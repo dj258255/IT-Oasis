@@ -3,9 +3,16 @@
   "description": "광활한 코드의 사막에서, 당신의 오아시스를 찾으세요.\nIT 야자수 </> — 성장에 뿌리를 둔 기술 블로그.",
   "descriptionEn": "In the vast desert of code, find your oasis. \nIT Palm Tree </> — a tech blog rooted in growth.",
   "status": "Active",
-  "bannerImage": "/uploads/banners/10월 출석 배경 원본_2048_1312.png",
+  "bannerImage": "/uploads/banners/10월 출석 배경 원본_2048_1312.png",
+  "authorImage": "",
   "authorBio": "오늘의 노력이 내일의 전문성을 만든다고 믿습니다.",
   "authorBioEn": "I believe that today's effort shapes tomorrow's expertise.",
   "githubUrl": "https://github.com/dj258255",
-  "email": "dj258255@naver.com"
+  "email": "dj258255@naver.com",
+  "socialLinks": [
+    { "type": "github", "url": "https://github.com/dj258255" },
+    { "type": "email", "url": "dj258255@naver.com" }
+  ],
+  "aboutContentKo": "안녕하세요! 이 블로그를 운영하고 있는 개발자입니다.\n\n개발하면서 배운 것들을 기록하고 공유하기 위해 이 블로그를 시작했습니다.\n\n## 기술 스택\n\n- 이 블로그는 **Astro**와 **Tailwind CSS**로 만들어졌습니다.\n- **GitHub Pages**에서 호스팅됩니다.\n\n## 연락처\n\n- GitHub: [github.com/dj258255](https://github.com/dj258255)",
+  "aboutContentEn": "Hello! I'm the developer running this blog.\n\nI started this blog to record and share what I learn while developing.\n\n## Tech Stack\n\n- This blog is built with **Astro** and **Tailwind CSS**.\n- Hosted on **GitHub Pages**.\n\n## Contact\n\n- GitHub: [github.com/dj258255](https://github.com/dj258255)"
 }
