@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const assetPath = (p: string) => `${base}/${p.replace(/^\//, '')}`;
 
 // Load site settings
 const settingsPath = path.join(process.cwd(), 'src/data/site/settings.json');
@@ -21,13 +22,14 @@ const posts = (await getCollection('blog'))
 <BaseLayout title={siteSettings.name} fullBanner={true}>
   <div class="fade-in-up">
     <!-- Hero Banner (full width) -->
-    <section class="hero-banner mb-10 sm:mb-14">
+    <section class="hero-banner mb-16 sm:mb-24">
       <div class="hero-banner-inner">
         {siteSettings.bannerImage ? (
-          <img src={`${base}/${siteSettings.bannerImage}`} alt="Banner" class="hero-banner-img" />
+          <img src={assetPath(siteSettings.bannerImage)} alt="Banner" class="hero-banner-img" />
         ) : (
           <div class="hero-banner-fallback"></div>
         )}
+        <div class="hero-banner-overlay-top"></div>
         <div class="hero-banner-overlay"></div>
         <div class="hero-banner-content">
         </div>
@@ -43,7 +45,7 @@ const posts = (await getCollection('blog'))
     <!-- 프로젝트 -->
     <section class="mb-14 sm:mb-20">
       <div class="flex items-center justify-between mb-6 sm:mb-8">
-        <h2 class="text-[22px] sm:text-[26px] font-bold tracking-tight" data-ko="프로젝트" data-en="Projects">프로젝트</h2>
+        <h2 class="text-[28px] sm:text-[34px] font-extrabold tracking-tight font-[Pretendard]" data-ko="프로젝트" data-en="Projects">프로젝트</h2>
         <div class="flex items-center gap-2">
           <button class="carousel-btn" data-carousel="projects" data-dir="prev" aria-label="Previous">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -67,16 +69,18 @@ const posts = (await getCollection('blog'))
                   </svg>
                 </div>
               </div>
-              <div class="p-4 sm:p-5 flex flex-col flex-1">
-                <h3 class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-1.5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
+              <div class="p-5 sm:p-6 flex flex-col flex-1">
+                <h3 class="text-[17px] sm:text-[19px] font-extrabold tracking-tight mb-2 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
                   {project.title}
                 </h3>
-                <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-auto pb-4">
+                <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-4 min-h-[5rem] sm:min-h-[5.5rem] mb-auto pb-4">
                   {project.description}
                 </p>
-                <p class="text-[11px] text-gray-400 dark:text-gray-500">
-                  {project.date} <span class="mx-1 opacity-40">·</span> {project.category}
-                </p>
+                <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500">
+                  <span>{project.date}</span>
+                  <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                  <span class="font-semibold text-primary/70 dark:text-primary-light/70">{project.category}</span>
+                </div>
               </div>
             </div>
           </a>
@@ -87,7 +91,7 @@ const posts = (await getCollection('blog'))
     <!-- 최신 스토리 -->
     <section class="mb-8">
       <div class="flex items-center justify-between mb-6 sm:mb-8">
-        <h2 class="text-[22px] sm:text-[26px] font-bold tracking-tight" data-ko="최신 스토리" data-en="Latest Story">최신 스토리</h2>
+        <h2 class="text-[28px] sm:text-[34px] font-extrabold tracking-tight font-[Pretendard]" data-ko="최신 스토리" data-en="Latest Story">최신 스토리</h2>
         <div class="flex items-center gap-2">
           <button class="carousel-btn" data-carousel="stories" data-dir="prev" aria-label="Previous">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -102,7 +106,7 @@ const posts = (await getCollection('blog'))
           <a href={`${base}/blog/${post.id}`} class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group">
             <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative mb-3 sm:mb-4">
               {post.data.coverImage && (
-                <img src={`${base}/${post.data.coverImage}`} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+                <img src={assetPath(post.data.coverImage)} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
               )}
               <div class="w-full h-full flex items-center justify-center">
                 <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
@@ -145,20 +149,20 @@ const posts = (await getCollection('blog'))
 
   .hero-banner-inner {
     position: relative;
-    height: 340px;
+    height: 520px;
     overflow: hidden;
   }
 
   @media (min-width: 640px) {
-    .hero-banner-inner { height: 420px; }
+    .hero-banner-inner { height: 640px; }
   }
 
   @media (min-width: 768px) {
-    .hero-banner-inner { height: 480px; }
+    .hero-banner-inner { height: 720px; }
   }
 
   @media (min-width: 1024px) {
-    .hero-banner-inner { height: 540px; }
+    .hero-banner-inner { height: 800px; }
   }
 
   .hero-banner-img {
@@ -206,6 +210,17 @@ const posts = (await getCollection('blog'))
   @keyframes banner-glow {
     0% { opacity: 1; }
     100% { opacity: 0.7; transform: scale(1.05); }
+  }
+
+  .hero-banner-overlay-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.15) 50%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
   }
 
   .hero-banner-overlay {

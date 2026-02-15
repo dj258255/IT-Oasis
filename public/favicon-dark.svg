@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="water-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#00B0FF"/>
+    </linearGradient>
+    <linearGradient id="bg-d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D1520"/>
+      <stop offset="100%" stop-color="#152238"/>
+    </linearGradient>
+    <linearGradient id="leaf-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ADE80"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+    <linearGradient id="bracket-d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E0F7FA"/>
+      <stop offset="100%" stop-color="#80DEEA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 배경 -->
+  <rect x="2" y="2" width="60" height="60" rx="14" ry="14" fill="url(#bg-d)"/>
+
+  <!-- ===== 야자수 잎 (가장 뒤 레이어) ===== -->
+  <!-- 왼쪽 크게 늘어지는 잎 - 위로 뻗다가 아래로 처짐 -->
+  <path d="M36 17 Q24 6, 10 16" stroke="url(#leaf-d)" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- 왼쪽 중간 잎 -->
+  <path d="M36 17 Q26 9, 14 20" stroke="url(#leaf-d)" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- 왼쪽 아래 잎 - 많이 처짐 -->
+  <path d="M36 17 Q28 14, 18 24" stroke="url(#leaf-d)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- 위쪽 잎 - 살짝 오른쪽으로 휘며 처짐 -->
+  <path d="M36 17 Q35 6, 42 5" stroke="url(#leaf-d)" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- 오른쪽 위 잎 - 뻗다가 살짝 처짐 -->
+  <path d="M36 17 Q46 7, 54 12" stroke="url(#leaf-d)" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- 오른쪽 중간 잎 -->
+  <path d="M36 17 Q48 12, 55 20" stroke="url(#leaf-d)" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- 오른쪽 아래 잎 - 가장 많이 처짐 -->
+  <path d="M36 17 Q46 17, 54 28" stroke="url(#leaf-d)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- ===== 양쪽 브래킷 (잎 위에 덮음) ===== -->
+  <path d="M17 20 L7 32 L17 44" stroke="url(#bracket-d)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M47 20 L57 32 L47 44" stroke="url(#bracket-d)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- 야자수 줄기 -->
+  <path d="M26 52 C27 44, 29 36, 33 28 C35 24, 36 21, 36 17" stroke="#C4925A" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+
+  <!-- 오아시스 물 -->
+  <ellipse cx="32" cy="52" rx="22" ry="5.5" fill="url(#water-d)" opacity="0.5"/>
+
+  <!-- 반짝이는 포인트 -->
+  <circle cx="12" cy="10" r="1.3" fill="#00E5FF" opacity="0.9"/>
+  <circle cx="8" cy="50" r="0.8" fill="#80DEEA" opacity="0.5"/>
+</svg>
