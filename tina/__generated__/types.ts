@@ -82,6 +82,10 @@ export type Query = {
   collections: Array<Collection>;
   node: Node;
   document: DocumentNode;
+  siteSettings: SiteSettings;
+  siteSettingsConnection: SiteSettingsConnection;
+  category: Category;
+  categoryConnection: CategoryConnection;
   blog: Blog;
   blogConnection: BlogConnection;
 };
@@ -108,6 +112,36 @@ export type QueryDocumentArgs = {
 };
 
 
+export type QuerySiteSettingsArgs = {
+  relativePath?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QuerySiteSettingsConnectionArgs = {
+  before?: InputMaybe<Scalars['String']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Float']['input']>;
+  last?: InputMaybe<Scalars['Float']['input']>;
+  sort?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<SiteSettingsFilter>;
+};
+
+
+export type QueryCategoryArgs = {
+  relativePath?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryCategoryConnectionArgs = {
+  before?: InputMaybe<Scalars['String']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Float']['input']>;
+  last?: InputMaybe<Scalars['Float']['input']>;
+  sort?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<CategoryFilter>;
+};
+
+
 export type QueryBlogArgs = {
   relativePath?: InputMaybe<Scalars['String']['input']>;
 };
@@ -123,6 +157,8 @@ export type QueryBlogConnectionArgs = {
 };
 
 export type DocumentFilter = {
+  siteSettings?: InputMaybe<SiteSettingsFilter>;
+  category?: InputMaybe<CategoryFilter>;
   blog?: InputMaybe<BlogFilter>;
 };
 
@@ -163,7 +199,104 @@ export type CollectionDocumentsArgs = {
   folder?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type DocumentNode = Blog | Folder;
+export type DocumentNode = SiteSettings | Category | Blog | Folder;
+
+export type SiteSettings = Node & Document & {
+  __typename?: 'SiteSettings';
+  name: Scalars['String']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  descriptionEn?: Maybe<Scalars['String']['output']>;
+  status?: Maybe<Scalars['String']['output']>;
+  bannerImage?: Maybe<Scalars['String']['output']>;
+  authorBio?: Maybe<Scalars['String']['output']>;
+  authorBioEn?: Maybe<Scalars['String']['output']>;
+  githubUrl?: Maybe<Scalars['String']['output']>;
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  _sys: SystemInfo;
+  _values: Scalars['JSON']['output'];
+};
+
+export type StringFilter = {
+  startsWith?: InputMaybe<Scalars['String']['input']>;
+  eq?: InputMaybe<Scalars['String']['input']>;
+  exists?: InputMaybe<Scalars['Boolean']['input']>;
+  in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+export type ImageFilter = {
+  startsWith?: InputMaybe<Scalars['String']['input']>;
+  eq?: InputMaybe<Scalars['String']['input']>;
+  exists?: InputMaybe<Scalars['Boolean']['input']>;
+  in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+export type SiteSettingsFilter = {
+  name?: InputMaybe<StringFilter>;
+  description?: InputMaybe<StringFilter>;
+  descriptionEn?: InputMaybe<StringFilter>;
+  status?: InputMaybe<StringFilter>;
+  bannerImage?: InputMaybe<ImageFilter>;
+  authorBio?: InputMaybe<StringFilter>;
+  authorBioEn?: InputMaybe<StringFilter>;
+  githubUrl?: InputMaybe<StringFilter>;
+  email?: InputMaybe<StringFilter>;
+};
+
+export type SiteSettingsConnectionEdges = {
+  __typename?: 'SiteSettingsConnectionEdges';
+  cursor: Scalars['String']['output'];
+  node?: Maybe<SiteSettings>;
+};
+
+export type SiteSettingsConnection = Connection & {
+  __typename?: 'SiteSettingsConnection';
+  pageInfo: PageInfo;
+  totalCount: Scalars['Float']['output'];
+  edges?: Maybe<Array<Maybe<SiteSettingsConnectionEdges>>>;
+};
+
+export type CategorySubcategories = {
+  __typename?: 'CategorySubcategories';
+  name: Scalars['String']['output'];
+  nameEn?: Maybe<Scalars['String']['output']>;
+};
+
+export type Category = Node & Document & {
+  __typename?: 'Category';
+  name: Scalars['String']['output'];
+  nameEn?: Maybe<Scalars['String']['output']>;
+  icon?: Maybe<Scalars['String']['output']>;
+  subcategories?: Maybe<Array<Maybe<CategorySubcategories>>>;
+  id: Scalars['ID']['output'];
+  _sys: SystemInfo;
+  _values: Scalars['JSON']['output'];
+};
+
+export type CategorySubcategoriesFilter = {
+  name?: InputMaybe<StringFilter>;
+  nameEn?: InputMaybe<StringFilter>;
+};
+
+export type CategoryFilter = {
+  name?: InputMaybe<StringFilter>;
+  nameEn?: InputMaybe<StringFilter>;
+  icon?: InputMaybe<StringFilter>;
+  subcategories?: InputMaybe<CategorySubcategoriesFilter>;
+};
+
+export type CategoryConnectionEdges = {
+  __typename?: 'CategoryConnectionEdges';
+  cursor: Scalars['String']['output'];
+  node?: Maybe<Category>;
+};
+
+export type CategoryConnection = Connection & {
+  __typename?: 'CategoryConnection';
+  pageInfo: PageInfo;
+  totalCount: Scalars['Float']['output'];
+  edges?: Maybe<Array<Maybe<CategoryConnectionEdges>>>;
+};
 
 export type Blog = Node & Document & {
   __typename?: 'Blog';
@@ -182,23 +315,9 @@ export type Blog = Node & Document & {
   _values: Scalars['JSON']['output'];
 };
 
-export type StringFilter = {
-  startsWith?: InputMaybe<Scalars['String']['input']>;
-  eq?: InputMaybe<Scalars['String']['input']>;
-  exists?: InputMaybe<Scalars['Boolean']['input']>;
-  in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
-};
-
 export type DatetimeFilter = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
-  eq?: InputMaybe<Scalars['String']['input']>;
-  exists?: InputMaybe<Scalars['Boolean']['input']>;
-  in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
-};
-
-export type ImageFilter = {
-  startsWith?: InputMaybe<Scalars['String']['input']>;
   eq?: InputMaybe<Scalars['String']['input']>;
   exists?: InputMaybe<Scalars['Boolean']['input']>;
   in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
@@ -248,6 +367,10 @@ export type Mutation = {
   deleteDocument: DocumentNode;
   createDocument: DocumentNode;
   createFolder: DocumentNode;
+  updateSiteSettings: SiteSettings;
+  createSiteSettings: SiteSettings;
+  updateCategory: Category;
+  createCategory: Category;
   updateBlog: Blog;
   createBlog: Blog;
 };
@@ -286,6 +409,30 @@ export type MutationCreateFolderArgs = {
 };
 
 
+export type MutationUpdateSiteSettingsArgs = {
+  relativePath: Scalars['String']['input'];
+  params: SiteSettingsMutation;
+};
+
+
+export type MutationCreateSiteSettingsArgs = {
+  relativePath: Scalars['String']['input'];
+  params: SiteSettingsMutation;
+};
+
+
+export type MutationUpdateCategoryArgs = {
+  relativePath: Scalars['String']['input'];
+  params: CategoryMutation;
+};
+
+
+export type MutationCreateCategoryArgs = {
+  relativePath: Scalars['String']['input'];
+  params: CategoryMutation;
+};
+
+
 export type MutationUpdateBlogArgs = {
   relativePath: Scalars['String']['input'];
   params: BlogMutation;
@@ -298,12 +445,40 @@ export type MutationCreateBlogArgs = {
 };
 
 export type DocumentUpdateMutation = {
+  siteSettings?: InputMaybe<SiteSettingsMutation>;
+  category?: InputMaybe<CategoryMutation>;
   blog?: InputMaybe<BlogMutation>;
   relativePath?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type DocumentMutation = {
+  siteSettings?: InputMaybe<SiteSettingsMutation>;
+  category?: InputMaybe<CategoryMutation>;
   blog?: InputMaybe<BlogMutation>;
+};
+
+export type SiteSettingsMutation = {
+  name?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  descriptionEn?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  bannerImage?: InputMaybe<Scalars['String']['input']>;
+  authorBio?: InputMaybe<Scalars['String']['input']>;
+  authorBioEn?: InputMaybe<Scalars['String']['input']>;
+  githubUrl?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CategorySubcategoriesMutation = {
+  name?: InputMaybe<Scalars['String']['input']>;
+  nameEn?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CategoryMutation = {
+  name?: InputMaybe<Scalars['String']['input']>;
+  nameEn?: InputMaybe<Scalars['String']['input']>;
+  icon?: InputMaybe<Scalars['String']['input']>;
+  subcategories?: InputMaybe<Array<InputMaybe<CategorySubcategoriesMutation>>>;
 };
 
 export type BlogMutation = {
@@ -319,7 +494,49 @@ export type BlogMutation = {
   body?: InputMaybe<Scalars['JSON']['input']>;
 };
 
+export type SiteSettingsPartsFragment = { __typename: 'SiteSettings', name: string, description?: string | null, descriptionEn?: string | null, status?: string | null, bannerImage?: string | null, authorBio?: string | null, authorBioEn?: string | null, githubUrl?: string | null, email?: string | null };
+
+export type CategoryPartsFragment = { __typename: 'Category', name: string, nameEn?: string | null, icon?: string | null, subcategories?: Array<{ __typename: 'CategorySubcategories', name: string, nameEn?: string | null } | null> | null };
+
 export type BlogPartsFragment = { __typename: 'Blog', title: string, titleEn?: string | null, description: string, descriptionEn?: string | null, date: string, tags?: Array<string | null> | null, category?: string | null, coverImage?: string | null, draft?: boolean | null, body?: any | null };
+
+export type SiteSettingsQueryVariables = Exact<{
+  relativePath: Scalars['String']['input'];
+}>;
+
+
+export type SiteSettingsQuery = { __typename?: 'Query', siteSettings: { __typename: 'SiteSettings', id: string, name: string, description?: string | null, descriptionEn?: string | null, status?: string | null, bannerImage?: string | null, authorBio?: string | null, authorBioEn?: string | null, githubUrl?: string | null, email?: string | null, _sys: { __typename?: 'SystemInfo', filename: string, basename: string, hasReferences?: boolean | null, breadcrumbs: Array<string>, path: string, relativePath: string, extension: string } } };
+
+export type SiteSettingsConnectionQueryVariables = Exact<{
+  before?: InputMaybe<Scalars['String']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Float']['input']>;
+  last?: InputMaybe<Scalars['Float']['input']>;
+  sort?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<SiteSettingsFilter>;
+}>;
+
+
+export type SiteSettingsConnectionQuery = { __typename?: 'Query', siteSettingsConnection: { __typename?: 'SiteSettingsConnection', totalCount: number, pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor: string, endCursor: string }, edges?: Array<{ __typename?: 'SiteSettingsConnectionEdges', cursor: string, node?: { __typename: 'SiteSettings', id: string, name: string, description?: string | null, descriptionEn?: string | null, status?: string | null, bannerImage?: string | null, authorBio?: string | null, authorBioEn?: string | null, githubUrl?: string | null, email?: string | null, _sys: { __typename?: 'SystemInfo', filename: string, basename: string, hasReferences?: boolean | null, breadcrumbs: Array<string>, path: string, relativePath: string, extension: string } } | null } | null> | null } };
+
+export type CategoryQueryVariables = Exact<{
+  relativePath: Scalars['String']['input'];
+}>;
+
+
+export type CategoryQuery = { __typename?: 'Query', category: { __typename: 'Category', id: string, name: string, nameEn?: string | null, icon?: string | null, _sys: { __typename?: 'SystemInfo', filename: string, basename: string, hasReferences?: boolean | null, breadcrumbs: Array<string>, path: string, relativePath: string, extension: string }, subcategories?: Array<{ __typename: 'CategorySubcategories', name: string, nameEn?: string | null } | null> | null } };
+
+export type CategoryConnectionQueryVariables = Exact<{
+  before?: InputMaybe<Scalars['String']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Float']['input']>;
+  last?: InputMaybe<Scalars['Float']['input']>;
+  sort?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<CategoryFilter>;
+}>;
+
+
+export type CategoryConnectionQuery = { __typename?: 'Query', categoryConnection: { __typename?: 'CategoryConnection', totalCount: number, pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor: string, endCursor: string }, edges?: Array<{ __typename?: 'CategoryConnectionEdges', cursor: string, node?: { __typename: 'Category', id: string, name: string, nameEn?: string | null, icon?: string | null, _sys: { __typename?: 'SystemInfo', filename: string, basename: string, hasReferences?: boolean | null, breadcrumbs: Array<string>, path: string, relativePath: string, extension: string }, subcategories?: Array<{ __typename: 'CategorySubcategories', name: string, nameEn?: string | null } | null> | null } | null } | null> | null } };
 
 export type BlogQueryVariables = Exact<{
   relativePath: Scalars['String']['input'];
@@ -340,6 +557,33 @@ export type BlogConnectionQueryVariables = Exact<{
 
 export type BlogConnectionQuery = { __typename?: 'Query', blogConnection: { __typename?: 'BlogConnection', totalCount: number, pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor: string, endCursor: string }, edges?: Array<{ __typename?: 'BlogConnectionEdges', cursor: string, node?: { __typename: 'Blog', id: string, title: string, titleEn?: string | null, description: string, descriptionEn?: string | null, date: string, tags?: Array<string | null> | null, category?: string | null, coverImage?: string | null, draft?: boolean | null, body?: any | null, _sys: { __typename?: 'SystemInfo', filename: string, basename: string, hasReferences?: boolean | null, breadcrumbs: Array<string>, path: string, relativePath: string, extension: string } } | null } | null> | null } };
 
+export const SiteSettingsPartsFragmentDoc = gql`
+    fragment SiteSettingsParts on SiteSettings {
+  __typename
+  name
+  description
+  descriptionEn
+  status
+  bannerImage
+  authorBio
+  authorBioEn
+  githubUrl
+  email
+}
+    `;
+export const CategoryPartsFragmentDoc = gql`
+    fragment CategoryParts on Category {
+  __typename
+  name
+  nameEn
+  icon
+  subcategories {
+    __typename
+    name
+    nameEn
+  }
+}
+    `;
 export const BlogPartsFragmentDoc = gql`
     fragment BlogParts on Blog {
   __typename
@@ -355,6 +599,120 @@ export const BlogPartsFragmentDoc = gql`
   body
 }
     `;
+export const SiteSettingsDocument = gql`
+    query siteSettings($relativePath: String!) {
+  siteSettings(relativePath: $relativePath) {
+    ... on Document {
+      _sys {
+        filename
+        basename
+        hasReferences
+        breadcrumbs
+        path
+        relativePath
+        extension
+      }
+      id
+    }
+    ...SiteSettingsParts
+  }
+}
+    ${SiteSettingsPartsFragmentDoc}`;
+export const SiteSettingsConnectionDocument = gql`
+    query siteSettingsConnection($before: String, $after: String, $first: Float, $last: Float, $sort: String, $filter: SiteSettingsFilter) {
+  siteSettingsConnection(
+    before: $before
+    after: $after
+    first: $first
+    last: $last
+    sort: $sort
+    filter: $filter
+  ) {
+    pageInfo {
+      hasPreviousPage
+      hasNextPage
+      startCursor
+      endCursor
+    }
+    totalCount
+    edges {
+      cursor
+      node {
+        ... on Document {
+          _sys {
+            filename
+            basename
+            hasReferences
+            breadcrumbs
+            path
+            relativePath
+            extension
+          }
+          id
+        }
+        ...SiteSettingsParts
+      }
+    }
+  }
+}
+    ${SiteSettingsPartsFragmentDoc}`;
+export const CategoryDocument = gql`
+    query category($relativePath: String!) {
+  category(relativePath: $relativePath) {
+    ... on Document {
+      _sys {
+        filename
+        basename
+        hasReferences
+        breadcrumbs
+        path
+        relativePath
+        extension
+      }
+      id
+    }
+    ...CategoryParts
+  }
+}
+    ${CategoryPartsFragmentDoc}`;
+export const CategoryConnectionDocument = gql`
+    query categoryConnection($before: String, $after: String, $first: Float, $last: Float, $sort: String, $filter: CategoryFilter) {
+  categoryConnection(
+    before: $before
+    after: $after
+    first: $first
+    last: $last
+    sort: $sort
+    filter: $filter
+  ) {
+    pageInfo {
+      hasPreviousPage
+      hasNextPage
+      startCursor
+      endCursor
+    }
+    totalCount
+    edges {
+      cursor
+      node {
+        ... on Document {
+          _sys {
+            filename
+            basename
+            hasReferences
+            breadcrumbs
+            path
+            relativePath
+            extension
+          }
+          id
+        }
+        ...CategoryParts
+      }
+    }
+  }
+}
+    ${CategoryPartsFragmentDoc}`;
 export const BlogDocument = gql`
     query blog($relativePath: String!) {
   blog(relativePath: $relativePath) {
@@ -415,7 +773,19 @@ export const BlogConnectionDocument = gql`
 export type Requester<C= {}> = <R, V>(doc: DocumentNode, vars?: V, options?: C) => Promise<R>
   export function getSdk<C>(requester: Requester<C>) {
     return {
-      blog(variables: BlogQueryVariables, options?: C): Promise<{data: BlogQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: BlogQueryVariables, query: string}> {
+      siteSettings(variables: SiteSettingsQueryVariables, options?: C): Promise<{data: SiteSettingsQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: SiteSettingsQueryVariables, query: string}> {
+        return requester<{data: SiteSettingsQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: SiteSettingsQueryVariables, query: string}, SiteSettingsQueryVariables>(SiteSettingsDocument, variables, options);
+      },
+    siteSettingsConnection(variables?: SiteSettingsConnectionQueryVariables, options?: C): Promise<{data: SiteSettingsConnectionQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: SiteSettingsConnectionQueryVariables, query: string}> {
+        return requester<{data: SiteSettingsConnectionQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: SiteSettingsConnectionQueryVariables, query: string}, SiteSettingsConnectionQueryVariables>(SiteSettingsConnectionDocument, variables, options);
+      },
+    category(variables: CategoryQueryVariables, options?: C): Promise<{data: CategoryQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: CategoryQueryVariables, query: string}> {
+        return requester<{data: CategoryQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: CategoryQueryVariables, query: string}, CategoryQueryVariables>(CategoryDocument, variables, options);
+      },
+    categoryConnection(variables?: CategoryConnectionQueryVariables, options?: C): Promise<{data: CategoryConnectionQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: CategoryConnectionQueryVariables, query: string}> {
+        return requester<{data: CategoryConnectionQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: CategoryConnectionQueryVariables, query: string}, CategoryConnectionQueryVariables>(CategoryConnectionDocument, variables, options);
+      },
+    blog(variables: BlogQueryVariables, options?: C): Promise<{data: BlogQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: BlogQueryVariables, query: string}> {
         return requester<{data: BlogQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: BlogQueryVariables, query: string}, BlogQueryVariables>(BlogDocument, variables, options);
       },
     blogConnection(variables?: BlogConnectionQueryVariables, options?: C): Promise<{data: BlogConnectionQuery, errors?: { message: string, locations: { line: number, column: number }[], path: string[] }[], variables: BlogConnectionQueryVariables, query: string}> {

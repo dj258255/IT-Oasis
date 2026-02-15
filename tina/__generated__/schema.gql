@@ -54,11 +54,17 @@ type Query {
   collections: [Collection!]!
   node(id: String): Node!
   document(collection: String, relativePath: String): DocumentNode!
+  siteSettings(relativePath: String): SiteSettings!
+  siteSettingsConnection(before: String, after: String, first: Float, last: Float, sort: String, filter: SiteSettingsFilter): SiteSettingsConnection!
+  category(relativePath: String): Category!
+  categoryConnection(before: String, after: String, first: Float, last: Float, sort: String, filter: CategoryFilter): CategoryConnection!
   blog(relativePath: String): Blog!
   blogConnection(before: String, after: String, first: Float, last: Float, sort: String, filter: BlogFilter): BlogConnection!
 }
 
 input DocumentFilter {
+  siteSettings: SiteSettingsFilter
+  category: CategoryFilter
   blog: BlogFilter
 }
 
@@ -85,7 +91,97 @@ type Collection {
   documents(before: String, after: String, first: Float, last: Float, sort: String, filter: DocumentFilter, folder: String): DocumentConnection!
 }
 
-union DocumentNode = Blog | Folder
+union DocumentNode = SiteSettings | Category | Blog | Folder
+
+type SiteSettings implements Node & Document {
+  name: String!
+  description: String
+  descriptionEn: String
+  status: String
+  bannerImage: String
+  authorBio: String
+  authorBioEn: String
+  githubUrl: String
+  email: String
+  id: ID!
+  _sys: SystemInfo!
+  _values: JSON!
+}
+
+input StringFilter {
+  startsWith: String
+  eq: String
+  exists: Boolean
+  in: [String]
+}
+
+input ImageFilter {
+  startsWith: String
+  eq: String
+  exists: Boolean
+  in: [String]
+}
+
+input SiteSettingsFilter {
+  name: StringFilter
+  description: StringFilter
+  descriptionEn: StringFilter
+  status: StringFilter
+  bannerImage: ImageFilter
+  authorBio: StringFilter
+  authorBioEn: StringFilter
+  githubUrl: StringFilter
+  email: StringFilter
+}
+
+type SiteSettingsConnectionEdges {
+  cursor: String!
+  node: SiteSettings
+}
+
+type SiteSettingsConnection implements Connection {
+  pageInfo: PageInfo!
+  totalCount: Float!
+  edges: [SiteSettingsConnectionEdges]
+}
+
+type CategorySubcategories {
+  name: String!
+  nameEn: String
+}
+
+type Category implements Node & Document {
+  name: String!
+  nameEn: String
+  icon: String
+  subcategories: [CategorySubcategories]
+  id: ID!
+  _sys: SystemInfo!
+  _values: JSON!
+}
+
+input CategorySubcategoriesFilter {
+  name: StringFilter
+  nameEn: StringFilter
+}
+
+input CategoryFilter {
+  name: StringFilter
+  nameEn: StringFilter
+  icon: StringFilter
+  subcategories: CategorySubcategoriesFilter
+}
+
+type CategoryConnectionEdges {
+  cursor: String!
+  node: Category
+}
+
+type CategoryConnection implements Connection {
+  pageInfo: PageInfo!
+  totalCount: Float!
+  edges: [CategoryConnectionEdges]
+}
 
 type Blog implements Node & Document {
   title: String!
@@ -103,23 +199,9 @@ type Blog implements Node & Document {
   _values: JSON!
 }
 
-input StringFilter {
-  startsWith: String
-  eq: String
-  exists: Boolean
-  in: [String]
-}
-
 input DatetimeFilter {
   after: String
   before: String
-  eq: String
-  exists: Boolean
-  in: [String]
-}
-
-input ImageFilter {
-  startsWith: String
   eq: String
   exists: Boolean
   in: [String]
@@ -166,17 +248,49 @@ type Mutation {
   deleteDocument(collection: String, relativePath: String!): DocumentNode!
   createDocument(collection: String, relativePath: String!, params: DocumentMutation!): DocumentNode!
   createFolder(collection: String, relativePath: String!): DocumentNode!
+  updateSiteSettings(relativePath: String!, params: SiteSettingsMutation!): SiteSettings!
+  createSiteSettings(relativePath: String!, params: SiteSettingsMutation!): SiteSettings!
+  updateCategory(relativePath: String!, params: CategoryMutation!): Category!
+  createCategory(relativePath: String!, params: CategoryMutation!): Category!
   updateBlog(relativePath: String!, params: BlogMutation!): Blog!
   createBlog(relativePath: String!, params: BlogMutation!): Blog!
 }
 
 input DocumentUpdateMutation {
+  siteSettings: SiteSettingsMutation
+  category: CategoryMutation
   blog: BlogMutation
   relativePath: String
 }
 
 input DocumentMutation {
+  siteSettings: SiteSettingsMutation
+  category: CategoryMutation
   blog: BlogMutation
+}
+
+input SiteSettingsMutation {
+  name: String
+  description: String
+  descriptionEn: String
+  status: String
+  bannerImage: String
+  authorBio: String
+  authorBioEn: String
+  githubUrl: String
+  email: String
+}
+
+input CategorySubcategoriesMutation {
+  name: String
+  nameEn: String
+}
+
+input CategoryMutation {
+  name: String
+  nameEn: String
+  icon: String
+  subcategories: [CategorySubcategoriesMutation]
 }
 
 input BlogMutation {
