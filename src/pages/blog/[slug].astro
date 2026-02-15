@@ -68,7 +68,7 @@ const catColorMap: Record<string, string> = {
 };
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage}>
+<BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? `${base}/${post.data.coverImage}` : undefined}>
   <div class="fade-in-up">
       <!-- Main content -->
       <article class="post-article relative">
@@ -122,7 +122,7 @@ const catColorMap: Record<string, string> = {
       <!-- Cover image -->
       {post.data.coverImage && (
         <div class="mb-8 sm:mb-10 rounded-2xl overflow-hidden">
-          <img src={post.data.coverImage} alt="" class="w-full h-64 sm:h-80 md:h-96 object-cover" loading="lazy" />
+          <img src={`${base}/${post.data.coverImage}`} alt="" class="w-full h-64 sm:h-80 md:h-96 object-cover" loading="lazy" />
         </div>
       )}
 

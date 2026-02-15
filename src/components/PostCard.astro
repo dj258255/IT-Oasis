@@ -34,7 +34,7 @@ const parentCat = category ? category.split('/')[0] : '';
     <div class="aspect-[16/10] w-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
       {coverImage && (
         <img
-          src={coverImage}
+          src={`${base}/${coverImage}`}
           alt=""
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out absolute inset-0"
           loading="lazy"
