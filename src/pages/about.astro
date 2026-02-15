@@ -27,8 +27,8 @@ const posts = (await getCollection('blog'))
         <span class="gradient-text" data-ko="소개" data-en="About">소개</span>
       </h1>
       <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">
-        <span class="lang-ko">풍부한 상상과 호기심으로<br />다양한 프로젝트를 만들어갑니다.</span>
-        <span class="lang-en hidden">Creating diverse projects<br />with rich imagination and curiosity.</span>
+        <span class="lang-ko" set:html={(siteSettings.aboutSubtitleKo || '').replace(/\n/g, '<br />')} />
+        <span class="lang-en hidden" set:html={(siteSettings.aboutSubtitleEn || '').replace(/\n/g, '<br />')} />
       </p>
     </div>
 

@@ -1,6 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { projects } from '../data/projects';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const siteSettings = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/data/site/settings.json'), 'utf-8'));
 ---
 
 <BaseLayout title="Projects — IT Oasis">
@@ -10,8 +14,8 @@ import { projects } from '../data/projects';
         <span class="gradient-text" data-ko="프로젝트" data-en="Projects">프로젝트</span>
       </h1>
       <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">
-        <span class="lang-ko">풍부한 상상과 호기심으로 만들어 온<br />다양한 프로젝트를 소개합니다.</span>
-        <span class="lang-en hidden">Introducing diverse projects<br />created with rich imagination and curiosity.</span>
+        <span class="lang-ko" set:html={(siteSettings.projectsSubtitleKo || '').replace(/\n/g, '<br />')} />
+        <span class="lang-en hidden" set:html={(siteSettings.projectsSubtitleEn || '').replace(/\n/g, '<br />')} />
       </p>
     </div>
   </div>
