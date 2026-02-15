@@ -10,6 +10,7 @@ export default defineConfig({
   build: {
     outputFolder: 'admin',
     publicFolder: 'public',
+    basePath: 'IT-Oasis',
   },
 
   media: {
