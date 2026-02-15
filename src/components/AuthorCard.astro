@@ -12,7 +12,7 @@ const siteSettings = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/da
   <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 p-6 sm:p-8 md:p-10">
     <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary/20 via-accent/15 to-rose/20">
       {siteSettings.authorImage ? (
-        <img src={assetPath(siteSettings.authorImage)} alt="Author" class="w-full h-full object-cover" />
+        <img src={assetPath(siteSettings.authorImage)} alt="Author" class="w-full h-full object-contain" />
       ) : (
         <>
           <img src={`${base}/favicon-light.svg`} alt="Author" class="w-full h-full object-cover p-4 block dark:hidden" />
