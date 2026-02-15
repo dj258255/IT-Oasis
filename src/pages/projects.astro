@@ -1,0 +1,210 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { projects } from '../data/projects';
+---
+
+<BaseLayout title="Projects — IT Oasis">
+  <div class="fade-in-up mb-10 sm:mb-14">
+    <div class="px-1">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+        <span class="gradient-text">Projects</span>
+      </h1>
+      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">
+        <span class="lang-ko">풍부한 상상과 호기심으로 만들어 온<br />다양한 프로젝트를 소개합니다.</span>
+        <span class="lang-en hidden">Introducing diverse projects<br />created with rich imagination and curiosity.</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Project cards -->
+  <div class="space-y-8 sm:space-y-10 stagger">
+    {projects.map((project) => (
+      <div class="project-card group">
+        <div class="flex flex-col sm:flex-row gap-5 sm:gap-7">
+          <!-- Image -->
+          <div class="sm:w-[260px] md:w-[300px] shrink-0">
+            <div class="aspect-[16/10] rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative flex items-center justify-center">
+              {project.image && (
+                <img
+                  src={project.image}
+                  alt=""
+                  class="w-full h-full object-cover transition-transform duration-700 ease-out absolute inset-0 group-hover:scale-105"
+                  loading="lazy"
+                  onerror="this.style.display='none'"
+                />
+              )}
+              <svg class="w-12 h-12 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {/* Hover overlay with action buttons */}
+              <div class="proj-overlay">
+                <div class="proj-overlay-buttons">
+                  {project.website && (
+                    <a href={project.website} target="_blank" rel="noopener noreferrer" class="proj-overlay-btn">
+                      <span data-ko="웹사이트 접속하기" data-en="Visit Website">웹사이트 접속하기</span>
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </a>
+                  )}
+                  {project.github && (
+                    <a href={project.github} target="_blank" rel="noopener noreferrer" class="proj-overlay-btn">
+                      <span data-ko="깃허브 보기" data-en="View GitHub">깃허브 보기</span>
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </a>
+                  )}
+                  {project.story && (
+                    <a href={project.story} class="proj-overlay-btn">
+                      <span data-ko="스토리 보기" data-en="View Story">스토리 보기</span>
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 flex flex-col justify-center">
+            <h2 class="text-[18px] sm:text-[22px] font-bold tracking-tight mb-2.5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
+              {project.title}
+            </h2>
+
+            <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed mb-5 line-clamp-3">
+              <span class="lang-ko">{project.description}</span>
+              <span class="lang-en hidden">{project.descriptionEn || project.description}</span>
+            </p>
+
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-1.5">
+              {project.tags.map((tag) => (
+                <span class="project-tag">{tag}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <!-- Empty state hint -->
+  <div class="mt-16 text-center">
+    <p class="text-[12px] text-gray-400 dark:text-gray-600" data-ko="더 많은 프로젝트가 곧 추가됩니다" data-en="More projects coming soon">
+      더 많은 프로젝트가 곧 추가됩니다
+    </p>
+  </div>
+</BaseLayout>
+
+<style>
+  .project-card {
+    padding: 1.25rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.02);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (min-width: 640px) {
+    .project-card {
+      padding: 1.5rem;
+      border-radius: 24px;
+    }
+  }
+
+  :global(.dark) .project-card {
+    background: rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .project-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(56, 189, 248, 0.06), 0 4px 16px rgba(0, 0, 0, 0.03);
+    border-color: rgba(56, 189, 248, 0.12);
+  }
+
+  :global(.dark) .project-card:hover {
+    box-shadow: 0 12px 40px rgba(56, 189, 248, 0.04), 0 4px 16px rgba(0, 0, 0, 0.2);
+    border-color: rgba(125, 211, 252, 0.1);
+  }
+
+  /* Hover overlay on image */
+  .proj-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    z-index: 10;
+    border-radius: inherit;
+  }
+
+  .project-card:hover .proj-overlay {
+    opacity: 1;
+  }
+
+  .proj-overlay-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 80%;
+    max-width: 240px;
+  }
+
+  .proj-overlay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1.1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1d1d1f;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .proj-overlay-btn:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Project tech tags */
+  .project-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.25rem 0.7rem;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #4b5563;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.25s ease;
+  }
+
+  :global(.dark) .project-tag {
+    background: rgba(255, 255, 255, 0.06);
+    color: #d1d5db;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .project-card:hover .project-tag {
+    background: rgba(56, 189, 248, 0.08);
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.15);
+  }
+
+  :global(.dark) .project-card:hover .project-tag {
+    background: rgba(125, 211, 252, 0.1);
+    color: #a5b4fc;
+    border-color: rgba(125, 211, 252, 0.15);
+  }
+</style>

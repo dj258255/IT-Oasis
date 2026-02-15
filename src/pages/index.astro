@@ -1,0 +1,361 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BlogSidebar from '../components/BlogSidebar.astro';
+import { getCollection } from 'astro:content';
+import { projects } from '../data/projects';
+
+const posts = (await getCollection('blog'))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 8);
+---
+
+<BaseLayout title="IT Oasis" fullBanner={true}>
+  <div class="fade-in-up">
+    <!-- Hero Banner (full width) -->
+    <section class="hero-banner mb-10 sm:mb-14">
+      <div class="hero-banner-inner">
+        <!-- <img src="/banner.jpg" alt="Banner" class="hero-banner-img" /> -->
+        <div class="hero-banner-fallback"></div>
+        <div class="hero-banner-overlay"></div>
+        <div class="hero-banner-content">
+          <div class="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6">
+            <div class="flex items-center gap-2 mb-3 sm:mb-4">
+              <div class="status-dot"></div>
+              <span class="text-[10px] sm:text-[11px] font-medium text-white/60 tracking-widest uppercase">Available for work</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-[1.15] mb-2 sm:mb-3 text-white">
+              <span data-ko="안녕하세요" data-en="Hello">안녕하세요</span>
+              <span class="inline-block ml-1" style="animation: wave 1.5s ease-in-out infinite;">👋</span>
+            </h1>
+            <p class="text-[13px] sm:text-[15px] text-white/70 leading-relaxed max-w-lg mb-5 sm:mb-6">
+              <span class="lang-ko">개발하면서 배운 것들을 기록하는 블로그입니다.<br/>좋은 코드와 깊은 사고를 지향합니다.</span>
+              <span class="lang-en hidden">A blog recording what I learn while developing.<br/>Aiming for good code and deep thinking.</span>
+            </p>
+            <div class="flex items-center gap-2 sm:gap-3">
+              <a href="/blog" class="inline-flex items-center gap-2 text-[12px] sm:text-[13px] font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/95 text-gray-900 shadow-lg hover:bg-white hover:scale-[1.02] transition-all duration-300">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                <span data-ko="블로그 읽기" data-en="Read Blog">블로그 읽기</span>
+              </a>
+              <a href="/about" class="inline-flex items-center gap-2 text-[12px] sm:text-[13px] font-medium px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 hover:bg-white/20 transition-all duration-300">
+                <span data-ko="더 알아보기" data-en="Learn More">더 알아보기</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Layout: sidebar floats outside, content fills header width -->
+    <div class="relative">
+      <div class="floating-sidebar hidden xl:block">
+        <BlogSidebar />
+      </div>
+
+    <!-- 프로젝트 -->
+    <section class="mb-14 sm:mb-20">
+      <div class="flex items-center justify-between mb-6 sm:mb-8">
+        <h2 class="text-[22px] sm:text-[26px] font-bold tracking-tight" data-ko="프로젝트" data-en="Projects">프로젝트</h2>
+        <div class="flex items-center gap-2">
+          <button class="carousel-btn" data-carousel="projects" data-dir="prev" aria-label="Previous">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <button class="carousel-btn" data-carousel="projects" data-dir="next" aria-label="Next">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+      </div>
+      <div class="carousel-track" id="carousel-projects">
+        {projects.map((project) => (
+          <a href="/projects" class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group">
+            <div class="proj-card rounded-2xl overflow-hidden h-full">
+              <div class="aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
+                {project.image && (
+                  <img src={project.image} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+                )}
+                <div class="w-full h-full flex items-center justify-center">
+                  <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="p-4 sm:p-5 flex flex-col flex-1">
+                <h3 class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-1.5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
+                  {project.title}
+                </h3>
+                <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-auto pb-4">
+                  {project.description}
+                </p>
+                <p class="text-[11px] text-gray-400 dark:text-gray-500">
+                  {project.date} <span class="mx-1 opacity-40">·</span> {project.category}
+                </p>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- 최신 스토리 -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-6 sm:mb-8">
+        <h2 class="text-[22px] sm:text-[26px] font-bold tracking-tight" data-ko="최신 스토리" data-en="Latest Story">최신 스토리</h2>
+        <div class="flex items-center gap-2">
+          <button class="carousel-btn" data-carousel="stories" data-dir="prev" aria-label="Previous">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <button class="carousel-btn" data-carousel="stories" data-dir="next" aria-label="Next">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+      </div>
+      <div class="carousel-track" id="carousel-stories">
+        {posts.map((post) => (
+          <a href={`/blog/${post.id}`} class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group">
+            <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative mb-3 sm:mb-4">
+              {post.data.coverImage && (
+                <img src={post.data.coverImage} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+              )}
+              <div class="w-full h-full flex items-center justify-center">
+                <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+            <h3 class="text-[14px] sm:text-[16px] font-bold tracking-tight leading-snug mb-1.5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-2">
+              {post.data.title}
+            </h3>
+            <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
+              {post.data.description}
+            </p>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-8deg); }
+    40% { transform: rotate(14deg); }
+    50% { transform: rotate(-4deg); }
+    60% { transform: rotate(10deg); }
+    70% { transform: rotate(0deg); }
+  }
+
+  /* Full-width hero banner */
+  .hero-banner {
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    width: 100vw;
+  }
+
+  .hero-banner-inner {
+    position: relative;
+    height: 340px;
+    overflow: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .hero-banner-inner { height: 420px; }
+  }
+
+  @media (min-width: 768px) {
+    .hero-banner-inner { height: 480px; }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-banner-inner { height: 540px; }
+  }
+
+  .hero-banner-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .hero-banner-fallback {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg,
+        #1a1040 0%,
+        #2d1b69 25%,
+        #1e1145 50%,
+        #0f1729 75%,
+        #0a0e1a 100%
+      );
+  }
+
+  .hero-banner-fallback::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 50%, rgba(56, 189, 248, 0.3) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 40%, rgba(6, 182, 212, 0.25) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 50% 80%, rgba(244, 114, 182, 0.15) 0%, transparent 70%);
+    animation: banner-glow 8s ease-in-out infinite alternate;
+  }
+
+  .hero-banner-fallback::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+  }
+
+  @keyframes banner-glow {
+    0% { opacity: 1; }
+    100% { opacity: 0.7; transform: scale(1.05); }
+  }
+
+  .hero-banner-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .hero-banner-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: 2rem;
+  }
+
+  @media (min-width: 640px) {
+    .hero-banner-content { padding-bottom: 2.5rem; }
+  }
+
+  @media (min-width: 768px) {
+    .hero-banner-content { padding-bottom: 3rem; }
+  }
+
+  /* Floating sidebar (outside content area) */
+  .floating-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 100%;
+    margin-right: 2rem;
+    width: 13rem;
+  }
+
+  @media (min-width: 1536px) {
+    .floating-sidebar {
+      margin-right: 2.5rem;
+    }
+  }
+
+  /* Project cards */
+  .proj-card {
+    background: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.02);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.dark) .proj-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .proj-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+    border-color: rgba(56, 189, 248, 0.1);
+  }
+
+  :global(.dark) .proj-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    border-color: rgba(125, 211, 252, 0.08);
+  }
+
+  /* Carousel */
+  .carousel-track {
+    display: flex;
+    gap: 1.25rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+  }
+
+  .carousel-track::-webkit-scrollbar { display: none; }
+  .carousel-track { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .carousel-item {
+    scroll-snap-align: start;
+  }
+
+  .carousel-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    color: #6b7280;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .carousel-btn:hover {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.15);
+    color: #0284c7;
+  }
+
+  :global(.dark) .carousel-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #9ca3af;
+  }
+
+  :global(.dark) .carousel-btn:hover {
+    background: rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.2);
+    color: #7dd3fc;
+  }
+</style>
+
+<script>
+  function initCarousels() {
+    document.querySelectorAll<HTMLButtonElement>('.carousel-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.carousel;
+        const dir = btn.dataset.dir;
+        const track = document.getElementById(`carousel-${id}`);
+        if (!track) return;
+        const scrollAmount = 340;
+        track.scrollBy({ left: dir === 'next' ? scrollAmount : -scrollAmount, behavior: 'smooth' });
+      });
+    });
+  }
+
+  initCarousels();
+  document.addEventListener('astro:page-load', initCarousels);
+</script>

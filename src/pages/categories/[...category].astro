@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getCollection } from 'astro:content';
+import { buildCategoryTree, parseCategory } from '../../lib/utils';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('blog')).filter(p => !p.data.draft);
+  const tree = buildCategoryTree(posts.map(p => p.data.category));
+
+  const paths: any[] = [];
+
+  for (const [parent, node] of tree) {
+    // Parent category page — shows ALL posts under this parent
+    paths.push({
+      params: { category: parent },
+      props: {
+        category: parent,
+        displayName: parent,
+        isParent: true,
+        posts: posts
+          .filter(p => parseCategory(p.data.category).parent === parent)
+          .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()),
+        children: [...node.children.entries()].sort((a, b) => b[1].count - a[1].count),
+      },
+    });
+
+    // Child category pages
+    for (const [child] of node.children) {
+      const fullCategory = `${parent}/${child}`;
+      paths.push({
+        params: { category: fullCategory },
+        props: {
+          category: fullCategory,
+          displayName: child,
+          isParent: false,
+          posts: posts
+            .filter(p => p.data.category === fullCategory)
+            .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()),
+          children: [],
+        },
+      });
+    }
+  }
+
+  return paths;
+}
+
+const { category, displayName, isParent, posts, children } = Astro.props;
+const parsed = parseCategory(category);
+---
+
+<BaseLayout title={`Category: ${category}`}>
+  <div class="fade-in-up">
+    <a href="/categories" class="group inline-flex items-center gap-1.5 text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8">
+      <svg class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      <span data-ko="모든 카테고리" data-en="All Categories">모든 카테고리</span>
+    </a>
+
+    <!-- Breadcrumb for sub-categories -->
+    {!isParent && parsed.parent && (
+      <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500 mb-4 px-1">
+        <a href={`/categories/${encodeURIComponent(parsed.parent)}`} class="hover:text-primary transition-colors">
+          {parsed.parent}
+        </a>
+        <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span class="text-gray-600 dark:text-gray-300 font-medium">{displayName}</span>
+      </div>
+    )}
+
+    <h1 class="text-xl sm:text-2xl font-bold tracking-tight mb-2 px-1">
+      <span class="gradient-text">{displayName}</span>
+    </h1>
+    <p class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 mb-8 sm:mb-10 px-1">
+      {posts.length}<span data-ko="개의 글" data-en=" posts">개의 글</span>
+    </p>
+
+    <!-- Sub-category chips for parent categories -->
+    {isParent && children.length > 0 && (
+      <div class="flex flex-wrap gap-2 mb-8 px-1">
+        {children.map(([child, childNode]: [string, any]) => (
+          <a
+            href={`/categories/${encodeURIComponent(category)}/${encodeURIComponent(child)}`}
+            class="text-[12px] font-medium px-4 py-2 rounded-xl glass-card text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+          >
+            {child}
+            <span class="ml-1.5 text-[11px] text-gray-400 dark:text-gray-500">{childNode.count}</span>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <div class="space-y-3 stagger">
+    {posts.map((post: any, i: number) => (
+      <PostCard
+        title={post.data.title}
+        description={post.data.description}
+        date={post.data.date}
+        slug={post.id}
+        tags={post.data.tags}
+        category={post.data.category}
+        coverImage={post.data.coverImage}
+        index={i}
+      />
+    ))}
+  </div>
+</BaseLayout>

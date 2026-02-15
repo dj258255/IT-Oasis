@@ -1,0 +1,595 @@
+---
+import { getCollection } from 'astro:content';
+
+interface Props {
+  transparent?: boolean;
+}
+
+const { transparent = false } = Astro.props;
+
+const navItems = [
+  { label: '소개', labelEn: 'About', href: '/about', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  { label: '프로젝트', labelEn: 'Projects', href: '/projects', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+  { label: '스토리', labelEn: 'Story', href: '/blog', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z' },
+  { label: '태그', labelEn: 'Tags', href: '/tags', icon: 'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z' },
+];
+
+const currentPath = Astro.url.pathname;
+
+const posts = (await getCollection('blog'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const searchData = posts.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  tags: post.data.tags,
+  category: post.data.category,
+  slug: post.id,
+  date: post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }),
+}));
+---
+
+<header class:list={["top-0 z-50 pt-3 sm:pt-4 pb-2 px-4 sm:px-6 md:px-8 lg:px-6", transparent ? "fixed left-0 right-0" : "sticky"]} {...(transparent ? { "data-transparent": "" } : {})}>
+  <!-- Header container (holds nav and search in same space) -->
+  <div class="header-container max-w-5xl mx-auto relative h-14 sm:h-15">
+  <!-- Normal header -->
+  <nav id="header-nav" class:list={["header-bar rounded-2xl px-3 sm:px-4 h-14 sm:h-15 flex items-center", transparent ? "glass-nav-transparent" : "glass-nav"]}>
+    <!-- Logo -->
+    <a href="/" class="flex items-center group shrink-0 mr-6">
+      <span class="text-[17px] sm:text-[18px] font-bold tracking-tight gradient-text-subtle">IT Oasis</span>
+    </a>
+
+    <!-- Desktop nav -->
+    <div class="hidden sm:flex items-center gap-1 flex-1">
+      {navItems.map(({ label, labelEn, href }) => {
+        const isActive = currentPath === href || (href !== '/' && currentPath.startsWith(href));
+        return (
+          <a
+            href={href}
+            class:list={[
+              'relative text-[14px] font-medium px-4 py-2 rounded-xl transition-all duration-300',
+              isActive
+                ? 'text-primary bg-primary/[0.08] dark:text-primary-light dark:bg-primary-light/[0.1]'
+                : 'text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/30 dark:hover:bg-white/[0.03]',
+            ]}
+            data-ko={label}
+            data-en={labelEn}
+          >
+            {label}
+          </a>
+        );
+      })}
+    </div>
+
+    <!-- Right side icons -->
+    <div class="flex items-center gap-0.5 shrink-0 ml-auto">
+      <!-- Language toggle -->
+      <button
+        id="lang-global-toggle"
+        class="lang-pill-btn p-1.5 sm:p-2 rounded-xl hover:bg-primary/[0.04] transition-all duration-300"
+        aria-label="Toggle language"
+      >
+        <span class="lang-pill-ko active">KO</span>
+        <span class="lang-pill-divider">/</span>
+        <span class="lang-pill-en">EN</span>
+      </button>
+
+      <!-- Search trigger -->
+      <button
+        id="search-open"
+        class="p-2.5 rounded-xl text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light hover:bg-primary/[0.04] transition-all duration-300"
+        aria-label="검색"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
+
+      <!-- Theme toggle -->
+      <button
+        id="theme-toggle"
+        class="p-2.5 rounded-xl hover:bg-gray-100/40 dark:hover:bg-white/[0.04] transition-all duration-300 group"
+        aria-label="테마 변경"
+      >
+        <svg class="w-4 h-4 hidden dark:block text-gray-400 group-hover:text-amber-300 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5" />
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+        </svg>
+        <svg class="w-4 h-4 block dark:hidden text-gray-500 group-hover:text-primary transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </button>
+
+      <!-- Mobile menu toggle -->
+      <button
+        id="mobile-menu-toggle"
+        class="sm:hidden p-2.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-300"
+        aria-label="메뉴"
+      >
+        <svg id="menu-icon-open" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg id="menu-icon-close" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Search mode header (hidden by default) -->
+  <div id="header-search" class:list={["header-bar header-bar--search rounded-2xl h-14 sm:h-15 flex items-center gap-2 px-3 sm:px-4", transparent ? "glass-search-solid" : "glass-nav"]}>
+    <svg class:list={["w-4 h-4 shrink-0", transparent ? "text-white/70" : "text-primary"]} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+    <input
+      id="header-search-input"
+      type="text"
+      placeholder="검색어를 입력하세요..."
+      data-ko-placeholder="검색어를 입력하세요..."
+      data-en-placeholder="Search..."
+      class:list={["flex-1 bg-transparent text-[13px] sm:text-[14px] focus:outline-none min-w-0", transparent ? "text-white placeholder:text-white/40" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"]}
+      autocomplete="off"
+    />
+    <kbd class:list={["hidden sm:inline-flex text-[10px] rounded-md px-1.5 py-0.5 shrink-0", transparent ? "text-white/40 border border-white/20" : "text-gray-400 dark:text-gray-500 border border-gray-200/60 dark:border-gray-700/40"]}>ESC</kbd>
+    <button id="search-close" class:list={["p-2 rounded-lg transition-all duration-200 shrink-0", transparent ? "text-white/50 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/40 dark:hover:bg-white/[0.04]"]} aria-label="검색 닫기">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  </div>
+
+  <!-- Search results dropdown -->
+  <div id="search-dropdown" class="search-dropdown max-w-5xl mx-auto mt-2">
+    <div class:list={["rounded-2xl p-2 max-h-[70vh] overflow-y-auto overscroll-contain", transparent ? "glass-search-solid" : "glass-nav"]}>
+      <div id="search-results-list"></div>
+      <p id="search-empty" class="hidden text-center text-[13px] py-8 text-gray-400 dark:text-gray-500" data-ko="검색 결과가 없습니다" data-en="No results found">
+        검색 결과가 없습니다
+      </p>
+      <p id="search-placeholder" class="text-center text-[12px] py-6 text-gray-400 dark:text-gray-500" data-ko="제목, 태그, 카테고리로 검색" data-en="Search by title, tags, category">
+        제목, 태그, 카테고리로 검색
+      </p>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden sm:hidden mt-2 glass-nav rounded-2xl max-w-5xl mx-auto p-2 animate-[fade-in-up_0.2s_ease]">
+    {navItems.map(({ label, labelEn, href, icon }) => {
+      const isActive = currentPath === href || (href !== '/' && currentPath.startsWith(href));
+      return (
+        <a
+          href={href}
+          class:list={[
+            'flex items-center gap-3 text-[14px] font-medium px-4 py-3.5 rounded-xl transition-all duration-300',
+            isActive
+              ? 'text-primary bg-primary/[0.06]'
+              : 'text-gray-500 dark:text-gray-400',
+          ]}
+        >
+          <svg class="w-4.5 h-4.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d={icon} />
+          </svg>
+          <span data-ko={label} data-en={labelEn}>{label}</span>
+        </a>
+      );
+    })}
+  </div>
+
+  <!-- Search overlay backdrop -->
+  <div id="search-backdrop" class="hidden fixed inset-0 z-[-1]"></div>
+</header>
+
+<script define:vars={{ searchData }}>
+  function initHeader() {
+    // Abort all previous global listeners from prior initHeader calls
+    if (window.__headerAC) window.__headerAC.abort();
+    window.__headerAC = new AbortController();
+    var sig = window.__headerAC.signal;
+
+    // Transparent header: add glass background on scroll past banner
+    const header = document.querySelector('header[data-transparent]');
+    const nav = document.getElementById('header-nav');
+    if (header && nav) {
+      const banner = document.querySelector('.hero-banner-inner');
+      const threshold = banner ? banner.getBoundingClientRect().height - 80 : 300;
+      let scrolled = false;
+      function onScroll() {
+        const past = window.scrollY > threshold;
+        if (past !== scrolled) {
+          scrolled = past;
+          if (past) {
+            nav.classList.remove('glass-nav-transparent');
+            nav.classList.add('glass-nav');
+          } else {
+            nav.classList.remove('glass-nav');
+            nav.classList.add('glass-nav-transparent');
+          }
+        }
+      }
+      window.addEventListener('scroll', onScroll, { passive: true, signal: sig });
+      onScroll();
+    }
+
+    // Theme toggle
+    const toggle = document.getElementById('theme-toggle');
+    toggle?.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }, { signal: sig });
+
+    // Language toggle
+    const langToggle = document.getElementById('lang-global-toggle');
+    const langKo = langToggle?.querySelector('.lang-pill-ko');
+    const langEn = langToggle?.querySelector('.lang-pill-en');
+    function updateLangButton(lang) {
+      if (lang === 'en') {
+        langKo?.classList.remove('active');
+        langEn?.classList.add('active');
+      } else {
+        langKo?.classList.add('active');
+        langEn?.classList.remove('active');
+      }
+    }
+    // Set initial state from localStorage
+    var savedLang = localStorage.getItem('preferred-lang') || 'ko';
+    updateLangButton(savedLang);
+    // Apply initial lang on page load
+    if (typeof window.applyGlobalLang === 'function') {
+      window.applyGlobalLang(savedLang);
+    }
+    langToggle?.addEventListener('click', function() {
+      var current = document.documentElement.classList.contains('lang-en') ? 'en' : 'ko';
+      var next = current === 'ko' ? 'en' : 'ko';
+      updateLangButton(next);
+      if (typeof window.applyGlobalLang === 'function') {
+        window.applyGlobalLang(next);
+      }
+    }, { signal: sig });
+    // Listen for lang changes from other sources
+    window.addEventListener('lang-changed', function(e) {
+      updateLangButton(e.detail.lang);
+    }, { signal: sig });
+
+    // Mobile menu
+    const mobileToggle = document.getElementById('mobile-menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('menu-icon-open');
+    const iconClose = document.getElementById('menu-icon-close');
+    mobileToggle?.addEventListener('click', () => {
+      const isHidden = mobileMenu?.classList.toggle('hidden');
+      iconOpen?.classList.toggle('hidden', !isHidden);
+      iconClose?.classList.toggle('hidden', isHidden);
+    }, { signal: sig });
+
+    // Search — searchData comes from build-time define:vars, safe for rendering
+    const headerNav = document.getElementById('header-nav');
+    const headerSearch = document.getElementById('header-search');
+    const searchInput = document.getElementById('header-search-input');
+    const searchDropdown = document.getElementById('search-dropdown');
+    const searchResults = document.getElementById('search-results-list');
+    const searchEmpty = document.getElementById('search-empty');
+    const searchPlaceholder = document.getElementById('search-placeholder');
+    const searchBackdrop = document.getElementById('search-backdrop');
+    const openBtn = document.getElementById('search-open');
+    const closeBtn = document.getElementById('search-close');
+
+    let isSearchOpen = false;
+    const container = document.querySelector('.header-container');
+
+    function openSearch() {
+      if (isSearchOpen) return;
+      isSearchOpen = true;
+      container?.classList.add('search-active');
+      searchDropdown?.classList.add('search-dropdown--open');
+      searchBackdrop?.classList.remove('hidden');
+      mobileMenu?.classList.add('hidden');
+      iconOpen?.classList.remove('hidden');
+      iconClose?.classList.add('hidden');
+      setTimeout(() => searchInput?.focus(), 250);
+    }
+
+    function closeSearch() {
+      if (!isSearchOpen) return;
+      isSearchOpen = false;
+      container?.classList.remove('search-active');
+      searchDropdown?.classList.remove('search-dropdown--open');
+      searchBackdrop?.classList.add('hidden');
+      if (searchInput) searchInput.value = '';
+      if (searchResults) searchResults.textContent = '';
+      searchEmpty?.classList.add('hidden');
+      searchPlaceholder?.classList.remove('hidden');
+    }
+
+    function performSearch(query) {
+      if (!query) {
+        if (searchResults) searchResults.textContent = '';
+        searchEmpty?.classList.add('hidden');
+        searchPlaceholder?.classList.remove('hidden');
+        return;
+      }
+
+      searchPlaceholder?.classList.add('hidden');
+      const q = query.toLowerCase().trim();
+      const filtered = searchData.filter((post) =>
+        post.title.toLowerCase().includes(q) ||
+        post.description.toLowerCase().includes(q) ||
+        post.tags.some((t) => t.toLowerCase().includes(q)) ||
+        post.category.toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        if (searchResults) searchResults.textContent = '';
+        searchEmpty?.classList.remove('hidden');
+        return;
+      }
+
+      searchEmpty?.classList.add('hidden');
+      if (searchResults) {
+        // Content from build-time searchData (define:vars), not user input
+        var frag = document.createDocumentFragment();
+        filtered.slice(0, 8).forEach(function(post) {
+          var a = document.createElement('a');
+          a.href = '/blog/' + post.slug;
+          a.className = 'search-result-item';
+          var meta = document.createElement('div');
+          meta.className = 'flex items-center gap-2 mb-1';
+          var dateSpan = document.createElement('span');
+          dateSpan.className = 'text-[10px] sm:text-[11px] font-medium text-gray-400 tracking-wider uppercase';
+          dateSpan.textContent = post.date;
+          var catSpan = document.createElement('span');
+          catSpan.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-primary/[0.06] text-primary/60 font-medium';
+          catSpan.textContent = post.category;
+          meta.appendChild(dateSpan);
+          meta.appendChild(catSpan);
+          var titleDiv = document.createElement('div');
+          titleDiv.className = 'text-[13px] sm:text-[14px] font-medium group-hover:text-primary transition-colors';
+          titleDiv.textContent = post.title;
+          var descDiv = document.createElement('div');
+          descDiv.className = 'text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500 line-clamp-1 mt-0.5';
+          descDiv.textContent = post.description;
+          a.appendChild(meta);
+          a.appendChild(titleDiv);
+          a.appendChild(descDiv);
+          frag.appendChild(a);
+        });
+        searchResults.textContent = '';
+        searchResults.appendChild(frag);
+      }
+    }
+
+    openBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openSearch();
+    }, { signal: sig });
+
+    closeBtn?.addEventListener('click', closeSearch, { signal: sig });
+    searchBackdrop?.addEventListener('click', closeSearch, { signal: sig });
+
+    searchInput?.addEventListener('input', (e) => {
+      performSearch(e.target.value);
+    }, { signal: sig });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isSearchOpen) {
+        closeSearch();
+      }
+      // Cmd/Ctrl + K to open search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        if (isSearchOpen) closeSearch();
+        else openSearch();
+      }
+    }, { signal: sig });
+  }
+
+  initHeader();
+  document.addEventListener('astro:page-load', initHeader);
+</script>
+
+<style>
+  /* Transparent nav for fullBanner pages */
+  .glass-nav-transparent {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid transparent;
+    box-shadow: none;
+  }
+
+  /* Override text colors when header is transparent (banner is always dark) */
+  header[data-transparent] .glass-nav-transparent :global(.gradient-text-subtle) {
+    color: white;
+    -webkit-text-fill-color: white;
+  }
+  header[data-transparent] .glass-nav-transparent a:not(.text-primary) {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  header[data-transparent] .glass-nav-transparent a:not(.text-primary):hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  header[data-transparent] .glass-nav-transparent button {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  header[data-transparent] .glass-nav-transparent button:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  /* Hide the dark-mode sun icon override for transparent */
+  header[data-transparent] .glass-nav-transparent :global(.dark\:block) {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  header[data-transparent] .glass-nav-transparent :global(.block.dark\:hidden) {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Search glass — light mode: white, barely transparent */
+  .glass-search-solid {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    color: #1d1d1f;
+  }
+  .glass-search-solid input { color: #1d1d1f; }
+  .glass-search-solid input::placeholder { color: #9ca3af; }
+  .glass-search-solid kbd { color: #9ca3af; border-color: rgba(0, 0, 0, 0.1); }
+  .glass-search-solid button { color: #6b7280; }
+  .glass-search-solid button:hover { color: #374151; }
+  .glass-search-solid svg.shrink-0 { color: #38bdf8; }
+
+  /* Search glass — dark mode: dark, barely transparent */
+  :global(.dark) .glass-search-solid {
+    background: rgba(15, 15, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: #e8e8f0;
+  }
+  :global(.dark) .glass-search-solid input { color: #e8e8f0; }
+  :global(.dark) .glass-search-solid input::placeholder { color: #6b7280; }
+  :global(.dark) .glass-search-solid kbd { color: #6b7280; border-color: rgba(255, 255, 255, 0.1); }
+  :global(.dark) .glass-search-solid button { color: #9ca3af; }
+  :global(.dark) .glass-search-solid button:hover { color: #e5e7eb; }
+  :global(.dark) .glass-search-solid svg.shrink-0 { color: #7dd3fc; }
+
+  /* Liquid Glass effect — adapts to any background via heavy blur */
+  .glass-liquid {
+    position: relative;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+    -webkit-backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .glass-liquid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.02) 40%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Header bar shared positioning */
+  .header-bar {
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Nav: visible by default */
+  #header-nav {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  /* Search: hidden by default, offset to right */
+  .header-bar--search {
+    opacity: 0;
+    transform: translateX(40px) scale(0.97);
+    pointer-events: none;
+  }
+
+  /* When search is active */
+  .search-active #header-nav {
+    opacity: 0;
+    transform: translateX(-40px) scale(0.97);
+    pointer-events: none;
+  }
+
+  .search-active .header-bar--search {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    pointer-events: auto;
+  }
+
+  /* Search dropdown animation */
+  .search-dropdown {
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
+  }
+
+  .search-dropdown--open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  /* Search results */
+  .search-result-item {
+    display: block;
+    padding: 10px 14px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+  .search-result-item:hover {
+    background: rgba(56, 189, 248, 0.04);
+  }
+  :global(.dark) .search-result-item:hover {
+    background: rgba(56, 189, 248, 0.06);
+  }
+  .search-result-item + .search-result-item {
+    border-top: 1px solid rgba(0, 0, 0, 0.03);
+  }
+  :global(.dark) .search-result-item + .search-result-item {
+    border-top-color: rgba(255, 255, 255, 0.03);
+  }
+
+  /* Language pill toggle */
+  .lang-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    user-select: none;
+    color: #9ca3af;
+  }
+  :global(.dark) .lang-pill-btn { color: #6b7280; }
+  .lang-pill-ko, .lang-pill-en {
+    opacity: 0.45;
+    transition: opacity 0.2s ease, color 0.2s ease;
+  }
+  .lang-pill-ko.active, .lang-pill-en.active {
+    opacity: 1;
+    color: #0ea5e9;
+  }
+  :global(.dark) .lang-pill-ko.active, :global(.dark) .lang-pill-en.active {
+    color: #38bdf8;
+  }
+  .lang-pill-divider {
+    opacity: 0.3;
+    margin: 0 1px;
+  }
+
+  /* Transparent header override */
+  header[data-transparent] .glass-nav-transparent .lang-pill-btn {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  header[data-transparent] .glass-nav-transparent .lang-pill-ko.active,
+  header[data-transparent] .glass-nav-transparent .lang-pill-en.active {
+    color: white;
+  }
+</style>

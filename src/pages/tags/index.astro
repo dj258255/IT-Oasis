@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+const tagMap = new Map<string, number>();
+
+posts.filter(p => !p.data.draft).forEach((post) => {
+  post.data.tags.forEach((tag) => {
+    tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+  });
+});
+
+const tags = [...tagMap.entries()].sort((a, b) => b[1] - a[1]);
+const tagColors = ['tag-violet', 'tag-cyan', 'tag-rose', 'tag-emerald', 'tag-amber'];
+---
+
+<BaseLayout title="Tags">
+  <div class="fade-in-up">
+    <div class="mb-8 sm:mb-10 px-1">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+        <span class="gradient-text">Tags</span>
+      </h1>
+      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed">
+        {tags.length}<span data-ko="개의 태그" data-en=" tags">개의 태그</span>
+      </p>
+    </div>
+
+    <div class="glass-gradient rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10">
+      <div class="flex flex-wrap gap-2 sm:gap-2.5">
+        {tags.map(([tag, count], i) => (
+          <a
+            href={`/tags/${encodeURIComponent(tag)}`}
+            class:list={[
+              'group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl glass-card text-[12px] sm:text-[13px] font-medium transition-all duration-300 hover:text-primary',
+              tagColors[i % tagColors.length]
+            ]}
+          >
+            <span>{tag}</span>
+            <span class="text-[11px] px-1.5 py-0.5 rounded-full bg-primary/[0.06] text-primary/50 dark:bg-primary-light/[0.08] dark:text-primary-light/50 group-hover:bg-primary/[0.12]">
+              {count}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</BaseLayout>

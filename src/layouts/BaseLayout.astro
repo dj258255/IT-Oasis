@@ -1,0 +1,102 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  /** Use max-w-6xl instead of max-w-5xl for pages that need more horizontal space */
+  wide?: boolean;
+  fullBanner?: boolean;
+}
+
+const { title, description = '개발 블로그', ogImage, wide = false, fullBanner = false } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="Blog" />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
+    <title>{title}</title>
+    <script is:inline>
+      const theme = localStorage.getItem('theme');
+      if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+      if (localStorage.getItem('preferred-lang') === 'en') {
+        document.documentElement.classList.add('lang-en');
+        document.documentElement.lang = 'en';
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col relative">
+    <!-- Aurora animated background -->
+    <div class="aurora-bg" aria-hidden="true">
+      <div class="aurora-orb aurora-orb-1"></div>
+      <div class="aurora-orb aurora-orb-2"></div>
+      <div class="aurora-orb aurora-orb-3"></div>
+      <div class="aurora-orb aurora-orb-4"></div>
+      <div class="aurora-orb aurora-orb-5"></div>
+    </div>
+
+    <!-- Grain texture overlay -->
+    <div class="grain-overlay" aria-hidden="true"></div>
+
+    <!-- Content -->
+    <div class="relative z-10 flex flex-col min-h-screen">
+      <Header transparent={fullBanner} />
+      <main class:list={["flex-1 w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-6 pb-16 sm:pb-20", wide ? "max-w-6xl" : "max-w-5xl", fullBanner ? "" : "pt-6 sm:pt-8"]}>
+        <slot />
+      </main>
+      <Footer />
+    </div>
+    <script is:inline>
+      function applyGlobalLang(lang) {
+        // 1) Update html element FIRST — prevents .lang-en selector from matching <html>
+        document.documentElement.lang = lang;
+        document.documentElement.classList.toggle('lang-en', lang === 'en');
+        // 2) data-ko/data-en text swap
+        document.querySelectorAll('[data-ko][data-en]').forEach(function(el) {
+          // Skip elements with child elements (e.g. <a> with SVG icons inside)
+          if (el.children.length === 0) {
+            el.textContent = el.dataset[lang];
+          }
+        });
+        // 3) lang-ko/lang-en block toggle (html already updated, so <html> won't match)
+        document.querySelectorAll('.lang-ko').forEach(function(el) {
+          el.classList.toggle('hidden', lang !== 'ko');
+        });
+        document.querySelectorAll('.lang-en').forEach(function(el) {
+          el.classList.toggle('hidden', lang !== 'en');
+        });
+        // 4) placeholder attribute swap
+        document.querySelectorAll('[data-ko-placeholder]').forEach(function(el) {
+          el.placeholder = lang === 'ko' ? el.dataset.koPlaceholder : el.dataset.enPlaceholder;
+        });
+        // 5) save preference
+        localStorage.setItem('preferred-lang', lang);
+        // 6) dispatch event for post-level lang integration
+        window.dispatchEvent(new CustomEvent('lang-changed', { detail: { lang: lang } }));
+      }
+      window.applyGlobalLang = applyGlobalLang;
+    </script>
+  </body>
+</html>

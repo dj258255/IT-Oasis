@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog'))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout title="스토리 — IT Oasis">
+  <div class="fade-in-up mb-8 sm:mb-10">
+    <div class="px-1">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+        <span class="gradient-text">Story</span>
+      </h1>
+      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed">
+        <span class="lang-ko">학습하고, 경험한 것 외에<br />일상 속의 작은 이벤트도 기록합니다.</span>
+        <span class="lang-en hidden">Beyond learning and experiences,<br />I also record small events in daily life.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 stagger">
+    {posts.map((post, i) => (
+      <PostCard
+        title={post.data.title}
+        description={post.data.description}
+        date={post.data.date}
+        slug={post.id}
+        tags={post.data.tags}
+        category={post.data.category}
+        coverImage={post.data.coverImage}
+        index={i}
+      />
+    ))}
+  </div>
+</BaseLayout>
