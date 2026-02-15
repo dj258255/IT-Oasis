@@ -1,0 +1,13 @@
+{
+  "title": "Scout.gg",
+  "description": "머신러닝 기반으로 LOL 플레이어의 성장 가능성을 판단하는 AI 프로젝트.",
+  "descriptionEn": "An AI project that evaluates LOL player growth potential using machine learning.",
+  "image": "/projects/scout-gg.jpg",
+  "tags": ["Python", "ML", "React"],
+  "category": "AI",
+  "date": "2024-09-15T00:00:00.000Z",
+  "github": "https://github.com/",
+  "website": "",
+  "story": "",
+  "order": 3
+}

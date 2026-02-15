@@ -1,0 +1,13 @@
+{
+  "title": "Tasty Tower",
+  "description": "음식 관련 타워 디펜스 게임 프로젝트. 재미있는 게임 메카닉과 귀여운 비주얼이 특징입니다.",
+  "descriptionEn": "A food-themed tower defense game project. Features fun game mechanics and cute visuals.",
+  "image": "/projects/tasty-tower.jpg",
+  "tags": ["Game", "JavaScript", "Canvas"],
+  "category": "Game",
+  "date": "2025-06-01T00:00:00.000Z",
+  "github": "https://github.com/",
+  "website": "",
+  "story": "",
+  "order": 2
+}

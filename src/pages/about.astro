@@ -170,7 +170,7 @@ const posts = (await getCollection('blog'))
             <div class="glass-card rounded-2xl overflow-hidden h-full">
               <div class="aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
                 {post.data.coverImage && (
-                  <img src={post.data.coverImage} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+                  <img src={`${base}/${post.data.coverImage}`} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
                 )}
                 <div class="w-full h-full flex items-center justify-center">
                   <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">

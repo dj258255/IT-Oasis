@@ -105,6 +105,76 @@ export default defineConfig({
         ],
       },
       {
+        name: 'project',
+        label: 'Projects',
+        path: 'src/data/projects',
+        format: 'json',
+        fields: [
+          {
+            type: 'string',
+            name: 'title',
+            label: 'Title',
+            isTitle: true,
+            required: true,
+          },
+          {
+            type: 'string',
+            name: 'description',
+            label: 'Description (Korean)',
+            ui: { component: 'textarea' },
+          },
+          {
+            type: 'string',
+            name: 'descriptionEn',
+            label: 'Description (English)',
+            ui: { component: 'textarea' },
+          },
+          {
+            type: 'image',
+            name: 'image',
+            label: 'Cover Image',
+          },
+          {
+            type: 'string',
+            name: 'tags',
+            label: 'Tags',
+            list: true,
+          },
+          {
+            type: 'string',
+            name: 'category',
+            label: 'Category',
+          },
+          {
+            type: 'datetime',
+            name: 'date',
+            label: 'Date',
+          },
+          {
+            type: 'string',
+            name: 'github',
+            label: 'GitHub URL',
+          },
+          {
+            type: 'string',
+            name: 'website',
+            label: 'Website URL',
+          },
+          {
+            type: 'string',
+            name: 'story',
+            label: 'Story Link',
+            description: 'Blog post link for this project',
+          },
+          {
+            type: 'number',
+            name: 'order',
+            label: 'Display Order',
+            description: 'Lower number = shown first',
+          },
+        ],
+      },
+      {
         name: 'category',
         label: 'Categories',
         path: 'src/data/categories',
