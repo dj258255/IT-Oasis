@@ -1,0 +1,9 @@
+{
+  "name": "개발",
+  "nameEn": "Development",
+  "icon": "code",
+  "subcategories": [
+    { "name": "Frontend", "nameEn": "Frontend" },
+    { "name": "JavaScript", "nameEn": "JavaScript" }
+  ]
+}

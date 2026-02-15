@@ -3,8 +3,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import BlogSidebar from '../components/BlogSidebar.astro';
 import { getCollection } from 'astro:content';
 import { projects } from '../data/projects';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+// Load site settings
+const settingsPath = path.join(process.cwd(), 'src/data/site/settings.json');
+const siteSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
 
 const posts = (await getCollection('blog'))
   .filter((post) => !post.data.draft)
@@ -12,40 +18,18 @@ const posts = (await getCollection('blog'))
   .slice(0, 8);
 ---
 
-<BaseLayout title="IT Oasis" fullBanner={true}>
+<BaseLayout title={siteSettings.name} fullBanner={true}>
   <div class="fade-in-up">
     <!-- Hero Banner (full width) -->
     <section class="hero-banner mb-10 sm:mb-14">
       <div class="hero-banner-inner">
-        <!-- <img src="/banner.jpg" alt="Banner" class="hero-banner-img" /> -->
-        <div class="hero-banner-fallback"></div>
+        {siteSettings.bannerImage ? (
+          <img src={siteSettings.bannerImage} alt="Banner" class="hero-banner-img" />
+        ) : (
+          <div class="hero-banner-fallback"></div>
+        )}
         <div class="hero-banner-overlay"></div>
         <div class="hero-banner-content">
-          <div class="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6">
-            <div class="flex items-center gap-2 mb-3 sm:mb-4">
-              <div class="status-dot"></div>
-              <span class="text-[10px] sm:text-[11px] font-medium text-white/60 tracking-widest uppercase">Available for work</span>
-            </div>
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-[1.15] mb-2 sm:mb-3 text-white">
-              <span data-ko="안녕하세요" data-en="Hello">안녕하세요</span>
-              <span class="inline-block ml-1" style="animation: wave 1.5s ease-in-out infinite;">👋</span>
-            </h1>
-            <p class="text-[13px] sm:text-[15px] text-white/70 leading-relaxed max-w-lg mb-5 sm:mb-6">
-              <span class="lang-ko">개발하면서 배운 것들을 기록하는 블로그입니다.<br/>좋은 코드와 깊은 사고를 지향합니다.</span>
-              <span class="lang-en hidden">A blog recording what I learn while developing.<br/>Aiming for good code and deep thinking.</span>
-            </p>
-            <div class="flex items-center gap-2 sm:gap-3">
-              <a href={`${base}/blog`} class="inline-flex items-center gap-2 text-[12px] sm:text-[13px] font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/95 text-gray-900 shadow-lg hover:bg-white hover:scale-[1.02] transition-all duration-300">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-                <span data-ko="블로그 읽기" data-en="Read Blog">블로그 읽기</span>
-              </a>
-              <a href={`${base}/about`} class="inline-flex items-center gap-2 text-[12px] sm:text-[13px] font-medium px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 hover:bg-white/20 transition-all duration-300">
-                <span data-ko="더 알아보기" data-en="Learn More">더 알아보기</span>
-              </a>
-            </div>
-          </div>
         </div>
       </div>
     </section>

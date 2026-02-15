@@ -77,17 +77,6 @@ const searchData = posts.map((post) => ({
         <span class="lang-pill-en">EN</span>
       </button>
 
-      <!-- Search trigger -->
-      <button
-        id="search-open"
-        class="p-2.5 rounded-xl text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light hover:bg-primary/[0.04] transition-all duration-300"
-        aria-label="검색"
-      >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </button>
-
       <!-- Theme toggle -->
       <button
         id="theme-toggle"
@@ -100,6 +89,17 @@ const searchData = posts.map((post) => ({
         </svg>
         <svg class="w-4 h-4 block dark:hidden text-gray-500 group-hover:text-primary transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </button>
+
+      <!-- Search trigger -->
+      <button
+        id="search-open"
+        class="p-2.5 rounded-xl text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light hover:bg-primary/[0.04] transition-all duration-300"
+        aria-label="검색"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </button>
 
@@ -447,19 +447,19 @@ const searchData = posts.map((post) => ({
 
   /* Search glass — dark mode: dark, barely transparent */
   :global(.dark) .glass-search-solid {
-    background: rgba(15, 15, 30, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(19, 19, 30, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 8px 32px rgba(0, 0, 0, 0.25),
       0 0 0 1px rgba(255, 255, 255, 0.04),
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    color: #e8e8f0;
+    color: #d8d8e8;
   }
-  :global(.dark) .glass-search-solid input { color: #e8e8f0; }
-  :global(.dark) .glass-search-solid input::placeholder { color: #6b7280; }
-  :global(.dark) .glass-search-solid kbd { color: #6b7280; border-color: rgba(255, 255, 255, 0.1); }
+  :global(.dark) .glass-search-solid input { color: #d8d8e8; }
+  :global(.dark) .glass-search-solid input::placeholder { color: #708090; }
+  :global(.dark) .glass-search-solid kbd { color: #708090; border-color: rgba(255, 255, 255, 0.08); }
   :global(.dark) .glass-search-solid button { color: #9ca3af; }
-  :global(.dark) .glass-search-solid button:hover { color: #e5e7eb; }
+  :global(.dark) .glass-search-solid button:hover { color: #dcdce8; }
   :global(.dark) .glass-search-solid svg.shrink-0 { color: #7dd3fc; }
 
   /* Liquid Glass effect — adapts to any background via heavy blur */
