@@ -3,6 +3,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { projects } from '../data/projects';
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 const posts = (await getCollection('blog'))
   .filter((post) => !post.data.draft)
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
@@ -71,7 +73,7 @@ const posts = (await getCollection('blog'))
     <div class="author-card mb-14 sm:mb-20">
       <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 p-6 sm:p-8 md:p-10">
         <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary/20 via-accent/15 to-rose/20">
-          <img src="/avatar.png" alt="Author" class="w-full h-full object-cover" onerror="this.style.display='none'" />
+          <img src={`${base}/avatar.png`} alt="Author" class="w-full h-full object-cover" onerror="this.style.display='none'" />
         </div>
         <div class="flex-1 min-w-0 text-center sm:text-left">
           <div class="flex items-center justify-center sm:justify-start gap-2.5 mb-3">
@@ -164,7 +166,7 @@ const posts = (await getCollection('blog'))
       </div>
       <div class="carousel-track" id="carousel-stories">
         {posts.map((post) => (
-          <a href={`/blog/${post.id}`} class="carousel-item w-[260px] sm:w-[280px] shrink-0 block group">
+          <a href={`${base}/blog/${post.id}`} class="carousel-item w-[260px] sm:w-[280px] shrink-0 block group">
             <div class="glass-card rounded-2xl overflow-hidden h-full">
               <div class="aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
                 {post.data.coverImage && (

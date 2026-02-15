@@ -12,6 +12,7 @@ interface Props {
 }
 
 const { title, description, date, slug, tags = [], category, coverImage, index = 0, compact = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const formattedDate = date.toLocaleDateString('ko-KR', {
   year: 'numeric',
@@ -28,7 +29,7 @@ const parentCat = category ? category.split('/')[0] : '';
 ---
 
 <article class="group">
-  <a href={`/blog/${slug}`} class="block glass-card rounded-xl sm:rounded-2xl overflow-hidden h-full">
+  <a href={`${base}/blog/${slug}`} class="block glass-card rounded-xl sm:rounded-2xl overflow-hidden h-full">
     {/* Cover image */}
     <div class="aspect-[16/10] w-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
       {coverImage && (

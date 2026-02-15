@@ -46,13 +46,14 @@ export async function getStaticPaths() {
   return paths;
 }
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const { category, displayName, isParent, posts, children } = Astro.props;
 const parsed = parseCategory(category);
 ---
 
 <BaseLayout title={`Category: ${category}`}>
   <div class="fade-in-up">
-    <a href="/categories" class="group inline-flex items-center gap-1.5 text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8">
+    <a href={`${base}/categories`} class="group inline-flex items-center gap-1.5 text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8">
       <svg class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
       </svg>
@@ -62,7 +63,7 @@ const parsed = parseCategory(category);
     <!-- Breadcrumb for sub-categories -->
     {!isParent && parsed.parent && (
       <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500 mb-4 px-1">
-        <a href={`/categories/${encodeURIComponent(parsed.parent)}`} class="hover:text-primary transition-colors">
+        <a href={`${base}/categories/${encodeURIComponent(parsed.parent)}`} class="hover:text-primary transition-colors">
           {parsed.parent}
         </a>
         <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -84,7 +85,7 @@ const parsed = parseCategory(category);
       <div class="flex flex-wrap gap-2 mb-8 px-1">
         {children.map(([child, childNode]: [string, any]) => (
           <a
-            href={`/categories/${encodeURIComponent(category)}/${encodeURIComponent(child)}`}
+            href={`${base}/categories/${encodeURIComponent(category)}/${encodeURIComponent(child)}`}
             class="text-[12px] font-medium px-4 py-2 rounded-xl glass-card text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
           >
             {child}

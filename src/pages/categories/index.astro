@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { buildCategoryTree } from '../../lib/utils';
 
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const posts = (await getCollection('blog')).filter(p => !p.data.draft);
 const categoryTree = buildCategoryTree(posts.map(p => p.data.category));
 const sortedParents = [...categoryTree.entries()].sort((a, b) => b[1].count - a[1].count);
@@ -32,7 +33,7 @@ const defaultGradient = 'from-cyan/15 to-emerald/15';
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 stagger">
       {sortedParents.map(([parent, node]) => (
         <a
-          href={`/categories/${encodeURIComponent(parent)}`}
+          href={`${base}/categories/${encodeURIComponent(parent)}`}
           class="glass-card rounded-xl sm:rounded-2xl p-5 sm:p-7 group block relative overflow-hidden"
         >
           <div class:list={["absolute -top-8 -right-8 w-24 h-24 rounded-full bg-gradient-to-br blur-2xl opacity-60 pointer-events-none group-hover:opacity-100 transition-opacity duration-500", catGradients[parent] || defaultGradient]}></div>
