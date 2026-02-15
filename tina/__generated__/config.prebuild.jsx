@@ -35,7 +35,7 @@ var config_default = defineConfig({
     basePath: "IT-Oasis"
   },
   media: {
-    store: {
+    tina: {
       mediaRoot: "uploads",
       publicFolder: "public"
     }
