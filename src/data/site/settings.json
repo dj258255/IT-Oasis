@@ -12,6 +12,16 @@
     { "type": "github", "url": "https://github.com/dj258255" },
     { "type": "email", "url": "dj258255@naver.com" }
   ],
+  "navItems": [
+    { "label": "소개", "labelEn": "About", "path": "/about", "icon": "person" },
+    { "label": "프로젝트", "labelEn": "Projects", "path": "/projects", "icon": "grid" },
+    { "label": "스토리", "labelEn": "Story", "path": "/blog", "icon": "newspaper" },
+    { "label": "태그", "labelEn": "Tags", "path": "/tags", "icon": "tag" }
+  ],
+  "aboutSubtitleKo": "풍부한 상상과 호기심으로\n다양한 프로젝트를 만들어갑니다.",
+  "aboutSubtitleEn": "Creating diverse projects\nwith rich imagination and curiosity.",
+  "projectsSubtitleKo": "풍부한 상상과 호기심으로 만들어 온\n다양한 프로젝트를 소개합니다.",
+  "projectsSubtitleEn": "Introducing diverse projects\ncreated with rich imagination and curiosity.",
   "aboutContentKo": {
     "type": "root",
     "children": [
