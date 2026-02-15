@@ -1,6 +1,6 @@
 # IT Oasis
 
-A personal tech blog by beomsu.
+A personal tech blog.
 
 The desert of technology is vast and endless.
 Between unfamiliar errors, tangled architectures, and sleepless debugging nights,
@@ -15,7 +15,7 @@ A place where scattered knowledge settles into something clear.
 
 ---
 
-beomsu의 개인 기술 블로그입니다.
+개인 기술 블로그입니다.
 
 기술의 사막은 끝없이 넓습니다.
 낯선 에러, 꼬인 아키텍처, 밤새운 디버깅 사이에서
