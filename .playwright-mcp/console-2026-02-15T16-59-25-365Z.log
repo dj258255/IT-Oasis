@@ -1,0 +1,4 @@
+[     795ms] ReferenceError: process is not defined
+    at https://dj258255.github.io/IT-Oasis/admin/assets/index-ed9e346a.js:2956:2331
+[    1032ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://dj258255.github.io/vite.svg:0
+[    2521ms] [ERROR] Failed to load assets @ https://dj258255.github.io/IT-Oasis/admin/:14

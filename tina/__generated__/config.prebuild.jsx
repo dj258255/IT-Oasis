@@ -1,20 +1,29 @@
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+}) : x)(function(x) {
+  if (typeof require !== "undefined") return require.apply(this, arguments);
+  throw Error('Dynamic require of "' + x + '" is not supported');
+});
+
 // tina/config.ts
 import { defineConfig } from "tinacms";
-import fs from "node:fs";
-import path from "node:path";
 var branch = process.env.GITHUB_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || process.env.HEAD || "main";
-var catDir = path.join(process.cwd(), "src/data/categories");
 var categoryOptions = [];
-try {
-  const files = fs.readdirSync(catDir).filter((f) => f.endsWith(".json"));
-  for (const file of files) {
-    const data = JSON.parse(fs.readFileSync(path.join(catDir, file), "utf-8"));
-    categoryOptions.push(data.name);
-    for (const sub of data.subcategories || []) {
-      categoryOptions.push(`${data.name}/${sub.name}`);
+if (typeof window === "undefined") {
+  try {
+    const fs = __require("node:fs");
+    const path = __require("node:path");
+    const catDir = path.join(process.cwd(), "src/data/categories");
+    const files = fs.readdirSync(catDir).filter((f) => f.endsWith(".json"));
+    for (const file of files) {
+      const data = JSON.parse(fs.readFileSync(path.join(catDir, file), "utf-8"));
+      categoryOptions.push(data.name);
+      for (const sub of data.subcategories || []) {
+        categoryOptions.push(`${data.name}/${sub.name}`);
+      }
     }
+  } catch {
   }
-} catch {
 }
 var config_default = defineConfig({
   branch,

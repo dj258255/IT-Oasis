@@ -1,23 +1,23 @@
 import { defineConfig } from 'tinacms';
-import fs from 'node:fs';
-import path from 'node:path';
 
 const branch = process.env.GITHUB_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || process.env.HEAD || 'main';
 
-// Build category options dynamically from JSON files
-const catDir = path.join(process.cwd(), 'src/data/categories');
-const categoryOptions: string[] = [];
-try {
-  const files = fs.readdirSync(catDir).filter(f => f.endsWith('.json'));
-  for (const file of files) {
-    const data = JSON.parse(fs.readFileSync(path.join(catDir, file), 'utf-8'));
-    categoryOptions.push(data.name);
-    for (const sub of data.subcategories || []) {
-      categoryOptions.push(`${data.name}/${sub.name}`);
+// Build category options dynamically from JSON files (Node.js build only)
+let categoryOptions: string[] = [];
+if (typeof window === 'undefined') {
+  try {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const catDir = path.join(process.cwd(), 'src/data/categories');
+    const files = fs.readdirSync(catDir).filter((f: string) => f.endsWith('.json'));
+    for (const file of files) {
+      const data = JSON.parse(fs.readFileSync(path.join(catDir, file), 'utf-8'));
+      categoryOptions.push(data.name);
+      for (const sub of data.subcategories || []) {
+        categoryOptions.push(`${data.name}/${sub.name}`);
+      }
     }
-  }
-} catch {
-  // Fallback if directory doesn't exist yet
+  } catch {}
 }
 
 export default defineConfig({
