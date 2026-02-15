@@ -26,5 +26,3 @@ pnpm-debug.log*
 # claude code
 .claude/
 
-# tina generated
-tina/__generated__/
