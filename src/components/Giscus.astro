@@ -1,0 +1,57 @@
+---
+---
+
+<section class="giscus-wrapper mt-12 pt-8 border-t border-gray-200/50 dark:border-gray-700/50">
+  <h3 class="text-[15px] font-semibold mb-6" data-ko="댓글" data-en="Comments">댓글</h3>
+  <div class="giscus"></div>
+</section>
+
+<script>
+  function loadGiscus() {
+    const container = document.querySelector('.giscus');
+    if (!container || container.querySelector('iframe')) return;
+
+    const theme = document.documentElement.classList.contains('dark') ? 'dark_dimmed' : 'light';
+
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.setAttribute('data-repo', 'dj258255/IT-Oasis');
+    script.setAttribute('data-repo-id', 'R_kgDORQ3dyg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDORQ3dys4C2fif');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'top');
+    script.setAttribute('data-theme', theme);
+    script.setAttribute('data-lang', 'ko');
+    script.setAttribute('data-loading', 'lazy');
+    script.crossOrigin = 'anonymous';
+    script.async = true;
+
+    container.appendChild(script);
+  }
+
+  // Theme change listener - update Giscus theme
+  function updateGiscusTheme() {
+    const iframe = document.querySelector<HTMLIFrameElement>('.giscus iframe');
+    if (!iframe) return;
+    const theme = document.documentElement.classList.contains('dark') ? 'dark_dimmed' : 'light';
+    iframe.contentWindow?.postMessage(
+      { giscus: { setConfig: { theme } } },
+      'https://giscus.app'
+    );
+  }
+
+  // Observe dark mode changes
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.attributeName === 'class') updateGiscusTheme();
+    }
+  });
+  observer.observe(document.documentElement, { attributes: true });
+
+  loadGiscus();
+  document.addEventListener('astro:page-load', loadGiscus);
+</script>

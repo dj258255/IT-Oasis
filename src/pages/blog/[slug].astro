@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import BlogSidebar from '../../components/BlogSidebar.astro';
+import Giscus from '../../components/Giscus.astro';
 import { getCollection, render } from 'astro:content';
 import { getReadingTime, parseCategory, splitContent } from '../../lib/utils';
 
@@ -215,6 +216,9 @@ const catColorMap: Record<string, string> = {
           </div>
         </div>
       )}
+
+      <!-- Comments -->
+      <Giscus />
 
       <!-- Prev / Next navigation -->
       {(prevPost || nextPost) && (
