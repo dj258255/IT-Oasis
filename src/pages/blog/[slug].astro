@@ -177,8 +177,8 @@ const catColorMap: Record<string, string> = {
           </div>
           <div class="flex-1 min-w-0 text-center sm:text-left">
             <div class="flex items-center justify-center sm:justify-start gap-2.5 mb-3">
-              <span class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 tracking-wider uppercase">Written by</span>
-              <span class="text-[12px] sm:text-[13px] font-bold px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light">@{siteSettings.name}</span>
+              <span class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 tracking-wider uppercase" data-ko="작성자" data-en="Written by">작성자</span>
+              <a href={`${base}/about`} class="text-[12px] sm:text-[13px] font-bold px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light hover:bg-primary/20 dark:hover:bg-primary-light/20 transition-colors duration-200" data-ko="@범수" data-en="@Su-Beom">@범수</a>
             </div>
             <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed mb-5" data-ko={siteSettings.authorBio} data-en={siteSettings.authorBioEn}>
               {siteSettings.authorBio}
