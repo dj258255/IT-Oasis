@@ -1,11 +1,11 @@
 {
   "name": "IT Oasis",
-  "description": "개발하면서 배운 것들을 기록하는 공간",
-  "descriptionEn": "A space to record what I learn while developing",
+  "description": "광활한 코드의 사막에서, 당신의 오아시스를 찾으세요.\nIT 야자수 </> — 성장에 뿌리를 둔 기술 블로그.",
+  "descriptionEn": "In the vast desert of code, find your oasis. \nIT Palm Tree </> — a tech blog rooted in growth.",
   "status": "Active",
-  "bannerImage": "/uploads/banners/wallpaper-down-12.png",
-  "authorBio": "풍부한 상상과 호기심으로 다양한 프로젝트를 만들어갑니다.",
-  "authorBioEn": "Creating diverse projects with rich imagination and curiosity.",
-  "githubUrl": "https://github.com",
-  "email": "contact@example.com"
+  "bannerImage": "/uploads/banners/10월 출석 배경 원본_2048_1312.png",
+  "authorBio": "오늘의 노력이 내일의 전문성을 만든다고 믿습니다.",
+  "authorBioEn": "I believe that today's effort shapes tomorrow's expertise.",
+  "githubUrl": "https://github.com/dj258255",
+  "email": "dj258255@naver.com"
 }
