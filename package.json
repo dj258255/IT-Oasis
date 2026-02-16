@@ -13,6 +13,8 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tinacms/cli": "^2.1.5",
     "astro": "^5.17.1",
+    "astro-expressive-code": "^0.41.6",
+    "remark-github-blockquote-alert": "^2.0.1",
     "tailwindcss": "^4.1.18",
     "tinacms": "^3.4.1"
   },

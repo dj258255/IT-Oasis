@@ -567,10 +567,10 @@ button, input, select, textarea {
 .prose h2 {
   font-size: 1.25rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(56, 189, 248, 0.08);
+  border-bottom: 2px solid rgba(100, 160, 200, 0.15);
 }
 @media (min-width: 640px) { .prose h2 { font-size: 1.5rem; } }
-.dark .prose h2 { border-bottom-color: rgba(125, 211, 252, 0.06); }
+.dark .prose h2 { border-bottom-color: rgba(100, 160, 200, 0.1); }
 .prose h3 { font-size: 1.125rem; }
 @media (min-width: 640px) { .prose h3 { font-size: 1.25rem; } }
 .prose p {
@@ -595,45 +595,108 @@ button, input, select, textarea {
   color: #9ec5d8;
   background-image: linear-gradient(rgba(158, 197, 216, 0.15), rgba(158, 197, 216, 0.15));
 }
-.prose code {
+/* Inline code only (not inside Expressive Code blocks) */
+.prose :not(pre) > code {
   @apply px-2 py-0.5 rounded-lg text-sm font-mono;
   background: rgba(100, 160, 200, 0.07);
   color: #3d7fa0;
   border: 1px solid rgba(100, 160, 200, 0.1);
 }
-.dark .prose code {
+.dark .prose :not(pre) > code {
   background: rgba(130, 175, 210, 0.08);
   color: #8db8d0;
   border-color: rgba(130, 175, 210, 0.1);
 }
-.prose pre {
-  @apply p-4 sm:p-6 rounded-xl sm:rounded-2xl overflow-x-auto my-6 sm:my-8 text-xs sm:text-sm;
-  background: linear-gradient(145deg, #1e1e30 0%, #1a1a2c 50%, #161628 100%) !important;
-  background-color: transparent !important;
-  color: #d8d8e8 !important;
-  border: 1px solid rgba(100, 160, 200, 0.06);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-.prose pre code {
-  @apply p-0 border-0 text-sm;
-  background: transparent !important;
-  background-color: transparent !important;
-  color: inherit;
-}
-.prose pre code * {
-  background: transparent !important;
-  background-color: transparent !important;
+/* Expressive Code wrapper spacing */
+.prose .expressive-code {
+  @apply my-6 sm:my-8;
 }
 .prose blockquote {
-  @apply pl-4 sm:pl-6 my-6 sm:my-8 py-1;
-  border-left: 3px solid;
-  border-image: linear-gradient(to bottom, #6aadca, #5a9aaa, #c0909a) 1;
-  color: #555570;
+  @apply pl-5 sm:pl-6 pr-5 sm:pr-6 my-6 sm:my-8 py-4 sm:py-5 rounded-xl sm:rounded-2xl;
+  background: rgba(106, 173, 202, 0.05);
+  border: 1px solid rgba(106, 173, 202, 0.1);
+  border-left: 3px solid #6aadca;
+  color: #4a4a60;
   font-style: italic;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
 }
-.dark .prose blockquote { color: #9595b0; }
+.dark .prose blockquote {
+  color: #a0a0be;
+  background: rgba(106, 173, 202, 0.05);
+  border-color: rgba(106, 173, 202, 0.08);
+  border-left-color: #6aadca;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+.prose blockquote p:first-child { margin-top: 0; }
+.prose blockquote p:last-child { margin-bottom: 0; }
+
+/* ===== GitHub-style Callout Alerts ===== */
+.prose .markdown-alert {
+  @apply rounded-xl sm:rounded-2xl px-5 py-4 my-6 sm:my-8;
+  border-left: 3px solid;
+  font-style: normal;
+  border-image: none;
+}
+.prose .markdown-alert > p:first-child { margin-top: 0; }
+.prose .markdown-alert > p:last-child { margin-bottom: 0; }
+.prose .markdown-alert .markdown-alert-title {
+  @apply flex items-center gap-2 font-semibold text-sm mb-2;
+}
+.prose .markdown-alert .markdown-alert-title svg {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+}
+
+/* NOTE */
+.prose .markdown-alert-note {
+  background: rgba(56, 139, 253, 0.06);
+  border-left-color: #388bfd;
+}
+.prose .markdown-alert-note .markdown-alert-title { color: #388bfd; }
+.dark .prose .markdown-alert-note {
+  background: rgba(56, 139, 253, 0.08);
+}
+
+/* TIP */
+.prose .markdown-alert-tip {
+  background: rgba(56, 202, 159, 0.06);
+  border-left-color: #38ca9f;
+}
+.prose .markdown-alert-tip .markdown-alert-title { color: #38ca9f; }
+.dark .prose .markdown-alert-tip {
+  background: rgba(56, 202, 159, 0.08);
+}
+
+/* IMPORTANT */
+.prose .markdown-alert-important {
+  background: rgba(163, 113, 247, 0.06);
+  border-left-color: #a371f7;
+}
+.prose .markdown-alert-important .markdown-alert-title { color: #a371f7; }
+.dark .prose .markdown-alert-important {
+  background: rgba(163, 113, 247, 0.08);
+}
+
+/* WARNING */
+.prose .markdown-alert-warning {
+  background: rgba(210, 153, 34, 0.06);
+  border-left-color: #d29922;
+}
+.prose .markdown-alert-warning .markdown-alert-title { color: #d29922; }
+.dark .prose .markdown-alert-warning {
+  background: rgba(210, 153, 34, 0.08);
+}
+
+/* CAUTION */
+.prose .markdown-alert-caution {
+  background: rgba(248, 81, 73, 0.06);
+  border-left-color: #f85149;
+}
+.prose .markdown-alert-caution .markdown-alert-title { color: #f85149; }
+.dark .prose .markdown-alert-caution {
+  background: rgba(248, 81, 73, 0.08);
+}
 .prose ul, .prose ol { @apply mb-5 sm:mb-6 pl-5 sm:pl-6; }
 .prose ul { @apply list-disc; }
 .prose ol { @apply list-decimal; }
@@ -660,9 +723,13 @@ button, input, select, textarea {
 }
 .dark .prose strong { color: #dcdce8; }
 
-/* Prose tables */
+/* Prose tables — responsive wrapper */
+.prose .table-wrapper {
+  @apply my-8 overflow-x-auto rounded-2xl;
+  -webkit-overflow-scrolling: touch;
+}
 .prose table {
-  @apply w-full my-8 text-sm;
+  @apply w-full text-sm;
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
@@ -670,26 +737,28 @@ button, input, select, textarea {
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(56, 189, 248, 0.1);
+  border: 1.5px solid rgba(100, 160, 200, 0.25);
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .dark .prose table {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(56, 189, 248, 0.08);
+  border-color: rgba(100, 160, 200, 0.18);
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.15),
+    0 12px 40px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .prose thead {
-  background: linear-gradient(135deg, rgba(100, 160, 200, 0.08) 0%, rgba(80, 160, 180, 0.06) 100%);
+  background: linear-gradient(135deg, rgba(100, 160, 200, 0.1) 0%, rgba(80, 160, 180, 0.07) 100%);
 }
 
 .dark .prose thead {
-  background: linear-gradient(135deg, rgba(100, 160, 200, 0.1) 0%, rgba(80, 160, 180, 0.07) 100%);
+  background: linear-gradient(135deg, rgba(100, 160, 200, 0.12) 0%, rgba(80, 160, 180, 0.08) 100%);
 }
 
 .prose th {
@@ -698,18 +767,18 @@ button, input, select, textarea {
   font-weight: 650;
   color: #3d6e8a;
   letter-spacing: 0.02em;
-  border-bottom: 1.5px solid rgba(100, 160, 200, 0.12);
+  border-bottom: 2px solid rgba(100, 160, 200, 0.25);
 }
 
 .dark .prose th {
   color: #8db8d0;
-  border-bottom-color: rgba(120, 170, 210, 0.1);
+  border-bottom-color: rgba(120, 170, 210, 0.2);
 }
 
 .prose td {
   @apply px-5 py-3.5;
   color: #3d3d4e;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark .prose td {
@@ -725,12 +794,19 @@ button, input, select, textarea {
   transition: background 0.2s ease;
 }
 
+.prose tbody tr:nth-child(even) {
+  background: rgba(100, 160, 200, 0.025);
+}
+.dark .prose tbody tr:nth-child(even) {
+  background: rgba(100, 160, 200, 0.03);
+}
+
 .prose tbody tr:hover {
-  background: rgba(100, 160, 200, 0.04);
+  background: rgba(100, 160, 200, 0.06);
 }
 
 .dark .prose tbody tr:hover {
-  background: rgba(100, 160, 200, 0.05);
+  background: rgba(100, 160, 200, 0.07);
 }
 
 /* ===== Animations ===== */
