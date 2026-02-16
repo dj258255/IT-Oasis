@@ -14,7 +14,7 @@ interface Props {
   fullBanner?: boolean;
 }
 
-const { title, description = '개발 블로그', ogImage, wide = false, fullBanner = false } = Astro.props;
+const { title, description = '광활한 코드의 사막에서, 당신의 오아시스를 찾으세요. IT 야자수 </> — 성장에 뿌리를 둔 기술 블로그.', ogImage, wide = false, fullBanner = false } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -138,5 +138,7 @@ const { title, description = '개발 블로그', ogImage, wide = false, fullBann
       initScrollReveal();
       document.addEventListener('astro:page-load', initScrollReveal);
     </script>
+    <!-- GoatCounter analytics -->
+    <script is:inline data-goatcounter="https://itoasis.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   </body>
 </html>

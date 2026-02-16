@@ -11,6 +11,16 @@ const year = new Date().getFullYear();
       <span class="lang-en hidden">For developers crossing the desert — rest and inspiration within.</span>
     </p>
 
+    <!-- Total views -->
+    <p id="total-views" class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500 mb-3 opacity-0 transition-opacity duration-500">
+      <svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+      <span data-ko="전체 방문" data-en="Total visits">전체 방문</span>
+      <span id="total-views-count" class="font-semibold text-gray-500 dark:text-gray-400">—</span>
+    </p>
+
     <!-- Copyright -->
     <p class="text-[11px] text-gray-400 dark:text-gray-600">
       &copy; {year} IT Oasis
@@ -45,3 +55,26 @@ const year = new Date().getFullYear();
     border-top: 1px solid rgba(56, 189, 248, 0.06);
   }
 </style>
+
+<script>
+  const GC_HOST = 'https://itoasis.goatcounter.com';
+
+  function loadTotalViews() {
+    const el = document.getElementById('total-views-count');
+    const wrapper = document.getElementById('total-views');
+    if (!el || !wrapper) return;
+
+    fetch(`${GC_HOST}/counter//TOTAL.json`)
+      .then(r => r.json())
+      .then(data => {
+        el.textContent = data.count;
+        wrapper.style.opacity = '1';
+      })
+      .catch(() => {
+        wrapper.style.display = 'none';
+      });
+  }
+
+  loadTotalViews();
+  document.addEventListener('astro:page-load', loadTotalViews);
+</script>
