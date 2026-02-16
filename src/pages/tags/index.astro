@@ -1,19 +1,18 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
-
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const posts = await getCollection('blog');
+import { base } from '../../lib/config';
+import { TAG_COLORS } from '../../lib/constants';
+import { getPublishedPosts } from '../../lib/posts';
+const posts = await getPublishedPosts();
 const tagMap = new Map<string, number>();
 
-posts.filter(p => !p.data.draft).forEach((post) => {
+posts.forEach((post) => {
   post.data.tags.forEach((tag) => {
     tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
   });
 });
 
 const tags = [...tagMap.entries()].sort((a, b) => b[1] - a[1]);
-const tagColors = ['tag-violet', 'tag-cyan', 'tag-rose', 'tag-emerald', 'tag-amber'];
 ---
 
 <BaseLayout title="Tags">
@@ -34,7 +33,7 @@ const tagColors = ['tag-violet', 'tag-cyan', 'tag-rose', 'tag-emerald', 'tag-amb
             href={`${base}/tags/${encodeURIComponent(tag)}`}
             class:list={[
               'group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl glass-card text-[12px] sm:text-[13px] font-medium transition-all duration-300 hover:text-primary',
-              tagColors[i % tagColors.length]
+              TAG_COLORS[i % TAG_COLORS.length]
             ]}
           >
             <span>{tag}</span>

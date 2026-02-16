@@ -1,0 +1,8 @@
+{
+  "name": "프로젝트",
+  "nameEn": "Projects",
+  "icon": "rocket",
+  "subcategories": [
+    { "name": "IT Oasis", "nameEn": "IT Oasis" }
+  ]
+}

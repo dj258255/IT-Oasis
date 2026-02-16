@@ -104,5 +104,39 @@ const { title, description = '개발 블로그', ogImage, wide = false, fullBann
       var savedLang = localStorage.getItem('preferred-lang');
       if (savedLang) applyGlobalLang(savedLang);
     </script>
+    <script>
+      function initCarousels() {
+        document.querySelectorAll<HTMLButtonElement>('.carousel-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.carousel;
+            const dir = btn.dataset.dir;
+            const track = document.getElementById(`carousel-${id}`);
+            if (!track) return;
+            const scrollAmount = 340;
+            track.scrollBy({ left: dir === 'next' ? scrollAmount : -scrollAmount, behavior: 'smooth' });
+          });
+        });
+      }
+
+      initCarousels();
+      document.addEventListener('astro:page-load', initCarousels);
+    </script>
+    <script>
+      function initScrollReveal() {
+        const els = document.querySelectorAll('.scroll-reveal');
+        if (!els.length) return;
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.15 });
+        els.forEach((el) => observer.observe(el));
+      }
+      initScrollReveal();
+      document.addEventListener('astro:page-load', initScrollReveal);
+    </script>
   </body>
 </html>

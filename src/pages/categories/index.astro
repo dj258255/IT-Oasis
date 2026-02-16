@@ -1,27 +1,15 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getCollection } from 'astro:content';
-import { buildCategoryTree, categoryIconPaths, defaultIconPath } from '../../lib/utils';
-import fs from 'node:fs';
-import path from 'node:path';
-
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const posts = (await getCollection('blog')).filter(p => !p.data.draft);
+import { buildCategoryTree } from '../../lib/utils';
+import { base, getCategoryI18n, getCategoryMeta } from '../../lib/config';
+import { getPublishedPosts } from '../../lib/posts';
+const posts = await getPublishedPosts();
 const categoryTree = buildCategoryTree(posts.map(p => p.data.category));
 const sortedParents = [...categoryTree.entries()].sort((a, b) => b[1].count - a[1].count);
 
-// Load category metadata from JSON files
-const catDir = path.join(process.cwd(), 'src/data/categories');
-const catFiles = fs.existsSync(catDir) ? fs.readdirSync(catDir).filter(f => f.endsWith('.json')) : [];
-const catMeta = new Map<string, { icon: string; gradient: string }>();
-for (const file of catFiles) {
-  const data = JSON.parse(fs.readFileSync(path.join(catDir, file), 'utf-8'));
-  catMeta.set(data.name, {
-    icon: categoryIconPaths[data.icon] || defaultIconPath,
-    gradient: 'from-primary/15 to-accent/15',
-  });
-}
-
+const catMetaRaw = getCategoryMeta();
+const catMeta = new Map([...catMetaRaw.entries()].map(([k, v]) => [k, { icon: v.icon, gradient: 'from-primary/15 to-accent/15' }]));
+const catI18n = getCategoryI18n();
 const defaultGradient = 'from-cyan/15 to-emerald/15';
 ---
 
@@ -52,14 +40,14 @@ const defaultGradient = 'from-cyan/15 to-emerald/15';
                 {node.count}<span data-ko="개의 글" data-en=" posts">개의 글</span>
               </span>
             </div>
-            <h2 class="text-[18px] font-bold group-hover:text-primary transition-colors duration-300 mb-1">
+            <h2 class="text-[18px] font-bold group-hover:text-primary transition-colors duration-300 mb-1" data-ko={parent} data-en={catI18n.get(parent) || parent}>
               {parent}
             </h2>
             {node.children.size > 0 && (
               <div class="flex flex-wrap gap-1.5 mt-3">
                 {[...node.children.entries()].sort((a, b) => b[1].count - a[1].count).map(([child, childNode]) => (
                   <span class="text-[11px] text-gray-400 dark:text-gray-500 bg-gray-100/60 dark:bg-gray-800/40 px-2.5 py-1 rounded-lg">
-                    {child} <span class="opacity-60">{childNode.count}</span>
+                    <span data-ko={child} data-en={catI18n.get(child) || child}>{child}</span> <span class="opacity-60">{childNode.count}</span>
                   </span>
                 ))}
               </div>
