@@ -1,4 +1,7 @@
 ---
+import { translateCategory } from '../lib/utils';
+import { base, assetPath, getCategoryI18n } from '../lib/config';
+
 interface Props {
   title: string;
   description: string;
@@ -12,20 +15,21 @@ interface Props {
 }
 
 const { title, description, date, slug, tags = [], category, coverImage, index = 0, compact = false } = Astro.props;
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const assetPath = (p: string) => `${base}/${p.replace(/^\//, '')}`;
+const catI18n = getCategoryI18n();
 
 const formattedDate = date.toLocaleDateString('ko-KR', {
   year: 'numeric',
   month: 'short',
   day: 'numeric',
 });
+const formattedDateEn = date.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
 
-const tagColors = ['tag-violet', 'tag-cyan', 'tag-rose', 'tag-emerald', 'tag-amber'];
-const catColorMap: Record<string, string> = {
-  '개발': 'cat-dev',
-  '일상': 'cat-life',
-};
+const categoryEn = category ? translateCategory(category, catI18n) : '';
+
 const parentCat = category ? category.split('/')[0] : '';
 ---
 
@@ -59,11 +63,11 @@ const parentCat = category ? category.split('/')[0] : '';
       </p>
       <div class="flex items-center justify-between mt-auto">
         <div class="flex items-center gap-2 text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500">
-          <time class="tracking-wider">{formattedDate}</time>
+          <time class="tracking-wider" data-ko={formattedDate} data-en={formattedDateEn}>{formattedDate}</time>
           {category && (
             <>
               <span class="w-0.5 h-0.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-              <span>{category}</span>
+              <span data-ko={category} data-en={categoryEn}>{category}</span>
             </>
           )}
         </div>

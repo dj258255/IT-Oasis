@@ -1,41 +1,36 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import BlogSidebar from '../components/BlogSidebar.astro';
-import { getCollection } from 'astro:content';
+import CarouselCard from '../components/CarouselCard.astro';
+import CarouselSection from '../components/CarouselSection.astro';
 import { projects } from '../data/projects';
-import fs from 'node:fs';
-import path from 'node:path';
+import { getPublishedPosts } from '../lib/posts';
+import { translateCategory } from '../lib/utils';
+import { base, assetPath, getSiteSettings, getCategoryI18n } from '../lib/config';
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const assetPath = (p: string) => `${base}/${p.replace(/^\//, '')}`;
+const catI18n = getCategoryI18n();
+const siteSettings = getSiteSettings();
 
-// Load site settings
-const settingsPath = path.join(process.cwd(), 'src/data/site/settings.json');
-const siteSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-
-const posts = (await getCollection('blog'))
-  .filter((post) => !post.data.draft)
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, 8);
+const posts = (await getPublishedPosts()).slice(0, 8);
 ---
 
 <BaseLayout title={siteSettings.name} fullBanner={true}>
-  <div class="fade-in-up">
-    <!-- Hero Banner (full width) -->
-    <section class="hero-banner mb-16 sm:mb-24">
-      <div class="hero-banner-inner">
-        {siteSettings.bannerImage ? (
-          <img src={assetPath(siteSettings.bannerImage)} alt="Banner" class="hero-banner-img" />
-        ) : (
-          <div class="hero-banner-fallback"></div>
-        )}
-        <div class="hero-banner-overlay-top"></div>
-        <div class="hero-banner-overlay"></div>
-        <div class="hero-banner-content">
-        </div>
+  <!-- Hero Banner (full width, no animation) -->
+  <section class="hero-banner mb-16 sm:mb-24">
+    <div class="hero-banner-inner">
+      {siteSettings.bannerImage ? (
+        <img src={assetPath(siteSettings.bannerImage)} alt="Banner" class="hero-banner-img" />
+      ) : (
+        <div class="hero-banner-fallback"></div>
+      )}
+      <div class="hero-banner-overlay-top"></div>
+      <div class="hero-banner-overlay"></div>
+      <div class="hero-banner-content">
       </div>
-    </section>
+    </div>
+  </section>
 
+  <div class="fade-in-up">
     <!-- Layout: sidebar floats outside, content fills header width -->
     <div class="relative">
       <div class="floating-sidebar hidden xl:block">
@@ -43,87 +38,39 @@ const posts = (await getCollection('blog'))
       </div>
 
     <!-- 프로젝트 -->
-    <section class="mb-14 sm:mb-20">
-      <div class="flex items-center justify-between mb-6 sm:mb-8">
-        <h2 class="text-[28px] sm:text-[34px] font-extrabold tracking-tight font-[Pretendard]" data-ko="프로젝트" data-en="Projects">프로젝트</h2>
-        <div class="flex items-center gap-2">
-          <button class="carousel-btn" data-carousel="projects" data-dir="prev" aria-label="Previous">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <button class="carousel-btn" data-carousel="projects" data-dir="next" aria-label="Next">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-          </button>
-        </div>
-      </div>
-      <div class="carousel-track" id="carousel-projects">
-        {projects.map((project) => (
-          <a href={`${base}/projects`} class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group">
-            <div class="proj-card rounded-2xl overflow-hidden h-full">
-              <div class="aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
-                {project.image && (
-                  <img src={project.image} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
-                )}
-                <div class="w-full h-full flex items-center justify-center">
-                  <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-              <div class="p-5 sm:p-6 flex flex-col flex-1">
-                <h3 class="text-[17px] sm:text-[19px] font-extrabold tracking-tight mb-2 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
-                  {project.title}
-                </h3>
-                <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-4 min-h-[5rem] sm:min-h-[5.5rem] mb-auto pb-4">
-                  {project.description}
-                </p>
-                <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500">
-                  <span>{project.date}</span>
-                  <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                  <span class="font-semibold text-primary/70 dark:text-primary-light/70">{project.category}</span>
-                </div>
-              </div>
-            </div>
-          </a>
-        ))}
-      </div>
-    </section>
+    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} large>
+      {projects.map((project) => (
+        <CarouselCard
+          href={project.website || project.github || (project.story ? `${base}${project.story}` : '') || `${base}/projects`}
+          title={project.title}
+          description={project.description}
+          descriptionEn={project.descriptionEn}
+          image={project.image}
+          date={project.date}
+          category={project.category}
+          website={project.website}
+          github={project.github}
+          story={project.story ? `${base}${project.story}` : ''}
+        />
+      ))}
+    </CarouselSection>
 
     <!-- 최신 스토리 -->
-    <section class="mb-8">
-      <div class="flex items-center justify-between mb-6 sm:mb-8">
-        <h2 class="text-[28px] sm:text-[34px] font-extrabold tracking-tight font-[Pretendard]" data-ko="최신 스토리" data-en="Latest Story">최신 스토리</h2>
-        <div class="flex items-center gap-2">
-          <button class="carousel-btn" data-carousel="stories" data-dir="prev" aria-label="Previous">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <button class="carousel-btn" data-carousel="stories" data-dir="next" aria-label="Next">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-          </button>
-        </div>
-      </div>
-      <div class="carousel-track" id="carousel-stories">
-        {posts.map((post) => (
-          <a href={`${base}/blog/${post.id}`} class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group">
-            <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative mb-3 sm:mb-4">
-              {post.data.coverImage && (
-                <img src={assetPath(post.data.coverImage)} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
-              )}
-              <div class="w-full h-full flex items-center justify-center">
-                <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-            <h3 class="text-[14px] sm:text-[16px] font-bold tracking-tight leading-snug mb-1.5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-2">
-              {post.data.title}
-            </h3>
-            <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
-              {post.data.description}
-            </p>
-          </a>
-        ))}
-      </div>
-    </section>
+    <CarouselSection id="stories" titleKo="최신 스토리" titleEn="Latest Story" viewAllHref={`${base}/blog`} large>
+      {posts.map((post) => (
+        <CarouselCard
+          href={`${base}/blog/${post.id}`}
+          title={post.data.title}
+          description={post.data.description}
+          descriptionEn={post.data.descriptionEn}
+          image={post.data.coverImage ? assetPath(post.data.coverImage) : undefined}
+          date={post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
+          dateEn={post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+          category={post.data.category}
+          categoryEn={translateCategory(post.data.category, catI18n)}
+        />
+      ))}
+    </CarouselSection>
 
     </div>
   </div>
@@ -265,98 +212,5 @@ const posts = (await getCollection('blog'))
     }
   }
 
-  /* Project cards */
-  .proj-card {
-    background: rgba(255, 255, 255, 0.35);
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.02);
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    display: flex;
-    flex-direction: column;
-  }
 
-  :global(.dark) .proj-card {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  .proj-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
-    border-color: rgba(56, 189, 248, 0.1);
-  }
-
-  :global(.dark) .proj-card:hover {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-    border-color: rgba(125, 211, 252, 0.08);
-  }
-
-  /* Carousel */
-  .carousel-track {
-    display: flex;
-    gap: 1.25rem;
-    overflow-x: auto;
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 0.5rem;
-  }
-
-  .carousel-track::-webkit-scrollbar { display: none; }
-  .carousel-track { -ms-overflow-style: none; scrollbar-width: none; }
-
-  .carousel-item {
-    scroll-snap-align: start;
-  }
-
-  .carousel-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    color: #6b7280;
-    transition: all 0.2s ease;
-    cursor: pointer;
-  }
-
-  .carousel-btn:hover {
-    background: rgba(56, 189, 248, 0.08);
-    border-color: rgba(56, 189, 248, 0.15);
-    color: #0284c7;
-  }
-
-  :global(.dark) .carousel-btn {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.06);
-    color: #9ca3af;
-  }
-
-  :global(.dark) .carousel-btn:hover {
-    background: rgba(56, 189, 248, 0.1);
-    border-color: rgba(56, 189, 248, 0.2);
-    color: #7dd3fc;
-  }
 </style>
-
-<script>
-  function initCarousels() {
-    document.querySelectorAll<HTMLButtonElement>('.carousel-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.carousel;
-        const dir = btn.dataset.dir;
-        const track = document.getElementById(`carousel-${id}`);
-        if (!track) return;
-        const scrollAmount = 340;
-        track.scrollBy({ left: dir === 'next' ? scrollAmount : -scrollAmount, behavior: 'smooth' });
-      });
-    });
-  }
-
-  initCarousels();
-  document.addEventListener('astro:page-load', initCarousels);
-</script>

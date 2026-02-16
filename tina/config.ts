@@ -287,7 +287,7 @@ export default defineConfig({
             type: 'string',
             name: 'story',
             label: 'Story Link',
-            description: 'Blog post link for this project',
+            description: 'Link to project story or related page.',
           },
           {
             type: 'number',

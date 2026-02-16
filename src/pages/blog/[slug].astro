@@ -3,19 +3,26 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import BlogSidebar from '../../components/BlogSidebar.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
 import Giscus from '../../components/Giscus.astro';
-import { getCollection, render } from 'astro:content';
-import { getReadingTime, parseCategory, splitContent } from '../../lib/utils';
+import { render } from 'astro:content';
+import { getReadingTime, parseCategory, splitContent, translateCategory } from '../../lib/utils';
+import { base, assetPath, getCategoryI18n } from '../../lib/config';
+import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
+import { getPublishedPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
-  const posts = (await getCollection('blog'))
-    .filter((p) => !p.data.draft)
-    .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+  const posts = await getPublishedPosts();
 
   return posts.map((post, index) => {
     const parentCat = parseCategory(post.data.category).parent;
-    const relatedPosts = posts
+    let relatedPosts = posts
       .filter((p) => p.id !== post.id && parseCategory(p.data.category).parent === parentCat)
       .slice(0, 4);
+
+    // Fallback: if no same-category posts, show recent posts
+    const isSameCategory = relatedPosts.length > 0;
+    if (!isSameCategory) {
+      relatedPosts = posts.filter((p) => p.id !== post.id).slice(0, 4);
+    }
 
     return {
       params: { slug: post.id },
@@ -24,14 +31,13 @@ export async function getStaticPaths() {
         prevPost: posts[index + 1] || null,
         nextPost: posts[index - 1] || null,
         relatedPosts,
+        isSameCategory,
       },
     };
   });
 }
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const assetPath = (p: string) => `${base}/${p.replace(/^\//, '')}`;
-const { post, prevPost, nextPost, relatedPosts } = Astro.props;
+const { post, prevPost, nextPost, relatedPosts, isSameCategory } = Astro.props;
 const { Content, headings } = await render(post);
 const readingTime = getReadingTime(post.body || '');
 const { en: enBody } = splitContent(post.body || '');
@@ -58,11 +64,9 @@ if (hasEn) {
   }
 }
 
-const tagColors = ['tag-violet', 'tag-cyan', 'tag-rose', 'tag-emerald', 'tag-amber'];
-const catColorMap: Record<string, string> = {
-  '개발': 'cat-dev',
-  '일상': 'cat-life',
-};
+const catI18n = getCategoryI18n();
+const categoryEn = translateCategory(post.data.category, catI18n);
+const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || parseCategory(post.data.category).parent;
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined}>
@@ -90,7 +94,7 @@ const catColorMap: Record<string, string> = {
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
           <span class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500">{readingTime}<span data-ko="분 읽기" data-en="min read">분 읽기</span></span>
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-          <a href={`${base}/categories/${encodeURIComponent(post.data.category)}`} class:list={['category-pill', catColorMap[parseCategory(post.data.category).parent] || 'cat-default']}>
+          <a href={`${base}/categories/${encodeURIComponent(post.data.category)}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']} data-ko={post.data.category} data-en={categoryEn}>
             {post.data.category}
           </a>
         </div>
@@ -100,7 +104,7 @@ const catColorMap: Record<string, string> = {
         <div class="flex flex-wrap items-center gap-1.5">
           {post.data.tags.length > 0 && (
             post.data.tags.map((tag: string, i: number) => (
-              <a href={`${base}/tags/${encodeURIComponent(tag)}`} class:list={['tag-pill text-[10px] sm:text-[11px]', tagColors[i % tagColors.length]]}>
+              <a href={`${base}/tags/${encodeURIComponent(tag)}`} class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>
                 {tag}
               </a>
             ))
@@ -167,8 +171,15 @@ const catColorMap: Record<string, string> = {
         <div class="related-card mt-6 sm:mt-8">
           <div class="p-6 sm:p-8 md:p-10">
             <p class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-5">
-              <span class="text-gray-500 dark:text-gray-400">'스토리 - {parseCategory(post.data.category).parent}'</span>
-              <span class="text-gray-400 dark:text-gray-500" data-ko=" 의 다른 글" data-en="'s other posts"> 의 다른 글</span>
+              {isSameCategory ? (
+                <>
+                  <span class="lang-ko text-gray-500 dark:text-gray-400">'{parseCategory(post.data.category).parent}'</span>
+                  <span class="lang-en hidden text-gray-500 dark:text-gray-400">'{parentCatEn}'</span>
+                  <span class="text-gray-400 dark:text-gray-500" data-ko=" 의 다른 글" data-en="'s other posts"> 의 다른 글</span>
+                </>
+              ) : (
+                <span class="text-gray-500 dark:text-gray-400" data-ko="다른 글 둘러보기" data-en="More posts to read">다른 글 둘러보기</span>
+              )}
             </p>
             <div class="divider mb-5"></div>
             <div class="space-y-0">
@@ -184,9 +195,6 @@ const catColorMap: Record<string, string> = {
           </div>
         </div>
       )}
-
-      <!-- Comments -->
-      <Giscus />
 
       <!-- Prev / Next navigation -->
       {(prevPost || nextPost) && (
@@ -220,6 +228,9 @@ const catColorMap: Record<string, string> = {
         </nav>
       )}
 
+      <!-- Comments -->
+      <Giscus />
+
       <!-- Sidebar TOC (desktop only, floating right of article) -->
       {hasToc && (
         <aside class="hidden xl:block floating-toc">
@@ -229,7 +240,7 @@ const catColorMap: Record<string, string> = {
                 <svg class="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
-                <span class="text-[12px] font-semibold tracking-wide uppercase text-gray-400 dark:text-gray-500" data-ko="목차" data-en="TOC">목차</span>
+                <span class="text-[13px] font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400" data-ko="목차" data-en="TOC">목차</span>
               </div>
 
               <!-- Progress bar -->
@@ -244,7 +255,7 @@ const catColorMap: Record<string, string> = {
                     data-heading={heading.slug}
                     data-lang={hasEn ? (idx < koHeadingCount ? 'ko' : 'en') : undefined}
                     class:list={[
-                      'toc-link block text-[12px] leading-relaxed py-1 rounded-lg transition-all duration-300 text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light',
+                      'toc-link block text-[13px] leading-relaxed py-1.5 rounded-lg transition-all duration-300 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light',
                       heading.depth === 2 && 'pl-2',
                       heading.depth === 3 && 'pl-5',
                       hasEn && idx >= koHeadingCount && 'hidden',
@@ -372,10 +383,10 @@ const catColorMap: Record<string, string> = {
               const isActive = link.getAttribute('data-heading') === id;
               if (isActive) {
                 link.classList.add('text-primary', 'dark:text-primary-light', 'font-medium', 'bg-primary/[0.04]');
-                link.classList.remove('text-gray-400', 'dark:text-gray-500');
+                link.classList.remove('text-gray-500', 'dark:text-gray-400');
               } else {
                 link.classList.remove('text-primary', 'dark:text-primary-light', 'font-medium', 'bg-primary/[0.04]');
-                link.classList.add('text-gray-400', 'dark:text-gray-500');
+                link.classList.add('text-gray-500', 'dark:text-gray-400');
               }
             });
 

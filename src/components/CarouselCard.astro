@@ -1,0 +1,136 @@
+---
+interface Props {
+  href: string;
+  title: string;
+  description?: string;
+  descriptionEn?: string;
+  image?: string;
+  date?: string;
+  dateEn?: string;
+  category?: string;
+  categoryEn?: string;
+  website?: string;
+  github?: string;
+  story?: string;
+}
+
+const { href, title, description, descriptionEn, image, date, dateEn, category, categoryEn, website, github, story } = Astro.props;
+const hasOverlay = !!(website || github || story);
+---
+
+<div class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group relative">
+  <div class="carousel-card rounded-2xl overflow-hidden h-full">
+    <div class="aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
+      {image && (
+        <img src={image} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+      )}
+      <div class="w-full h-full flex items-center justify-center">
+        <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      {hasOverlay && (
+        <div class="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[8px] opacity-0 group-hover:opacity-100 transition-opacity duration-350 z-20 rounded-[inherit]">
+          <div class="flex flex-col gap-2.5 w-[80%] max-w-[220px]">
+            {website && (
+              <a href={website} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
+                <span data-ko="웹사이트 접속하기" data-en="Visit Website">웹사이트 접속하기</span>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </a>
+            )}
+            {github && (
+              <a href={github} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
+                <span data-ko="깃허브 보기" data-en="View GitHub">깃허브 보기</span>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </a>
+            )}
+            {story && (
+              <a href={story} class="overlay-btn relative z-30">
+                <span data-ko="스토리 보기" data-en="View Story">스토리 보기</span>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+    <div class="p-5 sm:p-6 flex flex-col flex-1">
+      <h3 class="text-[19px] sm:text-[22px] font-extrabold tracking-tight mb-3 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-2">
+        <a href={href} class="stretched-link">{title}</a>
+      </h3>
+      {description && (
+        <p class="text-[14px] sm:text-[16px] text-gray-500 dark:text-gray-400 leading-[1.7] line-clamp-4 min-h-[5.5rem] sm:min-h-[6.5rem] mb-auto pb-4" data-ko={description} data-en={descriptionEn || description}>
+          {description}
+        </p>
+      )}
+      {(date || category) && (
+        <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500">
+          {date && <span data-ko={date} data-en={dateEn || date}>{date}</span>}
+          {date && category && <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>}
+          {category && <span class="font-semibold text-primary/70 dark:text-primary-light/70" data-ko={category} data-en={categoryEn || category}>{category}</span>}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
+<style>
+  .carousel-card {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.dark) .carousel-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .carousel-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    border-color: rgba(100, 160, 200, 0.1);
+  }
+
+  :global(.dark) .carousel-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    border-color: rgba(120, 170, 210, 0.08);
+  }
+
+  .overlay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1.1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1d1d1f;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .overlay-btn:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .stretched-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .stretched-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+  }
+</style>

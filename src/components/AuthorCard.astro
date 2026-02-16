@@ -1,11 +1,7 @@
 ---
-import fs from 'node:fs';
-import path from 'node:path';
+import { base, assetPath, getSiteSettings } from '../lib/config';
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const assetPath = (p: string) => `${base}/${p.replace(/^\//, '')}`;
-
-const siteSettings = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/data/site/settings.json'), 'utf-8'));
+const siteSettings = getSiteSettings();
 ---
 
 <div class="author-card">
@@ -109,7 +105,7 @@ const siteSettings = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/da
   }
 
   :global(.dark) .author-social-btn:hover {
-    background: rgba(56, 189, 248, 0.12);
-    color: #38bdf8;
+    background: rgba(100, 160, 200, 0.1);
+    color: #8db8d0;
   }
 </style>

@@ -1,12 +1,13 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
-import { getCollection } from 'astro:content';
+import { base } from '../../lib/config';
+import { getPublishedPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('blog');
+  const posts = await getPublishedPosts();
   const tags = new Set<string>();
-  posts.filter(p => !p.data.draft).forEach((post) => {
+  posts.forEach((post) => {
     post.data.tags.forEach((tag) => tags.add(tag));
   });
 
@@ -14,14 +15,11 @@ export async function getStaticPaths() {
     params: { tag },
     props: {
       tag,
-      posts: posts
-        .filter((post) => !post.data.draft && post.data.tags.includes(tag))
-        .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()),
+      posts: posts.filter((post) => post.data.tags.includes(tag)),
     },
   }));
 }
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const { tag, posts } = Astro.props;
 ---
 
@@ -44,7 +42,7 @@ const { tag, posts } = Astro.props;
     </p>
   </div>
 
-  <div class="space-y-3 stagger">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 stagger">
     {posts.map((post: any, i: number) => (
       <PostCard
         title={post.data.title}

@@ -1,0 +1,56 @@
+---
+/**
+ * Reusable carousel section: heading + prev/next buttons + scrollable track.
+ *
+ * Props:
+ *  - id          — carousel track ID (used as `carousel-{id}`)
+ *  - titleKo/En  — section title for i18n
+ *  - icon        — optional SVG path `d` for a leading icon (about-page style)
+ *  - viewAllHref — optional "전체보기" link
+ *  - large       — if true, uses large heading style (index-page); otherwise smaller (about-page)
+ *
+ * Slot: carousel items (e.g. <CarouselCard /> children)
+ */
+interface Props {
+  id: string;
+  titleKo: string;
+  titleEn: string;
+  icon?: string;
+  viewAllHref?: string;
+  large?: boolean;
+}
+
+const { id, titleKo, titleEn, icon, viewAllHref, large = false } = Astro.props;
+---
+
+<section class:list={["scroll-reveal", large ? "mb-14 sm:mb-20" : "mb-14 sm:mb-20"]}>
+  <div class:list={["flex items-center justify-between", large ? "mb-6 sm:mb-8" : "mb-6 px-1"]}>
+    <h2 class:list={[
+      "font-extrabold tracking-tight",
+      large
+        ? "text-[28px] sm:text-[34px]"
+        : "text-[18px] sm:text-[20px] flex items-center gap-2.5",
+    ]}>
+      {icon && (
+        <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d={icon} />
+        </svg>
+      )}
+      <span data-ko={titleKo} data-en={titleEn}>{titleKo}</span>
+    </h2>
+    <div class="flex items-center gap-2">
+      {viewAllHref && (
+        <a href={viewAllHref} class="text-[13px] font-semibold text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light transition-colors mr-2" data-ko="전체보기" data-en="View all">전체보기</a>
+      )}
+      <button class="carousel-btn" data-carousel={id} data-dir="prev" aria-label="Previous">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+      </button>
+      <button class="carousel-btn" data-carousel={id} data-dir="next" aria-label="Next">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </div>
+  </div>
+  <div class="carousel-track" id={`carousel-${id}`}>
+    <slot />
+  </div>
+</section>

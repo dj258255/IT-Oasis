@@ -1,15 +1,12 @@
 ---
-import { getCollection } from 'astro:content';
-import fs from 'node:fs';
-import path from 'node:path';
+import { base, getSiteSettings } from '../lib/config';
+import { getPublishedPosts } from '../lib/posts';
 
 interface Props {
   transparent?: boolean;
 }
 
 const { transparent = false } = Astro.props;
-
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const iconPaths: Record<string, string> = {
   person: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
@@ -26,7 +23,7 @@ const iconPaths: Record<string, string> = {
   chat: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
 };
 
-const siteSettings = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/data/site/settings.json'), 'utf-8'));
+const siteSettings = getSiteSettings();
 
 const navItems = (siteSettings.navItems || []).map((item: any) => ({
   label: item.label,
@@ -37,9 +34,7 @@ const navItems = (siteSettings.navItems || []).map((item: any) => ({
 
 const currentPath = Astro.url.pathname;
 
-const posts = (await getCollection('blog'))
-  .filter((p) => !p.data.draft)
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const posts = await getPublishedPosts();
 
 const searchData = posts.map((post) => ({
   title: post.data.title,
@@ -462,7 +457,7 @@ const searchData = posts.map((post) => ({
   .glass-search-solid kbd { color: #9ca3af; border-color: rgba(0, 0, 0, 0.1); }
   .glass-search-solid button { color: #6b7280; }
   .glass-search-solid button:hover { color: #374151; }
-  .glass-search-solid svg.shrink-0 { color: #38bdf8; }
+  .glass-search-solid svg.shrink-0 { color: #6aadca; }
 
   /* Search glass — dark mode: dark, barely transparent */
   :global(.dark) .glass-search-solid {
@@ -479,7 +474,7 @@ const searchData = posts.map((post) => ({
   :global(.dark) .glass-search-solid kbd { color: #708090; border-color: rgba(255, 255, 255, 0.08); }
   :global(.dark) .glass-search-solid button { color: #9ca3af; }
   :global(.dark) .glass-search-solid button:hover { color: #dcdce8; }
-  :global(.dark) .glass-search-solid svg.shrink-0 { color: #7dd3fc; }
+  :global(.dark) .glass-search-solid svg.shrink-0 { color: #8db8d0; }
 
   /* Liquid Glass effect — adapts to any background via heavy blur */
   .glass-liquid {
@@ -546,6 +541,8 @@ const searchData = posts.map((post) => ({
     opacity: 0;
     transform: translateY(-8px);
     pointer-events: none;
+    height: 0;
+    overflow: hidden;
     transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
                 transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
   }
@@ -554,6 +551,8 @@ const searchData = posts.map((post) => ({
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
+    height: auto;
+    overflow: visible;
   }
 
   /* Search results */
@@ -595,10 +594,10 @@ const searchData = posts.map((post) => ({
   }
   .lang-pill-ko.active, .lang-pill-en.active {
     opacity: 1;
-    color: #0ea5e9;
+    color: #4a9bc0;
   }
   :global(.dark) .lang-pill-ko.active, :global(.dark) .lang-pill-en.active {
-    color: #38bdf8;
+    color: #8db8d0;
   }
   .lang-pill-divider {
     opacity: 0.3;
