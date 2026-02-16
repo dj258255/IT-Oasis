@@ -16,7 +16,9 @@ export interface Project {
 }
 
 const projDir = path.join(process.cwd(), 'src/data/projects');
-const files = fs.readdirSync(projDir).filter(f => f.endsWith('.json'));
+const files = fs.existsSync(projDir)
+  ? fs.readdirSync(projDir).filter(f => f.endsWith('.json'))
+  : [];
 
 export const projects: Project[] = files
   .map(file => {

@@ -7,7 +7,9 @@ const catDir = path.join(__dirname, '..', 'src/data/categories');
 const outFile = path.join(__dirname, 'category-options.json');
 
 const opts = [];
-const files = fs.readdirSync(catDir).filter(f => f.endsWith('.json'));
+const files = fs.existsSync(catDir)
+  ? fs.readdirSync(catDir).filter(f => f.endsWith('.json'))
+  : [];
 
 for (const file of files) {
   const data = JSON.parse(fs.readFileSync(path.join(catDir, file), 'utf-8'));
