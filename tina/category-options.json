@@ -1,0 +1,26 @@
+[
+  {
+    "value": "일상",
+    "label": "일상"
+  },
+  {
+    "value": "개발",
+    "label": "개발"
+  },
+  {
+    "value": "개발/Frontend",
+    "label": "개발 → Frontend"
+  },
+  {
+    "value": "개발/JavaScript",
+    "label": "개발 → JavaScript"
+  },
+  {
+    "value": "프로젝트",
+    "label": "프로젝트"
+  },
+  {
+    "value": "프로젝트/IT Oasis",
+    "label": "프로젝트 → IT Oasis"
+  }
+]
