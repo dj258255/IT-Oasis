@@ -3,28 +3,29 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="relative z-10 pb-8 sm:pb-10 pt-8 mt-12 footer-sky">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6 text-center">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6">
+    <div class="flex items-center justify-between">
+      <!-- Left: Copyright -->
+      <p class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-600">
+        &copy; {year} IT Oasis
+      </p>
 
-    <!-- Description -->
-    <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 mb-4">
-      <span class="lang-ko">사막을 건너는 개발자에게, 쉼과 영감을 담아.</span>
-      <span class="lang-en hidden">For developers crossing the desert — rest and inspiration within.</span>
-    </p>
+      <!-- Center: Description -->
+      <p class="text-[11px] sm:text-[12px] text-gray-500 dark:text-gray-400">
+        <span class="lang-ko">사막을 건너는 개발자에게, 쉼과 영감을 담아.</span>
+        <span class="lang-en hidden">For developers crossing the desert — rest and inspiration within.</span>
+      </p>
 
-    <!-- Total views -->
-    <p id="total-views" class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500 mb-3 opacity-0 transition-opacity duration-500">
-      <svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-      </svg>
-      <span data-ko="전체 방문" data-en="Total visits">전체 방문</span>
-      <span id="total-views-count" class="font-semibold text-gray-500 dark:text-gray-400">—</span>
-    </p>
-
-    <!-- Copyright -->
-    <p class="text-[11px] text-gray-400 dark:text-gray-600">
-      &copy; {year} IT Oasis
-    </p>
+      <!-- Right: Total views -->
+      <p id="total-views" class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500 opacity-0 transition-opacity duration-500">
+        <svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+        <span data-ko="전체 방문" data-en="Total visits">전체 방문</span>
+        <span id="total-views-count" class="font-semibold text-gray-500 dark:text-gray-400">—</span>
+      </p>
+    </div>
   </div>
 </footer>
 

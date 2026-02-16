@@ -3,8 +3,8 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "tinacms dev -c \"astro dev\"",
-    "build": "tinacms build --skip-cloud-checks && astro build",
+    "dev": "node tina/generate-category-options.mjs && tinacms dev -c \"astro dev\"",
+    "build": "node tina/generate-category-options.mjs && tinacms build --skip-cloud-checks && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
