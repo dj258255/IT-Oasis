@@ -8,7 +8,7 @@ tags:
   - 블로그
   - 시작
 category: 일상
-coverImage: /uploads/banners/10%E1%84%8B%E1%85%AF%E1%86%AF%20%E1%84%8E%E1%85%AE%E1%86%AF%E1%84%89%E1%85%A5%E1%86%A8%20%E1%84%87%E1%85%A2%E1%84%80%E1%85%A7%E1%86%BC%20%E1%84%8B%E1%85%AF%E1%86%AB%E1%84%87%E1%85%A9%E1%86%AB_2048_1312.png
+coverImage: /uploads/banners/banner-main.png
 ---
 
 ## HelloWorld!
