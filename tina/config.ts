@@ -3,7 +3,7 @@ import { defineConfig } from 'tinacms';
 const branch = process.env.GITHUB_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || process.env.HEAD || 'main';
 
 // Build category options dynamically from JSON files (Node.js build only)
-let categoryOptions: string[] = [];
+let categoryOptions: { value: string; label: string }[] = [];
 if (typeof window === 'undefined') {
   try {
     const fs = require('node:fs');
@@ -12,9 +12,12 @@ if (typeof window === 'undefined') {
     const files = fs.readdirSync(catDir).filter((f: string) => f.endsWith('.json'));
     for (const file of files) {
       const data = JSON.parse(fs.readFileSync(path.join(catDir, file), 'utf-8'));
-      categoryOptions.push(data.name);
+      categoryOptions.push({ value: data.name, label: data.name });
       for (const sub of data.subcategories || []) {
-        categoryOptions.push(`${data.name}/${sub.name}`);
+        categoryOptions.push({
+          value: `${data.name}/${sub.name}`,
+          label: `${data.name} → ${sub.name}`,
+        });
       }
     }
   } catch {}
