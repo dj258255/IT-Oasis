@@ -29,3 +29,12 @@ tina/__generated__/
 # claude code
 .claude/
 
+# local docs/drafts
+docs/
+
+# obsidian
+.obsidian/
+
+# firebase
+firebase-debug.log
+
