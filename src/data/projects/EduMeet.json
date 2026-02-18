@@ -1,0 +1,10 @@
+{
+  "title": "EduMeet",
+  "description": "실시간 음성-자막 변환으로 청각장애인의 학습을 지원하는 온라인 교육 플랫폼",
+  "descriptionEn": "An online education platform that supports learning for the hearing-impaired through real-time speech-to-subtitle conversion",
+  "image": "/uploads/Project/EduMeet/EduMeetTitle.png",
+  "date": "2025-10-10T09:23:22.709Z",
+  "github": "https://github.com/dj258255/edumeet",
+  "website": "https://dj258255.github.io/IT-Oasis/blog/%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8/edumeet/-edumeet-/",
+  "order": 1
+}
