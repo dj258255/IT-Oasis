@@ -1,5 +1,9 @@
 [
   {
+    "value": "활동",
+    "label": "활동"
+  },
+  {
     "value": "일상",
     "label": "일상"
   },
@@ -22,5 +26,29 @@
   {
     "value": "프로젝트/IT Oasis",
     "label": "프로젝트 → IT Oasis"
+  },
+  {
+    "value": "프로젝트/EduMeet",
+    "label": "프로젝트 → EduMeet"
+  },
+  {
+    "value": "프로젝트/Joying",
+    "label": "프로젝트 → Joying"
+  },
+  {
+    "value": "프로젝트/IndiBalancing",
+    "label": "프로젝트 → IndiBalancing"
+  },
+  {
+    "value": "프로젝트/Orak",
+    "label": "프로젝트 → Orak"
+  },
+  {
+    "value": "프로젝트/Tymee",
+    "label": "프로젝트 → Tymee"
+  },
+  {
+    "value": "프로젝트/WikiEngine",
+    "label": "프로젝트 → WikiEngine"
   }
 ]
