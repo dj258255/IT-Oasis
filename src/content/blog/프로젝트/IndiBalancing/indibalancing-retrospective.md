@@ -34,8 +34,8 @@ draft: false
 처음에는 "그냥 스프레드시트 만들면 되겠지"라고 생각했습니다. 하지만 어떤 기능이 필요한지, 어떤 수식이 표준인지 전혀 몰랐습니다.
 
 GDC Vault, NDC 2018(넥슨), Zynga 공식 자료를 찾아보면서 게임 밸런싱 이론을 학습했습니다:
-- **TTK(Time to Kill) 계산**: 마지막 타격에는 쿨다운을 포함하지 않는다는 것
-- **Faucet/Sink 모델**: Faucet(유입) < Sink(소모)가 인플레이션 방지의 핵심
+- **TTK 계산**(Time to Kill): 마지막 타격에는 쿨다운을 포함하지 않는다는 것
+- **Faucet/Sink 모델**: Faucet(유입)이 Sink(소모)보다 작아야 인플레이션을 방지할 수 있다는 것
 - **Flow 이론**: 난이도가 실력과 적절하게 맞아야 몰입 상태가 유지된다
 
 > 시장 조사 상세: [게임 밸런스 도구 시장 조사](/blog/프로젝트/IndiBalancing/indie-balance-tool-market-research)
