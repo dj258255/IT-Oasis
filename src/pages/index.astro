@@ -6,9 +6,10 @@ import CarouselSection from '../components/CarouselSection.astro';
 import { projects } from '../data/projects';
 import { getPublishedPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
-import { base, assetPath, getSiteSettings, getCategoryI18n } from '../lib/config';
+import { base, assetPath, getSiteSettings, getCategoryI18n, getCategoryDisplayKo } from '../lib/config';
 
 const catI18n = getCategoryI18n();
+const catDisplayKo = getCategoryDisplayKo();
 const siteSettings = getSiteSettings();
 
 const posts = (await getPublishedPosts()).slice(0, 8);
@@ -48,7 +49,8 @@ const posts = (await getPublishedPosts()).slice(0, 8);
           descriptionEn={project.descriptionEn}
           image={project.image ? assetPath(project.image) : undefined}
           date={project.date}
-          category={project.category}
+          category={translateCategory(project.category, catDisplayKo)}
+          categoryEn={translateCategory(project.category, catI18n)}
           website={project.website}
           github={project.github}
           story={project.story ? `${base}${project.story}` : ''}
@@ -68,7 +70,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
           image={post.data.coverImage ? assetPath(post.data.coverImage) : undefined}
           date={post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
           dateEn={post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-          category={post.data.category}
+          category={translateCategory(post.data.category, catDisplayKo)}
           categoryEn={translateCategory(post.data.category, catI18n)}
         />
       ))}

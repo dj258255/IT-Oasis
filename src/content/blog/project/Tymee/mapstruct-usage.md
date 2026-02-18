@@ -12,6 +12,7 @@ tags:
   - Spring Boot
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/mapstruct-usage/manual-mapping-problem.png"
 ---
 
 > 이 프로젝트에서 MapStruct를 어디에 쓰고, 어디에 안 쓰는지 정리한다.

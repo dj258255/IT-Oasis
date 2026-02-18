@@ -12,6 +12,7 @@ tags:
   - Architecture
 category: theory
 draft: false
+coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png"
 ---
 
 

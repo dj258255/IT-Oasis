@@ -223,8 +223,8 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
         <nav class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {prevPost ? (
             <a href={`${base}/blog/${prevPost.id}`} class="glass-card rounded-2xl p-5 group block">
-              <span class="text-[11px] text-gray-400 dark:text-gray-500 tracking-widest uppercase flex items-center gap-1 mb-2">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <span class="text-[12px] font-semibold text-gray-500 dark:text-gray-400 tracking-widest uppercase flex items-center gap-1 mb-2">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
                 <span data-ko="이전 글" data-en="Previous">이전 글</span>
@@ -236,9 +236,9 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
           ) : <div />}
           {nextPost ? (
             <a href={`${base}/blog/${nextPost.id}`} class="glass-card rounded-2xl p-5 group block text-right">
-              <span class="text-[11px] text-gray-400 dark:text-gray-500 tracking-widest uppercase flex items-center justify-end gap-1 mb-2">
+              <span class="text-[12px] font-semibold text-gray-500 dark:text-gray-400 tracking-widest uppercase flex items-center justify-end gap-1 mb-2">
                 <span data-ko="다음 글" data-en="Next">다음 글</span>
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </span>

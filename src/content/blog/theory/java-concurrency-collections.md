@@ -12,6 +12,7 @@ tags:
   - Thread Safety
 category: theory
 draft: false
+coverImage: "/uploads/theory/java-concurrency-collections/segment-lock-diagram.png"
 ---
 
 

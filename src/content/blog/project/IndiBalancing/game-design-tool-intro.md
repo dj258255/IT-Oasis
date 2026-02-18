@@ -15,6 +15,7 @@ tags:
   - Unreal
 category: project/IndiBalancing
 draft: false
+coverImage: "/uploads/project/IndiBalancing/game-design-tool-intro/image.png"
 ---
 
 ![](/uploads/project/IndiBalancing/game-design-tool-intro/image.png)

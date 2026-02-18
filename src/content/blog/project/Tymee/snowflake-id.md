@@ -13,6 +13,7 @@ tags:
   - Primary Key
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/snowflake-id/snowflake-id-implementation.png"
 ---
 
 파일 업로드 API 만들면서 ID를 어떻게 할지 고민했다. 결론부터 말하면 내부 PK는 Auto Increment, 외부 노출용은 Snowflake ID로 분리했다.

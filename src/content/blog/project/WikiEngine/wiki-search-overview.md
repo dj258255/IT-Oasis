@@ -12,6 +12,7 @@ tags:
   - Architecture
 category: project/WikiEngine
 draft: false
+coverImage: "/uploads/project/WikiEngine/wiki-search-overview/architecture.png"
 ---
 
 나무위키, 위키피디아(한/영) 덤프 데이터를 MySQL에 적재하고, 실제 커뮤니티 수준의 트래픽을 감당할 수 있는 검색엔진을 만드는 프로젝트입니다.

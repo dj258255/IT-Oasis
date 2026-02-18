@@ -13,6 +13,7 @@ tags:
   - JPA
 category: project/EduMeet
 draft: false
+coverImage: "/uploads/project/EduMeet/edge-case-issues/title-board-register-edge-test.png"
 ---
 
 > 정상 동작하는 테스트 코드는 생략하고, 실패 사례와 그 해결 과정만 정리했다.

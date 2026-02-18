@@ -12,6 +12,7 @@ tags:
   - Performance
 category: theory
 draft: false
+coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 ---
 
 

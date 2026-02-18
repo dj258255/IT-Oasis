@@ -13,6 +13,7 @@ tags:
   - Game Balance
 category: project/IndiBalancing
 draft: false
+coverImage: "/uploads/project/IndiBalancing/indie-balance-tool-market-research/21-research.png"
 ---
 
 ## 1. 문제 인식: 왜 이 프로젝트를 시작했는가

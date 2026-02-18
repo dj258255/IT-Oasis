@@ -12,6 +12,7 @@ tags:
   - Spring Profile
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/spring-boot-config/properties-example.svg"
 ---
 
 이 프로젝트에서는 멀티모듈 구조에 4개 프로필(local, test, staging, prod)을 관리해야 했다. 처음 Spring Boot 프로젝트를 생성하면 `application.properties`가 기본으로 만들어지는데, yml로 바꿔서 사용했다. 그 과정에서 두 형식의 차이와 Spring Boot가 왜 properties를 기본으로 생성하는지 알게 됐다.

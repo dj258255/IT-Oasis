@@ -13,6 +13,7 @@ tags:
   - Non-blocking
 category: project/Joying
 draft: false
+coverImage: "/uploads/project/Joying/inbound-thread-optimization/problem.svg"
 ---
 
 ## 배경: Spring WebSocket STOMP의 구조

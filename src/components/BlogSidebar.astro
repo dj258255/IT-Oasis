@@ -86,7 +86,7 @@ const catDisplayKo = getCategoryDisplayKo();
               <svg class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d={catIconMap.get(parent) || defaultIconPath} />
               </svg>
-              <span data-ko={parent} data-en={catI18n.get(parent) || parent}>{parent}</span>
+              <span data-ko={catDisplayKo.get(parent) || parent} data-en={catI18n.get(parent) || parent}>{catDisplayKo.get(parent) || parent}</span>
               <span class="sidebar-count">{node.count}</span>
             </a>
             {node.children.size > 0 && (

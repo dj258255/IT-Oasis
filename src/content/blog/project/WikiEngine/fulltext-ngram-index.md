@@ -13,6 +13,7 @@ tags:
   - BOOLEAN MODE
 category: project/WikiEngine
 draft: false
+coverImage: "/uploads/project/WikiEngine/fulltext-ngram-index/search-expected.png"
 ---
 
 ## 이전 단계 요약

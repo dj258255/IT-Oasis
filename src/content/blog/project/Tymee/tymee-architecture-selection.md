@@ -13,6 +13,7 @@ tags:
   - Spring Boot
 category: project/Tymee
 draft: false
+coverImage: "/uploads/architecture-selection/hexagonal-architecture.png"
 ---
 
 > 레이어드 아키텍처를 기본으로, 헥사고날은 왜 고려하지 않았는가

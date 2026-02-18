@@ -13,6 +13,7 @@ tags:
   - Memory Management
 category: theory
 draft: false
+coverImage: "/uploads/theory/jvm-and-gc/jvm-architecture.png"
 ---
 
 

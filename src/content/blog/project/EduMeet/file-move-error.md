@@ -12,6 +12,7 @@ tags:
   - Repository Pattern
 category: project/EduMeet
 draft: false
+coverImage: "/uploads/project/EduMeet/file-move-error/file-moveerror.png"
 ---
 
 ## 정상 상태

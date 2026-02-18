@@ -13,6 +13,7 @@ tags:
   - Java
 category: theory
 draft: false
+coverImage: "/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.png"
 ---
 
 

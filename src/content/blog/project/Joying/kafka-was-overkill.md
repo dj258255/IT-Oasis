@@ -13,6 +13,7 @@ tags:
   - STOMP
 category: project/Joying
 draft: false
+coverImage: "/uploads/project/Joying/kafka-was-overkill/kafka.svg"
 ---
 
 메시지 순서 문제를 해결하려고 메시지 브로커를 검토했다. 처음에는 "실시간 메시징이니까 Kafka 써야 하는 거 아니야?"라는 생각이 있었다. 하지만 실제로 각 기술을 비교해보니 우리 상황에 맞는 답은 달랐다.

@@ -13,6 +13,7 @@ tags:
   - Docker Compose
 category: project/Orakgarak
 draft: false
+coverImage: "/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png"
 ---
 
 ## 한 줄 요약

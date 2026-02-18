@@ -13,6 +13,7 @@ tags:
   - Performance
 category: theory
 draft: false
+coverImage: "/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.png"
 ---
 
 

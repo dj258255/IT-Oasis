@@ -13,6 +13,7 @@ tags:
   - Fetch Join
 category: project/Joying
 draft: false
+coverImage: "/uploads/project/Joying/coroutine-jpa-401/async-parallel-query.svg"
 ---
 
 WebSocket Handler에 Coroutine을 적용하고 나서, Redis 캐시 미스 시 MongoDB 병렬 조회에도 `async`를 활용했다. 잘 되는 줄 알았는데, 이 `suspend fun`을 REST API에서 호출하는 순간 예상치 못한 에러가 터졌다.

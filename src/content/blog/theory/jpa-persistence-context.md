@@ -13,6 +13,7 @@ tags:
   - Dirty Checking
 category: theory
 draft: false
+coverImage: "/uploads/theory/jpa-persistence-context/transaction-basics.png"
 ---
 
 사이드 프로젝트를 진행하면서 Spring 트랜잭션에 대해 배운 것들을 정리했다.
