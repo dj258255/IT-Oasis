@@ -4,7 +4,9 @@ import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../lib/c
 
 interface Props {
   title: string;
+  titleEn?: string;
   description: string;
+  descriptionEn?: string;
   date: Date;
   slug: string;
   tags?: string[];
@@ -14,7 +16,7 @@ interface Props {
   compact?: boolean;
 }
 
-const { title, description, date, slug, tags = [], category, coverImage, index = 0, compact = false } = Astro.props;
+const { title, titleEn, description, descriptionEn, date, slug, tags = [], category, coverImage, index = 0, compact = false } = Astro.props;
 const catI18n = getCategoryI18n();
 
 const formattedDate = date.toLocaleDateString('ko-KR', {
@@ -55,10 +57,12 @@ const categoryKo = category ? translateCategory(category, catDisplayKo) : '';
 
     {/* Content */}
     <div class="p-4 sm:p-5 flex flex-col flex-1">
-      <h3 class="text-[14px] sm:text-[15px] font-semibold leading-snug tracking-[-0.01em] group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 mb-1.5 line-clamp-2">
+      <h3 class="text-[14px] sm:text-[15px] font-semibold leading-snug tracking-[-0.01em] group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 mb-1.5 line-clamp-2"
+        {...(titleEn ? { 'data-ko': title, 'data-en': titleEn } : {})}>
         {title}
       </h3>
-      <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-3 mb-4">
+      <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-3 mb-4"
+        {...(descriptionEn ? { 'data-ko': description, 'data-en': descriptionEn } : {})}>
         {description}
       </p>
       <div class="flex items-center gap-2 mt-auto">

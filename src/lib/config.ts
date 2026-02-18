@@ -54,6 +54,7 @@ export function getCategoryDisplayKo(): Map<string, string> {
     try {
       for (const file of readdirSync(catDir).filter(f => f.endsWith('.json'))) {
         const data = JSON.parse(readFileSync(join(catDir, file), 'utf-8'));
+        if (data.nameKo) _catDisplayKo.set(data.name, data.nameKo);
         for (const sub of data.subcategories || []) {
           if (sub.nameKo) _catDisplayKo.set(sub.name, sub.nameKo);
         }

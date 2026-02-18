@@ -1,6 +1,7 @@
 {
-  "name": "프로젝트",
+  "name": "project",
   "nameEn": "Projects",
+  "nameKo": "프로젝트",
   "icon": "rocket",
   "order": 3,
   "subcategories": [
@@ -8,7 +9,7 @@
     { "name": "IndiBalancing", "nameEn": "IndiBalancing", "nameKo": "인디밸런싱", "order": 2 },
     { "name": "Tymee", "nameEn": "Tymee", "nameKo": "타이미", "order": 3 },
     { "name": "Joying", "nameEn": "RentalJoying", "nameKo": "빌려조잉", "order": 4 },
-    { "name": "오락가락", "nameEn": "Orakgarak", "order": 5 },
+    { "name": "Orakgarak", "nameEn": "Orakgarak", "nameKo": "오락가락", "order": 5 },
     { "name": "EduMeet", "nameEn": "EduMeet", "nameKo": "에듀밋", "order": 6 },
     { "name": "IT Oasis", "nameEn": "IT Oasis", "order": 7 }
   ]

@@ -195,22 +195,22 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
             <p class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-5">
               {isSameCategory ? (
                 <>
-                  <span class="lang-ko text-gray-500 dark:text-gray-400">'{categoryKo}'</span>
-                  <span class="lang-en hidden text-gray-500 dark:text-gray-400">'{categoryEn}'</span>
-                  <span class="text-gray-400 dark:text-gray-500" data-ko=" 의 다른 글" data-en="'s other posts"> 의 다른 글</span>
+                  <span class="lang-ko text-gray-700 dark:text-gray-200">'{categoryKo}'</span>
+                  <span class="lang-en hidden text-gray-700 dark:text-gray-200">'{categoryEn}'</span>
+                  <span class="text-gray-500 dark:text-gray-400" data-ko=" 의 다른 글" data-en="'s other posts"> 의 다른 글</span>
                 </>
               ) : (
-                <span class="text-gray-500 dark:text-gray-400" data-ko="다른 글 둘러보기" data-en="More posts to read">다른 글 둘러보기</span>
+                <span class="text-gray-700 dark:text-gray-200" data-ko="다른 글 둘러보기" data-en="More posts to read">다른 글 둘러보기</span>
               )}
             </p>
             <div class="divider mb-5"></div>
             <div class="space-y-0">
               {relatedPosts.map((rp) => (
                 <a href={`${base}/blog/${rp.id}`} class="related-post-link group flex items-center justify-between gap-6">
-                  <p class="text-[14px] sm:text-[15px] font-semibold group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 truncate">
+                  <p class="text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 truncate">
                     {rp.data.title}
                   </p>
-                  <span class="text-[18px] text-gray-300 dark:text-gray-600 group-hover:text-primary dark:group-hover:text-primary-light group-hover:translate-x-1 transition-all duration-300 shrink-0 leading-none">&rarr;</span>
+                  <span class="text-[18px] text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-primary-light group-hover:translate-x-1 transition-all duration-300 shrink-0 leading-none">&rarr;</span>
                 </a>
               ))}
             </div>

@@ -3,6 +3,7 @@ import path from 'node:path';
 
 export interface Project {
   title: string;
+  titleEn: string;
   description: string;
   descriptionEn: string;
   image: string;
@@ -25,6 +26,7 @@ export const projects: Project[] = files
     const data = JSON.parse(fs.readFileSync(path.join(projDir, file), 'utf-8'));
     return {
       title: data.title || '',
+      titleEn: data.titleEn || data.title || '',
       description: data.description || '',
       descriptionEn: data.descriptionEn || '',
       image: data.image || '',

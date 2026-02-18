@@ -1,6 +1,7 @@
 {
-  "name": "이론",
+  "name": "theory",
   "nameEn": "Theory",
+  "nameKo": "이론",
   "icon": "book",
   "order": 4,
   "subcategories": []

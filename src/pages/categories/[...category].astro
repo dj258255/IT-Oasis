@@ -105,7 +105,9 @@ const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.paren
     {posts.map((post: any, i: number) => (
       <PostCard
         title={post.data.title}
+        titleEn={post.data.titleEn}
         description={post.data.description}
+        descriptionEn={post.data.descriptionEn}
         date={post.data.date}
         slug={post.id}
         tags={post.data.tags}
