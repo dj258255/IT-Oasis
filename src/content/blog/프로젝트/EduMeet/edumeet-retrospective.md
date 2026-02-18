@@ -71,7 +71,7 @@ Board-BoardImage 1:N 관계를 설정했는데, JPA가 엉뚱하게 `board_image
 
 ### QueryDSL 파일 이동 오류
 
-레이어드 아키텍처를 적용하려고 Repository 파일을 옮기면서 클래스명을 바꿨더니 "No property searchAll found for type Board" 에러가 발생했습니다. Spring Data JPA의 **"인터페이스명 + Impl" 네이밍 규칙** 때문이었는데, 이걸 몰랐으면 한참 헤맸을 겁니다.
+레이어드 아키텍처를 적용하려고 Repository 파일을 옮기면서 클래스명을 바꿨더니 "No property searchAll found for type Board" 에러가 발생했습니다. Spring Data JPA의 **인터페이스명 + Impl 네이밍 규칙** 때문이었는데, 이걸 몰랐으면 한참 헤맸을 겁니다.
 
 > 상세 분석: [파일 이동 오류](/blog/프로젝트/EduMeet/file-move-error)
 
@@ -81,7 +81,7 @@ Board-BoardImage 1:N 관계를 설정했는데, JPA가 엉뚱하게 `board_image
 
 ### 기능보다 방어 로직이 중요하다
 
-게시판 CRUD 기능 구현은 3일 만에 끝났습니다. 그런데 테스트 코드를 작성하면서 비정상 상황을 하나씩 따져보니, 방어 로직 구현에 5일이 더 걸렸습니다. **"기능이 동작한다"와 "서비스가 안전하다"는 다르다**는 걸 처음으로 체감했습니다.
+게시판 CRUD 기능 구현은 3일 만에 끝났습니다. 그런데 테스트 코드를 작성하면서 비정상 상황을 하나씩 따져보니, 방어 로직 구현에 5일이 더 걸렸습니다. **기능이 동작한다와 서비스가 안전하다는 다르다**는 걸 처음으로 체감했습니다.
 
 ### 코드 리뷰의 가치
 
