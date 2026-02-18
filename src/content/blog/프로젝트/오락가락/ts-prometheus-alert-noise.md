@@ -70,13 +70,13 @@ draft: false
 
 ### 2. Alertmanager 라우팅 분리
 
-![](/uploads/ts-prometheus-alert-noise/alertmanager-routing.svg)
+![](/uploads/프로젝트/오락가락/ts-prometheus-alert-noise/alertmanager-routing.svg)
 
 Critical은 `group_wait: 10s`로 빠르게 보내고, Warning은 `group_wait: 2m`으로 모아서 보낸다.
 
 ### 3. 억제 규칙(Inhibit Rules)
 
-![](/uploads/ts-prometheus-alert-noise/inhibit-rules.svg)
+![](/uploads/프로젝트/오락가락/ts-prometheus-alert-noise/inhibit-rules.svg)
 
 ApplicationDown(Critical)이 발생하면 같은 인스턴스의 HighCPU, HighMemory, HighResponseTime(Warning)을 자동 억제한다.
 
@@ -172,13 +172,13 @@ Post-restart CPU spikes typically stabilize within 1-2 minutes. `for: 5m` filter
 
 ### 2. Alertmanager Routing Separation
 
-![](/uploads/ts-prometheus-alert-noise/alertmanager-routing.svg)
+![](/uploads/프로젝트/오락가락/ts-prometheus-alert-noise/alertmanager-routing.svg)
 
 Critical alerts use `group_wait: 10s` for fast delivery. Warnings use `group_wait: 2m` for batching.
 
 ### 3. Inhibit Rules
 
-![](/uploads/ts-prometheus-alert-noise/inhibit-rules.svg)
+![](/uploads/프로젝트/오락가락/ts-prometheus-alert-noise/inhibit-rules.svg)
 
 When ApplicationDown (Critical) fires, HighCPU, HighMemory, and HighResponseTime (Warning) for the same instance are automatically suppressed.
 

@@ -25,7 +25,7 @@ Kafka가 제일 먼저 후보에 올랐다. 메시지를 디스크에 저장하�
 
 설정을 시작했다.
 
-![](/uploads/kafka-was-overkill/kafka.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/kafka.svg)
 
 
 KRaft 모드 설정, 클러스터 ID 생성, 메타데이터 디렉토리 포맷, 브로커별 고유 ID 설정, 리플리케이션 팩터 설정, 파티션 개수 설계...
@@ -71,7 +71,7 @@ Redis가 싱글 스레드로 동작하기 때문에 ID가 순서대로 부여된
 
 **Consumer Group 코드:**
 
-![](/uploads/kafka-was-overkill/redis-stream.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/redis-stream.svg)
 
 
 Consumer Group, Pending List, ACK 처리... 코드가 복잡해졌다.
@@ -125,10 +125,10 @@ NATS Core는 Redis Pub/Sub과 비슷하게 메시지를 저장하지 않는다. 
 
 Raw WebSocket으로 해도 된다. 직접 메시지 타입을 정의하면 된다.
 
-![](/uploads/kafka-was-overkill/websocket.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/websocket.svg)
 
 
-![](/uploads/kafka-was-overkill/websocket-2.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/websocket-2.svg)
 
 
 문제는 직접 구현할 게 많다는 점이다:
@@ -142,7 +142,7 @@ Raw WebSocket으로 해도 된다. 직접 메시지 타입을 정의하면 된�
 
 Socket.io는 Node.js 생태계에서 강력하다. 자동 재연결, 룸 관리, Fallback까지 다 된다.
 
-![](/uploads/kafka-was-overkill/socketio.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/socketio.svg)
 
 
 **문제는 우리가 Spring Boot를 쓴다는 점이다.** Java용 Socket.io 서버 구현체(netty-socketio)가 있지만, Spring 생태계와의 통합이 약하고 유지보수가 활발하지 않다.
@@ -157,7 +157,7 @@ Socket.io는 Node.js 생태계에서 강력하다. 자동 재연결, 룸 관리,
 2. **SockJS Fallback**: WebSocket 미지원 브라우저에서 자동으로 HTTP Polling으로 전환
 3. **팀 학습 비용**: REST와 비슷한 패턴이라 팀원들이 빠르게 적응
 
-![](/uploads/kafka-was-overkill/stomp.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/stomp.svg)
 
 
 다만 STOMP의 SimpleBroker는 사용하지 않았다.
@@ -167,7 +167,7 @@ Socket.io는 Node.js 생태계에서 강력하다. 자동 재연결, 룸 관리,
 
 ## 결론: Redis Pub/Sub + MongoDB
 
-![](/uploads/kafka-was-overkill/conclusion.png)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/conclusion.png)
 
 Redis Pub/Sub은 코드가 단순하다 (Redis Stream의 1/3 수준). 순서는 MongoDB의 `createdAt`으로 보장하고, 추가 인프라도 필요 없다. Pub/Sub이 메시지를 저장하지 않는 건 MongoDB에 저장하니까 문제없고, 실시간 순서 보장이 안 되는 건 네트워크 특성상 어차피 보장할 수 없는 영역이다.
 
@@ -198,7 +198,7 @@ Kafka was the first candidate. It stores messages on disk, guarantees ordering p
 
 We started configuring it.
 
-![](/uploads/kafka-was-overkill/kafka.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/kafka.svg)
 
 KRaft mode setup, cluster ID generation, metadata directory formatting, unique broker IDs, replication factor configuration, partition count design...
 
@@ -241,7 +241,7 @@ Since Redis is single-threaded, IDs are assigned in order.
 
 **Consumer Group Code:**
 
-![](/uploads/kafka-was-overkill/redis-stream.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/redis-stream.svg)
 
 Consumer Groups, Pending Lists, ACK handling... the code grew complex.
 
@@ -292,9 +292,9 @@ Separate from the message broker, we needed to choose a WebSocket protocol for c
 
 Raw WebSocket works fine -- just define message types manually.
 
-![](/uploads/kafka-was-overkill/websocket.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/websocket.svg)
 
-![](/uploads/kafka-was-overkill/websocket-2.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/websocket-2.svg)
 
 The problem is the amount of manual implementation:
 - Message type routing
@@ -307,7 +307,7 @@ The problem is the amount of manual implementation:
 
 Socket.io is powerful in the Node.js ecosystem with auto-reconnect, room management, and fallback support.
 
-![](/uploads/kafka-was-overkill/socketio.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/socketio.svg)
 
 **The problem is we use Spring Boot.** The Java Socket.io server implementation (netty-socketio) has weak Spring integration and isn't actively maintained.
 
@@ -321,7 +321,7 @@ Reasons for choosing STOMP:
 2. **SockJS Fallback**: Automatic HTTP Polling fallback for browsers without WebSocket support
 3. **Team learning cost**: REST-like patterns meant quick team adaptation
 
-![](/uploads/kafka-was-overkill/stomp.svg)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/stomp.svg)
 
 However, we did not use STOMP's SimpleBroker. For potential server scaling, the in-memory SimpleBroker wouldn't know about subscribers on other servers. Instead, we broadcast directly via Redis Pub/Sub.
 
@@ -329,7 +329,7 @@ However, we did not use STOMP's SimpleBroker. For potential server scaling, the 
 
 ## Conclusion: Redis Pub/Sub + MongoDB
 
-![](/uploads/kafka-was-overkill/conclusion.png)
+![](/uploads/프로젝트/Joying/kafka-was-overkill/conclusion.png)
 
 Redis Pub/Sub code is simple (1/3 the complexity of Redis Stream). Ordering is guaranteed by MongoDB's `createdAt`, and no additional infrastructure is needed. Pub/Sub not storing messages is fine since MongoDB handles persistence. Real-time ordering not being guaranteed is inherently a network limitation anyway.
 

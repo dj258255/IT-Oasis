@@ -40,7 +40,7 @@ LIMIT 20 OFFSET 0;
 
 ### 서버 현황
 
-![](/uploads/search-system-crash/server-status.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/server-status.png)
 
 - App Server: ARM 2코어 / 12GB RAM
 - MySQL 8.0, HikariCP 기본 설정 (maximumPoolSize=10)
@@ -58,7 +58,7 @@ LIMIT 20 OFFSET 0;
 
 ### 503 응답 확인
 
-![](/uploads/search-system-crash/503-timeout-response.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/503-timeout-response.png)
 
 검색과 무관한 API까지 모두 503을 반환하는 것은, 문제가 검색 쿼리 자체가 아니라 **공유 리소스의 고갈**임을 의미합니다.
 
@@ -76,7 +76,7 @@ EXPLAIN SELECT * FROM posts
 WHERE title LIKE '%keyword%' OR content LIKE '%keyword%';
 ```
 
-![](/uploads/search-system-crash/explain-result.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/explain-result.png)
 
 - `type: ALL` → Full Table Scan
 - `rows: 27,443,742` → 전체 행 스캔
@@ -85,7 +85,7 @@ WHERE title LIKE '%keyword%' OR content LIKE '%keyword%';
 
 ### 3-2. HikariCP 커넥션 풀 고갈
 
-![](/uploads/search-system-crash/connection-pool-error.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/connection-pool-error.png)
 
 ```
 HikariPool-1 - Connection is not available, request timed out after 30000ms
@@ -118,7 +118,7 @@ WHERE title LIKE '%keyword%' OR content LIKE '%keyword%'
 WHERE title LIKE '%keyword%'
 ```
 
-![](/uploads/search-system-crash/title-only-search.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/title-only-search.png)
 
 `content` LIKE를 제거하면 각 행에서 비교하는 데이터 크기가 수 KB → 수십 바이트로 줄어듭니다.
 여전히 Full Table Scan이지만, I/O와 CPU 비용이 크게 감소합니다.
@@ -130,7 +130,7 @@ WHERE title LIKE '%keyword%'
 public Page<PostSearchResponse> search(...) { ... }
 ```
 
-![](/uploads/search-system-crash/transactional-timeout.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/transactional-timeout.png)
 
 5초 이내에 완료되지 않는 쿼리는 강제 종료하여 커넥션을 반환합니다.
 
@@ -156,13 +156,13 @@ public ResponseEntity<ErrorResponse> handleQueryTimeout(QueryTimeoutException e)
 }
 ```
 
-![](/uploads/search-system-crash/timeout-exception-handler.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/timeout-exception-handler.png)
 
 타임아웃이 발생하면 사용자에게 명확한 메시지를 반환합니다.
 
 ### 조치 결과
 
-![](/uploads/search-system-crash/timeout-working-log.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/timeout-working-log.png)
 
 - 검색이 5초를 초과하면 타임아웃 → 커넥션 즉시 반환
 - 다른 API가 영향받지 않음 → **시스템 안정성 확보**
@@ -183,7 +183,7 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
-![](/uploads/search-system-crash/explain-baseline.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/explain-baseline.png)
 
 | 항목 | 값 |
 |------|-----|
@@ -201,7 +201,7 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
-![](/uploads/search-system-crash/explain-analyze-fail.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/explain-analyze-fail.png)
 
 `EXPLAIN ANALYZE`는 실제로 쿼리를 실행하므로, 2,744만 행 Full Table Scan + filesort를 수행합니다.
 5초 타임아웃에 의해 중단되어 실제 실행 시간은 측정할 수 없었습니다.
@@ -260,7 +260,7 @@ At this point, there are no indexes and the table contains approximately 27.44M 
 
 ### Server Status
 
-![](/uploads/search-system-crash/server-status.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/server-status.png)
 
 - App Server: ARM 2 cores / 12GB RAM
 - MySQL 8.0, HikariCP default settings (maximumPoolSize=10)
@@ -278,7 +278,7 @@ After calling the search API once, the following occurred:
 
 ### 503 Response Confirmed
 
-![](/uploads/search-system-crash/503-timeout-response.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/503-timeout-response.png)
 
 The fact that APIs unrelated to search also return 503 indicates that the problem is not the search query itself, but **exhaustion of a shared resource**.
 
@@ -296,7 +296,7 @@ EXPLAIN SELECT * FROM posts
 WHERE title LIKE '%keyword%' OR content LIKE '%keyword%';
 ```
 
-![](/uploads/search-system-crash/explain-result.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/explain-result.png)
 
 - `type: ALL` → Full Table Scan
 - `rows: 27,443,742` → Scanning all rows
@@ -305,7 +305,7 @@ The `content` column is `LONGTEXT`, so each row loads several KB to tens of KB o
 
 ### 3-2. HikariCP Connection Pool Exhaustion
 
-![](/uploads/search-system-crash/connection-pool-error.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/connection-pool-error.png)
 
 ```
 HikariPool-1 - Connection is not available, request timed out after 30000ms
@@ -338,7 +338,7 @@ WHERE title LIKE '%keyword%' OR content LIKE '%keyword%'
 WHERE title LIKE '%keyword%'
 ```
 
-![](/uploads/search-system-crash/title-only-search.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/title-only-search.png)
 
 Removing `content` LIKE reduces the data compared per row from several KB to tens of bytes.
 It's still a Full Table Scan, but I/O and CPU costs are significantly reduced.
@@ -350,7 +350,7 @@ It's still a Full Table Scan, but I/O and CPU costs are significantly reduced.
 public Page<PostSearchResponse> search(...) { ... }
 ```
 
-![](/uploads/search-system-crash/transactional-timeout.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/transactional-timeout.png)
 
 Queries not completing within 5 seconds are forcefully terminated to return the connection.
 
@@ -376,13 +376,13 @@ public ResponseEntity<ErrorResponse> handleQueryTimeout(QueryTimeoutException e)
 }
 ```
 
-![](/uploads/search-system-crash/timeout-exception-handler.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/timeout-exception-handler.png)
 
 When a timeout occurs, a clear message is returned to the user.
 
 ### Mitigation Results
 
-![](/uploads/search-system-crash/timeout-working-log.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/timeout-working-log.png)
 
 - Search exceeding 5 seconds triggers timeout → connection immediately returned
 - Other APIs unaffected → **system stability secured**
@@ -403,7 +403,7 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
-![](/uploads/search-system-crash/explain-baseline.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/explain-baseline.png)
 
 | Item | Value |
 |------|-------|
@@ -421,7 +421,7 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
-![](/uploads/search-system-crash/explain-analyze-fail.png)
+![](/uploads/프로젝트/WikiEngine/search-system-crash/explain-analyze-fail.png)
 
 `EXPLAIN ANALYZE` actually executes the query, performing a Full Table Scan + filesort on 27.44M rows.
 It was interrupted by the 5-second timeout, so the actual execution time could not be measured.

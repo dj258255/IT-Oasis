@@ -59,7 +59,7 @@ draft: false
 
 ### 아키텍처
 
-![](/uploads/wiki-search-overview/architecture.png)
+![](/uploads/프로젝트/WikiEngine/wiki-search-overview/architecture.png)
 
 <!-- EN -->
 
@@ -107,4 +107,4 @@ Frontend is deployed on Vercel.
 
 ### Architecture
 
-![](/uploads/wiki-search-overview/architecture.png)
+![](/uploads/프로젝트/WikiEngine/wiki-search-overview/architecture.png)

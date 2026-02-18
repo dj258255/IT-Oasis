@@ -56,19 +56,19 @@ Flyway와 Liquibase를 비교했다. Flyway는 SQL 파일만 작성하면 되고
 
 **gradle/libs.versions.toml**
 
-![gradle-version-catalog](/uploads/flyway-db-migration/gradle-version-catalog.svg)
+![gradle-version-catalog](/uploads/프로젝트/Tymee/flyway-db-migration/gradle-version-catalog.svg)
 
 
 **bootstrap/build.gradle.kts**
 
-![build-gradle-flyway](/uploads/flyway-db-migration/build-gradle-flyway.svg)
+![build-gradle-flyway](/uploads/프로젝트/Tymee/flyway-db-migration/build-gradle-flyway.svg)
 
 
 ---
 
 ## application.yml 설정
 
-![application-yml-flyway](/uploads/flyway-db-migration/application-yml-flyway.svg)
+![application-yml-flyway](/uploads/프로젝트/Tymee/flyway-db-migration/application-yml-flyway.svg)
 
 
 ### 설정 옵션별 상황
@@ -180,16 +180,16 @@ Migration checksum mismatch for migration version 1
 
 **선택지 A: 체크섬 강제 업데이트 (위험)**
 
-![checksum-force-update](/uploads/flyway-db-migration/checksum-force-update.svg)
+![checksum-force-update](/uploads/프로젝트/Tymee/flyway-db-migration/checksum-force-update.svg)
 
 **선택지 B: 새 마이그레이션으로 수정 (권장)**
 
-![new-migration-fix](/uploads/flyway-db-migration/new-migration-fix.svg)
+![new-migration-fix](/uploads/프로젝트/Tymee/flyway-db-migration/new-migration-fix.svg)
 
 
 ### 상황 3: 실패한 마이그레이션이 남아있는 경우
 
-![failed-migration-cleanup](/uploads/flyway-db-migration/failed-migration-cleanup.svg)
+![failed-migration-cleanup](/uploads/프로젝트/Tymee/flyway-db-migration/failed-migration-cleanup.svg)
 
 
 **주의:** 실패한 마이그레이션이 DB를 부분적으로 변경했을 수 있으므로, 삭제 전 DB 상태 확인 필수
@@ -231,7 +231,7 @@ Migration checksum mismatch for migration version 1
 
 **db/migration/V1__create_users_table.sql**
 
-![initial-migration](/uploads/flyway-db-migration/initial-migration.svg)
+![initial-migration](/uploads/프로젝트/Tymee/flyway-db-migration/initial-migration.svg)
 
 
 ---
@@ -294,19 +294,19 @@ I compared Flyway and Liquibase. Flyway only requires writing SQL files and Spri
 
 **gradle/libs.versions.toml**
 
-![gradle-version-catalog](/uploads/flyway-db-migration/gradle-version-catalog.svg)
+![gradle-version-catalog](/uploads/프로젝트/Tymee/flyway-db-migration/gradle-version-catalog.svg)
 
 
 **bootstrap/build.gradle.kts**
 
-![build-gradle-flyway](/uploads/flyway-db-migration/build-gradle-flyway.svg)
+![build-gradle-flyway](/uploads/프로젝트/Tymee/flyway-db-migration/build-gradle-flyway.svg)
 
 
 ---
 
 ## application.yml Configuration
 
-![application-yml-flyway](/uploads/flyway-db-migration/application-yml-flyway.svg)
+![application-yml-flyway](/uploads/프로젝트/Tymee/flyway-db-migration/application-yml-flyway.svg)
 
 
 ### Configuration Option Scenarios
@@ -418,16 +418,16 @@ According to the [Redgate official documentation](https://www.red-gate.com/hub/p
 
 **Option A: Force Update Checksum (risky)**
 
-![checksum-force-update](/uploads/flyway-db-migration/checksum-force-update.svg)
+![checksum-force-update](/uploads/프로젝트/Tymee/flyway-db-migration/checksum-force-update.svg)
 
 **Option B: Fix with a New Migration (recommended)**
 
-![new-migration-fix](/uploads/flyway-db-migration/new-migration-fix.svg)
+![new-migration-fix](/uploads/프로젝트/Tymee/flyway-db-migration/new-migration-fix.svg)
 
 
 ### Situation 3: A Failed Migration Remains in History
 
-![failed-migration-cleanup](/uploads/flyway-db-migration/failed-migration-cleanup.svg)
+![failed-migration-cleanup](/uploads/프로젝트/Tymee/flyway-db-migration/failed-migration-cleanup.svg)
 
 
 **Caution:** A failed migration may have partially modified the DB, so always verify the DB state before deleting
@@ -469,7 +469,7 @@ In practice, a **hybrid** approach is common:
 
 **db/migration/V1__create_users_table.sql**
 
-![initial-migration](/uploads/flyway-db-migration/initial-migration.svg)
+![initial-migration](/uploads/프로젝트/Tymee/flyway-db-migration/initial-migration.svg)
 
 
 ---

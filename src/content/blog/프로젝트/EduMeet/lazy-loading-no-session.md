@@ -26,7 +26,7 @@ Board(게시글)와 BoardImage(첨부파일)는 `@OneToMany` 관계로 매핑되
 
 단위 테스트에서 Board를 조회한 뒤 BoardImage에 접근하려 하자, `LazyInitializationException: no session` 오류가 발생했다.
 
-![](/uploads/lazy-loading-no-session/lazy-no-session-error.png)
+![](/uploads/프로젝트/EduMeet/lazy-loading-no-session/lazy-no-session-error.png)
 
 실행 결과를 보면 Board까지의 출력은 정상적으로 끝났지만, 그 직후 BoardImage를 SELECT하려는 시점에 DB 세션이 이미 닫혀 있었다.
 
@@ -54,13 +54,13 @@ Lazy 로딩은 **영속성 컨텍스트(Persistence Context)가 살아 있는 �
 
 근본적인 해결을 위해 `@EntityGraph`를 적용했다. `@EntityGraph`는 JPA가 제공하는 어노테이션으로, 지정한 연관 엔티티를 **조회 시점에 함께 로딩**(Eager)하도록 선언할 수 있다.
 
-![](/uploads/lazy-loading-no-session/solutions-entitygraph.png)
+![](/uploads/프로젝트/EduMeet/lazy-loading-no-session/solutions-entitygraph.png)
 
 `@EntityGraph`의 `attributePaths`에 `imageSet`을 명시하여, Board 조회 시 BoardImage를 한 번에 가져오도록 설정했다.
 
 단위 테스트를 다시 실행한 결과:
 
-![](/uploads/lazy-loading-no-session/solutions-entitygraph-02.png)
+![](/uploads/프로젝트/EduMeet/lazy-loading-no-session/solutions-entitygraph-02.png)
 
 실행 결과의 쿼리를 보면, Board 테이블과 BoardImage 테이블이 **LEFT JOIN으로 한 번에 조회**되었다. 별도의 추가 SELECT 없이 게시글과 첨부파일을 동시에 처리할 수 있게 된 것이다.
 
@@ -98,7 +98,7 @@ In other words, Board retrieval → BoardImage access should result in **2 SELEC
 
 In a unit test, after retrieving a Board and trying to access its BoardImage, a `LazyInitializationException: no session` error occurred.
 
-![](/uploads/lazy-loading-no-session/lazy-no-session-error.png)
+![](/uploads/프로젝트/EduMeet/lazy-loading-no-session/lazy-no-session-error.png)
 
 The execution output showed that Board was printed successfully, but at the point of trying to SELECT BoardImage, the DB session had already closed.
 
@@ -126,13 +126,13 @@ However, this approach is **only a workaround valid in the test environment**. I
 
 For a fundamental solution, `@EntityGraph` was applied. `@EntityGraph` is a JPA annotation that declares specified related entities to be **loaded eagerly at query time**.
 
-![](/uploads/lazy-loading-no-session/solutions-entitygraph.png)
+![](/uploads/프로젝트/EduMeet/lazy-loading-no-session/solutions-entitygraph.png)
 
 By specifying `imageSet` in `@EntityGraph`'s `attributePaths`, Board retrieval now fetches BoardImage in a single query.
 
 Re-running the unit test:
 
-![](/uploads/lazy-loading-no-session/solutions-entitygraph-02.png)
+![](/uploads/프로젝트/EduMeet/lazy-loading-no-session/solutions-entitygraph-02.png)
 
 The query log shows that Board and BoardImage tables were **retrieved in a single LEFT JOIN**. Posts and attachments can now be processed simultaneously without additional SELECTs.
 

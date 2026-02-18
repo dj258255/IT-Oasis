@@ -52,33 +52,33 @@ Promtail이 줄 단위로 파싱해서 첫 줄, 둘째 줄, 셋째 줄이 각각
 
 Log4j2의 JsonLayout을 사용해서 로그를 JSON으로 출력하게 변경했다.
 
-![](/uploads/ts-loki-stacktrace-parsing/log4j2-json-layout.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/log4j2-json-layout.svg)
 
 결과 JSON:
 
-![](/uploads/ts-loki-stacktrace-parsing/json-log-output.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/json-log-output.svg)
 
 ### 2. Promtail JSON 파이프라인 설정
 
 Promtail이 JSON을 파싱해서 level, logger 등을 Loki 레이블로 추출하도록 설정했다.
 
-![](/uploads/ts-loki-stacktrace-parsing/promtail-pipeline.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/promtail-pipeline.svg)
 
 ### 3. 환경별 로그 레벨 분리
 
 운영 환경에서는 Kafka, Redis 내부 로그를 WARN 이상만 남기도록 설정했다. 이런 라이브러리 로그가 Loki 용량을 불필요하게 차지하는 걸 방지한다.
 
-![](/uploads/ts-loki-stacktrace-parsing/log-level-config.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/log-level-config.svg)
 
 ### 4. 비동기 로깅
 
 로그 출력이 애플리케이션 스레드를 블로킹하지 않도록 AsyncLogger를 적용했다.
 
-![](/uploads/ts-loki-stacktrace-parsing/async-logging.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/async-logging.svg)
 
 ### 5. ERROR 로그 별도 파일 관리
 
-![](/uploads/ts-loki-stacktrace-parsing/error-log-management.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/error-log-management.svg)
 
 ---
 
@@ -159,33 +159,33 @@ The key was making stacktraces single-line. JSON format embeds stacktraces as es
 
 Switched to Log4j2's JsonLayout for JSON-formatted log output.
 
-![](/uploads/ts-loki-stacktrace-parsing/log4j2-json-layout.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/log4j2-json-layout.svg)
 
 Result JSON:
 
-![](/uploads/ts-loki-stacktrace-parsing/json-log-output.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/json-log-output.svg)
 
 ### 2. Promtail JSON Pipeline
 
 Configured Promtail to parse JSON and extract level, logger, etc. as Loki labels.
 
-![](/uploads/ts-loki-stacktrace-parsing/promtail-pipeline.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/promtail-pipeline.svg)
 
 ### 3. Per-Environment Log Level Separation
 
 Production limits Kafka and Redis internal logs to WARN+, preventing library logs from consuming Loki storage.
 
-![](/uploads/ts-loki-stacktrace-parsing/log-level-config.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/log-level-config.svg)
 
 ### 4. Async Logging
 
 AsyncLogger prevents log output from blocking application threads.
 
-![](/uploads/ts-loki-stacktrace-parsing/async-logging.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/async-logging.svg)
 
 ### 5. Separate ERROR Log Files
 
-![](/uploads/ts-loki-stacktrace-parsing/error-log-management.svg)
+![](/uploads/프로젝트/오락가락/ts-loki-stacktrace-parsing/error-log-management.svg)
 
 ---
 

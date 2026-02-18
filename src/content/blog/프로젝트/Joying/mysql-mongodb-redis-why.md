@@ -46,10 +46,10 @@ Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했다. 그런데 프로
 
 채팅방은 Member, Product와 관계를 맺는다.
 
-![](/uploads/mysql-mongodb-redis-why/mysql-relational-data.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/mysql-relational-data.svg)
 
 
-![](/uploads/mysql-mongodb-redis-why/mysql-relational-data-2.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/mysql-relational-data-2.svg)
 
 
 MongoDB로 이걸 하려면 Application Join이 필요하다. 느리다.
@@ -84,7 +84,7 @@ Pub/Sub은 메모리 기반이라 디스크 I/O가 없다. 초당 수만 건 처
 
 처음엔 MySQL의 JSON 컬럼에 메시지 배열로 저장하면 되지 않나 싶었다.
 
-![](/uploads/mysql-mongodb-redis-why/mysql-json-column-issues.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/mysql-json-column-issues.svg)
 
 
 세 가지 문제가 있었다.
@@ -99,7 +99,7 @@ JSON 파싱 → 역직렬화 → 필터링 → 직렬화 → 반환
 
 ### 2. 인덱싱 불가
 
-![](/uploads/mysql-mongodb-redis-why/no-indexing.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/no-indexing.svg)
 
 > 전체 JSON 스캔 (인덱스 못 씀)
 
@@ -116,7 +116,7 @@ MySQL은 행 단위 잠금이다. JSON 배열에 메시지 1개만 추가해도 
 
 **MongoDB는 이런 문제가 없다:**
 
-![](/uploads/mysql-mongodb-redis-why/concurrency-issue.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/concurrency-issue.svg)
 
 
 ---
@@ -136,14 +136,14 @@ MySQL은 행 단위 잠금이다. JSON 배열에 메시지 1개만 추가해도 
 
 ### 서버 간 결합도가 낮다
 
-![](/uploads/mysql-mongodb-redis-why/low-server-coupling.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/low-server-coupling.svg)
 
 
 서버 1이 죽어도 서버 2, 3은 영향 없이 동작한다.
 
 ### 수평 확장이 쉽다
 
-![](/uploads/mysql-mongodb-redis-why/horizontal-scaling.png)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/horizontal-scaling.png)
 
 
 
@@ -187,17 +187,17 @@ MySQL에서 실패하면 MongoDB도 롤백해야 하는데, 분산 트랜잭션�
 
 ### ChatMessage (MongoDB Document)
 
-![](/uploads/mysql-mongodb-redis-why/chat-message-mongodb.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/chat-message-mongodb.svg)
 
 
 ### ChatRoom (MySQL Entity)
 
-![](/uploads/mysql-mongodb-redis-why/chat-room-mysql.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/chat-room-mysql.svg)
 
 
 ### Factory Pattern (메시지 타입별 생성)
 
-![](/uploads/mysql-mongodb-redis-why/factory-pattern.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/factory-pattern.svg)
 
 
 메시지 타입별로 필수 필드를 강제한다. `createImageMessage`는 `imageUrl`이 필수 파라미터라서, 없으면 컴파일 에러가 난다.
@@ -248,9 +248,9 @@ Using the optimal store for each data type. Operating 3 DBs increases complexity
 
 Chat rooms have relationships with Member and Product.
 
-![](/uploads/mysql-mongodb-redis-why/mysql-relational-data.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/mysql-relational-data.svg)
 
-![](/uploads/mysql-mongodb-redis-why/mysql-relational-data-2.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/mysql-relational-data-2.svg)
 
 Doing this with MongoDB requires Application Joins, which are slow.
 
@@ -283,7 +283,7 @@ Redis also handles caching -- unread message counts and session info that are re
 
 Initially, we considered storing messages as JSON arrays in MySQL JSON columns.
 
-![](/uploads/mysql-mongodb-redis-why/mysql-json-column-issues.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/mysql-json-column-issues.svg)
 
 Three problems emerged.
 
@@ -295,7 +295,7 @@ JSON parse → deserialize → filter → serialize → return
 
 ### 2. No Indexing
 
-![](/uploads/mysql-mongodb-redis-why/no-indexing.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/no-indexing.svg)
 
 > Full JSON scan (can't use indexes)
 
@@ -310,7 +310,7 @@ MySQL uses row-level locking. Adding just 1 message to a JSON array locks the en
 
 **MongoDB doesn't have this problem:**
 
-![](/uploads/mysql-mongodb-redis-why/concurrency-issue.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/concurrency-issue.svg)
 
 ---
 
@@ -325,13 +325,13 @@ The core of most chat systems is Event-Driven Architecture. Putting all members 
 
 ### Low Server Coupling
 
-![](/uploads/mysql-mongodb-redis-why/low-server-coupling.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/low-server-coupling.svg)
 
 If Server 1 goes down, Servers 2 and 3 continue operating without impact.
 
 ### Easy Horizontal Scaling
 
-![](/uploads/mysql-mongodb-redis-why/horizontal-scaling.png)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/horizontal-scaling.png)
 
 Redis Pub/Sub stays the same. Just add a new server and it automatically subscribes.
 
@@ -369,15 +369,15 @@ For chat, performance matters more than consistency. Users barely notice if unre
 
 ### ChatMessage (MongoDB Document)
 
-![](/uploads/mysql-mongodb-redis-why/chat-message-mongodb.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/chat-message-mongodb.svg)
 
 ### ChatRoom (MySQL Entity)
 
-![](/uploads/mysql-mongodb-redis-why/chat-room-mysql.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/chat-room-mysql.svg)
 
 ### Factory Pattern (Per Message Type)
 
-![](/uploads/mysql-mongodb-redis-why/factory-pattern.svg)
+![](/uploads/프로젝트/Joying/mysql-mongodb-redis-why/factory-pattern.svg)
 
 Required fields are enforced per message type. `createImageMessage` requires `imageUrl` as a mandatory parameter -- missing it causes a compile error.
 

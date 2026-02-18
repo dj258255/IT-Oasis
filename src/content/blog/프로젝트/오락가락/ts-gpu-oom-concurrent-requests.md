@@ -57,19 +57,19 @@ AI 분석 담당 팀원과 같이 `nvidia-smi`로 GPU 메모리 사용량을 모
 
 permits를 GPU 계산상 최대 4건까지 가능하지만 2로 잡은 이유는, 요청마다 메모리 사용량이 다르고(음성 길이, 복잡도에 따라 편차), 안전 마진을 둬야 했기 때문이다.
 
-![](/uploads/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg)
 
 ### Semaphore Bean 설정
 
-![](/uploads/ts-gpu-oom-concurrent-requests/semaphore-bean-config.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/semaphore-bean-config.svg)
 
 ### ThreadPool 설정
 
-![](/uploads/ts-gpu-oom-concurrent-requests/threadpool-config.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/threadpool-config.svg)
 
 ### Semaphore 사용 코드
 
-![](/uploads/ts-gpu-oom-concurrent-requests/semaphore-usage-code.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/semaphore-usage-code.svg)
 
 ---
 
@@ -146,19 +146,19 @@ Two mechanisms were separated:
 
 Permits were set to 2 (not the theoretical max of 4) because per-request memory varies by audio length and complexity, requiring a safety margin.
 
-![](/uploads/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg)
 
 ### Semaphore Bean Config
 
-![](/uploads/ts-gpu-oom-concurrent-requests/semaphore-bean-config.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/semaphore-bean-config.svg)
 
 ### ThreadPool Config
 
-![](/uploads/ts-gpu-oom-concurrent-requests/threadpool-config.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/threadpool-config.svg)
 
 ### Semaphore Usage Code
 
-![](/uploads/ts-gpu-oom-concurrent-requests/semaphore-usage-code.svg)
+![](/uploads/프로젝트/오락가락/ts-gpu-oom-concurrent-requests/semaphore-usage-code.svg)
 
 ---
 

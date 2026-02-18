@@ -38,7 +38,7 @@ draft: false
 
 CGI는 간단했다. 요청이 오면 프로그램을 실행하고 결과를 HTML로 반환하면 끝이었다.
 
-![](/uploads/spring-mvc-thread-pool/cgi-process-hell-start.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-process-hell-start.png)
 
 문제는 성능이었다.
 
@@ -58,12 +58,12 @@ CGI는 간단했다. 요청이 오면 프로그램을 실행하고 결과를 HTM
 
 
 CGI 방식
-![](/uploads/spring-mvc-thread-pool/servlet-thread-based-revolution.png)
+![](/uploads/이론/spring-mvc-thread-pool/servlet-thread-based-revolution.png)
 
 
 서블릿 방식:
 
-![](/uploads/spring-mvc-thread-pool/servlet-thread-based-revolution-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/servlet-thread-based-revolution-2.png)
 
 
 
@@ -98,12 +98,12 @@ class ServletContainer {
 
 
 CGI 방식:
-![](/uploads/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture.png)
 
 
 서블릿 방식:
 
-![](/uploads/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture-2.png)
 
 → Code, Data, Heap은 공유하고 Stack만 따로!
 
@@ -151,7 +151,7 @@ public class MyServlet extends HttpServlet {
 
 **중요한 점**:
 
-![](/uploads/spring-mvc-thread-pool/servlet.png)
+![](/uploads/이론/spring-mvc-thread-pool/servlet.png)
 
 
 
@@ -173,7 +173,7 @@ GET http://localhost:8080/myServlet
 #### Lazy Loading: 필요할 때만 만든다
 
 서블릿은 **처음 접근할 때** 생성된다. 서버가 시작될 때 모든 서블릿을 만들지 않는다.
-![](/uploads/spring-mvc-thread-pool/lazy-loading-need.png)
+![](/uploads/이론/spring-mvc-thread-pool/lazy-loading-need.png)
 
 
 **왜 이렇게 할까?**
@@ -268,7 +268,7 @@ public class DispatcherServlet extends FrameworkServlet {
 ```
 
 **동작 흐름**:
-![](/uploads/spring-mvc-thread-pool/spring-dispatcherservlet.png)
+![](/uploads/이론/spring-mvc-thread-pool/spring-dispatcherservlet.png)
 
 
 **핵심**: 개발자는 `@RestController`나 `@Controller`만 만들면 되고, 서블릿 코드는 스프링이 알아서 처리해준다.
@@ -285,14 +285,14 @@ public class DispatcherServlet extends FrameworkServlet {
 
 동작 방식은 이랬다:
 
-![](/uploads/spring-mvc-thread-pool/tomcat-7-bio.png)
+![](/uploads/이론/spring-mvc-thread-pool/tomcat-7-bio.png)
 
 
 문제는 **Keep-Alive**였다.
 
 HTTP/1.1에서는 연결을 재사용한다. 요청 처리하고 나서도 연결을 끊지 않고 다음 요청을 기다린다. 보통 5-30초 정도 기다린다.
 
-![](/uploads/spring-mvc-thread-pool/tomcat-7-bio-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/tomcat-7-bio-2.png)
 
 
 BIO에서는 이 5초 동안 스레드가 아무것도 안 하고 대기한다. 스레드 풀이 200개면, 200명이 동시 접속하면 끝이었다. 201번째 사용자는 누군가 연결을 끊을 때까지 기다려야 했다.
@@ -423,12 +423,12 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 스프링 부트는 이렇게 요청을 처리한다:
 
-![](/uploads/spring-mvc-thread-pool/request-handle-flow.png)
+![](/uploads/이론/spring-mvc-thread-pool/request-handle-flow.png)
 
 
 200개 스레드가 모두 사용 중이면:
 
-![](/uploads/spring-mvc-thread-pool/request-handle-flow-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/request-handle-flow-2.png)
 
 
 ```
@@ -449,7 +449,7 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 #### JVM 메모리 구조
 
-![](/uploads/spring-mvc-thread-pool/jvm-memory-architecture.png)
+![](/uploads/이론/spring-mvc-thread-pool/jvm-memory-architecture.png)
 
 
 **Heap:**
@@ -834,7 +834,7 @@ class UserController {
 
 200개 스레드가 각각 User 객체(1KB)를 ThreadLocal에 들고 있으면:
 
-![](/uploads/spring-mvc-thread-pool/threadlocal-memory-count.png)
+![](/uploads/이론/spring-mvc-thread-pool/threadlocal-memory-count.png)
 
 
 > 출처: [madplay - 자바 ThreadLocal 사용법과 주의사항](https://madplay.github.io/post/java-threadlocal)
@@ -857,7 +857,7 @@ class EventProcessor {
 
 처리 속도보다 유입 속도가 빠르면:
 
-![](/uploads/spring-mvc-thread-pool/waiting.png)
+![](/uploads/이론/spring-mvc-thread-pool/waiting.png)
 
 
 > 출처: [blog.ecsimsw - 대기열 사이즈와 OOM 문제](https://www.blog.ecsimsw.com/entry/메모리-누수-확인-메트릭-모니터링과-대기열)
@@ -987,7 +987,7 @@ class AsyncConfig {
 
 ### CGI → 서블릿 → NIO의 진화
 
-![](/uploads/spring-mvc-thread-pool/cgi-servlet-nio-evolution.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-servlet-nio-evolution.png)
 
 
 ### 결국 답은
@@ -1089,7 +1089,7 @@ In the early 1990s, the web could only serve static HTML files. A method for dyn
 
 CGI was simple. When a request came in, it executed a program and returned the result as HTML.
 
-![](/uploads/spring-mvc-thread-pool/cgi-process-hell-start.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-process-hell-start.png)
 
 The problem was performance.
 
@@ -1109,12 +1109,12 @@ The core idea was **to use threads instead of processes**.
 
 
 CGI approach:
-![](/uploads/spring-mvc-thread-pool/servlet-thread-based-revolution.png)
+![](/uploads/이론/spring-mvc-thread-pool/servlet-thread-based-revolution.png)
 
 
 Servlet approach:
 
-![](/uploads/spring-mvc-thread-pool/servlet-thread-based-revolution-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/servlet-thread-based-revolution-2.png)
 
 
 
@@ -1149,12 +1149,12 @@ Let's dig deeper into why servlets are more efficient than processes.
 
 
 CGI approach:
-![](/uploads/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture.png)
 
 
 Servlet approach:
 
-![](/uploads/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-vs-servlet-memory-architecture-2.png)
 
 -> Code, Data, and Heap are shared; only the Stack is separate!
 
@@ -1202,7 +1202,7 @@ public class MyServlet extends HttpServlet {
 
 **Important point**:
 
-![](/uploads/spring-mvc-thread-pool/servlet.png)
+![](/uploads/이론/spring-mvc-thread-pool/servlet.png)
 
 
 
@@ -1224,7 +1224,7 @@ GET http://localhost:8080/myServlet
 #### Lazy Loading: Create Only When Needed
 
 Servlets are created **when first accessed**. Not all servlets are created when the server starts.
-![](/uploads/spring-mvc-thread-pool/lazy-loading-need.png)
+![](/uploads/이론/spring-mvc-thread-pool/lazy-loading-need.png)
 
 
 **Why do it this way?**
@@ -1319,7 +1319,7 @@ public class DispatcherServlet extends FrameworkServlet {
 ```
 
 **Request flow**:
-![](/uploads/spring-mvc-thread-pool/spring-dispatcherservlet.png)
+![](/uploads/이론/spring-mvc-thread-pool/spring-dispatcherservlet.png)
 
 
 **Key point**: Developers only need to create `@RestController` or `@Controller` classes, and Spring handles the servlet code automatically.
@@ -1336,14 +1336,14 @@ Early Tomcat used the BIO (Blocking I/O) connector by default.
 
 Here's how it worked:
 
-![](/uploads/spring-mvc-thread-pool/tomcat-7-bio.png)
+![](/uploads/이론/spring-mvc-thread-pool/tomcat-7-bio.png)
 
 
 The problem was **Keep-Alive**.
 
 HTTP/1.1 reuses connections. After processing a request, it doesn't close the connection but waits for the next request. Typically it waits about 5-30 seconds.
 
-![](/uploads/spring-mvc-thread-pool/tomcat-7-bio-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/tomcat-7-bio-2.png)
 
 
 With BIO, the thread sits idle doing nothing during those 5 seconds. If the thread pool has 200 threads, 200 concurrent connections was the limit. The 201st user had to wait until someone disconnected.
@@ -1474,12 +1474,12 @@ The Acceptor receives connections and passes them to Pollers. When a Poller dete
 
 Spring Boot processes requests like this:
 
-![](/uploads/spring-mvc-thread-pool/request-handle-flow.png)
+![](/uploads/이론/spring-mvc-thread-pool/request-handle-flow.png)
 
 
 When all 200 threads are in use:
 
-![](/uploads/spring-mvc-thread-pool/request-handle-flow-2.png)
+![](/uploads/이론/spring-mvc-thread-pool/request-handle-flow-2.png)
 
 
 ```
@@ -1500,7 +1500,7 @@ First, you need to understand the JVM memory structure.
 
 #### JVM Memory Structure
 
-![](/uploads/spring-mvc-thread-pool/jvm-memory-architecture.png)
+![](/uploads/이론/spring-mvc-thread-pool/jvm-memory-architecture.png)
 
 
 **Heap:**
@@ -1885,7 +1885,7 @@ class UserController {
 
 If 200 threads each hold a User object (1KB) in ThreadLocal:
 
-![](/uploads/spring-mvc-thread-pool/threadlocal-memory-count.png)
+![](/uploads/이론/spring-mvc-thread-pool/threadlocal-memory-count.png)
 
 
 > Source: [madplay - Java ThreadLocal Usage and Caveats](https://madplay.github.io/post/java-threadlocal)
@@ -1908,7 +1908,7 @@ class EventProcessor {
 
 If the inflow rate exceeds the processing rate:
 
-![](/uploads/spring-mvc-thread-pool/waiting.png)
+![](/uploads/이론/spring-mvc-thread-pool/waiting.png)
 
 
 > Source: [blog.ecsimsw - Queue Size and OOM Issues](https://www.blog.ecsimsw.com/entry/메모리-누수-확인-메트릭-모니터링과-대기열)
@@ -2038,7 +2038,7 @@ Resource-related:
 
 ### The Evolution from CGI to Servlet to NIO
 
-![](/uploads/spring-mvc-thread-pool/cgi-servlet-nio-evolution.png)
+![](/uploads/이론/spring-mvc-thread-pool/cgi-servlet-nio-evolution.png)
 
 
 ### The Bottom Line

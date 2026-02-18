@@ -114,7 +114,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 ```
 
 ## 전체 흐름
-![](/uploads/ime-input-handling/full.png)
+![](/uploads/프로젝트/IndiBalancing/ime-input-handling/full.png)
 
 
 ## 참고 오픈소스
@@ -246,7 +246,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 ```
 
 ## Full Flow
-![](/uploads/ime-input-handling/full.png)
+![](/uploads/프로젝트/IndiBalancing/ime-input-handling/full.png)
 
 ## Referenced Open Source
 

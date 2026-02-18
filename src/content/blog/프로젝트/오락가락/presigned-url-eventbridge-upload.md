@@ -40,7 +40,7 @@ draft: false
 
 ### 이중 네트워크 전송
 
-![](/uploads/presigned-url-eventbridge-upload/double-handling-network-cost.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/double-handling-network-cost.png)
 
 파일이 네트워크를 두 번 탄다. 클라이언트에서 서버로 한 번, 서버에서 S3로 한 번. 업로드 시간이 두 배고, 서버-S3 구간에서 실패하면 클라이언트부터 다시 보내야 한다.
 
@@ -66,11 +66,11 @@ Presigned URL을 쓰기로 결정하면, 서버가 파일을 직접 받지 않�
 
 ## 최종 아키텍처
 
-![](/uploads/presigned-url-eventbridge-upload/event-driven-architecture.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/event-driven-architecture.png)
 
 ### 전체 플로우
 
-![](/uploads/presigned-url-eventbridge-upload/full-flow-diagram.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/full-flow-diagram.png)
 
 1. 클라이언트가 Presigned URL 발급 요청
 2. 서버가 DB에 Upload 레코드(PENDING) 생성 + S3 Presigned URL 발급
@@ -80,7 +80,7 @@ Presigned URL을 쓰기로 결정하면, 서버가 파일을 직접 받지 않�
 
 ### 상태 흐름
 
-![](/uploads/presigned-url-eventbridge-upload/state-flow-diagram.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/state-flow-diagram.png)
 
 ---
 
@@ -123,9 +123,9 @@ Presigned URL 방식에서 피할 수 없는 문제가 고아 파일이다.
 | S3 고아 (FAILED/EXPIRED 14일 이상) | DB 상태 기반 스캔 | S3 파일 + DB 레코드 삭제 |
 | 처리 중단 (Stuck 30분 이상) | 배치 스캔 | Kafka 재발행 또는 DLQ |
 
-![](/uploads/presigned-url-eventbridge-upload/orphan-file-batch-scan.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/orphan-file-batch-scan.svg)
 
-![](/uploads/presigned-url-eventbridge-upload/orphan-file-cleanup-flow.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/orphan-file-cleanup-flow.svg)
 
 ---
 
@@ -133,13 +133,13 @@ Presigned URL 방식에서 피할 수 없는 문제가 고아 파일이다.
 
 ### Presigned URL 발급
 
-![](/uploads/presigned-url-eventbridge-upload/presigned-url-issue-flow.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/presigned-url-issue-flow.svg)
 
 URL 발급 시 DB에 Upload 레코드를 먼저 만든다. S3 이벤트가 올 때 "누구의 어떤 파일인지" 알아야 하기 때문이다. S3 키에 UUID를 포함시키고(`recordings/{uuid}_{filename}`), EventBridge 이벤트에서 UUID를 추출해 레코드를 조회한다.
 
 ### S3 이벤트 핸들러
 
-![](/uploads/presigned-url-eventbridge-upload/s3-event-handler.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/s3-event-handler.svg)
 
 ---
 
@@ -187,7 +187,7 @@ Server uploads load entire files into memory. Spring Boot's `MultipartFile` buff
 
 ### Double Network Transfer
 
-![](/uploads/presigned-url-eventbridge-upload/double-handling-network-cost.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/double-handling-network-cost.png)
 
 Files traverse the network twice: client to server, then server to S3. Upload time doubles, and server-to-S3 failures require retransmission from the client.
 
@@ -209,11 +209,11 @@ Decision: upload original WebM directly to S3, convert with FFmpeg on the backen
 
 ## Final Architecture
 
-![](/uploads/presigned-url-eventbridge-upload/event-driven-architecture.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/event-driven-architecture.png)
 
 ### Full Flow
 
-![](/uploads/presigned-url-eventbridge-upload/full-flow-diagram.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/full-flow-diagram.png)
 
 1. Client requests Presigned URL
 2. Server creates Upload record (PENDING) in DB + issues S3 Presigned URL
@@ -223,7 +223,7 @@ Decision: upload original WebM directly to S3, convert with FFmpeg on the backen
 
 ### State Flow
 
-![](/uploads/presigned-url-eventbridge-upload/state-flow-diagram.png)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/state-flow-diagram.png)
 
 ---
 
@@ -261,9 +261,9 @@ Automated cleanup via DB-state-based batch scanning:
 | S3 orphan (FAILED/EXPIRED > 14 days) | DB-state scan | Delete S3 file + DB record |
 | Stuck processing (> 30min) | Batch scan | Kafka republish or DLQ |
 
-![](/uploads/presigned-url-eventbridge-upload/orphan-file-batch-scan.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/orphan-file-batch-scan.svg)
 
-![](/uploads/presigned-url-eventbridge-upload/orphan-file-cleanup-flow.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/orphan-file-cleanup-flow.svg)
 
 ---
 
@@ -271,13 +271,13 @@ Automated cleanup via DB-state-based batch scanning:
 
 ### Presigned URL Issuance
 
-![](/uploads/presigned-url-eventbridge-upload/presigned-url-issue-flow.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/presigned-url-issue-flow.svg)
 
 Upload records are created in DB before issuing URLs, so S3 events can identify "whose file." UUIDs are embedded in S3 keys (`recordings/{uuid}_{filename}`), extracted from EventBridge events to query records.
 
 ### S3 Event Handler
 
-![](/uploads/presigned-url-eventbridge-upload/s3-event-handler.svg)
+![](/uploads/프로젝트/오락가락/presigned-url-eventbridge-upload/s3-event-handler.svg)
 
 ---
 

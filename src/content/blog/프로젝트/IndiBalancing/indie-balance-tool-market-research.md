@@ -57,7 +57,7 @@ draft: false
 - **방식**: 설문조사 + 커뮤니티 반응 수집
 - **기간**: 약 1주
 
-![](/uploads/indie-balance-tool-market-research/21-research.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/21-research.png)
 
 ### 2.2 홍보 문구
 
@@ -113,7 +113,7 @@ A: 네 맞습니다. 하지만 아직 초기 단계라 조정 중입니다.
 
 ### 3.1 응답자 프로필
 
-![](/uploads/indie-balance-tool-market-research/image.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image.png)
 
 | 역할 | 인원 |
 |------|------|
@@ -127,19 +127,19 @@ A: 네 맞습니다. 하지만 아직 초기 단계라 조정 중입니다.
 
 ### 3.2 개발 중인 장르
 
-![](/uploads/indie-balance-tool-market-research/game.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/game.png)
 
 **분석**: 로그라이크, RPG, 시뮬레이션이 상위권이다. 이 장르들의 공통점은 "수치 밸런싱이 중요하다"는 것이다. 장르 특성상 타겟 유저가 맞다는 신호다.
 
 ### 3.3 개발 경험
 
-![](/uploads/indie-balance-tool-market-research/dev.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/dev.png)
 
 **분석**: 12명 중 10명이 프로젝트 완성/출시 경험이 있다. 즉, "실제로 밸런싱 작업을 해본 사람들"이 응답했다. 경험 없는 사람의 의견보다 신뢰도가 높다.
 
 ### 3.4 현재 사용 도구
 
-![](/uploads/indie-balance-tool-market-research/tool.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/tool.png)
 
 **분석**: 대다수가 엑셀/구글 시트를 사용한다. 이 도구의 한계를 해결하면 전환할 가능성이 있다. Unity Inspector를 쓰는 사람도 있는데, 이는 "엔진 내에서 해결하고 싶다"는 니즈를 보여준다.
 
@@ -148,25 +148,25 @@ A: 네 맞습니다. 하지만 아직 초기 단계라 조정 중입니다.
 
 ### 3.5 현재 방식의 불편한 점
 
-![](/uploads/indie-balance-tool-market-research/image-2.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-2.png)
 
 **분석**: 이 질문의 응답이 핵심이다. "어떤 불편함을 해결해야 하는가"를 직접적으로 보여준다.
 
 ### 3.6 밸런싱 작업에서 어려운 점
 
-![](/uploads/indie-balance-tool-market-research/image-3.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-3.png)
 
 **분석**: "밸런스가 맞는지 확인하기 어렵다"가 핵심 페인 포인트다. 이것이 몬테카를로 시뮬레이션 기능의 근거가 된다.
 
 ### 3.7 정보 습득 경로
 
-![](/uploads/indie-balance-tool-market-research/image-4.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-4.png)
 
 **분석**: 레퍼런스 게임 분석, 커뮤니티, 유튜브가 상위권이다. 즉, "체계적인 학습 경로가 없다"는 뜻이다. 이론적 배경을 제공하면 차별화 포인트가 될 수 있다.
 
 ### 3.8 원하는 기능 (주관식)
 
-![](/uploads/indie-balance-tool-market-research/feature.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/feature.png)
 
 **주요 의견**:
 - 자동 DPS 계산
@@ -177,29 +177,29 @@ A: 네 맞습니다. 하지만 아직 초기 단계라 조정 중입니다.
 
 ### 3.9 사용 의향
 
-![](/uploads/indie-balance-tool-market-research/image-5.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-5.png)
 
 **분석**: 대다수가 "사용할 의향이 있다"고 응답했다. 가설 "도구가 있으면 사용할 것이다"가 어느 정도 검증되었다.
 
 ### 3.10 중요하게 생각하는 것
 
-![](/uploads/indie-balance-tool-market-research/image-6.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-6.png)
 
 **분석**: 사용 편의성, 게임 엔진 연동, 시각화가 상위권이다. 이 세 가지가 핵심 기능이 되어야 한다.
 
 ### 3.11 가격 민감도
 
-![](/uploads/indie-balance-tool-market-research/311.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/311.png)
 
 **분석**: 무료~월 5천원 대가 대다수다. 고가 유료화는 어렵고, 프리미엄 모델(기본 무료 + 고급 기능 유료)이 적합하다는 증거다.
 
 ### 3.12 자유 의견
 
-![](/uploads/indie-balance-tool-market-research/image-7.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-7.png)
 
 ### 3.13 베타테스트 참여 의향
 
-![](/uploads/indie-balance-tool-market-research/image-8.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-8.png)
 
 **분석**: 2명이 연락처를 남겼다. 초기 사용자 확보 가능성이 있다.
 
@@ -435,7 +435,7 @@ Market research was conducted to validate this hypothesis.
 - **Method**: Survey + community reaction collection
 - **Duration**: Approximately 1 week
 
-![](/uploads/indie-balance-tool-market-research/21-research.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/21-research.png)
 
 ### 2.3 Immediate Community Response
 
@@ -468,7 +468,7 @@ A: Yes. But it's still in early stages and being refined.
 
 ### 3.1 Respondent Profile
 
-![](/uploads/indie-balance-tool-market-research/image.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image.png)
 
 | Role | Count |
 |------|-------|
@@ -482,19 +482,19 @@ A: Yes. But it's still in early stages and being refined.
 
 ### 3.2 Genres in Development
 
-![](/uploads/indie-balance-tool-market-research/game.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/game.png)
 
 **Analysis**: Roguelike, RPG, and simulation ranked highest. The common trait: "numerical balancing is critical." Genre characteristics signal the target users are correct.
 
 ### 3.3 Development Experience
 
-![](/uploads/indie-balance-tool-market-research/dev.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/dev.png)
 
 **Analysis**: 10 out of 12 have completed/shipped projects. These are "people who've actually done balancing work." More credible than opinions from inexperienced respondents.
 
 ### 3.4 Current Tools Used
 
-![](/uploads/indie-balance-tool-market-research/tool.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/tool.png)
 
 **Analysis**: Majority use Excel/Google Sheets. Solving these tools' limitations creates switching potential. Some use Unity Inspector, showing a desire to "solve it within the engine."
 
@@ -503,25 +503,25 @@ Additional comment: "Unreal tables are annoying for planners doing large-scale w
 
 ### 3.5 Pain Points with Current Methods
 
-![](/uploads/indie-balance-tool-market-research/image-2.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-2.png)
 
 **Analysis**: This question's responses are key. Directly shows "what inconveniences need to be solved."
 
 ### 3.6 Balancing Difficulties
 
-![](/uploads/indie-balance-tool-market-research/image-3.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-3.png)
 
 **Analysis**: "Hard to verify if balance is correct" is the core pain point. This justifies the Monte Carlo simulation feature.
 
 ### 3.7 Information Sources
 
-![](/uploads/indie-balance-tool-market-research/image-4.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-4.png)
 
 **Analysis**: Reference game analysis, communities, and YouTube ranked highest. This means "there's no systematic learning path." Providing theoretical background could be a differentiator.
 
 ### 3.8 Desired Features (Open-ended)
 
-![](/uploads/indie-balance-tool-market-research/feature.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/feature.png)
 
 **Key opinions**:
 - Auto DPS calculation
@@ -532,29 +532,29 @@ Additional comment: "Unreal tables are annoying for planners doing large-scale w
 
 ### 3.9 Usage Intent
 
-![](/uploads/indie-balance-tool-market-research/image-5.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-5.png)
 
 **Analysis**: Majority responded "willing to use." The hypothesis "they'll use it if it exists" is somewhat validated.
 
 ### 3.10 What Matters Most
 
-![](/uploads/indie-balance-tool-market-research/image-6.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-6.png)
 
 **Analysis**: Ease of use, game engine integration, and visualization ranked highest. These three should be core features.
 
 ### 3.11 Price Sensitivity
 
-![](/uploads/indie-balance-tool-market-research/311.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/311.png)
 
 **Analysis**: Free to 5,000 KRW/month dominated. High-price monetization is difficult; evidence supports a freemium model (basic free + premium features paid).
 
 ### 3.12 Free Comments
 
-![](/uploads/indie-balance-tool-market-research/image-7.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-7.png)
 
 ### 3.13 Beta Test Participation
 
-![](/uploads/indie-balance-tool-market-research/image-8.png)
+![](/uploads/프로젝트/IndiBalancing/indie-balance-tool-market-research/image-8.png)
 
 **Analysis**: 2 people left contact information. Early user acquisition is possible.
 

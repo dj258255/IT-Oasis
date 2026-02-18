@@ -25,20 +25,20 @@ draft: false
 오전 6시에 일어나서 6시 50분부터 버스를 타고 익산에서 서울까지 이동했다.
 
 
-![](/uploads/aws-modern-app-training/bus-to-seoul.jpeg)
+![](/uploads/활동/aws-modern-app-training/bus-to-seoul.jpeg)
 
 
 들어서자마자 보이는 트리.
 
 
-![](/uploads/aws-modern-app-training/christmas-tree.jpeg)
+![](/uploads/활동/aws-modern-app-training/christmas-tree.jpeg)
 
 
 여긴 신기하게 QR을 찍으면 엘리베이터 문이 열리고 특정 층까지 자동으로 이동한다. 엘리베이터 안에 버튼이 없었다!
 
-![](/uploads/aws-modern-app-training/qr-elevator.jpeg)
+![](/uploads/활동/aws-modern-app-training/qr-elevator.jpeg)
 
-![](/uploads/aws-modern-app-training/classroom.jpeg)
+![](/uploads/활동/aws-modern-app-training/classroom.jpeg)
 
 원광대학교 모던 애플리케이션 교육 현장. 이틀 동안 강의를 들을 강의실이다.
 
@@ -46,7 +46,7 @@ draft: false
 
 ### AWS JAM
 
-![](/uploads/aws-modern-app-training/aws-jam-intro.png)
+![](/uploads/활동/aws-modern-app-training/aws-jam-intro.png)
 
 
 첫날에는 AWS JAM에 대한 간략한 설명을 듣고 바로 실습으로 이어졌다.
@@ -55,7 +55,7 @@ draft: false
 - AWS 실습으로 JAM이라는 점수를 받아서 랭킹을 매기는 시스템
 - 같이 강의를 들은 수강생들과 선의의 경쟁을 했다
 
-![](/uploads/aws-modern-app-training/jam-3rd-place.png)
+![](/uploads/활동/aws-modern-app-training/jam-3rd-place.png)
 
 
 결국 JAM에서 **999포인트로 3등**을 했다!
@@ -65,7 +65,7 @@ draft: false
 - "Security boundaries for your VPC" - 해결!
 - "Are you up for a network challenge?" - 마지막 스텝에서 꼬여서 시간 부족으로 못 풀었다
 
-![](/uploads/aws-modern-app-training/prize-humidifier.jpeg)
+![](/uploads/활동/aws-modern-app-training/prize-humidifier.jpeg)
 
 3등 상품으로 가습기(+공기청정기)를 받았다!
 
@@ -177,14 +177,14 @@ draft: false
 설명을 들은 것을 바탕으로 직접 실습을 시작했다.
 
 1. **데모 리소스 설정**
-![](/uploads/aws-modern-app-training/demo-resources.png)
+![](/uploads/활동/aws-modern-app-training/demo-resources.png)
 
 2. **런북 코드화**
-![](/uploads/aws-modern-app-training/runbook-code.png)
+![](/uploads/활동/aws-modern-app-training/runbook-code.png)
 
 3. **HCP Packer에 이미지 넣고 TFC로 배포**
 
-![](/uploads/aws-modern-app-training/hcp-packer-deploy.png)
+![](/uploads/활동/aws-modern-app-training/hcp-packer-deploy.png)
 
 4. 작업을 Azure로 변환 (환경변수 오류로 못함)
 5. 트랙 리소스 정리
@@ -211,8 +211,8 @@ draft: false
 | 1일차 | 10:00 ~ 17:00 | AWS JAM 실습 |
 | 2일차 | 09:30 ~ 17:00 | 모던 애플리케이션 실습 & 교육 |
 
-![](/uploads/aws-modern-app-training/group-photo-1.jpeg)
-![](/uploads/aws-modern-app-training/group-photo-2.jpeg)
+![](/uploads/활동/aws-modern-app-training/group-photo-1.jpeg)
+![](/uploads/활동/aws-modern-app-training/group-photo-2.jpeg)
 
 
 같이 강의를 들은 수강생들과 강사님, 멘토님들과의 사진 한 컷!
@@ -229,17 +229,17 @@ draft: false
 
 Woke up at 6 AM and took a bus from Iksan to Seoul starting at 6:50 AM.
 
-![](/uploads/aws-modern-app-training/bus-to-seoul.jpeg)
+![](/uploads/활동/aws-modern-app-training/bus-to-seoul.jpeg)
 
 A Christmas tree greeted us at the entrance.
 
-![](/uploads/aws-modern-app-training/christmas-tree.jpeg)
+![](/uploads/활동/aws-modern-app-training/christmas-tree.jpeg)
 
 Interestingly, scanning a QR code opens the elevator and automatically takes you to a specific floor. There were no buttons inside the elevator!
 
-![](/uploads/aws-modern-app-training/qr-elevator.jpeg)
+![](/uploads/활동/aws-modern-app-training/qr-elevator.jpeg)
 
-![](/uploads/aws-modern-app-training/classroom.jpeg)
+![](/uploads/활동/aws-modern-app-training/classroom.jpeg)
 
 The Wonkwang University Modern Application training venue. This is the classroom where we'd attend lectures for two days.
 
@@ -247,7 +247,7 @@ The Wonkwang University Modern Application training venue. This is the classroom
 
 ### AWS JAM
 
-![](/uploads/aws-modern-app-training/aws-jam-intro.png)
+![](/uploads/활동/aws-modern-app-training/aws-jam-intro.png)
 
 On the first day, we received a brief introduction to AWS JAM and jumped straight into hands-on practice.
 
@@ -255,7 +255,7 @@ On the first day, we received a brief introduction to AWS JAM and jumped straigh
 - A system where you earn JAM points through AWS hands-on exercises and compete on a leaderboard
 - We had friendly competition with fellow trainees
 
-![](/uploads/aws-modern-app-training/jam-3rd-place.png)
+![](/uploads/활동/aws-modern-app-training/jam-3rd-place.png)
 
 I finished **3rd place with 999 points** in the JAM!
 
@@ -264,7 +264,7 @@ I worked hard, but when I got stuck, I freely used hints to solve problems. Even
 - "Security boundaries for your VPC" - Solved!
 - "Are you up for a network challenge?" - Got tangled at the last step and ran out of time
 
-![](/uploads/aws-modern-app-training/prize-humidifier.jpeg)
+![](/uploads/활동/aws-modern-app-training/prize-humidifier.jpeg)
 
 I received a humidifier (+ air purifier) as the 3rd place prize!
 
@@ -376,14 +376,14 @@ Composing services with combinations of different clouds. This approach is gaini
 Based on the lectures, we started hands-on practice.
 
 1. **Demo resource setup**
-![](/uploads/aws-modern-app-training/demo-resources.png)
+![](/uploads/활동/aws-modern-app-training/demo-resources.png)
 
 2. **Runbook codification**
-![](/uploads/aws-modern-app-training/runbook-code.png)
+![](/uploads/활동/aws-modern-app-training/runbook-code.png)
 
 3. **Image to HCP Packer and deploy via TFC**
 
-![](/uploads/aws-modern-app-training/hcp-packer-deploy.png)
+![](/uploads/활동/aws-modern-app-training/hcp-packer-deploy.png)
 
 4. Convert to Azure (failed due to environment variable error)
 5. Track resource cleanup
@@ -408,7 +408,7 @@ Deeper learning depends on my own initiative, so I plan to study more thoroughly
 | Day 1 | 10:00 ~ 17:00 | AWS JAM Hands-on |
 | Day 2 | 09:30 ~ 17:00 | Modern Application Practice & Training |
 
-![](/uploads/aws-modern-app-training/group-photo-1.jpeg)
-![](/uploads/aws-modern-app-training/group-photo-2.jpeg)
+![](/uploads/활동/aws-modern-app-training/group-photo-1.jpeg)
+![](/uploads/활동/aws-modern-app-training/group-photo-2.jpeg)
 
 A group photo with fellow trainees, the instructor, and mentors!

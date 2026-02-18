@@ -64,7 +64,7 @@ class BIOConnector {
 
 HTTP Keep-Alive를 사용하는 경우를 생각해보자. 클라이언트가 첫 요청을 보내고, 2초 후에 두 번째 요청을 보낸다고 하자.
 
-![](/uploads/tomcat-nio-request-handling/11-bio-connector-problem.png)
+![](/uploads/이론/tomcat-nio-request-handling/11-bio-connector-problem.png)
 
 
 스레드가 1.9초 동안 **아무것도 안 하고 대기만** 했다. 이게 연결이 1000개라면?
@@ -212,7 +212,7 @@ NIO Connector는 세 가지 주요 컴포넌트로 구성된다.
 
 ### 2.1 전체 구조
 
-![](/uploads/tomcat-nio-request-handling/21-overall-architecture.png)
+![](/uploads/이론/tomcat-nio-request-handling/21-overall-architecture.png)
 
 각각 무슨 역할을 할까?
 
@@ -371,7 +371,7 @@ Poller 감시 (2초) → 스레드 할당 → 처리 (0.1초) → 스레드 반�
 
 ### 2.5 Selector는 어떻게 동작할까?
 
-![](/uploads/tomcat-nio-request-handling/25-selector-how-operation.png)
+![](/uploads/이론/tomcat-nio-request-handling/25-selector-how-operation.png)
 
 
 Java의 Selector는 운영체제의 I/O 멀티플렉싱 기능을 활용한다.
@@ -462,9 +462,9 @@ epoll:  10번만 체크 → 0.1ms
 
 
 
-![](/uploads/tomcat-nio-request-handling/25-selector-how-operation-2.png)
+![](/uploads/이론/tomcat-nio-request-handling/25-selector-how-operation-2.png)
 
-![](/uploads/tomcat-nio-request-handling/25-selector-how-operation-3.png)
+![](/uploads/이론/tomcat-nio-request-handling/25-selector-how-operation-3.png)
 
 **NIO Connector 동작 순서**
 
@@ -486,7 +486,7 @@ epoll:  10번만 체크 → 0.1ms
 
 ## 3. 톰캣 설정: maxThreads, maxConnections, acceptCount
 
-![](/uploads/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.png)
+![](/uploads/이론/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.png)
 
 
 이제 톰캣 설정값들이 어떤 의미인지 이해할 수 있다.
@@ -504,7 +504,7 @@ server:
 
 **흐름**:
 
-![](/uploads/tomcat-nio-request-handling/31-three-types-config-relationship.png)
+![](/uploads/이론/tomcat-nio-request-handling/31-three-types-config-relationship.png)
 
 ### 3.2 각 설정의 의미
 
@@ -633,7 +633,7 @@ listen(server_fd, 100);  // acceptCount = 100
 ```
 
 **acceptCount의 동작**:
-![](/uploads/tomcat-nio-request-handling/323-accept-count.png)
+![](/uploads/이론/tomcat-nio-request-handling/323-accept-count.png)
 
 
 ```
@@ -721,12 +721,12 @@ server:
 
 ### 4.1 전체 흐름
 
-![](/uploads/tomcat-nio-request-handling/41-overall-flow.png)
+![](/uploads/이론/tomcat-nio-request-handling/41-overall-flow.png)
 
 
 ### 4.2 DispatcherServlet: Front Controller
 
-![](/uploads/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.png)
+![](/uploads/이론/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.png)
 
 
 ```java
@@ -777,7 +777,7 @@ public class DispatcherServlet extends HttpServlet {
 
 ### 4.3 HandlerMapping: URL → Controller 매핑
 
-![](/uploads/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.png)
+![](/uploads/이론/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.png)
 
 
 ```java
@@ -929,7 +929,7 @@ class RequestMappingHandlerAdapter implements HandlerAdapter {
 }
 ```
 
-![](/uploads/tomcat-nio-request-handling/44-handler-adapter-controller-execution.png)
+![](/uploads/이론/tomcat-nio-request-handling/44-handler-adapter-controller-execution.png)
 
 
 
@@ -950,7 +950,7 @@ class PerformanceController {
 ```
 
 **실제 측정** (로컬 환경):
-![](/uploads/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.png)
+![](/uploads/이론/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.png)
 
 **병목은 어디?**
 
@@ -1224,13 +1224,13 @@ maxConnections = 200 × (1 + 버퍼) = 400~500
 
 이제 전체 그림이 보인다.
 
-![](/uploads/tomcat-nio-request-handling/6-overall-flow-summary.png)
+![](/uploads/이론/tomcat-nio-request-handling/6-overall-flow-summary.png)
 
 
 
 **각 계층의 처리 시간** (일반적인 REST API):
 
-![](/uploads/tomcat-nio-request-handling/6-overall-flow-summary-2.png)
+![](/uploads/이론/tomcat-nio-request-handling/6-overall-flow-summary-2.png)
 
 
 **결론**: 대부분의 경우 DB가 병목이다. 톰캣과 Spring MVC는 충분히 빠르다.
@@ -1322,7 +1322,7 @@ class BIOConnector {
 
 Consider the case of HTTP Keep-Alive. Suppose a client sends a first request and then a second request 2 seconds later.
 
-![](/uploads/tomcat-nio-request-handling/11-bio-connector-problem.png)
+![](/uploads/이론/tomcat-nio-request-handling/11-bio-connector-problem.png)
 
 
 The thread spent 1.9 seconds **doing nothing but waiting**. What if there are 1,000 connections?
@@ -1470,7 +1470,7 @@ The NIO Connector consists of three main components.
 
 ### 2.1 Overall Architecture
 
-![](/uploads/tomcat-nio-request-handling/21-overall-architecture.png)
+![](/uploads/이론/tomcat-nio-request-handling/21-overall-architecture.png)
 
 What role does each component play?
 
@@ -1629,7 +1629,7 @@ Thread occupied: 0.1 seconds
 
 ### 2.5 How Does the Selector Work?
 
-![](/uploads/tomcat-nio-request-handling/25-selector-how-operation.png)
+![](/uploads/이론/tomcat-nio-request-handling/25-selector-how-operation.png)
 
 
 Java's Selector leverages the operating system's I/O multiplexing capabilities.
@@ -1720,9 +1720,9 @@ epoll:  checks only 10 times → 0.1ms
 
 
 
-![](/uploads/tomcat-nio-request-handling/25-selector-how-operation-2.png)
+![](/uploads/이론/tomcat-nio-request-handling/25-selector-how-operation-2.png)
 
-![](/uploads/tomcat-nio-request-handling/25-selector-how-operation-3.png)
+![](/uploads/이론/tomcat-nio-request-handling/25-selector-how-operation-3.png)
 
 **NIO Connector Operation Sequence**
 
@@ -1744,7 +1744,7 @@ epoll:  checks only 10 times → 0.1ms
 
 ## 3. Tomcat Configuration: maxThreads, maxConnections, acceptCount
 
-![](/uploads/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.png)
+![](/uploads/이론/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.png)
 
 
 Now we can understand what these Tomcat configuration values mean.
@@ -1762,7 +1762,7 @@ server:
 
 **Flow**:
 
-![](/uploads/tomcat-nio-request-handling/31-three-types-config-relationship.png)
+![](/uploads/이론/tomcat-nio-request-handling/31-three-types-config-relationship.png)
 
 ### 3.2 Meaning of Each Setting
 
@@ -1891,7 +1891,7 @@ listen(server_fd, 100);  // acceptCount = 100
 ```
 
 **How acceptCount works**:
-![](/uploads/tomcat-nio-request-handling/323-accept-count.png)
+![](/uploads/이론/tomcat-nio-request-handling/323-accept-count.png)
 
 
 ```
@@ -1979,12 +1979,12 @@ Tomcat received the request. Now it's handed off to Spring MVC.
 
 ### 4.1 Overall Flow
 
-![](/uploads/tomcat-nio-request-handling/41-overall-flow.png)
+![](/uploads/이론/tomcat-nio-request-handling/41-overall-flow.png)
 
 
 ### 4.2 DispatcherServlet: Front Controller
 
-![](/uploads/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.png)
+![](/uploads/이론/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.png)
 
 
 ```java
@@ -2035,7 +2035,7 @@ public class DispatcherServlet extends HttpServlet {
 
 ### 4.3 HandlerMapping: URL to Controller Mapping
 
-![](/uploads/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.png)
+![](/uploads/이론/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.png)
 
 
 ```java
@@ -2187,7 +2187,7 @@ class RequestMappingHandlerAdapter implements HandlerAdapter {
 }
 ```
 
-![](/uploads/tomcat-nio-request-handling/44-handler-adapter-controller-execution.png)
+![](/uploads/이론/tomcat-nio-request-handling/44-handler-adapter-controller-execution.png)
 
 
 
@@ -2208,7 +2208,7 @@ class PerformanceController {
 ```
 
 **Actual measurements** (local environment):
-![](/uploads/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.png)
+![](/uploads/이론/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.png)
 
 **Where is the bottleneck?**
 
@@ -2482,13 +2482,13 @@ With buffer, 2~3x is appropriate
 
 Now we can see the full picture.
 
-![](/uploads/tomcat-nio-request-handling/6-overall-flow-summary.png)
+![](/uploads/이론/tomcat-nio-request-handling/6-overall-flow-summary.png)
 
 
 
 **Processing time at each layer** (typical REST API):
 
-![](/uploads/tomcat-nio-request-handling/6-overall-flow-summary-2.png)
+![](/uploads/이론/tomcat-nio-request-handling/6-overall-flow-summary-2.png)
 
 
 **Conclusion**: In most cases, the database is the bottleneck. Tomcat and Spring MVC are fast enough.

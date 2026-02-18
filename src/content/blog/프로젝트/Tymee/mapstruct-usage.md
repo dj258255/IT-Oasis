@@ -38,7 +38,7 @@ Entity → Domain → Response DTO (조회)
 
 ### 수동 변환의 문제
 
-![manual-mapping-problem](/uploads/mapstruct-usage/manual-mapping-problem.png)
+![manual-mapping-problem](/uploads/프로젝트/Tymee/mapstruct-usage/manual-mapping-problem.png)
 
 
 필드 순서 틀리거나 하나 빠뜨리면 컴파일 에러도 안 나고 런타임에 이상한 값이 들어간다. MapStruct는 컴파일 타임에 매핑 코드를 생성해서 이런 실수를 방지한다.
@@ -53,7 +53,7 @@ Entity → Domain → Response DTO (조회)
 
 이걸 처리하려면:
 
-![partial-update-problem](/uploads/mapstruct-usage/partial-update-problem.png)
+![partial-update-problem](/uploads/프로젝트/Tymee/mapstruct-usage/partial-update-problem.png)
 
 
 MapStruct의 `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)`나 default 메서드로 이걸 깔끔하게 처리할 수 있다.
@@ -75,14 +75,14 @@ MapStruct의 `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)`나 defaul
 
 ### UserMapper
 
-![user-mapper](/uploads/mapstruct-usage/user-mapper.png)
+![user-mapper](/uploads/프로젝트/Tymee/mapstruct-usage/user-mapper.png)
 
 
 User 도메인은 Value Object를 많이 쓴다. `Email`, `Nickname`, `Tier`, `UserStatus` 같은 VO들이 있고, 이걸 DTO로 변환할 때 `.value()`나 `.name()` 호출이 필요하다. 필드가 많아지면 수동으로 하기 귀찮고 실수하기 쉬워서 MapStruct를 썼다.
 
 ### UserSettingsMapper
 
-![user-settings-mapper](/uploads/mapstruct-usage/user-settings-mapper.png)
+![user-settings-mapper](/uploads/프로젝트/Tymee/mapstruct-usage/user-settings-mapper.png)
 
 
 UserSettings는 더 심하다. 푸시 알림, 개인정보, 플래너 설정 등 20개가 넘는 필드가 있고, 부분 업데이트(PATCH)를 지원해야 한다. null인 필드는 무시하고 기존 값을 유지하는 로직이 필요한데, 이걸 수동으로 하면 코드가 100줄 넘어간다.
@@ -93,7 +93,7 @@ UserSettings는 더 심하다. 푸시 알림, 개인정보, 플래너 설정 등
 
 ### UploadResponse.from()
 
-![upload-response-from](/uploads/mapstruct-usage/upload-response-from.png)
+![upload-response-from](/uploads/프로젝트/Tymee/mapstruct-usage/upload-response-from.png)
 
 
 upload은 MapStruct 안 쓴다. 이유:
@@ -106,7 +106,7 @@ upload은 MapStruct 안 쓴다. 이유:
 
 ### UploadEntity 변환
 
-![upload-entity-conversion](/uploads/mapstruct-usage/upload-entity-conversion.png)
+![upload-entity-conversion](/uploads/프로젝트/Tymee/mapstruct-usage/upload-entity-conversion.png)
 
 
 엔티티 ↔ 도메인도 필드명이 똑같고 타입도 같다. MapStruct 쓰면 자동으로 해주긴 하는데, 이 정도는 수동으로 해도 충분하다.
@@ -132,14 +132,14 @@ upload은 MapStruct 안 쓴다. 이유:
 
 ### build.gradle.kts
 
-![mapstruct-build-gradle](/uploads/mapstruct-usage/mapstruct-build-gradle.png)
+![mapstruct-build-gradle](/uploads/프로젝트/Tymee/mapstruct-usage/mapstruct-build-gradle.png)
 
 
 Lombok과 같이 쓰면 annotationProcessor 순서가 중요하다. MapStruct가 Lombok이 생성한 getter/setter를 사용하기 때문에 Lombok이 먼저 처리되어야 한다.
 
 ### Mapper 인터페이스
 
-![mapper-interface](/uploads/mapstruct-usage/mapper-interface.png)
+![mapper-interface](/uploads/프로젝트/Tymee/mapstruct-usage/mapper-interface.png)
 
 
 `componentModel = "spring"`으로 설정하면 Spring Bean으로 등록된다. `@Autowired`나 생성자 주입으로 사용할 수 있다.
@@ -447,7 +447,7 @@ Entity → Domain → Response DTO (query)
 
 ### Problems with Manual Conversion
 
-![manual-mapping-problem](/uploads/mapstruct-usage/manual-mapping-problem.png)
+![manual-mapping-problem](/uploads/프로젝트/Tymee/mapstruct-usage/manual-mapping-problem.png)
 
 
 If you get the field order wrong or miss one, there's no compile error — you get incorrect values at runtime. MapStruct generates mapping code at compile time to prevent such mistakes.
@@ -462,7 +462,7 @@ Settings update APIs typically change only a subset of fields:
 
 To handle this:
 
-![partial-update-problem](/uploads/mapstruct-usage/partial-update-problem.png)
+![partial-update-problem](/uploads/프로젝트/Tymee/mapstruct-usage/partial-update-problem.png)
 
 
 MapStruct's `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)` or default methods can handle this cleanly.
@@ -484,14 +484,14 @@ MapStruct's `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)` or default
 
 ### UserMapper
 
-![user-mapper](/uploads/mapstruct-usage/user-mapper.png)
+![user-mapper](/uploads/프로젝트/Tymee/mapstruct-usage/user-mapper.png)
 
 
 The User domain uses many Value Objects. There are VOs like `Email`, `Nickname`, `Tier`, and `UserStatus`, and converting them to DTOs requires calling `.value()` or `.name()`. As the number of fields grows, doing this manually becomes tedious and error-prone, so we used MapStruct.
 
 ### UserSettingsMapper
 
-![user-settings-mapper](/uploads/mapstruct-usage/user-settings-mapper.png)
+![user-settings-mapper](/uploads/프로젝트/Tymee/mapstruct-usage/user-settings-mapper.png)
 
 
 UserSettings is even more involved. There are over 20 fields including push notifications, privacy, and planner settings, and it needs to support partial updates (PATCH). The logic to ignore null fields and preserve existing values would exceed 100 lines if done manually.
@@ -502,7 +502,7 @@ UserSettings is even more involved. There are over 20 fields including push noti
 
 ### UploadResponse.from()
 
-![upload-response-from](/uploads/mapstruct-usage/upload-response-from.png)
+![upload-response-from](/uploads/프로젝트/Tymee/mapstruct-usage/upload-response-from.png)
 
 
 upload does not use MapStruct. Here's why:
@@ -515,7 +515,7 @@ upload does not use MapStruct. Here's why:
 
 ### UploadEntity Conversion
 
-![upload-entity-conversion](/uploads/mapstruct-usage/upload-entity-conversion.png)
+![upload-entity-conversion](/uploads/프로젝트/Tymee/mapstruct-usage/upload-entity-conversion.png)
 
 
 Entity-to-domain conversion also has identical field names and types. MapStruct would do this automatically, but this level of work is perfectly fine to do manually.
@@ -541,14 +541,14 @@ Ultimately, it comes down to how much boilerplate you can eliminate. If there ar
 
 ### build.gradle.kts
 
-![mapstruct-build-gradle](/uploads/mapstruct-usage/mapstruct-build-gradle.png)
+![mapstruct-build-gradle](/uploads/프로젝트/Tymee/mapstruct-usage/mapstruct-build-gradle.png)
 
 
 When using with Lombok, the annotationProcessor order matters. Since MapStruct uses the getters/setters generated by Lombok, Lombok must be processed first.
 
 ### Mapper Interface
 
-![mapper-interface](/uploads/mapstruct-usage/mapper-interface.png)
+![mapper-interface](/uploads/프로젝트/Tymee/mapstruct-usage/mapper-interface.png)
 
 
 Setting `componentModel = "spring"` registers it as a Spring Bean. You can use it with `@Autowired` or constructor injection.

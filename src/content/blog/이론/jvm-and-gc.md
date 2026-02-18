@@ -24,7 +24,7 @@ JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신�
 
 ### 1.1 JVM 전체 구조
 
-![](/uploads/jvm-and-gc/jvm-architecture.png)
+![](/uploads/이론/jvm-and-gc/jvm-architecture.png)
 
 출처 : https://dzone.com/articles/jvm-architecture-explained
 
@@ -39,7 +39,7 @@ Stack은 per thread
 
 ### 1.2 Class Loader Subsystem
 
-![](/uploads/jvm-and-gc/class-loader-subsystem.png)
+![](/uploads/이론/jvm-and-gc/class-loader-subsystem.png)
 
 Java 클래스(.class 파일)를 메모리에 로드하고 링크하는 역할.
 
@@ -47,7 +47,7 @@ Java 클래스(.class 파일)를 메모리에 로드하고 링크하는 역할.
 
 3단계 위임 모델 (Parent Delegation Model)
 
-![](/uploads/jvm-and-gc/parent-delegation-model.png)
+![](/uploads/이론/jvm-and-gc/parent-delegation-model.png)
 
 **동작 방식**:
 1. 클래스 로드 요청이 들어오면 **부모에게 먼저 위임**
@@ -68,7 +68,7 @@ System.out.println(MyClass.class.getClassLoader());     // AppClassLoader
 
 #### Linking (링킹)
 
-![](/uploads/jvm-and-gc/linking-process.png)
+![](/uploads/이론/jvm-and-gc/linking-process.png)
 
 
 1. **Verify**: 바이트코드가 JVM 명세에 맞는지 검증
@@ -79,7 +79,7 @@ System.out.println(MyClass.class.getClassLoader());     // AppClassLoader
 
 static 변수에 실제 값 할당, static 블록 실행
 
-![](/uploads/jvm-and-gc/initialization.png)
+![](/uploads/이론/jvm-and-gc/initialization.png)
 
 
 > 출처: [JVM Internals - Inside Java](https://blogs.oracle.com/javamagazine/post/java-class-file-jvm)
@@ -91,8 +91,8 @@ static 변수에 실제 값 할당, static 블록 실행
 
 JVM이 프로그램 실행 중 사용하는 메모리 영역들.
 
-![](/uploads/jvm-and-gc/runtime-data-areas.png)
-![](/uploads/jvm-and-gc/runtime-data-areas-2.png)
+![](/uploads/이론/jvm-and-gc/runtime-data-areas.png)
+![](/uploads/이론/jvm-and-gc/runtime-data-areas-2.png)
 
 
 
@@ -117,7 +117,7 @@ JVM이 프로그램 실행 중 사용하는 메모리 영역들.
 - PermGen은 힙의 일부 → 크기 제한으로 `OutOfMemoryError: PermGen space` 자주 발생
 - Metaspace는 Native Memory 사용 → 자동으로 확장 가능
 
-![](/uploads/jvm-and-gc/permgen-to-metaspace.png)
+![](/uploads/이론/jvm-and-gc/permgen-to-metaspace.png)
 
 
 > 출처: [Metaspace in Java 8 - Oracle](https://blogs.oracle.com/poonam/post/about-g1-garbage-collector-permanent-generation-and-metaspace)
@@ -137,7 +137,7 @@ int[] arr = new int[10]; // 배열도 Heap에 생성
 
 각 스레드마다 별도로 생성. **Stack Frame**들의 집합.
 
-![](/uploads/jvm-and-gc/jvm-stack.png)
+![](/uploads/이론/jvm-and-gc/jvm-stack.png)
 
 **Stack Frame 구성요소**:
 
@@ -187,13 +187,13 @@ Native 메서드 실행 중이면 PC는 undefined.
 
 JNI(Java Native Interface)를 통해 호출되는 네이티브 메서드(C/C++)용 스택.
 
-![](/uploads/jvm-and-gc/native-method-stack.png)
+![](/uploads/이론/jvm-and-gc/native-method-stack.png)
 
 ---
 
 ### 1.4 Execution Engine
 
-![](/uploads/jvm-and-gc/execution-engine.png)
+![](/uploads/이론/jvm-and-gc/execution-engine.png)
 
 바이트코드를 실제 기계어로 변환하여 실행.
 
@@ -201,16 +201,16 @@ JNI(Java Native Interface)를 통해 호출되는 네이티브 메서드(C/C++)�
 
 바이트코드를 한 줄씩 읽어서 실행. **시작은 빠르지만 반복 실행 시 느림**.
 
-![](/uploads/jvm-and-gc/interpreter.png)
+![](/uploads/이론/jvm-and-gc/interpreter.png)
 
 
 #### JIT Compiler (Just-In-Time)
-![](/uploads/jvm-and-gc/jit-compiler.png)
+![](/uploads/이론/jvm-and-gc/jit-compiler.png)
 
 자주 실행되는 코드(Hot Spot)를 **네이티브 코드로 컴파일**하여 캐싱.
 
 
-![](/uploads/jvm-and-gc/jit-compilation-flow.png)
+![](/uploads/이론/jvm-and-gc/jit-compilation-flow.png)
 
 1. 바이트 코드 (인터프리터로 실행)
 2. 프로파일링 (실행 횟수 측정 [메서드/루프])
@@ -225,7 +225,7 @@ JNI(Java Native Interface)를 통해 호출되는 네이티브 메서드(C/C++)�
 
 **JIT 컴파일러 종류 (Tiered Compilation)**:
 
-![](/uploads/jvm-and-gc/tiered-compilation.png)
+![](/uploads/이론/jvm-and-gc/tiered-compilation.png)
 
 Level1-3:C1 Ompiler <- Client Compiler
 Level 4: C2 Compiler <- Server Compiler
@@ -234,15 +234,15 @@ Level 4: C2 Compiler <- Server Compiler
 **JIT 최적화 기법들**:
 
 1. **Inlining**: 메서드 호출을 본문으로 대체
-![](/uploads/jvm-and-gc/inlining.png)
+![](/uploads/이론/jvm-and-gc/inlining.png)
 
 
 2. **Loop Unrolling**: 루프 반복 줄이기
-![](/uploads/jvm-and-gc/loop-unrolling.png)
+![](/uploads/이론/jvm-and-gc/loop-unrolling.png)
 
 
 3. **Escape Analysis**: 객체가 메서드 밖으로 탈출하지 않으면 스택에 할당
-![](/uploads/jvm-and-gc/escape-analysis.png)
+![](/uploads/이론/jvm-and-gc/escape-analysis.png)
 
 
 4. **Dead Code Elimination**: 사용되지 않는 코드 제거
@@ -262,13 +262,13 @@ Level 4: C2 Compiler <- Server Compiler
 
 Java 객체가 Heap에서 어떻게 저장되는지.
 
-![](/uploads/jvm-and-gc/object-memory-layout.png)
+![](/uploads/이론/jvm-and-gc/object-memory-layout.png)
 
 
 
 **예시**: 간단한 객체의 실제 크기
 
-![](/uploads/jvm-and-gc/object-size-example.png)
+![](/uploads/이론/jvm-and-gc/object-size-example.png)
 
 
 **Compressed OOPs (Ordinary Object Pointers)**:
@@ -288,7 +288,7 @@ Java 객체가 Heap에서 어떻게 저장되는지.
 ### 1.6 String Pool과 Interning
 
 String은 특별 취급. **String Pool**에서 중복 제거.
-![](/uploads/jvm-and-gc/string-pool.png)
+![](/uploads/이론/jvm-and-gc/string-pool.png)
 
 
 ```java
@@ -312,7 +312,7 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 프로그래머가 직접 메모리를 해제하지 않아도 **JVM이 알아서 사용하지 않는 객체를 정리**해주는 것.
 
-![](/uploads/jvm-and-gc/gc-overview.png)
+![](/uploads/이론/jvm-and-gc/gc-overview.png)
 
 편하지만 **공짜는 아니다**. GC가 동작할 때 성능 비용이 발생한다.
 
@@ -322,7 +322,7 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 ## 3. Heap 메모리 구조 (Generational Heap Model)
 
-![](/uploads/jvm-and-gc/heap-structure.png)
+![](/uploads/이론/jvm-and-gc/heap-structure.png)
 
 
 ### Young Generation
@@ -345,7 +345,7 @@ Young Gen에서 오래 살아남은 객체가 이동하는 곳. 객체의 age가
 
 **Weak Generational Hypothesis**: 대부분의 객체는 금방 죽는다.
 
-![](/uploads/jvm-and-gc/weak-generational-hypothesis.png)
+![](/uploads/이론/jvm-and-gc/weak-generational-hypothesis.png)
 
 
 금방 죽는 객체를 위해 전체 힙을 스캔하는 건 비효율적. **Young Gen만 자주 청소**하고, Old Gen은 가끔 청소한다.
@@ -363,7 +363,7 @@ Young Gen에서 오래 살아남은 객체가 이동하는 곳. 객체의 age가
 새 객체는 Eden 영역에 할당된다. 하지만 멀티스레드 환경에서 여러 스레드가 동시에 Eden에 할당하면 동기화 비용이 발생한다. 이를 해결하기 위해 **TLAB**을 사용한다.
 
 
-![](/uploads/jvm-and-gc/tlab.png)
+![](/uploads/이론/jvm-and-gc/tlab.png)
 
 
 - 각 스레드는 Eden 내에 자신만의 버퍼(TLAB)를 가진다
@@ -379,7 +379,7 @@ Object obj = new Object();
 ```
 
 **Bump-the-Pointer**:
-![](/uploads/jvm-and-gc/bump-the-pointer.png)
+![](/uploads/이론/jvm-and-gc/bump-the-pointer.png)
 
 
 
@@ -391,12 +391,12 @@ Object obj = new Object();
 
 Eden 영역이 가득 차면 **Minor GC**가 발생한다.
 
-![](/uploads/jvm-and-gc/first-minor-gc.png)
+![](/uploads/이론/jvm-and-gc/first-minor-gc.png)
 
 
 **Step 1: Stop-The-World**
 
-![](/uploads/jvm-and-gc/stop-the-world.png)
+![](/uploads/이론/jvm-and-gc/stop-the-world.png)
 
 
 모든 애플리케이션 스레드가 **Safepoint**에서 멈춘다.
@@ -423,12 +423,12 @@ GC Root는 다음을 포함한다:
 - JNI 참조
 - 동기화 모니터
 
-![](/uploads/jvm-and-gc/gc-roots-mark.png)
-![](/uploads/jvm-and-gc/gc-roots-mark-2.png)
+![](/uploads/이론/jvm-and-gc/gc-roots-mark.png)
+![](/uploads/이론/jvm-and-gc/gc-roots-mark-2.png)
 
 **Step 3: 살아남은 객체를 Survivor로 복사**
 
-![](/uploads/jvm-and-gc/survivor-copy.png)
+![](/uploads/이론/jvm-and-gc/survivor-copy.png)
 
 **핵심**: Eden은 통째로 비워진다. 살아남은 객체만 Survivor로 **복사**된다.
 
@@ -527,7 +527,7 @@ Minor GC 시
 
 ### 4.5 전체 과정 시각화
 
-![](/uploads/jvm-and-gc/full-gc-process.png)
+![](/uploads/이론/jvm-and-gc/full-gc-process.png)
 
 
 ---
@@ -560,7 +560,7 @@ Minor GC 시 X는 스캔 대상이 아님
 ```
 
 이를 해결하기 위해 **Card Table** 사용:
-![](/uploads/jvm-and-gc/card-table.png)
+![](/uploads/이론/jvm-and-gc/card-table.png)
 
 
 - Old Gen을 512B 단위 Card로 나눔
@@ -634,7 +634,7 @@ Minor GC는 보통 수 ms ~ 수십 ms. Full GC는 수백 ms ~ 수 초가 걸릴 
 **1단계: Mark**
 
 GC Root(스택, static 변수, JNI 참조 등)에서 시작하여 참조를 따라가며 **살아있는 객체에 표시**.
-![](/uploads/jvm-and-gc/mark-sweep.png)
+![](/uploads/이론/jvm-and-gc/mark-sweep.png)
 
 
 **2단계: Sweep**
@@ -654,7 +654,7 @@ GC Root(스택, static 변수, JNI 참조 등)에서 시작하여 참조를 따�
 
 GC가 동작하는 동안 **애플리케이션이 멈춘다**.
 
-![](/uploads/jvm-and-gc/stw-impact.png)
+![](/uploads/이론/jvm-and-gc/stw-impact.png)
 
 
 > "JVM pauses our application from running, whenever a GC event runs."
@@ -667,7 +667,7 @@ GC가 동작하는 동안 **애플리케이션이 멈춘다**.
 
 Sweep 후 메모리가 듬성듬성해진다.
 
-![](/uploads/jvm-and-gc/fragmentation.png)
+![](/uploads/이론/jvm-and-gc/fragmentation.png)
 
 
 총 빈 공간은 충분한데, **연속된 공간이 없어서** 큰 객체를 할당 못 할 수 있다.
@@ -684,7 +684,7 @@ Sweep 후 메모리가 듬성듬성해진다.
 
 단편화 문제를 해결하기 위해 **Compact** 단계 추가.
 
-![](/uploads/jvm-and-gc/mark-sweep-compact.png)
+![](/uploads/이론/jvm-and-gc/mark-sweep-compact.png)
 
 
 ### 장점
@@ -940,7 +940,7 @@ JVM (Java Virtual Machine) is a virtual machine that executes Java bytecode. It 
 
 ### 1.1 Overall JVM Structure
 
-![](/uploads/jvm-and-gc/jvm-architecture.png)
+![](/uploads/이론/jvm-and-gc/jvm-architecture.png)
 
 Source: https://dzone.com/articles/jvm-architecture-explained
 
@@ -955,7 +955,7 @@ Stack is per thread.
 
 ### 1.2 Class Loader Subsystem
 
-![](/uploads/jvm-and-gc/class-loader-subsystem.png)
+![](/uploads/이론/jvm-and-gc/class-loader-subsystem.png)
 
 Responsible for loading and linking Java classes (.class files) into memory.
 
@@ -963,7 +963,7 @@ Responsible for loading and linking Java classes (.class files) into memory.
 
 Three-level delegation model (Parent Delegation Model)
 
-![](/uploads/jvm-and-gc/parent-delegation-model.png)
+![](/uploads/이론/jvm-and-gc/parent-delegation-model.png)
 
 **How it works**:
 1. When a class load request comes in, it is **delegated to the parent first**
@@ -984,7 +984,7 @@ System.out.println(MyClass.class.getClassLoader());     // AppClassLoader
 
 #### Linking
 
-![](/uploads/jvm-and-gc/linking-process.png)
+![](/uploads/이론/jvm-and-gc/linking-process.png)
 
 
 1. **Verify**: Validates that bytecode conforms to the JVM specification
@@ -995,7 +995,7 @@ System.out.println(MyClass.class.getClassLoader());     // AppClassLoader
 
 Assigns actual values to static variables and executes static blocks.
 
-![](/uploads/jvm-and-gc/initialization.png)
+![](/uploads/이론/jvm-and-gc/initialization.png)
 
 
 > Source: [JVM Internals - Inside Java](https://blogs.oracle.com/javamagazine/post/java-class-file-jvm)
@@ -1007,8 +1007,8 @@ Assigns actual values to static variables and executes static blocks.
 
 Memory areas used by the JVM during program execution.
 
-![](/uploads/jvm-and-gc/runtime-data-areas.png)
-![](/uploads/jvm-and-gc/runtime-data-areas-2.png)
+![](/uploads/이론/jvm-and-gc/runtime-data-areas.png)
+![](/uploads/이론/jvm-and-gc/runtime-data-areas-2.png)
 
 
 
@@ -1033,7 +1033,7 @@ Contents stored:
 - PermGen was part of the heap, so its size limit frequently caused `OutOfMemoryError: PermGen space`
 - Metaspace uses Native Memory and can expand automatically
 
-![](/uploads/jvm-and-gc/permgen-to-metaspace.png)
+![](/uploads/이론/jvm-and-gc/permgen-to-metaspace.png)
 
 
 > Source: [Metaspace in Java 8 - Oracle](https://blogs.oracle.com/poonam/post/about-g1-garbage-collector-permanent-generation-and-metaspace)
@@ -1053,7 +1053,7 @@ See the Heap structure section below for details.
 
 Created separately for each thread. A collection of **Stack Frames**.
 
-![](/uploads/jvm-and-gc/jvm-stack.png)
+![](/uploads/이론/jvm-and-gc/jvm-stack.png)
 
 **Stack Frame components**:
 
@@ -1103,13 +1103,13 @@ PC is undefined while executing a native method.
 
 Stack for native methods (C/C++) called through JNI (Java Native Interface).
 
-![](/uploads/jvm-and-gc/native-method-stack.png)
+![](/uploads/이론/jvm-and-gc/native-method-stack.png)
 
 ---
 
 ### 1.4 Execution Engine
 
-![](/uploads/jvm-and-gc/execution-engine.png)
+![](/uploads/이론/jvm-and-gc/execution-engine.png)
 
 Converts bytecode into actual machine code and executes it.
 
@@ -1117,16 +1117,16 @@ Converts bytecode into actual machine code and executes it.
 
 Reads and executes bytecode line by line. **Fast to start but slow for repeated execution**.
 
-![](/uploads/jvm-and-gc/interpreter.png)
+![](/uploads/이론/jvm-and-gc/interpreter.png)
 
 
 #### JIT Compiler (Just-In-Time)
-![](/uploads/jvm-and-gc/jit-compiler.png)
+![](/uploads/이론/jvm-and-gc/jit-compiler.png)
 
 Compiles frequently executed code (Hot Spots) into **native code** and caches it.
 
 
-![](/uploads/jvm-and-gc/jit-compilation-flow.png)
+![](/uploads/이론/jvm-and-gc/jit-compilation-flow.png)
 
 1. Bytecode (executed by interpreter)
 2. Profiling (measures execution count [methods/loops])
@@ -1141,7 +1141,7 @@ Compiles frequently executed code (Hot Spots) into **native code** and caches it
 
 **JIT Compiler types (Tiered Compilation)**:
 
-![](/uploads/jvm-and-gc/tiered-compilation.png)
+![](/uploads/이론/jvm-and-gc/tiered-compilation.png)
 
 Level 1-3: C1 Compiler <- Client Compiler
 Level 4: C2 Compiler <- Server Compiler
@@ -1150,15 +1150,15 @@ Level 4: C2 Compiler <- Server Compiler
 **JIT optimization techniques**:
 
 1. **Inlining**: Replaces method calls with the method body
-![](/uploads/jvm-and-gc/inlining.png)
+![](/uploads/이론/jvm-and-gc/inlining.png)
 
 
 2. **Loop Unrolling**: Reduces loop iterations
-![](/uploads/jvm-and-gc/loop-unrolling.png)
+![](/uploads/이론/jvm-and-gc/loop-unrolling.png)
 
 
 3. **Escape Analysis**: If an object does not escape the method, it is allocated on the stack
-![](/uploads/jvm-and-gc/escape-analysis.png)
+![](/uploads/이론/jvm-and-gc/escape-analysis.png)
 
 
 4. **Dead Code Elimination**: Removes unused code
@@ -1178,13 +1178,13 @@ Level 4: C2 Compiler <- Server Compiler
 
 How Java objects are stored in the Heap.
 
-![](/uploads/jvm-and-gc/object-memory-layout.png)
+![](/uploads/이론/jvm-and-gc/object-memory-layout.png)
 
 
 
 **Example**: Actual size of a simple object
 
-![](/uploads/jvm-and-gc/object-size-example.png)
+![](/uploads/이론/jvm-and-gc/object-size-example.png)
 
 
 **Compressed OOPs (Ordinary Object Pointers)**:
@@ -1204,7 +1204,7 @@ How Java objects are stored in the Heap.
 ### 1.6 String Pool and Interning
 
 Strings receive special treatment. The **String Pool** eliminates duplicates.
-![](/uploads/jvm-and-gc/string-pool.png)
+![](/uploads/이론/jvm-and-gc/string-pool.png)
 
 
 ```java
@@ -1228,7 +1228,7 @@ System.out.println(s1 == s4);     // true (Pool reference via intern)
 
 Even without the programmer manually freeing memory, the **JVM automatically cleans up unused objects**.
 
-![](/uploads/jvm-and-gc/gc-overview.png)
+![](/uploads/이론/jvm-and-gc/gc-overview.png)
 
 It is convenient, but **not free**. There is a performance cost when GC runs.
 
@@ -1238,7 +1238,7 @@ It is convenient, but **not free**. There is a performance cost when GC runs.
 
 ## 3. Heap Memory Structure (Generational Heap Model)
 
-![](/uploads/jvm-and-gc/heap-structure.png)
+![](/uploads/이론/jvm-and-gc/heap-structure.png)
 
 
 ### Young Generation
@@ -1261,7 +1261,7 @@ Where objects that have survived long enough in the Young Gen are moved. When an
 
 **Weak Generational Hypothesis**: Most objects die young.
 
-![](/uploads/jvm-and-gc/weak-generational-hypothesis.png)
+![](/uploads/이론/jvm-and-gc/weak-generational-hypothesis.png)
 
 
 Scanning the entire heap for short-lived objects is inefficient. Instead, **clean the Young Gen frequently** and the Old Gen only occasionally.
@@ -1279,7 +1279,7 @@ A step-by-step look at the entire process of an object being created, going thro
 New objects are allocated in the Eden area. However, in a multithreaded environment, synchronization costs occur when multiple threads allocate in Eden simultaneously. **TLAB** solves this problem.
 
 
-![](/uploads/jvm-and-gc/tlab.png)
+![](/uploads/이론/jvm-and-gc/tlab.png)
 
 
 - Each thread has its own buffer (TLAB) within Eden
@@ -1295,7 +1295,7 @@ Object obj = new Object();
 ```
 
 **Bump-the-Pointer**:
-![](/uploads/jvm-and-gc/bump-the-pointer.png)
+![](/uploads/이론/jvm-and-gc/bump-the-pointer.png)
 
 
 
@@ -1307,12 +1307,12 @@ Object obj = new Object();
 
 A **Minor GC** occurs when the Eden area becomes full.
 
-![](/uploads/jvm-and-gc/first-minor-gc.png)
+![](/uploads/이론/jvm-and-gc/first-minor-gc.png)
 
 
 **Step 1: Stop-The-World**
 
-![](/uploads/jvm-and-gc/stop-the-world.png)
+![](/uploads/이론/jvm-and-gc/stop-the-world.png)
 
 
 All application threads stop at a **Safepoint**.
@@ -1339,12 +1339,12 @@ GC Roots include:
 - JNI references
 - Synchronization monitors
 
-![](/uploads/jvm-and-gc/gc-roots-mark.png)
-![](/uploads/jvm-and-gc/gc-roots-mark-2.png)
+![](/uploads/이론/jvm-and-gc/gc-roots-mark.png)
+![](/uploads/이론/jvm-and-gc/gc-roots-mark-2.png)
 
 **Step 3: Copy Surviving Objects to Survivor**
 
-![](/uploads/jvm-and-gc/survivor-copy.png)
+![](/uploads/이론/jvm-and-gc/survivor-copy.png)
 
 **Key point**: Eden is cleared entirely. Only surviving objects are **copied** to Survivor.
 
@@ -1443,7 +1443,7 @@ This causes short-lived objects to accumulate in Old Gen, **increasing Full GC f
 
 ### 4.5 Full Process Visualization
 
-![](/uploads/jvm-and-gc/full-gc-process.png)
+![](/uploads/이론/jvm-and-gc/full-gc-process.png)
 
 
 ---
@@ -1476,7 +1476,7 @@ During Minor GC, X is not a scan target
 ```
 
 The **Card Table** solves this:
-![](/uploads/jvm-and-gc/card-table.png)
+![](/uploads/이론/jvm-and-gc/card-table.png)
 
 
 - Old Gen is divided into 512-byte Cards
@@ -1550,7 +1550,7 @@ The most fundamental GC algorithm.
 **Phase 1: Mark**
 
 Starting from GC Roots (stacks, static variables, JNI references, etc.), follows references and **marks live objects**.
-![](/uploads/jvm-and-gc/mark-sweep.png)
+![](/uploads/이론/jvm-and-gc/mark-sweep.png)
 
 
 **Phase 2: Sweep**
@@ -1570,7 +1570,7 @@ Removes unmarked objects from memory and adds the freed memory to the free list.
 
 The **application pauses** while GC is running.
 
-![](/uploads/jvm-and-gc/stw-impact.png)
+![](/uploads/이론/jvm-and-gc/stw-impact.png)
 
 
 > "JVM pauses our application from running, whenever a GC event runs."
@@ -1583,7 +1583,7 @@ If a service requiring real-time responses pauses for hundreds of milliseconds, 
 
 After sweep, memory becomes scattered.
 
-![](/uploads/jvm-and-gc/fragmentation.png)
+![](/uploads/이론/jvm-and-gc/fragmentation.png)
 
 
 The total free space may be sufficient, but **there may not be enough contiguous space** to allocate a large object.
@@ -1600,7 +1600,7 @@ The **entire heap must be scanned** to find live objects. The larger the heap, t
 
 Adds a **Compact** phase to solve the fragmentation problem.
 
-![](/uploads/jvm-and-gc/mark-sweep-compact.png)
+![](/uploads/이론/jvm-and-gc/mark-sweep-compact.png)
 
 
 ### Advantages

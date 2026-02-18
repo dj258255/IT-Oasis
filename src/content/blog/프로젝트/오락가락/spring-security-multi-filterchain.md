@@ -40,7 +40,7 @@ Webhook, API, Actuator가 각각 다른 인증 방식을 필요로 해서 3개�
 | @Order(2) | `/actuator/**` | Basic Auth | Prometheus 메트릭 수집 |
 | @Order(3) | `/api/**` | JWT Bearer Token | 사용자 API |
 
-![](/uploads/spring-security-multi-filterchain/filterchain-flow.svg)
+![](/uploads/프로젝트/오락가락/spring-security-multi-filterchain/filterchain-flow.svg)
 
 요청이 들어오면 Order가 낮은 Chain부터 securityMatcher를 확인한다. 매칭되면 해당 Chain에서 처리하고, 아니면 다음 Chain으로 넘어간다. Webhook 경로가 먼저 매칭되니, API Chain의 JWT 필터를 타지 않는다.
 
@@ -61,7 +61,7 @@ AWS 인프라 레벨의 보안이 앞단에서 걸러주는 구조다. 애플리
 
 ## 구현 상세
 
-![](/uploads/spring-security-multi-filterchain/security-config.svg)
+![](/uploads/프로젝트/오락가락/spring-security-multi-filterchain/security-config.svg)
 
 ---
 
@@ -98,7 +98,7 @@ Independent FilterChains were configured per route using @Order and securityMatc
 | @Order(2) | `/actuator/**` | Basic Auth | Prometheus metric collection |
 | @Order(3) | `/api/**` | JWT Bearer Token | User API |
 
-![](/uploads/spring-security-multi-filterchain/filterchain-flow.svg)
+![](/uploads/프로젝트/오락가락/spring-security-multi-filterchain/filterchain-flow.svg)
 
 Incoming requests are matched against Chains in Order sequence. The first matching Chain handles the request. Since Webhook matches first, it bypasses the API Chain's JWT filter entirely.
 
@@ -119,7 +119,7 @@ AWS infrastructure-level security filters requests upstream. Adding application-
 
 ## Implementation Details
 
-![](/uploads/spring-security-multi-filterchain/security-config.svg)
+![](/uploads/프로젝트/오락가락/spring-security-multi-filterchain/security-config.svg)
 
 ---
 

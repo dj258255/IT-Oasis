@@ -154,7 +154,7 @@ JavaScript Number가 53비트까지만 정밀해서 API에서 ID를 문자열로
 
 ## 이 프로젝트 구현
 
-![snowflake-id-implementation](/uploads/snowflake-id/snowflake-id-implementation.png)
+![snowflake-id-implementation](/uploads/프로젝트/Tymee/snowflake-id/snowflake-id-implementation.png)
 
 
 - `synchronized`: 같은 밀리초에 여러 스레드가 호출해도 시퀀스로 구분
@@ -322,7 +322,7 @@ Since JavaScript Number only supports up to 53-bit precision, the API returns ID
 
 ## Implementation in This Project
 
-![snowflake-id-implementation](/uploads/snowflake-id/snowflake-id-implementation.png)
+![snowflake-id-implementation](/uploads/프로젝트/Tymee/snowflake-id/snowflake-id-implementation.png)
 
 - `synchronized`: Even when multiple threads call within the same millisecond, the sequence keeps them distinct
 - Clock regression check: Safeguard against NTP synchronization issues

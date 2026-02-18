@@ -36,13 +36,13 @@ MongoDB + Redis Pub/Sub 아키텍처를 설계했다. 이제 채팅방 목록 �
 
 DTO 필드만 해도 이 정도였다:
 
-![](/uploads/chatroom-list-slow-query/problem.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/problem.svg)
 
 
 
 가장 직관적인 방법으로 구현했다.
 
-![](/uploads/chatroom-list-slow-query/problem-2.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/problem-2.svg)
 
 
 테스트 환경을 설정하고 측정했다.
@@ -57,7 +57,7 @@ DTO 필드만 해도 이 정도였다:
 
 채팅방 10개를 조회하면:
 
-![](/uploads/chatroom-list-slow-query/problem-3.png)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/problem-3.png)
 
 
 **1.35초가 걸렸다.** 채팅방이 많아질수록 선형으로 느려졌다.
@@ -110,7 +110,7 @@ MySQL N+1은 Fetch Join과 배치 조회로 해결했다. MongoDB N+1은 Redis �
 
 처음엔 MySQL에 `unreadCount` 컬럼을 추가하면 되지 않을까 싶었다.
 
-![](/uploads/chatroom-list-slow-query/mysql-denormalization.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/mysql-denormalization.svg)
 
 
 세 가지 문제가 있었다.
@@ -158,7 +158,7 @@ N+1 문제를 해결하기 위한 캐싱 방법을 검토했다.
 
 ### 1. 애플리케이션 메모리 캐시 (HashMap)
 
-![](/uploads/chatroom-list-slow-query/app-memory-cache.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/app-memory-cache.svg)
 
 서버 JVM 힙에 캐시를 두면 빠르지만, 재시작하면 사라지고 서버를 여러 대로 확장하면 동기화가 안 된다.
 
@@ -168,7 +168,7 @@ N+1 문제를 해결하기 위한 캐싱 방법을 검토했다.
 
 ### 3. MongoDB Aggregation Pipeline
 
-![](/uploads/chatroom-list-slow-query/mongodb-aggregation.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/mongodb-aggregation.svg)
 
 채팅방별로 안읽은 메시지를 한 번에 집계할 수 있지만, 집계 연산 자체가 무겁고 매번 계산하므로 캐싱 효과가 없다.
 
@@ -247,12 +247,12 @@ Redis에서 여러 값을 조회할 때 가장 중요한 건 명령 실행 횟�
 
 ### 잘못된 방식
 
-![](/uploads/chatroom-list-slow-query/wrong-approach.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/wrong-approach.svg)
 
 
 ### 올바른 방식
 
-![](/uploads/chatroom-list-slow-query/right-approach.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/right-approach.svg)
 
 
 ### 성능 비교
@@ -297,19 +297,19 @@ Redis 캐싱에서 가장 중요한 건 캐시 히트율이다.
 
 
 ### 실제 동작
-![](/uploads/chatroom-list-slow-query/actual-behavior.png)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/actual-behavior.png)
 
 ---
 
 ## 실제 구현
 
 ### UnreadCountService
-![](/uploads/chatroom-list-slow-query/unread-count-service.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/unread-count-service.svg)
 
 
 ### 채팅방 목록 조회 개선
 
-![](/uploads/chatroom-list-slow-query/chatroom-list-improvement.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/chatroom-list-improvement.svg)
 
 ---
 
@@ -459,11 +459,11 @@ Information needed for the chatroom list:
 
 The DTO fields alone were substantial:
 
-![](/uploads/chatroom-list-slow-query/problem.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/problem.svg)
 
 We implemented it in the most straightforward way.
 
-![](/uploads/chatroom-list-slow-query/problem-2.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/problem-2.svg)
 
 We set up a test environment and measured performance.
 
@@ -475,7 +475,7 @@ Test environment:
 
 Querying 10 chatrooms:
 
-![](/uploads/chatroom-list-slow-query/problem-3.png)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/problem-3.png)
 
 **It took 1.35 seconds.** It slowed linearly as the number of chatrooms increased.
 
@@ -526,7 +526,7 @@ MySQL N+1 was solved with Fetch Join and batch queries. MongoDB N+1 was solved w
 
 Initially, we considered adding an `unreadCount` column to MySQL.
 
-![](/uploads/chatroom-list-slow-query/mysql-denormalization.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/mysql-denormalization.svg)
 
 Three problems emerged.
 
@@ -568,7 +568,7 @@ We evaluated caching approaches to solve the N+1 problem.
 
 ### 1. Application Memory Cache (HashMap)
 
-![](/uploads/chatroom-list-slow-query/app-memory-cache.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/app-memory-cache.svg)
 
 Fast when cached in JVM heap, but lost on restart and impossible to synchronize across multiple servers.
 
@@ -578,7 +578,7 @@ As discussed above, causes distributed transaction and concurrency issues.
 
 ### 3. MongoDB Aggregation Pipeline
 
-![](/uploads/chatroom-list-slow-query/mongodb-aggregation.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/mongodb-aggregation.svg)
 
 Can aggregate unread messages per chatroom in one query, but the aggregation itself is heavy and recalculated every time -- no caching benefit.
 
@@ -653,11 +653,11 @@ When retrieving multiple values from Redis, reducing the number of commands is c
 
 ### Wrong Approach
 
-![](/uploads/chatroom-list-slow-query/wrong-approach.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/wrong-approach.svg)
 
 ### Correct Approach
 
-![](/uploads/chatroom-list-slow-query/right-approach.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/right-approach.svg)
 
 ### Performance Comparison
 
@@ -698,18 +698,18 @@ Cache misses require MongoDB queries, causing slowdowns.
    -> SET unread:{chatRoomId}:{memberId} {count} EX 604800
 
 ### Actual Behavior
-![](/uploads/chatroom-list-slow-query/actual-behavior.png)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/actual-behavior.png)
 
 ---
 
 ## Implementation
 
 ### UnreadCountService
-![](/uploads/chatroom-list-slow-query/unread-count-service.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/unread-count-service.svg)
 
 ### Chatroom List Query Improvement
 
-![](/uploads/chatroom-list-slow-query/chatroom-list-improvement.svg)
+![](/uploads/프로젝트/Joying/chatroom-list-slow-query/chatroom-list-improvement.svg)
 
 ---
 

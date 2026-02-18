@@ -41,7 +41,7 @@ Spring Boot 4에서 처음 도입된 기능이라 레퍼런스가 거의 없었�
 
 처음에는 단순히 Spring Security에서 막는 건가 싶었다. SecurityConfig에 Swagger 관련 경로를 permitAll로 추가해봤다.
 
-![security-config-swagger](/uploads/spring-boot4-swagger-conflict/security-config-swagger.png)
+![security-config-swagger](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/security-config-swagger.png)
 
 **결과: 실패**
 
@@ -60,7 +60,7 @@ springdoc-openapi GitHub에서 [이슈 #3163](https://github.com/springdoc/sprin
 
 `WebConfig`를 만들어서 springdoc 패키지를 API versioning에서 제외하려고 했다.
 
-![webconfig-exclude-springdoc](/uploads/spring-boot4-swagger-conflict/webconfig-exclude-springdoc.png)
+![webconfig-exclude-springdoc](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/webconfig-exclude-springdoc.png)
 
 **결과: 실패**
 
@@ -76,7 +76,7 @@ Swagger UI 리소스(.html, .css, .js)에 대해서는 버전 파싱 자체를 �
 
 WebConfig파일을 삭제하고 다시 기존 파일을 수정하는 방향으로 갔다.
 
-![api-version-config-original](/uploads/spring-boot4-swagger-conflict/api-version-config-original.png)
+![api-version-config-original](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/api-version-config-original.png)
 
 여기서 `configureApiVersioning`으로 path segment versioning을 활성화하고 있었다.
 문제는 **모든 요청**에 대해 버전 파싱을 시도한다는 것.
@@ -93,7 +93,7 @@ WebConfig파일을 삭제하고 다시 기존 파일을 수정하는 방향으�
 
 GitHub 이슈의 힌트와 조합해서, Swagger 경로에 대해서는 `null`을 반환하면 버전 파싱을 스킵할 수 있지 않을까 싶었다.
 
-![blacklist-version-resolver](/uploads/spring-boot4-swagger-conflict/blacklist-version-resolver.png)
+![blacklist-version-resolver](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/blacklist-version-resolver.png)
 
 **결과: 부분 성공**
 
@@ -114,7 +114,7 @@ InvalidApiVersionException: 400 BAD_REQUEST "Invalid API version: 'auth'."
 
 `/api/v{N}/...` 패턴에 매칭되는 경로에서만 버전을 추출하고, 나머지는 모두 `null`을 반환하도록 변경했다.
 
-![whitelist-version-resolver](/uploads/spring-boot4-swagger-conflict/whitelist-version-resolver.png)
+![whitelist-version-resolver](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/whitelist-version-resolver.png)
 
 
 ### 정규표현식 설명
@@ -173,7 +173,7 @@ Swagger가 버전별 API를 제대로 인식하지 못하고 있었다.
 
 springdoc이 `@RequestMapping(version = "1.0")` 어노테이션을 인식해서 버전별로 API를 그룹화하도록 설정해야 했다.
 
-![grouped-openapi-config](/uploads/spring-boot4-swagger-conflict/grouped-openapi-config.png)
+![grouped-openapi-config](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/grouped-openapi-config.png)
 
 **결과: 성공!**
 
@@ -187,13 +187,13 @@ springdoc이 `@RequestMapping(version = "1.0")` 어노테이션을 인식해서 
 
 공식 스타일에 맞춰서 `SimpleVersionParser`를 추가했다. 이 파서는 `v1` → `1.0`, `1` → `1.0`으로 변환해준다.
 
-![simple-version-parser](/uploads/spring-boot4-swagger-conflict/simple-version-parser.png)
+![simple-version-parser](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/simple-version-parser.png)
 
 
 
 컨트롤러의 버전 어노테이션도 `"1.0"` 형태로 변경:
 
-![controller-version-annotation](/uploads/spring-boot4-swagger-conflict/controller-version-annotation.png)
+![controller-version-annotation](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/controller-version-annotation.png)
 
 **결과 :** 성공
 
@@ -203,17 +203,17 @@ springdoc이 `@RequestMapping(version = "1.0")` 어노테이션을 인식해서 
 
 ### ApiVersionConfig.java
 
-![final-api-version-config](/uploads/spring-boot4-swagger-conflict/final-api-version-config.png)
+![final-api-version-config](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/final-api-version-config.png)
 
 
 ### OpenApiConfig.java (버전별 그룹 설정)
 
-![final-openapi-config](/uploads/spring-boot4-swagger-conflict/final-openapi-config.png)
+![final-openapi-config](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/final-openapi-config.png)
 
 
 ### 컨트롤러 예시
 
-![controller-example](/uploads/spring-boot4-swagger-conflict/controller-example.png)
+![controller-example](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/controller-example.png)
 
 
 ---
@@ -320,7 +320,7 @@ Searching online only turned up articles written for Spring Boot 3 and earlier.
 
 At first, I thought it might simply be blocked by Spring Security. I tried adding Swagger-related paths as permitAll in the SecurityConfig.
 
-![security-config-swagger](/uploads/spring-boot4-swagger-conflict/security-config-swagger.png)
+![security-config-swagger](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/security-config-swagger.png)
 
 **Result: Failed**
 
@@ -339,7 +339,7 @@ The maintainer's suggested solution in the issue was to exclude springdoc from `
 
 I created a `WebConfig` to try excluding the springdoc package from API versioning.
 
-![webconfig-exclude-springdoc](/uploads/spring-boot4-swagger-conflict/webconfig-exclude-springdoc.png)
+![webconfig-exclude-springdoc](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/webconfig-exclude-springdoc.png)
 
 **Result: Failed**
 
@@ -355,7 +355,7 @@ It said that version parsing itself should be skipped for Swagger UI resources (
 
 I deleted the WebConfig file and went back to modifying the existing file.
 
-![api-version-config-original](/uploads/spring-boot4-swagger-conflict/api-version-config-original.png)
+![api-version-config-original](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/api-version-config-original.png)
 
 Path segment versioning was being enabled via `configureApiVersioning`.
 The problem was that it attempted version parsing on **every request**.
@@ -372,7 +372,7 @@ From [Dan Vega's blog](https://www.danvega.dev/blog/spring-boot-4-api-versioning
 
 Combining this with hints from the GitHub issue, I thought that returning `null` for Swagger paths might skip version parsing.
 
-![blacklist-version-resolver](/uploads/spring-boot4-swagger-conflict/blacklist-version-resolver.png)
+![blacklist-version-resolver](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/blacklist-version-resolver.png)
 
 **Result: Partial Success**
 
@@ -393,7 +393,7 @@ I realized that a **whitelist (extract version only from API paths)** approach w
 
 I changed it to extract the version only from paths matching the `/api/v{N}/...` pattern and return `null` for everything else.
 
-![whitelist-version-resolver](/uploads/spring-boot4-swagger-conflict/whitelist-version-resolver.png)
+![whitelist-version-resolver](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/whitelist-version-resolver.png)
 
 
 ### Regex Explanation
@@ -452,7 +452,7 @@ Swagger was not properly recognizing versioned APIs.
 
 I needed to configure springdoc to recognize `@RequestMapping(version = "1.0")` annotations and group APIs by version.
 
-![grouped-openapi-config](/uploads/spring-boot4-swagger-conflict/grouped-openapi-config.png)
+![grouped-openapi-config](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/grouped-openapi-config.png)
 
 **Result: Success!**
 
@@ -466,13 +466,13 @@ Initially I used `addSupportedVersions("1", "2")`, but looking at the Spring Fra
 
 I added a `SimpleVersionParser` to match the official style. This parser converts `v1` to `1.0` and `1` to `1.0`.
 
-![simple-version-parser](/uploads/spring-boot4-swagger-conflict/simple-version-parser.png)
+![simple-version-parser](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/simple-version-parser.png)
 
 
 
 The version annotations in controllers were also changed to the `"1.0"` format:
 
-![controller-version-annotation](/uploads/spring-boot4-swagger-conflict/controller-version-annotation.png)
+![controller-version-annotation](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/controller-version-annotation.png)
 
 **Result:** Success
 
@@ -482,17 +482,17 @@ The version annotations in controllers were also changed to the `"1.0"` format:
 
 ### ApiVersionConfig.java
 
-![final-api-version-config](/uploads/spring-boot4-swagger-conflict/final-api-version-config.png)
+![final-api-version-config](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/final-api-version-config.png)
 
 
 ### OpenApiConfig.java (Version Group Configuration)
 
-![final-openapi-config](/uploads/spring-boot4-swagger-conflict/final-openapi-config.png)
+![final-openapi-config](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/final-openapi-config.png)
 
 
 ### Controller Example
 
-![controller-example](/uploads/spring-boot4-swagger-conflict/controller-example.png)
+![controller-example](/uploads/프로젝트/Tymee/spring-boot4-swagger-conflict/controller-example.png)
 
 
 ---

@@ -26,7 +26,7 @@ Kotlin이 Java와 100% 호환된다고 하니까 문제없을 줄 알았다.
 
 채팅방 컨트롤러를 Kotlin으로 작성하다가 기존 Java 엔티티를 사용하려고 했다.
 
-![](/uploads/kotlin-lombok-interop/problem-found.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/problem-found.svg)
 
 
 이런식으로 다른 팀원이 만든 코드에 접근하려고 했다.
@@ -41,7 +41,7 @@ e: Unresolved reference 'getMemberId'.
 
 Java 엔티티는 분명히 Lombok `@Getter`를 사용하고 있었다.
 
-![](/uploads/kotlin-lombok-interop/problem-found-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/problem-found-2.svg)
 
 
 왜 Kotlin이 이걸 못 찾는거지?
@@ -50,7 +50,7 @@ Java 엔티티는 분명히 Lombok `@Getter`를 사용하고 있었다.
 
 Kotlin은 getter를 자동으로 프로퍼티로 변환해준다고 했으니까, 이렇게 바꿔봤다.
 
-![](/uploads/kotlin-lombok-interop/first-attempt.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/first-attempt.svg)
 
 
 결과는?
@@ -64,7 +64,7 @@ e: Cannot access 'field productId: Long!': it is private in 'Product'
 
 Kotlin annotation processing을 사용하면 되지 않을까 싶어서 kapt에 Lombok을 추가해봤다.
 
-![](/uploads/kotlin-lombok-interop/second-attempt.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/second-attempt.svg)
 
 
 이것도 안됐다. kapt는 Kotlin annotation processing이지 Java annotation processing이 아니었다.
@@ -99,10 +99,10 @@ Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직
 ### 빌드 순서 문제를 좀 더 자세히 알아보자
 
 
-![](/uploads/kotlin-lombok-interop/build-order.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/build-order.svg)
 
 
-![](/uploads/kotlin-lombok-interop/build-order-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/build-order-2.svg)
 
 
 타이밍이 안 맞는다. Kotlin이 너무 일찍 컴파일되는 거다.
@@ -111,7 +111,7 @@ Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직
 
 그럼 Java를 먼저 컴파일하면 되지 않을까? Kotlin 컴파일 태스크가 Java 컴파일을 기다리게 만들어봤다.
 
-![](/uploads/kotlin-lombok-interop/third-attempt.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/third-attempt.svg)
 
 
 결과는?
@@ -139,7 +139,7 @@ compileJava → compileKotlin을 기다림
 
 찾아보니까 Kotlin 1.7.20 버전부터 Lombok 플러그인을 공식 지원한다고 한다.
 
-![](/uploads/kotlin-lombok-interop/solution.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/solution.svg)
 
 
 이 플러그인을 추가하니까 Kotlin 컴파일러가 Lombok 어노테이션을 인식할 수 있게 됐다.
@@ -148,12 +148,12 @@ compileJava → compileKotlin을 기다림
 
 이 플러그인은 Kotlin 컴파일러가 Java 소스의 Lombok 어노테이션을 미리 읽고, 마치 getter/setter가 이미 존재하는 것처럼 처리하게 만든다.
 
-![](/uploads/kotlin-lombok-interop/kotlinpluginlombok.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/kotlinpluginlombok.svg)
 
 
 Kotlin 컴파일러가 이걸 보면:
 
-![](/uploads/kotlin-lombok-interop/kotlinpluginlombok-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/kotlinpluginlombok-2.svg)
 
 
 그래서 Kotlin 코드에서 `getProductId()`를 호출해도 컴파일 에러가 안 난다.
@@ -199,7 +199,7 @@ IntelliJ로 빌드하면 되긴 했다. IntelliJ는 자체적으로 Lombok 플�
 
 Gradle에서 Java Lombok annotation processing을 제대로 처리하려면 또 다른 플러그인이 필요했다.
 
-![](/uploads/kotlin-lombok-interop/solution-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/solution-2.svg)
 
 
 ### 두 개의 플러그인이 필요한 이유
@@ -237,9 +237,9 @@ error: constructor UploadType in enum UploadType cannot be applied to given type
 
 이번엔 Enum이 문제였다. 프로젝트에 있는 모든 Enum이 이런 식으로 작성되어 있었다.
 
-![](/uploads/kotlin-lombok-interop/third-problem.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/third-problem.svg)
 
-![](/uploads/kotlin-lombok-interop/third-problem-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/third-problem-2.svg)
 
 
 Enum에 `@RequiredArgsConstructor`를 썼는데, Lombok이 생성자를 안 만들어주는 거였다.
@@ -254,7 +254,7 @@ Enum에 `@RequiredArgsConstructor`를 썼는데, Lombok이 생성자를 안 만�
 
 보통은 Enum에서 Lombok을 쓰지 않고 직접 생성자를 작성한다.
 
-![](/uploads/kotlin-lombok-interop/solution-3.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/solution-3.svg)
 
 
 하지만 내 상황에서는 **Java 파일을 건드릴 수 없었다. 왜냐하면 내가 맡은 역할도 아니고 수정했다가 여기저기 터질 수도 있기 때문이다**. 기존 코드를 수정하지 않고 해결해야 했다.
@@ -267,12 +267,12 @@ Java 파일을 수정하지 않으려면 다른 방법이 필요했다.
 
 `delombok`은 Lombok 어노테이션을 실제 Java 코드로 변환해주는 도구다.
 
-![](/uploads/kotlin-lombok-interop/delombok.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/delombok.svg)
 
 
 delombok을 실행하면:
 
-![](/uploads/kotlin-lombok-interop/delombok-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/delombok-2.svg)
 
 
 보다시피 **생성자가 제대로 만들어졌다.**
@@ -310,7 +310,7 @@ RentMethod.java
 ### Java 컴파일이 delombok된 소스를 사용하게 만들기
 
 이제 Java 컴파일 태스크가 원본 소스 대신 delombok된 소스를 사용하도록 설정만 바꾸면 된다.
-![](/uploads/kotlin-lombok-interop/delombok-3.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/delombok-3.svg)
 
 
 이렇게 하면:
@@ -342,7 +342,7 @@ BUILD SUCCESSFUL in 8s
 ## 정리 및 최종 설정
 
 최종적으로 정리한 `build.gradle.kts` 설정은 이렇다.
-![](/uploads/kotlin-lombok-interop/summary.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/summary.svg)
 
 
 ### 중요한 포인트 정리
@@ -371,7 +371,7 @@ BUILD SUCCESSFUL in 8s
 최종 빌드 순서는 이렇게 된다:
 
 
-![](/uploads/kotlin-lombok-interop/build-order.png)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/build-order.png)
 
 
 ### 각 단계별 설명
@@ -450,7 +450,7 @@ But there were.
 
 While writing the chatroom controller in Kotlin, I tried to use existing Java entities.
 
-![](/uploads/kotlin-lombok-interop/problem-found.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/problem-found.svg)
 
 I was trying to access code written by another team member.
 
@@ -464,7 +464,7 @@ e: Unresolved reference 'getMemberId'.
 
 The Java entities were clearly using Lombok `@Getter`.
 
-![](/uploads/kotlin-lombok-interop/problem-found-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/problem-found-2.svg)
 
 Why can't Kotlin find them?
 
@@ -472,7 +472,7 @@ Why can't Kotlin find them?
 
 Since Kotlin automatically converts getters to properties, I tried this:
 
-![](/uploads/kotlin-lombok-interop/first-attempt.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/first-attempt.svg)
 
 Result?
 
@@ -484,7 +484,7 @@ Of course it didn't work. Since Lombok hasn't created the getters yet, it was tr
 
 I thought using Kotlin annotation processing might work, so I added Lombok to kapt.
 
-![](/uploads/kotlin-lombok-interop/second-attempt.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/second-attempt.svg)
 
 This didn't work either. kapt is for Kotlin annotation processing, not Java annotation processing.
 
@@ -514,9 +514,9 @@ Kotlin compiles first, but at that point Lombok hasn't generated the getters yet
 
 ### Understanding the Build Order Problem
 
-![](/uploads/kotlin-lombok-interop/build-order.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/build-order.svg)
 
-![](/uploads/kotlin-lombok-interop/build-order-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/build-order-2.svg)
 
 The timing doesn't match. Kotlin compiles too early.
 
@@ -524,7 +524,7 @@ The timing doesn't match. Kotlin compiles too early.
 
 What if Java compiles first? I made the Kotlin compile task depend on Java compilation.
 
-![](/uploads/kotlin-lombok-interop/third-attempt.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/third-attempt.svg)
 
 Result?
 
@@ -543,13 +543,13 @@ A circular dependency occurred. Since Java also references Kotlin code, they end
 
 It turns out that since Kotlin 1.7.20, there's official Lombok plugin support.
 
-![](/uploads/kotlin-lombok-interop/solution.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/solution.svg)
 
 This plugin lets the Kotlin compiler read Lombok annotations from Java sources and treat them as if the getters/setters already exist.
 
-![](/uploads/kotlin-lombok-interop/kotlinpluginlombok.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/kotlinpluginlombok.svg)
 
-![](/uploads/kotlin-lombok-interop/kotlinpluginlombok-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/kotlinpluginlombok-2.svg)
 
 ```
 BUILD SUCCESSFUL in 1s
@@ -568,7 +568,7 @@ error: cannot find symbol
 
 `kotlin("plugin.lombok")` only helps the **Kotlin compiler**. It has no effect on Java compilation. The `io.freefair.lombok` plugin was needed to properly run Java annotation processing in Gradle.
 
-![](/uploads/kotlin-lombok-interop/solution-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/solution-2.svg)
 
 | Plugin | Role | Target |
 |--------|------|--------|
@@ -584,7 +584,7 @@ error: constructor UploadType in enum UploadType cannot be applied to given type
 
 Enums using `@RequiredArgsConstructor` failed due to a compatibility issue with the `kotlin("plugin.lombok")` plugin.
 
-![](/uploads/kotlin-lombok-interop/third-problem.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/third-problem.svg)
 
 I couldn't modify the Java files since they weren't my responsibility and changes could break things elsewhere.
 
@@ -592,13 +592,13 @@ I couldn't modify the Java files since they weren't my responsibility and change
 
 `delombok` converts Lombok annotations into actual Java code.
 
-![](/uploads/kotlin-lombok-interop/delombok.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/delombok.svg)
 
-![](/uploads/kotlin-lombok-interop/delombok-2.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/delombok-2.svg)
 
 The constructor was properly generated. By making Java compilation use the delombok'd sources instead of the originals:
 
-![](/uploads/kotlin-lombok-interop/delombok-3.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/delombok-3.svg)
 
 ```bash
 ./gradlew clean build -x test
@@ -610,7 +610,7 @@ BUILD SUCCESSFUL in 8s
 
 ## Summary and Final Configuration
 
-![](/uploads/kotlin-lombok-interop/summary.svg)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/summary.svg)
 
 ### Key Points
 
@@ -621,7 +621,7 @@ BUILD SUCCESSFUL in 8s
 
 ## Build Order Diagram
 
-![](/uploads/kotlin-lombok-interop/build-order.png)
+![](/uploads/프로젝트/Joying/kotlin-lombok-interop/build-order.png)
 
 ## Conclusion
 

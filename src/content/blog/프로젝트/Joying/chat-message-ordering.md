@@ -69,7 +69,7 @@ DB에 저장된 순서가 정확해야 한다. 클라이언트가 채팅방을 �
 
 서버에서 `createdAt`을 함께 전송하고, 클라이언트가 메시지를 받을 때마다 정렬해서 표시한다.
 
-![](/uploads/chat-message-ordering/server-scaling.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/server-scaling.svg)
 
 
 네트워크 순서에 의존하지 않고, 서버 타임스탬프 기준으로 정렬한다. 메시지가 늦게 도착해도 올바른 위치에 삽입된다.
@@ -154,7 +154,7 @@ MongoDB의 `createdAt` 타임스탬프를 순서의 유일한 기준으로 삼�
 
 ### 백엔드: 서버 타임스탬프 설정
 
-![](/uploads/chat-message-ordering/server-timestamp.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/server-timestamp.svg)
 
 
 핵심은 세 가지다.
@@ -164,7 +164,7 @@ MongoDB의 `createdAt` 타임스탬프를 순서의 유일한 기준으로 삼�
 
 ### 프론트엔드: 타임스탬프 기준 정렬
 
-![](/uploads/chat-message-ordering/sort.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/sort.svg)
 
 
 ### 역할 분리
@@ -173,7 +173,7 @@ MongoDB의 `createdAt` 타임스탬프를 순서의 유일한 기준으로 삼�
 - **프론트엔드**: 수신한 메시지를 `timestamp` 기준 정렬해서 표시
 - **MongoDB**: 조회 시 `createdAt` 기준 정렬 (새로고침/채팅방 입장 시)
 
-![](/uploads/chat-message-ordering/role-separation.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/role-separation.svg)
 
 
 실시간 전달 중 네트워크 순서가 어긋나도, 클라이언트가 정렬해서 표시한다. 새로고침하면 MongoDB에서 정렬된 순서로 조회한다.
@@ -188,7 +188,7 @@ MongoDB의 `createdAt` 타임스탬프를 순서의 유일한 기준으로 삼�
 
 MongoDB에 `chatRoomId + createdAt` 복합 인덱스를 추가해서 정렬 비용을 해결했다.
 
-![](/uploads/chat-message-ordering/result.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/result.svg)
 
 <!-- EN -->
 
@@ -244,7 +244,7 @@ After a refresh, messages appear in DB-sorted order, but out-of-order messages d
 
 The server sends `createdAt` with each message, and the client sorts messages by timestamp on receipt.
 
-![](/uploads/chat-message-ordering/server-scaling.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/server-scaling.svg)
 
 Instead of relying on network order, messages are sorted by server timestamp. Late-arriving messages are inserted at the correct position.
 
@@ -326,7 +326,7 @@ MongoDB's `createdAt` timestamp serves as the sole ordering criterion.
 
 ### Backend: Server Timestamp Assignment
 
-![](/uploads/chat-message-ordering/server-timestamp.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/server-timestamp.svg)
 
 Three key points:
 - `createdAt` is set on the server before saving
@@ -335,7 +335,7 @@ Three key points:
 
 ### Frontend: Timestamp-Based Sorting
 
-![](/uploads/chat-message-ordering/sort.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/sort.svg)
 
 ### Role Separation
 
@@ -343,7 +343,7 @@ Three key points:
 - **Frontend**: Sort received messages by `timestamp` for display
 - **MongoDB**: Sort by `createdAt` on query (refresh/chat room entry)
 
-![](/uploads/chat-message-ordering/role-separation.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/role-separation.svg)
 
 Even if network order is disrupted during real-time delivery, the client sorts and displays correctly. On refresh, MongoDB returns messages in sorted order.
 
@@ -357,4 +357,4 @@ Even if network order is disrupted during real-time delivery, the client sorts a
 
 A compound index on `chatRoomId + createdAt` was added to MongoDB to optimize sorting performance.
 
-![](/uploads/chat-message-ordering/result.svg)
+![](/uploads/프로젝트/Joying/chat-message-ordering/result.svg)

@@ -85,13 +85,13 @@ UUID v4: 랜덤한 위치의 Leaf 노드에 삽입 (랜덤 삽입)
 | 경합 | 하나의 시퀀스에 대한 Lock 경합 발생 |
 | 병목 | Master-Slave 구조에서 Master만 ID 생성 → 단일 장애점 |
 
-![](/uploads/s3-upload-optimization/section.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/section.svg)
 
 ### 대안: Snowflake ID
 
 Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 모두 지원한다.
 
-![](/uploads/s3-upload-optimization/snowflake-id.png)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/snowflake-id.png)
 
 **장점:**
 - 64비트 = 8바이트 (UUID의 절반)
@@ -113,10 +113,10 @@ Snowflake ID: 6920399584824147968
 ```
 
 **Bad: PK에 비즈니스 의미 부여**
-![](/uploads/s3-upload-optimization/snowflake-id-02.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/snowflake-id-02.svg)
 
 **Good: PK와 도메인 식별자 분리**
-![](/uploads/s3-upload-optimization/snowflake-id-03.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/snowflake-id-03.svg)
 
 ### 결론: 상황에 따라 다르다
 
@@ -140,7 +140,7 @@ Spring Boot에서 S3에 파일을 업로드하는 세 가지 방법을 검토했
 
 ### 2.1 Stream 업로드
 
-![Stream 업로드 아키텍처](/uploads/s3-upload-optimization/stream-upload.png)
+![Stream 업로드 아키텍처](/uploads/프로젝트/EduMeet/s3-upload-optimization/stream-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
 HttpServletRequest의 InputStream을 이용해 S3에 직접 전송. 파일 바이너리를 서버에 저장하지 않는다.
@@ -149,12 +149,12 @@ HttpServletRequest의 InputStream을 이용해 S3에 직접 전송. 파일 바�
 
 ### 2.2 MultipartFile 업로드
 
-![MultipartFile 업로드 아키텍처](/uploads/s3-upload-optimization/multipartfile-upload.png)
+![MultipartFile 업로드 아키텍처](/uploads/프로젝트/EduMeet/s3-upload-optimization/multipartfile-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
 Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터리에 파일 저장.
 
-![MultipartFile 동작 원리](/uploads/s3-upload-optimization/multipartfile-upload-02.png)
+![MultipartFile 동작 원리](/uploads/프로젝트/EduMeet/s3-upload-optimization/multipartfile-upload-02.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
 **장점:** 이미지 리사이징 등 전처리 가능
@@ -162,15 +162,15 @@ Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터�
 
 ### 2.3 AWS Multipart 업로드
 
-![AWS Multipart 업로드](/uploads/s3-upload-optimization/aws-multipart-upload.png)
+![AWS Multipart 업로드](/uploads/프로젝트/EduMeet/s3-upload-optimization/aws-multipart-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
 파일을 작은 part로 나누어 개별 업로드. Spring Boot를 거치지 않고 S3에 직접 업로드.
 
-![AWS Multipart 진행 상태](/uploads/s3-upload-optimization/aws-multipart-upload-02.gif)
+![AWS Multipart 진행 상태](/uploads/프로젝트/EduMeet/s3-upload-optimization/aws-multipart-upload-02.gif)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-![AWS Multipart 전체 흐름](/uploads/s3-upload-optimization/aws-multipart-upload-03.png)
+![AWS Multipart 전체 흐름](/uploads/프로젝트/EduMeet/s3-upload-optimization/aws-multipart-upload-03.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
 ### 비교 표
@@ -220,9 +220,9 @@ OS마다 파일 경로가 다르다 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`
 
 ### 해결: 환경변수 + 기본값
 
-![환경변수 설정 코드](/uploads/s3-upload-optimization/solution.png)
+![환경변수 설정 코드](/uploads/프로젝트/EduMeet/s3-upload-optimization/solution.png)
 
-![](/uploads/s3-upload-optimization/solution-02.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/solution-02.svg)
 
 `EDUMEET_UPLOAD_PATH` 환경변수가 있으면 해당 값을, 없으면 `${java.io.tmpdir}/edumeet-upload` 기본값을 사용한다.
 
@@ -230,7 +230,7 @@ OS마다 파일 경로가 다르다 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`
 
 ## 5. 결과: 썸네일 리사이징 효과
 
-![리사이징 결과](/uploads/s3-upload-optimization/result-thumbnail-resizing-effect.png)
+![리사이징 결과](/uploads/프로젝트/EduMeet/s3-upload-optimization/result-thumbnail-resizing-effect.png)
 
 | 지표 | Before | After | 개선율 |
 |------|--------|-------|--------|
@@ -317,13 +317,13 @@ Real-world issues beyond "what if numbers run out":
 | Contention | Lock contention on a single sequence |
 | Bottleneck | Only Master generates IDs in Master-Slave → single point of failure |
 
-![](/uploads/s3-upload-optimization/section.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/section.svg)
 
 ### Alternative: Snowflake ID
 
 Twitter's **Snowflake ID** supports both sequential ordering and distributed environments in 64 bits.
 
-![](/uploads/s3-upload-optimization/snowflake-id.png)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/snowflake-id.png)
 
 **Advantages:**
 - 64 bits = 8 bytes (half of UUID)
@@ -333,10 +333,10 @@ Twitter's **Snowflake ID** supports both sequential ordering and distributed env
 The key business advantage is that **the ID itself contains information**: timestamp, datacenter ID, machine ID, and sequence number — enabling instant tracing of when and where a record was created.
 
 **Bad: Business meaning in PK**
-![](/uploads/s3-upload-optimization/snowflake-id-02.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/snowflake-id-02.svg)
 
 **Good: Separate PK and domain identifier**
-![](/uploads/s3-upload-optimization/snowflake-id-03.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/snowflake-id-03.svg)
 
 ### Conclusion: It Depends
 
@@ -360,7 +360,7 @@ Three methods for uploading files to S3 from Spring Boot were evaluated.
 
 ### 2.1 Stream Upload
 
-![Stream upload architecture](/uploads/s3-upload-optimization/stream-upload.png)
+![Stream upload architecture](/uploads/프로젝트/EduMeet/s3-upload-optimization/stream-upload.png)
 *Image source: [Woowahan Tech Blog](https://techblog.woowahan.com/11392/)*
 
 Transfers directly to S3 using HttpServletRequest's InputStream. File binaries aren't stored on the server.
@@ -369,12 +369,12 @@ Transfers directly to S3 using HttpServletRequest's InputStream. File binaries a
 
 ### 2.2 MultipartFile Upload
 
-![MultipartFile upload architecture](/uploads/s3-upload-optimization/multipartfile-upload.png)
+![MultipartFile upload architecture](/uploads/프로젝트/EduMeet/s3-upload-optimization/multipartfile-upload.png)
 *Image source: [Woowahan Tech Blog](https://techblog.woowahan.com/11392/)*
 
 Uses Spring's MultipartFile interface. WAS (Tomcat) saves files to a temporary directory.
 
-![MultipartFile mechanism](/uploads/s3-upload-optimization/multipartfile-upload-02.png)
+![MultipartFile mechanism](/uploads/프로젝트/EduMeet/s3-upload-optimization/multipartfile-upload-02.png)
 *Image source: [Woowahan Tech Blog](https://techblog.woowahan.com/11392/)*
 
 **Pros:** Image resizing and preprocessing possible
@@ -382,15 +382,15 @@ Uses Spring's MultipartFile interface. WAS (Tomcat) saves files to a temporary d
 
 ### 2.3 AWS Multipart Upload
 
-![AWS Multipart upload](/uploads/s3-upload-optimization/aws-multipart-upload.png)
+![AWS Multipart upload](/uploads/프로젝트/EduMeet/s3-upload-optimization/aws-multipart-upload.png)
 *Image source: [Woowahan Tech Blog](https://techblog.woowahan.com/11392/)*
 
 Splits files into small parts for individual upload. Uploads directly to S3 bypassing Spring Boot.
 
-![AWS Multipart progress](/uploads/s3-upload-optimization/aws-multipart-upload-02.gif)
+![AWS Multipart progress](/uploads/프로젝트/EduMeet/s3-upload-optimization/aws-multipart-upload-02.gif)
 *Image source: [Woowahan Tech Blog](https://techblog.woowahan.com/11392/)*
 
-![AWS Multipart flow](/uploads/s3-upload-optimization/aws-multipart-upload-03.png)
+![AWS Multipart flow](/uploads/프로젝트/EduMeet/s3-upload-optimization/aws-multipart-upload-03.png)
 *Image source: [Woowahan Tech Blog](https://techblog.woowahan.com/11392/)*
 
 ### Comparison Table
@@ -440,9 +440,9 @@ File paths differ by OS (Windows: `C:\Users\...\Temp`, Linux: `/tmp`, macOS: `/v
 
 ### Solution: Environment Variable + Default
 
-![Environment variable code](/uploads/s3-upload-optimization/solution.png)
+![Environment variable code](/uploads/프로젝트/EduMeet/s3-upload-optimization/solution.png)
 
-![](/uploads/s3-upload-optimization/solution-02.svg)
+![](/uploads/프로젝트/EduMeet/s3-upload-optimization/solution-02.svg)
 
 Uses `EDUMEET_UPLOAD_PATH` environment variable if set, otherwise falls back to `${java.io.tmpdir}/edumeet-upload`.
 
@@ -450,7 +450,7 @@ Uses `EDUMEET_UPLOAD_PATH` environment variable if set, otherwise falls back to 
 
 ## 5. Result: Thumbnail Resizing Effect
 
-![Resizing result](/uploads/s3-upload-optimization/result-thumbnail-resizing-effect.png)
+![Resizing result](/uploads/프로젝트/EduMeet/s3-upload-optimization/result-thumbnail-resizing-effect.png)
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
