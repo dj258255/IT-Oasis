@@ -16,8 +16,11 @@ function rehypeBasePath() {
         if (node.tagName === 'img' && node.properties?.src?.startsWith('/')) {
           node.properties.src = base + node.properties.src;
         }
-        if (node.tagName === 'a' && node.properties?.href?.startsWith('/uploads/')) {
-          node.properties.href = base + node.properties.href;
+        if (node.tagName === 'a') {
+          const href = node.properties?.href;
+          if (href && href.startsWith('/') && !href.startsWith('//')) {
+            node.properties.href = base + href;
+          }
         }
       }
       if (node.children) node.children.forEach(visit);

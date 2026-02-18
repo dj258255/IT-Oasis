@@ -1,6 +1,7 @@
 {
-  "name": "개발",
+  "name": "dev",
   "nameEn": "Development",
+  "nameKo": "개발",
   "icon": "code",
   "order": 5,
   "subcategories": [

@@ -1,13 +1,14 @@
 {
   "title": "인디밸런싱",
+  "titleEn": "IndiBalancing",
   "description": "게임 기획자를 위한 오픈소스 밸런싱 플랫폼",
   "descriptionEn": "An open-source game balancing platform for indie game designers",
-  "image": "/uploads/프로젝트/IndiBalancing/retrospective/title.png",
+  "image": "/uploads/project/IndiBalancing/retrospective/title.png",
   "tags": ["React", "TypeScript", "Zustand", "TailwindCSS", "Vercel"],
-  "category": "프로젝트",
+  "category": "project",
   "date": "2026-02-15",
   "github": "https://github.com/dj258255/indiebalancing",
   "website": "",
-  "story": "/blog/프로젝트/indibalancing/indibalancing-retrospective",
+  "story": "/blog/project/indibalancing/indibalancing-retrospective",
   "order": 1
 }

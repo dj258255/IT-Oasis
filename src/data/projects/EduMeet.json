@@ -1,11 +1,14 @@
 {
-  "title": "EduMeet",
+  "title": "에듀밋",
+  "titleEn": "EduMeet",
   "description": "실시간 음성-자막 변환으로 청각장애인의 학습을 지원하는 온라인 교육 플랫폼",
   "descriptionEn": "An online education platform that supports learning for the hearing-impaired through real-time speech-to-subtitle conversion",
-  "image": "/uploads/Project/EduMeet/EduMeetTitle.png",
+  "image": "/uploads/project/EduMeet/EduMeetTitle.png",
+  "tags": ["Java", "Spring Boot", "JPA", "QueryDSL", "MySQL", "AWS S3", "Docker"],
+  "category": "project",
   "date": "2025-08-15",
   "github": "https://github.com/dj258255/edumeet",
   "website": "",
-  "story": "/blog/프로젝트/edumeet/edumeet-retrospective",
+  "story": "/blog/project/edumeet/edumeet-retrospective",
   "order": 5
 }

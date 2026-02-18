@@ -1,13 +1,14 @@
 {
   "title": "오락가락",
+  "titleEn": "Orakgarak",
   "description": "내 목소리 데이터를 기반으로 노래를 추천받는 음성 분석 플랫폼",
   "descriptionEn": "A voice analysis platform that recommends songs based on your vocal range data",
-  "image": "/uploads/프로젝트/오락가락/retrospective/title.png",
+  "image": "/uploads/project/Orakgarak/retrospective/title.png",
   "tags": ["Java", "Spring Boot", "Kafka", "Prometheus", "Grafana", "AWS S3"],
-  "category": "프로젝트",
+  "category": "project",
   "date": "2025-09-30",
   "github": "https://github.com/dj258255",
   "website": "",
-  "story": "/blog/프로젝트/오락가락/orakgarak-retrospective",
+  "story": "/blog/project/orakgarak/orakgarak-retrospective",
   "order": 4
 }

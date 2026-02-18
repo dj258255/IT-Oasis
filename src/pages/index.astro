@@ -43,6 +43,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
         <CarouselCard
           href={project.website || project.github || (project.story ? `${base}${project.story}` : '') || `${base}/projects`}
           title={project.title}
+          titleEn={project.titleEn}
           description={project.description}
           descriptionEn={project.descriptionEn}
           image={project.image ? assetPath(project.image) : undefined}
@@ -61,6 +62,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
         <CarouselCard
           href={`${base}/blog/${post.id}`}
           title={post.data.title}
+          titleEn={post.data.titleEn}
           description={post.data.description}
           descriptionEn={post.data.descriptionEn}
           image={post.data.coverImage ? assetPath(post.data.coverImage) : undefined}
