@@ -76,7 +76,7 @@ Soft Delete 방식:
 
 #### 3. 실패 시 복잡한 예외 처리
 
-![immediate-delete-complexity](/uploads/orphan-file-cleanup/immediate-delete-complexity.png)
+![immediate-delete-complexity](/uploads/프로젝트/Tymee/orphan-file-cleanup/immediate-delete-complexity.png)
 
 
 #### 4. 복구 가능성
@@ -117,7 +117,7 @@ RabbitMQ가 이미 인프라에 있지만, 이 기능의 특성상 Spring Applic
 | **외부 서비스 연동** | 알림 서버, 결제 서버 등과 통신 |
 
 현재 구조에서 스케일 아웃 시 전환 예시:
-![rabbitmq-scaleout](/uploads/orphan-file-cleanup/rabbitmq-scaleout.png)
+![rabbitmq-scaleout](/uploads/프로젝트/Tymee/orphan-file-cleanup/rabbitmq-scaleout.png)
 
 
 ### 왜 이벤트 기반으로 구현했나?
@@ -163,7 +163,7 @@ Upload 모듈 ──depends──▶ Core 모듈 (이벤트 리스너)
 
 #### @TransactionalEventListener 사용 이유
 
-![transactional-event-listener](/uploads/orphan-file-cleanup/transactional-event-listener.png)
+![transactional-event-listener](/uploads/프로젝트/Tymee/orphan-file-cleanup/transactional-event-listener.png)
 
 
 - **AFTER_COMMIT**: 프로필 업데이트가 성공한 후에만 soft delete 실행
@@ -176,7 +176,7 @@ Upload 모듈 ──depends──▶ Core 모듈 (이벤트 리스너)
 
 프로필 이미지 변경 기능을 구현하다가 이상한 버그를 만났다. 이전 이미지를 soft delete 처리하는 이벤트 리스너를 만들었는데, 분명히 `save()`를 호출했는데도 `deleted_at`이 DB에 저장되지 않는 것이다.
 
-![after-commit-problem](/uploads/orphan-file-cleanup/after-commit-problem.png)
+![after-commit-problem](/uploads/프로젝트/Tymee/orphan-file-cleanup/after-commit-problem.png)
 
 
 처음엔 내 코드가 잘못된 줄 알고 한참을 헤맸다. 그러다 관련 글을 찾아보면서 원인을 알게 됐는데, 생각보다 깊은 내용이었다.
@@ -200,7 +200,7 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 
 ### 그래서 뭐가 문제냐면
 
-![transaction-context-alive](/uploads/orphan-file-cleanup/transaction-context-alive.png)
+![transaction-context-alive](/uploads/프로젝트/Tymee/orphan-file-cleanup/transaction-context-alive.png)
 
 
 `@Transactional`의 기본 propagation이 `REQUIRED`인데, 이건 "기존 트랜잭션이 있으면 참여하라"는 뜻이다. 스프링이 보기엔 트랜잭션 컨텍스트가 아직 있으니까 "오 트랜잭션 있네, 참여해야지!" 하고 기존 트랜잭션에 참여한다.
@@ -211,7 +211,7 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 
 영속성 컨텍스트 때문에 **성공한 것처럼 보인다**:
 
-![persistence-context-cache](/uploads/orphan-file-cleanup/persistence-context-cache.png)
+![persistence-context-cache](/uploads/프로젝트/Tymee/orphan-file-cleanup/persistence-context-cache.png)
 
 
 영속성 컨텍스트(1차 캐시)에서 조회되니까 코드상으로는 변경이 잘 된 것처럼 보인다. 하지만 DB에 직접 쿼리를 날려보면 값이 안 바뀌어있다. 이게 디버깅을 어렵게 만든다.
@@ -220,7 +220,7 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 
 **REQUIRES_NEW로 새 트랜잭션 시작**
 
-![requires-new-solution](/uploads/orphan-file-cleanup/requires-new-solution.png)
+![requires-new-solution](/uploads/프로젝트/Tymee/orphan-file-cleanup/requires-new-solution.png)
 
 
 `REQUIRES_NEW`는 기존 트랜잭션과 상관없이 새 트랜잭션을 만든다. 완전히 새로운 DB 트랜잭션이 시작되니까 정상적으로 저장된다.
@@ -229,7 +229,7 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 
 `@Async`를 쓰면 별도 스레드에서 실행되니까 트랜잭션 컨텍스트가 전파되지 않아서 문제가 해결되긴 한다.
 
-![async-alternative](/uploads/orphan-file-cleanup/async-alternative.png)
+![async-alternative](/uploads/프로젝트/Tymee/orphan-file-cleanup/async-alternative.png)
 
 근데 이 프로젝트에서는 `@Async`를 안 썼다. 이유는:
 
@@ -258,7 +258,7 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 ---
 
 ## 아키텍처
-![architecture-diagram](/uploads/orphan-file-cleanup/architecture-diagram.png)
+![architecture-diagram](/uploads/프로젝트/Tymee/orphan-file-cleanup/architecture-diagram.png)
 
 ---
 
@@ -268,28 +268,28 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 
 이벤트 정의. User와 Upload 모듈 간 순환 의존성 방지를 위해 Core에 위치.
 
-![profile-image-changed-event](/uploads/orphan-file-cleanup/profile-image-changed-event.png)
+![profile-image-changed-event](/uploads/프로젝트/Tymee/orphan-file-cleanup/profile-image-changed-event.png)
 
 
 ### 2. UserService (User 모듈)
 
 프로필 이미지 변경 시 이벤트 발행.
 
-![user-service-event-publish](/uploads/orphan-file-cleanup/user-service-event-publish.png)
+![user-service-event-publish](/uploads/프로젝트/Tymee/orphan-file-cleanup/user-service-event-publish.png)
 
 
 ### 3. ProfileImageChangedEventListener (Upload 모듈)
 
 이벤트 수신 후 Soft Delete 처리. 트랜잭션 커밋 후 실행.
 
-![event-listener](/uploads/orphan-file-cleanup/event-listener.png)
+![event-listener](/uploads/프로젝트/Tymee/orphan-file-cleanup/event-listener.png)
 
 
 ### 4. OrphanFileCleanupScheduler (Upload 모듈)
 
 매일 새벽 3시에 7일 지난 삭제 파일 정리.
 
-![orphan-cleanup-scheduler](/uploads/orphan-file-cleanup/orphan-cleanup-scheduler.png)
+![orphan-cleanup-scheduler](/uploads/프로젝트/Tymee/orphan-file-cleanup/orphan-cleanup-scheduler.png)
 
 
 ---
@@ -300,7 +300,7 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 
 스케줄러 활성화를 위해 메인 애플리케이션에 추가.
 
-![enable-scheduling](/uploads/orphan-file-cleanup/enable-scheduling.png)
+![enable-scheduling](/uploads/프로젝트/Tymee/orphan-file-cleanup/enable-scheduling.png)
 
 
 ### 보존 기간 변경
@@ -348,7 +348,7 @@ ERROR 파일 삭제 실패: publicId=7321847264891904002, path=..., error=...
 
 현재 배치 스케줄러는 **파일 타입이나 카테고리와 무관하게 `deleted_at` 기준으로만 정리**합니다.
 
-![batch-scheduler-generic](/uploads/orphan-file-cleanup/batch-scheduler-generic.png)
+![batch-scheduler-generic](/uploads/프로젝트/Tymee/orphan-file-cleanup/batch-scheduler-generic.png)
 
 
 ### 새로운 기능 추가 시 해야 할 일
@@ -362,7 +362,7 @@ ERROR 파일 삭제 실패: publicId=7321847264891904002, path=..., error=...
 
 ### 예시: 게시글 이미지 삭제 추가
 
-![post-image-delete-example](/uploads/orphan-file-cleanup/post-image-delete-example.png)
+![post-image-delete-example](/uploads/프로젝트/Tymee/orphan-file-cleanup/post-image-delete-example.png)
 
 
 ### 설계의 핵심
@@ -445,7 +445,7 @@ From the user's perspective, "deleting the old profile image" is irrelevant. A f
 
 #### 3. Complex Exception Handling on Failure
 
-![immediate-delete-complexity](/uploads/orphan-file-cleanup/immediate-delete-complexity.png)
+![immediate-delete-complexity](/uploads/프로젝트/Tymee/orphan-file-cleanup/immediate-delete-complexity.png)
 
 
 #### 4. Recovery Possibility
@@ -485,7 +485,7 @@ Consider using RabbitMQ when the following situations arise:
 | **External service integration** | Communication with notification servers, payment servers, etc. |
 
 Example of switching when scaling out from the current architecture:
-![rabbitmq-scaleout](/uploads/orphan-file-cleanup/rabbitmq-scaleout.png)
+![rabbitmq-scaleout](/uploads/프로젝트/Tymee/orphan-file-cleanup/rabbitmq-scaleout.png)
 
 
 ### Why Event-Driven Implementation?
@@ -531,7 +531,7 @@ Upload module ──depends──▶ Core module (event listener)
 
 #### Reason for Using @TransactionalEventListener
 
-![transactional-event-listener](/uploads/orphan-file-cleanup/transactional-event-listener.png)
+![transactional-event-listener](/uploads/프로젝트/Tymee/orphan-file-cleanup/transactional-event-listener.png)
 
 
 - **AFTER_COMMIT**: Soft delete executes only after the profile update succeeds
@@ -544,7 +544,7 @@ Upload module ──depends──▶ Core module (event listener)
 
 While implementing the profile image change feature, I encountered a strange bug. I created an event listener to soft-delete the previous image, and even though `save()` was clearly called, `deleted_at` was not being persisted to the database.
 
-![after-commit-problem](/uploads/orphan-file-cleanup/after-commit-problem.png)
+![after-commit-problem](/uploads/프로젝트/Tymee/orphan-file-cleanup/after-commit-problem.png)
 
 
 At first I spent a long time thinking my code was wrong. Then I found related articles and discovered the cause, which turned out to be deeper than expected.
@@ -568,7 +568,7 @@ Looking into Spring's `processCommit()` method, this is how it works:
 
 ### So What Is the Problem?
 
-![transaction-context-alive](/uploads/orphan-file-cleanup/transaction-context-alive.png)
+![transaction-context-alive](/uploads/프로젝트/Tymee/orphan-file-cleanup/transaction-context-alive.png)
 
 
 The default propagation of `@Transactional` is `REQUIRED`, which means "join an existing transaction if one exists." From Spring's perspective, the transaction context still exists, so it thinks "Oh, there's a transaction, let me join!" and participates in the existing transaction.
@@ -579,7 +579,7 @@ But the DB transaction has already been committed and terminated. As a result, n
 
 Due to the persistence context, **it appears to have succeeded**:
 
-![persistence-context-cache](/uploads/orphan-file-cleanup/persistence-context-cache.png)
+![persistence-context-cache](/uploads/프로젝트/Tymee/orphan-file-cleanup/persistence-context-cache.png)
 
 
 Since it reads from the persistence context (first-level cache), the change appears to have been applied correctly in code. But querying the database directly reveals that the value has not changed. This is what makes debugging difficult.
@@ -588,7 +588,7 @@ Since it reads from the persistence context (first-level cache), the change appe
 
 **Start a New Transaction with REQUIRES_NEW**
 
-![requires-new-solution](/uploads/orphan-file-cleanup/requires-new-solution.png)
+![requires-new-solution](/uploads/프로젝트/Tymee/orphan-file-cleanup/requires-new-solution.png)
 
 
 `REQUIRES_NEW` creates a new transaction regardless of the existing one. Since an entirely new DB transaction is started, the data is persisted correctly.
@@ -597,7 +597,7 @@ Since it reads from the persistence context (first-level cache), the change appe
 
 Using `@Async` would run the code in a separate thread, preventing transaction context propagation and thereby solving the problem.
 
-![async-alternative](/uploads/orphan-file-cleanup/async-alternative.png)
+![async-alternative](/uploads/프로젝트/Tymee/orphan-file-cleanup/async-alternative.png)
 
 However, `@Async` was not used in this project. The reasons are:
 
@@ -626,7 +626,7 @@ However, `@Async` was not used in this project. The reasons are:
 ---
 
 ## Architecture
-![architecture-diagram](/uploads/orphan-file-cleanup/architecture-diagram.png)
+![architecture-diagram](/uploads/프로젝트/Tymee/orphan-file-cleanup/architecture-diagram.png)
 
 ---
 
@@ -636,28 +636,28 @@ However, `@Async` was not used in this project. The reasons are:
 
 Event definition. Located in Core to prevent circular dependencies between User and Upload modules.
 
-![profile-image-changed-event](/uploads/orphan-file-cleanup/profile-image-changed-event.png)
+![profile-image-changed-event](/uploads/프로젝트/Tymee/orphan-file-cleanup/profile-image-changed-event.png)
 
 
 ### 2. UserService (User Module)
 
 Publishes an event when the profile image changes.
 
-![user-service-event-publish](/uploads/orphan-file-cleanup/user-service-event-publish.png)
+![user-service-event-publish](/uploads/프로젝트/Tymee/orphan-file-cleanup/user-service-event-publish.png)
 
 
 ### 3. ProfileImageChangedEventListener (Upload Module)
 
 Receives the event and performs soft delete. Executes after transaction commit.
 
-![event-listener](/uploads/orphan-file-cleanup/event-listener.png)
+![event-listener](/uploads/프로젝트/Tymee/orphan-file-cleanup/event-listener.png)
 
 
 ### 4. OrphanFileCleanupScheduler (Upload Module)
 
 Cleans up deleted files older than 7 days every day at 3 AM.
 
-![orphan-cleanup-scheduler](/uploads/orphan-file-cleanup/orphan-cleanup-scheduler.png)
+![orphan-cleanup-scheduler](/uploads/프로젝트/Tymee/orphan-file-cleanup/orphan-cleanup-scheduler.png)
 
 
 ---
@@ -668,7 +668,7 @@ Cleans up deleted files older than 7 days every day at 3 AM.
 
 Added to the main application to enable the scheduler.
 
-![enable-scheduling](/uploads/orphan-file-cleanup/enable-scheduling.png)
+![enable-scheduling](/uploads/프로젝트/Tymee/orphan-file-cleanup/enable-scheduling.png)
 
 
 ### Changing the Retention Period
@@ -716,7 +716,7 @@ ERROR File deletion failed: publicId=7321847264891904002, path=..., error=...
 
 The current batch scheduler **cleans up based solely on `deleted_at`, regardless of file type or category**.
 
-![batch-scheduler-generic](/uploads/orphan-file-cleanup/batch-scheduler-generic.png)
+![batch-scheduler-generic](/uploads/프로젝트/Tymee/orphan-file-cleanup/batch-scheduler-generic.png)
 
 
 ### What to Do When Adding New Features
@@ -730,7 +730,7 @@ The current batch scheduler **cleans up based solely on `deleted_at`, regardless
 
 ### Example: Adding Post Image Deletion
 
-![post-image-delete-example](/uploads/orphan-file-cleanup/post-image-delete-example.png)
+![post-image-delete-example](/uploads/프로젝트/Tymee/orphan-file-cleanup/post-image-delete-example.png)
 
 
 ### Core of the Design

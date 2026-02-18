@@ -42,7 +42,7 @@ IDE 포맷터나 EditorConfig만으로는 Java의 import 순서, 중괄호 위�
 ```
 
 **설정 (build.gradle.kts):**
-![spotless-config](/uploads/code-quality-management/spotless-config.svg)
+![spotless-config](/uploads/프로젝트/Tymee/code-quality-management/spotless-config.svg)
 
 
 ---
@@ -62,7 +62,7 @@ SpotBugs는 바이트코드 분석으로 **버그 패턴**을 찾고, Checkstyle
 
 ### Star Import(`import .*`) 금지 이유
 
-![star-import-problem](/uploads/code-quality-management/star-import-problem.svg)
+![star-import-problem](/uploads/프로젝트/Tymee/code-quality-management/star-import-problem.svg)
 
 **왜 금지하는가?**
 
@@ -81,7 +81,7 @@ SpotBugs는 바이트코드 분석으로 **버그 패턴**을 찾고, Checkstyle
 > 참고: [Google Java Style Guide - Import statements](https://google.github.io/styleguide/javaguide.html#s3.3-import-statements)
 
 **예외:** 테스트 코드의 static import는 가독성을 위해 허용하기도 함
-![static-import-exception](/uploads/code-quality-management/static-import-exception.svg)
+![static-import-exception](/uploads/프로젝트/Tymee/code-quality-management/static-import-exception.svg)
 
 
 **Suppressions:**
@@ -103,7 +103,7 @@ FindBugs가 2015년 이후 업데이트가 중단되어 그 후속인 SpotBugs�
 - 보안 취약점
 
 **설정:**
-![spotbugs-config](/uploads/code-quality-management/spotbugs-config.svg)
+![spotbugs-config](/uploads/프로젝트/Tymee/code-quality-management/spotbugs-config.svg)
 
 
 **Exclude 설정:**
@@ -118,7 +118,7 @@ DTO, Entity의 getter가 가변 객체를 반환하는 경고(EI_EXPOSE_REP)는 
 Cobertura는 2015년 이후 업데이트가 느려졌고, IntelliJ 내장 커버리지는 IDE에서만 확인 가능하다. JaCoCo는 Eclipse Foundation에서 관리하면서 최신 Java 버전을 빠르게 지원하고, Gradle 통합과 Codecov 연동이 잘 되어 CI 자동화에 적합하다.
 
 **커버리지 기준:**
-![jacoco-coverage-config](/uploads/code-quality-management/jacoco-coverage-config.svg)
+![jacoco-coverage-config](/uploads/프로젝트/Tymee/code-quality-management/jacoco-coverage-config.svg)
 
 
 **왜 60%/70%인가?**
@@ -137,7 +137,7 @@ Coveralls도 무료 커버리지 대시보드를 제공하지만, Codecov가 PR 
 
 #### Codecov vs Coveralls 실제 비교
 
-![codecov-vs-coveralls](/uploads/code-quality-management/codecov-vs-coveralls.png)
+![codecov-vs-coveralls](/uploads/프로젝트/Tymee/code-quality-management/codecov-vs-coveralls.png)
 
 위 이미지에서 중요한 차이가 보인다. Codecov는 비율이 아닌 정확한 줄 수로 표시하고, 패치 밖에서 바뀐 커버리지 여부와 패치 안의 코드 커버리지를 구분해서 보여준다.
 
@@ -179,7 +179,7 @@ private 레포이지만 혼자 만들고 있으니 무료 범위에 해당한다
 ## CI 파이프라인 구조
 
 
-![ci-pipeline](/uploads/code-quality-management/ci-pipeline.png)
+![ci-pipeline](/uploads/프로젝트/Tymee/code-quality-management/ci-pipeline.png)
 
 
 **단계 분리 이유:**
@@ -291,7 +291,7 @@ IDE formatters or EditorConfig alone cannot enforce language-specific rules like
 ```
 
 **Configuration (build.gradle.kts):**
-![spotless-config](/uploads/code-quality-management/spotless-config.svg)
+![spotless-config](/uploads/프로젝트/Tymee/code-quality-management/spotless-config.svg)
 
 
 ---
@@ -311,7 +311,7 @@ SpotBugs uses bytecode analysis to find **bug patterns**, while Checkstyle inspe
 
 ### Why Star Import (`import .*`) Is Prohibited
 
-![star-import-problem](/uploads/code-quality-management/star-import-problem.svg)
+![star-import-problem](/uploads/프로젝트/Tymee/code-quality-management/star-import-problem.svg)
 
 **Why prohibit it?**
 
@@ -330,7 +330,7 @@ A new version of a library may introduce classes that conflict with existing cla
 > Reference: [Google Java Style Guide - Import statements](https://google.github.io/styleguide/javaguide.html#s3.3-import-statements)
 
 **Exception:** Static imports in test code are sometimes allowed for readability
-![static-import-exception](/uploads/code-quality-management/static-import-exception.svg)
+![static-import-exception](/uploads/프로젝트/Tymee/code-quality-management/static-import-exception.svg)
 
 
 **Suppressions:**
@@ -352,7 +352,7 @@ FindBugs has not been updated since 2015, so its successor SpotBugs was chosen. 
 - Security vulnerabilities
 
 **Configuration:**
-![spotbugs-config](/uploads/code-quality-management/spotbugs-config.svg)
+![spotbugs-config](/uploads/프로젝트/Tymee/code-quality-management/spotbugs-config.svg)
 
 
 **Exclude configuration:**
@@ -367,7 +367,7 @@ Warnings about DTO/Entity getters returning mutable objects (EI_EXPOSE_REP) were
 Cobertura has had slow updates since 2015, and IntelliJ's built-in coverage can only be viewed within the IDE. JaCoCo is maintained by the Eclipse Foundation, quickly supports the latest Java versions, and integrates well with Gradle and Codecov, making it suitable for CI automation.
 
 **Coverage thresholds:**
-![jacoco-coverage-config](/uploads/code-quality-management/jacoco-coverage-config.svg)
+![jacoco-coverage-config](/uploads/프로젝트/Tymee/code-quality-management/jacoco-coverage-config.svg)
 
 
 **Why 60%/70%?**
@@ -386,7 +386,7 @@ Coveralls also provides a free coverage dashboard, but Codecov has cleaner PR co
 
 #### Codecov vs Coveralls Comparison
 
-![codecov-vs-coveralls](/uploads/code-quality-management/codecov-vs-coveralls.png)
+![codecov-vs-coveralls](/uploads/프로젝트/Tymee/code-quality-management/codecov-vs-coveralls.png)
 
 An important difference is visible in the image above. Codecov displays exact line counts rather than just percentages, and distinguishes between coverage changes outside the patch and code coverage within the patch.
 
@@ -428,7 +428,7 @@ In a monorepo structure, `codecov.yml` must be placed at the **repository root**
 ## CI Pipeline Structure
 
 
-![ci-pipeline](/uploads/code-quality-management/ci-pipeline.png)
+![ci-pipeline](/uploads/프로젝트/Tymee/code-quality-management/ci-pipeline.png)
 
 
 **Reasons for stage separation:**

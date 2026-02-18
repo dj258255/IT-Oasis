@@ -31,7 +31,7 @@ draft: false
 
 Spring WebSocket STOMP Handler는 기본적으로 동기 방식이다.
 
-![](/uploads/inbound-thread-optimization/problem.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/problem.svg)
 
 Thread가 일하는 시간을 분석했다.
 
@@ -59,7 +59,7 @@ MongoDB 저장 과정을 자세히 보면:
 
 운영체제 관점에서 보면:
 
-![](/uploads/inbound-thread-optimization/blocking-io.png)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/blocking-io.png)
 
 
 Thread 1은 98ms 동안 아무 일도 안 했지만 **Thread Pool의 자리를 차지**한다. 다른 메시지는 Thread 1이 돌아올 때까지 기다려야 한다.
@@ -72,25 +72,25 @@ Blocking I/O 문제를 해결하기 위한 방법을 검토했다.
 
 ### 1. Spring @Async
 
-![](/uploads/inbound-thread-optimization/spring-async.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/spring-async.svg)
 
 별도 Thread Pool을 만들어서 작업을 위임한다. 하지만 I/O 대기 중에도 Thread가 Blocked 상태로 점유되는 건 마찬가지다. Thread 수만 늘어나고 근본적인 해결이 안 된다.
 
 ### 2. Project Reactor (Reactive Programming)
 
-![](/uploads/inbound-thread-optimization/project-reactor.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/project-reactor.svg)
 
 완전한 Non-blocking을 구현할 수 있지만, 기존 JPA, JDBC 코드를 전부 Reactive로 바꿔야 한다. 6주 프로젝트에서 전체 스택을 바꾸기엔 리스크가 컸다.
 
 ### 3. Virtual Threads (Java 21)
 
-![](/uploads/inbound-thread-optimization/virtual-threads.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/virtual-threads.svg)
 
 JVM이 관리하는 경량 스레드로 수백만 개 생성 가능하다. 가장 깔끔한 해결책이지만, 당시 프로젝트가 Java 17 기반이었다. Java 21 업그레이드는 Spring Boot 버전 변경과 의존성 충돌 위험이 따랐다.
 
 ### 4. Kotlin Coroutine (선택)
 
-![](/uploads/inbound-thread-optimization/kotlin-coroutine.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/kotlin-coroutine.svg)
 
 우리 프로젝트가 이미 Kotlin 기반이었기 때문에 `suspend`만 붙이면 기존 코드와 자연스럽게 통합된다. JPA, JDBC를 그대로 쓸 수 있고, Reactor보다 학습 곡선이 완만하다. 다만 JPA Lazy Loading과 충돌할 수 있다는 점은 인지하고 있었다(이 문제는 별도 글에서 다룬다).
 
@@ -100,7 +100,7 @@ JVM이 관리하는 경량 스레드로 수백만 개 생성 가능하다. 가�
 
 Coroutine을 사용하면 Thread를 즉시 반환할 수 있다.
 
-![](/uploads/inbound-thread-optimization/coroutine-applied.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/coroutine-applied.svg)
 
 
 **Thread 점유 시간 비교**
@@ -120,12 +120,12 @@ Coroutine을 사용하면 Thread를 즉시 반환할 수 있다.
 
 ### Java 버전
 
-![](/uploads/inbound-thread-optimization/java-version.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/java-version.svg)
 
 
 ### Kotlin Coroutine 버전
 
-![](/uploads/inbound-thread-optimization/kotlin-coroutine-2.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/kotlin-coroutine-2.svg)
 
 
 **둘 다 동일한 효과다.** Inbound Thread를 빨리 반환하고, I/O 작업은 별도 스레드 풀에서 처리한다.
@@ -161,12 +161,12 @@ Java CompletableFuture로도 가능한데 Coroutine을 선택한 이유:
 
 ### ChatMessageService
 
-![](/uploads/inbound-thread-optimization/chat-message-mongodb.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/chat-message-mongodb.svg)
 
 
 ### WebSocket Controller
 
-![](/uploads/inbound-thread-optimization/websocket-controller.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/websocket-controller.svg)
 
 
 ---
@@ -198,7 +198,7 @@ This post covers how to efficiently utilize Thread Pools when using Spring WebSo
 
 Spring WebSocket STOMP Handlers operate synchronously by default.
 
-![](/uploads/inbound-thread-optimization/problem.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/problem.svg)
 
 Analyzing a single Inbound Thread's time breakdown:
 
@@ -223,7 +223,7 @@ Looking at the MongoDB save process in detail:
 
 From the OS perspective:
 
-![](/uploads/inbound-thread-optimization/blocking-io.png)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/blocking-io.png)
 
 Thread 1 does nothing for 98ms but still **occupies a slot in the Thread Pool**. Other messages must wait until Thread 1 returns.
 
@@ -235,25 +235,25 @@ Four approaches were evaluated to solve the blocking I/O problem.
 
 ### 1. Spring @Async
 
-![](/uploads/inbound-thread-optimization/spring-async.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/spring-async.svg)
 
 Delegates work to a separate Thread Pool. However, threads are still blocked during I/O waits. It just increases the number of threads without fundamentally solving the problem.
 
 ### 2. Project Reactor (Reactive Programming)
 
-![](/uploads/inbound-thread-optimization/project-reactor.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/project-reactor.svg)
 
 Achieves true Non-blocking, but requires rewriting all JPA/JDBC code to Reactive. Too risky for a 6-week project.
 
 ### 3. Virtual Threads (Java 21)
 
-![](/uploads/inbound-thread-optimization/virtual-threads.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/virtual-threads.svg)
 
 Lightweight JVM-managed threads that can scale to millions. The cleanest solution, but our project was on Java 17. Upgrading to Java 21 risked Spring Boot version changes and dependency conflicts.
 
 ### 4. Kotlin Coroutine (Chosen)
 
-![](/uploads/inbound-thread-optimization/kotlin-coroutine.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/kotlin-coroutine.svg)
 
 Since our project was already Kotlin-based, adding `suspend` integrates naturally with existing code. JPA and JDBC can be used as-is, and the learning curve is gentler than Reactor. The potential conflict with JPA Lazy Loading was noted (covered in a separate post).
 
@@ -263,7 +263,7 @@ Since our project was already Kotlin-based, adding `suspend` integrates naturall
 
 With Coroutines, threads can be returned immediately.
 
-![](/uploads/inbound-thread-optimization/coroutine-applied.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/coroutine-applied.svg)
 
 **Thread Occupancy Comparison**
 
@@ -282,11 +282,11 @@ Java CompletableFuture can produce the **same result**.
 
 ### Java Version
 
-![](/uploads/inbound-thread-optimization/java-version.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/java-version.svg)
 
 ### Kotlin Coroutine Version
 
-![](/uploads/inbound-thread-optimization/kotlin-coroutine-2.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/kotlin-coroutine-2.svg)
 
 **Both achieve the same effect.** The Inbound Thread is returned quickly, and I/O work is processed in a separate thread pool.
 
@@ -320,11 +320,11 @@ The current implementation aims to **increase Inbound Thread Pool throughput**. 
 
 ### ChatMessageService
 
-![](/uploads/inbound-thread-optimization/chat-message-mongodb.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/chat-message-mongodb.svg)
 
 ### WebSocket Controller
 
-![](/uploads/inbound-thread-optimization/websocket-controller.svg)
+![](/uploads/프로젝트/Joying/inbound-thread-optimization/websocket-controller.svg)
 
 ---
 

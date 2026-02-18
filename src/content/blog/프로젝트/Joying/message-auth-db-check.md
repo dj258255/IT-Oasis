@@ -50,7 +50,7 @@ draft: false
 
 그래서 메시지 전송할 때마다 MySQL에서 확인한다.
 
-![](/uploads/message-auth-db-check/why-permission-check.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/why-permission-check.svg)
 
 
 **문제는 메시지 보낼 때마다 조회한다는 것이다.**
@@ -69,7 +69,7 @@ draft: false
 
 ### 2. Application 메모리 캐시
 
-![](/uploads/message-auth-db-check/app-memory-cache.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/app-memory-cache.svg)
 
 0.01ms로 빠르지만, 서버가 여러 대일 때 동기화가 안 되고 재시작 시 소실된다.
 
@@ -93,7 +93,7 @@ TTL: 1시간
 
 ### 동작 방식
 
-![](/uploads/message-auth-db-check/flow-diagram.png)
+![](/uploads/프로젝트/Joying/message-auth-db-check/flow-diagram.png)
 
 
 ### 성능 비교
@@ -128,7 +128,7 @@ TTL: 1시간
 
 첫 메시지부터 빠르게 처리하기 위해 채팅방 생성 시 미리 캐싱했다.
 
-![](/uploads/message-auth-db-check/cache-warming.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/cache-warming.svg)
 
 ---
 
@@ -179,12 +179,12 @@ lastMessage가 1-2초 늦게 업데이트되어도 사용자가 거의 못 느�
 ## 실제 구현
 
 ### ChatRoomPermissionCache
-![](/uploads/message-auth-db-check/chat-room-mysql.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/chat-room-mysql.svg)
 
 
 ### 메시지 전송 서비스
 
-![](/uploads/message-auth-db-check/message-send-service.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/message-send-service.svg)
 
 ---
 
@@ -251,7 +251,7 @@ Malicious users could attempt to send messages to other people's chat rooms.
 
 So every message send requires a MySQL check.
 
-![](/uploads/message-auth-db-check/why-permission-check.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/why-permission-check.svg)
 
 **The problem is querying on every single message.**
 
@@ -269,7 +269,7 @@ Always accurate, but costs 30ms + a DB connection per message.
 
 ### 2. Application Memory Cache
 
-![](/uploads/message-auth-db-check/app-memory-cache.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/app-memory-cache.svg)
 
 Fast at 0.01ms, but doesn't synchronize across multiple servers and is lost on restart.
 
@@ -291,7 +291,7 @@ TTL: 1 hour
 
 ### Flow
 
-![](/uploads/message-auth-db-check/flow-diagram.png)
+![](/uploads/프로젝트/Joying/message-auth-db-check/flow-diagram.png)
 
 ### Performance Comparison
 
@@ -324,7 +324,7 @@ Since chat room participants rarely change, a 1-hour TTL is sufficient.
 
 To process the first message quickly, permissions are pre-cached when the chat room is created.
 
-![](/uploads/message-auth-db-check/cache-warming.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/cache-warming.svg)
 
 ---
 
@@ -371,11 +371,11 @@ A 1-2 second delay in lastMessage updates is barely noticeable. Message send spe
 ## Implementation
 
 ### ChatRoomPermissionCache
-![](/uploads/message-auth-db-check/chat-room-mysql.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/chat-room-mysql.svg)
 
 ### Message Send Service
 
-![](/uploads/message-auth-db-check/message-send-service.svg)
+![](/uploads/프로젝트/Joying/message-auth-db-check/message-send-service.svg)
 
 ---
 

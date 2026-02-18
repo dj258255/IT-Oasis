@@ -67,18 +67,18 @@ class ConcurrentHashMap<K, V> {
 ```
 
 **동작 방식:**
-![](/uploads/java-concurrency-collections/segment-lock-diagram.png)
+![](/uploads/이론/java-concurrency-collections/segment-lock-diagram.png)
 
 
 **예시:**
-![](/uploads/java-concurrency-collections/segment-lock-example.png)
+![](/uploads/이론/java-concurrency-collections/segment-lock-example.png)
 
 
 ### 1.3 ConcurrentHashMap의 개선: CAS 기반 (Java 8 이후)
 
 Java 8부터는 **세그먼트를 제거**하고 **CAS(Compare-And-Swap) + synchronized**를 사용한다.
 
-![](/uploads/java-concurrency-collections/cas-based-concurrenthashmap.png)
+![](/uploads/이론/java-concurrency-collections/cas-based-concurrenthashmap.png)
 
 
 ```java
@@ -233,7 +233,7 @@ public class CopyOnWriteArrayList<E> {
 ```
 
 **동작 원리:**
-![](/uploads/java-concurrency-collections/copy-on-write-diagram.png)
+![](/uploads/이론/java-concurrency-collections/copy-on-write-diagram.png)
 
 
 
@@ -287,7 +287,7 @@ public class ConfigurationManager {
 - 쓰기가 많으면 성능 급격히 저하
 
 **사용 기준:**
-![](/uploads/java-concurrency-collections/usage-criteria.svg)
+![](/uploads/이론/java-concurrency-collections/usage-criteria.svg)
 
 
 > 출처: [Java Documentation - CopyOnWriteArrayList](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CopyOnWriteArrayList.html), [Baeldung - CopyOnWriteArrayList Guide](https://www.baeldung.com/java-copy-on-write-arraylist)
@@ -816,10 +816,10 @@ public class HighContentionCounter {
 
 **동작 원리:**
 ActomicLong
-![](/uploads/java-concurrency-collections/atomic-long-diagram.png)
+![](/uploads/이론/java-concurrency-collections/atomic-long-diagram.png)
 
 LongAdder
-![](/uploads/java-concurrency-collections/long-adder-diagram.png)
+![](/uploads/이론/java-concurrency-collections/long-adder-diagram.png)
 
 
 **사용 기준:**
@@ -1118,18 +1118,18 @@ class ConcurrentHashMap<K, V> {
 ```
 
 **How it works:**
-![](/uploads/java-concurrency-collections/segment-lock-diagram.png)
+![](/uploads/이론/java-concurrency-collections/segment-lock-diagram.png)
 
 
 **Example:**
-![](/uploads/java-concurrency-collections/segment-lock-example.png)
+![](/uploads/이론/java-concurrency-collections/segment-lock-example.png)
 
 
 ### 1.3 ConcurrentHashMap Improvement: CAS-Based (Java 8+)
 
 Starting from Java 8, **segments were removed** and **CAS (Compare-And-Swap) + synchronized** is used instead.
 
-![](/uploads/java-concurrency-collections/cas-based-concurrenthashmap.png)
+![](/uploads/이론/java-concurrency-collections/cas-based-concurrenthashmap.png)
 
 
 ```java
@@ -1284,7 +1284,7 @@ public class CopyOnWriteArrayList<E> {
 ```
 
 **How it works:**
-![](/uploads/java-concurrency-collections/copy-on-write-diagram.png)
+![](/uploads/이론/java-concurrency-collections/copy-on-write-diagram.png)
 
 
 
@@ -1338,7 +1338,7 @@ public class ConfigurationManager {
 - Performance degrades sharply with frequent writes
 
 **Usage criteria:**
-![](/uploads/java-concurrency-collections/usage-criteria.svg)
+![](/uploads/이론/java-concurrency-collections/usage-criteria.svg)
 
 
 > Sources: [Java Documentation - CopyOnWriteArrayList](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CopyOnWriteArrayList.html), [Baeldung - CopyOnWriteArrayList Guide](https://www.baeldung.com/java-copy-on-write-arraylist)
@@ -1867,10 +1867,10 @@ public class HighContentionCounter {
 
 **How it works:**
 AtomicLong
-![](/uploads/java-concurrency-collections/atomic-long-diagram.png)
+![](/uploads/이론/java-concurrency-collections/atomic-long-diagram.png)
 
 LongAdder
-![](/uploads/java-concurrency-collections/long-adder-diagram.png)
+![](/uploads/이론/java-concurrency-collections/long-adder-diagram.png)
 
 
 **Usage criteria:**

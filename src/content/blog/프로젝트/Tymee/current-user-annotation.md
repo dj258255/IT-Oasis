@@ -22,19 +22,19 @@ Spring Security로 JWT 인증을 구현하면서 로그인한 사용자 정보�
 
 ### 1. SecurityContextHolder에서 직접 가져오기
 
-![security-context-holder-direct](/uploads/current-user-annotation/security-context-holder-direct.png)
+![security-context-holder-direct](/uploads/프로젝트/Tymee/current-user-annotation/security-context-holder-direct.png)
 
 가장 원시적인 방법인데, 매번 이 코드를 작성해야 해서 귀찮다. null 체크도 직접 해야 하고, 테스트 코드 짜기도 번거롭다.
 
 ### 2. Controller 파라미터로 Principal 받기
 
-![principal-parameter](/uploads/current-user-annotation/principal-parameter.png)
+![principal-parameter](/uploads/프로젝트/Tymee/current-user-annotation/principal-parameter.png)
 
 `Principal`은 Java 표준 인터페이스라서 `getName()` 밖에 없다. userId나 role 같은 커스텀 정보를 쓸 수가 없어서 실용성이 떨어진다.
 
 ### 3. @AuthenticationPrincipal 사용
 
-![authentication-principal](/uploads/current-user-annotation/authentication-principal.png)
+![authentication-principal](/uploads/프로젝트/Tymee/current-user-annotation/authentication-principal.png)
 
 Spring Security 3.2부터 지원하는 방식이다. 커스텀 로그인 객체를 바로 주입받을 수 있어서 제일 편하다.
 
@@ -44,13 +44,13 @@ Spring Security 3.2부터 지원하는 방식이다. 커스텀 로그인 객체�
 
 ### AuthenticationPrincipalArgumentResolver
 
-![argument-resolver](/uploads/current-user-annotation/argument-resolver.png)
+![argument-resolver](/uploads/프로젝트/Tymee/current-user-annotation/argument-resolver.png)
 
 결국 내부적으로는 `SecurityContextHolder.getContext().getAuthentication().getPrincipal()`을 호출한다. 그냥 Spring이 이 과정을 자동으로 해주는 것뿐이다.
 
 ### JWT 환경에서의 흐름
 
-![jwt-auth-flow](/uploads/current-user-annotation/jwt-auth-flow.png)
+![jwt-auth-flow](/uploads/프로젝트/Tymee/current-user-annotation/jwt-auth-flow.png)
 
 ---
 
@@ -58,27 +58,27 @@ Spring Security 3.2부터 지원하는 방식이다. 커스텀 로그인 객체�
 
 ### UserPrincipal
 
-![user-principal](/uploads/current-user-annotation/user-principal.png)
+![user-principal](/uploads/프로젝트/Tymee/current-user-annotation/user-principal.png)
 
 ### JwtUtil
 
-![jwt-util](/uploads/current-user-annotation/jwt-util.png)
+![jwt-util](/uploads/프로젝트/Tymee/current-user-annotation/jwt-util.png)
 
 ### JwtAuthenticationFilter
 
-![jwt-authentication-filter](/uploads/current-user-annotation/jwt-authentication-filter.png)
+![jwt-authentication-filter](/uploads/프로젝트/Tymee/current-user-annotation/jwt-authentication-filter.png)
 
 JWT 토큰에서 claim을 파싱해서 `UserPrincipal`을 만들고, `SecurityContextHolder`에 저장한다. 여기서 DB 조회는 전혀 없다.
 
 ### @CurrentUser 커스텀 어노테이션
 
-![current-user-annotation](/uploads/current-user-annotation/current-user-annotation.png)
+![current-user-annotation](/uploads/프로젝트/Tymee/current-user-annotation/current-user-annotation.png)
 
 `@AuthenticationPrincipal`을 메타 어노테이션으로 감싸서 `@CurrentUser`를 만들었다.
 
 ### Controller에서 사용
 
-![controller-usage](/uploads/current-user-annotation/controller-usage.png)
+![controller-usage](/uploads/프로젝트/Tymee/current-user-annotation/controller-usage.png)
 
 ---
 
@@ -181,19 +181,19 @@ While implementing JWT authentication with Spring Security, I had to figure out 
 
 ### 1. Directly from SecurityContextHolder
 
-![security-context-holder-direct](/uploads/current-user-annotation/security-context-holder-direct.png)
+![security-context-holder-direct](/uploads/프로젝트/Tymee/current-user-annotation/security-context-holder-direct.png)
 
 This is the most primitive approach. You have to write this code every time, which is tedious. You also have to handle null checks yourself, and writing tests becomes cumbersome.
 
 ### 2. Receiving Principal as a Controller Parameter
 
-![principal-parameter](/uploads/current-user-annotation/principal-parameter.png)
+![principal-parameter](/uploads/프로젝트/Tymee/current-user-annotation/principal-parameter.png)
 
 `Principal` is a Java standard interface that only has `getName()`. You cannot access custom information like userId or role, which limits its practicality.
 
 ### 3. Using @AuthenticationPrincipal
 
-![authentication-principal](/uploads/current-user-annotation/authentication-principal.png)
+![authentication-principal](/uploads/프로젝트/Tymee/current-user-annotation/authentication-principal.png)
 
 This approach has been available since Spring Security 3.2. It lets you inject a custom principal object directly, making it the most convenient option.
 
@@ -203,13 +203,13 @@ This approach has been available since Spring Security 3.2. It lets you inject a
 
 ### AuthenticationPrincipalArgumentResolver
 
-![argument-resolver](/uploads/current-user-annotation/argument-resolver.png)
+![argument-resolver](/uploads/프로젝트/Tymee/current-user-annotation/argument-resolver.png)
 
 Under the hood, it calls `SecurityContextHolder.getContext().getAuthentication().getPrincipal()`. Spring simply automates this process for you.
 
 ### Flow in a JWT Environment
 
-![jwt-auth-flow](/uploads/current-user-annotation/jwt-auth-flow.png)
+![jwt-auth-flow](/uploads/프로젝트/Tymee/current-user-annotation/jwt-auth-flow.png)
 
 ---
 
@@ -217,27 +217,27 @@ Under the hood, it calls `SecurityContextHolder.getContext().getAuthentication()
 
 ### UserPrincipal
 
-![user-principal](/uploads/current-user-annotation/user-principal.png)
+![user-principal](/uploads/프로젝트/Tymee/current-user-annotation/user-principal.png)
 
 ### JwtUtil
 
-![jwt-util](/uploads/current-user-annotation/jwt-util.png)
+![jwt-util](/uploads/프로젝트/Tymee/current-user-annotation/jwt-util.png)
 
 ### JwtAuthenticationFilter
 
-![jwt-authentication-filter](/uploads/current-user-annotation/jwt-authentication-filter.png)
+![jwt-authentication-filter](/uploads/프로젝트/Tymee/current-user-annotation/jwt-authentication-filter.png)
 
 It parses the claims from the JWT token, creates a `UserPrincipal`, and stores it in the `SecurityContextHolder`. There is no DB lookup involved here at all.
 
 ### @CurrentUser Custom Annotation
 
-![current-user-annotation](/uploads/current-user-annotation/current-user-annotation.png)
+![current-user-annotation](/uploads/프로젝트/Tymee/current-user-annotation/current-user-annotation.png)
 
 I wrapped `@AuthenticationPrincipal` as a meta-annotation to create `@CurrentUser`.
 
 ### Usage in Controller
 
-![controller-usage](/uploads/current-user-annotation/controller-usage.png)
+![controller-usage](/uploads/프로젝트/Tymee/current-user-annotation/controller-usage.png)
 
 ---
 

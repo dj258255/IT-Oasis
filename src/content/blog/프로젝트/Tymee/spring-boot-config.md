@@ -22,7 +22,7 @@ draft: false
 
 Key-Value 쌍의 평면 구조다. 단순하고 직관적이지만, 설정이 많아지면 중복 접두사가 반복되어 가독성이 떨어진다.
 
-![properties-example](/uploads/spring-boot-config/properties-example.svg)
+![properties-example](/uploads/프로젝트/Tymee/spring-boot-config/properties-example.svg)
 
 ---
 
@@ -30,13 +30,13 @@ Key-Value 쌍의 평면 구조다. 단순하고 직관적이지만, 설정이 �
 
 YAML의 계층적 구조로 설정을 표현한다. 들여쓰기로 구조를 나타내서 복잡한 설정도 명확하게 보인다.
 
-![yml-example](/uploads/spring-boot-config/yml-example.svg)
+![yml-example](/uploads/프로젝트/Tymee/spring-boot-config/yml-example.svg)
 
 ### 프로필 구분 기능
 
 yml은 하나의 파일 안에서 `---`로 프로필을 구분할 수 있다. properties는 `application-local.properties`, `application-prod.properties`처럼 파일을 분리해야 한다.
 
-![yml-profile-separation](/uploads/spring-boot-config/yml-profile-separation.svg)
+![yml-profile-separation](/uploads/프로젝트/Tymee/spring-boot-config/yml-profile-separation.svg)
 
 이 프로젝트는 local, test, staging, prod 4개 프로필이 필요했는데, yml 하나에 다 넣을 수 있어서 편했다.
 
@@ -58,7 +58,7 @@ Spring Boot에서 YAML 파일을 사용하려면 클래스패스에 [SnakeYAML](
 
 YAML 파일은 `@PropertySource` 어노테이션으로 로드할 수 없다. 이 방식으로 설정값을 로드해야 하는 경우에는 반드시 properties 파일을 사용해야 한다.
 
-![property-source-annotation](/uploads/spring-boot-config/property-source-annotation.svg)
+![property-source-annotation](/uploads/프로젝트/Tymee/spring-boot-config/property-source-annotation.svg)
 
 
 ### 우선순위: properties가 yml보다 높음
@@ -95,7 +95,7 @@ This project uses a multi-module structure with four profiles (local, test, stag
 
 A flat key-value pair structure. Simple and intuitive, but as the number of settings grows, repeated prefixes hurt readability.
 
-![properties-example](/uploads/spring-boot-config/properties-example.svg)
+![properties-example](/uploads/프로젝트/Tymee/spring-boot-config/properties-example.svg)
 
 ---
 
@@ -103,13 +103,13 @@ A flat key-value pair structure. Simple and intuitive, but as the number of sett
 
 Expresses configuration using YAML's hierarchical structure. Indentation conveys structure, making even complex settings easy to read.
 
-![yml-example](/uploads/spring-boot-config/yml-example.svg)
+![yml-example](/uploads/프로젝트/Tymee/spring-boot-config/yml-example.svg)
 
 ### Profile Separation
 
 yml lets you separate profiles within a single file using `---`. With properties, you have to split them into separate files like `application-local.properties` and `application-prod.properties`.
 
-![yml-profile-separation](/uploads/spring-boot-config/yml-profile-separation.svg)
+![yml-profile-separation](/uploads/프로젝트/Tymee/spring-boot-config/yml-profile-separation.svg)
 
 This project needed four profiles -- local, test, staging, and prod -- and being able to put them all in one yml file was convenient.
 
@@ -131,7 +131,7 @@ To use YAML files in Spring Boot, the [SnakeYAML](https://github.com/snakeyaml/s
 
 YAML files cannot be loaded with the `@PropertySource` annotation. If you need to load configuration values this way, you must use properties files.
 
-![property-source-annotation](/uploads/spring-boot-config/property-source-annotation.svg)
+![property-source-annotation](/uploads/프로젝트/Tymee/spring-boot-config/property-source-annotation.svg)
 
 ### Priority: properties Takes Precedence Over yml
 

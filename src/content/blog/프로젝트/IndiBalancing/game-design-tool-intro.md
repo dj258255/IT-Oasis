@@ -17,8 +17,8 @@ category: 프로젝트/IndiBalancing
 draft: false
 ---
 
-![](/uploads/game-design-tool-intro/image.png)
-![](/uploads/game-design-tool-intro/image-2.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/image.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/image-2.png)
 
 ---
 
@@ -50,7 +50,7 @@ draft: false
 - 학술자료: Csikszentmihalyi의 Flow 이론, 게임 경제학의 Faucet/Sink 모델
 - Ian Schreiber의 Game Balance Concepts 강의
 
-![](/uploads/game-design-tool-intro/where-study.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/where-study.png)
 
 추가로 실무 게임 개발 블로그에서 TTK/DPS 계산 공식, RPG 성장 곡선 설계를 참고했고, LoL/WoW의 데미지 공식(방어력 수확체감 `100/(100+DEF)`, 방어관통 시스템)을 분석했다.
 
@@ -83,7 +83,7 @@ draft: false
 
 ### 게임 특화 시각화
 
-![](/uploads/game-design-tool-intro/game-specialized-visualization-created.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/game-specialized-visualization-created.png)
 
 1. **성장 곡선 차트**: Linear, Exponential, Logarithmic, Quadratic, S-Curve 비교
 2. **레이더 차트**: 캐릭터/아이템 능력치 비교
@@ -134,7 +134,7 @@ Unity, Godot, Unreal 코드를 자동으로 생성한다.
 | 협업 기능 없음 | 개인 사용 목적, 클라우드/팀 기능은 추후 추가 예정 |
 | 자동 밸런싱 AI 아님 | 이상치 탐지만 제공, 수치 자동 조절 기능 없음 |
 
-![](/uploads/game-design-tool-intro/limitations.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/limitations.png)
 
 ---
 
@@ -192,8 +192,8 @@ A: IndexedDB는 로컬 저장이라 인터넷 없이도 작동한다.
 
 <!-- EN -->
 
-![](/uploads/game-design-tool-intro/image.png)
-![](/uploads/game-design-tool-intro/image-2.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/image.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/image-2.png)
 
 ---
 
@@ -225,7 +225,7 @@ Game balancing methodology was studied based on:
 - Academic materials: Csikszentmihalyi's Flow Theory, Faucet/Sink model in game economics
 - Ian Schreiber's Game Balance Concepts lectures
 
-![](/uploads/game-design-tool-intro/where-study.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/where-study.png)
 
 Additionally, TTK/DPS calculation formulas and RPG growth curve design were referenced from game development blogs. LoL/WoW damage formulas (diminishing returns `100/(100+DEF)`, armor penetration systems) were also analyzed.
 
@@ -258,7 +258,7 @@ Data auto-recalculates through cross-sheet references. Circular references trigg
 
 ### Game-Specific Visualization
 
-![](/uploads/game-design-tool-intro/game-specialized-visualization-created.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/game-specialized-visualization-created.png)
 
 1. **Growth Curve Charts**: Compare Linear, Exponential, Logarithmic, Quadratic, S-Curve
 2. **Radar Charts**: Compare character/item stats
@@ -309,7 +309,7 @@ Automatically generates code for Unity, Godot, and Unreal.
 | No collaboration features | Personal use only; cloud/team features planned |
 | Not an auto-balancing AI | Only provides anomaly detection, not automatic value adjustment |
 
-![](/uploads/game-design-tool-intro/limitations.png)
+![](/uploads/프로젝트/IndiBalancing/game-design-tool-intro/limitations.png)
 
 ---
 

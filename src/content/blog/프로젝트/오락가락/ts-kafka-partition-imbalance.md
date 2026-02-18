@@ -48,7 +48,7 @@ Kafka Exporter로 Consumer Lag을 파티션별로 확인하니, 특정 파티션
 
 uploadId를 파티션 키로 바꿨다. 업로드마다 UUID가 다르니 해시 분포가 고르게 퍼진다. 같은 파일의 이벤트만 같은 파티션에 들어가면서 순서도 보장된다.
 
-![](/uploads/ts-kafka-partition-imbalance/uploadid-partitioning.svg)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/uploadid-partitioning.svg)
 
 ---
 
@@ -56,7 +56,7 @@ uploadId를 파티션 키로 바꿨다. 업로드마다 UUID가 다르니 해시
 
 각 토픽별로 독립적인 Consumer Group을 구성했다.
 
-![](/uploads/ts-kafka-partition-imbalance/consumer-group-config.svg)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/consumer-group-config.svg)
 
 ### 토픽 구성
 
@@ -83,10 +83,10 @@ uploadId를 파티션 키로 바꿨다. 업로드마다 UUID가 다르니 해시
 | 유휴 Consumer 비율 | 66% | 0% |
 
 **Before**
-![](/uploads/ts-kafka-partition-imbalance/partition-distribution-before.png)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/partition-distribution-before.png)
 
 **After**
-![](/uploads/ts-kafka-partition-imbalance/section.png)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/section.png)
 
 ---
 
@@ -131,7 +131,7 @@ On reflection, ordering wasn't needed across "all uploads from the same user." O
 
 Switching to uploadId as partition key distributes hashes evenly (each upload has a unique UUID). Events for the same file still land on the same partition, preserving ordering.
 
-![](/uploads/ts-kafka-partition-imbalance/uploadid-partitioning.svg)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/uploadid-partitioning.svg)
 
 ---
 
@@ -139,7 +139,7 @@ Switching to uploadId as partition key distributes hashes evenly (each upload ha
 
 Independent Consumer Groups per topic.
 
-![](/uploads/ts-kafka-partition-imbalance/consumer-group-config.svg)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/consumer-group-config.svg)
 
 ### Topic Structure
 
@@ -166,10 +166,10 @@ All topics unified on uploadId as partition key.
 | Idle Consumer ratio | 66% | 0% |
 
 **Before**
-![](/uploads/ts-kafka-partition-imbalance/partition-distribution-before.png)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/partition-distribution-before.png)
 
 **After**
-![](/uploads/ts-kafka-partition-imbalance/section.png)
+![](/uploads/프로젝트/오락가락/ts-kafka-partition-imbalance/section.png)
 
 ---
 

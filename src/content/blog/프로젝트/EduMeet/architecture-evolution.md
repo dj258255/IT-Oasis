@@ -101,7 +101,7 @@ draft: false
 
 ### 접근법 1: JPA 엔티티부터 (상향식, DB 중심)
 
-![JPA 엔티티 우선 접근](/uploads/architecture-evolution/approach-1-jpa-entity-db.png)
+![JPA 엔티티 우선 접근](/uploads/프로젝트/EduMeet/architecture-evolution/approach-1-jpa-entity-db.png)
 
 Infrastructure(DB)부터 시작하는 상향식 접근. JPA 엔티티부터 만든다는 건 DDL(테이블)을 먼저 설계하겠다는 것과 같다.
 
@@ -112,7 +112,7 @@ Infrastructure(DB)부터 시작하는 상향식 접근. JPA 엔티티부터 만�
 
 ### 접근법 2: API 엔드포인트부터 (하향식, 프레임워크 중심)
 
-![API 엔드포인트 우선 접근](/uploads/architecture-evolution/approach-2-api.png)
+![API 엔드포인트 우선 접근](/uploads/프로젝트/EduMeet/architecture-evolution/approach-2-api.png)
 
 Presentation(Controller)부터 시작하는 하향식 접근. RequestBody/ResponseEntity를 먼저 고민하는 방식.
 
@@ -142,7 +142,7 @@ Presentation(Controller)부터 시작하는 하향식 접근. RequestBody/Respon
 
 ### 기존 구조의 문제
 
-![JPA 강결합 구조](/uploads/architecture-evolution/before-problem.png)
+![JPA 강결합 구조](/uploads/프로젝트/EduMeet/architecture-evolution/before-problem.png)
 
 **Service가 JpaRepository에 직접 의존하면:**
 - 10년 뒤 JPA를 대체하는 기술이 나와도 교체 불가
@@ -150,7 +150,7 @@ Presentation(Controller)부터 시작하는 하향식 접근. RequestBody/Respon
 
 ### 해결: 의존성 역전 적용
 
-![의존성 역전 적용](/uploads/architecture-evolution/solution-dependency-inversion-applied.png)
+![의존성 역전 적용](/uploads/프로젝트/EduMeet/architecture-evolution/solution-dependency-inversion-applied.png)
 
 **Application과 Infrastructure 사이에 인터페이스 도입:**
 
@@ -166,7 +166,7 @@ After:  Service → Repository (인터페이스) ← JpaRepositoryImpl
 
 ### Presentation에도 의존성 역전 적용
 
-![Presentation 의존성 역전](/uploads/architecture-evolution/presentation-dependency-inversion-applied.png)
+![Presentation 의존성 역전](/uploads/프로젝트/EduMeet/architecture-evolution/presentation-dependency-inversion-applied.png)
 
 **긍정적 측면:**
 - Presentation 컴포넌트 테스트 용이
@@ -182,7 +182,7 @@ After:  Service → Repository (인터페이스) ← JpaRepositoryImpl
 
 ## 5. 레이어드 → 헥사고날: 본질은 같다
 
-![헥사고날 비교](/uploads/architecture-evolution/layered-hexagonal.png)
+![헥사고날 비교](/uploads/프로젝트/EduMeet/architecture-evolution/layered-hexagonal.png)
 
 의존성 역전을 적용한 레이어드 아키텍처는 **헥사고날 아키텍처와 본질적으로 동일**하다.
 
@@ -346,7 +346,7 @@ In layered architecture, development order falls into two categories:
 
 ### Approach 1: JPA Entities First (Bottom-Up, DB-Centric)
 
-![JPA entity-first approach](/uploads/architecture-evolution/approach-1-jpa-entity-db.png)
+![JPA entity-first approach](/uploads/프로젝트/EduMeet/architecture-evolution/approach-1-jpa-entity-db.png)
 
 A bottom-up approach starting from Infrastructure (DB). Starting with JPA entities is essentially designing DDL (tables) first.
 
@@ -357,7 +357,7 @@ A bottom-up approach starting from Infrastructure (DB). Starting with JPA entiti
 
 ### Approach 2: API Endpoints First (Top-Down, Framework-Centric)
 
-![API endpoint-first approach](/uploads/architecture-evolution/approach-2-api.png)
+![API endpoint-first approach](/uploads/프로젝트/EduMeet/architecture-evolution/approach-2-api.png)
 
 A top-down approach starting from Presentation (Controller). Thinking about RequestBody/ResponseEntity first.
 
@@ -387,7 +387,7 @@ A top-down approach starting from Presentation (Controller). Thinking about Requ
 
 ### Problem with the Existing Structure
 
-![JPA tight coupling](/uploads/architecture-evolution/before-problem.png)
+![JPA tight coupling](/uploads/프로젝트/EduMeet/architecture-evolution/before-problem.png)
 
 **When Service directly depends on JpaRepository:**
 - Even if a technology replacing JPA emerges in 10 years, replacement is impossible
@@ -395,7 +395,7 @@ A top-down approach starting from Presentation (Controller). Thinking about Requ
 
 ### Solution: Apply Dependency Inversion
 
-![Dependency inversion applied](/uploads/architecture-evolution/solution-dependency-inversion-applied.png)
+![Dependency inversion applied](/uploads/프로젝트/EduMeet/architecture-evolution/solution-dependency-inversion-applied.png)
 
 **Introduce an interface between Application and Infrastructure:**
 
@@ -411,7 +411,7 @@ After:  Service → Repository (interface) ← JpaRepositoryImpl
 
 ### Applying Dependency Inversion to Presentation
 
-![Presentation dependency inversion](/uploads/architecture-evolution/presentation-dependency-inversion-applied.png)
+![Presentation dependency inversion](/uploads/프로젝트/EduMeet/architecture-evolution/presentation-dependency-inversion-applied.png)
 
 **Positive aspects:**
 - Easier testing of Presentation components
@@ -427,7 +427,7 @@ After:  Service → Repository (interface) ← JpaRepositoryImpl
 
 ## 5. Layered → Hexagonal: Same Essence
 
-![Hexagonal comparison](/uploads/architecture-evolution/layered-hexagonal.png)
+![Hexagonal comparison](/uploads/프로젝트/EduMeet/architecture-evolution/layered-hexagonal.png)
 
 Layered architecture with dependency inversion is **essentially identical to hexagonal architecture**.
 

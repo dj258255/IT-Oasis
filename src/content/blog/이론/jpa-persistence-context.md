@@ -25,7 +25,7 @@ draft: false
 계좌 이체처럼 여러 DB 작업이 하나의 단위로 묶여야 할 때 트랜잭션을 쓴다.
 출금은 됐는데 입금이 안 되면 큰일나니까.
 
-![](/uploads/jpa-persistence-context/transaction-basics.png)
+![](/uploads/이론/jpa-persistence-context/transaction-basics.png)
 
 
 **꼭 써야 하는 경우:**
@@ -47,7 +47,7 @@ draft: false
 
 Spring은 `@Transactional`이 붙은 클래스에 대해 프록시 객체를 만들고, 이 프록시가 메서드 호출을 가로채서 트랜잭션을 시작/커밋/롤백한다.
 
-![](/uploads/jpa-persistence-context/proxy-pattern.png)
+![](/uploads/이론/jpa-persistence-context/proxy-pattern.png)
 
 
 ### 프록시 생성 방식
@@ -61,7 +61,7 @@ Spring Boot는 CGLIB를 기본으로 쓴다. CGLIB는 바이트코드를 조작�
 
 ### 개념적으로 보면
 
-![](/uploads/jpa-persistence-context/proxy-conceptual.png)
+![](/uploads/이론/jpa-persistence-context/proxy-conceptual.png)
 
 
 ### 그래서 주의할 점
@@ -74,7 +74,7 @@ CGLIB은 상속으로 프록시를 만들기 때문에:
 
 이거 처음에 진짜 헷갈렸다.
 
-![](/uploads/jpa-persistence-context/internal-call-trap.png)
+![](/uploads/이론/jpa-persistence-context/internal-call-trap.png)
 
 
 같은 클래스 안에서 메서드를 호출하면 프록시를 안 거치고 직접 호출된다.
@@ -93,7 +93,7 @@ CGLIB은 상속으로 프록시를 만들기 때문에:
 
 조회 메서드에 `readOnly = true`를 붙이면 몇 가지 이점이 있다.
 
-![](/uploads/jpa-persistence-context/readonly-declaration.png)
+![](/uploads/이론/jpa-persistence-context/readonly-declaration.png)
 
 
 이렇게 선언하면 Spring과 JPA는 "이 메서드에서 쓰기 연산(persist, merge, remove)이 없을 것"이라고 가정하고 최적화를 수행한다.
@@ -155,7 +155,7 @@ Master-Slave 구조라면 `readOnly = true` 쿼리를 자동으로 Slave로 라�
 
 클래스에 기본으로 `readOnly = true` 걸어두고, 쓰기 메서드에만 `@Transactional`로 오버라이드한다.
 
-![](/uploads/jpa-persistence-context/readonly-pattern.png)
+![](/uploads/이론/jpa-persistence-context/readonly-pattern.png)
 
 
 ### 주의: 낙관적 락(@Version)과의 충돌
@@ -164,13 +164,13 @@ Master-Slave 구조라면 `readOnly = true` 쿼리를 자동으로 Slave로 라�
 
 JPA는 `@Version`으로 동시성을 제어한다:
 
-![](/uploads/jpa-persistence-context/version-optimistic-lock.png)
+![](/uploads/이론/jpa-persistence-context/version-optimistic-lock.png)
 
 수정 시점에 version을 비교해서, 다른 트랜잭션이 먼저 수정했으면 `OptimisticLockException`을 던진다.
 
 근데 `readOnly = true`에서 엔티티를 수정하면?
 
-![](/uploads/jpa-persistence-context/readonly-version-conflict.png)
+![](/uploads/이론/jpa-persistence-context/readonly-version-conflict.png)
 
 
 - flush() 호출 안 됨
@@ -209,7 +209,7 @@ JPA는 `@Version`으로 동시성을 제어한다:
 
 **논리 트랜잭션**은 스프링이 트랜잭션 매니저를 통해 관리하는 단위다. 여러 논리 트랜잭션이 하나의 물리 트랜잭션을 공유할 수 있다.
 
-![](/uploads/jpa-persistence-context/physical-logical-transaction.png)
+![](/uploads/이론/jpa-persistence-context/physical-logical-transaction.png)
 
 
 원칙은 단순하다:
@@ -234,7 +234,7 @@ JPA는 `@Version`으로 동시성을 제어한다:
 
 가장 많이 쓰는 기본 속성이다. 기존 트랜잭션이 있으면 참여하고, 없으면 새로 만든다.
 
-![](/uploads/jpa-persistence-context/required-propagation.png)
+![](/uploads/이론/jpa-persistence-context/required-propagation.png)
 
 
 둘이 같은 물리 트랜잭션을 쓰기 때문에:
@@ -247,10 +247,10 @@ inner()에서 롤백이 필요한데 outer()는 커밋하려고 하면? 스프�
 
 항상 새 트랜잭션을 만든다. 기존 트랜잭션이 있어도 완전히 별개로 동작한다.
 
-![](/uploads/jpa-persistence-context/requires-new-propagation.png)
+![](/uploads/이론/jpa-persistence-context/requires-new-propagation.png)
 
 
-![](/uploads/jpa-persistence-context/requires-new-detail.png)
+![](/uploads/이론/jpa-persistence-context/requires-new-detail.png)
 
 
 
@@ -267,7 +267,7 @@ inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 된다. 
 
 예를 들어 주문 처리 중 알림 발송이 실패해도 주문은 성공해야 하는 경우:
 
-![](/uploads/jpa-persistence-context/requires-new-usecase.png)
+![](/uploads/이론/jpa-persistence-context/requires-new-usecase.png)
 
 
 근데 REQUIRES_NEW 없이도 해결 가능하면 그게 더 낫다. 별도 서비스로 분리하거나 이벤트로 처리하는 방법도 있다.
@@ -280,7 +280,7 @@ inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 된다. 
 
 트랜잭션이 있으면 참여하고, 없으면 트랜잭션 없이 실행한다.
 
-![](/uploads/jpa-persistence-context/supports-propagation.png)
+![](/uploads/이론/jpa-persistence-context/supports-propagation.png)
 
 단순 조회인데 호출하는 쪽에 트랜잭션이 있으면 그걸 쓰고, 없으면 그냥 실행. 조회 메서드에서 가끔 쓴다.
 
@@ -288,7 +288,7 @@ inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 된다. 
 
 트랜잭션 없이 실행한다. 기존 트랜잭션이 있으면 보류시킨다.
 
-![](/uploads/jpa-persistence-context/not-supported-propagation.png)
+![](/uploads/이론/jpa-persistence-context/not-supported-propagation.png)
 
 
 트랜잭션이 필요 없는 작업(외부 API 호출, 파일 처리 등)에서 사용. 트랜잭션을 보류시키면 커넥션을 잡고 있지 않아서 리소스 낭비를 줄일 수 있다.
@@ -297,7 +297,7 @@ inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 된다. 
 
 반드시 기존 트랜잭션 안에서 실행되어야 한다. 트랜잭션 없이 호출하면 예외 발생.
 
-![](/uploads/jpa-persistence-context/mandatory-propagation.png)
+![](/uploads/이론/jpa-persistence-context/mandatory-propagation.png)
 
 
 "이 메서드는 단독으로 호출하면 안 돼"라는 제약을 걸 때 사용. 실수로 트랜잭션 없이 호출하면 바로 에러가 나니까 버그를 빨리 잡을 수 있다.
@@ -306,7 +306,7 @@ inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 된다. 
 
 트랜잭션 없이 실행한다. 기존 트랜잭션이 있으면 예외 발생.
 
-![](/uploads/jpa-persistence-context/never-propagation.png)
+![](/uploads/이론/jpa-persistence-context/never-propagation.png)
 
 
 MANDATORY의 반대. "이 메서드는 트랜잭션 안에서 호출하면 안 돼"라는 제약. 거의 안 쓴다.
@@ -329,7 +329,7 @@ JDBC savepoint 기능을 쓰는 거라 JPA에서는 사용 못한다. 그래서 
 
 기본적으로 RuntimeException이 터지면 롤백, Checked Exception은 롤백 안 된다.
 
-![](/uploads/jpa-persistence-context/rollback-rules.png)
+![](/uploads/이론/jpa-persistence-context/rollback-rules.png)
 
 
 왜 이런 규칙이냐면, EJB 시절부터 내려온 관례다:
@@ -338,7 +338,7 @@ JDBC savepoint 기능을 쓰는 거라 JPA에서는 사용 못한다. 그래서 
 
 Checked Exception에서도 롤백하고 싶으면:
 
-![](/uploads/jpa-persistence-context/rollback-checked-exception.png)
+![](/uploads/이론/jpa-persistence-context/rollback-checked-exception.png)
 
 
 그리고 예외를 catch해서 삼키면 롤백 안 된다. 롤백하려면 다시 던지거나 `setRollbackOnly()` 호출해야 함.
@@ -415,7 +415,7 @@ I organized what I learned about Spring transactions while working on a side pro
 
 You use transactions when multiple DB operations need to be treated as a single unit, like a bank transfer. If the withdrawal succeeds but the deposit fails, that would be a disaster.
 
-![](/uploads/jpa-persistence-context/transaction-basics.png)
+![](/uploads/이론/jpa-persistence-context/transaction-basics.png)
 
 
 **When you must use it:**
@@ -437,7 +437,7 @@ When you add `@Transactional`, transactions are managed as if by magic, but inte
 
 Spring creates a proxy object for the class annotated with `@Transactional`, and this proxy intercepts method calls to begin/commit/rollback the transaction.
 
-![](/uploads/jpa-persistence-context/proxy-pattern.png)
+![](/uploads/이론/jpa-persistence-context/proxy-pattern.png)
 
 
 ### Proxy Generation Methods
@@ -451,7 +451,7 @@ Spring Boot uses CGLIB by default. CGLIB manipulates bytecode to create proxies 
 
 ### Conceptual View
 
-![](/uploads/jpa-persistence-context/proxy-conceptual.png)
+![](/uploads/이론/jpa-persistence-context/proxy-conceptual.png)
 
 
 ### Things to Watch Out For
@@ -464,7 +464,7 @@ Because CGLIB creates proxies through inheritance:
 
 This one really confused me at first.
 
-![](/uploads/jpa-persistence-context/internal-call-trap.png)
+![](/uploads/이론/jpa-persistence-context/internal-call-trap.png)
 
 
 When you call a method within the same class, it is invoked directly without going through the proxy.
@@ -483,7 +483,7 @@ The solution is to extract the method into a separate service class.
 
 Adding `readOnly = true` to query methods provides several benefits.
 
-![](/uploads/jpa-persistence-context/readonly-declaration.png)
+![](/uploads/이론/jpa-persistence-context/readonly-declaration.png)
 
 
 When declared this way, Spring and JPA assume that no write operations (persist, merge, remove) will occur in this method and perform optimizations.
@@ -545,7 +545,7 @@ In a Master-Slave architecture, queries marked with `readOnly = true` can be aut
 
 I set `readOnly = true` at the class level by default, and override with `@Transactional` only for write methods.
 
-![](/uploads/jpa-persistence-context/readonly-pattern.png)
+![](/uploads/이론/jpa-persistence-context/readonly-pattern.png)
 
 
 ### Caution: Conflict with Optimistic Locking (@Version)
@@ -554,13 +554,13 @@ There is a reason you should not use `readOnly = true` recklessly. It can neutra
 
 JPA controls concurrency with `@Version`:
 
-![](/uploads/jpa-persistence-context/version-optimistic-lock.png)
+![](/uploads/이론/jpa-persistence-context/version-optimistic-lock.png)
 
 At the time of modification, the version is compared, and if another transaction modified the data first, an `OptimisticLockException` is thrown.
 
 But what happens when you modify an entity under `readOnly = true`?
 
-![](/uploads/jpa-persistence-context/readonly-version-conflict.png)
+![](/uploads/이론/jpa-persistence-context/readonly-version-conflict.png)
 
 
 - flush() is not called
@@ -599,7 +599,7 @@ A **physical transaction** is the actual transaction through a DB connection. Wh
 
 A **logical transaction** is a unit managed by Spring's transaction manager. Multiple logical transactions can share a single physical transaction.
 
-![](/uploads/jpa-persistence-context/physical-logical-transaction.png)
+![](/uploads/이론/jpa-persistence-context/physical-logical-transaction.png)
 
 
 The rules are simple:
@@ -624,7 +624,7 @@ In practice, only REQUIRED and REQUIRES_NEW are commonly used.
 
 The most commonly used default attribute. Joins an existing transaction if one exists, otherwise creates a new one.
 
-![](/uploads/jpa-persistence-context/required-propagation.png)
+![](/uploads/이론/jpa-persistence-context/required-propagation.png)
 
 
 Since both share the same physical transaction:
@@ -637,10 +637,10 @@ What if inner() needs to roll back but outer() tries to commit? Spring throws an
 
 Always creates a new transaction. Even if an existing transaction is present, it operates completely independently.
 
-![](/uploads/jpa-persistence-context/requires-new-propagation.png)
+![](/uploads/이론/jpa-persistence-context/requires-new-propagation.png)
 
 
-![](/uploads/jpa-persistence-context/requires-new-detail.png)
+![](/uploads/이론/jpa-persistence-context/requires-new-detail.png)
 
 
 
@@ -656,7 +656,7 @@ Use it when the success or failure of the inner transaction must not affect the 
 
 For example, when notification delivery fails during order processing, the order should still succeed:
 
-![](/uploads/jpa-persistence-context/requires-new-usecase.png)
+![](/uploads/이론/jpa-persistence-context/requires-new-usecase.png)
 
 
 However, if you can solve the problem without REQUIRES_NEW, that is preferable. You can also extract into a separate service or use event-driven approaches.
@@ -667,7 +667,7 @@ In my actual project, I used it for [Orphan File Cleanup in a File Upload System
 
 Joins an existing transaction if one exists, otherwise runs without a transaction.
 
-![](/uploads/jpa-persistence-context/supports-propagation.png)
+![](/uploads/이론/jpa-persistence-context/supports-propagation.png)
 
 For simple queries, it uses the caller's transaction if one exists, otherwise just runs. Occasionally used for query methods.
 
@@ -675,7 +675,7 @@ For simple queries, it uses the caller's transaction if one exists, otherwise ju
 
 Runs without a transaction. Suspends the existing transaction if one is present.
 
-![](/uploads/jpa-persistence-context/not-supported-propagation.png)
+![](/uploads/이론/jpa-persistence-context/not-supported-propagation.png)
 
 
 Used for operations that do not need transactions (external API calls, file processing, etc.). Suspending the transaction releases the connection hold, reducing resource waste.
@@ -684,7 +684,7 @@ Used for operations that do not need transactions (external API calls, file proc
 
 Must run within an existing transaction. Throws an exception if called without one.
 
-![](/uploads/jpa-persistence-context/mandatory-propagation.png)
+![](/uploads/이론/jpa-persistence-context/mandatory-propagation.png)
 
 
 Use this to enforce the constraint: "this method must not be called standalone." If accidentally called without a transaction, an immediate error is raised, helping you catch bugs early.
@@ -693,7 +693,7 @@ Use this to enforce the constraint: "this method must not be called standalone."
 
 Runs without a transaction. Throws an exception if an existing transaction is present.
 
-![](/uploads/jpa-persistence-context/never-propagation.png)
+![](/uploads/이론/jpa-persistence-context/never-propagation.png)
 
 
 The opposite of MANDATORY. Enforces: "this method must not be called inside a transaction." Rarely used.
@@ -716,7 +716,7 @@ It uses JDBC's savepoint feature, so it cannot be used with JPA. Hence, it is ra
 
 By default, a RuntimeException triggers a rollback, while a Checked Exception does not.
 
-![](/uploads/jpa-persistence-context/rollback-rules.png)
+![](/uploads/이론/jpa-persistence-context/rollback-rules.png)
 
 
 The reason for this rule dates back to the EJB era:
@@ -725,7 +725,7 @@ The reason for this rule dates back to the EJB era:
 
 To force rollback on a Checked Exception:
 
-![](/uploads/jpa-persistence-context/rollback-checked-exception.png)
+![](/uploads/이론/jpa-persistence-context/rollback-checked-exception.png)
 
 
 Also, if you catch and swallow an exception, no rollback occurs. You must either re-throw it or call `setRollbackOnly()` for a rollback.

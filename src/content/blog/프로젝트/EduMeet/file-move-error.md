@@ -22,7 +22,7 @@ draft: false
 
 ## 문제 상황
 
-![](/uploads/file-move-error/file-moveerror.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror.png)
 
 개발 중에 QueryDSL 기반 검색 기능을 구현하면서, `BoardSearch`(인터페이스)와 `BoardSearchImpl`(구현체)을 모두 Application 레이어에 두고 있었다.
 
@@ -39,15 +39,15 @@ draft: false
 
 인터페이스는 Application 레이어에 유지하고, 구현체인 `BoardSearchRepositoryImpl`을 Infrastructure 레이어로 옮겼다.
 
-![](/uploads/file-move-error/file-moveerror-02.png)
-![](/uploads/file-move-error/file-moveerror-03.png)
-![](/uploads/file-move-error/file-moveerror-04.png)
-![](/uploads/file-move-error/file-moveerror-05.png)
-![](/uploads/file-move-error/file-moveerror-06.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-02.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-03.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-04.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-05.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-06.png)
 
 그런데 이동 직후, 애플리케이션이 실행되지 않았다.
 
-![](/uploads/file-move-error/file-moveerror-07.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-07.png)
 
 ---
 
@@ -55,7 +55,7 @@ draft: false
 
 오류 메시지를 확인해보니, Spring Data JPA가 `BoardJpaRepository`에서 `searchAll(...)` 메서드를 자동 구현하려다 실패한 것이었다.
 
-![](/uploads/file-move-error/file-moveerror-08.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-08.png)
 
 Spring Data JPA의 쿼리 메서드 자동 생성 규칙을 확인했다. [Spring Data JPA 공식 문서](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html)에 따르면, JPA는 `findBy`, `findAllBy`, `countBy`, `deleteBy` 등의 **규약된 접두사**와 엔티티 프로퍼티명의 조합으로 쿼리를 자동 생성한다.
 
@@ -65,7 +65,7 @@ findAllByTagIn(List<String> tags)      → 자동 생성 가능
 searchAll(...)                          → 규약에 없음 → 자동 생성 불가
 ```
 
-![](/uploads/file-move-error/file-moveerror-09.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-09.png)
 
 문제의 근본 원인은 `BoardJpaRepository`가 `BoardSearchRepository` 인터페이스를 **extends**로 확장하고 있었기 때문이다. Spring Data JPA는 `BoardJpaRepository`에 선언된 모든 메서드(상속받은 것 포함)를 쿼리 메서드로 해석하려 한다. `searchAll`은 JPA 쿼리 메서드 규약에 맞지 않으므로 파싱 실패가 발생한 것이다.
 
@@ -80,11 +80,11 @@ searchAll(...)                          → 규약에 없음 → 자동 생성 �
 
 `BoardSearchRepositoryImpl`을 Infrastructure로 이동했으므로, `BoardJpaRepository`가 `BoardSearchRepository`를 extends할 이유가 없다. 각각 독립된 빈으로 관리하는 것이 더 적절하다.
 
-![](/uploads/file-move-error/file-moveerror-10.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-10.png)
 
 **1단계**: `BoardJpaRepository`에서 `BoardSearchRepository` extends 제거
 
-![](/uploads/file-move-error/file-moveerror-11.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-11.png)
 
 **2단계**: `BoardSearchRepositoryImpl`에 `@Repository` 어노테이션 추가
 
@@ -92,7 +92,7 @@ searchAll(...)                          → 규약에 없음 → 자동 생성 �
 1. **의미적 명확성**: 데이터 접근 계층임을 명시
 2. **예외 변환**: Spring이 데이터 접근 예외를 `DataAccessException`으로 자동 변환
 
-![](/uploads/file-move-error/file-moveerror-12.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-12.png)
 
 **3단계**: Service에서 `BoardSearchRepository`를 직접 주입받아 사용
 
@@ -112,7 +112,7 @@ searchAll(...)                          → 규약에 없음 → 자동 생성 �
 
 ## 번외: AI가 제안한 방법과의 차이
 
-![](/uploads/file-move-error/bonus.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/bonus.png)
 
 같은 문제를 AI에게 물어봤을 때, AI는 2가지 방법만 제안했다. 하지만 내가 선택한 방법은 달랐다. extends에서 분리하고 `private final BoardSearchRepository`로 직접 주입하는 방식이다.
 
@@ -137,7 +137,7 @@ In layered architecture, interfaces belong in the Application layer, and their i
 
 ## The Problem
 
-![](/uploads/file-move-error/file-moveerror.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror.png)
 
 While implementing QueryDSL-based search functionality during development, both `BoardSearch` (interface) and `BoardSearchImpl` (implementation) were placed in the Application layer.
 
@@ -154,15 +154,15 @@ The names `BoardSearch` and `BoardSearchImpl` didn't clearly convey their roles.
 
 The interface stayed in the Application layer, while the implementation `BoardSearchRepositoryImpl` was moved to the Infrastructure layer.
 
-![](/uploads/file-move-error/file-moveerror-02.png)
-![](/uploads/file-move-error/file-moveerror-03.png)
-![](/uploads/file-move-error/file-moveerror-04.png)
-![](/uploads/file-move-error/file-moveerror-05.png)
-![](/uploads/file-move-error/file-moveerror-06.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-02.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-03.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-04.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-05.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-06.png)
 
 However, immediately after the move, the application failed to start.
 
-![](/uploads/file-move-error/file-moveerror-07.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-07.png)
 
 ---
 
@@ -170,7 +170,7 @@ However, immediately after the move, the application failed to start.
 
 The error message revealed that Spring Data JPA failed while trying to auto-implement the `searchAll(...)` method in `BoardJpaRepository`.
 
-![](/uploads/file-move-error/file-moveerror-08.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-08.png)
 
 According to the [Spring Data JPA official documentation](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html), JPA auto-generates queries using **conventional prefixes** like `findBy`, `findAllBy`, `countBy`, `deleteBy` combined with entity property names.
 
@@ -180,7 +180,7 @@ findAllByTagIn(List<String> tags)      → Auto-generation possible
 searchAll(...)                          → Not in convention → Cannot auto-generate
 ```
 
-![](/uploads/file-move-error/file-moveerror-09.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-09.png)
 
 The root cause was that `BoardJpaRepository` was **extending** the `BoardSearchRepository` interface. Spring Data JPA tries to interpret all methods in `BoardJpaRepository` (including inherited ones) as query methods. Since `searchAll` doesn't follow JPA query method naming conventions, parsing failed.
 
@@ -195,11 +195,11 @@ In summary:
 
 Since `BoardSearchRepositoryImpl` was moved to Infrastructure, there's no reason for `BoardJpaRepository` to extend `BoardSearchRepository`. Managing them as independent beans is more appropriate.
 
-![](/uploads/file-move-error/file-moveerror-10.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-10.png)
 
 **Step 1**: Remove `BoardSearchRepository` extends from `BoardJpaRepository`
 
-![](/uploads/file-move-error/file-moveerror-11.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-11.png)
 
 **Step 2**: Add `@Repository` annotation to `BoardSearchRepositoryImpl`
 
@@ -207,7 +207,7 @@ While `@Component` would also register the bean, `@Repository` was chosen for tw
 1. **Semantic clarity**: Explicitly indicates a data access layer
 2. **Exception translation**: Spring automatically converts data access exceptions to `DataAccessException`
 
-![](/uploads/file-move-error/file-moveerror-12.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/file-moveerror-12.png)
 
 **Step 3**: Inject `BoardSearchRepository` directly in the Service
 
@@ -227,7 +227,7 @@ As a result, `BoardJpaRepository` handles only JPA entity management, while `Boa
 
 ## Aside: Difference from AI-Suggested Approach
 
-![](/uploads/file-move-error/bonus.png)
+![](/uploads/프로젝트/EduMeet/file-move-error/bonus.png)
 
 When asking AI about the same problem, it suggested only 2 approaches. But my chosen approach was different — separating the extends and directly injecting via `private final BoardSearchRepository`.
 

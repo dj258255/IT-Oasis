@@ -23,19 +23,19 @@ draft: false
 
 처음에는 Spring WebSocket의 SimpleBroker를 사용했다.
 
-![](/uploads/server-scaling-troubleshooting/simple-broker.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/simple-broker.svg)
 
 
 SimpleBroker는 구독 정보를 서버 메모리에 저장한다.
 
-![](/uploads/server-scaling-troubleshooting/simple-broker-memory.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/simple-broker-memory.png)
 
 
 현재는 서버 1대라서 문제가 없다. 하지만 서버를 여러 대로 확장하면 문제가 발생한다.
 
 **[스케일 아웃 시나리오]**
 
-![](/uploads/server-scaling-troubleshooting/scale-out-scenario.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/scale-out-scenario.png)
 
 
 SimpleBroker는 서버 확장이 불가능하다.
@@ -65,7 +65,7 @@ Spring이 공식 지원하는 메시지 브로커 전문 솔루션이지만, 이
 SimpleBroker를 제거하고, WebSocket 세션 정보를 Redis에 저장한다.
 
 
-![](/uploads/server-scaling-troubleshooting/redis-session-management.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/redis-session-management.png)
 
 
 모든 서버가 Redis Pub/Sub을 구독하므로, 각 서버가 자기에게 연결된 사용자에게 메시지를 전달한다.
@@ -76,12 +76,12 @@ SimpleBroker를 제거하고, WebSocket 세션 정보를 Redis에 저장한다.
 
 ### WebSocketEventListener
 
-![](/uploads/server-scaling-troubleshooting/websocket-event-listener.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/websocket-event-listener.svg)
 
 
 ### ChatMessageListener
 
-![](/uploads/server-scaling-troubleshooting/chat-message-listener.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/chat-message-listener.svg)
 
 
 **핵심:** `convertAndSendToUser`의 첫 번째 파라미터는 Principal의 name과 매칭된다. WebSocket 연결 시 Principal의 name을 memberId로 설정했으므로, memberId를 전달하면 해당 사용자에게 메시지가 전송된다.
@@ -138,7 +138,7 @@ Redis Pub/Sub 수신 -> convertAndSendToUser("userA") -> 실패 (연결 없음)
 
 ### LocalDateTime의 문제
 
-![](/uploads/server-scaling-troubleshooting/localdatetime-problem.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/localdatetime-problem.svg)
 
 
 LocalDateTime은 타임존 정보가 없다. 서버의 로컬 시간 기준이다.
@@ -155,12 +155,12 @@ LocalDateTime.now() -> 2025-01-10T01:30:00 (EST)
 
 ### Instant로 해결
 
-![](/uploads/server-scaling-troubleshooting/instant-solution.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/instant-solution.svg)
 
 
 Instant는 항상 UTC 기준이다. 전 세계 어디서나 동일한 값이다.
 
-![](/uploads/server-scaling-troubleshooting/localdatetime-vs-instant.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/localdatetime-vs-instant.png)
 
 
 ---
@@ -171,14 +171,14 @@ Instant는 항상 UTC 기준이다. 전 세계 어디서나 동일한 값이다.
 
 ### Offset 페이징의 문제
 
-![](/uploads/server-scaling-troubleshooting/offset-paging-problem.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/offset-paging-problem.svg)
 
 
 페이지가 뒤로 갈수록 스캔하는 Document가 기하급수적으로 늘어난다.
 
 ### 커서 페이징으로 해결
 
-![](/uploads/server-scaling-troubleshooting/cursor-paging-solution.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/cursor-paging-solution.svg)
 
 
 인덱스를 타고 정확한 위치로 바로 점프한다.
@@ -204,7 +204,7 @@ Instant는 항상 UTC 기준이다. 전 세계 어디서나 동일한 값이다.
 
 오래된 브라우저는 WebSocket을 지원하지 않는다. SockJS로 해결했다.
 
-![](/uploads/server-scaling-troubleshooting/sockjs.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/sockjs.svg)
 
 
 SockJS는 자동으로 최적의 전송 방식을 선택한다.
@@ -218,7 +218,7 @@ SockJS는 자동으로 최적의 전송 방식을 선택한다.
 
 ## 최종 아키텍처
 
-![](/uploads/server-scaling-troubleshooting/final-architecture.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/final-architecture.png)
 
 ---
 
@@ -234,17 +234,17 @@ This post covers the design considerations for scaling to multiple servers.
 
 Initially, we used Spring WebSocket's SimpleBroker.
 
-![](/uploads/server-scaling-troubleshooting/simple-broker.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/simple-broker.svg)
 
 SimpleBroker stores subscription information in server memory.
 
-![](/uploads/server-scaling-troubleshooting/simple-broker-memory.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/simple-broker-memory.png)
 
 With a single server, this works fine. But when scaling to multiple servers, problems arise.
 
 **[Scale-out Scenario]**
 
-![](/uploads/server-scaling-troubleshooting/scale-out-scenario.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/scale-out-scenario.png)
 
 SimpleBroker cannot support server scaling.
 
@@ -272,7 +272,7 @@ Since we were already using Redis for Pub/Sub and caching, it required no additi
 
 We removed SimpleBroker and stored WebSocket session information in Redis.
 
-![](/uploads/server-scaling-troubleshooting/redis-session-management.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/redis-session-management.png)
 
 All servers subscribe to Redis Pub/Sub, so each server delivers messages to users connected to it.
 
@@ -282,11 +282,11 @@ All servers subscribe to Redis Pub/Sub, so each server delivers messages to user
 
 ### WebSocketEventListener
 
-![](/uploads/server-scaling-troubleshooting/websocket-event-listener.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/websocket-event-listener.svg)
 
 ### ChatMessageListener
 
-![](/uploads/server-scaling-troubleshooting/chat-message-listener.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/chat-message-listener.svg)
 
 **Key point:** The first parameter of `convertAndSendToUser` matches the Principal's name. Since we set the Principal's name to memberId during WebSocket connection, passing the memberId sends messages to that user.
 
@@ -337,7 +337,7 @@ While implementing the reconnection mechanism, we discovered a timezone issue.
 
 ### The Problem with LocalDateTime
 
-![](/uploads/server-scaling-troubleshooting/localdatetime-problem.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/localdatetime-problem.svg)
 
 LocalDateTime has no timezone information. It's based on the server's local time.
 
@@ -352,11 +352,11 @@ LocalDateTime.now() -> 2025-01-10T01:30:00 (EST)
 
 ### Solution: Instant
 
-![](/uploads/server-scaling-troubleshooting/instant-solution.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/instant-solution.svg)
 
 Instant is always UTC-based, producing identical values worldwide.
 
-![](/uploads/server-scaling-troubleshooting/localdatetime-vs-instant.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/localdatetime-vs-instant.png)
 
 ---
 
@@ -366,13 +366,13 @@ While implementing infinite scroll, we found problems with offset-based paginati
 
 ### Offset Pagination Problem
 
-![](/uploads/server-scaling-troubleshooting/offset-paging-problem.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/offset-paging-problem.svg)
 
 As pages go further back, the number of scanned documents grows exponentially.
 
 ### Cursor Pagination Solution
 
-![](/uploads/server-scaling-troubleshooting/cursor-paging-solution.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/cursor-paging-solution.svg)
 
 Uses the index to jump directly to the exact position.
 
@@ -396,7 +396,7 @@ Uses the index to jump directly to the exact position.
 
 Older browsers don't support WebSocket. We solved this with SockJS.
 
-![](/uploads/server-scaling-troubleshooting/sockjs.svg)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/sockjs.svg)
 
 SockJS automatically selects the optimal transport:
 
@@ -408,7 +408,7 @@ SockJS automatically selects the optimal transport:
 
 ## Final Architecture
 
-![](/uploads/server-scaling-troubleshooting/final-architecture.png)
+![](/uploads/프로젝트/Joying/server-scaling-troubleshooting/final-architecture.png)
 
 ---
 

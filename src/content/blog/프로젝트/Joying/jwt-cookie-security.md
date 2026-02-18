@@ -51,7 +51,7 @@ Authorization: Bearer eyJhbGc...
 
 AngularJS, Backbone.js 시대
 "클라이언트가 모든 걸 관리하자!" 분위기
-![](/uploads/jwt-cookie-security/spa.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/spa.svg)
 
 
 - 프론트엔드가 강력해짐
@@ -60,7 +60,7 @@ AngularJS, Backbone.js 시대
 
 #### 3. 모바일 앱과 웹 API 통일
 
-![](/uploads/jwt-cookie-security/mobile.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/mobile.svg)
 
 
 - 웹/앱 API 엔드포인트 동일
@@ -69,7 +69,7 @@ AngularJS, Backbone.js 시대
 
 #### 4. CORS 문제 회피
 
-![](/uploads/jwt-cookie-security/cors.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/cors.svg)
 
 
 **이 시기 대표 서비스:**
@@ -111,7 +111,7 @@ AngularJS, Backbone.js 시대
 
 #### 개발자들의 각성
 
-![](/uploads/jwt-cookie-security/awakening.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/awakening.svg)
 
 
 보안 전문가들이 경고하기 시작:
@@ -197,7 +197,7 @@ AngularJS, Backbone.js 시대
 
 초창기 SPA 시대의 정석.
 
-![](/uploads/jwt-cookie-security/localstorage.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/localstorage.svg)
 
 
 솔직히 처음엔 이게 제일 간단해 보였다. 구현도 쉽고, CORS 설정만 해주면 되고, 모바일 앱이랑 같은 방식이니까 통일성도 있고. RESTful API 철학에도 딱 맞아떨어진다.
@@ -215,7 +215,7 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 
 출처: [The Hacker News - 25 Malicious JavaScript Libraries](https://thehackernews.com/2022/02/25-malicious-javascript-libraries.html)
 
-![](/uploads/jwt-cookie-security/image.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/image.svg)
 
 
 단 3줄로 토큰 탈취 끝.
@@ -228,7 +228,7 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 
 쿠키에 저장하되, HttpOnly 없이.
 
-![](/uploads/jwt-cookie-security/plain-cookie.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/plain-cookie.svg)
 
 
 쿠키의 만료 시간 자동 관리나 Domain, Path 제한 같은 기능은 쓸 수 있어서 LocalStorage보단 낫다고 볼 수 있다.
@@ -243,9 +243,9 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 
 백엔드에서 HttpOnly 쿠키 설정, 브라우저가 자동으로 쿠키 전송.
 
-![](/uploads/jwt-cookie-security/httponly-cookie.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie.svg)
 
-![](/uploads/jwt-cookie-security/httponly-cookie-2.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie-2.svg)
 
 
 이게 진짜다. JavaScript에서 `document.cookie`로 접근하려고 해도 빈 문자열만 반환된다. XSS 공격이 완전히 막힌다. 브라우저가 알아서 쿠키를 전송해주고, SameSite로 CSRF 방어도 되고, 만료 시간도 자동으로 관리된다. 프론트엔드 코드는 10줄이면 끝난다.
@@ -260,7 +260,7 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 
 쿠키에 HttpOnly로 저장하되, 백엔드에서 헤더로 변환.
 
-![](/uploads/jwt-cookie-security/httponly-cookie-3.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie-3.svg)
 
 
 HttpOnly의 보안과 Authorization 헤더의 유연성을 둘 다 가져가려는 방식이다. 마이크로서비스 간 토큰 전달이 쉽고, API Gateway와도 호환성이 좋다. 레거시 시스템 통합할 때도 편하다.
@@ -275,12 +275,12 @@ HttpOnly의 보안과 Authorization 헤더의 유연성을 둘 다 가져가려�
 
 ### LocalStorage 방식 (200+ 줄)
 
-![](/uploads/jwt-cookie-security/localstorage.png)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/localstorage.png)
 
 
 ### HttpOnly Cookie 방식 (10줄)
 
-![](/uploads/jwt-cookie-security/httponly-cookie-4.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie-4.svg)
 
 
 **20배 코드량 차이.**
@@ -514,13 +514,13 @@ VITE_BACKEND_TARGET=https://------.-.-------.io
 ### 2. Vite 설정
 
 `vite.config.js`
-![](/uploads/jwt-cookie-security/vite.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/vite.svg)
 
 
 ### 3. Axios 설정
 
 `axiosInstance.js`
-![](/uploads/jwt-cookie-security/3-axios.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/3-axios.svg)
 
 10줄 끝.
 
@@ -598,7 +598,7 @@ https://------.-.-------.io/api/v1 (백엔드)
 
 ### 1. 모바일 네이티브 앱
 
-![](/uploads/jwt-cookie-security/mobile-2.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/mobile-2.svg)
 
 
 **왜?**
@@ -622,7 +622,7 @@ curl -H "Authorization: Bearer ${TOKEN}" https://internal-api.com
 
 ### 3. 마이크로서비스 아키텍처
 
-![](/uploads/jwt-cookie-security/microservice.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/microservice.svg)
 
 
 **왜?**
@@ -764,7 +764,7 @@ proxy: {
 
 ### 역사로 보는 JWT 저장 방식
 
-![](/uploads/jwt-cookie-security/history.png)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/history.png)
 
 
 ### 핵심 포인트
@@ -999,7 +999,7 @@ Authorization: Bearer eyJhbGc...
 
 The era of AngularJS and Backbone.js.
 "Let the client manage everything!" was the vibe.
-![](/uploads/jwt-cookie-security/spa.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/spa.svg)
 
 - The frontend became powerful
 - The server only provided APIs
@@ -1007,7 +1007,7 @@ The era of AngularJS and Backbone.js.
 
 #### 3. Unification of Mobile Apps and Web APIs
 
-![](/uploads/jwt-cookie-security/mobile.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/mobile.svg)
 
 - Same API endpoints for web and mobile
 - Cookies only work in browsers
@@ -1015,7 +1015,7 @@ The era of AngularJS and Backbone.js.
 
 #### 4. Avoiding CORS Issues
 
-![](/uploads/jwt-cookie-security/cors.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/cors.svg)
 
 **Representative services of this era:**
 - Firebase Authentication
@@ -1056,7 +1056,7 @@ This was considered the standard approach at the time.
 
 #### Developers' Awakening
 
-![](/uploads/jwt-cookie-security/awakening.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/awakening.svg)
 
 Security experts started warning:
 - XSS kept appearing in the OWASP Top 10
@@ -1141,7 +1141,7 @@ Security experts started warning:
 
 The standard approach of the early SPA era.
 
-![](/uploads/jwt-cookie-security/localstorage.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/localstorage.svg)
 
 At first, this looked like the simplest option. Easy to implement, just set up CORS, unified with mobile apps, and perfectly aligned with RESTful API philosophy.
 
@@ -1158,7 +1158,7 @@ Malicious code embedded in npm packages stole Discord tokens from localStorage.
 
 Source: [The Hacker News - 25 Malicious JavaScript Libraries](https://thehackernews.com/2022/02/25-malicious-javascript-libraries.html)
 
-![](/uploads/jwt-cookie-security/image.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/image.svg)
 
 Token stolen in just 3 lines of code.
 
@@ -1170,7 +1170,7 @@ Token stolen in just 3 lines of code.
 
 Stored in a cookie, but without HttpOnly.
 
-![](/uploads/jwt-cookie-security/plain-cookie.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/plain-cookie.svg)
 
 You can use features like automatic expiry management and Domain/Path restrictions, so it's arguably better than LocalStorage.
 
@@ -1184,9 +1184,9 @@ Conclusion: LocalStorage drawbacks + Cookie complexity = worst combination.
 
 Backend sets HttpOnly cookies, and the browser sends them automatically.
 
-![](/uploads/jwt-cookie-security/httponly-cookie.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie.svg)
 
-![](/uploads/jwt-cookie-security/httponly-cookie-2.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie-2.svg)
 
 This is the real deal. Even if you try to access `document.cookie` via JavaScript, it returns an empty string. XSS attacks are completely blocked. The browser sends cookies automatically, SameSite handles CSRF defense, and expiry is managed automatically. Frontend code takes just 10 lines.
 
@@ -1200,7 +1200,7 @@ However, **SameSite policy causes issues during local development** (explained l
 
 Stored as HttpOnly cookies, but converted to headers on the backend.
 
-![](/uploads/jwt-cookie-security/httponly-cookie-3.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie-3.svg)
 
 This approach tries to combine HttpOnly security with Authorization header flexibility. Makes it easy to pass tokens between microservices, and it's compatible with API Gateways. Also convenient for legacy system integration.
 
@@ -1214,11 +1214,11 @@ Sometimes used in microservice architectures, but unnecessary for single-server 
 
 ### LocalStorage Approach (200+ Lines)
 
-![](/uploads/jwt-cookie-security/localstorage.png)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/localstorage.png)
 
 ### HttpOnly Cookie Approach (10 Lines)
 
-![](/uploads/jwt-cookie-security/httponly-cookie-4.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/httponly-cookie-4.svg)
 
 **20x difference in code volume.**
 
@@ -1447,12 +1447,12 @@ Each team member can configure differently:
 ### 2. Vite Configuration
 
 `vite.config.js`
-![](/uploads/jwt-cookie-security/vite.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/vite.svg)
 
 ### 3. Axios Configuration
 
 `axiosInstance.js`
-![](/uploads/jwt-cookie-security/3-axios.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/3-axios.svg)
 
 Done in 10 lines.
 
@@ -1530,7 +1530,7 @@ HttpOnly Cookie is the best choice for web, but headers are more suitable in the
 
 ### 1. Native Mobile Apps
 
-![](/uploads/jwt-cookie-security/mobile-2.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/mobile-2.svg)
 
 **Why?**
 - No XSS attacks (unless using WebView)
@@ -1553,7 +1553,7 @@ curl -H "Authorization: Bearer ${TOKEN}" https://internal-api.com
 
 ### 3. Microservice Architecture
 
-![](/uploads/jwt-cookie-security/microservice.svg)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/microservice.svg)
 
 **Why?**
 - Clear token passing between services
@@ -1694,7 +1694,7 @@ proxy: {
 
 ### JWT Storage History at a Glance
 
-![](/uploads/jwt-cookie-security/history.png)
+![](/uploads/프로젝트/Joying/jwt-cookie-security/history.png)
 
 ### Key Takeaways
 

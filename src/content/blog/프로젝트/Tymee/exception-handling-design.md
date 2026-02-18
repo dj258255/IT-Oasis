@@ -91,11 +91,11 @@ throw new EntityNotFoundException("User not found");
 
 `@ControllerAdvice`는 **DispatcherServlet 이후**에만 동작한다. JWT 인증 필터 같은 Filter에서 발생한 예외는 `@ControllerAdvice`로 잡히지 않는다.
 
-![filter-exception-scope](/uploads/exception-handling-design/filter-exception-scope.png)
+![filter-exception-scope](/uploads/프로젝트/Tymee/exception-handling-design/filter-exception-scope.png)
 
 Filter에서는 직접 try-catch로 에러 응답을 작성하거나, `/error`로 포워딩해서 `BasicErrorController`가 처리하게 해야 한다.
 
-![filter-exception-handling](/uploads/exception-handling-design/filter-exception-handling.png)
+![filter-exception-handling](/uploads/프로젝트/Tymee/exception-handling-design/filter-exception-handling.png)
 
 ---
 
@@ -289,7 +289,7 @@ RuntimeException
 
 모든 비즈니스 예외의 부모 클래스.
 
-![business-exception-class](/uploads/exception-handling-design/business-exception-class.png)
+![business-exception-class](/uploads/프로젝트/Tymee/exception-handling-design/business-exception-class.png)
 
 
 ### 사용 예시
@@ -313,7 +313,7 @@ User user = userRepository.findById(id)
 
 `@RestControllerAdvice`는 모든 컨트롤러에서 발생하는 예외를 **한 곳에서 처리**할 수 있게 해준다.
 
-![global-exception-handler](/uploads/exception-handling-design/global-exception-handler.png)
+![global-exception-handler](/uploads/프로젝트/Tymee/exception-handling-design/global-exception-handler.png)
 
 
 ### 처리하는 예외 목록
@@ -341,7 +341,7 @@ User user = userRepository.findById(id)
 
 ### ApiResponse
 
-![api-response-class](/uploads/exception-handling-design/api-response-class.png)
+![api-response-class](/uploads/프로젝트/Tymee/exception-handling-design/api-response-class.png)
 
 
 ### 성공 응답
@@ -540,11 +540,11 @@ When this exception is thrown, an exact match handler is searched first. If none
 
 `@ControllerAdvice` only works **after DispatcherServlet**. Exceptions thrown in Filters, such as JWT authentication filters, are not caught by `@ControllerAdvice`.
 
-![filter-exception-scope](/uploads/exception-handling-design/filter-exception-scope.png)
+![filter-exception-scope](/uploads/프로젝트/Tymee/exception-handling-design/filter-exception-scope.png)
 
 In Filters, you need to write error responses directly with try-catch, or forward to `/error` so that `BasicErrorController` handles it.
 
-![filter-exception-handling](/uploads/exception-handling-design/filter-exception-handling.png)
+![filter-exception-handling](/uploads/프로젝트/Tymee/exception-handling-design/filter-exception-handling.png)
 
 ---
 
@@ -738,7 +738,7 @@ RuntimeException
 
 Parent class of all business exceptions.
 
-![business-exception-class](/uploads/exception-handling-design/business-exception-class.png)
+![business-exception-class](/uploads/프로젝트/Tymee/exception-handling-design/business-exception-class.png)
 
 
 ### Usage Example
@@ -762,7 +762,7 @@ User user = userRepository.findById(id)
 
 `@RestControllerAdvice` allows handling exceptions from all controllers **in one place**.
 
-![global-exception-handler](/uploads/exception-handling-design/global-exception-handler.png)
+![global-exception-handler](/uploads/프로젝트/Tymee/exception-handling-design/global-exception-handler.png)
 
 
 ### Handled Exceptions
@@ -790,7 +790,7 @@ User user = userRepository.findById(id)
 
 ### ApiResponse
 
-![api-response-class](/uploads/exception-handling-design/api-response-class.png)
+![api-response-class](/uploads/프로젝트/Tymee/exception-handling-design/api-response-class.png)
 
 
 ### Success Response

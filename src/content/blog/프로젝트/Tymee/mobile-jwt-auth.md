@@ -87,7 +87,7 @@ Redis로 Refresh Token을 관리하는 것도 업계 표준이다.
 
 웹에서 HttpOnly Cookie를 쓰는 가장 큰 이유가 XSS 방어다.
 
-![xss-attack-diagram](/uploads/mobile-jwt-auth/xss-attack-diagram.png)
+![xss-attack-diagram](/uploads/프로젝트/Tymee/mobile-jwt-auth/xss-attack-diagram.png)
 
 근데 네이티브 앱은 **JavaScript 실행 환경이 아니다**. 악성 스크립트가 실행될 수가 없다.
 
@@ -163,7 +163,7 @@ keytool -list -v -keystore your-release-key.keystore -alias your-alias
 
 Apple은 client_secret이 **고정값이 아니라 JWT**다. 백엔드에서 직접 생성해야 한다:
 
-![apple-client-secret-jwt](/uploads/mobile-jwt-auth/apple-client-secret-jwt.png)
+![apple-client-secret-jwt](/uploads/프로젝트/Tymee/mobile-jwt-auth/apple-client-secret-jwt.png)
 
 
 > "Apple's OAuth2 implementation seems to be a lot different and quite challenging for a lot of developers to implement."
@@ -276,7 +276,7 @@ Apple은 iOS/macOS SDK만 제공하고, **서버 사이드 Java 라이브러리�
 
 그래서 **24시간 캐싱**을 구현했다:
 
-![apple-public-key-cache](/uploads/mobile-jwt-auth/apple-public-key-cache.png)
+![apple-public-key-cache](/uploads/프로젝트/Tymee/mobile-jwt-auth/apple-public-key-cache.png)
 
 
 **왜 키 로테이션 대응이 필요한가?**
@@ -314,7 +314,7 @@ Apple은 보안상 주기적으로 서명 키를 교체한다. 새 키가 생기
 
 그래서 **Redis에 Refresh Token을 저장**하고, 요청마다 비교한다:
 
-![refresh-token-reuse-detection](/uploads/mobile-jwt-auth/refresh-token-reuse-detection.png)
+![refresh-token-reuse-detection](/uploads/프로젝트/Tymee/mobile-jwt-auth/refresh-token-reuse-detection.png)
 
 
 Refresh Token Rotation + Reuse Detection은 OAuth 2.0 보안 권장사항이다.
@@ -361,7 +361,7 @@ user_devices:{userId} -> {device1, device2, ...}
 
 **세 가지 로그아웃 시나리오:**
 
-![device-logout-scenarios](/uploads/mobile-jwt-auth/device-logout-scenarios.png)
+![device-logout-scenarios](/uploads/프로젝트/Tymee/mobile-jwt-auth/device-logout-scenarios.png)
 
 
 ---
@@ -372,7 +372,7 @@ user_devices:{userId} -> {device1, device2, ...}
 
 모바일은 **상태 머신**이 복잡하다:
 
-![user-state-machine](/uploads/mobile-jwt-auth/user-state-machine.png)
+![user-state-machine](/uploads/프로젝트/Tymee/mobile-jwt-auth/user-state-machine.png)
 
 
 ---
@@ -400,7 +400,7 @@ JWT의 `aud` 클레임 검증에서 실패한다.
 
 **해결책: DevAuthController**
 
-![dev-auth-controller](/uploads/mobile-jwt-auth/dev-auth-controller.png)
+![dev-auth-controller](/uploads/프로젝트/Tymee/mobile-jwt-auth/dev-auth-controller.png)
 
 
 로컬/테스트 환경에서만 동작하는 개발용 로그인 API를 만들었다.
@@ -425,11 +425,11 @@ Mock OAuth 서버를 쓰는 방법도 있지만, 1인 개발에선 DevAuthContro
 
 ### 웹 (쿠키 기반)
 
-![web-cookie-flow](/uploads/mobile-jwt-auth/web-cookie-flow.png)
+![web-cookie-flow](/uploads/프로젝트/Tymee/mobile-jwt-auth/web-cookie-flow.png)
 
 ### 모바일 (현재 구현)
 
-![mobile-auth-flow](/uploads/mobile-jwt-auth/mobile-auth-flow.png)
+![mobile-auth-flow](/uploads/프로젝트/Tymee/mobile-jwt-auth/mobile-auth-flow.png)
 
 ---
 
@@ -561,7 +561,7 @@ Native apps typically use the **Authorization header**.
 
 The biggest reason for using HttpOnly Cookies on the web is XSS defense.
 
-![xss-attack-diagram](/uploads/mobile-jwt-auth/xss-attack-diagram.png)
+![xss-attack-diagram](/uploads/프로젝트/Tymee/mobile-jwt-auth/xss-attack-diagram.png)
 
 But native apps are **not a JavaScript execution environment**. Malicious scripts simply cannot run.
 
@@ -637,7 +637,7 @@ keytool -list -v -keystore your-release-key.keystore -alias your-alias
 
 Apple's client_secret is **not a fixed value but a JWT**. It must be generated on the backend:
 
-![apple-client-secret-jwt](/uploads/mobile-jwt-auth/apple-client-secret-jwt.png)
+![apple-client-secret-jwt](/uploads/프로젝트/Tymee/mobile-jwt-auth/apple-client-secret-jwt.png)
 
 
 > "Apple's OAuth2 implementation seems to be a lot different and quite challenging for a lot of developers to implement."
@@ -750,7 +750,7 @@ Requesting the public key from Apple's server on every request means:
 
 So **24-hour caching** was implemented:
 
-![apple-public-key-cache](/uploads/mobile-jwt-auth/apple-public-key-cache.png)
+![apple-public-key-cache](/uploads/프로젝트/Tymee/mobile-jwt-auth/apple-public-key-cache.png)
 
 
 **Why is key rotation handling necessary?**
@@ -788,7 +788,7 @@ On the web, HttpOnly cookies made JavaScript access impossible. Theft detection 
 
 So **Refresh Tokens are stored in Redis** and compared with each request:
 
-![refresh-token-reuse-detection](/uploads/mobile-jwt-auth/refresh-token-reuse-detection.png)
+![refresh-token-reuse-detection](/uploads/프로젝트/Tymee/mobile-jwt-auth/refresh-token-reuse-detection.png)
 
 
 Refresh Token Rotation + Reuse Detection is an OAuth 2.0 security best practice.
@@ -835,7 +835,7 @@ user_devices:{userId} -> {device1, device2, ...}
 
 **Three Logout Scenarios:**
 
-![device-logout-scenarios](/uploads/mobile-jwt-auth/device-logout-scenarios.png)
+![device-logout-scenarios](/uploads/프로젝트/Tymee/mobile-jwt-auth/device-logout-scenarios.png)
 
 
 ---
@@ -846,7 +846,7 @@ On the web, it was simple. Just manage login/logout.
 
 On mobile, the **state machine** is complex:
 
-![user-state-machine](/uploads/mobile-jwt-auth/user-state-machine.png)
+![user-state-machine](/uploads/프로젝트/Tymee/mobile-jwt-auth/user-state-machine.png)
 
 
 ---
@@ -874,7 +874,7 @@ JWT `aud` claim verification fails.
 
 **Solution: DevAuthController**
 
-![dev-auth-controller](/uploads/mobile-jwt-auth/dev-auth-controller.png)
+![dev-auth-controller](/uploads/프로젝트/Tymee/mobile-jwt-auth/dev-auth-controller.png)
 
 
 A development-only login API that works only in local/test environments was created.
@@ -899,11 +899,11 @@ A mock OAuth server is another option, but for solo development, DevAuthControll
 
 ### Web (Cookie-based)
 
-![web-cookie-flow](/uploads/mobile-jwt-auth/web-cookie-flow.png)
+![web-cookie-flow](/uploads/프로젝트/Tymee/mobile-jwt-auth/web-cookie-flow.png)
 
 ### Mobile (Current Implementation)
 
-![mobile-auth-flow](/uploads/mobile-jwt-auth/mobile-auth-flow.png)
+![mobile-auth-flow](/uploads/프로젝트/Tymee/mobile-jwt-auth/mobile-auth-flow.png)
 
 ---
 

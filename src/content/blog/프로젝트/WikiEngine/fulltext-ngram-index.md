@@ -31,7 +31,7 @@ draft: false
 
 1단계에서는 제목과 본문을 모두 검색하되, 최신순(`ORDER BY created_at DESC`)으로 정렬했습니다:
 
-![](/uploads/fulltext-ngram-index/search-expected.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/search-expected.png)
 
 
 하지만 content(LONGTEXT) 스캔이 커넥션 풀을 고갈시켜 시스템을 마비시켰고, 긴급 조치로 content 검색을 제거한 상태입니다.
@@ -44,12 +44,12 @@ draft: false
 
 인덱스 적용 후에도 검색 쿼리는 변함없이 타임아웃이 발생합니다.
 
-![](/uploads/fulltext-ngram-index/search-timeout.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/search-timeout.png)
 
 ### EXPLAIN 확인
 
-![](/uploads/fulltext-ngram-index/explain-before-1.png)
-![](/uploads/fulltext-ngram-index/explain-before-2.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-before-1.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-before-2.png)
 
 | 항목            | 값                               | 의미                         |
 | ------------- | ------------------------------- | -------------------------- |
@@ -204,11 +204,11 @@ FULLTEXT 인덱스를 생성하기 전에, 현재 테이블의 디스크 크기�
 
 테이블 디스크 크기 — 데이터 122GB, 인덱스 0MB:
 
-![](/uploads/fulltext-ngram-index/table-disk-size.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/table-disk-size.png)
 
 content 컬럼 통계 — 14,768,700행, 평균 6,586자, 최대 2,521,624자 (쿼리 소요 439초):
 
-![](/uploads/fulltext-ngram-index/content-stats.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/content-stats.png)
 
 **인덱스 생성 전 테이블 현황:**
 
@@ -252,7 +252,7 @@ CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) WITH PARSER ngra
 
 1,477만 건 posts 테이블에 FULLTEXT ngram 인덱스를 생성했으나, 85분 경과 시점에 디스크가 가득 찼습니다.
 
-![](/uploads/fulltext-ngram-index/disk-exceeded.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/disk-exceeded.png)
 
 [MySQL 공식 문서 (Online DDL Space Requirements)](https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-space-requirements.html)에 따르면, FULLTEXT 인덱스 생성 시 MySQL은 **임시 정렬 파일(temporary sort files)**을 생성합니다.
 이 파일은 토큰을 정렬하여 역색인에 병합하기 위한 것으로, **테이블 데이터 + 기존 인덱스 크기만큼**의 추가 디스크를 사용합니다. 병합이 완료되면 자동으로 삭제됩니다.
@@ -308,7 +308,7 @@ CREATE FULLTEXT INDEX ft_title_content ON tmp_namu_posts(title, content) WITH PA
 > **참고:** `information_schema.tables.index_length`는 B-Tree 인덱스만 포함하며, InnoDB FULLTEXT 인덱스는 별도의 FTS 보조 테이블(`fts_*`)에 저장됩니다.
 > 실제 FULLTEXT 인덱스 크기는 MySQL 데이터 디렉토리에서 FTS 파일 크기를 합산해야 정확합니다.
 
-![](/uploads/fulltext-ngram-index/namu-posts-index.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/namu-posts-index.png)
 
 ### 검색 쿼리 변경
 
@@ -345,8 +345,8 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 ### EXPLAIN 비교
 
-![](/uploads/fulltext-ngram-index/explain-like-before.png)
-![](/uploads/fulltext-ngram-index/explain-fulltext-after.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-like-before.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-fulltext-after.png)
 
 | 구분 | type | key | rows | Extra |
 |------|------|-----|------|-------|
@@ -361,13 +361,13 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 Before — `LIKE '%페텔%'`: 12.766초, 6건 반환 (title만 검색):
 
-![](/uploads/fulltext-ngram-index/like-response-time.png)
-![](/uploads/fulltext-ngram-index/like-results.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/like-response-time.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/like-results.png)
 
 After — `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`: 0.006초, 20건 반환 (title + content 검색):
 
-![](/uploads/fulltext-ngram-index/fulltext-response-time.png)
-![](/uploads/fulltext-ngram-index/fulltext-results.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/fulltext-response-time.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/fulltext-results.png)
 
 | 항목              | Before (LIKE)   | After (FULLTEXT)      | 비고                           |
 | --------------- | --------------- | --------------------- | ---------------------------- |
@@ -444,9 +444,9 @@ Lucene의 Nori 형태소 분석기는 "대한민국"을 형태소 단위로 분�
 
 ### 6-4. 인덱스 크기와 생성 비용
 
-![](/uploads/fulltext-ngram-index/index-size-1.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/index-size-1.png)
 
-![](/uploads/fulltext-ngram-index/index-size-2.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/index-size-2.png)
 
 
 title + content 복합 FULLTEXT 인덱스는 content(LONGTEXT)의 모든 2-gram 토큰을 역색인에 포함하므로 인덱스 크기가 상당합니다.
@@ -490,7 +490,7 @@ When a user enters a search term, the system returns posts containing that keywo
 
 In step 1, both title and body were searched, sorted by newest first (`ORDER BY created_at DESC`):
 
-![](/uploads/fulltext-ngram-index/search-expected.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/search-expected.png)
 
 However, content (LONGTEXT) scanning exhausted the connection pool and brought the system down, so content search was removed as an emergency measure.
 
@@ -502,12 +502,12 @@ Currently only title is searched. In this step, we apply FULLTEXT index to both 
 
 Even after applying indexes, search queries consistently time out.
 
-![](/uploads/fulltext-ngram-index/search-timeout.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/search-timeout.png)
 
 ### EXPLAIN Analysis
 
-![](/uploads/fulltext-ngram-index/explain-before-1.png)
-![](/uploads/fulltext-ngram-index/explain-before-2.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-before-1.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-before-2.png)
 
 | Item | Value | Meaning |
 |------|-------|---------|
@@ -643,11 +643,11 @@ Before creating the FULLTEXT index, we measured the current table's disk size an
 
 Table disk size -- Data 122GB, Index 0MB:
 
-![](/uploads/fulltext-ngram-index/table-disk-size.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/table-disk-size.png)
 
 Content column statistics -- 14,768,700 rows, average 6,586 chars, max 2,521,624 chars (query took 439s):
 
-![](/uploads/fulltext-ngram-index/content-stats.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/content-stats.png)
 
 **Pre-index table summary:**
 
@@ -690,7 +690,7 @@ CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) WITH PARSER ngra
 
 Creating a FULLTEXT ngram index on the 14.77M row posts table failed when disk ran out after 85 minutes.
 
-![](/uploads/fulltext-ngram-index/disk-exceeded.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/disk-exceeded.png)
 
 According to [MySQL documentation (Online DDL Space Requirements)](https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-space-requirements.html), MySQL creates **temporary sort files** during FULLTEXT index creation. These files sort tokens for merging into the inverted index, using additional disk space equal to **table data + existing index size**. They are automatically deleted after merging completes.
 
@@ -741,7 +741,7 @@ CREATE FULLTEXT INDEX ft_title_content ON tmp_namu_posts(title, content) WITH PA
 
 > **Note:** `information_schema.tables.index_length` includes only B-Tree indexes. InnoDB FULLTEXT indexes are stored in separate FTS auxiliary tables (`fts_*`). Accurate FULLTEXT index size requires summing FTS file sizes in the MySQL data directory.
 
-![](/uploads/fulltext-ngram-index/namu-posts-index.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/namu-posts-index.png)
 
 ### Search Query Change
 
@@ -775,8 +775,8 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 ### EXPLAIN Comparison
 
-![](/uploads/fulltext-ngram-index/explain-like-before.png)
-![](/uploads/fulltext-ngram-index/explain-fulltext-after.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-like-before.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/explain-fulltext-after.png)
 
 | Case | type | key | rows | Extra |
 |------|------|-----|------|-------|
@@ -791,13 +791,13 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 Before -- `LIKE '%페텔%'`: 12.766s, 6 results (title only):
 
-![](/uploads/fulltext-ngram-index/like-response-time.png)
-![](/uploads/fulltext-ngram-index/like-results.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/like-response-time.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/like-results.png)
 
 After -- `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`: 0.006s, 20 results (title + content):
 
-![](/uploads/fulltext-ngram-index/fulltext-response-time.png)
-![](/uploads/fulltext-ngram-index/fulltext-results.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/fulltext-response-time.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/fulltext-results.png)
 
 | Item | Before (LIKE) | After (FULLTEXT) | Note |
 |------|--------------|------------------|------|
@@ -867,9 +867,9 @@ Lucene's Nori morphological analyzer analyzes "대한민국" at the morpheme lev
 
 ### 6-4. Index Size and Creation Cost
 
-![](/uploads/fulltext-ngram-index/index-size-1.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/index-size-1.png)
 
-![](/uploads/fulltext-ngram-index/index-size-2.png)
+![](/uploads/프로젝트/WikiEngine/fulltext-ngram-index/index-size-2.png)
 
 The title + content composite FULLTEXT index includes all 2-gram tokens from content (LONGTEXT) in the inverted index, making the index size substantial.
 

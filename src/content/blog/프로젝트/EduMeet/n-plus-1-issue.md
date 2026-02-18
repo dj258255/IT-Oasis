@@ -26,17 +26,17 @@ Board(게시글)와 BoardImage(첨부파일)는 `@OneToMany` 관계이며, `Fetc
 
 더미 데이터 100건을 넣고 Board와 Reply를 left join하는 단위 테스트를 작성했다.
 
-![](/uploads/n-plus-1-issue/n1-occurred-background.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background.png)
 
-![](/uploads/n-plus-1-issue/n1-occurred-background-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background-02.png)
 
 페이지 사이즈를 10으로 설정하고 테스트를 실행했는데, 실행 속도가 비정상적으로 느렸다.
 
-![](/uploads/n-plus-1-issue/n1-occurred-background-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background-03.png)
 
 실행된 쿼리 로그를 확인해보니, 목록을 가져오는 쿼리 1건 외에 **각 게시글마다 board_image를 조회하는 쿼리가 개별 실행**되고 있었다.
 
-![](/uploads/n-plus-1-issue/n1-occurred-background-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background-04.png)
 
 ---
 
@@ -76,19 +76,19 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 
 1. **별칭 사용 주의** — Left Join Fetch에서 별칭을 사용하면 DB와의 데이터 일관성을 해칠 수 있다.
 
-![](/uploads/n-plus-1-issue/cautions.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/cautions.png)
 
 2. **카테시안 곱 중복 발생** — `@OneToMany` 컬렉션을 Fetch Join할 때 발생한다. **Hibernate 6부터는 자동으로 중복을 필터링**하지만, 명시적으로 `DISTINCT`를 선언하는 편이 의도가 명확하다.
 
-![](/uploads/n-plus-1-issue/cautions-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/cautions-02.png)
 
 3. **컬렉션 2개 이상 동시 Fetch Join 금지** — `@XToMany` 컬렉션 필드는 **하나만** Fetch Join 가능하다. 두 개 이상이면 `MultipleBagFetchException` 발생. List 대신 Set을 사용하면 회피 가능하다.
 
 **변경 전 (에러 발생)**
-![](/uploads/n-plus-1-issue/cautions-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/cautions-03.png)
 
 **변경 후 (에러 해결)**
-![](/uploads/n-plus-1-issue/cautions-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/cautions-04.png)
 
 4. **페이징 금지** — `@XToMany` 컬렉션을 Fetch Join한 상태에서 페이징하면, Hibernate가 **모든 데이터를 메모리에 로드 후 애플리케이션 레벨에서 페이징**을 수행한다.
 
@@ -132,72 +132,72 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 
 ### 기존 N+1 상태
 
-![](/uploads/n-plus-1-issue/stats.png)
-![](/uploads/n-plus-1-issue/stats-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/stats.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/stats-02.png)
 
 ### FetchJoin 적용
 
-![](/uploads/n-plus-1-issue/fetch-join.png)
-![](/uploads/n-plus-1-issue/fetch-join-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetch-join.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetch-join-02.png)
 
 테스트 결과:
 
-![](/uploads/n-plus-1-issue/fetch-join-03.png)
-![](/uploads/n-plus-1-issue/fetch-join-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetch-join-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetch-join-04.png)
 
 N+1은 해결되었지만 메모리 페이징 경고가 발생했다.
 
-![](/uploads/n-plus-1-issue/fetch-join-05.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetch-join-05.png)
 
 `HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory`
 
 ### EntityGraph 적용
 
-![](/uploads/n-plus-1-issue/entitygraph.png)
-![](/uploads/n-plus-1-issue/entitygraph-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/entitygraph.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/entitygraph-02.png)
 
-![](/uploads/n-plus-1-issue/entitygraph-03.png)
-![](/uploads/n-plus-1-issue/entitygraph-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/entitygraph-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/entitygraph-04.png)
 
 FetchJoin과 동일하게 메모리 페이징 경고 발생.
 
-![](/uploads/n-plus-1-issue/entitygraph-05.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/entitygraph-05.png)
 
 **FetchJoin과 EntityGraph의 핵심 차이: COUNT 쿼리**
 
 FetchJoin의 COUNT 쿼리는 `left join board_image`를 포함하지만, EntityGraph의 COUNT 쿼리는 `board` 테이블만 조회한다. EntityGraph가 COUNT 쿼리에서 불필요한 JOIN을 하지 않아 더 효율적이다.
 
-![](/uploads/n-plus-1-issue/diff.png)
-![](/uploads/n-plus-1-issue/diff-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/diff.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/diff-02.png)
 
 ### SUBSELECT 적용
 
-![](/uploads/n-plus-1-issue/fetchfetchmodesubselect.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetchfetchmodesubselect.png)
 
 기대와 달리 쿼리가 대량으로 실행됐다. 총 75개의 JDBC statements가 실행되었다.
 
-![](/uploads/n-plus-1-issue/fetchfetchmodesubselect-02.png)
-![](/uploads/n-plus-1-issue/fetchfetchmodesubselect-03.png)
-![](/uploads/n-plus-1-issue/fetchfetchmodesubselect-04.png)
-![](/uploads/n-plus-1-issue/fetchfetchmodesubselect-05.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-05.png)
 
 **실패 원인:** Spring Data JPA의 Page 인터페이스가 COUNT와 데이터 쿼리를 별도 Session에서 실행하여 SUBSELECT 최적화 조건을 위반했다.
 
-![](/uploads/n-plus-1-issue/hibernate-subselect-optimization.png)
-![](/uploads/n-plus-1-issue/hibernate-subselect-optimization-02.png)
-![](/uploads/n-plus-1-issue/hibernate-subselect-optimization-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/hibernate-subselect-optimization.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/hibernate-subselect-optimization-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/hibernate-subselect-optimization-03.png)
 
 수동 Session 관리를 시도했으나, 전체 Parent ID 기준으로 SUBSELECT가 실행되는 문제가 발생했다.
 
-![](/uploads/n-plus-1-issue/solution.png)
-![](/uploads/n-plus-1-issue/solution-02.png)
-![](/uploads/n-plus-1-issue/solution-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/solution.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/solution-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/solution-03.png)
 
 **결론**: SUBSELECT는 Spring Data JPA의 페이징 처리 방식과 근본적으로 호환되지 않는다.
 
 ### BatchSize 적용
 
-![](/uploads/n-plus-1-issue/batchsize.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/batchsize.png)
 
 `@BatchSize(size = 20)` 적용 결과 **4개 쿼리만 실행**되었다:
 
@@ -216,8 +216,8 @@ WHERE is1_0.board_id IN (100, 99, 98, 97, 96, 95, 94, 93, 92, 91);
 -- 4번째: COUNT 쿼리
 ```
 
-![](/uploads/n-plus-1-issue/stats-03.png)
-![](/uploads/n-plus-1-issue/stats-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/stats-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/stats-04.png)
 
 ---
 
@@ -261,15 +261,15 @@ WHERE is1_0.board_id IN (100, 99, 98, 97, 96, 95, 94, 93, 92, 91);
 
 **게시글 목록 조회 (페이징 필요)** → BatchSize 권장
 
-![](/uploads/n-plus-1-issue/board-query-paging.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/board-query-paging.png)
 
 **단일 게시글 상세 조회** → EntityGraph 권장
 
-![](/uploads/n-plus-1-issue/board-query.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/board-query.png)
 
 **특정 게시글 소량 조회 (페이징 불필요)** → FetchJoin 권장
 
-![](/uploads/n-plus-1-issue/board-querypaging.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/board-querypaging.png)
 
 ---
 
@@ -300,13 +300,13 @@ Board (post) and BoardImage (attachment) have a `@OneToMany` relationship with `
 
 After inserting 100 dummy records and writing a unit test with Board and Reply left join, the page size was set to 10 and the test ran abnormally slowly.
 
-![](/uploads/n-plus-1-issue/n1-occurred-background.png)
-![](/uploads/n-plus-1-issue/n1-occurred-background-02.png)
-![](/uploads/n-plus-1-issue/n1-occurred-background-03.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background-02.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background-03.png)
 
 The query log revealed that beyond the list query, **individual queries for board_image were being executed for each post**.
 
-![](/uploads/n-plus-1-issue/n1-occurred-background-04.png)
+![](/uploads/프로젝트/EduMeet/n-plus-1-issue/n1-occurred-background-04.png)
 
 ---
 

@@ -24,7 +24,7 @@ draft: false
 
 Board 엔티티에서 BoardImage에 대한 참조를 `@OneToMany`로 설정하고 프로젝트를 실행했더니, 예상과 다른 테이블이 생성됐다.
 
-![](/uploads/onetomany-join-table/onetomany-join-table-creation.png)
+![](/uploads/프로젝트/EduMeet/onetomany-join-table/onetomany-join-table-creation.png)
 
 `board`와 `board_image` 외에 **`board_image_set`이라는 중간 테이블(조인 테이블)**이 추가로 생성된 것이다.
 
@@ -54,7 +54,7 @@ Board 엔티티에서 BoardImage에 대한 참조를 `@OneToMany`로 설정하�
 
 적용 후 프로젝트를 실행하니, 중간 테이블 없이 `board_image` 테이블에 `board_id` 외래키가 생성되었다.
 
-![](/uploads/onetomany-join-table/onetomany-join-table-creation-02.png)
+![](/uploads/프로젝트/EduMeet/onetomany-join-table/onetomany-join-table-creation-02.png)
 
 `@ManyToOne` 구조처럼 외래키 기반의 테이블이 정상적으로 생성된 것을 확인할 수 있다.
 
@@ -95,7 +95,7 @@ Board (post) and BoardImage (attachment) have a 1:N relationship. Multiple Board
 
 After setting up the reference from Board to BoardImage with `@OneToMany` and running the project, unexpected tables were created.
 
-![](/uploads/onetomany-join-table/onetomany-join-table-creation.png)
+![](/uploads/프로젝트/EduMeet/onetomany-join-table/onetomany-join-table-creation.png)
 
 In addition to `board` and `board_image`, a **join table called `board_image_set`** was created.
 
@@ -125,7 +125,7 @@ Option 2 was chosen for the following reasons:
 
 After applying the fix and running the project, the `board_image` table was created with a `board_id` foreign key without any join table.
 
-![](/uploads/onetomany-join-table/onetomany-join-table-creation-02.png)
+![](/uploads/프로젝트/EduMeet/onetomany-join-table/onetomany-join-table-creation-02.png)
 
 The foreign key-based table structure, similar to a `@ManyToOne` setup, was successfully created.
 

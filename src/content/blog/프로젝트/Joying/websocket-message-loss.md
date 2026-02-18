@@ -109,7 +109,7 @@ Redis Pub/Sub은 실시간 전달만 담당하고, 메시지 복구는 MongoDB�
 
 ### 통합 API
 
-![](/uploads/websocket-message-loss/unified-api.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/unified-api.svg)
 
 
 하나의 API로 두 가지 용도를 처리한다.
@@ -134,12 +134,12 @@ GET /api/chat-rooms/123/messages?after=2024-01-01T10:00:00Z&size=50
 
 ### ChatMessageService
 
-![](/uploads/websocket-message-loss/chat-message-service.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/chat-message-service.svg)
 
 
 ### MongoDB 인덱스
 
-![](/uploads/websocket-message-loss/mongodb-index.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/mongodb-index.svg)
 
 복합 인덱스로 chatRoomId와 createdAt 기준 조회를 최적화했다.
 
@@ -149,7 +149,7 @@ GET /api/chat-rooms/123/messages?after=2024-01-01T10:00:00Z&size=50
 
 프론트엔드에서 구현해야 할 로직:
 
-![](/uploads/websocket-message-loss/client-reconnection.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/client-reconnection.svg)
 
 
 ---
@@ -252,7 +252,7 @@ While designing the reconnection API, I discovered it could be merged with the i
 
 ### Unified API
 
-![](/uploads/websocket-message-loss/unified-api.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/unified-api.svg)
 
 A single API serves both purposes.
 
@@ -274,11 +274,11 @@ GET /api/chat-rooms/123/messages?after=2024-01-01T10:00:00Z&size=50
 
 ### ChatMessageService
 
-![](/uploads/websocket-message-loss/chat-message-service.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/chat-message-service.svg)
 
 ### MongoDB Index
 
-![](/uploads/websocket-message-loss/mongodb-index.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/mongodb-index.svg)
 
 A compound index optimizes queries by chatRoomId and createdAt.
 
@@ -288,7 +288,7 @@ A compound index optimizes queries by chatRoomId and createdAt.
 
 Logic to be implemented on the frontend:
 
-![](/uploads/websocket-message-loss/client-reconnection.svg)
+![](/uploads/프로젝트/Joying/websocket-message-loss/client-reconnection.svg)
 
 ---
 

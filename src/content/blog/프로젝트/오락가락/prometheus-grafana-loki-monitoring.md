@@ -33,7 +33,7 @@ draft: false
 
 ## 모니터링 스택 아키텍처
 
-![](/uploads/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png)
+![](/uploads/프로젝트/오락가락/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png)
 
 ---
 
@@ -114,7 +114,7 @@ Alertmanager에서 Spring Boot Webhook을 거쳐 Mattermost로 전달하는 구�
 - 모니터링 서버를 별도 EC2로 분리 (t3.small 기준 월 ~$15)
 - 외부 SaaS(Datadog, New Relic 등) 사용
 
-![](/uploads/prometheus-grafana-loki-monitoring/monitoring-server-separation.png)
+![](/uploads/프로젝트/오락가락/prometheus-grafana-loki-monitoring/monitoring-server-separation.png)
 
 7주 SSAFY 프로젝트에서 모니터링 전용 서버까지 두는 건 과한 투자라고 판단했다. 대신 이 구성이 "서버는 살아있지만 애플리케이션이 죽은 경우"를 감지하는 데 초점을 맞췄다는 점을 인지하고 있다. 서버 자체의 장애는 AWS Console이나 SSH 실패로 인지하는 수밖에 없었다.
 
@@ -159,7 +159,7 @@ Manual monitoring could have survived a 7-week project, but the honest motivatio
 
 ## Monitoring Stack Architecture
 
-![](/uploads/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png)
+![](/uploads/프로젝트/오락가락/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png)
 
 ---
 
@@ -236,7 +236,7 @@ In production, this could be addressed with:
 - Separate monitoring EC2 instance (~$15/month for t3.small)
 - External SaaS (Datadog, New Relic, etc.)
 
-![](/uploads/prometheus-grafana-loki-monitoring/monitoring-server-separation.png)
+![](/uploads/프로젝트/오락가락/prometheus-grafana-loki-monitoring/monitoring-server-separation.png)
 
 For a 7-week SSAFY project, a dedicated monitoring server was deemed excessive. This setup focuses on detecting "application down while server is up" scenarios.
 

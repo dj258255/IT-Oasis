@@ -19,7 +19,7 @@ draft: false
 
 **ApiVersionConfig.java**
 
-![api-version-config](/uploads/spring-boot4-api-versioning/api-version-config.png)
+![api-version-config](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/api-version-config.png)
 
 ---
 
@@ -30,11 +30,11 @@ draft: false
 Spring MVC의 설정을 커스터마이징할 수 있는 인터페이스다.
 이 인터페이스를 구현하면 Spring MVC의 다양한 설정을 오버라이드할 수 있다.
 
-![webmvc-configurer](/uploads/spring-boot4-api-versioning/webmvc-configurer.svg)
+![webmvc-configurer](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/webmvc-configurer.svg)
 
 ### 2) configureApiVersioning 메서드
 
-![configure-api-versioning](/uploads/spring-boot4-api-versioning/configure-api-versioning.svg)
+![configure-api-versioning](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/configure-api-versioning.svg)
 
 **ApiVersionConfigurer의 주요 메서드:**
 
@@ -49,13 +49,13 @@ Spring MVC의 설정을 커스터마이징할 수 있는 인터페이스다.
 
 **usePathSegment(1)의 의미:**
 
-![path-segment-index](/uploads/spring-boot4-api-versioning/path-segment-index.png)
+![path-segment-index](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/path-segment-index.png)
 
 
 ### 3) configurePathMatch 메서드
 
 
-![configure-path-match](/uploads/spring-boot4-api-versioning/configure-path-match.png)
+![configure-path-match](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/configure-path-match.png)
 
 **동작 과정:**
 
@@ -108,18 +108,18 @@ Spring Boot 4.0에서는 `@RequestMapping`과 `@GetMapping` 등에 `version` 속
 ### 클래스 레벨에서 버전 지정
 
 
-![class-level-versioning](/uploads/spring-boot4-api-versioning/class-level-versioning.png)
+![class-level-versioning](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/class-level-versioning.png)
 
 이 컨트롤러의 모든 엔드포인트는 v1에서만 동작
 
 ### 메서드 레벨에서 버전 지정
 
-![method-level-versioning](/uploads/spring-boot4-api-versioning/method-level-versioning.svg)
+![method-level-versioning](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/method-level-versioning.svg)
 
 
 ### 버전 범위 지정
 
-![version-range](/uploads/spring-boot4-api-versioning/version-range.svg)
+![version-range](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/version-range.svg)
 
 
 
@@ -164,7 +164,7 @@ Header 방식(`X-API-Version`)은 URL이 깔끔하지만 브라우저 테스트�
 
 **ApiVersionConfig.java**
 
-![api-version-config](/uploads/spring-boot4-api-versioning/api-version-config.png)
+![api-version-config](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/api-version-config.png)
 
 ---
 
@@ -175,11 +175,11 @@ Header 방식(`X-API-Version`)은 URL이 깔끔하지만 브라우저 테스트�
 This is an interface for customizing Spring MVC configuration.
 Implementing this interface allows you to override various Spring MVC settings.
 
-![webmvc-configurer](/uploads/spring-boot4-api-versioning/webmvc-configurer.svg)
+![webmvc-configurer](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/webmvc-configurer.svg)
 
 ### 2) configureApiVersioning Method
 
-![configure-api-versioning](/uploads/spring-boot4-api-versioning/configure-api-versioning.svg)
+![configure-api-versioning](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/configure-api-versioning.svg)
 
 **Key methods of ApiVersionConfigurer:**
 
@@ -194,13 +194,13 @@ Implementing this interface allows you to override various Spring MVC settings.
 
 **What usePathSegment(1) means:**
 
-![path-segment-index](/uploads/spring-boot4-api-versioning/path-segment-index.png)
+![path-segment-index](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/path-segment-index.png)
 
 
 ### 3) configurePathMatch Method
 
 
-![configure-path-match](/uploads/spring-boot4-api-versioning/configure-path-match.png)
+![configure-path-match](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/configure-path-match.png)
 
 **How it works:**
 
@@ -253,18 +253,18 @@ In Spring Boot 4.0, a `version` attribute was added to `@RequestMapping`, `@GetM
 ### Class-Level Version Specification
 
 
-![class-level-versioning](/uploads/spring-boot4-api-versioning/class-level-versioning.png)
+![class-level-versioning](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/class-level-versioning.png)
 
 All endpoints in this controller only work on v1
 
 ### Method-Level Version Specification
 
-![method-level-versioning](/uploads/spring-boot4-api-versioning/method-level-versioning.svg)
+![method-level-versioning](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/method-level-versioning.svg)
 
 
 ### Version Range Specification
 
-![version-range](/uploads/spring-boot4-api-versioning/version-range.svg)
+![version-range](/uploads/프로젝트/Tymee/spring-boot4-api-versioning/version-range.svg)
 
 
 

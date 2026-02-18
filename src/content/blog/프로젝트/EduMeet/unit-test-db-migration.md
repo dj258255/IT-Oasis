@@ -31,7 +31,7 @@ EduMeet 프로젝트는 단위 테스트에서 MySQL을 사용하고 있었다. 
 
 H2는 Java로 작성된 오픈소스 RDBMS다. 별도 설치 없이 `build.gradle`과 `application.properties` 설정만으로 실행할 수 있다.
 
-![](/uploads/unit-test-db-migration/h2.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2.png)
 
 ### 1. 서버 모드 (TCP Server Mode)
 
@@ -85,28 +85,28 @@ MySQL 유지 방안들의 한계를 확인한 후, **단위 테스트는 H2 인�
 
 기존에는 `application.properties` 하나에 MySQL 설정을 몰아넣고 있었다. 이를 프로파일별로 분리했다.
 
-![](/uploads/unit-test-db-migration/h2-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-02.png)
 
 `application.properties`에서 기본 프로파일을 production으로 설정하고, 테스트 환경에서는 H2 프로파일이 활성화되도록 구성했다.
 
-![](/uploads/unit-test-db-migration/h2-03.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-03.png)
 
 - `application-production.properties`: MySQL 설정
 - `application-test.properties`: H2 인메모리 설정
 
 ### H2 연결 테스트
 
-![](/uploads/unit-test-db-migration/h2-connection-test.png)
-![](/uploads/unit-test-db-migration/h2-connection-test-02.png)
-![](/uploads/unit-test-db-migration/h2-connection-test-03.png)
-![](/uploads/unit-test-db-migration/h2-connection-test-04.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test-03.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test-04.png)
 
 ### MySQL 연결 테스트
 
-![](/uploads/unit-test-db-migration/mysql-connection-test.png)
-![](/uploads/unit-test-db-migration/mysql-connection-test-02.png)
-![](/uploads/unit-test-db-migration/mysql-connection-test-03.png)
-![](/uploads/unit-test-db-migration/mysql-connection-test-04.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test-03.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test-04.png)
 
 ---
 
@@ -115,10 +115,10 @@ MySQL 유지 방안들의 한계를 확인한 후, **단위 테스트는 H2 인�
 H2 인메모리 모드와 MySQL의 단위 테스트 성능을 수치로 비교했다.
 
 H2 테스트 결과:
-![](/uploads/unit-test-db-migration/speed-diff-comparison.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/speed-diff-comparison.png)
 
 MySQL 테스트 결과:
-![](/uploads/unit-test-db-migration/speed-diff-comparison-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/speed-diff-comparison-02.png)
 
 ### 개별 테스트 성능 비교
 
@@ -140,7 +140,7 @@ MySQL 테스트 결과:
 
 H2 인메모리 모드는 MySQL 대비 개별 테스트 평균 약 47%, 전체 테스트 약 45% 더 빠르게 완료했다. 특히 읽기(read) 위주의 테스트에서 성능 차이가 컸다. 디스크 I/O 없이 메모리에서 직접 처리하는 구조 덕분이다.
 
-![](/uploads/unit-test-db-migration/analysis.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/analysis.png)
 
 ---
 
@@ -167,7 +167,7 @@ The issue wasn't simply "H2 is faster." The core problem was the negative impact
 
 H2 is an open-source RDBMS written in Java. It runs without separate installation — just `build.gradle` and `application.properties` configuration.
 
-![](/uploads/unit-test-db-migration/h2.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2.png)
 
 ### 1. TCP Server Mode
 Runs as an independent server process. Data is stored externally and persists after shutdown.
@@ -218,28 +218,28 @@ Key rationale:
 
 Previously, all MySQL settings were in a single `application.properties`. We separated them by profile.
 
-![](/uploads/unit-test-db-migration/h2-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-02.png)
 
 The default profile was set to production in `application.properties`, with H2 profile activated in the test environment.
 
-![](/uploads/unit-test-db-migration/h2-03.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-03.png)
 
 - `application-production.properties`: MySQL configuration
 - `application-test.properties`: H2 in-memory configuration
 
 ### H2 Connection Test
 
-![](/uploads/unit-test-db-migration/h2-connection-test.png)
-![](/uploads/unit-test-db-migration/h2-connection-test-02.png)
-![](/uploads/unit-test-db-migration/h2-connection-test-03.png)
-![](/uploads/unit-test-db-migration/h2-connection-test-04.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test-03.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/h2-connection-test-04.png)
 
 ### MySQL Connection Test
 
-![](/uploads/unit-test-db-migration/mysql-connection-test.png)
-![](/uploads/unit-test-db-migration/mysql-connection-test-02.png)
-![](/uploads/unit-test-db-migration/mysql-connection-test-03.png)
-![](/uploads/unit-test-db-migration/mysql-connection-test-04.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test-03.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/mysql-connection-test-04.png)
 
 ---
 
@@ -248,10 +248,10 @@ The default profile was set to production in `application.properties`, with H2 p
 Numerically compared unit test performance between H2 in-memory and MySQL.
 
 H2 results:
-![](/uploads/unit-test-db-migration/speed-diff-comparison.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/speed-diff-comparison.png)
 
 MySQL results:
-![](/uploads/unit-test-db-migration/speed-diff-comparison-02.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/speed-diff-comparison-02.png)
 
 ### Individual Test Performance
 
@@ -273,7 +273,7 @@ MySQL results:
 
 H2 in-memory mode completed individual tests approximately 47% faster and overall tests approximately 45% faster than MySQL. The performance gap was especially large for read-heavy tests, thanks to the in-memory processing structure that eliminates disk I/O.
 
-![](/uploads/unit-test-db-migration/analysis.png)
+![](/uploads/프로젝트/EduMeet/unit-test-db-migration/analysis.png)
 
 ---
 

@@ -34,7 +34,7 @@ draft: false
 
 ## 방법 1: 직접 버전 명시
 
-![direct-version](/uploads/gradle-multimodule-dependency/direct-version.svg)
+![direct-version](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/direct-version.svg)
 
 자주 썼던 방식이다. 6주 프로젝트나 토이프로젝트에서는 괜찮았다.
 
@@ -46,7 +46,7 @@ draft: false
 
 ## 방법 2: ext 변수 사용
 
-![ext-variable](/uploads/gradle-multimodule-dependency/ext-variable.svg)
+![ext-variable](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/ext-variable.svg)
 
 AWS 관련 의존성 충돌 때문에 자주 썼던 방식이다.
 
@@ -56,7 +56,7 @@ AWS 관련 의존성 충돌 때문에 자주 썼던 방식이다.
 
 ## 방법 3: Spring BOM만 사용
 
-![spring-bom](/uploads/gradle-multimodule-dependency/spring-bom.svg)
+![spring-bom](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/spring-bom.svg)
 
 starter-web에서 자주 썼던 방식이다.
 
@@ -68,10 +68,10 @@ Spring 생태계 내 라이브러리 간 호환성을 BOM이 보장해주고, �
 
 [Gradle 공식 문서](https://docs.gradle.org/current/userguide/version_catalogs.html)에서 소개하는 방식입니다.
 
-![version-catalog-toml](/uploads/gradle-multimodule-dependency/version-catalog-toml.svg)
+![version-catalog-toml](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/version-catalog-toml.svg)
 
 
-![version-catalog-usage](/uploads/gradle-multimodule-dependency/version-catalog-usage.svg)
+![version-catalog-usage](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/version-catalog-usage.svg)
 
 
 IDE 자동완성이 완벽하게 지원되고, 오타 시 컴파일 에러가 나서 타입 안전하다. 멀티모듈에서 자동 공유되고 Dependabot 같은 자동화 도구도 지원한다.
@@ -82,10 +82,10 @@ IDE 자동완성이 완벽하게 지원되고, 오타 시 컴파일 에러가 �
 
 ## 방법 5: Version Catalog + Spring BOM (하이브리드)
 
-![hybrid-toml](/uploads/gradle-multimodule-dependency/hybrid-toml.svg)
+![hybrid-toml](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/hybrid-toml.svg)
 
 
-![hybrid-usage](/uploads/gradle-multimodule-dependency/hybrid-usage.svg)
+![hybrid-usage](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/hybrid-usage.svg)
 
 Spring 호환성은 BOM이 보장하고, Flyway나 jjwt 같은 외부 라이브러리는 Version Catalog로 중앙 관리한다. 두 가지 시스템을 모두 이해해야 하고 어떤 라이브러리가 어디에서 관리되는지 구분이 필요하다는 점은 있지만, Spring 기반 멀티모듈에서는 이 조합이 가장 실용적이다.
 
@@ -95,9 +95,9 @@ Spring 호환성은 BOM이 보장하고, Flyway나 jjwt 같은 외부 라이브�
 
 ## Bundle 활용 - 장단점
 
-![bundle-toml](/uploads/gradle-multimodule-dependency/bundle-toml.svg)
+![bundle-toml](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/bundle-toml.svg)
 
-![bundle-usage](/uploads/gradle-multimodule-dependency/bundle-usage.svg)
+![bundle-usage](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/bundle-usage.svg)
 
 
 항상 함께 쓰는 라이브러리를 그룹화해서 누락을 방지할 수 있다. 다만 번들 내 개별 라이브러리의 scope를 다르게 지정할 수 없다. 예를 들어 `jjwt-api`는 `api`로, 나머지는 `implementation`으로 하고 싶을 때 번들은 쓸 수 없다.
@@ -147,7 +147,7 @@ buildSrc에서는 기본적으로 상위 빌드의 Version Catalog에 접근할 
 
 **settings.gradle.kts (buildSrc 내부)**
 
-![buildsrc-settings](/uploads/gradle-multimodule-dependency/buildsrc-settings.svg)
+![buildsrc-settings](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/buildsrc-settings.svg)
 
 
 - Catalog 공유로 일관성 확보
@@ -201,7 +201,7 @@ However, strong centralization of version management causes:
 
 ## Approach 1: Direct Version Declaration
 
-![direct-version](/uploads/gradle-multimodule-dependency/direct-version.svg)
+![direct-version](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/direct-version.svg)
 
 This was my go-to approach. It worked fine for 6-week projects or toy projects.
 
@@ -213,7 +213,7 @@ It is intuitive and all information is visible just from the build script. Howev
 
 ## Approach 2: Using ext Variables
 
-![ext-variable](/uploads/gradle-multimodule-dependency/ext-variable.svg)
+![ext-variable](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/ext-variable.svg)
 
 I used this approach frequently because of AWS-related dependency conflicts.
 
@@ -223,7 +223,7 @@ Being able to define versions in one place is better than direct declaration, bu
 
 ## Approach 3: Spring BOM Only
 
-![spring-bom](/uploads/gradle-multimodule-dependency/spring-bom.svg)
+![spring-bom](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/spring-bom.svg)
 
 I frequently used this approach with starter-web.
 
@@ -235,10 +235,10 @@ The BOM guarantees compatibility among libraries within the Spring ecosystem, an
 
 This is the approach introduced in the [official Gradle documentation](https://docs.gradle.org/current/userguide/version_catalogs.html).
 
-![version-catalog-toml](/uploads/gradle-multimodule-dependency/version-catalog-toml.svg)
+![version-catalog-toml](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/version-catalog-toml.svg)
 
 
-![version-catalog-usage](/uploads/gradle-multimodule-dependency/version-catalog-usage.svg)
+![version-catalog-usage](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/version-catalog-usage.svg)
 
 
 IDE autocomplete is fully supported, and typos cause compile errors, providing type safety. It is automatically shared across multi-module projects and supports automation tools like Dependabot.
@@ -249,10 +249,10 @@ However, using Version Catalog alone requires manually ensuring compatibility am
 
 ## Approach 5: Version Catalog + Spring BOM (Hybrid)
 
-![hybrid-toml](/uploads/gradle-multimodule-dependency/hybrid-toml.svg)
+![hybrid-toml](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/hybrid-toml.svg)
 
 
-![hybrid-usage](/uploads/gradle-multimodule-dependency/hybrid-usage.svg)
+![hybrid-usage](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/hybrid-usage.svg)
 
 The BOM handles Spring compatibility, while external libraries like Flyway and jjwt are centrally managed through Version Catalog. You need to understand both systems and distinguish which library is managed where, but for Spring-based multi-module projects, this combination is the most practical.
 
@@ -262,9 +262,9 @@ The BOM handles Spring compatibility, while external libraries like Flyway and j
 
 ## Using Bundles - Pros and Cons
 
-![bundle-toml](/uploads/gradle-multimodule-dependency/bundle-toml.svg)
+![bundle-toml](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/bundle-toml.svg)
 
-![bundle-usage](/uploads/gradle-multimodule-dependency/bundle-usage.svg)
+![bundle-usage](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/bundle-usage.svg)
 
 
 You can group libraries that are always used together to prevent omissions. However, you cannot assign different scopes to individual libraries within a bundle. For example, if you want `jjwt-api` as `api` and the rest as `implementation`, bundles cannot be used.
@@ -314,7 +314,7 @@ By default, buildSrc cannot access the parent build's Version Catalog.
 
 **settings.gradle.kts (inside buildSrc)**
 
-![buildsrc-settings](/uploads/gradle-multimodule-dependency/buildsrc-settings.svg)
+![buildsrc-settings](/uploads/프로젝트/Tymee/gradle-multimodule-dependency/buildsrc-settings.svg)
 
 
 - Catalog sharing ensures consistency

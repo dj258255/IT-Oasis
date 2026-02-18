@@ -77,13 +77,13 @@ Spring Boot(Java)와 Python FastAPI가 Kafka 토픽을 통해 JSON 메시지를 
 
 ### 2. 파티션 키로 파일 단위 순서 보장
 
-![](/uploads/kafka-event-driven-pipeline/partition-key-ordering.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/partition-key-ordering.svg)
 
 uploadId를 파티션 키로 쓰면, 같은 파일의 모든 이벤트가 같은 파티션으로 들어간다. WAV 변환이 끝나기 전에 AI 분석이 실행되는 문제를 구조적으로 방지할 수 있다.
 
 ### 3. 다중 컨슈머 그룹
 
-![](/uploads/kafka-event-driven-pipeline/multi-consumer-groups.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/multi-consumer-groups.svg)
 
 같은 이벤트를 여러 컨슈머 그룹이 독립적으로 소비할 수 있다. 음성 처리, 로그 수집, 향후 추천 데이터 파이프라인 등을 같은 토픽에서 각자 가져갈 수 있다.
 
@@ -95,15 +95,15 @@ uploadId를 파티션 키로 쓰면, 같은 파일의 모든 이벤트가 같은
 
 이 프로젝트는 SSAFY 빅데이터 추천 트랙 과제였다. Kafka는 빅데이터 생태계의 핵심이라, Kafka Connect로 S3에 데이터 레이크를 구축하거나 Spark/Flink로 배치 분석을 붙이는 구조가 자연스럽다. 실제로 Kafka에서 Pinecone 벡터 DB까지 연결하는 파이프라인을 구현했다.
 
-![](/uploads/kafka-event-driven-pipeline/current-architecture.png)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/current-architecture.png)
 
-![](/uploads/kafka-event-driven-pipeline/extended-architecture.png)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/extended-architecture.png)
 
 ---
 
 ## 전체 아키텍처
 
-![](/uploads/kafka-event-driven-pipeline/full-architecture.png)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/full-architecture.png)
 
 ---
 
@@ -111,7 +111,7 @@ uploadId를 파티션 키로 쓰면, 같은 파일의 모든 이벤트가 같은
 
 ### 재시도 전략: 지수 백오프
 
-![](/uploads/kafka-event-driven-pipeline/exponential-backoff-retry.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/exponential-backoff-retry.svg)
 
 일시적 장애(네트워크 타임아웃, 일시적 서비스 불능)는 재시도로 해결되는 경우가 많다. 하지만 즉시 재시도하면 장애 중인 서비스에 부하만 가중시키니, 1초 → 2초 → 4초로 간격을 늘리는 지수 백오프를 적용했다. 최대 3회까지 시도한다.
 
@@ -133,7 +133,7 @@ AI 서버의 GPU는 DB보다 예민한 공유 자원이다. 동시 요청이 GPU
 
 **3순위 - 요청 크기 제한(100MB)**: 요청마다 GPU 메모리 사용량이 다르니, 큰 파일은 업로드 단계에서 거부한다.
 
-![](/uploads/kafka-event-driven-pipeline/threadpool-semaphore-control.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/threadpool-semaphore-control.svg)
 
 세마포어만으로는 부족하다. 요청마다 메모리 사용량이 다르고, 백엔드 서버가 여러 대면 각 서버가 동시에 쏜다. 큐가 앞단에서 버퍼 역할을 해야 GPU 서버가 안전하다.
 
@@ -217,13 +217,13 @@ Spring Boot (Java) and Python FastAPI exchanging JSON via Kafka topics was clean
 
 ### 2. Partition Key for Per-File Ordering
 
-![](/uploads/kafka-event-driven-pipeline/partition-key-ordering.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/partition-key-ordering.svg)
 
 Using uploadId as the partition key ensures all events for the same file go to the same partition, structurally preventing AI analysis from running before WAV conversion completes.
 
 ### 3. Multiple Consumer Groups
 
-![](/uploads/kafka-event-driven-pipeline/multi-consumer-groups.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/multi-consumer-groups.svg)
 
 The same events can be independently consumed by multiple consumer groups: voice processing, log collection, future recommendation pipelines.
 
@@ -235,15 +235,15 @@ Failed processing retries automatically by not committing offsets. Beyond max re
 
 This was a SSAFY big data recommendation track project. Kafka naturally connects to S3 data lakes via Kafka Connect, or to Spark/Flink batch analysis. A pipeline from Kafka to Pinecone vector DB was actually implemented.
 
-![](/uploads/kafka-event-driven-pipeline/current-architecture.png)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/current-architecture.png)
 
-![](/uploads/kafka-event-driven-pipeline/extended-architecture.png)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/extended-architecture.png)
 
 ---
 
 ## Full Architecture
 
-![](/uploads/kafka-event-driven-pipeline/full-architecture.png)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/full-architecture.png)
 
 ---
 
@@ -251,7 +251,7 @@ This was a SSAFY big data recommendation track project. Kafka naturally connects
 
 ### Retry Strategy: Exponential Backoff
 
-![](/uploads/kafka-event-driven-pipeline/exponential-backoff-retry.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/exponential-backoff-retry.svg)
 
 Transient failures often resolve with retry. But immediate retry adds load to a failing service. Exponential backoff (1s → 2s → 4s) was applied, with a maximum of 3 attempts.
 
@@ -273,7 +273,7 @@ Three-layer defense:
 
 **Layer 3 - Request Size Limit (100MB)**: Large files are rejected at upload to prevent variable GPU memory consumption.
 
-![](/uploads/kafka-event-driven-pipeline/threadpool-semaphore-control.svg)
+![](/uploads/프로젝트/오락가락/kafka-event-driven-pipeline/threadpool-semaphore-control.svg)
 
 Semaphore alone isn't enough. Per-request memory varies, and multiple backend servers can send simultaneously. The queue must buffer upstream to keep the GPU server safe.
 

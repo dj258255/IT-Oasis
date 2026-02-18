@@ -27,7 +27,7 @@ draft: false
 
 자동완성은 사용자가 검색창에 글자를 입력할 때마다, 해당 prefix로 시작하는 제목을 조회수 순으로 10건 반환하는 기능입니다.
 
-![](/uploads/autocomplete-btree-index/autocomplete-expected.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/autocomplete-expected.png)
 
 
 `LIKE 'prefix%'`는 후방 와일드카드입니다. B-Tree 인덱스는 값의 앞부분부터 정렬되어 있으므로, `LIKE 'prefix%'`는 인덱스의 정렬 순서를 활용하여 range scan이 가능한 패턴입니다. 검색(`LIKE '%keyword%'`)과 달리 인덱스만 추가하면 빠르게 동작할 것이라 예상했습니다.
@@ -40,9 +40,9 @@ draft: false
 
 자동완성 API를 호출하자, 검색과 동일하게 5초 타임아웃이 발생했습니다.
 
-![](/uploads/autocomplete-btree-index/autocomplete-timeout.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/autocomplete-timeout.png)
 
-![](/uploads/autocomplete-btree-index/autocomplete-timeout-log.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/autocomplete-timeout-log.png)
 
 
 검색도 안 되고, 자동완성도 안 되면 2,744만 건의 데이터를 찾을 수 있는 방법이 아예 없는 상태입니다. 자동완성 역시 Full Table Scan이 발생하면 검색과 마찬가지로 커넥션을 장시간 점유하여 시스템 마비를 유발할 수 있습니다.
@@ -55,7 +55,7 @@ draft: false
 
 ### EXPLAIN 확인
 
-![](/uploads/autocomplete-btree-index/explain-before.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/explain-before.png)
 
 
 | 항목 | 값 | 의미 |
@@ -120,7 +120,7 @@ title          | view_count
 "포뮬러"        | ...
 
 
-![](/uploads/autocomplete-btree-index/composite-index-structure.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/composite-index-structure.png)
 
 - `title`이 선행 컬럼이므로 `LIKE '페텔%'`에서 range scan이 가능합니다
 - 동일 prefix 내에서 `view_count DESC`로 이미 정렬되어 있으므로 별도의 filesort가 불필요합니다
@@ -143,9 +143,9 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### EXPLAIN 비교
 
-![](/uploads/autocomplete-btree-index/explain-before.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/explain-before.png)
 
-![](/uploads/autocomplete-btree-index/explain-after.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/explain-after.png)
 
 | 구분 | type | key | rows | Extra |
 |------|------|-----|------|-------|
@@ -159,7 +159,7 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### 응답시간 측정
 
-![](/uploads/autocomplete-btree-index/response-time-after.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/response-time-after.png)
 
 
 | 쿼리 | Before | After | 개선율 |
@@ -190,7 +190,7 @@ Search still fails with timeout, but autocomplete (`LIKE 'prefix%'`) uses a trai
 
 Autocomplete returns the top 10 titles starting with the given prefix, sorted by view count, each time the user types a character in the search box.
 
-![](/uploads/autocomplete-btree-index/autocomplete-expected.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/autocomplete-expected.png)
 
 `LIKE 'prefix%'` is a trailing wildcard. Since B-Tree indexes are sorted from the beginning of values, `LIKE 'prefix%'` can leverage the index's sort order for range scan. Unlike search (`LIKE '%keyword%'`), we expected it would work fast simply by adding an index.
 
@@ -202,9 +202,9 @@ However, in step 1, we intentionally did not add indexes to measure the baseline
 
 When calling the autocomplete API, it hit the same 5-second timeout as search.
 
-![](/uploads/autocomplete-btree-index/autocomplete-timeout.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/autocomplete-timeout.png)
 
-![](/uploads/autocomplete-btree-index/autocomplete-timeout-log.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/autocomplete-timeout-log.png)
 
 If neither search nor autocomplete works, there is no way to find anything among the 27.44 million records. Autocomplete with Full Table Scan can also monopolize connections and bring the system down, just like search.
 
@@ -216,7 +216,7 @@ If neither search nor autocomplete works, there is no way to find anything among
 
 ### EXPLAIN Analysis
 
-![](/uploads/autocomplete-btree-index/explain-before.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/explain-before.png)
 
 | Item | Value | Meaning |
 |------|-------|---------|
@@ -279,7 +279,7 @@ title          | view_count
 "포뮬러"        | ...
 
 
-![](/uploads/autocomplete-btree-index/composite-index-structure.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/composite-index-structure.png)
 
 - `title` is the leading column, enabling range scan for `LIKE '페텔%'`
 - Within the same prefix, rows are already sorted by `view_count DESC`, so no separate filesort is needed
@@ -302,9 +302,9 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### EXPLAIN Comparison
 
-![](/uploads/autocomplete-btree-index/explain-before.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/explain-before.png)
 
-![](/uploads/autocomplete-btree-index/explain-after.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/explain-after.png)
 
 | Case | type | key | rows | Extra |
 |------|------|-----|------|-------|
@@ -318,7 +318,7 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### Response Time
 
-![](/uploads/autocomplete-btree-index/response-time-after.png)
+![](/uploads/프로젝트/WikiEngine/autocomplete-btree-index/response-time-after.png)
 
 | Query | Before | After | Improvement |
 |-------|--------|-------|-------------|
