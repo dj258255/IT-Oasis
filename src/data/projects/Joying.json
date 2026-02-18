@@ -1,0 +1,13 @@
+{
+  "title": "빌려조잉",
+  "description": "물건을 서로 빌리고 빌려주는 C2C 공유 플랫폼",
+  "descriptionEn": "A C2C sharing platform for lending and borrowing items between neighbors",
+  "image": "/uploads/프로젝트/Joying/retrospective/title.gif",
+  "tags": ["Java", "Kotlin", "Spring Boot", "WebSocket", "Redis", "MongoDB", "MySQL"],
+  "category": "프로젝트",
+  "date": "2025-11-20",
+  "github": "https://github.com/dj258255/joying",
+  "website": "",
+  "story": "/blog/프로젝트/Joying/joying-retrospective",
+  "order": 2
+}

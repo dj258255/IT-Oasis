@@ -3,7 +3,7 @@ title: '검색엔진이 시스템을 마비시킨 과정과 대응'
 titleEn: 'How the Search Engine Crashed the System and Our Response'
 description: LIKE 검색이 Full Table Scan으로 2,744만 행을 스캔하며 HikariCP 커넥션 풀을 고갈시켜 시스템을 마비시킨 원인을 분석하고, 긴급 완화 조치로 시스템 안정성을 확보한 과정을 정리한다.
 descriptionEn: Analyzes how LIKE search caused Full Table Scan on 27.44M rows, exhausting HikariCP connection pool and crashing the system, and documents emergency mitigation measures to restore stability.
-date: 2025-02-01T00:00:00.000Z
+date: 2026-02-01T00:00:00.000Z
 tags:
   - MySQL
   - LIKE Search

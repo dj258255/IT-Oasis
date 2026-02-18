@@ -3,7 +3,7 @@ title: '위키 검색엔진 개요'
 titleEn: 'Wiki Search Engine Overview'
 description: 나무위키, 위키피디아 덤프 데이터를 MySQL에 적재하고, 커뮤니티 수준의 트래픽을 감당할 수 있는 검색엔진을 만드는 프로젝트의 개요와 서버 구성을 정리한다.
 descriptionEn: Overview of the project to load Namuwiki and Wikipedia dump data into MySQL and build a search engine capable of handling community-level traffic.
-date: 2025-01-27T00:00:00.000Z
+date: 2026-01-27T00:00:00.000Z
 tags:
   - MySQL
   - Search Engine

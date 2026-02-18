@@ -1,0 +1,13 @@
+{
+  "title": "타이미",
+  "description": "게이미피케이션 기반 집중력 향상 타이머 서비스",
+  "descriptionEn": "A gamification-based focus timer service for improving concentration",
+  "image": "/uploads/프로젝트/Tymee/retrospective/title.svg",
+  "tags": ["Spring Boot", "React Native", "Redis", "GitHub Actions", "Linear"],
+  "category": "프로젝트",
+  "date": "2026-02-10",
+  "github": "https://github.com/dj258255",
+  "website": "",
+  "story": "/blog/프로젝트/Tymee/tymee-retrospective",
+  "order": 5
+}

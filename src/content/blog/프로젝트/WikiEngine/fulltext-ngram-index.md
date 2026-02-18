@@ -3,7 +3,7 @@ title: 'FULLTEXT ngram 인덱스'
 titleEn: 'FULLTEXT ngram Index'
 description: B-Tree 인덱스의 한계를 넘어 FULLTEXT ngram 역색인으로 LIKE 검색을 대체하고, 57만 건 한국어 데이터에서 12초→6ms로 약 2,100배 성능을 개선한 과정과 ngram의 알려진 한계점을 정리한다.
 descriptionEn: Replaces LIKE search with FULLTEXT ngram inverted index beyond B-Tree limitations, achieving ~2,100x performance improvement from 12s to 6ms on 570K Korean documents, and documents known ngram limitations.
-date: 2025-02-12T00:00:00.000Z
+date: 2026-02-12T00:00:00.000Z
 tags:
   - MySQL
   - FULLTEXT
