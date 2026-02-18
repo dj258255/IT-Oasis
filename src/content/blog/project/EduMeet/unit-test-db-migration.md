@@ -13,6 +13,7 @@ tags:
   - CI/CD
 category: project/EduMeet
 draft: false
+coverImage: "/uploads/project/EduMeet/unit-test-db-migration/h2.png"
 ---
 
 ## 배경

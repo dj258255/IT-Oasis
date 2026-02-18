@@ -12,6 +12,7 @@ tags:
   - Schema Management
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/flyway-db-migration/gradle-version-catalog.svg"
 ---
 
 > 데이터베이스 스키마 변경을 코드처럼 버전 관리하는 방법

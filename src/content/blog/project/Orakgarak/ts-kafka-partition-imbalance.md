@@ -12,6 +12,7 @@ tags:
   - Performance
 category: project/Orakgarak
 draft: false
+coverImage: "/uploads/project/Orakgarak/ts-kafka-partition-imbalance/uploadid-partitioning.svg"
 ---
 
 ## 한 줄 요약

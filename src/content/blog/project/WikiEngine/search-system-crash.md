@@ -13,6 +13,7 @@ tags:
   - EXPLAIN
 category: project/WikiEngine
 draft: false
+coverImage: "/uploads/project/WikiEngine/search-system-crash/server-status.png"
 ---
 
 한국너 나무위키(1xx만 건) + 한국어 위키피디아(216만 건) + 영문 위키피디아(2,528만 건), 총 약 2,8xx만 건의 위키 덤프 데이터를 MySQL에 적재하고 검색 기능을 구현하는 프로젝트입니다.

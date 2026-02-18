@@ -12,6 +12,7 @@ tags:
   - Authentication
 category: project/Orakgarak
 draft: false
+coverImage: "/uploads/project/Orakgarak/spring-security-multi-filterchain/filterchain-flow.svg"
 ---
 
 ## 한 줄 요약

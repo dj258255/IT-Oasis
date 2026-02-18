@@ -13,6 +13,7 @@ tags:
   - Performance
 category: theory
 draft: false
+coverImage: "/uploads/theory/db-connection-pool/cost.png"
 ---
 
 

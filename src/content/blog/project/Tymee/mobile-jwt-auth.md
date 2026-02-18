@@ -13,6 +13,7 @@ tags:
   - Spring Security
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/mobile-jwt-auth/xss-attack-diagram.png"
 ---
 
 ## 들어가며

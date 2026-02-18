@@ -13,6 +13,7 @@ tags:
   - Redis
 category: theory
 draft: false
+coverImage: "/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.png"
 ---
 
 

@@ -13,6 +13,7 @@ tags:
   - Concurrency
 category: theory
 draft: false
+coverImage: "/uploads/theory/spring-mvc-thread-pool/cgi-process-hell-start.png"
 ---
 
 

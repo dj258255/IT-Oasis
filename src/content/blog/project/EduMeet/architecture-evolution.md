@@ -13,6 +13,7 @@ tags:
   - Spring
 category: project/EduMeet
 draft: false
+coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-entity-db.png"
 ---
 
 > 프로젝트 기획 단계에서 팀원들과 아키텍처를 논의하며 정리한 내용

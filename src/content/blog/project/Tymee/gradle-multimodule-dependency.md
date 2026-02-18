@@ -12,6 +12,7 @@ tags:
   - Build Management
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/gradle-multimodule-dependency/direct-version.svg"
 ---
 
 > 멀티모듈 프로젝트에서 의존성 버전을 하드코딩하니까 관리가 번거롭고, 보안 이슈 발생 시 빠르게 버전을 바꿀 수 있는 방법이 필요했다.

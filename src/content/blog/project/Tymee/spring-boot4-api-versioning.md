@@ -11,6 +11,7 @@ tags:
   - WebMvcConfigurer
 category: project/Tymee
 draft: false
+coverImage: "/uploads/project/Tymee/spring-boot4-api-versioning/api-version-config.png"
 ---
 
 > Spring Boot 4.0 / Spring Framework 7.0부터 API 버전 관리가 프레임워크 레벨에서 공식 지원된다.

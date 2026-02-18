@@ -12,6 +12,7 @@ tags:
   - Spring Data JPA
 category: project/EduMeet
 draft: false
+coverImage: "/uploads/project/EduMeet/lazy-loading-no-session/lazy-no-session-error.png"
 ---
 
 ## 정상 상태

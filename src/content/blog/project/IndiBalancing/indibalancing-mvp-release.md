@@ -14,6 +14,7 @@ tags:
   - Curve Fitting
 category: project/IndiBalancing
 draft: false
+coverImage: "/uploads/project/IndiBalancing/indibalancing-mvp-release/calculator-feature.png"
 ---
 
 MVP(Minimum Viable Product)로 공개한 인디밸런싱의 15가지 핵심 기능을 정리한다.

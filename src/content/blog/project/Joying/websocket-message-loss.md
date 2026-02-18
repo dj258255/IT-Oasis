@@ -12,6 +12,7 @@ tags:
   - Message Recovery
 category: project/Joying
 draft: false
+coverImage: "/uploads/project/Joying/websocket-message-loss/unified-api.svg"
 ---
 
 성능 문제는 해결했다. 그런데 모바일 테스트 중 예상치 못한 현상이 발견됐다.

@@ -13,6 +13,7 @@ tags:
   - Architecture
 category: project/Orakgarak
 draft: false
+coverImage: "/uploads/project/Orakgarak/kafka-event-driven-pipeline/partition-key-ordering.svg"
 ---
 
 ## 한 줄 요약

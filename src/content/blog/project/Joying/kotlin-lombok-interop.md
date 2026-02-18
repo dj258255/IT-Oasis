@@ -12,6 +12,7 @@ tags:
   - delombok
 category: project/Joying
 draft: false
+coverImage: "/uploads/project/Joying/kotlin-lombok-interop/problem-found.svg"
 ---
 
 ## 들어가며
