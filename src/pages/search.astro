@@ -1,0 +1,105 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog'))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const searchData = posts.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  tags: post.data.tags,
+  category: post.data.category,
+  slug: post.id,
+  date: post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }),
+}));
+---
+
+<BaseLayout title="Search">
+  <div class="fade-in-up">
+    <h1 class="text-xl sm:text-2xl font-bold tracking-tight mb-6 sm:mb-8 px-1">
+      <span class="gradient-text">Search</span>
+    </h1>
+
+    <!-- Search input -->
+    <div class="glass-gradient rounded-xl sm:rounded-2xl p-1 mb-6 sm:mb-8">
+      <div class="relative">
+        <svg class="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="제목, 태그, 카테고리로 검색..."
+          class="w-full pl-9 sm:pl-11 pr-4 py-3 sm:py-3.5 bg-transparent rounded-xl text-[13px] sm:text-[14px] placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="search-results" class="space-y-3"></div>
+    <p id="no-results" class="hidden text-center text-[14px] text-gray-400 dark:text-gray-500 py-12">
+      검색 결과가 없습니다
+    </p>
+    <p id="search-hint" class="text-center text-[14px] text-gray-400 dark:text-gray-500 py-12">
+      검색어를 입력하세요
+    </p>
+  </div>
+</BaseLayout>
+
+<script define:vars={{ searchData }}>
+  const input = document.getElementById('search-input');
+  const resultsContainer = document.getElementById('search-results');
+  const noResults = document.getElementById('no-results');
+  const hint = document.getElementById('search-hint');
+
+  function renderResults(posts) {
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = posts.map((post) => `
+      <article class="group">
+        <a href="/blog/${post.slug}" class="block glass-card rounded-2xl p-6 sm:p-7">
+          <div class="flex items-center gap-2 mb-3">
+            <time class="text-[11px] font-medium text-gray-400 tracking-widest uppercase">${post.date}</time>
+            <span class="category-pill cat-default">${post.category}</span>
+          </div>
+          <h3 class="text-[17px] font-semibold leading-snug mb-2.5 group-hover:text-primary transition-colors duration-500">${post.title}</h3>
+          <p class="text-[13px] text-gray-500 leading-relaxed line-clamp-2">${post.description}</p>
+          ${post.tags.length > 0 ? `
+            <div class="flex gap-1.5 mt-4">
+              ${post.tags.map(tag => `<span class="tag-pill text-[11px]">${tag}</span>`).join('')}
+            </div>
+          ` : ''}
+        </a>
+      </article>
+    `).join('');
+  }
+
+  input?.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+
+    if (!query) {
+      if (resultsContainer) resultsContainer.innerHTML = '';
+      noResults?.classList.add('hidden');
+      hint?.classList.remove('hidden');
+      return;
+    }
+
+    hint?.classList.add('hidden');
+    const filtered = searchData.filter((post) =>
+      post.title.toLowerCase().includes(query) ||
+      post.description.toLowerCase().includes(query) ||
+      post.tags.some(t => t.toLowerCase().includes(query)) ||
+      post.category.toLowerCase().includes(query)
+    );
+
+    if (filtered.length === 0) {
+      if (resultsContainer) resultsContainer.innerHTML = '';
+      noResults?.classList.remove('hidden');
+    } else {
+      noResults?.classList.add('hidden');
+      renderResults(filtered);
+    }
+  });
+</script>
