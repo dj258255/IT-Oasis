@@ -41,7 +41,7 @@ EduMeet은 **실시간 음성-자막 변환으로 청각장애인의 학습을 �
 
 게시판 목록 조회 시 쿼리가 게시글 수에 비례해서 증가하는 N+1 문제를 발견했습니다. `@BatchSize(20)`으로 IN절 배치 조회를 적용해 쿼리 수를 11개에서 2개로 줄이고, 응답 시간을 38.23ms에서 12.66ms로 **66.9% 개선**했습니다.
 
-> 상세 분석: [N+1 문제 분석과 해결](/blog/프로젝트/EduMeet/n-plus-1-issue)
+> 상세 분석: [N+1 문제 분석과 해결](/blog/프로젝트/edumeet/n-plus-1-issue)
 
 ### 127개 단위테스트 & H2 전환
 
@@ -49,13 +49,13 @@ MySQL로 테스트를 돌리면 9.57초가 걸렸는데, H2 인메모리 DB로 �
 
 127개 테스트 케이스 중 절반 이상이 "빈 제목으로 등록하면?", "좋아요가 Integer.MAX_VALUE를 넘으면?" 같은 **비정상 상황 대응** 테스트였습니다.
 
-> 상세 분석: [단위테스트 DB 마이그레이션](/blog/프로젝트/EduMeet/unit-test-db-migration)
+> 상세 분석: [단위테스트 DB 마이그레이션](/blog/프로젝트/edumeet/unit-test-db-migration)
 
 ### S3 이미지 업로드 최적화
 
 원본 이미지(5MB)를 그대로 저장하면 스토리지 비용이 문제가 됩니다. 이미지 리사이징으로 **91.8% 용량을 감소**시키고, DB PK는 Auto Increment로, 파일명은 UUID로 역할을 분리했습니다.
 
-> 상세 분석: [S3 업로드 최적화](/blog/프로젝트/EduMeet/s3-upload-optimization)
+> 상세 분석: [S3 업로드 최적화](/blog/프로젝트/edumeet/s3-upload-optimization)
 
 ---
 
@@ -67,13 +67,13 @@ Board-BoardImage 1:N 관계를 설정했는데, JPA가 엉뚱하게 `board_image
 
 원인은 `@OneToMany`에 `mappedBy`를 지정하지 않아서 단방향 연관관계로 인식한 것이었습니다. `mappedBy = "board"`를 추가하니 깔끔하게 해결됐습니다.
 
-> 상세 분석: [OneToMany 중간테이블 문제](/blog/프로젝트/EduMeet/onetomany-join-table)
+> 상세 분석: [OneToMany 중간테이블 문제](/blog/프로젝트/edumeet/onetomany-join-table)
 
 ### QueryDSL 파일 이동 오류
 
 레이어드 아키텍처를 적용하려고 Repository 파일을 옮기면서 클래스명을 바꿨더니 "No property searchAll found for type Board" 에러가 발생했습니다. Spring Data JPA의 **인터페이스명 + Impl 네이밍 규칙** 때문이었는데, 이걸 몰랐으면 한참 헤맸을 겁니다.
 
-> 상세 분석: [파일 이동 오류](/blog/프로젝트/EduMeet/file-move-error)
+> 상세 분석: [파일 이동 오류](/blog/프로젝트/edumeet/file-move-error)
 
 ---
 

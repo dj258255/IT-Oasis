@@ -43,7 +43,7 @@ draft: false
 
 채팅에 폴링은 불필요한 요청이 너무 많고, SSE는 단방향이라 양방향 실시간 통신이 필요한 채팅에 부적합했습니다. WebSocket을 선택했고, 서버 확장을 대비해 SimpleBroker 대신 **Redis Pub/Sub**으로 메시지를 브로드캐스트했습니다. 메시지 유실 방지를 위해 MongoDB에 영속화하고, REST API 폴백으로 재연결 시 누락 메시지를 복구했습니다.
 
-> 상세 분석: [WebSocket 메시지 유실 방지](/blog/프로젝트/Joying/websocket-message-loss) · [서버 스케일링](/blog/프로젝트/Joying/server-scaling-troubleshooting)
+> 상세 분석: [WebSocket 메시지 유실 방지](/blog/프로젝트/joying/websocket-message-loss) · [서버 스케일링](/blog/프로젝트/joying/server-scaling-troubleshooting)
 
 ### AI 자동 게시글 생성 (LangChain)
 
@@ -55,7 +55,7 @@ draft: false
 
 채팅 데이터 특성에 맞게 저장소를 분리했습니다. **MySQL**로 채팅방과 사용자 관계(트랜잭션, 조인 필요), **MongoDB**로 채팅 메시지(쓰기 성능, 스키마 유연성), **Redis**로 Pub/Sub과 안읽은 메시지 수 캐싱(초저지연 조회)을 담당하게 했습니다.
 
-> 상세 분석: [MySQL, MongoDB, Redis 왜 세 가지나 쓰나요?](/blog/프로젝트/Joying/mysql-mongodb-redis-why)
+> 상세 분석: [MySQL, MongoDB, Redis 왜 세 가지나 쓰나요?](/blog/프로젝트/joying/mysql-mongodb-redis-why)
 
 ---
 
@@ -67,19 +67,19 @@ draft: false
 
 반나절 동안 JWT 토큰 설정, Security 설정을 의심하다가 결국 스택트레이스를 뜯어보고 원인을 찾았습니다. `runBlocking`으로 스레드 전환을 방지하고, Fetch Join으로 필요한 데이터를 미리 로딩하는 이중 안전장치를 적용했습니다.
 
-> 상세 분석: [Coroutine + JPA 401 에러](/blog/프로젝트/Joying/coroutine-jpa-401)
+> 상세 분석: [Coroutine + JPA 401 에러](/blog/프로젝트/joying/coroutine-jpa-401)
 
 ### 채팅방 목록 N+1 (1.3초 → 65ms)
 
 채팅방 10개 조회 시 각 채팅방의 안읽은 메시지 수를 개별 Redis GET으로 조회하면서 N+1 문제가 발생했습니다. Redis MGET으로 배치 조회하고, 캐시 미스는 Coroutine async로 MongoDB 병렬 조회하니 **1.3초에서 65ms로 95% 개선**됐습니다.
 
-> 상세 분석: [채팅방 목록 느린 쿼리](/blog/프로젝트/Joying/chatroom-list-slow-query) · [Inbound Thread 최적화](/blog/프로젝트/Joying/inbound-thread-optimization)
+> 상세 분석: [채팅방 목록 느린 쿼리](/blog/프로젝트/joying/chatroom-list-slow-query) · [Inbound Thread 최적화](/blog/프로젝트/joying/inbound-thread-optimization)
 
 ### Redis CVSS 10.0 취약점 긴급 대응
 
 보안 뉴스에서 CVE-2025-49844 "RediShell"(CVSS 10.0) 소식을 접했는데, 우리가 쓰던 Redis 7.0.15가 정확히 취약 버전이었습니다. 즉시 7.2.11로 업그레이드하고, 인증 활성화 + EVAL 명령어 비활성화 + Docker 네트워크 격리까지 **다층 방어**를 적용했습니다.
 
-> 상세 분석: [Redis 취약점 긴급 패치](/blog/프로젝트/Joying/redis-security-issue)
+> 상세 분석: [Redis 취약점 긴급 패치](/blog/프로젝트/joying/redis-security-issue)
 
 ---
 
