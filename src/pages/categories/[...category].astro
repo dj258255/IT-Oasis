@@ -58,7 +58,7 @@ const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.paren
 
 <BaseLayout title={`Category: ${category}`}>
   <div class="fade-in-up">
-    <a href={`${base}/categories`} class="group inline-flex items-center gap-1.5 text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8">
+    <a href={`${base}/categories`} class="group inline-flex items-center gap-1.5 text-[13px] font-medium text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8">
       <svg class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
       </svg>
@@ -67,7 +67,7 @@ const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.paren
 
     <!-- Breadcrumb for sub-categories -->
     {!isParent && parsed.parent && (
-      <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500 mb-4 px-1">
+      <div class="flex items-center gap-2 text-[13px] text-gray-500 dark:text-gray-400 mb-4 px-1">
         <a href={`${base}/categories/${encodeURIComponent(parsed.parent)}`} class="hover:text-primary transition-colors" data-ko={parsed.parent} data-en={parentNameEn}>
           {parsed.parent}
         </a>
@@ -81,7 +81,7 @@ const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.paren
     <h1 class="text-xl sm:text-2xl font-bold tracking-tight mb-2 px-1">
       <span class="gradient-text" data-ko={displayNameKo} data-en={displayNameEn}>{displayNameKo}</span>
     </h1>
-    <p class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 mb-8 sm:mb-10 px-1">
+    <p class="text-[13px] sm:text-[14px] font-medium text-gray-500 dark:text-gray-400 mb-8 sm:mb-10 px-1">
       {posts.length}<span data-ko="개의 글" data-en=" posts">개의 글</span>
     </p>
 

@@ -22,7 +22,7 @@ const hasOverlay = !!(website || github || story);
   <div class="carousel-card rounded-2xl overflow-hidden h-full">
     <div class="aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
       {image && (
-        <img src={image} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+        <img src={image} alt="" class="w-full h-full object-fill absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
       )}
       <div class="w-full h-full flex items-center justify-center">
         <svg class="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
@@ -64,10 +64,10 @@ const hasOverlay = !!(website || github || story);
         </p>
       )}
       {(date || category) && (
-        <div class="flex items-center gap-2 text-[12px] text-gray-400 dark:text-gray-500">
+        <div class="flex items-center gap-2 text-[12px] sm:text-[13px] font-medium text-gray-500 dark:text-gray-400">
           {date && <span data-ko={date} data-en={dateEn || date}>{date}</span>}
-          {date && category && <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>}
-          {category && <span class="font-semibold text-primary/70 dark:text-primary-light/70" data-ko={category} data-en={categoryEn || category}>{category}</span>}
+          {date && category && <span class="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+          {category && <span class="font-semibold text-primary/80 dark:text-primary-light/80" data-ko={category} data-en={categoryEn || category}>{category}</span>}
         </div>
       )}
     </div>
