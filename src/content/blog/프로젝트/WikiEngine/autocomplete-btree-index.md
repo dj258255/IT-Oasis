@@ -3,7 +3,7 @@ title: '자동완성 B-Tree 인덱스 걸기'
 titleEn: 'Applying B-Tree Index for Autocomplete'
 description: 자동완성 LIKE prefix 검색이 인덱스 없이 Full Table Scan으로 타임아웃되는 문제를 B-Tree 복합 인덱스(title, view_count DESC)로 해결하고, 단일 인덱스 대안과 커버링 인덱스, Trie 자료구조를 비교 검토한 과정을 정리한다.
 descriptionEn: Resolves autocomplete LIKE prefix search timeout caused by Full Table Scan without index using B-Tree composite index (title, view_count DESC), comparing alternatives including single index, covering index, and Trie data structure.
-date: 2025-02-06T00:00:00.000Z
+date: 2026-02-06T00:00:00.000Z
 tags:
   - MySQL
   - B-Tree
