@@ -5,6 +5,26 @@ import remarkGithubAlerts from 'remark-github-blockquote-alert';
 import tailwindcss from '@tailwindcss/vite';
 
 const isProd = process.env.CI === 'true';
+const base = isProd ? '/IT-Oasis' : '';
+
+/** Rehype plugin: prepend base path to absolute image/link src in markdown body */
+function rehypeBasePath() {
+  return (tree) => {
+    if (!base) return;
+    function visit(node) {
+      if (node.type === 'element') {
+        if (node.tagName === 'img' && node.properties?.src?.startsWith('/')) {
+          node.properties.src = base + node.properties.src;
+        }
+        if (node.tagName === 'a' && node.properties?.href?.startsWith('/uploads/')) {
+          node.properties.href = base + node.properties.href;
+        }
+      }
+      if (node.children) node.children.forEach(visit);
+    }
+    visit(tree);
+  };
+}
 
 /** Rehype plugin: wrap <table> in a scrollable div */
 function rehypeTableWrapper() {
@@ -32,7 +52,7 @@ function rehypeTableWrapper() {
 // https://astro.build/config
 export default defineConfig({
   site: isProd ? 'https://dj258255.github.io' : 'http://localhost:4321',
-  base: isProd ? '/IT-Oasis' : '/',
+  base: base || '/',
   output: 'static',
   integrations: [
     expressiveCode({
@@ -58,7 +78,7 @@ export default defineConfig({
   ],
   markdown: {
     remarkPlugins: [remarkGithubAlerts],
-    rehypePlugins: [rehypeTableWrapper],
+    rehypePlugins: [rehypeBasePath, rehypeTableWrapper],
   },
   vite: {
     plugins: [tailwindcss()]
