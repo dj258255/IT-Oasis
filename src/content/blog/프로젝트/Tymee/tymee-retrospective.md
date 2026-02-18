@@ -48,7 +48,7 @@ draft: false
 
 ![Linear 보드](/uploads/프로젝트/Tymee/retrospective/linear-board.png)
 
-> 도입 과정: [타이미 소개](/blog/프로젝트/Tymee/tymee-introduction)
+> 도입 과정: [타이미 소개](/blog/프로젝트/tymee/tymee-introduction)
 
 ### 모바일 OAuth + JWT + Redis 인증 시스템
 
@@ -56,7 +56,7 @@ draft: false
 
 Google(라이브러리), Apple(공개키 직접 fetch + 캐싱), Kakao(REST API)별 OAuth 검증을 구현하고, **Refresh Token Rotation**으로 토큰 탈취 감지, `deviceId`별 독립 세션으로 기기별 선택적 로그아웃을 지원합니다.
 
-> 상세 분석: [모바일 JWT 인증](/blog/프로젝트/Tymee/mobile-jwt-auth)
+> 상세 분석: [모바일 JWT 인증](/blog/프로젝트/tymee/mobile-jwt-auth)
 
 ### 코드 품질 자동화 파이프라인
 
@@ -68,7 +68,7 @@ SonarQube는 Private 레포가 유료이고 3GB+ RAM 서버가 필요합니다. 
 
 ![CI 알림](/uploads/프로젝트/Tymee/retrospective/ci-alerts.png)
 
-> 상세 분석: [코드 품질 관리](/blog/프로젝트/Tymee/code-quality-management)
+> 상세 분석: [코드 품질 관리](/blog/프로젝트/tymee/code-quality-management)
 
 ---
 
@@ -78,7 +78,7 @@ SonarQube는 Private 레포가 유료이고 3GB+ RAM 서버가 필요합니다. 
 
 Spring Boot 4에서 새로 도입된 API Versioning을 활성화하니 Swagger에 접근할 때 `InvalidApiVersionException`이 발생했습니다. 신규 기능이라 레퍼런스가 거의 없었습니다. springdoc GitHub 이슈까지 뒤져서 **화이트리스트 방식 ApiVersionResolver**로 해결했습니다.
 
-> 상세 분석: [Spring Boot 4 API Versioning + Swagger 충돌](/blog/프로젝트/Tymee/spring-boot4-api-versioning)
+> 상세 분석: [Spring Boot 4 API Versioning + Swagger 충돌](/blog/프로젝트/tymee/spring-boot4-api-versioning)
 
 ### 이슈 추적 누락 문제
 
@@ -100,4 +100,4 @@ API 설계 완료, React Native UI 구현 중이고, Spring Boot 백엔드 개�
 
 팀 프로젝트와 개인 프로젝트의 가장 큰 차이는 **모든 의사결정의 책임이 온전히 나에게 있다**는 것입니다. 아키텍처 선택부터 UI 디자인까지, 왜 이렇게 했는지 스스로에게 설명할 수 있어야 합니다. 이 경험이 기술적 판단력을 키워주고 있다고 느낍니다.
 
-> 아키텍처 선택 과정: [타이미 아키텍처 선택](/blog/프로젝트/Tymee/tymee-architecture-selection)
+> 아키텍처 선택 과정: [타이미 아키텍처 선택](/blog/프로젝트/tymee/tymee-architecture-selection)
