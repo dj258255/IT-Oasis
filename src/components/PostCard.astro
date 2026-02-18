@@ -1,6 +1,6 @@
 ---
 import { translateCategory } from '../lib/utils';
-import { base, assetPath, getCategoryI18n } from '../lib/config';
+import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../lib/config';
 
 interface Props {
   title: string;
@@ -28,13 +28,13 @@ const formattedDateEn = date.toLocaleDateString('en-US', {
   day: 'numeric',
 });
 
+const catDisplayKo = getCategoryDisplayKo();
 const categoryEn = category ? translateCategory(category, catI18n) : '';
-
-const parentCat = category ? category.split('/')[0] : '';
+const categoryKo = category ? translateCategory(category, catDisplayKo) : '';
 ---
 
 <article class="group">
-  <a href={`${base}/blog/${slug}`} class="block glass-card rounded-xl sm:rounded-2xl overflow-hidden h-full">
+  <a href={`${base}/blog/${slug}`} class="flex flex-col glass-card rounded-xl sm:rounded-2xl overflow-hidden h-full">
     {/* Cover image */}
     <div class="aspect-[16/10] w-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative overflow-hidden">
       {coverImage && (
@@ -54,23 +54,21 @@ const parentCat = category ? category.split('/')[0] : '';
     </div>
 
     {/* Content */}
-    <div class="p-4 sm:p-5">
+    <div class="p-4 sm:p-5 flex flex-col flex-1">
       <h3 class="text-[14px] sm:text-[15px] font-semibold leading-snug tracking-[-0.01em] group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 mb-1.5 line-clamp-2">
         {title}
       </h3>
-      <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-4">
+      <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-4 mb-4">
         {description}
       </p>
-      <div class="flex items-center justify-between mt-auto">
-        <div class="flex items-center gap-2 text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500">
-          <time class="tracking-wider" data-ko={formattedDate} data-en={formattedDateEn}>{formattedDate}</time>
-          {category && (
-            <>
-              <span class="w-0.5 h-0.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-              <span data-ko={category} data-en={categoryEn}>{category}</span>
-            </>
-          )}
-        </div>
+      <div class="flex items-center gap-2 mt-auto">
+        <time class="text-[11px] sm:text-[12px] font-medium text-gray-500 dark:text-gray-400" data-ko={formattedDate} data-en={formattedDateEn}>{formattedDate}</time>
+        {category && (
+          <>
+            <span class="w-0.5 h-0.5 rounded-full bg-gray-400 dark:bg-gray-500" />
+            <span class="text-[11px] sm:text-[12px] font-medium text-gray-500 dark:text-gray-400" data-ko={categoryKo} data-en={categoryEn}>{categoryKo}</span>
+          </>
+        )}
       </div>
     </div>
   </a>

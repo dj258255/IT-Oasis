@@ -322,6 +322,12 @@ export default defineConfig({
             ],
           },
           {
+            type: 'number',
+            name: 'order',
+            label: 'Display Order',
+            description: 'Lower number = shown first in sidebar',
+          },
+          {
             type: 'object',
             name: 'subcategories',
             label: 'Subcategories',
@@ -337,6 +343,18 @@ export default defineConfig({
                 type: 'string',
                 name: 'nameEn',
                 label: 'Name (English)',
+              },
+              {
+                type: 'string',
+                name: 'nameKo',
+                label: 'Name (Korean)',
+                description: 'Korean display name (if different from identifier)',
+              },
+              {
+                type: 'number',
+                name: 'order',
+                label: 'Display Order',
+                description: 'Lower number = shown first',
               },
             ],
           },

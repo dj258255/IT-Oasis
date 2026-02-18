@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
 import { buildCategoryTree, parseCategory } from '../../lib/utils';
-import { base, getCategoryI18n } from '../../lib/config';
+import { base, getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
 import { getPublishedPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
@@ -50,6 +50,8 @@ export async function getStaticPaths() {
 const { category, displayName, isParent, posts, children } = Astro.props;
 const parsed = parseCategory(category);
 const catI18n = getCategoryI18n();
+const catDisplayKo = getCategoryDisplayKo();
+const displayNameKo = catDisplayKo.get(displayName) || displayName;
 const displayNameEn = catI18n.get(displayName) || displayName;
 const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.parent) : '';
 ---
@@ -72,12 +74,12 @@ const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.paren
         <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span class="text-gray-600 dark:text-gray-300 font-medium" data-ko={displayName} data-en={displayNameEn}>{displayName}</span>
+        <span class="text-gray-600 dark:text-gray-300 font-medium" data-ko={displayNameKo} data-en={displayNameEn}>{displayNameKo}</span>
       </div>
     )}
 
     <h1 class="text-xl sm:text-2xl font-bold tracking-tight mb-2 px-1">
-      <span class="gradient-text" data-ko={displayName} data-en={displayNameEn}>{displayName}</span>
+      <span class="gradient-text" data-ko={displayNameKo} data-en={displayNameEn}>{displayNameKo}</span>
     </h1>
     <p class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 mb-8 sm:mb-10 px-1">
       {posts.length}<span data-ko="개의 글" data-en=" posts">개의 글</span>
@@ -91,7 +93,7 @@ const parentNameEn = parsed.parent ? (catI18n.get(parsed.parent) || parsed.paren
             href={`${base}/categories/${encodeURIComponent(category)}/${encodeURIComponent(child)}`}
             class="text-[12px] font-medium px-4 py-2 rounded-xl glass-card text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
           >
-            <span data-ko={child} data-en={catI18n.get(child) || child}>{child}</span>
+            <span data-ko={catDisplayKo.get(child) || child} data-en={catI18n.get(child) || child}>{catDisplayKo.get(child) || child}</span>
             <span class="ml-1.5 text-[11px] text-gray-400 dark:text-gray-500">{childNode.count}</span>
           </a>
         ))}

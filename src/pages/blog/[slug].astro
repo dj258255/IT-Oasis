@@ -5,7 +5,7 @@ import AuthorCard from '../../components/AuthorCard.astro';
 import Giscus from '../../components/Giscus.astro';
 import { render } from 'astro:content';
 import { getReadingTime, parseCategory, splitContent, translateCategory } from '../../lib/utils';
-import { base, assetPath, getCategoryI18n } from '../../lib/config';
+import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
 import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
 import { getPublishedPosts } from '../../lib/posts';
 
@@ -13,12 +13,22 @@ export async function getStaticPaths() {
   const posts = await getPublishedPosts();
 
   return posts.map((post, index) => {
-    const parentCat = parseCategory(post.data.category).parent;
+    const fullCat = post.data.category;
+    const parentCat = parseCategory(fullCat).parent;
     let relatedPosts = posts
-      .filter((p) => p.id !== post.id && parseCategory(p.data.category).parent === parentCat)
+      .filter((p) => p.id !== post.id && p.data.category === fullCat)
       .slice(0, 4);
 
-    // Fallback: if no same-category posts, show recent posts
+    // Fallback: if not enough same-subcategory posts, fill from parent category
+    if (relatedPosts.length < 4) {
+      const existingIds = new Set([post.id, ...relatedPosts.map(p => p.id)]);
+      const parentPosts = posts
+        .filter((p) => !existingIds.has(p.id) && parseCategory(p.data.category).parent === parentCat)
+        .slice(0, 4 - relatedPosts.length);
+      relatedPosts = [...relatedPosts, ...parentPosts];
+    }
+
+    // Fallback: if no same-category posts at all, show recent posts
     const isSameCategory = relatedPosts.length > 0;
     if (!isSameCategory) {
       relatedPosts = posts.filter((p) => p.id !== post.id).slice(0, 4);
@@ -65,7 +75,9 @@ if (hasEn) {
 }
 
 const catI18n = getCategoryI18n();
+const catDisplayKo = getCategoryDisplayKo();
 const categoryEn = translateCategory(post.data.category, catI18n);
+const categoryKo = translateCategory(post.data.category, catDisplayKo);
 const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || parseCategory(post.data.category).parent;
 ---
 
@@ -75,7 +87,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
       <article class="post-article relative">
       <!-- Floating left sidebar (outside content area, like TOC on right) -->
       <div class="floating-sidebar hidden xl:block">
-        <BlogSidebar />
+        <BlogSidebar activeCategory={post.data.category} />
       </div>
       <!-- Back link -->
       <a href={`${base}/blog`} class="group inline-flex items-center gap-1.5 text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8 sm:mb-10">
@@ -104,8 +116,8 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
             <span id="post-views-count">—</span>
           </span>
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-          <a href={`${base}/categories/${encodeURIComponent(post.data.category)}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']} data-ko={post.data.category} data-en={categoryEn}>
-            {post.data.category}
+          <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']} data-ko={categoryKo} data-en={categoryEn}>
+            {categoryKo}
           </a>
         </div>
         <h1 id="post-title" class="text-xl sm:text-2xl md:text-3xl font-bold tracking-[-0.02em] leading-tight mb-4 sm:mb-5">
@@ -183,8 +195,8 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
             <p class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-5">
               {isSameCategory ? (
                 <>
-                  <span class="lang-ko text-gray-500 dark:text-gray-400">'{parseCategory(post.data.category).parent}'</span>
-                  <span class="lang-en hidden text-gray-500 dark:text-gray-400">'{parentCatEn}'</span>
+                  <span class="lang-ko text-gray-500 dark:text-gray-400">'{categoryKo}'</span>
+                  <span class="lang-en hidden text-gray-500 dark:text-gray-400">'{categoryEn}'</span>
                   <span class="text-gray-400 dark:text-gray-500" data-ko=" 의 다른 글" data-en="'s other posts"> 의 다른 글</span>
                 </>
               ) : (
@@ -258,7 +270,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
                 <div id="toc-progress" class="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-300" style="width: 0%"></div>
               </div>
 
-              <nav id="sidebar-toc" class="space-y-0.5">
+              <nav id="sidebar-toc" class="space-y-0.5 toc-scroll">
                 {tocHeadings.map((heading, idx) => (
                   <a
                     href={`#${heading.slug}`}
@@ -366,6 +378,30 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
       margin-left: 2.5rem;
     }
   }
+
+  .toc-scroll {
+    max-height: calc(100vh - 14rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.25) transparent;
+  }
+
+  .toc-scroll::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .toc-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .toc-scroll::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.25);
+    border-radius: 3px;
+  }
+
+  .toc-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.4);
+  }
 </style>
 
 <script>
@@ -394,6 +430,11 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
               if (isActive) {
                 link.classList.add('text-primary', 'dark:text-primary-light', 'font-medium', 'bg-primary/[0.04]');
                 link.classList.remove('text-gray-500', 'dark:text-gray-400');
+                // Auto-scroll TOC nav so active item stays visible
+                const tocNav = link.closest('.toc-scroll');
+                if (tocNav && tocNav.scrollHeight > tocNav.clientHeight) {
+                  link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
               } else {
                 link.classList.remove('text-primary', 'dark:text-primary-light', 'font-medium', 'bg-primary/[0.04]');
                 link.classList.add('text-gray-500', 'dark:text-gray-400');

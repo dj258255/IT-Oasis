@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { buildCategoryTree } from '../../lib/utils';
-import { base, getCategoryI18n, getCategoryMeta } from '../../lib/config';
+import { buildCategoryTree, defaultIconPath } from '../../lib/utils';
+import { base, getCategoryI18n, getCategoryMeta, getCategoryDisplayKo } from '../../lib/config';
 import { getPublishedPosts } from '../../lib/posts';
 const posts = await getPublishedPosts();
 const categoryTree = buildCategoryTree(posts.map(p => p.data.category));
@@ -10,6 +10,7 @@ const sortedParents = [...categoryTree.entries()].sort((a, b) => b[1].count - a[
 const catMetaRaw = getCategoryMeta();
 const catMeta = new Map([...catMetaRaw.entries()].map(([k, v]) => [k, { icon: v.icon, gradient: 'from-primary/15 to-accent/15' }]));
 const catI18n = getCategoryI18n();
+const catDisplayKo = getCategoryDisplayKo();
 const defaultGradient = 'from-cyan/15 to-emerald/15';
 ---
 
@@ -47,7 +48,7 @@ const defaultGradient = 'from-cyan/15 to-emerald/15';
               <div class="flex flex-wrap gap-1.5 mt-3">
                 {[...node.children.entries()].sort((a, b) => b[1].count - a[1].count).map(([child, childNode]) => (
                   <span class="text-[11px] text-gray-400 dark:text-gray-500 bg-gray-100/60 dark:bg-gray-800/40 px-2.5 py-1 rounded-lg">
-                    <span data-ko={child} data-en={catI18n.get(child) || child}>{child}</span> <span class="opacity-60">{childNode.count}</span>
+                    <span data-ko={catDisplayKo.get(child) || child} data-en={catI18n.get(child) || child}>{catDisplayKo.get(child) || child}</span> <span class="opacity-60">{childNode.count}</span>
                   </span>
                 ))}
               </div>
