@@ -63,7 +63,7 @@ const year = new Date().getFullYear();
     const wrapper = document.getElementById('total-views');
     if (!el || !wrapper) return;
 
-    fetch(`${GC_HOST}/counter//TOTAL.json`)
+    fetch(`${GC_HOST}/counter/TOTAL.json`)
       .then(r => r.json())
       .then(data => {
         el.textContent = data.count;

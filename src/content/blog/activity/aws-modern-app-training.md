@@ -11,7 +11,7 @@ tags:
   - Packer
   - Multi-Cloud
 category: activity
-coverImage: /uploads/aws-modern-app-training/group-photo-1.jpeg
+coverImage: /uploads/activity/aws-modern-app-training/group-photo-1.jpeg
 draft: false
 ---
 
