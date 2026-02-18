@@ -7,10 +7,11 @@ import { projects } from '../data/projects';
 import { getPublishedPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { renderRichText } from '../lib/richtext';
-import { base, assetPath, getSiteSettings, getCategoryI18n } from '../lib/config';
+import { base, assetPath, getSiteSettings, getCategoryI18n, getCategoryDisplayKo } from '../lib/config';
 
 const siteSettings = getSiteSettings();
 const catI18n = getCategoryI18n();
+const catDisplayKo = getCategoryDisplayKo();
 const aboutHtmlKo = renderRichText(siteSettings.aboutContentKo, base);
 const aboutHtmlEn = renderRichText(siteSettings.aboutContentEn, base);
 
@@ -45,16 +46,18 @@ const posts = (await getPublishedPosts()).slice(0, 8);
     </div>
 
     <!-- Projects carousel -->
-    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" icon="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} icon="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
       {projects.map((project) => (
         <CarouselCard
           href={project.website || project.github || (project.story ? `${base}${project.story}` : '') || `${base}/projects`}
           title={project.title}
+          titleEn={project.titleEn}
           description={project.description}
           descriptionEn={project.descriptionEn}
-          image={project.image}
+          image={project.image ? assetPath(project.image) : undefined}
           date={project.date}
-          category={project.category}
+          category={translateCategory(project.category, catDisplayKo)}
+          categoryEn={translateCategory(project.category, catI18n)}
           website={project.website}
           github={project.github}
           story={project.story ? `${base}${project.story}` : ''}
@@ -68,12 +71,13 @@ const posts = (await getPublishedPosts()).slice(0, 8);
         <CarouselCard
           href={`${base}/blog/${post.id}`}
           title={post.data.title}
+          titleEn={post.data.titleEn}
           description={post.data.description}
           descriptionEn={post.data.descriptionEn}
           image={post.data.coverImage ? assetPath(post.data.coverImage) : undefined}
           date={post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
           dateEn={post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-          category={post.data.category}
+          category={translateCategory(post.data.category, catDisplayKo)}
           categoryEn={translateCategory(post.data.category, catI18n)}
         />
       ))}
