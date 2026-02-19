@@ -15,7 +15,7 @@ draft: false
 coverImage: "/uploads/project/Tymee/current-user-annotation/security-context-holder-direct.png"
 ---
 
-Spring Security로 JWT 인증을 구현하면서 로그인한 사용자 정보를 컨트롤러에서 어떻게 가져올지 고민했다. 여러 방법을 비교해보고 `@CurrentUser` 커스텀 어노테이션을 만들어서 사용하기로 했는데, 그 과정을 정리해봤다.
+Spring Security로 JWT 인증을 구현하면서 로그인한 사용자 정보를 컨트롤러에서 어떻게 가져올지 고민했어요. 여러 방법을 비교해보고 `@CurrentUser` 커스텀 어노테이션을 만들어서 사용하기로 했는데, 그 과정을 정리해봤습니다.
 
 ---
 
@@ -25,19 +25,19 @@ Spring Security로 JWT 인증을 구현하면서 로그인한 사용자 정보�
 
 ![security-context-holder-direct](/uploads/project/Tymee/current-user-annotation/security-context-holder-direct.png)
 
-가장 원시적인 방법인데, 매번 이 코드를 작성해야 해서 귀찮다. null 체크도 직접 해야 하고, 테스트 코드 짜기도 번거롭다.
+가장 원시적인 방법인데, 매번 이 코드를 작성해야 해서 귀찮아요. null 체크도 직접 해야 하고, 테스트 코드 짜기도 번거롭습니다.
 
 ### 2. Controller 파라미터로 Principal 받기
 
 ![principal-parameter](/uploads/project/Tymee/current-user-annotation/principal-parameter.png)
 
-`Principal`은 Java 표준 인터페이스라서 `getName()` 밖에 없다. userId나 role 같은 커스텀 정보를 쓸 수가 없어서 실용성이 떨어진다.
+`Principal`은 Java 표준 인터페이스라서 `getName()` 밖에 없어요. userId나 role 같은 커스텀 정보를 쓸 수가 없어서 실용성이 떨어집니다.
 
 ### 3. @AuthenticationPrincipal 사용
 
 ![authentication-principal](/uploads/project/Tymee/current-user-annotation/authentication-principal.png)
 
-Spring Security 3.2부터 지원하는 방식이다. 커스텀 로그인 객체를 바로 주입받을 수 있어서 제일 편하다.
+Spring Security 3.2부터 지원하는 방식이에요. 커스텀 로그인 객체를 바로 주입받을 수 있어서 제일 편합니다.
 
 ---
 
@@ -47,7 +47,7 @@ Spring Security 3.2부터 지원하는 방식이다. 커스텀 로그인 객체�
 
 ![argument-resolver](/uploads/project/Tymee/current-user-annotation/argument-resolver.png)
 
-결국 내부적으로는 `SecurityContextHolder.getContext().getAuthentication().getPrincipal()`을 호출한다. 그냥 Spring이 이 과정을 자동으로 해주는 것뿐이다.
+결국 내부적으로는 `SecurityContextHolder.getContext().getAuthentication().getPrincipal()`을 호출해요. 그냥 Spring이 이 과정을 자동으로 해주는 것뿐이에요.
 
 ### JWT 환경에서의 흐름
 
@@ -69,13 +69,13 @@ Spring Security 3.2부터 지원하는 방식이다. 커스텀 로그인 객체�
 
 ![jwt-authentication-filter](/uploads/project/Tymee/current-user-annotation/jwt-authentication-filter.png)
 
-JWT 토큰에서 claim을 파싱해서 `UserPrincipal`을 만들고, `SecurityContextHolder`에 저장한다. 여기서 DB 조회는 전혀 없다.
+JWT 토큰에서 claim을 파싱해서 `UserPrincipal`을 만들고, `SecurityContextHolder`에 저장해요. 여기서 DB 조회는 전혀 없습니다.
 
 ### @CurrentUser 커스텀 어노테이션
 
 ![current-user-annotation](/uploads/project/Tymee/current-user-annotation/current-user-annotation.png)
 
-`@AuthenticationPrincipal`을 메타 어노테이션으로 감싸서 `@CurrentUser`를 만들었다.
+`@AuthenticationPrincipal`을 메타 어노테이션으로 감싸서 `@CurrentUser`를 만들었어요.
 
 ### Controller에서 사용
 
@@ -85,15 +85,15 @@ JWT 토큰에서 claim을 파싱해서 `UserPrincipal`을 만들고, `SecurityCo
 
 ## 근데 @CurrentUser를 왜 써?
 
-셋 다 결국 `SecurityContextHolder`에서 principal을 가져오는 건 똑같다.
+셋 다 결국 `SecurityContextHolder`에서 principal을 가져오는 건 똑같아요.
 
 ```java
 SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 ```
 
-그럼 왜 굳이 커스텀 어노테이션을 만들었냐면, `@AuthenticationPrincipal`을 직접 쓰면 모든 컨트롤러에 Spring Security import가 들어간다. `@CurrentUser`로 감싸면 그 의존성이 어노테이션 파일 하나에만 집중된다. 나중에 Principal 구조가 바뀌어도 한 곳만 고치면 되니까 편하다.
+그럼 왜 굳이 커스텀 어노테이션을 만들었냐면, `@AuthenticationPrincipal`을 직접 쓰면 모든 컨트롤러에 Spring Security import가 들어가거든요. `@CurrentUser`로 감싸면 그 의존성이 어노테이션 파일 하나에만 집중돼요. 나중에 Principal 구조가 바뀌어도 한 곳만 고치면 되니까 편합니다.
 
-Spring Security 공식 문서에서도 이 방식을 권장한다:
+Spring Security 공식 문서에서도 이 방식을 권장해요:
 
 > "You can further remove your dependency on Spring Security by making `@AuthenticationPrincipal` a meta annotation on your own annotation."
 
@@ -101,7 +101,7 @@ Spring Security 공식 문서에서도 이 방식을 권장한다:
 
 ## 주의할 점: NPE
 
-인증이 필요 없는 API에서 `@CurrentUser`를 쓰면 null이 들어온다.
+인증이 필요 없는 API에서 `@CurrentUser`를 쓰면 null이 들어와요.
 
 ```java
 @GetMapping("/public/info")
@@ -124,19 +124,19 @@ public ApiResponse<UserResponse> getUser(
 }
 ```
 
-`@PreAuthorize`는 인증 안 된 요청을 차단하고, `@CurrentUser`는 principal을 주입해준다. 그래서 인증 필수 API에서는 둘 다 붙여주는 게 안전하다.
+`@PreAuthorize`는 인증 안 된 요청을 차단하고, `@CurrentUser`는 principal을 주입해줘요. 그래서 인증 필수 API에서는 둘 다 붙여주는 게 안전합니다.
 
 ### 선택적 인증이 필요하면?
 
-로그인 안 해도 되는데 로그인하면 추가 정보를 보여주는 API가 있다면 (예: 인스타그램 게시글 - 비로그인은 그냥 보기, 로그인하면 좋아요 눌렀는지 표시), 커스텀 ArgumentResolver를 만들어서 null 처리를 해주면 된다.
+로그인 안 해도 되는데 로그인하면 추가 정보를 보여주는 API가 있다면 (예: 인스타그램 게시글 - 비로그인은 그냥 보기, 로그인하면 좋아요 눌렀는지 표시), 커스텀 ArgumentResolver를 만들어서 null 처리를 해주면 돼요.
 
-지금 프로젝트는 모바일 앱 전용이라 거의 다 인증 필수라서 안 만들었다.
+지금 프로젝트는 모바일 앱 전용이라 거의 다 인증 필수라서 안 만들었습니다.
 
 ---
 
 ## 속도는?
 
-JWT라서 DB 조회가 없다. 토큰 파싱만 하면 끝이라 0.1ms 정도 걸린다. 세션 방식은 매 요청마다 DB나 Redis를 조회해야 해서 5~20ms 정도 걸리는데, 비교하면 꽤 차이난다. 물론 세션도 장점이 있지만 (토큰 탈취 시 즉시 무효화 등), 모바일 앱에서는 JWT가 더 맞는 것 같다.
+JWT라서 DB 조회가 없어요. 토큰 파싱만 하면 끝이라 0.1ms 정도 걸립니다. 세션 방식은 매 요청마다 DB나 Redis를 조회해야 해서 5~20ms 정도 걸리는데, 비교하면 꽤 차이나요. 물론 세션도 장점이 있지만 (토큰 탈취 시 즉시 무효화 등), 모바일 앱에서는 JWT가 더 맞는 것 같습니다.
 
 ---
 
@@ -162,7 +162,7 @@ GET /users/{id} (Authorization: Bearer {token})
 
 ## 정리
 
-`@AuthenticationPrincipal`은 결국 `SecurityContextHolder`에서 가져오는 거고, `@CurrentUser`로 감싸면 의존성 관리가 좀 더 깔끔해진다. 인증 필수 API에서는 `@PreAuthorize`랑 같이 쓰면 NPE 걱정 없이 쓸 수 있다.
+`@AuthenticationPrincipal`은 결국 `SecurityContextHolder`에서 가져오는 거고, `@CurrentUser`로 감싸면 의존성 관리가 좀 더 깔끔해져요. 인증 필수 API에서는 `@PreAuthorize`랑 같이 쓰면 NPE 걱정 없이 쓸 수 있습니다.
 
 ---
 

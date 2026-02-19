@@ -21,7 +21,7 @@ coverImage: "/uploads/project/Tymee/flyway-db-migration/gradle-version-catalog.s
 
 ### ddl-auto의 편리함과 위험
 
-JPA의 `ddl-auto=update`는 개발 초기에 매우 편리하다. 엔티티만 수정하면 스키마가 자동으로 변경된다.
+JPA의 `ddl-auto=update`는 개발 초기에 매우 편리해요. 엔티티만 수정하면 스키마가 자동으로 변경됩니다.
 
 하지만 [JetBrains 블로그](https://blog.jetbrains.com/idea/2024/11/how-to-use-flyway-for-database-migrations-in-spring-boot-applications/)에서 지적하듯:
 
@@ -32,11 +32,11 @@ JPA의 `ddl-auto=update`는 개발 초기에 매우 편리하다. 엔티티만 �
 - 컬럼을 삭제하면? -> JPA는 절대 컬럼을 삭제하지 않음
 - NOT NULL을 추가하면? -> 기존 데이터가 NULL이면 실패
 
-이런 동작들이 개발 환경에서는 "그냥 DB 초기화하면 되지"로 넘어가지만, 운영 환경에서는 장애로 이어진다.
+이런 동작들이 개발 환경에서는 "그냥 DB 초기화하면 되지"로 넘어가지만, 운영 환경에서는 장애로 이어져요.
 
 ### 그렇다면 항상 마이그레이션 도구를 써야 할까?
 
-아니다. 프로젝트 단계에 따라 다르다:
+아니에요. 프로젝트 단계에 따라 달라요:
 
 | 단계                      | ddl-auto     | 마이그레이션 도구 |
 |---------------------------|--------------|-------------------|
@@ -49,7 +49,7 @@ JPA의 `ddl-auto=update`는 개발 초기에 매우 편리하다. 엔티티만 �
 
 ## Flyway와 Liquibase
 
-Flyway와 Liquibase를 비교했다. Flyway는 SQL 파일만 작성하면 되고 Spring Boot가 기본 auto-configuration을 제공해서 학습 곡선이 낮다. Liquibase는 XML/YAML로 DB 독립적 마이그레이션을 작성할 수 있고 무료 롤백 기능을 지원하지만, 별도 문법을 배워야 한다. 단일 DB(MySQL)만 쓰고 롤백보다 새 마이그레이션으로 수정하는 방식을 선호해서 Flyway를 선택했다.
+Flyway와 Liquibase를 비교했어요. Flyway는 SQL 파일만 작성하면 되고 Spring Boot가 기본 auto-configuration을 제공해서 학습 곡선이 낮습니다. Liquibase는 XML/YAML로 DB 독립적 마이그레이션을 작성할 수 있고 무료 롤백 기능을 지원하지만, 별도 문법을 배워야 해요. 단일 DB(MySQL)만 쓰고 롤백보다 새 마이그레이션으로 수정하는 방식을 선호해서 Flyway를 선택했습니다.
 
 ---
 
@@ -138,7 +138,7 @@ V20241231091500__add_comments_table.sql
 
 ## flyway_schema_history 테이블
 
-Flyway는 마이그레이션 이력을 `flyway_schema_history` 테이블에 기록한다.
+Flyway는 마이그레이션 이력을 `flyway_schema_history` 테이블에 기록해요.
 
 ```sql
 SELECT version, description, checksum, success, execution_time
@@ -216,11 +216,11 @@ Migration checksum mismatch for migration version 1
 
 ## 마이그레이션 vs 엔티티, 어느 것이 진실인가?
 
-두 가지 관점이 있다.
+두 가지 관점이 있어요.
 
-엔티티 우선(Code First)은 JPA 엔티티가 진실이고 마이그레이션이 이를 따라가는 방식이다. 마이그레이션 우선(DB First)은 마이그레이션이 진실이고 엔티티가 이를 반영하는 방식으로, DBA가 스키마를 설계하면 개발자가 엔티티를 맞춘다.
+엔티티 우선(Code First)은 JPA 엔티티가 진실이고 마이그레이션이 이를 따라가는 방식이에요. 마이그레이션 우선(DB First)은 마이그레이션이 진실이고 엔티티가 이를 반영하는 방식으로, DBA가 스키마를 설계하면 개발자가 엔티티를 맞춥니다.
 
-실무에서는 **하이브리드** 방식이 많다:
+실무에서는 **하이브리드** 방식이 많아요:
 1. 엔티티 먼저 작성
 2. `ddl-auto=update`로 개발 환경에서 동작 확인
 3. 스키마 변경 사항을 마이그레이션 파일로 수동 작성
@@ -239,9 +239,9 @@ Migration checksum mismatch for migration version 1
 
 ## 이 프로젝트의 선택
 
-마이그레이션 도구는 Flyway, 버전 번호는 순차 방식(`V1__`, `V2__`)을 선택했다. SQL 직접 작성이 직관적이고, Spring Boot 기본 통합을 지원하며, 1인 개발이라 브랜치 충돌이 없어서 순차 번호가 충분하다. 팀 협업으로 전환되면 타임스탬프 방식을 고려할 예정이다.
+마이그레이션 도구는 Flyway, 버전 번호는 순차 방식(`V1__`, `V2__`)을 선택했어요. SQL 직접 작성이 직관적이고, Spring Boot 기본 통합을 지원하며, 1인 개발이라 브랜치 충돌이 없어서 순차 번호가 충분합니다. 팀 협업으로 전환되면 타임스탬프 방식을 고려할 예정이에요.
 
-환경별로는 local에서 `ddl-auto=update` + Flyway enabled로 빠른 개발, test에서 `create-drop` + Flyway disabled로 깨끗한 테스트, staging에서 `validate` + Flyway enabled로 불일치 감지, prod에서 `none` + Flyway enabled로 안전하게 운영한다.
+환경별로는 local에서 `ddl-auto=update` + Flyway enabled로 빠른 개발, test에서 `create-drop` + Flyway disabled로 깨끗한 테스트, staging에서 `validate` + Flyway enabled로 불일치 감지, prod에서 `none` + Flyway enabled로 안전하게 운영합니다.
 
 ---
 

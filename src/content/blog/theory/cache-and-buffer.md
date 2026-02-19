@@ -18,19 +18,19 @@ coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 
 ## 1. 들어가며
 
-컴퓨터 시스템에서 '캐시(Cache)'와 '버퍼(Buffer)'는 모두 데이터를 임시로 저장하는 메모리 공간이다. 하지만 그 목적과 동작 방식은 근본적으로 다르다. 캐시는 **속도 향상**을 위해 자주 사용되는 데이터를 빠른 메모리에 저장하고, 버퍼는 **속도 차이 조절**을 위해 생산자와 소비자 사이에서 데이터를 임시 보관한다.
+컴퓨터 시스템에서 '캐시(Cache)'와 '버퍼(Buffer)'는 모두 데이터를 임시로 저장하는 메모리 공간이에요. 하지만 그 목적과 동작 방식은 근본적으로 다릅니다. 캐시는 **속도 향상**을 위해 자주 사용되는 데이터를 빠른 메모리에 저장하고, 버퍼는 **속도 차이 조절**을 위해 생산자와 소비자 사이에서 데이터를 임시 보관해요.
 
-이 두 개념은 CS 면접에서 자주 등장하는 주제이며, 실무에서도 성능 최적화와 시스템 설계에 필수적인 개념이다.
+이 두 개념은 CS 면접에서 자주 등장하는 주제이며, 실무에서도 성능 최적화와 시스템 설계에 필수적인 개념입니다.
 
 출처: [GeeksforGeeks - Difference between Cache and Buffer](https://www.geeksforgeeks.org/difference-between-cache-and-buffer/)
 
 ## 2. 메모리 계층 구조
 
-컴퓨터의 메모리는 계층적 구조로 설계되어 있다. CPU에 가까울수록 빠르지만 용량이 작고 비싸며, 멀어질수록 느리지만 용량이 크고 저렴하다.
+컴퓨터의 메모리는 계층적 구조로 설계되어 있어요. CPU에 가까울수록 빠르지만 용량이 작고 비싸며, 멀어질수록 느리지만 용량이 크고 저렴합니다.
 ![](/uploads/theory/cache-and-buffer/memory-hierarchy.png)
 
 
-캐시는 이 계층 구조에서 **상위 계층과 하위 계층 사이의 속도 차이를 줄이기 위해** 존재한다. 자주 접근하는 데이터를 빠른 메모리에 복사해두면, 느린 메모리에 접근하는 횟수를 줄일 수 있다.
+캐시는 이 계층 구조에서 **상위 계층과 하위 계층 사이의 속도 차이를 줄이기 위해** 존재합니다. 자주 접근하는 데이터를 빠른 메모리에 복사해두면, 느린 메모리에 접근하는 횟수를 줄일 수 있어요.
 
 >출처: [Wikipedia - "Memory Hierarchy"](https://en.wikipedia.org/wiki/Memory_hierarchy)
 
@@ -38,35 +38,35 @@ coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 
 ### 캐시의 목적
 
-캐시는 **데이터 접근 속도를 향상**시키기 위한 고속 메모리다. CPU가 메인 메모리(RAM)에서 데이터를 읽어오는 데는 상대적으로 많은 시간이 걸린다. 만약 자주 사용되는 데이터를 CPU와 더 가까운 곳에 복사해둔다면, 훨씬 빠르게 접근할 수 있다.
+캐시는 **데이터 접근 속도를 향상**시키기 위한 고속 메모리예요. CPU가 메인 메모리(RAM)에서 데이터를 읽어오는 데는 상대적으로 많은 시간이 걸리거든요. 만약 자주 사용되는 데이터를 CPU와 더 가까운 곳에 복사해둔다면, 훨씬 빠르게 접근할 수 있습니다.
 
 **핵심 특징:**
-- 원본 데이터의 **복사본**을 저장한다
-- 읽기 성능 향상이 주목적이다
-- 데이터가 없어도 원본에서 다시 가져올 수 있다
-- 투명하게 동작한다 (애플리케이션이 의식하지 못함)
+- 원본 데이터의 **복사본**을 저장해요
+- 읽기 성능 향상이 주목적이에요
+- 데이터가 없어도 원본에서 다시 가져올 수 있어요
+- 투명하게 동작합니다 (애플리케이션이 의식하지 못함)
 
 > 출처: [나무위키 - "캐시 메모리"](https://namu.wiki/w/%EC%BA%90%EC%8B%9C%20%EB%A9%94%EB%AA%A8%EB%A6%AC)
 
 ### 캐시 계층 (L1, L2, L3)
 
-현대 CPU는 여러 단계의 캐시를 가지고 있다.
+현대 CPU는 여러 단계의 캐시를 가지고 있어요.
 
 #### L1 캐시 (Level 1 Cache)
 
-CPU 코어에 가장 가까운 캐시로, 명령어 캐시(I-Cache)와 데이터 캐시(D-Cache)로 분리되어 있다.
+CPU 코어에 가장 가까운 캐시로, 명령어 캐시(I-Cache)와 데이터 캐시(D-Cache)로 분리되어 있어요.
 
 L1 캐시 구조:
 ![](/uploads/theory/cache-and-buffer/l1-cache-structure.png)
 
 
-하버드 아키텍처(Harvard Architecture)를 따라 명령어와 데이터를 분리함으로써, CPU가 동시에 명령어를 읽고 데이터를 처리할 수 있다.
+하버드 아키텍처(Harvard Architecture)를 따라 명령어와 데이터를 분리함으로써, CPU가 동시에 명령어를 읽고 데이터를 처리할 수 있습니다.
 
 > 출처: [Wikipedia - CPU Cache](https://en.wikipedia.org/wiki/CPU_cache), [GeeksforGeeks - Cache Memory in Computer Organization](https://www.geeksforgeeks.org/cache-memory-in-computer-organization/)
 
 #### L2 캐시 (Level 2 Cache)
 
-L1 캐시보다 크지만 약간 느린 캐시다. 보통 각 CPU 코어마다 독립적으로 존재한다.
+L1 캐시보다 크지만 약간 느린 캐시예요. 보통 각 CPU 코어마다 독립적으로 존재합니다.
 
 ![](/uploads/theory/cache-and-buffer/l2-cache-structure.png)
 
@@ -74,7 +74,7 @@ L1 캐시보다 크지만 약간 느린 캐시다. 보통 각 CPU 코어마다 �
 
 #### L3 캐시 (Level 3 Cache)
 
-모든 CPU 코어가 공유하는 캐시다. 가장 크지만 L1, L2보다 느리다.
+모든 CPU 코어가 공유하는 캐시예요. 가장 크지만 L1, L2보다 느립니다.
 
 ![](/uploads/theory/cache-and-buffer/l3-cache-structure.png)
 
@@ -83,11 +83,11 @@ L1 캐시보다 크지만 약간 느린 캐시다. 보통 각 CPU 코어마다 �
 
 ### 지역성 원리 (Principle of Locality)
 
-캐시가 효과적으로 동작하는 이유는 프로그램이 **지역성(Locality)**을 가지기 때문이다.
+캐시가 효과적으로 동작하는 이유는 프로그램이 **지역성(Locality)**을 가지기 때문이에요.
 
 #### 시간 지역성 (Temporal Locality)
 
-최근에 접근한 데이터는 가까운 미래에 다시 접근할 가능성이 높다.
+최근에 접근한 데이터는 가까운 미래에 다시 접근할 가능성이 높습니다.
 
 ```java
 // 시간 지역성 예시
@@ -97,13 +97,13 @@ for (int i = 0; i < 1000; i++) {
 }
 ```
 
-변수 `sum`은 루프 동안 계속 재사용되므로, 캐시에 저장해두면 효율적이다.
+변수 `sum`은 루프 동안 계속 재사용되므로, 캐시에 저장해두면 효율적이에요.
 
 > 출처: [Carnegie Mellon University - Introduction to Computer Systems](https://www.cs.cmu.edu/~213/) (15-213 강의 자료)
 
 #### 공간 지역성 (Spatial Locality)
 
-최근에 접근한 데이터의 **주변 데이터**에 접근할 가능성이 높다.
+최근에 접근한 데이터의 **주변 데이터**에 접근할 가능성이 높아요.
 
 ```java
 // 공간 지역성 예시
@@ -113,10 +113,10 @@ for (int i = 0; i < 1000; i++) {
 }
 ```
 
-배열은 메모리에 연속적으로 저장되므로, `array[0]`을 캐시에 가져올 때 주변의 `array[1]`, `array[2]`도 함께 가져온다 (캐시 라인 단위).
+배열은 메모리에 연속적으로 저장되므로, `array[0]`을 캐시에 가져올 때 주변의 `array[1]`, `array[2]`도 함께 가져옵니다 (캐시 라인 단위).
 
 **캐시 라인 (Cache Line):**
-캐시는 데이터를 개별 바이트가 아닌 블록 단위로 가져온다. 일반적으로 64바이트 단위의 캐시 라인을 사용한다.
+캐시는 데이터를 개별 바이트가 아닌 블록 단위로 가져와요. 일반적으로 64바이트 단위의 캐시 라인을 사용합니다.
 
 ![](/uploads/theory/cache-and-buffer/cache-line.png)
 
@@ -126,13 +126,13 @@ for (int i = 0; i < 1000; i++) {
 
 ### 버퍼의 목적
 
-버퍼는 **속도 차이가 있는 두 장치 사이에서 데이터를 임시 저장**하는 공간이다. 생산자(Producer)가 데이터를 생성하는 속도와 소비자(Consumer)가 데이터를 처리하는 속도가 다를 때, 그 차이를 완충한다.
+버퍼는 **속도 차이가 있는 두 장치 사이에서 데이터를 임시 저장**하는 공간이에요. 생산자(Producer)가 데이터를 생성하는 속도와 소비자(Consumer)가 데이터를 처리하는 속도가 다를 때, 그 차이를 완충합니다.
 
 **핵심 특징:**
-- 데이터의 **이동**을 관리한다 (복사가 아님)
-- 쓰기 성능 향상이 주목적이다
+- 데이터의 **이동**을 관리해요 (복사가 아님)
+- 쓰기 성능 향상이 주목적이에요
 - 데이터 손실 방지
-- 명시적으로 관리된다 (애플리케이션이 의식함)
+- 명시적으로 관리됩니다 (애플리케이션이 의식함)
 
 > 출처: [GeeksforGeeks - What is Buffer in Computer Science?](https://www.geeksforgeeks.org/what-is-buffer-in-computer-science/)
 
@@ -140,7 +140,7 @@ for (int i = 0; i < 1000; i++) {
 
 #### 키보드 버퍼
 
-사용자가 키를 누르는 속도와 프로그램이 입력을 처리하는 속도 사이의 간격을 메운다.
+사용자가 키를 누르는 속도와 프로그램이 입력을 처리하는 속도 사이의 간격을 메워줍니다.
 
 ![](/uploads/theory/cache-and-buffer/keyboard-buffer.png)
 
@@ -153,13 +153,13 @@ for (int i = 0; i < 1000; i++) {
 프로그램:     "Hello\n" 읽기
 ```
 
-키보드 버퍼가 없다면, 프로그램이 입력을 읽기 전에 사용자가 누른 키가 손실될 수 있다.
+키보드 버퍼가 없다면, 프로그램이 입력을 읽기 전에 사용자가 누른 키가 손실될 수 있어요.
 
 > 출처: [GeeksforGeeks - What is Buffer in Computer Science?](https://www.geeksforgeeks.org/what-is-buffer-in-computer-science/)
 
 #### 디스크 버퍼 (Disk Buffer)
 
-디스크는 RAM보다 훨씬 느리다. 데이터를 디스크에 쓸 때마다 기다리면 프로그램이 멈춘다.
+디스크는 RAM보다 훨씬 느려요. 데이터를 디스크에 쓸 때마다 기다리면 프로그램이 멈추게 됩니다.
 
 ```java
 // 버퍼 없이 디스크 쓰기
@@ -175,18 +175,18 @@ for (int i = 0; i < 1000; i++) {
 writer.flush();  // 버퍼의 내용을 한 번에 디스크로
 ```
 
-버퍼를 사용하면 여러 번의 작은 쓰기를 모아서 한 번의 큰 쓰기로 처리할 수 있다.
+버퍼를 사용하면 여러 번의 작은 쓰기를 모아서 한 번의 큰 쓰기로 처리할 수 있어요.
 
 > 출처: [Java Documentation - BufferedWriter](https://docs.oracle.com/javase/8/docs/api/java/io/BufferedWriter.html), [GeeksforGeeks - BufferedWriter in Java](https://www.geeksforgeeks.org/java-io-bufferedwriter-class-java/)
 
 #### 네트워크 버퍼 (Network Buffer)
 
-네트워크 통신에서 송신 버퍼와 수신 버퍼를 사용한다.
+네트워크 통신에서 송신 버퍼와 수신 버퍼를 사용해요.
 
 ![](/uploads/theory/cache-and-buffer/network-buffer.png)
 
 
-수신 버퍼는 네트워크에서 데이터가 도착하는 속도와 애플리케이션이 데이터를 읽는 속도의 차이를 흡수한다.
+수신 버퍼는 네트워크에서 데이터가 도착하는 속도와 애플리케이션이 데이터를 읽는 속도의 차이를 흡수합니다.
 
 ```java
 // TCP 소켓 버퍼 크기 설정
@@ -199,13 +199,13 @@ socket.setReceiveBufferSize(65536);  // 수신 버퍼: 64KB
 
 #### 링 버퍼 (Ring Buffer / Circular Buffer)
 
-고정 크기의 버퍼를 원형으로 사용하는 자료구조다.
+고정 크기의 버퍼를 원형으로 사용하는 자료구조예요.
 
 ![](/uploads/theory/cache-and-buffer/ring-buffer.png)
 
 
 
-링 버퍼는 포인터가 끝에 도달하면 처음으로 돌아가므로, 메모리를 재활용할 수 있다.
+링 버퍼는 포인터가 끝에 도달하면 처음으로 돌아가므로, 메모리를 재활용할 수 있습니다.
 
 ```c
 typedef struct {
@@ -253,7 +253,7 @@ char ring_buffer_read(RingBuffer* rb) {
 
 ### 메모리 관점에서의 차이
 
-리눅스의 `free` 명령어를 실행하면 캐시와 버퍼가 별도로 표시된다.
+리눅스의 `free` 명령어를 실행하면 캐시와 버퍼가 별도로 표시돼요.
 
 ```bash
 $ free -h
@@ -276,11 +276,11 @@ Swap:         2.0Gi          0B       2.0Gi
 
 ### Write-Through vs Write-Back
 
-캐시에 데이터를 쓸 때 두 가지 정책이 있다.
+캐시에 데이터를 쓸 때 두 가지 정책이 있어요.
 
 #### Write-Through (즉시 쓰기)
 
-캐시와 메인 메모리에 **동시에** 쓴다.
+캐시와 메인 메모리에 **동시에** 씁니다.
 
 ![](/uploads/theory/cache-and-buffer/write-through.png)
 
@@ -296,7 +296,7 @@ Swap:         2.0Gi          0B       2.0Gi
 
 #### Write-Back (나중에 쓰기)
 
-캐시에만 쓰고, 나중에 캐시 라인이 교체될 때 메모리에 쓴다.
+캐시에만 쓰고, 나중에 캐시 라인이 교체될 때 메모리에 씁니다.
 
 ![](/uploads/theory/cache-and-buffer/write-back.png)
 
@@ -312,7 +312,7 @@ Swap:         2.0Gi          0B       2.0Gi
 
 ### Dirty Bit
 
-Dirty Bit는 캐시 라인이 수정되었는지 표시하는 플래그다.
+Dirty Bit는 캐시 라인이 수정되었는지 표시하는 플래그예요.
 
 캐시 라인 구조:
 ![](/uploads/theory/cache-and-buffer/dirty-bit.svg)
@@ -331,7 +331,7 @@ Dirty Bit는 캐시 라인이 수정되었는지 표시하는 플래그다.
 
 ### Producer-Consumer 패턴
 
-버퍼는 전형적으로 생산자-소비자 문제에서 사용된다.
+버퍼는 전형적으로 생산자-소비자 문제에서 사용돼요.
 
 ```java
 // 공유 버퍼
@@ -401,13 +401,13 @@ class Consumer extends Thread {
 **동작 흐름:**
 ![](/uploads/theory/cache-and-buffer/producer-consumer-flow.png)
 
-생산자가 소비자보다 빠르더라도, 버퍼가 중간에서 데이터를 보관하므로 손실 없이 처리할 수 있다.
+생산자가 소비자보다 빠르더라도, 버퍼가 중간에서 데이터를 보관하므로 손실 없이 처리할 수 있습니다.
 
 > 출처: [GeeksforGeeks - Producer Consumer Problem in Java](https://www.geeksforgeeks.org/producer-consumer-solution-using-threads-java/), [Oracle - Java Concurrency Utilities](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/package-summary.html)
 
 ### 버퍼 오버플로우 (Buffer Overflow)
 
-버퍼의 크기를 초과하여 데이터를 쓰면 버퍼 오버플로우가 발생한다.
+버퍼의 크기를 초과하여 데이터를 쓰면 버퍼 오버플로우가 발생해요.
 
 ```c
 char buffer[10];
@@ -420,7 +420,7 @@ strcpy(buffer, "This is a very long string");  // 버퍼 오버플로우!
 ![](/uploads/theory/cache-and-buffer/buffer-overflow.png)
 
 
-버퍼 오버플로우는 심각한 보안 취약점으로, 공격자가 리턴 주소를 조작하여 악성 코드를 실행할 수 있다.
+버퍼 오버플로우는 심각한 보안 취약점으로, 공격자가 리턴 주소를 조작하여 악성 코드를 실행할 수 있습니다.
 
 **방어 기법:**
 ```c
@@ -546,7 +546,7 @@ public class BufferedLogger {
 5. 버퍼 소진: "버퍼링 중..." 표시
 ```
 
-버퍼가 없다면 네트워크 속도가 조금만 느려져도 재생이 끊긴다.
+버퍼가 없다면 네트워크 속도가 조금만 느려져도 재생이 끊기게 됩니다.
 
 > 출처: [Medium - Video Streaming Buffering Strategies](https://medium.com/@alexbespoyasov/video-streaming-buffering-strategies-48935eb96d2e), [Netflix Tech Blog - Per-Title Encode Optimization](https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2)
 
@@ -576,21 +576,21 @@ jdbcTemplate.batchUpdate(
 // 1,000개 INSERT → 1초
 ```
 
-개별 쿼리를 버퍼에 모았다가 한 번에 전송하면 네트워크 왕복 시간을 줄일 수 있다.
+개별 쿼리를 버퍼에 모았다가 한 번에 전송하면 네트워크 왕복 시간을 줄일 수 있어요.
 
 > 출처: [Spring Framework Documentation - Batch Operations](https://docs.spring.io/spring-framework/docs/current/reference/html/data-access.html#jdbc-batch-operations), [Baeldung - Batch Insert/Update with Hibernate](https://www.baeldung.com/jpa-hibernate-batch-insert-update)
 
 ## 9. 기술 업계 실전 사례
 
-우리가 겪은 문제는 이미 다른 회사들도 겪었던 문제다. 어떻게 해결했는지 살펴보자.
+우리가 겪은 문제는 이미 다른 회사들도 겪었던 문제예요. 어떻게 해결했는지 살펴보겠습니다.
 
 ### 1. 카카오톡의 캐시 서버 진화 - 물리 서버 256대를 어떻게 줄였나
 
-카카오톡은 초당 400만 건의 데이터 접근 요청을 처리한다. 처음에는 Memcached 물리 서버 256대를 운영했는데, 문제가 있었다. 데이터는 적은데 트래픽 분산을 위해 노드를 늘리다 보니, 캐시 클러스터가 60개 노드인데 각 노드가 32GB 중 겨우 300MB만 쓰는 상황이 됐다.
+카카오톡은 초당 400만 건의 데이터 접근 요청을 처리해요. 처음에는 Memcached 물리 서버 256대를 운영했는데, 문제가 있었어요. 데이터는 적은데 트래픽 분산을 위해 노드를 늘리다 보니, 캐시 클러스터가 60개 노드인데 각 노드가 32GB 중 겨우 300MB만 쓰는 상황이 됐거든요.
 
-게다가 물리 서버라 장애가 나면 대응이 느렸다. 개발자가 로그 알림으로 장애를 감지하고, 클라이언트 설정에서 해당 노드를 제거하고, 인프라팀에 새 장비를 요청하고, 새 노드를 설정에 추가하는 과정을 수동으로 했다.
+게다가 물리 서버라 장애가 나면 대응이 느렸습니다. 개발자가 로그 알림으로 장애를 감지하고, 클라이언트 설정에서 해당 노드를 제거하고, 인프라팀에 새 장비를 요청하고, 새 노드를 설정에 추가하는 과정을 수동으로 했어요.
 
-이걸 Redis + Kubernetes로 바꿨다. Sentinel로 자동 Failover를 구성하고, 내부 도구(Ban)를 만들어서 전체 과정을 자동화했다. 이제는 노드 장애가 나도 자동으로 감지되고 복구된다.
+이걸 Redis + Kubernetes로 바꿨습니다. Sentinel로 자동 Failover를 구성하고, 내부 도구(Ban)를 만들어서 전체 과정을 자동화했어요. 이제는 노드 장애가 나도 자동으로 감지되고 복구돼요.
 
 > 출처: [카카오 기술블로그 - if(kakao)2020 카카오톡 캐싱 시스템의 진화](https://tech.kakao.com/2020/11/10/if-kakao-2020-commentary-01-kakao/)
 
@@ -598,11 +598,11 @@ jdbcTemplate.batchUpdate(
 
 ### 2. Cache Stampede 문제와 해결법
 
-인기 있는 데이터의 캐시가 만료되는 순간, 수천 개의 요청이 동시에 DB를 조회하는 현상이다. 캐시가 만료되는 시각 T에 요청 1000개가 동시에 들어오면, 모두 캐시 미스가 나고, 1000개가 전부 DB를 조회한다. DB가 감당을 못 하고 죽는다.
+인기 있는 데이터의 캐시가 만료되는 순간, 수천 개의 요청이 동시에 DB를 조회하는 현상이에요. 캐시가 만료되는 시각 T에 요청 1000개가 동시에 들어오면, 모두 캐시 미스가 나고, 1000개가 전부 DB를 조회합니다. DB가 감당을 못 하고 죽어버려요.
 
 **해결 방법 1: 분산 락**
 
-첫 번째 요청만 DB를 조회하고 나머지는 대기시킨다.
+첫 번째 요청만 DB를 조회하고 나머지는 대기시킵니다.
 
 ```kotlin
 suspend fun getWithLock(key: String): String? {
@@ -629,7 +629,7 @@ suspend fun getWithLock(key: String): String? {
 
 **해결 방법 2: PER(Probabilistic Early Recomputation) 알고리즘**
 
-TTL이 얼마 안 남았으면 미리 백그라운드에서 갱신한다. 2015년 VLDB 컨퍼런스에 발표된 방법이다.
+TTL이 얼마 안 남았으면 미리 백그라운드에서 갱신해요. 2015년 VLDB 컨퍼런스에 발표된 방법입니다.
 
 ```kotlin
 fun getWithEarlyExpiration(key: String): String {
@@ -647,7 +647,7 @@ fun getWithEarlyExpiration(key: String): String {
 }
 ```
 
-DB 동시 쿼리가 1000회에서 1회로 줄어든다. DB CPU 사용률도 90%에서 10%로 떨어진다.
+DB 동시 쿼리가 1000회에서 1회로 줄어들어요. DB CPU 사용률도 90%에서 10%로 떨어집니다.
 
 > 참고: [토스 기술블로그 - 캐시 문제 해결 가이드](https://toss.tech/article/cache-traffic-tip)
 
@@ -655,9 +655,9 @@ DB 동시 쿼리가 1000회에서 1회로 줄어든다. DB CPU 사용률도 90%�
 
 ### 3. 조회수 같은 Write-Heavy 데이터 처리
 
-유튜브 같은 서비스에서 동영상 조회수를 매번 DB에 쓰면 어떻게 될까? 조회 1만 건/초면 MySQL UPDATE도 1만 건/초다. DB가 버틸 수 없다.
+유튜브 같은 서비스에서 동영상 조회수를 매번 DB에 쓰면 어떻게 될까요? 조회 1만 건/초면 MySQL UPDATE도 1만 건/초예요. DB가 버틸 수 없습니다.
 
-Redis에 먼저 쓰고, 1분마다 배치로 MySQL에 동기화하는 방식으로 해결한다.
+Redis에 먼저 쓰고, 1분마다 배치로 MySQL에 동기화하는 방식으로 해결해요.
 
 ```kotlin
 // 조회수 증가: Redis에만 (빠름)
@@ -680,13 +680,13 @@ fun syncViewCounts() {
 }
 ```
 
-DB Write가 10,000건/초에서 100건/분으로 줄어든다. 6,000배 감소다.
+DB Write가 10,000건/초에서 100건/분으로 줄어들어요. 6,000배 감소입니다.
 
 ---
 
 ### 4. 안정 해시로 캐시 서버 추가해도 안정적으로
 
-캐시 서버가 3대에서 4대로 늘어나면 어떻게 될까? 일반적인 해시 함수(`hash(key) % server_count`)를 쓰면 모든 키의 위치가 바뀐다.
+캐시 서버가 3대에서 4대로 늘어나면 어떻게 될까요? 일반적인 해시 함수(`hash(key) % server_count`)를 쓰면 모든 키의 위치가 바뀌어요.
 
 ```
 키 "user:1": hash = 12345
@@ -694,41 +694,41 @@ DB Write가 10,000건/초에서 100건/분으로 줄어든다. 6,000배 감소�
   After:  12345 % 4 = 1 (서버 1)
 ```
 
-모든 키가 재배치되니 캐시 미스율이 100%가 된다. DB에 갑자기 엄청난 트래픽이 몰린다.
+모든 키가 재배치되니 캐시 미스율이 100%가 됩니다. DB에 갑자기 엄청난 트래픽이 몰려요.
 
-안정 해시(Consistent Hashing)를 쓰면 서버를 추가해도 평균적으로 k/n개의 키만 재배치된다. 서버 3대에서 4대로 늘어나면 25%만 재배치된다.
+안정 해시(Consistent Hashing)를 쓰면 서버를 추가해도 평균적으로 k/n개의 키만 재배치돼요. 서버 3대에서 4대로 늘어나면 25%만 재배치됩니다.
 
-해시 링에 서버와 키를 배치하고, 키 위치에서 시계방향으로 가장 먼저 만나는 서버에 저장하는 방식이다. 가상 노드(Virtual Node)를 150개 정도 만들어서 데이터가 고르게 분산되도록 한다.
+해시 링에 서버와 키를 배치하고, 키 위치에서 시계방향으로 가장 먼저 만나는 서버에 저장하는 방식이에요. 가상 노드(Virtual Node)를 150개 정도 만들어서 데이터가 고르게 분산되도록 합니다.
 
-아마존 DynamoDB, 카산드라, 디스코드 채팅 등에서 이 방식을 쓴다.
+아마존 DynamoDB, 카산드라, 디스코드 채팅 등에서 이 방식을 쓰고 있어요.
 
 ---
 
 ### 5. 토스의 웹 캐싱 전략
 
-토스 프론트엔드 팀은 웹 성능을 높이기 위해 HTTP 캐시를 적극적으로 활용한다.
+토스 프론트엔드 팀은 웹 성능을 높이기 위해 HTTP 캐시를 적극적으로 활용해요.
 
 **HTML 파일:**
 ```
 Cache-Control: max-age=0, s-maxage=31536000
 ```
 
-브라우저는 항상 서버에 재검증을 요청하고(max-age=0), CDN은 1년 동안 캐싱한다(s-maxage=31536000). 배포할 때마다 CDN Invalidation을 실행해서 CDN이 새 HTML을 받아오게 한다.
+브라우저는 항상 서버에 재검증을 요청하고(max-age=0), CDN은 1년 동안 캐싱합니다(s-maxage=31536000). 배포할 때마다 CDN Invalidation을 실행해서 CDN이 새 HTML을 받아오게 해요.
 
 **JS/CSS 파일:**
 
-빌드할 때마다 URL에 버전 번호를 붙여서 고유한 URL을 만든다.
+빌드할 때마다 URL에 버전 번호를 붙여서 고유한 URL을 만들어요.
 ```
 /v1234/main.js
 /v1235/main.js
 ```
 
-이런 파일은 절대 바뀌지 않으니 max-age를 최대치로 설정한다.
+이런 파일은 절대 바뀌지 않으니 max-age를 최대치로 설정합니다.
 ```
 Cache-Control: max-age=31536000
 ```
 
-HTTP 캐시를 효율적으로 관리하려면 Cache-Control 헤더를 섬세하게 조절해야 한다는 게 토스 팀의 노하우다.
+HTTP 캐시를 효율적으로 관리하려면 Cache-Control 헤더를 섬세하게 조절해야 한다는 게 토스 팀의 노하우예요.
 
 > 출처: [토스 기술블로그 - 웹 서비스 캐시 똑똑하게 다루기](https://toss.tech/article/smart-web-service-cache)
 
@@ -736,7 +736,7 @@ HTTP 캐시를 효율적으로 관리하려면 Cache-Control 헤더를 섬세하
 
 ## 10. 정리
 
-캐시와 버퍼는 모두 임시 저장 공간이지만, 목적과 사용 방식이 다르다.
+캐시와 버퍼는 모두 임시 저장 공간이지만, 목적과 사용 방식이 달라요.
 
 **캐시 (Cache):**
 - **목적**: 느린 메모리 접근을 줄여 속도 향상
@@ -750,7 +750,7 @@ HTTP 캐시를 효율적으로 관리하려면 Cache-Control 헤더를 섬세하
 - **예시**: 키보드 버퍼, 디스크 버퍼, 네트워크 버퍼, 스트리밍 버퍼
 - **핵심 원리**: Producer-Consumer 패턴
 
-두 개념을 정확히 이해하면 시스템 성능을 최적화하고, 면접에서도 명확하게 설명할 수 있다.
+두 개념을 정확히 이해하면 시스템 성능을 최적화하고, 면접에서도 명확하게 설명할 수 있습니다.
 
 ## 11. 참고 자료
 

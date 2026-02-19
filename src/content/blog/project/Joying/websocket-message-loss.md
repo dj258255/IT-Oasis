@@ -15,13 +15,13 @@ draft: false
 coverImage: "/uploads/project/Joying/websocket-message-loss/unified-api.svg"
 ---
 
-성능 문제는 해결했다. 그런데 모바일 테스트 중 예상치 못한 현상이 발견됐다.
+성능 문제는 해결했어요. 그런데 모바일 테스트 중 예상치 못한 현상이 발견됐습니다.
 
 ---
 
 ## 문제 발견
 
-모바일 환경에서 테스트 중 다음과 같은 오류가 보고됐다.
+모바일 환경에서 테스트 중 다음과 같은 오류가 보고됐어요.
 
 **"채팅하다가 와이파이 끊겼다가 다시 연결하면 중간 메시지가 안 와요."**
 
@@ -45,7 +45,7 @@ coverImage: "/uploads/project/Joying/websocket-message-loss/unified-api.svg"
 
 ## 원인: Redis Pub/Sub의 Fire-and-Forget
 
-Redis Pub/Sub은 메시지를 저장하지 않는다. 현재 구독 중인 클라이언트에게만 전송하고 즉시 폐기한다.
+Redis Pub/Sub은 메시지를 저장하지 않아요. 현재 구독 중인 클라이언트에게만 전송하고 즉시 폐기합니다.
 
 
 **Redis Pub/Sub 동작**
@@ -56,29 +56,29 @@ Redis Pub/Sub은 메시지를 저장하지 않는다. 현재 구독 중인 클�
 > 연결이 끊긴 동안 발행된 메시지는 영영 못 받음
 
 
-MongoDB에는 모든 메시지가 저장되어 있다. 하지만 WebSocket이 끊긴 동안 발행된 Pub/Sub 메시지는 유실된다.
+MongoDB에는 모든 메시지가 저장되어 있어요. 하지만 WebSocket이 끊긴 동안 발행된 Pub/Sub 메시지는 유실돼요.
 
 ---
 
 ## 메시지 복구 방법 검토
 
-재연결 시 놓친 메시지를 복구하는 방법을 검토했다.
+재연결 시 놓친 메시지를 복구하는 방법을 검토했어요.
 
 ### 1. Kafka Consumer Group
 
-Kafka는 Consumer Group 단위로 Offset을 관리해서 재연결 시 재전송이 완벽하다. 하지만 Kafka 클러스터가 필요하고, 현재 트래픽(초당 100건)에는 과하다.
+Kafka는 Consumer Group 단위로 Offset을 관리해서 재연결 시 재전송이 완벽해요. 하지만 Kafka 클러스터가 필요하고, 현재 트래픽(초당 100건)에는 과합니다.
 
 ### 2. Redis Stream
 
-Redis Stream은 메시지를 저장하면서 Consumer Group도 지원한다. 하지만 ACK 처리 로직이 필요하고, **이미 MongoDB에 메시지가 저장되어 있어서 같은 데이터를 두 곳에 저장하는 셈**이다.
+Redis Stream은 메시지를 저장하면서 Consumer Group도 지원해요. 하지만 ACK 처리 로직이 필요하고, **이미 MongoDB에 메시지가 저장되어 있어서 같은 데이터를 두 곳에 저장하는 셈**이에요.
 
 ### 3. 서버 푸시 큐
 
-서버에서 사용자별로 미전송 메시지 큐를 관리하는 방식이다. 재연결 시 빠르지만, 서버 재시작이나 확장 시 큐가 유실되거나 동기화가 안 되는 문제가 있다.
+서버에서 사용자별로 미전송 메시지 큐를 관리하는 방식이에요. 재연결 시 빠르지만, 서버 재시작이나 확장 시 큐가 유실되거나 동기화가 안 되는 문제가 있어요.
 
 ### 4. MongoDB 조회 (선택)
 
-**이미 MongoDB에 모든 메시지가 저장되어 있다.** 재연결 시 마지막 수신 시간 이후 메시지를 조회하면 된다. 추가 인프라 없이 기존 데이터를 그대로 활용할 수 있고, 재연결 시 50-100ms 지연은 사용자가 체감하기 어려운 수준이다.
+**이미 MongoDB에 모든 메시지가 저장되어 있어요.** 재연결 시 마지막 수신 시간 이후 메시지를 조회하면 돼요. 추가 인프라 없이 기존 데이터를 그대로 활용할 수 있고, 재연결 시 50-100ms 지연은 사용자가 체감하기 어려운 수준이에요.
 
 ---
 
@@ -93,13 +93,13 @@ Redis Stream은 메시지를 저장하면서 Consumer Group도 지원한다. 하
 5. 못 받은 메시지 복구
 
 
-Redis Pub/Sub은 실시간 전달만 담당하고, 메시지 복구는 MongoDB에서 처리한다.
+Redis Pub/Sub은 실시간 전달만 담당하고, 메시지 복구는 MongoDB에서 처리해요.
 
 ---
 
 ## 커서 기반 페이지네이션
 
-재연결 API를 설계하면서 무한 스크롤 API와 합칠 수 있다는 점을 발견했다.
+재연결 API를 설계하면서 무한 스크롤 API와 합칠 수 있다는 점을 발견했어요.
 
 
 무한 스크롤: before 파라미터로 과거 방향 조회
@@ -113,7 +113,7 @@ Redis Pub/Sub은 실시간 전달만 담당하고, 메시지 복구는 MongoDB�
 ![](/uploads/project/Joying/websocket-message-loss/unified-api.svg)
 
 
-하나의 API로 두 가지 용도를 처리한다.
+하나의 API로 두 가지 용도를 처리해요.
 
 ### 사용 예시
 
@@ -142,7 +142,7 @@ GET /api/chat-rooms/123/messages?after=2024-01-01T10:00:00Z&size=50
 
 ![](/uploads/project/Joying/websocket-message-loss/mongodb-index.svg)
 
-복합 인덱스로 chatRoomId와 createdAt 기준 조회를 최적화했다.
+복합 인덱스로 chatRoomId와 createdAt 기준 조회를 최적화했어요.
 
 ---
 

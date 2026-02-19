@@ -18,7 +18,7 @@ coverImage: "/uploads/project/Tymee/mobile-jwt-auth/xss-attack-diagram.png"
 
 ## 들어가며
 
-이전 프로젝트에서 웹용으로 HttpOnly Cookie + JWT로 인증을 구현했었다.
+이전 프로젝트에서 웹용으로 HttpOnly Cookie + JWT로 인증을 구현했었어요.
 
 ```java
 // 백엔드 3줄
@@ -32,9 +32,9 @@ cookie.setAttribute("SameSite", "Lax");
 axios.create({ baseURL: '/api/v1', withCredentials: true });
 ```
 
-브라우저가 알아서 쿠키 보내주고, XSS도 막아주고, 편했다.
+브라우저가 알아서 쿠키 보내주고, XSS도 막아주고, 편했거든요.
 
-이번에 1인 개발로 모바일 앱 백엔드를 만들면서 웹과 모바일의 인증 구조가 많이 다르다는 걸 알았다.
+이번에 1인 개발로 모바일 앱 백엔드를 만들면서 웹과 모바일의 인증 구조가 많이 다르다는 걸 알게 됐어요.
 
 ---
 
@@ -51,7 +51,7 @@ axios.create({ baseURL: '/api/v1', withCredentials: true });
 
 ### 현업에서도 비슷하게 한다
 
-검색해보니 다른 기업들도 비슷한 구조를 사용하고 있었다.
+검색해보니 다른 기업들도 비슷한 구조를 사용하고 있었어요.
 
 > "For native apps, use platform-secure storage APIs. For example, in iOS, use Keychain, and in Android, use Keystore."
 >
@@ -61,7 +61,7 @@ axios.create({ baseURL: '/api/v1', withCredentials: true });
 >
 > — [Duende Software - JWT Best Practices](https://duendesoftware.com/learn/best-practices-using-jwts-with-web-and-mobile-apps)
 
-Redis로 Refresh Token을 관리하는 것도 업계 표준이다.
+Redis로 Refresh Token을 관리하는 것도 업계 표준이에요.
 
 > "After a user has successfully entered their login credentials, mobile banking apps use a token stored in Redis for the duration of a user session. Redis provides < 1ms latency at incredibly high throughput which makes authentication and session data access much faster."
 >
@@ -73,39 +73,39 @@ Redis로 Refresh Token을 관리하는 것도 업계 표준이다.
 
 ### 1. 네이티브 앱에는 쿠키 개념이 없다
 
-웹 브라우저는 쿠키를 자동으로 관리한다. 하지만 iOS/Android 네이티브 앱은 브라우저가 아니다.
+웹 브라우저는 쿠키를 자동으로 관리해요. 하지만 iOS/Android 네이티브 앱은 브라우저가 아닙니다.
 
 ```
 웹: 브라우저 -> 쿠키 자동 전송 -> 서버
 모바일: 앱 -> ??? -> 서버
 ```
 
-모바일 앱에서 쿠키를 쓰려면 직접 CookieManager를 관리해야 하는데, 이건 웹뷰에서나 쓰는 방식이다.
+모바일 앱에서 쿠키를 쓰려면 직접 CookieManager를 관리해야 하는데, 이건 웹뷰에서나 쓰는 방식이에요.
 
-네이티브 앱은 보통 **Authorization 헤더**를 쓴다.
+네이티브 앱은 보통 **Authorization 헤더**를 씁니다.
 
 ### 2. 모바일은 XSS가 없다
 
-웹에서 HttpOnly Cookie를 쓰는 가장 큰 이유가 XSS 방어다.
+웹에서 HttpOnly Cookie를 쓰는 가장 큰 이유가 XSS 방어예요.
 
 ![xss-attack-diagram](/uploads/project/Tymee/mobile-jwt-auth/xss-attack-diagram.png)
 
-근데 네이티브 앱은 **JavaScript 실행 환경이 아니다**. 악성 스크립트가 실행될 수가 없다.
+근데 네이티브 앱은 **JavaScript 실행 환경이 아니에요**. 악성 스크립트가 실행될 수가 없거든요.
 
 대신 모바일은 다른 위협이 있다:
 - 기기 분실/도난
 - 루팅/탈옥된 기기
 - 앱 디컴파일
 
-그래서 **OS 레벨 보안 저장소**(Keychain, Keystore)를 쓴다.
+그래서 **OS 레벨 보안 저장소**(Keychain, Keystore)를 써요.
 
 > "Never store JWTs in local storage or session storage. For mobile apps, use secure, encrypted storage like Keychain on iOS or Keystore on Android."
 >
 > — [Compile7 - JWT Best Practices for Mobile Apps](https://compile7.org/decompile/jwt-best-practices-for-mobile-apps)
 
-### 3. 멀티 디바이스 지원이 필수다
+### 3. 멀티 디바이스 지원이 필수예요
 
-웹은 보통 하나의 브라우저에서 로그인한다. 근데 모바일은?
+웹은 보통 하나의 브라우저에서 로그인해요. 근데 모바일은?
 
 ```
 사용자 A
@@ -113,17 +113,17 @@ iPhone (아침 출근길)
 iPad (집에서)
 ```
 
-각 기기마다 **독립적인 세션**이 필요하다. 쿠키는 브라우저 단위라 이걸 처리하기 어렵다.
+각 기기마다 **독립적인 세션**이 필요해요. 쿠키는 브라우저 단위라 이걸 처리하기 어렵습니다.
 
 ---
 
 ## 구현하면서 힘들었던 부분들
 
-### 1. 1인 개발자에게 OAuth 설정은 지옥이다
+### 1. 1인 개발자에게 OAuth 설정은 지옥이에요
 
-웹에서는 OAuth Redirect 방식을 썼다. 구글 콘솔에서 클라이언트 ID 만들고, redirect URI 등록하면 끝이었다.
+웹에서는 OAuth Redirect 방식을 썼어요. 구글 콘솔에서 클라이언트 ID 만들고, redirect URI 등록하면 끝이었거든요.
 
-**모바일은 설정이 번거롭다.**
+**모바일은 설정이 번거로워요.**
 
 #### Google OAuth 설정
 
@@ -162,7 +162,7 @@ keytool -list -v -keystore your-release-key.keystore -alias your-alias
 6. 백엔드에서 JWT 생성해서 client_secret 만들기
 
 
-Apple은 client_secret이 **고정값이 아니라 JWT**다. 백엔드에서 직접 생성해야 한다:
+Apple은 client_secret이 **고정값이 아니라 JWT**예요. 백엔드에서 직접 생성해야 합니다:
 
 ![apple-client-secret-jwt](/uploads/project/Tymee/mobile-jwt-auth/apple-client-secret-jwt.png)
 
@@ -182,16 +182,16 @@ Apple은 client_secret이 **고정값이 아니라 JWT**다. 백엔드에서 직
 6. Redirect URI 등록 (웹용)
 
 
-**웹에서는 redirect URI 하나 등록하면 끝이었는데**, 모바일은 플랫폼마다 설정이 다르고, 인증서/키 관리까지 해야 한다.
+**웹에서는 redirect URI 하나 등록하면 끝이었는데**, 모바일은 플랫폼마다 설정이 다르고, 인증서/키 관리까지 해야 해요.
 
-Google + Apple + Kakao 세 개를 전부 설정하는 데 하루 이상 걸렸다.
+Google + Apple + Kakao 세 개를 전부 설정하는 데 하루 이상 걸렸어요.
 
 
 
 
 ### 2. OAuth 토큰 검증 방식이 제공자마다 다름
 
-웹에서는 OAuth Redirect 방식을 썼다:
+웹에서는 OAuth Redirect 방식을 썼어요:
 
 
 1. 프론트 -> 구글 로그인 페이지로 redirect
@@ -210,13 +210,13 @@ Google + Apple + Kakao 세 개를 전부 설정하는 데 하루 이상 걸렸�
 5. 백엔드 -> 앱에 JWT 발급
 
 
-**redirect가 없다!** 백엔드가 직접 토큰을 검증해야 한다.
+**redirect가 없어요!** 백엔드가 직접 토큰을 검증해야 합니다.
 
 > "For mobile apps, if an ID Token is provided from Google on the client-side, no redirection will happen, and the user can be signed in directly on the server."
 >
 > — [Google Developers - Verify Google ID Token](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
 
-문제는 제공자마다 검증 방식이 다르다는 거다:
+문제는 제공자마다 검증 방식이 다르다는 거예요:
 
 | 제공자 | 토큰 타입 | 검증 방식 |
 |--------|----------|----------|
@@ -235,7 +235,7 @@ PublicKey publicKey = getApplePublicKey(kid);
 restTemplate.exchange("https://kapi.kakao.com/v2/user/me", ...);
 ```
 
-**Apple이 제일 힘들었다.** 공개키 로테이션까지 처리해야 해서 24시간 캐싱 로직을 직접 구현했다.
+**Apple이 제일 힘들었어요.** 공개키 로테이션까지 처리해야 해서 24시간 캐싱 로직을 직접 구현했습니다.
 
 > "Before using the token, you need to make sure that it was signed by Apple's private key. To do that, you need Apple's public key to verify the signature. You can get the public key from Apple's endpoint."
 >
@@ -250,7 +250,7 @@ restTemplate.exchange("https://kapi.kakao.com/v2/user/me", ...);
 GoogleIdToken googleIdToken = verifier.verify(idToken);
 ```
 
-Google API Client 라이브러리가 공개키 fetch, 캐싱, 로테이션 대응까지 전부 처리해준다.
+Google API Client 라이브러리가 공개키 fetch, 캐싱, 로테이션 대응까지 전부 처리해줘요.
 
 **Apple은 공식 Java 라이브러리가 없다:**
 
@@ -261,7 +261,7 @@ PublicKey publicKey = getApplePublicKey(kid); // 공개키 fetch + 캐싱
 Claims claims = Jwts.parser().verifyWith(publicKey)...  // 검증
 ```
 
-Apple은 iOS/macOS SDK만 제공하고, **서버 사이드 Java 라이브러리를 제공하지 않는다.** 그래서 직접 구현해야 한다:
+Apple은 iOS/macOS SDK만 제공하고, **서버 사이드 Java 라이브러리를 제공하지 않아요.** 그래서 직접 구현해야 합니다:
 
 1. JWT 헤더에서 `kid` (Key ID) 추출
 2. Apple JWKS 엔드포인트(`https://appleid.apple.com/auth/keys`)에서 공개키 fetch
@@ -275,14 +275,14 @@ Apple은 iOS/macOS SDK만 제공하고, **서버 사이드 Java 라이브러리�
 - Apple 서버 장애 시 우리 서비스도 장애
 - 불필요한 외부 API 호출
 
-그래서 **24시간 캐싱**을 구현했다:
+그래서 **24시간 캐싱**을 구현했어요:
 
 ![apple-public-key-cache](/uploads/project/Tymee/mobile-jwt-auth/apple-public-key-cache.png)
 
 
 **왜 키 로테이션 대응이 필요한가?**
 
-Apple은 보안상 주기적으로 서명 키를 교체한다. 새 키가 생기면:
+Apple은 보안상 주기적으로 서명 키를 교체해요. 새 키가 생기면:
 
 ```
 1. 새 JWT에는 새로운 kid가 포함됨
@@ -291,7 +291,7 @@ Apple은 보안상 주기적으로 서명 키를 교체한다. 새 키가 생기
 4. 검증 성공
 ```
 
-24시간마다 캐시를 클리어해서 오래된 키(Apple이 폐기한 키)가 남아있지 않게 했다.
+24시간마다 캐시를 클리어해서 오래된 키(Apple이 폐기한 키)가 남아있지 않게 했어요.
 
 **Google vs Apple 비교:**
 
@@ -303,22 +303,22 @@ Apple은 보안상 주기적으로 서명 키를 교체한다. 새 키가 생기
 | **키 로테이션** | 자동 | 직접 대응 |
 | **구현 난이도** | 쉬움 (1줄) | 어려움 (50줄+) |
 
-1인 개발자 입장에서 Apple Sign In이 제일 힘들었던 이유다.
+1인 개발자 입장에서 Apple Sign In이 제일 힘들었던 이유예요.
 
 ---
 
 ### 3. Refresh Token 탈취 감지 로직
 
-웹에서는 HttpOnly 쿠키라 JavaScript로 접근 자체가 불가능했다. 탈취 감지가 필요 없었다.
+웹에서는 HttpOnly 쿠키라 JavaScript로 접근 자체가 불가능했어요. 탈취 감지가 필요 없었거든요.
 
-**모바일은 다르다.** 앱 저장소가 탈취되면 토큰이 노출될 수 있다.
+**모바일은 달라요.** 앱 저장소가 탈취되면 토큰이 노출될 수 있어요.
 
-그래서 **Redis에 Refresh Token을 저장**하고, 요청마다 비교한다:
+그래서 **Redis에 Refresh Token을 저장**하고, 요청마다 비교합니다:
 
 ![refresh-token-reuse-detection](/uploads/project/Tymee/mobile-jwt-auth/refresh-token-reuse-detection.png)
 
 
-Refresh Token Rotation + Reuse Detection은 OAuth 2.0 보안 권장사항이다.
+Refresh Token Rotation + Reuse Detection은 OAuth 2.0 보안 권장사항이에요.
 
 > "With refresh token rotation, you can detect if a token is being reused (which suggests theft), and immediately revoke the session. When a used token shows up again, it's a massive red flag. If RT_1 is used a second time, the server knows a breach happened. It should immediately revoke the entire token family."
 >
@@ -340,15 +340,15 @@ Refresh Token Rotation + Reuse Detection은 OAuth 2.0 보안 권장사항이다.
 3. 공격자가 이전 토큰으로 갱신 시도 -> Redis 값과 불일치!
 4. -> 모든 기기 강제 로그아웃
 
-웹에서는 생각도 못했던 로직이다.
+웹에서는 생각도 못했던 로직이에요.
 
 ---
 
 ### 4. 디바이스별 세션 관리
 
-웹은 쿠키가 브라우저 단위라 세션 관리가 단순했다.
+웹은 쿠키가 브라우저 단위라 세션 관리가 단순했어요.
 
-모바일은 **deviceId별로 독립 세션**을 관리해야 한다:
+모바일은 **deviceId별로 독립 세션**을 관리해야 합니다:
 
 
 **Redis 키 구조**
@@ -369,9 +369,9 @@ user_devices:{userId} -> {device1, device2, ...}
 
 ### 5. 사용자 상태 관리 복잡도
 
-웹에서는 단순했다. 로그인/로그아웃만 관리하면 됐다.
+웹에서는 단순했어요. 로그인/로그아웃만 관리하면 됐거든요.
 
-모바일은 **상태 머신**이 복잡하다:
+모바일은 **상태 머신**이 복잡해요:
 
 ![user-state-machine](/uploads/project/Tymee/mobile-jwt-auth/user-state-machine.png)
 
@@ -380,9 +380,9 @@ user_devices:{userId} -> {device1, device2, ...}
 
 ### 6. Swagger 테스트 환경 - DevAuthController
 
-웹에서는 브라우저로 직접 로그인하면 쿠키가 저장되니까 Swagger 테스트도 쉬웠다.
+웹에서는 브라우저로 직접 로그인하면 쿠키가 저장되니까 Swagger 테스트도 쉬웠어요.
 
-**모바일 OAuth는 앱에서만 동작한다.** Swagger에서 테스트할 방법이 없다.
+**모바일 OAuth는 앱에서만 동작해요.** Swagger에서 테스트할 방법이 없습니다.
 
 Google OAuth Playground로 토큰 발급받아서 테스트하려고 했는데:
 
@@ -397,14 +397,14 @@ Google token verification failed
 OAuth Playground: 407408718192.apps.googleusercontent.com
 ```
 
-JWT의 `aud` 클레임 검증에서 실패한다.
+JWT의 `aud` 클레임 검증에서 실패해요.
 
 **해결책: DevAuthController**
 
 ![dev-auth-controller](/uploads/project/Tymee/mobile-jwt-auth/dev-auth-controller.png)
 
 
-로컬/테스트 환경에서만 동작하는 개발용 로그인 API를 만들었다.
+로컬/테스트 환경에서만 동작하는 개발용 로그인 API를 만들었어요.
 
 > "You can use Spring Profiles to enable/disable security configuration based on the environment. Disabling Spring Security is useful in the development and testing phases to quickly bypass authentication layers. However, it should be avoided in production environments."
 >
@@ -414,7 +414,7 @@ JWT의 `aud` 클레임 검증에서 실패한다.
 >
 > — [Baeldung - Faking OAuth2 Single Sign-on](https://www.baeldung.com/spring-oauth2-mock-sso)
 
-Mock OAuth 서버를 쓰는 방법도 있지만, 1인 개발에선 DevAuthController가 가장 간단하다:
+Mock OAuth 서버를 쓰는 방법도 있지만, 1인 개발에선 DevAuthController가 가장 간단해요:
 
 > "Beeceptor's mock OAuth 2.0 server gives you a fully functional, no-setup-required OAuth provider. You don't need client secrets, you don't even need valid credentials. The mock server accepts any input and gives you back a realistic access token."
 >
@@ -451,9 +451,11 @@ Mock OAuth 서버를 쓰는 방법도 있지만, 1인 개발에선 DevAuthContro
 
 ## 결론
 
-같은 JWT인데 환경에 따라 완전히 다른 아키텍처가 필요하다. 웹에서는 HttpOnly Cookie로 XSS를 방어하고 브라우저가 쿠키를 자동 관리해주지만, 모바일은 네이티브 앱에 쿠키 개념이 없어서 Authorization 헤더를 쓰고 OS 레벨 보안 저장소(Keychain/Keystore)에 토큰을 저장한다.
+같은 JWT인데 환경에 따라 완전히 다른 아키텍처가 필요해요.
+웹에서는 HttpOnly Cookie로 XSS를 방어하고 브라우저가 쿠키를 자동 관리해주지만, 모바일은 네이티브 앱에 쿠키 개념이 없어서 Authorization 헤더를 쓰고 OS 레벨 보안 저장소(Keychain/Keystore)에 토큰을 저장합니다.
 
-웹 개발할 때는 "HttpOnly 쿠키 쓰면 끝"이었는데, 모바일은 OAuth 설정만 해도 Google/Apple/Kakao 각각 플랫폼별로 다르고 인증서 관리까지 해야 한다. 각 환경의 위협 모델을 이해하고 그에 맞는 방어 전략을 선택하는 게 핵심이다.
+웹 개발할 때는 "HttpOnly 쿠키 쓰면 끝"이었는데, 모바일은 OAuth 설정만 해도 Google/Apple/Kakao 각각 플랫폼별로 다르고 인증서 관리까지 해야 해요.
+각 환경의 위협 모델을 이해하고 그에 맞는 방어 전략을 선택하는 게 핵심이에요.
 
 ---
 

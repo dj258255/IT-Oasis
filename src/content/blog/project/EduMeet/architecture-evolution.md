@@ -22,12 +22,12 @@ coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-enti
 
 ## 1. 아키텍처란?
 
-팀원들과 아키텍처를 논의하면서 여러 선택지가 나왔다:
+팀원들과 아키텍처를 논의하면서 여러 선택지가 나왔어요:
 1. Controller - Service - DTO - DAO (전통적 MVC)
 2. Presentation - Application - Domain - Infrastructure (레이어드)
 3. 헥사고날 아키텍처
 
-아키텍처에 대한 정확한 정의를 찾기 어려웠지만, 공통적으로 언급되는 핵심이 있었다:
+아키텍처에 대한 정확한 정의를 찾기 어려웠지만, 공통적으로 언급되는 핵심이 있었어요:
 
 > **"아키텍처는 제약 조건을 통해 목적을 달성한다."**
 
@@ -53,7 +53,7 @@ coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-enti
 
 **클린 아키텍처란?**
 
-로버트 C. 마틴(엉클 밥)이 제안한 아키텍처로, 핵심 원칙은 **"의존성은 안쪽으로만 향한다"**:
+로버트 C. 마틴(엉클 밥)이 제안한 아키텍처로, 핵심 원칙은 **"의존성은 안쪽으로만 향한다"**예요:
 
 ```
 [Frameworks & Drivers] → [Interface Adapters] → [Use Cases] → [Entities]
@@ -75,7 +75,8 @@ coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-enti
 | 팀 역량 | 레이어드 익숙 | 새 아키텍처 학습 비용 |
 | 외부 시스템 연동 | 적음 | 포트-어댑터 패턴 필요성 낮음 |
 
-**결론:** 클린/헥사고날은 **도메인 복잡도가 높거나**, **외부 시스템 연동이 많거나**, **장기 유지보수**가 필요할 때 빛을 발한다. 6주 프로젝트에서는 레이어드로 충분하고, 필요시 의존성 역전을 부분 적용하는 전략을 선택했다.
+**결론:** 클린/헥사고날은 **도메인 복잡도가 높거나**, **외부 시스템 연동이 많거나**, **장기 유지보수**가 필요할 때 빛을 발해요.
+6주 프로젝트에서는 레이어드로 충분하고, 필요시 의존성 역전을 부분 적용하는 전략을 선택했어요.
 
 ### 전통적 MVC vs 레이어드
 
@@ -96,7 +97,7 @@ coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-enti
 
 ## 3. 개발 접근법: 무엇부터 만들까?
 
-레이어드 아키텍처에서 개발 순서는 크게 두 가지로 나뉜다:
+레이어드 아키텍처에서 개발 순서는 크게 두 가지로 나뉘어요:
 - **하향식(Top-Down)**: Presentation → Application → Domain → Infrastructure
 - **상향식(Bottom-Up)**: Infrastructure → Domain → Application → Presentation
 
@@ -104,7 +105,8 @@ coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-enti
 
 ![JPA 엔티티 우선 접근](/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-entity-db.png)
 
-Infrastructure(DB)부터 시작하는 상향식 접근. JPA 엔티티부터 만든다는 건 DDL(테이블)을 먼저 설계하겠다는 것과 같다.
+Infrastructure(DB)부터 시작하는 상향식 접근이에요.
+JPA 엔티티부터 만든다는 건 DDL(테이블)을 먼저 설계하겠다는 것과 같아요.
 
 **문제점:**
 - DDL이 만들어지기 전까지 다른 개발자가 대기해야 함
@@ -115,7 +117,8 @@ Infrastructure(DB)부터 시작하는 상향식 접근. JPA 엔티티부터 만�
 
 ![API 엔드포인트 우선 접근](/uploads/project/EduMeet/architecture-evolution/approach-2-api.png)
 
-Presentation(Controller)부터 시작하는 하향식 접근. RequestBody/ResponseEntity를 먼저 고민하는 방식.
+Presentation(Controller)부터 시작하는 하향식 접근이에요.
+RequestBody/ResponseEntity를 먼저 고민하는 방식이에요.
 
 **문제점:**
 - 도메인 분석 전에 기술 스펙(Spring Web, JPA, JWT 등)을 먼저 결정
@@ -185,7 +188,7 @@ After:  Service → Repository (인터페이스) ← JpaRepositoryImpl
 
 ![헥사고날 비교](/uploads/project/EduMeet/architecture-evolution/layered-hexagonal.png)
 
-의존성 역전을 적용한 레이어드 아키텍처는 **헥사고날 아키텍처와 본질적으로 동일**하다.
+의존성 역전을 적용한 레이어드 아키텍처는 **헥사고날 아키텍처와 본질적으로 동일**해요.
 
 **깨달은 점:**
 - 헥사고날의 "포트-어댑터 패턴" = 의존성 역전의 다른 이름

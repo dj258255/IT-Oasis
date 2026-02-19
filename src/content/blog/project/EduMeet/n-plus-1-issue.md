@@ -19,23 +19,24 @@ coverImage: "/uploads/project/EduMeet/n-plus-1-issue/n1-occurred-background.png"
 
 ## 정상 상태
 
-Board(게시글)와 BoardImage(첨부파일)는 `@OneToMany` 관계이며, `FetchType.LAZY`로 설정되어 있다. 게시글 목록 조회 시 페이징된 Board 데이터를 가져오는 **1개의 쿼리**가 실행되고, 필요한 시점에 하위 엔티티를 조회하는 것이 정상 동작이다.
+Board(게시글)와 BoardImage(첨부파일)는 `@OneToMany` 관계이며, `FetchType.LAZY`로 설정되어 있어요.
+게시글 목록 조회 시 페이징된 Board 데이터를 가져오는 **1개의 쿼리**가 실행되고, 필요한 시점에 하위 엔티티를 조회하는 것이 정상 동작이에요.
 
 ---
 
 ## 문제 상황
 
-더미 데이터 100건을 넣고 Board와 Reply를 left join하는 단위 테스트를 작성했다.
+더미 데이터 100건을 넣고 Board와 Reply를 left join하는 단위 테스트를 작성했어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/n1-occurred-background.png)
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/n1-occurred-background-02.png)
 
-페이지 사이즈를 10으로 설정하고 테스트를 실행했는데, 실행 속도가 비정상적으로 느렸다.
+페이지 사이즈를 10으로 설정하고 테스트를 실행했는데, 실행 속도가 비정상적으로 느렸어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/n1-occurred-background-03.png)
 
-실행된 쿼리 로그를 확인해보니, 목록을 가져오는 쿼리 1건 외에 **각 게시글마다 board_image를 조회하는 쿼리가 개별 실행**되고 있었다.
+실행된 쿼리 로그를 확인해보니, 목록을 가져오는 쿼리 1건 외에 **각 게시글마다 board_image를 조회하는 쿼리가 개별 실행**되고 있었어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/n1-occurred-background-04.png)
 
@@ -43,7 +44,8 @@ Board(게시글)와 BoardImage(첨부파일)는 `@OneToMany` 관계이며, `Fetc
 
 ## 원인 분석
 
-이 현상은 **N+1 문제**다. 목록을 가져오는 쿼리 1건(+1)과, 각 게시글마다 연관 엔티티를 조회하는 쿼리 N건이 발생하는 것이다.
+이 현상은 **N+1 문제**예요.
+목록을 가져오는 쿼리 1건(+1)과, 각 게시글마다 연관 엔티티를 조회하는 쿼리 N건이 발생하는 거예요.
 
 실행 순서를 정리하면:
 
@@ -52,9 +54,11 @@ Board(게시글)와 BoardImage(첨부파일)는 `@OneToMany` 관계이며, `Fetc
 3. 게시판 객체의 `imageSet`에 접근하면서 `board_image` 테이블을 조회하는 쿼리 실행
 4. 2~3을 반복
 
-연관 엔티티를 `FetchType.LAZY`로 설정하면, 하위 필드에 접근할 때마다 Hibernate가 프록시 객체를 초기화하면서 추가 쿼리가 발생한다. 이 문제는 `FetchType.EAGER`로 바꾼다고 해결되지 않는다. Eager 전략이더라도 연관 엔티티를 개별 쿼리로 로딩하는 것은 동일하기 때문이다.
+연관 엔티티를 `FetchType.LAZY`로 설정하면, 하위 필드에 접근할 때마다 Hibernate가 프록시 객체를 초기화하면서 추가 쿼리가 발생해요.
+이 문제는 `FetchType.EAGER`로 바꾼다고 해결되지 않아요.
+Eager 전략이더라도 연관 엔티티를 개별 쿼리로 로딩하는 것은 동일하거든요.
 
-N+1 문제의 해결 방법은 4가지가 있다.
+N+1 문제의 해결 방법은 4가지가 있어요.
 
 ---
 
@@ -62,12 +66,12 @@ N+1 문제의 해결 방법은 4가지가 있다.
 
 ### 1. FetchJoin
 
-JPQL의 `JOIN FETCH` 키워드를 사용하여 연관 엔티티를 한 번의 쿼리로 함께 조회하는 방법이다.
+JPQL의 `JOIN FETCH` 키워드를 사용하여 연관 엔티티를 한 번의 쿼리로 함께 조회하는 방법이에요.
 
 - `JOIN FETCH`: Inner Join 쿼리 실행
 - `LEFT JOIN FETCH`: Left Outer Join 쿼리 실행
 
-Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로, 하위 엔티티가 반드시 존재하는 경우에는 Inner Join을 사용하는 것이 좋다.
+Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로, 하위 엔티티가 반드시 존재하는 경우에는 Inner Join을 사용하는 것이 좋아요.
 
 **장점:** 한 번의 쿼리로 연관 엔티티를 모두 조회, DB 왕복 횟수 최소화, `LazyInitializationException` 방지
 
@@ -75,15 +79,18 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 
 **주의사항:**
 
-1. **별칭 사용 주의** — Left Join Fetch에서 별칭을 사용하면 DB와의 데이터 일관성을 해칠 수 있다.
+1. **별칭 사용 주의** — Left Join Fetch에서 별칭을 사용하면 DB와의 데이터 일관성을 해칠 수 있어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/cautions.png)
 
-2. **카테시안 곱 중복 발생** — `@OneToMany` 컬렉션을 Fetch Join할 때 발생한다. **Hibernate 6부터는 자동으로 중복을 필터링**하지만, 명시적으로 `DISTINCT`를 선언하는 편이 의도가 명확하다.
+2. **카테시안 곱 중복 발생** — `@OneToMany` 컬렉션을 Fetch Join할 때 발생해요.
+**Hibernate 6부터는 자동으로 중복을 필터링**하지만, 명시적으로 `DISTINCT`를 선언하는 편이 의도가 명확해요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/cautions-02.png)
 
-3. **컬렉션 2개 이상 동시 Fetch Join 금지** — `@XToMany` 컬렉션 필드는 **하나만** Fetch Join 가능하다. 두 개 이상이면 `MultipleBagFetchException` 발생. List 대신 Set을 사용하면 회피 가능하다.
+3. **컬렉션 2개 이상 동시 Fetch Join 금지** — `@XToMany` 컬렉션 필드는 **하나만** Fetch Join 가능해요.
+두 개 이상이면 `MultipleBagFetchException`이 발생해요.
+List 대신 Set을 사용하면 회피 가능해요.
 
 **변경 전 (에러 발생)**
 ![](/uploads/project/EduMeet/n-plus-1-issue/cautions-03.png)
@@ -91,15 +98,16 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 **변경 후 (에러 해결)**
 ![](/uploads/project/EduMeet/n-plus-1-issue/cautions-04.png)
 
-4. **페이징 금지** — `@XToMany` 컬렉션을 Fetch Join한 상태에서 페이징하면, Hibernate가 **모든 데이터를 메모리에 로드 후 애플리케이션 레벨에서 페이징**을 수행한다.
+4. **페이징 금지** — `@XToMany` 컬렉션을 Fetch Join한 상태에서 페이징하면, Hibernate가 **모든 데이터를 메모리에 로드 후 애플리케이션 레벨에서 페이징**을 수행해요.
 
-> **결론**: 현재 게시판은 페이징이 필수이므로, FetchJoin 단독 사용은 부적합하다.
+> **결론**: 현재 게시판은 페이징이 필수이므로, FetchJoin 단독 사용은 부적합해요.
 
 ---
 
 ### 2. EntityGraph
 
-`@EntityGraph`는 JPA가 제공하는 어노테이션으로, Fetch Join을 선언적으로 사용하는 방법이다. 내부적으로 **Left Join** 기반으로 동작한다.
+`@EntityGraph`는 JPA가 제공하는 어노테이션으로, Fetch Join을 선언적으로 사용하는 방법이에요.
+내부적으로 **Left Join** 기반으로 동작해요.
 
 **장점:** 쿼리 메서드만으로 구현 가능, 동적 fetch 전략 변경 가능, Named Graph로 재사용 가능
 
@@ -109,7 +117,7 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 
 ### 3. @Fetch(FetchMode.SUBSELECT)
 
-첫 번째 쿼리로 부모 엔티티를 조회한 후, 두 번째 쿼리에서 서브쿼리를 사용하여 연관된 모든 자식 엔티티를 한 번에 조회하는 방식이다.
+첫 번째 쿼리로 부모 엔티티를 조회한 후, 두 번째 쿼리에서 서브쿼리를 사용하여 연관된 모든 자식 엔티티를 한 번에 조회하는 방식이에요.
 
 **장점:** 서브쿼리로 한 번에 연관 데이터 로딩 (총 2개 쿼리), 중복 데이터 없음
 
@@ -119,7 +127,7 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 
 ### 4. @BatchSize
 
-여러 개의 프록시 객체를 조회할 때, WHERE 절이 같은 여러 SELECT 쿼리들을 하나의 **IN 쿼리**로 합쳐주는 옵션이다.
+여러 개의 프록시 객체를 조회할 때, WHERE 절이 같은 여러 SELECT 쿼리들을 하나의 **IN 쿼리**로 합쳐주는 옵션이에요.
 
 **장점:** 페이징과 완벽 호환, N+1 문제를 N/size로 완화, 메모리 효율적, 중복 데이터 없음
 
@@ -129,7 +137,7 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 
 ## 실측 비교
 
-각 전략의 실제 성능을 비교하기 위해 Hibernate 통계 기능을 활성화했다.
+각 전략의 실제 성능을 비교하기 위해 Hibernate 통계 기능을 활성화했어요.
 
 ### 기존 N+1 상태
 
@@ -146,7 +154,7 @@ Inner Join이 Left Join보다 검색 범위가 좁아 성능이 우수하므로,
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetch-join-03.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetch-join-04.png)
 
-N+1은 해결되었지만 메모리 페이징 경고가 발생했다.
+N+1은 해결되었지만 메모리 페이징 경고가 발생했어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetch-join-05.png)
 
@@ -160,13 +168,14 @@ N+1은 해결되었지만 메모리 페이징 경고가 발생했다.
 ![](/uploads/project/EduMeet/n-plus-1-issue/entitygraph-03.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/entitygraph-04.png)
 
-FetchJoin과 동일하게 메모리 페이징 경고 발생.
+FetchJoin과 동일하게 메모리 페이징 경고가 발생했어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/entitygraph-05.png)
 
 **FetchJoin과 EntityGraph의 핵심 차이: COUNT 쿼리**
 
-FetchJoin의 COUNT 쿼리는 `left join board_image`를 포함하지만, EntityGraph의 COUNT 쿼리는 `board` 테이블만 조회한다. EntityGraph가 COUNT 쿼리에서 불필요한 JOIN을 하지 않아 더 효율적이다.
+FetchJoin의 COUNT 쿼리는 `left join board_image`를 포함하지만, EntityGraph의 COUNT 쿼리는 `board` 테이블만 조회해요.
+EntityGraph가 COUNT 쿼리에서 불필요한 JOIN을 하지 않아 더 효율적이에요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/diff.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/diff-02.png)
@@ -175,32 +184,33 @@ FetchJoin의 COUNT 쿼리는 `left join board_image`를 포함하지만, EntityG
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetchfetchmodesubselect.png)
 
-기대와 달리 쿼리가 대량으로 실행됐다. 총 75개의 JDBC statements가 실행되었다.
+기대와 달리 쿼리가 대량으로 실행됐어요.
+총 75개의 JDBC statements가 실행됐어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-02.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-03.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-04.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/fetchfetchmodesubselect-05.png)
 
-**실패 원인:** Spring Data JPA의 Page 인터페이스가 COUNT와 데이터 쿼리를 별도 Session에서 실행하여 SUBSELECT 최적화 조건을 위반했다.
+**실패 원인:** Spring Data JPA의 Page 인터페이스가 COUNT와 데이터 쿼리를 별도 Session에서 실행하여 SUBSELECT 최적화 조건을 위반했어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/hibernate-subselect-optimization.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/hibernate-subselect-optimization-02.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/hibernate-subselect-optimization-03.png)
 
-수동 Session 관리를 시도했으나, 전체 Parent ID 기준으로 SUBSELECT가 실행되는 문제가 발생했다.
+수동 Session 관리를 시도했으나, 전체 Parent ID 기준으로 SUBSELECT가 실행되는 문제가 발생했어요.
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/solution.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/solution-02.png)
 ![](/uploads/project/EduMeet/n-plus-1-issue/solution-03.png)
 
-**결론**: SUBSELECT는 Spring Data JPA의 페이징 처리 방식과 근본적으로 호환되지 않는다.
+**결론**: SUBSELECT는 Spring Data JPA의 페이징 처리 방식과 근본적으로 호환되지 않아요.
 
 ### BatchSize 적용
 
 ![](/uploads/project/EduMeet/n-plus-1-issue/batchsize.png)
 
-`@BatchSize(size = 20)` 적용 결과 **4개 쿼리만 실행**되었다:
+`@BatchSize(size = 20)` 적용 결과 **4개 쿼리만 실행**됐어요:
 
 ```sql
 -- 1번째: 목록 조회 쿼리
@@ -248,7 +258,7 @@ WHERE is1_0.board_id IN (100, 99, 98, 97, 96, 95, 94, 93, 92, 91);
 
 ## 적용: @BatchSize 선택
 
-이 프로젝트에서는 `@BatchSize(size = 20)`로 N+1 문제를 해결했다.
+이 프로젝트에서는 `@BatchSize(size = 20)`로 N+1 문제를 해결했어요.
 
 선택 이유:
 1. **페이징 호환**: Spring Data JPA의 Page 인터페이스와 완벽하게 호환
@@ -276,11 +286,14 @@ WHERE is1_0.board_id IN (100, 99, 98, 97, 96, 95, 94, 93, 92, 91);
 
 ## N+1은 왜 ORM 차원에서 해결하지 않는가
 
-N+1은 "버그"가 아니라 **트레이드오프**다.
+N+1은 "버그"가 아니라 **트레이드오프**예요.
 
-Lazy 로딩은 "필요한 시점에 필요한 데이터만 로드한다"는 설계 원칙을 따른다. 문제가 되는 것은 "목록 조회 후 연관 엔티티에 접근"하는 패턴이 빈번하기 때문이다. Hibernate는 FetchJoin, EntityGraph, BatchSize 등 **상황에 맞는 최적화 도구를 제공**하여 개발자가 선택할 수 있도록 하고 있다.
+Lazy 로딩은 "필요한 시점에 필요한 데이터만 로드한다"는 설계 원칙을 따르거든요.
+문제가 되는 것은 "목록 조회 후 연관 엔티티에 접근"하는 패턴이 빈번하기 때문이에요.
+Hibernate는 FetchJoin, EntityGraph, BatchSize 등 **상황에 맞는 최적화 도구를 제공**하여 개발자가 선택할 수 있도록 하고 있어요.
 
-ORM이 모든 경우를 자동으로 최적화하면, 반대로 불필요한 데이터까지 로드하는 문제가 생긴다. 사용자에게 선택권을 주는 것이 올바른 설계 판단이다.
+ORM이 모든 경우를 자동으로 최적화하면, 반대로 불필요한 데이터까지 로드하는 문제가 생겨요.
+사용자에게 선택권을 주는 것이 올바른 설계 판단이죠.
 
 ---
 

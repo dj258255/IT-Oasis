@@ -1,7 +1,7 @@
 ---
 title: 'JVM과 Garbage Collection 이해하기'
 titleEn: 'Understanding JVM and Garbage Collection'
-description: JVM 아키텍처(Class Loader, Runtime Data Areas, Execution Engine)부터 GC 알고리즘(Serial, Parallel, G1, ZGC)까지 분석한다.
+description: JVM 아키텍처(Class Loader, Runtime Data Areas, Execution Engine)부터 GC 알고리즘(Serial, Parallel, G1, ZGC)까지 분석해 봤어요.
 descriptionEn: Analyzes JVM architecture (Class Loader, Runtime Data Areas, Execution Engine) through GC algorithms (Serial, Parallel, G1, ZGC).
 date: 2025-10-20T00:00:00.000Z
 tags:
@@ -21,7 +21,7 @@ coverImage: "/uploads/theory/jvm-and-gc/jvm-architecture.png"
 
 ## 1. JVM 아키텍처 개요
 
-JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신이다. "Write Once, Run Anywhere"를 가능하게 하는 핵심 컴포넌트.
+JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신이에요. "Write Once, Run Anywhere"를 가능하게 하는 핵심 컴포넌트예요.
 
 ### 1.1 JVM 전체 구조
 
@@ -29,9 +29,9 @@ JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신�
 
 출처 : https://dzone.com/articles/jvm-architecture-explained
 
-initialization은 static을 초기화한다
+initialization은 static을 초기화해요
 
-Method Area는 Metasp.로 metadata가 있다.
+Method Area는 Metasp.로 metadata가 있어요.
 Stack은 per thread 
 
 > 출처: [JVM Architecture - Oracle](https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html)
@@ -42,7 +42,7 @@ Stack은 per thread
 
 ![](/uploads/theory/jvm-and-gc/class-loader-subsystem.png)
 
-Java 클래스(.class 파일)를 메모리에 로드하고 링크하는 역할.
+Java 클래스(.class 파일)를 메모리에 로드하고 링크하는 역할이에요.
 
 #### Loading (로딩)
 
@@ -90,7 +90,7 @@ static 변수에 실제 값 할당, static 블록 실행
 
 ### 1.3 Runtime Data Areas
 
-JVM이 프로그램 실행 중 사용하는 메모리 영역들.
+JVM이 프로그램 실행 중 사용하는 메모리 영역들이에요.
 
 ![](/uploads/theory/jvm-and-gc/runtime-data-areas.png)
 ![](/uploads/theory/jvm-and-gc/runtime-data-areas-2.png)
@@ -115,8 +115,8 @@ JVM이 프로그램 실행 중 사용하는 메모리 영역들.
 ```
 
 **PermGen → Metaspace 변경 이유**:
-- PermGen은 힙의 일부 → 크기 제한으로 `OutOfMemoryError: PermGen space` 자주 발생
-- Metaspace는 Native Memory 사용 → 자동으로 확장 가능
+- PermGen은 힙의 일부 → 크기 제한으로 `OutOfMemoryError: PermGen space`가 자주 발생했어요
+- Metaspace는 Native Memory 사용 → 자동으로 확장 가능해요
 
 ![](/uploads/theory/jvm-and-gc/permgen-to-metaspace.png)
 
@@ -125,18 +125,18 @@ JVM이 프로그램 실행 중 사용하는 메모리 영역들.
 
 #### Heap
 
-모든 객체와 배열이 할당되는 영역. **GC의 주요 대상**.
+모든 객체와 배열이 할당되는 영역이에요. **GC의 주요 대상**이고요.
 
 ```java
 User user = new User();  // User 객체는 Heap에 생성
 int[] arr = new int[10]; // 배열도 Heap에 생성
 ```
 
-자세한 내용은 아래 Heap 구조 섹션 참조.
+자세한 내용은 아래 Heap 구조 섹션을 참조해 주세요.
 
 #### JVM Stack (per Thread)
 
-각 스레드마다 별도로 생성. **Stack Frame**들의 집합.
+각 스레드마다 별도로 생성돼요. **Stack Frame**들의 집합이에요.
 
 ![](/uploads/theory/jvm-and-gc/jvm-stack.png)
 
@@ -175,14 +175,14 @@ void infinite() {
 
 #### PC Register (Program Counter)
 
-현재 실행 중인 명령어의 주소를 저장. 스레드마다 별도.
+현재 실행 중인 명령어의 주소를 저장해요. 스레드마다 별도로 존재해요.
 
 ```
 Thread 1: PC = 0x00A3 (method1의 10번째 바이트코드)
 Thread 2: PC = 0x00F7 (method2의 3번째 바이트코드)
 ```
 
-Native 메서드 실행 중이면 PC는 undefined.
+Native 메서드 실행 중이면 PC는 undefined예요.
 
 #### Native Method Stack
 
@@ -196,11 +196,11 @@ JNI(Java Native Interface)를 통해 호출되는 네이티브 메서드(C/C++)�
 
 ![](/uploads/theory/jvm-and-gc/execution-engine.png)
 
-바이트코드를 실제 기계어로 변환하여 실행.
+바이트코드를 실제 기계어로 변환하여 실행해요.
 
 #### Interpreter
 
-바이트코드를 한 줄씩 읽어서 실행. **시작은 빠르지만 반복 실행 시 느림**.
+바이트코드를 한 줄씩 읽어서 실행해요. **시작은 빠르지만 반복 실행 시 느려요**.
 
 ![](/uploads/theory/jvm-and-gc/interpreter.png)
 
@@ -208,7 +208,7 @@ JNI(Java Native Interface)를 통해 호출되는 네이티브 메서드(C/C++)�
 #### JIT Compiler (Just-In-Time)
 ![](/uploads/theory/jvm-and-gc/jit-compiler.png)
 
-자주 실행되는 코드(Hot Spot)를 **네이티브 코드로 컴파일**하여 캐싱.
+자주 실행되는 코드(Hot Spot)를 **네이티브 코드로 컴파일**하여 캐싱해요.
 
 
 ![](/uploads/theory/jvm-and-gc/jit-compilation-flow.png)
@@ -261,7 +261,7 @@ Level 4: C2 Compiler <- Server Compiler
 
 ### 1.5 Object 메모리 레이아웃
 
-Java 객체가 Heap에서 어떻게 저장되는지.
+Java 객체가 Heap에서 어떻게 저장되는지 살펴볼게요.
 
 ![](/uploads/theory/jvm-and-gc/object-memory-layout.png)
 
@@ -288,7 +288,7 @@ Java 객체가 Heap에서 어떻게 저장되는지.
 
 ### 1.6 String Pool과 Interning
 
-String은 특별 취급. **String Pool**에서 중복 제거.
+String은 특별 취급돼요. **String Pool**에서 중복을 제거해요.
 ![](/uploads/theory/jvm-and-gc/string-pool.png)
 
 
@@ -311,11 +311,11 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 ## 2. Garbage Collection이란?
 
-프로그래머가 직접 메모리를 해제하지 않아도 **JVM이 알아서 사용하지 않는 객체를 정리**해주는 것.
+프로그래머가 직접 메모리를 해제하지 않아도 **JVM이 알아서 사용하지 않는 객체를 정리**해주는 거예요.
 
 ![](/uploads/theory/jvm-and-gc/gc-overview.png)
 
-편하지만 **공짜는 아니다**. GC가 동작할 때 성능 비용이 발생한다.
+편하지만 **공짜는 아니에요**. GC가 동작할 때 성능 비용이 발생하거든요.
 
 > 출처: [Java Garbage Collection Basics - Oracle](https://www.oracle.com/technetwork/tutorials/tutorials-1873457.html)
 
@@ -328,14 +328,14 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 ### Young Generation
 
-새로 생성된 객체가 할당되는 영역. 세 부분으로 나뉜다:
+새로 생성된 객체가 할당되는 영역이에요. 세 부분으로 나뉩니다:
 
-- **Eden**: 객체가 최초로 생성되는 곳. Eden이 가득 차면 Minor GC 발생.
-- **Survivor 0, 1 (S0, S1)**: Minor GC에서 살아남은 객체가 이동. 두 영역을 번갈아 사용.
+- **Eden**: 객체가 최초로 생성되는 곳이에요. Eden이 가득 차면 Minor GC가 발생해요.
+- **Survivor 0, 1 (S0, S1)**: Minor GC에서 살아남은 객체가 이동해요. 두 영역을 번갈아 사용하고요.
 
 ### Old Generation (Tenured)
 
-Young Gen에서 오래 살아남은 객체가 이동하는 곳. 객체의 age가 임계값(기본 15)을 넘으면 **Promotion** 된다.
+Young Gen에서 오래 살아남은 객체가 이동하는 곳이에요. 객체의 age가 임계값(기본 15)을 넘으면 **Promotion** 돼요.
 
 ```bash
 # Tenuring Threshold 설정
@@ -349,7 +349,7 @@ Young Gen에서 오래 살아남은 객체가 이동하는 곳. 객체의 age가
 ![](/uploads/theory/jvm-and-gc/weak-generational-hypothesis.png)
 
 
-금방 죽는 객체를 위해 전체 힙을 스캔하는 건 비효율적. **Young Gen만 자주 청소**하고, Old Gen은 가끔 청소한다.
+금방 죽는 객체를 위해 전체 힙을 스캔하는 건 비효율적이에요. **Young Gen만 자주 청소**하고, Old Gen은 가끔 청소해요.
 
 > 출처: [Generations - Oracle Java SE 8 GC Tuning Guide](https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/generations.html)
 
@@ -357,19 +357,19 @@ Young Gen에서 오래 살아남은 객체가 이동하는 곳. 객체의 age가
 
 ## 4. Minor GC: Eden에서 Old Gen까지의 여정
 
-객체가 생성되고 GC를 거쳐 Old Generation으로 이동하는 전체 과정을 단계별로 살펴본다.
+객체가 생성되고 GC를 거쳐 Old Generation으로 이동하는 전체 과정을 단계별로 살펴볼게요.
 
 ### 4.1 객체 할당: TLAB (Thread-Local Allocation Buffer)
 
-새 객체는 Eden 영역에 할당된다. 하지만 멀티스레드 환경에서 여러 스레드가 동시에 Eden에 할당하면 동기화 비용이 발생한다. 이를 해결하기 위해 **TLAB**을 사용한다.
+새 객체는 Eden 영역에 할당돼요. 하지만 멀티스레드 환경에서 여러 스레드가 동시에 Eden에 할당하면 동기화 비용이 발생해요. 이를 해결하기 위해 **TLAB**을 사용해요.
 
 
 ![](/uploads/theory/jvm-and-gc/tlab.png)
 
 
-- 각 스레드는 Eden 내에 자신만의 버퍼(TLAB)를 가진다
-- 객체 할당 시 자기 TLAB 내에서 **bump-the-pointer**로 빠르게 할당
-- TLAB이 가득 차면 새 TLAB을 할당받음
+- 각 스레드는 Eden 내에 자신만의 버퍼(TLAB)를 가져요
+- 객체 할당 시 자기 TLAB 내에서 **bump-the-pointer**로 빠르게 할당해요
+- TLAB이 가득 차면 새 TLAB을 할당받아요
 - **락 없이 빠른 할당 가능**
 
 ```java
@@ -390,7 +390,7 @@ Object obj = new Object();
 
 ### 4.2 첫 번째 Minor GC: Eden이 가득 찼을 때
 
-Eden 영역이 가득 차면 **Minor GC**가 발생한다.
+Eden 영역이 가득 차면 **Minor GC**가 발생해요.
 
 ![](/uploads/theory/jvm-and-gc/first-minor-gc.png)
 
@@ -400,7 +400,7 @@ Eden 영역이 가득 차면 **Minor GC**가 발생한다.
 ![](/uploads/theory/jvm-and-gc/stop-the-world.png)
 
 
-모든 애플리케이션 스레드가 **Safepoint**에서 멈춘다.
+모든 애플리케이션 스레드가 **Safepoint**에서 멈춰요.
 
 **Safepoint란?**
 - GC가 안전하게 수행될 수 있는 지점
@@ -418,7 +418,7 @@ for (int i = 0; i < 1000000; i++) {
 
 **Step 2: GC Roots에서 시작하여 Mark**
 
-GC Root는 다음을 포함한다:
+GC Root는 다음을 포함해요:
 - 스레드 스택의 지역 변수
 - static 변수
 - JNI 참조
@@ -431,7 +431,7 @@ GC Root는 다음을 포함한다:
 
 ![](/uploads/theory/jvm-and-gc/survivor-copy.png)
 
-**핵심**: Eden은 통째로 비워진다. 살아남은 객체만 Survivor로 **복사**된다.
+**핵심**: Eden은 통째로 비워져요. 살아남은 객체만 Survivor로 **복사**돼요.
 
 > 출처: [How Java Garbage Collection Really Works - InfoQ](https://www.infoq.com/articles/Java-Garbage-Collection/)
 
@@ -439,7 +439,7 @@ GC Root는 다음을 포함한다:
 
 ### 4.3 두 번째 Minor GC: Survivor 간 이동
 
-다시 Eden이 가득 차면 두 번째 Minor GC 발생.
+다시 Eden이 가득 차면 두 번째 Minor GC가 발생해요.
 
 [시작 상태]
 Eden: `[I][J][K][L][M]` <- 새로 할당된 객체들
@@ -486,7 +486,7 @@ GC 4: Eden + S0(From) -> S1(To)
 
 ### 4.4 Promotion: Old Generation으로 이동
 
-객체의 age가 임계값(기본 15)에 도달하면 Old Gen으로 **승격(Promotion)** 된다.
+객체의 age가 임계값(기본 15)에 도달하면 Old Gen으로 **승격(Promotion)** 돼요.
 
 [15번째 Minor GC]
 Survivor0: [A(age=15)][B(age=15)] (From)
@@ -501,7 +501,7 @@ A, B는 이제 Minor GC 대상이 아님 (Major GC에서만 수집)
 
 **Premature Promotion 문제**
 
-Survivor 영역이 너무 작으면 age 임계값에 도달하지 않아도 강제 승격된다.
+Survivor 영역이 너무 작으면 age 임계값에 도달하지 않아도 강제 승격돼요.
 
 
 Survivor가 작은 경우
@@ -515,7 +515,7 @@ Minor GC 시
 - -> 일부가 Old Gen으로 강제 승격 (Premature Promotion)
 
 
-이렇게 되면 수명이 짧은 객체가 Old Gen에 쌓여 **Full GC 빈도 증가**.
+이렇게 되면 수명이 짧은 객체가 Old Gen에 쌓여 **Full GC 빈도가 증가**해요.
 
 ```bash
 # Survivor 비율 조정으로 해결
@@ -550,7 +550,7 @@ Minor GC 시
 
 **Card Table: Old Gen → Young Gen 참조 추적**
 
-Old Gen 객체가 Young Gen 객체를 참조하면 문제가 생긴다.
+Old Gen 객체가 Young Gen 객체를 참조하면 문제가 생겨요.
 
 ```
 Old Gen: [X] -> [A] (Eden)
@@ -560,7 +560,7 @@ Minor GC 시 X는 스캔 대상이 아님
 -> Old Gen 전체를 스캔? (그럼 Minor GC 의미 없음)
 ```
 
-이를 해결하기 위해 **Card Table** 사용:
+이를 해결하기 위해 **Card Table**을 사용해요:
 ![](/uploads/theory/jvm-and-gc/card-table.png)
 
 
@@ -620,7 +620,7 @@ java -Xlog:gc*:file=gc.log:time,uptime,level,tags -jar app.jar
 | Major GC | Old Gen | 덜 발생, 느림 |
 | Full GC | 전체 Heap | 가장 느림, 피해야 함 |
 
-Minor GC는 보통 수 ms ~ 수십 ms. Full GC는 수백 ms ~ 수 초가 걸릴 수 있다.
+Minor GC는 보통 수 ms ~ 수십 ms예요. Full GC는 수백 ms ~ 수 초가 걸릴 수 있어요.
 
 > 출처: [Understanding JVM and Garbage Collection - DZone](https://dzone.com/articles/understanding-the-java-memory-model-and-the-garbag)
 
@@ -628,7 +628,7 @@ Minor GC는 보통 수 ms ~ 수십 ms. Full GC는 수백 ms ~ 수 초가 걸릴 
 
 ## 6. Mark-and-Sweep 알고리즘
 
-가장 기본적인 GC 알고리즘.
+가장 기본적인 GC 알고리즘이에요.
 
 ### 동작 방식
 
@@ -653,29 +653,29 @@ GC Root(스택, static 변수, JNI 참조 등)에서 시작하여 참조를 따�
 
 #### 1. Stop-The-World (STW)
 
-GC가 동작하는 동안 **애플리케이션이 멈춘다**.
+GC가 동작하는 동안 **애플리케이션이 멈춰요**.
 
 ![](/uploads/theory/jvm-and-gc/stw-impact.png)
 
 
 > "JVM pauses our application from running, whenever a GC event runs."
 
-실시간 응답이 중요한 서비스에서 수백 ms씩 멈추면 치명적이다.
+실시간 응답이 중요한 서비스에서 수백 ms씩 멈추면 치명적이에요.
 
 > 출처: [Stop-the-World Events: Why Java GC Freezes Your Application - GCeasy](https://blog.gceasy.io/stop-the-world-events-why-java-gc-freezes-your-application/)
 
 #### 2. 메모리 단편화 (Fragmentation)
 
-Sweep 후 메모리가 듬성듬성해진다.
+Sweep 후 메모리가 듬성듬성해져요.
 
 ![](/uploads/theory/jvm-and-gc/fragmentation.png)
 
 
-총 빈 공간은 충분한데, **연속된 공간이 없어서** 큰 객체를 할당 못 할 수 있다.
+총 빈 공간은 충분한데, **연속된 공간이 없어서** 큰 객체를 할당 못 할 수 있어요.
 
 #### 3. 전체 힙 스캔
 
-살아있는 객체를 찾기 위해 **전체 힙을 스캔**해야 한다. 힙이 클수록 오래 걸린다.
+살아있는 객체를 찾기 위해 **전체 힙을 스캔**해야 해요. 힙이 클수록 오래 걸립니다.
 
 > 출처: [How the Mark-Sweep-Compact Algorithm Works - GCeasy](https://blog.gceasy.io/how-the-mark-sweep-compact-algorithm-works/)
 
@@ -683,7 +683,7 @@ Sweep 후 메모리가 듬성듬성해진다.
 
 ## 7. Mark-Sweep-Compact
 
-단편화 문제를 해결하기 위해 **Compact** 단계 추가.
+단편화 문제를 해결하기 위해 **Compact** 단계를 추가했어요.
 
 ![](/uploads/theory/jvm-and-gc/mark-sweep-compact.png)
 
@@ -802,7 +802,7 @@ java -Xms512m -Xmx2g -jar app.jar
 - `-Xms`: 초기 힙 크기
 - `-Xmx`: 최대 힙 크기
 
-**Tip**: Xms와 Xmx를 같게 설정하면 힙 리사이징 오버헤드를 줄일 수 있다.
+**Tip**: Xms와 Xmx를 같게 설정하면 힙 리사이징 오버헤드를 줄일 수 있어요.
 
 ### GC 로그 활성화
 
@@ -877,9 +877,9 @@ java.lang.OutOfMemoryError: GC overhead limit exceeded
 
 ### 대부분의 경우
 
-**기본 설정으로 충분하다.**
+**기본 설정으로 충분해요.**
 
-G1 GC가 기본이고, 대부분의 워크로드에서 잘 동작한다. **문제가 생기기 전에 튜닝하지 마라**.
+G1 GC가 기본이고, 대부분의 워크로드에서 잘 동작해요. **문제가 생기기 전에 튜닝하지 마세요**.
 
 ### 튜닝이 필요한 경우
 
@@ -911,10 +911,10 @@ java -Xms1g -Xmx1g -XX:+UseZGC -jar app.jar
 
 ### 핵심 포인트
 
-1. **GC는 공짜가 아니다** - STW가 발생한다
-2. **대부분은 기본 설정으로 충분하다** - 섣부른 최적화 금지
-3. **문제가 생기면 GC 로그부터 확인** - 추측하지 말고 측정하라
-4. **메모리 누수 먼저 해결** - GC 튜닝보다 코드 수정이 우선
+1. **GC는 공짜가 아니에요** - STW가 발생해요
+2. **대부분은 기본 설정으로 충분해요** - 섣부른 최적화 금지
+3. **문제가 생기면 GC 로그부터 확인하세요** - 추측하지 말고 측정하세요
+4. **메모리 누수 먼저 해결하세요** - GC 튜닝보다 코드 수정이 우선이에요
 
 ---
 

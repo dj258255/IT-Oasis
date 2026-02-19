@@ -1,7 +1,7 @@
 ---
 title: 'IME (한글·중국어·일본어) 입력 처리'
 titleEn: 'Handling IME (Korean/Chinese/Japanese) Input in Spreadsheets'
-description: React 스프레드시트에서 IME 조합 입력 시 자음/모음 분리 문제를 Uncontrolled Component와 Composition 이벤트로 해결한 과정을 정리한다.
+description: React 스프레드시트에서 IME 조합 입력 시 자음/모음 분리 문제를 Uncontrolled Component와 Composition 이벤트로 해결한 과정을 정리했어요.
 descriptionEn: Documents resolving IME composition input issues causing character separation in a React spreadsheet using Uncontrolled Components and Composition events.
 date: 2026-01-11T00:00:00.000Z
 tags:
@@ -17,11 +17,11 @@ draft: false
 coverImage: "/uploads/project/IndiBalancing/ime-input-handling/full.png"
 ---
 
-스프레드시트에서 IME(Input Method Editor) 입력을 올바르게 처리하기 위한 구현 방법을 정리한다.
+스프레드시트에서 IME(Input Method Editor) 입력을 올바르게 처리하기 위한 구현 방법을 정리해 봤어요.
 
 ## 문제 상황
 
-셀 선택 상태에서 한글을 입력하면 자음/모음이 분리되는 현상 발생:
+셀 선택 상태에서 한글을 입력하면 자음/모음이 분리되는 현상이 발생했어요:
 - 예: "안녕" 입력 시 → "ㅇㅏㄴㄴㅕㅇ" 으로 표시
 
 ### 원인
@@ -78,7 +78,7 @@ const isComposingRef = useRef(false);
 
 ### 3. 숨겨진 Input으로 초기 입력 처리 (Handsontable 패턴)
 
-셀 선택 상태에서 바로 타이핑 시작할 때 사용:
+셀 선택 상태에서 바로 타이핑을 시작할 때 사용해요:
 
 ```tsx
 // 숨겨진 input (화면에 보이지 않음)
@@ -130,14 +130,14 @@ const handleKeyDown = (e: KeyboardEvent) => {
 ## 주의사항
 
 1. **Enter 키 처리**
-   - IME 조합 중 Enter는 조합 확정 용도
-   - `isComposing` 체크하여 폼 제출 방지
+   - IME 조합 중 Enter는 조합 확정 용도예요
+   - `isComposing`을 체크해서 폼 제출을 방지해야 해요
 
 2. **Blur 이벤트**
-   - 포커스 잃을 때 `isComposingRef` 초기화 필요
+   - 포커스를 잃을 때 `isComposingRef`를 초기화해야 해요
 
 3. **접근성**
-   - 숨겨진 input 사용 시 스크린 리더 호환성 고려
+   - 숨겨진 input 사용 시 스크린 리더 호환성을 고려해야 해요
    - `aria-hidden="true"`, `tabIndex={-1}` 설정
 
 ## 관련 파일

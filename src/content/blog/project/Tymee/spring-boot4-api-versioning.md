@@ -28,8 +28,8 @@ coverImage: "/uploads/project/Tymee/spring-boot4-api-versioning/api-version-conf
 
 ### 1) WebMvcConfigurer 인터페이스
 
-Spring MVC의 설정을 커스터마이징할 수 있는 인터페이스다.
-이 인터페이스를 구현하면 Spring MVC의 다양한 설정을 오버라이드할 수 있다.
+Spring MVC의 설정을 커스터마이징할 수 있는 인터페이스예요.
+이 인터페이스를 구현하면 Spring MVC의 다양한 설정을 오버라이드할 수 있어요.
 
 ![webmvc-configurer](/uploads/project/Tymee/spring-boot4-api-versioning/webmvc-configurer.svg)
 
@@ -104,7 +104,7 @@ Spring MVC의 설정을 커스터마이징할 수 있는 인터페이스다.
 
 ## Controller에서 버전 지정하기
 
-Spring Boot 4.0에서는 `@RequestMapping`과 `@GetMapping` 등에 `version` 속성이 추가되었다.
+Spring Boot 4.0에서는 `@RequestMapping`과 `@GetMapping` 등에 `version` 속성이 추가됐어요.
 
 ### 클래스 레벨에서 버전 지정
 
@@ -141,13 +141,16 @@ Spring Boot 4.0에서는 `@RequestMapping`과 `@GetMapping` 등에 `version` 속
 
 ## Path Segment를 선택한 이유
 
-4가지 전략 중 **Path Segment** (`/api/v1/users`)를 선택했다.
+4가지 전략 중 **Path Segment** (`/api/v1/users`)를 선택했어요.
 
-URL만 보고 버전을 바로 알 수 있어서 디버깅이 쉽고, CDN/프록시 캐싱이 자연스럽게 동작하며, 브라우저에서 직접 테스트할 수 있다. URL이 길어진다는 비판이 있지만, 모바일 앱 전용 API라 외부 공개가 아니어서 크게 문제되지 않는다.
+URL만 보고 버전을 바로 알 수 있어서 디버깅이 쉽고, CDN/프록시 캐싱이 자연스럽게 동작하며, 브라우저에서 직접 테스트할 수 있어요.
+URL이 길어진다는 비판이 있지만, 모바일 앱 전용 API라 외부 공개가 아니어서 크게 문제되지 않습니다.
 
-Header 방식(`X-API-Version`)은 URL이 깔끔하지만 브라우저 테스트가 어렵고 로그 분석에 불리하다. Media Type 방식은 가장 RESTful하지만 구현이 복잡하고 클라이언트 설정이 번거롭다. Query Parameter 방식은 캐시 키가 복잡해지는 문제가 있다.
+Header 방식(`X-API-Version`)은 URL이 깔끔하지만 브라우저 테스트가 어렵고 로그 분석에 불리해요.
+Media Type 방식은 가장 RESTful하지만 구현이 복잡하고 클라이언트 설정이 번거로워요.
+Query Parameter 방식은 캐시 키가 복잡해지는 문제가 있어요.
 
-초기에는 단일 버전으로 시작하되, Breaking Change가 예상될 때 버전을 올리는 것이 현실적이다.
+초기에는 단일 버전으로 시작하되, Breaking Change가 예상될 때 버전을 올리는 게 현실적이에요.
 
 ---
 

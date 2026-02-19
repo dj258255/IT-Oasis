@@ -1,7 +1,7 @@
 ---
 title: '셀 입력 및 수식바 동기화 최적화'
 titleEn: 'Optimizing Cell Input and Formula Bar Synchronization'
-description: debounce에서 rafThrottle, 최종적으로 즉시 동기화까지 오픈소스 분석을 통해 도달한 셀-수식바 동기화 최적화 과정을 정리한다.
+description: debounce에서 rafThrottle, 최종적으로 즉시 동기화까지 오픈소스 분석을 통해 도달한 셀-수식바 동기화 최적화 과정을 정리해 봤어요.
 descriptionEn: Documents the optimization journey from debounce to rafThrottle to immediate sync, guided by open-source spreadsheet analysis.
 date: 2026-01-02T00:00:00.000Z
 tags:
@@ -18,7 +18,7 @@ draft: false
 
 ## 최종 결론
 
-**오픈소스 스프레드시트들은 debounce/throttle 없이 즉시 동기화한다.**
+**오픈소스 스프레드시트들은 debounce/throttle 없이 즉시 동기화해요.**
 
 ```typescript
 // 최종 구현 (오픈소스 방식)
@@ -51,7 +51,7 @@ onInput={(e) => {
 }}
 ```
 
-**결과**: 타이핑 후 150ms 지연 발생 → UX 저하
+**결과**: 타이핑 후 150ms 지연이 발생했어요 → UX 저하
 
 ---
 
@@ -74,7 +74,7 @@ onInput={(e) => {
 }}
 ```
 
-**결과**: 더 빠르지만 여전히 프레임 단위 지연
+**결과**: 더 빠르지만 여전히 프레임 단위 지연이 있었어요
 
 ---
 
@@ -108,15 +108,15 @@ onInput={(e) => {
 }}
 ```
 
-**결과**: Excel과 동일한 즉시 반영, 성능 문제 없음
+**결과**: Excel과 동일한 즉시 반영이 가능하고, 성능 문제도 없어요
 
 ---
 
 ## 왜 즉시 동기화가 성능 문제 없는가?
 
-1. **수식바는 독립 컴포넌트** - 테이블 전체 리렌더링 X
-2. **React 18 batching** - 여러 setState가 하나로 합쳐짐
-3. **문자열만 업데이트** - 연산 부하 거의 없음
+1. **수식바는 독립 컴포넌트**라서 테이블 전체가 리렌더링되지 않아요
+2. **React 18 batching** 덕분에 여러 setState가 하나로 합쳐져요
+3. **문자열만 업데이트**하기 때문에 연산 부하가 거의 없습니다
 
 ---
 
@@ -127,7 +127,7 @@ onInput={(e) => {
 | 추측으로 최적화 | 불필요한 복잡성 추가 |
 | 오픈소스 분석 | 검증된 패턴 발견 |
 
-**"premature optimization is the root of all evil"** - 실제로 문제가 되는지 먼저 확인하고, 오픈소스에서 검증된 방식을 따르는 것이 정답.
+**"premature optimization is the root of all evil"** - 실제로 문제가 되는지 먼저 확인하고, 오픈소스에서 검증된 방식을 따르는 게 정답이에요.
 
 ---
 

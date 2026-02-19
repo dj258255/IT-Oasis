@@ -18,17 +18,22 @@ coverImage: "/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monit
 
 ## 한 줄 요약
 
-장애를 사람이 SSH로 들어가서 확인하던 구조를 Prometheus(메트릭) + Loki(로그) + Grafana(시각화) + Alertmanager(알림)로 자동화해서 장애 감지를 30초 이내로 줄였다.
+장애를 사람이 SSH로 들어가서 확인하던 구조를 Prometheus(메트릭) + Loki(로그) + Grafana(시각화) + Alertmanager(알림)로 자동화해서 장애 감지를 30초 이내로 줄였어요.
 
 ---
 
 ## 문제 상황
 
-모니터링을 붙이기 전에는 장애를 알아채는 방법이 두 가지뿐이었다. 사용자가 "안 돼요"라고 말하거나, 개발자가 직접 서버에 SSH로 접속해서 로그를 뒤져보는 것. 둘 다 수분에서 수시간이 걸렸다.
+모니터링을 붙이기 전에는 장애를 알아채는 방법이 두 가지뿐이었어요.
+사용자가 "안 돼요"라고 말하거나, 개발자가 직접 서버에 SSH로 접속해서 로그를 뒤져보는 것.
+둘 다 수분에서 수시간이 걸렸죠.
 
-특히 힘들었던 건 로그 검색이었다. Docker 컨테이너 로그를 `docker logs | grep`으로 찾는데, 컨테이너가 재시작되면 이전 로그가 사라진다. Kafka Consumer Lag이 쌓이고 있는지, DB 커넥션이 고갈되고 있는지 실시간으로 볼 수 있는 방법이 없었다.
+특히 힘들었던 건 로그 검색이었어요.
+Docker 컨테이너 로그를 `docker logs | grep`으로 찾는데, 컨테이너가 재시작되면 이전 로그가 사라지거든요.
+Kafka Consumer Lag이 쌓이고 있는지, DB 커넥션이 고갈되고 있는지 실시간으로 볼 수 있는 방법이 없었어요.
 
-7주 프로젝트에서 수동 모니터링으로 버틸 수 있었겠지만, Prometheus와 Grafana를 직접 구축해보는 경험을 쌓고 싶었다. 이게 솔직한 동기다.
+7주 프로젝트에서 수동 모니터링으로 버틸 수 있었겠지만, Prometheus와 Grafana를 직접 구축해보는 경험을 쌓고 싶었어요.
+이게 솔직한 동기예요.
 
 ---
 
@@ -53,17 +58,26 @@ coverImage: "/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monit
 
 ## 왜 Prometheus인가 (CloudWatch 대신)
 
-AWS 환경이니 CloudWatch를 쓸 수도 있었다.
+AWS 환경이니 CloudWatch를 쓸 수도 있었어요.
 
-CloudWatch의 문제는 커스텀 메트릭 비용이었다. 메트릭 하나당 월 $0.30이 드는데, 6개 Exporter에서 수백 개 메트릭을 수집하면 비용이 무시할 수 없다. PromQL 같은 쿼리 표현력도 부족하다. 히스토그램 퍼센타일 계산 같은 건 CloudWatch Metrics Insights로도 어렵다.
+CloudWatch의 문제는 커스텀 메트릭 비용이었어요.
+메트릭 하나당 월 $0.30이 드는데, 6개 Exporter에서 수백 개 메트릭을 수집하면 비용이 무시할 수 없거든요.
+PromQL 같은 쿼리 표현력도 부족하고요.
+히스토그램 퍼센타일 계산 같은 건 CloudWatch Metrics Insights로도 어려워요.
 
-Prometheus는 오픈소스라 비용이 없고, PromQL로 복잡한 쿼리를 자유롭게 쓸 수 있다. 로컬 개발 환경과 운영 환경을 동일하게 유지할 수 있다는 것도 장점이었다.
+Prometheus는 오픈소스라 비용이 없고, PromQL로 복잡한 쿼리를 자유롭게 쓸 수 있어요.
+로컬 개발 환경과 운영 환경을 동일하게 유지할 수 있다는 것도 장점이었어요.
 
 ## 왜 Loki인가 (ELK 대신)
 
-로그 집계는 ELK(Elasticsearch + Logstash + Kibana)가 표준처럼 쓰인다. 처음에 ELK를 고려했는데, Elasticsearch가 프로덕션 환경에서 최소 8GB RAM을 권장한다는 걸 보고 포기했다. EC2 t3.medium(4GB)에서 애플리케이션, DB, Kafka, 모니터링 스택을 전부 돌려야 하는데 Elasticsearch까지 올릴 여유가 없었다.
+로그 집계는 ELK(Elasticsearch + Logstash + Kibana)가 표준처럼 쓰이죠.
+처음에 ELK를 고려했는데, Elasticsearch가 프로덕션 환경에서 최소 8GB RAM을 권장한다는 걸 보고 포기했어요.
+EC2 t3.medium(4GB)에서 애플리케이션, DB, Kafka, 모니터링 스택을 전부 돌려야 하는데 Elasticsearch까지 올릴 여유가 없었거든요.
 
-Loki는 메모리 효율이 좋다. 전문 검색(Full-text search)을 지원하지 않는 대신, 레이블 기반 필터링으로 동작한다. 우리 규모에서는 이 정도로 충분했다. Grafana와 네이티브 통합이라 같은 대시보드에서 메트릭과 로그를 같이 볼 수 있고, Prometheus와 동일한 레이블 체계를 쓴다.
+Loki는 메모리 효율이 좋아요.
+전문 검색(Full-text search)을 지원하지 않는 대신, 레이블 기반 필터링으로 동작해요.
+우리 규모에서는 이 정도로 충분했어요.
+Grafana와 네이티브 통합이라 같은 대시보드에서 메트릭과 로그를 같이 볼 수 있고, Prometheus와 동일한 레이블 체계를 쓰거든요.
 
 ---
 
@@ -71,7 +85,8 @@ Loki는 메모리 효율이 좋다. 전문 검색(Full-text search)을 지원하
 
 ### 알림 계층화
 
-알림을 같은 우선순위로 보내면 알림 피로(Alert Fatigue)가 온다. Critical과 Warning을 분리했다.
+알림을 같은 우선순위로 보내면 알림 피로(Alert Fatigue)가 오거든요.
+Critical과 Warning을 분리했어요.
 
 | 심각도 | 대기 시간 | 반복 간격 | 예시 |
 |--------|----------|----------|------|
@@ -80,19 +95,24 @@ Loki는 메모리 효율이 좋다. 전문 검색(Full-text search)을 지원하
 
 ### 억제 규칙(Inhibit Rules)
 
-Critical 알림이 발생하면 관련 Warning 알림을 자동 억제한다. 예를 들어 "ApplicationDown"이 뜨면 같은 인스턴스의 "HighCPU", "HighMemory" Warning은 보내지 않는다. 서버가 죽은 건 하나인데 알림이 4개 오는 건 의미가 없다.
+Critical 알림이 발생하면 관련 Warning 알림을 자동 억제해요.
+예를 들어 "ApplicationDown"이 뜨면 같은 인스턴스의 "HighCPU", "HighMemory" Warning은 보내지 않아요.
+서버가 죽은 건 하나인데 알림이 4개 오는 건 의미가 없거든요.
 
 ### Mattermost 연동
 
-SSAFY 프로젝트에서 Mattermost를 커뮤니케이션 도구로 썼기 때문에 Slack 대신 선택했다.
+SSAFY 프로젝트에서 Mattermost를 커뮤니케이션 도구로 썼기 때문에 Slack 대신 선택했어요.
 
-Alertmanager에서 Spring Boot Webhook을 거쳐 Mattermost로 전달하는 구조다. Critical은 @channel 멘션으로 즉시 알리고, Warning은 그룹핑해서 조용히 보낸다. 알림이 해결되면 Resolved 알림도 보내서 상태를 추적할 수 있게 했다.
+Alertmanager에서 Spring Boot Webhook을 거쳐 Mattermost로 전달하는 구조예요.
+Critical은 @channel 멘션으로 즉시 알리고, Warning은 그룹핑해서 조용히 보내요.
+알림이 해결되면 Resolved 알림도 보내서 상태를 추적할 수 있게 했어요.
 
 ---
 
 ## 29개 Alert 규칙
 
-실제로 설정한 규칙들이다. 서비스 특성에 맞춰 임계값을 조정했다.
+실제로 설정한 규칙들이에요.
+서비스 특성에 맞춰 임계값을 조정했어요.
 
 **애플리케이션 (4개)**: ApplicationDown(서버 응답 없음), HighResponseTime(P95 > 2초), HighErrorRate(5xx 에러율 > 10%), HighJVMMemory(힙 사용률 > 80%)
 
@@ -108,16 +128,20 @@ Alertmanager에서 Spring Boot Webhook을 거쳐 Mattermost로 전달하는 구�
 
 ## 단일 서버 구성의 한계
 
-가장 큰 문제를 솔직하게 인정한다. 모니터링 스택이 애플리케이션과 같은 서버에서 Docker Compose로 돌아가기 때문에, EC2 인스턴스 자체가 다운되면 Prometheus도, Alertmanager도 같이 죽는다. 알림을 보낼 주체가 없어진다.
+가장 큰 문제를 솔직하게 인정할게요.
+모니터링 스택이 애플리케이션과 같은 서버에서 Docker Compose로 돌아가기 때문에, EC2 인스턴스 자체가 다운되면 Prometheus도, Alertmanager도 같이 죽어요.
+알림을 보낼 주체가 없어집니다.
 
-프로덕션이라면 이렇게 해결할 수 있다:
+프로덕션이라면 이렇게 해결할 수 있어요:
 - CloudWatch Alarm으로 EC2 StatusCheckFailed 감시 (가장 현실적, $0.10/alarm)
 - 모니터링 서버를 별도 EC2로 분리 (t3.small 기준 월 ~$15)
 - 외부 SaaS(Datadog, New Relic 등) 사용
 
 ![](/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monitoring-server-separation.png)
 
-7주 SSAFY 프로젝트에서 모니터링 전용 서버까지 두는 건 과한 투자라고 판단했다. 대신 이 구성이 "서버는 살아있지만 애플리케이션이 죽은 경우"를 감지하는 데 초점을 맞췄다는 점을 인지하고 있다. 서버 자체의 장애는 AWS Console이나 SSH 실패로 인지하는 수밖에 없었다.
+7주 SSAFY 프로젝트에서 모니터링 전용 서버까지 두는 건 과한 투자라고 판단했어요.
+대신 이 구성이 "서버는 살아있지만 애플리케이션이 죽은 경우"를 감지하는 데 초점을 맞췄다는 점을 인지하고 있어요.
+서버 자체의 장애는 AWS Console이나 SSH 실패로 인지하는 수밖에 없었어요.
 
 ---
 

@@ -36,7 +36,8 @@ uploads 테이블의 deleted_at 컬럼 하나로 모든 파일 정리를 통합 
 -> 배치 스케줄러가 deleted_at 기준으로 일괄 정리 (코드 변경 없음)
 
 
-새로운 파일 타입이 추가돼도 정리 로직을 수정할 필요가 없다. `deleted_at`만 마킹하면 자동으로 정리 대상이 되고, 단일 배치로 모든 파일 타입을 처리한다.
+새로운 파일 타입이 추가돼도 정리 로직을 수정할 필요가 없어요.
+`deleted_at`만 마킹하면 자동으로 정리 대상이 되고, 단일 배치로 모든 파일 타입을 처리합니다.
 
 ### 왜 즉시 삭제하지 않는가?
 
@@ -57,7 +58,7 @@ public User updateProfile(..., Long newImageId) {
 - ①②가 성공 → ③에서 DB 예외 발생 → 롤백
 - 하지만 R2에서는 이미 파일이 삭제됨 → **데이터 불일치**
 
-R2, S3 같은 외부 스토리지는 DB 트랜잭션에 포함되지 않습니다.
+R2, S3 같은 외부 스토리지는 DB 트랜잭션에 포함되지 않아요.
 
 #### 2. API 응답 속도 저하
 
@@ -73,7 +74,7 @@ Soft Delete 방식:
 └── 총: 6ms
 ```
 
-사용자 입장에서 "이전 프로필 이미지 삭제"는 관심 없습니다. 일단 빠른 응답이 더 중요합니다.
+사용자 입장에서 "이전 프로필 이미지 삭제"는 관심 없거든요. 일단 빠른 응답이 더 중요해요.
 
 #### 3. 실패 시 복잡한 예외 처리
 
@@ -87,9 +88,11 @@ Soft Delete 방식:
 
 ### 왜 Soft Delete인가?
 
-즉시 삭제는 단순하지만 트랜잭션 불일치와 API 지연, 복구 불가 문제가 있다. 비동기 삭제로 응답 속도는 해결되지만 트랜잭션 문제는 여전하다.
+즉시 삭제는 단순하지만 트랜잭션 불일치와 API 지연, 복구 불가 문제가 있어요.
+비동기 삭제로 응답 속도는 해결되지만 트랜잭션 문제는 여전합니다.
 
-Soft Delete + 배치 방식은 트랜잭션 안전하고 응답이 빠르며 7일간 복구도 가능하다. 스토리지를 7일간 추가로 사용하는 비용이 있지만, 삭제 실패가 핵심 비즈니스에 영향을 주지 않고 트래픽 적은 새벽에 일괄 처리할 수 있어서 현업에서도 일반적인 방식이다.
+Soft Delete + 배치 방식은 트랜잭션 안전하고 응답이 빠르며 7일간 복구도 가능해요.
+스토리지를 7일간 추가로 사용하는 비용이 있지만, 삭제 실패가 핵심 비즈니스에 영향을 주지 않고 트래픽 적은 새벽에 일괄 처리할 수 있어서 현업에서도 일반적인 방식이에요.
 
 ---
 
@@ -102,9 +105,12 @@ RabbitMQ가 이미 인프라에 있지만, 이 기능에는 **Spring Application
 
 #### 이 기능에 RabbitMQ가 과한 이유
 
-RabbitMQ가 이미 인프라에 있지만, 이 기능의 특성상 Spring ApplicationEvent를 선택했다.
+RabbitMQ가 이미 인프라에 있지만, 이 기능의 특성상 Spring ApplicationEvent를 선택했어요.
 
-현재 SpringBoot 서버 1대에서 User 모듈과 Upload 모듈이 같은 JVM에서 실행되므로 서버 간 통신이 필요 없다. soft delete가 실패해도 배치에서 처리되니 치명적이지 않고, 결제처럼 "반드시 처리되어야 하는" 작업도 아니다. RabbitMQ를 쓰려면 ConnectionFactory, Exchange/Queue/Binding 설정, 직렬화 로직, 재연결 처리 등이 추가로 필요한데, Spring Event는 `@EventListener` 하나면 된다. ARM 1 OCPU / 6GB RAM 환경에서 불필요한 네트워크 hop도 낭비다.
+현재 SpringBoot 서버 1대에서 User 모듈과 Upload 모듈이 같은 JVM에서 실행되므로 서버 간 통신이 필요 없어요.
+soft delete가 실패해도 배치에서 처리되니 치명적이지 않고, 결제처럼 "반드시 처리되어야 하는" 작업도 아니에요.
+RabbitMQ를 쓰려면 ConnectionFactory, Exchange/Queue/Binding 설정, 직렬화 로직, 재연결 처리 등이 추가로 필요한데, Spring Event는 `@EventListener` 하나면 됩니다.
+ARM 1 OCPU / 6GB RAM 환경에서 불필요한 네트워크 hop도 낭비예요.
 
 #### 언제 RabbitMQ로 전환해야 하나?
 
@@ -175,18 +181,21 @@ Upload 모듈 ──depends──▶ Core 모듈 (이벤트 리스너)
 
 ## AFTER_COMMIT에서 DB 업데이트가 안 되는 문제
 
-프로필 이미지 변경 기능을 구현하다가 이상한 버그를 만났다. 이전 이미지를 soft delete 처리하는 이벤트 리스너를 만들었는데, 분명히 `save()`를 호출했는데도 `deleted_at`이 DB에 저장되지 않는 것이다.
+프로필 이미지 변경 기능을 구현하다가 이상한 버그를 만났어요.
+이전 이미지를 soft delete 처리하는 이벤트 리스너를 만들었는데, 분명히 `save()`를 호출했는데도 `deleted_at`이 DB에 저장되지 않는 거예요.
 
 ![after-commit-problem](/uploads/project/Tymee/orphan-file-cleanup/after-commit-problem.png)
 
 
-처음엔 내 코드가 잘못된 줄 알고 한참을 헤맸다. 그러다 관련 글을 찾아보면서 원인을 알게 됐는데, 생각보다 깊은 내용이었다.
+처음엔 내 코드가 잘못된 줄 알고 한참을 헤맸어요.
+그러다 관련 글을 찾아보면서 원인을 알게 됐는데, 생각보다 깊은 내용이었습니다.
 
 ### 원인: DB 트랜잭션과 스프링 트랜잭션 컨텍스트는 다르다
 
-`AFTER_COMMIT`이니까 당연히 트랜잭션이 끝난 상태라고 생각했다. 근데 정확히 말하면 **DB 트랜잭션**만 끝난 거고, **스프링 트랜잭션 컨텍스트**는 아직 살아있다.
+`AFTER_COMMIT`이니까 당연히 트랜잭션이 끝난 상태라고 생각했어요.
+근데 정확히 말하면 **DB 트랜잭션**만 끝난 거고, **스프링 트랜잭션 컨텍스트**는 아직 살아있어요.
 
-Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
+Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아가요:
 
 ```
 1. prepareForCommit()
@@ -197,16 +206,18 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 6. cleanupAfterCompletion() <-- 스프링 트랜잭션 컨텍스트 정리
 ```
 
-`doCommit()` 이후에 `triggerAfterCommit()`이 호출되는데, 이 시점에서 DB 트랜잭션은 끝났지만 스프링 트랜잭션 컨텍스트는 `cleanupAfterCompletion()`이 호출되기 전까지 살아있다.
+`doCommit()` 이후에 `triggerAfterCommit()`이 호출되는데, 이 시점에서 DB 트랜잭션은 끝났지만 스프링 트랜잭션 컨텍스트는 `cleanupAfterCompletion()`이 호출되기 전까지 살아있어요.
 
 ### 그래서 뭐가 문제냐면
 
 ![transaction-context-alive](/uploads/project/Tymee/orphan-file-cleanup/transaction-context-alive.png)
 
 
-`@Transactional`의 기본 propagation이 `REQUIRED`인데, 이건 "기존 트랜잭션이 있으면 참여하라"는 뜻이다. 스프링이 보기엔 트랜잭션 컨텍스트가 아직 있으니까 "오 트랜잭션 있네, 참여해야지!" 하고 기존 트랜잭션에 참여한다.
+`@Transactional`의 기본 propagation이 `REQUIRED`인데, 이건 "기존 트랜잭션이 있으면 참여하라"는 뜻이에요.
+스프링이 보기엔 트랜잭션 컨텍스트가 아직 있으니까 "오 트랜잭션 있네, 참여해야지!" 하고 기존 트랜잭션에 참여해요.
 
-근데 DB 트랜잭션은 이미 커밋되어 종료된 상태. 결과적으로 DB에 아무것도 반영되지 않는다.
+근데 DB 트랜잭션은 이미 커밋되어 종료된 상태.
+결과적으로 DB에 아무것도 반영되지 않습니다.
 
 ### 더 골치아픈 건
 
@@ -215,7 +226,9 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 ![persistence-context-cache](/uploads/project/Tymee/orphan-file-cleanup/persistence-context-cache.png)
 
 
-영속성 컨텍스트(1차 캐시)에서 조회되니까 코드상으로는 변경이 잘 된 것처럼 보인다. 하지만 DB에 직접 쿼리를 날려보면 값이 안 바뀌어있다. 이게 디버깅을 어렵게 만든다.
+영속성 컨텍스트(1차 캐시)에서 조회되니까 코드상으로는 변경이 잘 된 것처럼 보여요.
+하지만 DB에 직접 쿼리를 날려보면 값이 안 바뀌어있어요.
+이게 디버깅을 어렵게 만들어요.
 
 ### 해결책
 
@@ -224,23 +237,25 @@ Spring의 `processCommit()` 메서드를 까보면 이렇게 돌아간다:
 ![requires-new-solution](/uploads/project/Tymee/orphan-file-cleanup/requires-new-solution.png)
 
 
-`REQUIRES_NEW`는 기존 트랜잭션과 상관없이 새 트랜잭션을 만든다. 완전히 새로운 DB 트랜잭션이 시작되니까 정상적으로 저장된다.
+`REQUIRES_NEW`는 기존 트랜잭션과 상관없이 새 트랜잭션을 만들어요.
+완전히 새로운 DB 트랜잭션이 시작되니까 정상적으로 저장됩니다.
 
 ### 왜 @Async는 안 썼나?
 
-`@Async`를 쓰면 별도 스레드에서 실행되니까 트랜잭션 컨텍스트가 전파되지 않아서 문제가 해결되긴 한다.
+`@Async`를 쓰면 별도 스레드에서 실행되니까 트랜잭션 컨텍스트가 전파되지 않아서 문제가 해결되긴 해요.
 
 ![async-alternative](/uploads/project/Tymee/orphan-file-cleanup/async-alternative.png)
 
-근데 이 프로젝트에서는 `@Async`를 안 썼다. 이유는:
+근데 이 프로젝트에서는 `@Async`를 안 썼어요. 이유는:
 
-1. **soft delete는 금방 끝남** - `deleted_at` 마킹은 단순 UPDATE 하나라 몇 ms면 끝난다. 비동기로 할 이유가 없다.
+1. **soft delete는 금방 끝남** - `deleted_at` 마킹은 단순 UPDATE 하나라 몇 ms면 끝나요. 비동기로 할 이유가 없습니다.
 
-2. **동기 실행이 디버깅에 유리** - 비동기면 로그 추적이 복잡해지고, 예외 발생 시 어디서 터졌는지 파악하기 어렵다.
+2. **동기 실행이 디버깅에 유리** - 비동기면 로그 추적이 복잡해지고, 예외 발생 시 어디서 터졌는지 파악하기 어려워요.
 
-3. **REQUIRES_NEW로 충분** - 문제의 본질은 "새 DB 트랜잭션이 필요하다"인데, `REQUIRES_NEW`가 정확히 그걸 해결한다.
+3. **REQUIRES_NEW로 충분** - 문제의 본질은 "새 DB 트랜잭션이 필요하다"인데, `REQUIRES_NEW`가 정확히 그걸 해결해요.
 
-`@Async`는 "이 작업이 오래 걸려서 응답을 기다리기 싫을 때" 쓰는 거다. 예를 들어 이메일 발송, 푸시 알림 같은 외부 API 호출. soft delete는 해당 안 됨.
+`@Async`는 "이 작업이 오래 걸려서 응답을 기다리기 싫을 때" 쓰는 거예요.
+예를 들어 이메일 발송, 푸시 알림 같은 외부 API 호출이요. soft delete는 해당 안 돼요.
 
 ### 정리
 
@@ -379,9 +394,14 @@ ERROR 파일 삭제 실패: publicId=7321847264891904002, path=..., error=...
 
 ## 배운 점
 
-가장 크게 배운 건 "트랜잭션의 경계"다. R2/S3 같은 외부 스토리지는 DB 트랜잭션에 포함되지 않는다. 프로필 업데이트 중 R2 파일을 먼저 삭제했는데 DB 커밋에서 예외가 터지면, 파일은 삭제됐는데 DB는 롤백되는 불일치가 생긴다. `@TransactionalEventListener(AFTER_COMMIT)`으로 DB 커밋 성공 후에만 파일 작업을 하도록 해결했다.
+가장 크게 배운 건 "트랜잭션의 경계"예요.
+R2/S3 같은 외부 스토리지는 DB 트랜잭션에 포함되지 않아요.
+프로필 업데이트 중 R2 파일을 먼저 삭제했는데 DB 커밋에서 예외가 터지면, 파일은 삭제됐는데 DB는 롤백되는 불일치가 생겨요.
+`@TransactionalEventListener(AFTER_COMMIT)`으로 DB 커밋 성공 후에만 파일 작업을 하도록 해결했습니다.
 
-AFTER_COMMIT 시점의 함정도 있었다. `@Transactional` 메서드를 호출하면 새 트랜잭션이 시작될 줄 알았는데, DB 트랜잭션은 종료됐지만 스프링 트랜잭션 컨텍스트는 아직 정리 전이라 기본 전파 속성(REQUIRED)이 "이미 종료된 트랜잭션에 참여"를 시도했다. `REQUIRES_NEW`로 명시적으로 새 트랜잭션을 시작해야 한다는 걸 이 과정에서 알게 됐다.
+AFTER_COMMIT 시점의 함정도 있었어요.
+`@Transactional` 메서드를 호출하면 새 트랜잭션이 시작될 줄 알았는데, DB 트랜잭션은 종료됐지만 스프링 트랜잭션 컨텍스트는 아직 정리 전이라 기본 전파 속성(REQUIRED)이 "이미 종료된 트랜잭션에 참여"를 시도했어요.
+`REQUIRES_NEW`로 명시적으로 새 트랜잭션을 시작해야 한다는 걸 이 과정에서 알게 됐습니다.
 
 <!-- EN -->
 

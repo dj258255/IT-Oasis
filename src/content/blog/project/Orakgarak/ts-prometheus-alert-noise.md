@@ -17,15 +17,18 @@ coverImage: "/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-r
 
 ## 한 줄 요약
 
-서버 재시작할 때마다 Mattermost에 알림이 50-100건씩 쏟아져서 정작 중요한 알림을 놓치고 있었다. `for` 절로 일시적 스파이크를 걸러내고, inhibit_rules로 중복 알림을 억제해서 노이즈를 90% 줄였다.
+서버 재시작할 때마다 Mattermost에 알림이 50-100건씩 쏟아져서 정작 중요한 알림을 놓치고 있었어요.
+`for` 절로 일시적 스파이크를 걸러내고, inhibit_rules로 중복 알림을 억제해서 노이즈를 90% 줄였어요.
 
 ---
 
 ## 증상
 
-배포하거나 서버를 재시작할 때마다 Mattermost에 수십 건의 알림이 동시에 쏟아졌다. ApplicationDown, HighCPU, HighMemory, HighResponseTime이 한꺼번에 울리는데, 원인은 서버 재시작 하나였다.
+배포하거나 서버를 재시작할 때마다 Mattermost에 수십 건의 알림이 동시에 쏟아졌어요.
+ApplicationDown, HighCPU, HighMemory, HighResponseTime이 한꺼번에 울리는데, 원인은 서버 재시작 하나였어요.
 
-문제는 알림 피로였다. 알림이 너무 자주 오니까 슬슬 무시하게 되고, 진짜 장애가 났을 때도 "또 노이즈겠지"하고 넘기는 상황이 생겼다.
+문제는 알림 피로였어요.
+알림이 너무 자주 오니까 슬슬 무시하게 되고, 진짜 장애가 났을 때도 "또 노이즈겠지"하고 넘기는 상황이 생겼거든요.
 
 ## 환경
 
@@ -37,17 +40,23 @@ coverImage: "/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-r
 
 ## 원인 분석
 
-두 가지가 겹쳤다.
+두 가지가 겹쳤어요.
 
 ### 1. for 절 없이 즉시 알림
 
-기존 알림 규칙에 `for` 절이 없었다. Prometheus가 15초마다 스크래핑하는데, 한 번이라도 임계값을 넘으면 바로 알림이 나간다.
+기존 알림 규칙에 `for` 절이 없었어요.
+Prometheus가 15초마다 스크래핑하는데, 한 번이라도 임계값을 넘으면 바로 알림이 나갔어요.
 
-서버 재시작 시 CPU와 메모리가 일시적으로 튀는 건 정상이다. JVM 워밍업, 커넥션 풀 초기화, Kafka Consumer 리밸런싱 등이 동시에 일어나니까. 그런데 이걸 전부 장애로 인식하고 있었다.
+서버 재시작 시 CPU와 메모리가 일시적으로 튀는 건 정상이에요.
+JVM 워밍업, 커넥션 풀 초기화, Kafka Consumer 리밸런싱 등이 동시에 일어나거든요.
+그런데 이걸 전부 장애로 인식하고 있었어요.
 
 ### 2. 억제 규칙이 없었다
 
-서버가 죽으면 ApplicationDown(Critical)이 뜬다. 그런데 서버가 죽었으니 당연히 CPU도 응답시간도 비정상이 된다. HighCPU(Warning), HighResponseTime(Warning)이 같이 울린다. 근본 원인은 하나인데 알림이 4건 나오는 구조였다.
+서버가 죽으면 ApplicationDown(Critical)이 떠요.
+그런데 서버가 죽었으니 당연히 CPU도 응답시간도 비정상이 되죠.
+HighCPU(Warning), HighResponseTime(Warning)이 같이 울려요.
+근본 원인은 하나인데 알림이 4건 나오는 구조였어요.
 
 ---
 
@@ -55,7 +64,7 @@ coverImage: "/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-r
 
 ### 1. for 절로 지속 시간 필터링
 
-서버/DB 다운 같은 Critical은 `for: 1m`으로 빠르게 감지하되, Warning은 `for: 5m`으로 충분한 지속 시간을 확인한 뒤에만 알림을 보내도록 했다.
+서버/DB 다운 같은 Critical은 `for: 1m`으로 빠르게 감지하되, Warning은 `for: 5m`으로 충분한 지속 시간을 확인한 뒤에만 알림을 보내도록 했어요.
 
 | 알림 | for 값 | 심각도 | 임계값 |
 |------|--------|--------|--------|
@@ -67,19 +76,20 @@ coverImage: "/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-r
 | MySQLDown | 1m | critical | `up == 0` |
 | KafkaConsumerLag | 5m | warning | > 1000 |
 
-서버 재시작 후 CPU 스파이크는 보통 1-2분 안에 안정화된다. `for: 5m`이면 이런 일시적 이상은 걸러진다.
+서버 재시작 후 CPU 스파이크는 보통 1-2분 안에 안정화돼요.
+`for: 5m`이면 이런 일시적 이상은 걸러집니다.
 
 ### 2. Alertmanager 라우팅 분리
 
 ![](/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-routing.svg)
 
-Critical은 `group_wait: 10s`로 빠르게 보내고, Warning은 `group_wait: 2m`으로 모아서 보낸다.
+Critical은 `group_wait: 10s`로 빠르게 보내고, Warning은 `group_wait: 2m`으로 모아서 보내요.
 
 ### 3. 억제 규칙(Inhibit Rules)
 
 ![](/uploads/project/Orakgarak/ts-prometheus-alert-noise/inhibit-rules.svg)
 
-ApplicationDown(Critical)이 발생하면 같은 인스턴스의 HighCPU, HighMemory, HighResponseTime(Warning)을 자동 억제한다.
+ApplicationDown(Critical)이 발생하면 같은 인스턴스의 HighCPU, HighMemory, HighResponseTime(Warning)을 자동 억제해요.
 
 적용 전: ApplicationDown + HighCPU + HighMemory + HighResponseTime = 4건
 적용 후: ApplicationDown 1건만
