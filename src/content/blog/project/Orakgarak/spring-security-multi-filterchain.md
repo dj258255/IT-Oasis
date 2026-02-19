@@ -17,23 +17,28 @@ coverImage: "/uploads/project/Orakgarak/spring-security-multi-filterchain/filter
 
 ## 한 줄 요약
 
-Webhook, API, Actuator가 각각 다른 인증 방식을 필요로 해서 3개의 SecurityFilterChain을 @Order로 분리하고, OAuth2 + JWT + Refresh Token Rotation을 적용했다.
+Webhook, API, Actuator가 각각 다른 인증 방식을 필요로 해서 3개의 SecurityFilterChain을 @Order로 분리하고, OAuth2 + JWT + Refresh Token Rotation을 적용했어요.
 
 ---
 
 ## 문제 상황
 
-오락가락 서비스의 보안 요구사항은 경로마다 달랐다.
+오락가락 서비스의 보안 요구사항은 경로마다 달랐어요.
 
-`/api/webhook/**`은 EventBridge에서 호출하는 내부 엔드포인트다. 인증 없이 접근 가능해야 한다. `/api/**`는 사용자 API인데, JWT Bearer Token으로 인증이 필수다. `/actuator/**`는 Prometheus가 메트릭을 수집하는 모니터링용 엔드포인트인데, 외부에 노출되면 안 되니 Basic Auth로 보호해야 한다.
+`/api/webhook/**`은 EventBridge에서 호출하는 내부 엔드포인트예요.
+인증 없이 접근 가능해야 해요.
+`/api/**`는 사용자 API인데, JWT Bearer Token으로 인증이 필수고요.
+`/actuator/**`는 Prometheus가 메트릭을 수집하는 모니터링용 엔드포인트인데, 외부에 노출되면 안 되니 Basic Auth로 보호해야 했어요.
 
-하나의 SecurityFilterChain에 이 세 가지를 넣으려고 하면 충돌한다. Webhook은 `permitAll()`이어야 하고 API는 `authenticated()`여야 하는데, `/api/webhook/**`이 `/api/**`에 포함되기 때문이다. `antMatchers` 순서로 처리하는 방법도 있지만, 인증 방식 자체가 다른 경우(JWT vs Basic Auth)는 Filter 구성이 달라야 해서 하나의 Chain으로는 한계가 있다.
+하나의 SecurityFilterChain에 이 세 가지를 넣으려고 하면 충돌해요.
+Webhook은 `permitAll()`이어야 하고 API는 `authenticated()`여야 하는데, `/api/webhook/**`이 `/api/**`에 포함되기 때문이에요.
+`antMatchers` 순서로 처리하는 방법도 있지만, 인증 방식 자체가 다른 경우(JWT vs Basic Auth)는 Filter 구성이 달라야 해서 하나의 Chain으로는 한계가 있었어요.
 
 ---
 
 ## 3개의 FilterChain 분리
 
-@Order 어노테이션과 securityMatcher로 경로별 독립적인 FilterChain을 구성했다.
+@Order 어노테이션과 securityMatcher로 경로별 독립적인 FilterChain을 구성했어요.
 
 | 순서 | 경로 | 인증 방식 | 이유 |
 |------|------|----------|------|
@@ -43,20 +48,25 @@ Webhook, API, Actuator가 각각 다른 인증 방식을 필요로 해서 3개�
 
 ![](/uploads/project/Orakgarak/spring-security-multi-filterchain/filterchain-flow.svg)
 
-요청이 들어오면 Order가 낮은 Chain부터 securityMatcher를 확인한다. 매칭되면 해당 Chain에서 처리하고, 아니면 다음 Chain으로 넘어간다. Webhook 경로가 먼저 매칭되니, API Chain의 JWT 필터를 타지 않는다.
+요청이 들어오면 Order가 낮은 Chain부터 securityMatcher를 확인해요.
+매칭되면 해당 Chain에서 처리하고, 아니면 다음 Chain으로 넘어가요.
+Webhook 경로가 먼저 매칭되니, API Chain의 JWT 필터를 타지 않아요.
 
 ---
 
 ## Webhook에 인증이 없어도 되는 이유
 
-보안이 없는 엔드포인트가 있다는 게 불안할 수 있다. 하지만 이 경로는 여러 계층에서 이미 보호되고 있다.
+보안이 없는 엔드포인트가 있다는 게 불안할 수 있어요.
+하지만 이 경로는 여러 계층에서 이미 보호되고 있어요.
 
-1. EventBridge Rule이 특정 S3 버킷의 ObjectCreated 이벤트만 트리거한다.
-2. EC2가 VPC 내에 있고, Security Group으로 접근을 제한한다.
-3. 경로가 `/api/webhook/**`으로 한정되어 있어 다른 API에 영향이 없다.
-4. 핸들러에서 S3 ObjectCreated 이벤트 구조를 검증한다. 형식이 맞지 않으면 무시한다.
+1. EventBridge Rule이 특정 S3 버킷의 ObjectCreated 이벤트만 트리거해요.
+2. EC2가 VPC 내에 있고, Security Group으로 접근을 제한해요.
+3. 경로가 `/api/webhook/**`으로 한정되어 있어 다른 API에 영향이 없어요.
+4. 핸들러에서 S3 ObjectCreated 이벤트 구조를 검증하고요.
+형식이 맞지 않으면 무시해요.
 
-AWS 인프라 레벨의 보안이 앞단에서 걸러주는 구조다. 애플리케이션 레벨에서 중복으로 인증을 거는 건 불필요한 복잡도를 더할 뿐이었다.
+AWS 인프라 레벨의 보안이 앞단에서 걸러주는 구조거든요.
+애플리케이션 레벨에서 중복으로 인증을 거는 건 불필요한 복잡도를 더할 뿐이었어요.
 
 ---
 

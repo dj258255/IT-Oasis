@@ -25,11 +25,11 @@ coverImage: "/uploads/project/EduMeet/s3-upload-optimization/section.svg"
 
 ### 왜 UUID를 PK로 쓰면 안 되는가?
 
-**결론부터 말하면: "UUID 자체가 문제가 아니라, RDBMS의 Clustered Index 구조와 UUID의 랜덤성이 충돌하기 때문이다."**
+**결론부터 말하면: "UUID 자체가 문제가 아니라, RDBMS의 Clustered Index 구조와 UUID의 랜덤성이 충돌하기 때문이에요."**
 
 #### InnoDB의 Clustered Index 구조
 
-MySQL InnoDB는 PK를 기준으로 **Clustered Index**를 생성한다.
+MySQL InnoDB는 PK를 기준으로 **Clustered Index**를 생성해요.
 
 ```
 Clustered Index = 데이터 자체가 PK 순서로 물리적으로 정렬되어 저장됨
@@ -41,7 +41,7 @@ Clustered Index = 데이터 자체가 PK 순서로 물리적으로 정렬되어 
 
 #### UUID v4의 문제: 랜덤 삽입
 
-UUID v4는 122비트가 완전 랜덤이다.
+UUID v4는 122비트가 완전 랜덤이에요.
 
 ```
 Auto Increment: 항상 마지막 Leaf 노드에 추가 (순차 삽입)
@@ -68,7 +68,7 @@ UUID v4: 랜덤한 위치의 Leaf 노드에 삽입 (랜덤 삽입)
 
 ### Auto Increment의 문제점
 
-단순히 "숫자가 고갈되면 어떡하지?"보다 실무에서 더 중요한 문제들이 있다.
+단순히 "숫자가 고갈되면 어떡하지?"보다 실무에서 더 중요한 문제들이 있어요.
 
 #### 메모리/스토리지 오버헤드
 
@@ -90,7 +90,7 @@ UUID v4: 랜덤한 위치의 Leaf 노드에 삽입 (랜덤 삽입)
 
 ### 대안: Snowflake ID
 
-Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 모두 지원한다.
+Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 모두 지원해요.
 
 ![](/uploads/project/EduMeet/s3-upload-optimization/snowflake-id.png)
 
@@ -101,7 +101,7 @@ Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 
 
 #### Snowflake ID의 비즈니스적 이점
 
-ID 자체가 정보를 담고 있다는 점이 핵심이다.
+ID 자체가 정보를 담고 있다는 점이 핵심이에요.
 
 ```
 Snowflake ID: 6920399584824147968
@@ -137,14 +137,14 @@ Snowflake ID: 6920399584824147968
 
 ## 2. S3 업로드 방식 비교
 
-Spring Boot에서 S3에 파일을 업로드하는 세 가지 방법을 검토했다.
+Spring Boot에서 S3에 파일을 업로드하는 세 가지 방법을 검토했어요.
 
 ### 2.1 Stream 업로드
 
 ![Stream 업로드 아키텍처](/uploads/project/EduMeet/s3-upload-optimization/stream-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-HttpServletRequest의 InputStream을 이용해 S3에 직접 전송. 파일 바이너리를 서버에 저장하지 않는다.
+HttpServletRequest의 InputStream을 이용해 S3에 직접 전송하는 방식이에요. 파일 바이너리를 서버에 저장하지 않아요.
 
 **단점:** 대용량 파일 시 속도 문제 (937MB → 약 16분), 이미지 전처리 불가, 진행 상태 제공 불가
 
@@ -153,7 +153,7 @@ HttpServletRequest의 InputStream을 이용해 S3에 직접 전송. 파일 바�
 ![MultipartFile 업로드 아키텍처](/uploads/project/EduMeet/s3-upload-optimization/multipartfile-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터리에 파일 저장.
+Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tomcat)가 임시 디렉터리에 파일을 저장해요.
 
 ![MultipartFile 동작 원리](/uploads/project/EduMeet/s3-upload-optimization/multipartfile-upload-02.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
@@ -166,7 +166,7 @@ Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터�
 ![AWS Multipart 업로드](/uploads/project/EduMeet/s3-upload-optimization/aws-multipart-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-파일을 작은 part로 나누어 개별 업로드. Spring Boot를 거치지 않고 S3에 직접 업로드.
+파일을 작은 part로 나누어 개별 업로드하는 방식이에요. Spring Boot를 거치지 않고 S3에 직접 업로드하죠.
 
 ![AWS Multipart 진행 상태](/uploads/project/EduMeet/s3-upload-optimization/aws-multipart-upload-02.gif)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
@@ -194,7 +194,7 @@ Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터�
 클라이언트 → 서버 업로드 → 이미지 처리 → S3 업로드
 ```
 
-서버에서 일관된 이미지 처리가 가능하고, 클라이언트 구현이 단순하다.
+서버에서 일관된 이미지 처리가 가능하고, 클라이언트 구현이 단순해요.
 
 ### Presigned URL 방식
 
@@ -202,7 +202,7 @@ Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터�
 클라이언트 → Presigned URL 요청 → S3 직접 업로드
 ```
 
-서버 부하가 최소화되지만, 클라이언트에서 이미지 처리가 필요하다.
+서버 부하가 최소화되지만, 클라이언트에서 이미지 처리가 필요해요.
 
 ### 선택 이유
 
@@ -217,7 +217,7 @@ Spring의 MultipartFile 인터페이스 활용. WAS(Tomcat)가 임시 디렉터�
 
 ### 문제
 
-OS마다 파일 경로가 다르다 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`, macOS: `/var/folders/...`).
+OS마다 파일 경로가 달라요 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`, macOS: `/var/folders/...`).
 
 ### 해결: 환경변수 + 기본값
 
@@ -225,7 +225,7 @@ OS마다 파일 경로가 다르다 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`
 
 ![](/uploads/project/EduMeet/s3-upload-optimization/solution-02.svg)
 
-`EDUMEET_UPLOAD_PATH` 환경변수가 있으면 해당 값을, 없으면 `${java.io.tmpdir}/edumeet-upload` 기본값을 사용한다.
+`EDUMEET_UPLOAD_PATH` 환경변수가 있으면 해당 값을, 없으면 `${java.io.tmpdir}/edumeet-upload` 기본값을 사용해요.
 
 ---
 

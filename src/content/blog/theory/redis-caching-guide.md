@@ -16,17 +16,17 @@ coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png"
 ---
 
 
-이전 글([캐시와 버퍼: 속도 차이를 극복하는 두 가지 방법](/blog/theory/cache-and-buffer))에서 캐시의 기본 개념과 CPU 캐시, 웹 브라우저 캐시, Redis 캐시 등을 살펴봤다. 특히 Redis를 이용한 캐싱 예제를 보면서 DB 조회(50-200ms)를 캐시 조회(1-5ms)로 바꿔 **10배 이상 성능을 향상**시킬 수 있다는 걸 확인했다.
+이전 글([캐시와 버퍼: 속도 차이를 극복하는 두 가지 방법](/blog/theory/cache-and-buffer))에서 캐시의 기본 개념과 CPU 캐시, 웹 브라우저 캐시, Redis 캐시 등을 살펴봤어요. 특히 Redis를 이용한 캐싱 예제를 보면서 DB 조회(50-200ms)를 캐시 조회(1-5ms)로 바꿔 **10배 이상 성능을 향상**시킬 수 있다는 걸 확인했죠.
 
-그런데 막상 라이브 스트리밍 프로젝트에 적용하려고 보니 궁금한 게 너무 많았다. Redis는 왜 Memcached보다 빠를까? 어떤 자료구조를 제공할까? Spring Boot에서는 어떻게 쓸까? 캐시 전략은 뭐가 있고, 주의할 점은? 실제 서비스에서는 어떻게 쓸까?
+그런데 막상 라이브 스트리밍 프로젝트에 적용하려고 보니 궁금한 게 너무 많았어요. Redis는 왜 Memcached보다 빠를까? 어떤 자료구조를 제공할까? Spring Boot에서는 어떻게 쓸까? 캐시 전략은 뭐가 있고, 주의할 점은? 실제 서비스에서는 어떻게 쓸까?
 
-그래서 Redis와 캐싱에 대해 제대로 파헤쳐 보기로 했다.
+그래서 Redis와 캐싱에 대해 제대로 파헤쳐 보기로 했어요.
 
 ## 1. 왜 캐싱이 필요할까?
 
 ### 1.1 반복되는 조회의 문제
 
-라이브 스트리밍 서비스를 만들면서 이런 상황을 마주했다.
+라이브 스트리밍 서비스를 만들면서 이런 상황을 마주했어요.
 
 ```java
 @RestController
@@ -62,7 +62,7 @@ class StreamController {
 
 ### 1.2 캐시의 등장
 
-이런 부류의 문제를 해결하기 위해 **캐시(Cache)** 개념이 등장했다.
+이런 부류의 문제를 해결하기 위해 **캐시(Cache)** 개념이 등장했어요.
 
 ```java
 // 간단한 메모리 캐시
@@ -101,12 +101,12 @@ class SimpleCache {
 
 ### 1.3 CPU 캐시에서 배우는 교훈
 
-캐싱은 소프트웨어보다 하드웨어에서 먼저 발전했다.
+캐싱은 소프트웨어보다 하드웨어에서 먼저 발전했어요.
 ![](/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png)
 
 **핵심 원리**: 자주 쓰는 데이터를 빠른 곳에 두자!
 
-이것이 바로 **캐싱의 근본 원리**다.
+이것이 바로 **캐싱의 근본 원리**예요.
 
 ## 2. 캐싱의 역사와 Redis의 탄생
 
@@ -140,7 +140,7 @@ class LocalCache {
 
 #### Memcached (2003년)
 
-Brad Fitzpatrick이 LiveJournal을 위해 만든 분산 메모리 캐시 시스템이었다.
+Brad Fitzpatrick이 LiveJournal을 위해 만든 분산 메모리 캐시 시스템이었어요.
 
 ```java
 // Memcached 사용
@@ -169,7 +169,7 @@ User user = (User) client.get("user:123");
 
 ### 2.2 Redis의 탄생 (2009년)
 
-2009년, Salvatore Sanfilippo는 실시간 웹 로그 분석 시스템을 만들고 있었다. MySQL로는 성능이 안 나왔고, Memcached로는 필요한 기능(리스트, 정렬)이 없었다. 그래서 직접 만들기로 했다.
+2009년, Salvatore Sanfilippo는 실시간 웹 로그 분석 시스템을 만들고 있었어요. MySQL로는 성능이 안 나왔고, Memcached로는 필요한 기능(리스트, 정렬)이 없었죠. 그래서 직접 만들기로 했어요.
 
 **Redis (REmote DIctionary Server)의 설계 철학**:
 - **다양한 자료구조**: String, List, Set, Sorted Set, Hash
@@ -213,7 +213,7 @@ redis.lpush("list", "new item");  // 리스트 왼쪽에 추가
 
 ### 2.3 Spring Boot + Redis (2014년~)
 
-Spring Boot가 Redis를 1급 시민으로 채택하면서 사용이 폭발적으로 증가했다.
+Spring Boot가 Redis를 1급 시민으로 채택하면서 사용이 폭발적으로 증가했어요.
 
 ```yaml
 # Spring Boot 설정
@@ -508,11 +508,11 @@ class UserService {
 
 ### 5.1 "꼭 Redis를 써야 할까?"
 
-Redis를 공부하고 나서 모든 걸 Redis로 캐싱하려고 했다. 그런데 문득 이런 생각이 들었다.
+Redis를 공부하고 나서 모든 걸 Redis로 캐싱하려고 했어요. 그런데 문득 이런 생각이 들었거든요.
 
 "서버 1대만 쓰는데, 굳이 Redis를 띄워야 할까?"
 
-로그인 기능을 만들면서 이런 상황이 있었다.
+로그인 기능을 만들면서 이런 상황이 있었어요.
 
 ```java
 @Service
@@ -531,11 +531,11 @@ class CategoryService {
 - 서버가 1대면? Redis 없이 메모리에만 캐싱해도 충분하지 않을까?
 - Redis 설치/관리 비용이 아깝다
 
-찾아보니 스프링은 Redis 없이도 캐싱을 지원했다. 바로 **로컬 캐시**다.
+찾아보니 스프링은 Redis 없이도 캐싱을 지원했어요. 바로 **로컬 캐시**죠.
 
 ### 5.2 Spring의 캐시 추상화
 
-스프링의 캐시 추상화가 강력한 이유는 **구현체를 바꿔도 코드는 그대로**라는 점이다.
+스프링의 캐시 추상화가 강력한 이유는 **구현체를 바꿔도 코드는 그대로**라는 점이에요.
 
 ```java
 // 이 코드는 Redis든, Caffeine이든, EhCache든 똑같이 동작
@@ -548,13 +548,13 @@ public User getUser(Long id) {
 ![](/uploads/theory/redis-caching-guide/52-spring-cache-abstraction.png)
 
 
-설정만 바꾸면 구현체가 바뀐다. 이게 추상화의 힘이다.
+설정만 바꾸면 구현체가 바뀌어요. 이게 추상화의 힘이죠.
 
 > 출처: [Spring Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration/cache.html), [스프링 캐시 추상화](https://gunju-ko.github.io/spring/toby-spring/2019/04/11/Spring캐시추상화.html)
 
 ### 5.3 Caffeine Cache 사용하기
 
-**Caffeine**은 구글의 Guava Cache를 개선해서 만든 고성능 로컬 캐시 라이브러리다. 벤치마크 결과 기존 캐시 라이브러리들보다 빠르다고 해서 써보기로 했다.
+**Caffeine**은 구글의 Guava Cache를 개선해서 만든 고성능 로컬 캐시 라이브러리예요. 벤치마크 결과 기존 캐시 라이브러리들보다 빠르다고 해서 써보기로 했어요.
 
 #### 의존성 추가
 
@@ -639,13 +639,13 @@ void cachePerformanceTest() {
 }
 ```
 
-로컬 메모리라 네트워크 비용이 없어서 **거의 0ms**다.
+로컬 메모리라 네트워크 비용이 없어서 **거의 0ms**예요.
 
 > 출처: [Caffeine Cache GitHub](https://github.com/ben-manes/caffeine), [Spring Boot Caffeine Cache](https://javanexus.com/blog/optimizing-cache-performance-caffeine-spring-boot)
 
 ### 5.4 로컬 캐시 고급 설정
 
-Caffeine은 다양한 만료 정책을 지원한다.
+Caffeine은 다양한 만료 정책을 지원해요.
 
 ```java
 @Bean
@@ -708,7 +708,7 @@ Caffeine.newBuilder()
 
 ### 5.5 로컬 캐시 vs Redis, 언제 뭘 쓸까?
 
-이제 두 가지 옵션이 있다. 언제 뭘 써야 할까? 처음엔 혼란스러웠는데, 직접 써보니 명확해졌다.
+이제 두 가지 옵션이 있어요. 언제 뭘 써야 할까? 처음엔 혼란스러웠는데, 직접 써보니 명확해졌어요.
 
 #### 서버 1대 환경
 
@@ -719,7 +719,7 @@ Caffeine.newBuilder()
 - Redis 설치/관리 비용 불필요
 - 속도도 더 빠름 (네트워크 비용 0)
 
-실제로 내 프로젝트 초기에는 서버 1대였다. Caffeine으로 시작했고, 나중에 서버를 늘리면서 Redis로 마이그레이션했다. **코드는 하나도 안 바꿨다**. 설정만 바꿨다.
+실제로 내 프로젝트 초기에는 서버 1대였어요. Caffeine으로 시작했고, 나중에 서버를 늘리면서 Redis로 마이그레이션했죠. **코드는 하나도 안 바꿨어요**. 설정만 바꿨어요.
 
 #### 서버 여러 대 환경
 
@@ -731,7 +731,7 @@ Caffeine.newBuilder()
 - 모든 서버가 같은 데이터를 봐야 함
 - 세션 정보 같은 건 필수로 공유해야 함
 
-하지만 꼭 모든 걸 Redis로 캐싱할 필요는 없다. 나는 이렇게 섞어 쓴다.
+하지만 꼭 모든 걸 Redis로 캐싱할 필요는 없어요. 저는 이렇게 섞어 써요.
 
 #### 실무 전략: 하이브리드
 
@@ -792,13 +792,13 @@ class CachingService {
 ![](/uploads/theory/redis-caching-guide/performance-comparison.png)
 
 
-로컬 캐시가 압도적으로 빠르다. 하지만 **데이터 일관성**이 더 중요하면 Redis를 써야 한다.
+로컬 캐시가 압도적으로 빨라요. 하지만 **데이터 일관성**이 더 중요하면 Redis를 써야 해요.
 
 > 출처: [F-lab Redis와 Spring Boot 통합](https://f-lab.ai/en/insight/redis-spring-boot-integration-20250504), [Spring Cache 이해하기](https://velog.io/@taebong98/Spring-Cache-이해하기), [Spring Boot Caffeine 캐시 적용](https://blog.yevgnenll.me/posts/spring-boot-with-caffeine-cache)
 
 ### 5.6 캐시 통계 확인하기
 
-Caffeine은 캐시 히트율을 확인할 수 있다.
+Caffeine은 캐시 히트율을 확인할 수 있어요.
 
 ```java
 @Configuration
@@ -857,13 +857,13 @@ class CacheStatsController {
 }
 ```
 
-히트율이 높으면 캐싱이 잘 되고 있다는 뜻이다. 내 경우 카테고리 캐시는 98% 이상 히트율을 보였다.
+히트율이 높으면 캐싱이 잘 되고 있다는 뜻이에요. 제 경우 카테고리 캐시는 98% 이상 히트율을 보였어요.
 
 ## 6. 캐싱 전략
 
 ### 6.1 Cache-Aside (Lazy Loading)
 
-가장 흔한 패턴이다.
+가장 흔한 패턴이에요.
 
 ```java
 @Service
@@ -905,7 +905,7 @@ class ProductService {
 
 ### 6.2 Write-Through
 
-데이터 쓸 때 캐시도 함께 업데이트한다.
+데이터 쓸 때 캐시도 함께 업데이트해요.
 
 ```java
 @Service
@@ -933,7 +933,7 @@ class ProductService {
 
 ### 6.3 Write-Behind (Write-Back)
 
-캐시에만 쓰고, 나중에 DB에 반영한다.
+캐시에만 쓰고, 나중에 DB에 반영해요.
 
 ```java
 @Service
@@ -1402,12 +1402,12 @@ class StreamService {
 
 ### 10.3 마치며
 
-스레드 풀, 커넥션 풀에 이어 캐싱까지 공부하고 나니, 이제 라이브 스트리밍 서버의 성능 최적화 전체 그림이 보인다.
+스레드 풀, 커넥션 풀에 이어 캐싱까지 공부하고 나니, 이제 라이브 스트리밍 서버의 성능 최적화 전체 그림이 보여요.
 
 ![](/uploads/theory/redis-caching-guide/103-conclusion.png)
 
 
-다음에는 메시지 큐와 비동기 처리를 공부해서, 더욱 확장 가능한 시스템을 만들어 봐야겠다.
+다음에는 메시지 큐와 비동기 처리를 공부해서, 더욱 확장 가능한 시스템을 만들어 봐야겠어요.
 
 ## 참고 자료
 

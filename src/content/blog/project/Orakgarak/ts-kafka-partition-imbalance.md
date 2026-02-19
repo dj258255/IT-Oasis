@@ -17,15 +17,18 @@ coverImage: "/uploads/project/Orakgarak/ts-kafka-partition-imbalance/uploadid-pa
 
 ## 한 줄 요약
 
-userId 기반 파티셔닝 때문에 헤비 유저의 이벤트가 한 파티션에 몰리면서 Lag 편차가 10배까지 벌어졌다. uploadId 기반으로 바꿔서 Lag 편차 1.2배, 처리 완료 시간 p99를 5분에서 1분으로 줄였다.
+userId 기반 파티셔닝 때문에 헤비 유저의 이벤트가 한 파티션에 몰리면서 Lag 편차가 10배까지 벌어졌어요.
+uploadId 기반으로 바꿔서 Lag 편차 1.2배, 처리 완료 시간 p99를 5분에서 1분으로 줄였어요.
 
 ---
 
 ## 증상
 
-Kafka Exporter로 Consumer Lag을 파티션별로 확인하니, 특정 파티션에만 메시지가 몰려 있었다. 파티션 0의 Lag이 5000인데 파티션 1은 5, 파티션 2는 3이었다. 파티션 0에 붙은 Consumer만 바쁘게 돌고, 나머지 Consumer는 유휴 상태.
+Kafka Exporter로 Consumer Lag을 파티션별로 확인하니, 특정 파티션에만 메시지가 몰려 있었어요.
+파티션 0의 Lag이 5000인데 파티션 1은 5, 파티션 2는 3이었어요.
+파티션 0에 붙은 Consumer만 바쁘게 돌고, 나머지 Consumer는 유휴 상태였어요.
 
-결과적으로 파티션 0에 걸린 사용자의 음성 분석이 5분 넘게 대기하는 반면, 다른 파티션에 걸린 사용자는 바로 처리됐다.
+결과적으로 파티션 0에 걸린 사용자의 음성 분석이 5분 넘게 대기하는 반면, 다른 파티션에 걸린 사용자는 바로 처리됐어요.
 
 ## 환경
 
@@ -37,17 +40,23 @@ Kafka Exporter로 Consumer Lag을 파티션별로 확인하니, 특정 파티션
 
 ## 원인: 파티션 키가 userId
 
-기존에 userId를 파티션 키로 쓰고 있었다. "같은 사용자의 이벤트는 순서대로 처리되어야 한다"는 생각이었다.
+기존에 userId를 파티션 키로 쓰고 있었어요.
+"같은 사용자의 이벤트는 순서대로 처리되어야 한다"는 생각이었거든요.
 
-문제는 활동적인 사용자 한 명이 하루에 100건의 녹음을 올리면, 그 100건이 전부 같은 파티션에 들어간다는 것이다. 비활동 사용자는 하루 3-5건이니, 파티션 간 부하 차이가 수십 배까지 벌어진다.
+문제는 활동적인 사용자 한 명이 하루에 100건의 녹음을 올리면, 그 100건이 전부 같은 파티션에 들어간다는 거예요.
+비활동 사용자는 하루 3-5건이니, 파티션 간 부하 차이가 수십 배까지 벌어져요.
 
 ---
 
 ## 해결: uploadId 기반 파티셔닝
 
-생각해보니 "같은 사용자의 모든 업로드"가 순서를 보장할 필요는 없었다. 순서가 필요한 건 "같은 파일의 처리 단계" 뿐이다. UPLOADED → CONVERTING → COMPLETED가 순서대로 실행되면 되지, 사용자의 첫 번째 녹음과 두 번째 녹음 사이에 순서가 필요한 건 아니다.
+생각해보니 "같은 사용자의 모든 업로드"가 순서를 보장할 필요는 없었어요.
+순서가 필요한 건 "같은 파일의 처리 단계" 뿐이거든요.
+UPLOADED → CONVERTING → COMPLETED가 순서대로 실행되면 되지, 사용자의 첫 번째 녹음과 두 번째 녹음 사이에 순서가 필요한 건 아니거든요.
 
-uploadId를 파티션 키로 바꿨다. 업로드마다 UUID가 다르니 해시 분포가 고르게 퍼진다. 같은 파일의 이벤트만 같은 파티션에 들어가면서 순서도 보장된다.
+uploadId를 파티션 키로 바꿨어요.
+업로드마다 UUID가 다르니 해시 분포가 고르게 퍼져요.
+같은 파일의 이벤트만 같은 파티션에 들어가면서 순서도 보장돼요.
 
 ![](/uploads/project/Orakgarak/ts-kafka-partition-imbalance/uploadid-partitioning.svg)
 
@@ -55,7 +64,7 @@ uploadId를 파티션 키로 바꿨다. 업로드마다 UUID가 다르니 해시
 
 ## Consumer Group 구성
 
-각 토픽별로 독립적인 Consumer Group을 구성했다.
+각 토픽별로 독립적인 Consumer Group을 구성했어요.
 
 ![](/uploads/project/Orakgarak/ts-kafka-partition-imbalance/consumer-group-config.svg)
 
@@ -70,7 +79,7 @@ uploadId를 파티션 키로 바꿨다. 업로드마다 UUID가 다르니 해시
 | upload-events-retry | 재시도 대기 | uploadId |
 | upload-events-dlq | 최종 실패 | uploadId |
 
-모든 토픽에서 uploadId를 파티션 키로 통일했다.
+모든 토픽에서 uploadId를 파티션 키로 통일했어요.
 
 ---
 

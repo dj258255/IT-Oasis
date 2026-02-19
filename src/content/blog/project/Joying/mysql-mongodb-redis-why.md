@@ -15,29 +15,29 @@ draft: false
 coverImage: "/uploads/project/Joying/mysql-mongodb-redis-why/mysql-relational-data.svg"
 ---
 
-Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했다. 그런데 프로젝트 전체를 보면 MySQL, MongoDB, Redis 세 가지 데이터베이스를 쓰고 있다.
+Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했어요. 그런데 프로젝트 전체를 보면 MySQL, MongoDB, Redis 세 가지 데이터베이스를 쓰고 있습니다.
 
 **"DB 3개 쓰면 관리 안 힘든가?"**
 
-팀원이 물었다. 맞는 말이다. 복잡도가 올라간다. 그래도 이렇게 설계한 이유가 있다.
+팀원이 물었어요. 맞는 말이에요. 복잡도가 올라가거든요. 그래도 이렇게 설계한 이유가 있어요.
 
 ---
 
 ## 단일 DB로 해결할 수 없었나?
 
-처음엔 "MySQL 하나로 다 해결하면 안 되나?"라는 질문이 있었다. 검토해봤다.
+처음엔 "MySQL 하나로 다 해결하면 안 되나?"라는 질문이 있었어요. 검토해봤습니다.
 
 ### 1. MySQL만 사용
 
-단일 DB로 관리는 간단하지만, 채팅 메시지 Insert가 느리고(~15ms), 행 단위 잠금 때문에 동시 전송 시 병목이 생긴다.
+단일 DB로 관리는 간단하지만, 채팅 메시지 Insert가 느리고(~15ms), 행 단위 잠금 때문에 동시 전송 시 병목이 생겨요.
 
 ### 2. MongoDB만 사용
 
-메시지 저장은 빠르지만(~5ms), JOIN이 안 돼서 채팅방-사용자-상품 관계를 Application Join으로 처리해야 한다. 느리고 코드가 복잡해진다.
+메시지 저장은 빠르지만(~5ms), JOIN이 안 돼서 채팅방-사용자-상품 관계를 Application Join으로 처리해야 해요. 느리고 코드가 복잡해집니다.
 
 ### 3. Polyglot Persistence (선택)
 
-각 데이터에 최적화된 저장소를 쓰는 방식이다. DB 3개를 운영하는 복잡도가 올라가지만, 채팅 메시지가 초당 수백 건 발생하고 목록 조회가 빈번한 상황에서 **단일 DB로는 성능 요구사항을 맞출 수 없었다.**
+각 데이터에 최적화된 저장소를 쓰는 방식이에요. DB 3개를 운영하는 복잡도가 올라가지만, 채팅 메시지가 초당 수백 건 발생하고 목록 조회가 빈번한 상황에서 **단일 DB로는 성능 요구사항을 맞출 수 없었어요.**
 
 ---
 
@@ -45,7 +45,7 @@ Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했다. 그런데 프로
 
 ### MySQL: 관계형 데이터
 
-채팅방은 Member, Product와 관계를 맺는다.
+채팅방은 Member, Product와 관계를 맺어요.
 
 ![](/uploads/project/Joying/mysql-mongodb-redis-why/mysql-relational-data.svg)
 
@@ -53,11 +53,11 @@ Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했다. 그런데 프로
 ![](/uploads/project/Joying/mysql-mongodb-redis-why/mysql-relational-data-2.svg)
 
 
-MongoDB로 이걸 하려면 Application Join이 필요하다. 느리다.
+MongoDB로 이걸 하려면 Application Join이 필요해요. 느립니다.
 
 ### MongoDB: 쓰기 성능
 
-채팅 메시지는 읽기도 많지만, 쓰기 성능이 더 critical하다.
+채팅 메시지는 읽기도 많지만, 쓰기 성능이 더 critical해요.
 
 채팅 메시지 특성:
 - 쓰기 성능이 critical (실시간 전송, 지연 시 UX 저하)
@@ -66,7 +66,7 @@ MongoDB로 이걸 하려면 Application Join이 필요하다. 느리다.
 - 스키마 변경 가능성 (이미지, 파일, 음성 등 추가)
 
 
-MongoDB는 Insert에 최적화되어 있다. 문서 단위 잠금이라 동시성도 좋다.
+MongoDB는 Insert에 최적화되어 있어요. 문서 단위 잠금이라 동시성도 좋습니다.
 
 | 작업 | MySQL | MongoDB |
 |------|-------|---------|
@@ -75,20 +75,20 @@ MongoDB는 Insert에 최적화되어 있다. 문서 단위 잠금이라 동시�
 
 ### Redis: 실시간성
 
-Pub/Sub은 메모리 기반이라 디스크 I/O가 없다. 초당 수만 건 처리 가능하고, 지연 시간이 1ms 이하다.
+Pub/Sub은 메모리 기반이라 디스크 I/O가 없어요. 초당 수만 건 처리 가능하고, 지연 시간이 1ms 이하입니다.
 
-캐싱도 Redis가 담당한다. 안읽은 메시지 개수, 세션 정보처럼 자주 읽히는 데이터를 메모리에 둔다.
+캐싱도 Redis가 담당해요. 안읽은 메시지 개수, 세션 정보처럼 자주 읽히는 데이터를 메모리에 둡니다.
 
 ---
 
 ## MySQL JSON 컬럼은 왜 안 되는가
 
-처음엔 MySQL의 JSON 컬럼에 메시지 배열로 저장하면 되지 않나 싶었다.
+처음엔 MySQL의 JSON 컬럼에 메시지 배열로 저장하면 되지 않나 싶었어요.
 
 ![](/uploads/project/Joying/mysql-mongodb-redis-why/mysql-json-column-issues.svg)
 
 
-세 가지 문제가 있었다.
+세 가지 문제가 있었어요.
 
 ### 1. 파싱 오버헤드
 
@@ -113,7 +113,7 @@ Thread 1: JSON 배열 업데이트 → 전체 행 잠금
 Thread 2: 대기...
 
 
-MySQL은 행 단위 잠금이다. JSON 배열에 메시지 1개만 추가해도 전체 채팅방이 잠긴다.
+MySQL은 행 단위 잠금이에요. JSON 배열에 메시지 1개만 추가해도 전체 채팅방이 잠겨요.
 
 **MongoDB는 이런 문제가 없다:**
 
@@ -124,9 +124,9 @@ MySQL은 행 단위 잠금이다. JSON 배열에 메시지 1개만 추가해도 
 
 ## Event-Driven Architecture
 
-보통 채팅 시스템의 핵심은 Event-Driven Architecture다.
+보통 채팅 시스템의 핵심은 Event-Driven Architecture예요.
 
-한 채팅방의 인원을 서버 하나에 다 넣으면 서버가 죽어서 분산이 필수다.
+한 채팅방의 인원을 서버 하나에 다 넣으면 서버가 죽어서 분산이 필수예요.
 
 
 1. 메시지 전송 = 이벤트 발행
@@ -140,7 +140,7 @@ MySQL은 행 단위 잠금이다. JSON 배열에 메시지 1개만 추가해도 
 ![](/uploads/project/Joying/mysql-mongodb-redis-why/low-server-coupling.svg)
 
 
-서버 1이 죽어도 서버 2, 3은 영향 없이 동작한다.
+서버 1이 죽어도 서버 2, 3은 영향 없이 동작해요.
 
 ### 수평 확장이 쉽다
 
@@ -148,13 +148,13 @@ MySQL은 행 단위 잠금이다. JSON 배열에 메시지 1개만 추가해도 
 
 
 
-Redis Pub/Sub은 그대로. 새 서버 추가만 하면 자동으로 구독한다.
+Redis Pub/Sub은 그대로. 새 서버 추가만 하면 자동으로 구독합니다.
 
 ---
 
 ## Polyglot Persistence
 
-한 애플리케이션에서 여러 종류의 데이터베이스를 혼용하는 패턴을 Polyglot Persistence라고 한다.
+한 애플리케이션에서 여러 종류의 데이터베이스를 혼용하는 패턴을 Polyglot Persistence라고 해요.
 
 
 **MySQL: 채팅방 메타데이터**
@@ -173,14 +173,14 @@ Redis Pub/Sub은 그대로. 새 서버 추가만 하면 자동으로 구독한�
 - 안읽은 메시지 개수 캐싱
 
 
-**복잡도가 올라가는 건 맞다.**
-3개의 DB를 각각 관리해야 하고, 트랜잭션도 복잡해진다.
-MySQL에서 실패하면 MongoDB도 롤백해야 하는데, 분산 트랜잭션은 구현이 어렵다.
+**복잡도가 올라가는 건 맞아요.**
+3개의 DB를 각각 관리해야 하고, 트랜잭션도 복잡해져요.
+MySQL에서 실패하면 MongoDB도 롤백해야 하는데, 분산 트랜잭션은 구현이 어렵습니다.
 
-**그래도 선택한 이유는 성능이다.** 각 데이터에 최적화된 저장소를 쓰니까 성능이 압도적으로 좋다.
-채팅 메시지는 MongoDB로 빠르게 쓰고, 안읽은 메시지 개수는 Redis로 즉시 읽고, 사용자 정보는 MySQL로 관계 관리한다.
+**그래도 선택한 이유는 성능이에요.** 각 데이터에 최적화된 저장소를 쓰니까 성능이 압도적으로 좋아요.
+채팅 메시지는 MongoDB로 빠르게 쓰고, 안읽은 메시지 개수는 Redis로 즉시 읽고, 사용자 정보는 MySQL로 관계 관리합니다.
 
-채팅은 일관성보다 성능이 더 중요하다. 안읽은 메시지 개수가 1-2초 늦게 업데이트되는 건 사용자가 거의 못 느낀다.
+채팅은 일관성보다 성능이 더 중요해요. 안읽은 메시지 개수가 1-2초 늦게 업데이트되는 건 사용자가 거의 못 느끼거든요.
 
 ---
 
@@ -201,7 +201,7 @@ MySQL에서 실패하면 MongoDB도 롤백해야 하는데, 분산 트랜잭션�
 ![](/uploads/project/Joying/mysql-mongodb-redis-why/factory-pattern.svg)
 
 
-메시지 타입별로 필수 필드를 강제한다. `createImageMessage`는 `imageUrl`이 필수 파라미터라서, 없으면 컴파일 에러가 난다.
+메시지 타입별로 필수 필드를 강제해요. `createImageMessage`는 `imageUrl`이 필수 파라미터라서, 없으면 컴파일 에러가 납니다.
 
 ---
 
@@ -213,7 +213,7 @@ MySQL에서 실패하면 MongoDB도 롤백해야 하는데, 분산 트랜잭션�
 | MongoDB | 채팅 메시지 저장 | Insert 5ms |
 | Redis | 실시간 전달, 캐싱 | 1ms 이하 |
 
-3개 DB 운영 복잡도보다 성능 이득이 훨씬 크다.
+3개 DB 운영 복잡도보다 성능 이득이 훨씬 커요.
 
 <!-- EN -->
 

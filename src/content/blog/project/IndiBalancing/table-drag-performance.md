@@ -1,7 +1,7 @@
 ---
 title: '테이블 드래그 성능 최적화: O(N)에서 O(1)로'
 titleEn: 'Table Drag Performance Optimization: From O(N) to O(1)'
-description: React 스프레드시트에서 드래그 선택 시 발생한 성능 병목을 Set 자료구조, RAF 기반 throttle, DOM 직접 조작으로 해결한 과정을 정리한다.
+description: React 스프레드시트에서 드래그 선택 시 발생한 성능 병목을 Set 자료구조, RAF 기반 throttle, DOM 직접 조작으로 해결한 과정을 정리했어요.
 descriptionEn: Documents resolving drag selection performance bottlenecks in a React spreadsheet using Set data structures, RAF-based throttle, and direct DOM manipulation.
 date: 2025-12-23T00:00:00.000Z
 tags:
@@ -19,7 +19,7 @@ draft: false
 ## 1. 문제 상황 인식
 
 ### 1.1 정상 상태 정의
-- 스프레드시트 형태의 테이블에서 마우스 드래그로 셀 범위를 선택할 때, 사용자의 마우스 움직임에 즉각적으로 반응하여 선택 영역이 부드럽게 확장되어야 함
+- 스프레드시트 형태의 테이블에서 마우스 드래그로 셀 범위를 선택할 때, 사용자의 마우스 움직임에 즉각적으로 반응하여 선택 영역이 부드럽게 확장되어야 해요
 - 드래그 중 프레임 드랍 없이 60fps 유지
 - 100행 x 10열 규모의 테이블에서도 지연 없이 동작
 
@@ -38,7 +38,7 @@ draft: false
 ## 2. 원인 분석
 
 ### 2.1 분석 방법
-React DevTools Profiler와 코드 정적 분석을 통해 렌더링 병목 지점 식별
+React DevTools Profiler와 코드 정적 분석을 통해 렌더링 병목 지점을 식별했어요
 
 ### 2.2 발견된 문제점
 
@@ -60,9 +60,9 @@ const isFillPreview = fillPreviewCells.some(
 ```
 
 **분석**:
-- 100개 셀이 선택된 상태에서 500개 셀을 렌더링하면: 500 × 100 = 50,000번의 비교 연산
-- `Array.some()`은 최악의 경우 배열 전체를 순회하므로 O(N)
-- 드래그 중 매 프레임마다 이 연산이 반복됨
+- 100개 셀이 선택된 상태에서 500개 셀을 렌더링하면: 500 × 100 = 50,000번의 비교 연산이 발생해요
+- `Array.some()`은 최악의 경우 배열 전체를 순회하므로 O(N)이에요
+- 드래그 중 매 프레임마다 이 연산이 반복돼요
 
 #### 문제 2: 과도한 useMemo 의존성
 ```typescript
@@ -80,9 +80,9 @@ const columns = useMemo<ColumnDef<Row>[]>(() => {
 ```
 
 **분석**:
-- `fillPreviewCells`, `moveTargetCell` 등 드래그 상태가 의존성에 포함
-- 마우스 이동 시마다 전체 컬럼 정의가 재생성됨
-- 컬럼 재생성 → 테이블 재렌더링 → 모든 셀 재렌더링의 연쇄 반응
+- `fillPreviewCells`, `moveTargetCell` 등 드래그 상태가 의존성에 포함되어 있어요
+- 마우스 이동 시마다 전체 컬럼 정의가 재생성돼요
+- 컬럼 재생성 → 테이블 재렌더링 → 모든 셀 재렌더링의 연쇄 반응이 일어나요
 
 #### 문제 3: Throttle 미적용
 ```typescript
@@ -98,9 +98,9 @@ const handleCellMouseEnter = useCallback(
 ```
 
 **분석**:
-- `mousemove` 이벤트는 초당 수백 번 발생 가능
-- 매 이벤트마다 `setSelectedCells` 호출 → 리렌더링 트리거
-- 브라우저 렌더링 주기(60fps = 16.67ms)보다 빈번한 상태 업데이트
+- `mousemove` 이벤트는 초당 수백 번 발생할 수 있어요
+- 매 이벤트마다 `setSelectedCells` 호출 → 리렌더링이 트리거돼요
+- 브라우저 렌더링 주기(60fps = 16.67ms)보다 빈번한 상태 업데이트가 발생합니다
 
 ---
 
@@ -146,9 +146,9 @@ const isCellSelected = useCallback(
 ```
 
 **설계 결정**:
-- 기존 배열 구조 유지 → 기존 로직 변경 최소화
-- useMemo로 Set 파생 → 불필요한 재생성 방지
-- 문자열 키 사용 → Map보다 단순한 구조로 충분
+- 기존 배열 구조를 유지해서 기존 로직 변경을 최소화했어요
+- useMemo로 Set을 파생해서 불필요한 재생성을 방지했어요
+- 문자열 키를 사용했는데, Map보다 단순한 구조로 충분하거든요
 
 ### 4.2 Throttle 유틸리티 구현
 
@@ -183,9 +183,9 @@ function throttle<T extends (...args: Parameters<T>) => void>(
 ```
 
 **설계 결정**:
-- 16ms 간격 (60fps 기준) 선택
-- trailing edge 호출 보장 → 마지막 마우스 위치 반영
-- lodash 의존성 추가 대신 직접 구현 → 번들 크기 최적화
+- 16ms 간격(60fps 기준)을 선택했어요
+- trailing edge 호출을 보장해서 마지막 마우스 위치를 반영해요
+- lodash 의존성 추가 대신 직접 구현해서 번들 크기를 최적화했어요
 
 ### 4.3 드래그 핸들러에 Throttle 적용
 
@@ -214,8 +214,8 @@ const handleCellMouseEnterThrottled = useMemo(
 | 드래그 중 state 업데이트 빈도 | ~200회/초 | ~60회/초 | 70% 감소 |
 
 ### 5.2 정성적 개선
-- 드래그 시 프레임 드랍 현상 해소
-- 대용량 테이블에서도 부드러운 선택 경험 제공
+- 드래그 시 프레임 드랍 현상이 해소됐어요
+- 대용량 테이블에서도 부드러운 선택 경험을 제공해요
 
 ### 5.3 검증 방법
 ```bash
@@ -227,24 +227,24 @@ npm run build  # 타입 에러 및 빌드 오류 없음 확인
 ## 6. 핵심 교훈
 
 ### 6.1 자료구조 선택의 중요성
-- 동일한 기능도 자료구조에 따라 O(N) vs O(1) 차이 발생
-- 렌더링 루프 내부의 작은 비효율이 전체 성능에 큰 영향
+- 동일한 기능도 자료구조에 따라 O(N) vs O(1) 차이가 발생해요
+- 렌더링 루프 내부의 작은 비효율이 전체 성능에 큰 영향을 미칩니다
 
 ### 6.2 React 최적화 원칙
-- useMemo 의존성은 최소한으로 유지
-- 빈번한 상태 변경은 throttle/debounce로 제어
-- 렌더링 성능 문제는 대부분 불필요한 리렌더링에서 기인
+- useMemo 의존성은 최소한으로 유지해야 해요
+- 빈번한 상태 변경은 throttle/debounce로 제어하는 게 좋아요
+- 렌더링 성능 문제는 대부분 불필요한 리렌더링에서 기인하거든요
 
 ### 6.3 측정 기반 최적화
-- 추측이 아닌 프로파일링 결과를 기반으로 병목 지점 식별
-- 개선 전후 정량적 비교로 효과 검증
+- 추측이 아닌 프로파일링 결과를 기반으로 병목 지점을 식별해야 해요
+- 개선 전후 정량적 비교로 효과를 검증합니다
 
 ---
 
 ## 7. 2차 최적화 (Excel 수준 성능)
 
 ### 7.1 추가 문제 발견
-1차 최적화 후에도 드래그 시 미세한 지연이 존재. 오픈소스 스프레드시트(Handsontable, AG Grid, Google Sheets) 분석 결과 추가 최적화 기법 발견.
+1차 최적화 후에도 드래그 시 미세한 지연이 존재했어요. 오픈소스 스프레드시트(Handsontable, AG Grid, Google Sheets)를 분석한 결과 추가 최적화 기법을 발견했어요.
 
 ### 7.2 적용 기법
 
@@ -271,9 +271,9 @@ function rafThrottle<T extends (...args: any[]) => void>(fn: T): T {
 ```
 
 **장점**:
-- 브라우저 V-Sync와 동기화되어 프레임 드랍 최소화
-- 백그라운드 탭에서 자동 일시 중지
-- setTimeout 대비 더 정확한 타이밍
+- 브라우저 V-Sync와 동기화되어 프레임 드랍을 최소화해요
+- 백그라운드 탭에서 자동으로 일시 중지돼요
+- setTimeout 대비 더 정확한 타이밍을 제공합니다
 
 #### 기법 2: DOM 직접 조작 (React 렌더링 우회)
 ```typescript
@@ -314,9 +314,9 @@ const handleCellMouseEnterThrottled = useMemo(
 ```
 
 **핵심 아이디어**:
-- 드래그 중에는 React Virtual DOM Diffing + Re-render 사이클을 우회
-- 마우스 업 시에만 React 상태 동기화
-- 셀에 `data-cell-id` 속성 추가로 빠른 DOM 쿼리
+- 드래그 중에는 React Virtual DOM Diffing + Re-render 사이클을 우회해요
+- 마우스 업 시에만 React 상태를 동기화합니다
+- 셀에 `data-cell-id` 속성을 추가해서 빠른 DOM 쿼리가 가능해요
 
 #### 기법 3: CSS will-change 힌트
 ```typescript
@@ -328,8 +328,8 @@ style={{
 ```
 
 **효과**:
-- 브라우저가 해당 속성 변경을 미리 최적화
-- GPU 레이어 분리로 리페인트 비용 감소
+- 브라우저가 해당 속성 변경을 미리 최적화해요
+- GPU 레이어 분리로 리페인트 비용이 감소합니다
 
 ### 7.3 추가 개선 결과
 
@@ -340,9 +340,9 @@ style={{
 | 프레임 동기화 | setTimeout (불완전) | requestAnimationFrame | 완전 동기화 |
 
 ### 7.4 Excel/Google Sheets 수준 달성 방법론
-1. **React 렌더링 최소화**: 빈번한 UI 업데이트는 DOM 직접 조작
-2. **브라우저 API 활용**: requestAnimationFrame, will-change
-3. **마지막에만 상태 동기화**: ref로 중간 값 저장, 완료 시 state 업데이트
+1. **React 렌더링 최소화**: 빈번한 UI 업데이트는 DOM 직접 조작으로 처리해요
+2. **브라우저 API 활용**: requestAnimationFrame, will-change를 적극 활용합니다
+3. **마지막에만 상태 동기화**: ref로 중간 값을 저장하고, 완료 시에만 state를 업데이트해요
 
 ---
 

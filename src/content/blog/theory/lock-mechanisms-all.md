@@ -210,7 +210,7 @@ class Singleton {
 
 ### 2.1 스핀락이란?
 
-스핀락은 **락을 획득할 때까지 계속 확인**하는 방식이다.
+스핀락은 **락을 획득할 때까지 계속 확인**하는 방식이에요.
 
 ```java
 class Spinlock {
@@ -292,7 +292,7 @@ spin_unlock(&my_lock);
 
 #### Shared Lock (공유 락, S-Lock)
 
-여러 트랜잭션이 **읽기 전용**으로 동시 접근 가능하다.
+여러 트랜잭션이 **읽기 전용**으로 동시 접근 가능해요.
 
 ```sql
 -- Shared Lock 획득
@@ -313,7 +313,7 @@ SELECT * FROM users WHERE id = 1 LOCK IN SHARE MODE;
 
 #### Exclusive Lock (배타 락, X-Lock)
 
-**오직 하나의 트랜잭션만** 접근 가능하다.
+**오직 하나의 트랜잭션만** 접근 가능해요.
 
 ```sql
 -- Exclusive Lock 획득
@@ -393,11 +393,11 @@ public class OrderService {
 
 ### 3.2 MongoDB의 재미있는 락 메커니즘
 
-MongoDB는 MySQL과 완전히 다른 방식으로 락을 관리한다.
+MongoDB는 MySQL과 완전히 다른 방식으로 락을 관리해요.
 
 #### Intent Locks (의도 락)
 
-MongoDB는 **계층적 락** 구조를 사용한다.
+MongoDB는 **계층적 락** 구조를 사용해요.
 
 ![](/uploads/theory/lock-mechanisms-all/intent-locks-intent-lock.png)
 
@@ -581,7 +581,7 @@ public void updateStockWithRetry(Long productId, int quantity) {
 
 ### 4.1 왜 분산 락이 필요한가?
 
-마이크로서비스 환경에서는 **여러 인스턴스**가 동시에 실행된다.
+마이크로서비스 환경에서는 **여러 인스턴스**가 동시에 실행돼요.
 
 
 ![](/uploads/theory/lock-mechanisms-all/41-why-distributed-lock-needed.png)
@@ -611,7 +611,7 @@ public void processCoupon(String couponCode) {
 }
 ```
 
-DB 락으로는 **다른 서버 인스턴스**를 막을 수 없다. **분산 락**이 필요하다!
+DB 락으로는 **다른 서버 인스턴스**를 막을 수 없어요. **분산 락**이 필요하죠!
 
 > 출처: [Martin Kleppmann - How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)
 
@@ -765,13 +765,13 @@ public class CouponService {
 
 ### 4.3 Redlock 알고리즘
 
-단일 Redis 인스턴스는 **SPOF (Single Point of Failure)** 문제가 있다.
+단일 Redis 인스턴스는 **SPOF (Single Point of Failure)** 문제가 있어요.
 
 ```
 Redis 인스턴스 다운 → 모든 락 사라짐!
 ```
 
-**Redlock**: 여러 Redis 인스턴스에 분산 락을 획득한다.
+**Redlock**: 여러 Redis 인스턴스에 분산 락을 획득해요.
 
 ![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm.png)
 
@@ -971,11 +971,11 @@ public void goodMethod() {
 
 ### 6.1 하이퍼커넥트: Redis 분산 락과 성능 최적화
 
-하이퍼커넥트의 아자르 API팀은 전 세계 트래픽을 받는 멀티 서버 환경에서 분산 락을 구현했다.
+하이퍼커넥트의 아자르 API팀은 전 세계 트래픽을 받는 멀티 서버 환경에서 분산 락을 구현했어요.
 
 #### 문제 상황
 
-단일 서버의 로컬 락으로는 여러 서버 간 동기화를 보장할 수 없었다. "공통된 저장소를 이용하여 자원이 사용 중인지 체크"하는 분산 락이 필수적이었다.
+단일 서버의 로컬 락으로는 여러 서버 간 동기화를 보장할 수 없었어요. "공통된 저장소를 이용하여 자원이 사용 중인지 체크"하는 분산 락이 필수적이었죠.
 
 #### 초기 구현의 3가지 문제점
 
@@ -994,7 +994,7 @@ public void processWithLock(String key) {
 }
 ```
 
-어플리케이션 오류로 락을 해제하지 못하면 다른 모든 서버가 **무한 대기** 상태에 빠진다.
+어플리케이션 오류로 락을 해제하지 못하면 다른 모든 서버가 **무한 대기** 상태에 빠져요.
 
 **2. 무한 스핀락의 비효율성**
 
@@ -1021,7 +1021,7 @@ try {
 }
 ```
 
-락 획득 실패 시에도 finally에서 락을 해제하여 동기화가 깨진다.
+락 획득 실패 시에도 finally에서 락을 해제하여 동기화가 깨져요.
 
 #### Redisson의 3가지 핵심 솔루션
 
@@ -1042,7 +1042,7 @@ if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
 }
 ```
 
-어플리케이션 장애 시에도 `leaseTime` 후 자동으로 락이 해제된다.
+어플리케이션 장애 시에도 `leaseTime` 후 자동으로 락이 해제돼요.
 
 **2. Pub/Sub 기반 알림**
 
@@ -1103,7 +1103,7 @@ return redis.call('pttl', KEYS[1]);
 
 ### 6.2 컬리: Redisson 분산락으로 재고 관리
 
-컬리의 풀필먼트 입고 서비스팀은 입고관리 시스템(RMS)에서 발생한 동시성 문제를 Redisson으로 해결했다.
+컬리의 풀필먼트 입고 서비스팀은 입고관리 시스템(RMS)에서 발생한 동시성 문제를 Redisson으로 해결했어요.
 
 #### 발생한 동시성 문제
 
@@ -1310,11 +1310,11 @@ public void processOrder(String orderId) {
 
 ### 6.3 우아한형제들: WMS 재고 이관 분산 락
 
-우아한형제들은 WMS(Warehouse Management System) 재고 이관 과정에서 분산 락을 사용했다.
+우아한형제들은 WMS(Warehouse Management System) 재고 이관 과정에서 분산 락을 사용했어요.
 
 #### 문제 상황
 
-여러 프로세스가 동일한 자원(재고)에 접근할 때 충돌이 발생했다. 분산 환경에서 데이터 정합성을 유지하기 위해 분산 락이 필수적이었다.
+여러 프로세스가 동일한 자원(재고)에 접근할 때 충돌이 발생했어요. 분산 환경에서 데이터 정합성을 유지하기 위해 분산 락이 필수적이었죠.
 
 #### 해결 방법
 

@@ -23,14 +23,14 @@ coverImage: "/uploads/project/Tymee/mapstruct-usage/manual-mapping-problem.png"
 
 ### 불변 객체와 가변 객체
 
-이 프로젝트는 레이어별로 객체 특성이 다르다:
+이 프로젝트는 레이어별로 객체 특성이 달라요:
 
-- **Domain**: 불변 객체. 생성 후 상태 변경 시 새 객체 반환하거나 명시적 메서드로만 변경.
-- **Entity**: 가변 객체. JPA가 프록시로 감싸서 dirty checking 하려면 setter나 필드 직접 접근 필요.
-- **DTO (Request)**: 불변 객체. Java record 사용. 클라이언트에서 받은 값 그대로 유지.
+- **Domain**: 불변 객체. 생성 후 상태 변경 시 새 객체 반환하거나 명시적 메서드로만 변경해요.
+- **Entity**: 가변 객체. JPA가 프록시로 감싸서 dirty checking 하려면 setter나 필드 직접 접근이 필요해요.
+- **DTO (Request)**: 불변 객체. Java record 사용. 클라이언트에서 받은 값 그대로 유지해요.
 - **DTO (Response)**: 불변 객체. Java record 사용.
 
-문제는 이 객체들 사이에서 변환이 필요하다는 거다:
+문제는 이 객체들 사이에서 변환이 필요하다는 거예요:
 
 ```
 Request DTO → Domain → Entity (저장)
@@ -42,11 +42,12 @@ Entity → Domain → Response DTO (조회)
 ![manual-mapping-problem](/uploads/project/Tymee/mapstruct-usage/manual-mapping-problem.png)
 
 
-필드 순서 틀리거나 하나 빠뜨리면 컴파일 에러도 안 나고 런타임에 이상한 값이 들어간다. MapStruct는 컴파일 타임에 매핑 코드를 생성해서 이런 실수를 방지한다.
+필드 순서 틀리거나 하나 빠뜨리면 컴파일 에러도 안 나고 런타임에 이상한 값이 들어가요.
+MapStruct는 컴파일 타임에 매핑 코드를 생성해서 이런 실수를 방지합니다.
 
 ### 부분 업데이트 (PATCH)
 
-설정 변경 API는 보통 전체가 아니라 일부만 바꾼다:
+설정 변경 API는 보통 전체가 아니라 일부만 바꿔요:
 
 ```json
 { "pushEnabled": false }  // 푸시만 끄고 나머지는 유지
@@ -57,7 +58,7 @@ Entity → Domain → Response DTO (조회)
 ![partial-update-problem](/uploads/project/Tymee/mapstruct-usage/partial-update-problem.png)
 
 
-MapStruct의 `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)`나 default 메서드로 이걸 깔끔하게 처리할 수 있다.
+MapStruct의 `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)`나 default 메서드로 이걸 깔끔하게 처리할 수 있어요.
 
 ---
 
@@ -79,14 +80,18 @@ MapStruct의 `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)`나 defaul
 ![user-mapper](/uploads/project/Tymee/mapstruct-usage/user-mapper.png)
 
 
-User 도메인은 Value Object를 많이 쓴다. `Email`, `Nickname`, `Tier`, `UserStatus` 같은 VO들이 있고, 이걸 DTO로 변환할 때 `.value()`나 `.name()` 호출이 필요하다. 필드가 많아지면 수동으로 하기 귀찮고 실수하기 쉬워서 MapStruct를 썼다.
+User 도메인은 Value Object를 많이 써요.
+`Email`, `Nickname`, `Tier`, `UserStatus` 같은 VO들이 있고, 이걸 DTO로 변환할 때 `.value()`나 `.name()` 호출이 필요합니다.
+필드가 많아지면 수동으로 하기 귀찮고 실수하기 쉬워서 MapStruct를 썼어요.
 
 ### UserSettingsMapper
 
 ![user-settings-mapper](/uploads/project/Tymee/mapstruct-usage/user-settings-mapper.png)
 
 
-UserSettings는 더 심하다. 푸시 알림, 개인정보, 플래너 설정 등 20개가 넘는 필드가 있고, 부분 업데이트(PATCH)를 지원해야 한다. null인 필드는 무시하고 기존 값을 유지하는 로직이 필요한데, 이걸 수동으로 하면 코드가 100줄 넘어간다.
+UserSettings는 더 심해요.
+푸시 알림, 개인정보, 플래너 설정 등 20개가 넘는 필드가 있고, 부분 업데이트(PATCH)를 지원해야 합니다.
+null인 필드는 무시하고 기존 값을 유지하는 로직이 필요한데, 이걸 수동으로 하면 코드가 100줄 넘어가요.
 
 ---
 
@@ -97,20 +102,21 @@ UserSettings는 더 심하다. 푸시 알림, 개인정보, 플래너 설정 등
 ![upload-response-from](/uploads/project/Tymee/mapstruct-usage/upload-response-from.png)
 
 
-upload은 MapStruct 안 쓴다. 이유:
+upload은 MapStruct 안 써요. 이유는:
 
-1. **추가 파라미터 필요**: `url`과 `thumbnailUrl`은 도메인 객체에 없다. R2StorageService에서 생성한 값을 같이 넘겨야 하는데, MapStruct는 단순 객체 → 객체 변환에 최적화되어 있어서 이런 케이스가 어색하다.
+1. **추가 파라미터 필요**: `url`과 `thumbnailUrl`은 도메인 객체에 없어요. R2StorageService에서 생성한 값을 같이 넘겨야 하는데, MapStruct는 단순 객체 → 객체 변환에 최적화되어 있어서 이런 케이스가 어색해요.
 
-2. **필드가 적음**: Upload 도메인은 필드가 10개 안 된다. 수동으로 해도 코드 몇 줄이라 MapStruct 설정하는 비용이 더 크다.
+2. **필드가 적음**: Upload 도메인은 필드가 10개 안 돼요. 수동으로 해도 코드 몇 줄이라 MapStruct 설정하는 비용이 더 커요.
 
-3. **VO 없음**: user처럼 Email, Nickname 같은 VO를 안 쓴다. 그냥 primitive 타입이라 변환 로직이 단순하다.
+3. **VO 없음**: user처럼 Email, Nickname 같은 VO를 안 써요. 그냥 primitive 타입이라 변환 로직이 단순합니다.
 
 ### UploadEntity 변환
 
 ![upload-entity-conversion](/uploads/project/Tymee/mapstruct-usage/upload-entity-conversion.png)
 
 
-엔티티 ↔ 도메인도 필드명이 똑같고 타입도 같다. MapStruct 쓰면 자동으로 해주긴 하는데, 이 정도는 수동으로 해도 충분하다.
+엔티티 ↔ 도메인도 필드명이 똑같고 타입도 같아요.
+MapStruct 쓰면 자동으로 해주긴 하는데, 이 정도는 수동으로 해도 충분합니다.
 
 ---
 
@@ -125,7 +131,9 @@ upload은 MapStruct 안 쓴다. 이유:
 | 필드 5개 이하 | | O |
 | 1:1 단순 매핑 | 둘 다 OK | 둘 다 OK |
 
-결국 보일러플레이트가 얼마나 많이 줄어드냐의 문제다. user처럼 VO도 많고 필드도 많고 부분 업데이트도 있으면 MapStruct가 확실히 낫다. upload처럼 단순하면 굳이 의존성 추가할 필요 없다.
+결국 보일러플레이트가 얼마나 많이 줄어드냐의 문제예요.
+user처럼 VO도 많고 필드도 많고 부분 업데이트도 있으면 MapStruct가 확실히 낫습니다.
+upload처럼 단순하면 굳이 의존성 추가할 필요 없어요.
 
 ---
 
@@ -136,14 +144,16 @@ upload은 MapStruct 안 쓴다. 이유:
 ![mapstruct-build-gradle](/uploads/project/Tymee/mapstruct-usage/mapstruct-build-gradle.png)
 
 
-Lombok과 같이 쓰면 annotationProcessor 순서가 중요하다. MapStruct가 Lombok이 생성한 getter/setter를 사용하기 때문에 Lombok이 먼저 처리되어야 한다.
+Lombok과 같이 쓰면 annotationProcessor 순서가 중요해요.
+MapStruct가 Lombok이 생성한 getter/setter를 사용하기 때문에 Lombok이 먼저 처리되어야 하거든요.
 
 ### Mapper 인터페이스
 
 ![mapper-interface](/uploads/project/Tymee/mapstruct-usage/mapper-interface.png)
 
 
-`componentModel = "spring"`으로 설정하면 Spring Bean으로 등록된다. `@Autowired`나 생성자 주입으로 사용할 수 있다.
+`componentModel = "spring"`으로 설정하면 Spring Bean으로 등록돼요.
+`@Autowired`나 생성자 주입으로 사용할 수 있습니다.
 
 ---
 
@@ -151,17 +161,18 @@ Lombok과 같이 쓰면 annotationProcessor 순서가 중요하다. MapStruct가
 
 ### 객체 생성 비용, 걱정할 필요 없다
 
-불변 객체 변환은 매번 새 객체를 만들어야 하니까 가변 객체보다 느리지 않을까? 결론부터 말하면 **거의 차이 없다**.
+불변 객체 변환은 매번 새 객체를 만들어야 하니까 가변 객체보다 느리지 않을까요? 결론부터 말하면 **거의 차이 없어요**.
 
-JVM의 단기 객체(short-lived object) 생성 비용은 약 **3.6 나노초**다. API 요청 하나 처리하는 데 보통 수십~수백 밀리초가 걸리는데, 객체 몇 개 더 만든다고 체감되는 성능 저하는 없다.
+JVM의 단기 객체(short-lived object) 생성 비용은 약 **3.6 나노초**예요.
+API 요청 하나 처리하는 데 보통 수십~수백 밀리초가 걸리는데, 객체 몇 개 더 만든다고 체감되는 성능 저하는 없어요.
 
-게다가 JVM은 **Escape Analysis**라는 최적화를 한다:
+게다가 JVM은 **Escape Analysis**라는 최적화를 해요:
 
 - 메서드 밖으로 안 나가는 객체는 힙 대신 스택에 할당
 - 아예 객체를 만들지 않고 필드만 변수로 쪼개는 **Scalar Replacement**
 - 단일 스레드에서만 쓰이면 동기화 제거
 
-결국 불변 객체를 자주 만들어도 GC 부담이 크게 늘지 않는다. 오히려 불변 객체는:
+결국 불변 객체를 자주 만들어도 GC 부담이 크게 늘지 않아요. 오히려 불변 객체는:
 
 - **방어적 복사 불필요**: 가변 객체는 넘길 때마다 복사해야 안전한데, 불변은 그냥 참조 전달
 - **동기화 불필요**: 멀티스레드 환경에서 락 오버헤드 제로
@@ -180,9 +191,10 @@ JVM의 단기 객체(short-lived object) 생성 비용은 약 **3.6 나노초**�
 | ModelMapper | 184,304 |
 | Dozer | 89,860 |
 
-MapStruct가 수동 매핑과 거의 동등한 성능을 낸다. **컴파일 타임에 최적화된 코드를 생성**하기 때문이다.
+MapStruct가 수동 매핑과 거의 동등한 성능을 내요.
+**컴파일 타임에 최적화된 코드를 생성**하기 때문이에요.
 
-반면 Dozer나 ModelMapper는 리플렉션 기반이라 런타임 오버헤드가 크다. 150배 이상 차이 난다.
+반면 Dozer나 ModelMapper는 리플렉션 기반이라 런타임 오버헤드가 커요. 150배 이상 차이 납니다.
 
 ### 그래서 뭘 쓰나
 
@@ -192,13 +204,14 @@ MapStruct가 수동 매핑과 거의 동등한 성능을 낸다. **컴파일 타
 | 필드 적음 + 단순 변환 | 수동 (의존성 추가 비용 > 이득) |
 | 리플렉션 기반 매퍼 | 쓰지 마라 (성능 병목) |
 
-성능 측면에서 불변 객체 변환은 문제가 안 된다. 선택 기준은 **보일러플레이트 감소 효과**와 **타입 안전성**이다.
+성능 측면에서 불변 객체 변환은 문제가 안 돼요.
+선택 기준은 **보일러플레이트 감소 효과**와 **타입 안전성**입니다.
 
 ---
 
 ## 불변 객체 수정: toBuilder vs Wither vs Factory
 
-레이어드 아키텍처에서 불변 객체를 쓰면 필연적으로 마주치는 문제가 있다: **필드 하나만 바꾸고 싶은데 전체를 복사해야 한다**.
+레이어드 아키텍처에서 불변 객체를 쓰면 필연적으로 마주치는 문제가 있어요: **필드 하나만 바꾸고 싶은데 전체를 복사해야 한다**는 거예요.
 
 ### 문제 상황
 
@@ -216,7 +229,8 @@ var updated = User.builder()
                 .build();
 ```
 
-필드 20개 도메인이면 코드가 20줄이다. 실수하기 딱 좋고, 필드 추가될 때마다 여기저기 수정해야 한다.
+필드 20개 도메인이면 코드가 20줄이에요.
+실수하기 딱 좋고, 필드 추가될 때마다 여기저기 수정해야 합니다.
 
 ### 해결책 1: toBuilder (Lombok)
 
@@ -232,7 +246,7 @@ var updated = user.toBuilder()
         .build();
 ```
 
-기존 객체의 모든 필드를 복사한 Builder를 반환한다. 바꿀 필드만 덮어쓰면 된다.
+기존 객체의 모든 필드를 복사한 Builder를 반환해요. 바꿀 필드만 덮어쓰면 됩니다.
 
 ### 해결책 2: Wither 패턴 (Lombok @With)
 
@@ -247,7 +261,7 @@ public class User {
 var updated = user.withNickname("새닉네임");
 ```
 
-단일 필드 변경에 가장 깔끔하다. 여러 필드 변경하려면 체이닝:
+단일 필드 변경에 가장 깔끔해요. 여러 필드 변경하려면 체이닝:
 
 ```java
 var updated = user
@@ -268,7 +282,7 @@ public record User(String name, int age) {
 }
 ```
 
-Record는 Lombok 없이 써야 할 때. 필드 적으면 괜찮은데, 많으면 보일러플레이트가 늘어난다.
+Record는 Lombok 없이 써야 할 때 적합해요. 필드 적으면 괜찮은데, 많으면 보일러플레이트가 늘어나요.
 
 ### 해결책 4: Factory 메서드
 
@@ -284,17 +298,21 @@ public class User {
 }
 ```
 
-검증 로직 넣거나, 캐싱하거나, 서브타입 반환할 때 유용하다. 단순 필드 변경엔 과하다.
+검증 로직 넣거나, 캐싱하거나, 서브타입 반환할 때 유용해요.
+단순 필드 변경엔 과합니다.
 
 ### 비교
 
-`toBuilder`는 여러 필드를 동시에 바꿀 때 좋고, Wither는 단일 필드 변경에 깔끔하다. Factory 메서드는 검증이나 캐싱 로직이 필요할 때 유용하고, Record wither는 Lombok 없이 쓸 때 적합하다. 성능은 다 비슷하다. 결국 새 객체를 만드는 건 똑같고 JVM이 최적화해준다. 선택 기준은 코드 가독성과 유지보수성이다.
+`toBuilder`는 여러 필드를 동시에 바꿀 때 좋고, Wither는 단일 필드 변경에 깔끔해요.
+Factory 메서드는 검증이나 캐싱 로직이 필요할 때 유용하고, Record wither는 Lombok 없이 쓸 때 적합합니다.
+성능은 다 비슷해요. 결국 새 객체를 만드는 건 똑같고 JVM이 최적화해주거든요.
+선택 기준은 코드 가독성과 유지보수성이에요.
 
 ---
 
 ## 실제 프로젝트: UserSettings 사례
 
-이론은 여기까지고, 실제 이 프로젝트에서 어떻게 했는지 보자.
+이론은 여기까지고, 실제 이 프로젝트에서 어떻게 했는지 볼게요.
 
 ### UserSettings는 "부분 불변"
 
@@ -311,7 +329,7 @@ public class UserSettings {
 }
 ```
 
-**완전 불변이 아니라 가변 도메인**이다. 왜?
+**완전 불변이 아니라 가변 도메인**이에요. 왜냐하면:
 
 1. **필드가 20개 넘음**: 완전 불변이면 하나만 바꿔도 `toBuilder`로 새 객체 만들어야 함
 2. **PATCH API 지원**: 클라이언트가 `{ "pushEnabled": false }` 만 보내면 나머지는 유지해야 함
@@ -333,7 +351,7 @@ public void updatePlannerSettings(int startHour, int dailyGoal, int weeklyGoal, 
 }
 ```
 
-`toBuilder` 대신 명시적 `updateXxx()` 메서드를 쓴다. 장점:
+`toBuilder` 대신 명시적 `updateXxx()` 메서드를 써요. 장점은:
 - **검증 로직 포함 가능**: `plannerStartHour` 범위 체크 같은 거
 - **updatedAt 자동 갱신**: 매번 까먹지 않음
 - **의도 명확**: "이 필드는 이렇게 바꿀 수 있다"가 코드에 드러남
@@ -356,7 +374,7 @@ public interface UserSettingsMapper {
 }
 ```
 
-이게 바로 **MapStruct를 쓰는 이유**다:
+이게 바로 **MapStruct를 쓰는 이유**예요:
 - null인 필드는 무시하고 기존 값 유지 (PATCH 시맨틱)
 - 20개 필드 null 체크를 한 곳에서 관리
 - 도메인의 `updateXxx()` 메서드를 호출해서 검증도 탐
@@ -384,13 +402,13 @@ public UserSettings updateThemeMode(ThemeMode themeMode) {
 }
 ```
 
-나쁘진 않은데, 현재 구조에선 굳이 필요 없다.
+나쁘진 않은데, 현재 구조에선 굳이 필요 없어요.
 
 ---
 
 ## 결론: 왜 MapStruct인가
 
-정리하면 이렇다:
+정리하면 이래요:
 
 1. **레이어 간 변환** (User → UserResponse): MapStruct
     - 타입이 다르고, VO → primitive 변환 필요
@@ -405,7 +423,9 @@ public UserSettings updateThemeMode(ThemeMode themeMode) {
     - 필드 적고 타입 변환 없으면 그냥 `from()` 메서드로 충분
     - 추가 파라미터 필요하면 오히려 수동이 자연스러움
 
-결국 **"보일러플레이트가 얼마나 줄어드느냐"**가 핵심이다. 줄어드는 게 많으면 도구 쓰고, 별로면 수동으로 한다. 성능은 걱정할 필요 없다.
+결국 **"보일러플레이트가 얼마나 줄어드느냐"**가 핵심이에요.
+줄어드는 게 많으면 도구 쓰고, 별로면 수동으로 하면 됩니다.
+성능은 걱정할 필요 없어요.
 
 ---
 

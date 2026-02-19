@@ -18,9 +18,9 @@ coverImage: "/uploads/theory/java-concurrency-collections/segment-lock-diagram.p
 
 ## 들어가며
 
-멀티스레드 환경에서 일반 컬렉션(`ArrayList`, `HashMap`)을 사용하면 **경쟁 조건(Race Condition)**이 발생한다. `synchronized`로 모든 메서드를 감싸는 `Vector`나 `Hashtable`은 성능이 떨어진다.
+멀티스레드 환경에서 일반 컬렉션(`ArrayList`, `HashMap`)을 사용하면 **경쟁 조건(Race Condition)**이 발생해요. `synchronized`로 모든 메서드를 감싸는 `Vector`나 `Hashtable`은 성능이 떨어지죠.
 
-Java는 `java.util.concurrent` 패키지에서 **고성능 동시성 컬렉션**을 제공한다. 이 문서에서는 실무에서 자주 사용되는 동시성 자료구조와 락 메커니즘을 다룬다.
+Java는 `java.util.concurrent` 패키지에서 **고성능 동시성 컬렉션**을 제공해요. 이 문서에서는 실무에서 자주 사용되는 동시성 자료구조와 락 메커니즘을 다뤄볼게요.
 
 > 출처: [Java Documentation - Concurrent Collections](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/package-summary.html)
 
@@ -53,7 +53,7 @@ table.get("key2");     // 읽기도 전체 락 (비효율적!)
 
 ### 1.2 ConcurrentHashMap의 해결책: 세그먼트 락 (Java 8 이전)
 
-Java 7까지는 **세그먼트(Segment) 락**을 사용했다.
+Java 7까지는 **세그먼트(Segment) 락**을 사용했어요.
 
 ```java
 // 개념적 구조 (실제 코드는 아님)
@@ -77,7 +77,7 @@ class ConcurrentHashMap<K, V> {
 
 ### 1.3 ConcurrentHashMap의 개선: CAS 기반 (Java 8 이후)
 
-Java 8부터는 **세그먼트를 제거**하고 **CAS(Compare-And-Swap) + synchronized**를 사용한다.
+Java 8부터는 **세그먼트를 제거**하고 **CAS(Compare-And-Swap) + synchronized**를 사용해요.
 
 ![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.png)
 
@@ -203,7 +203,7 @@ map.computeIfAbsent("users", k -> new ArrayList<>()).add("Alice");
 
 ### 2.1 개념: 쓰기 시 복사
 
-**읽기가 압도적으로 많고 쓰기가 드문 경우**에 사용한다.
+**읽기가 압도적으로 많고 쓰기가 드문 경우**에 사용해요.
 
 ```java
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -297,7 +297,7 @@ public class ConfigurationManager {
 
 ### 3.1 개념: Producer-Consumer 패턴
 
-`BlockingQueue`는 **큐가 비었을 때 대기**, **큐가 꽉 찼을 때 대기**하는 기능을 제공한다.
+`BlockingQueue`는 **큐가 비었을 때 대기**, **큐가 꽉 찼을 때 대기**하는 기능을 제공해요.
 
 ```java
 import java.util.concurrent.BlockingQueue;
@@ -506,7 +506,7 @@ public class AsyncLogger {
 
 ### 4.1 ReentrantLock
 
-`synchronized`보다 더 유연한 락이다.
+`synchronized`보다 더 유연한 락이에요.
 
 ```java
 import java.util.concurrent.locks.ReentrantLock;
@@ -672,7 +672,7 @@ public class Cache<K, V> {
 
 ### 4.3 StampedLock (Java 8+)
 
-ReadWriteLock보다 **더 빠른 낙관적 읽기**를 제공한다.
+ReadWriteLock보다 **더 빠른 낙관적 읽기**를 제공해요.
 
 ```java
 import java.util.concurrent.locks.StampedLock;
@@ -729,7 +729,7 @@ public class Point {
 
 ### 5.1 AtomicInteger / AtomicLong
 
-**락 없이 원자적 연산**을 수행한다.
+**락 없이 원자적 연산**을 수행해요.
 
 ```java
 import java.util.concurrent.atomic.AtomicInteger;
@@ -795,7 +795,7 @@ public void increment() {
 
 ### 5.2 LongAdder (Java 8+)
 
-**고경쟁 상황에서 AtomicLong보다 빠르다.**
+**고경쟁 상황에서 AtomicLong보다 빨라요.**
 
 ```java
 import java.util.concurrent.atomic.LongAdder;
@@ -829,7 +829,7 @@ LongAdder
 
 ### 5.3 AtomicReference
 
-**객체 참조를 원자적으로 업데이트**한다.
+**객체 참조를 원자적으로 업데이트**해요.
 
 ```java
 import java.util.concurrent.atomic.AtomicReference;
@@ -861,7 +861,7 @@ public class ImmutableCache {
 
 ### 6.1 CountDownLatch
 
-**여러 스레드가 특정 개수만큼 완료될 때까지 대기**한다.
+**여러 스레드가 특정 개수만큼 완료될 때까지 대기**해요.
 
 ```java
 import java.util.concurrent.CountDownLatch;
