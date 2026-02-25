@@ -3,12 +3,11 @@
  * Data loading lives in config.ts.
  */
 
-/** Split markdown body into Korean and English parts by <!-- EN --> delimiter */
+/** Split markdown body into Korean and English parts by <!-- EN --> delimiter (standalone line only) */
 export function splitContent(body: string): { ko: string; en: string | null } {
-  const delimiter = '<!-- EN -->';
-  const idx = body.indexOf(delimiter);
-  if (idx === -1) return { ko: body, en: null };
-  return { ko: body.slice(0, idx).trim(), en: body.slice(idx + delimiter.length).trim() };
+  const match = body.match(/^<!-- EN -->$/m);
+  if (!match || match.index === undefined) return { ko: body, en: null };
+  return { ko: body.slice(0, match.index).trim(), en: body.slice(match.index + match[0].length).trim() };
 }
 
 export function getReadingTime(content: string): number {

@@ -1,54 +1,58 @@
 [
   {
-    "value": "활동",
-    "label": "활동"
+    "value": "activity",
+    "label": "activity"
   },
   {
-    "value": "일상",
-    "label": "일상"
+    "value": "daily",
+    "label": "daily"
   },
   {
-    "value": "개발",
-    "label": "개발"
+    "value": "dev",
+    "label": "dev"
   },
   {
-    "value": "개발/Frontend",
-    "label": "개발 → Frontend"
+    "value": "dev/Frontend",
+    "label": "dev → Frontend"
   },
   {
-    "value": "개발/JavaScript",
-    "label": "개발 → JavaScript"
+    "value": "dev/JavaScript",
+    "label": "dev → JavaScript"
   },
   {
-    "value": "프로젝트",
-    "label": "프로젝트"
+    "value": "project",
+    "label": "project"
   },
   {
-    "value": "프로젝트/IT Oasis",
-    "label": "프로젝트 → IT Oasis"
+    "value": "project/WikiEngine",
+    "label": "project → WikiEngine"
   },
   {
-    "value": "프로젝트/EduMeet",
-    "label": "프로젝트 → EduMeet"
+    "value": "project/IndiBalancing",
+    "label": "project → IndiBalancing"
   },
   {
-    "value": "프로젝트/Joying",
-    "label": "프로젝트 → Joying"
+    "value": "project/Tymee",
+    "label": "project → Tymee"
   },
   {
-    "value": "프로젝트/IndiBalancing",
-    "label": "프로젝트 → IndiBalancing"
+    "value": "project/Joying",
+    "label": "project → Joying"
   },
   {
-    "value": "프로젝트/Orak",
-    "label": "프로젝트 → Orak"
+    "value": "project/Orakgarak",
+    "label": "project → Orakgarak"
   },
   {
-    "value": "프로젝트/Tymee",
-    "label": "프로젝트 → Tymee"
+    "value": "project/EduMeet",
+    "label": "project → EduMeet"
   },
   {
-    "value": "프로젝트/WikiEngine",
-    "label": "프로젝트 → WikiEngine"
+    "value": "project/IT Oasis",
+    "label": "project → IT Oasis"
+  },
+  {
+    "value": "theory",
+    "label": "theory"
   }
 ]

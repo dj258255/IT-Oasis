@@ -60,12 +60,12 @@ const hasOverlay = !!(website || github || story);
         <a href={href} class="stretched-link" {...(titleEn ? { 'data-ko': title, 'data-en': titleEn } : {})}>{title}</a>
       </h3>
       {description && (
-        <p class="text-[14px] sm:text-[16px] text-gray-500 dark:text-gray-400 leading-[1.7] line-clamp-3 mb-auto pb-4" data-ko={description} data-en={descriptionEn || description}>
+        <p class="text-[14px] sm:text-[16px] text-gray-500 dark:text-gray-400 leading-[1.7] line-clamp-3 mb-auto" data-ko={description} data-en={descriptionEn || description}>
           {description}
         </p>
       )}
       {(date || category) && (
-        <div class="flex items-center gap-2 text-[12px] sm:text-[13px] font-medium text-gray-500 dark:text-gray-400">
+        <div class="flex items-center gap-2 text-[12px] sm:text-[13px] font-medium text-gray-500 dark:text-gray-400 pt-4">
           {date && <span data-ko={date} data-en={dateEn || date}>{date}</span>}
           {date && category && <span class="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
           {category && <span class="font-semibold text-primary/80 dark:text-primary-light/80" data-ko={category} data-en={categoryEn || category}>{category}</span>}
