@@ -66,9 +66,9 @@ const hasToc = tocHeadings.length > 2;
 
 let koHeadingCount = tocHeadings.length;
 if (hasEn) {
-  const delimIdx = (post.body || '').indexOf('<!-- EN -->');
-  if (delimIdx !== -1) {
-    const koSection = (post.body || '').slice(0, delimIdx);
+  const delimMatch = (post.body || '').match(/^<!-- EN -->$/m);
+  if (delimMatch && delimMatch.index !== undefined) {
+    const koSection = (post.body || '').slice(0, delimMatch.index);
     const matches = koSection.match(/^#{1,3}\s/gm);
     koHeadingCount = matches ? matches.length : 0;
   }
