@@ -95,8 +95,7 @@ B-Tree 인덱스 (title)
 
 *Introduction to Information Retrieval* 3장(토큰과 텀)과 [정보검색의 이론과 실제] 2장(역색인)에서, 텍스트 검색의 핵심 자료구조가 **역색인(inverted index)**이라는 것을 학습했습니다.
 
-역색인은 **사전(Dictionary)**과 **포스팅 목록(Posting List)**으로 구성됩니다.
-사전은 문서 모음에 포함된 모든 텀의 목록이고, 각 텀은 해당 텀이 출현한 문서를 가리키는 포스팅 목록으로 연결됩니다.
+역색인은 **사전(Dictionary)** 과 **포스팅 목록(Posting List)** 으로 구성됩니다. 사전은 문서 모음에 포함된 모든 텀의 목록이고, 각 텀은 해당 텀이 출현한 문서를 가리키는 포스팅 목록으로 연결됩니다.
 
 ```
 사전(Dictionary)     포스팅 목록(Posting List)
@@ -255,8 +254,7 @@ CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) WITH PARSER ngra
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/disk-exceeded.png)
 
-[MySQL 공식 문서 (Online DDL Space Requirements)](https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-space-requirements.html)에 따르면, FULLTEXT 인덱스 생성 시 MySQL은 **임시 정렬 파일(temporary sort files)**을 생성합니다.
-이 파일은 토큰을 정렬하여 역색인에 병합하기 위한 것으로, **테이블 데이터 + 기존 인덱스 크기만큼**의 추가 디스크를 사용합니다. 병합이 완료되면 자동으로 삭제됩니다.
+[MySQL 공식 문서 (Online DDL Space Requirements)](https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-space-requirements.html)에 따르면, FULLTEXT 인덱스 생성 시 MySQL은 **임시 정렬 파일(temporary sort files)** 을 생성합니다. 이 파일은 토큰을 정렬하여 역색인에 병합하기 위한 것으로, **테이블 데이터 + 기존 인덱스 크기만큼** 의 추가 디스크를 사용합니다. 병합이 완료되면 자동으로 삭제됩니다.
 
 ```
 인덱스 생성 중 필요한 디스크
@@ -298,9 +296,7 @@ INSERT INTO tmp_namu_posts SELECT * FROM posts WHERE category_id = 1 ORDER BY id
 CREATE FULLTEXT INDEX ft_title_content ON tmp_namu_posts(title, content) WITH PARSER ngram;
 ```
 
-> **배치 INSERT를 사용한 이유:** `CREATE TABLE AS SELECT`로 한 번에 복사하면 57만 건 x LONGTEXT를 하나의 트랜잭션으로 처리하게 됩니다.
-> InnoDB는 트랜잭션 중 변경된 모든 행에 대해 락을 유지하는데, content(LONGTEXT)가 포함된 57만 행의 락이 `innodb_buffer_pool_size`를 초과하여 **Error 1206 (lock table size exceeded)**가 발생했습니다.
-> 5만 건씩 분할하여 각 INSERT를 독립 트랜잭션으로 처리하면 락이 누적되지 않습니다.
+> **배치 INSERT를 사용한 이유:** `CREATE TABLE AS SELECT`로 한 번에 복사하면 57만 건 x LONGTEXT를 하나의 트랜잭션으로 처리하게 됩니다. InnoDB는 트랜잭션 중 변경된 모든 행에 대해 락을 유지하는데, content(LONGTEXT)가 포함된 57만 행의 락이 `innodb_buffer_pool_size`를 초과하여 **Error 1206 (lock table size exceeded)** 가 발생했습니다. 5만 건씩 분할하여 각 INSERT를 독립 트랜잭션으로 처리하면 락이 누적되지 않습니다.
 
 | 항목 | posts 테이블 (posts) | 한국어만 (tmp_namu_posts) |
 |------|-------------------|------------------------|
