@@ -518,16 +518,7 @@ fts_[table_id]_[index_id]_index_6   ← 토큰 파티션 6
 
 각 보조 테이블에는 역색인이 저장됩니다. 각 항목은 **(토큰, posting list)** 형태이며, posting list에는 **DOC_ID + 바이트 오프셋 위치(position)** 가 포함됩니다.
 
-```
-보조 테이블 내부 (역색인):
-┌──────────┬──────────────────────────────────────────────────────┐
-│  token   │  posting list                                        │
-├──────────┼──────────────────────────────────────────────────────┤
-│  "대한"  │  [doc_1:pos(5,23), doc_2:pos(1), doc_3:pos(12,45,78), ...] │  ← 19.6만 건
-│  "한국"  │  [doc_1:pos(7), doc_4:pos(3), doc_5:pos(9,31), ...]        │  ← 19.6만 건
-│  "페텔"  │  [doc_13:pos(2), doc_4521:pos(8), ...]                     │  ← 406건
-└──────────┴──────────────────────────────────────────────────────┘
-```
+![Inverted Index Table](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-table.svg)
 
 또한 InnoDB는 빈번한 소규모 INSERT 시 보조 테이블의 동시 접근 경합을 줄이기 위해 **FTS 캐시**를 유지합니다. 최근 삽입된 행의 토큰을 메모리에 임시 저장한 후, 캐시가 차면 보조 테이블로 일괄 flush합니다. 검색 시에는 보조 테이블(디스크)과 캐시(메모리) 결과를 병합합니다.
 
@@ -697,16 +688,7 @@ Posts 테이블(1,477만 건, 122GB)에 인덱스를 생성했을 때는 **300GB
 
 MySQL(InnoDB)은 Row-Oriented 스토리지입니다. 하나의 행을 구성하는 모든 컬럼(`id`, `title`, `content`, `created_at`, ...)이 디스크의 같은 페이지에 연속으로 저장됩니다.
 
-```
-Row-Oriented (MySQL InnoDB) — 행 단위로 저장
-┌──────────────────────────────────────────────────┐
-│ Page 1: [id=1, title="대한민국", content="대한민국은...(6,000자)", created_at, ...] │
-│         [id=2, title="페텔기우스", content="페텔기우스는...(8,000자)", ...]        │
-├──────────────────────────────────────────────────┤
-│ Page 2: [id=3, title="물리학", content="물리학은...(12,000자)", ...]               │
-│         ...                                                                      │
-└──────────────────────────────────────────────────┘
-```
+![Row-Oriented Storage](/uploads/project/WikiEngine/fulltext-ngram-index/row-oriented-storage.svg)
 
 FULLTEXT 인덱스를 생성할 때, MySQL은 모든 행의 `title`과 `content`를 읽어서 ngram 토큰을 추출해야 합니다. 그런데 Row-Oriented 구조에서는 **`content` 컬럼만 읽을 수 없습니다.** 디스크에서 행 전체를 읽은 후 `content` 값을 추출해야 합니다. 즉, `title`(평균 27자)과 `content`(평균 6,586자)의 ngram 토큰을 만들기 위해 **행의 모든 컬럼(122GB)을 디스크에서 읽어야** 합니다.
 
@@ -722,16 +704,7 @@ FULLTEXT 인덱스를 생성할 때, MySQL은 모든 행의 `title`과 `content`
 
 반면, BigQuery 같은 **Column-Oriented 스토리지**는 컬럼별로 독립 저장합니다. 만약 Column-Oriented였다면, `content` 컬럼 파일만 읽으면 되므로 불필요한 I/O가 발생하지 않습니다.
 
-```
-Column-Oriented (참고) — 컬럼 단위로 저장
-┌─────────────────────────┐  ┌─────────────────────────────────────┐
-│ title 파일:              │  │ content 파일:                        │
-│ "대한민국"                │  │ "대한민국은...(6,000자)"              │
-│ "페텔기우스"              │  │ "페텔기우스는...(8,000자)"            │
-│ "물리학"                  │  │ "물리학은...(12,000자)"               │
-└─────────────────────────┘  └─────────────────────────────────────┘
-↑ title만 필요하면 이 파일만 읽음   ↑ content만 필요하면 이 파일만 읽음
-```
+![Column-Oriented Storage](/uploads/project/WikiEngine/fulltext-ngram-index/column-oriented-storage.svg)
 
 이것이 MySQL FULLTEXT의 본질적 한계입니다:
 
@@ -1233,16 +1206,7 @@ Tokens are distributed across 6 tables based on **first character sort weight (c
 
 Each auxiliary table stores the inverted index. Each entry has the form **(token, posting list)**, where the posting list contains **DOC_ID + byte offset position**.
 
-```
-Auxiliary table internals (inverted index):
-┌──────────┬──────────────────────────────────────────────────────┐
-│  token   │  posting list                                        │
-├──────────┼──────────────────────────────────────────────────────┤
-│  "대한"  │  [doc_1:pos(5,23), doc_2:pos(1), doc_3:pos(12,45,78), ...] │  ← 196K docs
-│  "한국"  │  [doc_1:pos(7), doc_4:pos(3), doc_5:pos(9,31), ...]        │  ← 196K docs
-│  "페텔"  │  [doc_13:pos(2), doc_4521:pos(8), ...]                     │  ← 406 docs
-└──────────┴──────────────────────────────────────────────────────┘
-```
+![Inverted Index Table](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-table.svg)
 
 Additionally, InnoDB maintains an **FTS cache** to reduce contention on auxiliary tables during frequent small INSERTs. Tokens from recently inserted rows are temporarily stored in memory, then batch-flushed to auxiliary tables when the cache fills. During search, results from auxiliary tables (disk) and cache (memory) are merged.
 
@@ -1410,16 +1374,7 @@ The 300GB+ disk overflow is not simply "too much data" — it's a structural pro
 
 MySQL (InnoDB) is Row-Oriented storage. All columns composing a single row (`id`, `title`, `content`, `created_at`, ...) are stored consecutively on the same disk page.
 
-```
-Row-Oriented (MySQL InnoDB) — stored by row
-┌──────────────────────────────────────────────────┐
-│ Page 1: [id=1, title="대한민국", content="대한민국은...(6,000 chars)", created_at, ...] │
-│         [id=2, title="페텔기우스", content="페텔기우스는...(8,000 chars)", ...]        │
-├──────────────────────────────────────────────────┤
-│ Page 2: [id=3, title="물리학", content="물리학은...(12,000 chars)", ...]               │
-│         ...                                                                          │
-└──────────────────────────────────────────────────┘
-```
+![Row-Oriented Storage](/uploads/project/WikiEngine/fulltext-ngram-index/row-oriented-storage.svg)
 
 When creating a FULLTEXT index, MySQL must read all rows' `title` and `content` to extract ngram tokens. However, in Row-Oriented storage, **it cannot read only the `content` column**. It must read the entire row from disk, then extract the `content` value. In other words, to create ngram tokens from `title` (avg 27 chars) and `content` (avg 6,586 chars), **all columns of every row (122GB) must be read from disk**.
 
@@ -1435,16 +1390,7 @@ Disk usage during index creation
 
 In contrast, **Column-Oriented storage** like BigQuery stores each column independently. If it were Column-Oriented, only the `content` column file would need to be read, eliminating unnecessary I/O.
 
-```
-Column-Oriented (reference) — stored by column
-┌─────────────────────────┐  ┌─────────────────────────────────────┐
-│ title file:              │  │ content file:                        │
-│ "대한민국"                │  │ "대한민국은...(6,000 chars)"          │
-│ "페텔기우스"              │  │ "페텔기우스는...(8,000 chars)"        │
-│ "물리학"                  │  │ "물리학은...(12,000 chars)"           │
-└─────────────────────────┘  └─────────────────────────────────────┘
-↑ Only read this file if title needed   ↑ Only read this file if content needed
-```
+![Column-Oriented Storage](/uploads/project/WikiEngine/fulltext-ngram-index/column-oriented-storage.svg)
 
 This is the fundamental limitation of MySQL FULLTEXT:
 
