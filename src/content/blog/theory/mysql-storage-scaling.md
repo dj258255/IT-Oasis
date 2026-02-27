@@ -412,3 +412,402 @@ FULLTEXT ngram 인덱스 100GB+             검색 인덱스를 외부로 분리
 **기타:**
 - [Database Workload Read-Write Ratio — Benchant](https://benchant.com/blog/workload-read-write-ratio)
 - [How Discord Stores Trillions of Messages](https://discord.com/blog/how-discord-stores-trillions-of-messages)
+
+<!-- EN -->
+
+## 1. Introduction — Nearly Running Out of Disk
+
+I had 14.77 million wiki documents totaling 122GB in MySQL and tried to create a search index.
+
+```
+Local disk: 960GB used out of 994GB (34GB free)
+MySQL data volume: 122GB → 287.8GB during index creation (165GB increase, still in progress)
+```
+
+After running `CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) WITH PARSER ngram;`:
+
+- MySQL Workbench disconnected after 600 seconds (Error 2013: Lost connection)
+- `SHOW PROCESSLIST` showed State: `altering table` (still running)
+- Risk of filling disk completely → force killed with `KILL`
+- Volume after termination: 249.6GB (only partially cleaned up)
+
+**What was eating disk wasn't the content (122GB) — it was the FULLTEXT ngram index (100GB+).** This realization sparked the question: "Should we change how content is stored? How do production systems handle this?" This post is the result of that investigation.
+
+---
+
+## 2. What's Actually Eating Storage — Content vs Index
+
+| Target | Avg Tokens per Doc | Total Tokens | Estimated Index Size |
+|--------|-------------------|--------------|---------------------|
+| title only | 26 | ~380M | **1~3 GB** |
+| content only | 6,585 | ~97.3B | **50~150 GB+** |
+| title + content | ~6,611 | ~97.6B | **100~200 GB+** |
+
+Content accounts for **99.6%** of all tokens. The FULLTEXT ngram index size is fundamentally proportional to content length.
+
+A critical distinction is needed here:
+
+- **Content data itself**: 122GB — the raw text
+- **FULLTEXT index**: 100GB+ — the inverted index data structure for search
+
+Even if you compress or move content to Object Storage, **the index size remains the same**. The core problem wouldn't be solved. Still, I was curious about content storage patterns themselves, so I researched how production systems handle it.
+
+---
+
+## 3. Where Do Production Platforms Store Content?
+
+### 3-1. Content Storage Patterns of Major Platforms
+
+| Service | DB | Content Storage | Scale | Notes |
+|---------|-----|----------------|-------|-------|
+| **WordPress** | MySQL | Direct in `wp_posts.post_content` | Thousands to millions | Revisions stored in same table |
+| **Discourse** | PostgreSQL | Direct in `posts.raw` | 4M+ new posts/month | TOAST handles compression automatically |
+| **Stack Overflow** | SQL Server | Direct storage | 200M+ requests/day | 384GB RAM + 4TB PCIe SSD × 2 |
+| **Reddit** | PostgreSQL | Direct storage | 100K+ reads/sec | Aurora PostgreSQL + sharding |
+| **Notion** | PostgreSQL | Direct block-level storage | **200B+ blocks** | 480 logical shards / 96 physical instances |
+| **Confluence** | DB | **Vertical Partitioning** | Millions of docs | CONTENT + BODYCONTENT separation |
+| **Wikipedia** | MySQL | **Separate text table + External Storage** | TB-scale revision history | Delta compression → less than 2% of original |
+
+> Sources: [WordPress DB Structure](https://wp-staging.com/docs/the-wordpress-database-structure/), [Discourse PostgreSQL](https://blog.discourse.org/2021/04/standing-on-the-shoulders-of-a-giant-elephant/), [Stack Overflow Architecture 2016](https://nickcraver.com/blog/2016/02/17/stack-overflow-the-architecture-2016-edition/), [Notion Sharding](https://www.notion.com/blog/sharding-postgres-at-notion), [Wikipedia External Storage](https://wikitech.wikimedia.org/wiki/External_storage)
+
+Nearly every platform stores content **directly in the database**. Moving to Object Storage is an exceptional pattern that only occurs when revision history reaches TB scale, like Wikipedia.
+
+### 3-2. Lessons from Each Platform
+
+**Stack Overflow — Solving It with Hardware:**
+
+```
+SQL Server Cluster 1: Dell R720xd — 384GB RAM, 4TB PCIe SSD, 2x12 cores
+SQL Server Cluster 2: Dell R730xd — 768GB RAM, 6TB PCIe SSD, 2x8 cores
+```
+
+They handle 200M+ requests/day with just 2 SQL Server machines. Elastic and Redis serve as read caches, but the source of truth for content is SQL Server. The entire database has only **1 stored procedure** — they query directly with Dapper (Micro-ORM).
+
+**Takeaway:** With a well-tuned RDBMS + sufficient RAM + SSD, there's no need to move content out of the DB.
+
+> Source: [Stack Overflow Hardware 2016](https://nickcraver.com/blog/2016/03/29/stack-overflow-the-hardware-2016-edition/)
+
+**Notion — Handling 200 Billion Blocks with Sharding:**
+
+| Timeline | Physical Instances | Logical Shards | Total Blocks |
+|---------|-------------------|----------------|-------------|
+| 2021 | 32 | - | Billions |
+| 2023 | 96 | 480 | 200B+ |
+
+They handle hundreds of TB of text data in PostgreSQL using `workspace_id`-based sharding. They don't move content to Object Storage.
+
+> Sources: [Notion Sharding](https://www.notion.com/blog/sharding-postgres-at-notion), [Storing 200 Billion Entities — ByteByteGo](https://blog.bytebytego.com/p/storing-200-billion-entities-notions)
+
+**Wikipedia — The Only External Storage Case:**
+
+Wikipedia is the only platform that moved text content outside the DB. The reason is clear — **revision history is TB-scale**.
+
+```
+text table → pointer ("DB://cluster1/12345")
+                ↓
+External Storage cluster (blobs table in separate MySQL DB)
+                ↓
+Delta compression: first revision=full text, subsequent=diffs only, batch gzip
+  → entire history compressed to less than 2% of original
+```
+
+External Storage is only justified at scales exceeding 3TB+ uncompressed dumps.
+
+> Source: [External Storage — Wikitech](https://wikitech.wikimedia.org/wiki/External_storage)
+
+---
+
+## 4. Would Moving to Object Storage (R2/S3) Solve It?
+
+### 4-1. Cost Analysis
+
+| Storage Type | $/GB/month | 100GB Cost |
+|-------------|-----------|-----------|
+| **AWS RDS (gp3)** | $0.115 | $11.50 |
+| **AWS EBS (gp3)** | $0.08 | $8.00 |
+| **AWS S3 Standard** | $0.023 | $2.30 |
+| **Cloudflare R2** | $0.015 | $1.50 |
+| **S3 Glacier** | $0.004 | $0.40 |
+
+> Sources: [AWS RDS Pricing](https://aws.amazon.com/rds/pricing/), [Cloudflare R2 Pricing](https://developers.cloudflare.com/r2/pricing/)
+
+RDS storage is **5x** more expensive than S3. But at 122GB scale, the difference is only **~$11/month**. You need to consider whether that justifies an architecture change.
+
+### 4-2. Hidden Costs — Storage Cost Isn't Everything
+
+| Problem | Description |
+|---------|-------------|
+| **Transaction consistency** | DB INSERT succeeds + S3 PUT fails → data inconsistency |
+| **No JOIN** | Cannot JOIN DB rows with S3 objects |
+| **ORM transparency broken** | `post.getContent()` becomes an S3 HTTP call |
+| **No FULLTEXT search** | Cannot run `MATCH...AGAINST` on S3 objects |
+| **Increased latency** | S3 GET: 20~100ms vs DB Buffer Pool: sub-ms |
+| **No atomic UPDATE** | Content modification + pointer update are not atomic |
+
+Sacrificing transaction consistency, JOINs, and ORM transparency to save $11/month is not rational. **None of the production community platforms (Discourse, WordPress, Stack Overflow) move content to Object Storage.**
+
+| Platform | Content Storage | Object Storage |
+|----------|----------------|----------------|
+| Discourse | PostgreSQL direct | No |
+| XenForo | MySQL direct | No |
+| WordPress | MySQL direct | No |
+| Stack Overflow | SQL Server direct | No |
+
+> Source: [Database Workload Read-Write Ratio — Benchant](https://benchant.com/blog/workload-read-write-ratio)
+
+---
+
+## 5. InnoDB Compression — ROW_FORMAT=COMPRESSED
+
+There's a way to reduce storage while keeping content in the DB: InnoDB table compression.
+
+### 5-1. Two Types of MySQL Compression
+
+There are two compression methods with similar names but completely different mechanisms.
+
+| | ROW_FORMAT=COMPRESSED (Table Compression) | COMPRESSION= (Page Compression) |
+|---|---|---|
+| Introduced | MySQL 5.1+ | MySQL 5.7+ |
+| Mechanism | InnoDB internally creates smaller pages with zlib | OS filesystem sparse file + hole punching |
+| Hole punching required | **No** | **Yes** (OS + hardware support required) |
+| File copy | Works normally | `cp` fills holes, restoring original size |
+| Buffer Pool | Stores both compressed + uncompressed | Stores only uncompressed (better memory efficiency) |
+| Production readiness | Mature, stable | Percona: "hard to recommend for serious production" |
+
+**The method to use is `ROW_FORMAT=COMPRESSED`.** It's independent of hole punching and completes entirely within InnoDB.
+
+> Source: [On MySQL InnoDB Row Formats and Compression — Carson Ip](https://carsonip.me/posts/on-mysql-innodb-row-formats-and-compression/)
+
+### 5-2. How It Works
+
+InnoDB internally compresses 16KB pages to smaller sizes using zlib and stores them on disk.
+
+![InnoDB ROW_FORMAT=COMPRESSED mechanism](/uploads/theory/mysql-storage-scaling/innodb-compression.svg)
+
+Applying it is a single ALTER TABLE statement:
+
+```sql
+ALTER TABLE post_contents ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+```
+
+No application code changes needed. `SELECT content FROM post_contents` automatically returns the decompressed original.
+
+### 5-3. Choosing KEY_BLOCK_SIZE
+
+KEY_BLOCK_SIZE is the **target size (KB)** for compressed pages. It determines how much to reduce from the default 16KB InnoDB page.
+
+| KEY_BLOCK_SIZE | Target Compression | Characteristics |
+|:-:|:-:|---|
+| 16 | None | No compression (same as default page) |
+| **8** | 50% | Common choice, suitable for text data |
+| 4 | 75% | Aggressive compression, higher failure rate |
+| 2, 1 | 87~94% | Most attempts fail → dual storage actually wastes space |
+
+**Why compression failure matters:** If compressing 16KB to 8KB fails, a page split occurs and Buffer Pool stores **both compressed + uncompressed versions**. High failure rates actually increase memory usage.
+
+To find the optimal value, check per-index compression statistics:
+
+```sql
+-- Enable per-index compression stats (ON only during testing)
+SET GLOBAL innodb_cmp_per_index_enabled = ON;
+
+-- Create test table with specific KEY_BLOCK_SIZE
+CREATE TABLE test_compress_8 LIKE post_contents;
+ALTER TABLE test_compress_8 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+
+-- Insert sample data
+INSERT INTO test_compress_8 SELECT * FROM post_contents LIMIT 10000;
+
+-- Check compression success rate
+SELECT
+    database_name, table_name, index_name,
+    compress_ops,       -- compression attempts
+    compress_ops_ok,    -- successful compressions
+    ROUND(compress_ops_ok / compress_ops * 100, 1) AS success_rate
+FROM INFORMATION_SCHEMA.INNODB_CMP_PER_INDEX;
+```
+
+| Success Rate | Verdict |
+|:-:|---|
+| 90%+ | KEY_BLOCK_SIZE is appropriate |
+| 70~90% | Usable but monitor closely |
+| Below 70% | Increase to next larger value |
+
+### 5-4. Compression Suitability by CRUD Pattern
+
+**Core principle:** If decompression on every read and recompression on every write keeps repeating, CPU becomes the bottleneck. Therefore, **data access patterns** determine compression suitability.
+
+| CRUD Pattern | Suitability | Reason |
+|-------------|:-:|--------|
+| **INSERT-only (logs/audit)** | **Optimal** | Write once, never modified. No recompression |
+| **Write-once, Read-many (blog/CMS)** | **Suitable** | Low write frequency means rare recompression |
+| **Frequent UPDATEs (counters)** | **Unsuitable** | Recompression + page split risk on every UPDATE |
+| **Wiki/collaborative editing** | **Conditional** | Current version: caution needed, Revision history: optimal |
+
+**Basecamp case study (production-verified):**
+- Largest table: ~430GB → After ROW_FORMAT=COMPRESSED: **172GB (60% reduction)**
+- New records averaged **40% smaller**
+- Slow queries "virtually eliminated" — reduced I/O + relieved memory pressure
+
+> Source: [Scaling Your Database via InnoDB Table Compression — Signal v. Noise (Basecamp)](https://signalvnoise.com/posts/3571-scaling-your-database-via-innodb-table-compression)
+
+### 5-5. Comparison with PostgreSQL TOAST
+
+The reason Discourse and Reddit work without explicit compression is PostgreSQL's **TOAST** mechanism.
+
+| Aspect | PostgreSQL TOAST | MySQL InnoDB COMPRESSED |
+|--------|-----------------|------------------------|
+| Behavior | **Automatic** compression + out-of-line storage when row exceeds ~2KB | **Explicit** activation via `ALTER TABLE` |
+| Algorithm | pglz (default), LZ4 (PG 14+) | zlib |
+| Transparency | Fully transparent | Fully transparent |
+| Compression condition | Only when 25%+ compression achievable | Always attempts (dual storage on failure) |
+
+**Key difference:** PostgreSQL TOAST works automatically without configuration. MySQL requires explicit activation.
+
+> Source: [PostgreSQL TOAST Documentation](https://www.postgresql.org/docs/current/storage-toast.html)
+
+---
+
+## 6. Vertical Partitioning — Separating Heavy TEXT Columns
+
+### 6-1. Why Separate?
+
+MySQL TEXT/BLOB is stored in **overflow pages** (16KB chunks). This causes:
+
+- Reading a 1MB TEXT requires **64 overflow pages × 16KB = 640+ read IOPs**
+- TEXT in results **forces disk-based temporary tables** (MEMORY engine doesn't support TEXT)
+- Scanning 10,000 rows in list queries may read unnecessary overflow pages
+
+![Vertical Partitioning — Table Separation](/uploads/theory/mysql-storage-scaling/vertical-partitioning.svg)
+
+After separation, only the metadata table is scanned, so more rows fit per page and Buffer Pool efficiency improves.
+
+> Sources: [Why Everyone Avoids TEXT Fields in MySQL — Leapcell](https://leapcell.medium.com/why-everyone-avoids-text-fields-in-mysql-1a4000b95ce0), [How InnoDB Handles TEXT/BLOB — Percona](https://www.percona.com/blog/how-innodb-handles-text-blob-columns/)
+
+### 6-2. When Separation Isn't Needed
+
+- When single-row detail queries dominate and list queries are rare
+- When data size is under a few GB
+- **Rule of thumb:** Separation pays off when TEXT/BLOB averages >4KB and list:detail ratio exceeds 5:1
+
+**Confluence case:** `CONTENT` table (metadata) + `BODYCONTENT` table (body content). A classic enterprise wiki Vertical Partitioning example.
+
+> Source: [Confluence Data Model — Atlassian](https://confluence.atlassian.com/doc/confluence-data-model-127369837.html)
+
+### 6-3. binlog_row_image=NOBLOB — Replication Optimization Without Table Separation
+
+In Master-Slave setups, LONGTEXT can burden replication.
+
+```
+view_count UPDATE (+1)
+  → binlog_row_image=FULL (default)
+  → binlog records entire row including content (LONGTEXT)
+  → Only view_count changed, but LONGTEXT is transmitted to Slave every time
+```
+
+The fix is a single setting:
+
+```sql
+SET GLOBAL binlog_row_image = 'NOBLOB';
+```
+
+| Setting | binlog Records |
+|---------|---------------|
+| `FULL` (default) | All columns — content included on every UPDATE |
+| **`NOBLOB`** | BLOB/TEXT included **only when changed** |
+| `MINIMAL` | Only changed columns + PK |
+
+This achieves the same effect as Vertical Partitioning without table separation.
+
+---
+
+## 7. What Happens When Data Keeps Growing? — Production Response Patterns
+
+You can't increase disk indefinitely. Production systems use **separation** strategies.
+
+![Data Growth Response — Production Decision Flowchart](/uploads/theory/mysql-storage-scaling/data-growth-strategy.svg)
+
+| Strategy | Description | When to Apply |
+|----------|------------|--------------|
+| **Search engine separation** | Remove FULLTEXT index from DB, delegate to external search engine | When index size becomes burdensome |
+| **Table partitioning** | Physical separation by time range | When row count exceeds tens of millions |
+| **Cold data archiving** | Move old data to archive | When active/inactive data can be distinguished |
+| **Object Storage separation** | Move content to S3/R2 | TB-scale + revision history management needed |
+| **Sharding** | Split DB by tenant | When single DB performance limit is reached |
+
+**The key is not compression — it's "separation."** Search goes to search engines, old data to archives, attachments to Object Storage.
+
+### Optimal Storage by CRUD Pattern
+
+The **read:write ratio** is the key criterion for storage selection.
+
+| Workload | Read:Write | Optimal Storage |
+|----------|:-:|---|
+| Logs/Audit | 1:100+ | S3/R2 + Parquet, Time-series DB |
+| Blog/CMS | 100:1+ | RDBMS direct + CDN |
+| Wiki/Collaboration | 10:1~50:1 | RDBMS + Revision table |
+| Chat/Messaging | 5:1~20:1 | ScyllaDB, Cassandra |
+| E-commerce Products | 1000:1+ | RDBMS + Redis/CDN cache |
+
+> Sources: [Database Workload Read-Write Ratio — Benchant](https://benchant.com/blog/workload-read-write-ratio), [Data Store Choice Criteria — Azure Architecture Center](https://learn.microsoft.com/en-us/azure/architecture/guide/technology-choices/data-store-considerations)
+
+---
+
+## 8. Comprehensive Conclusion
+
+### Decision Matrix
+
+| Criteria | RDBMS Direct | Vertical Partitioning | Object Storage Migration |
+|----------|:-:|:-:|:-:|
+| **Data Scale** | <100GB | 10GB~10TB | >1TB |
+| **Search Needed** | Yes (FULLTEXT available) | Yes | No (separate index needed) |
+| **Transactions** | Required | Required | Not required |
+| **Complexity** | Low | Low~Medium | High |
+
+### Options Reviewed but Unnecessary at This Point
+
+| Option | Verdict | Reason |
+|--------|:--:|--------|
+| Object Storage migration | Excluded | Breaks transactions, doesn't solve core problem (index size), saves only $11/month |
+| Page compression (COMPRESSION=) | Excluded | Depends on hole punching, not recommended for production |
+| App-level gzip compression | Excluded | Breaks FULLTEXT search and ORM transparency |
+| NoSQL migration | Excluded | Fixed schema, transactions/JOINs needed, RDBMS sufficient at current scale |
+| InnoDB compression | Deferred | Doesn't affect core problem (index size), revisit when data reduction is needed |
+| Vertical Partitioning | Deferred | `binlog_row_image=NOBLOB` solves replication burden, decide after analyzing list query ratio |
+
+### Conclusion
+
+```
+Content 122GB → Keep direct DB storage         No content storage change needed
+FULLTEXT ngram index 100GB+                    Separate search index externally
+Low disk headroom                              Disk expansion is most cost-effective
+```
+
+**What eats disk isn't the content — it's the ngram index.** The fundamental solution is not compressing or moving content, but separating the search index to an external search engine.
+
+---
+
+## References
+
+**Platform Architecture:**
+- [WordPress Database Structure — WP STAGING](https://wp-staging.com/docs/the-wordpress-database-structure/)
+- [Stack Overflow Architecture 2016 — Nick Craver](https://nickcraver.com/blog/2016/02/17/stack-overflow-the-architecture-2016-edition/)
+- [Discourse PostgreSQL — Discourse Blog](https://blog.discourse.org/2021/04/standing-on-the-shoulders-of-a-giant-elephant/)
+- [Notion Sharding](https://www.notion.com/blog/sharding-postgres-at-notion)
+- [Wikipedia External Storage — Wikitech](https://wikitech.wikimedia.org/wiki/External_storage)
+- [Confluence Data Model — Atlassian](https://confluence.atlassian.com/doc/confluence-data-model-127369837.html)
+
+**MySQL/PostgreSQL Technical:**
+- [On MySQL InnoDB Row Formats and Compression — Carson Ip](https://carsonip.me/posts/on-mysql-innodb-row-formats-and-compression/)
+- [Scaling via InnoDB Table Compression — Basecamp](https://signalvnoise.com/posts/3571-scaling-your-database-via-innodb-table-compression)
+- [How InnoDB Handles TEXT/BLOB — Percona](https://www.percona.com/blog/how-innodb-handles-text-blob-columns/)
+- [PostgreSQL TOAST Documentation](https://www.postgresql.org/docs/current/storage-toast.html)
+
+**Cost/Cloud:**
+- [AWS RDS Pricing](https://aws.amazon.com/rds/pricing/)
+- [Cloudflare R2 Pricing](https://developers.cloudflare.com/r2/pricing/)
+- [Oracle vs AWS Block Volumes — Marty Sweet](https://www.martysweet.co.uk/oracle-vs-aws-cloud-block-volumes/)
+
+**Other:**
+- [Database Workload Read-Write Ratio — Benchant](https://benchant.com/blog/workload-read-write-ratio)
+- [How Discord Stores Trillions of Messages](https://discord.com/blog/how-discord-stores-trillions-of-messages)
