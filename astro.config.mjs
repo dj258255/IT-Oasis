@@ -29,6 +29,50 @@ function rehypeBasePath() {
   };
 }
 
+/** Rehype plugin: fix **bold** not parsed when followed by CJK without space.
+ *  CommonMark treats closing ** as non-right-flanking when preceded by punctuation
+ *  and followed by non-punctuation (e.g. **역색인(index)**이라는).
+ *  This post-processes text nodes to convert leftover **…** into <strong>. */
+function rehypeCjkBold() {
+  const BOLD_RE = /\*\*(.+?)\*\*/g;
+  const SKIP_TAGS = new Set(['pre', 'code', 'script', 'style']);
+  return (tree) => {
+    function visit(node) {
+      if (!node.children) return;
+      if (node.type === 'element' && SKIP_TAGS.has(node.tagName)) return;
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (child.type === 'text' && BOLD_RE.test(child.value)) {
+          const parts = [];
+          let last = 0;
+          BOLD_RE.lastIndex = 0;
+          let m;
+          while ((m = BOLD_RE.exec(child.value)) !== null) {
+            if (m.index > last) {
+              parts.push({ type: 'text', value: child.value.slice(last, m.index) });
+            }
+            parts.push({
+              type: 'element',
+              tagName: 'strong',
+              properties: {},
+              children: [{ type: 'text', value: m[1] }],
+            });
+            last = BOLD_RE.lastIndex;
+          }
+          if (last < child.value.length) {
+            parts.push({ type: 'text', value: child.value.slice(last) });
+          }
+          node.children.splice(i, 1, ...parts);
+          i += parts.length - 1;
+        } else {
+          visit(child);
+        }
+      }
+    }
+    visit(tree);
+  };
+}
+
 /** Rehype plugin: wrap <table> in a scrollable div */
 function rehypeTableWrapper() {
   return (tree) => {
@@ -81,7 +125,7 @@ export default defineConfig({
   ],
   markdown: {
     remarkPlugins: [remarkGithubAlerts],
-    rehypePlugins: [rehypeBasePath, rehypeTableWrapper],
+    rehypePlugins: [rehypeBasePath, rehypeCjkBold, rehypeTableWrapper],
   },
   vite: {
     plugins: [tailwindcss()]
