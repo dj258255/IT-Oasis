@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#00000022"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="300" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="16" width="680" height="40" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="360" y="42" text-anchor="middle" fill="white" font-size="15" font-weight="bold">Column-Oriented Storage (BigQuery, etc.)</text>
+
+  <!-- Title column file -->
+  <rect x="40" y="72" width="300" height="160" rx="10" fill="#fff" stroke="#3498db" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="72" width="300" height="30" rx="10 10 0 0" fill="#3498db"/>
+  <text x="190" y="92" text-anchor="middle" fill="white" font-size="13" font-weight="bold">title column file</text>
+
+  <rect x="56" y="112" width="268" height="28" rx="6" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+  <text x="190" y="131" text-anchor="middle" fill="#1d4ed8" font-size="12">"대한민국"</text>
+
+  <rect x="56" y="146" width="268" height="28" rx="6" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+  <text x="190" y="165" text-anchor="middle" fill="#1d4ed8" font-size="12">"페텔기우스"</text>
+
+  <rect x="56" y="180" width="268" height="28" rx="6" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+  <text x="190" y="199" text-anchor="middle" fill="#1d4ed8" font-size="12">"물리학"</text>
+
+  <!-- Content column file -->
+  <rect x="380" y="72" width="300" height="160" rx="10" fill="#fff" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="380" y="72" width="300" height="30" rx="10 10 0 0" fill="#22c55e"/>
+  <text x="530" y="92" text-anchor="middle" fill="white" font-size="13" font-weight="bold">content column file</text>
+
+  <rect x="396" y="112" width="268" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="530" y="131" text-anchor="middle" fill="#16a34a" font-size="12">"대한민국은...(6,000자)"</text>
+
+  <rect x="396" y="146" width="268" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="530" y="165" text-anchor="middle" fill="#16a34a" font-size="12">"페텔기우스는...(8,000자)"</text>
+
+  <rect x="396" y="180" width="268" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="530" y="199" text-anchor="middle" fill="#16a34a" font-size="12">"물리학은...(12,000자)"</text>
+
+  <!-- Annotations -->
+  <rect x="56" y="244" width="268" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="190" y="258" text-anchor="middle" fill="#2563eb" font-size="10" font-weight="bold">↑ title만 필요하면 이 파일만 읽음</text>
+
+  <rect x="396" y="244" width="268" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="530" y="258" text-anchor="middle" fill="#16a34a" font-size="10" font-weight="bold">↑ content만 필요하면 이 파일만 읽음</text>
+
+  <!-- Bottom comparison -->
+  <rect x="160" y="274" width="400" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="360" y="288" text-anchor="middle" fill="#16a34a" font-size="11" font-weight="bold">필요한 컬럼만 독립적으로 읽기 가능 → 불필요한 I/O 없음</text>
+</svg>

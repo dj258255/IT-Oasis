@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 310" width="720" height="310" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#00000022"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="310" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="16" width="680" height="40" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="360" y="42" text-anchor="middle" fill="white" font-size="15" font-weight="bold">Row-Oriented Storage (MySQL InnoDB)</text>
+
+  <!-- Page 1 -->
+  <rect x="40" y="72" width="640" height="110" rx="10" fill="#fff" stroke="#3498db" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="72" width="100" height="26" rx="10 0 0 0" fill="#3498db"/>
+  <text x="90" y="90" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Page 1</text>
+
+  <!-- Row 1 -->
+  <g transform="translate(56, 106)">
+    <rect x="0" y="0" width="36" height="22" rx="4" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+    <text x="18" y="15" text-anchor="middle" fill="#1d4ed8" font-size="9" font-weight="bold">id=1</text>
+
+    <rect x="42" y="0" width="90" height="22" rx="4" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+    <text x="87" y="15" text-anchor="middle" fill="#1d4ed8" font-size="9">"대한민국"</text>
+
+    <rect x="138" y="0" width="370" height="22" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+    <text x="323" y="15" text-anchor="middle" fill="#dc2626" font-size="9" font-weight="bold">content="대한민국은...(6,000자)"</text>
+
+    <rect x="514" y="0" width="96" height="22" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="562" y="15" text-anchor="middle" fill="#16a34a" font-size="9">created_at, ...</text>
+  </g>
+
+  <!-- Row 2 -->
+  <g transform="translate(56, 136)">
+    <rect x="0" y="0" width="36" height="22" rx="4" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+    <text x="18" y="15" text-anchor="middle" fill="#1d4ed8" font-size="9" font-weight="bold">id=2</text>
+
+    <rect x="42" y="0" width="90" height="22" rx="4" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+    <text x="87" y="15" text-anchor="middle" fill="#1d4ed8" font-size="9">"페텔기우스"</text>
+
+    <rect x="138" y="0" width="370" height="22" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+    <text x="323" y="15" text-anchor="middle" fill="#dc2626" font-size="9" font-weight="bold">content="페텔기우스는...(8,000자)"</text>
+
+    <rect x="514" y="0" width="96" height="22" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="562" y="15" text-anchor="middle" fill="#16a34a" font-size="9">created_at, ...</text>
+  </g>
+
+  <!-- Page 2 -->
+  <rect x="40" y="196" width="640" height="76" rx="10" fill="#fff" stroke="#3498db" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="196" width="100" height="26" rx="10 0 0 0" fill="#3498db"/>
+  <text x="90" y="214" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Page 2</text>
+
+  <!-- Row 3 -->
+  <g transform="translate(56, 230)">
+    <rect x="0" y="0" width="36" height="22" rx="4" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+    <text x="18" y="15" text-anchor="middle" fill="#1d4ed8" font-size="9" font-weight="bold">id=3</text>
+
+    <rect x="42" y="0" width="90" height="22" rx="4" fill="#e8f4fd" stroke="#93c5fd" stroke-width="1"/>
+    <text x="87" y="15" text-anchor="middle" fill="#1d4ed8" font-size="9">"물리학"</text>
+
+    <rect x="138" y="0" width="370" height="22" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+    <text x="323" y="15" text-anchor="middle" fill="#dc2626" font-size="9" font-weight="bold">content="물리학은...(12,000자)"</text>
+
+    <rect x="514" y="0" width="96" height="22" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="562" y="15" text-anchor="middle" fill="#16a34a" font-size="9">created_at, ...</text>
+  </g>
+
+  <!-- Bottom annotation -->
+  <rect x="120" y="284" width="480" height="20" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="360" y="298" text-anchor="middle" fill="#dc2626" font-size="11" font-weight="bold">content만 필요해도 행 전체(모든 컬럼)를 읽어야 함</text>
+</svg>
