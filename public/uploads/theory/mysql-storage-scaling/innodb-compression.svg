@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow-w" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="4" flood-color="#00000044"/>
+    </filter>
+    <linearGradient id="grad-blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="grad-green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="grad-arrow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="440" fill="#0f172a" rx="12"/>
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.04" stroke="#fff" stroke-width="1">
+    <line x1="0" y1="80" x2="800" y2="80"/><line x1="0" y1="160" x2="800" y2="160"/>
+    <line x1="0" y1="240" x2="800" y2="240"/><line x1="0" y1="320" x2="800" y2="320"/>
+    <line x1="200" y1="0" x2="200" y2="440"/><line x1="400" y1="0" x2="400" y2="440"/>
+    <line x1="600" y1="0" x2="600" y2="440"/>
+  </g>
+
+  <!-- Title -->
+  <text x="400" y="42" text-anchor="middle" fill="#f8fafc" font-size="24" font-weight="bold">MySQL 용량이 부족할 때</text>
+  <text x="400" y="68" text-anchor="middle" fill="#64748b" font-size="14">InnoDB ROW_FORMAT=COMPRESSED — 테이블 압축으로 디스크 절감</text>
+
+  <!-- ═══ Left: Normal InnoDB Page ═══ -->
+  <text x="190" y="108" text-anchor="middle" fill="#93c5fd" font-size="13" font-weight="bold">일반 InnoDB 페이지</text>
+
+  <!-- Page container -->
+  <rect x="40" y="120" width="300" height="210" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Size badge -->
+  <rect x="270" y="124" width="60" height="22" rx="11" fill="url(#grad-blue)"/>
+  <text x="300" y="139" text-anchor="middle" fill="white" font-size="11" font-weight="bold">16 KB</text>
+
+  <!-- Row blocks inside page -->
+  <rect x="56" y="140" width="268" height="32" rx="6" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1"/>
+  <text x="190" y="161" text-anchor="middle" fill="#93c5fd" font-size="12">Row 1 — user_id: 42, title: "MySQL 가이드..."</text>
+
+  <rect x="56" y="180" width="268" height="32" rx="6" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1"/>
+  <text x="190" y="201" text-anchor="middle" fill="#93c5fd" font-size="12">Row 2 — user_id: 87, title: "InnoDB 최적화..."</text>
+
+  <rect x="56" y="220" width="268" height="32" rx="6" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1"/>
+  <text x="190" y="241" text-anchor="middle" fill="#93c5fd" font-size="12">Row 3 — user_id: 15, title: "인덱스 전략..."</text>
+
+  <rect x="56" y="260" width="268" height="32" rx="6" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="190" y="281" text-anchor="middle" fill="#64748b" font-size="12">Row 4 ... Row N</text>
+
+  <text x="190" y="318" text-anchor="middle" fill="#475569" font-size="11">원본 데이터 — 비압축 저장</text>
+
+  <!-- ═══ Center: Compression Arrow ═══ -->
+  <line x1="356" y1="225" x2="440" y2="225" stroke="url(#grad-arrow)" stroke-width="3" marker-end="url(#arrow-w)"/>
+
+  <!-- zlib badge -->
+  <rect x="370" y="196" width="58" height="24" rx="12" fill="#7c3aed" filter="url(#shadow)"/>
+  <text x="399" y="212" text-anchor="middle" fill="white" font-size="11" font-weight="bold">zlib</text>
+
+  <!-- Compression ratio -->
+  <text x="399" y="262" text-anchor="middle" fill="#a78bfa" font-size="20" font-weight="bold">50%</text>
+  <text x="399" y="280" text-anchor="middle" fill="#7c3aed" font-size="11">절감</text>
+
+  <!-- ═══ Right: Compressed InnoDB Page ═══ -->
+  <text x="600" y="108" text-anchor="middle" fill="#86efac" font-size="13" font-weight="bold">압축된 InnoDB 페이지</text>
+
+  <!-- Compressed page container (smaller height) -->
+  <rect x="460" y="120" width="300" height="140" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Size badge -->
+  <rect x="690" y="124" width="60" height="22" rx="11" fill="url(#grad-green)"/>
+  <text x="720" y="139" text-anchor="middle" fill="white" font-size="11" font-weight="bold">8 KB</text>
+
+  <!-- Compressed data representation -->
+  <rect x="476" y="150" width="268" height="90" rx="6" fill="#14532d" stroke="#22c55e" stroke-width="1"/>
+
+  <!-- Compressed data pattern lines -->
+  <g fill="#22c55e" opacity="0.5" font-size="10" font-family="monospace">
+    <text x="486" y="170">78 9C ED 5D 0B 8C 1C D7</text>
+    <text x="486" y="184">75 DA 2E 4E 38 D2 F3 A1</text>
+    <text x="486" y="198">B0 7C 8E 0A 9B 41 2D 63</text>
+    <text x="486" y="212">4F E8 3A 17 C5 89 FA 52</text>
+    <text x="486" y="226">00 00 FF FF ...</text>
+  </g>
+
+  <text x="610" y="252" text-anchor="middle" fill="#475569" font-size="11">zlib 압축 데이터 — 디스크 저장</text>
+
+  <!-- KEY_BLOCK_SIZE annotation -->
+  <rect x="480" y="268" width="240" height="36" rx="8" fill="#1a2e1a" stroke="#22c55e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="600" y="291" text-anchor="middle" fill="#4ade80" font-size="11">KEY_BLOCK_SIZE = 8</text>
+
+  <!-- Freed space indicator -->
+  <rect x="460" y="270" width="300" height="60" rx="10" fill="none" stroke="#22c55e" stroke-width="1" stroke-dasharray="6,4" opacity="0.3"/>
+  <text x="610" y="322" text-anchor="middle" fill="#22c55e" font-size="11" opacity="0.5">확보된 공간</text>
+
+  <!-- ═══ Bottom Stats Strip ═══ -->
+  <rect x="0" y="360" width="800" height="80" fill="#0c1222" rx="0"/>
+  <line x1="0" y1="360" x2="800" y2="360" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Stat 1 -->
+  <text x="130" y="390" text-anchor="middle" fill="#f59e0b" font-size="20" font-weight="bold">60%</text>
+  <text x="130" y="410" text-anchor="middle" fill="#64748b" font-size="11">Basecamp 실측 절감률</text>
+  <text x="130" y="426" text-anchor="middle" fill="#475569" font-size="10">430GB → 172GB</text>
+
+  <!-- Divider -->
+  <line x1="266" y1="375" x2="266" y2="430" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Stat 2 -->
+  <text x="400" y="390" text-anchor="middle" fill="#3b82f6" font-size="20" font-weight="bold">Write-once</text>
+  <text x="400" y="410" text-anchor="middle" fill="#64748b" font-size="11">Read-many 패턴에 최적</text>
+  <text x="400" y="426" text-anchor="middle" fill="#475569" font-size="10">블로그, CMS, 상품 설명</text>
+
+  <!-- Divider -->
+  <line x1="534" y1="375" x2="534" y2="430" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Stat 3 -->
+  <text x="670" y="390" text-anchor="middle" fill="#22c55e" font-size="20" font-weight="bold">0 코드 변경</text>
+  <text x="670" y="410" text-anchor="middle" fill="#64748b" font-size="11">애플리케이션 완전 투명</text>
+  <text x="670" y="426" text-anchor="middle" fill="#475569" font-size="10">ALTER TABLE 한 줄로 적용</text>
+</svg>
