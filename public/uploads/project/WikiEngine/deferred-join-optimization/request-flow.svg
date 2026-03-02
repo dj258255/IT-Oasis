@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 480" width="820" height="480" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000018"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3498db"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#7f8c8d"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="480" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="14" width="780" height="38" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="410" y="39" text-anchor="middle" fill="white" font-size="14" font-weight="bold">OFFSET 페이지네이션 — 요청 흐름과 생성 SQL</text>
+
+  <!-- ===== Top Row: Infrastructure Chain ===== -->
+
+  <!-- Client -->
+  <rect x="30" y="76" width="110" height="52" rx="8" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="85" y="98" text-anchor="middle" fill="#2c3e50" font-size="12" font-weight="bold">Client</text>
+  <text x="85" y="114" text-anchor="middle" fill="#95a5a6" font-size="9">GET /posts?page=N</text>
+
+  <!-- Arrow: Client → nginx -->
+  <line x1="140" y1="102" x2="185" y2="102" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- nginx -->
+  <rect x="190" y="76" width="120" height="52" rx="8" fill="#27ae60" filter="url(#shadow)"/>
+  <text x="250" y="98" text-anchor="middle" fill="white" font-size="12" font-weight="bold">nginx</text>
+  <text x="250" y="114" text-anchor="middle" fill="#d5f5e3" font-size="9">HTTPS 종단</text>
+
+  <!-- Arrow: nginx → Spring Boot -->
+  <line x1="310" y1="102" x2="355" y2="102" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Spring Boot -->
+  <rect x="360" y="76" width="160" height="52" rx="8" fill="#3498db" filter="url(#shadow)"/>
+  <text x="440" y="98" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Spring Boot</text>
+  <text x="440" y="114" text-anchor="middle" fill="#d6eaf8" font-size="9">애플리케이션 서버</text>
+
+  <!-- Arrow: Spring Boot → MySQL -->
+  <line x1="520" y1="102" x2="600" y2="102" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- MySQL -->
+  <rect x="605" y="76" width="160" height="52" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="685" y="98" text-anchor="middle" fill="white" font-size="12" font-weight="bold">MySQL 8.0</text>
+  <text x="685" y="114" text-anchor="middle" fill="#aab7b8" font-size="9">posts 1,475만 건</text>
+
+  <!-- ===== Spring Boot Internal Call Stack ===== -->
+
+  <!-- Dashed boundary -->
+  <rect x="310" y="148" width="260" height="240" rx="10" fill="none" stroke="#3498db" stroke-width="1" stroke-dasharray="6,3"/>
+  <text x="330" y="168" fill="#2980b9" font-size="10" font-weight="bold" letter-spacing="0.5">SPRING BOOT 내부</text>
+
+  <!-- Arrow down from Spring Boot box -->
+  <line x1="440" y1="128" x2="440" y2="176" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- PostController -->
+  <rect x="345" y="180" width="190" height="40" rx="6" fill="#5dade2" filter="url(#shadow)"/>
+  <text x="440" y="197" text-anchor="middle" fill="white" font-size="11" font-weight="bold">PostController</text>
+  <text x="440" y="212" text-anchor="middle" fill="#d6eaf8" font-size="9">.getPosts(page, size)</text>
+
+  <!-- Arrow -->
+  <line x1="440" y1="220" x2="440" y2="238" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- PostService -->
+  <rect x="345" y="242" width="190" height="40" rx="6" fill="#3498db" filter="url(#shadow)"/>
+  <text x="440" y="259" text-anchor="middle" fill="white" font-size="11" font-weight="bold">PostService</text>
+  <text x="440" y="274" text-anchor="middle" fill="#d6eaf8" font-size="9">.getPosts(pageable)</text>
+
+  <!-- Arrow -->
+  <line x1="440" y1="282" x2="440" y2="300" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- PostRepository -->
+  <rect x="335" y="304" width="210" height="40" rx="6" fill="#2980b9" filter="url(#shadow)"/>
+  <text x="440" y="321" text-anchor="middle" fill="white" font-size="11" font-weight="bold">PostRepository</text>
+  <text x="440" y="336" text-anchor="middle" fill="#d6eaf8" font-size="8">findAllByOrderByCreatedAtDesc(pageable)</text>
+
+  <!-- Arrow: call stack → JPA label -->
+  <line x1="440" y1="344" x2="440" y2="368" stroke="#7f8c8d" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- JPA auto-generation label -->
+  <text x="440" y="382" text-anchor="middle" fill="#7f8c8d" font-size="9" font-weight="bold">Spring Data JPA 자동 생성 ↓</text>
+
+  <!-- Arrow: JPA → SQL box -->
+  <line x1="440" y1="388" x2="440" y2="408" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+  <!-- ===== SQL Box ===== -->
+  <rect x="140" y="412" width="540" height="48" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="410" y="432" text-anchor="middle" fill="#e74c3c" font-size="12" font-weight="bold" font-family="'JetBrains Mono', 'Fira Code', monospace">SELECT * FROM posts</text>
+  <text x="410" y="449" text-anchor="middle" fill="#e74c3c" font-size="11" font-family="'JetBrains Mono', 'Fira Code', monospace">ORDER BY created_at DESC LIMIT 20 OFFSET ?</text>
+
+  <!-- SQL → MySQL arrow -->
+  <line x1="680" y1="436" x2="700" y2="436" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <line x1="700" y1="436" x2="700" y2="134" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowRed)"/>
+
+  <!-- Warning annotation at left -->
+  <rect x="20" y="168" width="270" height="46" rx="6" fill="#fef9e7" stroke="#f9e79f" stroke-width="1"/>
+  <text x="155" y="186" text-anchor="middle" fill="#7d6608" font-size="10" font-weight="bold">⚠ SELECT * + OFFSET 20,000</text>
+  <text x="155" y="202" text-anchor="middle" fill="#7d6608" font-size="9">LONGTEXT 포함 20,000행을 읽고 버림</text>
+
+  <!-- Arrow from warning to Spring Boot area -->
+  <line x1="290" y1="191" x2="308" y2="191" stroke="#f39c12" stroke-width="1" stroke-dasharray="3,2"/>
+</svg>
