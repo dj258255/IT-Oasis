@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 380" width="820" height="380" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000018"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3498db"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#27ae60"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#95a5a6"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="380" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="14" width="780" height="38" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="410" y="39" text-anchor="middle" fill="white" font-size="14" font-weight="bold">CQRS 관점에서 본 임베디드 Lucene 아키텍처</text>
+
+  <!-- Client -->
+  <rect x="40" y="150" width="110" height="70" rx="10" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="95" y="182" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">Client</text>
+  <text x="95" y="200" text-anchor="middle" fill="#95a5a6" font-size="10">검색 / 글쓰기</text>
+
+  <!-- ===== Write Path (Top) ===== -->
+  <rect x="20" y="66" width="780" height="100" rx="10" fill="#ebf5fb" stroke="#aed6f1" stroke-width="1" opacity="0.5"/>
+  <text x="40" y="86" fill="#2980b9" font-size="11" font-weight="bold" letter-spacing="0.5">WRITE PATH (Command)</text>
+
+  <!-- PostService -->
+  <rect x="260" y="84" width="140" height="56" rx="8" fill="#3498db" filter="url(#shadow)"/>
+  <text x="330" y="110" text-anchor="middle" fill="white" font-size="12" font-weight="bold">PostService</text>
+  <text x="330" y="128" text-anchor="middle" fill="#d6eaf8" font-size="10">.save() / .update()</text>
+
+  <!-- MySQL -->
+  <rect x="520" y="84" width="140" height="56" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="590" y="108" text-anchor="middle" fill="white" font-size="12" font-weight="bold">MySQL</text>
+  <text x="590" y="126" text-anchor="middle" fill="#aab7b8" font-size="10">Source of Truth</text>
+
+  <!-- Write arrow: Client -> PostService -->
+  <line x1="150" y1="165" x2="255" y2="118" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="190" y="132" fill="#3498db" font-size="10" font-weight="bold">Write</text>
+
+  <!-- Write arrow: PostService -> MySQL -->
+  <line x1="400" y1="112" x2="515" y2="112" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="450" y="104" fill="#3498db" font-size="10">INSERT / UPDATE</text>
+
+  <!-- ===== Read Path (Bottom) ===== -->
+  <rect x="20" y="202" width="780" height="100" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1" opacity="0.5"/>
+  <text x="40" y="222" fill="#27ae60" font-size="11" font-weight="bold" letter-spacing="0.5">READ PATH (Query)</text>
+
+  <!-- LuceneSearchService -->
+  <rect x="260" y="228" width="180" height="56" rx="8" fill="#27ae60" filter="url(#shadow)"/>
+  <text x="350" y="252" text-anchor="middle" fill="white" font-size="12" font-weight="bold">LuceneSearchService</text>
+  <text x="350" y="270" text-anchor="middle" fill="#d5f5e3" font-size="10">.search() / .autocomplete()</text>
+
+  <!-- Lucene Index -->
+  <rect x="540" y="228" width="160" height="56" rx="8" fill="#1e8449" filter="url(#shadow)"/>
+  <text x="620" y="252" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Lucene Index</text>
+  <text x="620" y="270" text-anchor="middle" fill="#a9dfbf" font-size="10">Read Model (읽기 뷰)</text>
+
+  <!-- Read arrow: Client -> LuceneSearchService -->
+  <line x1="150" y1="200" x2="255" y2="250" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="188" y="238" fill="#27ae60" font-size="10" font-weight="bold">Read</text>
+
+  <!-- Read arrow: LuceneSearchService -> Lucene Index -->
+  <line x1="440" y1="256" x2="535" y2="256" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="472" y="248" fill="#27ae60" font-size="10">IndexSearcher</text>
+
+  <!-- Sync arrow: PostService -> Lucene Index (동기 색인) -->
+  <line x1="330" y1="140" x2="330" y2="224" stroke="#95a5a6" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrowGray)"/>
+  <text x="340" y="185" fill="#7f8c8d" font-size="10" font-weight="bold">동기 색인</text>
+  <text x="340" y="198" fill="#bdc3c7" font-size="9">addDocument()</text>
+
+  <!-- JVM boundary -->
+  <rect x="230" y="70" width="496" height="244" rx="12" fill="none" stroke="#7f8c8d" stroke-width="1" stroke-dasharray="8,4"/>
+  <text x="740" y="326" text-anchor="end" fill="#bdc3c7" font-size="10">단일 JVM (in-process)</text>
+
+  <!-- Bottom note -->
+  <rect x="40" y="332" width="740" height="34" rx="6" fill="#fef9e7" stroke="#f9e79f" stroke-width="1"/>
+  <text x="410" y="354" text-anchor="middle" fill="#7d6608" font-size="11">네트워크 오버헤드 없음 — Write/Read 분리가 프로세스 내에서 달성. ES 대비 CDC 파이프라인 불필요</text>
+</svg>

@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 540" width="820" height="540" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000018"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="540" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="14" width="780" height="38" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="410" y="39" text-anchor="middle" fill="white" font-size="14" font-weight="bold">검색어 "대한민국" — ngram vs Nori 포스팅 리스트 매핑</text>
+
+  <!-- ===== Left Panel: ngram ===== -->
+  <rect x="16" y="68" width="388" height="458" rx="10" fill="#fff5f5" stroke="#fecaca" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- Panel header -->
+  <rect x="16" y="68" width="388" height="34" rx="10" fill="#e74c3c"/>
+  <rect x="16" y="88" width="388" height="14" fill="#e74c3c"/>
+  <text x="210" y="92" text-anchor="middle" fill="white" font-size="13" font-weight="bold">ngram 2-gram — N:M 관계</text>
+
+  <!-- STEP 1 -->
+  <text x="36" y="128" font-size="10" font-weight="bold" fill="#7f8c8d" letter-spacing="0.5">STEP 1  토큰화</text>
+  <line x1="36" y1="132" x2="380" y2="132" stroke="#e0e0e0" stroke-width="0.5"/>
+
+  <rect x="36" y="140" width="76" height="28" rx="5" fill="#fce4ec" stroke="#e74c3c" stroke-width="1.2"/>
+  <text x="74" y="159" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">"대한"</text>
+
+  <rect x="126" y="140" width="76" height="28" rx="5" fill="#fce4ec" stroke="#e74c3c" stroke-width="1.2"/>
+  <text x="164" y="159" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">"한민"</text>
+
+  <rect x="216" y="140" width="76" height="28" rx="5" fill="#fce4ec" stroke="#e74c3c" stroke-width="1.2"/>
+  <text x="254" y="159" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">"민국"</text>
+
+  <text x="306" y="159" fill="#95a5a6" font-size="11">← 3개 토큰</text>
+
+  <!-- STEP 2 -->
+  <text x="36" y="196" font-size="10" font-weight="bold" fill="#7f8c8d" letter-spacing="0.5">STEP 2  포스팅 리스트 조회</text>
+  <line x1="36" y1="200" x2="380" y2="200" stroke="#e0e0e0" stroke-width="0.5"/>
+
+  <!-- PL: 대한 196,593건 -->
+  <text x="36" y="220" fill="#c0392b" font-size="10" font-weight="bold">"대한"</text>
+  <rect x="36" y="226" width="320" height="22" rx="4" fill="#e74c3c"/>
+  <text x="196" y="241" text-anchor="middle" fill="white" font-size="10" font-weight="bold">196,593건</text>
+  <text x="364" y="241" fill="#e74c3c" font-size="11" font-weight="bold">⚠</text>
+
+  <!-- PL: 한민 2,841건 -->
+  <text x="36" y="268" fill="#c0392b" font-size="10" font-weight="bold">"한민"</text>
+  <rect x="36" y="274" width="14" height="22" rx="4" fill="#e57373"/>
+  <text x="58" y="289" fill="#c0392b" font-size="10">2,841건</text>
+
+  <!-- PL: 민국 45,200건 -->
+  <text x="36" y="316" fill="#c0392b" font-size="10" font-weight="bold">"민국"</text>
+  <rect x="36" y="322" width="74" height="22" rx="4" fill="#e57373"/>
+  <text x="118" y="337" fill="#c0392b" font-size="10">45,200건</text>
+
+  <!-- Scale annotation -->
+  <text x="36" y="360" fill="#bdc3c7" font-size="9">█ = ~600건 (동일 스케일)</text>
+
+  <!-- STEP 3 -->
+  <text x="36" y="386" font-size="10" font-weight="bold" fill="#7f8c8d" letter-spacing="0.5">STEP 3  교집합 연산</text>
+  <line x1="36" y1="390" x2="380" y2="390" stroke="#e0e0e0" stroke-width="0.5"/>
+
+  <rect x="36" y="398" width="340" height="30" rx="6" fill="#fce4ec" stroke="#e74c3c" stroke-width="1.2"/>
+  <text x="206" y="418" text-anchor="middle" fill="#c0392b" font-size="11" font-weight="bold">A ∩ B ∩ C — ib_vector_t 순차 탐색 O(n)</text>
+
+  <!-- Arrow down -->
+  <line x1="206" y1="428" x2="206" y2="444" stroke="#e74c3c" stroke-width="1.5"/>
+  <polygon points="206,450 201,442 211,442" fill="#e74c3c"/>
+
+  <!-- Result -->
+  <rect x="106" y="454" width="200" height="32" rx="6" fill="#e74c3c" filter="url(#shadow)"/>
+  <text x="206" y="475" text-anchor="middle" fill="white" font-size="13" font-weight="bold">5초+ 타임아웃</text>
+
+  <text x="206" y="504" text-anchor="middle" fill="#e74c3c" font-size="10" font-weight="bold">"대한"이 무관한 문서까지 매칭 → 리스트 폭발</text>
+  <text x="206" y="518" text-anchor="middle" fill="#95a5a6" font-size="9">대한항공, 대한건설, 대한체육회, ...</text>
+
+  <!-- ===== Right Panel: Nori ===== -->
+  <rect x="416" y="68" width="388" height="458" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- Panel header -->
+  <rect x="416" y="68" width="388" height="34" rx="10" fill="#27ae60"/>
+  <rect x="416" y="88" width="388" height="14" fill="#27ae60"/>
+  <text x="610" y="92" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Nori 형태소 분석 — 1:M 관계</text>
+
+  <!-- STEP 1 -->
+  <text x="436" y="128" font-size="10" font-weight="bold" fill="#7f8c8d" letter-spacing="0.5">STEP 1  형태소 분석</text>
+  <line x1="436" y1="132" x2="780" y2="132" stroke="#e0e0e0" stroke-width="0.5"/>
+
+  <rect x="436" y="140" width="110" height="28" rx="5" fill="#e8f5e9" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="491" y="159" text-anchor="middle" fill="#1b5e20" font-size="12" font-weight="bold">"대한민국"</text>
+
+  <text x="560" y="159" fill="#95a5a6" font-size="11">← 1개 토큰</text>
+
+  <!-- STEP 2 -->
+  <text x="436" y="196" font-size="10" font-weight="bold" fill="#7f8c8d" letter-spacing="0.5">STEP 2  포스팅 리스트 조회</text>
+  <line x1="436" y1="200" x2="780" y2="200" stroke="#e0e0e0" stroke-width="0.5"/>
+
+  <text x="436" y="220" fill="#1b5e20" font-size="10" font-weight="bold">"대한민국"</text>
+  <rect x="436" y="226" width="18" height="22" rx="4" fill="#27ae60"/>
+  <text x="462" y="241" fill="#1b5e20" font-size="10">8,200건</text>
+
+  <!-- Empty space emphasis -->
+  <text x="610" y="300" text-anchor="middle" fill="#c8e6c9" font-size="22" font-weight="bold">∅</text>
+  <text x="610" y="322" text-anchor="middle" fill="#a5d6a7" font-size="11">교집합 단계 불필요</text>
+  <text x="610" y="338" text-anchor="middle" fill="#c8e6c9" font-size="10">포스팅 리스트가 1개뿐이므로</text>
+  <text x="610" y="352" text-anchor="middle" fill="#c8e6c9" font-size="10">교집합 연산 자체가 존재하지 않음</text>
+
+  <!-- STEP 3 -->
+  <text x="436" y="386" font-size="10" font-weight="bold" fill="#7f8c8d" letter-spacing="0.5">STEP 3  결과 반환</text>
+  <line x1="436" y1="390" x2="780" y2="390" stroke="#e0e0e0" stroke-width="0.5"/>
+
+  <rect x="436" y="398" width="340" height="30" rx="6" fill="#e8f5e9" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="606" y="418" text-anchor="middle" fill="#1b5e20" font-size="11" font-weight="bold">리스트 1개 → 8,200건 직접 반환</text>
+
+  <!-- Arrow down -->
+  <line x1="606" y1="428" x2="606" y2="444" stroke="#27ae60" stroke-width="1.5"/>
+  <polygon points="606,450 601,442 611,442" fill="#27ae60"/>
+
+  <!-- Result -->
+  <rect x="506" y="454" width="200" height="32" rx="6" fill="#27ae60" filter="url(#shadow)"/>
+  <text x="606" y="475" text-anchor="middle" fill="white" font-size="13" font-weight="bold">수 ms</text>
+
+  <text x="606" y="504" text-anchor="middle" fill="#27ae60" font-size="10" font-weight="bold">"대한민국" 의미 단위로 정확히 매칭</text>
+  <text x="606" y="518" text-anchor="middle" fill="#95a5a6" font-size="9">불필요한 문서 없이 8,200건만</text>
+</svg>

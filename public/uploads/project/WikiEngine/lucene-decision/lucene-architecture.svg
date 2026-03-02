@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 620" width="820" height="620" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000018"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f8c8d"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="620" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="14" width="780" height="38" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="410" y="39" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Lucene Index 아키텍처 — 세그먼트 기반 불변 파일 구조</text>
+
+  <!-- ===== Lucene Index Container ===== -->
+  <rect x="20" y="68" width="780" height="260" rx="10" fill="#eef6ff" stroke="#93c5fd" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="40" y="92" font-size="13" font-weight="bold" fill="#1e40af">Lucene Index</text>
+
+  <!-- Segment 0 -->
+  <rect x="40" y="108" width="160" height="140" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <rect x="40" y="108" width="160" height="30" rx="8" fill="#3b82f6"/>
+  <rect x="40" y="128" width="160" height="10" fill="#3b82f6"/>
+  <text x="120" y="128" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Segment 0</text>
+  <text x="120" y="152" text-anchor="middle" fill="#1e40af" font-size="9">(불변 파일 묶음)</text>
+  <rect x="52" y="162" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="120" y="174" text-anchor="middle" fill="#3b82f6" font-size="9">📄 _0.cfs + _0.si</text>
+  <rect x="52" y="182" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="120" y="194" text-anchor="middle" fill="#3b82f6" font-size="9">10,000 docs</text>
+  <rect x="52" y="202" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="120" y="214" text-anchor="middle" fill="#3b82f6" font-size="9">45MB</text>
+  <text x="120" y="240" text-anchor="middle" fill="#93c5fd" font-size="9">🔒 immutable</text>
+
+  <!-- Segment 1 -->
+  <rect x="220" y="108" width="160" height="140" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <rect x="220" y="108" width="160" height="30" rx="8" fill="#3b82f6"/>
+  <rect x="220" y="128" width="160" height="10" fill="#3b82f6"/>
+  <text x="300" y="128" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Segment 1</text>
+  <text x="300" y="152" text-anchor="middle" fill="#1e40af" font-size="9">(불변 파일 묶음)</text>
+  <rect x="232" y="162" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="300" y="174" text-anchor="middle" fill="#3b82f6" font-size="9">📄 _1.cfs + _1.si</text>
+  <rect x="232" y="182" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="300" y="194" text-anchor="middle" fill="#3b82f6" font-size="9">50,000 docs</text>
+  <rect x="232" y="202" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="300" y="214" text-anchor="middle" fill="#3b82f6" font-size="9">220MB</text>
+  <text x="300" y="240" text-anchor="middle" fill="#93c5fd" font-size="9">🔒 immutable</text>
+
+  <!-- Segment 2 -->
+  <rect x="400" y="108" width="160" height="140" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+  <rect x="400" y="108" width="160" height="30" rx="8" fill="#3b82f6"/>
+  <rect x="400" y="128" width="160" height="10" fill="#3b82f6"/>
+  <text x="480" y="128" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Segment 2</text>
+  <text x="480" y="152" text-anchor="middle" fill="#1e40af" font-size="9">(Merge 결과)</text>
+  <rect x="412" y="162" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="480" y="174" text-anchor="middle" fill="#3b82f6" font-size="9">📄 _2.cfs + _2.si</text>
+  <rect x="412" y="182" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="480" y="194" text-anchor="middle" fill="#3b82f6" font-size="9">200,000 docs</text>
+  <rect x="412" y="202" width="136" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd" stroke-width="0.5"/>
+  <text x="480" y="214" text-anchor="middle" fill="#3b82f6" font-size="9">870MB</text>
+  <text x="480" y="240" text-anchor="middle" fill="#93c5fd" font-size="9">🔒 immutable</text>
+
+  <!-- ... ellipsis -->
+  <text x="590" y="190" fill="#94a3b8" font-size="24" font-weight="bold">···</text>
+
+  <!-- segments_N -->
+  <rect x="630" y="118" width="150" height="60" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="705" y="142" text-anchor="middle" fill="#92400e" font-size="11" font-weight="bold">segments_N</text>
+  <text x="705" y="158" text-anchor="middle" fill="#b45309" font-size="9">활성 세그먼트 목록</text>
+  <text x="705" y="172" text-anchor="middle" fill="#d97706" font-size="8">(commit point)</text>
+
+  <!-- Arrows from segments_N to segments -->
+  <line x1="630" y1="148" x2="570" y2="178" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="630" y1="148" x2="380" y2="178" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="630" y1="148" x2="200" y2="178" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- write.lock -->
+  <rect x="630" y="198" width="150" height="36" rx="6" fill="#fef2f2" stroke="#ef4444" stroke-width="1"/>
+  <text x="705" y="220" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="bold">🔒 write.lock</text>
+
+  <!-- ===== Segment 내부 구조 ===== -->
+  <rect x="20" y="344" width="780" height="260" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="40" y="368" font-size="13" font-weight="bold" fill="#166534">각 Segment 내부 파일 구조</text>
+
+  <!-- .tim -->
+  <rect x="40" y="386" width="150" height="70" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="115" y="408" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">.tim</text>
+  <text x="115" y="424" text-anchor="middle" fill="#166534" font-size="9">Term Dictionary</text>
+  <text x="115" y="440" text-anchor="middle" fill="#4ade80" font-size="8">term → offset 매핑</text>
+  <text x="115" y="452" text-anchor="middle" fill="#86efac" font-size="8">(FST 구조)</text>
+
+  <!-- .doc -->
+  <rect x="200" y="386" width="150" height="70" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="275" y="408" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">.doc</text>
+  <text x="275" y="424" text-anchor="middle" fill="#166534" font-size="9">Postings — DocIDs</text>
+  <text x="275" y="440" text-anchor="middle" fill="#4ade80" font-size="8">문서 ID 목록</text>
+  <text x="275" y="452" text-anchor="middle" fill="#86efac" font-size="8">(VByte 압축)</text>
+
+  <!-- .pos -->
+  <rect x="360" y="386" width="150" height="70" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="435" y="408" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">.pos</text>
+  <text x="435" y="424" text-anchor="middle" fill="#166534" font-size="9">Postings — Positions</text>
+  <text x="435" y="440" text-anchor="middle" fill="#4ade80" font-size="8">위치 정보</text>
+  <text x="435" y="452" text-anchor="middle" fill="#86efac" font-size="8">(구절 검색용)</text>
+
+  <!-- .fdx -->
+  <rect x="520" y="386" width="150" height="70" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="595" y="408" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">.fdx</text>
+  <text x="595" y="424" text-anchor="middle" fill="#166534" font-size="9">Stored Fields Index</text>
+  <text x="595" y="440" text-anchor="middle" fill="#4ade80" font-size="8">저장 필드 인덱스</text>
+
+  <!-- .fdt -->
+  <rect x="680" y="386" width="100" height="70" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
+  <text x="730" y="408" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">.fdt</text>
+  <text x="730" y="424" text-anchor="middle" fill="#166534" font-size="9">Stored Fields</text>
+  <text x="730" y="440" text-anchor="middle" fill="#4ade80" font-size="8">Data</text>
+
+  <!-- Flow: Flush / Merge -->
+  <rect x="40" y="480" width="340" height="50" rx="8" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.2"/>
+  <text x="210" y="500" text-anchor="middle" fill="#0369a1" font-size="11" font-weight="bold">Flush: RAM Buffer → 새 Segment 생성</text>
+  <text x="210" y="516" text-anchor="middle" fill="#0ea5e9" font-size="9">IndexWriter.commit() 시 메모리 → 디스크</text>
+
+  <rect x="400" y="480" width="380" height="50" rx="8" fill="#faf5ff" stroke="#a855f7" stroke-width="1.2"/>
+  <text x="590" y="500" text-anchor="middle" fill="#7e22ce" font-size="11" font-weight="bold">Merge: 작은 Segment들 → 큰 Segment로 병합</text>
+  <text x="590" y="516" text-anchor="middle" fill="#a855f7" font-size="9">TieredMergePolicy 기준 자동 병합 (삭제 문서 제거)</text>
+
+  <!-- MMap note -->
+  <rect x="40" y="548" width="740" height="50" rx="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+  <text x="410" y="568" text-anchor="middle" fill="#c2410c" font-size="11" font-weight="bold">MMapDirectory: OS가 세그먼트 파일을 가상 메모리에 매핑 → 빠른 랜덤 액세스</text>
+  <text x="410" y="584" text-anchor="middle" fill="#fb923c" font-size="9">JVM 힙이 아닌 OS 페이지 캐시를 활용 → GC 부담 없이 대용량 인덱스 처리 가능</text>
+</svg>
