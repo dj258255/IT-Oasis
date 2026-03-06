@@ -1367,25 +1367,82 @@ JVM 힙은 여유롭고 GC pause도 무시할 수준입니다. **병목은 JVM �
 
 ### 개선 우선순위
 
-**1순위: Caffeine 로컬 캐시 (서버 증설 불필요)**
+**1순위: Caffeine 로컬 캐시 — CPU 부하 직접 제거**
 
 | 캐시 대상 | TTL | 예상 효과 |
 |----------|-----|----------|
-| 검색 결과 (`/posts/search?q=...`) | 5분 | 반복 검색 시 Lucene + MySQL 완전 스킵 |
+| 검색 결과 (`/posts/search?q=...`) | 5분 | 반복 검색 시 Lucene scoring + MySQL 완전 스킵 |
 | 자동완성 (`/posts/autocomplete?q=...`) | 5분 | 키 입력마다 DB 조회 제거 |
 | 목록 조회 (`/posts?page=N`) | 1분 | 같은 페이지 반복 요청 시 OFFSET 스캔 제거 |
 
 검색 쿼리는 Zipf 분포(소수의 인기 검색어가 트래픽 대부분)를 따르므로, 상위 1,000개 검색어만 캐싱해도 히트율 60%+ 가능. **캐시 히트 = CPU 사용 0**.
 
-**2순위: OCI Free Tier 스케일업 (비용 0원)**
+**왜 Caffeine인가:** Caffeine은 내부적으로 [Window TinyLfu](https://dl.acm.org/doi/10.1145/3149371) 알고리즘을 사용한다. 전통적인 LRU 캐시는 한 번만 조회된 항목이 자주 조회되는 항목을 밀어낼 수 있지만, TinyLfu는 Bloom filter 기반 빈도 추정으로 **"자주 검색되는 키워드"를 우선 유지**한다. 검색 캐시처럼 Zipf 분포가 뚜렷한 워크로드에서 LRU 대비 히트율이 높다.
 
-| 현재 | 변경 후 | 효과 |
-|------|--------|------|
-| 2 OCPU, 12GB RAM | 4 OCPU, 24GB RAM | CPU 2배, LA 20 → ~10 |
+**NRT(Near-Real-Time)와 캐시 무효화:** 현재 글 생성 시 `SearcherManager.maybeRefresh()`로 Lucene 인덱스를 NRT 갱신하고 있다. 캐시 무효화는 TTL 기반으로 시작한다.
 
-OCI Free Tier ARM은 총 4 OCPU / 24GB까지 무료. 모니터링 서버 2대는 AMD(x86)이므로 ARM 쿼터에 영향 없음.
+- TTL 5분이면 새 글이 검색 결과에 반영되기까지 최대 5분 지연
+- 위키 특성상 실시간 반영보다 안정적 응답이 더 중요
+- 이벤트 기반 무효화(`@CacheEvict`)는 "어떤 검색어의 결과가 영향받았는지" 판별이 불가능하므로 TTL이 실용적
+- Elasticsearch도 [내부적으로 시간 기반 캐시 무효화를 사용](https://www.elastic.co/blog/optimizing-lucene-caching)한다
 
-**3순위: 서버 측 최대 페이지 제한 + OFFSET 페이지네이션 유지 (코드 변경)**
+> 메시지 큐(Kafka 등)로 검색 요청을 비동기 처리하는 방식은 이 상황에 적합하지 않다. 검색은 **동기적 응답**이 필요한 작업이라 큐잉하면 사용자가 결과를 기다려야 한다. 메시지 큐가 맞는 경우는 비동기 처리 가능한 작업(글 생성 후 색인, 알림 발송 등)이다. CPU 포화의 핵심 해법은 **"일 자체를 줄이는 것"** → 캐시가 정답이다.
+
+**2순위: Tomcat 스레드풀 튜닝 — context switching 감소**
+
+현재 `application.yml`에 Tomcat 스레드풀 설정이 없어 **기본값 200 스레드**가 적용된다. CPU-bound 워크로드에서 200 스레드는 과도하다.
+
+[Zalando Engineering](https://engineering.zalando.com/posts/2019/04/how-to-set-an-ideal-thread-pool-size.html)과 [Baeldung](https://www.baeldung.com/java-web-thread-pool-config)이 제시하는 스레드풀 공식:
+
+```
+최적 스레드 수 = CPU 코어 × (1 + 대기시간 / 서비스시간)
+```
+
+CPU-bound 작업은 대기시간이 거의 0이므로 `2 × (1 + 0) = 2`가 이론적 최적이다. 실제로는 Lucene 검색 후 DB 조회(I/O 대기)가 있으므로 코어 수보다 높게 설정해야 하지만, 기본 200은 context switching만 유발한다.
+
+k6 load 결과에서 JVM 스레드가 20 → 120으로 급증한 것이 이 문제의 증거다. [LoadForge 가이드](https://loadforge.com/guides/configuring-thread-pools-for-better-performance-in-tomcat)에서도 maxThreads를 CPU 코어의 2~4배 내로 유지하라고 권장한다.
+
+```yaml
+server:
+  tomcat:
+    threads:
+      max: 20        # 기본 200 → CPU-bound에 맞게 축소
+      min-spare: 4   # 코어 수 수준의 대기 스레드
+    accept-count: 100 # 모든 스레드가 사용 중일 때 OS 대기열 크기
+```
+
+> max 20은 보수적 시작점이다. 순수 CPU-bound라면 4~6이 적정이지만, 검색 → DB 조회(I/O 대기) → 응답 패턴에서 I/O 대기 중 다른 요청을 처리할 여유를 둔 값이다. Caffeine 캐시 적용 후 실측으로 조정한다.
+
+**3순위: HikariCP 커넥션 풀 검증**
+
+[HikariCP 공식 Wiki](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)가 인용하는 PostgreSQL 프로젝트의 공식:
+
+```
+connections = (core_count × 2) + effective_spindle_count
+```
+
+- `core_count`: 물리 코어 수 (HyperThreading 제외)
+- `effective_spindle_count`: 데이터가 완전히 캐시된 경우 0
+
+현재 서버: 2 OCPU, InnoDB Buffer Pool 히트율 100% → `(2 × 2) + 0 = 4`. 현재 설정 `DB_POOL_SIZE=10`은 공식보다 크지만, HikariCP Wiki에서도 "작은 풀이 큰 풀보다 성능이 좋다"고 강조하며 Oracle의 실험에서 커넥션을 2,048 → 96으로 줄였을 때 응답시간이 100배 개선된 사례를 인용한다.
+
+Tomcat 스레드를 20으로 줄이면 동시에 DB를 조회하는 스레드도 줄어들므로, 현재 `pool size 10`은 적정하다. 변경 후 `hikaricp_connections_pending` (Prometheus 메트릭)을 모니터링하여 커넥션 대기가 발생하면 조정한다.
+
+**4순위: 서버 스케일업**
+
+| 구성 | OCPU 비용 | 메모리 비용 | 월 합계 |
+|------|-----------|-----------|---------|
+| 2 OCPU, 12GB (현재) | $14.60 | $13.14 | ~$28/월 |
+| 4 OCPU, 24GB (스케일업) | $29.20 | $26.28 | ~$56/월 |
+
+> OCI A1 Flex 기준 OCPU $0.01/시간, Memory $0.0015/GB-시간. ([Oracle 공식 가격](https://www.oracle.com/cloud/compute/arm/pricing/))
+> 참고: OCI Free Tier ARM은 3,000 OCPU-hours + 18,000 GB-hours/월 무료이므로, 4 OCPU 24GB(2,920 OCPU-hours + 17,520 GB-hours)는 무료 범위에 들어간다. 본 프로젝트는 Free Tier로 운영 중.
+>
+> AWS 비교: 동급 ARM(Graviton) t4g.xlarge(4 vCPU, 16GB)가 ~$98/월이므로 OCI가 약 절반 가격이다. ([AWS EC2 Pricing](https://aws.amazon.com/ec2/pricing/on-demand/))
+
+CPU 2배(LA 20 → ~10)로 즉각적인 개선이 가능하지만, 1~3순위를 먼저 적용하지 않으면 4 OCPU에서도 동일한 문제가 더 높은 VU에서 재현된다.
+
+**5순위: 서버 측 최대 페이지 제한 + OFFSET 페이지네이션 유지 (코드 변경)**
 
 현재 k6 스크립트에서만 page 200으로 제한하고 있지만, **서버 API에는 제한이 없습니다.** 서버 측에서 최대 페이지를 제한하면 OFFSET worst-case를 통제할 수 있습니다. Google 검색도 OFFSET + 최대 페이지 제한(약 30페이지) 방식을 사용하며, 페이지 번호 UI에서는 이 방식이 더 적합합니다.
 
@@ -1394,10 +1451,11 @@ OCI Free Tier ARM은 총 4 OCPU / 24GB까지 무료. 모니터링 서버 2대는
 **개선 후 재측정 계획:**
 
 ```
-1. Caffeine 캐시 도입 → k6 load 재측정
-2. OCI 4 OCPU 스케일업 → k6 load 재측정
-3. 두 개선의 결합 효과 확인
-4. 새 병목이 발견되면 다음 단계 결정
+1. Caffeine 캐시 + Tomcat 스레드풀 + HikariCP 검증 → k6 load 재측정
+2. k6 메트릭을 빈도별 분리 (rare/medium/high 별도 Trend) → 캐시 효과 정밀 측정
+3. OCI 4 OCPU 스케일업 → k6 load 재측정
+4. 두 개선의 결합 효과 확인
+5. 새 병목이 발견되면 다음 단계 결정
 ```
 
 ### 아직 불필요한 것
@@ -1438,6 +1496,15 @@ OCI Free Tier ARM은 총 4 OCPU / 24GB까지 무료. 모니터링 서버 2대는
 - [Elasticsearch Hardware Requirements — Opster](https://opster.com/guides/elasticsearch/capacity-planning/elasticsearch-hardware-requirements/)
 - [Vector Search: Lucene Is All You Need — arXiv:2308.14963](https://arxiv.org/abs/2308.14963)
 - [MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880)
+
+**성능 최적화:**
+- [Window TinyLfu — A Highly Efficient Cache Admission Policy (ACM)](https://dl.acm.org/doi/10.1145/3149371)
+- [Tencent의 Lucene 캐싱 최적화 — Elastic Blog](https://www.elastic.co/blog/optimizing-lucene-caching)
+- [How to Set an Ideal Thread Pool Size — Zalando Engineering](https://engineering.zalando.com/posts/2019/04/how-to-set-an-ideal-thread-pool-size.html)
+- [Configuring Thread Pools for Java Web Servers — Baeldung](https://www.baeldung.com/java-web-thread-pool-config)
+- [Optimizing Thread Pools for Tomcat — LoadForge](https://loadforge.com/guides/configuring-thread-pools-for-better-performance-in-tomcat)
+- [About Pool Sizing — HikariCP Wiki (GitHub)](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
+- [Optimal Connection Pool Size — Vlad Mihalcea](https://vladmihalcea.com/optimal-connection-pool-size/)
 
 **Lucene 리소스 및 운영:**
 - [Lucene's RAM Usage for Searching — Mike McCandless](https://blog.mikemccandless.com/2010/07/lucenes-ram-usage-for-searching.html)
@@ -2819,25 +2886,82 @@ Introducing a cache means repeated searches do not use CPU, allowing far more re
 
 ### Improvement Priority
 
-**Priority 1: Caffeine Local Cache (No server addition needed)**
+**Priority 1: Caffeine Local Cache -- Directly Eliminate CPU Load**
 
 | Cache Target | TTL | Expected Effect |
 |-------------|-----|-----------------|
-| Search results (`/posts/search?q=...`) | 5 min | Completely skip Lucene + MySQL on repeated searches |
+| Search results (`/posts/search?q=...`) | 5 min | Completely skip Lucene scoring + MySQL on repeated searches |
 | Autocomplete (`/posts/autocomplete?q=...`) | 5 min | Eliminate DB lookup per keystroke |
 | List view (`/posts?page=N`) | 1 min | Eliminate OFFSET scan on repeated same-page requests |
 
 Search queries follow a Zipf distribution (a few popular queries dominate traffic), so caching just the top 1,000 queries can achieve 60%+ hit rate. **Cache hit = 0 CPU usage**.
 
-**Priority 2: OCI Free Tier Scale-Up (Cost $0)**
+**Why Caffeine:** Caffeine internally uses the [Window TinyLfu](https://dl.acm.org/doi/10.1145/3149371) algorithm. Traditional LRU caches can evict frequently accessed items when one-time items push them out, but TinyLfu uses Bloom filter-based frequency estimation to **prioritize keeping "frequently searched keywords."** It achieves higher hit rates than LRU for workloads with distinct Zipf distributions like search caches.
 
-| Current | After Change | Effect |
-|---------|-------------|--------|
-| 2 OCPU, 12GB RAM | 4 OCPU, 24GB RAM | 2x CPU, LA 20 -> ~10 |
+**NRT (Near-Real-Time) and Cache Invalidation:** Currently, `SearcherManager.maybeRefresh()` updates the Lucene index in NRT when posts are created. Cache invalidation starts with a TTL-based approach.
 
-OCI Free Tier ARM allows up to 4 OCPU / 24GB for free. The 2 monitoring servers are AMD (x86), so they do not affect the ARM quota.
+- With a 5-minute TTL, new posts may take up to 5 minutes to appear in search results
+- For a wiki, stable responses matter more than real-time indexing
+- Event-based invalidation (`@CacheEvict`) cannot determine "which search query results are affected," making TTL more practical
+- Elasticsearch also [uses time-based cache invalidation internally](https://www.elastic.co/blog/optimizing-lucene-caching)
 
-**Priority 3: Server-Side Max Page Limit + Keep OFFSET Pagination (Code Change)**
+> Using a message queue (Kafka, etc.) for async search processing is not suitable here. Search requires **synchronous responses** -- queueing would make users wait for results. Message queues are appropriate for async tasks (post-create indexing, notifications). The key to solving CPU saturation is **"reducing the work itself"** → caching is the answer.
+
+**Priority 2: Tomcat Thread Pool Tuning -- Reduce Context Switching**
+
+Currently `application.yml` has no Tomcat thread pool configuration, so the **default of 200 threads** applies. 200 threads is excessive for CPU-bound workloads.
+
+The thread pool formula from [Zalando Engineering](https://engineering.zalando.com/posts/2019/04/how-to-set-an-ideal-thread-pool-size.html) and [Baeldung](https://www.baeldung.com/java-web-thread-pool-config):
+
+```
+Optimal threads = CPU cores × (1 + Wait time / Service time)
+```
+
+For CPU-bound tasks, wait time is near zero: `2 × (1 + 0) = 2` is the theoretical optimum. In practice, Lucene search followed by DB queries (I/O wait) exists, so it should be set higher than core count, but the default 200 only causes context switching overhead.
+
+The k6 load results showing JVM threads surging from 20 → 120 is evidence of this problem. The [LoadForge guide](https://loadforge.com/guides/configuring-thread-pools-for-better-performance-in-tomcat) also recommends keeping maxThreads within 2-4x of CPU cores.
+
+```yaml
+server:
+  tomcat:
+    threads:
+      max: 20        # Default 200 → reduced for CPU-bound workload
+      min-spare: 4   # Standby threads at core count level
+    accept-count: 100 # OS queue size when all threads are busy
+```
+
+> max 20 is a conservative starting point. For pure CPU-bound work, 4-6 would be optimal, but the search → DB query (I/O wait) → response pattern needs room to process other requests during I/O waits. Will be tuned with real measurements after Caffeine cache is applied.
+
+**Priority 3: HikariCP Connection Pool Verification**
+
+The formula cited by the [official HikariCP Wiki](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing) from the PostgreSQL project:
+
+```
+connections = (core_count × 2) + effective_spindle_count
+```
+
+- `core_count`: physical cores (excluding HyperThreading)
+- `effective_spindle_count`: 0 when data is fully cached
+
+Current server: 2 OCPU, InnoDB Buffer Pool hit rate 100% → `(2 × 2) + 0 = 4`. The current `DB_POOL_SIZE=10` is larger than the formula suggests, but the HikariCP Wiki emphasizes "smaller pools outperform larger pools" and cites an Oracle experiment where reducing connections from 2,048 → 96 improved response times by 100x.
+
+With Tomcat threads reduced to 20, the number of threads simultaneously querying the DB also decreases, so the current `pool size 10` is adequate. After changes, monitor `hikaricp_connections_pending` (Prometheus metric) and adjust if connection waits occur.
+
+**Priority 4: Server Scale-Up**
+
+| Config | OCPU Cost | Memory Cost | Monthly Total |
+|--------|-----------|-------------|---------------|
+| 2 OCPU, 12GB (current) | $14.60 | $13.14 | ~$28/mo |
+| 4 OCPU, 24GB (scale-up) | $29.20 | $26.28 | ~$56/mo |
+
+> OCI A1 Flex pricing: OCPU $0.01/hr, Memory $0.0015/GB-hr. ([Oracle official pricing](https://www.oracle.com/cloud/compute/arm/pricing/))
+> Note: OCI Free Tier ARM includes 3,000 OCPU-hours + 18,000 GB-hours/month free, so 4 OCPU 24GB (2,920 OCPU-hours + 17,520 GB-hours) fits within the free allowance. This project runs on Free Tier.
+>
+> AWS comparison: comparable ARM (Graviton) t4g.xlarge (4 vCPU, 16GB) costs ~$98/mo, making OCI roughly half the price. ([AWS EC2 Pricing](https://aws.amazon.com/ec2/pricing/on-demand/))
+
+Doubling CPU (LA 20 -> ~10) provides immediate improvement, but without applying priorities 1-3 first, the same problem will recur at higher VU counts even on 4 OCPU.
+
+**Priority 5: Server-Side Max Page Limit + Keep OFFSET Pagination (Code Change)**
 
 Currently the page 200 limit is only in the k6 script, but **the server API has no limit.** Limiting the maximum page on the server side controls the OFFSET worst-case. Google Search also uses OFFSET + maximum page limit (~30 pages), and this approach is more suitable for page number UIs.
 
@@ -2846,10 +2970,11 @@ Currently the page 200 limit is only in the k6 script, but **the server API has 
 **Post-improvement re-measurement plan:**
 
 ```
-1. Introduce Caffeine cache -> k6 load re-measurement
-2. OCI 4 OCPU scale-up -> k6 load re-measurement
-3. Verify combined effect of both improvements
-4. If new bottleneck is found, decide next step
+1. Caffeine cache + Tomcat thread pool + HikariCP verification -> k6 load re-measurement
+2. Split k6 metrics by frequency (rare/medium/high separate Trends) -> precise cache effect measurement
+3. OCI 4 OCPU scale-up -> k6 load re-measurement
+4. Verify combined effect of improvements
+5. If new bottleneck is found, decide next step
 ```
 
 ### Not Yet Needed
@@ -2890,6 +3015,15 @@ Currently the page 200 limit is only in the k6 script, but **the server API has 
 - [Elasticsearch Hardware Requirements -- Opster](https://opster.com/guides/elasticsearch/capacity-planning/elasticsearch-hardware-requirements/)
 - [Vector Search: Lucene Is All You Need -- arXiv:2308.14963](https://arxiv.org/abs/2308.14963)
 - [MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880)
+
+**Performance Optimization:**
+- [Window TinyLfu -- A Highly Efficient Cache Admission Policy (ACM)](https://dl.acm.org/doi/10.1145/3149371)
+- [Optimizing Lucene Caching -- Elastic Blog](https://www.elastic.co/blog/optimizing-lucene-caching)
+- [How to Set an Ideal Thread Pool Size -- Zalando Engineering](https://engineering.zalando.com/posts/2019/04/how-to-set-an-ideal-thread-pool-size.html)
+- [Configuring Thread Pools for Java Web Servers -- Baeldung](https://www.baeldung.com/java-web-thread-pool-config)
+- [Optimizing Thread Pools for Tomcat -- LoadForge](https://loadforge.com/guides/configuring-thread-pools-for-better-performance-in-tomcat)
+- [About Pool Sizing -- HikariCP Wiki (GitHub)](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
+- [Optimal Connection Pool Size -- Vlad Mihalcea](https://vladmihalcea.com/optimal-connection-pool-size/)
 
 **Lucene Resources and Operations:**
 - [Lucene's RAM Usage for Searching -- Mike McCandless](https://blog.mikemccandless.com/2010/07/lucenes-ram-usage-for-searching.html)

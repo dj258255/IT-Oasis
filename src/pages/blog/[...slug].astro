@@ -277,7 +277,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
                     data-heading={heading.slug}
                     data-lang={hasEn ? (idx < koHeadingCount ? 'ko' : 'en') : undefined}
                     class:list={[
-                      'toc-link block text-[13px] leading-relaxed py-1.5 rounded-lg transition-all duration-300 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light',
+                      'toc-link block text-[13px] leading-relaxed py-1.5 rounded-lg transition-all duration-300 text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light',
                       heading.depth === 2 && 'pl-2',
                       heading.depth === 3 && 'pl-5',
                       hasEn && idx >= koHeadingCount && 'hidden',
@@ -369,12 +369,12 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
     bottom: 0;
     left: 100%;
     margin-left: 2rem;
-    width: 200px;
+    width: 260px;
   }
 
   @media (min-width: 1536px) {
     .floating-toc {
-      width: 230px;
+      width: 300px;
       margin-left: 2.5rem;
     }
   }

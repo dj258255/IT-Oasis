@@ -1,6 +1,8 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import expressiveCode from 'astro-expressive-code';
+import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
 import remarkGithubAlerts from 'remark-github-blockquote-alert';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -124,7 +126,8 @@ export default defineConfig({
     }),
   ],
   markdown: {
-    remarkPlugins: [remarkGithubAlerts],
+    gfm: false,
+    remarkPlugins: [[remarkGfm, { singleTilde: false }], remarkBreaks, remarkGithubAlerts],
     rehypePlugins: [rehypeBasePath, rehypeCjkBold, rehypeTableWrapper],
   },
   vite: {
