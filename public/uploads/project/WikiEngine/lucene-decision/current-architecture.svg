@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" font-family="'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000018"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3498db"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="300" fill="#f8f9fa" rx="12"/>
+
+  <!-- Title -->
+  <rect x="20" y="14" width="680" height="36" rx="8" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="360" y="38" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Lucene 전환 전 — 기존 아키텍처</text>
+
+  <!-- Client -->
+  <rect x="40" y="120" width="120" height="60" rx="10" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="100" y="148" text-anchor="middle" fill="#2c3e50" font-size="13" font-weight="bold">클라이언트</text>
+  <text x="100" y="166" text-anchor="middle" fill="#95a5a6" font-size="10">검색 요청</text>
+
+  <!-- Spring Boot -->
+  <rect x="230" y="120" width="140" height="60" rx="10" fill="#3498db" filter="url(#shadow)"/>
+  <text x="300" y="148" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Spring Boot</text>
+  <text x="300" y="166" text-anchor="middle" fill="#d6eaf8" font-size="10">검색 API</text>
+
+  <!-- Arrow: Client -> Spring Boot -->
+  <line x1="160" y1="150" x2="225" y2="150" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- MySQL -->
+  <rect x="440" y="68" width="250" height="172" rx="10" fill="#2c3e50" filter="url(#shadow)"/>
+  <text x="565" y="92" text-anchor="middle" fill="white" font-size="14" font-weight="bold">MySQL 8.0</text>
+
+  <!-- Arrow: Spring Boot -> MySQL -->
+  <line x1="370" y1="150" x2="435" y2="150" stroke="#3498db" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- posts table -->
+  <rect x="456" y="104" width="220" height="34" rx="6" fill="#34495e"/>
+  <text x="466" y="126" fill="#ecf0f1" font-size="11" font-weight="bold">posts</text>
+  <text x="680" y="126" text-anchor="end" fill="#aab7b8" font-size="10">1,477만 건 · 122GB</text>
+
+  <!-- tmp_namu_posts table -->
+  <rect x="456" y="146" width="220" height="44" rx="6" fill="#34495e"/>
+  <text x="466" y="165" fill="#ecf0f1" font-size="11" font-weight="bold">tmp_namu_posts</text>
+  <text x="680" y="165" text-anchor="end" fill="#aab7b8" font-size="10">57만 건 · 12GB</text>
+  <text x="680" y="182" text-anchor="end" fill="#e74c3c" font-size="9">+ FULLTEXT 6.7GB</text>
+
+  <!-- Autocomplete index -->
+  <rect x="456" y="198" width="220" height="34" rx="6" fill="#34495e"/>
+  <text x="466" y="220" fill="#ecf0f1" font-size="11" font-weight="bold">자동완성</text>
+  <text x="680" y="220" text-anchor="end" fill="#aab7b8" font-size="10">B-Tree idx_title_viewcount</text>
+
+  <!-- Server note -->
+  <rect x="40" y="254" width="640" height="32" rx="6" fill="#fef9e7" stroke="#f9e79f" stroke-width="1"/>
+  <text x="360" y="274" text-anchor="middle" fill="#7d6608" font-size="10">OCI ARM (2 vCPU, 12GB RAM) · Always Free $0/월 · MySQL + Spring Boot + Nginx 단일 인스턴스</text>
+</svg>

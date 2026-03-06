@@ -27,12 +27,7 @@ draft: false
 
 [이전 글](/blog/project/wikiengine/fulltext-ngram-index) 완료 후, 한국어 57만 건(나무위키)에 대해 FULLTEXT ngram 인덱스가 동작하고 있었습니다.
 
-```
-클라이언트 -> Spring Boot -> MySQL 8.0
-                              ├── posts (1,477만 건, 122GB)
-                              ├── tmp_namu_posts (57만 건, 12GB + FULLTEXT 6.7GB)
-                              └── 자동완성: B-Tree idx_title_viewcount
-```
+![Lucene 전환 전 기존 아키텍처 — 클라이언트 → Spring Boot → MySQL 8.0](/uploads/project/WikiEngine/lucene-decision/current-architecture.svg)
 
 서버는 Oracle Cloud ARM 인스턴스(2 vCPU, 12GB RAM)로, Always Free 티어라 월 운영비가 $0입니다. 
 MySQL, Spring Boot, Nginx가 이 한 대에서 돌아가고 있으며, 모니터링 스택(Prometheus + Grafana + Loki)은 별도 AMD 인스턴스 2대(각 1 vCPU, 1GB)에 분리되어 있습니다.
@@ -1545,12 +1540,7 @@ Search transitioned from "not working" to "working," and title + body search bec
 
 After completing the [previous post](/blog/project/wikiengine/fulltext-ngram-index), the FULLTEXT ngram index was working for 570K Korean documents (Namuwiki).
 
-```
-Client -> Spring Boot -> MySQL 8.0
-                          ├── posts (14.77M rows, 122GB)
-                          ├── tmp_namu_posts (570K rows, 12GB + FULLTEXT 6.7GB)
-                          └── Autocomplete: B-Tree idx_title_viewcount
-```
+![Before Lucene — Existing Architecture: Client → Spring Boot → MySQL 8.0](/uploads/project/WikiEngine/lucene-decision/current-architecture-en.svg)
 
 The server is an Oracle Cloud ARM instance (2 vCPU, 12GB RAM), Always Free tier with $0/month operating cost.
 MySQL, Spring Boot, and Nginx run on this single machine, while the monitoring stack (Prometheus + Grafana + Loki) is separated across two AMD instances (1 vCPU, 1GB each).
