@@ -1461,8 +1461,6 @@ CPU 2배(LA 20 → ~10)로 즉각적인 개선이 가능하지만, 1~3순위를 
 | App 스케일아웃 (다중 인스턴스) | 단일 인스턴스 + 4 OCPU로도 한계일 때 |
 | Redis 분산 캐시 | 다중 인스턴스에서 캐시 일관성이 필요할 때 |
 
-→ 검색 품질 개선(동의어 확장, 쿼리 이해)은 [Lucene 검색 고도화](/blog/project/wikiengine/lucene-query-enhancement)에서 이어집니다.
-
 ---
 
 ## 출처
@@ -2974,8 +2972,6 @@ Currently the page 200 limit is only in the k6 script, but **the server API has 
 | MySQL Replication (read replica) | When writes interfere with reads even with high cache hit rate |
 | App Scale-Out (multiple instances) | When single instance + 4 OCPU reaches its limit |
 | Redis Distributed Cache | When cache consistency is needed across multiple instances |
-
--> Search quality improvement (synonym expansion, query understanding) continues in [Lucene Search Enhancement](/blog/project/wikiengine/lucene-query-enhancement).
 
 ---
 
