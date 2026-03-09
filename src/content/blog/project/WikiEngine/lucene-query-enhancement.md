@@ -3,7 +3,7 @@ title: 'Lucene 검색 고도화 — 동의어 확장과 쿼리 이해'
 titleEn: 'Lucene Query Enhancement — Synonym Expansion and Query Understanding'
 description: Lucene 기반 검색 엔진에 동의어 처리(쿼리 확장)와 Query Understanding(오타 교정, 복합어 분리, 의도 파악)을 적용하는 설계를 정리합니다.
 descriptionEn: Designs synonym expansion (query expansion) and query understanding (spelling correction, query segmentation, intent detection) for a Lucene-based search engine.
-date: 2026-03-02T00:00:00.000Z
+date: 2026-03-05T00:00:00.000Z
 tags:
   - Lucene
   - Nori
