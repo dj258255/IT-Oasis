@@ -103,6 +103,9 @@ export default defineConfig({
   site: isProd ? 'https://dj258255.github.io' : 'http://localhost:4321',
   base: base || '/',
   output: 'static',
+  build: {
+    concurrency: 1,
+  },
   integrations: [
     expressiveCode({
       themes: ['catppuccin-mocha', 'catppuccin-latte'],
