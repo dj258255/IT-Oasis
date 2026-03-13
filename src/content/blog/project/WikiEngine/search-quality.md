@@ -26,12 +26,12 @@ draft: false
 
 ## 이전 글 요약
 
-6단계에서 OFFSET 페이지네이션을 최적화했습니다.
+[이전 글](/blog/project/wikiengine/query-refactoring-optimization)에서 OFFSET 페이지네이션을 최적화했습니다.
 Deferred Join으로 클러스터 인덱스 랜덤 I/O를 1,000배 감소시키고, `Page<T>` → `Slice<T>` 전환으로 매 요청 COUNT(*) 2,038ms를 완전 제거했습니다.
 
 k6 load 테스트(100 VU, 20분) 결과:
 
-| 시나리오 | Before (5단계) | After (6단계) | 개선율 |
+| 시나리오 | Before | After | 개선율 |
 |----------|--------------|-------------|--------|
 | 최신 게시글 목록 평균 | 19,424ms | 8.33ms | **-99.96%** |
 | 검색 평균 | 3,328ms | 20.51ms | -99.4% |
@@ -41,7 +41,7 @@ k6 load 테스트(100 VU, 20분) 결과:
 
 ## 개요
 
-이번 단계에서는 **검색 품질** 자체를 개선합니다. 성능이 아닌 **결과의 정확도와 순위**가 주제입니다.
+이 글에서는 **검색 품질** 자체를 개선합니다. 성능이 아닌 **결과의 정확도와 순위**가 주제입니다.
 
 실제 구현 대상은 3개이며, 나머지 3개는 이미 완료/SKIP/Lucene 자동 적용으로 별도 구현이 불필요합니다.
 
@@ -50,7 +50,7 @@ k6 load 테스트(100 VU, 20분) 결과:
 | **1. 구절 검색** | PhraseQuery(slop=2) | **구현 완료** |
 | **2. 커뮤니티 검색 랭킹** | BM25 + viewCount + likeCount + recency | **구현 완료** |
 | **3. 검색 품질 평가** | P@10, MAP 측정 | **구현 완료** |
-| A. NRT 동적 역색인 | SearcherManager + maybeRefresh | 5단계 구현 완료 |
+| A. NRT 동적 역색인 | SearcherManager + maybeRefresh | [Lucene 전환](/blog/project/wikiengine/lucene-decision) 시 구현 완료 |
 | B. 색인 압축 | 기본 LZ4 유지 | SKIP |
 | C. Lucene 고급 검색 최적화 | WAND, MaxScore, Block-Max WAND | Lucene 내부 자동 적용 |
 
@@ -476,13 +476,13 @@ private boolean isRelevant(String title, String[] keywords) {
 
 | 항목 | 결론 | 이유 |
 |------|------|------|
-| A. NRT 동적 역색인 | 이미 완료 | 5단계에서 SearcherManager + maybeRefresh 구현 |
+| A. NRT 동적 역색인 | 이미 완료 | [Lucene 전환](/blog/project/wikiengine/lucene-decision) 시 SearcherManager + maybeRefresh 구현 |
 | B. 색인 압축 | SKIP | stored fields ~100 bytes/doc, LZ4→ZSTD ROI 없음 |
 | C. Lucene 고급 검색 최적화 | 자동 적용 | Block-Max WAND, MaxScore 등 Lucene 8.0+에서 기본 내장 |
 
 ### A. NRT 동적 역색인
 
-5단계에서 이미 구현 완료. SearcherManager + per-operation `maybeRefresh()` 방식으로 NRT 검색이 동작 중입니다.
+[Lucene 전환](/blog/project/wikiengine/lucene-decision) 시 이미 구현 완료. SearcherManager + per-operation `maybeRefresh()` 방식으로 NRT 검색이 동작 중입니다.
 
 - CRUD 직후 `searcherManager.maybeRefresh()` 호출로 즉시 검색 반영
 - 별도 백그라운드 스레드 없이 1,425만 건 규모에서 충분
@@ -503,7 +503,7 @@ Lucene 8.0+ 에서 Block-Max WAND, MaxScore, early termination이 **기본 적�
 | **Impact-ordered posting** | 점수 기여도 높은 문서 먼저 평가 | Top-k 조기 종료 가능 |
 | **Early termination** | k개 결과 확보 후 낮은 점수 문서 스킵 | 불필요한 계산 제거 |
 
-6단계 k6 load 테스트에서 고빈도 토큰("대한민국", "역사")도 P95 63.72ms로 충분히 빠른 것을 확인했으므로, 별도 작업 없이 Lucene에 위임합니다.
+[이전 k6 load 테스트](/blog/project/wikiengine/query-refactoring-optimization)에서 고빈도 토큰("대한민국", "역사")도 P95 63.72ms로 충분히 빠른 것을 확인했으므로, 별도 작업 없이 Lucene에 위임합니다.
 
 ---
 
