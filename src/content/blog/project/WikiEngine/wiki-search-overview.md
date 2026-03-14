@@ -56,6 +56,19 @@ coverImage: "/uploads/project/WikiEngine/wiki-search-overview/architecture.png"
 
 3대 모두 동일 VCN/서브넷에 위치하며, 서버 간 통신은 Private IP를 사용합니다.
 
+**App Server 리소스 할당 (12GB 내부 배분):**
+
+| 서비스 | 컨테이너 제한 | 내부 설정 | 비고 |
+|--------|-------------|----------|------|
+| Spring Boot | 2 GB | JVM 힙 1 GB (`-Xmx1g`) | API + Lucene 검색 |
+| MySQL 8.0 | 4 GB | InnoDB Buffer Pool 2 GB | localhost only |
+| Nginx | 256 MB | — | 리버스 프록시 + SSL |
+| Promtail | 256 MB | — | 로그 → Loki |
+| cAdvisor | 256 MB | — | 컨테이너 메트릭 |
+| MySQL Exporter | 128 MB | — | MySQL 메트릭 |
+| Node Exporter | 30 MB | — | 호스트 메트릭 |
+| **합계** | **~7 GB** | | 나머지 ~5GB → OS 페이지 캐시 (Lucene MMap) |
+
 프론트엔드는 Vercel에 배포합니다.
 
 ### 아키텍처
@@ -101,6 +114,19 @@ The result is a community dataset with tens of millions of posts, hundreds of th
 | App Server | ARM (Ampere A1) 2 cores / 12GB RAM | Nginx + Spring Boot + MySQL |
 | Monitoring #1 | AMD (E2.1.Micro) 1GB + 1GB Swap | Loki + Grafana + Nginx (HTTPS) |
 | Monitoring #2 | AMD (E2.1.Micro) 1GB + 1GB Swap | Prometheus |
+
+**App Server Resource Allocation (12GB breakdown):**
+
+| Service | Container Limit | Internal Config | Note |
+|---------|----------------|----------------|------|
+| Spring Boot | 2 GB | JVM Heap 1 GB (`-Xmx1g`) | API + Lucene Search |
+| MySQL 8.0 | 4 GB | InnoDB Buffer Pool 2 GB | localhost only |
+| Nginx | 256 MB | — | Reverse Proxy + SSL |
+| Promtail | 256 MB | — | Logs → Loki |
+| cAdvisor | 256 MB | — | Container metrics |
+| MySQL Exporter | 128 MB | — | MySQL metrics |
+| Node Exporter | 30 MB | — | Host metrics |
+| **Total** | **~7 GB** | | Remaining ~5GB → OS page cache (Lucene MMap) |
 
 All 3 instances are in the same VCN/subnet, using Private IPs for inter-server communication.
 

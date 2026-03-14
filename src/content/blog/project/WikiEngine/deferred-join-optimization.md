@@ -45,6 +45,8 @@ Spring Data JPA의 메서드 이름 기반 쿼리(`findAllByOrderByCreatedAtDesc
 
 k6 smoke 테스트(5 VU, 2분)에서 시나리오별 응답 시간을 측정했습니다.
 
+> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
+
 | 시나리오 | 평균 | P95 |
 |----------|------|-----|
 | 검색 (Lucene) | 66ms | 128ms |
@@ -233,7 +235,7 @@ Service와 Controller는 변경 없이 Repository 쿼리만 교체합니다.
 
 ### Before / After
 
-**k6 smoke 테스트 (5 VU, 2분, 동일 조건):**
+**k6 smoke 테스트 (5 VU, 2분, 동일 조건):** (ARM 2코어, Spring Boot JVM 1GB, MySQL InnoDB BP 2GB)
 
 | 메트릭 | Before | After | 개선율 |
 |--------|--------|-------|--------|
@@ -506,6 +508,8 @@ The response DTO `PostSummaryResponse` uses only 7 fields: `id`, `title`, `autho
 
 We measured response times per scenario in k6 smoke tests (5 VU, 2 minutes).
 
+> **Test environment**: ARM 2 cores / 12GB RAM — Spring Boot 2GB (JVM heap 1GB) + MySQL 4GB (InnoDB BP 2GB) + monitoring agents ~1GB. Remaining ~5GB for OS page cache (Lucene MMap).
+
 | Scenario | Avg | P95 |
 |----------|-----|-----|
 | Search (Lucene) | 66ms | 128ms |
@@ -694,7 +698,7 @@ Only the Repository query is replaced; Service and Controller remain unchanged.
 
 ### Before / After
 
-**k6 smoke test (5 VU, 2 minutes, identical conditions):**
+**k6 smoke test (5 VU, 2 minutes, identical conditions):** (ARM 2 cores, Spring Boot JVM 1GB, MySQL InnoDB BP 2GB)
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|

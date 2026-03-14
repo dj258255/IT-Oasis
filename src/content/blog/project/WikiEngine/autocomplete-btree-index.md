@@ -160,6 +160,8 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### 응답시간 측정
 
+> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: 2,744만 건.
+
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/response-time-after.png)
 
 
@@ -318,6 +320,8 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 - **Extra**: `Using filesort` remains, but filesort on 1 row is negligible
 
 ### Response Time
+
+> **Test environment**: ARM 2 cores / 12GB RAM — Spring Boot 2GB (JVM heap 1GB) + MySQL 4GB (InnoDB BP 2GB). Data: 27.44M rows.
 
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/response-time-after.png)
 

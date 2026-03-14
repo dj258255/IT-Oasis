@@ -359,6 +359,8 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 ### 응답시간 측정
 
+> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: tmp_namu_posts (57만 건, 12GB).
+
 Before — `LIKE '%페텔%'`: 12.766초, 6건 반환 (title만 검색):
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/like-response-time.png)
@@ -1053,6 +1055,8 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 - **Extra**: `Using filesort` (disk sort) to `Ft_hints: sorted, limit = 20`. The FULLTEXT engine handles relevance sorting and LIMIT internally, eliminating separate sorting.
 
 ### Response Time
+
+> **Test environment**: ARM 2 cores / 12GB RAM — Spring Boot 2GB (JVM heap 1GB) + MySQL 4GB (InnoDB BP 2GB). Data: tmp_namu_posts (570K rows, 12GB).
 
 Before -- `LIKE '%페텔%'`: 12.766s, 6 results (title only):
 

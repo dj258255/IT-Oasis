@@ -1202,6 +1202,8 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 
 #### 측정 결과 — smoke 프로필 (스크립트 검증)
 
+> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
+
 > smoke 프로필의 목적은 **스크립트가 에러 없이 동작하는지 검증**하는 것입니다. 5 VU / 2분이라 샘플 수가 적어 P99는 통계적으로 무의미하므로, 여기서는 평균과 P95만 봅니다. 성능 판단은 load 프로필부터입니다.
 
 ![k6 smoke 테스트 결과 — 214건 요청, 에러율 0%, 모든 Threshold 통과](/uploads/project/WikiEngine/lucene-decision/k6-smoke-result.png)
@@ -2718,6 +2720,8 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 ```
 
 #### Measurement Results -- smoke Profile (Script Verification)
+
+> **Test environment**: ARM 2 cores / 12GB RAM — Spring Boot 2GB (JVM heap 1GB) + MySQL 4GB (InnoDB BP 2GB) + monitoring agents ~1GB. Remaining ~5GB for OS page cache (Lucene MMap).
 
 > The purpose of the smoke profile is to **verify the script runs error-free**. With 5 VU / 2 minutes, the sample count is too small for P99 to be statistically meaningful, so only average and P95 are examined here. Performance assessment starts from the load profile.
 

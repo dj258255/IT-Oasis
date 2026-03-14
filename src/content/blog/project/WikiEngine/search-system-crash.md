@@ -44,7 +44,10 @@ LIMIT 20 OFFSET 0;
 ![](/uploads/project/WikiEngine/search-system-crash/server-status.png)
 
 - App Server: ARM 2코어 / 12GB RAM
-- MySQL 8.0, HikariCP 기본 설정 (maximumPoolSize=10)
+  - Spring Boot: 컨테이너 2GB / JVM 힙 1GB (`-Xmx1g`)
+  - MySQL 8.0: 컨테이너 4GB / InnoDB Buffer Pool 2GB
+  - 나머지: Nginx(256MB), Promtail(256MB), cAdvisor(256MB), Exporter 등 → 합계 ~7GB, 나머지 ~5GB는 OS 캐시
+- HikariCP 기본 설정 (maximumPoolSize=10)
 - 검색 외 다른 API(게시글 목록, 상세 조회 등)는 정상 동작
 
 ---
@@ -219,6 +222,8 @@ LIMIT 20;
 | Monitoring #1 | AMD 1GB + Swap 1GB | Loki + Grafana + Nginx (HTTPS) |
 | Monitoring #2 | AMD 1GB + Swap 1GB | Prometheus |
 
+> App Server 12GB 내부 배분: Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB = 합계 ~7GB. 나머지 ~5GB는 OS 페이지 캐시.
+
 ### 검색 상태
 
 | 항목 | 현재 상태 |
@@ -264,7 +269,10 @@ At this point, there are no indexes and the table contains approximately 27.44M 
 ![](/uploads/project/WikiEngine/search-system-crash/server-status.png)
 
 - App Server: ARM 2 cores / 12GB RAM
-- MySQL 8.0, HikariCP default settings (maximumPoolSize=10)
+  - Spring Boot: container 2GB / JVM heap 1GB (`-Xmx1g`)
+  - MySQL 8.0: container 4GB / InnoDB Buffer Pool 2GB
+  - Rest: Nginx(256MB), Promtail(256MB), cAdvisor(256MB), Exporters, etc. → total ~7GB, remaining ~5GB for OS page cache
+- HikariCP default settings (maximumPoolSize=10)
 - Other APIs (post list, detail view, etc.) working normally
 
 ---
@@ -438,6 +446,8 @@ It was interrupted by the 5-second timeout, so the actual execution time could n
 | App Server | ARM 2 cores / 12GB RAM | Nginx + Spring Boot + MySQL |
 | Monitoring #1 | AMD 1GB + 1GB Swap | Loki + Grafana + Nginx (HTTPS) |
 | Monitoring #2 | AMD 1GB + 1GB Swap | Prometheus |
+
+> App Server 12GB breakdown: Spring Boot 2GB (JVM heap 1GB) + MySQL 4GB (InnoDB BP 2GB) + monitoring agents ~1GB = total ~7GB. Remaining ~5GB for OS page cache.
 
 ### Search Status
 

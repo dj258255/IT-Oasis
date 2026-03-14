@@ -25,10 +25,12 @@ draft: false
 
 ## 이전 글 요약
 
-[이전 글](/blog/project/wikiengine/lucene-decision)에서 Lucene + Nori 형태소 분석기로 검색엔진을 전환했습니다.
+[Lucene 전환 글](/blog/project/wikiengine/lucene-decision)에서 Lucene + Nori 형태소 분석기로 검색엔진을 전환했습니다.
 1,425만 건 전체 검색, 고빈도 토큰 타임아웃 해소, false positive 제거까지 완료했습니다.
 
 k6 부하 테스트를 처음 실행한 결과, **검색이 아니라 최신 게시글 목록 조회가 최대 병목**이었습니다.
+
+> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
 
 | 시나리오 | smoke (5 VU) | load (100 VU) |
 |----------|-------------|---------------|
@@ -328,7 +330,7 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 피드 기반 서비스는 총 건수 자체가 의미 없습니다.
 커서 기반 + `hasNext`만으로 동작합니다.
 
-**4) Stack Overflow, Reddit — 페이지 번호 UI + 총 건수 표시**
+**5) Stack Overflow, Reddit — 페이지 번호 UI + 총 건수 표시**
 
 전통적인 게시판 UI를 유지하는 서비스는 여전히 총 건수를 표시합니다.
 다만 이 서비스들은 데이터 규모가 상대적으로 작거나, 캐싱으로 COUNT 비용을 흡수하고 있습니다.
@@ -720,6 +722,8 @@ page=31(0-indexed, 즉 32번째 페이지) 요청 시 `MAX_LIST_PAGE = 30`을 �
 
 ### k6 smoke (5 VU, 2분) — 변경 전후 비교
 
+> ARM 2코어, Spring Boot JVM 1GB, MySQL InnoDB BP 2GB
+
 ![k6 smoke After 결과 — 에러율 0%, 최신 게시글 목록 17.56ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-after-smoke-result.png)
 
 | 시나리오 | Before (Deferred Join만) | After (+ 페이지 30 제한 + COUNT 제거) | 개선율 |
@@ -755,6 +759,8 @@ Before(2,518ms)에는 세 가지 병목이 겹쳐 있었습니다:
 | **합계**                      | **~2,518ms**        | **~18ms**         |
 
 ### k6 load (100 VU, 20분) — 변경 전후 비교
+
+> ARM 2코어, Spring Boot JVM 1GB, MySQL InnoDB BP 2GB
 
 ![k6 load After 결과 — 42,401 요청, 에러율 0%, 최신 게시글 목록 8.33ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-k6-result.png)
 
