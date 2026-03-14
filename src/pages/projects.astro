@@ -42,13 +42,23 @@ const siteSettings = getSiteSettings();
               {/* Hover overlay with action buttons */}
               <div class="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[8px] opacity-0 group-hover:opacity-100 transition-opacity duration-350 z-10 rounded-[inherit]">
                 <div class="flex flex-col gap-2.5 w-[80%] max-w-[240px]">
-                  {project.website && (
+                  {Array.isArray(project.website) ? project.website.map((link) => (
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
+                      <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </a>
+                  )) : project.website && (
                     <a href={project.website} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
                       <span data-ko="웹사이트 접속하기" data-en="Visit Website">웹사이트 접속하기</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
                   )}
-                  {project.github && (
+                  {Array.isArray(project.github) ? project.github.map((link) => (
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
+                      <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </a>
+                  )) : project.github && (
                     <a href={project.github} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
                       <span data-ko="깃허브 보기" data-en="View GitHub">깃허브 보기</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>

@@ -1,4 +1,10 @@
 ---
+interface LinkItem {
+  label: string;
+  labelEn: string;
+  url: string;
+}
+
 interface Props {
   href: string;
   title: string;
@@ -10,13 +16,15 @@ interface Props {
   dateEn?: string;
   category?: string;
   categoryEn?: string;
-  website?: string;
-  github?: string;
+  website?: string | LinkItem[];
+  github?: string | LinkItem[];
   story?: string;
 }
 
 const { href, title, titleEn, description, descriptionEn, image, date, dateEn, category, categoryEn, website, github, story } = Astro.props;
-const hasOverlay = !!(website || github || story);
+const hasWebsite = Array.isArray(website) ? website.length > 0 : !!website;
+const hasGithub = Array.isArray(github) ? github.length > 0 : !!github;
+const hasOverlay = !!(hasWebsite || hasGithub || story);
 ---
 
 <div class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group relative">
@@ -33,13 +41,23 @@ const hasOverlay = !!(website || github || story);
       {hasOverlay && (
         <div class="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[8px] opacity-0 group-hover:opacity-100 transition-opacity duration-350 z-20 rounded-[inherit]">
           <div class="flex flex-col gap-2.5 w-[80%] max-w-[220px]">
-            {website && (
+            {Array.isArray(website) ? website.map((link) => (
+              <a href={link.url} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
+                <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </a>
+            )) : website && (
               <a href={website} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
                 <span data-ko="웹사이트 접속하기" data-en="Visit Website">웹사이트 접속하기</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </a>
             )}
-            {github && (
+            {Array.isArray(github) ? github.map((link) => (
+              <a href={link.url} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
+                <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </a>
+            )) : github && (
               <a href={github} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
                 <span data-ko="깃허브 보기" data-en="View GitHub">깃허브 보기</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>

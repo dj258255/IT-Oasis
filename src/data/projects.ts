@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+export interface LinkItem {
+  label: string;
+  labelEn: string;
+  url: string;
+}
+
+export type LinkField = string | LinkItem[];
+
 export interface Project {
   title: string;
   titleEn: string;
@@ -10,8 +18,8 @@ export interface Project {
   tags: string[];
   category: string;
   date: string;
-  github: string;
-  website: string;
+  github: LinkField;
+  website: LinkField;
   story: string;
   order?: number;
 }
@@ -33,8 +41,8 @@ export const projects: Project[] = files
       tags: data.tags || [],
       category: data.category || '',
       date: data.date ? new Date(data.date).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '',
-      github: data.github || '',
-      website: data.website || '',
+      github: Array.isArray(data.github) ? data.github : (data.github || ''),
+      website: Array.isArray(data.website) ? data.website : (data.website || ''),
       story: data.story || '',
       order: data.order ?? 999,
     };
