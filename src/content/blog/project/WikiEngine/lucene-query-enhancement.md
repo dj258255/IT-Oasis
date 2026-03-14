@@ -52,7 +52,7 @@ draft: true
 | 기능                      | 설명                                           | 적용 시점             |
 | ----------------------- | -------------------------------------------- | ----------------- |
 | 병렬 배치 인덱싱               | IndexWriter는 thread-safe, 2000건 x N스레드 병렬 처리 | 전체 리인덱싱이 다시 필요할 때 |
-| Near Real-Time (NRT) 색인 | 새 게시글 작성/수정/삭제를 Lucene에 실시간 반영               | ✅ 구현 완료           |
+| Near Real-Time (NRT) 색인 | 새 게시글 작성/수정/삭제를 Lucene에 실시간 반영               | 구현 완료           |
 
 ---
 
@@ -80,6 +80,18 @@ INSERT INTO synonyms (term, synonym, weight) VALUES
   ('DB', '데이터베이스', 1.0),
   ('데이터베이스', 'DB', 1.0);
 ```
+
+### 대안: Lucene SynonymGraphFilter
+
+Lucene은 `SynonymGraphFilter`를 네이티브 지원합니다. 인덱스 타임 또는 쿼리 타임에 분석기 체인에 동의어 맵을 주입하여 DB 조회 없이 동의어를 처리할 수 있습니다.
+
+| 방식 | 장점 | 단점 |
+|------|------|------|
+| **DB 기반 쿼리 확장** (아래 구현) | 동의어 추가/삭제가 즉시 반영, 가중치 제어 가능 | 매 쿼리마다 DB 조회 추가 |
+| **SynonymGraphFilter** (인덱스 타임) | DB 조회 없음, 분석기 체인에 통합 | 동의어 변경 시 전체 재색인 필요 |
+| **SynonymGraphFilter** (쿼리 타임) | DB 조회 없음, 재색인 불필요 | Analyzer를 두 벌 관리해야 함 |
+
+현재 동의어가 자주 변경될 수 있고, 가중치 제어가 필요하므로 DB 기반 방식을 먼저 설계합니다. 운영 안정화 후 SynonymGraphFilter(쿼리 타임)로 전환을 검토합니다.
 
 ### 쿼리 확장 구현
 
@@ -141,6 +153,10 @@ WHERE redirect_title IS NOT NULL;
 | **Spelling Correction** | 오타 교정 | "컴퓨텨" → "컴퓨터" |
 | **Query Segmentation** | 복합어 분리 | "인공지능기술" → "인공지능 기술" |
 | **Intent Detection** | 검색 의도 파악 | "아이폰 가격" → 구매 의도 |
+
+### 대안: Lucene DirectSpellChecker
+
+Lucene은 `DirectSpellChecker`를 내장하고 있어, 인덱스의 term dictionary를 사전으로 사용하여 편집 거리(Damerau-Levenshtein) 기반 오타 교정이 가능합니다. 별도 사전 구축이 불필요하고 인덱스가 곧 사전이 됩니다. 운영 초기에는 DirectSpellChecker로 시작하고, 검색 로그가 쌓이면 아래의 로그 기반 "Did you mean?"으로 보강하는 전략이 합리적입니다.
 
 ### 오타 교정 구현
 
@@ -264,6 +280,9 @@ searcherManager.maybeRefresh();
 ```
 
 기존 검색 요청은 이전 searcher로 완료되고, 새 요청만 새 searcher를 사용합니다.
+
+> **주의: MMapDirectory와 심볼릭 링크 호환성**
+> MMapDirectory는 파일을 메모리에 매핑하므로, 심볼릭 링크를 교체해도 이미 매핑된 파일은 이전 디렉토리를 계속 참조합니다. `searcherManager.maybeRefresh()`가 새 디렉토리의 파일을 올바르게 감지하려면, SearcherManager를 닫고 새 Directory로 다시 생성하거나, IndexWriter를 새 디렉토리로 교체한 후 refresh해야 할 수 있습니다. 실제 구현 시 검증이 필요합니다.
 
 ---
 

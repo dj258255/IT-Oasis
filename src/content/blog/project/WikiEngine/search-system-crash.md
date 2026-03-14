@@ -16,7 +16,7 @@ draft: false
 coverImage: "/uploads/project/WikiEngine/search-system-crash/server-status.png"
 ---
 
-한국너 나무위키(1xx만 건) + 한국어 위키피디아(216만 건) + 영문 위키피디아(2,528만 건), 총 약 2,8xx만 건의 위키 덤프 데이터를 MySQL에 적재하고 검색 기능을 구현하는 프로젝트입니다.
+한국어 나무위키(약 100만 건) + 한국어 위키피디아(216만 건) + 영문 위키피디아(2,528만 건), 총 약 2,744만 건의 위키 덤프 데이터를 MySQL에 적재하고 검색 기능을 구현하는 프로젝트입니다.
 
 **기술 스택:** Java 25, Spring Boot 4.0, MySQL 8.0, HikariCP
 
@@ -241,7 +241,7 @@ LIMIT 20;
 
 <!-- EN -->
 
-This is a project to load Namuwiki (~1M documents) + Korean Wikipedia (~2.16M documents) + English Wikipedia (~25.28M documents), totaling approximately 28M wiki dump records into MySQL and implement search functionality.
+This is a project to load Namuwiki (~1M documents) + Korean Wikipedia (~2.16M documents) + English Wikipedia (~25.28M documents), totaling approximately 27.44M wiki dump records into MySQL and implement search functionality.
 
 **Tech Stack:** Java 25, Spring Boot 4.0, MySQL 8.0, HikariCP
 

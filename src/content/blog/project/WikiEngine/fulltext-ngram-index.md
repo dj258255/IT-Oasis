@@ -409,9 +409,9 @@ ngram FULLTEXT는 `LIKE '%keyword%'` 대비 극적인 성능 개선을 제공하
   토큰: ["한국", "국어"]
 
 매칭되는 문서:
-  ✓ "한국어 문법"     -> 의도한 결과
-  ✗ "대한국제공항"     -> "한국" 토큰이 매칭 (오탐)
-  ✗ "미국어학연수"     -> "국어" 토큰이 매칭 (오탐)
+  O "한국어 문법"     -> 의도한 결과
+  X "대한국제공항"     -> "한국" 토큰이 매칭 (오탐)
+  X "미국어학연수"     -> "국어" 토큰이 매칭 (오탐)
 ```
 
 ### 6-2. 형태소 분석 미지원
@@ -537,7 +537,7 @@ fts_[table_id]_[index_id]_index_6   ← 토큰 파티션 6
 [3단계] 교집합 — fts_query_intersect()
     A ∩ B ∩ C → RB-tree 기반 교집합 → ~30,000 후보 문서
 
-[4단계] 구절 검증 — fts_query_match_phrase()     ★ 핵심 병목 ★
+[4단계] 구절 검증 — fts_query_match_phrase()     ** 핵심 병목 **
     후보 문서마다 실제 텍스트를 읽어서
     "대한" → "한민" → "민국"이 연속된 위치에 있는지 확인
 
@@ -572,7 +572,7 @@ ngram 검색에서 "대한민국"은 3개 토큰의 **구절(phrase) 검색**입
 struct fts_match_t {
     doc_id_t    doc_id;       // 문서 ID
     ulint       start;        // 구절 매칭 시작 오프셋
-    ib_vector_t *positions;   // 단어 위치 오프셋 배열 ← ★ vector(동적 배열) ★
+    ib_vector_t *positions;   // 단어 위치 오프셋 배열 ← vector(동적 배열)
 };
 ```
 
@@ -1227,7 +1227,7 @@ Additionally, InnoDB maintains an **FTS cache** to reduce contention on auxiliar
 [Stage 3] Intersection — fts_query_intersect()
     A ∩ B ∩ C → RB-tree based intersection → ~30,000 candidate documents
 
-[Stage 4] Phrase verification — fts_query_match_phrase()     ★ KEY BOTTLENECK ★
+[Stage 4] Phrase verification — fts_query_match_phrase()     ** KEY BOTTLENECK **
     For each candidate document, read actual text to verify
     "대한" → "한민" → "민국" appear at consecutive positions
 
@@ -1262,7 +1262,7 @@ Core data structure in `fts0que.cc`:
 struct fts_match_t {
     doc_id_t    doc_id;       // document ID
     ulint       start;        // phrase match start offset
-    ib_vector_t *positions;   // word position offset array ← ★ vector (dynamic array) ★
+    ib_vector_t *positions;   // word position offset array ← vector (dynamic array)
 };
 ```
 

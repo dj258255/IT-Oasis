@@ -341,7 +341,11 @@ Deferred Join이 **절약한 비용**과 **남은 비용**을 분리하면:
 - 인덱스 스캔 (20,020개): ~85% (인덱스가 있어도 14.75M 건 테이블에서 20,020개를 순차 탐색)
 - LONGTEXT 읽기: ~15% (Deferred Join이 제거한 부분)
 
+> **추정의 한계**: 이 비율은 13% 개선율에서 역산한 추정치입니다. MySQL 8.0.18+의 `EXPLAIN ANALYZE`를 사용하면 각 단계의 actual time을 측정하여 정확한 비율을 확인할 수 있지만, 이번 분석에서는 사용하지 않았습니다. 또한 InnoDB Buffer Pool(2GB)이 warm된 상태에서 테스트했으므로, 최근 데이터의 LONGTEXT가 이미 메모리에 있어 클러스터 I/O 비용이 실제 디스크 랜덤 I/O보다 낮았을 가능성이 있습니다. BP가 cold 상태라면 Deferred Join 효과가 더 크게 나타날 수 있습니다.
+
 Deferred Join은 15%에 해당하는 LONGTEXT 읽기를 제거했지만, 85%에 해당하는 **OFFSET 자체의 비용**(인덱스 20,020개 엔트리 스캔)은 건드리지 못합니다. 추가로 임시 테이블 생성 오버헤드가 일부 상쇄하여, 순수 개선이 13%로 나타난 것입니다.
+
+> **COUNT(\*) 비용 미분리**: `Page<Post>`를 반환하므로 매 요청마다 `SELECT COUNT(*) FROM posts`가 함께 실행됩니다. InnoDB는 정확한 row count를 메타데이터에 저장하지 않아, COUNT(*)도 인덱스 전체를 스캔해야 합니다. Before 2,518ms와 After 2,199ms에는 COUNT(*) 시간이 포함되어 있으므로, Deferred Join 자체의 순수 개선율은 13%보다 높을 수 있습니다. COUNT(*) 제거는 [후속 단계](/blog/project/wikiengine/query-refactoring-optimization)에서 `Page<T>` → `Slice<T>` 전환으로 해결했습니다.
 
 ### OFFSET이 근본적으로 느린 이유
 
@@ -804,7 +808,11 @@ Estimating the time composition of the original query:
 - Index scan (20,020 entries): ~85% (sequential traversal of 20,020 entries in a 14.75M-row table even with an index)
 - LONGTEXT reads: ~15% (the part eliminated by Deferred Join)
 
+> **Limitations of this estimate**: These ratios are back-calculated from the 13% improvement, not directly measured. MySQL 8.0.18+'s `EXPLAIN ANALYZE` could provide actual time per phase but was not used in this analysis. Additionally, the InnoDB Buffer Pool (2GB) was warm during testing, so LONGTEXT data for recent rows may already have been in memory, making clustered I/O cheaper than true disk random I/O. Deferred Join's effect could be larger with a cold Buffer Pool.
+
 Deferred Join eliminated the 15% LONGTEXT read cost, but cannot touch the 85% that is the **OFFSET itself** (scanning 20,020 index entries). The temporary table creation overhead partially offsets the gain, resulting in a net improvement of 13%.
+
+> **COUNT(\*) cost not separated**: Since `Page<Post>` is returned, `SELECT COUNT(*) FROM posts` runs with every request. InnoDB doesn't store exact row counts in metadata, so COUNT(*) also requires a full index scan. Both the Before (2,518ms) and After (2,199ms) measurements include COUNT(*) time, so Deferred Join's actual improvement for the main query alone may be higher than 13%. COUNT(*) elimination is addressed in the [next step](/blog/project/wikiengine/query-refactoring-optimization) via `Page<T>` → `Slice<T>` conversion.
 
 ### Why OFFSET Is Fundamentally Slow
 

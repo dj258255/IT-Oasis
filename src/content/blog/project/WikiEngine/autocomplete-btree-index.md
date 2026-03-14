@@ -85,14 +85,16 @@ title 컬럼에 인덱스 자체가 없으면 활용할 인덱스가 없으므�
 
 | 방식 | 장점 | 단점 | 판단 |
 |------|------|------|------|
-| 단일 인덱스 `(title)` | range scan 가능 | ORDER BY view_count에 filesort 발생 | X |
-| 복합 인덱스 `(title, view_count DESC)` | range scan + 정렬 제거 | SELECT *이므로 테이블 lookup 필요 | **O** |
+| 단일 인덱스 `(title)` | range scan 가능 | view_count 정보가 인덱스에 없음 | - |
+| 복합 인덱스 `(title, view_count DESC)` | range scan + ICP로 view_count 접근 | SELECT *이므로 테이블 lookup 필요 | **O** |
 | 커버링 인덱스 (전체 컬럼 포함) | 테이블 lookup 제거 | content가 LONGTEXT라 인덱스에 포함 불가 | 불가능 |
 | Trie 자료구조 | O(L) 탐색으로 매우 빠름 | 2,744만 제목을 메모리에 올려야 함 (ARM 서버 메모리 한계) | 시기상조 |
 
-**단일 인덱스 `(title)`을 제외한 이유:**
+**단일 인덱스 `(title)` 대신 복합 인덱스를 선택한 이유:**
 
-단일 인덱스만 있으면 `WHERE title LIKE 'prefix%'`에서 range scan은 가능하지만, `ORDER BY view_count DESC`에서 filesort가 발생합니다. MySQL은 인덱스에서 prefix에 매칭되는 모든 행을 가져온 뒤, 메모리(또는 디스크)에서 view_count로 재정렬해야 합니다.
+단일 인덱스 `(title)`만으로도 range scan이 가능하여 Full Table Scan → range scan 전환이라는 핵심 개선은 동일합니다. `ORDER BY view_count DESC`에 대한 filesort는 복합 인덱스 `(title, view_count DESC)`에서도 발생합니다. 선행 컬럼에 range 조건(LIKE 'prefix%')이 걸리면 후행 컬럼의 정렬 순서를 활용할 수 없기 때문입니다 (equality 조건에서만 가능).
+
+그러나 복합 인덱스는 **Index Condition Pushdown(ICP)** 시 view_count 값을 인덱스 레벨에서 읽을 수 있어, 향후 `SELECT title, view_count` 같은 커버링 쿼리로 변경할 경우 테이블 lookup을 줄일 수 있는 확장성이 있습니다.
 
 **커버링 인덱스를 제외한 이유:**
 
@@ -124,8 +126,8 @@ title          | view_count
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/composite-index-structure.png)
 
 - `title`이 선행 컬럼이므로 `LIKE '페텔%'`에서 range scan이 가능합니다
-- 동일 prefix 내에서 `view_count DESC`로 이미 정렬되어 있으므로 별도의 filesort가 불필요합니다
-- `LIMIT 10`이 걸려있으므로, 인덱스에서 조건에 맞는 10건만 찾으면 즉시 반환합니다
+- 선행 컬럼에 range 조건이 걸리면 후행 컬럼의 정렬 순서는 **활용되지 않습니다** — 각 title 값 내에서는 view_count DESC로 정렬되어 있지만, 서로 다른 title 간의 view_count는 전역 정렬이 아니므로 filesort가 필요합니다
+- `LIMIT 10`이 걸려있고, range scan으로 줄어든 결과에 대한 filesort이므로 비용은 미미합니다
 
 만약 컬럼 순서가 반대라면 `(view_count DESC, title)`:
 - `WHERE title LIKE 'prefix%'` → title이 후행 컬럼이라 인덱스 사용 불가
@@ -156,7 +158,7 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 - **type**: `ALL`(전체 스캔) → `range`(범위 스캔)
 - **key**: `NULL` → `idx_title_viewcount` (인덱스 사용)
 - **rows**: 27,440,000 → 1 (prefix에 매칭되는 행만 스캔)
-- **Extra**: `Using filesort`가 여전히 남아있지만, 1건에 대한 filesort이므로 비용은 무시할 수 있는 수준
+- **Extra**: `Using filesort`가 여전히 남아있습니다. 선행 컬럼에 range 조건(LIKE)이 걸리면 후행 컬럼(view_count DESC)의 정렬을 활용할 수 없기 때문입니다. 단, `LIMIT 10`과 함께 range scan으로 줄어든 결과에 대한 filesort이므로 비용은 미미합니다
 
 ### 응답시간 측정
 
@@ -246,14 +248,16 @@ We need an index that satisfies all three.
 
 | Approach | Pros | Cons | Decision |
 |----------|------|------|----------|
-| Single index `(title)` | Enables range scan | filesort on ORDER BY view_count | X |
-| Composite index `(title, view_count DESC)` | Range scan + sort elimination | Table lookup needed for SELECT * | **O** |
+| Single index `(title)` | Enables range scan | No view_count info in index | - |
+| Composite index `(title, view_count DESC)` | Range scan + ICP access to view_count | Table lookup needed for SELECT * | **O** |
 | Covering index (all columns) | Eliminates table lookup | content is LONGTEXT, cannot include in index | Impossible |
 | Trie data structure | O(L) lookup, very fast | Must load 27.44M titles in memory (ARM server memory limit) | Premature |
 
-**Why single index `(title)` was rejected:**
+**Why composite index was chosen over single index `(title)`:**
 
-With only a single index, `WHERE title LIKE 'prefix%'` can use range scan, but `ORDER BY view_count DESC` triggers filesort. MySQL must fetch all prefix-matching rows from the index, then re-sort by view_count in memory (or on disk).
+A single index `(title)` alone would also enable range scan, achieving the same core improvement from Full Table Scan to range scan. The `ORDER BY view_count DESC` filesort occurs with both single and composite indexes — when the leading column has a range condition (LIKE 'prefix%'), MySQL cannot leverage the trailing column's sort order (only possible with equality conditions).
+
+However, the composite index provides **Index Condition Pushdown (ICP)** access to view_count at the index level, which offers extensibility for future covering queries like `SELECT title, view_count`.
 
 **Why covering index was rejected:**
 
@@ -285,8 +289,8 @@ title          | view_count
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/composite-index-structure.png)
 
 - `title` is the leading column, enabling range scan for `LIKE '페텔%'`
-- Within the same prefix, rows are already sorted by `view_count DESC`, so no separate filesort is needed
-- With `LIMIT 10`, the index returns immediately after finding 10 matching rows
+- When the leading column has a range condition, the trailing column's sort order is **not leveraged** — within each title value, rows are sorted by view_count DESC, but view_counts across different titles are not globally sorted, so filesort is needed
+- With `LIMIT 10` and the reduced result set from range scan, the filesort cost is negligible
 
 If the column order were reversed `(view_count DESC, title)`:
 - `WHERE title LIKE 'prefix%'` -- title is the trailing column, so the index cannot be used
@@ -317,7 +321,7 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 - **type**: `ALL` (full scan) to `range` (range scan)
 - **key**: `NULL` to `idx_title_viewcount` (index used)
 - **rows**: 27,440,000 to 1 (scans only prefix-matching rows)
-- **Extra**: `Using filesort` remains, but filesort on 1 row is negligible
+- **Extra**: `Using filesort` remains because range conditions on the leading column prevent leveraging the trailing column's sort order. However, with `LIMIT 10` on the reduced result set from range scan, the filesort cost is negligible
 
 ### Response Time
 

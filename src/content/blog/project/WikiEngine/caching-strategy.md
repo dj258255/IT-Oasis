@@ -243,9 +243,9 @@ DB도 InnoDB Buffer Pool이라는 자체 메모리 캐시가 있습니다. Buffe
 ### 현재 상태
 
 ```
-Caffeine 의존성: ✅ (build.gradle에 caffeine:3.2.0)
-Spring Cache: ❌ (@EnableCaching 미설정, CacheManager 미등록)
-@Cacheable: ❌ (어디에도 미사용)
+Caffeine 의존성: O (build.gradle에 caffeine:3.2.0)
+Spring Cache: X (@EnableCaching 미설정, CacheManager 미등록)
+@Cacheable: X (어디에도 미사용)
 ```
 
 `TokenBlacklist`는 Caffeine을 직접 사용(`Cache<String, Boolean>`)하지만,
@@ -987,8 +987,10 @@ K6_INFLUXDB_PUSH_INTERVAL=10s k6 run --out influxdb=http://localhost:8086/k6 \
 | HikariCP Pending | ~50 | 0 | **완전 해소** |
 | HikariCP 획득 시간 | ~1.5s | ~0.1ms | **15,000x** |
 | Load Average (1m) | ~22 | ~6 | **73% 감소** |
-| MySQL QPS | ~150 | ~200 | 처리량 증가 |
+| MySQL QPS | ~150 | ~200 | 아래 설명 참조 |
 | MySQL 커넥션 | ~30 | ~1~2 | **93% 감소** |
+
+> **MySQL QPS가 150→200으로 증가한 이유**: 캐싱으로 CPU 경합이 해소되면서 총 처리량이 29,867→41,858건(+40%)으로 늘어났습니다. 캐시 미스 요청 + 쓰기 요청(생성/좋아요)의 **절대 수가 증가**했기 때문에 QPS도 증가한 것입니다. 요청당 DB 접근 횟수는 캐시 히트에 의해 감소했지만, 전체 처리량 증가가 이를 상쇄했습니다. Slow Queries 누적값(8.34K→15.1K)도 같은 원인입니다.
 
 ### 캐시 효과 요약
 
@@ -997,6 +999,8 @@ K6_INFLUXDB_PUSH_INTERVAL=10s k6 run --out influxdb=http://localhost:8086/k6 \
 | 캐시 히트율 (searchResults) | **81.8%** |
 | 캐시 히트율 (autocomplete) | **99.9%** |
 | 캐시 히트율 (postDetail) | **40.5%** |
+
+> **postDetail 히트율이 40.5%인 이유**: k6 부하 테스트가 1,477만 건 중 랜덤 postId를 조회하므로 캐시 재적중 확률이 낮습니다. 실제 운영에서는 Zipf 분포에 따라 인기 게시글에 트래픽이 집중되므로 히트율이 더 높을 것으로 예상됩니다.
 
 ### cascade failure 해소
 
