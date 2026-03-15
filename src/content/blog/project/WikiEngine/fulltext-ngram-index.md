@@ -76,10 +76,7 @@ coverImage: "/uploads/project/WikiEngine/fulltext-ngram-index/search-expected.pn
 `LIKE '%keyword%'`는 선행 와일드카드입니다.
 B-Tree 인덱스는 값의 **앞부분부터 정렬**되어 있으므로, 키워드가 문자열 어디에 위치하는지 알 수 없어 인덱스를 사용할 수 없습니다.
 
-```
-B-Tree 인덱스 (title)
-  "대한민국" -> "대한민국의 역사" -> "대한항공" -> "페텔기우스" -> ...
-```
+![B-Tree 인덱스의 한계 — 선행 와일드카드 사용 불가](/uploads/project/WikiEngine/fulltext-ngram-index/btree-index-limitation.svg)
 
 - `LIKE '페텔%'` -> "페" 위치부터 range scan 가능
 - `LIKE '%페텔%'` -> "페텔"이 문자열 어디에 있는지 알 수 없음 -> 전체 스캔
@@ -97,24 +94,13 @@ B-Tree 인덱스 (title)
 
 역색인은 **사전(Dictionary)** 과 **포스팅 목록(Posting List)** 으로 구성됩니다. 사전은 문서 모음에 포함된 모든 텀의 목록이고, 각 텀은 해당 텀이 출현한 문서를 가리키는 포스팅 목록으로 연결됩니다.
 
-```
-사전(Dictionary)     포스팅 목록(Posting List)
-  "페텔"          -> [문서13, 문서4521, ...]
-  "한민"          -> [문서7, 문서42, 문서890, ...]
-  "기우"          -> [문서13, 문서55, ...]
-```
+![역색인 구조 — 사전 + 포스팅 목록](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-concept.svg)
 
 `LIKE '%keyword%'`가 느린 이유는 역색인이 없기 때문입니다.
 역색인 없이는 키워드가 어떤 문서에 포함되어 있는지 알 수 없어 **모든 행을 읽어야** 합니다.
 역색인이 있으면 키워드를 사전에서 찾고, 포스팅 목록에서 문서 ID를 바로 반환할 수 있습니다.
 
-```
-역색인 없이 (현재)
-  LIKE '%페텔%' -> 14,768,700행 전부 읽기 -> 30초+
-
-역색인 있으면
-  "페텔" -> 사전에서 O(1) 탐색 -> 포스팅 목록 [문서13, 문서4521, ...] 반환 -> ms 단위
-```
+![역색인 Before/After — Full Scan vs O(1) 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-before-after.svg)
 
 이것이 KMP, Trie, Bloom Filter 같은 문자열 알고리즘과의 근본적 차이입니다.
 KMP는 **행 1개 안에서 비교 속도를 O(n*m) -> O(n+m)으로** 줄이는 것이고, 역색인은 **읽어야 할 행 수 자체를 줄이는 것**입니다.
@@ -153,15 +139,7 @@ Elasticsearch도 내부적으로 Lucene의 역색인을 사용합니다.
 
 **ngram_token_size=2 일 때:**
 
-```
-"대한민국" -> ["대한", "한민", "민국"]
-"페텔기우스" -> ["페텔", "텔기", "기우", "우스"]
-
-역색인
-  "페텔" -> [문서13, 문서4521, ...]
-  "텔기" -> [문서13, ...]
-  "한민" -> [문서7, 문서42, 문서890, ...]
-```
+![ngram 토큰화 + 역색인](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-tokenization.svg)
 
 검색 시 `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`을 실행하면, MySQL은 역색인에서 "페텔" 토큰을 찾아 해당 문서 ID들을 즉시 반환합니다.
 1,477만 행을 스캔할 필요가 없습니다.
@@ -256,11 +234,7 @@ CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) WITH PARSER ngra
 
 [MySQL 공식 문서 (Online DDL Space Requirements)](https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-space-requirements.html)에 따르면, FULLTEXT 인덱스 생성 시 MySQL은 **임시 정렬 파일(temporary sort files)** 을 생성합니다. 이 파일은 토큰을 정렬하여 역색인에 병합하기 위한 것으로, **테이블 데이터 + 기존 인덱스 크기만큼** 의 추가 디스크를 사용합니다. 병합이 완료되면 자동으로 삭제됩니다.
 
-```
-인덱스 생성 중 필요한 디스크
-= 원본 데이터(122GB) + 임시 정렬 파일(~122GB) + 최종 FULLTEXT 인덱스(생성 중)
-= 300GB+ 필요
-```
+![인덱스 생성 디스크 사용량 분해](/uploads/project/WikiEngine/fulltext-ngram-index/disk-space-breakdown.svg)
 
 서버 디스크 여유(253GB)로는 감당할 수 없어 `KILL` 명령으로 인덱스 생성을 중단했습니다.
 
@@ -404,26 +378,13 @@ ngram FULLTEXT는 `LIKE '%keyword%'` 대비 극적인 성능 개선을 제공하
 
 2-gram 토큰화는 단어 경계 정보를 보존하지 않습니다.
 
-```
-"한국어" 검색 시:
-  토큰: ["한국", "국어"]
-
-매칭되는 문서:
-  O "한국어 문법"     -> 의도한 결과
-  X "대한국제공항"     -> "한국" 토큰이 매칭 (오탐)
-  X "미국어학연수"     -> "국어" 토큰이 매칭 (오탐)
-```
+![ngram False Positive — 단어 경계 미보존](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-false-positive.svg)
 
 ### 6-2. 형태소 분석 미지원
 
 ngram은 글자 단위로 잘라낼 뿐 형태소 분석을 수행하지 않습니다.
 
-```
-"대한민국을" -> ["대한", "한민", "민국", "국을"]
-"대한민국"   -> ["대한", "한민", "민국"]
-
--> "국을" 토큰이 달라서 검색 정확도 하락
-```
+![형태소 분석 미지원 — 토큰 불일치](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-morpheme-mismatch.svg)
 
 ### 6-3. 고빈도 토큰 성능 저하 ([MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880))
 
@@ -497,20 +458,7 @@ MySQL FULLTEXT는 `Ft_hints: sorted, limit = N`으로 내부적으로 상위 N�
 
 FULLTEXT 인덱스를 생성하면 MySQL은 [6개의 보조 테이블](https://dev.mysql.com/doc/refman/8.4/en/innodb-fulltext-index.html)을 자동 생성합니다.
 
-```
-posts 테이블에 FULLTEXT INDEX 생성 시:
-
-fts_[table_id]_[index_id]_index_1   ← 토큰 파티션 1
-fts_[table_id]_[index_id]_index_2   ← 토큰 파티션 2
-fts_[table_id]_[index_id]_index_3   ← 토큰 파티션 3
-fts_[table_id]_[index_id]_index_4   ← 토큰 파티션 4
-fts_[table_id]_[index_id]_index_5   ← 토큰 파티션 5
-fts_[table_id]_[index_id]_index_6   ← 토큰 파티션 6
-
-+ fts_*_deleted          ← 삭제된 DOC_ID 목록
-+ fts_*_deleted_cache    ← 삭제 캐시 (메모리)
-+ fts_*_config           ← FTS_SYNCED_DOC_ID 등 인덱스 상태 메타데이터
-```
+![InnoDB FULLTEXT 보조 테이블 구조](/uploads/project/WikiEngine/fulltext-ngram-index/fts-auxiliary-tables.svg)
 
 토큰의 **첫 글자 정렬 가중치(character set sort weight)** 기준으로 6개 테이블에 분배됩니다. 이는 병렬 인덱싱을 위한 설계이며, `innodb_ft_sort_pll_degree`(기본 2스레드)로 조정 가능합니다.
 
@@ -524,40 +472,13 @@ fts_[table_id]_[index_id]_index_6   ← 토큰 파티션 6
 
 [`fts0que.cc`](https://dev.mysql.com/doc/dev/mysql-server/latest/fts0que_8cc.html)는 InnoDB FULLTEXT 검색의 핵심 쿼리 처리 엔진입니다. `MATCH(title, content) AGAINST('대한민국' IN BOOLEAN MODE)` 실행 시 내부 처리 흐름:
 
-```
-[1단계] 쿼리 파싱 — fts_query_parse()
-    "대한민국" → ngram(token_size=2) 분할
-    → 토큰: "대한", "한민", "민국"
-
-[2단계] 각 토큰별 posting list 조회 — fts_query_execute()
-    "대한" → 보조 테이블 + FTS 캐시 조회 → doc_id 집합 A (196,593건)
-    "한민" → 보조 테이블 + FTS 캐시 조회 → doc_id 집합 B (45,200건)
-    "민국" → 보조 테이블 + FTS 캐시 조회 → doc_id 집합 C (38,100건)
-
-[3단계] 교집합 — fts_query_intersect()
-    A ∩ B ∩ C → RB-tree 기반 교집합 → ~30,000 후보 문서
-
-[4단계] 구절 검증 — fts_query_match_phrase()     ** 핵심 병목 **
-    후보 문서마다 실제 텍스트를 읽어서
-    "대한" → "한민" → "민국"이 연속된 위치에 있는지 확인
-
-[5단계] 랭킹 — fts_query_calculate_ranking()
-    IDF 기반 BM25 점수 계산 → 정렬 → 반환
-```
+![InnoDB FTS 쿼리 처리 파이프라인](/uploads/project/WikiEngine/fulltext-ngram-index/fts-query-pipeline.svg)
 
 **3) 교집합 단계 (3단계) — RB-tree, 여기는 OK**
 
 `fts_query_intersect()`는 RB-tree(Red-Black Tree)를 사용합니다.
 
-```
-fts_query_intersect() 동작:
-
-토큰 A 결과 → RB-tree에 삽입: O(|A| × log|A|)
-토큰 B 결과 → A의 RB-tree에서 lookup: O(|B| × log|A|)
-교집합 결과 → 새로운 RB-tree (query->intersection)로 swap
-
-전체: O((|A| + |B| + |C|) × log(max))
-```
+![RB-tree 교집합 동작](/uploads/project/WikiEngine/fulltext-ngram-index/rbtree-intersect.svg)
 
 RB-tree는 O(log n) 탐색이므로 이 단계 자체는 치명적이지 않습니다.
 
@@ -597,35 +518,13 @@ for (i = phrase->match->start; i < ib_vector_size(positions); i++) {
 
 **문제의 본질:**
 
-```
-"대한"이 한 문서에 50번 등장한다고 가정:
-  → positions 배열에 50개의 바이트 오프셋
-  → 각 위치에서 "한민"이 바로 다음에 오는지 확인
-  → 그 다음 "민국"이 오는지 확인
-  → 최악의 경우: 50 × 2 = 100회 비교 (이 문서 하나에 대해)
-
-교집합 후 30,000건이 남는다면:
-  → 30,000 문서 × 각 문서당 평균 N회 위치 확인
-  → 전체: O(후보 문서 수 × 문서당 평균 출현 횟수 × 토큰 수)
-  → 순차 탐색(sequential iteration)으로 처리
-```
+![구절 검증 비용 — 순차 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/phrase-verify-cost.svg)
 
 **5) 고빈도 토큰에서 폭발하는 이유**
 
 단일 토큰 검색("대한")의 경우, 교집합 없이 196,593건 전부가 후보가 됩니다.
 
-```
-"대한" 검색 (토큰 1개 — 교집합 단계가 없음):
-  → posting list에서 196,593개 문서 전부 반환
-  → 각 문서마다 위치 확인 + 랭킹 계산
-  → O(196,593 × 평균 출현 횟수)
-  → 5초+ 타임아웃
-
-"페텔" 검색 (토큰 1개 — 희귀 토큰):
-  → posting list에서 406개 문서만 반환
-  → O(406 × 평균 출현 횟수)
-  → 23ms
-```
+![고빈도 vs 희귀 토큰 — 성능 차이](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
 
 희귀 토큰 "페텔" 검색 결과 — 20건, 0.023초:
 
@@ -692,13 +591,7 @@ FULLTEXT 인덱스를 생성할 때, MySQL은 모든 행의 `title`과 `content`
 
 여기에 더해, MySQL 공식 문서(Online DDL Space Requirements)에 따르면 FULLTEXT 인덱스 생성 시 **임시 정렬 파일**이 필요합니다. 토큰을 사전순으로 정렬하여 역색인에 병합하기 위한 것으로, 이 파일 크기는 테이블 데이터 크기에 비례합니다.
 
-```
-인덱스 생성 시 디스크 사용량
-= 원본 데이터 Full Scan(122GB)     ← Row-Oriented라 content만 읽을 수 없음
-+ 임시 정렬 파일(~122GB)            ← 토큰 정렬용
-+ 최종 FULLTEXT 인덱스(생성 중)      ← 976억 개 토큰의 역색인
-= 300GB+ 필요                       ← 서버 디스크 여유 253GB 초과
-```
+![인덱스 생성 디스크 사용량 분해](/uploads/project/WikiEngine/fulltext-ngram-index/disk-space-breakdown.svg)
 
 반면, BigQuery 같은 **Column-Oriented 스토리지**는 컬럼별로 독립 저장합니다. 만약 Column-Oriented였다면, `content` 컬럼 파일만 읽으면 되므로 불필요한 I/O가 발생하지 않습니다.
 
@@ -793,10 +686,7 @@ Autocomplete works, but search remains unusable. Cannot find documents by keywor
 
 `LIKE '%keyword%'` uses a leading wildcard. B-Tree indexes are sorted **from the beginning of values**, so they cannot determine where a keyword is located within a string and thus cannot use the index.
 
-```
-B-Tree index (title)
-  "대한민국" -> "대한민국의 역사" -> "대한항공" -> "페텔기우스" -> ...
-```
+![B-Tree 인덱스의 한계 — 선행 와일드카드 사용 불가](/uploads/project/WikiEngine/fulltext-ngram-index/btree-index-limitation.svg)
 
 - `LIKE '페텔%'` -> Can range scan from the "페" position
 - `LIKE '%페텔%'` -> Cannot determine where "페텔" is in the string -> full scan
@@ -811,22 +701,11 @@ From *Introduction to Information Retrieval* Chapter 3 (Tokens and Terms) and [T
 
 An inverted index consists of a **Dictionary** and **Posting Lists**. The dictionary is a list of all terms in the document collection, and each term links to a posting list pointing to documents where that term appears.
 
-```
-Dictionary          Posting List
-  "페텔"          -> [doc13, doc4521, ...]
-  "한민"          -> [doc7, doc42, doc890, ...]
-  "기우"          -> [doc13, doc55, ...]
-```
+![역색인 구조 — 사전 + 포스팅 목록](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-concept.svg)
 
 The reason `LIKE '%keyword%'` is slow is the absence of an inverted index. Without one, there is no way to know which documents contain the keyword, so **every row must be read**. With an inverted index, you look up the keyword in the dictionary and immediately return document IDs from the posting list.
 
-```
-Without inverted index (current)
-  LIKE '%페텔%' -> Read all 14,768,700 rows -> 30s+
-
-With inverted index
-  "페텔" -> O(1) dictionary lookup -> posting list [doc13, doc4521, ...] -> ms range
-```
+![역색인 Before/After — Full Scan vs O(1) 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-before-after.svg)
 
 This is the fundamental difference from string algorithms like KMP, Trie, or Bloom Filter. KMP **reduces comparison speed within a single row from O(n*m) to O(n+m)**, while inverted indexes **reduce the number of rows that need to be read**. The bottleneck is not string comparison but disk I/O reading 14.77 million rows, so an inverted index is needed.
 
@@ -861,15 +740,7 @@ According to [MySQL documentation: ngram Full-Text Parser](https://dev.mysql.com
 
 **When ngram_token_size=2:**
 
-```
-"대한민국" -> ["대한", "한민", "민국"]
-"페텔기우스" -> ["페텔", "텔기", "기우", "우스"]
-
-Inverted Index
-  "페텔" -> [doc13, doc4521, ...]
-  "텔기" -> [doc13, ...]
-  "한민" -> [doc7, doc42, doc890, ...]
-```
+![ngram 토큰화 + 역색인](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-tokenization.svg)
 
 When executing `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`, MySQL finds the "페텔" token in the inverted index and immediately returns matching document IDs. No need to scan 14.77 million rows.
 
@@ -958,11 +829,7 @@ Creating a FULLTEXT ngram index on the 14.77M row posts table failed when disk r
 
 According to [MySQL documentation (Online DDL Space Requirements)](https://dev.mysql.com/doc/refman/8.0/en/innodb-online-ddl-space-requirements.html), MySQL creates **temporary sort files** during FULLTEXT index creation. These files sort tokens for merging into the inverted index, using additional disk space equal to **table data + existing index size**. They are automatically deleted after merging completes.
 
-```
-Disk needed during index creation
-= Original data (122GB) + Temporary sort files (~122GB) + Final FULLTEXT index (in progress)
-= 300GB+ required
-```
+![인덱스 생성 디스크 사용량 분해](/uploads/project/WikiEngine/fulltext-ngram-index/disk-space-breakdown.svg)
 
 Server disk headroom (253GB) was insufficient, so index creation was killed with the `KILL` command.
 
@@ -1096,26 +963,13 @@ ngram FULLTEXT provides dramatic performance improvement over `LIKE '%keyword%'`
 
 2-gram tokenization does not preserve word boundary information.
 
-```
-Searching "한국어":
-  Tokens: ["한국", "국어"]
-
-Matching documents:
-  O "한국어 문법"     -> intended result
-  X "대한국제공항"     -> "한국" token matches (false positive)
-  X "미국어학연수"     -> "국어" token matches (false positive)
-```
+![ngram False Positive — 단어 경계 미보존](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-false-positive.svg)
 
 ### 6-2. No Morphological Analysis
 
 ngram simply splits by character count without performing morphological analysis.
 
-```
-"대한민국을" -> ["대한", "한민", "민국", "국을"]
-"대한민국"   -> ["대한", "한민", "민국"]
-
--> Different "국을" token reduces search accuracy
-```
+![형태소 분석 미지원 — 토큰 불일치](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-morpheme-mismatch.svg)
 
 ### 6-3. High-Frequency Token Performance Degradation ([MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880))
 
@@ -1187,20 +1041,7 @@ Above, we mentioned "vector sequential traversal" as the bottleneck. This sectio
 
 When a FULLTEXT index is created, MySQL automatically generates [6 auxiliary tables](https://dev.mysql.com/doc/refman/8.4/en/innodb-fulltext-index.html).
 
-```
-When creating FULLTEXT INDEX on posts table:
-
-fts_[table_id]_[index_id]_index_1   ← token partition 1
-fts_[table_id]_[index_id]_index_2   ← token partition 2
-fts_[table_id]_[index_id]_index_3   ← token partition 3
-fts_[table_id]_[index_id]_index_4   ← token partition 4
-fts_[table_id]_[index_id]_index_5   ← token partition 5
-fts_[table_id]_[index_id]_index_6   ← token partition 6
-
-+ fts_*_deleted          ← deleted DOC_ID list
-+ fts_*_deleted_cache    ← deletion cache (memory)
-+ fts_*_config           ← index state metadata (FTS_SYNCED_DOC_ID, etc.)
-```
+![InnoDB FULLTEXT 보조 테이블 구조](/uploads/project/WikiEngine/fulltext-ngram-index/fts-auxiliary-tables.svg)
 
 Tokens are distributed across 6 tables based on **first character sort weight (character set sort weight)**. This is designed for parallel indexing and adjustable via `innodb_ft_sort_pll_degree` (default 2 threads).
 
@@ -1214,40 +1055,13 @@ Additionally, InnoDB maintains an **FTS cache** to reduce contention on auxiliar
 
 [`fts0que.cc`](https://dev.mysql.com/doc/dev/mysql-server/latest/fts0que_8cc.html) is the core query processing engine for InnoDB FULLTEXT search. Internal processing flow when executing `MATCH(title, content) AGAINST('대한민국' IN BOOLEAN MODE)`:
 
-```
-[Stage 1] Query Parsing — fts_query_parse()
-    "대한민국" → ngram(token_size=2) split
-    → tokens: "대한", "한민", "민국"
-
-[Stage 2] Posting list lookup per token — fts_query_execute()
-    "대한" → auxiliary tables + FTS cache lookup → doc_id set A (196,593 docs)
-    "한민" → auxiliary tables + FTS cache lookup → doc_id set B (45,200 docs)
-    "민국" → auxiliary tables + FTS cache lookup → doc_id set C (38,100 docs)
-
-[Stage 3] Intersection — fts_query_intersect()
-    A ∩ B ∩ C → RB-tree based intersection → ~30,000 candidate documents
-
-[Stage 4] Phrase verification — fts_query_match_phrase()     ** KEY BOTTLENECK **
-    For each candidate document, read actual text to verify
-    "대한" → "한민" → "민국" appear at consecutive positions
-
-[Stage 5] Ranking — fts_query_calculate_ranking()
-    IDF-based BM25 score calculation → sort → return
-```
+![InnoDB FTS 쿼리 처리 파이프라인](/uploads/project/WikiEngine/fulltext-ngram-index/fts-query-pipeline.svg)
 
 **3) Intersection Stage (Stage 3) — RB-tree, This is OK**
 
 `fts_query_intersect()` uses an RB-tree (Red-Black Tree).
 
-```
-fts_query_intersect() operation:
-
-Token A results → insert into RB-tree: O(|A| × log|A|)
-Token B results → lookup in A's RB-tree: O(|B| × log|A|)
-Intersection result → swap to new RB-tree (query->intersection)
-
-Total: O((|A| + |B| + |C|) × log(max))
-```
+![RB-tree 교집합 동작](/uploads/project/WikiEngine/fulltext-ngram-index/rbtree-intersect.svg)
 
 RB-tree provides O(log n) lookup, so this stage itself is not critical.
 
@@ -1287,35 +1101,13 @@ for (i = phrase->match->start; i < ib_vector_size(positions); i++) {
 
 **The Core Problem:**
 
-```
-Assuming "대한" appears 50 times in a single document:
-  → 50 byte offsets in the positions array
-  → Check if "한민" immediately follows at each position
-  → Then check if "민국" follows
-  → Worst case: 50 × 2 = 100 comparisons (for this single document)
-
-If 30,000 candidates remain after intersection:
-  → 30,000 documents × average N position checks per document
-  → Total: O(candidate docs × avg occurrences per doc × token count)
-  → Processed via sequential iteration
-```
+![구절 검증 비용 — 순차 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/phrase-verify-cost.svg)
 
 **5) Why It Explodes with High-Frequency Tokens**
 
 For single-token search ("대한"), all 196,593 documents become candidates without intersection.
 
-```
-"대한" search (1 token — no intersection stage):
-  → 196,593 documents returned from posting list
-  → Position check + ranking calculation per document
-  → O(196,593 × avg occurrences)
-  → 5s+ timeout
-
-"페텔" search (1 token — rare token):
-  → Only 406 documents returned from posting list
-  → O(406 × avg occurrences)
-  → 23ms
-```
+![고빈도 vs 희귀 토큰 — 성능 차이](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
 
 Rare token "페텔" search results — 20 results, 0.023s:
 
@@ -1380,13 +1172,7 @@ When creating a FULLTEXT index, MySQL must read all rows' `title` and `content` 
 
 On top of this, according to MySQL documentation (Online DDL Space Requirements), **temporary sort files** are needed during FULLTEXT index creation. These sort tokens alphabetically for merging into the inverted index, and their size is proportional to the table data size.
 
-```
-Disk usage during index creation
-= Original data Full Scan (122GB)     ← Row-Oriented cannot read just content
-+ Temporary sort files (~122GB)        ← for token sorting
-+ Final FULLTEXT index (in progress)   ← inverted index of 97.6B tokens
-= 300GB+ required                      ← exceeds server disk headroom of 253GB
-```
+![인덱스 생성 디스크 사용량 분해](/uploads/project/WikiEngine/fulltext-ngram-index/disk-space-breakdown.svg)
 
 In contrast, **Column-Oriented storage** like BigQuery stores each column independently. If it were Column-Oriented, only the `content` column file would need to be read, eliminating unnecessary I/O.
 

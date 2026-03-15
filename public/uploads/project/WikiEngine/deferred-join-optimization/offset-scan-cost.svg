@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 140" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .row-bg { rx: 6; stroke-width: 1; }
+    .fast { fill: #f0fdf4; stroke: #22c55e; }
+    .mid { fill: #fefce8; stroke: #eab308; }
+    .slow { fill: #fef2f2; stroke: #ef4444; }
+    .offset { font-size: 13px; fill: #1e293b; font-weight: 700; font-family: 'Consolas', monospace; }
+    .desc { font-size: 11px; fill: #475569; }
+    .time { font-size: 13px; font-weight: 700; font-family: 'Consolas', monospace; }
+    .time-fast { fill: #22c55e; }
+    .time-mid { fill: #eab308; }
+    .time-slow { fill: #ef4444; }
+    .arrow { font-size: 11px; fill: #94a3b8; }
+  </style>
+
+  <rect x="8" y="8" width="640" height="36" class="row-bg fast"/>
+  <text x="20" y="31" class="offset">OFFSET 0</text>
+  <text x="160" y="31" class="arrow">--></text>
+  <text x="190" y="31" class="desc">인덱스 시작점에서 즉시 읽기</text>
+  <text x="430" y="31" class="arrow">--></text>
+  <text x="460" y="31" class="time time-fast">~10ms</text>
+
+  <rect x="8" y="52" width="640" height="36" class="row-bg mid"/>
+  <text x="20" y="75" class="offset">OFFSET 1,000</text>
+  <text x="160" y="75" class="arrow">--></text>
+  <text x="190" y="75" class="desc">1,020개 인덱스 엔트리 스캔</text>
+  <text x="430" y="75" class="arrow">--></text>
+  <text x="460" y="75" class="time time-mid">~100ms</text>
+
+  <rect x="8" y="96" width="640" height="36" class="row-bg slow"/>
+  <text x="20" y="119" class="offset">OFFSET 20,000</text>
+  <text x="160" y="119" class="arrow">--></text>
+  <text x="190" y="119" class="desc">20,020개 인덱스 엔트리 스캔</text>
+  <text x="430" y="119" class="arrow">--></text>
+  <text x="460" y="119" class="time time-slow">~2,000ms</text>
+  <text x="530" y="119" class="desc" fill="#ef4444">O(N) 선형 증가</text>
+</svg>

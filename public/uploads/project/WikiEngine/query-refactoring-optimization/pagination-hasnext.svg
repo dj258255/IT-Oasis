@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .label { font-size: 13px; fill: #64748b; font-weight: 500; }
+    .badge { font-size: 11px; fill: #fff; font-weight: 600; }
+    .page-num { font-size: 14px; fill: #334155; font-weight: 600; }
+    .page-num-active { font-size: 14px; fill: #fff; font-weight: 700; }
+    .nav-text { font-size: 13px; fill: #3b82f6; font-weight: 600; }
+    .nav-text-disabled { font-size: 13px; fill: #cbd5e1; font-weight: 600; }
+    .note { font-size: 12px; fill: #94a3b8; }
+    .divider { stroke: #e2e8f0; stroke-width: 1; }
+  </style>
+
+  <!-- hasNext=true -->
+  <rect x="16" y="12" width="90" height="22" rx="4" fill="#22c55e"/>
+  <text x="61" y="27" text-anchor="middle" class="badge">hasNext=true</text>
+
+  <g transform="translate(16, 48)">
+    <!-- 이전 버튼 -->
+    <rect x="0" y="0" width="52" height="36" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>
+    <text x="26" y="23" text-anchor="middle" class="nav-text-disabled">이전</text>
+
+    <!-- 페이지 1 -->
+    <rect x="60" y="0" width="36" height="36" rx="6" fill="#3b82f6"/>
+    <text x="78" y="23" text-anchor="middle" class="page-num-active">1</text>
+
+    <!-- 페이지 2 -->
+    <rect x="104" y="0" width="36" height="36" rx="6" fill="#fff" stroke="#e2e8f0"/>
+    <text x="122" y="23" text-anchor="middle" class="page-num">2</text>
+
+    <!-- 페이지 3 -->
+    <rect x="148" y="0" width="36" height="36" rx="6" fill="#fff" stroke="#e2e8f0"/>
+    <text x="166" y="23" text-anchor="middle" class="page-num">3</text>
+
+    <!-- 페이지 4 -->
+    <rect x="192" y="0" width="36" height="36" rx="6" fill="#fff" stroke="#e2e8f0"/>
+    <text x="210" y="23" text-anchor="middle" class="page-num">4</text>
+
+    <!-- 페이지 5 -->
+    <rect x="236" y="0" width="36" height="36" rx="6" fill="#fff" stroke="#e2e8f0"/>
+    <text x="254" y="23" text-anchor="middle" class="page-num">5</text>
+
+    <!-- ... -->
+    <text x="295" y="23" text-anchor="middle" class="page-num" fill="#94a3b8">...</text>
+
+    <!-- 다음 버튼 -->
+    <rect x="320" y="0" width="52" height="36" rx="6" fill="#fff" stroke="#3b82f6"/>
+    <text x="346" y="23" text-anchor="middle" class="nav-text">다음</text>
+
+    <!-- 화살표 -->
+    <text x="396" y="23" class="note">--- 다음 페이지 존재</text>
+  </g>
+
+  <!-- 구분선 -->
+  <line x1="16" y1="108" x2="704" y2="108" class="divider"/>
+
+  <!-- hasNext=false -->
+  <rect x="16" y="120" width="98" height="22" rx="4" fill="#ef4444"/>
+  <text x="65" y="135" text-anchor="middle" class="badge">hasNext=false</text>
+
+  <g transform="translate(16, 156)">
+    <!-- 이전 버튼 -->
+    <rect x="0" y="0" width="52" height="36" rx="6" fill="#fff" stroke="#3b82f6"/>
+    <text x="26" y="23" text-anchor="middle" class="nav-text">이전</text>
+
+    <!-- 페이지 1 -->
+    <rect x="60" y="0" width="36" height="36" rx="6" fill="#fff" stroke="#e2e8f0"/>
+    <text x="78" y="23" text-anchor="middle" class="page-num">1</text>
+
+    <!-- 페이지 2 -->
+    <rect x="104" y="0" width="36" height="36" rx="6" fill="#fff" stroke="#e2e8f0"/>
+    <text x="122" y="23" text-anchor="middle" class="page-num">2</text>
+
+    <!-- 페이지 3 (현재, 마지막) -->
+    <rect x="148" y="0" width="36" height="36" rx="6" fill="#3b82f6"/>
+    <text x="166" y="23" text-anchor="middle" class="page-num-active">3</text>
+
+    <!-- 다음 버튼 (비활성) -->
+    <rect x="192" y="0" width="52" height="36" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>
+    <text x="218" y="23" text-anchor="middle" class="nav-text-disabled">다음</text>
+
+    <!-- 설명 -->
+    <text x="268" y="23" class="note">--- 3이 마지막 페이지</text>
+  </g>
+</svg>

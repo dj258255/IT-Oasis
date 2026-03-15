@@ -370,12 +370,9 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 
 페이지 번호 UI는 `hasNext`로 충분히 구현 가능합니다:
 
-```
-hasNext=true  →  [이전] [1] [2] [3] [4] [5] [다음]
-hasNext=false →  [이전] [1] [2] [3]                  (3이 마지막)
-```
+![hasNext 기반 페이지네이션 UI](/uploads/project/WikiEngine/query-refactoring-optimization/pagination-hasnext.svg)
 
-현재 주변 2~3페이지 + [이전]/[다음] 버튼만 표시하면 됩니다.
+현재 주변 페이지 + [이전]/[다음] 버튼만 표시하면 됩니다.
 Google 검색도 2024년 이후 이 방식을 사용하고 있습니다.
 
 > **만약 나중에 "약 N개 결과"가 필요해지면?**
@@ -396,14 +393,7 @@ Google 검색도 2024년 이후 이 방식을 사용하고 있습니다.
 
 Spring Data JPA가 `Pageable` 파라미터를 처리하는 과정:
 
-```
-1. Repository 메서드 호출 시 Pageable 감지
-2. Hibernate Query 객체에 다음을 설정:
-   - query.setFirstResult(pageable.getOffset())   // → SQL OFFSET
-   - query.setMaxResults(pageable.getPageSize())   // → SQL LIMIT
-3. Slice<T> 반환 시: setMaxResults(pageSize + 1)로 변경 (다음 페이지 판별용)
-4. Hibernate가 DB 방언(Dialect)에 맞게 SQL에 LIMIT/OFFSET을 추가
-```
+![Spring Data Pageable 처리 흐름](/uploads/project/WikiEngine/query-refactoring-optimization/spring-data-pageable-flow.svg)
 
 **JPQL에서는** Hibernate가 쿼리 구조를 파싱하여 깨끗하게 LIMIT/OFFSET을 추가합니다.
 
@@ -855,7 +845,7 @@ posting list가 길수록 더 많은 문서를 스코어링해야 하므로 Luce
 
 ### 배경
 
-위의 6단계까지는 **최신 게시글 목록 조회(`GET /posts`)** 최적화였습니다.
+위의 섹션까지는 **최신 게시글 목록 조회(`GET /posts`)** 최적화였습니다.
 검색 API(`GET /posts/search`)는 "Lucene `totalHits`라 COUNT 문제 없음"으로 `Page<T>`를 유지했습니다.
 
 하지만 이후 **총 건수 표시를 제거**하고 **totalPages를 15로 cap**하면서, Page를 유지할 이유가 사라졌습니다:

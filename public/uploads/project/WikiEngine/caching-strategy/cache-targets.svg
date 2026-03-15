@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 210" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .search { fill: #eff6ff; stroke: #3b82f6; }
+    .auto { fill: #f0fdf4; stroke: #22c55e; }
+    .detail { fill: #fef3c7; stroke: #f59e0b; }
+    .num { font-size: 11px; fill: #1e293b; font-weight: 700; }
+    .label { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .key { font-size: 11px; fill: #7c3aed; font-weight: 600; font-family: 'Consolas', monospace; }
+    .val { font-size: 11px; fill: #475569; font-weight: 500; }
+    .arrow-text { font-size: 11px; fill: #94a3b8; }
+  </style>
+
+  <!-- 1. Search Result Cache -->
+  <rect x="16" y="8" width="28" height="20" rx="4" fill="#3b82f6"/>
+  <text x="30" y="22" text-anchor="middle" class="num" fill="#fff">1</text>
+  <text x="54" y="22" class="label">검색 결과 캐싱 (Search Result Cache)</text>
+
+  <rect x="36" y="34" width="640" height="42" class="box search"/>
+  <text x="52" y="54" class="key">"삼성전자" + page=0</text>
+  <text x="220" y="54" class="arrow-text">--></text>
+  <text x="250" y="54" class="val">Page&lt;Post&gt; (Lucene 검색 + DB 엔티티 조회 결과)</text>
+
+  <!-- 2. Autocomplete Cache -->
+  <rect x="16" y="88" width="28" height="20" rx="4" fill="#22c55e"/>
+  <text x="30" y="102" text-anchor="middle" class="num" fill="#fff">2</text>
+  <text x="54" y="102" class="label">자동완성 캐싱 (Autocomplete Cache)</text>
+
+  <rect x="36" y="114" width="640" height="42" class="box auto"/>
+  <text x="52" y="134" class="key">prefix "삼성"</text>
+  <text x="170" y="134" class="arrow-text">--></text>
+  <text x="200" y="134" class="val">["삼성전자", "삼성물산", "삼성SDI", ...] (Lucene PrefixQuery 결과)</text>
+
+  <!-- 3. Post Detail Cache -->
+  <rect x="16" y="168" width="28" height="20" rx="4" fill="#f59e0b"/>
+  <text x="30" y="182" text-anchor="middle" class="num" fill="#fff">3</text>
+  <text x="54" y="182" class="label">게시글 상세 캐싱 (Post Detail Cache)</text>
+
+  <rect x="36" y="194" width="640" height="42" class="box detail" transform="translate(0,-30)"/>
+  <text x="52" y="178" class="key">postId</text>
+  <text x="110" y="178" class="arrow-text">--></text>
+  <text x="140" y="178" class="val">PostDetailResponse (DB SELECT 결과)</text>
+</svg>

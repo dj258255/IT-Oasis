@@ -45,17 +45,9 @@ draft: false
 
 ### 현재 아키텍처
 
-7단계(Lucene + 랭킹)까지의 아키텍처:
+[검색 품질 고도화](/blog/project/wikiengine/search-quality)까지의 아키텍처:
 
-```
-클라이언트 → Spring Boot → Lucene (MMapDirectory, Nori 형태소 분석)
-                            ├── 검색: BM25 멀티필드 (title^3 + content) + 인기도 + 최신성
-                            ├── 자동완성: PrefixQuery (title 필드)
-                            └── 인덱스: 1,425만 건 (NRT 갱신)
-                         → MySQL 8.0
-                            ├── posts (1,477만 건, 122GB) — CRUD + 목록 조회
-                            └── Deferred Join 페이지네이션
-```
+![현재 아키텍처 — Lucene + MySQL, 캐싱 레이어 없음](/uploads/project/WikiEngine/caching-strategy/current-architecture.svg)
 
 현재 요청 흐름:
 - 검색: 클라이언트 → API 서버 → **Lucene 검색 (JVM 내부, SearcherManager acquire/release)**
@@ -74,14 +66,7 @@ draft: false
 
 이 말은 **같은 검색어에 대해 Lucene이 같은 검색을 반복 실행하고 있다**는 뜻입니다. "대한민국"을 100명이 검색하면, SearcherManager acquire → BM25 검색 → DB에서 Post 엔티티 조회를 100번 반복합니다. 99번은 낭비입니다.
 
-```
-현재 (캐시 없음)
-  100명이 "대한민국" 검색 → Lucene 검색 100회 + DB 엔티티 조회 100회
-
-목표 (Caffeine 캐시 적용)
-  100명이 "대한민국" 검색 → Lucene 검색 1회 + DB 조회 1회 + 캐시 반환 99회
-  → Lucene + DB 부하 99% 감소 (해당 검색어에 대해)
-```
+![캐시 Before/After — 100명 검색 시 Lucene+DB 부하 99% 감소](/uploads/project/WikiEngine/caching-strategy/cache-before-after.svg)
 
 **핵심 문제: 부하를 줄여야 비용이 줄어듭니다.**
 
@@ -183,14 +168,7 @@ DB도 InnoDB Buffer Pool이라는 자체 메모리 캐시가 있습니다. Buffe
 
 실무에서는 한 가지 캐시만 쓰지 않습니다. 카카오페이, 올리브영 등 국내 기업들이 실제로 사용하는 구조입니다:
 
-```
-클라이언트
-  → CDN (L3: 정적 자원 + 인기 페이지)
-  → API 서버
-    → Caffeine (L1: 인기 검색어 + 자동완성, TTL 5분)
-    → Redis (L2: 전체 검색 결과, TTL 30분)     ← 서버 여러 대일 때만
-    → MySQL (Source of Truth)
-```
+![멀티 레이어 캐시 아키텍처 — L1(Caffeine) + L2(Redis) + L3(CDN) + MySQL](/uploads/project/WikiEngine/caching-strategy/multi-layer-cache.svg)
 
 카카오페이는 L1(Caffeine) → L2(Redis) → DB 3계층 캐시를 사용하며, Redis Pub/Sub로 L1 캐시 동기화를 처리합니다.
 
@@ -254,19 +232,10 @@ Spring Cache 추상화(`@Cacheable`)를 쓰지 않는 수동 방식이었습니�
 
 ### 캐싱 대상 분석
 
-5단계에서 검색을 Lucene으로 전환했으므로, 포스팅 리스트는 Lucene이 MMapDirectory + OS page cache로 내부 캐싱합니다.
+[Lucene 전환](/blog/project/wikiengine/lucene-decision)에서 검색을 Lucene으로 전환했으므로, 포스팅 리스트는 Lucene이 MMapDirectory + OS page cache로 내부 캐싱합니다.
 앱 레벨에서 캐싱할 대상은 3가지입니다:
 
-```
-1. 검색 결과 캐싱 (Search Result Cache)
-   └─ "삼성전자" + page=0 → Page<Post> (Lucene 검색 + DB 엔티티 조회 결과)
-
-2. 자동완성 캐싱 (Autocomplete Cache)
-   └─ prefix "삼성" → ["삼성전자", "삼성물산", "삼성SDI", ...] (Lucene PrefixQuery 결과)
-
-3. 게시글 상세 캐싱 (Post Detail Cache)
-   └─ postId → PostDetailResponse (DB SELECT 결과)
-```
+![캐싱 대상 3가지 — 검색 결과, 자동완성, 게시글 상세](/uploads/project/WikiEngine/caching-strategy/cache-targets.svg)
 
 ~~포스팅 리스트 캐싱~~ — Lucene MMapDirectory가 OS page cache 활용, 별도 앱 캐시 불필요
 
@@ -372,12 +341,7 @@ public class CacheConfig {
 
 검색에서 가장 일반적인 캐싱 전략은 Cache-Aside(Lazy Loading)입니다. 애플리케이션이 캐시와 DB를 명시적으로 관리합니다.
 
-```
-1. 검색 요청 수신
-2. 캐시에서 검색 (key = "search:{keyword}:page:{n}")
-3-a. 캐시 히트 → 즉시 반환 (Lucene/DB 접근 없음)
-3-b. 캐시 미스 → Lucene 검색 → DB에서 Post 엔티티 조회 → 결과를 캐시에 저장 → 반환
-```
+![Cache-Aside 패턴 — 히트 시 즉시 반환, 미스 시 Lucene+DB 조회 후 캐시 저장](/uploads/project/WikiEngine/caching-strategy/cache-aside-flow.svg)
 
 > 출처: [AWS — Database Caching Strategies Using Redis](https://docs.aws.amazon.com/whitepapers/latest/database-caching-strategies-using-redis/caching-patterns.html)
 
@@ -547,14 +511,7 @@ public ResponseEntity<List<String>> autocomplete(@RequestParam String prefix) {
 
 ### stale-while-revalidate 동작
 
-```
-0분: 브라우저가 서버에 요청 → 응답 저장 (max-age=5분)
-3분: 같은 요청 → 브라우저 캐시에서 즉시 반환 (네트워크 0건)
-5분: 캐시 만료, 하지만 stale-while-revalidate=60초이므로:
-     → 이전 캐시를 즉시 반환 (사용자 대기 없음)
-     → 백그라운드에서 서버에 갱신 요청
-6분: 다음 요청부터 갱신된 데이터 반환
-```
+![stale-while-revalidate 동작 타임라인](/uploads/project/WikiEngine/caching-strategy/stale-while-revalidate.svg)
 
 ---
 
@@ -744,15 +701,15 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 | 메모리 사용률 | 56.1% / 28.9% / 44.8% |
 | 컨테이너 CPU (wiki-mysql-prod) | 피크 ~170% |
 
-### Phase 6 대비 성능 변화 — 왜 70배 느려졌는가
+### [이전 단계](/blog/project/wikiengine/query-refactoring-optimization) 대비 성능 변화 — 왜 70배 느려졌는가
 
 #### 무엇이 바뀌었나
 
-Phase 6까지는 **BM25 스코어링만** 사용했습니다.
+[이전 단계](/blog/project/wikiengine/query-refactoring-optimization)까지는 **BM25 스코어링만** 사용했습니다.
 Lucene은 BM25 단독 스코어링에서 Block-Max WAND 최적화를 적용할 수 있어서,
 posting list 전체를 순회하지 않고 top-k 결과를 빠르게 추출합니다.
 
-Phase 7에서 검색 품질을 올리기 위해 **3개의 추가 스코어링 요소**를 도입했습니다:
+[검색 품질 고도화](/blog/project/wikiengine/search-quality)에서 검색 품질을 올리기 위해 **3개의 추가 스코어링 요소**를 도입했습니다:
 
 | 추가 요소 | 역할 | 비용 |
 |----------|------|------|
@@ -765,11 +722,11 @@ Phase 7에서 검색 품질을 올리기 위해 **3개의 추가 스코어링 �
 "대한민국" 같은 고빈도 토큰은 **수만~수십만 건**이 매칭됩니다.
 
 ```
-Phase 6 (BM25만):
+이전 단계 (BM25만):
   "대한민국" 검색 -> posting list 순회 + BM25 score만 계산
   -> WAND 최적화로 일부만 평가 -> ~25ms
 
-Phase 7 (BM25 + FeatureField + RecencyDecay):
+검색 품질 고도화 후 (BM25 + FeatureField + RecencyDecay):
   "대한민국" 검색 -> posting list 순회 + BM25 score 계산
   + viewCount DocValues 읽기 (매칭 문서마다)
   + likeCount DocValues 읽기 (매칭 문서마다)
@@ -779,7 +736,7 @@ Phase 7 (BM25 + FeatureField + RecencyDecay):
 
 smoke(5 VU)에서 이를 확인할 수 있습니다:
 
-| 시나리오 | Phase 6 smoke | Phase 7 smoke | 변화 |
+| 시나리오 | 이전 단계 smoke | 품질 고도화 후 smoke | 변화 |
 |----------|-------------|-------------|------|
 | 검색 (전체) | 66ms | 184ms | 2.8배 |
 | 희귀 토큰 | -- | 21ms | 빠름 (posting list 짧음) |
@@ -792,7 +749,7 @@ smoke(5 VU)에서 이를 확인할 수 있습니다:
 
 #### 왜 검색 외에 전부 느려졌나 (100 VU)
 
-| 시나리오 | Phase 6 load (100 VU) | Phase 7 load (100 VU) | 변화 |
+| 시나리오 | 이전 단계 load (100 VU) | 품질 고도화 후 load (100 VU) | 변화 |
 |----------|---------------------|---------------------|------|
 | 검색 평균 | 20.51ms | 1,443ms | **70배** |
 | 자동완성 평균 | 5.91ms | 368ms | **62배** |
@@ -806,7 +763,7 @@ smoke(5 VU)에서 이를 확인할 수 있습니다:
 ```
 원인 체인:
 
-1. Phase 7 검색 = BM25 + DocValues 3회 -> 검색 1건당 CPU 시간 증가
+1. 품질 고도화 후 검색 = BM25 + DocValues 3회 -> 검색 1건당 CPU 시간 증가
 2. 100 VU 동시 검색 -> 2코어 CPU 포화 (App CPU 80~100%)
 3. CPU 대기열 형성 -> 모든 요청이 CPU 순번을 기다림
 4. 자동완성/목록/상세도 CPU 대기열에 갇힘 -> 전체 응답시간 폭증
@@ -814,7 +771,7 @@ smoke(5 VU)에서 이를 확인할 수 있습니다:
 6. JVM 스레드 20 -> 100+ 폭증 -> 컨텍스트 스위칭 오버헤드 추가
 ```
 
-이것은 Phase 6에서 deep OFFSET이 CPU를 포화시켜 전체 API가 무너졌던 것과 **동일한 패턴**입니다.
+이것은 [이전 단계](/blog/project/wikiengine/query-refactoring-optimization)에서 deep OFFSET이 CPU를 포화시켜 전체 API가 무너졌던 것과 **동일한 패턴**입니다.
 단일 병목(이번엔 검색 스코어링)이 공유 자원(CPU)을 독점하면, 무관한 API까지 연쇄 지연됩니다.
 
 #### 왜 캐싱이 해답인가

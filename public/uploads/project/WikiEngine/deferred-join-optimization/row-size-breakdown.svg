@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 100" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .col { rx: 4; stroke-width: 1; }
+    .small { fill: #eff6ff; stroke: #93c5fd; }
+    .big { fill: #fef2f2; stroke: #ef4444; }
+    .col-label { font-size: 10px; fill: #1e293b; font-weight: 600; text-anchor: middle; }
+    .col-size { font-size: 9px; fill: #64748b; text-anchor: middle; }
+    .note { font-size: 11px; fill: #64748b; }
+    .note-red { font-size: 11px; fill: #ef4444; font-weight: 600; }
+  </style>
+
+  <!-- Row bar -->
+  <rect x="16" y="12" width="30" height="40" class="col small"/>
+  <text x="31" y="30" class="col-label">id</text>
+  <text x="31" y="46" class="col-size">8B</text>
+
+  <rect x="50" y="12" width="60" height="40" class="col small"/>
+  <text x="80" y="30" class="col-label">title</text>
+  <text x="80" y="46" class="col-size">~512B</text>
+
+  <rect x="114" y="12" width="340" height="40" class="col big"/>
+  <text x="284" y="30" class="col-label">content (LONGTEXT)</text>
+  <text x="284" y="46" class="col-size">수 KB ~ 수십 KB (평균 ~13KB)</text>
+
+  <rect x="458" y="12" width="36" height="40" class="col small"/>
+  <text x="476" y="30" class="col-label">author</text>
+  <text x="476" y="46" class="col-size">8B</text>
+
+  <rect x="498" y="12" width="36" height="40" class="col small"/>
+  <text x="516" y="30" class="col-label">cat_id</text>
+  <text x="516" y="46" class="col-size">8B</text>
+
+  <rect x="538" y="12" width="36" height="40" class="col small"/>
+  <text x="556" y="30" class="col-label">views</text>
+  <text x="556" y="46" class="col-size">8B</text>
+
+  <rect x="578" y="12" width="36" height="40" class="col small"/>
+  <text x="596" y="30" class="col-label">likes</text>
+  <text x="596" y="46" class="col-size">8B</text>
+
+  <rect x="618" y="12" width="36" height="40" class="col small"/>
+  <text x="636" y="30" class="col-label">created</text>
+  <text x="636" y="46" class="col-size">8B</text>
+
+  <rect x="658" y="12" width="36" height="40" class="col small"/>
+  <text x="676" y="30" class="col-label">updated</text>
+  <text x="676" y="46" class="col-size">8B</text>
+
+  <!-- Bottom note -->
+  <text x="16" y="76" class="note-red">content가 행 크기의 대부분을 차지.</text>
+  <text x="270" y="76" class="note">OFFSET 20,000행 x ~13KB = ~260MB를 읽고 버림.</text>
+  <text x="16" y="92" class="note">content 없이 나머지 컬럼만이면 ~600B x 20,000 = ~12MB (1/20 수준)</text>
+</svg>

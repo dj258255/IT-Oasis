@@ -1010,7 +1010,7 @@ searcher.setSimilarity(similarity);
 
 ### 6-6. 자동완성 v2 (Lucene PrefixQuery)
 
-1단계의 LIKE 기반 자동완성을 Lucene PrefixQuery로 개선합니다.
+[자동완성 B-Tree 인덱스 걸기](/blog/project/wikiengine/autocomplete-btree-index)의 LIKE 기반 자동완성을 Lucene PrefixQuery로 개선합니다.
 
 **v1의 문제점:**
 - 제목만 검색 가능 → 본문에 있는 키워드는 자동완성 불가
@@ -2529,7 +2529,7 @@ Wiki documents range from hundreds to tens of thousands of characters, so loweri
 
 ### 6-6. Autocomplete v2 (Lucene PrefixQuery)
 
-Improving the Phase 1 LIKE-based autocomplete with Lucene PrefixQuery.
+Improving the [B-Tree autocomplete](/blog/project/wikiengine/autocomplete-btree-index) LIKE-based autocomplete with Lucene PrefixQuery.
 
 **v1 problems:**
 - Only title searchable -> keywords in body cannot trigger autocomplete

@@ -18,7 +18,7 @@ coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-e
 
 ## 이전 단계 요약
 
-1단계에서 `LIKE '%keyword%'` 검색이 Full Table Scan으로 시스템을 마비시키는 문제를 발견하고, 긴급 완화 조치(content LIKE 제거, 5초 타임아웃, HikariCP Fail-Fast)로 시스템 마비를 방지했습니다.
+[이전 글](/blog/project/wikiengine/search-system-crash)에서 `LIKE '%keyword%'` 검색이 Full Table Scan으로 시스템을 마비시키는 문제를 발견하고, 긴급 완화 조치(content LIKE 제거, 5초 타임아웃, HikariCP Fail-Fast)로 시스템 마비를 방지했습니다.
 
 검색은 여전히 타임아웃으로 실패하지만, 자동완성(`LIKE 'prefix%'`)은 후방 와일드카드이므로 B-Tree 인덱스를 활용할 수 있을 것이라 예상했습니다.
 
@@ -33,7 +33,7 @@ coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-e
 
 `LIKE 'prefix%'`는 후방 와일드카드입니다. B-Tree 인덱스는 값의 앞부분부터 정렬되어 있으므로, `LIKE 'prefix%'`는 인덱스의 정렬 순서를 활용하여 range scan이 가능한 패턴입니다. 검색(`LIKE '%keyword%'`)과 달리 인덱스만 추가하면 빠르게 동작할 것이라 예상했습니다.
 
-단, 1단계에서는 Baseline 측정을 위해 의도적으로 인덱스를 추가하지 않은 상태였습니다. 인덱스 없는 상태의 성능을 기록해야 Before/After 비교가 가능하기 때문입니다.
+단, [이전 글](/blog/project/wikiengine/search-system-crash)에서는 Baseline 측정을 위해 의도적으로 인덱스를 추가하지 않은 상태였습니다. 인덱스 없는 상태의 성능을 기록해야 Before/After 비교가 가능하기 때문입니다.
 
 ---
 
@@ -185,7 +185,7 @@ B-Tree 인덱스는 값의 앞부분부터 정렬되어 있으므로, `LIKE 'pre
 
 ## Previous Step Summary
 
-In step 1, we discovered that `LIKE '%keyword%'` search caused Full Table Scan that brought the system down, and applied emergency mitigations (removing content LIKE, 5-second timeout, HikariCP Fail-Fast) to prevent system paralysis.
+In the [previous post](/blog/project/wikiengine/search-system-crash), we discovered that `LIKE '%keyword%'` search caused Full Table Scan that brought the system down, and applied emergency mitigations (removing content LIKE, 5-second timeout, HikariCP Fail-Fast) to prevent system paralysis.
 
 Search still fails with timeout, but autocomplete (`LIKE 'prefix%'`) uses a trailing wildcard, so we expected it could leverage a B-Tree index.
 
@@ -199,7 +199,7 @@ Autocomplete returns the top 10 titles starting with the given prefix, sorted by
 
 `LIKE 'prefix%'` is a trailing wildcard. Since B-Tree indexes are sorted from the beginning of values, `LIKE 'prefix%'` can leverage the index's sort order for range scan. Unlike search (`LIKE '%keyword%'`), we expected it would work fast simply by adding an index.
 
-However, in step 1, we intentionally did not add indexes to measure the baseline. We needed to record index-free performance for Before/After comparison.
+However, in the [previous post](/blog/project/wikiengine/search-system-crash), we intentionally did not add indexes to measure the baseline. We needed to record index-free performance for Before/After comparison.
 
 ---
 

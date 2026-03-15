@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .time-label { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .time-sub { font-size: 11px; fill: #475569; font-weight: 500; }
+    .fresh { fill: #f0fdf4; stroke: #22c55e; stroke-width: 1.5; rx: 8; }
+    .stale { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.5; rx: 8; }
+    .expired { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1.5; rx: 8; }
+    .revalidate { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 8; }
+    .badge-green { font-size: 10px; fill: #fff; font-weight: 600; }
+    .note { font-size: 10.5px; fill: #64748b; }
+    .note-bold { font-size: 10.5px; fill: #1e293b; font-weight: 600; }
+    .timeline { stroke: #cbd5e1; stroke-width: 2; }
+    .dot { fill: #3b82f6; }
+    .dot-label { font-size: 11px; fill: #3b82f6; font-weight: 700; }
+  </style>
+
+  <!-- Timeline -->
+  <line x1="60" y1="30" x2="680" y2="30" class="timeline"/>
+
+  <!-- 0분 -->
+  <circle cx="80" cy="30" r="5" class="dot"/>
+  <text x="80" y="20" text-anchor="middle" class="dot-label">0분</text>
+
+  <rect x="60" y="44" width="140" height="52" class="fresh"/>
+  <text x="76" y="62" class="time-label">서버에 요청</text>
+  <text x="76" y="80" class="time-sub">응답 저장 (max-age=5분)</text>
+
+  <!-- 3분 -->
+  <circle cx="270" cy="30" r="5" class="dot"/>
+  <text x="270" y="20" text-anchor="middle" class="dot-label">3분</text>
+
+  <rect x="220" y="44" width="180" height="52" class="fresh"/>
+  <rect x="230" y="50" width="70" height="16" rx="3" fill="#22c55e"/>
+  <text x="265" y="62" text-anchor="middle" class="badge-green">캐시 히트</text>
+  <text x="230" y="80" class="note-bold">브라우저 캐시에서 즉시 반환</text>
+  <text x="230" y="92" class="note">네트워크 0건</text>
+
+  <!-- 5분 -->
+  <circle cx="460" cy="30" r="5" class="dot"/>
+  <text x="460" y="20" text-anchor="middle" class="dot-label">5분</text>
+
+  <rect x="410" y="44" width="260" height="76" class="stale"/>
+  <rect x="420" y="50" width="115" height="16" rx="3" fill="#f59e0b"/>
+  <text x="477" y="62" text-anchor="middle" class="badge-green">캐시 만료 + SWR</text>
+  <text x="420" y="80" class="note-bold">이전 캐시를 즉시 반환</text>
+  <text x="420" y="94" class="note">(사용자 대기 없음)</text>
+
+  <rect x="410" y="128" width="260" height="40" class="revalidate"/>
+  <text x="420" y="148" class="time-sub">백그라운드에서 서버에 갱신 요청</text>
+  <text x="420" y="162" class="note">stale-while-revalidate=60초 구간</text>
+
+  <!-- 6분 -->
+  <circle cx="640" cy="30" r="5" class="dot"/>
+  <text x="640" y="20" text-anchor="middle" class="dot-label">6분</text>
+
+  <rect x="600" y="44" width="100" height="52" class="fresh"/>
+  <text x="610" y="62" class="time-label">갱신 완료</text>
+  <text x="610" y="80" class="time-sub">새 데이터 반환</text>
+
+  <!-- 하단 범례 -->
+  <rect x="40" y="200" width="16" height="16" rx="3" fill="#22c55e"/>
+  <text x="64" y="213" class="note">Fresh (max-age 이내)</text>
+
+  <rect x="220" y="200" width="16" height="16" rx="3" fill="#f59e0b"/>
+  <text x="244" y="213" class="note">Stale (만료 + SWR 구간)</text>
+
+  <rect x="420" y="200" width="16" height="16" rx="3" fill="#3b82f6"/>
+  <text x="444" y="213" class="note">Revalidate (백그라운드 갱신)</text>
+
+  <text x="40" y="246" class="note">Cache-Control: max-age=300, stale-while-revalidate=60  |  사용자는 만료 시점에도 대기 없이 즉시 응답을 받음</text>
+</svg>

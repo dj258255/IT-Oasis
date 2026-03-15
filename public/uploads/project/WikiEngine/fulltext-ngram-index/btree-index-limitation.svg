@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 120" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .node { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 6; }
+    .node-text { font-size: 11px; fill: #1e293b; font-weight: 600; }
+    .arrow { font-size: 11px; fill: #94a3b8; }
+    .ok { font-size: 11px; fill: #22c55e; font-weight: 600; }
+    .fail { font-size: 11px; fill: #ef4444; font-weight: 600; }
+    .note { font-size: 10.5px; fill: #64748b; }
+  </style>
+  <text x="16" y="20" class="heading">B-Tree 인덱스 (title) — 앞부분부터 정렬</text>
+  <rect x="16" y="30" width="80" height="28" class="node"/><text x="30" y="49" class="node-text">대한민국</text>
+  <text x="102" y="49" class="arrow">--></text>
+  <rect x="120" y="30" width="110" height="28" class="node"/><text x="128" y="49" class="node-text">대한민국의 역사</text>
+  <text x="236" y="49" class="arrow">--></text>
+  <rect x="254" y="30" width="80" height="28" class="node"/><text x="262" y="49" class="node-text">대한항공</text>
+  <text x="340" y="49" class="arrow">--></text>
+  <rect x="358" y="30" width="86" height="28" class="node"/><text x="366" y="49" class="node-text">페텔기우스</text>
+  <text x="450" y="49" class="arrow">--></text>
+  <text x="470" y="49" class="arrow">...</text>
+
+  <text x="16" y="84" class="ok">LIKE '페텔%'</text><text x="110" y="84" class="note">--> "페" 위치부터 range scan 가능</text>
+  <text x="16" y="104" class="fail">LIKE '%페텔%'</text><text x="110" y="104" class="note">--> "페텔"이 문자열 어디에 있는지 알 수 없음 --> 전체 스캔</text>
+</svg>

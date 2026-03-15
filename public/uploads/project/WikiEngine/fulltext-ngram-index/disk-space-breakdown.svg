@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 140" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .row { rx: 6; stroke-width: 1; }
+    .data { fill: #eff6ff; stroke: #3b82f6; }
+    .temp { fill: #fef3c7; stroke: #f59e0b; }
+    .idx { fill: #fce7f3; stroke: #ec4899; }
+    .total { fill: #fef2f2; stroke: #ef4444; stroke-width: 2; }
+    .label { font-size: 11px; fill: #1e293b; font-weight: 600; }
+    .size { font-size: 12px; fill: #1e293b; font-weight: 700; font-family: 'Consolas', monospace; }
+    .note { font-size: 10px; fill: #64748b; }
+    .note-red { font-size: 11px; fill: #ef4444; font-weight: 600; }
+    .plus { font-size: 14px; fill: #94a3b8; font-weight: 700; }
+    .eq { font-size: 14px; fill: #ef4444; font-weight: 700; }
+  </style>
+
+  <text x="16" y="18" class="heading">인덱스 생성 시 디스크 사용량</text>
+
+  <rect x="16" y="30" width="160" height="40" class="row data"/>
+  <text x="26" y="48" class="label">원본 데이터 Full Scan</text>
+  <text x="26" y="62" class="size">122GB</text>
+
+  <text x="184" y="56" class="plus">+</text>
+
+  <rect x="200" y="30" width="160" height="40" class="row temp"/>
+  <text x="210" y="48" class="label">임시 정렬 파일</text>
+  <text x="210" y="62" class="size">~122GB</text>
+
+  <text x="368" y="56" class="plus">+</text>
+
+  <rect x="384" y="30" width="160" height="40" class="row idx"/>
+  <text x="394" y="48" class="label">FULLTEXT 인덱스 (생성 중)</text>
+  <text x="394" y="62" class="size">976억 토큰</text>
+
+  <text x="552" y="56" class="eq">=</text>
+
+  <rect x="568" y="30" width="80" height="40" class="row total"/>
+  <text x="578" y="56" class="size">300GB+</text>
+
+  <text x="16" y="96" class="note">Row-Oriented라 content만 읽을 수 없음</text>
+  <text x="200" y="96" class="note">토큰 정렬용</text>
+  <text x="384" y="96" class="note">역색인</text>
+  <text x="568" y="96" class="note-red">서버 여유 253GB 초과</text>
+</svg>

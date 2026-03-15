@@ -81,17 +81,7 @@ k6 load 테스트(100 VU, 20분) 결과:
 **이 프로젝트의 현재 설정**: `new KoreanAnalyzer()` = **`DecompoundMode.DISCARD`** (기본값).
 복합명사를 분해하되 원형을 폐기합니다. "세종시"로 검색하면 내부적으로 "세종" + "시"로 분해됩니다.
 
-```
-"세종시" → Nori DISCARD mode:
-  position 0: "세종"   ← 원형 "세종시" 폐기됨
-  position 1: "시"
-
-"인공지능기술" → Nori DISCARD mode:
-  position 0: "인공"
-  position 1: "지능"
-  position 2: "기술"
-  → "인공지능"이라는 원형도 폐기됨
-```
+![Nori DISCARD 모드 — 복합명사 분해, 원형 폐기](/uploads/project/WikiEngine/search-quality/nori-discard-mode.svg)
 
 DISCARD 모드에서 PhraseQuery(slop=0)이 실패하는 이유는 position 충돌이 아니라 **조사 삽입** 때문입니다:
 - "인공지능**의** 기술" → "인공" + "지능" + "기술" (조사 "의"는 POS StopFilter로 제거)
@@ -101,13 +91,7 @@ DISCARD 모드에서 PhraseQuery(slop=0)이 실패하는 이유는 position 충�
 
 `DecompoundMode.MIXED`는 원형과 분해 토큰이 **같은 position에 겹치면서** 구절 검색이 더 불안정해집니다:
 
-```
-"인공지능기술" → Nori mixed mode 토큰화:
-  position 0: "인공"
-  position 0: "인공지능" (compound, positionIncrement=0)  ← 같은 위치!
-  position 1: "지능"
-  position 2: "기술"
-```
+![Nori MIXED 모드 — 원형과 분해 토큰이 같은 position에 겹침](/uploads/project/WikiEngine/search-quality/nori-mixed-mode.svg)
 
 **결론**: DISCARD든 MIXED든 한국어 구절 검색에서는 **slop=2가 실용적**입니다. DISCARD에서는 조사/수식어 삽입을, MIXED에서는 position 겹침까지 추가로 흡수합니다.
 
@@ -119,13 +103,7 @@ DISCARD 모드에서 PhraseQuery(slop=0)이 실패하는 이유는 position 충�
 | **PhraseQuery (slop=2)** | compound 분해 차이를 흡수, 조사 허용 | 약간의 false positive | **채택** |
 | **BooleanQuery (MUST)** | 가장 안전, position 무관 | 구절 순서 무시 | 현재 기본 검색 |
 
-```
-PhraseQuery(slop=2) 매칭 예시:
-  "인공지능 기술" → 편집 거리(term 이동 횟수) 2 이내면 매칭
-  → "인공지능 관련 기술" (1회 이동) O 매칭
-  → "기술과 인공지능" (순서 역전, 2회 이동) O 매칭 — slop=2면 2-term 역전도 허용
-  → "인공지능을 활용한 새로운 기술" (3회 이동) X (범위 초과)
-```
+![PhraseQuery(slop=2) 매칭 예시 — 편집 거리 기반](/uploads/project/WikiEngine/search-quality/phrasequery-slop2-examples.svg)
 
 > **참고**: PhraseQuery의 slop은 단순한 position 차이가 아니라 **편집 거리**(term 이동 횟수)입니다. 순서를 뒤집으려면 2회 이동이 필요하므로, slop=2이면 2-term 역전도 매칭됩니다. 순서 역전을 명시적으로 차단하려면 `SpanNearQuery(inOrder=true)`를 사용해야 합니다.
 

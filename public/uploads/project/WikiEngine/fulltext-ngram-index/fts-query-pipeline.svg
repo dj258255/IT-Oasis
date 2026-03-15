@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 310" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .step { rx: 8; stroke-width: 1.5; }
+    .s1 { fill: #f8fafc; stroke: #e2e8f0; }
+    .s4 { fill: #fef2f2; stroke: #ef4444; }
+    .num-bg { fill: #3b82f6; }
+    .num-bg-red { fill: #ef4444; }
+    .num { font-size: 11px; fill: #fff; font-weight: 700; }
+    .title { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .code { font-size: 10px; fill: #7c3aed; font-family: 'Consolas', monospace; }
+    .detail { font-size: 10.5px; fill: #475569; }
+    .count { font-size: 10.5px; fill: #64748b; font-style: italic; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .badge-red { font-size: 9px; fill: #fff; font-weight: 600; }
+  </style>
+  <defs><marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker></defs>
+
+  <!-- Step 1 -->
+  <rect x="12" y="8" width="676" height="42" class="step s1"/>
+  <circle cx="32" cy="29" r="10" class="num-bg"/><text x="32" y="33" text-anchor="middle" class="num">1</text>
+  <text x="50" y="24" class="title">쿼리 파싱</text><text x="130" y="24" class="code">fts_query_parse()</text>
+  <text x="50" y="40" class="detail">"대한민국" --> ngram(2) --> 토큰: "대한", "한민", "민국"</text>
+
+  <path d="M 350 50 L 350 60" class="arrow"/>
+
+  <!-- Step 2 -->
+  <rect x="12" y="62" width="676" height="56" class="step s1"/>
+  <circle cx="32" cy="83" r="10" class="num-bg"/><text x="32" y="87" text-anchor="middle" class="num">2</text>
+  <text x="50" y="78" class="title">포스팅 목록 조회</text><text x="170" y="78" class="code">fts_query_execute()</text>
+  <text x="50" y="94" class="detail">"대한" --> doc_id 집합 A</text><text x="280" y="94" class="count">(196,593건)</text>
+  <text x="50" y="108" class="detail">"한민" --> 집합 B (45,200건)  |  "민국" --> 집합 C (38,100건)</text>
+
+  <path d="M 350 118 L 350 128" class="arrow"/>
+
+  <!-- Step 3 -->
+  <rect x="12" y="130" width="676" height="42" class="step s1"/>
+  <circle cx="32" cy="151" r="10" class="num-bg"/><text x="32" y="155" text-anchor="middle" class="num">3</text>
+  <text x="50" y="146" class="title">교집합</text><text x="105" y="146" class="code">fts_query_intersect()</text>
+  <text x="50" y="162" class="detail">A n B n C --> RB-tree 기반 교집합 --> ~30,000 후보 문서</text>
+
+  <path d="M 350 172 L 350 182" class="arrow"/>
+
+  <!-- Step 4 (병목) -->
+  <rect x="12" y="184" width="676" height="56" class="step s4"/>
+  <circle cx="32" cy="205" r="10" class="num-bg-red"/><text x="32" y="209" text-anchor="middle" class="num">4</text>
+  <text x="50" y="200" class="title">구절 검증</text><text x="120" y="200" class="code">fts_query_match_phrase()</text>
+  <rect x="330" y="190" width="70" height="16" rx="3" fill="#ef4444"/><text x="365" y="202" text-anchor="middle" class="badge-red">핵심 병목</text>
+  <text x="50" y="216" class="detail">후보 문서마다 실제 텍스트를 읽어서 "대한"-->"한민"-->"민국"이 연속 위치인지 확인</text>
+  <text x="50" y="232" class="detail">ib_vector_t 순차 탐색으로 처리 -- O(후보 x 출현 횟수 x 토큰 수)</text>
+
+  <path d="M 350 240 L 350 250" class="arrow"/>
+
+  <!-- Step 5 -->
+  <rect x="12" y="252" width="676" height="42" class="step s1"/>
+  <circle cx="32" cy="273" r="10" class="num-bg"/><text x="32" y="277" text-anchor="middle" class="num">5</text>
+  <text x="50" y="268" class="title">랭킹</text><text x="95" y="268" class="code">fts_query_calculate_ranking()</text>
+  <text x="50" y="284" class="detail">IDF 기반 BM25 점수 계산 --> 정렬 --> 반환</text>
+</svg>

@@ -87,15 +87,7 @@ page 1000이면 `OFFSET 20,000`입니다. 이 30%의 deep page 요청이 평균�
 
 InnoDB에서 `SELECT *`가 실행되면:
 
-```
-[1] idx_posts_created_at (세컨더리 인덱스)
-    → created_at 값 + PK(id) 만 저장됨
-    → 인덱스만으로는 title, content 등을 알 수 없음
-
-[2] 클러스터 인덱스 (PK 인덱스 = 실제 데이터)
-    → id, title, content(LONGTEXT), author_id, ... 전체 행이 저장됨
-    → 세컨더리 인덱스에서 PK를 얻은 뒤, 여기서 전체 행을 읽음
-```
+![InnoDB 세컨더리 인덱스 → 클러스터 인덱스 구조](/uploads/project/WikiEngine/deferred-join-optimization/innodb-index-structure.svg)
 
 `SELECT *`이므로 MySQL은 세컨더리 인덱스에서 PK를 찾고, 다시 클러스터 인덱스로 가서 **전체 행을 읽어야 합니다**. 이 과정에서 `content`(LONGTEXT)도 함께 읽힙니다.
 
@@ -116,10 +108,7 @@ InnoDB에서 `SELECT *`가 실행되면:
 
 OFFSET에서 "읽고 버리는" 비용은 **행의 크기에 비례**합니다. `posts` 테이블의 컬럼 구성을 보면:
 
-```
-id(8B) + title(~512B) + content(LONGTEXT, 수KB~수십KB) + author_id(8B)
-+ category_id(8B) + view_count(8B) + like_count(8B) + created_at(8B) + updated_at(8B)
-```
+![posts 테이블 행 크기 분해 — content가 대부분](/uploads/project/WikiEngine/deferred-join-optimization/row-size-breakdown.svg)
 
 `content`(LONGTEXT)가 행 크기의 대부분을 차지합니다. 위키피디아 문서 평균 6,586자(약 13KB)이므로, OFFSET 20,000개 행을 읽으면 **약 260MB의 데이터를 읽고 버리는** 셈입니다. 만약 `content` 없이 나머지 컬럼만이라면 ~12MB로 1/20 수준입니다.
 
@@ -274,14 +263,7 @@ Deferred Join의 효과는 페이지 깊이에 따라 다르게 나타납니다.
 - 인덱스 스캔이 전체 비용의 **~85%를 차지**하므로, 클러스터 I/O를 제거해도 개선폭이 제한적
 - 그래도 LONGTEXT 읽기가 사라져 13~19%는 확실히 개선됨
 
-```
-OFFSET 크기와 Deferred Join 효과:
-
-OFFSET 200   (page 10)  : ████████████░░░░ ~60% 개선 — 클러스터 I/O 비중 큼
-OFFSET 2,000 (page 100) : █████████░░░░░░░ ~40% 개선
-OFFSET 10,000 (page 500) : ████░░░░░░░░░░░░ ~20% 개선
-OFFSET 20,000 (page 1000): ██░░░░░░░░░░░░░░ ~13% 개선 — 인덱스 스캔이 지배적
-```
+![OFFSET 크기와 Deferred Join 효과 — 얕을수록 효과 큼](/uploads/project/WikiEngine/deferred-join-optimization/deferred-join-effect-by-offset.svg)
 
 즉, **Deferred Join은 OFFSET이 작을수록 효과가 크고, OFFSET이 커질수록 효과가 줄어듭니다.** 일반 사용자 트래픽의 대부분(~90%)은 page 1~10이므로, 평균 체감 개선은 k6 측정치(13%)보다 훨씬 클 수 있습니다.
 
@@ -349,11 +331,7 @@ Deferred Join은 15%에 해당하는 LONGTEXT 읽기를 제거했지만, 85%에 
 
 ### OFFSET이 근본적으로 느린 이유
 
-```
-OFFSET 0     → 인덱스 시작점에서 즉시 읽기 → ~10ms
-OFFSET 1,000 → 1,020개 인덱스 엔트리 스캔 → ~100ms
-OFFSET 20,000 → 20,020개 인덱스 엔트리 스캔 → ~2,000ms
-```
+![OFFSET 스캔 비용 — O(N) 선형 증가](/uploads/project/WikiEngine/deferred-join-optimization/offset-scan-cost.svg)
 
 OFFSET은 "N개를 건너뛰어라"가 아니라 "N개를 읽고 버려라"입니다. 인덱스가 있어도, B-Tree의 리프 노드를 하나씩 따라가며 20,020개를 카운트해야 합니다. 이건 Deferred Join으로 해결할 수 없는 구조적 한계입니다.
 
@@ -457,15 +435,7 @@ Keyset Pagination(`WHERE created_at < :cursor`)은 OFFSET을 제거하여 O(1) �
 
 Slack, Twitter, Instagram이 커서 기반을 쓰는 이유는 **UI가 무한 스크롤**이기 때문입니다. 페이지 번호가 있는 게시판 UI에서는 "3페이지 → 7페이지"로 바로 이동하는 게 당연한 기대이고, 커서 방식은 이를 지원할 수 없습니다.
 
-```
-페이지 번호 UI (게시판, Google 검색, 위키피디아):
-  → OFFSET + 페이지 제한이 적합
-  → Google도 결과를 ~30페이지까지만 제공
-
-무한 스크롤 UI (Twitter, Instagram, Slack):
-  → Keyset(커서)이 적합
-  → "다음 20개" 요청만 하면 됨
-```
+![페이지네이션 UI 비교 — 페이지 번호 vs 무한 스크롤](/uploads/project/WikiEngine/deferred-join-optimization/pagination-ui-comparison.svg)
 
 현재 서비스는 페이지 번호 UI를 사용하고 있으므로, **Deferred Join + 최대 페이지 제한** 조합이 현 요구사항에 맞는 선택입니다. 무한 스크롤 UI를 도입하게 되면 Keyset Pagination을 재검토할 예정입니다.
 
@@ -554,15 +524,7 @@ Since the `created_at DESC` index exists, no filesort occurs. The problem is the
 
 When `SELECT *` is executed in InnoDB:
 
-```
-[1] idx_posts_created_at (secondary index)
-    → Only stores created_at value + PK(id)
-    → Cannot determine title, content, etc. from index alone
-
-[2] Clustered index (PK index = actual data)
-    → Stores the full row: id, title, content(LONGTEXT), author_id, ...
-    → After obtaining PK from secondary index, reads full row here
-```
+![InnoDB Secondary Index → Clustered Index Structure](/uploads/project/WikiEngine/deferred-join-optimization/innodb-index-structure.svg)
 
 Since it's `SELECT *`, MySQL finds the PK in the secondary index, then goes to the clustered index to **read the full row**. In the process, `content` (LONGTEXT) is also read.
 
@@ -583,10 +545,7 @@ The problem is that clustered index random I/O occurs for 20,000 useless rows. M
 
 The "read and discard" cost in OFFSET is **proportional to row size**. Looking at the column composition of the `posts` table:
 
-```
-id(8B) + title(~512B) + content(LONGTEXT, several KB~tens of KB) + author_id(8B)
-+ category_id(8B) + view_count(8B) + like_count(8B) + created_at(8B) + updated_at(8B)
-```
+![Row size breakdown — content dominates](/uploads/project/WikiEngine/deferred-join-optimization/row-size-breakdown.svg)
 
 `content` (LONGTEXT) accounts for most of the row size. With an average Wikipedia article of 6,586 characters (~13KB), reading 20,000 OFFSET rows means **reading and discarding ~260MB of data**. Without `content`, the remaining columns would be ~12MB — 1/20th the size.
 
@@ -741,14 +700,7 @@ The effect of Deferred Join varies depending on page depth.
 - Index scan accounts for **~85% of total cost**, so even eliminating clustered I/O has limited improvement
 - Still, removing LONGTEXT reads provides a definite 13–19% improvement
 
-```
-OFFSET size and Deferred Join effectiveness:
-
-OFFSET 200   (page 10)  : ████████████░░░░ ~60% improvement — clustered I/O dominates
-OFFSET 2,000 (page 100) : █████████░░░░░░░ ~40% improvement
-OFFSET 10,000 (page 500) : ████░░░░░░░░░░░░ ~20% improvement
-OFFSET 20,000 (page 1000): ██░░░░░░░░░░░░░░ ~13% improvement — index scan dominates
-```
+![OFFSET size and Deferred Join effectiveness](/uploads/project/WikiEngine/deferred-join-optimization/deferred-join-effect-by-offset.svg)
 
 In other words, **Deferred Join is more effective with smaller OFFSETs and less effective as OFFSET grows.** Since the majority (~90%) of real user traffic is pages 1–10, the average perceived improvement can be much greater than the k6 measurement (13%).
 
@@ -816,11 +768,7 @@ Deferred Join eliminated the 15% LONGTEXT read cost, but cannot touch the 85% th
 
 ### Why OFFSET Is Fundamentally Slow
 
-```
-OFFSET 0     → Read immediately from index start → ~10ms
-OFFSET 1,000 → Scan 1,020 index entries → ~100ms
-OFFSET 20,000 → Scan 20,020 index entries → ~2,000ms
-```
+![OFFSET scan cost — O(N) linear growth](/uploads/project/WikiEngine/deferred-join-optimization/offset-scan-cost.svg)
 
 OFFSET is not "skip N entries" but "read N entries and discard them." Even with an index, the B-Tree leaf nodes must be followed one by one to count 20,020. This is a structural limitation that Deferred Join cannot solve.
 
@@ -922,15 +870,7 @@ Keyset Pagination (`WHERE created_at < :cursor`) eliminates OFFSET to guarantee 
 
 The reason Slack, Twitter, and Instagram use cursor-based is that **their UI is infinite scroll**. In a board UI with page numbers, jumping from "page 3 → page 7" directly is a natural expectation, and the cursor approach cannot support this.
 
-```
-Page number UI (boards, Google Search, Wikipedia):
-  → OFFSET + page limit is appropriate
-  → Google also limits results to ~30 pages
-
-Infinite scroll UI (Twitter, Instagram, Slack):
-  → Keyset (cursor) is appropriate
-  → Only needs to request "next 20"
-```
+![Pagination UI comparison — Page numbers vs Infinite scroll](/uploads/project/WikiEngine/deferred-join-optimization/pagination-ui-comparison.svg)
 
 Since the current service uses a page-number UI, **Deferred Join + max page limit** is the appropriate choice for the current requirements. Keyset Pagination will be reconsidered if an infinite scroll UI is introduced.
 

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 160" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .before { fill: #fef2f2; stroke: #ef4444; }
+    .after { fill: #f0fdf4; stroke: #22c55e; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .code { font-size: 11px; fill: #7c3aed; font-weight: 600; font-family: 'Consolas', monospace; }
+    .detail { font-size: 11px; fill: #475569; }
+    .time { font-size: 12px; font-weight: 700; }
+    .time-slow { fill: #ef4444; }
+    .time-fast { fill: #22c55e; }
+    .badge { font-size: 10px; fill: #fff; font-weight: 600; }
+  </style>
+
+  <rect x="16" y="8" width="668" height="62" class="box before"/>
+  <rect x="28" y="16" width="80" height="18" rx="3" fill="#ef4444"/>
+  <text x="68" y="29" text-anchor="middle" class="badge">역색인 없이</text>
+  <text x="28" y="50" class="code">LIKE '%페텔%'</text>
+  <text x="160" y="50" class="detail">--> 14,768,700행 전부 읽기 --></text>
+  <text x="430" y="50" class="time time-slow">30초+</text>
+
+  <rect x="16" y="82" width="668" height="62" class="box after"/>
+  <rect x="28" y="90" width="80" height="18" rx="3" fill="#22c55e"/>
+  <text x="68" y="103" text-anchor="middle" class="badge">역색인 있으면</text>
+  <text x="28" y="126" class="code">"페텔"</text>
+  <text x="80" y="126" class="detail">--> 사전에서 O(1) 탐색 --> 포스팅 목록 [문서13, 문서4521, ...] 반환 --></text>
+  <text x="560" y="126" class="time time-fast">ms 단위</text>
+</svg>

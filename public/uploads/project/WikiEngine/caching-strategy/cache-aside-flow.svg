@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 250" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .step { fill: #f8fafc; stroke: #e2e8f0; }
+    .hit { fill: #f0fdf4; stroke: #22c55e; }
+    .miss { fill: #fef2f2; stroke: #ef4444; }
+    .num-bg { fill: #3b82f6; }
+    .num { font-size: 11px; fill: #fff; font-weight: 700; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 600; }
+    .detail { font-size: 11px; fill: #475569; }
+    .key { font-size: 10.5px; fill: #7c3aed; font-family: 'Consolas', monospace; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah4); }
+    .arrow-hit { fill: none; stroke: #22c55e; stroke-width: 2; marker-end: url(#ah4g); }
+    .arrow-miss { fill: none; stroke: #ef4444; stroke-width: 1.5; marker-end: url(#ah4r); }
+    .badge { font-size: 10px; fill: #fff; font-weight: 600; }
+  </style>
+  <defs>
+    <marker id="ah4" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/>
+    </marker>
+    <marker id="ah4g" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#22c55e"/>
+    </marker>
+    <marker id="ah4r" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <!-- Step 1: 검색 요청 -->
+  <rect x="16" y="16" width="200" height="50" class="box step"/>
+  <circle cx="36" cy="41" r="11" class="num-bg"/>
+  <text x="36" y="45" text-anchor="middle" class="num">1</text>
+  <text x="56" y="36" class="label">검색 요청 수신</text>
+  <text x="56" y="52" class="key">key = "search:대한민국:page:0"</text>
+
+  <path d="M 216 41 L 250 41" class="arrow"/>
+
+  <!-- Step 2: 캐시 조회 -->
+  <rect x="254" y="16" width="180" height="50" class="box step"/>
+  <circle cx="274" cy="41" r="11" class="num-bg"/>
+  <text x="274" y="45" text-anchor="middle" class="num">2</text>
+  <text x="294" y="36" class="label">캐시에서 검색</text>
+  <text x="294" y="52" class="detail">Caffeine.get(key)</text>
+
+  <!-- Branch: Hit -->
+  <path d="M 344 66 L 344 100" class="arrow-hit"/>
+  <rect x="218" y="104" width="70" height="20" rx="4" fill="#22c55e"/>
+  <text x="253" y="118" text-anchor="middle" class="badge">캐시 히트</text>
+
+  <!-- Step 3-a: Hit -->
+  <rect x="16" y="96" width="190" height="50" class="box hit"/>
+  <text x="30" y="114" class="label" fill="#22c55e">3-a</text>
+  <text x="60" y="114" class="label">즉시 반환</text>
+  <text x="30" y="134" class="detail">Lucene/DB 접근 없음</text>
+  <path d="M 218 118 L 206 118" class="arrow-hit"/>
+
+  <!-- Branch: Miss -->
+  <path d="M 434 41 L 468 41" class="arrow-miss"/>
+  <rect x="440" y="30" width="70" height="20" rx="4" fill="#ef4444"/>
+  <text x="475" y="44" text-anchor="middle" class="badge">캐시 미스</text>
+
+  <!-- Step 3-b chain -->
+  <rect x="16" y="164" width="668" height="72" class="box miss"/>
+  <text x="30" y="184" class="label" fill="#ef4444">3-b</text>
+  <text x="60" y="184" class="label">캐시 미스 처리</text>
+
+  <text x="36" y="206" class="detail">Lucene 검색</text>
+  <path d="M 120" y="202" class="arrow"/>
+  <text x="140" y="206" class="detail">--></text>
+  <text x="166" y="206" class="detail">DB에서 Post 엔티티 조회</text>
+  <text x="352" y="206" class="detail">--></text>
+  <text x="378" y="206" class="detail">결과를 캐시에 저장</text>
+  <text x="530" y="206" class="detail">--></text>
+  <text x="556" y="206" class="detail">반환</text>
+
+  <text x="36" y="226" class="key">Caffeine.put(key, result)  // TTL 5분</text>
+
+  <path d="M 500 52 L 500 164" class="arrow-miss"/>
+</svg>

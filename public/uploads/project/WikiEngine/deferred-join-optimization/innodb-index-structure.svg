@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .secondary { fill: #eff6ff; stroke: #3b82f6; }
+    .clustered { fill: #fef3c7; stroke: #f59e0b; }
+    .label { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .num { font-size: 12px; fill: #fff; font-weight: 700; }
+    .sub { font-size: 11px; fill: #475569; }
+    .detail { font-size: 10.5px; fill: #64748b; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .arrow-label { font-size: 10px; fill: #94a3b8; font-style: italic; }
+  </style>
+  <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/></marker></defs>
+
+  <!-- [1] Secondary Index -->
+  <rect x="16" y="16" width="300" height="90" class="box secondary"/>
+  <circle cx="36" cy="36" r="12" fill="#3b82f6"/>
+  <text x="36" y="40" text-anchor="middle" class="num">1</text>
+  <text x="56" y="40" class="label">세컨더리 인덱스</text>
+  <text x="32" y="62" class="sub">idx_posts_created_at</text>
+  <text x="32" y="78" class="detail">created_at 값 + PK(id) 만 저장</text>
+  <text x="32" y="94" class="detail">title, content 등은 알 수 없음</text>
+
+  <!-- Arrow -->
+  <path d="M 316 61 L 380 61" class="arrow"/>
+  <text x="330" y="54" class="arrow-label">PK(id) 획득 후</text>
+
+  <!-- [2] Clustered Index -->
+  <rect x="384" y="16" width="316" height="110" class="box clustered"/>
+  <circle cx="404" cy="36" r="12" fill="#f59e0b"/>
+  <text x="404" y="40" text-anchor="middle" class="num">2</text>
+  <text x="424" y="40" class="label">클러스터 인덱스 (PK = 실제 데이터)</text>
+  <text x="400" y="62" class="sub">전체 행이 저장됨:</text>
+  <text x="400" y="78" class="detail">id, title, content(LONGTEXT), author_id,</text>
+  <text x="400" y="92" class="detail">category_id, view_count, like_count,</text>
+  <text x="400" y="106" class="detail">created_at, updated_at</text>
+  <text x="400" y="120" class="detail" fill="#ef4444">SELECT * 시 여기서 전체 행 읽기</text>
+
+  <!-- 하단 설명 -->
+  <rect x="16" y="144" width="684" height="60" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1"/>
+  <text x="32" y="166" class="sub" fill="#ef4444">SELECT * + OFFSET 20,000 = 세컨더리 인덱스에서 PK 20,020개 획득</text>
+  <text x="32" y="184" class="sub" fill="#ef4444">--> 클러스터 인덱스에서 20,020행(LONGTEXT 포함) 랜덤 I/O --> 20,000행 버림 --> 20행만 반환</text>
+</svg>

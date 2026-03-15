@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 280" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .mode-badge { font-size: 11px; fill: #fff; font-weight: 600; }
+    .pos-label { font-size: 11px; fill: #64748b; font-weight: 500; }
+    .token { font-size: 14px; fill: #1e293b; font-weight: 600; }
+    .token-box { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 6; }
+    .discard-box { fill: #fef2f2; stroke: #ef4444; stroke-width: 1.5; rx: 6; stroke-dasharray: 5,3; }
+    .note { font-size: 11px; fill: #ef4444; font-weight: 500; }
+    .note-gray { font-size: 11px; fill: #94a3b8; }
+    .arrow-text { font-size: 12px; fill: #64748b; font-weight: 500; }
+    .divider { stroke: #e2e8f0; stroke-width: 1; }
+    .input { font-size: 14px; fill: #7c3aed; font-weight: 600; font-family: 'Consolas', monospace; }
+  </style>
+
+  <!-- 세종시 -->
+  <rect x="12" y="8" width="120" height="22" rx="4" fill="#6366f1"/>
+  <text x="72" y="23" text-anchor="middle" class="mode-badge">DISCARD mode</text>
+
+  <text x="20" y="58" class="input">"세종시"</text>
+  <text x="105" y="58" class="arrow-text">--></text>
+
+  <!-- position 0 -->
+  <text x="150" y="50" class="pos-label">position 0</text>
+  <rect x="148" y="56" width="60" height="32" class="token-box"/>
+  <text x="178" y="77" text-anchor="middle" class="token">세종</text>
+
+  <!-- position 1 -->
+  <text x="228" y="50" class="pos-label">position 1</text>
+  <rect x="226" y="56" width="40" height="32" class="token-box"/>
+  <text x="246" y="77" text-anchor="middle" class="token">시</text>
+
+  <!-- 폐기된 원형 -->
+  <rect x="310" y="56" width="80" height="32" class="discard-box"/>
+  <text x="350" y="77" text-anchor="middle" class="token" fill="#ef4444" text-decoration="line-through">세종시</text>
+  <text x="404" y="77" class="note">원형 폐기됨</text>
+
+  <!-- 구분선 -->
+  <line x1="12" y1="110" x2="668" y2="110" class="divider"/>
+
+  <!-- 인공지능기술 -->
+  <text x="20" y="142" class="input">"인공지능기술"</text>
+  <text x="145" y="142" class="arrow-text">--></text>
+
+  <!-- position 0 -->
+  <text x="185" y="134" class="pos-label">pos 0</text>
+  <rect x="183" y="140" width="54" height="32" class="token-box"/>
+  <text x="210" y="161" text-anchor="middle" class="token">인공</text>
+
+  <!-- position 1 -->
+  <text x="252" y="134" class="pos-label">pos 1</text>
+  <rect x="250" y="140" width="54" height="32" class="token-box"/>
+  <text x="277" y="161" text-anchor="middle" class="token">지능</text>
+
+  <!-- position 2 -->
+  <text x="319" y="134" class="pos-label">pos 2</text>
+  <rect x="317" y="140" width="54" height="32" class="token-box"/>
+  <text x="344" y="161" text-anchor="middle" class="token">기술</text>
+
+  <!-- 폐기된 원형 -->
+  <rect x="410" y="140" width="100" height="32" class="discard-box"/>
+  <text x="460" y="161" text-anchor="middle" class="token" fill="#ef4444" text-decoration="line-through">인공지능</text>
+  <text x="524" y="161" class="note">원형 폐기됨</text>
+
+  <!-- 설명 -->
+  <rect x="12" y="200" width="656" height="68" rx="8" fill="#fefce8" stroke="#eab308" stroke-width="1"/>
+  <text x="28" y="222" class="heading">DISCARD 모드의 영향</text>
+  <text x="28" y="242" class="note-gray">복합명사를 분해하되 원형을 폐기합니다.</text>
+  <text x="28" y="258" class="note-gray">"인공지능"이라는 의미 단위가 사라지므로, 구절 검색 시 position 기반 매칭에 영향을 줍니다.</text>
+</svg>

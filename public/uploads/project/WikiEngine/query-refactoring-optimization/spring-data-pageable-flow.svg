@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 340" font-family="'Pretendard', 'Apple SD Gothic Neo', 'Consolas', monospace">
+  <style>
+    .step-box { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 1.5; rx: 8; }
+    .step-active { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 8; }
+    .step-num { font-size: 12px; fill: #fff; font-weight: 700; }
+    .step-num-bg { fill: #3b82f6; }
+    .step-num-bg-green { fill: #22c55e; }
+    .title { font-size: 13px; fill: #1e293b; font-weight: 600; }
+    .desc { font-size: 11.5px; fill: #64748b; font-weight: 400; }
+    .code { font-size: 11px; fill: #7c3aed; font-weight: 500; font-family: 'Consolas', 'SF Mono', monospace; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#arrowhead); }
+    .comment { font-size: 10.5px; fill: #94a3b8; font-style: italic; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Step 1 -->
+  <rect x="16" y="16" width="668" height="56" class="step-box"/>
+  <circle cx="40" cy="44" r="12" class="step-num-bg"/>
+  <text x="40" y="48" text-anchor="middle" class="step-num">1</text>
+  <text x="62" y="38" class="title">Repository 메서드 호출 시 Pageable 감지</text>
+  <text x="62" y="56" class="code">findAllWithDeferredJoin(Pageable pageable)</text>
+  <text x="480" y="47" class="comment">Spring Data가 Pageable 파라미터를 인식</text>
+
+  <!-- Arrow 1→2 -->
+  <path d="M 350 72 L 350 88" class="arrow"/>
+
+  <!-- Step 2 -->
+  <rect x="16" y="90" width="668" height="72" class="step-active"/>
+  <circle cx="40" cy="118" r="12" class="step-num-bg"/>
+  <text x="40" y="122" text-anchor="middle" class="step-num">2</text>
+  <text x="62" y="110" class="title">Hibernate Query 객체에 OFFSET / LIMIT 설정</text>
+  <text x="62" y="130" class="code">query.setFirstResult(pageable.getOffset())</text>
+  <text x="470" y="130" class="comment">// -> SQL OFFSET</text>
+  <text x="62" y="148" class="code">query.setMaxResults(pageable.getPageSize())</text>
+  <text x="470" y="148" class="comment">// -> SQL LIMIT</text>
+
+  <!-- Arrow 2→3 -->
+  <path d="M 350 162 L 350 178" class="arrow"/>
+
+  <!-- Step 3 -->
+  <rect x="16" y="180" width="668" height="56" class="step-active"/>
+  <circle cx="40" cy="208" r="12" class="step-num-bg-green"/>
+  <text x="40" y="212" text-anchor="middle" class="step-num">3</text>
+  <text x="62" y="200" class="title">Slice&lt;T&gt; 반환 시: LIMIT을 pageSize + 1로 변경</text>
+  <text x="62" y="220" class="code">setMaxResults(pageSize + 1)</text>
+  <text x="310" y="220" class="comment">// 다음 페이지 존재 여부 판별용 (extra row 패턴)</text>
+
+  <!-- Arrow 3→4 -->
+  <path d="M 350 236 L 350 252" class="arrow"/>
+
+  <!-- Step 4 -->
+  <rect x="16" y="254" width="668" height="72" class="step-box"/>
+  <circle cx="40" cy="282" r="12" class="step-num-bg"/>
+  <text x="40" y="286" text-anchor="middle" class="step-num">4</text>
+  <text x="62" y="274" class="title">Hibernate가 DB 방언(Dialect)에 맞게 SQL 생성</text>
+  <text x="62" y="294" class="code">SELECT ... FROM posts ... LIMIT 21 OFFSET 0</text>
+  <text x="470" y="294" class="comment">// MySQL Dialect</text>
+  <text x="62" y="312" class="desc">JPQL: 쿼리 파싱 후 깨끗하게 추가  |  nativeQuery: 쿼리 끝에 기계적으로 덧붙임</text>
+</svg>

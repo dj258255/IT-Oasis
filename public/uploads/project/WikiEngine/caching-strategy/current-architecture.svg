@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .client { fill: #f0fdf4; stroke: #22c55e; }
+    .spring { fill: #eff6ff; stroke: #3b82f6; }
+    .lucene { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql { fill: #fce7f3; stroke: #ec4899; }
+    .label { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 11px; fill: #475569; font-weight: 500; }
+    .detail { font-size: 10.5px; fill: #64748b; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .note { font-size: 10.5px; fill: #94a3b8; font-style: italic; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Client -->
+  <rect x="16" y="100" width="90" height="44" class="box client"/>
+  <text x="61" y="126" text-anchor="middle" class="label">Client</text>
+
+  <!-- Arrow -->
+  <path d="M 106 122 L 140 122" class="arrow"/>
+
+  <!-- Spring Boot -->
+  <rect x="144" y="84" width="120" height="76" class="box spring"/>
+  <text x="204" y="108" text-anchor="middle" class="label">Spring Boot</text>
+  <text x="204" y="124" text-anchor="middle" class="sub">API Server</text>
+  <text x="204" y="148" text-anchor="middle" class="note">캐싱 레이어 없음</text>
+
+  <!-- Arrow to Lucene -->
+  <path d="M 264 105 L 310 70" class="arrow"/>
+  <!-- Arrow to MySQL -->
+  <path d="M 264 140 L 310 175" class="arrow"/>
+
+  <!-- Lucene -->
+  <rect x="314" y="12" width="380" height="110" class="box lucene"/>
+  <text x="334" y="36" class="label">Lucene (MMapDirectory, Nori)</text>
+  <text x="334" y="56" class="sub">검색: BM25 (title^3 + content) + 인기도 + 최신성</text>
+  <text x="334" y="74" class="sub">자동완성: PrefixQuery (title)</text>
+  <text x="334" y="92" class="sub">인덱스: 1,425만 건 (NRT 갱신)</text>
+  <text x="334" y="110" class="detail">JVM 내부 처리 — SearcherManager acquire/release</text>
+
+  <!-- MySQL -->
+  <rect x="314" y="138" width="380" height="90" class="box mysql"/>
+  <text x="334" y="162" class="label">MySQL 8.0</text>
+  <text x="334" y="182" class="sub">posts (1,477만 건, 122GB) — CRUD + 목록 조회</text>
+  <text x="334" y="200" class="sub">Deferred Join 페이지네이션</text>
+  <text x="334" y="218" class="detail">목록/상세 조회는 MySQL 직접</text>
+
+  <!-- 하단 설명 -->
+  <text x="16" y="252" class="note">검색/자동완성 = JVM CPU/메모리 부하  |  목록/상세 = MySQL 부하  |  캐싱 레이어 없음</text>
+</svg>

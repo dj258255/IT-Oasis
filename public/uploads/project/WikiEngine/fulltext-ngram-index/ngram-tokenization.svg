@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 200" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .input { font-size: 13px; fill: #7c3aed; font-weight: 700; font-family: 'Consolas', monospace; }
+    .token { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 5; }
+    .token-text { font-size: 12px; fill: #1e40af; font-weight: 600; }
+    .posting { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1; rx: 5; }
+    .posting-text { font-size: 10.5px; fill: #92400e; }
+    .arrow { font-size: 11px; fill: #94a3b8; }
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .divider { stroke: #e2e8f0; stroke-width: 1; }
+  </style>
+
+  <text x="16" y="18" class="heading">ngram_token_size=2 토큰화 + 역색인</text>
+
+  <text x="16" y="46" class="input">"대한민국"</text>
+  <text x="105" y="46" class="arrow">--></text>
+  <rect x="128" y="32" width="50" height="24" class="token"/><text x="138" y="49" class="token-text">대한</text>
+  <rect x="184" y="32" width="50" height="24" class="token"/><text x="194" y="49" class="token-text">한민</text>
+  <rect x="240" y="32" width="50" height="24" class="token"/><text x="250" y="49" class="token-text">민국</text>
+
+  <text x="16" y="80" class="input">"페텔기우스"</text>
+  <text x="120" y="80" class="arrow">--></text>
+  <rect x="143" y="66" width="50" height="24" class="token"/><text x="153" y="83" class="token-text">페텔</text>
+  <rect x="199" y="66" width="50" height="24" class="token"/><text x="209" y="83" class="token-text">텔기</text>
+  <rect x="255" y="66" width="50" height="24" class="token"/><text x="265" y="83" class="token-text">기우</text>
+  <rect x="311" y="66" width="50" height="24" class="token"/><text x="321" y="83" class="token-text">우스</text>
+
+  <line x1="16" y1="100" x2="684" y2="100" class="divider"/>
+  <text x="16" y="118" class="heading">역색인</text>
+
+  <rect x="16" y="126" width="50" height="22" class="token"/><text x="26" y="142" class="token-text">페텔</text>
+  <text x="72" y="142" class="arrow">--></text>
+  <rect x="90" y="126" width="180" height="22" class="posting"/><text x="100" y="142" class="posting-text">[문서13, 문서4521, ...]</text>
+
+  <rect x="16" y="154" width="50" height="22" class="token"/><text x="26" y="170" class="token-text">텔기</text>
+  <text x="72" y="170" class="arrow">--></text>
+  <rect x="90" y="154" width="120" height="22" class="posting"/><text x="100" y="170" class="posting-text">[문서13, ...]</text>
+
+  <rect x="16" y="182" width="50" height="22" class="token"/><text x="26" y="198" class="token-text">한민</text>
+  <text x="72" y="198" class="arrow">--></text>
+  <rect x="90" y="182" width="210" height="22" class="posting"/><text x="100" y="198" class="posting-text">[문서7, 문서42, 문서890, ...]</text>
+</svg>

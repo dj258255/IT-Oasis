@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 100" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .code { font-size: 11px; fill: #7c3aed; font-family: 'Consolas', monospace; }
+    .detail { font-size: 11px; fill: #475569; }
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .complexity { font-size: 11px; fill: #1e40af; font-weight: 600; font-family: 'Consolas', monospace; }
+  </style>
+
+  <text x="16" y="18" class="heading">fts_query_intersect() 동작 — RB-tree O(log n)</text>
+
+  <text x="16" y="42" class="detail">토큰 A 결과 --> RB-tree에 삽입:</text><text x="260" y="42" class="complexity">O(|A| x log|A|)</text>
+  <text x="16" y="60" class="detail">토큰 B 결과 --> A의 RB-tree에서 lookup:</text><text x="290" y="60" class="complexity">O(|B| x log|A|)</text>
+  <text x="16" y="78" class="detail">교집합 결과 --> 새 RB-tree (query->intersection)로 swap</text>
+
+  <text x="16" y="98" class="detail">전체:</text><text x="55" y="98" class="complexity">O((|A| + |B| + |C|) x log(max))</text>
+</svg>

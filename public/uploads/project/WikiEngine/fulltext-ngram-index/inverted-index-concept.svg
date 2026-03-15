@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 130" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .term { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.5; rx: 6; }
+    .posting { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 6; }
+    .term-text { font-size: 12px; fill: #92400e; font-weight: 700; font-family: 'Consolas', monospace; }
+    .doc-text { font-size: 11px; fill: #1e40af; font-weight: 500; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .col-h { font-size: 11px; fill: #64748b; font-weight: 600; }
+  </style>
+  <defs><marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker></defs>
+
+  <text x="30" y="18" class="col-h">사전 (Dictionary)</text>
+  <text x="280" y="18" class="col-h">포스팅 목록 (Posting List)</text>
+
+  <rect x="16" y="28" width="70" height="26" class="term"/><text x="28" y="46" class="term-text">"페텔"</text>
+  <path d="M 86 41 L 180 41" class="arrow"/>
+  <rect x="184" y="28" width="260" height="26" class="posting"/><text x="196" y="46" class="doc-text">[문서13, 문서4521, ...]</text>
+
+  <rect x="16" y="62" width="70" height="26" class="term"/><text x="28" y="80" class="term-text">"한민"</text>
+  <path d="M 86 75 L 180 75" class="arrow"/>
+  <rect x="184" y="62" width="260" height="26" class="posting"/><text x="196" y="80" class="doc-text">[문서7, 문서42, 문서890, ...]</text>
+
+  <rect x="16" y="96" width="70" height="26" class="term"/><text x="28" y="114" class="term-text">"기우"</text>
+  <path d="M 86 109 L 180 109" class="arrow"/>
+  <rect x="184" y="96" width="260" height="26" class="posting"/><text x="196" y="114" class="doc-text">[문서13, 문서55, ...]</text>
+</svg>

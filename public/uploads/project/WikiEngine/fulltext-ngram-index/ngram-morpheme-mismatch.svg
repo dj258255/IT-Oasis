@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 110" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .input { font-size: 12px; fill: #7c3aed; font-weight: 600; font-family: 'Consolas', monospace; }
+    .token { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1; rx: 4; }
+    .token-diff { fill: #fef2f2; stroke: #ef4444; stroke-width: 1.5; rx: 4; }
+    .token-text { font-size: 11px; fill: #1e40af; font-weight: 600; text-anchor: middle; }
+    .token-text-diff { font-size: 11px; fill: #ef4444; font-weight: 700; text-anchor: middle; }
+    .arrow { font-size: 11px; fill: #94a3b8; }
+    .note { font-size: 11px; fill: #ef4444; font-weight: 500; }
+  </style>
+
+  <text x="16" y="22" class="input">"대한민국을"</text>
+  <text x="118" y="22" class="arrow">--></text>
+  <rect x="138" y="8" width="44" height="22" class="token"/><text x="160" y="24" class="token-text">대한</text>
+  <rect x="186" y="8" width="44" height="22" class="token"/><text x="208" y="24" class="token-text">한민</text>
+  <rect x="234" y="8" width="44" height="22" class="token"/><text x="256" y="24" class="token-text">민국</text>
+  <rect x="282" y="8" width="44" height="22" class="token-diff"/><text x="304" y="24" class="token-text-diff">국을</text>
+
+  <text x="16" y="58" class="input">"대한민국"</text>
+  <text x="108" y="58" class="arrow">--></text>
+  <rect x="138" y="44" width="44" height="22" class="token"/><text x="160" y="60" class="token-text">대한</text>
+  <rect x="186" y="44" width="44" height="22" class="token"/><text x="208" y="60" class="token-text">한민</text>
+  <rect x="234" y="44" width="44" height="22" class="token"/><text x="256" y="60" class="token-text">민국</text>
+
+  <text x="16" y="92" class="note">"국을" 토큰이 달라서 검색 정확도 하락 -- 형태소 분석 없이 글자 단위로 잘라내는 한계</text>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 220" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .idx { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1; rx: 5; }
+    .meta { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1; rx: 5; }
+    .idx-text { font-size: 10px; fill: #1e40af; font-weight: 500; font-family: 'Consolas', monospace; }
+    .meta-text { font-size: 10px; fill: #475569; font-weight: 500; font-family: 'Consolas', monospace; }
+    .note { font-size: 10px; fill: #64748b; }
+  </style>
+
+  <text x="16" y="18" class="heading">posts 테이블에 FULLTEXT INDEX 생성 시 — 6개 보조 테이블 + 메타</text>
+
+  <rect x="16" y="30" width="290" height="26" class="idx"/><text x="24" y="48" class="idx-text">fts_[table_id]_[index_id]_index_1</text><text x="280" y="48" class="note">파티션 1</text>
+  <rect x="16" y="60" width="290" height="26" class="idx"/><text x="24" y="78" class="idx-text">fts_[table_id]_[index_id]_index_2</text><text x="280" y="78" class="note">파티션 2</text>
+  <rect x="16" y="90" width="290" height="26" class="idx"/><text x="24" y="108" class="idx-text">fts_[table_id]_[index_id]_index_3</text><text x="280" y="108" class="note">파티션 3</text>
+  <rect x="16" y="120" width="290" height="26" class="idx"/><text x="24" y="138" class="idx-text">fts_[table_id]_[index_id]_index_4</text><text x="280" y="138" class="note">파티션 4</text>
+  <rect x="16" y="150" width="290" height="26" class="idx"/><text x="24" y="168" class="idx-text">fts_[table_id]_[index_id]_index_5</text><text x="280" y="168" class="note">파티션 5</text>
+  <rect x="16" y="180" width="290" height="26" class="idx"/><text x="24" y="198" class="idx-text">fts_[table_id]_[index_id]_index_6</text><text x="280" y="198" class="note">파티션 6</text>
+
+  <rect x="370" y="30" width="280" height="26" class="meta"/><text x="378" y="48" class="meta-text">fts_*_deleted</text><text x="530" y="48" class="note">삭제된 DOC_ID 목록</text>
+  <rect x="370" y="60" width="280" height="26" class="meta"/><text x="378" y="78" class="meta-text">fts_*_deleted_cache</text><text x="530" y="78" class="note">삭제 캐시 (메모리)</text>
+  <rect x="370" y="90" width="280" height="26" class="meta"/><text x="378" y="108" class="meta-text">fts_*_config</text><text x="530" y="108" class="note">인덱스 상태 메타데이터</text>
+</svg>
