@@ -42,7 +42,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
     <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} large>
       {projects.map((project) => (
         <CarouselCard
-          href={(Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || (project.story ? `${base}${project.story}` : '') || `${base}/projects`}
+          href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
           titleEn={project.titleEn}
           description={project.description}
@@ -51,9 +51,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
           date={project.date}
           category={translateCategory(project.category, catDisplayKo)}
           categoryEn={translateCategory(project.category, catI18n)}
-          website={project.website}
-          github={project.github}
-          story={project.story ? `${base}${project.story}` : ''}
+          noOverlay
         />
       ))}
     </CarouselSection>

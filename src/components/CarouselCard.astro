@@ -19,12 +19,13 @@ interface Props {
   website?: string | LinkItem[];
   github?: string | LinkItem[];
   story?: string;
+  noOverlay?: boolean;
 }
 
-const { href, title, titleEn, description, descriptionEn, image, date, dateEn, category, categoryEn, website, github, story } = Astro.props;
+const { href, title, titleEn, description, descriptionEn, image, date, dateEn, category, categoryEn, website, github, story, noOverlay = false } = Astro.props;
 const hasWebsite = Array.isArray(website) ? website.length > 0 : !!website;
 const hasGithub = Array.isArray(github) ? github.length > 0 : !!github;
-const hasOverlay = !!(hasWebsite || hasGithub || story);
+const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
 ---
 
 <div class="carousel-item w-[280px] sm:w-[320px] shrink-0 block group relative">
