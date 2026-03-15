@@ -217,7 +217,7 @@ draft: true
 
 #### 포트폴리오용 (상세)
 
-> **상황:** Phase 7에서 BM25 + FeatureField(조회수·좋아요) + RecencyDecay(최신성) 복합 스코어링을 도입한 후, 검색이 20ms→1,443ms(70배)로 regression. 100 VU 부하에서 CPU 포화로 검색 외 API(자동완성 5ms→368ms, 목록 8ms→392ms)까지 연쇄 지연.
+> **상황:** [검색 품질 고도화](/blog/project/wikiengine/search-quality)에서 BM25 + FeatureField(조회수·좋아요) + RecencyDecay(최신성) 복합 스코어링을 도입한 후, 검색이 20ms→1,443ms(70배)로 regression. 100 VU 부하에서 CPU 포화로 검색 외 API(자동완성 5ms→368ms, 목록 8ms→392ms)까지 연쇄 지연.
 >
 > **원인 분석:** 복합 스코어링에서 매칭 문서마다 DocValues 3회 읽기(viewCount, likeCount, createdAt)가 추가되어, Block-Max WAND 최적화가 제한됨. 고빈도 토큰("대한민국")에서 수만 건을 스코어링할 때 CPU 시간이 급증. 2코어 CPU가 포화되면서 모든 요청이 CPU 대기열에 갇힘.
 >
@@ -270,7 +270,7 @@ draft: true
 | **DB 최적화** | EXPLAIN/EXPLAIN ANALYZE 기반 쿼리 진단, Deferred Join(Covering Index), Page→Slice COUNT(*) 제거, OFFSET 페이지 제한. 1,425만 건 테이블에서 19,424ms→8ms |
 | **검색엔진** | MySQL FULLTEXT ngram 한계 분석(fts0que.cc 소스 수준) → Lucene 임베디드 + Nori 형태소 분석기 전환. BM25 + FeatureField 랭킹, PhraseQuery 구절 검색, P@10/MAP 정량 평가 |
 | **캐싱** | Caffeine L1 W-TinyLFU, @CacheEvict 즉시 무효화, Cache-Control stale-while-revalidate, Actuator 히트율 모니터링. 검색 히트율 81.8%, cascade failure 해소 |
-| **부하 테스트** | k6 smoke/load 4단계, InfluxDB+Grafana, 시나리오별 SLA. cascade failure 2회 진단(OFFSET CPU 포화, 복합 스코어링 CPU 포화) |
+| **부하 테스트** | k6 smoke/load 프로필, InfluxDB+Grafana, 시나리오별 SLA. cascade failure 2회 진단(OFFSET CPU 포화, 복합 스코어링 CPU 포화) |
 | **장애 대응** | HikariCP 커넥션 풀 고갈 → fail-fast 격리. InnoDB BP 100% + Slow Query 14.8K → CPU 병목 진단 |
 
 ---
@@ -279,28 +279,15 @@ draft: true
 
 포트폴리오에 "이 프로젝트의 전체 흐름"을 보여줄 때 사용합니다.
 
-```
-[Phase 1] LIKE → Full Table Scan → 시스템 마비
-          → 긴급 조치(타임아웃, fail-fast)로 가용성 확보
-
-[Phase 2] B-Tree 복합 인덱스 → 자동완성 해소 (>5,000ms → 8ms)
-
-[Phase 3] FULLTEXT ngram → 검색 동작 복구 (12초 → 6ms, 57만 건)
-          → 고빈도 토큰 타임아웃, 300GB+ 인덱스, false positive 한계 발견
-          → InnoDB FTS 소스코드(fts0que.cc) 수준에서 원인 분석
-
-[Phase 4] Lucene + Nori → 전체 1,425만 건 검색 (타임아웃 → 12ms)
-          → Lucene/ES/벡터DB 비용 비교 후 임베디드 Lucene 결정
-
-[Phase 5] Deferred Join + COUNT(*) 제거 + 30페이지 제한
-          → 19,424ms → 8ms, 에러율 32.53% → 0%
-          → cascade failure 진단: CPU 포화가 전체 API를 무너뜨림
-
-[Phase 6] 검색 품질 고도화 (구절 검색 + 커뮤니티 랭킹 + P@10/MAP)
-
-[Phase 7] Caffeine L1 캐시 → 전체 14배 개선, cascade failure 해소
-          → 검색 히트율 81.8%, CPU 80%→20%
-```
+| 순서 | 포스트 | 핵심 변화 |
+|------|--------|----------|
+| 1 | [검색엔진이 시스템을 마비시킨 과정과 대응](/blog/project/wikiengine/search-system-crash) | LIKE Full Table Scan → 시스템 마비 → 긴급 조치(타임아웃, fail-fast)로 가용성 확보 |
+| 2 | [자동완성 B-Tree 인덱스 걸기](/blog/project/wikiengine/autocomplete-btree-index) | B-Tree 복합 인덱스 → 자동완성 해소 (>5,000ms → 8ms) |
+| 3 | [FULLTEXT ngram 인덱스](/blog/project/wikiengine/fulltext-ngram-index) | 검색 동작 복구 (12초 → 6ms, 57만 건). 고빈도 토큰 타임아웃·300GB+ 인덱스·false positive 한계 발견. InnoDB FTS 소스코드(fts0que.cc) 수준 원인 분석 |
+| 4 | [MySQL 검색을 버리고 Lucene을 선택한 이유](/blog/project/wikiengine/lucene-decision) | Lucene + Nori → 전체 1,425만 건 검색 (타임아웃 → 12ms). Lucene/ES/벡터DB 비용 비교 후 임베디드 Lucene 결정 |
+| 5 | [Deferred Join 적용기](/blog/project/wikiengine/deferred-join-optimization) + [COUNT(*) 제거와 페이지 제한](/blog/project/wikiengine/query-refactoring-optimization) | 19,424ms → 8ms, 에러율 32.53% → 0%. cascade failure 진단: CPU 포화가 전체 API를 무너뜨림 |
+| 6 | [검색 품질 고도화](/blog/project/wikiengine/search-quality) | 구절 검색 + 커뮤니티 랭킹 + P@10/MAP 정량 평가 |
+| 7 | [캐싱 전략](/blog/project/wikiengine/caching-strategy) | Caffeine L1 캐시 → 전체 14배 개선, cascade failure 해소. 검색 히트율 81.8%, CPU 80%→20% |
 
 ---
 
