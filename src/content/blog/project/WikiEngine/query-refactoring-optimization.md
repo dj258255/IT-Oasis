@@ -260,8 +260,8 @@ countQuery = "SELECT COUNT(*) FROM posts"
 Spring Data의 `Page<T>` 반환 시 이 countQuery가 **매 요청마다** 자동 실행됩니다.
 1,425만 건 테이블에서 COUNT(*)는 InnoDB가 가장 작은 세컨더리 인덱스를 풀 스캔해야 하므로 비용이 높습니다.
 
-> Lucene 검색(`GET /api/v1.0/posts/search`)은 `totalHits`를 역색인에서 즉시 반환하므로 COUNT 문제 없음.
-> 이 문제는 **최신 게시글 목록 조회(`GET /api/v1.0/posts`)에만** 해당합니다.
+> Lucene 검색(`GET /api/v1.0/posts/search`)도 동일하게 `Slice<T>`로 전환했습니다.
+> Lucene의 `totalHits`는 추정치이고, 총 건수 표시를 제거한 이상 Page를 유지할 이유가 없습니다.
 
 ---
 
@@ -534,8 +534,7 @@ public Slice<PostSummaryResponse> getPosts(
 > 반환 타입을 `Slice<Post>`로 변경하면 자동으로 COUNT가 제거됩니다.
 > nativeQuery가 아니므로 함정 없음.
 
-> **검색은 변경 불필요**: `LuceneSearchService.search()`는 Lucene의 `totalHits`로 `Page<T>`를 생성하고 있습니다.
-> Lucene의 totalHits는 역색인에서 즉시 반환되므로 COUNT(*) 문제가 없습니다. 그대로 유지합니다.
+> **검색도 Slice로 전환**: `LuceneSearchService.search()`도 `Slice<T>`로 전환했습니다. Lucene의 `totalHits`는 추정치이고 총 건수 표시를 제거했으므로, `limit + 1` 패턴으로 `hasNext()`만 판단합니다. 추가로 content(LONGTEXT) 대신 snippet(150자)만 반환하여 응답 크기를 ~99% 절감했습니다.
 
 ### Spring Data: Page vs Slice 비교
 
@@ -849,6 +848,100 @@ posting list가 길수록 더 많은 문서를 스코어링해야 하므로 Luce
 | HikariCP Acquire Time | — | **0.03~0.05ms** | 커넥션 즉시 획득 |
 | App CPU | 100% | **~60%** | 40% 여유 |
 | System CPU | 100% | **~70%** (피크) | 30% 여유 |
+
+---
+
+## 7. 검색 API도 Slice로 전환 + Snippet 반환
+
+### 배경
+
+위의 6단계까지는 **최신 게시글 목록 조회(`GET /posts`)** 최적화였습니다.
+검색 API(`GET /posts/search`)는 "Lucene `totalHits`라 COUNT 문제 없음"으로 `Page<T>`를 유지했습니다.
+
+하지만 이후 **총 건수 표시를 제거**하고 **totalPages를 15로 cap**하면서, Page를 유지할 이유가 사라졌습니다:
+- `totalHits`는 추정치 (정확하지 않음)
+- 총 건수를 UI에 표시하지 않음
+- totalPages cap 로직이 추가로 필요 (불필요한 복잡도)
+
+### 변경 사항
+
+**1) 검색 API: `Page<Post>` → `Slice<PostSearchResponse>`**
+
+```java
+// Before
+public Page<Post> search(String keyword, Pageable pageable) {
+    Page<Post> result = luceneSearchService.search(keyword, pageable);
+    long maxAccessible = (long) MAX_SEARCH_PAGE * pageable.getPageSize();
+    if (result.getTotalElements() > maxAccessible) {
+        return new PageImpl<>(result.getContent(), pageable, maxAccessible);
+    }
+    return result;
+}
+
+// After — totalHits 계산 제거, cap 로직 제거, snippet 변환
+public Slice<PostSearchResponse> search(String keyword, Pageable pageable) {
+    Slice<Post> result = luceneSearchService.search(keyword, pageable);
+    List<PostSearchResponse> responses = result.getContent().stream()
+            .map(PostSearchResponse::from)
+            .toList();
+    return new SliceImpl<>(responses, pageable, result.hasNext());
+}
+```
+
+`LuceneSearchService`도 `limit + 1` 패턴으로 `hasNext`만 판단:
+
+```java
+// limit + 1 조회하여 hasNext 판단 (Slice 패턴)
+TopDocs topDocs = searcher.search(query, offset + limit + 1);
+boolean hasNext = topDocs.scoreDocs.length > offset + limit;
+return new SliceImpl<>(posts, pageable, hasNext);
+```
+
+**2) Snippet: content(LONGTEXT) 대신 150자 요약 반환**
+
+기존에는 검색 결과 20건에 `content(LONGTEXT, 평균 ~13KB)`를 통째로 전송했습니다.
+프론트에서는 제목만 표시하고 content는 버리고 있었으므로 **20건 × 13KB = ~260KB가 낭비**였습니다.
+
+```java
+public record PostSearchResponse(
+    Long id, String title, String snippet,
+    Long viewCount, Long likeCount, Instant createdAt
+) {
+    public static PostSearchResponse from(Post post) {
+        String plain = post.getContent().replaceAll("<[^>]*>", "").strip();
+        String snippet = plain.substring(0, Math.min(plain.length(), 150));
+        return new PostSearchResponse(
+            post.getId(), post.getTitle(), snippet,
+            post.getViewCount(), post.getLikeCount(), post.getCreatedAt());
+    }
+}
+```
+
+| | Before (Post 전체) | After (PostSearchResponse) |
+|---|---|---|
+| content 전송 | ~13KB (LONGTEXT) | 0 |
+| snippet 전송 | 없음 | ~150B |
+| 20건 기준 | ~260KB | ~3KB |
+| **절감률** | | **~99%** |
+
+**3) 페이지네이션: 슬라이딩 윈도우 + 최대 15페이지**
+
+```
+1페이지:   이전  [1] 2 3 4 5 6 7 8 9 10  다음
+10페이지:  이전  6 7 8 9 [10] 11 12 13 14 15  다음
+15페이지:  이전  6 7 8 9 10 11 12 13 14 [15]  다음(비활성)
+```
+
+- Google 방식 슬라이딩 윈도우: 현재 페이지 기준 앞뒤 10개 표시
+- 최대 15페이지 제한: 백엔드 `MAX_SEARCH_PAGE=15`와 동기화
+- `hasNext=false`면 그 페이지에서 번호가 끝남 (저빈도 검색어)
+
+### 향후 개선: Lucene UnifiedHighlighter
+
+현재 snippet은 본문 앞 150자를 단순 truncate합니다. 향후 Lucene `UnifiedHighlighter`를 적용하면:
+- 검색 키워드가 등장하는 **위치 주변** 텍스트를 추출 (KWIC: Key Word In Context)
+- 검색 키워드를 `<b>볼드</b>`로 하이라이트
+- 구글/네이버와 동일한 snippet 품질
 
 ---
 
