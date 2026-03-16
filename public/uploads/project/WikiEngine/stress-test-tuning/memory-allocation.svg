@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 180" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .bar { rx: 4; }
+    .app { fill: #3b82f6; }
+    .mysql { fill: #ec4899; }
+    .sidecar { fill: #f59e0b; }
+    .os { fill: #22c55e; }
+    .bar-label { font-size: 10px; fill: #fff; font-weight: 600; }
+    .size-label { font-size: 10px; fill: #1e293b; font-weight: 600; }
+    .note { font-size: 10px; fill: #64748b; }
+    .arrow { font-size: 14px; fill: #94a3b8; font-weight: 700; }
+  </style>
+
+  <text x="16" y="18" class="heading">서버 메모리 배분 (ARM 2코어, 12GB RAM)</text>
+
+  <!-- Before -->
+  <text x="16" y="46" class="size-label">튜닝 전</text>
+  <rect x="70" y="32" width="120" height="24" class="bar app"/><text x="100" y="49" class="bar-label">App 2G</text>
+  <rect x="190" y="32" width="240" height="24" class="bar mysql"/><text x="280" y="49" class="bar-label">MySQL 4G</text>
+  <rect x="430" y="32" width="54" height="24" class="bar sidecar"/><text x="435" y="49" class="bar-label">0.9G</text>
+  <rect x="484" y="32" width="200" height="24" class="bar os"/><text x="540" y="49" class="bar-label">OS + Lucene 페이지 캐시 ~5G</text>
+
+  <!-- Arrow -->
+  <text x="350" y="78" text-anchor="middle" class="arrow">v</text>
+
+  <!-- After -->
+  <text x="16" y="106" class="size-label">튜닝 후</text>
+  <rect x="70" y="92" width="240" height="24" class="bar app"/><text x="140" y="109" class="bar-label">App 4G (Xmx 1g->2g)</text>
+  <rect x="310" y="92" width="240" height="24" class="bar mysql"/><text x="400" y="109" class="bar-label">MySQL 4G</text>
+  <rect x="550" y="92" width="54" height="24" class="bar sidecar"/><text x="555" y="109" class="bar-label">0.9G</text>
+  <rect x="604" y="92" width="80" height="24" class="bar os"/><text x="614" y="109" class="bar-label">OS ~3G</text>
+
+  <!-- Legend -->
+  <rect x="70" y="132" width="12" height="12" class="bar app"/><text x="88" y="143" class="note">App (JVM)</text>
+  <rect x="170" y="132" width="12" height="12" class="bar mysql"/><text x="188" y="143" class="note">MySQL</text>
+  <rect x="250" y="132" width="12" height="12" class="bar sidecar"/><text x="268" y="143" class="note">Sidecar</text>
+  <rect x="340" y="132" width="12" height="12" class="bar os"/><text x="358" y="143" class="note">OS + Lucene 페이지 캐시</text>
+
+  <text x="70" y="168" class="note">Lucene MMap 커버율: 25% (5G/20G) --> 15% (3G/20G). Caffeine 히트율 96%이므로 실질적 영향 제한적.</text>
+</svg>

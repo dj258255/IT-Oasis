@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .input { fill: #f1f5f9; stroke: #94a3b8; }
+    .map { fill: #eff6ff; stroke: #3b82f6; }
+    .shuffle { fill: #fef3c7; stroke: #f59e0b; }
+    .reduce { fill: #fce7f3; stroke: #ec4899; }
+    .output { fill: #f0fdf4; stroke: #22c55e; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .heading { font-size: 11px; fill: #1e293b; font-weight: 700; }
+    .tech { font-size: 10px; fill: #7c3aed; font-weight: 600; }
+    .note { font-size: 10px; fill: #64748b; }
+    .divider { stroke: #e2e8f0; stroke-width: 1; }
+  </style>
+  <defs><marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker></defs>
+
+  <text x="16" y="18" class="heading">대규모 자동완성 파이프라인 — 사고 패턴</text>
+
+  <!-- Flow -->
+  <rect x="16" y="30" width="90" height="50" class="box input"/>
+  <text x="36" y="52" class="label">검색 로그</text>
+  <text x="26" y="68" class="sub">search_logs</text>
+
+  <path d="M 106 55 L 130 55" class="arrow"/>
+
+  <rect x="134" y="30" width="110" height="50" class="box map"/>
+  <text x="150" y="50" class="label">Map</text>
+  <text x="144" y="68" class="sub">prefix 분해</text>
+
+  <path d="M 244 55 L 268 55" class="arrow"/>
+
+  <rect x="272" y="30" width="110" height="50" class="box shuffle"/>
+  <text x="290" y="50" class="label">Shuffle</text>
+  <text x="282" y="68" class="sub">파티셔닝</text>
+
+  <path d="M 382 55 L 406 55" class="arrow"/>
+
+  <rect x="410" y="30" width="110" height="50" class="box reduce"/>
+  <text x="428" y="50" class="label">Reduce</text>
+  <text x="420" y="68" class="sub">Top-K 집계</text>
+
+  <path d="M 520 55 L 544 55" class="arrow"/>
+
+  <rect x="548" y="30" width="140" height="50" class="box output"/>
+  <text x="564" y="50" class="label">prefix_topk</text>
+  <text x="558" y="68" class="sub">Redis flat KV 서빙</text>
+
+  <!-- Tech comparison -->
+  <line x1="16" y1="100" x2="704" y2="100" class="divider"/>
+  <text x="16" y="118" class="heading">이 흐름을 실행하는 기술:</text>
+
+  <rect x="16" y="126" width="220" height="28" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="26" y="144" class="tech">2010년대: Hadoop MapReduce</text>
+  <text x="195" y="144" class="note">(레거시)</text>
+
+  <rect x="250" y="126" width="220" height="28" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1"/>
+  <text x="260" y="144" class="tech">2020년대: Spark SQL / Flink</text>
+  <text x="432" y="144" class="note">(현업 표준)</text>
+
+  <rect x="484" y="126" width="200" height="28" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1"/>
+  <text x="494" y="144" class="tech">단일 서버: SQL GROUP BY</text>
+  <text x="638" y="144" class="note">(현재)</text>
+
+  <text x="16" y="178" class="note">"MapReduce"는 Hadoop 프레임워크가 아니라 "데이터 분배 -> 그룹핑 -> 집계"라는 사고 패턴. 기술은 바뀌어도 흐름은 동일.</text>
+</svg>

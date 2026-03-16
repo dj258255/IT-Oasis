@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .axis { stroke: #cbd5e1; stroke-width: 1; }
+    .line { fill: none; stroke: #3b82f6; stroke-width: 2.5; }
+    .area { fill: url(#grad); }
+    .label { font-size: 10px; fill: #64748b; }
+    .vu-label { font-size: 11px; fill: #1e293b; font-weight: 600; }
+    .phase { font-size: 9px; fill: #fff; font-weight: 600; }
+    .phase-bg { rx: 3; }
+  </style>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Y axis labels -->
+  <text x="8" y="28" class="vu-label">200</text>
+  <text x="8" y="88" class="vu-label">100</text>
+  <text x="20" y="168" class="label">0</text>
+  <text x="8" y="185" class="label">VU</text>
+
+  <!-- X axis -->
+  <line x1="45" y1="170" x2="700" y2="170" class="axis"/>
+  <line x1="45" y1="25" x2="45" y2="170" class="axis"/>
+
+  <!-- Time labels -->
+  <text x="45" y="185" class="label">0</text>
+  <text x="97" y="185" class="label">2m</text>
+  <text x="176" y="185" class="label">7m</text>
+  <text x="228" y="185" class="label">9m</text>
+  <text x="490" y="185" class="label">19m</text>
+  <text x="542" y="185" class="label">21m</text>
+  <text x="620" y="185" class="label">24m</text>
+  <text x="673" y="185" class="label">25m</text>
+
+  <!-- Area fill -->
+  <polygon class="area" points="45,170 97,85 176,85 228,25 490,25 542,85 620,85 673,170 45,170"/>
+
+  <!-- VU line -->
+  <polyline class="line" points="45,170 97,85 176,85 228,25 490,25 542,85 620,85 673,170"/>
+
+  <!-- Phase labels -->
+  <rect x="55" y="120" width="50" height="16" class="phase-bg" fill="#94a3b8"/><text x="64" y="132" class="phase">워밍업</text>
+  <rect x="112" y="68" width="60" height="16" class="phase-bg" fill="#22c55e"/><text x="118" y="80" class="phase">정상 부하</text>
+  <rect x="240" y="8" width="56" height="16" class="phase-bg" fill="#ef4444"/><text x="244" y="20" class="phase">과부하 진입</text>
+  <rect x="340" y="8" width="100" height="16" class="phase-bg" fill="#ef4444"/><text x="344" y="20" class="phase">과부하 지속 (한계 탐색)</text>
+  <rect x="548" y="68" width="55" height="16" class="phase-bg" fill="#f59e0b"/><text x="552" y="80" class="phase">회복 확인</text>
+  <rect x="640" y="120" width="45" height="16" class="phase-bg" fill="#94a3b8"/><text x="644" y="132" class="phase">쿨다운</text>
+
+  <!-- Dashed guides -->
+  <line x1="45" y1="85" x2="700" y2="85" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="45" y1="25" x2="700" y2="25" stroke="#fecaca" stroke-width="1" stroke-dasharray="4,3"/>
+</svg>
