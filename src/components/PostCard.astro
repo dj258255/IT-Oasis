@@ -1,6 +1,6 @@
 ---
 import { translateCategory } from '../lib/utils';
-import { base, assetPath, getCategoryI18n, getCategoryDisplayKo, getSiteSettings } from '../lib/config';
+import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../lib/config';
 
 interface Props {
   title: string;
@@ -17,8 +17,7 @@ interface Props {
 }
 
 const { title, titleEn, description, descriptionEn, date, slug, tags = [], category, coverImage: rawCoverImage, index = 0, compact = false } = Astro.props;
-const fallbackImage = getSiteSettings().bannerImage;
-const coverImage = rawCoverImage || fallbackImage;
+const coverImage = rawCoverImage || '/uploads/banners/default-post-cover.png';
 const catI18n = getCategoryI18n();
 
 const formattedDate = date.toLocaleDateString('ko-KR', {
