@@ -308,6 +308,57 @@ tomcat_accept_count: 100   # 50→100 원복
 
 ---
 
+## GC 튜닝을 하지 않은 이유
+
+GC 튜닝은 **최후의 수단**이다. 최적화 순서:
+
+1. 애플리케이션 레벨 최적화 (코드, 쿼리, 캐싱) — [캐싱 전략](/blog/project/wikiengine/caching-strategy)~[Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 완료
+2. 아키텍처 변경 (분산 캐시, DB 분산, 스케일아웃) — 다음 단계에서 수행
+3. JVM/GC 튜닝 — 1, 2를 다 한 후에도 GC가 병목일 때만
+
+이 프로젝트에서 GC는 병목이 아니었다 (pause 최대 3ms, Full GC 없음, Heap 256MB/1GB 여유). GC 튜닝이 필요한 건 "GC pause가 수백ms~초 단위로 응답시간을 잡아먹을 때"이며, 그 전에 애플리케이션/아키텍처 레벨에서 해결하는 것이 정석이다.
+
+---
+
+## 스케일 업 vs 스케일 아웃
+
+| | 스케일 업 (서버 스펙 올리기) | 스케일 아웃 (서버 대수 늘리기) |
+|---|---|---|
+| 방법 | 2코어→4코어, RAM 12G→24G | 서버 2대→3대 + 로드밸런서 |
+| 장점 | 간단, 코드 변경 없음 | 무한 확장, 고가용성, 장애 격리 |
+| 단점 | 물리적 한계, 비용 급증 | 상태 공유 문제(세션, 캐시) |
+| 적합 상황 | 단기 해결, 스펙 여유 있을 때 | 장기 확장, 고가용성 필요 시 |
+
+**이 프로젝트에서 스케일 아웃을 선택한 이유:**
+
+1. **Oracle Cloud Free Tier라 스케일 업 불가** — ARM 2코어/12GB가 Free Tier 최대 사양
+2. **CPU가 병목** — 코어 수를 늘려야 하는데, 같은 서버에서는 불가
+3. **고가용성** — 서버 1대가 죽으면 전체 서비스 중단. 2대 이상이면 장애 격리 가능
+4. **포트폴리오 가치** — 스케일 업은 "서버 스펙 올렸다"로 끝이지만, 스케일 아웃은 Redis 캐시 일관성, 로드밸런싱, 세션 공유 등 **엔지니어링 판단**을 보여줄 수 있다
+
+> 실무에서는 "먼저 스케일 업(간단) → 한계 오면 스케일 아웃(확장성)"이 일반적이다. Free Tier 제약으로 스케일 업이 불가능하므로 바로 스케일 아웃으로 진행한다.
+
+---
+
+## CPU 병목 해결 순서 — 왜 바로 스케일 아웃이 아닌가
+
+CPU가 병목이라고 무조건 서버를 늘리는 게 아니다. 실무에서는 아래 순서로 접근한다:
+
+| 순서 | 최적화 | 적용 | 상태 |
+|------|--------|------|------|
+| 진짜 CPU 병목 확인 | lock / IO wait / GC / context switching이 CPU처럼 보일 수 있음 | Grafana에서 CPU 100%, GC 3ms, Lock 0, IO wait 없음 확인 | 진짜 CPU 병목 확인 |
+| 캐싱 | Caffeine L1 (히트율 96%) | [캐싱 전략](/blog/project/wikiengine/caching-strategy) | 완료 |
+| 알고리즘 | LIKE → Lucene BM25 역색인 | [Lucene 전환](/blog/project/wikiengine/lucene-decision) | 완료 |
+| 데이터 최적화 | Slice 전환, snippet 150자 (260KB→3KB) | [COUNT(*) 제거와 페이지 제한](/blog/project/wikiengine/query-refactoring-optimization) | 완료 |
+| Precompute | 검색 로그 → Trie 인기순 | [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete) | 완료 |
+| JVM/Tomcat 튜닝 | Tomcat 스레드 축소 시도 → 역효과 | 이 글 | **실패 (원복)** |
+| 스케일 업 | Free Tier 제약으로 불가 | - | **불가** |
+| **→ 스케일 아웃** | Redis L2 + Replication + 다중 인스턴스 | 다음 | **다음** |
+
+> **스케일 아웃은 "마지막 수단"이다.** 코드 최적화, 캐싱, 알고리즘 개선을 다 한 후에도 CPU가 병목이고, 스케일 업도 불가능한 상황에서 선택하는 것이다. "Redis가 좋으니까", "MSA가 트렌드니까"가 아니라, **"stress 테스트에서 CPU 100% 확인 + 튜닝 역효과 확인 + 스케일 업 불가"**라는 근거가 있다.
+
+---
+
 ## 참고: 대규모 자동완성 파이프라인 설계
 
 stress 테스트에서 단일 서버 한계를 확인한 후, "대규모에서는 어떻게 해야 하는가"를 정리합니다.
@@ -615,6 +666,57 @@ All settings reverted to 1st stress baseline.
 | After rollback | Same as 1st | **Cannot exceed this limit with tuning on this server** |
 
 **Distributed transition justified**: Single server (ARM 2 cores) limit is ~100-150 concurrent users. JVM/Tomcat tuning cannot break this limit. Fundamentally reducing CPU load requires Redis L2 cache (reducing DB/Lucene access) and App scale-out (distributing CPU).
+
+---
+
+## Why GC Tuning Was Not Performed
+
+GC tuning is a **last resort**. Optimization order:
+
+1. Application-level optimization (code, queries, caching) — completed through [Caching Strategy](/blog/project/wikiengine/caching-strategy) to [Trie Autocomplete](/blog/project/wikiengine/trie-autocomplete)
+2. Architecture changes (distributed cache, DB distribution, scale-out) — next phase
+3. JVM/GC tuning — only when GC is the bottleneck after completing 1 and 2
+
+GC was not a bottleneck in this project (max pause 3ms, no Full GC, Heap 256MB/1GB with headroom). GC tuning is needed when "GC pauses in the hundreds of ms to seconds consume response time." Before reaching that point, solving issues at the application/architecture level is the established approach.
+
+---
+
+## Scale Up vs Scale Out
+
+| | Scale Up (increase server specs) | Scale Out (increase server count) |
+|---|---|---|
+| Method | 2 cores→4 cores, RAM 12G→24G | 2→3 servers + load balancer |
+| Pros | Simple, no code changes | Unlimited expansion, high availability, fault isolation |
+| Cons | Physical limits, cost spikes | State sharing issues (sessions, cache) |
+| Suited for | Short-term fix, when spec headroom exists | Long-term scaling, high availability needed |
+
+**Why scale-out was chosen for this project:**
+
+1. **Oracle Cloud Free Tier prevents scale-up** — ARM 2 cores/12GB is the Free Tier maximum
+2. **CPU is the bottleneck** — more cores are needed, impossible on the same server
+3. **High availability** — with 1 server, any failure means total service outage. 2+ servers enable fault isolation
+4. **Portfolio value** — scale-up is just "upgraded server specs," but scale-out demonstrates **engineering judgment** in Redis cache consistency, load balancing, session sharing, etc.
+
+> In practice, the typical approach is "scale up first (simple) → scale out when limits are hit (scalability)." Due to Free Tier constraints making scale-up impossible, we proceed directly to scale-out.
+
+---
+
+## CPU Bottleneck Resolution Order — Why Not Scale Out Immediately
+
+CPU being the bottleneck doesn't mean immediately adding more servers. In practice, this order is followed:
+
+| Step | Optimization | Applied | Status |
+|------|-------------|---------|--------|
+| Verify real CPU bottleneck | lock / IO wait / GC / context switching can look like CPU | Grafana: CPU 100%, GC 3ms, Lock 0, IO wait none | Real CPU bottleneck confirmed |
+| Caching | Caffeine L1 (hit rate 96%) | [Caching Strategy](/blog/project/wikiengine/caching-strategy) | Done |
+| Algorithm | LIKE → Lucene BM25 inverted index | [Lucene Migration](/blog/project/wikiengine/lucene-decision) | Done |
+| Data optimization | Slice conversion, snippet 150 chars (260KB→3KB) | [COUNT(*) Elimination](/blog/project/wikiengine/query-refactoring-optimization) | Done |
+| Precompute | Search logs → Trie popularity | [Trie Autocomplete](/blog/project/wikiengine/trie-autocomplete) | Done |
+| JVM/Tomcat tuning | Tomcat thread reduction → backfired | This post | **Failed (reverted)** |
+| Scale up | Impossible due to Free Tier constraints | - | **Impossible** |
+| **→ Scale out** | Redis L2 + Replication + multi-instance | Next | **Next** |
+
+> **Scale-out is a "last resort."** It is chosen after completing code optimization, caching, and algorithm improvements, confirming CPU is still the bottleneck, and scale-up is impossible. Not because "Redis is good" or "MSA is trendy," but because there is concrete evidence: **"stress test confirmed CPU 100% + tuning backfired + scale-up impossible."**
 
 ---
 
