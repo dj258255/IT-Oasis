@@ -308,15 +308,21 @@ tomcat_accept_count: 100   # 50→100 원복
 
 ---
 
-## GC 튜닝을 하지 않은 이유
+## GC 튜닝이 해결책이 아니었던 이유
 
-GC 튜닝은 **최후의 수단**이다. 최적화 순서:
+JVM/Tomcat 튜닝을 시도했지만, **근본 병목이 GC가 아니라 CPU 자체였기 때문에** 효과가 없었다.
 
+1차 stress에서 확인한 GC 상태:
+- GC pause: 최대 **3ms** (문제 없음)
+- Full GC: **0회** (발생하지 않음)
+- JVM Heap: 256MB / 1GB (여유)
+
+GC 튜닝이 필요한 건 "GC pause가 수백ms~초 단위로 응답시간을 잡아먹을 때"다. 이 프로젝트에서는 GC가 정상 범위였고, CPU 100% 포화가 진짜 병목이었다. Tomcat 스레드를 줄여봤지만 CPU-bound 상황에서 동시 처리 용량만 줄어들어 79% 악화. **"GC가 아닌 곳을 튜닝하면 효과가 없거나 역효과"**라는 것을 실측으로 확인했다.
+
+최적화 순서의 정석:
 1. 애플리케이션 레벨 최적화 (코드, 쿼리, 캐싱) — [캐싱 전략](/blog/project/wikiengine/caching-strategy)~[Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 완료
-2. 아키텍처 변경 (분산 캐시, DB 분산, 스케일아웃) — 다음 단계에서 수행
-3. JVM/GC 튜닝 — 1, 2를 다 한 후에도 GC가 병목일 때만
-
-이 프로젝트에서 GC는 병목이 아니었다 (pause 최대 3ms, Full GC 없음, Heap 256MB/1GB 여유). GC 튜닝이 필요한 건 "GC pause가 수백ms~초 단위로 응답시간을 잡아먹을 때"이며, 그 전에 애플리케이션/아키텍처 레벨에서 해결하는 것이 정석이다.
+2. 아키텍처 변경 (분산 캐시, DB 분산, 스케일아웃) — 다음에서 수행
+3. JVM/GC 튜닝 — 1, 2를 다 한 후에도 **GC가 병목일 때만**
 
 ---
 
@@ -669,15 +675,21 @@ All settings reverted to 1st stress baseline.
 
 ---
 
-## Why GC Tuning Was Not Performed
+## Why GC Tuning Was Not the Solution
 
-GC tuning is a **last resort**. Optimization order:
+JVM/Tomcat tuning was attempted, but it had no effect because **the fundamental bottleneck was CPU itself, not GC**.
 
+GC status confirmed in the 1st stress test:
+- GC pause: max **3ms** (no issue)
+- Full GC: **0 occurrences** (never happened)
+- JVM Heap: 256MB / 1GB (plenty of headroom)
+
+GC tuning is needed when "GC pauses in the hundreds of ms to seconds consume response time." In this project, GC was within normal range, and the real bottleneck was 100% CPU saturation. Reducing Tomcat threads was attempted but only reduced concurrent processing capacity under a CPU-bound situation, resulting in 79% degradation. **"Tuning something that isn't the bottleneck has no effect or backfires"** — confirmed through measurement.
+
+The established optimization order:
 1. Application-level optimization (code, queries, caching) — completed through [Caching Strategy](/blog/project/wikiengine/caching-strategy) to [Trie Autocomplete](/blog/project/wikiengine/trie-autocomplete)
 2. Architecture changes (distributed cache, DB distribution, scale-out) — next phase
-3. JVM/GC tuning — only when GC is the bottleneck after completing 1 and 2
-
-GC was not a bottleneck in this project (max pause 3ms, no Full GC, Heap 256MB/1GB with headroom). GC tuning is needed when "GC pauses in the hundreds of ms to seconds consume response time." Before reaching that point, solving issues at the application/architecture level is the established approach.
+3. JVM/GC tuning — only when **GC is the bottleneck** after completing 1 and 2
 
 ---
 
