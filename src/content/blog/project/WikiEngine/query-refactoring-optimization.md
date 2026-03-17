@@ -978,3 +978,967 @@ public record PostSearchResponse(
 **k6 부하 테스트:**
 - [k6 — Test Types (smoke, load, stress, soak)](https://k6.io/docs/test-types/)
 - [k6 — Thresholds](https://k6.io/docs/using-k6/thresholds/)
+
+<!-- EN -->
+
+## Previous Post
+
+In the [Deferred Join post](/blog/project/wikiengine/deferred-join-optimization), we applied Deferred Join to OFFSET pagination on 14.75 million rows and analyzed why the improvement fell short of expectations.
+
+---
+
+## Previous Post Summary
+
+In the [Lucene migration post](/blog/project/wikiengine/lucene-decision), we switched the search engine to Lucene with the Nori morphological analyzer.
+We completed full-text search on 14.25 million rows, resolved high-frequency token timeouts, and eliminated false positives.
+
+When we first ran k6 load tests, **the latest post listing — not search — turned out to be the biggest bottleneck**.
+
+> **Test environment**: ARM 2-core / 12 GB RAM — Spring Boot 2 GB (JVM heap 1 GB) + MySQL 4 GB (InnoDB BP 2 GB) + monitoring agents ~1 GB. The remaining ~5 GB serves as OS page cache (Lucene MMap).
+
+| Scenario | smoke (5 VU) | load (100 VU) |
+|----------|-------------|---------------|
+| Search (Lucene) | 66 ms | 3,328 ms |
+| Autocomplete (Lucene) | 25 ms | 3,339 ms |
+| **Latest post listing (MySQL OFFSET)** | **2,518 ms** | **19,424 ms** |
+| Detail view (MySQL) | 53 ms | 3,345 ms |
+| Error rate | 0% | **32.53%** |
+
+In smoke, the latest post listing (2,518 ms) was **38x slower** than search (66 ms).
+Under load, the heavy OFFSET of the post listing saturated the CPU, **causing every scenario to collapse in a chain reaction**.
+
+---
+
+## 1. Discovery — The Latest Post Listing Was the Bottleneck, Not Search
+
+> This problem pertains to the **latest post listing** (`GET /api/v1.0/posts`).
+> Lucene search (`GET /api/v1.0/posts/search`) returns results directly from an inverted index, so it has no OFFSET problem.
+
+The k6 script requested pages 100–1000 with 30% probability.
+Page 1000 = `OFFSET 20,000`, meaning MySQL had to read 20,020 rows and discard 20,000.
+
+```sql
+-- Latest post listing: sorted by created_at DESC
+SELECT * FROM posts
+ORDER BY created_at DESC
+LIMIT 20 OFFSET 20000;  -- page 1001
+```
+
+---
+
+## 2. Root Cause — The Structural Inefficiency of SELECT * + OFFSET
+
+MySQL's `SELECT *` + OFFSET goes through the following steps:
+
+```
+1. Sequentially retrieve PKs from the secondary index (idx_posts_created_at)
+2. Random I/O to the clustered index for each PK to fetch the full row (including LONGTEXT)
+3. Read and discard OFFSET 20,000 rows → ~260 MB read and thrown away (20,000 × ~13 KB avg wiki body)
+4. Return only the remaining 20 rows
+```
+
+`PostSummaryResponse` does not use `content`. We were reading unnecessary LONGTEXT data.
+
+**CPU saturation causal chain (k6 load results):**
+
+```
+Deep OFFSET on latest post listing (OFFSET 20,000) → CPU-bound index scan
+→ 2-core CPU saturation (System CPU 100%, Load Average 20)
+→ Cascading delays across MySQL + App sharing the same CPU (14.8K Slow Queries)
+→ Search, autocomplete, detail views all delayed (66 ms → 3,300 ms)
+→ Spring Boot thread explosion (20 → 120), request timeouts
+→ HTTP 500 errors → k6 error rate 32.53%
+```
+
+Key evidence: **InnoDB Buffer Pool hit rate was 100%** (zero disk I/O), yet 14.8K Slow Queries occurred. The bottleneck was CPU, not memory.
+
+---
+
+## 3. Solution 1: Deferred Join
+
+### Principle
+
+The inner subquery performs `SELECT id` only, handled via Covering Index Scan.
+The outer query then looks up the clustered index for only the final 20 PKs.
+
+```sql
+-- Before: Random I/O for 20,020 full rows (including LONGTEXT)
+SELECT * FROM posts
+ORDER BY created_at DESC
+LIMIT 20 OFFSET 20000;
+
+-- After: Extract PKs via Covering Index, then cluster I/O for only 20 rows
+SELECT p.* FROM posts p
+INNER JOIN (
+    SELECT id FROM posts ORDER BY created_at DESC
+    LIMIT 20 OFFSET 20000
+) AS tmp ON p.id = tmp.id
+ORDER BY p.created_at DESC;
+```
+
+> `idx_posts_created_at` contains both `(created_at, id)`, so
+> `SELECT id ... ORDER BY created_at DESC` completes using only this index (Covering Index).
+
+### Current Implementation
+
+`PostRepository.java`:
+
+```java
+@Query(value = """
+    SELECT p.* FROM posts p
+    INNER JOIN (
+        SELECT id FROM posts ORDER BY created_at DESC
+        LIMIT :#{#pageable.pageSize} OFFSET :#{#pageable.offset}
+    ) AS tmp ON p.id = tmp.id
+    ORDER BY p.created_at DESC
+    """,
+    countQuery = "SELECT COUNT(*) FROM posts",
+    nativeQuery = true)
+Page<Post> findAllWithDeferredJoin(Pageable pageable);
+```
+
+`PostService.java`:
+
+```java
+public Page<Post> getPosts(Pageable pageable) {
+    return postRepository.findAllWithDeferredJoin(pageable);
+}
+```
+
+### EXPLAIN Results
+
+| id | select_type | table | type | key | rows | Extra |
+|----|-------------|-------|------|-----|------|-------|
+| 2 | DERIVED | posts | index | idx_posts_created_at | 20,020 | **Using index** (Covering) |
+| 1 | PRIMARY | `<derived2>` | ALL | NULL | 20,020 | Using temporary; Using filesort |
+| 1 | PRIMARY | p | eq_ref | PRIMARY | 1 | |
+
+Clustered index random I/O: **20,020 → 20** (1,000x reduction)
+
+### Measurement Results (k6 smoke, 5 VU, 2 min)
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Avg response time | 2,518 ms | 2,199 ms | -13% |
+| P95 | 3,372 ms | 2,741 ms | -19% |
+
+### Why the Improvement Was Low (13%) Compared to Expectations (40x)
+
+EXPLAIN analysis results:
+- **~85% of the total cost is the sequential scan of 20,020 index entries** (which Deferred Join cannot eliminate)
+- LONGTEXT I/O accounted for only ~15% → removing just this yielded 13%
+- Additionally, the overhead from temporary table creation (Using temporary; Using filesort) partially offset the gains
+
+| OFFSET Size | Deferred Join Improvement | Reason |
+|-------------|--------------------------|--------|
+| OFFSET 200 (page 10) | ~60% | Clustered I/O is a larger proportion |
+| OFFSET 2,000 (page 100) | ~40% | |
+| OFFSET 10,000 (page 500) | ~20% | |
+| OFFSET 20,000 (page 1000) | ~13% | Index scan dominates |
+
+> Since ~90% of user traffic is pages 1–10, the average perceived improvement is higher than the k6 measurement (13%).
+
+---
+
+## 4. Solution 2: Maximum Page Limit
+
+OFFSET's fundamental limitation (O(N) scan) is mitigated by Deferred Join, but unlimited pages are still risky.
+Google limits to ~30 pages, Naver also ~30 pages. **We cap the maximum page count to control worst-case scenarios.**
+
+### Industry Page Limit Comparison
+
+| Service | Results per page | Max pages | Max results |
+|---------|-----------------|-----------|-------------|
+| Google | 10 | ~30 pages | ~300 |
+| Naver | 15 | ~30 pages | ~450 |
+| **wikiEngine** | **20** | **31 pages (0–30)** | **620** |
+
+### Implementation
+
+**Step 1: Add ErrorCode**
+
+Added `PAGE_LIMIT_EXCEEDED` to `ErrorCode.java`:
+
+```java
+// 400 Bad Request
+PAGE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "최대 페이지 수를 초과했습니다"),
+```
+
+**Step 2: Add page limit logic to PostService**
+
+```java
+private static final int MAX_LIST_PAGE = 30;    // Latest post listing
+private static final int MAX_SEARCH_PAGE = 30;   // Lucene search
+
+private void validatePageLimit(Pageable pageable, int maxPage) {
+    if (pageable.getPageNumber() > maxPage) {
+        throw new BusinessException(ErrorCode.PAGE_LIMIT_EXCEEDED);
+    }
+}
+```
+
+**Why 30 pages:**
+
+| Max pages | Max OFFSET | Deferred Join measured |
+|-----------|-----------|----------------------|
+| 1,000 (no limit) | 19,980 | 19.4 ms (Covering Index scan) |
+| **30 (Google/Naver level)** | **580** | **~1 ms** |
+
+- Thanks to Deferred Join, page 1000 still completes in 19.4 ms, but at 30 pages the OFFSET is 580 — effectively zero cost
+- Both Google and Naver cap at ~30 pages. This matches user expectations
+- Latest post listing: beyond 30 pages (620 items), users are directed to search
+- Search: Lucene sorts by relevance, so results beyond 30 pages have low relevance
+
+### Note: Cursor-Based Pagination (For Infinite Scroll Migration)
+
+The current UI uses page numbers, so OFFSET + page limit is a good fit.
+When migrating to an infinite scroll UI, we plan to revisit Keyset Pagination.
+
+```sql
+-- Cursor approach: always reads only O(LIMIT), regardless of page depth
+SELECT * FROM posts
+WHERE created_at < :lastCreatedAt
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+| Approach | Pros | Cons | Use cases |
+|----------|------|------|-----------|
+| OFFSET (page numbers) | Jump to any specific page | Slows down at deep pages | Google, wiki search |
+| Cursor (infinite scroll) | Consistent performance | Sequential access only | Twitter, Instagram |
+
+---
+
+## 5. Solution 3: Eliminating COUNT(*)
+
+### Problem
+
+A COUNT(*) query was executed with every **latest post listing** request to display "Total N results".
+
+Current `PostRepository.findAllWithDeferredJoin` countQuery:
+
+```java
+countQuery = "SELECT COUNT(*) FROM posts"
+```
+
+This countQuery runs **automatically with every request** when Spring Data returns `Page<T>`.
+On a 14.25-million-row table, COUNT(*) is expensive because InnoDB must full-scan the smallest secondary index.
+
+> Lucene search (`GET /api/v1.0/posts/search`) was also converted to `Slice<T>`.
+> Lucene's `totalHits` is an estimate, and since we removed the total count display, there's no reason to keep Page.
+
+---
+
+### Trade-off Analysis — Do We Really Need "Total N" Display?
+
+To remove COUNT(*), we must give up the "Total N results" display.
+To evaluate this trade-off, we researched how real-world services handle it.
+
+#### Industry Case Studies
+
+**1) Google — Removed result count display entirely in 2024**
+
+Google had displayed "About 45,700,000 results" since the early days of search.
+However, in 2024, [they completely removed this number from search result pages](https://searchengineland.com/google-hides-search-results-count-under-tools-section-440299).
+
+Reasons for removal:
+- The number was an **estimate** — it routinely changed when navigating between pages
+- Deemed not useful to users — no one makes decisions based on "45.7 million results"
+- Not worth the computation cost
+
+```
+Before (pre-2024):
+  "About 45,700,000 results (0.52 seconds)"  ← displayed at top of page
+
+After (2024–):
+  No result count displayed. Hidden inside the Tools menu
+```
+
+> Source: [Google Drops Result Count From Search Results Page — Search Engine Roundtable](https://www.seroundtable.com/google-drops-result-count-from-search-results-page-37348.html)
+
+**2) Slack — Switched from offset+page to cursor, removed total_count**
+
+Slack initially provided OFFSET pagination with `count` + `page` parameters.
+They later [switched to cursor-based pagination and removed total_count](https://slack.engineering/evolving-api-pagination-at-slack/).
+
+Reasons for the switch:
+- As OFFSET grows, the DB must read through all previous rows, becoming slower
+- When items are added/deleted, the page window shifts, causing **duplicates/missing items**
+- `total_count` calculation = COUNT(*) = full scan on large tables
+
+Slack's current API: if `next_cursor` is an empty string, it's the last page. No total count.
+
+> Internally, they query `limit + 1` items to determine if a next page exists.
+> This is the same pattern as Spring Data's `Slice<T>`.
+
+> Source: [Evolving API Pagination at Slack — Slack Engineering](https://slack.engineering/evolving-api-pagination-at-slack/)
+
+**3) Naver — Section-based separation + ~30 page max, no total count shown**
+
+Unlike Google, Naver splits integrated search results into **sections** (blog, news, cafe, web documents, etc.).
+Each section shows only about 5 results initially and directs users to a dedicated section page via "More".
+
+- **Does not display total result count on the integrated search page**
+- Dedicated section pages (Blog tab, News tab) **provide only up to ~30 pages**
+  ([SerpApi — Naver Search API](https://serpapi.com/naver-search-api))
+- Pagination uses a `start` parameter-based OFFSET approach: 10 results per page for web search, 40 for shopping
+
+Naver's approach differs from Google's, but the conclusion is the same:
+**They don't show total counts like "N results" to users, and structurally block deep page access.**
+
+> Naver has been transitioning to AI-based search (Cue:) since 2024,
+> and traditional 10-blue-links pagination itself is declining.
+
+**4) Twitter (X), Instagram — Infinite scroll, no total count**
+
+For feed-based services, total count is inherently meaningless.
+They operate with cursor-based + `hasNext` only.
+
+**5) Stack Overflow, Reddit — Page number UI + total count display**
+
+Services that maintain a traditional board UI still display total counts.
+However, these services have relatively small data volumes or absorb COUNT costs through caching.
+
+#### Summary: Total Count Display Spectrum
+
+| Approach | Representative Services | Pros | Cons |
+|----------|------------------------|------|------|
+| **Exact COUNT** | Stack Overflow, traditional boards | Accurate total page display | Full scan every request on large tables |
+| **Estimated count** | Google (pre-2024) | Conveys scale, reduces COUNT cost | Estimates are inaccurate (change when paging) |
+| **No total count (hasNext only)** | Google (current), Slack, Twitter | Zero COUNT queries, best performance | Cannot display "Total N pages" |
+| **Section-based + page limit** | Naver | Section-level optimization, blocks deep pages | No aggregate count, max ~30 pages |
+
+#### UX Perspective — Total Page Count Is Meaningless Beyond 100 Pages
+
+According to [NN/g (Nielsen Norman Group) research](https://www.nngroup.com/articles/item-list-view-all/) and [UX design guides](https://coyleandrew.medium.com/design-better-pagination-a022a3b161e1):
+
+- When the page count is **in the tens to hundreds or more**, displaying total page count does not help users
+- Users don't make any decisions based on "Page 3 of 71,250"
+- On the other hand, **30 pages or fewer** gives users the psychological effect of "seeing the end"
+
+This project: 14.25 million rows / 20 per page = **710,000 pages**. Displaying total count is completely meaningless.
+
+---
+
+### Conclusion: Follow Google's Current Approach — hasNext Only, No Total Count
+
+| Criterion | This project's situation | Decision |
+|-----------|-------------------------|----------|
+| Data scale | 14.25 million rows (710K pages) | Total count meaningless |
+| COUNT(*) cost | InnoDB full scan (14.25M rows) | High cost per request |
+| UI type | Page numbers | hasNext + surrounding pages is sufficient |
+| User behavior | 90% visit pages 1–3 | Almost no deep page navigation |
+| Max page limit | 30 pages | Finite range → total count unnecessary |
+
+**`Page<T>` → `Slice<T>` conversion. COUNT(*) completely eliminated. No estimates needed either.**
+
+Page number UI can be fully implemented with `hasNext`:
+
+![hasNext-based pagination UI](/uploads/project/WikiEngine/query-refactoring-optimization/pagination-hasnext.svg)
+
+Display only surrounding pages + [Previous]/[Next] buttons.
+Google Search has been using this approach since 2024.
+
+> **What if "About N results" becomes needed later?**
+> `information_schema.tables.table_rows` can provide an estimate instantly (±10% margin).
+> Serving it through a separate API would add it without impacting latest post listing performance.
+> But considering why Google removed even this, the likelihood of needing it is low.
+
+---
+
+### Implementation Plan
+
+#### Caution: The Pitfall of Slice + nativeQuery + Deferred Join Combination
+
+The current `findAllWithDeferredJoin` is a nativeQuery with explicit `LIMIT/OFFSET` inside a subquery.
+Simply swapping the return type to `Slice<T>` in this structure can cause problems.
+
+**Why does it conflict? — Spring Data's internal pagination behavior**
+
+How Spring Data JPA processes `Pageable` parameters:
+
+![Spring Data Pageable processing flow](/uploads/project/WikiEngine/query-refactoring-optimization/spring-data-pageable-flow.svg)
+
+**In JPQL**, Hibernate parses the query structure and cleanly adds LIMIT/OFFSET.
+
+**In nativeQuery**, Hibernate cannot parse the SQL.
+Instead, it mechanically appends LIMIT/OFFSET to the end of the query string,
+or in some DB dialects, **wraps the entire query as a subquery** and applies pagination externally.
+
+For Deferred Join queries, this automatic handling conflicts in two ways:
+
+```sql
+-- Our Deferred Join query (with explicit LIMIT/OFFSET in the subquery)
+SELECT p.* FROM posts p
+INNER JOIN (
+    SELECT id FROM posts ORDER BY created_at DESC
+    LIMIT 20 OFFSET 0          ← ① Our explicit LIMIT
+) AS tmp ON p.id = tmp.id
+ORDER BY p.created_at DESC
+LIMIT 21                        ← ② Hibernate's auto-added LIMIT (Slice +1)
+```
+
+**Conflict scenarios:**
+
+| # | Symptom | Cause |
+|---|---------|-------|
+| ① | Double LIMIT applied (subquery + outer) | Hibernate mechanically appends LIMIT to the end of nativeQuery. Its intent differs from the subquery's LIMIT |
+| ② | COUNT query executes despite Slice | Bug in `nativeQuery + Slice` combination where Spring Data returns `PageImpl` ([DATAJPA-1464](https://github.com/spring-projects/spring-data-jpa/issues/1782)) |
+| ③ | ORDER BY lost | Spring Data may overwrite existing ORDER BY when trying to apply dynamic sorting to nativeQuery ([#2260](https://github.com/spring-projects/spring-data-jpa/issues/2260)) |
+
+Key point: **Spring Data's automatic pagination operates on the assumption that "LIMIT/OFFSET applies to the final result of the query"**.
+In structures like Deferred Join where **LIMIT/OFFSET already exists inside a subquery**, this assumption breaks.
+Since Spring Data cannot parse the internal structure of nativeQuery, the subquery's LIMIT and the outer auto-LIMIT overlap unintentionally.
+
+> Sources: [Vlad Mihalcea — Query Pagination with JPA and Hibernate](https://vladmihalcea.com/query-pagination-jpa-hibernate/),
+> [Spring Data JPA #2260](https://github.com/spring-projects/spring-data-jpa/issues/2260),
+> [Spring Data JPA #1782 (DATAJPA-1464)](https://github.com/spring-projects/spring-data-jpa/issues/1782)
+
+**Safe approach: Return `List<Post>` + manually construct `SliceImpl` in the service**
+
+This pattern is widely proven in industry:
+
+- **Slack Engineering** — Querying `limit + 1` items to determine `has_more` is the core mechanism of Slack's cursor-based pagination
+  ([Evolving API Pagination at Slack](https://slack.engineering/evolving-api-pagination-at-slack/))
+- **Baeldung** — Introduces Hibernate `query.setMaxResults(pageSize + 1)` + manual `SliceImpl` construction as the "extra row" pattern
+  ([Hibernate Pagination — Baeldung](https://www.baeldung.com/hibernate-pagination))
+- **Vlad Mihalcea (Hibernate core contributor)** — Recommends directly controlling `setFirstResult`/`setMaxResults` in nativeQuery
+  ([Query Pagination with JPA and Hibernate](https://vladmihalcea.com/query-pagination-jpa-hibernate/))
+- **Spring Data JPA GitHub Gist** — The `List<T>` return + `new SliceImpl<>(content, pageable, hasNext)` pattern is also used in Specification-based queries
+  ([GitHub Gist — Limit results without count query](https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b))
+
+Since it does not rely on Spring Data's automatic processing, there are no nativeQuery compatibility issues.
+**This pattern is the safest and most reliable approach for Deferred Join + nativeQuery.**
+
+**Step 1: Repository — Return `List<Post>`, explicit LIMIT/OFFSET parameters**
+
+```java
+// Before: Page<T> — countQuery auto-executed (COUNT(*) full scan every request)
+@Query(value = """
+    SELECT p.* FROM posts p
+    INNER JOIN (
+        SELECT id FROM posts ORDER BY created_at DESC
+        LIMIT :#{#pageable.pageSize} OFFSET :#{#pageable.offset}
+    ) AS tmp ON p.id = tmp.id
+    ORDER BY p.created_at DESC
+    """,
+    countQuery = "SELECT COUNT(*) FROM posts",
+    nativeQuery = true)
+Page<Post> findAllWithDeferredJoin(Pageable pageable);
+
+// After: List<T> — No COUNT, LIMIT+1 handled in service
+@Query(value = """
+    SELECT p.* FROM posts p
+    INNER JOIN (
+        SELECT id FROM posts ORDER BY created_at DESC
+        LIMIT :limit OFFSET :offset
+    ) AS tmp ON p.id = tmp.id
+    ORDER BY p.created_at DESC
+    """, nativeQuery = true)
+List<Post> findAllWithDeferredJoin(@Param("limit") int limit, @Param("offset") long offset);
+```
+
+**Step 2: Service — Manual Slice construction (LIMIT+1 pattern)**
+
+```java
+// PostService.java
+public Slice<Post> getPosts(Pageable pageable) {
+    if (pageable.getPageNumber() > MAX_LIST_PAGE) {
+        throw new BusinessException(ErrorCode.PAGE_LIMIT_EXCEEDED);
+    }
+
+    int pageSize = pageable.getPageSize();
+    long offset = pageable.getOffset();
+
+    // Key: Query pageSize + 1 to determine next page existence
+    List<Post> results = postRepository.findAllWithDeferredJoin(pageSize + 1, offset);
+
+    boolean hasNext = results.size() > pageSize;
+    if (hasNext) {
+        results = results.subList(0, pageSize);  // Only the 20 to actually display
+    }
+
+    return new SliceImpl<>(results, pageable, hasNext);
+}
+```
+
+> `SliceImpl` is Spring Data's implementation of `Slice<T>`.
+> It's created with `new SliceImpl<>(content, pageable, hasNext)`,
+> and supports `hasNext()`, `hasPrevious()`, `getContent()`, `getNumber()`, etc.
+
+**Step 3: Controller — Change return type**
+
+```java
+// PostController.java
+@GetMapping
+public Slice<PostSummaryResponse> getPosts(
+        @RequestParam(required = false) Long categoryId,
+        @PageableDefault(size = 20) Pageable pageable) {
+
+    Slice<Post> posts = (categoryId != null)
+            ? postService.getPostsByCategory(categoryId, pageable)
+            : postService.getPosts(pageable);
+
+    return posts.map(PostSummaryResponse::from);
+}
+```
+
+> **Category listing (`getPostsByCategory`) also needs the same pattern.**
+> Currently `findByCategoryIdOrderByCreatedAtDesc` is a Spring Data derived query, so
+> changing the return type to `Slice<Post>` automatically removes COUNT.
+> No pitfalls since it's not a nativeQuery.
+
+> **Search also converted to Slice**: `LuceneSearchService.search()` was also converted to `Slice<T>`. Lucene's `totalHits` is an estimate, and since the total count display was removed, we use the `limit + 1` pattern to determine only `hasNext()`. Additionally, by returning snippets (150 chars) instead of content (LONGTEXT), the response size was reduced by ~99%.
+
+### Spring Data: Page vs Slice Comparison
+
+| Item | `Page<T>` | `Slice<T>` |
+|------|-----------|------------|
+| COUNT query | **Executed every request** | Not executed |
+| `getTotalElements()` | O | X |
+| `getTotalPages()` | O | X |
+| `hasNext()` | O | O |
+| `getContent()` | O | O |
+| `getNumber()` (current page) | O | O |
+| DB queries per request | **2** (data + COUNT) | **1** (data only, LIMIT+1) |
+
+> Sources: [Spring Data JPA — Slice vs Page](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html), [JHipster — Boost Infinite Scroll Performance with Slice](https://www.jhipster.tech/tips/019_tip_infinite_scroll_with_slice.html)
+
+### Expected Results
+
+| Metric | Before (Page) | After (Slice) | Improvement |
+|--------|--------------|---------------|-------------|
+| DB queries/request | 2 (data + COUNT) | 1 (data only) | **50% reduction** |
+| COUNT(*) time | 2,038 ms (14.77M row scan) | 0 ms (eliminated) | **100% eliminated** |
+| Total count accuracy | 100% | Not displayed | - |
+| User experience | Same | Same (Google removed it too) | - |
+
+---
+
+## 6. Before/After Measurement
+
+### Pre-Change Captures
+
+We captured the following items before the code changes. These serve as evidence for equal-condition comparison with After.
+
+| # | Captured Item | Method | Purpose |
+|---|---------------|--------|---------|
+| 1 | COUNT(*) single execution cost | `EXPLAIN ANALYZE SELECT COUNT(*) FROM posts;` | Baseline for COUNT elimination effect |
+| 2 | Current API response JSON (Page structure) | `GET /api/v1.0/posts?page=0&size=20` | Confirm `totalElements`, `totalPages` fields disappear after Slice conversion |
+| 3 | k6 smoke (5 VU, 2 min) | `k6 run --env PROFILE=smoke baseline-load-test.js` | Performance baseline |
+| 4 | Grafana dashboard (during smoke) | QPS, CPU, Slow Query, thread count panel captures | Infrastructure baseline |
+| 5 | MySQL status snapshot | `SHOW GLOBAL STATUS LIKE 'Slow_queries';` | Cumulative Slow Query count |
+| 6 | (Optional) deep OFFSET execution time comparison | `EXPLAIN ANALYZE` page 200 vs page 1000 | Evidence for why page limits are needed |
+
+#### Capture Results
+
+**1. COUNT(*) execution cost:**
+
+![EXPLAIN ANALYZE SELECT COUNT(*) FROM posts — actual time=2014ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-count-explain.png)
+
+![Query execution Duration — COUNT(*) 2.038 sec, SHOW GLOBAL STATUS 0.015 sec](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-query-duration.png)
+
+```
+-> Count rows in posts  (actual time=2014..2014 rows=1 loops=1)
+```
+
+**Approximately 2 seconds were consumed by COUNT(*) for every latest post listing request.** Duration: 2.038 sec.
+
+**2. API response JSON (Page structure):**
+
+`GET /api/v1.0/posts?page=0&size=20` response (pagination metadata portion):
+
+```json
+{
+  "totalElements": 14769132,
+  "totalPages": 738457,
+  "number": 0,
+  "size": 20,
+  "first": true,
+  "last": false,
+  "numberOfElements": 20
+}
+```
+
+**`totalElements: 14,769,132` (~14.77 million), `totalPages: 738,457` (~740K pages).**
+After Slice conversion, `totalElements` and `totalPages` fields disappear, leaving only `hasNext: true/false`.
+
+**3. k6 smoke Before:**
+
+We use the smoke results measured right after the [previous post](/blog/project/wikiengine/lucene-decision) (Lucene migration) as the baseline.
+([lucene-decision — k6-smoke-result.png](/uploads/project/WikiEngine/lucene-decision/k6-smoke-result.png))
+
+| Metric | Search | Autocomplete | Latest post listing | Detail view | Write |
+|--------|--------|-------------|---------------------|-------------|-------|
+| Avg | 66 ms | 25 ms | 2,518 ms | 53 ms | 62 ms |
+| P95 | 128 ms | 37 ms | 3,372 ms | 93 ms | 124 ms |
+
+| Overall | Value |
+|---------|-------|
+| Total requests | 214 |
+| Error rate | 0.00% |
+| Overall P95 | 2,239 ms |
+
+**4. Grafana screenshots (during k6 load):**
+
+We use Grafana captures from the previous post's load profile (100 VU, 20 min) measurement as baseline:
+
+- MySQL metrics: Buffer Pool hit rate 100%, Slow Queries 14.8K, QPS 30–50
+  ([lucene-decision — k6-load-mysql.png](/uploads/project/WikiEngine/lucene-decision/k6-load-mysql.png))
+- Container resources: System CPU 100% saturated, Load Average 20+
+  ([lucene-decision — k6-load-container.png](/uploads/project/WikiEngine/lucene-decision/k6-load-container.png))
+- Spring Boot HTTP: Threads surged from 20 → 120, 5xx error rate peaked at 40%
+  ([lucene-decision — k6-load-springboot-http.png](/uploads/project/WikiEngine/lucene-decision/k6-load-springboot-http.png))
+
+**5. MySQL status:**
+
+![SHOW GLOBAL STATUS LIKE 'Slow_queries' — 79,505](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-slow-queries.png)
+
+```
+Slow_queries: 79505
+```
+
+Cumulative Slow Queries: **79,505** (total since server start).
+
+**6. Deep OFFSET execution cost (page 1000, with Deferred Join applied):**
+
+![EXPLAIN ANALYZE — Deferred Join + OFFSET 19,980 execution plan](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-explain-deep-offset-page1000.png)
+
+```sql
+EXPLAIN ANALYZE
+SELECT p.* FROM posts p
+INNER JOIN (
+    SELECT id FROM posts ORDER BY created_at DESC
+    LIMIT 20 OFFSET 19980
+) AS tmp ON p.id = tmp.id
+ORDER BY p.created_at DESC;
+```
+
+```
+-> Sort row IDs: p.created_at DESC  (actual time=19.4..19.4 rows=20 loops=1)
+    -> Nested loop inner join  (actual time=11.2..18.5 rows=20 loops=1)
+        -> Table scan on tmp  (actual time=6.62..6.63 rows=20 loops=1)
+            -> Materialize  (actual time=6.62..6.62 rows=20 loops=1)
+                -> Limit/Offset: 20/19980 row(s)  (actual time=6.61..6.61 rows=20 loops=1)
+                    -> Covering index scan on posts using idx_posts_created_at
+                       (cost=13774 rows=20000) (actual time=2.48..5.75 rows=20000 loops=1)
+        -> Single-row index lookup on p using PRIMARY (id=tmp.id)
+           (cost=0.997 rows=1) (actual time=0.586..0.586 rows=1 loops=20)
+```
+
+**Key point**: Thanks to Deferred Join, page 1000 (OFFSET 19,980) completes in **19.4 ms**.
+It scans only the Covering Index (`idx_posts_created_at`) to read 20,000 rows (5.75 ms), then looks up just 20 rows via PK in the clustered index (0.586 ms x 20).
+At page 30 (OFFSET 580), only 600 rows are scanned — effectively negligible. **The page limit is a UX decision, not a performance one.**
+
+---
+
+### Post-Change API Response Verification
+
+**1. Slice response check** — `GET /api/v1.0/posts?page=0&size=20`:
+
+```json
+{
+  "empty": false,
+  "first": true,
+  "last": false,
+  "number": 0,
+  "numberOfElements": 20,
+  "size": 20,
+  "pageable": {
+    "offset": 0,
+    "pageNumber": 0,
+    "pageSize": 20,
+    "paged": true
+  }
+}
+```
+
+**`totalElements` and `totalPages` fields completely removed.** COUNT(*) query no longer executes.
+
+**2. Page limit check** — `GET /api/v1.0/posts?page=11&size=20`:
+
+![page=11 request returns 400 PAGE_LIMIT_EXCEEDED response](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-after-page-limit-exceeded.png)
+
+```json
+{
+  "status": 400,
+  "message": "최대 페이지 수를 초과했습니다",
+  "code": "PAGE_LIMIT_EXCEEDED",
+  "timestamp": "2026-03-08T15:23:52.003214037Z"
+}
+```
+
+When requesting page=31 (0-indexed, i.e., the 32nd page), it exceeds `MAX_LIST_PAGE = 30` and returns a 400 error. Confirmed working correctly.
+(Screenshot was captured with MAX_LIST_PAGE=10 during initial testing, hence page=11)
+
+---
+
+### k6 smoke (5 VU, 2 min) — Before/After Comparison
+
+> ARM 2-core, Spring Boot JVM 1 GB, MySQL InnoDB BP 2 GB
+
+![k6 smoke After results — error rate 0%, latest post listing 17.56 ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-after-smoke-result.png)
+
+| Scenario | Before (Deferred Join only) | After (+ page 30 limit + COUNT removal) | Improvement |
+|----------|---------------------------|----------------------------------------|-------------|
+| Search | 66 ms | 55.39 ms | -16% |
+| Autocomplete | 25 ms | 13.98 ms | -44% |
+| Latest post listing | 2,518 ms | 17.56 ms | **-99.3%** |
+| Detail view | 53 ms | 29.20 ms | -45% |
+| Write | 62 ms | 39.63 ms | -36% |
+| Error rate | 0.00% | 0.00% | - |
+
+> **Note: Test path difference**
+> Before used `http://internal-IP:8080` (direct to app server), After used `https://api.studywithtymee.com` (via nginx + SSL).
+> Since After is faster despite additional network hops, the actual backend improvement is greater than the numbers suggest.
+> The reason unchanged scenarios (search, autocomplete, detail view) also got faster is
+> the cascading effect of MySQL connection/CPU contention being resolved after COUNT(*) + deep OFFSET were eliminated.
+
+**Why did the latest post listing decrease by 99.3%?**
+
+The Before (2,518 ms) had three overlapping bottlenecks:
+
+1. **COUNT(*) elimination (→ -2,038 ms)**: Every request performed a Full Table Scan on 14.77 million rows to compute `totalElements`. The `Page<T>` → `Slice<T>` conversion completely eliminated this query. On a per-request basis, ~2,038 ms out of 2,518 ms was COUNT(*), so **80% was removed by this alone**.
+
+2. **Deep OFFSET elimination (→ max page 30)**: The Before k6 script requested pages 100–1000 (OFFSET 2,000–20,000) with 30% probability. Larger OFFSETs proportionally increase secondary index → clustered index random I/O. The page 30 limit reduced max OFFSET to 580.
+
+3. **Deferred Join effectiveness maximized**: In the page 0–30 range, the subquery scans only the Covering Index (`idx_posts_created_at`) to extract 20 PKs, and the outer query reads exactly 20 rows from the clustered index. The smaller the OFFSET, the more efficient Deferred Join becomes.
+
+| Bottleneck | Before contribution | After |
+|------------|-------------------|-------|
+| COUNT(*) | ~2,038 ms | 0 ms (Slice) |
+| Deep OFFSET (page 100–1000) | ~300–500 ms (30% probability) | 0 ms (page 30 limit) |
+| Deferred Join (page 0–30) | ~50 ms | ~18 ms |
+| **Total** | **~2,518 ms** | **~18 ms** |
+
+### k6 load (100 VU, 20 min) — Before/After Comparison
+
+> ARM 2-core, Spring Boot JVM 1 GB, MySQL InnoDB BP 2 GB
+
+![k6 load After results — 42,401 requests, error rate 0%, latest post listing 8.33 ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-k6-result.png)
+
+| Scenario | Before | After | Improvement |
+|----------|--------|-------|-------------|
+| Search avg / P95 | 3,328 ms / 5,010 ms | 20.51 ms / 54.95 ms | **-99.4%** |
+| Autocomplete avg / P95 | 3,339 ms / 5,008 ms | 5.91 ms / 14.33 ms | **-99.8%** |
+| Latest post listing avg / P95 | 19,424 ms / 28,987 ms | 8.33 ms / 19.01 ms | **-99.96%** |
+| Detail view avg / P95 | 3,345 ms / — | 15.06 ms / 28.80 ms | **-99.6%** |
+| Write avg / P95 | — | 19.05 ms / 48.84 ms | — |
+| Overall avg / P95 / P99 | — | 30.12 ms / 118.82 ms / 228 ms | — |
+| Total requests | — | 42,401 | — |
+| Error rate | **32.53%** | **0.00%** | **Errors completely resolved** |
+
+> **Why did fixing only pagination improve search, autocomplete, and detail views by 99%?**
+> The Before search latency of 3,328 ms wasn't because search itself was slow. In smoke (5 VU), search was 66 ms and autocomplete was 25 ms. Under load (100 VU), the deep OFFSET (`OFFSET 20,000`) of the latest post listing **saturated the 2-core CPU to 100%**, trapping every request on the same server in the CPU queue. That is, Before 3,328 ms = search's inherent cost (~20 ms) + CPU saturation wait time (~3,300 ms).
+>
+> Once the pagination query was fixed and CPU saturation resolved, the other APIs **returned to their original speeds**. This is the **cascade failure** pattern where a single bottleneck brings down the entire system, and removing one bottleneck revives everything.
+
+#### Search Performance by Frequency Category (load test)
+
+![Grafana — avg/P95 response time by search frequency category](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-k6-detail.png)
+
+The k6 script classified search terms by frequency to measure performance differences based on Lucene posting list length:
+
+| Frequency | Ratio | Avg | P95 | Characteristics |
+|-----------|-------|-----|-----|-----------------|
+| Rare tokens | 10% | 20.36 ms | 60.86 ms | Short posting list, mostly cache misses |
+| Mid-frequency tokens | 60% | 18.35 ms | 48.29 ms | Typical user search patterns |
+| High-frequency tokens | 30% | 24.77 ms | 63.72 ms | Long posting list, stress test |
+
+High-frequency tokens (e.g., "Korea", "history") are on average 35% slower than mid-frequency.
+The longer the posting list, the more documents Lucene must score — a structural characteristic.
+However, even high-frequency tokens at P95 63.72 ms are fast enough, **easily meeting the load test SLA (P95 < 300 ms)**.
+
+### Grafana Dashboard — k6
+
+![k6 Grafana Overview — avg 30.1 ms, P95 119 ms, P99 228 ms, error rate 0%](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-k6-overview.png)
+
+- Average response time 30.1 ms, P95 119 ms, P99 228 ms
+- Throughput: avg 17.6 req/s, peak 58.8 req/s (100 VU segment)
+- Concurrent users: max 100 VU
+- Error rate: 0%
+
+### MySQL Metrics Comparison
+
+![Grafana MySQL — QPS 300, Buffer Pool 100%, Slow Queries 95.4K](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-mysql.png)
+
+| MySQL Metric | Before | After | Change |
+|-------------|--------|-------|--------|
+| QPS (peak) | 30–50 | **~300** | **6x increase** (CPU headroom enables more queries) |
+| InnoDB Buffer Pool hit rate | 100% | **100%** | Same (zero disk I/O) |
+| Slow Queries (cumulative) | 79,505 | 95,400 | +15,895 (smoke + load combined) |
+| Table Locks | — | **0** | No lock contention |
+
+> **6x QPS increase**: Before, CPU saturation limited throughput to 30–50 QPS. After, with CPU headroom, the same 100 VU now processes ~300 QPS.
+
+### Infrastructure Metrics Comparison
+
+![Grafana Infrastructure — CPU ~35%, Load Average ~3](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-infrastructure.png)
+
+![Grafana Containers — App CPU ~90%, MySQL ~10%](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-containers.png)
+
+| Infrastructure Metric | Before | After | Change |
+|----------------------|--------|-------|--------|
+| Host CPU (peak) | **100% (saturated)** | **~35%** | CPU saturation resolved |
+| Load Average (1m) | **20+** | **~3** | 85% decrease |
+| App Container CPU | 100% | ~90% (peak) | Headroom gained |
+| JVM threads | 20 → **120** | 28 → **34** | Thread explosion resolved |
+
+### Spring Boot Metrics
+
+![Spring Boot HTTP — avg response time, throughput](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-http.png)
+
+![Spring Boot JVM — Heap stable, GC Pause ~1 ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-jvm.png)
+
+![Spring Boot HikariCP — Active 20, Pending 0](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-hikari.png)
+
+![Spring Boot System — App CPU 60%, Threads 34](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-system.png)
+
+| Spring Boot Metric | Before | After | Change |
+|-------------------|--------|-------|--------|
+| JVM Heap | OldGen increasing | **Stable** (within 1 GiB) | Memory pressure resolved |
+| GC Pause | — | **~1 ms** | Normal |
+| HikariCP Active | 20 (pool exhausted) | **20** (normal usage) | Pending 0 |
+| HikariCP Acquire Time | — | **0.03–0.05 ms** | Connections acquired instantly |
+| App CPU | 100% | **~60%** | 40% headroom |
+| System CPU | 100% | **~70%** (peak) | 30% headroom |
+
+---
+
+## 7. Search API Also Converted to Slice + Snippet Response
+
+### Background
+
+The sections above covered optimization of the **latest post listing (`GET /posts`)**.
+The search API (`GET /posts/search`) kept `Page<T>`, reasoning that "Lucene's `totalHits` has no COUNT problem."
+
+However, after **removing the total count display** and **capping totalPages at 15**, there was no reason to keep Page:
+- `totalHits` is an estimate (not accurate)
+- Total count is not shown in the UI
+- Additional totalPages cap logic was needed (unnecessary complexity)
+
+### Changes
+
+**1) Search API: `Page<Post>` → `Slice<PostSearchResponse>`**
+
+```java
+// Before
+public Page<Post> search(String keyword, Pageable pageable) {
+    Page<Post> result = luceneSearchService.search(keyword, pageable);
+    long maxAccessible = (long) MAX_SEARCH_PAGE * pageable.getPageSize();
+    if (result.getTotalElements() > maxAccessible) {
+        return new PageImpl<>(result.getContent(), pageable, maxAccessible);
+    }
+    return result;
+}
+
+// After — totalHits calculation removed, cap logic removed, snippet conversion
+public Slice<PostSearchResponse> search(String keyword, Pageable pageable) {
+    Slice<Post> result = luceneSearchService.search(keyword, pageable);
+    List<PostSearchResponse> responses = result.getContent().stream()
+            .map(PostSearchResponse::from)
+            .toList();
+    return new SliceImpl<>(responses, pageable, result.hasNext());
+}
+```
+
+`LuceneSearchService` also uses the `limit + 1` pattern to determine `hasNext`:
+
+```java
+// Query limit + 1 to determine hasNext (Slice pattern)
+TopDocs topDocs = searcher.search(query, offset + limit + 1);
+boolean hasNext = topDocs.scoreDocs.length > offset + limit;
+return new SliceImpl<>(posts, pageable, hasNext);
+```
+
+**2) Snippet: Return 150-char summary instead of content (LONGTEXT)**
+
+Previously, search results sent `content (LONGTEXT, avg ~13 KB)` in its entirety for 20 results.
+The frontend only displayed titles and discarded content, so **20 x 13 KB = ~260 KB was wasted**.
+
+```java
+public record PostSearchResponse(
+    Long id, String title, String snippet,
+    Long viewCount, Long likeCount, Instant createdAt
+) {
+    public static PostSearchResponse from(Post post) {
+        String plain = post.getContent().replaceAll("<[^>]*>", "").strip();
+        String snippet = plain.substring(0, Math.min(plain.length(), 150));
+        return new PostSearchResponse(
+            post.getId(), post.getTitle(), snippet,
+            post.getViewCount(), post.getLikeCount(), post.getCreatedAt());
+    }
+}
+```
+
+| | Before (full Post) | After (PostSearchResponse) |
+|---|---|---|
+| content sent | ~13 KB (LONGTEXT) | 0 |
+| snippet sent | None | ~150 B |
+| Per 20 results | ~260 KB | ~3 KB |
+| **Reduction** | | **~99%** |
+
+**3) Pagination: Sliding window + max 15 pages**
+
+```
+Page 1:    Prev  [1] 2 3 4 5 6 7 8 9 10  Next
+Page 10:   Prev  6 7 8 9 [10] 11 12 13 14 15  Next
+Page 15:   Prev  6 7 8 9 10 11 12 13 14 [15]  Next(disabled)
+```
+
+- Google-style sliding window: show 10 pages around the current page
+- Max 15-page limit: synchronized with backend `MAX_SEARCH_PAGE=15`
+- When `hasNext=false`, page numbers end at that page (for low-frequency search terms)
+
+### Future Improvement: Lucene UnifiedHighlighter
+
+The current snippet simply truncates the first 150 characters of the body. In the future, applying Lucene `UnifiedHighlighter` would:
+- Extract text **around where the search keyword appears** (KWIC: Key Word In Context)
+- Highlight search keywords with `<b>bold</b>`
+- Achieve snippet quality on par with Google/Naver
+
+---
+
+## Sources
+
+**OFFSET Pagination:**
+- [Use The Index, Luke — No Offset](https://use-the-index-luke.com/no-offset)
+- [Percona — Efficient Pagination Using Deferred Joins](https://www.percona.com/blog/efficient-pagination-using-deferred-joins/)
+- [High Performance MySQL, 4th Edition — Optimizing LIMIT and OFFSET](https://www.oreilly.com/library/view/high-performance-mysql/9781492080503/)
+
+**COUNT(*) Elimination / Pagination Trade-offs:**
+- [Google Drops Result Count From Search Results Page — Search Engine Roundtable (2024)](https://www.seroundtable.com/google-drops-result-count-from-search-results-page-37348.html)
+- [Evolving API Pagination at Slack — Slack Engineering](https://slack.engineering/evolving-api-pagination-at-slack/)
+- [Percona — COUNT(*) for InnoDB Tables](https://www.percona.com/blog/count-for-innodb-tables/)
+- [Spring Data JPA — Slice vs Page](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html)
+- [JHipster — Boost Infinite Scroll Performance with Slice](https://www.jhipster.tech/tips/019_tip_infinite_scroll_with_slice.html)
+- [Estimated Counts for Faster Django Admin — SquadStack Engineering](https://medium.com/squad-engineering/estimated-counts-for-faster-django-admin-change-list-963cbf43683e)
+
+**Naver Search Pagination:**
+- [SerpApi — Naver Search Engine Results API](https://serpapi.com/naver-search-api)
+- [SearchAPI — Naver Search API Documentation](https://www.searchapi.io/docs/naver-api)
+
+**Spring Data JPA Slice + nativeQuery Issues:**
+- [Spring Data JPA #2260 — NativeQuery with Pagination](https://github.com/spring-projects/spring-data-jpa/issues/2260)
+- [Spring Data JPA #1782 — Slice returns PageImpl and executes COUNT with nativeQuery (DATAJPA-1464)](https://github.com/spring-projects/spring-data-jpa/issues/1782)
+- [Pagination in Spring Data JPA: Issues, Solutions, and 2026 Best Practices](https://copyprogramming.com/howto/issue-of-pagination-in-spring-data-jpa)
+- [Vlad Mihalcea — Query Pagination with JPA and Hibernate](https://vladmihalcea.com/query-pagination-jpa-hibernate/)
+- [GitHub Gist — Limit results using Specifications without count query](https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b)
+
+**Pagination UX:**
+- [Nielsen Norman Group — Users' Pagination Preferences and "View All"](https://www.nngroup.com/articles/item-list-view-all/)
+- [Design Better Pagination — Andrew Coyle](https://coyleandrew.medium.com/design-better-pagination-a022a3b161e1)
+- [UX Patterns for Developers — Pagination Pattern](https://uxpatterns.dev/patterns/navigation/pagination)
+
+**API Pagination Design:**
+- [REST API Pagination Best Practices — Speakeasy](https://www.speakeasy.com/api-design/pagination)
+- [API Pagination Explained: Techniques & Best Practices — QuarkAndCode](https://medium.com/@QuarkAndCode/api-pagination-explained-techniques-best-practices-real-world-tips-825ff43e3088)
+- [Slack Developer Docs — Pagination](https://docs.slack.dev/apis/web-api/pagination/)
+
+**Thread Pool Tuning:**
+- [Zalando Engineering — How to Set an Ideal Thread Pool Size](https://engineering.zalando.com/posts/2019/04/how-to-set-an-ideal-thread-pool-size.html)
+- [HikariCP — About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
+
+**k6 Load Testing:**
+- [k6 — Test Types (smoke, load, stress, soak)](https://k6.io/docs/test-types/)
+- [k6 — Thresholds](https://k6.io/docs/using-k6/thresholds/)

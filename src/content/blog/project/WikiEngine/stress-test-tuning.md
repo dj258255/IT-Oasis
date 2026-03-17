@@ -346,3 +346,303 @@ stress 테스트에서 단일 서버 한계를 확인한 후, "대규모에서�
 In [Caching Strategy](/blog/project/wikiengine/caching-strategy), we introduced Caffeine L1 cache achieving 14x overall improvement. In [Trie Autocomplete](/blog/project/wikiengine/trie-autocomplete), we implemented popularity-based autocomplete with Jamo search.
 
 Now we determine **where the single server breaks** to establish grounds for distributed architecture transition.
+
+---
+
+## Previous Posts Summary
+
+| Post | Improvement | Result |
+|------|---------|------|
+| [Caching Strategy](/blog/project/wikiengine/caching-strategy) | Caffeine L1 cache | Overall 776ms→54ms (14.4x), autocomplete hit rate 99.9% |
+| [Trie Autocomplete](/blog/project/wikiengine/trie-autocomplete) | Trie + search logs + Jamo | Alphabetical→popularity order, "삼ㅅ"→"삼성전자" |
+
+---
+
+## Overview
+
+### Purpose of This Post
+
+Identify the single server's **breaking point** with stress testing. Record what happens when limits are exceeded (P99 explosion? error rate increase? OOM?) and verify whether JVM/Tomcat tuning can push the limits further.
+
+### Why Stress Testing
+
+| Test | Purpose | VU | Duration | Meaning in This Project |
+|------|---------|-----|----------|------------------------|
+| smoke | Sanity check | 5 | 2min | "Does it crash?" — already done |
+| load | Expected traffic | 100 | 20min | "Performance under normal load?" — already done |
+| **stress** | **Find breaking point** | **200** | **25min** | **"Where does it break?" — this post** |
+| soak | Long-term stability | 50 | 4hr | After distributed infra |
+
+---
+
+## Test Environment
+
+| Item | Value |
+|------|-------|
+| Server | Oracle Cloud ARM (Ampere A1), 2 cores, 12GB RAM |
+| JVM | Java 25, -Xmx1g |
+| DB | MySQL 8.0, InnoDB Buffer Pool 2GB |
+| Data | 14.25M posts, Lucene index ~20GB |
+| k6 | Running from monitoring-loki server, InfluxDB + Grafana |
+
+### k6 Stress Profile
+
+![k6 stress profile — gradual ramp to 200 VU with recovery](/uploads/project/WikiEngine/stress-test-tuning/stress-profile.svg)
+
+> **25-minute rationale**: k6 official recommendation is 5x ramp-up duration, ideally 45min+. However, sustaining 200 VU for 30+ minutes on a 2-core ARM server risks server instability. Overload phase 10min + recovery 5min = 25min. Finding the breaking point is the goal, so **VU count (200)** matters more than duration.
+
+---
+
+## Expected Bottlenecks
+
+Four potential bottlenecks on a single server (ARM 2 cores, 12GB):
+
+### 1. CPU Saturation
+
+Lucene search (BM25 + DocValues + sorting) is CPU-intensive on 2 ARM cores. Caffeine cache hit rate is 96%, but simultaneous cache misses can saturate CPU.
+
+### 2. DB Connection Pool Exhaustion
+
+HikariCP pool size 20. If concurrent DB queries exceed 20, remaining requests wait. HikariCP pool sizing formula:
+
+```
+connections = (core_count * 2) + effective_spindle_count
+ARM 2 cores: (2 * 2) + 1 = 5 (minimum)
+Recommended: 10~20 (adjust per workload)
+```
+
+### 3. JVM Heap Pressure
+
+At -Xmx1g: Trie (~66MB) + Caffeine 3 caches (~100MB) + Spring Context (~200MB) + GC headroom (~200MB). Under stress, 200 concurrent requests' temporary objects may trigger Full GC (STW).
+
+### 4. Tomcat Thread Pool
+
+Spring Boot default: 200 Tomcat threads. If all 200 VUs are active simultaneously, the thread pool fills and additional requests queue.
+
+---
+
+## 1st Stress Results (Before Tuning, 200 VU, 25min)
+
+### k6 Console Results
+
+| Scenario | Avg | P95 | Max |
+|---------|------|-----|-----|
+| Overall | 290ms | 1,413ms | - |
+| Search (all) | 213ms | 953ms | - |
+| Search (rare 10%) | 146ms | 699ms | 6.88s |
+| Search (mid-freq 60%) | 151ms | 715ms | 6.76s |
+| Search (high-freq 30%) | 359ms | 1,592ms | 6.92s |
+| Autocomplete | 94ms | 399ms | 4.45s |
+| Post listing | 268ms | 1,287ms | 4.94s |
+| Detail view | 308ms | 1,257ms | 6.20s |
+| Write (create+like) | 269ms | 1,211ms | - |
+| **Error rate** | **0.00%** | | |
+| **Total requests** | **101,984** | | |
+
+![k6 stress console results](/uploads/project/WikiEngine/stress-test-tuning/A-1-k6-console.png)
+
+### Grafana Overview
+
+| Metric | Value |
+|--------|-------|
+| Avg response time | 230ms |
+| P95 | 1.21s |
+| P99 | 2.49s |
+| Error rate | 0.00128% |
+| Max TPS | 110 req/s |
+
+![k6 Grafana Overview](/uploads/project/WikiEngine/stress-test-tuning/A-2-k6-grafana-overview.png)
+
+---
+
+## Bottleneck Analysis
+
+### #1 Bottleneck: CPU Saturation (Most Critical)
+
+| Metric | Value | Evidence |
+|--------|-------|---------|
+| App CPU | **100% saturated** | Grafana process CPU panel |
+| cAdvisor wiki-app-prod | **150%+** (1.5 of 2 cores) | cAdvisor CPU panel |
+| Load Average (1m) | **20+** (18 processes waiting on 2 cores) | Host Load Average |
+| Saturation point | ~5min after 200 VU entry | VU graph and CPU graph crossover |
+
+CPU saturated while processing Lucene BM25 search (especially high-frequency tokens "대한민국", "history") and DB queries simultaneously. High-frequency tokens have the highest P95 (1,592ms) because longer posting lists require more CPU for BM25 scoring.
+
+![Spring Boot CPU + JVM Threads](/uploads/project/WikiEngine/stress-test-tuning/A-6-spring-boot-system-cache.png)
+
+![Host CPU + Load Average](/uploads/project/WikiEngine/stress-test-tuning/A-9-host.png)
+
+![cAdvisor CPU](/uploads/project/WikiEngine/stress-test-tuning/A-10-cadvisor.png)
+
+### #2 Bottleneck: HikariCP Connection Pool Pressure
+
+| Metric | Normal (100 VU) | Overload (200 VU) |
+|--------|-----------------|-------------------|
+| Active Connections | ~10/20 | **60+/20 (exceeds max)** |
+| Pending | 0 | **40+** |
+| Acquire Time | 0.05ms | **1,250ms** |
+
+Active reaching 60 despite Max=20: **CPU saturation slowed request processing, extending connection hold time**. Not a pool size issue — CPU is the root cause.
+
+![JVM Heap + HikariCP](/uploads/project/WikiEngine/stress-test-tuning/A-7-spring-boot-jvm-hikari.png)
+
+### Not Bottlenecks
+
+| Item | Value | Verdict |
+|------|-------|---------|
+| JVM Heap | 256MB / 1GB | Plenty of headroom |
+| GC Pause | Max 3ms | No issue |
+| InnoDB Buffer Pool | 100% hit rate | DB cache healthy |
+| Table Lock | 0 | No contention |
+
+![MySQL Panel](/uploads/project/WikiEngine/stress-test-tuning/A-11-mysql-1.png)
+
+### Cache Hit Rates
+
+| Cache | Hit Rate | Note |
+|-------|----------|------|
+| autocomplete | 100% | Trie + Caffeine perfect hit |
+| searchResults | 96.0% | Mostly cache-served |
+| postDetail | 71.4% | Random ID access → more misses |
+
+Even at 96% searchResults hit rate, **4% cache misses at 200 VU = ~8 req/s Lucene searches**, which saturates CPU.
+
+### Breaking Point Summary
+
+```
+Single server (ARM 2 cores, 12GB RAM, JVM -Xmx1g) limits:
+  Stable zone: ~100 VU (P95 < 500ms, CPU 40%)
+  Limit zone:  ~150 VU (P95 ~ 1s, CPU 80%)
+  Saturated:   200 VU (P95 > 1.4s, CPU 100%, HikariCP exhausted)
+  Errors:      None (0% error rate) — slows down but doesn't crash
+
+→ Practical single server limit: ~100-150 concurrent users
+```
+
+---
+
+## JVM/Tomcat Tuning Attempt
+
+### Server Memory Allocation
+
+![Server memory allocation — before and after tuning](/uploads/project/WikiEngine/stress-test-tuning/memory-allocation.svg)
+
+### Applied Tuning
+
+| Item | Before | After | Intent |
+|------|--------|-------|--------|
+| -Xmx | 1g | 2g | More GC headroom |
+| -Xms | (JVM default) | 2g | Eliminate heap resizing overhead |
+| Tomcat max-threads | 200 | 100 | Reduce context switching |
+| Tomcat accept-count | 100 | 50 | Limit queue waiting |
+| app_memory_limit | 2G | 4G | JVM 2g + metaspace/threads |
+
+### HikariCP (No Changes)
+
+The 1st stress showed HikariCP Active exceeding Max(20) because **CPU saturation slowed request processing, extending connection hold time** — not because the pool was too small. Increasing pool size wouldn't fix a CPU problem.
+
+---
+
+## 2nd Stress Results (After Tuning — Backfired)
+
+**Result: Every metric got worse.**
+
+| Metric | 1st (Before) | 2nd (After) | Change |
+|--------|-------------|-------------|--------|
+| Total requests | 101,984 | 61,636 | **-40%** |
+| Avg response | 290ms | 519ms | **+79% worse** |
+| P95 | 1,413ms | 1,714ms | **+21% worse** |
+| Error rate | 0.00% | **0.22%** | **Errors appeared** |
+| Autocomplete avg | 94ms | 327ms | **+248% worse** |
+| searchResults hit | 96% | 91.8% | **-4.2% drop** |
+| postDetail hit | 71.4% | 50% | **-21.4% drop** |
+
+![2nd stress k6 console](/uploads/project/WikiEngine/stress-test-tuning/B-1-k6-console.png)
+
+![2nd stress Grafana Overview](/uploads/project/WikiEngine/stress-test-tuning/B-2-k6-grafana-overview.png)
+
+![2nd stress JVM + HikariCP](/uploads/project/WikiEngine/stress-test-tuning/B-9-jvm-hikari.png)
+
+---
+
+## Root Cause of Backfire
+
+### 1. Tomcat max-threads 200→100 Was the Key Degradation Factor
+
+Under CPU-bound bottleneck, reducing threads **reduces concurrent processing capacity**. 200 VUs hitting 100 threads means 100 VUs queue. Queue wait time adds to response time.
+
+### 2. Xmx 2g Was Never Actually Applied
+
+```bash
+$ docker exec wiki-app-prod java -XshowSettings:vm -version 2>&1 | grep -i heap
+  Max. Heap Size (Estimated): 512.00M
+```
+
+**512MB** — not even 1g, let alone 2g.
+
+![JVM Heap Max 512MB — Xmx 2g not applied](/uploads/project/WikiEngine/stress-test-tuning/B-12-jvm-heap-512m.png)
+
+**Cause**: GitHub Actions deployment only replaces the Docker image (code). Ansible group_vars (environment variables) are only applied when the Ansible Playbook runs. The `group_vars/all.yml` was modified locally but never pushed to GitHub, so `.env.prod` wasn't updated.
+
+**Fix**: `ansible-vault encrypt group_vars/all.yml` → `git push` → applied on next deployment.
+
+> This taught us that **"code deployment" and "infrastructure config deployment" are separate things**.
+
+### 3. app_memory_limit 4G Reduced Lucene Page Cache
+
+Docker container claiming 4G reduced OS page cache (for Lucene MMap) from 5G to 3G, likely lowering cache hit rates.
+
+---
+
+## Three Lessons Learned
+
+> **1. Reducing threads under CPU-bound bottleneck is wrong tuning.** The intent was to reduce context switching, but it actually reduced concurrent processing capacity, only lengthening queue wait times. When CPU is the fundamental limit, JVM/thread tuning cannot solve it.
+>
+> **2. Always verify that tuning was actually applied.** Checked with `docker exec ... java -XshowSettings:vm`. The assumption "deployed = applied" is dangerous.
+>
+> **3. Record failed tunings too.** "Reduced Tomcat threads to 100 and it got 79% worse, so we reverted and learned that CPU-bound problems need more CPU, not fewer threads" is far more powerful in interviews than pretending it worked.
+
+---
+
+## Rollback + Final Conclusion
+
+All settings reverted to 1st stress baseline.
+
+| Attempt | Result | Verdict |
+|---------|--------|---------|
+| 1st stress (default) | CPU 100%, P95 1.4s, 0% errors | **Single server limit = ~100-150 VU** |
+| 2nd stress (Tomcat 100, Xmx not applied) | All metrics 40-79% worse, 0.22% errors | **Tuning backfired + deployment missed** |
+| After rollback | Same as 1st | **Cannot exceed this limit with tuning on this server** |
+
+**Distributed transition justified**: Single server (ARM 2 cores) limit is ~100-150 concurrent users. JVM/Tomcat tuning cannot break this limit. Fundamentally reducing CPU load requires Redis L2 cache (reducing DB/Lucene access) and App scale-out (distributing CPU).
+
+---
+
+## Reference: Large-Scale Autocomplete Pipeline Design
+
+### Current vs Large-Scale
+
+| Scale | Log Aggregation | Autocomplete Serving |
+|-------|----------------|---------------------|
+| **Single server (current)** | SQL GROUP BY | [Trie](/blog/project/wikiengine/trie-autocomplete) → Redis flat KV |
+| Large-scale batch | Spark SQL (hourly) | Redis Cluster |
+| Large-scale real-time | Kafka + Flink (per-second) | Redis Cluster + CDC |
+
+### On "MapReduce"
+
+"MapReduce" is **not the Hadoop MapReduce framework** but the thinking pattern of "distribute data → group → aggregate."
+
+![Large-scale autocomplete pipeline — thinking pattern and tech comparison](/uploads/project/WikiEngine/stress-test-tuning/mapreduce-pipeline.svg)
+
+Current industry (2025):
+- Hadoop MapReduce is only used in government/legacy enterprise systems
+- New projects use Spark SQL or Flink
+- Spark SQL uses its own execution engine (DAG + Catalyst Optimizer), not the MapReduce framework
+
+---
+
+## References
+
+- [k6 — Test Types (smoke, load, stress, soak)](https://k6.io/docs/test-types/)
+- [HikariCP — About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
+- [Zalando Engineering — How to Set an Ideal Thread Pool Size](https://engineering.zalando.com/posts/2019/04/how-to-set-an-ideal-thread-pool-size.html)
