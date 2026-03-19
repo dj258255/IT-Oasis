@@ -39,6 +39,11 @@ jobs:
         with:
           path: node_modules/.astro
           key: astro-build-${{ runner.os }}-${{ hashFiles('src/content/**', 'src/pages/**') }}
+          restore-keys: |
+            astro-build-${{ runner.os }}-
+
+      - name: Clear stale content cache
+        run: rm -rf node_modules/.astro/content
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,8 +57,8 @@ jobs:
         run: |
           PAGE_COUNT=$(find dist -name '*.html' | wc -l)
           echo "Built $PAGE_COUNT pages"
-          if [ "$PAGE_COUNT" -lt 350 ]; then
-            echo "::error::Expected 350+ pages, got $PAGE_COUNT — possible silent build failure"
+          if [ "$PAGE_COUNT" -lt 385 ]; then
+            echo "::error::Expected 385+ pages, got $PAGE_COUNT — possible silent build failure"
             exit 1
           fi
 
