@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .old { fill: #f1f5f9; stroke: #94a3b8; }
+    .new { fill: #eff6ff; stroke: #3b82f6; }
+    .ptr { fill: #fef3c7; stroke: #f59e0b; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .heading { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .note { font-size: 10px; fill: #64748b; }
+    .key { font-size: 10px; fill: #7c3aed; font-weight: 600; font-family: monospace; }
+    .step-num { font-size: 18px; fill: #3b82f6; font-weight: 700; }
+  </style>
+  <defs><marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker></defs>
+
+  <text x="16" y="20" class="heading">버전 네임스페이스 무중단 교체 — prefix_topk 갱신</text>
+
+  <!-- Step 1: Write new version -->
+  <text x="24" y="52" class="step-num">1</text>
+  <text x="42" y="52" class="label">새 버전 적재</text>
+
+  <rect x="16" y="60" width="200" height="70" class="box new"/>
+  <text x="26" y="80" class="key">prefix:v2:ㄱ → ["가상화폐","게임"]</text>
+  <text x="26" y="95" class="key">prefix:v2:삼 → ["삼성전자","삼성물산"]</text>
+  <text x="26" y="110" class="key">prefix:v2:대 → ["대한민국","대학교"]</text>
+  <text x="26" y="124" class="sub">TTL 2시간, 5,000 키</text>
+
+  <!-- Step 2: Atomic pointer switch -->
+  <text x="260" y="52" class="step-num">2</text>
+  <text x="278" y="52" class="label">포인터 원자적 전환</text>
+
+  <rect x="254" y="60" width="200" height="44" class="box ptr"/>
+  <text x="268" y="80" class="key">prefix:current_version</text>
+  <text x="268" y="96" class="sub">v1 → v2 (단일 키 SET — 원자적)</text>
+
+  <!-- Step 3: Read path -->
+  <text x="498" y="52" class="step-num">3</text>
+  <text x="516" y="52" class="label">읽기 경로</text>
+
+  <rect x="492" y="60" width="216" height="44" class="box new"/>
+  <text x="502" y="80" class="key">GET current_version → v2</text>
+  <text x="502" y="96" class="key">GET prefix:v2:삼성 → [Top-10]</text>
+
+  <!-- Old version fading -->
+  <rect x="16" y="150" width="200" height="50" class="box old" style="opacity: 0.5;"/>
+  <text x="26" y="170" class="key" style="opacity: 0.5;">prefix:v1:ㄱ → (이전 데이터)</text>
+  <text x="26" y="185" class="key" style="opacity: 0.5;">prefix:v1:삼 → (이전 데이터)</text>
+  <text x="26" y="195" class="sub" style="opacity: 0.5;">TTL 2시간 후 자동 정리</text>
+
+  <!-- Arrow from old to fade -->
+  <text x="230" y="175" class="note">이전 버전은</text>
+  <text x="230" y="188" class="note">TTL 만료까지 유효</text>
+  <text x="230" y="201" class="note">(safe rollback)</text>
+
+  <!-- Bottom note -->
+  <text x="16" y="228" class="note">버전 포인터 전환이 원자적이므로, 읽기 요청은 항상 완전한 데이터 세트를 참조. 적재 도중 실패해도 이전 버전이 유지됨.</text>
+</svg>

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 180" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .label { font-size: 11px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .heading { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .note { font-size: 10px; fill: #64748b; }
+    .bar-label { font-size: 9px; fill: #fff; font-weight: 700; }
+    .bar-label-dark { font-size: 9px; fill: #1e293b; font-weight: 600; }
+  </style>
+
+  <text x="16" y="20" class="heading">서버 메모리 배분 (ARM 2코어, 12GB RAM)</text>
+
+  <!-- Bar chart -->
+  <text x="16" y="52" class="label">App (2G)</text>
+  <rect x="110" y="38" width="120" height="22" rx="4" fill="#3b82f6"/>
+  <text x="152" y="53" class="bar-label">JVM Xmx 1g</text>
+
+  <text x="16" y="78" class="label">MySQL (4G)</text>
+  <rect x="110" y="64" width="240" height="22" rx="4" fill="#8b5cf6"/>
+  <text x="192" y="79" class="bar-label">InnoDB BP 2G</text>
+
+  <text x="16" y="104" class="label">Redis (300M)</text>
+  <rect x="110" y="90" width="18" height="22" rx="4" fill="#f59e0b"/>
+
+  <text x="16" y="130" class="label">사이드카 (900M)</text>
+  <rect x="110" y="116" width="54" height="22" rx="4" fill="#94a3b8"/>
+  <text x="118" y="131" class="bar-label-dark" style="font-size: 8px;">Nginx...</text>
+
+  <text x="16" y="156" class="label">OS + 페이지캐시</text>
+  <rect x="110" y="142" width="288" height="22" rx="4" fill="#22c55e" style="opacity: 0.7;"/>
+  <text x="200" y="157" class="bar-label">~4.8G → Lucene MMap 페이지 캐시</text>
+
+  <!-- Total -->
+  <line x1="400" y1="38" x2="400" y2="168" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3"/>
+  <text x="404" y="52" class="note">합계 ~7.2G</text>
+  <text x="404" y="66" class="note">남은 ~4.8G</text>
+
+  <!-- Scale -->
+  <text x="110" y="176" class="note">0</text>
+  <text x="410" y="176" class="note">6G</text>
+  <text x="690" y="176" class="note">12G</text>
+</svg>

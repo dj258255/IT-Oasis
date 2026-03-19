@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .redis { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql { fill: #eff6ff; stroke: #3b82f6; }
+    .app { fill: #f0fdf4; stroke: #22c55e; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .heading { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .step { font-size: 11px; fill: #7c3aed; font-weight: 700; }
+    .note { font-size: 10px; fill: #64748b; }
+    .depend { fill: none; stroke: #dc2626; stroke-width: 1.5; stroke-dasharray: 5; marker-end: url(#rh); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="rh" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#dc2626"/></marker>
+  </defs>
+
+  <text x="16" y="20" class="heading">분산 전환 순서 — Bottom-Up 의존 관계</text>
+
+  <!-- Phase 11 -->
+  <rect x="16" y="40" width="200" height="60" class="box redis"/>
+  <text x="30" y="60" class="step">11단계</text>
+  <text x="30" y="76" class="label">Redis L2 캐시 + flat KV</text>
+  <text x="30" y="90" class="sub">공유 상태 외부화 (Stateless 전환)</text>
+
+  <!-- Phase 12 -->
+  <rect x="260" y="40" width="200" height="60" class="box mysql"/>
+  <text x="274" y="60" class="step">12단계</text>
+  <text x="274" y="76" class="label">MySQL Replication</text>
+  <text x="274" y="90" class="sub">DB 읽기 부하 분산</text>
+
+  <!-- Phase 13 -->
+  <rect x="504" y="40" width="200" height="60" class="box app"/>
+  <text x="518" y="60" class="step">13단계</text>
+  <text x="518" y="76" class="label">App 스케일아웃</text>
+  <text x="518" y="90" class="sub">Nginx 로드밸런싱</text>
+
+  <!-- Arrows -->
+  <path d="M 216 70 L 256 70" class="arrow"/>
+  <path d="M 460 70 L 500 70" class="arrow"/>
+
+  <!-- Dependency lines -->
+  <path d="M 116 104 C 116 160, 604 160, 604 104" class="depend"/>
+  <text x="280" y="156" class="note" style="fill: #dc2626; font-weight: 600;">전제조건: Redis 없이 스케일아웃 불가</text>
+
+  <path d="M 360 104 C 360 190, 604 190, 604 104" class="depend"/>
+  <text x="380" y="186" class="note" style="fill: #dc2626; font-weight: 600;">전제조건: Replication 없이 DB 과부하</text>
+
+  <!-- Bottom explanation -->
+  <rect x="16" y="210" width="690" height="36" rx="6" fill="#fff7ed" stroke="#f97316" stroke-width="1"/>
+  <text x="30" y="226" class="note" style="font-size: 11px;">Redis 없이 앱 3대 → Caffeine 인스턴스별 독립 → 히트율 급락 → CPU 더 포화</text>
+  <text x="30" y="240" class="note" style="font-size: 11px;">MySQL Replication 없이 앱 3대 → HikariCP 커넥션 3배(20×3=60) → 단일 MySQL 감당 불가</text>
+</svg>

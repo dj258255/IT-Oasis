@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .l1 { fill: #eff6ff; stroke: #3b82f6; }
+    .l2 { fill: #fef3c7; stroke: #f59e0b; }
+    .origin { fill: #fce7f3; stroke: #ec4899; }
+    .req { fill: #f1f5f9; stroke: #94a3b8; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .heading { font-size: 13px; fill: #1e293b; font-weight: 700; }
+    .divider { stroke: #e2e8f0; stroke-width: 1; }
+    .hit { font-size: 10px; fill: #16a34a; font-weight: 600; }
+    .miss { font-size: 10px; fill: #dc2626; font-weight: 600; }
+    .stat { font-size: 11px; fill: #7c3aed; font-weight: 600; }
+    .note { font-size: 10px; fill: #64748b; }
+  </style>
+  <defs><marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker></defs>
+
+  <text x="16" y="20" class="heading">Before (10단계) — 단일 계층 캐시</text>
+
+  <rect x="16" y="34" width="80" height="40" class="box req"/>
+  <text x="36" y="58" class="label">요청</text>
+
+  <path d="M 96 54 L 130 54" class="arrow"/>
+
+  <rect x="134" y="34" width="160" height="40" class="box l1"/>
+  <text x="160" y="52" class="label">Caffeine (L1)</text>
+  <text x="160" y="66" class="sub">히트율 95.2% · ~0.1ms</text>
+
+  <path d="M 294 54 L 328 54" class="arrow"/>
+  <text x="298" y="48" class="miss">Miss 4.8%</text>
+
+  <rect x="332" y="34" width="180" height="40" class="box origin"/>
+  <text x="352" y="52" class="label">Lucene / MySQL</text>
+  <text x="352" y="66" class="sub">BM25 검색 ~50-200ms · CPU 집약</text>
+
+  <path d="M 512 54 L 546 54" class="arrow"/>
+
+  <rect x="550" y="34" width="80" height="40" class="box req"/>
+  <text x="570" y="58" class="label">응답</text>
+
+  <!-- Divider -->
+  <line x1="16" y1="100" x2="704" y2="100" class="divider"/>
+
+  <text x="16" y="124" class="heading">After (11단계) — L1 + L2 2계층 캐시</text>
+
+  <rect x="16" y="138" width="80" height="40" class="box req"/>
+  <text x="36" y="162" class="label">요청</text>
+
+  <path d="M 96 158 L 130 158" class="arrow"/>
+
+  <rect x="134" y="138" width="140" height="40" class="box l1"/>
+  <text x="160" y="156" class="label">Caffeine (L1)</text>
+  <text x="160" y="170" class="sub">히트율 73% · ~0.1ms</text>
+
+  <path d="M 274 158 L 308 158" class="arrow"/>
+  <text x="278" y="148" class="miss">Miss</text>
+
+  <rect x="312" y="138" width="140" height="40" class="box l2"/>
+  <text x="340" y="156" class="label">Redis (L2)</text>
+  <text x="340" y="170" class="sub">히트율 9% · P95 ~2.5ms</text>
+
+  <path d="M 452 158 L 486 158" class="arrow"/>
+  <text x="456" y="148" class="miss">Miss</text>
+
+  <rect x="490" y="138" width="140" height="40" class="box origin"/>
+  <text x="502" y="156" class="label">Lucene / MySQL</text>
+  <text x="502" y="170" class="sub">Origin 19%</text>
+
+  <path d="M 630 158 L 664 158" class="arrow"/>
+
+  <rect x="668" y="138" width="46" height="40" class="box req"/>
+  <text x="676" y="162" class="label">응답</text>
+
+  <!-- Save arrows -->
+  <path d="M 560 178 L 560 210 L 382 210 L 382 192" class="arrow" style="stroke: #22c55e;"/>
+  <path d="M 560 210 L 204 210 L 204 192" class="arrow" style="stroke: #22c55e;"/>
+  <text x="300" y="226" class="note" style="fill: #22c55e; font-weight: 600;">Origin 조회 후 L1 + L2 양쪽에 저장</text>
+
+  <!-- Promote arrow -->
+  <path d="M 382 178 L 382 198 L 204 198 L 204 192" style="fill: none; stroke: #3b82f6; stroke-width: 1.5; stroke-dasharray: 4; marker-end: url(#ah);"/>
+  <text x="240" y="196" class="note" style="fill: #3b82f6; font-weight: 600;">L2 히트 → L1 승격</text>
+
+  <!-- Stats -->
+  <line x1="16" y1="248" x2="704" y2="248" class="divider"/>
+  <text x="16" y="270" class="heading">실측 히트 분포 (100 VU, 20분)</text>
+
+  <rect x="16" y="280" width="200" height="40" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1"/>
+  <text x="30" y="305" class="stat">L1 (Caffeine): 73%</text>
+
+  <rect x="230" y="280" width="160" height="40" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+  <text x="244" y="305" class="stat">L2 (Redis): 9%</text>
+
+  <rect x="404" y="280" width="200" height="40" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="1"/>
+  <text x="418" y="305" class="stat">Origin (DB/Lucene): 19%</text>
+
+  <text x="620" y="305" class="note">합산 82% 히트</text>
+</svg>
