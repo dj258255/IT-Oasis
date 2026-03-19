@@ -38,9 +38,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules/.astro
-          key: astro-build-${{ runner.os }}-${{ hashFiles('src/content/**', 'src/pages/**', 'public/**') }}
-          restore-keys: |
-            astro-build-${{ runner.os }}-
+          key: astro-build-${{ runner.os }}-${{ hashFiles('src/content/**', 'src/pages/**') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
