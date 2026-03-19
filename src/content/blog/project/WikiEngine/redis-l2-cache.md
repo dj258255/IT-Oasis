@@ -710,46 +710,6 @@ Before(Caffeine + Trie)와 동일 조건(100 VU, 20분)으로 재측정합니다
 
 ---
 
-## 면접 예상 질문
-
-**Q: "왜 Redis를 도입했나요?"**
-
-stress 테스트에서 200 VU 시 CPU가 100% 포화되었습니다. 원인은 Caffeine 캐시 4% 미스가 Lucene BM25 검색을 트리거하는 것이었습니다. Redis L2 캐시를 도입하여 L1+L2 합산 히트율 82%를 달성하고, Origin 도달률을 19%로 낮췄습니다. 자동완성은 Trie DFS 대신 Redis flat KV O(1) GET으로 전환하여 Lettuce P95 2.5ms를 달성했습니다. 또한 스케일아웃 시 다중 인스턴스 간 캐시 일관성을 확보하기 위해 공유 캐시가 필요했습니다.
-
-**Q: "왜 Memcached가 아니라 Redis?"**
-
-Memcached는 순수 key-value 캐시에 특화되어 있지만, 이 프로젝트에서는 캐시 이상의 기능이 필요했습니다. 자동완성 데이터 영속성(RDB), TokenBlacklist(Set + TTL), L1 캐시 무효화(Pub/Sub). 캐시 데이터가 수십MB로 소규모이기 때문에 Memcached의 메모리 효율 이점도 의미가 없었습니다.
-
-**Q: "Caffeine만 쓰면 안 되나요?"**
-
-Caffeine은 인스턴스별 독립 캐시입니다. 스케일아웃하면 인스턴스 A에서 캐싱한 데이터를 B에서 또 조회해야 합니다. 실측 L1 73%, L2 9%, Origin 19%로 분포되었고, L1이 반복 요청을 0.1ms에 처리하면서 Redis 비용은 L1 미스 시에만 발생합니다.
-
-**Q: "Redis 없이 DB 버퍼풀이나 Caffeine 사이즈 키우면 안 됐어?"**
-
-InnoDB Buffer Pool은 이미 100% 히트율이었습니다. DB I/O가 아닌 CPU가 병목이므로 효과 없습니다. Caffeine 4% 미스는 캐시 용량이 아니라 cold query입니다. 사이즈를 2배로 해도 처음 검색되는 쿼리는 여전히 미스이고, 스케일아웃 시 인스턴스별 독립이라 근본 해결이 안 됩니다.
-
-**Q: "Redis 추가하면 서버 메모리 부담은?"**
-
-서버 12GB RAM 중 Redis 300MB 할당. 실측 메모리 사용률 28.4%(73MB/256MB), Eviction 0 ops/s. 페이지 캐시가 ~1% 감소하지만, Origin 도달률 19%로 실제 Lucene 접근 빈도가 감소하여 상쇄됩니다. AWS 환경이라면 ElastiCache 월 ~3만원 추가에 RDS 다운스케일 ~13만원 절감으로 총 비용이 줄어드는지가 도입 근거입니다.
-
-**Q: "L1-L2 데이터 불일치는?"**
-
-같은 인스턴스에서의 수정은 L1+L2 동시 evict → 즉시 반영. 현재는 단일 인스턴스라 불일치 없음. 스케일아웃 시 Redis Pub/Sub + L1 TTL(5분) 이중 보완 전략 적용. Pub/Sub은 at-most-once이지만, 유실 시에도 TTL 만료로 자연 갱신됩니다.
-
-**Q: "prefix_topk 갱신의 원자성은?"**
-
-RENAME은 5,000개 키를 개별 실행하므로 중간 실패 시 불일치. 버전 네임스페이스 방식으로 새 데이터를 별도 적재 후 `prefix:current_version`(단일 키)만 원자적으로 SET합니다. 적재 도중 실패해도 이전 버전이 유지됩니다.
-
-**Q: "Redis가 죽으면?"**
-
-Redis는 "있으면 빨라지는 것"입니다. TieredCacheService에서 try-catch로 L2를 스킵, L1 + Origin으로 fallback합니다. 자동완성은 Lucene PrefixQuery fallback으로 전환됩니다. Trie를 퇴역시키되 PrefixQuery를 유지한 이유입니다.
-
-**Q: "Spring @Cacheable 안 쓴 이유는?"**
-
-Spring Cache Abstraction은 단일 계층 전제 설계입니다. L1 → L2 → Origin 순서 조회 + L2 히트 시 L1 승격 흐름은 기본 지원하지 않습니다. CompositeCacheManager도 조회 순서와 승격 로직을 미지원하여 직접 구현이 가장 단순했습니다.
-
----
-
 ## 다음 글
 
 다음 글에서 MySQL Replication(Primary-Replica)을 구성하고 DataSource 라우팅으로 읽기 부하를 분산합니다. 이것이 App 스케일아웃의 두 번째 전제조건입니다.
@@ -1441,46 +1401,6 @@ Response time/CPU at 100 VU single instance are similar, but the real achievemen
 2. **Origin access rate 19%** — With L1+L2 two-tier, DB/Lucene load won't increase linearly when adding instances
 3. **Trie retired** — Switched to O(1) Redis GET, cross-instance consistency achieved, ~66MB JVM heap saved
 4. **Redis infra stable** — Eviction 0, Lettuce P95 2.5ms, memory usage 28.4%
-
----
-
-## Interview Q&A
-
-**Q: "Why did you introduce Redis?"**
-
-Stress testing showed CPU 100% saturation at 200 VU. The cause was Caffeine cache 4% misses triggering Lucene BM25 searches. Redis L2 cache achieved L1+L2 combined hit rate of 82%, reducing Origin access to 19%. Autocomplete switched from Trie DFS to Redis flat KV O(1) GET, achieving Lettuce P95 2.5ms. Additionally, shared cache was needed for cross-instance cache consistency on scale-out.
-
-**Q: "Why Redis instead of Memcached?"**
-
-Memcached specializes in pure key-value caching, but this project needed more than caching. Autocomplete data persistence (RDB), TokenBlacklist (Set + TTL), L1 cache invalidation (Pub/Sub). Cache data being tens of MBs makes Memcached's memory efficiency advantage meaningless.
-
-**Q: "Can't you just use Caffeine alone?"**
-
-Caffeine is per-instance cache. On scale-out, instance A's cached data must be re-fetched on B. Measured distribution: L1 73%, L2 9%, Origin 19%. L1 handles repeated requests at 0.1ms while Redis cost only occurs on L1 misses.
-
-**Q: "Couldn't you just increase DB buffer pool or Caffeine size?"**
-
-InnoDB Buffer Pool was already at 100% hit rate. CPU is the bottleneck, not DB I/O. Caffeine's 4% misses are cold queries, not capacity issues. Doubling size still misses first-time queries, and per-instance isolation on scale-out doesn't fundamentally solve it.
-
-**Q: "What about server memory pressure from adding Redis?"**
-
-Redis allocated 300MB from the server's 12GB RAM. Measured memory usage 28.4% (73MB/256MB), Eviction 0 ops/s. Page cache decreases ~1%, but Origin access at 19% means actual Lucene access frequency decreased, offsetting it. On AWS, the justification would be ElastiCache ~₩30K/month addition vs RDS downscaling ~₩130K/month savings.
-
-**Q: "What about L1-L2 data inconsistency?"**
-
-Edits on the same instance simultaneously evict L1+L2 → immediately reflected. Currently single-instance, so no inconsistency. On scale-out, Redis Pub/Sub + L1 TTL(5min) dual backup strategy applies. Pub/Sub is at-most-once, but TTL expiry provides natural refresh on message loss.
-
-**Q: "How is prefix_topk update atomicity guaranteed?"**
-
-RENAME executes 5,000 individual key renames — inconsistency on mid-failure. Version namespace approach loads new data separately, then atomically SETs `prefix:current_version` (single key). Previous version is maintained even if loading fails mid-way.
-
-**Q: "What happens when Redis dies?"**
-
-Redis is "makes things faster when available." TieredCacheService skips L2 via try-catch, falling back to L1 + Origin. Autocomplete switches to Lucene PrefixQuery fallback. This is why Trie was retired but PrefixQuery was kept.
-
-**Q: "Why not use Spring @Cacheable?"**
-
-Spring Cache Abstraction is designed for single-tier caching. L1 → L2 → Origin sequential lookup + L1 promotion on L2 hit isn't natively supported. CompositeCacheManager also lacks lookup ordering and promotion logic, making direct implementation the simplest approach.
 
 ---
 
