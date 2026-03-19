@@ -93,7 +93,7 @@ Redis L2 캐시를 도입하면:
 
 ## 인프라 구성 — 서버 2대 체제 전환
 
-[stress 테스트](/blog/project/wikiengine/stress-test-tuning)까지는 단일 서버에서 모든 것을 처리했습니다. 이 글부터 Oracle Cloud Free Tier 추가 인스턴스를 생성하여 **서버 2대 체제**로 전환합니다.
+[stress 테스트](/blog/project/wikiengine/stress-test-tuning)까지는 단일 서버에서 모든 것을 처리했습니다. 이 글부터 Oracle Cloud 추가 인스턴스를 생성하여 **서버 2대 체제**로 전환합니다.
 
 ![서버 토폴로지](/uploads/project/WikiEngine/redis-l2-cache/server-topology.svg)
 
@@ -105,7 +105,7 @@ Redis L2 캐시를 도입하면:
 | 서버 2 (app2) | Oracle Cloud ARM Ampere A1, 2코어, 12GB RAM | **신규 생성** |
 | 모니터링 | Oracle Cloud VM, 1GB RAM | 운영 중 |
 
-> Oracle Cloud Free Tier는 ARM Ampere A1을 **합계 4 OCPU + 24GB RAM**까지 무료 제공합니다. 서버 1이 2코어/12GB를 사용하고 있으므로, 서버 2도 동일한 2코어/12GB로 생성하여 Free Tier 한도를 모두 활용합니다.
+> 서버 1과 동일한 스펙(ARM 2코어, 12GB RAM)으로 서버 2를 구성합니다. 동일 스펙 2대 체제로 로드밸런싱 시 균등한 부하 분산이 가능합니다.
 
 ### 단계별 서버 활용 계획
 
@@ -148,11 +148,11 @@ Redis를 추가하기 전에, **기존 인프라 튜닝만으로 해결할 수 �
 | **InnoDB Buffer Pool 증가** (2G→4G) | Buffer Pool 히트율이 이미 **100%**. DB I/O가 병목이 아님 | **탈락** |
 | **Caffeine 캐시 사이즈 증가** | 4% 미스는 "새로운 검색어(cold query)"임. 사이즈 2배로 해도 cold query는 여전히 미스. 스케일아웃 시 인스턴스별 독립 | **탈락** |
 | **JVM 힙 증가** (1g→2g) | Heap 사용량 256MB/1GB로 여유 충분. CPU가 병목이므로 메모리 추가는 효과 없음. OS 페이지 캐시(Lucene MMap용)가 줄어 역효과 | **탈락** |
-| **스케일 업** (2코어→4코어) | Oracle Cloud Free Tier 최대 사양이 ARM 2코어/12GB. **불가** | **탈락** |
+| **스케일 업** (2코어→4코어) | 현재 인스턴스 스펙(ARM 2코어/12GB)이 상한. 스펙 변경 시 인스턴스 재생성 필요 | **탈락** |
 
-### 고정 자원 내 배분 비용 (Oracle Cloud Free Tier)
+### 고정 자원 내 배분 비용
 
-이 프로젝트는 AWS/GCP가 아닌 Oracle Cloud Free Tier(12GB RAM 고정)이므로, 인프라 비용은 "월 N만원"이 아니라 **"12GB 안에서 Redis에 300MB를 할당하면 다른 곳이 300MB 줄어드는"** 자원 배분 문제입니다.
+서버가 ARM 2코어, 12GB RAM으로 고정되어 있으므로 인프라 비용은 **"12GB 안에서 Redis에 300MB를 할당하면 다른 곳이 300MB 줄어드는"** 자원 배분 문제입니다.
 
 ![서버 메모리 배분](/uploads/project/WikiEngine/redis-l2-cache/memory-allocation.svg)
 
@@ -172,7 +172,7 @@ Redis 도입의 이득:
   → Redis 300MB 투자 가치 있음
 ```
 
-> **실무(AWS/GCP)에서의 비용 비교**: 프로덕션이라면 ElastiCache(t3.micro 기준 월 ~3만원)를 추가하고, DB 부하 감소분만큼 RDS를 다운스케일(예: db.r6g.large → medium, 월 ~13만원 절감)하여 총 비용을 줄일 수 있는지가 도입 근거입니다. Free Tier라 금액 비교는 불가하지만, **자원 배분 트레이드오프 분석**은 동일한 사고 과정입니다.
+> **AWS 환경에서의 비용 비교 참고**: ElastiCache(t3.micro 기준 월 ~3만원)를 추가하고, DB 부하 감소분만큼 RDS를 다운스케일(예: db.r6g.large → medium, 월 ~13만원 절감)하면 총 인프라 비용이 줄어드는지가 도입 근거가 됩니다. 관리형 서비스 여부와 관계없이 **자원 배분 트레이드오프 분석**은 동일한 사고 과정입니다.
 
 ---
 
@@ -291,7 +291,7 @@ public class TieredCacheService {
 | 대안 | 장점 | 단점 | 판단 |
 |------|------|------|------|
 | Redis Streams | at-least-once 보장 | Consumer Group + ACK 관리 복잡 | 캐시 무효화에 오버엔지니어링 |
-| Kafka | 완벽한 메시지 보장 | 별도 인프라, Free Tier 불가 | **탈락** |
+| Kafka | 완벽한 메시지 보장 | 별도 브로커 인프라 필요, 현재 서버 자원으로 운영 부담 | **탈락** |
 | **Pub/Sub + L1 TTL** | 구현 간단. 유실 시 L1 TTL(5분)이 안전망 | 최악 5분 stale | **선택** |
 
 커뮤니티 게시판에서 검색 결과가 최대 5분 지연되는 것은 UX에 큰 영향이 없으므로, **best-effort 무효화 + TTL 안전망** 전략을 채택했습니다.
@@ -730,7 +730,7 @@ InnoDB Buffer Pool은 이미 100% 히트율이었습니다. DB I/O가 아닌 CPU
 
 **Q: "Redis 추가하면 서버 메모리 부담은?"**
 
-Oracle Cloud Free Tier 12GB 중 Redis 300MB 할당. 실측 메모리 사용률 28.4%(73MB/256MB), Eviction 0 ops/s. 페이지 캐시가 ~1% 감소하지만, Origin 도달률 19%로 실제 Lucene 접근 빈도가 감소하여 상쇄됩니다. 실무라면 ElastiCache 월 ~3만원 추가에 RDS 다운스케일 ~13만원 절감으로 총 비용이 줄어드는지가 도입 근거입니다.
+서버 12GB RAM 중 Redis 300MB 할당. 실측 메모리 사용률 28.4%(73MB/256MB), Eviction 0 ops/s. 페이지 캐시가 ~1% 감소하지만, Origin 도달률 19%로 실제 Lucene 접근 빈도가 감소하여 상쇄됩니다. AWS 환경이라면 ElastiCache 월 ~3만원 추가에 RDS 다운스케일 ~13만원 절감으로 총 비용이 줄어드는지가 도입 근거입니다.
 
 **Q: "L1-L2 데이터 불일치는?"**
 
@@ -829,7 +829,7 @@ Redis L2 cache benefits:
 
 ## Infrastructure — Dual Server Setup
 
-Up to [Stress Test](/blog/project/wikiengine/stress-test-tuning), everything ran on a single server. Starting from this post, we create an additional Oracle Cloud Free Tier instance for a **dual server setup**.
+Up to [Stress Test](/blog/project/wikiengine/stress-test-tuning), everything ran on a single server. Starting from this post, we create an additional Oracle Cloud instance for a **dual server setup**.
 
 ![Server topology — Phases 11-13](/uploads/project/WikiEngine/redis-l2-cache/server-topology.svg)
 
@@ -841,7 +841,7 @@ Up to [Stress Test](/blog/project/wikiengine/stress-test-tuning), everything ran
 | Server 2 (app2) | Oracle Cloud ARM Ampere A1, 2 cores, 12GB RAM | **Newly created** |
 | Monitoring | Oracle Cloud VM, 1GB RAM | Running |
 
-> Oracle Cloud Free Tier provides ARM Ampere A1 up to **4 OCPU + 24GB RAM total** for free. Server 1 uses 2 cores/12GB, so Server 2 is created with the same specs to fully utilize the Free Tier quota.
+> Server 2 is configured with the same specs (ARM 2 cores, 12GB RAM) as Server 1. Identical specs across both servers enable even load distribution during load balancing.
 
 ### Phased Server Utilization Plan
 
@@ -884,11 +884,11 @@ Before adding Redis, we evaluated **4 alternatives using existing infrastructure
 | **InnoDB Buffer Pool increase** (2G→4G) | Buffer Pool hit rate already **100%**. DB I/O isn't the bottleneck | **Rejected** |
 | **Caffeine cache size increase** | 4% misses are "new search terms (cold queries)". Even doubling size won't help cold queries. Per-instance isolation on scale-out | **Rejected** |
 | **JVM heap increase** (1g→2g) | Heap usage 256MB/1GB with plenty of room. CPU is the bottleneck, not memory. Reduces OS page cache for Lucene MMap | **Rejected** |
-| **Scale up** (2→4 cores) | Oracle Cloud Free Tier max is ARM 2 cores/12GB. **Impossible** | **Rejected** |
+| **Scale up** (2→4 cores) | Current instance spec (ARM 2 cores/12GB) is the ceiling. Spec change requires instance recreation | **Rejected** |
 
-### Resource Allocation Cost (Oracle Cloud Free Tier)
+### Resource Allocation Cost
 
-This project uses Oracle Cloud Free Tier (12GB RAM fixed), not AWS/GCP. Infrastructure cost is not "₩N per month" but **"allocating 300MB to Redis means 300MB less elsewhere within 12GB"** — a resource allocation problem.
+With the server fixed at ARM 2 cores, 12GB RAM, infrastructure cost is **"allocating 300MB to Redis means 300MB less elsewhere within 12GB"** — a resource allocation problem.
 
 ![Server memory allocation](/uploads/project/WikiEngine/redis-l2-cache/memory-allocation.svg)
 
@@ -908,7 +908,7 @@ Decision:
   → Redis 300MB investment worthwhile
 ```
 
-> **Cost comparison in production (AWS/GCP)**: In production, the justification would be whether adding ElastiCache (t3.micro ~₩30K/month) and downscaling RDS (e.g., db.r6g.large → medium, ~₩130K/month savings) reduces total infrastructure cost. Free Tier prevents monetary comparison, but **the resource allocation tradeoff analysis is the same thought process**.
+> **AWS cost comparison reference**: Adding ElastiCache (t3.micro ~₩30K/month) and downscaling RDS (e.g., db.r6g.large → medium, ~₩130K/month savings) to check if total infrastructure cost decreases would be the justification. Regardless of managed vs self-hosted, **the resource allocation tradeoff analysis is the same thought process**.
 
 ---
 
@@ -1027,7 +1027,7 @@ Scenario: Post edit
 | Alternative | Pros | Cons | Decision |
 |------|------|------|------|
 | Redis Streams | at-least-once guaranteed | Consumer Group + ACK management complexity | Over-engineering for cache invalidation |
-| Kafka | Perfect message guarantee | Separate infra, impossible on Free Tier | **Rejected** |
+| Kafka | Perfect message guarantee | Separate broker infra needed, operational overhead on current server resources | **Rejected** |
 | **Pub/Sub + L1 TTL** | Simple implementation. L1 TTL(5min) serves as safety net on loss | Max 5min stale | **Selected** |
 
 For a community forum, max 5-minute delay in search results has negligible UX impact, so **best-effort invalidation + TTL safety net** was adopted.
@@ -1464,7 +1464,7 @@ InnoDB Buffer Pool was already at 100% hit rate. CPU is the bottleneck, not DB I
 
 **Q: "What about server memory pressure from adding Redis?"**
 
-Redis allocated 300MB from Oracle Cloud Free Tier's 12GB. Measured memory usage 28.4% (73MB/256MB), Eviction 0 ops/s. Page cache decreases ~1%, but Origin access at 19% means actual Lucene access frequency decreased, offsetting it. In production, the justification would be ElastiCache ~₩30K/month addition vs RDS downscaling ~₩130K/month savings.
+Redis allocated 300MB from the server's 12GB RAM. Measured memory usage 28.4% (73MB/256MB), Eviction 0 ops/s. Page cache decreases ~1%, but Origin access at 19% means actual Lucene access frequency decreased, offsetting it. On AWS, the justification would be ElastiCache ~₩30K/month addition vs RDS downscaling ~₩130K/month savings.
 
 **Q: "What about L1-L2 data inconsistency?"**
 
