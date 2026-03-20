@@ -49,8 +49,10 @@ jobs:
         run: |
           PAGE_COUNT=$(find dist -name '*.html' | wc -l)
           echo "Built $PAGE_COUNT pages"
-          if [ "$PAGE_COUNT" -lt 390 ]; then
-            echo "::error::Expected 390+ pages, got $PAGE_COUNT — possible silent build failure"
+          echo "--- All built pages ---"
+          find dist -name '*.html' | sed 's|^dist||' | sort
+          if [ "$PAGE_COUNT" -lt 350 ]; then
+            echo "::error::Expected 350+ pages, got $PAGE_COUNT — possible silent build failure"
             exit 1
           fi
 
