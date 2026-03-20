@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Clean Astro content cache
+        run: rm -rf node_modules/.astro
+
       - name: Build
         run: pnpm build
         env:
