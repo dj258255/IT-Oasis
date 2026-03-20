@@ -51,9 +51,9 @@ JVM/Tomcat 튜닝(스레드 200→100)은 **79% 악화**로 역효과. CPU-bound
 
 ## 1. 정상 상태 — MySQL은 병목이 아니다
 
-Phase 10(stress 테스트)과 Phase 11(Redis L2 캐시) 데이터를 보면 **MySQL은 현재 병목이 아닙니다**:
+[stress 테스트](/blog/project/wikiengine/stress-test-tuning)와 [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache) 데이터를 보면 **MySQL은 현재 병목이 아닙니다**:
 
-| 지표 | Phase 10 (200 VU) | Phase 11 After (100 VU) | 판단 |
+| 지표 | [stress 테스트](/blog/project/wikiengine/stress-test-tuning) (200 VU) | [Redis L2](/blog/project/wikiengine/redis-l2-cache) After (100 VU) | 판단 |
 |------|-------------------|------------------------|------|
 | InnoDB Buffer Pool 히트율 | 100% | 100% | DB I/O 병목 없음 |
 | Table Lock | 0 | 0 | 락 경합 없음 |
@@ -67,15 +67,15 @@ Phase 10(stress 테스트)과 Phase 11(Redis L2 캐시) 데이터를 보면 **My
 
 ## 2. 문제 인식 — 그런데 왜 Replication인가
 
-**13단계(스케일아웃)의 전제조건(Bottom-Up 인프라 준비)**입니다.
+**다음 단계인 App 스케일아웃의 전제조건(Bottom-Up 인프라 준비)**입니다.
 
 ```
 분산 전환의 순서와 근거:
-  11단계 Redis   → 앱 Stateless 전환 (캐시/토큰 공유)        ← 완료
-  12단계 Replica → DB 읽기 분리 (스케일아웃 시 DB 부하 분산)  ← 지금
-  13단계 Scale   → 앱 인스턴스 확장 (CPU 분산)                ← 다음
+  Redis L2 캐시   → 앱 Stateless 전환 (캐시/토큰 공유)        ← 완료
+  Replication     → DB 읽기 분리 (스케일아웃 시 DB 부하 분산)  ← 지금
+  App 스케일아웃  → 앱 인스턴스 확장 (CPU 분산)                ← 다음
 
-왜 12단계가 13단계보다 먼저인가:
+왜 Replication이 스케일아웃보다 먼저인가:
   App 2대 → HikariCP 커넥션 2배(20x2=40) → 단일 MySQL에 쓰기+읽기 모두 집중
   현재는 MySQL이 여유 있지만, App 2대에서 Origin 19% 쿼리가 2배가 되면
   단일 MySQL에 모든 트래픽이 몰리는 구조가 된다.
@@ -93,15 +93,15 @@ MySQL 공식 문서([19.4.5 Using Replication for Scale-Out](https://dev.mysql.c
 
 AWS RDS 공식 문서([Read Replicas](https://aws.amazon.com/rds/features/read-replicas/))에서도 "읽기 작업을 수평 확장(elastically scale out)하여 단일 DB 인스턴스의 용량 제약을 넘어서라"고 권장하며, Aurora는 Auto Scaling으로 Replica를 자동 조절하는 기능까지 제공합니다. Replica는 "문제 발생 후 대응"이 아니라 **"확장 계획에 맞춘 사전 구성"**입니다.
 
-단, Replica 도입 전에 **애플리케이션 레벨 최적화가 먼저 완료되어야** 합니다 — 쿼리 튜닝, 인덱싱, 캐싱 없이 Replica만 추가하면 오히려 성능이 악화될 수 있습니다([Medium - Your Read Replicas Aren't Helping](https://medium.com/@jholt1055/your-read-replicas-arent-helping-they-re-making-things-worse-1956f5c4b01f)). 이 프로젝트에서는 Phase 1~11에서 Lucene 검색, 인덱스 최적화, Caffeine/Redis 캐싱을 모두 완료한 후에 Replica를 도입하므로, 올바른 순서를 따르고 있습니다.
+단, Replica 도입 전에 **애플리케이션 레벨 최적화가 먼저 완료되어야** 합니다 — 쿼리 튜닝, 인덱싱, 캐싱 없이 Replica만 추가하면 오히려 성능이 악화될 수 있습니다([Medium - Your Read Replicas Aren't Helping](https://medium.com/@jholt1055/your-read-replicas-arent-helping-they-re-making-things-worse-1956f5c4b01f)). 이 프로젝트에서는 [FULLTEXT ngram](/blog/project/wikiengine/fulltext-ngram-index)부터 [Lucene 전환](/blog/project/wikiengine/lucene-decision), [캐싱 전략](/blog/project/wikiengine/caching-strategy), [Redis L2](/blog/project/wikiengine/redis-l2-cache)까지 애플리케이션 레벨 최적화를 모두 완료한 후에 Replica를 도입하므로, 올바른 순서를 따르고 있습니다.
 
 ---
 
-## 3. 대안 검토 — 12단계를 건너뛸 수 없는 이유
+## 3. 대안 검토 — Replication을 건너뛸 수 없는 이유
 
 | 대안 | 검토 결과 | 판단 |
 |------|----------|------|
-| **12단계 건너뛰고 바로 App 2대** | 현재 MySQL이 여유 있으니 2대 운영해도 버틸 수 있다. 하지만 App 2대 × HikariCP 20 = 40 커넥션이 단일 MySQL에 몰리고, 향후 App 3대 이상 확장 시 DB가 병목이 될 수 있다. **사전 분리가 없으면 나중에 서비스 운영 중 긴급 Replication 구성이 필요** — 훨씬 위험 | **탈락** |
+| **Replication 건너뛰고 바로 App 2대** | 현재 MySQL이 여유 있으니 2대 운영해도 버틸 수 있다. 하지만 App 2대 × HikariCP 20 = 40 커넥션이 단일 MySQL에 몰리고, 향후 App 3대 이상 확장 시 DB가 병목이 될 수 있다. **사전 분리가 없으면 나중에 서비스 운영 중 긴급 Replication 구성이 필요** — 훨씬 위험 | **탈락** |
 | **HikariCP 커넥션 풀 크기만 증가** (20→40) | [stress 테스트](/blog/project/wikiengine/stress-test-tuning)에서 확인: HikariCP 병목은 풀 부족이 아니라 CPU 포화의 증상. 풀을 올려도 근본 해결 안 됨 | **탈락** |
 | **Redis L2 캐시 히트율 더 올리기** | [Redis L2](/blog/project/wikiengine/redis-l2-cache)에서 L1+L2 합산 82% 히트, Origin 19%. 나머지 19%는 cold query + 쓰기 연산이라 캐시로 더 줄이기 어려움 | **탈락** |
 | **ProxySQL (커넥션 프록시)** | 앱 코드 변경 없이 R/W 분리 가능. 하지만 프록시 서버 추가 필요 (Free Tier 자원 소모), 쿼리 파싱 오버헤드, 장애 포인트 추가 | **탈락** (앱 레벨 라우팅이 더 단순) |
@@ -112,7 +112,7 @@ AWS RDS 공식 문서([Read Replicas](https://aws.amazon.com/rds/features/read-r
 ### Replication의 이점
 
 ```
-12단계 (Replication 추가):
+Replication 추가 후:
   App → Write → MySQL Primary (서버 1)
   App → Read  → MySQL Replica (서버 2)
 
@@ -131,7 +131,7 @@ AWS RDS 공식 문서([Read Replicas](https://aws.amazon.com/rds/features/read-r
 Replica 도입의 자원 비용:
   서버 2 MySQL Replica:  4G (InnoDB BP 2G + 오버헤드)
   → 서버 2의 남은 메모리: 12G - 4.1G = ~7.9G
-  → 13단계 App2(2G) + Lucene(페이지 캐시)에 ~5.9G 확보 — 충분
+  → 다음 단계 App2(2G) + Lucene(페이지 캐시)에 ~5.9G 확보 — 충분
 
   서버 1 Primary:
   → Binlog 디스크: 7일 보관 × 쓰기 비율 → 수백 MB 수준 (1,425만 건이지만 쓰기 빈도 낮음)
@@ -139,11 +139,11 @@ Replica 도입의 자원 비용:
 
 Replica 도입의 이득:
   Primary QPS ~300 → ~60 (쓰기 20%만) → CPU 여유 확보
-  13단계 App 2대 운영 시 DB 병목 제거
+  App 스케일아웃 시 DB 병목 제거
   Replica 장애 시 Primary fallback → 가용성 유지
 
 판단:
-  서버 2 메모리 4G 투자 → Primary CPU 80% 절감 + 스케일아웃 전제조건
+  서버 2 메모리 4G 투자 → Primary CPU 80% 절감 + App 스케일아웃 전제조건
   → 투자 가치 있음
 ```
 
@@ -213,9 +213,9 @@ Replica 도입의 이득:
   └── 사이드카 (Nginx, Promtail, cAdvisor, Exporters)
 
 서버 2 (ARM 2코어/12GB):
-  ├── wiki-mysql-replica (Replica)  ← 12단계 신규
+  ├── wiki-mysql-replica (Replica)  ← 신규
   │     └── Binlog 수신 → 데이터 동기화
-  ├── wiki-mysql-exporter (Replica 메트릭)  ← 12단계 신규
+  ├── wiki-mysql-exporter (Replica 메트릭)  ← 신규
   └── 사이드카 (Node Exporter)
 ```
 
@@ -224,11 +224,11 @@ Replica 도입의 이득:
 ```
 서버 2 (ARM 2코어, 12GB RAM):
   wiki-mysql-replica:   4G (InnoDB BP 2G + MySQL 오버헤드)
-  wiki-mysql-exporter:  64M  ← 12단계 신규
+  wiki-mysql-exporter:  64M  ← 신규
   wiki-node-exporter:   64M
   ─────────────────────────────────────
   합계:                 ~4.1G
-  남은 메모리:          ~7.9G → OS + 13단계 App2(2G) + Lucene 페이지 캐시(~5G)
+  남은 메모리:          ~7.9G → OS + App 스케일아웃 시 App2(2G) + Lucene 페이지 캐시(~5G)
 ```
 
 서버 1은 변경 없음 (~7.3G 사용 중, ~4.7G 여유).
@@ -565,7 +565,7 @@ Grafana 알림:
 
 ## 8. 분석
 
-100 VU 피크에서 에러율 13.25%와 P95 2.3초는 [stress 테스트](/blog/project/wikiengine/stress-test-tuning)에서 확인한 **App CPU 포화** 패턴과 일치합니다. 병목은 MySQL이 아니라 단일 App 인스턴스의 CPU(Lucene BM25 스코어링)이며, 이는 13단계(App 스케일아웃)에서 해결할 대상입니다.
+100 VU 피크에서 에러율 13.25%와 P95 2.3초는 [stress 테스트](/blog/project/wikiengine/stress-test-tuning)에서 확인한 **App CPU 포화** 패턴과 일치합니다. 병목은 MySQL이 아니라 단일 App 인스턴스의 CPU(Lucene BM25 스코어링)이며, 이는 다음 단계인 App 스케일아웃에서 해결할 대상입니다.
 
 R/W 분리는 정상 동작합니다:
 - Replica가 읽기의 대부분(~200 ops/s)을 처리하고, Primary는 쓰기(~50 ops/s)에 집중
@@ -585,7 +585,7 @@ R/W 분리는 정상 동작합니다:
 | Replication 구성 | **완료** — GTID 비동기, CLONE PLUGIN 133.5GB 복사 |
 | HikariCP 풀 분리 | **완료** — Primary 5 + Replica 15 (합계 20 유지) |
 | 모니터링 | **완료** — Replication Lag/Thread 패널 + 알림 3개 |
-| 13단계 전제조건 | **달성** — App 2대 확장 시 DB 읽기 부하 분산 준비 완료 |
+| App 스케일아웃 전제조건 | **달성** — App 2대 확장 시 DB 읽기 부하 분산 준비 완료 |
 
 ### 서버 현황
 
@@ -596,7 +596,7 @@ R/W 분리는 정상 동작합니다:
 | Monitoring #1 | AMD 1GB + Swap 1GB | Loki + Grafana + Nginx (HTTPS) |
 | Monitoring #2 | AMD 1GB + Swap 1GB | Prometheus |
 
-**다음 단계**: 13단계(App 스케일아웃) — 서버 2에 App 인스턴스를 추가하여 CPU 병목을 분산합니다.
+**다음 단계**: App 스케일아웃 — 서버 2에 App 인스턴스를 추가하여 CPU 병목을 분산합니다.
 
 <!-- EN -->
 
@@ -621,9 +621,9 @@ The app is now Stateless, but **the DB is still a single MySQL**. Scaling out to
 
 ## 1. Normal State — MySQL Is Not the Bottleneck
 
-Phase 10 (stress test) and Phase 11 (Redis L2 cache) data show **MySQL is not currently the bottleneck**:
+[Stress test](/blog/project/wikiengine/stress-test-tuning) and [Redis L2 cache](/blog/project/wikiengine/redis-l2-cache) data show **MySQL is not currently the bottleneck**:
 
-| Metric | Phase 10 (200 VU) | Phase 11 After (100 VU) | Assessment |
+| Metric | [Stress Test](/blog/project/wikiengine/stress-test-tuning) (200 VU) | [Redis L2](/blog/project/wikiengine/redis-l2-cache) After (100 VU) | Assessment |
 |--------|-------------------|------------------------|------------|
 | InnoDB Buffer Pool Hit Rate | 100% | 100% | No DB I/O bottleneck |
 | Table Lock | 0 | 0 | No lock contention |
@@ -637,15 +637,15 @@ Phase 10 (stress test) and Phase 11 (Redis L2 cache) data show **MySQL is not cu
 
 ## 2. Problem Recognition — Then Why Replication?
 
-It's a **prerequisite for Phase 13 (scale-out) — Bottom-Up infrastructure preparation**.
+It's a **prerequisite for the next step (App scale-out) — Bottom-Up infrastructure preparation**.
 
 ```
 Distributed transition order and rationale:
-  Phase 11 Redis   → App Stateless transition (shared cache/tokens)     ← Complete
-  Phase 12 Replica → DB read separation (DB load distribution at scale) ← Now
-  Phase 13 Scale   → App instance expansion (CPU distribution)          ← Next
+  Redis L2 Cache  → App Stateless transition (shared cache/tokens)     ← Complete
+  Replication     → DB read separation (DB load distribution at scale) ← Now
+  App Scale-Out   → App instance expansion (CPU distribution)          ← Next
 
-Why Phase 12 before Phase 13:
+Why Replication before Scale-Out:
   2 Apps → HikariCP connections double (20x2=40) → all reads+writes on single MySQL
   Currently MySQL has headroom, but with 2 apps, Origin 19% queries double
   → all traffic funnels into a single MySQL
@@ -659,15 +659,15 @@ Not "MySQL is slow now" but **"ensuring MySQL can handle the load when we add mo
 
 MySQL's official documentation ([19.4.5 Using Replication for Scale-Out](https://dev.mysql.com/doc/refman/8.0/en/replication-solutions-scaleout.html)) defines Replication's primary use as "distributing reads to Replicas in high-read, low-write environments." This project's community forum fits exactly this pattern (80-90% reads, 10-20% writes).
 
-However, **application-level optimization must be completed first** before adding Replicas — adding Replicas without query tuning, indexing, and caching can actually worsen performance ([Medium - Your Read Replicas Aren't Helping](https://medium.com/@jholt1055/your-read-replicas-arent-helping-they-re-making-things-worse-1956f5c4b01f)). This project completed Lucene search, index optimization, and Caffeine/Redis caching in Phases 1-11, so the correct order is followed.
+However, **application-level optimization must be completed first** before adding Replicas — adding Replicas without query tuning, indexing, and caching can actually worsen performance ([Medium - Your Read Replicas Aren't Helping](https://medium.com/@jholt1055/your-read-replicas-arent-helping-they-re-making-things-worse-1956f5c4b01f)). This project completed [Lucene search](/blog/project/wikiengine/lucene-decision), [index optimization](/blog/project/wikiengine/query-refactoring-optimization), and [Caffeine](/blog/project/wikiengine/caching-strategy)/[Redis caching](/blog/project/wikiengine/redis-l2-cache) before introducing Replication, so the correct order is followed.
 
 ---
 
-## 3. Alternative Review — Why Phase 12 Cannot Be Skipped
+## 3. Alternative Review — Why Replication Cannot Be Skipped
 
 | Alternative | Analysis | Decision |
 |-------------|----------|----------|
-| **Skip to Phase 13 (2 apps)** | Currently MySQL has headroom, but 2 apps × HikariCP 20 = 40 connections on single MySQL. Future 3+ apps would make DB the bottleneck. **Without pre-separation, emergency Replication during production is much riskier** | **Rejected** |
+| **Skip Replication, go straight to 2 apps** | Currently MySQL has headroom, but 2 apps × HikariCP 20 = 40 connections on single MySQL. Future 3+ apps would make DB the bottleneck. **Without pre-separation, emergency Replication during production is much riskier** | **Rejected** |
 | **Increase HikariCP pool only** (20→40) | [Stress test](/blog/project/wikiengine/stress-test-tuning) confirmed: HikariCP bottleneck is a symptom of CPU saturation, not pool shortage | **Rejected** |
 | **Increase Redis L2 cache hit rate** | L1+L2 combined 82% hit, Origin 19%. Remaining 19% is cold queries + writes, hard to reduce further with caching | **Rejected** |
 | **ProxySQL (connection proxy)** | R/W split without code changes. But requires additional proxy server (Free Tier resource constraint), query parsing overhead, added failure point | **Rejected** (app-level routing is simpler) |
@@ -681,11 +681,11 @@ This project uses Oracle Cloud Free Tier (2 servers, total 4 cores / 24GB), so i
 Replica resource cost:
   Server 2 MySQL Replica: 4G (InnoDB BP 2G + overhead)
   → Remaining on Server 2: 12G - 4.1G = ~7.9G
-  → Sufficient for Phase 13 App2 (2G) + Lucene page cache (~5G)
+  → Sufficient for App Scale-Out App2 (2G) + Lucene page cache (~5G)
 
 Replica benefit:
   Primary QPS ~300 → ~60 (writes 20% only) → CPU headroom gained
-  Phase 13 scale-out DB bottleneck eliminated
+  App scale-out DB bottleneck eliminated
   Replica failure → Primary fallback → availability maintained
 
 Verdict: 4G investment → 80% Primary CPU reduction + scale-out prerequisite → worth it
@@ -726,9 +726,9 @@ Server 1 (existing, ARM 2-core/12GB):
   └── Sidecars (Nginx, Promtail, cAdvisor, Exporters)
 
 Server 2 (ARM 2-core/12GB):
-  ├── wiki-mysql-replica (Replica)  ← Phase 12 new
+  ├── wiki-mysql-replica (Replica)  ← new
   │     └── Binlog receive → data sync
-  ├── wiki-mysql-exporter (Replica metrics)  ← Phase 12 new
+  ├── wiki-mysql-exporter (Replica metrics)  ← new
   └── Sidecars (Node Exporter)
 ```
 
@@ -858,7 +858,7 @@ Grafana alerts:
 
 ## 8. Analysis
 
-Error rate 13.25% and P95 2.3s at 100 VU peak matches the **App CPU saturation** pattern confirmed in the [stress test](/blog/project/wikiengine/stress-test-tuning). The bottleneck is not MySQL but the single App instance's CPU (Lucene BM25 scoring), which is the target for Phase 13 (App scale-out).
+Error rate 13.25% and P95 2.3s at 100 VU peak matches the **App CPU saturation** pattern confirmed in the [stress test](/blog/project/wikiengine/stress-test-tuning). The bottleneck is not MySQL but the single App instance's CPU (Lucene BM25 scoring), which is the target for the next step: App scale-out.
 
 R/W split is working correctly:
 - Replica handles most reads (~200 ops/s), Primary focuses on writes (~50 ops/s)
@@ -878,6 +878,6 @@ R/W split is working correctly:
 | Replication Setup | **Complete** — GTID async, CLONE PLUGIN 133.5GB |
 | HikariCP Pool Split | **Complete** — Primary 5 + Replica 15 (total 20 maintained) |
 | Monitoring | **Complete** — Replication Lag/Thread panels + 3 alerts |
-| Phase 13 Prerequisite | **Achieved** — DB read distribution ready for app scale-out |
+| App 스케일아웃 전제조건 | **Achieved** — DB read distribution ready for app scale-out |
 
-**Next step**: Phase 13 (App Scale-Out) — Add app instance on Server 2 to distribute CPU bottleneck.
+**Next step**: App Scale-Out — Add app instance on Server 2 to distribute CPU bottleneck.
