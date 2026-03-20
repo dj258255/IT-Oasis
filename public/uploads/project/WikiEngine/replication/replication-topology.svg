@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 520" width="840" height="520" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .server { fill: #f1f5f9; stroke: #cbd5e1; rx: 12; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql-r { fill: #fef9c3; stroke: #eab308; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .sidecar { fill: #f3e8ff; stroke: #a855f7; }
+    .exporter { fill: #e0e7ff; stroke: #6366f1; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .server-title { font-size: 13px; fill: #334155; font-weight: 700; }
+    .new-badge { font-size: 9px; fill: #dc2626; font-weight: 700; }
+    .arrow { fill: none; stroke-width: 2; marker-end: url(#ah); }
+    .write { stroke: #3b82f6; }
+    .read { stroke: #22c55e; }
+    .binlog { stroke: #f59e0b; stroke-dasharray: 6 3; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-blue" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#3b82f6"/></marker>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#22c55e"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="420" y="28" text-anchor="middle" class="heading">Replication 서버 토폴로지</text>
+
+  <!-- ===== Server 1 ===== -->
+  <rect x="20" y="50" width="390" height="440" class="server" filter="url(#shadow)"/>
+  <text x="40" y="76" class="server-title">서버 1 — ARM 2코어 / 12GB</text>
+  <text x="340" y="76" class="tiny">(기존)</text>
+
+  <!-- Spring Boot -->
+  <rect x="40" y="94" width="350" height="66" class="box app" filter="url(#shadow)"/>
+  <text x="56" y="116" class="label">wiki-app-prod (Spring Boot)</text>
+  <text x="56" y="132" class="sub">DataSource 라우팅</text>
+  <text x="56" y="148" class="tiny">Write → Primary  |  Read → Replica</text>
+
+  <!-- MySQL Primary -->
+  <rect x="40" y="174" width="350" height="62" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="56" y="196" class="label">wiki-mysql-prod (Primary)</text>
+  <text x="56" y="214" class="sub">InnoDB BP 2GB  |  Binlog → 서버 2</text>
+
+  <!-- Redis -->
+  <rect x="40" y="250" width="166" height="50" class="box redis" filter="url(#shadow)"/>
+  <text x="56" y="272" class="label">wiki-redis-prod</text>
+  <text x="56" y="288" class="sub">256MB</text>
+
+  <!-- Lucene -->
+  <rect x="222" y="250" width="168" height="50" class="box lucene" filter="url(#shadow)"/>
+  <text x="238" y="272" class="label">Lucene 인덱스</text>
+  <text x="238" y="288" class="sub">20GB, MMap</text>
+
+  <!-- Sidecars -->
+  <rect x="40" y="314" width="350" height="50" class="box sidecar" filter="url(#shadow)"/>
+  <text x="56" y="336" class="label">사이드카</text>
+  <text x="56" y="352" class="sub">Nginx  ·  Promtail  ·  cAdvisor  ·  MySQL Exporter  ·  Node Exporter</text>
+
+  <!-- Memory summary server 1 -->
+  <rect x="40" y="378" width="350" height="44" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="56" y="398" class="tiny" style="font-weight: 600;">메모리: Spring 2G + MySQL 4G + 사이드카 ~1G = ~7G</text>
+  <text x="56" y="412" class="tiny">남은 ~5G → OS 페이지 캐시 (Lucene MMap)</text>
+
+  <!-- ===== Server 2 ===== -->
+  <rect x="430" y="50" width="390" height="440" class="server" filter="url(#shadow)"/>
+  <text x="450" y="76" class="server-title">서버 2 — ARM 2코어 / 12GB</text>
+
+  <!-- MySQL Replica -->
+  <rect x="450" y="94" width="350" height="62" class="box mysql-r" filter="url(#shadow)"/>
+  <text x="466" y="116" class="label">wiki-mysql-replica (Replica)</text>
+  <text x="770" y="116" class="new-badge">NEW</text>
+  <text x="466" y="138" class="sub">InnoDB BP 2GB  |  read-only + super-read-only</text>
+
+  <!-- MySQL Exporter -->
+  <rect x="450" y="170" width="168" height="50" class="box exporter" filter="url(#shadow)"/>
+  <text x="466" y="192" class="label">mysql-exporter</text>
+  <text x="612" y="192" class="new-badge">NEW</text>
+  <text x="466" y="208" class="sub">Replica 메트릭</text>
+
+  <!-- Node Exporter -->
+  <rect x="634" y="170" width="166" height="50" class="box sidecar" filter="url(#shadow)"/>
+  <text x="650" y="192" class="label">node-exporter</text>
+  <text x="650" y="208" class="sub">호스트 메트릭</text>
+
+  <!-- Memory summary server 2 -->
+  <rect x="450" y="234" width="350" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="466" y="254" class="tiny" style="font-weight: 600;">메모리: MySQL Replica 4G + Exporter ~0.1G = ~4.1G</text>
+  <text x="466" y="268" class="tiny">남은 ~7.9G → OS + 스케일아웃 시 App2(2G) + Lucene(~5G)</text>
+
+  <!-- Future App2 placeholder -->
+  <rect x="450" y="304" width="350" height="56" rx="8" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="625" y="330" text-anchor="middle" class="sub" style="fill: #94a3b8;">(다음 단계: App 스케일아웃)</text>
+  <text x="625" y="346" text-anchor="middle" class="tiny" style="fill: #94a3b8;">Spring Boot + Lucene 인덱스</text>
+
+  <!-- ===== Arrows ===== -->
+  <!-- Write: App → Primary -->
+  <path d="M 215 160 L 215 170" class="arrow write" marker-end="url(#ah-blue)"/>
+  <text x="224" y="170" class="tiny" style="fill: #3b82f6; font-weight: 600;">Write</text>
+
+  <!-- Read: App → Replica (cross-server) -->
+  <path d="M 390 127 L 446 127" class="arrow read" marker-end="url(#ah-green)"/>
+  <text x="398" y="122" class="tiny" style="fill: #22c55e; font-weight: 600;">Read</text>
+
+  <!-- Binlog: Primary → Replica -->
+  <path d="M 390 205 C 420 205, 420 125, 446 125" class="arrow binlog" marker-end="url(#ah-amber)"/>
+  <text x="396" y="180" class="tiny" style="fill: #f59e0b; font-weight: 600;">Binlog</text>
+  <text x="396" y="192" class="tiny" style="fill: #f59e0b;">private network</text>
+
+  <!-- Legend -->
+  <rect x="450" y="378" width="350" height="80" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="466" y="396" class="tiny" style="font-weight: 600;">범례</text>
+  <line x1="466" y1="410" x2="496" y2="410" stroke="#3b82f6" stroke-width="2"/>
+  <text x="502" y="414" class="tiny">Write (INSERT/UPDATE/DELETE) → Primary</text>
+  <line x1="466" y1="428" x2="496" y2="428" stroke="#22c55e" stroke-width="2"/>
+  <text x="502" y="432" class="tiny">Read (SELECT) → Replica</text>
+  <line x1="466" y1="446" x2="496" y2="446" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 3"/>
+  <text x="502" y="450" class="tiny">Binlog 비동기 Replication (GTID)</text>
+</svg>

@@ -202,36 +202,11 @@ Replica 도입의 이득:
 
 ### 서버 토폴로지
 
-```
-서버 1 (기존, ARM 2코어/12GB):
-  ├── wiki-app-prod (Spring Boot)
-  │     └── DataSource 라우팅: Write → Primary, Read → Replica
-  ├── wiki-mysql-prod (Primary)
-  │     └── Binlog → 서버 2 private network로 전송
-  ├── wiki-redis-prod (Redis)
-  ├── Lucene 인덱스 (20GB, MMap)
-  └── 사이드카 (Nginx, Promtail, cAdvisor, Exporters)
-
-서버 2 (ARM 2코어/12GB):
-  ├── wiki-mysql-replica (Replica)  ← 신규
-  │     └── Binlog 수신 → 데이터 동기화
-  ├── wiki-mysql-exporter (Replica 메트릭)  ← 신규
-  └── 사이드카 (Node Exporter)
-```
+![Replication 서버 토폴로지](/uploads/project/WikiEngine/replication/replication-topology.svg)
 
 ### 서버 2 메모리 배분 (Replica 추가 후)
 
-```
-서버 2 (ARM 2코어, 12GB RAM):
-  wiki-mysql-replica:   4G (InnoDB BP 2G + MySQL 오버헤드)
-  wiki-mysql-exporter:  64M  ← 신규
-  wiki-node-exporter:   64M
-  ─────────────────────────────────────
-  합계:                 ~4.1G
-  남은 메모리:          ~7.9G → OS + App 스케일아웃 시 App2(2G) + Lucene 페이지 캐시(~5G)
-```
-
-서버 1은 변경 없음 (~7.3G 사용 중, ~4.7G 여유).
+![서버 2 메모리 배분](/uploads/project/WikiEngine/replication/server2-memory.svg)
 
 ---
 
@@ -715,22 +690,7 @@ Post edit (`PUT /posts/1` → `@Transactional`) and subsequent read (`GET /posts
 
 ### Server Topology
 
-```
-Server 1 (existing, ARM 2-core/12GB):
-  ├── wiki-app-prod (Spring Boot)
-  │     └── DataSource routing: Write → Primary, Read → Replica
-  ├── wiki-mysql-prod (Primary)
-  │     └── Binlog → Server 2 via private network
-  ├── wiki-redis-prod (Redis)
-  ├── Lucene index (20GB, MMap)
-  └── Sidecars (Nginx, Promtail, cAdvisor, Exporters)
-
-Server 2 (ARM 2-core/12GB):
-  ├── wiki-mysql-replica (Replica)  ← new
-  │     └── Binlog receive → data sync
-  ├── wiki-mysql-exporter (Replica metrics)  ← new
-  └── Sidecars (Node Exporter)
-```
+![Replication Server Topology](/uploads/project/WikiEngine/replication/replication-topology.svg)
 
 ---
 
