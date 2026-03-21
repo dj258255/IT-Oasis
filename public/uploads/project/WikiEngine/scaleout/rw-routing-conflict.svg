@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 340" width="780" height="340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .code { font-size: 10px; fill: #1e293b; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .heading { font-size: 13px; fill: #0f172a; font-weight: 800; }
+    .danger { font-size: 10px; fill: #dc2626; font-weight: 700; }
+    .ok { font-size: 10px; fill: #16a34a; font-weight: 700; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-red" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#dc2626"/></marker>
+    <filter id="s"><feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-color="#00000010"/></filter>
+  </defs>
+
+  <text x="390" y="22" text-anchor="middle" class="heading">GET 요청의 R/W 라우팅 충돌 구조</text>
+
+  <!-- GET request -->
+  <rect x="20" y="42" width="160" height="44" class="box" fill="#dbeafe" stroke="#3b82f6" filter="url(#s)"/>
+  <text x="100" y="62" text-anchor="middle" class="label">GET /posts/{id}</text>
+  <text x="100" y="76" text-anchor="middle" class="tiny">HTTP "읽기" 요청</text>
+
+  <!-- Arrow to Nginx -->
+  <path d="M 180 64 L 220 64" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Nginx -->
+  <rect x="224" y="42" width="160" height="44" class="box" fill="#e0e7ff" stroke="#6366f1" filter="url(#s)"/>
+  <text x="304" y="62" text-anchor="middle" class="label">Nginx map</text>
+  <text x="304" y="76" text-anchor="middle" class="tiny">GET → app_read upstream</text>
+
+  <!-- Arrow to App -->
+  <path d="M 384 64 L 420 64" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- App 1 + App 2 -->
+  <rect x="424" y="42" width="160" height="44" class="box" fill="#d1fae5" stroke="#10b981" filter="url(#s)"/>
+  <text x="504" y="62" text-anchor="middle" class="label">App 1 + App 2</text>
+  <text x="504" y="76" text-anchor="middle" class="tiny">least_conn 분산</text>
+
+  <!-- Arrow down to Controller -->
+  <path d="M 504 86 L 504 106" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Controller box -->
+  <rect x="30" y="110" width="720" height="210" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="50" y="132" class="label">PostController.getPost()</text>
+
+  <!-- Step 1: findByIdCached -->
+  <rect x="50" y="148" width="320" height="52" class="box" fill="#eff6ff" stroke="#3b82f6" filter="url(#s)"/>
+  <text x="66" y="168" class="code">findByIdCached(id)</text>
+  <text x="66" y="184" class="ok">@Transactional(readOnly=true) → Replica</text>
+
+  <!-- Arrow down -->
+  <path d="M 210 200 L 210 214" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Step 2: incrementViewCount -->
+  <rect x="50" y="218" width="320" height="52" class="box" fill="#fef2f2" stroke="#dc2626" filter="url(#s)"/>
+  <text x="66" y="238" class="code">incrementViewCount(id)</text>
+  <text x="66" y="254" class="danger">@Transactional → Primary (의도)</text>
+
+  <!-- Conflict annotation -->
+  <rect x="410" y="148" width="320" height="122" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <text x="430" y="170" class="danger" style="font-size: 12px;">충돌 발생</text>
+  <text x="430" y="190" class="sub">readOnly GET 안에서 write 메서드 호출 시</text>
+  <text x="430" y="206" class="sub">AbstractRoutingDataSource가 간헐적으로</text>
+  <text x="430" y="222" class="sub">Replica에 UPDATE를 라우팅</text>
+  <text x="430" y="244" class="danger">→ read-only 에러 → 500 Internal Error</text>
+  <text x="430" y="260" class="tiny">Known pitfall (Vlad Mihalcea, Baeldung)</text>
+
+  <!-- Red arrow from incrementViewCount to conflict -->
+  <path d="M 370 244 L 406 210" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#ah-red)"/>
+
+  <!-- Bottom note -->
+  <rect x="50" y="280" width="700" height="30" rx="6" fill="#fef9c3" stroke="#eab308" stroke-width="1"/>
+  <text x="400" y="300" text-anchor="middle" class="sub" style="fill: #92400e; font-weight: 600;">k6 부하 테스트: 상세 조회 38건 전부 실패 (pass=0, fail=38)</text>
+</svg>

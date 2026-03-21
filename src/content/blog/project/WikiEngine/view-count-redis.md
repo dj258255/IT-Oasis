@@ -86,13 +86,7 @@ App 1(서버 1)에서 2건 발생, App 2(서버 2)에서 0건.
 
 ### 구조적 원인: GET 요청에 DB 쓰기(UPDATE)가 포함되어 R/W 분리와 충돌
 
-```
-GET /posts/{id} (HTTP 레벨에서 "읽기" 요청)
-  → Nginx map: GET → app_read upstream (App 1 + App 2 분산)
-  → PostController.getPost()
-    → findByIdCached(id)          // 클래스 레벨 @Transactional(readOnly=true) → Replica
-    → incrementViewCount(id)      // 메서드 레벨 @Transactional → Primary (의도)
-```
+![GET 요청의 R/W 라우팅 충돌 구조](/uploads/project/WikiEngine/scaleout/rw-routing-conflict.svg)
 
 `incrementViewCount()`는 `@Transactional`(readOnly=false)이므로 `ReadWriteRoutingDataSource`가 "primary"를 반환하고, `LazyConnectionDataSourceProxy`가 Primary 커넥션을 할당해야 한다. **이론적으로는 정상 동작해야 한다.**
 
@@ -100,7 +94,7 @@ GET /posts/{id} (HTTP 레벨에서 "읽기" 요청)
 
 ### 부수적 문제: Row Lock 경합
 
-정상 동작하더라도, 100 VU 동시 접속 시 동일 게시글에 대한 `UPDATE posts SET view_count = view_count + 1 WHERE id = ?`는 InnoDB의 배타적 행 잠금(X Lock)을 유발한다. 100개 트랜잭션이 같은 행에 UPDATE를 시도하면 **직렬화**되어 순차 대기 → 처리량이 MySQL 기준 ~500-1,000 ops/s로 제한된다.
+정상 동작하더라도, 100 VU 동시 접속 시 동일 게시글에 대한 `UPDATE posts SET view_count = view_count + 1 WHERE id = ?`는 InnoDB의 배타적 행 잠금(X Lock)을 유발한다. 100개 트랜잭션이 같은 행에 UPDATE를 시도하면 **직렬화**되어 순차 대기 → 처리량이 MySQL 기준 ~500-1,000 ops/s로 제한된다 (SSD + `innodb_flush_log_at_trx_commit=1` 기준. HDD에서는 ~50 ops/s까지 하락, 내구성 설정 완화 시 수만 ops/s 가능하지만 데이터 유실 위험).
 
 ---
 
@@ -167,7 +161,7 @@ GET /posts/{id} (HTTP 레벨에서 "읽기" 요청)
 
 1. **GET에서 DB 쓰기 완전 제거**: R/W 분리 라우팅 충돌의 근본 원인을 구조적으로 해결. GET → Redis INCR(읽기 인프라), 배치 flush → DB UPDATE(쓰기 인프라, `@Scheduled`에서 별도 트랜잭션)
 2. **Redis INCR은 O(1), 싱글스레드 원자적**: 별도 락 없이 동시성 보장. MySQL UPDATE의 Row Lock 경합이 완전히 제거된다. 100 VU 동시 접속이든 1,000 VU이든 INCR 한 번이면 끝
-3. **성능**: Redis INCR ~100,000+ ops/s vs MySQL UPDATE ~500-1,000 ops/s (동일 행 동시 접근 시). 약 **100배** 처리량 차이 (Redis 공식 벤치마크)
+3. **성능**: Redis INCR ~100,000+ ops/s vs MySQL UPDATE ~500-1,000 ops/s (동일 행 동시 접근, SSD + `innodb_flush_log_at_trx_commit=1` 기준). 약 **100배** 처리량 차이. Redis 수치는 [Redis 공식 벤치마크](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/) 기준이며, MySQL 수치는 SSD 환경에서의 단일 hot row 경합 시 이론치이다 (HDD에서는 ~50 ops/s, 내구성 완화 시 수만 ops/s 가능)
 4. **멀티 인스턴스 공유 상태**: App 1과 App 2가 같은 Redis 키에 INCR하므로, 카운터 유실이나 중복 문제 없음. 향후 중복 방지(`SET NX EX`)도 Redis에서 바로 구현 가능
 5. **이미 Redis 인프라 있음**: [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)에서 L2 캐시 + 자동완성 flat KV로 Redis를 이미 운영 중. 추가 인프라 비용 0
 
@@ -188,28 +182,11 @@ GET /posts/{id} (HTTP 레벨에서 "읽기" 요청)
 
 이 프로젝트는 OCI 환경이므로 월 과금이 없다. 비용은 고정 자원 배분 트레이드오프로 평가한다:
 
-```
-Redis INCR 추가 메모리:
-  키: "post:views:{id}" (~20 bytes) + 값: 숫자 문자열 (~5 bytes)
-  Redis 오버헤드: ~64 bytes/key
-  → 키 당 ~90 bytes
-
-  동시 조회 게시글 수 (30초 윈도우): ~1,000개 (추정)
-  → ~90 KB 추가 메모리
-
-  현재 Redis 메모리: 27.5% (256MB 중 ~71MB 사용)
-  → 추가 90 KB는 무시 가능 (0.035%)
-```
+![Redis INCR 추가 메모리 추정](/uploads/project/WikiEngine/scaleout/viewcount-redis-memory.svg)
 
 실무(AWS) 환경 참고:
 
-```
-Before: RDS Primary에 매 GET마다 UPDATE → Primary CPU/IOPS 소모
-After:  ElastiCache INCR + 30초마다 배치 UPDATE
-  → Primary UPDATE 횟수: 초당 수백 건 → 30초마다 수십 건 (99%+ 감소)
-  → ElastiCache 추가 비용: 이미 캐시/세션용으로 운영 중이면 0원 추가
-  → Primary 다운스케일 가능성: UPDATE IOPS 감소만큼 여유 확보
-```
+![실무(AWS) 비용 비교](/uploads/project/WikiEngine/scaleout/viewcount-aws-cost.svg)
 
 ---
 
@@ -343,7 +320,7 @@ the --read-only option so it cannot execute this statement
 
 **Root cause**: The `AbstractRoutingDataSource`-based R/W splitting intermittently routed the view count `UPDATE` to the Replica (which is read-only). This is a known pitfall when a write method is called inside a read-only GET request context.
 
-**Secondary issue**: Even when routed correctly, 100 concurrent `UPDATE` statements on the same row caused InnoDB exclusive row locks (X Lock), serializing transactions and limiting throughput to ~500-1,000 ops/s.
+**Secondary issue**: Even when routed correctly, 100 concurrent `UPDATE` statements on the same row caused InnoDB exclusive row locks (X Lock), serializing transactions and limiting throughput to ~500-1,000 ops/s (SSD + `innodb_flush_log_at_trx_commit=1`; could be as low as ~50 on HDD).
 
 ---
 

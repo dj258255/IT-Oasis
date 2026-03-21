@@ -121,7 +121,7 @@ Lucene IndexWriter는 단일 프로세스에서만 사용할 수 있습니다(wr
 
 **Q: "Nginx에서 `if` 대신 `map`을 쓴 이유는?"**
 
-Nginx 공식 위키에서 `if` 디렉티브를 `location` 블록 내에서 사용하는 것을 'if is evil'로 경고합니다. `map`은 설정 로드 시에 변수를 미리 계산하므로 런타임 오버헤드가 없고, `proxy_pass http://$variable`과 안전하게 조합됩니다.
+Nginx 공식 위키에서 `if` 디렉티브를 `location` 블록 내에서 사용하는 것을 'if is evil'로 경고합니다. `map`은 설정 로드 시 해시 테이블을 컴파일하고, 요청 시 O(1) 해시 lookup으로 변수를 평가합니다(lazy evaluation). `proxy_pass http://$variable`과 안전하게 조합됩니다.
 
 **Q: "로드밸런싱 알고리즘으로 `least_conn`을 선택한 이유는?"**
 

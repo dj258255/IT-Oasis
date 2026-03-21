@@ -218,7 +218,7 @@ App 스케일아웃:
                       → POST/PUT/DELETE  → app_write
 ```
 
-**map 기반 라우팅 선택 근거**: Nginx의 `if` 디렉티브는 `location` 블록 내에서 예측 불가능한 동작을 하므로("if is evil" — Nginx 공식 위키), `map` 디렉티브로 변수를 미리 설정한 후 `proxy_pass`에서 사용합니다. `map`은 설정 로드 시 해석되어 런타임 오버헤드가 없습니다.
+**map 기반 라우팅 선택 근거**: Nginx의 `if` 디렉티브는 `location` 블록 내에서 예측 불가능한 동작을 하므로("if is evil" — Nginx 공식 위키), `map` 디렉티브로 변수를 미리 설정한 후 `proxy_pass`에서 사용합니다. `map`은 설정 로드 시 해시 테이블을 컴파일하고, 요청 시 O(1) 해시 lookup으로 변수를 평가합니다(lazy evaluation). `if` 디렉티브의 예측 불가능한 동작 대비 안전하고 성능도 무시 가능한 수준입니다.
 
 **로드밸런싱 알고리즘: `least_conn`**
 
@@ -1305,117 +1305,23 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | 캐시 Origin 도달률 | 42% | **19%** | **55%↓** |
 | InnoDB 히트율 | 99.5% | **99.9%** | 안정 |
 
----
+### 시스템 설계 관점 — 프로젝트 진화와 업계 패턴 대응
 
-## 스크린샷/측정 체크리스트
+이 프로젝트의 최적화 과정은 대규모 시스템 설계에서 사용되는 표준 패턴을 **직접 구현하고 검증**하는 과정이다.
 
-각 Step에서 포트폴리오/문서에 남겨야 할 증거 목록. [Replication](/blog/project/wikiengine/replication)과 동일한 수준으로 기록합니다.
+| 구현 내용 | 대응하는 시스템 설계 패턴 |
+|---------|---------------------|
+| Caffeine L1 로컬 캐시 | **Cache-Aside Pattern** — 읽기 경로 최적화 |
+| prefix → top-K flat KV 매핑 (Redis) | **CQRS** — 쓰기(MySQL)와 읽기(Redis flat KV)를 분리. 자동완성 설계에서 "접두사 → 인기순 10개 제안 목록"의 단순 매핑이 바로 이것 |
+| Trie → flat KV 전환 | **Trie 배제** — 대규모에서 Trie의 메모리/성능 한계를 인지하고, prefix→top-K O(1) 매핑으로 전환 |
+| hourly `@Scheduled` 배치 빌드 | **MapReduce 패턴** — 검색 로그를 집계하여 prefix별 top-K를 산출하는 배치 파이프라인 |
+| MySQL Primary-Replica | **읽기 복제** — DB 레벨 수평 확장 |
+| App 2대 + Nginx LB | **서비스 계층 수평 확장** — 로드밸런서 + 인스턴스 그룹 |
+| Redis INCR + 배치 flush | **Write-Behind Pattern** — 쓰기 경로 최적화. Sentry/YouTube 패턴과 동일 |
+| Spring Event → Outbox → Debezium+Kafka (예정) | **CDC + 이벤트 기반 동기화** — dual-write 제거, Read Model 독립 갱신 |
+| Redis Consistent Hashing (예정) | **샤딩 + 동적 복제** — 핫스팟 해결, 수평 확장 |
 
-### Before 측정 (Step 1)
-
-| # | 캡처 대상 | 소스 | 용도 |
-|---|----------|------|------|
-| 1 | k6 100 VU 결과 터미널 | k6 stdout (avg, P95, P99, 에러율, 총 요청 수) | Before 수치 기준점 |
-| 2 | Grafana — App CPU (100 VU 피크 구간) | cAdvisor 또는 호스트 CPU 패널 | "CPU 100% 포화" 병목 근거 |
-| 3 | Grafana — HikariCP | primary-pool + replica-pool Active/Pending | 커넥션 사용 현황 |
-| 4 | Grafana — Redis | 메모리, 히트율, Lettuce P95 | Redis 여유 확인 |
-| 5 | Grafana — Tiered Cache | L1/L2/Origin 비율 | 캐시 히트율 현황 |
-
-> [Replication](/blog/project/wikiengine/replication) After 측정 결과가 있으면 Before로 재활용 가능.
-
-### TokenBlacklist Redis 전환 (Step 2)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | 테스트 통과 터미널 | `./gradlew test` | 기존 테스트 깨지지 않음 |
-| 2 | 로그아웃 → 재요청 401 응답 | Postman/curl (요청+응답) | 블랙리스트 동작 검증 |
-| 3 | Redis CLI — 블랙리스트 키 + TTL | `KEYS "blacklist:*"` + `TTL blacklist:...` | TTL이 "남은 시간"인지 확인 |
-| 4 | Redis CLI — JWT 만료 후 키 삭제 | 만료 대기 후 `KEYS "blacklist:*"` → 0개 | 자동 정리 확인 |
-
-### Lucene Primary/Replica 모드 분리 (Step 3)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | 테스트 통과 터미널 | `./gradlew test` | 코드 변경 안정성 |
-| 2 | Primary 모드 기동 로그 | `LUCENE_MODE=primary` → IndexWriter 빈 생성 로그 | Primary 정상 동작 |
-| 3 | Replica 모드 기동 로그 | `LUCENE_MODE=replica` → IndexWriter 빈 미생성 로그 | Replica 모드 확인 |
-| 4 | Replica 모드에서 POST /posts | 게시글 생성 → MySQL 저장 + "Lucene replica mode — skipping" 로그 | 쓰기 skip 확인 |
-
-### 서버 2 App 배포 (Step 4)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | 서버 1 Redis 포트 변경 확인 | `docker port wiki-redis-prod` → private_ip:6379 | Redis 외부 접근 가능 |
-| 2 | 서버 2 → 서버 1 Redis 연결 | `redis-cli -h {서버1_IP} -a {pw} ping` → PONG | 네트워크 관통 확인 |
-| 3 | 서버 2 → 서버 1 SSH 키 확인 | `ssh -o BatchMode=yes {서버1_IP} echo ok` → ok | rsync용 SSH 확인 |
-| 4 | 초기 Lucene 인덱스 복사 | rsync 터미널 (전송 바이트, 소요 시간) | "20GB / ~3분" 실측 |
-| 5 | 서버 2 `docker ps` | App 2 + Alloy + MySQL Replica 컨테이너 | 전체 컨테이너 현황 |
-| 6 | App 2 healthcheck | `docker inspect ... wiki-app-prod-2` → healthy | 정상 기동 확인 |
-| 7 | App 2 검색 API 수동 테스트 | curl → 정상 검색 결과 | Lucene Replica 동작 |
-| 8 | 서버 2 방화벽 규칙 | `firewall-cmd --list-all` | 포트 허용 증거 |
-
-### Nginx 로드밸런싱 (Step 5)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | `nginx -t` 통과 | 설정 변경 후 문법 검증 | 설정 오류 없음 |
-| 2 | nginx.conf 핵심 부분 | upstream 2개 + map 라우팅 | 설정 구조 증거 |
-| 3 | 연속 GET → Nginx access log | `tail -f access.log` + 5회 GET | least_conn 분산 확인 |
-| 4 | POST → Nginx access log | POST /api/v1.0/posts → 항상 App 1 | 쓰기 고정 확인 |
-| 5 | App 2 stop → GET 정상 | `docker stop` → GET → App 1만 서빙 | 장애 대응 확인 |
-
-### Lucene 인덱스 동기화 (Step 6)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | lucene-sync.sh 실행 로그 | 수동 실행 → snapshot gen, rsync 전송량, 완료 | 동기화 정상 동작 |
-| 2 | `crontab -l` | 5분 주기 등록 | cron 설정 증거 |
-| 3 | 동기화 검증 | App 1 게시글 생성 → 5분 후 App 2 검색 → 포함 | stale window 확인 |
-| 4 | `/internal/lucene/snapshot` 응답 | curl → generation 번호 반환 | SnapshotDeletionPolicy 동작 |
-| 5 | `/internal/lucene/pause-refresh`, `resume-refresh` | curl → 200 OK | Refresh Pause 동작 |
-
-### 모니터링 (Step 7)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | Grafana — 인스턴스별 CPU 비교 | App 1 vs App 2 (부하 없을 때) | 2대 메트릭 수집 확인 |
-| 2 | Grafana — 인스턴스별 HikariCP | primary/replica-pool x 2 인스턴스 | 커넥션 풀 분리 확인 |
-| 3 | Grafana — App 2 Redis Lettuce P95 | App 1 로컬 vs App 2 원격 비교 | 네트워크 비대칭 실측 |
-| 4 | Prometheus targets 페이지 | `up{job="spring-boot-2"} = 1` | App 2 scrape 정상 |
-| 5 | Loki — App 2 로그 | label filter `container=wiki-app-prod-2` | 로그 수집 확인 |
-
-### 기능 검증 (Step 8)
-
-| # | 캡처 대상 | 시점 | 용도 |
-|---|----------|------|------|
-| 1 | TokenBlacklist 공유 검증 | App 1 로그아웃 → App 2 같은 토큰 → 401 | 보안 동작 증명 |
-| 2 | App 2 장애 시 | App 2 stop → k6 짧은 부하 → 에러 없음 | Nginx failover |
-| 3 | App 1 장애 시 | App 1 stop → GET 정상 + POST 실패 | 읽기 유지/쓰기 중단 |
-| 4 | Redis 장애 시 | Redis stop → 401 (보수적 거부) | Redis 장애 정책 확인 |
-| 5 | 무중단 배포 | App 1 재시작 → 서비스 중단 없음 | rolling restart 검증 |
-
-### After 측정 (Step 9) — 핵심
-
-| # | 캡처 대상 | 소스 | 용도 |
-|---|----------|------|------|
-| 1 | **k6 100 VU 결과 터미널** | k6 stdout | After 수치 (에러율, P95, TPS) |
-| 2 | **Grafana — 인스턴스별 CPU (부하 중)** | cAdvisor App 1 + App 2 | **핵심 증거 — "CPU 100%→50%" 분산** |
-| 3 | Grafana — HikariCP (부하 중) | 양쪽 primary-pool + replica-pool | 커넥션 분포 |
-| 4 | Grafana — Nginx 요청 분배 | 인스턴스별 TPS | least_conn 분배 비율 |
-| 5 | Grafana — Redis 히트율 (부하 중) | L1/L2/Origin | App 2 warm-up 후 캐시 안정화 |
-| 6 | Grafana — App 1 vs App 2 Lettuce P95 | Lettuce 메트릭 비교 | 원격 Redis 오버헤드 실측 |
-| 7 | Grafana — Replication Lag (부하 중) | mysql_slave_status_seconds_behind_master | App 2대 부하에서 Lag 안정 확인 |
-
-> **Step 9 #2 (인스턴스별 CPU 분산 그래프)가 이 글 전체의 성과를 증명하는 단일 핵심 증거입니다.** Before에서 CPU 100%였던 것이 After에서 각 50~60%로 분산된 그래프 하나가 "스케일아웃으로 CPU 병목을 해소했다"를 보여줍니다.
-
-### 결과 정리 (Step 10)
-
-| # | 캡처 대상 | 용도 |
-|---|----------|------|
-| 1 | Before vs After 비교표 | 문서에 표로 정리 ([Replication](/blog/project/wikiengine/replication)과 동일 형식) |
-| 2 | 최종 서버 토폴로지 | 아키텍처 도식 업데이트 |
-
-> **총 캡처 약 45건.** [Replication](/blog/project/wikiengine/replication)(~30건)보다 많은 이유: App 2대 x 인스턴스 비교 + 장애 시나리오 5종.
+> 단순히 기술을 나열한 것이 아니라, 성능 병목을 측정 → 원인 분석 → 대안 비교 → 실측 검증하는 과정을 반복했고, 그 결과가 업계 표준 시스템 설계 패턴과 자연스럽게 대응된다. 특히 Trie → flat KV 전환은 자동완성 시스템 설계에서 "Trie는 소규모에서는 적합하지만, 대규모에서는 prefix→top-K 매핑이 더 효율적"이라는 설계 판단을 직접 경험한 것이다.
 
 ---
 

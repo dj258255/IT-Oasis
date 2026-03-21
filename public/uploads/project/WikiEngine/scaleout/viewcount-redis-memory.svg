@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 300" width="700" height="300" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .heading { font-size: 13px; fill: #0f172a; font-weight: 800; }
+    .value { font-size: 11px; fill: #0f172a; font-weight: 700; }
+    .code { font-size: 10px; fill: #1e293b; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .ok { font-size: 11px; fill: #16a34a; font-weight: 700; }
+  </style>
+  <defs>
+    <filter id="s"><feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-color="#00000010"/></filter>
+  </defs>
+
+  <text x="350" y="22" text-anchor="middle" class="heading">Redis INCR 추가 메모리 추정</text>
+
+  <!-- Key structure breakdown -->
+  <rect x="30" y="40" width="300" height="130" rx="8" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5" filter="url(#s)"/>
+  <text x="50" y="62" class="label">키 구조</text>
+
+  <rect x="45" y="74" width="120" height="24" rx="4" fill="white" stroke="#f9a8d4"/>
+  <text x="105" y="90" text-anchor="middle" class="code">post:views:{id}</text>
+  <text x="178" y="90" class="sub">~20 bytes</text>
+
+  <text x="50" y="116" class="sub">값: 숫자 문자열</text>
+  <text x="178" y="116" class="sub">~5 bytes</text>
+
+  <text x="50" y="136" class="sub">Redis 오버헤드</text>
+  <text x="178" y="136" class="sub">~64 bytes/key</text>
+
+  <line x1="45" y1="148" x2="270" y2="148" stroke="#f9a8d4" stroke-width="1"/>
+  <text x="50" y="162" class="label">합계</text>
+  <text x="178" y="162" class="value">~90 bytes/key</text>
+
+  <!-- Calculation -->
+  <rect x="360" y="40" width="310" height="130" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" filter="url(#s)"/>
+  <text x="380" y="62" class="label">메모리 계산 (30초 윈도우)</text>
+
+  <text x="380" y="86" class="sub">동시 조회 게시글 수</text>
+  <text x="560" y="86" class="value">~1,000개</text>
+
+  <text x="380" y="108" class="sub">추가 메모리</text>
+  <text x="560" y="108" class="value">~90 KB</text>
+
+  <line x1="380" y1="120" x2="640" y2="120" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="140" class="sub">현재 Redis 사용</text>
+  <text x="560" y="140" class="value">~71MB / 256MB</text>
+
+  <text x="380" y="160" class="sub">추가 비율</text>
+  <text x="560" y="160" class="ok">0.035% (무시 가능)</text>
+
+  <!-- Visual bar -->
+  <rect x="30" y="194" width="640" height="36" rx="6" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+  <!-- Used: 71/256 = 27.7% → 178px -->
+  <rect x="30" y="194" width="178" height="36" rx="6" fill="#f9a8d4" stroke="#ec4899" stroke-width="1"/>
+  <text x="119" y="216" text-anchor="middle" class="tiny" style="fill: #9d174d; font-weight: 600;">71MB (27.5%)</text>
+  <!-- INCR addition: 0.035% ≈ 0.2px, show as 3px min -->
+  <rect x="208" y="194" width="3" height="36" fill="#dc2626"/>
+  <text x="420" y="216" text-anchor="middle" class="tiny" style="fill: #64748b;">남은 185MB (72.5%)</text>
+
+  <!-- Label -->
+  <text x="350" y="250" text-anchor="middle" class="tiny">Redis 256MB 중 INCR 키 추가분 = ~90KB (빨간 선, 시각적으로 보이지 않을 만큼 작음)</text>
+
+  <!-- Conclusion -->
+  <rect x="30" y="264" width="640" height="28" rx="6" fill="#d1fae5" stroke="#22c55e" stroke-width="1"/>
+  <text x="350" y="282" text-anchor="middle" class="ok">결론: 조회수 INCR 키는 Redis 메모리에 영향 없음 — 추가 인프라 비용 0</text>
+</svg>
