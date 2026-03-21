@@ -290,13 +290,14 @@ void incrementViewCountBy(@Param("id") Long id, @Param("delta") long delta);
 
 ---
 
-## 향후 개선
+## 향후 개선 — 검토 결과
 
-| 개선 | 설명 | 우선순위 |
-|------|------|---------|
-| **조회수 중복 방지** | `SET post:viewed:{sessionId}:{postId} 1 NX EX 86400` — 24시간 내 동일 사용자 중복 카운트 방지. Redis `SET NX EX`는 원자적, TTL로 자동 만료 | 높음 |
-| **Lua Script 원자적 flush** | `GETDEL`을 Lua Script로 묶어 flush 중 새 INCR이 유실되지 않도록 | 중간 |
-| **Redis Pipeline** | 배치 flush 시 여러 키를 Pipeline으로 한번에 처리하여 네트워크 왕복 감소 | 낮음 |
+| 항목 | 검토 결과 | 판단 |
+|------|---------|------|
+| **조회수 중복 방지** | 커뮤니티 게시판에서 조회수는 "정확한 유니크 방문자 수"가 아닌 **대략적인 인기도 지표**다. 디시인사이드·에펨코리아·네이버 블로그도 새로고침 시 조회수가 올라간다. 유튜브처럼 조회수가 수익과 직결되는 서비스가 아니므로 구현의 ROI가 낮다. `SET NX EX`를 추가하면 매 조회마다 Redis 명령 2개(INCR + SET NX), 24시간 TTL 키 대량 누적(256MB 제한), VPN/시크릿 모드 우회 가능 | **불필요** |
+| **Lua Script 원자적 flush** | 현재 `getAndDelete()`는 Redis `GETDEL` 명령으로 **이미 원자적**이다. `keys()` → `getAndDelete()` 사이에 새 INCR이 들어와도 유실이 없다 (GETDEL이 새 값을 포함하여 반환하거나, 키가 재생성되어 다음 flush에서 처리) | **불필요** — 현재 코드가 이미 안전 |
+| **Redis Pipeline** | ~1,000개 키 × private network 0.5ms RTT = ~500ms 절약이지만, 30초마다 실행되는 배치이므로 사용자 응답에 영향 없음 | **현재 불필요** |
+| **`KEYS` → `SCAN` 전환** | `KEYS`는 O(N) 블로킹. 현재 ~6,190개 키에서는 ~0.1ms로 무시 가능. 수만 개로 늘면 `SCAN` 커서 기반으로 전환 필요 | **규모 확대 시** |
 
 
 <!-- EN -->
