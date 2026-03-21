@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 400" width="700" height="400" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .file { fill: #f8fafc; stroke: #e2e8f0; rx: 6; }
+    .file-special { fill: #dbeafe; stroke: #3b82f6; rx: 6; }
+    .file-seg { fill: #d1fae5; stroke: #10b981; rx: 6; }
+    .file-lock { fill: #fef2f2; stroke: #ef4444; rx: 6; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .dir-icon { font-size: 14px; }
+    .code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; fill: #1e293b; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="350" y="28" text-anchor="middle" class="heading">Lucene 인덱스 파일 구조</text>
+
+  <!-- Directory tree container -->
+  <rect x="30" y="46" width="340" height="330" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Root directory -->
+  <text x="50" y="74" class="code" style="font-weight: 700;">/data/lucene/</text>
+
+  <!-- Tree lines and files -->
+  <!-- segments_N -->
+  <line x1="60" y1="84" x2="60" y2="102" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="60" y1="102" x2="80" y2="102" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="86" y="88" width="260" height="30" class="file-special" filter="url(#shadow)"/>
+  <text x="100" y="108" class="code" style="fill: #1d4ed8; font-weight: 700;">segments_N</text>
+  <text x="200" y="108" class="tiny" style="fill: #3b82f6;">커밋 포인트 (atomic)</text>
+
+  <!-- _0.cfs -->
+  <line x1="60" y1="102" x2="60" y2="140" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="60" y1="140" x2="80" y2="140" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="86" y="126" width="260" height="30" class="file-seg" filter="url(#shadow)"/>
+  <text x="100" y="146" class="code" style="fill: #065f46; font-weight: 700;">_0.cfs</text>
+  <text x="170" y="146" class="tiny" style="fill: #059669;">복합 세그먼트 (immutable)</text>
+
+  <!-- _0.cfe -->
+  <line x1="60" y1="140" x2="60" y2="178" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="60" y1="178" x2="80" y2="178" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="86" y="164" width="260" height="30" class="file-seg" filter="url(#shadow)"/>
+  <text x="100" y="184" class="code" style="fill: #065f46; font-weight: 700;">_0.cfe</text>
+  <text x="170" y="184" class="tiny" style="fill: #059669;">복합 엔트리 테이블</text>
+
+  <!-- _1.cfs -->
+  <line x1="60" y1="178" x2="60" y2="216" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="60" y1="216" x2="80" y2="216" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="86" y="202" width="260" height="30" class="file-seg" filter="url(#shadow)"/>
+  <text x="100" y="222" class="code" style="fill: #065f46; font-weight: 700;">_1.cfs / _1.cfe</text>
+  <text x="230" y="222" class="tiny" style="fill: #059669;">세그먼트 2</text>
+
+  <!-- _2.cfs (more segments) -->
+  <line x1="60" y1="216" x2="60" y2="254" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="60" y1="254" x2="80" y2="254" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="86" y="240" width="260" height="30" class="file-seg" filter="url(#shadow)"/>
+  <text x="100" y="260" class="code" style="fill: #065f46; font-weight: 700;">_2.cfs / _2.cfe ...</text>
+  <text x="252" y="260" class="tiny" style="fill: #059669;">세그먼트 N</text>
+
+  <!-- write.lock -->
+  <line x1="60" y1="254" x2="60" y2="292" stroke="#cbd5e1" stroke-width="1.5"/>
+  <line x1="60" y1="292" x2="80" y2="292" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="86" y="278" width="260" height="30" class="file-lock" filter="url(#shadow)"/>
+  <text x="100" y="298" class="code" style="fill: #991b1b; font-weight: 700;">write.lock</text>
+  <text x="190" y="298" class="tiny" style="fill: #dc2626;">단일 Writer 보장</text>
+
+  <!-- Pending deletes note -->
+  <rect x="50" y="322" width="300" height="38" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="66" y="338" class="tiny" style="fill: #059669; font-weight: 600;">merge 완료 시 이전 세그먼트 파일 삭제</text>
+  <text x="66" y="352" class="tiny" style="fill: #059669;">→ rsync 중 삭제되면 전송 실패 가능</text>
+
+  <!-- ===== Annotations ===== -->
+  <!-- Immutable segments note -->
+  <rect x="400" y="46" width="270" height="90" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="420" y="68" class="label" style="fill: #065f46;">Immutable 세그먼트</text>
+  <text x="420" y="86" class="sub" style="fill: #065f46;">한번 쓰여진 세그먼트 파일은 변경되지 않음.</text>
+  <text x="420" y="100" class="sub" style="fill: #065f46;">merge 시 새 세그먼트 생성 후 이전 삭제.</text>
+  <text x="420" y="118" class="tiny" style="fill: #059669;">→ rsync에 유리: 변경된 파일만 전송</text>
+
+  <!-- Atomic commit note -->
+  <rect x="400" y="150" width="270" height="80" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="420" y="172" class="label" style="fill: #1d4ed8;">Atomic segments_N 갱신</text>
+  <text x="420" y="190" class="sub" style="fill: #1e40af;">commit() 시 새 segments_N+1 파일 생성.</text>
+  <text x="420" y="204" class="sub" style="fill: #1e40af;">이전 segments_N은 그대로 유지 →</text>
+  <text x="420" y="218" class="tiny" style="fill: #3b82f6;">SnapshotDeletionPolicy가 보호</text>
+
+  <!-- write.lock note -->
+  <rect x="400" y="246" width="270" height="66" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="420" y="268" class="label" style="fill: #991b1b;">write.lock</text>
+  <text x="420" y="286" class="sub" style="fill: #991b1b;">App 2는 IndexWriter를 열지 않음 (읽기 전용).</text>
+  <text x="420" y="302" class="tiny" style="fill: #dc2626;">write.lock은 rsync 대상에서 제외 (--exclude)</text>
+
+  <!-- rsync key insight -->
+  <rect x="400" y="326" width="270" height="50" rx="8" fill="#fffbeb" stroke="#fbbf24" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="420" y="346" class="label" style="fill: #92400e;">rsync --delete 핵심</text>
+  <text x="420" y="362" class="sub" style="fill: #92400e;">immutable 세그먼트 → 변경분만 증분 전송</text>
+  <text x="420" y="374" class="tiny" style="fill: #a16207;">20GB 인덱스도 실제 전송량은 수 MB 수준</text>
+</svg>

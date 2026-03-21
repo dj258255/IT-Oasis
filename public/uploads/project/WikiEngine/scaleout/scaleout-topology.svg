@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 560" width="860" height="560" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .server { fill: #f1f5f9; stroke: #cbd5e1; rx: 12; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql-r { fill: #fef9c3; stroke: #eab308; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .nginx { fill: #e0e7ff; stroke: #6366f1; }
+    .sidecar { fill: #f3e8ff; stroke: #a855f7; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .server-title { font-size: 13px; fill: #334155; font-weight: 700; }
+    .new-badge { font-size: 9px; fill: #dc2626; font-weight: 700; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#10b981"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" class="heading">Scale-out 서버 토폴로지</text>
+
+  <!-- ===== Server 1 ===== -->
+  <rect x="20" y="50" width="400" height="490" class="server" filter="url(#shadow)"/>
+  <text x="40" y="76" class="server-title">서버 1 — ARM 2코어 / 12GB</text>
+
+  <!-- Nginx -->
+  <rect x="40" y="92" width="360" height="46" class="box nginx" filter="url(#shadow)"/>
+  <text x="56" y="112" class="label">Nginx (리버스 프록시)</text>
+  <text x="56" y="128" class="sub">least_conn (GET) | App1 only (POST/PUT/DELETE)</text>
+
+  <!-- App 1 -->
+  <rect x="40" y="150" width="360" height="62" class="box app" filter="url(#shadow)"/>
+  <text x="56" y="172" class="label">wiki-app-prod (Spring Boot)</text>
+  <text x="56" y="190" class="sub">Lucene Primary  |  DataSource 라우팅</text>
+
+  <!-- MySQL Primary -->
+  <rect x="40" y="224" width="360" height="50" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="56" y="246" class="label">wiki-mysql-prod (Primary)</text>
+  <text x="56" y="262" class="sub">InnoDB BP 2GB  |  Binlog → 서버 2</text>
+
+  <!-- Redis -->
+  <rect x="40" y="286" width="170" height="50" class="box redis" filter="url(#shadow)"/>
+  <text x="56" y="306" class="label">wiki-redis-prod</text>
+  <text x="56" y="322" class="sub">256MB (L2 캐시 + 세션)</text>
+
+  <!-- Lucene Index -->
+  <rect x="224" y="286" width="176" height="50" class="box lucene" filter="url(#shadow)"/>
+  <text x="240" y="306" class="label">Lucene 인덱스</text>
+  <text x="240" y="322" class="sub">Primary, MMap</text>
+
+  <!-- Sidecars -->
+  <rect x="40" y="348" width="360" height="50" class="box sidecar" filter="url(#shadow)"/>
+  <text x="56" y="368" class="label">사이드카</text>
+  <text x="56" y="384" class="sub">Alloy · Promtail · cAdvisor · MySQL Exp · Node Exp</text>
+
+  <!-- Memory summary server 1 -->
+  <rect x="40" y="412" width="360" height="44" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="56" y="432" class="tiny" style="font-weight: 600;">메모리: App 2G + MySQL 3G + Redis 0.3G + 사이드카 ~0.5G ≈ 5.8G</text>
+  <text x="56" y="446" class="tiny">남은 ~6.2G → OS 페이지 캐시 (Lucene MMap)</text>
+
+  <!-- ===== Server 2 ===== -->
+  <rect x="440" y="50" width="400" height="490" class="server" filter="url(#shadow)"/>
+  <text x="460" y="76" class="server-title">서버 2 — ARM 2코어 / 12GB</text>
+
+  <!-- App 2 (NEW) -->
+  <rect x="460" y="92" width="360" height="62" class="box app" filter="url(#shadow)"/>
+  <text x="476" y="114" class="label">wiki-app-2 (Spring Boot)</text>
+  <text x="790" y="114" class="new-badge">NEW</text>
+  <text x="476" y="132" class="sub">Lucene Replica  |  Read-only DataSource</text>
+  <text x="476" y="144" class="tiny">TokenBlacklist Redis 연동</text>
+
+  <!-- MySQL Replica -->
+  <rect x="460" y="166" width="360" height="50" class="box mysql-r" filter="url(#shadow)"/>
+  <text x="476" y="188" class="label">wiki-mysql-replica (Replica)</text>
+  <text x="476" y="204" class="sub">InnoDB BP 2GB  |  read-only</text>
+
+  <!-- Alloy (NEW) -->
+  <rect x="460" y="228" width="170" height="50" class="box sidecar" filter="url(#shadow)"/>
+  <text x="476" y="248" class="label">Grafana Alloy</text>
+  <text x="574" y="248" class="new-badge">NEW</text>
+  <text x="476" y="264" class="sub">128MB, 메트릭 수집</text>
+
+  <!-- Lucene copy (NEW) -->
+  <rect x="644" y="228" width="176" height="50" class="box lucene" filter="url(#shadow)"/>
+  <text x="660" y="248" class="label">Lucene 인덱스</text>
+  <text x="780" y="248" class="new-badge">NEW</text>
+  <text x="660" y="264" class="sub">rsync 복사본</text>
+
+  <!-- Sidecars -->
+  <rect x="460" y="290" width="360" height="50" class="box sidecar" filter="url(#shadow)"/>
+  <text x="476" y="310" class="label">사이드카</text>
+  <text x="476" y="326" class="sub">MySQL Exporter · Node Exporter</text>
+
+  <!-- Memory summary server 2 -->
+  <rect x="460" y="354" width="360" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="476" y="374" class="tiny" style="font-weight: 600;">메모리: App2 2G + MySQL 4G + Alloy 0.1G + Exp 0.1G ≈ 6.3G</text>
+  <text x="476" y="388" class="tiny">남은 ~5.7G → OS + Lucene 페이지 캐시</text>
+  <text x="476" y="400" class="tiny" style="fill: #16a34a; font-weight: 600;">기존 4.1G → 6.3G (+2.2G 증가)</text>
+
+  <!-- ===== Cross-server arrows ===== -->
+  <!-- Binlog: Primary → Replica -->
+  <path d="M 400 249 C 430 249, 430 191, 456 191" style="fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 6 3;" marker-end="url(#ah-amber)"/>
+  <text x="414" y="222" class="tiny" style="fill: #f59e0b; font-weight: 600;">Binlog</text>
+
+  <!-- rsync: Lucene → Lucene copy -->
+  <path d="M 400 311 C 432 311, 432 253, 640 253" style="fill: none; stroke: #10b981; stroke-width: 2; stroke-dasharray: 6 3;" marker-end="url(#ah-green)"/>
+  <text x="500" y="304" class="tiny" style="fill: #10b981; font-weight: 600;">rsync (5분)</text>
+
+  <!-- Legend -->
+  <rect x="460" y="424" width="360" height="96" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="476" y="442" class="tiny" style="font-weight: 600;">범례</text>
+  <rect x="476" y="452" width="8" height="8" rx="2" fill="#3b82f6"/>
+  <text x="490" y="460" class="tiny">Spring Boot App</text>
+  <rect x="580" y="452" width="8" height="8" rx="2" fill="#f59e0b"/>
+  <text x="594" y="460" class="tiny">MySQL</text>
+  <rect x="660" y="452" width="8" height="8" rx="2" fill="#ec4899"/>
+  <text x="674" y="460" class="tiny">Redis</text>
+  <rect x="476" y="470" width="8" height="8" rx="2" fill="#10b981"/>
+  <text x="490" y="478" class="tiny">Lucene</text>
+  <rect x="580" y="470" width="8" height="8" rx="2" fill="#6366f1"/>
+  <text x="594" y="478" class="tiny">Nginx</text>
+  <rect x="660" y="470" width="8" height="8" rx="2" fill="#a855f7"/>
+  <text x="674" y="478" class="tiny">사이드카</text>
+  <line x1="476" y1="494" x2="500" y2="494" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 3"/>
+  <text x="506" y="498" class="tiny">비동기 복제</text>
+  <text x="630" y="498" class="new-badge">NEW</text>
+  <text x="656" y="498" class="tiny">신규 추가</text>
+</svg>

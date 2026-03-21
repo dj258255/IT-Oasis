@@ -62,44 +62,11 @@ DB는 여유 있지만(Primary Slow Query 0건, InnoDB 히트율 99.5%), **앱 C
 
 **CPU 소비 내역 (Lucene 검색 경로):**
 
-```
-검색 요청 → Nori 형태소 분석 (쿼리 파싱) → BM25 스코어링 (세그먼트 순회)
-                                          → FeatureField 부스팅 (viewCount, likeCount)
-                                          → Recency Decay (30일 반감기)
-
-→ 이 전체가 CPU-bound 연산. 캐시 미스 시 매번 발생.
-→ Origin 42%의 요청이 이 경로를 타므로, 동시 요청이 많으면 CPU 포화.
-```
+![Lucene 검색 CPU 경로](/uploads/project/WikiEngine/scaleout/lucene-cpu-path.svg)
 
 **스케일아웃의 효과 추정:**
 
-```
-현재 (App 1대):
-  CPU 2코어 → 100 VU에서 100% → 에러율 13.25%
-
-App 2대 (CPU 4코어 분산):
-  읽기 요청을 2대에 분산 → 각 App CPU ~50%
-  → 에러율 대폭 감소, P95 개선 기대
-
-근거 — Queueing Theory (M/M/c 모델):
-  이용률 ρ = λ / (c × μ)  (λ: 도착율, c: 서버 수, μ: 서비스율)
-
-  현재: c=2코어, ρ ≈ 1.0 (포화 상태)
-    → 대기확률 ≈ 100%, 대기열 급증, 응답시간 폭등
-  App 2대: c=4코어, ρ ≈ 0.5
-    → 대기확률 급감, 대기열 거의 소멸, 응답시간 대폭 개선
-
-  ※ Little's Law (L = λW)는 안정 상태에서 동시 요청 수(L), 처리량(λ),
-    응답시간(W)의 서술적 관계이며, 하나를 바꾸면 다른 것이 자동으로
-    바뀐다는 인과 법칙이 아니다. 성능 개선의 핵심은 이용률(ρ) 감소이다.
-
-  선형 확장(2배)은 아닌 이유:
-    USL(Universal Scalability Law, Neil Gunther)에 따르면 노드 추가 시
-    직렬화(serialization) 비용 + 일관성(coherence) 비용이 발생한다.
-    공유 자원(MySQL Primary 쓰기, Redis 네트워크, Nginx 라우팅)이
-    coherence 항으로 작용하여 이론적 2배에 미치지 못한다.
-    단, CPU-bound 워크로드에서 직렬 분율이 낮으므로 효과는 크다.
-```
+![스케일아웃 효과 추정 — Queueing Theory](/uploads/project/WikiEngine/scaleout/scaleout-queueing.svg)
 
 ### 대안 검토 — 스케일아웃 외에 선택지는 없는가?
 
@@ -116,17 +83,17 @@ App 2대 (CPU 4코어 분산):
 스케일아웃을 위한 사전 준비가 모두 완료되었습니다:
 
 ```
-Redis L2 캐시    → 앱 Stateless 전환 (캐시/자동완성 Redis 공유)        ✅ 완료
-Replication      → DB 읽기 분리 (App 2대 시 DB 부하 분산)             ✅ 완료
+Redis L2 캐시    → 앱 Stateless 전환 (캐시/자동완성 Redis 공유)        완료
+Replication      → DB 읽기 분리 (App 2대 시 DB 부하 분산)             완료
 App 스케일아웃   → 앱 인스턴스 확장 (CPU 분산)                        ← 지금
 ```
 
 | 전제조건 | 상태 | 없으면 |
 |----------|------|--------|
-| [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache) | ✅ 완료 | App 간 캐시 불일치 → 히트율 절반 |
-| 자동완성 flat KV (Redis) | ✅ 완료 | App별 Trie 독립 → 메모리 중복, 불일치 |
-| [MySQL Replication](/blog/project/wikiengine/replication) | ✅ 완료 | App 2대 × HikariCP 20 = 40 커넥션이 단일 MySQL에 집중 |
-| TokenBlacklist Redis 전환 | ❌ 미완료 | App 1에서 로그아웃한 토큰을 App 2가 모름 → 보안 구멍 |
+| [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache) | 완료 | App 간 캐시 불일치 → 히트율 절반 |
+| 자동완성 flat KV (Redis) | 완료 | App별 Trie 독립 → 메모리 중복, 불일치 |
+| [MySQL Replication](/blog/project/wikiengine/replication) | 완료 | App 2대 × HikariCP 20 = 40 커넥션이 단일 MySQL에 집중 |
+| TokenBlacklist Redis 전환 | 미완료 | App 1에서 로그아웃한 토큰을 App 2가 모름 → 보안 구멍 |
 
 > **TokenBlacklist가 유일한 미완료 전제조건**입니다. 현재 Caffeine(로컬 메모리)으로 구현되어 있으며, 코드 주석에도 "다중 서버 환경에서는 Redis 등 외부 저장소로 교체가 필요하다"고 명시되어 있습니다.
 
@@ -136,64 +103,11 @@ App 스케일아웃   → 앱 인스턴스 확장 (CPU 분산)                  
 
 ### 서버 토폴로지
 
-```
-서버 1 (ARM 2코어/12GB):
-  ├── wiki-nginx-prod (Nginx)
-  │     └── L7 로드밸런싱: GET → App 1 + App 2, 쓰기 → App 1 (Lucene write affinity)
-  ├── wiki-app-prod (Spring Boot, Lucene Primary)
-  │     ├── IndexWriter + SearcherManager (읽기+쓰기)
-  │     └── DataSource: Write → Primary, Read → Replica
-  ├── wiki-mysql-prod (Primary)
-  ├── wiki-redis-prod (Redis)
-  ├── Lucene 인덱스 (20GB, MMap)
-  └── 사이드카 (Alloy, cAdvisor, Exporters)
-
-서버 2 (ARM 2코어/12GB):
-  ├── wiki-app-prod-2 (Spring Boot, Lucene Replica)  ← 신규
-  │     ├── SearcherManager only (읽기 전용, IndexWriter 없음)
-  │     └── DataSource: Write → Primary (서버 1), Read → Replica (로컬)
-  ├── wiki-mysql-replica (Replica)
-  ├── wiki-alloy-prod (로그 수집)  ← 신규
-  ├── Lucene 인덱스 복사본 (20GB, rsync 동기화)  ← 신규
-  └── 사이드카 (Node Exporter, MySQL Exporter)
-```
+![스케일아웃 서버 토폴로지](/uploads/project/WikiEngine/scaleout/scaleout-topology.svg)
 
 ### 요청 흐름
 
-```
-Client (HTTPS)
-    │
-    ▼
-Nginx (서버 1, :443)
-    │
-    ├── GET /api/...  ──────────────────┐
-    │   (읽기, 검색, 자동완성)          │
-    │                                   ▼
-    │                           ┌── least_conn ──┐
-    │                           │                │
-    │                     App 1 (서버 1)    App 2 (서버 2)
-    │                     Lucene Primary   Lucene Replica
-    │                           │                │
-    │                     ┌─────┴────────────────┘
-    │                     ▼
-    │               L1 Caffeine → L2 Redis → MySQL Replica (읽기)
-    │                                              (서버 2)
-    │
-    └── POST/PUT/DELETE  ──────────────────────────────────┐
-        (게시글 생성/수정/삭제)                              │
-                                                           ▼
-                                                     App 1 (서버 1)
-                                                     Lucene Primary
-                                                           │
-                                                     MySQL Primary (쓰기)
-                                                           │
-                                                     Lucene 인덱스 갱신
-                                                           │
-                                                     rsync (5분 주기)
-                                                           │
-                                                           ▼
-                                                     App 2 Lucene 복사본 갱신
-```
+![요청 흐름 — GET/POST 라우팅](/uploads/project/WikiEngine/scaleout/request-flow.svg)
 
 ### Lucene 인덱스 동기화 전략
 
@@ -239,19 +153,7 @@ App 2대에서 Lucene을 운영하는 핵심 도전은 **인덱스 동기화**�
 
 **rsync 동기화 상세:**
 
-```
-Lucene 인덱스 구조:
-  /data/lucene/
-  ├── segments_N           ← 커밋 포인트 (어떤 세그먼트가 활성인지)
-  ├── _0.cfs, _0.cfe       ← 세그먼트 파일 (불변, 새 세그먼트만 추가)
-  ├── _1.cfs, _1.cfe
-  └── write.lock           ← IndexWriter 락 (App 2에는 불필요)
-
-Lucene 세그먼트는 불변(immutable):
-  - 새 문서 추가 → 새 세그먼트 파일 생성
-  - 머지 → 기존 세그먼트 삭제 + 새 세그먼트 생성
-  - segments_N → 활성 세그먼트 목록 (커밋 시 원자적 갱신, Lucene 5.0+ NIO.2 ATOMIC_MOVE)
-```
+![Lucene 인덱스 파일 구조](/uploads/project/WikiEngine/scaleout/lucene-index-structure.svg)
 
 **rsync 안전성 — SnapshotDeletionPolicy 기반:**
 
@@ -259,36 +161,7 @@ rsync는 **파일 복사 순서를 보장하지 않습니다**. 단순 rsync만�
 
 Lucene 커미터 Mike McCandless의 권고: *"You must first close the IndexWriter when using rsync, else the copy can be corrupt."* ([Lucene's NRT segment index replication](https://blog.mikemccandless.com/2017/09/lucenes-near-real-time-segment-index.html)) — 또는 `SnapshotDeletionPolicy`를 사용하여 일관된 스냅샷을 잡은 후 rsync해야 합니다.
 
-```
-SnapshotDeletionPolicy + Refresh Pause 기반 rsync 흐름:
-  1. App 2: refresh 일시 중단 (rsync 중 maybeRefresh 차단)
-  2. App 1: commit() + snapshot() → 현재 커밋 포인트 고정
-     → 이 시점의 세그먼트 파일은 머지/GC에서 삭제 보호됨
-  3. rsync: 모든 파일 복사
-     → snapshot 보호: 참조된 세그먼트가 중간에 삭제되지 않음
-     → refresh 중단: App 2가 불완전한 상태를 읽지 않음
-  4. App 1: snapshot 해제 → GC가 불필요 세그먼트 정리
-  5. App 2: refresh 재개 + 즉시 maybeRefresh() → 새 segments_N 감지 → 새 reader 오픈
-
-두 가지 보호 메커니즘이 동시에 필요한 이유:
-
-  ① SnapshotDeletionPolicy (App 1 측):
-     - IndexWriter가 rsync 중에도 계속 동작 (쓰기 요청 처리)
-     - 머지가 발생하면 기존 세그먼트 파일이 삭제될 수 있음
-     - snapshot이 참조를 유지하면 삭제 방지 → rsync가 완전한 복사본 생성
-
-  ② Refresh Pause (App 2 측, LUCENE-628 대응):
-     - rsync는 파일 복사 순서를 보장하지 않음
-     - segments_N이 세그먼트 파일보다 먼저 도착할 수 있음
-     - 이 상태에서 maybeRefresh() 발동 → FileNotFoundException (~10% 실패율 보고)
-     - rsync 완료까지 refresh를 차단하면 이 레이스 컨디션 원천 방지
-
-rsync 중간에 중단되는 경우:
-  - refresh가 중단 상태이므로 App 2는 불완전한 디렉토리를 읽지 않음 → 안전
-  - 스크립트 실패 시 resume-refresh가 호출되지 않으면?
-    → 5분 후 다음 cron 실행 시 pause-refresh부터 다시 시작
-    → 안전장치: resume-refresh에 30초 타임아웃 자동 해제 (아래 코드 참조)
-```
+![rsync 동기화 흐름 — SnapshotDeletionPolicy + Refresh Pause](/uploads/project/WikiEngine/scaleout/rsync-flow.svg)
 
 **동기화 스크립트 (cron, 5분 주기):**
 
@@ -435,25 +308,7 @@ public class RedisTokenBlacklist implements TokenBlacklist {
 
 ### 자원 배분 비용 분석 (Oracle Cloud)
 
-```
-App 2 도입의 자원 비용:
-  서버 2 App 2 JVM:     2G (-Xmx1g, 총 resident ~2G)
-  서버 2 Alloy:         128M (로그 수집)
-  서버 2 Lucene 디스크:  20G (인덱스 복사본)
-  → 서버 2 메모리 추가: ~2.1G
-  → 서버 2 합계: 4.1G (기존) + 2.1G = ~6.2G
-  → 남은 메모리: 12G - 6.2G = ~5.8G → OS + Lucene 페이지 캐시(~5G)
-
-App 2 도입의 이득:
-  CPU 2코어 추가 → 읽기 부하 50% 분산
-  100 VU에서 에러율 13.25% → 대폭 감소 기대
-  P95 2,300ms → 개선 기대
-  향후 App 3대 확장 시 동일 패턴 적용 가능
-
-판단:
-  서버 2 메모리 2.1G 투자 → CPU 병목 해소 + 가용성 향상
-  → 투자 가치 있음
-```
+![스케일아웃 자원 비용 분석](/uploads/project/WikiEngine/scaleout/scaleout-cost.svg)
 
 > **실무(AWS)에서의 비용 비교 참고**: EC2 t3.medium(2vCPU/4GB) 1대 = ~$30/월. App 2대로 확장하면 EC2 2대($60) + ALB($15) = ~$75/월 (2.5배 증가). 하지만 TPS가 ~1.7배 증가하므로 TPS당 비용은 오히려 감소하고, 단일 장애점 제거 + 에러율 13%→<3% 감소로 SLA 개선 효과까지 포함하면 투자 대비 가치가 있습니다. 참고로 AWS에서는 Auto Scaling Group으로 부하에 따라 인스턴스를 자동 조절할 수 있으나, 이 프로젝트는 OCI 고정 자원이므로 수동 2대 고정입니다.
 
@@ -524,20 +379,7 @@ App 2 도입의 이득:
 
 **Redis 메모리 영향:**
 
-```
-블랙리스트 키 크기 추정:
-  키: "blacklist:" + JWT 토큰 (약 200 bytes) = ~215 bytes
-  값: "1" = 1 byte
-  Redis 오버헤드: ~64 bytes per key
-  → 키 당 ~280 bytes
-
-동시 블랙리스트 토큰 수:
-  JWT 만료시간 30분 = 1,800초
-  로그아웃 빈도: 분당 ~10건 (추정)
-  → 최대 동시: ~300개 × 280 bytes = ~82 KB
-
-  → Redis 메모리 영향 무시 가능 (현재 49MB 사용 중)
-```
+![TokenBlacklist Redis 메모리 추정](/uploads/project/WikiEngine/scaleout/tokenblacklist-memory.svg)
 
 ---
 
@@ -1581,33 +1423,11 @@ App 1 재사용:     /auth/me          → 401 (차단)
 
 ### 서버 2 (App 2 추가 후)
 
-```
-서버 2 (ARM 2코어, 12GB RAM):
-  wiki-mysql-replica:     4G  (InnoDB BP 2G + 오버헤드)
-  wiki-app-prod-2:        2G  (JVM -Xmx1g, 총 resident ~2G)   ← 신규
-  wiki-alloy-prod:        128M (로그 수집)                       ← 신규
-  wiki-mysql-exporter:    64M
-  wiki-node-exporter:     64M
-  ─────────────────────────────────────
-  합계:                   ~6.3G
-  남은 메모리:            ~5.7G → OS + Lucene 페이지 캐시
-```
+![서버 2 메모리 배분 (App 2 추가 후)](/uploads/project/WikiEngine/scaleout/server2-memory-after.svg)
 
 ### 서버 1 (변경 없음)
 
-```
-서버 1 (ARM 2코어, 12GB RAM):
-  wiki-app-prod:          2G   (JVM -Xmx1g)
-  wiki-mysql-prod:        3G   (InnoDB BP 2G + 오버헤드)
-  wiki-redis-prod:        256M
-  wiki-nginx-prod:        64M
-  wiki-alloy-prod:        128M
-  wiki-cadvisor:          128M
-  exporters:              ~200M (mysql, redis, node)
-  ─────────────────────────────────────
-  합계:                   ~5.8G (변경 없음, Nginx upstream 추가만)
-  남은 메모리:            ~6.2G → OS + Lucene 페이지 캐시
-```
+![서버 1 메모리 배분](/uploads/project/WikiEngine/scaleout/server1-memory.svg)
 
 ---
 
@@ -1626,66 +1446,6 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | `roles/firewall/tasks/main.yml` | 서버 1: 서버 2 → 6379/tcp 허용, 서버 2 → 서버 1: 8080/tcp 허용 |
 | `prometheus.yml.j2` | App 2 scrape target 추가 |
 | 서버 2 cron | `lucene-sync.sh` 5분 주기 |
-
----
-
-## 면접 예상 질문
-
-**Q: "앱을 2대로 늘린 이유는?"**
-
-A: "[Replication](/blog/project/wikiengine/replication) After 측정에서 100 VU 부하 시 App CPU가 100%에 도달하여 에러율 13.25%, P95 2.3초가 발생했습니다. 병목은 Lucene BM25 스코어링과 Nori 형태소 분석으로, CPU-bound 연산입니다. MySQL은 InnoDB 히트율 99.5%, Slow Query 0건으로 여유 있었고, Redis도 Lettuce P95 3ms로 병목이 아니었습니다. Oracle Cloud에서 서버 스펙 변경이 불가하므로, 서버 2에 App 인스턴스를 추가하여 CPU 2코어를 확보하는 스케일아웃이 유일한 선택지였습니다."
-
-**Q: "Lucene 인덱스 동기화는 어떻게 했나요?"**
-
-A: "MySQL Primary-Replica와 동일한 패턴을 적용했습니다. Nginx에서 HTTP 메서드 기반 라우팅으로 쓰기(POST/PUT/DELETE)를 App 1(Lucene Primary)로 고정하고, 읽기(GET)를 양쪽에 분산합니다. App 2의 Lucene은 5분 주기 rsync로 App 1의 인덱스를 복사합니다. 단순 rsync만으로는 안전하지 않습니다 — rsync는 파일 복사 순서를 보장하지 않아 segments_N이 세그먼트 파일보다 먼저 도착할 수 있고(LUCENE-628), IndexWriter 머지 중 세그먼트가 삭제될 수도 있습니다. 이를 해결하기 위해 두 가지 메커니즘을 적용합니다: App 1 측 `SnapshotDeletionPolicy`로 세그먼트 삭제를 방지하고, App 2 측 Refresh Pause로 rsync 중 `maybeRefresh()` 발동을 차단합니다. Mike McCandless(Lucene 커미터)도 'rsync 시 SnapshotDeletionPolicy를 사용하라'고 권고합니다. 커뮤니티 게시판에서 검색 결과가 최대 5분 늦게 반영되는 것은 UX에 영향이 없습니다."
-
-**Q: "NFS로 Lucene 인덱스를 공유하면 안 되나요?"**
-
-A: "NFS는 단일 인덱스를 유지할 수 있다는 장점이 있지만, Lucene MMapDirectory는 로컬 디스크의 OS 페이지 캐시를 활용하여 성능을 최적화합니다. NFS를 사용하면 매 검색 I/O마다 네트워크 왕복이 발생하여 검색 성능이 크게 저하됩니다. 특히 BM25 스코어링 시 다수의 랜덤 I/O(세그먼트 순회, 포스팅 리스트 읽기)가 발생하는데, NFS 레이턴시(~0.1-1ms per read)가 누적되면 검색 응답시간이 수 배 증가할 수 있습니다. rsync로 로컬 복사본을 유지하는 것이 성능과 단순성 모두에서 우수합니다."
-
-**Q: "왜 모든 요청을 round-robin으로 분배하지 않고 쓰기를 App 1로 고정했나요?"**
-
-A: "Lucene IndexWriter는 단일 프로세스에서만 사용할 수 있습니다(write.lock). 두 App이 각자 로컬 Lucene에 쓰면 인덱스 불일치가 발생합니다 — App 1이 처리한 쓰기는 App 2의 인덱스에 없고, 그 반대도 마찬가지입니다. 이를 해결하려면 Redis Pub/Sub이나 CDC로 인스턴스 간 알림이 필요한데, 이는 향후 단계의 범위입니다. 이 글에서는 쓰기를 App 1로 고정하는 것이 가장 단순하면서도 일관성을 보장하는 방법입니다. 쓰기는 전체 트래픽의 10-20%이므로 App 1에 집중되어도 부하 불균형은 미미합니다."
-
-**Q: "TokenBlacklist를 왜 Redis로 옮겼나요?"**
-
-A: "기존 Caffeine 기반 TokenBlacklist는 JVM 로컬 메모리에 저장됩니다. App 2대 환경에서 사용자가 App 1에서 로그아웃하면 App 1의 Caffeine에만 블랙리스트가 기록되고, App 2는 이를 모릅니다. 같은 JWT 토큰으로 App 2에 요청하면 유효한 토큰으로 인정되어 보안 구멍이 됩니다. Redis로 전환하면 양쪽 App이 같은 블랙리스트를 공유합니다. TTL은 JWT 전체 만료시간이 아니라 **현재 시점부터 만료까지 남은 시간**으로 설정합니다 — 예를 들어 30분짜리 JWT를 발급 20분 후에 로그아웃하면 TTL은 10분입니다. JWT가 자연 만료되면 Redis에서도 자동 제거되어 메모리를 최적으로 사용합니다. Redis 장애 시에는 보수적 정책(모든 토큰 거부)을 적용하여 보안을 우선합니다."
-
-**Q: "Nginx에서 `if` 대신 `map`을 쓴 이유는?"**
-
-A: "Nginx 공식 위키에서 `if` 디렉티브를 `location` 블록 내에서 사용하는 것을 'if is evil'로 경고합니다. `if`는 rewrite 모듈 소속으로, `proxy_pass`와 같은 다른 모듈의 디렉티브와 조합하면 예측 불가능한 동작을 합니다. `map`은 설정 로드 시에 변수를 미리 계산하므로 런타임 오버헤드가 없고, `proxy_pass http://$variable`과 안전하게 조합됩니다."
-
-**Q: "로드밸런싱 알고리즘으로 `least_conn`을 선택한 이유는?"**
-
-A: "검색 요청은 Lucene BM25 스코어링으로 수십~수백 ms 걸리고, 캐시 히트 요청은 ~1ms입니다. `round-robin`은 이 편차를 무시하고 순차 분배하므로, 느린 검색 요청이 몰린 인스턴스가 과부하될 수 있습니다. `least_conn`은 현재 활성 커넥션이 적은 쪽으로 분배하여, 처리시간이 긴 요청이 집중되는 것을 방지합니다. IP 기반 고정(`ip_hash`)은 JWT stateless 인증이므로 불필요합니다."
-
-**Q: "App 2가 죽으면 어떻게 되나요?"**
-
-A: "Nginx의 `max_fails=3 fail_timeout=30s` 설정에 의해 App 2가 3회 연속 실패하면 30초간 풀에서 제외됩니다. 모든 요청이 App 1로 라우팅되어 서비스는 지속됩니다. 30초 후 Nginx가 App 2에 다시 요청을 시도하여, 복구되었으면 풀에 재투입합니다. 이는 Grafana 알림으로 감지되며, [Replication](/blog/project/wikiengine/replication)의 Replica 장애 대응과 동일한 수준의 수동 복구입니다."
-
-**Q: "App 1이 죽으면 어떻게 되나요?"**
-
-A: "읽기 요청은 App 2가 처리하여 검색/조회 서비스는 유지됩니다. 하지만 쓰기 요청은 App 1로 고정(Lucene Primary)되어 있으므로 게시글 생성/수정/삭제가 실패합니다. 이는 MySQL Primary 장애 시 쓰기 실패와 같은 수준입니다. App 1 복구 후 정상화됩니다. 자동 failover(App 2를 Lucene Primary로 승격)는 IndexWriter 전환, rsync 방향 변경 등 복잡도가 높아 이 단계에서는 미구현합니다."
-
-**Q: "Lucene replica 모드에서 SearcherManager는 어떻게 새 세그먼트를 감지하나요?"**
-
-A: "SearcherManager를 Directory에서 직접 생성하면(`new SearcherManager(directory, null)`), `maybeRefresh()` 호출 시 내부적으로 `DirectoryReader.openIfChanged()`를 실행합니다. 이 메서드는 `segments_N` 파일이 변경되었는지 확인하고, 변경되었으면 새 IndexReader를 오픈합니다. 중요한 점은 Directory 기반 SearcherManager는 **committed 변경사항만** 감지한다는 것입니다 — IndexWriter 기반과 달리 uncommitted 변경은 보이지 않습니다. rsync가 `segments_N`을 갱신한 후, 30초 주기 스케줄러가 `maybeRefresh()`를 호출하면 새 세그먼트가 반영됩니다. Primary 모드에서는 IndexWriter 기반 SearcherManager가 NRT(Near Real-Time)으로 즉시 반영하지만, Replica 모드에서는 rsync 주기(5분) + refresh 주기(30초) = 최대 ~5.5분 지연이 있습니다."
-
-**Q: "rsync로 Lucene 인덱스를 복사하는 게 안전한가요? 파일 순서 문제는 없나요?"**
-
-A: "rsync는 파일 복사 순서를 보장하지 않습니다. segments_N이 세그먼트 파일보다 먼저 복사되면 `maybeRefresh()`가 아직 없는 세그먼트를 참조하여 IOException이 발생할 수 있습니다. 또한 rsync 중에 IndexWriter가 머지를 실행하면 참조된 세그먼트가 삭제될 수도 있습니다. 이를 해결하기 위해 `SnapshotDeletionPolicy`를 사용합니다. rsync 전에 `commit() + snapshot()`을 호출하면 현재 커밋 포인트의 세그먼트 파일이 삭제에서 보호됩니다. rsync가 어떤 순서로 복사하든, 최종적으로 모든 파일이 복사되면 일관된 상태가 됩니다. rsync 완료 후 snapshot을 해제하면 GC가 불필요 세그먼트를 정리합니다. Lucene 커미터 Mike McCandless도 'rsync 시 IndexWriter를 닫거나 SnapshotDeletionPolicy를 사용하라'고 권고합니다."
-
-**Q: "선형 확장이 안 되는 이유를 좀 더 정확히 설명해주세요. Amdahl's Law인가요?"**
-
-A: "Amdahl's Law는 직렬 분율(serial fraction)만 고려하여 '쓰기 20%가 직렬이면 최대 5배 확장'이라고 예측합니다. 하지만 실제로는 **coherence penalty**도 존재합니다 — App 2가 서버 1의 Redis에 네트워크로 접근하는 오버헤드, Nginx 라우팅 오버헤드, 인스턴스 간 캐시 중복(Caffeine L1은 인스턴스별 독립) 등입니다. 이를 더 정확히 모델링하는 것이 Neil Gunther의 **USL(Universal Scalability Law)**입니다. USL은 Amdahl's Law에 coherence 항을 추가하여, 노드 추가 시 오히려 성능이 감소하는 retrograde scaling까지 예측합니다. 이 프로젝트에서는 2대 수준이므로 retrograde 구간은 아니지만, coherence 비용 때문에 이론적 2배에는 미치지 못합니다."
-
-**Q: "Redis가 죽으면 TokenBlacklist는 어떻게 되나요?"**
-
-A: "Redis 장애 시 `isBlacklisted()`에서 `RedisConnectionFailureException`이 발생합니다. 보수적 정책을 적용하여 Redis 연결 실패 시 `true`(블랙리스트됨)를 반환합니다 — 정상 토큰도 일시적으로 거부되지만, 로그아웃된 토큰이 통과하는 보안 구멍보다 낫습니다. 커뮤니티 게시판에서 사용자가 재로그인하면 새 토큰을 받으므로 UX 영향은 제한적입니다. 반대로 허용 정책(Redis 실패 시 false 반환)을 선택하면, 로그아웃된 토큰으로 API 접근이 가능해져 보안 사고가 됩니다. Grafana에 Redis 다운 알림(Critical)을 설정하여 빠른 복구를 유도합니다."
-
-**Q: "App 1이 stateful(Lucene Primary)인데 이게 진정한 스케일아웃인가요?"**
-
-A: "읽기(80-90%)는 완전한 stateless 분산이고, 쓰기(10-20%)만 App 1에 affinity가 있습니다. CPU 병목은 읽기 경로(Lucene BM25 스코어링)에 있으므로, 읽기 분산만으로도 핵심 병목이 해소됩니다. 쓰기 affinity는 MySQL Primary-Replica 패턴과 동일한 구조입니다 — MySQL도 쓰기는 Primary 고정이지만, 이를 스케일아웃이 아니라고 하지는 않습니다. 쓰기까지 완전히 분산하려면 향후 CDC(이벤트 기반 인덱스 동기화)가 필요합니다. 이 글에서는 CPU 병목 해소라는 목표에 집중하고, 완전한 stateless 전환은 다음 단계로 위임합니다."
 
 <!-- EN -->
 

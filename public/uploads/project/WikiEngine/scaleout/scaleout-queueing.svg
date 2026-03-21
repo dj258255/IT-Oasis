@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 420" width="820" height="420" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .value-big { font-size: 20px; fill: #0f172a; font-weight: 800; }
+    .danger { fill: #dc2626; }
+    .success { fill: #16a34a; }
+    .server-box { fill: #f1f5f9; stroke: #cbd5e1; rx: 12; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="410" y="28" text-anchor="middle" class="heading">Scale-out 대기열 이론 (Queueing Theory)</text>
+
+  <!-- ===== Before: 1 App ===== -->
+  <rect x="30" y="50" width="370" height="280" class="server-box" filter="url(#shadow)"/>
+  <text x="215" y="76" text-anchor="middle" class="label" style="font-size: 13px; fill: #334155; font-weight: 700;">Before — App 1대</text>
+
+  <!-- Server icon -->
+  <rect x="130" y="96" width="170" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="215" y="118" text-anchor="middle" class="label">App 1 (2코어)</text>
+  <text x="215" y="134" text-anchor="middle" class="tiny">Lucene Primary</text>
+
+  <!-- Metrics -->
+  <text x="70" y="180" class="sub">이용률 (ρ)</text>
+  <text x="260" y="180" class="value-big danger">≈ 1.0</text>
+
+  <text x="70" y="210" class="sub">CPU 사용률</text>
+  <text x="260" y="210" class="value-big danger">100%</text>
+
+  <text x="70" y="240" class="sub">에러율</text>
+  <text x="260" y="240" class="value-big danger">13.25%</text>
+
+  <text x="70" y="268" class="sub">P95 레이턴시</text>
+  <text x="260" y="268" class="label danger">급격히 증가</text>
+
+  <!-- Queue visualization -->
+  <rect x="60" y="284" width="300" height="30" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="210" y="304" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">M/M/c: c=2, ρ→1 → 대기 시간 급증</text>
+
+  <!-- ===== After: 2 Apps ===== -->
+  <rect x="420" y="50" width="370" height="280" class="server-box" filter="url(#shadow)"/>
+  <text x="605" y="76" text-anchor="middle" class="label" style="font-size: 13px; fill: #334155; font-weight: 700;">After — App 2대</text>
+
+  <!-- Two server icons -->
+  <rect x="460" y="96" width="130" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="525" y="118" text-anchor="middle" class="label">App 1</text>
+  <text x="525" y="134" text-anchor="middle" class="tiny">2코어</text>
+
+  <rect x="600" y="96" width="130" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="665" y="118" text-anchor="middle" class="label">App 2</text>
+  <text x="665" y="134" text-anchor="middle" class="tiny">2코어</text>
+  <rect x="710" y="88" width="32" height="16" rx="4" fill="#dc2626"/>
+  <text x="726" y="99" text-anchor="middle" style="font-size: 8px; fill: white; font-weight: 700;">NEW</text>
+
+  <!-- Metrics -->
+  <text x="460" y="180" class="sub">이용률 (ρ)</text>
+  <text x="650" y="180" class="value-big success">≈ 0.5</text>
+
+  <text x="460" y="210" class="sub">CPU 사용률</text>
+  <text x="650" y="210" class="value-big success">~50%</text>
+
+  <text x="460" y="240" class="sub">에러율</text>
+  <text x="650" y="240" class="value-big success">대폭 감소</text>
+
+  <text x="460" y="268" class="sub">P95 레이턴시</text>
+  <text x="650" y="268" class="label success">안정화</text>
+
+  <!-- Queue visualization -->
+  <rect x="450" y="284" width="300" height="30" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="600" y="304" text-anchor="middle" class="tiny" style="fill: #16a34a; font-weight: 600;">M/M/c: c=4, ρ≈0.5 → 여유 용량 확보</text>
+
+  <!-- VS divider -->
+  <rect x="388" y="170" width="44" height="30" rx="15" fill="#334155"/>
+  <text x="410" y="190" text-anchor="middle" style="font-size: 13px; fill: white; font-weight: 800;">VS</text>
+
+  <!-- USL Note -->
+  <rect x="30" y="350" width="760" height="56" rx="8" fill="#fffbeb" stroke="#fbbf24" stroke-width="1" filter="url(#shadow)"/>
+  <text x="50" y="370" class="label" style="fill: #92400e;">USL (Universal Scalability Law) 참고</text>
+  <text x="50" y="388" class="sub" style="fill: #92400e;">실제 스케일링은 비선형 — 코히어런스(coherence) 비용과 직렬화(serialization) 병목으로 이론적 2배보다 낮은 처리량 향상.</text>
+  <text x="50" y="400" class="tiny" style="fill: #a16207;">그러나 ρ ≈ 1.0 → 0.5로의 감소는 P95 레이턴시와 에러율에 극적인 효과를 줌 (비선형적 개선)</text>
+</svg>

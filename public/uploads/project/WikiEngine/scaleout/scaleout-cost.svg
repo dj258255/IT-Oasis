@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" width="780" height="420" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .value { font-size: 11px; fill: #0f172a; font-weight: 700; }
+    .value-big { font-size: 18px; fill: #0f172a; font-weight: 800; }
+    .new-badge { font-size: 9px; fill: #dc2626; font-weight: 700; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="390" y="28" text-anchor="middle" class="heading">서버 2 리소스 비용 분석 (12GB)</text>
+
+  <!-- ===== Before bar ===== -->
+  <text x="40" y="60" class="label">Before (Replication 단계)</text>
+
+  <!-- Full bar background -->
+  <rect x="40" y="70" width="700" height="44" rx="6" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- MySQL Replica: 4.1G / 12G = 34.2% → 239px -->
+  <rect x="40" y="70" width="239" height="44" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="159" y="90" text-anchor="middle" class="label">MySQL Replica + Exp</text>
+  <text x="159" y="106" text-anchor="middle" class="sub">4.1 GB</text>
+
+  <!-- Remaining: 7.9G / 12G = 65.8% → 461px -->
+  <rect x="279" y="70" width="461" height="44" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="509" y="90" text-anchor="middle" class="sub" style="fill: #22c55e; font-weight: 600;">남은 ~7.9 GB</text>
+  <text x="509" y="106" text-anchor="middle" class="tiny" style="fill: #22c55e;">OS + 여유</text>
+
+  <!-- ===== After bar ===== -->
+  <text x="40" y="144" class="label">After (Scale-out 단계)</text>
+
+  <!-- Full bar background -->
+  <rect x="40" y="154" width="700" height="44" rx="6" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- MySQL Replica: 4.1G → 239px -->
+  <rect x="40" y="154" width="239" height="44" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="159" y="174" text-anchor="middle" class="label">MySQL Replica + Exp</text>
+  <text x="159" y="190" text-anchor="middle" class="sub">4.1 GB</text>
+
+  <!-- App 2: 2G / 12G = 16.7% → 117px -->
+  <rect x="279" y="154" width="117" height="44" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="337" y="174" text-anchor="middle" class="label">App 2</text>
+  <text x="337" y="190" text-anchor="middle" class="sub">2.0 GB</text>
+  <text x="388" y="164" class="new-badge">NEW</text>
+
+  <!-- Alloy: 0.1G / 12G ≈ 0.8% → show min 16px -->
+  <rect x="396" y="154" width="24" height="44" rx="4" fill="#f3e8ff" stroke="#a855f7" stroke-width="1"/>
+  <text x="408" y="212" text-anchor="middle" class="tiny" style="fill: #a855f7;">Alloy</text>
+  <text x="408" y="222" text-anchor="middle" class="tiny" style="fill: #a855f7;">0.1G</text>
+
+  <!-- Remaining: 5.7G / 12G = 47.5% → 333px -->
+  <rect x="420" y="154" width="320" height="44" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="580" y="174" text-anchor="middle" class="sub" style="fill: #22c55e; font-weight: 600;">남은 ~5.7 GB</text>
+  <text x="580" y="190" text-anchor="middle" class="tiny" style="fill: #22c55e;">OS + Lucene 페이지 캐시</text>
+
+  <!-- Delta annotation -->
+  <path d="M 279 118 L 279 144" stroke="#dc2626" stroke-width="1.5" marker-end="url(#delta-arrow)"/>
+  <path d="M 420 118 L 420 144" stroke="#dc2626" stroke-width="1.5"/>
+  <line x1="279" y1="128" x2="420" y2="128" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="350" y="126" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 700;">+2.1 GB 추가</text>
+
+  <!-- ===== Benefits table ===== -->
+  <rect x="40" y="246" width="700" height="160" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- Header -->
+  <rect x="40" y="246" width="700" height="28" rx="8" fill="#334155"/>
+  <text x="60" y="264" font-size="11" fill="white" font-weight="700">항목</text>
+  <text x="260" y="264" font-size="11" fill="white" font-weight="700">Before</text>
+  <text x="460" y="264" font-size="11" fill="white" font-weight="700">After</text>
+  <text x="620" y="264" font-size="11" fill="white" font-weight="700">효과</text>
+
+  <!-- Row 1: CPU -->
+  <line x1="40" y1="298" x2="740" y2="298" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="290" class="label">CPU 코어 (검색)</text>
+  <text x="260" y="290" class="value" style="fill: #dc2626;">2코어</text>
+  <text x="460" y="290" class="value" style="fill: #16a34a;">4코어 (2+2)</text>
+  <text x="620" y="290" class="sub" style="fill: #16a34a;">처리 용량 2배</text>
+
+  <!-- Row 2: Error rate -->
+  <line x1="40" y1="326" x2="740" y2="326" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="318" class="label">에러율</text>
+  <text x="260" y="318" class="value" style="fill: #dc2626;">13.25%</text>
+  <text x="460" y="318" class="value" style="fill: #16a34a;">대폭 감소</text>
+  <text x="620" y="318" class="sub" style="fill: #16a34a;">안정성 확보</text>
+
+  <!-- Row 3: P95 -->
+  <line x1="40" y1="354" x2="740" y2="354" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="346" class="label">P95 레이턴시</text>
+  <text x="260" y="346" class="value" style="fill: #dc2626;">급등 (ρ→1)</text>
+  <text x="460" y="346" class="value" style="fill: #16a34a;">안정화 (ρ≈0.5)</text>
+  <text x="620" y="346" class="sub" style="fill: #16a34a;">UX 개선</text>
+
+  <!-- Row 4: Memory remaining -->
+  <text x="60" y="378" class="label">서버 2 남은 메모리</text>
+  <text x="260" y="378" class="value">7.9 GB</text>
+  <text x="460" y="378" class="value">5.7 GB</text>
+  <text x="620" y="378" class="sub">Lucene 캐시 충분</text>
+
+  <!-- Footer note -->
+  <rect x="40" y="412" width="700" height="0" rx="0" fill="none"/>
+</svg>

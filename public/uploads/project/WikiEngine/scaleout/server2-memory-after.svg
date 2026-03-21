@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 340" width="700" height="340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .value { font-size: 11px; fill: #0f172a; font-weight: 700; }
+    .new-badge { font-size: 9px; fill: #dc2626; font-weight: 700; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="350" y="24" text-anchor="middle" class="heading">서버 2 메모리 배분 — Scale-out 후 (12GB)</text>
+
+  <!-- Full bar background -->
+  <rect x="40" y="44" width="620" height="40" rx="6" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- MySQL Replica: 4G / 12G = 33.3% → 207px -->
+  <rect x="40" y="44" width="207" height="40" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="143" y="62" text-anchor="middle" class="label">MySQL Replica</text>
+  <text x="143" y="76" text-anchor="middle" class="sub">4 GB</text>
+
+  <!-- App 2: 2G / 12G = 16.7% → 103px -->
+  <rect x="247" y="44" width="103" height="40" rx="6" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="298" y="62" text-anchor="middle" class="label">App 2</text>
+  <text x="298" y="76" text-anchor="middle" class="sub">2 GB</text>
+
+  <!-- Alloy: 128M / 12G ≈ 1% → min 14px -->
+  <rect x="350" y="44" width="14" height="40" fill="#f3e8ff" stroke="#a855f7" stroke-width="1"/>
+
+  <!-- Exporters: 128M → 14px -->
+  <rect x="364" y="44" width="14" height="40" fill="#e0e7ff" stroke="#6366f1" stroke-width="1"/>
+
+  <!-- Remaining: ~5.7G / 12G = 47.5% → 295px -->
+  <rect x="378" y="44" width="282" height="40" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="519" y="62" text-anchor="middle" class="sub" style="fill: #22c55e; font-weight: 600;">남은 ~5.7 GB</text>
+  <text x="519" y="76" text-anchor="middle" class="tiny" style="fill: #22c55e;">OS + Lucene 페이지 캐시</text>
+
+  <!-- Breakdown table -->
+  <rect x="40" y="104" width="620" height="226" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- Header -->
+  <rect x="40" y="104" width="620" height="28" rx="8" fill="#334155"/>
+  <text x="60" y="122" font-size="11" fill="white" font-weight="700">컨테이너</text>
+  <text x="310" y="122" font-size="11" fill="white" font-weight="700">메모리</text>
+  <text x="440" y="122" font-size="11" fill="white" font-weight="700">비고</text>
+
+  <!-- Row 1: MySQL Replica -->
+  <line x1="40" y1="156" x2="660" y2="156" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="50" y="140" width="8" height="8" rx="2" fill="#f59e0b"/>
+  <text x="66" y="148" class="label">wiki-mysql-replica</text>
+  <text x="310" y="148" class="value">4 GB</text>
+  <text x="440" y="148" class="sub">InnoDB BP 2GB + MySQL 오버헤드</text>
+
+  <!-- Row 2: App 2 -->
+  <line x1="40" y1="180" x2="660" y2="180" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="50" y="164" width="8" height="8" rx="2" fill="#3b82f6"/>
+  <text x="66" y="172" class="label">wiki-app-2</text>
+  <text x="230" y="172" class="new-badge">NEW</text>
+  <text x="310" y="172" class="value">2 GB</text>
+  <text x="440" y="172" class="sub">Spring Boot + Lucene Replica (읽기 전용)</text>
+
+  <!-- Row 3: Alloy -->
+  <line x1="40" y1="204" x2="660" y2="204" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="50" y="188" width="8" height="8" rx="2" fill="#a855f7"/>
+  <text x="66" y="196" class="label">grafana-alloy</text>
+  <text x="230" y="196" class="new-badge">NEW</text>
+  <text x="310" y="196" class="value">128 MB</text>
+  <text x="440" y="196" class="sub">메트릭 수집 + 원격 전송</text>
+
+  <!-- Row 4: MySQL Exporter -->
+  <line x1="40" y1="228" x2="660" y2="228" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="50" y="212" width="8" height="8" rx="2" fill="#6366f1"/>
+  <text x="66" y="220" class="label">wiki-mysql-exporter</text>
+  <text x="310" y="220" class="value">64 MB</text>
+  <text x="440" y="220" class="sub">Replica 메트릭 수집</text>
+
+  <!-- Row 5: Node Exporter -->
+  <line x1="40" y1="252" x2="660" y2="252" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="50" y="236" width="8" height="8" rx="2" fill="#a855f7"/>
+  <text x="66" y="244" class="label">wiki-node-exporter</text>
+  <text x="310" y="244" class="value">64 MB</text>
+  <text x="440" y="244" class="sub">호스트 메트릭 수집</text>
+
+  <!-- Divider -->
+  <line x1="52" y1="262" x2="648" y2="262" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Total -->
+  <text x="66" y="280" class="label" style="fill: #334155;">합계</text>
+  <text x="310" y="280" class="value" style="fill: #334155;">~6.3 GB</text>
+  <text x="440" y="280" class="sub" style="fill: #dc2626; font-weight: 600;">기존 4.1G → 6.3G (+2.2G)</text>
+
+  <!-- Remaining -->
+  <rect x="50" y="292" width="8" height="8" rx="2" fill="#22c55e"/>
+  <text x="66" y="300" class="label" style="fill: #22c55e;">남은 메모리</text>
+  <text x="310" y="300" class="value" style="fill: #22c55e;">~5.7 GB</text>
+  <text x="440" y="300" class="sub">OS + Lucene MMap 페이지 캐시</text>
+
+  <!-- Footer note -->
+  <text x="66" y="322" class="tiny">Lucene 인덱스(20GB)는 MMap으로 OS 페이지 캐시에서 관리 — 5.7GB 중 활발히 사용</text>
+</svg>

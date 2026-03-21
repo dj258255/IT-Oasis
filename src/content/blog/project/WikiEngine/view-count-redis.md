@@ -321,37 +321,6 @@ void incrementViewCountBy(@Param("id") Long id, @Param("delta") long delta);
 | **Lua Script 원자적 flush** | `GETDEL`을 Lua Script로 묶어 flush 중 새 INCR이 유실되지 않도록 | 중간 |
 | **Redis Pipeline** | 배치 flush 시 여러 키를 Pipeline으로 한번에 처리하여 네트워크 왕복 감소 | 낮음 |
 
----
-
-## 면접 예상 질문
-
-**Q: "조회수를 왜 Redis로 옮겼나요?"**
-
-A: "[App 스케일아웃](/blog/project/wikiengine/scaleout)에서 GET 요청이 2대에 분산되는데, 기존 `incrementViewCount()`가 `@Transactional` DB UPDATE를 하고 있었습니다. `AbstractRoutingDataSource`로 R/W 분리 중인 환경에서, GET 안의 write 호출이 간헐적으로 Replica에 UPDATE를 시도하여 `read-only` 에러 → 500이 발생했습니다. k6 부하 테스트에서 상세 조회 38건 전부 실패했습니다. 근본적으로 GET 요청에 DB 쓰기가 포함된 구조가 R/W 분리와 충돌하는 것이므로, Redis INCR로 전환하여 GET에서 DB 쓰기를 완전히 제거했습니다. 30초 주기로 DB에 배치 flush합니다. 이 패턴은 Sentry, YouTube 등에서 검증된 Write-Behind 패턴입니다."
-
-**Q: "트랜잭션을 분리하면(REQUIRES_NEW) 되지 않나요? 왜 굳이 Redis를 써야 하나요?"**
-
-A: "`REQUIRES_NEW`로 조회수 UPDATE를 별도 트랜잭션으로 분리하면 R/W 라우팅 문제 자체는 해결됩니다. 하지만 이건 5개 문제 중 1개만 해결하는 겁니다. 매 GET마다 DB UPDATE가 여전히 실행되므로 Primary MySQL에 대한 부하는 동일하고, 100 VU 동시 접속 시 동일 게시글에 대한 InnoDB 배타적 행 잠금(X Lock)이 발생하여 트랜잭션이 직렬화됩니다. MySQL은 이 패턴에서 ~500-1,000 ops/s인 반면, Redis INCR은 ~100,000+ ops/s입니다. 또한 REQUIRES_NEW는 별도 DB 커넥션을 소비하므로, primary-pool 5개 중 조회수 UPDATE만을 위한 커넥션이 점유되어 실제 쓰기 요청에 영향을 줍니다. Redis INCR은 이 5가지 문제(R/W 충돌, Row Lock, DB 부하, 커넥션 소비, 동시성)를 전부 해결합니다."
-
-**Q: "낙관적 락(CAS)이나 비관적 락으로 동시성만 해결하면 안 되나요?"**
-
-A: "비관적 락(SELECT FOR UPDATE)은 동시성은 보장하지만 락을 잡고 있는 동안 다른 트랜잭션이 대기하므로 100건 동시 요청 시 약 400ms가 걸립니다. 낙관적 락(WHERE view_count = 이전값)은 충돌 시 재시도하는데, 인기 게시글에 100 VU가 동시 접속하면 거의 모든 요청이 충돌하여 재시도가 폭증합니다. 두 방식 모두 매 GET마다 Primary MySQL에 UPDATE를 실행한다는 근본 문제가 동일합니다. 이 문제의 핵심은 '동시성'이 아니라 'GET 요청에서 DB 쓰기가 발생하는 구조'입니다. Redis INCR은 구조 자체를 바꿔서 GET에서 DB 쓰기를 완전히 제거합니다."
-
-**Q: "Redis 대신 Caffeine 같은 로컬 캐시로 카운터를 누적하면 안 되나요?"**
-
-A: "단일 인스턴스에서는 유효한 방법입니다. 하지만 [App 스케일아웃](/blog/project/wikiengine/scaleout)에서 App 2대를 운영하고 있으므로 세 가지 문제가 있습니다. 첫째, App 재시작·재배포 시 JVM 메모리의 카운터가 유실됩니다. CI/CD로 배포할 때마다 flush 전 누적분이 사라지는 겁니다. 둘째, 향후 동일 사용자의 중복 조회 방지(`SET NX EX`)를 구현하려면 인스턴스 간 공유 상태가 필요합니다. App 1에서 조회한 사용자가 Nginx least_conn에 의해 App 2로 라우팅되면 중복 카운트됩니다. 셋째, 관측성 — 현재 누적 조회수를 확인하려면 각 App의 내부 상태를 개별 조회해야 합니다. 결국 중복 방지를 위해서라도 Redis가 필요하므로, 처음부터 Redis INCR을 사용하는 것이 합리적입니다."
-
-**Q: "Redis가 죽으면 조회수는 어떻게 되나요?"**
-
-A: "Redis 장애 시 `increment()`에서 `RedisConnectionFailureException`을 catch하고 로그만 남깁니다. 게시글 조회 자체는 정상 반환됩니다. 최대 30초간의 조회수가 유실될 수 있지만, 커뮤니티에서 조회수는 '대략적인 인기도 지표'이므로 허용 가능합니다. Sentry도 10초 유실을 허용하고, YouTube도 Eventual Consistency를 사용합니다."
-
-**Q: "새로고침으로 조회수를 올릴 수 있지 않나요?"**
-
-A: "현재는 중복 방지 없이 모든 요청을 카운트합니다. 프로덕션에서는 `SET post:viewed:{sessionId}:{postId} 1 NX EX 86400`으로 24시간 내 동일 사용자 중복을 방지합니다. Redis의 `SET NX EX`는 원자적이라 레이스 컨디션이 없고, TTL로 자동 만료되어 메모리 관리도 자동입니다. 이건 향후 개선 항목으로 기록해두었습니다."
-
-**Q: "`keys()` 명령은 프로덕션에서 위험하지 않나요?"**
-
-A: "맞습니다. Redis `KEYS` 명령은 O(N)이고 프로덕션에서 블로킹 위험이 있습니다. 현재 규모(30초 윈도우 x 조회 게시글 ~1,000개)에서는 문제없지만, 스케일 시 `SCAN` 커서 기반 반복으로 전환하거나, flush 대상 키를 별도 Set으로 관리하는 방식으로 개선해야 합니다."
 
 <!-- EN -->
 

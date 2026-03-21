@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" width="860" height="480" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql-r { fill: #fef9c3; stroke: #eab308; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .nginx { fill: #e0e7ff; stroke: #6366f1; }
+    .client { fill: #f1f5f9; stroke: #cbd5e1; }
+    .cache { fill: #fef3c7; stroke: #f59e0b; }
+    .arrow-read { fill: none; stroke: #22c55e; stroke-width: 2; marker-end: url(#ah-green); }
+    .arrow-write { fill: none; stroke: #3b82f6; stroke-width: 2; marker-end: url(#ah-blue); }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#22c55e"/></marker>
+    <marker id="ah-blue" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#3b82f6"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <marker id="ah-emerald" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#10b981"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" class="heading">요청 흐름 (Request Flow)</text>
+
+  <!-- ===== Section 1: Read Path ===== -->
+  <rect x="20" y="46" width="820" height="180" class="section" filter="url(#shadow)"/>
+  <text x="40" y="68" class="label" style="fill: #22c55e;">READ 경로 (GET)</text>
+  <text x="170" y="68" class="tiny">least_conn 로드밸런싱</text>
+
+  <!-- Client -->
+  <rect x="40" y="84" width="80" height="44" class="box client" filter="url(#shadow)"/>
+  <text x="80" y="110" text-anchor="middle" class="label">Client</text>
+
+  <!-- Arrow: Client → Nginx -->
+  <path d="M 120 106 L 148 106" class="arrow-read"/>
+
+  <!-- Nginx -->
+  <rect x="156" y="84" width="80" height="44" class="box nginx" filter="url(#shadow)"/>
+  <text x="196" y="104" text-anchor="middle" class="label">Nginx</text>
+  <text x="196" y="118" text-anchor="middle" class="tiny">least_conn</text>
+
+  <!-- Fork arrows to App 1 and App 2 -->
+  <path d="M 236 96 L 290 86" class="arrow-read" style="marker-end: url(#ah-green)"/>
+  <path d="M 236 116 L 290 126" class="arrow-read" style="marker-end: url(#ah-green)"/>
+
+  <!-- App 1 -->
+  <rect x="298" y="64" width="100" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="348" y="84" text-anchor="middle" class="label">App 1</text>
+  <text x="348" y="98" text-anchor="middle" class="tiny">Lucene Primary</text>
+
+  <!-- App 2 -->
+  <rect x="298" y="114" width="100" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="348" y="134" text-anchor="middle" class="label">App 2</text>
+  <text x="348" y="148" text-anchor="middle" class="tiny">Lucene Replica</text>
+
+  <!-- Merge arrows to L1 Cache -->
+  <path d="M 398 86 L 438 106" class="arrow-read" style="marker-end: url(#ah-green)"/>
+  <path d="M 398 136 L 438 116" class="arrow-read" style="marker-end: url(#ah-green)"/>
+
+  <!-- L1 Cache -->
+  <rect x="446" y="84" width="80" height="44" class="box cache" filter="url(#shadow)"/>
+  <text x="486" y="104" text-anchor="middle" class="label">L1</text>
+  <text x="486" y="118" text-anchor="middle" class="tiny">Caffeine</text>
+
+  <!-- Arrow: L1 → L2 -->
+  <path d="M 526 106 L 554 106" class="arrow-read" style="marker-end: url(#ah-green)"/>
+  <text x="534" y="100" class="tiny" style="fill: #f59e0b;">miss</text>
+
+  <!-- L2 Cache -->
+  <rect x="562" y="84" width="80" height="44" class="box redis" filter="url(#shadow)"/>
+  <text x="602" y="104" text-anchor="middle" class="label">L2</text>
+  <text x="602" y="118" text-anchor="middle" class="tiny">Redis</text>
+
+  <!-- Arrow: L2 → MySQL Replica -->
+  <path d="M 642 106 L 670 106" class="arrow-read" style="marker-end: url(#ah-green)"/>
+  <text x="650" y="100" class="tiny" style="fill: #f59e0b;">miss</text>
+
+  <!-- MySQL Replica -->
+  <rect x="678" y="84" width="140" height="44" class="box mysql-r" filter="url(#shadow)"/>
+  <text x="748" y="104" text-anchor="middle" class="label">MySQL Replica</text>
+  <text x="748" y="118" text-anchor="middle" class="tiny">서버 2</text>
+
+  <!-- Cache hit note -->
+  <rect x="446" y="144" width="236" height="28" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="564" y="162" text-anchor="middle" class="tiny" style="fill: #16a34a; font-weight: 600;">L1+L2 캐시 히트 시 DB 접근 없음 (58% 히트)</text>
+
+  <!-- Lucene search note -->
+  <rect x="298" y="164" width="140" height="28" rx="6" fill="#d1fae5" stroke="#10b981" stroke-width="1"/>
+  <text x="368" y="182" text-anchor="middle" class="tiny" style="fill: #059669; font-weight: 600;">검색 요청 → 로컬 Lucene</text>
+
+  <!-- ===== Section 2: Write Path ===== -->
+  <rect x="20" y="240" width="820" height="180" class="section" filter="url(#shadow)"/>
+  <text x="40" y="262" class="label" style="fill: #3b82f6;">WRITE 경로 (POST / PUT / DELETE)</text>
+  <text x="320" y="262" class="tiny">App 1 단독 처리 (Lucene Primary)</text>
+
+  <!-- Client -->
+  <rect x="40" y="278" width="80" height="44" class="box client" filter="url(#shadow)"/>
+  <text x="80" y="304" text-anchor="middle" class="label">Client</text>
+
+  <!-- Arrow: Client → Nginx -->
+  <path d="M 120 300 L 148 300" class="arrow-write"/>
+
+  <!-- Nginx -->
+  <rect x="156" y="278" width="80" height="44" class="box nginx" filter="url(#shadow)"/>
+  <text x="196" y="298" text-anchor="middle" class="label">Nginx</text>
+  <text x="196" y="312" text-anchor="middle" class="tiny">App 1 only</text>
+
+  <!-- Arrow: Nginx → App 1 -->
+  <path d="M 236 300 L 290 300" class="arrow-write"/>
+
+  <!-- App 1 -->
+  <rect x="298" y="278" width="100" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="348" y="298" text-anchor="middle" class="label">App 1</text>
+  <text x="348" y="312" text-anchor="middle" class="tiny">Primary</text>
+
+  <!-- Arrow: App 1 → MySQL Primary -->
+  <path d="M 398 300 L 432 300" class="arrow-write"/>
+
+  <!-- MySQL Primary -->
+  <rect x="440" y="278" width="120" height="44" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="500" y="298" text-anchor="middle" class="label">MySQL</text>
+  <text x="500" y="312" text-anchor="middle" class="tiny">Primary</text>
+
+  <!-- Arrow: App 1 → Lucene -->
+  <path d="M 398 310 L 398 350 L 432 350" class="arrow-write"/>
+
+  <!-- Lucene index -->
+  <rect x="440" y="332" width="120" height="44" class="box lucene" filter="url(#shadow)"/>
+  <text x="500" y="352" text-anchor="middle" class="label">Lucene</text>
+  <text x="500" y="366" text-anchor="middle" class="tiny">Index 갱신</text>
+
+  <!-- Arrow: Lucene → rsync → App 2 Lucene -->
+  <path d="M 560 354 L 610 354" style="fill: none; stroke: #10b981; stroke-width: 2; stroke-dasharray: 6 3;" marker-end="url(#ah-emerald)"/>
+  <text x="570" y="346" class="tiny" style="fill: #10b981; font-weight: 600;">rsync</text>
+
+  <!-- App 2 Lucene copy -->
+  <rect x="618" y="332" width="120" height="44" class="box lucene" filter="url(#shadow)"/>
+  <text x="678" y="348" text-anchor="middle" class="label">Lucene</text>
+  <text x="678" y="362" text-anchor="middle" class="tiny">App 2 복사본</text>
+  <text x="678" y="374" text-anchor="middle" class="tiny" style="fill: #10b981;">(서버 2)</text>
+
+  <!-- MySQL binlog replication -->
+  <path d="M 560 300 L 610 300" style="fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 6 3;" marker-end="url(#ah-amber)"/>
+  <text x="568" y="292" class="tiny" style="fill: #f59e0b; font-weight: 600;">Binlog</text>
+
+  <!-- MySQL Replica (write path) -->
+  <rect x="618" y="278" width="120" height="44" class="box mysql-r" filter="url(#shadow)"/>
+  <text x="678" y="298" text-anchor="middle" class="label">MySQL</text>
+  <text x="678" y="312" text-anchor="middle" class="tiny">Replica (서버 2)</text>
+
+  <!-- Legend -->
+  <rect x="20" y="434" width="820" height="36" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="40" y1="454" x2="70" y2="454" stroke="#22c55e" stroke-width="2"/>
+  <text x="76" y="458" class="tiny">Read (GET)</text>
+  <line x1="150" y1="454" x2="180" y2="454" stroke="#3b82f6" stroke-width="2"/>
+  <text x="186" y="458" class="tiny">Write (POST/PUT/DELETE)</text>
+  <line x1="320" y1="454" x2="350" y2="454" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 3"/>
+  <text x="356" y="458" class="tiny">Binlog 비동기 복제</text>
+  <line x1="500" y1="454" x2="530" y2="454" stroke="#10b981" stroke-width="2" stroke-dasharray="6 3"/>
+  <text x="536" y="458" class="tiny">rsync Lucene 복제 (5분 주기)</text>
+</svg>
