@@ -622,7 +622,7 @@ Slice 전환 후 `totalElements`와 `totalPages` 필드가 사라지고, `hasNex
 - MySQL 지표: Buffer Pool 히트율 100%, Slow Query 14.8K건, QPS 30~50
   ([lucene-decision — k6-load-mysql.png](/uploads/project/WikiEngine/lucene-decision/k6-load-mysql.png))
 - 컨테이너 리소스: System CPU 100% 포화, Load Average 20+
-  ([lucene-decision — k6-load-container.png](/uploads/project/WikiEngine/lucene-decision/k6-load-container.png))
+  ([lucene-decision — k6-load-containers.png](/uploads/project/WikiEngine/lucene-decision/k6-load-containers.png))
 - Spring Boot HTTP: 스레드 20→120 폭증, 5xx 에러율 최대 40%
   ([lucene-decision — k6-load-springboot-http.png](/uploads/project/WikiEngine/lucene-decision/k6-load-springboot-http.png))
 
@@ -1586,7 +1586,7 @@ We use Grafana captures from the previous post's load profile (100 VU, 20 min) m
 - MySQL metrics: Buffer Pool hit rate 100%, Slow Queries 14.8K, QPS 30–50
   ([lucene-decision — k6-load-mysql.png](/uploads/project/WikiEngine/lucene-decision/k6-load-mysql.png))
 - Container resources: System CPU 100% saturated, Load Average 20+
-  ([lucene-decision — k6-load-container.png](/uploads/project/WikiEngine/lucene-decision/k6-load-container.png))
+  ([lucene-decision — k6-load-containers.png](/uploads/project/WikiEngine/lucene-decision/k6-load-containers.png))
 - Spring Boot HTTP: Threads surged from 20 → 120, 5xx error rate peaked at 40%
   ([lucene-decision — k6-load-springboot-http.png](/uploads/project/WikiEngine/lucene-decision/k6-load-springboot-http.png))
 
