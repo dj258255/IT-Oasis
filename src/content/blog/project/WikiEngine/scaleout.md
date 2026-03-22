@@ -1313,7 +1313,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 |---------|---------------------|
 | Caffeine L1 로컬 캐시 | **Cache-Aside Pattern** — 읽기 경로 최적화 |
 | prefix → top-K flat KV 매핑 (Redis) | **CQRS** — 쓰기(MySQL)와 읽기(Redis flat KV)를 분리. 자동완성 설계에서 "접두사 → 인기순 10개 제안 목록"의 단순 매핑이 바로 이것 |
-| Trie → flat KV 전환 | **Trie 배제** — 대규모에서 Trie의 메모리/성능 한계를 인지하고, prefix→top-K O(1) 매핑으로 전환 |
+| Trie → flat KV 전환 | **Trie 진화** — naive Trie의 서브트리 순회 O(N) 한계를 인지하고, prefix→top-K O(1) flat KV 매핑으로 전환. 이는 Google(노드에 top-K 미리 저장)·Bing(Trie 기반 자동완성)과 본질적으로 동일한 패턴 — Trie 구조를 제거하고 결과만 KV에 물화(materialize) |
 | hourly `@Scheduled` 배치 빌드 | **MapReduce 패턴** — 검색 로그를 집계하여 prefix별 top-K를 산출하는 배치 파이프라인 |
 | MySQL Primary-Replica | **읽기 복제** — DB 레벨 수평 확장 |
 | App 2대 + Nginx LB | **서비스 계층 수평 확장** — 로드밸런서 + 인스턴스 그룹 |
@@ -1321,7 +1321,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | Spring Event → Outbox → Debezium+Kafka (예정) | **CDC + 이벤트 기반 동기화** — dual-write 제거, Read Model 독립 갱신 |
 | Redis Consistent Hashing (예정) | **샤딩 + 동적 복제** — 핫스팟 해결, 수평 확장 |
 
-> 단순히 기술을 나열한 것이 아니라, 성능 병목을 측정 → 원인 분석 → 대안 비교 → 실측 검증하는 과정을 반복했고, 그 결과가 업계 표준 시스템 설계 패턴과 자연스럽게 대응된다. 특히 Trie → flat KV 전환은 자동완성 시스템 설계에서 "Trie는 소규모에서는 적합하지만, 대규모에서는 prefix→top-K 매핑이 더 효율적"이라는 설계 판단을 직접 경험한 것이다.
+> 단순히 기술을 나열한 것이 아니라, 성능 병목을 측정 → 원인 분석 → 대안 비교 → 실측 검증하는 과정을 반복했고, 그 결과가 업계 표준 시스템 설계 패턴과 자연스럽게 대응된다. 특히 Trie → flat KV 전환은 자동완성 시스템 설계에서 "naive Trie의 서브트리 순회 한계를 인지하고 prefix→top-K flat KV로 물화(materialize)한다"는 패턴을 직접 구현한 것이다. Bing, Google, Elasticsearch 모두 Trie 변형(FST, PruningRadixTrie) + flat KV 서빙의 2단계 구조를 사용한다.
 
 ---
 

@@ -921,11 +921,13 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 CQRS(Command Query Responsibility Segregation) 패턴에 완벽히 부합. 자동완성 제안이 최대 1시간 지연될 수 있으므로 빅데이터 일괄 처리(Batch Processing) 패턴 사용 가능.
 
-### Trie 자료구조 — 왜 적합하지 않은가
+### Trie 자료구조 — naive 구현의 한계와 프로덕션 최적화
 
-소규모([Trie 자동완성](/blog/project/wikiengine/trie-autocomplete))에서는 유효하지만, 수십억 건 규모에서는 Trie 대신 **접두사 → Top-K 매핑**의 분산 키/값 저장소가 적합하다.
+소규모([Trie 자동완성](/blog/project/wikiengine/trie-autocomplete))에서는 유효하다. 수십억 건 규모에서 **naive Trie**는 메모리(단일 서버 초과)와 성능(1~2글자 prefix의 서브트리 순회 O(N))에서 한계가 있다. **하지만 Trie 계열 자체가 부적합한 것은 아니다** — Bing은 공식적으로 Trie 기반 자동완성을 사용하고([Bing Blog, 2013](https://blogs.bing.com/search-quality-insights/April-2013/A-Deeper-Look-at-Autosuggest/)), Google은 각 Trie 노드에 top-K 결과를 미리 저장하여 서브트리 순회 없이 O(L)에 제안을 반환한다. Elasticsearch의 Completion Suggester는 FST(Finite State Transducer)를, PruningRadixTrie는 자식의 max-rank 기반 early termination으로 naive Trie 대비 1000배 빠른 검색을 달성한다([wolfgarbe/PruningRadixTrie](https://github.com/wolfgarbe/PruningRadixTrie)).
 
-### 빅데이터 처리 파이프라인 (MapReduce)
+이 프로젝트에서는 [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)(학습용 인메모리 Trie) → [Redis L2 캐시 + flat KV](/blog/project/wikiengine/redis-l2-cache)(Redis flat KV O(1) 전환)로 진화했다. flat KV 패턴은 Google의 "노드에 top-K 미리 저장"과 본질적으로 동일 — Trie 구조를 제거하고 결과만 KV에 물화(materialize)한 것이다.
+
+### 데이터 처리 파이프라인 — MapReduce 패턴과 현대 구현
 
 **Map**: 검색어를 모든 가능한 접두사로 분해 → **Reduce**: 키별 Top-K 정렬
 
@@ -933,19 +935,23 @@ CQRS(Command Query Responsibility Segregation) 패턴에 완벽히 부합. 자�
 "b" → ["bat", "bad", "better", ...]  (인기순 상위 10개)
 ```
 
+> **주의**: MapReduce는 **개념적 패턴**(Map → Shuffle → Reduce)으로서 유효하지, Hadoop MapReduce 프레임워크는 2025 기준 레거시다. 프로덕션에서는 Apache Flink(실시간+배치), Spark Structured Streaming, Kafka Streams를 사용한다. Bing은 trending 쿼리를 5~15분 내에 반영하는데, 이는 시간 단위 배치로는 불가능하다.
+
 ### 데이터 동기화 — CDC
 
 ![자동완성 데이터 동기화 — CDC 흐름](/uploads/project/WikiEngine/cdc/autocomplete-cdc-flow.svg)
+
+> **데이터 소스 구분**: CDC는 **DB 상태 변경**(posts 테이블 INSERT/UPDATE/DELETE)을 캡처하는 패턴이다. 자동완성 데이터의 원천은 **검색 쿼리 로그**(사용자 행동)이므로, 자동완성 빈도 집계 자체에는 직접 이벤트 발행 + 스트리밍 집계가 더 자연스러운 패턴이다. 이 프로젝트에서 CDC가 자동완성에 기여하는 경로는 "posts 테이블 변경 → 자동완성 KV에 반영할 게시글 제목 변경 감지"이다.
 
 ### 설계 하이라이트
 
 | # | 설계 포인트 | wikiEngine 적용 |
 |---|------------|---------------|
-| 1 | **Trie 배제** (대규모) | [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 소규모 Trie 적용, CDC에서 분산 KV로 진화 |
-| 2 | **CQRS 패턴** | 읽기(자동완성 서비스)와 쓰기(업데이터)를 별도 경로로 분리 |
-| 3 | **분산 키/값 저장소** | Redis를 L2 캐시 + 자동완성 KV로 활용 |
-| 4 | **MapReduce** | `@Scheduled` 배치로 Top-K 매핑 빌드 (단일 서버 규모) |
-| 5 | **CDC** | Debezium + Kafka로 MySQL → Lucene/Redis 동기화 |
+| 1 | **Trie → flat KV 진화** | [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 소규모 Trie 구현 → [Redis L2](/blog/project/wikiengine/redis-l2-cache)에서 flat KV O(1) 전환. 프로덕션 시스템(Bing, Google)은 Trie 변형(FST, PruningRadixTrie) + flat KV 서빙의 2단계 구조 |
+| 2 | **CQRS 패턴** | 읽기(Redis flat KV O(1) GET)와 쓰기(`@Scheduled` 배치 빌드)를 분리 |
+| 3 | **분산 키/값 저장소** | Redis를 L2 캐시 + 자동완성 KV 서빙 레이어로 활용 |
+| 4 | **MapReduce 패턴** | `buildPrefixTopK()`가 Map(prefix 분해) → Reduce(PriorityQueue top-K) 수행. 프로덕션 규모에서는 Flink/Spark |
+| 5 | **CDC** | Debezium + Kafka로 MySQL → Lucene/캐시 동기화 (binlog 기반 모든 변경 경로 캡처) |
 
 
 <!-- EN -->
