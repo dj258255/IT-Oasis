@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 260" width="860" height="260" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-amber { fill: none; stroke: #f59e0b; stroke-width: 1.5; marker-end: url(#ah-amber); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="22" text-anchor="middle" class="heading">동기 -> 비동기 전환 window</text>
+
+  <!-- Top timeline: 현재 (동기) -->
+  <rect x="20" y="34" width="820" height="86" class="section" filter="url(#shadow)"/>
+  <text x="40" y="54" class="label" style="fill:#10b981;">현재 (동기, 트랜잭션 내)</text>
+
+  <!-- Timeline boxes -->
+  <rect x="40" y="62" width="120" height="28" class="box app" filter="url(#shadow)"/>
+  <text x="100" y="80" text-anchor="middle" class="tiny">save()</text>
+
+  <line x1="160" y1="76" x2="180" y2="76" class="arrow"/>
+
+  <rect x="188" y="62" width="120" height="28" class="box lucene" filter="url(#shadow)"/>
+  <text x="248" y="80" text-anchor="middle" class="tiny">indexSafely()</text>
+
+  <line x1="308" y1="76" x2="328" y2="76" class="arrow"/>
+
+  <rect x="336" y="62" width="150" height="28" class="box app" filter="url(#shadow)"/>
+  <text x="411" y="80" text-anchor="middle" class="tiny">트랜잭션 커밋</text>
+
+  <line x1="486" y1="76" x2="506" y2="76" class="arrow"/>
+
+  <rect x="514" y="62" width="80" height="28" class="box app" filter="url(#shadow)"/>
+  <text x="554" y="80" text-anchor="middle" class="tiny">반환</text>
+
+  <!-- Green bar: DB + Lucene 모두 반영 -->
+  <rect x="620" y="64" width="200" height="24" rx="6" fill="#d1fae5" stroke="#10b981" stroke-width="1"/>
+  <text x="720" y="80" text-anchor="middle" class="tiny" style="fill:#059669; font-weight:700;">DB + Lucene 모두 반영</text>
+
+  <!-- Bottom timeline: AFTER_COMMIT 전환 후 -->
+  <rect x="20" y="134" width="820" height="116" class="section" filter="url(#shadow)"/>
+  <text x="40" y="154" class="label" style="fill:#3b82f6;">AFTER_COMMIT 전환 후</text>
+
+  <!-- Timeline boxes -->
+  <rect x="40" y="164" width="100" height="28" class="box app" filter="url(#shadow)"/>
+  <text x="90" y="182" text-anchor="middle" class="tiny">save()</text>
+
+  <line x1="140" y1="178" x2="158" y2="178" class="arrow"/>
+
+  <rect x="166" y="164" width="130" height="28" class="box app" filter="url(#shadow)"/>
+  <text x="231" y="182" text-anchor="middle" class="tiny">트랜잭션 커밋</text>
+
+  <line x1="296" y1="178" x2="314" y2="178" class="arrow"/>
+
+  <!-- Window gap (dashed amber) -->
+  <rect x="322" y="162" width="150" height="32" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="397" y="183" text-anchor="middle" class="tiny" style="fill:#d97706; font-weight:700;">window</text>
+
+  <line x1="472" y1="178" x2="490" y2="178" class="arrow"/>
+
+  <!-- AFTER_COMMIT listener -->
+  <rect x="498" y="164" width="160" height="28" class="box lucene" filter="url(#shadow)"/>
+  <text x="578" y="182" text-anchor="middle" class="tiny">AFTER_COMMIT 리스너</text>
+
+  <line x1="658" y1="178" x2="676" y2="178" class="arrow"/>
+
+  <rect x="684" y="164" width="130" height="28" class="box lucene" filter="url(#shadow)"/>
+  <text x="749" y="182" text-anchor="middle" class="tiny">Lucene 반영</text>
+
+  <!-- Annotation arrow pointing to window -->
+  <line x1="397" y1="210" x2="397" y2="196" class="arrow-amber"/>
+  <text x="397" y="224" text-anchor="middle" class="tiny" style="fill:#d97706; font-weight:700;">일시적 불일치</text>
+  <text x="397" y="238" text-anchor="middle" class="tiny" style="fill:#d97706;">DB에는 있지만 Lucene에는 없음 (~수 ms)</text>
+</svg>

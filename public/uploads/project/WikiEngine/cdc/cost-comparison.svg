@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" width="860" height="340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="24" text-anchor="middle" class="heading">비용 비교</text>
+
+  <!-- Row 1: Spring Event (blue accent) -->
+  <rect x="30" y="40" width="800" height="88" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="40" width="6" height="88" rx="3" fill="#3b82f6"/>
+
+  <text x="56" y="60" class="label" style="fill:#3b82f6;">Spring Event</text>
+
+  <text x="56" y="78" class="sub" font-weight="700">추가 인프라:</text>
+  <text x="145" y="78" class="sub">없음</text>
+  <text x="260" y="78" class="sub" font-weight="700">추가 메모리:</text>
+  <text x="360" y="78" class="sub">없음</text>
+
+  <text x="56" y="96" class="sub" font-weight="700">코드 변경:</text>
+  <text x="130" y="96" class="sub">PostService 리팩터링 + EventHandler 3~4개</text>
+
+  <text x="56" y="114" class="sub" font-weight="700">운영 부담:</text>
+  <text x="130" y="114" class="sub">없음 (기존 Spring 앱 운영과 동일)</text>
+
+  <!-- Row 2: Outbox (amber accent) -->
+  <rect x="30" y="140" width="800" height="88" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="140" width="6" height="88" rx="3" fill="#f59e0b"/>
+
+  <text x="56" y="160" class="label" style="fill:#d97706;">Outbox</text>
+
+  <text x="56" y="178" class="sub" font-weight="700">추가 인프라:</text>
+  <text x="145" y="178" class="sub">outbox 테이블 1개</text>
+  <text x="360" y="178" class="sub" font-weight="700">추가 메모리:</text>
+  <text x="460" y="178" class="sub">무시 가능</text>
+
+  <text x="56" y="196" class="sub" font-weight="700">MySQL 부하:</text>
+  <text x="140" y="196" class="sub">1초 폴링 (~0.1ms/query)</text>
+
+  <text x="56" y="214" class="sub" font-weight="700">운영 부담:</text>
+  <text x="130" y="214" class="sub">주 1회 모니터링</text>
+
+  <!-- Row 3: Kafka CDC (indigo accent) -->
+  <rect x="30" y="240" width="800" height="88" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="240" width="6" height="88" rx="3" fill="#6366f1"/>
+
+  <text x="56" y="260" class="label" style="fill:#6366f1;">Kafka CDC</text>
+
+  <text x="56" y="278" class="sub" font-weight="700">추가 인프라:</text>
+  <text x="145" y="278" class="sub">Kafka 4G + Debezium 2G</text>
+  <text x="380" y="278" class="sub" font-weight="700">AWS:</text>
+  <text x="415" y="278" class="sub">EC2 $30/월</text>
+
+  <text x="56" y="296" class="sub" font-weight="700">운영 부담:</text>
+  <text x="130" y="296" class="sub">주 ~1시간</text>
+
+  <text x="56" y="314" class="sub" font-weight="700">장애 대응:</text>
+  <text x="130" y="314" class="sub">fallback 자동 전환 (MTTR ~0)</text>
+</svg>

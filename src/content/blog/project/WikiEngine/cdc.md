@@ -168,15 +168,7 @@ Lucene 인덱스에 `FeatureField("features", "viewCount")`와 `FeatureField("fe
 
 로드맵에서 설계한 3-step 진화:
 
-```
-현재 (dual-write)
-  ↓
-Step 1: Spring ApplicationEvent (단일 서버 디커플링)
-  ↓
-Step 2: Transactional Outbox (이벤트 유실 방지)
-  ↓
-Step 3: Debezium + Kafka (프로덕션 CDC)
-```
+![점진적 진화 로드맵](/uploads/project/WikiEngine/cdc/evolution-roadmap.svg)
 
 단, Kafka + Debezium은 최소 5~8G RAM이 필요하여 현재 Free Tier에서는 불가. Spring Event부터 시작하여 구조적 개선을 먼저 달성한다.
 
@@ -283,19 +275,7 @@ public void pollAndPublish() {
 
 ### 선택: Spring Event → Outbox → CDC 순서
 
-```
-Step 1 — Spring ApplicationEvent (즉시 적용 가능)
-  목표: PostService 디커플링 + 불완전한 캐시 무효화 해결
-  비용: 코드 변경만, 인프라 0
-
-Step 2 — Transactional Outbox (이벤트 유실 방지)
-  목표: 앱 재시작/장애 시에도 이벤트 보장
-  비용: outbox 테이블 1개 + 폴링 스케줄러
-
-Step 3 — Debezium + Kafka (프로덕션 CDC)
-  전제: 별도 서버 또는 Free Tier 여유 확보 시
-  비용: Kafka 4G + Debezium 2G = 최소 6G RAM 추가
-```
+![Spring Event → Outbox → CDC 선택](/uploads/project/WikiEngine/cdc/selection-steps.svg)
 
 ### 현업 사례
 
@@ -310,25 +290,7 @@ Step 3 — Debezium + Kafka (프로덕션 CDC)
 
 ### 비용 분석
 
-```
-Spring Event:
-  추가 인프라: 없음
-  추가 메모리: 없음
-  코드 변경: PostService 리팩터링 + EventHandler 3~4개
-  운영 부담: 없음 (기존 Spring 앱 운영과 동일)
-
-Outbox:
-  추가 인프라: outbox 테이블 1개
-  추가 메모리: 무시 가능
-  MySQL 부하: 폴링 1초 주기 SELECT (~0.1ms per query)
-  운영 부담: outbox 테이블 사이즈 모니터링 (주 1회)
-
-Kafka CDC:
-  추가 인프라: Kafka 4G + Debezium 2G
-  AWS 참고: EC2 t3.medium ($30/월) + MSK Serverless ($0.1/GB)
-  운영 부담: 주 ~1시간 (Connector 상태 확인, Consumer lag 모니터링, topic retention 점검)
-  장애 대응: KRaft 단일 브로커 장애 시 @ApplicationModuleListener fallback 자동 전환 (MTTR ~0, 서비스 중단 없음)
-```
+![비용 비교](/uploads/project/WikiEngine/cdc/cost-comparison.svg)
 
 ### 운영 복잡도 정당화 — "일 200건에 Kafka가 필요한가?"
 
@@ -391,15 +353,7 @@ public sealed interface PostEvent {
 
 ### Trade-off: 동기 → 비동기 전환의 일시적 불일치 window
 
-```
-현재 (동기, 트랜잭션 내):
-  postRepository.save() → indexSafely() → 트랜잭션 커밋 → 반환
-  → 반환 시점에 DB + Lucene 모두 반영
-
-AFTER_COMMIT 전환 후:
-  postRepository.save() → 트랜잭션 커밋 → [window] → AFTER_COMMIT 리스너 → Lucene 반영
-  → window 동안 DB에는 있지만 Lucene에는 없음 (~수 ms)
-```
+![동기 → 비동기 전환 window](/uploads/project/WikiEngine/cdc/sync-async-window.svg)
 
 이 window는 수 ms 수준이며, 커뮤니티 게시판에서 허용 가능하다.
 
@@ -936,22 +890,7 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 ### 주간 운영 체크리스트
 
-```
-매일 (자동 — Grafana 알림):
-  □ Debezium Connector 상태: RUNNING 확인
-  □ CDC Lag < 60초
-  □ Consumer Lag = 0
-
-주 1회 (수동 — 5분):
-  □ Kafka 브로커 디스크 사용량 확인 (7일 retention)
-  □ Debezium 로그에 WARN/ERROR 없는지 확인
-  □ kafka-ui에서 토픽/파티션 상태 확인
-
-월 1회 (수동 — 15분):
-  □ Kafka topic retention 정책 점검
-  □ Debezium Connector 설정 변경 필요 여부 검토
-  □ 직접 SQL DELETE → Lucene 반영 E2E 검증 재실행
-```
+![주간 운영 체크리스트](/uploads/project/WikiEngine/cdc/weekly-ops-checklist.svg)
 
 > **운영 비용 총평**: Kafka + Debezium의 주간 운영 시간은 약 30분~1시간이다. 대부분 Grafana 알림이 자동으로 커버하고, 수동 점검은 주 1회 5분 수준이다. 이 비용은 dual-write 불일치 발생 시 디버깅 + 전체 재인덱싱(28분) + 사용자 불만 대응에 소모되는 시간보다 확실히 작다.
 

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 340" width="750" height="340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .check { font-size: 11px; fill: #475569; }
+    .check-icon { font-size: 11px; fill: #94a3b8; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="375" y="24" text-anchor="middle" class="heading">주간 운영 체크리스트</text>
+
+  <!-- Section 1: 매일 (green border) -->
+  <rect x="30" y="40" width="690" height="88" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="40" width="6" height="88" rx="3" fill="#10b981"/>
+
+  <text x="56" y="60" class="label" style="fill:#10b981;">매일 (자동 -- Grafana 알림)</text>
+
+  <text x="56" y="80" class="check-icon">&#9744;</text>
+  <text x="74" y="80" class="check">Debezium Connector 상태: RUNNING 확인</text>
+
+  <text x="56" y="98" class="check-icon">&#9744;</text>
+  <text x="74" y="98" class="check">CDC Lag &lt; 60초</text>
+
+  <text x="56" y="116" class="check-icon">&#9744;</text>
+  <text x="74" y="116" class="check">Consumer Lag = 0</text>
+
+  <!-- Section 2: 주 1회 (blue border) -->
+  <rect x="30" y="140" width="690" height="88" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="140" width="6" height="88" rx="3" fill="#3b82f6"/>
+
+  <text x="56" y="160" class="label" style="fill:#3b82f6;">주 1회 (수동 -- 5분)</text>
+
+  <text x="56" y="180" class="check-icon">&#9744;</text>
+  <text x="74" y="180" class="check">Kafka 브로커 디스크 사용량 확인</text>
+
+  <text x="56" y="198" class="check-icon">&#9744;</text>
+  <text x="74" y="198" class="check">Debezium 로그에 WARN/ERROR 없는지 확인</text>
+
+  <text x="56" y="216" class="check-icon">&#9744;</text>
+  <text x="74" y="216" class="check">kafka-ui에서 토픽/파티션 상태 확인</text>
+
+  <!-- Section 3: 월 1회 (indigo border) -->
+  <rect x="30" y="240" width="690" height="88" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="240" width="6" height="88" rx="3" fill="#6366f1"/>
+
+  <text x="56" y="260" class="label" style="fill:#6366f1;">월 1회 (수동 -- 15분)</text>
+
+  <text x="56" y="280" class="check-icon">&#9744;</text>
+  <text x="74" y="280" class="check">Kafka topic retention 정책 점검</text>
+
+  <text x="56" y="298" class="check-icon">&#9744;</text>
+  <text x="74" y="298" class="check">Debezium Connector 설정 변경 필요 여부 검토</text>
+
+  <text x="56" y="316" class="check-icon">&#9744;</text>
+  <text x="74" y="316" class="check">직접 SQL DELETE -> Lucene 반영 E2E 검증 재실행</text>
+</svg>

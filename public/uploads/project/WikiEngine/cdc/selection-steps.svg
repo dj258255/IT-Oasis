@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 320" width="860" height="320" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .badge { font-size: 9px; font-weight: 700; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="24" text-anchor="middle" class="heading">Spring Event -> Outbox -> CDC 선택</text>
+
+  <!-- Column 1: Spring ApplicationEvent -->
+  <rect x="30" y="42" width="240" height="240" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="42" width="240" height="40" class="box app" style="rx:10 10 0 0;" filter="url(#shadow)"/>
+  <text x="150" y="58" text-anchor="middle" class="label" style="fill:#3b82f6;">Step 1</text>
+  <text x="150" y="72" text-anchor="middle" class="label" style="fill:#3b82f6;">Spring ApplicationEvent</text>
+
+  <text x="50" y="104" class="sub" font-weight="700">목표</text>
+  <text x="50" y="118" class="tiny">PostService 디커플링</text>
+  <text x="50" y="132" class="tiny">+ 캐시 무효화 해결</text>
+
+  <text x="50" y="156" class="sub" font-weight="700">비용</text>
+  <text x="50" y="170" class="tiny">코드 변경만, 인프라 0</text>
+
+  <!-- Badge: 즉시 적용 -->
+  <rect x="80" y="192" width="80" height="22" rx="11" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+  <text x="120" y="207" text-anchor="middle" class="badge" style="fill:#3b82f6;">즉시 적용</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="270" y1="162" x2="298" y2="162" class="arrow"/>
+
+  <!-- Column 2: Transactional Outbox -->
+  <rect x="310" y="42" width="240" height="240" class="section" filter="url(#shadow)"/>
+  <rect x="310" y="42" width="240" height="40" class="box mysql-p" style="rx:10 10 0 0;" filter="url(#shadow)"/>
+  <text x="430" y="58" text-anchor="middle" class="label" style="fill:#d97706;">Step 2</text>
+  <text x="430" y="72" text-anchor="middle" class="label" style="fill:#d97706;">Transactional Outbox</text>
+
+  <text x="330" y="104" class="sub" font-weight="700">목표</text>
+  <text x="330" y="118" class="tiny">앱 재시작/장애 시에도</text>
+  <text x="330" y="132" class="tiny">이벤트 보장</text>
+
+  <text x="330" y="156" class="sub" font-weight="700">비용</text>
+  <text x="330" y="170" class="tiny">outbox 테이블 1개 + 폴링</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="550" y1="162" x2="578" y2="162" class="arrow"/>
+
+  <!-- Column 3: Debezium + Kafka -->
+  <rect x="590" y="42" width="240" height="240" class="section" filter="url(#shadow)"/>
+  <rect x="590" y="42" width="240" height="40" class="box kafka" style="rx:10 10 0 0;" filter="url(#shadow)"/>
+  <text x="710" y="58" text-anchor="middle" class="label" style="fill:#6366f1;">Step 3</text>
+  <text x="710" y="72" text-anchor="middle" class="label" style="fill:#6366f1;">Debezium + Kafka</text>
+
+  <text x="610" y="104" class="sub" font-weight="700">목표</text>
+  <text x="610" y="118" class="tiny">dual-write 원천 차단</text>
+
+  <text x="610" y="142" class="sub" font-weight="700">비용</text>
+  <text x="610" y="156" class="tiny">Kafka 4G + Debezium 2G</text>
+  <text x="610" y="170" class="tiny">= 6G RAM</text>
+
+  <text x="610" y="194" class="sub" font-weight="700">전제</text>
+  <text x="610" y="208" class="tiny">Free Tier 여유 확보 시</text>
+</svg>
