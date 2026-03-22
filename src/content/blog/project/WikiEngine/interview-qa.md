@@ -9,6 +9,10 @@ tags:
   - WikiEngine
   - Replication
   - DataSource
+  - CDC
+  - Debezium
+  - Kafka
+  - Dual-Write
 category: project/WikiEngine
 draft: true
 ---
@@ -186,3 +190,113 @@ App 재시작 시 카운터 유실, 멀티 인스턴스에서 중복 방지 불�
 **Q: "`keys()` 명령은 프로덕션에서 위험하지 않나요?"**
 
 맞습니다. Redis `KEYS` 명령은 O(N)이고 프로덕션에서 블로킹 위험이 있습니다. 현재 규모에서는 문제없지만, 스케일 시 `SCAN` 커서 기반 반복으로 전환하거나, flush 대상 키를 별도 Set으로 관리하는 방식으로 개선해야 합니다.
+
+---
+
+## 시스템 디자인: 대규모 자동완성 시스템
+
+> 이 섹션은 wikiEngine 프로젝트의 구현이 아닌, **수십억 쿼리 규모의 검색 자동완성** 시스템 설계 면접 답안이다. Phase 9(Trie 기반 자동완성)에서 학습한 내용을 대규모로 확장한 사고 실험.
+
+**Q: "수십억 사용자 규모의 자동완성 시스템을 설계해보세요"**
+
+요구사항부터 정리합니다. 한국어·영어 지원, 자동완성 제안 10개, 최근 24시간 인기 검색어 기반, 최대 응답 시간 240ms, 데이터 신선도 최대 1시간 지연 허용, 최종 일관성(Eventual Consistency). API는 `GET /complete?q=`(자동완성)과 `GET /search?q=`(검색, 내부적으로 순위 업데이트) 두 개입니다. 영어는 소문자 정규화, 한국어는 자모(Jamo) 분해 정규화(`한` → `ㅎ+ㅏ+ㄴ`)를 적용합니다.
+
+핵심 관찰은 읽기(자동완성, 240ms 미만)와 쓰기(순위 업데이트, 느려도 됨)의 성능 요구사항이 완전히 다르다는 것입니다. CQRS 패턴으로 분리하여, AutoComplete Service(읽기 최적화 KV 저장소)와 AutoComplete Updater Service(검색어 수집 + 배치 처리)를 독립 운영합니다. 데이터 신선도 1시간 허용이므로 실시간이 아닌 배치 처리(MapReduce)로 접두사→Top-K 매핑을 생성하고, CDC로 변경분만 AutoComplete Service에 전파합니다.
+
+**Q: "Trie를 쓰면 안 되나요?"**
+
+순수(naive) Trie는 이 규모에서 부적합합니다. 영어는 노드당 26개 분기지만, 한국어를 음절 단위로 처리하면 노드당 **11,172개**(가~힣) 분기가 발생합니다. 자모 분해로 줄여도 68개(초성 19 + 중성 21 + 종성 28)로 영어의 2.6배입니다. 수십억 검색어 × 양 언어 지원이면 단일 서버 메모리를 초과합니다. 또한 1~2글자 접두사에 대해 모든 하위 분기를 순회하고 인기순 정렬하는 비용이 과도합니다.
+
+**하지만 모든 Trie 계열이 부적합한 것은 아닙니다.** Elasticsearch의 Completion Suggester는 FST(Finite State Transducer, 접미사 공유로 메모리 극적 축소) 기반이고, PruningRadixTrie는 각 노드에 자식의 최대 rank를 저장하여 비유망 분기를 pruning해 표준 Trie 대비 1000배 빠른 prefix search를 달성합니다 ([wolfgarbe/PruningRadixTrie](https://github.com/wolfgarbe/PruningRadixTrie)). 실제 대규모 시스템은 **오프라인에서 FST/PruningRadixTrie로 매핑을 생성하고, 온라인 서빙은 flat KV lookup(O(1))**으로 수행하는 2단계 구조입니다.
+
+**Q: "한국어 자동완성은 영어와 뭐가 다른가요?"**
+
+근본적으로 다릅니다. 영어는 알파벳이 곧 입력 단위(`h` → `ho` → `how`)지만, 한국어는 자모 조합 과정에서 **음절 자체가 변형**됩니다(`ㅎ` → `하` → `한` → `한ㄱ` → `한구` → `한국`). 미완성 음절(`ㅎ`, `한ㄱ`) 상태에서도 자동완성이 동작해야 합니다.
+
+해결은 **자모 분해**입니다. `한국`을 `ㅎㅏㄴㄱㅜㄱ`으로 분해하여 접두사 키로 사용하면, `ㅎ` 입력만으로 `한국`, `해외`, `호텔` 등 모든 ㅎ 시작 음절을 매칭할 수 있습니다. 분기 수도 11,172 → 68로 축소됩니다. 네이버·다음 같은 한국 포털은 자모 분해 + 초성 검색(`ㅎㄱ` → `한국`, `학교`)을 병행합니다.
+
+단, 같은 음절 수라도 한국어가 영어보다 자모가 많아서 Map 단계 출력량과 자동완성 API 호출 수가 더 많습니다. `bat`(3글자)은 접두사 3개, `한국`(2음절)은 자모 분해 시 접두사 6개.
+
+**Q: "MapReduce는 레거시 아닌가요?"**
+
+맞습니다. Google 자체가 2014년부터 내부 MapReduce 사용을 줄이고 Dremel/BigQuery로 전환했습니다. 이 설계에서 MapReduce를 사용하는 건 **개념적 설명**을 위해서이고, 프로덕션에서는 Apache Flink(이벤트 단위 실시간, 2025-26년 스트림 처리 de facto 표준), Kafka Streams(경량, 별도 클러스터 불필요), Spark Structured Streaming(마이크로배치) 등 현대적 스트림 처리 기술을 사용합니다.
+
+아키텍처 관점에서는 배치(MapReduce) + 실시간(스트리밍)을 이중 운영하는 **Lambda 아키텍처**와, 스트리밍 단일 경로로 통합하는 **Kappa 아키텍처**가 있습니다. 현대 자동완성 시스템은 대부분 Kappa(Flink + Kafka)에 가깝습니다. 이 설계에서 "1시간 신선도"를 요구했으므로 배치도 이론적으로 충분하지만, 실시간성을 높이려면 Kappa로 전환하여 수 분 단위 신선도를 달성할 수 있습니다.
+
+**Q: "핫스팟 문제는 어떻게 해결하나요?"**
+
+접두사→제안 매핑을 해시 기반으로 샤딩하면 **데이터 분산**은 되지만 **부하 분산**이 안 됩니다. 1글자 접두사(`ㅎ`, `s`)가 3글자보다 훨씬 많이 조회되므로, 인기 키가 있는 샤드에 트래픽이 집중됩니다(핫스팟).
+
+해결은 **동적 복제**(Meta Shard Manager, [SOSP 2021](https://dl.acm.org/doi/pdf/10.1145/3477132.3483546))입니다. 각 호스트가 네트워크 트래픽·CPU 사용률을 Shard Manager에 보고하면, 상한 초과 시 읽기 전용 복제본을 추가 프로비저닝하고, 하한 미달 시 제거합니다. CockroachDB의 Load-Based Splitting(range 자동 분할)이나 DynamoDB의 Adaptive Capacity도 유사 패턴입니다.
+
+현실적으로는 자동화된 Shard Manager를 직접 구현하기보다 Redis Cluster 자동 rebalancing이나 Vitess(MySQL 샤딩 표준)를 활용하고, 모니터링 + 수동 스케일링으로 시작하는 것이 일반적입니다.
+
+**Q: "1% 샘플링이면 정확한가요?"**
+
+검색어 빈도는 Zipf 분포를 따릅니다. 상위 1%가 전체 트래픽의 ~20%, 상위 10%가 ~60%를 차지합니다 ([PMC 연구](https://pmc.ncbi.nlm.nih.gov/articles/PMC4176592/)). 이 극단적 skew 덕분에 1% 샘플(시간당 400만 건)에서도 상위 검색어의 상대적 순위가 안정적으로 보존됩니다.
+
+한계는 Long tail 검색어(빈도 1~2회)의 순위 불안정과 신규 trending 검색어 미탐지입니다. Top-10 자동완성에는 영향 없지만, trending 감지가 필요하면 별도 실시간 레이어(Flink 등)를 보완합니다. 대안으로 Count-Min Sketch(고정 메모리 빈도 근사)나 HyperLogLog(cardinality 추정) 같은 확률적 자료구조를 병행하면 메모리 효율과 정확도를 동시에 확보할 수 있습니다.
+
+**Q: "CDC를 어떻게 활용하나요?"**
+
+MapReduce 결과를 DB에 쓸 때 CDC(Change Data Capture)로 **변경분만** AutoComplete Service에 전파합니다. 전체 갱신(TRUNCATE + INSERT)은 모든 행에 이벤트가 발생하여 폭증하고, 증분 갱신(UPSERT)은 실제 순위가 변경된 접두사만 이벤트가 발생합니다. 대부분의 접두사에 대한 top-10은 1시간 주기로 크게 변하지 않으므로, 증분 갱신으로 CDC 이벤트를 전체의 5~10% 수준으로 줄일 수 있습니다.
+
+**Q: "글로벌 배포는 어떻게 하나요?"**
+
+멀티 데이터센터로 고가용성(한 DC 장애 시 서비스 유지)과 낮은 대기시간(사용자 근접 DC 응답)을 확보합니다. 한국어 자동완성 데이터는 아시아 DC에 복제 우선순위를 높이고, 영어는 글로벌 균등 복제합니다.
+
+---
+
+## CDC (Change Data Capture) — 이벤트 기반 동기화
+
+**Q: "왜 Kafka를 안 쓰고 Spring Event부터 시작하나요?"**
+
+Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier에서 서버 2대의 여유 메모리로는 부족합니다. 하지만 문제의 핵심은 '메시지 브로커가 없다'가 아니라 'PostService가 6개 Read Model에 직접 결합되어 있다'입니다. Spring ApplicationEvent로 디커플링하면, 나중에 Kafka로 전환할 때 EventHandler만 Consumer로 교체하면 됩니다. 이 단계적 진화는 실무에서도 일반적인 접근입니다 — 처음부터 Kafka를 도입하기보다, 먼저 이벤트 기반 구조를 잡고 인프라를 점진적으로 확장합니다.
+
+**Q: "Spring Event는 이벤트가 유실될 수 있지 않나요?"**
+
+맞습니다. `@TransactionalEventListener(AFTER_COMMIT)`는 커밋 후 같은 스레드에서 실행되므로, 리스너 실행 중 앱이 죽으면 이벤트가 유실됩니다. 하지만 이 프로젝트는 Spring Modulith 2.0.2를 사용하고 있어서, Modulith의 Event Publication Log를 활용할 수 있습니다. Event Publication Log는 이벤트를 DB 테이블에 기록하고, 리스너 실패 시 미완료 이벤트를 자동 재시도합니다. 이는 Transactional Outbox 패턴과 유사한 효과를 Spring Modulith가 프레임워크 수준에서 제공하는 것입니다.
+
+**Q: "dual-write 문제가 실제로 발생한 적이 있나요?"**
+
+Phase 10 stress 테스트(200 VU)에서 Lucene indexing이 IOException으로 실패한 케이스가 있었습니다. CPU 포화 상태에서 MMapDirectory I/O 타임아웃이 발생하여, DB에는 게시글이 저장되었지만 Lucene 인덱스에는 없는 불일치가 발생했습니다. 현재는 `try-catch + log.error()`로만 처리하고 있어서, 이 불일치를 감지하거나 자동 복구하는 방법이 없습니다. CDC를 도입하면 이벤트 리플레이로 불일치를 복구할 수 있습니다.
+
+**Q: "Transactional Outbox의 폴링이 DB에 부하를 주지 않나요?"**
+
+1초 주기로 `SELECT * FROM outbox_events WHERE published = FALSE ORDER BY id LIMIT 100`을 실행합니다. `(published, id)` 복합 인덱스가 있으므로 Index Scan이고, 미발행 이벤트가 없으면 빈 결과를 즉시 반환합니다. 현재 MySQL QPS가 ~200 ops/s인 상황에서 1 ops/s 추가는 무시 가능합니다.
+
+**Q: "멀티 인스턴스에서 Outbox 폴링 중복 처리는 어떻게 하나요?"**
+
+`SELECT ... FOR UPDATE SKIP LOCKED`를 사용합니다. 한 인스턴스가 이벤트를 처리 중이면 다른 인스턴스는 해당 행을 건너뛰고 다음 행을 처리합니다. MySQL 8.0의 `SKIP LOCKED`는 InnoDB에서 지원되며, 큐 패턴에 최적화되어 있습니다.
+
+**Q: "EventHandler 멱등성은 어떻게 보장하나요?"**
+
+Lucene의 `updateDocument()`는 Term 기준으로 기존 문서를 삭제 후 재삽입하므로 자연 멱등적입니다. 캐시 `evict()`도 키가 없으면 no-op이라 멱등적입니다. 주의할 건 좋아요 카운터입니다 — `INCREMENT` 방식은 중복 실행 시 이중 증가하므로, 이벤트에 변경 후 절대값(예: likeCount=42)을 포함하여 `SET` 방식으로 갱신합니다. 설계 원칙은 '이벤트 핸들러는 SET, INCREMENT 금지'입니다.
+
+**Q: "이미 Redis 쓰고 있는데 Redis Stream으로 하면 안 되나요? 왜 Kafka?"**
+
+두 가지 이유로 Redis Stream은 적합하지 않습니다. 첫째, 자동완성은 1시간 지연을 허용하는 배치 처리 구조라 Redis Stream의 실시간 기능이 불필요합니다. 둘째, Kafka와의 근본적 차이가 있습니다: (1) Redis Stream은 메모리 기반이라 커널 패닉 시 유실 가능, Kafka는 디스크 기반 + replication으로 브로커 장애에도 보존. (2) Redis Stream은 MAXLEN 트리밍 시 영구 소실, Kafka는 retention으로 수 주 보존 + 리플레이 가능. (3) Redis Stream은 단일 스레드, Kafka는 파티션 기반 수평 확장. 검색 인덱스 손상 시 Kafka 토픽을 리플레이하여 재구축할 수 있다는 것은 결정적 이점입니다.
+
+**Q: "볼륨도 작은데 왜 Kafka를 쓰나요? 오버엔지니어링 아닌가요?"**
+
+두 가지로 답합니다. 첫째, **ROI 비교**입니다. Kafka 주간 운영 비용은 약 30분~1시간(Grafana 알림 자동 + 주 1회 5분 수동 점검)인데, dual-write 불일치가 발생하면 디버깅 + 전체 재인덱싱(28분) + 사용자 불만 대응에 수 시간이 소모됩니다. Phase 10에서 실제로 Lucene indexing IOException이 발생한 바 있고, 이를 감지하는 메커니즘이 없는 상태였습니다. 둘째, **fallback 구조** 덕분에 Kafka가 죽어도 서비스는 `@ApplicationModuleListener`로 자동 전환됩니다. Kafka는 "평시의 정확성 보장"이고, fallback은 "장애 시 서비스 연속성 보장"으로 역할이 분리됩니다.
+
+**Q: "KRaft 단일 브로커가 프로덕션에 적합한가요?"**
+
+적합하지 않습니다. Confluent 공식 문서에서도 KRaft combined mode는 개발/테스트 전용이라고 명시합니다. 이 프로젝트에서는 Free Tier 메모리 제약(12G 서버)으로 단일 브로커를 택했고, `@ConditionalOnProperty` fallback으로 Kafka 장애 시 서비스 연속성을 확보했습니다. 프로덕션 확장 시에는 KRaft 3노드 컨트롤러 + 전용 브로커로 HA를 확보해야 합니다. 핵심은 "단일 브로커이므로 Kafka의 이점이 없다"가 아니라, "정상 동작 시 binlog 기반 모든 변경 캡처 + 이벤트 리플레이 + 양쪽 L1 캐시 무효화"가 확보되며, 장애 시에는 fallback이 커버한다는 것입니다.
+
+**Q: "Elasticsearch를 쓰면 CDC 자체가 불필요하지 않나요?"**
+
+Elasticsearch를 도입해도 MySQL → ES 동기화 문제는 동일합니다. ES 공식 문서에서도 Logstash JDBC Input이나 Debezium CDC를 권장합니다. 비용 비교: embedded Lucene + CDC는 6G RAM(Kafka 4G + Debezium 2G)인데, ES HA 구성은 최소 12G RAM(4G × 3노드)이고, AWS OpenSearch Serverless는 월 ~$200부터 시작합니다. Embedded Lucene은 검색 성능도 7~10배 빠릅니다(네트워크 홉 없이 직접 접근). 인프라 비용을 최소화하면서 같은 정확성을 달성하는 것이 embedded Lucene + CDC의 선택 이유입니다.
+
+**Q: "Debezium CDC lag이 15~20분까지 발생할 수 있다는데, 어떻게 대응하나요?"**
+
+Debezium Connector는 단일 스레드로 binlog을 소비하므로, 대량 DML 시 lag이 누적될 수 있습니다. 대응 전략은 세 가지입니다. 첫째, Prometheus + Grafana로 `MilliSecondsBehindSource` 메트릭을 모니터링하여 lag이 임계값(예: 5분)을 초과하면 알림. 둘째, topic별 partition을 늘려서 Consumer 병렬화. 셋째, 대량 배치 작업은 off-peak 시간에 실행. 일 200건 수준이므로 당장은 문제없지만, 확장 시 모니터링 체계부터 구축합니다.
+
+**Q: "'직접 SQL 미감지'를 CDC의 핵심 이점으로 드셨는데, 관리자가 직접 SQL을 치는 일이 실제로 얼마나 있나요?"**
+
+핵심은 PostService(ORM)를 통하지 않는 모든 DB 변경 경로가 문제라는 것입니다. 다섯 가지 경로가 있습니다: (1) Flyway 마이그레이션 스크립트의 UPDATE 배치, (2) 스팸 봇 게시글 일괄 삭제 등 긴급 데이터 수정, (3) `@Modifying` JPQL 벌크 연산, (4) MySQL Replication의 Primary/Replica 불일치, (5) 향후 서비스 확장 시 다른 모듈의 DB 접근. CDC는 MySQL이 이미 제공하는 변경 감지 인프라(binlog)를 재사용하는 것입니다.
+
+**Q: "CDC 도입 과정에서 실제로 겪은 문제가 있나요?"**
+
+배포 후 게시글 생성이 검색에 노출되지 않는 문제를 발견했습니다. 원인은 멀티 인스턴스 환경에서 CDC Consumer와 Lucene IndexWriter의 위치 불일치였습니다. App 2(Kafka와 같은 서버)에서 CDC Consumer가 이벤트를 수신했지만, App 2는 Lucene Replica(IndexWriter가 null)라 인덱싱이 skip됐습니다. App 1은 docker-compose에서 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 환경변수 매핑이 빠져 있어서 Kafka 연결에 실패하고 있었습니다. 이 경험에서 현업에서 검색 인덱스가 앱에 embedded 되지 않는 이유를 체감했고, CDC 파이프라인은 end-to-end 검증 테스트가 필수라는 것을 배웠습니다.
