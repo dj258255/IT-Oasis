@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 200" width="860" height="200" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .client { fill: #f1f5f9; stroke: #cbd5e1; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="22" text-anchor="middle" class="heading">CDC End-to-End 지연 측정 (평균 2.1초)</text>
+
+  <!-- Pipeline boxes -->
+  <rect x="10" y="38" width="70" height="40" class="box client" filter="url(#shadow)"/>
+  <text x="45" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">POST API</text>
+  <text x="45" y="70" text-anchor="middle" class="tiny">요청</text>
+
+  <path d="M 80 58 L 96 58" class="arrow"/>
+
+  <rect x="104" y="38" width="80" height="40" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="144" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">MySQL</text>
+  <text x="144" y="70" text-anchor="middle" class="tiny">INSERT</text>
+
+  <path d="M 184 58 L 200 58" class="arrow"/>
+
+  <rect x="208" y="38" width="70" height="40" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="243" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">binlog</text>
+  <text x="243" y="70" text-anchor="middle" class="tiny">기록</text>
+
+  <path d="M 278 58 L 294 58" class="arrow"/>
+
+  <rect x="302" y="38" width="80" height="40" class="box app" filter="url(#shadow)"/>
+  <text x="342" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">Debezium</text>
+  <text x="342" y="70" text-anchor="middle" class="tiny">캡처</text>
+
+  <path d="M 382 58 L 398 58" class="arrow"/>
+
+  <rect x="406" y="38" width="70" height="40" class="box kafka" filter="url(#shadow)"/>
+  <text x="441" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">Kafka</text>
+  <text x="441" y="70" text-anchor="middle" class="tiny">발행</text>
+
+  <path d="M 476 58 L 492 58" class="arrow"/>
+
+  <rect x="500" y="38" width="90" height="40" class="box app" filter="url(#shadow)"/>
+  <text x="545" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">CDC</text>
+  <text x="545" y="70" text-anchor="middle" class="tiny">Consumer</text>
+
+  <path d="M 590 58 L 606 58" class="arrow"/>
+
+  <rect x="614" y="38" width="70" height="40" class="box lucene" filter="url(#shadow)"/>
+  <text x="649" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">Lucene</text>
+  <text x="649" y="70" text-anchor="middle" class="tiny">인덱싱</text>
+
+  <path d="M 684 58 L 700 58" class="arrow"/>
+
+  <rect x="708" y="38" width="90" height="40" class="box lucene" filter="url(#shadow)"/>
+  <text x="753" y="56" text-anchor="middle" class="tiny" style="font-weight: 700;">maybeRefresh</text>
+  <text x="753" y="70" text-anchor="middle" class="tiny">검색 가능</text>
+
+  <!-- Timing bar -->
+  <rect x="10" y="96" width="788" height="6" rx="3" fill="#3b82f6" opacity="0.3"/>
+  <rect x="10" y="96" width="788" height="6" rx="3" fill="#3b82f6" opacity="0.7"/>
+  <text x="404" y="120" text-anchor="middle" class="label" style="fill: #1d4ed8;">평균 2.1초 (2,130ms)</text>
+
+  <!-- Individual measurements -->
+  <rect x="20" y="134" width="820" height="56" class="section" filter="url(#shadow)"/>
+  <text x="40" y="154" class="label">측정 결과 (5회)</text>
+  <text x="40" y="172" class="sub">#1: 2616ms   #2: 2201ms   #3: 1985ms   #4: 1876ms   #5: 1973ms</text>
+  <text x="680" y="172" class="sub" style="fill: #059669; font-weight: 700;">평균: 2,130ms (~2.1초)</text>
+</svg>

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" width="860" height="420" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .cache { fill: #fef3c7; stroke: #f59e0b; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .event { fill: #ede9fe; stroke: #8b5cf6; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow-green { fill: none; stroke: #10b981; stroke-width: 1.5; marker-end: url(#ah-green); }
+    .arrow-amber { fill: none; stroke: #f59e0b; stroke-width: 1.5; marker-end: url(#ah-amber); }
+    .arrow-pink { fill: none; stroke: #ec4899; stroke-width: 1.5; marker-end: url(#ah-pink); }
+  </style>
+  <defs>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#10b981"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <marker id="ah-pink" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#ec4899"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" class="heading">이벤트 라우팅 — 이벤트 타입별 핸들러 매핑</text>
+
+  <!-- Section backgrounds -->
+  <rect x="20" y="44" width="280" height="360" class="section" filter="url(#shadow)"/>
+  <text x="40" y="68" class="label" style="fill: #8b5cf6;">이벤트 타입</text>
+
+  <rect x="540" y="44" width="300" height="360" class="section" filter="url(#shadow)"/>
+  <text x="560" y="68" class="label" style="fill: #10b981;">이벤트 핸들러</text>
+
+  <!-- Event Types (left) -->
+  <rect x="40" y="84" width="240" height="44" class="box event" filter="url(#shadow)"/>
+  <text x="160" y="104" text-anchor="middle" class="label">PostCreatedEvent</text>
+  <text x="160" y="118" text-anchor="middle" class="tiny">게시글 생성</text>
+
+  <rect x="40" y="148" width="240" height="44" class="box event" filter="url(#shadow)"/>
+  <text x="160" y="168" text-anchor="middle" class="label">PostUpdatedEvent</text>
+  <text x="160" y="182" text-anchor="middle" class="tiny">게시글 수정</text>
+
+  <rect x="40" y="212" width="240" height="44" class="box event" filter="url(#shadow)"/>
+  <text x="160" y="232" text-anchor="middle" class="label">PostDeletedEvent</text>
+  <text x="160" y="246" text-anchor="middle" class="tiny">게시글 삭제</text>
+
+  <rect x="40" y="276" width="240" height="44" class="box event" filter="url(#shadow)"/>
+  <text x="160" y="296" text-anchor="middle" class="label">PostLikeChangedEvent</text>
+  <text x="160" y="310" text-anchor="middle" class="tiny">좋아요 변경</text>
+
+  <!-- Handlers (right) -->
+  <rect x="560" y="84" width="260" height="54" class="box lucene" filter="url(#shadow)"/>
+  <text x="690" y="104" text-anchor="middle" class="label">LuceneIndexEventHandler</text>
+  <text x="690" y="126" text-anchor="middle" class="tiny">Lucene 인덱스 추가/갱신/삭제</text>
+
+  <rect x="560" y="184" width="260" height="54" class="box cache" filter="url(#shadow)"/>
+  <text x="690" y="204" text-anchor="middle" class="label">CacheEventHandler</text>
+  <text x="690" y="226" text-anchor="middle" class="tiny">게시글 상세 캐시(L1+L2) 무효화</text>
+
+  <rect x="560" y="284" width="260" height="54" class="box redis" filter="url(#shadow)"/>
+  <text x="690" y="304" text-anchor="middle" class="label">SearchCacheEventHandler</text>
+  <text x="690" y="326" text-anchor="middle" class="tiny">검색 결과 캐시 L1 무효화</text>
+
+  <!-- Arrows: Created → Lucene, SearchCache -->
+  <path d="M 280 100 L 552 100" class="arrow-green"/>
+  <path d="M 280 112 L 400 112 L 400 306 L 552 306" class="arrow-pink"/>
+
+  <!-- Arrows: Updated → Lucene, Cache, SearchCache -->
+  <path d="M 280 160 L 420 160 L 420 106 L 552 106" class="arrow-green"/>
+  <path d="M 280 170 L 552 206" class="arrow-amber"/>
+  <path d="M 280 180 L 410 180 L 410 312 L 552 312" class="arrow-pink"/>
+
+  <!-- Arrows: Deleted → Lucene, Cache, SearchCache -->
+  <path d="M 280 224 L 440 224 L 440 114 L 552 114" class="arrow-green"/>
+  <path d="M 280 234 L 450 234 L 450 212 L 552 212" class="arrow-amber"/>
+  <path d="M 280 244 L 430 244 L 430 318 L 552 318" class="arrow-pink"/>
+
+  <!-- Arrows: LikeChanged → Cache -->
+  <path d="M 280 298 L 460 298 L 460 218 L 552 218" class="arrow-amber"/>
+
+  <!-- Legend -->
+  <rect x="20" y="370" width="520" height="30" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="40" y1="386" x2="70" y2="386" stroke="#10b981" stroke-width="2"/>
+  <text x="76" y="390" class="tiny">Lucene</text>
+  <line x1="140" y1="386" x2="170" y2="386" stroke="#f59e0b" stroke-width="2"/>
+  <text x="176" y="390" class="tiny">캐시 무효화</text>
+  <line x1="260" y1="386" x2="290" y2="386" stroke="#ec4899" stroke-width="2"/>
+  <text x="296" y="390" class="tiny">검색 캐시 무효화</text>
+</svg>

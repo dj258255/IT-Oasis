@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 300" width="650" height="300" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .client { fill: #f1f5f9; stroke: #cbd5e1; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="325" y="24" text-anchor="middle" class="heading">자동완성 데이터 동기화 — CDC 흐름</text>
+
+  <!-- Section -->
+  <rect x="20" y="38" width="610" height="250" class="section" filter="url(#shadow)"/>
+
+  <!-- Step 1: MapReduce 결과 DB -->
+  <rect x="200" y="52" width="250" height="40" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="325" y="70" text-anchor="middle" class="label">MapReduce 결과 DB</text>
+  <text x="325" y="84" text-anchor="middle" class="tiny">접두사 &#x2192; Top-K 매핑 저장</text>
+
+  <!-- Arrow down -->
+  <path d="M 325 92 L 325 108" class="arrow"/>
+
+  <!-- Step 2: CDC 프로세스 -->
+  <rect x="200" y="112" width="250" height="40" class="box app" filter="url(#shadow)"/>
+  <text x="325" y="130" text-anchor="middle" class="label">CDC 프로세스</text>
+  <text x="325" y="144" text-anchor="middle" class="tiny">로그 감시 (binlog 기반)</text>
+
+  <!-- Arrow down -->
+  <path d="M 325 152 L 325 168" class="arrow"/>
+
+  <!-- Step 3: 메시지 브로커 -->
+  <rect x="200" y="172" width="250" height="40" class="box kafka" filter="url(#shadow)"/>
+  <text x="325" y="190" text-anchor="middle" class="label">메시지 브로커</text>
+  <text x="325" y="204" text-anchor="middle" class="tiny">이벤트 발행 (Kafka 등)</text>
+
+  <!-- Arrow down -->
+  <path d="M 325 212 L 325 228" class="arrow"/>
+
+  <!-- Step 4: AutoComplete Service -->
+  <rect x="200" y="232" width="250" height="40" class="box lucene" filter="url(#shadow)"/>
+  <text x="325" y="250" text-anchor="middle" class="label">AutoComplete Service</text>
+  <text x="325" y="264" text-anchor="middle" class="tiny">이벤트 구독 &#x2192; 자동완성 데이터 갱신</text>
+
+  <!-- Side labels -->
+  <text x="470" y="72" class="tiny" style="fill: #92400e;">&#x2460; 배치 처리 결과</text>
+  <text x="470" y="132" class="tiny" style="fill: #1d4ed8;">&#x2461; 변경 감지</text>
+  <text x="470" y="192" class="tiny" style="fill: #4338ca;">&#x2462; 이벤트 전달</text>
+  <text x="470" y="252" class="tiny" style="fill: #059669;">&#x2463; 실시간 반영</text>
+</svg>

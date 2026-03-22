@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 140" width="860" height="140" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .client { fill: #f1f5f9; stroke: #cbd5e1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-amber { fill: none; stroke: #f59e0b; stroke-width: 2; marker-end: url(#ah-amber); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="22" text-anchor="middle" class="heading">CDC 파이프라인 동작 (게시글 생성)</text>
+
+  <!-- POST API -->
+  <rect x="10" y="40" width="110" height="50" class="box client" filter="url(#shadow)"/>
+  <text x="65" y="60" text-anchor="middle" class="label">POST API</text>
+  <text x="65" y="76" text-anchor="middle" class="tiny">id=14819219</text>
+
+  <path d="M 120 65 L 140 65" class="arrow"/>
+
+  <!-- MySQL Primary -->
+  <rect x="148" y="40" width="110" height="50" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="203" y="60" text-anchor="middle" class="label">MySQL</text>
+  <text x="203" y="76" text-anchor="middle" class="tiny">Primary binlog</text>
+
+  <path d="M 258 65 L 278 65" class="arrow-amber"/>
+
+  <!-- Debezium -->
+  <rect x="286" y="40" width="110" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="341" y="60" text-anchor="middle" class="label">Debezium</text>
+  <text x="341" y="76" text-anchor="middle" class="tiny">Connector</text>
+
+  <path d="M 396 65 L 416 65" class="arrow"/>
+
+  <!-- Kafka Topic -->
+  <rect x="424" y="40" width="120" height="50" class="box kafka" filter="url(#shadow)"/>
+  <text x="484" y="60" text-anchor="middle" class="label">Kafka Topic</text>
+  <text x="484" y="76" text-anchor="middle" class="tiny">wikidb.posts</text>
+
+  <path d="M 544 65 L 564 65" class="arrow"/>
+
+  <!-- CDC Consumer -->
+  <rect x="572" y="40" width="110" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="627" y="60" text-anchor="middle" class="label">CDC Consumer</text>
+  <text x="627" y="76" text-anchor="middle" class="tiny">DebeziumCdc</text>
+
+  <path d="M 682 65 L 702 65" class="arrow"/>
+
+  <!-- Result -->
+  <rect x="710" y="36" width="140" height="58" class="box lucene" filter="url(#shadow)"/>
+  <text x="780" y="56" text-anchor="middle" class="label">CDC CREATE</text>
+  <text x="780" y="72" text-anchor="middle" class="tiny">Lucene 인덱싱 +</text>
+  <text x="780" y="84" text-anchor="middle" class="tiny">캐시 무효화</text>
+
+  <!-- Bottom note -->
+  <rect x="10" y="102" width="840" height="28" rx="6" fill="#d1fae5" stroke="#86efac" stroke-width="1"/>
+  <text x="430" y="120" text-anchor="middle" class="tiny" style="fill: #059669; font-weight: 600;">MySQL binlog → Debezium → Kafka → Consumer → Lucene + 캐시 (전체 경로 자동)</text>
+</svg>

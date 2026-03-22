@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 280" width="750" height="280" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .event { fill: #ede9fe; stroke: #8b5cf6; }
+    .decision { fill: #fefce8; stroke: #eab308; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-green { fill: none; stroke: #10b981; stroke-width: 2; marker-end: url(#ah-green); }
+    .arrow-red { fill: none; stroke: #ef4444; stroke-width: 2; marker-end: url(#ah-red); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#10b981"/></marker>
+    <marker id="ah-red" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#ef4444"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="375" y="24" text-anchor="middle" class="heading">Kafka 유무에 따른 자동 전환 (@ConditionalOnProperty)</text>
+
+  <!-- Decision diamond (rendered as rounded rect) -->
+  <rect x="195" y="42" width="360" height="42" class="box decision" filter="url(#shadow)"/>
+  <text x="375" y="68" text-anchor="middle" class="label">KAFKA_BOOTSTRAP_SERVERS 환경변수 설정됨?</text>
+
+  <!-- Yes branch -->
+  <path d="M 285 84 L 285 108" class="arrow-green"/>
+  <text x="270" y="100" class="sub" style="fill: #10b981; font-weight: 700;">Yes</text>
+
+  <rect x="20" y="112" width="700" height="70" class="section" filter="url(#shadow)"/>
+  <text x="40" y="132" class="label" style="fill: #10b981;">CDC 경로 (DebeziumCdcConsumer 활성화)</text>
+  <text x="40" y="148" class="tiny">기존 @ApplicationModuleListener 핸들러 비활성화</text>
+
+  <rect x="40" y="156" width="110" height="20" class="box mysql-p" style="stroke-width: 1;"/>
+  <text x="95" y="170" text-anchor="middle" class="tiny" style="font-weight: 600;">MySQL binlog</text>
+  <path d="M 150 166 L 170 166" class="arrow"/>
+  <rect x="178" y="156" width="80" height="20" class="box app" style="stroke-width: 1;"/>
+  <text x="218" y="170" text-anchor="middle" class="tiny" style="font-weight: 600;">Debezium</text>
+  <path d="M 258 166 L 278 166" class="arrow"/>
+  <rect x="286" y="156" width="80" height="20" class="box kafka" style="stroke-width: 1;"/>
+  <text x="326" y="170" text-anchor="middle" class="tiny" style="font-weight: 600;">Kafka</text>
+  <path d="M 366 166 L 386 166" class="arrow"/>
+  <rect x="394" y="156" width="110" height="20" class="box app" style="stroke-width: 1;"/>
+  <text x="449" y="170" text-anchor="middle" class="tiny" style="font-weight: 600;">CDC Consumer</text>
+
+  <!-- No branch -->
+  <path d="M 465 84 L 465 208" class="arrow-red"/>
+  <text x="472" y="100" class="sub" style="fill: #ef4444; font-weight: 700;">No</text>
+
+  <rect x="20" y="212" width="700" height="58" class="section" filter="url(#shadow)"/>
+  <text x="40" y="232" class="label" style="fill: #ef4444;">Fallback 경로 (@ApplicationModuleListener 활성화)</text>
+
+  <rect x="40" y="242" width="110" height="20" class="box app" style="stroke-width: 1;"/>
+  <text x="95" y="256" text-anchor="middle" class="tiny" style="font-weight: 600;">PostService</text>
+  <path d="M 150 252 L 170 252" class="arrow"/>
+  <rect x="178" y="242" width="130" height="20" class="box event" style="stroke-width: 1;"/>
+  <text x="243" y="256" text-anchor="middle" class="tiny" style="font-weight: 600;">ApplicationEvent</text>
+  <path d="M 308 252 L 328 252" class="arrow"/>
+  <rect x="336" y="242" width="110" height="20" class="box lucene" style="stroke-width: 1;"/>
+  <text x="391" y="256" text-anchor="middle" class="tiny" style="font-weight: 600;">EventHandler</text>
+</svg>

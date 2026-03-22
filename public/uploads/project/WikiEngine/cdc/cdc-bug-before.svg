@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 320" width="860" height="320" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .fail { fill: #fef2f2; stroke: #ef4444; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-red { fill: none; stroke: #ef4444; stroke-width: 2; marker-end: url(#ah-red); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-red" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#ef4444"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="24" text-anchor="middle" class="heading">CDC 버그 — 수정 전 (양쪽 모두 인덱싱 불가)</text>
+
+  <!-- App 1 (서버 1) -->
+  <rect x="20" y="42" width="400" height="120" class="section" filter="url(#shadow)"/>
+  <text x="40" y="64" class="label" style="fill: #3b82f6;">App 1 (서버 1)</text>
+
+  <rect x="40" y="76" width="120" height="36" class="box lucene" filter="url(#shadow)"/>
+  <text x="100" y="98" text-anchor="middle" class="label">Lucene Primary</text>
+
+  <rect x="180" y="76" width="220" height="36" class="box fail" filter="url(#shadow)"/>
+  <text x="290" y="92" text-anchor="middle" class="sub" style="fill: #dc2626;">KAFKA_BOOTSTRAP_SERVERS 미전달</text>
+
+  <rect x="40" y="120" width="360" height="30" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="220" y="140" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">localhost:9092 → 연결 실패 X</text>
+
+  <!-- App 2 (서버 2) -->
+  <rect x="440" y="42" width="400" height="120" class="section" filter="url(#shadow)"/>
+  <text x="460" y="64" class="label" style="fill: #3b82f6;">App 2 (서버 2)</text>
+
+  <rect x="460" y="76" width="120" height="36" class="box lucene" filter="url(#shadow)"/>
+  <text x="520" y="98" text-anchor="middle" class="label">Lucene Replica</text>
+
+  <rect x="600" y="76" width="220" height="36" class="box kafka" filter="url(#shadow)"/>
+  <text x="710" y="98" text-anchor="middle" class="sub">Kafka 연결 성공 → CDC 이벤트 수신</text>
+
+  <rect x="460" y="120" width="360" height="30" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="640" y="140" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">indexWriter == null → skip X</text>
+
+  <!-- Flow arrows showing failure -->
+  <path d="M 220 162 L 220 188" class="arrow-red"/>
+  <path d="M 640 162 L 640 188" class="arrow-red"/>
+
+  <!-- Result -->
+  <rect x="200" y="192" width="460" height="50" class="box fail" filter="url(#shadow)"/>
+  <text x="430" y="214" text-anchor="middle" class="label" style="fill: #dc2626; font-size: 14px;">양쪽 모두 인덱싱 불가 X</text>
+  <text x="430" y="232" text-anchor="middle" class="tiny" style="fill: #dc2626;">App 1: Kafka 미연결 / App 2: IndexWriter 없음</text>
+
+  <!-- Detail explanation -->
+  <rect x="20" y="258" width="820" height="50" class="section" filter="url(#shadow)"/>
+  <text x="40" y="278" class="label" style="fill: #ef4444;">근본 원인</text>
+  <text x="40" y="296" class="sub">docker-compose.yml.j2 (App 1)에서 SPRING_KAFKA_BOOTSTRAP_SERVERS 환경변수 매핑 누락</text>
+</svg>

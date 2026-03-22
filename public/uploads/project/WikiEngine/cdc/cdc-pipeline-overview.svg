@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 120" width="860" height="120" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="22" text-anchor="middle" class="heading">CDC 파이프라인 개요</text>
+
+  <!-- MySQL binlog -->
+  <rect x="20" y="40" width="120" height="44" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="80" y="58" text-anchor="middle" class="label">MySQL</text>
+  <text x="80" y="74" text-anchor="middle" class="tiny">binlog</text>
+
+  <path d="M 140 62 L 168 62" class="arrow"/>
+
+  <!-- Debezium -->
+  <rect x="176" y="40" width="120" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="236" y="58" text-anchor="middle" class="label">Debezium</text>
+  <text x="236" y="74" text-anchor="middle" class="tiny">Connector</text>
+
+  <path d="M 296 62 L 324 62" class="arrow"/>
+
+  <!-- Kafka Topic -->
+  <rect x="332" y="40" width="120" height="44" class="box kafka" filter="url(#shadow)"/>
+  <text x="392" y="58" text-anchor="middle" class="label">Kafka Topic</text>
+  <text x="392" y="74" text-anchor="middle" class="tiny">이벤트 스트림</text>
+
+  <path d="M 452 62 L 480 62" class="arrow"/>
+
+  <!-- Consumer(s) -->
+  <rect x="488" y="40" width="120" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="548" y="58" text-anchor="middle" class="label">Consumer(s)</text>
+  <text x="548" y="74" text-anchor="middle" class="tiny">CDC Consumer</text>
+
+  <path d="M 608 52 L 646 52" class="arrow"/>
+  <path d="M 608 72 L 646 72" class="arrow"/>
+
+  <!-- Lucene -->
+  <rect x="654" y="30" width="80" height="34" class="box lucene" filter="url(#shadow)"/>
+  <text x="694" y="52" text-anchor="middle" class="label">Lucene</text>
+
+  <!-- Redis/Cache -->
+  <rect x="654" y="72" width="80" height="34" class="box redis" filter="url(#shadow)"/>
+  <text x="694" y="88" text-anchor="middle" class="label">Cache</text>
+
+  <!-- Legend label -->
+  <text x="754" y="52" class="tiny">검색 인덱스</text>
+  <text x="754" y="88" class="tiny">Redis/Caffeine</text>
+</svg>

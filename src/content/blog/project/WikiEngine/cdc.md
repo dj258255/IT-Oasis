@@ -89,16 +89,7 @@ public void deletePost(Long id, Long userId) {
 
 ### 의존 관계 그래프
 
-```
-PostService
-  ├── postRepository.save()          → MySQL Primary
-  ├── luceneIndexService.indexPost()  → Lucene (App 로컬)
-  ├── tieredCacheService.evict()     → Caffeine L1 + Redis L2
-  ├── postRepository.incrementLikeCount()  → MySQL Primary
-  └── (미연결) searchResultCache, autocompleteKV
-         ↑
-         검색 결과 캐시와 자동완성 KV는 변경 이벤트를 받지 못함
-```
+![PostService 의존 관계 그래프](/uploads/project/WikiEngine/cdc/dual-write-dependency.svg)
 
 ---
 
@@ -127,15 +118,7 @@ private void indexSafely(Post post) {
 
 PostService가 알아야 하는 것:
 
-```
-PostService
-  → PostRepository (MySQL)
-  → LuceneIndexService (검색 인덱스)
-  → TieredCacheService (게시글 캐시)
-  → PostLikeRepository (좋아요)
-  → (알아야 하지만 모름) 검색 결과 캐시
-  → (알아야 하지만 모름) 자동완성 KV
-```
+![PostService 6개 의존성](/uploads/project/WikiEngine/cdc/postservice-coupling.svg)
 
 새로운 Read Model(예: Elasticsearch, 추천 시스템, 알림)을 추가할 때마다 PostService를 수정해야 한다. OCP(Open-Closed Principle) 위반.
 
@@ -171,16 +154,7 @@ Lucene 인덱스에 `FeatureField("features", "viewCount")`와 `FeatureField("fe
 
 해결책으로 "Write to a single authoritative system (the database), then use CDC (log extraction) to propagate changes"를 권장한다. Confluent도 "Issues caused by this problem are extremely difficult to spot, and you don't get any red flags indicating that something has become inconsistent"라고 경고한다.
 
-```
-시나리오 A: DB 성공 + Lucene 실패
-  → DB에는 있고 검색에는 없는 게시글 (현재 발생 가능)
-
-시나리오 B: DB 성공 + 캐시 무효화 실패
-  → 수정 전 데이터가 30분간 캐시에서 서빙
-
-시나리오 C: DB 성공 + Redis Pub/Sub 실패
-  → 이벤트 유실, Consumer가 변경을 모름
-```
+![Dual-Write 실패 시나리오](/uploads/project/WikiEngine/cdc/dual-write-scenarios.svg)
 
 이 문제를 해결하는 업계 표준 패턴:
 
@@ -296,9 +270,7 @@ public void pollAndPublish() {
 
 ### 방안 3: Debezium + Kafka CDC
 
-```
-MySQL binlog → Debezium → Kafka Topic → Consumer(s) → Lucene/Redis/Cache
-```
+![CDC 파이프라인 개요](/uploads/project/WikiEngine/cdc/cdc-pipeline-overview.svg)
 
 | 장점 | 단점 |
 |------|------|
@@ -404,24 +376,7 @@ public sealed interface PostEvent {
 
 ### EventHandler 분리
 
-```
-PostCreatedEvent
-  → LuceneIndexEventHandler.onCreated()       : Lucene 인덱스 추가
-  → SearchCacheEventHandler.onCreated()       : 검색 결과 캐시 무효화
-
-PostUpdatedEvent
-  → LuceneIndexEventHandler.onUpdated()       : Lucene 인덱스 갱신
-  → CacheEventHandler.onUpdated()             : 게시글 상세 캐시 무효화
-  → SearchCacheEventHandler.onUpdated()       : 검색 결과 캐시 무효화
-
-PostDeletedEvent
-  → LuceneIndexEventHandler.onDeleted()       : Lucene 인덱스 삭제
-  → CacheEventHandler.onDeleted()             : 게시글 상세 캐시 무효화
-  → SearchCacheEventHandler.onDeleted()       : 검색 결과 캐시 무효화
-
-PostLikeChangedEvent
-  → CacheEventHandler.onLikeChanged()         : 게시글 상세 캐시 무효화
-```
+![이벤트 라우팅](/uploads/project/WikiEngine/cdc/event-handler-routing.svg)
 
 ### Consumer 멱등성 (Idempotency)
 
@@ -653,17 +608,7 @@ L1+L2 합산 **79%** 히트. 동등.
 
 Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는지 검증했다.
 
-```
-테스트 시나리오:
-  1) LuceneIndexEventHandler에서 강제 예외 발생 (IOException 시뮬레이션)
-  2) 게시글 생성 API 호출 → DB 커밋 성공, Lucene 인덱싱 실패
-  3) event_publication 테이블 확인: completion_date = NULL (미완료 상태)
-  4) 예외 원인 제거 후 대기
-  5) IncompleteEventPublications 스케줄러가 미완료 이벤트 자동 재시도
-  6) Lucene 인덱스에 게시글 반영 확인
-
-결과: 재시도 성공. 미완료 이벤트가 다음 스케줄링 주기에 자동 처리됨.
-```
+![Event Publication Log 재시도 검증](/uploads/project/WikiEngine/cdc/event-publication-test.svg)
 
 **알려진 한계**: (1) 이벤트 클래스의 FQCN이 DB에 저장되므로, 클래스를 리네임/이동하면 기존 미완료 이벤트의 재시도가 `ClassNotFoundException`으로 실패한다. 이벤트 클래스 변경 전 미완료 이벤트를 반드시 소진해야 한다. (2) [GitHub Issue #835](https://github.com/spring-projects/spring-modulith/issues/835)에서 런타임 중 리스너가 호출되지 않는 케이스가 보고되었다. 이 프로젝트에서는 재현되지 않았지만, Kafka CDC로 진화하는 추가적인 동기가 된다. (3) 멀티 인스턴스에서 재시작 시 미완료 이벤트 재처리가 인스턴스별로 독립적이므로 중복 처리 가능 — Consumer 멱등성이 전제조건이다.
 
@@ -722,24 +667,7 @@ Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는�
 
 ### 인프라 구성
 
-```
-서버 2 (oracle-aarch64-2, 12G RAM / 2 vCPU):
-  ├── Kafka 4.2.0 (KRaft 단일 브로커, ZooKeeper 불필요) — 4G RAM
-  ├── Debezium Connect 3.4.2 (MySQL Connector) — 2G RAM
-  ├── App 2 (Kafka Consumer) — 1G Heap + ~200M Non-Heap
-  ├── MySQL Replica — ~3.5G (InnoDB 버퍼 풀 2G 포함)
-  └── 모니터링 Exporter들 — ~300M
-  총 사용: ~11G / 12G
-
-CDC 파이프라인:
-  MySQL Primary (서버 1) binlog
-    → Debezium Connector (서버 2)
-    → Kafka Topic: dbserver1.wikidb.posts
-    → DebeziumCdcConsumer (App 1 + App 2)
-      → Lucene 인덱스 갱신
-      → 게시글 캐시 무효화
-      → 검색 캐시 L1 무효화
-```
+![인프라 구성 + CDC 파이프라인](/uploads/project/WikiEngine/cdc/cdc-infrastructure.svg)
 
 > **KRaft 단일 브로커의 한계와 방어 전략**: Confluent 공식 문서에서 KRaft combined mode(브로커 + 컨트롤러 단일 프로세스)는 개발/테스트 전용이라고 명시하며, 프로덕션에서는 최소 3개 컨트롤러를 권장한다. 현재 단일 브로커 구성에서 Kafka가 죽으면 CDC 파이프라인이 멈추지만, **서비스 자체는 중단되지 않는다.** `@ConditionalOnProperty` fallback으로 `@ApplicationModuleListener`가 자동 전환되어 Phase 14-1b 수준으로 동작한다. 이 구조에서 Kafka의 역할은 **"평시의 정확성 극대화"**이고, fallback은 **"장애 시 서비스 연속성 보장"**이다. Kafka가 복구되면 Debezium이 마지막 binlog position부터 이어서 캡처하므로 **장애 동안의 변경도 소급 반영**된다. 프로덕션 확장 시에는 KRaft 3노드 컨트롤러 + 전용 브로커로 HA를 확보해야 한다.
 
@@ -762,59 +690,25 @@ CDC 파이프라인:
 
 ### 코드 구조 — Kafka 유무에 따른 자동 전환
 
-```
-KAFKA_BOOTSTRAP_SERVERS 환경변수 설정됨?
-  ├── Yes → DebeziumCdcConsumer 활성화 (@ConditionalOnProperty)
-  │         기존 @ApplicationModuleListener 핸들러 비활성화
-  │         MySQL binlog → Kafka → Consumer 경로
-  │
-  └── No  → 기존 @ApplicationModuleListener 핸들러 활성화 (fallback)
-            PostService → ApplicationEvent → EventHandler 경로
-```
+![Kafka 유무에 따른 자동 전환](/uploads/project/WikiEngine/cdc/kafka-fallback-switch.svg)
 
 ### CDC 파이프라인 동작 확인
 
 ![CDC 파이프라인 성공](/uploads/project/WikiEngine/cdc/phase14-cdc-final-success.png)
 
-```
-게시글 생성 (POST /api/v1.0/posts) → id=14819219
-  → MySQL Primary binlog 기록
-  → Debezium Connector가 binlog 캡처
-  → Kafka 토픽 dbserver1.wikidb.posts에 이벤트 발행
-  → DebeziumCdcConsumer가 수신
-  → CDC CREATE: postId=14819219 (Lucene 인덱싱 + 캐시 무효화)
-```
+![CDC 파이프라인 동작 — 게시글 생성](/uploads/project/WikiEngine/cdc/cdc-create-flow.svg)
 
 ### CDC Consumer 아키텍처 버그 발견 및 수정
 
 Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**를 발견했다.
 
-```
-문제 상황:
-  App 1 (서버 1): Lucene Primary (IndexWriter 있음)
-    → KAFKA_BOOTSTRAP_SERVERS가 컨테이너에 전달되지 않음
-    → 기본값 localhost:9092로 연결 시도 → 실패
-
-  App 2 (서버 2): Lucene Replica (IndexWriter 없음)
-    → Kafka 연결 성공, CDC 이벤트 정상 수신
-    → indexWriter == null → skip
-
-결과: 양쪽 모두 CDC → Lucene 인덱싱 불가
-```
+![CDC 버그 — 수정 전](/uploads/project/WikiEngine/cdc/cdc-bug-before.svg)
 
 **근본 원인**: `docker-compose.yml.j2`(App 1)에서 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 환경변수 매핑이 빠져 있었다.
 
 **수정 후 구조**:
 
-```
-App 1 (서버 1): Lucene Primary + CDC Consumer
-  → CDC 이벤트 수신 → indexWriter로 Lucene 인덱싱 O
-
-App 2 (서버 2): Lucene Replica + CDC Consumer
-  → CDC 이벤트 수신 → Lucene 인덱싱 skip
-  → 캐시 무효화만 수행
-  → Lucene 인덱스는 rsync(5분 주기)로 App 1에서 동기화
-```
+![CDC 버그 수정 후](/uploads/project/WikiEngine/cdc/cdc-bug-after.svg)
 
 > **현업과의 비교**: 프로덕션에서는 Elasticsearch/OpenSearch 같은 별도 검색 클러스터가 자체적으로 Primary/Replica 복제를 관리하므로, "CDC Consumer가 어느 App에서 돌아야 하느냐" 문제가 발생하지 않는다. embedded Lucene은 인프라 비용을 아끼는 대신, 이런 관리 복잡성을 애플리케이션이 부담한다.
 
@@ -822,28 +716,11 @@ App 2 (서버 2): Lucene Replica + CDC Consumer
 
 ### CDC 정확성 검증 — 직접 SQL DELETE 테스트
 
-```
-시나리오:
-  1) API로 게시글 생성 (id=14822086)
-  2) Lucene에서 검색 확인: FOUND
-  3) 직접 SQL DELETE: DELETE FROM posts WHERE id=14822086
-     (PostService 완전 우회)
-  4) CDC 파이프라인 동작:
-     MySQL binlog → Debezium → Kafka → CDC Consumer → Lucene deleteFromIndex()
-  5) Lucene에서 검색 확인: GONE
-
-결과: 직접 SQL DELETE → Lucene 삭제 반영까지 0.7초
-```
+![CDC 정확성 검증 — 직접 SQL DELETE 테스트](/uploads/project/WikiEngine/cdc/cdc-sql-delete-test.svg)
 
 ### CDC End-to-End 지연 측정
 
-```
-경로: POST API → MySQL INSERT → binlog → Debezium → Kafka → CDC Consumer → Lucene → maybeRefresh()
-
-측정 결과 (5회):
-  #1: 2616ms  #2: 2201ms  #3: 1985ms  #4: 1876ms  #5: 1973ms
-  평균: 2130ms (~2.1초)
-```
+![CDC End-to-End 지연 측정](/uploads/project/WikiEngine/cdc/cdc-e2e-latency.svg)
 
 커뮤니티 게시판에서 "게시글 작성 후 2초 뒤 검색 가능"은 허용 가능한 수준이며, CDC의 이점(직접 SQL 감지, 이벤트 리플레이, 양쪽 L1 캐시 무효화)이 이 지연을 상회한다.
 
@@ -1119,17 +996,7 @@ CQRS(Command Query Responsibility Segregation) 패턴에 완벽히 부합. 자�
 
 ### 데이터 동기화 — CDC
 
-```
-[MapReduce 결과 DB]
-       ↓
-  CDC 프로세스 (로그 감시)
-       ↓
-  메시지 브로커 (이벤트 발행)
-       ↓
-  AutoComplete Service (이벤트 구독)
-       ↓
-  사용자에게 자동완성 제안 제공
-```
+![자동완성 데이터 동기화 — CDC 흐름](/uploads/project/WikiEngine/cdc/autocomplete-cdc-flow.svg)
 
 ### 설계 하이라이트
 

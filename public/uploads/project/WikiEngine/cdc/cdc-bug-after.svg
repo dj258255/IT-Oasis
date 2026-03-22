@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 280" width="860" height="280" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .success { fill: #d1fae5; stroke: #10b981; }
+    .cache { fill: #fef3c7; stroke: #f59e0b; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-green { fill: none; stroke: #10b981; stroke-width: 2; marker-end: url(#ah-green); }
+    .arrow-dash { fill: none; stroke: #10b981; stroke-width: 2; stroke-dasharray: 6 3; marker-end: url(#ah-green); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#10b981"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="24" text-anchor="middle" class="heading">CDC 버그 수정 후 — 정상 동작</text>
+
+  <!-- App 1 (서버 1) -->
+  <rect x="20" y="42" width="400" height="100" class="section" filter="url(#shadow)"/>
+  <text x="40" y="64" class="label" style="fill: #3b82f6;">App 1 (서버 1)</text>
+
+  <rect x="40" y="76" width="130" height="36" class="box lucene" filter="url(#shadow)"/>
+  <text x="105" y="98" text-anchor="middle" class="label">Lucene Primary</text>
+
+  <rect x="185" y="76" width="120" height="36" class="box app" filter="url(#shadow)"/>
+  <text x="245" y="98" text-anchor="middle" class="label">CDC Consumer</text>
+
+  <rect x="40" y="118" width="360" height="20" rx="6" fill="#d1fae5" stroke="#86efac" stroke-width="1"/>
+  <text x="220" y="132" text-anchor="middle" class="tiny" style="fill: #059669; font-weight: 600;">indexWriter 인덱싱 O &#x2713;</text>
+
+  <!-- App 2 (서버 2) -->
+  <rect x="440" y="42" width="400" height="100" class="section" filter="url(#shadow)"/>
+  <text x="460" y="64" class="label" style="fill: #3b82f6;">App 2 (서버 2)</text>
+
+  <rect x="460" y="76" width="130" height="36" class="box lucene" filter="url(#shadow)"/>
+  <text x="525" y="98" text-anchor="middle" class="label">Lucene Replica</text>
+
+  <rect x="605" y="76" width="120" height="36" class="box app" filter="url(#shadow)"/>
+  <text x="665" y="98" text-anchor="middle" class="label">CDC Consumer</text>
+
+  <rect x="460" y="118" width="360" height="20" rx="6" fill="#d1fae5" stroke="#86efac" stroke-width="1"/>
+  <text x="640" y="132" text-anchor="middle" class="tiny" style="fill: #059669; font-weight: 600;">인덱싱 skip, 캐시 무효화만 &#x2713;</text>
+
+  <!-- rsync arrow from App 1 to App 2 -->
+  <path d="M 320 94 L 452 94" class="arrow-dash"/>
+  <text x="375" y="88" class="tiny" style="fill: #10b981; font-weight: 600;">rsync (5분)</text>
+
+  <!-- Summary -->
+  <rect x="20" y="160" width="820" height="110" class="section" filter="url(#shadow)"/>
+  <text x="40" y="184" class="label" style="fill: #10b981;">수정 후 역할 분담</text>
+
+  <rect x="40" y="196" width="370" height="60" class="box success" filter="url(#shadow)"/>
+  <text x="225" y="216" text-anchor="middle" class="label">App 1: CDC &#x2192; Lucene 인덱싱 담당</text>
+  <text x="225" y="234" text-anchor="middle" class="sub">IndexWriter로 직접 쓰기 + 캐시 무효화</text>
+  <text x="225" y="248" text-anchor="middle" class="tiny" style="fill: #059669;">&#x2713; Primary 인덱스 갱신</text>
+
+  <rect x="430" y="196" width="390" height="60" class="box success" filter="url(#shadow)"/>
+  <text x="625" y="216" text-anchor="middle" class="label">App 2: 캐시 무효화 + rsync 수신</text>
+  <text x="625" y="234" text-anchor="middle" class="sub">Lucene 인덱싱 skip, L1/L2 캐시 무효화만</text>
+  <text x="625" y="248" text-anchor="middle" class="tiny" style="fill: #059669;">&#x2713; 5분 주기 rsync로 Lucene 동기화</text>
+</svg>

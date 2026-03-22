@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 280" width="750" height="280" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .success { fill: #d1fae5; stroke: #10b981; }
+    .fail { fill: #fef2f2; stroke: #ef4444; }
+    .result { fill: #fef3c7; stroke: #f59e0b; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="375" y="24" text-anchor="middle" class="heading">Dual-Write 실패 시나리오</text>
+
+  <!-- Scenario A -->
+  <rect x="15" y="40" width="230" height="230" class="section" filter="url(#shadow)"/>
+  <text x="130" y="62" text-anchor="middle" class="label" style="fill: #ef4444;">시나리오 A</text>
+
+  <rect x="35" y="76" width="190" height="34" class="box success" filter="url(#shadow)"/>
+  <text x="130" y="98" text-anchor="middle" class="sub" style="fill: #059669;">DB 성공 &#x2713;</text>
+
+  <rect x="35" y="120" width="190" height="34" class="box fail" filter="url(#shadow)"/>
+  <text x="130" y="142" text-anchor="middle" class="sub" style="fill: #dc2626;">Lucene 실패 X</text>
+
+  <rect x="35" y="174" width="190" height="44" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="130" y="192" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">DB에는 있고</text>
+  <text x="130" y="206" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">검색에는 없는 게시글</text>
+
+  <!-- Scenario B -->
+  <rect x="260" y="40" width="230" height="230" class="section" filter="url(#shadow)"/>
+  <text x="375" y="62" text-anchor="middle" class="label" style="fill: #ef4444;">시나리오 B</text>
+
+  <rect x="280" y="76" width="190" height="34" class="box success" filter="url(#shadow)"/>
+  <text x="375" y="98" text-anchor="middle" class="sub" style="fill: #059669;">DB 성공 &#x2713;</text>
+
+  <rect x="280" y="120" width="190" height="34" class="box fail" filter="url(#shadow)"/>
+  <text x="375" y="142" text-anchor="middle" class="sub" style="fill: #dc2626;">캐시 무효화 실패 X</text>
+
+  <rect x="280" y="174" width="190" height="44" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="375" y="192" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">수정 전 데이터가</text>
+  <text x="375" y="206" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">30분간 서빙</text>
+
+  <!-- Scenario C -->
+  <rect x="505" y="40" width="230" height="230" class="section" filter="url(#shadow)"/>
+  <text x="620" y="62" text-anchor="middle" class="label" style="fill: #ef4444;">시나리오 C</text>
+
+  <rect x="525" y="76" width="190" height="34" class="box success" filter="url(#shadow)"/>
+  <text x="620" y="98" text-anchor="middle" class="sub" style="fill: #059669;">DB 성공 &#x2713;</text>
+
+  <rect x="525" y="120" width="190" height="34" class="box fail" filter="url(#shadow)"/>
+  <text x="620" y="142" text-anchor="middle" class="sub" style="fill: #dc2626;">Redis Pub/Sub 실패 X</text>
+
+  <rect x="525" y="174" width="190" height="44" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="620" y="192" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">이벤트 유실,</text>
+  <text x="620" y="206" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">Consumer가 변경을 모름</text>
+</svg>

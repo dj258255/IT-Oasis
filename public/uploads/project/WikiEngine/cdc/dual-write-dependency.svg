@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 350" width="860" height="350" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .cache { fill: #fef3c7; stroke: #f59e0b; }
+    .disconnected { fill: #fef2f2; stroke: #ef4444; stroke-dasharray: 6 3; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-blue { fill: none; stroke: #3b82f6; stroke-width: 2; marker-end: url(#ah-blue); }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-blue" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#3b82f6"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" class="heading">PostService 의존 관계 그래프 (Dual-Write)</text>
+
+  <!-- Section background -->
+  <rect x="20" y="42" width="820" height="295" class="section" filter="url(#shadow)"/>
+
+  <!-- PostService -->
+  <rect x="40" y="130" width="140" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="110" y="152" text-anchor="middle" class="label">PostService</text>
+  <text x="110" y="168" text-anchor="middle" class="tiny">dual-write 구조</text>
+
+  <!-- Arrow 1: PostService → MySQL Primary (postRepository.save) -->
+  <path d="M 180 140 L 290 78" class="arrow-blue"/>
+  <rect x="300" y="56" width="180" height="44" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="390" y="76" text-anchor="middle" class="label">MySQL Primary</text>
+  <text x="390" y="90" text-anchor="middle" class="tiny">postRepository.save()</text>
+
+  <!-- Arrow 2: PostService → Lucene -->
+  <path d="M 180 150 L 290 138" class="arrow-blue"/>
+  <rect x="300" y="116" width="180" height="44" class="box lucene" filter="url(#shadow)"/>
+  <text x="390" y="136" text-anchor="middle" class="label">Lucene (App 로컬)</text>
+  <text x="390" y="150" text-anchor="middle" class="tiny">luceneIndexService.indexPost()</text>
+
+  <!-- Arrow 3: PostService → Caffeine L1 + Redis L2 -->
+  <path d="M 180 160 L 290 198" class="arrow-blue"/>
+  <rect x="300" y="176" width="180" height="44" class="box cache" filter="url(#shadow)"/>
+  <text x="390" y="192" text-anchor="middle" class="label">Caffeine L1 + Redis L2</text>
+  <text x="390" y="208" text-anchor="middle" class="tiny">tieredCacheService.evict()</text>
+
+  <!-- Arrow 4: PostService → MySQL Primary (incrementLikeCount) -->
+  <path d="M 180 170 L 290 258" class="arrow-blue"/>
+  <rect x="300" y="236" width="180" height="44" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="390" y="256" text-anchor="middle" class="label">MySQL Primary</text>
+  <text x="390" y="270" text-anchor="middle" class="tiny">incrementLikeCount()</text>
+
+  <!-- Disconnected boxes -->
+  <rect x="580" y="56" width="170" height="44" class="box disconnected" filter="url(#shadow)"/>
+  <text x="665" y="76" text-anchor="middle" class="label" style="fill: #ef4444;">searchResultCache</text>
+  <text x="665" y="90" text-anchor="middle" class="tiny">검색 결과 캐시</text>
+
+  <rect x="580" y="116" width="170" height="44" class="box disconnected" filter="url(#shadow)"/>
+  <text x="665" y="136" text-anchor="middle" class="label" style="fill: #ef4444;">autocompleteKV</text>
+  <text x="665" y="150" text-anchor="middle" class="tiny">자동완성 Redis KV</text>
+
+  <!-- Note -->
+  <rect x="570" y="176" width="260" height="32" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="700" y="196" text-anchor="middle" class="tiny" style="fill: #dc2626; font-weight: 600;">변경 이벤트를 받지 못함 (미연결)</text>
+</svg>

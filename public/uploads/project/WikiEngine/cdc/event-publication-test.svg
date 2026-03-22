@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 320" width="750" height="320" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .fail { fill: #fef2f2; stroke: #ef4444; }
+    .success { fill: #d1fae5; stroke: #10b981; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="375" y="24" text-anchor="middle" class="heading">Event Publication Log 재시도 검증</text>
+
+  <!-- Section -->
+  <rect x="20" y="38" width="710" height="272" class="section" filter="url(#shadow)"/>
+
+  <!-- Step 1 -->
+  <rect x="40" y="52" width="36" height="28" rx="14" fill="#ef4444" stroke="none"/>
+  <text x="58" y="71" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">1</text>
+  <rect x="88" y="48" width="600" height="36" class="box fail" filter="url(#shadow)"/>
+  <text x="388" y="64" text-anchor="middle" class="label">LuceneIndexEventHandler &#x2192; IOException 강제 발생</text>
+  <text x="388" y="78" text-anchor="middle" class="tiny" style="fill: #dc2626;">Lucene 인덱싱 실패 시뮬레이션</text>
+
+  <!-- Step 2 -->
+  <rect x="40" y="96" width="36" height="28" rx="14" fill="#ef4444" stroke="none"/>
+  <text x="58" y="115" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">2</text>
+  <rect x="88" y="92" width="600" height="36" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="388" y="108" text-anchor="middle" class="label">POST /api &#x2192; DB 커밋 성공, Lucene 인덱싱 실패</text>
+  <text x="388" y="122" text-anchor="middle" class="tiny">MySQL에만 데이터 존재</text>
+
+  <!-- Step 3 -->
+  <rect x="40" y="140" width="36" height="28" rx="14" fill="#f59e0b" stroke="none"/>
+  <text x="58" y="159" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">3</text>
+  <rect x="88" y="136" width="600" height="36" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="388" y="152" text-anchor="middle" class="label">event_publication 테이블: completion_date = NULL</text>
+  <text x="388" y="166" text-anchor="middle" class="tiny">미완료 이벤트로 기록됨</text>
+
+  <!-- Step 4 -->
+  <rect x="40" y="184" width="36" height="28" rx="14" fill="#3b82f6" stroke="none"/>
+  <text x="58" y="203" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">4</text>
+  <rect x="88" y="180" width="600" height="36" class="box app" filter="url(#shadow)"/>
+  <text x="388" y="196" text-anchor="middle" class="label">예외 원인 제거 후 대기</text>
+  <text x="388" y="210" text-anchor="middle" class="tiny">IOException 시뮬레이션 해제</text>
+
+  <!-- Step 5 -->
+  <rect x="40" y="228" width="36" height="28" rx="14" fill="#3b82f6" stroke="none"/>
+  <text x="58" y="247" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">5</text>
+  <rect x="88" y="224" width="600" height="36" class="box app" filter="url(#shadow)"/>
+  <text x="388" y="240" text-anchor="middle" class="label">IncompleteEventPublications 스케줄러 &#x2192; 미완료 이벤트 재시도</text>
+  <text x="388" y="254" text-anchor="middle" class="tiny">자동 재시도 스케줄링</text>
+
+  <!-- Step 6 -->
+  <rect x="40" y="272" width="36" height="28" rx="14" fill="#10b981" stroke="none"/>
+  <text x="58" y="291" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">6</text>
+  <rect x="88" y="268" width="600" height="36" class="box success" filter="url(#shadow)"/>
+  <text x="388" y="284" text-anchor="middle" class="label">Lucene 인덱스에 게시글 반영 &#x2713;</text>
+  <text x="388" y="298" text-anchor="middle" class="tiny" style="fill: #059669;">재시도 성공 — 미완료 이벤트가 자동 처리됨</text>
+</svg>

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 260" width="860" height="260" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .client { fill: #f1f5f9; stroke: #cbd5e1; }
+    .success { fill: #d1fae5; stroke: #10b981; }
+    .fail { fill: #fef2f2; stroke: #ef4444; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-amber { fill: none; stroke: #f59e0b; stroke-width: 2; marker-end: url(#ah-amber); }
+    .arrow-green { fill: none; stroke: #10b981; stroke-width: 2; marker-end: url(#ah-green); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <marker id="ah-green" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#10b981"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="22" text-anchor="middle" class="heading">CDC 정확성 검증 — 직접 SQL DELETE 테스트</text>
+
+  <!-- Step 1: API 생성 + Lucene FOUND -->
+  <rect x="20" y="38" width="820" height="44" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="44" width="28" height="28" rx="14" fill="#3b82f6" stroke="none"/>
+  <text x="44" y="63" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">1</text>
+  <text x="70" y="58" class="label">API &#x2192; 게시글 생성 (id=14822086)</text>
+  <rect x="650" y="46" width="170" height="28" class="box success" filter="url(#shadow)"/>
+  <text x="735" y="66" text-anchor="middle" class="sub" style="fill: #059669; font-weight: 600;">Lucene: FOUND &#x2713;</text>
+
+  <!-- Step 2: 직접 SQL DELETE -->
+  <rect x="20" y="90" width="820" height="44" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="96" width="28" height="28" rx="14" fill="#ef4444" stroke="none"/>
+  <text x="44" y="115" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">2</text>
+  <text x="70" y="110" class="label">직접 SQL DELETE: DELETE FROM posts WHERE id=14822086</text>
+  <rect x="570" y="98" width="250" height="28" class="box fail" filter="url(#shadow)"/>
+  <text x="695" y="118" text-anchor="middle" class="sub" style="fill: #dc2626; font-weight: 600;">PostService 완전 우회!</text>
+
+  <!-- Step 3: CDC Pipeline -->
+  <rect x="20" y="142" width="820" height="44" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="148" width="28" height="28" rx="14" fill="#6366f1" stroke="none"/>
+  <text x="44" y="167" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">3</text>
+
+  <rect x="70" y="150" width="90" height="28" class="box mysql-p" style="stroke-width: 1;"/>
+  <text x="115" y="168" text-anchor="middle" class="tiny" style="font-weight: 600;">MySQL binlog</text>
+  <path d="M 160 164 L 176 164" class="arrow-amber"/>
+  <rect x="184" y="150" width="90" height="28" class="box app" style="stroke-width: 1;"/>
+  <text x="229" y="168" text-anchor="middle" class="tiny" style="font-weight: 600;">Debezium</text>
+  <path d="M 274 164 L 290 164" class="arrow"/>
+  <rect x="298" y="150" width="80" height="28" class="box kafka" style="stroke-width: 1;"/>
+  <text x="338" y="168" text-anchor="middle" class="tiny" style="font-weight: 600;">Kafka</text>
+  <path d="M 378 164 L 394 164" class="arrow"/>
+  <rect x="402" y="150" width="110" height="28" class="box app" style="stroke-width: 1;"/>
+  <text x="457" y="168" text-anchor="middle" class="tiny" style="font-weight: 600;">CDC Consumer</text>
+  <path d="M 512 164 L 528 164" class="arrow-green"/>
+  <rect x="536" y="150" width="130" height="28" class="box lucene" style="stroke-width: 1;"/>
+  <text x="601" y="168" text-anchor="middle" class="tiny" style="font-weight: 600;">deleteFromIndex()</text>
+
+  <!-- Step 4: Lucene GONE -->
+  <rect x="20" y="194" width="820" height="44" class="section" filter="url(#shadow)"/>
+  <rect x="30" y="200" width="28" height="28" rx="14" fill="#10b981" stroke="none"/>
+  <text x="44" y="219" text-anchor="middle" style="fill: white; font-size: 11px; font-weight: 700;">4</text>
+  <text x="70" y="214" class="label">Lucene에서 검색 확인</text>
+  <rect x="650" y="202" width="170" height="28" class="box success" filter="url(#shadow)"/>
+  <text x="735" y="222" text-anchor="middle" class="sub" style="fill: #059669; font-weight: 600;">Lucene: GONE &#x2713;</text>
+
+  <!-- Timing -->
+  <rect x="300" y="202" width="140" height="28" rx="6" fill="#d1fae5" stroke="#86efac" stroke-width="1"/>
+  <text x="370" y="220" text-anchor="middle" class="sub" style="fill: #059669; font-weight: 700;">0.7초 내 반영</text>
+</svg>

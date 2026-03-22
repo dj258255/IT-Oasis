@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" width="860" height="500" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql-r { fill: #fef9c3; stroke: #eab308; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .lucene { fill: #d1fae5; stroke: #10b981; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .cache { fill: #fef3c7; stroke: #f59e0b; }
+    .client { fill: #f1f5f9; stroke: #cbd5e1; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .server { fill: #fafafa; stroke: #d1d5db; rx: 12; stroke-width: 1.5; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-amber { fill: none; stroke: #f59e0b; stroke-width: 2; marker-end: url(#ah-amber); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-amber" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="430" y="24" text-anchor="middle" class="heading">인프라 구성 + CDC 파이프라인</text>
+
+  <!-- ===== Server 2 Box ===== -->
+  <rect x="20" y="40" width="820" height="210" class="server" filter="url(#shadow)"/>
+  <text x="40" y="62" class="label">서버 2 (oracle-aarch64-2, 12G RAM / 2 vCPU)</text>
+
+  <!-- Kafka -->
+  <rect x="40" y="76" width="150" height="44" class="box kafka" filter="url(#shadow)"/>
+  <text x="115" y="96" text-anchor="middle" class="label">Kafka 4.2.0</text>
+  <text x="115" y="110" text-anchor="middle" class="tiny">KRaft 단일 브로커 — 4G</text>
+
+  <!-- Debezium -->
+  <rect x="210" y="76" width="170" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="295" y="96" text-anchor="middle" class="label">Debezium 3.4.2</text>
+  <text x="295" y="110" text-anchor="middle" class="tiny">MySQL Connector — 2G</text>
+
+  <!-- App 2 -->
+  <rect x="400" y="76" width="140" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="470" y="96" text-anchor="middle" class="label">App 2</text>
+  <text x="470" y="110" text-anchor="middle" class="tiny">Kafka Consumer — 1G+200M</text>
+
+  <!-- MySQL Replica -->
+  <rect x="560" y="76" width="140" height="44" class="box mysql-r" filter="url(#shadow)"/>
+  <text x="630" y="96" text-anchor="middle" class="label">MySQL Replica</text>
+  <text x="630" y="110" text-anchor="middle" class="tiny">~3.5G (InnoDB 2G)</text>
+
+  <!-- Monitoring -->
+  <rect x="720" y="76" width="100" height="44" class="box client" filter="url(#shadow)"/>
+  <text x="770" y="96" text-anchor="middle" class="label">Monitoring</text>
+  <text x="770" y="110" text-anchor="middle" class="tiny">Exporters ~300M</text>
+
+  <!-- Total -->
+  <rect x="40" y="132" width="780" height="26" rx="6" fill="#e0e7ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="430" y="150" text-anchor="middle" class="tiny" style="fill: #4338ca; font-weight: 600;">총 사용: ~11G / 12G</text>
+
+  <!-- ===== CDC Pipeline Flow ===== -->
+  <rect x="20" y="268" width="820" height="220" class="section" filter="url(#shadow)"/>
+  <text x="40" y="292" class="label" style="fill: #6366f1;">CDC 파이프라인 흐름</text>
+
+  <!-- MySQL Primary (서버 1) -->
+  <rect x="40" y="308" width="130" height="50" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="105" y="328" text-anchor="middle" class="label">MySQL Primary</text>
+  <text x="105" y="344" text-anchor="middle" class="tiny">서버 1 — binlog</text>
+
+  <path d="M 170 333 L 198 333" class="arrow-amber"/>
+  <text x="178" y="326" class="tiny" style="fill: #f59e0b;">binlog</text>
+
+  <!-- Debezium -->
+  <rect x="206" y="308" width="130" height="50" class="box app" filter="url(#shadow)"/>
+  <text x="271" y="328" text-anchor="middle" class="label">Debezium</text>
+  <text x="271" y="344" text-anchor="middle" class="tiny">서버 2</text>
+
+  <path d="M 336 333 L 364 333" class="arrow"/>
+
+  <!-- Kafka Topic -->
+  <rect x="372" y="308" width="150" height="50" class="box kafka" filter="url(#shadow)"/>
+  <text x="447" y="324" text-anchor="middle" class="label">Kafka Topic</text>
+  <text x="447" y="342" text-anchor="middle" class="tiny">dbserver1.wikidb.posts</text>
+
+  <path d="M 522 326 L 556 316" class="arrow"/>
+  <path d="M 522 340 L 556 350" class="arrow"/>
+
+  <!-- DebeziumCdcConsumer App 1 -->
+  <rect x="564" y="296" width="130" height="40" class="box app" filter="url(#shadow)"/>
+  <text x="629" y="312" text-anchor="middle" class="label">App 1</text>
+  <text x="629" y="328" text-anchor="middle" class="tiny">CDC Consumer</text>
+
+  <!-- DebeziumCdcConsumer App 2 -->
+  <rect x="564" y="346" width="130" height="40" class="box app" filter="url(#shadow)"/>
+  <text x="629" y="362" text-anchor="middle" class="label">App 2</text>
+  <text x="629" y="378" text-anchor="middle" class="tiny">CDC Consumer</text>
+
+  <!-- Output: Lucene -->
+  <path d="M 694 312 L 730 312" class="arrow"/>
+  <rect x="738" y="296" width="85" height="34" class="box lucene" filter="url(#shadow)"/>
+  <text x="780" y="318" text-anchor="middle" class="label">Lucene</text>
+
+  <!-- Output: 게시글 캐시 -->
+  <path d="M 694 370 L 730 418" class="arrow"/>
+  <rect x="738" y="404" width="85" height="34" class="box cache" filter="url(#shadow)"/>
+  <text x="780" y="420" text-anchor="middle" class="label">게시글 캐시</text>
+  <text x="780" y="434" text-anchor="middle" class="tiny">무효화</text>
+
+  <!-- Output: 검색 캐시 L1 -->
+  <path d="M 694 360 L 730 462" class="arrow"/>
+  <rect x="738" y="448" width="85" height="34" class="box redis" filter="url(#shadow)"/>
+  <text x="780" y="464" text-anchor="middle" class="label">검색 캐시</text>
+  <text x="780" y="478" text-anchor="middle" class="tiny">L1 무효화</text>
+
+  <!-- Server 1 label on MySQL Primary -->
+  <rect x="170" y="168" width="100" height="60" class="box mysql-p" filter="url(#shadow)" style="opacity: 0.4;"/>
+  <text x="220" y="192" text-anchor="middle" class="tiny" style="fill: #92400e;">서버 1</text>
+  <text x="220" y="206" text-anchor="middle" class="tiny" style="fill: #92400e;">MySQL Primary</text>
+</svg>
