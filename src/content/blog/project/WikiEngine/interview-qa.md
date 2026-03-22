@@ -61,7 +61,7 @@ Spring Cache Abstraction은 단일 계층 전제 설계입니다. L1 → L2 → 
 
 **Q: "왜 MySQL Replication을 도입했나요?"**
 
-13단계 App 스케일아웃의 전제조건입니다. 현재 MySQL은 병목이 아니지만(InnoDB 버퍼 풀 히트율 99.5%, Table Lock 0), App을 2대로 늘리면 HikariCP 커넥션이 40개(20×2)로 단일 MySQL에 집중됩니다. 미리 읽기를 Replica로 분리하면 Primary는 쓰기(~50 ops/s)만, Replica는 읽기(~200 ops/s)를 담당하여 스케일아웃 시 DB가 병목이 되지 않습니다. 실측 결과 Replication Lag은 부하 시에도 0~1초로 커뮤니티 서비스에 영향 없었습니다.
+[App 스케일아웃](/blog/project/wikiengine/scaleout)의 전제조건입니다. 현재 MySQL은 병목이 아니지만(InnoDB 버퍼 풀 히트율 99.5%, Table Lock 0), App을 2대로 늘리면 HikariCP 커넥션이 40개(20×2)로 단일 MySQL에 집중됩니다. 미리 읽기를 Replica로 분리하면 Primary는 쓰기(~50 ops/s)만, Replica는 읽기(~200 ops/s)를 담당하여 스케일아웃 시 DB가 병목이 되지 않습니다. 실측 결과 Replication Lag은 부하 시에도 0~1초로 커뮤니티 서비스에 영향 없었습니다.
 
 **Q: "ProxySQL 같은 프록시를 안 쓰고 앱 레벨에서 라우팅한 이유는?"**
 
@@ -195,7 +195,7 @@ App 재시작 시 카운터 유실, 멀티 인스턴스에서 중복 방지 불�
 
 ## 시스템 디자인: 대규모 자동완성 시스템
 
-> 이 섹션은 wikiEngine 프로젝트의 구현이 아닌, **수십억 쿼리 규모의 검색 자동완성** 시스템 설계 면접 답안이다. Phase 9(Trie 기반 자동완성)에서 학습한 내용을 대규모로 확장한 사고 실험.
+> 이 섹션은 wikiEngine 프로젝트의 구현이 아닌, **수십억 쿼리 규모의 검색 자동완성** 시스템 설계 면접 답안이다. [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 학습한 내용을 대규모로 확장한 사고 실험.
 
 **Q: "수십억 사용자 규모의 자동완성 시스템을 설계해보세요"**
 
@@ -251,7 +251,7 @@ MapReduce 결과를 DB에 쓸 때 CDC(Change Data Capture)로 **변경분만** A
 
 **Q: "왜 Kafka를 안 쓰고 Spring Event부터 시작하나요?"**
 
-Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier에서 서버 2대의 여유 메모리로는 부족합니다. 하지만 문제의 핵심은 '메시지 브로커가 없다'가 아니라 'PostService가 6개 Read Model에 직접 결합되어 있다'입니다. Spring ApplicationEvent로 디커플링하면, 나중에 Kafka로 전환할 때 EventHandler만 Consumer로 교체하면 됩니다. 이 단계적 진화는 실무에서도 일반적인 접근입니다 — 처음부터 Kafka를 도입하기보다, 먼저 이벤트 기반 구조를 잡고 인프라를 점진적으로 확장합니다.
+Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier에서 서버 2대의 여유 메모리로는 부족합니다. 하지만 문제의 핵심은 '메시지 브로커가 없다'가 아니라 'PostService가 6개 Read Model에 직접 결합되어 있다'입니다. Spring ApplicationEvent로 디커플링하면, 나중에 Kafka로 전환할 때 EventHandler만 Consumer로 교체하면 됩니다. 이 점진적 진화는 실무에서도 일반적인 접근입니다 — 처음부터 Kafka를 도입하기보다, 먼저 이벤트 기반 구조를 잡고 인프라를 점진적으로 확장합니다.
 
 **Q: "Spring Event는 이벤트가 유실될 수 있지 않나요?"**
 
@@ -259,7 +259,7 @@ Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier�
 
 **Q: "dual-write 문제가 실제로 발생한 적이 있나요?"**
 
-Phase 10 stress 테스트(200 VU)에서 Lucene indexing이 IOException으로 실패한 케이스가 있었습니다. CPU 포화 상태에서 MMapDirectory I/O 타임아웃이 발생하여, DB에는 게시글이 저장되었지만 Lucene 인덱스에는 없는 불일치가 발생했습니다. 현재는 `try-catch + log.error()`로만 처리하고 있어서, 이 불일치를 감지하거나 자동 복구하는 방법이 없습니다. CDC를 도입하면 이벤트 리플레이로 불일치를 복구할 수 있습니다.
+[부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning)(200 VU)에서 Lucene indexing이 IOException으로 실패한 케이스가 있었습니다. CPU 포화 상태에서 MMapDirectory I/O 타임아웃이 발생하여, DB에는 게시글이 저장되었지만 Lucene 인덱스에는 없는 불일치가 발생했습니다. 현재는 `try-catch + log.error()`로만 처리하고 있어서, 이 불일치를 감지하거나 자동 복구하는 방법이 없습니다. CDC를 도입하면 이벤트 리플레이로 불일치를 복구할 수 있습니다.
 
 **Q: "Transactional Outbox의 폴링이 DB에 부하를 주지 않나요?"**
 
@@ -279,7 +279,7 @@ Lucene의 `updateDocument()`는 Term 기준으로 기존 문서를 삭제 후 �
 
 **Q: "볼륨도 작은데 왜 Kafka를 쓰나요? 오버엔지니어링 아닌가요?"**
 
-두 가지로 답합니다. 첫째, **ROI 비교**입니다. Kafka 주간 운영 비용은 약 30분~1시간(Grafana 알림 자동 + 주 1회 5분 수동 점검)인데, dual-write 불일치가 발생하면 디버깅 + 전체 재인덱싱(28분) + 사용자 불만 대응에 수 시간이 소모됩니다. Phase 10에서 실제로 Lucene indexing IOException이 발생한 바 있고, 이를 감지하는 메커니즘이 없는 상태였습니다. 둘째, **fallback 구조** 덕분에 Kafka가 죽어도 서비스는 `@ApplicationModuleListener`로 자동 전환됩니다. Kafka는 "평시의 정확성 보장"이고, fallback은 "장애 시 서비스 연속성 보장"으로 역할이 분리됩니다.
+두 가지로 답합니다. 첫째, **ROI 비교**입니다. Kafka 주간 운영 비용은 약 30분~1시간(Grafana 알림 자동 + 주 1회 5분 수동 점검)인데, dual-write 불일치가 발생하면 디버깅 + 전체 재인덱싱(28분) + 사용자 불만 대응에 수 시간이 소모됩니다. [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning)에서 실제로 Lucene indexing IOException이 발생한 바 있고, 이를 감지하는 메커니즘이 없는 상태였습니다. 둘째, **fallback 구조** 덕분에 Kafka가 죽어도 서비스는 `@ApplicationModuleListener`로 자동 전환됩니다. Kafka는 "평시의 정확성 보장"이고, fallback은 "장애 시 서비스 연속성 보장"으로 역할이 분리됩니다.
 
 **Q: "KRaft 단일 브로커가 프로덕션에 적합한가요?"**
 
