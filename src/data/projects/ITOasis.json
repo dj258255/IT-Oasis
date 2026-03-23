@@ -3,7 +3,7 @@
   "titleEn": "IT Oasis",
   "description": "Astro 5.x 기반 기술 블로그 — CSS View Transitions, 다국어(KO/EN) 토글, 카테고리/태그 시스템, 다크모드",
   "descriptionEn": "Technical blog built with Astro 5.x — CSS View Transitions, bilingual (KO/EN) toggle, category/tag system, dark mode",
-  "image": "",
+  "image": "/uploads/banners/banner-main.png",
   "tags": ["Astro", "TypeScript", "TailwindCSS", "View Transitions", "i18n"],
   "category": "project",
   "date": "2026-01-15",
