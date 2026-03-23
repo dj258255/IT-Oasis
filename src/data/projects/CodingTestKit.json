@@ -1,5 +1,5 @@
 {
-  "title": "CodingTestKit",
+  "title": "코딩테스트도구",
   "titleEn": "CodingTestKit",
   "description": "IDE에서 코딩테스트 문제를 가져오고, 테스트하고, 제출하는 올인원 플러그인",
   "descriptionEn": "An all-in-one IDE plugin to fetch, test, and submit coding test problems without leaving your editor",
@@ -32,5 +32,5 @@
     }
   ],
   "story": "/blog/project/codingtestkit/codingtestkit-introduction",
-  "order": 0
+  "order": 2
 }
