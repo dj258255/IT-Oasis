@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" width="860" height="420" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .node-a { fill: #3b82f6; }
+    .node-b { fill: #10b981; }
+    .node-c { fill: #f59e0b; }
+    .key-dot { fill: #ef4444; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .ring { fill: none; stroke: #cbd5e1; stroke-width: 3; }
+    .arrow-curve { fill: none; stroke: #ef4444; stroke-width: 1.5; stroke-dasharray: 4 2; marker-end: url(#ah-red); }
+  </style>
+  <defs>
+    <marker id="ah-red" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><polygon points="0 0, 6 2, 0 4" fill="#ef4444"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <text x="430" y="28" text-anchor="middle" class="heading">Consistent Hashing — 해시 링과 가상 노드</text>
+
+  <!-- Left: Hash Ring -->
+  <rect x="20" y="42" width="400" height="365" class="section" filter="url(#shadow)"/>
+  <text x="220" y="68" text-anchor="middle" class="label">해시 링 (0 ~ 2³²)</text>
+
+  <!-- Ring circle -->
+  <circle cx="220" cy="230" r="120" class="ring"/>
+
+  <!-- Node A (top) - 0° -->
+  <circle cx="220" cy="110" r="10" class="node-a"/>
+  <text x="220" y="98" text-anchor="middle" class="sub" style="fill:#3b82f6; font-weight:700">Node A</text>
+
+  <!-- Node B (bottom-right) - 120° -->
+  <circle cx="324" cy="290" r="10" class="node-b"/>
+  <text x="358" y="285" text-anchor="start" class="sub" style="fill:#10b981; font-weight:700">Node B</text>
+
+  <!-- Node C (bottom-left) - 240° -->
+  <circle cx="116" cy="290" r="10" class="node-c"/>
+  <text x="80" y="285" text-anchor="end" class="sub" style="fill:#f59e0b; font-weight:700">Node C</text>
+
+  <!-- Virtual nodes (small dots) -->
+  <circle cx="270" cy="117" r="4" class="node-a" opacity="0.5"/>
+  <circle cx="185" cy="118" r="4" class="node-a" opacity="0.5"/>
+  <circle cx="310" cy="160" r="4" class="node-b" opacity="0.5"/>
+  <circle cx="338" cy="220" r="4" class="node-b" opacity="0.5"/>
+  <circle cx="130" cy="170" r="4" class="node-c" opacity="0.5"/>
+  <circle cx="105" cy="230" r="4" class="node-c" opacity="0.5"/>
+  <circle cx="290" cy="330" r="4" class="node-a" opacity="0.5"/>
+  <circle cx="150" cy="335" r="4" class="node-b" opacity="0.5"/>
+  <circle cx="200" cy="350" r="4" class="node-c" opacity="0.5"/>
+
+  <!-- Key examples -->
+  <circle cx="250" cy="135" r="5" class="key-dot"/>
+  <text x="268" y="140" class="tiny" style="fill:#ef4444">prefix:삼성</text>
+
+  <circle cx="340" cy="250" r="5" class="key-dot"/>
+  <text x="360" y="254" class="tiny" style="fill:#ef4444">post:123</text>
+
+  <circle cx="135" cy="250" r="5" class="key-dot"/>
+
+  <text x="220" y="390" text-anchor="middle" class="tiny">각 물리 노드 × 150 가상 노드 = 450 엔트리</text>
+
+  <!-- Right: Comparison table -->
+  <rect x="440" y="42" width="400" height="365" class="section" filter="url(#shadow)"/>
+  <text x="640" y="68" text-anchor="middle" class="label">hash(key) % N vs Consistent Hashing</text>
+
+  <!-- Modulo hash problem -->
+  <rect x="460" y="82" width="360" height="75" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1" filter="url(#shadow)"/>
+  <text x="640" y="102" text-anchor="middle" class="sub" style="fill:#ef4444; font-weight:700">hash(key) % N — 단순 모듈로</text>
+  <text x="470" y="120" class="tiny">3→4 노드 전환 시: ~75% 키 재배치</text>
+  <text x="470" y="134" class="tiny">→ 캐시 미스 폭증 (cache stampede)</text>
+
+  <!-- Consistent hashing benefit -->
+  <rect x="460" y="170" width="360" height="75" rx="6" fill="#d1fae5" stroke="#6ee7b7" stroke-width="1" filter="url(#shadow)"/>
+  <text x="640" y="190" text-anchor="middle" class="sub" style="fill:#059669; font-weight:700">Consistent Hashing — 최소 재배치</text>
+  <text x="470" y="208" class="tiny">3→4 노드 전환 시: ~25% 키 이동 (1/N)</text>
+  <text x="470" y="222" class="tiny">→ 인접 키만 이동, 나머지 유지</text>
+
+  <!-- Virtual node effect -->
+  <rect x="460" y="260" width="360" height="130" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <text x="640" y="280" text-anchor="middle" class="sub" style="font-weight:700">가상 노드 수에 따른 분산 편차</text>
+
+  <text x="480" y="300" class="tiny">가상 노드 1개    → ~50% 편차</text>
+  <text x="480" y="316" class="tiny">가상 노드 50개   → ~10% 편차</text>
+  <text x="480" y="332" class="tiny" style="fill:#059669; font-weight:700">가상 노드 150개  →  ~5% 편차 (선택)</text>
+  <text x="480" y="348" class="tiny">가상 노드 500개  →  ~2% 편차</text>
+
+  <text x="640" y="378" text-anchor="middle" class="tiny">ConcurrentSkipListMap · O(log N) 라우팅 · MurmurHash3</text>
+</svg>

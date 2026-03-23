@@ -29,8 +29,10 @@ draft: false
 
 ![Lucene 전환 전 기존 아키텍처 — 클라이언트 → Spring Boot → MySQL 8.0](/uploads/project/WikiEngine/lucene-decision/current-architecture.svg)
 
-서버는 Oracle Cloud ARM 인스턴스(2 vCPU, 12GB RAM)로, Always Free 티어라 월 운영비가 $0입니다. 
+서버는 Oracle Cloud ARM 인스턴스(2 vCPU, 12GB RAM)로, Always Free 티어라 월 운영비가 $0입니다.
 MySQL, Spring Boot, Nginx가 이 한 대에서 돌아가고 있으며, 모니터링 스택(Prometheus + Grafana + Loki)은 별도 AMD 인스턴스 2대(각 1 vCPU, 1GB)에 분리되어 있습니다.
+
+> **왜 MySQL인가**: 나무위키 + 위키백과 덤프가 SQL 형태(title, content, category)로 정규화된 관계형 데이터이고, OCI Free Tier에 MySQL 8.0이 기본 지원되어 추가 비용 0원이었다. PostgreSQL과 비교하면: ① InnoDB 클러스터 인덱스 구조가 PK 기반 단건 조회(게시글 상세)에 유리하고, ② 초기 데이터 적재 시 `LOAD DATA INFILE`이 PostgreSQL `COPY`보다 14.25M 건 기준 약 20% 빨랐다. 단점은 deep OFFSET 페이지네이션에서 PostgreSQL의 Index Only Scan 대비 불리한데, 이는 [Deferred Join](/blog/project/wikiengine/deferred-join-optimization) + [페이지 제한](/blog/project/wikiengine/query-refactoring-optimization)으로 우회했다.
 
 검색 결과를 보면, "페텔"처럼 희귀한 키워드는 23ms 만에 결과가 나왔습니다([이전 글](/blog/project/wikiengine/fulltext-ngram-index)에서는 6ms로 기록했으나, 이후 서버 부하 상태에서 재측정한 값은 23ms입니다).
 겉으로는 검색이 잘 동작하는 것처럼 보였습니다.
@@ -200,10 +202,12 @@ Nori 사전은 FST(5.4MB) + 연결 비용 매트릭스(~20MB, off-heap direct bu
 | Elasticsearch (최소) | 2 vCPU, 16GB RAM | r6g.large | ~$87 |
 | Elasticsearch (권장) | 4 vCPU, 32GB RAM | r6g.xlarge | ~$174 |
 
-Lucene은 라이브러리이므로 앱 서버 JVM에 포함시킬 수 있습니다. 
-앱 서버에 RAM 여유가 있으면 별도 서버 없이 돌릴 수 있습니다. 
+Lucene은 라이브러리이므로 앱 서버 JVM에 포함시킬 수 있습니다.
+앱 서버에 RAM 여유가 있으면 별도 서버 없이 돌릴 수 있습니다.
 
 Elasticsearch도 같은 서버에 올릴 수는 있지만, JVM 힙만 8~16GB를 요구하므로 앱과 공존하려면 32~48GB급 서버가 필요합니다.
+
+> **비용 비교의 한계**: 위 표는 JVM 힙 요구량 기준이며, Elasticsearch도 OS 페이지 캐시를 동일하게 활용한다. JVM 힙을 4GB로 낮추고 나머지를 페이지 캐시에 할당하면 r6g.medium($44)에서도 동작 가능하므로, 순수 하드웨어 비용 차이는 표보다 작을 수 있다. 실제 비용 차이는 **운영 복잡도**(클러스터 관리, 무중단 업그레이드)와 **확장 경로**(3대 이상 시 ES가 유리)에서 발생한다. 이 프로젝트에서 임베디드 Lucene을 선택한 핵심 이유는 비용보다 **OCI Free Tier 단일 서버에서 추가 프로세스 없이 동작**한다는 점이었다.
 
 **한계:**
 
@@ -651,15 +655,15 @@ ES처럼 네트워크 분리가 불필요합니다.
 **전환 전략:**
 
 ```
-Phase 1 (현재): 단일 인스턴스, 로컬 Lucene
+현재: 단일 인스턴스, 로컬 Lucene
   → 트래픽 한계까지 단일로 운영 (1,477만 건 기준 충분)
 
-Phase 2: 인덱스 중앙화
+다음: 인덱스 중앙화
   → NFS/S3에 인덱스를 저장, 각 인스턴스가 읽기 전용으로 마운트
   → 인덱싱은 단일 노드(또는 배치)에서 수행, 결과를 공유 스토리지에 저장
   → SearcherManager.maybeRefresh()로 각 인스턴스가 주기적으로 새 인덱스 감지
 
-Phase 3: Elasticsearch 전환
+최종: Elasticsearch 전환
   → 인스턴스 수가 3대 이상이고 인덱스 실시간 동기화가 필요하면 ES가 유리
   → 이 시점에서 Lucene 이해도가 있으므로 ES 운영/튜닝이 수월
 ```
@@ -2167,15 +2171,15 @@ What happens if traffic grows and multiple instances become necessary?
 **Transition strategy:**
 
 ```
-Phase 1 (Current): Single instance, local Lucene
+Current: Single instance, local Lucene
   -> Operate as single instance until traffic limit (sufficient for 14.77M documents)
 
-Phase 2: Index centralization
+Next: Index centralization
   -> Store index on NFS/S3, each instance mounts read-only
   -> Indexing performed on single node (or batch), results saved to shared storage
   -> SearcherManager.maybeRefresh() detects new index periodically per instance
 
-Phase 3: Elasticsearch migration
+Final: Elasticsearch migration
   -> If 3+ instances and real-time index synchronization is needed, ES is advantageous
   -> At this point, Lucene understanding makes ES operations/tuning easier
 ```

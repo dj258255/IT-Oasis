@@ -54,7 +54,7 @@ JVM/Tomcat 튜닝(스레드 200→100)은 **79% 악화**로 역효과. CPU-bound
 
 "CPU가 병목이니 서버를 늘리자"가 아니라 **인프라 준비 → 앱 확장** 순서(Bottom-Up)로 진행합니다.
 
-![분산 전환 의존 관계 — Redis(11) → Replication(12) → 스케일아웃(13)](/uploads/project/WikiEngine/redis-l2-cache/distributed-dependency.svg)
+![분산 전환 의존 관계 — Redis → Replication → 스케일아웃](/uploads/project/WikiEngine/redis-l2-cache/distributed-dependency.svg)
 
 앱 스케일아웃을 먼저 하면 생기는 문제:
 
@@ -158,9 +158,11 @@ Redis를 추가하기 전에, **기존 인프라 튜닝만으로 해결할 수 �
 
 ```
 Redis 도입의 자원 비용:
-  Redis 컨테이너:       +300MB (maxmemory 256MB + 오버헤드)
+  Redis 컨테이너:       +300MB (maxmemory 256MB + freelist/클라이언트 버퍼 오버헤드 ~20%)
   OS 페이지 캐시 감소:   -200MB (~5G → ~4.8G)
   Lucene 인덱스 20GB 중 페이지 캐시 커버율: 25% → 24% (-1%)
+  영속성 비용:          AOF 미사용 (캐시 데이터이므로 유실 허용, 최대 30초 조회수 유실)
+                       RDB 스냅샷도 미사용 (재시작 시 origin에서 재로딩)
 
 Redis 도입의 이득:
   L2 캐시 히트 시 Lucene 검색 회피 → CPU 부하 감소
@@ -171,6 +173,8 @@ Redis 도입의 이득:
   페이지 캐시 1% 감소 < L2 캐시 + Trie 힙 절약 + 스케일아웃 준비
   → Redis 300MB 투자 가치 있음
 ```
+
+> **Redis 장애 시 데이터 유실 범위**: AOF/RDB를 모두 미사용하므로 Redis 재시작 시 모든 캐시 데이터가 유실된다. L2 캐시와 자동완성 KV는 origin(MySQL/Lucene)에서 재로딩되고, 조회수는 최대 30초(flush 주기) 분량만 유실된다. 토큰 블랙리스트는 JWT 만료시간(24h) 내 데이터이므로, Redis 재시작 시 로그아웃된 토큰이 만료 전까지 다시 유효해질 수 있다 — 이 보안 트레이드오프는 [Redis 샤딩](/blog/project/wikiengine/redis-sharding)에서 전용 인스턴스 분리로 blast radius를 축소했다.
 
 > **AWS 환경에서의 비용 비교 참고**: ElastiCache(t3.micro 기준 월 ~3만원)를 추가하고, DB 부하 감소분만큼 RDS를 다운스케일(예: db.r6g.large → medium, 월 ~13만원 절감)하면 총 인프라 비용이 줄어드는지가 도입 근거가 됩니다. 관리형 서비스 여부와 관계없이 **자원 배분 트레이드오프 분석**은 동일한 사고 과정입니다.
 
@@ -791,7 +795,7 @@ Redis L2 cache benefits:
 
 Up to [Stress Test](/blog/project/wikiengine/stress-test-tuning), everything ran on a single server. Starting from this post, we create an additional Oracle Cloud instance for a **dual server setup**.
 
-![Server topology — Phases 11-13](/uploads/project/WikiEngine/redis-l2-cache/server-topology.svg)
+![Server topology — Redis L2 캐시 → Replication → 스케일아웃](/uploads/project/WikiEngine/redis-l2-cache/server-topology.svg)
 
 ### Server Specs
 

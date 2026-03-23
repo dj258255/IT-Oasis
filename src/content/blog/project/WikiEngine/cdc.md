@@ -623,7 +623,7 @@ Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는�
 
 ![인프라 구성 + CDC 파이프라인](/uploads/project/WikiEngine/cdc/cdc-infrastructure.svg)
 
-> **KRaft 단일 브로커의 한계와 방어 전략**: Confluent 공식 문서에서 KRaft combined mode(브로커 + 컨트롤러 단일 프로세스)는 개발/테스트 전용이라고 명시하며, 프로덕션에서는 최소 3개 컨트롤러를 권장한다. 현재 단일 브로커 구성에서 Kafka가 죽으면 CDC 파이프라인이 멈추지만, **서비스 자체는 중단되지 않는다.** `@ConditionalOnProperty` fallback으로 `@ApplicationModuleListener`가 자동 전환되어 Phase 14-1b 수준으로 동작한다. 이 구조에서 Kafka의 역할은 **"평시의 정확성 극대화"**이고, fallback은 **"장애 시 서비스 연속성 보장"**이다. Kafka가 복구되면 Debezium이 마지막 binlog position부터 이어서 캡처하므로 **장애 동안의 변경도 소급 반영**된다. 프로덕션 확장 시에는 KRaft 3노드 컨트롤러 + 전용 브로커로 HA를 확보해야 한다.
+> **KRaft 단일 브로커의 한계와 방어 전략**: Confluent 공식 문서에서 KRaft combined mode(브로커 + 컨트롤러 단일 프로세스)는 개발/테스트 전용이라고 명시하며, 프로덕션에서는 최소 3개 컨트롤러를 권장한다. 현재 단일 브로커 구성에서 Kafka가 죽으면 CDC 파이프라인이 멈추지만, **서비스 자체는 중단되지 않는다.** `@ConditionalOnProperty` fallback으로 `@ApplicationModuleListener`가 자동 전환되어 비동기 이벤트 처리 수준으로 동작한다. 이 구조에서 Kafka의 역할은 **"평시의 정확성 극대화"**이고, fallback은 **"장애 시 서비스 연속성 보장"**이다. Kafka가 복구되면 Debezium이 마지막 binlog position부터 이어서 캡처하므로 **장애 동안의 변경도 소급 반영**된다. 프로덕션 확장 시에는 KRaft 3노드 컨트롤러 + 전용 브로커로 HA를 확보해야 한다.
 
 ### Debezium Connector 상태
 

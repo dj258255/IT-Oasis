@@ -701,11 +701,11 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 | 메모리 사용률 | 56.1% / 28.9% / 44.8% |
 | 컨테이너 CPU (wiki-mysql-prod) | 피크 ~170% |
 
-### [이전 단계](/blog/project/wikiengine/query-refactoring-optimization) 대비 성능 변화 — 왜 70배 느려졌는가
+### [이전 글](/blog/project/wikiengine/query-refactoring-optimization) 대비 성능 변화 — 왜 70배 느려졌는가
 
 #### 무엇이 바뀌었나
 
-[이전 단계](/blog/project/wikiengine/query-refactoring-optimization)까지는 **BM25 스코어링만** 사용했습니다.
+[이전 글](/blog/project/wikiengine/query-refactoring-optimization)까지는 **BM25 스코어링만** 사용했습니다.
 Lucene은 BM25 단독 스코어링에서 Block-Max WAND 최적화를 적용할 수 있어서,
 posting list 전체를 순회하지 않고 top-k 결과를 빠르게 추출합니다.
 
@@ -722,7 +722,7 @@ posting list 전체를 순회하지 않고 top-k 결과를 빠르게 추출합�
 "대한민국" 같은 고빈도 토큰은 **수만~수십만 건**이 매칭됩니다.
 
 ```
-이전 단계 (BM25만):
+이전 글 (BM25만):
   "대한민국" 검색 -> posting list 순회 + BM25 score만 계산
   -> WAND 최적화로 일부만 평가 -> ~25ms
 
@@ -736,7 +736,7 @@ posting list 전체를 순회하지 않고 top-k 결과를 빠르게 추출합�
 
 smoke(5 VU)에서 이를 확인할 수 있습니다:
 
-| 시나리오 | 이전 단계 smoke | 품질 고도화 후 smoke | 변화 |
+| 시나리오 | 이전 글 smoke | 품질 고도화 후 smoke | 변화 |
 |----------|-------------|-------------|------|
 | 검색 (전체) | 66ms | 184ms | 2.8배 |
 | 희귀 토큰 | -- | 21ms | 빠름 (posting list 짧음) |
@@ -749,7 +749,7 @@ smoke(5 VU)에서 이를 확인할 수 있습니다:
 
 #### 왜 검색 외에 전부 느려졌나 (100 VU)
 
-| 시나리오 | 이전 단계 load (100 VU) | 품질 고도화 후 load (100 VU) | 변화 |
+| 시나리오 | 이전 글 load (100 VU) | 품질 고도화 후 load (100 VU) | 변화 |
 |----------|---------------------|---------------------|------|
 | 검색 평균 | 20.51ms | 1,443ms | **70배** |
 | 자동완성 평균 | 5.91ms | 368ms | **62배** |
@@ -771,7 +771,7 @@ smoke(5 VU)에서 이를 확인할 수 있습니다:
 6. JVM 스레드 20 -> 100+ 폭증 -> 컨텍스트 스위칭 오버헤드 추가
 ```
 
-이것은 [이전 단계](/blog/project/wikiengine/query-refactoring-optimization)에서 deep OFFSET이 CPU를 포화시켜 전체 API가 무너졌던 것과 **동일한 패턴**입니다.
+이것은 [이전 글](/blog/project/wikiengine/query-refactoring-optimization)에서 deep OFFSET이 CPU를 포화시켜 전체 API가 무너졌던 것과 **동일한 패턴**입니다.
 단일 병목(이번엔 검색 스코어링)이 공유 자원(CPU)을 독점하면, 무관한 API까지 연쇄 지연됩니다.
 
 #### 왜 캐싱이 해답인가
@@ -1750,7 +1750,7 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 | Memory Usage | 56.1% / 28.9% / 44.8% |
 | Container CPU (wiki-mysql-prod) | Peak ~170% |
 
-### [Previous Phase](/blog/project/wikiengine/query-refactoring-optimization) Performance Change — Why It Got 70x Slower
+### [Previous Post](/blog/project/wikiengine/query-refactoring-optimization) Performance Change — Why It Got 70x Slower
 
 #### What Changed
 
@@ -1785,7 +1785,7 @@ After search quality enhancement (BM25 + FeatureField + RecencyDecay):
 
 This is confirmed in smoke testing (5 VU):
 
-| Scenario | Previous Phase Smoke | After Quality Enhancement Smoke | Change |
+| Scenario | Previous Post Smoke | After Quality Enhancement Smoke | Change |
 |----------|---------------------|-------------------------------|--------|
 | Search (overall) | 66ms | 184ms | 2.8x |
 | Rare tokens | -- | 21ms | Fast (short posting list) |
@@ -1798,7 +1798,7 @@ At 5 VU, **only search got 2.8x slower; all other APIs remained the same.**
 
 #### Why Everything Else Got Slower (100 VU)
 
-| Scenario | Previous Phase Load (100 VU) | After Quality Enhancement Load (100 VU) | Change |
+| Scenario | Previous Post Load (100 VU) | After Quality Enhancement Load (100 VU) | Change |
 |----------|------------------------------|---------------------------------------|--------|
 | Search avg | 20.51ms | 1,443ms | **70x** |
 | Autocomplete avg | 5.91ms | 368ms | **62x** |

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" width="860" height="420" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .warn { fill: #fef2f2; stroke: #ef4444; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+    .arrow-red { fill: none; stroke: #ef4444; stroke-width: 2; stroke-dasharray: 6 3; marker-end: url(#ah-red); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <marker id="ah-red" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#ef4444"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <text x="430" y="28" text-anchor="middle" class="heading">Before — 단일 Redis 인스턴스 (4가지 워크로드 혼재)</text>
+
+  <rect x="20" y="42" width="820" height="365" class="section" filter="url(#shadow)"/>
+
+  <!-- App -->
+  <rect x="50" y="60" width="760" height="150" class="box app" filter="url(#shadow)" style="fill:#eff6ff"/>
+  <text x="430" y="82" text-anchor="middle" class="label">Spring Boot App (N대)</text>
+
+  <!-- Services inside App -->
+  <rect x="75" y="96" width="160" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="155" y="115" text-anchor="middle" class="sub">TieredCacheService</text>
+  <text x="155" y="130" text-anchor="middle" class="tiny">L2 캐시</text>
+
+  <rect x="255" y="96" width="160" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="335" y="115" text-anchor="middle" class="sub">RedisAutocompleteService</text>
+  <text x="335" y="130" text-anchor="middle" class="tiny">자동완성 flat KV</text>
+
+  <rect x="435" y="96" width="160" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="515" y="115" text-anchor="middle" class="sub">ViewCountService</text>
+  <text x="515" y="130" text-anchor="middle" class="tiny">조회수 INCR + flush</text>
+
+  <rect x="615" y="96" width="170" height="44" class="box app" filter="url(#shadow)"/>
+  <text x="700" y="115" text-anchor="middle" class="sub">RedisTokenBlacklist</text>
+  <text x="700" y="130" text-anchor="middle" class="tiny">JWT 블랙리스트</text>
+
+  <!-- Single StringRedisTemplate -->
+  <text x="430" y="172" text-anchor="middle" class="tiny" style="fill:#3b82f6; font-weight:700">전부 동일한 StringRedisTemplate (단일 Bean)</text>
+
+  <!-- Arrows to Redis -->
+  <path d="M 155 190 L 430 280" class="arrow"/>
+  <path d="M 335 190 L 430 280" class="arrow"/>
+  <path d="M 515 190 L 430 280" class="arrow-red"/>
+  <path d="M 700 190 L 430 280" class="arrow-red"/>
+
+  <!-- Single Redis -->
+  <rect x="330" y="270" width="200" height="60" class="box redis" filter="url(#shadow)"/>
+  <text x="430" y="295" text-anchor="middle" class="label">Redis (단일)</text>
+  <text x="430" y="312" text-anchor="middle" class="tiny">127.0.0.1:6379 · maxmemory 128mb</text>
+
+  <!-- Problem boxes -->
+  <rect x="50" y="350" width="230" height="44" class="box warn" filter="url(#shadow)"/>
+  <text x="165" y="370" text-anchor="middle" class="sub" style="fill:#ef4444">KEYS 블로킹 34.6ms</text>
+  <text x="165" y="384" text-anchor="middle" class="tiny">30초마다 전체 Redis 멈춤</text>
+
+  <rect x="310" y="350" width="230" height="44" class="box warn" filter="url(#shadow)"/>
+  <text x="425" y="370" text-anchor="middle" class="sub" style="fill:#ef4444">배치↔실시간 간섭</text>
+  <text x="425" y="384" text-anchor="middle" class="tiny">GET 최악 15.5ms (평균의 1,868배)</text>
+
+  <rect x="570" y="350" width="230" height="44" class="box warn" filter="url(#shadow)"/>
+  <text x="685" y="370" text-anchor="middle" class="sub" style="fill:#ef4444">volatile-lru 보안 위험</text>
+  <text x="685" y="384" text-anchor="middle" class="tiny">블랙리스트 키 eviction 가능</text>
+</svg>

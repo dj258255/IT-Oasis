@@ -237,7 +237,7 @@ k6 후 검색 로그: 49개 고유 검색어, 인공지능 78회 1위.
 |------|---------|
 | 점수 공식 (70% 빈도 + 30% 시간 감쇠) | 검색 로그 41건이 하루 만에 쌓여서 시간 분포가 없음. raw count와 결과 동일 |
 | Pre-computed Top-K (depth <= 3) | 41건에서 DFS가 0.1ms. 사전 계산의 이점 없음 — 오버엔지니어링 |
-| AnalyzingSuggester 비교 | 12단계에서 Redis flat KV로 전환 시 Trie를 퇴역. 퇴역할 자료구조를 비교할 실익 없음 |
+| AnalyzingSuggester 비교 | [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)에서 Redis flat KV로 전환 시 Trie를 퇴역. 퇴역할 자료구조를 비교할 실익 없음 |
 
 ### 대규모에서의 Trie 한계
 
@@ -247,7 +247,7 @@ Trie는 이 단계의 학습 자료구조이며, **대규모 자동완성의 최
 - **검색 성능**: 1~2글자 prefix의 DFS 분기가 폭발적
 - **네트워크 기반 불가**: 분산 환경에서 글자마다 네트워크 홉 발생
 
-최종 아키텍처는 `prefix → [top-10 suggestions]` flat 매핑을 Redis에서 O(1) GET으로 서빙하는 것입니다 (12단계).
+최종 아키텍처는 `prefix → [top-10 suggestions]` flat 매핑을 Redis에서 O(1) GET으로 서빙하는 것입니다 ([Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)에서 구현).
 
 ---
 

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" width="860" height="400" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .selected { fill: #d1fae5; stroke: #10b981; }
+    .option { fill: #f1f5f9; stroke: #cbd5e1; }
+    .best { fill: #dbeafe; stroke: #3b82f6; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+  </style>
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <text x="430" y="28" text-anchor="middle" class="heading">대안 비교 — Redis 분산 전략</text>
+  <rect x="20" y="42" width="820" height="345" class="section" filter="url(#shadow)"/>
+
+  <!-- Option 1: Redis Cluster -->
+  <rect x="40" y="58" width="370" height="130" class="box option" filter="url(#shadow)"/>
+  <text x="225" y="78" text-anchor="middle" class="label">방안 1: Redis Cluster (공식 분산)</text>
+  <text x="55" y="96" class="sub">자동 샤딩 (16384 슬롯)</text>
+  <text x="55" y="112" class="sub">자동 failover + 데이터 리밸런싱</text>
+  <text x="55" y="128" class="tiny" style="fill:#ef4444">최소 6노드 (3P + 3R) · ~$144/월</text>
+  <text x="55" y="144" class="tiny" style="fill:#ef4444">MOVED/ASK 리다이렉션 복잡도</text>
+  <text x="55" y="162" class="tiny" style="fill:#3b82f6; font-weight:600">→ 프로덕션 표준, 현 규모에서 과잉</text>
+
+  <!-- Option 2: Redis Sentinel -->
+  <rect x="450" y="58" width="370" height="130" class="box best" filter="url(#shadow)"/>
+  <text x="635" y="78" text-anchor="middle" class="label" style="fill:#1d4ed8">방안 2: Redis Sentinel (현 규모 최적)</text>
+  <text x="465" y="96" class="sub">자동 failover (Primary → Replica 승격)</text>
+  <text x="465" y="112" class="sub">데이터 샤딩 없음 (단일 Primary)</text>
+  <text x="465" y="128" class="tiny" style="fill:#059669">~$36/월 · 현 60MB 데이터에 가장 합리적</text>
+  <text x="465" y="144" class="tiny">Sentinel 프로세스 3개 추가 운영</text>
+  <text x="465" y="162" class="tiny" style="fill:#3b82f6; font-weight:600">→ 소규모 팀의 프로덕션 최선 선택</text>
+
+  <!-- Option 3: App-level Consistent Hashing (선택) -->
+  <rect x="40" y="200" width="370" height="130" class="box selected" filter="url(#shadow)"/>
+  <text x="225" y="220" text-anchor="middle" class="label" style="fill:#047857">방안 3: 앱 레벨 Consistent Hashing (선택)</text>
+  <text x="55" y="238" class="sub">Redis Cluster 운영 복잡도 없음</text>
+  <text x="55" y="254" class="sub">완전한 라우팅 제어 · 알고리즘 학습</text>
+  <text x="55" y="270" class="tiny" style="fill:#ef4444">자동 리밸런싱/failover 없음</text>
+  <text x="55" y="286" class="tiny" style="fill:#ef4444">현업에서 거의 사용되지 않음</text>
+  <text x="55" y="304" class="tiny" style="fill:#059669; font-weight:600">→ 학습 목적에 최적 (프로덕션 권장 아님)</text>
+
+  <!-- Option 4: 기능 분할 -->
+  <rect x="450" y="200" width="370" height="130" class="box option" filter="url(#shadow)"/>
+  <text x="635" y="220" text-anchor="middle" class="label">방안 4: 용도별 전용 인스턴스</text>
+  <text x="465" y="238" class="sub">용도별 격리 (maxmemory 정책 최적화)</text>
+  <text x="465" y="254" class="sub">운영 가장 단순</text>
+  <text x="465" y="270" class="tiny" style="fill:#ef4444">Consistent Hashing 학습 불가</text>
+  <text x="465" y="286" class="tiny" style="fill:#ef4444">확장성 제한</text>
+  <text x="465" y="304" class="tiny" style="fill:#3b82f6; font-weight:600">→ 하이브리드: 방안 3 + 4 조합 적용</text>
+
+  <!-- Bottom note -->
+  <text x="430" y="362" text-anchor="middle" class="sub" style="font-weight:700">최종 선택: 방안 3 + 방안 4 하이브리드</text>
+  <text x="430" y="378" text-anchor="middle" class="tiny">Consistent Hashing (자동완성/캐시/조회수) + 전용 인스턴스 (블랙리스트 격리)</text>
+</svg>

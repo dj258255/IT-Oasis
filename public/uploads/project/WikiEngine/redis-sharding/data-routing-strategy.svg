@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" width="860" height="340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .hash { fill: #fef3c7; stroke: #f59e0b; }
+    .fixed { fill: #dbeafe; stroke: #3b82f6; }
+    .isolated { fill: #d1fae5; stroke: #10b981; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 1.5; marker-end: url(#ah); }
+    .arrow-orange { fill: none; stroke: #f59e0b; stroke-width: 1.5; marker-end: url(#ah-or); }
+    .arrow-blue { fill: none; stroke: #3b82f6; stroke-width: 1.5; marker-end: url(#ah-bl); }
+    .arrow-green { fill: none; stroke: #10b981; stroke-width: 1.5; marker-end: url(#ah-gr); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><polygon points="0 0, 6 2, 0 4" fill="#94a3b8"/></marker>
+    <marker id="ah-or" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><polygon points="0 0, 6 2, 0 4" fill="#f59e0b"/></marker>
+    <marker id="ah-bl" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><polygon points="0 0, 6 2, 0 4" fill="#3b82f6"/></marker>
+    <marker id="ah-gr" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto"><polygon points="0 0, 6 2, 0 4" fill="#10b981"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <text x="430" y="28" text-anchor="middle" class="heading">데이터 라우팅 전략 — 키 유형별 목적지</text>
+
+  <rect x="20" y="42" width="820" height="285" class="section" filter="url(#shadow)"/>
+
+  <!-- Key types (left) -->
+  <rect x="40" y="58" width="200" height="32" class="box hash" filter="url(#shadow)"/>
+  <text x="140" y="78" text-anchor="middle" class="sub">자동완성 KV (prefix:*)</text>
+
+  <rect x="40" y="98" width="200" height="32" class="box hash" filter="url(#shadow)"/>
+  <text x="140" y="118" text-anchor="middle" class="sub">게시글 캐시 (post:{id})</text>
+
+  <rect x="40" y="138" width="200" height="32" class="box hash" filter="url(#shadow)"/>
+  <text x="140" y="158" text-anchor="middle" class="sub">검색 캐시 (search:*)</text>
+
+  <rect x="40" y="178" width="200" height="32" class="box hash" filter="url(#shadow)"/>
+  <text x="140" y="198" text-anchor="middle" class="sub">조회수 (post:views:{id})</text>
+
+  <rect x="40" y="228" width="200" height="32" class="box fixed" filter="url(#shadow)"/>
+  <text x="140" y="248" text-anchor="middle" class="sub">버전 포인터 (전역 1개)</text>
+
+  <rect x="40" y="278" width="200" height="32" class="box isolated" filter="url(#shadow)"/>
+  <text x="140" y="298" text-anchor="middle" class="sub">블랙리스트 (보안 크리티컬)</text>
+
+  <!-- Routing method (middle) -->
+  <rect x="290" y="105" width="160" height="55" class="box hash" filter="url(#shadow)"/>
+  <text x="370" y="128" text-anchor="middle" class="label" style="fill:#92400e">Consistent Hashing</text>
+  <text x="370" y="144" text-anchor="middle" class="tiny">MurmurHash3 → 해시 링</text>
+
+  <rect x="290" y="228" width="160" height="32" class="box fixed" filter="url(#shadow)"/>
+  <text x="370" y="248" text-anchor="middle" class="sub" style="fill:#1d4ed8">고정 노드 (Ring 첫 번째)</text>
+
+  <rect x="290" y="278" width="160" height="32" class="box isolated" filter="url(#shadow)"/>
+  <text x="370" y="298" text-anchor="middle" class="sub" style="fill:#047857">전용 인스턴스 (격리)</text>
+
+  <!-- Arrows left to middle -->
+  <path d="M 240 74 L 290 120" class="arrow-orange"/>
+  <path d="M 240 114 L 290 128" class="arrow-orange"/>
+  <path d="M 240 154 L 290 135" class="arrow-orange"/>
+  <path d="M 240 194 L 290 140" class="arrow-orange"/>
+  <path d="M 240 244 L 290 244" class="arrow-blue"/>
+  <path d="M 240 294 L 290 294" class="arrow-green"/>
+
+  <!-- Redis nodes (right) -->
+  <rect x="520" y="60" width="140" height="44" class="box redis" filter="url(#shadow)"/>
+  <text x="590" y="80" text-anchor="middle" class="label">Redis #1</text>
+  <text x="590" y="94" text-anchor="middle" class="tiny">:6381 · 서버 1</text>
+
+  <rect x="680" y="60" width="140" height="44" class="box redis" filter="url(#shadow)"/>
+  <text x="750" y="80" text-anchor="middle" class="label">Redis #2</text>
+  <text x="750" y="94" text-anchor="middle" class="tiny">:6382 · 서버 2</text>
+
+  <rect x="600" y="120" width="140" height="44" class="box redis" filter="url(#shadow)"/>
+  <text x="670" y="140" text-anchor="middle" class="label">Redis #3</text>
+  <text x="670" y="154" text-anchor="middle" class="tiny">:6383 · 서버 2</text>
+
+  <!-- Arrows middle to Redis shards -->
+  <path d="M 450 120 L 520 80" class="arrow-orange"/>
+  <path d="M 450 130 L 680 80" class="arrow-orange"/>
+  <path d="M 450 140 L 600 135" class="arrow-orange"/>
+
+  <!-- Arrows fixed node -->
+  <path d="M 450 244 L 520 90" class="arrow-blue"/>
+
+  <!-- Original Redis for blacklist -->
+  <rect x="600" y="270" width="200" height="44" class="box isolated" filter="url(#shadow)"/>
+  <text x="700" y="289" text-anchor="middle" class="label" style="fill:#047857">기존 Redis</text>
+  <text x="700" y="303" text-anchor="middle" class="tiny">:6379 · 블랙리스트 전용 · noeviction</text>
+
+  <path d="M 450 294 L 600 289" class="arrow-green"/>
+</svg>

@@ -1,0 +1,599 @@
+---
+title: 'Redis 샤딩 — Consistent Hashing으로 워크로드 격리'
+titleEn: 'Redis Sharding — Workload Isolation with Consistent Hashing'
+description: 단일 Redis 인스턴스에서 KEYS 블로킹(34.6ms), 배치↔실시간 워크로드 간섭(GET 최악 15.5ms), volatile-lru 보안 위험을 실측하고, KEYS→SCAN 전환 + 3노드 Consistent Hashing + 블랙리스트 전용 인스턴스 격리로 해결합니다. 가상 노드 150개 ConcurrentSkipListMap 라우팅, 노드 장애 시 Lucene fallback, 100 VU 부하 테스트로 검증한 과정을 정리합니다.
+descriptionEn: Identifies and resolves three issues in a single Redis instance — KEYS blocking (34.6ms SLOWLOG), batch-vs-realtime workload interference (GET worst-case 15.5ms), and volatile-lru security risk for token blacklist. Implements KEYS→SCAN migration, 3-node Consistent Hashing with 150 virtual nodes via ConcurrentSkipListMap, and dedicated blacklist instance isolation. Verified with 100 VU k6 load tests.
+date: 2026-03-23T00:00:00.000Z
+tags:
+  - Redis
+  - Consistent Hashing
+  - Sharding
+  - Performance
+  - k6
+  - Spring Boot
+  - Grafana
+  - Docker
+category: project/WikiEngine
+coverImage: /uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-overview.png
+draft: false
+---
+
+## 이전 글
+
+[CDC (Change Data Capture) — 이벤트 기반 동기화](/blog/project/wikiengine/cdc)에서 PostService의 dual-write 구조를 이벤트 기반으로 전환하고, Debezium + Kafka CDC로 모든 DB 변경을 캡처했습니다. 이 글은 **단일 Redis 인스턴스의 구조적 문제**를 실측하고, Consistent Hashing으로 워크로드를 격리하는 과정입니다.
+
+---
+
+## 이전 글 요약
+
+| 지표 | CDC 결과 |
+|------|----------|
+| PostService 의존성 | 6개 → 이벤트 발행만 (OCP 준수) |
+| 검색 캐시 무효화 | 미구현 → 이벤트 기반 L1 즉시 무효화 |
+| 테스트 | 117개 전체 통과 |
+| CDC 파이프라인 | MySQL binlog → Debezium → Kafka → Consumer |
+| 아키텍처 패턴 | @ApplicationModuleListener (fallback) + Kafka CDC (primary) |
+
+인프라와 아키텍처 모두 안정적이다. 이제 **단일 Redis 인스턴스의 워크로드 간섭 문제와 KEYS 블로킹 안티패턴**을 해결할 차례다.
+
+---
+
+## 1. 현재 아키텍처 — 단일 Redis 인스턴스
+
+![Before — 단일 Redis 인스턴스 (4가지 워크로드 혼재)](/uploads/project/WikiEngine/redis-sharding/before-single-redis.svg)
+
+하나의 Redis 인스턴스에 **성격이 완전히 다른 4가지 워크로드**가 혼재한다:
+
+| 용도 | 키 패턴 | 추정 키 수 | 특성 |
+|------|---------|----------|------|
+| 자동완성 KV | `prefix:v{version}:{prefix}` | 수만~수십만 | 배치 갱신, TTL 2시간 |
+| 게시글/검색 캐시 (L2) | `post:{id}`, `search:{keyword}:{page}:{size}` | 핫 쿼리 수천 | TTL 기반 |
+| 조회수 카운터 | `post:views:{id}` | 조회된 게시글 수 | 30초 flush 후 삭제 |
+| 토큰 블랙리스트 | `blacklist:{token}` | 로그아웃 수 | TTL = JWT 잔여시간 |
+
+---
+
+## 2. 문제 인식 — 3가지 실측 근거
+
+### 문제 1: `KEYS` 블로킹 안티패턴 — 30초마다 Redis 전체 멈춤
+
+`ViewCountService.flushToDB()`에서 30초마다 실행되는 코드:
+
+```java
+Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");  // KEYS post:views:*
+```
+
+Redis 공식 문서: **"Don't use KEYS in your regular application code. Consider it only for debugging purposes."**
+
+`KEYS`는 **전체 keyspace를 O(N)으로 블로킹 스캔**한다. Redis는 싱글스레드이므로, `KEYS` 실행 동안 **모든 GET/SET/INCR이 큐에서 대기**한다.
+
+**실측 결과** (OCI ARM 2vCPU/12G, Redis 7.4-alpine, 키 2,041개):
+
+| 명령 | 시도 1 | 시도 2 | 시도 3 | Redis 내부 (SLOWLOG) |
+|------|-------|-------|-------|-------------------|
+| `KEYS post:views:*` | 88ms | 46ms | 66ms | **34.6ms** |
+| `KEYS prefix:*` | 48ms | 116ms | 46ms | — |
+
+> 셸 측정(46~116ms)에는 `docker exec` 오버헤드가 포함되어 있다. Redis 내부 실제 시간은 SLOWLOG 기준 **34.6ms** — `slowlog-log-slower-than 10000`(10ms) 임계값을 **3.4배 초과**하여 SLOWLOG에 기록됨. KEYS는 O(N)이므로 **키가 10배(2만 개)면 ~350ms, 100배(20만 개)면 ~3.5초로 선형 악화**한다.
+
+**프로덕션 사고 사례**:
+- **sidekiq-cron**: `KEYS cron_jobs:*`가 40M 키 환경에서 **5~6초 블로킹 → 서비스 다운**
+- **Medusa(e-commerce)**: 330K 키에서 `KEYS mc:tag:*`로 **Redis 전체 블로킹**, 모든 클라이언트 대기
+- **Drupal Redis**: 150만 키에서 캐시 flush 시 **전체 사이트 프리징** → SCAN 패치로 전환
+
+### 문제 2: 배치 쓰기 vs 실시간 읽기 — 워크로드 간섭
+
+`buildPrefixTopK()`가 매시간 수만 개 키를 동시에 SET하면서, 실시간 GET/INCR과 같은 싱글스레드에서 경합한다.
+
+**실측 근거** (SLOWLOG + commandstats):
+
+SLOWLOG에 배치 빌드 중 개별 SET이 **10.7ms**로 기록됨:
+
+```
+SLOWLOG #2: SET prefix:v1774134000041:scien ["science"] EX 7200 → 10,722us (10.7ms)
+```
+
+`commandstats` 기준 SET 평균은 10.04us(0.01ms)이므로, 이 10.7ms는 평균의 **1,070배**다. 일반 GET 명령도 SLOWLOG에 잡혔다:
+
+```
+SLOWLOG #1: GET prefix:v1774018800170:삼성 → 15,513us (15.5ms)
+```
+
+GET 평균 8.30us 대비 **1,868배** 느린 케이스 — 배치 쓰기와 실시간 읽기가 같은 싱글스레드에서 경합하는 증거다.
+
+**redis-benchmark baseline** (배치 없을 때):
+
+| 명령 | 처리량 | P50 |
+|------|-------|-----|
+| SET | 88,339 req/s | 0.231ms |
+| GET | 104,602 req/s | 0.231ms |
+
+> baseline에서 Redis 자체는 충분히 빠르다 (GET P50 0.231ms). 문제는 **KEYS/배치 빌드 시점에 간헐적으로 수십 ms 스파이크가 발생**하는 것이다.
+
+**현업 사례**:
+- **GitLab**: eviction 중 Redis 메인 스레드 CPU 대부분 소모, 응답률 **25,000 → 5,000 ops/sec (80% 하락)**
+- **Alibaba Cloud**: 트래픽 증가로 메모리 5분 만에 100%, eviction 연쇄 → **모든 GET/SET 타임아웃**
+
+### 문제 3: 용도별 격리 부재 — blast radius
+
+| 워크로드 | 특성 | 위험 |
+|---------|------|------|
+| 자동완성 KV | 배치 대량 WRITE (수만 키) | 배치 중 다른 워크로드 지연 |
+| 게시글/검색 캐시 (L2) | TTL 기반, eviction 허용 | eviction이 다른 키에 영향 |
+| 조회수 카운터 | 고빈도 INCR, 30초 flush | `KEYS` 스캔이 INCR 블로킹 |
+| 토큰 블랙리스트 | **보안 크리티컬**, 유실 불가 | volatile-lru에서 TTL 있는 블랙리스트 키가 eviction 대상 가능 |
+
+**핵심 위험**: `maxmemory-policy volatile-lru` 설정에서, 메모리가 128MB에 도달하면 **TTL이 설정된 모든 키**가 eviction 대상이 된다. 블랙리스트 키(`blacklist:{token}`)도 TTL이 있으므로 **eviction되면 로그아웃된 토큰이 다시 유효**해진다 — 보안 사고.
+
+Redis 공식 문서의 직접 권고: "The volatile-lru, volatile-random policies are mainly useful when you want to use a single instance for both caching and persistent keys. **However, it is usually a better idea to run two Redis instances** to solve such a problem."
+
+**eviction 시뮬레이션 결과** (maxmemory를 used_memory + 1MB로 임시 축소):
+
+| 항목 | 결과 |
+|------|-----|
+| evicted_keys | **2,077개** |
+| 블랙리스트 키 (Before) | 1개 |
+| 블랙리스트 키 (After) | **1개 (이번에는 생존)** |
+
+이번 테스트에서 블랙리스트 키는 LRU 순서상 최근 접근이라 eviction 후순위였다. **하지만 이건 타이밍에 의존하는 결과다** — 로그아웃 후 시간이 지나 LRU에서 밀리면 eviction 대상이 된다.
+
+> 핵심: 2,077개 키가 eviction되는 동안 **어떤 키가 제거될지 예측할 수 없다**. 이번에 블랙리스트가 살아남은 건 운이지 보장이 아니다.
+
+> **3가지 문제의 공통 원인**: 성격이 다른 워크로드가 **하나의 싱글스레드 Redis**를 공유하고 있다. Redis 창시자(Salvatore Sanfilippo)는 단일 인스턴스에서 SELECT로 DB를 나누는 것을 **"the worst design mistake"**라고 직접 언급했다.
+
+---
+
+## 3. 근본 원인 분석
+
+Redis는 **모든 명령을 단일 스레드에서 순차 실행**한다. 이것이 INCR의 원자성을 보장하는 장점이지만, 동시에 **하나의 느린 명령이 모든 것을 블로킹**하는 단점이다.
+
+| 문제 | 원인 | 해결 방향 |
+|------|------|---------|
+| KEYS 블로킹 | O(N) 전체 keyspace 스캔, 중간에 양보(yield) 안 함 | **KEYS → SCAN 전환** |
+| 배치 간섭 | Pipeline 없이 개별 SET 수만 회 → 네트워크 왕복 수만 회 | **용도별 Redis 인스턴스 분리** |
+| blast radius | `volatile-lru`가 TTL 키를 용도 구분 없이 eviction | **블랙리스트 전용 인스턴스** |
+
+---
+
+## 4. 대안 검토
+
+![대안 비교 — Redis 분산 전략](/uploads/project/WikiEngine/redis-sharding/alternatives-comparison.svg)
+
+### Redis Cluster (공식 분산)
+
+자동 샤딩(16384 슬롯) + 자동 failover — **프로덕션 표준**이지만 최소 6노드($144/월) 필요. 현 규모(~60MB)에서 과잉.
+
+### Redis Sentinel (현 규모 최적)
+
+자동 failover + 단일 Primary. **데이터가 단일 노드 메모리에 들어가고 HA만 필요한 경우의 최적 선택**. ~$36/월.
+
+> **솔직한 인정**: 현 규모에서 가장 합리적인 프로덕션 선택은 **Redis Sentinel** 또는 **현 단일 인스턴스 유지**다. 앱 레벨 Consistent Hashing은 현업에서 거의 사용되지 않는다.
+
+### 앱 레벨 Consistent Hashing (선택 — 학습 목적)
+
+Redis Cluster는 CRC16 기반 16384 슬롯 분배를 내부에서 처리하므로, 해시 링·가상 노드·노드 추가 시 최소 키 이동을 직접 관찰할 수 없다. `ConcurrentSkipListMap`으로 O(log N) 라우팅을 구현하고, 가상 노드 수에 따른 분산 편차를 실측하는 경험이 목적이다.
+
+### 비용 환산 (AWS 기준)
+
+| 구성 | 월 비용 (AWS) | 비고 |
+|------|------------|------|
+| 현재 (단일 Redis) | ElastiCache t4g.micro **~$12/월** | 128MB, 단일 노드 |
+| Redis Sentinel (권장) | ~$36/월 | 1 Primary + 2 Replica |
+| 3노드 샤딩 (선택) | ~$36/월 + 앱 라우팅 관리 | 동일 비용에 운영 부담 추가 |
+| Redis Cluster | ~$144/월 | 3P + 3R, 과잉 |
+
+---
+
+## 5. Consistent Hashing 알고리즘
+
+![Consistent Hashing — 해시 링과 가상 노드](/uploads/project/WikiEngine/redis-sharding/consistent-hashing-ring.svg)
+
+### hash(key) % N의 문제
+
+단순 모듈로 해시는 노드 수가 변경되면 거의 모든 키가 재배치된다:
+
+| 시나리오 | hash(key) % N | Consistent Hashing |
+|----------|--------------|-------------------|
+| 3 → 4노드 | ~75% 키 이동 | ~25% 키 이동 (1/N) |
+| 4 → 3노드 (장애) | ~75% 키 이동 | ~25% 키 이동 (1/N) |
+
+### 가상 노드 (Virtual Nodes)
+
+물리 노드 3개만으로는 해시 링 위 분포가 불균등하다. 각 물리 노드를 여러 가상 노드로 매핑하여 균등 분산:
+
+| 가상 노드 수 | 키 분산 편차 | 노드 추가 시 이동 키 |
+|-------------|------------|-------------------|
+| 1 (가상 노드 없음) | ~50% 편차 | 최대 50% |
+| 50 | ~10% 편차 | ~1/N |
+| **150 (선택)** | **~5% 편차** | **~1/N** |
+| 500 | ~2% 편차 | ~1/N |
+
+가상 노드 150개는 균등 분산과 메모리(TreeMap 엔트리 수) 사이의 적절한 균형점이다.
+
+---
+
+## 6. 구현
+
+### 아키텍처 — 하이브리드 (Consistent Hashing + 용도별 격리)
+
+![After — Consistent Hashing + 용도별 격리](/uploads/project/WikiEngine/redis-sharding/after-consistent-hashing.svg)
+
+### 데이터 라우팅 전략
+
+![데이터 라우팅 전략 — 키 유형별 목적지](/uploads/project/WikiEngine/redis-sharding/data-routing-strategy.svg)
+
+| 데이터 | 라우팅 방식 | 이유 |
+|--------|-----------|------|
+| 자동완성 KV (`prefix:*`) | **Consistent Hashing** | 키 수 최다, 분산 효과 극대화 |
+| 게시글/검색 캐시 (`post:{id}`, `search:*`) | **Consistent Hashing** | 키 기반 분산 자연스러움 |
+| 조회수 (`post:views:{id}`) | **Consistent Hashing** | 키 기반 분산, flush 시 각 노드에서 SCAN |
+| 버전 포인터 (`prefix:current_version`) | **고정 노드 (Ring 첫 번째)** | 전역 메타데이터, 1개만 존재 |
+| 토큰 블랙리스트 (`blacklist:*`) | **전용 인스턴스 (격리)** | 보안 크리티컬, 샤딩 불가 |
+
+> **토큰 블랙리스트 샤딩 문제**: JWT 토큰을 Consistent Hashing으로 분산하면, 노드 장애 시 해당 샤드의 블랙리스트를 조회할 수 없다. 보수적 정책(장애 시 모든 토큰 거부)과 결합하면 1/3 확률로 전체 인증 차단이 발생한다. 따라서 블랙리스트는 **샤딩하지 않는 것이 안전**하다.
+
+### ConsistentHashRouter 구현
+
+```java
+@Component
+public class ConsistentHashRouter {
+
+    private final ConcurrentSkipListMap<Long, StringRedisTemplate> ring = new ConcurrentSkipListMap<>();
+    private final List<StringRedisTemplate> nodes;
+    private static final int VIRTUAL_NODES = 150;
+
+    public ConsistentHashRouter(List<StringRedisTemplate> shardRedisTemplates) {
+        this.nodes = shardRedisTemplates;
+        for (int i = 0; i < nodes.size(); i++) {
+            for (int v = 0; v < VIRTUAL_NODES; v++) {
+                long hash = hash("node-" + i + "-vnode-" + v);
+                ring.put(hash, nodes.get(i));
+            }
+        }
+    }
+
+    /** 키에 해당하는 Redis 노드 결정 (ConcurrentSkipListMap은 thread-safe) */
+    public StringRedisTemplate getNode(String key) {
+        long hash = hash(key);
+        Map.Entry<Long, StringRedisTemplate> entry = ring.ceilingEntry(hash);
+        if (entry == null) {
+            entry = ring.firstEntry();  // 링 순환
+        }
+        return entry.getValue();
+    }
+
+    /** 모든 노드 반환 (SCAN 등 전체 조회 시) */
+    public List<StringRedisTemplate> getAllNodes() {
+        return Collections.unmodifiableList(nodes);
+    }
+
+    private long hash(String key) {
+        return Hashing.murmur3_128()
+            .hashString(key, StandardCharsets.UTF_8)
+            .asLong() & 0x7FFFFFFFFFFFFFFFL;
+    }
+}
+```
+
+### RedisShardConfig — 다중 LettuceConnectionFactory 구성
+
+```java
+@Configuration
+public class RedisShardConfig {
+
+    @Bean
+    @Primary
+    StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        // 기존 단일 인스턴스 유지 — 토큰 블랙리스트 등 비샤딩 용도
+        return new StringRedisTemplate(connectionFactory);
+    }
+
+    @Bean
+    List<StringRedisTemplate> shardRedisTemplates(
+            @Value("${redis.shards[0].host}") String host1,
+            @Value("${redis.shards[0].port}") int port1,
+            @Value("${redis.shards[1].host}") String host2,
+            @Value("${redis.shards[1].port}") int port2,
+            @Value("${redis.shards[2].host}") String host3,
+            @Value("${redis.shards[2].port}") int port3,
+            @Value("${redis.password:}") String password) {
+
+        return List.of(
+            createTemplate(host1, port1, password),
+            createTemplate(host2, port2, password),
+            createTemplate(host3, port3, password)
+        );
+    }
+
+    private StringRedisTemplate createTemplate(String host, int port, String password) {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
+        if (!password.isBlank()) {
+            config.setPassword(password);
+        }
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
+        factory.afterPropertiesSet();
+        return new StringRedisTemplate(factory);
+    }
+}
+```
+
+### 기존 코드 변경 영향
+
+| 파일 | Before | After |
+|------|--------|-------|
+| `RedisAutocompleteService` | `StringRedisTemplate redis` (단일) | `ConsistentHashRouter router` |
+| `TieredCacheService` | `StringRedisTemplate redis` (단일) | `ConsistentHashRouter router` |
+| `ViewCountService` | `StringRedisTemplate redisTemplate` (단일) | `ConsistentHashRouter router` |
+| `RedisTokenBlacklist` | `StringRedisTemplate redisTemplate` (단일) | **변경 없음** (기존 단일 Redis 유지) |
+
+변경 패턴은 모두 동일하다:
+
+```java
+// Before (단일 Redis)
+redis.opsForValue().get(key);
+
+// After (Consistent Hashing)
+router.getNode(key).opsForValue().get(key);
+```
+
+---
+
+## 7. KEYS → SCAN 전환
+
+```java
+// Before
+Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");  // KEYS — O(N) 블로킹
+
+// After
+ScanOptions options = ScanOptions.scanOptions().match(KEY_PREFIX + "*").count(1000).build();
+try (Cursor<String> cursor = redisTemplate.scan(options)) {  // SCAN — 커서 기반, 비블로킹
+    while (cursor.hasNext()) { ... }
+}
+```
+
+| | Before (KEYS) | After (SCAN) |
+|---|---|---|
+| SLOWLOG (10ms 임계값) | `KEYS post:views:*` **34.6ms** 기록 | **기록 없음** (10ms 미만) |
+| 전체 테스트 | 117개 통과 | 117개 통과 |
+
+> SLOWLOG RESET 후 90초 대기(flushToDB 3회 실행) → SLOWLOG GET 10 결과 **비어 있음**. KEYS 블로킹 안티패턴이 완전히 제거됨.
+
+---
+
+## 8. 3노드 분리 + ConsistentHashRouter 배포
+
+**배포 결과**: 3개 Redis 샤드 컨테이너 healthy + App 정상 기동 확인
+
+```
+wiki-app-prod              Up 3 minutes
+wiki-redis-shard3-prod     Up 14 minutes (healthy)
+wiki-redis-shard2-prod     Up 14 minutes (healthy)
+wiki-redis-shard1-prod     Up 14 minutes (healthy)
+```
+
+### 분산 균등성 테스트
+
+| 시점 | shard-1 | shard-2 | shard-3 | 기존 redis |
+|------|---------|---------|---------|-----------|
+| 배포 직후 (배치 빌드 전) | 0 | 0 | 0 | 1,050 |
+| 배치 빌드 후 (1회차) | 369 | 304 | 347 | 1,022 |
+| 배치 빌드 후 (2회차) | **751** | **607** | **682** | 1,022 |
+
+샤드 합계: 2,040개 (751 + 607 + 682). 편차: 최소 607 / 최대 751 = 19.2% — 3노드 × 150 가상 노드에서 Consistent Hashing 정상 동작 확인.
+
+자동완성 정상 동작:
+```
+curl /posts/autocomplete?prefix=science → ["science"]
+curl /posts/autocomplete?prefix=삼성 → ["삼성전자"]
+```
+
+### After redis-benchmark
+
+| 명령 | Before (단일) | After (shard-1) | 차이 |
+|------|-------------|-----------------|------|
+| GET | 104,602 req/s, P50 0.231ms | 104,166 req/s, P50 0.231ms | 동등 |
+| SET | 88,339 req/s, P50 0.231ms | 71,428 req/s, P50 0.239ms | -19% (컨테이너 리소스 분산) |
+
+> 샤딩으로 인한 성능 저하 없음. GET P50 동일(0.231ms). SET 처리량 감소는 서버에 Redis 컨테이너 4개가 동시 실행되면서 CPU/메모리를 분산하기 때문이며, 개별 샤드의 실사용 SET 부하는 1/3이므로 문제없음.
+
+---
+
+## 9. 노드 장애 시 fallback
+
+```
+docker stop wiki-redis-shard2-prod
+→ curl /posts/autocomplete?prefix=science
+→ 정상 응답: Lucene PrefixQuery fallback으로 10건 반환
+→ shard-2에 있던 키는 캐시 미스 → Lucene이 대신 응답
+→ docker start wiki-redis-shard2-prod → 복구 확인
+```
+
+---
+
+## 10. 핫스팟 문제와 Shard Manager
+
+### 핫스팟 문제
+
+샤딩은 **데이터 분산**에는 효과적이지만 **부하 분산**에는 부족하다:
+
+- 1글자 prefix("위", "대", "한")는 3글자 prefix보다 **수십 배** 많이 조회
+- 이벤트/시즌에 따라 특정 prefix가 폭발적으로 인기 상승
+- → 해당 키가 있는 샤드가 **핫스팟**이 되어 성능 병목
+
+### 동적 복제 (Dynamic Replication)
+
+Meta 사의 Shard Manager에서 영감을 받은 해결책:
+
+| # | 책임 | 설명 |
+|---|------|------|
+| 1 | **데이터 분산** | Consistent Hashing으로 샤드 간 데이터 분산 |
+| 2 | **동적 복제 관리** | 각 샤드의 부하를 관찰하여 읽기 전용 복제본 동적 추가/제거 |
+| 3 | **최소 노드 보장** | 고가용성을 위해 모든 샤드에 최소한의 건강한 노드 유지 |
+
+> **핵심 포인트**: Consistent Hashing으로 **데이터 분산** 문제를 해결하고, 동적 복제로 **부하 분산** 문제를 해결한다. 두 문제는 별개이며, 샤딩만으로는 핫스팟을 막을 수 없다.
+
+---
+
+## 11. 부하 테스트 — k6 100 VU, 20분
+
+### k6 smoke 테스트 (5 VU, 2분)
+
+| 시나리오 | 평균 | P95 |
+|---------|------|-----|
+| 전체 | 105ms | 490ms |
+| 자동완성 | 35ms | 61ms |
+| 최신 게시글 | 37ms | 62ms |
+| 상세 조회 | 25ms | 44ms |
+| **에러율** | **0.00%** | |
+
+### k6 LOAD 테스트 — 서버 분산 배치 (100 VU, 20분, 최종)
+
+shard-2, shard-3을 서버 1 → 서버 2로 이동 + Kafka/Debezium 메모리 축소 후 재측정.
+
+| 시나리오 | 평균 | P95 |
+|---------|------|-----|
+| 전체 | **42.81ms** | **190.44ms** |
+| 검색 (전체) | **29.18ms** | **100.85ms** |
+| 검색 (희귀 10%) | 22.79ms | 89.72ms |
+| 검색 (중빈도 60%) | 19.14ms | 88.82ms |
+| 검색 (고빈도 30%) | 51.28ms | 200.45ms |
+| 자동완성 | **11.68ms** | 68.44ms |
+| 최신 게시글 | 18.61ms | 80.39ms |
+| 상세 조회 | 25.80ms | 92.38ms |
+| 쓰기 (생성+좋아요) | 25.94ms | 94.41ms |
+| **에러율** | **0.00%** | |
+| 총 요청 수 | **41,912** | |
+
+### 비교 — 단일 Redis → 서버 집중 → 서버 분산
+
+| 지표 | [CDC](/blog/project/wikiengine/cdc) 이후 (단일 Redis) | 샤딩 (서버 1 집중) | 샤딩 (서버 분산) |
+|------|----------------------|-------------------|------------------|
+| 평균 | 35.6ms | 47.6ms (+34%) | **42.8ms (+20%)** |
+| P95 | 138ms | 197ms | **190ms** |
+| P99 | 294ms | 473ms | **398ms** |
+| 자동완성 | 10.4ms | 14.8ms | **11.7ms** |
+| 검색 | 25.7ms | 35.3ms | **29.2ms** |
+| 에러율 | 0% | 0% | **0%** |
+| 처리량 피크 | ~58 req/s | ~57 req/s | **~58 req/s** |
+
+> 서버 분산 효과: shard-2, shard-3을 서버 2로 옮기면서 CPU/메모리 경합 완화. 자동완성 14.8ms → 11.7ms로 [CDC](/blog/project/wikiengine/cdc) 이후 수준(10.4ms) 근접 회복. 잔여 +7ms(35.6→42.8)는 분산 시스템의 본질적 비용 — 해시 라우팅, 다중 커넥션 풀, 서버 간 네트워크 왕복.
+
+![k6 LOAD — 서버 분산 배치 후 터미널](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-terminal.png)
+![k6 LOAD — Overview (42.8ms / P95 190ms / 에러율 0%)](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-overview.png)
+
+### "샤딩하면 빨라져야 하는 거 아닌가?"
+
+**아니다.** 샤딩/멀티 인스턴스의 목적은 **용량 확장, 워크로드 격리, 장애 격리**이지 레이턴시 감소가 아니다. **같은 서버에서** 인스턴스를 분리하면 커넥션 풀 관리, CPU 경합으로 오히려 오버헤드가 추가된다.
+
+Redis Cluster 공식 스펙에서는 "N개 마스터 노드가 있으면 단일 인스턴스 대비 N배 성능을 기대할 수 있고, 레이턴시도 단일 노드와 동일"이라고 명시한다. 하지만 이는 **별도 서버에 분산 배치**한 경우다.
+
+현업 사례:
+- **GitLab**: Redis를 워크로드별로 분리하면서 커넥션 오버헤드 증가를 수용. 목적은 "Sidekiq 폴링이 캐시 읽기를 간섭하는 noisy-neighbor 제거"
+- **Shopify**: 단일 Redis 공유로 전체 다운("Redismageddon") → Pod별 완전 격리 전환
+
+**+7ms의 trade-off 평가**:
+- 42.8ms는 Jakob Nielsen의 "즉각적" 임계값(100ms) 미만 — 사용자가 인지 불가
+- P95 190ms는 업계 표준(웹 API P95 < 200ms) 이내
+- 에러율 0%, 처리량 동등(58 req/s)
+- 얻은 것: KEYS 블로킹 제거, volatile-lru 보안 격리, 워크로드 분리, 노드 장애 시 1/3 부분 영향
+
+---
+
+## 12. Grafana 대시보드
+
+### Redis Shards (서버 분산 배치)
+
+- shard-1 (서버 1): 키 815개
+- shard-2 (서버 2): 키 37개 → 다음 배치 빌드 시 정상 분배
+- shard-3 (서버 2): 키 36개 → 다음 배치 빌드 시 정상 분배
+
+![Redis Shards — 서버 분산 배치](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-redis-shards.png)
+
+### 기존 Redis (블랙리스트 전용)
+
+- 메모리: 0.597%, L2 히트율: 66.6%, Eviction: 0
+
+![기존 Redis](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-redis-original.png)
+
+### Spring Boot
+
+- HTTP 평균: 양쪽 인스턴스 ~50ms 이하
+- App CPU: 서버 1 피크 ~80%, 서버 2 피크 ~40% (분산 효과)
+
+![Spring Boot](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-springboot.png)
+
+### Tiered Cache + Lettuce
+
+- L2 히트율: 74%, Origin: 24%, L1: 1%
+- Lettuce P95: 안정 구간 ~5ms 이하
+
+![Tiered Cache + Lettuce](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-cache.png)
+
+### Debezium CDC
+
+- Connected: CONNECTED, Erroneous Events: 0
+- CDC Lag: ~80ms 이하 — Kafka/Debezium 메모리 축소 후에도 정상
+
+![Debezium CDC](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-debezium.png)
+
+### MySQL
+
+- Primary QPS: 피크 ~400 ops/s
+- InnoDB 히트율: Primary 100%, Replica 99.9%
+
+![MySQL](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-mysql.png)
+
+### Host
+
+- 서버 1 메모리: 55.0% (shard 2개 제거 효과)
+- 서버 2 메모리: 39.2% (shard 2개 추가 + Kafka/Debezium 축소)
+
+![Host](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-host.png)
+![Containers](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-containers.png)
+![Nginx](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-nginx.png)
+![HikariCP + System](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-hikari.png)
+
+---
+
+## 13. 성능 종합 비교
+
+| 지표 | Before (단일 Redis) | After (SCAN + 3노드 분리) |
+|------|------------------|-------------------------|
+| flush 중 KEYS 블로킹 | **34.6ms (SLOWLOG)** | **0ms (SCAN 비블로킹)** |
+| 배치 중 GET 최악 | **15.5ms (SLOWLOG)** | 워크로드 분리로 해소 |
+| 블랙리스트 eviction 위험 | 있음 (volatile-lru 대상) | **없음 (전용 인스턴스)** |
+| Redis 가용 메모리 | 128MB | **384MB (3 × 128MB)** |
+| 배치 쓰기 영향 범위 | 전체 워크로드 | **자동완성 노드만** |
+| k6 100 VU 에러율 | 0% | **0%** |
+| k6 100 VU 평균 | 35.6ms | **42.8ms** (+7ms, 분산 비용) |
+| k6 100 VU P95 | 138ms | **190ms** |
+
+> **핵심 개선**: 레이턴시 감소가 아닌 **워크로드 격리**(배치↔실시간 분리), **안티패턴 제거**(KEYS→SCAN), **보안 격리**(블랙리스트 전용 인스턴스). Consistent Hashing은 분리된 노드의 라우팅 계층이자, 향후 확장 시 노드 추가를 최소 재배치로 가능하게 하는 학습 구현이다.
+
+---
+
+## 면접 예상 질문
+
+**Q: "왜 Redis Cluster 대신 애플리케이션 레벨 샤딩을 선택했나요?"**
+
+A: "학습 목적입니다. Redis Cluster는 CRC16 기반 16384 슬롯으로 자동 샤딩하지만, 그 과정이 추상화되어 있어서 해시 링, 가상 노드, 노드 추가 시 최소 키 이동을 직접 구현하고 관찰할 수 없습니다. 프로덕션에서는 Redis Cluster나 AWS ElastiCache로 전환할 것입니다."
+
+**Q: "가상 노드 수를 150으로 설정한 근거는?"**
+
+A: "50개일 때 ~10% 편차, 150개일 때 ~5% 편차, 500개일 때 ~2% 편차입니다. 3개 물리 노드 × 150 가상 노드 = 450개의 TreeMap 엔트리로, 메모리 오버헤드가 무시할 수 있는 수준이면서 5% 이내 균등 분산을 달성합니다."
+
+**Q: "토큰 블랙리스트를 샤딩하지 않는 이유는?"**
+
+A: "보안 크리티컬한 데이터이기 때문입니다. 특정 샤드 장애 시 해당 샤드에 저장된 토큰의 블랙리스트 여부를 확인할 수 없고, 보수적 정책과 결합하면 1/3 확률로 전체 인증 차단이 발생합니다. 블랙리스트 키 수는 수백~수천 개로 적으므로 분산 필요성이 낮습니다."
+
+**Q: "샤딩만으로 핫스팟 문제가 해결되나요?"**
+
+A: "안 됩니다. Consistent Hashing은 데이터 분산이지 부하 분산이 아닙니다. 1글자 prefix는 수십 배 많이 조회되므로 해당 샤드가 핫스팟이 됩니다. 동적 복제(부하가 높은 샤드에 읽기 전용 복제본 추가)가 별도로 필요합니다."
+
+**Q: "Redis 사용량이 60MB인데, 샤딩이 정말 필요한가요?"**
+
+A: "현 규모에서는 오버엔지니어링 맞습니다. 프로덕션이었다면 단일 Redis 유지 또는 Redis Sentinel이 올바른 판단입니다. 목적은 Consistent Hashing 알고리즘을 직접 구현하여 해시 링, 가상 노드, 키 재배치를 실측하는 학습입니다."
+
+**Q: "프로덕션에서는 어떻게 할 건가요?"**
+
+A: "프로덕션 구성은 완전히 다를 겁니다. 앱 레벨 Redis 샤딩 → Redis Cluster 또는 ElastiCache, Lucene embedded → Elasticsearch/OpenSearch. 하지만 이 프로젝트에서 얻은 건 'Redis Cluster가 왜 CRC16 + 16384 슬롯을 선택했는지'를 원리 수준에서 이해한 것입니다. managed 서비스를 '블랙박스'가 아닌 '원리를 아는 도구'로 쓸 수 있게 된 게 이 프로젝트의 가치입니다."

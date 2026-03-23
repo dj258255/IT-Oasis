@@ -161,7 +161,7 @@ App 1(서버 1)에서 2건 발생, App 2(서버 2)에서 0건.
 
 1. **GET에서 DB 쓰기 완전 제거**: R/W 분리 라우팅 충돌의 근본 원인을 구조적으로 해결. GET → Redis INCR(읽기 인프라), 배치 flush → DB UPDATE(쓰기 인프라, `@Scheduled`에서 별도 트랜잭션)
 2. **Redis INCR은 O(1), 싱글스레드 원자적**: 별도 락 없이 동시성 보장. MySQL UPDATE의 Row Lock 경합이 완전히 제거된다. 100 VU 동시 접속이든 1,000 VU이든 INCR 한 번이면 끝
-3. **성능**: Redis INCR ~100,000+ ops/s vs MySQL UPDATE ~500-1,000 ops/s (동일 행 동시 접근, SSD + `innodb_flush_log_at_trx_commit=1` 기준). 약 **100배** 처리량 차이. Redis 수치는 [Redis 공식 벤치마크](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/) 기준이며, MySQL 수치는 SSD 환경에서의 단일 hot row 경합 시 이론치이다 (HDD에서는 ~50 ops/s, 내구성 완화 시 수만 ops/s 가능)
+3. **성능**: Redis INCR ~100,000+ ops/s vs MySQL UPDATE ~500-1,000 ops/s (동일 행 동시 접근, SSD + `innodb_flush_log_at_trx_commit=1` 기준). 약 **100배** 처리량 차이. Redis 수치는 [Redis 공식 벤치마크](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/) 기준이며, MySQL 수치는 SSD 환경에서의 단일 hot row 경합 시 업계 참고치이다 (본 프로젝트 환경에서 직접 벤치마크하지 않은 추정값. HDD에서는 ~50 ops/s, `innodb_flush_log_at_trx_commit=2` 완화 시 수만 ops/s 가능)
 4. **멀티 인스턴스 공유 상태**: App 1과 App 2가 같은 Redis 키에 INCR하므로, 카운터 유실이나 중복 문제 없음. 향후 중복 방지(`SET NX EX`)도 Redis에서 바로 구현 가능
 5. **이미 Redis 인프라 있음**: [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)에서 L2 캐시 + 자동완성 flat KV로 Redis를 이미 운영 중. 추가 인프라 비용 0
 

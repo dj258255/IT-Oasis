@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 380" width="860" height="380" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <style>
+    .box { rx: 8; stroke-width: 1.5; }
+    .heading { font-size: 14px; fill: #0f172a; font-weight: 800; }
+    .label { font-size: 12px; fill: #1e293b; font-weight: 700; }
+    .sub { font-size: 10px; fill: #475569; }
+    .tiny { font-size: 9px; fill: #64748b; }
+    .app { fill: #dbeafe; stroke: #3b82f6; }
+    .mysql-p { fill: #fef3c7; stroke: #f59e0b; }
+    .mysql-r { fill: #fef9c3; stroke: #eab308; }
+    .redis { fill: #fce7f3; stroke: #ec4899; }
+    .kafka { fill: #e0e7ff; stroke: #6366f1; }
+    .nginx { fill: #d1fae5; stroke: #10b981; }
+    .section { fill: #f8fafc; stroke: #e2e8f0; rx: 10; stroke-width: 1; }
+    .arrow { fill: none; stroke: #94a3b8; stroke-width: 2; marker-end: url(#ah); }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#94a3b8"/></marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#00000010"/>
+    </filter>
+  </defs>
+
+  <text x="430" y="28" text-anchor="middle" class="heading">현재 분산 아키텍처 — stress/soak/chaos 테스트 대상</text>
+
+  <!-- Nginx LB -->
+  <rect x="340" y="42" width="180" height="36" class="box nginx" filter="url(#shadow)"/>
+  <text x="430" y="64" text-anchor="middle" class="label">Nginx LB (least_conn, L7)</text>
+
+  <path d="M 390 78 L 200 110" class="arrow"/>
+  <path d="M 470 78 L 660 110" class="arrow"/>
+
+  <!-- Server 1 -->
+  <rect x="30" y="100" width="370" height="260" class="section" filter="url(#shadow)"/>
+  <text x="215" y="120" text-anchor="middle" class="sub" style="font-weight:700">서버 1 (ARM 2코어, 12GB)</text>
+
+  <rect x="50" y="130" width="150" height="36" class="box app" filter="url(#shadow)"/>
+  <text x="125" y="146" text-anchor="middle" class="sub">App 1 (Lucene Primary)</text>
+  <text x="125" y="158" text-anchor="middle" class="tiny">Spring Boot</text>
+
+  <rect x="220" y="130" width="160" height="36" class="box mysql-p" filter="url(#shadow)"/>
+  <text x="300" y="146" text-anchor="middle" class="sub">MySQL Primary</text>
+  <text x="300" y="158" text-anchor="middle" class="tiny">쓰기 + R/W 라우팅</text>
+
+  <rect x="50" y="180" width="150" height="36" class="box redis" filter="url(#shadow)"/>
+  <text x="125" y="196" text-anchor="middle" class="sub">Redis (토큰BL 전용)</text>
+  <text x="125" y="208" text-anchor="middle" class="tiny">:6379 · 샤딩 제외</text>
+
+  <rect x="220" y="180" width="160" height="36" class="box redis" filter="url(#shadow)"/>
+  <text x="300" y="196" text-anchor="middle" class="sub">Redis Shard-1</text>
+  <text x="300" y="208" text-anchor="middle" class="tiny">:6381</text>
+
+  <rect x="50" y="230" width="330" height="36" class="box nginx" filter="url(#shadow)"/>
+  <text x="215" y="250" text-anchor="middle" class="sub">Nginx + 모니터링 사이드카</text>
+
+  <rect x="50" y="280" width="330" height="28" class="box" style="fill:#f1f5f9; stroke:#cbd5e1" filter="url(#shadow)"/>
+  <text x="215" y="298" text-anchor="middle" class="tiny">ConsistentHashRouter (MurmurHash3, 150 가상 노드)</text>
+
+  <!-- Server 2 -->
+  <rect x="460" y="100" width="370" height="260" class="section" filter="url(#shadow)"/>
+  <text x="645" y="120" text-anchor="middle" class="sub" style="font-weight:700">서버 2 (ARM 2코어, 12GB)</text>
+
+  <rect x="480" y="130" width="150" height="36" class="box app" filter="url(#shadow)"/>
+  <text x="555" y="146" text-anchor="middle" class="sub">App 2 (Lucene Replica)</text>
+  <text x="555" y="158" text-anchor="middle" class="tiny">Spring Boot</text>
+
+  <rect x="650" y="130" width="160" height="36" class="box mysql-r" filter="url(#shadow)"/>
+  <text x="730" y="146" text-anchor="middle" class="sub">MySQL Replica</text>
+  <text x="730" y="158" text-anchor="middle" class="tiny">읽기 분산 · GTID</text>
+
+  <rect x="480" y="180" width="150" height="36" class="box redis" filter="url(#shadow)"/>
+  <text x="555" y="196" text-anchor="middle" class="sub">Redis Shard-2/3</text>
+  <text x="555" y="208" text-anchor="middle" class="tiny">:6382, :6383</text>
+
+  <rect x="650" y="180" width="160" height="36" class="box kafka" filter="url(#shadow)"/>
+  <text x="730" y="196" text-anchor="middle" class="sub">Kafka 4.x (KRaft)</text>
+  <text x="730" y="208" text-anchor="middle" class="tiny">2G · CDC 이벤트</text>
+
+  <rect x="650" y="230" width="160" height="36" class="box kafka" filter="url(#shadow)"/>
+  <text x="730" y="248" text-anchor="middle" class="sub">Debezium Connect</text>
+  <text x="730" y="258" text-anchor="middle" class="tiny">1G · binlog → Kafka</text>
+
+  <!-- CDC Flow -->
+  <rect x="480" y="280" width="330" height="28" class="box" style="fill:#f1f5f9; stroke:#cbd5e1" filter="url(#shadow)"/>
+  <text x="645" y="298" text-anchor="middle" class="tiny">CDC: MySQL binlog → Debezium → Kafka → Consumer (App 1+2)</text>
+
+  <!-- Bottom label -->
+  <text x="430" y="375" text-anchor="middle" class="tiny" style="fill:#3b82f6; font-weight:600">각 컴포넌트가 단독으로 검증된 상태 — 전체 장시간 동작 안정성은 미확인</text>
+</svg>

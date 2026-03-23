@@ -16,7 +16,7 @@ draft: false
 coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-expected.png"
 ---
 
-## 이전 단계 요약
+## 이전 글 요약
 
 [이전 글](/blog/project/wikiengine/search-system-crash)에서 `LIKE '%keyword%'` 검색이 Full Table Scan으로 시스템을 마비시키는 문제를 발견하고, 긴급 완화 조치(content LIKE 제거, 5초 타임아웃, HikariCP Fail-Fast)로 시스템 마비를 방지했습니다.
 
