@@ -597,3 +597,587 @@ A: "현 규모에서는 오버엔지니어링 맞습니다. 프로덕션이었�
 **Q: "프로덕션에서는 어떻게 할 건가요?"**
 
 A: "프로덕션 구성은 완전히 다를 겁니다. 앱 레벨 Redis 샤딩 → Redis Cluster 또는 ElastiCache, Lucene embedded → Elasticsearch/OpenSearch. 하지만 이 프로젝트에서 얻은 건 'Redis Cluster가 왜 CRC16 + 16384 슬롯을 선택했는지'를 원리 수준에서 이해한 것입니다. managed 서비스를 '블랙박스'가 아닌 '원리를 아는 도구'로 쓸 수 있게 된 게 이 프로젝트의 가치입니다."
+
+
+<!-- EN -->
+
+
+## Previous Post
+
+In [CDC (Change Data Capture) — Event-Driven Synchronization](/blog/project/wikiengine/cdc), PostService's dual-write architecture was converted to event-driven synchronization, and Debezium + Kafka CDC was used to capture all DB changes. This post covers **identifying structural problems in a single Redis instance** through actual measurements and isolating workloads with Consistent Hashing.
+
+---
+
+## Previous Post Summary
+
+| Metric | CDC Result |
+|--------|-----------|
+| PostService Dependencies | 6 → Event publishing only (OCP compliant) |
+| Search Cache Invalidation | Not implemented → Event-driven L1 immediate invalidation |
+| Tests | 117 all passing |
+| CDC Pipeline | MySQL binlog → Debezium → Kafka → Consumer |
+| Architecture Pattern | @ApplicationModuleListener (fallback) + Kafka CDC (primary) |
+
+Both infrastructure and architecture are stable. Now it's time to resolve the **workload interference and KEYS blocking anti-pattern in the single Redis instance**.
+
+---
+
+## 1. Current Architecture — Single Redis Instance
+
+![Before — Single Redis Instance (4 workloads mixed)](/uploads/project/WikiEngine/redis-sharding/before-single-redis.svg)
+
+A single Redis instance hosts **four fundamentally different workloads**:
+
+| Purpose | Key Pattern | Estimated Key Count | Characteristics |
+|---------|-------------|-------------------|-----------------|
+| Autocomplete KV | `prefix:v{version}:{prefix}` | Tens to hundreds of thousands | Batch refresh, TTL 2 hours |
+| Post/Search Cache (L2) | `post:{id}`, `search:{keyword}:{page}:{size}` | Thousands of hot queries | TTL-based |
+| View Counter | `post:views:{id}` | Number of viewed posts | Deleted after 30s flush |
+| Token Blacklist | `blacklist:{token}` | Number of logouts | TTL = JWT remaining time |
+
+---
+
+## 2. Problem Identification — 3 Measured Evidence Points
+
+### Problem 1: `KEYS` Blocking Anti-Pattern — Redis Freezes Every 30 Seconds
+
+Code executed every 30 seconds in `ViewCountService.flushToDB()`:
+
+```java
+Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");  // KEYS post:views:*
+```
+
+Redis official documentation: **"Don't use KEYS in your regular application code. Consider it only for debugging purposes."**
+
+`KEYS` performs an **O(N) blocking scan of the entire keyspace**. Since Redis is single-threaded, **all GET/SET/INCR operations queue up** while `KEYS` is running.
+
+**Measured Results** (OCI ARM 2vCPU/12G, Redis 7.4-alpine, 2,041 keys):
+
+| Command | Trial 1 | Trial 2 | Trial 3 | Redis Internal (SLOWLOG) |
+|---------|---------|---------|---------|--------------------------|
+| `KEYS post:views:*` | 88ms | 46ms | 66ms | **34.6ms** |
+| `KEYS prefix:*` | 48ms | 116ms | 46ms | — |
+
+> Shell measurements (46~116ms) include `docker exec` overhead. The actual Redis internal time is **34.6ms** per SLOWLOG — **3.4x above** the `slowlog-log-slower-than 10000` (10ms) threshold, triggering a SLOWLOG entry. Since KEYS is O(N), **10x keys (20K) means ~350ms, 100x keys (200K) means ~3.5s — linear degradation**.
+
+**Production Incident Cases**:
+- **sidekiq-cron**: `KEYS cron_jobs:*` caused **5-6 second blocking → service down** in a 40M key environment
+- **Medusa (e-commerce)**: `KEYS mc:tag:*` with 330K keys caused **total Redis blocking**, all clients waiting
+- **Drupal Redis**: Cache flush with 1.5M keys caused **entire site freezing** → migrated to SCAN patch
+
+### Problem 2: Batch Writes vs. Realtime Reads — Workload Interference
+
+When `buildPrefixTopK()` SETs tens of thousands of keys hourly, it competes with realtime GET/INCR on the same single thread.
+
+**Measured Evidence** (SLOWLOG + commandstats):
+
+SLOWLOG recorded an individual SET during batch build at **10.7ms**:
+
+```
+SLOWLOG #2: SET prefix:v1774134000041:scien ["science"] EX 7200 → 10,722us (10.7ms)
+```
+
+The `commandstats` average for SET is 10.04us (0.01ms), making this 10.7ms **1,070x the average**. A normal GET command was also caught in SLOWLOG:
+
+```
+SLOWLOG #1: GET prefix:v1774018800170:삼성 → 15,513us (15.5ms)
+```
+
+This is **1,868x slower** than the GET average of 8.30us — evidence that batch writes and realtime reads are contending on the same single thread.
+
+**redis-benchmark baseline** (without batch):
+
+| Command | Throughput | P50 |
+|---------|-----------|-----|
+| SET | 88,339 req/s | 0.231ms |
+| GET | 104,602 req/s | 0.231ms |
+
+> At baseline, Redis itself is fast enough (GET P50 0.231ms). The problem is **intermittent spikes of tens of milliseconds during KEYS/batch build**.
+
+**Industry Cases**:
+- **GitLab**: During eviction, Redis main thread consumed most CPU, response rate dropped **25,000 → 5,000 ops/sec (80% decrease)**
+- **Alibaba Cloud**: Memory hit 100% in 5 minutes due to traffic surge, cascading eviction → **all GET/SET timeouts**
+
+### Problem 3: Lack of Per-Purpose Isolation — Blast Radius
+
+| Workload | Characteristics | Risk |
+|----------|----------------|------|
+| Autocomplete KV | Batch bulk WRITE (tens of thousands of keys) | Other workloads delayed during batch |
+| Post/Search Cache (L2) | TTL-based, eviction allowed | Eviction affects other keys |
+| View Counter | High-frequency INCR, 30s flush | `KEYS` scan blocks INCR |
+| Token Blacklist | **Security-critical**, loss unacceptable | Blacklist keys with TTL are eviction candidates under volatile-lru |
+
+**Core Risk**: With `maxmemory-policy volatile-lru`, when memory reaches 128MB, **all keys with TTL** become eviction candidates. Blacklist keys (`blacklist:{token}`) also have TTL, so **if evicted, a logged-out token becomes valid again** — a security incident.
+
+Direct recommendation from Redis official documentation: "The volatile-lru, volatile-random policies are mainly useful when you want to use a single instance for both caching and persistent keys. **However, it is usually a better idea to run two Redis instances** to solve such a problem."
+
+**Eviction Simulation Results** (maxmemory temporarily reduced to used_memory + 1MB):
+
+| Item | Result |
+|------|--------|
+| evicted_keys | **2,077** |
+| Blacklist Keys (Before) | 1 |
+| Blacklist Keys (After) | **1 (survived this time)** |
+
+The blacklist key survived because it was recently accessed and ranked low in LRU eviction order. **But this result depends on timing** — after some time since logout, it would move up in LRU order and become an eviction candidate.
+
+> Key point: While 2,077 keys were evicted, **there is no way to predict which keys will be removed**. The blacklist surviving this time was luck, not a guarantee.
+
+> **Common Root Cause of All 3 Problems**: Workloads with fundamentally different characteristics share **a single single-threaded Redis**. Redis creator Salvatore Sanfilippo directly called separating DBs with SELECT on a single instance **"the worst design mistake"**.
+
+---
+
+## 3. Root Cause Analysis
+
+Redis **executes all commands sequentially on a single thread**. This is the strength that guarantees INCR atomicity, but also the weakness where **one slow command blocks everything**.
+
+| Problem | Cause | Solution Direction |
+|---------|-------|--------------------|
+| KEYS blocking | O(N) full keyspace scan, no yielding mid-operation | **KEYS → SCAN migration** |
+| Batch interference | Individual SETs tens of thousands of times without Pipeline → tens of thousands of network round trips | **Per-purpose Redis instance separation** |
+| Blast radius | `volatile-lru` evicts TTL keys regardless of purpose | **Dedicated blacklist instance** |
+
+---
+
+## 4. Alternative Evaluation
+
+![Alternative Comparison — Redis Distribution Strategies](/uploads/project/WikiEngine/redis-sharding/alternatives-comparison.svg)
+
+### Redis Cluster (Official Distribution)
+
+Auto-sharding (16384 slots) + auto-failover — the **production standard**, but requires a minimum of 6 nodes ($144/month). Overkill for current scale (~60MB).
+
+### Redis Sentinel (Optimal for Current Scale)
+
+Auto-failover + single Primary. **The optimal choice when data fits in a single node's memory and only HA is needed**. ~$36/month.
+
+> **Honest Admission**: The most rational production choice at current scale is **Redis Sentinel** or **keeping the current single instance**. App-level Consistent Hashing is rarely used in production.
+
+### App-Level Consistent Hashing (Selected — Learning Purpose)
+
+Redis Cluster handles CRC16-based 16384 slot distribution internally, so the hash ring, virtual nodes, and minimum key migration when adding nodes cannot be directly observed. The goal is to implement O(log N) routing with `ConcurrentSkipListMap` and measure distribution variance by virtual node count.
+
+### Cost Comparison (AWS Basis)
+
+| Configuration | Monthly Cost (AWS) | Notes |
+|--------------|-------------------|-------|
+| Current (Single Redis) | ElastiCache t4g.micro **~$12/month** | 128MB, single node |
+| Redis Sentinel (Recommended) | ~$36/month | 1 Primary + 2 Replica |
+| 3-Node Sharding (Selected) | ~$36/month + app routing management | Same cost with added operational burden |
+| Redis Cluster | ~$144/month | 3P + 3R, overkill |
+
+---
+
+## 5. Consistent Hashing Algorithm
+
+![Consistent Hashing — Hash Ring and Virtual Nodes](/uploads/project/WikiEngine/redis-sharding/consistent-hashing-ring.svg)
+
+### The Problem with hash(key) % N
+
+Simple modulo hashing redistributes almost all keys when the node count changes:
+
+| Scenario | hash(key) % N | Consistent Hashing |
+|----------|--------------|-------------------|
+| 3 → 4 nodes | ~75% key migration | ~25% key migration (1/N) |
+| 4 → 3 nodes (failure) | ~75% key migration | ~25% key migration (1/N) |
+
+### Virtual Nodes
+
+With only 3 physical nodes, the distribution on the hash ring is uneven. Each physical node is mapped to multiple virtual nodes for even distribution:
+
+| Virtual Nodes | Key Distribution Variance | Keys Moved on Node Addition |
+|--------------|--------------------------|---------------------------|
+| 1 (no virtual nodes) | ~50% variance | Up to 50% |
+| 50 | ~10% variance | ~1/N |
+| **150 (selected)** | **~5% variance** | **~1/N** |
+| 500 | ~2% variance | ~1/N |
+
+150 virtual nodes is the right balance between even distribution and memory (TreeMap entry count).
+
+---
+
+## 6. Implementation
+
+### Architecture — Hybrid (Consistent Hashing + Per-Purpose Isolation)
+
+![After — Consistent Hashing + Per-Purpose Isolation](/uploads/project/WikiEngine/redis-sharding/after-consistent-hashing.svg)
+
+### Data Routing Strategy
+
+![Data Routing Strategy — Destination by Key Type](/uploads/project/WikiEngine/redis-sharding/data-routing-strategy.svg)
+
+| Data | Routing Method | Reason |
+|------|---------------|--------|
+| Autocomplete KV (`prefix:*`) | **Consistent Hashing** | Highest key count, maximizes distribution benefit |
+| Post/Search Cache (`post:{id}`, `search:*`) | **Consistent Hashing** | Key-based distribution is natural |
+| View Count (`post:views:{id}`) | **Consistent Hashing** | Key-based distribution, SCAN on each node during flush |
+| Version Pointer (`prefix:current_version`) | **Fixed Node (first in Ring)** | Global metadata, only 1 exists |
+| Token Blacklist (`blacklist:*`) | **Dedicated Instance (isolated)** | Security-critical, cannot be sharded |
+
+> **Token Blacklist Sharding Problem**: If JWT tokens are distributed via Consistent Hashing, a node failure means the blacklist for that shard cannot be queried. Combined with a conservative policy (reject all tokens on failure), there's a 1/3 chance of blocking all authentication. Therefore, the blacklist is **safest without sharding**.
+
+### ConsistentHashRouter Implementation
+
+```java
+@Component
+public class ConsistentHashRouter {
+
+    private final ConcurrentSkipListMap<Long, StringRedisTemplate> ring = new ConcurrentSkipListMap<>();
+    private final List<StringRedisTemplate> nodes;
+    private static final int VIRTUAL_NODES = 150;
+
+    public ConsistentHashRouter(List<StringRedisTemplate> shardRedisTemplates) {
+        this.nodes = shardRedisTemplates;
+        for (int i = 0; i < nodes.size(); i++) {
+            for (int v = 0; v < VIRTUAL_NODES; v++) {
+                long hash = hash("node-" + i + "-vnode-" + v);
+                ring.put(hash, nodes.get(i));
+            }
+        }
+    }
+
+    /** 키에 해당하는 Redis 노드 결정 (ConcurrentSkipListMap은 thread-safe) */
+    public StringRedisTemplate getNode(String key) {
+        long hash = hash(key);
+        Map.Entry<Long, StringRedisTemplate> entry = ring.ceilingEntry(hash);
+        if (entry == null) {
+            entry = ring.firstEntry();  // 링 순환
+        }
+        return entry.getValue();
+    }
+
+    /** 모든 노드 반환 (SCAN 등 전체 조회 시) */
+    public List<StringRedisTemplate> getAllNodes() {
+        return Collections.unmodifiableList(nodes);
+    }
+
+    private long hash(String key) {
+        return Hashing.murmur3_128()
+            .hashString(key, StandardCharsets.UTF_8)
+            .asLong() & 0x7FFFFFFFFFFFFFFFL;
+    }
+}
+```
+
+### RedisShardConfig — Multiple LettuceConnectionFactory Configuration
+
+```java
+@Configuration
+public class RedisShardConfig {
+
+    @Bean
+    @Primary
+    StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        // 기존 단일 인스턴스 유지 — 토큰 블랙리스트 등 비샤딩 용도
+        return new StringRedisTemplate(connectionFactory);
+    }
+
+    @Bean
+    List<StringRedisTemplate> shardRedisTemplates(
+            @Value("${redis.shards[0].host}") String host1,
+            @Value("${redis.shards[0].port}") int port1,
+            @Value("${redis.shards[1].host}") String host2,
+            @Value("${redis.shards[1].port}") int port2,
+            @Value("${redis.shards[2].host}") String host3,
+            @Value("${redis.shards[2].port}") int port3,
+            @Value("${redis.password:}") String password) {
+
+        return List.of(
+            createTemplate(host1, port1, password),
+            createTemplate(host2, port2, password),
+            createTemplate(host3, port3, password)
+        );
+    }
+
+    private StringRedisTemplate createTemplate(String host, int port, String password) {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
+        if (!password.isBlank()) {
+            config.setPassword(password);
+        }
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
+        factory.afterPropertiesSet();
+        return new StringRedisTemplate(factory);
+    }
+}
+```
+
+### Impact on Existing Code
+
+| File | Before | After |
+|------|--------|-------|
+| `RedisAutocompleteService` | `StringRedisTemplate redis` (single) | `ConsistentHashRouter router` |
+| `TieredCacheService` | `StringRedisTemplate redis` (single) | `ConsistentHashRouter router` |
+| `ViewCountService` | `StringRedisTemplate redisTemplate` (single) | `ConsistentHashRouter router` |
+| `RedisTokenBlacklist` | `StringRedisTemplate redisTemplate` (single) | **No change** (keeps existing single Redis) |
+
+The change pattern is identical across all files:
+
+```java
+// Before (single Redis)
+redis.opsForValue().get(key);
+
+// After (Consistent Hashing)
+router.getNode(key).opsForValue().get(key);
+```
+
+---
+
+## 7. KEYS → SCAN Migration
+
+```java
+// Before
+Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");  // KEYS — O(N) blocking
+
+// After
+ScanOptions options = ScanOptions.scanOptions().match(KEY_PREFIX + "*").count(1000).build();
+try (Cursor<String> cursor = redisTemplate.scan(options)) {  // SCAN — cursor-based, non-blocking
+    while (cursor.hasNext()) { ... }
+}
+```
+
+| | Before (KEYS) | After (SCAN) |
+|---|---|---|
+| SLOWLOG (10ms threshold) | `KEYS post:views:*` **34.6ms** recorded | **No entries** (under 10ms) |
+| Full Tests | 117 passing | 117 passing |
+
+> After SLOWLOG RESET, waited 90 seconds (3 flushToDB executions) → SLOWLOG GET 10 result was **empty**. The KEYS blocking anti-pattern has been completely eliminated.
+
+---
+
+## 8. 3-Node Separation + ConsistentHashRouter Deployment
+
+**Deployment Result**: 3 Redis shard containers healthy + App started successfully
+
+```
+wiki-app-prod              Up 3 minutes
+wiki-redis-shard3-prod     Up 14 minutes (healthy)
+wiki-redis-shard2-prod     Up 14 minutes (healthy)
+wiki-redis-shard1-prod     Up 14 minutes (healthy)
+```
+
+### Distribution Uniformity Test
+
+| Timing | shard-1 | shard-2 | shard-3 | original redis |
+|--------|---------|---------|---------|----------------|
+| Right after deployment (before batch build) | 0 | 0 | 0 | 1,050 |
+| After batch build (1st run) | 369 | 304 | 347 | 1,022 |
+| After batch build (2nd run) | **751** | **607** | **682** | 1,022 |
+
+Shard total: 2,040 keys (751 + 607 + 682). Variance: min 607 / max 751 = 19.2% — Consistent Hashing working correctly with 3 nodes x 150 virtual nodes.
+
+Autocomplete working correctly:
+```
+curl /posts/autocomplete?prefix=science → ["science"]
+curl /posts/autocomplete?prefix=삼성 → ["삼성전자"]
+```
+
+### After redis-benchmark
+
+| Command | Before (single) | After (shard-1) | Difference |
+|---------|-----------------|-----------------|------------|
+| GET | 104,602 req/s, P50 0.231ms | 104,166 req/s, P50 0.231ms | Equal |
+| SET | 88,339 req/s, P50 0.231ms | 71,428 req/s, P50 0.239ms | -19% (container resource sharing) |
+
+> No performance degradation from sharding. GET P50 identical (0.231ms). The SET throughput decrease is due to 4 Redis containers running simultaneously on the same server, sharing CPU/memory. Since each shard handles 1/3 of actual SET load, this is not an issue.
+
+---
+
+## 9. Node Failure Fallback
+
+```
+docker stop wiki-redis-shard2-prod
+→ curl /posts/autocomplete?prefix=science
+→ Normal response: 10 results returned via Lucene PrefixQuery fallback
+→ Keys on shard-2 result in cache miss → Lucene responds instead
+→ docker start wiki-redis-shard2-prod → Recovery confirmed
+```
+
+---
+
+## 10. Hotspot Problem and Shard Manager
+
+### Hotspot Problem
+
+Sharding is effective for **data distribution** but insufficient for **load distribution**:
+
+- 1-character prefixes ("wi", "de", "ha") are queried **tens of times more** than 3-character prefixes
+- Certain prefixes see explosive popularity spikes due to events/seasons
+- → The shard containing those keys becomes a **hotspot**, creating a performance bottleneck
+
+### Dynamic Replication
+
+A solution inspired by Meta's Shard Manager:
+
+| # | Responsibility | Description |
+|---|---------------|-------------|
+| 1 | **Data Distribution** | Distribute data across shards via Consistent Hashing |
+| 2 | **Dynamic Replication Management** | Monitor each shard's load and dynamically add/remove read replicas |
+| 3 | **Minimum Node Guarantee** | Maintain a minimum number of healthy nodes per shard for high availability |
+
+> **Key Point**: Consistent Hashing solves the **data distribution** problem, and dynamic replication solves the **load distribution** problem. These are separate problems, and sharding alone cannot prevent hotspots.
+
+---
+
+## 11. Load Test — k6 100 VU, 20 Minutes
+
+### k6 Smoke Test (5 VU, 2 Minutes)
+
+| Scenario | Average | P95 |
+|----------|---------|-----|
+| Overall | 105ms | 490ms |
+| Autocomplete | 35ms | 61ms |
+| Latest Posts | 37ms | 62ms |
+| Detail View | 25ms | 44ms |
+| **Error Rate** | **0.00%** | |
+
+### k6 LOAD Test — Server-Distributed Deployment (100 VU, 20 Minutes, Final)
+
+shard-2 and shard-3 moved from Server 1 → Server 2 + Kafka/Debezium memory reduced, then re-measured.
+
+| Scenario | Average | P95 |
+|----------|---------|-----|
+| Overall | **42.81ms** | **190.44ms** |
+| Search (All) | **29.18ms** | **100.85ms** |
+| Search (Rare 10%) | 22.79ms | 89.72ms |
+| Search (Medium 60%) | 19.14ms | 88.82ms |
+| Search (High-frequency 30%) | 51.28ms | 200.45ms |
+| Autocomplete | **11.68ms** | 68.44ms |
+| Latest Posts | 18.61ms | 80.39ms |
+| Detail View | 25.80ms | 92.38ms |
+| Write (Create + Like) | 25.94ms | 94.41ms |
+| **Error Rate** | **0.00%** | |
+| Total Requests | **41,912** | |
+
+### Comparison — Single Redis → Server-Concentrated → Server-Distributed
+
+| Metric | After [CDC](/blog/project/wikiengine/cdc) (Single Redis) | Sharding (Server 1 Concentrated) | Sharding (Server-Distributed) |
+|--------|----------------------|-------------------|------------------|
+| Average | 35.6ms | 47.6ms (+34%) | **42.8ms (+20%)** |
+| P95 | 138ms | 197ms | **190ms** |
+| P99 | 294ms | 473ms | **398ms** |
+| Autocomplete | 10.4ms | 14.8ms | **11.7ms** |
+| Search | 25.7ms | 35.3ms | **29.2ms** |
+| Error Rate | 0% | 0% | **0%** |
+| Peak Throughput | ~58 req/s | ~57 req/s | **~58 req/s** |
+
+> Server distribution effect: Moving shard-2 and shard-3 to Server 2 reduced CPU/memory contention. Autocomplete improved from 14.8ms → 11.7ms, approaching the post-[CDC](/blog/project/wikiengine/cdc) level (10.4ms). The remaining +7ms (35.6→42.8) is the inherent cost of distributed systems — hash routing, multiple connection pools, and inter-server network round trips.
+
+![k6 LOAD — Terminal after server-distributed deployment](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-terminal.png)
+![k6 LOAD — Overview (42.8ms / P95 190ms / Error Rate 0%)](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-overview.png)
+
+### "Shouldn't sharding make things faster?"
+
+**No.** The purpose of sharding/multi-instance is **capacity scaling, workload isolation, and fault isolation** — not latency reduction. Splitting instances **on the same server** actually adds overhead from connection pool management and CPU contention.
+
+The Redis Cluster official spec states: "With N master nodes you can expect N times the performance of a single instance, and latency equal to a single node." However, this assumes **deployment on separate servers**.
+
+Industry cases:
+- **GitLab**: Accepted increased connection overhead when separating Redis by workload. The goal was "removing the noisy-neighbor problem where Sidekiq polling interferes with cache reads"
+- **Shopify**: Shared single Redis caused total downtime ("Redismageddon") → migrated to per-pod complete isolation
+
+**+7ms Trade-off Assessment**:
+- 42.8ms is below Jakob Nielsen's "instantaneous" threshold (100ms) — imperceptible to users
+- P95 190ms is within industry standards (web API P95 < 200ms)
+- Error rate 0%, equivalent throughput (58 req/s)
+- Gained: KEYS blocking elimination, volatile-lru security isolation, workload separation, 1/3 partial impact on node failure
+
+---
+
+## 12. Grafana Dashboard
+
+### Redis Shards (Server-Distributed Deployment)
+
+- shard-1 (Server 1): 815 keys
+- shard-2 (Server 2): 37 keys → Will be properly distributed on next batch build
+- shard-3 (Server 2): 36 keys → Will be properly distributed on next batch build
+
+![Redis Shards — Server-Distributed Deployment](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-redis-shards.png)
+
+### Original Redis (Blacklist Dedicated)
+
+- Memory: 0.597%, L2 Hit Rate: 66.6%, Eviction: 0
+
+![Original Redis](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-redis-original.png)
+
+### Spring Boot
+
+- HTTP Average: Both instances under ~50ms
+- App CPU: Server 1 peak ~80%, Server 2 peak ~40% (distribution effect)
+
+![Spring Boot](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-springboot.png)
+
+### Tiered Cache + Lettuce
+
+- L2 Hit Rate: 74%, Origin: 24%, L1: 1%
+- Lettuce P95: Stable range under ~5ms
+
+![Tiered Cache + Lettuce](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-cache.png)
+
+### Debezium CDC
+
+- Connected: CONNECTED, Erroneous Events: 0
+- CDC Lag: Under ~80ms — Normal even after Kafka/Debezium memory reduction
+
+![Debezium CDC](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-debezium.png)
+
+### MySQL
+
+- Primary QPS: Peak ~400 ops/s
+- InnoDB Hit Rate: Primary 100%, Replica 99.9%
+
+![MySQL](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-mysql.png)
+
+### Host
+
+- Server 1 Memory: 55.0% (effect of removing 2 shards)
+- Server 2 Memory: 39.2% (added 2 shards + Kafka/Debezium reduced)
+
+![Host](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-host.png)
+![Containers](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-containers.png)
+![Nginx](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-nginx.png)
+![HikariCP + System](/uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-hikari.png)
+
+---
+
+## 13. Overall Performance Comparison
+
+| Metric | Before (Single Redis) | After (SCAN + 3-Node Separation) |
+|--------|------------------|-------------------------|
+| KEYS blocking during flush | **34.6ms (SLOWLOG)** | **0ms (SCAN non-blocking)** |
+| Worst GET during batch | **15.5ms (SLOWLOG)** | Resolved by workload separation |
+| Blacklist eviction risk | Present (volatile-lru target) | **None (dedicated instance)** |
+| Redis available memory | 128MB | **384MB (3 x 128MB)** |
+| Batch write blast radius | All workloads | **Autocomplete nodes only** |
+| k6 100 VU error rate | 0% | **0%** |
+| k6 100 VU average | 35.6ms | **42.8ms** (+7ms, distribution cost) |
+| k6 100 VU P95 | 138ms | **190ms** |
+
+> **Key Improvement**: Not latency reduction, but **workload isolation** (batch vs. realtime separation), **anti-pattern elimination** (KEYS→SCAN), and **security isolation** (dedicated blacklist instance). Consistent Hashing serves as the routing layer for separated nodes and a learning implementation that enables future scaling with minimal key redistribution when adding nodes.
+
+---
+
+## Interview Questions
+
+**Q: "Why did you choose application-level sharding instead of Redis Cluster?"**
+
+A: "For learning purposes. Redis Cluster auto-shards using CRC16-based 16384 slots, but the process is abstracted away, making it impossible to directly implement and observe the hash ring, virtual nodes, and minimum key migration when adding nodes. In production, I would migrate to Redis Cluster or AWS ElastiCache."
+
+**Q: "What is the rationale for setting virtual nodes to 150?"**
+
+A: "At 50 nodes there's ~10% variance, at 150 nodes ~5% variance, and at 500 nodes ~2% variance. 3 physical nodes x 150 virtual nodes = 450 TreeMap entries, which is negligible memory overhead while achieving even distribution within 5%."
+
+**Q: "Why isn't the token blacklist sharded?"**
+
+A: "Because it's security-critical data. If a specific shard fails, the blacklist status of tokens stored on that shard cannot be verified. Combined with a conservative policy, there's a 1/3 chance of blocking all authentication. The blacklist key count is only hundreds to thousands, so there's little need for distribution."
+
+**Q: "Does sharding alone solve the hotspot problem?"**
+
+A: "No. Consistent Hashing is data distribution, not load distribution. 1-character prefixes are queried tens of times more, causing the corresponding shard to become a hotspot. Dynamic replication (adding read-only replicas to high-load shards) is needed separately."
+
+**Q: "Your Redis usage is 60MB — is sharding really necessary?"**
+
+A: "It's over-engineering at current scale, admittedly. If this were production, keeping a single Redis or using Redis Sentinel would be the right call. The purpose was to directly implement the Consistent Hashing algorithm and measure the hash ring, virtual nodes, and key redistribution firsthand."
+
+**Q: "What would you do in production?"**
+
+A: "The production setup would be completely different. App-level Redis sharding → Redis Cluster or ElastiCache, embedded Lucene → Elasticsearch/OpenSearch. But what I gained from this project is understanding at the principle level 'why Redis Cluster chose CRC16 + 16384 slots.' The value of this project is being able to use managed services not as a 'black box' but as 'a tool whose principles I understand.'"

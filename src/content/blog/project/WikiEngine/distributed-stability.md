@@ -410,3 +410,398 @@ A: "stress 테스트의 목적은 '200 VU를 견디는 것'이 아니라 **'한�
 **Q: "전체 프로젝트에서 이 글의 의미는?"**
 
 A: "초반 글들은 '코드 최적화로 얼마나 빨라지나', [stress 테스트](/blog/project/wikiengine/stress-test-tuning)는 '단일 서버의 한계는 어디인가', [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)~[Redis 샤딩](/blog/project/wikiengine/redis-sharding)은 '분산 아키텍처를 어떻게 구축하나'였습니다. 이 글은 **'구축한 분산 아키텍처가 실제로 안정적인가'**를 검증합니다."
+
+
+<!-- EN -->
+
+
+## Previous Post
+
+In [Redis Sharding — Workload Isolation with Consistent Hashing](/blog/project/wikiengine/redis-sharding), we eliminated the KEYS blocking anti-pattern, implemented 3-node Consistent Hashing, and isolated the blacklist to a dedicated instance. This post **verifies the entire distributed architecture with a stress test**.
+
+---
+
+## Previous Posts Summary
+
+| Post | Key Metrics |
+|------|---------|
+| [Redis L2 Cache + Stateless Migration](/blog/project/wikiengine/redis-l2-cache) | L1 73% + L2 9% = 82% hit, Lettuce P95 2.5ms |
+| [MySQL Replication](/blog/project/wikiengine/replication) | GTID async, Primary 5 + Replica 15, Lag 0~1s |
+| [App Scale-Out](/blog/project/wikiengine/scaleout) | 482ms → 37ms (92% down), errors 13.25% → 0%, CPU 100% → 50% |
+| [CDC — Event-Driven Synchronization](/blog/project/wikiengine/cdc) | PostService dual-write removed, OCP compliant |
+| [Redis Sharding](/blog/project/wikiengine/redis-sharding) | KEYS→SCAN, 3-node separation, workload isolation |
+
+Load test after [Redis Sharding](/blog/project/wikiengine/redis-sharding) (100 VU, 20 min):
+
+| Metric | Result |
+|------|-----|
+| Avg Response Time | 42.8ms |
+| P95 | 190ms |
+| Error Rate | 0.00% |
+| Throughput (peak) | ~58 req/s |
+
+Each component has been verified independently. However, **the limits when everything operates together under high load** had not been confirmed.
+
+---
+
+## 1. Why Now
+
+### Difference from the [Stress Test](/blog/project/wikiengine/stress-test-tuning)
+
+The [stress test](/blog/project/wikiengine/stress-test-tuning) identified **the single-server limit**:
+
+- Single server (1 App + 1 MySQL + 0 Redis) → 200 VU, 25 min → CPU 100%, P95 1.4s
+- Established the rationale for **"scale-out is needed"**
+
+This test identifies **the distributed architecture's limit**:
+
+- Distributed architecture (2 Apps + MySQL Primary/Replica + Redis 3-shard + Kafka + Debezium) → stress (re-exploring the limit)
+- Answers **"Is it production-ready?"**
+
+### Deferred Soak Test
+
+The soak test (50 VU, 4 hours) explicitly deferred in the [stress test](/blog/project/wikiengine/stress-test-tuning) is only meaningful after the distributed infrastructure is in place. On a single server, 50 VU x 4 hours would quickly crash at CPU 100%, but with a distributed architecture, we look for **problems that emerge over time while CPU has headroom**.
+
+"Time-based" problems that soak tests find:
+- **Memory leaks**: Heap usage gradually rises even after GC → OOM
+- **GC Pause accumulation**: G1 GC Mixed/Full GC frequency increases over time
+- **DB Connection Pool Drift**: HikariCP active connections gradually rise → pool exhaustion
+- **Redis Memory Drift**: used_memory gradually rises → eviction → risk of blacklist key loss
+- **Kafka Consumer Lag accumulation**: Initially 0 but lag increases over time
+- **Replication Lag accumulation**: MySQL Replica gradually falls behind under load
+
+**Industry examples**:
+- **Netflix**: Found a DirectByteBuffer leak in Zuul proxy after 48 hours of soak testing — GC handled it in short tests but caused OOM over long durations
+- **LinkedIn**: Found repeated rebalancing due to misconfigured `max.poll.records` in Kafka Consumer during a 4-hour soak
+- **Stripe**: Soak test revealed Ruby GC heap fragmentation growing proportionally with time, causing P99 latency to triple after 2 hours
+
+---
+
+## 2. Test Environment
+
+### Infrastructure Configuration
+
+![Current distributed architecture](/uploads/project/WikiEngine/distributed-stability/current-architecture.svg)
+
+| Server | Role | Specs |
+|------|------|------|
+| Server 1 | App + DB Primary + Redis + Nginx | ARM 2-core, 12GB |
+| Server 2 | App + DB Replica + Redis Shard + Kafka | ARM 2-core, 12GB |
+| Server 3 | Grafana + Loki + k6 + InfluxDB | AMD 1-core, 6GB |
+| Server 4 | Prometheus + Node Exporter | AMD 1-core, 6GB |
+
+### Data State
+
+| Item | Value |
+|------|-----|
+| posts table | ~14.25M rows |
+| Lucene index | ~20GB (Primary + Replica) |
+| Redis autocomplete KV | Tens to hundreds of thousands of keys (distributed across 3 shards) |
+| Redis cache L2 | Thousands of hot post keys (distributed across 3 shards) |
+| Redis token blacklist | Hundreds to thousands of keys (dedicated instance) |
+
+---
+
+## 3. Stress Test Plan
+
+### VU Target Rationale
+
+In the [stress test](/blog/project/wikiengine/stress-test-tuning), the ARM 2-core single server hit its limit at 100-150 VU (CPU 100%). After [App Scale-Out](/blog/project/wikiengine/scaleout) to 2 App instances, CPU stabilized at 50% under 100 VU. With simple linear scaling, the limit would be 200-300 VU, but Amdahl's Law means contention on shared resources (MySQL Primary, Nginx, Redis) prevents linear scaling.
+
+### Profile (25 min)
+
+```
+0~3 min:    0 → 100 VU  (warm-up)
+3~8 min:    100 VU hold  (normal load — Baseline comparison)
+8~12 min:   100 → 200 VU (overload entry)
+12~22 min:  200 VU hold  (limit exploration)
+22~25 min:  200 → 0 VU   (recovery)
+```
+
+### Traffic Distribution
+
+| Scenario | Ratio | Description |
+|---------|------|------|
+| Search | 30% | Mixed Korean/English 15 keywords |
+| Autocomplete | 25% | 12 prefixes |
+| Detail View | 20% | Hot posts 80% + random 20% |
+| List View | 15% | Pages 0~9 |
+| Write | 5% | Post creation |
+| Likes | 5% | Targeting hot posts |
+
+### Success Criteria
+
+| Metric | [Stress Test](/blog/project/wikiengine/stress-test-tuning) (single) | Target (distributed) |
+|------|------------------|------------------|
+| Max VU (error rate < 1%) | ~100-150 VU | **200+ VU** |
+| P95 (100 VU) | 1,400ms | **< 200ms** |
+| Error Rate (200 VU) | 13.25% (at 100 VU) | **< 1%** |
+
+---
+
+## 4. Stress Test Results
+
+### k6 Console Results
+
+![k6 stress console results](/uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-console.png)
+
+| Scenario | Avg | P95 |
+|---------|------|-----|
+| **Overall** | **897.69ms** | **1,910.67ms** |
+| Search (all) | 955.03ms | 1,985.55ms |
+| Search (rare 10%) | 785.60ms | 1,861.00ms |
+| Search (mid-frequency 60%) | 940.54ms | 1,926.67ms |
+| Search (high-frequency 30%) | 1,042.18ms | 1,999.72ms |
+| Autocomplete | 693.41ms | 1,797.56ms |
+| Latest Posts | 672.73ms | 1,714.21ms |
+| Detail View | **1,305.00ms** | **2,299.64ms** |
+| Write (create + likes) | 519.76ms | 1,607.26ms |
+| **Error Rate** | **0.09%** | |
+| Total Requests | **54,165** | |
+
+### k6 Overview Dashboard
+
+![k6 Overview — response time, throughput, error rate, VU](/uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-overview.png)
+
+| Metric | Value | Analysis |
+|------|-----|------|
+| Avg Response Time | **1.08s** | Spiked at 200 VU compared to 100 VU segment (42.8ms) |
+| P95 | **2.20s** | 11.5x worse than [Redis Sharding](/blog/project/wikiengine/redis-sharding) P95 (190ms) |
+| P99 | **5.73s** | Extreme latency — queue explosion during CPU saturation |
+| Error Rate | **0.105%** | Target (< 1%) achieved |
+| Peak Throughput | **109 req/s** | Peak during 100 VU segment, actually dropped at 200 VU |
+
+**Response Time Trend**:
+- **0~8 min** (0→100 VU): Avg ~50ms, P95 ~200ms — matches Baseline
+- **8~12 min** (100→200 VU): **P95 surges by the minute** — entering CPU saturation
+- **12~22 min** (200 VU hold): P95/P99 **explode to seconds** — queueing avalanche
+- **22~25 min** (200→0 VU): Returns to normal within ~2 min after load reduction
+
+---
+
+## 5. Root Cause Analysis — App CPU Saturation as the Fundamental Bottleneck
+
+### 100 VU vs 200 VU Comparison
+
+| Metric | 100 VU Segment | 200 VU Segment | Degradation |
+|------|-----------|-----------|------|
+| Avg | ~50ms | **897ms** | 18x |
+| P95 | ~200ms | **1,911ms** | 9.5x |
+| P99 | ~400ms | **5,730ms** | 14x |
+| Throughput | ~60 req/s | ~25 req/s (drop) | -58% |
+| App CPU | ~50% | **80-100%** | Saturated |
+
+The throughput actually dropping is a **queueing avalanche** — new requests arrive faster than the app can process them, causing the queue to snowball.
+
+### Elimination Method — Evidence That CPU Is the Bottleneck
+
+| Component | Status at 200 VU | Bottleneck? |
+|---------|-----------|------|
+| **App CPU** | **80-100%**, Load Average ~15 (7.5x for 2 cores) | **YES** |
+| MySQL | InnoDB hit rate 100%, Slow Query 0 (Primary), Row Lock 12ms x1 | No |
+| Redis | OPS 50 ops/s (limit 100K), memory 0.6%, Eviction 0, Slowlog 0 | No |
+| Kafka | Consumer Lag briefly 3K → converges to 0, CDC Lag ~40ms | No (transient) |
+| Nginx | Active 200+, negligible CPU usage | No (waiting on app) |
+| Network | TTFB 3.95s — **mostly server response wait** | No (consequence of CPU) |
+| Replication | Lag 0~1s, IO/SQL Thread Running | No |
+
+**Same conclusion as the [stress test](/blog/project/wikiengine/stress-test-tuning) (single server)**: The bottleneck is **App CPU (Lucene BM25 scoring + Nori morphological analysis)**. [App Scale-Out](/blog/project/wikiengine/scaleout) to 2 App instances stabilized CPU at 50% for 100 VU, but **CPU saturation is reached again at 200 VU**.
+
+### Supporting 200+ VU
+
+| Alternative | Effect | Feasibility |
+|------|------|---------|
+| **Scale to 3 Apps** | CPU 4→6 cores, rho ≈ 0.67 (200 VU) | Exceeds OCI Free Tier limit |
+| **Improve cache hit rate** | Fewer origin lookups → CPU savings | L2 65% → 80%+ possible (TTL tuning) |
+| **Strengthen detail view cache** | Improve the slowest scenario (P95 2.3s) | Room for postDetail L1/L2 hit rate improvement |
+
+---
+
+## 6. Grafana Dashboards
+
+### Per-Scenario Response Time
+
+![Per-scenario avg/P95 + frequency comparison](/uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-scenario-detail.png)
+
+- At 200 VU, **all scenarios degrade simultaneously** — not a specific API bottleneck but system-wide CPU saturation
+- Detail view (P95 9.83s) is the slowest — high origin hit rate (Lucene + MySQL)
+- Rare token (10%) search is faster than high-frequency (30%) — high-frequency tokens match more documents, increasing BM25 scoring cost
+
+### Spring Boot HTTP + JVM
+
+![HTTP avg/P95/P99, throughput, error rate, JVM Heap/GC](/uploads/project/WikiEngine/distributed-stability/phase16-stress-springboot-http-jvm.png)
+
+- Heap: Both instances ~200-300MB usage, stable within 1G limit
+- GC Pause: ~0.5ms at 100 VU, **rises to 6ms upon entering 200 VU** — increased G1 Evacuation Pause
+
+### Tiered Cache + Lettuce
+
+![L1/L2/Origin hit rates, Lettuce P95/P99](/uploads/project/WikiEngine/distributed-stability/phase16-stress-tiered-cache-lettuce.png)
+
+- Origin reach rate: **rises to 10 ops/s at 200 VU** — increased cache misses concentrate load on Lucene/MySQL
+- Lettuce P95: ~2ms at 100 VU → **spikes to 10ms at 200 VU** (event loop delay from CPU contention)
+
+### HikariCP + CPU
+
+![HikariCP connection pool, connection acquisition time, CPU, thread count](/uploads/project/WikiEngine/distributed-stability/phase16-stress-hikaricp-cpu.png)
+
+- Replica pool: Active reaches **max 14~15** (200 VU) — read load concentration
+- Connection acquisition time: **200ms spike** right after entering 200 VU — symptom of CPU saturation
+- **App CPU**: ~40-60% at 100 VU, **80-100% at 200 VU** — **bottleneck confirmed**
+
+### Per-Container Resources
+
+![Per-container CPU, memory, network, disk I/O](/uploads/project/WikiEngine/distributed-stability/phase16-stress-containers-cadvisor.png)
+
+- wiki-app-prod CPU: Peak **180%** (relative to 2 cores)
+- wiki-mysql-prod CPU: Nearly 0% — **DB is not the bottleneck**
+- Memory: App ~1G, MySQL ~3.5G — stable, no OOM risk
+
+### Redis Per-Shard
+
+![Per-shard memory, OPS, key count, network, connections](/uploads/project/WikiEngine/distributed-stability/phase16-stress-redis-shard.png)
+
+- OPS: **50 ops/s at 200 VU** — plenty of headroom (Redis limit 100K ops/s)
+- Key count: shard-1 916, shard-2 436, shard-3 527
+- Connections: 3 per shard
+
+### Redis Aggregate
+
+![Memory usage, L2 hit rate, OPS, Eviction, Slowlog](/uploads/project/WikiEngine/distributed-stability/phase16-stress-redis-dashboard.png)
+
+- Memory usage: **0.597%** — extremely spare
+- L2 cache hit rate: **65.0%** — cold query ratio increased under stress load
+- **Eviction: 0**, **Slowlog: 0**
+
+![Redis network I/O, Uptime](/uploads/project/WikiEngine/distributed-stability/phase16-stress-redis-network-uptime.png)
+
+### Nginx
+
+![Nginx status, connections, request count](/uploads/project/WikiEngine/distributed-stability/phase16-stress-nginx.png)
+
+- Active Connections: rises to 200+ at 200 VU
+- Waiting connections: surges at 200 VU — connections waiting for app response
+
+### MySQL
+
+![MySQL QPS, connections, InnoDB buffer pool, Slow Query, Row Lock](/uploads/project/WikiEngine/distributed-stability/phase16-stress-mysql-qps.png)
+
+- InnoDB buffer pool hit rate: **100% for both Primary/Replica** — no DB I/O bottleneck
+- Table Locks: **0**
+
+![InnoDB Row Lock wait time, per-operation Row throughput](/uploads/project/WikiEngine/distributed-stability/phase16-stress-mysql-row-lock.png)
+
+### MySQL Replication
+
+![Replication Lag, thread status, Primary vs Replica command comparison](/uploads/project/WikiEngine/distributed-stability/phase16-stress-replication-lag.png)
+
+- Replication Lag: **oscillates between 0~1s** — within normal range
+- R/W split: Primary SELECT ~10 ops/s, Replica SELECT **~70 ops/s**
+
+### Kafka + CDC
+
+![Kafka messages received/min, Consumer Lag](/uploads/project/WikiEngine/distributed-stability/phase16-stress-kafka-consumer.png)
+
+- Consumer Lag: 0 at 100 VU, **rises to max ~3K at 200 VU** → then converges to 0
+- Peak messages: ~28 msg/s
+
+### Debezium
+
+![Debezium connection status, CDC Lag, Events/sec](/uploads/project/WikiEngine/distributed-stability/phase16-stress-debezium.png)
+
+- Connected: **CONNECTED** (entire duration), Erroneous Events: **0**
+- CDC Lag: Peak **~40ms** — near real-time
+
+### Network Details
+
+![HTTP request phase-by-phase duration, network traffic](/uploads/project/WikiEngine/distributed-stability/phase16-stress-network-detail.png)
+
+- TTFB: **3.95s** — server response wait dominates at 200 VU
+- Total received data: 242 MiB
+
+### Host
+
+![Host CPU, memory, Swap, disk, Load Average](/uploads/project/WikiEngine/distributed-stability/phase16-stress-host-node-exporter.png)
+
+- Server 1 memory: 63.3%, Swap: 12.2%
+- Server 1 Load Average 1m: Peak **~15** (7.5x for 2 cores)
+
+### Kafka Topics
+
+![Kafka per-topic partition count](/uploads/project/WikiEngine/distributed-stability/phase16-stress-kafka-topics.png)
+
+---
+
+## 7. Performance Summary Comparison
+
+### [Stress Test](/blog/project/wikiengine/stress-test-tuning) (Single) vs Distributed
+
+| Metric | [Stress Test](/blog/project/wikiengine/stress-test-tuning) (single) | Stress (distributed) | Improvement |
+|------|-----------------|---------------|------|
+| Max VU (error < 1%) | ~100-150 VU | **~150-200 VU** | ~1.3-2x |
+| P95 (100 VU) | 1,400ms | **~200ms** | **7x improvement** |
+| Error Rate (200 VU) | 13.25% (at 100 VU) | **0.09%** (at 200 VU) | Errors nearly eliminated |
+| Peak Throughput | ~30 req/s | **~109 req/s** | 3.6x |
+| Recovery | Not measured | **Normal within ~2 min** | |
+| Bottleneck | App CPU (single 2-core) | App CPU (distributed 4-core) | Same bottleneck, higher limit |
+
+### 100 VU Segment Comparison (Normal Load)
+
+| Metric | [Redis Sharding](/blog/project/wikiengine/redis-sharding) (Baseline) | Stress 100 VU Segment |
+|------|--------------------|-----------------------------|
+| Avg | 42.8ms | ~50ms |
+| P95 | 190ms | ~200ms |
+| Error Rate | 0.00% | 0.00% |
+
+> At 100 VU, identical to Baseline. **SLA (P95 < 300ms) met.**
+
+### Key Conclusions
+
+1. **P95 200ms at 100 VU** — SLA met under normal load
+2. **0.09% error rate at 200 VU** — dramatically improved from [stress test](/blog/project/wikiengine/stress-test-tuning) (single, 13.25% at 100 VU)
+3. **App CPU remains the fundamental bottleneck** — 200 VU is the practical limit without scaling beyond 3+ instances
+4. **MySQL, Redis, Kafka, Nginx all have headroom** — resolving App CPU alone enables further scaling
+
+---
+
+## Future Plans
+
+### Soak Test (50 VU, 4 Hours)
+
+Planned for the final architecture after search pipeline improvements (synonym expansion, query understanding, LTR, etc.) are complete. Will monitor memory leaks, GC Pause accumulation, connection pool drift, Redis memory drift, and Kafka Consumer Lag accumulation at 30-minute intervals.
+
+### Chaos Engineering (Fault Injection)
+
+8 scenarios planned for the final architecture:
+
+| # | Scenario | Expected Result |
+|---|----------|---------|
+| 1a | App graceful stop (SIGTERM) | Nginx → routes to other App, 0 errors |
+| 1b | App crash (SIGKILL) | In-flight requests lost, then routes to other App |
+| 2 | Redis shard crash | Cache miss only for that shard |
+| 3 | Token BL Redis crash | Conservative policy (reject all tokens) |
+| 4 | MySQL Replica crash | Reads → routed to Primary |
+| 5 | Kafka crash | CDC halted, fallback behavior |
+| 6 | Debezium crash | CDC halted, catch-up after recovery |
+| 7 | Network delay 100ms | Response time increase, functionality intact |
+| 8 | Redis + Kafka simultaneous crash | Cache miss + CDC halt, service continues |
+
+---
+
+## Interview Questions
+
+**Q: "Why did you separate stress testing and soak testing?"**
+
+A: "They serve different purposes. Stress testing finds **where the system breaks under maximum instantaneous load** — we ramped VU up to 200 to identify the limit. Soak testing finds **problems that emerge over time under sustained normal load** — we run 50 VU for 4 hours to observe memory leaks, GC degradation, and connection pool drift."
+
+**Q: "What was the most dangerous scenario in Chaos Engineering?"**
+
+A: "The token blacklist Redis failure. If the blacklist can't be queried, the conservative policy (reject all tokens) causes a complete service authentication lockout, while the lenient policy (accept all tokens) creates a security hole. In production, you'd either ensure HA for the blacklist Redis via Redis Sentinel, or keep JWT expiration short (15 min) and use the lenient policy — it's a trade-off."
+
+**Q: "ARM 2-core x 2 instances — can it handle 200 VU?"**
+
+A: "The purpose of stress testing isn't to 'handle 200 VU' but to **'quantify where the limit is.'** Once you know the limit, you can do capacity planning — 'scaling to 3 Apps would support up to N VU.'"
+
+**Q: "What is the significance of this post in the overall project?"**
+
+A: "The early posts were about 'how much faster can code optimization make it', the [stress test](/blog/project/wikiengine/stress-test-tuning) was about 'where is the single-server limit', [Redis L2 Cache](/blog/project/wikiengine/redis-l2-cache) through [Redis Sharding](/blog/project/wikiengine/redis-sharding) were about 'how to build a distributed architecture.' This post **verifies whether the distributed architecture we built is actually stable.**"
