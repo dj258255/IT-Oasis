@@ -95,7 +95,7 @@ ProxySQL은 쿼리를 SQL 레벨에서 파싱하여 SELECT/INSERT를 분기합�
 
 현재 구조에서 Replica 커넥션 획득에 실패하면 예외가 전파되어 읽기 요청이 실패합니다. 자동 failover는 미구현입니다. `AbstractRoutingDataSource`의 `lenientFallback`은 lookup key가 매핑에 없을 때만 동작하고, DataSource가 등록되어 있지만 커넥션 실패인 경우에는 적용되지 않습니다. 자동 failover를 구현하려면 `getConnection()` override + try-catch + Primary fallback이 필요한데, 서킷 브레이커, 헬스체크 등 복잡도가 높아서 이 프로젝트에서는 Grafana 알림 + 수동 대응으로 판단했습니다. Free Tier 물리 서버 장애 빈도가 매우 낮기 때문입니다.
 
-**Q: "1,425만 건 덤프는 얼마나 걸리나요?"**
+**Q: "1,215만 건 덤프는 얼마나 걸리나요?"**
 
 posts 테이블에 LONGTEXT content가 포함되어 있어 덤프 파일이 수십 GB에 달할 수 있습니다. `--single-transaction --quick`으로 행 단위 스트리밍 덤프를 하면 메모리를 절약하면서 Primary 쓰기도 계속 가능합니다. 다만 덤프 동안 undo log가 증가하고 metadata lock이 DDL을 차단할 수 있으므로, 서비스 트래픽이 적은 새벽 시간대에 실행합니다. 실제로는 mysqldump에서 문제가 발생하여 CLONE PLUGIN으로 전환했고, 133.5GB를 ~83MB/s로 약 28분 만에 복사 완료했습니다.
 

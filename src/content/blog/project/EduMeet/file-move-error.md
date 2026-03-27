@@ -122,14 +122,20 @@ Spring Data JPA는 `BoardJpaRepository`에 선언된 모든 메서드(상속받�
 
 ![](/uploads/project/EduMeet/file-move-error/bonus.png)
 
-같은 문제를 AI에게 물어봤을 때, AI는 2가지 방법만 제안했어요.
-하지만 제가 선택한 방법은 달랐어요.
-extends에서 분리하고 `private final BoardSearchRepository`로 직접 주입하는 방식이에요.
+같은 문제를 AI에게 물어봤을 때, AI는 2가지 방법을 제안했어요:
+1. `BoardSearchRepositoryImpl` 클래스명을 관례에 맞게 변경
+2. `@Repository` 스캔 범위를 확장
 
-AI가 제안한 방법이 틀린 건 아닐 수 있지만, 현재 프로젝트의 레이어 구조와 의존성 방향을 고려했을 때 분리하는 것이 더 적절하다고 판단했어요.
+하지만 제가 선택한 방법은 달랐어요. extends에서 분리하고 `private final BoardSearchRepository`로 직접 주입하는 방식이에요.
 
-AI의 답변을 무조건 수용하기보다, 현재 아키텍처의 맥락에서 검증하고 판단하는 과정이 중요하다고 생각해요.
-AI가 제시하는 것이 모든 방법의 전부가 아니라는 전제로, 스스로 근거를 갖고 선택하는 것이 더 나은 결과를 만들어요.
+**왜 AI의 제안을 채택하지 않았는가:**
+- 방법 1(이름 변경)은 구현체를 다시 같은 패키지에 두는 것을 전제로 해요. 그러면 Infrastructure 레이어로 분리한 의미가 없어지죠.
+- 방법 2(스캔 범위 확장)는 `BoardJpaRepository`가 여전히 `BoardSearchRepository`를 extends하는 구조를 유지해요. JPA가 `searchAll`을 쿼리 메서드로 해석하려는 근본 문제가 남아요.
+- 제 선택(extends 분리 + 독립 빈)은 각 Repository가 단일 책임을 갖고, 레이어 간 의존성 방향도 지켜지는 구조예요.
+
+실제로 AI의 방법 1(이름 변경 + 같은 패키지)도 시도해봤어요. 동작은 했지만, 구현체가 Application 레이어에 다시 돌아가게 되어 레이어 분리를 한 의미가 사라졌어요. 방법 2(스캔 범위 확장)도 테스트했는데, 빈 등록은 되지만 `BoardJpaRepository`가 여전히 `searchAll`을 쿼리 메서드로 해석하려는 경고가 남았어요.
+
+AI의 답변은 "Spring Data JPA의 Custom Repository 규칙 안에서 문제를 해결"하는 관점이었고, 제 선택은 "애초에 extends로 묶을 이유가 없다"는 아키텍처 관점이었어요. 세 가지 모두 동작하지만, 현재 프로젝트의 레이어 구조와 의존성 방향을 고려했을 때 분리가 가장 깔끔했어요.
 
 ---
 

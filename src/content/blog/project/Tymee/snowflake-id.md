@@ -145,7 +145,7 @@ if (currentTimestamp < lastTimestamp) {
 
 2024년에 [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562.html)로 표준화됐어요.
 Snowflake 영향을 받아서 타임스탬프 기반이라 시간순 정렬이 돼요.
-[Buildkite](https://buildkite.com/resources/blog/goodbye-integers-hello-uuids/)에서 UUID v7으로 전환하고 WAL 쓰기가 50% 줄었다고 합니다.
+[Buildkite](https://buildkite.com/resources/blog/goodbye-integers-hello-uuids/)에서 시간순 UUID로 전환하면서 다른 최적화와 함께 6주간 WAL 쓰기가 50% 줄었다고 합니다(UUID v7 단독 효과는 아니고 복합적 개선 결과).
 
 UUID v7은 16바이트로 Snowflake(8바이트)의 두 배지만, RFC 9562로 표준화되어 있고 시계 동기화에 덜 민감해요.
 반면 Snowflake는 크기가 작아 MySQL처럼 PK 크기가 중요한 환경에서 유리하고, 별도 라이브러리 없이 직접 구현할 수 있어요.
@@ -192,6 +192,8 @@ JavaScript Number가 53비트까지만 정밀해서 API에서 ID를 문자열로
 
 이 프로젝트는 모바일 앱 전용 API라 UUID 호환이 필요 없었어요.
 내부 PK는 Auto Increment로 JPA 최적화하고, 외부 노출용만 Snowflake로 분리했습니다.
+
+**왜 MySQL인가:** 이 프로젝트는 Read-heavy 워크로드(타이머 기록 조회, 랭킹 조회)가 주이고, 복잡한 JOIN보다 단순 CRUD가 대부분이에요. 팀 내 MySQL 운영 경험이 있고, Oracle Cloud Free Tier에서 제공하는 ARM 인스턴스에 MySQL을 직접 설치해서 비용 없이 운영 가능합니다. PostgreSQL은 UUID 네이티브 타입 지원과 JSONB 등 장점이 있지만, 이 프로젝트에서는 필요하지 않았어요. Snowflake ID가 Long(8바이트)이라 MySQL BIGINT에 딱 맞는 것도 선택 이유 중 하나예요.
 
 ---
 
@@ -317,7 +319,7 @@ On a single server this is rarely an issue, but it becomes a concern when scalin
 
 ## What About UUID v7?
 
-It was standardized as [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562.html) in 2024. Influenced by Snowflake, it is timestamp-based and supports time-ordering. [Buildkite](https://buildkite.com/resources/blog/goodbye-integers-hello-uuids/) reported a 50% reduction in WAL writes after switching to UUID v7.
+It was standardized as [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562.html) in 2024. Influenced by Snowflake, it is timestamp-based and supports time-ordering. [Buildkite](https://buildkite.com/resources/blog/goodbye-integers-hello-uuids/) reported a 50% reduction in WAL writes after switching to time-ordered UUIDs (combined with other optimizations over a 6-week period, not solely attributable to the UUID change).
 
 UUID v7 is 16 bytes -- twice the size of Snowflake (8 bytes) -- but it is standardized under RFC 9562 and less sensitive to clock synchronization. Snowflake, on the other hand, is smaller, which is advantageous in MySQL where PK size matters, and it can be implemented directly without external libraries. If you already have UUID infrastructure or use PostgreSQL where UUID types are well supported, UUID v7 may be the better choice.
 
@@ -359,6 +361,8 @@ Since JavaScript Number only supports up to 53-bit precision, the API returns ID
 For a single-server internal system, Auto Increment is sufficient. If external exposure is needed in a MySQL environment, Snowflake (8 bytes) is a good choice. If you already have UUID infrastructure or use PostgreSQL, UUID v7 is also viable.
 
 This project is a mobile-app-only API, so UUID compatibility was not needed. The internal PK uses Auto Increment for JPA optimization, and only the externally exposed ID is separated using Snowflake.
+
+**Why MySQL:** This project has a read-heavy workload (timer record queries, ranking lookups) with mostly simple CRUD rather than complex JOINs. There is existing MySQL operational experience, and MySQL can be installed directly on Oracle Cloud Free Tier ARM instances at no cost. PostgreSQL offers advantages like native UUID types and JSONB, but these were not needed for this project. Snowflake ID being a Long (8 bytes) that fits perfectly into MySQL BIGINT was also a factor in the decision.
 
 ---
 

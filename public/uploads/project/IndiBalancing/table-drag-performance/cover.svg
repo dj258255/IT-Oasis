@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Title area -->
+  <text x="600" y="80" font-family="sans-serif" font-size="16" fill="#64748b" text-anchor="middle" letter-spacing="4">PERFORMANCE OPTIMIZATION</text>
+
+  <!-- O(N) → O(1) big text -->
+  <text x="340" y="175" font-family="monospace" font-size="72" fill="#ef4444" font-weight="700" opacity="0.9">O(N)</text>
+  <g transform="translate(540, 145)">
+    <line x1="0" y1="15" x2="80" y2="15" stroke="#64748b" stroke-width="3"/>
+    <polygon points="80,8 96,15 80,22" fill="#64748b"/>
+  </g>
+  <text x="660" y="175" font-family="monospace" font-size="72" fill="#22c55e" font-weight="700" opacity="0.9">O(1)</text>
+
+  <!-- Spreadsheet grid - Before -->
+  <g transform="translate(80, 230)">
+    <text x="0" y="-10" font-family="sans-serif" font-size="14" fill="#ef4444" font-weight="600">Before: Array.some()</text>
+
+    <!-- Grid cells -->
+    <g>
+      <rect x="0" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="60" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="120" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="180" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="240" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+
+      <rect x="0" y="30" width="60" height="30" fill="#451a1a" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+      <rect x="60" y="30" width="60" height="30" fill="#451a1a" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+      <rect x="120" y="30" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="180" y="30" width="60" height="30" fill="#451a1a" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+      <rect x="240" y="30" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+
+      <rect x="0" y="60" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="60" y="60" width="60" height="30" fill="#451a1a" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+      <rect x="120" y="60" width="60" height="30" fill="#451a1a" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+      <rect x="180" y="60" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="240" y="60" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    </g>
+
+    <text x="0" y="120" font-family="monospace" font-size="13" fill="#ef4444">50,000 comparisons</text>
+    <text x="0" y="140" font-family="monospace" font-size="12" fill="#64748b">500 cells x 100 selected</text>
+  </g>
+
+  <!-- After - Set -->
+  <g transform="translate(480, 230)">
+    <text x="0" y="-10" font-family="sans-serif" font-size="14" fill="#22c55e" font-weight="600">After: Set.has()</text>
+
+    <g>
+      <rect x="0" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="60" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="120" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="180" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="240" y="0" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+
+      <rect x="0" y="30" width="60" height="30" fill="#14532d" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
+      <rect x="60" y="30" width="60" height="30" fill="#14532d" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
+      <rect x="120" y="30" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="180" y="30" width="60" height="30" fill="#14532d" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
+      <rect x="240" y="30" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+
+      <rect x="0" y="60" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="60" y="60" width="60" height="30" fill="#14532d" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
+      <rect x="120" y="60" width="60" height="30" fill="#14532d" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
+      <rect x="180" y="60" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="240" y="60" width="60" height="30" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    </g>
+
+    <text x="0" y="120" font-family="monospace" font-size="13" fill="#22c55e">500 lookups (O(1) each)</text>
+    <text x="0" y="140" font-family="monospace" font-size="12" fill="#64748b">99% reduction</text>
+  </g>
+
+  <!-- Technique pills -->
+  <g transform="translate(860, 240)">
+    <rect width="260" height="40" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1"/>
+    <text x="16" y="26" font-family="monospace" font-size="13" fill="#3b82f6">Set data structure</text>
+
+    <rect y="52" width="260" height="40" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="16" y="78" font-family="monospace" font-size="13" fill="#8b5cf6">requestAnimationFrame</text>
+
+    <rect y="104" width="260" height="40" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+    <text x="16" y="130" font-family="monospace" font-size="13" fill="#f59e0b">Direct DOM manipulation</text>
+  </g>
+
+  <!-- Bottom stats bar -->
+  <g transform="translate(80, 480)">
+    <rect width="320" height="80" rx="10" fill="#1e293b" stroke="#374151" stroke-width="1"/>
+    <text x="20" y="30" font-family="sans-serif" font-size="12" fill="#64748b">State updates / sec</text>
+    <text x="20" y="58" font-family="monospace" font-size="24" fill="#ef4444">~200</text>
+    <text x="110" y="58" font-family="sans-serif" font-size="18" fill="#475569">&rarr;</text>
+    <text x="140" y="58" font-family="monospace" font-size="24" fill="#22c55e">~60</text>
+    <text x="200" y="58" font-family="monospace" font-size="14" fill="#64748b">(-70%)</text>
+  </g>
+
+  <g transform="translate(440, 480)">
+    <rect width="320" height="80" rx="10" fill="#1e293b" stroke="#374151" stroke-width="1"/>
+    <text x="20" y="30" font-family="sans-serif" font-size="12" fill="#64748b">Re-renders during drag</text>
+    <text x="20" y="58" font-family="monospace" font-size="24" fill="#ef4444">every frame</text>
+    <text x="210" y="58" font-family="sans-serif" font-size="18" fill="#475569">&rarr;</text>
+    <text x="235" y="58" font-family="monospace" font-size="24" fill="#22c55e">0</text>
+  </g>
+
+  <g transform="translate(800, 480)">
+    <rect width="320" height="80" rx="10" fill="#1e293b" stroke="#374151" stroke-width="1"/>
+    <text x="20" y="30" font-family="sans-serif" font-size="12" fill="#64748b">Frame sync</text>
+    <text x="20" y="58" font-family="monospace" font-size="18" fill="#ef4444">setTimeout</text>
+    <text x="175" y="58" font-family="sans-serif" font-size="18" fill="#475569">&rarr;</text>
+    <text x="200" y="58" font-family="monospace" font-size="16" fill="#22c55e">rAF</text>
+  </g>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="624" width="1200" height="6" fill="url(#accent)"/>
+</svg>

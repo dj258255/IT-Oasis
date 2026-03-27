@@ -48,6 +48,17 @@ Kafka Exporter로 Consumer Lag을 파티션별로 확인하니, 특정 파티션
 
 ---
 
+## 대안 검토
+
+| 방식 | 장점 | 단점 | 판단 |
+|------|------|------|------|
+| **Round-robin (키 없음)** | 완벽한 균등 분산 | 같은 파일의 이벤트가 다른 파티션으로 가서 순서 보장 불가 | 탈락 |
+| **userId 유지 + 파티션 수 증가** | 기존 코드 변경 없음 | 헤비 유저 문제는 파티션 수와 무관. 한 유저의 100건이 여전히 한 파티션에 집중 | 탈락 |
+| **uploadId 기반 파티셔닝** | UUID 해시라 균등 분산 + 같은 파일 내 순서 보장 | 같은 사용자의 서로 다른 업로드 간 순서는 미보장 (하지만 필요 없음) | **선택** |
+| **Custom Partitioner** | 특정 로직 구현 가능 | uploadId 해시만으로 충분한데 커스텀은 과잉 | 탈락 |
+
+---
+
 ## 해결: uploadId 기반 파티셔닝
 
 생각해보니 "같은 사용자의 모든 업로드"가 순서를 보장할 필요는 없었어요.
@@ -132,6 +143,17 @@ Users whose events landed on partition 0 waited 5+ minutes for voice analysis, w
 userId was the partition key, based on the assumption that "same user's events must be processed in order."
 
 The problem: one active user uploading 100 recordings per day sends all 100 to the same partition. Inactive users upload 3-5 per day, creating tens-of-times load difference between partitions.
+
+---
+
+## Alternatives Considered
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Round-robin (no key)** | Perfect even distribution | Same file's events scatter across partitions, no ordering | Rejected |
+| **Keep userId + more partitions** | No code changes | Heavy user problem is partition-count-independent. 100 events from one user still land on one partition | Rejected |
+| **uploadId-based partitioning** | UUID hash distributes evenly + preserves per-file ordering | No cross-upload ordering for same user (but not needed) | **Selected** |
+| **Custom Partitioner** | Flexible logic | uploadId hash is sufficient; custom is over-engineering | Rejected |
 
 ---
 

@@ -32,7 +32,10 @@ Webhook, API, Actuator가 각각 다른 인증 방식을 필요로 해서 3개�
 
 하나의 SecurityFilterChain에 이 세 가지를 넣으려고 하면 충돌해요.
 Webhook은 `permitAll()`이어야 하고 API는 `authenticated()`여야 하는데, `/api/webhook/**`이 `/api/**`에 포함되기 때문이에요.
-`antMatchers` 순서로 처리하는 방법도 있지만, 인증 방식 자체가 다른 경우(JWT vs Basic Auth)는 Filter 구성이 달라야 해서 하나의 Chain으로는 한계가 있었어요.
+
+처음에는 단일 FilterChain에서 `requestMatchers` 순서로 해결하려 했어요.
+`/api/webhook/**`을 먼저 `permitAll()`로 설정하고 `/api/**`를 `authenticated()`로 설정하면 경로 우선순위로 동작할 수 있지만, 실제로 Actuator의 Basic Auth(`httpBasic()`)와 API의 JWT Bearer Token은 **Filter 자체가 달라야** 해요.
+`httpBasic()`이 활성화된 Chain에서 JWT 요청이 들어오면 Basic Auth 실패로 401이 반환되는 문제가 발생했어요.
 
 ---
 
@@ -60,19 +63,35 @@ Webhook 경로가 먼저 매칭되니, API Chain의 JWT 필터를 타지 않아�
 하지만 이 경로는 여러 계층에서 이미 보호되고 있어요.
 
 1. EventBridge Rule이 특정 S3 버킷의 ObjectCreated 이벤트만 트리거해요.
-2. EC2가 VPC 내에 있고, Security Group으로 접근을 제한해요.
+2. EC2의 Security Group으로 인바운드 접근을 제한해요. (단, EventBridge API Destination은 퍼블릭 인터넷을 경유하므로 VPC 내부 격리가 아닌 Security Group + HTTPS가 보호 계층이에요.)
 3. 경로가 `/api/webhook/**`으로 한정되어 있어 다른 API에 영향이 없어요.
 4. 핸들러에서 S3 ObjectCreated 이벤트 구조를 검증하고요.
 형식이 맞지 않으면 무시해요.
 
 AWS 인프라 레벨의 보안이 앞단에서 걸러주는 구조거든요.
-애플리케이션 레벨에서 중복으로 인증을 거는 건 불필요한 복잡도를 더할 뿐이었어요.
+
+**HMAC 서명 검증은 왜 안 했는가**: EventBridge → HTTP 엔드포인트 호출에서 HMAC 서명을 직접 추가하려면 Lambda를 중간에 끼워야 해요. EventBridge 자체는 HTTP 헤더에 서명을 넣는 기능이 없거든요. AWS API Destination + Connection으로 OAuth/API Key 인증은 가능하지만, Security Group + HTTPS로 접근이 제한된 상태에서 Lambda를 추가하는 건 5주 프로젝트 기준 과잉이라 판단했어요. (EventBridge API Destination은 퍼블릭 인터넷을 경유하므로 VPC 격리가 아닌 Security Group이 보호 계층이에요.)
+
+프로덕션이라면 EventBridge → API Destination에 `Authorization` 헤더를 설정하거나, Webhook 핸들러에서 EventBridge 이벤트의 `source`, `detail-type` 필드를 검증하는 방식이 더 적합해요.
 
 ---
 
 ## 구현 상세
 
 ![](/uploads/project/Orakgarak/spring-security-multi-filterchain/security-config.svg)
+
+---
+
+## 결과
+
+| 경로 | 변경 전 (단일 FilterChain) | 변경 후 (3개 FilterChain) |
+|------|------------------------|------------------------|
+| `/api/webhook/**` | JWT 필터에 걸려 EventBridge 호출 실패 (401) | `permitAll()` — 정상 처리 |
+| `/actuator/**` | JWT 인증 요구 → Prometheus 수집 실패 | Basic Auth — Prometheus 정상 수집 |
+| `/api/**` | JWT 인증 정상 (단, httpBasic 충돌 시 401) | JWT Bearer Token 전용 — 충돌 없음 |
+
+각 Chain이 독립된 Filter 구성을 갖기 때문에, 한 경로의 인증 방식이 다른 경로에 영향을 주지 않아요.
+새로운 인증 방식이 필요한 경로가 추가돼도 기존 Chain을 수정하지 않고 새 Chain만 추가하면 돼요.
 
 ---
 
@@ -95,7 +114,7 @@ Security requirements differed by route in the Orak service.
 
 `/api/webhook/**` is an internal endpoint called by EventBridge, requiring no authentication. `/api/**` is the user API requiring JWT Bearer Token authentication. `/actuator/**` is the monitoring endpoint for Prometheus metric collection, protected with Basic Auth.
 
-Putting all three in a single SecurityFilterChain causes conflicts. Webhook needs `permitAll()` while API needs `authenticated()`, but `/api/webhook/**` is a subset of `/api/**`. Even with `antMatchers` ordering, different authentication mechanisms (JWT vs Basic Auth) require different Filter configurations that a single Chain cannot accommodate.
+Putting all three in a single SecurityFilterChain causes conflicts. Webhook needs `permitAll()` while API needs `authenticated()`, but `/api/webhook/**` is a subset of `/api/**`. Initially tried resolving with `requestMatchers` ordering in a single chain, but Actuator's `httpBasic()` and API's JWT Bearer Token require fundamentally different Filter configurations. With `httpBasic()` enabled, JWT requests received 401 from Basic Auth failure.
 
 ---
 
@@ -120,17 +139,31 @@ Incoming requests are matched against Chains in Order sequence. The first matchi
 An unauthenticated endpoint might seem concerning, but this route is already protected at multiple layers:
 
 1. EventBridge Rule only triggers on specific S3 bucket ObjectCreated events.
-2. EC2 is within a VPC with Security Group access restrictions.
+2. EC2's Security Group restricts inbound access. (Note: EventBridge API Destinations route through the public internet, so the protection layer is Security Group + HTTPS, not VPC-internal isolation.)
 3. The path is limited to `/api/webhook/**` with no impact on other APIs.
 4. The handler validates S3 ObjectCreated event structure, ignoring malformed requests.
 
-AWS infrastructure-level security filters requests upstream. Adding application-level authentication would only add unnecessary complexity.
+AWS infrastructure-level security filters requests upstream.
+
+**Why no HMAC signature verification**: Adding HMAC signatures to EventBridge → HTTP calls would require a Lambda intermediary, as EventBridge doesn't natively add signatures to HTTP headers. AWS API Destination + Connection supports OAuth/API Key auth, but with Security Group + HTTPS already restricting access (EventBridge API Destinations route through the public internet, not VPC-internal), adding Lambda was excessive for a 5-week project. In production, configuring an `Authorization` header via API Destination or validating EventBridge event `source` and `detail-type` fields would be more appropriate.
 
 ---
 
 ## Implementation Details
 
 ![](/uploads/project/Orakgarak/spring-security-multi-filterchain/security-config.svg)
+
+---
+
+## Results
+
+| Path | Before (Single FilterChain) | After (3 FilterChains) |
+|------|---------------------------|----------------------|
+| `/api/webhook/**` | JWT filter blocked EventBridge calls (401) | `permitAll()` — works correctly |
+| `/actuator/**` | JWT auth required → Prometheus scraping failed | Basic Auth — Prometheus scrapes normally |
+| `/api/**` | JWT auth works (but 401 on httpBasic conflict) | JWT Bearer Token only — no conflicts |
+
+Each chain has independent filter configuration, so one path's auth method doesn't affect others. Adding new auth methods only requires a new chain without modifying existing ones.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: 'COUNT(*) 제거와 페이지 제한으로 19,424ms → 8ms'
 titleEn: 'Eliminating COUNT(*) and Page Limits — From 19,424ms to 8ms on 14M Rows'
-description: 1,425만 건 테이블에서 COUNT(*) 제거(Page→Slice), 30페이지 제한, Deferred Join을 조합하여 최신 게시글 목록 조회를 19,424ms에서 8.33ms로 개선하고, k6 load 테스트(100 VU, 20분)에서 에러율 32.53%→0%를 달성한 과정을 정리합니다.
+description: 1,215만 건 테이블에서 COUNT(*) 제거(Page→Slice), 30페이지 제한, Deferred Join을 조합하여 최신 게시글 목록 조회를 19,424ms에서 8.33ms로 개선하고, k6 load 테스트(100 VU, 20분)에서 에러율 32.53%→0%를 달성한 과정을 정리합니다.
 descriptionEn: Combined COUNT(*) elimination (Page to Slice), 30-page limit, and Deferred Join to reduce post listing from 19,424ms to 8.33ms on 14.25M rows, achieving 0% error rate under 100 VU k6 load test.
 date: 2026-03-05T00:00:00.000Z
 tags:
@@ -26,7 +26,7 @@ draft: false
 ## 이전 글 요약
 
 [Lucene 전환 글](/blog/project/wikiengine/lucene-decision)에서 Lucene + Nori 형태소 분석기로 검색엔진을 전환했습니다.
-1,425만 건 전체 검색, 고빈도 토큰 타임아웃 해소, false positive 제거까지 완료했습니다.
+1,215만 건 전체 검색, 고빈도 토큰 타임아웃 해소, false positive 제거까지 완료했습니다.
 
 k6 부하 테스트를 처음 실행한 결과, **검색이 아니라 최신 게시글 목록 조회가 최대 병목**이었습니다.
 
@@ -258,7 +258,7 @@ countQuery = "SELECT COUNT(*) FROM posts"
 ```
 
 Spring Data의 `Page<T>` 반환 시 이 countQuery가 **매 요청마다** 자동 실행됩니다.
-1,425만 건 테이블에서 COUNT(*)는 InnoDB가 가장 작은 세컨더리 인덱스를 풀 스캔해야 하므로 비용이 높습니다.
+1,215만 건 테이블에서 COUNT(*)는 InnoDB가 가장 작은 세컨더리 인덱스를 풀 스캔해야 하므로 비용이 높습니다.
 
 > Lucene 검색(`GET /api/v1.0/posts/search`)도 동일하게 `Slice<T>`로 전환했습니다.
 > Lucene의 `totalHits`는 추정치이고, 총 건수 표시를 제거한 이상 Page를 유지할 이유가 없습니다.
@@ -352,7 +352,7 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 - 사용자는 "71,250페이지 중 3페이지"를 보고 아무런 의사결정을 하지 않습니다
 - 반면 **30페이지 이하**라면 총 페이지 수가 "끝이 보인다"는 심리적 효과를 줍니다
 
-이 프로젝트: 1,425만 건 / 20건 페이지 = **71만 페이지**. 총 건수 표시는 완전히 무의미합니다.
+이 프로젝트: 1,215만 건 / 20건 페이지 = **60만 페이지**. 총 건수 표시는 완전히 무의미합니다.
 
 ---
 
@@ -360,8 +360,8 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 
 | 판단 기준 | 이 프로젝트의 상황 | 결론 |
 |----------|-----------------|------|
-| 데이터 규모 | 1,425만 건 (71만 페이지) | 총 건수 무의미 |
-| COUNT(*) 비용 | InnoDB 풀 스캔 (1,425만 행) | 매 요청 비용 높음 |
+| 데이터 규모 | 1,215만 건 (60만 페이지) | 총 건수 무의미 |
+| COUNT(*) 비용 | InnoDB 풀 스캔 (1,215만 행) | 매 요청 비용 높음 |
 | UI 타입 | 페이지 번호 | hasNext + 현재 주변 페이지로 충분 |
 | 사용자 행동 | 90%가 1~3페이지 | 뒷페이지 네비게이션 거의 없음 |
 | 최대 페이지 제한 | 30페이지 | 유한한 범위 → 총 건수 불필요 |

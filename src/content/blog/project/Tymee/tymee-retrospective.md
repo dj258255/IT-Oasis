@@ -44,7 +44,7 @@ draft: false
 
 1인 개발이지만 체계적인 이슈 관리가 필요했습니다. Linear에서 이슈 생성 → 브랜치 자동 생성 → PR 머지 → 이슈 자동 종료 → Slack 알림까지, 매번 수동으로 5단계를 거치는 게 비효율적이었습니다.
 
-자동화 파이프라인을 구축해서 **이슈 하나당 수동 작업 5번을 0번으로 줄였습니다**. 117개 이슈를 놓치지 않고 추적하고 있습니다.
+자동화 파이프라인을 구축해서 **이슈 하나당 수동 작업 5번을 0번으로 줄였습니다**. 자동화 전에는 GitHub Issues 117개 중 완료된 작업이 Open 상태로 남아 실제 진행률을 파악할 수 없었는데, 현재는 모든 이슈 상태가 PR 머지와 동시에 자동 반영됩니다.
 
 ![Linear 보드](/uploads/project/Tymee/retrospective/linear-board.png)
 
@@ -60,7 +60,7 @@ Google(라이브러리), Apple(공개키 직접 fetch + 캐싱), Kakao(REST API)
 
 ### 코드 품질 자동화 파이프라인
 
-SonarQube는 Private 레포가 유료이고 3GB+ RAM 서버가 필요합니다. 개별 도구를 조합해서 완전 무료로 구축했습니다:
+SonarQube는 Private 레포가 유료이고 4GB+ RAM 서버가 필요합니다. 개별 도구를 조합해서 완전 무료로 구축했습니다:
 - **Spotless**: Google Java Format 자동 포맷팅
 - **Checkstyle**: 네이밍/import/블록 규칙 검사
 - **SpotBugs**: 바이트코드 분석으로 NPE, 리소스 누수 탐지
@@ -132,7 +132,7 @@ In team projects, only predetermined users (teammates, judges) ever used the ser
 
 Even as a solo developer, I needed systematic issue management. The flow from creating an issue in Linear → auto-creating a branch → merging a PR → auto-closing the issue → Slack notification — doing these 5 steps manually every time was inefficient.
 
-By building an automation pipeline, I **reduced manual work from 5 steps to 0 per issue**. I'm tracking 117 issues without missing a single one.
+By building an automation pipeline, I **reduced manual work from 5 steps to 0 per issue**. Before automation, completed tasks among 117 GitHub Issues remained in Open state, making it impossible to gauge actual progress. Now, all issue states are automatically updated when PRs are merged.
 
 ![Linear Board](/uploads/project/Tymee/retrospective/linear-board.png)
 
@@ -148,7 +148,7 @@ I implemented OAuth verification for Google (library), Apple (direct public key 
 
 ### Code Quality Automation Pipeline
 
-SonarQube charges for private repos and requires 3GB+ RAM servers. I assembled individual tools to build a fully free pipeline:
+SonarQube charges for private repos and requires 4GB+ RAM servers. I assembled individual tools to build a fully free pipeline:
 - **Spotless**: Google Java Format auto-formatting
 - **Checkstyle**: Naming/import/block rule checking
 - **SpotBugs**: Bytecode analysis to detect NPE, resource leaks

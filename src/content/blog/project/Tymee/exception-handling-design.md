@@ -354,7 +354,7 @@ User user = userRepository.findById(id)
     "id": 1,
     "nickname": "홍길동"
   },
-  "timestamp": "2024-01-15T10:30:00"
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 
@@ -367,7 +367,7 @@ User user = userRepository.findById(id)
     "code": "U002",
     "message": "이미 사용 중인 이메일입니다"
   },
-  "timestamp": "2024-01-15T10:30:00"
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 
@@ -384,7 +384,7 @@ User user = userRepository.findById(id)
       "password": "비밀번호는 8자 이상이어야 합니다"
     }
   },
-  "timestamp": "2024-01-15T10:30:00"
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 
@@ -803,7 +803,7 @@ User user = userRepository.findById(id)
     "id": 1,
     "nickname": "John"
   },
-  "timestamp": "2024-01-15T10:30:00"
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 
@@ -816,7 +816,7 @@ User user = userRepository.findById(id)
     "code": "U002",
     "message": "Email already in use"
   },
-  "timestamp": "2024-01-15T10:30:00"
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 
@@ -833,7 +833,7 @@ User user = userRepository.findById(id)
       "password": "Password must be at least 8 characters"
     }
   },
-  "timestamp": "2024-01-15T10:30:00"
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 

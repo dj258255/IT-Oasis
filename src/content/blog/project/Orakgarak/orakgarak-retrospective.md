@@ -60,7 +60,7 @@ S3 이벤트를 EventBridge를 통해 Kafka로 전달하는 이벤트 드리븐 
 2. `Semaphore(permits=2)`로 동시 실행 제한
 3. **파일 100MB 제한**으로 단일 요청 메모리 상한
 
-3주 운영 기간 동안 **OOM 0회**를 달성했어요.
+3주 운영 기간 동안(일 평균 약 30-50건 업로드 처리 기준) **OOM 0회**를 달성했어요.
 
 > 상세 분석: [GPU OOM 방어 전략](/blog/project/orakgarak/ts-gpu-oom-concurrent-requests)
 
@@ -68,7 +68,7 @@ S3 이벤트를 EventBridge를 통해 Kafka로 전달하는 이벤트 드리븐 
 
 장애가 발생한 후 로그를 grep하면 MTTR(복구 시간)이 길어지거든요.
 **선제적 모니터링**으로 장애 징후를 미리 감지하고 싶었습니다.
-Prometheus 6개 Exporter, Grafana 대시보드, Loki JSON 로그, 29개 Alert 규칙을 구축해서 **장애 감지 30초 이내**를 달성했어요.
+Prometheus 6개 Exporter, Grafana 대시보드, Loki JSON 로그, 29개 Alert 규칙을 구축했어요. Alertmanager의 `for`절(Critical 1분, Warning 5분) + `group_wait`(Critical 10초) 기반으로, Critical 장애 발생 후 **~85초 이내**(scrape 15s + for 1m + group_wait 10s)에 Mattermost로 알림이 도달하는 구조를 만들었어요. 수동 확인(수분~수시간)에서 자동 감지로 전환한 것이 핵심이에요.
 
 ![Grafana 대시보드](/uploads/project/Orakgarak/retrospective/grafana.png)
 
@@ -112,9 +112,9 @@ userId 기반 파티셔닝을 적용했더니 헤비 유저의 이벤트가 한 
 
 ### 장애는 예방보다 복구가 중요하다
 
-파일 업로드 파이프라인에서 "Stuck 파일"(처리가 멈춘 파일)이 일 10-20건 발생했어요.
+파일 업로드 파이프라인에서 "Stuck 파일"(처리가 멈춘 파일)이 일 10-20건 발생했어요. 이건 Kafka consumer 에러 로그와 DB의 PROCESSING 상태가 30분 이상 유지되는 건을 조회해서 확인한 수치예요.
 모든 예외 상황을 방어하려 했더니 방어 로직이 복잡해져서 오히려 새 버그가 생겼습니다.
-**12단계 상태 머신**과 **DLQ 패턴**으로 "장애는 발생한다, 대신 빨리 복구한다"는 방향으로 전환하니 Stuck 파일이 0건이 됐어요.
+**12단계 상태 머신**과 **DLQ 패턴**으로 "장애는 발생한다, 대신 빨리 복구한다"는 방향으로 전환하니 Stuck 파일이 0건이 됐어요. (DLQ 이동 후 Mattermost 알림으로 수동 확인하는 방식이라, 30분 이상 PROCESSING 유지 건이 사라진 거예요.)
 
 ### 문서화의 적정선
 
@@ -162,13 +162,13 @@ Each voice analysis model uses 2–3GB of GPU memory, and running 3+ concurrentl
 2. `Semaphore(permits=2)` to limit concurrent execution
 3. **100MB file size limit** to cap single-request memory
 
-Achieved **zero OOM incidents** over 3 weeks of operation.
+Achieved **zero OOM incidents** over 3 weeks of operation (averaging 30-50 uploads processed per day).
 
 > Detailed analysis: [GPU OOM Defense Strategy](/blog/project/orakgarak/ts-gpu-oom-concurrent-requests)
 
 ### Monitoring Infrastructure (Prometheus + Grafana + Loki)
 
-Grepping logs after an incident extends MTTR (Mean Time To Recovery). I wanted **proactive monitoring** to detect failure signals before they escalate. I built 6 Prometheus exporters, Grafana dashboards, Loki JSON logging, and 29 alert rules to achieve **incident detection within 30 seconds**.
+Grepping logs after an incident extends MTTR (Mean Time To Recovery). I wanted **proactive monitoring** to detect failure signals before they escalate. I built 6 Prometheus exporters, Grafana dashboards, Loki JSON logging, and 29 alert rules. With Alertmanager's `for` clause (Critical 1min, Warning 5min) + `group_wait` (Critical 10s), Critical alerts reach Mattermost within **~85 seconds** (scrape 15s + for 1m + group_wait 10s) after incident. The key improvement was transitioning from manual detection (minutes to hours) to automated alerting.
 
 ![Grafana Dashboard](/uploads/project/Orakgarak/retrospective/grafana.png)
 
@@ -208,7 +208,7 @@ Switching to **uploadId-based partitioning** ensured only events for the same fi
 
 ### Recovery Matters More Than Prevention
 
-The file upload pipeline had 10–20 "stuck files" (files that stopped processing) per day. Trying to defend against every edge case made the defensive logic so complex that it introduced new bugs. Switching to a **12-step state machine** and **DLQ pattern** with the philosophy "failures will happen — just recover quickly" brought stuck files down to zero.
+The file upload pipeline had 10–20 "stuck files" (files that stopped processing) per day — measured by querying DB records stuck in PROCESSING state for over 30 minutes, cross-referenced with Kafka consumer error logs. Trying to defend against every edge case made the defensive logic so complex that it introduced new bugs. Switching to a **12-step state machine** and **DLQ pattern** with the philosophy "failures will happen — just recover quickly" brought stuck files down to zero. (Files beyond max retries move to DLQ with Mattermost alerts for manual review, eliminating the 30min+ PROCESSING state entirely.)
 
 ### Finding the Right Level of Documentation
 

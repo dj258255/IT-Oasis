@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="500" viewBox="0 0 600 500">
+  <defs>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#FF6B6B"/>
+    </marker>
+    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64B5F6"/>
+    </marker>
+    <marker id="arrowhead-white" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#aaa"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="500" fill="#1a1a2e" rx="12"/>
+
+  <!-- Title -->
+  <text x="300" y="42" text-anchor="middle" fill="#e0e0e0" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="bold">링 버퍼 (Ring Buffer)</text>
+
+  <!-- Ring center -->
+  <!-- cx=300, cy=260, outer radius=150, inner radius=95 -->
+
+  <!-- Segment paths: 8 segments, each 45 degrees, starting from top (–90°) clockwise -->
+  <!-- Slot 0: -90° to -45° (empty) -->
+  <path d="M300,110 A150,150 0 0,1 406.07,153.93 L358.18,195.68 A95,95 0 0,0 300,165 Z" fill="#333" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 1: -45° to 0° (empty) -->
+  <path d="M406.07,153.93 A150,150 0 0,1 450,260 L395,260 A95,95 0 0,0 358.18,195.68 Z" fill="#333" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 2: 0° to 45° (filled - data) -->
+  <path d="M450,260 A150,150 0 0,1 406.07,366.07 L358.18,324.32 A95,95 0 0,0 395,260 Z" fill="#4CAF50" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 3: 45° to 90° (filled - data) -->
+  <path d="M406.07,366.07 A150,150 0 0,1 300,410 L300,355 A95,95 0 0,0 358.18,324.32 Z" fill="#4CAF50" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 4: 90° to 135° (filled - data) -->
+  <path d="M300,410 A150,150 0 0,1 193.93,366.07 L241.82,324.32 A95,95 0 0,0 300,355 Z" fill="#4CAF50" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 5: 135° to 180° (empty) -->
+  <path d="M193.93,366.07 A150,150 0 0,1 150,260 L205,260 A95,95 0 0,0 241.82,324.32 Z" fill="#333" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 6: 180° to 225° (empty) -->
+  <path d="M150,260 A150,150 0 0,1 193.93,153.93 L241.82,195.68 A95,95 0 0,0 205,260 Z" fill="#333" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Slot 7: 225° to 270° (empty) -->
+  <path d="M193.93,153.93 A150,150 0 0,1 300,110 L300,165 A95,95 0 0,0 241.82,195.68 Z" fill="#333" stroke="#1a1a2e" stroke-width="2"/>
+
+  <!-- Slot numbers -->
+  <!-- Each label at midpoint angle, radius ~125 -->
+  <!-- Slot 0: mid angle = -67.5° → (300+125*cos(-67.5°), 260+125*sin(-67.5°)) -->
+  <text x="348" y="150" text-anchor="middle" fill="#aaa" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">0</text>
+  <!-- Slot 1: mid angle = -22.5° -->
+  <text x="415" y="210" text-anchor="middle" fill="#aaa" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">1</text>
+  <!-- Slot 2: mid angle = 22.5° -->
+  <text x="415" y="315" text-anchor="middle" fill="#fff" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">2</text>
+  <!-- Slot 3: mid angle = 67.5° -->
+  <text x="348" y="375" text-anchor="middle" fill="#fff" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">3</text>
+  <!-- Slot 4: mid angle = 112.5° -->
+  <text x="252" y="375" text-anchor="middle" fill="#fff" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">4</text>
+  <!-- Slot 5: mid angle = 157.5° -->
+  <text x="185" y="315" text-anchor="middle" fill="#aaa" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">5</text>
+  <!-- Slot 6: mid angle = 202.5° -->
+  <text x="185" y="210" text-anchor="middle" fill="#aaa" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">6</text>
+  <!-- Slot 7: mid angle = 247.5° -->
+  <text x="252" y="150" text-anchor="middle" fill="#aaa" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold">7</text>
+
+  <!-- Clockwise direction arrow (arc outside the ring) -->
+  <path d="M340,95 A165,165 0 0,1 455,195" fill="none" stroke="#aaa" stroke-width="1.5" marker-end="url(#arrowhead-white)"/>
+  <text x="420" y="120" text-anchor="middle" fill="#aaa" font-family="'Segoe UI', Arial, sans-serif" font-size="11">시계 방향</text>
+
+  <!-- Write Pointer (Head) → pointing to slot 5 -->
+  <!-- Slot 5 outer midpoint: angle=157.5°, radius=150 → (300+150*cos(157.5°), 260+150*sin(157.5°)) ≈ (161, 317) -->
+  <!-- Arrow from outside pointing inward -->
+  <line x1="68" y1="370" x2="148" y2="330" stroke="#FF6B6B" stroke-width="2.5" marker-end="url(#arrowhead-red)"/>
+  <rect x="10" y="375" width="150" height="24" rx="4" fill="#FF6B6B" fill-opacity="0.15" stroke="#FF6B6B" stroke-width="1"/>
+  <text x="85" y="392" text-anchor="middle" fill="#FF6B6B" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold">쓰기 포인터 (Head)</text>
+
+  <!-- Read Pointer (Tail) → pointing to slot 2 -->
+  <!-- Slot 2 outer midpoint: angle=22.5°, radius=150 → (300+150*cos(22.5°), 260+150*sin(22.5°)) ≈ (439, 317) -->
+  <line x1="532" y1="370" x2="452" y2="330" stroke="#64B5F6" stroke-width="2.5" marker-end="url(#arrowhead-blue)"/>
+  <rect x="440" y="375" width="150" height="24" rx="4" fill="#64B5F6" fill-opacity="0.15" stroke="#64B5F6" stroke-width="1"/>
+  <text x="515" y="392" text-anchor="middle" fill="#64B5F6" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold">읽기 포인터 (Tail)</text>
+
+  <!-- Legend -->
+  <rect x="170" y="450" width="16" height="16" rx="3" fill="#4CAF50"/>
+  <text x="192" y="463" fill="#ccc" font-family="'Segoe UI', Arial, sans-serif" font-size="12">데이터 있음</text>
+  <rect x="280" y="450" width="16" height="16" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+  <text x="302" y="463" fill="#ccc" font-family="'Segoe UI', Arial, sans-serif" font-size="12">비어 있음</text>
+  <rect x="390" y="450" width="16" height="16" rx="3" fill="#FF6B6B" fill-opacity="0.3" stroke="#FF6B6B" stroke-width="1"/>
+  <text x="412" y="463" fill="#ccc" font-family="'Segoe UI', Arial, sans-serif" font-size="12">포인터</text>
+
+  <!-- Center label -->
+  <text x="300" y="255" text-anchor="middle" fill="#888" font-family="'Segoe UI', Arial, sans-serif" font-size="13">크기: 8</text>
+  <text x="300" y="273" text-anchor="middle" fill="#888" font-family="'Segoe UI', Arial, sans-serif" font-size="13">사용: 3/8</text>
+</svg>

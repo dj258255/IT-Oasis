@@ -20,7 +20,17 @@ coverImage: "/uploads/project/Joying/server-scaling-troubleshooting/simple-broke
 
 ---
 
-## SimpleBroker의 한계
+## 0. 정상 상태
+
+**서버 환경**: EC2 t3.medium (2 vCPU, 4GB RAM) **1대**, Spring Boot + WebSocket STOMP + SimpleBroker, MySQL 8.0, MongoDB 6.0, Redis 7.x 모두 Docker Compose로 운영.
+
+**동시 접속**: 테스트 환경 기준 20-30명. 서버 1대로 기능은 정상 동작.
+
+**현재 구조의 한계**: 서버 1대로 운영 중이므로 서버 장애 시 전체 서비스 중단. 사용자가 늘어나면 수평 확장이 필요한데, SimpleBroker는 구독 정보를 서버 메모리에 저장하므로 Scale-out이 불가.
+
+---
+
+## 1. SimpleBroker의 한계
 
 처음에는 Spring WebSocket의 SimpleBroker를 사용했어요.
 
@@ -231,7 +241,17 @@ This post covers the design considerations for scaling to multiple servers.
 
 ---
 
-## SimpleBroker's Limitation
+## 0. Normal State
+
+**Server environment**: Single EC2 t3.medium (2 vCPU, 4GB RAM), Spring Boot + WebSocket STOMP + SimpleBroker, MySQL 8.0, MongoDB 6.0, Redis 7.x via Docker Compose.
+
+**Concurrent users**: 20-30 in test. Single server handles all features correctly.
+
+**Current limitation**: Single server = single point of failure. As users grow, horizontal scaling is needed, but SimpleBroker stores subscriptions in server memory — making scale-out impossible.
+
+---
+
+## 1. SimpleBroker's Limitation
 
 Initially, we used Spring WebSocket's SimpleBroker.
 

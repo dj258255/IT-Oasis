@@ -20,6 +20,19 @@ coverImage: "/uploads/project/EduMeet/edge-case-issues/title-board-register-edge
 
 ---
 
+## 왜 에지 케이스 테스트를 이렇게 많이 작성했는가
+
+게시판 CRUD 기능은 3일 만에 구현했어요. "동작한다"고 생각하고 넘어갈 수 있었지만, **"동작한다"와 "안전하다"는 다르다**는 전제로 에지 케이스를 체계적으로 탐색했어요.
+
+탐색 기준은 간단했어요:
+- **입력 경계값**: 빈 문자열, 최대 길이 초과, 음수, Integer.MAX_VALUE
+- **존재하지 않는 참조**: 없는 카테고리 ID, 다른 게시글의 댓글 ID
+- **상태 불일치**: 삭제된 게시글 조회, 타입 변경 미반영
+
+이 12건의 버그는 "검증 로직을 안 넣었다"는 단순한 실수가 아니에요. 각각이 **어느 레이어에서 검증해야 하는가**(Controller의 형식 검증 vs Service의 비즈니스 규칙 검증)를 결정하는 설계 판단을 포함하고 있어요.
+
+---
+
 # 게시글
 
 ## 1. 제목이 없는 게시글 등록
@@ -287,6 +300,19 @@ Spring Data JPA의 Repository 프록시가 `IllegalArgumentException`을 `Invali
 <!-- EN -->
 
 > Only failed test cases and their resolution processes are documented here; passing tests are omitted.
+
+---
+
+## Why So Many Edge Case Tests
+
+Board CRUD features were implemented in 3 days. It was tempting to move on thinking "it works," but **"it works" and "it's safe" are different** — so edge cases were systematically explored.
+
+Exploration criteria:
+- **Input boundaries**: empty strings, max length exceeded, negatives, Integer.MAX_VALUE
+- **Non-existent references**: missing category IDs, comment IDs from other posts
+- **State mismatches**: querying deleted posts, unreflected type changes
+
+These 12 bugs aren't simply "forgot to add validation." Each involved a **design decision about which layer should validate** (Controller format validation vs Service business rule validation).
 
 ---
 

@@ -29,7 +29,7 @@ EduMeet은 **실시간 음성-자막 변환으로 청각장애인의 학습을 �
 
 ## 내 역할
 
-백엔드 개발(기여도 33%)을 담당했습니다. 구체적으로는 **게시판 CRUD**, **이미지 업로드**, **단위테스트** 전반을 맡았습니다.
+백엔드 개발을 담당했습니다. 구체적으로는 **게시판 CRUD API 설계/구현**, **S3 이미지 업로드 파이프라인**, **127개 단위테스트 작성**, **레이어드 아키텍처 설계**를 맡았습니다.
 
 첫 팀 프로젝트라서 "기능 구현"에만 집중할 줄 알았는데, 실제로는 기능 구현보다 **방어 로직과 테스트 코드**에 훨씬 더 많은 시간을 쏟았습니다.
 
@@ -37,23 +37,27 @@ EduMeet은 **실시간 음성-자막 변환으로 청각장애인의 학습을 �
 
 ## 주요 구현
 
-### N+1 문제 해결 (66.9% 성능 개선)
+### N+1 문제 해결 — 쿼리 12개 → 4개, 응답 66.9% 개선
 
-게시판 목록 조회 시 쿼리가 게시글 수에 비례해서 증가하는 N+1 문제를 발견했습니다. `@BatchSize(20)`으로 IN절 배치 조회를 적용해 쿼리 수를 11개에서 2개로 줄이고, 응답 시간을 38.23ms에서 12.66ms로 **66.9% 개선**했습니다.
+Board-BoardImage-Reply 3개 테이블(1:N 관계)에서 게시판 목록 조회 시, 페이지 사이즈 10건마다 board_image를 개별 SELECT하는 N+1 문제를 발견했습니다. Hibernate SQL 로그와 통계 기능으로 쿼리 12개(목록 1 + N+1 10 + COUNT 1) 실행을 확인했습니다.
+
+FetchJoin(메모리 페이징 문제), EntityGraph(성능 악화 +35%), SUBSELECT(Spring Data JPA 세션 비호환), BatchSize 4가지를 실측 비교한 결과, `@BatchSize(20)`이 페이징과 호환되면서 가장 높은 성능(38.33ms → 12.66ms, **66.9% 개선**)을 보여 선택했습니다.
 
 > 상세 분석: [N+1 문제 분석과 해결](/blog/project/edumeet/n-plus-1-issue)
 
 ### 127개 단위테스트 & H2 전환
 
-MySQL로 테스트를 돌리면 9.57초가 걸렸는데, H2 인메모리 DB로 전환하니 5.23초로 **45% 빨라졌습니다**. 단위테스트는 H2, 통합테스트는 MySQL로 이원화했습니다.
+MySQL로 테스트를 돌리면 9.57초가 걸렸습니다. 디스크 I/O와 TCP 네트워크 왕복이 원인이었고, 개발 중 테스트를 하루 평균 20~30회 실행하면 4.34초 × 25회 ≈ 하루 약 1.5~2분, 6주간 3명 기준 약 3~4시간의 누적 대기가 발생합니다. H2 인메모리 DB로 전환하니 5.23초로 **45% 빨라졌습니다**.
 
-127개 테스트 케이스 중 절반 이상이 "빈 제목으로 등록하면?", "좋아요가 Integer.MAX_VALUE를 넘으면?" 같은 **비정상 상황 대응** 테스트였습니다.
+단위테스트는 H2(빠른 피드백), 통합테스트는 MySQL(SQL 호환성 검증)로 이원화했습니다. H2-MySQL 간 SQL 호환성 차이(`GROUP_CONCAT`, `ENUM` 등)는 통합 테스트에서 잡는 전략입니다.
 
 > 상세 분석: [단위테스트 DB 마이그레이션](/blog/project/edumeet/unit-test-db-migration)
 
-### S3 이미지 업로드 최적화
+### S3 이미지 업로드 최적화 — 용량 91.8% 감소
 
-원본 이미지(5MB)를 그대로 저장하면 스토리지 비용이 문제가 됩니다. 이미지 리사이징으로 **91.8% 용량을 감소**시키고, DB PK는 Auto Increment로, 파일명은 UUID로 역할을 분리했습니다.
+원본 이미지(약 5MB, 4032×3024)를 썸네일(약 410KB, 800×600)로 리사이징하여 **91.8% 용량 감소**를 달성했습니다. Stream/MultipartFile/AWS Multipart 3가지 업로드 방식을 비교하고, 서버 리사이징이 필수인 요구사항에 맞춰 MultipartFile을 선택했습니다.
+
+DB PK는 InnoDB Clustered Index와의 호환성을 위해 Auto Increment, 외부 노출 파일명은 예측 불가능한 UUID로 역할을 분리했습니다.
 
 > 상세 분석: [S3 업로드 최적화](/blog/project/edumeet/s3-upload-optimization)
 
@@ -61,17 +65,19 @@ MySQL로 테스트를 돌리면 9.57초가 걸렸는데, H2 인메모리 DB로 �
 
 ## 기억에 남는 트러블슈팅
 
-### OneToMany 중간테이블 자동 생성
+### JPA 엔티티 매핑 → N+1 해결까지 이어진 흐름
 
-Board-BoardImage 1:N 관계를 설정했는데, JPA가 엉뚱하게 `board_image_set`이라는 중간테이블을 자동으로 만들어버렸습니다. ERD에 없는 테이블이 갑자기 생기니 팀원들이 혼란스러워했죠.
+세 가지 문제가 순서대로 연결됐습니다:
 
-원인은 `@OneToMany`에 `mappedBy`를 지정하지 않아서 단방향 연관관계로 인식한 것이었습니다. `mappedBy = "board"`를 추가하니 깔끔하게 해결됐습니다.
+1. **OneToMany 중간테이블 자동 생성**: `@OneToMany`에 `mappedBy`를 빠뜨려서 ERD에 없는 `board_image_set` 중간테이블이 생겼습니다. `mappedBy = "board"`로 해결하면서, JPA 매핑 후 반드시 DDL을 ERD와 대조 검증하는 팀 규칙을 정했습니다. → [상세](/blog/project/edumeet/onetomany-join-table)
 
-> 상세 분석: [OneToMany 중간테이블 문제](/blog/project/edumeet/onetomany-join-table)
+2. **Lazy Loading No Session**: 중간테이블을 제거하고 나니, 테스트에서 BoardImage에 접근할 때 `LazyInitializationException`이 발생했습니다. 영속성 컨텍스트의 생명주기를 이해하고 `@EntityGraph`로 근본 해결했습니다. → [상세](/blog/project/edumeet/lazy-loading-no-session)
 
-### QueryDSL 파일 이동 오류
+3. **N+1 문제 발견**: @EntityGraph를 적용하면서 Lazy 로딩의 동작 원리를 파악했기에, 게시판 목록 조회에서 N+1이 발생하는 근본 원인(프록시 초기화 → 루프 내 추가 쿼리)을 빠르게 짚을 수 있었습니다. → [상세](/blog/project/edumeet/n-plus-1-issue)
 
-레이어드 아키텍처를 적용하려고 Repository 파일을 옮기면서 클래스명을 바꿨더니 "No property searchAll found for type Board" 에러가 발생했습니다. Spring Data JPA의 **인터페이스명 + Impl 네이밍 규칙** 때문이었는데, 이걸 몰랐으면 한참 헤맸을 겁니다.
+### QueryDSL 파일 이동 오류 — 아키텍처 원칙 vs 프레임워크 규칙
+
+레이어드 아키텍처에서 구현체를 Infrastructure 레이어로 이동했더니 "No property searchAll found for type Board" 에러가 발생했습니다. Spring Data JPA의 Custom Repository 네이밍 규칙과 레이어 분리 원칙이 충돌한 건데, AI가 제안한 2가지 방법 대신 **extends 분리 + 독립 빈 주입**이라는 아키텍처 관점의 해법을 선택했습니다.
 
 > 상세 분석: [파일 이동 오류](/blog/project/edumeet/file-move-error)
 
@@ -107,7 +113,7 @@ EduMeet is **an online education platform that supports hearing-impaired learner
 
 ## My Role
 
-I was responsible for backend development (33% contribution). Specifically, I owned **board CRUD**, **image upload**, and **unit testing** across the project.
+I was responsible for backend development. Specifically, I owned **board CRUD API design/implementation**, **S3 image upload pipeline**, **127 unit tests**, and **layered architecture design**.
 
 Being my first team project, I expected to focus solely on feature implementation, but in reality I spent far more time on **defensive logic and test code** than the features themselves.
 
@@ -115,23 +121,27 @@ Being my first team project, I expected to focus solely on feature implementatio
 
 ## Key Implementations
 
-### Fixing the N+1 Problem (66.9% Performance Improvement)
+### N+1 Problem Fix — 12 Queries → 4, 66.9% Response Improvement
 
-I discovered an N+1 problem where the number of queries grew proportionally to the number of posts when loading the board list. By applying `@BatchSize(20)` for IN-clause batch loading, I reduced the query count from 11 to 2 and improved response time from 38.23ms to 12.66ms — a **66.9% improvement**.
+In the Board-BoardImage-Reply 3-table structure (1:N relationships), I discovered an N+1 problem where individual SELECTs for board_image fired per post during list queries. Hibernate statistics confirmed 12 JDBC statements per page (list 1 + N+1 10 + COUNT 1).
+
+After benchmarking FetchJoin (memory pagination issue), EntityGraph (+35% degradation), SUBSELECT (Spring Data JPA session incompatibility), and BatchSize, `@BatchSize(20)` was selected for best pagination compatibility and performance (38.33ms → 12.66ms, **66.9% improvement**).
 
 > Detailed analysis: [N+1 Problem Analysis and Solution](/blog/project/edumeet/n-plus-1-issue)
 
 ### 127 Unit Tests & H2 Migration
 
-Running tests against MySQL took 9.57 seconds. Switching to H2 in-memory DB brought it down to 5.23 seconds — **45% faster**. I separated unit tests (H2) from integration tests (MySQL).
+MySQL-based tests took 9.57 seconds due to disk I/O and TCP round trips. Running tests 20-30 times daily, cumulative wait time became non-trivial. Switching to H2 in-memory reduced it to 5.23 seconds — **45% faster**.
 
-More than half of the 127 test cases covered **abnormal scenario handling** — things like "What if a title is empty?" or "What if likes exceed Integer.MAX_VALUE?"
+Unit tests use H2 (fast feedback), integration tests use MySQL (SQL compatibility verification). H2-MySQL differences (`GROUP_CONCAT`, `ENUM`, etc.) are caught in integration tests.
 
 > Detailed analysis: [Unit Test DB Migration](/blog/project/edumeet/unit-test-db-migration)
 
-### S3 Image Upload Optimization
+### S3 Image Upload Optimization — 91.8% Size Reduction
 
-Storing original images (5MB) as-is creates storage cost issues. By applying image resizing, I achieved a **91.8% reduction in file size**, and separated concerns by using Auto Increment for DB PKs and UUID for file names.
+Resized original images (~5MB, 4032×3024) to thumbnails (~410KB, 800×600) for **91.8% size reduction**. Compared Stream/MultipartFile/AWS Multipart upload methods and chose MultipartFile for server-side resizing requirements.
+
+DB PKs use Auto Increment (InnoDB Clustered Index compatibility), external file names use UUID (unpredictable).
 
 > Detailed analysis: [S3 Upload Optimization](/blog/project/edumeet/s3-upload-optimization)
 
@@ -139,17 +149,19 @@ Storing original images (5MB) as-is creates storage cost issues. By applying ima
 
 ## Memorable Troubleshooting
 
-### OneToMany Auto-Generated Join Table
+### JPA Entity Mapping → N+1 Resolution Flow
 
-When I set up a Board–BoardImage 1:N relationship, JPA unexpectedly auto-created a `board_image_set` join table. A table that didn't exist in our ERD suddenly appeared, confusing the entire team.
+Three issues connected sequentially:
 
-The cause was not specifying `mappedBy` on `@OneToMany`, which made JPA treat it as a unidirectional relationship. Adding `mappedBy = "board"` resolved it cleanly.
+1. **OneToMany join table**: Missing `mappedBy` caused JPA to auto-create a `board_image_set` join table. Fixed with `mappedBy = "board"`, established team rule to verify DDL against ERD. → [Details](/blog/project/edumeet/onetomany-join-table)
 
-> Detailed analysis: [OneToMany Join Table Problem](/blog/project/edumeet/onetomany-join-table)
+2. **Lazy Loading No Session**: After fixing the join table, `LazyInitializationException` occurred when accessing BoardImage in tests. Understood Persistence Context lifecycle and applied `@EntityGraph` as fundamental fix. → [Details](/blog/project/edumeet/lazy-loading-no-session)
 
-### QueryDSL File Move Error
+3. **N+1 discovery**: Understanding Lazy loading mechanics from the EntityGraph work enabled quick identification of the N+1 root cause (proxy initialization → additional queries per loop iteration). → [Details](/blog/project/edumeet/n-plus-1-issue)
 
-While applying layered architecture, I moved and renamed Repository files, which triggered a "No property searchAll found for type Board" error. It was caused by Spring Data JPA's **interface name + Impl naming convention** — without knowing this rule, I would have been stuck for hours.
+### QueryDSL File Move — Architecture Principles vs Framework Rules
+
+Moving implementation to Infrastructure layer triggered "No property searchAll found for type Board." Spring Data JPA's Custom Repository naming rules conflicted with layer separation. Chose **extends separation + independent bean injection** over AI's 2 suggestions, based on architectural reasoning.
 
 > Detailed analysis: [File Move Error](/blog/project/edumeet/file-move-error)
 

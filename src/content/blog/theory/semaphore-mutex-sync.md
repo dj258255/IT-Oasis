@@ -78,7 +78,7 @@ class BankAccount {
 **핵심 특징:**
 - **소유권(Ownership)이 있다**: Lock을 건 스레드만 Unlock 가능
 - **이진(Binary) 상태**: Locked(1) 또는 Unlocked(0)
-- **재진입 가능**: 같은 스레드가 여러 번 Lock 가능 (ReentrantLock)
+- **소유권**: 락을 획득한 스레드만 해제 가능. 재진입은 구현에 따라 다름 — Java의 synchronized와 ReentrantLock은 재진입 가능하지만, POSIX PTHREAD_MUTEX_NORMAL은 재진입 시 데드락 발생
 
 > 출처: [Velog - [OS]뮤텍스(Mutex)와 세마포어(Semaphore)](https://velog.io/@dodozee/뮤텍스Mutex와-세마포어Semaphore), [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/)
 
@@ -110,6 +110,8 @@ class BankAccount {
 ```
 
 `synchronized` 키워드는 메서드나 블록에 대한 암묵적 뮤텍스를 제공해요. 한 스레드가 `synchronized` 메서드를 실행 중이면, 다른 스레드는 대기해야 해요.
+
+참고: Java의 synchronized도 재진입 가능하다 — synchronized 메서드 안에서 같은 객체의 다른 synchronized 메서드를 호출해도 데드락이 발생하지 않는다.
 
 > 출처: [Java Documentation - synchronized](https://docs.oracle.com/javase/tutorial/essential/concurrency/sync.html), [Baeldung - Guide to synchronized](https://www.baeldung.com/java-synchronized)
 
@@ -234,6 +236,8 @@ public void innerMethod() {
 semaphore binary_sem = 1;  // 초기값: 1
 
 wait(binary_sem) {
+    // 주의: 실제 구현에서는 while 검사와 binary_sem-- 사이의 원자성이
+    // 보장되어야 한다 (하드웨어 CAS 명령어 또는 인터럽트 비활성화를 사용)
     while (binary_sem <= 0) {
         // 대기
     }
@@ -351,7 +355,7 @@ pool.releaseConnection(conn);            // 카운터: 10
 | **목적** | 상호 배제 (Mutual Exclusion) | 자원 개수 제한 |
 | **사용 시나리오** | 임계영역 보호 | 자원 풀 관리 |
 | **재진입** | 가능 (ReentrantLock) | 불가능 (카운터만 증감) |
-| **범위** | 프로세스 범위 | 시스템 범위 (프로세스 간 공유 가능) |
+| **범위** | 기본적으로 프로세스 내 (단, POSIX PTHREAD_PROCESS_SHARED나 Windows Named Mutex로 프로세스 간 공유 가능) | 구현에 따라 프로세스 내(Java) 또는 시스템 범위(POSIX named semaphore) |
 | **예시** | synchronized, ReentrantLock | Semaphore(n) |
 
 > 출처: [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/), [Stack Overflow - What is the difference between lock, mutex and semaphore?](https://stackoverflow.com/questions/2332765/)
@@ -452,7 +456,18 @@ class Philosopher extends Thread {
 
 > 출처: [Wikipedia - Dining Philosophers Problem](https://en.wikipedia.org/wiki/Dining_philosophers_problem), [GeeksforGeeks - Deadlock in Operating System](https://www.geeksforgeeks.org/introduction-of-deadlock-in-operating-system/)
 
-### 해결 방법 1: 홀수/짝수 철학자 분리
+### 데드락 발생의 4가지 필요조건 (Coffman)
+
+데드락이 발생하려면 다음 4가지 조건이 **동시에** 성립해야 해요:
+
+1. **상호 배제 (Mutual Exclusion)**: 포크는 한 번에 한 철학자만 사용 가능
+2. **점유 대기 (Hold and Wait)**: 왼쪽 포크를 든 채 오른쪽 포크를 기다림
+3. **비선점 (No Preemption)**: 다른 철학자의 포크를 강제로 빼앗을 수 없음
+4. **순환 대기 (Circular Wait)**: 철학자 0→1→2→3→4→0 순환 대기 구조
+
+해결 방법은 이 4가지 중 **하나를 깨뜨리는 것**이에요.
+
+### 해결 방법 1: 홀수/짝수 철학자 분리 (순환 대기 제거)
 
 ```java
 class Philosopher extends Thread {
@@ -649,17 +664,23 @@ public class LockManager {
     private final StringRedisTemplate redisTemplate;
     private static final int LOCK_TTL_SECONDS = 3;
 
-    public boolean acquireLock(String key) {
+    public String acquireLock(String key) {
         String lockKey = key + ":lock";
+        String lockValue = UUID.randomUUID().toString();
         Boolean success = redisTemplate.opsForValue()
-            .setIfAbsent(lockKey, "locked",
+            .setIfAbsent(lockKey, lockValue,
                          Duration.ofSeconds(LOCK_TTL_SECONDS));
-        return Boolean.TRUE.equals(success);
+        return Boolean.TRUE.equals(success) ? lockValue : null;
     }
 
-    public void releaseLock(String key) {
+    public void releaseLock(String key, String lockValue) {
         String lockKey = key + ":lock";
-        redisTemplate.delete(lockKey);
+        // Lua 스크립트로 자신의 락인지 확인 후 삭제 (원자적)
+        String script = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                        "return redis.call('del', KEYS[1]) " +
+                        "else return 0 end";
+        redisTemplate.execute(new DefaultRedisScript<>(script, Long.class),
+            List.of(lockKey), lockValue);
     }
 }
 
@@ -670,8 +691,9 @@ public class RedisLockUtil {
             Supplier<T> supplier,
             LockManager lockManager) {
 
-        // 락 획득 시도
-        if (!lockManager.acquireLock(lockKey)) {
+        // 락 획득 시도 (UUID 반환, 실패 시 null)
+        String lockValue = lockManager.acquireLock(lockKey);
+        if (lockValue == null) {
             throw new BusinessException("동시 요청이 발생했습니다");
         }
 
@@ -679,8 +701,8 @@ public class RedisLockUtil {
             // 비즈니스 로직 실행
             return supplier.get();
         } finally {
-            // 락 해제
-            lockManager.releaseLock(lockKey);
+            // 락 해제 (자신의 락인지 확인 후 삭제)
+            lockManager.releaseLock(lockKey, lockValue);
         }
     }
 }
@@ -713,6 +735,8 @@ public ResponseEntity<?> claimReward(@RequestBody RewardRequest request) {
 
 ### LINE: 비동기 서버와 이벤트 루프 기반 동시성
 
+참고: 아래 사례는 뮤텍스/세마포어와는 다른 동시성 패러다임이지만, 락 없이 동시성을 달성하는 대안적 접근으로 비교 참고할 만하다.
+
 LINE Engineering에서는 비동기 서버에서 이벤트 루프를 활용한 동시성 처리를 상세히 설명했어요.
 
 #### 멀티플렉싱 기반 동시성
@@ -736,7 +760,7 @@ while (true) {
         handleRead(event) // <- 논블로킹 처리
       }
       if(writable){
-        handWrite(event)
+        handleWrite(event)
       }
     }
   }
@@ -747,7 +771,7 @@ while (true) {
 | 멀티스레드 방식 | 이벤트 루프 방식 |
 |--------------|---------------|
 | 요청당 1개 스레드 | 단일 스레드 |
-| 컨텍스트 스위칭 비용 높음 | 컨텍스트 스위칭 없음 |
+| 컨텍스트 스위칭 비용 높음 | 이벤트 루프 내 사용자 레벨 컨텍스트 스위칭 없음 |
 | 메모리 사용량 많음 (스레드 스택) | 메모리 효율적 |
 | 동기 I/O (블로킹) | 비동기 I/O (논블로킹) |
 | 동시 연결 수: 수백~수천 | 동시 연결 수: 수만~수십만 |
@@ -885,7 +909,7 @@ public CompletableFuture<HttpResponse> serve(ServiceRequestContext ctx,
 - 소유권이 있음 (Lock을 건 스레드만 Unlock)
 - 이진 상태 (Locked/Unlocked)
 - 단일 자원 보호
-- 재진입 가능 (ReentrantLock)
+- 재진입은 구현에 따라 다름 (Java ReentrantLock: 가능, POSIX NORMAL: 불가)
 - 예시: `synchronized`, `ReentrantLock`
 
 **세마포어 (Semaphore):**
@@ -1027,7 +1051,7 @@ A mutex (Mutual Exclusion) is **a locking mechanism for implementing mutual excl
 **Key characteristics:**
 - **Has ownership**: Only the thread that locked can unlock
 - **Binary state**: Locked (1) or Unlocked (0)
-- **Reentrant**: The same thread can lock multiple times (ReentrantLock)
+- **Ownership**: Only the thread that acquired the lock can release it. Reentrancy depends on implementation — Java's synchronized and ReentrantLock are reentrant, but POSIX PTHREAD_MUTEX_NORMAL causes deadlock on reentry
 
 > Sources: [Velog - [OS] Mutex and Semaphore](https://velog.io/@dodozee/뮤텍스Mutex와-세마포어Semaphore), [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/)
 
@@ -1059,6 +1083,8 @@ class BankAccount {
 ```
 
 The `synchronized` keyword provides an implicit mutex on a method or block. When one thread is executing a `synchronized` method, other threads must wait.
+
+Note: Java's synchronized is also reentrant — calling another synchronized method on the same object from within a synchronized method does not cause a deadlock.
 
 > Sources: [Java Documentation - synchronized](https://docs.oracle.com/javase/tutorial/essential/concurrency/sync.html), [Baeldung - Guide to synchronized](https://www.baeldung.com/java-synchronized)
 
@@ -1183,6 +1209,9 @@ A semaphore whose counter can only be 0 or 1.
 semaphore binary_sem = 1;  // Initial value: 1
 
 wait(binary_sem) {
+    // Note: In actual implementations, atomicity between the while check
+    // and binary_sem-- must be guaranteed (using hardware CAS instructions
+    // or interrupt disabling)
     while (binary_sem <= 0) {
         // Wait
     }
@@ -1300,7 +1329,7 @@ Semaphores are useful for managing **limited resource pools**.
 | **Purpose** | Mutual exclusion | Limiting resource count |
 | **Use case** | Protecting critical sections | Resource pool management |
 | **Reentrancy** | Possible (ReentrantLock) | Not possible (only counter increment/decrement) |
-| **Scope** | Process scope | System scope (can be shared between processes) |
+| **Scope** | Process-local by default (but can be shared across processes via POSIX PTHREAD_PROCESS_SHARED or Windows Named Mutex) | Depends on implementation: process-local (Java) or system-wide (POSIX named semaphore) |
 | **Examples** | synchronized, ReentrantLock | Semaphore(n) |
 
 > Sources: [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/), [Stack Overflow - What is the difference between lock, mutex and semaphore?](https://stackoverflow.com/questions/2332765/)
@@ -1598,17 +1627,23 @@ public class LockManager {
     private final StringRedisTemplate redisTemplate;
     private static final int LOCK_TTL_SECONDS = 3;
 
-    public boolean acquireLock(String key) {
+    public String acquireLock(String key) {
         String lockKey = key + ":lock";
+        String lockValue = UUID.randomUUID().toString();
         Boolean success = redisTemplate.opsForValue()
-            .setIfAbsent(lockKey, "locked",
+            .setIfAbsent(lockKey, lockValue,
                          Duration.ofSeconds(LOCK_TTL_SECONDS));
-        return Boolean.TRUE.equals(success);
+        return Boolean.TRUE.equals(success) ? lockValue : null;
     }
 
-    public void releaseLock(String key) {
+    public void releaseLock(String key, String lockValue) {
         String lockKey = key + ":lock";
-        redisTemplate.delete(lockKey);
+        // Lua script to atomically verify ownership before deleting
+        String script = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                        "return redis.call('del', KEYS[1]) " +
+                        "else return 0 end";
+        redisTemplate.execute(new DefaultRedisScript<>(script, Long.class),
+            List.of(lockKey), lockValue);
     }
 }
 
@@ -1619,8 +1654,9 @@ public class RedisLockUtil {
             Supplier<T> supplier,
             LockManager lockManager) {
 
-        // Attempt to acquire lock
-        if (!lockManager.acquireLock(lockKey)) {
+        // Attempt to acquire lock (returns UUID, null on failure)
+        String lockValue = lockManager.acquireLock(lockKey);
+        if (lockValue == null) {
             throw new BusinessException("동시 요청이 발생했습니다");
         }
 
@@ -1628,8 +1664,8 @@ public class RedisLockUtil {
             // Execute business logic
             return supplier.get();
         } finally {
-            // Release lock
-            lockManager.releaseLock(lockKey);
+            // Release lock (verify ownership before deleting)
+            lockManager.releaseLock(lockKey, lockValue);
         }
     }
 }
@@ -1685,7 +1721,7 @@ while (true) {
         handleRead(event) // <- Non-blocking processing
       }
       if(writable){
-        handWrite(event)
+        handleWrite(event)
       }
     }
   }

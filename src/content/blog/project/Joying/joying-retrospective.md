@@ -69,15 +69,15 @@ draft: false
 
 > 상세 분석: [Coroutine + JPA 401 에러](/blog/project/joying/coroutine-jpa-401)
 
-### 채팅방 목록 N+1 (1.3초 → 65ms)
+### 채팅방 목록 N+1 (1,350ms → 85ms, 16배 개선)
 
-채팅방 10개 조회 시 각 채팅방의 안읽은 메시지 수를 개별 Redis GET으로 조회하면서 N+1 문제가 발생했습니다. Redis MGET으로 배치 조회하고, 캐시 미스는 Coroutine async로 MongoDB 병렬 조회하니 **1.3초에서 65ms로 95% 개선**됐습니다.
+채팅방 10개 조회 시 51번의 쿼리가 발생(MySQL N+1 + 개별 Redis GET + 개별 MongoDB countDocuments). Fetch Join으로 MySQL 쿼리를 3개로 줄이고, Redis MGET으로 10개 키를 일괄 조회하고, 캐시 미스는 Coroutine async로 MongoDB 병렬 조회. **51쿼리 → 4쿼리, 1,350ms → 85ms (캐시 히트율 95% 기준).** 최악의 경우(전체 캐시 미스)에도 185ms로 Before 대비 7배 빠름.
 
 > 상세 분석: [채팅방 목록 느린 쿼리](/blog/project/joying/chatroom-list-slow-query) · [Inbound Thread 최적화](/blog/project/joying/inbound-thread-optimization)
 
-### Redis CVSS 10.0 취약점 긴급 대응
+### Redis CVSS 9.9 취약점 긴급 대응
 
-보안 뉴스에서 CVE-2025-49844 "RediShell"(CVSS 10.0) 소식을 접했는데, 우리가 쓰던 Redis 7.0.15가 정확히 취약 버전이었습니다. 즉시 7.2.11로 업그레이드하고, 인증 활성화 + EVAL 명령어 비활성화 + Docker 네트워크 격리까지 **다층 방어**를 적용했습니다.
+보안 뉴스에서 CVE-2025-49844 "RediShell"(CVSS 9.9) 소식을 접했는데, 우리가 쓰던 Redis 7.0.15가 정확히 취약 버전이었습니다. 즉시 7.2.11로 업그레이드하고, 인증 활성화 + EVAL 명령어 비활성화 + Docker 네트워크 격리까지 **다층 방어**를 적용했습니다.
 
 > 상세 분석: [Redis 취약점 긴급 패치](/blog/project/joying/redis-security-issue)
 
@@ -158,15 +158,15 @@ I spent half a day suspecting JWT token configuration and Security settings, unt
 
 > Detailed analysis: [Coroutine + JPA 401 Error](/blog/project/joying/coroutine-jpa-401)
 
-### Chat Room List N+1 (1.3s → 65ms)
+### Chat Room List N+1 (1,350ms → 85ms, 16x improvement)
 
-When loading 10 chat rooms, fetching each room's unread message count via individual Redis GET calls caused an N+1 problem. By switching to Redis MGET for batch retrieval and using Coroutine async for parallel MongoDB queries on cache misses, I achieved a **95% improvement from 1.3 seconds to 65ms**.
+Loading 10 chat rooms triggered 51 queries (MySQL N+1 + individual Redis GETs + individual MongoDB countDocuments). Applied Fetch Join to reduce MySQL queries to 3, Redis MGET for batch key retrieval, and Coroutine async for parallel MongoDB queries on cache misses. **51 queries → 4, 1,350ms → 85ms (at 95% cache hit rate).** Even worst case (full cache miss) is 185ms — still 7x faster than before.
 
 > Detailed analysis: [Chat Room List Slow Query](/blog/project/joying/chatroom-list-slow-query) · [Inbound Thread Optimization](/blog/project/joying/inbound-thread-optimization)
 
-### Redis CVSS 10.0 Vulnerability Emergency Response
+### Redis CVSS 9.9 Vulnerability Emergency Response
 
-I spotted CVE-2025-49844 "RediShell" (CVSS 10.0) in the security news, and our Redis 7.0.15 was exactly the vulnerable version. I immediately upgraded to 7.2.11 and applied **defense-in-depth**: authentication enabled + EVAL command disabled + Docker network isolation.
+I spotted CVE-2025-49844 "RediShell" (CVSS 9.9) in the security news, and our Redis 7.0.15 was exactly the vulnerable version. I immediately upgraded to 7.2.11 and applied **defense-in-depth**: authentication enabled + EVAL command disabled + Docker network isolation.
 
 > Detailed analysis: [Redis Vulnerability Emergency Patch](/blog/project/joying/redis-security-issue)
 

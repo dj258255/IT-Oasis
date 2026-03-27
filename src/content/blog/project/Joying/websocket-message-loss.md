@@ -19,7 +19,17 @@ coverImage: "/uploads/project/Joying/websocket-message-loss/unified-api.svg"
 
 ---
 
-## 문제 발견
+## 0. 정상 상태
+
+**서버 환경**: EC2 t3.medium (2 vCPU, 4GB RAM), Spring Boot + WebSocket (STOMP), Redis Pub/Sub으로 실시간 메시지 전달, MongoDB에 메시지 영구 저장.
+
+**동시 접속**: 테스트 환경 기준 10-20명. 모바일(Android) + 웹(React) 혼합 환경.
+
+**정상 동작**: WebSocket 연결이 유지된 상태에서 메시지 전송 → Redis Pub/Sub → 수신까지 평균 5-10ms. 메시지 유실 0건.
+
+---
+
+## 1. 문제 발견
 
 모바일 환경에서 테스트 중 다음과 같은 오류가 보고됐어요.
 
@@ -157,9 +167,12 @@ GET /api/chat-rooms/123/messages?after=2024-01-01T10:00:00Z&size=50
 
 ## 결과
 
+> **측정 조건**: EC2 t3.medium, 10명 동시 접속, WiFi 끊김 시뮬레이션 (모바일 네트워크 토글)
+
 | 시나리오 | Before | After |
 |----------|--------|-------|
 | 네트워크 끊김 후 재연결 | 중간 메시지 유실 | 모든 메시지 복구 |
+| 재연결 시 복구 소요 시간 | — (복구 불가) | 50-100ms (20건 기준) |
 | API 개수 | 2개 (스크롤 + 재연결) | 1개 (통합) |
 
 <!-- EN -->
@@ -168,7 +181,17 @@ Performance issues were resolved, but an unexpected problem was discovered durin
 
 ---
 
-## Problem Discovery
+## 0. Normal State
+
+**Server environment**: EC2 t3.medium (2 vCPU, 4GB RAM), Spring Boot + WebSocket (STOMP), Redis Pub/Sub for real-time delivery, MongoDB for persistent storage.
+
+**Concurrent users**: 10-20 in test. Mixed mobile (Android) + web (React).
+
+**Normal operation**: With active WebSocket, message send → Redis Pub/Sub → receive avg 5-10ms. Zero message loss.
+
+---
+
+## 1. Problem Discovery
 
 During mobile testing, the following bug was reported:
 
@@ -295,7 +318,10 @@ Logic to be implemented on the frontend:
 
 ## Results
 
+> **Measurement conditions**: EC2 t3.medium, 10 concurrent users, WiFi disconnect simulation (mobile network toggle)
+
 | Scenario | Before | After |
 |----------|--------|-------|
 | Reconnection after network drop | Intermediate messages lost | All messages recovered |
+| Recovery time on reconnect | N/A (no recovery) | 50-100ms (20 messages) |
 | Number of APIs | 2 (scroll + reconnection) | 1 (unified) |

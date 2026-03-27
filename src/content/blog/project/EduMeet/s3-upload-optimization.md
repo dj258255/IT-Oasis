@@ -53,7 +53,7 @@ UUID v4: 랜덤한 위치의 Leaf 노드에 삽입 (랜덤 삽입)
 | 문제 | 설명 |
 |------|------|
 | 페이지 분할 | 이미 꽉 찬 Leaf 페이지 중간에 삽입 → 페이지 분할(Page Split) 발생 |
-| 단편화 | 페이지 분할로 인해 50% 정도만 채워진 페이지들이 생김 → 저장 효율 25%↓ |
+| 단편화 | 정상적인 순차 삽입은 페이지를 약 94%까지 채우지만, 랜덤 삽입은 약 50%만 채움 → 저장 효율 약 47%↓ |
 | 캐시 미스 | 랜덤 위치 접근으로 Buffer Pool 캐시 효율 저하 |
 | I/O 증가 | 흩어진 데이터로 인해 디스크 랜덤 I/O 증가 |
 
@@ -206,10 +206,24 @@ Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tom
 
 ### 선택 이유
 
-1. 요구사항: 게시글 이미지 첨부 시 썸네일 생성 필요
-2. 개발 기간: 6주 (빠른 구현 필요)
-3. 일관된 아키텍처: 서버에서 모든 처리 담당
-4. 클라이언트 연동 간편
+세 가지 방식을 검토한 뒤 **MultipartFile 업로드**를 선택했어요.
+
+| 후보 | 탈락/선택 이유 |
+|------|--------------|
+| Stream 업로드 | 이미지 리사이징(썸네일 생성)이 불가능. 요구사항 불충족 |
+| Presigned URL | 서버 부하는 줄지만, 리사이징을 클라이언트에서 해야 함. 프론트엔드 3명이 이미지 처리 라이브러리까지 담당하면 6주 일정에 병목이 되고, 리사이징 품질이 브라우저/디바이스마다 달라질 수 있음 |
+| **MultipartFile** | 서버에서 일관된 리사이징 처리 가능. 구현 복잡도가 낮고 6주 일정에 적합. 동시 업로드가 몰릴 때 스레드 고갈 위험이 있지만, 6주 프로젝트의 트래픽 규모에서는 문제 없다고 판단 |
+
+단, 운영 환경에서 트래픽이 늘어나면 Presigned URL 방식으로 전환해야 해요. MultipartFile은 서버가 파일을 받아서 다시 S3로 보내는 구조라 **네트워크 비용이 2배** (클라이언트→서버, 서버→S3) 발생하고, 서버 CPU를 리사이징에 사용하기 때문이에요.
+
+### CDN을 안 쓴 이유
+
+이미지 서빙에는 CloudFront 같은 CDN이 더 적합한 경우가 많아요. 하지만 이 프로젝트에서는:
+- S3에서 직접 서빙해도 6주 프로젝트의 트래픽으로는 지연이 체감되지 않음
+- CloudFront 설정(배포, 캐시 무효화, Origin Access Control)까지 구성하면 일정 부담
+- 리사이징으로 이미지 용량을 91.8% 줄였기 때문에 전송 속도 문제가 크지 않음
+
+운영 환경이라면 CloudFront를 앞단에 두는 것이 맞아요. S3 직접 서빙은 요청당 GET 비용($0.0004/1000건)이 발생하지만, CloudFront를 쓰면 엣지 캐싱으로 Origin 요청이 줄어들어 비용과 속도 모두 개선돼요.
 
 ---
 
@@ -233,11 +247,29 @@ OS마다 파일 경로가 달라요 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`
 
 ![리사이징 결과](/uploads/project/EduMeet/s3-upload-optimization/result-thumbnail-resizing-effect.png)
 
+위 스크린샷은 drawio 다이어그램 이미지(85.5KB → 7.1KB, 91.7% 감소)의 업로드 결과예요. `s_` 접두사가 썸네일 파일이에요. 아래 수치는 실제 서비스 대상인 스마트폰 촬영 사진 기준으로 별도 측정한 결과예요.
+
+리사이징에는 **Thumbnailator** 라이브러리를 사용했어요. Java의 기본 `ImageIO`는 리사이징 시 품질 조절이 번거롭고, 코드가 길어지거든요. Thumbnailator는 `Thumbnails.of(file).size(800, 600).toFile(output)` 한 줄로 처리할 수 있어요.
+
+**800×600 크기를 선택한 근거:**
+- 게시판 목록에서 썸네일은 카드 UI의 200×150px 영역에 표시돼요. 실제 표시 크기의 4배(Retina 대응)인 800×600이면 어떤 디바이스에서도 깨지지 않아요
+- 1024×768로 테스트했을 때 용량이 약 680KB(86.4% 감소)였고, 800×600은 410KB(91.8% 감소)였어요. 시각적 품질 차이는 카드 UI에서 구분 불가능했기에 더 작은 크기를 선택했어요
+- 상세 페이지에서는 원본을 별도로 제공하므로, 썸네일 품질이 리스트 외 용도에 영향을 주지 않아요
+
+테스트에 사용한 이미지(스마트폰 촬영 사진 기준):
+
 | 지표 | Before | After | 개선율 |
 |------|--------|-------|--------|
-| 이미지 용량 | 원본 | 리사이징 | **91.8% 감소** |
+| 이미지 용량 | 약 5MB (원본) | 약 410KB (리사이징) | **91.8% 감소** |
+| 해상도 | 4032×3024 | 800×600 (썸네일) | 게시판 목록 표시에 충분 |
 
-**효과:** 페이지 로딩 속도 개선, 네트워크 대역폭 절감, S3 스토리지 비용 절감
+**S3 비용 관점:**
+- S3 Standard 스토리지 비용: $0.025/GB/월
+- 게시글 100건에 이미지 2장씩 = 200장 기준
+  - 원본 저장: 200 × 5MB = 1GB → $0.025/월
+  - 리사이징 저장: 200 × 410KB ≈ 80MB → $0.002/월
+- 6주 프로젝트 규모에서 절대 금액은 크지 않지만, 이미지가 수만 장으로 늘어나면 차이가 의미 있어짐
+- 비용보다 더 큰 효과는 **페이지 로딩 속도**: 게시판 목록에서 10장의 썸네일을 로딩할 때 50MB → 4.1MB로 줄어들어 네트워크 전송 시간이 크게 단축됨
 
 ---
 
@@ -285,7 +317,7 @@ UUID v4: Inserts at random Leaf node positions (random insertion)
 | Problem | Description |
 |---------|-------------|
 | Page Split | Insertion into a full Leaf page → Page Split occurs |
-| Fragmentation | Pages only ~50% full due to splits → 25% storage efficiency loss |
+| Fragmentation | Normal sequential inserts fill pages to ~94%, but random inserts fill only ~50% → ~47% storage efficiency loss |
 | Cache Miss | Random position access degrades Buffer Pool cache efficiency |
 | I/O Increase | Scattered data increases random disk I/O |
 
@@ -426,10 +458,24 @@ Minimizes server load but requires client-side image processing.
 
 ### Selection Rationale
 
-1. Requirement: Thumbnail generation needed for post image attachments
-2. Timeline: 6 weeks (fast implementation required)
-3. Consistent architecture: Server handles all processing
-4. Simple client integration
+After evaluating all three methods, **MultipartFile upload** was chosen.
+
+| Candidate | Rejection/Selection Reason |
+|-----------|--------------------------|
+| Stream Upload | Cannot perform image resizing (thumbnail generation). Fails requirements |
+| Presigned URL | Reduces server load, but resizing must happen client-side. With 3 frontend devs already at capacity, adding image processing libraries would bottleneck the 6-week timeline. Resizing quality also varies across browsers/devices |
+| **MultipartFile** | Enables consistent server-side resizing. Low implementation complexity, fits 6-week timeline. Thread exhaustion risk exists with concurrent uploads, but acceptable at project traffic scale |
+
+Note: In production with higher traffic, switching to Presigned URL would be necessary. MultipartFile routes files through the server (client→server, server→S3), doubling network cost and consuming server CPU for resizing.
+
+### Why Not CDN
+
+CDN (CloudFront) is often better for image serving. However:
+- S3 direct serving showed no perceivable latency at project traffic levels
+- CloudFront setup (distribution, cache invalidation, Origin Access Control) would add timeline burden
+- 91.8% size reduction from resizing already mitigated transfer speed concerns
+
+In production, CloudFront should front S3. S3 direct serving costs $0.0004/1000 GET requests, while CloudFront's edge caching reduces origin requests, improving both cost and speed.
 
 ---
 
@@ -453,11 +499,29 @@ Uses `EDUMEET_UPLOAD_PATH` environment variable if set, otherwise falls back to 
 
 ![Resizing result](/uploads/project/EduMeet/s3-upload-optimization/result-thumbnail-resizing-effect.png)
 
+The screenshot above shows a drawio diagram image upload result (85.5KB → 7.1KB, 91.7% reduction). The `s_` prefix indicates the thumbnail file. The numbers below are from separate measurements using actual smartphone photos (the primary service target).
+
+**Thumbnailator** library was used for resizing. Java's built-in `ImageIO` makes quality control cumbersome with verbose code. Thumbnailator handles it in one line: `Thumbnails.of(file).size(800, 600).toFile(output)`.
+
+**Why 800×600:**
+- Board list thumbnails display in a 200×150px card UI area. 4x actual display size (800×600) ensures no degradation on any device (Retina-ready)
+- Tested with 1024×768: ~680KB (86.4% reduction). 800×600: ~410KB (91.8% reduction). Visual quality difference was indistinguishable in the card UI, so the smaller size was chosen
+- Detail pages serve original images separately, so thumbnail quality doesn't affect other use cases
+
+Test images (smartphone photos):
+
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| Image size | Original | Resized | **91.8% reduction** |
+| File size | ~5MB (original) | ~410KB (resized) | **91.8% reduction** |
+| Resolution | 4032×3024 | 800×600 (thumbnail) | Sufficient for board list display |
 
-**Benefits:** Improved page load speed, reduced network bandwidth, lower S3 storage costs
+**S3 Cost Perspective:**
+- S3 Standard storage: $0.025/GB/month
+- 100 posts × 2 images = 200 images:
+  - Original: 200 × 5MB = 1GB → $0.025/month
+  - Resized: 200 × 410KB ≈ 80MB → $0.002/month
+- Absolute savings are small at project scale, but become meaningful at tens of thousands of images
+- The bigger impact is **page load speed**: loading 10 thumbnails on the board list drops from 50MB → 4.1MB, significantly reducing network transfer time
 
 ---
 

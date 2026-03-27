@@ -33,9 +33,9 @@ draft: false
 
 처음에는 "그냥 스프레드시트 만들면 되겠지"라고 생각했습니다. 하지만 어떤 기능이 필요한지, 어떤 수식이 표준인지 전혀 몰랐습니다.
 
-GDC Vault, NDC 2018(넥슨), Zynga 공식 자료를 찾아보면서 게임 밸런싱 이론을 학습했습니다:
+GDC Vault, NDC 2018 밸런스 기획 세션, Zynga 공식 자료를 찾아보면서 게임 밸런싱 이론을 학습했습니다:
 - **TTK 계산**(Time to Kill): 마지막 타격에는 쿨다운을 포함하지 않는다는 것
-- **Faucet/Sink 모델**: Faucet(유입)이 Sink(소모)보다 작아야 인플레이션을 방지할 수 있다는 것
+- **Faucet/Sink 모델**: Faucet(유입)이 Sink(소모)를 초과하면 인플레이션이 발생하므로, 둘 사이의 균형을 유지해야 한다는 것
 - **Flow 이론**: 난이도가 실력과 적절하게 맞아야 몰입 상태가 유지된다
 
 > 시장 조사 상세: [게임 밸런스 도구 시장 조사](/blog/project/indibalancing/indie-balance-tool-market-research)
@@ -46,9 +46,9 @@ GDC Vault, NDC 2018(넥슨), Zynga 공식 자료를 찾아보면서 게임 밸�
 
 ## 주요 구현
 
-### 게임 특화 수식 23개
+### 게임 특화 수식
 
-엑셀에는 `DAMAGE(atk, def)`, `SCALE(base, level, rate, type)`, `TTK(hp, damage, attackSpeed)` 같은 게임 특화 함수가 없습니다. 감소율 공식 DAMAGE, 4가지 성장 곡선(Linear/Exponential/Logarithmic/S-Curve) SCALE, 정확한 킬타임 TTK, 시트 간 참조 REF 등 **23개 함수**를 구현했습니다.
+엑셀에는 `DAMAGE(atk, def)`, `SCALE(base, level, rate, type)`, `TTK(hp, damage, attackSpeed)` 같은 게임 특화 함수가 없습니다. 감소율 공식 DAMAGE, 4가지 성장 곡선(Linear/Exponential/Logarithmic/S-Curve) SCALE, 정확한 킬타임 TTK, 시트 간 참조 REF 등 핵심 함수 23개에서 시작해 현재 **70개 이상**으로 확장했습니다.
 
 기획자가 `=DAMAGE(100, 50)`을 입력하면 즉시 `66.67`을 계산합니다.
 
@@ -102,9 +102,9 @@ When developing indie games, managing balance data like character stats, weapon 
 
 At first, I thought "I'll just build a spreadsheet." But I had no idea what features were needed or which formulas were standard.
 
-I studied game balancing theory from GDC Vault, NDC 2018 (Nexon), and Zynga official materials:
+I studied game balancing theory from GDC Vault, NDC 2018 balance design sessions, and Zynga official materials:
 - **TTK Calculation** (Time to Kill): The final hit shouldn't include cooldown
-- **Faucet/Sink Model**: Faucets (income) must be smaller than Sinks (spending) to prevent inflation
+- **Faucet/Sink Model**: When Faucets (income) exceed Sinks (spending), inflation occurs — so the two must be kept in equilibrium
 - **Flow Theory**: Difficulty must match skill level to maintain a state of flow
 
 > Market research details: [Game Balance Tool Market Research](/blog/project/indibalancing/indie-balance-tool-market-research)
@@ -115,9 +115,9 @@ I studied game balancing theory from GDC Vault, NDC 2018 (Nexon), and Zynga offi
 
 ## Key Implementations
 
-### 23 Game-Specific Formulas
+### Game-Specific Formulas (70+)
 
-Excel lacks game-specific functions like `DAMAGE(atk, def)`, `SCALE(base, level, rate, type)`, `TTK(hp, damage, attackSpeed)`. I implemented **23 functions** including the diminishing returns formula DAMAGE, 4 growth curves (Linear/Exponential/Logarithmic/S-Curve) SCALE, accurate kill-time TTK, and cross-sheet reference REF.
+Excel lacks game-specific functions like `DAMAGE(atk, def)`, `SCALE(base, level, rate, type)`, `TTK(hp, damage, attackSpeed)`. Starting with 23 core functions including the diminishing returns formula DAMAGE, 4 growth curves (Linear/Exponential/Logarithmic/S-Curve) SCALE, accurate kill-time TTK, and cross-sheet reference REF, the library has since expanded to **over 70 functions**.
 
 When a designer enters `=DAMAGE(100, 50)`, it instantly calculates `66.67`.
 

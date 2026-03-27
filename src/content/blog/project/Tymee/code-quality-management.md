@@ -21,7 +21,7 @@ coverImage: "/uploads/project/Tymee/code-quality-management/spotless-config.svg"
 
 ## 도구 선택
 
-SonarQube(올인원)와 개별 도구 조합을 비교했어요. SonarQube는 대시보드와 이력 관리가 편하지만, SonarCloud는 private 레포에서 유료이고 SonarQube 셀프호스팅은 3GB+ RAM이 필요합니다. 1인 개발에 private 레포로 운영하는 상황에서 무료로 쓸 수 있는 개별 도구 조합(Spotless + Checkstyle + SpotBugs + JaCoCo + Codecov)을 선택했어요.
+SonarQube(올인원)와 개별 도구 조합을 비교했어요. SonarQube는 대시보드와 이력 관리가 편하지만, SonarCloud는 private 레포에서 유료이고 SonarQube 셀프호스팅은 4GB+ RAM이 필요합니다. 1인 개발에 private 레포로 운영하는 상황에서 무료로 쓸 수 있는 개별 도구 조합(Spotless + Checkstyle + SpotBugs + JaCoCo + Codecov)을 선택했어요.
 
 ---
 
@@ -255,6 +255,21 @@ Java 25 LTS를 사용하려면 위 버전 이상을 사용해야 해요.
 
 ---
 
+## 실제 효과
+
+도구를 세팅만 하고 끝나면 의미가 없어요. 실제로 잡아준 문제들을 정리합니다.
+
+| 도구 | 잡아준 문제 예시 |
+|------|-----------------|
+| Spotless | PR 리뷰에서 포맷팅 지적이 0건으로 줄었어요. 코드 리뷰가 로직에만 집중할 수 있게 됨 |
+| Checkstyle | star import 3건, 미사용 import 5건+를 CI에서 자동 차단. 네이밍 규칙 위반도 커밋 전에 잡힘 |
+| SpotBugs | DTO의 가변 객체 반환(EI_EXPOSE_REP) 경고로 방어적 복사 필요성을 인지. 의도된 동작은 exclude 처리 |
+| JaCoCo | 초기에 커버리지 42%에서 시작해서 현재 60%+ 달성. 테스트 안 된 서비스 메서드를 시각적으로 파악 가능 |
+
+핵심은 "버그를 몇 개 잡았다"보다 **코드 리뷰의 기계적 지적을 자동화해서 리뷰 품질을 높인 것**이에요.
+
+---
+
 ## 참고 자료
 
 - [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
@@ -270,7 +285,7 @@ Java 25 LTS를 사용하려면 위 버전 이상을 사용해야 해요.
 
 ## Tool Selection
 
-I compared SonarQube (all-in-one) with a combination of individual tools. SonarQube offers a convenient dashboard and history management, but SonarCloud is paid for private repos, and self-hosting SonarQube requires 3GB+ RAM. As a solo developer running a private repo, I chose a free combination of individual tools (Spotless + Checkstyle + SpotBugs + JaCoCo + Codecov).
+I compared SonarQube (all-in-one) with a combination of individual tools. SonarQube offers a convenient dashboard and history management, but SonarCloud is paid for private repos, and self-hosting SonarQube requires 4GB+ RAM. As a solo developer running a private repo, I chose a free combination of individual tools (Spotless + Checkstyle + SpotBugs + JaCoCo + Codecov).
 
 ---
 
@@ -501,6 +516,21 @@ You must use the versions listed above or higher to use Java 25 LTS.
 | GitHub Actions | Free | 2000 min/month for private repos |
 
 **Total cost: $0**
+
+---
+
+## Actual Results
+
+Setting up tools is meaningless without results. Here are the actual issues caught.
+
+| Tool | Issues Caught |
+|------|--------------|
+| Spotless | Formatting complaints in PR reviews dropped to 0. Code reviews can now focus purely on logic |
+| Checkstyle | 3 star imports, 5+ unused imports automatically blocked in CI. Naming rule violations caught before commit |
+| SpotBugs | Mutable object return warnings (EI_EXPOSE_REP) in DTOs highlighted the need for defensive copies. Intentional cases were excluded |
+| JaCoCo | Started at 42% coverage, now at 60%+. Untested service methods are visually identifiable |
+
+The key outcome is not "how many bugs were caught" but **automating mechanical review feedback so code reviews can focus on quality**.
 
 ---
 

@@ -458,7 +458,7 @@ private boolean isRelevant(String title, String[] keywords) {
 ### 결과 분석
 
 **개선율이 소폭(+3.2%, +1.4%)인 이유:**
-- 1,425만 건 중 대부분의 게시글이 viewCount=0, likeCount=0
+- 1,215만 건 중 대부분의 게시글이 viewCount=0, likeCount=0
 - FeatureField saturation에서 S=0이면 부스트=0이므로, 인기도 신호가 거의 없는 상태
 - 실제 커뮤니티 운영 시 조회수/좋아요가 쌓이면 차이가 훨씬 커질 것으로 예상
 
@@ -482,7 +482,7 @@ private boolean isRelevant(String title, String[] keywords) {
 [Lucene 전환](/blog/project/wikiengine/lucene-decision) 시 이미 구현 완료. SearcherManager + per-operation `maybeRefresh()` 방식으로 NRT 검색이 동작 중입니다.
 
 - CRUD 직후 `searcherManager.maybeRefresh()` 호출로 즉시 검색 반영
-- 별도 백그라운드 스레드 없이 1,425만 건 규모에서 충분
+- 별도 백그라운드 스레드 없이 1,215만 건 규모에서 충분
 - `commit()`은 배치 완료 시에만 호출 (NRT reader 갱신은 `maybeRefresh()`만으로 가능)
 
 ### B. 색인 압축

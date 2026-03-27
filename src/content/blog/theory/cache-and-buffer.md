@@ -29,6 +29,13 @@ coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 컴퓨터의 메모리는 계층적 구조로 설계되어 있어요. CPU에 가까울수록 빠르지만 용량이 작고 비싸며, 멀어질수록 느리지만 용량이 크고 저렴합니다.
 ![](/uploads/theory/cache-and-buffer/memory-hierarchy.png)
 
+**계층별 접근 속도 참고:**
+- **L1 캐시**: 1~2 사이클 (~1ns)
+- **L2 캐시**: 5~10 사이클 (~3-5ns)
+- **L3 캐시**: 20~40 사이클 (~10-20ns)
+- **RAM**: 수백 사이클 (~50-100ns)
+- **SSD**: 수만~수십만 사이클 (NVMe 기준 10~25μs)
+- **HDD**: 수백만 사이클 (seek time 5~10ms)
 
 캐시는 이 계층 구조에서 **상위 계층과 하위 계층 사이의 속도 차이를 줄이기 위해** 존재합니다. 자주 접근하는 데이터를 빠른 메모리에 복사해두면, 느린 메모리에 접근하는 횟수를 줄일 수 있어요.
 
@@ -39,6 +46,8 @@ coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 ### 캐시의 목적
 
 캐시는 **데이터 접근 속도를 향상**시키기 위한 고속 메모리예요. CPU가 메인 메모리(RAM)에서 데이터를 읽어오는 데는 상대적으로 많은 시간이 걸리거든요. 만약 자주 사용되는 데이터를 CPU와 더 가까운 곳에 복사해둔다면, 훨씬 빠르게 접근할 수 있습니다.
+
+캐시에서 원하는 데이터를 찾으면 **캐시 히트(Cache Hit)**, 찾지 못하면 **캐시 미스(Cache Miss)**라고 해요. 캐시 히트의 비율을 **히트율(Hit Rate)**이라 하며, 히트율이 높을수록 캐시가 효과적으로 동작하고 있다는 의미입니다.
 
 **핵심 특징:**
 - 원본 데이터의 **복사본**을 저장해요
@@ -129,7 +138,7 @@ for (int i = 0; i < 1000; i++) {
 버퍼는 **속도 차이가 있는 두 장치 사이에서 데이터를 임시 저장**하는 공간이에요. 생산자(Producer)가 데이터를 생성하는 속도와 소비자(Consumer)가 데이터를 처리하는 속도가 다를 때, 그 차이를 완충합니다.
 
 **핵심 특징:**
-- 데이터의 **이동**을 관리해요 (복사가 아님)
+- 데이터 전송 **속도 차이를 완충**해요 (임시 저장 공간)
 - 쓰기 성능 향상이 주목적이에요
 - 데이터 손실 방지
 - 명시적으로 관리됩니다 (애플리케이션이 의식함)
@@ -201,7 +210,7 @@ socket.setReceiveBufferSize(65536);  // 수신 버퍼: 64KB
 
 고정 크기의 버퍼를 원형으로 사용하는 자료구조예요.
 
-![](/uploads/theory/cache-and-buffer/ring-buffer.png)
+![](/uploads/theory/cache-and-buffer/ring-buffer.svg)
 
 
 
@@ -244,9 +253,9 @@ char ring_buffer_read(RingBuffer* rb) {
 | **데이터 특성** | 원본 데이터의 복사본 | 이동 중인 데이터 |
 | **데이터 수명** | 원본이 변경되면 무효화 가능 | 읽으면 소비됨 (일회성) |
 | **크기** | 상대적으로 작음 (용량 제약) | 상대적으로 유연함 |
-| **관리 주체** | 하드웨어/시스템 (자동) | 소프트웨어 (명시적) |
-| **주요 동작** | 읽기(Read) 최적화 | 쓰기(Write) 최적화 |
-| **투명성** | 투명함 (애플리케이션이 모름) | 명시적 (애플리케이션이 관리) |
+| **관리 주체** | 하드웨어 캐시: 자동 / 소프트웨어 캐시 (Redis, CDN): 명시적 관리 | 소프트웨어 (명시적) |
+| **주요 동작** | 재사용 최적화 (읽기/쓰기 모두) | 속도 차이 완충 (읽기/쓰기 모두) |
+| **투명성** | 하드웨어 캐시: 투명 / 소프트웨어 캐시: 명시적 | 명시적 (애플리케이션이 관리) |
 | **예시** | CPU 캐시, 브라우저 캐시, DNS 캐시 | 키보드 버퍼, 디스크 버퍼, 네트워크 버퍼 |
 
 > 출처: [Stack Overflow - What is the difference between buffer and cache?](https://stackoverflow.com/questions/6345020/), [GeeksforGeeks - Difference between Cache and Buffer](https://www.geeksforgeeks.org/difference-between-cache-and-buffer/)
@@ -406,6 +415,8 @@ class Consumer extends Thread {
 > 출처: [GeeksforGeeks - Producer Consumer Problem in Java](https://www.geeksforgeeks.org/producer-consumer-solution-using-threads-java/), [Oracle - Java Concurrency Utilities](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/package-summary.html)
 
 ### 버퍼 오버플로우 (Buffer Overflow)
+
+> 여기서 말하는 버퍼 오버플로우는 앞의 Producer-Consumer 버퍼 가득 참과는 다른 보안 취약점 맥락이에요.
 
 버퍼의 크기를 초과하여 데이터를 쓰면 버퍼 오버플로우가 발생해요.
 
@@ -610,7 +621,8 @@ suspend fun getWithLock(key: String): String? {
     if (cached != null) return cached
 
     val lockKey = "lock:$key"
-    val acquired = redis.opsForValue().setIfAbsent(lockKey, "1", 5, TimeUnit.SECONDS)
+    val lockValue = UUID.randomUUID().toString()
+    val acquired = redis.opsForValue().setIfAbsent(lockKey, lockValue, 5, TimeUnit.SECONDS)
 
     if (acquired == true) {
         try {
@@ -618,7 +630,15 @@ suspend fun getWithLock(key: String): String? {
             redis.opsForValue().set(key, data, 1, TimeUnit.HOURS)
             return data
         } finally {
-            redis.delete(lockKey)
+            // 락 해제 시 자신의 락인지 확인 (Lua 스크립트로 원자적 수행)
+            val luaScript = """
+                if redis.call('get', KEYS[1]) == ARGV[1] then
+                    return redis.call('del', KEYS[1])
+                else
+                    return 0
+                end
+            """
+            redis.execute(DefaultRedisScript<Long>(luaScript, Long::class.java), listOf(lockKey), lockValue)
         }
     } else {
         delay(100)
@@ -627,9 +647,9 @@ suspend fun getWithLock(key: String): String? {
 }
 ```
 
-**해결 방법 2: PER(Probabilistic Early Recomputation) 알고리즘**
+**해결 방법 2: TTL 기반 조기 재갱신 (Early Refresh)**
 
-TTL이 얼마 안 남았으면 미리 백그라운드에서 갱신해요. 2015년 VLDB 컨퍼런스에 발표된 방법입니다.
+TTL이 얼마 안 남았으면 미리 백그라운드에서 갱신해요. 실제 PER(Probabilistic Early Recomputation) 알고리즘은 만료 시각에 확률적 요소를 도입한 수식 기반 방법이며, 아래 코드는 그보다 단순한 TTL 임계값 기반 접근입니다.
 
 ```kotlin
 fun getWithEarlyExpiration(key: String): String {
@@ -668,15 +688,30 @@ fun incrementViewCount(videoId: Long) {
 // 1분마다 MySQL에 동기화
 @Scheduled(fixedRate = 60000)
 fun syncViewCounts() {
-    val keys = redis.keys("view:*")
-    val counts = redis.opsForValue().multiGet(keys)
+    // redis.keys() 대신 SCAN 사용 (프로덕션 안전)
+    val keys = mutableListOf<String>()
+    var cursor = "0"
+    do {
+        val result = redis.scan(cursor, ScanOptions.scanOptions().match("view:*").count(100).build())
+        keys.addAll(result.keys)
+        cursor = result.cursorAsString
+    } while (cursor != "0")
+
+    // GETDEL 또는 Lua 스크립트로 읽기와 리셋을 원자적으로 수행해야 데이터 손실을 방지할 수 있다
+    val luaScript = """
+        local result = {}
+        for i, key in ipairs(KEYS) do
+            local value = redis.call('getdel', key)
+            table.insert(result, value or '0')
+        end
+        return result
+    """
+    val counts = redis.execute(DefaultRedisScript<List<String>>(luaScript, List::class.java), keys)
 
     jdbcTemplate.batchUpdate(
         "UPDATE videos SET view_count = view_count + ? WHERE video_id = ?",
-        // ... batch update
+        // ... batch update using counts
     )
-
-    redis.delete(keys)
 }
 ```
 
@@ -696,7 +731,7 @@ DB Write가 10,000건/초에서 100건/분으로 줄어들어요. 6,000배 감�
 
 모든 키가 재배치되니 캐시 미스율이 100%가 됩니다. DB에 갑자기 엄청난 트래픽이 몰려요.
 
-안정 해시(Consistent Hashing)를 쓰면 서버를 추가해도 평균적으로 k/n개의 키만 재배치돼요. 서버 3대에서 4대로 늘어나면 25%만 재배치됩니다.
+안정 해시(Consistent Hashing)를 쓰면 서버를 추가해도 평균적으로 k/n개의 키만 재배치돼요 (k = 전체 키 수, n = 서버 수). 서버 3대에서 4대로 늘어나면 25%만 재배치됩니다.
 
 해시 링에 서버와 키를 배치하고, 키 위치에서 시계방향으로 가장 먼저 만나는 서버에 저장하는 방식이에요. 가상 노드(Virtual Node)를 150개 정도 만들어서 데이터가 고르게 분산되도록 합니다.
 
@@ -823,6 +858,13 @@ Source: [GeeksforGeeks - Difference between Cache and Buffer](https://www.geeksf
 Computer memory is designed in a hierarchical structure. The closer to the CPU, the faster but smaller and more expensive; the farther, the slower but larger and cheaper.
 ![](/uploads/theory/cache-and-buffer/memory-hierarchy.png)
 
+**Access latency by layer:**
+- **L1 cache**: 1-2 cycles (~1ns)
+- **L2 cache**: 5-10 cycles (~3-5ns)
+- **L3 cache**: 20-40 cycles (~10-20ns)
+- **RAM**: Hundreds of cycles (~50-100ns)
+- **SSD**: Tens to hundreds of thousands of cycles (NVMe: 10-25μs)
+- **HDD**: Millions of cycles (seek time 5-10ms)
 
 Caches exist in this hierarchy **to bridge the speed gap between upper and lower layers**. By copying frequently accessed data to faster memory, the number of accesses to slower memory can be reduced.
 
@@ -833,6 +875,8 @@ Caches exist in this hierarchy **to bridge the speed gap between upper and lower
 ### Purpose of Cache
 
 A cache is high-speed memory designed to **improve data access speed**. It takes a relatively long time for the CPU to read data from main memory (RAM). If frequently used data is copied closer to the CPU, it can be accessed much faster.
+
+When the desired data is found in the cache, it is called a **cache hit**; when it is not found, it is called a **cache miss**. The ratio of cache hits is called the **hit rate**, and a higher hit rate means the cache is working more effectively.
 
 **Key characteristics:**
 - Stores a **copy** of the original data
@@ -923,7 +967,7 @@ Caches fetch data not in individual bytes but in block units. Typically, 64-byte
 A buffer is a space that **temporarily stores data between two devices with different speeds**. When the speed at which a producer generates data differs from the speed at which a consumer processes it, the buffer absorbs that difference.
 
 **Key characteristics:**
-- Manages data **movement** (not copying)
+- **Absorbs speed differences** in data transfer (temporary storage space)
 - Primarily improves write performance
 - Prevents data loss
 - Managed explicitly (applications are aware of it)
@@ -995,7 +1039,7 @@ socket.setReceiveBufferSize(65536);  // Receive buffer: 64KB
 
 A data structure that uses a fixed-size buffer in a circular fashion.
 
-![](/uploads/theory/cache-and-buffer/ring-buffer.png)
+![](/uploads/theory/cache-and-buffer/ring-buffer.svg)
 
 
 
@@ -1038,9 +1082,9 @@ char ring_buffer_read(RingBuffer* rb) {
 | **Data nature** | Copy of original data | Data in transit |
 | **Data lifespan** | Can be invalidated when original changes | Consumed once read (one-time use) |
 | **Size** | Relatively small (capacity-constrained) | Relatively flexible |
-| **Management** | Hardware/system (automatic) | Software (explicit) |
-| **Primary operation** | Read optimization | Write optimization |
-| **Transparency** | Transparent (applications are unaware) | Explicit (applications manage it) |
+| **Management** | Hardware cache: automatic / Software cache (Redis, CDN): explicit | Software (explicit) |
+| **Primary operation** | Reuse optimization (both read/write) | Speed gap buffering (both read/write) |
+| **Transparency** | Hardware cache: transparent / Software cache: explicit | Explicit (applications manage it) |
 | **Examples** | CPU cache, browser cache, DNS cache | Keyboard buffer, disk buffer, network buffer |
 
 > Source: [Stack Overflow - What is the difference between buffer and cache?](https://stackoverflow.com/questions/6345020/), [GeeksforGeeks - Difference between Cache and Buffer](https://www.geeksforgeeks.org/difference-between-cache-and-buffer/)
@@ -1200,6 +1244,8 @@ Even when the producer is faster than the consumer, the buffer holds data in bet
 > Source: [GeeksforGeeks - Producer Consumer Problem in Java](https://www.geeksforgeeks.org/producer-consumer-solution-using-threads-java/), [Oracle - Java Concurrency Utilities](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/package-summary.html)
 
 ### Buffer Overflow
+
+> Note: The buffer overflow discussed here is a security vulnerability context, different from the Producer-Consumer buffer being full described above.
 
 When data is written beyond the buffer's size, a buffer overflow occurs.
 
@@ -1404,7 +1450,8 @@ suspend fun getWithLock(key: String): String? {
     if (cached != null) return cached
 
     val lockKey = "lock:$key"
-    val acquired = redis.opsForValue().setIfAbsent(lockKey, "1", 5, TimeUnit.SECONDS)
+    val lockValue = UUID.randomUUID().toString()
+    val acquired = redis.opsForValue().setIfAbsent(lockKey, lockValue, 5, TimeUnit.SECONDS)
 
     if (acquired == true) {
         try {
@@ -1412,7 +1459,15 @@ suspend fun getWithLock(key: String): String? {
             redis.opsForValue().set(key, data, 1, TimeUnit.HOURS)
             return data
         } finally {
-            redis.delete(lockKey)
+            // Release lock only if it belongs to us (atomic via Lua script)
+            val luaScript = """
+                if redis.call('get', KEYS[1]) == ARGV[1] then
+                    return redis.call('del', KEYS[1])
+                else
+                    return 0
+                end
+            """
+            redis.execute(DefaultRedisScript<Long>(luaScript, Long::class.java), listOf(lockKey), lockValue)
         }
     } else {
         delay(100)
@@ -1421,9 +1476,9 @@ suspend fun getWithLock(key: String): String? {
 }
 ```
 
-**Solution 2: PER (Probabilistic Early Recomputation) Algorithm**
+**Solution 2: TTL-Based Early Refresh**
 
-If the TTL is running low, proactively refresh in the background. This method was presented at the VLDB Conference in 2015.
+If the TTL is running low, proactively refresh in the background. Note that the actual PER (Probabilistic Early Recomputation) algorithm uses a probability-based formula; the code below is a simpler TTL-threshold approach.
 
 ```kotlin
 fun getWithEarlyExpiration(key: String): String {
@@ -1462,15 +1517,30 @@ fun incrementViewCount(videoId: Long) {
 // Sync to MySQL every minute
 @Scheduled(fixedRate = 60000)
 fun syncViewCounts() {
-    val keys = redis.keys("view:*")
-    val counts = redis.opsForValue().multiGet(keys)
+    // Use SCAN instead of redis.keys() (production-safe)
+    val keys = mutableListOf<String>()
+    var cursor = "0"
+    do {
+        val result = redis.scan(cursor, ScanOptions.scanOptions().match("view:*").count(100).build())
+        keys.addAll(result.keys)
+        cursor = result.cursorAsString
+    } while (cursor != "0")
+
+    // Use GETDEL or Lua script to atomically read and reset, preventing data loss
+    val luaScript = """
+        local result = {}
+        for i, key in ipairs(KEYS) do
+            local value = redis.call('getdel', key)
+            table.insert(result, value or '0')
+        end
+        return result
+    """
+    val counts = redis.execute(DefaultRedisScript<List<String>>(luaScript, List::class.java), keys)
 
     jdbcTemplate.batchUpdate(
         "UPDATE videos SET view_count = view_count + ? WHERE video_id = ?",
-        // ... batch update
+        // ... batch update using counts
     )
-
-    redis.delete(keys)
 }
 ```
 
@@ -1490,7 +1560,7 @@ Key "user:1": hash = 12345
 
 All keys are redistributed, causing a 100% cache miss rate. The DB suddenly gets hit with massive traffic.
 
-With Consistent Hashing, when a server is added, only an average of k/n keys are redistributed. Going from 3 to 4 servers means only 25% redistribution.
+With Consistent Hashing, when a server is added, only an average of k/n keys are redistributed (k = total number of keys, n = number of servers). Going from 3 to 4 servers means only 25% redistribution.
 
 Servers and keys are placed on a hash ring, and each key is stored on the first server encountered clockwise from the key's position. Around 150 virtual nodes are created to ensure even data distribution.
 

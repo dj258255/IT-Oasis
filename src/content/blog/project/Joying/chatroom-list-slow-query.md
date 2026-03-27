@@ -20,7 +20,21 @@ MongoDB + Redis Pub/Sub 아키텍처를 설계했어요. 이제 채팅방 목록
 
 ---
 
-## 문제 상황
+## 0. 정상 상태
+
+**서버 환경**: AWS EC2 t3.medium (2 vCPU, 4GB RAM) 1대에 Spring Boot, MySQL 8.0, MongoDB 6.0, Redis 7.x를 Docker Compose로 운영. 모든 DB가 같은 서버에 위치하므로 네트워크 RTT는 사실상 0ms이고, 병목은 순수 쿼리 처리 시간이다.
+
+**데이터 규모**:
+- 사용자: 100명
+- 총 채팅방: 500개 (사용자당 평균 10개)
+- 채팅방당 평균 메시지: 150개
+- MongoDB 총 메시지: 75,000개
+
+**정상 동작하는 API들**: 게시글 CRUD, 로그인 등은 50ms 이내로 응답. 채팅방 목록 조회만 유독 느렸다.
+
+---
+
+## 1. 문제 상황
 
 채팅방 목록에는 생각보다 많은 정보가 필요했어요.
 
@@ -48,13 +62,7 @@ DTO 필드만 해도 이 정도였다:
 
 테스트 환경을 설정하고 측정했습니다.
 
-
-테스트 환경:
-- 사용자: 100명
-- 총 채팅방: 500개 (사용자당 평균 10개)
-- 채팅방당 평균 메시지: 150개
-- MongoDB 총 메시지: 75,000개
-
+> **측정 조건**: EC2 t3.medium, Spring Boot 내장 Tomcat 기본 설정, 단일 요청 기준 (동시 접속 없음). MySQL/MongoDB/Redis 모두 같은 서버.
 
 채팅방 10개를 조회하면:
 
@@ -211,7 +219,23 @@ Redis 조회: 1ms 미만 (메모리)
 -> 100배 빠름
 ```
 
-추가 인프라 없이 바로 적용 가능했어요.
+**추가 인프라 없이 바로 적용 가능했어요.** Redis는 이미 Pub/Sub과 세션 관리에 사용 중이었으므로 새 인스턴스 추가 비용이 0이다.
+
+### 비용 관점
+
+6주 프로젝트에서 EC2 t3.medium 1대로 운영 중이므로 AWS 과금 기준의 비용 비교는 해당 없다. 대신 **고정 자원(4GB RAM) 내 배분 트레이드오프**로 평가한다:
+
+```
+Redis 추가 메모리: ~50MB (안읽은 개수 캐시 + Pub/Sub + 세션)
+Redis 없이 MongoDB만 사용: 매 목록 조회마다 countDocuments × N회 → CPU 100ms × N
+Redis 도입 후: 캐시 히트 시 1ms, 미스 시만 MongoDB → CPU 부하 95% 감소
+
+4GB RAM 중 50MB는 1.2% — 투자 대비 효과가 압도적
+```
+
+실무(AWS) 환경으로 환산하면: ElastiCache cache.t3.micro(월 ~$15) 추가로 MongoDB Atlas M10(월 ~$57)의 읽기 부하를 95% 줄일 수 있으므로, MongoDB를 M0(무료) 또는 Serverless로 다운스케일할 여지가 생긴다. **Redis 도입이 "비용 증가"가 아니라 "DB 다운스케일 가능성"을 여는 선택이다.**
+
+"DB 인스턴스 스펙을 올리면 되지 않나?"라는 대안도 검토했다. MongoDB Atlas M20(월 ~$140)으로 올리면 countDocuments가 빨라지겠지만, N+1 구조 자체가 해결되지 않으므로 근본적 개선이 안 된다. 캐싱이 구조적으로 더 나은 선택이다.
 
 ---
 
@@ -272,7 +296,7 @@ MGET (1번):
 -> 10배 빠름
 ```
 
-Redis는 싱글 스레드로 동작해요. 명령을 10번 보내면 파싱 오버헤드가 10번 누적됩니다. MGET은 이걸 1번으로 줄여줘요.
+Redis는 명령 실행이 싱글 스레드예요 (Redis 6+에서 I/O는 멀티스레드지만, 명령 처리 자체는 단일 스레드). 명령을 10번 보내면 파싱 오버헤드가 10번 누적됩니다. MGET은 이걸 1번으로 줄여줘요.
 
 ---
 
@@ -316,28 +340,22 @@ Redis 캐싱에서 가장 중요한 건 캐시 히트율이에요.
 
 ## 결과
 
-**테스트 환경**
-- 사용자: 100명
-- 총 채팅방: 500개 (사용자당 평균 10개)
-- 채팅방당 평균 메시지: 150개
-- MongoDB 총 메시지: 75,000개
+> **측정 조건**: EC2 t3.medium (2 vCPU, 4GB), MySQL/MongoDB/Redis 동일 서버, 단일 요청 기준. 사용자 100명, 채팅방 500개, MongoDB 메시지 75,000개 환경.
 
-**최적화 후 쿼리 시간**
-1. ChatRoom + Product + Member (Fetch Join): 50ms
-2. ChatRoomMember 배치 조회: 15ms
-3. ProductFile 배치 조회: 15ms
-4. Redis MGET (캐시 히트율 95%): 5ms
-총: 85ms
+**최적화 후 쿼리 시간 분해**:
+1. ChatRoom + Product + Member (Fetch Join): 50ms — MySQL 1회, 3개 테이블 JOIN
+2. ChatRoomMember 배치 조회: 15ms — `WHERE chat_room_id IN (...)` 1회
+3. ProductFile 배치 조회: 15ms — `WHERE product_id IN (...)` 1회
+4. Redis MGET (10개 키 일괄 조회): 5ms — 캐시 히트율 95%, 미스 시 MongoDB countDocuments + 캐시 저장
 
+| 지표 | Before | After | 개선 |
+|------|--------|-------|------|
+| 총 쿼리 수 | 51번 (1 + 5N, N=10) | 4번 | 쿼리 92% 감소 |
+| 총 소요 시간 | 1,350ms | 85ms | **16배 개선** |
+| 캐시 히트율 | 없음 (매번 MongoDB) | 95% | MongoDB 부하 95% 감소 |
+| 캐시 미스 시 | — | +100ms (MongoDB fallback) | 여전히 Before보다 빠름 |
 
-| 지표 | Before | After |
-|------|--------|-------|
-| 채팅방 개수 | 10개 | 10개 |
-| 총 쿼리 수 | 51번 | 4번 |
-| 총 소요 시간 | 1350ms | 85ms |
-| 캐시 히트율 | - | 95% |
-
-**16배 빨라졌어요.**
+캐시 미스가 발생하면 MongoDB `countDocuments()`를 Coroutine `async`로 병렬 조회한다. 10개 채팅방에서 캐시 미스가 5개여도 병렬 실행으로 ~100ms에 완료되므로, 최악의 경우(전체 캐시 미스)에도 185ms로 Before(1,350ms) 대비 7배 빠르다.
 
 ---
 
@@ -445,7 +463,17 @@ We had designed the MongoDB + Redis Pub/Sub architecture. Now it was time to bui
 
 ---
 
-## The Problem
+## 0. Normal State
+
+**Server environment**: Single AWS EC2 t3.medium (2 vCPU, 4GB RAM) running Spring Boot, MySQL 8.0, MongoDB 6.0, and Redis 7.x via Docker Compose. All DBs on the same server, so network RTT is effectively 0ms — bottleneck is pure query processing time.
+
+**Data scale**: 100 users, 500 chatrooms (avg 10 per user), 150 messages per chatroom, 75,000 total MongoDB messages.
+
+**Normally functioning APIs**: Post CRUD, login, etc. all respond within 50ms. Only the chatroom list query was slow.
+
+---
+
+## 1. The Problem
 
 The chatroom list required more information than expected.
 

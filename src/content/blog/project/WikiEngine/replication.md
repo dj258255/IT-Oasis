@@ -134,7 +134,7 @@ Replica 도입의 자원 비용:
   → 다음 단계 App2(2G) + Lucene(페이지 캐시)에 ~5.9G 확보 — 충분
 
   서버 1 Primary:
-  → Binlog 디스크: 7일 보관 × 쓰기 비율 → 수백 MB 수준 (1,425만 건이지만 쓰기 빈도 낮음)
+  → Binlog 디스크: 7일 보관 × 쓰기 비율 → 수백 MB 수준 (1,215만 건이지만 쓰기 빈도 낮음)
   → Primary CPU: 읽기 80%가 Replica로 이동 → 상당한 CPU 절감
 
 Replica 도입의 이득:
@@ -439,7 +439,7 @@ Grafana 알림:
 
 ### k6 100 VU load 테스트 결과
 
-> **테스트 환경**: 서버 1 ARM 2코어/12GB — Spring Boot 2GB(JVM 힙 1GB) + MySQL Primary 4GB(InnoDB BP 2GB) + Redis 256MB. 서버 2 ARM 2코어/12GB — MySQL Replica 4GB(InnoDB BP 2GB). 데이터: 1,425만 건.
+> **테스트 환경**: 서버 1 ARM 2코어/12GB — Spring Boot 2GB(JVM 힙 1GB) + MySQL Primary 4GB(InnoDB BP 2GB) + Redis 256MB. 서버 2 ARM 2코어/12GB — MySQL Replica 4GB(InnoDB BP 2GB). 데이터: 1,215만 건.
 
 ![k6 콘솔 결과](/uploads/project/WikiEngine/replication/phase12-k6-console-result.png)
 

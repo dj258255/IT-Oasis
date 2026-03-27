@@ -1,8 +1,8 @@
 ---
 title: '"Redis 터졌다" - 13년 묵은 시한폭탄, 우리 서버에도 있었다'
 titleEn: '"Redis Exploded" - A 13-Year-Old Time Bomb Was in Our Server Too'
-description: CVSS 10.0 Redis 취약점(CVE-2025-49844 RediShell)을 발견하고, 긴급 패치 적용과 다층 보안 강화 조치를 수행한 과정을 정리한다.
-descriptionEn: Documents the discovery of the CVSS 10.0 Redis vulnerability (CVE-2025-49844 RediShell) and the emergency patching and multi-layer security hardening process.
+description: CVSS 9.9 Redis 취약점(CVE-2025-49844 RediShell)을 발견하고, 긴급 패치 적용과 다층 보안 강화 조치를 수행한 과정을 정리한다.
+descriptionEn: Documents the discovery of the CVSS 9.9 Redis vulnerability (CVE-2025-49844 RediShell) and the emergency patching and multi-layer security hardening process.
 date: 2025-12-26T00:00:00.000Z
 tags:
   - Redis
@@ -20,7 +20,7 @@ draft: false
 
 > **"Redis에서 CVSS 10.0 만점의 원격 코드 실행 취약점 발견"**
 
-CVSS 10.0? 최고 위험도예요. 게다가 **13년 동안 숨어있었다**고 합니다.
+CVSS 9.9? 사실상 최고 위험도예요. (NVD 공식 9.9, 일부 벤더는 10.0으로 보도. PR:L — 인증 필요 — 때문에 0.1 차감) 게다가 **13년 동안 숨어있었다**고 합니다.
 
 우리 프로젝트는 Redis를 세션 관리와 캐싱에 사용 중이었거든요. 심장이 철렁했어요.
 
@@ -38,13 +38,13 @@ CVSS 10.0? 최고 위험도예요. 게다가 **13년 동안 숨어있었다**고
 |------|------|
 | **CVE 번호** | CVE-2025-49844 |
 | **별칭** | RediShell |
-| **CVSS 점수** | **10.0 / 10.0** (Critical) |
-| **발견 시기** | 2025년 5월 (Pwn2Own Berlin) |
+| **CVSS 점수** | **9.9 / 10.0** (Critical) — NVD 공식 기준. 일부 벤더(Redis 공식 블로그, Sysdig)는 10.0으로 보도 |
+| **발견 시기** | 2025년 (Wiz Research Team, ZDI 협력) |
 | **공개 시기** | 2025년 10월 3일 |
 | **발견자** | Wiz Research Team |
 | **잠복 기간** | **약 13년** |
 
-CVSS 10.0은 **가능한 최고 위험도**예요.
+CVSS 9.9는 **사실상 최고 위험도**예요. (10.0이 아닌 이유: 공격에 인증이 필요하기 때문. 하지만 인증 없이 노출된 인스턴스가 6만 개라 실질적 위험은 10.0과 동일)
 
 실제로 이 취약점은 공격자가 **원격에서 코드를 실행**할 수 있게 만듭니다.
 
@@ -168,6 +168,22 @@ command: redis-server --requirepass ${REDIS_PASSWORD}
 다행히 우리는 **패스워드 인증을 활성화**해둔 상태였어요.
 
 하지만 인증만으로는 충분하지 않습니다. **인증된 사용자도 악용 가능**하기 때문이에요.
+
+---
+
+## 위험 판단: 우리 서비스에 미치는 영향
+
+패치 전에 먼저 우리 환경의 위험도를 평가했다.
+
+| 항목 | 우리 상태 | 위험도 |
+|------|----------|--------|
+| Redis 버전 | 7.0.15 (취약 범위) | **치명적** |
+| 인증 (requirepass) | 활성화됨 | 완화 요소 |
+| Lua 스크립트 사용 | 미사용 | 완화 요소 |
+| 네트워크 노출 | Docker Compose 내부, 외부 포트 바인딩 있음 | **위험** |
+| Redis에 저장된 데이터 | 채팅 캐시, 세션, Pub/Sub 채널 | 유출 시 사용자 데이터 노출 |
+
+**결론**: 인증이 있어 즉시 RCE 위험은 낮지만, 외부 포트 바인딩이 있고 CVSS 9.9는 "패치 가능한 즉시 패치"가 원칙. 6주 프로젝트라 운영 중단 비용도 낮으므로 **즉시 패치를 결정했다.**
 
 ---
 
@@ -314,7 +330,7 @@ Redis 공식 이미지는 **기본적으로 인증 비활성화** 상태예요. 
 
 ### 2. "보안 업데이트는 최우선"
 
-CVSS 10.0은 **즉시 패치**해야 해요. "나중에..."는 없습니다.
+CVSS 9.9는 **즉시 패치**해야 해요. "나중에..."는 없습니다.
 
 ### 3. "다층 방어가 답이다"
 
@@ -355,7 +371,7 @@ While developing as usual one day, a security news article caught my eye.
 
 > **"CVSS 10.0 Remote Code Execution vulnerability discovered in Redis"**
 
-CVSS 10.0? The highest severity possible. And it had been **hiding for 13 years**.
+CVSS 9.9? Effectively the highest severity possible (NVD official 9.9; some vendors report 10.0. The 0.1 deduction: authentication required). And it had been **hiding for 13 years**.
 
 Our project was using Redis for session management and caching. My heart sank.
 
@@ -373,8 +389,8 @@ I immediately started investigating.
 |------|---------|
 | **CVE Number** | CVE-2025-49844 |
 | **Alias** | RediShell |
-| **CVSS Score** | **10.0 / 10.0** (Critical) |
-| **Discovery** | May 2025 (Pwn2Own Berlin) |
+| **CVSS Score** | **9.9 / 10.0** (Critical) — NVD official. Some vendors (Redis blog, Sysdig) report 10.0 |
+| **Discovery** | 2025 (Wiz Research Team, ZDI collaboration) |
 | **Disclosure** | October 3, 2025 |
 | **Discoverer** | Wiz Research Team |
 | **Dormancy Period** | **~13 years** |
@@ -422,6 +438,22 @@ redis:
 Version **7.0.15** was on an **end-of-life branch** with no patches available. We chose to upgrade to **7.2.11**.
 
 Fortunately, password authentication was already enabled — but authentication alone wasn't sufficient since **authenticated users can also exploit this**.
+
+---
+
+## Risk Assessment: Impact on Our Service
+
+Before patching, I first assessed the risk to our environment.
+
+| Factor | Our Status | Risk Level |
+|--------|-----------|------------|
+| Redis version | 7.0.15 (vulnerable) | **Critical** |
+| Authentication (requirepass) | Enabled | Mitigating |
+| Lua script usage | Not used | Mitigating |
+| Network exposure | Docker Compose internal, but external port binding present | **Risky** |
+| Data in Redis | Chat cache, sessions, Pub/Sub channels | User data exposure if breached |
+
+**Decision**: Authentication lowers immediate RCE risk, but external port binding exists and CVSS 9.9 means "patch immediately when possible." As a 6-week project with low downtime cost, **immediate patching was decided.**
 
 ---
 
@@ -482,7 +514,7 @@ The 7.2.11 patch included fixes for 6 vulnerabilities simultaneously, including 
 ## Lessons Learned
 
 1. **"Defaults are not secure"** — Redis ships with authentication disabled by default
-2. **"Security updates are top priority"** — CVSS 10.0 requires immediate patching
+2. **"Security updates are top priority"** — CVSS 9.9 requires immediate patching
 3. **"Defense in Depth is the answer"** — Patch + Authentication + Lua disable + Network isolation + Firewall
 
 Even if one layer is breached, the next layer stops the attack.

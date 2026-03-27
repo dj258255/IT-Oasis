@@ -41,7 +41,7 @@ class BIOConnector {
                 try {
                     // 1. 요청 대기 (Blocking!)
                     InputStream input = socket.getInputStream();
-                    byte[] data = input.read();  // 데이터 올 때까지 대기
+                    byte[] data = readAll(input);  // 데이터 올 때까지 대기
 
                     // 2. 요청 처리
                     processRequest(data);
@@ -54,6 +54,7 @@ class BIOConnector {
                     // 스레드가 계속 점유됨!
                 } finally {
                     socket.close();
+                    // 실제 BIO에서는 Keep-Alive를 처리하려면 루프를 돌며 다음 요청을 기다려야 한다 (여기서는 생략)
                 }
             });
         }
@@ -131,7 +132,7 @@ class NIOConnector {
 
 | 항목 | BIO | NIO |
 |------|-----|-----|
-| 스레드와 연결 | 1:1 매핑 | N:1 매핑 (Poller가 관리) |
+| 스레드와 연결 | 1:1 매핑 | 1:N 매핑 (1개 Poller가 N개 연결 관리) |
 | 데이터 대기 | 스레드가 Blocking | Selector가 감시 |
 | 유휴 시간 처리 | 스레드가 낭비됨 | 스레드 즉시 반환 |
 | 최대 동시 연결 | ~200개 (스레드 수 제한) | ~10,000개 (메모리만 충분하면) |
@@ -175,6 +176,7 @@ class SlowController {
 - 처음 200개: 3초 후 응답
 - 201~400번: 6초 후 응답
 - 401~600번: 9초 후 응답
+- 601~800번: 12초 후 응답
 - 801~1000번: 15초 후 응답
 
 평균 응답 시간: 9초
@@ -192,6 +194,8 @@ class SlowController {
 
 평균 응답 시간: 3.2초
 ```
+
+> 주의: 이 시나리오에서는 Thread.sleep이 워커 스레드를 점유하므로, NIO여도 maxThreads=200이 병목이다. NIO의 진짜 장점은 Keep-Alive 유휴 대기 중에 스레드를 반환하는 것이지, 요청 처리 중 스레드를 해방시키는 것이 아니다.
 
 **왜 이런 차이가 날까?**
 
@@ -358,6 +362,8 @@ class SocketProcessor implements Runnable {
 
 **중요한 점**: 워커 스레드는 실제 처리 시간만 사용하고 즉시 반환돼요.
 
+> 중요: NIO 커넥터라 하더라도, 워커 스레드(Executor)에서의 서블릿 처리는 여전히 Blocking I/O이다. DB 조회, 외부 API 호출 등 모든 I/O 작업이 워커 스레드를 점유한다. NIO가 Non-blocking인 것은 연결 관리(Acceptor/Poller) 계층뿐이다.
+
 ```
 BIO:
 스레드 할당 → 데이터 대기 (2초) → 처리 (0.1초) → 대기 (Keep-Alive 20초)
@@ -453,10 +459,10 @@ for (int i = 0; i < nfds; i++) {
 ```
 연결 1000개 중 10개만 준비된 경우:
 
-select: 1000번 체크 → 10ms
-epoll:  10번만 체크 → 0.1ms
+select: 1000개 FD 순회 → 수십~수백μs
+epoll:  ready FD만 반환 → 수μs
 
-100배 차이!
+연결 수가 많아질수록 차이가 벌어진다 (수만 연결 이상에서 수십배 이상)
 ```
 
 > 출처: [NiklasJang's Blog - select, poll, epoll 구조](https://niklasjang.github.io/backend/select-poll-epoll/)
@@ -581,6 +587,8 @@ class NIOEndpoint {
 }
 ```
 
+> 실제 톰캣 구현에서 Acceptor는 blocking acquire()를 사용한다. maxConnections에 도달하면 Acceptor 자체가 블록되어 accept()를 호출하지 않게 되고, 그 결과 OS의 TCP backlog 큐에 연결이 쌓인다.
+
 **기본값 8192가 적절한 이유**:
 
 ```
@@ -611,9 +619,12 @@ server:
 # - 메모리만 낭비!
 
 # 올바른 설정
+# NIO 환경에서는 유휴 연결을 Poller가 효율적으로 관리하므로
+# 기본값 8192가 대부분의 경우 적합하다.
+# 메모리가 제한적인 환경에서만 낮추는 것을 고려한다.
 server:
   tomcat:
-    max-connections: 500   # threads.max의 2~3배 정도
+    max-connections: 8192
     threads:
       max: 200
 ```
@@ -738,7 +749,6 @@ public class DispatcherServlet extends HttpServlet {
     private List<HandlerAdapter> handlerAdapters;
     private List<ViewResolver> viewResolvers;
 
-    @Override
     protected void doDispatch(HttpServletRequest request,
                              HttpServletResponse response) {
 
@@ -984,6 +994,8 @@ public List<UserDto> getUsers() {
 
 ### 5.1 카카오페이: Spring Batch 성능 최적화
 
+> 참고: 아래 사례는 톰캣 NIO와는 직접적 관련이 없지만, Spring 환경에서의 대규모 처리 최적화 관점에서 참고할 만한 사례이다.
+
 **문제 상황**:
 
 카카오페이 정산플랫폼팀에서 유저 등급 업데이트 배치 작업을 실행했어요. 5만 개 레코드 처리에 **1시간 이상** 소요되었죠.
@@ -1201,23 +1213,16 @@ server:
   tomcat:
     threads:
       max: 200
-    max-connections: 500   # threads.max의 2~3배
-    accept-count: 20       # 빠른 실패
+    max-connections: 8192   # NIO에서는 Poller가 유휴 연결을 효율적으로 관리하므로 기본값이 적합
+    accept-count: 20        # 빠른 실패
 ```
 
 **이유**:
 
 ```
-maxConnections = threads.max × (처리 시간 / 평균 Keep-Alive 시간)
-
-예시:
-- 평균 처리 시간: 100ms
-- Keep-Alive timeout: 20초 (20,000ms)
-- 비율: 100 / 20,000 = 0.005
-
-maxConnections = 200 × (1 + 버퍼) = 400~500
-
-버퍼를 고려해 2~3배 정도가 적절
+NIO 환경에서는 유휴 연결을 Poller가 효율적으로 관리하므로
+기본값 8192가 대부분의 경우 적합하다.
+메모리가 제한적인 환경에서만 낮추는 것을 고려한다.
 ```
 
 ## 6. 전체 흐름 정리
@@ -1299,7 +1304,7 @@ class BIOConnector {
                 try {
                     // 1. Wait for request (Blocking!)
                     InputStream input = socket.getInputStream();
-                    byte[] data = input.read();  // Wait until data arrives
+                    byte[] data = readAll(input);  // Wait until data arrives
 
                     // 2. Process request
                     processRequest(data);
@@ -1312,6 +1317,7 @@ class BIOConnector {
                     // Thread remains occupied!
                 } finally {
                     socket.close();
+                    // In actual BIO, handling Keep-Alive requires looping to wait for the next request (omitted here)
                 }
             });
         }
@@ -1389,7 +1395,7 @@ class NIOConnector {
 
 | Aspect | BIO | NIO |
 |--------|-----|-----|
-| Thread-to-connection | 1:1 mapping | N:1 mapping (managed by Poller) |
+| Thread-to-connection | 1:1 mapping | 1:N mapping (1 Poller manages N connections) |
 | Waiting for data | Thread blocks | Selector monitors |
 | Idle time handling | Thread is wasted | Thread returned immediately |
 | Max concurrent connections | ~200 (limited by thread count) | ~10,000 (as long as there's enough memory) |
@@ -1433,6 +1439,7 @@ Result:
 - First 200: respond after 3 seconds
 - 201~400: respond after 6 seconds
 - 401~600: respond after 9 seconds
+- 601~800: respond after 12 seconds
 - 801~1000: respond after 15 seconds
 
 Average response time: 9 seconds
@@ -1450,6 +1457,8 @@ Result:
 
 Average response time: 3.2 seconds
 ```
+
+> Note: In this scenario, Thread.sleep occupies the worker thread, so even with NIO, maxThreads=200 becomes the bottleneck. The real advantage of NIO is returning threads during Keep-Alive idle waiting, not freeing threads during request processing.
 
 **Why such a big difference?**
 
@@ -1616,6 +1625,8 @@ class SocketProcessor implements Runnable {
 
 **Important**: Worker threads are used only for the actual processing time and returned immediately.
 
+> Important: Even with the NIO connector, servlet processing in worker threads (Executor) is still Blocking I/O. All I/O operations such as DB queries and external API calls occupy the worker thread. NIO is Non-blocking only at the connection management (Acceptor/Poller) layer.
+
 ```
 BIO:
 Thread assigned → wait for data (2s) → process (0.1s) → wait (Keep-Alive 20s)
@@ -1711,10 +1722,10 @@ for (int i = 0; i < nfds; i++) {
 ```
 With 1000 connections and only 10 ready:
 
-select: checks 1000 times → 10ms
-epoll:  checks only 10 times → 0.1ms
+select: iterates 1000 FDs → tens to hundreds of μs
+epoll:  returns only ready FDs → a few μs
 
-100x difference!
+The gap widens as connections increase (tens of times or more at 10,000+ connections)
 ```
 
 > Source: [NiklasJang's Blog - select, poll, epoll architecture](https://niklasjang.github.io/backend/select-poll-epoll/)
@@ -1839,6 +1850,8 @@ class NIOEndpoint {
 }
 ```
 
+> In the actual Tomcat implementation, the Acceptor uses a blocking acquire(). When maxConnections is reached, the Acceptor itself blocks and stops calling accept(), causing connections to accumulate in the OS TCP backlog queue.
+
 **Why the default of 8192 is reasonable**:
 
 ```
@@ -1869,9 +1882,12 @@ server:
 # - Memory wasted!
 
 # Correct configuration
+# In NIO environments, the Poller efficiently manages idle connections,
+# so the default value of 8192 is suitable for most cases.
+# Consider lowering it only in memory-constrained environments.
 server:
   tomcat:
-    max-connections: 500   # About 2~3x threads.max
+    max-connections: 8192
     threads:
       max: 200
 ```
@@ -1996,7 +2012,6 @@ public class DispatcherServlet extends HttpServlet {
     private List<HandlerAdapter> handlerAdapters;
     private List<ViewResolver> viewResolvers;
 
-    @Override
     protected void doDispatch(HttpServletRequest request,
                              HttpServletResponse response) {
 
@@ -2242,6 +2257,8 @@ public List<UserDto> getUsers() {
 
 ### 5.1 KakaoPay: Spring Batch Performance Optimization
 
+> Note: The following case is not directly related to Tomcat NIO, but it is a useful reference for large-scale processing optimization in a Spring environment.
+
 **Problem**:
 
 The KakaoPay settlement platform team ran a batch job to update user grades. Processing 50,000 records took **over 1 hour**.
@@ -2459,23 +2476,16 @@ server:
   tomcat:
     threads:
       max: 200
-    max-connections: 500   # 2~3x threads.max
-    accept-count: 20       # Fast failure
+    max-connections: 8192   # Default is suitable for NIO; Poller handles idle connections efficiently
+    accept-count: 20        # Fast failure
 ```
 
 **Reasoning**:
 
 ```
-maxConnections = threads.max x (processing time / average Keep-Alive time)
-
-Example:
-- Average processing time: 100ms
-- Keep-Alive timeout: 20 seconds (20,000ms)
-- Ratio: 100 / 20,000 = 0.005
-
-maxConnections = 200 x (1 + buffer) = 400~500
-
-With buffer, 2~3x is appropriate
+In NIO environments, the Poller efficiently manages idle connections,
+so the default value of 8192 is suitable for most cases.
+Consider lowering it only in memory-constrained environments.
 ```
 
 ## 6. Overall Flow Summary

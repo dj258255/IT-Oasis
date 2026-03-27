@@ -32,7 +32,7 @@ Grafana의 컨테이너 모니터링 대시보드에서 AI 서버 Pod의 재시�
 
 ## 환경
 
-- Python FastAPI (AI 서버), PyTorch + GPU (16GB VRAM)
+- Python FastAPI (AI 서버), PyTorch + GPU (8GB VRAM)
 - Spring Boot (API 서버), WebClient 비동기 호출
 - Docker Compose 단일 서버 구성
 
@@ -42,12 +42,12 @@ Grafana의 컨테이너 모니터링 대시보드에서 AI 서버 Pod의 재시�
 
 GPU 메모리를 계산해봤어요.
 
-GPU 전체 메모리 16GB 중 모델 로딩에 4GB가 상시 점유돼요.
-추론 1건당 약 3GB를 써요.
-최대 동시 처리는 (16 - 4) / 3 = 약 4건이에요.
+GPU 전체 메모리 8GB 중 모델 로딩에 약 3GB가 상시 점유돼요.
+추론 1건당 약 2-3GB를 써요.
+최대 동시 처리는 (8 - 3) / 2.5 = 약 2건이에요.
 
 그런데 Kafka Consumer에서 이벤트가 들어오는 대로 AI 서버에 요청을 쏘고 있었어요.
-동시에 10건이 들어오면 30GB가 필요한데 16GB밖에 없으니 OOM이 나는 게 당연했어요.
+동시에 5건만 들어오면 필요 메모리가 VRAM을 초과하니 OOM이 나는 게 당연했어요.
 
 AI 분석 담당 팀원과 같이 `nvidia-smi`로 GPU 메모리 사용량을 모니터링하면서 동시 요청 수와 OOM 발생 시점을 대조했어요.
 동시 3건까지는 안정적이고, 4건부터 가끔 스파이크가 나고, 5건 이상이면 거의 확실하게 OOM이 터졌어요.
@@ -68,7 +68,18 @@ WAV 변환과 AI 분석이 같은 Consumer에서 처리되는데, WAV 변환은 
 **Semaphore(permits=2)**: 외부 서비스(AI 서버 GPU) 보호.
 4개 스레드가 동시에 실행되더라도 AI 서버에는 2개만 동시 요청해요.
 
-permits를 GPU 계산상 최대 4건까지 가능하지만 2로 잡은 이유는, 요청마다 메모리 사용량이 다르고(음성 길이, 복잡도에 따라 편차), 안전 마진을 둬야 했기 때문이에요.
+permits를 2로 잡은 이유는, GPU 계산상 최대 동시 처리가 약 2건이고, 요청마다 메모리 사용량이 다르기 때문에(음성 길이, 복잡도에 따라 편차) 안전 마진을 포함한 수치예요.
+
+### 검토했지만 선택하지 않은 대안
+
+| 방식 | 장점 | 단점 | 판단 |
+|------|------|------|------|
+| **Kafka `max.poll.records` 조절** | 설정만 변경 | Consumer 레벨 제한이라 GPU 메모리와 직접 연동 안 됨. WAV 변환까지 같이 제한됨 | 탈락 |
+| **Resilience4j RateLimiter** | 시간 기반 요청률 제한 | AI 분석은 시간당 N건이 아니라 동시 N건이 문제. 처리 시간이 가변적이라 rate 기반은 부적합 | 탈락 |
+| **ThreadPool만 (Semaphore 없이)** | 단순 | WAV 변환과 AI 분석이 같은 풀이면 AI가 WAV를 블로킹. 풀을 분리해도 AI 전용 풀 max=2로 하면 Semaphore와 사실상 동일 | 부분 채택 |
+| **ThreadPool + Semaphore** | 내부(CPU) + 외부(GPU) 자원을 독립 제어 | 구현 약간 복잡 | **선택** |
+
+ThreadPool만으로도 가능하지만, Semaphore로 "외부 GPU 자원에 대한 동시 접근 제한"을 명시적으로 분리한 게 Bulkhead 패턴의 의도를 더 잘 표현해요.
 
 ![](/uploads/project/Orakgarak/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg)
 
@@ -131,7 +142,7 @@ During operation, the Python AI server crashed when voice analysis requests spik
 
 ## Environment
 
-- Python FastAPI (AI server), PyTorch + GPU (16GB VRAM)
+- Python FastAPI (AI server), PyTorch + GPU (8GB VRAM)
 - Spring Boot (API server), WebClient async calls
 - Docker Compose single-server setup
 
@@ -139,9 +150,9 @@ During operation, the Python AI server crashed when voice analysis requests spik
 
 ## Root Cause
 
-GPU memory calculation: 16GB total, 4GB constant for model loading, ~3GB per inference. Maximum concurrent processing: (16 - 4) / 3 ≈ 4.
+GPU memory calculation: 8GB total, ~3GB constant for model loading, ~2-3GB per inference. Maximum concurrent processing: (8 - 3) / 2.5 ≈ 2.
 
-But the Kafka Consumer was firing requests to the AI server as fast as events arrived. 10 concurrent requests need 30GB on 16GB hardware — OOM was inevitable.
+But the Kafka Consumer was firing requests to the AI server as fast as events arrived. 5 concurrent requests exceed available VRAM — OOM was inevitable.
 
 Monitoring GPU memory with `nvidia-smi` alongside the AI team, we correlated concurrent request counts with OOM timing. 3 concurrent was stable, 4 showed occasional spikes, 5+ almost guaranteed OOM.
 
@@ -157,7 +168,7 @@ Two mechanisms were separated:
 
 **Semaphore (permits=2)**: Protects external service (AI server GPU). Even with 4 threads running, only 2 can simultaneously request the AI server.
 
-Permits were set to 2 (not the theoretical max of 4) because per-request memory varies by audio length and complexity, requiring a safety margin.
+Permits were set to 2, matching the GPU's theoretical max concurrent capacity of ~2, with per-request memory varying by audio length and complexity.
 
 ![](/uploads/project/Orakgarak/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg)
 

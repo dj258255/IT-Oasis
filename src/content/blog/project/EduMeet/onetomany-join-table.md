@@ -77,6 +77,15 @@ Board 엔티티에서 BoardImage에 대한 참조를 `@OneToMany`로 설정하�
 2. `mappedBy`로 연관관계의 주인을 명시하면, 중간 테이블 없이 **외래키 기반의 자연스러운 테이블 구조**를 만들 수 있어요.
 3. 중간 테이블 제거는 단순히 테이블 수를 줄이는 것이 아니라, **조인 연산 복잡도와 데이터 정합성 관리 비용을 줄이는 것**이에요.
 
+### 왜 이 문제를 일찍 잡는 것이 중요한가
+
+중간 테이블이 생기면:
+- 게시글과 이미지를 조회할 때 `board → board_image_set → board_image`로 **2번 조인**이 필요해져요. 데이터가 늘어나면 쿼리 성능에 직접 영향
+- N+1 문제와 결합되면 쿼리 수가 더 폭발적으로 증가해요 (이후 N+1 해결 과정에서 이 구조를 먼저 정리한 것이 도움이 됐어요)
+- `ddl-auto=update`로 운영하다가 이미 중간 테이블에 데이터가 쌓인 후에 발견하면, 데이터 마이그레이션까지 필요해져서 수정 비용이 기하급수적으로 증가해요
+
+이 경험 이후 JPA 엔티티 매핑 시 `ddl-auto=create`로 테이블을 생성한 뒤, 반드시 **ERD와 실제 생성된 DDL을 비교 검증**하는 절차를 팀 규칙으로 정했어요.
+
 JPA 연관관계 매핑은 어노테이션 하나로 끝나는 게 아니라, 도메인 관계의 방향성과 데이터베이스 설계 원칙을 함께 고려해야 해요.
 
 ---
@@ -147,6 +156,15 @@ The foreign key-based table structure, similar to a `@ManyToOne` setup, was succ
 1. `@OneToMany` used alone without `mappedBy` or `@JoinColumn` **creates a join table by default**. This is JPA's default strategy.
 2. Specifying the relationship owner with `mappedBy` creates a **natural foreign key-based table structure** without a join table.
 3. Eliminating the join table isn't just about reducing table count — it's about **reducing join operation complexity and data integrity management costs**.
+
+### Why Early Detection Matters
+
+When a join table exists:
+- Querying posts with images requires `board → board_image_set → board_image` — **2 joins**. Query performance degrades directly as data grows
+- Combined with N+1, query count explodes even further (resolving this structure first helped when tackling N+1 later)
+- If discovered after data has already accumulated in the join table under `ddl-auto=update`, data migration becomes necessary and fix costs grow exponentially
+
+After this experience, the team established a rule to always **compare generated DDL against the ERD** after JPA entity mapping using `ddl-auto=create`.
 
 JPA relationship mapping isn't just about a single annotation — it requires considering both the directionality of domain relationships and database design principles.
 

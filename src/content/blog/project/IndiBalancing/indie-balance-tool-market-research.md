@@ -374,11 +374,13 @@ A: 네 맞습니다. 하지만 아직 초기 단계라 조정 중입니다.
 
 ## 8. 결론: 무엇을 배웠는가
 
-### 8.1 검증된 것
+### 8.1 확인된 긍정 신호
 
 1. **문제는 실재해요**: 인디 개발자들이 밸런싱 도구의 부재를 느끼고 있어요
 2. **관심은 있어요**: 홍보 시 즉각적인 긍정 반응이 있었어요
 3. **사용 의향은 있어요**: 설문에서 대다수가 "사용하겠다"고 응답했어요
+
+> 다만 12명이라는 표본 크기의 한계가 있으므로, 이 결과는 통계적 검증이 아닌 초기 방향성 확인으로 해석했어요.
 
 ### 8.2 주의할 것
 
@@ -428,7 +430,7 @@ Market research was conducted to validate this hypothesis.
 
 ---
 
-## 2. Market Research: Hypothesis Validation
+## 2. Market Research: Hypothesis Exploration
 
 ### 2.1 Research Method
 
@@ -535,7 +537,7 @@ Additional comment: "Unreal tables are annoying for planners doing large-scale w
 
 ![](/uploads/project/IndiBalancing/indie-balance-tool-market-research/image-5.png)
 
-**Analysis**: Majority responded "willing to use." The hypothesis "they'll use it if it exists" is somewhat validated.
+**Analysis**: Majority responded "willing to use." This provides an early positive signal for the hypothesis "they'll use it if it exists," though the small sample size limits definitive conclusions.
 
 ### 3.10 What Matters Most
 
@@ -682,11 +684,13 @@ These reactions were interpreted as signals that "the market recognizes this pro
 
 ## 8. Conclusion: What Was Learned
 
-### 8.1 What Was Validated
+### 8.1 Positive Signals Confirmed
 
 1. **The problem is real**: Indie developers feel the absence of balancing tools
 2. **Interest exists**: Immediate positive reactions when promoted
 3. **Usage intent exists**: Majority responded "willing to use" in surveys
+
+> With only 12 respondents, these results represent early directional signals rather than statistically validated conclusions.
 
 ### 8.2 Caveats
 

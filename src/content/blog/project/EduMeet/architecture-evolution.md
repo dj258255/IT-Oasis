@@ -224,7 +224,23 @@ After:  Service → Repository (인터페이스) ← JpaRepositoryImpl
 
 ---
 
-## 7. 결론
+## 7. 실제 프로젝트에서의 적용 결과
+
+이론으로 정리한 내용을 EduMeet 프로젝트에 적용한 구체적인 결과:
+
+### 의존성 역전이 실제로 도움이 된 사례
+
+1. **QueryDSL Repository 분리**: `BoardJpaRepository`(JPA 기본 CRUD)와 `BoardSearchRepository`(QueryDSL 검색)를 분리했어요. 인터페이스를 Application 레이어에, 구현체를 Infrastructure 레이어에 배치하여 Service가 QueryDSL에 직접 의존하지 않는 구조를 만들었어요. 이 과정에서 Spring Data JPA의 네이밍 규칙 충돌 문제를 경험하고 해결했어요 → [파일 이동 오류](/blog/project/edumeet/file-move-error)
+
+2. **테스트 DB 교체**: Service가 Repository 인터페이스에 의존하고, 인터페이스 뒤의 구현체가 JPA/H2/MySQL을 결정하는 구조였기에, 테스트 환경에서 MySQL → H2 전환이 `application-test.properties` 변경만으로 가능했어요 → [단위테스트 DB 마이그레이션](/blog/project/edumeet/unit-test-db-migration)
+
+### 도메인 중심 개발이 안 된 부분 (반성)
+
+솔직히 완벽하게 적용하지는 못했어요. JPA 엔티티(`@Entity`)가 도메인 객체를 겸하고 있어요. 6주 일정에서 도메인 모델과 영속성 객체를 분리하면 `from()`/`toModel()` 변환 코드가 늘어나서 개발 속도가 떨어진다고 판단했어요. 트레이드오프의 결과인데, 도메인이 더 복잡했다면 분리가 필수였을 거예요.
+
+---
+
+## 8. 결론
 
 ### 핵심 정리
 
@@ -487,6 +503,20 @@ Layered architecture with dependency inversion is **essentially identical to hex
    - Builds a domain-centric layered architecture
    - Enables flexible response to technology stack changes
    - Ultimately results in the same structure as hexagonal architecture
+
+## 8. Practical Application Results
+
+### Where Dependency Inversion Actually Helped
+
+1. **QueryDSL Repository separation**: Split `BoardJpaRepository` (basic JPA CRUD) from `BoardSearchRepository` (QueryDSL search). Interface in Application layer, implementation in Infrastructure layer, so Service doesn't depend on QueryDSL directly. This triggered a Spring Data JPA naming convention conflict, which was resolved. → [File Move Error](/blog/project/edumeet/file-move-error)
+
+2. **Test DB swap**: Since Service depends on Repository interfaces (not implementations), switching from MySQL to H2 for testing only required changing `application-test.properties`. → [Unit Test DB Migration](/blog/project/edumeet/unit-test-db-migration)
+
+### What Wasn't Done (Honest Reflection)
+
+JPA entities (`@Entity`) serve double duty as domain objects. Separating domain models from persistence objects would have added `from()`/`toModel()` conversion code, slowing development within the 6-week timeline. This was a trade-off — if the domain had been more complex, separation would have been necessary.
+
+---
 
 ### Decision-Making Process
 

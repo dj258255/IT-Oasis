@@ -45,7 +45,7 @@ ApplicationDown, HighCPU, HighMemory, HighResponseTime이 한꺼번에 울리는
 ### 1. for 절 없이 즉시 알림
 
 기존 알림 규칙에 `for` 절이 없었어요.
-Prometheus가 15초마다 스크래핑하는데, 한 번이라도 임계값을 넘으면 바로 알림이 나갔어요.
+Prometheus가 15초 간격으로 스크래핑하도록 설정(기본값은 1분이지만 빠른 감지를 위해 15초로 변경)했는데, 한 번이라도 임계값을 넘으면 바로 알림이 나갔어요.
 
 서버 재시작 시 CPU와 메모리가 일시적으로 튀는 건 정상이에요.
 JVM 워밍업, 커넥션 풀 초기화, Kafka Consumer 리밸런싱 등이 동시에 일어나거든요.
@@ -153,7 +153,7 @@ Two issues compounded:
 
 ### 1. No `for` Clause — Instant Alerts
 
-Alert rules had no `for` clause. Prometheus scrapes every 15 seconds, and a single threshold breach triggered an immediate alert.
+Alert rules had no `for` clause. Prometheus was configured to scrape every 15 seconds (default is 1 minute; reduced for faster detection), and a single threshold breach triggered an immediate alert.
 
 CPU and memory spiking during server restart is normal — JVM warmup, connection pool initialization, Kafka Consumer rebalancing all happen simultaneously. But everything was being classified as a failure.
 

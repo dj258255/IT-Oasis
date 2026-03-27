@@ -60,7 +60,7 @@ class OldSchoolDatabase {
 3. **세션 생성**: DB 서버 내부에 세션 객체 할당
 4. **메타데이터 로딩**: 데이터베이스 설정, 인코딩 정보 등
 
-이 과정은 **수십 밀리초에서 수백 밀리초**가 걸려요. 로컬 네트워크에서도 20~50ms 정도 소요돼요. 만약 초당 1000개의 요청이 들어온다면? 그냥 커넥션 만드는 데만 20초가 걸린다는 뜻이에요.
+이 과정은 **수십 밀리초에서 수백 밀리초**가 걸려요. 로컬 네트워크에서도 20~50ms 정도 소요돼요. 만약 초당 1000개의 요청이 들어온다면? 그냥 커넥션 만드는 데만 20초가 걸린다는 뜻이에요. (단일 스레드 직렬 처리를 가정한 계산. 멀티스레드 환경에서는 병렬로 커넥션을 생성하므로 실제 시간은 이보다 짧지만, 오버헤드가 크다는 점은 동일)
 
 ```java
 // 커넥션 생성 비용 측정
@@ -323,10 +323,10 @@ JDBC 2.0에서 커넥션 풀링을 위한 표준 API가 추가되었고, JDBC 3.
 
 아파치 재단에서 만든 커넥션 풀이었어요. 많은 프로젝트에서 사용되었고요.
 
-**문제점**:
+**문제점** (DBCP 1.x 기준. DBCP 2.x는 Apache Commons Pool 2 기반으로 상당히 개선되었다):
 - 단일 스레드와 락을 사용해 전체 풀을 잠가 스레드 안전성을 보장했어요
 - 느렸고 멀티 코어 CPU를 제대로 활용하지 못했어요
-- 벤치마크 결과 HikariCP 대비 **2000배 이상 느렸다** (5 ops/ms vs 45,289 ops/ms)
+- HikariCP 저자가 작성한 벤치마크(특정 시나리오)에서 HikariCP 대비 **2,000배 이상 느렸다** (21.75 ops/ms vs 45,289 ops/ms)
 
 #### Tomcat JDBC Pool (2010년)
 
@@ -450,16 +450,16 @@ class ConcurrentBag<T> {
 
 #### PreparedStatement 캐싱을 하지 않는 이유
 
-대부분의 JDBC 드라이버(PostgreSQL, Oracle, MySQL 등)는 **이미 드라이버 수준에서 캐싱**을 해요.
+HikariCP는 커넥션 풀 레벨의 PreparedStatement 캐싱이 JDBC 스펙과 맞지 않아 버그를 유발할 수 있다고 판단하여 제공하지 않아요. 대신 JDBC 드라이버 설정(예: MySQL의 `cachePrepStmts=true`, `prepStmtCacheSize=250`)을 사용하라고 권장해요.
 
 ```java
-// MySQL Connector/J는 이미 캐싱을 함
+// MySQL Connector/J 드라이버 설정으로 캐싱 활성화
+// jdbc:mysql://localhost:3306/mydb?cachePrepStmts=true&prepStmtCacheSize=250
 Connection conn = dataSource.getConnection();
-// 드라이버 내부에서 이미 캐싱됨!
 PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?");
 ```
 
-커넥션 풀 레벨에서 또 캐싱하면 **중복**이고 오버헤드만 늘어나요. HikariCP는 이를 과감히 제거했어요.
+HikariCP는 커넥션 풀 레벨에서의 PS 캐싱을 과감히 제거하고, 드라이버 레벨 캐싱에 맡기는 방식을 선택했어요.
 
 > 출처: [HikariCP GitHub - About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing), [MySQL Connector/J Connection Pooling](https://dev.mysql.com/doc/connector-j/en/connector-j-usagenotes-j2ee-concepts-connection-pooling.html)
 
@@ -474,7 +474,7 @@ PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?")
 | `connectionTimeout` | 30초 | 커넥션 획득 대기 시간 |
 | `idleTimeout` | 10분 | 유휴 커넥션 제거 시간 |
 | `maxLifetime` | 30분 | 커넥션 최대 생존 시간 |
-| `keepaliveTime` | 2분 | 커넥션 유지 확인 간격 |
+| `keepaliveTime` | 0 (비활성화, HikariCP 4.2.0+에서 추가) | 커넥션 유지 확인 간격 |
 | `validationTimeout` | 5초 | 연결 유효성 검사 타임아웃 |
 
 ### 4.2 Spring Boot 설정 예시
@@ -495,6 +495,8 @@ spring:
       max-lifetime: 580000            # 9분 40초 (DB wait_timeout보다 짧게)
       idle-timeout: 600000            # 10분
       keepalive-time: 30000           # 30초
+      # 주의: idle-timeout이 max-lifetime보다 길면 idle-timeout은 사실상 무의미하다
+      # (max-lifetime에 의해 먼저 제거됨). idle-timeout은 max-lifetime보다 짧게 설정해야 한다.
 
       # 기타
       auto-commit: true
@@ -534,7 +536,7 @@ hikari:
 
 #### 4.3.3 maxLifetime
 
-**권장**: **DB의 wait_timeout보다 2~3초 짧게**
+**권장**: **DB의 wait_timeout보다 최소 30초 짧게 (HikariCP 공식 권장. 네트워크 지연, 클럭 동기화 문제를 고려)**
 
 ```yaml
 hikari:
@@ -693,7 +695,7 @@ pool_size = thread_count × (connections_per_task - 1) + 1
 - 작업당 커넥션: 1개
 - pool_size = 200 × (1 - 1) + 1 = **1개**?!
 
-이건 말이 안 돼요. 왜일까요?
+이 공식은 **데드락 방지를 위한 최소 풀 크기**이지, 성능 최적값이 아니에요. 작업당 커넥션이 1개면 데드락이 원리적으로 발생할 수 없으므로 최소 1개로도 동작한다는 의미예요 (극도로 느리겠지만요).
 
 #### 단계 4: 실제 동시성 고려
 
@@ -911,7 +913,7 @@ SET GLOBAL wait_timeout = 600;           -- 10분
 SET GLOBAL interactive_timeout = 600;    -- 10분
 ```
 
-3. **keepaliveTime 설정** (HikariCP 4.0+)
+3. **keepaliveTime 설정** (HikariCP 4.2.0+)
 ```yaml
 hikari:
   keepalive-time: 30000  # 30초마다 연결 확인
@@ -1640,10 +1642,10 @@ The oldest and most well-known connection pool library. It was widely used with 
 
 A connection pool created by the Apache Foundation. It was used in many projects.
 
-**Problems**:
+**Problems** (DBCP 1.x. DBCP 2.x was significantly improved based on Apache Commons Pool 2):
 - Used a single thread and lock to lock the entire pool for thread safety
 - Slow and failed to utilize multi-core CPUs effectively
-- Benchmarks showed it was **over 2,000x slower** than HikariCP (5 ops/ms vs 45,289 ops/ms)
+- In benchmarks written by HikariCP's author (specific scenarios), it was **over 2,000x slower** than HikariCP (21.75 ops/ms vs 45,289 ops/ms)
 
 #### Tomcat JDBC Pool (2010)
 
@@ -1767,16 +1769,16 @@ class ConcurrentBag<T> {
 
 #### Why It Doesn't Cache PreparedStatements
 
-Most JDBC drivers (PostgreSQL, Oracle, MySQL, etc.) **already cache at the driver level**.
+HikariCP determined that connection pool-level PreparedStatement caching conflicts with the JDBC specification and can introduce bugs, so it does not provide this feature. Instead, HikariCP recommends using JDBC driver settings (e.g., MySQL's `cachePrepStmts=true`, `prepStmtCacheSize=250`).
 
 ```java
-// MySQL Connector/J already caches
+// Enable caching via MySQL Connector/J driver settings
+// jdbc:mysql://localhost:3306/mydb?cachePrepStmts=true&prepStmtCacheSize=250
 Connection conn = dataSource.getConnection();
-// Already cached internally by the driver!
 PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?");
 ```
 
-Caching again at the connection pool level would be **redundant** and only add overhead. HikariCP boldly removed this.
+HikariCP boldly removed pool-level PS caching and delegates caching to the driver level.
 
 > Source: [HikariCP GitHub - About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing), [MySQL Connector/J Connection Pooling](https://dev.mysql.com/doc/connector-j/en/connector-j-usagenotes-j2ee-concepts-connection-pooling.html)
 
@@ -1791,7 +1793,7 @@ Caching again at the connection pool level would be **redundant** and only add o
 | `connectionTimeout` | 30 seconds | Wait time to acquire a connection |
 | `idleTimeout` | 10 minutes | Time before idle connections are removed |
 | `maxLifetime` | 30 minutes | Maximum connection lifetime |
-| `keepaliveTime` | 2 minutes | Connection keepalive check interval |
+| `keepaliveTime` | 0 (disabled, added in HikariCP 4.2.0+) | Connection keepalive check interval |
 | `validationTimeout` | 5 seconds | Connection validation timeout |
 
 ### 4.2 Spring Boot Configuration Example
@@ -1812,6 +1814,9 @@ spring:
       max-lifetime: 580000            # 9 min 40 sec (shorter than DB wait_timeout)
       idle-timeout: 600000            # 10 minutes
       keepalive-time: 30000           # 30 seconds
+      # Warning: If idle-timeout is longer than max-lifetime, idle-timeout is effectively
+      # meaningless (connections are removed by max-lifetime first).
+      # idle-timeout should be set shorter than max-lifetime.
 
       # Other
       auto-commit: true
@@ -1851,7 +1856,7 @@ hikari:
 
 #### 4.3.3 maxLifetime
 
-**Recommendation**: **2-3 seconds shorter than the DB's wait_timeout**
+**Recommendation**: **At least 30 seconds shorter than the DB's wait_timeout (officially recommended by HikariCP, accounting for network latency and clock synchronization issues)**
 
 ```yaml
 hikari:
@@ -2010,7 +2015,7 @@ pool_size = thread_count x (connections_per_task - 1) + 1
 - Connections per task: 1
 - pool_size = 200 x (1 - 1) + 1 = **1**?!
 
-That doesn't make sense. Why?
+This formula is for the **minimum pool size to prevent deadlocks**, not for optimal performance. With 1 connection per task, deadlocks are structurally impossible, so technically 1 connection suffices (albeit extremely slowly).
 
 #### Step 4: Consider Actual Concurrency
 
@@ -2228,7 +2233,7 @@ SET GLOBAL wait_timeout = 600;           -- 10 minutes
 SET GLOBAL interactive_timeout = 600;    -- 10 minutes
 ```
 
-3. **Set keepaliveTime** (HikariCP 4.0+)
+3. **Set keepaliveTime** (HikariCP 4.2.0+)
 ```yaml
 hikari:
   keepalive-time: 30000  # Check connection every 30 seconds

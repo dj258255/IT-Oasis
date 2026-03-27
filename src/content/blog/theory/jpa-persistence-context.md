@@ -112,7 +112,7 @@ JPA는 엔티티를 조회하면 영속성 컨텍스트에 저장하고, 이 객
 근데 `readOnly = true`면 이 과정 자체가 생략돼요:
 
 - FlushMode가 MANUAL로 바뀜
-- 스냅샷 안 만듦
+- flush 시점에 스냅샷 비교를 하지 않으므로 사실상 스냅샷이 무용해진다 (단, Hibernate 구현에 따라 스냅샷 자체는 여전히 생성될 수 있다)
 - flush() 호출 안 함
 - Dirty Checking 안 함
 
@@ -132,7 +132,7 @@ PostgreSQL, Oracle, H2 등 일부 DB는 이 힌트를 통해 내부 처리를 �
 
 **1. 락 경합(Lock Contention) 감소**
 
-일반 트랜잭션은 데이터 수정 가능성이 있으니까 쓰기 락(Write Lock)을 잡아요.
+readOnly = true를 설정하면 JDBC 레벨에서 connection.setReadOnly(true)가 호출되며, DB 벤더에 따라 최적화가 적용될 수 있어요 (예: MySQL InnoDB에서 읽기 전용 트랜잭션은 트랜잭션 ID 할당을 생략하여 MVCC 오버헤드를 줄인다).
 
 근데 read-only 트랜잭션은 변경이 없다고 명시됐으니까 락을 최소화하거나 안 걸어요.
 
@@ -146,7 +146,7 @@ PostgreSQL, Oracle, H2 등 일부 DB는 이 힌트를 통해 내부 처리를 �
 
 근데 read-only 트랜잭션은 변경할 게 없으니까 복구할 것도 없어요.
 
-DB가 이 로그 생성을 최소화하거나 건너뛰면서 디스크 I/O와 메모리 사용량이 줄어듭니다.
+SELECT만 실행하는 트랜잭션은 readOnly 여부와 관계없이 undo/redo 로그를 생성하지 않아요. readOnly의 DB 레벨 효과는 벤더별로 다르며, MySQL InnoDB에서는 트랜잭션 ID 할당 생략 등의 최적화가 있어요.
 
 ### DB Replication 환경에서 유용
 
@@ -156,7 +156,7 @@ Master-Slave 구조라면 `readOnly = true` 쿼리를 자동으로 Slave로 라�
 
 클래스에 기본으로 `readOnly = true` 걸어두고, 쓰기 메서드에만 `@Transactional`로 오버라이드해요.
 
-![](/uploads/theory/jpa-persistence-context/readonly-pattern.png)
+![](/uploads/theory/jpa-persistence-context/version-optimistic-lock.png)
 
 
 ### 주의: 낙관적 락(@Version)과의 충돌
@@ -165,7 +165,7 @@ Master-Slave 구조라면 `readOnly = true` 쿼리를 자동으로 Slave로 라�
 
 JPA는 `@Version`으로 동시성을 제어해요:
 
-![](/uploads/theory/jpa-persistence-context/version-optimistic-lock.png)
+![](/uploads/theory/jpa-persistence-context/readonly-pattern.png)
 
 수정 시점에 version을 비교해서, 다른 트랜잭션이 먼저 수정했으면 `OptimisticLockException`을 던져요.
 
@@ -179,7 +179,7 @@ JPA는 `@Version`으로 동시성을 제어해요:
 - @Version 비교도 안 됨
 - **충돌이 발생해도 감지 못함**
 
-최악의 경우, 다른 트랜잭션의 수정 내용을 조용히 덮어써버릴 수 있어요. 그것도 아무 에러 없이요.
+수정한 내용이 DB에 반영되지 않아요 (flush가 안 되니까). 에러도 나지 않으므로, 개발자가 수정이 적용됐다고 착각할 수 있는 것이 진짜 위험이에요.
 
 ### 결론
 
@@ -250,8 +250,7 @@ inner()에서 롤백이 필요한데 outer()는 커밋하려고 하면? 스프�
 
 ![](/uploads/theory/jpa-persistence-context/requires-new-propagation.png)
 
-
-![](/uploads/theory/jpa-persistence-context/requires-new-detail.png)
+<!-- requires-new-detail.png는 requires-new-propagation.png와 동일한 이미지이므로 제거함. 별도 다이어그램이 필요하면 추가할 것. -->
 
 
 
@@ -361,7 +360,7 @@ R2나 S3 같은 외부 스토리지는 DB 트랜잭션 안에 포함되지 않�
 public void updateProfile(...) {
     user.updateProfileImage(newImageId);  // ① DB 업데이트
     r2Service.deleteFile(oldImagePath);   // ② R2 삭제 (외부 시스템!)
-    return userRepository.save(user);     // ③ 커밋
+    userRepository.save(user);             // ③ 저장 (커밋은 메서드 종료 후 프록시가 수행) — Dirty Checking이면 save() 호출 자체가 불필요
 }
 ```
 
@@ -502,7 +501,7 @@ When JPA loads an entity, it stores it in the persistence context and tracks whe
 With `readOnly = true`, this entire process is skipped:
 
 - FlushMode switches to MANUAL
-- No snapshot is created
+- Snapshot comparison is not performed at flush time, making the snapshot effectively useless (however, depending on the Hibernate implementation, the snapshot itself may still be created)
 - flush() is not called
 - Dirty Checking is not performed
 
@@ -522,13 +521,7 @@ Some databases like PostgreSQL, Oracle, and H2 use this hint to optimize their i
 
 **1. Reduced Lock Contention**
 
-Normal transactions acquire write locks because data modifications are possible.
-
-However, read-only transactions are explicitly declared as non-modifying, so locks are minimized or not acquired at all.
-
-As a result, even when multiple SELECT queries arrive simultaneously, they can be processed in parallel without lock contention.
-
-This is especially effective in high-traffic environments.
+Setting readOnly = true causes connection.setReadOnly(true) to be called at the JDBC level, and depending on the DB vendor, optimizations may be applied (e.g., in MySQL InnoDB, read-only transactions skip transaction ID allocation, reducing MVCC overhead).
 
 **2. Reduced Undo/Redo Logs**
 
@@ -536,7 +529,7 @@ Every transaction generates undo/redo logs for rollback and recovery purposes.
 
 But read-only transactions have nothing to change, so there is nothing to recover.
 
-The DB minimizes or skips log generation, reducing disk I/O and memory usage.
+Transactions that only execute SELECTs do not generate undo/redo logs regardless of readOnly. The DB-level effect of readOnly varies by vendor; in MySQL InnoDB, optimizations such as skipping transaction ID allocation are applied.
 
 ### Useful in DB Replication Environments
 
@@ -546,7 +539,7 @@ In a Master-Slave architecture, queries marked with `readOnly = true` can be aut
 
 I set `readOnly = true` at the class level by default, and override with `@Transactional` only for write methods.
 
-![](/uploads/theory/jpa-persistence-context/readonly-pattern.png)
+![](/uploads/theory/jpa-persistence-context/version-optimistic-lock.png)
 
 
 ### Caution: Conflict with Optimistic Locking (@Version)
@@ -555,7 +548,7 @@ There is a reason you should not use `readOnly = true` recklessly. It can neutra
 
 JPA controls concurrency with `@Version`:
 
-![](/uploads/theory/jpa-persistence-context/version-optimistic-lock.png)
+![](/uploads/theory/jpa-persistence-context/readonly-pattern.png)
 
 At the time of modification, the version is compared, and if another transaction modified the data first, an `OptimisticLockException` is thrown.
 
@@ -569,7 +562,7 @@ But what happens when you modify an entity under `readOnly = true`?
 - @Version comparison is not performed
 - **Conflicts go undetected**
 
-In the worst case, another transaction's modifications can be silently overwritten, with no error at all.
+The modifications will not be persisted to the DB (because flush does not occur). Since no error is raised, the real danger is that the developer may mistakenly believe the changes were applied.
 
 ### Conclusion
 
@@ -640,8 +633,7 @@ Always creates a new transaction. Even if an existing transaction is present, it
 
 ![](/uploads/theory/jpa-persistence-context/requires-new-propagation.png)
 
-
-![](/uploads/theory/jpa-persistence-context/requires-new-detail.png)
+<!-- requires-new-detail.png는 requires-new-propagation.png와 동일한 이미지이므로 제거함. 별도 다이어그램이 필요하면 추가할 것. -->
 
 
 
@@ -748,7 +740,7 @@ External storage services like R2 or S3 are not included in DB transactions. It 
 public void updateProfile(...) {
     user.updateProfileImage(newImageId);  // ① DB update
     r2Service.deleteFile(oldImagePath);   // ② R2 delete (external system!)
-    return userRepository.save(user);     // ③ Commit
+    userRepository.save(user);             // ③ Save (commit is performed by the proxy after method exit) — If using Dirty Checking, the save() call itself is unnecessary
 }
 ```
 

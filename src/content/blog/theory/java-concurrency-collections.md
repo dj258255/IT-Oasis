@@ -77,6 +77,8 @@ class ConcurrentHashMap<K, V> {
 
 ### 1.3 ConcurrentHashMap의 개선: CAS 기반 (Java 8 이후)
 
+세그먼트 수가 생성 시 고정되어 동시성 수준이 제한되고, 메모리 오버헤드가 컸기 때문에 Java 8에서 CAS 기반으로 전환했다.
+
 Java 8부터는 **세그먼트를 제거**하고 **CAS(Compare-And-Swap) + synchronized**를 사용해요.
 
 ![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.png)
@@ -119,8 +121,12 @@ synchronized (전체 테이블) {
 }
 
 // ConcurrentHashMap (Java 7): 세그먼트 락 (중간)
-synchronized (segments[i]) {
+// 실제로는 ReentrantLock을 상속한 Segment를 사용
+segments[i].lock();
+try {
     // 해당 세그먼트만
+} finally {
+    segments[i].unlock();
 }
 
 // ConcurrentHashMap (Java 8+): 버킷 락 (최고)
@@ -195,6 +201,8 @@ map.get("users").add("Alice");
 
 // 올바른 코드: 원자적 연산 사용
 map.computeIfAbsent("users", k -> new ArrayList<>()).add("Alice");
+// 주의: 반환된 ArrayList 자체는 thread-safe하지 않으므로,
+// 동시 수정이 필요하면 CopyOnWriteArrayList 등을 사용해야 한다
 ```
 
 > 출처: [Java Documentation - ConcurrentHashMap](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentHashMap.html), [Baeldung - Guide to ConcurrentHashMap](https://www.baeldung.com/java-concurrent-map)
@@ -570,9 +578,9 @@ public class Counter {
 | 자동 해제 | O (예외 시 자동) | X (finally 필수) |
 | tryLock | X | O |
 | 타임아웃 | X | O |
-| 인터럽트 | X | O |
+| 인터럽트 | 제한적 (wait() 중에는 가능, 락 획득 대기 중 불가) | O |
 | 공정성(fairness) | X | O |
-| Condition 변수 | X | O (여러 개 가능) |
+| Condition 변수 | 제한적 (wait/notify 1개만) | O (여러 개 가능) |
 
 **공정한 락 (Fair Lock):**
 ```java
@@ -720,8 +728,7 @@ public class Point {
 3. **Write Lock**: 배타 락 (하나만 가능)
 
 **주의사항:**
-- ReentrantLock과 달리 **재진입 불가능**
-- 쓰기 락 보유 중 읽기 락 획득 불가능 (데드락 주의)
+- 재진입 불가능 — 같은 스레드에서 락을 다시 획득하면 데드락 발생 (ReentrantLock과 달리 재진입을 지원하지 않음)
 
 > 출처: [Java Documentation - ReentrantLock](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/ReentrantLock.html), [Java Documentation - ReadWriteLock](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/ReadWriteLock.html), [Java Documentation - StampedLock](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/StampedLock.html)
 
@@ -755,6 +762,8 @@ public class AtomicCounter {
 
 **내부 구현 (간소화):**
 ```java
+// 간소화된 코드 — Java 8+에서는 Unsafe.getAndAddInt()를 사용하며,
+// Java 9+에서는 VarHandle 기반으로 변경되었다
 public class AtomicInteger {
     private volatile int value;
 
@@ -816,7 +825,7 @@ public class HighContentionCounter {
 ```
 
 **동작 원리:**
-ActomicLong
+AtomicLong
 ![](/uploads/theory/java-concurrency-collections/atomic-long-diagram.png)
 
 LongAdder
@@ -1128,6 +1137,8 @@ class ConcurrentHashMap<K, V> {
 
 ### 1.3 ConcurrentHashMap Improvement: CAS-Based (Java 8+)
 
+The number of segments was fixed at creation time, which limited the concurrency level, and the memory overhead was significant. This led to the switch to a CAS-based approach in Java 8.
+
 Starting from Java 8, **segments were removed** and **CAS (Compare-And-Swap) + synchronized** is used instead.
 
 ![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.png)
@@ -1165,18 +1176,22 @@ public V put(K key, V value) {
 **Performance comparison:**
 ```java
 // Hashtable: full lock (worst)
-synchronized (전체 테이블) {
-    // 모든 연산
+synchronized (entireTable) {
+    // all operations
 }
 
 // ConcurrentHashMap (Java 7): segment lock (middle)
-synchronized (segments[i]) {
-    // 해당 세그먼트만
+// Actual implementation uses Segment extending ReentrantLock
+segments[i].lock();
+try {
+    // only this segment
+} finally {
+    segments[i].unlock();
 }
 
 // ConcurrentHashMap (Java 8+): bucket lock (best)
 synchronized (bucket[i]) {
-    // 해당 버킷만
+    // only this bucket
 }
 ```
 
@@ -1246,6 +1261,8 @@ map.get("users").add("Alice");
 
 // Correct code: use atomic operation
 map.computeIfAbsent("users", k -> new ArrayList<>()).add("Alice");
+// Note: the returned ArrayList itself is not thread-safe,
+// so use CopyOnWriteArrayList etc. if concurrent modification is needed
 ```
 
 > Sources: [Java Documentation - ConcurrentHashMap](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentHashMap.html), [Baeldung - Guide to ConcurrentHashMap](https://www.baeldung.com/java-concurrent-map)
@@ -1621,9 +1638,9 @@ public class Counter {
 | Automatic release | Yes (auto on exception) | No (finally required) |
 | tryLock | No | Yes |
 | Timeout | No | Yes |
-| Interruptible | No | Yes |
+| Interruptible | Limited (possible during wait(), not during lock acquisition) | Yes |
 | Fairness | No | Yes |
-| Condition variables | No | Yes (multiple) |
+| Condition variables | Limited (only 1 via wait/notify) | Yes (multiple) |
 
 **Fair Lock:**
 ```java
@@ -1771,8 +1788,7 @@ public class Point {
 3. **Write Lock**: Exclusive lock (only one allowed)
 
 **Caveats:**
-- Unlike ReentrantLock, **not reentrant**
-- Cannot acquire a read lock while holding a write lock (beware of deadlocks)
+- Not reentrant — re-acquiring a lock from the same thread causes deadlock (unlike ReentrantLock, which supports reentrancy)
 
 > Sources: [Java Documentation - ReentrantLock](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/ReentrantLock.html), [Java Documentation - ReadWriteLock](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/ReadWriteLock.html), [Java Documentation - StampedLock](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/StampedLock.html)
 
@@ -1806,6 +1822,8 @@ public class AtomicCounter {
 
 **Internal implementation (simplified):**
 ```java
+// Simplified code — Java 8+ uses Unsafe.getAndAddInt(),
+// and Java 9+ switched to a VarHandle-based implementation
 public class AtomicInteger {
     private volatile int value;
 

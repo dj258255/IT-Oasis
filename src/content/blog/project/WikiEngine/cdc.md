@@ -781,7 +781,7 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ![Classloading + Buffer Pools](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-classloading-buffers.png)
 
-- **Mapped buffer**: **~30 GB** — Lucene 인덱스 파일의 memory-mapped I/O. 1,425만 건 인덱스
+- **Mapped buffer**: **~30 GB** — Lucene 인덱스 파일의 memory-mapped I/O. 1,215만 건 인덱스
 
 ### Nginx
 

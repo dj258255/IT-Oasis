@@ -19,10 +19,21 @@ coverImage: "/uploads/project/Joying/message-auth-db-check/why-permission-check.
 
 ---
 
-## 문제 상황
+## 0. 정상 상태
+
+**서버 환경**: EC2 t3.medium (2 vCPU, 4GB RAM) 1대에 Spring Boot, MySQL 8.0, MongoDB 6.0, Redis 7.x를 Docker Compose로 운영. 1:1 채팅 서비스로, 채팅방 참여자는 구매자와 판매자 2명으로 고정.
+
+**데이터 규모**: 사용자 100명, 채팅방 500개, 채팅방당 메시지 평균 150개.
+
+**기대치**: 카카오톡 등 일반 메신저에서 메시지 전송은 사용자가 체감하기 어려운 수준(~50ms 이내)이어야 한다. 현재 단일 요청 기준 106-192ms로, 연속 전송 시 체감 지연이 발생하는 상태.
+
+---
+
+## 1. 문제 상황
 
 메시지 전송 API 흐름을 분석해봤어요.
 
+> **측정 조건**: EC2 t3.medium, 단일 요청 기준. MySQL/MongoDB/Redis 모두 같은 서버 (네트워크 RTT ≈ 0ms).
 
 **메시지 전송 API**
 
@@ -35,7 +46,7 @@ coverImage: "/uploads/project/Joying/message-auth-db-check/why-permission-check.
 총 소요: 106-192ms
 
 
-메시지 10개를 연속으로 보내면 1-2초가 걸렸습니다.
+메시지 10개를 연속으로 보내면 1-2초가 걸렸습니다. 특히 권한 확인(30-50ms)은 채팅방 참여자가 거의 변하지 않는 1:1 채팅에서 매 요청마다 MySQL을 조회하는 것이 비효율적이었어요.
 
 ---
 
@@ -225,7 +236,19 @@ After optimizing the chat room list query, message sending turned out to be slow
 
 ---
 
-## Problem
+## 0. Normal State
+
+**Server environment**: Single EC2 t3.medium (2 vCPU, 4GB RAM) running Spring Boot, MySQL 8.0, MongoDB 6.0, Redis 7.x via Docker Compose. 1:1 chat service — chatroom participants are fixed (buyer + seller).
+
+**Data scale**: 100 users, 500 chatrooms, avg 150 messages per room.
+
+**Expectation**: Message sending should feel instant to users (~50ms). Current single-request latency of 106-192ms causes noticeable delay on consecutive sends.
+
+---
+
+## 1. Problem
+
+> **Measurement conditions**: EC2 t3.medium, single request, all DBs on same server (network RTT ≈ 0ms).
 
 I analyzed the message sending API flow.
 

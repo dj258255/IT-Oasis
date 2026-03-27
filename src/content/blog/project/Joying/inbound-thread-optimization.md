@@ -28,7 +28,19 @@ coverImage: "/uploads/project/Joying/inbound-thread-optimization/problem.svg"
 
 ---
 
-## 문제: Thread가 I/O 대기 중에 멈춘다
+## 0. 정상 상태
+
+**서버 환경**: EC2 t3.medium (2 vCPU, 4GB RAM), Spring Boot 3.x + WebSocket STOMP.
+
+**Inbound Thread Pool**: Spring WebSocket STOMP의 `clientInboundChannel` 기본 corePoolSize는 `Runtime.getRuntime().availableProcessors() * 2` = **4개** (t3.medium 2 vCPU 기준). 이 4개의 스레드가 모든 클라이언트의 메시지 전송을 처리한다.
+
+**동시 접속**: 테스트 환경 기준 20명, 채팅방 50개. 피크 시 초당 10-20건의 메시지 전송.
+
+**성능 기대치**: 채팅 메시지 전송은 사용자가 즉시 전달되었다고 느껴야 한다. Inbound Thread가 블로킹되면 다른 사용자의 메시지 처리가 밀리면서 **체감 지연**이 발생한다.
+
+---
+
+## 1. 문제: Thread가 I/O 대기 중에 멈춘다
 
 Spring WebSocket STOMP Handler는 기본적으로 동기 방식이에요.
 
@@ -36,13 +48,14 @@ Spring WebSocket STOMP Handler는 기본적으로 동기 방식이에요.
 
 Thread가 일하는 시간을 분석해봤어요.
 
+> **측정 조건**: EC2 t3.medium, Inbound Thread 2개, 단일 메시지 처리 기준. MongoDB/Redis 같은 서버.
 
 **Inbound Thread 1개**
 - MongoDB 저장 대기: 100ms (일 안 함)
 - Redis 발행 대기: 10ms (일 안 함)
 - 실제로 CPU 쓰는 시간: <1ms
 
-> Thread가 99%의 시간을 그냥 기다리는 데만 씀
+> Thread가 99%의 시간을 그냥 기다리는 데만 씀. **Thread 4개 × 110ms 점유 = 초당 최대 ~36건 처리.** 피크 트래픽(초당 10-20건)에서 병목 직전이다.
 
 
 ---
@@ -75,7 +88,7 @@ Blocking I/O 문제를 해결하기 위한 방법을 검토했어요.
 
 ![](/uploads/project/Joying/inbound-thread-optimization/spring-async.svg)
 
-별도 Thread Pool을 만들어서 작업을 위임해요. 하지만 I/O 대기 중에도 Thread가 Blocked 상태로 점유되는 건 마찬가지예요. Thread 수만 늘어나고 근본적인 해결이 안 됩니다.
+별도 Thread Pool을 만들어서 작업을 위임해요. Inbound Thread는 즉시 반환되지만, **I/O 대기 중인 Thread가 @Async Thread Pool로 이동했을 뿐** — 전체 시스템에서 블로킹되는 Thread 수는 동일해요. Thread Pool 크기를 N으로 설정하면 동시에 N개까지만 처리 가능하고, 초과 요청은 큐에서 대기한다. Thread 수만 늘어나고 근본적인 해결이 안 됩니다. Coroutine과의 차이: Coroutine은 I/O 대기 중 Thread를 반환하고, I/O 완료 시 다시 Thread를 할당받는 구조라 같은 Thread 수로 더 많은 동시 요청을 처리할 수 있다.
 
 ### 2. Project Reactor (Reactive Programming)
 
@@ -174,12 +187,16 @@ Java CompletableFuture로도 가능한데 Coroutine을 선택한 이유:
 
 ## 결과
 
+> **측정 조건**: EC2 t3.medium, Inbound Thread 2개 기본 설정 유지, 20명 동시 접속
+
 | 지표 | Before | After |
 |------|--------|-------|
-| Inbound Thread 점유 시간 | 150ms | <1ms |
+| Inbound Thread 점유 시간 | 150ms/건 | <1ms/건 |
+| 이론적 최대 처리량 (Thread 4개) | ~36건/초 | **수천 건/초** (I/O가 아닌 CPU 바운드만) |
 | Inbound Thread 활용도 | I/O 대기로 99% 유휴 | 즉시 반환 후 다음 요청 처리 |
+| 실제 병목 지점 | Inbound Thread Pool | MongoDB/Redis I/O (별도 스레드에서 처리) |
 
-※ I/O Thread는 여전히 150ms 동안 blocking됨. Inbound Thread Pool을 더 효율적으로 활용할 수 있게 된 것이 핵심.
+※ I/O 작업(MongoDB 저장, Redis 발행)의 총 소요 시간 자체는 여전히 150ms다. 하지만 이 작업을 Coroutine이 별도 I/O 스레드에서 비동기로 처리하므로, **Inbound Thread는 즉시 반환되어 다음 메시지를 받을 수 있다.** 병목이 "Thread Pool 크기"에서 "I/O 대역폭"으로 이동한 것이 핵심.
 
 <!-- EN -->
 
@@ -195,7 +212,19 @@ This post covers how to efficiently utilize Thread Pools when using Spring WebSo
 
 ---
 
-## Problem: Threads Stall During I/O Waits
+## 0. Normal State
+
+**Server environment**: EC2 t3.medium (2 vCPU, 4GB RAM), Spring Boot 3.x + WebSocket STOMP.
+
+**Inbound Thread Pool**: Spring WebSocket STOMP's `clientInboundChannel` default corePoolSize is `Runtime.getRuntime().availableProcessors() * 2` = **4 threads** (t3.medium, 2 vCPU). These 4 threads handle all client messages.
+
+**Concurrent users**: 20 in test, 50 chatrooms. Peak: 10-20 msgs/sec.
+
+**Performance expectation**: Chat messages should feel instant. When Inbound Threads block, other users' messages queue up, causing perceived delay.
+
+---
+
+## 1. Problem: Threads Stall During I/O Waits
 
 Spring WebSocket STOMP Handlers operate synchronously by default.
 
@@ -331,9 +360,13 @@ The current implementation aims to **increase Inbound Thread Pool throughput**. 
 
 ## Results
 
+> **Measurement conditions**: EC2 t3.medium, 2 Inbound Threads (default), 20 concurrent users
+
 | Metric | Before | After |
 |--------|--------|-------|
-| Inbound Thread occupancy | 150ms | <1ms |
+| Inbound Thread occupancy | 150ms/msg | <1ms/msg |
+| Theoretical max throughput (4 threads) | ~36 msgs/sec | **Thousands/sec** (CPU-bound only) |
 | Inbound Thread utilization | 99% idle on I/O waits | Immediately returned for next request |
+| Actual bottleneck | Inbound Thread Pool | MongoDB/Redis I/O (handled in separate threads) |
 
-Note: I/O Threads are still blocked for 150ms. The key improvement is more efficient utilization of the Inbound Thread Pool.
+Note: Total I/O time (MongoDB save, Redis publish) is still 150ms. But Coroutines handle this asynchronously on separate I/O threads, so **Inbound Threads are immediately returned for the next message.** The bottleneck shifted from "Thread Pool size" to "I/O bandwidth."

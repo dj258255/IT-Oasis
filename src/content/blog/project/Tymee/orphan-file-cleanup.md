@@ -94,6 +94,9 @@ Soft Delete 방식:
 Soft Delete + 배치 방식은 트랜잭션 안전하고 응답이 빠르며 7일간 복구도 가능해요.
 스토리지를 7일간 추가로 사용하는 비용이 있지만, 삭제 실패가 핵심 비즈니스에 영향을 주지 않고 트래픽 적은 새벽에 일괄 처리할 수 있어서 현업에서도 일반적인 방식이에요.
 
+**스토리지 비용 관점:**
+Cloudflare R2 기준으로 저장 비용은 월 $0.015/GB예요. 프로필 이미지가 평균 500KB이고 일일 교체가 100건이면 7일 유예 기간 동안 추가 스토리지는 약 350MB($0.005/월)로 무시할 수 있는 수준이에요. 반면 즉시 삭제 실패로 인한 재처리 로직, 보상 트랜잭션 구현 비용은 개발 시간으로 환산하면 훨씬 비쌉니다.
+
 ---
 
 ## 인프라 현황 및 기술 선택 배경
@@ -104,8 +107,6 @@ Soft Delete + 배치 방식은 트랜잭션 안전하고 응답이 빠르며 7�
 RabbitMQ가 이미 인프라에 있지만, 이 기능에는 **Spring ApplicationEvent**를 선택했습니다.
 
 #### 이 기능에 RabbitMQ가 과한 이유
-
-RabbitMQ가 이미 인프라에 있지만, 이 기능의 특성상 Spring ApplicationEvent를 선택했어요.
 
 현재 SpringBoot 서버 1대에서 User 모듈과 Upload 모듈이 같은 JVM에서 실행되므로 서버 간 통신이 필요 없어요.
 soft delete가 실패해도 배치에서 처리되니 치명적이지 않고, 결제처럼 "반드시 처리되어야 하는" 작업도 아니에요.
@@ -480,6 +481,9 @@ Immediate deletion is simple but has issues with transaction inconsistency, API 
 
 The Soft Delete + batch approach is transaction-safe, fast in response, and allows 7-day recovery. While there is an additional storage cost for 7 days, deletion failures do not impact core business, and bulk processing can be done during low-traffic early morning hours, making this a common practice in production.
 
+**Storage Cost Perspective:**
+On Cloudflare R2, storage costs $0.015/GB per month. If profile images average 500KB and there are 100 daily replacements, the additional storage during the 7-day grace period is about 350MB ($0.005/month) — negligible. In contrast, implementing retry logic and compensating transactions for immediate deletion failures costs far more in development time.
+
 ---
 
 ## Infrastructure Context and Technology Choice
@@ -489,8 +493,6 @@ The Soft Delete + batch approach is transaction-safe, fast in response, and allo
 RabbitMQ is already in the infrastructure, but **Spring ApplicationEvent** was chosen for this feature.
 
 #### Why RabbitMQ Is Overkill for This Feature
-
-Although RabbitMQ is already in the infrastructure, Spring ApplicationEvent was chosen given the nature of this feature.
 
 Currently, the User module and Upload module run in the same JVM on a single SpringBoot server, so inter-server communication is unnecessary. Even if soft delete fails, the batch handles it, so it is not critical. It is also not a "must-process" task like payments. Using RabbitMQ would require additional ConnectionFactory, Exchange/Queue/Binding configuration, serialization logic, and reconnection handling, whereas Spring Event only needs a single `@EventListener`. On an ARM 1 OCPU / 6GB RAM environment, an unnecessary network hop is wasteful.
 

@@ -23,6 +23,13 @@ Log4j2를 JSON 포맷으로 바꾸고 Promtail JSON 파이프라인을 설정해
 
 ---
 
+## 정상 상태
+
+Spring Boot + Log4j2가 텍스트 포맷(PatternLayout)으로 로그를 stdout에 출력하고, Promtail이 이를 수집해서 Loki로 전송하는 구조였어요.
+일반 로그(단일 줄)는 정상적으로 수집되고 Grafana에서 검색이 가능했어요.
+
+---
+
 ## 증상
 
 Grafana에서 `NullPointerException`을 검색하면 에러 메시지 한 줄만 나오고, 실제 스택트레이스는 보이지 않았어요.
@@ -48,10 +55,29 @@ Promtail이 줄 단위로 파싱해서 첫 줄, 둘째 줄, 셋째 줄이 각각
 
 ---
 
+## 원인 분석
+
+Promtail은 기본적으로 `\n`(개행)을 로그 엔트리 경계로 인식해요.
+Java 스택트레이스는 여러 줄로 출력되니, Promtail이 각 줄을 독립된 로그 엔트리로 분리하는 건 당연한 동작이에요.
+
+---
+
+## 대안 검토
+
+| 방식 | 장점 | 단점 | 판단 |
+|------|------|------|------|
+| **Promtail multiline stage** | 기존 텍스트 포맷 유지 | 정규표현식으로 시작 패턴을 정의해야 하고, 로그 포맷이 바뀌면 정규식도 수정 필요. 구조화 쿼리 불가 | 탈락 |
+| **Log4j2 JSON 포맷 전환** | 스택트레이스가 JSON 필드 안에 이스케이프되어 자동으로 한 줄. 구조화 쿼리(level, traceId 등) 가능 | 로그 크기 증가 (JSON 메타데이터), 사람이 읽기 어려움 | **선택** |
+| **Fluentd/Fluent Bit** | 멀티라인 파서 내장 | Promtail을 교체해야 함. Loki와의 호환성 유지가 목표인데 인프라 변경 과잉 | 탈락 |
+
+multiline stage도 검토했지만, 텍스트 로그에서 정규식으로 멀티라인을 묶으면 "타임스탬프로 시작하는 줄"을 엔트리 경계로 잡아야 하는데, 로그 포맷이 바뀔 때마다 정규식을 수정해야 해요. JSON 전환하면 멀티라인 문제가 원천적으로 사라지고, 덤으로 구조화 쿼리(level="ERROR", traceId 기반 추적)가 가능해져서 JSON을 택했어요.
+
+---
+
 ## 해결: Log4j2 JSON 포맷 + Promtail 파이프라인
 
 핵심은 스택트레이스를 한 줄로 만드는 거였어요.
-JSON 포맷으로 바꾸면 스택트레이스가 message 필드 안에 이스케이프된 문자열로 들어가니, Promtail 입장에서는 한 줄이 돼요.
+JSON 포맷으로 바꾸면 스택트레이스가 `thrown` 필드(Log4j2 JsonLayout 기준) 안에 이스케이프된 문자열로 들어가니, 전체 로그 이벤트가 한 줄의 JSON이 되어 Promtail이 하나의 엔트리로 인식해요.
 
 ### 1. Log4j2 JSON Layout 적용
 
@@ -134,6 +160,12 @@ Resolved stacktrace search failures in Grafana caused by multi-line log splittin
 
 ---
 
+## Normal State
+
+Spring Boot + Log4j2 output text-formatted logs (PatternLayout) to stdout. Promtail collected these and forwarded to Loki. Single-line logs were collected and searchable in Grafana normally.
+
+---
+
 ## Symptoms
 
 Searching for `NullPointerException` in Grafana returned only the error message line, not the actual stacktrace. Each stacktrace line was stored as a separate log entry.
@@ -157,9 +189,25 @@ Promtail parsed line-by-line, making each line a separate log entry. Searching "
 
 ---
 
+## Root Cause
+
+Promtail uses `\n` (newline) as log entry boundaries by default. Java stacktraces span multiple lines, so Promtail naturally splits each line into a separate log entry.
+
+---
+
+## Alternatives Considered
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Promtail multiline stage** | Keeps text format | Requires regex for start patterns; regex must update when log format changes; no structured queries | Rejected |
+| **Log4j2 JSON format** | Stacktrace auto-escaped into single JSON field; enables structured queries (level, traceId) | Larger log size (JSON metadata); harder to read raw | **Selected** |
+| **Fluentd/Fluent Bit** | Built-in multiline parser | Requires replacing Promtail; excessive infra change for this goal | Rejected |
+
+---
+
 ## Solution: Log4j2 JSON Format + Promtail Pipeline
 
-The key was making stacktraces single-line. JSON format embeds stacktraces as escaped strings within the message field, appearing as one line to Promtail.
+The key was making stacktraces single-line. JSON format embeds stacktraces as escaped strings within the `thrown` field (Log4j2 JsonLayout), making the entire log event a single JSON line that Promtail recognizes as one entry.
 
 ### 1. Log4j2 JSON Layout
 

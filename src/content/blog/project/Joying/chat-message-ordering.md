@@ -21,6 +21,16 @@ Redis Pub/Sub으로 실시간 메시징을 구현하면서, 이 순서 보장이
 
 ---
 
+## 0. 정상 상태
+
+**서버 환경**: EC2 t3.medium 1대, Spring Boot + WebSocket STOMP, Redis Pub/Sub, MongoDB. 현재 서버 1대이므로 메시지 순서 문제가 없음.
+
+**데이터 특성**: 1:1 채팅으로, 채팅방 참여자는 구매자/판매자 2명 고정. 메시지 빈도는 채팅방당 초당 1-3건 수준. 피크 시 전체 초당 10-20건.
+
+**순서가 중요한 이유**: 대여 플랫폼이므로 "가능한가요?" → "네 가능합니다" → "몇 시에 만날까요?" 같은 흐름이 뒤섞이면 거래 자체가 불가능. 메시지 순서 보장은 **기능 요구사항**이다.
+
+---
+
 ## 실시간 전달 vs 저장 순서
 
 채팅에서 "순서"는 두 가지를 구분해야 해요.
@@ -196,6 +206,16 @@ MongoDB에 `chatRoomId + createdAt` 복합 인덱스를 추가해서 정렬 비�
 I was responsible for building 1:1 chat for an item rental platform. Chat messages must appear to the recipient in the exact order they were sent. If you send "Hello" followed by "What's up?" on KakaoTalk but the recipient sees "What's up?" first, the conversation breaks down.
 
 While implementing real-time messaging with Redis Pub/Sub, I discovered that guaranteeing message order is not as simple as it seems.
+
+---
+
+## 0. Normal State
+
+**Server environment**: Single EC2 t3.medium, Spring Boot + WebSocket STOMP, Redis Pub/Sub, MongoDB. Currently single server — no message ordering issues.
+
+**Data characteristics**: 1:1 chat only (buyer + seller, 2 participants per room). Message frequency: 1-3 msgs/sec per room, peak 10-20 msgs/sec total.
+
+**Why ordering matters**: As a rental platform, conversation flows like "Is this available?" → "Yes" → "What time should we meet?" — if these get scrambled, the transaction fails. Message ordering is a **functional requirement**, not a nice-to-have.
 
 ---
 

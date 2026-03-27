@@ -136,7 +136,7 @@ public ApiResponse<UserResponse> getUser(
 
 ## 속도는?
 
-JWT라서 DB 조회가 없어요. 토큰 파싱만 하면 끝이라 0.1ms 정도 걸립니다. 세션 방식은 매 요청마다 DB나 Redis를 조회해야 해서 5~20ms 정도 걸리는데, 비교하면 꽤 차이나요. 물론 세션도 장점이 있지만 (토큰 탈취 시 즉시 무효화 등), 모바일 앱에서는 JWT가 더 맞는 것 같습니다.
+JWT라서 DB 조회가 없어요. 토큰 파싱은 CPU 연산만 수행하기 때문에 sub-millisecond 수준이에요. 세션 방식은 매 요청마다 DB나 Redis를 조회해야 해서 네트워크 I/O가 추가됩니다. Redis 조회는 보통 1ms 미만, DB 조회는 수 ms 수준이에요. 물론 세션도 장점이 있지만 (토큰 탈취 시 즉시 무효화 등), 모바일 앱에서는 멀티 디바이스 지원과 서버 무상태성이 중요해서 JWT가 더 맞습니다.
 
 ---
 
@@ -295,7 +295,7 @@ In this project, since it is a mobile-app-only API where almost everything requi
 
 ## Performance?
 
-Since it uses JWT, there is no DB lookup. Token parsing is all it takes, which runs in about 0.1ms. Session-based approaches require a DB or Redis lookup on every request, taking around 5-20ms -- a significant difference. Sessions do have their advantages (like immediate token revocation upon theft), but for a mobile app, JWT seems like the better fit.
+Since it uses JWT, there is no DB lookup. Token parsing only performs CPU operations, so it completes in sub-millisecond time. Session-based approaches require a DB or Redis lookup on every request, adding network I/O. Redis lookups are typically under 1ms, while DB lookups take several milliseconds. Sessions do have their advantages (like immediate token revocation upon theft), but for a mobile app, multi-device support and server statelessness are important, making JWT the better fit.
 
 ---
 

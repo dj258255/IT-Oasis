@@ -13,6 +13,7 @@ tags:
   - Fortune-Sheet
   - Optimization
 category: project/IndiBalancing
+coverImage: "/uploads/project/IndiBalancing/cell-input-sync/cover.svg"
 draft: false
 ---
 
@@ -114,6 +115,9 @@ onInput={(e) => {
 
 ## 왜 즉시 동기화가 성능 문제 없는가?
 
+**오픈소스가 즉시 동기화하는 이유**: Fortune-Sheet, Luckysheet는 React를 사용하지 않고 DOM을 직접 조작하기 때문에 상태 관리 오버헤드 자체가 없어요. Univer는 RxJS Observable로 값을 공유하므로 리렌더링 없이 동기화돼요.
+
+**본 프로젝트에서 즉시 동기화가 가능한 이유**:
 1. **수식바는 독립 컴포넌트**라서 테이블 전체가 리렌더링되지 않아요
 2. **React 18 batching** 덕분에 여러 setState가 하나로 합쳐져요
 3. **문자열만 업데이트**하기 때문에 연산 부하가 거의 없습니다
@@ -235,6 +239,9 @@ onInput={(e) => {
 
 ## Why Immediate Sync Has No Performance Issues
 
+**Why open-source projects use immediate sync**: Fortune-Sheet and Luckysheet don't use React — they manipulate the DOM directly, so there's no state management overhead. Univer shares values via RxJS Observables, achieving sync without re-renders.
+
+**Why immediate sync works in this project**:
 1. **Formula bar is an independent component** - no full table re-render
 2. **React 18 batching** - multiple setStates merged into one
 3. **String-only update** - virtually no computational load

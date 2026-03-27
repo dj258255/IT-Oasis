@@ -27,7 +27,7 @@ draft: false
 
 ## 1. 정상 상태 인식
 
-커뮤니티 게시판(1,425만 건)의 게시글 상세 조회 API(`GET /api/v1.0/posts/{id}`)는 두 가지 작업을 수행했다:
+커뮤니티 게시판(1,215만 건)의 게시글 상세 조회 API(`GET /api/v1.0/posts/{id}`)는 두 가지 작업을 수행했다:
 
 ```java
 // PostController.getPost()

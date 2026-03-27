@@ -313,6 +313,8 @@ Apple은 보안상 주기적으로 서명 키를 교체해요. 새 키가 생기
 
 **모바일은 달라요.** 앱 저장소가 탈취되면 토큰이 노출될 수 있어요.
 
+Refresh Token 저장소로 DB(MySQL)와 Redis를 비교했어요. DB에 저장하면 추가 인프라가 필요 없지만, 토큰 갱신은 매 Access Token 만료마다 발생해서 읽기/쓰기가 빈번해요. MySQL은 디스크 기반이라 단순 키-값 조회에도 수 ms가 걸리고, 커넥션 풀을 소비해요. Redis는 인메모리라 같은 작업이 sub-ms로 끝나고, TTL 설정으로 만료된 토큰이 자동 삭제돼요. Oracle Cloud Free Tier에서 Redis를 직접 설치해서 추가 비용 없이 운영하고 있어요.
+
 그래서 **Redis에 Refresh Token을 저장**하고, 요청마다 비교합니다:
 
 ![refresh-token-reuse-detection](/uploads/project/Tymee/mobile-jwt-auth/refresh-token-reuse-detection.png)
@@ -788,6 +790,8 @@ This is why Apple Sign In was the hardest part for a solo developer.
 On the web, HttpOnly cookies made JavaScript access impossible. Theft detection wasn't needed.
 
 **Mobile is different.** If the app's storage is compromised, tokens can be exposed.
+
+I compared MySQL and Redis as Refresh Token stores. Storing in MySQL requires no additional infrastructure, but token refresh happens frequently (on every Access Token expiration), involving heavy read/write operations. MySQL is disk-based, so even simple key-value lookups take several milliseconds and consume connection pool resources. Redis is in-memory, completing the same operations in sub-milliseconds, and TTL settings automatically clean up expired tokens. I run Redis on Oracle Cloud Free Tier with no additional cost.
 
 So **Refresh Tokens are stored in Redis** and compared with each request:
 

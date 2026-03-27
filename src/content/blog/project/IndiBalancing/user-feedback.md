@@ -13,6 +13,7 @@ tags:
   - Spreadsheet
   - Accessibility
 category: project/IndiBalancing
+coverImage: "/uploads/project/IndiBalancing/user-feedback/cover.svg"
 draft: false
 ---
 

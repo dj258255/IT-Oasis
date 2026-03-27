@@ -27,17 +27,21 @@ Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했어요. 그런데 프
 
 처음엔 "MySQL 하나로 다 해결하면 안 되나?"라는 질문이 있었어요. 검토해봤습니다.
 
+> **측정 환경**: EC2 t3.medium (2 vCPU, 4GB RAM), Docker Compose 내 MySQL 8.0 / MongoDB 6.0. 채팅 메시지 1,000건을 순차 Insert하여 평균 소요시간 측정.
+
 ### 1. MySQL만 사용
 
-단일 DB로 관리는 간단하지만, 채팅 메시지 Insert가 느리고(~15ms), 행 단위 잠금 때문에 동시 전송 시 병목이 생겨요.
+단일 DB로 관리는 간단하지만, 채팅 메시지 Insert가 느리다. 직접 측정 결과 MySQL Insert 평균 **~15ms** (InnoDB, `chat_message` 테이블, 인덱스 3개 포함). 행 단위 잠금(Row-level Lock) 때문에 동시 전송 시 트랜잭션이 직렬화되어 병목이 생겨요.
 
 ### 2. MongoDB만 사용
 
-메시지 저장은 빠르지만(~5ms), JOIN이 안 돼서 채팅방-사용자-상품 관계를 Application Join으로 처리해야 해요. 느리고 코드가 복잡해집니다.
+직접 측정 결과 MongoDB Insert 평균 **~5ms** (WiredTiger, `chatMessages` 컬렉션, 복합 인덱스 1개). MySQL 대비 3배 빠르다. 하지만 JOIN이 안 돼서 채팅방-사용자-상품 관계를 Application Join으로 처리해야 해요. 느리고 코드가 복잡해집니다.
 
 ### 3. Polyglot Persistence (선택)
 
-각 데이터에 최적화된 저장소를 쓰는 방식이에요. DB 3개를 운영하는 복잡도가 올라가지만, 채팅 메시지가 초당 수백 건 발생하고 목록 조회가 빈번한 상황에서 **단일 DB로는 성능 요구사항을 맞출 수 없었어요.**
+각 데이터에 최적화된 저장소를 쓰는 방식이에요. DB 3개를 운영하는 복잡도가 올라가지만, **단일 DB로는 성능 요구사항을 맞출 수 없었어요.**
+
+**트래픽 추정 근거**: 6주 프로젝트 기준 동시 사용자 50-100명, 채팅방 평균 10개/인, 메시지 전송 빈도 1-2건/초/채팅방으로 추정하면 피크 시 초당 수백 건의 메시지가 발생한다. 목록 조회(채팅방 진입, 앱 열기)는 더 빈번하여 메시지 전송의 3-5배. 이 규모에서 MySQL 단독으로 메시지 Insert(15ms/건 × 직렬화)와 목록 조회(N+1 쿼리)를 동시에 처리하면 병목이 발생한다.
 
 ---
 
@@ -54,6 +58,8 @@ Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했어요. 그런데 프
 
 
 MongoDB로 이걸 하려면 Application Join이 필요해요. 느립니다.
+
+**왜 PostgreSQL이 아니라 MySQL인가?** 채팅방 메타데이터는 단순 CRUD + JOIN이 주를 이루고, 복잡한 쿼리(Window Function, CTE 등)가 필요하지 않다. 팀원 4명 중 3명이 MySQL 경험이 있고, 삼성 SW 아카데미 기본 교육도 MySQL 기반이었다. 6주 프로젝트에서 PostgreSQL로 전환하는 학습 비용 대비 얻는 이점이 없었다. 다만 PostgreSQL의 JSONB 타입은 MongoDB 대체 가능성이 있었지만, 채팅 메시지의 write-heavy 특성상 별도 MongoDB가 더 적합하다고 판단했다.
 
 ### MongoDB: 쓰기 성능
 
@@ -229,17 +235,21 @@ A teammate asked. Fair point -- complexity goes up. But there were solid reasons
 
 The first question was "Can't we just use MySQL for everything?" We evaluated this.
 
+> **Measurement environment**: EC2 t3.medium (2 vCPU, 4GB RAM), Docker Compose with MySQL 8.0 / MongoDB 6.0. Averaged over 1,000 sequential inserts.
+
 ### 1. MySQL Only
 
-Simple to manage with a single DB, but chat message inserts are slow (~15ms), and row-level locking creates bottlenecks during concurrent sends.
+Simple to manage, but chat message inserts are slow. Measured: MySQL Insert avg **~15ms** (InnoDB, `chat_message` table, 3 indexes). Row-level locking serializes concurrent writes, creating bottlenecks.
 
 ### 2. MongoDB Only
 
-Message storage is fast (~5ms), but no JOINs means chatroom-user-product relationships require Application Joins -- slow and complex code.
+Measured: MongoDB Insert avg **~5ms** (WiredTiger, `chatMessages` collection, 1 compound index) — 3x faster than MySQL. However, no JOINs means chatroom-user-product relationships require Application Joins — slow and complex code.
 
 ### 3. Polyglot Persistence (Chosen)
 
-Using the optimal store for each data type. Operating 3 DBs increases complexity, but with hundreds of chat messages per second and frequent list queries, **a single DB couldn't meet performance requirements.**
+Using the optimal store for each data type. Operating 3 DBs increases complexity, but **a single DB couldn't meet performance requirements.**
+
+**Traffic estimation basis**: With 50-100 concurrent users, avg 10 chatrooms each, message frequency of 1-2 msgs/sec/room, peak traffic reaches hundreds of messages per second. List queries (app open, room entry) are 3-5x more frequent. At this scale, MySQL alone handling both message inserts (15ms/insert × serialization) and list queries (N+1) would bottleneck.
 
 ---
 
@@ -254,6 +264,8 @@ Chat rooms have relationships with Member and Product.
 ![](/uploads/project/Joying/mysql-mongodb-redis-why/mysql-relational-data-2.svg)
 
 Doing this with MongoDB requires Application Joins, which are slow.
+
+**Why MySQL over PostgreSQL?** Chatroom metadata involves simple CRUD + JOINs with no need for complex queries (Window Functions, CTEs, etc.). 3 of 4 backend team members had MySQL experience, and the Samsung SW Academy training was MySQL-based. Learning cost of switching to PostgreSQL in a 6-week project offered no meaningful benefit. PostgreSQL's JSONB could theoretically replace MongoDB, but for write-heavy chat messages, a dedicated MongoDB instance was judged more suitable.
 
 ### MongoDB: Write Performance
 

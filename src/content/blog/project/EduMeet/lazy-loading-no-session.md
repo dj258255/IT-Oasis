@@ -83,8 +83,18 @@ Lazy 로딩은 **영속성 컨텍스트(Persistence Context)가 살아 있는 �
 | 적용 범위 | 테스트 한정 우회 | 서비스 코드에서도 적용 가능 |
 | 근본 해결 | 아님 | 맞음 |
 
-`@OneToMany` 구조에서 Lazy 로딩을 유지하면서도, 필요한 시점에 `@EntityGraph`로 Eager 전환을 선언할 수 있다는 점이 핵심이에요.
-하위 엔티티의 로딩 전략을 **상황에 따라 유연하게 제어**할 수 있죠.
+### 왜 @Transactional이 아닌 @EntityGraph인가
+
+`@Transactional`을 테스트에 추가하면 당장은 동작하지만, 두 가지 문제가 있어요.
+
+1. **서비스 코드의 실제 동작을 검증하지 못함**: 테스트에서 트랜잭션을 열어주면, 서비스 코드가 트랜잭션 없이도 잘 동작하는 것처럼 보이는 **거짓 양성(false positive)**이 발생해요. 실제 운영 환경에서 Controller → Service 호출 시 트랜잭션 범위 밖에서 Lazy 엔티티에 접근하면 동일한 `no session` 에러가 터져요.
+2. **문제를 숨기는 것이지 해결하는 것이 아님**: 테스트가 통과했다고 해서 코드가 안전한 게 아니에요. Open Session in View(OSIV) 패턴에 의존하는 것과 같은 맥락이에요.
+
+`@EntityGraph`는 필요한 연관 엔티티를 **쿼리 시점에 명시적으로 선언**하는 방식이라, 어떤 환경에서든 동일하게 동작해요. 이 경험 이후 프로젝트 전체에서 Lazy 엔티티에 접근하는 모든 Repository 메서드에 로딩 전략을 명시하는 습관이 생겼어요.
+
+### 이 문제에서 배운 원칙
+
+`@OneToMany` 구조에서 Lazy 로딩을 유지하면서도, 필요한 시점에 `@EntityGraph`로 Eager 전환을 선언할 수 있다는 점이 핵심이에요. 이후 N+1 문제를 분석할 때도 이 경험이 바탕이 됐어요 — Lazy 로딩의 동작 원리(프록시 초기화 → 영속성 컨텍스트 필요)를 이해하고 있었기 때문에, N+1의 근본 원인을 빠르게 파악할 수 있었어요.
 
 ---
 
@@ -156,7 +166,18 @@ The query log shows that Board and BoardImage tables were **retrieved in a singl
 | Applicability | Test-only workaround | Applicable in service code too |
 | Fundamental Fix | No | Yes |
 
-The key takeaway is that while maintaining Lazy loading in a `@OneToMany` structure, you can declare Eager fetching with `@EntityGraph` when needed. This allows **flexible control over child entity loading strategies based on the situation**.
+### Why @EntityGraph Over @Transactional
+
+Adding `@Transactional` to tests works immediately, but has two problems:
+
+1. **Doesn't verify actual service behavior**: Opening a transaction in tests creates **false positives** — making service code appear to work without transactions. In production, accessing Lazy entities outside transaction scope (Controller → Service) triggers the same `no session` error.
+2. **Hides the problem rather than solving it**: Passing tests don't mean safe code. This is the same trap as depending on Open Session in View (OSIV).
+
+`@EntityGraph` **explicitly declares** which related entities to load at query time, working identically in any environment. After this experience, I adopted the practice of explicitly specifying loading strategies for all Repository methods that access Lazy entities.
+
+### Principle Learned
+
+The key takeaway is that while maintaining Lazy loading in a `@OneToMany` structure, you can declare Eager fetching with `@EntityGraph` when needed. This experience became foundational when analyzing the N+1 problem later — understanding Lazy loading mechanics (proxy initialization → Persistence Context required) enabled quick identification of N+1's root cause.
 
 ---
 

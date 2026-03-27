@@ -1,7 +1,7 @@
 ---
 title: '검색엔진이 시스템을 마비시킨 과정과 대응'
 titleEn: 'How the Search Engine Crashed the System and Our Response'
-description: LIKE 검색이 Full Table Scan으로 2,744만 행을 스캔하며 HikariCP 커넥션 풀을 고갈시켜 시스템을 마비시킨 원인을 분석하고, 긴급 완화 조치로 시스템 안정성을 확보한 과정을 정리한다.
+description: LIKE 검색이 Full Table Scan으로 1,215만 행을 스캔하며 HikariCP 커넥션 풀을 고갈시켜 시스템을 마비시킨 원인을 분석하고, 긴급 완화 조치로 시스템 안정성을 확보한 과정을 정리한다.
 descriptionEn: Analyzes how LIKE search caused Full Table Scan on 27.44M rows, exhausting HikariCP connection pool and crashing the system, and documents emergency mitigation measures to restore stability.
 date: 2026-02-01T00:00:00.000Z
 tags:
@@ -16,7 +16,7 @@ draft: false
 coverImage: "/uploads/project/WikiEngine/search-system-crash/server-status.png"
 ---
 
-한국어 나무위키(약 100만 건) + 한국어 위키피디아(216만 건) + 영문 위키피디아(2,528만 건), 총 약 2,744만 건의 위키 덤프 데이터를 MySQL에 적재하고 검색 기능을 구현하는 프로젝트입니다.
+나무위키(57만 건) + 한국어 위키백과(74만 건) + 영어 위키백과(714만 건) + 뉴스(16만 건) + 웹 콘텐츠(354만 건), 총 약 1,215만 건의 데이터를 MySQL에 적재하고 검색 기능을 구현하는 프로젝트입니다.
 
 **기술 스택:** Java 25, Spring Boot 4.0, MySQL 8.0, HikariCP
 
@@ -37,7 +37,7 @@ ORDER BY created_at DESC
 LIMIT 20 OFFSET 0;
 ```
 
-이 시점에서는 인덱스가 없고, 테이블에는 약 2,744만 행이 존재합니다.
+이 시점에서는 인덱스가 없고, 테이블에는 약 1,215만 행이 존재합니다.
 
 ### 서버 현황
 
@@ -73,7 +73,7 @@ LIMIT 20 OFFSET 0;
 ### 3-1. Full Table Scan
 
 `LIKE '%keyword%'`는 와일드카드가 앞에 있어 **B-Tree 인덱스를 사용할 수 없습니다**.
-MySQL은 2,744만 행 전체를 순차 스캔합니다.
+MySQL은 1,215만 행 전체를 순차 스캔합니다.
 
 ```sql
 EXPLAIN SELECT * FROM posts
@@ -207,7 +207,7 @@ LIMIT 20;
 
 ![](/uploads/project/WikiEngine/search-system-crash/explain-analyze-fail.png)
 
-`EXPLAIN ANALYZE`는 실제로 쿼리를 실행하므로, 2,744만 행 Full Table Scan + filesort를 수행합니다.
+`EXPLAIN ANALYZE`는 실제로 쿼리를 실행하므로, 1,215만 행 Full Table Scan + filesort를 수행합니다.
 5초 타임아웃에 의해 중단되어 실제 실행 시간은 측정할 수 없었습니다.
 
 ---

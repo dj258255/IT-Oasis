@@ -45,7 +45,7 @@ Coroutine의 `async`를 쓰면 5개의 MongoDB 조회를 병렬로 처리할 수
 
 ## 원인 분석
 
-로그를 자세히 보니 401이 아니라 `LazyInitializationException`이었어요. Spring Security 예외 핸들러가 이걸 401로 변환해서 보여준 거였습니다.
+로그를 자세히 보니 401이 아니라 `LazyInitializationException`이었어요. Spring Security 필터 체인에서 인증 처리 중 예외가 발생하면, `ExceptionTranslationFilter`가 이를 `AuthenticationException`으로 간주하고 401을 반환한다. 즉, `LazyInitializationException` → Security 필터에서 catch → 인증 실패로 처리 → 401 응답이 된 거였습니다.
 
 org.hibernate.LazyInitializationException:
 could not initialize proxy - no Session
@@ -112,6 +112,12 @@ Spring의 `@Transactional`은 Thread-Local 기반이라 Coroutine에서 스레�
 
 1. **runBlocking**: 스레드 전환 없이 Session/SecurityContext 유지
 2. **Fetch Join**: 혹시 모를 Lazy Loading 문제 방지 (이중 안전장치)
+
+**"runBlocking이면 Coroutine 쓰는 의미가 없는 거 아니야?"**
+
+맞는 지적이다. REST API 경로에서는 `runBlocking`으로 동기 실행하므로 Coroutine의 비동기 이점이 없다. 하지만 Coroutine을 도입한 이유는 REST API가 아니라 **WebSocket Handler에서 MongoDB 병렬 조회**를 위해서였다([Inbound Thread 최적화](/blog/project/joying/inbound-thread-optimization) 참고). REST API에서 같은 `suspend fun`을 호출할 때만 `runBlocking`으로 감싸는 것이고, WebSocket 경로에서는 Coroutine의 `async` 병렬 처리가 그대로 동작한다.
+
+**Virtual Thread(Java 21)가 더 깔끔한 해결책**이라는 것도 인지하고 있었다. Virtual Thread는 ThreadLocal 기반 코드(Hibernate, Security)와 호환되면서 경량 스레드의 이점을 얻을 수 있다. 하지만 프로젝트가 Java 17 기반이었고, 6주 프로젝트에서 Java 21 업그레이드 + Spring Boot 버전 변경은 리스크가 컸다.
 
 우리 경우는 `ChatRoom → Product`, `ChatRoom → Buyer`, `ChatRoom → Seller`가 모두 N:1 관계거든요. N:1 관계에서는 Fetch Join이 가장 효율적이에요.
 
@@ -217,7 +223,7 @@ Same token, but only the list query failed.
 
 ## Root Cause Analysis
 
-Looking at the logs more carefully, it wasn't actually 401 but a `LazyInitializationException`. Spring Security's exception handler was converting it to 401.
+Looking at the logs more carefully, it wasn't actually 401 but a `LazyInitializationException`. When an exception occurs during authentication processing in Spring Security's filter chain, `ExceptionTranslationFilter` treats it as an `AuthenticationException` and returns 401. So: `LazyInitializationException` → caught by Security filter → treated as auth failure → 401 response.
 
 ![](/uploads/project/Joying/coroutine-jpa-401/lazy-init-exception-code.svg)
 
@@ -250,6 +256,12 @@ Spring's `@Transactional` is ThreadLocal-based, so it doesn't work properly when
 
 1. **runBlocking**: Maintains Session/SecurityContext without thread switching
 2. **Fetch Join**: Prevents any Lazy Loading issues (double safety net)
+
+**"Doesn't runBlocking defeat the purpose of Coroutines?"**
+
+Fair point. In REST API paths, `runBlocking` runs synchronously, losing Coroutine's async benefit. But Coroutines were introduced for **WebSocket Handler's parallel MongoDB queries** ([Inbound Thread Optimization](/blog/project/joying/inbound-thread-optimization)), not REST APIs. Only REST paths wrap the same `suspend fun` with `runBlocking` — WebSocket paths still leverage `async` parallelism.
+
+**Virtual Threads (Java 21) would be cleaner** — compatible with ThreadLocal-based code (Hibernate, Security) while providing lightweight threads. However, the project was on Java 17, and upgrading Java + Spring Boot was too risky for a 6-week project.
 
 For N:1 relationships (`ChatRoom → Product`, `ChatRoom → Buyer`, `ChatRoom → Seller`), Fetch Join is most efficient.
 

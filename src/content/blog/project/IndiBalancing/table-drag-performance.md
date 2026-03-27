@@ -13,6 +13,7 @@ tags:
   - Throttle
   - Spreadsheet
 category: project/IndiBalancing
+coverImage: "/uploads/project/IndiBalancing/table-drag-performance/cover.svg"
 draft: false
 ---
 
@@ -98,7 +99,7 @@ const handleCellMouseEnter = useCallback(
 ```
 
 **분석**:
-- `mousemove` 이벤트는 초당 수백 번 발생할 수 있어요
+- `mousemove` 이벤트는 마우스 폴링 레이트에 따라 초당 60~120회 이상 발생할 수 있어요
 - 매 이벤트마다 `setSelectedCells` 호출 → 리렌더링이 트리거돼요
 - 브라우저 렌더링 주기(60fps = 16.67ms)보다 빈번한 상태 업데이트가 발생합니다
 
@@ -316,11 +317,11 @@ const handleCellMouseEnterThrottled = useMemo(
 **핵심 아이디어**:
 - 드래그 중에는 React Virtual DOM Diffing + Re-render 사이클을 우회해요
 - 마우스 업 시에만 React 상태를 동기화합니다
-- 셀에 `data-cell-id` 속성을 추가해서 빠른 DOM 쿼리가 가능해요
+- 셀에 `data-cell-id` 속성을 추가해서 DOM 쿼리가 가능해요 (단, data 속성 셀렉터는 class 셀렉터 대비 약 3배 느려요. 대규모 테이블에서는 JavaScript Map으로 셀 요소를 직접 추적하는 방식이 더 효율적일 수 있어요)
 
 #### 기법 3: CSS will-change 힌트
 ```typescript
-// 셀에 GPU 가속 힌트 추가
+// 셀에 합성 레이어 분리 힌트 추가
 style={{
   // ... 기존 스타일
   willChange: 'background, outline',
@@ -328,8 +329,8 @@ style={{
 ```
 
 **효과**:
-- 브라우저가 해당 속성 변경을 미리 최적화해요
-- GPU 레이어 분리로 리페인트 비용이 감소합니다
+- 브라우저가 해당 요소를 별도 합성 레이어로 분리하여, `background`/`outline` 변경 시 다른 요소에 대한 리페인트 영향을 줄여요
+- 단, `background`/`outline`은 compositor-only 속성이 아니므로 해당 레이어 내 paint는 여전히 발생해요. 진정한 GPU 합성만으로 처리되는 속성은 `transform`과 `opacity`예요
 
 ### 7.3 추가 개선 결과
 
@@ -432,7 +433,7 @@ const handleCellMouseEnter = useCallback(
 ```
 
 **Analysis**:
-- `mousemove` events can fire hundreds of times per second
+- `mousemove` events can fire 60-120+ times per second depending on mouse polling rate
 - Every event calls `setSelectedCells` → triggers re-render
 - State updates more frequent than browser rendering cycle (60fps = 16.67ms)
 
@@ -583,14 +584,14 @@ function rafThrottle<T extends (...args: any[]) => void>(fn: T): T {
 **Core idea**:
 - During drag: bypass React Virtual DOM Diffing + Re-render cycle
 - Sync to React state only on mouse up
-- Add `data-cell-id` attribute to cells for fast DOM queries
+- Add `data-cell-id` attribute to cells for DOM queries (note: data attribute selectors are ~3x slower than class selectors — for large tables, tracking cell elements directly in a JavaScript Map could be more efficient)
 
 #### Technique 3: CSS will-change Hint
 ```typescript
 style={{ willChange: 'background, outline' }}
 ```
 
-**Effect**: Browser pre-optimizes property changes; GPU layer separation reduces repaint cost
+**Effect**: Browser isolates the element into a separate compositing layer, reducing repaint impact on other elements. Note that `background`/`outline` are not compositor-only properties — paint still occurs within that layer. Only `transform` and `opacity` are handled purely by the GPU compositor
 
 ### 7.3 Additional Results
 

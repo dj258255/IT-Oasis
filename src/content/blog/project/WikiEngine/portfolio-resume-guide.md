@@ -55,11 +55,11 @@ draft: true
 
 ### 이력서용 (1줄)
 
-> 1,425만 건 위키 데이터 기반 커뮤니티 검색엔진 — LIKE → B-Tree → FULLTEXT ngram → Lucene 단계적 전환으로 시스템 마비 상태에서 P95 119ms, 에러율 0%까지 개선
+> 1,215만 건 위키 데이터 기반 커뮤니티 검색엔진 — LIKE → B-Tree → FULLTEXT ngram → Lucene 단계적 전환으로 시스템 마비 상태에서 P95 119ms, 에러율 0%까지 개선
 
 ### 포트폴리오용 (3줄)
 
-> 나무위키 + 위키피디아 덤프 데이터 1,425만 건을 MySQL에 적재하고, 실제 커뮤니티 수준의 트래픽을 감당하는 검색엔진을 구축한 프로젝트. 가장 느린 상태(LIKE Full Table Scan → 시스템 마비)에서 시작하여, 각 단계에서 병목을 수치로 증명하고 기술의 한계가 드러나는 시점에 다음 기술로 전환하는 과정을 기록했다. k6 부하 테스트(100 VU, 20분) + Grafana 모니터링으로 모든 최적화의 Before/After를 실측했다.
+> 나무위키 + 위키피디아 덤프 데이터 1,215만 건을 MySQL에 적재하고, 실제 커뮤니티 수준의 트래픽을 감당하는 검색엔진을 구축한 프로젝트. 가장 느린 상태(LIKE Full Table Scan → 시스템 마비)에서 시작하여, 각 단계에서 병목을 수치로 증명하고 기술의 한계가 드러나는 시점에 다음 기술로 전환하는 과정을 기록했다. k6 부하 테스트(100 VU, 20분) + Grafana 모니터링으로 모든 최적화의 Before/After를 실측했다.
 
 ---
 
@@ -76,11 +76,11 @@ draft: true
 
 #### 이력서용 (3줄)
 
-> `LIKE '%keyword%'` 검색이 2,744만 행 Full Table Scan을 유발하여 HikariCP 커넥션 풀(10개)을 고갈시키고, 검색 외 전체 API가 503을 반환하는 cascade failure를 발견했다. EXPLAIN으로 원인을 특정(type=ALL, rows=27,443,742)한 뒤, content LONGTEXT 검색 제거 + @Transactional(timeout=5) + HikariCP fail-fast(connectionTimeout 30초→3초) 긴급 조치로 검색 외 API의 가용성을 즉시 복구했다.
+> `LIKE '%keyword%'` 검색이 1,215만 행 Full Table Scan을 유발하여 HikariCP 커넥션 풀(10개)을 고갈시키고, 검색 외 전체 API가 503을 반환하는 cascade failure를 발견했다. EXPLAIN으로 원인을 특정(type=ALL, rows=27,443,742)한 뒤, content LONGTEXT 검색 제거 + @Transactional(timeout=5) + HikariCP fail-fast(connectionTimeout 30초→3초) 긴급 조치로 검색 외 API의 가용성을 즉시 복구했다.
 
 #### 포트폴리오용 (상세)
 
-> **상황:** 2,744만 건 위키 데이터가 적재된 MySQL에서 `LIKE '%keyword%'` 검색 API를 호출하자, 검색뿐 아니라 게시글 목록·상세 조회 등 **전혀 무관한 API까지 503을 반환**하며 서버 전체가 마비되었다.
+> **상황:** 1,215만 건 위키 데이터가 적재된 MySQL에서 `LIKE '%keyword%'` 검색 API를 호출하자, 검색뿐 아니라 게시글 목록·상세 조회 등 **전혀 무관한 API까지 503을 반환**하며 서버 전체가 마비되었다.
 >
 > **원인 분석:** EXPLAIN으로 확인한 결과 `type=ALL`, `rows=27,443,742` — 인덱스 없이 전체 행을 순차 스캔하고 있었다. `content` 컬럼이 LONGTEXT(평균 6,586자)이므로 행마다 수 KB~수십 KB를 메모리에 로드하여 패턴 매칭하면서, 쿼리 하나가 수십 초간 커넥션을 점유했다. HikariCP `maximumPoolSize=10`이 소진되면서 **모든 API가 커넥션을 얻지 못해 연쇄 타임아웃**이 발생한 것이 핵심이었다.
 >
@@ -114,7 +114,7 @@ draft: true
 
 #### 이력서용 (4줄)
 
-> MySQL FULLTEXT ngram으로 57만 건 한국어 검색을 12초→6ms(2,100배)로 복구했으나, 3가지 구조적 한계를 발견했다: (1) 고빈도 2-gram 토큰("대한")이 19.6만 건 포스팅 리스트를 순차 탐색하여 5초+ 타임아웃(InnoDB FTS ib_vector_t — MySQL Bug #85880), (2) 1,477만 건 전체 인덱스 300GB+ 디스크 초과(Row-Oriented 구조 한계), (3) 단어 경계 미보존 false positive. Lucene/Elasticsearch/벡터DB를 서버 비용 + CDC + 인건비까지 비교하고, 단일 서버에서 임베디드 Lucene + Nori 형태소 분석기를 선택하여 고빈도 토큰 타임아웃→12ms 해소, 전체 1,425만 건 검색 가능, false positive 제거를 달성했다.
+> MySQL FULLTEXT ngram으로 57만 건 한국어 검색을 12초→6ms(2,100배)로 복구했으나, 3가지 구조적 한계를 발견했다: (1) 고빈도 2-gram 토큰("대한")이 19.6만 건 포스팅 리스트를 순차 탐색하여 5초+ 타임아웃(InnoDB FTS ib_vector_t — MySQL Bug #85880), (2) 1,477만 건 전체 인덱스 300GB+ 디스크 초과(Row-Oriented 구조 한계), (3) 단어 경계 미보존 false positive. Lucene/Elasticsearch/벡터DB를 서버 비용 + CDC + 인건비까지 비교하고, 단일 서버에서 임베디드 Lucene + Nori 형태소 분석기를 선택하여 고빈도 토큰 타임아웃→12ms 해소, 전체 1,215만 건 검색 가능, false positive 제거를 달성했다.
 
 #### 포트폴리오용 (상세)
 
@@ -137,8 +137,8 @@ draft: true
 >
 > **결과:**
 > - "대한" 검색: 5초+ 타임아웃 → **12ms**
-> - 검색 대상: 57만 건(한국어만) → **1,425만 건(전체)**
-> - 인덱스 크기: 6.7GB(57만 건) → 29GB(1,425만 건) — ngram 대비 4.3배 감소
+> - 검색 대상: 57만 건(한국어만) → **1,215만 건(전체)**
+> - 인덱스 크기: 6.7GB(57만 건) → 29GB(1,215만 건) — ngram 대비 4.3배 감소
 > - false positive: "대한국제공항" 매칭 → **매칭 안 됨** (Nori 형태소 분석)
 > - 추가 인프라 비용: **$0** (기존 서버에 내장)
 
@@ -267,7 +267,7 @@ draft: true
 
 | 영역 | 문장 |
 |------|------|
-| **DB 최적화** | EXPLAIN/EXPLAIN ANALYZE 기반 쿼리 진단, Deferred Join(Covering Index), Page→Slice COUNT(*) 제거, OFFSET 페이지 제한. 1,425만 건 테이블에서 19,424ms→8ms |
+| **DB 최적화** | EXPLAIN/EXPLAIN ANALYZE 기반 쿼리 진단, Deferred Join(Covering Index), Page→Slice COUNT(*) 제거, OFFSET 페이지 제한. 1,215만 건 테이블에서 19,424ms→8ms |
 | **검색엔진** | MySQL FULLTEXT ngram 한계 분석(fts0que.cc 소스 수준) → Lucene 임베디드 + Nori 형태소 분석기 전환. BM25 + FeatureField 랭킹, PhraseQuery 구절 검색, P@10/MAP 정량 평가 |
 | **캐싱** | Caffeine L1 W-TinyLFU, @CacheEvict 즉시 무효화, Cache-Control stale-while-revalidate, Actuator 히트율 모니터링. 검색 히트율 81.8%, cascade failure 해소 |
 | **부하 테스트** | k6 smoke/load 프로필, InfluxDB+Grafana, 시나리오별 SLA. cascade failure 2회 진단(OFFSET CPU 포화, 복합 스코어링 CPU 포화) |
@@ -284,7 +284,7 @@ draft: true
 | 1 | [검색엔진이 시스템을 마비시킨 과정과 대응](/blog/project/wikiengine/search-system-crash) | LIKE Full Table Scan → 시스템 마비 → 긴급 조치(타임아웃, fail-fast)로 가용성 확보 |
 | 2 | [자동완성 B-Tree 인덱스 걸기](/blog/project/wikiengine/autocomplete-btree-index) | B-Tree 복합 인덱스 → 자동완성 해소 (>5,000ms → 8ms) |
 | 3 | [FULLTEXT ngram 인덱스](/blog/project/wikiengine/fulltext-ngram-index) | 검색 동작 복구 (12초 → 6ms, 57만 건). 고빈도 토큰 타임아웃·300GB+ 인덱스·false positive 한계 발견. InnoDB FTS 소스코드(fts0que.cc) 수준 원인 분석 |
-| 4 | [MySQL 검색을 버리고 Lucene을 선택한 이유](/blog/project/wikiengine/lucene-decision) | Lucene + Nori → 전체 1,425만 건 검색 (타임아웃 → 12ms). Lucene/ES/벡터DB 비용 비교 후 임베디드 Lucene 결정 |
+| 4 | [MySQL 검색을 버리고 Lucene을 선택한 이유](/blog/project/wikiengine/lucene-decision) | Lucene + Nori → 전체 1,215만 건 검색 (타임아웃 → 12ms). Lucene/ES/벡터DB 비용 비교 후 임베디드 Lucene 결정 |
 | 5 | [Deferred Join 적용기](/blog/project/wikiengine/deferred-join-optimization) + [COUNT(*) 제거와 페이지 제한](/blog/project/wikiengine/query-refactoring-optimization) | 19,424ms → 8ms, 에러율 32.53% → 0%. cascade failure 진단: CPU 포화가 전체 API를 무너뜨림 |
 | 6 | [검색 품질 고도화](/blog/project/wikiengine/search-quality) | 구절 검색 + 커뮤니티 랭킹 + P@10/MAP 정량 평가 |
 | 7 | [캐싱 전략](/blog/project/wikiengine/caching-strategy) | Caffeine L1 캐시 → 전체 14배 개선, cascade failure 해소. 검색 히트율 81.8%, CPU 80%→20% |
@@ -317,7 +317,7 @@ draft: true
 | 전체 평균 (100 VU, 캐시 후) | 776ms | **54ms** | **14배** |
 | 검색 히트율 (Caffeine) | 0% (캐시 없음) | **81.8%** | — |
 | CPU (100 VU) | 100% 포화 | **20~40%** | 60%p 감소 |
-| 검색 대상 | 57만 건 (한국어만) | **1,425만 건 (전체)** | 25배 확대 |
+| 검색 대상 | 1,215만 건 (전체) | **1,215만 건 (전체)** | 25배 확대 |
 | 인덱스 크기 | 300GB+ (생성 불가) | **29GB** (Lucene) | 생성 가능 |
 | 추가 인프라 비용 | $0 | **$0** (Lucene 내장) | ES 대비 연 $3,036~$9,528 회피 |
 

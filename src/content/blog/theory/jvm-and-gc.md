@@ -29,11 +29,6 @@ JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신�
 
 출처 : https://dzone.com/articles/jvm-architecture-explained
 
-initialization은 static을 초기화해요
-
-Method Area는 Metasp.로 metadata가 있어요.
-Stack은 per thread 
-
 > 출처: [JVM Architecture - Oracle](https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html)
 
 ---
@@ -108,6 +103,8 @@ JVM이 프로그램 실행 중 사용하는 메모리 영역들이에요.
 - 메서드 바이트코드
 - static 변수
 
+참고: Java 7부터 static 변수의 참조는 Heap으로 이동했다. Metaspace에는 클래스 메타데이터만 저장된다.
+
 ```bash
 # Metaspace 크기 설정 (Java 8+)
 -XX:MetaspaceSize=128m        # 초기 크기
@@ -115,7 +112,7 @@ JVM이 프로그램 실행 중 사용하는 메모리 영역들이에요.
 ```
 
 **PermGen → Metaspace 변경 이유**:
-- PermGen은 힙의 일부 → 크기 제한으로 `OutOfMemoryError: PermGen space`가 자주 발생했어요
+- PermGen은 힙의 일부 (정확히는 논리적으로 힙의 일부로 관리되었지만, GC 관점에서 Young/Old Gen과는 별도로 취급되었다) → 크기 제한으로 `OutOfMemoryError: PermGen space`가 자주 발생했어요
 - Metaspace는 Native Memory 사용 → 자동으로 확장 가능해요
 
 ![](/uploads/theory/jvm-and-gc/permgen-to-metaspace.png)
@@ -228,7 +225,7 @@ JNI(Java Native Interface)를 통해 호출되는 네이티브 메서드(C/C++)�
 
 ![](/uploads/theory/jvm-and-gc/tiered-compilation.png)
 
-Level1-3:C1 Ompiler <- Client Compiler
+Level1-3:C1 Compiler <- Client Compiler
 Level 4: C2 Compiler <- Server Compiler
 
 
@@ -254,6 +251,8 @@ Level 4: C2 Compiler <- Server Compiler
 -XX:CompileThreshold=10000         # 컴파일 임계값
 -XX:-TieredCompilation             # Tiered Compilation 비활성화
 ```
+
+참고: Tiered Compilation이 활성화된 상태(Java 8+ 기본값)에서는 이 옵션이 무시된다. 각 레벨별로 별도 임계값이 사용된다.
 
 > 출처: [JIT Compiler - Oracle](https://docs.oracle.com/en/java/javase/17/vm/java-hotspot-virtual-machine-performance-enhancements.html)
 
@@ -406,6 +405,8 @@ Eden 영역이 가득 차면 **Minor GC**가 발생해요.
 - GC가 안전하게 수행될 수 있는 지점
 - 모든 객체 참조가 일관된 상태
 - 예: 메서드 호출 사이, 루프 백엣지(loop back-edge)
+
+단, C2 컴파일러는 counted loop(예: `for (int i = 0; i < N; i++)`)의 백엣지에 safepoint를 삽입하지 않을 수 있다. 이것은 GC 지연의 원인이 될 수 있다.
 
 ```java
 for (int i = 0; i < 1000000; i++) {
@@ -603,7 +604,7 @@ java -Xlog:gc*:file=gc.log:time,uptime,level,tags -jar app.jar
 ```
 
 해석:
-- `Eden regions: 6->0(8)`: Eden 6개 region 사용 -> 0개로 (최대 8개)
+- `Eden regions: 6->0(8)`: Eden 6개 region 사용 -> 0개로 (다음 사이클 예상 Eden 크기 8개)
 - `Survivor regions: 0->1(1)`: Survivor 0 -> 1개 사용
 - `24M->4M(256M)`: 힙 24MB 사용 -> 4MB로 줄음 (전체 256MB)
 - `3.245ms`: GC 소요 시간
@@ -627,6 +628,8 @@ Minor GC는 보통 수 ms ~ 수십 ms예요. Full GC는 수백 ms ~ 수 초가 �
 ---
 
 ## 6. Mark-and-Sweep 알고리즘
+
+앞서 Minor GC에서 Mark-Copy 방식을 살펴봤는데, 여기서는 GC의 가장 기본적인 알고리즘인 Mark-and-Sweep을 정리해요.
 
 가장 기본적인 GC 알고리즘이에요.
 
@@ -751,7 +754,7 @@ Sweep 후 메모리가 듬성듬성해져요.
 - **STW 10ms 미만** 목표 (보통 250μs 이하)
 - 대용량 힙(최대 16TB)에서도 짧은 지연
 - 거의 모든 작업을 애플리케이션과 **동시 수행**
-- Java 15+ 정식 지원
+- Java 15+ 정식 지원 (Production Ready). Generational ZGC는 Java 21에서 도입
 
 ### Shenandoah
 
@@ -817,7 +820,7 @@ java -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:gc.log -jar app.jar
 ### Young/Old 비율 조정
 
 ```bash
-# Young Gen을 전체의 1/3으로 (기본은 1/3)
+# Young Gen을 전체의 1/3으로 (Parallel/Serial GC 기본값. G1 GC에서는 G1NewSizePercent(5%)~G1MaxNewSizePercent(60%)로 adaptive하게 결정된다)
 -XX:NewRatio=2
 
 # Survivor 영역 크기 조정
@@ -945,11 +948,6 @@ JVM (Java Virtual Machine) is a virtual machine that executes Java bytecode. It 
 
 Source: https://dzone.com/articles/jvm-architecture-explained
 
-Initialization initializes static members.
-
-Method Area is Metaspace, where metadata resides.
-Stack is per thread.
-
 > Source: [JVM Architecture - Oracle](https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html)
 
 ---
@@ -1024,6 +1022,8 @@ Contents stored:
 - Method bytecode
 - Static variables
 
+Note: Since Java 7, static variable references have been moved to the Heap. Only class metadata is stored in Metaspace.
+
 ```bash
 # Metaspace size settings (Java 8+)
 -XX:MetaspaceSize=128m        # Initial size
@@ -1031,7 +1031,7 @@ Contents stored:
 ```
 
 **Why PermGen was changed to Metaspace**:
-- PermGen was part of the heap, so its size limit frequently caused `OutOfMemoryError: PermGen space`
+- PermGen was part of the heap (more precisely, it was managed as a logical part of the heap, but was treated separately from Young/Old Gen from a GC perspective), so its size limit frequently caused `OutOfMemoryError: PermGen space`
 - Metaspace uses Native Memory and can expand automatically
 
 ![](/uploads/theory/jvm-and-gc/permgen-to-metaspace.png)
@@ -1170,6 +1170,8 @@ Level 4: C2 Compiler <- Server Compiler
 -XX:CompileThreshold=10000         # Compilation threshold
 -XX:-TieredCompilation             # Disable Tiered Compilation
 ```
+
+Note: When Tiered Compilation is enabled (default since Java 8+), this option is ignored. Separate thresholds are used for each level.
 
 > Source: [JIT Compiler - Oracle](https://docs.oracle.com/en/java/javase/17/vm/java-hotspot-virtual-machine-performance-enhancements.html)
 
@@ -1322,6 +1324,8 @@ All application threads stop at a **Safepoint**.
 - A point where GC can be performed safely
 - All object references are in a consistent state
 - Examples: between method calls, at loop back-edges
+
+Note: The C2 compiler may not insert safepoints at the back-edge of counted loops (e.g., `for (int i = 0; i < N; i++)`). This can cause GC delays.
 
 ```java
 for (int i = 0; i < 1000000; i++) {
@@ -1519,7 +1523,7 @@ Example log output:
 ```
 
 Interpretation:
-- `Eden regions: 6->0(8)`: Eden used 6 regions -> 0 (max 8)
+- `Eden regions: 6->0(8)`: Eden used 6 regions -> 0 (expected Eden size for next cycle: 8)
 - `Survivor regions: 0->1(1)`: Survivor 0 -> 1 used
 - `24M->4M(256M)`: Heap usage dropped from 24MB to 4MB (total 256MB)
 - `3.245ms`: GC duration
@@ -1543,6 +1547,8 @@ Minor GC typically takes a few ms to tens of ms. Full GC can take hundreds of ms
 ---
 
 ## 6. Mark-and-Sweep Algorithm
+
+Earlier we looked at the Mark-Copy approach used in Minor GC. Here we cover Mark-and-Sweep, the most fundamental GC algorithm.
 
 The most fundamental GC algorithm.
 
@@ -1667,7 +1673,7 @@ Adds a **Compact** phase to solve the fragmentation problem.
 - **Target STW under 10ms** (usually under 250us)
 - Short latency even with large heaps (up to 16TB)
 - Almost all work is performed **concurrently** with the application
-- Officially supported since Java 15+
+- Officially supported since Java 15+ (Production Ready). Generational ZGC was introduced in Java 21
 
 ### Shenandoah
 
@@ -1733,7 +1739,7 @@ java -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:gc.log -jar app.jar
 ### Adjusting Young/Old Ratio
 
 ```bash
-# Set Young Gen to 1/3 of total (default is 1/3)
+# Set Young Gen to 1/3 of total (Parallel/Serial GC default. In G1 GC, determined adaptively between G1NewSizePercent(5%) and G1MaxNewSizePercent(60%))
 -XX:NewRatio=2
 
 # Adjust Survivor area size

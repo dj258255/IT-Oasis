@@ -58,7 +58,7 @@ stress 테스트로 단일 서버의 **한계점(breaking point)**을 수치로 
 | 서버 | Oracle Cloud ARM (Ampere A1), 2코어, 12GB RAM |
 | JVM | Java 25, -Xmx1g |
 | DB | MySQL 8.0, InnoDB Buffer Pool 2GB |
-| 데이터 | posts 1,425만 건, Lucene 인덱스 ~20GB |
+| 데이터 | posts 1,215만 건, Lucene 인덱스 ~20GB |
 | k6 | monitoring-loki 서버에서 실행, InfluxDB + Grafana 연동 |
 
 ### k6 stress 프로필

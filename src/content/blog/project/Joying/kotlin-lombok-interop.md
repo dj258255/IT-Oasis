@@ -19,6 +19,9 @@ coverImage: "/uploads/project/Joying/kotlin-lombok-interop/problem-found.svg"
 
 이번 프로젝트에서 채팅 기능을 새로 개발하게 됐어요.
 기존 코드는 전부 Java + Lombok으로 되어있는데, 새 기능은 Kotlin으로 작성하기로 했습니다.
+
+**왜 Kotlin?** 채팅 시스템은 WebSocket 메시지 처리에서 비동기 I/O가 핵심이다. Kotlin Coroutine은 `suspend fun` + `async` 조합으로 비동기 코드를 동기 코드처럼 작성할 수 있어서, Java의 `CompletableFuture` 체이닝보다 가독성과 유지보수성이 좋다. 기존 Java 코드(회원, 상품 등)는 그대로 두고, 새로 개발하는 채팅 모듈만 Kotlin으로 작성하는 점진적 도입 전략을 택했다.
+
 Kotlin이 Java와 100% 호환된다고 하니까 문제없을 줄 알았어요.
 
 근데 아니었습니다.
@@ -443,9 +446,11 @@ Java 원본 코드를 수정하지 않고 CI/CD에서 Gradle만으로 빌드할 
 
 ## Introduction
 
-A new chat feature was being developed for the project. The existing codebase was entirely in Java + Lombok, but the new feature was to be written in Kotlin. Since Kotlin is supposedly 100% compatible with Java, there shouldn't be any problems.
+A new chat feature was being developed for the project. The existing codebase was entirely in Java + Lombok, but the new feature was to be written in Kotlin.
 
-But there were.
+**Why Kotlin?** The chat system's core is async I/O for WebSocket message handling. Kotlin Coroutine's `suspend fun` + `async` allows writing async code that reads like synchronous code — better readability and maintainability than Java's `CompletableFuture` chaining. Strategy: keep existing Java code (members, products) as-is, and write only the new chat module in Kotlin (gradual adoption).
+
+Since Kotlin is supposedly 100% compatible with Java, there shouldn't be any problems. But there were.
 
 ## Problem Discovery: Lombok Is Invisible?
 

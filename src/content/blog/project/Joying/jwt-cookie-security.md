@@ -18,6 +18,12 @@ coverImage: "/uploads/project/Joying/jwt-cookie-security/spa.svg"
 
 # 로컬에선 401, 운영에선 200... 같은 API인데 왜? SameSite 쿠키 때문에 막혔던 이야기
 
+## 배경
+
+**서비스**: 물품 대여 플랫폼 (Spring Boot API + React SPA). 회원가입/로그인 → JWT 발급 → 이후 모든 API에 인증 필요.
+
+**프론트엔드 구조**: React(Vite) SPA로, 로컬 개발 시 `localhost:5173`에서 실행. 운영 시 `api.joying.com`과 `joying.com`으로 같은 도메인.
+
 ## 들어가며
 
 프로젝트 시작하면서 가장 먼저 마주한 질문.

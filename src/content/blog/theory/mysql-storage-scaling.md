@@ -44,7 +44,7 @@ MySQL data 볼륨: 122GB → 인덱스 생성 중 287.8GB (165GB 증가, 아직 
 | content만 | 6,585개 | ~973억 개 | **50~150 GB+** |
 | title + content | ~6,611개 | ~976억 개 | **100~200 GB+** |
 
-content가 전체 토큰의 **99.6%**를 차지해요. FULLTEXT ngram 인덱스의 크기는 본질적으로 content 길이에 비례합니다.
+content가 전체 토큰의 **99.6%**를 차지해요. ngram 파서는 텍스트를 n글자 단위로 분할하므로, 원본 텍스트 대비 토큰 수가 폭발적으로 증가해요. 예를 들어 '안녕하세요'라는 5글자 텍스트는 `ngram_token_size=2` 기준으로 4개의 토큰('안녕', '녕하', '하세', '세요')이 생성돼요. 이것이 FULLTEXT ngram 인덱스 크기가 원본 데이터보다 커지는 근본적인 이유예요.
 
 여기서 핵심적인 구분이 필요해요:
 
@@ -142,7 +142,7 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 | **JOIN 불가** | DB 행과 S3 오브젝트를 JOIN할 수 없음 |
 | **ORM 투명성 깨짐** | `post.getContent()`가 S3 HTTP 호출로 변질 |
 | **FULLTEXT 검색 불가** | S3 오브젝트에 `MATCH...AGAINST`를 실행할 수 없음 |
-| **레이턴시 증가** | S3 GET: 20~100ms vs DB Buffer Pool: sub-ms |
+| **레이턴시 증가** | S3 GET: 50~200ms (Standard S3 같은 리전 기준. S3 Express One Zone은 single-digit ms 가능) vs DB Buffer Pool: sub-ms |
 | **Atomic UPDATE 불가** | 콘텐츠 수정 + 포인터 업데이트가 원자적이지 않음 |
 
 월 $11을 절감하려고 트랜잭션 일관성, JOIN, ORM 투명성을 포기하는 건 합리적이지 않아요. **현업 커뮤니티 플랫폼(Discourse, WordPress, Stack Overflow) 중 콘텐츠를 Object Storage로 뺀 곳은 없어요.**
@@ -168,7 +168,7 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 
 | | ROW_FORMAT=COMPRESSED (테이블 압축) | COMPRESSION= (페이지 압축) |
 |---|---|---|
-| 도입 | MySQL 5.1+ | MySQL 5.7+ |
+| 도입 | MySQL 5.1 InnoDB Plugin (MySQL 5.5+ 기본 내장) | MySQL 5.7.8+ |
 | 동작 | InnoDB 내부에서 zlib으로 작은 페이지 생성 | OS 파일시스템의 sparse file + hole punching |
 | 펀치 홀 필요 | **아니오** | **예** (OS + 하드웨어 지원 필수) |
 | 파일 복사 | 정상 동작 | `cp` 시 hole이 채워져 원본 크기로 복원됨 |
@@ -176,6 +176,8 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 | 프로덕션 | 성숙, 안정적 | Percona: "프로덕션에 추천하기 어렵다" |
 
 **사용할 방식은 `ROW_FORMAT=COMPRESSED`예요.** 펀치 홀과 무관하고, InnoDB 내부에서 완결되는 전통적 압축이에요.
+
+> **참고:** MySQL 8.0에서 InnoDB 압축 관련 설정에 대해 "향후 MySQL 릴리스에서 제거될 수 있습니다"라는 경고가 있다. 새 프로젝트에서는 페이지 압축(COMPRESSION='zlib')이나 외부 저장소 분리를 검토하는 것이 바람직하다.
 
 > 출처: [On MySQL InnoDB Row Formats and Compression — Carson Ip](https://carsonip.me/posts/on-mysql-innodb-row-formats-and-compression/)
 
@@ -190,6 +192,8 @@ InnoDB 내부에서 zlib으로 16KB 페이지를 더 작은 크기로 압축하�
 ```sql
 ALTER TABLE post_contents ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
 ```
+
+> **주의:** 대용량 테이블에 ALTER TABLE을 실행하면 테이블 전체가 재구축되며, 디스크 공간이 임시로 2배 필요하고 장시간 락이 걸릴 수 있다. 프로덕션에서는 pt-online-schema-change나 gh-ost 같은 온라인 DDL 도구 사용을 권장한다.
 
 애플리케이션 코드 변경은 전혀 필요 없어요. `SELECT content FROM post_contents`가 자동으로 압축 해제된 원본을 반환합니다.
 
@@ -261,7 +265,7 @@ PostgreSQL을 쓰는 Discourse나 Reddit이 별도 압축 없이도 되는 이�
 | 동작 | 행이 ~2KB 초과 시 **자동** 압축 + out-of-line 저장 | `ALTER TABLE`로 **명시적** 활성화 |
 | 알고리즘 | pglz (기본), LZ4 (PG 14+) | zlib |
 | 투명성 | 완전 투명 | 완전 투명 |
-| 압축 조건 | 25% 이상 압축 가능할 때만 | 항상 시도 (실패 시 이중 저장) |
+| 압축 조건 | TOAST 임계값(약 2KB) 이하로 줄일 수 있거나 의미 있게 크기가 줄어들 때 | 항상 시도 (실패 시 이중 저장) |
 
 **핵심 차이:** PostgreSQL은 별도 설정 없이 TOAST가 자동으로 작동해요. MySQL은 명시적으로 적용해야 해요.
 
@@ -275,7 +279,7 @@ PostgreSQL을 쓰는 Discourse나 Reddit이 별도 압축 없이도 되는 이�
 
 MySQL의 TEXT/BLOB은 **overflow page**(16KB 청크)에 저장돼요. 이로 인해:
 
-- 1MB TEXT를 읽으려면 **64개 overflow page × 16KB = 640+ read IOPs** 필요
+- 1MB TEXT를 읽으려면 **64개 overflow page × 16KB = 64 read IOPs** 필요
 - TEXT가 결과에 포함되면 **디스크 기반 임시 테이블** 강제 (MEMORY 엔진이 TEXT 미지원)
 - 목록 조회에서 10,000행 스캔 시 불필요한 overflow page까지 읽을 수 있음
 
@@ -318,7 +322,7 @@ SET GLOBAL binlog_row_image = 'NOBLOB';
 | **`NOBLOB`** | BLOB/TEXT는 **변경된 경우만** 포함 |
 | `MINIMAL` | 변경된 컬럼 + PK만 |
 
-Vertical Partitioning과 동일한 효과를 테이블 분리 없이 얻을 수 있어요.
+복제(replication) 트래픽 측면에서는 대형 컬럼 데이터 전송을 줄이는 유사한 효과가 있어요. 단, Vertical Partitioning의 핵심 이점인 목록 조회 시 Buffer Pool 효율 향상이나 임시 테이블 최적화는 해결되지 않아요.
 
 ---
 
@@ -443,7 +447,7 @@ After running `CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) W
 | content only | 6,585 | ~97.3B | **50~150 GB+** |
 | title + content | ~6,611 | ~97.6B | **100~200 GB+** |
 
-Content accounts for **99.6%** of all tokens. The FULLTEXT ngram index size is fundamentally proportional to content length.
+Content accounts for **99.6%** of all tokens. The ngram parser splits text into n-character units, causing an explosive increase in token count compared to the original text. For example, a 5-character text '안녕하세요' with `ngram_token_size=2` generates 4 tokens ('안녕', '녕하', '하세', '세요'). This is the fundamental reason why the FULLTEXT ngram index grows larger than the original data.
 
 A critical distinction is needed here:
 
@@ -541,7 +545,7 @@ RDS storage is **5x** more expensive than S3. But at 122GB scale, the difference
 | **No JOIN** | Cannot JOIN DB rows with S3 objects |
 | **ORM transparency broken** | `post.getContent()` becomes an S3 HTTP call |
 | **No FULLTEXT search** | Cannot run `MATCH...AGAINST` on S3 objects |
-| **Increased latency** | S3 GET: 20~100ms vs DB Buffer Pool: sub-ms |
+| **Increased latency** | S3 GET: 50~200ms (Standard S3, same region. S3 Express One Zone offers single-digit ms) vs DB Buffer Pool: sub-ms |
 | **No atomic UPDATE** | Content modification + pointer update are not atomic |
 
 Sacrificing transaction consistency, JOINs, and ORM transparency to save $11/month is not rational. **None of the production community platforms (Discourse, WordPress, Stack Overflow) move content to Object Storage.**
@@ -567,7 +571,7 @@ There are two compression methods with similar names but completely different me
 
 | | ROW_FORMAT=COMPRESSED (Table Compression) | COMPRESSION= (Page Compression) |
 |---|---|---|
-| Introduced | MySQL 5.1+ | MySQL 5.7+ |
+| Introduced | MySQL 5.1 InnoDB Plugin (built-in from MySQL 5.5+) | MySQL 5.7.8+ |
 | Mechanism | InnoDB internally creates smaller pages with zlib | OS filesystem sparse file + hole punching |
 | Hole punching required | **No** | **Yes** (OS + hardware support required) |
 | File copy | Works normally | `cp` fills holes, restoring original size |
@@ -575,6 +579,8 @@ There are two compression methods with similar names but completely different me
 | Production readiness | Mature, stable | Percona: "hard to recommend for serious production" |
 
 **The method to use is `ROW_FORMAT=COMPRESSED`.** It's independent of hole punching and completes entirely within InnoDB.
+
+> **Note:** In MySQL 8.0, InnoDB compression-related settings carry a warning that they "may be removed in a future MySQL release." For new projects, consider page compression (COMPRESSION='zlib') or external storage separation.
 
 > Source: [On MySQL InnoDB Row Formats and Compression — Carson Ip](https://carsonip.me/posts/on-mysql-innodb-row-formats-and-compression/)
 
@@ -660,7 +666,7 @@ The reason Discourse and Reddit work without explicit compression is PostgreSQL'
 | Behavior | **Automatic** compression + out-of-line storage when row exceeds ~2KB | **Explicit** activation via `ALTER TABLE` |
 | Algorithm | pglz (default), LZ4 (PG 14+) | zlib |
 | Transparency | Fully transparent | Fully transparent |
-| Compression condition | Only when 25%+ compression achievable | Always attempts (dual storage on failure) |
+| Compression condition | When data can be reduced below the TOAST threshold (~2KB) or meaningfully shrunk in size | Always attempts (dual storage on failure) |
 
 **Key difference:** PostgreSQL TOAST works automatically without configuration. MySQL requires explicit activation.
 
@@ -674,7 +680,7 @@ The reason Discourse and Reddit work without explicit compression is PostgreSQL'
 
 MySQL TEXT/BLOB is stored in **overflow pages** (16KB chunks). This causes:
 
-- Reading a 1MB TEXT requires **64 overflow pages × 16KB = 640+ read IOPs**
+- Reading a 1MB TEXT requires **64 overflow pages × 16KB = 64 read IOPs**
 - TEXT in results **forces disk-based temporary tables** (MEMORY engine doesn't support TEXT)
 - Scanning 10,000 rows in list queries may read unnecessary overflow pages
 
@@ -717,7 +723,7 @@ SET GLOBAL binlog_row_image = 'NOBLOB';
 | **`NOBLOB`** | BLOB/TEXT included **only when changed** |
 | `MINIMAL` | Only changed columns + PK |
 
-This achieves the same effect as Vertical Partitioning without table separation.
+In terms of replication traffic, this achieves a similar effect by reducing large column data transmission. However, it does not address the core benefits of Vertical Partitioning — improved Buffer Pool efficiency during list queries and temporary table optimization.
 
 ---
 

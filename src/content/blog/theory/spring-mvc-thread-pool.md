@@ -78,11 +78,10 @@ class ServletContainer {
     ThreadPool pool = new ThreadPool(200); // 미리 생성
 
     void handleRequest(HttpRequest request) {
-        Thread thread = pool.getThread(); // 풀에서 가져옴
-        thread.run(() -> {
+        pool.submit(() -> {
             servlet.service(request);
+            // 요청 처리 완료 후 스레드가 자동으로 풀에 반환됨
         });
-        pool.returnThread(thread); // 다시 반환
     }
 }
 ```
@@ -168,6 +167,8 @@ GET http://localhost:8080/myServlet
 GET http://localhost:8080/myServlet
 // 응답 시간: 6.61ms (서블릿 재사용!)
 ```
+
+> 참고: Spring의 DispatcherServlet은 `load-on-startup=1`이 기본이므로 서버 시작 시 바로 초기화된다. 위 차이는 순수 서블릿 API 사용 시의 예시이다.
 
 > 출처: [Velog - 자바 서블릿에 대해 알아보자](https://velog.io/@jakeseo_me/자바-서블릿에-대해-알아보자.-근데-톰캣과-스프링을-살짝-곁들인)
 
@@ -307,9 +308,9 @@ BIO에서는 이 5초 동안 스레드가 아무것도 안 하고 대기해요. 
 BIO 방식으로는 불가능했어요. 10,000개 스레드를 만들면:
 
 ```
-메모리: 10,000 * 2MB = 20GB
+메모리: 10,000 * 1MB = 10GB
 컨텍스트 스위칭: 초당 수백만 번
-CPU: 스레드 전환만 하다가 죽음
+CPU: 코어당 2,500개 스레드 스케줄링으로 유효 CPU 시간이 크게 감소
 ```
 
 > 출처: [Wikipedia - C10k problem](https://en.wikipedia.org/wiki/C10k_problem)
@@ -405,8 +406,8 @@ Keep-Alive 대기 중인 연결은 Selector가 관리하고, 실제로 데이터
 http-nio-8080-Acceptor-0 (1개)
   → 연결 수락
 
-http-nio-8080-ClientPoller-0 (2개)
-http-nio-8080-ClientPoller-1
+http-nio-8080-ClientPoller (Tomcat 8.5+ 기준 1개, 8.0에서는 2개)
+  (Tomcat 8.0 이전에는 pollerThreadCount 설정으로 조절 가능)
   → Selector로 연결 감시
 
 http-nio-8080-exec-1 (10~200개)
@@ -429,13 +430,13 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 200개 스레드가 모두 사용 중이면:
 
-![](/uploads/theory/spring-mvc-thread-pool/request-handle-flow-2.png)
+![](/uploads/theory/spring-mvc-thread-pool/request-handle-flow-2.svg)
 
 
 ```
 1. max-connections (8192개) 내의 연결은 Poller가 관리
 2. accept-count (100개) 까지는 OS 레벨 큐에서 대기
-3. 두 제한을 모두 초과하면 connection timeout
+3. 두 제한을 모두 초과하면 OS가 TCP SYN을 drop하여 클라이언트에서 Connection refused 발생
 ```
 
 > 출처: [Velog - 스프링부트는 어떻게 다중 유저 요청을 처리할까?](https://velog.io/@sihyung92/how-does-springboot-handle-multiple-requests), [HARIL - Spring MVC Traffic Testing](https://haril.dev/blog/2023/11/10/Spring-MVC-Traffic-Testing)
@@ -515,7 +516,8 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 ```
 4 / 2000 = 0.002 (0.2%)
-CPU가 스레드 전환만 하다가 끝남
+2000개 스레드에서는 컨텍스트 스위칭 오버헤드가 급격히 증가한다.
+코어당 500개 스레드를 스케줄링하면 유효 CPU 시간이 크게 줄어든다.
 ```
 
 > 출처: [Eli Bendersky - Measuring context switching](https://eli.thegreenplace.net/2018/measuring-context-switching-and-memory-overheads-for-linux-threads/), [Medium - Context Switching Impact](https://serkanerip.medium.com/the-performance-impact-of-excessive-context-switching-a8aa023ba542)
@@ -560,6 +562,8 @@ RAM: 128-512MB
 ```
 15,000개 동시 요청: 정상 처리
 ```
+
+> 참고: Thread.sleep 같은 가벼운 요청은 실제 스레드 스택을 거의 사용하지 않으므로, 2000개 스레드가 모두 1MB씩 사용하지는 않는다. 실제 메모리 사용량은 활성 스택 프레임 깊이에 따라 다르다.
 
 서버 성능은 하드웨어와 설정에 크게 의존한다는 걸 보여주죠.
 
@@ -695,7 +699,7 @@ kernel.threads-max: 131072
 계산 공식:
 
 ```
-최대 스레드 수 = 가용 메모리 / (스택 크기 * 1024 * 1024)
+최대 스레드 수 = 가용 메모리(MB) / 스택 크기(MB)
 ```
 
 예를 들어:
@@ -806,7 +810,9 @@ class StreamController {
 java.lang.OutOfMemoryError: Java heap space
 ```
 
-#### ThreadLocal 메모리 누수
+#### ThreadLocal 누수
+
+ThreadLocal 누수의 실제 위험은 OOM이 아니라, 스레드 풀에서 스레드가 재사용될 때 **이전 요청의 데이터가 남아 보안/로직 오류**를 일으키는 것이다. `remove()`를 호출하지 않으면 다음 요청에서 이전 사용자의 정보를 볼 수 있다.
 
 ```java
 // 위험한 코드
@@ -1006,6 +1012,8 @@ CPU 작업 많으면 (이미지 처리, 암호화):
 → Virtual Threads 고려 (Java 21+)
 ```
 
+**Virtual Threads (Java 21+):** Virtual Thread는 스택을 수 KB만 사용하여 수백만 개를 생성할 수 있다. Spring Boot 3.2+에서는 `spring.threads.virtual.enabled=true` 설정으로 적용 가능하며, 이 경우 플랫폼 스레드 풀 크기 제한이 더 이상 병목이 되지 않는다. "왜 200개인가"라는 질문 자체가 Virtual Thread 환경에서는 의미를 잃는다.
+
 라이브 스트리밍 서버는 WebSocket, DB 쿼리, OAuth API 호출 전부 I/O bound라 스레드를 늘려도 될 것 같아요. 부하 테스트 돌려보고 최적값을 찾아봐야겠어요.
 
 ---
@@ -1129,11 +1137,10 @@ class ServletContainer {
     ThreadPool pool = new ThreadPool(200); // Pre-created
 
     void handleRequest(HttpRequest request) {
-        Thread thread = pool.getThread(); // Get from pool
-        thread.run(() -> {
+        pool.submit(() -> {
             servlet.service(request);
+            // Thread is automatically returned to the pool after request processing
         });
-        pool.returnThread(thread); // Return to pool
     }
 }
 ```
@@ -1358,7 +1365,7 @@ In 1999, Dan Kegel raised the question: **"How do we handle 10,000 concurrent co
 It was impossible with the BIO approach. Creating 10,000 threads would mean:
 
 ```
-Memory: 10,000 * 2MB = 20GB
+Memory: 10,000 * 1MB = 10GB
 Context switching: millions of times per second
 CPU: dies just from thread switching
 ```
@@ -1480,7 +1487,7 @@ Spring Boot processes requests like this:
 
 When all 200 threads are in use:
 
-![](/uploads/theory/spring-mvc-thread-pool/request-handle-flow-2.png)
+![](/uploads/theory/spring-mvc-thread-pool/request-handle-flow-2.svg)
 
 
 ```
@@ -1566,7 +1573,8 @@ If you created 2,000 threads:
 
 ```
 4 / 2000 = 0.002 (0.2%)
-CPU spends all its time just switching threads
+With 2,000 threads, context switching overhead increases dramatically.
+Scheduling 500 threads per core significantly reduces effective CPU time.
 ```
 
 > Sources: [Eli Bendersky - Measuring context switching](https://eli.thegreenplace.net/2018/measuring-context-switching-and-memory-overheads-for-linux-threads/), [Medium - Context Switching Impact](https://serkanerip.medium.com/the-performance-impact-of-excessive-context-switching-a8aa023ba542)
@@ -1746,7 +1754,7 @@ kernel.threads-max: 131072
 Calculation formula:
 
 ```
-Maximum threads = Available memory / (Stack size * 1024 * 1024)
+Maximum threads = Available memory (MB) / Stack size (MB)
 ```
 
 For example:

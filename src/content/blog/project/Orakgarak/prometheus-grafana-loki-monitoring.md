@@ -1,8 +1,8 @@
 ---
 title: 'Prometheus + Grafana + Loki 모니터링 스택 구축'
 titleEn: 'Building a Monitoring Stack with Prometheus, Grafana, and Loki'
-description: 장애를 SSH로 확인하던 구조를 Prometheus(메트릭) + Loki(로그) + Grafana(시각화) + Alertmanager(알림)로 자동화해서 장애 감지를 30초 이내로 줄인 과정을 정리한다.
-descriptionEn: Documents automating failure detection from manual SSH checks to under 30 seconds using Prometheus, Loki, Grafana, and Alertmanager.
+description: 장애를 SSH로 확인하던 구조를 Prometheus(메트릭) + Loki(로그) + Grafana(시각화) + Alertmanager(알림)로 자동화해서 Critical 장애 감지를 ~85초 이내로 줄인 과정을 정리한다.
+descriptionEn: Documents automating failure detection from manual SSH checks to ~85s for Critical alerts using Prometheus, Loki, Grafana, and Alertmanager.
 date: 2025-09-01T00:00:00.000Z
 tags:
   - Prometheus
@@ -18,7 +18,7 @@ coverImage: "/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monit
 
 ## 한 줄 요약
 
-장애를 사람이 SSH로 들어가서 확인하던 구조를 Prometheus(메트릭) + Loki(로그) + Grafana(시각화) + Alertmanager(알림)로 자동화해서 장애 감지를 30초 이내로 줄였어요.
+장애를 사람이 SSH로 들어가서 확인하던 구조를 Prometheus(메트릭) + Loki(로그) + Grafana(시각화) + Alertmanager(알림)로 자동화해서 Critical 장애 감지를 ~85초 이내(scrape 15s + for 1m + group_wait 10s)로 줄였어요.
 
 ---
 
@@ -72,7 +72,7 @@ Prometheus는 오픈소스라 비용이 없고, PromQL로 복잡한 쿼리를 �
 
 로그 집계는 ELK(Elasticsearch + Logstash + Kibana)가 표준처럼 쓰이죠.
 처음에 ELK를 고려했는데, Elasticsearch가 프로덕션 환경에서 최소 8GB RAM을 권장한다는 걸 보고 포기했어요.
-EC2 t3.medium(4GB)에서 애플리케이션, DB, Kafka, 모니터링 스택을 전부 돌려야 하는데 Elasticsearch까지 올릴 여유가 없었거든요.
+EC2 인스턴스(4 vCPU, 16GB RAM)에서 애플리케이션, DB, Kafka, 모니터링 스택을 전부 돌려야 하는데, Elasticsearch JVM 힙만 8GB를 먹으면 나머지 서비스에 할당할 메모리가 부족해지거든요.
 
 Loki는 메모리 효율이 좋아요.
 전문 검색(Full-text search)을 지원하지 않는 대신, 레이블 기반 필터링으로 동작해요.
@@ -149,7 +149,7 @@ Critical은 @channel 멘션으로 즉시 알리고, Warning은 그룹핑해서 �
 
 | 지표 | 개선 전 | 개선 후 |
 |------|--------|--------|
-| 장애 감지 시간 | 수동 확인 (수분~수시간) | 30초 이내 |
+| 장애 감지 시간 | 수동 확인 (수분~수시간) | Critical: ~85초 이내 (scrape 15s + for 1m + group_wait 10s), Warning: ~5분 |
 | 로그 검색 시간 | SSH + grep (수십초) | Grafana에서 즉시 |
 | 알림 노이즈 | 체계 없음 | severity 기반 그룹핑 |
 | 근본 원인 분석 | 수시간 | 10분 이내 |
@@ -168,7 +168,7 @@ Critical은 @channel 멘션으로 즉시 알리고, Warning은 그룹핑해서 �
 
 ## Summary
 
-Automated failure detection from manual SSH checks to under 30 seconds using Prometheus (metrics), Loki (logs), Grafana (visualization), and Alertmanager (alerts).
+Automated failure detection from manual SSH checks to ~85 seconds for Critical alerts (scrape 15s + for 1m + group_wait 10s) using Prometheus (metrics), Loki (logs), Grafana (visualization), and Alertmanager (alerts).
 
 ---
 
@@ -209,7 +209,7 @@ Prometheus is free, supports complex PromQL queries, and allows identical local 
 
 ## Why Loki (Not ELK)
 
-ELK is the standard for log aggregation. But Elasticsearch recommends at least 8GB RAM for production. Running the application, DB, Kafka, and monitoring stack on a t3.medium (4GB) left no room for Elasticsearch.
+ELK is the standard for log aggregation. But Elasticsearch recommends at least 8GB RAM for production. Running the application, DB, Kafka, and monitoring stack on the EC2 instance (4 vCPU, 16GB RAM), Elasticsearch's 8GB JVM heap alone would starve the other services of memory.
 
 Loki is memory-efficient, using label-based filtering instead of full-text search. For our scale, this was sufficient. Native Grafana integration means metrics and logs share the same dashboard, using the same label system as Prometheus.
 

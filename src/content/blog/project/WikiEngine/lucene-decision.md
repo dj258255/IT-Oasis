@@ -800,7 +800,7 @@ public List<Map<String, String>> analyze(@RequestParam String text) throws IOExc
 
 | | Lucene + Nori | MySQL FULLTEXT ngram |
 |---|---|---|
-| 검색 대상 | **1,425만 건 (전체)** | 57만 건 (한국어만) |
+| 검색 대상 | **1,215만 건 (전체)** | 1,215만 건 (전체) |
 | "대한민국" 검색 | **2,144건 즉시 반환** | **503 QUERY_TIMEOUT** |
 | 응답 | 즉시 | 5초 초과 타임아웃 |
 
@@ -808,7 +808,7 @@ public List<Map<String, String>> analyze(@RequestParam String text) throws IOExc
 
 ![Nori 토큰 분석 결과 — "대한민국을 사랑합니다" → 대한, 민국, 사랑](/uploads/project/WikiEngine/lucene-decision/step2-nori-analyze.png)
 
-![Lucene "대한민국" 검색 — 1,425만 건에서 2,144건 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step2-lucene-search-result.png)
+![Lucene "대한민국" 검색 — 1,215만 건에서 2,144건 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step2-lucene-search-result.png)
 
 ![ngram "대한민국" 검색 — 57만 건에서 503 QUERY_TIMEOUT](/uploads/project/WikiEngine/lucene-decision/step2-ngram-timeout.png)
 
@@ -878,7 +878,7 @@ public void indexAll(long startId) throws IOException {
 `entityManager.clear()`를 매 배치마다 호출하고, batch size를 축소하여 해결했습니다.
 Docker 컨테이너의 JAVA_OPTS로 `-Xmx1g`를 설정하여 힙 메모리를 확보했습니다.
 
-![du -sh — 전체 인덱스 29GB (ngram 6.7GB/57만 건 대비 전체 1,425만 건 커버)](/uploads/project/WikiEngine/lucene-decision/step3-du-sh.png)
+![du -sh — 전체 인덱스 29GB (ngram 6.7GB/57만 건 대비 전체 1,215만 건 커버)](/uploads/project/WikiEngine/lucene-decision/step3-du-sh.png)
 
 **Step 4: API 전환**
 ```
@@ -945,10 +945,10 @@ public List<String> autocomplete(String prefix) {
 | "페텔" 검색 (희귀) | 23ms | **14ms** | 39% |
 | "한국" 검색 (중빈도) | 281ms | **24ms** | **91%** |
 | "대한" 검색 (고빈도) | 5초+ 타임아웃 | **12ms** | **∞ (타임아웃 해소)** |
-| 검색 대상 | 57만 건 (한국어만) | **1,425만 건 (전체)** | 25배 확대 |
+| 검색 대상 | 1,215만 건 (전체) | **1,215만 건 (전체)** | 25배 확대 |
 | false positive ("한국어"→"대한국제공항") | 존재 | **해소** | |
 | 형태소 분석 ("대한민국을"="대한민국") | 결과 다름 | **동일 (2,144건)** | |
-| 인덱스 크기 | 6.7 GB (57만 건) | 29GB (1,425만 건) | 25배 데이터, 4.3배 인덱스 |
+| 인덱스 크기 | 6.7 GB (57만 건) | 29GB (1,215만 건) | 25배 데이터, 4.3배 인덱스 |
 
 핵심: **25배 많은 데이터를 검색하면서 고빈도 키워드 응답이 타임아웃 → 12ms로 개선**.
 중빈도 키워드("한국")도 281ms → 24ms로 91% 개선.
@@ -1049,8 +1049,8 @@ public List<String> autocomplete(String prefix, int limit) throws Exception {
 
 | 지표     | v1 (LIKE + B-Tree) | v2 (Lucene PrefixQuery) | 개선    |
 | ------ | ------------------ | ----------------------- | ----- |
-| 응답시간   | 8ms (57만 건)        | ms 단위 (1,425만 건)        | 25배 데이터에서 동등 이상 |
-| 검색 범위  | 제목만 (57만 건)       | 제목 (1,425만 건 전체)        | 25배 확대 |
+| 응답시간   | 8ms (57만 건)        | ms 단위 (1,215만 건)        | 25배 데이터에서 동등 이상 |
+| 검색 범위  | 제목만 (57만 건)       | 제목 (1,215만 건 전체)        | 25배 확대 |
 | 제안어 품질 | 문자열 prefix 매칭     | Nori 형태소 기반 prefix 매칭   | 형태소 단위 |
 
 ---
@@ -1089,8 +1089,8 @@ public List<String> autocomplete(String prefix, int limit) throws Exception {
 
 | 항목                      | Before (ngram)     | After (Lucene Nori)    | 변화                |
 | ----------------------- | ------------------ | ---------------------- | ----------------- |
-| 인덱스 크기                  | 6.7GB (57만 건)      | **29GB (1,425만 건)**    | 25배 데이터, 4.3배 인덱스 |
-| 검색 대상 범위                | 57만 건 (한국어만)       | **1,425만 건 (전체)**      | **+2,500%**       |
+| 인덱스 크기                  | 6.7GB (57만 건)      | **29GB (1,215만 건)**    | 25배 데이터, 4.3배 인덱스 |
+| 검색 대상 범위                | 1,215만 건 (전체)       | **1,215만 건 (전체)**      | **+2,500%**       |
 | 디스크 사용률 (`df -h`)       | 174G/399G (44%)    | **186G/399G (47%)**    | +12G (+3%p)       |
 | 페이지 캐시 (`free -h`)      | 4.9GB (buff/cache) | **3.7GB (buff/cache)** | -1.2GB            |
 | CPU ("대한" 검색 시 Grafana) | 타임아웃 (측정 불가)        | **스파이크 없음 (12ms)**    | **타임아웃 해소**       |

@@ -120,10 +120,12 @@ MySQL 유지 방안들의 한계를 확인한 후, **단위 테스트는 H2 인�
 
 H2 인메모리 모드와 MySQL의 단위 테스트 성능을 수치로 비교했어요.
 
-H2 테스트 결과:
+아래 스크린샷은 속도 비교를 위해 실행한 **Repository/Service 레이어 31개 테스트**의 결과예요. 프로젝트 전체 테스트는 127개이지만, DB 접근이 없는 단순 검증 테스트는 H2/MySQL 차이가 없으므로 DB 의존 테스트만 비교 대상으로 선정했어요.
+
+H2 테스트 결과 (31개 테스트):
 ![](/uploads/project/EduMeet/unit-test-db-migration/speed-diff-comparison.png)
 
-MySQL 테스트 결과:
+MySQL 테스트 결과 (31개 테스트):
 ![](/uploads/project/EduMeet/unit-test-db-migration/speed-diff-comparison-02.png)
 
 ### 개별 테스트 성능 비교
@@ -145,7 +147,22 @@ MySQL 테스트 결과:
 ### 분석
 
 H2 인메모리 모드는 MySQL 대비 개별 테스트 평균 약 47%, 전체 테스트 약 45% 더 빠르게 완료했어요.
-특히 읽기(read) 위주의 테스트에서 성능 차이가 컸어요. 디스크 I/O 없이 메모리에서 직접 처리하는 구조 덕분이에요.
+특히 읽기(read) 위주의 테스트에서 성능 차이가 컸어요. MySQL은 매 쿼리마다 디스크 I/O(InnoDB 버퍼풀 미스 시)와 TCP 네트워크 왕복이 발생하지만, H2 인메모리는 JVM 힙 메모리에서 직접 처리하므로 이 두 가지 오버헤드가 없어요.
+
+**4.34초 차이가 왜 중요한가:**
+- 개발 중 테스트를 하루 평균 20~30회 실행한다고 가정하면, 누적 차이는 하루 약 1.5~2분
+- 6주간 팀원 3명 기준으로는 약 3~4시간의 대기 시간 절감
+- 핵심은 절대 시간보다 **심리적 임계점**: 테스트가 10초를 넘으면 개발자가 "이거 느리네" 하고 다음 코드를 먼저 작성하기 시작하고, 결국 테스트 실행 자체를 생략하게 돼요. 5.23초는 "기다릴 수 있는 시간"이고, 9.57초는 "딴 짓 하기 시작하는 시간"이에요
+- CI/CD에서는 테스트 단계가 빌드 파이프라인의 일부이므로, 매 Push마다 4.34초가 누적되면 하루 수십 회 빌드에서 병목이 됨
+
+### H2와 MySQL의 호환성 리스크
+
+H2 인메모리를 테스트에 쓸 때 주의할 점이 있어요. H2의 MySQL 호환 모드(`MODE=MySQL`)를 사용해도 100% 동일하지 않아요.
+
+- MySQL의 `GROUP_CONCAT`, `JSON_EXTRACT` 같은 함수는 H2에서 지원하지 않거나 동작이 다름
+- `AUTO_INCREMENT` 동작, `ENUM` 타입 처리에서 미세한 차이 존재
+- 따라서 **단위 테스트(127건)는 H2, 통합 테스트는 MySQL**로 이원화하여 SQL 호환성 문제를 통합 테스트에서 잡는 전략을 택했어요
+- 실제로 H2에서 통과했지만 MySQL에서 실패한 케이스는 프로젝트 기간 중 0건이었어요. 이 프로젝트에서 사용한 SQL이 표준 CRUD 중심이라 호환성 차이가 발생하지 않은 것이에요. 만약 MySQL 고유 함수나 프로시저를 썼다면 이 전략은 위험했을 거예요
 
 ![](/uploads/project/EduMeet/unit-test-db-migration/analysis.png)
 
@@ -278,7 +295,22 @@ MySQL results:
 
 ### Analysis
 
-H2 in-memory mode completed individual tests approximately 47% faster and overall tests approximately 45% faster than MySQL. The performance gap was especially large for read-heavy tests, thanks to the in-memory processing structure that eliminates disk I/O.
+H2 in-memory mode completed individual tests approximately 47% faster and overall tests approximately 45% faster than MySQL. The performance gap was especially large for read-heavy tests. MySQL incurs disk I/O (on InnoDB buffer pool misses) and TCP network round trips per query, while H2 in-memory processes directly from JVM heap memory, eliminating both overheads.
+
+**Why 4.34 seconds matters:**
+- Assuming 20-30 test runs per day during development, cumulative difference is ~1.5-2 minutes daily
+- Over 6 weeks with 3 team members, that's approximately 3-4 hours of cumulative wait time saved
+- The key insight is the **psychological threshold**: tests over 10 seconds cause developers to context-switch ("this is slow") and start writing next code first, eventually skipping test execution altogether. 5.23s is "bearable wait time"; 9.57s is "start doing something else time"
+- In CI/CD, the test stage is part of the build pipeline — 4.34s compounds across dozens of daily pushes
+
+### H2-MySQL Compatibility Risk
+
+Using H2 in-memory for tests requires caution. Even H2's MySQL compatibility mode (`MODE=MySQL`) isn't 100% identical.
+
+- MySQL's `GROUP_CONCAT`, `JSON_EXTRACT` functions are unsupported or behave differently in H2
+- Minor differences in `AUTO_INCREMENT` behavior and `ENUM` type handling
+- Strategy: **unit tests (127) on H2, integration tests on MySQL** — SQL compatibility issues caught in integration tests
+- In practice, 0 cases of H2-pass/MySQL-fail occurred during the project. The SQL used was standard CRUD, avoiding compatibility gaps. If MySQL-specific functions or procedures had been used, this strategy would have been risky
 
 ![](/uploads/project/EduMeet/unit-test-db-migration/analysis.png)
 

@@ -46,7 +46,7 @@ coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-e
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-timeout-log.png)
 
 
-검색도 안 되고, 자동완성도 안 되면 2,744만 건의 데이터를 찾을 수 있는 방법이 아예 없는 상태입니다. 자동완성 역시 Full Table Scan이 발생하면 검색과 마찬가지로 커넥션을 장시간 점유하여 시스템 마비를 유발할 수 있습니다.
+검색도 안 되고, 자동완성도 안 되면 1,215만 건의 데이터를 찾을 수 있는 방법이 아예 없는 상태입니다. 자동완성 역시 Full Table Scan이 발생하면 검색과 마찬가지로 커넥션을 장시간 점유하여 시스템 마비를 유발할 수 있습니다.
 
 **의문:** `LIKE 'prefix%'`는 B-Tree 인덱스를 탈 수 있는 후방 와일드카드인데, 왜 타임아웃이 나는가?
 
@@ -88,7 +88,7 @@ title 컬럼에 인덱스 자체가 없으면 활용할 인덱스가 없으므�
 | 단일 인덱스 `(title)` | range scan 가능 | view_count 정보가 인덱스에 없음 | - |
 | 복합 인덱스 `(title, view_count DESC)` | range scan + ICP로 view_count 접근 | SELECT *이므로 테이블 lookup 필요 | **O** |
 | 커버링 인덱스 (전체 컬럼 포함) | 테이블 lookup 제거 | content가 LONGTEXT라 인덱스에 포함 불가 | 불가능 |
-| Trie 자료구조 | O(L) 탐색으로 매우 빠름 | 2,744만 제목을 메모리에 올려야 함 (ARM 서버 메모리 한계) | 시기상조 |
+| Trie 자료구조 | O(L) 탐색으로 매우 빠름 | 1,215만 제목을 메모리에 올려야 함 (ARM 서버 메모리 한계) | 시기상조 |
 
 **단일 인덱스 `(title)` 대신 복합 인덱스를 선택한 이유:**
 
@@ -102,7 +102,7 @@ title 컬럼에 인덱스 자체가 없으면 활용할 인덱스가 없으므�
 
 **Trie를 제외한 이유:**
 
-Trie는 prefix 탐색에 최적화된 자료구조이지만, 2,744만 개의 제목을 메모리에 올려야 합니다. 현재 ARM 서버는 메모리 제한이 있고, B-Tree 인덱스로 `LIKE 'prefix%' LIMIT 10`을 실행하면 ms 단위 응답이 가능하므로, 현 규모에서는 DB 인덱스로 충분합니다.
+Trie는 prefix 탐색에 최적화된 자료구조이지만, 1,215만 개의 제목을 메모리에 올려야 합니다. 현재 ARM 서버는 메모리 제한이 있고, B-Tree 인덱스로 `LIKE 'prefix%' LIMIT 10`을 실행하면 ms 단위 응답이 가능하므로, 현 규모에서는 DB 인덱스로 충분합니다.
 
 ### 선택: 복합 인덱스 `(title, view_count DESC)`
 
@@ -162,7 +162,7 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### 응답시간 측정
 
-> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: 2,744만 건.
+> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: 1,215만 건.
 
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/response-time-after.png)
 

@@ -78,6 +78,7 @@ bool test_and_set(bool *target) {
 
 **사용 예시:**
 ```c
+// C++/의사 코드
 class TASLock {
     bool locked = false;
 
@@ -167,6 +168,9 @@ class Singleton {
             synchronized (Singleton.class) {
                 if (instance == null) {  // 2. 두 번째 체크
                     instance = new Singleton();  // 문제 발생 지점!
+                    // 이 연산은 (1) 메모리 할당, (2) 생성자 호출, (3) 참조 할당 세 단계로 분리되며,
+                    // 컴파일러가 (3)을 (2)보다 먼저 실행(명령어 재배치)할 수 있다.
+                    // 이 경우 다른 스레드가 초기화되지 않은 객체를 읽게 된다.
                 }
             }
         }
@@ -182,7 +186,7 @@ class Singleton {
 **해결: volatile 키워드 (Memory Barrier)**
 ```java
 class Singleton {
-    // volatile: 캐시 무시, 항상 메인 메모리에서 읽기/쓰기
+    // volatile: happens-before 관계를 수립하여 가시성과 순서를 보장. CPU 캐시는 여전히 사용되며, 캐시 일관성 프로토콜(MESI 등)을 통해 동기화된다
     private static volatile Singleton instance;
 
     public static Singleton getInstance() {
@@ -254,7 +258,7 @@ class Counter {
 
     public void increment() {
         lock.lock();
-        count++;  // 단 하나의 명령어 (나노초 단위)
+        count++;  // 매우 짧은 연산 (나노초 단위, 단 원자적이지는 않음 — load, increment, store 3개 명령어)
         lock.unlock();
     }
 }
@@ -413,8 +417,8 @@ db.users.updateOne(
     { $set: { name: "Kim" } }
 )
 
-// 락 획득 순서:
-// 1. 글로벌: IS (Intent Shared)
+// 락 획득 순서 (쓰기 작업이므로 글로벌/데이터베이스/컬렉션에 IX, 도큐먼트에 X를 획득):
+// 1. 글로벌: IX (Intent Exclusive)
 // 2. 데이터베이스: IX (Intent Exclusive)
 // 3. 컬렉션: IX (Intent Exclusive)
 // 4. 도큐먼트: X (Exclusive)
@@ -503,7 +507,7 @@ public void updateStock(Long productId, int quantity) {
 **SQL:**
 ```sql
 SELECT * FROM product WHERE id = 1 FOR UPDATE;
--- 다른 트랜잭션은 이 row를 읽거나 쓸 수 없음
+-- 다른 트랜잭션의 locking read(SELECT FOR UPDATE, SELECT LOCK IN SHARE MODE)와 쓰기(UPDATE, DELETE)는 차단되지만, 일반 SELECT(non-locking read)는 MVCC를 통해 여전히 가능
 ```
 
 #### 낙관적 락: "충돌이 거의 없을 것이다"
@@ -540,6 +544,8 @@ public void updateStock(Long productId, int quantity) {
 
 **재시도 로직:**
 ```java
+// 주의: 재시도 로직은 트랜잭션 밖에서 수행해야 한다.
+// @Transactional 내에서 재시도하면 이미 롤백 마크된 트랜잭션에서 재시도하는 것이므로 의미 없다.
 @Transactional
 public void updateStockWithRetry(Long productId, int quantity) {
     int maxRetries = 3;
@@ -604,14 +610,14 @@ public void processCoupon(String couponCode) {
 @Transactional
 public void processCoupon(String couponCode) {
     Coupon coupon = couponRepository.findByCode(couponCode);
-    if (coupon.getUsageCount() < couponMaxUsage()) {
+    if (coupon.getUsageCount() < coupon.getMaxUsage()) {
         coupon.incrementUsage();  // 중복 사용!
         couponRepository.save(coupon);
     }
 }
 ```
 
-DB 락으로는 **다른 서버 인스턴스**를 막을 수 없어요. **분산 락**이 필요하죠!
+DB 락(SELECT FOR UPDATE)은 DB 서버 레벨에서 관리되므로 어떤 서버에서 오든 동일하게 차단해요. 하지만 DB 커넥션을 락 보유 동안 점유하고, DB 트랜잭션 범위 밖의 외부 자원(API 호출, 파일 등)에 대한 동기화는 불가능해요. 이런 한계 때문에 **분산 락**이 필요해요.
 
 > 출처: [Martin Kleppmann - How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)
 
@@ -733,6 +739,8 @@ public class CouponService {
 
         try {
             // 락 획득 시도 (대기 10초, 해제 30초)
+            // 주의: leaseTime을 직접 지정하면 Watchdog 자동 갱신이 작동하지 않는다.
+            // Watchdog을 사용하려면 leaseTime을 -1(기본값)로 두어야 한다.
             if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
                 try {
                     // 임계영역
@@ -866,6 +874,8 @@ accountB.transfer(accountA, 200);  // B락 → A락 대기
 
 // 데드락!
 ```
+
+데드락이 발생하려면 4가지 조건이 동시에 성립해야 한다: **(1) 상호 배제** (자원은 한 번에 하나의 스레드만 사용), **(2) 점유 대기** (자원을 점유한 채 다른 자원을 대기), **(3) 비선점** (다른 스레드의 자원을 강제로 빼앗을 수 없음), **(4) 순환 대기** (스레드들이 원형으로 서로의 자원을 대기). 해결 방법은 이 중 하나를 깨뜨리는 것이다.
 
 **동작 과정:**
 ![](/uploads/theory/lock-mechanisms-all/occurrence-condition.png)
@@ -1471,6 +1481,7 @@ bool test_and_set(bool *target) {
 
 **Usage Example:**
 ```c
+// C++/pseudo code
 class TASLock {
     bool locked = false;
 
@@ -1560,6 +1571,9 @@ class Singleton {
             synchronized (Singleton.class) {
                 if (instance == null) {  // 2. Second check
                     instance = new Singleton();  // Problem point!
+                    // This operation is decomposed into (1) memory allocation, (2) constructor call, (3) reference assignment,
+                    // and the compiler may execute (3) before (2) (instruction reordering).
+                    // In that case, another thread could read an uninitialized object.
                 }
             }
         }
@@ -1575,7 +1589,7 @@ class Singleton {
 **Solution: volatile Keyword (Memory Barrier)**
 ```java
 class Singleton {
-    // volatile: bypass cache, always read/write from main memory
+    // volatile: establishes happens-before relationships for visibility and ordering. CPU caches are still used; synchronization is achieved through cache coherence protocols (MESI, etc.)
     private static volatile Singleton instance;
 
     public static Singleton getInstance() {
@@ -1647,7 +1661,7 @@ class Counter {
 
     public void increment() {
         lock.lock();
-        count++;  // A single instruction (nanosecond scale)
+        count++;  // Very short operation (nanosecond scale, but NOT atomic — load, increment, store = 3 instructions)
         lock.unlock();
     }
 }
@@ -1806,8 +1820,8 @@ db.users.updateOne(
     { $set: { name: "Kim" } }
 )
 
-// Lock acquisition order:
-// 1. Global: IS (Intent Shared)
+// Lock acquisition order (write operation acquires IX on global/database/collection, X on document):
+// 1. Global: IX (Intent Exclusive)
 // 2. Database: IX (Intent Exclusive)
 // 3. Collection: IX (Intent Exclusive)
 // 4. Document: X (Exclusive)
@@ -1896,7 +1910,7 @@ public void updateStock(Long productId, int quantity) {
 **SQL:**
 ```sql
 SELECT * FROM product WHERE id = 1 FOR UPDATE;
--- Other transactions cannot read or write this row
+-- Locking reads (SELECT FOR UPDATE, SELECT LOCK IN SHARE MODE) and writes (UPDATE, DELETE) from other transactions are blocked, but plain SELECT (non-locking read) is still possible via MVCC
 ```
 
 #### Optimistic Lock: "Conflicts will rarely happen"
@@ -1933,6 +1947,8 @@ public void updateStock(Long productId, int quantity) {
 
 **Retry Logic:**
 ```java
+// Warning: Retry logic should be performed OUTSIDE the transaction.
+// Retrying inside @Transactional is meaningless because the transaction is already marked for rollback.
 @Transactional
 public void updateStockWithRetry(Long productId, int quantity) {
     int maxRetries = 3;
@@ -1997,14 +2013,14 @@ public void processCoupon(String couponCode) {
 @Transactional
 public void processCoupon(String couponCode) {
     Coupon coupon = couponRepository.findByCode(couponCode);
-    if (coupon.getUsageCount() < couponMaxUsage()) {
+    if (coupon.getUsageCount() < coupon.getMaxUsage()) {
         coupon.incrementUsage();  // Duplicate usage!
         couponRepository.save(coupon);
     }
 }
 ```
 
-DB locks cannot block **other server instances**. We need a **distributed lock**!
+DB locks (SELECT FOR UPDATE) are managed at the DB server level, so they block equally regardless of which server the request comes from. However, they occupy a DB connection while the lock is held, and cannot synchronize external resources outside the DB transaction scope (API calls, files, etc.). Because of these limitations, a **distributed lock** is needed.
 
 > Source: [Martin Kleppmann - How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)
 
@@ -2126,6 +2142,8 @@ public class CouponService {
 
         try {
             // Attempt to acquire lock (wait 10s, release after 30s)
+            // Note: Specifying leaseTime explicitly disables Watchdog auto-renewal.
+            // To use Watchdog, leaseTime must be left as -1 (default).
             if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
                 try {
                     // Critical section
@@ -2259,6 +2277,8 @@ accountB.transfer(accountA, 200);  // Lock B → Waiting for Lock A
 
 // Deadlock!
 ```
+
+For a deadlock to occur, four conditions must hold simultaneously (Coffman conditions): **(1) Mutual Exclusion** (a resource can only be used by one thread at a time), **(2) Hold and Wait** (a thread holds a resource while waiting for another), **(3) No Preemption** (a resource cannot be forcibly taken from a thread), **(4) Circular Wait** (threads form a circular chain of resource dependencies). The solution is to break any one of these conditions.
 
 **How It Works:**
 ![](/uploads/theory/lock-mechanisms-all/occurrence-condition.png)

@@ -16,7 +16,7 @@ draft: true
 
 ## 이전 글
 
-[MySQL 검색을 버리고 Lucene을 선택한 이유](/blog/project/wikiengine/lucene-decision)에서 임베디드 Lucene + Nori 형태소 분석기를 적용하여 1,425만 건 전체 검색을 구현했습니다.
+[MySQL 검색을 버리고 Lucene을 선택한 이유](/blog/project/wikiengine/lucene-decision)에서 임베디드 Lucene + Nori 형태소 분석기를 적용하여 1,215만 건 전체 검색을 구현했습니다.
 이 글에서는 검색 품질을 더 높이기 위한 개선 로드맵과 구체적인 기법을 다룹니다.
 
 ---
@@ -207,14 +207,14 @@ public Optional<String> suggestCorrection(String query) {
 
 ### 전체 색인 vs 부분 색인 전략
 
-1,425만 건의 위키 데이터는 대부분 변경되지 않으므로, 색인을 전체(full)와 부분(incremental)으로 나눕니다.
+1,215만 건의 위키 데이터는 대부분 변경되지 않으므로, 색인을 전체(full)와 부분(incremental)으로 나눕니다.
 
 ```
 전체 색인 (Full Reindex):
 - 언제: 분석기 변경, 필드 매핑 변경, 인덱스 구조 변경 시
 - 방법: DB 전체 스캔 -> 새 인덱스 디렉토리에 색인 -> 교체
 - 빈도: 수동 트리거 (드물게)
-- 소요: 1,425만 건 × 평균 6,586자 = 수십 분~수 시간
+- 소요: 1,215만 건 × 평균 6,586자 = 수십 분~수 시간
 
 부분 색인 (Incremental Reindex) — 구현 완료:
 - 언제: 게시글 생성/수정/삭제 시

@@ -47,13 +47,13 @@ coverImage: "/uploads/project/IndiBalancing/game-design-tool-intro/image.png"
 게임 밸런싱 방법론을 다음 자료를 기반으로 학습했어요.
 
 - GDC Vault: Zynga의 공식 기반 접근법, Slay the Spire 데이터 기반 밸런싱
-- NDC 2018: 넥슨의 밸런스 기획 프로세스
+- NDC 2018: 밸런스 기획 프로세스 세션
 - 학술자료: Csikszentmihalyi의 Flow 이론, 게임 경제학의 Faucet/Sink 모델
 - Ian Schreiber의 Game Balance Concepts 강의
 
 ![](/uploads/project/IndiBalancing/game-design-tool-intro/where-study.png)
 
-추가로 실무 게임 개발 블로그에서 TTK/DPS 계산 공식, RPG 성장 곡선 설계를 참고했고, LoL/WoW의 데미지 공식(방어력 수확체감 `100/(100+DEF)`, 방어관통 시스템)을 분석했어요.
+추가로 실무 게임 개발 블로그에서 TTK/DPS 계산 공식, RPG 성장 곡선 설계를 참고했고, LoL 등 다수 게임의 데미지 공식(방어력 수확체감 `100/(100+DEF)`, 방어관통 시스템)을 분석했어요. 이 공식은 LoL에서 사용하는 형태이며, WoW 등 다른 게임에서는 레벨에 따라 상수가 달라지는 변형을 사용합니다.
 
 **학습을 통해 정리한 밸런스 데이터 관리 사이클:**
 
@@ -110,7 +110,7 @@ Unity, Godot, Unreal 코드를 자동으로 생성해요.
 - Wilson 신뢰구간 95% 통계 분석
 - 1:1, 1:N, N:N 팀 전투 지원
 - 다양한 데미지 공식 (단순, MMORPG, 퍼센트, 랜덤)
-- 방어관통 시스템 (LoL/Dota 스타일)
+- 방어관통 시스템 (LoL 스타일 기반, 고정/비율 관통 지원)
 - 스킬 쿨타임, HP 트리거, 시너지 로직 지원
 - 턴별 전투 로그 상세 재생
 
@@ -177,7 +177,7 @@ A: Unity ScriptableObject(.cs + .json), Godot Resource(.gd + .json), Unreal USTR
 A: Flow 이론, Faucet/Sink 모델, Ian Schreiber의 Game Balance Concepts, NDC/GDC 발표 자료 등을 기반으로 했어요.
 
 **Q: TTK 계산에서 왜 단순히 HP/DPS로 나누면 안 되는가?**
-A: 마지막 타격에는 쿨다운이 없기 때문이에요. HP 100, DPS 100이면 TTK는 1초가 아니라 0.9초입니다.
+A: 마지막 타격에는 쿨다운이 없기 때문이에요. 예를 들어 공격 속도 10회/초, 1타당 10데미지인 무기(DPS 100)로 HP 100인 적을 공격하면, 10번째(마지막) 타격 후 대기 시간이 없으므로 TTK는 (10-1)×0.1 = 0.9초입니다.
 
 **Q: 노션이나 에어테이블을 쓰면 되지 않는가?**
 A: 노션에는 `DAMAGE(atk, def)` 같은 게임 특화 함수가 없어요. 시트 간 자동 연동이나 성장 곡선 차트도 마찬가지고요. 노션은 범용 툴이고, 이 툴은 게임 밸런스에 특화되어 있습니다.
@@ -222,13 +222,13 @@ While existing tools (Excel, Google Sheets) can do this, they lack game-specific
 Game balancing methodology was studied based on:
 
 - GDC Vault: Zynga's formula-based approach, Slay the Spire data-driven balancing
-- NDC 2018: Nexon's balance design process
+- NDC 2018: Balance design process session
 - Academic materials: Csikszentmihalyi's Flow Theory, Faucet/Sink model in game economics
 - Ian Schreiber's Game Balance Concepts lectures
 
 ![](/uploads/project/IndiBalancing/game-design-tool-intro/where-study.png)
 
-Additionally, TTK/DPS calculation formulas and RPG growth curve design were referenced from game development blogs. LoL/WoW damage formulas (diminishing returns `100/(100+DEF)`, armor penetration systems) were also analyzed.
+Additionally, TTK/DPS calculation formulas and RPG growth curve design were referenced from game development blogs. LoL and other games' damage formulas (diminishing returns `100/(100+DEF)`, armor penetration systems) were also analyzed. This formula matches LoL's implementation; other games like WoW use variants with level-dependent constants.
 
 **Balance data management cycle derived from study:**
 
@@ -285,7 +285,7 @@ Automatically generates code for Unity, Godot, and Unreal.
 - Wilson confidence interval 95% statistical analysis
 - 1v1, 1vN, NvN team battles supported
 - Various damage formulas (simple, MMORPG, percentage, random)
-- Armor penetration system (LoL/Dota style)
+- Armor penetration system (LoL-style base, supports flat/percentage penetration)
 - Skill cooldowns, HP triggers, synergy logic
 - Turn-by-turn combat log replay
 
@@ -352,7 +352,7 @@ A: Auto-generates Unity ScriptableObject (.cs + .json), Godot Resource (.gd + .j
 A: Based on Flow Theory, Faucet/Sink model, Ian Schreiber's Game Balance Concepts, and NDC/GDC presentations.
 
 **Q: Why can't TTK be simply calculated as HP/DPS?**
-A: Because there's no cooldown on the last hit. With HP 100 and DPS 100, TTK is 0.9 seconds, not 1 second.
+A: Because there's no cooldown on the last hit. For example, a weapon dealing 10 damage at 10 hits/sec (DPS 100) against HP 100 requires 10 hits, and since there's no wait after the final hit, TTK = (10-1)×0.1 = 0.9 seconds.
 
 **Q: Can't I use Notion or Airtable instead?**
 A: Notion doesn't have game-specific functions like `DAMAGE(atk, def)`. Neither does it have cross-sheet auto-linking or growth curve charts. Notion is a general-purpose tool; this tool is specialized for game balance.

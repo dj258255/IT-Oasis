@@ -39,12 +39,12 @@ coverImage: "/uploads/project/Orakgarak/presigned-url-eventbridge-upload/double-
 
 ### OOM 위험
 
-서버 업로드는 파일 전체를 메모리에 올려요.
-Spring Boot의 `MultipartFile`이 기본적으로 파일을 메모리에 버퍼링하기 때문이거든요.
+서버 업로드 방식에서는 파일 데이터가 서버 메모리를 경유해요.
+Spring Boot의 `StandardMultipartResolver`는 `file-size-threshold`(기본값 0) 이상이면 디스크 임시 파일에 쓰지만, 업로드 수신 중 서블릿 컨테이너가 입력 스트림을 버퍼링하고, 이후 S3로 전송하기 위해 다시 읽는 과정에서 메모리를 사용해요.
 
 음성 파일 하나가 대략 30-50MB였어요.
-동시 업로드가 10건만 겹쳐도 500MB가 순간 점유되고, 여기에 GC 압박까지 더해지면 응답 지연이 시작돼요.
-동시 20건이면 1GB를 넘기면서 OOM 가능성이 현실적인 수치가 돼요.
+동시 업로드가 10건만 겹쳐도 디스크 I/O + 메모리 버퍼링으로 수백 MB가 순간 점유되고, S3 전송까지 포함하면 요청당 30-40초간 리소스를 점유해요.
+실제로 OOM이 발생한 건 아니지만, 동시 업로드가 증가하면 JVM 힙 압박 → Full GC → 응답 지연 → 스레드 점유 누적으로 이어지는 구조적 위험이 있었어요.
 
 ### 이중 네트워크 전송
 
@@ -174,18 +174,31 @@ S3 키에 UUID를 포함시키고(`recordings/{uuid}_{filename}`), EventBridge �
 
 ---
 
+## 결과
+
+| 지표 | 서버 경유 방식 | Presigned URL 방식 |
+|------|-------------|-------------------|
+| 업로드 경로 | 클라이언트 → 서버 → S3 (2홉) | 클라이언트 → S3 (1홉) |
+| 서버 메모리 부담 | 파일 크기만큼 점유 | 0 (URL 발급만) |
+| 업로드 중 서버 의존 | 서버 다운 시 업로드 불가 | 서버 무관 (S3 직접) |
+| 실패 복구 | 클라이언트부터 재전송 | S3에 원본 보존, 백엔드 재시도 |
+| 구현 복잡도 | 낮음 | 높음 (EventBridge + 고아 파일 배치 + 상태 머신) |
+
+---
+
 ## 솔직한 평가
 
 Presigned URL 방식도 완벽하지 않아요.
 
 업로드 전에 파일을 검증할 수 없다는 게 가장 큰 단점이에요.
 서버를 거치면 파일 포맷, 크기, 악성코드 등을 업로드 전에 체크할 수 있지만, S3 직접 업로드에서는 올라온 뒤에야 확인 가능하거든요.
+Presigned POST 정책(POST Policy)에서 `content-length-range` 조건으로 파일 크기 상한을, `Content-Type` 조건으로 허용 포맷을 제한했어요. (일반 Presigned PUT URL은 파일 크기 제한이 불가능하므로 Presigned POST를 사용했어요.) 하지만 파일 내용 자체의 검증은 업로드 후에만 가능해요.
 
 구현 복잡도도 올라가요.
 Presigned URL 발급, EventBridge 설정, 고아 파일 처리 배치잡까지 관리 포인트가 늘어나요.
 클라이언트에서 S3로 직접 보내니 디버깅도 어렵고요.
 
-다만 우리 서비스에서는 음성 파일 특성상 업로드 전 검증이 크게 필요 없었고, OOM 방지가 더 중요했어요.
+다만 우리 서비스에서는 음성 파일 특성상 업로드 전 검증이 크게 필요 없었고, 서버 메모리 부담 제거가 더 중요했어요.
 그래서 이 트레이드오프를 감수했어요.
 
 ---
@@ -218,7 +231,7 @@ The first approach was receiving files on the server, converting, then storing i
 
 ### OOM Risk
 
-Server uploads load entire files into memory. Spring Boot's `MultipartFile` buffers files in memory by default. Audio files were 30-50MB each. 10 concurrent uploads means 500MB of instant memory pressure; 20 concurrent uploads crosses 1GB with realistic OOM risk.
+Server uploads route file data through server memory. Spring Boot's `StandardMultipartResolver` writes files to disk temp files when exceeding `file-size-threshold` (default 0), but the servlet container buffers the input stream during upload, and reading it back for S3 transfer consumes memory. Audio files were 30-50MB each, and with 10 concurrent uploads, disk I/O plus memory buffering consumes hundreds of MB while each request holds resources for 30-40 seconds. While OOM didn't actually occur, the structural risk of heap pressure → Full GC → response delay → thread accumulation was clear.
 
 ### Double Network Transfer
 
@@ -316,13 +329,25 @@ Upload records are created in DB before issuing URLs, so S3 events can identify 
 
 ---
 
+## Results
+
+| Metric | Server-Proxied Upload | Presigned URL Upload |
+|--------|----------------------|---------------------|
+| Upload path | Client → Server → S3 (2 hops) | Client → S3 (1 hop) |
+| Server memory burden | File-size memory occupation | 0 (URL issuance only) |
+| Server dependency during upload | Upload fails if server is down | Server-independent (direct S3) |
+| Failure recovery | Retransmit from client | Original preserved in S3, backend retry |
+| Implementation complexity | Low | High (EventBridge + orphan batch + state machine) |
+
+---
+
 ## Honest Assessment
 
-Presigned URLs aren't perfect. The biggest downside is inability to validate files before upload. Server-proxied uploads can check format, size, and malware beforehand; direct S3 uploads can only verify after arrival.
+Presigned URLs aren't perfect. The biggest downside is inability to validate files before upload. Server-proxied uploads can check format, size, and malware beforehand; direct S3 uploads can only verify after arrival. Presigned POST policies enforce `content-length-range` (file size cap) and `Content-Type` restrictions — standard Presigned PUT URLs cannot enforce file size limits, so Presigned POST was used. However, content validation is only possible post-upload.
 
 Implementation complexity also increases: Presigned URL issuance, EventBridge configuration, orphan file batch jobs all add management overhead.
 
-However, for our service, audio files didn't require pre-upload validation, and OOM prevention was more critical. This trade-off was accepted.
+However, for our service, audio files didn't require pre-upload validation, and eliminating server memory burden was more critical. This trade-off was accepted.
 
 ---
 

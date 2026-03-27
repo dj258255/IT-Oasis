@@ -18,7 +18,7 @@ coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png"
 
 이전 글([캐시와 버퍼: 속도 차이를 극복하는 두 가지 방법](/blog/theory/cache-and-buffer))에서 캐시의 기본 개념과 CPU 캐시, 웹 브라우저 캐시, Redis 캐시 등을 살펴봤어요. 특히 Redis를 이용한 캐싱 예제를 보면서 DB 조회(50-200ms)를 캐시 조회(1-5ms)로 바꿔 **10배 이상 성능을 향상**시킬 수 있다는 걸 확인했죠.
 
-그런데 막상 라이브 스트리밍 프로젝트에 적용하려고 보니 궁금한 게 너무 많았어요. Redis는 왜 Memcached보다 빠를까? 어떤 자료구조를 제공할까? Spring Boot에서는 어떻게 쓸까? 캐시 전략은 뭐가 있고, 주의할 점은? 실제 서비스에서는 어떻게 쓸까?
+그런데 막상 라이브 스트리밍 프로젝트에 적용하려고 보니 궁금한 게 너무 많았어요. Redis vs Memcached — 무엇이 다를까? 어떤 자료구조를 제공할까? Spring Boot에서는 어떻게 쓸까? 캐시 전략은 뭐가 있고, 주의할 점은? 실제 서비스에서는 어떻게 쓸까?
 
 그래서 Redis와 캐싱에 대해 제대로 파헤쳐 보기로 했어요.
 
@@ -161,7 +161,7 @@ User user = (User) client.get("user:123");
 - 간단함
 
 **한계**:
-- 문자열만 저장 가능 (단순 key-value)
+- 바이너리 데이터 저장 가능하나, 서버 사이드 자료구조 조작 불가 (단순 key-value)
 - 영속성 없음 (재시작하면 데이터 손실)
 - 복잡한 자료구조 지원 안 함
 
@@ -180,10 +180,11 @@ User user = (User) client.get("user:123");
 ```
 Redis의 성능:
 - GET/SET: 초당 100,000 ops
-- Memcached: 초당 60,000 ops
+- Memcached: 초당 100,000+ ops (멀티스레드, 단순 key-value에 특화)
 - MySQL: 초당 1,000 ops
 
-100배 이상 차이!
+Redis vs MySQL: 100배 이상 차이!
+(Redis를 선택하는 이유는 속도보다 다양한 서버 사이드 자료구조 지원이 핵심이다)
 ```
 
 #### Redis가 Memcached보다 나은 점
@@ -216,11 +217,12 @@ redis.lpush("list", "new item");  // 리스트 왼쪽에 추가
 Spring Boot가 Redis를 1급 시민으로 채택하면서 사용이 폭발적으로 증가했어요.
 
 ```yaml
-# Spring Boot 설정
+# Spring Boot 설정 (Spring Boot 3.x부터 spring.data.redis.* 사용)
 spring:
-  redis:
-    host: localhost
-    port: 6379
+  data:
+    redis:
+      host: localhost
+      port: 6379
   cache:
     type: redis
 ```
@@ -374,17 +376,19 @@ dependencies {
 ### 4.2 기본 설정
 
 ```yaml
+# Spring Boot 3.x부터 spring.data.redis.* 사용
 spring:
-  redis:
-    host: localhost
-    port: 6379
-    password: # 비밀번호 (선택)
-    timeout: 3000ms
-    lettuce:
-      pool:
-        max-active: 10  # 최대 커넥션
-        max-idle: 10    # 유휴 커넥션
-        min-idle: 2     # 최소 커넥션
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: # 비밀번호 (선택)
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 10  # 최대 커넥션
+          max-idle: 10    # 유휴 커넥션
+          min-idle: 2     # 최소 커넥션
   cache:
     type: redis
     redis:
@@ -404,8 +408,9 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
 
         // JSON 직렬화
-        Jackson2JsonRedisSerializer<Object> serializer =
-            new Jackson2JsonRedisSerializer<>(Object.class);
+        // Object.class로 Jackson2JsonRedisSerializer를 생성하면 역직렬화 시 LinkedHashMap으로 반환된다
+        GenericJackson2JsonRedisSerializer serializer =
+            new GenericJackson2JsonRedisSerializer();
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
@@ -459,9 +464,10 @@ public class CacheConfig {
                 RedisSerializationContext.SerializationPair
                     .fromSerializer(new StringRedisSerializer())
             )
+            // Object.class로 Jackson2JsonRedisSerializer를 생성하면 역직렬화 시 LinkedHashMap으로 반환된다
             .serializeValuesWith(
                 RedisSerializationContext.SerializationPair
-                    .fromSerializer(new Jackson2JsonRedisSerializer<>(Object.class))
+                    .fromSerializer(new GenericJackson2JsonRedisSerializer())
             );
 
         return RedisCacheManager.builder(factory)
@@ -512,7 +518,7 @@ Redis를 공부하고 나서 모든 걸 Redis로 캐싱하려고 했어요. 그�
 
 "서버 1대만 쓰는데, 굳이 Redis를 띄워야 할까?"
 
-로그인 기능을 만들면서 이런 상황이 있었어요.
+API 기능을 만들면서 이런 상황이 있었어요.
 
 ```java
 @Service
@@ -903,7 +909,35 @@ class ProductService {
 - 첫 요청은 느림 (Cache Miss)
 - 캐시 만료 시점에 부하 집중 (Thundering Herd)
 
-### 6.2 Write-Through
+### 6.2 Read-Through
+
+Cache-Aside와 비슷하지만, **캐시 자체가 DB 조회를 담당**하는 점이 다르다. 애플리케이션은 항상 캐시에만 요청하고, 캐시 미스 시 캐시가 직접 DB에서 데이터를 가져와 저장한다.
+
+```java
+// Read-Through: 캐시 라이브러리가 로딩을 담당
+// Caffeine의 LoadingCache가 대표적인 Read-Through 구현
+LoadingCache<Long, Product> productCache = Caffeine.newBuilder()
+    .expireAfterWrite(1, TimeUnit.HOURS)
+    .build(id -> repository.findById(id)  // 캐시 미스 시 자동으로 호출됨
+        .orElseThrow(() -> new NotFoundException(id)));
+
+// 사용: 항상 캐시에만 요청
+Product product = productCache.get(productId);
+```
+
+**Cache-Aside와의 차이**:
+- **Cache-Aside**: 애플리케이션이 캐시 미스를 감지하고 직접 DB를 조회한 뒤 캐시에 저장
+- **Read-Through**: 캐시 자체가 데이터 로딩 책임을 가짐 — 애플리케이션은 캐시만 바라봄
+
+**장점**:
+- 애플리케이션 코드가 단순해짐 (캐시 로직 분리)
+- 동일 키에 대한 동시 요청 시 중복 로딩 방지 (built-in)
+
+**단점**:
+- 캐시 라이브러리에 의존적
+- 캐시 미스 시 동기적 로딩으로 지연 발생
+
+### 6.3 Write-Through
 
 데이터 쓸 때 캐시도 함께 업데이트해요.
 
@@ -931,7 +965,7 @@ class ProductService {
 - 쓰기 성능 저하 (캐시 + DB)
 - 안 쓰는 데이터도 캐싱
 
-### 6.3 Write-Behind (Write-Back)
+### 6.4 Write-Behind (Write-Back)
 
 캐시에만 쓰고, 나중에 DB에 반영해요.
 
@@ -950,17 +984,19 @@ class ViewCountService {
     // 주기적으로 DB 반영 (1분마다)
     @Scheduled(fixedDelay = 60000)
     public void syncToDatabase() {
-        Set<String> keys = redis.keys("stream:*:views");
+        // `KEYS` 명령은 O(N) 블로킹이므로 프로덕션에서는 반드시 `SCAN`을 사용해야 한다
+        ScanOptions scanOptions = ScanOptions.scanOptions().match("stream:*:views").count(100).build();
+        try (Cursor<String> cursor = redis.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                Long streamId = extractStreamId(key);
 
-        for (String key : keys) {
-            Long streamId = extractStreamId(key);
-            Long views = redis.opsForValue().get(key);
-
-            // DB 업데이트
-            streamRepository.updateViews(streamId, views);
-
-            // 캐시 삭제
-            redis.delete(key);
+                // GETDEL로 읽기와 삭제를 원자적으로 수행 (Redis 6.2+)
+                Long views = redis.opsForValue().getAndDelete(key);
+                if (views != null) {
+                    streamRepository.updateViews(streamId, views);
+                }
+            }
         }
     }
 }
@@ -1041,9 +1077,15 @@ class StreamService {
                 redis.delete(lockKey);
             }
         } else {
-            // Lock 획득 실패 → 잠시 대기 후 재시도
-            Thread.sleep(100);
-            return getPopularStreams();
+            // Lock 획득 실패 → 잠시 대기 후 재시도 (최대 3회)
+            int retries = 0;
+            while (retries < 3) {
+                Thread.sleep(100);
+                cached = redis.get(cacheKey);
+                if (cached != null) return cached;
+                retries++;
+            }
+            throw new RuntimeException("캐시 갱신 대기 시간 초과");
         }
     }
 }
@@ -1073,13 +1115,11 @@ class UserService {
     public User getUser(Long id) {
         String key = "user:" + id;
 
-        // 캐시 확인
-        if (redis.hasKey(key)) {
-            User cached = redis.get(key);
-            if (cached == null) {
-                throw new UserNotFoundException(id);
-            }
-            return cached;
+        // 캐시 확인 (get 1번으로 통합 — hasKey + get 2번 호출은 불필요한 RTT 발생)
+        Object cached = redis.opsForValue().get(key);
+        if (cached != null) {
+            if (cached instanceof NullValue) return null;  // null 캐싱된 경우
+            return (User) cached;
         }
 
         // DB 조회
@@ -1181,14 +1221,20 @@ class VideoViewService {
     // 1분마다 DB에 배치 업데이트
     @Scheduled(fixedDelay = 60000)
     public void syncToDatabase() {
-        Set<String> keys = redis.keys("video:*:views");
-
+        // `KEYS` 명령은 O(N) 블로킹이므로 프로덕션에서는 반드시 `SCAN`을 사용해야 한다
+        ScanOptions scanOptions = ScanOptions.scanOptions().match("video:*:views").count(100).build();
         List<VideoView> updates = new ArrayList<>();
-        for (String key : keys) {
-            String videoId = extractVideoId(key);
-            Long views = redis.getAndDelete(key);  // 가져오고 삭제
 
-            updates.add(new VideoView(videoId, views));
+        try (Cursor<String> cursor = redis.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                String videoId = extractVideoId(key);
+                Long views = redis.getAndDelete(key);  // 가져오고 삭제
+
+                if (views != null) {
+                    updates.add(new VideoView(videoId, views));
+                }
+            }
         }
 
         // 배치 업데이트 (1번의 쿼리로)
@@ -1360,17 +1406,18 @@ class LeaderboardService {
 ### 10.2 실제 설정 예시
 
 ```yaml
-# application.yml
+# application.yml (Spring Boot 3.x부터 spring.data.redis.* 사용)
 spring:
-  redis:
-    host: localhost
-    port: 6379
-    timeout: 3000ms
-    lettuce:
-      pool:
-        max-active: 10
-        max-idle: 10
-        min-idle: 2
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 10
+          min-idle: 2
   cache:
     type: redis
     redis:
@@ -1435,7 +1482,7 @@ class StreamService {
 
 In the previous article ([Cache and Buffer: Two Approaches to Overcoming Speed Differences](/blog/theory/cache-and-buffer)), we explored the basic concepts of caching, including CPU cache, web browser cache, and Redis cache. In particular, through a Redis caching example, we confirmed that converting DB lookups (50-200ms) to cache lookups (1-5ms) can **improve performance by more than 10x**.
 
-However, when I tried to apply this to my live streaming project, I had so many questions. Why is Redis faster than Memcached? What data structures does it offer? How do you use it with Spring Boot? What caching strategies exist, and what are the pitfalls? How is it used in production services?
+However, when I tried to apply this to my live streaming project, I had so many questions. Redis vs Memcached -- what's different? What data structures does it offer? How do you use it with Spring Boot? What caching strategies exist, and what are the pitfalls? How is it used in production services?
 
 So I decided to dig deep into Redis and caching.
 
@@ -1578,7 +1625,7 @@ User user = (User) client.get("user:123");
 - Simple
 
 **Limitations:**
-- Can only store strings (simple key-value)
+- Can store binary data, but no server-side data structure manipulation (simple key-value)
 - No persistence (data lost on restart)
 - No complex data structure support
 
@@ -1597,10 +1644,11 @@ In 2009, Salvatore Sanfilippo was building a real-time web log analytics system.
 ```
 Redis Performance:
 - GET/SET: 100,000 ops/sec
-- Memcached: 60,000 ops/sec
+- Memcached: 100,000+ ops/sec (multithreaded, optimized for simple key-value)
 - MySQL: 1,000 ops/sec
 
-More than 100x difference!
+Redis vs MySQL: More than 100x difference!
+(The key reason to choose Redis over Memcached is its rich server-side data structures, not speed)
 ```
 
 #### How Redis Is Better Than Memcached
@@ -1633,11 +1681,12 @@ redis.lpush("list", "new item");  // Add to the left of the list
 When Spring Boot adopted Redis as a first-class citizen, usage exploded.
 
 ```yaml
-# Spring Boot configuration
+# Spring Boot configuration (use spring.data.redis.* from Spring Boot 3.x)
 spring:
-  redis:
-    host: localhost
-    port: 6379
+  data:
+    redis:
+      host: localhost
+      port: 6379
   cache:
     type: redis
 ```
@@ -1791,17 +1840,19 @@ dependencies {
 ### 4.2 Basic Configuration
 
 ```yaml
+# Use spring.data.redis.* from Spring Boot 3.x
 spring:
-  redis:
-    host: localhost
-    port: 6379
-    password: # Password (optional)
-    timeout: 3000ms
-    lettuce:
-      pool:
-        max-active: 10  # Max connections
-        max-idle: 10    # Idle connections
-        min-idle: 2     # Min connections
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: # Password (optional)
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 10  # Max connections
+          max-idle: 10    # Idle connections
+          min-idle: 2     # Min connections
   cache:
     type: redis
     redis:
@@ -1821,8 +1872,9 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
 
         // JSON serialization
-        Jackson2JsonRedisSerializer<Object> serializer =
-            new Jackson2JsonRedisSerializer<>(Object.class);
+        // Using Jackson2JsonRedisSerializer with Object.class causes deserialization to return LinkedHashMap
+        GenericJackson2JsonRedisSerializer serializer =
+            new GenericJackson2JsonRedisSerializer();
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
@@ -1876,9 +1928,10 @@ public class CacheConfig {
                 RedisSerializationContext.SerializationPair
                     .fromSerializer(new StringRedisSerializer())
             )
+            // Using Jackson2JsonRedisSerializer with Object.class causes deserialization to return LinkedHashMap
             .serializeValuesWith(
                 RedisSerializationContext.SerializationPair
-                    .fromSerializer(new Jackson2JsonRedisSerializer<>(Object.class))
+                    .fromSerializer(new GenericJackson2JsonRedisSerializer())
             );
 
         return RedisCacheManager.builder(factory)
@@ -1929,7 +1982,7 @@ After learning about Redis, I tried to cache everything with it. But then I had 
 
 "If I'm only using one server, do I really need to spin up Redis?"
 
-While building a login feature, I had this situation:
+While building an API feature, I had this situation:
 
 ```java
 @Service
@@ -2320,7 +2373,35 @@ class ProductService {
 - First request is slow (Cache Miss)
 - Load concentration at cache expiration (Thundering Herd)
 
-### 6.2 Write-Through
+### 6.2 Read-Through
+
+Similar to Cache-Aside, but the **cache itself is responsible for querying the DB**. The application always requests from the cache, and on a cache miss, the cache fetches the data from the DB and stores it.
+
+```java
+// Read-Through: The cache library handles loading
+// Caffeine's LoadingCache is a representative Read-Through implementation
+LoadingCache<Long, Product> productCache = Caffeine.newBuilder()
+    .expireAfterWrite(1, TimeUnit.HOURS)
+    .build(id -> repository.findById(id)  // Called automatically on cache miss
+        .orElseThrow(() -> new NotFoundException(id)));
+
+// Usage: Always request from cache only
+Product product = productCache.get(productId);
+```
+
+**Difference from Cache-Aside:**
+- **Cache-Aside**: The application detects cache misses, queries the DB directly, and stores the result in cache
+- **Read-Through**: The cache itself owns the data loading responsibility — the application only interacts with the cache
+
+**Advantages:**
+- Simplifies application code (cache logic is separated)
+- Prevents duplicate loading for concurrent requests on the same key (built-in)
+
+**Disadvantages:**
+- Depends on the cache library
+- Synchronous loading on cache miss causes latency
+
+### 6.3 Write-Through
 
 Updates the cache when data is written.
 
@@ -2348,7 +2429,7 @@ class ProductService {
 - Write performance degradation (cache + DB)
 - Caches data that may never be read
 
-### 6.3 Write-Behind (Write-Back)
+### 6.4 Write-Behind (Write-Back)
 
 Writes only to cache and syncs to DB later.
 
@@ -2367,17 +2448,19 @@ class ViewCountService {
     // Periodically sync to DB (every minute)
     @Scheduled(fixedDelay = 60000)
     public void syncToDatabase() {
-        Set<String> keys = redis.keys("stream:*:views");
+        // The `KEYS` command is O(N) blocking — always use `SCAN` in production
+        ScanOptions scanOptions = ScanOptions.scanOptions().match("stream:*:views").count(100).build();
+        try (Cursor<String> cursor = redis.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                Long streamId = extractStreamId(key);
 
-        for (String key : keys) {
-            Long streamId = extractStreamId(key);
-            Long views = redis.opsForValue().get(key);
-
-            // Update DB
-            streamRepository.updateViews(streamId, views);
-
-            // Delete from cache
-            redis.delete(key);
+                // GETDEL performs read and delete atomically (Redis 6.2+)
+                Long views = redis.opsForValue().getAndDelete(key);
+                if (views != null) {
+                    streamRepository.updateViews(streamId, views);
+                }
+            }
         }
     }
 }
@@ -2458,9 +2541,15 @@ class StreamService {
                 redis.delete(lockKey);
             }
         } else {
-            // Lock not acquired → Wait briefly and retry
-            Thread.sleep(100);
-            return getPopularStreams();
+            // Lock not acquired → Wait briefly and retry (max 3 attempts)
+            int retries = 0;
+            while (retries < 3) {
+                Thread.sleep(100);
+                cached = redis.get(cacheKey);
+                if (cached != null) return cached;
+                retries++;
+            }
+            throw new RuntimeException("Cache refresh wait timeout");
         }
     }
 }
@@ -2490,13 +2579,11 @@ class UserService {
     public User getUser(Long id) {
         String key = "user:" + id;
 
-        // Check cache
-        if (redis.hasKey(key)) {
-            User cached = redis.get(key);
-            if (cached == null) {
-                throw new UserNotFoundException(id);
-            }
-            return cached;
+        // Check cache (single get call — hasKey + get causes unnecessary extra RTT)
+        Object cached = redis.opsForValue().get(key);
+        if (cached != null) {
+            if (cached instanceof NullValue) return null;  // Null-cached entry
+            return (User) cached;
         }
 
         // Query DB
@@ -2598,14 +2685,20 @@ class VideoViewService {
     // Batch update to DB every minute
     @Scheduled(fixedDelay = 60000)
     public void syncToDatabase() {
-        Set<String> keys = redis.keys("video:*:views");
-
+        // The `KEYS` command is O(N) blocking — always use `SCAN` in production
+        ScanOptions scanOptions = ScanOptions.scanOptions().match("video:*:views").count(100).build();
         List<VideoView> updates = new ArrayList<>();
-        for (String key : keys) {
-            String videoId = extractVideoId(key);
-            Long views = redis.getAndDelete(key);  // Get and delete
 
-            updates.add(new VideoView(videoId, views));
+        try (Cursor<String> cursor = redis.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                String videoId = extractVideoId(key);
+                Long views = redis.getAndDelete(key);  // Get and delete
+
+                if (views != null) {
+                    updates.add(new VideoView(videoId, views));
+                }
+            }
         }
 
         // Batch update (single query)
@@ -2777,17 +2870,18 @@ class LeaderboardService {
 ### 10.2 Practical Configuration Example
 
 ```yaml
-# application.yml
+# application.yml (use spring.data.redis.* from Spring Boot 3.x)
 spring:
-  redis:
-    host: localhost
-    port: 6379
-    timeout: 3000ms
-    lettuce:
-      pool:
-        max-active: 10
-        max-idle: 10
-        min-idle: 2
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 10
+          min-idle: 2
   cache:
     type: redis
     redis:

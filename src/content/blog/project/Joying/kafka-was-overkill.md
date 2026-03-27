@@ -43,7 +43,7 @@ Kafka가 필요한 경우는 명확해요:
 - 재처리 필요 없음
 - 중복 전달되어도 클라이언트가 중복 제거하면 됨
 
-**우리 트래픽(초당 100~1000건)에 Kafka는 오버 엔지니어링이었어요.**
+**우리 트래픽에 Kafka는 오버 엔지니어링이었어요.** 트래픽 추정: 동시 접속 50-100명 × 채팅방당 1-2건/초 = 피크 시 **초당 100~200건** 수준. Redis Pub/Sub은 단일 인스턴스에서 초당 수십만 건 처리가 가능하므로([Redis 공식 벤치마크](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/) 기준) 현재 트래픽의 **1,000배 이상 여유**가 있다.
 
 ---
 
@@ -68,7 +68,7 @@ XADD chat:stream * message "안녕하세요"
 → ID: "1609459200000-0" (밀리초 타임스탬프-시퀀스)
 ```
 
-Redis가 싱글 스레드로 동작하기 때문에 ID가 순서대로 부여돼요.
+Redis는 명령 실행이 싱글 스레드이기 때문에(Redis 6+에서 I/O는 멀티스레드지만 명령 처리는 단일 스레드) ID가 순서대로 부여돼요.
 
 **Consumer Group 코드:**
 
@@ -172,6 +172,10 @@ Socket.io는 Node.js 생태계에서 강력해요. 자동 재연결, 룸 관리,
 
 Redis Pub/Sub은 코드가 단순해요 (Redis Stream의 1/3 수준). 순서는 MongoDB의 `createdAt`으로 보장하고, 추가 인프라도 필요 없습니다. Pub/Sub이 메시지를 저장하지 않는 건 MongoDB에 저장하니까 문제없고, 실시간 순서 보장이 안 되는 건 네트워크 특성상 어차피 보장할 수 없는 영역이에요.
 
+**트레이드오프: fire-and-forget의 위험**
+
+Redis Pub/Sub은 메시지를 저장하지 않으므로, 구독자가 없는 순간에 발행된 메시지는 영구 유실된다. 이건 명확한 단점이다. 이 문제는 별도 글([WebSocket 메시지 유실 방지](/blog/project/joying/websocket-message-loss))에서 MongoDB 기반 재연결 복구 메커니즘으로 해결했다. Redis Pub/Sub은 "실시간 전달 채널"이고, MongoDB가 "메시지의 Source of Truth"라는 역할 분리가 핵심이다.
+
 ---
 
 ## 결과
@@ -185,7 +189,7 @@ Redis Pub/Sub은 코드가 단순해요 (Redis Stream의 1/3 수준). 순서는 
 
 **선택: Redis Pub/Sub + MongoDB**
 
-나중에 트래픽이 폭발하면 NATS나 카프카로 마이그레이션하면 돼요. `RedisPubSubPublisher`를 `KafkaPublisher`로 바꾸기만 하면 됩니다. 처음부터 완벽한 인프라를 갖추는 것보다, 현재 규모에 맞는 기술을 쓰고 필요할 때 교체하는 게 낫다고 판단했어요.
+나중에 트래픽이 폭발하면 NATS나 카프카로 마이그레이션하면 돼요. 이를 대비해 메시지 발행을 `ChatMessagePublisher` 인터페이스로 추상화해두었고, `RedisPubSubPublisher`가 이를 구현한다. Kafka 전환 시 `KafkaPublisher` 구현체만 추가하면 된다. 처음부터 완벽한 인프라를 갖추는 것보다, 현재 규모에 맞는 기술을 쓰고 필요할 때 교체하는 게 낫다고 판단했어요.
 
 <!-- EN -->
 
@@ -215,7 +219,7 @@ Our requirements were different:
 - No reprocessing needed
 - Client-side deduplication handles duplicates
 
-**Kafka was over-engineering for our traffic (100-1,000 messages/sec).**
+**Kafka was over-engineering for our traffic.** Traffic estimation: 50-100 concurrent users × 1-2 msgs/sec/room = peak **~100-200 msgs/sec**. Redis Pub/Sub handles hundreds of thousands per second on a single instance ([Redis benchmarks](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/)), giving us **1,000x+ headroom**.
 
 ---
 
@@ -238,7 +242,7 @@ XADD chat:stream * message "Hello"
 → ID: "1609459200000-0" (millisecond timestamp-sequence)
 ```
 
-Since Redis is single-threaded, IDs are assigned in order.
+Since Redis executes commands on a single thread (I/O is multi-threaded since Redis 6, but command processing remains single-threaded), IDs are assigned in order.
 
 **Consumer Group Code:**
 
@@ -347,4 +351,4 @@ Redis Pub/Sub code is simple (1/3 the complexity of Redis Stream). Ordering is g
 
 **Chosen: Redis Pub/Sub + MongoDB**
 
-If traffic explodes later, we can migrate to NATS or Kafka. Just swap `RedisPubSubPublisher` for `KafkaPublisher`. We decided it's better to use technology that fits the current scale and replace it when needed, rather than building perfect infrastructure from the start.
+If traffic explodes later, we can migrate to NATS or Kafka. Message publishing was abstracted behind a `ChatMessagePublisher` interface, with `RedisPubSubPublisher` as the current implementation. Migrating to Kafka means adding a `KafkaPublisher` implementation. We decided it's better to use technology that fits the current scale and replace it when needed, rather than building perfect infrastructure from the start.
