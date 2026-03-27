@@ -17,13 +17,10 @@ const tags = [...tagMap.entries()].sort((a, b) => b[1] - a[1]);
 
 <BaseLayout title="Tags">
   <div class="fade-in-up">
-    <div class="mb-8 sm:mb-10 px-1">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+    <div class="mb-8 sm:mb-10 px-1 text-center">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
         <span class="gradient-text" data-ko="태그" data-en="Tags">태그</span>
       </h1>
-      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed">
-        {tags.length}<span data-ko="개의 태그" data-en=" tags">개의 태그</span>
-      </p>
     </div>
 
     <div class="glass-gradient rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10">

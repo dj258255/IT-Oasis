@@ -156,75 +156,105 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       color: #1a1a1a;
     }
 
-    /* Pagination */
+    /* ── Pagination ── */
     #pagination {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
 
-    .page-btn {
-      width: 44px;
-      height: 44px;
+    /* Nav arrows (« ‹ › ») */
+    .page-btn.nav-btn {
+      width: 48px;
+      height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 500;
+      border-radius: 12px;
       border: none;
-      background: transparent;
-      color: #888;
+      font-size: 20px;
+      font-weight: 400;
+      background: rgba(0, 0, 0, 0.04);
+      color: #bbb;
       cursor: pointer;
       transition: all 0.2s ease;
-    }
-    :global(.dark) .page-btn {
-      color: #777;
-    }
-    .page-btn:hover:not(.active):not(:disabled) {
-      background: rgba(0, 0, 0, 0.05);
-      color: #444;
-    }
-    :global(.dark) .page-btn:hover:not(.active):not(:disabled) {
-      background: rgba(255, 255, 255, 0.06);
-      color: #ccc;
-    }
-    .page-btn.active {
-      background: rgba(0, 0, 0, 0.07);
-      color: #222;
-      font-weight: 700;
-    }
-    :global(.dark) .page-btn.active {
-      background: rgba(255, 255, 255, 0.1);
-      color: #eee;
-    }
-    .page-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-    .page-btn.nav-btn {
-      width: 44px;
-      height: 44px;
-      background: rgba(0, 0, 0, 0.04);
-      color: #aaa;
-      font-size: 18px;
+      letter-spacing: 0;
     }
     :global(.dark) .page-btn.nav-btn {
-      background: rgba(255, 255, 255, 0.05);
-      color: #666;
+      background: rgba(255, 255, 255, 0.06);
+      color: #555;
     }
     .page-btn.nav-btn:hover:not(:disabled) {
       background: rgba(0, 0, 0, 0.08);
-      color: #666;
+      color: #888;
     }
     :global(.dark) .page-btn.nav-btn:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.1);
-      color: #aaa;
+      color: #999;
+    }
+    .page-btn.nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
-    /* Gap between nav buttons and page numbers */
+    /* Page number buttons */
+    .page-btn.num-btn {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 500;
+      background: transparent;
+      color: #999;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    :global(.dark) .page-btn.num-btn {
+      color: #666;
+    }
+    .page-btn.num-btn:hover:not(.active) {
+      background: rgba(0, 0, 0, 0.04);
+      color: #555;
+    }
+    :global(.dark) .page-btn.num-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.06);
+      color: #aaa;
+    }
+    .page-btn.num-btn.active {
+      background: rgba(0, 0, 0, 0.06);
+      color: #333;
+      font-weight: 700;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    :global(.dark) .page-btn.num-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #eee;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Spacer between nav groups and numbers */
     .page-nav-gap {
-      width: 8px;
+      width: 12px;
+    }
+
+    /* Ellipsis dots */
+    .page-dots {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font-size: 18px;
+      letter-spacing: 3px;
+      user-select: none;
+    }
+    :global(.dark) .page-dots {
+      color: #555;
     }
 
     /* Smooth hide/show for cards */
@@ -271,6 +301,7 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
         const btn = document.createElement('button');
         btn.className = 'page-btn';
         if (typeof page === 'number') {
+          btn.classList.add('num-btn');
           btn.textContent = String(page);
           btn.dataset.page = String(page);
           if (isActive) btn.classList.add('active');
@@ -344,8 +375,8 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
         for (const p of pages) {
           if (p === '...') {
             const dots = document.createElement('span');
-            dots.textContent = '\u2026';
-            dots.style.cssText = 'color:#aaa;font-size:16px;width:44px;display:flex;align-items:center;justify-content:center;';
+            dots.className = 'page-dots';
+            dots.textContent = '...';
             pagination.appendChild(dots);
           } else {
             pagination.appendChild(createPageBtn(p as number, p === currentPage, false));
