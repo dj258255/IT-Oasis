@@ -91,6 +91,22 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [
+                  { "type": "text", "text": "Email: " },
+                  {
+                    "type": "a",
+                    "url": "mailto:dj258255@naver.com",
+                    "children": [{ "type": "text", "text": "dj258255@naver.com" }]
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -162,6 +178,22 @@
                     "type": "a",
                     "url": "https://github.com/dj258255",
                     "children": [{ "type": "text", "text": "github.com/dj258255" }]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [
+                  { "type": "text", "text": "Email: " },
+                  {
+                    "type": "a",
+                    "url": "mailto:dj258255@naver.com",
+                    "children": [{ "type": "text", "text": "dj258255@naver.com" }]
                   }
                 ]
               }

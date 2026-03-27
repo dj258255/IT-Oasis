@@ -501,6 +501,39 @@ button, input, select, textarea {
 .dark .tag-emerald { background: rgba(100, 180, 150, 0.1); color: #80b8a0; border-color: rgba(100, 180, 150, 0.15); }
 .dark .tag-amber { background: rgba(200, 175, 90, 0.1); color: #c0a860; border-color: rgba(200, 175, 90, 0.15); }
 
+/* ===== Post Card Meta Badges ===== */
+.post-meta-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 100px;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.date-badge {
+  background: rgba(100, 160, 210, 0.08);
+  color: #4a8db8;
+  border: 1px solid rgba(100, 160, 210, 0.14);
+}
+.dark .date-badge {
+  background: rgba(120, 170, 210, 0.1);
+  color: #8db8d0;
+  border-color: rgba(120, 170, 210, 0.15);
+}
+
+.category-badge {
+  background: rgba(180, 120, 200, 0.08);
+  color: #9060a8;
+  border: 1px solid rgba(180, 120, 200, 0.14);
+}
+.dark .category-badge {
+  background: rgba(180, 140, 210, 0.1);
+  color: #b898d0;
+  border-color: rgba(180, 140, 210, 0.15);
+}
+
 /* ===== Divider ===== */
 .divider {
   height: 1px;

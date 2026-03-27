@@ -2,37 +2,407 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
 import { getPublishedPosts } from '../../lib/posts';
+import { getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
 
 const posts = await getPublishedPosts();
+const catI18n = getCategoryI18n();
+const catDisplayKo = getCategoryDisplayKo();
+
+// Collect all categories (full path) from posts
+const allCats = new Map<string, { ko: string; en: string; count: number; parent: string }>();
+for (const post of posts) {
+  const cat = post.data.category;
+  if (!cat) continue;
+  if (!allCats.has(cat)) {
+    // Build display names: "프로젝트(위키엔진)" / "Projects(WikiEngine)"
+    const parts = cat.split('/');
+    const parentKey = parts[0];
+    const parentKo = catDisplayKo.get(parentKey) || parentKey;
+    const parentEn = catI18n.get(parentKey) || parentKey;
+    let ko: string, en: string;
+    if (parts.length > 1) {
+      const childKo = catDisplayKo.get(parts[1]) || parts[1];
+      const childEn = catI18n.get(parts[1]) || parts[1];
+      ko = `${parentKo}(${childKo})`;
+      en = `${parentEn}(${childEn})`;
+    } else {
+      ko = parentKo;
+      en = parentEn;
+    }
+    allCats.set(cat, { ko, en, count: 0, parent: parentKey });
+  }
+  allCats.get(cat)!.count++;
+}
+
+// Sort: group by parent (by count desc), then within each parent sort subcats by count desc
+const parentOrder = new Map<string, number>();
+for (const [, val] of allCats) {
+  parentOrder.set(val.parent, (parentOrder.get(val.parent) || 0) + val.count);
+}
+const sortedCats = [...allCats.entries()].sort((a, b) => {
+  const pA = parentOrder.get(a[1].parent) || 0;
+  const pB = parentOrder.get(b[1].parent) || 0;
+  if (pA !== pB) return pB - pA; // parent group by total count
+  if (a[1].parent !== b[1].parent) return 0;
+  // Within same parent: parent entry first, then subcats by count
+  const aIsSub = a[0].includes('/');
+  const bIsSub = b[0].includes('/');
+  if (!aIsSub && bIsSub) return -1;
+  if (aIsSub && !bIsSub) return 1;
+  return b[1].count - a[1].count;
+});
 ---
 
 <BaseLayout title="스토리 — IT Oasis">
   <div class="fade-in-up mb-8 sm:mb-10">
-    <div class="px-1">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+    {/* Category heading + filter tabs */}
+    <div class="px-1 text-center mb-5">
+      <h2 class="text-4xl sm:text-5xl font-bold tracking-tight">
+        <span class="gradient-text" data-ko="카테고리" data-en="Category">카테고리</span>
+      </h2>
+    </div>
+    <div class="flex flex-wrap gap-2 px-1 justify-center mb-10" id="category-filters">
+      <button
+        class="cat-filter-btn active"
+        data-category="all"
+        data-ko={`전체 (${posts.length})`}
+        data-en={`All (${posts.length})`}
+      >
+        <span class="lang-ko">전체 ({posts.length})</span>
+        <span class="lang-en hidden">All ({posts.length})</span>
+      </button>
+      {sortedCats.map(([key, val]) => (
+        <button
+          class="cat-filter-btn"
+          data-category={key}
+          data-ko={`${val.ko} (${val.count})`}
+          data-en={`${val.en} (${val.count})`}
+        >
+          <span class="lang-ko">{val.ko} ({val.count})</span>
+          <span class="lang-en hidden">{val.en} ({val.count})</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="px-1 text-center">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
         <span class="gradient-text" data-ko="스토리" data-en="Story">스토리</span>
       </h1>
-      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed">
-        <span class="lang-ko">학습하고, 경험한 것 외에<br />일상 속의 작은 이벤트도 기록합니다.</span>
-        <span class="lang-en hidden">Beyond learning and experiences,<br />I also record small events in daily life.</span>
-      </p>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 stagger">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 stagger" id="posts-grid">
     {posts.map((post, i) => (
-      <PostCard
-        title={post.data.title}
-        titleEn={post.data.titleEn}
-        description={post.data.description}
-        descriptionEn={post.data.descriptionEn}
-        date={post.data.date}
-        slug={post.id}
-        tags={post.data.tags}
-        category={post.data.category}
-        coverImage={post.data.coverImage}
-        index={i}
-      />
+      <div class="post-card-wrapper" data-post-category={post.data.category || ''} data-post-parent={post.data.category?.split('/')[0] || ''}>
+        <PostCard
+          title={post.data.title}
+          titleEn={post.data.titleEn}
+          description={post.data.description}
+          descriptionEn={post.data.descriptionEn}
+          date={post.data.date}
+          slug={post.id}
+          tags={post.data.tags}
+          category={post.data.category}
+          coverImage={post.data.coverImage}
+          index={i}
+        />
+      </div>
     ))}
   </div>
+
+  {/* Pagination controls */}
+  <div class="flex justify-center mt-10" id="pagination-wrap">
+    <div id="pagination"></div>
+  </div>
+
+  <style>
+    /* Category filter buttons */
+    .cat-filter-btn {
+      padding: 8px 18px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1.5px solid rgba(0, 0, 0, 0.12);
+      background: transparent;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+    :global(.dark) .cat-filter-btn {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: #aaa;
+    }
+    .cat-filter-btn:hover {
+      border-color: rgba(0, 0, 0, 0.25);
+      color: #333;
+      background: rgba(0, 0, 0, 0.03);
+    }
+    :global(.dark) .cat-filter-btn:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ddd;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .cat-filter-btn.active {
+      background: #333;
+      border-color: #333;
+      color: #fff;
+      font-weight: 600;
+    }
+    :global(.dark) .cat-filter-btn.active {
+      background: #e0e0e0;
+      border-color: #e0e0e0;
+      color: #1a1a1a;
+    }
+
+    /* Pagination */
+    #pagination {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .page-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    :global(.dark) .page-btn {
+      color: #777;
+    }
+    .page-btn:hover:not(.active):not(:disabled) {
+      background: rgba(0, 0, 0, 0.05);
+      color: #444;
+    }
+    :global(.dark) .page-btn:hover:not(.active):not(:disabled) {
+      background: rgba(255, 255, 255, 0.06);
+      color: #ccc;
+    }
+    .page-btn.active {
+      background: rgba(0, 0, 0, 0.07);
+      color: #222;
+      font-weight: 700;
+    }
+    :global(.dark) .page-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #eee;
+    }
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .page-btn.nav-btn {
+      width: 44px;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.04);
+      color: #aaa;
+      font-size: 18px;
+    }
+    :global(.dark) .page-btn.nav-btn {
+      background: rgba(255, 255, 255, 0.05);
+      color: #666;
+    }
+    .page-btn.nav-btn:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.08);
+      color: #666;
+    }
+    :global(.dark) .page-btn.nav-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+      color: #aaa;
+    }
+
+    /* Gap between nav buttons and page numbers */
+    .page-nav-gap {
+      width: 8px;
+    }
+
+    /* Smooth hide/show for cards */
+    .post-card-wrapper {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .post-card-wrapper.hidden-card {
+      display: none;
+    }
+  </style>
+
+  <script>
+    function initBlogFilter() {
+      const ROWS = 4;
+      const grid = document.getElementById('posts-grid');
+      const pagination = document.getElementById('pagination');
+      const filterBtns = document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn');
+      if (!grid || !pagination) return;
+
+      const allCards = Array.from(grid.querySelectorAll<HTMLElement>('.post-card-wrapper'));
+      let activeCategory = 'all';
+      let currentPage = 1;
+
+      function getColCount() {
+        const w = window.innerWidth;
+        if (w >= 1024) return 3;
+        if (w >= 640) return 2;
+        return 1;
+      }
+
+      function getFilteredCards() {
+        if (activeCategory === 'all') return allCards;
+        return allCards.filter(c => {
+          const full = c.dataset.postCategory || '';
+          // Exact match for subcategory (e.g. "project/WikiEngine")
+          // or parent match for parent-only categories (e.g. "theory")
+          return full === activeCategory || c.dataset.postParent === activeCategory;
+        });
+      }
+
+      const NAV_SYMBOLS: Record<string, string> = { first: '\u00AB', prev: '\u2039', next: '\u203A', last: '\u00BB' };
+
+      function createPageBtn(page: number | string, isActive: boolean, disabled: boolean): HTMLButtonElement {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn';
+        if (typeof page === 'number') {
+          btn.textContent = String(page);
+          btn.dataset.page = String(page);
+          if (isActive) btn.classList.add('active');
+        } else {
+          btn.classList.add('nav-btn');
+          btn.dataset.page = page;
+          btn.textContent = NAV_SYMBOLS[page] || page;
+        }
+        if (disabled) btn.disabled = true;
+        btn.addEventListener('click', () => handlePageClick(btn.dataset.page!));
+        return btn;
+      }
+
+      function createGap(): HTMLSpanElement {
+        const gap = document.createElement('span');
+        gap.className = 'page-nav-gap';
+        return gap;
+      }
+
+      function handlePageClick(val: string) {
+        const filtered = getFilteredCards();
+        const cols = getColCount();
+        const perPage = ROWS * cols;
+        const totalPages = Math.ceil(filtered.length / perPage);
+
+        if (val === 'first') { currentPage = 1; }
+        else if (val === 'prev') { if (currentPage > 1) currentPage--; }
+        else if (val === 'next') { if (currentPage < totalPages) currentPage++; }
+        else if (val === 'last') { currentPage = totalPages; }
+        else { currentPage = parseInt(val); }
+        renderPage();
+        grid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      function renderPage() {
+        const filtered = getFilteredCards();
+        const cols = getColCount();
+        const perPage = ROWS * cols;
+        const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        // Hide all, show only current page items
+        allCards.forEach(c => c.classList.add('hidden-card'));
+        filtered.forEach((c, i) => {
+          if (i >= start && i < end) {
+            c.classList.remove('hidden-card');
+          }
+        });
+
+        renderPagination(totalPages);
+      }
+
+      function renderPagination(totalPages: number) {
+        if (!pagination) return;
+        // Clear existing children
+        while (pagination.firstChild) pagination.removeChild(pagination.firstChild);
+
+        if (totalPages <= 1) return;
+
+        // Left nav: « ‹
+        pagination.appendChild(createPageBtn('first', false, currentPage === 1));
+        pagination.appendChild(createPageBtn('prev', false, currentPage === 1));
+
+        pagination.appendChild(createGap());
+
+        // Page numbers
+        const pages = getPaginationRange(currentPage, totalPages);
+        for (const p of pages) {
+          if (p === '...') {
+            const dots = document.createElement('span');
+            dots.textContent = '\u2026';
+            dots.style.cssText = 'color:#aaa;font-size:16px;width:44px;display:flex;align-items:center;justify-content:center;';
+            pagination.appendChild(dots);
+          } else {
+            pagination.appendChild(createPageBtn(p as number, p === currentPage, false));
+          }
+        }
+
+        // Right nav: › »
+        pagination.appendChild(createGap());
+        pagination.appendChild(createPageBtn('next', false, currentPage === totalPages));
+        pagination.appendChild(createPageBtn('last', false, currentPage === totalPages));
+      }
+
+      function getPaginationRange(current: number, total: number): (number | string)[] {
+        if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+        const pages: (number | string)[] = [];
+        if (current <= 4) {
+          for (let i = 1; i <= 5; i++) pages.push(i);
+          pages.push('...');
+          pages.push(total);
+        } else if (current >= total - 3) {
+          pages.push(1);
+          pages.push('...');
+          for (let i = total - 4; i <= total; i++) pages.push(i);
+        } else {
+          pages.push(1);
+          pages.push('...');
+          for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+          pages.push('...');
+          pages.push(total);
+        }
+        return pages;
+      }
+
+      // Category filter click
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeCategory = btn.dataset.category || 'all';
+          currentPage = 1;
+          renderPage();
+        });
+      });
+
+      // Re-render on resize (column count may change)
+      let resizeTimer: ReturnType<typeof setTimeout>;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(renderPage, 150);
+      });
+
+      // Initial render
+      renderPage();
+    }
+
+    // Run on load and page transitions
+    initBlogFilter();
+    document.addEventListener('astro:page-load', initBlogFilter);
+  </script>
 </BaseLayout>

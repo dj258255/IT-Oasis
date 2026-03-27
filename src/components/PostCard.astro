@@ -66,13 +66,10 @@ const categoryKo = category ? translateCategory(category, catDisplayKo) : '';
         {...(descriptionEn ? { 'data-ko': description, 'data-en': descriptionEn } : {})}>
         {description}
       </p>
-      <div class="flex items-center gap-2 mt-auto">
-        <time class="text-[11px] sm:text-[12px] font-medium text-gray-500 dark:text-gray-400" data-ko={formattedDate} data-en={formattedDateEn}>{formattedDate}</time>
+      <div class="flex items-center gap-2 mt-auto flex-wrap">
+        <time class="post-meta-badge date-badge" data-ko={formattedDate} data-en={formattedDateEn}>{formattedDate}</time>
         {category && (
-          <>
-            <span class="w-0.5 h-0.5 rounded-full bg-gray-400 dark:bg-gray-500" />
-            <span class="text-[11px] sm:text-[12px] font-medium text-gray-500 dark:text-gray-400" data-ko={categoryKo} data-en={categoryEn}>{categoryKo}</span>
-          </>
+          <span class="post-meta-badge category-badge" data-ko={categoryKo} data-en={categoryEn}>{categoryKo}</span>
         )}
       </div>
     </div>

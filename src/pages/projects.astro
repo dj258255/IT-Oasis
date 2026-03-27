@@ -8,14 +8,10 @@ const siteSettings = getSiteSettings();
 
 <BaseLayout title="Projects — IT Oasis">
   <div class="fade-in-up mb-10 sm:mb-14">
-    <div class="px-1">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+    <div class="px-1 text-center">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
         <span class="gradient-text" data-ko="프로젝트" data-en="Projects">프로젝트</span>
       </h1>
-      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">
-        <span class="lang-ko" set:html={(siteSettings.projectsSubtitleKo || '').replace(/\n/g, '<br />')} />
-        <span class="lang-en hidden" set:html={(siteSettings.projectsSubtitleEn || '').replace(/\n/g, '<br />')} />
-      </p>
     </div>
   </div>
 

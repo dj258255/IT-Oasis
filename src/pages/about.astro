@@ -20,14 +20,10 @@ const posts = (await getPublishedPosts()).slice(0, 8);
 
 <BaseLayout title="소개 — IT Oasis">
   <div class="fade-in-up">
-    <div class="mb-10 sm:mb-14 px-1">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-5">
+    <div class="mb-10 sm:mb-14 px-1 text-center">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
         <span class="gradient-text" data-ko="소개" data-en="About">소개</span>
       </h1>
-      <p class="text-[20px] sm:text-[24px] text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">
-        <span class="lang-ko" set:html={(siteSettings.aboutSubtitleKo || '').replace(/\n/g, '<br />')} />
-        <span class="lang-en hidden" set:html={(siteSettings.aboutSubtitleEn || '').replace(/\n/g, '<br />')} />
-      </p>
     </div>
 
     <div class="glass-gradient rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10 relative overflow-hidden mb-14 sm:mb-20">
@@ -45,11 +41,11 @@ const posts = (await getPublishedPosts()).slice(0, 8);
       <AuthorCard />
     </div>
 
-    <!-- Projects carousel -->
-    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} icon="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+    <!-- Projects carousel (same as homepage) -->
+    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} large>
       {projects.map((project) => (
         <CarouselCard
-          href={(Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || (project.story ? `${base}${project.story}` : '') || `${base}/projects`}
+          href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
           titleEn={project.titleEn}
           description={project.description}
@@ -58,15 +54,13 @@ const posts = (await getPublishedPosts()).slice(0, 8);
           date={project.date}
           category={translateCategory(project.category, catDisplayKo)}
           categoryEn={translateCategory(project.category, catI18n)}
-          website={project.website}
-          github={project.github}
-          story={project.story ? `${base}${project.story}` : ''}
+          noOverlay
         />
       ))}
     </CarouselSection>
 
-    <!-- Latest stories carousel -->
-    <CarouselSection id="stories" titleKo="최신 스토리" titleEn="Latest Story" viewAllHref={`${base}/blog`} icon="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+    <!-- Latest stories carousel (same as homepage) -->
+    <CarouselSection id="stories" titleKo="최신 스토리" titleEn="Latest Story" viewAllHref={`${base}/blog`} large>
       {posts.map((post) => (
         <CarouselCard
           href={`${base}/blog/${post.id}`}
