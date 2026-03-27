@@ -154,12 +154,16 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       background: #333;
       border-color: #333;
       color: #fff;
-      font-weight: 600;
+      font-weight: 500;
     }
     :global(.dark) .cat-filter-btn.active {
       background: #e0e0e0;
       border-color: #e0e0e0;
       color: #1a1a1a;
+    }
+    /* prevent layout shift on active toggle */
+    .cat-filter-btn {
+      box-sizing: border-box;
     }
 
     /* ── Pagination (global because JS creates these elements dynamically) ── */
