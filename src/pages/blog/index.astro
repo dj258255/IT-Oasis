@@ -174,23 +174,23 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       border: none;
       font-size: 20px;
       font-weight: 400;
-      background: rgba(0, 0, 0, 0.05);
-      color: #bbb;
+      background: rgba(0, 0, 0, 0.08);
+      color: #999;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     :global(.dark .page-btn.nav-btn) {
-      background: rgba(255, 255, 255, 0.07);
-      color: #555;
+      background: rgba(255, 255, 255, 0.12);
+      color: #777;
     }
     :global(.page-btn.nav-btn:hover:not(:disabled)) {
-      background: rgba(0, 0, 0, 0.09);
-      color: #888;
+      background: rgba(0, 0, 0, 0.14);
+      color: #666;
       transform: translateY(-1px);
     }
     :global(.dark .page-btn.nav-btn:hover:not(:disabled)) {
-      background: rgba(255, 255, 255, 0.12);
-      color: #999;
+      background: rgba(255, 255, 255, 0.18);
+      color: #bbb;
     }
     :global(.page-btn.nav-btn:disabled) {
       opacity: 0.3;
@@ -209,29 +209,29 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       font-size: 16px;
       font-weight: 500;
       background: transparent;
-      color: #999;
+      color: #777;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     :global(.dark .page-btn.num-btn) {
-      color: #666;
+      color: #888;
     }
     :global(.page-btn.num-btn:hover:not(.active)) {
-      background: rgba(0, 0, 0, 0.04);
-      color: #555;
+      background: rgba(0, 0, 0, 0.06);
+      color: #444;
     }
     :global(.dark .page-btn.num-btn:hover:not(.active)) {
-      background: rgba(255, 255, 255, 0.06);
-      color: #aaa;
+      background: rgba(255, 255, 255, 0.08);
+      color: #ccc;
     }
     :global(.page-btn.num-btn.active) {
-      background: rgba(0, 0, 0, 0.06);
-      color: #333;
+      background: rgba(0, 0, 0, 0.1);
+      color: #222;
       font-weight: 700;
     }
     :global(.dark .page-btn.num-btn.active) {
-      background: rgba(255, 255, 255, 0.1);
-      color: #eee;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
     }
 
     /* Spacer between nav groups and numbers */
@@ -246,13 +246,13 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ccc;
+      color: #999;
       font-size: 18px;
       letter-spacing: 3px;
       user-select: none;
     }
     :global(.dark .page-dots) {
-      color: #555;
+      color: #777;
     }
 
     /* Smooth hide/show for cards */
