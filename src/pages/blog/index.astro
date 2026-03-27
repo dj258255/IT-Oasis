@@ -61,7 +61,7 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
         <span class="gradient-text" data-ko="카테고리" data-en="Category">카테고리</span>
       </h2>
     </div>
-    <div class="flex flex-wrap gap-2 px-1 justify-center mb-10" id="category-filters">
+    <div class="cat-filter-area flex flex-wrap gap-2 px-1 justify-center mb-10" id="category-filters">
       <button
         class="cat-filter-btn active"
         data-category="all"
@@ -116,6 +116,12 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
   </div>
 
   <style>
+    /* Category filter area - fixed height to prevent layout shift */
+    .cat-filter-area {
+      min-height: 88px;
+      align-content: flex-start;
+    }
+
     /* Category filter buttons */
     .cat-filter-btn {
       padding: 8px 18px;
@@ -171,29 +177,36 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       align-items: center;
       justify-content: center;
       border-radius: 12px;
-      border: none;
+      border: 1px solid rgba(74, 141, 184, 0.15);
       font-size: 20px;
       font-weight: 400;
-      background: rgba(74, 141, 184, 0.08);
-      color: rgba(74, 141, 184, 0.45);
+      background: rgba(74, 141, 184, 0.06);
+      color: #4a8db8;
       cursor: pointer;
       transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
     :global(.dark .page-btn.nav-btn) {
-      background: rgba(141, 184, 208, 0.1);
-      color: rgba(141, 184, 208, 0.45);
+      background: rgba(141, 184, 208, 0.08);
+      border-color: rgba(141, 184, 208, 0.15);
+      color: #8db8d0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     }
     :global(.page-btn.nav-btn:hover:not(:disabled)) {
-      background: rgba(74, 141, 184, 0.14);
-      color: rgba(74, 141, 184, 0.7);
+      background: rgba(74, 141, 184, 0.12);
+      border-color: rgba(74, 141, 184, 0.25);
+      color: #3a7da8;
       transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(74, 141, 184, 0.12);
     }
     :global(.dark .page-btn.nav-btn:hover:not(:disabled)) {
-      background: rgba(141, 184, 208, 0.16);
-      color: rgba(141, 184, 208, 0.7);
+      background: rgba(141, 184, 208, 0.15);
+      border-color: rgba(141, 184, 208, 0.25);
+      color: #a0cce0;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
     }
     :global(.page-btn.nav-btn:disabled) {
-      opacity: 0.3;
+      opacity: 0.4;
       cursor: not-allowed;
     }
 
@@ -205,33 +218,39 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       align-items: center;
       justify-content: center;
       border-radius: 12px;
-      border: none;
+      border: 1px solid transparent;
       font-size: 16px;
       font-weight: 500;
       background: transparent;
-      color: #888;
+      color: #666;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     :global(.dark .page-btn.num-btn) {
-      color: #777;
+      color: #999;
     }
     :global(.page-btn.num-btn:hover:not(.active)) {
-      background: rgba(74, 141, 184, 0.07);
+      background: rgba(74, 141, 184, 0.06);
+      border-color: rgba(74, 141, 184, 0.12);
       color: #4a8db8;
     }
     :global(.dark .page-btn.num-btn:hover:not(.active)) {
       background: rgba(141, 184, 208, 0.08);
+      border-color: rgba(141, 184, 208, 0.12);
       color: #8db8d0;
     }
     :global(.page-btn.num-btn.active) {
       background: rgba(74, 141, 184, 0.12);
+      border-color: rgba(74, 141, 184, 0.2);
       color: #3a7da8;
       font-weight: 700;
+      box-shadow: 0 1px 3px rgba(74, 141, 184, 0.1);
     }
     :global(.dark .page-btn.num-btn.active) {
       background: rgba(141, 184, 208, 0.15);
+      border-color: rgba(141, 184, 208, 0.2);
       color: #a0cce0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     /* Spacer between nav groups and numbers */
