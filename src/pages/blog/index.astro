@@ -206,8 +206,12 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
     }
     :global(.page-btn.nav-btn:disabled) {
-      opacity: 0.4;
+      opacity: 0.65;
       cursor: not-allowed;
+      color: #aaa;
+    }
+    :global(.dark .page-btn.nav-btn:disabled) {
+      color: #666;
     }
 
     /* Page number buttons */
