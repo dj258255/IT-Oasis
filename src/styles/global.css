@@ -714,6 +714,8 @@ button, input, select, textarea {
 .dark .prose li::marker { color: #8db8d0; }
 .prose img {
   @apply rounded-2xl my-8;
+  max-width: 100%;
+  height: auto;
   box-shadow: 0 16px 56px rgba(0, 0, 0, 0.1);
 }
 .prose hr {

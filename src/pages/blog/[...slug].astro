@@ -520,12 +520,14 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
         enDiv.classList.remove('lang-hidden');
         enDiv.classList.add('fade-in');
         if (titleEl && titleEn) titleEl.textContent = titleEn;
+        if (titleEn) document.title = titleEn;
       } else {
         enDiv.classList.add('lang-hidden');
         enDiv.classList.remove('fade-in');
         koDiv.classList.remove('lang-hidden');
         koDiv.classList.add('fade-in');
         if (titleEl) titleEl.textContent = titleKo;
+        document.title = titleKo;
       }
 
       // Switch TOC headings to match language
