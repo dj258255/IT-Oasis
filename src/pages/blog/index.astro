@@ -9,12 +9,11 @@ const catI18n = getCategoryI18n();
 const catDisplayKo = getCategoryDisplayKo();
 
 // Collect all categories (full path) from posts
-const allCats = new Map<string, { ko: string; en: string; count: number; parent: string }>();
+const allCats = new Map<string, { ko: string; en: string; parent: string }>();
 for (const post of posts) {
   const cat = post.data.category;
   if (!cat) continue;
   if (!allCats.has(cat)) {
-    // Build display names: "프로젝트(위키엔진)" / "Projects(WikiEngine)"
     const parts = cat.split('/');
     const parentKey = parts[0];
     const parentKo = catDisplayKo.get(parentKey) || parentKey;
@@ -29,27 +28,24 @@ for (const post of posts) {
       ko = parentKo;
       en = parentEn;
     }
-    allCats.set(cat, { ko, en, count: 0, parent: parentKey });
+    allCats.set(cat, { ko, en, parent: parentKey });
   }
-  allCats.get(cat)!.count++;
 }
 
-// Sort: group by parent (by count desc), then within each parent sort subcats by count desc
-const parentOrder = new Map<string, number>();
-for (const [, val] of allCats) {
-  parentOrder.set(val.parent, (parentOrder.get(val.parent) || 0) + val.count);
-}
+// Fixed order: 일상 → 활동 → 이론 → 프로젝트(서브카테고리 by count desc)
+const parentDisplayOrder = ['daily', 'activity', 'theory', 'project'];
 const sortedCats = [...allCats.entries()].sort((a, b) => {
-  const pA = parentOrder.get(a[1].parent) || 0;
-  const pB = parentOrder.get(b[1].parent) || 0;
-  if (pA !== pB) return pB - pA; // parent group by total count
-  if (a[1].parent !== b[1].parent) return 0;
-  // Within same parent: parent entry first, then subcats by count
+  const idxA = parentDisplayOrder.indexOf(a[1].parent);
+  const idxB = parentDisplayOrder.indexOf(b[1].parent);
+  const oA = idxA === -1 ? 999 : idxA;
+  const oB = idxB === -1 ? 999 : idxB;
+  if (oA !== oB) return oA - oB;
+  // Same parent: non-sub first, then subs alphabetically
   const aIsSub = a[0].includes('/');
   const bIsSub = b[0].includes('/');
   if (!aIsSub && bIsSub) return -1;
   if (aIsSub && !bIsSub) return 1;
-  return b[1].count - a[1].count;
+  return a[1].ko.localeCompare(b[1].ko);
 });
 ---
 
@@ -65,21 +61,21 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
       <button
         class="cat-filter-btn active"
         data-category="all"
-        data-ko={`전체 (${posts.length})`}
-        data-en={`All (${posts.length})`}
+        data-ko="전체"
+        data-en="All"
       >
-        <span class="lang-ko">전체 ({posts.length})</span>
-        <span class="lang-en hidden">All ({posts.length})</span>
+        <span class="lang-ko">전체</span>
+        <span class="lang-en hidden">All</span>
       </button>
       {sortedCats.map(([key, val]) => (
         <button
           class="cat-filter-btn"
           data-category={key}
-          data-ko={`${val.ko} (${val.count})`}
-          data-en={`${val.en} (${val.count})`}
+          data-ko={val.ko}
+          data-en={val.en}
         >
-          <span class="lang-ko">{val.ko} ({val.count})</span>
-          <span class="lang-en hidden">{val.en} ({val.count})</span>
+          <span class="lang-ko">{val.ko}</span>
+          <span class="lang-en hidden">{val.en}</span>
         </button>
       ))}
     </div>
