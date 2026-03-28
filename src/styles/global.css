@@ -418,10 +418,10 @@ button, input, select, textarea {
 
 /* ===== Gradient Text ===== */
 .gradient-text {
-  background: linear-gradient(135deg, #3d6e8a 0%, #4a8db8 30%, #5a9ec0 50%, #3d8a80 80%, #4aaa98 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #4a8db8;
+}
+.dark .gradient-text {
+  color: #8db8d0;
 }
 
 .gradient-text-subtle {
