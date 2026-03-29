@@ -369,6 +369,12 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ---
 
+## 다음 글
+
+[카테고리 검색 필터링 + Facet 집계](/blog/project/wikiengine/search-category-facet)에서 Lucene `Occur.FILTER` 절로 카테고리 필터링을 구현하고, DB GROUP BY 간이 Facet으로 카테고리 분포를 제공합니다.
+
+---
+
 ## 향후 계획
 
 ### soak 테스트 (50 VU, 4시간)
