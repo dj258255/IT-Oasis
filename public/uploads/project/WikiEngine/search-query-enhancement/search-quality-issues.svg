@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <filter id="shadow2">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="400" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Section 1: 오타 교정 -->
+  <rect x="20" y="16" width="350" height="180" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" filter="url(#shadow2)"/>
+  <rect x="20" y="16" width="350" height="34" rx="10" fill="#e74c3c"/>
+  <rect x="20" y="36" width="350" height="14" fill="#e74c3c"/>
+  <text x="195" y="39" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">오타 교정 미지원 — 검색 실패</text>
+
+  <text x="40" y="76" font-size="12" fill="#64748b">"컴퓨텨"</text>
+  <text x="160" y="76" font-size="12" fill="#94a3b8">→ Nori: 사전 미등록 → 미분석</text>
+  <text x="160" y="96" font-size="12" fill="#e74c3c" font-weight="600">→ 결과 0건</text>
+
+  <line x1="40" y1="108" x2="350" y2="108" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="40" y="130" font-size="12" fill="#64748b">"프로그래밍"</text>
+  <text x="160" y="130" font-size="12" fill="#27ae60" font-weight="600">→ 1,233건 ✓</text>
+
+  <text x="40" y="156" font-size="12" fill="#64748b">"프로그래링"</text>
+  <text x="160" y="156" font-size="12" fill="#94a3b8">→ 오타 (ㅁ 누락)</text>
+  <text x="160" y="176" font-size="12" fill="#e74c3c" font-weight="600">→ 결과 0건</text>
+
+  <!-- Section 2: Nori 과분해 -->
+  <rect x="390" y="16" width="350" height="180" rx="10" fill="#fff" stroke="#e67e22" stroke-width="1.5" filter="url(#shadow2)"/>
+  <rect x="390" y="16" width="350" height="34" rx="10" fill="#e67e22"/>
+  <rect x="390" y="36" width="350" height="14" fill="#e67e22"/>
+  <text x="565" y="39" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Nori 복합어 과분해 — Precision 저하</text>
+
+  <text x="410" y="80" font-size="12" fill="#1e293b" font-weight="600">"운동화"</text>
+  <text x="410" y="104" font-size="12" fill="#94a3b8">→ Nori:</text>
+  <text x="470" y="104" font-size="13" fill="#e67e22" font-weight="700">"운동" + "화"</text>
+  <text x="410" y="126" font-size="11" fill="#94a3b8">사용자 의도: 운동화라는 상품</text>
+
+  <line x1="410" y1="140" x2="720" y2="140" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="410" y="160" font-size="12" fill="#1e293b" font-weight="600">"인공지능기술"</text>
+  <text x="410" y="182" font-size="12" fill="#94a3b8">→ Nori:</text>
+  <text x="470" y="182" font-size="13" fill="#e67e22" font-weight="700">"인공" + "지능" + "기술"</text>
+
+  <!-- Section 3: 동의어 미지원 -->
+  <rect x="20" y="212" width="720" height="170" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5" filter="url(#shadow2)"/>
+  <rect x="20" y="212" width="720" height="34" rx="10" fill="#4a8db8"/>
+  <rect x="20" y="232" width="720" height="14" fill="#4a8db8"/>
+  <text x="380" y="235" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">동의어 미지원 — Recall 손실</text>
+
+  <!-- Columns -->
+  <text x="100" y="274" text-anchor="middle" font-size="12" fill="#94a3b8" font-weight="600">검색어</text>
+  <text x="300" y="274" text-anchor="middle" font-size="12" fill="#94a3b8" font-weight="600">Lucene 매칭</text>
+  <text x="560" y="274" text-anchor="middle" font-size="12" fill="#94a3b8" font-weight="600">누락 문서</text>
+
+  <line x1="40" y1="284" x2="720" y2="284" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="100" y="308" text-anchor="middle" font-size="13" fill="#1e293b" font-weight="600">"AI"</text>
+  <text x="300" y="308" text-anchor="middle" font-size="12" fill="#64748b">"ai" 포함 문서만</text>
+  <text x="560" y="308" text-anchor="middle" font-size="12" fill="#e74c3c" font-weight="600">"인공지능" 문서 누락</text>
+
+  <text x="100" y="336" text-anchor="middle" font-size="13" fill="#1e293b" font-weight="600">"DB"</text>
+  <text x="300" y="336" text-anchor="middle" font-size="12" fill="#64748b">"db" 포함 문서만</text>
+  <text x="560" y="336" text-anchor="middle" font-size="12" fill="#e74c3c" font-weight="600">"데이터베이스" 문서 누락</text>
+
+  <text x="100" y="364" text-anchor="middle" font-size="13" fill="#1e293b" font-weight="600">"ML"</text>
+  <text x="300" y="364" text-anchor="middle" font-size="12" fill="#64748b">"ml" 포함 문서만</text>
+  <text x="560" y="364" text-anchor="middle" font-size="12" fill="#e74c3c" font-weight="600">"머신러닝", "기계학습" 누락</text>
+</svg>

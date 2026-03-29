@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="arrow3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a8db8"/>
+    </marker>
+    <filter id="shadow3">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="460" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">검색 품질 개선의 두 축</text>
+
+  <!-- User Input -->
+  <rect x="270" y="50" width="220" height="40" rx="20" fill="#4a8db8" filter="url(#shadow3)"/>
+  <text x="380" y="75" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">사용자 입력</text>
+
+  <line x1="380" y1="90" x2="380" y2="115" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Query Understanding Box -->
+  <rect x="120" y="120" width="520" height="130" rx="10" fill="#fff" stroke="#e67e22" stroke-width="2" filter="url(#shadow3)"/>
+  <rect x="120" y="120" width="520" height="32" rx="10" fill="#e67e22"/>
+  <rect x="120" y="140" width="520" height="12" fill="#e67e22"/>
+  <text x="380" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Query Understanding</text>
+
+  <!-- QU items -->
+  <circle cx="165" cy="178" r="6" fill="#e67e22"/>
+  <text x="182" y="183" font-size="12" fill="#1e293b">오타 교정:</text>
+  <text x="268" y="183" font-size="12" fill="#e67e22" font-weight="600">"컴퓨텨" → "컴퓨터"</text>
+
+  <circle cx="165" cy="206" r="6" fill="#e67e22"/>
+  <text x="182" y="211" font-size="12" fill="#1e293b">복합어 분리:</text>
+  <text x="278" y="211" font-size="12" fill="#e67e22" font-weight="600">"인공지능기술" → "인공지능 기술"</text>
+
+  <circle cx="165" cy="234" r="6" fill="#e67e22"/>
+  <text x="182" y="239" font-size="12" fill="#1e293b">의도 파악:</text>
+  <text x="262" y="239" font-size="12" fill="#e67e22" font-weight="600">"아이폰 가격" → 구매 의도</text>
+
+  <line x1="380" y1="250" x2="380" y2="275" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Query Expansion Box -->
+  <rect x="120" y="280" width="520" height="100" rx="10" fill="#fff" stroke="#27ae60" stroke-width="2" filter="url(#shadow3)"/>
+  <rect x="120" y="280" width="520" height="32" rx="10" fill="#27ae60"/>
+  <rect x="120" y="300" width="520" height="12" fill="#27ae60"/>
+  <text x="380" y="303" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Query Expansion</text>
+
+  <circle cx="165" cy="340" r="6" fill="#27ae60"/>
+  <text x="182" y="345" font-size="12" fill="#1e293b">동의어 확장:</text>
+  <text x="280" y="345" font-size="12" fill="#27ae60" font-weight="600">"AI" → "AI OR 인공지능"</text>
+
+  <circle cx="165" cy="366" r="6" fill="#27ae60"/>
+  <text x="182" y="371" font-size="12" fill="#1e293b">위키 리다이렉트:</text>
+  <text x="296" y="371" font-size="12" fill="#27ae60" font-weight="600">"인공 지능" → "인공지능"</text>
+
+  <line x1="380" y1="380" x2="380" y2="405" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- Lucene -->
+  <rect x="230" y="410" width="300" height="40" rx="20" fill="#2c3e50" filter="url(#shadow3)"/>
+  <text x="380" y="435" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">Lucene 검색 실행</text>
+</svg>

@@ -37,16 +37,7 @@ draft: false
 
 ### 검색 흐름
 
-```
-사용자 입력: "AI"
-  → URL 디코딩 + 소문자 변환 (정규화)
-  → MultiFieldQueryParser.parse("ai")
-  → Nori 형태소 분석: "ai" (단일 토큰)
-  → BM25 스코어링 (title:3, content:1)
-  → FeatureField 부스팅 (viewCount, likeCount)
-  → Recency Decay (30일 반감기)
-  → TopDocs → 응답
-```
+![현재 검색 파이프라인](/uploads/project/WikiEngine/search-query-enhancement/search-pipeline-current.svg)
 
 ### BM25 설정
 
@@ -64,44 +55,11 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 
 ## 2. 문제 상황 — 세 가지 검색 품질 한계
 
-### 문제 1: 동의어 미지원 — Recall 손실
+![검색 품질 3대 문제 — 동의어, 오타, 복합어](/uploads/project/WikiEngine/search-query-enhancement/search-quality-issues.svg)
 
-```
-사용자 검색: "AI"
-  → Lucene 매칭: "ai" 포함 문서만 반환
-  → "인공지능"이 제목/본문인 문서는 누락
-
-사용자 검색: "DB"
-  → "데이터베이스" 문서 누락
-
-사용자 검색: "ML"
-  → "머신러닝", "기계학습" 문서 누락
-```
-
-이는 **Recall(재현율) 손실**이다. 관련 있는 문서가 존재하지만 쿼리에 매칭되지 않아 사용자에게 보이지 않는다.
-
-### 문제 2: 오타 교정 미지원 — 검색 실패
-
-```
-사용자 검색: "컴퓨텨"
-  → Nori: "컴퓨텨" (사전 미등록 → 미분석 단일 토큰)
-  → 인덱스에 "컴퓨텨" 없음 → 결과 0건
-
-사용자 검색: "프로그래밍" (오타 없음) → 1,233건
-사용자 검색: "프로그래링" (오타) → 0건
-```
-
-검색 결과 0건은 사용자 이탈의 주요 원인이다. 오타 교정이나 "혹시 OO을(를) 찾으셨나요?" 제안이 필요하다.
-
-### 문제 3: 복합어 분리 한계 — Nori의 과도한 분해
-
-```
-Nori 형태소 분석:
-  "운동화" → "운동" + "화"    (사용자 의도: 운동화라는 상품)
-  "인공지능기술" → "인공" + "지능" + "기술"  (원형 "인공지능" 폐기)
-```
-
-Nori의 `DecompoundMode.DISCARD` (현재 설정)는 복합명사를 분해하고 원형을 폐기한다. "운동화"를 검색하면 "운동"과 "화"를 각각 포함하는 무관한 문서까지 매칭될 수 있다 (**Precision 저하**).
+- **동의어 미지원**: "AI" 검색 시 "인공지능" 문서 누락 — **Recall 손실**
+- **오타 교정 미지원**: "프로그래링" 검색 시 결과 0건 — **사용자 이탈**
+- **복합어 과분해**: Nori `DecompoundMode.DISCARD`가 "운동화"를 "운동"+"화"로 분해 — **Precision 저하**
 
 ### 정리
 
@@ -115,20 +73,7 @@ Nori의 `DecompoundMode.DISCARD` (현재 설정)는 복합명사를 분해하고
 
 ## 3. 문제 분석 — 검색 품질 개선의 두 축
 
-```
-사용자 입력
-  ↓
-[Query Understanding]  ← 이 글에서 구현
-  ├── 오타 교정: "컴퓨텨" → "컴퓨터"
-  ├── 복합어 분리: "인공지능기술" → "인공지능 기술"
-  └── 의도 파악: "아이폰 가격" → 구매 의도
-  ↓
-[Query Expansion]  ← 이 글에서 구현
-  ├── 동의어 확장: "AI" → "AI OR 인공지능"
-  └── 위키 리다이렉트 활용: "인공 지능" → "인공지능"
-  ↓
-Lucene 검색 실행
-```
+![검색 품질 개선의 두 축 — Query Understanding + Query Expansion](/uploads/project/WikiEngine/search-query-enhancement/query-understanding-flow.svg)
 
 이 두 축이 **검색 쿼리가 Lucene에 도달하기 전**에 처리되어야 한다. 현재 파이프라인에서 정규화(소문자 변환)만 있고, Query Understanding과 Query Expansion이 누락되어 있다.
 
@@ -281,15 +226,7 @@ public void incrementalIndex(Post post) throws IOException {
 
 #### 현재 방식의 한계
 
-```
-검색어: "가비지 컬렉션"
-현재 snippet: "자바는 제임스 고슬링이 1995년에 개발한 프로그래밍 언어로..."
-             (앞 150자 — 검색어와 무관)
-
-이상적: "...JVM의 가비지 컬렉션은 힙 메모리에서 참조되지 않는 객체를
-        자동으로 회수하는 메커니즘이다..."
-        (검색어가 포함된 가장 관련도 높은 문장)
-```
+![Snippet Before/After — 검색어 주변 맥락 추출](/uploads/project/WikiEngine/search-query-enhancement/snippet-comparison.svg)
 
 #### 현업 표준: Lucene UnifiedHighlighter
 
@@ -524,35 +461,7 @@ Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전
 
 ### Part 3: 검색 파이프라인 통합
 
-```
-사용자 입력: "컴퓨텨 AI"
-  ↓
-[1. 정규화]
-  URL 디코딩 + 소문자 변환 → "컴퓨텨 ai"
-  ↓
-[2. 오타 교정 — DirectSpellChecker]
-  "컴퓨텨" → "컴퓨터" (편집 거리 1)
-  → "컴퓨터 ai"
-  → 원본과 다르면 "혹시 '컴퓨터 AI'을(를) 찾으셨나요?" 제안
-  ↓
-[3. 형태소 분석 — Nori (사용자 사전 적용)]
-  "컴퓨터" → "컴퓨터" (사전 등록, 단일 토큰)
-  "ai" → "ai"
-  → tokens: ["컴퓨터", "ai"]
-  ↓
-[4. 동의어 확장 — QueryExpansionService]
-  "ai" → ["ai", "인공지능"]
-  "컴퓨터" → ["컴퓨터"] (동의어 없음)
-  ↓
-[5. Lucene 쿼리 빌드]
-  BooleanQuery(
-    BooleanQuery("컴퓨터", MUST),
-    BooleanQuery("ai" SHOULD, "인공지능" SHOULD, MUST)
-  )
-  ↓
-[6. 검색 실행 + 카테고리 필터 (이전 글)]
-  → 결과 + "혹시 '컴퓨터 AI'을(를) 찾으셨나요?" 제안
-```
+![통합 검색 파이프라인 — "컴퓨텨 AI"](/uploads/project/WikiEngine/search-query-enhancement/integrated-pipeline.svg)
 
 ---
 

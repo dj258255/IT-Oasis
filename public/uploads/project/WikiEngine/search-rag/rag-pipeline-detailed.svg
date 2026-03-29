@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="arrowR5" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a8db8"/>
+    </marker>
+    <filter id="shadowR5">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="560" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">RAG 파이프라인 상세 — "자바 가비지 컬렉션 원리"</text>
+
+  <!-- Input -->
+  <rect x="210" y="50" width="340" height="40" rx="20" fill="#4a8db8" filter="url(#shadowR5)"/>
+  <text x="380" y="75" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">"자바 가비지 컬렉션 원리"</text>
+
+  <line x1="380" y1="90" x2="380" y2="110" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrowR5)"/>
+
+  <!-- Step 1 -->
+  <rect x="140" y="115" width="480" height="50" rx="8" fill="#fff" stroke="#9b59b6" stroke-width="1.5" filter="url(#shadowR5)"/>
+  <rect x="140" y="115" width="36" height="50" rx="8" fill="#9b59b6"/>
+  <rect x="163" y="115" width="13" height="50" fill="#9b59b6"/>
+  <text x="158" y="145" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">1</text>
+  <text x="186" y="136" font-size="12" font-weight="600" fill="#1e293b">Query Understanding</text>
+  <text x="186" y="155" font-size="11" fill="#64748b">오타 교정 + 동의어 확장 (이전 글에서 구현)</text>
+
+  <line x1="380" y1="165" x2="380" y2="185" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrowR5)"/>
+
+  <!-- Step 2 -->
+  <rect x="140" y="190" width="480" height="50" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.5" filter="url(#shadowR5)"/>
+  <rect x="140" y="190" width="36" height="50" rx="8" fill="#4a8db8"/>
+  <rect x="163" y="190" width="13" height="50" fill="#4a8db8"/>
+  <text x="158" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">2</text>
+  <text x="186" y="210" font-size="12" font-weight="600" fill="#1e293b">Retrieval — Lucene BM25</text>
+  <text x="186" y="230" font-size="11" fill="#64748b">Top-5 문서 검색 (제목 + 본문)</text>
+
+  <line x1="380" y1="240" x2="380" y2="260" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrowR5)"/>
+
+  <!-- Step 3 -->
+  <rect x="140" y="265" width="480" height="50" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.5" filter="url(#shadowR5)"/>
+  <rect x="140" y="265" width="36" height="50" rx="8" fill="#e67e22"/>
+  <rect x="163" y="265" width="13" height="50" fill="#e67e22"/>
+  <text x="158" y="295" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">3</text>
+  <text x="186" y="286" font-size="12" font-weight="600" fill="#1e293b">Context 구성</text>
+  <text x="186" y="305" font-size="11" fill="#64748b">5개 문서의 핵심 내용을 프롬프트에 주입 (~2,000 토큰)</text>
+
+  <line x1="380" y1="315" x2="380" y2="335" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrowR5)"/>
+
+  <!-- Step 4 -->
+  <rect x="80" y="340" width="600" height="90" rx="8" fill="#fff" stroke="#2c3e50" stroke-width="1.5" filter="url(#shadowR5)"/>
+  <rect x="80" y="340" width="36" height="90" rx="8" fill="#2c3e50"/>
+  <rect x="103" y="340" width="13" height="90" fill="#2c3e50"/>
+  <text x="98" y="390" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">4</text>
+  <text x="126" y="362" font-size="12" font-weight="600" fill="#1e293b">Generation — LLM API (Gemini 2.0 Flash)</text>
+  <rect x="126" y="372" width="534" height="48" rx="4" fill="#f1f5f9"/>
+  <text x="138" y="390" font-size="10" fill="#94a3b8">System:</text>
+  <text x="192" y="390" font-size="10" fill="#2c3e50">"제공된 문서만 참고하여 답변. [문서 N] 형태로 인용 필수."</text>
+  <text x="138" y="408" font-size="10" fill="#94a3b8">Context:</text>
+  <text x="198" y="408" font-size="10" fill="#2c3e50">[문서1 제목+내용], [문서2], ... [문서5]</text>
+
+  <line x1="380" y1="430" x2="380" y2="450" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrowR5)"/>
+
+  <!-- Step 5: Result -->
+  <rect x="100" y="455" width="560" height="86" rx="10" fill="#fff" stroke="#27ae60" stroke-width="2" filter="url(#shadowR5)"/>
+  <rect x="100" y="455" width="36" height="86" rx="10" fill="#27ae60"/>
+  <rect x="123" y="455" width="13" height="86" fill="#27ae60"/>
+  <text x="118" y="503" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">5</text>
+  <text x="148" y="478" font-size="12" font-weight="600" fill="#1e293b">Response</text>
+  <circle cx="158" cy="500" r="4" fill="#27ae60"/>
+  <text x="170" y="505" font-size="11" fill="#1e293b">AI 요약 답변 (SSE 스트리밍)</text>
+  <circle cx="158" cy="522" r="4" fill="#27ae60"/>
+  <text x="170" y="527" font-size="11" fill="#1e293b">출처 (게시글 링크) + 기존 검색 결과 목록</text>
+</svg>

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 680" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="arrow5" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a8db8"/>
+    </marker>
+    <filter id="shadow5">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="680" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="32" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">통합 검색 파이프라인 — "컴퓨텨 AI"</text>
+
+  <!-- Input -->
+  <rect x="230" y="50" width="300" height="40" rx="20" fill="#4a8db8" filter="url(#shadow5)"/>
+  <text x="380" y="75" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">사용자 입력: "컴퓨텨 AI"</text>
+
+  <line x1="380" y1="90" x2="380" y2="110" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow5)"/>
+
+  <!-- Step 1: 정규화 -->
+  <rect x="160" y="115" width="440" height="50" rx="8" fill="#fff" stroke="#94a3b8" stroke-width="1.5" filter="url(#shadow5)"/>
+  <rect x="160" y="115" width="36" height="50" rx="8" fill="#94a3b8"/>
+  <rect x="183" y="115" width="13" height="50" fill="#94a3b8"/>
+  <text x="178" y="145" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">1</text>
+  <text x="210" y="135" font-size="12" font-weight="600" fill="#1e293b">정규화</text>
+  <text x="210" y="155" font-size="11" fill="#64748b">URL 디코딩 + 소문자 변환 →</text>
+  <text x="395" y="155" font-size="12" fill="#4a8db8" font-weight="600">"컴퓨텨 ai"</text>
+
+  <line x1="380" y1="165" x2="380" y2="185" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow5)"/>
+
+  <!-- Step 2: 오타 교정 -->
+  <rect x="100" y="190" width="560" height="70" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.5" filter="url(#shadow5)"/>
+  <rect x="100" y="190" width="36" height="70" rx="8" fill="#e67e22"/>
+  <rect x="123" y="190" width="13" height="70" fill="#e67e22"/>
+  <text x="118" y="230" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">2</text>
+  <text x="150" y="212" font-size="12" font-weight="600" fill="#1e293b">오타 교정 — DirectSpellChecker</text>
+  <text x="150" y="232" font-size="11" fill="#64748b">"컴퓨텨" → "컴퓨터" (편집 거리 1) →</text>
+  <text x="380" y="232" font-size="12" fill="#e67e22" font-weight="600">"컴퓨터 ai"</text>
+  <text x="150" y="252" font-size="11" fill="#94a3b8">→ "혹시 '컴퓨터 AI'을(를) 찾으셨나요?" 제안</text>
+
+  <line x1="380" y1="260" x2="380" y2="280" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow5)"/>
+
+  <!-- Step 3: Nori -->
+  <rect x="100" y="285" width="560" height="70" rx="8" fill="#fff" stroke="#9b59b6" stroke-width="1.5" filter="url(#shadow5)"/>
+  <rect x="100" y="285" width="36" height="70" rx="8" fill="#9b59b6"/>
+  <rect x="123" y="285" width="13" height="70" fill="#9b59b6"/>
+  <text x="118" y="325" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">3</text>
+  <text x="150" y="308" font-size="12" font-weight="600" fill="#1e293b">형태소 분석 — Nori (사용자 사전)</text>
+  <text x="150" y="328" font-size="11" fill="#64748b">"컴퓨터" → "컴퓨터" (사전 등록, 단일 토큰)</text>
+  <text x="150" y="348" font-size="11" fill="#64748b">"ai" → "ai" → tokens:</text>
+  <text x="310" y="348" font-size="12" fill="#9b59b6" font-weight="600">["컴퓨터", "ai"]</text>
+
+  <line x1="380" y1="355" x2="380" y2="375" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow5)"/>
+
+  <!-- Step 4: 동의어 확장 -->
+  <rect x="100" y="380" width="560" height="70" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.5" filter="url(#shadow5)"/>
+  <rect x="100" y="380" width="36" height="70" rx="8" fill="#27ae60"/>
+  <rect x="123" y="380" width="13" height="70" fill="#27ae60"/>
+  <text x="118" y="420" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">4</text>
+  <text x="150" y="402" font-size="12" font-weight="600" fill="#1e293b">동의어 확장 — QueryExpansionService</text>
+  <text x="150" y="422" font-size="11" fill="#64748b">"ai" →</text>
+  <text x="195" y="422" font-size="12" fill="#27ae60" font-weight="600">["ai", "인공지능"]</text>
+  <text x="150" y="442" font-size="11" fill="#64748b">"컴퓨터" → ["컴퓨터"] (동의어 없음)</text>
+
+  <line x1="380" y1="450" x2="380" y2="470" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow5)"/>
+
+  <!-- Step 5: Lucene 쿼리 빌드 -->
+  <rect x="100" y="475" width="560" height="80" rx="8" fill="#fff" stroke="#2c3e50" stroke-width="1.5" filter="url(#shadow5)"/>
+  <rect x="100" y="475" width="36" height="80" rx="8" fill="#2c3e50"/>
+  <rect x="123" y="475" width="13" height="80" fill="#2c3e50"/>
+  <text x="118" y="520" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">5</text>
+  <text x="150" y="498" font-size="12" font-weight="600" fill="#1e293b">Lucene 쿼리 빌드</text>
+  <rect x="150" y="508" width="490" height="38" rx="4" fill="#f1f5f9"/>
+  <text x="162" y="524" font-size="11" font-family="monospace" fill="#2c3e50">BooleanQuery(</text>
+  <text x="180" y="540" font-size="11" font-family="monospace" fill="#2c3e50">"컴퓨터" <tspan fill="#4a8db8">MUST</tspan>, ("ai" <tspan fill="#27ae60">SHOULD</tspan>, "인공지능" <tspan fill="#27ae60">SHOULD</tspan>) <tspan fill="#4a8db8">MUST</tspan> )</text>
+
+  <line x1="380" y1="555" x2="380" y2="575" stroke="#4a8db8" stroke-width="2" marker-end="url(#arrow5)"/>
+
+  <!-- Step 6: Result -->
+  <rect x="100" y="580" width="560" height="80" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.5" filter="url(#shadow5)"/>
+  <rect x="100" y="580" width="36" height="80" rx="8" fill="#4a8db8"/>
+  <rect x="123" y="580" width="13" height="80" fill="#4a8db8"/>
+  <text x="118" y="625" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">6</text>
+  <text x="150" y="604" font-size="12" font-weight="600" fill="#1e293b">검색 실행 + 카테고리 필터</text>
+  <text x="150" y="628" font-size="12" fill="#4a8db8" font-weight="600">→ 검색 결과</text>
+  <text x="150" y="650" font-size="11" fill="#e67e22">+ "혹시 '컴퓨터 AI'을(를) 찾으셨나요?" 제안</text>
+</svg>

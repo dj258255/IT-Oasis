@@ -38,12 +38,7 @@ draft: false
 
 ## 1. 정상 상태 — 현재 검색 경험
 
-```
-사용자: "자바 가비지 컬렉션 원리"
-  -> 검색 결과: 10건의 게시글 링크 (제목 + snippet)
-  -> 사용자가 직접 각 게시글을 클릭하여 읽어야 함
-  -> 원하는 답을 찾기까지 평균 2~3개 게시글 탐색 필요
-```
+![현재 검색 경험 — 문서 목록만 제공](/uploads/project/WikiEngine/search-rag/current-search-experience.svg)
 
 프론트엔드에 "AI 요약" 섹션이 있지만, 현재 구현은 **검색 결과와 무관하게 LLM에 쿼리만 전달**하는 방식이다 — 검색된 문서를 컨텍스트로 주입하지 않으므로 **할루시네이션 위험이 높고, 출처 인용이 불가능**하다.
 
@@ -73,12 +68,7 @@ draft: false
 
 ### RAG로 해결
 
-```
-RAG 파이프라인:
-  1. Retrieval: 사용자 쿼리로 관련 문서 검색 (기존 Lucene)
-  2. Augmentation: 검색된 문서를 LLM 컨텍스트에 주입
-  3. Generation: LLM이 문서를 기반으로 답변 생성 + 출처 표시
-```
+![RAG 파이프라인 — Retrieval → Augmentation → Generation](/uploads/project/WikiEngine/search-rag/rag-pipeline-simple.svg)
 
 ---
 
@@ -109,31 +99,11 @@ RAG 파이프라인:
 
 [Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 **Lexical(BM25) to Graph(동의어) to Embedding(벡터)** 순서로 진화한다.
 
-```
-쿼리 확장 구현: BM25 + 동의어 확장 (DB 기반 쿼리 확장) -- 완료
-  -> "AI" 검색 시 "인공지능" 문서도 반환
-
-이 글 초기: BM25 + RAG (LLM으로 답변 생성) -- 현재
-  -> BM25로 Top-5 문서 검색 -> LLM 컨텍스트 주입 -> 답변 생성
-  -> "BM25만으로 Retrieval이 충분한가?" 평가
-
-향후: Hybrid Retrieval (BM25 + Dense) -- 벡터 도입
-  -> BM25 Retrieval 품질이 부족한 케이스가 실측으로 확인되면:
-    예) "환경 오염의 영향" 검색 -> "공해", "대기질", "수질 오염" 문서 누락
-  -> Lucene KnnFloatVectorField(HNSW) + Reciprocal Rank Fusion으로 병합
-```
+![Retrieval 개선 로드맵 — BM25 → Hybrid](/uploads/project/WikiEngine/search-rag/retrieval-roadmap.svg)
 
 **벡터 검색 도입 시 인프라:**
 
-```
-방안 A: Lucene KnnVectorField (임베디드, 추가 인프라 없음) -- 적합
-  - 현재 Lucene 10.3.2에 HNSW 기반 벡터 검색 포함
-  - 임베딩 모델만 추가 (sentence-transformers all-MiniLM-L6-v2, 384차원)
-  - 1,215만 건 x 384차원 = ~21GB 추가 인덱스
-
-방안 B: 외부 벡터 DB (Pinecone, pgvector 등) -- 별도 서버 필요
-방안 C: LLM API 임베딩 -- API 비용 + 지연
-```
+![벡터 검색 도입 시 인프라 비교](/uploads/project/WikiEngine/search-rag/vector-infra.svg)
 
 ---
 
@@ -141,26 +111,7 @@ RAG 파이프라인:
 
 ### 4-1. RAG 파이프라인
 
-```
-사용자: "자바 가비지 컬렉션 원리"
-  |
-[1. Query Understanding] (이전 글에서 구현)
-  오타 교정 + 동의어 확장
-  |
-[2. Retrieval -- Lucene BM25]
-  Top-5 문서 검색 (제목 + 본문)
-  |
-[3. Context 구성]
-  검색된 5개 문서의 핵심 내용을 프롬프트에 주입
-  |
-[4. Generation -- LLM API]
-  System: "아래 문서를 참고하여 질문에 답변하세요. 반드시 출처를 표시하세요."
-  Context: [문서1 제목+내용], [문서2 제목+내용], ...
-  User: "자바 가비지 컬렉션 원리"
-  |
-[5. Response]
-  AI 요약 답변 + 출처 (게시글 링크) + 기존 검색 결과 목록
-```
+![RAG 파이프라인 상세 — 5단계](/uploads/project/WikiEngine/search-rag/rag-pipeline-detailed.svg)
 
 ### 4-2. Context 구성
 
@@ -275,19 +226,7 @@ public SseEmitter aiSummaryStream(@RequestParam String q) {
 
 ### Rate Limiting -- Redis Token Bucket
 
-```
-AtomicInteger(서버별) -> Redis INCR + EXPIRE(전역)로 전환
-- 10 RPM 전역 공유 (서버 2대)
-- Redis 장애 시 rate limit 통과 허용 (Gemini 자체 429로 2차 방어)
-```
-
-### 동일 쿼리 캐싱
-
-```
-Redis 캐싱 (TTL 30분):
-- 캐시 히트 시 Gemini 호출 없이 즉시 SSE 전송 (비용 0, 지연 ~ms)
-- 현업 기준 동일 쿼리 반복률 30%+ -> LLM 비용 40-60% 절감
-```
+![비용 최적화 — Rate Limiting + 캐싱](/uploads/project/WikiEngine/search-rag/cost-optimization.svg)
 
 ### 비용 추정
 

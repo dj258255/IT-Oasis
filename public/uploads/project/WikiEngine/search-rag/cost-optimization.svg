@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <filter id="shadowR6">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="220" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">비용 최적화 — Rate Limiting + 캐싱</text>
+
+  <!-- Rate Limiting -->
+  <rect x="20" y="46" width="350" height="158" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" filter="url(#shadowR6)"/>
+  <rect x="20" y="46" width="350" height="30" rx="10" fill="#e74c3c"/>
+  <rect x="20" y="66" width="350" height="10" fill="#e74c3c"/>
+  <text x="195" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Rate Limiting — Redis Token Bucket</text>
+
+  <text x="40" y="98" font-size="11" fill="#64748b">전환:</text>
+  <text x="40" y="118" font-size="11" fill="#1e293b">AtomicInteger(서버별)</text>
+  <text x="210" y="118" font-size="11" fill="#e74c3c" font-weight="600">→ Redis INCR + EXPIRE(전역)</text>
+
+  <line x1="40" y1="132" x2="350" y2="132" stroke="#e2e8f0" stroke-width="1"/>
+
+  <circle cx="52" cy="152" r="4" fill="#e74c3c"/>
+  <text x="64" y="157" font-size="11" fill="#1e293b">10 RPM 전역 공유 (서버 2대)</text>
+
+  <circle cx="52" cy="176" r="4" fill="#e74c3c"/>
+  <text x="64" y="181" font-size="11" fill="#1e293b">Redis 장애 시 통과 허용</text>
+  <text x="64" y="196" font-size="10" fill="#94a3b8">(Gemini 자체 429로 2차 방어)</text>
+
+  <!-- Caching -->
+  <rect x="390" y="46" width="350" height="158" rx="10" fill="#fff" stroke="#27ae60" stroke-width="1.5" filter="url(#shadowR6)"/>
+  <rect x="390" y="46" width="350" height="30" rx="10" fill="#27ae60"/>
+  <rect x="390" y="66" width="350" height="10" fill="#27ae60"/>
+  <text x="565" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">동일 쿼리 캐싱 — Redis TTL 30분</text>
+
+  <circle cx="412" cy="98" r="4" fill="#27ae60"/>
+  <text x="424" y="103" font-size="11" fill="#1e293b">캐시 히트 시 Gemini 호출 없음</text>
+
+  <circle cx="412" cy="122" r="4" fill="#27ae60"/>
+  <text x="424" y="127" font-size="11" fill="#1e293b">비용 0, 지연 ~ms</text>
+
+  <line x1="410" y1="140" x2="720" y2="140" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="410" y="164" font-size="12" fill="#1e293b">동일 쿼리 반복률:</text>
+  <text x="540" y="164" font-size="12" fill="#27ae60" font-weight="700">30%+</text>
+
+  <text x="410" y="188" font-size="12" fill="#1e293b">LLM 비용 절감:</text>
+  <text x="528" y="188" font-size="14" fill="#27ae60" font-weight="700">40~60%</text>
+</svg>

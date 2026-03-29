@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <filter id="shadow4">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="240" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">검색어: "가비지 컬렉션" — Snippet 비교</text>
+
+  <!-- Before -->
+  <rect x="20" y="44" width="350" height="180" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" filter="url(#shadow4)"/>
+  <rect x="20" y="44" width="350" height="30" rx="10" fill="#fef2f2"/>
+  <rect x="20" y="64" width="350" height="10" fill="#fef2f2"/>
+  <text x="30" y="64" font-size="11" font-weight="700" fill="#e74c3c">BEFORE — 앞 150자</text>
+
+  <rect x="36" y="86" width="318" height="52" rx="6" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="48" y="106" font-size="11" fill="#64748b">"자바는 제임스 고슬링이 1995년에 개발한</text>
+  <text x="48" y="124" font-size="11" fill="#64748b">프로그래밍 언어로..."</text>
+
+  <rect x="36" y="150" width="318" height="28" rx="6" fill="#fef2f2"/>
+  <text x="48" y="170" font-size="11" fill="#e74c3c" font-weight="600">검색어와 무관한 문서 앞부분</text>
+
+  <text x="195" y="202" text-anchor="middle" font-size="10" fill="#94a3b8">검색어 "가비지 컬렉션"이 snippet에 없음</text>
+
+  <!-- After -->
+  <rect x="390" y="44" width="350" height="180" rx="10" fill="#fff" stroke="#27ae60" stroke-width="1.5" filter="url(#shadow4)"/>
+  <rect x="390" y="44" width="350" height="30" rx="10" fill="#f0fdf4"/>
+  <rect x="390" y="64" width="350" height="10" fill="#f0fdf4"/>
+  <text x="400" y="64" font-size="11" font-weight="700" fill="#27ae60">AFTER — UnifiedHighlighter</text>
+
+  <rect x="406" y="86" width="318" height="52" rx="6" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="418" y="106" font-size="11" fill="#1e293b">"...JVM의 <tspan font-weight="700" fill="#4a8db8">가비지 컬렉션</tspan>은 힙 메모리에서</text>
+  <text x="418" y="124" font-size="11" fill="#1e293b">참조되지 않는 객체를 자동으로 회수하는..."</text>
+
+  <rect x="406" y="150" width="318" height="28" rx="6" fill="#f0fdf4"/>
+  <text x="418" y="170" font-size="11" fill="#27ae60" font-weight="600">검색어 주변 맥락을 정확히 추출</text>
+
+  <text x="565" y="202" text-anchor="middle" font-size="10" fill="#94a3b8">BM25 문장 스코어링으로 최적 구간 선택</text>
+</svg>

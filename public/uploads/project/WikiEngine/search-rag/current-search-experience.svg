@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 280" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="arrowR1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <filter id="shadowR1">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="280" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">현재 검색 경험</text>
+
+  <!-- User -->
+  <rect x="40" y="56" width="200" height="48" rx="24" fill="#4a8db8" filter="url(#shadowR1)"/>
+  <text x="140" y="76" text-anchor="middle" font-size="11" fill="#fff" font-weight="600">"자바 가비지 컬렉션 원리"</text>
+  <text x="140" y="92" text-anchor="middle" font-size="10" fill="#d4e8f5">사용자 검색</text>
+
+  <line x1="240" y1="80" x2="280" y2="80" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowR1)"/>
+
+  <!-- Results -->
+  <rect x="286" y="50" width="200" height="60" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadowR1)"/>
+  <text x="386" y="72" text-anchor="middle" font-size="11" fill="#1e293b" font-weight="600">검색 결과</text>
+  <text x="386" y="92" text-anchor="middle" font-size="11" fill="#64748b">10건 게시글 링크</text>
+  <text x="386" y="104" text-anchor="middle" font-size="10" fill="#94a3b8">(제목 + snippet)</text>
+
+  <line x1="486" y1="80" x2="526" y2="80" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowR1)"/>
+
+  <!-- User clicks -->
+  <rect x="532" y="50" width="200" height="60" rx="8" fill="#fef2f2" stroke="#e74c3c" stroke-width="1.5" filter="url(#shadowR1)"/>
+  <text x="632" y="72" text-anchor="middle" font-size="11" fill="#e74c3c" font-weight="600">사용자가 직접 탐색</text>
+  <text x="632" y="92" text-anchor="middle" font-size="11" fill="#64748b">각 게시글 클릭해서 읽기</text>
+  <text x="632" y="104" text-anchor="middle" font-size="10" fill="#94a3b8">평균 2~3개 탐색 필요</text>
+
+  <!-- Problems -->
+  <rect x="40" y="136" width="680" height="126" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="6,3" filter="url(#shadowR1)"/>
+  <text x="60" y="162" font-size="12" font-weight="700" fill="#e74c3c">한계</text>
+
+  <circle cx="72" cy="188" r="4" fill="#e74c3c"/>
+  <text x="86" y="193" font-size="12" fill="#1e293b"><tspan font-weight="600">정보 탐색 비용:</tspan> 어떤 게시글이 답을 포함하는지 모름</text>
+
+  <circle cx="72" cy="216" r="4" fill="#e74c3c"/>
+  <text x="86" y="221" font-size="12" fill="#1e293b"><tspan font-weight="600">지식 종합 불가:</tspan> 여러 문서에 분산된 정보를 하나로 종합 불가</text>
+
+  <circle cx="72" cy="244" r="4" fill="#e74c3c"/>
+  <text x="86" y="249" font-size="12" fill="#1e293b"><tspan font-weight="600">질문형 쿼리 미지원:</tspan> "왜 자바는 포인터가 없나?" 직접 답변 불가</text>
+</svg>
