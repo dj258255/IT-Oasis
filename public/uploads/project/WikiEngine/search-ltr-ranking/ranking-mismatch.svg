@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <filter id="sL2">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="340" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">검색: "자바" — 수동 랭킹 vs 사용자 의도</text>
+
+  <!-- Left: 수동 랭킹 -->
+  <rect x="20" y="46" width="340" height="230" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" filter="url(#sL2)"/>
+  <rect x="20" y="46" width="340" height="30" rx="10" fill="#fef2f2"/>
+  <rect x="20" y="66" width="340" height="10" fill="#fef2f2"/>
+  <text x="190" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="#e74c3c">BM25 수동 랭킹 결과</text>
+
+  <!-- Rank items -->
+  <rect x="36" y="86" width="28" height="28" rx="14" fill="#e74c3c"/>
+  <text x="50" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">1</text>
+  <text x="76" y="100" font-size="12" fill="#1e293b" font-weight="600">자바 더 헛 (스타워즈)</text>
+  <text x="76" y="116" font-size="10" fill="#94a3b8">BM25 title 매칭 + viewCount</text>
+
+  <rect x="36" y="128" width="28" height="28" rx="14" fill="#e74c3c"/>
+  <text x="50" y="147" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">2</text>
+  <text x="76" y="142" font-size="12" fill="#1e293b" font-weight="600">자바 애플릿</text>
+  <text x="76" y="158" font-size="10" fill="#94a3b8">BM25 title 매칭</text>
+
+  <rect x="36" y="170" width="28" height="28" rx="14" fill="#e74c3c"/>
+  <text x="50" y="189" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">3</text>
+  <text x="76" y="184" font-size="12" fill="#1e293b" font-weight="600">로자바</text>
+  <text x="76" y="200" font-size="10" fill="#94a3b8">BM25 title 부분 매칭</text>
+
+  <rect x="36" y="212" width="28" height="28" rx="14" fill="#94a3b8"/>
+  <text x="50" y="231" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">4</text>
+  <text x="76" y="226" font-size="12" fill="#e74c3c" font-weight="700">자바 (프로그래밍 언어)</text>
+  <text x="76" y="242" font-size="10" fill="#e74c3c">사용자가 원하는 결과가 4위로 밀림</text>
+
+  <rect x="36" y="252" width="308" height="18" rx="4" fill="#fef2f2"/>
+  <text x="190" y="266" text-anchor="middle" font-size="10" fill="#e74c3c" font-weight="600">viewCount 모두 0~1 → BM25 텍스트만으로 순위 결정</text>
+
+  <!-- Right: 사용자 클릭 분포 -->
+  <rect x="400" y="46" width="340" height="230" rx="10" fill="#fff" stroke="#27ae60" stroke-width="1.5" filter="url(#sL2)"/>
+  <rect x="400" y="46" width="340" height="30" rx="10" fill="#f0fdf4"/>
+  <rect x="400" y="66" width="340" height="10" fill="#f0fdf4"/>
+  <text x="570" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="#27ae60">사용자 실제 클릭 분포</text>
+
+  <!-- Bar chart -->
+  <text x="420" y="104" font-size="12" fill="#1e293b" font-weight="600">자바 (프로그래밍 언어)</text>
+  <rect x="420" y="112" width="272" height="24" rx="4" fill="#27ae60"/>
+  <text x="700" y="129" text-anchor="end" font-size="12" font-weight="700" fill="#fff">80%</text>
+
+  <text x="420" y="156" font-size="12" fill="#1e293b" font-weight="600">자바스크립트</text>
+  <rect x="420" y="164" width="51" height="24" rx="4" fill="#4a8db8"/>
+  <text x="480" y="181" font-size="12" font-weight="700" fill="#4a8db8">15%</text>
+
+  <text x="420" y="208" font-size="12" fill="#1e293b" font-weight="600">자바 (지명)</text>
+  <rect x="420" y="216" width="17" height="24" rx="4" fill="#94a3b8"/>
+  <text x="448" y="233" font-size="12" font-weight="600" fill="#94a3b8">5%</text>
+
+  <rect x="420" y="252" width="304" height="18" rx="4" fill="#f0fdf4"/>
+  <text x="572" y="266" text-anchor="middle" font-size="10" fill="#27ae60" font-weight="600">사용자 행동 데이터를 랭킹에 반영해야 함</text>
+
+  <!-- Bottom conclusion -->
+  <rect x="40" y="292" width="680" height="36" rx="8" fill="#4a8db8" filter="url(#sL2)"/>
+  <text x="380" y="315" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">LTR(Learning to Rank)로 사용자 의도 기반 재랭킹 필요</text>
+</svg>

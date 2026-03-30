@@ -42,19 +42,9 @@ draft: false
 
 ## 1. 정상 상태 — 현재 랭킹 모델
 
-```
-BM25(title:3, content:1)
-  + FeatureField("viewCount") 부스팅
-  + FeatureField("likeCount") 부스팅
-  + Recency Decay (30일 반감기)
-```
+![현재 랭킹 모델 — 수동 가중치 기반](/uploads/project/WikiEngine/search-ltr-ranking/current-ranking-model.svg)
 
-[검색 품질 평가](/blog/project/wikiengine/search-quality)에서 구현한 이 랭킹은 **수동 가중치** 기반이다:
-- title 가중치 3:1은 경험적 판단
-- viewCount/likeCount 부스팅은 고정 로그 함수
-- Recency 30일 반감기도 수동 설정
-
-이 가중치들이 실제로 사용자가 원하는 결과 순서와 일치하는지 **데이터 기반으로 검증되지 않았다**.
+[검색 품질 평가](/blog/project/wikiengine/search-quality)에서 구현한 이 랭킹은 **수동 가중치** 기반이다. 이 가중치들이 실제로 사용자가 원하는 결과 순서와 일치하는지 **데이터 기반으로 검증되지 않았다**.
 
 ---
 
@@ -62,22 +52,7 @@ BM25(title:3, content:1)
 
 ### 문제 1: 수동 가중치의 한계
 
-```
-검색: "자바"
-
-수동 랭킹 결과:
-  1. 자바 더 헛 (스타워즈)     ← BM25 title 매칭 + viewCount
-  2. 자바 애플릿               ← BM25 title 매칭
-  3. 로자바                   ← BM25 title 부분 매칭
-  4. 자바 (프로그래밍 언어)     ← 사용자가 실제로 원하는 결과
-
-사용자 클릭 분포 (검색 로그 기반):
-  자바 (프로그래밍 언어)  80%
-  자바스크립트            15%
-  자바 (지명)             5%
-```
-
-수동 랭킹에서 "자바 (프로그래밍 언어)"가 4위로 밀려 있다. viewCount가 모두 0~1로 동일하여 BM25 텍스트 스코어만으로 순위가 결정되기 때문이다.
+![검색 "자바" — 수동 랭킹 vs 사용자 의도](/uploads/project/WikiEngine/search-ltr-ranking/ranking-mismatch.svg)
 
 ### 문제 2: Facet — DB GROUP BY 간이 집계의 한계
 

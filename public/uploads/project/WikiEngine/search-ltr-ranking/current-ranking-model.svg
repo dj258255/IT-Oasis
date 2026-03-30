@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <filter id="sL1">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="300" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">현재 랭킹 모델 — 수동 가중치 기반</text>
+
+  <!-- BM25 Core -->
+  <rect x="40" y="50" width="320" height="54" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="2" filter="url(#sL1)"/>
+  <rect x="40" y="50" width="320" height="28" rx="10" fill="#4a8db8"/>
+  <rect x="40" y="68" width="320" height="10" fill="#4a8db8"/>
+  <text x="200" y="70" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">BM25 텍스트 매칭</text>
+  <text x="60" y="94" font-size="12" fill="#1e293b">title <tspan font-weight="700" fill="#4a8db8">x3</tspan> , content <tspan font-weight="700" fill="#4a8db8">x1</tspan></text>
+
+  <!-- Plus -->
+  <text x="380" y="82" text-anchor="middle" font-size="20" font-weight="700" fill="#94a3b8">+</text>
+
+  <!-- FeatureField -->
+  <rect x="400" y="50" width="320" height="54" rx="10" fill="#fff" stroke="#e67e22" stroke-width="2" filter="url(#sL1)"/>
+  <rect x="400" y="50" width="320" height="28" rx="10" fill="#e67e22"/>
+  <rect x="400" y="68" width="320" height="10" fill="#e67e22"/>
+  <text x="560" y="70" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">FeatureField 부스팅</text>
+  <text x="420" y="94" font-size="12" fill="#1e293b">viewCount + likeCount (고정 로그 함수)</text>
+
+  <!-- Plus -->
+  <text x="380" y="132" text-anchor="middle" font-size="20" font-weight="700" fill="#94a3b8">+</text>
+
+  <!-- Recency -->
+  <rect x="220" y="118" width="320" height="40" rx="10" fill="#fff" stroke="#9b59b6" stroke-width="1.5" filter="url(#sL1)"/>
+  <text x="380" y="143" text-anchor="middle" font-size="12" fill="#1e293b"><tspan font-weight="600" fill="#9b59b6">Recency Decay</tspan> (30일 반감기)</text>
+
+  <!-- Problem callout -->
+  <rect x="40" y="178" width="680" height="104" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="6,3" filter="url(#sL1)"/>
+  <text x="60" y="202" font-size="12" font-weight="700" fill="#e74c3c">한계</text>
+
+  <circle cx="72" cy="226" r="4" fill="#e74c3c"/>
+  <text x="86" y="231" font-size="12" fill="#1e293b">title 가중치 3:1은 <tspan font-weight="600">경험적 판단</tspan> — 데이터 기반 검증 없음</text>
+
+  <circle cx="72" cy="252" r="4" fill="#e74c3c"/>
+  <text x="86" y="257" font-size="12" fill="#1e293b">viewCount/likeCount 부스팅은 <tspan font-weight="600">고정 함수</tspan> — 피처 간 interaction 학습 불가</text>
+
+  <circle cx="72" cy="278" r="4" fill="#e74c3c"/>
+  <text x="86" y="283" font-size="12" fill="#1e293b">Linear Model을 학습해도 <tspan font-weight="600">기존 수동 가중치와 동일</tspan> (OpenSource Connections)</text>
+</svg>
