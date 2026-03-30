@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background -->
+  <circle cx="256" cy="256" r="240" fill="#0d1117" stroke="#30363d" stroke-width="3"/>
+
+  <!-- Top arc (left to right) -->
+  <path
+    d="M 130 220 C 130 120, 382 120, 382 220"
+    stroke="#58a6ff"
+    stroke-width="32"
+    fill="none"
+    stroke-linecap="round"
+  />
+
+  <!-- Bottom arc (right to left) -->
+  <path
+    d="M 382 292 C 382 392, 130 392, 130 292"
+    stroke="#58a6ff"
+    stroke-width="32"
+    fill="none"
+    stroke-linecap="round"
+  />
+
+  <!-- Right arrow: points straight DOWN, at right end of top arc -->
+  <polygon points="354,216 410,216 382,268" fill="#58a6ff"/>
+
+  <!-- Left arrow: points straight UP, at left end of bottom arc -->
+  <polygon points="158,296 102,296 130,244" fill="#58a6ff"/>
+
+  <!-- Gate bars top -->
+  <rect x="228" y="108" width="16" height="72" rx="8" fill="#3fb950"/>
+  <rect x="268" y="108" width="16" height="72" rx="8" fill="#3fb950"/>
+
+  <!-- Gate bars bottom -->
+  <rect x="228" y="332" width="16" height="72" rx="8" fill="#3fb950"/>
+  <rect x="268" y="332" width="16" height="72" rx="8" fill="#3fb950"/>
+
+  <!-- Center eval dot -->
+  <circle cx="256" cy="256" r="28" fill="#d29922"/>
+</svg>
