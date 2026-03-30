@@ -116,7 +116,7 @@ OCI Free Tier는 ARM Ampere A1이다. XGBoost4J JAR(`ml.dmlc:xgboost4j_2.12:2.1.
 
 현재 사용자 트래픽이 거의 없어 클릭 로그가 축적되지 않는다. LLM으로 relevance 판정을 대신한다.
 
-**현업 근거**: SIGIR 2023 (Thomas et al.) — GPT-4의 relevance 판정이 crowdsource annotator와 Cohen's Kappa 0.6~0.7로 일치, crowdsource 간 일치율(0.4~0.6)과 동등 이상.
+**현업 근거**: SIGIR 2024 (Thomas et al.) — GPT-4의 relevance 판정이 crowdsource annotator와 Cohen's Kappa 0.6~0.7로 일치, crowdsource 간 일치율(0.4~0.6)과 동등 이상.
 
 ---
 
@@ -381,7 +381,7 @@ CREATE TABLE click_logs (
 
 ## 출처
 
-- [SIGIR 2023 — LLMs can Accurately Predict Searcher Preferences](https://arxiv.org/abs/2305.02156)
+- [SIGIR 2024 — LLMs can Accurately Predict Searcher Preferences (Thomas et al.)](https://arxiv.org/abs/2309.10621)
 - [OpenSource Connections — LTR Linear Models](https://opensourceconnections.com/blog/2017/04/01/learning-to-rank-linear-models/)
 - [Booking.com — 150 Successful ML Models (KDD 2019)](https://dl.acm.org/doi/10.1145/3292500.3330716)
 - [Airbnb — ML-Powered Search Ranking (KDD 2018)](https://dl.acm.org/doi/10.1145/3219819.3219862)

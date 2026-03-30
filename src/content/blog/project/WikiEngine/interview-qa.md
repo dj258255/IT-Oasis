@@ -319,7 +319,7 @@ OpenSource Connections의 분석에 따르면 "Elasticsearch boosts are nothing 
 
 **Q: "LLM-as-a-Judge로 학습 데이터를 생성했는데, LLM 판정을 신뢰할 수 있나요?"**
 
-SIGIR 2023(Thomas et al.) 연구에서 GPT-4의 relevance 판정이 crowdsource annotator와 Cohen's Kappa 0.6~0.7로 일치합니다. crowdsource 간 일치율이 0.4~0.6이므로 동등 이상입니다. 다만 LLM은 temperature=0이어도 완전 deterministic이 아니므로, 3회 호출 후 평균 반올림으로 분산을 줄였습니다. 이는 TREC LLMJudge 참가팀(RMIT-IR)이 사용한 방법입니다. 궁극적으로는 사용자 클릭 데이터(implicit feedback)로 전환할 계획이며, 클릭 로그 인프라를 이미 구축했습니다.
+SIGIR 2024(Thomas et al.) 연구에서 GPT-4의 relevance 판정이 crowdsource annotator와 Cohen's Kappa 0.6~0.7로 일치합니다. crowdsource 간 일치율이 0.4~0.6이므로 동등 이상입니다. 다만 LLM은 temperature=0이어도 완전 deterministic이 아니므로, 3회 호출 후 평균 반올림으로 분산을 줄였습니다. 이는 TREC LLMJudge 참가팀(RMIT-IR)이 사용한 방법입니다. 궁극적으로는 사용자 클릭 데이터(implicit feedback)로 전환할 계획이며, 클릭 로그 인프라를 이미 구축했습니다.
 
 **Q: "1차 LLM 데이터 생성이 98% 실패한 근본 원인은?"**
 
