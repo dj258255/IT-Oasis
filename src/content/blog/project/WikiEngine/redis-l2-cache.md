@@ -714,6 +714,29 @@ Before(Caffeine + Trie)와 동일 조건(100 VU, 20분)으로 재측정합니다
 
 ---
 
+## 후속 개선 — Spring Batch 전환
+
+`RedisAutocompleteService.buildPrefixTopK()`의 `@Scheduled` 방식을 **Spring Batch Job(Tasklet)**으로 전환했습니다.
+
+| 항목 | 변경 전 | 변경 후 |
+|------|--------|--------|
+| 실행 방식 | `@Scheduled(cron)` + 단일 메서드 | Spring Batch `Job` + `Tasklet` + `@Scheduled` 트리거 |
+| 실행 이력 | 로그만 | JobRepository에 시작/종료/상태/처리 건수 자동 기록 |
+| 실패 복구 | 다음 주기까지 대기 | FAILED 상태에서 재시작 가능 |
+| 트랜잭션 | `@Transactional(readOnly)` | Spring Batch Step 트랜잭션 관리 |
+
+설계 문서의 MapReduce 배치 패턴과 부합합니다:
+- **Map**: SQL GROUP BY → prefix 분해 (원본 + 자모 + 초성)
+- **Reduce**: 접두사별 Top-K 집계
+- **Write**: Redis 버전 네임스페이스 적재 → 포인터 원자적 전환
+
+관련 파일:
+- `AutocompleteBatchConfig.java` — Job/Step/Tasklet 정의
+- `AutocompleteBatchScheduler.java` — 매시간 Job 트리거
+- `RedisAutocompleteService.java` — `buildPrefixTopK()` 제거, 초기화만 유지
+
+---
+
 ## 다음 글
 
 다음 글에서 MySQL Replication(Primary-Replica)을 구성하고 DataSource 라우팅으로 읽기 부하를 분산합니다. 이것이 App 스케일아웃의 두 번째 전제조건입니다.

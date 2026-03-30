@@ -953,6 +953,27 @@ CQRS(Command Query Responsibility Segregation) 패턴에 완벽히 부합. 자�
 | 4 | **MapReduce 패턴** | `buildPrefixTopK()`가 Map(prefix 분해) → Reduce(PriorityQueue top-K) 수행. 프로덕션 규모에서는 Flink/Spark |
 | 5 | **CDC** | Debezium + Kafka로 MySQL → Lucene/캐시 동기화 (binlog 기반 모든 변경 경로 캡처) |
 
+---
+
+## 후속 개선 — CDC 에러 핸들링 강화
+
+### DLQ(Dead Letter Topic) + 재시도 로직
+
+| 항목 | 변경 전 | 변경 후 |
+|------|--------|--------|
+| 예외 처리 | `catch(Exception) { log.error(); }` — 예외 삼킴, 메시지 유실 | `throw new RuntimeException(e)` — Spring Kafka DefaultErrorHandler가 재시도 |
+| 재시도 | 없음 | 1초 간격 9회 = 총 10회 시도 (FixedBackOff) |
+| 실패 후 처리 | 로그만 | DLT(`{토픽}.DLT`)로 격리, 사후 분석/재처리 가능 |
+| offset 커밋 | `enable-auto-commit` 미명시 | `enable-auto-commit=false` + `ack-mode=RECORD` 명시 |
+
+**왜 예외를 throw해야 하는가**: Spring Kafka의 `DefaultErrorHandler`는 리스너가 예외를 throw할 때만 동작합니다. `catch`에서 예외를 삼키면 Kafka 입장에서 "정상 처리"로 간주되어 offset이 커밋되고, 재시도도 DLQ 격리도 일어나지 않습니다. Confluent 공식 문서에서도 DLQ는 "운영 관찰성 시그널"로 — DLT에 메시지가 쌓이면 알림을 보내 원인을 분석하는 패턴을 권장합니다.
+
+**AckMode.RECORD를 명시한 이유**: `enable-auto-commit=true`(기본값)면 poll() 주기마다 자동 커밋되어, 처리 실패한 메시지도 커밋될 수 있습니다. `enable-auto-commit=false` + `ack-mode=RECORD`로 설정하면 각 레코드 처리 완료 후에만 offset이 커밋되어, 실패 시 해당 레코드부터 재처리됩니다.
+
+관련 파일:
+- `CdcErrorHandlerConfig.java` — `DefaultErrorHandler` + `DeadLetterPublishingRecoverer`
+- `DebeziumCdcConsumer.java` — catch에서 throw 추가
+- `application.yml` — `enable-auto-commit: false`, `ack-mode: RECORD`
 
 <!-- EN -->
 
