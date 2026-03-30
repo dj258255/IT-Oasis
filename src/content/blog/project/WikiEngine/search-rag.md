@@ -93,7 +93,7 @@ draft: false
 | **Dense Retrieval (임베딩)** | 의미 유사도 기반, 더 정확 | 임베딩 모델 + 벡터 DB 필요 | 후반 도입 검토 |
 | **Hybrid (BM25 + Dense)** | 최상의 Retrieval | BM25 + 벡터 DB 모두 필요 | **최종 목표** |
 
-**BM25가 이 프로젝트에서 충분한 근거**: wikiEngine은 위키피디아/나무위키 데이터 기반으로 기술 용어 키워드 검색이 주 사용 패턴이다. RAG Retrieval 비교 실험에서 BM25는 키워드 전용 쿼리 NDCG 0.88로 Dense Retrieval(혼합 쿼리 0.65) 대비 우위를 보였다 (출처: [BM25 vs Dense Retrievers 비교](https://medium.com/@siddharth_58896/rag-techniques-bm25-vs-dense-retrievers-a-complete-practical-guide-b1302ee35b7b)). 엔지니어링 로그, 금융 데이터, 법률/과학 문서 등 키워드가 명확한 도메인에서는 BM25가 Dense보다 나을 수 있다는 것이 [Anthropic RAG 가이드](https://docs.anthropic.com/en/docs/build-with-claude/retrieval-augmented-generation)의 평가이기도 하다. "AI" to "인공지능" 수준의 동의어는 [쿼리 확장 구현](/blog/project/wikiengine/search-query-enhancement)의 DB 기반 쿼리 확장으로 이미 해결되었다.
+**BM25가 이 프로젝트에서 충분한 근거**: wikiEngine은 나무위키/한국어 위키백과/영어 위키백과/뉴스/웹텍스트 데이터 기반으로 기술 용어 키워드 검색이 주 사용 패턴이다. RAG Retrieval 비교 실험에서 BM25는 키워드 전용 쿼리 NDCG 0.88로 Dense Retrieval(혼합 쿼리 0.65) 대비 우위를 보였다 (출처: [BM25 vs Dense Retrievers 비교](https://medium.com/@siddharth_58896/rag-techniques-bm25-vs-dense-retrievers-a-complete-practical-guide-b1302ee35b7b)). 엔지니어링 로그, 금융 데이터, 법률/과학 문서 등 키워드가 명확한 도메인에서는 BM25가 Dense보다 나을 수 있다는 것이 [Anthropic RAG 가이드](https://docs.anthropic.com/en/docs/build-with-claude/retrieval-augmented-generation)의 평가이기도 하다. "AI" to "인공지능" 수준의 동의어는 [쿼리 확장 구현](/blog/project/wikiengine/search-query-enhancement)의 DB 기반 쿼리 확장으로 이미 해결되었다.
 
 ### Retrieval 개선 로드맵
 

@@ -1,7 +1,7 @@
 ---
 title: 'WikiEngine 총정리 — 1,215만 건 검색 엔진의 설계부터 RAG까지'
 titleEn: 'WikiEngine Retrospective — From Design to RAG with 12.15M Documents'
-description: 2개월간 26편의 기술 블로그로 기록한 WikiEngine 검색 엔진 프로젝트를 총정리합니다. MySQL LIKE 5,000ms 타임아웃에서 시작하여 임베디드 Lucene + Nori 한국어 형태소 분석으로 전환하고, Caffeine+Redis 2계층 캐시(82% 히트율), MySQL Replication R/W 분리, Nginx 스케일아웃(에러율 13.25%→0%), Debezium+Kafka CDC, Redis 3노드 Consistent Hashing까지 분산 아키텍처를 완성합니다. 검색 품질은 동의어 확장, 오타 교정, UnifiedHighlighter snippet, LTR(NDCG +4.8%p), 카테고리 28개 자동 분류, Aho-Corasick 금칙어 필터링으로 고도화하고, RAG(Gemini SSE 스트리밍)로 AI 검색 요약을 제공합니다. 자동완성 시스템 설계(CQRS + MapReduce + CDC)의 이론과 실제 구현의 매핑, 26편 전체 시리즈 링크, 핵심 수치 총정리를 포함합니다.
+description: 나무위키+한국어 위키백과+영어 위키백과+뉴스+웹텍스트+C4 한국어 코퍼스 1,215만 건 검색 엔진 프로젝트를 2개월간 26편의 기술 블로그로 기록하고 총정리합니다. MySQL LIKE 5,000ms 타임아웃에서 시작하여 임베디드 Lucene + Nori 한국어 형태소 분석으로 전환하고, Caffeine+Redis 2계층 캐시(82% 히트율), MySQL Replication R/W 분리, Nginx 스케일아웃(에러율 13.25%→0%), Debezium+Kafka CDC, Redis 3노드 Consistent Hashing까지 분산 아키텍처를 완성합니다. 검색 품질은 동의어 확장, 오타 교정, UnifiedHighlighter snippet, LTR(NDCG +4.8%p), 카테고리 28개 자동 분류, Aho-Corasick 금칙어 필터링으로 고도화하고, RAG(Gemini SSE 스트리밍)로 AI 검색 요약을 제공합니다. 자동완성 시스템 설계(CQRS + MapReduce + CDC)의 이론과 실제 구현의 매핑, 26편 전체 시리즈 링크, 핵심 수치 총정리를 포함합니다.
 descriptionEn: A comprehensive retrospective of the WikiEngine search engine project documented across 26 technical blog posts over 2 months. From MySQL LIKE 5,000ms timeout to embedded Lucene + Nori, two-tier cache (82% hit), MySQL Replication, Nginx scale-out (error 13.25%→0%), Debezium+Kafka CDC, Redis 3-node Consistent Hashing. Search quality enhanced with synonyms, spell check, UnifiedHighlighter, LTR (NDCG +4.8%p), 28-category auto-classification, Aho-Corasick content filtering, and RAG with Gemini SSE streaming.
 date: 2026-03-30T00:00:00.000Z
 tags:
@@ -28,7 +28,23 @@ draft: false
 
 ## 프로젝트 개요
 
-WikiEngine은 위키피디아 + 나무위키 데이터 **1,215만 건**을 대상으로 한 검색 엔진입니다. OCI Free Tier ARM 2코어 서버 2대에서 운영되며, 2개월간 검색 인프라 구축부터 분산 아키텍처 전환, 검색 품질 고도화, AI 검색 요약까지 진행했습니다.
+WikiEngine은 나무위키 + 한국어 위키백과 + 영어 위키백과 데이터 **1,215만 건**을 대상으로 한 검색 엔진입니다. 위키 문서를 그대로 사용하는 것이 아니라, 실제 커뮤니티 게시판처럼 변환하여 적재했습니다. OCI Free Tier ARM 2코어 서버 2대에서 운영되며, 2개월간 검색 인프라 구축부터 분산 아키텍처 전환, 검색 품질 고도화, AI 검색 요약까지 진행했습니다.
+
+### 데이터 소스
+
+| 소스 | 포맷 | 문서 수 | 설명 |
+|------|------|---------|------|
+| 나무위키 (2021.03) | JSON | 571,364건 | 나무마크 본문, 한국어 커뮤니티 문서 |
+| 한국어 위키백과 (2026.03) | XML | 739,791건 | MediaWiki XML 덤프 (ns=0 일반 문서만) |
+| 영어 위키백과 (2026.02) | XML | 7,139,510건 | MediaWiki XML 덤프 (ns=0 일반 문서만) |
+| 한국어 뉴스 | JSON | 159,639건 | 뉴스 기사 텍스트 |
+| 한국어 웹텍스트 | JSON | 1,284,822건 | 웹 크롤링 텍스트 |
+| C4 한국어 클린 | JSON | 2,261,463건 | 한국어 웹 코퍼스 |
+| **합계** | | **12,156,589건** | **30개 카테고리, 고유 태그 ~216만 개** |
+
+위키 문서를 그대로 사용하는 것이 아니라, 실제 커뮤니티 게시판처럼 변환하여 적재했습니다. 위키 `[[분류:XXX]]`는 태그+카테고리로 변환하고, 뉴스/웹 콘텐츠는 소스별 고정 카테고리를 부여했습니다.
+
+### 프로젝트 규모
 
 | 항목 | 수치 |
 |------|------|
@@ -61,7 +77,7 @@ WikiEngine은 위키피디아 + 나무위키 데이터 **1,215만 건**을 대�
                       → MySQL (CRUD)
 ```
 
-MySQL FULLTEXT의 근본적 한계(300GB+ 인덱스 추정, false positive, 한국어 지원 미흡)를 확인한 후, 임베디드 Lucene으로 전환했습니다. Elasticsearch 대비 **추가 인프라 비용 $0**이라는 점이 결정적이었습니다.
+MySQL FULLTEXT의 근본적 한계(300GB+ 인덱스 추정, false positive, 한국어 지원 미흡)를 확인한 후, 임베디드 Lucene으로 전환했습니다. Elasticsearch는 별도 3노드 클러스터에 최소 6GB RAM이 추가로 필요하지만, 임베디드 Lucene은 앱 JVM 내에서 동작하여 **별도 프로세스 없이 기존 서버 메모리로 운영**할 수 있다는 점이 결정적이었습니다.
 
 - [MySQL을 버리고 Lucene을 선택한 이유](/blog/project/wikiengine/lucene-decision)에서 FULLTEXT의 한계를 분석하고, Nori 한국어 형태소 분석기를 적용한 임베디드 Lucene으로 전환했습니다.
 - [검색 품질 평가](/blog/project/wikiengine/search-quality)에서 PhraseQuery(slop=2) + BM25 + FeatureField(viewCount, likeCount) + Recency Decay 랭킹을 구현했습니다. 15개 테스트 쿼리로 측정한 P@10이 0.827 → **0.853** (+3.2%)로 개선되었습니다.
@@ -298,14 +314,14 @@ WikiEngine에서는 Stateless 전환(Caffeine/Trie/TokenBlacklist → Redis 외�
 
 | 관점 | Lucene (선택) | Elasticsearch |
 |------|-------------|--------------|
-| 인프라 비용 | **$0** (앱 내장) | 최소 6G RAM (3노드 HA) |
-| 검색 성능 | **네트워크 홉 없음** (7~10배 빠름) | REST API 오버헤드 |
-| 운영 복잡도 | 앱과 함께 배포 | 별도 클러스터 모니터링 |
-| Free Tier | **가능** | **불가능** |
+| 메모리 사용 | **앱 JVM 내 공유** (별도 프로세스 없음) | 최소 6G RAM 추가 (3노드 HA 기준 JVM 각 2G+) |
+| 검색 성능 | **네트워크 홉 없음** — 같은 프로세스 내 직접 호출 | REST API + 네트워크 직렬화/역직렬화 오버헤드 |
+| 운영 복잡도 | 앱과 함께 배포, 별도 프로세스 관리 없음 | 별도 클러스터 배포 + 모니터링 + 버전 관리 |
+| 인프라 제약 | **OCI Free Tier 12GB 서버에서 운영 가능** | 12GB 서버에서 ES 3노드 + 앱 동시 운영 불가능 |
 | LTR | Rescorer API 직접 구현 | elasticsearch-learning-to-rank 플러그인 |
-| 분산 검색 | 앱 레벨 (구현 필요) | 네이티브 샤딩+복제 |
+| 분산 검색 | 앱 레벨 샤딩 (구현 필요) | 네이티브 샤딩+복제 |
 
-현재 인프라(Free Tier 2대, 총 24GB RAM)에서는 Elasticsearch 도입이 불가능합니다. Lucene 임베디드로 검색 품질, 캐싱, LTR, Facet, 동의어, 오타 교정까지 모두 구현할 수 있었습니다. 인프라가 확장되면 Elasticsearch 마이그레이션을 검토합니다.
+현재 인프라(Free Tier 2대, 총 24GB RAM)에서 앱(Spring Boot + Lucene 42GB 인덱스) + MySQL + Redis 3노드 + Kafka를 모두 운영하고 있습니다. 여기에 Elasticsearch 3노드(최소 6G RAM)를 추가하면 메모리가 부족합니다. Lucene 임베디드로 검색 품질, 캐싱, LTR, Facet, 동의어, 오타 교정까지 모두 구현할 수 있었고, 네트워크 홉이 없어 응답시간도 더 빠릅니다. 인프라가 확장되면 Elasticsearch 마이그레이션을 검토합니다.
 
 ### 왜 Kafka를 쓰는가 (볼륨이 작은데 오버엔지니어링 아닌가)
 
