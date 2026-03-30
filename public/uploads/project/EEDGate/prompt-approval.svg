@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 240" fill="none">
+  <style>
+    text { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+    .title { font-size: 12px; fill: #94a3b8; font-weight: 600; }
+    .code { font-size: 12px; fill: #e2e8f0; }
+    .added { font-size: 12px; fill: #4ade80; }
+    .arrow { font-size: 11px; fill: #f59e0b; }
+    .btn { font-size: 12px; font-weight: 600; }
+    .border { stroke: #334155; stroke-width: 1; }
+  </style>
+
+  <rect width="520" height="240" fill="#0f172a" rx="10"/>
+
+  <rect x="0" y="0" width="260" height="32" fill="#1e293b" rx="10"/>
+  <rect x="0" y="22" width="260" height="10" fill="#1e293b"/>
+  <text class="title" x="16" y="21">원본 프롬프트</text>
+
+  <rect x="260" y="0" width="260" height="32" fill="#1e293b" rx="10"/>
+  <rect x="260" y="22" width="260" height="10" fill="#1e293b"/>
+  <text class="title" x="276" y="21">수정 제안</text>
+
+  <line class="border" x1="260" y1="0" x2="260" y2="180"/>
+  <line class="border" x1="0" y1="32" x2="520" y2="32"/>
+
+  <text class="code" x="16" y="56">당신은 분석가입니다.</text>
+  <text class="code" x="16" y="76">핵심 토픽을 추출하세요</text>
+
+  <text class="code" x="276" y="56">당신은 분석가입니다.</text>
+  <text class="code" x="276" y="76">핵심 토픽을 추출하세요</text>
+  <text class="added" x="276" y="96">반드시 JSON으로 출력</text>
+  <text class="arrow" x="460" y="96">&lt;- 추가됨</text>
+  <text class="added" x="276" y="116">예: {"topics": [...]}</text>
+  <text class="arrow" x="460" y="116">&lt;- 추가됨</text>
+
+  <line class="border" x1="0" y1="180" x2="520" y2="180"/>
+
+  <rect x="40" y="194" width="100" height="32" fill="#172554" stroke="#3b82f6" stroke-width="1.5" rx="6"/>
+  <text class="btn" x="90" y="215" text-anchor="middle" fill="#3b82f6">승인</text>
+
+  <rect x="168" y="194" width="100" height="32" fill="#1e293b" stroke="#475569" stroke-width="1.5" rx="6"/>
+  <text class="btn" x="218" y="215" text-anchor="middle" fill="#94a3b8">수정</text>
+
+  <rect x="296" y="194" width="112" height="32" fill="#1e293b" stroke="#475569" stroke-width="1.5" rx="6"/>
+  <text class="btn" x="352" y="215" text-anchor="middle" fill="#94a3b8">건너뛰기</text>
+</svg>

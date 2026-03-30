@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 200" fill="none">
+  <style>
+    text { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    .label { font-size: 13px; fill: #e2e8f0; font-weight: 600; }
+    .pass { font-size: 11px; fill: #4ade80; font-weight: 600; }
+    .fail { font-size: 11px; fill: #f87171; font-weight: 600; }
+    .io { font-size: 13px; fill: #cbd5e1; font-weight: 600; }
+    .connector { stroke: #475569; stroke-width: 1.5; }
+    .box { rx: 8; }
+  </style>
+
+  <rect width="820" height="200" fill="#0f172a" rx="12"/>
+
+  <!-- Input -->
+  <rect class="box" x="16" y="60" width="72" height="36" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text class="io" x="52" y="83" text-anchor="middle">입력</text>
+
+  <line class="connector" x1="88" y1="78" x2="110" y2="78"/>
+  <polygon points="106,74 114,78 106,82" fill="#475569"/>
+
+  <!-- Step 1 -->
+  <rect class="box" x="114" y="52" width="90" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="label" x="159" y="82" text-anchor="middle">단계 1</text>
+
+  <line class="connector" x1="204" y1="78" x2="226" y2="78"/>
+  <polygon points="222,74 230,78 222,82" fill="#475569"/>
+
+  <!-- Gate 1 -->
+  <polygon points="262,52 294,78 262,104 230,78" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text class="label" x="262" y="75" text-anchor="middle" font-size="10" fill="#f59e0b">게이트</text>
+
+  <text class="pass" x="262" y="124" text-anchor="middle">통과?</text>
+  <text class="fail" x="262" y="140" text-anchor="middle">실패 = 멈춤</text>
+  <line stroke="#f87171" stroke-width="1" stroke-dasharray="3,2" x1="262" y1="104" x2="262" y2="114"/>
+
+  <line class="connector" x1="294" y1="78" x2="316" y2="78"/>
+  <polygon points="312,74 320,78 312,82" fill="#475569"/>
+
+  <!-- Step 2 -->
+  <rect class="box" x="320" y="52" width="90" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="label" x="365" y="82" text-anchor="middle">단계 2</text>
+
+  <line class="connector" x1="410" y1="78" x2="432" y2="78"/>
+  <polygon points="428,74 436,78 428,82" fill="#475569"/>
+
+  <!-- Gate 2 -->
+  <polygon points="468,52 500,78 468,104 436,78" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text class="label" x="468" y="75" text-anchor="middle" font-size="10" fill="#f59e0b">게이트</text>
+
+  <text class="pass" x="468" y="124" text-anchor="middle">통과?</text>
+  <text class="fail" x="468" y="140" text-anchor="middle">실패 = 멈춤</text>
+  <line stroke="#f87171" stroke-width="1" stroke-dasharray="3,2" x1="468" y1="104" x2="468" y2="114"/>
+
+  <line class="connector" x1="500" y1="78" x2="522" y2="78"/>
+  <polygon points="518,74 526,78 518,82" fill="#475569"/>
+
+  <!-- Step 3 -->
+  <rect class="box" x="526" y="52" width="90" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="label" x="571" y="82" text-anchor="middle">단계 3</text>
+
+  <line class="connector" x1="616" y1="78" x2="638" y2="78"/>
+  <polygon points="634,74 642,78 634,82" fill="#475569"/>
+
+  <!-- Gate 3 -->
+  <polygon points="674,52 706,78 674,104 642,78" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text class="label" x="674" y="75" text-anchor="middle" font-size="10" fill="#f59e0b">게이트</text>
+
+  <text class="pass" x="674" y="124" text-anchor="middle">통과?</text>
+  <text class="fail" x="674" y="140" text-anchor="middle">실패 = 멈춤</text>
+  <line stroke="#f87171" stroke-width="1" stroke-dasharray="3,2" x1="674" y1="104" x2="674" y2="114"/>
+
+  <line class="connector" x1="706" y1="78" x2="728" y2="78"/>
+  <polygon points="724,74 732,78 724,82" fill="#475569"/>
+
+  <!-- Output -->
+  <rect class="box" x="732" y="60" width="72" height="36" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text class="io" x="768" y="83" text-anchor="middle">출력</text>
+</svg>

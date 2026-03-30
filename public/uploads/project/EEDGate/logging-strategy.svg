@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 320" fill="none">
+  <style>
+    text { font-family: 'SF Mono', 'Cascadia Code', monospace; }
+    .title { font-size: 13px; fill: #e2e8f0; font-weight: 700; }
+    .desc { font-size: 11px; fill: #94a3b8; }
+    .log { font-size: 11px; }
+    .step { fill: #38bdf8; }
+    .eval { fill: #a78bfa; }
+    .box { rx: 8; }
+  </style>
+
+  <rect width="580" height="320" fill="#0f172a" rx="12"/>
+
+  <!-- stdout -->
+  <rect class="box" x="20" y="16" width="540" height="130" fill="#1e293b" stroke="#4ade80" stroke-width="1.5"/>
+  <text class="title" x="40" y="40">stdout (항상)</text>
+  <text class="desc" x="180" y="40">사람이 읽을 수 있는 요약</text>
+
+  <text class="log step" x="44" y="64">[STEP]</text>
+  <text class="log" x="100" y="64" fill="#e2e8f0">classify -> 완료 (0.8s, 1.2K tokens)</text>
+  <text class="log step" x="44" y="82">[STEP]</text>
+  <text class="log" x="100" y="82" fill="#e2e8f0">retrieve -> 완료 (3.2s, 4.5K tokens, 8 links)</text>
+  <text class="log eval" x="44" y="100">[EVAL]</text>
+  <text class="log" x="100" y="100" fill="#e2e8f0">groundedness -> 0.85 (PASS, threshold: 0.7)</text>
+  <text class="log step" x="44" y="118">[STEP]</text>
+  <text class="log" x="100" y="118" fill="#e2e8f0">generate -> 완료 (5.1s, 8.3K tokens)</text>
+
+  <!-- jsonl -->
+  <rect class="box" x="20" y="160" width="260" height="64" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+  <text class="title" x="40" y="184">jsonl (선택적)</text>
+  <text class="desc" x="40" y="200">기계가 읽을 수 있는 전체 트레이스</text>
+  <text class="desc" x="40" y="214">각 이벤트가 한 줄 JSON</text>
+
+  <!-- langfuse -->
+  <rect class="box" x="300" y="160" width="260" height="64" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+  <text class="title" x="320" y="184">langfuse (선택적)</text>
+  <text class="desc" x="320" y="200">대시보드 시각화</text>
+  <text class="desc" x="320" y="214">API 키 설정 시 자동 활성화</text>
+
+  <!-- otel -->
+  <rect class="box" x="20" y="240" width="540" height="64" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+  <text class="title" x="40" y="264">otel (선택적)</text>
+  <text class="desc" x="180" y="264">OpenTelemetry 호환 백엔드</text>
+  <text class="desc" x="40" y="284">Jaeger, Grafana Tempo, Datadog 등</text>
+</svg>

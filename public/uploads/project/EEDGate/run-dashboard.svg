@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" fill="none">
+  <style>
+    text { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+    .header { font-size: 12px; fill: #94a3b8; }
+    .header-val { font-size: 12px; fill: #38bdf8; }
+    .title { font-size: 14px; fill: #e2e8f0; font-weight: 700; }
+    .done { font-size: 12px; fill: #4ade80; }
+    .run { font-size: 12px; fill: #facc15; }
+    .wait { font-size: 12px; fill: #64748b; }
+    .log-step { font-size: 11px; fill: #38bdf8; }
+    .log-pass { font-size: 11px; fill: #4ade80; }
+    .log-end { font-size: 11px; fill: #94a3b8; }
+    .log-info { font-size: 11px; fill: #a78bfa; }
+    .border { stroke: #334155; stroke-width: 1; }
+  </style>
+
+  <rect width="720" height="380" fill="#0f172a" rx="10"/>
+
+  <!-- Top header bar -->
+  <rect x="0" y="0" width="720" height="44" fill="#1e293b" rx="10"/>
+  <rect x="0" y="34" width="720" height="10" fill="#1e293b"/>
+
+  <text class="title" x="16" y="26">document-pipeline</text>
+  <rect x="170" y="12" width="1" height="20" fill="#334155"/>
+  <text class="header" x="184" y="22">sonnet</text>
+  <text class="header" x="226" y="22">|</text>
+  <text class="header" x="236" y="22">high</text>
+  <text class="header" x="264" y="22">|</text>
+  <text class="header-val" x="274" y="22">42s</text>
+
+  <text class="header" x="400" y="18">워크플로우:</text>
+  <text class="header-val" x="480" y="18">document-pipeline</text>
+  <text class="header" x="400" y="34">모델:</text>
+  <text class="header-val" x="438" y="34">sonnet</text>
+  <text class="header" x="492" y="34">노력:</text>
+  <text class="header-val" x="530" y="34">high</text>
+
+  <!-- Metrics bar -->
+  <rect x="320" y="44" width="400" height="28" fill="#172554"/>
+  <text class="header" x="334" y="62">경과:</text>
+  <text class="header-val" x="372" y="62">42s</text>
+  <text class="header" x="412" y="62">토큰:</text>
+  <text class="header-val" x="452" y="62">12,450</text>
+  <text class="header" x="512" y="62">비용:</text>
+  <text class="header-val" x="548" y="62">$0.02</text>
+
+  <line class="border" x1="0" y1="72" x2="720" y2="72"/>
+  <line class="border" x1="320" y1="44" x2="320" y2="380"/>
+
+  <!-- Left panel -->
+  <rect x="0" y="44" width="320" height="28" fill="#172554"/>
+  <text class="header" x="16" y="62">단계</text>
+
+  <text class="done" x="24" y="102">[완료]</text>
+  <text class="done" x="80" y="102">classify_input</text>
+
+  <text class="done" x="24" y="126">[완료]</text>
+  <text class="done" x="80" y="126">retrieve_docs</text>
+
+  <text class="run" x="24" y="150">[실행]</text>
+  <text class="run" x="80" y="150">generate_draft</text>
+
+  <text class="wait" x="24" y="174">[ .. ]</text>
+  <text class="wait" x="80" y="174">validate_final</text>
+
+  <text class="wait" x="24" y="198">[ .. ]</text>
+  <text class="wait" x="80" y="198">format_output</text>
+
+  <!-- Right panel -->
+  <text class="log-step" x="336" y="100">[단계 시작]</text>
+  <text class="log-end" x="426" y="100">classify_input -> classifier</text>
+
+  <text class="log-pass" x="336" y="122">[검증]</text>
+  <text class="log-pass" x="390" y="122">통과</text>
+
+  <text class="log-end" x="336" y="144">[단계 종료]</text>
+  <text class="log-end" x="430" y="144">완료 3.2s (2,100 토큰)</text>
+
+  <text class="log-step" x="336" y="174">[단계 시작]</text>
+  <text class="log-end" x="426" y="174">retrieve_docs -> researcher</text>
+
+  <text class="log-info" x="336" y="196">[검색]</text>
+  <text class="log-end" x="390" y="196">3개 청크 (평균 점수: 0.82)</text>
+
+  <text class="log-end" x="336" y="218">[단계 종료]</text>
+  <text class="log-end" x="430" y="218">완료 5.1s (4,350 토큰)</text>
+
+  <text class="log-step" x="336" y="248">[단계 시작]</text>
+  <text class="log-end" x="426" y="248">generate_draft -> writer</text>
+
+  <text class="log-end" x="336" y="270">...</text>
+</svg>

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" fill="none">
+  <style>
+    text { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    .title { font-size: 16px; fill: #e2e8f0; font-weight: 700; }
+    .module { font-size: 13px; fill: #e2e8f0; font-weight: 600; }
+    .bus-label { font-size: 12px; fill: #f59e0b; font-weight: 600; }
+    .bus-sub { font-size: 10px; fill: #fbbf24; }
+    .box { rx: 8; }
+    .connector { stroke: #475569; stroke-width: 1.5; }
+  </style>
+
+  <rect width="640" height="400" fill="#0f172a" rx="12"/>
+
+  <rect x="20" y="16" width="600" height="368" fill="none" stroke="#334155" stroke-width="1.5" rx="10"/>
+  <text class="title" x="240" y="44" text-anchor="middle">eddgate CLI</text>
+
+  <!-- Top row -->
+  <rect class="box" x="48" y="60" width="120" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="module" x="108" y="82" text-anchor="middle">Context</text>
+  <text class="module" x="108" y="98" text-anchor="middle">Builder</text>
+
+  <rect class="box" x="192" y="60" width="120" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="module" x="252" y="82" text-anchor="middle">Workflow</text>
+  <text class="module" x="252" y="98" text-anchor="middle">Engine</text>
+
+  <rect class="box" x="336" y="60" width="120" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="module" x="396" y="82" text-anchor="middle">Agent</text>
+  <text class="module" x="396" y="98" text-anchor="middle">Runner</text>
+
+  <rect class="box" x="480" y="60" width="120" height="52" fill="#172554" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="module" x="540" y="82" text-anchor="middle">Eval</text>
+  <text class="module" x="540" y="98" text-anchor="middle">Module</text>
+
+  <line class="connector" x1="108" y1="112" x2="108" y2="150"/>
+  <line class="connector" x1="252" y1="112" x2="252" y2="150"/>
+  <line class="connector" x1="396" y1="112" x2="396" y2="150"/>
+  <line class="connector" x1="540" y1="112" x2="540" y2="150"/>
+
+  <!-- Core Bus -->
+  <rect class="box" x="48" y="150" width="552" height="56" fill="#1a1a2e" stroke="#f59e0b" stroke-width="1.5"/>
+  <text class="bus-label" x="324" y="176" text-anchor="middle">Core Bus</text>
+  <text class="bus-sub" x="324" y="194" text-anchor="middle">(이벤트 + 구조화 로깅 + 상태 관리)</text>
+
+  <line class="connector" x1="108" y1="206" x2="108" y2="244"/>
+  <line class="connector" x1="252" y1="206" x2="252" y2="244"/>
+  <line class="connector" x1="396" y1="206" x2="396" y2="244"/>
+  <line class="connector" x1="540" y1="206" x2="540" y2="244"/>
+
+  <!-- Bottom row -->
+  <rect class="box" x="48" y="244" width="120" height="52" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text class="module" x="108" y="266" text-anchor="middle">MCP</text>
+  <text class="module" x="108" y="282" text-anchor="middle">Manager</text>
+
+  <rect class="box" x="192" y="244" width="120" height="52" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text class="module" x="252" y="266" text-anchor="middle">Model</text>
+  <text class="module" x="252" y="282" text-anchor="middle">Provider</text>
+
+  <rect class="box" x="336" y="244" width="120" height="52" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text class="module" x="396" y="266" text-anchor="middle">Trace</text>
+  <text class="module" x="396" y="282" text-anchor="middle">Emitter</text>
+
+  <rect class="box" x="480" y="244" width="120" height="52" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text class="module" x="540" y="266" text-anchor="middle">Config</text>
+  <text class="module" x="540" y="282" text-anchor="middle">Store</text>
+</svg>
