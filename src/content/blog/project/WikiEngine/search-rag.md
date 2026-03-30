@@ -387,6 +387,10 @@ String snippetSource = cleaned.substring(0, Math.min(cleaned.length(), 500));
 | 4 | [콘텐츠 필터링 -- 운영 안전장치](/blog/project/wikiengine/search-content-filter) | Aho-Corasick 금칙어, 블라인드, Negative Caching |
 | 5 | **AI 검색 요약 -- RAG** (이 글) | RAG 파이프라인, SSE, 비용 모니터링 |
 
+## 다음 글
+
+[WikiEngine 총정리](/blog/project/wikiengine/wiki-engine-retrospective)에서 26편 전체 시리즈의 아키텍처 진화, 핵심 수치, 자동완성 시스템 설계 이론과 실제 구현의 매핑을 정리합니다.
+
 ---
 
 ## 출처
