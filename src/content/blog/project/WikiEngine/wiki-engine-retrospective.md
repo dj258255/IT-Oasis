@@ -23,6 +23,7 @@ tags:
   - Spring Boot
   - Wiki
 category: project/WikiEngine
+coverImage: /uploads/project/WikiEngine/wiki-engine-retrospective/wikiengine-architecture.svg
 draft: false
 ---
 
@@ -373,3 +374,9 @@ ROI 비교: Kafka 주간 운영 30분~1시간 vs dual-write 불일치 발생 시
 | 24 | [포트폴리오 가이드](/blog/project/wikiengine/portfolio-resume-guide) | 이력서 작성 프레임워크 |
 | 25 | [면접 예상 질문](/blog/project/wikiengine/interview-qa) | 프로젝트 전체 면접 Q&A |
 | 26 | **WikiEngine 총정리** (이 글) | 설계부터 RAG까지 전체 회고 |
+
+---
+
+## 최종 아키텍처
+
+![WikiEngine Infrastructure](/uploads/project/WikiEngine/wiki-engine-retrospective/wikiengine-architecture.svg)
