@@ -309,6 +309,36 @@ Debezium Connector는 단일 스레드로 binlog을 소비하므로, 대량 DML 
 
 ---
 
+## LTR 재랭킹 + 카테고리 자동 분류
+
+> 출처: [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking)
+
+**Q: "왜 Linear Model이 아니라 LambdaMART를 선택했나요?"**
+
+OpenSource Connections의 분석에 따르면 "Elasticsearch boosts are nothing but coefficients in a linear regression"입니다. 같은 3개 피처(viewCount, likeCount, recency)로 Linear Model을 학습해도 기존 수동 가중치와 거의 동일한 결과가 나옵니다. tree model인 LambdaMART는 피처 간 interaction을 학습할 수 있습니다. 예를 들어 "titleLength가 짧으면서 tagOverlap이 높은 경우"처럼 비선형 관계를 포착합니다. 실제로 Feature Importance에서 titleLength(1.0)와 tagOverlap(0.9)이 최상위를 차지했습니다.
+
+**Q: "LLM-as-a-Judge로 학습 데이터를 생성했는데, LLM 판정을 신뢰할 수 있나요?"**
+
+SIGIR 2023(Thomas et al.) 연구에서 GPT-4의 relevance 판정이 crowdsource annotator와 Cohen's Kappa 0.6~0.7로 일치합니다. crowdsource 간 일치율이 0.4~0.6이므로 동등 이상입니다. 다만 LLM은 temperature=0이어도 완전 deterministic이 아니므로, 3회 호출 후 평균 반올림으로 분산을 줄였습니다. 이는 TREC LLMJudge 참가팀(RMIT-IR)이 사용한 방법입니다. 궁극적으로는 사용자 클릭 데이터(implicit feedback)로 전환할 계획이며, 클릭 로그 인프라를 이미 구축했습니다.
+
+**Q: "1차 LLM 데이터 생성이 98% 실패한 근본 원인은?"**
+
+라운드 간 딜레이 2초로 3회 호출이 약 6초, 분당 30요청으로 Gemini 무료 티어 15 RPM을 초과했습니다. Spring AI 기본 retry가 HTTP 429를 NonTransientAiException(4xx)으로 분류하여 재시도하지 않았고, 데이터가 메모리 전용(ArrayList)이라 status API에 성공/실패 구분이 없어 98% 실패를 인지하지 못했습니다. 딜레이를 5초로 변경하고(12 RPM), 지수 백오프 재시도, CSV append로 디스크 저장, resume 기능을 추가하여 해결했습니다.
+
+**Q: "NDCG@10이 +4.8%p인데, train set에서는 0.9228이잖아요. 과적합 아닌가요?"**
+
+맞습니다. train set 0.9228은 과적합이 반영된 수치이고, 면접에서 말하는 수치는 5-Fold Cross Validation 기준 0.7387(+-0.04)입니다. 10쿼리 200쌍 소규모 데이터에서 +4.8%p입니다. Sanderson & Zobel 연구에 따르면 100쿼리 기준 +5% 이상이면 통계적으로 감지 가능한 수준입니다. 학습 데이터를 늘리면(45쿼리 목표) 개선폭이 커질 것으로 예상합니다.
+
+**Q: "LTR ON에서 72배 성능 악화인데, 왜 프로덕션에서 끄기로 결정했나요? 최적화할 수 없었나요?"**
+
+근본 원인은 Rescore window 200에서 문서당 14개 피처 추출이 CPU-intensive하다는 것입니다. BM25 3필드 곱하기 200문서 = 600회 Scorer 생성 + Nori 토큰화가 2코어 ARM에서 포화됩니다. 현업에서는 피처 사전 계산(인덱스 타임에 피처를 stored field로 저장), 피처 캐싱, 전용 다코어 서버에서 처리합니다. 2코어 Free Tier에서는 이런 최적화를 해도 한계가 있습니다. LTR 파이프라인 전체(데이터 생성 → 학습 → 추론 → 평가)를 검증하는 것이 목적이었으므로, 기능 검증 완료 후 LTR_ENABLED=false로 비활성화하고 인프라 확장 시 재활성화합니다.
+
+**Q: "XGBoost4J를 선택한 이유는? ONNX Runtime이나 다른 옵션은?"**
+
+세 가지를 검토했습니다. xgboost-predictor-java는 XGBoost 2.x 모델 포맷(UBJSON)과 비호환이고 deprecated입니다. ONNX Runtime은 onnxmltools가 XGBRanker를 ONNX로 변환하는 것을 지원하지 않습니다(Issue #382). XGBoost4J는 Python save_model() 포맷을 변환 없이 직접 로드할 수 있고, ARM64 Linux 네이티브 라이브러리가 JAR에 번들되어 있으며, inplace_predict()가 thread-safe라서 DMatrix 생성 없이 flat float 배열로 직접 추론할 수 있습니다.
+
+---
+
 ## 카테고리 검색 필터링 + Facet 집계
 
 > 출처: [카테고리 검색 필터링 + Facet 집계](/blog/project/wikiengine/search-category-facet)

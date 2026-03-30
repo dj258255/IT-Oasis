@@ -3,7 +3,7 @@ title: '콘텐츠 필터링 — Aho-Corasick 금칙어 탐지와 운영 안전�
 titleEn: 'Content Filtering — Aho-Corasick Banned Word Detection and Operational Safety'
 description: 커뮤니티 검색 서비스의 운영 안전장치를 구축합니다. 16,090개 금칙어를 Aho-Corasick O(N+Z) 알고리즘으로 탐지하여 자동완성 결과에서 유해 검색어를 필터링하고, 블라인드 게시글을 Lucene Occur.MUST_NOT으로 검색에서 제외합니다. 영어 금칙어의 Scunthorpe 문제(단어 경계 매칭), Negative Caching(빈 결과 30초 TTL)으로 cache penetration 방지, title_raw StringField로 자동완성 Lucene fallback 품질을 개선합니다.
 descriptionEn: Builds operational safety for a community search service. Detects 16,090 banned words with Aho-Corasick O(N+Z) algorithm to filter harmful autocomplete suggestions. Excludes blinded posts from search via Lucene Occur.MUST_NOT. Handles the Scunthorpe problem for English banned words with word-boundary matching. Implements Negative Caching (30s TTL for empty results) to prevent cache penetration, and title_raw StringField for better autocomplete Lucene fallback quality.
-date: 2026-03-27T00:00:00.000Z
+date: 2026-03-28T00:00:00.000Z
 tags:
   - Lucene
   - Search Engine
@@ -19,16 +19,16 @@ draft: false
 
 ## 이전 글
 
-[쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement)에서 동의어 확장("AI" → "인공지능"), DirectSpellChecker 오타 교정, UnifiedHighlighter snippet 개선, 12,156,589건 전체 재색인 인프라를 구축했습니다.
+[LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking)에서 XGBoost LambdaMART로 NDCG@10을 +4.8%p 개선하고, 카테고리 28개 자동 분류 + Lucene 네이티브 Facet + 태그 216만 건 인덱싱을 완료했습니다.
 
 | 지표 | 결과 |
 |------|------|
-| 동의어 확장 | "AI" → "인공지능" 1위 (Recall 대폭 개선) |
-| 오타 교정 | "프로그래링" → "프로그래밍" 제안 성공 |
-| Snippet | UnifiedHighlighter + snippetSource 500자 (검색어 주변 맥락) |
-| 재색인 | 12,156,589건, 42GB, ~2시간 |
+| NDCG@10 | 0.6910 → 0.7387 (+4.8%p, 5-Fold CV) |
+| 카테고리 분류 | 28개 주제별, 정확도 ~83% |
+| Facet | SortedSetDocValuesFacetCounts 네이티브 전환 |
+| LTR 프로덕션 | CPU 포화로 비활성화 (LTR_ENABLED=false) |
 
-검색 기능(품질, 인프라)이 고도화되었지만, 커뮤니티 서비스 운영에 필수적인 **콘텐츠 안전장치**가 없습니다.
+검색 기능(품질, 랭킹, 인프라)이 고도화되었지만, 커뮤니티 서비스 운영에 필수적인 **콘텐츠 안전장치**가 없습니다.
 
 ---
 

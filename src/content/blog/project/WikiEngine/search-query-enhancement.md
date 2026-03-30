@@ -556,7 +556,7 @@ snippetSource(앞 500자) + UnifiedHighlighter 조합으로, 검색어 주변 �
 
 ## 다음 글
 
-[콘텐츠 필터링 — 운영 안전장치](/blog/project/wikiengine/search-content-filter)에서 Aho-Corasick 기반 금칙어 필터링, 블라인드 게시글 검색 제외, Negative Caching, 자동완성 안전장치를 구현합니다.
+[LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking)에서 XGBoost LambdaMART로 BM25 수동 가중치를 ML 모델로 대체하고, 카테고리 28개 자동 분류 + Lucene 네이티브 Facet을 구현합니다.
 
 ---
 

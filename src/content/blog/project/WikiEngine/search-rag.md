@@ -3,7 +3,7 @@ title: 'AI 검색 요약 — RAG 파이프라인 + SSE 스트리밍 + 비용 모
 titleEn: 'AI Search Summary — RAG Pipeline + SSE Streaming + Cost Monitoring'
 description: Lucene BM25 검색 결과 Top-5 문서를 LLM 컨텍스트에 주입하는 RAG(Retrieval-Augmented Generation) 파이프라인을 구축합니다. Spring AI 2.0 + Gemini 2.0 Flash로 SSE 스트리밍 답변을 생성하고, 인라인 출처 배지를 파싱하여 게시글 링크로 연결합니다. 할루시네이션 방지(문서 기반 답변 제한 + 인용 강제), AI 요약 트리거 조건(네비게이션 의도 스킵), Redis Token Bucket rate limiting(10 RPM 전역), 동일 쿼리 캐싱(TTL 30분, LLM 비용 40-60% 절감), Grafana 7패널 대시보드(RPM, 응답시간, 토큰, 피드백, 비용 추정)까지 포함합니다. BM25가 이 프로젝트에서 Dense Retrieval보다 적합한 근거와, Hybrid Retrieval 전환 로드맵도 정리합니다.
 descriptionEn: Builds a RAG pipeline injecting Lucene BM25 Top-5 search results into LLM context. Uses Spring AI 2.0 + Gemini 2.0 Flash for SSE streaming answers with inline citation badges parsed to post links. Includes hallucination prevention, trigger conditions (skip navigation intent), Redis Token Bucket rate limiting (10 RPM global), query caching (30min TTL, 40-60% LLM cost reduction), and Grafana 7-panel dashboard. Documents why BM25 outperforms Dense Retrieval for this project and the Hybrid Retrieval roadmap.
-date: 2026-03-28T00:00:00.000Z
+date: 2026-03-29T00:00:00.000Z
 tags:
   - Lucene
   - Search Engine
@@ -383,8 +383,9 @@ String snippetSource = cleaned.substring(0, Math.min(cleaned.length(), 500));
 |------|------|------|
 | 1 | [카테고리 검색 필터링 + Facet 집계](/blog/project/wikiengine/search-category-facet) | Lucene FILTER 절, DB GROUP BY Facet |
 | 2 | [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement) | 동의어, 오타 교정, UnifiedHighlighter, 재색인 인프라 |
-| 3 | [콘텐츠 필터링 -- 운영 안전장치](/blog/project/wikiengine/search-content-filter) | Aho-Corasick 금칙어, 블라인드, Negative Caching |
-| 4 | **AI 검색 요약 -- RAG** (이 글) | RAG 파이프라인, SSE, 비용 모니터링 |
+| 3 | [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking) | XGBoost LambdaMART, LLM-as-a-Judge, Facet 네이티브 전환 |
+| 4 | [콘텐츠 필터링 -- 운영 안전장치](/blog/project/wikiengine/search-content-filter) | Aho-Corasick 금칙어, 블라인드, Negative Caching |
+| 5 | **AI 검색 요약 -- RAG** (이 글) | RAG 파이프라인, SSE, 비용 모니터링 |
 
 ---
 
