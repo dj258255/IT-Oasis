@@ -147,6 +147,8 @@ WikiEngine은 위키피디아 + 나무위키 데이터 **1,215만 건**을 대�
 | 접두사 → Top-K 매핑의 flat 저장소 | **Redis flat KV** — `prefix:v{version}:{접두사}` → JSON 배열 |
 | O(1) 조회 | Redis GET 단일 명령 |
 
+**관련 글**: [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete) (소규모 Trie 구현 + 한계), [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache) (Trie → Redis flat KV 전환)
+
 ### 샤딩 + 핫스팟 해결
 
 | 이론 | WikiEngine 구현 |
