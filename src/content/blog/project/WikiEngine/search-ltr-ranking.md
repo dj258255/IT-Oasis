@@ -44,7 +44,7 @@ draft: false
 
 ![현재 랭킹 모델 — 수동 가중치 기반](/uploads/project/WikiEngine/search-ltr-ranking/current-ranking-model.svg)
 
-[검색 품질 평가](/blog/project/wikiengine/search-quality)에서 구현한 이 랭킹은 **수동 가중치** 기반이다. 이 가중치들이 실제로 사용자가 원하는 결과 순서와 일치하는지 **데이터 기반으로 검증되지 않았다**.
+[검색 품질 평가](/blog/project/wikiengine/search-quality)에서 구현한 이 랭킹은 **수동 가중치** 기반입니다. 이 가중치들이 실제로 사용자가 원하는 결과 순서와 일치하는지 **데이터 기반으로 검증되지 않았다**.
 
 ---
 
@@ -56,11 +56,11 @@ draft: false
 
 ### 문제 2: Facet — DB GROUP BY 간이 집계의 한계
 
-[카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet)에서 DB GROUP BY로 간이 Facet을 구현했지만, Top-1,000건에 대한 근사 집계였다. Lucene 네이티브 `SortedSetDocValuesFacetCounts`로 전환하여 **전체 매칭 문서**에 대한 정확한 Facet이 필요하다. 이를 위해 `SortedSetDocValuesFacetField` + 전체 재색인이 필요하다.
+[카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet)에서 DB GROUP BY로 간이 Facet을 구현했지만, Top-1,000건에 대한 근사 집계였다. Lucene 네이티브 `SortedSetDocValuesFacetCounts`로 전환하여 **전체 매칭 문서**에 대한 정확한 Facet이 필요합니다. 이를 위해 `SortedSetDocValuesFacetField` + 전체 재색인이 필요합니다.
 
 ### 문제 3: 카테고리가 namespace 기반이라 Facet이 무의미
 
-위키 데이터 임포트 시 할당된 카테고리가 "일반 문서" 97%로 편중되어 있어, Facet을 표시해도 의미가 없다. **주제별 카테고리 28개로 재분류**가 선행되어야 한다.
+위키 데이터 임포트 시 할당된 카테고리가 "일반 문서" 97%로 편중되어 있어, Facet을 표시해도 의미가 없습니다. **주제별 카테고리 28개로 재분류**가 선행되어야 합니다.
 
 ---
 
@@ -75,7 +75,7 @@ draft: false
 | **Neural (BERT)** | 문맥 이해 가능 | 추론 지연 수백 ms, GPU 필요 | **탈락** (240ms SLA) |
 | **Elasticsearch LTR** | ES 생태계 통합 | 별도 클러스터 필요 (최소 6G RAM) | **탈락** (Free Tier 불가) |
 
-**Linear Model을 탈락시킨 근거**: OpenSource Connections의 분석 — *"Elasticsearch boosts are nothing but coefficients in a linear regression"*. 같은 3개 피처(viewCount, likeCount, recency)로 Linear Model을 학습해도 **기존 수동 가중치와 거의 동일한 결과**가 나온다. tree model(LambdaMART)은 피처 간 interaction(예: titleLength가 짧으면서 tagOverlap이 높은 경우)을 학습할 수 있어 비선형 관계를 포착한다.
+**Linear Model을 탈락시킨 근거**: OpenSource Connections의 분석 — *"Elasticsearch boosts are nothing but coefficients in a linear regression"*. 같은 3개 피처(viewCount, likeCount, recency)로 Linear Model을 학습해도 **기존 수동 가중치와 거의 동일한 결과**가 나온다. tree model(LambdaMART)은 피처 간 interaction(예: titleLength가 짧으면서 tagOverlap이 높은 경우)을 학습할 수 있어 비선형 관계를 포착합니다.
 
 ### Java 추론 런타임 선택
 
@@ -85,11 +85,11 @@ draft: false
 | ONNX Runtime | **탈락** | onnxmltools가 `XGBRanker` → ONNX 변환 미지원 ([Issue #382](https://github.com/onnx/onnxmltools/issues/382)) |
 | **XGBoost4J** | **선택** | Python `save_model()` → Java `XGBoost.loadModel()` 변환 없이 직접 로드. ARM64 Linux 네이티브 라이브러리 JAR 번들 포함. `inplace_predict()`가 thread-safe |
 
-OCI Free Tier는 ARM Ampere A1이다. XGBoost4J JAR(`ml.dmlc:xgboost4j_2.12:2.1.4`)에 `lib/linux/aarch64/libxgboost4j.so`가 번들되어 있어 별도 컴파일 없이 동작한다.
+OCI Free Tier는 ARM Ampere A1입니다. XGBoost4J JAR(`ml.dmlc:xgboost4j_2.12:2.1.4`)에 `lib/linux/aarch64/libxgboost4j.so`가 번들되어 있어 별도 컴파일 없이 동작합니다.
 
 ### 학습 데이터: LLM-as-a-Judge
 
-현재 사용자 트래픽이 거의 없어 클릭 로그가 축적되지 않는다. LLM으로 relevance 판정을 대신한다.
+현재 사용자 트래픽이 거의 없어 클릭 로그가 축적되지 않습니다. LLM으로 relevance 판정을 대신합니다.
 
 **현업 근거**: SIGIR 2024 (Thomas et al.) — GPT-4의 relevance 판정이 crowdsource annotator와 Cohen's Kappa 0.6~0.7로 일치, crowdsource 간 일치율(0.4~0.6)과 동등 이상.
 
@@ -122,7 +122,7 @@ OCI Free Tier는 ARM Ampere A1이다. XGBoost4J JAR(`ml.dmlc:xgboost4j_2.12:2.1.
 
 ### Part 2: Facet 네이티브 전환 + 태그 인덱싱
 
-[카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet)에서 보류했던 Lucene 네이티브 Facet을 구현한다. **1회 재색인으로 모든 변경사항을 통합 반영**한다.
+[카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet)에서 보류했던 Lucene 네이티브 Facet을 구현합니다. **1회 재색인으로 모든 변경사항을 통합 반영**합니다.
 
 **재색인에 포함된 변경사항:**
 
@@ -136,10 +136,10 @@ OCI Free Tier는 ARM Ampere A1이다. XGBoost4J JAR(`ml.dmlc:xgboost4j_2.12:2.1.
 
 **성능 최적화:**
 
-- **`SortedSetDocValuesReaderState` RefreshListener 기반 캐싱**: `SearcherManager.addListener()`로 reader 갱신 시 사전 빌드. 검색 경로에서 lock 없이 volatile read만 수행. Lucene 공식 Javadoc: *"create it once and re-use for a given IndexReader"*. LUCENE-7905에서 OrdinalMap 빌드 비용이 26.6M terms에 ~106초로 보고되어, 검색 요청마다 생성하면 안 된다.
+- **`SortedSetDocValuesReaderState` RefreshListener 기반 캐싱**: `SearcherManager.addListener()`로 reader 갱신 시 사전 빌드. 검색 경로에서 lock 없이 volatile read만 수행. Lucene 공식 Javadoc: *"create it once and re-use for a given IndexReader"*. LUCENE-7905에서 OrdinalMap 빌드 비용이 26.6M terms에 ~106초로 보고되어, 검색 요청마다 생성하면 안 됩니다.
 - **`MultiCollectorManager`로 TopDocs + FacetsCollector 단일 패스 수집**: 동일 쿼리의 `searcher.search()` 2회 호출 → 1회로 통합, I/O 절감.
 
-**태그 Facet 제거 결정**: 216만 고유 태그에 대한 Facet은 고카디널리티 안티패턴이다 (Elasticsearch 공식도 경고). 태그는 **검색 품질 향상용**(`TextField`로 인덱싱되어 검색에 매칭)으로만 사용하고, Facet은 카테고리(30개)만 유지한다.
+**태그 Facet 제거 결정**: 216만 고유 태그에 대한 Facet은 고카디널리티 안티패턴이다 (Elasticsearch 공식도 경고). 태그는 **검색 품질 향상용**(`TextField`로 인덱싱되어 검색에 매칭)으로만 사용하고, Facet은 카테고리(30개)만 유지합니다.
 
 **Facet 실측:**
 
@@ -235,7 +235,7 @@ Rescore window N=200은 Elasticsearch 공식 문서 기본값. `ltr.enabled` 설
 
 #### 3-4. 클릭 로그 인프라 — implicit feedback 수집
 
-LLM-as-a-Judge는 cold start 부트스트랩용이다. 프로덕션에서는 사용자 클릭 데이터가 더 정확하다.
+LLM-as-a-Judge는 cold start 부트스트랩용입니다. 프로덕션에서는 사용자 클릭 데이터가 더 정확합니다.
 
 ```sql
 -- click_logs 테이블 (Flyway V5)

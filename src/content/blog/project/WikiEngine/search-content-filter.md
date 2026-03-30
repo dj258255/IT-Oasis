@@ -34,7 +34,7 @@ draft: false
 
 ## 1. 정상 상태 — 현재 콘텐츠 관리 현황
 
-현재 wikiEngine은 위키피디아 데이터 기반이므로, 콘텐츠 품질이 높고 유해 콘텐츠가 거의 없다. 하지만 사용자 게시글 작성이 가능해지면 다음 문제가 발생한다:
+현재 wikiEngine은 위키피디아 데이터 기반이므로, 콘텐츠 품질이 높고 유해 콘텐츠가 거의 없습니다. 하지만 사용자 게시글 작성이 가능해지면 다음 문제가 발생합니다:
 
 ```
 유해 콘텐츠 유형:
@@ -56,7 +56,7 @@ draft: false
 2. **k6 부하 테스트에서 게시글을 대량 생성한다** — 제목/본문에 아무 문자열이나 들어감
 3. **자동완성이 검색 로그 기반이다** — 유해 검색어가 자동완성에 그대로 노출될 수 있음
 
-`curl -X POST /api/v1.0/posts -d '{"title":"금칙어 포함 제목","content":"..."}'`를 보내면 **아무 검증 없이 DB에 저장되고 Lucene 인덱스에 포함된다.**
+`curl -X POST /api/v1.0/posts -d '{"title":"금칙어 포함 제목","content":"..."}'`를 보내면 **아무 검증 없이 DB에 저장되고 Lucene 인덱스에 포함됩니다.**
 
 ### 커뮤니티 서비스의 표준 안전장치
 
@@ -79,7 +79,7 @@ draft: false
 | **Aho-Corasick** | **O(N+Z)** (Z=매칭 수, M에 무관) | [robert-bor/aho-corasick](https://github.com/robert-bor/aho-corasick) 라이브러리 사용 | **선택** |
 | 정규식 합성 | O(N) | 금칙어 변경 시 재컴파일 | 대안 |
 
-Aho-Corasick은 Trie 자료구조에 failure link를 추가하여, 텍스트를 한 번만 순회하면서 모든 패턴을 동시에 매칭한다. 금칙어가 16,090개여도 텍스트 길이에만 비례하는 시간이 소요된다.
+Aho-Corasick은 Trie 자료구조에 failure link를 추가하여, 텍스트를 한 번만 순회하면서 모든 패턴을 동시에 매칭합니다. 금칙어가 16,090개여도 텍스트 길이에만 비례하는 시간이 소요됩니다.
 
 ---
 
@@ -127,7 +127,7 @@ public class ContentFilterService {
 }
 ```
 
-**영어 Trie의 단어 경계 매칭 — Scunthorpe 문제**: "ass"를 금칙어로 등록하면 "assassination", "class", "Scunthorpe" 같은 정상 단어까지 차단된다. 영어 금칙어는 단어 경계(`\b`)로 매칭하여 이 문제를 방지한다. 한국어는 교착어 특성상 부분 일치가 더 적합하다 ("매춘" → "매춘부", "매춘업소" 등을 모두 잡아야 함).
+**영어 Trie의 단어 경계 매칭 — Scunthorpe 문제**: "ass"를 금칙어로 등록하면 "assassination", "class", "Scunthorpe" 같은 정상 단어까지 차단됩니다. 영어 금칙어는 단어 경계(`\b`)로 매칭하여 이 문제를 방지합니다. 한국어는 교착어 특성상 부분 일치가 더 적합하다 ("매춘" → "매춘부", "매춘업소" 등을 모두 잡아야 함).
 
 #### 금칙어 사전
 
@@ -168,7 +168,7 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 
 ### 4-3. 자동완성 안전장치
 
-[자동완성 구현](/blog/project/wikiengine/trie-autocomplete)에서 구현한 검색 로그 기반 자동완성에 금칙어 필터를 적용한다.
+[자동완성 구현](/blog/project/wikiengine/trie-autocomplete)에서 구현한 검색 로그 기반 자동완성에 금칙어 필터를 적용합니다.
 
 ```
 현재 자동완성 흐름:
@@ -178,7 +178,7 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
   사용자 입력 → Redis flat KV 조회 → 금칙어 필터링 → Top-10 반환
 ```
 
-> 금칙어 필터는 Redis 조회 후 앱 레벨에서 수행한다. Redis에 금칙어를 저장하지 않고, Caffeine 캐시에 올린 금칙어 Set으로 필터링한다. 이유: Redis KV 재빌드 주기(1시간)와 금칙어 업데이트가 독립적이어야 하므로.
+> 금칙어 필터는 Redis 조회 후 앱 레벨에서 수행합니다. Redis에 금칙어를 저장하지 않고, Caffeine 캐시에 올린 금칙어 Set으로 필터링합니다. 이유: Redis KV 재빌드 주기(1시간)와 금칙어 업데이트가 독립적이어야 하므로.
 
 ### 4-4. 자동완성 Lucene fallback 품질 개선
 
@@ -201,7 +201,7 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 
 **해결**: TieredCacheService에서 빈 결과는 30초 TTL, 정상 결과는 기존 10분 유지.
 
-**30초 TTL 선정 근거**: 앱 기동 시 Lucene SearcherManager 초기화(인덱스 로딩)가 수 초~수십 초 소요된다. 이보다 짧은 30초로 설정하면, 인덱스 로딩 완료 후 캐시가 만료되어 다음 요청에서 정상 결과를 자동 갱신한다. [RFC 2308](https://datatracker.ietf.org/doc/html/rfc2308)(DNS Negative Caching)은 60~300초를 권장하지만, 이는 DNS 전파 지연이 전제된 수치이며 앱 레벨 캐시에서는 더 짧은 TTL이 적절하다. AWS CloudFront도 negative TTL 기본값이 5초로 짧게 설정되어 있다. 빈 결과를 아예 캐시하지 않으면 cache penetration(동일 쿼리가 매번 origin까지 관통)이 발생하므로, 짧은 TTL로 캐시하되 빠르게 만료시키는 것이 [ByteByteGo의 Cache Miss Attack 패턴](https://blog.bytebytego.com/p/cache-miss-attack)에서도 권장하는 방식이다.
+**30초 TTL 선정 근거**: 앱 기동 시 Lucene SearcherManager 초기화(인덱스 로딩)가 수 초~수십 초 소요됩니다. 이보다 짧은 30초로 설정하면, 인덱스 로딩 완료 후 캐시가 만료되어 다음 요청에서 정상 결과를 자동 갱신합니다. [RFC 2308](https://datatracker.ietf.org/doc/html/rfc2308)(DNS Negative Caching)은 60~300초를 권장하지만, 이는 DNS 전파 지연이 전제된 수치이며 앱 레벨 캐시에서는 더 짧은 TTL이 적절하다. AWS CloudFront도 negative TTL 기본값이 5초로 짧게 설정되어 있습니다. 빈 결과를 아예 캐시하지 않으면 cache penetration(동일 쿼리가 매번 origin까지 관통)이 발생하므로, 짧은 TTL로 캐시하되 빠르게 만료시키는 것이 [ByteByteGo의 Cache Miss Attack 패턴](https://blog.bytebytego.com/p/cache-miss-attack)에서도 권장하는 방식이다.
 
 ---
 
@@ -229,7 +229,7 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 
 ![블라인드 After — 619166 제외](/uploads/project/WikiEngine/search-content-filter/phase20-blind-after-test-search.png)
 
-> `POST /admin/lucene/reindex?ids=619166`으로 Lucene 인덱스에 `blinded=true` 반영 후, `Occur.MUST_NOT TermQuery("blinded","true")`에 의해 검색 결과에서 자동 제외. 블라인드 해제 시 `blinded=false`로 재인덱싱하면 검색에 복원된다.
+> `POST /admin/lucene/reindex?ids=619166`으로 Lucene 인덱스에 `blinded=true` 반영 후, `Occur.MUST_NOT TermQuery("blinded","true")`에 의해 검색 결과에서 자동 제외. 블라인드 해제 시 `blinded=false`로 재인덱싱하면 검색에 복원됩니다.
 
 ---
 

@@ -47,9 +47,9 @@ draft: false
 | b | 0.75 (기본값) | 문서 길이 정규화 — 1이면 긴 문서 강하게 페널티 |
 | 필드 가중치 | title:3, content:1 | MultiFieldQueryParser로 적용 |
 
-BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](https://pmc.ncbi.nlm.nih.gov/articles/PMC7148026/)에서 변형 간 유의미한 성능 차이는 없었다. `MultiFieldQueryParser`로 title:3, content:1 가중치를 이미 적용 중이므로 BM25F의 효과를 일부 대체하고 있다.
+BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](https://pmc.ncbi.nlm.nih.gov/articles/PMC7148026/)에서 변형 간 유의미한 성능 차이는 없었다. `MultiFieldQueryParser`로 title:3, content:1 가중치를 이미 적용 중이므로 BM25F의 효과를 일부 대체하고 있습니다.
 
-**결론**: 기본 BM25에서 시작하고, 검색 품질 이슈가 실제로 발생하면 변형을 검토한다.
+**결론**: 기본 BM25에서 시작하고, 검색 품질 이슈가 실제로 발생하면 변형을 검토합니다.
 
 ---
 
@@ -75,7 +75,7 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 
 ![검색 품질 개선의 두 축 — Query Understanding + Query Expansion](/uploads/project/WikiEngine/search-query-enhancement/query-understanding-flow.svg)
 
-이 두 축이 **검색 쿼리가 Lucene에 도달하기 전**에 처리되어야 한다. 현재 파이프라인에서 정규화(소문자 변환)만 있고, Query Understanding과 Query Expansion이 누락되어 있다.
+이 두 축이 **검색 쿼리가 Lucene에 도달하기 전**에 처리되어야 합니다. 현재 파이프라인에서 정규화(소문자 변환)만 있고, Query Understanding과 Query Expansion이 누락되어 있습니다.
 
 ### 전제조건: 전체 재색인 인프라
 
@@ -84,7 +84,7 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 - **인덱스 타임 동의어** (SynonymGraphFilter): 재색인 필요
 - **Nori 사용자 사전 변경**: 재색인 필요
 
-**전체 재색인 + 무중단 교체 인프라**를 이 글에서 먼저 구축한다.
+**전체 재색인 + 무중단 교체 인프라**를 이 글에서 먼저 구축합니다.
 
 ---
 
@@ -100,11 +100,11 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 | **벡터 임베딩 (Word2Vec/BERT)** | "AI"↔"인공지능"을 자동 학습, 동의어 테이블 불필요 | 임베딩 모델 + 벡터 DB 필요, ARM 서버 추론 비용 | **탈락** ([AI 검색 요약](/blog/project/wikiengine/search-rag)에서 부분 도입 검토) |
 | **Elasticsearch Synonym API** | ES 생태계 네이티브, 동적 관리 | ES 별도 운영 필요, Free Tier 불가 | **탈락** |
 
-**선택 근거**: [Elastic 공식 블로그](https://www.elastic.co/blog/boosting-the-power-of-elasticsearch-with-synonyms)에서도 쿼리 타임 동의어를 권장한다 — "인덱스 크기 영향 없음, term 통계 불변, 동의어 변경 시 재색인 불필요". DB 기반으로 먼저 운영 유연성을 확보하고, 재색인 시 SynonymGraphFilter 파일로 전환한다.
+**선택 근거**: [Elastic 공식 블로그](https://www.elastic.co/blog/boosting-the-power-of-elasticsearch-with-synonyms)에서도 쿼리 타임 동의어를 권장한다 — "인덱스 크기 영향 없음, term 통계 불변, 동의어 변경 시 재색인 불필요". DB 기반으로 먼저 운영 유연성을 확보하고, 재색인 시 SynonymGraphFilter 파일로 전환합니다.
 
-> **쿼리 타임 동의어가 IDF를 왜곡하지 않는 이유**: 인덱스 타임 동의어는 인덱스에 동의어 term이 추가되어 document frequency가 인위적으로 높아지고, BM25 IDF 계산을 왜곡한다 — "AI"를 인덱싱할 때 "인공지능"도 함께 추가하면, "인공지능"의 DF가 실제보다 부풀려져 해당 term의 가중치가 낮아진다. 쿼리 타임 확장은 인덱스 term 통계가 불변이므로 이 문제가 없다. [OpenSource Connections의 "Solr Synonyms Mea Culpa"](https://opensourceconnections.com/blog/2017/11/21/solr-synonyms-mea-culpa/)에서도 인덱스 타임 동의어의 IDF 왜곡을 실사례로 경고한다.
+> **쿼리 타임 동의어가 IDF를 왜곡하지 않는 이유**: 인덱스 타임 동의어는 인덱스에 동의어 term이 추가되어 document frequency가 인위적으로 높아지고, BM25 IDF 계산을 왜곡한다 — "AI"를 인덱싱할 때 "인공지능"도 함께 추가하면, "인공지능"의 DF가 실제보다 부풀려져 해당 term의 가중치가 낮아진다. 쿼리 타임 확장은 인덱스 term 통계가 불변이므로 이 문제가 없습니다. [OpenSource Connections의 "Solr Synonyms Mea Culpa"](https://opensourceconnections.com/blog/2017/11/21/solr-synonyms-mea-culpa/)에서도 인덱스 타임 동의어의 IDF 왜곡을 실사례로 경고합니다.
 
-> **벡터 방식을 선택하지 않은 이유**: [Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 Lexical(BM25) → Graph(동의어) → Embedding(벡터) 순서로 진화한다. 현재 wikiEngine은 BM25까지 완료되었으므로, 다음 단계는 동의어(Graph)이다. 동의어 테이블 수십 개로 해결되는 문제에 임베딩 모델 + 벡터 DB를 도입하면 오버엔지니어링이다.
+> **벡터 방식을 선택하지 않은 이유**: [Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 Lexical(BM25) → Graph(동의어) → Embedding(벡터) 순서로 진화합니다. 현재 wikiEngine은 BM25까지 완료되었으므로, 다음 단계는 동의어(Graph)이다. 동의어 테이블 수십 개로 해결되는 문제에 임베딩 모델 + 벡터 DB를 도입하면 오버엔지니어링이다.
 
 ### 오타 교정 방식
 
@@ -141,14 +141,14 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 | Nori 사용자 사전 변경 | YES |
 | 카테고리 재매핑 + SortedSetDocValuesFacetField | YES |
 
-**전략**: 코드를 먼저 모두 구현하고, 재색인은 **1회만 실행**한다.
+**전략**: 코드를 먼저 모두 구현하고, 재색인은 **1회만 실행**합니다.
 
 | 전략 | 재색인 횟수 | 소요 시간 | 서비스 영향 | 판단 |
 |------|---------|---------|---------|------|
 | Part별 재색인 | 3회 | ~수십 시간 (수 시간 × 3) | 서비스 영향 3배 | **탈락** |
 | **한번에 모아서** | **1회** | **~수 시간** | **최소** | **선택** |
 
-현업에서도 인덱스 변경사항을 모아서 한 번에 재색인하는 것이 표준이다. Elasticsearch의 Blue-Green 재색인 패턴([Elastic 공식](https://www.elastic.co/blog/changing-mapping-with-zero-downtime))에서도 "새 인덱스를 새 매핑으로 한 번에 구축 → alias swap"을 권장한다. 변경마다 재색인하면 1,425만 건 × 여러 번 = 불필요한 시간과 I/O 낭비다.
+현업에서도 인덱스 변경사항을 모아서 한 번에 재색인하는 것이 표준입니다. Elasticsearch의 Blue-Green 재색인 패턴([Elastic 공식](https://www.elastic.co/blog/changing-mapping-with-zero-downtime))에서도 "새 인덱스를 새 매핑으로 한 번에 구축 → alias swap"을 권장합니다. 변경마다 재색인하면 1,425만 건 × 여러 번 = 불필요한 시간과 I/O 낭비입니다.
 
 재색인 전까지의 동작:
 - **snippetSource 없음** → UnifiedHighlighter가 null 반환 → `PostSearchResponse.from(post)` fallback (앞 150자)
@@ -193,7 +193,7 @@ Directory currentDir = MMapDirectory.open(symlink);
 searcherManager = new SearcherManager(currentDir, null);
 ```
 
-> **주의**: MMapDirectory는 파일을 메모리에 매핑하므로, 심볼릭 링크를 교체해도 이미 매핑된 파일은 이전 디렉토리를 계속 참조한다. 반드시 SearcherManager를 재생성해야 한다.
+> **주의**: MMapDirectory는 파일을 메모리에 매핑하므로, 심볼릭 링크를 교체해도 이미 매핑된 파일은 이전 디렉토리를 계속 참조합니다. 반드시 SearcherManager를 재생성해야 합니다.
 
 #### 동시 색인 방지
 
@@ -230,7 +230,7 @@ public void incrementalIndex(Post post) throws IOException {
 
 #### 현업 표준: Lucene UnifiedHighlighter
 
-Elasticsearch의 기본 하이라이터(`unified`)는 내부적으로 **Lucene UnifiedHighlighter**를 사용한다. 텍스트를 문장 단위로 분리한 뒤 **BM25로 각 문장을 스코어링**하여, 검색 쿼리와 가장 관련도 높은 문장을 snippet으로 반환한다.
+Elasticsearch의 기본 하이라이터(`unified`)는 내부적으로 **Lucene UnifiedHighlighter**를 사용합니다. 텍스트를 문장 단위로 분리한 뒤 **BM25로 각 문장을 스코어링**하여, 검색 쿼리와 가장 관련도 높은 문장을 snippet으로 반환합니다.
 
 출처: [Elasticsearch Highlighting Reference](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/highlighting), [Reverse Engineering Elasticsearch Highlights](https://medium.com/swlh/reverse-engineering-elasticsearch-highlights-e36ec4164e84)
 
@@ -316,7 +316,7 @@ INSERT INTO synonyms (term, synonym, weight) VALUES
 
 #### 위키 리다이렉트 활용 — 자동 동의어 추출
 
-위키피디아 데이터에는 리다이렉트 정보가 포함되어 있다. 이를 활용하면 동의어를 자동 추출할 수 있다.
+위키피디아 데이터에는 리다이렉트 정보가 포함되어 있습니다. 이를 활용하면 동의어를 자동 추출할 수 있습니다.
 
 ```sql
 SELECT redirect_title AS term, title AS synonym, 0.8 AS weight
@@ -444,7 +444,7 @@ public class SpellCheckService {
 
 #### 2-2. 복합어 보존 — Nori 사용자 사전
 
-Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전으로 해결한다.
+Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전으로 해결합니다.
 
 ```
 # userdict_ko.txt — Nori 사용자 사전
@@ -502,7 +502,7 @@ Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전
 | 4위 | "Ai Ai Syndrome" | **"인공지능의 개요"** |
 | 5위 | ".ai" (한국어) | **"약한 인공 지능"** |
 
-**결과**: "AI" 검색 시 동의어 "인공지능"이 확장되어, 한국어 인공지능 관련 문서가 상위에 노출된다. **Recall이 대폭 개선되었다.**
+**결과**: "AI" 검색 시 동의어 "인공지능"이 확장되어, 한국어 인공지능 관련 문서가 상위에 노출됩니다. **Recall이 대폭 개선되었다.**
 
 ### After 2: "ML" 검색 — 동의어 확장 성공
 
@@ -517,7 +517,7 @@ Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전
 
 **"혹시 '프로그래밍'을(를) 찾으셨나요?"** 제안이 검색 결과 위에 표시됨. DirectSpellChecker가 "프로그래링" 전체를 "프로그래밍"으로 교정 성공 (편집 거리 1).
 
-> **트리거 조건 개선**: 최초에는 "결과 3건 미만일 때만 교정"이었지만, Google의 ["Did you mean?" 패턴](https://blog.google/products/search/abcs-spelling-google-search/)에서는 결과 유무와 무관하게 교정 제안을 표시한다. **항상 교정 시도 + 원본과 다르면 제안** 방식으로 변경했다.
+> **트리거 조건 개선**: 최초에는 "결과 3건 미만일 때만 교정"이었지만, Google의 ["Did you mean?" 패턴](https://blog.google/products/search/abcs-spelling-google-search/)에서는 결과 유무와 무관하게 교정 제안을 표시합니다. **항상 교정 시도 + 원본과 다르면 제안** 방식으로 변경했다.
 
 ### After 4: "컴퓨터" 검색 — 정상 결과 (교정 미발생)
 
@@ -534,7 +534,7 @@ Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전
 | 1위 snippet | "가비지(garbage)는 다음 등을 가리킨다. 쓰레기..." | **"가비지 컬렉션으로 자바 프로그램은 메모리 누수에 대해 면역성을 갖는다"** |
 | 2위 snippet | "자바 가상 머신(JVM)은..." (GC 미언급) | **"점진적 가비지 컬렉션은 Unity 2019.1에 실험 단계의 미리보기 기능..."** |
 
-snippetSource(앞 500자) + UnifiedHighlighter 조합으로, 검색어 주변 맥락이 snippet에 정확히 표시된다.
+snippetSource(앞 500자) + UnifiedHighlighter 조합으로, 검색어 주변 맥락이 snippet에 정확히 표시됩니다.
 
 ### After 6: "AI" 검색 + snippet (재색인 후)
 

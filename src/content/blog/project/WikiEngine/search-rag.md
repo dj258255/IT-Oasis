@@ -97,7 +97,7 @@ draft: false
 
 ### Retrieval 개선 로드맵
 
-[Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 **Lexical(BM25) to Graph(동의어) to Embedding(벡터)** 순서로 진화한다.
+[Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 **Lexical(BM25) to Graph(동의어) to Embedding(벡터)** 순서로 진화합니다.
 
 ![Retrieval 개선 로드맵 — BM25 → Hybrid](/uploads/project/WikiEngine/search-rag/retrieval-roadmap.svg)
 
@@ -180,7 +180,7 @@ public class RagService {
 
 ### 4-4. SSE 스트리밍
 
-LLM 응답은 1~5초 걸릴 수 있으므로, Server-Sent Events로 토큰 단위 스트리밍한다.
+LLM 응답은 1~5초 걸릴 수 있으므로, Server-Sent Events로 토큰 단위 스트리밍합니다.
 
 ```java
 @GetMapping(value = "/search/ai-summary", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -204,7 +204,7 @@ public SseEmitter aiSummaryStream(@RequestParam String q) {
 
 ### 4-5. AI 요약 트리거 조건
 
-모든 검색에 AI 요약을 제공하면 비용 낭비다. AiSummaryDecisionService에서 쿼리 의도를 분류한다:
+모든 검색에 AI 요약을 제공하면 비용 낭비입니다. AiSummaryDecisionService에서 쿼리 의도를 분류한다:
 
 - **네비게이션 의도** ("네이버", "구글", "위키백과") -> AI 요약 스킵
 - **거래 의도** ("구매", "가격") -> AI 요약 스킵
@@ -302,7 +302,7 @@ Spring Boot 대시보드에 "AI 요약" 섹션 추가 -- 7개 패널:
 
 ## 7. 배포 이슈 및 해결
 
-운영 환경 배포 시 발견된 문제들. 모두 **로컬(ddl-auto: update)에서는 자동 처리되지만 운영(ddl-auto: validate + Flyway)에서는 수동 조치가 필요한** 차이에서 기인한다.
+운영 환경 배포 시 발견된 문제들. 모두 **로컬(ddl-auto: update)에서는 자동 처리되지만 운영(ddl-auto: validate + Flyway)에서는 수동 조치가 필요한** 차이에서 기인합니다.
 
 | # | 이슈 | 원인 | 해결 |
 |---|------|------|------|

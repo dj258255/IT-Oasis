@@ -70,7 +70,7 @@ doc.add(new FeatureField("features", "viewCount", Math.max(post.getViewCount(), 
 doc.add(new FeatureField("features", "likeCount", Math.max(post.getLikeCount(), 1)));
 ```
 
-**핵심 사실: `categoryId`가 이미 `LongField`로 Lucene 인덱스에 포함되어 있다.** 카테고리 "필터링"은 필드를 추가하는 문제가 아니라, **검색 쿼리(buildQuery)에 필터 절을 추가하는 문제**다.
+**핵심 사실: `categoryId`가 이미 `LongField`로 Lucene 인덱스에 포함되어 있습니다.** 카테고리 "필터링"은 필드를 추가하는 문제가 아니라, **검색 쿼리(buildQuery)에 필터 절을 추가하는 문제**입니다.
 
 ### 카테고리 데이터 현황
 
@@ -90,7 +90,7 @@ categories 테이블:
 
 ### 기존 카테고리 관련 기능
 
-PostController에 이미 **목록 조회 시 카테고리 필터링**이 존재한다 (PostController.java:41-51):
+PostController에 이미 **목록 조회 시 카테고리 필터링**이 존재합니다 (PostController.java:41-51):
 
 ```java
 @GetMapping
@@ -105,7 +105,7 @@ public Slice<PostListResponse> getPosts(
 }
 ```
 
-하지만 이건 **SQL 기반 필터링** (`postRepository.findByCategoryIdOrderByCreatedAtDesc`)이다. **검색 API** (`GET /posts/search`)에는 카테고리 필터링이 없다.
+하지만 이건 **SQL 기반 필터링** (`postRepository.findByCategoryIdOrderByCreatedAtDesc`)입니다. **검색 API** (`GET /posts/search`)에는 카테고리 필터링이 없습니다.
 
 ---
 
@@ -127,11 +127,11 @@ public Slice<PostSearchResponse> search(
 
 `categoryId` 파라미터가 없다. 사용자가 "프로그래밍"을 검색하면 1,425만 건 전체에서 결과를 반환하며, 특정 카테고리로 좁히는 방법이 없다.
 
-검색 결과를 보고 "이 중에서 Java 관련만 보고 싶다"는 요구를 충족할 수 없다. 목록 조회(`GET /posts`)에서는 카테고리 필터가 되지만, **검색**에서는 안 된다 — 기능의 비대칭이다.
+검색 결과를 보고 "이 중에서 Java 관련만 보고 싶다"는 요구를 충족할 수 없다. 목록 조회(`GET /posts`)에서는 카테고리 필터가 되지만, **검색**에서는 안 된다 — 기능의 비대칭입니다.
 
 ### 문제 2: 검색 결과의 카테고리 분포를 알 수 없다 (Facet 부재)
 
-"프로그래밍" 검색 시 1,233건([검색 품질 평가](/blog/project/wikiengine/search-quality) 실측) 중 어떤 카테고리에 몇 건이 있는지 **집계가 안 된다**. 사용자는 맹목적으로 결과를 스크롤해야 한다.
+"프로그래밍" 검색 시 1,233건([검색 품질 평가](/blog/project/wikiengine/search-quality) 실측) 중 어떤 카테고리에 몇 건이 있는지 **집계가 안 된다**. 사용자는 맹목적으로 결과를 스크롤해야 합니다.
 
 실제 검색엔진의 Faceted Navigation:
 
@@ -166,7 +166,7 @@ return new BooleanQuery.Builder()
 
 ### Facet 집계가 안 되는 이유
 
-Facet 집계는 **전체 매칭 문서의 카테고리별 건수를 세는 것**이다. 일반 검색 쿼리는 Top-K만 반환하므로, 별도 Collector가 필요하다.
+Facet 집계는 **전체 매칭 문서의 카테고리별 건수를 세는 것**이다. 일반 검색 쿼리는 Top-K만 반환하므로, 별도 Collector가 필요합니다.
 
 Lucene은 `lucene-facet` 모듈에서 Facet API를 제공하지만, 현재 build.gradle에 **`lucene-facet` 의존성이 없다:**
 
@@ -198,7 +198,7 @@ Facet을 구현하려면 두 가지 경로가 있다:
 | **DB Post-filter** (Lucene 결과 → DB WHERE category_id=?) | Lucene 변경 없음 | pagination 깨짐 (100건 중 50건 필터 → 페이지 절반만 표시) | **탈락** |
 | **Elasticsearch** | 네이티브 필터링 + Aggregation | 별도 클러스터 필요, Free Tier 불가 (최소 6G RAM) | **탈락** |
 
-**DB Post-filter를 탈락시킨 구체적 이유**: Lucene이 20건을 반환한 뒤 DB에서 카테고리 필터로 10건이 걸러지면, 해당 페이지에 10건만 표시된다. 다음 페이지도 같은 문제가 반복된다. Lucene에서 FILTER 절로 처리하면 처음부터 해당 카테고리 결과만 정확히 20건 반환한다.
+**DB Post-filter를 탈락시킨 구체적 이유**: Lucene이 20건을 반환한 뒤 DB에서 카테고리 필터로 10건이 걸러지면, 해당 페이지에 10건만 표시됩니다. 다음 페이지도 같은 문제가 반복됩니다. Lucene에서 FILTER 절로 처리하면 처음부터 해당 카테고리 결과만 정확히 20건 반환합니다.
 
 ### Facet 집계 방식
 
@@ -220,7 +220,7 @@ Facet을 구현하려면 두 가지 경로가 있다:
 
 ### 5-1. 카테고리 필터링 — LuceneSearchService 수정
 
-`categoryId`가 이미 `LongField`로 인덱싱되어 있으므로, `search()` 메서드에 categoryId 파라미터를 추가하고 `FILTER` 절을 추가한다.
+`categoryId`가 이미 `LongField`로 인덱싱되어 있으므로, `search()` 메서드에 categoryId 파라미터를 추가하고 `FILTER` 절을 추가합니다.
 
 ```java
 // LuceneSearchService — 변경
@@ -281,7 +281,7 @@ public Slice<PostSearchResponse> search(String keyword, Long categoryId, Pageabl
 }
 ```
 
-**캐시 키 변경 주의**: `categoryId`가 캐시 키에 포함되어야 한다. 같은 키워드라도 카테고리별로 다른 결과를 반환하므로, 기존 캐시 키(`keyword:page:size`)에 categoryId를 추가해야 캐시 오염이 방지된다.
+**캐시 키 변경 주의**: `categoryId`가 캐시 키에 포함되어야 합니다. 같은 키워드라도 카테고리별로 다른 결과를 반환하므로, 기존 캐시 키(`keyword:page:size`)에 categoryId를 추가해야 캐시 오염이 방지됩니다.
 
 ### 5-3. 간이 Facet — DB GROUP BY
 
@@ -311,7 +311,7 @@ public List<CategoryFacet> getCategoryFacets(String keyword, int topN) throws IO
 List<CategoryFacet> countByCategoryIdIn(@Param("postIds") List<Long> postIds);
 ```
 
-**한계 인지**: 이 방식은 상위 1,000건에 대한 집계이므로, 전체 매칭 문서에 대한 정확한 Facet은 아니다. 하지만 검색 엔진에서 사용자가 관심 있는 건 상위 결과의 분포이지, 10만 번째 결과의 카테고리가 아니다. 상위 1,000건의 카테고리 분포는 전체와 유사한 경향을 보이므로 UX 관점에서 충분하다. [쿼리 확장 구현](/blog/project/wikiengine/search-query-enhancement)의 재색인 시 Lucene Facet API로 전환한다.
+**한계 인지**: 이 방식은 상위 1,000건에 대한 집계이므로, 전체 매칭 문서에 대한 정확한 Facet은 아닙니다. 하지만 검색 엔진에서 사용자가 관심 있는 건 상위 결과의 분포이지, 10만 번째 결과의 카테고리가 아닙니다. 상위 1,000건의 카테고리 분포는 전체와 유사한 경향을 보이므로 UX 관점에서 충분합니다. [쿼리 확장 구현](/blog/project/wikiengine/search-query-enhancement)의 재색인 시 Lucene Facet API로 전환합니다.
 
 ### 5-4. 응답 DTO 확장
 
@@ -365,7 +365,7 @@ public record SearchWithFacetsResponse(
 }
 ```
 
-> **Facet은 category 파라미터 없이 검색할 때만 반환한다.** 이미 카테고리가 선택된 상태에서 Facet을 보여주는 건 의미 없다 (드릴다운된 상태에서는 해당 카테고리만 나옴).
+> **Facet은 category 파라미터 없이 검색할 때만 반환합니다.** 이미 카테고리가 선택된 상태에서 Facet을 보여주는 건 의미 없다 (드릴다운된 상태에서는 해당 카테고리만 나옴).
 
 ---
 
