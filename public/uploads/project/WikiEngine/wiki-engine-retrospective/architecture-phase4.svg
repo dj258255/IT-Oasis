@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="a4a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a8db8"/>
+    </marker>
+    <marker id="a4b" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <marker id="a4c" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <filter id="s4a">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="480" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="380" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">4단계: 분산 아키텍처</text>
+
+  <!-- User -->
+  <rect x="20" y="56" width="90" height="50" rx="25" fill="#4a8db8" filter="url(#s4a)"/>
+  <text x="65" y="86" text-anchor="middle" font-size="12" font-weight="600" fill="#fff">사용자</text>
+
+  <line x1="110" y1="81" x2="145" y2="81" stroke="#4a8db8" stroke-width="2" marker-end="url(#a4a)"/>
+
+  <!-- Nginx -->
+  <rect x="150" y="56" width="110" height="50" rx="8" fill="#fff" stroke="#27ae60" stroke-width="2" filter="url(#s4a)"/>
+  <text x="205" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#27ae60">Nginx</text>
+  <text x="205" y="94" text-anchor="middle" font-size="9" fill="#64748b">L7 LB (least_conn)</text>
+
+  <!-- Arrows to App 1 and App 2 -->
+  <line x1="260" y1="70" x2="310" y2="55" stroke="#4a8db8" stroke-width="2" marker-end="url(#a4a)"/>
+  <line x1="260" y1="92" x2="310" y2="107" stroke="#4a8db8" stroke-width="2" marker-end="url(#a4a)"/>
+
+  <!-- App 1 -->
+  <rect x="315" y="30" width="200" height="50" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="2" filter="url(#s4a)"/>
+  <text x="415" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#4a8db8">App 1</text>
+  <text x="415" y="68" text-anchor="middle" font-size="9" fill="#64748b">Spring Boot + Lucene</text>
+
+  <!-- App 2 -->
+  <rect x="315" y="88" width="200" height="50" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="2" filter="url(#s4a)"/>
+  <text x="415" y="110" text-anchor="middle" font-size="12" font-weight="700" fill="#4a8db8">App 2</text>
+  <text x="415" y="126" text-anchor="middle" font-size="9" fill="#64748b">Spring Boot + Lucene</text>
+
+  <!-- Cache layer label -->
+  <text x="620" y="28" font-size="10" fill="#94a3b8" font-weight="600">캐시 계층</text>
+
+  <!-- Arrow from App 1 to cache -->
+  <line x1="515" y1="55" x2="555" y2="55" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a4b)"/>
+
+  <!-- Caffeine -->
+  <rect x="560" y="36" width="80" height="38" rx="6" fill="#fff3e0" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="600" y="54" text-anchor="middle" font-size="10" font-weight="600" fill="#e67e22">Caffeine</text>
+  <text x="600" y="68" text-anchor="middle" font-size="9" fill="#94a3b8">L1 (73%)</text>
+
+  <line x1="640" y1="55" x2="665" y2="55" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a4b)"/>
+
+  <!-- Redis L2 -->
+  <rect x="670" y="36" width="70" height="38" rx="6" fill="#fef2f2" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="705" y="54" text-anchor="middle" font-size="10" font-weight="600" fill="#e74c3c">Redis</text>
+  <text x="705" y="68" text-anchor="middle" font-size="9" fill="#94a3b8">L2 (9%)</text>
+
+  <!-- ===== Middle Section: Databases ===== -->
+  <line x1="415" y1="138" x2="415" y2="158" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a4b)"/>
+
+  <!-- MySQL box -->
+  <rect x="170" y="164" width="490" height="100" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5" filter="url(#s4a)"/>
+  <text x="415" y="184" text-anchor="middle" font-size="11" font-weight="600" fill="#94a3b8">데이터 계층</text>
+
+  <!-- Primary -->
+  <rect x="195" y="196" width="150" height="48" rx="6" fill="#eef5fa" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="270" y="216" text-anchor="middle" font-size="11" font-weight="700" fill="#4a8db8">MySQL Primary</text>
+  <text x="270" y="234" text-anchor="middle" font-size="9" fill="#64748b">쓰기 (5 conn)</text>
+
+  <!-- Replication arrow -->
+  <line x1="345" y1="220" x2="395" y2="220" stroke="#4a8db8" stroke-width="1.5" marker-end="url(#a4a)"/>
+  <text x="370" y="212" text-anchor="middle" font-size="8" fill="#94a3b8">GTID</text>
+
+  <!-- Replica -->
+  <rect x="400" y="196" width="150" height="48" rx="6" fill="#eef5fa" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="475" y="216" text-anchor="middle" font-size="11" font-weight="700" fill="#4a8db8">MySQL Replica</text>
+  <text x="475" y="234" text-anchor="middle" font-size="9" fill="#64748b">읽기 (15 conn)</text>
+
+  <!-- ===== Bottom Section: Event Pipeline ===== -->
+
+  <!-- CDC Pipeline -->
+  <rect x="40" y="290" width="680" height="80" rx="10" fill="#fff" stroke="#e67e22" stroke-width="1.5" filter="url(#s4a)"/>
+  <text x="380" y="310" text-anchor="middle" font-size="11" font-weight="600" fill="#e67e22">이벤트 파이프라인 (CDC)</text>
+
+  <!-- Debezium -->
+  <rect x="70" y="320" width="120" height="36" rx="6" fill="#fff3e0" stroke="#e67e22" stroke-width="1"/>
+  <text x="130" y="343" text-anchor="middle" font-size="10" font-weight="600" fill="#e67e22">Debezium</text>
+  <text x="130" y="354" text-anchor="middle" font-size="8" fill="#94a3b8">binlog 캡처</text>
+
+  <line x1="190" y1="338" x2="230" y2="338" stroke="#e67e22" stroke-width="1.5" marker-end="url(#a4c)"/>
+
+  <!-- Kafka -->
+  <rect x="235" y="320" width="120" height="36" rx="6" fill="#fff3e0" stroke="#e67e22" stroke-width="1"/>
+  <text x="295" y="343" text-anchor="middle" font-size="10" font-weight="600" fill="#e67e22">Kafka</text>
+  <text x="295" y="354" text-anchor="middle" font-size="8" fill="#94a3b8">KRaft + DLQ</text>
+
+  <line x1="355" y1="338" x2="395" y2="338" stroke="#e67e22" stroke-width="1.5" marker-end="url(#a4c)"/>
+
+  <!-- Consumer -->
+  <rect x="400" y="320" width="180" height="36" rx="6" fill="#fff3e0" stroke="#e67e22" stroke-width="1"/>
+  <text x="490" y="343" text-anchor="middle" font-size="10" font-weight="600" fill="#e67e22">Lucene + 캐시 동기화</text>
+
+  <!-- MySQL → Debezium arrow -->
+  <line x1="270" y1="264" x2="130" y2="318" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a4c)"/>
+  <text x="180" y="286" font-size="8" fill="#e67e22">binlog</text>
+
+  <!-- Redis Sharding -->
+  <rect x="40" y="396" width="680" height="66" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5" filter="url(#s4a)"/>
+  <text x="380" y="416" text-anchor="middle" font-size="11" font-weight="600" fill="#e74c3c">Redis 3노드 (Consistent Hashing)</text>
+
+  <rect x="70" y="426" width="170" height="26" rx="4" fill="#fef2f2"/>
+  <text x="155" y="444" text-anchor="middle" font-size="9" fill="#e74c3c">자동완성 KV (배치)</text>
+
+  <rect x="260" y="426" width="170" height="26" rx="4" fill="#fef2f2"/>
+  <text x="345" y="444" text-anchor="middle" font-size="9" fill="#e74c3c">L2 캐시 (실시간)</text>
+
+  <rect x="450" y="426" width="170" height="26" rx="4" fill="#fef2f2"/>
+  <text x="535" y="444" text-anchor="middle" font-size="9" fill="#e74c3c">토큰 블랙리스트</text>
+</svg>

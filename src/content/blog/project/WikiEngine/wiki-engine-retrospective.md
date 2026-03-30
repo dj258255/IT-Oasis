@@ -72,10 +72,7 @@ WikiEngine은 나무위키, 한국어/영어 위키백과, 뉴스, 웹텍스트 
 
 ### 2단계: 임베디드 Lucene 전환
 
-```
-사용자 → Spring Boot → Lucene (BM25 + Nori 형태소 분석)
-                      → MySQL (CRUD)
-```
+![2단계 아키텍처 — 임베디드 Lucene + MySQL CRUD](/uploads/project/WikiEngine/wiki-engine-retrospective/architecture-phase2.svg)
 
 MySQL FULLTEXT의 근본적 한계(300GB+ 인덱스 추정, false positive, 한국어 지원 미흡)를 확인한 후, 임베디드 Lucene으로 전환했습니다. Elasticsearch는 별도 3노드 클러스터에 최소 6GB RAM이 추가로 필요하지만, 임베디드 Lucene은 앱 JVM 내에서 동작하여 **별도 프로세스 없이 기존 서버 메모리로 운영**할 수 있다는 점이 결정적이었습니다.
 
@@ -98,13 +95,7 @@ Lucene 검색 자체는 빠르지만, 반복 쿼리에 대해 매번 인덱스�
 
 ### 4단계: 분산 아키텍처
 
-```
-사용자 → Nginx(L7 LB) → App 1 → Caffeine(L1) → Redis(L2) → Lucene
-                       → App 2      ↓
-                                  MySQL Primary ←→ Replica
-                                  Kafka + Debezium (CDC)
-                                  Redis 3노드 (Consistent Hashing)
-```
+![4단계 아키텍처 — 분산 시스템](/uploads/project/WikiEngine/wiki-engine-retrospective/architecture-phase4.svg)
 
 단일 서버의 한계(100-150 VU에서 CPU 100% 포화)를 k6 부하 테스트로 확인한 후, 6개 컴포넌트를 도입하여 분산 아키텍처로 전환했습니다.
 

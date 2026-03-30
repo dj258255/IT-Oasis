@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="a2a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a8db8"/>
+    </marker>
+    <filter id="s2a">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="200" rx="12" fill="#f8fafb" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="380" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">2단계: 임베디드 Lucene 전환</text>
+
+  <!-- User -->
+  <rect x="30" y="70" width="100" height="60" rx="30" fill="#4a8db8" filter="url(#s2a)"/>
+  <text x="80" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">사용자</text>
+
+  <line x1="130" y1="100" x2="175" y2="100" stroke="#4a8db8" stroke-width="2" marker-end="url(#a2a)"/>
+
+  <!-- Spring Boot -->
+  <rect x="180" y="60" width="160" height="80" rx="10" fill="#fff" stroke="#27ae60" stroke-width="2" filter="url(#s2a)"/>
+  <text x="260" y="92" text-anchor="middle" font-size="13" font-weight="700" fill="#27ae60">Spring Boot</text>
+  <text x="260" y="112" text-anchor="middle" font-size="10" fill="#64748b">앱 서버</text>
+  <text x="260" y="128" text-anchor="middle" font-size="9" fill="#94a3b8">(단일 프로세스)</text>
+
+  <!-- Arrow to Lucene -->
+  <line x1="340" y1="85" x2="415" y2="85" stroke="#4a8db8" stroke-width="2" marker-end="url(#a2a)"/>
+
+  <!-- Arrow to MySQL -->
+  <line x1="340" y1="115" x2="415" y2="115" stroke="#94a3b8" stroke-width="2" marker-end="url(#a2a)"/>
+
+  <!-- Lucene -->
+  <rect x="420" y="50" width="300" height="46" rx="8" fill="#fff" stroke="#e67e22" stroke-width="2" filter="url(#s2a)"/>
+  <text x="440" y="72" font-size="12" font-weight="700" fill="#e67e22">Lucene</text>
+  <text x="510" y="72" font-size="11" fill="#64748b">BM25 + Nori 형태소 분석</text>
+  <text x="440" y="88" font-size="10" fill="#94a3b8">임베디드 (같은 JVM, 네트워크 홉 없음)</text>
+
+  <!-- MySQL -->
+  <rect x="420" y="104" width="300" height="46" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.5" filter="url(#s2a)"/>
+  <text x="440" y="126" font-size="12" font-weight="700" fill="#4a8db8">MySQL</text>
+  <text x="500" y="126" font-size="11" fill="#64748b">CRUD (게시글 저장/조회)</text>
+  <text x="440" y="142" font-size="10" fill="#94a3b8">검색은 Lucene, 데이터 관리는 MySQL</text>
+
+  <!-- Label -->
+  <text x="380" y="178" text-anchor="middle" font-size="10" fill="#94a3b8">검색과 CRUD가 분리된 구조 (CQRS의 시작)</text>
+</svg>
