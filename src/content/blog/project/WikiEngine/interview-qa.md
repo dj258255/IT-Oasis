@@ -13,6 +13,12 @@ tags:
   - Debezium
   - Kafka
   - Dual-Write
+  - Lucene
+  - Faceted Search
+  - Nori
+  - RAG
+  - LLM
+  - Aho-Corasick
 category: project/WikiEngine
 draft: true
 ---
@@ -300,3 +306,111 @@ Debezium Connector는 단일 스레드로 binlog을 소비하므로, 대량 DML 
 **Q: "CDC 도입 과정에서 실제로 겪은 문제가 있나요?"**
 
 배포 후 게시글 생성이 검색에 노출되지 않는 문제를 발견했습니다. 원인은 멀티 인스턴스 환경에서 CDC Consumer와 Lucene IndexWriter의 위치 불일치였습니다. App 2(Kafka와 같은 서버)에서 CDC Consumer가 이벤트를 수신했지만, App 2는 Lucene Replica(IndexWriter가 null)라 인덱싱이 skip됐습니다. App 1은 docker-compose에서 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 환경변수 매핑이 빠져 있어서 Kafka 연결에 실패하고 있었습니다. 이 경험에서 현업에서 검색 인덱스가 앱에 embedded 되지 않는 이유를 체감했고, CDC 파이프라인은 end-to-end 검증 테스트가 필수라는 것을 배웠습니다.
+
+---
+
+## 카테고리 검색 필터링 + Facet 집계
+
+> 출처: [카테고리 검색 필터링 + Facet 집계](/blog/project/wikiengine/search-category-facet)
+
+**Q: "카테고리 필터링을 왜 Lucene에서 하나? DB WHERE 절로 하면 안 되나?"**
+
+검색은 Lucene이 처리하고 카테고리만 DB에서 필터하면 pagination이 깨집니다. Lucene이 20건을 반환한 뒤 DB에서 10건이 필터되면 페이지에 10건만 표시됩니다. Lucene에서 FILTER 절로 처리하면 처음부터 해당 카테고리 결과만 정확히 20건 반환합니다. 또한 Occur.FILTER는 Lucene 내부적으로 LRUQueryCache를 통해 bitset 캐싱되어 동일 카테고리 반복 검색 시 성능 이점이 있습니다.
+
+**Q: "Occur.FILTER와 Occur.MUST의 차이가 뭔가요?"**
+
+둘 다 필수 조건(문서가 반드시 매칭해야 함)입니다. 차이는 스코어 기여 여부입니다. MUST는 BM25 스코어에 영향을 주고, FILTER는 스코어에 기여하지 않습니다. 카테고리 필터는 "이 카테고리에 속하는가?"만 판단하면 되므로 관련도 스코어와 무관합니다. FILTER는 스코어를 계산하지 않기 때문에 Lucene의 쿼리 캐시(LRUQueryCache)에서 bitset으로 캐싱됩니다. 같은 카테고리로 반복 검색하면 캐시된 bitset을 재사용하여 더 빠릅니다.
+
+**Q: "Facet을 DB GROUP BY로 한 이유는? Lucene에 네이티브 Facet API가 있지 않나?"**
+
+Lucene의 SortedSetDocValuesFacetCounts는 SortedSetDocValuesFacetField 필드가 인덱스에 있어야 합니다. 현재 인덱스에는 LongField("categoryId")만 있고 SortedSetDocValuesField는 없습니다. 이 필드를 추가하려면 1,425만 건 전체 재색인이 필요한데, 재색인 인프라가 아직 없었습니다. DB GROUP BY로 간이 Facet을 먼저 제공하고, 재색인 인프라 구축 후 네이티브 Facet으로 전환했습니다.
+
+**Q: "DB GROUP BY로 Facet을 하면 상위 1,000건만 집계하는 거 아닌가? 정확하지 않잖아?"**
+
+맞습니다. 전체 매칭 문서가 아닌 BM25 Top-1,000에 대한 근사 집계입니다. 하지만 검색 엔진에서 사용자가 관심 있는 건 상위 결과의 분포이지, 10만 번째 결과의 카테고리가 아닙니다. 상위 1,000건의 카테고리 분포는 전체와 유사한 경향을 보이므로 UX 관점에서 충분합니다. 정확한 집계가 필요해지면 재색인 시 Lucene Facet API로 전환합니다.
+
+---
+
+## 쿼리 확장 + Query Understanding
+
+> 출처: [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement)
+
+**Q: "동의어를 인덱스 타임이 아니라 쿼리 타임에 확장한 이유는?"**
+
+인덱스 타임 동의어(SynonymGraphFilter)는 인덱스에 동의어 term을 추가하여 document frequency를 인위적으로 높입니다. "AI"를 인덱싱할 때 "인공지능"도 함께 추가하면, "인공지능"의 DF가 실제보다 부풀려져 BM25 IDF 계산이 왜곡됩니다. 해당 term의 가중치가 낮아져 검색 품질이 저하됩니다. 쿼리 타임 확장은 인덱스 term 통계가 불변이므로 이 문제가 없습니다. 또한 동의어 추가/삭제 시 재색인이 불필요하여 운영 유연성이 높습니다.
+
+**Q: "DirectSpellChecker는 한국어에서 어떤 한계가 있나요?"**
+
+DirectSpellChecker는 Damerau-Levenshtein 편집 거리 기반으로 동작하는데, 한국어 음절 단위로 비교합니다. "컴퓨텨"에서 "컴퓨터"는 편집 거리 1이라 잡히지만, 자모 레벨의 미세한 오타는 음절 단위에서 편집 거리가 1 이상이 될 수 있어 교정이 불안정합니다. 또한 Nori가 복합어를 분해하므로 인덱스 term이 원형과 다를 수 있어, 인덱스에 해당 term 자체가 없으면 후보를 찾지 못합니다. 이 한계는 검색 로그 기반 "Did you mean?" 시스템으로 보강합니다.
+
+**Q: "BM25 기본값(k1=1.2, b=0.75)을 왜 그대로 썼나요? 튜닝은 안 했나요?"**
+
+BM25 변형(BM25+, BM25L, BM25F) 간 비교 연구를 검토했습니다. 뉴스 코퍼스 3개 대상 실험에서 변형 간 유의미한 성능 차이는 없었습니다. MultiFieldQueryParser로 title:3, content:1 가중치를 이미 적용 중이므로 BM25F(필드별 가중치)의 효과를 일부 대체하고 있습니다. 기본값에서 시작하고, 검색 품질 이슈가 실제로 발생하면 k1/b 파라미터를 조정하는 것이 합리적 순서입니다.
+
+**Q: "UnifiedHighlighter에서 content를 Store.YES로 하지 않고 snippetSource 500자만 저장한 이유는?"**
+
+content 전체를 Store.YES로 하면 1,425만 건 곱하기 평균 6,586자 = 인덱스 크기 100GB 이상으로 폭증합니다. 앞 500자만 별도 StoredField로 저장하면 약 7GB 추가로 인덱스 42GB 수준입니다. 검색어가 문서 앞부분 500자 안에 있을 확률이 높고(제목, 서론, Infobox), 500자 밖의 검색어는 DB 조회 후 자르는 기존 방식으로 fallback합니다. 인덱스 크기와 snippet 품질 사이의 트레이드오프를 선택한 것입니다.
+
+**Q: "무중단 재색인을 어떻게 구현했나요?"**
+
+새 디렉토리에 전체 색인을 수행한 뒤, 심볼릭 링크를 원자적으로 교체(Files.move ATOMIC_MOVE)합니다. 핵심은 심볼릭 링크 교체만으로는 부족하다는 점입니다. MMapDirectory는 파일을 메모리에 매핑하므로, 심볼릭 링크를 교체해도 이미 매핑된 파일은 이전 디렉토리를 계속 참조합니다. 따라서 SearcherManager를 닫고 새 Directory로 재생성해야 합니다. 재색인 중 증분 인덱싱은 AtomicBoolean 플래그로 차단하되, CDC 이벤트는 Kafka에 남아있으므로 재색인 완료 후 자동 재처리됩니다.
+
+**Q: "Nori 사용자 사전 158,539개는 어디서 가져왔나요?"**
+
+수동 복합어 30개 + open-korean-text 프로젝트(Apache 2.0 라이선스)의 wikipedia_title_nouns 158,509개를 합쳐 총 158,539개입니다. 위키피디아 제목 명사는 복합어 보존이 필요한 고유명사를 포함하고 있어 Nori의 과도한 분해를 방지하는 데 적합합니다. 사용자 사전 변경 시 Analyzer가 바뀌므로 전체 재색인이 필요합니다.
+
+---
+
+## 콘텐츠 필터링 - 운영 안전장치
+
+> 출처: [콘텐츠 필터링 - 운영 안전장치](/blog/project/wikiengine/search-content-filter)
+
+**Q: "금칙어 필터링을 왜 Aho-Corasick으로 했나요? String.contains() 루프면 안 되나요?"**
+
+String.contains() 루프는 O(N 곱하기 M) 시간이 걸립니다(N=텍스트 길이, M=금칙어 수). 금칙어가 16,090개이므로 매 텍스트마다 16,090번 순회합니다. Aho-Corasick은 Trie에 failure link를 추가하여 텍스트를 한 번만 순회하면서 모든 패턴을 동시에 매칭합니다. O(N+Z)로 금칙어 수에 무관합니다(Z=매칭 수). 자동완성 결과 필터링처럼 요청마다 실행되는 곳에서 성능 차이가 유의미합니다.
+
+**Q: "영어 금칙어에서 Scunthorpe 문제를 어떻게 처리했나요?"**
+
+영어 금칙어는 단어 경계(word boundary) 매칭을 적용합니다. "ass"를 금칙어로 등록해도 "assassination", "class", "Scunthorpe" 같은 정상 단어는 차단하지 않습니다. 한국어는 교착어 특성상 부분 일치가 더 적합합니다. "매춘"을 등록하면 "매춘부", "매춘업소" 등 합성어까지 모두 잡아야 하기 때문입니다. 따라서 한국어 Trie(부분 일치)와 영어 Trie(단어 경계)를 분리하여 운영합니다.
+
+**Q: "블라인드 게시글을 왜 Lucene 인덱스에서 삭제하지 않고 MUST_NOT으로 필터했나요?"**
+
+복원 가능성 때문입니다. 블라인드는 "검색에서 숨기기"이지 "삭제"가 아닙니다. 관리자가 리뷰 후 반려하면 블라인드를 해제하고 검색에 복원해야 합니다. 인덱스에서 삭제하면 복원 시 재인덱싱이 필요하지만, blinded=true 필드를 두고 MUST_NOT으로 필터하면 blinded=false로 업데이트만 하면 즉시 검색에 복원됩니다.
+
+**Q: "Negative Caching의 TTL을 30초로 정한 근거는?"**
+
+앱 기동 시 Lucene SearcherManager 초기화(42GB 인덱스 로딩)가 수 초에서 수십 초 걸립니다. 이 시간 동안 검색 결과가 0건이고, 이를 캐시하면 인덱스 로딩 완료 후에도 빈 결과가 유지됩니다. 30초면 인덱스 로딩이 완료된 후 캐시가 만료되어 다음 요청에서 정상 결과를 반환합니다. 빈 결과를 아예 캐시하지 않으면 cache penetration(동일 쿼리가 매번 origin까지 관통)이 발생합니다.
+
+---
+
+## AI 검색 요약 - RAG
+
+> 출처: [AI 검색 요약 - RAG](/blog/project/wikiengine/search-rag)
+
+**Q: "왜 벡터 검색(Dense Retrieval)이 아니라 BM25를 Retrieval로 썼나요?"**
+
+wikiEngine은 위키피디아/나무위키 데이터 기반으로 기술 용어 키워드 검색이 주 사용 패턴입니다. 키워드가 명확한 도메인에서는 BM25가 Dense Retrieval보다 우수할 수 있습니다. RAG 비교 실험에서 BM25는 키워드 전용 쿼리 NDCG 0.88로 Dense Retrieval(혼합 쿼리 0.65)보다 높았습니다. Anthropic RAG 가이드에서도 기술 용어, 법률/과학 문서 등 키워드가 명확한 도메인에서는 BM25가 강력한 baseline이라고 평가합니다. "AI"에서 "인공지능" 수준의 의미 확장은 쿼리 타임 동의어 확장으로 이미 해결되었으므로, 벡터 검색 도입의 ROI가 낮습니다.
+
+**Q: "할루시네이션을 어떻게 방지했나요?"**
+
+네 가지 전략입니다. 첫째, 시스템 프롬프트에 "제공된 문서만 참고하여 답변하세요"를 명시합니다. 둘째, 답변에 [문서 N] 형태의 인용을 필수로 요구합니다. 셋째, 검색 결과 BM25 스코어가 임계값 미만이면 AI 요약 자체를 스킵합니다. 넷째, 사용자 피드백으로 품질을 지속 모니터링하고, 부정적 피드백이 집중되는 쿼리 패턴을 분석하여 프롬프트를 개선합니다.
+
+**Q: "AI 요약 트리거 조건은 어떻게 결정했나요?"**
+
+모든 검색에 AI 요약을 생성하면 LLM API 비용이 낭비됩니다. 네비게이션 의도("네이버", "구글")는 사용자가 해당 사이트에 가고 싶은 것이지 설명을 원하는 게 아니므로 스킵합니다. 물음표 쿼리("자바 GC?")는 결과 1건이라도 AI 답변합니다. Google AI Overviews에서도 질문형 쿼리의 AI 요약 출현율이 28에서 38%로 가장 높습니다. 일반 쿼리는 결과 3건 이상일 때만 AI 답변합니다.
+
+**Q: "Rate Limiting을 AtomicInteger에서 Redis로 전환한 이유는?"**
+
+서버가 2대이기 때문입니다. AtomicInteger는 JVM 단위이므로 서버별로 독립적인 카운터가 됩니다. 서버 A에서 5건, 서버 B에서 5건 = 실제 10건인데 각 서버는 5건으로 인식합니다. Gemini 무료 티어가 15 RPM이므로 10 RPM 전역 제한을 걸어 버퍼를 두었습니다. Redis INCR + EXPIRE로 전역 공유 카운터를 구현합니다. Redis 장애 시에는 rate limit을 통과시키고, Gemini 자체 429 응답으로 2차 방어합니다.
+
+**Q: "동일 쿼리 캐싱 TTL을 30분으로 정한 근거는?"**
+
+LLM 답변은 시간에 민감하지 않습니다. 같은 검색어에 대한 위키피디아 기반 답변은 30분 사이에 바뀌지 않습니다. 현업 기준 검색 엔진에서 동일 쿼리 반복률은 30% 이상입니다. TTL 30분이면 대부분의 반복 쿼리가 캐시 히트되어 Gemini 호출 없이 즉시 SSE 전송됩니다. LLM 비용을 40에서 60% 절감할 수 있습니다. TTL을 더 길게 잡으면 Redis 메모리 사용량이 증가하고, 더 짧게 잡으면 캐시 히트율이 떨어집니다. 30분은 비용 절감과 메모리 사용의 균형점입니다.
+
+**Q: "snippetSource에 raw 위키 마크업이 저장되어 snippet이 빈 문자열로 반환되는 문제를 어떻게 해결했나요?"**
+
+Wikipedia CirrusSearch 패턴을 참고했습니다. CirrusSearch는 source_text(raw)와 text(clean)을 별도 필드로 관리하고, 검색/하이라이팅은 clean text만 사용합니다. raw 마크업을 stored field에 저장하고 쿼리 타임에 정리하는 것은 안티패턴입니다. 인덱스 타임에 마크업을 정리한 clean text를 저장하는 것이 업계 표준입니다. 원본 1,500자에서 마크업을 정리하여 500자 clean text를 확보합니다.
+
+**Q: "배포 시 Flyway 마이그레이션이 Replica에 전파되지 않는 문제를 어떻게 발견하고 해결했나요?"**
+
+운영 배포 후 ai_summary_feedback 테이블과 blinded 컬럼이 Replica에 없어서 읽기 쿼리가 실패했습니다. MySQL Replication이 끊겨 있었기 때문입니다. Primary에서 Flyway V4 마이그레이션이 실행되었지만, DDL이 Replica에 전파되지 않았습니다. Replica에 수동으로 테이블과 컬럼을 추가하고, Replication을 재연결했습니다. 교훈은 세 가지입니다: Flyway 마이그레이션 후 Replica 전파 확인 체크리스트 필요, MySQL Replication 상태를 모니터링해야 함, ddl-auto validate(운영)와 update(로컬) 차이를 인지해야 합니다.

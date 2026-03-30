@@ -392,22 +392,6 @@ public record SearchWithFacetsResponse(
 
 ---
 
-## 면접 예상 질문
-
-**Q: "카테고리 필터링을 왜 Lucene에서 하나? DB WHERE 절로 하면 안 되나?"**
-
-A: "검색은 Lucene이 처리하고 카테고리만 DB에서 필터하면 pagination이 깨집니다. Lucene이 20건을 반환한 뒤 DB에서 10건이 필터되면 페이지에 10건만 표시됩니다. Lucene에서 FILTER 절로 처리하면 처음부터 해당 카테고리 결과만 정확히 20건 반환합니다. 또한 Occur.FILTER는 Lucene 내부적으로 bitset 캐싱되어 동일 카테고리 반복 검색 시 성능 이점이 있습니다."
-
-**Q: "Facet을 DB GROUP BY로 한 이유는? Lucene에 네이티브 Facet API가 있지 않나?"**
-
-A: "Lucene의 SortedSetDocValuesFacetCounts는 SortedSetDocValuesFacetField 필드가 인덱스에 있어야 합니다. 현재 인덱스에는 LongField('categoryId')만 있고 SortedSetDocValuesField는 없습니다. 이 필드를 추가하려면 1,425만 건 전체 재색인이 필요한데, [쿼리 확장 구현](/blog/project/wikiengine/search-query-enhancement)에서 무중단 재색인 인프라를 구축합니다. DB GROUP BY로 간이 Facet을 먼저 제공하고, 재색인 시 네이티브 Facet으로 전환합니다."
-
-**Q: "DB GROUP BY로 Facet을 하면 상위 1,000건만 집계하는 거 아닌가? 정확하지 않잖아?"**
-
-A: "맞습니다. 전체 매칭 문서가 아닌 BM25 Top-1,000에 대한 근사 집계입니다. 하지만 검색 엔진에서 사용자가 관심 있는 건 상위 결과의 분포이지, 10만 번째 결과의 카테고리가 아닙니다. 상위 1,000건의 카테고리 분포는 전체와 유사한 경향을 보이므로 UX 관점에서 충분합니다. 정확한 집계가 필요해지면 재색인 시 Lucene Facet API로 전환합니다."
-
----
-
 ## 다음 글
 
 [쿼리 확장 + Query Understanding — 검색 품질 고도화](/blog/project/wikiengine/search-query-enhancement)에서 동의어 확장("AI" → "인공지능"), 오타 교정(DirectSpellChecker), Nori 사용자 사전, UnifiedHighlighter 기반 snippet 개선, 그리고 전체 재색인 인프라를 구축합니다.
