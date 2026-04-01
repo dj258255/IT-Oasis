@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="lensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8fbc8f"/>
+      <stop offset="100%" stop-color="#a3c4a3"/>
+    </linearGradient>
+    <linearGradient id="handleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8fbc8f"/>
+      <stop offset="100%" stop-color="#7dad7d"/>
+    </linearGradient>
+    <clipPath id="lensClip">
+      <circle cx="220" cy="210" r="130"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background: warm off-white -->
+  <rect width="512" height="512" rx="96" ry="96" fill="#f0efe8"/>
+
+  <!-- Lens ring: muted sage green -->
+  <circle cx="220" cy="210" r="140" fill="none" stroke="url(#lensGrad)" stroke-width="24"/>
+
+  <!-- Lens glass -->
+  <circle cx="220" cy="210" r="122" fill="#8fbc8f" opacity="0.07"/>
+
+  <!-- Glass highlight -->
+  <ellipse cx="185" cy="170" rx="45" ry="30" fill="white" opacity="0.3" transform="rotate(-25 185 170)"/>
+
+  <!-- Text lines inside lens -->
+  <g clip-path="url(#lensClip)">
+    <rect x="155" y="155" width="105" height="5" rx="2.5" fill="#b5ccb5"/>
+    <rect x="155" y="173" width="130" height="5" rx="2.5" fill="#c2d4c2"/>
+    <rect x="155" y="191" width="90"  height="5" rx="2.5" fill="#b5ccb5"/>
+    <rect x="155" y="209" width="120" height="5" rx="2.5" fill="#c2d4c2"/>
+    <rect x="155" y="227" width="75"  height="5" rx="2.5" fill="#b5ccb5"/>
+    <rect x="155" y="245" width="110" height="5" rx="2.5" fill="#c2d4c2"/>
+  </g>
+
+  <!-- Highlighted/found line -->
+  <g clip-path="url(#lensClip)">
+    <rect x="151" y="188" width="96" height="11" rx="3" fill="#8fbc8f" opacity="0.3"/>
+  </g>
+
+  <!-- Handle -->
+  <line x1="318" y1="318" x2="415" y2="415" stroke="url(#handleGrad)" stroke-width="34" stroke-linecap="round"/>
+  <line x1="322" y1="314" x2="410" y2="402" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.25"/>
+</svg>
