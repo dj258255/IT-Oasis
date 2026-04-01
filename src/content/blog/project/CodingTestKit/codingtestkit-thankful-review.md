@@ -1,0 +1,84 @@
+---
+title: 'CodingTestKit - 감사 후기를 받고 정말 뿌듯했다'
+titleEn: 'CodingTestKit - A Review That Made Me Proud'
+description: 카카오톡 메시지와 마켓플레이스 리뷰를 통해, CodingTestKit이 실제로 누군가에게 도움이 되고 있다는 걸 느끼며 개발자로서 뿌듯함을 느낀 기록입니다.
+descriptionEn: A short retrospective on receiving thankful messages and marketplace reviews for CodingTestKit, and feeling quietly proud that it is genuinely helping real users.
+date: 2026-04-02
+tags:
+  - Retrospective
+  - CodingTestKit
+  - IntelliJ Plugin
+  - VS Code Extension
+  - User Feedback
+category: project/CodingTestKit
+coverImage: /uploads/project/CodingTestKit/review-thanks.png
+draft: false
+---
+
+CodingTestKit을 만들면서 가장 많이 했던 생각은 "내가 필요해서 만드는 도구"라는 말이었다.
+
+코딩테스트를 준비할 때 직접 불편했던 점이 많았고, 그걸 하나씩 줄여보자는 마음으로 기능을 붙여왔다.
+문제를 가져오고, 테스트 케이스를 돌리고, 제출하고, 기록까지 남기는 흐름을 IDE 안에서 끝내고 싶었다.
+
+그런데 이번에 카카오톡으로 감사 후기를 받고, 마켓플레이스 리뷰까지 보면서 조금 다른 기분이 들었다.
+이제는 그냥 내가 쓰려고 만든 도구가 아니라, 실제로 다른 사람도 편하게 쓰고 있는 도구가 되어가고 있다는 게 눈에 들어왔다.
+
+![](/uploads/project/CodingTestKit/review-thanks.png)
+
+메시지 내용 자체도 정말 감사했지만, 특히 "편하다", "만족스럽다", "주변에도 추천해보겠다" 같은 말들이 오래 남았다.
+내가 만들 때 중요하게 생각했던 지점이 실제 사용자에게도 그대로 전달됐다는 느낌이 들어서 더 그랬다.
+
+개인 프로젝트를 하다 보면 혼자 계속 만들기만 하게 될 때가 많다.
+기능은 늘어나는데, 이게 정말 의미 있는 방향인지 가끔은 헷갈릴 때도 있다.
+그런데 이렇게 직접적인 반응을 받으니, 적어도 내가 중요하게 생각한 방향은 맞았구나 하는 생각이 들었다.
+
+무엇보다 개발자로서 뿌듯했다.
+내가 만든 기능이 단순히 "동작한다"에서 끝나는 게 아니라, 누군가의 준비 과정을 조금 더 편하게 만들어주고 있다는 점이 크게 다가왔다.
+결국 내가 만들고 싶은 것도 그런 도구인 것 같다.
+실제로 쓰는 사람이 있고, 그 사람이 "이거 괜찮다"라고 말해줄 수 있는 것.
+
+이번 후기를 보면서 더 열심히 만들어야겠다는 생각도 자연스럽게 들었다.
+아직 부족한 점도 많고, 더 다듬어야 할 부분도 분명히 있다.
+그래도 이런 반응이 있다는 건 계속 개선할 이유가 충분하다는 뜻이기도 하다.
+
+앞으로도 불편한 부분은 더 줄이고, 실제로 코딩테스트를 준비하는 사람들에게 도움이 되는 방향으로 계속 발전시켜보고 싶다.
+나중에는 "한번 써보면 계속 쓰게 되는 플러그인"에 더 가까워졌으면 좋겠다.
+
+이번 후기는 단순히 기분 좋은 메시지라기보다, 내가 왜 이 프로젝트를 계속 만들고 싶은지 다시 확인하게 해준 계기였다.
+개발자로서 꽤 오래 남을 뿌듯한 순간이었다.
+
+<!-- EN -->
+
+While building CodingTestKit, the thought I kept coming back to was simple: this started as a tool I wanted for myself.
+
+There were many small frustrations whenever I prepared for coding tests, so I kept adding features one by one to reduce them.
+I wanted the whole flow of fetching a problem, running test cases, submitting, and recording the result to happen inside the IDE.
+
+But this time, after receiving thankful KakaoTalk messages and seeing marketplace reviews, I felt something a little different.
+It no longer felt like a tool made only for myself.
+It started to feel like a tool that other people were genuinely finding useful.
+
+![](/uploads/project/CodingTestKit/review-thanks.png)
+
+I was grateful for the messages themselves, but what stayed with me most were phrases like "it is convenient," "it feels satisfying to use," and "I want to recommend it to friends."
+Those words made me feel that the things I cared about while building the plugin were reaching users in the way I hoped.
+
+When you work on a personal project, there are many moments where you just keep building on your own.
+Features increase, but sometimes you are not sure whether you are moving in a meaningful direction.
+Getting this kind of direct feedback made me feel that the direction I cared about was the right one.
+
+More than anything, it made me quietly proud as a developer.
+It meant a lot that something I built was not just "working," but actually making someone else's preparation process a little easier.
+In the end, I think that is the kind of tool I want to build:
+something real people use, and something they can genuinely say is good.
+
+This feedback also made me want to work even harder.
+There is still a lot to improve, and many parts that can be polished further.
+But reactions like this are also proof that there is a good reason to keep improving it.
+
+I want to keep developing CodingTestKit in a way that truly helps people preparing for coding tests and keeps removing unnecessary friction.
+Hopefully, it becomes the kind of plugin that people keep using once they try it.
+
+This review was more than just a nice message.
+It reminded me why I want to keep building this project in the first place.
+It was one of those moments that stay with you for a long time as a developer.
