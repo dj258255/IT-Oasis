@@ -3,12 +3,12 @@
   "titleEn": "WikiEngine",
   "description": "1,425만 건 위키 데이터 기반 검색엔진 — Lucene + Nori 형태소 분석, 분산 아키텍처(MySQL Replication, Redis 샤딩, Kafka CDC), k6 부하 테스트로 검증",
   "descriptionEn": "Search engine for 14.25M wiki documents — Lucene + Nori morphological analysis, distributed architecture (MySQL Replication, Redis Sharding, Kafka CDC), verified with k6 load testing",
-  "image": "/uploads/project/WikiEngine/wiki-search-overview/architecture.png",
+  "image": "/favicon-light.svg",
   "tags": ["Spring Boot", "Lucene", "MySQL", "Redis", "Kafka", "Debezium", "Nginx", "Docker", "k6", "Grafana"],
   "category": "project",
   "date": "2026-03-24",
   "github": "https://github.com/dj258255/wikiEngine",
   "website": "https://www.studywithtymee.com/",
-  "story": "/blog/project/wikiengine/lucene-decision",
+  "story": "/blog/project/wikiengine/wiki-engine-retrospective",
   "order": 1
 }

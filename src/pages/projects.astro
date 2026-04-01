@@ -18,7 +18,14 @@ const siteSettings = getSiteSettings();
   <!-- Project cards -->
   <div class="space-y-8 sm:space-y-10 stagger">
     {projects.map((project) => (
-      <div class="project-card group">
+      <div
+        class:list={['project-card group', project.story && 'project-card--clickable']}
+        role={project.story ? 'link' : undefined}
+        tabindex={project.story ? '0' : undefined}
+        data-story-url={project.story ? `${base}${project.story}` : undefined}
+        onclick={project.story ? "const link = event.target.closest('a'); if (link) return; const url = this.dataset.storyUrl; if (url) window.location.href = url;" : undefined}
+        onkeydown={project.story ? "if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); const url = this.dataset.storyUrl; if (url) window.location.href = url; }" : undefined}
+      >
         <div class="flex flex-col sm:flex-row gap-6 sm:gap-10">
           <!-- Image -->
           <div class="sm:w-[300px] md:w-[360px] shrink-0">
@@ -105,6 +112,10 @@ const siteSettings = getSiteSettings();
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .project-card--clickable {
+    cursor: pointer;
   }
 
   .project-card:hover {
