@@ -86,11 +86,11 @@ B-Tree 인덱스는 값의 **앞부분부터 정렬**되어 있으므로, 키워
 자료구조 자체가 다른 문제를 풀고 있으므로, B-Tree 위에서 아무리 튜닝해도 해결할 수 없습니다.
 
 그렇다면 "특정 키워드가 포함된 문서를 빠르게 찾는" 자료구조는 무엇일까?
-이 질문에서 출발하여 정보 검색(Information Retrieval) 분야를 학습하게 되었습니다.
+이 질문에서 출발해 정보 검색(Information Retrieval) 관점에서 어떤 자료구조가 이 문제에 맞는지 다시 검토했습니다.
 
 ### 역색인 — IR 교재에서 찾은 해답
 
-*Introduction to Information Retrieval* 3장(토큰과 텀)과 [정보검색의 이론과 실제] 2장(역색인)에서, 텍스트 검색의 핵심 자료구조가 **역색인(inverted index)**이라는 것을 학습했습니다.
+*Introduction to Information Retrieval* 3장(토큰과 텀)과 [정보검색의 이론과 실제] 2장(역색인)을 참고해, 텍스트 검색의 핵심 자료구조가 **역색인(inverted index)**이라는 점을 확인했습니다.
 
 역색인은 **사전(Dictionary)** 과 **포스팅 목록(Posting List)** 으로 구성됩니다. 사전은 문서 모음에 포함된 모든 텀의 목록이고, 각 텀은 해당 텀이 출현한 문서를 가리키는 포스팅 목록으로 연결됩니다.
 
@@ -1209,4 +1209,3 @@ From this perspective, the significance of the **Lucene transition** becomes cle
 **Load Test Timing:**
 
 The k6 load test baseline was premised on "executing when search at least works." Currently, rare tokens work but high-frequency tokens still timeout, making it impossible to run load tests reflecting actual user search patterns. **The k6 baseline load test will be executed after Lucene transition, when all search terms operate stably.**
-

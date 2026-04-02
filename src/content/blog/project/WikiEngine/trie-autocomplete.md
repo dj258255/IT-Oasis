@@ -236,12 +236,12 @@ k6 후 검색 로그: 49개 고유 검색어, 인공지능 78회 1위.
 | 항목 | 스킵 이유 |
 |------|---------|
 | 점수 공식 (70% 빈도 + 30% 시간 감쇠) | 검색 로그 41건이 하루 만에 쌓여서 시간 분포가 없음. raw count와 결과 동일 |
-| Pre-computed Top-K (depth <= 3) | 41건에서 DFS가 0.1ms. 사전 계산의 이점 없음 — 오버엔지니어링 |
+| Pre-computed Top-K (depth <= 3) | 41건에서 DFS가 0.1ms. 사전 계산의 이점보다 관리 복잡도가 더 큼 |
 | AnalyzingSuggester 비교 | [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)에서 Redis flat KV로 전환 시 Trie를 퇴역. 퇴역할 자료구조를 비교할 실익 없음 |
 
 ### 대규모에서의 Trie 한계
 
-Trie는 이 단계의 학습 자료구조이며, **대규모 자동완성의 최종 형태가 아닙니다.**
+Trie는 이 단계에서 검색 품질 문제를 해결하는 데는 유효했지만, **대규모 자동완성의 최종 형태로 보기는 어렵습니다.**
 
 - **메모리**: 모든 단어/구 조합을 Trie에 저장하면 단일 머신에 올릴 수 없음
 - **검색 성능**: 1~2글자 prefix의 DFS 분기가 폭발적
@@ -490,7 +490,7 @@ After k6: 49 unique search terms, "Artificial Intelligence" ranked #1 with 78 se
 
 ### Trie Limitations at Scale
 
-The Trie serves as a learning data structure for this stage and is **not the final form of large-scale autocomplete.**
+The Trie is effective for solving the search-quality problem at this stage, but it is **not the final form of large-scale autocomplete.**
 
 - **Memory**: Storing all word/phrase combinations in a Trie cannot fit on a single machine
 - **Search Performance**: DFS branching for 1-2 character prefixes explodes

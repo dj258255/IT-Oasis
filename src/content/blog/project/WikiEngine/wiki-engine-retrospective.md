@@ -323,7 +323,7 @@ WikiEngine에서는 Stateless 전환(Caffeine/Trie/TokenBlacklist → Redis 외�
 
 현재 인프라(Free Tier 2대, 총 24GB RAM)에서 앱(Spring Boot + Lucene) + MySQL + Redis 3노드 + Kafka를 모두 운영하고 있습니다. 여기에 Elasticsearch를 단일 노드라도 추가하면 JVM 2GB+ 메모리가 별도로 필요하여, 이미 빠듯한 메모리에 압박이 가중됩니다. Lucene 임베디드는 앱 JVM 내에서 동작하여 별도 프로세스가 없고, 네트워크 홉도 없어 응답시간이 더 빠릅니다. 검색 품질, 캐싱, LTR, Facet, 동의어, 오타 교정까지 모두 Lucene API만으로 구현할 수 있었습니다. 다만 분산 검색이 필요해지면 앱 레벨 샤딩을 직접 구현해야 하는 한계가 있으며, 인프라가 확장되면 Elasticsearch 마이그레이션을 검토합니다.
 
-### 왜 Kafka를 쓰는가 (볼륨이 작은데 오버엔지니어링 아닌가)
+### 왜 Kafka를 쓰는가 (볼륨이 작은데도 선택한 이유)
 
 이 질문은 타당했습니다. WikiEngine은 초당 수만 건을 처리하는 서비스가 아니고, 글 생성량만 보면 메시지 브로커까지 도입하는 것이 과해 보일 수 있습니다. 그래서 이 프로젝트에서도 처음부터 Kafka를 전제로 두지 않았습니다. 오히려 [CDC — 이벤트 기반 동기화](/blog/project/wikiengine/cdc)에서 정리한 것처럼 **Spring Event → `@ApplicationModuleListener`**처럼 더 가볍고 단순한 선택부터 먼저 검토했습니다. 이때 기준은 "최신 기술인가"가 아니라, `PostService`가 MySQL 저장, Lucene 인덱싱, 캐시 무효화를 한 요청 안에서 모두 직접 처리하던 **dual-write 구조의 결합과 불일치 위험**을 어느 정도까지 줄일 수 있는가였습니다.
 

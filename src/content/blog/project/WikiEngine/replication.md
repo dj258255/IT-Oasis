@@ -107,7 +107,7 @@ AWS RDS 공식 문서([Read Replicas](https://aws.amazon.com/rds/features/read-r
 | **ProxySQL (커넥션 프록시)** | 앱 코드 변경 없이 R/W 분리 가능. 하지만 프록시 서버 추가 필요 (Free Tier 자원 소모), 쿼리 파싱 오버헤드, 장애 포인트 추가 | **탈락** (앱 레벨 라우팅이 더 단순) |
 | **MySQL Replication** | 미리 읽기를 Replica로 분리하여 스케일아웃 시 DB 부하를 사전 분산. Primary는 쓰기 전용, Replica는 읽기 전용 | **선택** |
 
-**앱 레벨 라우팅 vs ProxySQL 선택 근거**: Spring에서 `@Transactional(readOnly=true)` 기반 라우팅은 이미 서비스 코드에 readOnly 분리가 되어 있으므로 코드 변경이 최소이고, 별도 프록시 인프라가 불필요합니다. ProxySQL은 쿼리를 파싱하여 SELECT/INSERT를 분기하는데, 이 프로젝트 규모에서는 오버엔지니어링입니다.
+**앱 레벨 라우팅 vs ProxySQL 선택 근거**: Spring에서 `@Transactional(readOnly=true)` 기반 라우팅은 이미 서비스 코드에 readOnly 분리가 되어 있으므로 코드 변경이 최소이고, 별도 프록시 인프라가 불필요합니다. ProxySQL은 쿼리를 파싱하여 SELECT/INSERT를 분기하는데, 현재 규모에서는 운영 복잡도에 비해 이점이 제한적이었습니다.
 
 ### Replication의 이점
 
@@ -156,7 +156,7 @@ Replica 도입의 이득:
 | 방식 | 장점 | 단점 | 판단 |
 |------|------|------|------|
 | **비동기 Replication** | 설정 간단, Primary 성능 영향 없음 | Replica 지연(lag) 가능 | **선택** |
-| 반동기(Semi-sync) | 최소 1대 ACK 보장 | Primary 쓰기 지연, 플러그인 필요 | 오버엔지니어링 |
+| 반동기(Semi-sync) | 최소 1대 ACK 보장 | Primary 쓰기 지연, 플러그인 필요 | 현재 요구사항 대비 복잡도 과다 |
 | 그룹 Replication (InnoDB Cluster) | 자동 failover, 멀티 Primary | 최소 3대 필요, 복잡 | Free Tier 불가 |
 
 비동기 Replication 선택 근거:
@@ -192,7 +192,7 @@ Replica 도입의 이득:
 |------|------|------|------|
 | **stale 허용** | 코드 변경 없음 | 본인 글 수정 후 1-2초 옛날 데이터 | **선택** |
 | 수정 API 응답에 결과 포함 | PUT 응답 자체에 수정된 데이터 반환 → GET 불필요 | 프론트엔드 변경 필요 | 보완 가능 |
-| forcePrimary 플래그 | 수정 후 쿠키/파라미터로 N초간 Primary 강제 | 라우팅 로직 복잡화 | 오버엔지니어링 |
+| forcePrimary 플래그 | 수정 후 쿠키/파라미터로 N초간 Primary 강제 | 라우팅 로직 복잡화 | 현재 서비스 특성 대비 복잡도 과다 |
 
 **선택 근거**: 커뮤니티 게시판에서 수정 후 1-2초 지연은 실질적으로 문제가 되지 않습니다. 사용자가 수정 버튼을 누르고 → 성공 알림을 확인하고 → 페이지가 리로드되는 시간(~1-2초) 동안 Replication이 따라잡습니다. 비동기 Replication의 일반적인 lag은 수십~수백 ms 수준이므로, 대부분의 경우 사용자가 인지하기 전에 동기화가 완료됩니다.
 

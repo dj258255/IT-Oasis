@@ -283,7 +283,7 @@ Lucene의 `updateDocument()`는 Term 기준으로 기존 문서를 삭제 후 �
 
 두 가지 이유로 Redis Stream은 적합하지 않습니다. 첫째, 자동완성은 1시간 지연을 허용하는 배치 처리 구조라 Redis Stream의 실시간 기능이 불필요합니다. 둘째, Kafka와의 근본적 차이가 있습니다: (1) Redis Stream은 메모리 기반이라 커널 패닉 시 유실 가능, Kafka는 디스크 기반 + replication으로 브로커 장애에도 보존. (2) Redis Stream은 MAXLEN 트리밍 시 영구 소실, Kafka는 retention으로 수 주 보존 + 리플레이 가능. (3) Redis Stream은 단일 스레드, Kafka는 파티션 기반 수평 확장. 검색 인덱스 손상 시 Kafka 토픽을 리플레이하여 재구축할 수 있다는 것은 결정적 이점입니다.
 
-**Q: "볼륨도 작은데 왜 Kafka를 쓰나요? 오버엔지니어링 아닌가요?"**
+**Q: "볼륨도 작은데 왜 Kafka를 쓰나요?"**
 
 두 가지로 답합니다. 첫째, **ROI 비교**입니다. Kafka 주간 운영 비용은 약 30분~1시간(Grafana 알림 자동 + 주 1회 5분 수동 점검)인데, dual-write 불일치가 발생하면 디버깅 + 전체 재인덱싱(28분) + 사용자 불만 대응에 수 시간이 소모됩니다. [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning)에서 실제로 Lucene indexing IOException이 발생한 바 있고, 이를 감지하는 메커니즘이 없는 상태였습니다. 둘째, **fallback 구조** 덕분에 Kafka가 죽어도 서비스는 `@ApplicationModuleListener`로 자동 전환됩니다. Kafka는 "평시의 정확성 보장"이고, fallback은 "장애 시 서비스 연속성 보장"으로 역할이 분리됩니다.
 
@@ -331,7 +331,7 @@ SIGIR 2024(Thomas et al.) 연구에서 GPT-4의 relevance 판정이 crowdsource 
 
 **Q: "LTR ON에서 72배 성능 악화인데, 왜 프로덕션에서 끄기로 결정했나요? 최적화할 수 없었나요?"**
 
-근본 원인은 Rescore window 200에서 문서당 14개 피처 추출이 CPU-intensive하다는 것입니다. BM25 3필드 곱하기 200문서 = 600회 Scorer 생성 + Nori 토큰화가 2코어 ARM에서 포화됩니다. 현업에서는 피처 사전 계산(인덱스 타임에 피처를 stored field로 저장), 피처 캐싱, 전용 다코어 서버에서 처리합니다. 2코어 Free Tier에서는 이런 최적화를 해도 한계가 있습니다. LTR 파이프라인 전체(데이터 생성 → 학습 → 추론 → 평가)를 검증하는 것이 목적이었으므로, 기능 검증 완료 후 LTR_ENABLED=false로 비활성화하고 인프라 확장 시 재활성화합니다.
+근본 원인은 Rescore window 200에서 문서당 14개 피처 추출이 CPU-intensive하다는 것입니다. BM25 3필드 곱하기 200문서 = 600회 Scorer 생성 + Nori 토큰화가 2코어 ARM에서 포화됩니다. 규모가 더 큰 환경에서는 피처 사전 계산(인덱스 타임에 피처를 stored field로 저장), 피처 캐싱, 전용 다코어 서버를 분리하는 방식이 더 적합합니다. 2코어 Free Tier에서는 이런 최적화를 해도 한계가 있었습니다. 그래서 기능 검증 후에는 `LTR_ENABLED=false`로 비활성화하고, 인프라 확장 시 다시 활성화하는 쪽이 더 합리적이라고 판단했습니다.
 
 **Q: "XGBoost4J를 선택한 이유는? ONNX Runtime이나 다른 옵션은?"**
 

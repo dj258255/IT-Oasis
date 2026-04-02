@@ -206,7 +206,7 @@ Facet을 구현하려면 두 가지 경로가 있다:
 |------|------|------|------|
 | **Lucene SortedSetDocValuesFacetCounts** | 정확한 전체 매칭 문서 집계, 네이티브 | `lucene-facet` 의존성 추가 + `SortedSetDocValuesFacetField` 추가 + **전체 재색인 필요** | **재색인 시 함께 적용** |
 | **DB GROUP BY** (검색 결과 ID로) | 재색인 불필요, 즉시 구현 가능 | Top-K 결과만 집계 (전체 매칭 문서 집계 아님), DB 왕복 추가 | **먼저 적용** |
-| **Taxonomy Index** | 계층 Facet 지원 | 별도 인덱스 관리, 오버엔지니어링 | **탈락** |
+| **Taxonomy Index** | 계층 Facet 지원 | 별도 인덱스 관리 비용이 큼 | **탈락** |
 
 **단계적 접근:**
 1. **현재**: 카테고리 필터링 (LongField FILTER, 재색인 불필요) + DB 기반 간이 Facet
