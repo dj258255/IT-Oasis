@@ -304,7 +304,7 @@ public void pollAndPublish() {
 | 멀티 인스턴스 L1 캐시 무효화 | App 1 이벤트를 App 2가 모름 (TTL 만료까지 stale) | **양쪽 모두 CDC 이벤트로 즉시 무효화** |
 | 주간 운영 시간 | ~0 (하지만 불일치 발생 시 **수 시간 디버깅**) | ~1시간 (정기 점검) |
 
-Kafka 운영의 핵심 비용은 인프라가 아니라 **학습 곡선과 장애 대응 역량**이다. 이 프로젝트에서는 KRaft 단일 브로커 + `@ConditionalOnProperty` fallback 구조로 운영 부담을 최소화했다. Kafka가 죽어도 서비스는 @ApplicationModuleListener 수준으로 자동 전환되어 **서비스 중단 없이** 동작한다. Kafka는 "평시의 정확성 보장"이고, fallback은 "장애 시 서비스 연속성 보장"이다.
+Kafka 운영의 핵심 비용은 인프라 자체보다 **운영 진입 비용과 장애 대응 복잡도**에 가깝습니다. 이 프로젝트에서는 KRaft 단일 브로커 + `@ConditionalOnProperty` fallback 구조로 운영 부담을 최소화했습니다. Kafka가 죽어도 서비스는 @ApplicationModuleListener 수준으로 자동 전환되어 **서비스 중단 없이** 동작합니다. Kafka는 "평시의 정확성 보장"이고, fallback은 "장애 시 서비스 연속성 보장"입니다.
 
 ### "Elasticsearch를 쓰면 CDC 자체가 불필요하지 않나?"
 

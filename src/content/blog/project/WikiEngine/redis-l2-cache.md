@@ -294,7 +294,7 @@ public class TieredCacheService {
 
 | 대안 | 장점 | 단점 | 판단 |
 |------|------|------|------|
-| Redis Streams | at-least-once 보장 | Consumer Group + ACK 관리 복잡 | 캐시 무효화에 오버엔지니어링 |
+| Redis Streams | at-least-once 보장 | Consumer Group + ACK 관리 복잡 | 캐시 무효화 목적 대비 복잡도 과다 |
 | Kafka | 완벽한 메시지 보장 | 별도 브로커 인프라 필요, 현재 서버 자원으로 운영 부담 | **탈락** |
 | **Pub/Sub + L1 TTL** | 구현 간단. 유실 시 L1 TTL(5분)이 안전망 | 최악 5분 stale | **선택** |
 

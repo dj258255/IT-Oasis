@@ -167,11 +167,11 @@ Redis는 **모든 명령을 단일 스레드에서 순차 실행**한다. 이것
 
 자동 failover + 단일 Primary. **데이터가 단일 노드 메모리에 들어가고 HA만 필요한 경우의 최적 선택**. ~$36/월.
 
-> **솔직한 인정**: 현 규모에서 가장 합리적인 프로덕션 선택은 **Redis Sentinel** 또는 **현 단일 인스턴스 유지**다. 앱 레벨 Consistent Hashing은 현업에서 거의 사용되지 않는다.
+> **핵심 trade-off**: 현 규모에서 고가용성만 필요했다면 **Redis Sentinel**이나 단일 인스턴스 유지가 더 단순한 선택이었을 수 있습니다. 하지만 이 단계의 핵심 문제는 HA보다도, 서로 다른 워크로드를 같은 인스턴스에 섞어두었을 때 생기는 간섭과 보안상 영향 범위를 어떻게 줄일 것인가에 더 가까웠습니다.
 
-### 앱 레벨 Consistent Hashing (선택 — 학습 목적)
+### 앱 레벨 Consistent Hashing (선택 — 워크로드 분리와 제어 가능성)
 
-Redis Cluster는 CRC16 기반 16384 슬롯 분배를 내부에서 처리하므로, 해시 링·가상 노드·노드 추가 시 최소 키 이동을 직접 관찰할 수 없다. `ConcurrentSkipListMap`으로 O(log N) 라우팅을 구현하고, 가상 노드 수에 따른 분산 편차를 실측하는 경험이 목적이다.
+Redis Cluster는 범용 샤딩에는 적합하지만, 이 단계에서 중요했던 것은 단순한 데이터 분산보다 자동완성, 일반 캐시, 조회수, 블랙리스트처럼 성격이 다른 데이터를 어떻게 분리하고 어떤 노드에 둘지 더 세밀하게 제어하는 일이었습니다. 그래서 현재 제약 안에서는 애플리케이션 라우팅 계층을 두고, 키 재배치와 노드별 역할을 직접 통제하는 방식이 더 적합하다고 판단했습니다.
 
 ### 비용 환산 (AWS 기준)
 
@@ -568,7 +568,7 @@ Redis Cluster 공식 스펙에서는 "N개 마스터 노드가 있으면 단일 
 | k6 100 VU 평균 | 35.6ms | **42.8ms** (+7ms, 분산 비용) |
 | k6 100 VU P95 | 138ms | **190ms** |
 
-> **핵심 개선**: 레이턴시 감소가 아닌 **워크로드 격리**(배치↔실시간 분리), **안티패턴 제거**(KEYS→SCAN), **보안 격리**(블랙리스트 전용 인스턴스). Consistent Hashing은 분리된 노드의 라우팅 계층이자, 향후 확장 시 노드 추가를 최소 재배치로 가능하게 하는 학습 구현이다.
+> **핵심 개선**: 레이턴시 감소가 아닌 **워크로드 격리**(배치↔실시간 분리), **안티패턴 제거**(KEYS→SCAN), **보안 격리**(블랙리스트 전용 인스턴스)입니다. Consistent Hashing은 분리된 노드의 라우팅 계층으로서, 현재 구조에서 키 이동을 최소화하면서 용도별 분리를 유지할 수 있게 만든 선택이었습니다.
 
 ---
 
@@ -576,7 +576,7 @@ Redis Cluster 공식 스펙에서는 "N개 마스터 노드가 있으면 단일 
 
 **Q: "왜 Redis Cluster 대신 애플리케이션 레벨 샤딩을 선택했나요?"**
 
-A: "학습 목적입니다. Redis Cluster는 CRC16 기반 16384 슬롯으로 자동 샤딩하지만, 그 과정이 추상화되어 있어서 해시 링, 가상 노드, 노드 추가 시 최소 키 이동을 직접 구현하고 관찰할 수 없습니다. 프로덕션에서는 Redis Cluster나 AWS ElastiCache로 전환할 것입니다."
+A: "이 단계의 핵심 문제는 범용 샤딩 자체보다, 자동완성·일반 캐시·조회수·블랙리스트처럼 성격이 다른 데이터를 어떻게 분리하고, 노드 추가나 장애 시 키 이동을 얼마나 통제할 수 있느냐였습니다. Redis Cluster는 범용 샤딩에는 강하지만 현재 규모에서는 더 무겁고, 용도별 분리 전략을 세밀하게 표현하기엔 과했습니다. 그래서 현재 제약 안에서는 애플리케이션 레벨 라우팅으로 필요한 분리와 제어를 먼저 확보하는 편이 더 적합하다고 판단했습니다."
 
 **Q: "가상 노드 수를 150으로 설정한 근거는?"**
 
@@ -592,11 +592,11 @@ A: "안 됩니다. Consistent Hashing은 데이터 분산이지 부하 분산이
 
 **Q: "Redis 사용량이 60MB인데, 샤딩이 정말 필요한가요?"**
 
-A: "현 규모에서는 오버엔지니어링 맞습니다. 프로덕션이었다면 단일 Redis 유지 또는 Redis Sentinel이 올바른 판단입니다. 목적은 Consistent Hashing 알고리즘을 직접 구현하여 해시 링, 가상 노드, 키 재배치를 실측하는 학습입니다."
+A: "용량만 보면 단일 Redis 유지나 Sentinel이 더 단순한 선택일 수 있습니다. 하지만 이 단계에서 해결하려던 문제는 메모리 부족이 아니라, 배치 작업과 실시간 조회의 간섭, KEYS 블로킹, 블랙리스트 같은 보안성 높은 데이터의 영향 범위를 줄이는 것이었습니다. 즉, 샤딩은 용량 문제보다 워크로드 분리와 격리 관점에서 선택된 구조였습니다."
 
 **Q: "프로덕션에서는 어떻게 할 건가요?"**
 
-A: "프로덕션 구성은 완전히 다를 겁니다. 앱 레벨 Redis 샤딩 → Redis Cluster 또는 ElastiCache, Lucene embedded → Elasticsearch/OpenSearch. 하지만 이 프로젝트에서 얻은 건 'Redis Cluster가 왜 CRC16 + 16384 슬롯을 선택했는지'를 원리 수준에서 이해한 것입니다. managed 서비스를 '블랙박스'가 아닌 '원리를 아는 도구'로 쓸 수 있게 된 게 이 프로젝트의 가치입니다."
+A: "프로덕션에서는 운영 단순성과 장애 대응을 더 우선해 Redis Cluster, Sentinel, 또는 관리형 서비스를 검토할 것입니다. 다만 이 프로젝트에서는 워크로드별 분리, 키 이동 최소화, 장애 시 영향 범위를 직접 통제하는 것이 더 중요한 과제였고, 현재 구조는 그 판단을 검증하기 위한 선택이었습니다."
 
 
 <!-- EN -->
@@ -1152,7 +1152,7 @@ Industry cases:
 | k6 100 VU average | 35.6ms | **42.8ms** (+7ms, distribution cost) |
 | k6 100 VU P95 | 138ms | **190ms** |
 
-> **Key Improvement**: Not latency reduction, but **workload isolation** (batch vs. realtime separation), **anti-pattern elimination** (KEYS→SCAN), and **security isolation** (dedicated blacklist instance). Consistent Hashing serves as the routing layer for separated nodes and a learning implementation that enables future scaling with minimal key redistribution when adding nodes.
+> **Key Improvement**: Not latency reduction, but **workload isolation** (batch vs. realtime separation), **anti-pattern elimination** (KEYS→SCAN), and **security isolation** (dedicated blacklist instance). Consistent Hashing serves as the routing layer for separated nodes and keeps key redistribution limited when nodes are added later.
 
 ---
 
@@ -1160,7 +1160,7 @@ Industry cases:
 
 **Q: "Why did you choose application-level sharding instead of Redis Cluster?"**
 
-A: "For learning purposes. Redis Cluster auto-shards using CRC16-based 16384 slots, but the process is abstracted away, making it impossible to directly implement and observe the hash ring, virtual nodes, and minimum key migration when adding nodes. In production, I would migrate to Redis Cluster or AWS ElastiCache."
+A: "The main problem at this stage was not generic sharding by itself, but how to separate autocomplete, general cache, counters, and blacklist data with different operational characteristics while keeping key movement predictable. Redis Cluster is strong for generic sharding, but for this scale it was heavier than necessary and less explicit about per-purpose routing. Application-level routing gave finer control over workload isolation and node assignment under the current constraints."
 
 **Q: "What is the rationale for setting virtual nodes to 150?"**
 

@@ -117,27 +117,27 @@ App 2대에서 Lucene을 운영하는 핵심 도전은 **인덱스 동기화**�
 
 | 방식 | 장점 | 단점 | 판단 |
 |------|------|------|------|
-| **Elasticsearch** | 샤드 복제 자동 처리, 운영 부담 없음 | 메모리 최소 4GB, 학습 목적에 부합하지 않음 | **탈락** (아래 상세) |
+| **Elasticsearch** | 샤드 복제 자동 처리, 운영 부담 없음 | 메모리 최소 4GB, 현재 자원 제약에서 과중 | **탈락** (아래 상세) |
 | **공유 파일시스템 (NFS/OCI FSS)** | 단일 인덱스, 항상 일관, rsync 불필요 | 네트워크 I/O per search (MMap 성능 저하) | **탈락** (아래 상세) |
 | **오브젝트 스토리지 (S3/OCI)** | 스냅샷 저장 + 각 서버 pull | 29GB 매번 다운로드 비효율 | **탈락** |
 | **양쪽 독립 쓰기** | 코드 변경 최소 | 인덱스 불일치 (App 1 쓰기 ↔ App 2 쓰기) | **탈락** (일관성 문제) |
 | **Redis Pub/Sub 알림** | 거의 실시간 동기화 | dual-write, 향후 CDC와 역할 중복 | **검토** (향후) |
 | **쓰기 App 1 고정 + rsync** | 단순, 단일 writer, MySQL Primary-Replica와 동일 패턴 | 최대 5분 stale | **선택** |
 
-**"현업에서는 어떻게 하는가" — 왜 이 프로젝트에서 ES/NFS를 쓰지 않는가:**
+**비슷한 상황에서 검토할 수 있는 대안 — 왜 이 프로젝트에서 ES/NFS를 쓰지 않는가:**
 
 현업에서 멀티 노드 검색을 운영할 때 가장 일반적인 방법은 **Elasticsearch**입니다. ES는 내부적으로 Lucene 기반이지만, 샤드 복제/리밸런싱/장애 복구를 프레임워크가 자동 처리하므로 인덱스 동기화를 개발자가 직접 다룰 필요가 없습니다. 두 번째로 **공유 파일시스템(AWS EFS, OCI FSS)**을 양쪽 서버에 NFS 마운트하여 하나의 인덱스를 공유하는 방식이 있습니다.
 
 이 프로젝트에서 두 방식을 쓰지 않는 이유:
 
-| 방식 | 현업에서의 장점 | 이 프로젝트에서 쓰지 않는 이유 |
+| 방식 | 장점 | 이 프로젝트에서 쓰지 않는 이유 |
 |------|---------------|--------------------------|
-| **Elasticsearch** | 샤드 복제 자동, REST API, 운영 도구 풍부 | ① ES 최소 메모리 4GB — 자원 부족 ② **학습 목적**: ES를 쓰면 역색인/세그먼트/NRT/MMap 같은 검색엔진 핵심 원리를 경험할 수 없음. raw Lucene으로 직접 구축하고, 분산 환경에서의 인덱스 동기화 문제를 **직접 경험**하는 것이 포트폴리오로서 더 가치 있음 |
+| **Elasticsearch** | 샤드 복제 자동, REST API, 운영 도구 풍부 | ① ES 최소 메모리 4GB — 자원 부족 ② MySQL→검색엔진 동기화 문제는 여전히 별도 관리 필요 ③ 현재 규모에서는 검색 클러스터 운영 비용이 App 2대 확장의 목적보다 큼 |
 | **NFS/OCI FSS** | 단일 인덱스, rsync 불필요 | ① Lucene MMapDirectory는 OS 페이지 캐시에 의존 — NFS 위에서는 매 검색 I/O마다 네트워크 왕복 발생, BM25 스코어링 시 랜덤 I/O 누적으로 성능 수 배 저하 (Lucene JIRA LUCENE-673, Atlassian 공식 경고) ② OCI FSS는 월 ~$3 비용 발생 |
 
 **현업 사례 — Yelp nrtsearch**: Yelp는 프로덕션에서 raw Lucene 기반 검색 시스템(nrtsearch)을 운영합니다. "dedicated primary/writer node that takes care of indexing operations and expensive operations like segment merges, allowing the replicas' system resources to be dedicated entirely for search queries". Replica는 "sync with the current primary and update their indexes using Lucene's NRT APIs"로 동기화합니다 ([Yelp Engineering Blog](https://engineeringblog.yelp.com/2021/09/nrtsearch-yelps-fast-scalable-and-cost-effective-search-engine.html)). 이 프로젝트의 Primary/Replica 패턴과 동일한 구조입니다.
 
-**이 프로젝트의 포지션**: "ES 없이 raw Lucene으로 검색엔진을 직접 구축하고, 멀티 노드에서 인덱스 동기화(SnapshotDeletionPolicy + Refresh Pause + rsync), 레이스 컨디션(LUCENE-628), 빈 디렉토리 기동 실패 등 분산 환경의 실제 문제를 직접 경험하고 해결했다" — ES를 쓰면 이런 문제를 아예 모르고 넘어갑니다. 면접에서 "왜 ES 안 쓰셨나요?"에 대한 명확한 답변이 됩니다.
+**이 프로젝트의 판단 기준**: 이 시점의 목적은 검색 클러스터를 새로 운영하는 것이 아니라, 현재 자원 안에서 App CPU 병목을 나누면서도 검색 인덱스 일관성을 유지하는 것이었습니다. raw Lucene을 유지하면 인덱스 생명주기와 동기화 시점을 애플리케이션에서 직접 제어할 수 있고, 별도 검색 프로세스 없이 현재 자원 안에서 목적을 달성할 수 있었습니다. 반대로 Elasticsearch는 동기화 문제를 완전히 없애주지 않으면서도 메모리와 운영 복잡도를 더 크게 늘리는 선택이었습니다.
 
 **참고 — CI/CD와 데이터 동기화는 별개 파이프라인**: GitHub Actions CI/CD는 **코드**를 배포하는 것이지, **데이터**(Lucene 인덱스 29GB)를 배포하는 것이 아닙니다. 인덱스 데이터 동기화는 rsync cron이라는 별도 파이프라인으로 처리하며, 이는 MySQL Replication이 CI/CD와 별개인 것과 같은 원리입니다.
 

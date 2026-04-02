@@ -344,7 +344,7 @@ CREATE TABLE click_logs (
 
 - **LTR 파이프라인은 기능 검증 완료**: 학습 데이터 생성(LLM-as-a-Judge) → 모델 학습(XGBoost LambdaMART) → 재랭킹(Rescorer) → **NDCG +4.8%p 개선** → 부하 테스트
 - **2코어 ARM Free Tier에서 프로덕션 LTR은 CPU 부족**: `LTR_ENABLED=false`로 비활성화, 인프라 확장 시 재활성화 예정
-- **현업에서는**: 피처 사전 계산(pre-computation), 피처 캐싱, 전용 다코어 서버 또는 GPU에서 LTR 처리. Elasticsearch LTR 플러그인도 dedicated scoring node 사용
+- **규모가 더 커지면**: 피처 사전 계산(pre-computation), 피처 캐싱, 전용 다코어 서버 또는 GPU에서 LTR 처리를 분리하는 편이 더 적합합니다. Elasticsearch LTR 플러그인도 dedicated scoring node 구성을 권장합니다.
 
 ---
 
