@@ -399,25 +399,6 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ---
 
-## 면접 예상 질문
-
-**Q: "stress 테스트와 soak 테스트를 왜 분리해서 했나요?"**
-
-A: "목적이 다릅니다. stress는 **순간 최대 부하에서 시스템이 어디서 터지는지** 찾습니다 — VU를 200까지 올려서 한계점을 확인했습니다. soak는 **정상 부하를 장시간 유지했을 때 시간에 따라 나타나는 문제**를 찾습니다 — 50 VU로 4시간 동안 돌려서 메모리 누수, GC 악화, 커넥션 풀 drift를 관찰합니다."
-
-**Q: "Chaos Engineering에서 가장 위험한 시나리오는 뭐였나요?"**
-
-A: "토큰 블랙리스트 Redis 장애입니다. 블랙리스트를 조회할 수 없으면 보수적 정책(모든 토큰 거부)으로 서비스 전면 인증 차단이 되거나, 관대 정책(모든 토큰 통과)으로 보안 구멍이 생깁니다. 프로덕션이라면 Redis Sentinel로 블랙리스트 Redis의 HA를 확보하거나, JWT 만료시간을 짧게(15분) 잡고 관대 정책을 쓰는 트레이드오프가 있습니다."
-
-**Q: "ARM 2코어 × 2대인데, 200 VU를 견딜 수 있나요?"**
-
-A: "stress 테스트의 목적은 '200 VU를 견디는 것'이 아니라 **'한계가 어디인지 수치로 확인하는 것'**입니다. 한계를 알면 'App 3대로 확장하면 N VU까지 가능하다'는 용량 계획(capacity planning)을 할 수 있습니다."
-
-**Q: "전체 프로젝트에서 이 글의 의미는?"**
-
-A: "초반 글들은 '코드 최적화로 얼마나 빨라지나', [stress 테스트](/blog/project/wikiengine/stress-test-tuning)는 '단일 서버의 한계는 어디인가', [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)~[Redis 샤딩](/blog/project/wikiengine/redis-sharding)은 '분산 아키텍처를 어떻게 구축하나'였습니다. 이 글은 **'구축한 분산 아키텍처가 실제로 안정적인가'**를 검증합니다."
-
-
 <!-- EN -->
 
 
@@ -793,21 +774,3 @@ Planned for the final architecture after search pipeline improvements (synonym e
 | 8 | Redis + Kafka simultaneous crash | Cache miss + CDC halt, service continues |
 
 ---
-
-## Interview Questions
-
-**Q: "Why did you separate stress testing and soak testing?"**
-
-A: "They serve different purposes. Stress testing finds **where the system breaks under maximum instantaneous load** — we ramped VU up to 200 to identify the limit. Soak testing finds **problems that emerge over time under sustained normal load** — we run 50 VU for 4 hours to observe memory leaks, GC degradation, and connection pool drift."
-
-**Q: "What was the most dangerous scenario in Chaos Engineering?"**
-
-A: "The token blacklist Redis failure. If the blacklist can't be queried, the conservative policy (reject all tokens) causes a complete service authentication lockout, while the lenient policy (accept all tokens) creates a security hole. In production, you'd either ensure HA for the blacklist Redis via Redis Sentinel, or keep JWT expiration short (15 min) and use the lenient policy — it's a trade-off."
-
-**Q: "ARM 2-core x 2 instances — can it handle 200 VU?"**
-
-A: "The purpose of stress testing isn't to 'handle 200 VU' but to **'quantify where the limit is.'** Once you know the limit, you can do capacity planning — 'scaling to 3 Apps would support up to N VU.'"
-
-**Q: "What is the significance of this post in the overall project?"**
-
-A: "The early posts were about 'how much faster can code optimization make it', the [stress test](/blog/project/wikiengine/stress-test-tuning) was about 'where is the single-server limit', [Redis L2 Cache](/blog/project/wikiengine/redis-l2-cache) through [Redis Sharding](/blog/project/wikiengine/redis-sharding) were about 'how to build a distributed architecture.' This post **verifies whether the distributed architecture we built is actually stable.**"

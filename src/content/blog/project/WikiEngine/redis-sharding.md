@@ -572,33 +572,6 @@ Redis Cluster 공식 스펙에서는 "N개 마스터 노드가 있으면 단일 
 
 ---
 
-## 면접 예상 질문
-
-**Q: "왜 Redis Cluster 대신 애플리케이션 레벨 샤딩을 선택했나요?"**
-
-A: "이 단계의 핵심 문제는 범용 샤딩 자체보다, 자동완성·일반 캐시·조회수·블랙리스트처럼 성격이 다른 데이터를 어떻게 분리하고, 노드 추가나 장애 시 키 이동을 얼마나 통제할 수 있느냐였습니다. Redis Cluster는 범용 샤딩에는 강하지만 현재 규모에서는 더 무겁고, 용도별 분리 전략을 세밀하게 표현하기엔 과했습니다. 그래서 현재 제약 안에서는 애플리케이션 레벨 라우팅으로 필요한 분리와 제어를 먼저 확보하는 편이 더 적합하다고 판단했습니다."
-
-**Q: "가상 노드 수를 150으로 설정한 근거는?"**
-
-A: "50개일 때 ~10% 편차, 150개일 때 ~5% 편차, 500개일 때 ~2% 편차입니다. 3개 물리 노드 × 150 가상 노드 = 450개의 TreeMap 엔트리로, 메모리 오버헤드가 무시할 수 있는 수준이면서 5% 이내 균등 분산을 달성합니다."
-
-**Q: "토큰 블랙리스트를 샤딩하지 않는 이유는?"**
-
-A: "보안 크리티컬한 데이터이기 때문입니다. 특정 샤드 장애 시 해당 샤드에 저장된 토큰의 블랙리스트 여부를 확인할 수 없고, 보수적 정책과 결합하면 1/3 확률로 전체 인증 차단이 발생합니다. 블랙리스트 키 수는 수백~수천 개로 적으므로 분산 필요성이 낮습니다."
-
-**Q: "샤딩만으로 핫스팟 문제가 해결되나요?"**
-
-A: "안 됩니다. Consistent Hashing은 데이터 분산이지 부하 분산이 아닙니다. 1글자 prefix는 수십 배 많이 조회되므로 해당 샤드가 핫스팟이 됩니다. 동적 복제(부하가 높은 샤드에 읽기 전용 복제본 추가)가 별도로 필요합니다."
-
-**Q: "Redis 사용량이 60MB인데, 샤딩이 정말 필요한가요?"**
-
-A: "용량만 보면 단일 Redis 유지나 Sentinel이 더 단순한 선택일 수 있습니다. 하지만 이 단계에서 해결하려던 문제는 메모리 부족이 아니라, 배치 작업과 실시간 조회의 간섭, KEYS 블로킹, 블랙리스트 같은 보안성 높은 데이터의 영향 범위를 줄이는 것이었습니다. 즉, 샤딩은 용량 문제보다 워크로드 분리와 격리 관점에서 선택된 구조였습니다."
-
-**Q: "프로덕션에서는 어떻게 할 건가요?"**
-
-A: "프로덕션에서는 운영 단순성과 장애 대응을 더 우선해 Redis Cluster, Sentinel, 또는 관리형 서비스를 검토할 것입니다. 다만 이 프로젝트에서는 워크로드별 분리, 키 이동 최소화, 장애 시 영향 범위를 직접 통제하는 것이 더 중요한 과제였고, 현재 구조는 그 판단을 검증하기 위한 선택이었습니다."
-
-
 <!-- EN -->
 
 
@@ -1155,29 +1128,3 @@ Industry cases:
 > **Key Improvement**: Not latency reduction, but **workload isolation** (batch vs. realtime separation), **anti-pattern elimination** (KEYS→SCAN), and **security isolation** (dedicated blacklist instance). Consistent Hashing serves as the routing layer for separated nodes and keeps key redistribution limited when nodes are added later.
 
 ---
-
-## Interview Questions
-
-**Q: "Why did you choose application-level sharding instead of Redis Cluster?"**
-
-A: "The main problem at this stage was not generic sharding by itself, but how to separate autocomplete, general cache, counters, and blacklist data with different operational characteristics while keeping key movement predictable. Redis Cluster is strong for generic sharding, but for this scale it was heavier than necessary and less explicit about per-purpose routing. Application-level routing gave finer control over workload isolation and node assignment under the current constraints."
-
-**Q: "What is the rationale for setting virtual nodes to 150?"**
-
-A: "At 50 nodes there's ~10% variance, at 150 nodes ~5% variance, and at 500 nodes ~2% variance. 3 physical nodes x 150 virtual nodes = 450 TreeMap entries, which is negligible memory overhead while achieving even distribution within 5%."
-
-**Q: "Why isn't the token blacklist sharded?"**
-
-A: "Because it's security-critical data. If a specific shard fails, the blacklist status of tokens stored on that shard cannot be verified. Combined with a conservative policy, there's a 1/3 chance of blocking all authentication. The blacklist key count is only hundreds to thousands, so there's little need for distribution."
-
-**Q: "Does sharding alone solve the hotspot problem?"**
-
-A: "No. Consistent Hashing is data distribution, not load distribution. 1-character prefixes are queried tens of times more, causing the corresponding shard to become a hotspot. Dynamic replication (adding read-only replicas to high-load shards) is needed separately."
-
-**Q: "Your Redis usage is 60MB — is sharding really necessary?"**
-
-A: "It's over-engineering at current scale, admittedly. If this were production, keeping a single Redis or using Redis Sentinel would be the right call. The purpose was to directly implement the Consistent Hashing algorithm and measure the hash ring, virtual nodes, and key redistribution firsthand."
-
-**Q: "What would you do in production?"**
-
-A: "The production setup would be completely different. App-level Redis sharding → Redis Cluster or ElastiCache, embedded Lucene → Elasticsearch/OpenSearch. But what I gained from this project is understanding at the principle level 'why Redis Cluster chose CRC16 + 16384 slots.' The value of this project is being able to use managed services not as a 'black box' but as 'a tool whose principles I understand.'"
