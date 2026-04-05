@@ -1,8 +1,8 @@
 ---
 title: 'Nori 형태소 분석기 Stop Filter 문제 — "안녕" 검색 0건의 원인과 해결'
 titleEn: 'Nori Analyzer Stop Filter Issue — Why Searching "안녕" Returns Zero Results'
-description: Lucene Nori 한국어 분석기의 DEFAULT_STOP_TAGS에 IC(감탄사)가 포함되어 있어, standalone "안녕"이 감탄사로 태깅→필터링→빈 쿼리→0건이 되는 비대칭 검색 문제를 분석합니다. 같은 "안녕"이 "안녕하세요"에서는 NNG(명사)로 정상 인덱싱되는 품사 태깅 문맥 의존성이 근본 원인입니다. Stop Tags 커스터마이징(IC 제거), Multi-field N-gram, Query-time 폴백 3가지 선택지를 현업 사례(배달의민족, 딜리셔스, Elastic 공식 가이드)와 함께 트레이드오프하고, 서버 제약(2코어 ARM, 디스크 82%) 기반으로 A(IC 제거) + C(토큰 전멸 PrefixQuery 폴백) 조합을 선택합니다.
-descriptionEn: Analyzes an asymmetric search failure in Lucene Nori Korean analyzer where standalone "안녕" is tagged as IC (interjection) and filtered by DEFAULT_STOP_TAGS, producing zero results, while the same morpheme "안녕" in "안녕하세요" is tagged as NNG (noun) and indexed normally. Evaluates three solutions — custom stop tags, multi-field n-gram, and query-time fallback — with production case studies (Baemin, Dealicious, Elastic), and selects A (IC removal) + C (zero-token PrefixQuery fallback) based on server constraints (2-core ARM, 82% disk).
+description: Lucene Nori 한국어 분석기의 DEFAULT_STOP_TAGS에 IC(감탄사)가 포함되어 있어, standalone "안녕"이 감탄사로 태깅→필터링→빈 쿼리→0건이 되는 비대칭 검색 문제를 분석합니다. 같은 "안녕"이 "안녕하세요"에서는 NNG(명사)로 정상 인덱싱되는 품사 태깅 문맥 의존성이 근본 원인입니다. Stop Tags 커스터마이징(IC 제거), Multi-field N-gram + dis_max, Query-time 폴백 3가지 선택지를 현업 사례(배달의민족, 딜리셔스, Elastic 공식 CJK 검색 가이드)와 함께 트레이드오프하고, A(IC 제거) + B(title_ngram + dis_max) + C(토큰 전멸 PrefixQuery 폴백) 조합을 선택합니다.
+descriptionEn: Analyzes an asymmetric search failure in Lucene Nori Korean analyzer where standalone "안녕" is tagged as IC (interjection) and filtered by DEFAULT_STOP_TAGS, producing zero results, while the same morpheme "안녕" in "안녕하세요" is tagged as NNG (noun) and indexed normally. Evaluates three solutions — custom stop tags, multi-field n-gram + dis_max, and query-time fallback — with production case studies (Baemin, Dealicious, Elastic CJK search guide), and selects A (IC removal) + B (title_ngram + dis_max) + C (zero-token PrefixQuery fallback).
 date: 2026-04-04T00:00:00.000Z
 tags:
   - Lucene
@@ -218,26 +218,25 @@ mecab-ko 사전(Nori가 사용하는 사전)에서 "안녕"은 NNG(명사, "평�
 
 ---
 
-## 5. 결정 — A + C
+## 5. 결정 — A + B + C
 
-### B가 빠지는 이유
+### B를 포함하는 이유
 
-현재 서버 상태:
+초기에는 B(Multi-field N-gram)를 디스크/메모리 비용 때문에 제외했습니다. 전체 콘텐츠를 n-gram으로 이중 인덱싱하면 36GB → 55~72GB(+50~100%)로 증가하여 서버2(잔여 56GB)에서 디스크 부족이 발생합니다.
+
+그러나 **title 필드만 n-gram으로 추가**하면 인덱스 증가폭이 36GB → 39GB(+8%)로 최소화됩니다. Elastic 공식 CJK 검색 가이드에서 제시한 형태소+n-gram multi-field 조합 패턴을 참고하여 dis_max 구조를 적용하면, 형태소 분석이 실패하는 케이스에서 n-gram이 안전망 역할을 합니다.
 
 ```
-서버1: /dev/mapper/rocky-root  399G  206G  194G  52%
-서버2: /dev/mapper/rocky-root  299G  244G   56G  82%
+서버1: /dev/mapper/rocky-root  399G  206G  194G  52%  → 39GB 인덱스 수용 가능
+서버2: /dev/mapper/rocky-root  299G  244G   56G  82%  → 39GB 인덱스 수용 가능 (잔여 53GB)
 ```
 
-서버2의 남은 공간은 **56GB**입니다. 현재 Lucene 인덱스가 36GB인 상태에서 N-gram으로 50~100% 증가(55~72GB)하면 **디스크 공간이 부족**합니다.
+### A + B + C 조합의 논리
 
-또한 2코어 ARM 서버에서 MMap 페이지 캐시의 워킹셋이 커지면 I/O thrashing이 발생합니다. 배달의민족도 이 문제 때문에 분석기를 ES 밖으로 빼서 애플리케이션 레이어로 이전한 사례가 있습니다.
-
-### A + C 조합의 논리
-
-- **A(IC 제거)**: "안녕" 같은 감탄사 검색을 근본적으로 해결합니다 (95%의 케이스).
-- **C(PrefixQuery 폴백)**: A가 커버하지 못하는 미지의 엣지 케이스에 대한 안전망입니다 (5%의 보험).
-- A를 적용하면 IC 케이스에서 C는 트리거되지 않습니다(토큰이 살아남으니까). C는 순수하게 아직 발견되지 않은 엣지 케이스만 커버합니다.
+- **A(IC 제거)**: "안녕" 같은 감탄사 검색을 근본적으로 해결합니다.
+- **B(title_ngram + dis_max)**: 불완전 입력 시 n-gram이 안전망 역할. title만 n-gram으로 제한하여 인덱스 증가 최소화(36→39GB, +8%). Elastic 공식 CJK 검색 가이드의 형태소+n-gram 조합 패턴을 참고한 dis_max 구조로, 형태소 분석과 n-gram 중 높은 점수를 선택합니다.
+- **C(PrefixQuery 폴백)**: A와 B가 커버하지 못하는 미지의 엣지 케이스에 대한 보험입니다.
+- A를 적용하면 IC 케이스에서 C는 트리거되지 않습니다(토큰이 살아남으니까). B는 "안녕하세" 같은 불완전 입력에서 n-gram 매칭으로 관련 문서를 상위에 올립니다.
 
 IC 외에 비슷한 문제가 생길 수 있는 품사:
 
@@ -302,11 +301,73 @@ A를 적용하면 "안녕"은 더 이상 IC로 필터링되지 않으므로 `tok
 
 PrefixQuery는 title 필드의 term dictionary에서 해당 접두사로 시작하는 텀을 찾습니다. BM25 랭킹 대신 constant score가 적용되므로 정상 검색보다 랭킹 품질은 떨어지지만, **0건보다는 결과를 반환하는 것이 낫습니다**.
 
+### B. Multi-field N-gram + dis_max
+
+형태소 분석기가 불완전한 입력을 비표준적으로 토큰화하는 문제를 보완하기 위해, title 필드에 2-3gram 분석기를 추가하고 dis_max 쿼리로 결합합니다.
+
+**PerFieldAnalyzerWrapper 구성:**
+
+```java
+// LuceneConfig.java
+@Bean
+Analyzer luceneAnalyzer() {
+    Analyzer noriAnalyzer = createNoriAnalyzer();
+    Analyzer ngramAnalyzer = createNgramAnalyzer();
+    return new PerFieldAnalyzerWrapper(noriAnalyzer, Map.of("title_ngram", ngramAnalyzer));
+}
+```
+
+기본 분석기는 Nori(IC 제거 적용), `title_ngram` 필드만 2-3gram 분석기를 사용합니다. 콘텐츠 전체를 n-gram으로 인덱싱하면 토큰 폭발(6.5배)이 발생하므로, title만 n-gram으로 제한하여 인덱스 증가를 최소화합니다.
+
+**인덱싱 시 title_ngram 필드 추가:**
+
+```java
+// LuceneIndexService.java
+doc.add(new TextField("title_ngram", post.getTitle(), Field.Store.NO));
+```
+
+기존 title 필드(Nori 분석)와 별도로 title_ngram 필드를 추가합니다. `Field.Store.NO`로 원본 텍스트는 저장하지 않아 디스크 사용을 최소화합니다.
+
+**dis_max 쿼리 구조:**
+
+```java
+// LuceneSearchService.java
+Query textOrNgram = new DisjunctionMaxQuery(
+        List.of(
+                textQuery,
+                new BoostQuery(ngramQuery, 2.0f)
+        ),
+        0.1f
+);
+
+BooleanQuery.Builder builder = new BooleanQuery.Builder()
+        .add(textOrNgram, BooleanClause.Occur.MUST)
+        .add(viewBoost, BooleanClause.Occur.SHOULD)
+        .add(likeBoost, BooleanClause.Occur.SHOULD)
+        .add(recencyBoost, BooleanClause.Occur.SHOULD);
+```
+
+**dis_max의 동작 원리:**
+
+- 형태소 분석(textQuery)과 n-gram(ngramQuery) 중 **높은 점수를 선택**합니다
+- `tie_breaker=0.1`: 양쪽 모두 매칭될 때 낮은 쪽 점수의 10%를 보너스로 추가합니다
+- n-gram boost=2.0: textQuery 내부의 `title^3` boost와 경쟁할 수 있도록 가중치를 부여합니다
+
+**기존 구조 vs dis_max 구조:**
+
+| | 기존 (MUST + SHOULD) | dis_max |
+|---|---|---|
+| 쿼리 | textQuery(**MUST**) + ngram(SHOULD) | dis_max(textQuery, ngram)(**MUST**) |
+| "안녕하세" | textQuery에서 '하세' 매칭 → '하세' 문서 상위 | n-gram에서 '안녕하세' 매칭 → '안녕하세요' 문서 상위 |
+| 핵심 차이 | MUST에서 탈락하면 ngram이 구제 불가 | **둘 중 하나만 매칭되면 통과** |
+
+기존에는 `textQuery`가 MUST였기 때문에 형태소 분석 결과가 검색 결과를 완전히 지배했습니다. dis_max 구조에서는 형태소 분석이 실패해도 n-gram이 매칭되면 문서가 반환됩니다.
+
 ### 비용
 
-- **인덱스 크기**: 변화 없음 (36GB 유지)
-- **재색인**: 불필요 — 기존 인덱스의 NNG 토큰 '안녕'이 그대로 매칭됨
-- **서버 영향**: 없음
+- **인덱스 크기**: 36GB → 39GB (+8%, title_ngram만 추가)
+- **재색인**: **필수** — title_ngram 필드 추가 (12M건, 69분)
+- **서버 영향**: MMap 페이지 캐시 약간 증가, 체감 영향 없음
 
 ---
 
@@ -420,21 +481,15 @@ builder.add(prefixBoost, BooleanClause.Occur.SHOULD);
 | 기존 검색 영향 | **재현율 감소** | 없음 | 없음 | 없음 |
 | 구현 복잡도 | 1줄 | 중간 | 3줄 | 없음 |
 
-### 판단 — D-3(title_raw Prefix)이 적합하지만 현재는 D-4 유지
+### 판단 — B(dis_max) + D-4(Did-you-mean) 조합
 
-D-3이 기술적으로 가장 적합합니다. title_raw 필드가 이미 인덱스에 존재하고(자동완성 fallback용으로 Phase 20에서 추가), PrefixQuery 하나를 SHOULD로 추가하면 "안녕하세" 입력 시 "안녕하세요" 제목 문서가 상위에 노출됩니다.
+D-1~D-3은 각각 구조적 한계가 있지만, 앞서 결정한 **B(title_ngram + dis_max)**가 이 문제를 부분적으로 해결합니다.
 
-**그럼에도 D-4(현상 유지)를 선택한 이유:**
+- dis_max로 n-gram 결과가 상위에 올라오면서 "안녕하세요" 관련 문서가 노출됩니다. 기존에는 textQuery(MUST) 구조에서 형태소 분석 결과('하세')가 랭킹을 지배했지만, dis_max 구조에서는 n-gram이 '안녕하세'를 매칭하여 관련 문서를 상위로 올립니다.
+- Did-you-mean이 "안녕하"를 제안하여 사용자가 올바른 검색어로 재검색할 수 있습니다.
+- 현업에서도 자동완성/Did-you-mean으로 불완전 입력을 보정하는 패턴이 표준입니다(Google, Naver).
 
-1. **이 문제의 발생 빈도가 낮습니다.** "안녕하세"처럼 한국어 활용형을 불완전하게 입력하는 경우는 일반적 검색 패턴이 아닙니다. 대부분의 사용자는 명사("안녕", "삼성전자")나 완성된 문장("안녕하세요")을 검색합니다.
-
-2. **Did-you-mean이 이미 올바른 보정을 제공하고 있습니다.** "안녕하"를 클릭하면 정상 결과가 나옵니다. Google도 형태소 분석 실패 시 Did-you-mean으로 보정하는 방식을 사용합니다.
-
-3. **D-3의 부작용 검증이 필요합니다.** title_raw PrefixQuery를 모든 검색에 SHOULD로 추가하면, 12M 문서의 term dictionary에서 prefix scan이 매번 발생합니다. 일반 명사 검색("자바스크립트", "삼성전자")에서 불필요한 prefix 매칭이 추가되어 검색 레이턴시가 증가할 수 있습니다. 이를 확인하려면 부하 테스트가 필요합니다.
-
-4. **근본적 해결이 아닙니다.** 불완전한 입력("안녕하세")에서 완성형("안녕하세요")을 유추하는 것은 **query understanding(쿼리 이해)** 영역이며, 형태소 분석기나 인덱스 구조만으로는 해결할 수 없습니다. Google의 BERT 기반 쿼리 이해, 네이버의 의도 분류 모델처럼 ML 기반 접근이 필요한 영역입니다.
-
-이 문제는 **형태소 분석기의 구조적 한계**(불완전한 입력 처리 불가)와 **OR 기반 쿼리의 노이즈 문제**가 결합된 케이스이며, IC 수정과는 별개의 이슈입니다. 향후 검색 품질 개선 단계에서 D-3 적용 + 레이턴시 검증을 진행할 예정입니다.
+이 문제는 **형태소 분석기의 구조적 한계**(불완전한 입력 처리 불가)와 **OR 기반 쿼리의 노이즈 문제**가 결합된 케이스이며, IC 수정과는 별개의 이슈입니다. dis_max가 랭킹을 개선하고, Did-you-mean이 UX를 보정하는 이중 구조로 대응합니다.
 
 ---
 
@@ -462,39 +517,67 @@ D-3이 기술적으로 가장 적합합니다. title_raw 필드가 이미 인덱
 | 하이브리드 | 대규모 검색 | 형태소 분석(정밀도) + 서브워드(재현율) 결합 |
 | Query Understanding | Google, 네이버 | ML 기반 쿼리 의도 분류 + 자동 보정 |
 
-이 프로젝트에서는 Nori의 성능(3,000+ docs/sec)과 메모리 효율이 12M 규모에 적합하므로 Nori를 유지하되, stop tags 커스터마이징과 폴백으로 한계를 보완하는 접근을 선택했습니다. 불완전 입력 문제는 현재 Did-you-mean으로 보정하고, 향후 title_raw PrefixQuery 보강을 검토합니다.
+이 프로젝트에서는 Nori의 성능(3,000+ docs/sec)과 메모리 효율이 12M 규모에 적합하므로 Nori를 유지하되, stop tags 커스터마이징(IC 제거) + title_ngram + dis_max + 토큰 전멸 폴백으로 한계를 보완하는 접근을 선택했습니다. 불완전 입력 문제는 dis_max가 n-gram 기반 랭킹을 개선하고, Did-you-mean이 UX 보정을 담당합니다.
 
 ---
 
 ## 9. 검증 — Before / After
 
-### Before — "안녕" 검색 시 0건
+### Before — 수정 전 상태
 
-![Before — 안녕 검색 0건](/uploads/project/WikiEngine/nori-stop-filter-fix/search-annyeong-zero.png)
+**"안녕" 자동완성 — 정상 동작 (Redis 기반):**
 
-Nori가 "안녕"을 IC(감탄사)로 태깅 → `DEFAULT_STOP_TAGS`에서 필터링 → 빈 쿼리 → 결과 0건.
+![안녕 자동완성](/uploads/project/WikiEngine/nori-stop-filter-fix/before-autocomplete-annyeong.png)
 
-같은 "안녕"이 "안녕하세요" 내에서는 NNG(명사)로 인덱싱되어 있으므로, 인덱스에 토큰은 존재하지만 검색어 쪽에서 소멸하는 비대칭 현상입니다.
+**"안녕" 검색 — AI 요약은 나오지만 게시글 0건:**
 
-### After — IC 제거 + 토큰 전멸 폴백 적용
+![안녕 검색 AI 요약만](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeong-ai.png)
 
-**"안녕" 검색 — 정상 반환:**
+> AI 요약은 이전 캐시에서 결과를 가져왔지만, 실제 검색 결과는 "검색 결과가 없습니다." IC 필터링으로 쿼리 자체가 소멸한 상태.
 
-![After — 안녕 검색 정상 반환](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeong.png)
+**"안녕하세" 검색 — 0건 (수정 전):**
 
-IC 제거 후 "안녕"이 더 이상 감탄사로 필터링되지 않아, "안녕에 안녕", "안녕하세요", "엄마 안녕", "#안녕" 등 **인덱스에 존재하던 문서들이 정상 매칭**됩니다.
+![안녕하세 검색 0건](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeonghase-zero.png)
 
-**"안녕" 자동완성 — 정상 동작:**
+**"안녕하세" 검색 — "하세" 문서만 노출 (MUST 구조):**
 
-![After — 안녕 자동완성 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-autocomplete-annyeong.png)
+![안녕하세 하세 결과](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeonghase-hase-results.png)
 
-자동완성에서도 "안녕", "안녕하세", "안녕하" 제안이 정상 표시됩니다.
+> textQuery(MUST) 구조에서 Nori가 ['안녕', '하세']로 토큰화 → "하세" 완전 일치 문서가 title^3 boost로 상위 독점.
 
-**"안녕하세" 검색 — 기존과 동일:**
+**"황치열" 자동완성 — 빈 결과:**
 
-![After — 안녕하세 검색 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeonghase.png)
+![황치열 자동완성 안 됨](/uploads/project/WikiEngine/nori-stop-filter-fix/before-autocomplete-hwang-empty.png)
 
-기존에 정상 동작하던 검색은 영향 없이 그대로 유지됩니다. AI 요약, 카테고리 Facet, Did-you-mean 모두 정상.
+> Lucene fallback에서 title_jamo PrefixQuery 사용 시 12M건의 자모 분해 term이 너무 많아 매칭 실패.
+
+### After — A + B + C 적용 후
+
+**"안녕" 자동완성 — 정상:**
+
+![안녕 자동완성 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-autocomplete-annyeong.png)
+
+**"안녕" 검색 — 정상 반환 + AI 요약:**
+
+![안녕 검색 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeong.png)
+
+> IC 제거로 "안녕"이 감탄사로 필터링되지 않아 정상 매칭. AI 요약도 검색 결과를 기반으로 정상 생성.
+
+**"안녕하세" 검색 — "안녕하세요" 관련 문서 상위 노출:**
+
+![안녕하세 dis_max 결과](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeonghase-dismax.png)
+
+> dis_max + n-gram으로 "안녕하세요 안녕하세요.", "안녕하세요. 안녕하세요." 등 관련 문서가 상위에 노출. Did-you-mean "안녕하" 제안도 정상.
+
+**"황" 자동완성 — "황치열" 정상 동작:**
+
+![황 자동완성 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-autocomplete-hwang.png)
+
+> title_raw PrefixQuery로 변경하여 완성 한글 자동완성 정상 동작.
+
+**"황치열" 검색 — 정상 반환 + AI 요약:**
+
+![황치열 검색 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-hwang.png)
 
 ### 개선 요약
 
@@ -502,14 +585,13 @@ IC 제거 후 "안녕"이 더 이상 감탄사로 필터링되지 않아, "안�
 |------|--------|-------|
 | "안녕" 검색 | **0건** | **정상 반환** (안녕에 안녕, 안녕하세요 등) |
 | "안녕" 자동완성 | **없음** | **정상** (안녕, 안녕하세, 안녕하) |
-| "안녕하세" 검색 | 정상 | 정상 (변화 없음) |
-| 인덱스 크기 | 36GB | 36GB (변화 없음) |
-| 재색인 | - | **불필요** |
-| 랭킹 품질 | - | BM25 유지 (IC 제거로 정상 토큰화) |
+| "안녕하세" 검색 | **"하세" 문서만** | **"안녕하세요" 관련 문서 상위** + Did-you-mean |
+| "황" 자동완성 | **빈 결과** | **"황치열" 정상 제안** |
+| 인덱스 크기 | 36GB | 39GB (+8%) |
+| 재색인 | - | 필수 (12M건, 69분) |
+| 랭킹 | BM25 only | dis_max(BM25, N-gram) + 인기도 + 최신성 |
 
-수정 사항은 LuceneConfig.java 1줄(IC 제거) + LuceneSearchService.java 4줄(토큰 전멸 폴백)입니다.
-
-재색인 없이 배포만으로 즉시 효과가 발생합니다. 기존 인덱스에 "안녕하세요" → NNG "안녕" 토큰이 이미 저장되어 있고, 수정 후에는 검색 시 "안녕"이 IC로 필터링되지 않아 해당 토큰과 정상 매칭됩니다.
+수정 사항: LuceneConfig.java (IC 제거 + PerFieldAnalyzerWrapper), LuceneIndexService.java (title_ngram 필드), LuceneSearchService.java (dis_max 쿼리 + 자동완성 title_raw fallback).
 
 ---
 
@@ -525,3 +607,5 @@ IC 제거 후 "안녕"이 더 이상 감탄사로 필터링되지 않아, "안�
 - [딜리셔스 기술블로그 — Elasticsearch 도입기](https://dealicious-inc.github.io/2021/11/22/dealibird-elastic-search.html)
 - [Sease — When and How to Use N-grams in Elasticsearch](https://sease.io/2023/12/when-and-how-to-use-n-grams-in-elasticsearch.html)
 - [카카오 기술블로그 — Khaiii 형태소 분석기](https://tech.kakao.com/posts/358)
+- [Elastic Blog — How to implement Japanese full-text search](https://www.elastic.co/blog/how-to-implement-japanese-full-text-search-in-elasticsearch)
+- [Elastic Blog — How to Search CJK Text Part 2: Multi-fields](https://www.elastic.co/blog/how-to-search-ch-jp-kr-part-2)
