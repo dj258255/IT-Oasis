@@ -99,7 +99,7 @@ public class ContentFilterService {
 
     /**
      * Aho-Corasick automaton 2개를 Caffeine 캐시(TTL 10분)로 보관.
-     * - koreanTrie: 부분 일치 — "매춘" → "매춘부" 차단 (합성어 커버)
+     * - koreanTrie: 부분 일치 — "금칙" → "금칙어" 차단 (합성어 커버)
      * - englishTrie: 단어 경계 매칭 — "ass" → "assassination" 허용 (Scunthorpe 방지)
      *
      * 라이브러리: org.ahocorasick:ahocorasick:0.6.3 (robert-bor)
@@ -127,7 +127,7 @@ public class ContentFilterService {
 }
 ```
 
-**영어 Trie의 단어 경계 매칭 — Scunthorpe 문제**: "ass"를 금칙어로 등록하면 "assassination", "class", "Scunthorpe" 같은 정상 단어까지 차단됩니다. 영어 금칙어는 단어 경계(`\b`)로 매칭하여 이 문제를 방지합니다. 한국어는 교착어 특성상 부분 일치가 더 적합하다 ("매춘" → "매춘부", "매춘업소" 등을 모두 잡아야 함).
+**영어 Trie의 단어 경계 매칭 — Scunthorpe 문제**: "ass"를 금칙어로 등록하면 "assassination", "class", "Scunthorpe" 같은 정상 단어까지 차단됩니다. 영어 금칙어는 단어 경계(`\b`)로 매칭하여 이 문제를 방지합니다. 한국어는 교착어 특성상 부분 일치가 더 적합하다 ("금칙" → "금칙어", "금칙어목록" 등을 모두 잡아야 함).
 
 #### 금칙어 사전
 
@@ -182,11 +182,11 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 
 ### 4-4. 자동완성 Lucene fallback 품질 개선
 
-**문제**: Lucene fallback에서 `PrefixQuery`가 Nori-analyzed `title` 필드를 사용. "성매" → Nori → "성"으로 분해 → "성악가", "남한산성" 등 무관한 결과 반환.
+**문제**: Lucene fallback에서 `PrefixQuery`가 Nori-analyzed `title` 필드를 사용. 형태소 분석된 토큰으로 prefix 매칭하면 의도와 무관한 결과가 반환된다.
 
 **원인**: 자동완성은 형태소 분석 없이 원본 prefix로 매칭해야 하는데, 검색용 Nori-analyzed 필드를 공유하고 있었음.
 
-**해결**: `title_raw` StringField (untokenized, lowercased) 추가 + PrefixQuery 대상 변경. 한국어 "성매" → "성매매", 영어 "prog" → "programming".
+**해결**: `title_raw` StringField (untokenized, lowercased) 추가 + PrefixQuery 대상 변경. 한국어 "금칙" → "금칙어", 영어 "prog" → "programming".
 
 > **아키텍처 정리:**
 > - **Redis** (메인): 검색 로그 기반 인기 검색어 제안 — CQRS 읽기 경로, O(1)
