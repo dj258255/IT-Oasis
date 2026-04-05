@@ -535,12 +535,6 @@ D-1~D-3은 각각 구조적 한계가 있지만, 앞서 결정한 **B(title_ngra
 
 ![안녕 자동완성](/uploads/project/WikiEngine/nori-stop-filter-fix/before-autocomplete-annyeong.png)
 
-**"안녕" 검색 — AI 요약은 나오지만 게시글 0건:**
-
-![안녕 검색 AI 요약만](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeong-ai.png)
-
-> AI 요약은 이전 캐시에서 결과를 가져왔지만, 실제 검색 결과는 "검색 결과가 없습니다." IC 필터링으로 쿼리 자체가 소멸한 상태.
-
 **"안녕하세" 검색 — 0건 (수정 전):**
 
 ![안녕하세 검색 0건](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeonghase-zero.png)
