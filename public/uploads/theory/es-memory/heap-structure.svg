@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-label="JVM Heap structure with Young Generation (Eden, S0, S1) and Old Generation">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .outer { fill: none; stroke: #1f2937; stroke-width: 2; }
+      .young { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.5; }
+      .old { fill: #fff7ed; stroke: #d97706; stroke-width: 1.5; }
+      .slot { fill: #ffffff; stroke: #2563eb; stroke-width: 1; }
+      .title { font: 600 16px "system-ui", sans-serif; fill: #111827; }
+      .sub { font: 600 14px "system-ui", sans-serif; fill: #111827; }
+      .cell { font: 500 13px "system-ui", sans-serif; fill: #374151; }
+      .note { font: 400 11px "system-ui", sans-serif; fill: #6b7280; }
+    </style>
+  </defs>
+  <rect width="720" height="220" class="bg"/>
+  <rect x="10" y="10" width="700" height="200" rx="8" class="outer"/>
+  <text x="360" y="36" text-anchor="middle" class="title">Heap</text>
+
+  <!-- Young Generation -->
+  <rect x="30" y="60" width="420" height="130" rx="6" class="young"/>
+  <text x="240" y="88" text-anchor="middle" class="sub">Young Generation</text>
+  <rect x="50" y="110" width="200" height="60" rx="4" class="slot"/>
+  <text x="150" y="146" text-anchor="middle" class="cell">Eden</text>
+  <rect x="260" y="110" width="85" height="60" rx="4" class="slot"/>
+  <text x="302.5" y="146" text-anchor="middle" class="cell">S0</text>
+  <rect x="355" y="110" width="85" height="60" rx="4" class="slot"/>
+  <text x="397.5" y="146" text-anchor="middle" class="cell">S1</text>
+
+  <!-- Old Generation -->
+  <rect x="470" y="60" width="230" height="130" rx="6" class="old"/>
+  <text x="585" y="88" text-anchor="middle" class="sub">Old Generation</text>
+  <text x="585" y="146" text-anchor="middle" class="note">tenured objects</text>
+</svg>
