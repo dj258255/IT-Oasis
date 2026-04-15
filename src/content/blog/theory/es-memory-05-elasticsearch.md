@@ -15,16 +15,9 @@ tags:
 category: theory/JVM-Memory
 draft: false
 coverImage: "/uploads/theory/es-memory/cover-5.svg"
+series: "JVM 메모리"
+seriesOrder: 5
 ---
-
-> **JVM 메모리 시리즈**
->
-> - [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc)
-> - [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
-> - [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
-> - [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
-> - **Elasticsearch 메모리 모델** (현재 글)
 
 > 본 문서는 **Elastic 공식 reference** 와 **Elastic 엔지니어가 작성한 기술 블로그** 를 1차 소스로 해요. 문서 버전은 Elasticsearch 8.x 기준이에요. 0~4편에서 쌓은 JVM/OS 이론을 **Elasticsearch 운영 맥락 하나로 묶는 캡스톤** 편이에요.
 

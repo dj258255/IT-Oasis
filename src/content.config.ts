@@ -13,6 +13,8 @@ const blog = defineCollection({
     category: z.string().default('일반'),
     coverImage: z.string().optional(),
     draft: z.boolean().default(false),
+    series: z.string().optional(),
+    seriesOrder: z.number().optional(),
   }),
 });
 

@@ -1,0 +1,145 @@
+---
+import { getPublishedPosts } from '../lib/posts';
+import { base } from '../lib/config';
+
+interface Props {
+  currentPostId: string;
+  series: string;
+}
+
+const { currentPostId, series } = Astro.props;
+const allPosts = await getPublishedPosts();
+const seriesPosts = allPosts
+  .filter((p) => p.data.series === series)
+  .sort((a, b) => {
+    const orderA = a.data.seriesOrder ?? 999;
+    const orderB = b.data.seriesOrder ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.data.date.valueOf() - b.data.date.valueOf();
+  });
+---
+
+{seriesPosts.length > 0 && (
+  <aside class="series-nav">
+    <p class="series-nav-title">
+      <strong data-ko={`${series} 시리즈`} data-en={`${series} Series`}>{series} 시리즈</strong>
+    </p>
+    <ul class="series-nav-list">
+      {seriesPosts.map((p) => {
+        const isCurrent = p.id === currentPostId;
+        const titleKo = p.data.title;
+        const titleEn = p.data.titleEn || titleKo;
+        return (
+          <li>
+            {isCurrent ? (
+              <>
+                <strong data-ko={titleKo} data-en={titleEn}>{titleKo}</strong>
+                <span class="current-marker" data-ko=" (현재 글)" data-en=" (current)"> (현재 글)</span>
+              </>
+            ) : (
+              <a href={`${base}/blog/${p.id}`} data-ko={titleKo} data-en={titleEn}>{titleKo}</a>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  </aside>
+)}
+
+<style>
+  .series-nav {
+    margin: 1.5rem 0 2rem;
+    padding: 1rem 1.25rem 1.1rem;
+    border-radius: 0.875rem;
+    background: rgba(106, 173, 202, 0.05);
+    border: 1px solid rgba(106, 173, 202, 0.1);
+    border-left: 3px solid #6aadca;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+  }
+
+  @media (min-width: 640px) {
+    .series-nav {
+      padding: 1.125rem 1.5rem 1.25rem;
+      border-radius: 1rem;
+    }
+  }
+
+  :global(.dark) .series-nav {
+    background: rgba(106, 173, 202, 0.05);
+    border-color: rgba(106, 173, 202, 0.08);
+    border-left-color: #6aadca;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .series-nav-title {
+    font-size: 14px;
+    color: #374151;
+    margin: 0 0 0.6rem;
+  }
+
+  @media (min-width: 640px) {
+    .series-nav-title {
+      font-size: 15px;
+    }
+  }
+
+  :global(.dark) .series-nav-title {
+    color: #e5e7eb;
+  }
+
+  .series-nav-list {
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 0;
+    padding-left: 1.1rem;
+    list-style: disc;
+  }
+
+  @media (min-width: 640px) {
+    .series-nav-list {
+      font-size: 14px;
+    }
+  }
+
+  .series-nav-list li {
+    color: #4b5563;
+    padding: 0.1rem 0;
+  }
+
+  :global(.dark) .series-nav-list li {
+    color: #9ca3af;
+  }
+
+  .series-nav-list a {
+    color: #0ea5e9;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .series-nav-list a:hover {
+    text-decoration: underline;
+  }
+
+  :global(.dark) .series-nav-list a {
+    color: #7dd3fc;
+  }
+
+  .series-nav-list strong {
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  :global(.dark) .series-nav-list strong {
+    color: #f1f5f9;
+  }
+
+  .current-marker {
+    color: #6b7280;
+    font-weight: 400;
+    font-size: 0.92em;
+  }
+
+  :global(.dark) .current-marker {
+    color: #9ca3af;
+  }
+</style>

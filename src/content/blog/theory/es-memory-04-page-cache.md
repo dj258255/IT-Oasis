@@ -14,16 +14,9 @@ tags:
 category: theory/JVM-Memory
 draft: false
 coverImage: "/uploads/theory/es-memory/cover-4.svg"
+series: "JVM 메모리"
+seriesOrder: 4
 ---
-
-> **JVM 메모리 시리즈**
->
-> - [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc)
-> - [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
-> - [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
-> - [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - **OS Page Cache가 ES 성능을 결정하는 이유** (현재 글)
-> - [Elasticsearch 메모리 모델](/blog/theory/es-memory-05-elasticsearch)
 
 > 본 문서는 **docs.kernel.org Linux Kernel 공식 문서** 와 **man7.org의 Linux manual page** 를 1차 소스로 해요. 1~3편이 JVM 프로세스 안에서 본 메모리라면, 이 글은 한 단계 아래인 **OS 커널 관점**에서 메모리를 봐요.
 
