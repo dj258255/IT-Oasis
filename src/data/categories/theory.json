@@ -4,5 +4,7 @@
   "nameKo": "이론",
   "icon": "book",
   "order": 4,
-  "subcategories": []
+  "subcategories": [
+    { "name": "JVM-Memory", "nameEn": "JVM Memory", "nameKo": "JVM 메모리", "order": 1 }
+  ]
 }

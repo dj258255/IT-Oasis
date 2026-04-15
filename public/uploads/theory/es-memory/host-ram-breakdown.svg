@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" role="img" aria-label="Elasticsearch node host RAM breakdown: JVM heap, off-heap, and OS page cache">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .outer { fill: none; stroke: #1f2937; stroke-width: 2; }
+      .heap { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.5; }
+      .offheap { fill: #faf5ff; stroke: #7c3aed; stroke-width: 1.5; }
+      .pagecache { fill: #f0fdf4; stroke: #16a34a; stroke-width: 1.5; }
+      .title { font: 600 16px "system-ui", sans-serif; fill: #111827; }
+      .sub { font: 600 14px "system-ui", sans-serif; fill: #111827; }
+      .item { font: 500 13px "system-ui", sans-serif; fill: #1f2937; }
+      .hint { font: 400 12px "system-ui", sans-serif; fill: #6b7280; }
+      .arrow { font: 600 12px "system-ui", sans-serif; fill: #dc2626; }
+    </style>
+  </defs>
+  <rect width="720" height="460" class="bg"/>
+  <rect x="10" y="10" width="700" height="440" rx="8" class="outer"/>
+  <text x="360" y="38" text-anchor="middle" class="title">Host RAM (예: 64GB)</text>
+
+  <!-- JVM Heap -->
+  <rect x="30" y="60" width="660" height="160" rx="6" class="heap"/>
+  <text x="50" y="86" class="sub">JVM Heap = Xmx (30GB)</text>
+  <text x="70" y="116" class="item">Young / Old Generation</text>
+  <text x="90" y="140" class="hint">• Indexing buffer</text>
+  <text x="90" y="160" class="hint">• Query caches</text>
+  <text x="90" y="180" class="hint">• Aggregation working set</text>
+  <text x="70" y="208" class="arrow">→ circuit breaker 대상</text>
+
+  <!-- Off-heap -->
+  <rect x="30" y="240" width="660" height="110" rx="6" class="offheap"/>
+  <text x="50" y="266" class="sub">Off-heap (수 GB)</text>
+  <text x="70" y="294" class="item">• Netty DirectBuffer</text>
+  <text x="70" y="316" class="item">• Metaspace / Thread stacks</text>
+  <text x="70" y="338" class="item">• GC metadata</text>
+
+  <!-- OS Page Cache -->
+  <rect x="30" y="370" width="660" height="70" rx="6" class="pagecache"/>
+  <text x="50" y="396" class="sub">OS Page Cache (~30GB+)</text>
+  <text x="70" y="420" class="item">Lucene 인덱스 파일 (mmap)</text>
+  <text x="470" y="420" class="arrow">→ 넓을수록 검색 빨라짐</text>
+</svg>

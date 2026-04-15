@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-label="JVM process memory layout: heap and non-heap regions">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .outer { fill: none; stroke: #1f2937; stroke-width: 2; }
+      .heap { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.5; }
+      .nonheap { fill: #f9fafb; stroke: #6b7280; stroke-width: 1.5; }
+      .row { fill: #ffffff; stroke: #9ca3af; stroke-width: 1; }
+      .title { font: 600 16px "system-ui", sans-serif; fill: #111827; }
+      .sub { font: 600 14px "system-ui", sans-serif; fill: #111827; }
+      .label { font: 500 13px "system-ui", sans-serif; fill: #1f2937; }
+      .desc { font: 400 12px "system-ui", sans-serif; fill: #6b7280; }
+    </style>
+  </defs>
+  <rect width="720" height="480" class="bg"/>
+  <rect x="10" y="10" width="700" height="460" rx="8" class="outer"/>
+  <text x="360" y="38" text-anchor="middle" class="title">JVM Process</text>
+
+  <!-- Heap -->
+  <rect x="30" y="60" width="660" height="100" rx="6" class="heap"/>
+  <text x="50" y="86" class="sub">Heap (-Xmx)</text>
+  <rect x="50" y="100" width="620" height="44" rx="4" class="row"/>
+  <text x="70" y="128" class="label">Young Generation / Old Generation</text>
+
+  <!-- Non-heap -->
+  <rect x="30" y="180" width="660" height="280" rx="6" class="nonheap"/>
+  <text x="50" y="206" class="sub">Non-heap</text>
+
+  <!-- rows -->
+  <g font-family="system-ui, sans-serif">
+    <rect x="50" y="220" width="620" height="36" rx="4" class="row"/>
+    <text x="70" y="244" class="label">Metaspace</text>
+    <text x="240" y="244" class="desc">— 클래스 메타데이터 (메서드/상수풀 등)</text>
+
+    <rect x="50" y="262" width="620" height="36" rx="4" class="row"/>
+    <text x="70" y="286" class="label">Code Cache (JIT)</text>
+    <text x="240" y="286" class="desc">— 컴파일된 네이티브 코드</text>
+
+    <rect x="50" y="304" width="620" height="36" rx="4" class="row"/>
+    <text x="70" y="328" class="label">Thread Stacks</text>
+    <text x="240" y="328" class="desc">— 스레드당 -Xss</text>
+
+    <rect x="50" y="346" width="620" height="36" rx="4" class="row"/>
+    <text x="70" y="370" class="label">Direct Buffers</text>
+    <text x="240" y="370" class="desc">— NIO, Netty 등</text>
+
+    <rect x="50" y="388" width="620" height="36" rx="4" class="row"/>
+    <text x="70" y="412" class="label">mmap regions</text>
+    <text x="240" y="412" class="desc">— Lucene 인덱스 mmap</text>
+
+    <rect x="50" y="430" width="620" height="24" rx="4" class="row"/>
+    <text x="70" y="448" class="label">GC Metadata</text>
+    <text x="240" y="448" class="desc">— G1 Remembered Set 등</text>
+  </g>
+</svg>
