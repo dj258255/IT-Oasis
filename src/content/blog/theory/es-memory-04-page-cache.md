@@ -125,7 +125,7 @@ ES가 "Xmx 50% 이하" 를 강하게 권하는 이유 중 하나가 이 OOM Kill
 3. ES가 `index.store.preload` 같은 기능을 제공하는 이유가 **기동 직후 Page Cache를 미리 채워놓기 위함**이에요.
 4. Heap을 RAM의 50%로 제한하는 이유는 **나머지 50%가 Page Cache를 위한 예산**이기 때문이에요. Heap을 과도하게 잡으면 Page Cache가 좁아지고, 그만큼 Lucene이 **디스크 I/O로 떨어져요** → latency 폭증.
 
-## 8. 면접에서 자주 혼동되는 포인트
+## 8. 자주 혼동되는 포인트
 
 - "free 명령의 used가 크면 위험" → 틀렸어요. **`available` 열을 봐야 해요.** 최근(`procps-ng` 기반) `free`는 `used`, `buff/cache`, `available` 을 분리해서 보여주며, `available` 은 "필요하면 reclaim 가능한 양을 이미 고려한 실제 여유 메모리" 를 뜻해요. used가 커도 available이 충분하면 정상이에요.
 - "Page Cache는 JVM 메모리" → 아니에요. **OS 커널이 관리**해요. JVM은 그냥 페이지 폴트로 간접 접근할 뿐이에요.
