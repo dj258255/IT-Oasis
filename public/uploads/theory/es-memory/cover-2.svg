@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="num" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <text x="80" y="100" font-size="18" font-weight="700" fill="#0ea5e9" letter-spacing="4">JVM MEMORY SERIES</text>
+  <line x1="80" y1="115" x2="320" y2="115" stroke="#0ea5e9" stroke-width="2"/>
+
+  <text x="80" y="310" font-size="220" font-weight="800" fill="url(#num)">02</text>
+
+  <text x="80" y="420" font-size="56" font-weight="700" fill="#0f172a">Garbage Collection</text>
+  <text x="80" y="470" font-size="24" font-weight="400" fill="#475569">Stop-the-World · G1 · ZGC · Shenandoah</text>
+
+  <g transform="translate(720, 230)">
+    <text x="200" y="-15" font-size="18" font-weight="600" fill="#475569" text-anchor="middle">Application Timeline</text>
+
+    <rect x="0" y="0" width="60" height="50" fill="#86efac" rx="4"/>
+    <rect x="60" y="0" width="80" height="50" fill="#fca5a5" rx="4"/>
+    <rect x="140" y="0" width="90" height="50" fill="#86efac" rx="4"/>
+    <rect x="230" y="0" width="50" height="50" fill="#fca5a5" rx="4"/>
+    <rect x="280" y="0" width="120" height="50" fill="#86efac" rx="4"/>
+
+    <text x="100" y="32" font-size="16" font-weight="700" fill="#7f1d1d" text-anchor="middle">STW</text>
+    <text x="255" y="32" font-size="16" font-weight="700" fill="#7f1d1d" text-anchor="middle">STW</text>
+
+    <g transform="translate(0, 100)">
+      <rect x="0" y="0" width="20" height="20" fill="#86efac" rx="3"/>
+      <text x="30" y="16" font-size="16" fill="#475569">running</text>
+
+      <rect x="140" y="0" width="20" height="20" fill="#fca5a5" rx="3"/>
+      <text x="170" y="16" font-size="16" fill="#475569">paused (STW)</text>
+    </g>
+  </g>
+</svg>

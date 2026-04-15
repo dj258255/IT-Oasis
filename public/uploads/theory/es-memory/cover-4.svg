@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="num" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <marker id="ah4" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <text x="80" y="100" font-size="18" font-weight="700" fill="#0ea5e9" letter-spacing="4">JVM MEMORY SERIES</text>
+  <line x1="80" y1="115" x2="320" y2="115" stroke="#0ea5e9" stroke-width="2"/>
+
+  <text x="80" y="310" font-size="220" font-weight="800" fill="url(#num)">04</text>
+
+  <text x="80" y="420" font-size="56" font-weight="700" fill="#0f172a">OS Page Cache</text>
+  <text x="80" y="470" font-size="24" font-weight="400" fill="#475569">Linux Kernel · mmap · reclaim</text>
+
+  <g transform="translate(720, 160)">
+    <rect x="0" y="0" width="400" height="80" fill="#bae6fd" stroke="#0ea5e9" stroke-width="2" rx="10"/>
+    <text x="200" y="50" font-size="22" font-weight="700" fill="#0c4a6e" text-anchor="middle">Application</text>
+
+    <rect x="0" y="130" width="400" height="100" fill="#fce7f3" stroke="#a855f7" stroke-width="2" rx="10"/>
+    <text x="200" y="168" font-size="22" font-weight="700" fill="#581c87" text-anchor="middle">Page Cache</text>
+    <text x="200" y="200" font-size="14" fill="#7e22ce" text-anchor="middle">(RAM, kernel-managed)</text>
+
+    <rect x="0" y="280" width="400" height="80" fill="#e5e7eb" stroke="#6b7280" stroke-width="2" rx="10"/>
+    <text x="200" y="330" font-size="22" font-weight="700" fill="#1f2937" text-anchor="middle">Disk</text>
+
+    <line x1="200" y1="80" x2="200" y2="125" stroke="#64748b" stroke-width="2.5" marker-end="url(#ah4)"/>
+    <line x1="200" y1="230" x2="200" y2="275" stroke="#64748b" stroke-width="2.5" marker-end="url(#ah4)"/>
+
+    <text x="230" y="108" font-size="14" fill="#475569">read/mmap</text>
+    <text x="230" y="262" font-size="14" fill="#475569">load on miss</text>
+  </g>
+</svg>

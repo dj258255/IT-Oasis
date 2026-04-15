@@ -1,8 +1,8 @@
 ---
-title: 'Elasticsearch 메모리 이론 ③: Off-heap Memory'
-titleEn: 'Elasticsearch Memory Theory ③: Off-heap Memory'
-description: Elasticsearch가 Heap 바깥에서 쓰는 메모리 — DirectByteBuffer, MaxDirectMemorySize, mmap, Foreign Memory API — 를 Oracle 공식 문서와 OpenJDK 버그 트래커 기준으로 정리했어요. 왜 Xmx만으로는 메모리 사용량을 통제할 수 없는지.
-descriptionEn: Analyzes memory that Elasticsearch uses outside the JVM heap — DirectByteBuffer, MaxDirectMemorySize, mmap, Foreign Memory API — citing Oracle official docs and the OpenJDK bug tracker. Why Xmx alone can't control memory footprint.
+title: 'JVM 메모리 ③: Off-heap과 Direct Memory'
+titleEn: 'JVM Memory ③: Off-heap and Direct Memory'
+description: JVM이 Heap 바깥에서 쓰는 메모리 — DirectByteBuffer, MaxDirectMemorySize, mmap, Foreign Memory API — 를 Oracle 공식 문서와 OpenJDK 버그 트래커 기준으로 정리했어요. 왜 Xmx만으로는 프로세스 메모리를 통제할 수 없는지.
+descriptionEn: Memory the JVM uses outside the heap — DirectByteBuffer, MaxDirectMemorySize, mmap, Foreign Memory API — citing Oracle docs and the OpenJDK bug tracker. Why Xmx alone can't control process memory footprint.
 date: 2026-04-12T00:00:00.000Z
 tags:
   - JVM
@@ -13,6 +13,7 @@ tags:
   - NIO
 category: theory/JVM-Memory
 draft: false
+coverImage: "/uploads/theory/es-memory/cover-3.svg"
 ---
 
 > **JVM 메모리 시리즈** — **3편 (Off-heap, 지금 여기)**

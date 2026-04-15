@@ -1,8 +1,8 @@
 ---
-title: 'Elasticsearch 메모리 이론 ①: JVM Heap 구조'
-titleEn: 'Elasticsearch Memory Theory ①: JVM Heap Internals'
-description: Elasticsearch를 떠받치는 JVM Heap 구조 정리. Young/Old Generation, Eden/Survivor, NewRatio 같은 용어가 실제로 무엇을 가리키는지 Oracle JDK 17 공식 문서만 근거로 뜯어봤어요.
-descriptionEn: First in the Elasticsearch memory theory series. Explains what Young/Old Generation, Eden/Survivor, and NewRatio actually refer to, based only on official Oracle JDK 17 documentation.
+title: 'JVM 메모리 ①: Heap 세대 구조'
+titleEn: 'JVM Memory ①: Heap Internals'
+description: JVM Heap이 Young/Old Generation, Eden/Survivor로 나뉘는 이유와 NewRatio·SurvivorRatio 같은 튜닝 파라미터를 Oracle JDK 17 공식 문서 기준으로 뜯어봤어요. G1에서 이 파라미터들을 왜 건드리면 안 되는지까지.
+descriptionEn: Why the JVM heap is split into Young/Old Generations with Eden/Survivor spaces, and what NewRatio/SurvivorRatio actually control — grounded in Oracle JDK 17 docs. Including why these should not be touched under G1.
 date: 2026-04-10T00:00:00.000Z
 tags:
   - JVM
@@ -13,6 +13,7 @@ tags:
   - Memory Management
 category: theory/JVM-Memory
 draft: false
+coverImage: "/uploads/theory/es-memory/cover-1.svg"
 ---
 
 > **JVM 메모리 시리즈** — **1편 (Heap 세대 구조, 지금 여기)**

@@ -13,7 +13,7 @@ tags:
   - Memory Management
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/jvm-and-gc/jvm-architecture.png"
+coverImage: "/uploads/theory/es-memory/cover-0.svg"
 ---
 
 > **JVM 메모리 시리즈** — **0편 (지금 여기)**
