@@ -14,6 +14,7 @@ tags:
 category: project/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/search-system-crash/server-status.png"
+series: "WikiEngine"
 ---
 
 나무위키(57만 건) + 한국어 위키백과(74만 건) + 영어 위키백과(714만 건) + 뉴스(16만 건) + 웹 콘텐츠(354만 건), 총 약 1,215만 건의 데이터를 MySQL에 적재하고 검색 기능을 구현하는 프로젝트입니다.

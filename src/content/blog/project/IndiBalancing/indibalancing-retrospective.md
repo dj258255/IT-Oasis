@@ -13,6 +13,7 @@ tags:
 category: project/IndiBalancing
 coverImage: /uploads/project/IndiBalancing/retrospective/title.png
 draft: false
+series: "IndiBalancing"
 ---
 
 ## 프로젝트 소개

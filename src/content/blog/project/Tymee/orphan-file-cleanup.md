@@ -14,6 +14,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/orphan-file-cleanup/immediate-delete-complexity.png"
+series: "Tymee"
 ---
 
 > 파일 업로드 시스템에서 더 이상 참조되지 않는 고아 파일을 자동으로 정리하는 범용 시스템입니다.

@@ -13,6 +13,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/presigned-url-eventbridge-upload/double-handling-network-cost.png"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

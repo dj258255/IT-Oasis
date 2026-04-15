@@ -93,6 +93,23 @@ const seriesPosts = allPosts
     margin: 0;
     padding-left: 1.1rem;
     list-style: disc;
+    max-height: 18rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  }
+
+  .series-nav-list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .series-nav-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .series-nav-list::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.3);
+    border-radius: 4px;
   }
 
   @media (min-width: 640px) {
@@ -143,3 +160,21 @@ const seriesPosts = allPosts
     color: #9ca3af;
   }
 </style>
+
+<script>
+  function scrollCurrentIntoView() {
+    document.querySelectorAll<HTMLElement>('.series-nav-list').forEach((list) => {
+      if (list.scrollHeight <= list.clientHeight) return;
+      const current = list.querySelector<HTMLElement>('li strong');
+      if (current) {
+        const li = current.closest('li');
+        if (li) {
+          const offset = li.offsetTop - list.clientHeight / 2 + li.offsetHeight / 2;
+          list.scrollTop = Math.max(0, offset);
+        }
+      }
+    });
+  }
+  scrollCurrentIntoView();
+  document.addEventListener('astro:page-load', scrollCurrentIntoView);
+</script>

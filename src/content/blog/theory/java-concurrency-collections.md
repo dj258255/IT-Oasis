@@ -13,6 +13,8 @@ tags:
 category: theory/Concurrency
 draft: false
 coverImage: "/uploads/theory/java-concurrency-collections/segment-lock-diagram.svg"
+series: "동시성과 락"
+seriesOrder: 2
 ---
 
 

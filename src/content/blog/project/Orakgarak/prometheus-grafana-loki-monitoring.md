@@ -14,6 +14,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

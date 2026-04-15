@@ -14,6 +14,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

@@ -14,6 +14,7 @@ tags:
 category: project/Joying
 draft: false
 coverImage: "/uploads/project/Joying/chatroom-list-slow-query/problem.svg"
+series: "Joying"
 ---
 
 MongoDB + Redis Pub/Sub 아키텍처를 설계했어요. 이제 채팅방 목록 조회 API를 만들 차례였습니다.

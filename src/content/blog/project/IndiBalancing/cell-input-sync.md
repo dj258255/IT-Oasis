@@ -15,6 +15,7 @@ tags:
 category: project/IndiBalancing
 coverImage: "/uploads/project/IndiBalancing/cell-input-sync/cover.svg"
 draft: false
+series: "IndiBalancing"
 ---
 
 ## 최종 결론

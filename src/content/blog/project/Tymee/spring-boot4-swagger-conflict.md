@@ -13,6 +13,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/spring-boot4-swagger-conflict/security-config-swagger.png"
+series: "Tymee"
 ---
 
 ## 문제 상황

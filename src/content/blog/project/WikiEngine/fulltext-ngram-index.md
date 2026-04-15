@@ -14,6 +14,7 @@ tags:
 category: project/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/fulltext-ngram-index/search-expected.png"
+series: "WikiEngine"
 ---
 
 ## 이전 글 요약

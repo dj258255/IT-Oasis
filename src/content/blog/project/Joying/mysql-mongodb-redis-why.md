@@ -13,6 +13,7 @@ tags:
 category: project/Joying
 draft: false
 coverImage: "/uploads/project/Joying/mysql-mongodb-redis-why/mysql-relational-data.svg"
+series: "Joying"
 ---
 
 Redis Pub/Sub + MongoDB로 메시지 브로커를 결정했어요. 그런데 프로젝트 전체를 보면 MySQL, MongoDB, Redis 세 가지 데이터베이스를 쓰고 있습니다.

@@ -13,6 +13,7 @@ tags:
 category: project/Joying
 draft: false
 coverImage: "/uploads/project/Joying/message-auth-db-check/why-permission-check.svg"
+series: "Joying"
 ---
 
 채팅방 목록 조회를 최적화하고 나니, 이번엔 메시지 전송이 느렸어요.

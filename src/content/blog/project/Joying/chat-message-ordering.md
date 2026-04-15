@@ -13,6 +13,7 @@ tags:
 category: project/Joying
 draft: false
 coverImage: "/uploads/project/Joying/chat-message-ordering/server-scaling.svg"
+series: "Joying"
 ---
 
 물품 대여 플랫폼의 1:1 채팅을 맡았어요. 채팅은 메시지를 보낸 순서 그대로 상대방에게 보여야 합니다. 카카오톡에서 "안녕" 다음에 "뭐해?"를 보냈는데, 상대방 화면에 "뭐해?"가 먼저 뜨면 대화가 안 되거든요.

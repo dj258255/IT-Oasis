@@ -14,6 +14,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/mobile-jwt-auth/xss-attack-diagram.png"
+series: "Tymee"
 ---
 
 ## 들어가며

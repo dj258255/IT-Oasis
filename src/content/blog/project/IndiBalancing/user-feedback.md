@@ -15,6 +15,7 @@ tags:
 category: project/IndiBalancing
 coverImage: "/uploads/project/IndiBalancing/user-feedback/cover.svg"
 draft: false
+series: "IndiBalancing"
 ---
 
 ## 프로젝트 개요

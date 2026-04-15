@@ -25,6 +25,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/wiki-engine-retrospective/wikiengine-architecture.svg
 draft: false
+series: "WikiEngine"
 ---
 
 ## 프로젝트 개요

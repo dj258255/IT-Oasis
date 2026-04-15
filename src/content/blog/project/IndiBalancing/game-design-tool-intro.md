@@ -16,6 +16,7 @@ tags:
 category: project/IndiBalancing
 draft: false
 coverImage: "/uploads/project/IndiBalancing/game-design-tool-intro/image.png"
+series: "IndiBalancing"
 ---
 
 ![](/uploads/project/IndiBalancing/game-design-tool-intro/image.png)

@@ -14,6 +14,7 @@ tags:
 category: project/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/unit-test-db-migration/h2.png"
+series: "EduMeet"
 ---
 
 ## 배경

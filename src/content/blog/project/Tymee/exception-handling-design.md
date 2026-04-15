@@ -14,6 +14,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/exception-handling-design/filter-exception-scope.png"
+series: "Tymee"
 ---
 
 > 왜 이 방식을 선택했는가

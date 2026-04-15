@@ -13,6 +13,7 @@ tags:
 category: project/CodingTestKit
 coverImage: /uploads/project/CodingTestKit/review-thanks.png
 draft: false
+series: "CodingTestKit"
 ---
 
 CodingTestKit을 만들면서 가장 많이 했던 생각은 "내가 필요해서 만드는 도구"라는 말이었다.

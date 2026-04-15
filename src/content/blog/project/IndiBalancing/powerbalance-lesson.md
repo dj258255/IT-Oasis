@@ -13,6 +13,7 @@ tags:
 category: project/IndiBalancing
 coverImage: /uploads/project/IndiBalancing/powerbalance-feedback.png
 draft: false
+series: "IndiBalancing"
 ---
 
 PowerBalance를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.

@@ -18,6 +18,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-overview.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

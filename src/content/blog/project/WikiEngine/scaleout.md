@@ -20,6 +20,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/scaleout/step9-load-grafana-overview.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

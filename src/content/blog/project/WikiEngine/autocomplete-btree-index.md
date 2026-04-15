@@ -14,6 +14,7 @@ tags:
 category: project/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-expected.png"
+series: "WikiEngine"
 ---
 
 ## 이전 글 요약

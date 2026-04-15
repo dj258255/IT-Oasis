@@ -15,6 +15,7 @@ tags:
 category: project/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/s3-upload-optimization/section.svg"
+series: "EduMeet"
 ---
 
 > EduMeet 프로젝트에서 게시글 이미지 업로드 기능 구현 시 고민한 내용

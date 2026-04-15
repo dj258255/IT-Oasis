@@ -14,6 +14,8 @@ tags:
 category: theory/Concurrency
 draft: false
 coverImage: "/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.svg"
+series: "동시성과 락"
+seriesOrder: 3
 ---
 
 

@@ -18,6 +18,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/redis-l2-cache/after-03-spring-boot-system-tiered.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글
