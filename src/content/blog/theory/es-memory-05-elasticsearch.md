@@ -1,8 +1,8 @@
 ---
-title: 'Elasticsearch 메모리 이론 ⑤: 힙 50% 룰 · mmap · Circuit Breaker'
-titleEn: 'Elasticsearch Memory Theory ⑤: 50% Heap Rule · mmap · Circuit Breaker'
-description: 앞선 JVM/GC/Off-heap/Page Cache 이론을 Elasticsearch 운영 맥락으로 묶는 글이에요. 왜 Heap이 26~30GB에서 끊기는지(compressed oops), hybridfs가 어떤 파일만 mmap하는지, circuit breaker가 heap 40/60/95%에 왜 걸려있는지 공식 문서로 정리했어요.
-descriptionEn: Capstone of the series. Ties chapters 1–4 into Elasticsearch operations. Why heap is capped at 26–30GB (compressed oops), which files hybridfs mmaps, and why circuit breakers sit at 40/60/95% of heap.
+title: 'JVM 메모리 ⑤: Elasticsearch 메모리 모델'
+titleEn: 'JVM Memory ⑤: Applied to Elasticsearch'
+description: 앞선 0~4편의 JVM/OS 메모리 이론을 Elasticsearch 운영 맥락 하나로 묶는 캡스톤 편. 왜 Heap이 26~30GB에서 끊기는지(compressed oops), hybridfs가 어떤 파일만 mmap하는지, circuit breaker가 heap 40/60/95%에 왜 걸려있는지 공식 문서로 정리했어요.
+descriptionEn: "Capstone — ties parts 0–4's JVM/OS memory theory into Elasticsearch operations. Why heap is capped at 26–30GB (compressed oops), which files hybridfs mmaps, and why circuit breakers sit at 40/60/95% of heap."
 date: 2026-04-14T00:00:00.000Z
 tags:
   - Elasticsearch
@@ -14,6 +14,7 @@ tags:
   - Memory Management
 category: theory/JVM-Memory
 draft: false
+coverImage: "/uploads/theory/es-memory/cover-5.svg"
 ---
 
 > **JVM 메모리 시리즈** — **5편 (Elasticsearch 통합, 지금 여기) · 마지막 편**

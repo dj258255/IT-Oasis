@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="num" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <text x="80" y="100" font-size="18" font-weight="700" fill="#0ea5e9" letter-spacing="4">JVM MEMORY SERIES</text>
+  <line x1="80" y1="115" x2="320" y2="115" stroke="#0ea5e9" stroke-width="2"/>
+
+  <text x="80" y="310" font-size="220" font-weight="800" fill="url(#num)">01</text>
+
+  <text x="80" y="420" font-size="56" font-weight="700" fill="#0f172a">Heap Internals</text>
+  <text x="80" y="470" font-size="24" font-weight="400" fill="#475569">Young/Old · Eden · Survivor · Promotion</text>
+
+  <g transform="translate(720, 220)">
+    <rect x="0" y="0" width="400" height="180" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="2" rx="12"/>
+    <text x="100" y="-10" font-size="18" font-weight="600" fill="#0284c7" text-anchor="middle">Young Generation</text>
+
+    <rect x="10" y="30" width="180" height="120" fill="#bae6fd" stroke="#0ea5e9" stroke-width="1.5" rx="6"/>
+    <text x="100" y="98" font-size="26" font-weight="700" fill="#0c4a6e" text-anchor="middle">Eden</text>
+
+    <rect x="200" y="30" width="85" height="120" fill="#bae6fd" stroke="#0ea5e9" stroke-width="1.5" rx="6"/>
+    <text x="242" y="98" font-size="20" font-weight="700" fill="#0c4a6e" text-anchor="middle">S0</text>
+
+    <rect x="295" y="30" width="85" height="120" fill="#bae6fd" stroke="#0ea5e9" stroke-width="1.5" rx="6"/>
+    <text x="337" y="98" font-size="20" font-weight="700" fill="#0c4a6e" text-anchor="middle">S1</text>
+
+    <rect x="440" y="0" width="160" height="180" fill="#fce7f3" stroke="#a855f7" stroke-width="2" rx="12"/>
+    <text x="520" y="-10" font-size="18" font-weight="600" fill="#9333ea" text-anchor="middle">Old Generation</text>
+    <text x="520" y="100" font-size="26" font-weight="700" fill="#581c87" text-anchor="middle">Old</text>
+
+    <path d="M 390 80 L 435 80" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+    <text x="412" y="70" font-size="14" font-weight="600" fill="#475569" text-anchor="middle">promote</text>
+  </g>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#64748b"/>
+    </marker>
+  </defs>
+</svg>

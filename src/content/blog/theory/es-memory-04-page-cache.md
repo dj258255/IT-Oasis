@@ -1,8 +1,8 @@
 ---
-title: 'Elasticsearch 메모리 이론 ④: OS Page Cache'
-titleEn: 'Elasticsearch Memory Theory ④: OS Page Cache'
-description: Elastic이 "Heap을 RAM의 50% 이하로 두고 나머지는 filesystem cache에 남겨라"라고 말하는 진짜 이유. Linux 커널 문서 기반으로 Page Cache 동작, mmap, reclaim, OOM killer까지 정리했어요.
-descriptionEn: Explains why Elastic says "keep JVM heap under 50% of RAM and leave the rest for the filesystem cache." Covers Linux page cache, mmap, reclaim, and OOM killer based on official kernel documentation.
+title: 'JVM 메모리 ④: OS Page Cache'
+titleEn: 'JVM Memory ④: OS Page Cache'
+description: JVM 프로세스 바깥, OS 커널이 관리하는 Page Cache가 무엇이고 애플리케이션 성능에 어떤 영향을 주는지 Linux 커널 공식 문서 기반으로 정리했어요. mmap, reclaim, OOM killer, 그리고 ES가 "Heap을 RAM 50% 이하로 두라"고 하는 진짜 이유까지.
+descriptionEn: What the OS-kernel-managed Page Cache is and how it impacts application performance, grounded in the official Linux kernel docs. Covers mmap, reclaim, OOM killer, and why Elasticsearch says "keep JVM heap under 50% of RAM."
 date: 2026-04-13T00:00:00.000Z
 tags:
   - Linux
@@ -13,6 +13,7 @@ tags:
   - Kernel
 category: theory/JVM-Memory
 draft: false
+coverImage: "/uploads/theory/es-memory/cover-4.svg"
 ---
 
 > **JVM 메모리 시리즈** — **4편 (OS Page Cache, 지금 여기)**
