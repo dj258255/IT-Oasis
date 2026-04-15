@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 560" role="img" aria-label="캐시 라인 - 메모리 주소 0x1000 요청 시 0x1000~0x103F 64바이트 블록 전체를 한 번에 복사해서 캐시에 저장">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .req { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .mem { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .copy { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .cache { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="cl-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="380" height="560" class="bg"/>
+  <text x="190" y="28" text-anchor="middle" class="title">캐시 라인 단위 복사</text>
+
+  <rect x="90" y="60" width="200" height="80" rx="8" class="req"/>
+  <text x="190" y="88" text-anchor="middle" class="lbl">메모리 주소</text>
+  <text x="190" y="110" text-anchor="middle" class="lbl">0x1000의</text>
+  <text x="190" y="130" text-anchor="middle" class="lbl">데이터 요청</text>
+  <line x1="190" y1="142" x2="190" y2="168" stroke="#888" stroke-width="1.5" marker-end="url(#cl-a)"/>
+
+  <rect x="90" y="175" width="200" height="90" rx="8" class="mem"/>
+  <text x="190" y="202" text-anchor="middle" class="lbl">메모리</text>
+  <text x="190" y="225" text-anchor="middle" class="lbl">0x1000 ~ 0x103F</text>
+  <text x="190" y="248" text-anchor="middle" class="lbl">64 바이트</text>
+  <line x1="190" y1="268" x2="190" y2="294" stroke="#888" stroke-width="1.5" marker-end="url(#cl-a)"/>
+
+  <rect x="90" y="300" width="200" height="80" rx="8" class="copy"/>
+  <text x="190" y="328" text-anchor="middle" class="lbl">한 번에</text>
+  <text x="190" y="350" text-anchor="middle" class="lbl">전체 블록 복사</text>
+  <text x="190" y="370" text-anchor="middle" class="sub">(라인 단위 전송)</text>
+  <line x1="190" y1="382" x2="190" y2="408" stroke="#888" stroke-width="1.5" marker-end="url(#cl-a)"/>
+
+  <rect x="90" y="415" width="200" height="90" rx="8" class="cache"/>
+  <text x="190" y="442" text-anchor="middle" class="lbl">캐시</text>
+  <text x="190" y="465" text-anchor="middle" class="lbl">0x1000 ~ 0x103F</text>
+  <text x="190" y="488" text-anchor="middle" class="lbl">64 바이트</text>
+</svg>

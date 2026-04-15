@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 660" role="img" aria-label="파일 읽기 프로세스 - 애플리케이션 read 호출 → 페이지 캐시 확인 → 캐시 미스 → 파일시스템 메타데이터(buff) 확인 → 디스크에서 데이터 읽기 → 페이지 캐시에 저장">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .s1 { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .s-cache { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .s-miss { fill: rgba(255, 183, 77, 0.25); stroke: #FFB74D; stroke-width: 1.5; }
+      .s-buff { fill: rgba(255, 238, 215, 0.16); stroke: #FFB74D; stroke-width: 1.25; }
+      .s-disk { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="fr-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="380" height="660" class="bg"/>
+  <text x="190" y="28" text-anchor="middle" class="title">파일 읽기 프로세스</text>
+
+  <rect x="90" y="55" width="200" height="56" rx="8" class="s1"/>
+  <text x="190" y="80" text-anchor="middle" class="lbl">애플리케이션의</text>
+  <text x="190" y="100" text-anchor="middle" class="lbl">read() 호출</text>
+  <line x1="190" y1="111" x2="190" y2="128" stroke="#888" stroke-width="1.5" marker-end="url(#fr-a)"/>
+
+  <rect x="90" y="135" width="200" height="60" rx="8" class="s-cache"/>
+  <text x="190" y="160" text-anchor="middle" class="lbl">페이지 캐시 확인</text>
+  <text x="190" y="181" text-anchor="middle" class="sub">cache</text>
+  <line x1="190" y1="197" x2="190" y2="214" stroke="#888" stroke-width="1.5" marker-end="url(#fr-a)"/>
+
+  <rect x="110" y="222" width="160" height="40" rx="8" class="s-miss"/>
+  <text x="190" y="246" text-anchor="middle" class="lbl">캐시 미스</text>
+  <line x1="190" y1="262" x2="190" y2="280" stroke="#888" stroke-width="1.5" marker-end="url(#fr-a)"/>
+
+  <rect x="90" y="288" width="200" height="72" rx="8" class="s-buff"/>
+  <text x="190" y="312" text-anchor="middle" class="lbl">파일 시스템</text>
+  <text x="190" y="333" text-anchor="middle" class="lbl">메타데이터 확인</text>
+  <text x="190" y="352" text-anchor="middle" class="sub">buff</text>
+  <line x1="190" y1="360" x2="190" y2="378" stroke="#888" stroke-width="1.5" marker-end="url(#fr-a)"/>
+
+  <rect x="90" y="386" width="200" height="60" rx="8" class="s-disk"/>
+  <text x="190" y="410" text-anchor="middle" class="lbl">디스크에서</text>
+  <text x="190" y="431" text-anchor="middle" class="lbl">데이터 읽기</text>
+  <line x1="190" y1="446" x2="190" y2="464" stroke="#888" stroke-width="1.5" marker-end="url(#fr-a)"/>
+
+  <rect x="90" y="472" width="200" height="80" rx="8" class="s-cache"/>
+  <text x="190" y="498" text-anchor="middle" class="lbl">페이지 캐시에 저장</text>
+  <text x="190" y="521" text-anchor="middle" class="sub">다음 읽기를 위해</text>
+</svg>

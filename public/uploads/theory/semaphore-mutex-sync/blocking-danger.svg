@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 480" role="img" aria-label="블로킹 위험성 - 정상 시 클라이언트 요청 2ms 응답, 블로킹 I/O 3초 발생 시 2ms + 3000ms = 3002ms로 응답 지연">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .slow { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .danger-txt { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="bd-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="700" height="480" class="bg"/>
+  <text x="350" y="28" text-anchor="middle" class="title">블로킹 I/O의 위험</text>
+
+  <rect x="30"  y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="110" y="73" text-anchor="middle" class="lbl">클라이언트</text>
+  <rect x="260" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="340" y="73" text-anchor="middle" class="lbl">이벤트 루프</text>
+  <rect x="490" y="50" width="180" height="34" rx="6" class="actor"/>
+  <text x="580" y="73" text-anchor="middle" class="lbl">블로킹 I/O</text>
+  <line x1="110" y1="84" x2="110" y2="440" class="lifeline"/>
+  <line x1="340" y1="84" x2="340" y2="440" class="lifeline"/>
+  <line x1="580" y1="84" x2="580" y2="440" class="lifeline"/>
+
+  <line x1="110" y1="110" x2="338" y2="110" stroke="#bbb" stroke-width="1.25" marker-end="url(#bd-a)"/>
+  <text x="224" y="104" text-anchor="middle" class="msg">요청 A</text>
+  <rect x="260" y="122" width="160" height="28" rx="6" class="ok"/>
+  <text x="340" y="141" text-anchor="middle" class="msg">처리 시간: 2ms</text>
+  <line x1="340" y1="158" x2="112" y2="158" stroke="#bbb" stroke-width="1.25" marker-end="url(#bd-a)"/>
+  <text x="224" y="152" text-anchor="middle" class="msg">응답 (2ms · 정상)</text>
+
+  <line x1="110" y1="198" x2="338" y2="198" stroke="#bbb" stroke-width="1.25" marker-end="url(#bd-a)"/>
+  <text x="224" y="192" text-anchor="middle" class="msg">요청 B</text>
+  <rect x="260" y="210" width="160" height="26" rx="6" class="ok"/>
+  <text x="340" y="228" text-anchor="middle" class="msg">처리 시작: 2ms</text>
+
+  <line x1="340" y1="254" x2="578" y2="254" stroke="#bbb" stroke-width="1.25" marker-end="url(#bd-a)"/>
+  <text x="459" y="248" text-anchor="middle" class="msg">블로킹 I/O 시작</text>
+
+  <rect x="260" y="270" width="320" height="46" rx="6" class="danger"/>
+  <text x="420" y="292" text-anchor="middle" class="danger-txt">대기 3000ms</text>
+  <text x="420" y="308" text-anchor="middle" class="msg">이벤트 루프가 멈춤</text>
+
+  <line x1="578" y1="338" x2="342" y2="338" stroke="#bbb" stroke-width="1.25" marker-end="url(#bd-a)"/>
+  <text x="459" y="332" text-anchor="middle" class="msg">완료 (3000ms 뒤)</text>
+
+  <rect x="260" y="352" width="160" height="26" rx="6" class="slow"/>
+  <text x="340" y="370" text-anchor="middle" class="msg">응답 준비: 2ms</text>
+
+  <line x1="340" y1="398" x2="112" y2="398" stroke="#bbb" stroke-width="1.25" marker-end="url(#bd-a)"/>
+  <text x="224" y="392" text-anchor="middle" class="danger-txt">응답 3002ms (지연)</text>
+
+  <text x="350" y="432" text-anchor="middle" class="msg">→ 이벤트 루프 특성상 블로킹 1건이 전체 처리를 막음</text>
+</svg>

@@ -10,9 +10,9 @@ tags:
   - ConcurrentHashMap
   - BlockingQueue
   - Thread Safety
-category: theory
+category: theory/Concurrency
 draft: false
-coverImage: "/uploads/theory/java-concurrency-collections/segment-lock-diagram.png"
+coverImage: "/uploads/theory/java-concurrency-collections/segment-lock-diagram.svg"
 ---
 
 
@@ -68,11 +68,11 @@ class ConcurrentHashMap<K, V> {
 ```
 
 **동작 방식:**
-![](/uploads/theory/java-concurrency-collections/segment-lock-diagram.png)
+![](/uploads/theory/java-concurrency-collections/segment-lock-diagram.svg)
 
 
 **예시:**
-![](/uploads/theory/java-concurrency-collections/segment-lock-example.png)
+![](/uploads/theory/java-concurrency-collections/segment-lock-example.svg)
 
 
 ### 1.3 ConcurrentHashMap의 개선: CAS 기반 (Java 8 이후)
@@ -81,7 +81,7 @@ class ConcurrentHashMap<K, V> {
 
 Java 8부터는 **세그먼트를 제거**하고 **CAS(Compare-And-Swap) + synchronized**를 사용해요.
 
-![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.png)
+![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.svg)
 
 
 ```java
@@ -242,7 +242,7 @@ public class CopyOnWriteArrayList<E> {
 ```
 
 **동작 원리:**
-![](/uploads/theory/java-concurrency-collections/copy-on-write-diagram.png)
+![](/uploads/theory/java-concurrency-collections/copy-on-write-diagram.svg)
 
 
 
@@ -826,10 +826,10 @@ public class HighContentionCounter {
 
 **동작 원리:**
 AtomicLong
-![](/uploads/theory/java-concurrency-collections/atomic-long-diagram.png)
+![](/uploads/theory/java-concurrency-collections/atomic-long-diagram.svg)
 
 LongAdder
-![](/uploads/theory/java-concurrency-collections/long-adder-diagram.png)
+![](/uploads/theory/java-concurrency-collections/long-adder-diagram.svg)
 
 
 **사용 기준:**
@@ -1128,11 +1128,11 @@ class ConcurrentHashMap<K, V> {
 ```
 
 **How it works:**
-![](/uploads/theory/java-concurrency-collections/segment-lock-diagram.png)
+![](/uploads/theory/java-concurrency-collections/segment-lock-diagram.svg)
 
 
 **Example:**
-![](/uploads/theory/java-concurrency-collections/segment-lock-example.png)
+![](/uploads/theory/java-concurrency-collections/segment-lock-example.svg)
 
 
 ### 1.3 ConcurrentHashMap Improvement: CAS-Based (Java 8+)
@@ -1141,7 +1141,7 @@ The number of segments was fixed at creation time, which limited the concurrency
 
 Starting from Java 8, **segments were removed** and **CAS (Compare-And-Swap) + synchronized** is used instead.
 
-![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.png)
+![](/uploads/theory/java-concurrency-collections/cas-based-concurrenthashmap.svg)
 
 
 ```java
@@ -1302,7 +1302,7 @@ public class CopyOnWriteArrayList<E> {
 ```
 
 **How it works:**
-![](/uploads/theory/java-concurrency-collections/copy-on-write-diagram.png)
+![](/uploads/theory/java-concurrency-collections/copy-on-write-diagram.svg)
 
 
 
@@ -1886,10 +1886,10 @@ public class HighContentionCounter {
 
 **How it works:**
 AtomicLong
-![](/uploads/theory/java-concurrency-collections/atomic-long-diagram.png)
+![](/uploads/theory/java-concurrency-collections/atomic-long-diagram.svg)
 
 LongAdder
-![](/uploads/theory/java-concurrency-collections/long-adder-diagram.png)
+![](/uploads/theory/java-concurrency-collections/long-adder-diagram.svg)
 
 
 **Usage criteria:**

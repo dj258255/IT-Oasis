@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 660" role="img" aria-label="PermGen에서 Metaspace로 전환 - Java 7은 Heap 안에 Young Gen, Old Gen, PermGen이 있었으나, Java 8+에서는 Metaspace가 Native Memory로 분리되고 Heap에는 Young Gen과 Old Gen만 남음">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .ver-frame { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.4); stroke-width: 1.25; }
+      .heap { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .native { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.25; }
+      .gen { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .perm { fill: rgba(255, 183, 77, 0.24); stroke: #FFB74D; stroke-width: 1.25; }
+      .meta { fill: rgba(186, 104, 200, 0.24); stroke: #BA68C8; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="pm-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="660" height="660" class="bg"/>
+  <text x="330" y="28" text-anchor="middle" class="title">PermGen → Metaspace</text>
+
+  <rect x="160" y="50" width="340" height="220" rx="10" class="ver-frame"/>
+  <text x="330" y="74" text-anchor="middle" class="frame-lbl">Java 7</text>
+  <rect x="180" y="86" width="300" height="174" rx="8" class="heap"/>
+  <text x="330" y="106" text-anchor="middle" class="lbl">Heap</text>
+  <rect x="220" y="120" width="220" height="34" rx="6" class="gen"/>
+  <text x="330" y="142" text-anchor="middle" class="lbl">Young Gen</text>
+  <rect x="220" y="164" width="220" height="34" rx="6" class="gen"/>
+  <text x="330" y="186" text-anchor="middle" class="lbl">Old Gen</text>
+  <rect x="220" y="208" width="220" height="34" rx="6" class="perm"/>
+  <text x="330" y="230" text-anchor="middle" class="lbl">PermGen</text>
+
+  <line x1="330" y1="278" x2="330" y2="304" stroke="#888" stroke-width="1.5" marker-end="url(#pm-a)"/>
+  <text x="345" y="298" class="lbl">전환</text>
+
+  <rect x="100" y="316" width="460" height="320" rx="10" class="ver-frame"/>
+  <text x="330" y="340" text-anchor="middle" class="frame-lbl">Java 8+</text>
+
+  <rect x="120" y="356" width="200" height="100" rx="8" class="native"/>
+  <text x="220" y="376" text-anchor="middle" class="lbl">Native Memory</text>
+  <rect x="150" y="392" width="140" height="44" rx="6" class="meta"/>
+  <text x="220" y="420" text-anchor="middle" class="lbl">Metaspace</text>
+
+  <rect x="340" y="356" width="200" height="200" rx="8" class="heap"/>
+  <text x="440" y="376" text-anchor="middle" class="lbl">Heap</text>
+  <rect x="360" y="396" width="160" height="50" rx="6" class="gen"/>
+  <text x="440" y="426" text-anchor="middle" class="lbl">Young Gen</text>
+  <rect x="360" y="466" width="160" height="50" rx="6" class="gen"/>
+  <text x="440" y="496" text-anchor="middle" class="lbl">Old Gen</text>
+</svg>

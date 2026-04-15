@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 360" role="img" aria-label="AtomicLong - 하나의 변수에 모든 스레드가 CAS 시도, 경쟁 심화 시 CAS 실패 증가와 루프 반복">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .box1 { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .box-bad { fill: rgba(255, 107, 107, 0.25); stroke: #FF6B6B; stroke-width: 1.75; }
+      .box-warn { fill: rgba(255, 183, 77, 0.18); stroke: #FFB74D; stroke-width: 1.5; }
+      .label { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .detail { font: 500 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="al-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="420" height="360" class="bg"/>
+
+  <rect x="130" y="30" width="160" height="48" rx="8" class="box1"/>
+  <text x="210" y="60" text-anchor="middle" class="label">AtomicLong</text>
+  <line x1="210" y1="80" x2="210" y2="108" stroke="#888" stroke-width="1.5" marker-end="url(#al-arrow)"/>
+
+  <rect x="100" y="115" width="220" height="90" rx="8" class="box-bad"/>
+  <text x="210" y="144" text-anchor="middle" class="detail">하나의 변수에</text>
+  <text x="210" y="165" text-anchor="middle" class="detail">모든 스레드가</text>
+  <text x="210" y="186" text-anchor="middle" class="detail">CAS 시도</text>
+  <line x1="210" y1="210" x2="210" y2="238" stroke="#888" stroke-width="1.5" marker-end="url(#al-arrow)"/>
+
+  <rect x="100" y="245" width="220" height="92" rx="8" class="box-warn"/>
+  <text x="210" y="274" text-anchor="middle" class="detail">경쟁 심화 시</text>
+  <text x="210" y="295" text-anchor="middle" class="detail">CAS 실패 증가</text>
+  <text x="210" y="316" text-anchor="middle" class="detail">루프 반복</text>
+</svg>

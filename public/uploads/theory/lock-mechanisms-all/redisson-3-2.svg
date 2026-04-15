@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 740" role="img" aria-label="Redisson PubSub 방식 - 서버A가 tryLock 실패 후 PubSub 채널 구독, 서버B가 unlock하면 채널에 publish, 메시지 수신 후 tryLock 재시도하여 성공 - Redis 요청 없이 효율적">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .pubsub { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .state { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .fail { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="rd2-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="760" height="740" class="bg"/>
+  <text x="380" y="28" text-anchor="middle" class="title">Redisson — PubSub 방식 (효율적)</text>
+
+  <rect x="20" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="90" y="73" text-anchor="middle" class="lbl">서버A</text>
+  <rect x="200" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="270" y="73" text-anchor="middle" class="lbl">Redis</text>
+  <rect x="380" y="50" width="160" height="34" rx="6" class="pubsub"/>
+  <text x="460" y="73" text-anchor="middle" class="lbl">PubSub 채널</text>
+  <rect x="600" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="670" y="73" text-anchor="middle" class="lbl">서버B</text>
+  <line x1="90" y1="84" x2="90" y2="710" class="lifeline"/>
+  <line x1="270" y1="84" x2="270" y2="710" class="lifeline"/>
+  <line x1="460" y1="84" x2="460" y2="710" class="lifeline"/>
+  <line x1="670" y1="84" x2="670" y2="710" class="lifeline"/>
+
+  <rect x="180" y="100" width="180" height="32" rx="6" class="state"/>
+  <text x="270" y="120" text-anchor="middle" class="msg">락이 이미 점유된 상태</text>
+
+  <line x1="92" y1="160" x2="268" y2="160" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd2-a)"/>
+  <text x="180" y="154" text-anchor="middle" class="msg">tryLock() 시도</text>
+  <line x1="268" y1="184" x2="92" y2="184" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd2-a)"/>
+  <text x="180" y="178" text-anchor="middle" class="msg">실패</text>
+
+  <line x1="92" y1="220" x2="458" y2="220" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd2-a)"/>
+  <text x="275" y="214" text-anchor="middle" class="msg">subscribe (채널 구독)</text>
+
+  <rect x="0" y="240" width="180" height="80" rx="8" class="ok"/>
+  <text x="90" y="266" text-anchor="middle" class="msg">대기 중</text>
+  <text x="90" y="284" text-anchor="middle" class="msg">Redis 요청 없음</text>
+  <text x="90" y="304" text-anchor="middle" class="msg">네트워크 / CPU 효율적</text>
+
+  <rect x="600" y="338" width="160" height="32" rx="6" class="state"/>
+  <text x="680" y="358" text-anchor="middle" class="msg">작업 완료</text>
+
+  <line x1="668" y1="394" x2="272" y2="394" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd2-a)"/>
+  <text x="470" y="388" text-anchor="middle" class="msg">unlock()</text>
+  <rect x="180" y="406" width="180" height="32" rx="6" class="state"/>
+  <text x="270" y="426" text-anchor="middle" class="msg">락 해제</text>
+
+  <line x1="668" y1="468" x2="462" y2="468" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd2-a)"/>
+  <text x="565" y="462" text-anchor="middle" class="msg">락 해제 메시지 publish</text>
+
+  <line x1="458" y1="500" x2="92" y2="500" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd2-a)"/>
+  <text x="275" y="494" text-anchor="middle" class="msg">메시지 수신 · 락 해제됨</text>
+
+  <line x1="92" y1="540" x2="268" y2="540" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd2-a)"/>
+  <text x="180" y="534" text-anchor="middle" class="msg">tryLock() 재시도</text>
+  <line x1="268" y1="564" x2="92" y2="564" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd2-a)"/>
+  <text x="180" y="558" text-anchor="middle" class="msg">성공</text>
+
+  <rect x="20" y="580" width="140" height="38" rx="6" class="ok"/>
+  <text x="90" y="604" text-anchor="middle" class="msg">락 획득 성공</text>
+</svg>

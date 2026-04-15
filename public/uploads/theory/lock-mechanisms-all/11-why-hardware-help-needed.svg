@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 660" role="img" aria-label="하드웨어 도움 필요한 이유 - while(locked) 확인과 locked = true 사이에 시간 차이가 생기면 두 스레드가 모두 임계영역 진입, Race Condition 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .stage { fill: rgba(255, 238, 215, 0.14); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .state { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .stage-lbl { font: 700 11.5px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="hw-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="600" height="660" class="bg"/>
+  <text x="300" y="28" text-anchor="middle" class="title">왜 하드웨어 도움이 필요한가</text>
+
+  <rect x="20"  y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="90" y="73" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="220" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="300" y="73" text-anchor="middle" class="lbl">locked 변수</text>
+  <rect x="440" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="510" y="73" text-anchor="middle" class="lbl">스레드B</text>
+  <line x1="90" y1="84" x2="90" y2="620" class="lifeline"/>
+  <line x1="300" y1="84" x2="300" y2="620" class="lifeline"/>
+  <line x1="510" y1="84" x2="510" y2="620" class="lifeline"/>
+
+  <rect x="220" y="100" width="160" height="26" rx="6" class="state"/>
+  <text x="300" y="118" text-anchor="middle" class="msg">locked = false</text>
+
+  <rect x="20" y="138" width="560" height="22" rx="4" class="stage"/>
+  <text x="300" y="154" text-anchor="middle" class="stage-lbl">시간: 0ms</text>
+
+  <line x1="92" y1="184" x2="298" y2="184" stroke="#bbb" stroke-width="1.25" marker-end="url(#hw-a)"/>
+  <text x="195" y="178" text-anchor="middle" class="msg">while(locked) 확인 → false 반환</text>
+
+  <rect x="20" y="200" width="560" height="22" rx="4" class="stage"/>
+  <text x="300" y="216" text-anchor="middle" class="stage-lbl">시간: 1ms</text>
+
+  <line x1="508" y1="246" x2="302" y2="246" stroke="#bbb" stroke-width="1.25" marker-end="url(#hw-a)"/>
+  <text x="405" y="240" text-anchor="middle" class="msg">while(locked) 확인 → false 반환</text>
+
+  <rect x="20" y="262" width="560" height="22" rx="4" class="stage"/>
+  <text x="300" y="278" text-anchor="middle" class="stage-lbl">시간: 2ms</text>
+
+  <line x1="92" y1="308" x2="298" y2="308" stroke="#bbb" stroke-width="1.25" marker-end="url(#hw-a)"/>
+  <text x="195" y="302" text-anchor="middle" class="msg">locked = true</text>
+  <rect x="220" y="320" width="160" height="26" rx="6" class="state"/>
+  <text x="300" y="338" text-anchor="middle" class="msg">locked = true</text>
+
+  <rect x="20" y="358" width="560" height="22" rx="4" class="stage"/>
+  <text x="300" y="374" text-anchor="middle" class="stage-lbl">시간: 3ms</text>
+
+  <line x1="508" y1="404" x2="302" y2="404" stroke="#bbb" stroke-width="1.25" marker-end="url(#hw-a)"/>
+  <text x="405" y="398" text-anchor="middle" class="msg">locked = true (이미 true)</text>
+
+  <rect x="160" y="430" width="280" height="46" rx="8" class="danger"/>
+  <text x="300" y="453" text-anchor="middle" class="lbl">문제: 둘 다 임계영역 진입!</text>
+  <text x="300" y="470" text-anchor="middle" class="msg">Race Condition 발생</text>
+
+  <rect x="20" y="494" width="140" height="32" rx="6" class="state"/>
+  <text x="90" y="514" text-anchor="middle" class="msg">임계영역 실행</text>
+  <rect x="440" y="494" width="140" height="32" rx="6" class="state"/>
+  <text x="510" y="514" text-anchor="middle" class="msg">임계영역 실행</text>
+
+  <rect x="20"  y="580" width="140" height="34" rx="6" class="actor"/>
+  <text x="90" y="603" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="220" y="580" width="160" height="34" rx="6" class="actor"/>
+  <text x="300" y="603" text-anchor="middle" class="lbl">locked 변수</text>
+  <rect x="440" y="580" width="140" height="34" rx="6" class="actor"/>
+  <text x="510" y="603" text-anchor="middle" class="lbl">스레드B</text>
+</svg>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 320" role="img" aria-label="Class Loader 부모 위임 모델 - Bootstrap Loader(rt.jar, java.lang) ← Extension Loader(jre/lib/ext/*.jar) ← Application Loader(classpath, 개발자 코드), 위임 방향 오른쪽→왼쪽">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .loader { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .delegate { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #FF6B6B; }
+    </style>
+    <marker id="pd-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="760" height="320" class="bg"/>
+  <text x="380" y="28" text-anchor="middle" class="title">Class Loader 부모 위임 모델</text>
+
+  <rect x="30" y="80" width="700" height="200" rx="10" class="frame"/>
+  <text x="380" y="106" text-anchor="middle" class="frame-lbl">Class Loader 계층 구조</text>
+
+  <rect x="60" y="140" width="180" height="80" rx="8" class="loader"/>
+  <text x="150" y="170" text-anchor="middle" class="lbl">Bootstrap Loader</text>
+  <text x="150" y="194" text-anchor="middle" class="sub">rt.jar, java.lang.*</text>
+
+  <rect x="290" y="140" width="180" height="80" rx="8" class="loader"/>
+  <text x="380" y="170" text-anchor="middle" class="lbl">Extension Loader</text>
+  <text x="380" y="194" text-anchor="middle" class="sub">jre/lib/ext/*.jar</text>
+
+  <rect x="520" y="140" width="180" height="80" rx="8" class="loader"/>
+  <text x="610" y="170" text-anchor="middle" class="lbl">Application Loader</text>
+  <text x="610" y="194" text-anchor="middle" class="sub">classpath, 개발자 코드</text>
+
+  <line x1="290" y1="180" x2="240" y2="180" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#pd-a)"/>
+  <text x="265" y="170" text-anchor="middle" class="delegate">위임</text>
+
+  <line x1="520" y1="180" x2="470" y2="180" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#pd-a)"/>
+  <text x="495" y="170" text-anchor="middle" class="delegate">위임</text>
+</svg>

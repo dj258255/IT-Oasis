@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 700" role="img" aria-label="서블릿 방식 메모리 - JVM 프로세스 하나가 스레드별 독립 영역(Thread Stack)과 공유 영역(Code/Data/Heap)을 분리, Stack만 스레드별로 독립해서 메모리 효율적">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-outer { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .frame-part { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .jvm { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .thread { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .shared { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .advantage { fill: rgba(76, 175, 80, 0.3); stroke: #4CAF50; stroke-width: 1.5; }
+      .title-stage { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .lbl { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="sv-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="780" height="700" class="bg"/>
+  <text x="390" y="30" text-anchor="middle" class="title">서블릿 방식 — 메모리 공유</text>
+
+  <rect x="30" y="50" width="720" height="540" rx="12" class="frame-outer"/>
+
+  <rect x="300" y="70" width="180" height="46" rx="8" class="jvm"/>
+  <text x="390" y="97" text-anchor="middle" class="title-stage">JVM 프로세스</text>
+
+  <path d="M 330 116 C 250 140, 180 160, 160 180" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sv-a)"/>
+  <path d="M 450 116 C 530 140, 600 160, 620 180" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sv-a)"/>
+
+  <rect x="60" y="186" width="280" height="330" rx="10" class="frame-part"/>
+  <text x="200" y="210" text-anchor="middle" class="title-stage">스레드별 독립 영역</text>
+  <rect x="90" y="226" width="220" height="60" rx="6" class="thread"/>
+  <text x="200" y="252" text-anchor="middle" class="lbl">Thread 1 Stack</text>
+  <text x="200" y="272" text-anchor="middle" class="lbl">지역 변수</text>
+  <rect x="90" y="296" width="220" height="60" rx="6" class="thread"/>
+  <text x="200" y="322" text-anchor="middle" class="lbl">Thread 2 Stack</text>
+  <text x="200" y="342" text-anchor="middle" class="lbl">지역 변수</text>
+  <rect x="90" y="366" width="220" height="60" rx="6" class="thread"/>
+  <text x="200" y="392" text-anchor="middle" class="lbl">Thread 3 Stack</text>
+  <text x="200" y="412" text-anchor="middle" class="lbl">지역 변수</text>
+
+  <rect x="440" y="186" width="280" height="330" rx="10" class="frame-part"/>
+  <text x="580" y="210" text-anchor="middle" class="title-stage">공유 영역</text>
+  <rect x="470" y="230" width="220" height="52" rx="6" class="shared"/>
+  <text x="580" y="258" text-anchor="middle" class="lbl">Code: 서블릿 클래스 코드</text>
+  <rect x="470" y="298" width="220" height="52" rx="6" class="shared"/>
+  <text x="580" y="326" text-anchor="middle" class="lbl">Data: static 변수</text>
+  <rect x="470" y="366" width="220" height="52" rx="6" class="shared"/>
+  <text x="580" y="394" text-anchor="middle" class="lbl">Heap: 객체들</text>
+
+  <line x1="390" y1="590" x2="390" y2="614" stroke="#888" stroke-width="1.5" marker-end="url(#sv-a)"/>
+
+  <rect x="170" y="620" width="440" height="66" rx="10" class="advantage"/>
+  <text x="390" y="646" text-anchor="middle" class="title-stage">장점</text>
+  <text x="390" y="668" text-anchor="middle" class="lbl">Code · Data · Heap 공유, Stack만 스레드별 독립 · 메모리 효율적</text>
+</svg>

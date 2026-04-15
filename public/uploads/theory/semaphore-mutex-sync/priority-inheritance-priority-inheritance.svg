@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 620" role="img" aria-label="Priority Inheritance 해결책 - 고우선순위 H가 저우선순위 L의 락을 기다릴 때 L이 H의 우선순위를 상속받아 M보다 먼저 실행, 임계영역 완료 후 L이 원래 우선순위로 복귀">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .low { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .low-boost { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.5; }
+      .mid { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .high { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 238, 215, 0.1); stroke: #FFB74D; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.25); stroke: #4CAF50; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .ok-txt { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #a8e6cf; }
+    </style>
+    <marker id="pi-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="720" height="620" class="bg"/>
+  <text x="360" y="28" text-anchor="middle" class="title">Priority Inheritance · 해결책</text>
+
+  <rect x="30"  y="50" width="160" height="34" rx="6" class="low"/>
+  <text x="110" y="73" text-anchor="middle" class="lbl">스레드L (Low)</text>
+  <rect x="260" y="50" width="200" height="34" rx="6" class="mid"/>
+  <text x="360" y="73" text-anchor="middle" class="lbl">스레드M (Medium)</text>
+  <rect x="520" y="50" width="170" height="34" rx="6" class="high"/>
+  <text x="605" y="73" text-anchor="middle" class="lbl">스레드H (High)</text>
+  <line x1="110" y1="84" x2="110" y2="590" class="lifeline"/>
+  <line x1="360" y1="84" x2="360" y2="590" class="lifeline"/>
+  <line x1="605" y1="84" x2="605" y2="590" class="lifeline"/>
+
+  <rect x="50" y="100" width="160" height="30" rx="6" class="low"/>
+  <text x="130" y="120" text-anchor="middle" class="msg">1. L이 lock 획득</text>
+
+  <rect x="50" y="142" width="160" height="30" rx="6" class="low"/>
+  <text x="130" y="162" text-anchor="middle" class="msg">2. 임계영역 실행</text>
+
+  <line x1="605" y1="196" x2="112" y2="196" stroke="#bbb" stroke-width="1.25" marker-end="url(#pi-a)"/>
+  <text x="358" y="190" text-anchor="middle" class="msg">3. H가 lock 시도 → 대기</text>
+
+  <rect x="50" y="212" width="160" height="50" rx="6" class="low-boost"/>
+  <text x="130" y="232" text-anchor="middle" class="msg">4. L이 H의 우선순위</text>
+  <text x="130" y="250" text-anchor="middle" class="msg">상속 (High로 승격)</text>
+
+  <rect x="260" y="274" width="200" height="46" rx="6" class="mid"/>
+  <text x="360" y="296" text-anchor="middle" class="msg">5. M이 실행 시도하나</text>
+  <text x="360" y="312" text-anchor="middle" class="msg">L (승격된 High)에 밀림</text>
+
+  <rect x="50" y="332" width="160" height="50" rx="6" class="low-boost"/>
+  <text x="130" y="352" text-anchor="middle" class="msg">6. L 계속 실행</text>
+  <text x="130" y="370" text-anchor="middle" class="msg">임계영역 종료</text>
+
+  <line x1="112" y1="400" x2="603" y2="400" stroke="#bbb" stroke-width="1.25" marker-end="url(#pi-a)"/>
+  <text x="360" y="394" text-anchor="middle" class="msg">7. L이 unlock → H가 즉시 획득</text>
+
+  <rect x="50" y="414" width="160" height="34" rx="6" class="low"/>
+  <text x="130" y="436" text-anchor="middle" class="msg">L, 원래 우선순위로 복귀</text>
+
+  <rect x="520" y="460" width="170" height="38" rx="6" class="high"/>
+  <text x="605" y="484" text-anchor="middle" class="msg">H 실행 · 정상 응답</text>
+
+  <rect x="80" y="516" width="560" height="60" rx="10" class="ok"/>
+  <text x="360" y="540" text-anchor="middle" class="ok-txt">해결</text>
+  <text x="360" y="562" text-anchor="middle" class="msg">L이 일시적으로 H의 우선순위를 상속받아 M이 끼어들지 못함</text>
+</svg>

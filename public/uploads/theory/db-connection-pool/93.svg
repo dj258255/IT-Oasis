@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 700" role="img" aria-label="사용자 요청이 Tomcat NIO Selector → Worker Thread Pool 200 → 비즈니스 로직 → 커넥션 풀 50 → DB 순으로 흐르는 전체 요청 처리 계층도">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .step1 { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.5; }
+      .step2 { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .step3 { fill: rgba(255, 183, 77, 0.18); stroke: #FFB74D; stroke-width: 1.5; }
+      .step4 { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.5; }
+      .step5 { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 2; }
+      .step6 { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.5; }
+      .label { font: 600 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .highlight { font: 700 12.5px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="req-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="500" height="700" class="bg"/>
+  <text x="250" y="32" text-anchor="middle" class="title">요청 처리 전체 흐름</text>
+
+  <!-- 1. User request -->
+  <rect x="150" y="55" width="200" height="56" rx="8" class="step1"/>
+  <text x="250" y="88" text-anchor="middle" class="label">사용자 요청</text>
+  <line x1="250" y1="115" x2="250" y2="140" stroke="#888" stroke-width="1.5" marker-end="url(#req-arrow)"/>
+
+  <!-- 2. Tomcat Connector -->
+  <rect x="130" y="145" width="240" height="70" rx="8" class="step2"/>
+  <text x="250" y="174" text-anchor="middle" class="label">톰캣 Connector</text>
+  <text x="250" y="196" text-anchor="middle" class="sub">NIO · Selector</text>
+  <line x1="250" y1="219" x2="250" y2="244" stroke="#888" stroke-width="1.5" marker-end="url(#req-arrow)"/>
+
+  <!-- 3. Worker pool -->
+  <rect x="130" y="249" width="240" height="70" rx="8" class="step3"/>
+  <text x="250" y="278" text-anchor="middle" class="label">워커 스레드 풀</text>
+  <text x="250" y="300" text-anchor="middle" class="sub">200개</text>
+  <line x1="250" y1="323" x2="250" y2="348" stroke="#888" stroke-width="1.5" marker-end="url(#req-arrow)"/>
+
+  <!-- 4. Business logic -->
+  <rect x="130" y="353" width="240" height="70" rx="8" class="step4"/>
+  <text x="250" y="382" text-anchor="middle" class="label">비즈니스 로직</text>
+  <text x="250" y="404" text-anchor="middle" class="sub">Controller · Service</text>
+  <line x1="250" y1="427" x2="250" y2="452" stroke="#888" stroke-width="1.5" marker-end="url(#req-arrow)"/>
+
+  <!-- 5. Connection pool (highlight) -->
+  <rect x="120" y="457" width="260" height="86" rx="8" class="step5"/>
+  <text x="250" y="486" text-anchor="middle" class="label">커넥션 풀</text>
+  <text x="250" y="508" text-anchor="middle" class="sub">50개</text>
+  <text x="250" y="530" text-anchor="middle" class="highlight">← 오늘 공부한 것</text>
+  <line x1="250" y1="547" x2="250" y2="572" stroke="#888" stroke-width="1.5" marker-end="url(#req-arrow)"/>
+
+  <!-- 6. DB -->
+  <rect x="150" y="577" width="200" height="60" rx="8" class="step6"/>
+  <text x="250" y="612" text-anchor="middle" class="label">데이터베이스</text>
+</svg>

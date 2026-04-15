@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 500" role="img" aria-label="ConcurrentHashMap 세그먼트 락 시퀀스 다이어그램 - 스레드 1, 2, 3이 서로 다른 세그먼트(0, 5)에 동시 접근하는 상황과 같은 세그먼트 접근 시 대기 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .actor-box { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .segment-box { fill: rgba(76, 175, 80, 0.20); stroke: #4CAF50; stroke-width: 1.25; }
+      .seg2-box { fill: rgba(186, 104, 200, 0.20); stroke: #BA68C8; stroke-width: 1.25; }
+      .msg-box { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255, 238, 215, 0.35); stroke-width: 1; }
+      .result-box { fill: rgba(255, 107, 107, 0.15); stroke: #FF6B6B; stroke-width: 1.25; }
+      .actor { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .note { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .msg-arrow { stroke: #bbb; stroke-width: 1.25; fill: none; }
+      .wait-arrow { stroke: #FF6B6B; stroke-width: 1.25; fill: none; }
+    </style>
+    <marker id="msg-arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+    <marker id="wait-arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#FF6B6B"/>
+    </marker>
+  </defs>
+  <rect width="840" height="500" class="bg"/>
+  <text x="420" y="28" text-anchor="middle" class="title">ConcurrentHashMap 세그먼트 락 예시</text>
+
+  <!-- Actors (5 lifelines) -->
+  <g>
+    <rect x="40"  y="50" width="120" height="34" rx="6" class="actor-box"/>
+    <text x="100" y="72" text-anchor="middle" class="actor">스레드 1</text>
+    <line x1="100" y1="84" x2="100" y2="420" class="lifeline"/>
+
+    <rect x="195" y="50" width="120" height="34" rx="6" class="segment-box"/>
+    <text x="255" y="72" text-anchor="middle" class="actor">세그먼트 0</text>
+    <line x1="255" y1="84" x2="255" y2="420" class="lifeline"/>
+
+    <rect x="350" y="50" width="120" height="34" rx="6" class="seg2-box"/>
+    <text x="410" y="72" text-anchor="middle" class="actor">세그먼트 5</text>
+    <line x1="410" y1="84" x2="410" y2="420" class="lifeline"/>
+
+    <rect x="505" y="50" width="120" height="34" rx="6" class="actor-box"/>
+    <text x="565" y="72" text-anchor="middle" class="actor">스레드 2</text>
+    <line x1="565" y1="84" x2="565" y2="420" class="lifeline"/>
+
+    <rect x="660" y="50" width="120" height="34" rx="6" class="actor-box"/>
+    <text x="720" y="72" text-anchor="middle" class="actor">스레드 3</text>
+    <line x1="720" y1="84" x2="720" y2="420" class="lifeline"/>
+  </g>
+
+  <!-- Messages -->
+  <!-- Thread1 → Seg0: put("key1", 1), locks, store -->
+  <line x1="100" y1="110" x2="255" y2="110" class="msg-arrow" marker-end="url(#msg-arr)"/>
+  <text x="177" y="104" text-anchor="middle" class="msg">put("key1", 1) · 락 획득</text>
+
+  <!-- Thread2 → Seg5: put("key100", 2) parallel -->
+  <line x1="565" y1="140" x2="410" y2="140" class="msg-arrow" marker-end="url(#msg-arr)"/>
+  <text x="487" y="134" text-anchor="middle" class="msg">put("key100", 2) · 동시 실행 가능</text>
+
+  <!-- Thread3 → Seg0: put("key2", 3) - must wait -->
+  <line x1="720" y1="175" x2="255" y2="175" class="wait-arrow" marker-end="url(#wait-arr)"/>
+  <text x="487" y="169" text-anchor="middle" class="msg" fill="#ffcccb">put("key2", 3) · 세그먼트 0 대기</text>
+
+  <!-- Seg0 returns to Thread1 -->
+  <line x1="255" y1="210" x2="100" y2="210" class="msg-arrow" marker-end="url(#msg-arr)"/>
+  <text x="177" y="204" text-anchor="middle" class="msg">key1 저장 완료</text>
+
+  <!-- Seg5 returns to Thread2 -->
+  <line x1="410" y1="240" x2="565" y2="240" class="msg-arrow" marker-end="url(#msg-arr)"/>
+  <text x="487" y="234" text-anchor="middle" class="msg">key100 저장 완료</text>
+
+  <!-- Seg0 now releases, Thread3 can proceed -->
+  <line x1="255" y1="275" x2="720" y2="275" class="msg-arrow" marker-end="url(#msg-arr)"/>
+  <text x="487" y="269" text-anchor="middle" class="msg">락 해제 → 스레드 3 진입</text>
+
+  <!-- Seg0 stores key2 -->
+  <line x1="255" y1="310" x2="720" y2="310" class="msg-arrow" marker-end="url(#msg-arr)"/>
+  <text x="487" y="304" text-anchor="middle" class="msg">key2 저장 완료</text>
+
+  <!-- Result box -->
+  <rect x="60" y="350" width="720" height="60" rx="8" class="result-box"/>
+  <text x="420" y="377" text-anchor="middle" class="actor">결과</text>
+  <text x="420" y="398" text-anchor="middle" class="note">스레드 1 · 2는 다른 세그먼트라 동시 실행, 스레드 3은 스레드 1과 같은 세그먼트라 대기</text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 400" role="img" aria-label="Redis로 해결 - 3대의 서버(Server 1, 2, 3)가 모두 중앙의 Redis(A=1)를 참조하여 캐시 일관성 유지">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .top-box { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .server-box { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.5; }
+      .redis-box { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .val { font: 700 15px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="sme2-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="560" height="400" class="bg"/>
+
+  <rect x="200" y="20" width="160" height="44" rx="6" class="top-box"/>
+  <text x="280" y="47" text-anchor="middle" class="lbl">Redis로 해결</text>
+  <path d="M 240 64 C 200 90, 140 105, 120 125" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme2-arrow)"/>
+  <line x1="280" y1="64" x2="280" y2="125" stroke="#888" stroke-width="1.5" marker-end="url(#sme2-arrow)"/>
+  <path d="M 320 64 C 360 90, 420 105, 440 125" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme2-arrow)"/>
+
+  <rect x="50" y="135" width="140" height="54" rx="6" class="server-box"/>
+  <text x="120" y="168" text-anchor="middle" class="lbl">Server 1</text>
+
+  <rect x="210" y="135" width="140" height="54" rx="6" class="server-box"/>
+  <text x="280" y="168" text-anchor="middle" class="lbl">Server 2</text>
+
+  <rect x="370" y="135" width="140" height="54" rx="6" class="server-box"/>
+  <text x="440" y="168" text-anchor="middle" class="lbl">Server 3</text>
+
+  <path d="M 120 189 C 120 220, 220 230, 270 245" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme2-arrow)"/>
+  <line x1="280" y1="189" x2="280" y2="245" stroke="#888" stroke-width="1.5" marker-end="url(#sme2-arrow)"/>
+  <path d="M 440 189 C 440 220, 340 230, 290 245" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme2-arrow)"/>
+
+  <rect x="200" y="250" width="160" height="100" rx="8" class="redis-box"/>
+  <text x="280" y="280" text-anchor="middle" class="val">Redis</text>
+  <text x="280" y="304" text-anchor="middle" class="lbl">중앙 캐시</text>
+  <text x="280" y="328" text-anchor="middle" class="val">A = 1</text>
+</svg>

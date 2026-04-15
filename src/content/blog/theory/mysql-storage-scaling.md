@@ -11,7 +11,7 @@ tags:
   - Compression
   - Vertical Partitioning
   - Database Scaling
-category: theory
+category: theory/Database
 draft: false
 coverImage: "/uploads/theory/mysql-storage-scaling/innodb-compression.svg"
 ---

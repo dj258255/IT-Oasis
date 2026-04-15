@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 660" role="img" aria-label="우선순위 역전 문제 - High 우선순위 스레드가 Low 우선순위 스레드가 잡은 락을 기다리는 동안 Medium 스레드가 선점하는 Priority Inversion 상황">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .low { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .mid { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .high { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .cs { fill: rgba(255, 238, 215, 0.1); stroke: #FFB74D; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .warn { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="pd-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="720" height="660" class="bg"/>
+  <text x="360" y="28" text-anchor="middle" class="title">우선순위 역전 (Priority Inversion)</text>
+
+  <rect x="30"  y="50" width="160" height="34" rx="6" class="low"/>
+  <text x="110" y="73" text-anchor="middle" class="lbl">스레드L (Low)</text>
+  <rect x="260" y="50" width="200" height="34" rx="6" class="mid"/>
+  <text x="360" y="73" text-anchor="middle" class="lbl">스레드M (Medium)</text>
+  <rect x="520" y="50" width="170" height="34" rx="6" class="high"/>
+  <text x="605" y="73" text-anchor="middle" class="lbl">스레드H (High)</text>
+  <line x1="110" y1="84" x2="110" y2="620" class="lifeline"/>
+  <line x1="360" y1="84" x2="360" y2="620" class="lifeline"/>
+  <line x1="605" y1="84" x2="605" y2="620" class="lifeline"/>
+
+  <rect x="50" y="108" width="160" height="30" rx="6" class="cs"/>
+  <text x="130" y="127" text-anchor="middle" class="msg">1. L이 lock 획득</text>
+  <rect x="50" y="148" width="160" height="30" rx="6" class="cs"/>
+  <text x="130" y="167" text-anchor="middle" class="msg">2. 임계영역 실행</text>
+
+  <line x1="605" y1="200" x2="112" y2="200" stroke="#bbb" stroke-width="1.25" marker-end="url(#pd-a)"/>
+  <text x="358" y="194" text-anchor="middle" class="msg">3. H가 lock 시도 → 대기</text>
+
+  <rect x="520" y="214" width="170" height="38" rx="6" class="high"/>
+  <text x="605" y="232" text-anchor="middle" class="msg">H 대기 (L이 잡은 락)</text>
+  <text x="605" y="247" text-anchor="middle" class="msg">정상: 곧 풀릴 것</text>
+
+  <rect x="260" y="268" width="200" height="50" rx="6" class="mid"/>
+  <text x="360" y="292" text-anchor="middle" class="msg">4. M이 CPU 선점</text>
+  <text x="360" y="308" text-anchor="middle" class="msg">(L보다 우선순위 높음)</text>
+
+  <rect x="50" y="332" width="160" height="46" rx="6" class="danger"/>
+  <text x="130" y="354" text-anchor="middle" class="warn">5. L 실행 중단</text>
+  <text x="130" y="370" text-anchor="middle" class="msg">CPU를 M에게 뺏김</text>
+
+  <rect x="260" y="392" width="200" height="46" rx="6" class="mid"/>
+  <text x="360" y="414" text-anchor="middle" class="msg">6. M 계속 실행</text>
+  <text x="360" y="430" text-anchor="middle" class="msg">(락 필요 없음)</text>
+
+  <rect x="520" y="452" width="170" height="50" rx="6" class="danger"/>
+  <text x="605" y="474" text-anchor="middle" class="warn">H 여전히 대기</text>
+  <text x="605" y="490" text-anchor="middle" class="msg">불필요하게 블록됨</text>
+
+  <rect x="80" y="530" width="560" height="74" rx="10" class="danger"/>
+  <text x="360" y="556" text-anchor="middle" class="warn">Priority Inversion 발생</text>
+  <text x="360" y="576" text-anchor="middle" class="msg">High가 Low를 기다리는데, 중간의 Medium이 Low를 선점해버리는 상황</text>
+  <text x="360" y="594" text-anchor="middle" class="msg">→ 우선순위가 역전되어 High의 응답성이 무너짐</text>
+</svg>

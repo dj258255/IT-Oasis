@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" role="img" aria-label="SUPPORTS 전파 - getUser는 트랜잭션이 있으면 참여하고 없으면 그냥 실행">
+  <defs>
+    <style>
+      .bg { fill: #1e1e2e; }
+      .top { fill: #2d2d3f; }
+      .dot1 { fill: #FF6B6B; }
+      .dot2 { fill: #FFB74D; }
+      .dot3 { fill: #4CAF50; }
+      .annot { font: 500 14px "Consolas", "Menlo", monospace; fill: #FFB74D; }
+      .keyword { font: 500 14px "Consolas", "Menlo", monospace; fill: #C586C0; }
+      .type { font: 500 14px "Consolas", "Menlo", monospace; fill: #4EC9B0; }
+      .ident { font: 500 14px "Consolas", "Menlo", monospace; fill: #DCDCAA; }
+      .var { font: 500 14px "Consolas", "Menlo", monospace; fill: #9CDCFE; }
+      .text { font: 500 14px "Consolas", "Menlo", monospace; fill: #d4d4d4; }
+    </style>
+  </defs>
+  <rect width="760" height="180" rx="8" class="bg"/>
+  <rect width="760" height="32" rx="8" class="top"/>
+  <circle cx="20" cy="16" r="6" class="dot1"/>
+  <circle cx="40" cy="16" r="6" class="dot2"/>
+  <circle cx="60" cy="16" r="6" class="dot3"/>
+
+  <text x="20" y="60" class="annot">@Transactional(propagation = <tspan class="type">Propagation</tspan>.SUPPORTS)</text>
+  <text x="20" y="82" class="keyword">public <tspan class="type">User</tspan> <tspan class="ident">getUser</tspan>(<tspan class="type">Long</tspan> <tspan class="var">id</tspan>) {</text>
+  <text x="40" y="104" class="text"><tspan class="keyword">return</tspan> userRepository.<tspan class="ident">findById</tspan>(<tspan class="var">id</tspan>);</text>
+  <text x="20" y="126" class="text">}</text>
+</svg>

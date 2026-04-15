@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 700" role="img" aria-label="큐 적체 메모리 누수 시나리오 - 초기 상태 0개, 1초 경과 1000개 유입/500개 처리 누적 500개, 10초 경과 10000개 유입/5000개 처리 누적 5000개, 60초 60000개/30000개 누적 30000개, 600초 600000개/300000개 누적 300000개 메모리 300MB - GC가 수집 못해 OOM 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .stage { fill: rgba(255, 238, 215, 0.14); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .state { fill: rgba(255, 238, 215, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .state-bad { fill: rgba(255, 107, 107, 0.26); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .stage-lbl { font: 700 11.5px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .warn { font: 700 11.5px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="wt-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="540" height="700" class="bg"/>
+  <text x="270" y="28" text-anchor="middle" class="title">큐 적체 메모리 누수</text>
+
+  <rect x="20"  y="50" width="110" height="30" rx="6" class="actor"/>
+  <text x="75" y="70" text-anchor="middle" class="lbl">이벤트 소스</text>
+  <rect x="155" y="50" width="100" height="30" rx="6" class="actor"/>
+  <text x="205" y="70" text-anchor="middle" class="lbl">큐</text>
+  <rect x="280" y="50" width="120" height="30" rx="6" class="actor"/>
+  <text x="340" y="70" text-anchor="middle" class="lbl">처리 스레드</text>
+  <rect x="420" y="50" width="100" height="30" rx="6" class="actor"/>
+  <text x="470" y="70" text-anchor="middle" class="lbl">메모리</text>
+  <line x1="75" y1="80" x2="75" y2="680" class="lifeline"/>
+  <line x1="205" y1="80" x2="205" y2="680" class="lifeline"/>
+  <line x1="340" y1="80" x2="340" y2="680" class="lifeline"/>
+  <line x1="470" y1="80" x2="470" y2="680" class="lifeline"/>
+
+  <rect x="155" y="90" width="100" height="26" rx="6" class="state"/>
+  <text x="205" y="107" text-anchor="middle" class="msg">초기 0개</text>
+
+  <rect x="10" y="132" width="520" height="22" rx="4" class="stage"/>
+  <text x="270" y="148" text-anchor="middle" class="stage-lbl">1초 경과</text>
+
+  <line x1="77" y1="178" x2="203" y2="178" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="140" y="172" text-anchor="middle" class="msg">1000개 유입</text>
+  <line x1="207" y1="200" x2="338" y2="200" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="272" y="194" text-anchor="middle" class="msg">500개 처리</text>
+  <rect x="150" y="210" width="110" height="36" rx="6" class="state"/>
+  <text x="205" y="228" text-anchor="middle" class="msg">누적 500개</text>
+  <text x="205" y="242" text-anchor="middle" class="msg">메모리 500KB</text>
+
+  <rect x="10" y="258" width="520" height="22" rx="4" class="stage"/>
+  <text x="270" y="274" text-anchor="middle" class="stage-lbl">10초 경과</text>
+
+  <line x1="77" y1="304" x2="203" y2="304" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="140" y="298" text-anchor="middle" class="msg">10000개 유입</text>
+  <line x1="207" y1="326" x2="338" y2="326" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="272" y="320" text-anchor="middle" class="msg">5000개 처리</text>
+  <rect x="150" y="336" width="110" height="36" rx="6" class="state"/>
+  <text x="205" y="354" text-anchor="middle" class="msg">누적 5000개</text>
+  <text x="205" y="368" text-anchor="middle" class="msg">메모리 5MB</text>
+
+  <rect x="10" y="384" width="520" height="22" rx="4" class="stage"/>
+  <text x="270" y="400" text-anchor="middle" class="stage-lbl">60초 경과 (1분)</text>
+
+  <line x1="77" y1="430" x2="203" y2="430" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="140" y="424" text-anchor="middle" class="msg">60000개 유입</text>
+  <line x1="207" y1="452" x2="338" y2="452" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="272" y="446" text-anchor="middle" class="msg">30000개 처리</text>
+  <rect x="150" y="462" width="110" height="36" rx="6" class="state"/>
+  <text x="205" y="480" text-anchor="middle" class="msg">누적 30000개</text>
+  <text x="205" y="494" text-anchor="middle" class="msg">메모리 30MB</text>
+
+  <rect x="10" y="510" width="520" height="22" rx="4" class="stage"/>
+  <text x="270" y="526" text-anchor="middle" class="stage-lbl">600초 경과 (10분)</text>
+
+  <line x1="77" y1="556" x2="203" y2="556" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="140" y="550" text-anchor="middle" class="msg">600000개 유입</text>
+  <line x1="207" y1="578" x2="338" y2="578" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="272" y="572" text-anchor="middle" class="msg">300000개 처리</text>
+  <rect x="140" y="588" width="130" height="40" rx="6" class="state-bad"/>
+  <text x="205" y="606" text-anchor="middle" class="msg">누적 300000개</text>
+  <text x="205" y="622" text-anchor="middle" class="msg">메모리 300MB</text>
+
+  <line x1="340" y1="656" x2="468" y2="656" stroke="#bbb" stroke-width="1.25" marker-end="url(#wt-a)"/>
+  <text x="400" y="650" text-anchor="middle" class="warn">메모리 부족 예외</text>
+  <rect x="400" y="666" width="140" height="30" rx="6" class="state-bad"/>
+  <text x="470" y="685" text-anchor="middle" class="msg">OutOfMemoryError</text>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 540" role="img" aria-label="JVM Stack (Thread1) - method3 (Top, 현재 실행 중) → method2 → method1 → main(Bottom), 각 프레임에 Local Variables, Operand Stack, Frame Data 포함">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.5; }
+      .top-frame { fill: rgba(255, 238, 215, 0.22); stroke: #FFB74D; stroke-width: 1.5; }
+      .red { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.5; }
+      .green { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.5; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .item { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .pos { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+  </defs>
+  <rect width="460" height="540" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">JVM Stack (Thread1)</text>
+
+  <text x="380" y="78" class="pos">↑ Top</text>
+  <text x="380" y="94" class="item">(현재 실행 중)</text>
+
+  <rect x="40" y="60" width="320" height="100" rx="8" class="top-frame"/>
+  <text x="200" y="84" text-anchor="middle" class="lbl">method3()</text>
+  <text x="60" y="106" class="item">· Local Variables: this, x, y</text>
+  <text x="60" y="124" class="item">· Operand Stack: [...]</text>
+  <text x="60" y="142" class="item">· Frame Data: Return Address, etc.</text>
+
+  <rect x="40" y="174" width="320" height="100" rx="8" class="red"/>
+  <text x="200" y="198" text-anchor="middle" class="lbl">method2()</text>
+  <text x="60" y="220" class="item">· Local Variables: this, param1</text>
+  <text x="60" y="238" class="item">· Operand Stack: [...]</text>
+  <text x="60" y="256" class="item">· Frame Data</text>
+
+  <rect x="40" y="288" width="320" height="100" rx="8" class="green"/>
+  <text x="200" y="312" text-anchor="middle" class="lbl">method1()</text>
+  <text x="60" y="334" class="item">· Local Variables: this, args</text>
+  <text x="60" y="352" class="item">· Operand Stack: [...]</text>
+  <text x="60" y="370" class="item">· Frame Data</text>
+
+  <rect x="40" y="402" width="320" height="80" rx="8" class="frame"/>
+  <text x="200" y="446" text-anchor="middle" class="lbl">main()</text>
+
+  <text x="380" y="478" class="pos">↓ Bottom</text>
+</svg>

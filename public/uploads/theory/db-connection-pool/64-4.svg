@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 680" role="img" aria-label="커넥션 풀 데드락: 스레드 16개, 커넥션 풀 10개, 작업당 2개 필요 — 모두 1개씩 잡고 두 번째를 서로 기다리는 데드락">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .stage-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255, 238, 215, 0.35); stroke-width: 1.25; }
+      .state { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.5; }
+      .stage-label { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .thread-ok { fill: rgba(100, 181, 246, 0.16); stroke: #64B5F6; stroke-width: 1.25; }
+      .thread-wait { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.25; }
+      .pool-alert { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.5; }
+      .deadlock { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 2; }
+      .stroke-arrow { stroke: #888; stroke-width: 1.5; fill: none; }
+      .txt { font: 500 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .small { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .danger { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="dead-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="820" height="680" class="bg"/>
+  <text x="410" y="34" text-anchor="middle" class="title">커넥션 풀 데드락 시나리오</text>
+
+  <!-- Initial state -->
+  <rect x="280" y="55" width="260" height="80" rx="8" class="state"/>
+  <text x="410" y="80" text-anchor="middle" class="sub">시작 상태</text>
+  <text x="410" y="103" text-anchor="middle" class="txt">스레드 16개 · 커넥션 풀 10개</text>
+  <text x="410" y="122" text-anchor="middle" class="txt">작업당 필요 커넥션: 2개</text>
+  <line x1="410" y1="137" x2="410" y2="157" class="stroke-arrow" marker-end="url(#dead-arrow)"/>
+
+  <!-- Stage 1 -->
+  <rect x="30" y="162" width="760" height="200" rx="10" class="stage-frame"/>
+  <text x="50" y="185" class="sub">1단계 · 첫 번째 커넥션 획득</text>
+  <rect x="340" y="195" width="140" height="36" rx="6" class="stage-label"/>
+  <text x="410" y="219" text-anchor="middle" class="txt">1단계 시작</text>
+  <line x1="410" y1="231" x2="410" y2="245" class="stroke-arrow"/>
+  <!-- threads row -->
+  <g>
+    <rect x="50"  y="250" width="130" height="60" rx="6" class="thread-ok"/>
+    <text x="115" y="274" text-anchor="middle" class="txt">Thread 1</text>
+    <text x="115" y="293" text-anchor="middle" class="small">커넥션 1개 획득</text>
+    <rect x="190" y="250" width="130" height="60" rx="6" class="thread-ok"/>
+    <text x="255" y="274" text-anchor="middle" class="txt">Thread 2</text>
+    <text x="255" y="293" text-anchor="middle" class="small">커넥션 1개 획득</text>
+    <rect x="330" y="250" width="130" height="60" rx="6" class="thread-ok"/>
+    <text x="395" y="274" text-anchor="middle" class="txt">Thread 3</text>
+    <text x="395" y="293" text-anchor="middle" class="small">커넥션 1개 획득</text>
+    <rect x="470" y="260" width="60" height="40" rx="6" class="state"/>
+    <text x="500" y="285" text-anchor="middle" class="txt">…</text>
+    <rect x="540" y="250" width="130" height="60" rx="6" class="thread-ok"/>
+    <text x="605" y="274" text-anchor="middle" class="txt">Thread 10</text>
+    <text x="605" y="293" text-anchor="middle" class="small">커넥션 1개 획득</text>
+  </g>
+  <!-- Pool exhausted -->
+  <rect x="240" y="325" width="340" height="30" rx="6" class="pool-alert"/>
+  <text x="410" y="346" text-anchor="middle" class="danger">커넥션 풀: 10개 모두 사용 중 · 남은: 0개</text>
+
+  <line x1="410" y1="362" x2="410" y2="378" class="stroke-arrow" marker-end="url(#dead-arrow)"/>
+
+  <!-- Stage 2 -->
+  <rect x="30" y="385" width="760" height="200" rx="10" class="stage-frame"/>
+  <text x="50" y="408" class="sub">2단계 · 두 번째 커넥션 요청</text>
+  <rect x="340" y="418" width="140" height="36" rx="6" class="stage-label"/>
+  <text x="410" y="442" text-anchor="middle" class="txt">2단계 시작</text>
+  <line x1="410" y1="454" x2="410" y2="468" class="stroke-arrow"/>
+  <g>
+    <rect x="50"  y="473" width="130" height="60" rx="6" class="thread-wait"/>
+    <text x="115" y="497" text-anchor="middle" class="txt">Thread 1</text>
+    <text x="115" y="516" text-anchor="middle" class="small">2번째 대기 중</text>
+    <rect x="190" y="473" width="130" height="60" rx="6" class="thread-wait"/>
+    <text x="255" y="497" text-anchor="middle" class="txt">Thread 2</text>
+    <text x="255" y="516" text-anchor="middle" class="small">2번째 대기 중</text>
+    <rect x="330" y="473" width="130" height="60" rx="6" class="thread-wait"/>
+    <text x="395" y="497" text-anchor="middle" class="txt">Thread 3</text>
+    <text x="395" y="516" text-anchor="middle" class="small">2번째 대기 중</text>
+    <rect x="470" y="483" width="60" height="40" rx="6" class="state"/>
+    <text x="500" y="508" text-anchor="middle" class="txt">…</text>
+    <rect x="540" y="473" width="130" height="60" rx="6" class="thread-wait"/>
+    <text x="605" y="497" text-anchor="middle" class="txt">Thread 10</text>
+    <text x="605" y="516" text-anchor="middle" class="small">2번째 대기 중</text>
+  </g>
+  <line x1="410" y1="548" x2="410" y2="558" class="stroke-arrow"/>
+  <text x="410" y="572" text-anchor="middle" class="danger">→ 아무도 첫 번째 커넥션을 반환하지 않음</text>
+
+  <line x1="410" y1="585" x2="410" y2="600" class="stroke-arrow" marker-end="url(#dead-arrow)"/>
+
+  <!-- Deadlock box -->
+  <rect x="230" y="605" width="360" height="64" rx="10" class="deadlock"/>
+  <text x="410" y="630" text-anchor="middle" class="sub" fill="#ffcccb">데드락 발생</text>
+  <text x="410" y="652" text-anchor="middle" class="txt">모든 스레드가 서로의 커넥션을 기다리며 멈춤</text>
+</svg>

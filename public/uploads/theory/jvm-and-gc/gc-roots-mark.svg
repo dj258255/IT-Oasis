@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-label="GC Roots - main 스레드 스택 지역변수 ref, static UserService.instance, synchronized 모니터 같은 GC Roots에서 객체 A(→B,C), X(Old Gen), Y로 참조">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .root { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .obj { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .old { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="gr-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="720" height="480" class="bg"/>
+  <text x="360" y="28" text-anchor="middle" class="title">GC Roots</text>
+
+  <rect x="30" y="50" width="660" height="140" rx="10" class="frame"/>
+  <text x="360" y="74" text-anchor="middle" class="frame-lbl">GC Roots</text>
+
+  <rect x="70" y="98" width="180" height="70" rx="8" class="root"/>
+  <text x="160" y="128" text-anchor="middle" class="lbl">main 스레드 스택</text>
+  <text x="160" y="150" text-anchor="middle" class="lbl">지역변수 ref</text>
+
+  <rect x="270" y="98" width="200" height="70" rx="8" class="root"/>
+  <text x="370" y="138" text-anchor="middle" class="lbl">static UserService.instance</text>
+
+  <rect x="490" y="98" width="180" height="70" rx="8" class="root"/>
+  <text x="580" y="138" text-anchor="middle" class="lbl">synchronized 모니터</text>
+
+  <line x1="160" y1="168" x2="100" y2="240" stroke="#888" stroke-width="1.5" marker-end="url(#gr-a)"/>
+  <line x1="370" y1="168" x2="370" y2="240" stroke="#888" stroke-width="1.5" marker-end="url(#gr-a)"/>
+  <line x1="580" y1="168" x2="600" y2="240" stroke="#888" stroke-width="1.5" marker-end="url(#gr-a)"/>
+
+  <rect x="30" y="210" width="660" height="220" rx="10" class="frame"/>
+  <text x="360" y="232" text-anchor="middle" class="frame-lbl">객체들</text>
+
+  <rect x="70" y="254" width="60" height="40" rx="6" class="obj"/>
+  <text x="100" y="278" text-anchor="middle" class="lbl">A</text>
+
+  <line x1="100" y1="294" x2="60" y2="346" stroke="#888" stroke-width="1.5" marker-end="url(#gr-a)"/>
+  <line x1="100" y1="294" x2="240" y2="346" stroke="#888" stroke-width="1.5" marker-end="url(#gr-a)"/>
+
+  <rect x="30" y="360" width="60" height="40" rx="6" class="obj"/>
+  <text x="60" y="384" text-anchor="middle" class="lbl">B</text>
+  <rect x="210" y="360" width="60" height="40" rx="6" class="obj"/>
+  <text x="240" y="384" text-anchor="middle" class="lbl">C</text>
+
+  <rect x="320" y="254" width="120" height="40" rx="6" class="old"/>
+  <text x="380" y="278" text-anchor="middle" class="lbl">X (Old Gen)</text>
+
+  <rect x="570" y="254" width="60" height="40" rx="6" class="obj"/>
+  <text x="600" y="278" text-anchor="middle" class="lbl">Y</text>
+</svg>

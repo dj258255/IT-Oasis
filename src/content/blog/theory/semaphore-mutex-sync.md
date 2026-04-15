@@ -11,9 +11,9 @@ tags:
   - OS
   - Concurrency
   - Java
-category: theory
+category: theory/Concurrency
 draft: false
-coverImage: "/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.png"
+coverImage: "/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.svg"
 ---
 
 
@@ -49,7 +49,7 @@ class BankAccount {
 ```
 
 **경쟁 상태 (Race Condition) 발생:**
-![](/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.png)
+![](/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.svg)
 
 
 
@@ -83,7 +83,7 @@ class BankAccount {
 > 출처: [Velog - [OS]뮤텍스(Mutex)와 세마포어(Semaphore)](https://velog.io/@dodozee/뮤텍스Mutex와-세마포어Semaphore), [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/)
 
 ### 뮤텍스 동작 원리
-![](/uploads/theory/semaphore-mutex-sync/mutex-operation-principle.png)
+![](/uploads/theory/semaphore-mutex-sync/mutex-operation-principle.svg)
 
 **중요:** 스레드 B는 스레드 A의 Lock을 해제할 수 없어요. 오직 소유자인 스레드 A만 Unlock 가능해요.
 
@@ -191,7 +191,7 @@ public void innerMethod() {
 ```
 
 **동작 과정:**
-![](/uploads/theory/semaphore-mutex-sync/reentrant-possible-reentrant.png)
+![](/uploads/theory/semaphore-mutex-sync/reentrant-possible-reentrant.svg)
 
 
 재진입이 불가능하다면, `innerMethod()`에서 데드락이 발생해요.
@@ -216,7 +216,7 @@ public void innerMethod() {
 세마포어는 정수형 카운터로 구현돼요.
 
 
-![](/uploads/theory/semaphore-mutex-sync/semaphore-operation-principle.png)
+![](/uploads/theory/semaphore-mutex-sync/semaphore-operation-principle.svg)
 
 
 **주요 연산:**
@@ -300,7 +300,7 @@ class Car extends Thread {
 **실행 결과:**
 
 
-![](/uploads/theory/semaphore-mutex-sync/2-counting-semaphore-counting-semaphore.png)
+![](/uploads/theory/semaphore-mutex-sync/2-counting-semaphore-counting-semaphore.svg)
 
 
 
@@ -449,7 +449,7 @@ class Philosopher extends Thread {
 
 **데드락 발생 시나리오:**
 
-![](/uploads/theory/semaphore-mutex-sync/wrong-impl-deadlock-occurrence.png)
+![](/uploads/theory/semaphore-mutex-sync/wrong-impl-deadlock-occurrence.svg)
 
 
 모든 철학자가 왼쪽 포크를 들고 오른쪽 포크를 기다리므로, 아무도 식사할 수 없게 돼요.
@@ -546,7 +546,7 @@ class DiningPhilosophers {
 우선순위 역전은 **낮은 우선순위의 스레드가 높은 우선순위 스레드보다 먼저 실행**되는 현상이에요.
 
 **시나리오:**
-![](/uploads/theory/semaphore-mutex-sync/problem-description.png)
+![](/uploads/theory/semaphore-mutex-sync/problem-description.svg)
 
 
 > 출처: [Wikipedia - Priority Inversion](https://en.wikipedia.org/wiki/Priority_inversion), [GeeksforGeeks - Priority Inversion in Operating Systems](https://www.geeksforgeeks.org/priority-inversion-what-the-heck/)
@@ -569,7 +569,7 @@ NASA는 VxWorks 운영체제의 **우선순위 상속(Priority Inheritance)** �
 ### 우선순위 상속 (Priority Inheritance)
 
 낮은 우선순위 스레드가 뮤텍스를 소유하고 있을 때, 높은 우선순위 스레드가 대기하면 **소유자의 우선순위를 일시적으로 높여줍니다**.
-![](/uploads/theory/semaphore-mutex-sync/priority-inheritance-priority-inheritance.png)
+![](/uploads/theory/semaphore-mutex-sync/priority-inheritance-priority-inheritance.svg)
 
 
 Java에서는 직접 구현해야 하지만, RTOS(Real-Time OS)에서는 기본 제공해요.
@@ -723,7 +723,7 @@ public ResponseEntity<?> claimReward(@RequestBody RewardRequest request) {
 ```
 
 **동작 과정:**
-![](/uploads/theory/semaphore-mutex-sync/solution-method-redis-setnx-distributed-lock.png)
+![](/uploads/theory/semaphore-mutex-sync/solution-method-redis-setnx-distributed-lock.svg)
 
 
 **핵심 포인트:**
@@ -748,7 +748,7 @@ LINE Engineering에서는 비동기 서버에서 이벤트 루프를 활용한 �
 
 **이벤트 루프 동작 원리:**
 
-![](/uploads/theory/semaphore-mutex-sync/multiplexing-based-concurrency.png)
+![](/uploads/theory/semaphore-mutex-sync/multiplexing-based-concurrency.svg)
 
 
 ```java
@@ -807,7 +807,7 @@ public CompletableFuture<HttpResponse> serve(ServiceRequestContext ctx,
 ```
 
 **블로킹 시 문제:**
-![](/uploads/theory/semaphore-mutex-sync/blocking-danger.png)
+![](/uploads/theory/semaphore-mutex-sync/blocking-danger.svg)
 
 
 **핵심 원칙:**
@@ -1022,7 +1022,7 @@ class BankAccount {
 ```
 
 **Race Condition:**
-![](/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.png)
+![](/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.svg)
 
 
 
@@ -1056,7 +1056,7 @@ A mutex (Mutual Exclusion) is **a locking mechanism for implementing mutual excl
 > Sources: [Velog - [OS] Mutex and Semaphore](https://velog.io/@dodozee/뮤텍스Mutex와-세마포어Semaphore), [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/)
 
 ### How Mutex Works
-![](/uploads/theory/semaphore-mutex-sync/mutex-operation-principle.png)
+![](/uploads/theory/semaphore-mutex-sync/mutex-operation-principle.svg)
 
 **Important:** Thread B cannot release Thread A's lock. Only the owner, Thread A, can unlock it.
 
@@ -1164,7 +1164,7 @@ public void innerMethod() {
 ```
 
 **How it works:**
-![](/uploads/theory/semaphore-mutex-sync/reentrant-possible-reentrant.png)
+![](/uploads/theory/semaphore-mutex-sync/reentrant-possible-reentrant.svg)
 
 
 If reentrancy were not possible, a deadlock would occur in `innerMethod()`.
@@ -1189,7 +1189,7 @@ A semaphore is a **signaling mechanism** that controls **access by multiple proc
 A semaphore is implemented as an integer counter.
 
 
-![](/uploads/theory/semaphore-mutex-sync/semaphore-operation-principle.png)
+![](/uploads/theory/semaphore-mutex-sync/semaphore-operation-principle.svg)
 
 
 **Key operations:**
@@ -1274,7 +1274,7 @@ class Car extends Thread {
 **Execution result:**
 
 
-![](/uploads/theory/semaphore-mutex-sync/2-counting-semaphore-counting-semaphore.png)
+![](/uploads/theory/semaphore-mutex-sync/2-counting-semaphore-counting-semaphore.svg)
 
 
 
@@ -1423,7 +1423,7 @@ class Philosopher extends Thread {
 
 **Deadlock scenario:**
 
-![](/uploads/theory/semaphore-mutex-sync/wrong-impl-deadlock-occurrence.png)
+![](/uploads/theory/semaphore-mutex-sync/wrong-impl-deadlock-occurrence.svg)
 
 
 All philosophers pick up their left fork and wait for the right fork, so nobody can eat.
@@ -1509,7 +1509,7 @@ Since at most 4 can sit simultaneously, at least one philosopher can always pick
 Priority inversion is a phenomenon where **a lower-priority thread executes before a higher-priority thread**.
 
 **Scenario:**
-![](/uploads/theory/semaphore-mutex-sync/problem-description.png)
+![](/uploads/theory/semaphore-mutex-sync/problem-description.svg)
 
 
 > Sources: [Wikipedia - Priority Inversion](https://en.wikipedia.org/wiki/Priority_inversion), [GeeksforGeeks - Priority Inversion in Operating Systems](https://www.geeksforgeeks.org/priority-inversion-what-the-heck/)
@@ -1532,7 +1532,7 @@ NASA enabled the **Priority Inheritance** feature of the VxWorks operating syste
 ### Priority Inheritance
 
 When a low-priority thread holds a mutex and a high-priority thread is waiting for it, **the owner's priority is temporarily elevated**.
-![](/uploads/theory/semaphore-mutex-sync/priority-inheritance-priority-inheritance.png)
+![](/uploads/theory/semaphore-mutex-sync/priority-inheritance-priority-inheritance.svg)
 
 
 In Java, this must be implemented manually, but RTOS (Real-Time OS) provides it natively.
@@ -1686,7 +1686,7 @@ public ResponseEntity<?> claimReward(@RequestBody RewardRequest request) {
 ```
 
 **How it works:**
-![](/uploads/theory/semaphore-mutex-sync/solution-method-redis-setnx-distributed-lock.png)
+![](/uploads/theory/semaphore-mutex-sync/solution-method-redis-setnx-distributed-lock.svg)
 
 
 **Key points:**
@@ -1709,7 +1709,7 @@ A technique that allows a single process/thread to handle both input and output.
 
 **How the event loop works:**
 
-![](/uploads/theory/semaphore-mutex-sync/multiplexing-based-concurrency.png)
+![](/uploads/theory/semaphore-mutex-sync/multiplexing-based-concurrency.svg)
 
 
 ```java
@@ -1768,7 +1768,7 @@ public CompletableFuture<HttpResponse> serve(ServiceRequestContext ctx,
 ```
 
 **Problem when blocking:**
-![](/uploads/theory/semaphore-mutex-sync/blocking-danger.png)
+![](/uploads/theory/semaphore-mutex-sync/blocking-danger.svg)
 
 
 **Key principles:**

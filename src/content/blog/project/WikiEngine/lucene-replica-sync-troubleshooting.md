@@ -36,18 +36,7 @@ draft: true
 
 wikiEngine은 2대의 ARM 서버에서 운영됩니다. Lucene 인덱스의 쓰기는 서버1(primary)에서만 수행하고, 서버2(replica)는 읽기 전용으로 동작합니다. MySQL의 Primary-Replica 패턴과 동일한 사고 모델입니다.
 
-```
-서버1 (Primary)                    서버2 (Replica)
-┌────────────────────┐             ┌────────────────────┐
-│  App (Spring Boot)  │             │  App (Spring Boot)  │
-│  - IndexWriter      │             │  - DirectoryReader   │
-│  - NRT SearcherMgr  │             │  - SearcherManager   │
-│  - CDC 이벤트 수신  │  ← rsync →  │  - 읽기 전용         │
-│  - 자동완성 배치     │             │                      │
-└────────────────────┘             └────────────────────┘
-         ↑                                   ↑
-    Nginx (쓰기)                    Nginx (읽기 분산)
-```
+![wikiEngine Primary-Replica 아키텍처 — 서버1은 IndexWriter/NRT SearcherManager로 쓰기 전용, 서버2는 DirectoryReader로 읽기 전용, 사이를 rsync로 동기화](/uploads/project/WikiEngine/lucene-replica-sync-troubleshooting/primary-replica-architecture.svg)
 
 서버1의 앱은 Kafka CDC 이벤트를 수신하여 실시간으로 Lucene 인덱스를 갱신합니다. `IndexWriter`로 문서를 추가/수정/삭제하고, `SearcherManager`의 NRT(Near Real-Time) 리더가 변경사항을 반영합니다.
 

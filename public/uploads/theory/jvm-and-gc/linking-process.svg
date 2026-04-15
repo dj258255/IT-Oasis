@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-label="Linking 과정 - Verify(바이트코드 검증, 보안 체크) → Prepare(static 메모리 할당 + 기본값) → Resolve(심볼릭 참조를 실제 참조로)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .step { fill: rgba(100, 181, 246, 0.24); stroke: #64B5F6; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="lp-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="720" height="240" class="bg"/>
+  <text x="360" y="28" text-anchor="middle" class="title">Linking 단계</text>
+
+  <rect x="40" y="70" width="180" height="120" rx="8" class="step"/>
+  <text x="130" y="104" text-anchor="middle" class="lbl">Verify</text>
+  <text x="130" y="128" text-anchor="middle" class="sub">바이트코드 검증</text>
+  <text x="130" y="152" text-anchor="middle" class="sub">(보안 체크)</text>
+
+  <line x1="220" y1="130" x2="258" y2="130" stroke="#888" stroke-width="1.5" marker-end="url(#lp-a)"/>
+
+  <rect x="270" y="70" width="180" height="120" rx="8" class="step"/>
+  <text x="360" y="104" text-anchor="middle" class="lbl">Prepare</text>
+  <text x="360" y="128" text-anchor="middle" class="sub">static 메모리</text>
+  <text x="360" y="152" text-anchor="middle" class="sub">할당 + 기본값</text>
+
+  <line x1="450" y1="130" x2="488" y2="130" stroke="#888" stroke-width="1.5" marker-end="url(#lp-a)"/>
+
+  <rect x="500" y="70" width="180" height="120" rx="8" class="step"/>
+  <text x="590" y="104" text-anchor="middle" class="lbl">Resolve</text>
+  <text x="590" y="128" text-anchor="middle" class="sub">심볼릭 참조를</text>
+  <text x="590" y="152" text-anchor="middle" class="sub">실제 참조로</text>
+</svg>

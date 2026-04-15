@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" role="img" aria-label="Interpreter 동작 - 바이트코드(iload_1, iload_2, iadd, ireturn)를 인터프리터가 한 줄씩 해석해서 실행, 매번 반복">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .bc { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .interp { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .repeat { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="ip-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="720" height="360" class="bg"/>
+  <text x="360" y="28" text-anchor="middle" class="title">Interpreter 동작</text>
+
+  <rect x="20" y="180" width="120" height="50" rx="8" class="repeat"/>
+  <text x="80" y="210" text-anchor="middle" class="lbl">(매번 반복)</text>
+
+  <line x1="140" y1="205" x2="178" y2="205" stroke="#888" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ip-a)"/>
+
+  <rect x="180" y="50" width="540" height="160" rx="10" class="frame"/>
+  <text x="450" y="74" text-anchor="middle" class="frame-lbl">인터프리터</text>
+
+  <rect x="200" y="170" width="80" height="32" rx="6" class="interp"/>
+  <text x="240" y="190" text-anchor="middle" class="lbl">해석</text>
+  <line x1="280" y1="186" x2="318" y2="186" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+  <rect x="320" y="170" width="80" height="32" rx="6" class="interp"/>
+  <text x="360" y="190" text-anchor="middle" class="lbl">해석</text>
+  <line x1="400" y1="186" x2="438" y2="186" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+  <rect x="440" y="170" width="80" height="32" rx="6" class="interp"/>
+  <text x="480" y="190" text-anchor="middle" class="lbl">해석</text>
+  <line x1="520" y1="186" x2="558" y2="186" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+  <rect x="560" y="170" width="120" height="32" rx="6" class="interp"/>
+  <text x="620" y="190" text-anchor="middle" class="lbl">해석</text>
+
+  <rect x="180" y="220" width="540" height="120" rx="10" class="frame"/>
+  <text x="450" y="244" text-anchor="middle" class="frame-lbl">바이트코드</text>
+
+  <rect x="200" y="280" width="80" height="42" rx="6" class="bc"/>
+  <text x="240" y="306" text-anchor="middle" class="lbl">iload_1</text>
+  <line x1="240" y1="280" x2="240" y2="206" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+  <rect x="320" y="280" width="80" height="42" rx="6" class="bc"/>
+  <text x="360" y="306" text-anchor="middle" class="lbl">iload_2</text>
+  <line x1="360" y1="280" x2="360" y2="206" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+  <rect x="440" y="280" width="80" height="42" rx="6" class="bc"/>
+  <text x="480" y="306" text-anchor="middle" class="lbl">iadd</text>
+  <line x1="480" y1="280" x2="480" y2="206" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+  <rect x="560" y="280" width="120" height="42" rx="6" class="bc"/>
+  <text x="620" y="306" text-anchor="middle" class="lbl">ireturn</text>
+  <line x1="620" y1="280" x2="620" y2="206" stroke="#888" stroke-width="1.5" marker-end="url(#ip-a)"/>
+</svg>

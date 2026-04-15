@@ -10,9 +10,9 @@ tags:
   - Spring Boot
   - Performance
   - Architecture
-category: theory
+category: theory/Database
 draft: false
-coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png"
+coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.svg"
 ---
 
 
@@ -102,7 +102,7 @@ class SimpleCache {
 ### 1.3 CPU 캐시에서 배우는 교훈
 
 캐싱은 소프트웨어보다 하드웨어에서 먼저 발전했어요.
-![](/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png)
+![](/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.svg)
 
 **핵심 원리**: 자주 쓰는 데이터를 빠른 곳에 두자!
 
@@ -551,7 +551,7 @@ public User getUser(Long id) {
 }
 ```
 
-![](/uploads/theory/redis-caching-guide/52-spring-cache-abstraction.png)
+![](/uploads/theory/redis-caching-guide/52-spring-cache-abstraction.svg)
 
 
 설정만 바꾸면 구현체가 바뀌어요. 이게 추상화의 힘이죠.
@@ -718,7 +718,7 @@ Caffeine.newBuilder()
 
 #### 서버 1대 환경
 
-![](/uploads/theory/redis-caching-guide/server-single-env.png)
+![](/uploads/theory/redis-caching-guide/server-single-env.svg)
 
 **로컬 캐시를 쓴다**:
 - 서버가 1대뿐이면 데이터 불일치 문제 없음
@@ -729,9 +729,9 @@ Caffeine.newBuilder()
 
 #### 서버 여러 대 환경
 
-![](/uploads/theory/redis-caching-guide/server-multi-env.png)
+![](/uploads/theory/redis-caching-guide/server-multi-env.svg)
 
-![](/uploads/theory/redis-caching-guide/server-multi-env-2.png)
+![](/uploads/theory/redis-caching-guide/server-multi-env-2.svg)
 
 **Redis를 쓴다**:
 - 모든 서버가 같은 데이터를 봐야 함
@@ -795,7 +795,7 @@ class CachingService {
 
 #### 성능 비교를 해봤다
 
-![](/uploads/theory/redis-caching-guide/performance-comparison.png)
+![](/uploads/theory/redis-caching-guide/performance-comparison.svg)
 
 
 로컬 캐시가 압도적으로 빨라요. 하지만 **데이터 일관성**이 더 중요하면 Redis를 써야 해요.
@@ -1451,7 +1451,7 @@ class StreamService {
 
 스레드 풀, 커넥션 풀에 이어 캐싱까지 공부하고 나니, 이제 라이브 스트리밍 서버의 성능 최적화 전체 그림이 보여요.
 
-![](/uploads/theory/redis-caching-guide/103-conclusion.png)
+![](/uploads/theory/redis-caching-guide/103-conclusion.svg)
 
 
 다음에는 메시지 큐와 비동기 처리를 공부해서, 더욱 확장 가능한 시스템을 만들어 봐야겠어요.
@@ -1566,7 +1566,7 @@ After applying cache:
 ### 1.3 Lessons from CPU Cache
 
 Caching evolved in hardware before software.
-![](/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.png)
+![](/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.svg)
 
 **Core principle**: Keep frequently used data in a fast location!
 
@@ -2015,7 +2015,7 @@ public User getUser(Long id) {
 }
 ```
 
-![](/uploads/theory/redis-caching-guide/52-spring-cache-abstraction.png)
+![](/uploads/theory/redis-caching-guide/52-spring-cache-abstraction.svg)
 
 
 Just change the configuration and the implementation switches. That is the power of abstraction.
@@ -2182,7 +2182,7 @@ Now we have two options. When should you use which? I was confused at first, but
 
 #### Single Server Environment
 
-![](/uploads/theory/redis-caching-guide/server-single-env.png)
+![](/uploads/theory/redis-caching-guide/server-single-env.svg)
 
 **Use local cache:**
 - With only one server, there's no data inconsistency issue
@@ -2193,9 +2193,9 @@ In my project's early stages, I had just one server. I started with Caffeine and
 
 #### Multi-Server Environment
 
-![](/uploads/theory/redis-caching-guide/server-multi-env.png)
+![](/uploads/theory/redis-caching-guide/server-multi-env.svg)
 
-![](/uploads/theory/redis-caching-guide/server-multi-env-2.png)
+![](/uploads/theory/redis-caching-guide/server-multi-env-2.svg)
 
 **Use Redis:**
 - All servers must see the same data
@@ -2259,7 +2259,7 @@ class CachingService {
 
 #### I Ran a Performance Comparison
 
-![](/uploads/theory/redis-caching-guide/performance-comparison.png)
+![](/uploads/theory/redis-caching-guide/performance-comparison.svg)
 
 
 Local cache is overwhelmingly faster. But when **data consistency** matters more, you should use Redis.
@@ -2915,7 +2915,7 @@ class StreamService {
 
 After studying thread pools, connection pools, and now caching, I can see the full picture of performance optimization for a live streaming server.
 
-![](/uploads/theory/redis-caching-guide/103-conclusion.png)
+![](/uploads/theory/redis-caching-guide/103-conclusion.svg)
 
 
 Next, I plan to study message queues and asynchronous processing to build an even more scalable system.

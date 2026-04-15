@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" role="img" aria-label="식사하는 철학자 데드락 - 철학자 0~4가 각자 왼쪽 포크를 보유하고 오른쪽 포크를 요청하는 순환 대기로 데드락">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .phil { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .detail { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .edge-lbl { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="dl-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="900" height="360" class="bg"/>
+  <text x="450" y="30" text-anchor="middle" class="title">식사하는 철학자 · 데드락 상황 (5ms 이후)</text>
+
+  <rect x="20"  y="100" width="150" height="120" rx="8" class="phil"/>
+  <text x="95" y="128" text-anchor="middle" class="lbl">철학자0</text>
+  <text x="95" y="155" text-anchor="middle" class="detail">포크0 보유</text>
+  <text x="95" y="176" text-anchor="middle" class="detail">포크1 대기</text>
+
+  <rect x="200" y="100" width="150" height="120" rx="8" class="phil"/>
+  <text x="275" y="128" text-anchor="middle" class="lbl">철학자1</text>
+  <text x="275" y="155" text-anchor="middle" class="detail">포크1 보유</text>
+  <text x="275" y="176" text-anchor="middle" class="detail">포크2 대기</text>
+
+  <rect x="380" y="100" width="150" height="120" rx="8" class="phil"/>
+  <text x="455" y="128" text-anchor="middle" class="lbl">철학자2</text>
+  <text x="455" y="155" text-anchor="middle" class="detail">포크2 보유</text>
+  <text x="455" y="176" text-anchor="middle" class="detail">포크3 대기</text>
+
+  <rect x="560" y="100" width="150" height="120" rx="8" class="phil"/>
+  <text x="635" y="128" text-anchor="middle" class="lbl">철학자3</text>
+  <text x="635" y="155" text-anchor="middle" class="detail">포크3 보유</text>
+  <text x="635" y="176" text-anchor="middle" class="detail">포크4 대기</text>
+
+  <rect x="740" y="100" width="150" height="120" rx="8" class="phil"/>
+  <text x="815" y="128" text-anchor="middle" class="lbl">철학자4</text>
+  <text x="815" y="155" text-anchor="middle" class="detail">포크4 보유</text>
+  <text x="815" y="176" text-anchor="middle" class="detail">포크0 대기</text>
+
+  <line x1="170" y1="160" x2="198" y2="160" stroke="#bbb" stroke-width="1.5" marker-end="url(#dl-a)"/>
+  <text x="185" y="150" text-anchor="middle" class="edge-lbl">포크1 요청</text>
+
+  <line x1="350" y1="160" x2="378" y2="160" stroke="#bbb" stroke-width="1.5" marker-end="url(#dl-a)"/>
+  <text x="365" y="150" text-anchor="middle" class="edge-lbl">포크2 요청</text>
+
+  <line x1="530" y1="160" x2="558" y2="160" stroke="#bbb" stroke-width="1.5" marker-end="url(#dl-a)"/>
+  <text x="545" y="150" text-anchor="middle" class="edge-lbl">포크3 요청</text>
+
+  <line x1="710" y1="160" x2="738" y2="160" stroke="#bbb" stroke-width="1.5" marker-end="url(#dl-a)"/>
+  <text x="725" y="150" text-anchor="middle" class="edge-lbl">포크4 요청</text>
+
+  <path d="M 815 220 C 815 280, 200 280, 95 260 L 95 220" stroke="#bbb" stroke-width="1.5" fill="none" marker-end="url(#dl-a)"/>
+  <text x="455" y="300" text-anchor="middle" class="edge-lbl">포크0 요청 (순환)</text>
+</svg>

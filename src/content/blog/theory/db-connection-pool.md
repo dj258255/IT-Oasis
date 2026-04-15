@@ -11,9 +11,9 @@ tags:
   - JDBC
   - Spring Boot
   - Performance
-category: theory
+category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-connection-pool/cost.png"
+coverImage: "/uploads/theory/db-connection-pool/cost.svg"
 ---
 
 
@@ -230,12 +230,12 @@ public class DataSourceConfig {
 #### 비용 비교
 
 **잘못된 방법 (매번 풀 생성)**:
-![](/uploads/theory/db-connection-pool/cost.png)
+![](/uploads/theory/db-connection-pool/cost.svg)
 
 
 **올바른 방법 (싱글톤 풀)**:
 
-![](/uploads/theory/db-connection-pool/cost-2.png)
+![](/uploads/theory/db-connection-pool/cost-2.svg)
 
 
 #### 메모리 관점
@@ -961,7 +961,7 @@ class DeadlockService {
 ```
 
 **발생 조건**:
-![](/uploads/theory/db-connection-pool/64-4.png)
+![](/uploads/theory/db-connection-pool/64-4.svg)
 
 
 **해결**:
@@ -1300,7 +1300,7 @@ spring:
 
 스레드 풀에 이어 커넥션 풀까지 공부하고 나니, 이제 라이브 스트리밍 서버가 어떻게 동시 요청을 처리하는지 전체 그림이 보이기 시작했어요.
 
-![](/uploads/theory/db-connection-pool/93.png)
+![](/uploads/theory/db-connection-pool/93.svg)
 
 
 다음엔 캐싱과 비동기 처리에 대해 더 공부해서, cs 개념을 재정립하고 더 빠르고 안정적인 서버를 만들도록 노력해야겠어요.
@@ -1549,12 +1549,12 @@ public class DataSourceConfig {
 #### Cost Comparison
 
 **Wrong approach (creating pool every time)**:
-![](/uploads/theory/db-connection-pool/cost.png)
+![](/uploads/theory/db-connection-pool/cost.svg)
 
 
 **Correct approach (singleton pool)**:
 
-![](/uploads/theory/db-connection-pool/cost-2.png)
+![](/uploads/theory/db-connection-pool/cost-2.svg)
 
 
 #### Memory Perspective
@@ -2281,7 +2281,7 @@ class DeadlockService {
 ```
 
 **Conditions for occurrence**:
-![](/uploads/theory/db-connection-pool/64-4.png)
+![](/uploads/theory/db-connection-pool/64-4.svg)
 
 
 **Solutions**:
@@ -2620,7 +2620,7 @@ spring:
 
 After studying connection pools following thread pools, I can now see the full picture of how a live streaming server handles concurrent requests.
 
-![](/uploads/theory/db-connection-pool/93.png)
+![](/uploads/theory/db-connection-pool/93.svg)
 
 
 Next, I want to study caching and asynchronous processing further, re-establish my CS fundamentals, and work toward building faster and more stable servers.

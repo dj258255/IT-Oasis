@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 340" role="img" aria-label="Tomcat-Spring 통합 아키텍처 - Client가 Web Server 통해 Apache Tomcat의 DispatcherServlet(Servlet Container) 호출, Spring Container의 Servlet WAC(HandlerMapping/HandlerAdapter/Controller)와 Root WAC(Service/Repository) 활용">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .tomcat { fill: rgba(255, 238, 215, 0.06); stroke: #FFB74D; stroke-width: 1.5; stroke-dasharray: 6 4; }
+      .spring { fill: rgba(76, 175, 80, 0.06); stroke: #4CAF50; stroke-width: 1.5; stroke-dasharray: 6 4; }
+      .web { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .container { fill: rgba(255, 238, 215, 0.14); stroke: #FFB74D; stroke-width: 1.25; }
+      .dispatch { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .wac { fill: rgba(76, 175, 80, 0.1); stroke: #4CAF50; stroke-width: 1.25; }
+      .map { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .ctrl { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .svc { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .lbl { font: 600 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .zone-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .zone-lbl2 { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #4CAF50; }
+    </style>
+    <marker id="hac-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#64B5F6"/></marker>
+  </defs>
+  <rect width="820" height="340" class="bg"/>
+  <text x="410" y="26" text-anchor="middle" class="title">Tomcat — Spring 통합 아키텍처</text>
+
+  <rect x="30" y="148" width="50" height="70" rx="6" class="web"/>
+  <text x="55" y="188" text-anchor="middle" class="lbl">Client</text>
+
+  <rect x="100" y="50" width="250" height="240" rx="10" class="tomcat"/>
+  <text x="120" y="74" class="zone-lbl">Apache Tomcat</text>
+
+  <rect x="130" y="150" width="90" height="90" rx="6" class="web"/>
+  <text x="175" y="196" text-anchor="middle" class="lbl">Web Server</text>
+
+  <rect x="230" y="90" width="100" height="160" rx="6" class="container"/>
+  <text x="280" y="110" text-anchor="middle" class="zone-lbl">Servlet Container</text>
+  <rect x="240" y="135" width="80" height="90" rx="4" class="dispatch"/>
+  <text x="280" y="170" text-anchor="middle" class="lbl">Dispatcher</text>
+  <text x="280" y="188" text-anchor="middle" class="lbl">Servlet</text>
+
+  <rect x="380" y="50" width="410" height="240" rx="10" class="spring"/>
+  <text x="400" y="74" class="zone-lbl2">Spring Container</text>
+
+  <rect x="410" y="90" width="210" height="180" rx="8" class="wac"/>
+  <text x="515" y="108" text-anchor="middle" class="zone-lbl2">Servlet WAC</text>
+  <rect x="430" y="124" width="170" height="28" rx="4" class="map"/>
+  <text x="515" y="142" text-anchor="middle" class="lbl">HandlerMapping</text>
+  <rect x="430" y="158" width="170" height="28" rx="4" class="map"/>
+  <text x="515" y="176" text-anchor="middle" class="lbl">HandlerAdapter</text>
+  <rect x="430" y="200" width="170" height="40" rx="4" class="ctrl"/>
+  <text x="515" y="225" text-anchor="middle" class="lbl">Controller</text>
+
+  <rect x="640" y="90" width="150" height="180" rx="8" class="wac"/>
+  <text x="715" y="108" text-anchor="middle" class="zone-lbl2">Root WAC</text>
+  <rect x="660" y="130" width="110" height="38" rx="4" class="svc"/>
+  <text x="715" y="154" text-anchor="middle" class="lbl">Service</text>
+  <rect x="660" y="184" width="110" height="38" rx="4" class="svc"/>
+  <text x="715" y="208" text-anchor="middle" class="lbl">Repository</text>
+
+  <line x1="80" y1="175" x2="128" y2="175" stroke="#64B5F6" stroke-width="1.25" marker-end="url(#hac-a)"/>
+  <line x1="220" y1="180" x2="238" y2="180" stroke="#64B5F6" stroke-width="1.25" marker-end="url(#hac-a)"/>
+  <line x1="320" y1="170" x2="428" y2="135" stroke="#64B5F6" stroke-width="1.25" marker-end="url(#hac-a)"/>
+  <line x1="320" y1="200" x2="428" y2="172" stroke="#64B5F6" stroke-width="1.25" marker-end="url(#hac-a)"/>
+  <line x1="600" y1="220" x2="658" y2="205" stroke="#64B5F6" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#hac-a)"/>
+
+  <text x="700" y="310" class="lbl" style="fill:#64B5F6;">WAC = WebApplicationContext</text>
+</svg>

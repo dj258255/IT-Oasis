@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 720" role="img" aria-label="임계영역 레이스 컨디션 - 스레드A와 스레드B가 잔액 1000원 계좌에 각각 500, 800 출금 시도, 동시에 읽고 쓰면서 잘못된 결과 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .time-bar { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .msg-ok { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .msg-bad { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.3); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .danger-txt { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="cs-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="600" height="720" class="bg"/>
+  <text x="300" y="28" text-anchor="middle" class="title">임계영역 · Race Condition</text>
+
+  <rect x="30"  y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="100" y="73" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="230" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="300" y="73" text-anchor="middle" class="lbl">계좌</text>
+  <rect x="430" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="500" y="73" text-anchor="middle" class="lbl">스레드B</text>
+  <line x1="100" y1="84" x2="100" y2="680" class="lifeline"/>
+  <line x1="300" y1="84" x2="300" y2="680" class="lifeline"/>
+  <line x1="500" y1="84" x2="500" y2="680" class="lifeline"/>
+
+  <rect x="220" y="100" width="160" height="34" rx="6" class="msg-ok"/>
+  <text x="300" y="123" text-anchor="middle" class="msg">초기 잔액: 1000원</text>
+
+  <rect x="100" y="150" width="400" height="22" rx="4" class="time-bar"/>
+  <text x="300" y="166" text-anchor="middle" class="msg">시간: 0ms</text>
+
+  <line x1="300" y1="190" x2="102" y2="190" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-arrow)"/>
+  <text x="200" y="184" text-anchor="middle" class="msg">balance ≥ 500 확인 · 1000 ≥ 500 (OK)</text>
+
+  <rect x="100" y="206" width="400" height="22" rx="4" class="time-bar"/>
+  <text x="300" y="222" text-anchor="middle" class="msg">시간: 1ms</text>
+
+  <line x1="300" y1="246" x2="498" y2="246" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-arrow)"/>
+  <text x="400" y="240" text-anchor="middle" class="msg">balance ≥ 800 확인 · 1000 ≥ 800 (OK)</text>
+
+  <rect x="100" y="262" width="400" height="22" rx="4" class="time-bar"/>
+  <text x="300" y="278" text-anchor="middle" class="msg">시간: 2ms</text>
+
+  <line x1="100" y1="302" x2="298" y2="302" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-arrow)"/>
+  <text x="200" y="296" text-anchor="middle" class="msg">balance = 1000 − 500</text>
+  <rect x="230" y="315" width="140" height="34" rx="6" class="msg-bad"/>
+  <text x="300" y="337" text-anchor="middle" class="msg">잔액: 500원</text>
+
+  <rect x="100" y="360" width="400" height="22" rx="4" class="time-bar"/>
+  <text x="300" y="376" text-anchor="middle" class="msg">시간: 3ms</text>
+
+  <line x1="500" y1="402" x2="302" y2="402" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-arrow)"/>
+  <text x="400" y="396" text-anchor="middle" class="msg">balance = 1000 − 800</text>
+  <rect x="230" y="415" width="140" height="34" rx="6" class="msg-bad"/>
+  <text x="300" y="437" text-anchor="middle" class="msg">잔액: 200원</text>
+
+  <rect x="180" y="470" width="240" height="100" rx="8" class="danger"/>
+  <text x="300" y="496" text-anchor="middle" class="danger-txt">최종 잔액: 200원</text>
+  <text x="300" y="518" text-anchor="middle" class="msg">(잘못된 결과)</text>
+  <text x="300" y="542" text-anchor="middle" class="danger-txt">실제로는 -300원이어야 함</text>
+  <text x="300" y="560" text-anchor="middle" class="msg">(500 + 800 &gt; 1000)</text>
+
+  <text x="300" y="605" text-anchor="middle" class="danger-txt">Race Condition 발생</text>
+
+  <rect x="30"  y="636" width="140" height="34" rx="6" class="actor"/>
+  <text x="100" y="659" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="230" y="636" width="140" height="34" rx="6" class="actor"/>
+  <text x="300" y="659" text-anchor="middle" class="lbl">계좌</text>
+  <rect x="430" y="636" width="140" height="34" rx="6" class="actor"/>
+  <text x="500" y="659" text-anchor="middle" class="lbl">스레드B</text>
+</svg>

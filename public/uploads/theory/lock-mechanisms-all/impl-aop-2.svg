@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 540" role="img" aria-label="AOP 기반 락 - Lock 획득 → 비즈니스 로직 실행 → 예외 발생 → 트랜잭션 롤백 → Lock 해제, 비즈니스와 락 관리 분리">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .aop { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .work { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.24); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="ao2-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="600" height="540" class="bg"/>
+  <text x="300" y="28" text-anchor="middle" class="title">AOP 기반 락 — 예외 처리 흐름</text>
+
+  <rect x="20" y="50" width="120" height="34" rx="6" class="actor"/>
+  <text x="80" y="73" text-anchor="middle" class="lbl">Client</text>
+  <rect x="170" y="50" width="120" height="34" rx="6" class="aop"/>
+  <text x="230" y="73" text-anchor="middle" class="lbl">Aspect</text>
+  <rect x="320" y="50" width="120" height="34" rx="6" class="actor"/>
+  <text x="380" y="73" text-anchor="middle" class="lbl">Redis</text>
+  <rect x="470" y="50" width="120" height="34" rx="6" class="work"/>
+  <text x="530" y="73" text-anchor="middle" class="lbl">Service · DB</text>
+  <line x1="80" y1="84" x2="80" y2="510" class="lifeline"/>
+  <line x1="230" y1="84" x2="230" y2="510" class="lifeline"/>
+  <line x1="380" y1="84" x2="380" y2="510" class="lifeline"/>
+  <line x1="530" y1="84" x2="530" y2="510" class="lifeline"/>
+
+  <line x1="82" y1="118" x2="228" y2="118" stroke="#bbb" stroke-width="1.25" marker-end="url(#ao2-a)"/>
+  <text x="155" y="112" text-anchor="middle" class="msg">@DistributedLock 호출</text>
+
+  <line x1="232" y1="150" x2="378" y2="150" stroke="#bbb" stroke-width="1.25" marker-end="url(#ao2-a)"/>
+  <text x="305" y="144" text-anchor="middle" class="msg">Lock 획득</text>
+  <rect x="330" y="160" width="100" height="28" rx="6" class="ok"/>
+  <text x="380" y="178" text-anchor="middle" class="msg">성공</text>
+
+  <line x1="232" y1="216" x2="528" y2="216" stroke="#bbb" stroke-width="1.25" marker-end="url(#ao2-a)"/>
+  <text x="380" y="210" text-anchor="middle" class="msg">비즈니스 로직 호출</text>
+
+  <rect x="480" y="226" width="100" height="32" rx="6" class="danger"/>
+  <text x="530" y="246" text-anchor="middle" class="msg">예외 발생</text>
+
+  <line x1="528" y1="284" x2="232" y2="284" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#ao2-a)"/>
+  <text x="380" y="278" text-anchor="middle" class="msg">예외 전파 + 트랜잭션 롤백</text>
+
+  <rect x="170" y="298" width="280" height="32" rx="6" class="aop"/>
+  <text x="310" y="318" text-anchor="middle" class="msg">finally 블록 진입</text>
+
+  <line x1="232" y1="354" x2="378" y2="354" stroke="#bbb" stroke-width="1.25" marker-end="url(#ao2-a)"/>
+  <text x="305" y="348" text-anchor="middle" class="msg">Lock 해제 (DEL)</text>
+  <rect x="330" y="364" width="100" height="28" rx="6" class="ok"/>
+  <text x="380" y="382" text-anchor="middle" class="msg">해제 완료</text>
+
+  <line x1="228" y1="430" x2="82" y2="430" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#ao2-a)"/>
+  <text x="155" y="424" text-anchor="middle" class="msg">예외 응답 (롤백된 상태)</text>
+</svg>

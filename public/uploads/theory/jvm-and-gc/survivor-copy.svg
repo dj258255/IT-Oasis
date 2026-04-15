@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 740" role="img" aria-label="Survivor 복사 - 복사 전 Eden 가득 참 / Survivor0(To) 비어있음 / Survivor1(From) 비어있음, Minor GC 후 Eden 해제, Survivor0에 살아남은 A,B,C (age=1)가 복사, Object Header Mark Word의 age(4bit)도 증가">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.4); stroke-width: 1.25; }
+      .eden { fill: rgba(255, 238, 215, 0.16); stroke: #FFB74D; stroke-width: 1.25; }
+      .survivor { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .empty { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .stage { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .header { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="sc-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="660" height="740" class="bg"/>
+  <text x="330" y="28" text-anchor="middle" class="title">Survivor 복사</text>
+
+  <rect x="40" y="50" width="580" height="220" rx="10" class="frame"/>
+  <text x="330" y="74" text-anchor="middle" class="frame-lbl">복사 전</text>
+  <rect x="80" y="90" width="500" height="50" rx="8" class="eden"/>
+  <text x="330" y="120" text-anchor="middle" class="lbl">Eden: [A][B][C][D][E][F][G][H]</text>
+  <rect x="80" y="152" width="240" height="42" rx="8" class="empty"/>
+  <text x="200" y="178" text-anchor="middle" class="lbl">Survivor0 (To): 비어있음</text>
+  <rect x="340" y="152" width="240" height="42" rx="8" class="empty"/>
+  <text x="460" y="178" text-anchor="middle" class="lbl">Survivor1 (From): 비어있음</text>
+
+  <rect x="250" y="284" width="160" height="36" rx="6" class="stage"/>
+  <text x="330" y="306" text-anchor="middle" class="lbl">Minor GC 복사</text>
+  <line x1="330" y1="320" x2="330" y2="340" stroke="#888" stroke-width="1.5" marker-end="url(#sc-a)"/>
+
+  <rect x="40" y="346" width="580" height="220" rx="10" class="frame"/>
+  <text x="330" y="370" text-anchor="middle" class="frame-lbl">복사 후</text>
+  <rect x="80" y="384" width="500" height="42" rx="8" class="empty"/>
+  <text x="330" y="410" text-anchor="middle" class="lbl">Eden: 가비지 전체 해제</text>
+  <rect x="80" y="438" width="240" height="60" rx="8" class="survivor"/>
+  <text x="200" y="462" text-anchor="middle" class="lbl">Survivor0</text>
+  <text x="200" y="482" text-anchor="middle" class="lbl">[A(age=1)][B(age=1)][C(age=1)]</text>
+  <rect x="340" y="438" width="240" height="60" rx="8" class="empty"/>
+  <text x="460" y="472" text-anchor="middle" class="lbl">Survivor1: 비어있음</text>
+
+  <line x1="330" y1="580" x2="330" y2="600" stroke="#888" stroke-width="1.5" marker-end="url(#sc-a)"/>
+
+  <rect x="80" y="610" width="500" height="100" rx="10" class="header"/>
+  <text x="330" y="636" text-anchor="middle" class="lbl">Object Header · Mark Word</text>
+  <text x="330" y="666" text-anchor="middle" class="lbl">… | age (4bit): 1 | …</text>
+</svg>

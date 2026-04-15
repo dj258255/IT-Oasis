@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 620" role="img" aria-label="뮤텍스 동작 - 스레드A가 lock 후 임계영역 실행 중 스레드B의 lock 시도는 블록 대기, 스레드A unlock 후 스레드B가 lock 획득">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .state-free { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.25; }
+      .state-locked { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .cs { fill: rgba(255, 238, 215, 0.14); stroke: #FFB74D; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="mx-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="600" height="620" class="bg"/>
+  <text x="300" y="28" text-anchor="middle" class="title">Mutex 동작 원리</text>
+
+  <rect x="30"  y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="100" y="73" text-anchor="middle" class="lbl">뮤텍스</text>
+  <rect x="230" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="300" y="73" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="430" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="500" y="73" text-anchor="middle" class="lbl">스레드B</text>
+  <line x1="100" y1="84" x2="100" y2="590" class="lifeline"/>
+  <line x1="300" y1="84" x2="300" y2="590" class="lifeline"/>
+  <line x1="500" y1="84" x2="500" y2="590" class="lifeline"/>
+
+  <rect x="30" y="95" width="140" height="38" rx="6" class="state-free"/>
+  <text x="100" y="111" text-anchor="middle" class="msg">Locked: 0 (비어있음)</text>
+  <text x="100" y="126" text-anchor="middle" class="msg">Owner: null</text>
+
+  <line x1="300" y1="152" x2="102" y2="152" stroke="#bbb" stroke-width="1.25" marker-end="url(#mx-arrow)"/>
+  <text x="200" y="146" text-anchor="middle" class="msg">lock()</text>
+
+  <rect x="30" y="165" width="140" height="38" rx="6" class="state-locked"/>
+  <text x="100" y="181" text-anchor="middle" class="msg">Locked: 1 (잠김)</text>
+  <text x="100" y="196" text-anchor="middle" class="msg">Owner: Thread A</text>
+
+  <rect x="230" y="215" width="140" height="30" rx="6" class="cs"/>
+  <text x="300" y="235" text-anchor="middle" class="msg">임계영역 실행</text>
+
+  <line x1="500" y1="268" x2="102" y2="268" stroke="#bbb" stroke-width="1.25" marker-end="url(#mx-arrow)"/>
+  <text x="300" y="262" text-anchor="middle" class="msg">lock() 시도</text>
+
+  <rect x="180" y="282" width="240" height="30" rx="6" class="wait"/>
+  <text x="300" y="302" text-anchor="middle" class="msg">대기 (블록됨)</text>
+
+  <line x1="300" y1="334" x2="102" y2="334" stroke="#bbb" stroke-width="1.25" marker-end="url(#mx-arrow)"/>
+  <text x="200" y="328" text-anchor="middle" class="msg">unlock()</text>
+
+  <rect x="30" y="348" width="140" height="38" rx="6" class="state-free"/>
+  <text x="100" y="364" text-anchor="middle" class="msg">Locked: 0 (비어있음)</text>
+  <text x="100" y="379" text-anchor="middle" class="msg">Owner: null</text>
+
+  <line x1="500" y1="408" x2="102" y2="408" stroke="#bbb" stroke-width="1.25" marker-end="url(#mx-arrow)"/>
+  <text x="300" y="402" text-anchor="middle" class="msg">lock() 획득</text>
+
+  <rect x="30" y="422" width="140" height="38" rx="6" class="state-locked"/>
+  <text x="100" y="438" text-anchor="middle" class="msg">Locked: 1 (잠김)</text>
+  <text x="100" y="453" text-anchor="middle" class="msg">Owner: Thread B</text>
+
+  <rect x="30"  y="548" width="140" height="34" rx="6" class="actor"/>
+  <text x="100" y="571" text-anchor="middle" class="lbl">뮤텍스</text>
+  <rect x="230" y="548" width="140" height="34" rx="6" class="actor"/>
+  <text x="300" y="571" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="430" y="548" width="140" height="34" rx="6" class="actor"/>
+  <text x="500" y="571" text-anchor="middle" class="lbl">스레드B</text>
+</svg>

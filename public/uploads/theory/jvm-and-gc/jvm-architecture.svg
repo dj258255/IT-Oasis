@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" role="img" aria-label="JVM 전체 아키텍처 - Class File → Class Loader Subsystem → Runtime Data Areas (Method Area, Heap, JVM Stacks, PC Registers, Native Method Stacks) → Execution Engine (Interpreter, JIT, GC) → Native Method Interface → Native Method Library">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .cls { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .loader { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .data { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .exec { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .native { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="ja-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="760" height="480" class="bg"/>
+  <text x="380" y="28" text-anchor="middle" class="title">JVM 전체 아키텍처</text>
+
+  <rect x="20" y="50" width="120" height="60" rx="8" class="cls"/>
+  <text x="80" y="86" text-anchor="middle" class="lbl">Class File</text>
+  <line x1="140" y1="80" x2="178" y2="80" stroke="#888" stroke-width="1.5" marker-end="url(#ja-a)"/>
+
+  <rect x="180" y="50" width="200" height="120" rx="8" class="frame"/>
+  <text x="280" y="74" text-anchor="middle" class="frame-lbl">Class Loader Subsystem</text>
+  <rect x="195" y="84" width="170" height="26" rx="4" class="loader"/>
+  <text x="280" y="102" text-anchor="middle" class="lbl">Loading</text>
+  <rect x="195" y="116" width="170" height="26" rx="4" class="loader"/>
+  <text x="280" y="134" text-anchor="middle" class="lbl">Linking</text>
+  <rect x="195" y="148" width="170" height="20" rx="4" class="loader"/>
+  <text x="280" y="163" text-anchor="middle" class="lbl">Initialization</text>
+
+  <line x1="280" y1="170" x2="280" y2="190" stroke="#888" stroke-width="1.5" marker-end="url(#ja-a)"/>
+
+  <rect x="20" y="200" width="500" height="180" rx="10" class="frame"/>
+  <text x="270" y="224" text-anchor="middle" class="frame-lbl">Runtime Data Areas</text>
+  <rect x="40" y="240" width="140" height="50" rx="6" class="data"/>
+  <text x="110" y="270" text-anchor="middle" class="lbl">Method Area</text>
+  <rect x="200" y="240" width="140" height="50" rx="6" class="data"/>
+  <text x="270" y="270" text-anchor="middle" class="lbl">Heap</text>
+  <rect x="360" y="240" width="140" height="50" rx="6" class="data"/>
+  <text x="430" y="270" text-anchor="middle" class="lbl">PC Register</text>
+  <rect x="40" y="300" width="220" height="60" rx="6" class="data"/>
+  <text x="150" y="334" text-anchor="middle" class="lbl">JVM Stack</text>
+  <rect x="280" y="300" width="220" height="60" rx="6" class="data"/>
+  <text x="390" y="334" text-anchor="middle" class="lbl">Native Method Stack</text>
+
+  <rect x="540" y="200" width="200" height="180" rx="10" class="frame"/>
+  <text x="640" y="224" text-anchor="middle" class="frame-lbl">Execution Engine</text>
+  <rect x="560" y="240" width="160" height="36" rx="6" class="exec"/>
+  <text x="640" y="262" text-anchor="middle" class="lbl">Interpreter</text>
+  <rect x="560" y="282" width="160" height="36" rx="6" class="exec"/>
+  <text x="640" y="304" text-anchor="middle" class="lbl">JIT Compiler</text>
+  <rect x="560" y="324" width="160" height="36" rx="6" class="exec"/>
+  <text x="640" y="346" text-anchor="middle" class="lbl">Garbage Collector</text>
+
+  <rect x="180" y="400" width="200" height="50" rx="8" class="native"/>
+  <text x="280" y="430" text-anchor="middle" class="lbl">Native Method Interface (JNI)</text>
+  <rect x="430" y="400" width="200" height="50" rx="8" class="native"/>
+  <text x="530" y="430" text-anchor="middle" class="lbl">Native Method Library</text>
+</svg>

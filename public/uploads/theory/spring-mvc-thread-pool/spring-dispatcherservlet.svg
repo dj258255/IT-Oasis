@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 760" role="img" aria-label="Spring DispatcherServlet 처리 흐름 - 클라이언트 요청 → 톰캣 스레드 풀에서 스레드 할당 → DispatcherServlet(단 하나) → 핸들러 매핑(/api/user → UserController) → 핸들러 어댑터(@RestController → JSON) → UserController.getUser 실행 → 결과 반환">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .client { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .tomcat { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .dispatcher { fill: rgba(255, 238, 215, 0.2); stroke: #FFB74D; stroke-width: 1.5; }
+      .mapping { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .adapter { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.25; }
+      .controller { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .result { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .code { font: 500 12px "Consolas", "Menlo", monospace; fill: #e0e0e0; }
+    </style>
+    <marker id="sd-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="420" height="760" class="bg"/>
+  <text x="210" y="28" text-anchor="middle" class="title">Spring DispatcherServlet 흐름</text>
+
+  <rect x="110" y="50" width="200" height="40" rx="6" class="client"/>
+  <text x="210" y="75" text-anchor="middle" class="lbl">클라이언트 요청</text>
+  <line x1="210" y1="90" x2="210" y2="110" stroke="#888" stroke-width="1.5" marker-end="url(#sd-a)"/>
+
+  <rect x="90" y="116" width="240" height="60" rx="8" class="tomcat"/>
+  <text x="210" y="140" text-anchor="middle" class="lbl">톰캣</text>
+  <text x="210" y="161" text-anchor="middle" class="code">스레드 풀에서 스레드 할당</text>
+  <line x1="210" y1="176" x2="210" y2="196" stroke="#888" stroke-width="1.5" marker-end="url(#sd-a)"/>
+
+  <rect x="90" y="202" width="240" height="60" rx="8" class="dispatcher"/>
+  <text x="210" y="226" text-anchor="middle" class="lbl">DispatcherServlet</text>
+  <text x="210" y="247" text-anchor="middle" class="code">단 하나</text>
+  <line x1="210" y1="262" x2="210" y2="282" stroke="#888" stroke-width="1.5" marker-end="url(#sd-a)"/>
+
+  <rect x="90" y="288" width="240" height="64" rx="8" class="mapping"/>
+  <text x="210" y="312" text-anchor="middle" class="lbl">핸들러 매핑</text>
+  <text x="210" y="334" text-anchor="middle" class="code">/api/user → UserController</text>
+  <line x1="210" y1="352" x2="210" y2="372" stroke="#888" stroke-width="1.5" marker-end="url(#sd-a)"/>
+
+  <rect x="90" y="378" width="240" height="64" rx="8" class="adapter"/>
+  <text x="210" y="402" text-anchor="middle" class="lbl">핸들러 어댑터</text>
+  <text x="210" y="424" text-anchor="middle" class="code">@RestController → JSON</text>
+  <line x1="210" y1="442" x2="210" y2="462" stroke="#888" stroke-width="1.5" marker-end="url(#sd-a)"/>
+
+  <rect x="90" y="468" width="240" height="54" rx="8" class="controller"/>
+  <text x="210" y="500" text-anchor="middle" class="code">UserController.getUser 실행</text>
+  <line x1="210" y1="522" x2="210" y2="542" stroke="#888" stroke-width="1.5" marker-end="url(#sd-a)"/>
+
+  <rect x="130" y="548" width="160" height="40" rx="6" class="result"/>
+  <text x="210" y="573" text-anchor="middle" class="lbl">결과 반환</text>
+</svg>

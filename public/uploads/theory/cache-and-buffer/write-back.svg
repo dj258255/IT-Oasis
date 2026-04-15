@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 700" role="img" aria-label="Write-Back - CPU 쓰기 요청 시 캐시에만 쓰고 Dirty Bit=1 설정 후 빠르게 완료, 나중에 캐시 라인 교체 시 Dirty Bit 확인해서 메모리에 쓰고 교체">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .cpu { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .cache-w { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .fast { fill: rgba(76, 175, 80, 0.32); stroke: #4CAF50; stroke-width: 1.25; }
+      .later { fill: rgba(255, 238, 215, 0.14); stroke: rgba(255,238,215,0.35); stroke-width: 1; }
+      .check { fill: rgba(255, 183, 77, 0.3); stroke: #FFB74D; stroke-width: 1.25; }
+      .mem { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .swap { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="wb-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="440" height="700" class="bg"/>
+  <text x="220" y="28" text-anchor="middle" class="title">Write-Back 동작</text>
+
+  <rect x="110" y="50" width="220" height="68" rx="8" class="cpu"/>
+  <text x="220" y="76" text-anchor="middle" class="lbl">CPU 데이터 쓰기 요청</text>
+  <text x="220" y="98" text-anchor="middle" class="sub">A = 10</text>
+  <line x1="220" y1="118" x2="220" y2="138" stroke="#888" stroke-width="1.5" marker-end="url(#wb-a)"/>
+
+  <rect x="110" y="146" width="220" height="68" rx="8" class="cache-w"/>
+  <text x="220" y="172" text-anchor="middle" class="lbl">캐시에 쓰기</text>
+  <text x="220" y="194" text-anchor="middle" class="sub">A: 10 · Dirty Bit = 1</text>
+  <line x1="220" y1="214" x2="220" y2="234" stroke="#888" stroke-width="1.5" marker-end="url(#wb-a)"/>
+
+  <rect x="130" y="242" width="180" height="54" rx="8" class="fast"/>
+  <text x="220" y="267" text-anchor="middle" class="lbl">쓰기 완료 · 빠름</text>
+  <line x1="220" y1="296" x2="220" y2="318" stroke="#888" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#wb-a)"/>
+
+  <rect x="90" y="326" width="260" height="50" rx="8" class="later"/>
+  <text x="220" y="356" text-anchor="middle" class="sub">… 나중에 캐시 라인 교체 시 …</text>
+  <line x1="220" y1="376" x2="220" y2="396" stroke="#888" stroke-width="1.5" marker-end="url(#wb-a)"/>
+
+  <rect x="110" y="404" width="220" height="60" rx="8" class="check"/>
+  <text x="220" y="430" text-anchor="middle" class="lbl">Dirty Bit 확인</text>
+  <text x="220" y="450" text-anchor="middle" class="sub">1: 수정됨</text>
+  <line x1="220" y1="464" x2="220" y2="484" stroke="#888" stroke-width="1.5" marker-end="url(#wb-a)"/>
+
+  <rect x="110" y="492" width="220" height="60" rx="8" class="mem"/>
+  <text x="220" y="518" text-anchor="middle" class="lbl">메모리에 쓰기</text>
+  <text x="220" y="538" text-anchor="middle" class="sub">A: 10</text>
+  <line x1="220" y1="552" x2="220" y2="572" stroke="#888" stroke-width="1.5" marker-end="url(#wb-a)"/>
+
+  <rect x="110" y="580" width="220" height="56" rx="8" class="swap"/>
+  <text x="220" y="614" text-anchor="middle" class="lbl">캐시 라인 교체</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 460" role="img" aria-label="Test-and-Set 동작 - 스레드A의 test_and_set이 원자적으로 old_value = false를 반환하면서 locked = true로 설정, 스레드B의 test_and_set은 old_value = true를 반환하여 임계영역 진입 못함">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .state { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="tas-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="600" height="460" class="bg"/>
+  <text x="300" y="28" text-anchor="middle" class="title">Test-and-Set (TAS)</text>
+
+  <rect x="20"  y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="90" y="73" text-anchor="middle" class="lbl">스레드A</text>
+  <rect x="220" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="300" y="73" text-anchor="middle" class="lbl">locked 변수</text>
+  <rect x="440" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="510" y="73" text-anchor="middle" class="lbl">스레드B</text>
+  <line x1="90" y1="84" x2="90" y2="430" class="lifeline"/>
+  <line x1="300" y1="84" x2="300" y2="430" class="lifeline"/>
+  <line x1="510" y1="84" x2="510" y2="430" class="lifeline"/>
+
+  <line x1="92" y1="120" x2="298" y2="120" stroke="#bbb" stroke-width="1.25" marker-end="url(#tas-a)"/>
+  <text x="195" y="114" text-anchor="middle" class="msg">test_and_set() · 원자적</text>
+  <rect x="220" y="130" width="160" height="40" rx="6" class="ok"/>
+  <text x="300" y="148" text-anchor="middle" class="msg">old_value = false 반환</text>
+  <text x="300" y="164" text-anchor="middle" class="msg">locked = true로 설정</text>
+
+  <line x1="298" y1="190" x2="92" y2="190" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#tas-a)"/>
+  <text x="195" y="184" text-anchor="middle" class="msg">false → 임계영역 진입 가능</text>
+
+  <rect x="20" y="206" width="140" height="32" rx="6" class="ok"/>
+  <text x="90" y="226" text-anchor="middle" class="msg">임계영역 실행</text>
+
+  <line x1="508" y1="262" x2="302" y2="262" stroke="#bbb" stroke-width="1.25" marker-end="url(#tas-a)"/>
+  <text x="405" y="256" text-anchor="middle" class="msg">test_and_set() · 원자적</text>
+  <rect x="220" y="272" width="160" height="40" rx="6" class="wait"/>
+  <text x="300" y="290" text-anchor="middle" class="msg">old_value = true 반환</text>
+  <text x="300" y="306" text-anchor="middle" class="msg">locked는 그대로 true</text>
+
+  <line x1="298" y1="332" x2="508" y2="332" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#tas-a)"/>
+  <text x="405" y="326" text-anchor="middle" class="msg">true → 진입 불가, 대기</text>
+
+  <rect x="440" y="348" width="140" height="32" rx="6" class="wait"/>
+  <text x="510" y="368" text-anchor="middle" class="msg">대기 (스핀)</text>
+
+  <line x1="92" y1="406" x2="298" y2="406" stroke="#bbb" stroke-width="1.25" marker-end="url(#tas-a)"/>
+  <text x="195" y="400" text-anchor="middle" class="msg">unlock() · locked = false</text>
+</svg>

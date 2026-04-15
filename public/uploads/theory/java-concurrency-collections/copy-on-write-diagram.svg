@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-label="CopyOnWriteArrayList - 쓰기는 synchronized + Arrays.copyOf로 새 배열 생성 후 volatile 교체, 읽기는 volatile read + 배열 인덱스로 락 없이 Snapshot Isolation">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .col-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255, 238, 215, 0.35); stroke-width: 1.25; }
+      .write-box { fill: rgba(255, 183, 77, 0.18); stroke: #FFB74D; stroke-width: 1.5; }
+      .write-step { fill: rgba(255, 183, 77, 0.13); stroke: #FFB74D; stroke-width: 1.25; }
+      .read-box { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.5; }
+      .read-step { fill: rgba(76, 175, 80, 0.15); stroke: #4CAF50; stroke-width: 1.25; }
+      .col-label { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .step { font: 500 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .detail { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="cow-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="720" height="480" class="bg"/>
+  <text x="360" y="30" text-anchor="middle" class="title">CopyOnWriteArrayList - 쓰기와 읽기 경로</text>
+
+  <!-- Write column -->
+  <rect x="30" y="50" width="330" height="410" rx="10" class="col-frame"/>
+  <rect x="70" y="62" width="250" height="36" rx="6" class="write-box"/>
+  <text x="195" y="86" text-anchor="middle" class="col-label">쓰기 작업 (add/set)</text>
+
+  <!-- Write steps -->
+  <rect x="60" y="115" width="270" height="40" rx="6" class="write-step"/>
+  <text x="195" y="140" text-anchor="middle" class="step">synchronized 락 획득</text>
+  <line x1="195" y1="157" x2="195" y2="170" stroke="#888" stroke-width="1.5" marker-end="url(#cow-arrow)"/>
+
+  <rect x="60" y="175" width="270" height="56" rx="6" class="write-step"/>
+  <text x="195" y="200" text-anchor="middle" class="step">Arrays.copyOf</text>
+  <text x="195" y="220" text-anchor="middle" class="detail">기존 배열 복사 (새 배열)</text>
+  <line x1="195" y1="233" x2="195" y2="248" stroke="#888" stroke-width="1.5" marker-end="url(#cow-arrow)"/>
+
+  <rect x="60" y="253" width="270" height="56" rx="6" class="write-step"/>
+  <text x="195" y="278" text-anchor="middle" class="step">새 배열 수정</text>
+  <text x="195" y="298" text-anchor="middle" class="detail">newArray[i] = newValue</text>
+  <line x1="195" y1="311" x2="195" y2="326" stroke="#888" stroke-width="1.5" marker-end="url(#cow-arrow)"/>
+
+  <rect x="60" y="331" width="270" height="56" rx="6" class="write-step"/>
+  <text x="195" y="356" text-anchor="middle" class="step">array = newArray</text>
+  <text x="195" y="376" text-anchor="middle" class="detail">volatile write로 교체</text>
+  <line x1="195" y1="389" x2="195" y2="404" stroke="#888" stroke-width="1.5" marker-end="url(#cow-arrow)"/>
+
+  <rect x="80" y="409" width="230" height="38" rx="6" class="write-box"/>
+  <text x="195" y="433" text-anchor="middle" class="step">락 해제 · 완료</text>
+
+  <!-- Read column -->
+  <rect x="380" y="50" width="310" height="410" rx="10" class="col-frame"/>
+  <rect x="420" y="62" width="230" height="36" rx="6" class="read-box"/>
+  <text x="535" y="86" text-anchor="middle" class="col-label">읽기 작업 (get)</text>
+
+  <rect x="410" y="115" width="250" height="40" rx="6" class="read-step"/>
+  <text x="535" y="140" text-anchor="middle" class="step">volatile read</text>
+  <line x1="535" y1="157" x2="535" y2="170" stroke="#888" stroke-width="1.5" marker-end="url(#cow-arrow)"/>
+
+  <rect x="410" y="175" width="250" height="56" rx="6" class="read-step"/>
+  <text x="535" y="200" text-anchor="middle" class="step">array index 접근</text>
+  <text x="535" y="220" text-anchor="middle" class="detail">array[i]</text>
+  <line x1="535" y1="233" x2="535" y2="248" stroke="#888" stroke-width="1.5" marker-end="url(#cow-arrow)"/>
+
+  <rect x="410" y="253" width="250" height="56" rx="6" class="read-step"/>
+  <text x="535" y="278" text-anchor="middle" class="step">값 반환</text>
+  <text x="535" y="298" text-anchor="middle" class="detail">Snapshot Isolation</text>
+
+  <rect x="430" y="330" width="210" height="40" rx="6" class="read-box"/>
+  <text x="535" y="355" text-anchor="middle" class="step">락 없음</text>
+
+  <!-- Summary -->
+  <rect x="430" y="388" width="210" height="60" rx="6" class="read-step"/>
+  <text x="535" y="412" text-anchor="middle" class="detail">· 읽기 성능 매우 빠름</text>
+  <text x="535" y="432" text-anchor="middle" class="detail">· Thread-safe</text>
+  <text x="535" y="452" text-anchor="middle" class="detail" style="fill: #ffcccb;">· Snapshot 보장</text>
+</svg>

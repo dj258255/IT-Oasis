@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 680" role="img" aria-label="네트워크 버퍼 - 송신측 애플리케이션 → 송신 버퍼 → 네트워크 계층 → 네트워크 전송 / 수신측은 역순으로 수신">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .side-frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .app { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .buf { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .net { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .wire { fill: rgba(255, 238, 215, 0.14); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .side-lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="nb-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="680" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">네트워크 버퍼</text>
+
+  <!-- 송신측 -->
+  <rect x="30" y="50" width="400" height="280" rx="10" class="side-frame"/>
+  <text x="230" y="74" text-anchor="middle" class="side-lbl">송신측</text>
+
+  <rect x="120" y="90" width="220" height="40" rx="6" class="app"/>
+  <text x="230" y="115" text-anchor="middle" class="lbl">애플리케이션</text>
+  <line x1="230" y1="130" x2="230" y2="148" stroke="#888" stroke-width="1.5" marker-end="url(#nb-a)"/>
+
+  <rect x="120" y="154" width="220" height="40" rx="6" class="buf"/>
+  <text x="230" y="179" text-anchor="middle" class="lbl">송신 버퍼</text>
+  <line x1="230" y1="194" x2="230" y2="212" stroke="#888" stroke-width="1.5" marker-end="url(#nb-a)"/>
+
+  <rect x="120" y="218" width="220" height="40" rx="6" class="net"/>
+  <text x="230" y="243" text-anchor="middle" class="lbl">네트워크 계층</text>
+  <line x1="230" y1="258" x2="230" y2="276" stroke="#888" stroke-width="1.5" marker-end="url(#nb-a)"/>
+
+  <rect x="120" y="282" width="220" height="40" rx="6" class="wire"/>
+  <text x="230" y="307" text-anchor="middle" class="lbl">네트워크</text>
+
+  <!-- 전송 중간 -->
+  <line x1="230" y1="336" x2="230" y2="356" stroke="#888" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#nb-a)"/>
+  <text x="230" y="352" text-anchor="middle" class="lbl">전송</text>
+
+  <!-- 수신측 -->
+  <rect x="30" y="362" width="400" height="280" rx="10" class="side-frame"/>
+  <text x="230" y="386" text-anchor="middle" class="side-lbl">수신측</text>
+
+  <rect x="120" y="400" width="220" height="40" rx="6" class="wire"/>
+  <text x="230" y="425" text-anchor="middle" class="lbl">네트워크</text>
+  <line x1="230" y1="440" x2="230" y2="458" stroke="#888" stroke-width="1.5" marker-end="url(#nb-a)"/>
+
+  <rect x="120" y="464" width="220" height="40" rx="6" class="net"/>
+  <text x="230" y="489" text-anchor="middle" class="lbl">네트워크 계층</text>
+  <line x1="230" y1="504" x2="230" y2="522" stroke="#888" stroke-width="1.5" marker-end="url(#nb-a)"/>
+
+  <rect x="120" y="528" width="220" height="40" rx="6" class="buf"/>
+  <text x="230" y="553" text-anchor="middle" class="lbl">수신 버퍼</text>
+  <line x1="230" y1="568" x2="230" y2="586" stroke="#888" stroke-width="1.5" marker-end="url(#nb-a)"/>
+
+  <rect x="120" y="592" width="220" height="40" rx="6" class="app"/>
+  <text x="230" y="617" text-anchor="middle" class="lbl">애플리케이션</text>
+</svg>

@@ -16,14 +16,14 @@ draft: false
 coverImage: "/uploads/theory/es-memory/cover-0.svg"
 ---
 
-> **JVM 메모리 시리즈** — **0편 (지금 여기)**
+> **JVM 메모리 시리즈**
 >
-> - **0. [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc)** ← 이 글
-> - ① [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
-> - ② [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
-> - ③ [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - ④ [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
-> - ⑤ [힙 50% 룰 · mmap · Circuit Breaker](/blog/theory/es-memory-05-elasticsearch)
+> - **JVM과 Garbage Collection 이해하기** (현재 글)
+> - [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
+> - [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
+> - [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
+> - [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
+> - [Elasticsearch 메모리 모델](/blog/theory/es-memory-05-elasticsearch)
 
 ## 0. 이 글의 위치
 
@@ -396,14 +396,14 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 <!-- EN -->
 
-> **JVM Memory Series** — **Part 0 (you are here)**
+> **JVM Memory Series**
 >
-> - **0. [Understanding JVM and Garbage Collection](/blog/theory/jvm-and-gc)** ← this post
-> - ① [JVM Heap Internals](/blog/theory/es-memory-01-jvm-heap)
-> - ② [GC Algorithms and Stop-the-World](/blog/theory/es-memory-02-gc)
-> - ③ [JVM Off-heap and Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - ④ [Why OS Page Cache Determines ES Performance](/blog/theory/es-memory-04-page-cache)
-> - ⑤ [50% Heap Rule · mmap · Circuit Breaker](/blog/theory/es-memory-05-elasticsearch)
+> - **Understanding JVM and Garbage Collection** (current)
+> - [JVM Heap Internals](/blog/theory/es-memory-01-jvm-heap)
+> - [GC Algorithms and Stop-the-World](/blog/theory/es-memory-02-gc)
+> - [JVM Off-heap and Direct Memory](/blog/theory/es-memory-03-off-heap)
+> - [OS Page Cache Explained](/blog/theory/es-memory-04-page-cache)
+> - [Applied to Elasticsearch](/blog/theory/es-memory-05-elasticsearch)
 
 ## 0. Where This Post Fits
 
