@@ -13,6 +13,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/current-user-annotation/security-context-holder-direct.png"
+series: "Tymee"
 ---
 
 Spring Security로 JWT 인증을 구현하면서 로그인한 사용자 정보를 컨트롤러에서 어떻게 가져올지 고민했어요. 여러 방법을 비교해보고 `@CurrentUser` 커스텀 어노테이션을 만들어서 사용하기로 했는데, 그 과정을 정리해봤습니다.

@@ -15,6 +15,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/stress-test-tuning/A-2-k6-grafana-overview.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

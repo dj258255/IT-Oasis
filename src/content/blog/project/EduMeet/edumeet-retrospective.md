@@ -13,6 +13,7 @@ tags:
 category: project/EduMeet
 coverImage: /uploads/project/EduMeet/retrospective/title.png
 draft: false
+series: "EduMeet"
 ---
 
 ## 프로젝트 소개

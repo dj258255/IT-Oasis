@@ -15,6 +15,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-category-facet/phase17-after-category-filter-search.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

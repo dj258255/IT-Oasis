@@ -14,6 +14,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-loki-stacktrace-parsing/log4j2-json-layout.svg"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

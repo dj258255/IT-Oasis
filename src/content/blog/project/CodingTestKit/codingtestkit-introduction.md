@@ -13,6 +13,7 @@ tags:
 category: project/CodingTestKit
 coverImage: /uploads/project/CodingTestKit/title.png
 draft: false
+series: "CodingTestKit"
 ---
 
 ## 프로젝트 소개

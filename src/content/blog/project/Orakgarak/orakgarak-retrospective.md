@@ -14,6 +14,7 @@ tags:
 category: project/Orakgarak
 coverImage: /uploads/project/Orakgarak/retrospective/title.png
 draft: false
+series: "Orakgarak"
 ---
 
 ## 프로젝트 소개

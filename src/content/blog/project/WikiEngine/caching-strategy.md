@@ -16,6 +16,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/caching-strategy/C-2-spring-boot-cache.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

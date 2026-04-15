@@ -21,6 +21,7 @@ tags:
   - Aho-Corasick
 category: project/WikiEngine
 draft: true
+series: "WikiEngine"
 ---
 
 ## Redis L2 캐시 + 자동완성 flat KV

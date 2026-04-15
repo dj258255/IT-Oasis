@@ -14,6 +14,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/snowflake-id/snowflake-id-implementation.png"
+series: "Tymee"
 ---
 
 파일 업로드 API 만들면서 ID를 어떻게 할지 고민했어요.

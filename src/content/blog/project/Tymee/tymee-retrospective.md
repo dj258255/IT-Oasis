@@ -14,6 +14,7 @@ tags:
 category: project/Tymee
 coverImage: /uploads/project/Tymee/retrospective/title.svg
 draft: false
+series: "Tymee"
 ---
 
 ## 프로젝트 소개

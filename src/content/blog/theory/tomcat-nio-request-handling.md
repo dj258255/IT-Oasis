@@ -14,6 +14,7 @@ tags:
 category: theory/Web-Server
 draft: false
 coverImage: "/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.svg"
+series: "요청 처리"
 ---
 
 

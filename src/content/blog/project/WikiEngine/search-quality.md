@@ -16,6 +16,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop4.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

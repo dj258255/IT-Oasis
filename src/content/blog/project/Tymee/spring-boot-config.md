@@ -13,6 +13,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/spring-boot-config/properties-example.svg"
+series: "Tymee"
 ---
 
 이 프로젝트에서는 멀티모듈 구조에 4개 프로필(local, test, staging, prod)을 관리해야 했어요.

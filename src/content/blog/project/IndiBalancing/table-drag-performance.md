@@ -15,6 +15,7 @@ tags:
 category: project/IndiBalancing
 coverImage: "/uploads/project/IndiBalancing/table-drag-performance/cover.svg"
 draft: false
+series: "IndiBalancing"
 ---
 
 ## 1. 문제 상황 인식

@@ -14,6 +14,7 @@ tags:
 category: project/Joying
 draft: false
 coverImage: "/uploads/project/Joying/server-scaling-troubleshooting/simple-broker.svg"
+series: "Joying"
 ---
 
 서버를 여러 대로 확장할 때 필요한 설계를 정리해요.

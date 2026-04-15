@@ -20,6 +20,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-rag/ai-summary-full-with-results.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

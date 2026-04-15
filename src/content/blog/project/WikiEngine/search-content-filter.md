@@ -15,6 +15,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

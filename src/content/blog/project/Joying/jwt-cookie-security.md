@@ -14,6 +14,7 @@ tags:
 category: project/Joying
 draft: false
 coverImage: "/uploads/project/Joying/jwt-cookie-security/spa.svg"
+series: "Joying"
 ---
 
 # 로컬에선 401, 운영에선 200... 같은 API인데 왜? SameSite 쿠키 때문에 막혔던 이야기

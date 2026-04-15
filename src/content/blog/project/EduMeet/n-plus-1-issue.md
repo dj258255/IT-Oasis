@@ -15,6 +15,7 @@ tags:
 category: project/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/n-plus-1-issue/n1-occurred-background.png"
+series: "EduMeet"
 ---
 
 ## 정상 상태

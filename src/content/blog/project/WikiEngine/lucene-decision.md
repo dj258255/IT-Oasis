@@ -14,6 +14,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/lucene-decision/cqrs-architecture.svg
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글 요약

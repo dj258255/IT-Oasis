@@ -10,6 +10,7 @@ tags:
   - Career
 category: project/WikiEngine
 draft: true
+series: "WikiEngine"
 ---
 
 > **이 문서는 비공개(draft)입니다.** 이력서·포트폴리오 작성 시 참고용으로만 사용합니다.

@@ -13,6 +13,7 @@ tags:
 category: project/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/onetomany-join-table/onetomany-join-table-creation.png"
+series: "EduMeet"
 ---
 
 ## 정상 상태

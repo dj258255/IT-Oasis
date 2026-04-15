@@ -11,6 +11,7 @@ tags:
   - Focus Timer
 category: project/Tymee
 draft: false
+series: "Tymee"
 ---
 
 # 프로젝트 소개

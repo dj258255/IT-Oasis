@@ -13,6 +13,7 @@ tags:
 category: project/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/file-move-error/file-moveerror.png"
+series: "EduMeet"
 ---
 
 ## 정상 상태

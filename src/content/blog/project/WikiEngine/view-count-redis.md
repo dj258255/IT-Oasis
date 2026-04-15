@@ -17,6 +17,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/scaleout/step9-load-k6-after-viewcount.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

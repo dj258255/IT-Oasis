@@ -14,6 +14,7 @@ tags:
 category: project/Joying
 coverImage: /uploads/project/Joying/retrospective/title.gif
 draft: false
+series: "Joying"
 ---
 
 ## 프로젝트 소개

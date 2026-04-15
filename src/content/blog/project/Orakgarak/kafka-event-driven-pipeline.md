@@ -14,6 +14,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/kafka-event-driven-pipeline/partition-key-ordering.svg"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

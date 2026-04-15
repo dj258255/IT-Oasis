@@ -12,6 +12,7 @@ tags:
   - Search Engine
 category: project/WikiEngine
 draft: true
+series: "WikiEngine"
 ---
 
 ## 이전 글

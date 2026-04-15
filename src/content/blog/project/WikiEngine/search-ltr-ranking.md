@@ -23,6 +23,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-after-java-frontend.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

@@ -13,6 +13,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/spring-security-multi-filterchain/filterchain-flow.svg"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

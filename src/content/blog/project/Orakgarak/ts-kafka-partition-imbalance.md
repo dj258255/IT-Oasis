@@ -13,6 +13,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-kafka-partition-imbalance/uploadid-partitioning.svg"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

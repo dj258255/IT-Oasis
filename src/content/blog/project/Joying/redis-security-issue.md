@@ -12,6 +12,7 @@ tags:
   - Defense in Depth
 category: project/Joying
 draft: false
+series: "Joying"
 ---
 
 ## 들어가며

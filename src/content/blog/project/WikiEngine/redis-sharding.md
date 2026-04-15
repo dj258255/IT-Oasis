@@ -16,6 +16,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-overview.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

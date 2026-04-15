@@ -13,6 +13,7 @@ tags:
 category: project/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-routing.svg"
+series: "Orakgarak"
 ---
 
 ## 한 줄 요약

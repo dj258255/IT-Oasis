@@ -15,6 +15,7 @@ tags:
 category: project/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/code-quality-management/spotless-config.svg"
+series: "Tymee"
 ---
 
 > 일관성 있는 코드를 유지하고 일정 수준 이상의 품질을 보장하기 위해 도입했어요.

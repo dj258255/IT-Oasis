@@ -17,6 +17,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ai.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

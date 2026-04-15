@@ -14,6 +14,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/deferred-join-optimization/request-flow.svg
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글

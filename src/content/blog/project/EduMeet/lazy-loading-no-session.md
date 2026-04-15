@@ -13,6 +13,7 @@ tags:
 category: project/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/lazy-loading-no-session/lazy-no-session-error.png"
+series: "EduMeet"
 ---
 
 ## 정상 상태

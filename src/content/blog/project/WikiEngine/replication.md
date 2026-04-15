@@ -18,6 +18,7 @@ tags:
 category: project/WikiEngine
 coverImage: /uploads/project/WikiEngine/replication/phase12-mysql-primary-replica.png
 draft: false
+series: "WikiEngine"
 ---
 
 ## 이전 글
