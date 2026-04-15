@@ -186,7 +186,7 @@ OpenJDK **JEP 189**의 핵심 목표(Red Hat 주도):
 3. **힙이 커질수록 G1의 CSet/RSet 관리 비용이 커져요** → pause time도 길어질 가능성 → ES가 heap을 크게 주지 말라고 하는 근거 중 하나예요.
 4. ES가 `-XX:+UseG1GC` 대신 ZGC를 쓰는 경우도 있지만, 일반 운영 권장은 여전히 G1이에요.
 
-## 7. 면접/운영에서 자주 혼동되는 포인트
+## 7. 자주 혼동되는 포인트
 
 - "Full GC = Major GC = Old GC" 아니에요. **G1의 Full GC는 "비상 STW"** 이고, Major GC는 Old를 건드리는 광의의 표현이에요.
 - "Minor GC는 짧다" 도 절대적이지 않아요. Young이 비정상적으로 크면 Minor도 길어져요.

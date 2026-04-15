@@ -118,7 +118,7 @@ jcmd <pid> VM.native_memory summary
 2. **Lucene 인덱스는 hybridfs 전략에 따라 일부 파일이 mmap**으로 매핑돼요 (term dictionary, norms, doc values). 매핑되지 않은 파일도 OS가 자동으로 Page Cache에 캐싱해요. mmap된 영역은 "off-heap이라기보다 OS가 관리하는 메모리"지만 **JVM 프로세스의 RSS(Resident Set Size)에 합산**되므로, `top`으로 보면 RSS가 Xmx보다 훨씬 커 보이는 게 정상이에요.
 3. ES "heap의 50%" 권장은 **"나머지 50%는 Direct Memory + Page Cache + 기타 off-heap에 쓰라"** 는 뜻이에요. 이걸 안 남기고 Xmx를 80~90%로 잡으면 **OS OOM killer에 의해 프로세스가 강제 종료**돼요.
 
-## 8. 면접에서 자주 혼동되는 포인트
+## 8. 자주 혼동되는 포인트
 
 - "off-heap은 GC가 없다" → 절반만 맞아요. **Cleaner 기반 간접 해제**는 있어요. 단 즉시 해제가 아니라 **heap GC 타이밍에 의존**해요.
 - "Direct Memory는 빠르다" → 복사가 줄어서 **I/O 관점에서** 빠른 것이지, 일반 메모리 접근은 오히려 JIT 최적화가 덜 붙을 수 있어요.

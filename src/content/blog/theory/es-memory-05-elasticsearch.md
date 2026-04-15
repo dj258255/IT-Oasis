@@ -200,14 +200,14 @@ Reference 문서의 요약도 같은 취지로 다음과 같이 서술해요:
 
 ![Elasticsearch 노드 한 대의 Host RAM 메모리 배분 — JVM Heap, Off-heap, OS Page Cache](/uploads/theory/es-memory/host-ram-breakdown.svg)
 
-## 7. 면접/포트폴리오에서 자주 혼동되는 포인트
+## 7. 자주 혼동되는 포인트
 
 - **"heap을 키우면 검색이 빨라진다"** — 틀렸어요. 오히려 Page Cache가 좁아져서 느려지고, GC STW가 길어져요.
 - **"RAM 128GB면 heap도 64GB 주면 된다"** — 틀렸어요. **30GB에서 끊어요.** 나머지는 Page Cache로.
 - **"fielddata는 off-heap이다"** — 기본적으로 **heap에 로드돼요.** `text` 필드에 sort/aggs를 걸면 매우 위험한 이유예요.
 - **"mmapfs가 무조건 빠르다"** — 아니에요. 파일 종류별 trade-off 때문에 ES default는 **hybridfs**예요.
 
-## 8. 면접 1분 답변 예시
+## 8. 1분 요약
 
 > "Elasticsearch 노드의 메모리는 JVM Heap과 OS Page Cache로 양분해서 이해하고 있습니다. Heap은 인덱싱 버퍼, 쿼리 캐시, 집계 연산용으로 쓰이고 G1 GC의 대상이라 너무 크면 STW가 길어집니다. 또한 32GB를 넘으면 compressed oops 최적화가 꺼지기 때문에 실질적으로는 26~30GB가 상한입니다. 반면 Lucene 인덱스 파일은 hybridfs의 mmap을 통해 OS Page Cache에 올라가는데, 이 영역이 클수록 디스크 I/O 없이 검색이 가능하므로 '나머지 RAM 50%를 OS에 남겨야 한다'는 가이드가 나옵니다. 이 두 영역 사이의 예산 배분이 ES 튜닝의 핵심이고, 한 요청이 heap을 과점유하지 못하도록 field data · request · parent circuit breaker가 heap 기준 40/60/95%로 걸려 있습니다."
 
