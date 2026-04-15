@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="DispatcherServlet Front Controller - 클라이언트 요청(1) → DispatcherServlet → Controller(2), Controller가 Model 접근(3), Controller → DispatcherServlet(4), DispatcherServlet → View(5), View → DispatcherServlet(6), DispatcherServlet → 클라이언트 응답(7)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .dispatcher { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.5; }
+      .controller { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .view { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .model { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.25; }
+      .frame { fill: rgba(76, 175, 80, 0.06); stroke: #4CAF50; stroke-width: 1.25; stroke-dasharray: 6 4; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .num { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #FF6B6B; }
+    </style>
+    <marker id="fc-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#bbb"/></marker>
+  </defs>
+  <rect width="640" height="400" class="bg"/>
+  <text x="320" y="28" text-anchor="middle" class="title">DispatcherServlet (Front Controller)</text>
+
+  <rect x="40" y="50" width="560" height="320" rx="10" class="frame"/>
+
+  <rect x="100" y="100" width="200" height="90" rx="8" class="dispatcher"/>
+  <text x="200" y="130" text-anchor="middle" class="lbl">DispatcherServlet</text>
+  <text x="200" y="152" text-anchor="middle" class="sub">Front Controller</text>
+
+  <rect x="400" y="100" width="180" height="90" rx="8" class="controller"/>
+  <text x="490" y="132" text-anchor="middle" class="lbl">Controller (C)</text>
+
+  <rect x="60" y="250" width="180" height="90" rx="8" class="view"/>
+  <text x="150" y="282" text-anchor="middle" class="lbl">View (V)</text>
+
+  <rect x="360" y="250" width="180" height="90" rx="8" class="model"/>
+  <text x="450" y="282" text-anchor="middle" class="lbl">Model (M)</text>
+
+  <text x="20" y="145" class="num">1</text>
+  <line x1="36" y1="140" x2="96" y2="140" stroke="#bbb" stroke-width="1.5" marker-end="url(#fc-a)"/>
+  <line x1="96" y1="158" x2="36" y2="158" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#fc-a)"/>
+  <text x="20" y="170" class="num">7</text>
+
+  <text x="340" y="120" class="num">2</text>
+  <line x1="300" y1="130" x2="396" y2="130" stroke="#bbb" stroke-width="1.5" marker-end="url(#fc-a)"/>
+
+  <text x="340" y="170" class="num">4</text>
+  <line x1="396" y1="160" x2="300" y2="160" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#fc-a)"/>
+
+  <text x="490" y="220" class="num">3</text>
+  <line x1="470" y1="192" x2="460" y2="250" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#fc-a)"/>
+
+  <text x="170" y="220" class="num">5</text>
+  <line x1="180" y1="190" x2="165" y2="250" stroke="#bbb" stroke-width="1.5" marker-end="url(#fc-a)"/>
+
+  <text x="230" y="220" class="num">6</text>
+  <line x1="215" y1="250" x2="200" y2="190" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#fc-a)"/>
+
+  <line x1="240" y1="330" x2="360" y2="330" stroke="#bbb" stroke-width="1.5" stroke-dasharray="4 4"/>
+</svg>

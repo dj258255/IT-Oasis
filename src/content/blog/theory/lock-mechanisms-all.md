@@ -11,9 +11,9 @@ tags:
   - Database Lock
   - Concurrency
   - Redis
-category: theory
+category: theory/Concurrency
 draft: false
-coverImage: "/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.png"
+coverImage: "/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.svg"
 ---
 
 
@@ -53,7 +53,7 @@ class BrokenLock {
 ```
 
 **문제점:**
-![](/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.png)
+![](/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.svg)
 
 
 두 스레드가 동시에 `locked == false`를 확인하고 둘 다 락을 획득합니다. 이를 해결하려면 **하드웨어의 도움**이 필요합니다.
@@ -96,7 +96,7 @@ class TASLock {
 ```
 
 **동작 과정:**
-![](/uploads/theory/lock-mechanisms-all/12-test-and-set-tas.png)
+![](/uploads/theory/lock-mechanisms-all/12-test-and-set-tas.svg)
 
 
 > 출처: [Wikipedia - Test-and-Set](https://en.wikipedia.org/wiki/Test-and-set)
@@ -139,7 +139,7 @@ class CASExample {
 ```
 
 **동작 과정:**
-![](/uploads/theory/lock-mechanisms-all/13-compare-and-swap-cas.png)
+![](/uploads/theory/lock-mechanisms-all/13-compare-and-swap-cas.svg)
 
 
 
@@ -180,7 +180,7 @@ class Singleton {
 ```
 
 **문제점:**
-![](/uploads/theory/lock-mechanisms-all/14-memory-barrier-memory-barrier.png)
+![](/uploads/theory/lock-mechanisms-all/14-memory-barrier-memory-barrier.svg)
 
 
 **해결: volatile 키워드 (Memory Barrier)**
@@ -234,7 +234,7 @@ class Spinlock {
 ```
 
 **동작 방식:**
-![](/uploads/theory/lock-mechanisms-all/21-spinlock.png)
+![](/uploads/theory/lock-mechanisms-all/21-spinlock.svg)
 
 
 > 출처: [Wikipedia - Spinlock](https://en.wikipedia.org/wiki/Spinlock), [GeeksforGeeks - Spinlock](https://www.geeksforgeeks.org/spinlock-vs-semaphore/)
@@ -385,11 +385,11 @@ public class OrderService {
 
 **잘못된 방법**
 
-![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction.png)
+![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction.svg)
 
 **옳바른 방법**
 
-![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction-2.png)
+![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction-2.svg)
 
 
 
@@ -403,7 +403,7 @@ MongoDB는 MySQL과 완전히 다른 방식으로 락을 관리해요.
 
 MongoDB는 **계층적 락** 구조를 사용해요.
 
-![](/uploads/theory/lock-mechanisms-all/intent-locks-intent-lock.png)
+![](/uploads/theory/lock-mechanisms-all/intent-locks-intent-lock.svg)
 
 
 **Intent Lock의 종류:**
@@ -539,7 +539,7 @@ public void updateStock(Long productId, int quantity) {
 ```
 
 **동작 과정:**
-![](/uploads/theory/lock-mechanisms-all/optimistic-lock.png)
+![](/uploads/theory/lock-mechanisms-all/optimistic-lock.svg)
 
 
 **재시도 로직:**
@@ -590,7 +590,7 @@ public void updateStockWithRetry(Long productId, int quantity) {
 마이크로서비스 환경에서는 **여러 인스턴스**가 동시에 실행돼요.
 
 
-![](/uploads/theory/lock-mechanisms-all/41-why-distributed-lock-needed.png)
+![](/uploads/theory/lock-mechanisms-all/41-why-distributed-lock-needed.svg)
 
 
 
@@ -696,7 +696,7 @@ public class CouponService {
 ```
 
 **동작 과정:**
-![](/uploads/theory/lock-mechanisms-all/basic-impl.png)
+![](/uploads/theory/lock-mechanisms-all/basic-impl.svg)
 
 
 > 출처: [Redis Documentation - Distributed locks](https://redis.io/docs/manual/patterns/distributed-locks/), [Baeldung - Distributed Lock with Redis](https://www.baeldung.com/spring-redis-distributed-lock)
@@ -781,11 +781,11 @@ Redis 인스턴스 다운 → 모든 락 사라짐!
 
 **Redlock**: 여러 Redis 인스턴스에 분산 락을 획득해요.
 
-![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm.png)
+![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm.svg)
 
 
 **알고리즘:**
-![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm-2.png)
+![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm-2.svg)
 
 ```java
 // Redisson Redlock 사용
@@ -878,7 +878,7 @@ accountB.transfer(accountA, 200);  // B락 → A락 대기
 데드락이 발생하려면 4가지 조건이 동시에 성립해야 한다: **(1) 상호 배제** (자원은 한 번에 하나의 스레드만 사용), **(2) 점유 대기** (자원을 점유한 채 다른 자원을 대기), **(3) 비선점** (다른 스레드의 자원을 강제로 빼앗을 수 없음), **(4) 순환 대기** (스레드들이 원형으로 서로의 자원을 대기). 해결 방법은 이 중 하나를 깨뜨리는 것이다.
 
 **동작 과정:**
-![](/uploads/theory/lock-mechanisms-all/occurrence-condition.png)
+![](/uploads/theory/lock-mechanisms-all/occurrence-condition.svg)
 
 
 #### 해결 방법 1: 락 순서 지정
@@ -970,7 +970,7 @@ public void goodMethod() {
 
 이미 [세마포어와 뮤텍스](https://velog.io/@dj258255/%EC%84%B8%EB%A7%88%ED%8F%AC%EC%96%B4%EC%99%80-%EB%AE%A4%ED%85%8D%EC%8A%A4-%EB%8F%99%EA%B8%B0%ED%99%94-%EB%A9%94%EC%BB%A4%EB%8B%88%EC%A6%98%EC%9D%98-%EC%9D%B4%ED%95%B4)에서 다룬 내용이므로 간단히 요약:
 
-![](/uploads/theory/lock-mechanisms-all/53-priority-inversion-priority-inversion.png)
+![](/uploads/theory/lock-mechanisms-all/53-priority-inversion-priority-inversion.svg)
 
 
 **해결: Priority Inheritance** (우선순위 상속)
@@ -1061,12 +1061,12 @@ if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
 
 **기존 스핀락**
 
-![](/uploads/theory/lock-mechanisms-all/redisson-3.png)
+![](/uploads/theory/lock-mechanisms-all/redisson-3.svg)
 
 
 **[Redisson Pub/Sub 방식]**
 
-![](/uploads/theory/lock-mechanisms-all/redisson-3-2.png)
+![](/uploads/theory/lock-mechanisms-all/redisson-3-2.svg)
 
 
 **성능 개선:**
@@ -1103,7 +1103,7 @@ return redis.call('pttl', KEYS[1]);
 
 **Redisson의 락 획득 프로세스:**
 
-![](/uploads/theory/lock-mechanisms-all/optimization.png)
+![](/uploads/theory/lock-mechanisms-all/optimization.svg)
 
 
 **핵심 교훈:**
@@ -1243,10 +1243,10 @@ public class AopForTransaction {
 **핵심: "트랜잭션 커밋 이후 락 해제"**
 
 올바른 방법 (트랜잭션 커밋 후 락 해제)
-![](/uploads/theory/lock-mechanisms-all/impl-aop.png)
+![](/uploads/theory/lock-mechanisms-all/impl-aop.svg)
 
 잘못된 방법 (트랜잭션 커밋 전 락 해제)
-![](/uploads/theory/lock-mechanisms-all/impl-aop-2.png)
+![](/uploads/theory/lock-mechanisms-all/impl-aop-2.svg)
 
 
 #### 적용 결과: 테스트 검증
@@ -1456,7 +1456,7 @@ class BrokenLock {
 ```
 
 **The Problem:**
-![](/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.png)
+![](/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.svg)
 
 
 Two threads simultaneously check that `locked == false` and both acquire the lock. To solve this, we need **hardware support**.
@@ -1499,7 +1499,7 @@ class TASLock {
 ```
 
 **How It Works:**
-![](/uploads/theory/lock-mechanisms-all/12-test-and-set-tas.png)
+![](/uploads/theory/lock-mechanisms-all/12-test-and-set-tas.svg)
 
 
 > Source: [Wikipedia - Test-and-Set](https://en.wikipedia.org/wiki/Test-and-set)
@@ -1542,7 +1542,7 @@ class CASExample {
 ```
 
 **How It Works:**
-![](/uploads/theory/lock-mechanisms-all/13-compare-and-swap-cas.png)
+![](/uploads/theory/lock-mechanisms-all/13-compare-and-swap-cas.svg)
 
 
 
@@ -1583,7 +1583,7 @@ class Singleton {
 ```
 
 **The Problem:**
-![](/uploads/theory/lock-mechanisms-all/14-memory-barrier-memory-barrier.png)
+![](/uploads/theory/lock-mechanisms-all/14-memory-barrier-memory-barrier.svg)
 
 
 **Solution: volatile Keyword (Memory Barrier)**
@@ -1637,7 +1637,7 @@ class Spinlock {
 ```
 
 **How It Works:**
-![](/uploads/theory/lock-mechanisms-all/21-spinlock.png)
+![](/uploads/theory/lock-mechanisms-all/21-spinlock.svg)
 
 
 > Source: [Wikipedia - Spinlock](https://en.wikipedia.org/wiki/Spinlock), [GeeksforGeeks - Spinlock](https://www.geeksforgeeks.org/spinlock-vs-semaphore/)
@@ -1788,11 +1788,11 @@ public class OrderService {
 
 **Incorrect Approach**
 
-![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction.png)
+![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction.svg)
 
 **Correct Approach**
 
-![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction-2.png)
+![](/uploads/theory/lock-mechanisms-all/practical-example-stock-deduction-2.svg)
 
 
 
@@ -1806,7 +1806,7 @@ MongoDB manages locks in a completely different way from MySQL.
 
 MongoDB uses a **hierarchical lock** structure.
 
-![](/uploads/theory/lock-mechanisms-all/intent-locks-intent-lock.png)
+![](/uploads/theory/lock-mechanisms-all/intent-locks-intent-lock.svg)
 
 
 **Types of Intent Locks:**
@@ -1942,7 +1942,7 @@ public void updateStock(Long productId, int quantity) {
 ```
 
 **How It Works:**
-![](/uploads/theory/lock-mechanisms-all/optimistic-lock.png)
+![](/uploads/theory/lock-mechanisms-all/optimistic-lock.svg)
 
 
 **Retry Logic:**
@@ -1993,7 +1993,7 @@ public void updateStockWithRetry(Long productId, int quantity) {
 In a microservice environment, **multiple instances** run simultaneously.
 
 
-![](/uploads/theory/lock-mechanisms-all/41-why-distributed-lock-needed.png)
+![](/uploads/theory/lock-mechanisms-all/41-why-distributed-lock-needed.svg)
 
 
 
@@ -2099,7 +2099,7 @@ public class CouponService {
 ```
 
 **How It Works:**
-![](/uploads/theory/lock-mechanisms-all/basic-impl.png)
+![](/uploads/theory/lock-mechanisms-all/basic-impl.svg)
 
 
 > Source: [Redis Documentation - Distributed locks](https://redis.io/docs/manual/patterns/distributed-locks/), [Baeldung - Distributed Lock with Redis](https://www.baeldung.com/spring-redis-distributed-lock)
@@ -2184,11 +2184,11 @@ Redis instance goes down → All locks are lost!
 
 **Redlock**: Acquires distributed locks across multiple Redis instances.
 
-![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm.png)
+![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm.svg)
 
 
 **Algorithm:**
-![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm-2.png)
+![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm-2.svg)
 
 ```java
 // Using Redisson Redlock
@@ -2281,7 +2281,7 @@ accountB.transfer(accountA, 200);  // Lock B → Waiting for Lock A
 For a deadlock to occur, four conditions must hold simultaneously (Coffman conditions): **(1) Mutual Exclusion** (a resource can only be used by one thread at a time), **(2) Hold and Wait** (a thread holds a resource while waiting for another), **(3) No Preemption** (a resource cannot be forcibly taken from a thread), **(4) Circular Wait** (threads form a circular chain of resource dependencies). The solution is to break any one of these conditions.
 
 **How It Works:**
-![](/uploads/theory/lock-mechanisms-all/occurrence-condition.png)
+![](/uploads/theory/lock-mechanisms-all/occurrence-condition.svg)
 
 
 #### Solution 1: Lock Ordering
@@ -2373,7 +2373,7 @@ public void goodMethod() {
 
 This topic was already covered in [Semaphores and Mutexes](https://velog.io/@dj258255/%EC%84%B8%EB%A7%88%ED%8F%AC%EC%96%B4%EC%99%80-%EB%AE%A4%ED%85%8D%EC%8A%A4-%EB%8F%99%EA%B8%B0%ED%99%94-%EB%A9%94%EC%BB%A4%EB%8B%88%EC%A6%98%EC%9D%98-%EC%9D%B4%ED%95%B4), so here is a brief summary:
 
-![](/uploads/theory/lock-mechanisms-all/53-priority-inversion-priority-inversion.png)
+![](/uploads/theory/lock-mechanisms-all/53-priority-inversion-priority-inversion.svg)
 
 
 **Solution: Priority Inheritance**
@@ -2464,12 +2464,12 @@ Uses a **Pub/Sub** mechanism instead of spinlocks:
 
 **Previous Spinlock Approach**
 
-![](/uploads/theory/lock-mechanisms-all/redisson-3.png)
+![](/uploads/theory/lock-mechanisms-all/redisson-3.svg)
 
 
 **[Redisson Pub/Sub Approach]**
 
-![](/uploads/theory/lock-mechanisms-all/redisson-3-2.png)
+![](/uploads/theory/lock-mechanisms-all/redisson-3-2.svg)
 
 
 **Performance Improvement:**
@@ -2506,7 +2506,7 @@ return redis.call('pttl', KEYS[1]);
 
 **Redisson's Lock Acquisition Process:**
 
-![](/uploads/theory/lock-mechanisms-all/optimization.png)
+![](/uploads/theory/lock-mechanisms-all/optimization.svg)
 
 
 **Key Lesson:**
@@ -2646,10 +2646,10 @@ public class AopForTransaction {
 **Key Point: "Release the Lock After Transaction Commit"**
 
 Correct approach (release lock after transaction commit)
-![](/uploads/theory/lock-mechanisms-all/impl-aop.png)
+![](/uploads/theory/lock-mechanisms-all/impl-aop.svg)
 
 Incorrect approach (release lock before transaction commit)
-![](/uploads/theory/lock-mechanisms-all/impl-aop-2.png)
+![](/uploads/theory/lock-mechanisms-all/impl-aop-2.svg)
 
 
 #### Results: Test Verification

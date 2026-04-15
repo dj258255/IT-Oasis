@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" role="img" aria-label="Card Table - Old Generation이 Card 0, Card 1, Card 2, Card 3 등 512 byte 단위로 분할, Card Table(1 byte per card)이 각 Card에 Dirty 표시(1), Dirty=Young Gen 참조 있음">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.4); stroke-width: 1.25; }
+      .card { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .clean { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .dirty { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.5; }
+      .note { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="ct-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="760" height="560" class="bg"/>
+  <text x="380" y="28" text-anchor="middle" class="title">Card Table</text>
+
+  <rect x="20" y="50" width="720" height="130" rx="10" class="frame"/>
+  <text x="380" y="76" text-anchor="middle" class="frame-lbl">Old Generation</text>
+  <rect x="40" y="96" width="130" height="68" rx="6" class="card"/>
+  <text x="105" y="124" text-anchor="middle" class="lbl">Card 0</text>
+  <text x="105" y="144" text-anchor="middle" class="sub">512 B</text>
+  <rect x="180" y="96" width="130" height="68" rx="6" class="card"/>
+  <text x="245" y="124" text-anchor="middle" class="lbl">Card 1</text>
+  <text x="245" y="144" text-anchor="middle" class="sub">512 B</text>
+  <rect x="320" y="96" width="130" height="68" rx="6" class="card"/>
+  <text x="385" y="124" text-anchor="middle" class="lbl">Card 2</text>
+  <text x="385" y="144" text-anchor="middle" class="sub">512 B</text>
+  <rect x="460" y="96" width="130" height="68" rx="6" class="card"/>
+  <text x="525" y="124" text-anchor="middle" class="lbl">Card 3</text>
+  <text x="525" y="144" text-anchor="middle" class="sub">512 B</text>
+  <rect x="600" y="96" width="130" height="68" rx="6" class="card"/>
+  <text x="665" y="134" text-anchor="middle" class="lbl">…</text>
+
+  <line x1="380" y1="184" x2="380" y2="214" stroke="#888" stroke-width="1.5" marker-end="url(#ct-a)"/>
+
+  <rect x="200" y="220" width="360" height="320" rx="10" class="frame"/>
+  <text x="380" y="246" text-anchor="middle" class="frame-lbl">Card Table (1 byte per card)</text>
+
+  <rect x="320" y="264" width="120" height="42" rx="6" class="clean"/>
+  <text x="380" y="290" text-anchor="middle" class="lbl">0</text>
+
+  <rect x="320" y="316" width="120" height="42" rx="6" class="dirty"/>
+  <text x="380" y="342" text-anchor="middle" class="lbl">1 ← Dirty!</text>
+
+  <rect x="320" y="368" width="120" height="42" rx="6" class="clean"/>
+  <text x="380" y="394" text-anchor="middle" class="lbl">0</text>
+
+  <rect x="320" y="420" width="120" height="42" rx="6" class="clean"/>
+  <text x="380" y="446" text-anchor="middle" class="lbl">0</text>
+
+  <rect x="320" y="472" width="120" height="42" rx="6" class="clean"/>
+  <text x="380" y="498" text-anchor="middle" class="lbl">…</text>
+
+  <rect x="460" y="290" width="280" height="50" rx="8" class="note"/>
+  <text x="600" y="320" text-anchor="middle" class="lbl">Dirty = Young Gen 참조 있음</text>
+  <line x1="460" y1="330" x2="442" y2="336" stroke="#888" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ct-a)"/>
+</svg>

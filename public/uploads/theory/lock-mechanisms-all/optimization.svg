@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 760" role="img" aria-label="락 획득 최적화 - tryLock 호출 → 결과 확인 → 성공이면 작업 진행, 실패면 PubSub 채널 구독 → waitTime 내 알림 대기 → 재시도 → 획득하면 작업 진행, 실패하면 timeout 처리">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .start { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .step { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .decision { fill: rgba(255, 183, 77, 0.26); stroke: #FFB74D; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.25; }
+      .fail { fill: rgba(255, 107, 107, 0.24); stroke: #FF6B6B; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="op-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="760" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">락 획득 최적화 흐름</text>
+
+  <rect x="130" y="50" width="200" height="40" rx="6" class="start"/>
+  <text x="230" y="74" text-anchor="middle" class="lbl">tryLock 호출</text>
+  <line x1="230" y1="90" x2="230" y2="108" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <rect x="120" y="116" width="220" height="40" rx="6" class="step"/>
+  <text x="230" y="140" text-anchor="middle" class="lbl">2. 즉시 락 획득 시도</text>
+  <line x1="230" y1="156" x2="230" y2="174" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <polygon points="230,180 360,224 230,268 100,224" class="decision"/>
+  <text x="230" y="220" text-anchor="middle" class="lbl">획득 성공?</text>
+
+  <text x="380" y="240" class="sub">Yes</text>
+  <path d="M 360 224 C 400 224, 410 480, 380 580" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#op-a)"/>
+
+  <text x="80" y="240" class="sub">No</text>
+  <line x1="230" y1="268" x2="230" y2="290" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <rect x="100" y="296" width="260" height="56" rx="8" class="step"/>
+  <text x="230" y="320" text-anchor="middle" class="lbl">3. PubSub 채널 구독</text>
+  <text x="230" y="338" text-anchor="middle" class="sub">락 해제 알림 대기</text>
+  <line x1="230" y1="352" x2="230" y2="370" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <rect x="100" y="378" width="260" height="56" rx="8" class="wait"/>
+  <text x="230" y="402" text-anchor="middle" class="lbl">메시지 대기</text>
+  <text x="230" y="420" text-anchor="middle" class="sub">waitTime 내</text>
+  <line x1="230" y1="434" x2="230" y2="452" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <polygon points="230,458 360,502 230,546 100,502" class="decision"/>
+  <text x="230" y="498" text-anchor="middle" class="lbl">알림 수신?</text>
+
+  <text x="80" y="520" class="sub">No</text>
+  <line x1="100" y1="502" x2="60" y2="552" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <text x="380" y="520" class="sub">Yes</text>
+  <line x1="230" y1="546" x2="230" y2="568" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <rect x="100" y="572" width="260" height="46" rx="8" class="step"/>
+  <text x="230" y="600" text-anchor="middle" class="lbl">4. 락 재획득 시도</text>
+  <line x1="230" y1="618" x2="230" y2="636" stroke="#888" stroke-width="1.5" marker-end="url(#op-a)"/>
+
+  <rect x="120" y="644" width="220" height="46" rx="8" class="ok"/>
+  <text x="230" y="673" text-anchor="middle" class="lbl">5. 작업 실행</text>
+
+  <rect x="0" y="560" width="120" height="50" rx="8" class="fail"/>
+  <text x="60" y="585" text-anchor="middle" class="lbl">6. waitTime 초과</text>
+  <text x="60" y="600" text-anchor="middle" class="sub">실패 처리</text>
+</svg>

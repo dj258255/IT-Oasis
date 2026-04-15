@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 900" role="img" aria-label="톰캣 요청 처리 흐름 - 부팅 시 스레드 풀 10개 미리 생성, 요청 들어오면 exec 스레드가 풀에서 가져와 DispatcherServlet → Controller → Service → Repository 수행 후 응답 반환, 스레드는 풀로 돌아가 재사용">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .boot { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .req { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .step { fill: rgba(255, 238, 215, 0.16); stroke: #FFB74D; stroke-width: 1.25; }
+      .dispatcher { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .logic { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .return { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="rh-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="420" height="900" class="bg"/>
+  <text x="210" y="28" text-anchor="middle" class="title">톰캣 요청 처리 흐름</text>
+
+  <rect x="80" y="50" width="260" height="74" rx="8" class="boot"/>
+  <text x="210" y="76" text-anchor="middle" class="lbl">톰캣 부팅 시</text>
+  <text x="210" y="96" text-anchor="middle" class="sub">스레드 풀 생성</text>
+  <text x="210" y="114" text-anchor="middle" class="sub">10개 미리 생성</text>
+  <line x1="210" y1="124" x2="210" y2="144" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="150" width="260" height="46" rx="8" class="req"/>
+  <text x="210" y="177" text-anchor="middle" class="lbl">요청 들어옴</text>
+  <line x1="210" y1="196" x2="210" y2="214" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="220" width="260" height="56" rx="8" class="step"/>
+  <text x="210" y="244" text-anchor="middle" class="lbl">exec 스레드가</text>
+  <text x="210" y="264" text-anchor="middle" class="lbl">풀에서 가져감</text>
+  <line x1="210" y1="276" x2="210" y2="294" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="300" width="260" height="46" rx="8" class="dispatcher"/>
+  <text x="210" y="327" text-anchor="middle" class="lbl">DispatcherServlet</text>
+  <line x1="210" y1="346" x2="210" y2="364" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="370" width="260" height="46" rx="8" class="logic"/>
+  <text x="210" y="397" text-anchor="middle" class="lbl">Controller</text>
+  <line x1="210" y1="416" x2="210" y2="434" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="440" width="260" height="46" rx="8" class="logic"/>
+  <text x="210" y="467" text-anchor="middle" class="lbl">Service</text>
+  <line x1="210" y1="486" x2="210" y2="504" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="510" width="260" height="46" rx="8" class="logic"/>
+  <text x="210" y="537" text-anchor="middle" class="lbl">Repository</text>
+  <line x1="210" y1="556" x2="210" y2="574" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="580" width="260" height="46" rx="8" class="return"/>
+  <text x="210" y="607" text-anchor="middle" class="lbl">응답 반환</text>
+  <line x1="210" y1="626" x2="210" y2="644" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="80" y="650" width="260" height="64" rx="8" class="req"/>
+  <text x="210" y="676" text-anchor="middle" class="lbl">스레드는 다시</text>
+  <text x="210" y="694" text-anchor="middle" class="lbl">풀로 돌아감</text>
+  <text x="210" y="710" text-anchor="middle" class="sub">재사용 대기</text>
+
+  <path d="M 340 682 C 390 680, 400 400, 400 180 L 340 170" stroke="#888" stroke-width="1.5" fill="none" stroke-dasharray="4 4" marker-end="url(#rh-a)"/>
+</svg>

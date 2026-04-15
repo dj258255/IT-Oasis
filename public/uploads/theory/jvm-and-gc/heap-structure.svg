@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" role="img" aria-label="Heap 구조 - Young Gen에 Eden과 S0/S1, Old Gen이 별도로 존재">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .heap { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .young { fill: rgba(76, 175, 80, 0.08); stroke: #4CAF50; stroke-width: 1.25; }
+      .eden { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .survivor { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .old { fill: rgba(255, 183, 77, 0.24); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+  </defs>
+  <rect width="600" height="380" class="bg"/>
+  <text x="300" y="28" text-anchor="middle" class="title">Heap 구조</text>
+
+  <rect x="40" y="50" width="520" height="300" rx="10" class="heap"/>
+  <text x="300" y="74" text-anchor="middle" class="frame-lbl">Heap</text>
+
+  <rect x="60" y="90" width="260" height="240" rx="8" class="young"/>
+  <text x="190" y="114" text-anchor="middle" class="frame-lbl">Young Gen</text>
+
+  <rect x="100" y="140" width="180" height="80" rx="6" class="eden"/>
+  <text x="190" y="186" text-anchor="middle" class="lbl">Eden</text>
+
+  <rect x="100" y="240" width="180" height="70" rx="6" class="survivor"/>
+  <text x="190" y="282" text-anchor="middle" class="lbl">S0 / S1</text>
+
+  <rect x="380" y="160" width="160" height="110" rx="8" class="old"/>
+  <text x="460" y="220" text-anchor="middle" class="lbl">Old Gen</text>
+</svg>

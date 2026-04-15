@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 520" role="img" aria-label="커넥션 풀 없을 때 3개 요청이 각자 500ms 풀 생성 — 총 1530ms 낭비">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .col-label { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .step-start { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .step-pool { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.5; }
+      .step-query { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.5; }
+      .step-total { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.5; }
+      .step-problem { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.75; }
+      .col-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255, 238, 215, 0.35); stroke-width: 1.25; }
+      .step-text { font: 500 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .ms-text { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .problem-text { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+      .arrow { stroke: #888; stroke-width: 1.5; fill: none; }
+    </style>
+    <marker id="cost-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="840" height="520" class="bg"/>
+  <text x="420" y="34" text-anchor="middle" class="title">커넥션 풀 없이 3번 요청 처리</text>
+
+  <!-- Column frames -->
+  <rect x="30"  y="55" width="240" height="360" rx="10" class="col-frame"/>
+  <rect x="300" y="55" width="240" height="360" rx="10" class="col-frame"/>
+  <rect x="570" y="55" width="240" height="360" rx="10" class="col-frame"/>
+
+  <text x="150" y="80" text-anchor="middle" class="col-label">1번 요청</text>
+  <text x="420" y="80" text-anchor="middle" class="col-label">2번 요청</text>
+  <text x="690" y="80" text-anchor="middle" class="col-label">3번 요청</text>
+
+  <!-- Column 1 -->
+  <g>
+    <rect x="60" y="95"  width="180" height="46" rx="6" class="step-start"/>
+    <text x="150" y="123" text-anchor="middle" class="step-text">요청 시작</text>
+    <line x1="150" y1="145" x2="150" y2="163" class="arrow" marker-end="url(#cost-arrow)"/>
+
+    <rect x="60" y="168" width="180" height="60" rx="6" class="step-pool"/>
+    <text x="150" y="191" text-anchor="middle" class="step-text">커넥션 풀 생성</text>
+    <text x="150" y="214" text-anchor="middle" class="ms-text">500ms</text>
+    <line x1="150" y1="232" x2="150" y2="248" class="arrow" marker-end="url(#cost-arrow)"/>
+
+    <rect x="60" y="253" width="180" height="56" rx="6" class="step-query"/>
+    <text x="150" y="276" text-anchor="middle" class="step-text">쿼리 실행</text>
+    <text x="150" y="297" text-anchor="middle" class="ms-text">10ms</text>
+    <line x1="150" y1="313" x2="150" y2="328" class="arrow" marker-end="url(#cost-arrow)"/>
+
+    <rect x="60" y="333" width="180" height="46" rx="6" class="step-total"/>
+    <text x="150" y="361" text-anchor="middle" class="ms-text">총 510ms</text>
+  </g>
+
+  <!-- Column 2 -->
+  <g>
+    <rect x="330" y="95"  width="180" height="46" rx="6" class="step-start"/>
+    <text x="420" y="123" text-anchor="middle" class="step-text">요청 시작</text>
+    <line x1="420" y1="145" x2="420" y2="163" class="arrow" marker-end="url(#cost-arrow)"/>
+    <rect x="330" y="168" width="180" height="60" rx="6" class="step-pool"/>
+    <text x="420" y="191" text-anchor="middle" class="step-text">커넥션 풀 생성</text>
+    <text x="420" y="214" text-anchor="middle" class="ms-text">500ms</text>
+    <line x1="420" y1="232" x2="420" y2="248" class="arrow" marker-end="url(#cost-arrow)"/>
+    <rect x="330" y="253" width="180" height="56" rx="6" class="step-query"/>
+    <text x="420" y="276" text-anchor="middle" class="step-text">쿼리 실행</text>
+    <text x="420" y="297" text-anchor="middle" class="ms-text">10ms</text>
+    <line x1="420" y1="313" x2="420" y2="328" class="arrow" marker-end="url(#cost-arrow)"/>
+    <rect x="330" y="333" width="180" height="46" rx="6" class="step-total"/>
+    <text x="420" y="361" text-anchor="middle" class="ms-text">총 510ms</text>
+  </g>
+
+  <!-- Column 3 -->
+  <g>
+    <rect x="600" y="95"  width="180" height="46" rx="6" class="step-start"/>
+    <text x="690" y="123" text-anchor="middle" class="step-text">요청 시작</text>
+    <line x1="690" y1="145" x2="690" y2="163" class="arrow" marker-end="url(#cost-arrow)"/>
+    <rect x="600" y="168" width="180" height="60" rx="6" class="step-pool"/>
+    <text x="690" y="191" text-anchor="middle" class="step-text">커넥션 풀 생성</text>
+    <text x="690" y="214" text-anchor="middle" class="ms-text">500ms</text>
+    <line x1="690" y1="232" x2="690" y2="248" class="arrow" marker-end="url(#cost-arrow)"/>
+    <rect x="600" y="253" width="180" height="56" rx="6" class="step-query"/>
+    <text x="690" y="276" text-anchor="middle" class="step-text">쿼리 실행</text>
+    <text x="690" y="297" text-anchor="middle" class="ms-text">10ms</text>
+    <line x1="690" y1="313" x2="690" y2="328" class="arrow" marker-end="url(#cost-arrow)"/>
+    <rect x="600" y="333" width="180" height="46" rx="6" class="step-total"/>
+    <text x="690" y="361" text-anchor="middle" class="ms-text">총 510ms</text>
+  </g>
+
+  <!-- Convergence lines -->
+  <path d="M 150 379 C 150 410, 300 420, 420 432" class="arrow" marker-end="url(#cost-arrow)"/>
+  <line x1="420" y1="379" x2="420" y2="432" class="arrow" marker-end="url(#cost-arrow)"/>
+  <path d="M 690 379 C 690 410, 540 420, 420 432" class="arrow" marker-end="url(#cost-arrow)"/>
+
+  <!-- Problem box -->
+  <rect x="210" y="438" width="420" height="70" rx="8" class="step-problem"/>
+  <text x="420" y="463" text-anchor="middle" class="ms-text">총 시간: 1530ms</text>
+  <text x="420" y="485" text-anchor="middle" class="problem-text">매 요청마다 풀 생성 오버헤드</text>
+  <text x="420" y="502" text-anchor="middle" class="problem-text">실제 쿼리 시간의 약 50배 낭비</text>
+</svg>

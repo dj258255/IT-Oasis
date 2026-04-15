@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 380" role="img" aria-label="Selector 동작 원리 - 단일 Thread가 Selector를 통해 여러 Channel을 관리하는 구조">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .thread { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .selector { fill: rgba(255, 183, 77, 0.28); stroke: #FFB74D; stroke-width: 1.5; }
+      .channel { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+  </defs>
+  <rect width="520" height="380" class="bg"/>
+  <text x="260" y="28" text-anchor="middle" class="title">Selector 동작 구조</text>
+
+  <rect x="180" y="60" width="160" height="50" rx="8" class="thread"/>
+  <text x="260" y="90" text-anchor="middle" class="lbl">Thread</text>
+  <line x1="260" y1="110" x2="260" y2="150" stroke="#aaa" stroke-width="2"/>
+
+  <polygon points="180,155 340,155 370,195 340,235 180,235 150,195" class="selector"/>
+  <text x="260" y="202" text-anchor="middle" class="lbl">Selector</text>
+
+  <line x1="200" y1="235" x2="100" y2="280" stroke="#aaa" stroke-width="2"/>
+  <line x1="260" y1="235" x2="260" y2="280" stroke="#aaa" stroke-width="2"/>
+  <line x1="320" y1="235" x2="420" y2="280" stroke="#aaa" stroke-width="2"/>
+
+  <rect x="40" y="284" width="120" height="50" rx="8" class="channel"/>
+  <text x="100" y="314" text-anchor="middle" class="lbl">Channel</text>
+  <rect x="200" y="284" width="120" height="50" rx="8" class="channel"/>
+  <text x="260" y="314" text-anchor="middle" class="lbl">Channel</text>
+  <rect x="360" y="284" width="120" height="50" rx="8" class="channel"/>
+  <text x="420" y="314" text-anchor="middle" class="lbl">Channel</text>
+</svg>

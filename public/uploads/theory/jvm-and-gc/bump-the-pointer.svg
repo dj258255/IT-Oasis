@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 460" role="img" aria-label="Bump the Pointer - 할당 전 [Object1][Object2][Free Space](top 포인터), Object3 할당 후 [Object1][Object2][Object3][Free], top 포인터가 그만큼 이동">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .action { fill: rgba(255, 238, 215, 0.16); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="bp-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="520" height="460" class="bg"/>
+  <text x="260" y="28" text-anchor="middle" class="title">Bump the Pointer 할당</text>
+
+  <rect x="40" y="60" width="440" height="140" rx="10" class="frame"/>
+  <text x="260" y="94" text-anchor="middle" class="lbl">할당 전: [Object1][Object2]</text>
+  <text x="260" y="122" text-anchor="middle" class="lbl">[       Free Space       ]</text>
+  <text x="260" y="164" text-anchor="middle" class="sub">↑ top 포인터</text>
+
+  <rect x="200" y="214" width="120" height="34" rx="6" class="action"/>
+  <text x="260" y="236" text-anchor="middle" class="lbl">Object3 할당</text>
+  <line x1="260" y1="250" x2="260" y2="274" stroke="#888" stroke-width="1.5" marker-end="url(#bp-a)"/>
+
+  <rect x="40" y="280" width="440" height="140" rx="10" class="frame"/>
+  <text x="260" y="314" text-anchor="middle" class="lbl">할당 후: [Object1][Object2]</text>
+  <text x="260" y="342" text-anchor="middle" class="lbl">[Object3][   Free    ]</text>
+  <text x="260" y="384" text-anchor="middle" class="sub">↑ top 포인터 이동</text>
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 820" role="img" aria-label="전체 흐름 요약 - 클라이언트 → OS Network Stack → Tomcat NIO Connector → Acceptor/Poller/Executor 순서 → Spring MVC → Filter/Dispatcher/HandlerMapping/HandlerAdapter/Controller → Repository → MessageConverter → 응답 → Keep-Alive">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .client { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .os { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .nio { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .tier-worker { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .spring { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .handler { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.25; }
+      .controller { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .done { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="ov-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="420" height="820" class="bg"/>
+  <text x="210" y="26" text-anchor="middle" class="title">전체 요청 처리 요약</text>
+
+  <rect x="110" y="48" width="200" height="34" rx="6" class="client"/>
+  <text x="210" y="70" text-anchor="middle" class="lbl">클라이언트</text>
+  <line x1="210" y1="82" x2="210" y2="98" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="104" width="200" height="34" rx="6" class="os"/>
+  <text x="210" y="126" text-anchor="middle" class="lbl">OS Network Stack</text>
+  <line x1="210" y1="138" x2="210" y2="154" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="160" width="200" height="34" rx="6" class="nio"/>
+  <text x="210" y="182" text-anchor="middle" class="lbl">Tomcat NIO Connector</text>
+  <line x1="210" y1="194" x2="210" y2="210" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="80" y="216" width="260" height="34" rx="6" class="nio"/>
+  <text x="210" y="238" text-anchor="middle" class="lbl">Acceptor · Poller · Executor</text>
+  <line x1="210" y1="250" x2="210" y2="266" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="272" width="200" height="34" rx="6" class="tier-worker"/>
+  <text x="210" y="294" text-anchor="middle" class="lbl">Worker Thread (200개)</text>
+  <line x1="210" y1="306" x2="210" y2="322" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="328" width="200" height="34" rx="6" class="spring"/>
+  <text x="210" y="350" text-anchor="middle" class="lbl">Filter Chain</text>
+  <line x1="210" y1="362" x2="210" y2="378" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="384" width="200" height="34" rx="6" class="spring"/>
+  <text x="210" y="406" text-anchor="middle" class="lbl">DispatcherServlet</text>
+  <line x1="210" y1="418" x2="210" y2="434" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="440" width="200" height="34" rx="6" class="handler"/>
+  <text x="210" y="462" text-anchor="middle" class="lbl">HandlerMapping</text>
+  <line x1="210" y1="474" x2="210" y2="490" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="496" width="200" height="34" rx="6" class="handler"/>
+  <text x="210" y="518" text-anchor="middle" class="lbl">HandlerAdapter</text>
+  <line x1="210" y1="530" x2="210" y2="546" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="552" width="200" height="34" rx="6" class="controller"/>
+  <text x="210" y="574" text-anchor="middle" class="lbl">Controller</text>
+  <line x1="210" y1="586" x2="210" y2="602" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="608" width="200" height="34" rx="6" class="controller"/>
+  <text x="210" y="630" text-anchor="middle" class="lbl">Service · Repository</text>
+  <line x1="210" y1="642" x2="210" y2="658" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="664" width="200" height="34" rx="6" class="handler"/>
+  <text x="210" y="686" text-anchor="middle" class="lbl">MessageConverter</text>
+  <line x1="210" y1="698" x2="210" y2="714" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="720" width="200" height="34" rx="6" class="done"/>
+  <text x="210" y="742" text-anchor="middle" class="lbl">Response</text>
+  <line x1="210" y1="754" x2="210" y2="770" stroke="#888" stroke-width="1.5" marker-end="url(#ov-a)"/>
+
+  <rect x="110" y="776" width="200" height="34" rx="6" class="nio"/>
+  <text x="210" y="798" text-anchor="middle" class="lbl">Keep-Alive</text>
+</svg>

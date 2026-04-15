@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 760" role="img" aria-label="Redlock 알고리즘 단계 - 시작(start_time) → 모든 N개 Redis에 순차적 시도 → 과반수 획득 검증(success >= N/2 + 1) → 총 소요 시간 검증(elapsed < lock_ttl) → 락 획득 / 실패시 모두 해제">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .start { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .step { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .decision { fill: rgba(255, 183, 77, 0.26); stroke: #FFB74D; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.5; }
+      .fail { fill: rgba(255, 107, 107, 0.24); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="r2-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="760" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">Redlock 알고리즘 단계</text>
+
+  <rect x="130" y="50" width="200" height="40" rx="6" class="start"/>
+  <text x="230" y="74" text-anchor="middle" class="lbl">Redlock 알고리즘 시작</text>
+  <line x1="230" y1="90" x2="230" y2="108" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <rect x="100" y="116" width="260" height="56" rx="8" class="step"/>
+  <text x="230" y="140" text-anchor="middle" class="lbl">1. 현재 시각 기록</text>
+  <text x="230" y="160" text-anchor="middle" class="sub">start_time = now</text>
+  <line x1="230" y1="172" x2="230" y2="190" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <rect x="100" y="198" width="260" height="56" rx="8" class="step"/>
+  <text x="230" y="222" text-anchor="middle" class="lbl">2. 모든 N개 Redis 인스턴스에</text>
+  <text x="230" y="242" text-anchor="middle" class="sub">순차적으로 락 획득 시도</text>
+  <line x1="230" y1="254" x2="230" y2="272" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <rect x="120" y="280" width="220" height="40" rx="6" class="step"/>
+  <text x="230" y="304" text-anchor="middle" class="lbl">3. 성공 횟수 카운트</text>
+  <line x1="230" y1="320" x2="230" y2="338" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <polygon points="230,344 360,388 230,432 100,388" class="decision"/>
+  <text x="230" y="384" text-anchor="middle" class="lbl">과반수 획득?</text>
+  <text x="230" y="402" text-anchor="middle" class="sub">success ≥ N/2 + 1</text>
+
+  <text x="80" y="402" class="sub">No</text>
+  <line x1="100" y1="388" x2="60" y2="448" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <text x="380" y="402" class="sub">Yes</text>
+  <line x1="230" y1="432" x2="230" y2="450" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <rect x="100" y="458" width="260" height="56" rx="8" class="step"/>
+  <text x="230" y="482" text-anchor="middle" class="lbl">4. 총 소요 시간 확인</text>
+  <text x="230" y="502" text-anchor="middle" class="sub">elapsed = now - start_time</text>
+  <line x1="230" y1="514" x2="230" y2="532" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <polygon points="230,538 360,582 230,626 100,582" class="decision"/>
+  <text x="230" y="578" text-anchor="middle" class="lbl">elapsed &lt; lock_ttl?</text>
+
+  <text x="80" y="595" class="sub">No</text>
+  <line x1="100" y1="582" x2="60" y2="630" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <text x="380" y="595" class="sub">Yes</text>
+  <line x1="230" y1="626" x2="230" y2="650" stroke="#888" stroke-width="1.5" marker-end="url(#r2-a)"/>
+
+  <rect x="140" y="660" width="180" height="40" rx="6" class="ok"/>
+  <text x="230" y="685" text-anchor="middle" class="lbl">5. 락 획득 성공</text>
+
+  <rect x="20" y="640" width="120" height="60" rx="6" class="fail"/>
+  <text x="80" y="665" text-anchor="middle" class="lbl">획득한 락</text>
+  <text x="80" y="685" text-anchor="middle" class="sub">모두 해제</text>
+</svg>

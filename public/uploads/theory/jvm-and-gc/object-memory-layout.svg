@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 620" role="img" aria-label="Object Memory Layout - Object Header(Mark Word 8bytes, Class Pointer 4/8bytes, Array Length 4bytes만 배열일 때), Instance Data, Padding(8바이트 정렬)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .header { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .section { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .padding { fill: rgba(255, 238, 215, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="om-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="620" height="620" class="bg"/>
+  <text x="310" y="28" text-anchor="middle" class="title">Object Memory Layout</text>
+
+  <rect x="230" y="50" width="160" height="40" rx="6" class="header"/>
+  <text x="310" y="74" text-anchor="middle" class="lbl">Object Header</text>
+  <line x1="310" y1="90" x2="310" y2="114" stroke="#888" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#om-a)"/>
+
+  <rect x="20" y="118" width="580" height="480" rx="10" class="frame"/>
+  <text x="60" y="142" class="lbl" style="fill: #FFB74D;">Object Memory Layout</text>
+
+  <rect x="130" y="160" width="360" height="70" rx="8" class="section"/>
+  <text x="310" y="184" text-anchor="middle" class="lbl">Mark Word (8 bytes)</text>
+  <text x="310" y="204" text-anchor="middle" class="sub">HashCode, GC age, Lock state,</text>
+  <text x="310" y="220" text-anchor="middle" class="sub">GC marking bits</text>
+  <line x1="310" y1="230" x2="310" y2="258" stroke="#888" stroke-width="1.5" marker-end="url(#om-a)"/>
+
+  <rect x="130" y="264" width="360" height="60" rx="8" class="section"/>
+  <text x="310" y="288" text-anchor="middle" class="lbl">Class Pointer (4/8 bytes)</text>
+  <text x="310" y="308" text-anchor="middle" class="sub">Metaspace 클래스 메타데이터 참조</text>
+  <line x1="310" y1="324" x2="310" y2="352" stroke="#888" stroke-width="1.5" marker-end="url(#om-a)"/>
+
+  <rect x="130" y="358" width="360" height="54" rx="8" class="section"/>
+  <text x="310" y="380" text-anchor="middle" class="lbl">Array Length (4 bytes)</text>
+  <text x="310" y="400" text-anchor="middle" class="sub">배열인 경우에만</text>
+  <line x1="310" y1="412" x2="310" y2="440" stroke="#888" stroke-width="1.5" marker-end="url(#om-a)"/>
+
+  <rect x="130" y="446" width="360" height="70" rx="8" class="section"/>
+  <text x="310" y="470" text-anchor="middle" class="lbl">Instance Data</text>
+  <text x="310" y="488" text-anchor="middle" class="sub">필드 값들 (primitive = 값, reference = 주소)</text>
+  <text x="310" y="506" text-anchor="middle" class="sub">상위 클래스 필드 포함</text>
+  <line x1="310" y1="516" x2="310" y2="544" stroke="#888" stroke-width="1.5" marker-end="url(#om-a)"/>
+
+  <rect x="180" y="550" width="260" height="44" rx="8" class="padding"/>
+  <text x="310" y="574" text-anchor="middle" class="lbl">Padding</text>
+  <text x="310" y="590" text-anchor="middle" class="sub">8바이트 정렬</text>
+</svg>

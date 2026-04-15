@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 360" role="img" aria-label="WikiEngine Primary-Replica 아키텍처: 서버1 쓰기 전용(IndexWriter, NRT SearcherManager), 서버2 읽기 전용(DirectoryReader), 사이에 rsync 동기화">
+  <defs>
+    <marker id="we-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#6b7280"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      .primary { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.75; }
+      .replica { fill: #f0fdf4; stroke: #16a34a; stroke-width: 1.75; }
+      .nginx { fill: #fef3c7; stroke: #d97706; stroke-width: 1.5; }
+      .server-label { font: 700 15px "system-ui", sans-serif; fill: #111827; }
+      .app-label { font: 600 13px "system-ui", sans-serif; fill: #111827; }
+      .item { font: 500 12.5px "system-ui", sans-serif; fill: #374151; }
+      .note { font: 600 13px "system-ui", sans-serif; fill: #6b7280; }
+      .sync { font: 700 14px "system-ui", sans-serif; fill: #dc2626; }
+      .arrow-line { stroke: #6b7280; stroke-width: 1.5; fill: none; }
+    </style>
+  </defs>
+  <rect width="780" height="360" class="bg"/>
+
+  <!-- Server labels -->
+  <text x="170" y="30" text-anchor="middle" class="server-label">서버1 (Primary)</text>
+  <text x="610" y="30" text-anchor="middle" class="server-label">서버2 (Replica)</text>
+
+  <!-- Primary App box -->
+  <rect x="30" y="55" width="280" height="185" rx="8" class="primary"/>
+  <text x="170" y="85" text-anchor="middle" class="app-label">App (Spring Boot)</text>
+  <text x="50" y="120" class="item">• IndexWriter</text>
+  <text x="50" y="145" class="item">• NRT SearcherManager</text>
+  <text x="50" y="170" class="item">• CDC 이벤트 수신</text>
+  <text x="50" y="195" class="item">• 자동완성 배치</text>
+
+  <!-- Replica App box -->
+  <rect x="470" y="55" width="280" height="185" rx="8" class="replica"/>
+  <text x="610" y="85" text-anchor="middle" class="app-label">App (Spring Boot)</text>
+  <text x="490" y="120" class="item">• DirectoryReader</text>
+  <text x="490" y="145" class="item">• SearcherManager</text>
+  <text x="490" y="170" class="item">• 읽기 전용</text>
+
+  <!-- rsync arrow between apps -->
+  <line x1="310" y1="148" x2="470" y2="148" class="arrow-line" marker-end="url(#we-arrow)"/>
+  <line x1="470" y1="148" x2="310" y2="148" class="arrow-line" marker-end="url(#we-arrow)"/>
+  <text x="390" y="140" text-anchor="middle" class="sync">rsync</text>
+
+  <!-- Nginx labels with arrows -->
+  <rect x="80" y="280" width="180" height="40" rx="6" class="nginx"/>
+  <text x="170" y="306" text-anchor="middle" class="note">Nginx (쓰기)</text>
+  <line x1="170" y1="280" x2="170" y2="245" class="arrow-line" marker-end="url(#we-arrow)"/>
+
+  <rect x="520" y="280" width="180" height="40" rx="6" class="nginx"/>
+  <text x="610" y="306" text-anchor="middle" class="note">Nginx (읽기 분산)</text>
+  <line x1="610" y1="280" x2="610" y2="245" class="arrow-line" marker-end="url(#we-arrow)"/>
+</svg>

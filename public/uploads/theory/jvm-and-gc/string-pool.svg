@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 620" role="img" aria-label="String Pool - Heap 내부에 일반 Heap 영역(new String('hello')은 별도 객체 생성)과 String Pool('hello', 'world', 'java' 등 인턴된 문자열)이 분리 존재">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .heap { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .area { fill: rgba(255, 238, 215, 0.05); stroke: rgba(255,238,215,0.4); stroke-width: 1.25; }
+      .obj { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .str { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+  </defs>
+  <rect width="580" height="620" class="bg"/>
+  <text x="290" y="28" text-anchor="middle" class="title">String Pool</text>
+
+  <rect x="40" y="50" width="500" height="540" rx="12" class="heap"/>
+  <text x="60" y="74" class="frame-lbl">Heap</text>
+
+  <rect x="80" y="90" width="420" height="160" rx="10" class="area"/>
+  <text x="100" y="114" class="frame-lbl">일반 Heap 영역</text>
+  <rect x="170" y="140" width="240" height="80" rx="8" class="obj"/>
+  <text x="290" y="170" text-anchor="middle" class="lbl">new String("hello")</text>
+  <text x="290" y="194" text-anchor="middle" class="lbl">→ 별도 객체 생성</text>
+
+  <rect x="80" y="270" width="420" height="300" rx="10" class="area"/>
+  <text x="100" y="294" class="frame-lbl">String Pool</text>
+  <rect x="200" y="316" width="180" height="40" rx="6" class="str"/>
+  <text x="290" y="342" text-anchor="middle" class="lbl">"hello"</text>
+  <rect x="200" y="368" width="180" height="40" rx="6" class="str"/>
+  <text x="290" y="394" text-anchor="middle" class="lbl">"world"</text>
+  <rect x="200" y="420" width="180" height="40" rx="6" class="str"/>
+  <text x="290" y="446" text-anchor="middle" class="lbl">"java"</text>
+  <rect x="250" y="472" width="80" height="40" rx="6" class="str"/>
+  <text x="290" y="498" text-anchor="middle" class="lbl">…</text>
+</svg>

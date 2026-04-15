@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 620" role="img" aria-label="커넥션 풀 사용 시 앱 시작에 1번만 500ms 풀 생성, 이후 요청들이 빌려 쓰기 — 총 30ms로 50배 개선">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .step-start { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .step-pool { fill: rgba(255, 183, 77, 0.18); stroke: #FFB74D; stroke-width: 1.5; }
+      .step-borrow { fill: rgba(100, 181, 246, 0.14); stroke: #64B5F6; stroke-width: 1.5; }
+      .step-query { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.5; }
+      .step-total { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.5; }
+      .success { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.75; }
+      .col-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255, 238, 215, 0.35); stroke-width: 1.25; }
+      .step-text { font: 500 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .ms-text { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .success-text { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #a8e6cf; }
+    </style>
+    <marker id="c2-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="820" height="620" class="bg"/>
+  <text x="410" y="34" text-anchor="middle" class="title">커넥션 풀 사용 — 한 번 생성 후 빌려쓰기</text>
+
+  <!-- App start -->
+  <rect x="310" y="55"  width="200" height="46" rx="6" class="step-start"/>
+  <text x="410" y="83" text-anchor="middle" class="step-text">애플리케이션 시작</text>
+  <line x1="410" y1="105" x2="410" y2="123" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+
+  <!-- Pool create (once) -->
+  <rect x="290" y="128" width="240" height="70" rx="6" class="step-pool"/>
+  <text x="410" y="152" text-anchor="middle" class="step-text">커넥션 풀 생성</text>
+  <text x="410" y="172" text-anchor="middle" class="ms-text">500ms</text>
+  <text x="410" y="189" text-anchor="middle" class="sub">(앱 기동 시 단 1번)</text>
+  <line x1="410" y1="202" x2="410" y2="218" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+
+  <!-- Pool ready -->
+  <rect x="310" y="223" width="200" height="46" rx="6" class="step-start"/>
+  <text x="410" y="251" text-anchor="middle" class="step-text">풀 준비 완료</text>
+
+  <!-- branching lines -->
+  <path d="M 410 269 C 410 285, 150 290, 150 300" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#c2-arrow)"/>
+  <line x1="410" y1="269" x2="410" y2="300" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <path d="M 410 269 C 410 285, 670 290, 670 300" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#c2-arrow)"/>
+
+  <!-- Column frames -->
+  <rect x="30"  y="305" width="240" height="220" rx="10" class="col-frame"/>
+  <rect x="290" y="305" width="240" height="220" rx="10" class="col-frame"/>
+  <rect x="550" y="305" width="240" height="220" rx="10" class="col-frame"/>
+
+  <text x="150" y="326" text-anchor="middle" class="sub">1번 요청 처리</text>
+  <text x="410" y="326" text-anchor="middle" class="sub">2번 요청 처리</text>
+  <text x="670" y="326" text-anchor="middle" class="sub">3번 요청 처리</text>
+
+  <!-- Column 1 -->
+  <rect x="60" y="337" width="180" height="40" rx="6" class="step-borrow"/>
+  <text x="150" y="361" text-anchor="middle" class="step-text">커넥션 빌림 · 0.01ms</text>
+  <line x1="150" y1="380" x2="150" y2="394" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <rect x="60" y="397" width="180" height="44" rx="6" class="step-query"/>
+  <text x="150" y="421" text-anchor="middle" class="step-text">쿼리 실행 · 10ms</text>
+  <line x1="150" y1="443" x2="150" y2="459" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <rect x="60" y="463" width="180" height="40" rx="6" class="step-total"/>
+  <text x="150" y="487" text-anchor="middle" class="ms-text">총 10.01ms</text>
+
+  <!-- Column 2 -->
+  <rect x="320" y="337" width="180" height="40" rx="6" class="step-borrow"/>
+  <text x="410" y="361" text-anchor="middle" class="step-text">커넥션 빌림 · 0.01ms</text>
+  <line x1="410" y1="380" x2="410" y2="394" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <rect x="320" y="397" width="180" height="44" rx="6" class="step-query"/>
+  <text x="410" y="421" text-anchor="middle" class="step-text">쿼리 실행 · 10ms</text>
+  <line x1="410" y1="443" x2="410" y2="459" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <rect x="320" y="463" width="180" height="40" rx="6" class="step-total"/>
+  <text x="410" y="487" text-anchor="middle" class="ms-text">총 10.01ms</text>
+
+  <!-- Column 3 -->
+  <rect x="580" y="337" width="180" height="40" rx="6" class="step-borrow"/>
+  <text x="670" y="361" text-anchor="middle" class="step-text">커넥션 빌림 · 0.01ms</text>
+  <line x1="670" y1="380" x2="670" y2="394" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <rect x="580" y="397" width="180" height="44" rx="6" class="step-query"/>
+  <text x="670" y="421" text-anchor="middle" class="step-text">쿼리 실행 · 10ms</text>
+  <line x1="670" y1="443" x2="670" y2="459" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <rect x="580" y="463" width="180" height="40" rx="6" class="step-total"/>
+  <text x="670" y="487" text-anchor="middle" class="ms-text">총 10.01ms</text>
+
+  <!-- Convergence -->
+  <path d="M 150 503 C 150 530, 300 540, 410 545" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#c2-arrow)"/>
+  <line x1="410" y1="503" x2="410" y2="545" stroke="#888" stroke-width="1.5" marker-end="url(#c2-arrow)"/>
+  <path d="M 670 503 C 670 530, 520 540, 410 545" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#c2-arrow)"/>
+
+  <!-- Success box -->
+  <rect x="210" y="548" width="400" height="60" rx="8" class="success"/>
+  <text x="410" y="573" text-anchor="middle" class="ms-text">총 시간: 30.03ms (시작 시간 제외)</text>
+  <text x="410" y="594" text-anchor="middle" class="success-text">성능 향상: 1530ms → 30ms · 약 50배</text>
+</svg>

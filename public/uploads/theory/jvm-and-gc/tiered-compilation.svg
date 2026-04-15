@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" role="img" aria-label="Tiered Compilation - Level 0 Interpreter(시작점) → Level 1-3 C1 Compiler(빠른 컴파일, 간단한 최적화) → Level 4 C2 Compiler(느린 컴파일, 공격적인 최적화: 인라이닝, 루프 언롤링 등)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .l0 { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .l13 { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .l4 { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="tc-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="800" height="300" class="bg"/>
+  <text x="400" y="28" text-anchor="middle" class="title">Tiered Compilation</text>
+
+  <rect x="20" y="60" width="760" height="220" rx="10" class="frame"/>
+  <text x="400" y="84" text-anchor="middle" class="frame-lbl">Tiered Compilation</text>
+
+  <rect x="40" y="130" width="180" height="90" rx="8" class="l0"/>
+  <text x="130" y="168" text-anchor="middle" class="lbl">Level 0: Interpreter</text>
+  <text x="130" y="196" text-anchor="middle" class="sub">(시작점)</text>
+
+  <line x1="220" y1="175" x2="258" y2="175" stroke="#888" stroke-width="1.5" marker-end="url(#tc-a)"/>
+
+  <rect x="260" y="130" width="200" height="90" rx="8" class="l13"/>
+  <text x="360" y="160" text-anchor="middle" class="lbl">Level 1-3: C1 Compiler</text>
+  <text x="360" y="186" text-anchor="middle" class="sub">빠른 컴파일</text>
+  <text x="360" y="206" text-anchor="middle" class="sub">간단한 최적화</text>
+
+  <line x1="460" y1="175" x2="498" y2="175" stroke="#888" stroke-width="1.5" marker-end="url(#tc-a)"/>
+
+  <rect x="500" y="130" width="260" height="90" rx="8" class="l4"/>
+  <text x="630" y="160" text-anchor="middle" class="lbl">Level 4: C2 Compiler</text>
+  <text x="630" y="182" text-anchor="middle" class="sub">느린 컴파일 · 공격적 최적화</text>
+  <text x="630" y="202" text-anchor="middle" class="sub">(인라이닝, 루프 언롤링 등)</text>
+</svg>

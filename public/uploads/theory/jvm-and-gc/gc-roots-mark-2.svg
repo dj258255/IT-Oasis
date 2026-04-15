@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" role="img" aria-label="Mark 과정 - Root → A → Mark → B → Mark, C → Mark, 결과: A,B,C는 살아있음(Marked), D,E,F,G,H는 죽음(Unmarked)으로 가비지">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .root { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .marked { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .garbage { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .alive { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.25; }
+      .dead { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .edge-lbl { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="gm-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="760" height="440" class="bg"/>
+  <text x="380" y="28" text-anchor="middle" class="title">Mark &amp; Sweep — Mark 과정</text>
+
+  <rect x="20" y="60" width="280" height="340" rx="10" class="frame"/>
+  <text x="160" y="86" text-anchor="middle" class="frame-lbl">결과</text>
+  <rect x="60" y="120" width="200" height="80" rx="8" class="alive"/>
+  <text x="160" y="150" text-anchor="middle" class="lbl">A, B, C</text>
+  <text x="160" y="174" text-anchor="middle" class="sub">살아있음 (Marked)</text>
+  <rect x="60" y="230" width="200" height="90" rx="8" class="dead"/>
+  <text x="160" y="262" text-anchor="middle" class="lbl">D, E, F, G, H</text>
+  <text x="160" y="286" text-anchor="middle" class="sub">죽음 (Unmarked)</text>
+  <text x="160" y="304" text-anchor="middle" class="sub">→ 가비지</text>
+
+  <rect x="320" y="60" width="420" height="340" rx="10" class="frame"/>
+  <text x="530" y="86" text-anchor="middle" class="frame-lbl">Mark 과정</text>
+
+  <rect x="350" y="200" width="80" height="40" rx="6" class="root"/>
+  <text x="390" y="224" text-anchor="middle" class="lbl">Root</text>
+
+  <line x1="430" y1="220" x2="478" y2="220" stroke="#888" stroke-width="1.5" marker-end="url(#gm-a)"/>
+  <text x="454" y="212" text-anchor="middle" class="edge-lbl">참조</text>
+
+  <rect x="480" y="200" width="100" height="40" rx="6" class="marked"/>
+  <text x="530" y="224" text-anchor="middle" class="lbl">A → Mark!</text>
+
+  <line x1="580" y1="210" x2="608" y2="170" stroke="#888" stroke-width="1.5" marker-end="url(#gm-a)"/>
+  <text x="618" y="166" class="edge-lbl">참조</text>
+  <line x1="580" y1="230" x2="608" y2="270" stroke="#888" stroke-width="1.5" marker-end="url(#gm-a)"/>
+  <text x="618" y="282" class="edge-lbl">참조</text>
+
+  <rect x="610" y="140" width="110" height="40" rx="6" class="marked"/>
+  <text x="665" y="164" text-anchor="middle" class="lbl">B → Mark!</text>
+
+  <rect x="610" y="260" width="110" height="40" rx="6" class="marked"/>
+  <text x="665" y="284" text-anchor="middle" class="lbl">C → Mark!</text>
+</svg>

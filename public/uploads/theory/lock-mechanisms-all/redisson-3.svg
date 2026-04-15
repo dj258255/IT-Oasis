@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 760" role="img" aria-label="Redisson 폴링 방식 - 서버A가 tryLock 시도 → 실패 → 대기 → 재시도 반복으로 네트워크 및 CPU 낭비, 서버B가 unlock 후에야 락 획득">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .state { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .fail { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .ok { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.3); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="rd-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="660" height="760" class="bg"/>
+  <text x="330" y="28" text-anchor="middle" class="title">Redisson — 폴링 방식</text>
+
+  <rect x="30" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="110" y="73" text-anchor="middle" class="lbl">서버A</text>
+  <rect x="250" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="330" y="73" text-anchor="middle" class="lbl">Redis</text>
+  <rect x="470" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="550" y="73" text-anchor="middle" class="lbl">서버B</text>
+  <line x1="110" y1="84" x2="110" y2="730" class="lifeline"/>
+  <line x1="330" y1="84" x2="330" y2="730" class="lifeline"/>
+  <line x1="550" y1="84" x2="550" y2="730" class="lifeline"/>
+
+  <rect x="240" y="100" width="180" height="32" rx="6" class="state"/>
+  <text x="330" y="120" text-anchor="middle" class="msg">락이 이미 점유된 상태</text>
+
+  <line x1="112" y1="160" x2="328" y2="160" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd-a)"/>
+  <text x="220" y="154" text-anchor="middle" class="msg">tryLock() 시도</text>
+  <line x1="328" y1="184" x2="112" y2="184" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd-a)"/>
+  <text x="220" y="178" text-anchor="middle" class="msg">실패</text>
+  <rect x="20" y="196" width="180" height="26" rx="4" class="wait"/>
+  <text x="110" y="214" text-anchor="middle" class="msg">대기 (sleep)</text>
+
+  <line x1="112" y1="244" x2="328" y2="244" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd-a)"/>
+  <text x="220" y="238" text-anchor="middle" class="msg">tryLock() 재시도</text>
+  <line x1="328" y1="268" x2="112" y2="268" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd-a)"/>
+  <text x="220" y="262" text-anchor="middle" class="msg">실패</text>
+  <rect x="20" y="280" width="180" height="26" rx="4" class="wait"/>
+  <text x="110" y="298" text-anchor="middle" class="msg">대기 (sleep)</text>
+
+  <line x1="112" y1="328" x2="328" y2="328" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd-a)"/>
+  <text x="220" y="322" text-anchor="middle" class="msg">tryLock() 재시도</text>
+  <line x1="328" y1="352" x2="112" y2="352" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd-a)"/>
+  <text x="220" y="346" text-anchor="middle" class="msg">실패</text>
+
+  <rect x="0" y="370" width="220" height="80" rx="8" class="danger"/>
+  <text x="110" y="394" text-anchor="middle" class="msg">계속 대기</text>
+  <text x="110" y="412" text-anchor="middle" class="msg">반복 Redis 요청</text>
+  <text x="110" y="430" text-anchor="middle" class="msg">네트워크 / CPU 낭비</text>
+
+  <rect x="460" y="478" width="180" height="32" rx="6" class="state"/>
+  <text x="550" y="498" text-anchor="middle" class="msg">작업 완료</text>
+
+  <line x1="548" y1="528" x2="332" y2="528" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd-a)"/>
+  <text x="440" y="522" text-anchor="middle" class="msg">unlock()</text>
+  <rect x="240" y="540" width="180" height="32" rx="6" class="ok"/>
+  <text x="330" y="560" text-anchor="middle" class="msg">락 해제</text>
+
+  <line x1="112" y1="600" x2="328" y2="600" stroke="#bbb" stroke-width="1.25" marker-end="url(#rd-a)"/>
+  <text x="220" y="594" text-anchor="middle" class="msg">tryLock() 재시도</text>
+  <line x1="328" y1="624" x2="112" y2="624" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#rd-a)"/>
+  <text x="220" y="618" text-anchor="middle" class="msg">성공</text>
+  <rect x="30" y="640" width="160" height="32" rx="6" class="ok"/>
+  <text x="110" y="660" text-anchor="middle" class="msg">락 획득</text>
+</svg>

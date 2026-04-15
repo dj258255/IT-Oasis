@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 600" role="img" aria-label="세마포어 wait/signal 동작 - count 3부터 시작, A/B/C 스레드가 wait으로 count 감소, D는 count 0일 때 대기, signal이 오면 count 증가하며 D 실행">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .count { fill: rgba(255, 238, 215, 0.16); stroke: #FFB74D; stroke-width: 1.25; }
+      .count-zero { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .count-up { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.25; }
+      .wait-bar { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .run { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="sem-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="720" height="600" class="bg"/>
+  <text x="360" y="28" text-anchor="middle" class="title">Semaphore 동작 원리</text>
+
+  <g>
+    <rect x="30"  y="50" width="100" height="30" rx="6" class="actor"/>
+    <text x="80" y="70" text-anchor="middle" class="lbl">세마포어</text>
+    <rect x="180" y="50" width="100" height="30" rx="6" class="actor"/>
+    <text x="230" y="70" text-anchor="middle" class="lbl">스레드A</text>
+    <rect x="330" y="50" width="100" height="30" rx="6" class="actor"/>
+    <text x="380" y="70" text-anchor="middle" class="lbl">스레드B</text>
+    <rect x="480" y="50" width="100" height="30" rx="6" class="actor"/>
+    <text x="530" y="70" text-anchor="middle" class="lbl">스레드C</text>
+    <rect x="600" y="50" width="100" height="30" rx="6" class="actor"/>
+    <text x="650" y="70" text-anchor="middle" class="lbl">스레드D</text>
+    <line x1="80"  y1="80" x2="80"  y2="560" class="lifeline"/>
+    <line x1="230" y1="80" x2="230" y2="560" class="lifeline"/>
+    <line x1="380" y1="80" x2="380" y2="560" class="lifeline"/>
+    <line x1="530" y1="80" x2="530" y2="560" class="lifeline"/>
+    <line x1="650" y1="80" x2="650" y2="560" class="lifeline"/>
+  </g>
+
+  <rect x="30" y="92" width="100" height="34" rx="6" class="count"/>
+  <text x="80" y="108" text-anchor="middle" class="msg">count: 3</text>
+  <text x="80" y="122" text-anchor="middle" class="msg">(가용 3)</text>
+
+  <line x1="230" y1="148" x2="82" y2="148" stroke="#bbb" stroke-width="1.25" marker-end="url(#sem-arrow)"/>
+  <text x="155" y="142" text-anchor="middle" class="msg">wait() (P 연산)</text>
+  <rect x="30" y="158" width="100" height="26" rx="6" class="count"/>
+  <text x="80" y="176" text-anchor="middle" class="msg">count: 2</text>
+
+  <line x1="380" y1="204" x2="82" y2="204" stroke="#bbb" stroke-width="1.25" marker-end="url(#sem-arrow)"/>
+  <text x="230" y="198" text-anchor="middle" class="msg">wait()</text>
+  <rect x="30" y="214" width="100" height="26" rx="6" class="count"/>
+  <text x="80" y="232" text-anchor="middle" class="msg">count: 1</text>
+
+  <line x1="530" y1="260" x2="82" y2="260" stroke="#bbb" stroke-width="1.25" marker-end="url(#sem-arrow)"/>
+  <text x="305" y="254" text-anchor="middle" class="msg">wait()</text>
+  <rect x="30" y="270" width="100" height="30" rx="6" class="count-zero"/>
+  <text x="80" y="286" text-anchor="middle" class="msg">count: 0</text>
+  <text x="80" y="298" text-anchor="middle" class="msg">(자원 소진)</text>
+
+  <line x1="650" y1="322" x2="82" y2="322" stroke="#bbb" stroke-width="1.25" marker-end="url(#sem-arrow)"/>
+  <text x="366" y="316" text-anchor="middle" class="msg">wait()</text>
+
+  <rect x="150" y="338" width="500" height="30" rx="6" class="wait-bar"/>
+  <text x="400" y="358" text-anchor="middle" class="msg">대기 (블록됨)</text>
+
+  <line x1="230" y1="396" x2="82" y2="396" stroke="#bbb" stroke-width="1.25" marker-end="url(#sem-arrow)"/>
+  <text x="155" y="390" text-anchor="middle" class="msg">signal() (V 연산)</text>
+  <rect x="30" y="410" width="100" height="30" rx="6" class="count-up"/>
+  <text x="80" y="426" text-anchor="middle" class="msg">count: 1</text>
+  <text x="80" y="438" text-anchor="middle" class="msg">(카운터 증가)</text>
+
+  <line x1="82" y1="466" x2="648" y2="466" stroke="#bbb" stroke-width="1.25" marker-end="url(#sem-arrow)"/>
+  <text x="400" y="460" text-anchor="middle" class="msg">대기 해제</text>
+
+  <rect x="600" y="490" width="100" height="30" rx="6" class="run"/>
+  <text x="650" y="510" text-anchor="middle" class="msg">실행</text>
+</svg>

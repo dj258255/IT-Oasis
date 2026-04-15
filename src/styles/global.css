@@ -654,7 +654,7 @@ button, input, select, textarea {
   border: 1px solid rgba(106, 173, 202, 0.1);
   border-left: 3px solid #6aadca;
   color: #4a4a60;
-  font-style: italic;
+  font-style: normal;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
 }
 .dark .prose blockquote {

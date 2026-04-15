@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 800" role="img" aria-label="요청 처리 전체 흐름 - 사용자 → Tomcat NIO → Worker 200 → Redis 캐시 확인 → Cache Miss → 비즈니스 로직 → 커넥션 풀 50 → DB">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .s1 { fill: rgba(186, 104, 200, 0.2); stroke: #BA68C8; stroke-width: 1.5; }
+      .s2 { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.5; }
+      .s3 { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.5; }
+      .s-redis { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.75; }
+      .s-miss { fill: rgba(255, 183, 77, 0.3); stroke: #FFB74D; stroke-width: 1.75; }
+      .s-logic { fill: rgba(186, 104, 200, 0.18); stroke: #BA68C8; stroke-width: 1.5; }
+      .s-pool { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.5; }
+      .s-db { fill: rgba(186, 104, 200, 0.2); stroke: #BA68C8; stroke-width: 1.5; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .highlight { font: 700 12.5px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="cc-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="440" height="800" class="bg"/>
+  <text x="220" y="30" text-anchor="middle" class="title">요청 흐름 — Redis 계층</text>
+
+  <rect x="120" y="55" width="200" height="50" rx="8" class="s1"/>
+  <text x="220" y="85" text-anchor="middle" class="lbl">사용자 요청</text>
+  <line x1="220" y1="105" x2="220" y2="126" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="100" y="132" width="240" height="66" rx="8" class="s2"/>
+  <text x="220" y="158" text-anchor="middle" class="lbl">톰캣 Connector</text>
+  <text x="220" y="180" text-anchor="middle" class="sub">NIO · Selector</text>
+  <line x1="220" y1="202" x2="220" y2="222" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="100" y="228" width="240" height="66" rx="8" class="s3"/>
+  <text x="220" y="254" text-anchor="middle" class="lbl">워커 스레드 풀</text>
+  <text x="220" y="276" text-anchor="middle" class="sub">200개</text>
+  <line x1="220" y1="298" x2="220" y2="318" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="90" y="324" width="260" height="80" rx="8" class="s-redis"/>
+  <text x="220" y="350" text-anchor="middle" class="lbl">캐시 확인</text>
+  <text x="220" y="372" text-anchor="middle" class="sub">Redis</text>
+  <text x="220" y="393" text-anchor="middle" class="highlight">← 오늘 공부한 것</text>
+  <line x1="220" y1="406" x2="220" y2="426" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="140" y="432" width="160" height="46" rx="8" class="s-miss"/>
+  <text x="220" y="460" text-anchor="middle" class="lbl">Cache Miss</text>
+  <line x1="220" y1="480" x2="220" y2="500" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="100" y="506" width="240" height="56" rx="8" class="s-logic"/>
+  <text x="220" y="540" text-anchor="middle" class="lbl">비즈니스 로직</text>
+  <line x1="220" y1="564" x2="220" y2="584" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="100" y="590" width="240" height="66" rx="8" class="s-pool"/>
+  <text x="220" y="616" text-anchor="middle" class="lbl">커넥션 풀</text>
+  <text x="220" y="638" text-anchor="middle" class="sub">50개</text>
+  <line x1="220" y1="660" x2="220" y2="680" stroke="#888" stroke-width="1.5" marker-end="url(#cc-arrow)"/>
+
+  <rect x="120" y="686" width="200" height="56" rx="8" class="s-db"/>
+  <text x="220" y="720" text-anchor="middle" class="lbl">데이터베이스</text>
+</svg>

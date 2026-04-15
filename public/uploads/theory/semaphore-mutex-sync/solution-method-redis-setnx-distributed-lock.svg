@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 640" role="img" aria-label="Redis SETNX 분산락 - 사용자A가 중복 API 요청, 첫 번째는 SETNX로 락 획득 후 비즈니스 로직 실행 및 DEL, 두 번째(0.1초 후)는 SETNX 실패해 즉시 에러 반환">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .setnx-ok { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .setnx-fail { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .logic { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .section { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .section-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="sn-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="820" height="640" class="bg"/>
+  <text x="410" y="28" text-anchor="middle" class="title">Redis SETNX 분산락</text>
+
+  <g>
+    <rect x="30"  y="50" width="150" height="34" rx="6" class="actor"/>
+    <text x="105" y="73" text-anchor="middle" class="lbl">사용자A</text>
+    <rect x="230" y="50" width="150" height="34" rx="6" class="actor"/>
+    <text x="305" y="73" text-anchor="middle" class="lbl">Controller</text>
+    <rect x="430" y="50" width="150" height="34" rx="6" class="actor"/>
+    <text x="505" y="73" text-anchor="middle" class="lbl">Redis</text>
+    <rect x="630" y="50" width="160" height="34" rx="6" class="actor"/>
+    <text x="710" y="73" text-anchor="middle" class="lbl">비즈니스 로직</text>
+    <line x1="105" y1="84" x2="105" y2="610" class="lifeline"/>
+    <line x1="305" y1="84" x2="305" y2="610" class="lifeline"/>
+    <line x1="505" y1="84" x2="505" y2="610" class="lifeline"/>
+    <line x1="710" y1="84" x2="710" y2="610" class="lifeline"/>
+  </g>
+
+  <rect x="20" y="100" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="116" text-anchor="middle" class="section-lbl">1. 첫 번째 요청</text>
+
+  <line x1="107" y1="138" x2="303" y2="138" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="205" y="132" text-anchor="middle" class="msg">보상 요청 API 호출</text>
+
+  <rect x="20" y="156" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="172" text-anchor="middle" class="section-lbl">2. 락 획득 시도</text>
+
+  <line x1="307" y1="190" x2="503" y2="190" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="405" y="184" text-anchor="middle" class="msg">SETNX "benefit:reward:userA.lock"</text>
+  <rect x="420" y="204" width="170" height="26" rx="6" class="setnx-ok"/>
+  <text x="505" y="222" text-anchor="middle" class="msg">성공 (키 생성됨)</text>
+
+  <rect x="20" y="244" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="260" text-anchor="middle" class="section-lbl">3. 비즈니스 로직 실행</text>
+
+  <line x1="307" y1="278" x2="708" y2="278" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="508" y="272" text-anchor="middle" class="msg">포인트 지급 처리</text>
+  <rect x="640" y="290" width="140" height="26" rx="6" class="logic"/>
+  <text x="710" y="308" text-anchor="middle" class="msg">완료</text>
+
+  <line x1="708" y1="330" x2="507" y2="330" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="608" y="324" text-anchor="middle" class="msg">DEL "benefit:reward:userA.lock"</text>
+
+  <line x1="303" y1="354" x2="107" y2="354" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="205" y="348" text-anchor="middle" class="msg">성공 응답</text>
+
+  <rect x="20" y="372" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="388" text-anchor="middle" class="section-lbl">4. 0.1초 후 중복 요청 (더블 클릭)</text>
+
+  <line x1="107" y1="410" x2="303" y2="410" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="205" y="404" text-anchor="middle" class="msg">보상 요청 API 재호출</text>
+
+  <rect x="20" y="428" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="444" text-anchor="middle" class="section-lbl">5. 락 획득 시도 (실패)</text>
+
+  <line x1="307" y1="462" x2="503" y2="462" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="405" y="456" text-anchor="middle" class="msg">SETNX "benefit:reward:userA.lock"</text>
+  <rect x="420" y="476" width="170" height="26" rx="6" class="setnx-fail"/>
+  <text x="505" y="494" text-anchor="middle" class="msg">실패 (키가 이미 존재)</text>
+
+  <rect x="20" y="516" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="532" text-anchor="middle" class="section-lbl">6. 즉시 예외 처리</text>
+
+  <line x1="303" y1="552" x2="107" y2="552" stroke="#bbb" stroke-width="1.25" marker-end="url(#sn-a)"/>
+  <text x="205" y="546" text-anchor="middle" class="msg">에러: 동시 요청이 발생했습니다</text>
+</svg>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 720" role="img" aria-label="MongoDB Intent Lock 계층 - 레벨 1 글로벌 Lock(전체 인스턴스) → 레벨 2 데이터베이스 Lock(특정 DB) → 레벨 3 컬렉션 Lock(특정 Collection) → 레벨 4 도큐먼트 Lock(특정 Document)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .l1 { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.5; }
+      .l2 { fill: rgba(255, 183, 77, 0.18); stroke: #FFB74D; stroke-width: 1.5; }
+      .l3 { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.5; }
+      .l4 { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.5; }
+      .inner { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .lvl-lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .lbl { font: 600 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="il-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="720" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">MongoDB Intent Lock 계층</text>
+
+  <rect x="40" y="50" width="380" height="140" rx="10" class="l1"/>
+  <text x="60" y="74" class="lvl-lbl">레벨 1: 글로벌</text>
+  <rect x="120" y="92" width="220" height="80" rx="8" class="inner"/>
+  <text x="230" y="124" text-anchor="middle" class="lbl">글로벌 Lock</text>
+  <text x="230" y="146" text-anchor="middle" class="sub">전체 MongoDB 인스턴스</text>
+  <line x1="230" y1="190" x2="230" y2="216" stroke="#888" stroke-width="1.5" marker-end="url(#il-a)"/>
+
+  <rect x="40" y="220" width="380" height="140" rx="10" class="l2"/>
+  <text x="60" y="244" class="lvl-lbl">레벨 2: 데이터베이스</text>
+  <rect x="120" y="262" width="220" height="80" rx="8" class="inner"/>
+  <text x="230" y="294" text-anchor="middle" class="lbl">데이터베이스 Lock</text>
+  <text x="230" y="316" text-anchor="middle" class="sub">특정 DB</text>
+  <line x1="230" y1="360" x2="230" y2="386" stroke="#888" stroke-width="1.5" marker-end="url(#il-a)"/>
+
+  <rect x="40" y="390" width="380" height="140" rx="10" class="l3"/>
+  <text x="60" y="414" class="lvl-lbl">레벨 3: 컬렉션</text>
+  <rect x="120" y="432" width="220" height="80" rx="8" class="inner"/>
+  <text x="230" y="464" text-anchor="middle" class="lbl">컬렉션 Lock</text>
+  <text x="230" y="486" text-anchor="middle" class="sub">특정 Collection</text>
+  <line x1="230" y1="530" x2="230" y2="556" stroke="#888" stroke-width="1.5" marker-end="url(#il-a)"/>
+
+  <rect x="40" y="560" width="380" height="140" rx="10" class="l4"/>
+  <text x="60" y="584" class="lvl-lbl">레벨 4: 도큐먼트</text>
+  <rect x="120" y="602" width="220" height="80" rx="8" class="inner"/>
+  <text x="230" y="634" text-anchor="middle" class="lbl">도큐먼트 Lock</text>
+  <text x="230" y="656" text-anchor="middle" class="sub">특정 Document</text>
+</svg>

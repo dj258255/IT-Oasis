@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 420" role="img" aria-label="서버 여러 대 환경 - Server 1, 2, 3이 각자 다른 로컬 캐시 값(A=1, A=2, A=1)을 가져서 불일치 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .top-box { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .server-box { fill: rgba(255, 183, 77, 0.15); stroke: #FFB74D; stroke-width: 1.5; }
+      .cache-ok { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .cache-bad { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.75; }
+      .problem { fill: rgba(255, 107, 107, 0.25); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .val { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .danger { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="sme-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="620" height="420" class="bg"/>
+
+  <rect x="210" y="20" width="200" height="50" rx="6" class="top-box"/>
+  <text x="310" y="43" text-anchor="middle" class="lbl">서버 여러 대면</text>
+  <text x="310" y="62" text-anchor="middle" class="lbl">문제 발생</text>
+
+  <!-- arrows branching to 3 servers -->
+  <path d="M 260 70 C 220 90, 130 100, 120 120" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme-arrow)"/>
+  <line x1="310" y1="70" x2="310" y2="120" stroke="#888" stroke-width="1.5" marker-end="url(#sme-arrow)"/>
+  <path d="M 360 70 C 400 90, 490 100, 500 120" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme-arrow)"/>
+
+  <!-- 3 server columns -->
+  <rect x="40" y="125" width="160" height="160" rx="8" class="server-box"/>
+  <text x="120" y="148" text-anchor="middle" class="lbl">Server 1</text>
+  <rect x="70" y="170" width="100" height="80" rx="6" class="cache-ok"/>
+  <text x="120" y="202" text-anchor="middle" class="lbl">Cache</text>
+  <text x="120" y="228" text-anchor="middle" class="val">A = 1</text>
+
+  <rect x="230" y="125" width="160" height="160" rx="8" class="server-box"/>
+  <text x="310" y="148" text-anchor="middle" class="lbl">Server 2</text>
+  <rect x="260" y="170" width="100" height="80" rx="6" class="cache-bad"/>
+  <text x="310" y="202" text-anchor="middle" class="lbl">Cache</text>
+  <text x="310" y="228" text-anchor="middle" class="val">A = 2</text>
+
+  <rect x="420" y="125" width="160" height="160" rx="8" class="server-box"/>
+  <text x="500" y="148" text-anchor="middle" class="lbl">Server 3</text>
+  <rect x="450" y="170" width="100" height="80" rx="6" class="cache-ok"/>
+  <text x="500" y="202" text-anchor="middle" class="lbl">Cache</text>
+  <text x="500" y="228" text-anchor="middle" class="val">A = 1</text>
+
+  <!-- converging arrows to problem -->
+  <path d="M 120 285 C 180 310, 260 320, 300 340" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme-arrow)"/>
+  <line x1="310" y1="285" x2="310" y2="340" stroke="#888" stroke-width="1.5" marker-end="url(#sme-arrow)"/>
+  <path d="M 500 285 C 440 310, 360 320, 320 340" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sme-arrow)"/>
+
+  <rect x="200" y="346" width="220" height="58" rx="8" class="problem"/>
+  <text x="310" y="371" text-anchor="middle" class="danger">불일치 발생</text>
+  <text x="310" y="392" text-anchor="middle" class="lbl">각 서버마다 다른 값</text>
+</svg>

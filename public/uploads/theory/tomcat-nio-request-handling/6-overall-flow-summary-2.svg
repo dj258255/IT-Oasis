@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 1120" role="img" aria-label="전체 요청 처리 시간 120ms - OS Network 1ms → Tomcat Acceptor/Poller/Executor 0.2ms → Filter 0.3ms → DispatcherServlet 0.5ms → HandlerMapping 0.1ms → HandlerAdapter 0.1ms → Controller 1ms → Service 2ms → DB 쿼리 100ms(병목!) → MessageConverter 1ms → Response 0.5ms → Network 14ms">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .header { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .a { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .b { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .c { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.25; }
+      .d { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .e { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .f { fill: rgba(186, 104, 200, 0.16); stroke: #BA68C8; stroke-width: 1.25; }
+      .g { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.25; }
+      .bottleneck { fill: rgba(255, 107, 107, 0.3); stroke: #FF6B6B; stroke-width: 1.75; }
+      .h { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.25; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .ms { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .warn { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="s2-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="420" height="1120" class="bg"/>
+  <text x="210" y="28" text-anchor="middle" class="title">요청 처리 시간 (DB 포함)</text>
+  <text x="210" y="52" text-anchor="middle" class="header">전체: 120ms</text>
+
+  <rect x="110" y="70" width="200" height="50" rx="6" class="a"/>
+  <text x="210" y="95" text-anchor="middle" class="lbl">OS Network</text>
+  <text x="210" y="113" text-anchor="middle" class="ms">1ms</text>
+  <line x1="210" y1="120" x2="210" y2="138" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="80" y="144" width="260" height="60" rx="6" class="b"/>
+  <text x="210" y="170" text-anchor="middle" class="lbl">Tomcat Acceptor/Poller/Executor</text>
+  <text x="210" y="190" text-anchor="middle" class="ms">0.2ms</text>
+  <line x1="210" y1="204" x2="210" y2="222" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="228" width="200" height="50" rx="6" class="c"/>
+  <text x="210" y="253" text-anchor="middle" class="lbl">Filter Chain</text>
+  <text x="210" y="271" text-anchor="middle" class="ms">0.3ms</text>
+  <line x1="210" y1="278" x2="210" y2="296" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="302" width="200" height="50" rx="6" class="d"/>
+  <text x="210" y="327" text-anchor="middle" class="lbl">DispatcherServlet</text>
+  <text x="210" y="345" text-anchor="middle" class="ms">0.5ms</text>
+  <line x1="210" y1="352" x2="210" y2="370" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="376" width="200" height="50" rx="6" class="d"/>
+  <text x="210" y="401" text-anchor="middle" class="lbl">HandlerMapping</text>
+  <text x="210" y="419" text-anchor="middle" class="ms">0.1ms</text>
+  <line x1="210" y1="426" x2="210" y2="444" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="450" width="200" height="50" rx="6" class="e"/>
+  <text x="210" y="475" text-anchor="middle" class="lbl">HandlerAdapter</text>
+  <text x="210" y="493" text-anchor="middle" class="ms">0.1ms</text>
+  <line x1="210" y1="500" x2="210" y2="518" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="524" width="200" height="50" rx="6" class="d"/>
+  <text x="210" y="549" text-anchor="middle" class="lbl">Controller</text>
+  <text x="210" y="567" text-anchor="middle" class="ms">1ms</text>
+  <line x1="210" y1="574" x2="210" y2="592" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="598" width="200" height="50" rx="6" class="a"/>
+  <text x="210" y="623" text-anchor="middle" class="lbl">Service</text>
+  <text x="210" y="641" text-anchor="middle" class="ms">2ms</text>
+  <line x1="210" y1="648" x2="210" y2="666" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="90" y="672" width="240" height="76" rx="8" class="bottleneck"/>
+  <text x="210" y="697" text-anchor="middle" class="lbl">DB 쿼리</text>
+  <text x="210" y="717" text-anchor="middle" class="ms">100ms</text>
+  <text x="210" y="736" text-anchor="middle" class="warn">(병목!)</text>
+  <line x1="210" y1="748" x2="210" y2="766" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="772" width="200" height="50" rx="6" class="f"/>
+  <text x="210" y="797" text-anchor="middle" class="lbl">MessageConverter</text>
+  <text x="210" y="815" text-anchor="middle" class="ms">1ms</text>
+  <line x1="210" y1="822" x2="210" y2="840" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="846" width="200" height="50" rx="6" class="g"/>
+  <text x="210" y="871" text-anchor="middle" class="lbl">Response</text>
+  <text x="210" y="889" text-anchor="middle" class="ms">0.5ms</text>
+  <line x1="210" y1="896" x2="210" y2="914" stroke="#888" stroke-width="1.5" marker-end="url(#s2-a)"/>
+
+  <rect x="110" y="920" width="200" height="50" rx="6" class="h"/>
+  <text x="210" y="945" text-anchor="middle" class="lbl">Network</text>
+  <text x="210" y="963" text-anchor="middle" class="ms">14ms</text>
+</svg>

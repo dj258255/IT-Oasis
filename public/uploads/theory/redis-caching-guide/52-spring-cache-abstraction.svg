@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Spring Cache Abstraction - 애플리케이션 코드(@Cacheable/@CacheEvict) → CacheManager 추상화 → Redis/Caffeine/EhCache 구현체 선택">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .app-box { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.5; }
+      .mgr-box { fill: rgba(76, 175, 80, 0.25); stroke: #4CAF50; stroke-width: 1.75; }
+      .impl-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255, 238, 215, 0.35); stroke-width: 1.25; }
+      .impl { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.5; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .code { font: 500 12.5px "Consolas", "Menlo", monospace; fill: #e0e0e0; }
+      .hdr { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="sc-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="640" height="420" class="bg"/>
+  <text x="320" y="30" text-anchor="middle" class="title">Spring Cache Abstraction</text>
+
+  <rect x="200" y="55" width="240" height="72" rx="8" class="app-box"/>
+  <text x="320" y="82" text-anchor="middle" class="lbl">애플리케이션 코드</text>
+  <text x="320" y="105" text-anchor="middle" class="code">@Cacheable · @CacheEvict</text>
+  <line x1="320" y1="127" x2="320" y2="148" stroke="#888" stroke-width="1.5" marker-end="url(#sc-arrow)"/>
+
+  <rect x="180" y="155" width="280" height="96" rx="8" class="mgr-box"/>
+  <text x="320" y="183" text-anchor="middle" class="hdr">CacheManager</text>
+  <text x="320" y="207" text-anchor="middle" class="lbl">추상화</text>
+  <text x="320" y="230" text-anchor="middle" class="lbl">(스프링이 제공)</text>
+
+  <path d="M 230 251 C 200 270, 150 290, 130 310" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sc-arrow)"/>
+  <line x1="320" y1="251" x2="320" y2="310" stroke="#888" stroke-width="1.5" marker-end="url(#sc-arrow)"/>
+  <path d="M 410 251 C 440 270, 490 290, 510 310" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#sc-arrow)"/>
+
+  <rect x="40" y="280" width="560" height="110" rx="10" class="impl-frame"/>
+  <text x="320" y="306" text-anchor="middle" class="hdr">구현체 선택</text>
+
+  <rect x="70" y="320" width="140" height="54" rx="6" class="impl"/>
+  <text x="140" y="353" text-anchor="middle" class="lbl">Redis</text>
+
+  <rect x="250" y="320" width="140" height="54" rx="6" class="impl"/>
+  <text x="320" y="353" text-anchor="middle" class="lbl">Caffeine</text>
+
+  <rect x="430" y="320" width="140" height="54" rx="6" class="impl"/>
+  <text x="500" y="353" text-anchor="middle" class="lbl">EhCache</text>
+</svg>

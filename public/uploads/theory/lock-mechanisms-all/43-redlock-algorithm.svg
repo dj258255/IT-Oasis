@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 460" role="img" aria-label="Redlock 알고리즘 - 애플리케이션 서버가 Redis 클러스터(Redis1, Redis2, Redis3)의 과반수 이상에 동시에 락 요청을 보내 모두 획득되면 락 성공">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .server { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .request { fill: rgba(255, 238, 215, 0.16); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .redis { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12.5px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="rl-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="580" height="460" class="bg"/>
+  <text x="290" y="28" text-anchor="middle" class="title">Redlock 알고리즘</text>
+
+  <rect x="40" y="50" width="500" height="120" rx="10" class="frame"/>
+  <text x="60" y="74" class="frame-lbl">애플리케이션 계층</text>
+  <rect x="220" y="90" width="140" height="50" rx="6" class="server"/>
+  <text x="290" y="120" text-anchor="middle" class="lbl">서버</text>
+
+  <path d="M 230 170 C 180 200, 130 220, 120 250" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#rl-a)"/>
+  <line x1="290" y1="170" x2="290" y2="250" stroke="#888" stroke-width="1.5" marker-end="url(#rl-a)"/>
+  <path d="M 350 170 C 400 200, 450 220, 460 250" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#rl-a)"/>
+
+  <rect x="50" y="200" width="80" height="28" rx="4" class="request"/>
+  <text x="90" y="218" text-anchor="middle" class="lbl">락 요청</text>
+  <rect x="250" y="200" width="80" height="28" rx="4" class="request"/>
+  <text x="290" y="218" text-anchor="middle" class="lbl">락 요청</text>
+  <rect x="430" y="200" width="80" height="28" rx="4" class="request"/>
+  <text x="470" y="218" text-anchor="middle" class="lbl">락 요청</text>
+
+  <rect x="40" y="240" width="500" height="180" rx="10" class="frame"/>
+  <text x="60" y="264" class="frame-lbl">Redis 클러스터</text>
+
+  <rect x="60" y="290" width="120" height="100" rx="6" class="redis"/>
+  <text x="120" y="332" text-anchor="middle" class="lbl">Redis 1</text>
+  <text x="120" y="354" text-anchor="middle" class="lbl">락 획득</text>
+
+  <rect x="230" y="290" width="120" height="100" rx="6" class="redis"/>
+  <text x="290" y="332" text-anchor="middle" class="lbl">Redis 2</text>
+  <text x="290" y="354" text-anchor="middle" class="lbl">락 획득</text>
+
+  <rect x="400" y="290" width="120" height="100" rx="6" class="redis"/>
+  <text x="460" y="332" text-anchor="middle" class="lbl">Redis 3</text>
+  <text x="460" y="354" text-anchor="middle" class="lbl">락 획득</text>
+</svg>

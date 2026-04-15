@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 820" role="img" aria-label="3가지 설정의 관계 - 클라이언트 요청이 OS Accept Queue(accept-count=100)에 쌓였다가, Tomcat 연결 슬롯(max-connections=200)을 거쳐, Worker Thread Pool(max-threads=200)에서 처리, 각 단계 가득 차면 다음 요청 거부 또는 대기">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .client { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .stage-a { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .stage-b { fill: rgba(255, 238, 215, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .stage-c { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .decision { fill: rgba(255, 183, 77, 0.26); stroke: #FFB74D; stroke-width: 1.25; }
+      .reject { fill: rgba(255, 107, 107, 0.24); stroke: #FF6B6B; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 107, 107, 0.18); stroke: #FF6B6B; stroke-width: 1.25; }
+      .done { fill: rgba(76, 175, 80, 0.3); stroke: #4CAF50; stroke-width: 1.5; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="tt-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="480" height="820" class="bg"/>
+  <text x="240" y="28" text-anchor="middle" class="title">3가지 설정의 관계</text>
+
+  <rect x="140" y="50" width="200" height="36" rx="6" class="client"/>
+  <text x="240" y="74" text-anchor="middle" class="lbl">클라이언트 요청</text>
+  <line x1="240" y1="86" x2="240" y2="104" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <rect x="110" y="110" width="260" height="58" rx="8" class="stage-a"/>
+  <text x="240" y="134" text-anchor="middle" class="lbl">(1) OS Accept Queue</text>
+  <text x="240" y="156" text-anchor="middle" class="sub">accept-count (기본 100)</text>
+  <line x1="240" y1="168" x2="240" y2="186" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <polygon points="240,190 340,218 240,246 140,218" class="decision"/>
+  <text x="240" y="222" text-anchor="middle" class="lbl">가득 참?</text>
+
+  <text x="100" y="240" class="sub">Yes</text>
+  <line x1="148" y1="232" x2="100" y2="258" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+  <rect x="20" y="264" width="160" height="50" rx="8" class="reject"/>
+  <text x="100" y="292" text-anchor="middle" class="lbl">Connection refused</text>
+
+  <text x="340" y="240" class="sub">No</text>
+  <line x1="240" y1="246" x2="240" y2="270" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <rect x="110" y="276" width="260" height="58" rx="8" class="stage-b"/>
+  <text x="240" y="300" text-anchor="middle" class="lbl">(2) Tomcat 연결 슬롯</text>
+  <text x="240" y="322" text-anchor="middle" class="sub">max-connections (기본 200)</text>
+  <line x1="240" y1="334" x2="240" y2="352" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <polygon points="240,356 340,384 240,412 140,384" class="decision"/>
+  <text x="240" y="388" text-anchor="middle" class="lbl">가득 참?</text>
+
+  <text x="100" y="406" class="sub">Yes</text>
+  <line x1="148" y1="398" x2="100" y2="424" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+  <rect x="20" y="430" width="160" height="50" rx="8" class="wait"/>
+  <text x="100" y="450" text-anchor="middle" class="sub">accept-count 대기로</text>
+  <text x="100" y="468" text-anchor="middle" class="sub">이동</text>
+
+  <text x="340" y="406" class="sub">No</text>
+  <line x1="240" y1="412" x2="240" y2="436" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <rect x="110" y="442" width="260" height="58" rx="8" class="stage-c"/>
+  <text x="240" y="466" text-anchor="middle" class="lbl">(3) Worker Thread Pool</text>
+  <text x="240" y="488" text-anchor="middle" class="sub">max-threads (기본 200)</text>
+  <line x1="240" y1="500" x2="240" y2="518" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <polygon points="240,522 340,550 240,578 140,550" class="decision"/>
+  <text x="240" y="554" text-anchor="middle" class="lbl">가득 참?</text>
+
+  <text x="100" y="572" class="sub">Yes</text>
+  <line x1="148" y1="564" x2="100" y2="590" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+  <rect x="20" y="596" width="160" height="50" rx="8" class="wait"/>
+  <text x="100" y="616" text-anchor="middle" class="sub">연결 대기</text>
+  <text x="100" y="634" text-anchor="middle" class="sub">처리 지연</text>
+
+  <text x="340" y="572" class="sub">No</text>
+  <line x1="240" y1="578" x2="240" y2="602" stroke="#888" stroke-width="1.5" marker-end="url(#tt-a)"/>
+
+  <rect x="140" y="608" width="200" height="50" rx="8" class="done"/>
+  <text x="240" y="636" text-anchor="middle" class="lbl">요청 처리</text>
+</svg>

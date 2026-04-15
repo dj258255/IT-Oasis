@@ -10,9 +10,9 @@ tags:
   - Memory Hierarchy
   - CS Fundamentals
   - Performance
-category: theory
+category: theory/Systems
 draft: false
-coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
+coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.svg"
 ---
 
 
@@ -27,7 +27,7 @@ coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 ## 2. 메모리 계층 구조
 
 컴퓨터의 메모리는 계층적 구조로 설계되어 있어요. CPU에 가까울수록 빠르지만 용량이 작고 비싸며, 멀어질수록 느리지만 용량이 크고 저렴합니다.
-![](/uploads/theory/cache-and-buffer/memory-hierarchy.png)
+![](/uploads/theory/cache-and-buffer/memory-hierarchy.svg)
 
 **계층별 접근 속도 참고:**
 - **L1 캐시**: 1~2 사이클 (~1ns)
@@ -66,7 +66,7 @@ coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.png"
 CPU 코어에 가장 가까운 캐시로, 명령어 캐시(I-Cache)와 데이터 캐시(D-Cache)로 분리되어 있어요.
 
 L1 캐시 구조:
-![](/uploads/theory/cache-and-buffer/l1-cache-structure.png)
+![](/uploads/theory/cache-and-buffer/l1-cache-structure.svg)
 
 
 하버드 아키텍처(Harvard Architecture)를 따라 명령어와 데이터를 분리함으로써, CPU가 동시에 명령어를 읽고 데이터를 처리할 수 있습니다.
@@ -77,7 +77,7 @@ L1 캐시 구조:
 
 L1 캐시보다 크지만 약간 느린 캐시예요. 보통 각 CPU 코어마다 독립적으로 존재합니다.
 
-![](/uploads/theory/cache-and-buffer/l2-cache-structure.png)
+![](/uploads/theory/cache-and-buffer/l2-cache-structure.svg)
 
 > 출처: [Intel - OpenCL Memory Hierarchy](https://www.intel.com/content/www/us/en/docs/opencl-sdk/developer-guide-processor-graphics/2019-4/memory-hierarchy.html)
 
@@ -85,7 +85,7 @@ L1 캐시보다 크지만 약간 느린 캐시예요. 보통 각 CPU 코어마�
 
 모든 CPU 코어가 공유하는 캐시예요. 가장 크지만 L1, L2보다 느립니다.
 
-![](/uploads/theory/cache-and-buffer/l3-cache-structure.png)
+![](/uploads/theory/cache-and-buffer/l3-cache-structure.svg)
 
 
 > 출처: [GeeksforGeeks - "Cache Memory in Computer Organization"](https://www.geeksforgeeks.org/computer-organization-architecture/cache-memory-in-computer-organization/)
@@ -127,7 +127,7 @@ for (int i = 0; i < 1000; i++) {
 **캐시 라인 (Cache Line):**
 캐시는 데이터를 개별 바이트가 아닌 블록 단위로 가져와요. 일반적으로 64바이트 단위의 캐시 라인을 사용합니다.
 
-![](/uploads/theory/cache-and-buffer/cache-line.png)
+![](/uploads/theory/cache-and-buffer/cache-line.svg)
 
 > 출처: [Wikipedia - CPU Cache](https://en.wikipedia.org/wiki/CPU_cache), [GeeksforGeeks - Locality of Reference](https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/)
 
@@ -151,7 +151,7 @@ for (int i = 0; i < 1000; i++) {
 
 사용자가 키를 누르는 속도와 프로그램이 입력을 처리하는 속도 사이의 간격을 메워줍니다.
 
-![](/uploads/theory/cache-and-buffer/keyboard-buffer.png)
+![](/uploads/theory/cache-and-buffer/keyboard-buffer.svg)
 
 
 ```
@@ -192,7 +192,7 @@ writer.flush();  // 버퍼의 내용을 한 번에 디스크로
 
 네트워크 통신에서 송신 버퍼와 수신 버퍼를 사용해요.
 
-![](/uploads/theory/cache-and-buffer/network-buffer.png)
+![](/uploads/theory/cache-and-buffer/network-buffer.svg)
 
 
 수신 버퍼는 네트워크에서 데이터가 도착하는 속도와 애플리케이션이 데이터를 읽는 속도의 차이를 흡수합니다.
@@ -276,7 +276,7 @@ Swap:         2.0Gi          0B       2.0Gi
 
 
 파일 읽기 과정:
-![](/uploads/theory/cache-and-buffer/file-read-process.png)
+![](/uploads/theory/cache-and-buffer/file-read-process.svg)
 
 
 > 출처: [Linux man pages - free(1)](https://man7.org/linux/man-pages/man1/free.1.html), [Red Hat - Understanding Memory Usage on Linux](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/s1-memory-capture)
@@ -291,7 +291,7 @@ Swap:         2.0Gi          0B       2.0Gi
 
 캐시와 메인 메모리에 **동시에** 씁니다.
 
-![](/uploads/theory/cache-and-buffer/write-through.png)
+![](/uploads/theory/cache-and-buffer/write-through.svg)
 
 **장점:**
 - 데이터 일관성 유지 (캐시와 메모리가 항상 동일)
@@ -307,7 +307,7 @@ Swap:         2.0Gi          0B       2.0Gi
 
 캐시에만 쓰고, 나중에 캐시 라인이 교체될 때 메모리에 씁니다.
 
-![](/uploads/theory/cache-and-buffer/write-back.png)
+![](/uploads/theory/cache-and-buffer/write-back.svg)
 
 **장점:**
 - 쓰기가 빠름 (캐시에만 쓰면 완료)
@@ -408,7 +408,7 @@ class Consumer extends Thread {
 ```
 
 **동작 흐름:**
-![](/uploads/theory/cache-and-buffer/producer-consumer-flow.png)
+![](/uploads/theory/cache-and-buffer/producer-consumer-flow.svg)
 
 생산자가 소비자보다 빠르더라도, 버퍼가 중간에서 데이터를 보관하므로 손실 없이 처리할 수 있습니다.
 
@@ -428,7 +428,7 @@ strcpy(buffer, "This is a very long string");  // 버퍼 오버플로우!
 ```
 
 **메모리 구조:**
-![](/uploads/theory/cache-and-buffer/buffer-overflow.png)
+![](/uploads/theory/cache-and-buffer/buffer-overflow.svg)
 
 
 버퍼 오버플로우는 심각한 보안 취약점으로, 공격자가 리턴 주소를 조작하여 악성 코드를 실행할 수 있습니다.
@@ -456,7 +456,7 @@ strlcpy(buffer, input, sizeof(buffer));  // BSD 시스템
 
 #### 1. 웹 브라우저 캐시
 
-![](/uploads/theory/cache-and-buffer/browser-cache.png)
+![](/uploads/theory/cache-and-buffer/browser-cache.svg)
 
 
 > 출처: [MDN Web Docs - HTTP Caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), [web.dev - HTTP Caching](https://web.dev/http-cache/)
@@ -856,7 +856,7 @@ Source: [GeeksforGeeks - Difference between Cache and Buffer](https://www.geeksf
 ## 2. Memory Hierarchy
 
 Computer memory is designed in a hierarchical structure. The closer to the CPU, the faster but smaller and more expensive; the farther, the slower but larger and cheaper.
-![](/uploads/theory/cache-and-buffer/memory-hierarchy.png)
+![](/uploads/theory/cache-and-buffer/memory-hierarchy.svg)
 
 **Access latency by layer:**
 - **L1 cache**: 1-2 cycles (~1ns)
@@ -895,7 +895,7 @@ Modern CPUs have multiple levels of cache.
 The cache closest to the CPU core, split into an instruction cache (I-Cache) and a data cache (D-Cache).
 
 L1 cache structure:
-![](/uploads/theory/cache-and-buffer/l1-cache-structure.png)
+![](/uploads/theory/cache-and-buffer/l1-cache-structure.svg)
 
 
 By following the Harvard Architecture to separate instructions and data, the CPU can simultaneously read instructions and process data.
@@ -906,7 +906,7 @@ By following the Harvard Architecture to separate instructions and data, the CPU
 
 Larger but slightly slower than the L1 cache. Typically exists independently for each CPU core.
 
-![](/uploads/theory/cache-and-buffer/l2-cache-structure.png)
+![](/uploads/theory/cache-and-buffer/l2-cache-structure.svg)
 
 > Source: [Intel - OpenCL Memory Hierarchy](https://www.intel.com/content/www/us/en/docs/opencl-sdk/developer-guide-processor-graphics/2019-4/memory-hierarchy.html)
 
@@ -914,7 +914,7 @@ Larger but slightly slower than the L1 cache. Typically exists independently for
 
 A cache shared by all CPU cores. The largest, but slower than L1 and L2.
 
-![](/uploads/theory/cache-and-buffer/l3-cache-structure.png)
+![](/uploads/theory/cache-and-buffer/l3-cache-structure.svg)
 
 
 > Source: [GeeksforGeeks - "Cache Memory in Computer Organization"](https://www.geeksforgeeks.org/computer-organization-architecture/cache-memory-in-computer-organization/)
@@ -956,7 +956,7 @@ Since arrays are stored contiguously in memory, when `array[0]` is loaded into c
 **Cache Line:**
 Caches fetch data not in individual bytes but in block units. Typically, 64-byte cache lines are used.
 
-![](/uploads/theory/cache-and-buffer/cache-line.png)
+![](/uploads/theory/cache-and-buffer/cache-line.svg)
 
 > Source: [Wikipedia - CPU Cache](https://en.wikipedia.org/wiki/CPU_cache), [GeeksforGeeks - Locality of Reference](https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/)
 
@@ -980,7 +980,7 @@ A buffer is a space that **temporarily stores data between two devices with diff
 
 Bridges the gap between the speed at which users press keys and the speed at which programs process input.
 
-![](/uploads/theory/cache-and-buffer/keyboard-buffer.png)
+![](/uploads/theory/cache-and-buffer/keyboard-buffer.svg)
 
 
 ```
@@ -1021,7 +1021,7 @@ Using a buffer allows multiple small writes to be aggregated into a single large
 
 Network communication uses send buffers and receive buffers.
 
-![](/uploads/theory/cache-and-buffer/network-buffer.png)
+![](/uploads/theory/cache-and-buffer/network-buffer.svg)
 
 
 The receive buffer absorbs the speed difference between data arriving from the network and the application reading the data.
@@ -1105,7 +1105,7 @@ Swap:         2.0Gi          0B       2.0Gi
 
 
 File reading process:
-![](/uploads/theory/cache-and-buffer/file-read-process.png)
+![](/uploads/theory/cache-and-buffer/file-read-process.svg)
 
 
 > Source: [Linux man pages - free(1)](https://man7.org/linux/man-pages/man1/free.1.html), [Red Hat - Understanding Memory Usage on Linux](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/s1-memory-capture)
@@ -1120,7 +1120,7 @@ There are two policies for writing data to cache.
 
 Data is written to both the cache and main memory **simultaneously**.
 
-![](/uploads/theory/cache-and-buffer/write-through.png)
+![](/uploads/theory/cache-and-buffer/write-through.svg)
 
 **Pros:**
 - Maintains data consistency (cache and memory are always identical)
@@ -1136,7 +1136,7 @@ Data is written to both the cache and main memory **simultaneously**.
 
 Data is written only to the cache, and written to memory later when the cache line is evicted.
 
-![](/uploads/theory/cache-and-buffer/write-back.png)
+![](/uploads/theory/cache-and-buffer/write-back.svg)
 
 **Pros:**
 - Writes are fast (writing to cache completes the operation)
@@ -1237,7 +1237,7 @@ class Consumer extends Thread {
 ```
 
 **Operation flow:**
-![](/uploads/theory/cache-and-buffer/producer-consumer-flow.png)
+![](/uploads/theory/cache-and-buffer/producer-consumer-flow.svg)
 
 Even when the producer is faster than the consumer, the buffer holds data in between so nothing is lost.
 
@@ -1257,7 +1257,7 @@ strcpy(buffer, "This is a very long string");  // Buffer overflow!
 ```
 
 **Memory structure:**
-![](/uploads/theory/cache-and-buffer/buffer-overflow.png)
+![](/uploads/theory/cache-and-buffer/buffer-overflow.svg)
 
 
 Buffer overflow is a serious security vulnerability that allows attackers to manipulate return addresses and execute malicious code.
@@ -1285,7 +1285,7 @@ strlcpy(buffer, input, sizeof(buffer));  // BSD systems
 
 #### 1. Web Browser Cache
 
-![](/uploads/theory/cache-and-buffer/browser-cache.png)
+![](/uploads/theory/cache-and-buffer/browser-cache.svg)
 
 
 > Source: [MDN Web Docs - HTTP Caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching), [web.dev - HTTP Caching](https://web.dev/http-cache/)

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 540" role="img" aria-label="Tomcat NIO 전체 아키텍처 - 클라이언트 요청 → Acceptor(스레드 1-2개) → Poller(스레드 1-2개) → Executor(워커 풀 200개) → Spring DispatcherServlet">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .client { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .acc { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .poll { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.25; }
+      .exec { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .spring { fill: rgba(255, 238, 215, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="oa-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="540" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">Tomcat NIO 전체 아키텍처</text>
+
+  <rect x="110" y="50" width="240" height="48" rx="8" class="client"/>
+  <text x="230" y="79" text-anchor="middle" class="lbl">클라이언트 요청</text>
+  <line x1="230" y1="98" x2="230" y2="118" stroke="#888" stroke-width="1.5" marker-end="url(#oa-a)"/>
+
+  <rect x="80" y="124" width="300" height="58" rx="8" class="acc"/>
+  <text x="230" y="148" text-anchor="middle" class="lbl">[1] Acceptor</text>
+  <text x="230" y="170" text-anchor="middle" class="sub">스레드 1~2개</text>
+  <line x1="230" y1="182" x2="230" y2="202" stroke="#888" stroke-width="1.5" marker-end="url(#oa-a)"/>
+
+  <rect x="80" y="208" width="300" height="58" rx="8" class="poll"/>
+  <text x="230" y="232" text-anchor="middle" class="lbl">[2] Poller</text>
+  <text x="230" y="254" text-anchor="middle" class="sub">스레드 1~2개</text>
+  <line x1="230" y1="266" x2="230" y2="286" stroke="#888" stroke-width="1.5" marker-end="url(#oa-a)"/>
+
+  <rect x="80" y="292" width="300" height="72" rx="8" class="exec"/>
+  <text x="230" y="318" text-anchor="middle" class="lbl">[3] Executor</text>
+  <text x="230" y="340" text-anchor="middle" class="sub">워커 스레드 풀</text>
+  <text x="230" y="358" text-anchor="middle" class="sub">기본 200개</text>
+  <line x1="230" y1="364" x2="230" y2="384" stroke="#888" stroke-width="1.5" marker-end="url(#oa-a)"/>
+
+  <rect x="80" y="390" width="300" height="58" rx="8" class="spring"/>
+  <text x="230" y="414" text-anchor="middle" class="lbl">Spring</text>
+  <text x="230" y="436" text-anchor="middle" class="sub">DispatcherServlet</text>
+</svg>

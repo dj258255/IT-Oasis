@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460" role="img" aria-label="첫 Minor GC - 참조 관계: Root → A → B, C (A에서 나감), Eden에는 A~H까지 있고 GC 후 Root에서 도달 가능한 A, B, C만 Survivor로 복사, D~H는 가비지로 수거">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .obj { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .root { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .garbage { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .empty { fill: rgba(76, 175, 80, 0.15); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .small { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="fm-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="820" height="460" class="bg"/>
+  <text x="410" y="28" text-anchor="middle" class="title">첫 Minor GC — Mark & Sweep</text>
+
+  <rect x="20" y="50" width="240" height="170" rx="10" class="frame"/>
+  <text x="140" y="72" text-anchor="middle" class="frame-lbl">참조 관계</text>
+  <rect x="40" y="110" width="60" height="34" rx="6" class="root"/>
+  <text x="70" y="132" text-anchor="middle" class="small">Root</text>
+  <line x1="100" y1="127" x2="128" y2="127" stroke="#888" stroke-width="1.5" marker-end="url(#fm-a)"/>
+  <rect x="130" y="110" width="50" height="34" rx="6" class="obj"/>
+  <text x="155" y="132" text-anchor="middle" class="small">A</text>
+  <line x1="180" y1="120" x2="208" y2="100" stroke="#888" stroke-width="1.5" marker-end="url(#fm-a)"/>
+  <line x1="180" y1="138" x2="208" y2="158" stroke="#888" stroke-width="1.5" marker-end="url(#fm-a)"/>
+  <rect x="210" y="82" width="40" height="34" rx="6" class="obj"/>
+  <text x="230" y="104" text-anchor="middle" class="small">B</text>
+  <rect x="210" y="140" width="40" height="34" rx="6" class="obj"/>
+  <text x="230" y="162" text-anchor="middle" class="small">C</text>
+
+  <rect x="280" y="50" width="520" height="390" rx="10" class="frame"/>
+  <text x="540" y="72" text-anchor="middle" class="frame-lbl">메모리 상태</text>
+
+  <rect x="300" y="90" width="280" height="330" rx="10" class="frame"/>
+  <text x="440" y="112" text-anchor="middle" class="small">Eden (가득 참)</text>
+  <rect x="380" y="130" width="60" height="28" rx="4" class="obj"/>
+  <text x="410" y="148" text-anchor="middle" class="small">A</text>
+  <rect x="380" y="166" width="60" height="28" rx="4" class="obj"/>
+  <text x="410" y="184" text-anchor="middle" class="small">B</text>
+  <rect x="380" y="202" width="60" height="28" rx="4" class="obj"/>
+  <text x="410" y="220" text-anchor="middle" class="small">C</text>
+  <rect x="380" y="238" width="60" height="28" rx="4" class="garbage"/>
+  <text x="410" y="256" text-anchor="middle" class="small">D</text>
+  <rect x="380" y="274" width="60" height="28" rx="4" class="garbage"/>
+  <text x="410" y="292" text-anchor="middle" class="small">E</text>
+  <rect x="380" y="310" width="60" height="28" rx="4" class="garbage"/>
+  <text x="410" y="328" text-anchor="middle" class="small">F</text>
+  <rect x="380" y="346" width="60" height="28" rx="4" class="garbage"/>
+  <text x="410" y="364" text-anchor="middle" class="small">G</text>
+  <rect x="380" y="382" width="60" height="28" rx="4" class="garbage"/>
+  <text x="410" y="400" text-anchor="middle" class="small">H</text>
+
+  <rect x="600" y="90" width="80" height="110" rx="8" class="empty"/>
+  <text x="640" y="150" text-anchor="middle" class="small">Survivor0</text>
+  <text x="640" y="168" text-anchor="middle" class="small">(To)</text>
+  <rect x="600" y="220" width="80" height="110" rx="8" class="empty"/>
+  <text x="640" y="280" text-anchor="middle" class="small">Survivor1</text>
+  <rect x="690" y="90" width="100" height="260" rx="8" class="empty"/>
+  <text x="740" y="220" text-anchor="middle" class="small">Old Gen</text>
+</svg>

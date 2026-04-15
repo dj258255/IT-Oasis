@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 580" role="img" aria-label="Runtime Data Areas - 모든 스레드 공유 영역(Method Area: 클래스 메타데이터/상수풀/메서드 코드/Static 변수, Heap: Young Gen[Eden, S0, S1] / Old Gen)과 스레드별 별도 생성(PC Reg, Stack, Native Method Stack)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .shared { fill: rgba(76, 175, 80, 0.06); stroke: #4CAF50; stroke-width: 1.25; stroke-dasharray: 4 3; }
+      .per-thread { fill: rgba(100, 181, 246, 0.06); stroke: #64B5F6; stroke-width: 1.25; stroke-dasharray: 4 3; }
+      .method { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .heap { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .gen-y { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .gen-o { fill: rgba(255, 183, 77, 0.16); stroke: #FFB74D; stroke-width: 1.25; }
+      .small { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.25; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .frame-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .frame-sub { font: 600 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+  </defs>
+  <rect width="540" height="580" class="bg"/>
+  <text x="270" y="28" text-anchor="middle" class="title">Runtime Data Areas</text>
+
+  <rect x="20" y="50" width="500" height="280" rx="10" class="shared"/>
+  <text x="270" y="74" text-anchor="middle" class="frame-lbl">모든 스레드가 공유</text>
+
+  <rect x="40" y="92" width="200" height="220" rx="8" class="method"/>
+  <text x="140" y="116" text-anchor="middle" class="lbl">Method Area</text>
+  <text x="140" y="134" text-anchor="middle" class="sub">(Metaspace)</text>
+  <text x="140" y="170" text-anchor="middle" class="sub">· 클래스 메타데이터</text>
+  <text x="140" y="190" text-anchor="middle" class="sub">· 상수 풀</text>
+  <text x="140" y="210" text-anchor="middle" class="sub">· 메서드 코드</text>
+  <text x="140" y="230" text-anchor="middle" class="sub">· Static 변수</text>
+
+  <rect x="260" y="92" width="240" height="220" rx="8" class="heap"/>
+  <text x="380" y="116" text-anchor="middle" class="lbl">Heap</text>
+  <rect x="280" y="140" width="200" height="120" rx="6" class="gen-y"/>
+  <text x="380" y="160" text-anchor="middle" class="lbl">Young Gen</text>
+  <rect x="290" y="180" width="60" height="60" rx="4" class="small"/>
+  <text x="320" y="216" text-anchor="middle" class="sub">Eden</text>
+  <rect x="358" y="180" width="50" height="60" rx="4" class="small"/>
+  <text x="383" y="216" text-anchor="middle" class="sub">S0</text>
+  <rect x="416" y="180" width="50" height="60" rx="4" class="small"/>
+  <text x="441" y="216" text-anchor="middle" class="sub">S1</text>
+  <rect x="280" y="270" width="200" height="34" rx="6" class="gen-o"/>
+  <text x="380" y="292" text-anchor="middle" class="lbl">Old Gen</text>
+
+  <rect x="20" y="350" width="500" height="200" rx="10" class="per-thread"/>
+  <text x="270" y="374" text-anchor="middle" class="frame-lbl">스레드마다 별도 생성</text>
+
+  <rect x="40" y="392" width="140" height="60" rx="6" class="small"/>
+  <text x="110" y="412" text-anchor="middle" class="sub">PC Reg.</text>
+  <text x="110" y="432" text-anchor="middle" class="sub">(Thread1)</text>
+  <rect x="200" y="392" width="140" height="60" rx="6" class="small"/>
+  <text x="270" y="412" text-anchor="middle" class="sub">Stack</text>
+  <text x="270" y="432" text-anchor="middle" class="sub">(Thread1)</text>
+  <rect x="360" y="392" width="140" height="60" rx="6" class="small"/>
+  <text x="430" y="412" text-anchor="middle" class="sub">Native Method Stack</text>
+  <text x="430" y="432" text-anchor="middle" class="sub">(Thread1)</text>
+
+  <rect x="40" y="466" width="140" height="60" rx="6" class="small"/>
+  <text x="110" y="486" text-anchor="middle" class="sub">PC Reg.</text>
+  <text x="110" y="506" text-anchor="middle" class="sub">(Thread2)</text>
+  <rect x="200" y="466" width="140" height="60" rx="6" class="small"/>
+  <text x="270" y="486" text-anchor="middle" class="sub">Stack</text>
+  <text x="270" y="506" text-anchor="middle" class="sub">(Thread2)</text>
+  <rect x="360" y="466" width="140" height="60" rx="6" class="small"/>
+  <text x="430" y="486" text-anchor="middle" class="sub">Native Method Stack</text>
+  <text x="430" y="506" text-anchor="middle" class="sub">(Thread2)</text>
+</svg>

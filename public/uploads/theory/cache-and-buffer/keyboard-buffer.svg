@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 340" role="img" aria-label="키보드 버퍼 - 사용자가 H→e→l→l→o→Enter를 입력하면 키보드 버퍼에 Hello + 개행문자가 쌓이고 프로그램이 한꺼번에 읽음">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .input { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .buf { fill: rgba(255, 238, 215, 0.16); stroke: #FFB74D; stroke-width: 1.25; }
+      .prog { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .code { font: 500 13px "Consolas", "Menlo", monospace; fill: #e0e0e0; }
+    </style>
+    <marker id="kb-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="340" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">키보드 버퍼</text>
+
+  <rect x="120" y="55" width="220" height="60" rx="8" class="input"/>
+  <text x="230" y="80" text-anchor="middle" class="lbl">사용자 입력</text>
+  <text x="230" y="102" text-anchor="middle" class="code">H → e → l → l → o → Enter</text>
+  <line x1="230" y1="115" x2="230" y2="138" stroke="#888" stroke-width="1.5" marker-end="url(#kb-a)"/>
+
+  <rect x="120" y="145" width="220" height="66" rx="8" class="buf"/>
+  <text x="230" y="170" text-anchor="middle" class="lbl">키보드 버퍼</text>
+  <text x="230" y="194" text-anchor="middle" class="code">H · e · l · l · o · \n</text>
+  <line x1="230" y1="211" x2="230" y2="234" stroke="#888" stroke-width="1.5" marker-end="url(#kb-a)"/>
+
+  <rect x="120" y="240" width="220" height="66" rx="8" class="prog"/>
+  <text x="230" y="265" text-anchor="middle" class="lbl">프로그램</text>
+  <text x="230" y="290" text-anchor="middle" class="sub">Hello + 개행 문자 읽기</text>
+</svg>

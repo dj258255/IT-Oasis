@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 620" role="img" aria-label="Counting Semaphore 주차장 예시 - count 5, 6대 차량이 진입 시도, 앞 5대는 acquire 성공하고 6대는 대기, 1대 release 후 차량6 acquire">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .count { fill: rgba(255, 238, 215, 0.14); stroke: #FFB74D; stroke-width: 1.25; }
+      .count-full { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .release { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.25; }
+      .wait-box { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="cs-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="820" height="620" class="bg"/>
+  <text x="410" y="26" text-anchor="middle" class="title">Counting Semaphore · 주차장 (5칸)</text>
+
+  <g>
+    <rect x="20"  y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="65" y="61" text-anchor="middle" class="lbl">세마포어</text>
+    <rect x="140" y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="185" y="61" text-anchor="middle" class="lbl">차량1</text>
+    <rect x="260" y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="305" y="61" text-anchor="middle" class="lbl">차량2</text>
+    <rect x="380" y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="425" y="61" text-anchor="middle" class="lbl">차량3</text>
+    <rect x="500" y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="545" y="61" text-anchor="middle" class="lbl">차량4</text>
+    <rect x="620" y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="665" y="61" text-anchor="middle" class="lbl">차량5</text>
+    <rect x="720" y="42" width="90" height="28" rx="6" class="actor"/>
+    <text x="765" y="61" text-anchor="middle" class="lbl">차량6</text>
+    <line x1="65"  y1="70" x2="65"  y2="600" class="lifeline"/>
+    <line x1="185" y1="70" x2="185" y2="600" class="lifeline"/>
+    <line x1="305" y1="70" x2="305" y2="600" class="lifeline"/>
+    <line x1="425" y1="70" x2="425" y2="600" class="lifeline"/>
+    <line x1="545" y1="70" x2="545" y2="600" class="lifeline"/>
+    <line x1="665" y1="70" x2="665" y2="600" class="lifeline"/>
+    <line x1="765" y1="70" x2="765" y2="600" class="lifeline"/>
+  </g>
+
+  <rect x="15" y="80" width="100" height="30" rx="6" class="count"/>
+  <text x="65" y="101" text-anchor="middle" class="msg">count: 5</text>
+
+  <!-- 6 acquires -->
+  <line x1="185" y1="128" x2="67" y2="128" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="130" y="122" text-anchor="middle" class="msg">acquire() · 주차 완료</text>
+  <rect x="15" y="140" width="100" height="22" rx="4" class="count"/>
+  <text x="65" y="156" text-anchor="middle" class="msg">count: 4</text>
+
+  <line x1="305" y1="176" x2="67" y2="176" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="190" y="170" text-anchor="middle" class="msg">acquire() · 주차 완료</text>
+  <rect x="15" y="188" width="100" height="22" rx="4" class="count"/>
+  <text x="65" y="204" text-anchor="middle" class="msg">count: 3</text>
+
+  <line x1="425" y1="224" x2="67" y2="224" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="250" y="218" text-anchor="middle" class="msg">acquire() · 주차 완료</text>
+  <rect x="15" y="236" width="100" height="22" rx="4" class="count"/>
+  <text x="65" y="252" text-anchor="middle" class="msg">count: 2</text>
+
+  <line x1="545" y1="272" x2="67" y2="272" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="310" y="266" text-anchor="middle" class="msg">acquire() · 주차 완료</text>
+  <rect x="15" y="284" width="100" height="22" rx="4" class="count"/>
+  <text x="65" y="300" text-anchor="middle" class="msg">count: 1</text>
+
+  <line x1="665" y1="320" x2="67" y2="320" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="370" y="314" text-anchor="middle" class="msg">acquire() · 주차 완료</text>
+  <rect x="15" y="332" width="100" height="30" rx="6" class="count-full"/>
+  <text x="65" y="349" text-anchor="middle" class="msg">count: 0</text>
+  <text x="65" y="361" text-anchor="middle" class="msg">(만석)</text>
+
+  <rect x="730" y="380" width="80" height="30" rx="6" class="wait-box"/>
+  <text x="770" y="400" text-anchor="middle" class="msg">대기 중</text>
+
+  <!-- release by car 1 -->
+  <line x1="185" y1="436" x2="67" y2="436" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="130" y="430" text-anchor="middle" class="msg">출차 · release()</text>
+  <rect x="15" y="448" width="100" height="30" rx="6" class="release"/>
+  <text x="65" y="465" text-anchor="middle" class="msg">count: 1</text>
+  <text x="65" y="477" text-anchor="middle" class="msg">(1칸 확보)</text>
+
+  <line x1="67" y1="510" x2="763" y2="510" stroke="#bbb" stroke-width="1.25" marker-end="url(#cs-a)"/>
+  <text x="415" y="504" text-anchor="middle" class="msg">acquire() · 주차 완료</text>
+  <rect x="15" y="522" width="100" height="22" rx="4" class="count"/>
+  <text x="65" y="538" text-anchor="middle" class="msg">count: 0</text>
+</svg>

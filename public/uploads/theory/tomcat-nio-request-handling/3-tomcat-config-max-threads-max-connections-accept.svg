@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 380" role="img" aria-label="Tomcat 3가지 설정 - accept-count(대기 큐) / max-connections(동시 연결 슬롯) / max-threads(워커 스레드 풀)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .tomcat-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.4); stroke-width: 1.5; }
+      .queue-a { fill: rgba(100, 181, 246, 0.24); stroke: #64B5F6; stroke-width: 1.25; }
+      .queue-c { fill: rgba(186, 104, 200, 0.24); stroke: #BA68C8; stroke-width: 1.25; }
+      .pool { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .slot { fill: rgba(255, 238, 215, 0.2); stroke: rgba(255,238,215,0.4); stroke-width: 1; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .request { font: 600 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="tc-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="780" height="380" class="bg"/>
+  <text x="390" y="30" text-anchor="middle" class="title">Tomcat 세 가지 설정</text>
+
+  <text x="40" y="180" text-anchor="middle" class="request">Request</text>
+  <line x1="70" y1="180" x2="110" y2="180" stroke="#888" stroke-width="1.5" marker-end="url(#tc-a)"/>
+
+  <rect x="120" y="60" width="640" height="280" rx="10" class="tomcat-frame"/>
+  <text x="160" y="86" class="lbl">Tomcat</text>
+
+  <!-- accept-count queue -->
+  <rect x="150" y="132" width="160" height="100" rx="8" class="queue-a"/>
+  <rect x="170" y="150" width="12" height="64" class="slot"/>
+  <rect x="187" y="150" width="12" height="64" class="slot"/>
+  <rect x="204" y="150" width="12" height="64" class="slot"/>
+  <rect x="221" y="150" width="12" height="64" class="slot"/>
+  <rect x="238" y="150" width="12" height="64" class="slot"/>
+  <rect x="255" y="150" width="12" height="64" class="slot"/>
+  <rect x="272" y="150" width="12" height="64" class="slot"/>
+  <text x="230" y="128" text-anchor="middle" class="lbl">Queue</text>
+  <text x="230" y="252" text-anchor="middle" class="sub">accept-count</text>
+
+  <line x1="316" y1="182" x2="342" y2="182" stroke="#888" stroke-width="1.5" marker-end="url(#tc-a)"/>
+
+  <!-- max-connections queue -->
+  <rect x="350" y="132" width="160" height="100" rx="8" class="queue-c"/>
+  <rect x="370" y="150" width="12" height="64" class="slot"/>
+  <rect x="387" y="150" width="12" height="64" class="slot"/>
+  <rect x="404" y="150" width="12" height="64" class="slot"/>
+  <rect x="421" y="150" width="12" height="64" class="slot"/>
+  <rect x="438" y="150" width="12" height="64" class="slot"/>
+  <rect x="455" y="150" width="12" height="64" class="slot"/>
+  <rect x="472" y="150" width="12" height="64" class="slot"/>
+  <text x="430" y="128" text-anchor="middle" class="lbl">Queue</text>
+  <text x="430" y="252" text-anchor="middle" class="sub">max-connections</text>
+
+  <line x1="516" y1="182" x2="542" y2="182" stroke="#888" stroke-width="1.5" marker-end="url(#tc-a)"/>
+
+  <!-- thread pool -->
+  <rect x="550" y="132" width="190" height="100" rx="8" class="pool"/>
+  <circle cx="580" cy="168" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="614" cy="168" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="648" cy="168" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="682" cy="168" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="596" cy="200" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="630" cy="200" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="664" cy="200" r="12" fill="#FFB74D" stroke="#e0e0e0" stroke-width="1"/>
+  <text x="645" y="128" text-anchor="middle" class="lbl">Thread Pool</text>
+  <text x="645" y="252" text-anchor="middle" class="sub">max-threads</text>
+</svg>

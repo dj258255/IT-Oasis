@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 560" role="img" aria-label="Segment Lock - 테이블을 16구역으로 분할하고 세그먼트별 독립 락으로 다른 세그먼트 접근 시 블록되지 않아 동시성 향상">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .box-entry { fill: rgba(100, 181, 246, 0.18); stroke: #64B5F6; stroke-width: 1.5; }
+      .box-frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255, 238, 215, 0.4); stroke-width: 1.25; }
+      .box-segment { fill: rgba(76, 175, 80, 0.2); stroke: #4CAF50; stroke-width: 1.5; }
+      .box-elipsis { fill: rgba(100, 181, 246, 0.16); stroke: #64B5F6; stroke-width: 1.25; }
+      .box-result { fill: rgba(186, 104, 200, 0.2); stroke: #BA68C8; stroke-width: 1.5; }
+      .label { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .detail { font: 500 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="seg-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="460" height="560" class="bg"/>
+
+  <rect x="110" y="25" width="240" height="60" rx="8" class="box-entry"/>
+  <text x="230" y="52" text-anchor="middle" class="detail">전체 테이블을</text>
+  <text x="230" y="74" text-anchor="middle" class="detail">16개 구역으로 분할</text>
+  <line x1="230" y1="88" x2="230" y2="108" stroke="#888" stroke-width="1.5" marker-end="url(#seg-arrow)"/>
+
+  <rect x="40" y="115" width="380" height="340" rx="10" class="box-frame"/>
+  <text x="230" y="140" text-anchor="middle" class="label">세그먼트 구조</text>
+
+  <rect x="90" y="155" width="280" height="42" rx="6" class="box-segment"/>
+  <text x="230" y="181" text-anchor="middle" class="detail">세그먼트 0 · 독립 락</text>
+  <rect x="90" y="205" width="280" height="42" rx="6" class="box-segment"/>
+  <text x="230" y="231" text-anchor="middle" class="detail">세그먼트 1 · 독립 락</text>
+  <rect x="90" y="255" width="280" height="42" rx="6" class="box-segment"/>
+  <text x="230" y="281" text-anchor="middle" class="detail">세그먼트 2 · 독립 락</text>
+  <rect x="90" y="305" width="280" height="42" rx="6" class="box-segment"/>
+  <text x="230" y="331" text-anchor="middle" class="detail">세그먼트 3 · 독립 락</text>
+  <rect x="180" y="355" width="100" height="32" rx="6" class="box-elipsis"/>
+  <text x="230" y="377" text-anchor="middle" class="detail">…</text>
+  <rect x="90" y="395" width="280" height="42" rx="6" class="box-segment"/>
+  <text x="230" y="421" text-anchor="middle" class="detail">세그먼트 15 · 독립 락</text>
+
+  <line x1="230" y1="458" x2="230" y2="478" stroke="#888" stroke-width="1.5" marker-end="url(#seg-arrow)"/>
+
+  <rect x="60" y="485" width="340" height="60" rx="8" class="box-result"/>
+  <text x="230" y="512" text-anchor="middle" class="detail">다른 세그먼트 접근 시 블록되지 않음</text>
+  <text x="230" y="533" text-anchor="middle" class="detail">→ 동시성 향상</text>
+</svg>

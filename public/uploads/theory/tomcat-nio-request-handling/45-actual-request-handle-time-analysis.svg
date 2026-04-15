@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 980" role="img" aria-label="전체 요청 처리 시간 2.5ms - Tomcat NIO 0.1ms → Filter Chain 0.2ms → DispatcherServlet 0.05ms → HandlerMapping 0.1ms → HandlerAdapter 0.05ms → Controller 1ms → MessageConverter 0.8ms → 응답 전송 0.2ms">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .header { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+      .s1 { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .s2 { fill: rgba(255, 238, 215, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .s3 { fill: rgba(186, 104, 200, 0.2); stroke: #BA68C8; stroke-width: 1.25; }
+      .s4 { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .s5 { fill: rgba(255, 107, 107, 0.24); stroke: #FF6B6B; stroke-width: 1.25; }
+      .s6 { fill: rgba(186, 104, 200, 0.16); stroke: #BA68C8; stroke-width: 1.25; }
+      .s7 { fill: rgba(76, 175, 80, 0.26); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .ms { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="rh-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="420" height="980" class="bg"/>
+  <text x="210" y="30" text-anchor="middle" class="title">요청 처리 시간 분석</text>
+  <text x="210" y="56" text-anchor="middle" class="header">전체: 2.5ms</text>
+
+  <rect x="100" y="80" width="220" height="70" rx="8" class="s2"/>
+  <text x="210" y="110" text-anchor="middle" class="lbl">톰캣 NIO</text>
+  <text x="210" y="132" text-anchor="middle" class="ms">0.1ms</text>
+  <line x1="210" y1="150" x2="210" y2="172" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="178" width="220" height="70" rx="8" class="s1"/>
+  <text x="210" y="208" text-anchor="middle" class="lbl">Filter Chain</text>
+  <text x="210" y="230" text-anchor="middle" class="ms">0.2ms</text>
+  <line x1="210" y1="248" x2="210" y2="270" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="276" width="220" height="70" rx="8" class="s3"/>
+  <text x="210" y="306" text-anchor="middle" class="lbl">DispatcherServlet</text>
+  <text x="210" y="328" text-anchor="middle" class="ms">0.05ms</text>
+  <line x1="210" y1="346" x2="210" y2="368" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="374" width="220" height="70" rx="8" class="s3"/>
+  <text x="210" y="404" text-anchor="middle" class="lbl">HandlerMapping</text>
+  <text x="210" y="426" text-anchor="middle" class="ms">0.1ms</text>
+  <line x1="210" y1="444" x2="210" y2="466" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="472" width="220" height="70" rx="8" class="s4"/>
+  <text x="210" y="502" text-anchor="middle" class="lbl">HandlerAdapter</text>
+  <text x="210" y="524" text-anchor="middle" class="ms">0.05ms</text>
+  <line x1="210" y1="542" x2="210" y2="564" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="570" width="220" height="70" rx="8" class="s5"/>
+  <text x="210" y="600" text-anchor="middle" class="lbl">Controller</text>
+  <text x="210" y="622" text-anchor="middle" class="ms">1ms</text>
+  <line x1="210" y1="640" x2="210" y2="662" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="668" width="220" height="70" rx="8" class="s6"/>
+  <text x="210" y="698" text-anchor="middle" class="lbl">MessageConverter</text>
+  <text x="210" y="720" text-anchor="middle" class="ms">0.8ms</text>
+  <line x1="210" y1="738" x2="210" y2="760" stroke="#888" stroke-width="1.5" marker-end="url(#rh-a)"/>
+
+  <rect x="100" y="766" width="220" height="70" rx="8" class="s7"/>
+  <text x="210" y="796" text-anchor="middle" class="lbl">응답 전송</text>
+  <text x="210" y="818" text-anchor="middle" class="ms">0.2ms</text>
+</svg>

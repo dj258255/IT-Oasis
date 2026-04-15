@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 540" role="img" aria-label="TLAB - Eden 영역 안에 Thread1 TLAB, Thread2 TLAB, Thread3 TLAB이 각각 자기만의 영역을 가지고 나머지는 Free 공간">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .eden { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.4); stroke-width: 1.25; }
+      .tlab { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .free { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+  </defs>
+  <rect width="580" height="540" class="bg"/>
+  <text x="290" y="28" text-anchor="middle" class="title">TLAB (Thread-Local Allocation Buffer)</text>
+
+  <rect x="40" y="50" width="500" height="470" rx="12" class="eden"/>
+  <text x="290" y="76" text-anchor="middle" class="frame-lbl">Eden 영역</text>
+
+  <rect x="180" y="100" width="220" height="80" rx="8" class="tlab"/>
+  <text x="290" y="132" text-anchor="middle" class="lbl">Thread1</text>
+  <text x="290" y="156" text-anchor="middle" class="lbl">TLAB</text>
+
+  <rect x="180" y="200" width="220" height="80" rx="8" class="tlab"/>
+  <text x="290" y="232" text-anchor="middle" class="lbl">Thread2</text>
+  <text x="290" y="256" text-anchor="middle" class="lbl">TLAB</text>
+
+  <rect x="180" y="300" width="220" height="80" rx="8" class="tlab"/>
+  <text x="290" y="332" text-anchor="middle" class="lbl">Thread3</text>
+  <text x="290" y="356" text-anchor="middle" class="lbl">TLAB</text>
+
+  <rect x="220" y="420" width="140" height="60" rx="8" class="free"/>
+  <text x="290" y="456" text-anchor="middle" class="lbl">[Free]</text>
+</svg>

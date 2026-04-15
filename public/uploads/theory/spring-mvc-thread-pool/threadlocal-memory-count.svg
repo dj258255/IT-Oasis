@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 720" role="img" aria-label="ThreadLocal 메모리 누수 시뮬레이션 - 스레드 풀의 스레드 1/2가 ThreadLocal에 User 객체(2KB)를 저장하고 풀로 돌아가도 제거하지 않으면 객체가 계속 누적되어 메모리 누수 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .section { fill: rgba(255, 238, 215, 0.12); stroke: rgba(255,238,215,0.35); stroke-width: 1; }
+      .assign { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .return { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.25; }
+      .mem { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .warn { fill: rgba(255, 107, 107, 0.3); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .section-lbl { font: 700 11.5px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="tl-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="820" height="720" class="bg"/>
+  <text x="410" y="28" text-anchor="middle" class="title">ThreadLocal 메모리 누수 시뮬레이션</text>
+
+  <rect x="30"  y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="100" y="73" text-anchor="middle" class="lbl">스레드 1</text>
+  <rect x="230" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="300" y="73" text-anchor="middle" class="lbl">스레드 2</text>
+  <rect x="430" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="500" y="73" text-anchor="middle" class="lbl">스레드 3</text>
+  <rect x="630" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="710" y="73" text-anchor="middle" class="lbl">ThreadLocal</text>
+  <line x1="100" y1="84" x2="100" y2="680" class="lifeline"/>
+  <line x1="300" y1="84" x2="300" y2="680" class="lifeline"/>
+  <line x1="500" y1="84" x2="500" y2="680" class="lifeline"/>
+  <line x1="710" y1="84" x2="710" y2="680" class="lifeline"/>
+
+  <rect x="20" y="100" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="116" text-anchor="middle" class="section-lbl">스레드 1 요청 할당</text>
+
+  <line x1="102" y1="150" x2="708" y2="150" stroke="#bbb" stroke-width="1.25" marker-end="url(#tl-a)"/>
+  <text x="405" y="144" text-anchor="middle" class="msg">set(User A) · 2KB</text>
+  <rect x="640" y="162" width="140" height="28" rx="6" class="assign"/>
+  <text x="710" y="180" text-anchor="middle" class="msg">Thread1: User A (2KB)</text>
+
+  <rect x="20" y="210" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="226" text-anchor="middle" class="section-lbl">요청 처리 후 풀로 반환 (remove 안 함)</text>
+
+  <rect x="30" y="248" width="140" height="28" rx="6" class="return"/>
+  <text x="100" y="266" text-anchor="middle" class="msg">Thread1 풀 반환</text>
+
+  <rect x="20" y="298" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="314" text-anchor="middle" class="section-lbl">스레드 2 요청 할당</text>
+
+  <line x1="302" y1="350" x2="708" y2="350" stroke="#bbb" stroke-width="1.25" marker-end="url(#tl-a)"/>
+  <text x="505" y="344" text-anchor="middle" class="msg">set(User B) · 2KB</text>
+  <rect x="640" y="362" width="140" height="46" rx="6" class="mem"/>
+  <text x="710" y="380" text-anchor="middle" class="msg">Thread1: User A (잔존)</text>
+  <text x="710" y="398" text-anchor="middle" class="msg">Thread2: User B (2KB)</text>
+
+  <rect x="30" y="430" width="140" height="28" rx="6" class="return"/>
+  <text x="100" y="448" text-anchor="middle" class="msg">Thread2 풀 반환</text>
+
+  <rect x="20" y="478" width="780" height="22" rx="4" class="section"/>
+  <text x="410" y="494" text-anchor="middle" class="section-lbl">스레드 3 요청 할당</text>
+
+  <line x1="502" y1="530" x2="708" y2="530" stroke="#bbb" stroke-width="1.25" marker-end="url(#tl-a)"/>
+  <text x="605" y="524" text-anchor="middle" class="msg">set(User C) · 2KB</text>
+  <rect x="600" y="542" width="180" height="66" rx="6" class="mem"/>
+  <text x="690" y="560" text-anchor="middle" class="msg">Thread1: User A (잔존)</text>
+  <text x="690" y="578" text-anchor="middle" class="msg">Thread2: User B (잔존)</text>
+  <text x="690" y="596" text-anchor="middle" class="msg">Thread3: User C (2KB)</text>
+
+  <line x1="410" y1="624" x2="410" y2="640" stroke="#bbb" stroke-width="1.25" marker-end="url(#tl-a)"/>
+  <rect x="220" y="646" width="380" height="28" rx="6" class="warn"/>
+  <text x="410" y="665" text-anchor="middle" class="msg">200 스레드 × 2KB = 400KB · 점점 누적 (리크)</text>
+</svg>

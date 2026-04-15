@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="L1 Cache 구조 - CPU 코어에서 L1 명령어 캐시(I-Cache, 32-64KB)와 L1 데이터 캐시(D-Cache, 32-64KB)로 분리, 접근 시간 1-4 사이클(약 1ns)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .cpu { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .cache { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.5; }
+      .storage { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .time { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="l1-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="640" height="400" class="bg"/>
+  <text x="320" y="28" text-anchor="middle" class="title">L1 Cache 구조</text>
+
+  <rect x="240" y="50" width="160" height="46" rx="8" class="cpu"/>
+  <text x="320" y="78" text-anchor="middle" class="lbl">CPU 코어</text>
+
+  <path d="M 280 96 C 220 120, 160 140, 140 160" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#l1-a)"/>
+  <path d="M 360 96 C 420 120, 480 140, 500 160" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#l1-a)"/>
+
+  <rect x="40" y="165" width="200" height="90" rx="8" class="cache"/>
+  <text x="140" y="192" text-anchor="middle" class="lbl">L1 명령어 캐시</text>
+  <text x="140" y="216" text-anchor="middle" class="sub">I Cache</text>
+  <text x="140" y="238" text-anchor="middle" class="sub">32 ~ 64 KB</text>
+
+  <rect x="400" y="165" width="200" height="90" rx="8" class="cache"/>
+  <text x="500" y="192" text-anchor="middle" class="lbl">L1 데이터 캐시</text>
+  <text x="500" y="216" text-anchor="middle" class="sub">D Cache</text>
+  <text x="500" y="238" text-anchor="middle" class="sub">32 ~ 64 KB</text>
+
+  <line x1="140" y1="255" x2="140" y2="280" stroke="#888" stroke-width="1.5" marker-end="url(#l1-a)"/>
+  <line x1="500" y1="255" x2="500" y2="280" stroke="#888" stroke-width="1.5" marker-end="url(#l1-a)"/>
+  <path d="M 200 255 C 240 290, 280 300, 320 310" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#l1-a)"/>
+  <path d="M 440 255 C 400 290, 360 300, 320 310" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#l1-a)"/>
+
+  <rect x="40" y="286" width="200" height="60" rx="8" class="storage"/>
+  <text x="140" y="314" text-anchor="middle" class="lbl">프로그램 코드 저장</text>
+
+  <rect x="400" y="286" width="200" height="60" rx="8" class="storage"/>
+  <text x="500" y="314" text-anchor="middle" class="lbl">데이터 저장</text>
+
+  <rect x="240" y="300" width="160" height="70" rx="8" class="time"/>
+  <text x="320" y="326" text-anchor="middle" class="lbl">접근 시간</text>
+  <text x="320" y="348" text-anchor="middle" class="sub">1~4 사이클 · 약 1ns</text>
+</svg>

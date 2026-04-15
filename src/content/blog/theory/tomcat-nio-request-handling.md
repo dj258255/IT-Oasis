@@ -11,9 +11,9 @@ tags:
   - Spring MVC
   - Non-Blocking IO
   - Performance
-category: theory
+category: theory/Web-Server
 draft: false
-coverImage: "/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.png"
+coverImage: "/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.svg"
 ---
 
 
@@ -66,7 +66,7 @@ class BIOConnector {
 
 HTTP Keep-Alive를 사용하는 경우를 생각해 볼게요. 클라이언트가 첫 요청을 보내고, 2초 후에 두 번째 요청을 보낸다고 해볼게요.
 
-![](/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.png)
+![](/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.svg)
 
 
 스레드가 1.9초 동안 **아무것도 안 하고 대기만** 했어요. 이게 연결이 1000개라면?
@@ -217,7 +217,7 @@ NIO Connector는 세 가지 주요 컴포넌트로 구성돼요.
 
 ### 2.1 전체 구조
 
-![](/uploads/theory/tomcat-nio-request-handling/21-overall-architecture.png)
+![](/uploads/theory/tomcat-nio-request-handling/21-overall-architecture.svg)
 
 각각 무슨 역할을 할까?
 
@@ -378,7 +378,7 @@ Poller 감시 (2초) → 스레드 할당 → 처리 (0.1초) → 스레드 반�
 
 ### 2.5 Selector는 어떻게 동작할까?
 
-![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation.png)
+![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation.svg)
 
 
 Java의 Selector는 운영체제의 I/O 멀티플렉싱 기능을 활용해요.
@@ -469,9 +469,9 @@ epoll:  ready FD만 반환 → 수μs
 
 
 
-![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-2.png)
+![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-2.svg)
 
-![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-3.png)
+![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-3.svg)
 
 **NIO Connector 동작 순서**
 
@@ -493,7 +493,7 @@ epoll:  ready FD만 반환 → 수μs
 
 ## 3. 톰캣 설정: maxThreads, maxConnections, acceptCount
 
-![](/uploads/theory/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.png)
+![](/uploads/theory/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.svg)
 
 
 이제 톰캣 설정값들이 어떤 의미인지 이해할 수 있어요.
@@ -511,7 +511,7 @@ server:
 
 **흐름**:
 
-![](/uploads/theory/tomcat-nio-request-handling/31-three-types-config-relationship.png)
+![](/uploads/theory/tomcat-nio-request-handling/31-three-types-config-relationship.svg)
 
 ### 3.2 각 설정의 의미
 
@@ -645,7 +645,7 @@ listen(server_fd, 100);  // acceptCount = 100
 ```
 
 **acceptCount의 동작**:
-![](/uploads/theory/tomcat-nio-request-handling/323-accept-count.png)
+![](/uploads/theory/tomcat-nio-request-handling/323-accept-count.svg)
 
 
 ```
@@ -733,12 +733,12 @@ server:
 
 ### 4.1 전체 흐름
 
-![](/uploads/theory/tomcat-nio-request-handling/41-overall-flow.png)
+![](/uploads/theory/tomcat-nio-request-handling/41-overall-flow.svg)
 
 
 ### 4.2 DispatcherServlet: Front Controller
 
-![](/uploads/theory/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.png)
+![](/uploads/theory/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.svg)
 
 
 ```java
@@ -788,7 +788,7 @@ public class DispatcherServlet extends HttpServlet {
 
 ### 4.3 HandlerMapping: URL → Controller 매핑
 
-![](/uploads/theory/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.png)
+![](/uploads/theory/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.svg)
 
 
 ```java
@@ -940,7 +940,7 @@ class RequestMappingHandlerAdapter implements HandlerAdapter {
 }
 ```
 
-![](/uploads/theory/tomcat-nio-request-handling/44-handler-adapter-controller-execution.png)
+![](/uploads/theory/tomcat-nio-request-handling/44-handler-adapter-controller-execution.svg)
 
 
 
@@ -961,7 +961,7 @@ class PerformanceController {
 ```
 
 **실제 측정** (로컬 환경):
-![](/uploads/theory/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.png)
+![](/uploads/theory/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.svg)
 
 **병목은 어디?**
 
@@ -1230,13 +1230,13 @@ NIO 환경에서는 유휴 연결을 Poller가 효율적으로 관리하므로
 
 이제 전체 그림이 보여요.
 
-![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary.png)
+![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary.svg)
 
 
 
 **각 계층의 처리 시간** (일반적인 REST API):
 
-![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary-2.png)
+![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary-2.svg)
 
 
 **결론**: 대부분의 경우 DB가 병목이에요. 톰캣과 Spring MVC는 충분히 빨라요.
@@ -1329,7 +1329,7 @@ class BIOConnector {
 
 Consider the case of HTTP Keep-Alive. Suppose a client sends a first request and then a second request 2 seconds later.
 
-![](/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.png)
+![](/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.svg)
 
 
 The thread spent 1.9 seconds **doing nothing but waiting**. What if there are 1,000 connections?
@@ -1480,7 +1480,7 @@ The NIO Connector consists of three main components.
 
 ### 2.1 Overall Architecture
 
-![](/uploads/theory/tomcat-nio-request-handling/21-overall-architecture.png)
+![](/uploads/theory/tomcat-nio-request-handling/21-overall-architecture.svg)
 
 What role does each component play?
 
@@ -1641,7 +1641,7 @@ Thread occupied: 0.1 seconds
 
 ### 2.5 How Does the Selector Work?
 
-![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation.png)
+![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation.svg)
 
 
 Java's Selector leverages the operating system's I/O multiplexing capabilities.
@@ -1732,9 +1732,9 @@ The gap widens as connections increase (tens of times or more at 10,000+ connect
 
 
 
-![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-2.png)
+![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-2.svg)
 
-![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-3.png)
+![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation-3.svg)
 
 **NIO Connector Operation Sequence**
 
@@ -1756,7 +1756,7 @@ The gap widens as connections increase (tens of times or more at 10,000+ connect
 
 ## 3. Tomcat Configuration: maxThreads, maxConnections, acceptCount
 
-![](/uploads/theory/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.png)
+![](/uploads/theory/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.svg)
 
 
 Now we can understand what these Tomcat configuration values mean.
@@ -1774,7 +1774,7 @@ server:
 
 **Flow**:
 
-![](/uploads/theory/tomcat-nio-request-handling/31-three-types-config-relationship.png)
+![](/uploads/theory/tomcat-nio-request-handling/31-three-types-config-relationship.svg)
 
 ### 3.2 Meaning of Each Setting
 
@@ -1908,7 +1908,7 @@ listen(server_fd, 100);  // acceptCount = 100
 ```
 
 **How acceptCount works**:
-![](/uploads/theory/tomcat-nio-request-handling/323-accept-count.png)
+![](/uploads/theory/tomcat-nio-request-handling/323-accept-count.svg)
 
 
 ```
@@ -1996,12 +1996,12 @@ Tomcat received the request. Now it's handed off to Spring MVC.
 
 ### 4.1 Overall Flow
 
-![](/uploads/theory/tomcat-nio-request-handling/41-overall-flow.png)
+![](/uploads/theory/tomcat-nio-request-handling/41-overall-flow.svg)
 
 
 ### 4.2 DispatcherServlet: Front Controller
 
-![](/uploads/theory/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.png)
+![](/uploads/theory/tomcat-nio-request-handling/42-dispatcher-servlet-front-controller.svg)
 
 
 ```java
@@ -2051,7 +2051,7 @@ public class DispatcherServlet extends HttpServlet {
 
 ### 4.3 HandlerMapping: URL to Controller Mapping
 
-![](/uploads/theory/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.png)
+![](/uploads/theory/tomcat-nio-request-handling/43-handler-mapping-url-controller-mapping.svg)
 
 
 ```java
@@ -2203,7 +2203,7 @@ class RequestMappingHandlerAdapter implements HandlerAdapter {
 }
 ```
 
-![](/uploads/theory/tomcat-nio-request-handling/44-handler-adapter-controller-execution.png)
+![](/uploads/theory/tomcat-nio-request-handling/44-handler-adapter-controller-execution.svg)
 
 
 
@@ -2224,7 +2224,7 @@ class PerformanceController {
 ```
 
 **Actual measurements** (local environment):
-![](/uploads/theory/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.png)
+![](/uploads/theory/tomcat-nio-request-handling/45-actual-request-handle-time-analysis.svg)
 
 **Where is the bottleneck?**
 
@@ -2493,13 +2493,13 @@ Consider lowering it only in memory-constrained environments.
 
 Now we can see the full picture.
 
-![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary.png)
+![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary.svg)
 
 
 
 **Processing time at each layer** (typical REST API):
 
-![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary-2.png)
+![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary-2.svg)
 
 
 **Conclusion**: In most cases, the database is the bottleneck. Tomcat and Spring MVC are fast enough.

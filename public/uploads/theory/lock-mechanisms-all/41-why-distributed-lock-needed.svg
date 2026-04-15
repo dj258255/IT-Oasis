@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 580" role="img" aria-label="분산 락이 필요한 이유 - 사용자 요청이 로드밸런서를 거쳐 서버 A/B/C 중 하나로 분산, 모두 같은 데이터베이스 접근, 서버 간 공유 락 메커니즘 필요">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .req { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .lb { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .server { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .db { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 12.5px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="dl-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="580" height="580" class="bg"/>
+  <text x="290" y="28" text-anchor="middle" class="title">분산 락이 필요한 이유</text>
+
+  <rect x="180" y="50" width="220" height="40" rx="6" class="req"/>
+  <text x="290" y="76" text-anchor="middle" class="lbl">사용자 요청</text>
+  <line x1="290" y1="90" x2="290" y2="120" stroke="#888" stroke-width="1.5" marker-end="url(#dl-a)"/>
+
+  <rect x="40" y="130" width="500" height="100" rx="10" class="frame"/>
+  <text x="60" y="152" class="frame-lbl">로드 밸런싱 계층</text>
+  <rect x="200" y="170" width="180" height="44" rx="6" class="lb"/>
+  <text x="290" y="198" text-anchor="middle" class="lbl">로드 밸런서</text>
+
+  <path d="M 240 230 C 200 260, 130 290, 110 320" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#dl-a)"/>
+  <line x1="290" y1="230" x2="290" y2="320" stroke="#888" stroke-width="1.5" marker-end="url(#dl-a)"/>
+  <path d="M 340 230 C 380 260, 450 290, 470 320" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#dl-a)"/>
+
+  <rect x="40" y="270" width="500" height="120" rx="10" class="frame"/>
+  <text x="60" y="294" class="frame-lbl">애플리케이션 서버 계층</text>
+  <rect x="60" y="324" width="120" height="50" rx="6" class="server"/>
+  <text x="120" y="354" text-anchor="middle" class="lbl">서버 A</text>
+  <rect x="230" y="324" width="120" height="50" rx="6" class="server"/>
+  <text x="290" y="354" text-anchor="middle" class="lbl">서버 B</text>
+  <rect x="400" y="324" width="120" height="50" rx="6" class="server"/>
+  <text x="460" y="354" text-anchor="middle" class="lbl">서버 C</text>
+
+  <path d="M 120 374 C 130 410, 240 440, 290 460" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#dl-a)"/>
+  <line x1="290" y1="374" x2="290" y2="460" stroke="#888" stroke-width="1.5" marker-end="url(#dl-a)"/>
+  <path d="M 460 374 C 450 410, 340 440, 290 460" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#dl-a)"/>
+
+  <rect x="40" y="430" width="500" height="120" rx="10" class="frame"/>
+  <text x="60" y="454" class="frame-lbl">데이터 계층</text>
+  <ellipse cx="290" cy="500" rx="80" ry="32" class="db"/>
+  <text x="290" y="506" text-anchor="middle" class="lbl">데이터베이스</text>
+</svg>

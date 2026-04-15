@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 820" role="img" aria-label="메모리 계층구조 - CPU Core 안의 L1(1ns)/L2(3-10ns) 캐시, L3 공유(10-20ns), RAM(100ns, 100배 느림), SSD(50,000ns, 50,000배 느림), HDD(10,000,000ns, 천만배 느림)">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .cpu-frame { fill: rgba(255, 238, 215, 0.08); stroke: rgba(255, 238, 215, 0.4); stroke-width: 1.5; }
+      .l1 { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.75; }
+      .l2 { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.5; }
+      .l3 { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.5; }
+      .ram { fill: rgba(255, 183, 77, 0.25); stroke: #FFB74D; stroke-width: 1.5; }
+      .ssd { fill: rgba(255, 107, 107, 0.2); stroke: #FF6B6B; stroke-width: 1.5; }
+      .hdd { fill: rgba(255, 107, 107, 0.38); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lbl-name { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .lbl-size { font: 500 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .lbl-note { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="mem-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="540" height="820" class="bg"/>
+  <text x="270" y="32" text-anchor="middle" class="title">메모리 계층 구조</text>
+
+  <!-- CPU Core -->
+  <rect x="30" y="50" width="480" height="160" rx="10" class="cpu-frame"/>
+  <text x="270" y="75" text-anchor="middle" class="lbl-name">CPU Core</text>
+
+  <rect x="60" y="95" width="200" height="100" rx="8" class="l1"/>
+  <text x="160" y="123" text-anchor="middle" class="lbl-name">L1 Cache</text>
+  <text x="160" y="146" text-anchor="middle" class="lbl-size">32~64KB</text>
+  <text x="160" y="168" text-anchor="middle" class="lbl-size">1ns</text>
+  <text x="160" y="188" text-anchor="middle" class="lbl-note">가장 빠름</text>
+
+  <rect x="280" y="115" width="200" height="60" rx="8" class="l2"/>
+  <text x="380" y="140" text-anchor="middle" class="lbl-name">L2 Cache</text>
+  <text x="380" y="162" text-anchor="middle" class="lbl-size">256~512KB · 3~10ns</text>
+
+  <line x1="270" y1="210" x2="270" y2="232" stroke="#888" stroke-width="1.5" marker-end="url(#mem-arrow)"/>
+
+  <!-- L3 -->
+  <rect x="110" y="238" width="320" height="72" rx="8" class="l3"/>
+  <text x="270" y="265" text-anchor="middle" class="lbl-name">L3 Cache (공유)</text>
+  <text x="270" y="290" text-anchor="middle" class="lbl-size">8~32MB · 10~20ns</text>
+  <line x1="270" y1="312" x2="270" y2="334" stroke="#888" stroke-width="1.5" marker-end="url(#mem-arrow)"/>
+
+  <!-- RAM -->
+  <rect x="110" y="340" width="320" height="90" rx="8" class="ram"/>
+  <text x="270" y="368" text-anchor="middle" class="lbl-name">RAM</text>
+  <text x="270" y="392" text-anchor="middle" class="lbl-size">8~64GB · 100ns</text>
+  <text x="270" y="414" text-anchor="middle" class="lbl-note">100배 느림</text>
+  <line x1="270" y1="432" x2="270" y2="454" stroke="#888" stroke-width="1.5" marker-end="url(#mem-arrow)"/>
+
+  <!-- SSD -->
+  <rect x="110" y="460" width="320" height="100" rx="8" class="ssd"/>
+  <text x="270" y="490" text-anchor="middle" class="lbl-name">SSD</text>
+  <text x="270" y="514" text-anchor="middle" class="lbl-size">256GB~2TB · 50,000ns</text>
+  <text x="270" y="540" text-anchor="middle" class="lbl-note">50,000배 느림</text>
+  <line x1="270" y1="562" x2="270" y2="584" stroke="#888" stroke-width="1.5" marker-end="url(#mem-arrow)"/>
+
+  <!-- HDD -->
+  <rect x="110" y="590" width="320" height="90" rx="8" class="hdd"/>
+  <text x="270" y="620" text-anchor="middle" class="lbl-name">HDD</text>
+  <text x="270" y="644" text-anchor="middle" class="lbl-size">10,000,000ns</text>
+  <text x="270" y="666" text-anchor="middle" class="lbl-note">천만배 느림</text>
+</svg>

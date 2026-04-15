@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 380" role="img" aria-label="JIT Compiler 구조 - Intermediate Code Generator → Code Optimizer → Target Code Generator 순서, 옆에 Profiler가 성능 측정">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame { fill: rgba(255, 238, 215, 0.06); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .jit { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .comp { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .prof { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.25; }
+      .lbl { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .frame-lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="jc-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="480" height="380" class="bg"/>
+  <text x="240" y="28" text-anchor="middle" class="title">JIT Compiler 내부 구조</text>
+
+  <rect x="20" y="50" width="440" height="56" rx="8" class="jit"/>
+  <text x="240" y="84" text-anchor="middle" class="frame-lbl">Execution Engine</text>
+
+  <rect x="20" y="120" width="440" height="240" rx="10" class="frame"/>
+  <text x="240" y="144" text-anchor="middle" class="frame-lbl">JIT Compiler</text>
+
+  <rect x="40" y="160" width="220" height="42" rx="6" class="comp"/>
+  <text x="150" y="186" text-anchor="middle" class="lbl">Intermediate Code Generator</text>
+  <line x1="150" y1="202" x2="150" y2="220" stroke="#888" stroke-width="1.5" marker-end="url(#jc-a)"/>
+
+  <rect x="40" y="226" width="220" height="42" rx="6" class="comp"/>
+  <text x="150" y="252" text-anchor="middle" class="lbl">Code Optimizer</text>
+  <line x1="150" y1="268" x2="150" y2="286" stroke="#888" stroke-width="1.5" marker-end="url(#jc-a)"/>
+
+  <rect x="40" y="292" width="220" height="42" rx="6" class="comp"/>
+  <text x="150" y="318" text-anchor="middle" class="lbl">Target Code Generator</text>
+
+  <rect x="300" y="220" width="140" height="80" rx="6" class="prof"/>
+  <text x="370" y="266" text-anchor="middle" class="lbl">Profiler</text>
+</svg>

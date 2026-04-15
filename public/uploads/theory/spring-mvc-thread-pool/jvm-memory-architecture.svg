@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 380" role="img" aria-label="JVM 메모리 구조 - JVM 메모리가 Heap(모든 스레드 공유, Young/Old Generation)과 Stack(스레드마다 개별 할당 1MB)으로 분리">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .root { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .heap { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.5; }
+      .gen { fill: rgba(76, 175, 80, 0.18); stroke: #4CAF50; stroke-width: 1.25; }
+      .stack { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.5; }
+      .thread { fill: rgba(255, 183, 77, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .lbl { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="jm-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="820" height="380" class="bg"/>
+  <text x="410" y="30" text-anchor="middle" class="title">JVM 메모리 구조</text>
+
+  <rect x="340" y="50" width="140" height="44" rx="8" class="root"/>
+  <text x="410" y="77" text-anchor="middle" class="lbl">JVM 메모리</text>
+
+  <path d="M 360 94 C 280 120, 210 140, 180 160" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#jm-a)"/>
+  <path d="M 460 94 C 540 120, 610 140, 640 160" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#jm-a)"/>
+
+  <rect x="60" y="168" width="240" height="70" rx="8" class="heap"/>
+  <text x="180" y="193" text-anchor="middle" class="lbl">Heap</text>
+  <text x="180" y="215" text-anchor="middle" class="sub">모든 스레드가 공유</text>
+
+  <path d="M 130 238 C 130 260, 100 270, 90 288" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#jm-a)"/>
+  <path d="M 230 238 C 230 260, 260 270, 270 288" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#jm-a)"/>
+
+  <rect x="30" y="294" width="130" height="50" rx="6" class="gen"/>
+  <text x="95" y="324" text-anchor="middle" class="sub">Young Generation</text>
+  <rect x="200" y="294" width="130" height="50" rx="6" class="gen"/>
+  <text x="265" y="324" text-anchor="middle" class="sub">Old Generation</text>
+
+  <rect x="520" y="168" width="240" height="70" rx="8" class="stack"/>
+  <text x="640" y="193" text-anchor="middle" class="lbl">Stack</text>
+  <text x="640" y="215" text-anchor="middle" class="sub">스레드마다 개별 할당</text>
+
+  <path d="M 570 238 C 540 260, 520 270, 510 288" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#jm-a)"/>
+  <line x1="640" y1="238" x2="640" y2="288" stroke="#888" stroke-width="1.5" marker-end="url(#jm-a)"/>
+  <path d="M 710 238 C 740 260, 760 270, 770 288" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#jm-a)"/>
+
+  <rect x="450" y="294" width="120" height="50" rx="6" class="thread"/>
+  <text x="510" y="318" text-anchor="middle" class="sub">Thread 1 Stack</text>
+  <text x="510" y="336" text-anchor="middle" class="sub">1MB</text>
+  <rect x="580" y="294" width="120" height="50" rx="6" class="thread"/>
+  <text x="640" y="318" text-anchor="middle" class="sub">Thread 2 Stack</text>
+  <text x="640" y="336" text-anchor="middle" class="sub">1MB</text>
+  <rect x="710" y="294" width="120" height="50" rx="6" class="thread"/>
+  <text x="770" y="318" text-anchor="middle" class="sub">Thread 3 Stack</text>
+  <text x="770" y="336" text-anchor="middle" class="sub">1MB</text>
+</svg>

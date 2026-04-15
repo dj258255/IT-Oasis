@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 540" role="img" aria-label="우선순위 역전 - 낮은 우선순위 스레드가 락 보유 중 → 높은 우선순위 스레드가 락 대기 → 중간 우선순위 스레드가 실행되면 → 높은 우선순위가 중간을 기다리는 우선순위 역전 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .low { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.5; }
+      .high { fill: rgba(255, 238, 215, 0.24); stroke: #FFB74D; stroke-width: 1.5; }
+      .mid { fill: rgba(255, 183, 77, 0.34); stroke: #FFB74D; stroke-width: 1.5; }
+      .danger { fill: rgba(255, 107, 107, 0.34); stroke: #FF6B6B; stroke-width: 1.75; }
+      .lbl { font: 600 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .warn { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="pi-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="460" height="540" class="bg"/>
+  <text x="230" y="28" text-anchor="middle" class="title">우선순위 역전</text>
+
+  <rect x="80" y="60" width="300" height="80" rx="10" class="low"/>
+  <text x="230" y="92" text-anchor="middle" class="lbl">낮은 우선순위 스레드가</text>
+  <text x="230" y="115" text-anchor="middle" class="lbl">락 보유</text>
+  <line x1="230" y1="140" x2="230" y2="172" stroke="#888" stroke-width="1.5" marker-end="url(#pi-a)"/>
+
+  <rect x="80" y="180" width="300" height="80" rx="10" class="high"/>
+  <text x="230" y="212" text-anchor="middle" class="lbl">높은 우선순위 스레드가</text>
+  <text x="230" y="235" text-anchor="middle" class="lbl">락 대기</text>
+  <line x1="230" y1="260" x2="230" y2="292" stroke="#888" stroke-width="1.5" marker-end="url(#pi-a)"/>
+
+  <rect x="80" y="300" width="300" height="80" rx="10" class="mid"/>
+  <text x="230" y="332" text-anchor="middle" class="lbl">중간 우선순위 스레드가</text>
+  <text x="230" y="355" text-anchor="middle" class="lbl">실행</text>
+  <line x1="230" y1="380" x2="230" y2="412" stroke="#888" stroke-width="1.5" marker-end="url(#pi-a)"/>
+
+  <rect x="40" y="420" width="380" height="100" rx="12" class="danger"/>
+  <text x="230" y="450" text-anchor="middle" class="warn">높은 우선순위가 중간 우선순위를 기다림</text>
+  <text x="230" y="475" text-anchor="middle" class="lbl">우선순위 역전 발생</text>
+</svg>

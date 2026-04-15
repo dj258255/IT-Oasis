@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 380" role="img" aria-label="Acceptor → PollerEvent Queue → Poller → Worker 파이프라인 - Acceptor가 NioChannel을 PollerEvent Queue에 넣고, Poller가 꺼내 등록한 후 데이터가 있는 채널을 Worker 스레드에 forward">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .stage { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .queue { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .event { fill: rgba(255, 238, 215, 0.16); stroke: rgba(255,238,215,0.3); stroke-width: 1.25; }
+      .register { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.25; }
+      .worker { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.5; }
+      .lbl { font: 700 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 11px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="ss3-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="840" height="380" class="bg"/>
+  <text x="420" y="28" text-anchor="middle" class="title">Acceptor → PollerEvent Queue → Poller → Worker</text>
+
+  <rect x="30" y="120" width="140" height="80" rx="8" class="stage"/>
+  <text x="100" y="148" text-anchor="middle" class="lbl">Acceptor</text>
+  <text x="100" y="170" text-anchor="middle" class="sub">연결 수락</text>
+  <text x="100" y="186" text-anchor="middle" class="sub">NioChannel 생성</text>
+
+  <line x1="170" y1="160" x2="208" y2="160" stroke="#888" stroke-width="1.5" marker-end="url(#ss3-a)"/>
+
+  <rect x="210" y="120" width="190" height="80" rx="8" class="queue"/>
+  <text x="305" y="148" text-anchor="middle" class="lbl">PollerEvent Queue</text>
+  <rect x="230" y="160" width="150" height="28" rx="4" class="event"/>
+  <text x="305" y="178" text-anchor="middle" class="sub">Poller Event · Poller Event · …</text>
+
+  <line x1="400" y1="160" x2="438" y2="160" stroke="#888" stroke-width="1.5" marker-end="url(#ss3-a)"/>
+
+  <rect x="440" y="120" width="160" height="80" rx="8" class="stage"/>
+  <text x="520" y="148" text-anchor="middle" class="lbl">Poller</text>
+  <text x="520" y="170" text-anchor="middle" class="sub">NioChannel 등록</text>
+  <text x="520" y="186" text-anchor="middle" class="sub">Selector 기반 감시</text>
+
+  <rect x="440" y="50" width="160" height="48" rx="8" class="register"/>
+  <text x="520" y="80" text-anchor="middle" class="lbl">Register NioChannel</text>
+  <line x1="520" y1="98" x2="520" y2="118" stroke="#888" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ss3-a)"/>
+
+  <line x1="600" y1="160" x2="638" y2="160" stroke="#888" stroke-width="1.5" marker-end="url(#ss3-a)"/>
+
+  <rect x="640" y="120" width="170" height="80" rx="8" class="worker"/>
+  <text x="725" y="148" text-anchor="middle" class="lbl">Worker</text>
+  <text x="725" y="170" text-anchor="middle" class="sub">Select channel if data</text>
+  <text x="725" y="186" text-anchor="middle" class="sub">is available → forward</text>
+
+  <text x="420" y="260" text-anchor="middle" class="sub">Acceptor가 새 연결을 큐에 넣으면 Poller가 꺼내 등록하고, 데이터가 들어온 채널만</text>
+  <text x="420" y="280" text-anchor="middle" class="sub">Worker 스레드로 포워딩하여 워커 스레드가 블로킹 없이 실제 요청만 처리</text>
+</svg>

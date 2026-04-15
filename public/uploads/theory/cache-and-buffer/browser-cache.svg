@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 640" role="img" aria-label="브라우저 캐시 - 첫 방문 시 서버에서 CSS 다운로드 후 디스크 캐시에 저장, 두 번째 방문 시 디스크 캐시에서 직접 로드하여 네트워크 요청 없이 빠른 페이지 로딩">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .section { fill: rgba(255, 238, 215, 0.12); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .msg-box { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .note { fill: rgba(255, 183, 77, 0.25); stroke: #FFB74D; stroke-width: 1.25; }
+      .fast { fill: rgba(76, 175, 80, 0.28); stroke: #4CAF50; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .section-lbl { font: 700 12px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="bc-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="680" height="640" class="bg"/>
+  <text x="340" y="28" text-anchor="middle" class="title">브라우저 캐시 동작</text>
+
+  <rect x="40"  y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="120" y="73" text-anchor="middle" class="lbl">브라우저</text>
+  <rect x="260" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="340" y="73" text-anchor="middle" class="lbl">디스크 캐시</text>
+  <rect x="480" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="560" y="73" text-anchor="middle" class="lbl">서버</text>
+  <line x1="120" y1="84" x2="120" y2="600" class="lifeline"/>
+  <line x1="340" y1="84" x2="340" y2="600" class="lifeline"/>
+  <line x1="560" y1="84" x2="560" y2="600" class="lifeline"/>
+
+  <rect x="20" y="100" width="640" height="24" rx="4" class="section"/>
+  <text x="340" y="117" text-anchor="middle" class="section-lbl">첫 방문</text>
+
+  <line x1="122" y1="148" x2="558" y2="148" stroke="#bbb" stroke-width="1.25" marker-end="url(#bc-a)"/>
+  <text x="340" y="142" text-anchor="middle" class="msg">example.com/style.css 요청</text>
+
+  <line x1="558" y1="180" x2="122" y2="180" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#bc-a)"/>
+  <text x="340" y="174" text-anchor="middle" class="msg">CSS 파일 다운로드 · 200 OK</text>
+
+  <rect x="380" y="196" width="260" height="46" rx="6" class="note"/>
+  <text x="510" y="218" text-anchor="middle" class="msg">Cache-Control: max-age=86400</text>
+  <text x="510" y="236" text-anchor="middle" class="msg">(24시간 캐시)</text>
+
+  <line x1="122" y1="270" x2="338" y2="270" stroke="#bbb" stroke-width="1.25" marker-end="url(#bc-a)"/>
+  <text x="230" y="264" text-anchor="middle" class="msg">디스크 캐시에 저장</text>
+
+  <rect x="20" y="304" width="640" height="24" rx="4" class="section"/>
+  <text x="340" y="321" text-anchor="middle" class="section-lbl">두 번째 방문</text>
+
+  <line x1="122" y1="354" x2="338" y2="354" stroke="#bbb" stroke-width="1.25" marker-end="url(#bc-a)"/>
+  <text x="230" y="348" text-anchor="middle" class="msg">디스크 캐시 확인</text>
+
+  <line x1="338" y1="390" x2="122" y2="390" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#bc-a)"/>
+  <text x="230" y="378" text-anchor="middle" class="msg">캐시에서 직접 로드</text>
+  <text x="230" y="396" text-anchor="middle" class="msg">(네트워크 요청 없음)</text>
+
+  <rect x="40" y="424" width="160" height="40" rx="6" class="fast"/>
+  <text x="120" y="448" text-anchor="middle" class="lbl">빠른 페이지 로딩</text>
+
+  <rect x="40"  y="560" width="160" height="34" rx="6" class="actor"/>
+  <text x="120" y="583" text-anchor="middle" class="lbl">브라우저</text>
+  <rect x="260" y="560" width="160" height="34" rx="6" class="actor"/>
+  <text x="340" y="583" text-anchor="middle" class="lbl">디스크 캐시</text>
+  <rect x="480" y="560" width="160" height="34" rx="6" class="actor"/>
+  <text x="560" y="583" text-anchor="middle" class="lbl">서버</text>
+</svg>

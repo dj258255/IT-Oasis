@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 660" role="img" aria-label="epoll 기반 멀티플렉싱 - 단일 스레드로 epoll_wait 호출하여 이벤트 리스트 가져오고, 이벤트마다 readable/writable 체크 후 handleRead/handleWrite로 논블로킹 처리">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .top { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.5; }
+      .call { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.5; }
+      .loop { fill: rgba(186, 104, 200, 0.2); stroke: #BA68C8; stroke-width: 1.5; }
+      .decision { fill: rgba(186, 104, 200, 0.22); stroke: #BA68C8; stroke-width: 1.5; }
+      .handle { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.5; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .code { font: 500 12px "Consolas", "Menlo", monospace; fill: #e0e0e0; }
+      .sub { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+    </style>
+    <marker id="ep-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#888"/>
+    </marker>
+  </defs>
+  <rect width="540" height="660" class="bg"/>
+  <text x="270" y="28" text-anchor="middle" class="title">Multiplexing 기반 동시성 (epoll)</text>
+
+  <rect x="40" y="54" width="200" height="44" rx="8" class="top"/>
+  <text x="140" y="73" text-anchor="middle" class="lbl">단일 스레드</text>
+  <text x="140" y="91" text-anchor="middle" class="sub">전체 이벤트 처리</text>
+
+  <rect x="300" y="54" width="200" height="44" rx="8" class="top"/>
+  <text x="400" y="73" text-anchor="middle" class="lbl">사용 스레드: 1</text>
+  <text x="400" y="91" text-anchor="middle" class="sub">(최소 자원)</text>
+
+  <line x1="270" y1="108" x2="270" y2="128" stroke="#888" stroke-width="1.5" marker-end="url(#ep-a)"/>
+
+  <rect x="140" y="135" width="260" height="50" rx="8" class="call"/>
+  <text x="270" y="157" text-anchor="middle" class="lbl">epoll_wait 호출</text>
+  <text x="270" y="175" text-anchor="middle" class="code">epoll_wait(fd, events, ...)</text>
+  <line x1="270" y1="185" x2="270" y2="205" stroke="#888" stroke-width="1.5" marker-end="url(#ep-a)"/>
+
+  <rect x="140" y="212" width="260" height="46" rx="8" class="call"/>
+  <text x="270" y="233" text-anchor="middle" class="lbl">이벤트 목록 반환</text>
+  <text x="270" y="250" text-anchor="middle" class="sub">(준비된 fd만 돌아옴)</text>
+  <line x1="270" y1="258" x2="270" y2="278" stroke="#888" stroke-width="1.5" marker-end="url(#ep-a)"/>
+
+  <rect x="140" y="285" width="260" height="42" rx="8" class="loop"/>
+  <text x="270" y="310" text-anchor="middle" class="code">for event in events</text>
+  <line x1="270" y1="327" x2="270" y2="345" stroke="#888" stroke-width="1.5" marker-end="url(#ep-a)"/>
+
+  <polygon points="270,352 380,395 270,438 160,395" class="decision"/>
+  <text x="270" y="392" text-anchor="middle" class="lbl">readable?</text>
+
+  <text x="180" y="455" class="sub">Yes</text>
+  <path d="M 190 420 C 150 440, 100 450, 80 470" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#ep-a)"/>
+  <rect x="20" y="475" width="180" height="44" rx="8" class="handle"/>
+  <text x="110" y="494" text-anchor="middle" class="lbl">handleRead</text>
+  <text x="110" y="512" text-anchor="middle" class="sub">논블로킹 읽기 처리</text>
+
+  <text x="345" y="455" class="sub">No</text>
+  <path d="M 350 420 C 390 440, 440 450, 460 470" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#ep-a)"/>
+
+  <polygon points="470,478 520,508 470,538 420,508" class="decision"/>
+  <text x="470" y="513" text-anchor="middle" class="lbl">writable?</text>
+
+  <text x="470" y="560" text-anchor="middle" class="sub">Yes</text>
+  <line x1="470" y1="538" x2="470" y2="570" stroke="#888" stroke-width="1.5" marker-end="url(#ep-a)"/>
+  <rect x="380" y="575" width="180" height="44" rx="8" class="handle"/>
+  <text x="470" y="594" text-anchor="middle" class="lbl">handleWrite</text>
+  <text x="470" y="612" text-anchor="middle" class="sub">논블로킹 쓰기 처리</text>
+
+  <path d="M 110 519 C 110 620, 200 640, 240 640" stroke="#888" stroke-width="1.5" fill="none"/>
+  <path d="M 470 619 C 470 640, 330 640, 300 640" stroke="#888" stroke-width="1.5" fill="none"/>
+  <path d="M 270 640 C 270 620, 530 600, 530 180" stroke="#888" stroke-width="1.5" fill="none" marker-end="url(#ep-a)"/>
+  <text x="460" y="650" class="sub">loop</text>
+</svg>

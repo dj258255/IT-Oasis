@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 900" role="img" aria-label="Tomcat 7 Keep-Alive 문제 - HTML 요청/응답 후 5초 대기 스레드 점유 중, CSS 요청/응답 후 다시 5초 대기 스레드 점유 중, JS 요청/응답 진행. 문제: 대기 시간 동안 스레드 계속 묶여있음, 10초 동안 1개 스레드 낭비, 동시 접속자 많으면 스레드 고갈">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .step-req { fill: rgba(186, 104, 200, 0.2); stroke: #BA68C8; stroke-width: 1.25; }
+      .step-ok { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 107, 107, 0.24); stroke: #FF6B6B; stroke-width: 1.5; }
+      .problem { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.5; }
+      .client { fill: rgba(100, 181, 246, 0.22); stroke: #64B5F6; stroke-width: 1.25; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .sub { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #cccccc; }
+      .warn { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #ffcccb; }
+    </style>
+    <marker id="bio2-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="420" height="900" class="bg"/>
+  <text x="210" y="28" text-anchor="middle" class="title">Keep-Alive와 스레드 점유</text>
+
+  <rect x="110" y="50" width="200" height="34" rx="6" class="client"/>
+  <text x="210" y="71" text-anchor="middle" class="lbl">사용자 브라우저</text>
+  <line x1="210" y1="84" x2="210" y2="100" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="106" width="200" height="34" rx="6" class="step-req"/>
+  <text x="210" y="127" text-anchor="middle" class="lbl">연결 수립</text>
+  <line x1="210" y1="140" x2="210" y2="156" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="162" width="200" height="34" rx="6" class="step-req"/>
+  <text x="210" y="183" text-anchor="middle" class="lbl">HTML 요청</text>
+  <line x1="210" y1="196" x2="210" y2="212" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="218" width="200" height="34" rx="6" class="step-ok"/>
+  <text x="210" y="239" text-anchor="middle" class="lbl">HTML 응답 받음</text>
+  <line x1="210" y1="252" x2="210" y2="268" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="100" y="274" width="220" height="50" rx="8" class="wait"/>
+  <text x="210" y="298" text-anchor="middle" class="warn">5초 대기</text>
+  <text x="210" y="316" text-anchor="middle" class="sub">스레드 점유 중</text>
+  <line x1="210" y1="324" x2="210" y2="340" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="346" width="200" height="44" rx="6" class="step-req"/>
+  <text x="210" y="369" text-anchor="middle" class="lbl">같은 연결로 CSS 요청</text>
+  <line x1="210" y1="390" x2="210" y2="406" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="412" width="200" height="34" rx="6" class="step-ok"/>
+  <text x="210" y="433" text-anchor="middle" class="lbl">CSS 응답 받음</text>
+  <line x1="210" y1="446" x2="210" y2="462" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="100" y="468" width="220" height="50" rx="8" class="wait"/>
+  <text x="210" y="492" text-anchor="middle" class="warn">5초 대기</text>
+  <text x="210" y="510" text-anchor="middle" class="sub">스레드 점유 중</text>
+  <line x1="210" y1="518" x2="210" y2="534" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="540" width="200" height="44" rx="6" class="step-req"/>
+  <text x="210" y="563" text-anchor="middle" class="lbl">같은 연결로 JS 요청</text>
+  <line x1="210" y1="584" x2="210" y2="600" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="110" y="606" width="200" height="34" rx="6" class="step-ok"/>
+  <text x="210" y="627" text-anchor="middle" class="lbl">JS 응답 받음</text>
+
+  <line x1="210" y1="660" x2="210" y2="680" stroke="#888" stroke-width="1.5" marker-end="url(#bio2-a)"/>
+
+  <rect x="50" y="684" width="320" height="160" rx="10" class="problem"/>
+  <text x="210" y="714" text-anchor="middle" class="warn">문제점</text>
+  <text x="210" y="742" text-anchor="middle" class="sub">대기 시간 동안 스레드 계속 묶임</text>
+  <text x="210" y="770" text-anchor="middle" class="sub">10초 동안 스레드 1개 낭비</text>
+  <text x="210" y="798" text-anchor="middle" class="sub">동시 접속자 많으면 스레드 고갈</text>
+</svg>

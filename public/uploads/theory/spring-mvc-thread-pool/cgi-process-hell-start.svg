@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-label="CGI 방식 동작 - 사용자가 HTTP 요청하면 웹서버가 hello.cgi 프로세스 생성 및 실행, DB 조회 후 HTML 생성하여 응답 반환, 요청마다 프로세스 종료">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .terminated { fill: rgba(255, 238, 215, 0.15); stroke: #FFB74D; stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="pg-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="800" height="560" class="bg"/>
+  <text x="400" y="28" text-anchor="middle" class="title">CGI 방식 요청 처리</text>
+
+  <rect x="30"  y="50" width="130" height="34" rx="6" class="actor"/>
+  <text x="95" y="73" text-anchor="middle" class="lbl">사용자</text>
+  <rect x="220" y="50" width="130" height="34" rx="6" class="actor"/>
+  <text x="285" y="73" text-anchor="middle" class="lbl">웹 서버</text>
+  <rect x="410" y="50" width="150" height="34" rx="6" class="actor"/>
+  <text x="485" y="73" text-anchor="middle" class="lbl">hello.cgi 프로세스</text>
+  <rect x="620" y="50" width="150" height="34" rx="6" class="actor"/>
+  <text x="695" y="73" text-anchor="middle" class="lbl">데이터베이스</text>
+  <line x1="95" y1="84" x2="95" y2="520" class="lifeline"/>
+  <line x1="285" y1="84" x2="285" y2="520" class="lifeline"/>
+  <line x1="485" y1="84" x2="485" y2="520" class="lifeline"/>
+  <line x1="695" y1="84" x2="695" y2="520" class="lifeline"/>
+
+  <line x1="97" y1="112" x2="283" y2="112" stroke="#bbb" stroke-width="1.25" marker-end="url(#pg-a)"/>
+  <text x="190" y="106" text-anchor="middle" class="msg">HTTP 요청 (/cgi-bin/hello.cgi)</text>
+
+  <line x1="287" y1="150" x2="483" y2="150" stroke="#bbb" stroke-width="1.25" marker-end="url(#pg-a)"/>
+  <text x="385" y="144" text-anchor="middle" class="msg">프로세스 생성 및 실행</text>
+
+  <line x1="487" y1="188" x2="693" y2="188" stroke="#bbb" stroke-width="1.25" marker-end="url(#pg-a)"/>
+  <text x="590" y="182" text-anchor="middle" class="msg">DB 조회</text>
+
+  <line x1="693" y1="226" x2="487" y2="226" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#pg-a)"/>
+  <text x="590" y="220" text-anchor="middle" class="msg">조회 결과 반환</text>
+
+  <path d="M 485 256 C 520 264, 520 284, 486 292" stroke="#bbb" stroke-width="1.25" fill="none" marker-end="url(#pg-a)"/>
+  <text x="545" y="276" text-anchor="middle" class="msg">데이터 계산 및 처리</text>
+
+  <path d="M 485 316 C 520 324, 520 344, 486 352" stroke="#bbb" stroke-width="1.25" fill="none" marker-end="url(#pg-a)"/>
+  <text x="535" y="336" text-anchor="middle" class="msg">HTML 생성</text>
+
+  <line x1="483" y1="376" x2="287" y2="376" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#pg-a)"/>
+  <text x="385" y="370" text-anchor="middle" class="msg">HTML 응답 반환</text>
+
+  <rect x="420" y="392" width="140" height="30" rx="6" class="terminated"/>
+  <text x="490" y="412" text-anchor="middle" class="msg">프로세스 종료</text>
+
+  <line x1="283" y1="448" x2="97" y2="448" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#pg-a)"/>
+  <text x="190" y="442" text-anchor="middle" class="msg">HTTP 응답 (HTML)</text>
+
+  <rect x="30"  y="482" width="130" height="34" rx="6" class="actor"/>
+  <text x="95" y="505" text-anchor="middle" class="lbl">사용자</text>
+  <rect x="220" y="482" width="130" height="34" rx="6" class="actor"/>
+  <text x="285" y="505" text-anchor="middle" class="lbl">웹 서버</text>
+</svg>

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 900" role="img" aria-label="웹 서버 진화 - CGI(1990초) → 서블릿(1997~) → BIO 톰캣(~2014) → NIO 톰캣(2014~) 단계별 발전">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .stage-cgi { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.5; }
+      .stage-servlet { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.5; }
+      .stage-bio { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .stage-nio { fill: rgba(76, 175, 80, 0.24); stroke: #4CAF50; stroke-width: 1.5; }
+      .item { fill: rgba(100, 181, 246, 0.14); stroke: #64B5F6; stroke-width: 1.25; }
+      .dev { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .title-stage { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .lbl { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="ev-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#888"/></marker>
+  </defs>
+  <rect width="360" height="900" class="bg"/>
+  <text x="180" y="26" text-anchor="middle" class="title">CGI → Servlet → NIO 진화</text>
+
+  <rect x="40" y="48" width="280" height="160" rx="10" class="stage-cgi"/>
+  <text x="180" y="72" text-anchor="middle" class="title-stage">CGI (1990년대 초)</text>
+  <rect x="65" y="86" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="106" text-anchor="middle" class="lbl">요청당 프로세스 생성</text>
+  <rect x="65" y="126" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="146" text-anchor="middle" class="lbl">동시 접속 수십 명</text>
+  <rect x="65" y="166" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="186" text-anchor="middle" class="lbl">메모리 / CPU 폭발</text>
+
+  <rect x="140" y="216" width="80" height="26" rx="6" class="dev"/>
+  <text x="180" y="235" text-anchor="middle" class="lbl">발전</text>
+  <line x1="180" y1="242" x2="180" y2="254" stroke="#888" stroke-width="1.5" marker-end="url(#ev-a)"/>
+
+  <rect x="40" y="258" width="280" height="160" rx="10" class="stage-servlet"/>
+  <text x="180" y="282" text-anchor="middle" class="title-stage">서블릿 (1997~)</text>
+  <rect x="65" y="296" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="316" text-anchor="middle" class="lbl">요청당 스레드 할당</text>
+  <rect x="65" y="336" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="356" text-anchor="middle" class="lbl">스레드 풀로 재사용</text>
+  <rect x="65" y="376" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="396" text-anchor="middle" class="lbl">동시 접속 수백 명</text>
+
+  <rect x="140" y="426" width="80" height="26" rx="6" class="dev"/>
+  <text x="180" y="445" text-anchor="middle" class="lbl">발전</text>
+  <line x1="180" y1="452" x2="180" y2="464" stroke="#888" stroke-width="1.5" marker-end="url(#ev-a)"/>
+
+  <rect x="40" y="468" width="280" height="160" rx="10" class="stage-bio"/>
+  <text x="180" y="492" text-anchor="middle" class="title-stage">BIO 톰캣 (~2014)</text>
+  <rect x="65" y="506" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="526" text-anchor="middle" class="lbl">연결당 스레드 점유</text>
+  <rect x="65" y="546" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="566" text-anchor="middle" class="lbl">Keep-Alive 중에도 스레드 차지</text>
+  <rect x="65" y="586" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="606" text-anchor="middle" class="lbl">최대 200개 동시 연결</text>
+
+  <rect x="140" y="636" width="80" height="26" rx="6" class="dev"/>
+  <text x="180" y="655" text-anchor="middle" class="lbl">발전</text>
+  <line x1="180" y1="662" x2="180" y2="674" stroke="#888" stroke-width="1.5" marker-end="url(#ev-a)"/>
+
+  <rect x="40" y="678" width="280" height="200" rx="10" class="stage-nio"/>
+  <text x="180" y="702" text-anchor="middle" class="title-stage">NIO 톰캣 (2014~)</text>
+  <rect x="65" y="716" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="736" text-anchor="middle" class="lbl">Selector로 연결 관리</text>
+  <rect x="65" y="756" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="776" text-anchor="middle" class="lbl">데이터 있을 때만 워커 스레드 할당</text>
+  <rect x="65" y="796" width="230" height="32" rx="6" class="item"/>
+  <text x="180" y="816" text-anchor="middle" class="lbl">200개 워커 스레드 · 8192개 동시 연결</text>
+</svg>

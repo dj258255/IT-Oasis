@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 580" role="img" aria-label="ReentrantLock 재진입 - 같은 스레드가 outerMethod에서 lock 획득 후 innerMethod 호출해서 다시 lock 획득, 카운트가 증가했다가 각 unlock으로 감소해 0이 되면 해제">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .state-1 { fill: rgba(255, 183, 77, 0.2); stroke: #FFB74D; stroke-width: 1.25; }
+      .state-2 { fill: rgba(255, 107, 107, 0.22); stroke: #FF6B6B; stroke-width: 1.25; }
+      .state-0 { fill: rgba(76, 175, 80, 0.22); stroke: #4CAF50; stroke-width: 1.25; }
+      .code-block { fill: rgba(255, 238, 215, 0.1); stroke: rgba(255,238,215,0.35); stroke-width: 1.25; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 12px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="re-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="640" height="580" class="bg"/>
+  <text x="320" y="28" text-anchor="middle" class="title">ReentrantLock · 재진입 가능</text>
+
+  <rect x="30"  y="50" width="130" height="34" rx="6" class="actor"/>
+  <text x="95" y="73" text-anchor="middle" class="lbl">outerMethod</text>
+  <rect x="210" y="50" width="130" height="34" rx="6" class="actor"/>
+  <text x="275" y="73" text-anchor="middle" class="lbl">ReentrantLock</text>
+  <rect x="390" y="50" width="130" height="34" rx="6" class="actor"/>
+  <text x="455" y="73" text-anchor="middle" class="lbl">innerMethod</text>
+  <line x1="95"  y1="84" x2="95"  y2="550" class="lifeline"/>
+  <line x1="275" y1="84" x2="275" y2="550" class="lifeline"/>
+  <line x1="455" y1="84" x2="455" y2="550" class="lifeline"/>
+
+  <line x1="95" y1="112" x2="273" y2="112" stroke="#bbb" stroke-width="1.25" marker-end="url(#re-a)"/>
+  <text x="180" y="106" text-anchor="middle" class="msg">1. outerMethod 호출 · lock()</text>
+
+  <rect x="210" y="124" width="130" height="30" rx="6" class="state-1"/>
+  <text x="275" y="144" text-anchor="middle" class="msg">Count: 1</text>
+  <text x="355" y="144" class="msg">Owner: Thread</text>
+
+  <rect x="30" y="170" width="180" height="30" rx="6" class="code-block"/>
+  <text x="120" y="190" text-anchor="middle" class="msg">System.out.println("outer")</text>
+
+  <line x1="95" y1="220" x2="453" y2="220" stroke="#bbb" stroke-width="1.25" marker-end="url(#re-a)"/>
+  <text x="280" y="214" text-anchor="middle" class="msg">2. innerMethod() 호출</text>
+
+  <line x1="455" y1="246" x2="277" y2="246" stroke="#bbb" stroke-width="1.25" marker-end="url(#re-a)"/>
+  <text x="360" y="240" text-anchor="middle" class="msg">lock() 재호출</text>
+
+  <rect x="210" y="258" width="130" height="30" rx="6" class="state-2"/>
+  <text x="275" y="278" text-anchor="middle" class="msg">Count: 2 (재진입)</text>
+  <text x="355" y="278" class="msg">Owner: 같은 Thread</text>
+
+  <rect x="390" y="300" width="180" height="30" rx="6" class="code-block"/>
+  <text x="480" y="320" text-anchor="middle" class="msg">System.out.println("inner")</text>
+
+  <line x1="455" y1="352" x2="277" y2="352" stroke="#bbb" stroke-width="1.25" marker-end="url(#re-a)"/>
+  <text x="360" y="346" text-anchor="middle" class="msg">3. unlock() (inner 종료)</text>
+  <rect x="210" y="364" width="130" height="30" rx="6" class="state-1"/>
+  <text x="275" y="384" text-anchor="middle" class="msg">Count: 1</text>
+
+  <line x1="95" y1="416" x2="273" y2="416" stroke="#bbb" stroke-width="1.25" marker-end="url(#re-a)"/>
+  <text x="180" y="410" text-anchor="middle" class="msg">4. unlock() (outer 종료)</text>
+  <rect x="210" y="428" width="130" height="34" rx="6" class="state-0"/>
+  <text x="275" y="444" text-anchor="middle" class="msg">Count: 0</text>
+  <text x="275" y="458" text-anchor="middle" class="msg">(완전 해제)</text>
+
+  <rect x="80" y="490" width="480" height="46" rx="8" class="code-block"/>
+  <text x="320" y="515" text-anchor="middle" class="msg">같은 스레드가 여러 번 lock 가능, 획득 횟수만큼 unlock해야 해제됨</text>
+</svg>

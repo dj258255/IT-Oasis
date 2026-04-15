@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 720" role="img" aria-label="재고 차감 Lost Update 문제 - 트랜잭션 A/B가 동시에 stock=10 읽기, A가 7개 차감 후 stock=3 commit, B가 5개 차감 후 stock=5 commit, 최종 재고 5인데 실제로는 -2여야 함, Lost Update 발생">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .state { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+    </style>
+    <marker id="ps-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="660" height="720" class="bg"/>
+  <text x="330" y="28" text-anchor="middle" class="title">재고 차감 — Lost Update</text>
+
+  <rect x="30" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="110" y="73" text-anchor="middle" class="lbl">트랜잭션A</text>
+  <rect x="250" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="330" y="73" text-anchor="middle" class="lbl">DB</text>
+  <rect x="470" y="50" width="160" height="34" rx="6" class="actor"/>
+  <text x="550" y="73" text-anchor="middle" class="lbl">트랜잭션B</text>
+  <line x1="110" y1="84" x2="110" y2="690" class="lifeline"/>
+  <line x1="330" y1="84" x2="330" y2="690" class="lifeline"/>
+  <line x1="550" y1="84" x2="550" y2="690" class="lifeline"/>
+
+  <rect x="240" y="100" width="180" height="32" rx="6" class="state"/>
+  <text x="330" y="120" text-anchor="middle" class="msg">초기 재고: 10개</text>
+
+  <line x1="112" y1="160" x2="328" y2="160" stroke="#bbb" stroke-width="1.25" marker-end="url(#ps-a)"/>
+  <text x="220" y="154" text-anchor="middle" class="msg">findById(1)</text>
+  <line x1="328" y1="184" x2="112" y2="184" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#ps-a)"/>
+  <text x="220" y="178" text-anchor="middle" class="msg">stock = 10</text>
+
+  <line x1="548" y1="216" x2="332" y2="216" stroke="#bbb" stroke-width="1.25" marker-end="url(#ps-a)"/>
+  <text x="440" y="210" text-anchor="middle" class="msg">findById(1)</text>
+  <line x1="328" y1="240" x2="548" y2="240" stroke="#bbb" stroke-width="1.25" stroke-dasharray="4 4" marker-end="url(#ps-a)"/>
+  <text x="440" y="234" text-anchor="middle" class="msg">stock = 10 (동시 읽기)</text>
+
+  <line x1="112" y1="280" x2="328" y2="280" stroke="#bbb" stroke-width="1.25" marker-end="url(#ps-a)"/>
+  <text x="220" y="274" text-anchor="middle" class="msg">decreaseStock(7)</text>
+  <rect x="240" y="290" width="180" height="32" rx="6" class="state"/>
+  <text x="330" y="310" text-anchor="middle" class="msg">stock = 3</text>
+
+  <line x1="112" y1="350" x2="328" y2="350" stroke="#bbb" stroke-width="1.25" marker-end="url(#ps-a)"/>
+  <text x="220" y="344" text-anchor="middle" class="msg">commit</text>
+
+  <line x1="548" y1="394" x2="332" y2="394" stroke="#bbb" stroke-width="1.25" marker-end="url(#ps-a)"/>
+  <text x="440" y="388" text-anchor="middle" class="msg">decreaseStock(5)</text>
+  <rect x="240" y="404" width="180" height="32" rx="6" class="danger"/>
+  <text x="330" y="424" text-anchor="middle" class="msg">stock = 5 (잘못된 결과)</text>
+
+  <line x1="548" y1="466" x2="332" y2="466" stroke="#bbb" stroke-width="1.25" marker-end="url(#ps-a)"/>
+  <text x="440" y="460" text-anchor="middle" class="msg">commit</text>
+
+  <rect x="120" y="500" width="420" height="100" rx="10" class="danger"/>
+  <text x="330" y="528" text-anchor="middle" class="lbl">최종 재고: 5개</text>
+  <text x="330" y="552" text-anchor="middle" class="msg">실제로는 -2여야 함</text>
+  <text x="330" y="572" text-anchor="middle" class="msg">Lost Update 문제 발생</text>
+</svg>

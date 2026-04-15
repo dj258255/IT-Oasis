@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 700" role="img" aria-label="데드락 발생 조건 - 스레드1이 accountA_lock 획득, 스레드2가 accountB_lock 획득, 스레드1이 accountB_lock 시도해 대기, 스레드2가 accountA_lock 시도해 대기, 양쪽 무한 대기">
+  <defs>
+    <style>
+      .bg { fill: #1a1a2e; }
+      .title { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .actor { fill: rgba(100, 181, 246, 0.2); stroke: #64B5F6; stroke-width: 1.25; }
+      .stage { fill: rgba(255, 238, 215, 0.14); stroke: rgba(255,238,215,0.3); stroke-width: 1; }
+      .lock { fill: rgba(255, 238, 215, 0.18); stroke: #FFB74D; stroke-width: 1.25; }
+      .wait { fill: rgba(255, 183, 77, 0.22); stroke: #FFB74D; stroke-width: 1.25; }
+      .danger { fill: rgba(255, 107, 107, 0.28); stroke: #FF6B6B; stroke-width: 1.5; }
+      .lifeline { stroke: #666; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 12.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .msg { font: 500 11.5px "Segoe UI", Arial, sans-serif; fill: #e0e0e0; }
+      .stage-lbl { font: 700 11.5px "Segoe UI", Arial, sans-serif; fill: #FFB74D; }
+    </style>
+    <marker id="oc-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bbb"/></marker>
+  </defs>
+  <rect width="760" height="700" class="bg"/>
+  <text x="380" y="28" text-anchor="middle" class="title">데드락 발생 조건</text>
+
+  <rect x="20"  y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="90" y="73" text-anchor="middle" class="lbl">스레드 1</text>
+  <rect x="200" y="50" width="160" height="34" rx="6" class="lock"/>
+  <text x="280" y="73" text-anchor="middle" class="lbl">accountA_lock</text>
+  <rect x="400" y="50" width="160" height="34" rx="6" class="lock"/>
+  <text x="480" y="73" text-anchor="middle" class="lbl">accountB_lock</text>
+  <rect x="600" y="50" width="140" height="34" rx="6" class="actor"/>
+  <text x="670" y="73" text-anchor="middle" class="lbl">스레드 2</text>
+  <line x1="90" y1="84" x2="90" y2="660" class="lifeline"/>
+  <line x1="280" y1="84" x2="280" y2="660" class="lifeline"/>
+  <line x1="480" y1="84" x2="480" y2="660" class="lifeline"/>
+  <line x1="670" y1="84" x2="670" y2="660" class="lifeline"/>
+
+  <rect x="20" y="100" width="720" height="22" rx="4" class="stage"/>
+  <text x="380" y="116" text-anchor="middle" class="stage-lbl">시간: 0ms</text>
+
+  <line x1="92" y1="146" x2="278" y2="146" stroke="#bbb" stroke-width="1.25" marker-end="url(#oc-a)"/>
+  <text x="185" y="140" text-anchor="middle" class="msg">lock()</text>
+  <rect x="200" y="156" width="160" height="26" rx="6" class="lock"/>
+  <text x="280" y="174" text-anchor="middle" class="msg">스레드1이 획득</text>
+
+  <rect x="20" y="194" width="720" height="22" rx="4" class="stage"/>
+  <text x="380" y="210" text-anchor="middle" class="stage-lbl">시간: 1ms</text>
+
+  <line x1="668" y1="240" x2="482" y2="240" stroke="#bbb" stroke-width="1.25" marker-end="url(#oc-a)"/>
+  <text x="575" y="234" text-anchor="middle" class="msg">lock()</text>
+  <rect x="400" y="250" width="160" height="26" rx="6" class="lock"/>
+  <text x="480" y="268" text-anchor="middle" class="msg">스레드2가 획득</text>
+
+  <rect x="20" y="288" width="720" height="22" rx="4" class="stage"/>
+  <text x="380" y="304" text-anchor="middle" class="stage-lbl">시간: 2ms</text>
+
+  <line x1="92" y1="334" x2="478" y2="334" stroke="#bbb" stroke-width="1.25" marker-end="url(#oc-a)"/>
+  <text x="285" y="328" text-anchor="middle" class="msg">lock() 시도</text>
+  <rect x="20" y="346" width="180" height="40" rx="6" class="wait"/>
+  <text x="110" y="368" text-anchor="middle" class="msg">대기 중</text>
+  <text x="110" y="382" text-anchor="middle" class="msg">accountB는 스레드2 소유</text>
+
+  <rect x="20" y="394" width="720" height="22" rx="4" class="stage"/>
+  <text x="380" y="410" text-anchor="middle" class="stage-lbl">시간: 3ms</text>
+
+  <line x1="668" y1="440" x2="282" y2="440" stroke="#bbb" stroke-width="1.25" marker-end="url(#oc-a)"/>
+  <text x="475" y="434" text-anchor="middle" class="msg">lock() 시도</text>
+  <rect x="560" y="452" width="180" height="40" rx="6" class="wait"/>
+  <text x="650" y="474" text-anchor="middle" class="msg">대기 중</text>
+  <text x="650" y="488" text-anchor="middle" class="msg">accountA는 스레드1 소유</text>
+
+  <rect x="100" y="518" width="560" height="100" rx="10" class="danger"/>
+  <text x="380" y="546" text-anchor="middle" class="lbl">데드락 발생</text>
+  <text x="380" y="568" text-anchor="middle" class="msg">스레드1: accountA 보유, accountB 대기</text>
+  <text x="380" y="586" text-anchor="middle" class="msg">스레드2: accountB 보유, accountA 대기</text>
+  <text x="380" y="606" text-anchor="middle" class="msg">서로 영원히 대기</text>
+</svg>
