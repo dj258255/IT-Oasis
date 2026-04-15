@@ -15,16 +15,9 @@ tags:
 category: theory/JVM-Memory
 draft: false
 coverImage: "/uploads/theory/es-memory/cover-2.svg"
+series: "JVM 메모리"
+seriesOrder: 2
 ---
-
-> **JVM 메모리 시리즈**
->
-> - [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc)
-> - [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
-> - **GC 알고리즘과 Stop-the-World** (현재 글)
-> - [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
-> - [Elasticsearch 메모리 모델](/blog/theory/es-memory-05-elasticsearch)
 
 > 본 문서는 **Oracle JDK 17 HotSpot VM** + OpenJDK JEP 1차 소스 기준이에요. Safepoint·Mark-Sweep 같은 **일반론**은 [0편](/blog/theory/jvm-and-gc)에서 간단히 다뤘고, 이 글은 **Elasticsearch 운영에 직접 영향을 주는 G1/ZGC/Shenandoah**와 **Oracle JDK 빌드 포함 여부** 같은 실무 관점에 집중해요.
 

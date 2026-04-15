@@ -14,16 +14,9 @@ tags:
 category: theory/JVM-Memory
 draft: false
 coverImage: "/uploads/theory/es-memory/cover-1.svg"
+series: "JVM 메모리"
+seriesOrder: 1
 ---
-
-> **JVM 메모리 시리즈**
->
-> - [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc)
-> - **JVM Heap의 세대별 구조** (현재 글)
-> - [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
-> - [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
-> - [Elasticsearch 메모리 모델](/blog/theory/es-memory-05-elasticsearch)
 
 > 본 문서는 **Oracle JDK 17 HotSpot VM** 기준이에요. 버전에 따라 default 값이 다르므로, 다른 버전을 쓸 경우 각 버전 문서를 교차 확인해야 해요. JVM 아키텍처 전반(클래스 로더, Runtime Data Areas, Execution Engine, JIT 등)은 [0편](/blog/theory/jvm-and-gc)에서 다뤘고, 이 글은 그중에서 **Elasticsearch 운영에 직결되는 Heap 구조**만 발췌·심화한 버전이에요.
 

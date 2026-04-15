@@ -14,16 +14,9 @@ tags:
 category: theory/JVM-Memory
 draft: false
 coverImage: "/uploads/theory/es-memory/cover-3.svg"
+series: "JVM 메모리"
+seriesOrder: 3
 ---
-
-> **JVM 메모리 시리즈**
->
-> - [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc)
-> - [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
-> - [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
-> - **JVM Off-heap과 Direct Memory** (현재 글)
-> - [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
-> - [Elasticsearch 메모리 모델](/blog/theory/es-memory-05-elasticsearch)
 
 > 본 문서는 **Oracle JDK 17 / 21 ByteBuffer API 공식 문서**와 **HotSpot VM 커맨드라인 레퍼런스** 를 1차 소스로 해요. 1·2편이 `Xmx` **안쪽**의 메모리(Heap과 GC)를 다뤘다면, 이 글은 `Xmx` **바깥**의 메모리를 다뤄요.
 

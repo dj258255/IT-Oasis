@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import BlogSidebar from '../../components/BlogSidebar.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
 import Giscus from '../../components/Giscus.astro';
+import SeriesNav from '../../components/SeriesNav.astro';
 import { render } from 'astro:content';
 import { getReadingTime, parseCategory, splitContent, translateCategory } from '../../lib/utils';
 import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
@@ -149,6 +150,11 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
 
       <!-- Divider -->
       <div class="divider mb-8 sm:mb-10"></div>
+
+      <!-- Series navigation (auto-rendered when frontmatter has `series`) -->
+      {post.data.series && (
+        <SeriesNav currentPostId={post.id} series={post.data.series} />
+      )}
 
       <!-- Inline TOC (mobile only when sidebar exists) -->
       {hasToc && (

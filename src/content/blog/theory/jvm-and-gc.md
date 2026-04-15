@@ -14,16 +14,9 @@ tags:
 category: theory/JVM-Memory
 draft: false
 coverImage: "/uploads/theory/es-memory/cover-0.svg"
+series: "JVM 메모리"
+seriesOrder: 0
 ---
-
-> **JVM 메모리 시리즈**
->
-> - **JVM과 Garbage Collection 이해하기** (현재 글)
-> - [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
-> - [GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
-> - [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
-> - [Elasticsearch 메모리 모델](/blog/theory/es-memory-05-elasticsearch)
 
 ## 0. 이 글의 위치
 
@@ -395,15 +388,6 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 **이어지는 글**: [① JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap)
 
 <!-- EN -->
-
-> **JVM Memory Series**
->
-> - **Understanding JVM and Garbage Collection** (current)
-> - [JVM Heap Internals](/blog/theory/es-memory-01-jvm-heap)
-> - [GC Algorithms and Stop-the-World](/blog/theory/es-memory-02-gc)
-> - [JVM Off-heap and Direct Memory](/blog/theory/es-memory-03-off-heap)
-> - [OS Page Cache Explained](/blog/theory/es-memory-04-page-cache)
-> - [Applied to Elasticsearch](/blog/theory/es-memory-05-elasticsearch)
 
 ## 0. Where This Post Fits
 
