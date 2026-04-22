@@ -12,10 +12,10 @@ tags:
   - React
   - Spreadsheet
   - Accessibility
-category: project/IndiBalancing
-coverImage: "/uploads/project/IndiBalancing/user-feedback/cover.svg"
+category: project/Balruno
+coverImage: "/uploads/project/Balruno/user-feedback/cover.svg"
 draft: false
-series: "IndiBalancing"
+series: "Balruno"
 ---
 
 ## 프로젝트 개요

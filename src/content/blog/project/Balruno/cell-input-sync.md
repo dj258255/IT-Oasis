@@ -12,10 +12,10 @@ tags:
   - Spreadsheet
   - Fortune-Sheet
   - Optimization
-category: project/IndiBalancing
-coverImage: "/uploads/project/IndiBalancing/cell-input-sync/cover.svg"
+category: project/Balruno
+coverImage: "/uploads/project/Balruno/cell-input-sync/cover.svg"
 draft: false
-series: "IndiBalancing"
+series: "Balruno"
 ---
 
 ## 최종 결론

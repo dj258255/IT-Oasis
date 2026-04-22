@@ -6,7 +6,7 @@
   "order": 3,
   "subcategories": [
     { "name": "WikiEngine", "nameEn": "WikiEngine", "nameKo": "위키엔진", "order": 1 },
-    { "name": "IndiBalancing", "nameEn": "IndiBalancing", "nameKo": "인디밸런싱", "order": 2 },
+    { "name": "Balruno", "nameEn": "Balruno", "nameKo": "발루노", "order": 2 },
     { "name": "Tymee", "nameEn": "Tymee", "nameKo": "타이미", "order": 3 },
     { "name": "Joying", "nameEn": "RentalJoying", "nameKo": "빌려조잉", "order": 4 },
     { "name": "Orakgarak", "nameEn": "Orakgarak", "nameKo": "오락가락", "order": 5 },

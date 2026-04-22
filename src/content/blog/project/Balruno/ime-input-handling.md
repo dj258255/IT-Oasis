@@ -12,10 +12,10 @@ tags:
   - Handsontable
   - Spreadsheet
   - i18n
-category: project/IndiBalancing
+category: project/Balruno
 draft: false
-coverImage: "/uploads/project/IndiBalancing/ime-input-handling/full.png"
-series: "IndiBalancing"
+coverImage: "/uploads/project/Balruno/ime-input-handling/full.png"
+series: "Balruno"
 ---
 
 스프레드시트에서 IME(Input Method Editor) 입력을 올바르게 처리하기 위한 구현 방법을 정리해 봤어요.
@@ -116,7 +116,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 ```
 
 ## 전체 흐름
-![](/uploads/project/IndiBalancing/ime-input-handling/full.png)
+![](/uploads/project/Balruno/ime-input-handling/full.png)
 
 
 ## 참고 오픈소스
@@ -248,7 +248,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 ```
 
 ## Full Flow
-![](/uploads/project/IndiBalancing/ime-input-handling/full.png)
+![](/uploads/project/Balruno/ime-input-handling/full.png)
 
 ## Referenced Open Source
 

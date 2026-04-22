@@ -51,7 +51,7 @@ Push만 하면 자동으로 빌드/배포가 되니까, 이 부분은 딱히 신
 ### 카테고리 시스템
 
 2단계 계층 구조를 지원해요.
-`프로젝트/IndiBalancing`처럼 부모/자식 형태로 분류할 수 있고, 사이드바에서 펼쳐서 볼 수 있어요.
+`프로젝트/발루노`처럼 부모/자식 형태로 분류할 수 있고, 사이드바에서 펼쳐서 볼 수 있어요.
 카테고리별 아이콘, 정렬 순서, 한/영 이름은 JSON으로 관리하고 있어서 TinaCMS에서도 편집이 가능해요.
 
 ### 한/영 전환 (i18n)
@@ -126,7 +126,7 @@ Since it's a static site, CDN caching works well and response times are fast.
 ### Category System
 
 It supports a two-level hierarchy.
-You can classify posts in a parent/child format like `Project/IndiBalancing`, and expand them in the sidebar.
+You can classify posts in a parent/child format like `Project/Balruno`, and expand them in the sidebar.
 Category icons, sort order, and Korean/English names are managed in JSON, so they're editable from TinaCMS as well.
 
 ### Korean/English Toggle (i18n)
