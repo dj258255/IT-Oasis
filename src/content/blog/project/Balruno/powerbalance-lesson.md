@@ -9,11 +9,11 @@ tags:
   - User Feedback
   - Product
   - Game Design
-  - IndiBalancing
-category: project/IndiBalancing
-coverImage: /uploads/project/IndiBalancing/powerbalance-feedback.png
+  - Balruno
+category: project/Balruno
+coverImage: /uploads/project/Balruno/powerbalance-feedback.png
 draft: false
-series: "IndiBalancing"
+series: "Balruno"
 ---
 
 PowerBalance를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.
@@ -29,7 +29,7 @@ PowerBalance를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.
 관심을 보이는 사람은 있었지만, 실제로 들어와서 써보는 사람은 많지 않았다.
 그리고 더 중요한 건, "필요해 보인다"와 "실제로 쓰게 된다"는 전혀 다른 문제라는 점이었다.
 
-![](/uploads/project/IndiBalancing/powerbalance-feedback.png)
+![](/uploads/project/Balruno/powerbalance-feedback.png)
 
 특히 기억에 남았던 건 사용성에 대한 피드백이었다.
 기능 자체나 방향성은 흥미롭지만, 처음 켰을 때 무엇부터 해야 하는지 막막하고 진입 장벽이 높다는 반응이었다.
@@ -70,7 +70,7 @@ Some people showed interest, but very few actually tried using it.
 And that made one thing very clear:
 something that "looks useful" and something that people actually adopt are two very different things.
 
-![](/uploads/project/IndiBalancing/powerbalance-feedback.png)
+![](/uploads/project/Balruno/powerbalance-feedback.png)
 
 What stayed with me most was the feedback around usability.
 The direction and feature set seemed interesting, but people felt lost when they first opened the app and did not know what to do first.

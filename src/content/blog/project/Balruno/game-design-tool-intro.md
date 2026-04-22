@@ -1,6 +1,6 @@
 ---
-title: '인디밸런싱 - 게임 밸런스 데이터 관리 툴'
-titleEn: 'IndiBalancing - Game Balance Data Management Tool'
+title: '발루노 - 게임 밸런스 데이터 관리 툴'
+titleEn: 'Balruno - Game Balance Data Management Tool'
 description: 인디게임 개발자를 위한 웹 기반 게임 밸런스 데이터 관리 툴의 기능, 수식 체계, 시뮬레이션, 게임 엔진 연동을 소개해요.
 descriptionEn: Introduces the web-based game balance data management tool for indie developers, covering formulas, simulations, and game engine integration.
 date: 2025-12-14T00:00:00.000Z
@@ -13,20 +13,20 @@ tags:
   - Unity
   - Godot
   - Unreal
-category: project/IndiBalancing
+category: project/Balruno
 draft: false
-coverImage: "/uploads/project/IndiBalancing/game-design-tool-intro/image.png"
-series: "IndiBalancing"
+coverImage: "/uploads/project/Balruno/game-design-tool-intro/image.png"
+series: "Balruno"
 ---
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/image.png)
-![](/uploads/project/IndiBalancing/game-design-tool-intro/image-2.png)
+![](/uploads/project/Balruno/game-design-tool-intro/image.png)
+![](/uploads/project/Balruno/game-design-tool-intro/image-2.png)
 
 ---
 
 ## 프로젝트 개요
 
-인디밸런싱은 인디게임 개발자를 위한 웹 기반 게임 밸런스 데이터 관리 툴이에요. 엑셀이나 구글 시트보다 게임 개발에 특화된 시트 시스템과 수식을 제공합니다.
+발루노는 인디게임 개발자를 위한 웹 기반 게임 밸런스 데이터 관리 툴이에요. 엑셀이나 구글 시트보다 게임 개발에 특화된 시트 시스템과 수식을 제공합니다.
 
 ---
 
@@ -52,7 +52,7 @@ series: "IndiBalancing"
 - 학술자료: Csikszentmihalyi의 Flow 이론, 게임 경제학의 Faucet/Sink 모델
 - Ian Schreiber의 Game Balance Concepts 강의
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/where-study.png)
+![](/uploads/project/Balruno/game-design-tool-intro/where-study.png)
 
 추가로 실무 게임 개발 블로그에서 TTK/DPS 계산 공식, RPG 성장 곡선 설계를 참고했고, LoL 등 다수 게임의 데미지 공식(방어력 수확체감 `100/(100+DEF)`, 방어관통 시스템)을 분석했어요. 이 공식은 LoL에서 사용하는 형태이며, WoW 등 다른 게임에서는 레벨에 따라 상수가 달라지는 변형을 사용합니다.
 
@@ -85,7 +85,7 @@ series: "IndiBalancing"
 
 ### 게임 특화 시각화
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/game-specialized-visualization-created.png)
+![](/uploads/project/Balruno/game-design-tool-intro/game-specialized-visualization-created.png)
 
 1. **성장 곡선 차트**: Linear, Exponential, Logarithmic, Quadratic, S-Curve 비교
 2. **레이더 차트**: 캐릭터/아이템 능력치 비교
@@ -136,7 +136,7 @@ Unity, Godot, Unreal 코드를 자동으로 생성해요.
 | 협업 기능 없음 | 개인 사용 목적, 클라우드/팀 기능은 추후 추가 예정 |
 | 자동 밸런싱 AI 아님 | 이상치 탐지만 제공, 수치 자동 조절 기능 없음 |
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/limitations.png)
+![](/uploads/project/Balruno/game-design-tool-intro/limitations.png)
 
 ---
 
@@ -194,14 +194,14 @@ A: IndexedDB는 로컬 저장이라 인터넷 없이도 작동해요.
 
 <!-- EN -->
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/image.png)
-![](/uploads/project/IndiBalancing/game-design-tool-intro/image-2.png)
+![](/uploads/project/Balruno/game-design-tool-intro/image.png)
+![](/uploads/project/Balruno/game-design-tool-intro/image-2.png)
 
 ---
 
 ## Project Overview
 
-IndiBalancing is a web-based game balance data management tool for indie game developers. It provides a sheet system and formulas more specialized for game development than Excel or Google Sheets.
+Balruno is a web-based game balance data management tool for indie game developers. It provides a sheet system and formulas more specialized for game development than Excel or Google Sheets.
 
 ---
 
@@ -227,7 +227,7 @@ Game balancing methodology was studied based on:
 - Academic materials: Csikszentmihalyi's Flow Theory, Faucet/Sink model in game economics
 - Ian Schreiber's Game Balance Concepts lectures
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/where-study.png)
+![](/uploads/project/Balruno/game-design-tool-intro/where-study.png)
 
 Additionally, TTK/DPS calculation formulas and RPG growth curve design were referenced from game development blogs. LoL and other games' damage formulas (diminishing returns `100/(100+DEF)`, armor penetration systems) were also analyzed. This formula matches LoL's implementation; other games like WoW use variants with level-dependent constants.
 
@@ -260,7 +260,7 @@ Data auto-recalculates through cross-sheet references. Circular references trigg
 
 ### Game-Specific Visualization
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/game-specialized-visualization-created.png)
+![](/uploads/project/Balruno/game-design-tool-intro/game-specialized-visualization-created.png)
 
 1. **Growth Curve Charts**: Compare Linear, Exponential, Logarithmic, Quadratic, S-Curve
 2. **Radar Charts**: Compare character/item stats
@@ -311,7 +311,7 @@ Automatically generates code for Unity, Godot, and Unreal.
 | No collaboration features | Personal use only; cloud/team features planned |
 | Not an auto-balancing AI | Only provides anomaly detection, not automatic value adjustment |
 
-![](/uploads/project/IndiBalancing/game-design-tool-intro/limitations.png)
+![](/uploads/project/Balruno/game-design-tool-intro/limitations.png)
 
 ---
 

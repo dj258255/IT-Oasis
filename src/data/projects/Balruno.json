@@ -1,0 +1,14 @@
+{
+  "title": "발루노",
+  "titleEn": "Balruno",
+  "description": "게임 기획자를 위한 오픈소스 밸런싱 플랫폼",
+  "descriptionEn": "An open-source game balancing platform for indie game designers",
+  "image": "/uploads/project/Balruno/retrospective/title.png",
+  "tags": ["React", "TypeScript", "Zustand", "TailwindCSS", "Vercel"],
+  "category": "project",
+  "date": "2026-02-15",
+  "github": "https://github.com/dj258255/balruno",
+  "website": "https://www.balruno.com/",
+  "story": "/blog/project/balruno/balruno-retrospective",
+  "order": 4
+}

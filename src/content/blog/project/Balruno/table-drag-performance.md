@@ -12,10 +12,10 @@ tags:
   - DOM
   - Throttle
   - Spreadsheet
-category: project/IndiBalancing
-coverImage: "/uploads/project/IndiBalancing/table-drag-performance/cover.svg"
+category: project/Balruno
+coverImage: "/uploads/project/Balruno/table-drag-performance/cover.svg"
 draft: false
-series: "IndiBalancing"
+series: "Balruno"
 ---
 
 ## 1. 문제 상황 인식

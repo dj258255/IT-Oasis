@@ -1,8 +1,8 @@
 ---
-title: '인디밸런싱 - 게임 밸런싱 도구를 직접 만들다'
-titleEn: 'IndiBalancing - Building a Game Balancing Tool from Scratch'
-description: 게임 기획자를 위한 오픈소스 밸런싱 플랫폼 인디밸런싱의 개발 과정과 GDC/NDC 이론 학습 경험을 정리했습니다.
-descriptionEn: A retrospective on building IndiBalancing, an open-source game balancing platform, including learnings from GDC/NDC theory.
+title: '발루노 - 게임 밸런싱 도구를 직접 만들다'
+titleEn: 'Balruno - Building a Game Balancing Tool from Scratch'
+description: 게임 기획자를 위한 오픈소스 밸런싱 플랫폼 발루노의 개발 과정과 GDC/NDC 이론 학습 경험을 정리했습니다.
+descriptionEn: A retrospective on building Balruno, an open-source game balancing platform, including learnings from GDC/NDC theory.
 date: 2026-02-15
 tags:
   - Retrospective
@@ -10,19 +10,19 @@ tags:
   - TypeScript
   - Zustand
   - Game Design
-category: project/IndiBalancing
-coverImage: /uploads/project/IndiBalancing/retrospective/title.png
+category: project/Balruno
+coverImage: /uploads/project/Balruno/retrospective/title.png
 draft: false
-series: "IndiBalancing"
+series: "Balruno"
 ---
 
 ## 프로젝트 소개
 
-인디밸런싱은 **게임 기획자를 위한 오픈소스 밸런싱 플랫폼**입니다.
+발루노는 **게임 기획자를 위한 오픈소스 밸런싱 플랫폼**입니다.
 
 인디게임을 개발할 때 캐릭터 스탯, 무기 수치, 레벨 테이블 같은 밸런스 데이터를 엑셀로 관리하면 여러 불편함이 있습니다. 게임 특화 수식(DAMAGE, TTK, DPS 등)이 없고, 시트 간 연동이 번거롭고, JSON 내보내기도 수동입니다. 이 문제를 해결하는 웹 툴을 만들고 있습니다.
 
-![인디밸런싱](/uploads/project/IndiBalancing/retrospective/title.png)
+![발루노](/uploads/project/Balruno/retrospective/title.png)
 
 **기간**: 2025.01 - 진행 중
 **형태**: 개인 프로젝트
@@ -39,7 +39,7 @@ GDC Vault, NDC 2018 밸런스 기획 세션, Zynga 공식 자료를 찾아보면
 - **Faucet/Sink 모델**: Faucet(유입)이 Sink(소모)를 초과하면 인플레이션이 발생하므로, 둘 사이의 균형을 유지해야 한다는 것
 - **Flow 이론**: 난이도가 실력과 적절하게 맞아야 몰입 상태가 유지된다
 
-> 시장 조사 상세: [게임 밸런스 도구 시장 조사](/blog/project/indibalancing/indie-balance-tool-market-research)
+> 시장 조사 상세: [게임 밸런스 도구 시장 조사](/blog/project/balruno/indie-balance-tool-market-research)
 
 "만들면서 배우기"도 좋지만, **먼저 이론을 공부하면 시행착오를 줄일 수 있다**는 걸 이 과정에서 배웠습니다.
 
@@ -57,7 +57,7 @@ GDC Vault, NDC 2018 밸런스 기획 세션, Zynga 공식 자료를 찾아보면
 
 유닛 하나씩 수동으로 밸런스를 확인하면 시간도 오래 걸리고 누락이 생깁니다. 기준값(HP, ATK, DEF, 공속) 설정 후 역할별(탱커/딜러/서포터/밸런스) DPS/EHP 허용 범위를 정의하면, 유닛 추가 시 **자동으로 범위 이탈 여부를 표시**합니다.
 
-> 기술 포스트: [게임 디자인 도구 소개](/blog/project/indibalancing/game-design-tool-intro) · [MVP 릴리즈](/blog/project/indibalancing/indibalancing-mvp-release)
+> 기술 포스트: [게임 디자인 도구 소개](/blog/project/balruno/game-design-tool-intro) · [MVP 릴리즈](/blog/project/balruno/balruno-mvp-release)
 
 ---
 
@@ -67,13 +67,13 @@ GDC Vault, NDC 2018 밸런스 기획 세션, Zynga 공식 자료를 찾아보면
 
 셀이 많아지면 드래그가 버벅거리는 문제가 있었습니다. 가상화와 이벤트 최적화로 해결했습니다.
 
-> 상세 분석: [테이블 드래그 성능 개선](/blog/project/indibalancing/table-drag-performance)
+> 상세 분석: [테이블 드래그 성능 개선](/blog/project/balruno/table-drag-performance)
 
 ### IME 한글 입력 처리
 
 한글 입력 시 조합 중인 글자가 중복 입력되는 문제가 발생했습니다. `compositionstart`/`compositionend` 이벤트로 IME 상태를 추적해서 해결했습니다.
 
-> 상세 분석: [IME 입력 처리](/blog/project/indibalancing/ime-input-handling)
+> 상세 분석: [IME 입력 처리](/blog/project/balruno/ime-input-handling)
 
 ---
 
@@ -87,11 +87,11 @@ MVP를 배포한 상태이고, 계속 기능을 추가하고 있습니다. 개�
 
 ## About the Project
 
-IndiBalancing is an **open-source balancing platform for game designers**.
+Balruno is an **open-source balancing platform for game designers**.
 
 When developing indie games, managing balance data like character stats, weapon values, and level tables in Excel comes with several pain points. There are no game-specific formulas (DAMAGE, TTK, DPS, etc.), cross-sheet references are cumbersome, and JSON export is manual. I'm building a web tool to solve these problems.
 
-![IndiBalancing](/uploads/project/IndiBalancing/retrospective/title.png)
+![Balruno](/uploads/project/Balruno/retrospective/title.png)
 
 **Duration**: Jan 2025 – In Progress
 **Type**: Personal Project
@@ -108,7 +108,7 @@ I studied game balancing theory from GDC Vault, NDC 2018 balance design sessions
 - **Faucet/Sink Model**: When Faucets (income) exceed Sinks (spending), inflation occurs — so the two must be kept in equilibrium
 - **Flow Theory**: Difficulty must match skill level to maintain a state of flow
 
-> Market research details: [Game Balance Tool Market Research](/blog/project/indibalancing/indie-balance-tool-market-research)
+> Market research details: [Game Balance Tool Market Research](/blog/project/balruno/indie-balance-tool-market-research)
 
 "Learning by building" is great, but I learned from this process that **studying theory first can reduce trial and error**.
 
@@ -126,7 +126,7 @@ When a designer enters `=DAMAGE(100, 50)`, it instantly calculates `66.67`.
 
 Manually checking balance for each unit is time-consuming and error-prone. After setting baseline values (HP, ATK, DEF, attack speed) and defining DPS/EHP tolerance ranges by role (Tank/DPS/Support/Balanced), the validator **automatically flags units that fall outside their expected range** when added.
 
-> Technical posts: [Game Design Tool Introduction](/blog/project/indibalancing/game-design-tool-intro) · [MVP Release](/blog/project/indibalancing/indibalancing-mvp-release)
+> Technical posts: [Game Design Tool Introduction](/blog/project/balruno/game-design-tool-intro) · [MVP Release](/blog/project/balruno/balruno-mvp-release)
 
 ---
 
@@ -136,13 +136,13 @@ Manually checking balance for each unit is time-consuming and error-prone. After
 
 As the number of cells grew, dragging became sluggish. I resolved it through virtualization and event optimization.
 
-> Detailed analysis: [Table Drag Performance Improvement](/blog/project/indibalancing/table-drag-performance)
+> Detailed analysis: [Table Drag Performance Improvement](/blog/project/balruno/table-drag-performance)
 
 ### IME Korean Input Handling
 
 During Korean input, characters being composed would get duplicated. I tracked the IME state using `compositionstart`/`compositionend` events to resolve the issue.
 
-> Detailed analysis: [IME Input Handling](/blog/project/indibalancing/ime-input-handling)
+> Detailed analysis: [IME Input Handling](/blog/project/balruno/ime-input-handling)
 
 ---
 
