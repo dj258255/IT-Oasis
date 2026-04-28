@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="memBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#bfdbfe"/>
+    </linearGradient>
+    <linearGradient id="diskBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#0f172a"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#16a34a"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="520" fill="#f8fafc"/>
+
+  <text x="450" y="40" font-size="22" font-weight="700" fill="#0f172a" text-anchor="middle">STEAL + NO-FORCE 정책 — 거의 모든 현대 DB의 선택</text>
+
+  <!-- Memory (Buffer Pool) -->
+  <g transform="translate(60, 90)">
+    <rect width="780" height="180" rx="12" fill="url(#memBg)" stroke="#3b82f6" stroke-width="2"/>
+    <text x="20" y="32" font-size="16" font-weight="700" fill="#1e3a8a">버퍼풀 (메모리)</text>
+
+    <!-- Pages -->
+    <g transform="translate(40, 60)">
+      <rect width="120" height="90" rx="8" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+      <text x="60" y="36" font-size="13" font-weight="600" text-anchor="middle" fill="#0f172a">Page A</text>
+      <text x="60" y="58" font-size="11" text-anchor="middle" fill="#16a34a">committed</text>
+      <text x="60" y="76" font-size="11" text-anchor="middle" fill="#475569">clean</text>
+    </g>
+    <g transform="translate(180, 60)">
+      <rect width="120" height="90" rx="8" fill="#fff" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="60" y="36" font-size="13" font-weight="600" text-anchor="middle" fill="#0f172a">Page B</text>
+      <text x="60" y="58" font-size="11" text-anchor="middle" fill="#dc2626">uncommitted</text>
+      <text x="60" y="76" font-size="11" text-anchor="middle" fill="#dc2626">DIRTY</text>
+    </g>
+    <g transform="translate(320, 60)">
+      <rect width="120" height="90" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="60" y="36" font-size="13" font-weight="600" text-anchor="middle" fill="#0f172a">Page C</text>
+      <text x="60" y="58" font-size="11" text-anchor="middle" fill="#16a34a">committed</text>
+      <text x="60" y="76" font-size="11" text-anchor="middle" fill="#dc2626">DIRTY</text>
+    </g>
+
+    <!-- Note -->
+    <g transform="translate(500, 60)">
+      <rect width="240" height="90" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+      <text x="120" y="32" font-size="13" font-weight="700" text-anchor="middle" fill="#713f12">STEAL</text>
+      <text x="120" y="56" font-size="11.5" text-anchor="middle" fill="#713f12">미커밋 dirty page도</text>
+      <text x="120" y="74" font-size="11.5" text-anchor="middle" fill="#713f12">디스크로 evict 가능</text>
+    </g>
+  </g>
+
+  <!-- Arrows -->
+  <line x1="240" y1="280" x2="240" y2="330" stroke="#0f172a" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="252" y="312" font-size="11" fill="#0f172a">evict (uncommitted!)</text>
+
+  <line x1="660" y1="280" x2="660" y2="330" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="672" y="312" font-size="11" fill="#16a34a">WAL fsync only</text>
+
+  <!-- Disk -->
+  <g transform="translate(60, 340)">
+    <rect width="780" height="160" rx="12" fill="url(#diskBg)" stroke="#ca8a04" stroke-width="2"/>
+    <text x="20" y="32" font-size="16" font-weight="700" fill="#713f12">디스크</text>
+
+    <g transform="translate(40, 60)">
+      <rect width="380" height="80" rx="8" fill="#fff" stroke="#713f12" stroke-width="1.5"/>
+      <text x="190" y="32" font-size="14" font-weight="700" text-anchor="middle" fill="#0f172a">Data Files</text>
+      <text x="190" y="56" font-size="11.5" text-anchor="middle" fill="#475569">미커밋 변경이 섞일 수 있음 → 복구 시 UNDO 필요</text>
+    </g>
+
+    <g transform="translate(440, 60)">
+      <rect width="300" height="80" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="150" y="32" font-size="14" font-weight="700" text-anchor="middle" fill="#0f172a">WAL (Write-Ahead Log)</text>
+      <text x="150" y="56" font-size="11.5" text-anchor="middle" fill="#475569">NO-FORCE → 커밋 시 WAL만 fsync</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 580" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="580" fill="#f8fafc"/>
+
+  <text x="490" y="40" font-size="22" font-weight="700" fill="#0f172a" text-anchor="middle">두 가지 롤백 철학 — 이전 버전을 어디에 두느냐</text>
+
+  <!-- LEFT: PostgreSQL -->
+  <g transform="translate(40, 80)">
+    <rect width="440" height="460" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="220" y="40" font-size="18" font-weight="700" fill="#1e3a8a" text-anchor="middle">PostgreSQL — Append-only</text>
+
+    <!-- Heap before -->
+    <text x="30" y="80" font-size="13" font-weight="600" fill="#0f172a">UPDATE 전 — 힙 (heap)</text>
+    <g transform="translate(30, 92)">
+      <rect width="380" height="50" rx="6" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" fill="#0f172a">tuple v1   xmin=100  xmax=∅   balance=1000</text>
+      <text x="14" y="40" font-size="11" fill="#475569" font-style="italic">visible</text>
+    </g>
+
+    <!-- Heap after -->
+    <text x="30" y="170" font-size="13" font-weight="600" fill="#0f172a">UPDATE 후 — 새 튜플 추가</text>
+    <g transform="translate(30, 182)">
+      <rect width="380" height="50" rx="6" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" fill="#0f172a">tuple v1   xmin=100  xmax=200  balance=1000</text>
+      <text x="14" y="40" font-size="11" fill="#475569" font-style="italic">old version</text>
+    </g>
+    <g transform="translate(30, 240)">
+      <rect width="380" height="50" rx="6" fill="#fff" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" fill="#0f172a">tuple v2   xmin=200  xmax=∅   balance=900</text>
+      <text x="14" y="40" font-size="11" fill="#16a34a" font-style="italic">new version (txn 200)</text>
+    </g>
+
+    <!-- ROLLBACK -->
+    <g transform="translate(30, 312)">
+      <rect width="380" height="60" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="190" y="26" font-size="13" font-weight="700" text-anchor="middle" fill="#7f1d1d">ROLLBACK txn 200</text>
+      <text x="190" y="46" font-size="11.5" text-anchor="middle" fill="#7f1d1d">CLOG[200] = ABORTED — 끝.</text>
+    </g>
+
+    <text x="30" y="396" font-size="12" font-weight="700" fill="#0f172a">결과</text>
+    <text x="30" y="416" font-size="12" fill="#475569">• 롤백 자체는 O(1)</text>
+    <text x="30" y="434" font-size="12" fill="#475569">• 죽은 튜플은 디스크에 남음</text>
+    <text x="30" y="452" font-size="12" fill="#475569">• VACUUM이 나중에 청소</text>
+  </g>
+
+  <!-- RIGHT: InnoDB -->
+  <g transform="translate(500, 80)">
+    <rect width="440" height="460" rx="14" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+    <text x="220" y="40" font-size="18" font-weight="700" fill="#7c2d12" text-anchor="middle">InnoDB — In-place + Undo Log</text>
+
+    <!-- Row before -->
+    <text x="30" y="80" font-size="13" font-weight="600" fill="#0f172a">UPDATE 전 — 메인 테이블</text>
+    <g transform="translate(30, 92)">
+      <rect width="380" height="50" rx="6" fill="#fff" stroke="#7c2d12"/>
+      <text x="14" y="22" font-size="12" fill="#0f172a">row id=1   balance=1000   roll_ptr=∅</text>
+      <text x="14" y="40" font-size="11" fill="#475569" font-style="italic">current</text>
+    </g>
+
+    <!-- Row after -->
+    <text x="30" y="170" font-size="13" font-weight="600" fill="#0f172a">UPDATE 후 — in-place 수정</text>
+    <g transform="translate(30, 182)">
+      <rect width="220" height="50" rx="6" fill="#fff" stroke="#7c2d12"/>
+      <text x="14" y="22" font-size="12" fill="#0f172a">row id=1   balance=900</text>
+      <text x="14" y="40" font-size="11" fill="#16a34a" font-style="italic">in-place modified</text>
+    </g>
+    <line x1="250" y1="207" x2="290" y2="207" stroke="#0f172a" stroke-width="1.5" marker-end="url(#ar)"/>
+    <g transform="translate(290, 182)">
+      <rect width="120" height="50" rx="6" fill="#fef3c7" stroke="#ca8a04"/>
+      <text x="60" y="22" font-size="11.5" font-weight="700" text-anchor="middle" fill="#713f12">Undo Log</text>
+      <text x="60" y="40" font-size="11" text-anchor="middle" fill="#713f12">balance=1000</text>
+    </g>
+
+    <!-- ROLLBACK -->
+    <g transform="translate(30, 270)">
+      <rect width="380" height="80" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="190" y="26" font-size="13" font-weight="700" text-anchor="middle" fill="#7f1d1d">ROLLBACK</text>
+      <text x="190" y="48" font-size="11.5" text-anchor="middle" fill="#7f1d1d">Undo Log 따라 행을 한 줄씩 되돌림</text>
+      <text x="190" y="66" font-size="11.5" text-anchor="middle" fill="#7f1d1d">100만 행 = 100만 번 undo</text>
+    </g>
+
+    <text x="30" y="396" font-size="12" font-weight="700" fill="#0f172a">결과</text>
+    <text x="30" y="416" font-size="12" fill="#475569">• 롤백 비용 O(N)</text>
+    <text x="30" y="434" font-size="12" fill="#475569">• 메인 테이블은 즉시 클린</text>
+    <text x="30" y="452" font-size="12" fill="#475569">• purge thread가 Undo 정리</text>
+  </g>
+</svg>
