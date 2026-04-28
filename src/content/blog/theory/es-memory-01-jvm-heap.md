@@ -142,3 +142,130 @@ Oracle JDK 17 G1 Tuning Guide의 명시적 경고:
 ---
 
 **이어지는 글**: [JVM의 GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc)
+
+<!-- EN -->
+
+> This document is based on **Oracle JDK 17 HotSpot VM**. Default values vary by version, so cross-check with the docs for whichever version you are on. The broader JVM architecture (class loaders, Runtime Data Areas, Execution Engine, JIT) is covered in [Part 0](/blog/theory/jvm-and-gc); this post is an excerpted, deeper take focused on the **Heap structure that directly affects Elasticsearch operations**.
+
+## 1. Why You Need This Theory
+
+Elasticsearch is a Java application running on the JVM. **Most of the cases where an Elasticsearch node dies or slows down due to memory issues come from the JVM Heap and GC.** That is why the ES guideline *"set heap to at most 50% of total RAM"* only makes sense once you understand what the JVM Heap is and how it is used.
+
+In other words, this document organizes terms like `Xms`, `Xmx`, `Young/Old Generation`, and `Eden/Survivor` — **what they are and where they sit structurally** — based on primary sources.
+
+## 2. The Big Picture of JVM Memory
+
+A JVM process's memory is split into two big chunks.
+
+1. **Heap area** — the area where **objects created with `new` live**. This is what GC operates on.
+2. **Non-heap area** — class metadata (Metaspace), thread stacks, code cache (JIT), Direct Memory, GC's own structures, etc.
+
+What `-Xms` and `-Xmx` control is **only the size of the Heap area**. So when you say *"I gave Xmx 8g but the JVM process is using 12g"*, that is the non-heap area being allocated on top — it is not a bug. (For Direct Buffer, the headline non-heap item, see the [Off-heap Memory part](/blog/theory/es-memory-03-off-heap).)
+
+## 3. Generational Heap Structure (Generational Hypothesis)
+
+HotSpot splits the Heap into two generations based on the **Generational Hypothesis** — *"most objects die young."*
+
+![JVM Heap structure — Young Generation (Eden, S0, S1) and Old Generation](/uploads/theory/es-memory/heap-structure.svg)
+
+> The image above is the physical layout of **classic generational collectors** like Serial/Parallel GC. **G1 GC does not keep Young/Old as fixed contiguous memory; it labels equal-size regions as "young"/"old"** instead. Conceptually the same two generations, but the layout differs. See the [GC Algorithms part](/blog/theory/es-memory-02-gc) for details.
+
+### 3-1. Young Generation
+
+From the Oracle official docs (JDK 8 GC Tuning Guide, "Generations" chapter):
+
+> "The young generation consists of eden and two survivor spaces. ... One survivor space is empty at any time, and serves as the destination of any live objects in eden; the other survivor space is the destination during the next copying collection." — [Oracle JDK 8 GC Tuning Guide — Generations](https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/generations.html)
+
+I cited the JDK 8 doc because that structural description is the most direct one. The same concept appears in the JDK 17 doc's ["Factors Affecting Garbage Collection Performance"](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html) in the context of eden/survivor tuning.
+
+To summarize:
+
+- **Eden**: where newly `new`-ed objects are first allocated.
+- **Survivor 0 / Survivor 1 (S0 / S1)**: two equally-sized spaces. One side is always empty.
+- **Young GC (Minor GC)**: triggered when Eden fills up. Only the **live objects** in Eden and the currently-used Survivor are **copied** to the other Survivor; everything else is discarded in one shot.
+- **Promotion**: objects that survive enough Young GCs are moved to the Old Generation. The threshold is called the **tenuring threshold** and the GC adjusts it dynamically.
+
+### 3-2. Old Generation
+
+The area where long-lived (live data) objects collect. Subject to **Major GC (or Full GC)**, which is much more expensive than Young GC and has longer STW (Stop-the-World) pauses.
+
+### 3-3. Metaspace (not a generation)
+
+Starting with Java 8, PermGen was removed and replaced by **Metaspace**. Metaspace lives in **Native Memory, not Heap**, and stores class metadata (method info, constant pool, etc.). It is managed independently of `-Xmx`.
+
+## 4. Key Tuning Parameters (JDK 17)
+
+> **Important**: the parameters below come from docs that assume **classic generational collectors like Parallel GC / Serial GC**. **In G1 GC — the default collector in JDK 17 — Oracle officially advises against using `NewRatio`, `NewSize`, or `Xmn`.** The reason is in section 4-2.
+
+The values below are confirmed directly against Oracle's official GC Tuning Guide.
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `-Xms` / `-Xmx` | system / ergonomics-dependent | Initial / maximum Heap size. In production, pinning both to the same value is recommended |
+| `-XX:NewRatio` | `2` (Parallel/Serial) | Young:Old = 1:N. `2` means Young is 1/3 of total Heap |
+| `-XX:SurvivorRatio` | `8` | Eden:Survivor = N:1. `8` means each Survivor is 1/8 of Eden |
+| `-XX:NewSize`, `-XX:MaxNewSize` | ergonomics-dependent | Lower / upper bound of Young Generation (explicit values vary across version and platform, so no single number is given) |
+| `-XX:MinHeapFreeRatio` | `40%` | Heap tries to expand if free space falls below this |
+| `-XX:MaxHeapFreeRatio` | `70%` | Heap tries to shrink if free space rises above this |
+
+> "Setting `-XX:NewRatio=3` means that the ratio between the young and old generation is 1:3. In other words, the combined size of the eden and survivor spaces will be one-fourth of the total heap size." — [Oracle JDK 17 GC Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
+
+> "Setting `-XX:SurvivorRatio=6` sets the ratio between eden and a survivor space to 1:6. In other words, each survivor space will be one-sixth of the size of eden, and thus one-eighth of the size of the young generation (not one-seventh, because there are two survivor spaces)." — same source
+
+### 4-1. Trade-off
+
+The trade-off the official doc itself calls out:
+
+> "The bigger the young generation, the less often minor collections occur. However, for a bounded heap size, a larger young generation implies a smaller old generation, which will increase the frequency of major collections." — [Oracle JDK 17 GC Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
+
+So if you grow Young, Minor GC frequency drops but Major GC frequency rises. Bigger is not unconditionally better.
+
+### 4-2. On G1, do not use NewRatio / NewSize / Xmn (official guidance)
+
+Explicit warning from the Oracle JDK 17 G1 Tuning Guide:
+
+> "Avoid limiting the young generation size to particular values by using options like `-Xmn`, `-XX:NewRatio` and others because the young generation size is the main means for G1 to allow it to meet the pause-time. Setting the young generation size to a single value overrides and practically disables pause-time control." — [Oracle JDK 17 — G1 Garbage Collector Tuning](https://docs.oracle.com/en/java/javase/17/gctuning/garbage-first-garbage-collector-tuning.html)
+
+Why:
+
+- G1 **dynamically resizes the Young Generation on every young collection** to meet its pause-time goal (`-XX:MaxGCPauseMillis`, default 200ms).
+- Pinning Young size with `NewRatio`/`Xmn` effectively **disables** that auto-tuning, which neuters pause-time control itself.
+
+So in environments using G1 (= JDK 9+ default, which covers most Elasticsearch operations), you should **only touch `Xms`/`Xmx` and `MaxGCPauseMillis` from the table above and leave the rest at default**. The reason `NewRatio`/`SurvivorRatio` were explained first is for conceptual understanding — in real G1 tuning, do not touch them.
+
+## 5. Object Allocation and Promotion Flow (Life Cycle)
+
+1. `new Foo()` → allocated in Eden via the **TLAB (Thread Local Allocation Buffer)**.
+2. Eden fills up → **Minor GC** triggers.
+    - Surviving objects are copied to the currently empty Survivor (S1).
+    - Eden and the other Survivor (S0) are wiped at once.
+3. On the next Minor GC, S1 → S0 copy happens and the age count goes up.
+4. When age exceeds the **tenuring threshold** → **promoted to the Old Generation**.
+5. Old Generation fills up → **Major GC (or Full GC)**.
+
+> "At each garbage collection, the virtual machine chooses a threshold number, which is the number of times an object can be copied before it's old. This threshold is chosen to keep the survivors half full." — [Oracle JDK 17 GC Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
+
+### 5-1. What if Survivor is too small?
+
+> "If survivor spaces are too small, then the copying collection overflows directly into the old generation." — same source
+
+So if Survivor is too small, objects that should have lived out their life in Young are **prematurely promoted**, the Old Generation fills up faster, and Major GC accelerates. This is one of the classic causes of an application showing abnormally high Full GC frequency.
+
+## 6. What This Means From an Elasticsearch Angle
+
+1. **ES recommends a Heap of at most ~26-30GB.** The reason is GC cost and compressed OOPs, covered in detail in the [Elasticsearch Memory Model part](/blog/theory/es-memory-05-elasticsearch).
+2. **The ES Heap 50% rule** means *"leave the other 50% for OS Page Cache."* That is, `Xmx` only governs the JVM Heap; the rest of memory is assumed to be **used by the OS to cache Lucene index files**. For the Page Cache concept, see the [OS Page Cache part](/blog/theory/es-memory-04-page-cache).
+3. The bigger the Heap, the longer the **GC STW pause**, and during that window the ES node may fail to send heartbeats and get dropped from the cluster.
+
+## References (Primary Sources)
+
+- [Oracle JDK 17 HotSpot VM Garbage Collection Tuning Guide — Factors Affecting GC Performance](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
+- [Oracle JDK 17 HotSpot VM GC Tuning Guide — Available Collectors](https://docs.oracle.com/en/java/javase/17/gctuning/available-collectors.html)
+- [Oracle JDK 17 — G1 Garbage Collector Tuning](https://docs.oracle.com/en/java/javase/17/gctuning/garbage-first-garbage-collector-tuning.html)
+- [Oracle JDK 8 GC Tuning Guide — Generations (original explanation of the generational hypothesis)](https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/generations.html)
+- [Oracle JDK 8 GC Tuning Guide — Sizing the Generations](https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/sizing.html)
+- [OpenJDK HotSpot Runtime Overview](https://openjdk.org/groups/hotspot/docs/RuntimeOverview.html)
+
+---
+
+**Next**: [GC Algorithms and Stop-the-World on the JVM](/blog/theory/es-memory-02-gc)
