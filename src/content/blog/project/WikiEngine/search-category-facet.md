@@ -404,3 +404,392 @@ public record SearchWithFacetsResponse(
 - [Lucene BooleanClause.Occur — FILTER vs MUST](https://lucene.apache.org/core/10_1_0/core/org/apache/lucene/search/BooleanClause.Occur.html)
 - [Lucene Facet API — SortedSetDocValuesFacetCounts](https://lucene.apache.org/core/10_1_0/facet/org/apache/lucene/facet/sortedset/SortedSetDocValuesFacetCounts.html)
 - [Apache Lucene SimpleSortedSetFacetsExample](https://github.com/apache/lucene/blob/main/lucene/demo/src/java/org/apache/lucene/demo/facet/SimpleSortedSetFacetsExample.java)
+
+<!-- EN -->
+
+## Previous
+
+In [Distributed Stability — Stress Test + Limit Analysis](/blog/project/wikiengine/distributed-stability) we validated the limits of the distributed architecture (2 App + MySQL Replication + Redis 3-shard + Kafka CDC) under stress.
+
+| Metric | 100 VU | 200 VU (stress) |
+|---|---|---|
+| Avg response | 42.8ms | 897ms |
+| P95 | 190ms | 1,911ms |
+| Error rate | 0.00% | 0.09% |
+| Bottleneck | App CPU ~50% | App CPU 80-100% (Lucene BM25 + Nori) |
+
+At 100 VU, P95 ~200ms met the 300ms SLA, and MySQL/Redis/Kafka all had headroom. With infra bottlenecks resolved, this post starts focusing on **enhancing the search functionality itself**.
+
+---
+
+## 1. Steady State — Current Search Architecture
+
+### Search flow
+
+```
+User search: GET /api/v1.0/posts/search?q=프로그래밍&page=0&size=20
+  → PostService.search(keyword, pageable)
+  → TieredCacheService L1(Caffeine) → L2(Redis) → Origin:
+    → LuceneSearchService.search(keyword, pageable)
+    → buildQuery(keyword):
+        MUST:   BM25(title^3, content^1) via MultiFieldQueryParser + Nori
+        SHOULD: FeatureField.saturation(viewCount, w=3.0, pivot=1000)
+        SHOULD: FeatureField.saturation(likeCount, w=2.0, pivot=100)
+        SHOULD: RecencyDecay(halfLife=30 days)
+    → TopDocs → extract IDs from Lucene docs → DB findAllById → Slice<Post>
+  → PostSearchResponse(id, title, snippet, viewCount, likeCount, createdAt)
+```
+
+### Lucene index field layout (verified in code)
+
+`LuceneIndexService.toDocument()` (LuceneIndexService.java:161-179):
+
+```java
+Document doc = new Document();
+doc.add(new KeywordField("id", post.getId().toString(), Field.Store.YES));
+doc.add(new TextField("title", post.getTitle(), Field.Store.YES));
+doc.add(new TextField("content", post.getContent(), Field.Store.NO));
+
+if (post.getCategoryId() != null) {
+    doc.add(new LongField("categoryId", post.getCategoryId(), Field.Store.YES));
+}
+
+doc.add(new LongField("viewCount", post.getViewCount(), Field.Store.YES));
+doc.add(new LongField("createdAt", post.getCreatedAt().toEpochMilli(), Field.Store.YES));
+doc.add(new FeatureField("features", "viewCount", Math.max(post.getViewCount(), 1)));
+doc.add(new FeatureField("features", "likeCount", Math.max(post.getLikeCount(), 1)));
+```
+
+**Key fact: `categoryId` is already in the Lucene index as a `LongField`.** Adding category "filtering" is not about adding a field — it is about adding a **filter clause to the search query (`buildQuery`)**.
+
+### Category data state
+
+```
+posts table:
+  category_id BIGINT (nullable) — FK to categories table
+
+categories table:
+  id BIGINT PK
+  name VARCHAR (NOT NULL, UNIQUE)
+  parent_id BIGINT (nullable) — supports hierarchy
+```
+
+- Post entity: `private Long categoryId;` (nullable — uncategorized posts allowed)
+- Category entity: `name` + `parentId` (hierarchical)
+- Categories are created together with the Wikipedia import
+
+### Existing category-related features
+
+PostController already supports **category filtering on the listing endpoint** (PostController.java:41-51):
+
+```java
+@GetMapping
+public Slice<PostListResponse> getPosts(
+    @RequestParam(required = false) Long categoryId,
+    Pageable pageable
+) {
+    if (categoryId != null) {
+        return postService.getPostsByCategory(categoryId, pageable);
+    }
+    return postService.getLatestPosts(pageable);
+}
+```
+
+But that is **SQL-based filtering** (`postRepository.findByCategoryIdOrderByCreatedAtDesc`). The **search API** (`GET /posts/search`) has no category filtering.
+
+---
+
+## 2. Problem — No Category Filtering in Search
+
+### Problem 1: search API has no category filter parameter
+
+PostController.java:128-134 search endpoint:
+
+```java
+@GetMapping("/search")
+public Slice<PostSearchResponse> search(
+    @RequestParam String q,
+    Pageable pageable
+) {
+    return postService.search(q, pageable);
+}
+```
+
+No `categoryId` parameter. Searching "프로그래밍" returns results from all 14.25M docs with no way to narrow to a category.
+
+The user cannot satisfy "show me only Java-related ones from these results." Listing (`GET /posts`) supports category filtering, but **search** does not — an asymmetry.
+
+### Problem 2: no insight into category distribution of results (no Facet)
+
+Among the 1,233 hits ([measured in search-quality](/blog/project/wikiengine/search-quality)) for "프로그래밍", we **cannot aggregate** how many fall in each category. The user has to scroll blindly.
+
+Faceted Navigation in real search engines:
+
+```
+Google: "프로그래밍" → tabs (All/Images/News/Video) + tools (date filter)
+Naver: "프로그래밍" → tabs (Integrated/Blog/Cafe/Knowledge iN) + category filters
+Stack Overflow: tag-based filtering (java, python, etc.) + count per tag
+Amazon: product search → left category tree + count per category
+```
+
+In community search, Faceted Navigation is a **baseline feature**.
+
+---
+
+## 3. Analysis — Structural Cause
+
+### Why category filtering does not work
+
+`categoryId` exists in the Lucene index, but `buildQuery()` (LuceneSearchService.java:176-197) has no category filter clause:
+
+```java
+// current buildQuery() — no category filter
+return new BooleanQuery.Builder()
+    .add(textQuery, BooleanClause.Occur.MUST)        // text matching
+    .add(viewBoost, BooleanClause.Occur.SHOULD)       // popularity
+    .add(likeBoost, BooleanClause.Occur.SHOULD)       // likes
+    .add(recencyBoost, BooleanClause.Occur.SHOULD)    // recency
+    .build();
+```
+
+**The field exists but is not used in the query.** Adding `LongField.newExactQuery("categoryId", categoryId)` as a `FILTER` clause makes filtering work.
+
+### Why Facet aggregation does not work
+
+Facet aggregation means **counting matching docs per category across the entire matching set**. A normal search query returns only top-K, so a separate Collector is needed.
+
+Lucene provides a Facet API in the `lucene-facet` module, but the current build.gradle has **no `lucene-facet` dependency**:
+
+```groovy
+// build.gradle — current
+implementation 'org.apache.lucene:lucene-core:10.3.2'
+implementation 'org.apache.lucene:lucene-analysis-nori:10.3.2'
+implementation 'org.apache.lucene:lucene-queryparser:10.3.2'
+implementation 'org.apache.lucene:lucene-queries:10.3.2'
+// no lucene-facet!
+```
+
+Two paths to implement Facets:
+
+| Approach | Required | Pros / Cons |
+|---|---|---|
+| **Lucene Facet API** (`lucene-facet`) | `SortedSetDocValuesFacetField` + `FacetsConfig` + `SortedSetDocValuesFacetCounts` | native Facet, exact aggregation. **Requires adding `SortedSetDocValuesField` to the index + full reindex** |
+| **Manual aggregation** (use existing LongField) | `LongField("categoryId")` already exists → DB GROUP BY on result postIds | no reindex, no extra dependencies. **But aggregates only the current page, not the full match set (not exact Facet)** |
+
+---
+
+## 4. Alternatives — Why I Picked This
+
+### Category filtering approach
+
+| Option | Pro | Con | Verdict |
+|---|---|---|---|
+| **Lucene LongField.newExactQuery + FILTER** | already in index, no reindex, pagination correct | - | **chosen** |
+| **DB Post-filter** (Lucene results → DB WHERE category_id=?) | no Lucene change | breaks pagination (100 → 50 after filter → page shows half) | **rejected** |
+| **Elasticsearch** | native filter + Aggregation | needs separate cluster, impossible on Free Tier (≥6GB RAM) | **rejected** |
+
+**Why DB Post-filter is rejected, concretely**: Lucene returns 20, then DB filtering by category drops it to 10 — only 10 shown on that page. Same problem repeats on the next page. Doing it in Lucene with FILTER returns exactly 20 results from that category from the start.
+
+### Facet aggregation approach
+
+| Option | Pro | Con | Verdict |
+|---|---|---|---|
+| **Lucene SortedSetDocValuesFacetCounts** | exact full-match aggregation, native | adds `lucene-facet` dependency + `SortedSetDocValuesFacetField` + **full reindex required** | **applied during reindex** |
+| **DB GROUP BY** (over result IDs) | no reindex, instant to implement | aggregates only top-K, not the whole match set, extra DB round-trip | **applied first** |
+| **Taxonomy Index** | supports hierarchical Facets | high cost of managing a separate index | **rejected** |
+
+**Phased approach:**
+1. **Now**: category filtering (LongField FILTER, no reindex) + DB-based approximate Facet
+2. **At the [query expansion](/blog/project/wikiengine/search-query-enhancement) reindex**: add `SortedSetDocValuesFacetField` + switch to native Lucene Facet
+
+This way we deliver the feature instantly while upgrading to exact Facets together with the reindex infrastructure build-out.
+
+---
+
+## 5. Implementation
+
+### 5-1. Category filtering — modifying LuceneSearchService
+
+Since `categoryId` is already indexed as `LongField`, we add a `categoryId` parameter to `search()` and a `FILTER` clause.
+
+```java
+// LuceneSearchService — change
+public Slice<Post> search(String keyword, Long categoryId, Pageable pageable) throws IOException {
+    IndexSearcher searcher = searcherManager.acquire();
+    try {
+        Query query = buildQuery(keyword, categoryId);  // pass categoryId
+        // ... existing logic identical
+    }
+}
+
+private Query buildQuery(String keyword, Long categoryId) throws ParseException {
+    // existing BM25 + popularity + recency
+    BooleanQuery.Builder builder = new BooleanQuery.Builder()
+        .add(textQuery, BooleanClause.Occur.MUST)
+        .add(viewBoost, BooleanClause.Occur.SHOULD)
+        .add(likeBoost, BooleanClause.Occur.SHOULD)
+        .add(recencyBoost, BooleanClause.Occur.SHOULD);
+
+    // add category filter
+    if (categoryId != null) {
+        builder.add(LongField.newExactQuery("categoryId", categoryId),
+                     BooleanClause.Occur.FILTER);
+    }
+
+    return builder.build();
+}
+```
+
+**Why `Occur.FILTER`:**
+- `MUST` affects scoring. Category filter is a "is it in this category?" decision — relevance score is irrelevant.
+- `FILTER` is required like `MUST` but does not contribute to scoring. Internally Lucene treats FILTER clauses as **bitset-cacheable**, giving a perf benefit on repeated queries with the same category.
+- Source: [Lucene BooleanClause.Occur Javadoc](https://lucene.apache.org/core/10_1_0/core/org/apache/lucene/search/BooleanClause.Occur.html#FILTER)
+
+### 5-2. API change — PostController + PostService
+
+```java
+// PostController — add categoryId to the search endpoint
+@GetMapping("/search")
+public Slice<PostSearchResponse> search(
+    @RequestParam String q,
+    @RequestParam(required = false) Long categoryId,
+    Pageable pageable
+) {
+    return postService.search(q, categoryId, pageable);
+}
+```
+
+```java
+// PostService — pass categoryId down to LuceneSearchService
+public Slice<PostSearchResponse> search(String keyword, Long categoryId, Pageable pageable) {
+    // include categoryId in the cache key
+    String cacheKey = keyword + ":" + categoryId + ":" + pageable.getPageNumber()
+                    + ":" + pageable.getPageSize();
+    // L1 → L2 → origin same logic; pass categoryId at origin
+    Slice<Post> posts = luceneSearchService.search(keyword, categoryId, pageable);
+    // ...
+}
+```
+
+**Cache-key caveat**: `categoryId` must be in the cache key. The same keyword returns different results per category, so without adding categoryId to the existing key (`keyword:page:size`), cache pollution would occur.
+
+### 5-3. Approximate Facet — DB GROUP BY
+
+Instead of native Lucene Facets, **provide category distribution via DB aggregation after search**.
+
+```java
+// PostService — category Facet (DB-based approximate impl)
+public List<CategoryFacet> getCategoryFacets(String keyword, int topN) throws IOException {
+    // 1. extract all result IDs from Lucene (cap at 1000)
+    List<Long> postIds = luceneSearchService.searchIds(keyword, 1000);
+
+    // 2. aggregate counts per category in DB
+    return postRepository.countByCategoryIdIn(postIds).stream()
+        .sorted(Comparator.comparing(CategoryFacet::count).reversed())
+        .limit(topN)
+        .toList();
+}
+```
+
+```sql
+-- PostRepository — counts per category
+@Query("SELECT new com.wiki.engine.post.dto.CategoryFacet(c.id, c.name, COUNT(p)) " +
+       "FROM Post p JOIN Category c ON p.categoryId = c.id " +
+       "WHERE p.id IN :postIds " +
+       "GROUP BY c.id, c.name " +
+       "ORDER BY COUNT(p) DESC")
+List<CategoryFacet> countByCategoryIdIn(@Param("postIds") List<Long> postIds);
+```
+
+**Acknowledged limit**: this aggregates only the top-1,000 results, so it is not an exact Facet over the full match set. But in search engines what users actually care about is the distribution of top results, not the category of the 100,000th. The top-1,000 distribution mirrors the overall trend, so it is good enough UX-wise. Will switch to the Lucene Facet API during the [query expansion](/blog/project/wikiengine/search-query-enhancement) reindex.
+
+### 5-4. Response DTO extension
+
+```java
+// PostSearchResponse — add categoryId
+public record PostSearchResponse(
+    Long id,
+    String title,
+    String snippet,
+    Long viewCount,
+    Long likeCount,
+    Instant createdAt,
+    Long categoryId       // added
+) {}
+
+// CategoryFacet — facet aggregation result
+public record CategoryFacet(
+    Long id,
+    String name,
+    Long count
+) {}
+
+// SearchWithFacetsResponse — combined search + facet response
+public record SearchWithFacetsResponse(
+    Slice<PostSearchResponse> results,
+    List<CategoryFacet> facets
+) {}
+```
+
+### 5-5. Full API design
+
+```
+Before:  GET /api/v1.0/posts/search?q=프로그래밍&page=0&size=20
+After:   GET /api/v1.0/posts/search?q=프로그래밍&category=42&page=0&size=20
+
+Response:
+{
+  "data": {
+    "results": {
+      "content": [
+        { "id": 123, "title": "...", "snippet": "...", "categoryId": 42, ... }
+      ],
+      "hasNext": true
+    },
+    "facets": [
+      { "id": 42, "name": "Programming Languages", "count": 342 },
+      { "id": 15, "name": "Software Engineering", "count": 189 },
+      { "id": 7, "name": "OS", "count": 127 }
+    ]
+  }
+}
+```
+
+> **Facets are returned only when no `category` is selected.** Showing Facets when a category is already selected is meaningless (the drilled-down result is just that category).
+
+---
+
+## 6. Verification — Before/After
+
+### Before: search without category filter
+
+![Before — search without category filter](/uploads/project/WikiEngine/search-category-facet/phase17-before-search-no-category-filter.png)
+
+### After: with categoryId=7 filter
+
+![After — categoryId=7 applied](/uploads/project/WikiEngine/search-category-facet/phase17-after-category-filter-search.png)
+
+> Searching "프로그래밍" with `categoryId=7` (Computer Science): `LongField.newExactQuery("categoryId", 7)` + `Occur.FILTER` returns only that category's results. Posts on mechatronics, spaghetti code, reconfigurable computing, etc. — only Computer Science posts.
+
+### Items applied together at the reindex
+
+- Added `lucene-facet` dependency (`org.apache.lucene:lucene-facet:10.3.2`)
+- Added `SortedSetDocValuesFacetField("category", categoryName)` to the index
+- `FacetsConfig` setup + `config.build(doc)` applied
+- Switched to exact Facets via `SortedSetDocValuesFacetCounts`
+- Added `lucene-highlighter` + `snippetSource` StoredField + UnifiedHighlighter
+- Full reindex completed (12,156,589 docs, 42GB, ~2 hours)
+
+---
+
+## Next
+
+In [Query Expansion + Query Understanding — Search Quality Enhancement](/blog/project/wikiengine/search-query-enhancement) we add synonym expansion ("AI" → "인공지능"), typo correction (DirectSpellChecker), the Nori user dictionary, snippet improvements via UnifiedHighlighter, and the full reindex infrastructure.
+
+---
+
+## Sources
+
+- [Lucene BooleanClause.Occur — FILTER vs MUST](https://lucene.apache.org/core/10_1_0/core/org/apache/lucene/search/BooleanClause.Occur.html)
+- [Lucene Facet API — SortedSetDocValuesFacetCounts](https://lucene.apache.org/core/10_1_0/facet/org/apache/lucene/facet/sortedset/SortedSetDocValuesFacetCounts.html)
+- [Apache Lucene SimpleSortedSetFacetsExample](https://github.com/apache/lucene/blob/main/lucene/demo/src/java/org/apache/lucene/demo/facet/SimpleSortedSetFacetsExample.java)
