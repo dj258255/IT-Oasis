@@ -1,8 +1,8 @@
 ---
-title: 'PowerBalance를 만들고 나서 배운 것'
-titleEn: 'What I Learned After Building PowerBalance'
-description: 인디게임 밸런싱 도구 PowerBalance를 만들며 느꼈던 가능성과, 실제 사용자 반응이 기대와는 달랐던 경험, 그리고 그 배움이 이후 CodingTestKit에 어떻게 이어졌는지를 정리한 글입니다.
-descriptionEn: A retrospective on building PowerBalance, the gap between a promising idea and real user adoption, and how that lesson later shaped CodingTestKit.
+title: 'Balruno를 만들고 나서 배운 것'
+titleEn: 'What I Learned After Building Balruno'
+description: 인디게임 밸런싱 도구 Balruno를 만들며 느꼈던 가능성과, 실제 사용자 반응이 기대와는 달랐던 경험, 그리고 그 배움이 이후 CodingTestKit에 어떻게 이어졌는지를 정리한 글입니다.
+descriptionEn: A retrospective on building Balruno, the gap between a promising idea and real user adoption, and how that lesson later shaped CodingTestKit.
 date: 2026-04-02
 tags:
   - Retrospective
@@ -16,7 +16,7 @@ draft: false
 series: "Balruno"
 ---
 
-PowerBalance를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.
+Balruno를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.
 
 게임 밸런싱은 분명히 반복 계산이 많고, 엑셀이나 구글 시트만으로는 불편한 점도 많았다.
 그래서 게임 기획자에게 필요한 수식, 시뮬레이션, 검증 기능을 한곳에 모아두면 분명히 도움이 될 거라고 믿었다.
@@ -45,10 +45,10 @@ PowerBalance를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.
 기존 작업 흐름을 크게 바꾸지 않으면서도 바로 편해지는 지점이 있는지, 처음 설치한 사람이 설명 없이도 바로 가치를 느낄 수 있는지를 더 많이 고민했다.
 
 결과적으로 그 차이는 꽤 컸다.
-PowerBalance에서는 내가 만든 도구의 가능성과 한계를 동시에 배웠고, 그 배움을 바탕으로 다음 프로젝트에서는 실제 사용성과 진입 장벽을 더 의식하게 됐다.
+Balruno에서는 내가 만든 도구의 가능성과 한계를 동시에 배웠고, 그 배움을 바탕으로 다음 프로젝트에서는 실제 사용성과 진입 장벽을 더 의식하게 됐다.
 그 흐름 위에서 나온 CodingTestKit은 결국 다운로드 수 254를 기록했다.
 
-그래서 지금 돌아보면 PowerBalance는 "실패한 프로젝트"라기보다, 내가 제품을 보는 눈을 바꾸게 만든 프로젝트에 더 가깝다.
+그래서 지금 돌아보면 Balruno는 "실패한 프로젝트"라기보다, 내가 제품을 보는 눈을 바꾸게 만든 프로젝트에 더 가깝다.
 좋은 기능을 만드는 것과, 사람들이 실제로 쓰는 도구를 만드는 것은 다르다는 걸 이때 확실히 배웠다.
 
 아마 그때 이 경험이 없었다면, 다음 프로젝트에서도 비슷한 실수를 반복했을 것 같다.
@@ -56,7 +56,7 @@ PowerBalance에서는 내가 만든 도구의 가능성과 한계를 동시에 �
 
 <!-- EN -->
 
-When I first built PowerBalance, I genuinely thought it was a pretty breakthrough idea.
+When I first built Balruno, I genuinely thought it was a pretty breakthrough idea.
 
 Game balancing clearly involves a lot of repetitive calculation, and spreadsheets like Excel or Google Sheets have obvious limitations for that kind of work.
 So I believed that if I put game-specific formulas, simulations, and validation tools in one place, it would definitely help game designers.
@@ -88,10 +88,10 @@ why should someone use this right now?
 I paid more attention to whether the tool improved an existing workflow immediately, and whether a first-time user could feel the value without much explanation.
 
 In the end, that difference mattered.
-PowerBalance taught me both the potential and the limit of a good idea, and that lesson shaped how I approached the next project.
+Balruno taught me both the potential and the limit of a good idea, and that lesson shaped how I approached the next project.
 CodingTestKit eventually reached 254 downloads.
 
-So when I look back now, I do not really see PowerBalance as a failed project.
+So when I look back now, I do not really see Balruno as a failed project.
 It was the project that changed the way I think about products.
 It taught me that building good features and building something people actually use are not the same thing.
 
