@@ -20,15 +20,9 @@ series: "트랜잭션 ACID"
 seriesOrder: 1
 ---
 
-> ACID를 한 번에 다루면 모든 글자가 얕아지므로 시리즈로 나눠서 정리하고 있어요. 이번 편은 **A(Atomicity, 원자성)** 이고, 다음 편은 **I(MVCC와 격리)**, **D(WAL과 fsync)** 로 이어집니다.
-
 ## 0. 들어가며
 
-처음 이 글을 쓸 때 강의 노트에 있던 *"PostgreSQL은 미리 디스크에 쓰는 낙관적 접근, SQL Server는 메모리에만 쓰는 비관적 접근"* 이라는 대비를 그대로 받아 적었어요. 결론부터 말하면 이 프레임은 부정확합니다.
-
-- **"낙관적/비관적"** 이라는 용어는 원래 락 전략(Optimistic Lock vs Pessimistic Lock)을 가리키는 말이지, 트랜잭션 처리 전략의 표준 용어가 아니에요.
-- PostgreSQL, MySQL InnoDB, SQL Server 셋 다 **WAL 프로토콜**을 따르고, 데이터 페이지는 모두 버퍼풀(메모리)에 두며 **WAL 로그만 fsync** 합니다.
-- 진짜 차이는 **이전 버전을 어디에 두느냐**, 그리고 그로 인한 **롤백 메커니즘의 차이**예요.
+PostgreSQL, MySQL InnoDB, SQL Server 셋 다 **WAL 프로토콜**을 따르고, 데이터 페이지는 모두 버퍼풀(메모리)에 두며 **WAL 로그만 fsync** 합니다. 진짜 차이는 **이전 버전을 어디에 두느냐**, 그리고 그로 인한 **롤백 메커니즘의 차이**예요.
 
 이 글은 그 정확한 차이를 Atomicity 관점에서 풀어봅니다.
 
@@ -219,13 +213,6 @@ Atomicity는 단순한 *"전부 성공 or 전부 실패"* 규칙이 아니라, *
 
 세 DB 모두 외부에서 보면 같은 Atomicity 보장을 제공하지만, 내부적으로는 **비용을 청구하는 시점과 형태**가 완전히 다릅니다.
 
-> **면접 한 줄 답변**: *"PostgreSQL과 InnoDB의 차이는 '낙관적/비관적'이 아니라 MVCC 구현 방식입니다. PostgreSQL은 append-only로 새 튜플을 만들고 abort 시 CLOG와 가시성 규칙으로 무시하기 때문에 롤백 연산이 O(1)이지만 VACUUM 비용을 나중에 치르고, InnoDB는 in-place 수정 후 Undo Log로 되돌리기 때문에 롤백 자체가 비싼 대신 별도 청소가 덜 필요합니다. 둘 다 STEAL + NO-FORCE 정책을 쓰지만, 복구 시 PostgreSQL은 명시적 Undo phase 없이 Redo + 가시성으로 처리하고 InnoDB/SQL Server는 ARIES 스타일로 Redo + Undo를 명시적으로 수행합니다."*
-
-## 다음 편 예고
-
-- **(2) Isolation** — MVCC와 격리 수준. PostgreSQL의 튜플 버전 체인 vs InnoDB의 Undo Log 기반 버전 재구성. 이번 편에 살짝 등장한 xmin/xmax/CLOG/hint bit, DB_ROLL_PTR/Read View의 깊은 이야기.
-- **(3) Durability** — WAL 프로토콜의 실제 차이. fsync 타이밍, `innodb_flush_log_at_trx_commit`, group commit, doublewrite buffer, 체크포인트 전략까지.
-
 ## 참고 (1차 자료 우선)
 
 - [PostgreSQL Documentation: Write-Ahead Logging (WAL)](https://www.postgresql.org/docs/current/wal-intro.html)
@@ -242,15 +229,9 @@ Atomicity는 단순한 *"전부 성공 or 전부 실패"* 규칙이 아니라, *
 
 <!-- EN -->
 
-> Covering ACID in one shot makes every letter shallow, so I am splitting it into a series. This part covers **A (Atomicity)**, and the next ones cover **I (MVCC and Isolation)** and **D (WAL and fsync)**.
-
 ## 0. Introduction
 
-When I first drafted this, I copied a contrast from my notes verbatim: *"PostgreSQL takes an optimistic approach by writing to disk early, while SQL Server takes a pessimistic approach by keeping things in memory."* Up front: that framing is inaccurate.
-
-- **"Optimistic / pessimistic"** is originally a term for locking strategies (Optimistic Lock vs Pessimistic Lock). It is not a standard term for transaction processing strategies.
-- PostgreSQL, MySQL InnoDB, and SQL Server all follow the **WAL protocol**. Data pages live in the buffer pool (memory) in all three, and only the **WAL log is fsync-ed**.
-- The real difference is **where the previous version is stored**, and the **rollback mechanism** that flows from that choice.
+PostgreSQL, MySQL InnoDB, and SQL Server all follow the **WAL protocol**. Data pages live in the buffer pool (memory) in all three, and only the **WAL log is fsync-ed**. The real difference is **where the previous version is stored**, and the **rollback mechanism** that flows from that choice.
 
 This post unpacks that real difference from the angle of Atomicity.
 
@@ -440,10 +421,3 @@ Atomicity is not just a *"all succeed or all fail"* rule — it is the implement
 - **SQL Server** — In the ARIES family like InnoDB. MVCC is opt-in (snapshot isolation) and the version store lives in tempdb.
 
 All three deliver the same external Atomicity guarantee, but internally **the moment and form of the bill** are completely different.
-
-> **Interview one-liner**: *"The difference between PostgreSQL and InnoDB is not 'optimistic vs pessimistic' but the MVCC implementation. PostgreSQL appends new tuples and, on abort, simply ignores them via the CLOG and visibility rules — so the rollback operation is O(1), but VACUUM pays the bill later. InnoDB modifies in place and reverts via the Undo Log — so rollback itself is expensive, but separate cleanup is lighter. Both use STEAL + NO-FORCE, but on recovery PostgreSQL does Redo + visibility with no explicit Undo phase, while InnoDB and SQL Server explicitly do ARIES-style Redo + Undo."*
-
-## What's next in the series
-
-- **(2) Isolation** — MVCC and isolation levels. PostgreSQL's tuple version chain vs InnoDB's Undo-Log-based version reconstruction. The deeper story of xmin/xmax/CLOG/hint bit and DB_ROLL_PTR/Read View, all of which made cameo appearances here.
-- **(3) Durability** — The actual differences between WAL implementations: fsync timing, `innodb_flush_log_at_trx_commit`, group commit, doublewrite buffer, checkpoint strategy.
