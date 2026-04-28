@@ -320,3 +320,306 @@ title_raw는 분석기를 타지 않는 StringField로 이미 인덱싱되어 �
 - [Elastic Blog — Nori: The Official Elasticsearch Plugin for Korean](https://www.elastic.co/blog/nori-the-official-elasticsearch-plugin-for-korean-language-analysis)
 - [Elastic Blog — How to Search CJK Text Part 2: Multi-fields](https://www.elastic.co/blog/how-to-search-ch-jp-kr-part-2)
 - [Sease — When and How to Use N-grams in Elasticsearch](https://sease.io/2023/12/when-and-how-to-use-n-grams-in-elasticsearch.html)
+
+<!-- EN -->
+
+## Previous
+
+In [AI Search Summary — RAG Pipeline + SSE Streaming + Cost Monitoring](/blog/project/wikiengine/search-rag) we built a RAG pipeline that injects Lucene BM25 results into LLM context. With search functionality complete, we discovered an issue where **certain keywords either return nothing or surface the wrong results.**
+
+---
+
+## 1. Steady State
+
+WikiEngine is a search system on Lucene 10.3.2 + the Nori Korean morphological analyzer.
+
+| Item | Detail |
+|---|---|
+| Data scale | 12.15M docs (8.45M wiki + 160K news + 3.54M web) |
+| Index size | ~36GB (MMapDirectory) |
+| Analyzer | Nori KoreanAnalyzer + UserDictionary with 158K entries |
+| Ranking | BM25 + viewCount/likeCount saturation + recency decay |
+| Servers | ARM 2-core / 12GB RAM × 2 (Primary + Replica) |
+
+Common-noun searches like "삼성전자", "인공지능", "자바스크립트" work fine.
+
+---
+
+## 2. The Problem — Two Symptoms
+
+### Symptom 1: searching "안녕" returns 0 results
+
+Searching "안녕하세요" returns results, but typing just "안녕" returns **nothing**.
+
+![Zero results for "안녕"](/uploads/project/WikiEngine/nori-stop-filter-fix/search-annyeong-zero.png)
+
+### Symptom 2: searching "안녕하세" surfaces only "하세" docs
+
+Searching "안녕하세" surfaces docs about **"하세" (a Japanese surname) on top** instead of docs about "안녕하세요".
+
+![안녕하세 surfacing 하세 results](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeonghase-hase-results.png)
+
+> Did-you-mean suggests "안녕하" but the actual results are dominated by unrelated docs like "하세", "하세쿠라", "하세 히로시".
+
+### Autocomplete is broken too
+
+| Input | Autocomplete | Note |
+|---|---|---|
+| "안" | 안경, 안녕, 안녕하 | OK |
+| "안녕" | **none** | broken |
+| "안녕하세요" | many results | OK |
+| "황치열" | **none** | broken |
+
+---
+
+## 3. Root Cause
+
+### Symptom 1 — IC (Interjection) Stop Filter
+
+Nori's `DEFAULT_STOP_TAGS` includes IC (interjection). The same string "안녕" gets a different POS tag depending on context:
+
+```
+"안녕하세요"  → Nori: '안녕'(NNG, noun) + '하'(XSV) + '세요'(EF)
+              → Stop filter: '안녕' kept ✓
+              → Index: ['안녕']
+
+"안녕"        → Nori: '안녕'(IC, interjection)
+              → Stop filter: '안녕' removed ✗
+              → Query: [] (empty query → 0 results)
+```
+
+**The crux**: standalone "안녕" gets tagged as an interjection (IC) and gets filtered out. But the index contains '안녕' (NNG) as part of "안녕하세요". **Indexed but not searchable — an asymmetry problem.**
+
+### Symptom 2 — Non-standard tokenization of incomplete input
+
+"안녕하세" is an unfinished form not in Nori's dictionary, and Nori splits it non-standardly:
+
+```
+"안녕하세" → Nori: '안녕'(NNG) + '하세'(???)
+            → Query: ['안녕', '하세'] (OR)
+```
+
+In the OR query, a doc whose title is "하세" (Japanese surname) gets a perfect title match with title^3 boost, so its BM25 score is extremely high. Meanwhile, the "안녕하세요" doc only has '안녕' indexed and does not match the '하세' token at all.
+
+| Doc | Indexed tokens | Match '안녕' | Match '하세' | BM25 |
+|---|---|:---:|:---:|---|
+| "하세" (Japanese surname) | ['하세'] | ✗ | ✓ (title exact) | **very high** |
+| "안녕하세요" | ['안녕'] | ✓ (partial) | ✗ | low |
+
+### Autocomplete cause — limits of title_jamo PrefixQuery
+
+The Lucene fallback used PrefixQuery on the title_jamo field, but with 12M docs the jamo-decomposed term space is too large, so completed-Hangul searches like "황치열" fail.
+
+---
+
+## 4. Options
+
+The two symptoms have different root causes, so each needs its own fix.
+
+### Symptom 1 fix — remove IC
+
+| Option | Pro | Con |
+|---|---|---|
+| **A. Remove IC from Stop Tags** | root-cause fix, 1-line change | all interjections get indexed |
+| Add '안녕' as NNG to user dictionary | keep IC | cannot manually register every interjection |
+
+Removing IC bloats the index slightly, but interjections are a tiny fraction of Korean text.
+
+### Symptom 2 fix — n-gram supplement
+
+| Option | "안녕하세" → "안녕하세요" | Impact on existing search | Cost |
+|---|:---:|---|---|
+| **B. title_ngram + dis_max** | **✓** | none | +8% index |
+| Switch to AND operator | ✗ (recall drops) | **severe** | none |
+| PhraseQuery boost | ✗ (only 1 token, no phrase possible) | none | none |
+| Status quo + Did-you-mean | ✗ | none | none |
+
+Adding a 2-3gram analyzer to the title field only and combining via dis_max means even when morphological analysis fails, n-gram raises related docs through character-sequence matching. Applying n-gram to all content would explode tokens 6.5×, but title-only keeps it at 36GB → 39GB (+8%).
+
+### Insurance — token-wipeout fallback
+
+| Option | Description |
+|---|---|
+| **C. PrefixQuery fallback** | If Nori produces 0 tokens after analysis, fall back to PrefixQuery on the raw keyword |
+
+This is insurance for edge cases not covered by A and B.
+
+---
+
+## 5. Implementation — A + B + C
+
+The three layers cover three different failure modes:
+- **A (remove IC)**: interjection getting filtered
+- **B (dis_max)**: morphological analysis mis-tokenizing incomplete input
+- **C (PrefixQuery)**: unknown cases where all tokens disappear
+
+### A. Customize Stop Tags
+
+```java
+// LuceneConfig.java
+private Analyzer createNoriAnalyzer() {
+    UserDictionary userDict = loadUserDictionary();
+    Set<POS.Tag> stopTags = EnumSet.copyOf(
+        KoreanPartOfSpeechStopFilter.DEFAULT_STOP_TAGS);
+    stopTags.remove(POS.Tag.IC);  // remove IC (interjection)
+    return new KoreanAnalyzer(userDict,
+        KoreanTokenizer.DEFAULT_DECOMPOUND, stopTags, false);
+}
+```
+
+### B. title_ngram + dis_max
+
+**PerFieldAnalyzerWrapper:**
+
+```java
+@Bean
+Analyzer luceneAnalyzer() {
+    Analyzer noriAnalyzer = createNoriAnalyzer();
+    Analyzer ngramAnalyzer = createNgramAnalyzer(); // 2-3gram
+    return new PerFieldAnalyzerWrapper(noriAnalyzer,
+        Map.of("title_ngram", ngramAnalyzer));
+}
+```
+
+**Add title_ngram field at indexing time:**
+
+```java
+// LuceneIndexService.java
+doc.add(new TextField("title_ngram", post.getTitle(), Field.Store.NO));
+```
+
+**dis_max query:**
+
+```java
+new DisjunctionMaxQuery(
+    List.of(
+        textQuery,                           // Nori analysis
+        new BoostQuery(ngramQuery, 2.0f)     // 2-3gram
+    ),
+    0.1f  // tie_breaker
+);
+```
+
+#### dis_max tuning steps
+
+This shape did not appear from the start — there was trial and error.
+
+**Pass 1 — MUST + SHOULD:**
+
+```
+textQuery(MUST) + ngramQuery(SHOULD)
+```
+
+Since textQuery is MUST, morphological analysis dominates. In "안녕하세" the '하세' token raised the "하세" doc to the top via title^3, and n-gram being SHOULD could not flip the order.
+
+**Pass 2 — dis_max with 3.0 boost on textQuery:**
+
+```
+dis_max([BoostQuery(textQuery, 3.0), ngramQuery], tie_breaker=0.1)
+```
+
+textQuery 3.0 × inner title 3.0 = 9× boost. The exact "하세" match still dominated n-gram. Same result.
+
+**Pass 3 — dis_max, no boost:**
+
+Even with only the inner title^3 boost, the BM25 for the "하세" exact title match was so high that n-gram partial matching was not enough.
+
+**Final — 2.0 boost on ngramQuery:**
+
+Boosting n-gram by 2.0 lets it compete with title^3.
+
+| | textQuery score | ngramQuery score | dis_max picks |
+|---|---|---|---|
+| "하세" doc | high (title exact) | low | textQuery |
+| "안녕하세요" doc | low (only '안녕' matches) | **high** (4-char n-gram × 2.0) | **ngramQuery → top** |
+
+### C. Token-wipeout PrefixQuery fallback
+
+```java
+// LuceneSearchService.java
+if (allTokens.isEmpty()) {
+    return new PrefixQuery(new Term("title", queryStr.toLowerCase()));
+}
+```
+
+### D. Autocomplete title_raw fallback
+
+The existing Lucene fallback used only title_jamo PrefixQuery, so completed-Hangul queries like "황치열" failed. We split completed-Hangul vs jamo input:
+
+```java
+// RedisAutocompleteService.java
+if (JamoDecomposer.isCompleteHangul(prefix)) {
+    // "황치열" → title_raw PrefixQuery
+    return luceneSearchService.autocompleteFallback(prefix, "title_raw");
+} else {
+    // "ㅎㅊㅇ" → title_jamo PrefixQuery
+    return luceneSearchService.autocompleteFallback(
+        JamoDecomposer.decompose(prefix), "title_jamo");
+}
+```
+
+title_raw is a StringField indexed without analyzer, already in the index — no extra cost.
+
+---
+
+## 6. Verification — Before / After
+
+### Before
+
+**"안녕하세" — only "하세" docs:**
+
+![안녕하세 하세 results](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeonghase-hase-results.png)
+
+**"황치열" autocomplete — empty:**
+
+![황치열 autocomplete empty](/uploads/project/WikiEngine/nori-stop-filter-fix/before-autocomplete-hwang-empty.png)
+
+### After
+
+**"안녕" — returns results + AI summary:**
+
+![안녕 search OK](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeong.png)
+
+**"안녕하세" — "안녕하세요" docs on top:**
+
+![안녕하세 dis_max result](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeonghase-dismax.png)
+
+**"황" autocomplete — "황치열" appears:**
+
+![황 autocomplete OK](/uploads/project/WikiEngine/nori-stop-filter-fix/after-autocomplete-hwang.png)
+
+### Improvement summary
+
+| Item | Before | After |
+|---|---|---|
+| Search "안녕" | **0** | normal |
+| Search "안녕하세" | **only "하세" docs** | **"안녕하세요" docs on top** |
+| Autocomplete "황치열" | **empty** | normal suggestions |
+| Index size | 36GB | 39GB (+8%) |
+| Reindex | - | required (12M docs, 69 min) |
+
+Files modified: `LuceneConfig.java` (IC removal + PerFieldAnalyzerWrapper), `LuceneIndexService.java` (title_ngram field), `LuceneSearchService.java` (dis_max query + PrefixQuery fallback), `RedisAutocompleteService.java` (title_raw fallback).
+
+---
+
+## 7. Structural Limits of Nori
+
+The issues found here are not Nori-specific — they are **common limits of dictionary-based morphological analyzers.**
+
+| Limit | Description |
+|---|---|
+| IC over-filtering | IC is in stop tags, so standalone interjections are unsearchable |
+| Incomplete input | inflectional fragments like "안녕하세" get tokenized non-standardly |
+| OOV (out-of-vocab) | new coinages and proper nouns are not handled |
+| Coarse particle/ending tags | only "J" and "E" supercategories — cannot remove specific particles/endings |
+
+For this project, Nori's throughput (3,000+ docs/sec) and memory efficiency suit the 12M scale, so we kept Nori and chose to **patch its limits with IC removal + title_ngram dis_max + PrefixQuery fallback + autocomplete title_raw fallback**.
+
+---
+
+## Sources
+
+- [Lucene 10.3.2 — KoreanPartOfSpeechStopFilter.java](https://github.com/apache/lucene/blob/main/lucene/analysis/nori/src/java/org/apache/lucene/analysis/ko/KoreanPartOfSpeechStopFilter.java)
+- [Elastic Blog — Nori: The Official Elasticsearch Plugin for Korean](https://www.elastic.co/blog/nori-the-official-elasticsearch-plugin-for-korean-language-analysis)
+- [Elastic Blog — How to Search CJK Text Part 2: Multi-fields](https://www.elastic.co/blog/how-to-search-ch-jp-kr-part-2)
+- [Sease — When and How to Use N-grams in Elasticsearch](https://sease.io/2023/12/when-and-how-to-use-n-grams-in-elasticsearch.html)
