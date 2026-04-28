@@ -38,3 +38,6 @@ docs/
 # firebase
 firebase-debug.log
 
+# playwright mcp tool cache
+.playwright-mcp/
+
