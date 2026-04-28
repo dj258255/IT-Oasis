@@ -421,3 +421,17 @@ Atomicity is not just a *"all succeed or all fail"* rule — it is the implement
 - **SQL Server** — In the ARIES family like InnoDB. MVCC is opt-in (snapshot isolation) and the version store lives in tempdb.
 
 All three deliver the same external Atomicity guarantee, but internally **the moment and form of the bill** are completely different.
+
+## References (Primary Sources First)
+
+- [PostgreSQL Documentation: Write-Ahead Logging (WAL)](https://www.postgresql.org/docs/current/wal-intro.html)
+- [PostgreSQL 7.3 Documentation: WAL — UNDO operation is not implemented](https://www.postgresql.org/docs/7.3/wal.html)
+- [PostgreSQL Mailing List: PG and undo logging (Tom Lane on commit/abort being O(1))](https://www.postgresql.org/message-id/603c8f070908180931s5b6f3a59l4f64488e6e2476a8%40mail.gmail.com)
+- [PostgreSQL Wiki: Hint Bits](https://wiki.postgresql.org/wiki/Hint_Bits)
+- [The Internals of PostgreSQL: Commit Log (clog)](https://www.interdb.jp/pg/pgsql05.html)
+- [SQL Server Transaction Log Architecture — Microsoft Learn](https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-transaction-log-architecture-and-management-guide)
+- [Well-known Databases Use Different Approaches for MVCC — EDB](https://www.enterprisedb.com/blog/postgresql-anti-wraparound)
+- [Comparing PostgreSQL MVCC vs InnoDB — Severalnines](https://severalnines.com/blog/comparing-postgresql-mvcc-vs-innodb/)
+- [InnoDB Undo Log vs Redo Log — Percona](https://www.percona.com/blog/innodbs-redo-log-and-undo-log/)
+- ARIES: A Transaction Recovery Method (Mohan et al., 1992)
+- [How Postgres Makes Transactions Atomic — brandur.org](https://brandur.org/postgres-atomicity)
