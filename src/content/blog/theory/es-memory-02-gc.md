@@ -244,11 +244,11 @@ Only the ones explicitly named in Oracle's JDK 17 official ["Available Collector
 
 | Collector | Flag | Character | Purpose | In Oracle JDK 17? |
 |---|---|---|---|---|
-| Serial GC | `-XX:+UseSerialGC` | single-threaded STW | small datasets / single CPU | ✓ |
-| Parallel GC | `-XX:+UseParallelGC` | multi-threaded STW | maximize throughput | ✓ |
-| G1 GC | `-XX:+UseG1GC` | **mostly concurrent** | predictable pause time (default) | ✓ |
-| Z GC | `-XX:+UseZGC` | **fully concurrent** | ultra-low latency (a few ms) | ✓ (production-ready since JDK 15) |
-| Shenandoah | `-XX:+UseShenandoahGC` | **fully concurrent** | pauses independent of heap size | **✗ (not built into Oracle JDK)** |
+| Serial GC | `-XX:+UseSerialGC` | single-threaded STW | small datasets / single CPU | yes |
+| Parallel GC | `-XX:+UseParallelGC` | multi-threaded STW | maximize throughput | yes |
+| G1 GC | `-XX:+UseG1GC` | **mostly concurrent** | predictable pause time (default) | yes |
+| Z GC | `-XX:+UseZGC` | **fully concurrent** | ultra-low latency (a few ms) | yes (production-ready since JDK 15) |
+| Shenandoah | `-XX:+UseShenandoahGC` | **fully concurrent** | pauses independent of heap size | **no (not built into Oracle JDK)** |
 
 **G1 is the default in JDK 17.** Oracle doc: *"G1 is selected by default on most hardware and operating system configurations"* ([Oracle JDK 17 — Available Collectors](https://docs.oracle.com/en/java/javase/17/gctuning/available-collectors.html))
 
