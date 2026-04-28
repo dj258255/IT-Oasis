@@ -40,9 +40,9 @@ seriesOrder: 1
 
 ```sql
 BEGIN;
-UPDATE account SET balance = balance - 100 WHERE id = 1;  -- ✅ 성공
+UPDATE account SET balance = balance - 100 WHERE id = 1;  -- 성공
 -- 여기서 무슨 일이 생기면?
-UPDATE account SET balance = balance + 100 WHERE id = 2;  -- ❌
+UPDATE account SET balance = balance + 100 WHERE id = 2;  -- 실패
 COMMIT;
 ```
 
@@ -262,9 +262,9 @@ Simple to state, tricky to implement. Classic example:
 
 ```sql
 BEGIN;
-UPDATE account SET balance = balance - 100 WHERE id = 1;  -- ✅ ok
+UPDATE account SET balance = balance - 100 WHERE id = 1;  -- success
 -- what if something happens here?
-UPDATE account SET balance = balance + 100 WHERE id = 2;  -- ❌
+UPDATE account SET balance = balance + 100 WHERE id = 2;  -- failure
 COMMIT;
 ```
 

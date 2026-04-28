@@ -380,11 +380,11 @@ Nori's `DEFAULT_STOP_TAGS` includes IC (interjection). The same string "안녕" 
 
 ```
 "안녕하세요"  → Nori: '안녕'(NNG, noun) + '하'(XSV) + '세요'(EF)
-              → Stop filter: '안녕' kept ✓
+              → Stop filter: '안녕' kept
               → Index: ['안녕']
 
 "안녕"        → Nori: '안녕'(IC, interjection)
-              → Stop filter: '안녕' removed ✗
+              → Stop filter: '안녕' removed
               → Query: [] (empty query → 0 results)
 ```
 
@@ -403,8 +403,8 @@ In the OR query, a doc whose title is "하세" (Japanese surname) gets a perfect
 
 | Doc | Indexed tokens | Match '안녕' | Match '하세' | BM25 |
 |---|---|:---:|:---:|---|
-| "하세" (Japanese surname) | ['하세'] | ✗ | ✓ (title exact) | **very high** |
-| "안녕하세요" | ['안녕'] | ✓ (partial) | ✗ | low |
+| "하세" (Japanese surname) | ['하세'] | no | yes (title exact) | **very high** |
+| "안녕하세요" | ['안녕'] | yes (partial) | no | low |
 
 ### Autocomplete cause — limits of title_jamo PrefixQuery
 
@@ -429,10 +429,10 @@ Removing IC bloats the index slightly, but interjections are a tiny fraction of 
 
 | Option | "안녕하세" → "안녕하세요" | Impact on existing search | Cost |
 |---|:---:|---|---|
-| **B. title_ngram + dis_max** | **✓** | none | +8% index |
-| Switch to AND operator | ✗ (recall drops) | **severe** | none |
-| PhraseQuery boost | ✗ (only 1 token, no phrase possible) | none | none |
-| Status quo + Did-you-mean | ✗ | none | none |
+| **B. title_ngram + dis_max** | **yes** | none | +8% index |
+| Switch to AND operator | no (recall drops) | **severe** | none |
+| PhraseQuery boost | no (only 1 token, no phrase possible) | none | none |
+| Status quo + Did-you-mean | no | none | none |
 
 Adding a 2-3gram analyzer to the title field only and combining via dis_max means even when morphological analysis fails, n-gram raises related docs through character-sequence matching. Applying n-gram to all content would explode tokens 6.5×, but title-only keeps it at 36GB → 39GB (+8%).
 
