@@ -366,3 +366,346 @@ CREATE TABLE click_logs (
 - [XGBoost Learning to Rank Tutorial](https://xgboost.readthedocs.io/en/stable/tutorials/learning_to_rank.html)
 - [Sanderson & Zobel — How many queries?](https://dl.acm.org/doi/10.1145/1076034.1076116)
 - [LUCENE-7905 — SortedSetDocValues OrdinalMap build cost](https://issues.apache.org/jira/browse/LUCENE-7905)
+
+<!-- EN -->
+
+## Previous
+
+In [Query Expansion + Query Understanding](/blog/project/wikiengine/search-query-enhancement) we built synonym expansion, DirectSpellChecker typo correction, UnifiedHighlighter snippet improvements, and the full reindex infrastructure for 12,156,589 docs.
+
+| Metric | Result |
+|---|---|
+| Synonym expansion | "AI" → "인공지능" #1 (recall improved) |
+| Typo correction | "프로그래링" → "프로그래밍" suggestion succeeded |
+| Snippet | UnifiedHighlighter + 500-char snippetSource |
+| Reindex infra | Directory Swap + SearcherManager recreation (zero downtime) |
+
+Search queries are correctly interpreted and expanded, but the **ranking model still relies on manual rules**. Also, the **switch to native Lucene Facets** that was deferred in [Category Search Filtering](/blog/project/wikiengine/search-category-facet) is completed in this post.
+
+---
+
+## 1. Steady State — Current Ranking Model
+
+![Current ranking model — manual weights](/uploads/project/WikiEngine/search-ltr-ranking/current-ranking-model.svg)
+
+The ranking implemented in [Search Quality Evaluation](/blog/project/wikiengine/search-quality) is based on **manual weights**. Whether these weights actually align with the order users want **has not been validated by data**.
+
+---
+
+## 2. Problems
+
+### Problem 1: limits of manual weighting
+
+![Searching "자바" — manual ranking vs user intent](/uploads/project/WikiEngine/search-ltr-ranking/ranking-mismatch.svg)
+
+### Problem 2: Facet — limits of DB GROUP BY approximation
+
+In [Category Search Filtering](/blog/project/wikiengine/search-category-facet) I implemented an approximate Facet via DB GROUP BY, but it was an approximation over only the top-1,000 results. Switching to native `SortedSetDocValuesFacetCounts` is needed for **exact Facets over the entire matching set**. That requires `SortedSetDocValuesFacetField` + a full reindex.
+
+### Problem 3: namespace-based categories make Facets meaningless
+
+The categories assigned during the wiki import skew 97% to "general doc," so showing a Facet is meaningless. **Reclassifying into 28 topical categories** must come first.
+
+---
+
+## 3. Alternative Review
+
+### LTR model choice
+
+| Model | Pro | Con | Verdict |
+|---|---|---|---|
+| **LambdaMART (XGBoost)** | optimizes NDCG, industry standard for search ranking | Python training → Java inference conversion needed | **chosen** |
+| **Linear Model** | simple, interpretable, native to Java | cannot learn non-linear relationships | **rejected** (same as manual boosting) |
+| **Neural (BERT)** | understands context | inference latency hundreds of ms, needs GPU | **rejected** (240ms SLA) |
+| **Elasticsearch LTR** | integrated into ES ecosystem | needs a separate cluster (≥6GB RAM) | **rejected** (impossible on Free Tier) |
+
+**Why Linear Model was rejected**: per OpenSource Connections — *"Elasticsearch boosts are nothing but coefficients in a linear regression"*. Training a Linear Model on the same 3 features (viewCount, likeCount, recency) gives **almost identical results to the existing manual weights**. A tree model (LambdaMART) can learn feature interactions (e.g., short titleLength + high tagOverlap), capturing non-linear relationships.
+
+### Java inference runtime choice
+
+| Option | Outcome | Reason |
+|---|---|---|
+| xgboost-predictor-java | **rejected** | incompatible with XGBoost 2.x model format (UBJSON), deprecated |
+| ONNX Runtime | **rejected** | onnxmltools does not support `XGBRanker` → ONNX conversion ([Issue #382](https://github.com/onnx/onnxmltools/issues/382)) |
+| **XGBoost4J** | **chosen** | loads Python `save_model()` directly via Java `XGBoost.loadModel()` with no conversion. ARM64 Linux native lib bundled in the JAR. `inplace_predict()` is thread-safe |
+
+OCI Free Tier is ARM Ampere A1. The XGBoost4J JAR (`ml.dmlc:xgboost4j_2.12:2.1.4`) bundles `lib/linux/aarch64/libxgboost4j.so`, so it works without any extra compilation.
+
+### Training data: LLM-as-a-Judge
+
+User traffic is essentially zero, so click logs do not accumulate. We use an LLM to substitute for relevance judgments.
+
+**Industry basis**: SIGIR 2024 (Thomas et al.) — GPT-4's relevance judgments agree with crowdsource annotators at Cohen's Kappa 0.6-0.7, equal to or better than inter-annotator agreement (0.4-0.6).
+
+---
+
+## 4. Implementation
+
+### Part 1: Auto-classifying 28 categories
+
+Reclassified the existing namespace-based categories ("general doc" 97%) into **28 topical categories** (computer science, math, physics, history, music, games, sports, etc.).
+
+**Method**: keyword-based batch classification (`CategoryClassificationService`). For each category, define a list of representative keywords; assign the post to the category with the most keyword matches in title + tags.
+
+**Accuracy validation (90 manual samples):**
+
+| Category | Correct | Borderline | Wrong | Accuracy |
+|---|---|---|---|---|
+| Computer Science | 10 | 0 | 0 | **100%** |
+| History | 10 | 0 | 0 | **100%** |
+| Music | 10 | 0 | 0 | **100%** |
+| Game | 10 | 0 | 0 | **100%** |
+| Sports | 10 | 0 | 0 | **100%** |
+| Physics | 8 | 2 | 0 | **80%** |
+| Math | 6 | 4 | 0 | **60%** |
+| Education | 6 | 3 | 1 | **60%** |
+| People | 5 | 5 | 0 | **50%** |
+| **Average** | | | | **~83%** |
+
+> Limits of keyword classification: "수능시험" (college entrance exam) matches the "math" keyword and is classified as math; anime character names match the "people" keyword. Without priority/exclusivity logic between keywords, accuracy degrades on edge cases. 83% is enough for Facet exploration; can be improved with MoreLikeThis-based reclassification later.
+
+### Part 2: Native Facet switch + tag indexing
+
+This is where the native Lucene Facet deferred in [Category Search Filtering](/blog/project/wikiengine/search-category-facet) lands. **All changes are integrated into a single reindex.**
+
+**Changes included in the reindex:**
+
+| Change | Detail |
+|---|---|
+| Facet field | `SortedSetDocValuesFacetField("category", categoryName)` |
+| Tag indexing | `TextField("tags", tagNames, Store.YES)` — 2.16M unique tags |
+| Nori user dict | 158,539 entries (30 manual + 158,509 from open-korean-text) |
+| snippetSource sanitization | raw markup → clean plain text |
+| Batch tag preloading | prevents N+1 (1 JOIN query per batch) |
+
+**Performance optimizations:**
+
+- **`SortedSetDocValuesReaderState` cached via RefreshListener**: pre-built when the reader refreshes via `SearcherManager.addListener()`. The search path does only a volatile read, no lock. Lucene Javadoc: *"create it once and re-use for a given IndexReader"*. LUCENE-7905 reports OrdinalMap build cost of ~106s for 26.6M terms — must not build it on every search.
+- **Single-pass collection of TopDocs + FacetsCollector via `MultiCollectorManager`**: consolidate two `searcher.search()` calls into one for the same query, saving I/O.
+
+**Decision to drop tag Facet**: Faceting over 2.16M unique tags is a high-cardinality anti-pattern (Elasticsearch's own docs warn about this). Tags are kept only **for search-quality** (indexed as `TextField` and matched in search); only the 30 categories are kept as Facets.
+
+**Facet measurement:**
+
+![Category Facet distribution — search "프로그래밍"](/uploads/project/WikiEngine/search-ltr-ranking/phase19-after-category-facets-distribution.png)
+
+> Aggregated over the entire matching set via `SortedSetDocValuesFacetCounts`. Searching "프로그래밍": web content (21,884) > others (3,770) > computer science (3,047) > games (878) > music (720) ... food/cooking (5). All 30 categories aggregated correctly.
+
+### Part 3: LTR — LambdaMART + XGBoost4J
+
+#### 3-1. Training data — LLM-as-a-Judge (Gemini)
+
+Collect 45 search queries, extract BM25 top-20 for each → 900 (query, doc) pairs. Use the Gemini API for 4-point relevance judgments:
+
+- 0: Irrelevant
+- 1: Marginally relevant — only mentions the topic
+- 2: Relevant — partial answer
+- 3: Highly relevant — direct, complete answer
+
+**Non-determinism handling — average of 3 calls, rounded**: even at temperature=0, LLMs are not fully deterministic (GPU batch composition varies, floating-point non-associativity). For graded relevance, averaging + rounding is the canonical approach (TREC LLMJudge participant RMIT-IR: 3 generations → average → round).
+
+**First run failed (2% success rate):**
+
+![1st run status — shown as 900 done](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-1st-run-status-900.png)
+
+> 45 queries × 20 docs = 900 marked done, but CSV export pulled out **only 18**. Server logs showed 882 with `Failed to generate content`.
+
+**Root cause**: 2-second delay between rounds → 3 calls take ~6s → **30 requests/min, exceeding 15 RPM**. Spring AI's default retry classifies HTTP 429 as `NonTransientAiException` and does not retry. Also, data was memory-only (`ArrayList`) and the status API had no success/fail breakdown, so the 98% failure went unnoticed.
+
+**Fixes:**
+
+| Item | Before | After |
+|---|---|---|
+| Inter-round delay | 2s (30 RPM, **over**) | **5s** (12 RPM, within 15 RPM) |
+| On API failure | no retry | **exponential backoff** (10s → 20s, max 2 per round) |
+| Data persistence | memory-only (loss risk) | **CSV append + flush** (write to disk on each judgment) |
+| Re-execution | from scratch | **resume** — skip completed (qid, postId) |
+| Status API | only `dataSize` | shows `success` and `fail` separately |
+
+After the fixes: 10 queries × 20 docs = 200 pairs, 200/200 success on Gemini 3.1 Flash Lite (100%).
+
+![LTR data generation start](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-generate-start.png)
+![CSV export result](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-csv-export.png)
+
+#### 3-2. Feature extractor (14 features)
+
+> Industry baseline: cold start uses 10-20 features (LinkedIn 200+, Etsy 50-100). BM25 score is almost always the most important. The first 20 features cover ~80% of total performance.
+
+| # | Feature | Type | Description |
+|---|---|---|---|
+| 1 | bm25Title | query-dependent | BM25 on title field |
+| 2 | bm25Content | query-dependent | BM25 on content field |
+| 3 | queryTermCoverageTitle | query-dependent | fraction of query terms appearing in title |
+| 4 | queryTermCoverageContent | query-dependent | fraction of query terms appearing in content |
+| 5 | exactTitleMatch | query-dependent | query exactly contained in title (0/1) |
+| 6 | titleLength | query-independent | title length (token count) |
+| 7 | contentLength | query-independent | content length (chars, log-transformed) |
+| 8 | freshnessDays | query-independent | days since creation |
+| 9 | viewCount | query-independent | view count (log1p) |
+| 10 | likeCount | query-independent | like count (log1p) |
+| 11 | tagOverlap | query-dependent | overlap between query terms and tags |
+| 12 | categoryId | query-independent | category ID (ordinal) |
+| 13 | queryLength | query-level | query word count |
+| 14 | bm25Snippet | query-dependent | BM25 on snippetSource field |
+
+#### 3-3. Rescorer-based reranking
+
+Two-Phase Ranking — the pattern most search engines use (Google, Bing, Naver):
+
+```
+Phase 1 (BM25):  12,156,589 docs → extract top-200 (ms range)
+Phase 2 (LTR):   top-200 → extract 14 features → score with XGBoost4J → return top-K
+```
+
+```java
+public class LTRRescorer extends Rescorer {
+    private final Booster booster;  // XGBoost4J model
+
+    @Override
+    public TopDocs rescore(IndexSearcher searcher, TopDocs firstPass, int topN) {
+        for (int i = 0; i < hits.length; i++) {
+            float[] features = featureExtractor.extractFeatures(query, doc, searcher);
+            // XGBoost4J inplace_predict — thread-safe, no DMatrix needed
+            float[][] input = new float[][] { features };
+            float[][] output = booster.inplacePredict(input, 0, 0);
+            newScores[i] = output[0][0];
+        }
+        // sort by new scores → rerankedTopDocs
+    }
+}
+```
+
+Rescore window N=200 is the Elasticsearch official default. Toggle on/off via the `ltr.enabled` setting.
+
+#### 3-4. Click log infrastructure — implicit feedback collection
+
+LLM-as-a-Judge is a cold-start bootstrap. In production, user click data is more accurate.
+
+```sql
+-- click_logs table (Flyway V5)
+CREATE TABLE click_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    query VARCHAR(500) NOT NULL,
+    post_id BIGINT NOT NULL,
+    click_position INT,
+    dwell_time_ms BIGINT,
+    session_id VARCHAR(36),
+    user_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+- On click in search results: `navigator.sendBeacon()` → produce to Kafka "search.clicks" topic + DB write
+- On post detail `visibilitychange` + `pagehide` → send dwell time
+- `sessionStorage`-managed per-tab session ID
+
+**Click → relevance conversion (for future retraining):**
+
+| Dwell time | Grade | Meaning | Source |
+|---|---|---|---|
+| > 120s | 3 (Highly Relevant) | SAT click | Kim et al. WSDM 2014 |
+| 30-120s | 2 (Relevant) | medium | |
+| 10-30s | 1 (Marginally) | short click | |
+| < 10s | 0 (Irrelevant) | misclick | Microsoft Research |
+| no click + position 1-3 | 0 | seen but not clicked | Joachims Skip-Above |
+
+---
+
+## 5. Verification — Before/After
+
+### Ranking quality (NDCG@10)
+
+![Training result — NDCG@10 + Feature Importance](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-training-result.png)
+
+| Metric | Value | Note |
+|---|---|---|
+| BM25 Baseline NDCG@10 | 0.6910 | bm25Title score |
+| LTR NDCG@10 (train set) | 0.9228 | reflects overfit, reference only |
+| **LTR NDCG@10 (5-Fold CV)** | **0.7387 (±0.04)** | **+4.8%p over BM25** |
+
+> The 0.9228 train-set figure reflects overfitting. **+4.8%p on CV is the honest improvement.** With a small dataset (10 queries, 200 pairs), +4.8%p is meaningful (Sanderson & Zobel: ≥+5% over 100 queries is statistically detectable).
+
+**Feature Importance (gain):**
+
+| Rank | Feature | Gain | Analysis |
+|---|---|---|---|
+| 1 | titleLength | 1.0 | short titles = disambiguation pages |
+| 2 | tagOverlap | 0.9 | overlap of query terms and tags — **payoff of tag indexing** |
+| 3 | bm25Title | 0.8 | BM25 title score — top in nearly all LTR setups |
+| 4 | categoryId | 0.7 | category — **payoff of auto-classification** |
+| 9-14 | viewCount, likeCount, etc. | 0.0 | **unused** — dummy data so no signal |
+
+> viewCount/likeCount are 0.0 because views/likes are essentially zero — no discriminative signal. Their importance should rise once real traffic accumulates.
+
+### Before — "자바" with BM25 default ranking
+
+![Before — 자바 BM25 ranking (frontend)](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-before-java-frontend.png)
+![Before — 자바 BM25 ranking (terminal)](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-before-java-terminal.png)
+
+> BM25 + FeatureField manual boost: 1. Java the Hutt (Star Wars) → 2. Java applet → 3. Rojava → **4. Java (programming language)**. The user-intended programming language is pushed to #4.
+
+### After — "자바" with LTR reranking
+
+![After — 자바 LTR ranking (frontend)](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-after-java-frontend.png)
+
+> LTR rerank: 1. **Java (programming language)** → 2. **JavaScript** → 3. Java people. "Java the Hutt (Star Wars)" is dropped from #1 and programming-related docs move up. This is the result of titleLength + tagOverlap + bm25Title feature interactions.
+
+---
+
+## 6. Load Test — The Reality of LTR
+
+### LTR ON — k6 100 VU, 20 min
+
+| Scenario | Baseline (LTR OFF) | LTR ON | Change |
+|---|---|---|---|
+| Overall | 42.81ms / P95 190ms | **3,088ms / P95 16.7s** | **72× worse** |
+| Search | 29.18ms / P95 100ms | **8,826ms / P95 37.2s** | **302× worse** |
+| Autocomplete | 11.68ms / P95 68ms | **497ms / P95 2.2s** | 42× worse despite being unrelated to LTR |
+| Error rate | 0.00% | **0.81%** | timeout + 500 |
+
+![k6 overview — LTR ON](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-load-k6-overview.png)
+
+![Spring Boot + CPU — LTR ON](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-load-spring-boot.png)
+
+> App CPU peak **160%** (80% + 80% across 2 cores). JVM thread count spikes 50 → 150. All Tomcat threads occupied by LTR feature extraction. 1-min Load Average peaks at **60** (30× over capacity on 2 cores).
+
+**Root cause**: extracting 14 features for each of 200 docs in the rescore window is CPU-intensive. BM25 across 3 fields × 200 docs = 600 Scorer creations + Nori tokenization 200 docs × 3 = 600+ morphological analyses. With 100 VU concurrency on 2-core ARM, CPU saturates → queueing avalanche → even unrelated APIs (autocomplete) degrade in tandem.
+
+### LTR OFF — k6 100 VU, 20 min
+
+| Scenario | Baseline | LTR OFF (final) | Change |
+|---|---|---|---|
+| Overall | 42.81ms / P95 190ms | **263ms / P95 1.17s** | +515% |
+| Search | 29.18ms / P95 100ms | **548ms / P95 2.61s** | cost of Facet+tags+dict |
+| Autocomplete | 11.68ms / P95 68ms | **43ms / P95 99ms** | back to baseline level |
+| Error rate | 0.00% | **0.00%** | stable |
+
+![k6 overview — LTR OFF](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltroff-load-k6-overview.png)
+
+> With LTR off, error rate is 0% and autocomplete returns to the 43ms baseline level. The 548ms search figure is the cost of the additions in this post: **Facet aggregation + tag indexing + 158K-entry Nori user dict**. The index growth from 36GB → 42GB also contributes.
+
+### Conclusion
+
+- **LTR pipeline is functionally validated**: training-data generation (LLM-as-a-Judge) → model training (XGBoost LambdaMART) → reranking (Rescorer) → **NDCG +4.8%p improvement** → load test
+- **Production LTR is CPU-bound on 2-core ARM Free Tier**: disabled via `LTR_ENABLED=false`; will re-enable when infrastructure scales up
+- **At larger scale**: pre-computed features, feature caching, and offloading LTR to a dedicated multi-core or GPU-backed scoring node fits better. The Elasticsearch LTR plugin also recommends a dedicated scoring node configuration.
+
+---
+
+## Next
+
+In [Content Filtering — Operational Safety](/blog/project/wikiengine/search-content-filter) we implement Aho-Corasick banned-word filtering, exclusion of blinded posts from search, Negative Caching, and autocomplete safety mechanisms.
+
+---
+
+## Sources
+
+- [SIGIR 2024 — LLMs can Accurately Predict Searcher Preferences (Thomas et al.)](https://arxiv.org/abs/2309.10621)
+- [OpenSource Connections — LTR Linear Models](https://opensourceconnections.com/blog/2017/04/01/learning-to-rank-linear-models/)
+- [Booking.com — 150 Successful ML Models (KDD 2019)](https://dl.acm.org/doi/10.1145/3292500.3330716)
+- [Airbnb — ML-Powered Search Ranking (KDD 2018)](https://dl.acm.org/doi/10.1145/3219819.3219862)
+- [Joachims et al. — Accurately Interpreting Clickthrough Data (SIGIR 2005)](https://www.cs.cornell.edu/people/tj/publications/joachims_etal_05a.pdf)
+- [Kim et al. — Modeling Dwell Time (WSDM 2014)](https://www.microsoft.com/en-us/research/publication/modeling-dwell-time-to-predict-click-level-satsifaction/)
+- [XGBoost Learning to Rank Tutorial](https://xgboost.readthedocs.io/en/stable/tutorials/learning_to_rank.html)
+- [Sanderson & Zobel — How many queries?](https://dl.acm.org/doi/10.1145/1076034.1076116)
+- [LUCENE-7905 — SortedSetDocValues OrdinalMap build cost](https://issues.apache.org/jira/browse/LUCENE-7905)
