@@ -337,3 +337,329 @@ series: "WikiEngine"
 **이력서 액션 동사:**
 - [Resume Worded — Software Engineering Action Verbs](https://resumeworded.com/software-engineer-resume-action-verbs)
 - [Interview Kickstart — Software Engineering Resume Action Verbs](https://interviewkickstart.com/blogs/articles/action-verbs-software-engineering)
+
+<!-- EN -->
+
+> **This document is private (draft).** It is meant only as a reference when writing a resume / portfolio.
+
+---
+
+## Writing Principles
+
+### Recruiters decide in 30 seconds
+
+Practitioners scan a resume in about 30 seconds on average. If the key information is not in the first 2-3 lines, they move on.
+
+**Never do:**
+- "Improved performance" — by how much? what? why?
+- "Adopted Lucene" — why? what were the alternatives?
+- "Introduced caching" — what? on what basis?
+- Just listing tech stacks — "Java, Spring Boot, MySQL, Lucene" alone proves nothing
+
+**Always do:**
+- Include **numbers (Before/After)** in every line
+- One line of justification on *why* you chose what you chose
+- Leave the reader no room to ask "so what?"
+- Start with action verbs: "analyzed", "diagnosed", "designed", "measured"
+
+> Sources: [Resume Worded — Backend Developer Resume Examples](https://resumeworded.com/backend-developer-resume-example), [Woowahan Tech Blog — A rookie dev's bumpy resume-writing journey](https://techblog.woowahan.com/11998/)
+
+### Compress STAR
+
+Resume lines compress STAR (Situation-Task-Action-Result) into **2-4 lines**. Do not write long paragraphs like a blog post. Use the portfolio with a deeper link to show depth.
+
+```
+[Situation + Problem] one line — show severity with numbers
+[Root cause] one line — name the "why" to demonstrate analysis
+[Solution] one line — bonus if you compared alternatives
+[Result] one line — Before/After numbers, quantitative
+```
+
+> Sources: [Showcase your achievements with STAR — for developer resumes](https://dataengineeringstoic.co.kr/entry/%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%9D%B4%EB%A0%A5%EC%84%9C-STAR-%EA%B8%B0%EB%B2%95%EC%9C%BC%EB%A1%9C-%EC%84%B1%EA%B3%BC%EB%A5%BC-%EB%B9%9B%EB%82%B4%EC%84%B8%EC%9A%94), [Teal — Junior Backend Developer Resume Example](https://www.tealhq.com/resume-example/junior-backend-developer)
+
+---
+
+## Project One-Liner
+
+### Resume version (1 line)
+
+> A community search engine over 12.15M wiki documents — incrementally migrated LIKE → B-Tree → FULLTEXT ngram → Lucene, taking the system from full meltdown to P95 119ms with 0% error rate.
+
+### Portfolio version (3 lines)
+
+> Built a search engine over 12.15M docs from Namuwiki + Wikipedia dumps in MySQL, capable of handling community-grade traffic. Started from the slowest possible state (LIKE Full Table Scan → system meltdown) and documented each step where bottlenecks were proven with numbers and the next technology was adopted exactly when the current one's limit was exposed. Every Before/After was measured under k6 load tests (100 VU, 20 minutes) + Grafana monitoring.
+
+---
+
+## Resume Lines per Key Experience
+
+> Each experience below provides both a **resume version (compressed 2-4 lines)** and a **portfolio version (5-10 lines + blog link)**.
+> Use the compressed one in the resume, the detailed one + blog link in the portfolio.
+
+---
+
+### Experience 1: Incident Response — One Search Took Down the Entire API
+
+**Blog:** [How a search engine paralyzed the system, and how we responded](/blog/project/wikiengine/search-system-crash)
+
+#### Resume (3 lines)
+
+> Discovered a cascade failure where `LIKE '%keyword%'` on 12.15M rows triggered a Full Table Scan, exhausted the HikariCP pool (10 conns) and made every non-search API return 503. After identifying the cause via EXPLAIN (`type=ALL, rows=27,443,742`), I immediately restored availability for non-search APIs through emergency mitigations: removed LIKE on the content LONGTEXT, set `@Transactional(timeout=5)`, and switched HikariCP to fail-fast (connectionTimeout 30s → 3s).
+
+#### Portfolio (detailed)
+
+> **Situation:** Calling the `LIKE '%keyword%'` search API on the MySQL with 12.15M wiki rows caused **completely unrelated APIs (post listing, post detail, etc.) to also return 503**. The whole server went down, not just search.
+>
+> **Root cause:** EXPLAIN showed `type=ALL`, `rows=27,443,742` — the entire table was being scanned without an index. Because `content` is LONGTEXT (~6,586 chars on average), each row had to load a few KB to tens of KB into memory for pattern matching, and a single query held the connection for tens of seconds. With HikariCP `maximumPoolSize=10` exhausted, **every API failed to acquire a connection and timed out in cascade.**
+>
+> **Emergency response (4 actions):**
+> 1. Removed content LIKE → per-row comparison data went from KB-range to bytes
+> 2. `@Transactional(readOnly=true, timeout=5)` → kill any query over 5 seconds
+> 3. HikariCP `connectionTimeout` 30s → 3s (fail-fast) → prevent queue buildup
+> 4. Dedicated `QueryTimeoutException` handler → return clear errors to clients
+>
+> **Result:** The search performance issue itself was unresolved, but **availability for non-search APIs was instantly restored.** This became the starting point for the staged migration B-Tree → FULLTEXT ngram → Lucene.
+
+#### What this experience demonstrates
+
+| Skill | Evidence |
+|---|---|
+| Incident diagnosis | Identified Full Table Scan via EXPLAIN; recognized connection-pool-exhaustion cascade pattern |
+| Emergency response | Decided to secure system stability *before* root-cause fix |
+| Prioritization | Separated "search performance" from "system availability"; treated availability first |
+
+#### Interview prep
+
+- "Why not just bump pool size to 20?" → Symptom relief, not a fix. If the Full Table Scan is unresolved, 20 will exhaust too.
+- "Did you consider a separate pool for search?" → The Bulkhead pattern. Valid, but config changes are faster in an emergency.
+- "Isn't 3-second fail-fast too aggressive?" → Normal queries are in the ms range. Anything taking 3 seconds is already abnormal.
+
+---
+
+### Experience 2: Analyzing MySQL Search Limits → Choosing Lucene
+
+**Blog:** [FULLTEXT ngram index](/blog/project/wikiengine/fulltext-ngram-index) + [Why I dropped MySQL search and chose Lucene](/blog/project/wikiengine/lucene-decision)
+
+#### Resume (4 lines)
+
+> Restored 570K-row Korean search from 12s → 6ms (2,100×) with MySQL FULLTEXT ngram, but discovered three structural limits: (1) high-frequency 2-gram tokens (e.g., "대한") triggered linear scans over 196K-entry posting lists and timed out at 5s+ (InnoDB FTS `ib_vector_t` — MySQL Bug #85880); (2) full-corpus 14.77M index needed 300GB+ disk (row-oriented limitation); (3) false positives from broken word boundaries. Compared Lucene / Elasticsearch / vector DBs including server cost + CDC + headcount, chose embedded Lucene + Nori on a single server, eliminating high-frequency-token timeouts (5s+ → 12ms), enabling full 12.15M-doc search, and removing false positives.
+
+#### Portfolio (detailed)
+
+> **Situation:** As an alternative to LIKE, applied MySQL FULLTEXT ngram and got Korean search working on 570K rows (12s → 6ms). But "working" was different from "usable."
+>
+> **Three problems:**
+> 1. **High-frequency token timeout:** searching "대한" linearly walked a 196K-entry posting list and hit 5s+ timeouts. Reading the MySQL source (`fts0que.cc`) showed that the intersection step uses an RB-tree, but the **phrase-verification step is bottlenecked by linear scans on `ib_vector_t` (a dynamic array)**. [MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880) has a reporter-proposed 750,000× speedup patch that Oracle has not merged for 9 years.
+> 2. **Index-size explosion:** Building the ngram index over the full 14.77M corpus would need 300GB+. The row-oriented layout cannot read just the content column — it scans the entire 122GB.
+> 3. **False positives:** searching "한국어" matched "대한국제공항" because 2-gram does not preserve word boundaries.
+>
+> **Alternative comparison (cost view):**
+>
+> | Option | Server cost (mo) | CDC cost | Total |
+> |---|---|---|---|
+> | Embedded Lucene | $44-87 | none | **$44-87** |
+> | Self-hosted ES | $87-174 | $80-339 | $167-513 |
+> | AWS OpenSearch (prod) | $455 | $339 | $794 |
+>
+> Even knowing ES's strengths (auto replica promotion, alias-based zero-downtime swap, monitoring), I judged that **a single server + 14.77M-doc workload** does not need a distributed layer; spending RAM on it would be waste. MySQL is the source of truth, so the index can be rebuilt if lost.
+>
+> **Result:**
+> - "대한" search: 5s+ timeout → **12ms**
+> - Search corpus: 570K (Korean only) → **12.15M (full)**
+> - Index size: 6.7GB (570K) → 29GB (12.15M) — 4.3× smaller relative to ngram
+> - False positives: "대한국제공항" matched → **no longer matched** (Nori morphological analysis)
+> - Extra infra cost: **$0** (embedded into the existing server)
+
+#### What this experience demonstrates
+
+| Skill | Evidence |
+|---|---|
+| Curiosity | Drilled down to MySQL source (`fts0que.cc`) to identify the structural cause of the limit |
+| Tech decision | Honestly acknowledged ES's strengths, but argued why Lucene is the rational choice for current requirements — costs included |
+| Cost sense | Understood that "server cost is not the real cost; headcount is" |
+
+#### Interview prep
+
+- "If you know ES's strengths so well, why Lucene?" → No need for distribution; ES heap of 8-16GB on a single 12GB server is physically impossible.
+- "Couldn't you have used Lucene from day one?" → Going through the ngram phase was needed to learn inverted-index principles, IDF, and BM25 properly. Staged learning was deliberate.
+- "What if the index is corrupted?" → MySQL is the source of truth. Recoverable via full reindex (6h 40m).
+- "Any companies using Lucene directly?" → Twitter (Earlybird), LinkedIn (Galene), Uber (Sia). All have extreme requirements ES cannot satisfy + dedicated search teams.
+
+---
+
+### Experience 3: OFFSET Pagination Optimization — 99.96% Improvement
+
+**Blog:** [Applying Deferred Join](/blog/project/wikiengine/deferred-join-optimization) + [Removing COUNT(*) and capping pages: 19,424ms → 8ms](/blog/project/wikiengine/query-refactoring-optimization)
+
+#### Resume (4 lines)
+
+> Under k6 load (100 VU, 20 min), deep OFFSET on the latest-posts list saturated CPU and triggered cascade failure across the entire API (32.53% error rate). With InnoDB Buffer Pool hit rate at 100% but 14.8K Slow Queries, diagnosed it as **CPU-bound**. Combined Deferred Join (cluster I/O 20,020 → 20), 30-page cap (OFFSET 20,000 → 580), and COUNT(*) removal (Page → Slice; EXPLAIN ANALYZE measured 2,038ms eliminated) for **19,424ms → 8.33ms (-99.96%), error rate 32.53% → 0%**. Worked around Spring Data's nativeQuery + Slice double-LIMIT trap (DATAJPA-1464) by tracking the GitHub issue and using a manual `List<T>` + `SliceImpl` pattern.
+
+#### Portfolio (detailed)
+
+> **Situation:** After migrating to Lucene, the first k6 load test showed the bottleneck was **not search (66ms) but the latest-posts list (19,424ms)**. Error rate 32.53% — the system collapsed.
+>
+> **Root cause:** The k6 script requested `page=100~1000` (OFFSET up to 20,000) 30% of the time. `SELECT *` + deep OFFSET reads the PK from the secondary index, then loads each full row (LONGTEXT included) from the cluster index. 20,000 rows × ~13KB = ~260MB read and discarded. InnoDB Buffer Pool hit rate was 100% but 14.8K Slow Queries — the bottleneck was **CPU, not memory.**
+>
+> **Solution (3 combined):**
+>
+> | # | Action | Effect |
+> |---|---|---|
+> | 1 | **Deferred Join** — `SELECT id` only in subquery for Covering Index Scan; outer reads only 20 PKs from the cluster | cluster I/O 20,020 → 20 |
+> | 2 | **30-page cap** — Google/Naver standard. OFFSET 20,000 → 580 | worst-case 34× reduction |
+> | 3 | **COUNT(*) removal** — Page → Slice. EXPLAIN ANALYZE showed COUNT(*) alone took 2,038ms | 2,038ms removed per request |
+>
+> Discovered Spring Data's `nativeQuery=true` + `Slice<T>` trap where Hibernate applies LIMIT twice ([DATAJPA-1464](https://github.com/spring-projects/spring-data-jpa/issues/1782)). Worked around with `List<T>` returns and manual `SliceImpl` (LIMIT+1 pattern). Same proven pattern recommended by Slack Engineering and Vlad Mihalcea (Hibernate core contributor).
+>
+> **Result:**
+> - Latest posts: 19,424ms → **8.33ms** (-99.96%)
+> - Search: 3,328ms → **20.51ms** (-99.4%) — back to normal speed once the cascade was resolved
+> - Error rate: 32.53% → **0.00%**
+> - CPU: 100% saturated → 35%
+> - QPS: 50 → 300 (6×)
+
+#### What this experience demonstrates
+
+| Skill | Evidence |
+|---|---|
+| Diagnosis | BP 100% + Slow Queries 14.8K → diagnosed CPU bottleneck (not disk) |
+| Honesty | Deferred Join "expected 40× vs actual 13%" — analyzed via EXPLAIN that index scan accounted for 85% |
+| Framework understanding | Tracked Spring Data internals (Hibernate `setMaxResults`) into the GitHub issue |
+| Cascade failure | Experienced (twice — here + caching) the pattern of a single bottleneck collapsing the whole system |
+
+#### Interview prep
+
+- "Why not Keyset Pagination?" → Page-number UI cannot "jump to page N". Reconsider when migrating to infinite scroll.
+- "Why was Deferred Join not as fast as expected?" → ~85% of total cost was index scan; LONGTEXT I/O was ~15%.
+- "How do you show total page count without COUNT(*)?" → Google removed result-count display in 2024. `hasNext` is sufficient.
+
+---
+
+### Experience 4: Caffeine L1 Cache — Cascade Failure Resolved
+
+**Blog:** [Caching strategy — Caffeine L1 local cache for 14× search response](/blog/project/wikiengine/caching-strategy)
+
+#### Resume (3 lines)
+
+> After introducing search-quality enhancements (BM25 + FeatureField + RecencyDecay), composite scoring saturated CPU and caused cascade failure across the API at 100 VU. Justifying with Zipf-distributed search traffic, introduced a Caffeine L1 cache, and after comparing Redis/CDN by cost and fit chose Caffeine ($0 on a single server). Overall avg 776ms → 54ms (14×), search hit rate 81.8%, CPU 80-100% → 20-40%, cascade failure fully resolved.
+
+#### Portfolio (detailed)
+
+> **Situation:** After [search-quality enhancements](/blog/project/wikiengine/search-quality) introduced composite scoring (BM25 + FeatureField for views/likes + RecencyDecay), search regressed 20ms → 1,443ms (70×). At 100 VU, CPU saturation cascaded into non-search APIs (autocomplete 5ms → 368ms, listing 8ms → 392ms).
+>
+> **Root cause:** Composite scoring adds 3 DocValue reads per matching doc (viewCount, likeCount, createdAt), limiting Block-Max WAND optimization. For high-frequency tokens like "대한민국", scoring tens of thousands of docs spiked CPU time. With only 2 cores, every request got stuck in the CPU run queue.
+>
+> **Alternative comparison:**
+>
+> | Cache | Latency | Cost | Best for |
+> |---|---|---|---|
+> | **Caffeine (L1)** | < 0.1ms | $0 | single server, hot-query caching |
+> | Redis (L2) | 0.5-2ms | $24,000+/yr | multi-server, cache coherency |
+> | CDN (L3) | 5-50ms | $6,000+/yr | global users, static content |
+>
+> **Implementation:** Search results (TTL 5 min, W-TinyLFU), autocomplete (TTL 10 min), post detail (`@CacheEvict` for instant invalidation). Browser caching via Cache-Control stale-while-revalidate. Hit-rate monitoring via Actuator + Prometheus + Grafana.
+>
+> **Result:**
+> - Overall avg: 776ms → **54ms** (14×)
+> - Autocomplete: 368ms → **4.67ms** (back to smoke 5VU level)
+> - Search hit rate: **81.8%**, autocomplete hit rate: **99.9%**
+> - CPU: 80-100% → 20-40%, HikariCP Pending: 50 → 0
+> - OOM safety: 4K/10K entries cap, TTL kicks in before maximumSize
+
+#### Interview prep
+
+- "Why Caffeine over Redis?" → Single-server, microsecond response without network. When adding servers, introduce Redis.
+- "Cache consistency?" → Search: TTL 5 min (Google also takes time to refresh the index); detail: `@CacheEvict` for instant invalidation.
+- "Cache stampede?" → Confirmed limited impact at TTL expiry under load test. `refreshAfterWrite` to be added if needed.
+
+---
+
+### Experience 5: Quantitative Search-Quality Evaluation
+
+**Blog:** [Search-quality enhancement — phrase search, community ranking, P@10/MAP evaluation](/blog/project/wikiengine/search-quality)
+
+#### Resume (3 lines)
+
+> Implemented PhraseQuery (slop=2) phrase search to absorb Nori's compound-noun decomposition variance. After analyzing Reddit/Stack Overflow/Naver ranking algorithms, designed BM25 + FeatureField (views/likes saturation) + ExponentialDecay (30-day half-life) community ranking. Quantitatively evaluated search quality with P@10/MAP across 15 test queries and verified that FeatureField-based popularity boost balances with BM25 text relevance.
+
+#### Interview prep
+
+- "Is P@10 +3.2% meaningful?" → 15 queries × 10 results = 150 judgments; 4-5-judgment difference. Goal was "no quality regression + slight improvement direction" rather than statistical significance.
+- "How did you decide weights 3.0/2.0/5.0?" → Such that boosts do not invert BM25 scores (5-15). Needs A/B re-validation once production data accumulates.
+
+---
+
+## Skills Section — Sentence Patterns
+
+In the resume "Skills" section, do not just list tech stacks — write **sentences linked to experience.**
+
+| Area | Sentence |
+|---|---|
+| **DB optimization** | EXPLAIN/EXPLAIN ANALYZE-driven query diagnosis, Deferred Join (Covering Index), Page → Slice COUNT(*) removal, OFFSET page cap. 19,424ms → 8ms on a 12.15M-row table |
+| **Search engine** | Analyzed MySQL FULLTEXT ngram limits (down to fts0que.cc source) → migrated to embedded Lucene + Nori. BM25 + FeatureField ranking, PhraseQuery phrase search, P@10/MAP quantitative evaluation |
+| **Caching** | Caffeine L1 W-TinyLFU, `@CacheEvict` instant invalidation, Cache-Control stale-while-revalidate, Actuator hit-rate monitoring. Search hit rate 81.8%, cascade failure resolved |
+| **Load testing** | k6 smoke/load profiles, InfluxDB+Grafana, per-scenario SLAs. Diagnosed cascade failure twice (OFFSET CPU saturation, composite-scoring CPU saturation) |
+| **Incident response** | HikariCP exhaustion → fail-fast isolation. InnoDB BP 100% + 14.8K Slow Queries → diagnosed CPU bottleneck |
+
+---
+
+## Project Tech Journey — Timeline Summary
+
+Use this when showing "the full arc of this project" in a portfolio.
+
+| # | Post | Key change |
+|---|---|---|
+| 1 | [Search engine paralyzes the system, response](/blog/project/wikiengine/search-system-crash) | LIKE Full Table Scan → meltdown → emergency mitigations (timeout, fail-fast) for availability |
+| 2 | [Autocomplete B-Tree index](/blog/project/wikiengine/autocomplete-btree-index) | composite B-Tree index → autocomplete fixed (>5,000ms → 8ms) |
+| 3 | [FULLTEXT ngram index](/blog/project/wikiengine/fulltext-ngram-index) | search restored (12s → 6ms, 570K). Found high-frequency timeout, 300GB+ index, false-positive limits. Source-level cause analysis (fts0que.cc) |
+| 4 | [Why I chose Lucene over MySQL search](/blog/project/wikiengine/lucene-decision) | Lucene + Nori → full 12.15M search (timeout → 12ms). Cost-compared Lucene/ES/vector DBs and decided embedded Lucene |
+| 5 | [Deferred Join](/blog/project/wikiengine/deferred-join-optimization) + [COUNT(*) removal & page cap](/blog/project/wikiengine/query-refactoring-optimization) | 19,424ms → 8ms, error rate 32.53% → 0%. Diagnosed cascade failure: CPU saturation collapses entire API |
+| 6 | [Search quality enhancement](/blog/project/wikiengine/search-quality) | phrase search + community ranking + P@10/MAP quantitative evaluation |
+| 7 | [Caching strategy](/blog/project/wikiengine/caching-strategy) | Caffeine L1 cache → 14× overall improvement, cascade failure resolved. Search hit rate 81.8%, CPU 80% → 20% |
+
+---
+
+## TOP 10 Deepest Interview Questions for This Project
+
+| # | Question | Answer essence |
+|---|---|---|
+| 1 | "Why Lucene over ES?" | Compared server RAM + CDC + headcount. Single server + 14.77M does not need distribution |
+| 2 | "What is cascade failure, and how did you diagnose it?" | BP 100% + Slow Queries 14.8K → CPU bottleneck. Deep OFFSET monopolized shared CPU |
+| 3 | "Why is ngram slow on high-frequency tokens?" | fts0que.cc `ib_vector_t` linear scan. 2-gram "대한" 196K linear O(N) |
+| 4 | "Why didn't Deferred Join give the expected speedup?" | Index scan ~85%, LONGTEXT I/O ~15%. Removing only the latter gives 13% |
+| 5 | "How do you manage cache consistency?" | Search TTL 5 min, detail `@CacheEvict` instant, autocomplete TTL 10 min |
+| 6 | "Without COUNT(*), how do you show total page count on the front?" | Google removed result counts in 2024. `hasNext` + nearby pages is enough |
+| 7 | "Why not Keyset Pagination?" | Page-number UI cannot jump to page N. Reconsider on infinite-scroll migration |
+| 8 | "Why BM25 b=0.5?" | Wiki doc length variance is large. Reduces over-penalty for long docs. Re-validate via A/B |
+| 9 | "What if the index is corrupted?" | MySQL = source of truth. Full reindex (6h 40m) recovers it |
+| 10 | "Sum up the project in one line?" | "Started from the slowest possible state and migrated step by step, proving each bottleneck with numbers" |
+
+---
+
+## Numbers Summary — Before/After at a Glance
+
+| Metric | Initial | Final | Improvement |
+|---|---|---|---|
+| Search (high-frequency "대한") | system meltdown (Full Table Scan) | **12ms** (Lucene + Nori) | timeout resolved |
+| Latest posts (100 VU) | 19,424ms / 32.53% errors | **8.33ms / 0% errors** | **-99.96%** |
+| Overall avg (100 VU, with cache) | 776ms | **54ms** | **14×** |
+| Search hit rate (Caffeine) | 0% (no cache) | **81.8%** | — |
+| CPU (100 VU) | 100% saturated | **20-40%** | -60pp |
+| Search corpus | 12.15M (full) | **12.15M (full)** | 25× expansion |
+| Index size | 300GB+ (cannot build) | **29GB** (Lucene) | buildable |
+| Extra infra cost | $0 | **$0** (Lucene embedded) | avoided $3,036-$9,528/yr vs ES |
+
+---
+
+## References
+
+**Resume writing:**
+- [Resume Worded — Backend Developer Resume Examples 2026](https://resumeworded.com/backend-developer-resume-example)
+- [Teal — Junior Backend Developer Resume Example 2025](https://www.tealhq.com/resume-example/junior-backend-developer)
+- [Woowahan Tech Blog — A rookie dev's bumpy resume-writing journey](https://techblog.woowahan.com/11998/)
+- [Showcase your achievements with STAR — for developer resumes](https://dataengineeringstoic.co.kr/entry/%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%9D%B4%EB%A0%A5%EC%84%9C-STAR-%EA%B8%B0%EB%B2%95%EC%9C%BC%EB%A1%9C-%EC%84%B1%EA%B3%BC%EB%A5%BC-%EB%B9%9B%EB%82%B4%EC%84%B8%EC%9A%94)
+- [GitHub — Awesome Resume Portfolio](https://github.com/codingmonster-tv/Awesome_Resume_Portfolio)
+
+**Resume action verbs:**
+- [Resume Worded — Software Engineering Action Verbs](https://resumeworded.com/software-engineer-resume-action-verbs)
+- [Interview Kickstart — Software Engineering Resume Action Verbs](https://interviewkickstart.com/blogs/articles/action-verbs-software-engineering)

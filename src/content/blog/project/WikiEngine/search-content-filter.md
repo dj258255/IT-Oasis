@@ -246,3 +246,234 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 - [LDNOOBWV2 — List of Dirty, Naughty, Obscene, and Otherwise Bad Words V2](https://github.com/LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2)
 - [RFC 2308 — Negative Caching of DNS Queries](https://datatracker.ietf.org/doc/html/rfc2308)
 - [ByteByteGo — Cache Miss Attack](https://blog.bytebytego.com/p/cache-miss-attack)
+
+<!-- EN -->
+
+## Previous
+
+In [LTR Re-ranking + Auto-Categorization](/blog/project/wikiengine/search-ltr-ranking) we improved NDCG@10 by +4.8%p with XGBoost LambdaMART, finished 28-topic auto-categorization + native Lucene Facet + indexing 2.16M tags.
+
+| Metric | Result |
+|---|---|
+| NDCG@10 | 0.6910 → 0.7387 (+4.8%p, 5-Fold CV) |
+| Categorization | 28 topics, ~83% accuracy |
+| Facet | switched to native SortedSetDocValuesFacetCounts |
+| LTR in production | disabled (LTR_ENABLED=false) due to CPU saturation |
+
+Search functionality (quality, ranking, infra) is now solid, but the **content-safety mechanisms** that any community service needs are still missing.
+
+---
+
+## 1. Steady State — Current Content Management
+
+WikiEngine is on top of Wikipedia data, so content quality is high and there is barely any harmful content. But the moment user-authored posts come into play, you get:
+
+```
+Harmful-content categories:
+  1. Posts containing banned words (profanity, hate speech)
+  2. Spam (ads, flooding)
+  3. Low-quality content (meaningless, clickbait)
+  4. Personal-info exposure (phone numbers, addresses, etc.)
+```
+
+Right now there is **no filtering / monitoring / reporting system at all**.
+
+---
+
+## 2. The Problem — Why Content Filtering, Now
+
+### Structural issues
+
+1. **The post-creation API is already open** — `POST /api/v1.0/posts` lets any authenticated user create a post.
+2. **k6 load tests create posts in bulk** — title/body get arbitrary strings.
+3. **Autocomplete is built on search logs** — harmful queries can leak straight into autocomplete.
+
+`curl -X POST /api/v1.0/posts -d '{"title":"banned-word title","content":"..."}'` is currently **stored in the DB and indexed into Lucene with zero validation.**
+
+### Standard safety mechanisms in community services
+
+| Issue | Impact | Industry baseline |
+|---|---|---|
+| No banned-word block | Toxic environment, user churn | Default in most community services |
+| No spam block | Polluted search results, degraded UX | Stack Overflow, Reddit, etc. all run spam filters |
+| No reporting | No self-cleaning mechanism | Kakao, Naver all run report/blind systems |
+| Polluted autocomplete | Harmful queries leak into autocomplete | Google/Naver filter autocomplete |
+
+---
+
+## 3. Analysis — Why Aho-Corasick
+
+Banned-word detection options:
+
+| Approach | Time complexity | Implementation | Verdict |
+|---|---|---|---|
+| `String.contains()` loop | O(N×M) (N=text, M=word count) | trivial | slow with 1,000+ words |
+| **Aho-Corasick** | **O(N+Z)** (Z=match count, independent of M) | use [robert-bor/aho-corasick](https://github.com/robert-bor/aho-corasick) | **chosen** |
+| Compiled regex union | O(N) | recompile on word changes | alternative |
+
+Aho-Corasick adds failure links to a Trie, scans the text once, and matches all patterns simultaneously. Even with 16,090 banned words, time only scales with text length.
+
+---
+
+## 4. Implementation
+
+### 4-1. Banned-word filtering
+
+```
+Two enforcement points:
+  1. Write-time: check posts on create/update for banned words
+  2. Search-time: filter banned words from autocomplete suggestions
+```
+
+```java
+@Service
+public class ContentFilterService {
+
+    /**
+     * Two Aho-Corasick automata kept in a Caffeine cache (10-min TTL).
+     * - koreanTrie: substring match — "금칙" matches "금칙어" (covers compounds)
+     * - englishTrie: word-boundary match — "ass" does NOT match "assassination" (Scunthorpe-safe)
+     *
+     * Library: org.ahocorasick:ahocorasick:0.6.3 (robert-bor)
+     */
+    private record BannedAutomata(Trie koreanTrie, Trie englishTrie) {}
+
+    /**
+     * Detect banned words in O(N+Z) using Aho-Corasick.
+     * N = text length, Z = matches. Linear regardless of M (word count).
+     *
+     * Currently 3,094 KO + 12,996 EN = 16,090 banned words.
+     */
+    private boolean isBanned(String text, BannedAutomata automata) {
+        String lower = text.toLowerCase();
+        if (!automata.koreanTrie().parseText(lower).isEmpty()) return true;
+        return !automata.englishTrie().parseText(lower).isEmpty();
+    }
+
+    public List<String> filterSuggestions(List<String> suggestions) {
+        BannedAutomata automata = getAutomata();
+        return suggestions.stream()
+            .filter(s -> !isBanned(s, automata))
+            .toList();
+    }
+}
+```
+
+**English Trie uses word-boundary matching — the Scunthorpe problem**: registering "ass" as a banned word would also block legitimate words like "assassination", "class", "Scunthorpe". For English we match on word boundary (`\b`) to avoid that. Korean is agglutinative, so substring match fits better — "금칙" needs to also catch "금칙어", "금칙어목록", etc.
+
+#### Banned-word dictionary
+
+```sql
+CREATE TABLE banned_words (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    word VARCHAR(100) NOT NULL UNIQUE,
+    category ENUM('PROFANITY', 'HATE_SPEECH', 'SPAM', 'ADULT', 'PERSONAL_INFO') NOT NULL,
+    severity ENUM('LOW', 'MEDIUM', 'HIGH') NOT NULL DEFAULT 'MEDIUM',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_category (category)
+);
+```
+
+- Initial data: **3,094** Korean banned words — [LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2](https://github.com/LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2) `data/ko.txt`
+- On any change to the dictionary → invalidate the Caffeine cache (10-min TTL) → rebuild the Aho-Corasick automaton.
+
+### 4-2. Blinded posts — wired into the Lucene index
+
+```java
+// Blinded posts are excluded from search.
+// Option 1: delete from the Lucene index (auto via CDC events)
+// Option 2: add a filter at search time (Occur.MUST_NOT)
+
+// Picked option 2 — keeps it reversible.
+Query blindFilter = new TermQuery(new Term("status", "BLIND"));
+builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
+```
+
+```
+Report-handling flow:
+  1. User reports a post (POST /api/v1.0/posts/{id}/report)
+  2. After N reports → auto-blind (excluded from search)
+  3. Admin review → approve (delete) or reject (restore)
+```
+
+No reindex needed: existing index has no `blinded` field → no `MUST_NOT` matches → everything passes (correct). When something is blinded, [a CDC event](/blog/project/wikiengine/cdc) → reindex just that doc → exclusion takes effect.
+
+### 4-3. Autocomplete safety
+
+We apply the banned-word filter to the search-log-based autocomplete from [Autocomplete Implementation](/blog/project/wikiengine/trie-autocomplete).
+
+```
+Current autocomplete flow:
+  user input → Redis flat KV lookup → top-10 returned
+
+After filter:
+  user input → Redis flat KV lookup → banned-word filter → top-10 returned
+```
+
+> The banned-word filter runs in-app after the Redis lookup. We do not store banned words in Redis; we filter against a banned-word Set held in a Caffeine cache. Reason: the Redis KV rebuild cycle (1 hr) and the banned-word update cadence must stay independent.
+
+### 4-4. Improving Lucene autocomplete fallback quality
+
+**Problem**: in the Lucene fallback, `PrefixQuery` was hitting the Nori-analyzed `title` field. Doing prefix match on morphologically tokenized terms returned results that did not match user intent.
+
+**Cause**: autocomplete must match on the raw prefix (no morphological analysis), but it was sharing the search-side Nori-analyzed field.
+
+**Fix**: added `title_raw` StringField (untokenized, lowercased) and switched `PrefixQuery` to it. Korean "금칙" → "금칙어", English "prog" → "programming".
+
+> **Architecture summary:**
+> - **Redis** (main): popular-query suggestions from search logs — the CQRS read path, O(1)
+> - **Lucene** (fallback): on Redis miss, doc-title-based supplementary suggestions
+>   - single token ("자바") → `title_raw` PrefixQuery (untokenized)
+>   - contains whitespace ("자바 가비지") → BM25 search on `title` (Nori-analyzed)
+> - Autocomplete ≠ morphological analysis (industry standard: Naver/Google/ES all use a separate untokenized field)
+
+### 4-5. Negative caching — short TTL for empty results
+
+**Problem**: searching right after app boot — before the index is fully loaded — caches a 0-result response and keeps returning 0 results for 5-10 minutes.
+
+**Fix**: in TieredCacheService, empty results get a 30-second TTL while normal results keep the existing 10-minute TTL.
+
+**Why 30s**: Lucene SearcherManager initialization (loading the index) takes seconds to tens of seconds at boot. Setting TTL shorter than that means once index loading completes, the cache expires and the next request automatically refreshes with real results. [RFC 2308](https://datatracker.ietf.org/doc/html/rfc2308) (DNS Negative Caching) recommends 60-300s, but that assumes DNS propagation delay; for app-level caches a shorter TTL is more appropriate. AWS CloudFront also defaults negative TTL to a short 5 seconds. Not caching empty results at all causes cache penetration (every same query goes through to origin), so caching with a short TTL but expiring fast is exactly the pattern recommended in [ByteByteGo's Cache Miss Attack pattern](https://blog.bytebytego.com/p/cache-miss-attack).
+
+---
+
+## 5. Verification — Before/After
+
+### Banned-word filtering in autocomplete
+
+**Typing "바보" — no suggestions:**
+
+![Banned-word autocomplete blocked — no suggestions for "바보"](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-banned-babo.png)
+
+**Typing "자바" — normal autocomplete:**
+
+![Normal autocomplete — suggestion list shown for "자바"](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png)
+
+> "바보" is in `banned_words_ko.txt` (3,094 entries). Detected in O(N+Z) by Aho-Corasick `Trie.parseText()` and removed by `ContentFilterService.filterSuggestions()`.
+
+### Excluding blinded posts from search
+
+**Before — post id=619166 is in the result set:**
+
+![Blind Before — 619166 included](/uploads/project/WikiEngine/search-content-filter/phase20-blind-before-test-search.png)
+
+**After — post id=619166 is excluded:**
+
+![Blind After — 619166 excluded](/uploads/project/WikiEngine/search-content-filter/phase20-blind-after-test-search.png)
+
+> `POST /admin/lucene/reindex?ids=619166` updates the Lucene index with `blinded=true`, after which `Occur.MUST_NOT TermQuery("blinded","true")` automatically excludes it. To unblind, reindex with `blinded=false` and it comes back.
+
+---
+
+## Next
+
+In [AI Search Summary — RAG](/blog/project/wikiengine/search-rag) we feed Lucene BM25 search results into LLM context to generate AI summaries, and implement SSE streaming, source citations, hallucination prevention, and cost monitoring.
+
+---
+
+## Sources
+
+- [robert-bor/aho-corasick — Java Aho-Corasick library](https://github.com/robert-bor/aho-corasick)
+- [LDNOOBWV2 — List of Dirty, Naughty, Obscene, and Otherwise Bad Words V2](https://github.com/LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2)
+- [RFC 2308 — Negative Caching of DNS Queries](https://datatracker.ietf.org/doc/html/rfc2308)
+- [ByteByteGo — Cache Miss Attack](https://blog.bytebytego.com/p/cache-miss-attack)
