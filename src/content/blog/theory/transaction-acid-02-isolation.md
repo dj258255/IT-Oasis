@@ -23,7 +23,7 @@ seriesOrder: 2
 
 ## 0. 들어가며
 
-같은 `REPEATABLE READ`라도 PostgreSQL과 MySQL InnoDB는 다르게 동작하고, 같은 `SERIALIZABLE`이라도 SSI 기반(낙관)과 잠금 기반(비관)은 비용 구조가 완전히 다릅니다. **표준은 최소 보장만 정의하고, 실제 동작은 제품마다 다르다** — 이 글은 그 정확한 차이를 Isolation 관점에서 풀어봅니다. A편(Atomicity)에서 살짝 등장한 MVCC와 `xmin`/`xmax`/Undo Log를 본격적으로 다뤄요.
+같은 `REPEATABLE READ`라도 PostgreSQL과 MySQL InnoDB는 다르게 동작하고, 같은 `SERIALIZABLE`이라도 SSI 기반(낙관)과 잠금 기반(비관)은 비용 구조가 완전히 다릅니다. **표준은 최소 보장만 정의하고, 실제 동작은 제품마다 다르다** — 이 글은 그 정확한 차이를 Isolation 관점에서 풀어봅니다. [① 편(Atomicity)](/blog/theory/transaction-acid-01-atomicity)에서 살짝 등장한 MVCC와 `xmin`/`xmax`/Undo Log를 본격적으로 다뤄요.
 
 ## 1. Isolation이 풀어야 하는 진짜 문제
 
@@ -239,7 +239,7 @@ PostgreSQL 공식 문서: *"PostgreSQL's Repeatable Read implementation does not
 
 > **MVCC의 핵심**: **읽기와 쓰기의 직접적인 blocking을 최소화**하는 것. 읽기는 과거 버전을, 쓰기는 충돌만 제어하도록 분리합니다 (단, write-write 충돌이나 명시적 locking read는 여전히 blocking이 발생할 수 있어요).
 
-이게 결정적이에요. 읽기는 snapshot 기준으로 수행되고, 쓰기 간 충돌만 locking 또는 validation으로 처리됩니다. 그 결과 **읽기와 쓰기가 서로를 막지 않아요.** A편에서 다룬 `xmin`/`xmax`(PostgreSQL)와 `DB_ROLL_PTR`(InnoDB)이 바로 MVCC를 위한 메커니즘입니다.
+이게 결정적이에요. 읽기는 snapshot 기준으로 수행되고, 쓰기 간 충돌만 locking 또는 validation으로 처리됩니다. 그 결과 **읽기와 쓰기가 서로를 막지 않아요.** [① 편](/blog/theory/transaction-acid-01-atomicity)에서 다룬 `xmin`/`xmax`(PostgreSQL)와 `DB_ROLL_PTR`(InnoDB)이 바로 MVCC를 위한 메커니즘입니다.
 
 #### PostgreSQL의 MVCC — 새 튜플 생성 + 가시성 관리
 
@@ -368,11 +368,11 @@ ORM과 함께 자주 보는 패턴들:
 격리 수준과 무관하게, 모든 트랜잭션은 짧을수록 좋아요:
 
 - 짧을수록 잠금 보유 시간이 줄어 다른 트랜잭션을 덜 막아요.
-- 짧을수록 PostgreSQL의 VACUUM, MySQL의 purge thread가 더 빨리 일할 수 있어요 (A편 참조).
+- 짧을수록 PostgreSQL의 VACUUM, MySQL의 purge thread가 더 빨리 일할 수 있어요 ([① 편 참조](/blog/theory/transaction-acid-01-atomicity)).
 - 짧을수록 충돌 가능성이 낮아 직렬화 실패 / 재시도가 줄어요.
 - 짧을수록 크래시 시 복구해야 할 양이 적어요.
 
-A편의 결론과 같습니다 — **트랜잭션은 비즈니스 로직 단위로 짧고 응집력 있게.**
+[① 편](/blog/theory/transaction-acid-01-atomicity)의 결론과 같습니다 — **트랜잭션은 비즈니스 로직 단위로 짧고 응집력 있게.**
 
 ## 8. 정리
 
@@ -383,7 +383,7 @@ A편의 결론과 같습니다 — **트랜잭션은 비즈니스 로직 단위�
 - **Snapshot Isolation ≠ Serializable.** 이론적 SI는 first-committer-wins 규칙으로 P4(Lost Update)까지 모델 정의 수준에서 막는다고 설명되지만(Berenson 1995), 실제 DB에서는 update 방식과 conflict detection 구현에 따라 보장 수준이 달라져요. 제품별 문서와 검증 결과를 따로 확인해야 합니다. SI는 어떤 구현이든 **write skew는 막지 못하며**, SERIALIZABLE은 SSI나 잠금으로 이를 차단해요.
 - **언제 SERIALIZABLE이 필요한가**: 여러 행에 걸친 predicate 제약이 깨질 위험이 있는 경우 — 의사 on-call 최소 인원, 여러 계좌 합계 한도 같은 시나리오. 단일 row의 단순 차감/검증은 원자적 조건부 UPDATE로 해결되므로 SERIALIZABLE이 필요하지 않아요.
 - **구현은 두 갈래** — 비관적(잠금) vs 낙관적(충돌 감지). 대부분의 현대 RDBMS는 **MVCC로 두 접근을 결합**해서 읽기-쓰기를 서로 막지 않아요.
-- **PostgreSQL MVCC**는 UPDATE 시 새 튜플을 생성하고 가시성 규칙으로 관리, VACUUM이 정리. **InnoDB MVCC**는 clustered index record에 현재 버전을 두고 Undo Log 체인으로 이전 버전을 재구성. A편에서 다룬 롤백 비용 차이가 여기서도 그대로 작용합니다.
+- **PostgreSQL MVCC**는 UPDATE 시 새 튜플을 생성하고 가시성 규칙으로 관리, VACUUM이 정리. **InnoDB MVCC**는 clustered index record에 현재 버전을 두고 Undo Log 체인으로 이전 버전을 재구성. [① 편](/blog/theory/transaction-acid-01-atomicity)에서 다룬 롤백 비용 차이가 여기서도 그대로 작용합니다.
 - **실무 가이드**: OLTP는 RC, 보고서/배치는 RR(=SI), 재고/예약/한도 검증은 SERIALIZABLE 또는 명시적 `SELECT ... FOR UPDATE`. 격리 수준은 트랜잭션마다 다르게 지정 가능하므로 워크로드별로 세분화하면 효율적이에요.
 - **트랜잭션은 짧게** — 격리 수준과 무관하게 모든 면(잠금 보유, VACUUM/purge, 충돌 가능성, 크래시 복구)에서 짧은 트랜잭션이 유리합니다.
 
@@ -619,7 +619,7 @@ Most modern RDBMSs combine both via **MVCC (Multi-Version Concurrency Control).*
 
 > **MVCC's core**: **minimize direct blocking between reads and writes.** Reads see past versions; writes only contend on conflict (though write-write conflicts and explicit locking reads can still block).
 
-This is decisive. Reads run on a snapshot, write conflicts are handled by locking or validation. As a result **reads and writes do not block each other.** `xmin`/`xmax` (PostgreSQL) and `DB_ROLL_PTR` (InnoDB) — covered in part A — are exactly the mechanisms for MVCC.
+This is decisive. Reads run on a snapshot, write conflicts are handled by locking or validation. As a result **reads and writes do not block each other.** `xmin`/`xmax` (PostgreSQL) and `DB_ROLL_PTR` (InnoDB) — covered in [Part ①](/blog/theory/transaction-acid-01-atomicity) — are exactly the mechanisms for MVCC.
 
 #### PostgreSQL's MVCC — new tuples + visibility management
 
@@ -748,11 +748,11 @@ Patterns commonly seen with ORMs:
 Regardless of isolation level, every transaction should be as short as possible:
 
 - Shorter → less lock-hold time, less blocking.
-- Shorter → PostgreSQL VACUUM, MySQL purge thread can work faster (see part A).
+- Shorter → PostgreSQL VACUUM, MySQL purge thread can work faster (see [Part ①](/blog/theory/transaction-acid-01-atomicity)).
 - Shorter → less chance of conflict, fewer serialization failures / retries.
 - Shorter → less to recover after a crash.
 
-Same conclusion as part A — **keep transactions short and cohesive at business-logic boundaries.**
+Same conclusion as [Part ①](/blog/theory/transaction-acid-01-atomicity) — **keep transactions short and cohesive at business-logic boundaries.**
 
 ## 8. Wrap-up
 
@@ -763,7 +763,7 @@ Same conclusion as part A — **keep transactions short and cohesive at business
 - **Snapshot Isolation ≠ Serializable.** Theoretical SI is described to block P4 (Lost Update) at the model-definition level via first-committer-wins (Berenson 1995), but in real DBs the guarantee level depends on update method and conflict-detection implementation. Check per-product docs and verification results separately. Either way, SI does **not** block write skew; SERIALIZABLE blocks it via SSI or locking.
 - **When you need SERIALIZABLE**: when a predicate constraint across multiple rows can be broken — minimum on-call doctors, multi-account total limit, etc. Single-row simple deduction/validation is solved by atomic conditional UPDATE; SERIALIZABLE is unnecessary.
 - **Two implementation schools** — pessimistic (locking) vs optimistic (conflict detection). Most modern RDBMSs **combine both via MVCC** so reads and writes do not block each other directly.
-- **PostgreSQL MVCC** creates new tuples on UPDATE and manages with visibility rules; VACUUM cleans. **InnoDB MVCC** keeps the latest version in the clustered index record and reconstructs older versions via the Undo Log chain. The rollback-cost difference from part A applies the same here.
+- **PostgreSQL MVCC** creates new tuples on UPDATE and manages with visibility rules; VACUUM cleans. **InnoDB MVCC** keeps the latest version in the clustered index record and reconstructs older versions via the Undo Log chain. The rollback-cost difference from [Part ①](/blog/theory/transaction-acid-01-atomicity) applies the same here.
 - **Practical guide**: RC for OLTP, RR (= SI) for reports/batch, SERIALIZABLE or explicit `SELECT ... FOR UPDATE` for inventory/booking/limit checks. You can set isolation per transaction, so segmenting by workload is more efficient than a global setting.
 - **Keep transactions short** — regardless of isolation level, short transactions win on every axis (lock holding, VACUUM/purge, conflict probability, crash recovery).
 

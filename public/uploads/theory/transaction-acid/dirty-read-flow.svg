@@ -1,14 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
-  <defs>
-    <marker id="dirArr" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
-      <path d="M0,0 L0,14 L13,7 z" fill="#dc2626"/>
-    </marker>
-  </defs>
-  <rect width="920" height="480" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 470" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="920" height="470" fill="#fff"/>
 
   <text x="460" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">Dirty Read — 미커밋 값을 읽어 잘못된 결과가 나가는 시나리오</text>
   <text x="460" y="56" font-size="13" fill="#475569" text-anchor="middle">sales: product 1 (qty=10, price=$5), product 2 (qty=20, price=$4)</text>
 
+  <!-- Column headers -->
   <g transform="translate(80, 86)">
     <rect width="360" height="34" rx="6" fill="#dbeafe" stroke="#1e3a8a"/>
     <text x="180" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#1e3a8a">Tx1 — 보고서</text>
@@ -18,54 +14,58 @@
     <text x="180" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#7f1d1d">Tx2 — 판매 추가</text>
   </g>
 
-  <line x1="260" y1="130" x2="260" y2="450" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
-  <line x1="660" y1="130" x2="660" y2="450" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <!-- Lifelines -->
+  <line x1="260" y1="130" x2="260" y2="440" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="660" y1="130" x2="660" y2="440" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
 
+  <!-- Time row 1 -->
+  <text x="40" y="158" font-size="11" font-weight="700" fill="#94a3b8">T1</text>
   <g transform="translate(80, 134)">
     <rect width="360" height="46" rx="6" fill="#fff" stroke="#1e3a8a"/>
     <text x="14" y="20" font-size="12" font-weight="600" fill="#1e3a8a">① BEGIN</text>
     <text x="14" y="38" font-size="11.5" fill="#475569">SELECT product_id, qty*price FROM sales</text>
   </g>
+
+  <!-- Time row 2 -->
+  <text x="40" y="218" font-size="11" font-weight="700" fill="#94a3b8">T2</text>
   <g transform="translate(80, 192)">
     <rect width="360" height="50" rx="6" fill="#fff" stroke="#1e3a8a"/>
     <text x="14" y="22" font-size="12" font-weight="600" fill="#1e3a8a">② 읽은 결과</text>
     <text x="14" y="42" font-size="12" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">{p1: 50, p2: 80}  → 합계 130</text>
   </g>
-
-  <g transform="translate(480, 134)">
-    <rect width="360" height="46" rx="6" fill="#fff" stroke="#7f1d1d"/>
-    <text x="14" y="20" font-size="12" font-weight="600" fill="#7f1d1d">③ BEGIN</text>
-    <text x="14" y="38" font-size="11.5" fill="#475569">UPDATE sales SET qty=15 WHERE product_id=1</text>
-  </g>
   <g transform="translate(480, 192)">
     <rect width="360" height="50" rx="6" fill="#fef3c7" stroke="#ca8a04"/>
-    <text x="14" y="22" font-size="12" font-weight="700" fill="#713f12">④ 아직 COMMIT 하지 않음</text>
-    <text x="14" y="42" font-size="11.5" fill="#713f12">메모리 상의 변경만 존재 — 디스크 미반영</text>
+    <text x="14" y="22" font-size="12" font-weight="700" fill="#713f12">③ BEGIN + UPDATE qty=15</text>
+    <text x="14" y="42" font-size="11.5" fill="#713f12">아직 COMMIT 하지 않음 — 메모리에만 변경 존재</text>
   </g>
 
-  <!-- curved arrow from Tx2 ④ left edge to Tx1 ⑤ right edge -->
-  <path d="M 480 217 C 420 217, 460 290, 440 290" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" marker-end="url(#dirArr)"/>
-  <g transform="translate(370, 252)">
-    <rect x="-95" y="-14" width="200" height="22" rx="11" fill="#fff" stroke="#dc2626" stroke-width="1"/>
-    <text x="5" y="2" font-size="11" font-weight="700" fill="#dc2626" text-anchor="middle">미커밋 변경(qty=15)이 새어나옴</text>
+  <!-- Time row 3 — leak indicator + dirty read -->
+  <text x="40" y="282" font-size="11" font-weight="700" fill="#94a3b8">T3</text>
+  <g transform="translate(80, 256)">
+    <rect width="760" height="32" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <text x="380" y="21" font-size="12" font-weight="700" fill="#dc2626" text-anchor="middle">⚠ Tx2의 미커밋 변경(qty=15)이 Tx1으로 새어나오는 시점</text>
   </g>
 
-  <g transform="translate(80, 280)">
-    <rect width="360" height="62" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
-    <text x="14" y="22" font-size="12" font-weight="700" fill="#7f1d1d">⑤ SELECT SUM(qty*price)</text>
-    <text x="14" y="42" font-size="13" fill="#7f1d1d" font-family="ui-monospace, Menlo, monospace">→ 155  (잘못된 값!)</text>
-    <text x="14" y="58" font-size="11" fill="#7f1d1d" font-style="italic">개별 합 130과 불일치</text>
+  <!-- Time row 4 -->
+  <text x="40" y="332" font-size="11" font-weight="700" fill="#94a3b8">T4</text>
+  <g transform="translate(80, 304)">
+    <rect width="360" height="68" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <text x="14" y="22" font-size="12" font-weight="700" fill="#7f1d1d">④ SELECT SUM(qty*price)</text>
+    <text x="14" y="44" font-size="14" fill="#7f1d1d" font-weight="700" font-family="ui-monospace, Menlo, monospace">→ 155  (잘못된 값)</text>
+    <text x="14" y="62" font-size="11" fill="#7f1d1d" font-style="italic">개별 합 130과 불일치</text>
   </g>
 
-  <g transform="translate(480, 354)">
-    <rect width="360" height="64" rx="6" fill="#fff" stroke="#7f1d1d" stroke-width="1.5"/>
-    <text x="14" y="22" font-size="12" font-weight="700" fill="#7f1d1d">⑥ ROLLBACK</text>
-    <text x="14" y="42" font-size="11.5" fill="#7f1d1d">qty=15 변경은 폐기 — 존재한 적 없는 값</text>
-    <text x="14" y="58" font-size="11" fill="#7f1d1d" font-style="italic">Tx1이 본 데이터의 근거가 사라짐</text>
+  <!-- Time row 5 -->
+  <text x="40" y="404" font-size="11" font-weight="700" fill="#94a3b8">T5</text>
+  <g transform="translate(480, 380)">
+    <rect width="360" height="48" rx="6" fill="#fff" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="14" y="22" font-size="12" font-weight="700" fill="#7f1d1d">⑤ ROLLBACK</text>
+    <text x="14" y="40" font-size="11.5" fill="#7f1d1d">qty=15 변경은 폐기 — 존재한 적 없는 값</text>
   </g>
 
-  <g transform="translate(80, 430)">
-    <rect width="760" height="40" rx="6" fill="#fef9c3" stroke="#ca8a04"/>
-    <text x="20" y="25" font-size="12.5" fill="#713f12">결과: 같은 트랜잭션 안에서 개별 합(130) ≠ SUM(155). 그리고 SUM의 근거였던 데이터는 영원히 존재하지 않게 됨.</text>
+  <!-- Result -->
+  <g transform="translate(80, 440)">
+    <rect width="760" height="22" rx="6" fill="#fef9c3" stroke="#ca8a04"/>
+    <text x="20" y="16" font-size="12" fill="#713f12">결과: 같은 트랜잭션 안에서 개별 합(130) ≠ SUM(155). 그 SUM의 근거였던 데이터는 영원히 존재하지 않게 됨.</text>
   </g>
 </svg>
