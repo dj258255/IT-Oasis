@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 360" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
   <defs>
-    <marker id="ucArr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <path d="M0,0 L0,6 L9,3 z" fill="#7c2d12"/>
+    <marker id="ucArr" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M0,0 L0,14 L13,7 z" fill="#7c2d12"/>
     </marker>
   </defs>
   <rect width="920" height="360" fill="#fff"/>
 
   <text x="460" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">InnoDB — 현재 버전은 in-place, 옛 버전은 Undo Log 체인을 따라가 재구성</text>
 
-  <!-- Clustered Index Record -->
   <g transform="translate(80, 76)">
     <rect width="320" height="100" rx="12" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
     <text x="20" y="28" font-size="13" font-weight="700" fill="#7c2d12">Clustered Index (sales)</text>
@@ -19,7 +18,6 @@
     </g>
   </g>
 
-  <!-- Undo Log -->
   <g transform="translate(540, 76)">
     <rect width="300" height="100" rx="12" fill="#fef3c7" stroke="#ca8a04" stroke-width="2"/>
     <text x="20" y="28" font-size="13" font-weight="700" fill="#713f12">Undo Log</text>
@@ -30,11 +28,13 @@
     </g>
   </g>
 
-  <!-- arrow -->
-  <line x1="400" y1="116" x2="540" y2="116" stroke="#7c2d12" stroke-width="1.8" marker-end="url(#ucArr)"/>
-  <text x="470" y="106" font-size="11" font-weight="600" fill="#7c2d12" text-anchor="middle">roll_ptr</text>
+  <!-- straight thicker arrow with labeled badge -->
+  <line x1="400" y1="116" x2="540" y2="116" stroke="#7c2d12" stroke-width="2.5" stroke-linecap="round" marker-end="url(#ucArr)"/>
+  <g transform="translate(470, 100)">
+    <rect x="-32" y="-14" width="64" height="22" rx="11" fill="#fff" stroke="#7c2d12" stroke-width="1"/>
+    <text x="0" y="2" font-size="11" font-weight="700" fill="#7c2d12" text-anchor="middle">roll_ptr</text>
+  </g>
 
-  <!-- Reader explanation -->
   <g transform="translate(80, 200)">
     <rect width="760" height="60" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
     <text x="20" y="22" font-size="13" font-weight="700" fill="#1e3a8a">옛 스냅샷이 필요한 Reader</text>
