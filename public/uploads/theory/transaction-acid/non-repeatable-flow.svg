@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 430" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
-  <rect width="920" height="430" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="920" height="460" fill="#fff"/>
 
   <text x="460" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">Non-repeatable Read — 같은 행을 두 번 읽으니 값이 바뀐 시나리오</text>
-  <text x="460" y="56" font-size="13" fill="#475569" text-anchor="middle">Tx2가 정상적으로 COMMIT — 그러나 Tx1 안에서는 같은 데이터가 두 가지 값으로 보임</text>
+  <text x="460" y="56" font-size="13" fill="#475569" text-anchor="middle">초기: p1 (qty=10, price=$5), p2 (qty=20, price=$4)  ·  Tx2가 p1.qty를 10 → 15로 바꿈</text>
 
   <g transform="translate(80, 86)">
     <rect width="360" height="34" rx="6" fill="#dbeafe" stroke="#1e3a8a"/>
@@ -13,40 +13,42 @@
     <text x="180" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#713f12">Tx2 — 판매 갱신</text>
   </g>
 
-  <line x1="260" y1="130" x2="260" y2="400" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
-  <line x1="660" y1="130" x2="660" y2="400" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="260" y1="130" x2="260" y2="430" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="660" y1="130" x2="660" y2="430" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
 
   <text x="40" y="158" font-size="11" font-weight="700" fill="#94a3b8">T1</text>
   <g transform="translate(80, 134)">
-    <rect width="360" height="50" rx="6" fill="#fff" stroke="#1e3a8a"/>
+    <rect width="360" height="64" rx="6" fill="#fff" stroke="#1e3a8a"/>
     <text x="14" y="22" font-size="12" font-weight="600" fill="#1e3a8a">① BEGIN + 1차 SELECT</text>
-    <text x="14" y="42" font-size="12" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">{p1: 50, p2: 80}  → 합계 130</text>
+    <text x="14" y="40" font-size="11.5" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">p1: qty=10 × $5 = 50</text>
+    <text x="14" y="56" font-size="11.5" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">p2: qty=20 × $4 = 80   →  합계 130</text>
   </g>
 
-  <text x="40" y="220" font-size="11" font-weight="700" fill="#94a3b8">T2</text>
-  <g transform="translate(480, 196)">
+  <text x="40" y="234" font-size="11" font-weight="700" fill="#94a3b8">T2</text>
+  <g transform="translate(480, 210)">
     <rect width="360" height="50" rx="6" fill="#fff" stroke="#713f12"/>
-    <text x="14" y="22" font-size="12" font-weight="600" fill="#713f12">② BEGIN + UPDATE qty=15</text>
-    <text x="14" y="42" font-size="11.5" fill="#475569">WHERE product_id=1</text>
+    <text x="14" y="22" font-size="12" font-weight="600" fill="#713f12">② BEGIN + UPDATE p1.qty=15</text>
+    <text x="14" y="42" font-size="11.5" fill="#475569">UPDATE sales SET qty=15 WHERE product_id=1</text>
   </g>
 
-  <text x="40" y="278" font-size="11" font-weight="700" fill="#94a3b8">T3</text>
-  <g transform="translate(480, 256)">
+  <text x="40" y="292" font-size="11" font-weight="700" fill="#94a3b8">T3</text>
+  <g transform="translate(480, 270)">
     <rect width="360" height="36" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
-    <text x="14" y="24" font-size="13" font-weight="700" fill="#14532d">③ COMMIT (정상 커밋)</text>
+    <text x="14" y="24" font-size="13" font-weight="700" fill="#14532d">③ COMMIT  →  디스크 상태: p1.qty = 15</text>
   </g>
 
-  <text x="40" y="324" font-size="11" font-weight="700" fill="#94a3b8">T4</text>
-  <g transform="translate(80, 302)">
+  <text x="40" y="338" font-size="11" font-weight="700" fill="#94a3b8">T4</text>
+  <g transform="translate(80, 316)">
     <rect width="760" height="32" rx="6" fill="#fefce8" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6,4"/>
-    <text x="380" y="21" font-size="12" font-weight="700" fill="#ca8a04" text-anchor="middle">Tx2의 커밋된 변경이 Tx1의 두 번째 read 결과에 반영되는 시점</text>
+    <text x="380" y="21" font-size="12" font-weight="700" fill="#ca8a04" text-anchor="middle">Tx2의 커밋된 변경(p1.qty=15)이 Tx1의 다음 read에 반영되는 시점</text>
   </g>
 
-  <text x="40" y="376" font-size="11" font-weight="700" fill="#94a3b8">T5</text>
-  <g transform="translate(80, 350)">
-    <rect width="360" height="68" rx="6" fill="#fef3c7" stroke="#ca8a04" stroke-width="2"/>
+  <text x="40" y="394" font-size="11" font-weight="700" fill="#94a3b8">T5</text>
+  <g transform="translate(80, 360)">
+    <rect width="360" height="84" rx="6" fill="#fef3c7" stroke="#ca8a04" stroke-width="2"/>
     <text x="14" y="22" font-size="12" font-weight="700" fill="#713f12">④ 2차 SELECT SUM(qty*price)</text>
-    <text x="14" y="44" font-size="14" fill="#713f12" font-weight="700" font-family="ui-monospace, Menlo, monospace">→ 155  (130과 불일치)</text>
-    <text x="14" y="62" font-size="11" fill="#713f12" font-style="italic">같은 트랜잭션, 같은 데이터, 다른 값</text>
+    <text x="14" y="40" font-size="11.5" fill="#713f12" font-family="ui-monospace, Menlo, monospace">p1: qty=15 × $5 = 75   ← qty 바뀜</text>
+    <text x="14" y="56" font-size="11.5" fill="#713f12" font-family="ui-monospace, Menlo, monospace">p2: qty=20 × $4 = 80</text>
+    <text x="14" y="76" font-size="13" fill="#713f12" font-weight="700" font-family="ui-monospace, Menlo, monospace">→ SUM = 155  (T1의 130과 불일치)</text>
   </g>
 </svg>
