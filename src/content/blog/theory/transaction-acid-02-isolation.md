@@ -60,7 +60,7 @@ DB에 클라이언트가 한 명뿐이면 격리 따위 신경 쓸 필요 없어
 
 Dirty Read와 달리 읽은 값이 모두 커밋된 값이에요. 그래서 더 미묘합니다. *"같은 트랜잭션 안에서 같은 행을 두 번 읽었더니 값이 다르더라"* 가 핵심.
 
-> 강의에서 *"굳이 같은 행을 두 번 읽을 일이 있냐"* 는 의문이 든다고 하는데, 실제로는 다른 쿼리가 같은 행에 의존하는 경우가 흔해요. 위 예시도 첫 쿼리는 product_id별 세부, 두 번째는 SUM — 둘 다 product 1의 qty에 의존합니다.
+> *"굳이 같은 행을 두 번 읽을 일이 있냐"* 는 의문이 들 수 있는데, 실제로는 서로 다른 쿼리가 같은 행에 의존하는 경우가 흔해요. 위 예시도 첫 쿼리는 product_id별 세부, 두 번째는 SUM — 둘 다 product 1의 qty에 의존합니다.
 
 ### 2.3 Phantom Read — 없던 행이 갑자기 나타난다
 
@@ -100,7 +100,7 @@ SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 
 | REPEATABLE READ | 방지 | 방지 | 표준상 가능 |
 | SERIALIZABLE | 방지 | 방지 | 방지 |
 
-표준은 **"최소 보장"만 정의**해요. 실제 DB는 더 강한 보장을 제공할 수 있습니다. 이게 강의 노트의 단순화된 표와 다른 점이에요.
+표준은 **"최소 보장"만 정의**해요. 실제 DB는 더 강한 보장을 제공할 수 있습니다. 위 표를 그대로 외우면 실제 DB의 동작과 어긋나는 이유가 여기 있어요.
 
 ### 3.1 READ UNCOMMITTED
 
@@ -138,7 +138,7 @@ SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 
 
 PostgreSQL 공식 문서: *"PostgreSQL's Repeatable Read implementation does not allow phantom reads. This is acceptable under the SQL standard because the standard specifies which anomalies must not occur at certain isolation levels; higher guarantees are acceptable."*
 
-> 즉 위키피디아의 표를 곧이곧대로 외우면 PostgreSQL/MySQL의 실제 동작과 어긋나요. 강의가 *"각 DBMS가 격리 수준을 다르게 구현한다"* 고 한 말은 정확합니다.
+> 즉 위키피디아의 표를 곧이곧대로 외우면 PostgreSQL/MySQL의 실제 동작과 어긋나요. **각 DBMS는 격리 수준을 표준보다 강하게(또는 다르게) 구현하는 경우가 흔합니다.**
 
 > **그럼 PostgreSQL은 SERIALIZABLE이 필요 없는가?** 필요해요. ANSI 정의의 phantom은 RR에서 막히지만, 더 일반화된 **predicate 기반 anomaly(write skew)** 는 RR에서 여전히 발생하기 때문이에요. 의사 on-call 같은 *서로 다른 행을 보면서 전체 제약이 깨지는* 시나리오는 SERIALIZABLE의 SSI(predicate read 추적)로만 막힙니다 — 자세한 메커니즘은 다음 섹션에서 다뤄요.
 
@@ -267,7 +267,7 @@ PostgreSQL처럼 테이블 힙에 여러 튜플 버전을 쌓기보다는, clust
 | 정리 메커니즘 | VACUUM | purge thread |
 | 옛 버전 조회 비용 | 페이지 내 tuple/HOT chain과 가시성 체크 영향을 받음 | Undo Log 체인이 길수록 비용 증가 |
 
-> 강의 노트의 *"장기 실행 트랜잭션에서 InnoDB는 최신 값에 신뢰할 수 없어 비용이 많이 든다"* 는 표현은 정확히 이 얘기예요.
+> *"장기 실행 트랜잭션에서 InnoDB는 최신 값에 신뢰할 수 없어 비용이 많이 든다"* 는 표현이 가리키는 게 정확히 이 현상이에요.
 
 ## 5. 격리 수준 정리표 (DB별 실제 동작)
 
@@ -480,7 +480,7 @@ The SQL standard defines four isolation levels — from weak to strong.
 | REPEATABLE READ | prevented | prevented | possible per standard |
 | SERIALIZABLE | prevented | prevented | prevented |
 
-The standard defines **minimum guarantees only.** Actual DBs may provide stronger ones. This is what differs from the simplified table in lecture notes.
+The standard defines **minimum guarantees only.** Actual DBs may provide stronger ones. That is exactly why memorizing the table above verbatim diverges from real-world behavior.
 
 ### 3.1 READ UNCOMMITTED
 
@@ -518,7 +518,7 @@ In the same transaction, re-reading the same row returns the same value. Prevent
 
 PostgreSQL official doc: *"PostgreSQL's Repeatable Read implementation does not allow phantom reads. This is acceptable under the SQL standard because the standard specifies which anomalies must not occur at certain isolation levels; higher guarantees are acceptable."*
 
-> If you memorize the Wikipedia table verbatim, it diverges from PostgreSQL/MySQL's actual behavior. The lecture's *"each DBMS implements isolation levels differently"* is accurate.
+> If you memorize the Wikipedia table verbatim, it diverges from PostgreSQL/MySQL's actual behavior. **Each DBMS commonly implements isolation levels stronger than — or simply different from — the standard.**
 
 > **Then does PostgreSQL not need SERIALIZABLE?** It does. ANSI-defined phantom is blocked at RR, but the more general **predicate-based anomaly (write skew)** still occurs at RR. Scenarios like the on-call doctors — *checking different rows but breaking a global constraint* — are only blocked by SERIALIZABLE's SSI (predicate read tracking). Mechanism details are in the next section.
 
@@ -647,7 +647,7 @@ Long-running transactions prevent purging the old versions their snapshot sees, 
 | Cleanup mechanism | VACUUM | purge thread |
 | Old version read cost | affected by tuple/HOT chain on the page and visibility checks | grows with Undo Log chain length |
 
-> The lecture note's *"under long-running transactions, InnoDB cannot trust the latest value and pays high cost"* refers exactly to this.
+> The phrasing *"under long-running transactions, InnoDB cannot trust the latest value and pays high cost"* points to exactly this phenomenon.
 
 ## 5. Isolation Level Reference Table (per-DB actual behavior)
 
