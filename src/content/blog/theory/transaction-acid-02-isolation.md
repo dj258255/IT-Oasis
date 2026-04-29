@@ -87,8 +87,6 @@ Tx1과 Tx2가 같은 시작값(10)을 읽고 각자 계산해서 쓰는 바람�
 
 > **왜 Lost Update가 특히 위험한가?** 다른 읽기 현상도 잘못된 의사결정, 잘못된 정산, 중복 처리로 이어질 수 있어 결코 가볍지 않아요. 다만 Lost Update는 그 위에 한 단계 더 — 이미 디스크에 쓴 변경이 다른 트랜잭션에 의해 **영구적으로 덮어쓰여지는 직접적 데이터 손실**입니다. 재고 카운트가 어긋나고, 잔액이 잘못 누적되고, 좌석이 중복 예약돼요. 그래서 4가지 anomaly 중 비즈니스 임팩트가 가장 즉각적이고 회복이 어렵습니다.
 
-> **2장 요약** — SQL 표준이 정의한 읽기 현상은 Dirty Read, Non-repeatable Read, Phantom 3가지이고, Lost Update는 표준 외 anomaly이지만 실무에서 가장 자주 만나는 동시성 버그입니다.
-
 ## 3. 격리 수준 (Isolation Levels)
 
 SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 순.
@@ -106,7 +104,7 @@ SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 
 
 ### 3.1 READ UNCOMMITTED
 
-> **강의 노트 정정**: 강의에서는 *"SQL Server를 제외하고는 다른 데이터베이스가 지원하지 않는다"* 고 했는데, 이는 부정확합니다.
+> **흔한 오해 정정**: *"SQL Server를 제외하고는 다른 데이터베이스가 RU를 지원하지 않는다"* 는 표현이 종종 보이는데, 이는 부정확합니다.
 
 1차 자료 확인:
 
@@ -126,7 +124,7 @@ SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 
 - **Oracle, SQL Server의 기본 격리 수준이기도 합니다.**
 - **MySQL InnoDB의 기본은 Repeatable Read입니다** (아래 참고).
 
-> **강의 노트 정정**: 강의에서 *"많은 데이터베이스에서 이것이 기본 격리 수준이라고 믿습니다"* 라고 했는데, MySQL은 예외예요. MySQL InnoDB의 기본은 Repeatable Read.
+> **흔한 오해 정정**: *"대부분의 DB에서 RC가 기본"* 이라고 단정하는 표현이 자주 보이는데, MySQL은 예외예요. MySQL InnoDB의 기본은 Repeatable Read.
 
 ### 3.3 REPEATABLE READ
 
@@ -201,8 +199,6 @@ PostgreSQL 공식 문서: *"PostgreSQL's Repeatable Read implementation does not
 >
 > **구체적으로 FOR UPDATE로 못 막는 케이스**: `SELECT COUNT(*) FROM doctors WHERE on_call = true` 같은 집계/범위 쿼리는 결과 행을 잠그는 게 의미가 없어요(잠글 행은 조건을 만족하는 행들이고, 다른 트랜잭션이 조건을 만족하지 않던 행을 갱신해 조건을 만족하게 만들 수 있음). 이런 predicate 무결성은 SERIALIZABLE이나 검증 대상 전체 범위를 잠그는 더 넓은 잠금이 필요해요.
 
-> **3장 요약** — 격리 수준은 RU < RC < RR < SERIALIZABLE 4단계지만, 실제 동작은 DB마다 다릅니다. PostgreSQL RR은 SI로 구현되어 ANSI phantom까지 막고, MySQL InnoDB RR은 consistent read와 locking statement가 분리된 hybrid예요. SERIALIZABLE만이 write skew까지 막습니다.
-
 ## 4. 격리는 어떻게 구현되는가 — 두 가지 동시성 제어
 
 격리 수준은 명세이고, 실제 구현은 **동시성 제어(Concurrency Control)** 가 담당합니다. 크게 두 갈래예요.
@@ -272,8 +268,6 @@ PostgreSQL처럼 테이블 힙에 여러 튜플 버전을 쌓기보다는, clust
 | 옛 버전 조회 비용 | 페이지 내 tuple/HOT chain과 가시성 체크 영향을 받음 | Undo Log 체인이 길수록 비용 증가 |
 
 > 강의 노트의 *"장기 실행 트랜잭션에서 InnoDB는 최신 값에 신뢰할 수 없어 비용이 많이 든다"* 는 표현은 정확히 이 얘기예요.
-
-> **4장 요약** — 격리는 비관적 잠금과 낙관적 충돌 감지 두 갈래로 구현되며, 현대 RDBMS는 MVCC로 두 접근을 결합해 읽기와 쓰기의 직접적 blocking을 최소화합니다. PostgreSQL은 새 튜플을 힙에 추가하고 InnoDB는 Undo Log 체인으로 옛 버전을 재구성해요.
 
 ## 5. 격리 수준 정리표 (DB별 실제 동작)
 
@@ -473,8 +467,6 @@ Tx1 and Tx2 read the same starting value (10), each computes, and writes — **t
 
 > **Why is Lost Update particularly dangerous?** Other read phenomena can also lead to wrong decisions, wrong settlements, duplicate processing — none are light. But Lost Update is one step further — **a write that already hit disk is permanently overwritten by another transaction**, a direct data loss. Inventory counts go wrong, balances accumulate incorrectly, seats get double-booked. So among the four anomalies, the business impact is the most immediate and the hardest to recover from.
 
-> **Section 2 takeaway** — The SQL standard defines three read phenomena (Dirty/Non-repeatable/Phantom). Lost Update is non-standard but the most frequent concurrency bug in practice.
-
 ## 3. Isolation Levels
 
 The SQL standard defines four isolation levels — from weak to strong.
@@ -492,7 +484,7 @@ The standard defines **minimum guarantees only.** Actual DBs may provide stronge
 
 ### 3.1 READ UNCOMMITTED
 
-> **Lecture note correction**: a lecture saying *"only SQL Server supports it; other DBs don't"* is inaccurate.
+> **Common misconception fix**: the claim *"only SQL Server supports RU; other DBs don't"* is sometimes seen but inaccurate.
 
 Primary-source check:
 
@@ -512,7 +504,7 @@ Sees only committed changes. Prevents Dirty Read but allows Non-repeatable Read 
 - **Also the default for Oracle, SQL Server.**
 - **MySQL InnoDB's default is Repeatable Read** (see below).
 
-> **Lecture note correction**: a claim like *"I believe many DBs use this as default"* — MySQL is an exception. MySQL InnoDB's default is Repeatable Read.
+> **Common misconception fix**: the assertion *"most DBs use RC as the default"* is often stated, but MySQL is an exception. MySQL InnoDB's default is Repeatable Read.
 
 ### 3.3 REPEATABLE READ
 
@@ -587,8 +579,6 @@ Two implementation paths:
 >
 > **Concretely, what FOR UPDATE cannot block**: aggregate/range queries like `SELECT COUNT(*) FROM doctors WHERE on_call = true` — locking the result rows is meaningless (the rows to lock are those that satisfy the condition, but another transaction can update a row that did not satisfy the condition into one that does). Such predicate integrity requires SERIALIZABLE or a broader lock that covers the entire validation range.
 
-> **Section 3 takeaway** — The four isolation levels are RU < RC < RR < SERIALIZABLE, but actual behavior differs by DB. PostgreSQL RR is implemented as SI and even blocks ANSI phantom; MySQL InnoDB RR is a hybrid of consistent read and locking statement. Only SERIALIZABLE blocks write skew.
-
 ## 4. How Isolation Is Implemented — Two Concurrency Controls
 
 Isolation level is the spec; the actual implementation is by **concurrency control (CC).** Two main schools.
@@ -658,8 +648,6 @@ Long-running transactions prevent purging the old versions their snapshot sees, 
 | Old version read cost | affected by tuple/HOT chain on the page and visibility checks | grows with Undo Log chain length |
 
 > The lecture note's *"under long-running transactions, InnoDB cannot trust the latest value and pays high cost"* refers exactly to this.
-
-> **Section 4 takeaway** — Isolation is implemented in two schools (pessimistic locking vs optimistic conflict detection), and modern RDBMSs combine both via MVCC to minimize direct read-write blocking. PostgreSQL appends new tuples to the heap; InnoDB reconstructs old versions via Undo Log chains.
 
 ## 5. Isolation Level Reference Table (per-DB actual behavior)
 
