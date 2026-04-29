@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
   <defs>
     <linearGradient id="lvlG" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#fee2e2"/>
@@ -7,58 +7,58 @@
       <stop offset="100%" stop-color="#dbeafe"/>
     </linearGradient>
   </defs>
-  <rect width="1000" height="380" fill="#f8fafc"/>
-  <text x="500" y="40" font-size="22" font-weight="700" fill="#0f172a" text-anchor="middle">격리 수준 — 표준 vs 실제 동작</text>
+  <rect width="1100" height="380" fill="#f8fafc"/>
+  <text x="550" y="40" font-size="22" font-weight="700" fill="#0f172a" text-anchor="middle">격리 수준 — 표준 vs 실제 동작</text>
 
   <!-- Spectrum bar -->
-  <rect x="60" y="80" width="880" height="36" rx="18" fill="url(#lvlG)" stroke="#cbd5e1"/>
-  <text x="170" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#7f1d1d">READ UNCOMMITTED</text>
-  <text x="390" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#713f12">READ COMMITTED</text>
-  <text x="610" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#14532d">REPEATABLE READ</text>
-  <text x="830" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#1e3a8a">SERIALIZABLE</text>
+  <rect x="60" y="80" width="980" height="36" rx="18" fill="url(#lvlG)" stroke="#cbd5e1"/>
+  <text x="180" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#7f1d1d">READ UNCOMMITTED</text>
+  <text x="425" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#713f12">READ COMMITTED</text>
+  <text x="675" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#14532d">REPEATABLE READ</text>
+  <text x="920" y="103" font-size="13" font-weight="700" text-anchor="middle" fill="#1e3a8a">SERIALIZABLE</text>
 
   <text x="60" y="142" font-size="12" fill="#475569">동시성 ↑</text>
-  <text x="940" y="142" font-size="12" text-anchor="end" fill="#475569">일관성 ↑</text>
+  <text x="1040" y="142" font-size="12" text-anchor="end" fill="#475569">일관성 ↑</text>
 
   <!-- Phenomena rows -->
   <g transform="translate(60, 170)" font-size="12">
     <text x="0" y="0" font-weight="700" fill="#0f172a">막는 read phenomenon</text>
-    <text x="220" y="0" text-anchor="middle" fill="#7f1d1d">none</text>
-    <text x="440" y="0" text-anchor="middle" fill="#713f12">Dirty</text>
-    <text x="660" y="0" text-anchor="middle" fill="#14532d">Dirty + Non-repeatable</text>
-    <text x="880" y="0" text-anchor="middle" fill="#1e3a8a">+ Phantom + Write Skew</text>
+    <text x="240" y="0" text-anchor="middle" fill="#7f1d1d">none</text>
+    <text x="475" y="0" text-anchor="middle" fill="#713f12">Dirty</text>
+    <text x="715" y="0" text-anchor="middle" fill="#14532d">Dirty + Non-repeatable</text>
+    <text x="945" y="0" text-anchor="middle" fill="#1e3a8a">+ Phantom + Write Skew</text>
   </g>
 
-  <line x1="60" y1="195" x2="940" y2="195" stroke="#cbd5e1"/>
+  <line x1="60" y1="195" x2="1040" y2="195" stroke="#cbd5e1"/>
 
   <!-- DB rows -->
   <g transform="translate(60, 222)" font-size="12">
     <text x="0" y="0" font-weight="700" fill="#1e3a8a">PostgreSQL</text>
-    <text x="220" y="0" text-anchor="middle" fill="#475569">RC로 자동 승격</text>
-    <text x="440" y="0" text-anchor="middle" fill="#16a34a">기본값</text>
-    <text x="660" y="0" text-anchor="middle" fill="#475569">SI — ANSI phantom 차단</text>
-    <text x="880" y="0" text-anchor="middle" fill="#475569">SSI — write skew 차단</text>
+    <text x="240" y="0" text-anchor="middle" fill="#475569">RC로 자동 승격</text>
+    <text x="475" y="0" text-anchor="middle" fill="#16a34a">기본값</text>
+    <text x="715" y="0" text-anchor="middle" fill="#475569">SI — ANSI phantom 차단</text>
+    <text x="945" y="0" text-anchor="middle" fill="#475569">SSI — write skew 차단</text>
   </g>
 
   <g transform="translate(60, 254)" font-size="12">
     <text x="0" y="0" font-weight="700" fill="#7c2d12">MySQL InnoDB</text>
-    <text x="220" y="0" text-anchor="middle" fill="#475569">정식 지원</text>
-    <text x="440" y="0" text-anchor="middle" fill="#475569">옵션</text>
-    <text x="660" y="0" text-anchor="middle" fill="#16a34a">기본값 — hybrid</text>
-    <text x="880" y="0" text-anchor="middle" fill="#475569">잠금 기반</text>
+    <text x="240" y="0" text-anchor="middle" fill="#475569">정식 지원</text>
+    <text x="475" y="0" text-anchor="middle" fill="#475569">옵션</text>
+    <text x="715" y="0" text-anchor="middle" fill="#16a34a">기본값 — hybrid</text>
+    <text x="945" y="0" text-anchor="middle" fill="#475569">잠금 기반</text>
   </g>
 
   <g transform="translate(60, 286)" font-size="12">
     <text x="0" y="0" font-weight="700" fill="#0f172a">SQL Server</text>
-    <text x="220" y="0" text-anchor="middle" fill="#475569">정식 지원</text>
-    <text x="440" y="0" text-anchor="middle" fill="#16a34a">기본값 (옵션 ON시 MVCC)</text>
-    <text x="660" y="0" text-anchor="middle" fill="#475569">잠금 기반</text>
-    <text x="880" y="0" text-anchor="middle" fill="#475569">key-range lock</text>
+    <text x="240" y="0" text-anchor="middle" fill="#475569">정식 지원</text>
+    <text x="475" y="0" text-anchor="middle" fill="#16a34a">기본값 (옵션 ON시 MVCC)</text>
+    <text x="715" y="0" text-anchor="middle" fill="#475569">잠금 기반</text>
+    <text x="945" y="0" text-anchor="middle" fill="#475569">key-range lock</text>
   </g>
 
   <!-- Caveat -->
   <g transform="translate(60, 326)">
-    <rect width="880" height="40" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+    <rect width="980" height="40" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
     <text x="20" y="25" font-size="12.5" fill="#713f12">표준은 최소 보장만 정의 — 같은 격리 수준 이름이라도 DB마다 실제 동작은 다르다</text>
   </g>
 </svg>
