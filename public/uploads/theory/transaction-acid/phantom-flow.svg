@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="phArr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#1e3a8a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="420" fill="#fff"/>
+
+  <text x="460" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">Phantom Read — 없던 행이 갑자기 나타나는 시나리오</text>
+  <text x="460" y="56" font-size="13" fill="#475569" text-anchor="middle">범위 쿼리에서 발생 — 읽은 적 없는 행은 잠글 수 없기 때문</text>
+
+  <g transform="translate(80, 86)">
+    <rect width="360" height="34" rx="6" fill="#dbeafe" stroke="#1e3a8a"/>
+    <text x="180" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#1e3a8a">Tx1 — 범위 쿼리</text>
+  </g>
+  <g transform="translate(480, 86)">
+    <rect width="360" height="34" rx="6" fill="#dcfce7" stroke="#14532d"/>
+    <text x="180" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#14532d">Tx2 — 새 행 INSERT</text>
+  </g>
+
+  <line x1="260" y1="130" x2="260" y2="390" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="660" y1="130" x2="660" y2="390" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+
+  <g transform="translate(80, 134)">
+    <rect width="360" height="50" rx="6" fill="#fff" stroke="#1e3a8a"/>
+    <text x="14" y="22" font-size="12" font-weight="600" fill="#1e3a8a">① BEGIN + SELECT * FROM sales</text>
+    <text x="14" y="42" font-size="12" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">→ {p1, p2}</text>
+  </g>
+
+  <g transform="translate(480, 134)">
+    <rect width="360" height="50" rx="6" fill="#fff" stroke="#14532d"/>
+    <text x="14" y="22" font-size="12" font-weight="600" fill="#14532d">② BEGIN</text>
+    <text x="14" y="42" font-size="11.5" fill="#475569">INSERT INTO sales VALUES (p3, 10, 1)</text>
+  </g>
+  <g transform="translate(480, 196)">
+    <rect width="360" height="42" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="14" y="26" font-size="13" font-weight="700" fill="#14532d">③ COMMIT</text>
+  </g>
+
+  <g transform="translate(80, 252)">
+    <rect width="360" height="64" rx="6" fill="#dbeafe" stroke="#1e3a8a" stroke-width="1.5"/>
+    <text x="14" y="22" font-size="12" font-weight="700" fill="#1e3a8a">④ 2차 SELECT SUM(qty*price)</text>
+    <text x="14" y="42" font-size="13" fill="#1e3a8a" font-family="ui-monospace, Menlo, monospace">→ 140  (p3가 합계에 끼어듦)</text>
+    <text x="14" y="58" font-size="11" fill="#1e3a8a" font-style="italic">처음엔 보이지 않던 행 — phantom</text>
+  </g>
+
+  <line x1="480" y1="217" x2="440" y2="270" stroke="#1e3a8a" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#phArr)"/>
+  <text x="270" y="244" font-size="11" font-weight="600" fill="#1e3a8a" text-anchor="middle">새로 커밋된 p3가 두 번째 read의 결과 집합에 포함됨</text>
+
+  <g transform="translate(80, 332)">
+    <rect width="760" height="44" rx="6" fill="#dbeafe" stroke="#1e3a8a"/>
+    <text x="20" y="20" font-size="12.5" fill="#1e3a8a">Non-repeatable Read와 차이: 이미 읽은 행이 변한 게 아니라 "범위에 새 행이 끼어든 것".</text>
+    <text x="20" y="36" font-size="12.5" fill="#1e3a8a">읽은 행은 잠글 수 있지만, 아직 존재하지 않는 행은 잠글 수 없으므로 막기 더 어렵다.</text>
+  </g>
+</svg>

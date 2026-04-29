@@ -46,21 +46,7 @@ DB에 클라이언트가 한 명뿐이면 격리 따위 신경 쓸 필요 없어
 
 ### 2.1 Dirty Read — 커밋되지 않은 값을 읽는다
 
-```
-sales 테이블 — product 1 (qty=10, price=$5), product 2 (qty=20, price=$4)
-
-Tx1 (보고서)                    Tx2 (판매 추가)
--------------------------       ------------------------
-BEGIN
-SELECT product_id, qty*price    BEGIN
-FROM sales                      UPDATE sales SET qty=15
-→ {p1: 50, p2: 80}              WHERE product_id=1
-                                (아직 COMMIT 안 함)
-SELECT SUM(qty*price)
-FROM sales
-→ 155  ← 커밋도 안 된 값(15)을 읽음 (잘못된 결과)
-                                ROLLBACK  ← 그 변경은 사라짐
-```
+![Dirty Read 시나리오 — 미커밋 값을 읽음](/uploads/theory/transaction-acid/dirty-read-flow.svg)
 
 같은 트랜잭션 안에서 개별 행 합계(50+80=130)와 SUM(155)이 일치하지 않는 보고서가 나갑니다. 게다가 Tx2가 롤백하면 그 데이터는 **애초에 존재한 적이 없는 값**이 돼요. 가장 직관적으로 위험한 읽기 현상입니다.
 
@@ -68,18 +54,7 @@ FROM sales
 
 ### 2.2 Non-repeatable Read — 같은 값이 중간에 바뀐다
 
-```
-Tx1 (보고서)                    Tx2 (판매 추가)
--------------------------       ------------------------
-BEGIN
-SELECT product_id, qty*price    BEGIN
-FROM sales                      UPDATE sales SET qty=15
-→ {p1: 50, p2: 80}              WHERE product_id=1
-                                COMMIT   ← 정상 커밋
-SELECT SUM(qty*price)
-FROM sales
-→ 155  ← 커밋된 값이긴 하지만 처음 읽은 130과 불일치
-```
+![Non-repeatable Read 시나리오 — 같은 행을 두 번 읽으니 값이 다름](/uploads/theory/transaction-acid/non-repeatable-flow.svg)
 
 Dirty Read와 달리 읽은 값이 모두 커밋된 값이에요. 그래서 더 미묘합니다. *"같은 트랜잭션 안에서 같은 행을 두 번 읽었더니 값이 다르더라"* 가 핵심.
 
@@ -87,17 +62,7 @@ Dirty Read와 달리 읽은 값이 모두 커밋된 값이에요. 그래서 더 
 
 ### 2.3 Phantom Read — 없던 행이 갑자기 나타난다
 
-```
-Tx1 (범위 쿼리)                 Tx2 (새 행 INSERT)
--------------------------       ------------------------
-BEGIN
-SELECT * FROM sales             BEGIN
-→ {p1, p2}                      INSERT INTO sales VALUES (p3, 10, 1)
-                                COMMIT
-SELECT SUM(qty*price)
-FROM sales
-→ 140  ← p3가 합계에 끼어듦
-```
+![Phantom Read 시나리오 — 범위 쿼리에 새 행이 끼어듦](/uploads/theory/transaction-acid/phantom-flow.svg)
 
 Non-repeatable Read와 비슷해 보이지만 다릅니다.
 
@@ -112,20 +77,7 @@ Non-repeatable Read와 비슷해 보이지만 다릅니다.
 
 ### 2.4 Lost Update — 동시 업데이트가 서로를 덮어쓴다
 
-```
-초기: product 1 qty=10
-
-Tx1 (10개 추가)                 Tx2 (5개 추가)
--------------------------       ------------------------
-BEGIN                           BEGIN
-SELECT qty FROM sales           SELECT qty FROM sales
-WHERE product_id=1              WHERE product_id=1
-→ 10                            → 10
-                                UPDATE sales SET qty=10+5=15
-                                COMMIT
-UPDATE sales SET qty=10+10=20
-COMMIT                          ← Tx2의 변경이 사라짐
-```
+![Lost Update 시나리오 — read-modify-write에서 한쪽이 사라짐](/uploads/theory/transaction-acid/lost-update-flow.svg)
 
 Tx1과 Tx2가 같은 시작값(10)을 읽고 각자 계산해서 쓰는 바람에, **나중에 커밋한 쪽이 먼저 커밋한 쪽을 덮어씁니다.** 15+10=25가 되어야 하는데 20이 돼요. Tx2의 +5가 사라진 것.
 
@@ -299,33 +251,15 @@ UPDATE가 와도 기존 튜플을 in-place로 덮어쓰지 않고 새 튜플을 
 
 > 엄밀히 말하면 순수 append-only는 아닙니다. **HOT(Heap-Only Tuple) update** 최적화가 있어서, 인덱스 컬럼이 변경되지 않고 같은 페이지에 공간이 있으면 인덱스를 갱신하지 않고 같은 페이지 내에서 새 튜플을 추가해요. 그래도 **기존 튜플을 즉시 덮어쓰지는 않는다**는 점이 InnoDB의 in-place update와 다른 핵심입니다.
 
-```
-sales (product_id=1) 페이지:
-┌──────────────────────────────────────┐
-│ 튜플 v1: qty=10, xmin=100, xmax=200 │ ← Tx 100이 만들고, Tx 200이 폐기 표시
-│ 튜플 v2: qty=15, xmin=200, xmax=∞   │ ← Tx 200이 새로 만든 버전
-└──────────────────────────────────────┘
-
-트랜잭션 ID 150인 Reader → v1을 본다 (xmin=100은 보임, xmax=200은 미래라 무시).
-트랜잭션 ID 250인 Reader → v2를 본다.
-결과: 두 reader는 각자 일관된 버전을 잠금 없이 본다.
-```
-
-**비용** — 옛 튜플이 누적되니 VACUUM이 청소해야 해요.
+![PostgreSQL — 한 페이지에 옛/새 튜플 공존, 가시성으로 분기](/uploads/theory/transaction-acid/pg-tuple-versions.svg)
 
 #### InnoDB의 MVCC — Undo Log 기반 버전 재구성
 
 PostgreSQL처럼 테이블 힙에 여러 튜플 버전을 쌓기보다는, clustered index record에는 현재 버전을 두고 **Undo Log 체인**을 통해 이전 버전을 재구성해요 (in-place update). 행 헤더의 `DB_ROLL_PTR`이 Undo Log 안의 옛 버전을 가리키는 포인터 역할을 합니다.
 
-```
-sales 테이블:
-  product_id=1, qty=15 (최신, DB_ROLL_PTR → undo entry A)
+![InnoDB — 현재 버전은 in-place, 옛 버전은 Undo Log 체인](/uploads/theory/transaction-acid/innodb-undo-chain.svg)
 
-Undo Log:
-  entry A: qty=10 (이전 값)  ← Reader는 이걸 따라가서 옛 버전을 재구성
-```
-
-**비용** — 장기 실행 트랜잭션이 있으면 그 스냅샷이 보는 옛 버전을 purge할 수 없어서 Undo Log가 부풀어 오릅니다(History List Length 증가). Undo chain이 길어지면 snapshot read 비용이 증가하고, purge가 지연되면 성능 저하로 이어져요.
+장기 실행 트랜잭션이 있으면 그 스냅샷이 보는 옛 버전을 purge할 수 없어서 Undo Log가 부풀어 오릅니다(History List Length 증가). Undo chain이 길어지면 snapshot read 비용이 증가하고, purge가 지연되면 성능 저하로 이어져요.
 
 #### 비교
 
@@ -502,21 +436,7 @@ First, an accurate fact. **The SQL standard (ANSI SQL-92) officially defines 3 r
 
 ### 2.1 Dirty Read — reading uncommitted values
 
-```
-sales table — product 1 (qty=10, price=$5), product 2 (qty=20, price=$4)
-
-Tx1 (report)                    Tx2 (add sale)
--------------------------       ------------------------
-BEGIN
-SELECT product_id, qty*price    BEGIN
-FROM sales                      UPDATE sales SET qty=15
-→ {p1: 50, p2: 80}              WHERE product_id=1
-                                (not yet COMMIT)
-SELECT SUM(qty*price)
-FROM sales
-→ 155  ← reads uncommitted value (15) — wrong result
-                                ROLLBACK  ← that change disappears
-```
+![Dirty Read flow — reading an uncommitted value](/uploads/theory/transaction-acid/dirty-read-flow.svg)
 
 In the same transaction, the per-row sum (50+80=130) and SUM (155) do not match — the report goes out inconsistent. And if Tx2 rolls back, the data **never existed in the first place**. The most intuitively dangerous read phenomenon.
 
@@ -524,18 +444,7 @@ In the same transaction, the per-row sum (50+80=130) and SUM (155) do not match 
 
 ### 2.2 Non-repeatable Read — same value changes mid-transaction
 
-```
-Tx1 (report)                    Tx2 (add sale)
--------------------------       ------------------------
-BEGIN
-SELECT product_id, qty*price    BEGIN
-FROM sales                      UPDATE sales SET qty=15
-→ {p1: 50, p2: 80}              WHERE product_id=1
-                                COMMIT   ← committed normally
-SELECT SUM(qty*price)
-FROM sales
-→ 155  ← all values committed but disagrees with first read of 130
-```
+![Non-repeatable Read flow — same row read twice gives different values](/uploads/theory/transaction-acid/non-repeatable-flow.svg)
 
 Unlike Dirty Read, all values read are committed values. So it is more subtle. The crux: *"reading the same row twice in the same transaction returned different values."*
 
@@ -543,17 +452,7 @@ Unlike Dirty Read, all values read are committed values. So it is more subtle. T
 
 ### 2.3 Phantom Read — rows that did not exist suddenly appear
 
-```
-Tx1 (range query)               Tx2 (insert new row)
--------------------------       ------------------------
-BEGIN
-SELECT * FROM sales             BEGIN
-→ {p1, p2}                      INSERT INTO sales VALUES (p3, 10, 1)
-                                COMMIT
-SELECT SUM(qty*price)
-FROM sales
-→ 140  ← p3 sneaks into the sum
-```
+![Phantom Read flow — a new row sneaks into a range query](/uploads/theory/transaction-acid/phantom-flow.svg)
 
 Looks similar to Non-repeatable Read but is different.
 
@@ -568,20 +467,7 @@ The reason to distinguish them: **implementation cost is completely different.**
 
 ### 2.4 Lost Update — concurrent updates overwrite each other
 
-```
-Initial: product 1 qty=10
-
-Tx1 (add 10)                    Tx2 (add 5)
--------------------------       ------------------------
-BEGIN                           BEGIN
-SELECT qty FROM sales           SELECT qty FROM sales
-WHERE product_id=1              WHERE product_id=1
-→ 10                            → 10
-                                UPDATE sales SET qty=10+5=15
-                                COMMIT
-UPDATE sales SET qty=10+10=20
-COMMIT                          ← Tx2's change is gone
-```
+![Lost Update flow — read-modify-write where one side disappears](/uploads/theory/transaction-acid/lost-update-flow.svg)
 
 Tx1 and Tx2 read the same starting value (10), each computes, and writes — **the later commit overwrites the earlier one.** Should be 15+10=25 but ends as 20. Tx2's +5 is gone.
 
@@ -755,33 +641,15 @@ UPDATE does not overwrite the existing tuple in place; it creates a new tuple. O
 
 > Strictly, it is not pure append-only. **HOT (Heap-Only Tuple) update** optimization: when no indexed columns change and there is space on the same page, no index update is needed and a new tuple is added within the same page. Even so, the key difference from InnoDB's in-place update is that **the existing tuple is not immediately overwritten.**
 
-```
-sales (product_id=1) page:
-┌──────────────────────────────────────┐
-│ tuple v1: qty=10, xmin=100, xmax=200 │ ← created by Tx 100, marked dead by Tx 200
-│ tuple v2: qty=15, xmin=200, xmax=∞   │ ← new version made by Tx 200
-└──────────────────────────────────────┘
-
-Reader with txid=150 → sees v1 (xmin=100 visible, xmax=200 is in future → ignored).
-Reader with txid=250 → sees v2.
-Result: both readers see consistent versions without locks.
-```
-
-**Cost** — old tuples accumulate; VACUUM must clean.
+![PostgreSQL — old/new tuples coexist on the same page; visibility decides which one each reader sees](/uploads/theory/transaction-acid/pg-tuple-versions.svg)
 
 #### InnoDB's MVCC — version reconstruction via Undo Log
 
 Rather than stacking multiple tuple versions in the table heap like PostgreSQL, InnoDB keeps the current version in the clustered index record and reconstructs older versions via an **Undo Log chain** (in-place update). The row header's `DB_ROLL_PTR` points to the old version inside the Undo Log.
 
-```
-sales table:
-  product_id=1, qty=15 (latest, DB_ROLL_PTR → undo entry A)
+![InnoDB — current version stays in place; old versions reconstructed by following the Undo Log chain](/uploads/theory/transaction-acid/innodb-undo-chain.svg)
 
-Undo Log:
-  entry A: qty=10 (previous value)  ← Reader follows this to reconstruct old version
-```
-
-**Cost** — long-running transactions prevent purging the old versions their snapshot sees, so the Undo Log balloons (History List Length grows). Long undo chains increase snapshot read cost; delayed purge degrades performance.
+Long-running transactions prevent purging the old versions their snapshot sees, so the Undo Log balloons (History List Length grows). Long undo chains increase snapshot read cost; delayed purge degrades performance.
 
 #### Comparison
 
