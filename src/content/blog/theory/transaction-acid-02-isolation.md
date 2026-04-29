@@ -21,7 +21,9 @@ series: "트랜잭션 ACID"
 seriesOrder: 2
 ---
 
-> 이 글의 핵심 메시지: **"격리 수준 이름만 보고 동작을 판단하면 안 된다."** 같은 REPEATABLE READ라도 PostgreSQL과 MySQL InnoDB는 다르게 동작하고, 같은 SERIALIZABLE이라도 SSI 기반과 잠금 기반의 비용 구조가 다릅니다. 표준은 최소 보장만 정의하고, 실제 동작은 제품마다 다르다는 점을 머리에 두고 읽어주세요.
+## 0. 들어가며
+
+같은 `REPEATABLE READ`라도 PostgreSQL과 MySQL InnoDB는 다르게 동작하고, 같은 `SERIALIZABLE`이라도 SSI 기반(낙관)과 잠금 기반(비관)은 비용 구조가 완전히 다릅니다. **표준은 최소 보장만 정의하고, 실제 동작은 제품마다 다르다** — 이 글은 그 정확한 차이를 Isolation 관점에서 풀어봅니다. A편(Atomicity)에서 살짝 등장한 MVCC와 `xmin`/`xmax`/Undo Log를 본격적으로 다뤄요.
 
 ## 1. Isolation이 풀어야 하는 진짜 문제
 
@@ -143,8 +145,6 @@ PostgreSQL 공식 문서: *"PostgreSQL's Repeatable Read implementation does not
 > **그럼 PostgreSQL은 SERIALIZABLE이 필요 없는가?** 필요해요. ANSI 정의의 phantom은 RR에서 막히지만, 더 일반화된 **predicate 기반 anomaly(write skew)** 는 RR에서 여전히 발생하기 때문이에요. 의사 on-call 같은 *서로 다른 행을 보면서 전체 제약이 깨지는* 시나리오는 SERIALIZABLE의 SSI(predicate read 추적)로만 막힙니다 — 자세한 메커니즘은 다음 섹션에서 다뤄요.
 
 ### 3.4 SNAPSHOT ISOLATION
-
-> 여기까지가 표준이 정의한 4단계 격리 수준이에요. 이제부터는 **표준 너머의 격리 수준과 실제 DB 구현 차이**를 봅니다 — 이 글에서 가장 헷갈리기 쉬운 구간이지만, 면접과 실무에서 차이를 만드는 부분이기도 해요.
 
 표준 4단계와 별개로 존재하는 격리 수준. **트랜잭션 시작 시점의 일관된 스냅샷**을 봅니다.
 
@@ -277,9 +277,7 @@ PostgreSQL처럼 테이블 힙에 여러 튜플 버전을 쌓기보다는, clust
 
 ## 5. 격리 수준 정리표 (DB별 실제 동작)
 
-표준만 보면 안 돼요. 실제 DB의 동작은 다릅니다.
-
-> **이 섹션의 핵심 한 줄**: 격리 수준 이름만으로 실제 보장을 판단하면 안 됩니다. 같은 REPEATABLE READ라도 PostgreSQL은 SI에 가깝고, MySQL InnoDB는 consistent read + locking read + next-key/gap lock이 섞인 hybrid라 동작이 달라요. **이름은 표준이지만 의미는 제품 종속입니다.**
+표준만 보면 안 돼요. 같은 REPEATABLE READ라도 PostgreSQL은 SI에 가깝고, MySQL InnoDB는 consistent read + locking read + next-key/gap lock이 섞인 hybrid라 동작이 다릅니다. **이름은 표준이지만 의미는 제품 종속이에요.**
 
 | 격리 수준 | PostgreSQL | MySQL InnoDB | SQL Server |
 |---|---|---|---|
@@ -534,8 +532,6 @@ PostgreSQL official doc: *"PostgreSQL's Repeatable Read implementation does not 
 
 ### 3.4 SNAPSHOT ISOLATION
 
-> The four standard levels end here. From here on we cover **isolation levels beyond the standard and per-DB implementation differences** — the most confusing part of this post, but also where interview/practice differences are made.
-
 Separate from the four standard levels. Sees a **consistent snapshot as of the transaction start.**
 
 **What it blocks and what it does not:**
@@ -667,9 +663,7 @@ Long-running transactions prevent purging the old versions their snapshot sees, 
 
 ## 5. Isolation Level Reference Table (per-DB actual behavior)
 
-Do not look only at the standard. Actual DB behavior differs.
-
-> **One-line takeaway of this section**: do not judge actual guarantees by the isolation-level name alone. The same REPEATABLE READ is close to SI in PostgreSQL but a hybrid of consistent read + locking read + next-key/gap lock in MySQL InnoDB — different behavior. **The name is standard; the meaning is product-specific.**
+Do not look only at the standard. The same REPEATABLE READ is close to SI in PostgreSQL but a hybrid of consistent read + locking read + next-key/gap lock in MySQL InnoDB — different behavior. **The name is standard; the meaning is product-specific.**
 
 | Isolation level | PostgreSQL | MySQL InnoDB | SQL Server |
 |---|---|---|---|

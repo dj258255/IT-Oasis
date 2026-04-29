@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
   <defs>
-    <marker id="luArr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <path d="M0,0 L0,6 L9,3 z" fill="#be185d"/>
+    <marker id="luArr" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M0,0 L0,14 L13,7 z" fill="#be185d"/>
     </marker>
   </defs>
-  <rect width="920" height="460" fill="#fff"/>
+  <rect width="920" height="480" fill="#fff"/>
 
   <text x="460" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">Lost Update — 동시 read-modify-write로 한쪽이 다른 쪽을 덮어쓰는 시나리오</text>
   <text x="460" y="56" font-size="13" fill="#475569" text-anchor="middle">초기: product 1 qty=10  ·  Tx1은 +10, Tx2는 +5  →  정답 25, 실제 20</text>
@@ -18,10 +18,9 @@
     <text x="180" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#831843">Tx2 — qty + 5</text>
   </g>
 
-  <line x1="260" y1="130" x2="260" y2="430" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
-  <line x1="660" y1="130" x2="660" y2="430" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="260" y1="130" x2="260" y2="450" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="660" y1="130" x2="660" y2="450" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4"/>
 
-  <!-- Both read 10 -->
   <g transform="translate(80, 134)">
     <rect width="360" height="50" rx="6" fill="#fff" stroke="#1e3a8a"/>
     <text x="14" y="22" font-size="12" font-weight="600" fill="#1e3a8a">① BEGIN + SELECT qty</text>
@@ -33,7 +32,6 @@
     <text x="14" y="42" font-size="13" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">→ qty = 10  (같은 시작값)</text>
   </g>
 
-  <!-- Tx2 commits first -->
   <g transform="translate(480, 196)">
     <rect width="360" height="60" rx="6" fill="#fff" stroke="#831843"/>
     <text x="14" y="22" font-size="12" font-weight="600" fill="#831843">③ UPDATE qty = 10 + 5 = 15</text>
@@ -41,8 +39,14 @@
     <text x="14" y="56" font-size="11" fill="#475569">qty = 15 디스크 반영</text>
   </g>
 
-  <!-- Tx1 commits later, overwriting -->
-  <g transform="translate(80, 268)">
+  <!-- curved arrow Tx2 commit → Tx1 update -->
+  <path d="M 480 226 C 420 226, 460 318, 440 318" fill="none" stroke="#be185d" stroke-width="2.5" stroke-linecap="round" marker-end="url(#luArr)"/>
+  <g transform="translate(370, 280)">
+    <rect x="-130" y="-14" width="260" height="22" rx="11" fill="#fff" stroke="#be185d" stroke-width="1"/>
+    <text x="5" y="2" font-size="11" font-weight="700" fill="#be185d" text-anchor="middle">Tx1은 Tx2의 변경을 못 본 채 옛 값으로 덮어씀</text>
+  </g>
+
+  <g transform="translate(80, 308)">
     <rect width="360" height="80" rx="6" fill="#fce7f3" stroke="#be185d" stroke-width="1.5"/>
     <text x="14" y="22" font-size="12" font-weight="700" fill="#831843">⑤ UPDATE qty = 10 + 10 = 20</text>
     <text x="14" y="42" font-size="12" font-weight="700" fill="#831843">⑥ COMMIT (나중에 커밋)</text>
@@ -50,13 +54,10 @@
     <text x="14" y="74" font-size="11" fill="#831843" font-style="italic">Tx2의 +5가 사라짐</text>
   </g>
 
-  <line x1="480" y1="252" x2="440" y2="306" stroke="#be185d" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#luArr)"/>
-
-  <!-- Result -->
-  <g transform="translate(80, 364)">
-    <rect width="760" height="74" rx="6" fill="#fee2e2" stroke="#dc2626"/>
-    <text x="20" y="24" font-size="14" font-weight="700" fill="#7f1d1d">결과: 디스크에 qty = 20  ·  정답은 25</text>
-    <text x="20" y="44" font-size="12" fill="#7f1d1d">두 트랜잭션이 같은 시작값(10)을 보고 각자 계산 → 나중 커밋이 먼저 커밋의 변경을 영구히 덮어씀.</text>
-    <text x="20" y="62" font-size="12" fill="#7f1d1d">방지: UPDATE qty = qty + ?  ·  SELECT ... FOR UPDATE  ·  버전 조건부 UPDATE (낙관적 잠금)</text>
+  <g transform="translate(80, 402)">
+    <rect width="760" height="64" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+    <text x="20" y="22" font-size="14" font-weight="700" fill="#7f1d1d">결과: 디스크에 qty = 20  ·  정답은 25</text>
+    <text x="20" y="40" font-size="12" fill="#7f1d1d">두 트랜잭션이 같은 시작값(10)을 보고 각자 계산 → 나중 커밋이 먼저 커밋의 변경을 영구히 덮어씀.</text>
+    <text x="20" y="56" font-size="12" fill="#7f1d1d">방지: UPDATE qty = qty + ?  ·  SELECT ... FOR UPDATE  ·  버전 조건부 UPDATE (낙관적 잠금)</text>
   </g>
 </svg>
