@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glow2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="pgG2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="myG2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7c2d12"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg2)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.5">
+    <path d="M0 158 H1200 M0 316 H1200 M0 474 H1200"/>
+    <path d="M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+
+  <g transform="translate(80, 80)">
+    <rect width="240" height="36" rx="18" fill="none" stroke="url(#glow2)" stroke-width="1.5"/>
+    <text x="120" y="24" fill="#e2e8f0" font-size="15" font-weight="600" text-anchor="middle" letter-spacing="2">TRANSACTION ACID · ②</text>
+  </g>
+
+  <text x="80" y="200" fill="#f8fafc" font-size="62" font-weight="800">Isolation은</text>
+  <text x="80" y="278" fill="#f8fafc" font-size="62" font-weight="800">어떻게 구현되는가</text>
+
+  <text x="80" y="332" fill="#94a3b8" font-size="22" font-weight="500">같은 REPEATABLE READ도 DB마다 다르게 동작한다 — MVCC와 격리 수준의 진짜 의미</text>
+
+  <g transform="translate(80, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#pgG2)" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#93c5fd" font-size="18" font-weight="700" letter-spacing="1">POSTGRESQL · RR</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">Snapshot Isolation</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">ANSI phantom 차단</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">SSI로 SERIALIZABLE — write skew까지</text>
+  </g>
+
+  <g transform="translate(620, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#myG2)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#fdba74" font-size="18" font-weight="700" letter-spacing="1">INNODB · RR</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">Hybrid (snapshot + lock)</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">consistent read vs locking read 분리</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">read-modify-write에서 Lost Update 누출</text>
+  </g>
+</svg>
