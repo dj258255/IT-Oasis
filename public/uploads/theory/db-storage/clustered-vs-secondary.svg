@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="csa" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L0,12 L11,6 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+  <rect width="980" height="480" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">PostgreSQL vs InnoDB — Index와 Heap의 결정적 차이</text>
+
+  <!-- PostgreSQL side -->
+  <g transform="translate(40, 80)">
+    <rect width="440" height="380" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="220" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#1e3a8a">PostgreSQL — 모든 인덱스가 Secondary</text>
+    <text x="220" y="52" font-size="11.5" text-anchor="middle" fill="#475569">힙은 무순서 페이지 모음 + 별도 B+Tree가 CTID를 가리킴</text>
+
+    <!-- Index leaf -->
+    <g transform="translate(40, 76)">
+      <rect width="360" height="60" rx="8" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#1e3a8a">Index B+Tree leaf</text>
+      <text x="14" y="42" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">(key=40, ctid=(1, 4))</text>
+      <text x="14" y="56" font-size="10.5" font-style="italic" fill="#1e3a8a">key + 행 식별자(CTID)만 저장</text>
+    </g>
+
+    <line x1="220" y1="146" x2="220" y2="172" stroke="#0f172a" stroke-width="1.5" marker-end="url(#csa)"/>
+
+    <!-- Heap page -->
+    <g transform="translate(40, 178)">
+      <rect width="360" height="80" rx="8" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#1e3a8a">Heap page 1 (무순서)</text>
+      <text x="14" y="42" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">slot 1: {id:7, ...}</text>
+      <text x="14" y="58" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">slot 4: {id:40, name:Alice, salary:...}</text>
+      <text x="14" y="74" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">slot 7: {id:12, ...}</text>
+    </g>
+
+    <g transform="translate(40, 274)">
+      <rect width="360" height="46" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="14" y="20" font-size="12" font-weight="700" fill="#14532d">장점</text>
+      <text x="14" y="38" font-size="11" fill="#14532d">모든 인덱스가 동등. PK 변경해도 다른 인덱스 영향 없음</text>
+    </g>
+
+    <g transform="translate(40, 326)">
+      <rect width="360" height="46" rx="8" fill="#fef3c7" stroke="#ca8a04"/>
+      <text x="14" y="20" font-size="12" font-weight="700" fill="#713f12">단점</text>
+      <text x="14" y="38" font-size="11" fill="#713f12">일반적으로 인덱스→힙 2단계 IO (Index-Only Scan 가능)</text>
+    </g>
+  </g>
+
+  <!-- InnoDB side -->
+  <g transform="translate(500, 80)">
+    <rect width="440" height="380" rx="14" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+    <text x="220" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#7c2d12">InnoDB — PK가 Clustered, Secondary는 PK를 가리킴</text>
+    <text x="220" y="52" font-size="11.5" text-anchor="middle" fill="#475569">테이블 자체가 PK B+Tree. leaf에 행 전체가 들어있음</text>
+
+    <!-- Secondary -->
+    <g transform="translate(40, 76)">
+      <rect width="360" height="60" rx="8" fill="#fff" stroke="#fb923c"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#7c2d12">Secondary index leaf</text>
+      <text x="14" y="42" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">(name='Alice', id=40)</text>
+      <text x="14" y="56" font-size="10.5" font-style="italic" fill="#7c2d12">secondary key + PK 저장 (물리 주소 X)</text>
+    </g>
+
+    <line x1="220" y1="146" x2="220" y2="172" stroke="#0f172a" stroke-width="1.5" marker-end="url(#csa)"/>
+
+    <!-- Clustered -->
+    <g transform="translate(40, 178)">
+      <rect width="360" height="80" rx="8" fill="#fed7aa" stroke="#7c2d12"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#7c2d12">Clustered Index leaf (= 테이블 자체)</text>
+      <text x="14" y="42" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">(id=40, {name:Alice, salary:...})</text>
+      <text x="14" y="58" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">(id=41, {...})</text>
+      <text x="14" y="74" font-size="10.5" font-style="italic" fill="#7c2d12">PK 순서로 정렬 + 행 자체가 leaf에</text>
+    </g>
+
+    <g transform="translate(40, 274)">
+      <rect width="360" height="46" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="14" y="20" font-size="12" font-weight="700" fill="#14532d">장점</text>
+      <text x="14" y="38" font-size="11" fill="#14532d">PK lookup 1단계 — clustered index 한 번이면 행</text>
+    </g>
+
+    <g transform="translate(40, 326)">
+      <rect width="360" height="46" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="14" y="20" font-size="12" font-weight="700" fill="#7f1d1d">단점</text>
+      <text x="14" y="38" font-size="11" fill="#7f1d1d">UUID PK 시 무작위 페이지 분할 + 캐시 히트율 저하</text>
+    </g>
+  </g>
+</svg>

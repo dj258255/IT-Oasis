@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="ptr1" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L0,12 L11,6 z" fill="#1e3a8a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="480" fill="#f8fafc"/>
+  <text x="460" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">PostgreSQL Page Layout (8KB) — Slotted Page</text>
+  <text x="460" y="56" font-size="12" fill="#475569" text-anchor="middle">Line Pointer는 위에서 아래로, Tuple 데이터는 아래에서 위로 자라난다</text>
+
+  <!-- The page rectangle -->
+  <g transform="translate(120, 96)">
+    <rect width="380" height="336" rx="10" fill="#fff" stroke="#1e3a8a" stroke-width="2"/>
+
+    <!-- Page Header -->
+    <rect x="0" y="0" width="380" height="40" rx="10" fill="#dbeafe" stroke="#1e3a8a"/>
+    <text x="190" y="26" font-size="13" font-weight="700" text-anchor="middle" fill="#1e3a8a">Page Header (24 bytes)</text>
+
+    <!-- Line Pointers -->
+    <rect x="0" y="40" width="380" height="68" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="190" y="62" font-size="13" font-weight="700" text-anchor="middle" fill="#5b21b6">Line Pointers (lp1, lp2, ...)</text>
+    <text x="190" y="80" font-size="11" text-anchor="middle" fill="#5b21b6">각 행의 (offset, length)</text>
+    <text x="190" y="96" font-size="11" font-style="italic" text-anchor="middle" fill="#5b21b6">↓ 아래로 자라남</text>
+
+    <!-- Free Space -->
+    <rect x="0" y="108" width="380" height="100" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4,3"/>
+    <text x="190" y="160" font-size="14" font-weight="700" text-anchor="middle" fill="#475569">Free Space</text>
+    <text x="190" y="178" font-size="11" text-anchor="middle" fill="#475569">새 행 추가 공간</text>
+
+    <!-- Tuple data -->
+    <rect x="0" y="208" width="380" height="92" fill="#fef3c7" stroke="#ca8a04"/>
+    <text x="190" y="226" font-size="11" font-style="italic" text-anchor="middle" fill="#713f12">↑ 위로 자라남</text>
+    <text x="190" y="246" font-size="12" font-family="ui-monospace, Menlo, monospace" text-anchor="middle" fill="#0f172a">Tuple N data</text>
+    <text x="190" y="264" font-size="12" font-family="ui-monospace, Menlo, monospace" text-anchor="middle" fill="#0f172a">Tuple 2 data</text>
+    <text x="190" y="282" font-size="12" font-family="ui-monospace, Menlo, monospace" text-anchor="middle" fill="#0f172a">Tuple 1 data</text>
+
+    <!-- Special -->
+    <rect x="0" y="300" width="380" height="36" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="190" y="322" font-size="12" font-weight="700" text-anchor="middle" fill="#14532d">Special Space (B-tree only)</text>
+  </g>
+
+  <!-- Side annotations -->
+  <text x="100" y="118" font-size="11" font-weight="700" fill="#94a3b8" text-anchor="end">0</text>
+  <text x="100" y="438" font-size="11" font-weight="700" fill="#94a3b8" text-anchor="end">8192</text>
+
+  <!-- arrow from line pointer to tuple -->
+  <path d="M 510 152 C 600 152, 600 280, 510 280" fill="none" stroke="#1e3a8a" stroke-width="1.8" stroke-linecap="round" marker-end="url(#ptr1)"/>
+  <g transform="translate(640, 200)">
+    <rect x="-110" y="-14" width="220" height="22" rx="11" fill="#fff" stroke="#1e3a8a"/>
+    <text x="0" y="2" font-size="11" font-weight="700" fill="#1e3a8a" text-anchor="middle">CTID = (페이지번호, lp index)</text>
+  </g>
+
+  <g transform="translate(540, 96)">
+    <text x="0" y="20" font-size="13" font-weight="700" fill="#0f172a">핵심 포인트</text>
+    <text x="0" y="42" font-size="12" fill="#475569">• Line pointer 간접 참조 — 행이 페이지 안에서</text>
+    <text x="0" y="58" font-size="12" fill="#475569">  이동해도 인덱스는 깨지지 않음</text>
+    <text x="0" y="80" font-size="12" fill="#475569">• VACUUM, defragmentation, HOT update의 기반</text>
+    <text x="0" y="102" font-size="12" fill="#475569">• 인덱스 페이지의 special space에는</text>
+    <text x="0" y="118" font-size="12" fill="#475569">  형제 페이지 링크 등의 메타데이터</text>
+  </g>
+</svg>
