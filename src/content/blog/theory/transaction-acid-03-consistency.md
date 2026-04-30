@@ -3,7 +3,7 @@ title: '트랜잭션 ACID ③: Consistency는 사실 두 가지다'
 titleEn: 'Transaction ACID ③: There Are Actually Two Consistencies'
 description: ACID의 C와 CAP의 C가 같은 단어일 뿐 완전히 다른 개념이라는 점을 정리해요. Kleppmann은 "C는 ACID에 들어갈 자격이 없다"고 말하고, CAP의 C는 사실 linearizability를 의미합니다. Eventual Consistency가 데이터 손상을 회복시키지 못하는 이유와 일관성 모델 공간(linearizability/serializability/strict serializability)까지.
 descriptionEn: ACID's C and CAP's C share a word but mean completely different things. Kleppmann says "C does not really belong in ACID," and CAP's C is actually linearizability. Why eventual consistency cannot heal data corruption, plus the consistency-model space (linearizability / serializability / strict serializability).
-date: 2026-01-30T00:00:00.000Z
+date: 2026-04-30T00:00:00.000Z
 tags:
   - Transaction
   - ACID

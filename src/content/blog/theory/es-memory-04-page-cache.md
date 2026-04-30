@@ -3,7 +3,7 @@ title: 'JVM 메모리 ④: OS Page Cache'
 titleEn: 'JVM Memory ④: OS Page Cache'
 description: JVM 프로세스 바깥, OS 커널이 관리하는 Page Cache가 무엇이고 애플리케이션 성능에 어떤 영향을 주는지 Linux 커널 공식 문서 기반으로 정리했어요. mmap, reclaim, OOM killer, 그리고 ES가 "Heap을 RAM 50% 이하로 두라"고 하는 진짜 이유까지.
 descriptionEn: What the OS-kernel-managed Page Cache is and how it impacts application performance, grounded in the official Linux kernel docs. Covers mmap, reclaim, OOM killer, and why Elasticsearch says "keep JVM heap under 50% of RAM."
-date: 2026-01-13T00:00:00.000Z
+date: 2026-04-13T00:00:00.000Z
 tags:
   - Linux
   - Page Cache
