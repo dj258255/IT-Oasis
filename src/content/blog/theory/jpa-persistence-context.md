@@ -3,7 +3,7 @@ title: 'JPA 영속성 컨텍스트와 트랜잭션 이해하기'
 titleEn: 'Understanding JPA Persistence Context and Transactions'
 description: '@Transactional의 프록시 동작 원리, 영속성 컨텍스트의 1차 캐시와 더티 체킹, 전파 속성, 그리고 실무에서 자주 발생하는 함정까지 정리했어요.'
 descriptionEn: 'Covers @Transactional proxy mechanics, persistence context 1st-level cache and dirty checking, propagation attributes, and common production pitfalls.'
-date: 2025-12-23T00:00:00.000Z
+date: 2025-09-24T00:00:00.000Z
 tags:
   - JPA
   - Persistence Context

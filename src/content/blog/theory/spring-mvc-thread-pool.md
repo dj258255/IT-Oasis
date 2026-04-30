@@ -3,7 +3,7 @@ title: '스프링 MVC는 왜 스레드를 최대 200개까지 사용할까'
 titleEn: 'Why Does Spring MVC Use Up to 200 Threads?'
 description: CGI 시절부터 서블릿, 스레드 풀까지의 역사를 따라가며 톰캣의 기본 스레드 수 200의 의미와 스레드 풀 튜닝 전략을 정리한다.
 descriptionEn: Traces the history from CGI to servlets to thread pools, explaining the meaning behind Tomcat default 200 threads and thread pool tuning strategies.
-date: 2025-11-05T00:00:00.000Z
+date: 2025-08-07T00:00:00.000Z
 tags:
   - Spring MVC
   - Thread Pool

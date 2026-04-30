@@ -3,7 +3,7 @@ title: 'MySQL 용량이 부족할 때 — 콘텐츠 저장 아키텍처 탐구'
 titleEn: 'When MySQL Runs Out of Space — Content Storage Architecture Deep Dive'
 description: 'FULLTEXT 인덱스가 디스크를 287GB까지 먹은 경험에서 출발해, 현업 7개 플랫폼의 콘텐츠 저장 방식, InnoDB 압축의 동작 원리, Object Storage 이동의 함정, Vertical Partitioning까지 정리해요.'
 descriptionEn: 'Starting from a FULLTEXT index consuming 287GB of disk, explores content storage patterns of 7 production platforms, InnoDB compression internals, Object Storage trade-offs, and Vertical Partitioning strategies.'
-date: 2026-02-27T00:00:00.000Z
+date: 2025-11-29T00:00:00.000Z
 tags:
   - MySQL
   - InnoDB
