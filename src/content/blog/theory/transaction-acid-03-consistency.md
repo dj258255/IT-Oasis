@@ -166,6 +166,10 @@ Instagram 예시로 돌아가서 — `photos.likes_count = 5`인데 likes 테이
 
 이 둘을 구분하는 게 결정적이에요.
 
+> **흔한 오해 정정 — *"eventual consistency는 NoSQL 얘기다"***: 아닙니다. 단일 노드 PostgreSQL에 read replica를 한 대 붙이는 순간, 또는 앞단에 Redis / Memcached 캐시를 두는 순간부터 시스템은 이미 eventual consistency 모델로 들어가요 — primary에 쓰고 직후 replica에서 읽으면 옛 값이 나오고, DB를 갱신해도 캐시는 한 박자 늦게 무효화됩니다.
+>
+> 즉 *"우리 DB가 ACID를 지키니까 시스템 전체도 strong consistency"* 라는 가정은 단일 노드에서만 성립해요. 복제본 · 캐시 · CDN — **데이터가 두 군데에 존재하는 순간 eventual consistency의 영역** 이고, 그 trade-off를 *"NoSQL 쓸 때만 신경 쓴다"* 고 미루면 운영에서 직접 부딪힙니다.
+
 ### Eventual Consistency를 받아들이는 이유
 
 DynamoDB, Cassandra, Riak 같은 시스템들이 의도적으로 eventual consistency를 선택하는 이유:
@@ -402,6 +406,10 @@ So:
 - **CAP-C violation (stale read)**: usually heals via replica sync, but with async replication and a primary failure, unreplicated data can be lost permanently.
 
 Distinguishing the two is decisive.
+
+> **Common misconception fix — *"eventual consistency is a NoSQL thing"***: it is not. The moment you attach a single read replica to single-node PostgreSQL, or place a Redis / Memcached cache in front of it, your system is already in the eventual-consistency model — write to primary and read from replica right after, you get the old value; update the DB and the cache is invalidated one beat late.
+>
+> So the assumption *"our DB is ACID, therefore the whole system has strong consistency"* only holds on a single node. Replicas, caches, CDNs — **the moment data exists in two places, you are in eventual-consistency territory**, and deferring the trade-off as *"only when we use NoSQL"* will hit you directly in production.
 
 ### Why teams accept eventual consistency
 
