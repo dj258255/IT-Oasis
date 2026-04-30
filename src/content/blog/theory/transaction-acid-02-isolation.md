@@ -89,16 +89,21 @@ Tx1과 Tx2가 같은 시작값(10)을 읽고 각자 계산해서 쓰는 바람�
 
 ## 3. 격리 수준 (Isolation Levels)
 
-SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 순.
+SQL 표준은 4가지 격리 수준을 정의해요 — 약한 것부터 강한 순. 표준 외 격리 수준인 SNAPSHOT, 그리고 표준 외 anomaly인 Lost Update까지 함께 매트릭스로 보면:
+
+![격리 수준 × 읽기 현상 매트릭스 (SNAPSHOT + Lost Update 포함)](/uploads/theory/transaction-acid/isolation-matrix.svg)
+
+같은 내용을 표로 다시 한 번 정리하면 다음과 같아요:
+
+| 격리 수준 | Dirty Read | Lost Update | Non-repeatable | Phantom |
+|---|---|---|---|---|
+| READ UNCOMMITTED | 가능 | 가능 | 가능 | 가능 |
+| READ COMMITTED | 방지 | 가능 | 가능 | 가능 |
+| REPEATABLE READ | 방지 | 방지 | 방지 | 표준상 가능 |
+| SNAPSHOT | 방지 | 방지 | 방지 | 방지 (단 write skew는 별개) |
+| SERIALIZABLE | 방지 | 방지 | 방지 | 방지 |
 
 ![격리 수준 — 표준 vs 실제](/uploads/theory/transaction-acid/isolation-levels.svg)
-
-| 격리 수준 | Dirty Read | Non-repeatable | Phantom |
-|---|---|---|---|
-| READ UNCOMMITTED | 가능 | 가능 | 가능 |
-| READ COMMITTED | 방지 | 가능 | 가능 |
-| REPEATABLE READ | 방지 | 방지 | 표준상 가능 |
-| SERIALIZABLE | 방지 | 방지 | 방지 |
 
 표준은 **"최소 보장"만 정의**해요. 실제 DB는 더 강한 보장을 제공할 수 있습니다. 위 표를 그대로 외우면 실제 DB의 동작과 어긋나는 이유가 여기 있어요.
 
@@ -469,16 +474,21 @@ Tx1 and Tx2 read the same starting value (10), each computes, and writes — **t
 
 ## 3. Isolation Levels
 
-The SQL standard defines four isolation levels — from weak to strong.
+The SQL standard defines four isolation levels — from weak to strong. With the non-standard SNAPSHOT level and the non-standard anomaly Lost Update included as a matrix:
+
+![Isolation level × read phenomenon matrix (with SNAPSHOT + Lost Update)](/uploads/theory/transaction-acid/isolation-matrix.svg)
+
+Same content as a table:
+
+| Isolation level | Dirty Read | Lost Update | Non-repeatable | Phantom |
+|---|---|---|---|---|
+| READ UNCOMMITTED | possible | possible | possible | possible |
+| READ COMMITTED | prevented | possible | possible | possible |
+| REPEATABLE READ | prevented | prevented | prevented | possible per standard |
+| SNAPSHOT | prevented | prevented | prevented | prevented (write skew is separate) |
+| SERIALIZABLE | prevented | prevented | prevented | prevented |
 
 ![Isolation levels — standard vs reality](/uploads/theory/transaction-acid/isolation-levels.svg)
-
-| Isolation level | Dirty Read | Non-repeatable | Phantom |
-|---|---|---|---|
-| READ UNCOMMITTED | possible | possible | possible |
-| READ COMMITTED | prevented | possible | possible |
-| REPEATABLE READ | prevented | prevented | possible per standard |
-| SERIALIZABLE | prevented | prevented | prevented |
 
 The standard defines **minimum guarantees only.** Actual DBs may provide stronger ones. That is exactly why memorizing the table above verbatim diverges from real-world behavior.
 
