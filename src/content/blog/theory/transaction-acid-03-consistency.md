@@ -59,17 +59,11 @@ ACID에서 가장 모호한 글자가 C입니다. 면접에서도 가장 자주 
 
 ### Instagram 예시
 
-```
-photos 테이블           likes 테이블
-photo_id | likes_count   user   | photo_id
-   1     |     2         John   |    1
-   2     |     1         Edmund |    1
-                         John   |    2
-```
+![Instagram 예시 — invariant이 두 테이블에 걸쳐 있다](/uploads/theory/transaction-acid/instagram-tables.svg)
 
 여기서 invariant: `photos.likes_count = COUNT(*) FROM likes WHERE photo_id = ?`
 
-이게 깨지면(예: photos에 likes_count가 5인데 likes 테이블엔 2개밖에 없음, 또는 likes 테이블에 photo_id=4가 있는데 photos엔 4가 없음) → 데이터 불일치, 즉 **C 위반**입니다.
+두 테이블이 따로 있지만 *"좋아요 수의 합"* 이라는 한 가지 진실을 두 곳에서 표현하고 있어요. 이 둘이 어긋나면(예: photos에 likes_count가 5인데 likes 테이블엔 2개뿐, 또는 likes 테이블에 photo_id=4가 있는데 photos엔 4가 없음) → 데이터 불일치, 즉 **C 위반**입니다.
 
 ### Kleppmann의 주목할 만한 입장
 
@@ -304,17 +298,11 @@ The meaning of C is that these constraints are satisfied at the start of the tra
 
 ### Instagram example
 
-```
-photos table            likes table
-photo_id | likes_count   user   | photo_id
-   1     |     2         John   |    1
-   2     |     1         Edmund |    1
-                         John   |    2
-```
+![Instagram example — the invariant spans two tables](/uploads/theory/transaction-acid/instagram-tables.svg)
 
 The invariant: `photos.likes_count = COUNT(*) FROM likes WHERE photo_id = ?`
 
-Break this (e.g., `photos.likes_count = 5` but only 2 rows exist in `likes`; or a row in `likes` references `photo_id = 4` that doesn't exist in `photos`) → data inconsistency, i.e., **C violation.**
+The two tables are physically separate, but they each express the same truth — *"how many likes does this photo have."* When they disagree (e.g., `photos.likes_count = 5` but only 2 rows exist in `likes`; or a row in `likes` references `photo_id = 4` that doesn't exist in `photos`) → data inconsistency, i.e., **C violation.**
 
 ### Kleppmann's notable position
 
