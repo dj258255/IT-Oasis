@@ -189,6 +189,18 @@ PostgreSQL 공식 문서: *"PostgreSQL's Repeatable Read implementation does not
 
 > **왜 비싼가?** *"직렬화"* 는 트랜잭션을 차례대로 줄 세워서 하나씩 처리하는 것과 같은 효과를 보장한다는 뜻이에요. 동시 실행이 결과적으로 어떤 순차 실행과 동등해야 하므로, DB는 실제로 그렇게 동작하거나(2PL이 잠금으로 강제) 그 결과를 보장할 수 있을 때만 커밋을 허용해야 해요(SSI가 충돌 감지로 강제). 단, 항상 *"가장 느린"* 은 아닙니다. SSI 같은 낙관적 구현은 충돌이 적은 워크로드에서는 SI 비용에 가깝게 동작하지만, 충돌이 많은 워크로드에서는 abort/retry로 처리량이 급락할 수 있어요.
 
+> **SSI가 작동하는 모습 — PostgreSQL의 실제 에러 메시지**: PostgreSQL은 read/write 의존성 사이클을 감지하면 한 트랜잭션을 abort하고 다음 메시지로 알려줍니다:
+>
+> ```
+> ERROR:  could not serialize access due to
+>         read/write dependencies among transactions
+> HINT:   The transaction might succeed if retried.
+> ```
+>
+> 두 트랜잭션이 *서로 다른 행* 만 갱신해도 — 예를 들어 한쪽은 `UPDATE WHERE val='a'`, 다른 쪽은 `UPDATE WHERE val='b'` 처럼 결과 집합이 겹치지 않아 보여도 — 두 트랜잭션이 서로의 read predicate에 영향을 주는 write를 했다면 SSI는 이걸 잡아냅니다. RR/SI에서는 둘 다 통과되지만 직렬화 결과는 어떤 순차 실행과도 동등하지 않거든요.
+>
+> 즉 **SERIALIZABLE을 쓰면 클라이언트는 이 에러를 받고 트랜잭션 전체를 멱등하게 재시도** 할 준비가 되어 있어야 해요. 비관적 대안으로는 `SELECT ... FOR UPDATE` + READ COMMITTED 조합이 있는데, 이는 잠금 보유 시간이 길어지므로 SSI보다 처리량이 떨어질 수 있습니다 — 충돌 빈도와 트랜잭션 길이에 따라 선택해야 해요.
+
 구현 방식은 두 가지예요:
 
 - **2PL(Two-Phase Locking) 기반** — 잠금으로 직렬화. SQL Server의 SERIALIZABLE.
@@ -573,6 +585,18 @@ So **"Snapshot Isolation ≠ Serializable"**. Only SERIALIZABLE blocks every ano
 The strongest level. Allows only outcomes equivalent to running the concurrent transactions one by one in some order. Prevents not only every read anomaly but also write skew. Cost varies by implementation — lock-based (2PL) pays blocking cost; optimistic (SSI) pays abort/retry cost; throughput can drop sharply under conflict-heavy workloads. Clients must be prepared to retry idempotently.
 
 > **Why so expensive?** *"Serializable"* means guaranteeing the same effect as if transactions ran one after another. Concurrent execution must be equivalent to *some* serial execution, so the DB must either actually do that (2PL forces it via locks) or only allow commits when the result can be guaranteed (SSI forces it via conflict detection). It is not always *"the slowest"* though. Optimistic implementations like SSI behave close to SI cost under low-conflict workloads, but throughput collapses under high-conflict workloads due to abort/retry.
+
+> **SSI in action — the actual PostgreSQL error message**: when PostgreSQL detects a read/write dependency cycle, it aborts one transaction and tells you with this message:
+>
+> ```
+> ERROR:  could not serialize access due to
+>         read/write dependencies among transactions
+> HINT:   The transaction might succeed if retried.
+> ```
+>
+> Even when two transactions update *disjoint rows* — e.g., one does `UPDATE WHERE val='a'` and the other `UPDATE WHERE val='b'` so their write sets do not overlap — if each transaction's write affects the other transaction's read predicate, SSI catches it. Both would have committed under RR/SI, but no serial schedule equivalent to that concurrent execution exists.
+>
+> That is, **once you use SERIALIZABLE the client must be prepared to receive this error and retry the entire transaction idempotently.** The pessimistic alternative is `SELECT ... FOR UPDATE` + READ COMMITTED, but that holds locks longer and may yield lower throughput than SSI — the choice depends on conflict rate and transaction length.
 
 Two implementation paths:
 
