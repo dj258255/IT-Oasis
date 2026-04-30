@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="380" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">Group Commit — 동시 커밋들의 fsync를 한 번에 묶는다</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">한 번의 fsync는 그 시점까지의 모든 WAL을 함께 flush하는 성질을 활용</text>
+
+  <!-- Without group commit -->
+  <g transform="translate(40, 90)">
+    <rect width="440" height="260" rx="14" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <text x="20" y="30" font-size="14" font-weight="700" fill="#7f1d1d">Without Group Commit</text>
+
+    <!-- Three transactions, three separate fsyncs -->
+    <g transform="translate(20, 50)">
+      <rect width="400" height="34" rx="6" fill="#fff" stroke="#dc2626"/>
+      <text x="14" y="22" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">T1: write WAL → fsync (1회)</text>
+    </g>
+    <g transform="translate(20, 92)">
+      <rect width="400" height="34" rx="6" fill="#fff" stroke="#dc2626"/>
+      <text x="14" y="22" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">T2: write WAL → fsync (2회)</text>
+    </g>
+    <g transform="translate(20, 134)">
+      <rect width="400" height="34" rx="6" fill="#fff" stroke="#dc2626"/>
+      <text x="14" y="22" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">T3: write WAL → fsync (3회)</text>
+    </g>
+
+    <g transform="translate(20, 192)">
+      <rect width="400" height="56" rx="8" fill="#fff" stroke="#dc2626"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#7f1d1d">결과: N 트랜잭션 = N 회 fsync</text>
+      <text x="14" y="42" font-size="11.5" fill="#7f1d1d">fsync는 비싸므로 처리량 무너짐</text>
+    </g>
+  </g>
+
+  <!-- With group commit -->
+  <g transform="translate(500, 90)">
+    <rect width="440" height="260" rx="14" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="20" y="30" font-size="14" font-weight="700" fill="#14532d">With Group Commit</text>
+
+    <g transform="translate(20, 50)">
+      <rect width="400" height="34" rx="6" fill="#fff" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">T1: write WAL → fsync 시작</text>
+    </g>
+    <g transform="translate(20, 92)">
+      <rect width="400" height="34" rx="6" fill="#fff" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">T2, T3: write WAL → fsync 대기</text>
+    </g>
+    <g transform="translate(20, 134)">
+      <rect width="400" height="34" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#14532d">T1의 fsync 완료 → T2, T3도 함께 보장</text>
+    </g>
+
+    <g transform="translate(20, 192)">
+      <rect width="400" height="56" rx="8" fill="#fff" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#14532d">결과: N 트랜잭션 = 1 회 fsync</text>
+      <text x="14" y="42" font-size="11.5" fill="#14532d">강한 durability 유지하면서 처리량 확보</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="dialG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fee2e2"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="380" fill="#f8fafc"/>
+  <text x="540" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">Durability 다이얼 — DB별 설정 매트릭스</text>
+  <text x="540" y="56" font-size="12" fill="#475569" text-anchor="middle">처리량 ↔ 데이터 손실 위험 사이의 trade-off — 트랜잭션마다 다르게 줄 수도 있다</text>
+
+  <!-- spectrum bar -->
+  <rect x="60" y="80" width="960" height="30" rx="15" fill="url(#dialG)" stroke="#cbd5e1"/>
+  <text x="80" y="100" font-size="12" font-weight="700" fill="#7f1d1d">⬅ 처리량↑ / 손실 위험↑</text>
+  <text x="1000" y="100" font-size="12" font-weight="700" fill="#14532d" text-anchor="end">강한 durability ➡</text>
+
+  <!-- PostgreSQL row -->
+  <g transform="translate(60, 132)" font-size="12">
+    <text x="0" y="20" font-weight="700" fill="#1e3a8a">PostgreSQL</text>
+    <text x="0" y="38" font-size="11" fill="#475569">synchronous_commit</text>
+
+    <g transform="translate(180, 0)">
+      <rect width="160" height="48" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="80" y="20" font-weight="700" text-anchor="middle" fill="#7f1d1d">off</text>
+      <text x="80" y="38" font-size="10.5" text-anchor="middle" fill="#7f1d1d">최대 ~600ms 손실</text>
+    </g>
+    <g transform="translate(355, 0)">
+      <rect width="160" height="48" rx="8" fill="#fef3c7" stroke="#ca8a04"/>
+      <text x="80" y="20" font-weight="700" text-anchor="middle" fill="#713f12">local</text>
+      <text x="80" y="38" font-size="10.5" text-anchor="middle" fill="#713f12">로컬 fsync만</text>
+    </g>
+    <g transform="translate(530, 0)">
+      <rect width="160" height="48" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+      <text x="80" y="20" font-weight="700" text-anchor="middle" fill="#713f12">remote_write</text>
+      <text x="80" y="38" font-size="10.5" text-anchor="middle" fill="#713f12">standby OS 캐시까지</text>
+    </g>
+    <g transform="translate(705, 0)">
+      <rect width="160" height="48" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="80" y="20" font-weight="700" text-anchor="middle" fill="#14532d">on (기본)</text>
+      <text x="80" y="38" font-size="10.5" text-anchor="middle" fill="#14532d">로컬 + standby fsync</text>
+    </g>
+    <g transform="translate(880, 0)">
+      <rect width="120" height="48" rx="8" fill="#bbf7d0" stroke="#15803d"/>
+      <text x="60" y="20" font-weight="700" text-anchor="middle" fill="#14532d">remote_apply</text>
+      <text x="60" y="38" font-size="10.5" text-anchor="middle" fill="#14532d">적용까지</text>
+    </g>
+  </g>
+
+  <!-- MySQL row -->
+  <g transform="translate(60, 220)" font-size="12">
+    <text x="0" y="20" font-weight="700" fill="#7c2d12">MySQL InnoDB</text>
+    <text x="0" y="38" font-size="11" fill="#475569">innodb_flush_log_at_trx_commit</text>
+
+    <g transform="translate(180, 0)">
+      <rect width="240" height="48" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="120" y="20" font-weight="700" text-anchor="middle" fill="#7f1d1d">0</text>
+      <text x="120" y="38" font-size="10.5" text-anchor="middle" fill="#7f1d1d">매 1초 일괄 flush · 최대 1초 손실</text>
+    </g>
+    <g transform="translate(435, 0)">
+      <rect width="290" height="48" rx="8" fill="#fef3c7" stroke="#ca8a04"/>
+      <text x="145" y="20" font-weight="700" text-anchor="middle" fill="#713f12">2</text>
+      <text x="145" y="38" font-size="10.5" text-anchor="middle" fill="#713f12">OS 캐시까지 + 1초 fsync · OS 크래시 시 손실</text>
+    </g>
+    <g transform="translate(740, 0)">
+      <rect width="260" height="48" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="130" y="20" font-weight="700" text-anchor="middle" fill="#14532d">1 (기본, ACID)</text>
+      <text x="130" y="38" font-size="10.5" text-anchor="middle" fill="#14532d">매 커밋 fsync · 손실 거의 없음</text>
+    </g>
+  </g>
+
+  <!-- Caveat -->
+  <g transform="translate(60, 314)">
+    <rect width="960" height="50" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+    <text x="20" y="22" font-size="12.5" fill="#713f12">PostgreSQL은 트랜잭션 단위로 SET LOCAL synchronous_commit 변경 가능 — 중요한 트랜잭션은 강하게, 덜 중요한 건 빠르게 혼합 운영.</text>
+    <text x="20" y="40" font-size="11.5" fill="#713f12">MySQL 기본값(1)만 ACID 준수. 0/2는 명시적으로 ACID-D를 일부 포기하는 설정.</text>
+  </g>
+</svg>
