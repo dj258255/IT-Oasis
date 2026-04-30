@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glow3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="acidGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#065f46"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="capGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg3)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.5">
+    <path d="M0 158 H1200 M0 316 H1200 M0 474 H1200"/>
+    <path d="M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+
+  <g transform="translate(80, 80)">
+    <rect width="240" height="36" rx="18" fill="none" stroke="url(#glow3)" stroke-width="1.5"/>
+    <text x="120" y="24" fill="#e2e8f0" font-size="15" font-weight="600" text-anchor="middle" letter-spacing="2">TRANSACTION ACID · ③</text>
+  </g>
+
+  <text x="80" y="200" fill="#f8fafc" font-size="62" font-weight="800">Consistency는</text>
+  <text x="80" y="278" fill="#f8fafc" font-size="62" font-weight="800">사실 두 가지다</text>
+
+  <text x="80" y="332" fill="#94a3b8" font-size="22" font-weight="500">ACID의 C와 CAP의 C는 같은 단어를 쓸 뿐 완전히 다른 개념이다</text>
+
+  <g transform="translate(80, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#acidGrad)" stroke="#10b981" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#6ee7b7" font-size="18" font-weight="700" letter-spacing="1">ACID · C</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">애플리케이션의 무결성 제약</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">FK · UNIQUE · CHECK · 비즈니스 규칙</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">— Kleppmann: "C는 ACID에 들어갈 자격이 없다"</text>
+  </g>
+
+  <g transform="translate(620, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#capGrad)" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#93c5fd" font-size="18" font-weight="700" letter-spacing="1">CAP · C</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">Linearizability</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">단일 복사본 추상화 + real-time 순서</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">합의 알고리즘 (Paxos/Raft) + 복제로 구현</text>
+  </g>
+</svg>

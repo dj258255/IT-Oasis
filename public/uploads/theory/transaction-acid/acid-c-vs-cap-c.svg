@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="380" fill="#f8fafc"/>
+  <text x="490" y="36" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">ACID-C vs CAP-C — 같은 이름, 다른 문제</text>
+
+  <!-- Header row -->
+  <g transform="translate(40, 76)">
+    <rect width="280" height="44" fill="#e2e8f0" stroke="#94a3b8"/>
+    <text x="140" y="28" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">측면</text>
+
+    <g transform="translate(280, 0)">
+      <rect width="320" height="44" fill="#dcfce7" stroke="#94a3b8"/>
+      <text x="160" y="28" font-size="14" font-weight="700" fill="#14532d" text-anchor="middle">ACID의 C</text>
+    </g>
+    <g transform="translate(600, 0)">
+      <rect width="300" height="44" fill="#dbeafe" stroke="#94a3b8"/>
+      <text x="150" y="28" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">CAP의 C (Linearizability)</text>
+    </g>
+  </g>
+
+  <!-- Row 1 -->
+  <g transform="translate(40, 120)">
+    <rect width="280" height="48" fill="#fff" stroke="#94a3b8"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="#0f172a">의미</text>
+
+    <g transform="translate(280, 0)">
+      <rect width="320" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#0f172a">트랜잭션이 무결성 제약을 깨지 않음</text>
+    </g>
+    <g transform="translate(600, 0)">
+      <rect width="300" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="22" font-size="12" fill="#0f172a">단일 복사본처럼 보이고,</text>
+      <text x="14" y="38" font-size="12" fill="#0f172a">쓰기 후 모든 읽기는 그 값(또는 이후)을 봄</text>
+    </g>
+  </g>
+
+  <!-- Row 2 -->
+  <g transform="translate(40, 168)">
+    <rect width="280" height="48" fill="#fff" stroke="#94a3b8"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="#0f172a">범위</text>
+
+    <g transform="translate(280, 0)">
+      <rect width="320" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#0f172a">단일 DB의 트랜잭션 단위</text>
+    </g>
+    <g transform="translate(600, 0)">
+      <rect width="300" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#0f172a">분산 시스템 전체</text>
+    </g>
+  </g>
+
+  <!-- Row 3 -->
+  <g transform="translate(40, 216)">
+    <rect width="280" height="48" fill="#fff" stroke="#94a3b8"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="#0f172a">누가 보장?</text>
+
+    <g transform="translate(280, 0)">
+      <rect width="320" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#0f172a">애플리케이션 (DB는 일부 도움)</text>
+    </g>
+    <g transform="translate(600, 0)">
+      <rect width="300" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#0f172a">합의 알고리즘 + 복제</text>
+    </g>
+  </g>
+
+  <!-- Row 4 -->
+  <g transform="translate(40, 264)">
+    <rect width="280" height="48" fill="#fff" stroke="#94a3b8"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="#0f172a">예시</text>
+
+    <g transform="translate(280, 0)">
+      <rect width="320" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">likes_count = COUNT(likes)</text>
+    </g>
+    <g transform="translate(600, 0)">
+      <rect width="300" height="48" fill="#fff" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#0f172a">"쓰고 즉시 읽으면 그 값이 나옴"</text>
+    </g>
+  </g>
+
+  <!-- Row 5 -->
+  <g transform="translate(40, 312)">
+    <rect width="280" height="48" fill="#fff" stroke="#94a3b8"/>
+    <text x="14" y="30" font-size="13" font-weight="700" fill="#0f172a">반대 개념</text>
+
+    <g transform="translate(280, 0)">
+      <rect width="320" height="48" fill="#fee2e2" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#7f1d1d">데이터 손상 (corruption)</text>
+    </g>
+    <g transform="translate(600, 0)">
+      <rect width="300" height="48" fill="#fee2e2" stroke="#94a3b8"/>
+      <text x="14" y="30" font-size="12" fill="#7f1d1d">Stale read (약한 일관성 모델)</text>
+    </g>
+  </g>
+</svg>

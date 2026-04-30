@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="380" fill="#f8fafc"/>
+  <text x="490" y="36" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">일관성 모델 — 두 차원과 그 교집합</text>
+  <text x="490" y="58" font-size="12" fill="#475569" text-anchor="middle">단일 객체 일관성 vs 트랜잭션 일관성 — 둘은 직접 비교 불가능한 다른 축</text>
+
+  <!-- Single-object axis -->
+  <g transform="translate(60, 96)">
+    <rect width="450" height="220" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="20" y="34" font-size="14" font-weight="700" fill="#1e3a8a">① 단일 객체(single-object) 차원</text>
+    <text x="20" y="56" font-size="11.5" fill="#475569">한 키의 read/write가 어떻게 보이는가</text>
+
+    <!-- Spectrum -->
+    <g transform="translate(20, 84)">
+      <rect width="410" height="32" rx="16" fill="#fff" stroke="#cbd5e1"/>
+      <text x="40" y="20" font-size="11" font-weight="700" fill="#1e3a8a" text-anchor="middle">Linearizable</text>
+      <text x="155" y="20" font-size="11" font-weight="600" fill="#475569" text-anchor="middle">Sequential</text>
+      <text x="270" y="20" font-size="11" font-weight="600" fill="#475569" text-anchor="middle">Causal</text>
+      <text x="380" y="20" font-size="11" font-weight="700" fill="#7f1d1d" text-anchor="middle">Eventual</text>
+    </g>
+    <text x="20" y="138" font-size="11" fill="#475569">← 강함</text>
+    <text x="430" y="138" font-size="11" fill="#475569" text-anchor="end">약함 →</text>
+
+    <text x="20" y="170" font-size="12" fill="#0f172a">• Linearizable — 단일 복사본 추상화 + 실시간 순서</text>
+    <text x="20" y="188" font-size="12" fill="#0f172a">• Eventual — 시간이 지나면 수렴, 시점 보장 없음</text>
+    <text x="20" y="206" font-size="11.5" font-style="italic" fill="#475569">CAP·PACELC는 이 축에서의 트레이드오프</text>
+  </g>
+
+  <!-- Transaction axis -->
+  <g transform="translate(530, 96)">
+    <rect width="390" height="220" rx="12" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+    <text x="20" y="34" font-size="14" font-weight="700" fill="#7c2d12">② 다중 객체/트랜잭션 차원</text>
+    <text x="20" y="56" font-size="11.5" fill="#475569">여러 행에 걸친 트랜잭션이 어떻게 직렬화되는가</text>
+
+    <g transform="translate(20, 84)">
+      <rect width="350" height="32" rx="16" fill="#fff" stroke="#cbd5e1"/>
+      <text x="60" y="20" font-size="11" font-weight="700" fill="#7c2d12" text-anchor="middle">Serializable</text>
+      <text x="180" y="20" font-size="11" font-weight="600" fill="#475569" text-anchor="middle">Snapshot</text>
+      <text x="300" y="20" font-size="11" font-weight="700" fill="#7f1d1d" text-anchor="middle">Read Committed</text>
+    </g>
+
+    <text x="20" y="170" font-size="12" fill="#0f172a">• Serializable — 어떤 직렬 순서와 동등</text>
+    <text x="20" y="188" font-size="12" fill="#0f172a">• ② 편(Isolation)에서 다룬 격리 수준</text>
+    <text x="20" y="206" font-size="11.5" font-style="italic" fill="#475569">linearizability와는 직접 비교 불가 (다른 축)</text>
+  </g>
+
+  <!-- Intersection -->
+  <g transform="translate(60, 332)">
+    <rect width="860" height="34" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+    <text x="20" y="22" font-size="13" fill="#713f12">두 차원의 교집합 = <tspan font-weight="700">Strict Serializability</tspan>  · 트랜잭션 직렬화 + 실시간 순서 (예: Google Spanner)</text>
+  </g>
+</svg>
