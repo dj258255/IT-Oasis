@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 420" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="420" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">WAL — 변경 델타를 디스크에 먼저, 데이터 페이지는 나중에</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">디스크 쓰기는 메모리보다 100~1000배 느리므로 매번 데이터 페이지 전체를 쓰지 않는다</text>
+
+  <!-- Memory side -->
+  <g transform="translate(40, 90)">
+    <rect width="440" height="280" rx="14" fill="#dbeafe" stroke="#1e3a8a" stroke-width="2"/>
+    <text x="20" y="32" font-size="14" font-weight="700" fill="#1e3a8a">메모리 (Buffer Pool)</text>
+
+    <g transform="translate(20, 50)">
+      <rect width="400" height="50" rx="8" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" font-weight="600" fill="#0f172a">① 트랜잭션이 데이터 페이지 변경</text>
+      <text x="14" y="40" font-size="11" fill="#475569" font-family="ui-monospace, Menlo, monospace">UPDATE balance: 100 → 200 (page 7)</text>
+    </g>
+
+    <g transform="translate(20, 110)">
+      <rect width="400" height="50" rx="8" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" font-weight="600" fill="#0f172a">② WAL 레코드 생성</text>
+      <text x="14" y="40" font-size="11" fill="#475569" font-family="ui-monospace, Menlo, monospace">"row 7: balance 100 → 200"  (작은 델타)</text>
+    </g>
+
+    <g transform="translate(20, 170)">
+      <rect width="400" height="50" rx="8" fill="#fef3c7" stroke="#ca8a04"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#713f12">③ Dirty page는 메모리에 남음</text>
+      <text x="14" y="40" font-size="11" fill="#713f12">디스크 데이터 파일은 아직 옛날 값</text>
+    </g>
+
+    <g transform="translate(20, 230)">
+      <rect width="400" height="36" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#14532d">④ 체크포인트 시점에 백그라운드로 flush</text>
+    </g>
+  </g>
+
+  <!-- Disk side -->
+  <g transform="translate(500, 90)">
+    <rect width="440" height="280" rx="14" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+    <text x="20" y="32" font-size="14" font-weight="700" fill="#7c2d12">디스크</text>
+
+    <g transform="translate(20, 50)">
+      <rect width="400" height="86" rx="8" fill="#fff" stroke="#fb923c"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#7c2d12">WAL (Write-Ahead Log)</text>
+      <text x="14" y="42" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">[T1] row 7: balance 100→200</text>
+      <text x="14" y="58" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">[T2] row 9: balance 50→0</text>
+      <text x="14" y="74" font-size="11" fill="#7c2d12" font-style="italic">순차 쓰기 + 작은 델타 → 빠름</text>
+    </g>
+
+    <g transform="translate(20, 152)">
+      <rect width="400" height="60" rx="8" fill="#fff" stroke="#fb923c"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#7c2d12">데이터 파일 (8KB / 16KB 페이지)</text>
+      <text x="14" y="42" font-size="11" fill="#7c2d12">아직 옛 값 (체크포인트 후 갱신)</text>
+    </g>
+
+    <g transform="translate(20, 224)">
+      <rect width="400" height="42" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="14" y="20" font-size="12" font-weight="700" fill="#7f1d1d">충돌 발생 시</text>
+      <text x="14" y="36" font-size="11" fill="#7f1d1d">WAL을 redo → 메모리 dirty page 복원</text>
+    </g>
+  </g>
+
+  <g transform="translate(40, 384)">
+    <rect width="900" height="26" rx="6" fill="#fef9c3" stroke="#ca8a04"/>
+    <text x="20" y="18" font-size="12" fill="#713f12">핵심: WAL은 변경 델타만 + 순차 쓰기 → 작고 빠름. 충돌 후 복구는 마지막 체크포인트 이후의 WAL만 재실행.</text>
+  </g>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 420" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="layArr" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L0,12 L11,6 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+  <rect width="980" height="420" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">fsync 계층 — 어디까지 안전해야 진짜 durability인가</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">단순 write()는 OS page cache까지만, fsync는 디스크 매체 직전까지 — 그 너머엔 하드웨어 캐시</text>
+
+  <!-- 4 layers -->
+  <g transform="translate(60, 96)">
+    <!-- Layer 1: App / DB -->
+    <rect width="860" height="58" rx="10" fill="#dbeafe" stroke="#1e3a8a" stroke-width="2"/>
+    <text x="20" y="24" font-size="13" font-weight="700" fill="#1e3a8a">① 애플리케이션 / DB</text>
+    <text x="20" y="44" font-size="11.5" fill="#0f172a">DB가 write(fd, wal_record, size) 호출 — 자기 입장에서는 "썼다"</text>
+  </g>
+  <line x1="490" y1="158" x2="490" y2="178" stroke="#0f172a" stroke-width="2" marker-end="url(#layArr)"/>
+
+  <g transform="translate(60, 184)">
+    <rect width="860" height="58" rx="10" fill="#fef3c7" stroke="#ca8a04" stroke-width="2"/>
+    <text x="20" y="24" font-size="13" font-weight="700" fill="#713f12">② OS Page Cache</text>
+    <text x="20" y="44" font-size="11.5" fill="#0f172a">OS는 메모리에만 저장하고 즉시 "성공" 반환 — 전원 차단 시 손실</text>
+  </g>
+  <line x1="490" y1="246" x2="490" y2="266" stroke="#0f172a" stroke-width="2" marker-end="url(#layArr)"/>
+
+  <g transform="translate(60, 272)">
+    <rect width="860" height="58" rx="10" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+    <text x="20" y="24" font-size="13" font-weight="700" fill="#7c2d12">③ 디스크 컨트롤러 캐시 (휘발성)</text>
+    <text x="20" y="44" font-size="11.5" fill="#0f172a">fsync가 OS-level flush 요청. 단 일부 디스크는 컨트롤러 캐시까지만 도착해도 응답</text>
+  </g>
+  <line x1="490" y1="334" x2="490" y2="354" stroke="#0f172a" stroke-width="2" marker-end="url(#layArr)"/>
+
+  <g transform="translate(60, 360)">
+    <rect width="860" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="20" y="22" font-size="13" font-weight="700" fill="#14532d">④ 비휘발성 매체 (NVMe / SSD / HDD)</text>
+    <text x="20" y="40" font-size="11.5" fill="#0f172a">진짜 durability — BBU·atomic write·fs barrier 등 하드웨어 협력 필요</text>
+  </g>
+</svg>
