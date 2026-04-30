@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="460" fill="#f8fafc"/>
+  <text x="490" y="36" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">"Consistency"라는 한 단어가 가리키는 4가지</text>
+  <text x="490" y="58" font-size="12" fill="#475569" text-anchor="middle">같은 단어를 쓸 뿐 푸는 문제가 완전히 다름</text>
+
+  <!-- Card 1 -->
+  <g transform="translate(40, 90)">
+    <rect width="440" height="160" rx="14" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="20" y="32" font-size="14" font-weight="700" fill="#14532d">① ACID의 C — 트랜잭션 무결성</text>
+    <text x="20" y="62" font-size="13" fill="#0f172a">트랜잭션이 invariant(FK·UNIQUE·CHECK·비즈니스 규칙)를</text>
+    <text x="20" y="82" font-size="13" fill="#0f172a">유지한 채 한 유효 상태 → 다른 유효 상태로 전이</text>
+    <text x="20" y="116" font-size="12" font-weight="700" fill="#14532d">누가 보장?</text>
+    <text x="20" y="134" font-size="12" fill="#14532d">애플리케이션 (DB는 FK / UNIQUE / CHECK / EXCLUSION 일부 도움)</text>
+  </g>
+
+  <!-- Card 2 -->
+  <g transform="translate(500, 90)">
+    <rect width="440" height="160" rx="14" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+    <text x="20" y="32" font-size="14" font-weight="700" fill="#1e3a8a">② CAP의 C — Linearizability</text>
+    <text x="20" y="62" font-size="13" fill="#0f172a">분산 시스템이 단일 복사본처럼 보이고,</text>
+    <text x="20" y="82" font-size="13" fill="#0f172a">실시간 순서(real-time ordering) 따름</text>
+    <text x="20" y="116" font-size="12" font-weight="700" fill="#1e3a8a">누가 보장?</text>
+    <text x="20" y="134" font-size="12" fill="#1e3a8a">합의 알고리즘 (Paxos / Raft) + 복제 메커니즘</text>
+  </g>
+
+  <!-- Card 3 -->
+  <g transform="translate(40, 270)">
+    <rect width="440" height="160" rx="14" fill="#fef3c7" stroke="#ca8a04" stroke-width="2"/>
+    <text x="20" y="32" font-size="14" font-weight="700" fill="#713f12">③ Eventual Consistency — 복제본 수렴</text>
+    <text x="20" y="62" font-size="13" fill="#0f172a">충분한 시간이 지나면 모든 복제본이</text>
+    <text x="20" y="82" font-size="13" fill="#0f172a">동일한 값으로 수렴 (수렴 시점은 보장 안 됨)</text>
+    <text x="20" y="116" font-size="12" font-weight="700" fill="#713f12">한계</text>
+    <text x="20" y="134" font-size="12" fill="#713f12">데이터 손상은 자동 회복 안 됨 — 별도 보정 메커니즘 필요</text>
+  </g>
+
+  <!-- Card 4 -->
+  <g transform="translate(500, 270)">
+    <rect width="440" height="160" rx="14" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="20" y="32" font-size="14" font-weight="700" fill="#5b21b6">④ Read Consistency — 트랜잭션 내부</text>
+    <text x="20" y="62" font-size="13" fill="#0f172a">같은 트랜잭션 안에서 같은 행을 다시 읽어도</text>
+    <text x="20" y="82" font-size="13" fill="#0f172a">같은 값을 봄 (snapshot 격리 등)</text>
+    <text x="20" y="116" font-size="12" font-weight="700" fill="#5b21b6">누가 보장?</text>
+    <text x="20" y="134" font-size="12" fill="#5b21b6">격리 수준 (REPEATABLE READ / SNAPSHOT / SERIALIZABLE)</text>
+  </g>
+</svg>
