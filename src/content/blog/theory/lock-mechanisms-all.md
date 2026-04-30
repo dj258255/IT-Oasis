@@ -3,7 +3,7 @@ title: '락 메커니즘의 모든 것 - 하드웨어부터 분산 시스템까�
 titleEn: 'Lock Mechanisms: From Hardware to Distributed Systems'
 description: CPU의 원자 명령어(CAS, TAS)부터 OS 레벨 락, 애플리케이션 락, DB 락, 분산 락까지 락 메커니즘의 전체 스펙트럼을 정리한다.
 descriptionEn: Covers the full spectrum of lock mechanisms from CPU atomic instructions (CAS, TAS) through OS locks, application locks, DB locks, to distributed locks.
-date: 2025-09-18T00:00:00.000Z
+date: 2025-06-20T00:00:00.000Z
 tags:
   - Lock
   - CAS

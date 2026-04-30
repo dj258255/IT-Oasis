@@ -3,7 +3,7 @@ title: 'JVM과 Garbage Collection 이해하기'
 titleEn: 'Understanding JVM and Garbage Collection'
 description: JVM 메모리 시리즈의 출발점. Class Loader, Runtime Data Areas, Execution Engine, JIT 컴파일러까지 JVM 아키텍처 전반을 정리하고, Heap 구조·GC 알고리즘 같은 메모리 세부 주제는 ①~⑤편으로 이어가요.
 descriptionEn: Starting point of the JVM memory series. Covers JVM architecture — Class Loader, Runtime Data Areas, Execution Engine, JIT — with deeper Heap structure and GC algorithm details continuing in parts ①–⑤.
-date: 2026-04-09T00:00:00.000Z
+date: 2026-01-09T00:00:00.000Z
 tags:
   - JVM
   - Garbage Collection

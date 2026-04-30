@@ -3,7 +3,7 @@ title: '캐시와 버퍼: 속도 차이를 극복하는 두 가지 방법'
 titleEn: 'Cache and Buffer: Two Approaches to Bridging Speed Gaps'
 description: 캐시와 버퍼의 개념을 CPU 캐시부터 웹 브라우저 캐시, 커널 버퍼까지 전 계층에 걸쳐 정리하고, 두 메커니즘의 근본적인 차이를 분석한다.
 descriptionEn: Analyzes cache and buffer concepts across all layers from CPU cache to browser cache and kernel buffers, exploring their fundamental differences.
-date: 2025-08-01T00:00:00.000Z
+date: 2025-05-03T00:00:00.000Z
 tags:
   - Cache
   - Buffer

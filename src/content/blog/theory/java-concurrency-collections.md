@@ -3,7 +3,7 @@ title: 'Java 동시성 컬렉션과 유틸리티'
 titleEn: 'Java Concurrent Collections and Utilities'
 description: ConcurrentHashMap, CopyOnWriteArrayList, BlockingQueue 등 java.util.concurrent 패키지의 고성능 동시성 자료구조와 동작 원리를 정리한다.
 descriptionEn: Covers high-performance concurrent data structures in java.util.concurrent including ConcurrentHashMap, CopyOnWriteArrayList, and BlockingQueue.
-date: 2025-10-04T00:00:00.000Z
+date: 2025-07-06T00:00:00.000Z
 tags:
   - Java
   - Concurrency

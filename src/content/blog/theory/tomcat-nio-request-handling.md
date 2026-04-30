@@ -3,7 +3,7 @@ title: '톰캣은 어떻게 수만 개의 요청을 동시에 처리할까'
 titleEn: 'How Does Tomcat Handle Tens of Thousands of Concurrent Requests?'
 description: BIO에서 NIO로의 전환 이유, NIO Connector의 Poller/Acceptor 구조, Spring MVC의 요청 처리 파이프라인까지 톰캣 내부를 파헤친다.
 descriptionEn: Explores Tomcat internals from BIO to NIO transition, NIO Connector Poller/Acceptor architecture, and the Spring MVC request processing pipeline.
-date: 2025-12-07T00:00:00.000Z
+date: 2025-09-08T00:00:00.000Z
 tags:
   - Tomcat
   - NIO
