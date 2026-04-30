@@ -1,8 +1,8 @@
 ---
-title: 'Balruno를 만들고 나서 배운 것'
-titleEn: 'What I Learned After Building Balruno'
-description: 인디게임 밸런싱 도구 Balruno를 만들며 느꼈던 가능성과, 실제 사용자 반응이 기대와는 달랐던 경험, 그리고 그 배움이 이후 CodingTestKit에 어떻게 이어졌는지를 정리한 글입니다.
-descriptionEn: A retrospective on building Balruno, the gap between a promising idea and real user adoption, and how that lesson later shaped CodingTestKit.
+title: 'Balruno를 만들면서 배우고, 지금도 다듬는 것'
+titleEn: 'What I Am Learning From Building Balruno — Still Iterating'
+description: 인디게임 밸런싱 도구 Balruno의 첫 사용자 반응에서 얻은 배움과, 그 피드백을 바탕으로 진입 장벽·온보딩·백엔드까지 지금도 진행 중인 개선 방향을 정리한 글입니다.
+descriptionEn: How early user feedback on Balruno is reshaping its onboarding, UX, and the backend rebuild that is currently in progress.
 date: 2026-04-02
 tags:
   - Retrospective
@@ -16,84 +16,81 @@ draft: false
 series: "Balruno"
 ---
 
-Balruno를 처음 만들 때는 나름 꽤 획기적이라고 생각했다.
+Balruno를 처음 만들 때는 꽤 가능성이 보이는 방향이라고 생각했다.
 
-게임 밸런싱은 분명히 반복 계산이 많고, 엑셀이나 구글 시트만으로는 불편한 점도 많았다.
-그래서 게임 기획자에게 필요한 수식, 시뮬레이션, 검증 기능을 한곳에 모아두면 분명히 도움이 될 거라고 믿었다.
+게임 밸런싱은 분명히 반복 계산이 많고, 엑셀이나 구글 시트만으로는 불편한 점도 많다.
+그래서 게임 기획자에게 필요한 수식, 시뮬레이션, 검증 기능을 한곳에 모아두면 분명히 도움이 될 거라는 확신이 있었다.
 
-실제로 주변에서 인디게임 밸런싱을 하던 친구도 만족해했다.
-내가 생각했던 문제의식 자체가 완전히 틀린 건 아니었다고 느꼈다.
-적어도 누군가에게는 분명히 필요한 도구였다.
+실제로 주변에서 인디게임 밸런싱을 하던 친구도 만족스럽게 써줬다.
+내가 잡았던 문제의식 자체는 틀리지 않았다는 신호였다.
+적어도 누군가에게는 분명히 가치가 있는 도구라는 점은 확인했다.
 
-하지만 막상 홍보를 해보니 사람들의 반응은 생각보다 훨씬 냉정했다.
-관심을 보이는 사람은 있었지만, 실제로 들어와서 써보는 사람은 많지 않았다.
-그리고 더 중요한 건, "필요해 보인다"와 "실제로 쓰게 된다"는 전혀 다른 문제라는 점이었다.
+다만 막상 외부에 알려보니 반응은 예상보다 신중했다.
+관심을 보이는 사람은 있었지만 들어와서 끝까지 써보는 사람은 많지 않았다.
+*"필요해 보인다"* 와 *"실제로 쓰게 된다"* 는 전혀 다른 문제라는 점을 이때 확실히 체감했다.
 
 ![](/uploads/project/Balruno/powerbalance-feedback.png)
 
-특히 기억에 남았던 건 사용성에 대한 피드백이었다.
-기능 자체나 방향성은 흥미롭지만, 처음 켰을 때 무엇부터 해야 하는지 막막하고 진입 장벽이 높다는 반응이었다.
-개발하는 입장에서는 기능을 많이 넣을수록 더 좋아질 거라고 생각하기 쉽지만, 실제 사용자 입장에서는 처음 5분 안에 감이 오지 않으면 그대로 이탈하게 된다는 걸 이때 더 분명하게 느꼈다.
+특히 가장 큰 인사이트는 **사용성에 대한 피드백** 이었다.
+방향성과 기능 자체는 흥미롭다는 평이 많았지만, 처음 켰을 때 무엇부터 해야 할지 막막하고 진입 장벽이 높다는 의견이 반복됐다.
+개발자 입장에서는 기능이 많을수록 좋다고 생각하기 쉽지만, **사용자는 처음 5분 안에 감이 오지 않으면 그대로 떠난다**.
+이 한 줄을 사용자 반응에서 직접 들으면서 다음 개선의 방향이 분명해졌다.
 
-돌이켜보면 사람들은 이미 각자 익숙한 방식이 있었다.
-누군가는 엑셀을 썼고, 누군가는 구글 시트를 썼고, 누군가는 그냥 머릿속과 메모로도 작업하고 있었다.
-내가 보기엔 불편해 보여도, 그 사람들에게는 이미 굴러가고 있는 흐름이 있었던 거다.
-그 흐름을 바꾸게 만들 만큼의 명확한 이유가 없다면, 아무리 기능이 많아도 실제 사용으로 이어지기 어렵다는 걸 배웠다.
+돌이켜보면 사람들은 이미 각자 익숙한 작업 흐름이 있다.
+누군가는 엑셀을 쓰고, 누군가는 구글 시트를 쓰고, 누군가는 머릿속과 메모로도 충분히 작업한다.
+내가 보기엔 불편해 보여도, 그들에게는 이미 굴러가고 있는 흐름이 있는 거다.
+**그 흐름을 바꿀 만큼 명확한 이유** 를 처음 5분 안에 보여주는 것 — 이게 Balruno가 풀어야 할 진짜 과제였다.
 
-이 경험은 이후 프로젝트를 만들 때 꽤 오래 남았다.
-특히 나중에 CodingTestKit을 만들 때는 "기능이 많으냐"보다 "사람이 지금 당장 왜 이걸 써야 하는가"를 훨씬 더 조심해서 보게 됐다.
-기존 작업 흐름을 크게 바꾸지 않으면서도 바로 편해지는 지점이 있는지, 처음 설치한 사람이 설명 없이도 바로 가치를 느낄 수 있는지를 더 많이 고민했다.
+그래서 지금은 그 방향으로 다음 버전을 적극적으로 다듬고 있다.
 
-결과적으로 그 차이는 꽤 컸다.
-Balruno에서는 내가 만든 도구의 가능성과 한계를 동시에 배웠고, 그 배움을 바탕으로 다음 프로젝트에서는 실제 사용성과 진입 장벽을 더 의식하게 됐다.
-그 흐름 위에서 나온 CodingTestKit은 결국 다운로드 수 254를 기록했다.
+- **온보딩 재설계** — 처음 켜자마자 *"내가 무엇을 할 수 있는지"* 가 한눈에 보이도록, 빈 화면 대신 가벼운 샘플 시나리오와 가이드 흐름을 기본으로.
+- **진입 장벽 낮추기** — 모든 기능을 한 번에 보여주지 않고, *처음 5분 안에 가치를 느끼는 경로* 를 우선.
+- **백엔드 도입** — 지금까지는 클라이언트 중심 구조였지만, 협업·저장·시뮬레이션 결과 공유를 자연스럽게 하기 위해 **서버를 새로 붙이고 곧 배포** 한다.
+- **사용성 피드백 반영** — 친구와 초기 사용자에게서 받은 구체적인 피드백을 우선순위로 두고 인터랙션을 조정 중.
 
-그래서 지금 돌아보면 Balruno는 "실패한 프로젝트"라기보다, 내가 제품을 보는 눈을 바꾸게 만든 프로젝트에 더 가깝다.
-좋은 기능을 만드는 것과, 사람들이 실제로 쓰는 도구를 만드는 것은 다르다는 걸 이때 확실히 배웠다.
+이 경험은 다른 프로젝트에서도 그대로 살아 있다.
+[CodingTestKit](/blog/project/codingtestkit/codingtestkit-introduction)을 만들 때는 *"기능이 많은가"* 가 아니라 *"사람이 지금 당장 왜 이걸 써야 하는가"* 를 훨씬 더 의식했고, 처음 설치한 사람이 설명 없이도 바로 가치를 느낄 수 있는 지점을 우선 설계했다.
+그 방향성 위에서 나온 CodingTestKit은 다운로드 254회를 기록했고, **같은 원칙을 Balruno에도 그대로 적용해서 다시 다듬는 중** 이다.
 
-아마 그때 이 경험이 없었다면, 다음 프로젝트에서도 비슷한 실수를 반복했을 것 같다.
-그래서 지금도 이 프로젝트는 나한테 꽤 중요한 의미로 남아 있다.
+그래서 지금 시점에서 Balruno는 *"실패한 프로젝트"* 가 아니라, **첫 사용자 반응에서 다음 방향을 명확히 잡은 진행 중인 프로젝트** 다.
+좋은 기능을 만드는 것과 사람들이 실제로 쓰는 도구를 만드는 것은 다르다는 — 그 차이를 직접 확인했고, 그 위에서 지금도 계속 만들어가고 있다.
 
 <!-- EN -->
 
-When I first built Balruno, I genuinely thought it was a pretty breakthrough idea.
+When I first built Balruno, I saw real potential in the direction.
 
-Game balancing clearly involves a lot of repetitive calculation, and spreadsheets like Excel or Google Sheets have obvious limitations for that kind of work.
-So I believed that if I put game-specific formulas, simulations, and validation tools in one place, it would definitely help game designers.
+Game balancing involves a lot of repetitive computation, and spreadsheets like Excel or Google Sheets have clear limitations for that kind of work.
+So I was confident that bringing the formulas, simulations, and validation a game designer needs into one place would genuinely help.
 
-And to be fair, it did help at least one real person.
-A friend of mine who was working on indie game balancing was satisfied with it, which made me feel that the problem I was trying to solve was not wrong.
-The need itself was real.
+A friend who was working on indie game balancing actually used it and was happy with it.
+That confirmed the underlying problem was real — at least for some people, the tool clearly created value.
 
-But once I tried promoting it, the reaction was much colder than I expected.
-Some people showed interest, but very few actually tried using it.
-And that made one thing very clear:
-something that "looks useful" and something that people actually adopt are two very different things.
+When I started showing it more broadly, however, the reception was more cautious than I expected.
+People showed interest, but few stuck around to use it end to end.
+That is when I really felt the difference between *"this looks useful"* and *"I actually use this."*
 
 ![](/uploads/project/Balruno/powerbalance-feedback.png)
 
-What stayed with me most was the feedback around usability.
-The direction and feature set seemed interesting, but people felt lost when they first opened the app and did not know what to do first.
-As a builder, it is easy to assume that more features make a product better.
-But from the user's side, if the value is not clear within the first few minutes, they are likely to leave.
+The most valuable insight came from **usability feedback**.
+The direction and feature set were interesting, but multiple people said they did not know what to do first when they opened the app — the entry barrier felt too high.
+As a builder it is easy to assume more features means a better product, but **users leave within the first five minutes if the value is not obvious**.
+Hearing that directly from real users made the next iteration's direction clear.
 
-Looking back, most people already had their own workflow.
-Some used Excel, some used Google Sheets, and some managed things with notes and experience.
-Even if I thought those workflows looked inconvenient, they were already familiar and working well enough for them.
-Unless I could give them a very clear reason to switch, a richer feature set alone was not enough.
+Looking back, everyone already has a workflow that works for them.
+Some use Excel, some use Google Sheets, some manage with notes and intuition.
+Even if those workflows look inefficient to me, they are already running for the people using them.
+**Showing a clear reason to switch — within the first five minutes** — that is the real challenge Balruno needs to solve.
 
-That lesson stayed with me for a long time.
-Later, when I built CodingTestKit, I became much more careful about one question:
-why should someone use this right now?
-I paid more attention to whether the tool improved an existing workflow immediately, and whether a first-time user could feel the value without much explanation.
+So that is exactly what I am actively working on for the next version.
 
-In the end, that difference mattered.
-Balruno taught me both the potential and the limit of a good idea, and that lesson shaped how I approached the next project.
-CodingTestKit eventually reached 254 downloads.
+- **Onboarding redesign** — instead of an empty canvas, the app starts with a lightweight sample scenario and a guided flow so users can see *"what I can do here"* at a glance.
+- **Lower the entry barrier** — instead of exposing every feature at once, prioritize the path that *delivers value within the first five minutes*.
+- **Backend introduction** — Balruno has been client-side so far, but to make collaboration, persistence, and simulation-result sharing feel natural, **a server is being added and will ship soon**.
+- **Acting on real feedback** — the specific feedback from my friend and early users is the top input shaping ongoing interaction tweaks.
 
-So when I look back now, I do not really see Balruno as a failed project.
-It was the project that changed the way I think about products.
-It taught me that building good features and building something people actually use are not the same thing.
+This experience continues to inform other projects.
+When I built [CodingTestKit](/blog/project/codingtestkit/codingtestkit-introduction), I focused much more on *"why would someone use this right now?"* rather than *"how many features can I add?"*, and made sure first-time users could feel the value without explanation.
+That direction got CodingTestKit to 254 downloads, and **I am applying the same principle back to Balruno as I iterate**.
 
-If I had not learned that lesson then, I probably would have repeated the same mistake in the next project.
-That is why this project still matters a lot to me.
+So at this point, Balruno is not a *"failed project"* — it is **a project that locked in a clear next direction from the first round of user feedback, and is actively being improved**.
+Building good features and building something people actually use are not the same thing — I confirmed that difference firsthand, and I am still building on top of it.
