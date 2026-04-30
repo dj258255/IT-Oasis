@@ -3,7 +3,7 @@ title: '트랜잭션 ACID ②: Isolation은 어떻게 구현되는가'
 titleEn: 'Transaction ACID ②: How Is Isolation Implemented?'
 description: 격리 수준 이름만 보고 동작을 판단하면 안 되는 이유. PostgreSQL의 RR(Snapshot Isolation, ANSI phantom 차단)과 InnoDB의 RR(consistent read + locking statement hybrid)이 어떻게 다른지, write skew와 lost update가 왜 DB마다 다르게 새어나오는지를 1차 자료 기준으로 정리해요.
 descriptionEn: Why you cannot judge actual behavior just from the isolation-level name. How PostgreSQL's RR (Snapshot Isolation, blocks ANSI phantom) differs from InnoDB's RR (consistent read + locking statement hybrid), and why write skew and lost update leak differently across DBs — grounded in primary sources.
-date: 2026-04-29T00:00:00.000Z
+date: 2026-04-16T00:00:00.000Z
 tags:
   - Transaction
   - ACID
