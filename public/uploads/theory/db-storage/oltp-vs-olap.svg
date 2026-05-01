@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 360" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="360" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">OLTP vs OLAP — 접근 패턴이 저장 방식을 결정한다</text>
+
+  <!-- OLTP -->
+  <g transform="translate(40, 80)">
+    <rect width="440" height="240" rx="14" fill="#dbeafe" stroke="#1e3a8a" stroke-width="2"/>
+    <text x="220" y="30" font-size="16" font-weight="700" text-anchor="middle" fill="#1e3a8a">OLTP — 몇 행 × 많은 컬럼</text>
+
+    <g transform="translate(20, 50)">
+      <rect width="400" height="60" rx="8" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="20" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">SELECT * FROM users WHERE id = 12345;</text>
+      <text x="14" y="40" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">UPDATE accounts SET balance=balance-100;</text>
+      <text x="14" y="55" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">INSERT INTO orders (...) VALUES (...);</text>
+    </g>
+
+    <g transform="translate(20, 124)">
+      <text x="0" y="20" font-size="12" font-weight="700" fill="#1e3a8a">특징</text>
+      <text x="0" y="40" font-size="12" fill="#0f172a">• 응답시간 ms 단위 · 동시성 높음</text>
+      <text x="0" y="58" font-size="12" fill="#0f172a">• 정확성 필수 (ACID)</text>
+      <text x="0" y="76" font-size="12" fill="#0f172a">• 한 행에 여러 컬럼 함께 다룸</text>
+      <text x="0" y="100" font-size="12" font-weight="700" fill="#16a34a">→ Row Store가 자연스러움</text>
+    </g>
+  </g>
+
+  <!-- OLAP -->
+  <g transform="translate(500, 80)">
+    <rect width="440" height="240" rx="14" fill="#fef3c7" stroke="#92400e" stroke-width="2"/>
+    <text x="220" y="30" font-size="16" font-weight="700" text-anchor="middle" fill="#92400e">OLAP — 많은 행 × 몇 컬럼</text>
+
+    <g transform="translate(20, 50)">
+      <rect width="400" height="60" rx="8" fill="#fff" stroke="#92400e"/>
+      <text x="14" y="20" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">SELECT region, SUM(revenue)</text>
+      <text x="14" y="36" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">FROM sales WHERE date &gt;= '2024-01-01'</text>
+      <text x="14" y="52" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">GROUP BY region;</text>
+    </g>
+
+    <g transform="translate(20, 124)">
+      <text x="0" y="20" font-size="12" font-weight="700" fill="#92400e">특징</text>
+      <text x="0" y="40" font-size="12" fill="#0f172a">• 응답시간 초~분 단위 허용 · 동시성 낮음</text>
+      <text x="0" y="58" font-size="12" fill="#0f172a">• 보통 읽기 전용</text>
+      <text x="0" y="76" font-size="12" fill="#0f172a">• 수백만~수십억 행에 몇 컬럼만 본다</text>
+      <text x="0" y="100" font-size="12" font-weight="700" fill="#16a34a">→ Column Store가 자연스러움</text>
+    </g>
+  </g>
+</svg>

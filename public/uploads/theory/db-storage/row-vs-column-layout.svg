@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="460" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">같은 데이터, 다른 디스크 배치</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">id / name / age / salary 4컬럼 × 4행을 두 가지 방식으로 저장</text>
+
+  <!-- Row Store side -->
+  <g transform="translate(40, 86)">
+    <rect width="440" height="350" rx="12" fill="#dbeafe" stroke="#1e3a8a" stroke-width="2"/>
+    <text x="220" y="30" font-size="15" font-weight="700" text-anchor="middle" fill="#1e3a8a">Row Store</text>
+    <text x="220" y="48" font-size="11" text-anchor="middle" fill="#475569">한 행의 모든 컬럼이 연속 저장</text>
+
+    <g font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">
+      <g transform="translate(20, 64)">
+        <rect width="400" height="38" rx="6" fill="#fff" stroke="#1e3a8a"/>
+        <text x="14" y="16" font-weight="700" fill="#1e3a8a">Page 1</text>
+        <text x="14" y="32">[1, Alice, 30, 80000] [2, Bob, 25, 60000]</text>
+      </g>
+      <g transform="translate(20, 110)">
+        <rect width="400" height="38" rx="6" fill="#fff" stroke="#1e3a8a"/>
+        <text x="14" y="16" font-weight="700" fill="#1e3a8a">Page 2</text>
+        <text x="14" y="32">[3, Carol, 35, 90000] [4, Dave, 40, 75000]</text>
+      </g>
+    </g>
+
+    <g transform="translate(20, 168)">
+      <rect width="400" height="78" rx="8" fill="#fff" stroke="#1e3a8a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#1e3a8a">SELECT * WHERE id=1</text>
+      <text x="14" y="40" font-size="11" fill="#475569">→ Page 1 한 번 IO로 모든 컬럼 확보</text>
+      <text x="14" y="60" font-size="12" font-weight="700" fill="#dc2626">SELECT SUM(salary)</text>
+      <text x="14" y="76" font-size="11" fill="#7f1d1d">→ 모든 페이지 IO, 80% 불필요한 컬럼</text>
+    </g>
+
+    <g transform="translate(20, 254)">
+      <rect width="400" height="80" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#14532d">강점</text>
+      <text x="14" y="40" font-size="11" fill="#14532d">• 한 행 lookup 빠름 (페이지 1번)</text>
+      <text x="14" y="58" font-size="11" fill="#14532d">• 변경 단위가 행 중심 — MVCC·WAL과 자연스러움</text>
+      <text x="14" y="76" font-size="11" fill="#14532d">• PostgreSQL · MySQL InnoDB의 기본</text>
+    </g>
+  </g>
+
+  <!-- Column Store side -->
+  <g transform="translate(500, 86)">
+    <rect width="440" height="350" rx="12" fill="#fef3c7" stroke="#92400e" stroke-width="2"/>
+    <text x="220" y="30" font-size="15" font-weight="700" text-anchor="middle" fill="#92400e">Column Store</text>
+    <text x="220" y="48" font-size="11" text-anchor="middle" fill="#475569">같은 컬럼의 값들이 연속 저장</text>
+
+    <g font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">
+      <g transform="translate(20, 64)">
+        <rect width="400" height="20" rx="4" fill="#fff" stroke="#92400e"/>
+        <text x="14" y="14"><tspan font-weight="700" fill="#92400e">id:</tspan>     1, 2, 3, 4</text>
+      </g>
+      <g transform="translate(20, 88)">
+        <rect width="400" height="20" rx="4" fill="#fff" stroke="#92400e"/>
+        <text x="14" y="14"><tspan font-weight="700" fill="#92400e">name:</tspan>   Alice, Bob, Carol, Dave</text>
+      </g>
+      <g transform="translate(20, 112)">
+        <rect width="400" height="20" rx="4" fill="#fff" stroke="#92400e"/>
+        <text x="14" y="14"><tspan font-weight="700" fill="#92400e">age:</tspan>    30, 25, 35, 40</text>
+      </g>
+      <g transform="translate(20, 136)">
+        <rect width="400" height="20" rx="4" fill="#fff" stroke="#92400e"/>
+        <text x="14" y="14"><tspan font-weight="700" fill="#92400e">salary:</tspan> 80000, 60000, 90000, 75000</text>
+      </g>
+    </g>
+
+    <g transform="translate(20, 168)">
+      <rect width="400" height="78" rx="8" fill="#fff" stroke="#92400e"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#dc2626">SELECT * WHERE id=1</text>
+      <text x="14" y="40" font-size="11" fill="#7f1d1d">→ 4개 컬럼 영역 따로 접근 후 행 재구성</text>
+      <text x="14" y="60" font-size="12" font-weight="700" fill="#16a34a">SELECT SUM(salary)</text>
+      <text x="14" y="76" font-size="11" fill="#14532d">→ salary 영역만 스캔 + 압축까지</text>
+    </g>
+
+    <g transform="translate(20, 254)">
+      <rect width="400" height="80" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="14" y="22" font-size="12" font-weight="700" fill="#14532d">강점</text>
+      <text x="14" y="40" font-size="11" fill="#14532d">• 집계·범위 스캔 빠름, 압축률 높음 (수배 이상)</text>
+      <text x="14" y="58" font-size="11" fill="#14532d">• vectorized + SIMD + data skipping 결합</text>
+      <text x="14" y="76" font-size="11" fill="#14532d">• ClickHouse · Parquet · Snowflake · BigQuery</text>
+    </g>
+  </g>
+</svg>
