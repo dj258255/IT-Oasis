@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="pgArr" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L0,12 L11,6 z" fill="#1e3a8a"/>
+    </marker>
+  </defs>
+  <rect width="760" height="240" fill="#f8fafc"/>
+  <text x="380" y="30" font-size="16" font-weight="700" text-anchor="middle" fill="#1e3a8a">PostgreSQL — Index → Heap 2단계 lookup</text>
+
+  <g transform="translate(80, 56)">
+    <rect width="600" height="60" rx="8" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+    <text x="20" y="24" font-size="13" font-weight="700" fill="#1e3a8a">Index B+Tree leaf</text>
+    <text x="20" y="46" font-size="13" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">(key=40, ctid=(1, 4))</text>
+  </g>
+
+  <line x1="380" y1="124" x2="380" y2="148" stroke="#1e3a8a" stroke-width="1.8" marker-end="url(#pgArr)"/>
+  <g transform="translate(400, 138)">
+    <rect x="-30" y="-12" width="100" height="20" rx="10" fill="#fff" stroke="#1e3a8a"/>
+    <text x="20" y="2" font-size="11" font-weight="700" fill="#1e3a8a" text-anchor="middle">CTID 따라감</text>
+  </g>
+
+  <g transform="translate(80, 156)">
+    <rect width="600" height="60" rx="8" fill="#dbeafe" stroke="#1e3a8a" stroke-width="1.5"/>
+    <text x="20" y="24" font-size="13" font-weight="700" fill="#1e3a8a">Heap page 1</text>
+    <text x="20" y="46" font-size="13" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">slot 4 = {id:40, name:Alice, salary:...}</text>
+  </g>
+</svg>

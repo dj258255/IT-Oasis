@@ -218,30 +218,20 @@ PostgreSQL 기준 (가장 흔한 패턴):
 
 PostgreSQL은 clustered index가 없어요(InnoDB 같은 의미에서). 테이블은 항상 힙(무순서 페이지 모음)이고, 모든 인덱스는 별도의 B+Tree에 키 + CTID만 저장합니다. PostgreSQL의 `CLUSTER` 명령이 있긴 하지만 **일회성 물리 재정렬** 일 뿐, 이후 INSERT/UPDATE는 정렬을 유지하지 않아요 — InnoDB의 *지속적으로 정렬을 유지하는* clustered index와는 다른 개념.
 
-```
-[Index B+Tree leaf]: (key=40, ctid=(1,4))
-                            ↓
-[Heap page 1]: ... slot 4 = {id:40, name:..., salary:...}
-```
+![PostgreSQL — Index → Heap 2단계 lookup](/uploads/theory/db-storage/pg-index-heap.svg)
 
 - **장점**: 모든 인덱스가 동등. PK 변경해도 다른 인덱스 영향 없음.
-- **단점**: 일반적으로 인덱스 → 힙 2단계 IO가 필요해요 (단, Index-Only Scan이 가능하거나 힙 페이지가 이미 shared buffer에 있으면 힙 IO는 생략 가능). UPDATE 시 모든 인덱스를 갱신해야 함 (HOT update로 일부 회피 가능, 후속편에서).
+- **단점**: 일반적으로 인덱스 → 힙 2단계 IO가 필요해요 (단, Index-Only Scan이 가능하거나 힙 페이지가 이미 shared buffer에 있으면 힙 IO는 생략 가능). UPDATE 시 모든 인덱스를 갱신해야 함.
 
 ### MySQL InnoDB — PK가 Clustered, Secondary는 PK를 가리킴
 
 InnoDB는 테이블 자체가 PK 기준으로 정렬된 B+Tree예요. PK B+Tree의 leaf에 **행 전체가 들어있어요.**
 
-```
-[Clustered Index leaf]: (id=40, {name:..., salary:...})  ← 행 자체
-```
+![InnoDB — Clustered Index leaf 자체에 행](/uploads/theory/db-storage/innodb-clustered.svg)
 
 Secondary index는 leaf에 secondary key + PK만 저장합니다. 실제 행을 가져오려면 PK로 다시 clustered index를 lookup.
 
-```
-[Secondary Index leaf]: (name='Alice', id=40)
-                                ↓ PK lookup
-[Clustered Index leaf]: (id=40, {name:..., salary:...})
-```
+![InnoDB — Secondary Index → Clustered Index 2단계 lookup](/uploads/theory/db-storage/innodb-secondary.svg)
 
 - **장점**: PK 기반 lookup은 1단계 — clustered index 한 번이면 행이 나옴.
 - **단점**: Secondary index 사용 시 2단계 (secondary → clustered). 그리고 **PK가 길면 모든 secondary index가 부풀어 오름** (PK 값을 leaf마다 저장하므로).
@@ -273,15 +263,6 @@ PostgreSQL은 clustered index가 없으므로 이 문제가 본질적으로 작�
 - **`SELECT *`는 컬럼 수와 IO가 1:1 비례하지는 않지만**, TOAST chunk 추가 IO + Index-Only Scan 기회 상실 + 네트워크 전송량 증가로 결과적으로 IO를 늘리는 경우가 많습니다.
 
 > 결국 스토리지 내부의 핵심 설계 결정은 **얼마나 적은 페이지 접근으로 답을 만들 것인가** 라는 한 가지 질문으로 수렴해요. 페이지를 어떻게 쪼갤지, 인덱스를 어떻게 만들지, PK를 무엇으로 할지 — 거의 모든 선택이 **페이지 접근 횟수와 그것이 캐시에 머물 확률** 로 평가됩니다. 다른 차원(CPU, lock, network)은 그 위에 쌓여요.
-
-## 다음 편 예고
-
-이 시리즈가 다룰 후속 주제들:
-
-- **B+Tree 깊게**: 노드 분할, fanout 계산, 트리 깊이 추정, fillfactor
-- **HOT Update와 Visibility Map**: PostgreSQL이 인덱스 갱신을 피하는 메커니즘
-- **Row Store vs Column Store**: OLTP와 OLAP의 물리 구조 차이
-- **Index 종류**: Hash, GIN, GiST, BRIN — B+Tree 외의 선택지
 
 ## 참고 (1차 자료 우선)
 
@@ -493,30 +474,20 @@ This is the largest physical-structure difference between the two DBs.
 
 PostgreSQL has no clustered index (in the InnoDB sense). The table is always a heap (an unordered collection of pages), and every index is a separate B+Tree storing key + CTID. PostgreSQL has a `CLUSTER` command, but it is a **one-shot physical reordering** — subsequent INSERTs/UPDATEs do not maintain the order. Different from InnoDB's *continuously-maintained* clustered index.
 
-```
-[Index B+Tree leaf]: (key=40, ctid=(1,4))
-                            ↓
-[Heap page 1]: ... slot 4 = {id:40, name:..., salary:...}
-```
+![PostgreSQL — Index → Heap two-step lookup](/uploads/theory/db-storage/pg-index-heap.svg)
 
 - **Pro**: all indexes are equal. Changing the PK has no impact on other indexes.
-- **Con**: typically requires two-step I/O, index → heap (unless an Index-Only Scan applies or the heap page is already in shared buffers, in which case heap I/O is skipped). Every index must be updated on UPDATE (HOT update can skip some — covered later).
+- **Con**: typically requires two-step I/O, index → heap (unless an Index-Only Scan applies or the heap page is already in shared buffers, in which case heap I/O is skipped). Every index must be updated on UPDATE.
 
 ### MySQL InnoDB — PK is the clustered, secondary points to PK
 
 The InnoDB table itself is a B+Tree sorted by PK. The PK B+Tree's leaves contain **whole rows.**
 
-```
-[Clustered Index leaf]: (id=40, {name:..., salary:...})  ← the row itself
-```
+![InnoDB — the row itself lives in the Clustered Index leaf](/uploads/theory/db-storage/innodb-clustered.svg)
 
 A secondary index leaf stores secondary key + PK only. To get the actual row, you look up the clustered index again with the PK.
 
-```
-[Secondary Index leaf]: (name='Alice', id=40)
-                                ↓ PK lookup
-[Clustered Index leaf]: (id=40, {name:..., salary:...})
-```
+![InnoDB — Secondary Index → Clustered Index two-step lookup](/uploads/theory/db-storage/innodb-secondary.svg)
 
 - **Pro**: PK lookup is one step — one clustered-index trip and you have the row.
 - **Con**: Using a secondary index is two steps (secondary → clustered). And **a long PK bloats every secondary index** (the PK value is duplicated in every leaf).
@@ -548,15 +519,6 @@ PostgreSQL has no clustered index, so this problem is fundamentally smaller — 
 - **`SELECT *` does not scale 1:1 with column count for I/O**, but TOAST chunk extra I/O + lost Index-Only Scan + increased network bytes mean it often does increase I/O in practice.
 
 > Storage internals' core design question converges to one thing: **how few page touches does it take to produce the answer?** How to split pages, how to build indexes, what to use as PK — almost every decision is evaluated by **page-touch count and the probability that those pages are in cache.** Other dimensions (CPU, lock, network) stack on top.
-
-## What's Next in the Series
-
-Upcoming topics:
-
-- **B+Tree, deeper**: node splits, fanout calculations, depth estimation, fillfactor
-- **HOT Update and Visibility Map**: how PostgreSQL avoids index updates
-- **Row Store vs Column Store**: the physical-structure split between OLTP and OLAP
-- **Index types**: Hash, GIN, GiST, BRIN — alternatives to B+Tree
 
 ## References (Primary Sources First)
 
