@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 320" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="320" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">Column Store — 디스크 배치</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">같은 컬럼 값들이 별도 영역에 연속 — 같은 위치(position)가 행을 매칭한다</text>
+
+  <g transform="translate(40, 80)">
+    <rect width="900" height="44" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="1.5"/>
+    <text x="16" y="28" font-size="13" font-weight="700" fill="#92400e">id 컬럼 영역</text>
+    <text x="170" y="28" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#0f172a">1, 2, 3, 4, 5, 6, ...</text>
+  </g>
+
+  <g transform="translate(40, 138)">
+    <rect width="900" height="44" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="1.5"/>
+    <text x="16" y="28" font-size="13" font-weight="700" fill="#92400e">name 컬럼 영역</text>
+    <text x="170" y="28" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#0f172a">'Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', ...</text>
+  </g>
+
+  <g transform="translate(40, 196)">
+    <rect width="900" height="44" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="1.5"/>
+    <text x="16" y="28" font-size="13" font-weight="700" fill="#92400e">age 컬럼 영역</text>
+    <text x="170" y="28" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#0f172a">30, 25, 35, 40, 28, 45, ...</text>
+  </g>
+
+  <g transform="translate(40, 254)">
+    <rect width="900" height="44" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="1.5"/>
+    <text x="16" y="28" font-size="13" font-weight="700" fill="#92400e">salary 컬럼 영역</text>
+    <text x="170" y="28" font-family="ui-monospace, Menlo, monospace" font-size="13" fill="#0f172a">80000, 60000, 90000, 75000, 65000, 100000, ...</text>
+  </g>
+</svg>

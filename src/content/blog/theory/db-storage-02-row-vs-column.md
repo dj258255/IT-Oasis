@@ -64,11 +64,7 @@ SELECT product_id, AVG(price) FROM transactions GROUP BY product_id;
 
 ### 디스크 배치
 
-```
-[Page 1] [row1: id=1, name='Alice', age=30, salary=80000] [row2: id=2, ...]
-[Page 2] [row3: id=3, name='Bob', age=25, salary=60000] [row4: id=4, ...]
-[Page 3] [row5: ...] [row6: ...]
-```
+![Row Store 디스크 배치 — 한 페이지에 여러 행이 함께](/uploads/theory/db-storage/row-store-pages.svg)
 
 한 행의 모든 필드가 물리적으로 인접해요. 이게 단순한 1편의 모델 — 우리가 페이지·힙·인덱스를 이야기할 때 암묵적으로 가정한 배치입니다.
 
@@ -92,14 +88,9 @@ SELECT product_id, AVG(price) FROM transactions GROUP BY product_id;
 
 ### 디스크 배치
 
-같은 4명의 직원 데이터를 column store로 저장하면:
+같은 직원 데이터를 column store로 저장하면:
 
-```
-[id 컬럼 영역]:     1, 2, 3, 4, 5, 6, ...
-[name 컬럼 영역]:   'Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', ...
-[age 컬럼 영역]:    30, 25, 35, 40, 28, 45, ...
-[salary 컬럼 영역]: 80000, 60000, 90000, 75000, 65000, 100000, ...
-```
+![Column Store 디스크 배치 — 컬럼별 별도 영역](/uploads/theory/db-storage/column-store-areas.svg)
 
 각 컬럼이 별도의 영역(보통 별도 파일 또는 별도 페이지 묶음)에 저장돼요. 같은 행의 데이터를 모으려면 각 컬럼의 같은 위치에서 가져와 조립해야 합니다.
 
@@ -374,11 +365,7 @@ These two workloads have completely different access patterns. OLTP is **narrow 
 
 ### Disk layout
 
-```
-[Page 1] [row1: id=1, name='Alice', age=30, salary=80000] [row2: id=2, ...]
-[Page 2] [row3: id=3, name='Bob', age=25, salary=60000] [row4: id=4, ...]
-[Page 3] [row5: ...] [row6: ...]
-```
+![Row Store disk layout — many rows packed in one page](/uploads/theory/db-storage/row-store-pages.svg)
 
 All fields of a row are physically adjacent. This is the simple model from Part 1 — the layout we implicitly assumed when discussing pages, heap, and indexes.
 
@@ -402,14 +389,9 @@ All fields of a row are physically adjacent. This is the simple model from Part 
 
 ### Disk layout
 
-The same four employees stored in a column store:
+The same employee data stored in a column store:
 
-```
-[id column area]:     1, 2, 3, 4, 5, 6, ...
-[name column area]:   'Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', ...
-[age column area]:    30, 25, 35, 40, 28, 45, ...
-[salary column area]: 80000, 60000, 90000, 75000, 65000, 100000, ...
-```
+![Column Store disk layout — each column in its own area](/uploads/theory/db-storage/column-store-areas.svg)
 
 Each column lives in a separate area (typically a separate file or page group). To gather a row, you fetch from the same position of each column area and assemble.
 

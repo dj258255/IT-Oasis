@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 280" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="280" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="18" font-weight="700" fill="#0f172a" text-anchor="middle">Row Store — 디스크 배치</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">한 행의 모든 컬럼이 한 페이지 안에 연속</text>
+
+  <g transform="translate(40, 80)">
+    <rect width="900" height="48" rx="8" fill="#dbeafe" stroke="#1e3a8a" stroke-width="1.5"/>
+    <text x="16" y="20" font-size="12" font-weight="700" fill="#1e3a8a">Page 1</text>
+    <g font-family="ui-monospace, Menlo, monospace" font-size="12.5" fill="#0f172a">
+      <rect x="86" y="10" width="380" height="28" rx="4" fill="#fff" stroke="#1e3a8a"/>
+      <text x="96" y="29">[row1: id=1, name='Alice', age=30, salary=80000]</text>
+      <rect x="478" y="10" width="380" height="28" rx="4" fill="#fff" stroke="#1e3a8a"/>
+      <text x="488" y="29">[row2: id=2, name='Bob',   age=25, salary=60000]</text>
+    </g>
+  </g>
+
+  <g transform="translate(40, 140)">
+    <rect width="900" height="48" rx="8" fill="#dbeafe" stroke="#1e3a8a" stroke-width="1.5"/>
+    <text x="16" y="20" font-size="12" font-weight="700" fill="#1e3a8a">Page 2</text>
+    <g font-family="ui-monospace, Menlo, monospace" font-size="12.5" fill="#0f172a">
+      <rect x="86" y="10" width="380" height="28" rx="4" fill="#fff" stroke="#1e3a8a"/>
+      <text x="96" y="29">[row3: id=3, name='Carol', age=35, salary=90000]</text>
+      <rect x="478" y="10" width="380" height="28" rx="4" fill="#fff" stroke="#1e3a8a"/>
+      <text x="488" y="29">[row4: id=4, name='Dave',  age=40, salary=75000]</text>
+    </g>
+  </g>
+
+  <g transform="translate(40, 200)">
+    <rect width="900" height="48" rx="8" fill="#dbeafe" stroke="#1e3a8a" stroke-width="1.5"/>
+    <text x="16" y="20" font-size="12" font-weight="700" fill="#1e3a8a">Page 3</text>
+    <g font-family="ui-monospace, Menlo, monospace" font-size="12.5" fill="#0f172a">
+      <rect x="86" y="10" width="380" height="28" rx="4" fill="#fff" stroke="#1e3a8a"/>
+      <text x="96" y="29">[row5: id=5, name='Eve',   age=28, salary=65000]</text>
+      <rect x="478" y="10" width="380" height="28" rx="4" fill="#fff" stroke="#1e3a8a"/>
+      <text x="488" y="29">[row6: id=6, name='Frank', age=45, salary=100000]</text>
+    </g>
+  </g>
+</svg>
