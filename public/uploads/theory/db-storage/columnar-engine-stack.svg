@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <rect width="980" height="380" fill="#f8fafc"/>
+  <text x="490" y="34" font-size="20" font-weight="700" fill="#0f172a" text-anchor="middle">Column Store가 빠른 진짜 이유 — 4가지 메커니즘의 결합</text>
+  <text x="490" y="56" font-size="12" fill="#475569" text-anchor="middle">적은 IO만이 아니다 — 압축 + vectorized SIMD + late materialization + data skipping</text>
+
+  <g transform="translate(40, 90)">
+    <rect width="220" height="240" rx="14" fill="#fef3c7" stroke="#ca8a04" stroke-width="2"/>
+    <text x="110" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#713f12">① 압축</text>
+    <text x="20" y="58" font-size="11" fill="#713f12">같은 컬럼 = 같은 타입 + 유사 분포</text>
+    <text x="20" y="80" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">• RLE</text>
+    <text x="20" y="98" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">• Dictionary</text>
+    <text x="20" y="116" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">• Delta</text>
+    <text x="20" y="134" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">• Bit Packing</text>
+    <text x="20" y="172" font-size="11.5" fill="#713f12">실측 5~10× 압축 흔함</text>
+    <text x="20" y="194" font-size="11.5" fill="#713f12">→ 더 적은 디스크 IO</text>
+    <text x="20" y="212" font-size="11.5" fill="#713f12">→ 더 적은 메모리</text>
+  </g>
+
+  <g transform="translate(280, 90)">
+    <rect width="220" height="240" rx="14" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <text x="110" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#1e3a8a">② Vectorized + SIMD</text>
+    <text x="20" y="58" font-size="11" fill="#1e3a8a">한 batch = 수천 개 값</text>
+    <text x="20" y="80" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">DuckDB: 2048</text>
+    <text x="20" y="98" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">ClickHouse: 비슷</text>
+    <text x="20" y="128" font-size="11.5" fill="#1e3a8a">SIMD로 batch 내부 병렬:</text>
+    <text x="20" y="146" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">AVX2:  int32 8개/명령</text>
+    <text x="20" y="164" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0f172a">AVX-512: int32 16개/명령</text>
+    <text x="20" y="194" font-size="11.5" fill="#1e3a8a">tuple-at-a-time의</text>
+    <text x="20" y="210" font-size="11.5" fill="#1e3a8a">함수 호출 오버헤드 제거</text>
+  </g>
+
+  <g transform="translate(520, 90)">
+    <rect width="220" height="240" rx="14" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="110" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#14532d">③ Late Materialization</text>
+    <text x="20" y="58" font-size="11" fill="#14532d">필터 조건 컬럼만 먼저</text>
+    <text x="20" y="80" font-size="11" fill="#14532d">통과한 위치 리스트만 보관</text>
+    <text x="20" y="102" font-size="11" fill="#14532d">→ 다른 컬럼은 그 위치만</text>
+    <text x="20" y="124" font-size="11" fill="#14532d">→ 마지막에 재구성</text>
+    <text x="20" y="160" font-size="11.5" fill="#14532d">99% 행이 필터에서 탈락하면</text>
+    <text x="20" y="178" font-size="11.5" fill="#14532d">나머지 99% 컬럼 데이터는</text>
+    <text x="20" y="196" font-size="11.5" fill="#14532d">아예 안 읽음</text>
+  </g>
+
+  <g transform="translate(760, 90)">
+    <rect width="180" height="240" rx="14" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="90" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#5b21b6">④ Data Skipping</text>
+    <text x="14" y="58" font-size="11" fill="#5b21b6">block 단위 min/max</text>
+    <text x="14" y="80" font-size="11" fill="#5b21b6">메타데이터 저장</text>
+    <text x="14" y="102" font-size="11" fill="#5b21b6">필터와 비교 → 통째로</text>
+    <text x="14" y="124" font-size="11" fill="#5b21b6">건너뛰는 block 골라냄</text>
+    <text x="14" y="158" font-size="11" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">price &gt; 100</text>
+    <text x="14" y="174" font-size="11" fill="#0f172a" font-family="ui-monospace, Menlo, monospace">block max=80 → skip</text>
+    <text x="14" y="200" font-size="11" fill="#5b21b6">선택적 필터에서</text>
+    <text x="14" y="216" font-size="11" fill="#5b21b6">90%+ 데이터 미접근</text>
+  </g>
+</svg>
