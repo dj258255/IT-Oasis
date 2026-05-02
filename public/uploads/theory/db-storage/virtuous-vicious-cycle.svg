@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgcyc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrCyG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4ade80"/>
+    </marker>
+    <marker id="arrCyR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="760" fill="url(#bgcyc)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">선순환 vs 악순환 — 세 메커니즘은 강하게 결합되어 있다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">fillfactor + autovacuum 설정 + 인덱스 컬럼 설계가 정렬돼야 선순환</text>
+
+  <!-- Virtuous cycle (left) -->
+  <g transform="translate(60, 110)">
+    <rect width="540" height="620" rx="14" fill="#1e293b" stroke="#14532d" stroke-width="1.5"/>
+    <rect x="0" y="0" width="540" height="44" rx="14" fill="#14532d"/>
+    <text x="270" y="29" fill="#bbf7d0" font-size="16" font-weight="700" text-anchor="middle">선순환 — Virtuous Cycle</text>
+
+    <g font-size="13">
+      <g transform="translate(40, 70)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#22c55e"/>
+        <text x="20" y="22" fill="#86efac" font-size="12" font-weight="700">1</text>
+        <text x="50" y="24" fill="#e2e8f0">Fillfactor 적절히 낮춤 (예: 80)</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">UPDATE 여유 공간 확보</text>
+      </g>
+      <line x1="270" y1="130" x2="270" y2="148" stroke="#4ade80" stroke-width="2" marker-end="url(#arrCyG)"/>
+
+      <g transform="translate(40, 154)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#22c55e"/>
+        <text x="20" y="22" fill="#86efac" font-size="12" font-weight="700">2</text>
+        <text x="50" y="24" fill="#e2e8f0">HOT update 활성화</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">인덱스 갱신 회피 → write amplification ↓</text>
+      </g>
+      <line x1="270" y1="214" x2="270" y2="232" stroke="#4ade80" stroke-width="2" marker-end="url(#arrCyG)"/>
+
+      <g transform="translate(40, 238)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#22c55e"/>
+        <text x="20" y="22" fill="#86efac" font-size="12" font-weight="700">3</text>
+        <text x="50" y="24" fill="#e2e8f0">HOT pruning이 chain 정리</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">VACUUM 없이 page-level cleanup</text>
+      </g>
+      <line x1="270" y1="298" x2="270" y2="316" stroke="#4ade80" stroke-width="2" marker-end="url(#arrCyG)"/>
+
+      <g transform="translate(40, 322)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#22c55e"/>
+        <text x="20" y="22" fill="#86efac" font-size="12" font-weight="700">4</text>
+        <text x="50" y="24" fill="#e2e8f0">Autovacuum 적시에 dead 청소 + VM 갱신</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">all-visible / all-frozen 비율 유지</text>
+      </g>
+      <line x1="270" y1="382" x2="270" y2="400" stroke="#4ade80" stroke-width="2" marker-end="url(#arrCyG)"/>
+
+      <g transform="translate(40, 406)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#22c55e"/>
+        <text x="20" y="22" fill="#86efac" font-size="12" font-weight="700">5</text>
+        <text x="50" y="24" fill="#e2e8f0">Index-Only Scan 효율적 작동</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">읽기 빠름, Heap Fetches = 0</text>
+      </g>
+      <line x1="270" y1="466" x2="270" y2="484" stroke="#4ade80" stroke-width="2" marker-end="url(#arrCyG)"/>
+
+      <g transform="translate(40, 490)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#22c55e"/>
+        <text x="20" y="22" fill="#86efac" font-size="12" font-weight="700">6</text>
+        <text x="50" y="24" fill="#e2e8f0">Bloat 적음 → 디스크/메모리 효율</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">sequential scan도 빠름</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Vicious cycle (right) -->
+  <g transform="translate(620, 110)">
+    <rect width="540" height="620" rx="14" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <rect x="0" y="0" width="540" height="44" rx="14" fill="#7f1d1d"/>
+    <text x="270" y="29" fill="#fecaca" font-size="16" font-weight="700" text-anchor="middle">악순환 — Vicious Cycle</text>
+
+    <g font-size="13">
+      <g transform="translate(40, 70)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#ef4444"/>
+        <text x="20" y="22" fill="#fda4af" font-size="12" font-weight="700">1</text>
+        <text x="50" y="24" fill="#e2e8f0">Fillfactor 100 + 인덱스 컬럼 자주 변경</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">또는 idle in transaction long tx</text>
+      </g>
+      <line x1="270" y1="130" x2="270" y2="148" stroke="#f87171" stroke-width="2" marker-end="url(#arrCyR)"/>
+
+      <g transform="translate(40, 154)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#ef4444"/>
+        <text x="20" y="22" fill="#fda4af" font-size="12" font-weight="700">2</text>
+        <text x="50" y="24" fill="#e2e8f0">HOT 거의 안 됨, cold update만</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">매번 인덱스 N개 갱신</text>
+      </g>
+      <line x1="270" y1="214" x2="270" y2="232" stroke="#f87171" stroke-width="2" marker-end="url(#arrCyR)"/>
+
+      <g transform="translate(40, 238)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#ef4444"/>
+        <text x="20" y="22" fill="#fda4af" font-size="12" font-weight="700">3</text>
+        <text x="50" y="24" fill="#e2e8f0">Bloat 빠르게 누적</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">heap + index 양쪽 모두</text>
+      </g>
+      <line x1="270" y1="298" x2="270" y2="316" stroke="#f87171" stroke-width="2" marker-end="url(#arrCyR)"/>
+
+      <g transform="translate(40, 322)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#ef4444"/>
+        <text x="20" y="22" fill="#fda4af" font-size="12" font-weight="700">4</text>
+        <text x="50" y="24" fill="#e2e8f0">Autovacuum이 못 따라감</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">cost throttling + worker 부족</text>
+      </g>
+      <line x1="270" y1="382" x2="270" y2="400" stroke="#f87171" stroke-width="2" marker-end="url(#arrCyR)"/>
+
+      <g transform="translate(40, 406)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#ef4444"/>
+        <text x="20" y="22" fill="#fda4af" font-size="12" font-weight="700">5</text>
+        <text x="50" y="24" fill="#e2e8f0">VM stale → IOS 안 됨</text>
+        <text x="50" y="42" fill="#94a3b8" font-size="11">Heap Fetches > 0 일반 IS로 fallback</text>
+      </g>
+      <line x1="270" y1="466" x2="270" y2="484" stroke="#f87171" stroke-width="2" marker-end="url(#arrCyR)"/>
+
+      <g transform="translate(40, 490)">
+        <rect width="460" height="56" rx="10" fill="#0f172a" stroke="#ef4444"/>
+        <text x="20" y="22" fill="#fda4af" font-size="12" font-weight="700">6</text>
+        <text x="50" y="24" fill="#e2e8f0">최악: anti-wraparound VACUUM 강제 발동</text>
+        <text x="50" y="42" fill="#fcd34d" font-size="11">일반 작업 lock 충돌, latency 폭발</text>
+      </g>
+    </g>
+  </g>
+</svg>

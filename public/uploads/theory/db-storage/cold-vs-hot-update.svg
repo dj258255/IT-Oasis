@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgcv" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f87171"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4ade80"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="720" fill="url(#bgcv)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="26" font-weight="700" text-anchor="middle">Cold Update vs HOT Update</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">UPDATE 한 번이 만드는 IO의 차이</text>
+
+  <!-- Left: Cold update -->
+  <g transform="translate(60, 110)">
+    <rect width="510" height="560" rx="14" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="48" rx="14" fill="#7f1d1d"/>
+    <text x="255" y="31" fill="#fecaca" font-size="17" font-weight="700" text-anchor="middle">COLD UPDATE — 인덱스 N개 모두 갱신</text>
+
+    <!-- Heap page -->
+    <g transform="translate(28, 76)">
+      <text x="0" y="0" fill="#fbbf24" font-size="12" font-weight="700" letter-spacing="1">HEAP PAGE</text>
+      <rect x="0" y="10" width="220" height="120" rx="6" fill="#0f172a" stroke="#475569"/>
+      <rect x="10" y="22" width="200" height="22" rx="3" fill="#3f3f46" stroke="#71717a"/>
+      <text x="20" y="38" fill="#a1a1aa" font-size="11">Tuple 1 (DEAD)</text>
+      <rect x="10" y="50" width="200" height="22" rx="3" fill="#0c4a6e" stroke="#0ea5e9"/>
+      <text x="20" y="66" fill="#bae6fd" font-size="11">Tuple 2 (NEW, different page)</text>
+      <text x="10" y="98" fill="#94a3b8" font-size="11">새 튜플 = 다른 페이지 가능</text>
+      <text x="10" y="116" fill="#94a3b8" font-size="11">옛 튜플 = dead로 표시</text>
+    </g>
+
+    <!-- Indexes -->
+    <g transform="translate(280, 76)">
+      <text x="0" y="0" fill="#fbbf24" font-size="12" font-weight="700" letter-spacing="1">INDEXES (N개)</text>
+      <g>
+        <rect x="0" y="10" width="200" height="22" rx="3" fill="#7f1d1d" stroke="#ef4444"/>
+        <text x="10" y="26" fill="#fecaca" font-size="11">idx_a → 갱신</text>
+        <rect x="0" y="38" width="200" height="22" rx="3" fill="#7f1d1d" stroke="#ef4444"/>
+        <text x="10" y="54" fill="#fecaca" font-size="11">idx_b → 갱신</text>
+        <rect x="0" y="66" width="200" height="22" rx="3" fill="#7f1d1d" stroke="#ef4444"/>
+        <text x="10" y="82" fill="#fecaca" font-size="11">idx_c → 갱신</text>
+        <text x="0" y="108" fill="#94a3b8" font-size="11">…변경 안 한 컬럼의 인덱스도</text>
+        <text x="0" y="124" fill="#94a3b8" font-size="11">CTID 바뀌어 모두 갱신</text>
+      </g>
+    </g>
+
+    <!-- Cost list -->
+    <g transform="translate(28, 250)">
+      <text x="0" y="0" fill="#f87171" font-size="13" font-weight="700">비용 누적</text>
+      <text x="0" y="28" fill="#e2e8f0" font-size="13">• Heap에 새 튜플 작성</text>
+      <text x="0" y="50" fill="#e2e8f0" font-size="13">• 옛 튜플 dead 표시</text>
+      <text x="0" y="72" fill="#e2e8f0" font-size="13">• 인덱스 N개 갱신 (옛→새 CTID)</text>
+      <text x="0" y="94" fill="#e2e8f0" font-size="13">• WAL 레코드 추가 (모든 변경)</text>
+      <text x="0" y="116" fill="#e2e8f0" font-size="13">• 옛 인덱스 엔트리는 VACUUM 대기</text>
+    </g>
+
+    <g transform="translate(28, 410)">
+      <rect width="454" height="120" rx="8" fill="#0f172a" stroke="#7f1d1d" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#fda4af" font-size="13" font-weight="700">결과</text>
+      <text x="20" y="54" fill="#cbd5e1" font-size="13">Write amplification 폭발 + index bloat 누적</text>
+      <text x="20" y="78" fill="#cbd5e1" font-size="13">10 indexes → UPDATE 1번에 IO 11+</text>
+      <text x="20" y="102" fill="#cbd5e1" font-size="13">Bloat 청소는 VACUUM에 의존</text>
+    </g>
+  </g>
+
+  <!-- Right: HOT update -->
+  <g transform="translate(630, 110)">
+    <rect width="510" height="560" rx="14" fill="#1e293b" stroke="#14532d" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="48" rx="14" fill="#14532d"/>
+    <text x="255" y="31" fill="#bbf7d0" font-size="17" font-weight="700" text-anchor="middle">HOT UPDATE — 인덱스 갱신 0</text>
+
+    <!-- Heap page -->
+    <g transform="translate(28, 76)">
+      <text x="0" y="0" fill="#4ade80" font-size="12" font-weight="700" letter-spacing="1">HEAP PAGE (같은 페이지)</text>
+      <rect x="0" y="10" width="454" height="160" rx="6" fill="#0f172a" stroke="#475569"/>
+
+      <rect x="14" y="26" width="200" height="22" rx="3" fill="#3f3f46" stroke="#71717a"/>
+      <text x="24" y="42" fill="#a1a1aa" font-size="11">Tuple 1 (HEAP_HOT_UPDATED)</text>
+
+      <rect x="14" y="56" width="200" height="22" rx="3" fill="#14532d" stroke="#22c55e"/>
+      <text x="24" y="72" fill="#bbf7d0" font-size="11">Tuple 2 (HEAP_ONLY_TUPLE)</text>
+
+      <line x1="214" y1="38" x2="244" y2="38" stroke="#facc15" stroke-width="1.5" marker-end="url(#arrG)"/>
+      <text x="226" y="30" fill="#facc15" font-size="10" font-weight="700">t_ctid</text>
+
+      <text x="14" y="118" fill="#94a3b8" font-size="11">free space 남아있어야 가능 (fillfactor)</text>
+      <text x="14" y="138" fill="#94a3b8" font-size="11">변경 컬럼이 어떤 인덱스에도 없어야</text>
+      <text x="14" y="156" fill="#94a3b8" font-size="11">row 크기 증가 / TOAST 이동 → 실패</text>
+    </g>
+
+    <!-- Index pointer -->
+    <g transform="translate(28, 256)">
+      <text x="0" y="0" fill="#4ade80" font-size="12" font-weight="700" letter-spacing="1">INDEX</text>
+      <rect x="0" y="10" width="200" height="22" rx="3" fill="#0f172a" stroke="#22c55e"/>
+      <text x="10" y="26" fill="#bbf7d0" font-size="11">옛 line pointer만 가리킴 (변경 0)</text>
+      <text x="0" y="50" fill="#94a3b8" font-size="11">→ 인덱스 N개여도 갱신 0</text>
+    </g>
+
+    <g transform="translate(28, 332)">
+      <text x="0" y="0" fill="#4ade80" font-size="13" font-weight="700">비용 감소</text>
+      <text x="0" y="28" fill="#e2e8f0" font-size="13">• Heap에 새 튜플 작성 (zero 아님)</text>
+      <text x="0" y="50" fill="#e2e8f0" font-size="13">• 옛 튜플 HEAP_HOT_UPDATED 플래그</text>
+      <text x="0" y="72" fill="#e2e8f0" font-size="13">• 인덱스 갱신 0 (write amp 핵심)</text>
+      <text x="0" y="94" fill="#e2e8f0" font-size="13">• WAL 레코드 더 가벼움</text>
+    </g>
+
+    <g transform="translate(28, 460)">
+      <rect width="454" height="80" rx="8" fill="#0f172a" stroke="#14532d" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#86efac" font-size="13" font-weight="700">결과</text>
+      <text x="20" y="54" fill="#cbd5e1" font-size="13">UPDATE 기인 index bloat 자체 발생 안 함</text>
+      <text x="20" y="74" fill="#cbd5e1" font-size="13">HOT pruning이 page-level cleanup까지 처리</text>
+    </g>
+  </g>
+</svg>
