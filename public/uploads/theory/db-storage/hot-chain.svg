@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bghc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrFB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+    <marker id="arrIDX" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="560" fill="url(#bghc)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">HOT Chain — 같은 페이지 안의 버전 체인</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">인덱스는 옛 line pointer만 가리키고, t_ctid 따라 최신 튜플로 도달</text>
+
+  <!-- Index box -->
+  <g transform="translate(80, 200)">
+    <rect width="180" height="120" rx="10" fill="#0c4a6e" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="90" y="32" fill="#a5f3fc" font-size="14" font-weight="700" text-anchor="middle">INDEX</text>
+    <line x1="20" y1="44" x2="160" y2="44" stroke="#0e7490"/>
+    <text x="90" y="68" fill="#e2e8f0" font-size="13" text-anchor="middle">key → LP 1</text>
+    <text x="90" y="92" fill="#94a3b8" font-size="11" text-anchor="middle">(변경 0)</text>
+    <text x="90" y="108" fill="#94a3b8" font-size="11" text-anchor="middle">옛 위치 그대로</text>
+  </g>
+
+  <!-- Page box -->
+  <g transform="translate(360, 130)">
+    <rect width="760" height="280" rx="14" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#facc15" font-size="13" font-weight="700" letter-spacing="1">HEAP PAGE</text>
+
+    <!-- Line Pointers row -->
+    <g transform="translate(20, 56)">
+      <text x="0" y="0" fill="#94a3b8" font-size="11" font-weight="600">Line Pointers</text>
+      <rect x="0" y="10" width="80" height="36" rx="4" fill="#0f172a" stroke="#22d3ee"/>
+      <text x="40" y="33" fill="#a5f3fc" font-size="12" text-anchor="middle">LP 1</text>
+      <rect x="92" y="10" width="80" height="36" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="132" y="33" fill="#64748b" font-size="12" text-anchor="middle">LP 2</text>
+      <rect x="184" y="10" width="80" height="36" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="224" y="33" fill="#64748b" font-size="12" text-anchor="middle">LP 3</text>
+      <rect x="276" y="10" width="80" height="36" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="316" y="33" fill="#64748b" font-size="12" text-anchor="middle">LP 5</text>
+    </g>
+
+    <!-- Tuples row -->
+    <g transform="translate(20, 140)">
+      <text x="0" y="0" fill="#94a3b8" font-size="11" font-weight="600">Tuples</text>
+      <!-- Tuple 1 -->
+      <rect x="0" y="10" width="180" height="100" rx="6" fill="#3f3f46" stroke="#71717a"/>
+      <text x="14" y="34" fill="#fbbf24" font-size="12" font-weight="700">Tuple 1</text>
+      <text x="14" y="54" fill="#a1a1aa" font-size="11">HEAP_HOT_UPDATED</text>
+      <text x="14" y="74" fill="#a1a1aa" font-size="11">DEAD (옛 버전)</text>
+      <text x="14" y="94" fill="#facc15" font-size="11" font-weight="700">t_ctid → Tuple 2</text>
+
+      <!-- Tuple 2 -->
+      <rect x="220" y="10" width="180" height="100" rx="6" fill="#3f3f46" stroke="#71717a"/>
+      <text x="234" y="34" fill="#fbbf24" font-size="12" font-weight="700">Tuple 2</text>
+      <text x="234" y="54" fill="#a1a1aa" font-size="11">HEAP_HOT_UPDATED</text>
+      <text x="234" y="74" fill="#a1a1aa" font-size="11">DEAD</text>
+      <text x="234" y="94" fill="#facc15" font-size="11" font-weight="700">t_ctid → Tuple 3</text>
+
+      <!-- Tuple 3 -->
+      <rect x="440" y="10" width="180" height="100" rx="6" fill="#14532d" stroke="#22c55e"/>
+      <text x="454" y="34" fill="#86efac" font-size="12" font-weight="700">Tuple 3</text>
+      <text x="454" y="54" fill="#bbf7d0" font-size="11">HEAP_ONLY_TUPLE</text>
+      <text x="454" y="74" fill="#bbf7d0" font-size="11">LIVE (최신 버전)</text>
+      <text x="454" y="94" fill="#94a3b8" font-size="11">인덱스에서 직접 안 가리킴</text>
+    </g>
+
+    <!-- LP1 → Tuple 1 dotted -->
+    <line x1="60" y1="92" x2="40" y2="142" stroke="#22d3ee" stroke-dasharray="4 3" stroke-width="1.5" marker-end="url(#arrIDX)"/>
+
+    <!-- t_ctid arrows -->
+    <line x1="200" y1="200" x2="240" y2="200" stroke="#facc15" stroke-width="2" marker-end="url(#arrFB)"/>
+    <line x1="420" y1="200" x2="460" y2="200" stroke="#facc15" stroke-width="2" marker-end="url(#arrFB)"/>
+  </g>
+
+  <!-- Index → page line pointer arrow -->
+  <line x1="260" y1="260" x2="380" y2="206" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrIDX)"/>
+
+  <!-- Bottom note -->
+  <g transform="translate(80, 460)">
+    <rect width="1040" height="74" rx="10" fill="#0f172a" stroke="#334155"/>
+    <text x="20" y="28" fill="#facc15" font-size="13" font-weight="700">Read 경로</text>
+    <text x="20" y="54" fill="#cbd5e1" font-size="13">Index → LP 1 → Tuple 1 → t_ctid → Tuple 2 → t_ctid → Tuple 3 (live)</text>
+    <text x="600" y="54" fill="#94a3b8" font-size="12">chain이 길수록 pointer chasing 비용 ↑ → HOT pruning이 정리</text>
+  </g>
+</svg>
