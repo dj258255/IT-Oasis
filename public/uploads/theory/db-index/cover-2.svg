@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgi2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glowi2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="seqGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7f1d1d"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="bmpGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#854d0e"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="idxGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#14532d"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgi2)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.5">
+    <path d="M0 158 H1200 M0 316 H1200 M0 474 H1200"/>
+    <path d="M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+
+  <g transform="translate(80, 80)">
+    <rect width="240" height="36" rx="18" fill="none" stroke="url(#glowi2)" stroke-width="1.5"/>
+    <text x="120" y="24" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle" letter-spacing="2">DATABASE INDEX · 2</text>
+  </g>
+
+  <text x="80" y="200" fill="#f8fafc" font-size="60" font-weight="800">스캔의 종류와</text>
+  <text x="80" y="276" fill="#f8fafc" font-size="60" font-weight="800">옵티마이저의 선택</text>
+
+  <text x="80" y="332" fill="#94a3b8" font-size="22" font-weight="500">셀렉티비티 스펙트럼이 plan을 결정한다 — Seq · Index · Bitmap · IOS</text>
+
+  <g transform="translate(80, 400)">
+    <rect x="0" y="0" width="320" height="170" rx="16" fill="url(#seqGrad)" stroke="#ef4444" stroke-width="1.5"/>
+    <text x="22" y="44" fill="#fecaca" font-size="16" font-weight="700" letter-spacing="1">SEQ SCAN</text>
+    <text x="22" y="84" fill="#f8fafc" font-size="22" font-weight="700">매우 높은 셀렉티비티</text>
+    <text x="22" y="118" fill="#cbd5e1" font-size="14">전체 테이블 순차 읽기</text>
+    <text x="22" y="142" fill="#cbd5e1" font-size="14">parallel 가능</text>
+  </g>
+
+  <g transform="translate(420, 400)">
+    <rect x="0" y="0" width="320" height="170" rx="16" fill="url(#bmpGrad)" stroke="#facc15" stroke-width="1.5"/>
+    <text x="22" y="44" fill="#fde68a" font-size="16" font-weight="700" letter-spacing="1">BITMAP SCAN</text>
+    <text x="22" y="84" fill="#f8fafc" font-size="22" font-weight="700">중간 셀렉티비티</text>
+    <text x="22" y="118" fill="#cbd5e1" font-size="14">페이지 비트맵 + 물리적 순서</text>
+    <text x="22" y="142" fill="#cbd5e1" font-size="14">BitmapAnd / BitmapOr 결합</text>
+  </g>
+
+  <g transform="translate(760, 400)">
+    <rect x="0" y="0" width="360" height="170" rx="16" fill="url(#idxGrad)" stroke="#22c55e" stroke-width="1.5"/>
+    <text x="22" y="44" fill="#bbf7d0" font-size="16" font-weight="700" letter-spacing="1">INDEX / IOS</text>
+    <text x="22" y="84" fill="#f8fafc" font-size="22" font-weight="700">매우 낮은 셀렉티비티</text>
+    <text x="22" y="118" fill="#cbd5e1" font-size="14">Index Scan = 인덱스 + 힙 random IO</text>
+    <text x="22" y="142" fill="#cbd5e1" font-size="14">IOS = 힙 안 감 (Heap Fetches: 0)</text>
+  </g>
+</svg>
