@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgi4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glowi4" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="esrGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#581c87"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="ordGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c4a6e"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgi4)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.5">
+    <path d="M0 158 H1200 M0 316 H1200 M0 474 H1200"/>
+    <path d="M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+
+  <g transform="translate(80, 80)">
+    <rect width="240" height="36" rx="18" fill="none" stroke="url(#glowi4)" stroke-width="1.5"/>
+    <text x="120" y="24" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle" letter-spacing="2">DATABASE INDEX · 4</text>
+  </g>
+
+  <text x="80" y="200" fill="#f8fafc" font-size="60" font-weight="800">복합 인덱스와</text>
+  <text x="80" y="276" fill="#f8fafc" font-size="60" font-weight="800">좌측 컬럼 규칙</text>
+
+  <text x="80" y="332" fill="#94a3b8" font-size="22" font-weight="500">컬럼 순서가 곧 정렬 순서 — 같은 세 컬럼도 순서가 바뀌면 다른 인덱스</text>
+
+  <g transform="translate(80, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#ordGrad)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#a5f3fc" font-size="18" font-weight="700" letter-spacing="1">LEFTMOST PREFIX</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">왼쪽부터 차례로</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">equality는 leading부터, range가 나오면 멈춤</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">PG 17- Full-Index Scan / PG 18+ skip scan</text>
+  </g>
+
+  <g transform="translate(620, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#esrGrad)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#ddd6fe" font-size="18" font-weight="700" letter-spacing="1">ESR RULE</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">Equality · Sort · Range</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">Equality 먼저, Sort/Range는 워크로드 의존</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">3컬럼 넘으면 신중히, INCLUDE와 구분</text>
+  </g>
+</svg>

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgci" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="580" fill="url(#bgci)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">복합 인덱스(key 컬럼 추가) vs INCLUDE — 같아 보이지만 다르다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">검색에 쓰이는 컬럼인가, 조회 데이터인가가 갈림길</text>
+
+  <g transform="translate(60, 110)">
+    <rect width="540" height="440" rx="14" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+    <rect x="0" y="0" width="540" height="44" rx="14" fill="#581c87"/>
+    <text x="270" y="29" fill="#ddd6fe" font-size="16" font-weight="700" text-anchor="middle">방식 A — 모두 key 컬럼</text>
+
+    <g transform="translate(20, 70)" font-family="Menlo, monospace" font-size="13" fill="#cbd5e1">
+      <text x="0" y="0">CREATE INDEX idx_a</text>
+      <text x="0" y="22">ON tab (id, name, email);</text>
+    </g>
+
+    <g transform="translate(20, 150)" font-size="13">
+      <text x="0" y="0" fill="#facc15" font-weight="700">특성</text>
+      <text x="0" y="24" fill="#cbd5e1">- Uniqueness: (id, name, email) 조합</text>
+      <text x="0" y="48" fill="#cbd5e1">- Internal node에 모든 컬럼 포함</text>
+      <text x="0" y="72" fill="#cbd5e1">- Leftmost prefix rule 모든 컬럼에 적용</text>
+      <text x="0" y="100" fill="#86efac" font-weight="700">잘 맞는 경우</text>
+      <text x="0" y="124" fill="#cbd5e1">- WHERE name=? AND id=? 자주 발생</text>
+      <text x="0" y="148" fill="#cbd5e1">- 이 컬럼 조합으로 정렬/그룹핑</text>
+      <text x="0" y="176" fill="#fda4af" font-weight="700">단점</text>
+      <text x="0" y="200" fill="#cbd5e1">- Internal node 비대화</text>
+      <text x="0" y="224" fill="#cbd5e1">- uniqueness 의도와 다를 수 있음</text>
+    </g>
+  </g>
+
+  <g transform="translate(620, 110)">
+    <rect width="540" height="440" rx="14" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+    <rect x="0" y="0" width="540" height="44" rx="14" fill="#14532d"/>
+    <text x="270" y="29" fill="#bbf7d0" font-size="16" font-weight="700" text-anchor="middle">방식 B — id key + INCLUDE</text>
+
+    <g transform="translate(20, 70)" font-family="Menlo, monospace" font-size="13" fill="#cbd5e1">
+      <text x="0" y="0">CREATE INDEX idx_b</text>
+      <text x="0" y="22">ON tab (id) INCLUDE (name, email);</text>
+    </g>
+
+    <g transform="translate(20, 150)" font-size="13">
+      <text x="0" y="0" fill="#facc15" font-weight="700">특성</text>
+      <text x="0" y="24" fill="#cbd5e1">- Uniqueness: id만</text>
+      <text x="0" y="48" fill="#cbd5e1">- Internal node에 id만 (작음)</text>
+      <text x="0" y="72" fill="#cbd5e1">- Leftmost prefix rule은 id에만</text>
+      <text x="0" y="100" fill="#86efac" font-weight="700">잘 맞는 경우</text>
+      <text x="0" y="124" fill="#cbd5e1">- id로만 검색, name/email은 SELECT</text>
+      <text x="0" y="148" fill="#cbd5e1">- IOS로 답 완료 (Heap Fetches: 0)</text>
+      <text x="0" y="176" fill="#fda4af" font-weight="700">단점</text>
+      <text x="0" y="200" fill="#cbd5e1">- name/email은 검색에 못 씀</text>
+      <text x="0" y="224" fill="#cbd5e1">- INCLUDE 컬럼 UPDATE는 HOT 깨뜨림</text>
+    </g>
+  </g>
+</svg>

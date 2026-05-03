@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgcs" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="540" fill="url(#bgcs)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">(a, b, c) 복합 인덱스 — 사전식 정렬</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">a로 먼저 정렬, 같은 a 안에서 b로, 같은 (a, b) 안에서 c로</text>
+
+  <g transform="translate(120, 130)">
+    <rect width="380" height="380" rx="14" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="190" y="32" fill="#a5f3fc" font-size="14" font-weight="700" text-anchor="middle">Leaf entry 정렬</text>
+
+    <g transform="translate(40, 60)" font-family="Menlo, monospace" font-size="14" fill="#cbd5e1">
+      <text x="0" y="20">(A, 1, X)</text>
+      <text x="0" y="44">(A, 1, Y)</text>
+      <text x="0" y="68">(A, 2, X)</text>
+      <text x="0" y="92">(A, 2, Y)</text>
+      <text x="0" y="116" fill="#475569">─────────</text>
+      <text x="0" y="140">(B, 1, X)</text>
+      <text x="0" y="164">(B, 1, Y)</text>
+      <text x="0" y="188">(B, 2, X)</text>
+      <text x="0" y="212">(B, 2, Y)</text>
+      <text x="0" y="236" fill="#475569">─────────</text>
+      <text x="0" y="260">(C, 1, X) ...</text>
+    </g>
+
+    <g transform="translate(220, 70)">
+      <rect x="0"  y="0"  width="14" height="100" fill="#facc15" opacity="0.5"/>
+      <text x="22" y="16" fill="#fde68a" font-size="11" font-weight="700">a = A 슬라이스</text>
+      <text x="22" y="34" fill="#94a3b8" font-size="11">한 덩어리로 직접 접근</text>
+
+      <rect x="0"  y="120" width="14" height="100" fill="#22d3ee" opacity="0.5"/>
+      <text x="22" y="136" fill="#a5f3fc" font-size="11" font-weight="700">a = B 슬라이스</text>
+      <text x="22" y="154" fill="#94a3b8" font-size="11">다음 덩어리</text>
+    </g>
+  </g>
+
+  <g transform="translate(560, 130)">
+    <rect width="540" height="380" rx="14" fill="#1e293b" stroke="#475569"/>
+    <text x="270" y="32" fill="#facc15" font-size="14" font-weight="700" text-anchor="middle">활용 패턴</text>
+
+    <g transform="translate(20, 60)" font-size="13">
+      <text x="0" y="0" fill="#86efac" font-weight="700">a 검색 (leading)</text>
+      <text x="0" y="20" fill="#cbd5e1">→ 한 슬라이스 직접 접근</text>
+
+      <text x="0" y="60" fill="#86efac" font-weight="700">a + b 검색 (leftmost prefix)</text>
+      <text x="0" y="80" fill="#cbd5e1">→ 더 작은 슬라이스</text>
+
+      <text x="0" y="120" fill="#86efac" font-weight="700">a + b + c 검색 (전체 prefix)</text>
+      <text x="0" y="140" fill="#cbd5e1">→ 한 entry로 직접</text>
+
+      <text x="0" y="180" fill="#fda4af" font-weight="700">b만 검색 (leading 누락)</text>
+      <text x="0" y="200" fill="#cbd5e1">→ B 값이 인덱스 전체에 흩어짐</text>
+      <text x="0" y="220" fill="#94a3b8">PG 17- Full-Index Scan 가능</text>
+      <text x="0" y="240" fill="#94a3b8">PG 18+ skip scan 가능 (cost 의존)</text>
+
+      <text x="0" y="280" fill="#fda4af" font-weight="700">a + c 검색 (b 누락)</text>
+      <text x="0" y="300" fill="#cbd5e1">→ a 슬라이스 후 c는 인덱스에서 체크</text>
+      <text x="0" y="320" fill="#94a3b8">스캔 범위는 a 슬라이스 전체</text>
+    </g>
+  </g>
+</svg>
