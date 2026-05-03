@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgi6" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glowi6" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="lockGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7f1d1d"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="horizonGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#854d0e"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgi6)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.5">
+    <path d="M0 158 H1200 M0 316 H1200 M0 474 H1200"/>
+    <path d="M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+
+  <g transform="translate(80, 80)">
+    <rect width="240" height="36" rx="18" fill="none" stroke="url(#glowi6)" stroke-width="1.5"/>
+    <text x="120" y="24" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle" letter-spacing="2">DATABASE INDEX · 6</text>
+  </g>
+
+  <text x="80" y="200" fill="#f8fafc" font-size="60" font-weight="800">운영과 한계</text>
+
+  <text x="80" y="260" fill="#94a3b8" font-size="22" font-weight="500">시리즈 마무리 — 인덱스를 실제로 만들고 갱신하고 한계에 부딪힐 때</text>
+
+  <text x="80" y="320" fill="#fde68a" font-size="18" font-weight="600">덜 만들고 더 측정한다</text>
+
+  <g transform="translate(80, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#lockGrad)" stroke="#ef4444" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#fecaca" font-size="18" font-weight="700" letter-spacing="1">LOCK</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">DDL은 DB를 멈출 수 있다</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">CREATE INDEX CONCURRENTLY가 정공법</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">REINDEX CONCURRENTLY는 PG 12+</text>
+  </g>
+
+  <g transform="translate(620, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#horizonGrad)" stroke="#facc15" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#fde68a" font-size="18" font-weight="700" letter-spacing="1">VISIBILITY HORIZON</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">장기 트랜잭션의 비용</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">하나의 idle in tx가 클러스터 전체에</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">VM/IOS 효과 상실 + bloat 누적</text>
+  </g>
+</svg>

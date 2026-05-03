@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgcp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrCP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="540" fill="url(#bgcp)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">CREATE INDEX CONCURRENTLY — 4단계로 동작한다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">DML 허용 (ShareUpdateExclusiveLock) · 마지막 phase에서만 짧은 lock 전환</text>
+
+  <g transform="translate(60, 130)">
+    <rect width="270" height="200" rx="12" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#a5f3fc" font-size="13" font-weight="700">Phase 1</text>
+    <text x="20" y="60" fill="#cbd5e1" font-size="13">카탈로그에 invalid</text>
+    <text x="20" y="80" fill="#cbd5e1" font-size="13">인덱스 등록</text>
+    <text x="20" y="116" fill="#facc15" font-size="11" font-weight="700">Lock</text>
+    <text x="20" y="136" fill="#94a3b8" font-size="11">ShareUpdateExclusive</text>
+    <text x="20" y="156" fill="#94a3b8" font-size="11">DML 허용</text>
+    <text x="20" y="180" fill="#86efac" font-size="11">INSERT/UPDATE/DELETE OK</text>
+  </g>
+
+  <g transform="translate(345, 130)">
+    <rect width="270" height="200" rx="12" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#a5f3fc" font-size="13" font-weight="700">Phase 2</text>
+    <text x="20" y="60" fill="#cbd5e1" font-size="13">첫 번째 테이블 스캔</text>
+    <text x="20" y="80" fill="#cbd5e1" font-size="13">→ 인덱스 빌드</text>
+    <text x="20" y="116" fill="#facc15" font-size="11" font-weight="700">Lock</text>
+    <text x="20" y="136" fill="#94a3b8" font-size="11">ShareUpdateExclusive</text>
+    <text x="20" y="156" fill="#94a3b8" font-size="11">snapshot synchronize</text>
+    <text x="20" y="180" fill="#86efac" font-size="11">DML 계속 허용</text>
+  </g>
+
+  <g transform="translate(630, 130)">
+    <rect width="270" height="200" rx="12" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#a5f3fc" font-size="13" font-weight="700">Phase 3</text>
+    <text x="20" y="60" fill="#cbd5e1" font-size="13">두 번째 테이블 스캔</text>
+    <text x="20" y="80" fill="#cbd5e1" font-size="13">→ 1단계 변경 catch-up</text>
+    <text x="20" y="116" fill="#facc15" font-size="11" font-weight="700">Lock</text>
+    <text x="20" y="136" fill="#94a3b8" font-size="11">ShareUpdateExclusive</text>
+    <text x="20" y="156" fill="#94a3b8" font-size="11">기존 트랜잭션 종료 대기</text>
+    <text x="20" y="180" fill="#fda4af" font-size="11">장기 tx에 차단 가능</text>
+  </g>
+
+  <g transform="translate(915, 130)">
+    <rect width="220" height="200" rx="12" fill="#1e293b" stroke="#facc15" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#fde68a" font-size="13" font-weight="700">Phase 4</text>
+    <text x="20" y="60" fill="#cbd5e1" font-size="13">valid로 마킹</text>
+    <text x="20" y="116" fill="#facc15" font-size="11" font-weight="700">Lock</text>
+    <text x="20" y="136" fill="#94a3b8" font-size="11">짧은 AccessExclusive</text>
+    <text x="20" y="156" fill="#94a3b8" font-size="11">수 ms~수 초</text>
+    <text x="20" y="180" fill="#fda4af" font-size="11">최종 카탈로그 갱신</text>
+  </g>
+
+  <line x1="333" y1="230" x2="343" y2="230" stroke="#facc15" stroke-width="2" marker-end="url(#arrCP)"/>
+  <line x1="618" y1="230" x2="628" y2="230" stroke="#facc15" stroke-width="2" marker-end="url(#arrCP)"/>
+  <line x1="903" y1="230" x2="913" y2="230" stroke="#facc15" stroke-width="2" marker-end="url(#arrCP)"/>
+
+  <g transform="translate(60, 360)">
+    <rect width="1080" height="140" rx="12" fill="#0f172a" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fda4af" font-size="13" font-weight="700">제약</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">- 트랜잭션 블록 내 사용 불가 (BEGIN; CREATE INDEX CONCURRENTLY ... 에러)</text>
+    <text x="20" y="80" fill="#cbd5e1" font-size="13">- 테이블당 동시 1개만 (다른 CONCURRENTLY와 직렬화)</text>
+    <text x="20" y="102" fill="#cbd5e1" font-size="13">- 실패 시 INVALID 인덱스 남음 → 수동 DROP INDEX 필요</text>
+    <text x="20" y="124" fill="#cbd5e1" font-size="13">- partitioned table은 직접 불가 → 각 파티션별 CONCURRENTLY 후 메타데이터만 합치기</text>
+  </g>
+</svg>

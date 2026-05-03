@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgxh" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrXH" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="540" fill="url(#bgxh)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">xmin horizon — 장기 트랜잭션 하나가 클러스터 전체를 잡는다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">활성 트랜잭션 중 가장 오래된 xmin이 horizon — 그 이후 dead tuple은 회수 불가</text>
+
+  <!-- timeline -->
+  <g transform="translate(80, 130)">
+    <line x1="0" y1="40" x2="1040" y2="40" stroke="#475569" stroke-width="2"/>
+    <text x="0" y="20" fill="#94a3b8" font-size="11">12:00</text>
+    <text x="1010" y="20" fill="#94a3b8" font-size="11">13:00</text>
+
+    <!-- session A: long tx -->
+    <line x1="100" y1="40" x2="900" y2="40" stroke="#ef4444" stroke-width="6"/>
+    <text x="100" y="70" fill="#fda4af" font-size="13" font-weight="700">세션 A — BEGIN; SELECT ...; (idle in transaction 1시간)</text>
+    <circle cx="100" cy="40" r="6" fill="#ef4444"/>
+    <text x="100" y="98" fill="#94a3b8" font-size="11">xmin = 100 (이 트랜잭션이 horizon을 잡음)</text>
+
+    <!-- other DML -->
+    <line x1="200" y1="-30" x2="200" y2="-10" stroke="#22c55e" stroke-width="2"/>
+    <text x="200" y="-40" fill="#86efac" font-size="11" text-anchor="middle">DELETE</text>
+    <line x1="350" y1="-30" x2="350" y2="-10" stroke="#22c55e" stroke-width="2"/>
+    <text x="350" y="-40" fill="#86efac" font-size="11" text-anchor="middle">UPDATE</text>
+    <line x1="500" y1="-30" x2="500" y2="-10" stroke="#22c55e" stroke-width="2"/>
+    <text x="500" y="-40" fill="#86efac" font-size="11" text-anchor="middle">VACUUM 시도</text>
+    <line x1="650" y1="-30" x2="650" y2="-10" stroke="#22c55e" stroke-width="2"/>
+    <text x="650" y="-40" fill="#86efac" font-size="11" text-anchor="middle">UPDATE</text>
+    <line x1="800" y1="-30" x2="800" y2="-10" stroke="#22c55e" stroke-width="2"/>
+    <text x="800" y="-40" fill="#86efac" font-size="11" text-anchor="middle">VACUUM 시도</text>
+  </g>
+
+  <!-- effect box -->
+  <g transform="translate(80, 280)">
+    <rect width="510" height="220" rx="14" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#fda4af" font-size="14" font-weight="700">효과 — 클러스터 전반에 영향</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">- 다른 모든 테이블의 dead tuple 회수 차단</text>
+    <text x="20" y="80" fill="#cbd5e1" font-size="13">- bloat 누적 (heap + index 양쪽)</text>
+    <text x="20" y="102" fill="#cbd5e1" font-size="13">- VM all-visible 비트 reset 누적 → IOS 효과 사라짐</text>
+    <text x="20" y="124" fill="#cbd5e1" font-size="13">- autovacuum이 돌아도 horizon에 막혀 효과 제한적</text>
+    <text x="20" y="146" fill="#facc15" font-size="13">- shared relation과 전역 horizon에 큰 영향</text>
+    <text x="20" y="180" fill="#fda4af" font-size="12" font-weight="700">즉 idle in transaction 한 세션이 1시간 = 1시간 동안 회수 정지</text>
+  </g>
+
+  <!-- horizon causes -->
+  <g transform="translate(630, 280)">
+    <rect width="510" height="220" rx="14" fill="#1e293b" stroke="#facc15" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#fde68a" font-size="14" font-weight="700">Horizon을 잡는 5가지 원인</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">1. 활성 트랜잭션 (idle in transaction 포함)</text>
+    <text x="20" y="80" fill="#cbd5e1" font-size="13">2. Replication slot (사라진 standby의 slot)</text>
+    <text x="20" y="102" fill="#cbd5e1" font-size="13">3. Hot standby 장기 쿼리 + hot_standby_feedback=on</text>
+    <text x="20" y="124" fill="#cbd5e1" font-size="13">4. Prepared transaction (2PC) 미커밋</text>
+    <text x="20" y="146" fill="#cbd5e1" font-size="13">5. Abandoned cursor (WITH HOLD)</text>
+    <text x="20" y="180" fill="#86efac" font-size="12" font-weight="700">예방: idle_in_transaction_session_timeout</text>
+    <text x="20" y="200" fill="#86efac" font-size="12" font-weight="700">진단: pg_stat_activity, pg_replication_slots</text>
+  </g>
+</svg>
