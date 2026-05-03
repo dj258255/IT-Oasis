@@ -353,16 +353,6 @@ EXPLAIN (ANALYZE, BUFFERS) <쿼리>;
 
 인덱스는 원본 테이블에 대한 *검색용 보조 자료구조* 로, 보통 B-tree 기반이에요. 검색 효율을 이론적으로 O(N)에서 O(log N)으로 낮추는 단순한 자료구조의 응용이고, 그 대가로 *쓰기 비용 + 저장 공간* 이 늘어납니다. 다만 실제 성능은 *I/O 패턴 + 캐시 상태* 에 따라 달라지며 Seq Scan이 더 빠를 수도 있어요. 인덱스를 언제, 어떻게 쓸지는 옵티마이저가 *통계 기반 휴리스틱* 으로 결정해요 — 항상 최적은 아니고, 특히 컬럼 간 상관관계는 기본 통계로 포착되지 않아 cardinality 추정이 어긋나는 흔한 원인입니다. 그 결정을 보여주는 도구가 `EXPLAIN`이에요. EXPLAIN은 *cost(시작/총), rows, width* 같은 추정값을 보여주고, `EXPLAIN ANALYZE`는 실제로 실행해서 *actual time, actual rows, loops* 같은 실측값까지 추가해줘요. cost는 시간이 아니라 *임의 단위* (`seq_page_cost=1.0`이 기준)이고 plan 간 *상대 비교용* 이지 절대값으로 의미 없으며 실제 시간과 정확히 비례하지도 않아요. *추정 rows와 실측 actual rows의 격차* 가 plan 문제 진단의 핵심 신호예요 — 격차가 크면 `ANALYZE`로 통계 갱신부터. 인덱스가 있어도 반환할 행이 너무 많으면(대략 수% 수준부터, 다만 데이터 분포/cost 설정에 따라 달라짐) 옵티마이저는 Seq Scan이 더 효율적이라고 판단해 인덱스를 무시할 수 있고, *함수/표현식 + LIKE 시작 와일드카드 + 암묵적 타입 변환* 같은 패턴은 인덱스 사용 자체를 막아요. `EXPLAIN (ANALYZE, BUFFERS)` 옵션으로 *shared hit/read* 같은 캐시 효과까지 진단 가능 — 단 동시성/lock/cold cache 같은 운영 환경 요소까지 완전히 반영하지는 않는다는 점은 염두에 둬야 해요. **인덱스 튜닝의 출발점은 plan을 정확히 읽는 능력** 이에요.
 
-### 다음 편 예고
-
-- **2편 — 스캔의 종류와 옵티마이저의 선택**: Sequential / Index / Index-Only / Bitmap Index / Bitmap Heap Scan의 메커니즘과 *언제 어떤 스캔이 선택되는가*
-- **3편 — Covering Index와 Index-Only Scan**: `INCLUDE` 절로 진짜 IOS 만들기, [스토리지 ③편](/blog/theory/db-storage-03-hot-update-visibility-map)의 VM 두 단계 조건과 통합
-- **4편 — 복합 인덱스**: 좌측 컬럼 규칙, AND vs OR, 컬럼 순서 결정
-- **5편 — 클러스터형 인덱스와 DB별 차이**: PostgreSQL vs MySQL InnoDB vs SQL Server
-- **6편 — 운영과 한계**: `CONCURRENTLY`, 장기 트랜잭션 비용, 파티셔닝/샤딩, Bloom Filter
-
----
-
 ### 글의 범위와 한계
 
 이 글은 PostgreSQL 기준이에요. EXPLAIN의 출력 형식과 cost 계산 모델은 DBMS마다 다릅니다 — MySQL의 `EXPLAIN`은 형식이 다르고(`type`, `rows`, `Extra` 컬럼), Oracle의 `EXPLAIN PLAN`은 `DBMS_XPLAN.DISPLAY`로 출력해요. 다만 *옵티마이저가 통계 기반으로 plan을 결정한다* 는 본질적 메커니즘은 모든 RDBMS에 공통이고, plan을 읽는 사고법 자체는 이식 가능합니다.

@@ -420,14 +420,6 @@ PostgreSQL UPDATE는 MVCC 구현 특성상 write amplification이 발생할 수 
 
 각 DB가 MVCC를 구현하는 다른 방식에 따라 다른 비용 + 다른 튜닝 지렛대를 가져요. PostgreSQL의 HOT/VM 모델은 그중 하나이고, 가장 open-source 생태계에서 자주 마주치게 되는 모델일 뿐.
 
-### 다음 편 예고
-
-스토리지 시리즈 후속 주제들:
-
-- **B+Tree 깊게**: 노드 분할, fanout 계산, fillfactor의 인덱스 측면
-- **Index 종류**: Hash, GIN, GiST, BRIN — B+Tree 외의 선택지
-- **WAL과 Replication**: 스토리지가 분산되면 어떻게 되는가
-
 ### 참고 (1차 자료 우선)
 
 - [PostgreSQL Documentation — Heap-Only Tuples (HOT)](https://www.postgresql.org/docs/current/storage-hot.html) — HOT의 두 조건 공식 정의
