@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="720" fill="url(#bgap)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">인덱스 안티패턴 6가지 — 운영에서 자주 보는 실수</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">덜 만들고 더 측정하는 게 핵심 원칙</text>
+
+  <g transform="translate(60, 110)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">1. 일단 만들고 보자</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">쿼리 느려질 때마다 인덱스 추가 → 수십 개 누적</text>
+    <text x="20" y="86" fill="#94a3b8" font-size="12">- INSERT/UPDATE/DELETE 비용에 모두 영향</text>
+    <text x="20" y="106" fill="#94a3b8" font-size="12">- bloat 누적, 통계 갱신 비용</text>
+    <text x="20" y="138" fill="#86efac" font-size="12" font-weight="700">진단</text>
+    <text x="20" y="158" fill="#94a3b8" font-family="Menlo, monospace" font-size="11">SELECT ... WHERE idx_scan = 0 FROM pg_stat_user_indexes</text>
+  </g>
+
+  <g transform="translate(620, 110)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">2. 카디널리티 낮은 컬럼</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">99%가 'active'인 status 컬럼에 인덱스</text>
+    <text x="20" y="86" fill="#94a3b8" font-size="12">- 옵티마이저는 Seq Scan을 더 싸다고 판단</text>
+    <text x="20" y="106" fill="#94a3b8" font-size="12">- 인덱스 거의 안 쓰임</text>
+    <text x="20" y="138" fill="#86efac" font-size="12" font-weight="700">처방 — partial index</text>
+    <text x="20" y="158" fill="#94a3b8" font-family="Menlo, monospace" font-size="11">CREATE INDEX ... WHERE status = 'inactive'</text>
+  </g>
+
+  <g transform="translate(60, 310)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">3. 함수 적용된 컬럼에 인덱스 없음</text>
+    <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">WHERE LOWER(email) = 'x@y.com'</text>
+    <text x="20" y="86" fill="#94a3b8" font-size="12">- email 인덱스가 LOWER(email)에는 안 잡힘</text>
+    <text x="20" y="138" fill="#86efac" font-size="12" font-weight="700">처방 — expression index</text>
+    <text x="20" y="158" fill="#94a3b8" font-family="Menlo, monospace" font-size="11">CREATE INDEX ... ON users(LOWER(email))</text>
+  </g>
+
+  <g transform="translate(620, 310)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">4. INCLUDE 누락 (PG 11+)</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">모든 컬럼을 key로 만들어 covering 흉내</text>
+    <text x="20" y="86" fill="#94a3b8" font-size="12">- uniqueness가 (id, email, name) 조합에 적용</text>
+    <text x="20" y="106" fill="#94a3b8" font-size="12">- navigation node 비대화, leftmost prefix 묶임</text>
+    <text x="20" y="138" fill="#86efac" font-size="12" font-weight="700">처방 — INCLUDE 절</text>
+    <text x="20" y="158" fill="#94a3b8" font-family="Menlo, monospace" font-size="11">CREATE UNIQUE INDEX ... (id) INCLUDE (email, name)</text>
+  </g>
+
+  <g transform="translate(60, 510)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">5. partitioned에 CONCURRENTLY 직접</text>
+    <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">CREATE INDEX CONCURRENTLY ON events_partitioned</text>
+    <text x="20" y="86" fill="#94a3b8" font-size="12">- 에러: cannot run on partitioned tables</text>
+    <text x="20" y="138" fill="#86efac" font-size="12" font-weight="700">처방 — 각 파티션별 + 메타데이터 합치기</text>
+    <text x="20" y="158" fill="#94a3b8" font-size="11">파티션마다 CONCURRENTLY → partitioned에 non-concurrent</text>
+  </g>
+
+  <g transform="translate(620, 510)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">6. EXPLAIN만 보고 ANALYZE 안 봄</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">EXPLAIN은 옵티마이저 추정 — 실제와 다를 수 있음</text>
+    <text x="20" y="86" fill="#94a3b8" font-size="12">- 통계 stale, 데이터 분포 비대칭, cache 상태 영향</text>
+    <text x="20" y="138" fill="#86efac" font-size="12" font-weight="700">처방 — BUFFERS까지 함께</text>
+    <text x="20" y="158" fill="#94a3b8" font-family="Menlo, monospace" font-size="11">EXPLAIN (ANALYZE, BUFFERS) ...</text>
+  </g>
+</svg>
