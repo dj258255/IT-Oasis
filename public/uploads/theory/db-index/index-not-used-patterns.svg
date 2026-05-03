@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgnu" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="540" fill="url(#bgnu)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">인덱스가 있어도 안 쓰이는 4가지 패턴</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">EXPLAIN으로 옵티마이저의 실제 선택을 검증해야 한다</text>
+
+  <g transform="translate(60, 120)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">1. 너무 많은 행이 매칭됨</text>
+    <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">SELECT * FROM employees WHERE id &gt; 100;</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">전체의 거의 모든 행이 조건을 만족 →</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">옵티마이저가 Seq Scan이 더 빠르다 판단</text>
+    <text x="20" y="142" fill="#fda4af" font-size="12">임계값은 데이터 분포 / random_page_cost /</text>
+    <text x="20" y="160" fill="#fda4af" font-size="12">캐시 상태에 따라 가변</text>
+  </g>
+
+  <g transform="translate(620, 120)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">2. 함수 / 표현식</text>
+    <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">WHERE LOWER(name) = 'z'</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">name 인덱스로는 LOWER(name)을 찾을 수 없음</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">→ Seq Scan 발생</text>
+    <text x="20" y="142" fill="#86efac" font-size="12">처방: 표현식 인덱스 (functional index)</text>
+    <text x="20" y="160" fill="#86efac" font-family="Menlo, monospace" font-size="12">CREATE INDEX ... ON t(LOWER(name));</text>
+  </g>
+
+  <g transform="translate(60, 320)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">3. LIKE 시작 와일드카드</text>
+    <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">WHERE name LIKE '%Z%'</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">B-tree는 prefix 검색만 가능 →</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">'%...' 형태는 인덱스 사용 불가</text>
+    <text x="20" y="142" fill="#86efac" font-size="12">처방: trigram (pg_trgm GIN) 또는</text>
+    <text x="20" y="160" fill="#86efac" font-size="12">전문 검색 (Full-Text Search)</text>
+  </g>
+
+  <g transform="translate(620, 320)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">4. 암묵적 타입 변환</text>
+    <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">WHERE id::TEXT = '100'</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">id가 INTEGER인데 TEXT로 cast →</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">id 인덱스를 못 씀</text>
+    <text x="20" y="142" fill="#86efac" font-size="12">처방: 양쪽 타입을 일치시킬 것</text>
+    <text x="20" y="160" fill="#86efac" font-family="Menlo, monospace" font-size="12">WHERE id = 100</text>
+  </g>
+</svg>
