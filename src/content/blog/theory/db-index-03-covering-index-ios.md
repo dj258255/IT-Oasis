@@ -421,14 +421,6 @@ SELECT user_id, count(*) FROM orders WHERE user_id < 100 GROUP BY user_id;
 
 Index-Only Scan은 *인덱스만으로 답을 완성* 해 힙 접근을 통째로 회피할 수 있을 때 *매우 강력한 plan* 이지만 (인덱스가 너무 크거나 캐시에 못 들어가면 효과는 줄어듭니다), PostgreSQL의 IOS는 *plan에 잡혔다고 진짜 IOS는 아니에요* — *`Heap Fetches: 0`* 이어야 합니다 (다만 `Heap Fetches`는 *힙 방문 횟수* 이지 *디스크 IO 횟수* 는 아니므로 실제 IO는 BUFFERS의 shared hit/read로 함께 확인). 힙 접근은 *random IO가 될 가능성이 높지만 buffer cache hit이면 메모리 접근* 으로 끝날 수도 있어요. 진짜 IOS의 *두 단계 조건*: (1) **covering** — 쿼리에 필요한 모든 컬럼이 인덱스에 있어야 하고, (2) **visibility** — Visibility Map에 *all-visible bit* 이 켜져 있어야 합니다 (VM 확인 자체는 항상 필요, *bit가 켜져 있을 때만 heap 방문이 생략*). VM은 *매우 작아 대부분의 경우 메모리에 상주* 해요. 두 조건이 충족되어야 IOS가 *성립* 하지만, *실제 성능은 인덱스 크기, 캐시 상태, correlation 같은 추가 요소* 에도 영향을 받아요. 첫 번째는 *INCLUDE 절* 로 만족시킵니다 — PostgreSQL 11+에서 도입, *leaf tuple에만 저장 + navigation node 안 들어감 + uniqueness는 key 컬럼에만*. 다만 *INCLUDE 컬럼이 자주 UPDATE되면 HOT update가 깨지고*, *큰 컬럼이면 인덱스 비대화*, *B-tree index entry는 TOAST 후에도 약 페이지의 1/3 한계*, *총 32 컬럼 제한* 같은 트레이드오프가 따라요. 두 번째 조건(visibility)은 *VACUUM이 갱신, 트랜잭션이 reset* 하는 동적 상태라 — *append-only + 적절한 VACUUM이 함께 이뤄질 때 IOS에 이상적* 이고, *변경이 잦은 테이블이나 VACUUM 없는 insert-only 테이블에서는 효과가 사라져요* (PostgreSQL 12 이전 insert-only 테이블의 Mandrill outage 사례). 대형 고변경 테이블에서는 `autovacuum_vacuum_scale_factor`를 *1% 수준까지 낮추는 패턴* 이 흔하고, *insert-only 테이블* 은 PostgreSQL 13+의 `autovacuum_vacuum_insert_scale_factor`로 별도 트리거 가능 — 어느 쪽이든 *워크로드에 따라 `Heap Fetches`와 autovacuum 부하를 모니터링하며 조정* 하는 게 정확합니다 (*특히 OLTP에서는 과도한 autovacuum의 IO 증가도 함께 고려*). *`EXPLAIN (ANALYZE, BUFFERS)`* 로 `Heap Fetches`와 `Buffers`를 함께 확인하면 IOS의 실제 효과를 정량화할 수 있어요. IOS 지원은 *index access method뿐 아니라 operator class에 의존* 합니다 — *B-tree* 는 일반적으로 지원, *GiST/SP-GiST* 는 *원본 값을 재구성할 수 있는 operator class* 에서만, *GIN/BRIN/Hash* 는 불가 (GIN은 인덱스 항목이 *원본 값의 일부* 만 저장해서). PostgreSQL Wiki가 *"index-mostly scan"* 이라 부르는 게 더 정확한 명칭일 정도로, *plan만 보고 IOS 효과를 단정하면 안 돼요*.
 
-### 다음 편 예고
-
-- **4편 — 복합 인덱스**: *좌측 컬럼 규칙(leftmost prefix)*, AND vs OR 동작 차이, 컬럼 순서 결정 전략, INCLUDE와 복합 인덱스의 차이
-- **5편 — 클러스터형 인덱스와 DB별 차이**: PostgreSQL vs MySQL InnoDB vs SQL Server
-- **6편 — 운영과 한계**: `CONCURRENTLY`, 장기 트랜잭션 비용, 파티셔닝/샤딩, Bloom Filter
-
----
-
 ### 글의 범위와 한계
 
 이 글은 *PostgreSQL 기준*. IOS의 두 단계 조건(covering + visibility) 메커니즘은 *PostgreSQL 고유* 예요 — MySQL InnoDB는 *clustered index 구조* 라 leaf node에 *모든 컬럼이 저장* 되므로 *secondary index에서 covering이 자연스럽게 발생* 합니다 (5편에서 비교). SQL Server는 *INCLUDE 절을 PostgreSQL보다 먼저 도입(2005)* 했고 *clustered index 또는 RID로 visibility 처리* 하는 방식이라 PostgreSQL의 VM 같은 별도 메커니즘이 없어요.

@@ -444,15 +444,6 @@ EXPLAIN SELECT name FROM grades WHERE LOWER(name) = 'z';
 
 PostgreSQL은 *Sequential Scan / Index Scan / Index-Only Scan / Bitmap Index Scan + Bitmap Heap Scan* 등 여러 스캔 전략을 가지고 있고, 옵티마이저는 *통계 기반* 으로 *cost가 가장 낮은 plan* 을 골라요. *셀렉티비티가 가장 중요한 변수지만 유일한 변수는 아니며*, correlation/cost 파라미터/캐시 상태/row width/parallel 가능성이 함께 작용합니다. **Seq Scan** 은 인덱스 없거나/작은 테이블/높은 셀렉티비티에서 선택되며 *parallel 가능* (단 PARALLEL UNSAFE 함수, SERIALIZABLE, FOR UPDATE 등은 막음). **Index Scan** 은 *인덱스로 후보 찾고 힙으로 random IO로 점프* 하는 패턴이라 *일반적으로 매우 낮은 셀렉티비티에서 가장 효율적* 이지만 — 정확히는 *서로 다른 페이지 접근 수* 가 누적 비용을 결정하므로 correlation이 높거나 cache hit이 많으면 *중간 셀렉티비티(예: 5%)에서도 충분히 효율적* 일 수 있어요. correlation이 높을수록 Index Scan 효율이 올라가고 `CLUSTER`로 인위적으로 높일 수도 있지만 *one-time 작업* 이라 이후 INSERT/UPDATE는 정렬을 보장하지 않아요. **Bitmap Scan** 은 *Index와 Seq의 중간 지점* 에서 *비트맵* 을 만들어 *완전한 순차 IO는 아니지만 페이지 접근을 정렬해 random IO를 크게 줄이고*, *BitmapAnd / BitmapOr* 로 *여러 인덱스 결합* 까지 가능합니다. *exact bitmap* 은 *페이지 + tuple offset까지* 정확히 추적하지만 *work_mem 부족* 하면 *lossy(페이지 단위)로 축약* 되어 `Recheck Cond`가 진짜 비용 발생 — `Heap Blocks: lossy > 0`이 결정적 신호. lossy index type(GIN/GiST/BRIN)이나 추가 조건에서도 recheck가 의미 있을 수 있어 `Rows Removed by Index Recheck`로 확인이 정확. **Bitmap Index Scan은 단독으로 결과를 내지 않고** 보통 BitmapAnd/BitmapOr를 거쳐 *Bitmap Heap Scan에서 소비* 됩니다. `Index Cond` vs `Filter`는 *인덱스 활용 범위 vs heap 재평가* 의 차이라 후자가 많으면 *복합 인덱스 신호*. **Index-Only Scan** 은 *인덱스만으로 답 완료* 하는 최선의 plan이지만 *Visibility Map 최신성* 이 조건이라 `Heap Fetches: 0`이어야 진짜 IOS예요 (3편 deep dive). 다중 인덱스 환경에서는 *결합 / 단일 사용 / 둘 다 무시* 시나리오 중 cost가 낮은 것이 선택되며, **AND vs OR** 로 동작이 갈립니다 — AND는 *한쪽만 충분히 셀렉티브* 하면 단일 인덱스 + Filter, *둘 다 적당히 셀렉티브* 면 BitmapAnd. OR는 *모든 인덱스를 봐야* 함. 함수/표현식 적용, LIKE 시작 와일드카드, 암묵적 타입 변환은 *원본 인덱스를 무력화* 시키는 흔한 패턴. *EXPLAIN으로 plan 노드 종류를 확인* 해 *옵티마이저의 실제 선택* 을 검증하는 게 튜닝의 출발점이에요.
 
-### 다음 편 예고
-
-- **3편 — Covering Index와 Index-Only Scan**: `INCLUDE` 절로 진짜 IOS 만들기, *Visibility Map 최신성 조건*, *IOS의 두 단계* 상세 ([스토리지 ③편 cross-reference](/blog/theory/db-storage-03-hot-update-visibility-map))
-- **4편 — 복합 인덱스**: 좌측 컬럼 규칙, AND vs OR 동작 차이, 컬럼 순서 결정 전략
-- **5편 — 클러스터형 인덱스와 DB별 차이**: PostgreSQL vs MySQL InnoDB vs SQL Server
-- **6편 — 운영과 한계**: `CONCURRENTLY`, 장기 트랜잭션 비용, 파티셔닝/샤딩, Bloom Filter
-
----
-
 ### 글의 범위와 한계
 
 이 글은 *PostgreSQL 기준* 이에요. 스캔 노드의 종류와 명칭은 DBMS마다 달라요 — MySQL의 `EXPLAIN`은 *type 컬럼* 에 `ALL` (Seq Scan 해당), `index`, `range`, `ref`, `eq_ref`, `const` 같은 값으로 표현하고, *Bitmap Index Scan은 PostgreSQL 특유의 메커니즘* 입니다 (MySQL InnoDB는 비슷한 효과를 *Index Merge* 로 처리). 다만 *옵티마이저가 셀렉티비티 기반으로 plan을 결정한다* 는 본질은 모든 RDBMS에 공통이고, 사고법 자체는 이식 가능해요.
