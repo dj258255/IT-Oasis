@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgts" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="460" fill="url(#bgts)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">인덱스 타입별 IOS / INCLUDE 지원</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">IOS는 access method + operator class에 의존한다</text>
+
+  <g transform="translate(80, 120)">
+    <rect width="1040" height="280" rx="14" fill="#1e293b" stroke="#334155"/>
+
+    <g transform="translate(40, 30)">
+      <text x="0" y="0" fill="#facc15" font-size="13" font-weight="700">인덱스 타입</text>
+      <text x="240" y="0" fill="#facc15" font-size="13" font-weight="700" text-anchor="middle">IOS 지원</text>
+      <text x="440" y="0" fill="#facc15" font-size="13" font-weight="700" text-anchor="middle">INCLUDE 지원</text>
+      <text x="650" y="0" fill="#facc15" font-size="13" font-weight="700">비고</text>
+    </g>
+
+    <g transform="translate(40, 60)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0" y="22" fill="#bbf7d0" font-weight="700">B-tree</text>
+      <text x="240" y="22" fill="#86efac" text-anchor="middle">지원</text>
+      <text x="440" y="22" fill="#86efac" text-anchor="middle">지원</text>
+      <text x="650" y="22" fill="#cbd5e1">가장 일반적, 모든 operator class</text>
+    </g>
+
+    <g transform="translate(40, 100)" font-size="13">
+      <text x="0" y="22" fill="#fde68a" font-weight="700">GiST</text>
+      <text x="240" y="22" fill="#fde68a" text-anchor="middle">일부 operator class</text>
+      <text x="440" y="22" fill="#86efac" text-anchor="middle">지원</text>
+      <text x="650" y="22" fill="#cbd5e1">원본 값 재구성 가능한 클래스에 한함</text>
+    </g>
+
+    <g transform="translate(40, 140)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0" y="22" fill="#fde68a" font-weight="700">SP-GiST</text>
+      <text x="240" y="22" fill="#fde68a" text-anchor="middle">일부 operator class</text>
+      <text x="440" y="22" fill="#86efac" text-anchor="middle">지원</text>
+      <text x="650" y="22" fill="#cbd5e1">non-balanced 트리, operator class 의존</text>
+    </g>
+
+    <g transform="translate(40, 180)" font-size="13">
+      <text x="0" y="22" fill="#fda4af" font-weight="700">GIN</text>
+      <text x="240" y="22" fill="#fda4af" text-anchor="middle">불가</text>
+      <text x="440" y="22" fill="#fda4af" text-anchor="middle">불가</text>
+      <text x="650" y="22" fill="#cbd5e1">인덱스 항목이 원본 값의 일부만 저장</text>
+    </g>
+
+    <g transform="translate(40, 220)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0" y="22" fill="#fda4af" font-weight="700">BRIN</text>
+      <text x="240" y="22" fill="#fda4af" text-anchor="middle">불가</text>
+      <text x="440" y="22" fill="#fda4af" text-anchor="middle">불가</text>
+      <text x="650" y="22" fill="#cbd5e1">매우 큰 테이블의 요약 인덱스</text>
+    </g>
+
+    <g transform="translate(40, 250)" font-size="13">
+      <text x="0" y="22" fill="#fda4af" font-weight="700">Hash</text>
+      <text x="240" y="22" fill="#fda4af" text-anchor="middle">불가</text>
+      <text x="440" y="22" fill="#fda4af" text-anchor="middle">불가</text>
+      <text x="650" y="22" fill="#cbd5e1">equality only</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgvc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrVC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+    <marker id="arrVCR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="540" fill="url(#bgvc)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">VM은 VACUUM이 채우고, write activity가 깎는다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">변경이 잦은 테이블에서 IOS가 빛을 못 보는 이유</text>
+
+  <!-- VACUUM box -->
+  <g transform="translate(80, 130)">
+    <rect width="280" height="100" rx="12" fill="#0f172a" stroke="#facc15" stroke-width="1.5"/>
+    <text x="140" y="32" fill="#facc15" font-size="14" font-weight="700" text-anchor="middle">VACUUM (autovacuum)</text>
+    <text x="140" y="56" fill="#cbd5e1" font-size="12" text-anchor="middle">페이지 스캔 + all-visible 확인</text>
+    <text x="140" y="74" fill="#cbd5e1" font-size="12" text-anchor="middle">vacuum_scale_factor / insert_*</text>
+    <text x="140" y="92" fill="#94a3b8" font-size="11" text-anchor="middle">PG13+ insert 트리거</text>
+  </g>
+
+  <!-- VM box -->
+  <g transform="translate(460, 130)">
+    <rect width="280" height="100" rx="12" fill="#0f172a" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="140" y="32" fill="#22d3ee" font-size="14" font-weight="700" text-anchor="middle">Visibility Map</text>
+    <text x="140" y="56" fill="#a5f3fc" font-size="12" text-anchor="middle">페이지마다 all-visible 비트</text>
+    <text x="140" y="74" fill="#a5f3fc" font-size="12" text-anchor="middle">매우 작음 → 메모리 상주</text>
+    <text x="140" y="92" fill="#94a3b8" font-size="11" text-anchor="middle">IOS의 visibility 조건</text>
+  </g>
+
+  <!-- write activity -->
+  <g transform="translate(840, 130)">
+    <rect width="280" height="100" rx="12" fill="#0f172a" stroke="#ef4444" stroke-width="1.5"/>
+    <text x="140" y="32" fill="#ef4444" font-size="14" font-weight="700" text-anchor="middle">Write Activity</text>
+    <text x="140" y="56" fill="#fda4af" font-size="12" text-anchor="middle">INSERT / UPDATE / DELETE</text>
+    <text x="140" y="74" fill="#fda4af" font-size="12" text-anchor="middle">한 row 변경에 페이지 비트 reset</text>
+    <text x="140" y="92" fill="#94a3b8" font-size="11" text-anchor="middle">CYBERTEC 사례</text>
+  </g>
+
+  <!-- arrows -->
+  <line x1="360" y1="180" x2="455" y2="180" stroke="#facc15" stroke-width="2" marker-end="url(#arrVC)"/>
+  <text x="408" y="172" fill="#facc15" font-size="11" font-weight="700" text-anchor="middle">set</text>
+
+  <line x1="838" y1="180" x2="745" y2="180" stroke="#f87171" stroke-width="2" marker-end="url(#arrVCR)"/>
+  <text x="790" y="172" fill="#fda4af" font-size="11" font-weight="700" text-anchor="middle">reset</text>
+
+  <!-- Effect on IOS -->
+  <g transform="translate(80, 280)">
+    <rect width="510" height="220" rx="14" fill="#1e293b" stroke="#14532d" stroke-width="1.5"/>
+    <text x="20" y="34" fill="#86efac" font-size="14" font-weight="700">append-only + VACUUM (이상적)</text>
+    <text x="20" y="62" fill="#cbd5e1" font-size="13">로그 / 이벤트 / 시계열 데이터</text>
+    <text x="20" y="84" fill="#cbd5e1" font-size="13">VM이 안정적으로 채워짐 → Heap Fetches: 0</text>
+    <text x="20" y="116" fill="#facc15" font-size="12" font-weight="700">PG12 이전 함정 (Mandrill outage)</text>
+    <text x="20" y="138" fill="#94a3b8" font-size="12">insert만 발생 → autovacuum 트리거 안 됨</text>
+    <text x="20" y="156" fill="#94a3b8" font-size="12">→ VM 안 채워져 IOS 효과 사라짐</text>
+    <text x="20" y="184" fill="#86efac" font-size="12" font-weight="700">PG13+ 해결</text>
+    <text x="20" y="204" fill="#94a3b8" font-size="12">autovacuum_vacuum_insert_scale_factor</text>
+  </g>
+
+  <g transform="translate(610, 280)">
+    <rect width="510" height="220" rx="14" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="20" y="34" fill="#fda4af" font-size="14" font-weight="700">변경 잦은 OLTP 핫 테이블</text>
+    <text x="20" y="62" fill="#cbd5e1" font-size="13">사용자 세션 / 카운터 / 계정 잔액</text>
+    <text x="20" y="84" fill="#cbd5e1" font-size="13">한 row UPDATE → 페이지의 VM 비트 reset</text>
+    <text x="20" y="116" fill="#facc15" font-size="12" font-weight="700">처방 후보</text>
+    <text x="20" y="138" fill="#94a3b8" font-size="12">vacuum_scale_factor를 0.01 수준까지</text>
+    <text x="20" y="156" fill="#94a3b8" font-size="12">단 OLTP의 IO 부담도 함께 모니터링</text>
+    <text x="20" y="184" fill="#94a3b8" font-size="12">Heap Fetches + dead tuple +</text>
+    <text x="20" y="204" fill="#94a3b8" font-size="12">autovacuum 부하의 균형</text>
+  </g>
+</svg>
