@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bglp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="600" fill="url(#bglp)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">(a, b, c) 인덱스의 쿼리별 활용 — Leftmost Prefix Rule</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">equality는 leading부터, range가 나오면 거기서 스캔 범위 멈춤</text>
+
+  <g transform="translate(80, 110)">
+    <rect width="1040" height="460" rx="14" fill="#1e293b" stroke="#334155"/>
+
+    <g transform="translate(40, 30)">
+      <text x="0" y="0" fill="#facc15" font-size="13" font-weight="700">쿼리 패턴</text>
+      <text x="540" y="0" fill="#facc15" font-size="13" font-weight="700">인덱스 활용</text>
+      <text x="820" y="0" fill="#facc15" font-size="13" font-weight="700">비고</text>
+    </g>
+
+    <g transform="translate(40, 60)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a=1 AND b=2 AND c=3</text>
+      <text x="540" y="22" fill="#86efac">완전 활용</text>
+      <text x="820" y="22" fill="#94a3b8">한 슬라이스 직접</text>
+    </g>
+
+    <g transform="translate(40, 100)" font-size="13">
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a=1 AND b=2</text>
+      <text x="540" y="22" fill="#86efac">활용</text>
+      <text x="820" y="22" fill="#94a3b8">더 큰 슬라이스</text>
+    </g>
+
+    <g transform="translate(40, 140)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a=1</text>
+      <text x="540" y="22" fill="#86efac">활용</text>
+      <text x="820" y="22" fill="#94a3b8">a 슬라이스 전체</text>
+    </g>
+
+    <g transform="translate(40, 180)" font-size="13">
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a=1 AND c=3</text>
+      <text x="540" y="22" fill="#fde68a">a로 좁히고 c는 체크</text>
+      <text x="820" y="22" fill="#94a3b8">b 누락 (skip 가능)</text>
+    </g>
+
+    <g transform="translate(40, 220)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE b=2</text>
+      <text x="540" y="22" fill="#fda4af">주력 활용 아님</text>
+      <text x="820" y="22" fill="#94a3b8">PG 17- Full-Idx / PG 18+ skip</text>
+    </g>
+
+    <g transform="translate(40, 260)" font-size="13">
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a=1 AND b&gt;=42 AND c&lt;77</text>
+      <text x="540" y="22" fill="#fde68a">a, b까지로 범위 제한</text>
+      <text x="820" y="22" fill="#94a3b8">c는 Index Cond, 스캔 범위 미축소</text>
+    </g>
+
+    <g transform="translate(40, 300)" font-size="13">
+      <rect x="-10" y="-2" width="980" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a&gt;=1 AND b=2</text>
+      <text x="540" y="22" fill="#fda4af">a range 이후 정지</text>
+      <text x="820" y="22" fill="#94a3b8">b 조건은 스캔 범위 못 좁힘</text>
+    </g>
+
+    <g transform="translate(40, 340)" font-size="13">
+      <text x="0"   y="22" fill="#cbd5e1" font-family="Menlo, monospace">WHERE a=1 OR b=2</text>
+      <text x="540" y="22" fill="#fda4af">복합 인덱스 약점</text>
+      <text x="820" y="22" fill="#94a3b8">단일 인덱스 + BitmapOr 유리</text>
+    </g>
+
+    <g transform="translate(40, 400)">
+      <rect width="960" height="40" rx="8" fill="#0f172a" stroke="#facc15"/>
+      <text x="20" y="26" fill="#fde68a" font-size="13" font-weight="700">핵심: 쿼리 작성 순서가 아니라 인덱스 정의 순서가 결정적. 옵티마이저는 leftmost prefix를 자동으로 찾는다.</text>
+    </g>
+  </g>
+</svg>
