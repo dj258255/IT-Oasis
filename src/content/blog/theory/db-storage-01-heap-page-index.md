@@ -74,23 +74,53 @@ DB는 이 현실 위에서 일하므로, **페이지 단위라는 더 큰 추상
 
 ### 페이지의 물리적 위치 = 파일 안의 블록 번호
 
-PostgreSQL 기준 — 테이블마다 디스크에 데이터 파일이 있고, 그 파일은 8KB 단위 블록들로 나뉘어요. 블록 번호는 0부터 순차 증가. 행이 추가되어 마지막 블록이 꽉 차면 새 블록을 파일 끝에 추가합니다.
+PostgreSQL 기준 — 테이블마다 디스크에 데이터 파일이 있고, 그 파일은 **8KB 단위 페이지의 배열**로 구성돼요. 페이지 0 뒤에 페이지 1, 페이지 2 순서로 이어지는 단순한 구조. 그래서 임의의 페이지를 디스크에서 꺼낼 때 필요한 정보가 정확히 세 가지로 떨어져요 — *파일 이름 / offset / length*.
 
-InnoDB도 비슷하지만 16KB 페이지로, 그리고 PK 순서로 정렬된 B+Tree 노드(=페이지)들이 연결돼요.
+![파일 = 고정 크기 페이지의 배열, offset = page_no × page_size](/uploads/theory/db-storage/file-as-page-array.svg)
+
+```
+파일이름: base/<db_oid>/<relfilenode>   (PostgreSQL의 데이터 파일 경로)
+offset  = page_no × page_size           (page 2면 2 × 8192 = 16384)
+length  = page_size                     (8KB = 8192바이트)
+```
+
+이 매핑이 *논리적 페이지 번호 ↔ 디스크 위치*를 산수 한 번으로 풀어줘요. 인덱스가 가리키는 CTID `(page_no, slot)`도 결국 이 산수로 디스크 위치로 환원됩니다. 새 INSERT는 마지막 페이지의 free space에 추가하고, 꽉 차면 파일 끝에 `page_no = N+1`을 새로 만들어 append.
+
+InnoDB도 같은 *파일=페이지 배열* 구조지만 페이지 크기가 16KB이고, heap이 아니라 **PK 순서로 정렬된 B+Tree 노드(=페이지)** 들이 형제 포인터로 연결되어 있어요(7장 clustered index 참고).
 
 ### 페이지 안의 구조 (PostgreSQL 8KB 기준)
 
 ![PostgreSQL 페이지 레이아웃 — Slotted Page](/uploads/theory/db-storage/page-layout.svg)
 
+PostgreSQL 페이지는 공식 문서 기준 네 구획으로 나뉘어요:
+
+| 구획 | 크기 | 역할 |
+|---|---|---|
+| **PageHeader** | 24바이트 (고정) | LSN, checksum, free space 시작/끝 오프셋 등 페이지 메타데이터 |
+| **ItemId 배열 (Line Pointers)** | 4바이트 × N | 각 항목의 *(offset, length, flags)*. CTID의 슬롯 번호가 여기 인덱스 |
+| **Items (Tuples)** | 가변 | 실제 행 데이터. 페이지 아래쪽에서 위로 거꾸로 자람 |
+| **Special Space** | 가변 | 인덱스 페이지의 형제 페이지 링크 등. heap 페이지에서는 0바이트 |
+
 핵심 포인트:
 
-- **Line Pointer 배열(페이지 위쪽)** 이 각 행의 오프셋과 길이를 저장. CTID의 두 번째 숫자가 이 line pointer 인덱스예요.
-- **Tuple 데이터(페이지 아래쪽)** 는 거꾸로 자라남. 위쪽 line pointer 끝과 아래쪽 tuple 시작 사이의 free space가 새 행을 추가할 공간.
-- 인덱스 페이지의 경우 **Special Space** 에 형제 페이지 링크 등의 메타데이터.
+- **Line Pointer 배열은 위쪽**, **Tuple 데이터는 아래쪽** 에서 거꾸로 자람. 둘 사이의 공간이 free space — 새 행이 들어올 자리.
+- ItemId 한 개가 4바이트라는 게 작아 보이지만, 페이지당 항목이 1,000개라면 4KB(전체 페이지의 절반!)가 포인터로 채워져요. *행이 너무 작으면 ItemId 오버헤드가 커진다*는 의미.
+- ItemId 간접 참조 덕분에 PostgreSQL은 페이지 안에서 행을 옮길 수 있어요(VACUUM, defragmentation, [HOT update](/blog/theory/db-storage-03-hot-update-visibility-map) 등). 인덱스가 ItemId를 가리키므로 행이 페이지 안에서 이동해도 인덱스는 깨지지 않습니다.
 
-이 line pointer 간접 참조 덕분에 PostgreSQL은 페이지 안에서 행을 옮길 수 있어요(VACUUM, defragmentation, HOT update 등). 인덱스가 line pointer를 가리키므로 행이 페이지 안에서 이동해도 인덱스는 깨지지 않아요.
+### Buffer Pool — 페이지가 디스크에서 메모리로 올라오는 곳
 
-> **3장 요약** — 페이지는 DB의 논리적 IO 최소 단위(PG 8KB, InnoDB 16KB). 페이지 안에 여러 행이 있고, line pointer 배열이 각 행 위치를 가리킵니다. 디스크 기반 RDBMS는 행 한 개만 읽지 않고 페이지 단위로 작업해요 — 다만 물리적 IO는 OS readahead로 더 크게 묶이거나(PostgreSQL 18의 `io_combine_limit` 기본 128KB = 16 페이지), SSD/파일시스템 4KB 블록으로 쪼개질 수도 있어요.
+지금까지 *"DB는 페이지 단위로 디스크 IO를 한다"* 만 말했어요. 그런데 디스크에서 읽힌 페이지는 어디로 갈까요? **Buffer Pool(Shared Buffers)** 이라는 메모리 영역이에요. PostgreSQL은 `shared_buffers` 설정으로 크기를 정하고, InnoDB는 `innodb_buffer_pool_size`로 정합니다.
+
+흐름은 이래요:
+
+1. 쿼리가 page 2를 읽으려 함 → buffer pool에 이미 있나? **HIT** 면 디스크 IO 없이 끝.
+2. 없으면 **MISS** → OS에 `pread(file, offset, length)` 요청 → buffer pool의 빈 슬롯(또는 evicted된 슬롯)에 페이지 적재.
+3. 그 페이지에 접근하는 모든 후속 쿼리는 메모리에서 처리.
+4. UPDATE도 같은 흐름 — 페이지를 buffer pool로 끌어와 *메모리에서 변경* 한 뒤, 변경 사실은 [WAL](/blog/theory/transaction-acid-04-durability)로 먼저 기록. 더러워진 페이지(dirty page)는 나중에 background writer / checkpoint가 모아서 한 번에 flush.
+
+이 메커니즘 덕분에 *"인덱스로 페이지 3개만 짚어도 빠르다"* 가 성립해요 — 그 3개가 buffer pool에 있을 확률이 높으면 디스크 IO 없이 끝나니까. 그래서 buffer pool이 **워킹셋(working set)을 담을 만큼 크냐**가 OLTP 성능의 1차 관문이고, 이건 [캐시와 버퍼](/blog/theory/cache-and-buffer) 글의 캐시 일반론이 DB 컨텍스트에서 구체화된 형태예요. 읽기 캐시이자 쓰기 버퍼라는 *이중 역할*도 같은 글 기준으로 자연스럽게 풀려요.
+
+> **3장 요약** — 파일은 *페이지의 배열* 이고, 페이지 번호 ↔ 디스크 offset은 산수 한 번. 페이지 안은 *PageHeader / ItemId / Items / Special* 네 구획이고, 디스크에서 읽힌 페이지는 buffer pool에 머물며 후속 IO를 흡수합니다. 다만 물리적 IO는 OS readahead로 더 크게 묶이거나(PostgreSQL 18의 `io_combine_limit` 기본 128KB = 16 페이지), SSD/파일시스템 4KB 블록으로 쪼개질 수도 있어요.
 
 ## 4. IO — 줄여야 하는 비용
 
@@ -330,23 +360,53 @@ DBs operate on top of this reality, so they impose **a larger abstraction called
 
 ### Physical location of a page = block number inside a file
 
-In PostgreSQL — each table has a data file on disk, divided into 8KB blocks. Block numbers start at 0 and increase sequentially. When a row is added and the last block fills up, a new block is appended at the end of the file.
+In PostgreSQL — each table has a data file on disk, and that file is laid out as **an array of 8KB pages**. Page 0 is followed by page 1, then page 2, in straight succession. To pull any page off disk you need exactly three pieces of information — *file name, offset, length*.
 
-InnoDB is similar but with 16KB pages and B+Tree nodes (= pages) linked in PK order.
+![File = an array of fixed-size pages, offset = page_no × page_size](/uploads/theory/db-storage/file-as-page-array.svg)
+
+```
+filename: base/<db_oid>/<relfilenode>   (PostgreSQL data-file path)
+offset  = page_no × page_size           (page 2 → 2 × 8192 = 16384)
+length  = page_size                     (8KB = 8192 bytes)
+```
+
+This mapping reduces *logical page number ↔ disk position* to a single multiplication. The CTID `(page_no, slot)` an index points to also collapses into the same arithmetic. New INSERTs go into the free space of the last page, and once that page fills the file appends a fresh `page_no = N+1`.
+
+InnoDB has the same *file = page array* layout but with 16KB pages, and instead of a heap it stores **B+Tree nodes (= pages) sorted by PK** with sibling pointers between them (see Section 7 on clustered indexes).
 
 ### Inside a page (PostgreSQL 8KB)
 
 ![PostgreSQL Page Layout — Slotted Page](/uploads/theory/db-storage/page-layout.svg)
 
+A PostgreSQL page is divided into four regions per the official docs:
+
+| Region | Size | Role |
+|---|---|---|
+| **PageHeader** | 24 bytes (fixed) | LSN, checksum, free-space start/end offsets, and other page metadata |
+| **ItemId array (Line Pointers)** | 4 bytes × N | Each item's *(offset, length, flags)*. The slot number in a CTID indexes into this |
+| **Items (Tuples)** | variable | The actual row data. Grows from the bottom of the page upward |
+| **Special Space** | variable | Sibling-page links etc. for index pages. 0 bytes on heap pages |
+
 Key points:
 
-- The **Line Pointer array (top of the page)** stores each row's offset and length. The second number in a CTID is this line-pointer index.
-- The **Tuple data (bottom of the page)** grows upward. The free space between the bottom of the line pointers and the top of the tuples is where new rows go.
-- For index pages, the **Special Space** holds metadata like sibling-page links.
+- **Line Pointers grow from the top, Tuples grow from the bottom.** The space between them is the free space for new rows.
+- A 4-byte ItemId sounds tiny, but with 1,000 items per page that is 4KB — half the page — spent on pointers. *Rows that are too small make ItemId overhead dominant.*
+- ItemId indirection lets PostgreSQL move rows within a page (VACUUM, defragmentation, [HOT update](/blog/theory/db-storage-03-hot-update-visibility-map)). Since indexes point to ItemIds, moving rows within a page does not break the indexes.
 
-This line-pointer indirection lets PostgreSQL move rows within a page (VACUUM, defragmentation, HOT update). Since indexes point to line pointers, moving rows within a page does not break the indexes.
+### Buffer Pool — where pages live in memory
 
-> **Section 3 takeaway** — A page is the DB's logical minimum I/O unit (PG 8KB, InnoDB 16KB). A page contains many rows, and the line-pointer array points to each row's location. Disk-based RDBMSs do not read one row at a time — they work in pages. Real physical I/O may be larger via OS readahead (PostgreSQL 18's `io_combine_limit` defaults to 128KB = 16 pages) or smaller via the SSD/filesystem 4KB blocks.
+So far I have only said *"the DB does disk I/O page by page."* Where does a page go after being read from disk? Into the **Buffer Pool (Shared Buffers)** — a region of memory sized by `shared_buffers` in PostgreSQL, or `innodb_buffer_pool_size` in InnoDB.
+
+The flow:
+
+1. A query asks for page 2 → already in the buffer pool? **HIT** — no disk I/O needed.
+2. Otherwise **MISS** → ask the OS for `pread(file, offset, length)` → place the page in a free slot (or an evicted slot) of the buffer pool.
+3. All subsequent queries touching that page are served from memory.
+4. UPDATEs use the same flow — the page is pulled into the buffer pool, *modified in memory*, and the change is first recorded as a [WAL](/blog/theory/transaction-acid-04-durability) record. Dirty pages are batched out later by the background writer / checkpoint.
+
+This mechanism is why *"three pages via index is fast"* is actually true — those three pages are likely already in the buffer pool, so disk I/O can be zero. Whether the buffer pool is **large enough to hold the working set** is therefore the first gate of OLTP performance, and it is exactly the general caching story from the [Cache and Buffer](/blog/theory/cache-and-buffer) post made concrete in a DB context. The dual role — read cache + write buffer — also drops out of that same general story.
+
+> **Section 3 takeaway** — A file is *an array of pages*; page-number ↔ disk-offset is one multiplication. Inside a page sit four regions — *PageHeader / ItemId / Items / Special* — and once read, a page lives in the buffer pool to absorb subsequent I/O. Real physical I/O may be larger via OS readahead (PostgreSQL 18's `io_combine_limit` defaults to 128KB = 16 pages) or smaller via the SSD/filesystem 4KB blocks.
 
 ## 4. I/O — The Cost to Reduce
 

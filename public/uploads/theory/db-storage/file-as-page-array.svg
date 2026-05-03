@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgfa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrFA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#bgfa)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">파일 = 고정 크기 페이지의 배열</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">offset = page_no × page_size · length = page_size</text>
+
+  <!-- Filename label -->
+  <g transform="translate(80, 120)">
+    <text x="0" y="0" fill="#facc15" font-size="13" font-weight="700" letter-spacing="1">DATA FILE (예: base/16384/24576)</text>
+  </g>
+
+  <!-- Pages -->
+  <g transform="translate(80, 140)">
+    <rect x="0"   y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#22d3ee"/>
+    <text x="60" y="34" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">Page 0</text>
+    <text x="60" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset 0</text>
+    <text x="60" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+
+    <rect x="130" y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#22d3ee"/>
+    <text x="190" y="34" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">Page 1</text>
+    <text x="190" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset 8192</text>
+    <text x="190" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+
+    <rect x="260" y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#facc15" stroke-width="2"/>
+    <text x="320" y="34" fill="#fde68a" font-size="13" font-weight="700" text-anchor="middle">Page 2</text>
+    <text x="320" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset 16384</text>
+    <text x="320" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+
+    <rect x="390" y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#22d3ee"/>
+    <text x="450" y="34" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">Page 3</text>
+    <text x="450" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset 24576</text>
+    <text x="450" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+
+    <rect x="520" y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#22d3ee"/>
+    <text x="580" y="34" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">Page 4</text>
+    <text x="580" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset 32768</text>
+    <text x="580" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+
+    <rect x="650" y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#22d3ee"/>
+    <text x="710" y="34" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">Page 5</text>
+    <text x="710" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset 40960</text>
+    <text x="710" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+
+    <text x="800" y="58" fill="#64748b" font-size="16" font-weight="700">…</text>
+
+    <rect x="850" y="0" width="120" height="100" rx="6" fill="#0f172a" stroke="#22d3ee"/>
+    <text x="910" y="34" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">Page N</text>
+    <text x="910" y="58" fill="#94a3b8" font-size="11" text-anchor="middle">offset N×8192</text>
+    <text x="910" y="78" fill="#94a3b8" font-size="11" text-anchor="middle">8KB</text>
+  </g>
+
+  <!-- Read formula box -->
+  <g transform="translate(80, 290)">
+    <rect width="1040" height="140" rx="12" fill="#0f172a" stroke="#facc15"/>
+    <text x="20" y="32" fill="#facc15" font-size="13" font-weight="700" letter-spacing="1">READ Page 2</text>
+
+    <text x="20" y="62" fill="#cbd5e1" font-size="13">파일이름: base/16384/24576</text>
+    <text x="20" y="84" fill="#cbd5e1" font-size="13">offset = 2 × 8192 = 16384</text>
+    <text x="20" y="106" fill="#cbd5e1" font-size="13">length = 8192</text>
+    <text x="20" y="128" fill="#94a3b8" font-size="12">→ OS의 pread(fd, buf, 8192, 16384) 한 번으로 페이지 가져옴</text>
+
+    <line x1="380" y1="-150" x2="380" y2="20" stroke="#facc15" stroke-dasharray="4 4" marker-end="url(#arrFA)"/>
+
+    <g transform="translate(560, 50)">
+      <text x="0" y="0" fill="#facc15" font-size="12" font-weight="700">왜 이 그림이 중요한가</text>
+      <text x="0" y="24" fill="#94a3b8" font-size="12">- 페이지 번호만 알면 디스크 위치 = 산수 한 번</text>
+      <text x="0" y="44" fill="#94a3b8" font-size="12">- 인덱스가 가리키는 CTID (page_no, slot)도 같은 산수로 변환</text>
+      <text x="0" y="64" fill="#94a3b8" font-size="12">- 새 INSERT는 마지막 페이지에 append, 꽉 차면 N+1 페이지 생성</text>
+    </g>
+  </g>
+</svg>
