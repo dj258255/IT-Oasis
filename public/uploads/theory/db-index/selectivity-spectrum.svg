@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="460" fill="url(#bgss)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">셀렉티비티 스펙트럼 — 매칭 비율이 plan을 결정한다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">정확한 임계값은 cost 모델 / correlation / 캐시 상태에 따라 달라짐</text>
+
+  <!-- gradient bar -->
+  <g transform="translate(80, 130)">
+    <rect width="1040" height="22" rx="11" fill="url(#spectrum)" opacity="0.9"/>
+    <text x="0" y="-8" fill="#86efac" font-size="12" font-weight="700">매우 낮음 (0.x %)</text>
+    <text x="520" y="-8" fill="#fde68a" font-size="12" font-weight="700" text-anchor="middle">중간 (수 ~ 수십 %)</text>
+    <text x="1040" y="-8" fill="#fda4af" font-size="12" font-weight="700" text-anchor="end">매우 높음 (큰 부분)</text>
+  </g>
+
+  <!-- Plan zones -->
+  <g transform="translate(80, 180)">
+    <rect x="0" y="0" width="320" height="220" rx="14" fill="#1e293b" stroke="#22c55e"/>
+    <text x="20" y="32" fill="#86efac" font-size="14" font-weight="700">INDEX SCAN</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">한두 행, LIMIT 작음</text>
+    <text x="20" y="82" fill="#cbd5e1" font-size="13">correlation 높으면 범위 확장</text>
+    <text x="20" y="106" fill="#94a3b8" font-size="12">+ Heap random IO 누적이 비용</text>
+    <text x="20" y="130" fill="#94a3b8" font-size="12">+ CLUSTER로 인위적 정렬 가능</text>
+    <text x="20" y="154" fill="#94a3b8" font-size="12">+ Index-Only Scan은 힙 안 감</text>
+    <text x="20" y="178" fill="#94a3b8" font-size="12">  (VM all-visible 조건)</text>
+    <text x="20" y="202" fill="#facc15" font-size="12" font-weight="700">EXPLAIN: Index Scan / Index Only</text>
+  </g>
+
+  <g transform="translate(440, 180)">
+    <rect x="0" y="0" width="320" height="220" rx="14" fill="#1e293b" stroke="#facc15"/>
+    <text x="20" y="32" fill="#fde68a" font-size="14" font-weight="700">BITMAP SCAN</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">수 ~ 수십 % 셀렉티비티</text>
+    <text x="20" y="82" fill="#cbd5e1" font-size="13">다중 인덱스 결합 가능</text>
+    <text x="20" y="106" fill="#94a3b8" font-size="12">+ 페이지 비트맵 → 물리적 정렬</text>
+    <text x="20" y="130" fill="#94a3b8" font-size="12">+ BitmapAnd / BitmapOr</text>
+    <text x="20" y="154" fill="#94a3b8" font-size="12">+ work_mem 부족시 lossy 모드</text>
+    <text x="20" y="178" fill="#94a3b8" font-size="12">  → Recheck Cond 비용 증가</text>
+    <text x="20" y="202" fill="#facc15" font-size="12" font-weight="700">EXPLAIN: Bitmap Heap Scan</text>
+  </g>
+
+  <g transform="translate(800, 180)">
+    <rect x="0" y="0" width="320" height="220" rx="14" fill="#1e293b" stroke="#ef4444"/>
+    <text x="20" y="32" fill="#fda4af" font-size="14" font-weight="700">SEQUENTIAL SCAN</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">거의 모든 행이 매칭</text>
+    <text x="20" y="82" fill="#cbd5e1" font-size="13">인덱스 부재 / 작은 테이블</text>
+    <text x="20" y="106" fill="#94a3b8" font-size="12">+ 순차 IO + OS readahead로 효율</text>
+    <text x="20" y="130" fill="#94a3b8" font-size="12">+ Parallel Seq Scan 가능</text>
+    <text x="20" y="154" fill="#94a3b8" font-size="12">  (PARALLEL UNSAFE 함수,</text>
+    <text x="20" y="178" fill="#94a3b8" font-size="12">   SERIALIZABLE, FOR UPDATE 막음)</text>
+    <text x="20" y="202" fill="#facc15" font-size="12" font-weight="700">EXPLAIN: Seq Scan / Parallel</text>
+  </g>
+</svg>

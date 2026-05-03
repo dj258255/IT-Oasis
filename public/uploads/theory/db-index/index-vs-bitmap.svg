@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgib" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrIB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrIBR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f87171"/>
+    </marker>
+    <marker id="arrIBG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="580" fill="url(#bgib)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">Index Scan vs Bitmap Scan — 같은 인덱스, 다른 IO 패턴</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">Index Scan은 random IO 누적, Bitmap은 페이지 단위로 정렬해 random IO 감소</text>
+
+  <!-- Left: Index Scan -->
+  <g transform="translate(60, 110)">
+    <rect width="510" height="430" rx="14" fill="#1e293b" stroke="#1e3a8a" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#1e3a8a"/>
+    <text x="255" y="29" fill="#bfdbfe" font-size="16" font-weight="700" text-anchor="middle">Index Scan — 행마다 힙으로 random jump</text>
+
+    <!-- Index nodes -->
+    <g transform="translate(40, 80)">
+      <text x="0" y="0" fill="#94a3b8" font-size="11" font-weight="700">INDEX (정렬됨)</text>
+      <rect x="0"  y="14" width="50" height="28" rx="4" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="25" y="33" fill="#a5f3fc" font-size="11" text-anchor="middle">k1</text>
+      <rect x="60" y="14" width="50" height="28" rx="4" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="85" y="33" fill="#a5f3fc" font-size="11" text-anchor="middle">k2</text>
+      <rect x="120" y="14" width="50" height="28" rx="4" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="145" y="33" fill="#a5f3fc" font-size="11" text-anchor="middle">k3</text>
+      <rect x="180" y="14" width="50" height="28" rx="4" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="205" y="33" fill="#a5f3fc" font-size="11" text-anchor="middle">k4</text>
+      <rect x="240" y="14" width="50" height="28" rx="4" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="265" y="33" fill="#a5f3fc" font-size="11" text-anchor="middle">k5</text>
+    </g>
+
+    <!-- Heap pages -->
+    <g transform="translate(40, 200)">
+      <text x="0" y="0" fill="#94a3b8" font-size="11" font-weight="700">HEAP PAGES (디스크 순서)</text>
+      <rect x="0" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="30" y="40" fill="#cbd5e1" font-size="11" text-anchor="middle">P0</text>
+      <rect x="70" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="100" y="40" fill="#cbd5e1" font-size="11" text-anchor="middle">P1</text>
+      <rect x="140" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="170" y="40" fill="#cbd5e1" font-size="11" text-anchor="middle">P2</text>
+      <rect x="210" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="240" y="40" fill="#cbd5e1" font-size="11" text-anchor="middle">P3</text>
+      <rect x="280" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="310" y="40" fill="#cbd5e1" font-size="11" text-anchor="middle">P4</text>
+      <rect x="350" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="380" y="40" fill="#cbd5e1" font-size="11" text-anchor="middle">P5</text>
+    </g>
+
+    <!-- Random arrows zigzag -->
+    <g stroke="#f87171" fill="none" stroke-width="1.5">
+      <line x1="65"  y1="135" x2="320" y2="210" marker-end="url(#arrIBR)"/>
+      <line x1="125" y1="135" x2="110" y2="210" marker-end="url(#arrIBR)"/>
+      <line x1="185" y1="135" x2="390" y2="210" marker-end="url(#arrIBR)"/>
+      <line x1="245" y1="135" x2="180" y2="210" marker-end="url(#arrIBR)"/>
+      <line x1="305" y1="135" x2="250" y2="210" marker-end="url(#arrIBR)"/>
+    </g>
+
+    <g transform="translate(40, 320)">
+      <rect width="430" height="86" rx="10" fill="#0f172a" stroke="#7f1d1d" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#fda4af" font-size="13" font-weight="700">비용 패턴</text>
+      <text x="20" y="50" fill="#cbd5e1" font-size="13">매 후보마다 다른 페이지 → random IO 누적</text>
+      <text x="20" y="70" fill="#94a3b8" font-size="12">random_page_cost=4.0 (seq의 4배)</text>
+    </g>
+  </g>
+
+  <!-- Right: Bitmap Scan -->
+  <g transform="translate(630, 110)">
+    <rect width="510" height="430" rx="14" fill="#1e293b" stroke="#854d0e" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#854d0e"/>
+    <text x="255" y="29" fill="#fde68a" font-size="16" font-weight="700" text-anchor="middle">Bitmap Scan — 비트맵으로 정렬해 페이지를 한 번에</text>
+
+    <!-- Bitmap step -->
+    <g transform="translate(40, 80)">
+      <text x="0" y="0" fill="#94a3b8" font-size="11" font-weight="700">1단계 — Bitmap Index Scan (PageTableEntry)</text>
+      <rect x="0"   y="14" width="60" height="28" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="30" y="33" fill="#fde68a" font-size="11" text-anchor="middle">P0</text>
+      <rect x="70"  y="14" width="60" height="28" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="100" y="33" fill="#64748b" font-size="11" text-anchor="middle">P1</text>
+      <rect x="140" y="14" width="60" height="28" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="170" y="33" fill="#fde68a" font-size="11" text-anchor="middle">P2</text>
+      <rect x="210" y="14" width="60" height="28" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="240" y="33" fill="#fde68a" font-size="11" text-anchor="middle">P3</text>
+      <rect x="280" y="14" width="60" height="28" rx="4" fill="#0f172a" stroke="#475569"/>
+      <text x="310" y="33" fill="#64748b" font-size="11" text-anchor="middle">P4</text>
+      <rect x="350" y="14" width="60" height="28" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="380" y="33" fill="#fde68a" font-size="11" text-anchor="middle">P5</text>
+      <text x="0" y="70" fill="#94a3b8" font-size="11">매칭 페이지만 선별 + tuple offset bitmap</text>
+    </g>
+
+    <!-- Heap step -->
+    <g transform="translate(40, 200)">
+      <text x="0" y="0" fill="#94a3b8" font-size="11" font-weight="700">2단계 — Bitmap Heap Scan (물리적 순서로)</text>
+      <rect x="0" y="14" width="60" height="44" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="30" y="40" fill="#fde68a" font-size="11" text-anchor="middle">P0</text>
+      <rect x="70" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569" opacity="0.4"/>
+      <text x="100" y="40" fill="#64748b" font-size="11" text-anchor="middle">P1</text>
+      <rect x="140" y="14" width="60" height="44" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="170" y="40" fill="#fde68a" font-size="11" text-anchor="middle">P2</text>
+      <rect x="210" y="14" width="60" height="44" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="240" y="40" fill="#fde68a" font-size="11" text-anchor="middle">P3</text>
+      <rect x="280" y="14" width="60" height="44" rx="4" fill="#0f172a" stroke="#475569" opacity="0.4"/>
+      <text x="310" y="40" fill="#64748b" font-size="11" text-anchor="middle">P4</text>
+      <rect x="350" y="14" width="60" height="44" rx="4" fill="#854d0e" stroke="#facc15"/>
+      <text x="380" y="40" fill="#fde68a" font-size="11" text-anchor="middle">P5</text>
+    </g>
+
+    <!-- Sequential arrows -->
+    <g stroke="#facc15" fill="none" stroke-width="2">
+      <line x1="60" y1="240" x2="135" y2="240" marker-end="url(#arrIBG)"/>
+      <line x1="200" y1="240" x2="205" y2="240" marker-end="url(#arrIBG)"/>
+      <line x1="270" y1="240" x2="345" y2="240" marker-end="url(#arrIBG)"/>
+    </g>
+
+    <g transform="translate(40, 320)">
+      <rect width="430" height="86" rx="10" fill="#0f172a" stroke="#854d0e" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#fde68a" font-size="13" font-weight="700">비용 패턴</text>
+      <text x="20" y="50" fill="#cbd5e1" font-size="13">페이지 정렬 + 한 번에 fetch → random IO 감소</text>
+      <text x="20" y="70" fill="#94a3b8" font-size="12">work_mem 부족시 lossy → Recheck Cond 비용</text>
+    </g>
+  </g>
+</svg>

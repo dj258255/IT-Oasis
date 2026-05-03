@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgcf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrCF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#bgcf)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">Index Cond vs Filter — access predicate vs filter predicate</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">인덱스로 좁히는가, 가져온 행에 평가하는가</text>
+
+  <g transform="translate(80, 120)">
+    <rect width="1040" height="320" rx="14" fill="#1e293b" stroke="#334155"/>
+
+    <!-- Index Cond box -->
+    <g transform="translate(40, 40)">
+      <rect width="440" height="240" rx="12" fill="#0f172a" stroke="#22c55e"/>
+      <text x="20" y="32" fill="#86efac" font-size="14" font-weight="700">Index Cond (access predicate)</text>
+      <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">Index Cond: (a = 100)</text>
+      <text x="20" y="92" fill="#cbd5e1" font-size="13">인덱스 자체로 후보 범위를 좁힘</text>
+      <text x="20" y="114" fill="#cbd5e1" font-size="13">B-tree에서 트리 탐색에 직접 사용</text>
+      <text x="20" y="138" fill="#94a3b8" font-size="12">- 후보 행 수가 줄어든다 (= 빠름)</text>
+      <text x="20" y="160" fill="#94a3b8" font-size="12">- 인덱스 페이지만 탐색</text>
+      <text x="20" y="182" fill="#94a3b8" font-size="12">- 효율적인 "selective" 조건</text>
+      <text x="20" y="216" fill="#86efac" font-size="12" font-weight="700">→ 인덱스가 활용됨</text>
+    </g>
+
+    <!-- Filter box -->
+    <g transform="translate(560, 40)">
+      <rect width="440" height="240" rx="12" fill="#0f172a" stroke="#fb923c"/>
+      <text x="20" y="32" fill="#fdba74" font-size="14" font-weight="700">Filter (filter predicate)</text>
+      <text x="20" y="58" fill="#cbd5e1" font-family="Menlo, monospace" font-size="13">Filter: (b = 100)</text>
+      <text x="20" y="92" fill="#cbd5e1" font-size="13">힙에서 가져온 행에 대해 평가</text>
+      <text x="20" y="114" fill="#cbd5e1" font-size="13">인덱스로 못 좁힌 조건</text>
+      <text x="20" y="138" fill="#94a3b8" font-size="12">- 모든 후보 행에 평가 필요</text>
+      <text x="20" y="160" fill="#94a3b8" font-size="12">- Rows Removed by Filter: N 발생</text>
+      <text x="20" y="182" fill="#94a3b8" font-size="12">- 후보가 많으면 비효율</text>
+      <text x="20" y="216" fill="#fdba74" font-size="12" font-weight="700">→ 복합 인덱스 신호 (4편)</text>
+    </g>
+  </g>
+</svg>
