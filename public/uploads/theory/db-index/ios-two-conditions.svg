@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgtc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrTC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrTCG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4ade80"/>
+    </marker>
+    <marker id="arrTCR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="580" fill="url(#bgtc)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">IOS의 두 단계 조건 — 한 가지만 깨져도 진짜 IOS 아님</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">plan에 Index Only Scan이 잡혔다고 안심하면 안 된다 — Heap Fetches로 검증</text>
+
+  <g transform="translate(540, 110)">
+    <rect width="120" height="56" rx="10" fill="#0c4a6e" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="60" y="24" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">SELECT 쿼리</text>
+    <text x="60" y="44" fill="#94a3b8" font-size="11" text-anchor="middle">SELECT id, email ...</text>
+  </g>
+
+  <line x1="600" y1="170" x2="600" y2="208" stroke="#94a3b8" marker-end="url(#arrTC)"/>
+
+  <g transform="translate(420, 210)">
+    <rect width="360" height="80" rx="12" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="180" y="28" fill="#a5f3fc" font-size="13" font-weight="700" text-anchor="middle">조건 1 — Covering (plan time)</text>
+    <text x="180" y="54" fill="#cbd5e1" font-size="13" text-anchor="middle">필요한 모든 컬럼이 인덱스 안에 있는가</text>
+    <text x="180" y="72" fill="#94a3b8" font-size="11" text-anchor="middle">INCLUDE 절 / multicolumn / count(*)</text>
+  </g>
+
+  <g transform="translate(80, 330)">
+    <rect width="280" height="100" rx="12" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="140" y="28" fill="#fda4af" font-size="13" font-weight="700" text-anchor="middle">NO → 일반 Index Scan</text>
+    <text x="140" y="54" fill="#cbd5e1" font-size="12" text-anchor="middle">매 행마다 힙 방문 필요</text>
+    <text x="140" y="72" fill="#94a3b8" font-size="11" text-anchor="middle">IOS plan 자체가 안 잡힘</text>
+    <text x="140" y="90" fill="#94a3b8" font-size="11" text-anchor="middle">EXPLAIN: Index Scan</text>
+  </g>
+  <line x1="450" y1="290" x2="280" y2="328" stroke="#f87171" marker-end="url(#arrTCR)"/>
+  <text x="350" y="312" fill="#fda4af" font-size="11" font-weight="700">NO</text>
+
+  <line x1="600" y1="290" x2="600" y2="328" stroke="#4ade80" marker-end="url(#arrTCG)"/>
+  <text x="610" y="312" fill="#86efac" font-size="11" font-weight="700">YES → Index Only Scan plan</text>
+
+  <g transform="translate(420, 330)">
+    <rect width="360" height="80" rx="12" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+    <text x="180" y="28" fill="#86efac" font-size="13" font-weight="700" text-anchor="middle">조건 2 — Visibility (런타임)</text>
+    <text x="180" y="54" fill="#cbd5e1" font-size="13" text-anchor="middle">VM의 all-visible 비트가 set인가</text>
+    <text x="180" y="72" fill="#94a3b8" font-size="11" text-anchor="middle">VACUUM이 채우고, write activity가 깎음</text>
+  </g>
+
+  <g transform="translate(80, 470)">
+    <rect width="320" height="80" rx="12" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="160" y="28" fill="#fda4af" font-size="13" font-weight="700" text-anchor="middle">VM = 0 → Heap Fetch</text>
+    <text x="160" y="50" fill="#cbd5e1" font-size="12" text-anchor="middle">IOS plan으로 잡혔어도 힙 방문</text>
+    <text x="160" y="70" fill="#94a3b8" font-size="11" text-anchor="middle">EXPLAIN: Heap Fetches &gt; 0</text>
+  </g>
+  <line x1="450" y1="410" x2="280" y2="468" stroke="#f87171" marker-end="url(#arrTCR)"/>
+  <text x="350" y="445" fill="#fda4af" font-size="11" font-weight="700">NO (VM stale)</text>
+
+  <g transform="translate(800, 470)">
+    <rect width="320" height="80" rx="12" fill="#1e293b" stroke="#14532d" stroke-width="1.5"/>
+    <text x="160" y="28" fill="#86efac" font-size="13" font-weight="700" text-anchor="middle">VM = 1 → 진짜 IOS</text>
+    <text x="160" y="50" fill="#cbd5e1" font-size="12" text-anchor="middle">힙 방문 0 — 인덱스만으로 답</text>
+    <text x="160" y="70" fill="#facc15" font-size="11" text-anchor="middle">EXPLAIN: Heap Fetches: 0</text>
+  </g>
+  <line x1="750" y1="410" x2="920" y2="468" stroke="#4ade80" marker-end="url(#arrTCG)"/>
+  <text x="830" y="445" fill="#86efac" font-size="11" font-weight="700">YES</text>
+</svg>
