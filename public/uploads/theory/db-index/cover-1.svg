@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgi1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glowi1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <linearGradient id="ixGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="exGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#581c87"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgi1)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.5">
+    <path d="M0 158 H1200 M0 316 H1200 M0 474 H1200"/>
+    <path d="M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+
+  <g transform="translate(80, 80)">
+    <rect width="240" height="36" rx="18" fill="none" stroke="url(#glowi1)" stroke-width="1.5"/>
+    <text x="120" y="24" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle" letter-spacing="2">DATABASE INDEX · 1</text>
+  </g>
+
+  <text x="80" y="200" fill="#f8fafc" font-size="60" font-weight="800">인덱스 기초와</text>
+  <text x="80" y="276" fill="#f8fafc" font-size="60" font-weight="800">EXPLAIN 읽기</text>
+
+  <text x="80" y="332" fill="#94a3b8" font-size="22" font-weight="500">옵티마이저의 결정을 검증하는 능력에서 인덱스 튜닝이 시작된다</text>
+
+  <g transform="translate(80, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#ixGrad)" stroke="#60a5fa" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#93c5fd" font-size="18" font-weight="700" letter-spacing="1">INDEX</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">검색용 보조 자료구조</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">B-tree 기반 · O(N) → O(log N)</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">쓰기 비용 / 저장 공간이 트레이드오프</text>
+  </g>
+
+  <g transform="translate(620, 400)">
+    <rect x="0" y="0" width="500" height="170" rx="16" fill="url(#exGrad)" stroke="#c084fc" stroke-width="1.5"/>
+    <text x="28" y="44" fill="#e9d5ff" font-size="18" font-weight="700" letter-spacing="1">EXPLAIN</text>
+    <text x="28" y="84" fill="#f8fafc" font-size="26" font-weight="700">옵티마이저 결정의 거울</text>
+    <text x="28" y="118" fill="#cbd5e1" font-size="17">cost · rows · width 추정</text>
+    <text x="28" y="144" fill="#cbd5e1" font-size="17">ANALYZE → 실측 + Heap Fetches + Buffers</text>
+  </g>
+</svg>

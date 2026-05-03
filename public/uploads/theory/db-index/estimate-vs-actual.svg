@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgev" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#bgev)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">추정 rows vs 실측 actual rows — 격차가 곧 진단 신호</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">EXPLAIN ANALYZE의 진짜 가치는 두 숫자의 비교</text>
+
+  <!-- Left: healthy -->
+  <g transform="translate(60, 120)">
+    <rect width="510" height="320" rx="14" fill="#1e293b" stroke="#14532d" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#14532d"/>
+    <text x="255" y="29" fill="#bbf7d0" font-size="16" font-weight="700" text-anchor="middle">건강한 plan — 격차 거의 없음</text>
+
+    <g transform="translate(30, 80)">
+      <text x="0" y="0" fill="#94a3b8" font-size="12" font-weight="700">EXPLAIN ANALYZE 출력</text>
+      <g font-family="Menlo, monospace" font-size="13">
+        <text x="0" y="30" fill="#facc15">Index Scan using users_pkey</text>
+        <text x="0" y="54" fill="#fb923c">  cost=0.29..8.45</text>
+        <text x="200" y="54" fill="#a5f3fc">rows=99</text>
+        <text x="0" y="78" fill="#86efac">  actual time=0.012..0.045</text>
+        <text x="0" y="102" fill="#86efac">  actual rows=98</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 220)">
+      <text x="0" y="0" fill="#86efac" font-size="13" font-weight="700">진단</text>
+      <text x="0" y="24" fill="#cbd5e1" font-size="13">추정 99 vs 실측 98 거의 일치</text>
+      <text x="0" y="44" fill="#cbd5e1" font-size="13">→ 통계 정확, plan 적절</text>
+      <text x="0" y="64" fill="#94a3b8" font-size="12">→ 인덱스가 의도대로 동작 중</text>
+    </g>
+  </g>
+
+  <!-- Right: broken -->
+  <g transform="translate(630, 120)">
+    <rect width="510" height="320" rx="14" fill="#1e293b" stroke="#7f1d1d" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#7f1d1d"/>
+    <text x="255" y="29" fill="#fecaca" font-size="16" font-weight="700" text-anchor="middle">통계가 깨진 plan — 5000배 과소추정</text>
+
+    <g transform="translate(30, 80)">
+      <text x="0" y="0" fill="#94a3b8" font-size="12" font-weight="700">EXPLAIN ANALYZE 출력</text>
+      <g font-family="Menlo, monospace" font-size="13">
+        <text x="0" y="30" fill="#facc15">Nested Loop</text>
+        <text x="0" y="54" fill="#fb923c">  cost=8.45</text>
+        <text x="200" y="54" fill="#a5f3fc">rows=10</text>
+        <text x="0" y="78" fill="#fda4af">  actual time=234.5..</text>
+        <text x="0" y="102" fill="#fda4af">  actual rows=50000</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 220)">
+      <text x="0" y="0" fill="#fda4af" font-size="13" font-weight="700">진단</text>
+      <text x="0" y="24" fill="#cbd5e1" font-size="13">추정 10 vs 실측 50,000 (5000배)</text>
+      <text x="0" y="44" fill="#cbd5e1" font-size="13">→ 통계가 outdated 또는 분포 가정 오류</text>
+      <text x="0" y="64" fill="#cbd5e1" font-size="13">→ 처방: ANALYZE &lt;table&gt; 으로 통계 갱신</text>
+      <text x="0" y="84" fill="#94a3b8" font-size="12">컬럼 상관관계면 CREATE STATISTICS 검토</text>
+    </g>
+  </g>
+</svg>
