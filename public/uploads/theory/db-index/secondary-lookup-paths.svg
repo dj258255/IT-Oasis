@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgsl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrSL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="580" fill="url(#bgsl)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">Secondary Index 조회 — 2단계는 같지만 본질이 다르다</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">SELECT name FROM users WHERE email = 'x'</text>
+
+  <g transform="translate(60, 110)">
+    <rect width="510" height="440" rx="14" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#0c4a6e"/>
+    <text x="255" y="29" fill="#a5f3fc" font-size="16" font-weight="700" text-anchor="middle">PostgreSQL (Heap)</text>
+
+    <g transform="translate(30, 80)">
+      <rect width="450" height="60" rx="8" fill="#0f172a" stroke="#22d3ee"/>
+      <text x="20" y="26" fill="#a5f3fc" font-size="13" font-weight="700">1. email 인덱스 검색</text>
+      <text x="20" y="46" fill="#94a3b8" font-size="12">→ CTID (page=42, offset=3) 획득</text>
+    </g>
+
+    <line x1="255" y1="142" x2="255" y2="178" stroke="#facc15" marker-end="url(#arrSL)"/>
+
+    <g transform="translate(30, 180)">
+      <rect width="450" height="60" rx="8" fill="#0f172a" stroke="#22d3ee"/>
+      <text x="20" y="26" fill="#a5f3fc" font-size="13" font-weight="700">2. heap의 page 42, offset 3 직접 fetch</text>
+      <text x="20" y="46" fill="#94a3b8" font-size="12">→ name 컬럼 읽기</text>
+    </g>
+
+    <g transform="translate(30, 280)">
+      <rect width="450" height="130" rx="10" fill="#0f172a" stroke="#22d3ee" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#a5f3fc" font-size="13" font-weight="700">비용 구조</text>
+      <text x="20" y="50" fill="#cbd5e1" font-size="13">- heap fetch는 random IO 가능성</text>
+      <text x="20" y="70" fill="#cbd5e1" font-size="13">- VM all-visible이면 IOS로 회피 가능 (3편)</text>
+      <text x="20" y="90" fill="#cbd5e1" font-size="13">- PK 크기 영향: CTID 6B 고정</text>
+      <text x="20" y="110" fill="#cbd5e1" font-size="13">- secondary에 PK 복사 안 됨</text>
+    </g>
+  </g>
+
+  <g transform="translate(630, 110)">
+    <rect width="510" height="440" rx="14" fill="#1e293b" stroke="#fb923c" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#7c2d12"/>
+    <text x="255" y="29" fill="#fdba74" font-size="16" font-weight="700" text-anchor="middle">MySQL InnoDB (Clustered)</text>
+
+    <g transform="translate(30, 80)">
+      <rect width="450" height="60" rx="8" fill="#0f172a" stroke="#fb923c"/>
+      <text x="20" y="26" fill="#fdba74" font-size="13" font-weight="700">1. email 인덱스 검색</text>
+      <text x="20" y="46" fill="#94a3b8" font-size="12">→ PK 값 (예: id=100) 획득</text>
+    </g>
+
+    <line x1="255" y1="142" x2="255" y2="178" stroke="#facc15" marker-end="url(#arrSL)"/>
+
+    <g transform="translate(30, 180)">
+      <rect width="450" height="60" rx="8" fill="#0f172a" stroke="#fb923c"/>
+      <text x="20" y="26" fill="#fdba74" font-size="13" font-weight="700">2. PK B-tree에서 100 검색</text>
+      <text x="20" y="46" fill="#94a3b8" font-size="12">→ leaf에서 모든 컬럼 획득</text>
+    </g>
+
+    <g transform="translate(30, 280)">
+      <rect width="450" height="130" rx="10" fill="#0f172a" stroke="#fb923c" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#fdba74" font-size="13" font-weight="700">비용 구조</text>
+      <text x="20" y="50" fill="#cbd5e1" font-size="13">- B-tree 탐색 (cache locality 일반적으로 좋음)</text>
+      <text x="20" y="70" fill="#cbd5e1" font-size="13">- secondary는 (col, PK) — covering 자연 발생</text>
+      <text x="20" y="90" fill="#cbd5e1" font-size="13">- PK 크기가 모든 secondary에 복제 (결정적)</text>
+      <text x="20" y="110" fill="#cbd5e1" font-size="13">- UUID PK = 안티패턴, surrogate PK 정석</text>
+    </g>
+  </g>
+</svg>

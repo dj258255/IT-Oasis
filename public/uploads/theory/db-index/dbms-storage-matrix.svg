@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgdm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#bgdm)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">DBMS별 저장 구조 한눈에</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">기본값과 선택 가능 여부, secondary index 포인터의 본질이 달라진다</text>
+
+  <g transform="translate(60, 120)">
+    <rect width="1080" height="320" rx="14" fill="#1e293b" stroke="#334155"/>
+
+    <g transform="translate(30, 30)" font-size="13">
+      <text x="0"   y="0" fill="#facc15" font-weight="700">DBMS</text>
+      <text x="220" y="0" fill="#facc15" font-weight="700">기본 구조</text>
+      <text x="440" y="0" fill="#facc15" font-weight="700">다른 옵션</text>
+      <text x="640" y="0" fill="#facc15" font-weight="700">PK가 정렬 결정</text>
+      <text x="850" y="0" fill="#facc15" font-weight="700">Secondary 포인터</text>
+    </g>
+
+    <g transform="translate(30, 56)" font-size="13">
+      <rect x="-10" y="-2" width="1020" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#a5f3fc" font-weight="700">PostgreSQL</text>
+      <text x="220" y="22" fill="#cbd5e1">Heap (변경 불가)</text>
+      <text x="440" y="22" fill="#94a3b8">없음</text>
+      <text x="640" y="22" fill="#fda4af">아니오 (CLUSTER 일시적)</text>
+      <text x="850" y="22" fill="#cbd5e1">CTID (heap 직접)</text>
+    </g>
+
+    <g transform="translate(30, 92)" font-size="13">
+      <text x="0"   y="22" fill="#fdba74" font-weight="700">MySQL InnoDB</text>
+      <text x="220" y="22" fill="#cbd5e1">Clustered (강제)</text>
+      <text x="440" y="22" fill="#94a3b8">없음</text>
+      <text x="640" y="22" fill="#86efac">예</text>
+      <text x="850" y="22" fill="#cbd5e1">PK 값</text>
+    </g>
+
+    <g transform="translate(30, 128)" font-size="13">
+      <rect x="-10" y="-2" width="1020" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#94a3b8" font-weight="700">MySQL MyISAM</text>
+      <text x="220" y="22" fill="#cbd5e1">Heap</text>
+      <text x="440" y="22" fill="#94a3b8">없음</text>
+      <text x="640" y="22" fill="#fda4af">아니오</text>
+      <text x="850" y="22" fill="#cbd5e1">RID</text>
+    </g>
+
+    <g transform="translate(30, 164)" font-size="13">
+      <text x="0"   y="22" fill="#c4b5fd" font-weight="700">SQL Server</text>
+      <text x="220" y="22" fill="#cbd5e1">Clustered (PK 자동)</text>
+      <text x="440" y="22" fill="#94a3b8">Heap (PK 없거나 명시)</text>
+      <text x="640" y="22" fill="#fde68a">옵션</text>
+      <text x="850" y="22" fill="#cbd5e1">PK 또는 RID(8B)</text>
+    </g>
+
+    <g transform="translate(30, 200)" font-size="13">
+      <rect x="-10" y="-2" width="1020" height="36" fill="#0f172a"/>
+      <text x="0"   y="22" fill="#fcd34d" font-weight="700">Oracle</text>
+      <text x="220" y="22" fill="#cbd5e1">Heap (기본)</text>
+      <text x="440" y="22" fill="#94a3b8">IOT (ORGANIZATION INDEX)</text>
+      <text x="640" y="22" fill="#fde68a">heap=No / IOT=Yes</text>
+      <text x="850" y="22" fill="#cbd5e1">ROWID 또는 PK</text>
+    </g>
+
+    <g transform="translate(30, 250)">
+      <rect width="1020" height="60" rx="10" fill="#0f172a" stroke="#facc15"/>
+      <text x="20" y="26" fill="#fde68a" font-size="13" font-weight="700">결정적 차이</text>
+      <text x="20" y="48" fill="#cbd5e1" font-size="13">PostgreSQL은 선택권 없음 + 모든 인덱스 동등 / InnoDB는 PK 크기가 모든 secondary에 복제 / SQL Server는 RID Lookup vs Key Lookup 명시 표시</text>
+    </g>
+  </g>
+</svg>

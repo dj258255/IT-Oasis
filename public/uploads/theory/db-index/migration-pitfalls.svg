@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgmp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="540" fill="url(#bgmp)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">DBMS 이전 시 흔한 함정</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">같은 SQL이라도 저장 구조가 달라 비용 구조가 정반대로 갈 수 있다</text>
+
+  <g transform="translate(60, 110)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">함정 1 — UUID PK 그대로 들고 옴</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">MySQL InnoDB → PostgreSQL 이전</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">InnoDB에서는 안티패턴이지만 PG에서는</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">heap 구조라 부담이 훨씬 적음</text>
+    <text x="20" y="142" fill="#86efac" font-size="12">절충안: UUIDv7 (시간 정렬)</text>
+    <text x="20" y="160" fill="#86efac" font-size="12">→ cache locality 일부 회복</text>
+  </g>
+
+  <g transform="translate(620, 110)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">함정 2 — secondary index 전략 그대로</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">PostgreSQL → MySQL InnoDB 이전</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">PG에서 자유롭게 만든 많은 secondary</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">→ InnoDB에서는 PK가 모두 복제</text>
+    <text x="20" y="142" fill="#86efac" font-size="12">처방: PK 크기를 작게 + secondary 수</text>
+    <text x="20" y="160" fill="#86efac" font-size="12">절제, covering이 자연 발생함을 활용</text>
+  </g>
+
+  <g transform="translate(60, 320)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">함정 3 — clustered index 변경 비용</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">SQL Server</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">clustered 변경 시 모든 nonclustered</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">index 재구축 (Microsoft 공식)</text>
+    <text x="20" y="142" fill="#86efac" font-size="12">처방: clustered 컬럼 선택은 초기에</text>
+    <text x="20" y="160" fill="#86efac" font-size="12">신중히, 큰 테이블은 변경 비용 산정 필수</text>
+  </g>
+
+  <g transform="translate(620, 320)">
+    <rect width="540" height="180" rx="12" fill="#1e293b" stroke="#7f1d1d"/>
+    <text x="20" y="32" fill="#fecaca" font-size="14" font-weight="700">함정 4 — Plan 모양만 보고 비교</text>
+    <text x="20" y="58" fill="#cbd5e1" font-size="13">DBMS 간 EXPLAIN 비교</text>
+    <text x="20" y="92" fill="#94a3b8" font-size="12">"Index Scan + Heap Fetch"가 같아 보여도</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="12">PG의 heap fetch와 InnoDB clustered lookup은</text>
+    <text x="20" y="132" fill="#94a3b8" font-size="12">비용 구조가 다름</text>
+    <text x="20" y="160" fill="#86efac" font-size="12">처방: DBMS별 plan 노드의 의미를 정확히</text>
+  </g>
+</svg>
