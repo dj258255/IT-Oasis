@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="-apple-system, 'Pretendard', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bghi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <marker id="arrHI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#facc15"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="580" fill="url(#bghi)"/>
+
+  <text x="600" y="50" fill="#f8fafc" font-size="24" font-weight="700" text-anchor="middle">Heap-Organized vs Index-Organized — 두 세계관</text>
+  <text x="600" y="78" fill="#94a3b8" font-size="14" text-anchor="middle">데이터와 인덱스가 분리됐는가, PK 인덱스 자체가 테이블인가</text>
+
+  <g transform="translate(60, 110)">
+    <rect width="510" height="440" rx="14" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#0c4a6e"/>
+    <text x="255" y="29" fill="#a5f3fc" font-size="16" font-weight="700" text-anchor="middle">Heap-Organized</text>
+
+    <g transform="translate(40, 80)">
+      <text x="0" y="0" fill="#facc15" font-size="12" font-weight="700">Heap pages (정렬 없음)</text>
+      <rect x="0" y="14" width="430" height="100" rx="6" fill="#0f172a" stroke="#475569"/>
+      <g font-family="Menlo, monospace" font-size="12" fill="#cbd5e1">
+        <text x="20" y="40">row A    row C    row B</text>
+        <text x="20" y="62">row D    row F    row E</text>
+        <text x="20" y="84">...</text>
+      </g>
+    </g>
+
+    <g transform="translate(40, 220)">
+      <rect width="180" height="60" rx="6" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="90" y="24" fill="#a5f3fc" font-size="12" font-weight="700" text-anchor="middle">Index on id</text>
+      <text x="90" y="44" fill="#94a3b8" font-size="11" text-anchor="middle">leaf: (id, CTID)</text>
+
+      <rect x="240" width="180" height="60" rx="6" fill="#0c4a6e" stroke="#22d3ee"/>
+      <text x="330" y="24" fill="#a5f3fc" font-size="12" font-weight="700" text-anchor="middle">Index on email</text>
+      <text x="330" y="44" fill="#94a3b8" font-size="11" text-anchor="middle">leaf: (email, CTID)</text>
+
+      <line x1="90" y1="60" x2="200" y2="-90" stroke="#facc15" stroke-dasharray="3 3" marker-end="url(#arrHI)"/>
+      <line x1="330" y1="60" x2="240" y2="-80" stroke="#facc15" stroke-dasharray="3 3" marker-end="url(#arrHI)"/>
+    </g>
+
+    <g transform="translate(40, 320)">
+      <rect width="430" height="100" rx="10" fill="#0f172a" stroke="#22d3ee" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#a5f3fc" font-size="13" font-weight="700">특징</text>
+      <text x="20" y="50" fill="#cbd5e1" font-size="13">- 모든 인덱스가 동등한 secondary</text>
+      <text x="20" y="70" fill="#cbd5e1" font-size="13">- INSERT는 마지막 페이지 append (빠름)</text>
+      <text x="20" y="90" fill="#cbd5e1" font-size="13">- PK 조회도 인덱스 + heap 2단계</text>
+    </g>
+  </g>
+
+  <g transform="translate(630, 110)">
+    <rect width="510" height="440" rx="14" fill="#1e293b" stroke="#fb923c" stroke-width="1.5"/>
+    <rect x="0" y="0" width="510" height="44" rx="14" fill="#7c2d12"/>
+    <text x="255" y="29" fill="#fdba74" font-size="16" font-weight="700" text-anchor="middle">Index-Organized (Clustered)</text>
+
+    <g transform="translate(40, 80)">
+      <text x="0" y="0" fill="#facc15" font-size="12" font-weight="700">PK B-tree (정렬됨, leaf에 데이터)</text>
+
+      <rect x="170" y="14" width="100" height="32" rx="6" fill="#7c2d12" stroke="#fb923c"/>
+      <text x="220" y="34" fill="#fdba74" font-size="12" text-anchor="middle">Root</text>
+
+      <rect x="60"  y="70" width="100" height="32" rx="6" fill="#7c2d12" stroke="#fb923c"/>
+      <text x="110" y="90" fill="#fdba74" font-size="12" text-anchor="middle">Internal</text>
+      <rect x="280" y="70" width="100" height="32" rx="6" fill="#7c2d12" stroke="#fb923c"/>
+      <text x="330" y="90" fill="#fdba74" font-size="12" text-anchor="middle">Internal</text>
+
+      <line x1="200" y1="46" x2="120" y2="70" stroke="#fb923c"/>
+      <line x1="240" y1="46" x2="320" y2="70" stroke="#fb923c"/>
+
+      <rect x="0"   y="120" width="100" height="44" rx="6" fill="#0f172a" stroke="#fb923c"/>
+      <text x="50"  y="138" fill="#fdba74" font-size="11" text-anchor="middle">Leaf</text>
+      <text x="50"  y="156" fill="#94a3b8" font-size="10" text-anchor="middle">PK + 모든 컬럼</text>
+
+      <rect x="110" y="120" width="100" height="44" rx="6" fill="#0f172a" stroke="#fb923c"/>
+      <text x="160" y="138" fill="#fdba74" font-size="11" text-anchor="middle">Leaf</text>
+      <text x="160" y="156" fill="#94a3b8" font-size="10" text-anchor="middle">PK + 모든 컬럼</text>
+
+      <rect x="220" y="120" width="100" height="44" rx="6" fill="#0f172a" stroke="#fb923c"/>
+      <text x="270" y="138" fill="#fdba74" font-size="11" text-anchor="middle">Leaf</text>
+      <text x="270" y="156" fill="#94a3b8" font-size="10" text-anchor="middle">PK + 모든 컬럼</text>
+
+      <rect x="330" y="120" width="100" height="44" rx="6" fill="#0f172a" stroke="#fb923c"/>
+      <text x="380" y="138" fill="#fdba74" font-size="11" text-anchor="middle">Leaf</text>
+      <text x="380" y="156" fill="#94a3b8" font-size="10" text-anchor="middle">PK + 모든 컬럼</text>
+    </g>
+
+    <g transform="translate(40, 320)">
+      <rect width="430" height="100" rx="10" fill="#0f172a" stroke="#fb923c" stroke-dasharray="4 4"/>
+      <text x="20" y="28" fill="#fdba74" font-size="13" font-weight="700">특징</text>
+      <text x="20" y="50" fill="#cbd5e1" font-size="13">- PK 조회 한 단계 (B-tree → leaf 데이터)</text>
+      <text x="20" y="70" fill="#cbd5e1" font-size="13">- PK 순서로 물리 정렬 유지</text>
+      <text x="20" y="90" fill="#cbd5e1" font-size="13">- secondary index는 PK 값을 포인터로</text>
+    </g>
+  </g>
+</svg>
