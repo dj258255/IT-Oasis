@@ -115,6 +115,8 @@ DB는 보통 매 커밋마다:
 
 fsync는 비싸요. 대략적으로 HDD에서는 한 자릿수~수십 ms (7200rpm 기준 한 회전이 8ms, 회전 지연이 큰 비중), SATA/NVMe SSD에서는 수십 μs~수 ms 수준 (장치·커널·전원 보호 여부에 따라 편차 큼). 매 커밋마다 fsync를 호출하면 처리량이 떨어지는 건 분명합니다 — 특히 짧은 트랜잭션이 많은 OLTP 워크로드에서 결정적인 병목이 돼요.
 
+한 가지 짚어두면 — fsync 비용의 본질은 *"데이터를 더 많이 쓴다"* 가 아니라 **동기 barrier로 작동한다**는 점이에요. `write()`는 OS 페이지 캐시까지만 복사하고 즉시 리턴하므로 커널이 여러 쓰기를 큰 sequential I/O로 묶을 수 있지만, 매 커밋 fsync는 디스크 ack까지 애플리케이션이 블로킹돼서 그 묶음 효과가 깨져요. 디스크에 들어가는 *총 바이트*는 비슷해도 **I/O 명령 횟수와 동기 대기 시간**이 자릿수로 차이 납니다 — 그래서 단일 커넥션 OLTP 처리량은 대략 1/fsync_latency에 묶이고, 이걸 살리는 메커니즘이 다음에 다룰 group commit이에요.
+
 이래서 DB들이 fsync를 묶어서(group commit) 처리하거나, 아예 끄거나(asynchronous commit), 하드웨어 도움(NVRAM, 배터리 백업 RAID 컨트롤러)을 받는 등 여러 우회를 써요.
 
 ### 진실은 더 어둡다 — 디스크도 거짓말을 한다
@@ -381,6 +383,8 @@ This is the standard ACID-D implementation pattern.
 ### The cost of fsync
 
 fsync is expensive. Roughly, single-digit to tens of ms on HDD (a 7200rpm rotation is 8ms, with rotational latency dominating); tens of μs to a few ms on SATA/NVMe SSD (with significant variance based on device, kernel, and power-loss protection). Calling fsync on every commit clearly tanks throughput — it is the decisive bottleneck for OLTP workloads with many short transactions.
+
+To clarify — the essence of fsync's cost is not *"writing more data"* but acting as a **synchronous barrier**. `write()` copies into the OS page cache and returns immediately, so the kernel can batch many writes into one large sequential I/O. But fsync on every commit blocks the application until the disk acknowledges, breaking that batching. The same total bytes hit disk, but the **I/O command count and synchronous wait time** differ by orders of magnitude — so single-connection OLTP throughput is bounded roughly by 1/fsync_latency, which is what the next section's group commit recovers.
 
 That is why DBs use detours like batching fsync (group commit), turning it off (asynchronous commit), or relying on hardware help (NVRAM, battery-backed RAID controllers).
 
