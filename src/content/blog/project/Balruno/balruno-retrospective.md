@@ -1,7 +1,7 @@
 ---
 title: 'Balruno MVP 후기'
 titleEn: 'Balruno MVP Retrospective'
-description: 게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에 정리합니다. PostgreSQL JSONB 채택(MySQL JSON 240ms vs PG 65ms 직접 측정), 시트 셀 + 시트 트리 + 문서 트리 3 영역 통합 동기화 알고리즘(Baserow + Linear + Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1 백업으로 매니지드 대비 연 $1,860 절감, OAuth-only + 자체 발급 JWT(Auth0 대비 연 $2,880 절감), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트 모니터링(Datadog 대비 연 $720 절감), nginx blue/green 무중단 배포(첫 cutover 21초 → 두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지 포함합니다.
+description: 게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에 정리합니다. PostgreSQL JSONB 채택(MySQL JSON 240ms vs PG 65ms 직접 측정), 시트 셀 + 시트 트리 + 문서 트리 3 영역 통합 동기화 알고리즘(Baserow + Linear + Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1 백업으로 매니지드 대비 예상 회피 비용 연 약 $1,860, OAuth-only + 자체 발급 JWT(Auth0 대비 연 약 $2,880), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트 모니터링(Datadog 대비 연 약 $720), nginx blue/green 무중단 배포(첫 cutover 21초 → 두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지 포함합니다.
 descriptionEn: A retrospective of Balruno — a game-balancing spreadsheet + document workspace built solo. Covers PostgreSQL JSONB adoption (MySQL JSON 240ms vs PG 65ms, measured directly), unified 3-region sync (sheet cells + sheet tree + doc tree) combining Baserow + Linear + Outline patterns, OCI Always Free 4-machine self-host with Ansible ($1,860/yr saved vs managed), OAuth-only + self-issued JWT ($2,880/yr saved vs Auth0), self-hosted observability with Grafana/Loki/Alloy/Prometheus/InfluxDB ($720/yr saved vs Datadog), nginx blue/green zero-downtime deploy (21s first cutover, 0s thereafter), and the server-canonical migration that retired ~80K lines of local-mode code.
 date: 2026-05-10T00:00:00.000Z
 tags:
@@ -72,9 +72,9 @@ Balruno는 **게임 밸런싱 도메인에 특화된 협업 스프레드시트 +
 
 - 처리 규모: 사용자 100명까지 단일 인스턴스로 충분.
 - 응답 시간 목표: 시트 통째 GET p95 500ms 이하.
-- 데이터 진실원: 서버 PostgreSQL이 정답. 클라 IndexedDB는 즉각 반응을 위한 캐시(Linear / Notion / AFFiNE Cloud의 최신 모델).
+- 데이터 진실원: 서버 PostgreSQL을 단일 진실 원천으로, 클라 IndexedDB는 즉각 반응을 위한 캐시(Linear / Notion 류 협업 제품에서 흔히 보이는 *서버 진실원 + 로컬 캐시* 모델 참고).
 - 비용: 매니지드 0원, 무료 인프라만. 사용자/부하 트리거가 떨어지면 그때부터 캐시·읽기 복제본·로드밸런서·지역 백업 등을 *단계적으로만* 도입.
-- 일관성: 시트 셀과 트리는 *마지막 쓰기 우선(LWW) + 버전 비교*, 문서 본문은 yjs CRDT 자동 머지.
+- 일관성: 시트 셀과 트리는 *baseVersion 기반 optimistic concurrency control*(서버에 먼저 도착해 버전을 올린 op만 승리, 늦은 op는 conflict로 거절), 문서 본문은 yjs CRDT 자동 머지.
 
 ### 설계 전에 분기를 미리 그어둔 곳
 
@@ -98,11 +98,11 @@ Balruno는 **게임 밸런싱 도메인에 특화된 협업 스프레드시트 +
 
 질문은 *기능이 가장 많은 DB가 무엇인가*가 아니라 *시트라는 자연 단위를 가장 단순하게 받아낼 수 있는 저장 모델이 무엇인가*였어요. 셀 1개당 row 1개로 풀어버리면 시트 1개(1,000 × 30)가 30,000 row가 되고 시트 GET 한 번이 다단계 JOIN이나 N+1 위험으로 풀려요. 동적 컬럼 16종 각각의 검증과 인덱싱을 정규 테이블에서 받는 비용도 컸어요.
 
-### 왜 MySQL JSON으로는 부족한가
+### MySQL JSON 의 한계 (이 도메인 기준)
 
-MySQL 5.7+의 JSON 타입은 시트 도메인에 대해 두 가지 구조적 한계를 갖고 있었어요.
+MySQL JSON 자체가 못 쓸 만큼 부실하다는 얘기는 아니에요. 다만 *동적 컬럼이 16종이고 자주 추가되는 우리 도메인*에서는 운영 부담이 컸어요.
 
-첫째, JSON을 *텍스트*로 저장해요(8.0에서 binary가 도입됐지만 인덱싱 측면에서는 여전히 한계예요). 매 쿼리마다 JSON 파싱 비용이 들어가고, GIN 같은 네이티브 JSON 인덱스가 없어서 generated column으로 우회해야 해요.
+첫째, MySQL 8 의 JSON 컬럼은 내부적으로는 binary 형태로 저장되긴 하지만, PostgreSQL 의 GIN 같은 *컬럼 자체에 대한 범용 인덱스*가 없어서 자주 조회하는 경로마다 generated column 또는 multi-valued index 를 만들어 인덱싱하는 방식이 필요해요.
 
 ```sql
 ALTER TABLE projects ADD COLUMN sheet_name VARCHAR(255)
@@ -110,9 +110,9 @@ ALTER TABLE projects ADD COLUMN sheet_name VARCHAR(255)
 CREATE INDEX idx_projects_sheet_name ON projects(sheet_name);
 ```
 
-컬럼 16종 각각에 인덱스가 필요하면 16개 generated column이 따라붙고, 컬럼 타입을 한 종류 추가할 때마다 마이그레이션이 폭발하는 구조였어요.
+조회 경로가 16 종 컬럼 × 검색 패턴별로 늘어나면 generated column 도 같이 늘어나서, 컬럼 타입 한 종류를 추가할 때마다 마이그레이션 부담이 비례해서 커지는 구조였어요.
 
-둘째, 부분 patch 연산이 약했어요. 셀 이벤트 WebSocket이 들어올 때마다 시트 통째를 다시 쓰는 게 아니라 `data->'sheets'->0->'rows'->42->'cells'->'col_id'` 한 점만 patch해야 효율적인데, MySQL `JSON_SET`도 가능은 했지만 인덱스/통계 갱신 차원에서 PostgreSQL의 `jsonb_set` + GIN 조합이 훨씬 자연스러웠어요.
+둘째, 부분 patch 표현이 약했어요. MySQL `JSON_SET / REPLACE / REMOVE` 도 partial update 최적화가 들어가 있긴 하지만, 셀 이벤트 WebSocket이 들어올 때마다 `data->'sheets'->0->'rows'->42->'cells'->'col_id'` 한 점만 *애플리케이션 코드에서 깔끔하게* 표현하기에는 PostgreSQL `jsonb_set` 쪽이 더 자연스러웠어요. 물리적으로는 어느 쪽이든 row update + WAL 비용은 그대로 따라가지만, 시트 전체를 클라이언트에서 재직렬화해 통째로 덮어쓰는 방식보다 코드와 충돌 처리 모델이 훨씬 단순해진다는 차이가 있었어요.
 
 ### 후보 7개를 직접 측정해봤어요
 
@@ -126,19 +126,21 @@ CREATE INDEX idx_projects_sheet_name ON projects(sheet_name);
 | **PostgreSQL 18 + JSONB** | **22ms** | **65ms** | 110ms | **GIN(네이티브)** |
 | MongoDB 7 | 35ms | 95ms | 140ms | 자동 인덱스 |
 
-시트 내부 키 조회(`data->>'name' = ?`):
+시트 내부 containment 조회 (`WHERE data @> '{"name": "..."}'`):
 
 | DB | p95 | 비고 |
 |----|-----|------|
-| MySQL 8 | 320ms | generated column 우회 |
-| **PostgreSQL 18 JSONB** | **45ms** | GIN 직접 |
+| MySQL 8 | 320ms | name 경로 generated column + B-Tree 우회 |
+| **PostgreSQL 18 JSONB** | **45ms** | `jsonb_path_ops` GIN containment 매칭 |
 | MongoDB | 60ms | path 인덱스 |
 
-PostgreSQL JSONB가 시트 GET에서 MySQL 대비 약 3.7배 빨랐고, 그 차이는 (1) JSONB의 binary 저장(파싱 0), (2) 한 GIN 인덱스로 *전체 JSON 트리* 인덱싱, (3) `jsonb_set(data, path, value)`로 셀 단위 부분 patch가 가능하다는 점에서 나왔어요.
+> 경로별 equality(`data->>'name' = ?`) 가 아니라 *containment* 쿼리로 잡은 건 의도적인 선택이었어요. equality는 보통 expression B-tree 인덱스가 자연스럽고, GIN 의 강점은 containment / jsonpath 쪽이라 워크로드를 거기에 맞춰 설계했어요. 양쪽 모두 별도 인덱스를 운영해야 했다면 그건 또 다른 비용이지만, 우리 쿼리 패턴은 containment 가 압도적으로 많았어요.
 
-후보 7개 평가도 같이 해봤어요. MySQL 정규화는 시트 GET이 N+1로 풀려서 거부, MongoDB 단독은 결제/인증이 별도 RDBMS를 또 요구해서 듀얼 스택이 되는 점에서 거부, MySQL + Mongo 듀얼은 운영 표면적이 2배(백업/모니터링/마이그레이션 도구 모두 ×2) + 크로스 DB 트랜잭션 부재(회원 탈퇴 시 Saga / 2PC 필요) + 비용 약 4배라서 1인 운영에서는 안티패턴이었어요. SQLite 서버는 동시 쓰기가 약하고, yjs 네이티브 저장(y-redis)은 결제·인증 같은 비-시트 데이터를 별도 DB에 또 둬야 했어요.
+PostgreSQL JSONB가 시트 GET에서 MySQL 대비 약 3.7배 빨랐고, 그 차이는 (1) JSONB 의 binary + 사전 파싱 트리 저장으로 매 쿼리 파싱이 거의 없다는 점, (2) 우리 워크로드에 잘 맞는 containment / jsonpath 조회를 `jsonb_path_ops` GIN 이 빠르게 처리한다는 점, (3) `jsonb_set(data, path, value)` 로 *애플리케이션 레벨에서* 셀 경로 단위 patch 를 깔끔하게 표현할 수 있어 코드와 충돌 처리 모델이 단순해진다는 점에서 나왔어요. 다만 (3) 은 SQL 코드 모양 얘기지 물리 저장에서 row update + WAL 이 사라진다는 의미는 아니에요.
 
-같은 도메인의 다른 제품들이 어떻게 가는지도 같이 봤어요. Notion은 [PostgreSQL을 32개 데이터베이스 샤드로 운영](https://www.notion.com/blog/the-great-re-shard)하면서 블록 모델을 받아내고 있고, Linear는 PostgreSQL + 정형 스키마, Outline은 `collection.documentStructure`라는 JSONB 트리를 활용하고, Supabase는 Postgres 위 Realtime SaaS를 돌려요 — *블록/문서형 SaaS = PostgreSQL*이 사실상 표준이 되어 있다는 인상을 받았어요.
+후보 7개 평가도 같이 해봤어요. MySQL 정규화는 시트 GET이 N+1로 풀려서 거부, MongoDB 단독은 결제/인증이 별도 RDBMS를 또 요구해서 듀얼 스택이 되는 점에서 거부, MySQL + Mongo 듀얼은 운영 표면적이 2배(백업/모니터링/마이그레이션 도구 모두 ×2) + 크로스 DB 트랜잭션 부재(회원 탈퇴 시 Saga / 2PC 필요) + 비용 약 4배라서, *1인 운영 단계*에서는 부담이 효용을 넘겼어요. SQLite 서버는 동시 쓰기가 약하고, yjs 네이티브 저장(y-redis)은 결제·인증 같은 비-시트 데이터를 별도 DB에 또 둬야 했어요.
+
+같은 도메인의 다른 제품들이 어떻게 가는지도 같이 봤어요. Notion은 [PostgreSQL을 32개 데이터베이스 샤드로 운영](https://www.notion.com/blog/the-great-re-shard)하면서 블록 모델을 받아내고 있고, Linear는 PostgreSQL + 정형 스키마, Outline은 `collection.documentStructure`라는 JSONB 트리를 활용하고, Supabase는 Postgres 위 Realtime SaaS를 돌려요 — 블록/문서형 협업 SaaS에서 PostgreSQL이 *충분히 검증된 선택지 중 하나*라는 인상을 받았어요. (MongoDB / Firestore / DynamoDB / SQLite-sync 계열 등 다른 길을 가는 제품도 많아서 *유일 정답*은 아니지만, 우리 도메인에는 잘 맞는 길이었어요.)
 
 ### 결과 — 한 row에 3 영역 JSONB
 
@@ -172,7 +174,7 @@ CREATE INDEX idx_projects_doc_tree_gin   ON projects USING GIN(doc_tree jsonb_pa
 
 측정 결과: 시트 통째 GET p95 65ms(목표 500ms 이하 통과), `jsonb_set` patch 트랜잭션 p95 8ms, GIN 인덱스 ON/OFF를 직접 비교해보면 p95가 280ms에서 65ms로 약 4.3배 개선됐어요. 인덱스 크기는 시트 1만 건 기준 50MB로 12GB ARM에서 충분히 여유가 있었어요.
 
-비용 차원에서도 PG 채택이 자명했어요. Aurora MySQL이 가벼운 인스턴스 기준 월 $50 안팎, MongoDB Atlas가 월 $25 안팎인 데 비해 OCI Always Free 위 PostgreSQL 셀프호스트는 **월 $0**이고, 하나의 DB로 결제·인증·시트·yjs binary까지 다 받을 수 있어서 스택이 단순했어요. 매니지드 대비 연 $960~$1,200 절감 + 데이터 통제권 유지가 같이 따라왔어요.
+비용 차원에서도 PG 가 합리적인 선택이었어요. Aurora MySQL이 가벼운 인스턴스 기준 월 $50 안팎, MongoDB Atlas가 월 $25 안팎인 데 비해 OCI Always Free 위 PostgreSQL 셀프호스트는 **월 $0**이고, 하나의 DB로 결제·인증·시트·yjs binary까지 다 받을 수 있어서 스택이 단순했어요. 매니지드를 선택했을 때의 *예상 회피 비용*이 연 $960~$1,200, 거기에 데이터 통제권 유지가 같이 따라왔어요.
 
 ---
 
@@ -182,11 +184,11 @@ CREATE INDEX idx_projects_doc_tree_gin   ON projects USING GIN(doc_tree jsonb_pa
 
 초기 구조는 클라이언트 단일(Next.js + Tiptap + yjs + y-indexeddb)이었어요. 시트 셀·행·컬럼 변경이 모두 Y.Doc 위에서 일어나고, 약 1,400 라인짜리 `lib/ydoc.ts` 한 파일이 여러 store에서 import되고 있었어요. AFFiNE / AppFlowy식 *모든 도메인 yjs 통합*을 그대로 따라간 형태였어요.
 
-### 시트가 yjs에 어울리지 않는다
+### 우리 도메인에서 시트와 yjs가 잘 맞지 않았던 이유
 
-서버 진실원 모델(Linear / Notion / AFFiNE Cloud의 최신 패턴)로 옮기려는 시점에 yjs 통합이 두 가지 한계를 드러냈어요.
+서버 진실원 + 로컬 캐시 모델(Linear / Notion 류 협업 제품에서 흔히 보이는 패턴)로 옮기려는 시점에 *우리 시트 도메인*에서 yjs 통합이 두 가지 한계를 드러냈어요.
 
-첫째 **도메인 차이**. AFFiNE/AppFlowy의 시트는 *Notion 계열*(문서 안에 임베드된 작은 표)이라 yjs Y.Map으로 자연스럽지만, Balruno의 시트는 *Baserow 계열*(16종 컬럼 + 게임 함수 70+ + 몬테카를로 시뮬 + Unity export)이라 외부 시뮬/엔진 통합 영역이 깊었어요. 이런 도메인에서 yjs CRDT 자동 머지는 *기획 의도와 어긋난 머지*를 만들 위험이 컸어요.
+첫째 **도메인 차이**. AFFiNE/AppFlowy의 시트는 *Notion 계열*(문서 안에 임베드된 작은 표)이라 yjs Y.Map으로 자연스럽지만, Balruno의 시트는 *Baserow 계열*(16종 컬럼 + 게임 함수 70+ + 몬테카를로 시뮬 + Unity export)이라 외부 시뮬/엔진 통합 영역이 깊었어요. 이런 도메인에서는 yjs CRDT 의 자동 머지가 *기획 의도와 어긋난 머지*를 만들 위험이 우리 케이스에서는 더 컸어요(같은 yjs 가 다른 도메인에서는 잘 맞을 수 있다는 전제는 그대로 인정해요).
 
 둘째 **Java 생태계 미지원**. y-crdt의 Java 바인딩이 미완성(2022년에 열린 이슈 #217 이후 진척이 거의 없어요)이라 서버측 검증·persistence·승격을 Java로 받으려면 직접 구현해야 했고, 이건 6개월짜리 함정이었어요. Hocuspocus를 Node sidecar로 도입하더라도 시트 동기화 진영이 Spring과 Node로 쪼개지는 운영 표면이 늘어났어요.
 
@@ -218,7 +220,7 @@ CREATE INDEX idx_projects_doc_tree_gin   ON projects USING GIN(doc_tree jsonb_pa
 
 검증은 단계마다 같은 기준으로 잡았어요. `tsc --noEmit` green, vitest 9/10 file pass / 82/82 tests pass, prod CI green, 수동 prod smoke(시트 추가 / 셀 편집 / 문서 추가 / 문서 이름 변경 / drag-drop) 통과. 마지막 정리 후 `grep -r "ydoc\|Y\.Doc" packages/web/src` 결과는 Hocuspocus 관련만 남았어요.
 
-돌이켜보면 *얼마나 많이 추가했는가*보다 *80,000 라인을 지우면서도 prod CI를 한 번도 깨지 않았는가*가 이 단계에서 가장 분명한 신호였어요. 그리고 그 정리가 가능했던 이유는 더 단순해요. AFFiNE/AppFlowy의 "전부 yjs"라는 인기 디폴트를 *도메인 차이(Baserow 계열 시트 vs Notion 계열 시트)*라는 측정 가능한 분기로 떼어놓고 보니, 우리에게는 그게 정답이 아니었다는 걸 받아들일 수 있었어요.
+돌이켜보면 *얼마나 많이 추가했는가*보다 *80,000 라인을 지우면서도 prod CI를 한 번도 깨지 않았는가*가 이 단계에서 가장 분명한 신호였어요. 그리고 그 정리가 가능했던 이유는 더 단순해요. AFFiNE/AppFlowy의 "전부 yjs"라는 인기 디폴트를 *도메인 차이(Baserow 계열 시트 vs Notion 계열 시트)*라는 분기로 떼어놓고 보니, *우리 도메인에서는* 그쪽이 자연스러운 답은 아니었다는 결론에 도달할 수 있었어요.
 
 ---
 
@@ -270,11 +272,11 @@ COMMIT;
 -- 8. 같은 프로젝트의 다른 세션에 broadcast (sender 제외)
 ```
 
-`baseVersion` 비교가 LWW + 충돌 감지의 1차 방어선이에요. 두 사용자가 동시에 같은 셀을 편집하면 둘 중 늦게 도착한 op는 `baseVersion != current` 조건에서 conflict로 떨어지고, 클라는 전체 상태(`sync.full`)를 다시 받아서 자기 변경을 되돌리고 토스트로 알리는 흐름이에요.
+`baseVersion` 비교가 *optimistic concurrency control* 의 1차 방어선이에요. 엄밀하게는 "LWW(마지막 쓰기 우선)"라기보다 *서버에 먼저 도착해 버전을 올린 op 가 승리* 하는 모델이고, 늦게 도착한 op는 conflict 로 거절돼요. 클라는 전체 상태(`sync.full`)를 다시 받아서 자기 변경을 되돌리고 토스트로 알리는 흐름이에요.
 
 `clientMsgId`는 재연결 시나리오를 방어해요. 클라가 op를 보냈는데 응답 오기 전에 네트워크가 끊기면, 재연결 후 같은 op를 재전송해도 `op_idempotency` 테이블에서 hit되어 캐시된 ack를 돌려줘요. 중복 적용이 0으로 보장돼요.
 
-이 도메인은 *DB 락 / Redis INCR / 메시지 큐* 중 하나를 고르는 문제가 아니라 *baseVersion + 부분 patch + 멱등키*의 3단 조합으로 풀어야 한다고 봤어요. 좋아요 카운터처럼 단일 정수를 증가시키는 게 아니라 문서 트리와 셀의 위치별 부분 patch가 들어오기 때문에 Redis INCR 패턴은 도메인에 맞지 않았어요. `FOR UPDATE` row lock은 비관적 락이긴 하지만 *프로젝트 1 row 단위*라 잠금 범위가 좁고, 시트 셀과 트리가 모두 같은 row를 잡기 때문에 한 영역의 변경이 다른 영역과 같은 트랜잭션 안에서 자연스럽게 직렬화돼요.
+이 도메인은 *DB 락 / Redis INCR / 메시지 큐* 중 하나를 고르는 문제가 아니라 *baseVersion + 부분 patch + 멱등키*의 3단 조합으로 풀었어요. 좋아요 카운터처럼 단일 정수를 증가시키는 게 아니라 위치별 부분 patch 가 들어오는 도메인이라 Redis INCR 의 단일 카운터 모델이 잘 맞지 않았어요. `FOR UPDATE` row lock은 DB 관점에서 한 row 단위로 보면 좁지만, 시트 셀·트리 3 영역이 같은 row를 공유하기 때문에 *프로젝트 단위 write serialization* 이 같이 걸려요. 사용자 100명 목표 규모에서는 단순성 이득이 더 컸지만, 트래픽이 더 커지면 영역별 row 분리 또는 partition 을 다시 보게 될 부분이라고 의식하고 있어요.
 
 ### cycle 방지 — 애플리케이션 BFS
 
@@ -315,10 +317,10 @@ public boolean hasAncestorCycle(JsonNode tree, String nodeId, String newParentId
 
 | 영역 | 시나리오 | 정책 |
 |------|---------|------|
-| 시트 셀 | 같은 셀 동시 편집 | LWW + 버전, 늦은 op는 conflict + 클라 rollback + 토스트 |
-| 시트 셀 | 행 추가 동시 | row id가 클라 측 UUIDv7 발급이라 충돌 0 |
+| 시트 셀 | 같은 셀 동시 편집 | OCC + baseVersion, 늦은 op 는 conflict + 클라 rollback + 토스트 |
+| 시트 셀 | 행 추가 동시 | row id 가 클라 측 UUIDv7 발급이라 ID 충돌 가능성을 실무적으로 무시 가능한 수준으로 낮춤 (동시성 제어 자체는 baseVersion + 트랜잭션 + 멱등키 담당) |
 | 시트 셀 | 컬럼 삭제 + 셀 업데이트 동시 | 컬럼 삭제 우선 → 셀 업데이트 conflict |
-| 시트 트리 | 노드 이동 동시 | LWW(늦은 op conflict) |
+| 시트 트리 | 노드 이동 동시 | OCC(서버 도착 순으로 늦은 op conflict) |
 | 시트 트리 | 자기 자손 밑으로 이동 | 400 CYCLE_DETECTED 즉시 거부 |
 | 시트 트리 | 노드 삭제 + 이름 변경 동시 | 삭제 먼저 처리 → 이름 변경 conflict |
 | 문서 트리 | (동일 정책) | (동일) |
@@ -360,7 +362,7 @@ paying user 0인데 매월 $155 지출 + vendor lock-in + 데이터 통제권 �
 | **backup** | x86 1GB | pg_dump rsync 수신 + cloudflared(monitor 도메인 Tunnel) + node_exporter | ~480MB |
 | **status** | x86 1GB | Cloudflare R2 업로드 daemon + node_exporter | ~150MB |
 
-1GB 머신에 모니터링을 박지 않은 건 측정 결과 때문이었어요. Loki 모놀리식이 안정 상태에서 약 1.5GB, Prometheus WAL replay가 일시적으로 2~3배 메모리 스파이크를 일으키고, Grafana 권장이 4GB — 1GB로 분산은 OOM kill이 보장된 안티패턴이었어요(Reddit /r/selfhosted, GitHub 이슈에서 다수 검증). ARM 12GB 통합이 OCI Always Free의 검증된 패턴이고, 1GB 머신은 단일 daemon(R2 업로드, cloudflared)으로만 채워서 안전하게 활용했어요.
+1GB 머신에 모니터링을 박지 않은 건 메모리 수치를 보고 내린 결정이었어요. Loki 모놀리식이 안정 상태에서 약 1.5GB, Prometheus WAL replay가 일시적으로 2~3배 메모리 스파이크를 일으키고, Grafana 권장이 4GB — 1GB로 분산하면 *우리 워크로드 기준* OOM 위험이 매우 컸어요(Reddit /r/selfhosted, GitHub 이슈에서 비슷한 실패 사례 다수). ARM 12GB 통합이 OCI Ampere A1 환경에서 자주 보이는 패턴이고, 1GB 머신은 단일 daemon(R2 업로드, cloudflared)으로만 채워서 안전하게 활용했어요.
 
 ### Ansible로 자동화
 
@@ -384,7 +386,7 @@ Datadog Pro $15/host × 4대 = 월 $60 / 연 $720 비용이 *호스트 4대 무�
 
 | 도구 | 역할 | 후보 비교 후 채택 사유 |
 |------|------|------------------------|
-| **Prometheus** | 운영 메트릭 TSDB | Spring Actuator native + 사실상 표준 |
+| **Prometheus** | 운영 메트릭 TSDB | Spring Actuator native + Spring 진영에서 가장 널리 쓰이는 옵션 |
 | **Loki** | 로그 aggregator | 약 512MB, Elasticsearch ~2GB 대비 부담 ↓ |
 | **Alloy** | 로그 수집기 | Promtail은 [2025-02 LTS 전환 + 2026-03 EOL 발표](https://grafana.com/blog/2025/02/13/grafana-loki-3.4-standardized-storage-config-sizing-guidance-and-promtail-merging-into-alloy/), 신규는 Alloy로 시작이 정석 |
 | **InfluxDB 2.x** | k6 부하 결과 TSDB(분리) | 부하 결과의 high-cardinality 시계열이 운영 Prometheus 오염 방지 |
@@ -422,7 +424,7 @@ Datadog Pro $15/host × 4대 = 월 $60 / 연 $720 비용이 *호스트 4대 무�
 | 후보 | 거부 사유 |
 |------|-----------|
 | Kamal | Kamal-proxy가 nginx 자리를 차지 → Cloudflare Origin Cert 이전 + Ansible 일부 폐기 필요. nginx 직접 방식 대비 도입 시간 비용이 큼 |
-| Kubernetes | etcd / control plane / 네트워크 플러그인 운영 부담이 zero-downtime 이익을 압도. 사용자 1,000명+ 단계 도구 |
+| Kubernetes | 우리 단계에서는 etcd / control plane / 네트워크 플러그인 운영 부담이 zero-downtime 이익보다 컸음. 사용자 규모가 커지면 다시 평가 |
 | 두 컨테이너 항상 공존 + weight 분산 | RAM 상시 +2.5GB. 무료 인프라에서 비상 자산을 유지하는 게 우선. 카나리는 사용자 1,000명+ 시점 별도 검토 |
 
 nginx 직접 blue/green을 선택한 건 Cloudflare Origin Cert + 기존 Ansible 인프라 자산을 그대로 보존할 수 있어서였어요.
@@ -459,7 +461,7 @@ DB 마이그레이션은 expand-contract 강제: NOT NULL 컬럼 추가 시 null
 
 ### 자체 비밀번호의 진짜 비용
 
-자체 ID + bcrypt + SMTP 패턴은 7단계 chain이에요 — *비밀번호 정책 + bcrypt(라운드 12면 요청당 약 250ms CPU, 가상 스레드라도 회피 불가) + DB + 비밀번호 재설정 메일(SES $0.10/1,000 또는 SendGrid 월 $19.95) + bounce 처리 + 누출 모니터링 + 2FA*. chain의 어떤 단계 하나만 깨져도(예: SMTP가 다운되면 비밀번호 재설정 자체가 막혀요) 전체가 무효예요. 1인 OSS가 이 chain 전체를 운영하는 건 *모든 책임을 떠안기*라 안티패턴이었어요.
+자체 ID + bcrypt + SMTP 패턴은 7단계 chain이에요 — *비밀번호 정책 + bcrypt(라운드 12면 요청당 약 250ms CPU, 가상 스레드라도 회피 불가) + DB + 비밀번호 재설정 메일(SES $0.10/1,000 또는 SendGrid 월 $19.95) + bounce 처리 + 누출 모니터링 + 2FA*. chain의 어떤 단계 하나만 깨져도(예: SMTP가 다운되면 비밀번호 재설정 자체가 막혀요) 전체가 무효예요. *1인 운영 단계*에서 이 chain 전체를 직접 끌고 가는 건 모든 책임을 떠안는 형태라, 우리 제약에서는 부담이 컸어요.
 
 매니지드 인증도 paying user 0 시점에는 비용이 컸어요 — [Auth0 Pro가 시작가 월 $240](https://auth0.com/pricing), Clerk Pro 월 $25 + per-MAU, Supabase Auth는 무료지만 Supabase 풀 스택 lock-in, AWS Cognito는 $0.0055/MAU로 저렴하지만 vendor lock-in.
 
@@ -528,7 +530,7 @@ sealed interface Decision {
 | Redis | OK + 빠름 | Redis 추가 | 사용자 늘면 트리거 |
 | Stateless(rotation only) | **X** | 0 | 거부 |
 
-비용 결과: Auth0 대비 연 $2,880 절감 / Clerk 대비 연 $324 절감 + lock-in 0 + 데이터 통제권 100%. 학습 시간은 약 1주 정도였어요.
+비용 결과: Auth0 / Clerk 같은 매니지드를 선택했을 때의 *예상 회피 비용*이 각각 연 약 $2,880 / 연 약 $324, 거기에 lock-in 회피와 데이터 통제권 유지가 같이 따라왔어요. 학습 시간은 약 1주 정도였어요.
 
 ---
 
@@ -593,12 +595,14 @@ sealed interface Decision {
 
 ### 인프라 + 비용
 
-| 항목 | 매니지드 가설 | OCI 셀프 실측 | 절감 |
+| 항목 | 매니지드 가설 | OCI 셀프 실측 | 예상 회피 비용(avoided cost) |
 |------|----------------|----------------|------|
-| 인프라 통합(Vercel + Fly.io + Aurora + Atlas + Datadog) | $155/월 | **$0/월** | **연 $1,860** |
-| 인증(Auth0 Pro) | $240/월 | $0(OAuth + 자체 발급 JWT) | **연 $2,880** |
-| 인증(Clerk Pro + 100 MAU) | $27/월 | $0 | 연 $324 |
-| 모니터링(Datadog Pro 4 host) | $60/월 | $0(Grafana 셀프) | **연 $720** |
+| 인프라 통합(Vercel + Fly.io + Aurora + Atlas + Datadog) | $155/월 | **$0/월** | **연 약 $1,860** |
+| 인증(Auth0 Pro) | $240/월 | $0(OAuth + 자체 발급 JWT) | **연 약 $2,880** |
+| 인증(Clerk Pro + 100 MAU) | $27/월 | $0 | 연 약 $324 |
+| 모니터링(Datadog Pro 4 host) | $60/월 | $0(Grafana 셀프) | **연 약 $720** |
+
+> 매니지드를 실제로 결제했다가 멈춘 게 아니라 *처음부터 매니지드를 골랐다면 들었을 비용*이라서 "절감"보다 *avoided cost* 표현이 정확해요.
 
 ### DB
 
@@ -623,7 +627,7 @@ sealed interface Decision {
 | 항목 | 결과 |
 |------|------|
 | WebSocket 엔드포인트 | `/ws/projects/{projectId}` 단일 통합(시트 셀 + 시트 트리 + 문서 트리 3 영역) |
-| 충돌 감지 | baseVersion + LWW + 클라 rollback |
+| 충돌 감지 | baseVersion 기반 OCC(서버 도착 순으로 늦은 op 거절) + 클라 rollback |
 | 재전송 멱등 | clientMsgId UUIDv7 + `op_idempotency` 캐시 응답 |
 | cycle 방지 | 애플리케이션 BFS, 400 CYCLE_DETECTED |
 | cascade delete | 애플리케이션 재귀 + `documents.deleted_at`(30일 hard delete cron) |
@@ -667,7 +671,7 @@ sealed interface Decision {
 
 Balruno는 *발명*이 아니라 *조합*으로 풀린 프로젝트였어요. Baserow의 셀 이벤트 + Linear의 트리 op log + Outline의 문서 본문 yjs / Hocuspocus + Notion의 PostgreSQL JSONB block 모델 + Spring Security 7의 OAuth 2.1 default + OCI Always Free + Cloudflare R2 — 각각이 5년 이상 검증된 OSS 다수파였고, 1인 OSS의 안전한 길은 *각 도메인 표준을 존중하면서, 도메인 차이가 드러나는 한 점에서만 분기*하는 것이었어요.
 
-그 한 점이 *시트가 Baserow 계열이다*라는 인식이었고, 이 분기 위에서 약 80,000 라인 로컬 모드 정리, 시트 도메인 100% 서버 진실원 전환, 3 영역 통합 동기화, 무중단 배포, 셀프 호스트 인프라가 차례로 풀렸어요. paying user 0 시점에 매니지드 통합 대비 연 약 $5,460 절감(인프라 $1,860 + 인증 $2,880 + 모니터링 $720) + 데이터 통제권 100% + 운영 자동화까지 같이 확보했고, 이 모든 결정의 추적성이 70여 개의 결정 문서로 남아 있어요.
+그 한 점이 *시트가 Baserow 계열이다*라는 인식이었고, 이 분기 위에서 약 80,000 라인 로컬 모드 정리, 시트 도메인 100% 서버 진실원 전환, 3 영역 통합 동기화, 무중단 배포, 셀프 호스트 인프라가 차례로 풀렸어요. paying user 0 시점 기준으로 매니지드 통합을 골랐다면 들었을 *예상 회피 비용* 이 연 약 $5,460(인프라 약 $1,860 + 인증 약 $2,880 + 모니터링 약 $720), 거기에 데이터 통제권과 운영 자동화 경험이 같이 따라왔어요. 모든 결정은 70여 개의 결정 문서로 추적할 수 있게 남겨뒀어요.
 
 <!-- EN -->
 
@@ -705,13 +709,15 @@ The core question wasn't *which DB has the most features* but *which storage mod
 
 The same CRUD API was wired to MySQL 8 + JSON, PostgreSQL 18 + JSONB, and MongoDB 7 on the same OCI ARM 12GB monitor host (same VCN, ≤1ms internal). With k6 (50 VU, 5 min) writing to InfluxDB 2.x and a single Grafana dashboard registering both Prometheus (live) and InfluxDB (load) data sources, the measurements were:
 
-| DB | Sheet GET p95 (10K) | Internal key lookup p95 |
+| DB | Sheet GET p95 (10K) | Containment lookup p95 (`data @> '{...}'`) |
 |----|----------------------|--------------------------|
-| MySQL 8 + JSON | **240ms** | 320ms (generated column) |
-| **PostgreSQL 18 + JSONB** | **65ms** | **45ms (GIN native)** |
+| MySQL 8 + JSON | **240ms** | 320ms (generated column + B-tree) |
+| **PostgreSQL 18 + JSONB** | **65ms** | **45ms (`jsonb_path_ops` GIN)** |
 | MongoDB 7 | 95ms | 60ms |
 
-PG JSONB was about 3.7× faster than MySQL JSON on sheet GET. The structural reasons were (1) JSONB binary storage (no parsing per query), (2) one GIN index covering the *entire* JSON tree, and (3) `jsonb_set(data, path, value)` enabling per-cell partial patches that match the cell-event WebSocket exactly. Same-domain references — Notion sharding [PostgreSQL across 32 databases](https://www.notion.com/blog/the-great-re-shard) for blocks/comments/collections, Linear on PG, Outline's `documentStructure` JSONB tree, Supabase's PG-based Realtime — confirmed the choice. Aurora MySQL ~$50/mo + Mongo Atlas ~$25/mo became OCI self-hosted PG **$0/mo** — yearly savings of $960~$1,200 plus full data control.
+PG JSONB was about 3.7× faster than MySQL JSON on sheet GET. The structural reasons were (1) JSONB's binary, pre-parsed storage which removes most per-query parsing cost, (2) `jsonb_path_ops` GIN matching our containment / jsonpath workload well, and (3) `jsonb_set(data, path, value)` letting the application express per-cell patches cleanly — that last point is about code shape, not physical writes (the row update + WAL cost is still there). MySQL 8 stores JSON in a binary form too, but the relevant gap for us was the indexing model: with no general-purpose JSON index, every frequent path needs its own generated column or multi-valued index, which becomes a real maintenance load when 16 dynamic column types each grow new query patterns.
+
+Same-domain references — Notion sharding [PostgreSQL across 32 databases](https://www.notion.com/blog/the-great-re-shard) for blocks/comments/collections, Linear on PG, Outline's `documentStructure` JSONB tree, Supabase's PG-based Realtime — show PostgreSQL is *one well-validated path* in this space (MongoDB / Firestore / DynamoDB / SQLite-sync are equally legitimate alternatives in other shapes; we picked PG for the fit, not because it's a universal default). Aurora MySQL ~$50/mo + Mongo Atlas ~$25/mo would have been ~$75–$100/mo; OCI self-hosted PG was **$0/mo** — an *avoided cost* of about $960–$1,200/yr plus retained data control.
 
 Final model: 3 JSONB columns + 3 version columns in the same `projects` row. Single transaction guarantee for cross-region writes; independent versions so a conflict in one region doesn't block another. Document bodies stay as `documents.binary` BYTEA (yjs) consumed by Hocuspocus' database extension adapter.
 
@@ -738,7 +744,7 @@ About **~80,000 lines** of local-mode code retired. Sheet domain is now 100% ser
 
 ## 3. Realtime Sync — Baserow + Linear + Outline Combined
 
-A single WebSocket endpoint `/ws/projects/{projectId}` handles all three regions. Per-message `baseVersion` (per-region version) + `clientMsgId` (UUIDv7) drive LWW conflict detection and idempotent retry. The server transaction is one Spring `@Transactional`:
+A single WebSocket endpoint `/ws/projects/{projectId}` handles all three regions. Per-message `baseVersion` (per-region version) + `clientMsgId` (UUIDv7) drive *optimistic concurrency control by server arrival order* (strictly speaking, not LWW: the op that lands first and bumps the version wins; later ops are rejected as conflicts) plus idempotent retry. The server transaction is one Spring `@Transactional`:
 
 1. `SELECT ... FOR UPDATE` on the project row — reads all 3 versions at once.
 2. `baseVersion` check (region-specific) — mismatch → ROLLBACK + conflict response.
@@ -749,7 +755,7 @@ A single WebSocket endpoint `/ws/projects/{projectId}` handles all three regions
 7. Cascade delete (only on `tree.delete`) — recursive descendants + `documents.deleted_at` soft delete.
 8. Broadcast to remaining sessions (sender excluded).
 
-Why baseVersion + jsonb_set + idempotency rather than DB lock / Redis INCR / message queue: this isn't a single-integer counter (Redis INCR's sweet spot) — it's per-position partial patches across a JSONB tree, where the row-level `FOR UPDATE` already keeps the lock surface small (1 project = 1 row). Cycle prevention is application-BFS rather than PG CTE recursive because JSONB tree walks differ from row-based parent/child trees and Spring code is simpler to reason about.
+Why baseVersion + jsonb_set + idempotency rather than DB lock / Redis INCR / message queue: this isn't a single-integer counter (Redis INCR's sweet spot) — it's per-position partial patches across a JSONB tree. The `FOR UPDATE` lock is one row at the DB level, but because the three regions share that row, it intentionally accepts *project-level write serialization* — fine at our 100-user target, and a candidate for region-level row split or partitioning if traffic scales. Cycle prevention is application-BFS rather than PG CTE recursive because JSONB tree walks differ from row-based parent/child trees and Spring code is simpler to reason about.
 
 Functional accuracy (conflicts / idempotency / cycle / cascade) is verified by `SheetCellOpServiceTest` + `TreeOpServiceTest`. Load measurements (broadcast latency p95, op_idempotency miss ratio, conflict rate) are deferred to a *real-traffic regression incident* — synthetic 100 VU baselines on a near-empty service can't fill the (current state)/(problem) phases of a real retrospective, and the regression event itself becomes the source data.
 
@@ -763,7 +769,7 @@ Role distribution: prod-app (Spring + Nginx + Hocuspocus, ~3GB), monitor (PG 18 
 
 Ansible roles + a single GitHub Actions workflow (PR check + main push apply, 1 vault-password GitHub Secret) bring all 4 hosts up via `ansible-playbook -i inventory.yml site.yml`. The 3-2-1 backup chain runs monitor pg_dump → backup rsync → status R2 upload (cross-cloud, S3-compatible) and was validated end-to-end at 2 seconds.
 
-The observability stack is fully self-hosted: Prometheus (live ops metrics) + Loki (logs, ~512MB vs Elasticsearch ~2GB) + Alloy (log shipper, since [Promtail entered LTS in Feb 2025 and EOL is Mar 2026](https://grafana.com/blog/2025/02/13/grafana-loki-3.4-standardized-storage-config-sizing-guidance-and-promtail-merging-into-alloy/)) + InfluxDB 2.x (k6 load results, kept *separate* from Prometheus to avoid high-cardinality contamination) + blackbox_exporter (HTTP/TLS/TCP probes, replacing the earlier Uptime Kuma plan once it became redundant) + Grafana (single pane). Datadog Pro $15/host × 4 = $720/yr saved.
+The observability stack is fully self-hosted: Prometheus (live ops metrics) + Loki (logs, ~512MB vs Elasticsearch ~2GB) + Alloy (log shipper, since [Promtail entered LTS in Feb 2025 and EOL is Mar 2026](https://grafana.com/blog/2025/02/13/grafana-loki-3.4-standardized-storage-config-sizing-guidance-and-promtail-merging-into-alloy/)) + InfluxDB 2.x (k6 load results, kept *separate* from Prometheus to avoid high-cardinality contamination) + blackbox_exporter (HTTP/TLS/TCP probes, replacing the earlier Uptime Kuma plan once it became redundant) + Grafana (single pane). Datadog Pro at $15/host × 4 hosts would have been ~$720/yr — that is the avoided cost.
 
 The first measurements that became real source data:
 
@@ -786,7 +792,7 @@ Token storage is dual: httpOnly cookie (`Domain=balruno.com`, SameSite=Lax) for 
 
 Verified-email auto-link uses a sealed interface with 4 cases (Notion / Linear / Vercel pattern). Case 2 — *provider didn't mark email as verified, but a user with the same email already exists* — is rejected to block account takeover (an attacker registering an unverified GitHub email with the victim's address would otherwise auto-link). GitHub's `/user/emails` is filtered to `primary == verified == true`; Google OIDC's `email_verified` claim provides this directly. Refresh tokens are DB rotation chains (BYTEA hash + prev_id) so revoke is instant; Redis comes in once user count justifies it.
 
-Cost outcome: Auth0 vs self-hosted = $2,880/yr saved, Clerk vs self = $324/yr, plus 0 lock-in.
+Cost outcome: an avoided cost of roughly $2,880/yr vs Auth0 and $324/yr vs Clerk, plus zero vendor lock-in.
 
 ---
 
@@ -815,4 +821,4 @@ The two most satisfying decisions in this layer were the ApplicationEvent decoup
 
 ## Closing
 
-Balruno was less invention and more **composition**. Baserow cell events + Linear op logs + Outline JSONB doc trees + Notion's PG JSONB block model + Spring Security 7's OAuth 2.1 defaults + OCI Always Free + Cloudflare R2 — each backed by 5+ years of OSS validation. The single inflection point was recognising that *sheets here are Baserow-class, not Notion-class*; everything downstream — the 80K-line cleanup, the server-canonical migration, the 3-region unified sync, the zero-downtime cutover, the self-hosted infrastructure — followed from that one branch. At paying-user 0 the stack saves about $5,460/yr versus managed (infra $1,860 + auth $2,880 + observability $720) while keeping full data control and operational-automation signal.
+Balruno was less invention and more **composition**. Baserow cell events + Linear op logs + Outline JSONB doc trees + Notion's PG JSONB block model + Spring Security 7's OAuth 2.1 defaults + OCI Always Free + Cloudflare R2 — each backed by 5+ years of OSS validation. The single inflection point was recognising that *sheets in our domain are Baserow-class, not Notion-class*; everything downstream — the 80K-line cleanup, the server-canonical migration, the 3-region unified sync, the zero-downtime cutover, the self-hosted infrastructure — followed from that one branch. At paying-user 0 the avoided cost versus a managed-stack baseline is about $5,460/yr (infra ~$1,860 + auth ~$2,880 + observability ~$720), with retained data control and operational-automation experience as the rest of the trade.
