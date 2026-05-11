@@ -1,8 +1,33 @@
 ---
 title: 'Balruno MVP 후기'
 titleEn: 'Balruno MVP Retrospective'
-description: 게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에 정리합니다. PostgreSQL JSONB 채택(50,000 시트 환경에서 MySQL/PG/Mongo 직접 측정 — Sheet GET p95: PG 16ms / MySQL 25ms / Mongo 45ms, Name UPDATE p95: Mongo 37ms / PG 40ms / MySQL 63ms. 쓰기만 보면 MongoDB가 조금 빨랐지만, 한정된 인프라 안에서 DB를 둘로 나누지 않고 하나로 운영하는 편이 더 합리적이라고 판단해 PostgreSQL 선택), 시트 셀 + 시트 트리 + 문서 트리 3 영역 통합 동기화 알고리즘(Baserow + Linear + Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1 백업으로 매니지드 대비 예상 회피 비용 연 약 $1,860, OAuth-only + 자체 발급 JWT(Auth0 대비 연 약 $2,880), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트 모니터링(Datadog 대비 연 약 $720), nginx blue/green 무중단 배포(첫 cutover 21초 → 두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지 포함합니다.
-descriptionEn: A retrospective of Balruno — a game-balancing spreadsheet + document workspace built solo. Covers PostgreSQL JSONB adoption (head-to-head MySQL/PG/Mongo measurements at 50,000 sheets — Sheet GET p95: PG 16ms / MySQL 25ms / Mongo 45ms, Name UPDATE p95: Mongo 37ms / PG 40ms / MySQL 63ms. MongoDB was slightly faster on writes, but PostgreSQL was chosen because the gap was small and a single database was more practical under constrained infrastructure), unified 3-region sync (sheet cells + sheet tree + doc tree) combining Baserow + Linear + Outline patterns, OCI Always Free 4-machine self-host with Ansible ($1,860/yr saved vs managed), OAuth-only + self-issued JWT ($2,880/yr saved vs Auth0), self-hosted observability with Grafana/Loki/Alloy/Prometheus/InfluxDB ($720/yr saved vs Datadog), nginx blue/green zero-downtime deploy (21s first cutover, 0s thereafter), and the server-canonical migration that retired ~80K lines of local-mode code.
+description: >-
+  게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에
+  정리합니다. PostgreSQL JSONB 채택(50,000 시트 환경에서 MySQL/PG/Mongo 직접 측정
+  — Sheet GET p95: PG 16ms / MySQL 25ms / Mongo 45ms, Name UPDATE p95: Mongo 37ms
+  / PG 40ms / MySQL 63ms. 쓰기만 보면 MongoDB가 조금 빨랐지만, 한정된 인프라 안에서
+  DB를 둘로 나누지 않고 하나로 운영하는 편이 더 합리적이라고 판단해 PostgreSQL 선택),
+  시트 셀 + 시트 트리 + 문서 트리 3영역 통합 동기화 알고리즘(Baserow + Linear +
+  Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1
+  백업으로 매니지드 대비 예상 회피 비용 연 약 $1,860, OAuth-only + 자체 발급 JWT(Auth0
+  대비 연 약 $2,880), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트
+  모니터링(Datadog 대비 연 약 $720), nginx blue/green 무중단 배포(첫 cutover 21초 →
+  두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지
+  포함합니다.
+descriptionEn: >-
+  A retrospective of Balruno — a game-balancing spreadsheet + document
+  workspace built solo. Covers PostgreSQL JSONB adoption (head-to-head
+  MySQL/PG/Mongo measurements at 50,000 sheets — Sheet GET p95: PG 16ms /
+  MySQL 25ms / Mongo 45ms, Name UPDATE p95: Mongo 37ms / PG 40ms / MySQL
+  63ms. MongoDB was slightly faster on writes, but PostgreSQL was chosen
+  because the gap was small and a single database was more practical under
+  constrained infrastructure), unified 3-region sync (sheet cells + sheet tree
+  + doc tree) combining Baserow + Linear + Outline patterns, OCI Always Free
+  4-machine self-host with Ansible ($1,860/yr saved vs managed), OAuth-only +
+  self-issued JWT ($2,880/yr saved vs Auth0), self-hosted observability with
+  Grafana/Loki/Alloy/Prometheus/InfluxDB ($720/yr saved vs Datadog), nginx
+  blue/green zero-downtime deploy (21s first cutover, 0s thereafter), and the
+  server-canonical migration that retired ~80K lines of local-mode code.
 date: 2026-05-10T00:00:00.000Z
 tags:
   - PostgreSQL
