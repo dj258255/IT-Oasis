@@ -1,8 +1,8 @@
 ---
 title: 'Balruno MVP 후기'
 titleEn: 'Balruno MVP Retrospective'
-description: 게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에 정리합니다. PostgreSQL JSONB 채택(MySQL JSON 240ms vs PG 65ms 직접 측정), 시트 셀 + 시트 트리 + 문서 트리 3 영역 통합 동기화 알고리즘(Baserow + Linear + Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1 백업으로 매니지드 대비 예상 회피 비용 연 약 $1,860, OAuth-only + 자체 발급 JWT(Auth0 대비 연 약 $2,880), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트 모니터링(Datadog 대비 연 약 $720), nginx blue/green 무중단 배포(첫 cutover 21초 → 두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지 포함합니다.
-descriptionEn: A retrospective of Balruno — a game-balancing spreadsheet + document workspace built solo. Covers PostgreSQL JSONB adoption (MySQL JSON 240ms vs PG 65ms, measured directly), unified 3-region sync (sheet cells + sheet tree + doc tree) combining Baserow + Linear + Outline patterns, OCI Always Free 4-machine self-host with Ansible ($1,860/yr saved vs managed), OAuth-only + self-issued JWT ($2,880/yr saved vs Auth0), self-hosted observability with Grafana/Loki/Alloy/Prometheus/InfluxDB ($720/yr saved vs Datadog), nginx blue/green zero-downtime deploy (21s first cutover, 0s thereafter), and the server-canonical migration that retired ~80K lines of local-mode code.
+description: 게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에 정리합니다. PostgreSQL JSONB 채택(50,000 시트 환경에서 MySQL/PG/Mongo 직접 측정 — Sheet GET p95: PG 16ms / MySQL 25ms / Mongo 45ms 로 PG read 압승, Name UPDATE p95: Mongo 37ms / PG 40ms 로 write 는 Mongo 1등이나 PG 가 read-heavy 도메인 + 단일 RDBMS 운영에서 종합 우위), 시트 셀 + 시트 트리 + 문서 트리 3 영역 통합 동기화 알고리즘(Baserow + Linear + Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1 백업으로 매니지드 대비 예상 회피 비용 연 약 $1,860, OAuth-only + 자체 발급 JWT(Auth0 대비 연 약 $2,880), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트 모니터링(Datadog 대비 연 약 $720), nginx blue/green 무중단 배포(첫 cutover 21초 → 두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지 포함합니다.
+descriptionEn: A retrospective of Balruno — a game-balancing spreadsheet + document workspace built solo. Covers PostgreSQL JSONB adoption (head-to-head MySQL/PG/Mongo measurements at 50,000 sheets — Sheet GET p95: PG 16ms / MySQL 25ms / Mongo 45ms with PG winning read, Name UPDATE p95: Mongo 37ms / PG 40ms with Mongo edging write, but PG chosen for read-heavy domain + single-RDBMS operability), unified 3-region sync (sheet cells + sheet tree + doc tree) combining Baserow + Linear + Outline patterns, OCI Always Free 4-machine self-host with Ansible ($1,860/yr saved vs managed), OAuth-only + self-issued JWT ($2,880/yr saved vs Auth0), self-hosted observability with Grafana/Loki/Alloy/Prometheus/InfluxDB ($720/yr saved vs Datadog), nginx blue/green zero-downtime deploy (21s first cutover, 0s thereafter), and the server-canonical migration that retired ~80K lines of local-mode code.
 date: 2026-05-10T00:00:00.000Z
 tags:
   - PostgreSQL
@@ -116,27 +116,41 @@ CREATE INDEX idx_projects_sheet_name ON projects(sheet_name);
 
 ### 후보 7개를 직접 측정해봤어요
 
-같은 CRUD API를 MySQL 8 + JSON, PostgreSQL 18 + JSONB, MongoDB 7 세 곳에 각각 연결해 직접 측정했어요. 호스트는 OCI ARM 12GB 머신, 클라이언트는 같은 가상 네트워크의 다른 머신(서로 1ms 이내), 부하 도구는 k6(50 가상 사용자, 5분), 결과 저장은 InfluxDB, 시각화는 Grafana 한 대시보드(Prometheus + InfluxDB 데이터소스 동시 등록)로 묶었어요.
+같은 CRUD API를 MySQL 8 + JSON, PostgreSQL 18 + JSONB, MongoDB 7 세 곳에 각각 연결해 직접 측정했어요. 호스트는 OCI ARM Ampere A1 12GB 1대(prod_app)에 docker compose 로 3 DB + 3 Node.js Express 래퍼 + k6 컨테이너를 같은 bridge 네트워크에 격리, 부하 도구는 k6(50 가상 사용자, 5분/시나리오, `sleep(0.05)` per iteration), 결과 저장은 k6 `handleSummary` 가 summary.json 으로 떨군 게 진실원이에요. 데이터는 50,000 시트 × 평균 약 2KB JSONB (총 약 110MB) — 시트 shape 을 의도적으로 얇게 잡아 Node serialize 가 dominant 가 되지 않게 격리했어요. 측정 도구는 [`tools/benchmark/`](https://github.com/dj258255/balruno/tree/main/tools/benchmark) 에 정리해뒀어요. 시나리오는 9개(Sheet GET / Search / Name UPDATE × 3 DB)였어요.
 
-시트 통째 GET p95 (1만 건):
+시트 통째 GET — 단건 PK 조회 (50,000건 환경):
 
-| DB | p50 | p95 | p99 | 인덱스 |
-|----|-----|-----|-----|--------|
-| MySQL 8 + JSON | 80ms | **240ms** | 380ms | generated column + B-Tree |
-| **PostgreSQL 18 + JSONB** | **22ms** | **65ms** | 110ms | **GIN(네이티브)** |
-| MongoDB 7 | 35ms | 95ms | 140ms | 자동 인덱스 |
+| DB | p50 | p95 | p99 | rps | 인덱스 plan |
+|----|-----|-----|-----|-----|-------------|
+| MySQL 8 + JSON | 3ms | 25ms | 46ms | 860 | `id` PK B-Tree |
+| **PostgreSQL 18 + JSONB** | **2ms** | **16ms** | **30ms** | **902** | **`sheets_pkey` (EXPLAIN exec 1.3ms)** |
+| MongoDB 7 | 9ms | 45ms | 72ms | 760 | `_id` default |
 
-시트 내부 containment 조회 (`WHERE data @> '{"name": "..."}'`):
+시트 내부 containment 조회 (`WHERE data @> '{"name": "..."}' LIMIT 10`):
 
-| DB | p95 | 비고 |
-|----|-----|------|
-| MySQL 8 | 320ms | name 경로 generated column + B-Tree 우회 |
-| **PostgreSQL 18 JSONB** | **45ms** | `jsonb_path_ops` GIN containment 매칭 |
-| MongoDB | 60ms | path 인덱스 |
+| DB | p50 | p95 | p99 | rps | 인덱스 plan |
+|----|-----|-----|-----|-----|-------------|
+| MySQL 8 + JSON | 3ms | 23ms | 43ms | 880 | 생성 컬럼 `name_extracted` + B-Tree covering |
+| **PostgreSQL 18 + JSONB** | **2ms** | **16ms** | **32ms** | **904** | **`jsonb_path_ops` GIN Bitmap Index Scan (EXPLAIN exec 0.083ms)** |
+| MongoDB 7 | 5ms | 35ms | 60ms | 813 | `name` path 인덱스 |
 
 > 경로별 equality(`data->>'name' = ?`) 가 아니라 *containment* 쿼리로 잡은 건 의도적인 선택이었어요. equality는 보통 expression B-tree 인덱스가 자연스럽고, GIN 의 강점은 containment / jsonpath 쪽이라 워크로드를 거기에 맞춰 설계했어요. 양쪽 모두 별도 인덱스를 운영해야 했다면 그건 또 다른 비용이지만, 우리 쿼리 패턴은 containment 가 압도적으로 많았어요.
 
-PostgreSQL JSONB가 시트 GET에서 MySQL 대비 약 3.7배 빨랐고, 그 차이는 (1) JSONB 의 binary + 사전 파싱 트리 저장으로 매 쿼리 파싱이 거의 없다는 점, (2) 우리 워크로드에 잘 맞는 containment / jsonpath 조회를 `jsonb_path_ops` GIN 이 빠르게 처리한다는 점, (3) `jsonb_set(data, path, value)` 로 *애플리케이션 레벨에서* 셀 경로 단위 patch 를 깔끔하게 표현할 수 있어 코드와 충돌 처리 모델이 단순해진다는 점에서 나왔어요. 다만 (3) 은 SQL 코드 모양 얘기지 물리 저장에서 row update + WAL 이 사라진다는 의미는 아니에요.
+partial UPDATE — 인덱싱된 `name` 필드 patch (`PATCH /sheet/:id/name`, 인덱스 reindex 포함):
+
+| DB | p50 | p95 | p99 | rps | 쿼리 / 인덱스 reindex |
+|----|-----|-----|-----|-----|------------------|
+| MySQL 8 + JSON | 18ms | 63ms | 95ms | 665 | `JSON_SET(data, '$.name', ?)` + 생성 컬럼 B-Tree reindex |
+| PostgreSQL 18 + JSONB | 10ms | 40ms | 94ms | 743 | `jsonb_set(data, '{name}', $::jsonb)` + GIN reindex |
+| **MongoDB 7** | **6ms** | **37ms** | **63ms** | **804** | `updateOne({_id}, { $set: {name} })` + path 인덱스 reindex |
+
+> 여기서 측정한 *write* 는 정확히 *기존 row 의 한 필드만 patch* 하는 partial UPDATE 1종이에요. CREATE(`POST /sheet`) / DELETE 는 사용자 액션이라 분당 1회 미만이라서 50 VU load test 의미가 약해 제외했어요. 셀 이벤트 WebSocket 의 실제 패턴(분당 수십회 cell.update) 이 이 시나리오와 같은 모양이에요.
+
+**읽기는 PostgreSQL 압승, 쓰기는 MongoDB 가 1등이었어요.** PostgreSQL 의 우위는 (1) JSONB 의 binary + 사전 파싱 트리 저장으로 매 쿼리 파싱이 거의 없다는 점, (2) 우리 워크로드에 잘 맞는 containment / jsonpath 조회를 `jsonb_path_ops` GIN 이 빠르게 처리한다는 점, (3) `jsonb_set(data, path, value)` 로 *애플리케이션 레벨에서* 셀 경로 단위 patch 를 깔끔하게 표현할 수 있다는 점에서 나왔어요. write 에서는 MongoDB 의 document-level `$set` + path 인덱스 reindex 가 PostgreSQL 의 GIN reindex + MVCC 새 버전 만들기보다 약간 빨랐어요(p95 37ms vs 40ms, 약 8% 차이).
+
+그래도 PostgreSQL 을 택한 건 (1) Balruno 도메인이 *read-heavy* (셀 read >> 셀 write), (2) read 쪽 PG 의 우위(MySQL 대비 약 1.5배, Mongo 대비 약 2.5배 빠른 p95)가 write 쪽 Mongo 의 우위(PG 대비 8%) 보다 훨씬 컸고, (3) 결제 / 인증 / 세션이 관계형이라 *듀얼 스택을 피하려면 단일 RDBMS* 가 필요했고, (4) 1인 운영자에게 단일 DB의 인지 비용이 결정적이었기 때문이에요. (3)(4) 는 단순 latency 표 밖의 *운영 차원* 이라서 측정 1등인 DB 를 그대로 따라가지 못한 거에요.
+
+> **1차 측정의 함정 두 개를 먼저 만났어요.** 처음엔 시트 1개 5,000건 × 약 185KB 로 측정했는데, 모든 DB 가 sheet GET p95 280ms 근처에서 거의 동률이고 PG search 가 28초로 처참하게 나왔어요. 단발 curl 로 latency 가 7~13ms 인 걸 확인하고, EXPLAIN 으로 PG가 5K rows 환경에서는 GIN 대신 Seq Scan 을 선택한다는 사실, ARM 2 OCPU 위 Node.js JSON.stringify(185KB) 가 CPU 를 다 잡아먹는 사실을 추적했어요. *측정한 게 DB 가 아니라 stack + 옵티마이저 결정* 이었던 거였어요. 2차에서 응답 사이즈 1/123 줄이고 데이터셋 10배 키우니 같은 GIN 인덱스인데 옵티마이저가 Bitmap Index Scan 으로 선택을 바꿨고(EXPLAIN exec 860ms → 0.083ms), search 가 28초 → 16ms 로 *1760배 빨라졌어요*. 같은 PG / 같은 인덱스 / 같은 쿼리 / 데이터셋 크기만 다른 두 EXPLAIN 비교가 이 글에서 가장 강조하고 싶은 부분이에요.
 
 후보 7개 평가도 같이 해봤어요. MySQL 정규화는 시트 GET이 N+1로 풀려서 거부, MongoDB 단독은 결제/인증이 별도 RDBMS를 또 요구해서 듀얼 스택이 되는 점에서 거부, MySQL + Mongo 듀얼은 운영 표면적이 2배(백업/모니터링/마이그레이션 도구 모두 ×2) + 크로스 DB 트랜잭션 부재(회원 탈퇴 시 Saga / 2PC 필요) + 비용 약 4배라서, *1인 운영 단계*에서는 부담이 효용을 넘겼어요. SQLite 서버는 동시 쓰기가 약하고, yjs 네이티브 저장(y-redis)은 결제·인증 같은 비-시트 데이터를 별도 DB에 또 둬야 했어요.
 
