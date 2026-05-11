@@ -161,6 +161,12 @@ partial UPDATE — 인덱싱된 `name` 필드 patch (`PATCH /sheet/:id/name`, �
 첫째, 실제 수치에서 읽기 성능이 더 안정적으로 앞섰어요.  
 둘째, 한정된 인프라에서 DB를 둘로 나누지 않고 하나로 운영하는 편이 백업, 모니터링, 마이그레이션까지 포함해 더 단순했어요.
 
+중간에 한 번 크게 헷갈린 적도 있었어요.  
+처음 측정에서는 PostgreSQL 검색이 28초까지 튀었는데, 원인을 따라가 보니 DB보다 응답 직렬화와 옵티마이저 선택이 더 큰 문제였어요. 응답 크기를 줄이고 데이터셋을 키운 뒤 다시 보니 같은 GIN 인덱스에서도 실행 계획이 바뀌었고, 검색은 16ms 수준으로 정상화됐어요. 이때 배운 건 하나였어요.
+
+> 벤치마크 숫자만 보는 게 아니라,  
+> "지금 내가 진짜 DB를 재고 있는지"부터 확인해야 한다.
+
 ### 결과 — 한 row에 3 영역 JSONB
 
 최종 모델은 `projects` 한 row 안에 *시트 셀 + 시트 트리 + 문서 트리* 3 영역 JSONB와 각자의 버전 컬럼을 같이 두는 구조였어요.
@@ -444,7 +450,7 @@ DB 마이그레이션은 expand-contract 강제: NOT NULL 컬럼 추가 시 null
 
 ---
 
-## 4. 인증 — OAuth-only + 자체 발급 JWT (RS256, audience 분리)
+## 4. 인증 — OAuth-only + 자체 발급 JWT(HS256, 미래에 RS256 예약)
 
 ### 자체 비밀번호의 진짜 비용
 
@@ -467,17 +473,19 @@ Balruno 사용자는 대부분 GitHub나 Google 계정을 이미 갖고 있었�
 
 ### JWT 알고리즘은 *verifier 수*가 결정해요
 
-| 알고리즘 | 키 | sign | verify | 다중 verifier | 채택 |
-|----------|-----|------|--------|--------------|------|
-| HS256 | symmetric 32B | ~1µs | ~1µs | 비밀 공유 위험 ↑ | v1.1 까지 |
+| 알고리즘 | 키 | sign | verify | 다중 verifier | 채택 시점 |
+|----------|-----|------|--------|--------------|-----------|
+| **HS256** | symmetric 32B | ~1µs | ~1µs | 비밀 공유 위험 ↑ | **현재 ★** |
 | HS512 | symmetric 64B | ~1µs | ~1µs | 동일 | – |
-| **RS256** | private + public | ~50µs | ~5µs | **공개키만 배포 — verifier-leak 안전** | **현재 ★ (v1.2)** |
-| ES256 | private + public(작음) | ~10µs | ~30µs | 동일 | RS256의 modern 대안 |
-| EdDSA(Ed25519) | private + public(가장 작음) | ~5µs | ~15µs | 동일 | 미래 표준 후보 |
+| **RS256** | private + public | ~50µs | ~5µs | **JWKS 엔드포인트 OK** | 별도 운영팀·외부 verifier 시점 예약 |
+| ES256 | private + public(작음) | ~10µs | ~30µs | JWKS OK | RS256의 modern 대안 |
+| EdDSA(Ed25519) | private + public(가장 작음) | ~5µs | ~15µs | JWKS OK | 미래 표준 후보 |
 
-처음에는 검증 주체가 Spring 하나일 거라고 보고 HS256으로 갔지만, 실제로는 Hocuspocus(packages/collab)가 별도 Node.js 프로세스에서 collab 토큰을 검증하고 있었어요. HS256은 발급자와 검증자가 같은 비밀을 공유해야 해서, *Hocuspocus 런타임이 어디선가 노출되면 곧바로 위조 가능*한 구조였죠. 그래서 ADR 0002 v1.2에서 **RS256 + 같은 RSA 키 쌍 + audience claim 분리**(main API는 `aud=balruno-api`, collab은 `aud=balruno-collab`)로 마이그레이션했어요.
+처음에는 *검증 주체가 Spring 하나* 라고 봐서 HS256으로 갔는데, 실제로는 Hocuspocus(`packages/collab`)가 별도 Node.js 프로세스로 collab 토큰을 검증하고 있어서 사실 *verifier가 둘* 이었어요. 이 구조라면 HS256의 비밀 공유 위험이 명목상 도착한 셈이라 RS256으로 옮기는 걸 검토했어요.
 
-이제 Hocuspocus는 *공개 키만* 받아요. 발급은 Spring만 가능하니까, collab 측이 노출돼도 토큰 위조는 막혀요. main JWT와 collab JWT가 같은 키 쌍을 쓰지만 audience가 다르니까 verifier 필터가 자기 surface 토큰만 받아요. 향후 verifier가 더 늘어나면 `/.well-known/jwks.json` 엔드포인트를 추가할 계획이에요 — 지금 2개 verifier 정도면 PEM 직접 배포로도 운영 부담이 작아요.
+그런데 동종 OSS의 코드를 직접 까봤어요. Baserow의 `SIMPLE_JWT`는 algorithm 명시 없이 default HS256, Outline의 `User.ts`는 `type: "collaboration"` 토큰까지 `user.jwtSecret` 하나로 HS256 sign(우리 collab 시나리오와 정확히 동일), Hocuspocus playground도 `jsonwebtoken.sign(payload, secret)` algorithm 미명시, Supabase Auth의 `GetSigningAlg()` fallback도 `jwt.SigningMethodHS256`. *알고리즘은 동종 OSS들이 README에 자랑하지 않을 만큼 implementation detail* 이었고, 가장 흔한 default가 HS256이었어요.
+
+같은 vault·같은 운영자·같은 host인 우리 환경에서 RS256의 *발급/검증 권한 분리* 효과는 명목상이고, 1인 운영 부담만 늘어나요. 그래서 HS256 유지로 결정했어요. RS256 transition trigger는 *별도 운영팀·별도 vault·외부 verifier(mobile SDK나 third-party 같은)* 가 들어오는 시점으로 재정의했어요.
 
 ### JWT 보관 — cookie + Bearer 듀얼
 
@@ -715,6 +723,8 @@ The conclusion was simple:
 
 I still picked PostgreSQL. Reads mattered more in practice, and under limited infrastructure it was more reasonable to run one database well than split the system across two.
 
+One important lesson came from a bad first benchmark. PostgreSQL search once showed 28 seconds, but the real problem turned out to be response serialization and planner choice, not the database itself. After reducing payload size and re-running the test with a larger dataset, the same GIN index switched to a better plan and search dropped to normal numbers. That was the point where I learned to verify *what I am actually measuring* before trusting the number.
+
 The final model keeps 3 JSONB regions plus 3 version columns in the same `projects` row, while document bodies stay in `documents.binary` as yjs binary. That kept the write path transactional and let each region resolve conflicts independently.
 
 ---
@@ -776,18 +786,17 @@ That was the point where the deploy path stopped being a guess and became someth
 
 ---
 
-## 4. Auth — OAuth-only + Self-issued JWT (RS256, audience-split)
+## 4. Auth — OAuth-only + Self-issued JWT (HS256, RS256 deferred)
 
 Running passwords directly would have meant owning password policy, hashing, reset mail, leak response, and 2FA. That was too much responsibility for a solo product at this stage. Managed auth was also more expensive than it needed to be.
 
 OAuth-only fit the product better. Most users already had GitHub or Google accounts, so the login flow stayed simple while the provider handled passwords and 2FA.
 
-JWT design follows the number of verifiers:
+JWT design followed the number of verifiers. I first assumed Spring would be the only verifier, but Hocuspocus (`packages/collab`) is a separate Node.js process verifying collab tokens — there were already two verifiers, and HS256's shared-secret weakness had textbook trigger to switch.
 
-- The first cut was HS256, on the assumption that Spring would be the only verifier.
-- In practice Hocuspocus (a separate Node.js process under `packages/collab`) verifies collab tokens on every WebSocket open, so HS256 was already requiring the secret on two surfaces — exactly the property RS256 was supposed to avoid.
-- ADR 0002 v1.2 migrated to **RS256 with a single RSA key pair and an audience-split**: the main API uses `aud=balruno-api`, collab uses `aud=balruno-collab`. Hocuspocus only receives the public key, so a verifier-side leak can no longer forge tokens.
-- JWKS endpoint (`/.well-known/jwks.json`) is reserved for when a third verifier joins; with two verifiers, distributing the PEM directly is operationally cheaper.
+I read the source of comparable OSS before migrating. Baserow's `SIMPLE_JWT` doesn't specify an algorithm (django-rest-framework-simplejwt defaults to HS256). Outline's `User.ts` signs every token kind, including `type: "collaboration"`, with a single `user.jwtSecret` and no algorithm option — the closest analogue to our collab token scenario, and they share the same secret across verifiers. The Hocuspocus playground itself calls `jsonwebtoken.sign(payload, secret)` with no algorithm. Supabase Auth's `GetSigningAlg()` fallback is `jwt.SigningMethodHS256`. The algorithm is the kind of detail none of these projects highlight in their README — and the default is consistently HS256.
+
+In our environment (same vault, same operator, same host), RS256's issuer/verifier separation is theoretical. The migration adds key-management cost to a one-person operation for a benefit nobody comparable is paying for. HS256 stays. The trigger for revisiting gets redefined to a real boundary: a separate operations team, a separate vault, or an external verifier (a future mobile SDK or third-party integration).
 
 Token delivery is dual: httpOnly cookie for browsers, Bearer token for desktop and API clients.
 
