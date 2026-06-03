@@ -8,12 +8,15 @@ import { render } from 'astro:content';
 import { getReadingTime, parseCategory, splitContent, translateCategory } from '../../lib/utils';
 import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
 import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
-import { getPublishedPosts } from '../../lib/posts';
+import { getBuildablePosts, getPublishedPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
+  // Build a page for every non-draft post (unlisted included, so direct links work)...
+  const buildable = await getBuildablePosts();
+  // ...but only ever surface publicly-listed posts as prev/next/related.
   const posts = await getPublishedPosts();
 
-  return posts.map((post, index) => {
+  return buildable.map((post) => {
     const fullCat = post.data.category;
     const parentCat = parseCategory(fullCat).parent;
     let relatedPosts = posts
@@ -35,12 +38,17 @@ export async function getStaticPaths() {
       relatedPosts = posts.filter((p) => p.id !== post.id).slice(0, 4);
     }
 
+    // Unlisted posts sit outside the public sequence, so they get no prev/next.
+    const pubIndex = posts.findIndex((p) => p.id === post.id);
+    const prevPost = pubIndex >= 0 ? posts[pubIndex + 1] || null : null;
+    const nextPost = pubIndex >= 0 ? posts[pubIndex - 1] || null : null;
+
     return {
       params: { slug: post.id },
       props: {
         post,
-        prevPost: posts[index + 1] || null,
-        nextPost: posts[index - 1] || null,
+        prevPost,
+        nextPost,
         relatedPosts,
         isSameCategory,
       },
@@ -88,7 +96,7 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
 const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || parseCategory(post.data.category).parent;
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined}>
+<BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined} noindex={post.data.unlisted}>
   <div class="fade-in-up">
       <!-- Main content -->
       <article class="post-article relative">

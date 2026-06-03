@@ -12,9 +12,11 @@ interface Props {
   /** Use max-w-6xl instead of max-w-5xl for pages that need more horizontal space */
   wide?: boolean;
   fullBanner?: boolean;
+  /** When true, emit a robots meta tag so search engines skip this (unlisted) page. */
+  noindex?: boolean;
 }
 
-const { title, description = '광활한 코드의 사막에서, 당신의 오아시스를 찾으세요. IT 야자수 </> — 성장에 뿌리를 둔 기술 블로그.', ogImage, wide = false, fullBanner = false } = Astro.props;
+const { title, description = '광활한 코드의 사막에서, 당신의 오아시스를 찾으세요. IT 야자수 </> — 성장에 뿌리를 둔 기술 블로그.', ogImage, wide = false, fullBanner = false, noindex = false } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -25,6 +27,7 @@ const { title, description = '광활한 코드의 사막에서, 당신의 오아
     <link rel="icon" type="image/svg+xml" href={`${base}/favicon-dark.svg`} media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <meta name="generator" content={Astro.generator} />
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
