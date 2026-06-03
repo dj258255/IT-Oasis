@@ -13,6 +13,8 @@ const blog = defineCollection({
     category: z.string().default('일반'),
     coverImage: z.string().optional(),
     draft: z.boolean().default(false),
+    /** Built and reachable by direct link, but hidden from all listings, search, RSS, and search engines. */
+    unlisted: z.boolean().default(false),
     series: z.string().optional(),
     seriesOrder: z.number().optional(),
   }),
