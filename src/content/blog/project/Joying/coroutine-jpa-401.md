@@ -28,7 +28,7 @@ WebSocket Handler에 Coroutine을 적용하고 나서, Redis 캐시 미스 시 M
 ![](/uploads/project/Joying/coroutine-jpa-401/async-parallel-query.svg)
 
 
-Coroutine의 `async`를 쓰면 5개의 MongoDB 조회를 병렬로 처리할 수 있어요. 순차 처리하면 500ms 걸릴 작업이 100ms로 줄어들죠.
+Coroutine의 `async`를 쓰면 5개의 MongoDB 조회를 병렬로 처리할 수 있어요. 순차로 5번 기다리던 네트워크 왕복이, 가장 오래 걸리는 1번의 왕복 시간으로 줄어들죠.
 
 **문제는** 이 `suspend fun`을 호출하려면 코루틴 컨텍스트가 필요하다는 거예요. 그래서 REST API에서도 코루틴을 도입했는데, 여기서 문제가 시작됐습니다.
 
@@ -207,7 +207,7 @@ When querying the chatroom list, the **unread message count** for each chatroom 
 
 ![](/uploads/project/Joying/coroutine-jpa-401/async-parallel-query.svg)
 
-Using Coroutine's `async`, these 5 MongoDB queries can run in parallel. What takes 500ms sequentially drops to 100ms.
+Using Coroutine's `async`, these 5 MongoDB queries can run in parallel. Five sequential network round-trips collapse into the time of the single slowest one.
 
 **The problem** was that calling this `suspend fun` requires a coroutine context, so coroutines were introduced to the REST API as well — and that's where trouble began.
 

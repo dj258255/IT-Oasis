@@ -47,16 +47,16 @@ Spring WebSocket STOMP Handler는 기본적으로 동기 방식이에요.
 
 ![](/uploads/project/Joying/inbound-thread-optimization/problem.svg)
 
-Thread가 일하는 시간을 분석해봤어요.
+메시지 한 건을 처리할 때 Inbound Thread가 뭘 하는지 뜯어봤어요.
 
-> **측정 조건**: EC2 t3.medium, Inbound Thread 2개, 단일 메시지 처리 기준. MongoDB/Redis 같은 서버.
+**메시지 1건당 Inbound Thread가 거치는 블로킹 I/O**
+- MongoDB 영속화 — 네트워크 왕복 + 쓰기 완료 대기
+- Redis Pub/Sub 발행 — 네트워크 왕복
+- 안읽음 카운터 증가 — 네트워크 왕복
 
-**Inbound Thread 1개**
-- MongoDB 저장 대기: 100ms (일 안 함)
-- Redis 발행 대기: 10ms (일 안 함)
-- 실제로 CPU 쓰는 시간: <1ms
+정작 CPU가 일하는 시간은 파싱·DTO 변환 정도로 극히 짧고, 나머지는 전부 **I/O 응답을 기다리며 스레드를 붙잡고 있는 시간**이에요.
 
-> Thread가 99%의 시간을 그냥 기다리는 데만 씀. **Thread 4개 × 110ms 점유 = 초당 최대 ~36건 처리.** 피크 트래픽(초당 10-20건)에서 병목 직전이다.
+> 문제의 핵심은 평균 속도가 아니라 **결합(coupling)**입니다. 동기 구조에서 Inbound Pool의 처리 능력은 `스레드 수 ÷ 메시지당 I/O 시간`에 묶여요. 평소에는 I/O가 밀리초 단위라 티가 안 나지만, MongoDB가 디스크 flush·락 경합·일시 지연으로 한 번 튀는 순간(tail latency) 스레드 4개가 전부 그 지연에 같이 잡히고, **다른 모든 사용자의 메시지 수신이 함께 멈춥니다.**
 
 
 ---
@@ -65,19 +65,19 @@ Thread가 일하는 시간을 분석해봤어요.
 
 MongoDB 저장 과정을 자세히 보면:
 
-**MongoDB 저장 (100ms)**
-1. 네트워크 패킷 전송 (1ms) ← CPU 사용
-2. MongoDB 서버 응답 대기 (98ms) ← CPU 안 씀
-3. 네트워크 응답 수신 (1ms) ← CPU 사용
+**MongoDB 저장 한 번의 내부**
+1. 네트워크 패킷 전송 ← CPU 사용 (마이크로초 단위)
+2. MongoDB 서버 처리·응답 대기 ← CPU 안 씀 (소요 시간의 대부분)
+3. 네트워크 응답 수신 ← CPU 사용 (마이크로초 단위)
 
-> 100ms 중 98ms는 CPU가 놀고 있음
+> 소요 시간의 대부분은 CPU가 노는 '대기'다
 
 운영체제 관점에서 보면:
 
 ![](/uploads/project/Joying/inbound-thread-optimization/blocking-io.png)
 
 
-Thread 1은 98ms 동안 아무 일도 안 했지만 **Thread Pool의 자리를 차지**해요. 다른 메시지는 Thread 1이 돌아올 때까지 기다려야 합니다.
+Thread 1은 대기하는 동안 아무 일도 안 하지만 **Thread Pool의 자리를 차지**해요. 다른 메시지는 Thread 1이 돌아올 때까지 기다려야 합니다.
 
 ---
 
@@ -121,10 +121,10 @@ Coroutine을 사용하면 Thread를 즉시 반환할 수 있어요.
 **Thread 점유 시간 비교**
 
 **Before (Blocking)**
-- Inbound Thread 점유 시간: 150ms (I/O 완료까지 대기)
+- Inbound Thread 점유: I/O가 끝날 때까지 — MongoDB 지연이 튀면 그대로 같이 묶임
 
 **After (Coroutine)**
-- Inbound Thread 점유 시간: <1ms (즉시 반환)
+- Inbound Thread 점유: 코루틴 디스패치까지만 — 즉시 반환
 - I/O 작업은 Dispatchers.IO 스레드 풀에서 별도 처리
 
 ---
@@ -161,7 +161,7 @@ Java CompletableFuture로도 가능한데 Coroutine을 선택한 이유:
 
 **현재 구현**
 - Inbound Thread: 즉시 반환
-- Dispatchers.IO Thread: 150ms 동안 blocking
+- Dispatchers.IO Thread: I/O가 끝날 때까지 blocking — 대기가 사라진 게 아니라 자리를 옮긴 것
 
 **진짜 Non-blocking이 되려면**
 - Reactive MongoDB Driver 필요
@@ -188,16 +188,18 @@ Java CompletableFuture로도 가능한데 Coroutine을 선택한 이유:
 
 ## 결과
 
-> **측정 조건**: EC2 t3.medium, Inbound Thread 2개 기본 설정 유지, 20명 동시 접속
+이 전환은 수치로 잰 개선이 아니라 **구조가 바뀐 것**이라, 비교도 구조로 정리하는 게 정확합니다.
 
-| 지표 | Before | After |
+| 관점 | Before (동기) | After (Coroutine) |
 |------|--------|-------|
-| Inbound Thread 점유 시간 | 150ms/건 | <1ms/건 |
-| 이론적 최대 처리량 (Thread 4개) | ~36건/초 | **수천 건/초** (I/O가 아닌 CPU 바운드만) |
-| Inbound Thread 활용도 | I/O 대기로 99% 유휴 | 즉시 반환 후 다음 요청 처리 |
-| 실제 병목 지점 | Inbound Thread Pool | MongoDB/Redis I/O (별도 스레드에서 처리) |
+| Inbound Thread 점유 | I/O 완료까지 대기 | 디스패치 후 즉시 반환 |
+| 처리량 상한 | 스레드 수 ÷ 메시지당 I/O 시간에 종속 | I/O 지연과 분리 (CPU 바운드만 남음) |
+| MongoDB 지연 스파이크 | 전체 메시지 수신 정체로 전파 | Dispatchers.IO 안에 격리 |
+| 실제 병목 지점 | Inbound Thread Pool | MongoDB/Redis I/O 대역폭 |
 
-※ I/O 작업(MongoDB 저장, Redis 발행)의 총 소요 시간 자체는 여전히 150ms다. 하지만 이 작업을 Coroutine이 별도 I/O 스레드에서 비동기로 처리하므로, **Inbound Thread는 즉시 반환되어 다음 메시지를 받을 수 있다.** 병목이 "Thread Pool 크기"에서 "I/O 대역폭"으로 이동한 것이 핵심.
+I/O 작업(MongoDB 저장, Redis 발행)의 총 소요 시간 자체는 그대로다. 하지만 이 작업을 Coroutine이 별도 I/O 스레드에서 비동기로 처리하므로, **Inbound Thread는 즉시 반환되어 다음 메시지를 받을 수 있다.** 병목이 "Thread Pool 크기"에서 "I/O 대역폭"으로 이동한 것이 핵심.
+
+솔직한 한계도 남겨둡니다. 당시 테스트 규모(20명 동시 접속, 초당 10~20건)에서는 동기 구조로도 충분히 버틸 수 있었어요. 이 전환의 가치는 그 시점의 처리량 숫자가 아니라, **I/O 지연 스파이크가 메시지 수신 경로 전체를 멈추지 못하게 만든 구조**에 있습니다.
 
 <!-- EN -->
 
@@ -231,13 +233,16 @@ Spring WebSocket STOMP Handlers operate synchronously by default.
 
 ![](/uploads/project/Joying/inbound-thread-optimization/problem.svg)
 
-Analyzing a single Inbound Thread's time breakdown:
+Breaking down what an Inbound Thread does per message:
 
-- MongoDB save wait: 100ms (no work done)
-- Redis publish wait: 10ms (no work done)
-- Actual CPU time: <1ms
+**Blocking I/O per message on the Inbound Thread**
+- MongoDB persistence — network round-trip + write completion wait
+- Redis Pub/Sub publish — network round-trip
+- Unread counter increment — network round-trip
 
-> The thread spends 99% of its time just waiting.
+Actual CPU work (parsing, DTO mapping) is tiny; the rest is **holding the thread while waiting for I/O responses**.
+
+> The real issue is **coupling**, not average speed. In a synchronous design, the Inbound Pool's capacity is bound to `thread count ÷ per-message I/O time`. Normally I/O takes mere milliseconds — but the moment MongoDB spikes (disk flush, lock contention, transient slowdowns — tail latency), all four threads get stuck on that spike, and **every user's message intake stalls together.**
 
 ---
 
@@ -245,18 +250,18 @@ Analyzing a single Inbound Thread's time breakdown:
 
 Looking at the MongoDB save process in detail:
 
-**MongoDB Save (100ms)**
-1. Network packet send (1ms) - CPU active
-2. MongoDB server response wait (98ms) - CPU idle
-3. Network response receive (1ms) - CPU active
+**Inside a single MongoDB save**
+1. Network packet send - CPU active (microseconds)
+2. MongoDB server processing/response wait - CPU idle (the vast majority of the time)
+3. Network response receive - CPU active (microseconds)
 
-> 98ms out of 100ms, the CPU is idle.
+> Most of the elapsed time is the CPU idling in 'wait'.
 
 From the OS perspective:
 
 ![](/uploads/project/Joying/inbound-thread-optimization/blocking-io.png)
 
-Thread 1 does nothing for 98ms but still **occupies a slot in the Thread Pool**. Other messages must wait until Thread 1 returns.
+Thread 1 does nothing while waiting but still **occupies a slot in the Thread Pool**. Other messages must wait until Thread 1 returns.
 
 ---
 
@@ -299,10 +304,10 @@ With Coroutines, threads can be returned immediately.
 **Thread Occupancy Comparison**
 
 **Before (Blocking)**
-- Inbound Thread occupancy: 150ms (waits until I/O completes)
+- Inbound Thread occupancy: until I/O completes — a MongoDB latency spike drags the thread with it
 
 **After (Coroutine)**
-- Inbound Thread occupancy: <1ms (returned immediately)
+- Inbound Thread occupancy: only until coroutine dispatch — returned immediately
 - I/O work handled separately in Dispatchers.IO thread pool
 
 ---
@@ -337,7 +342,7 @@ Reasons for choosing Coroutine over Java CompletableFuture:
 
 **Current Implementation**
 - Inbound Thread: Returned immediately
-- Dispatchers.IO Thread: Blocked for 150ms
+- Dispatchers.IO Thread: Blocked until I/O completes — the waiting didn't disappear, it moved
 
 **For True Non-blocking**
 - Reactive MongoDB Driver required
@@ -361,13 +366,15 @@ The current implementation aims to **increase Inbound Thread Pool throughput**. 
 
 ## Results
 
-> **Measurement conditions**: EC2 t3.medium, 2 Inbound Threads (default), 20 concurrent users
+This change is a structural improvement rather than a measured one, so the comparison is best expressed structurally.
 
-| Metric | Before | After |
+| Aspect | Before (Sync) | After (Coroutine) |
 |--------|--------|-------|
-| Inbound Thread occupancy | 150ms/msg | <1ms/msg |
-| Theoretical max throughput (4 threads) | ~36 msgs/sec | **Thousands/sec** (CPU-bound only) |
-| Inbound Thread utilization | 99% idle on I/O waits | Immediately returned for next request |
-| Actual bottleneck | Inbound Thread Pool | MongoDB/Redis I/O (handled in separate threads) |
+| Inbound Thread occupancy | Held until I/O completes | Returned right after dispatch |
+| Throughput ceiling | Bound to thread count ÷ per-message I/O time | Decoupled from I/O latency (CPU-bound only) |
+| MongoDB latency spike | Propagates into a stall of all message intake | Isolated inside Dispatchers.IO |
+| Actual bottleneck | Inbound Thread Pool | MongoDB/Redis I/O bandwidth |
 
-Note: Total I/O time (MongoDB save, Redis publish) is still 150ms. But Coroutines handle this asynchronously on separate I/O threads, so **Inbound Threads are immediately returned for the next message.** The bottleneck shifted from "Thread Pool size" to "I/O bandwidth."
+Total I/O time (MongoDB save, Redis publish) stays the same. But Coroutines handle it asynchronously on separate I/O threads, so **Inbound Threads are immediately returned for the next message.** The bottleneck shifted from "Thread Pool size" to "I/O bandwidth."
+
+An honest caveat: at our test scale (20 concurrent users, 10–20 msgs/sec), the synchronous design would have held up fine. The value of this change is not a throughput number at that point in time, but **a structure where I/O latency spikes can no longer stall the entire message intake path.**
