@@ -8,7 +8,7 @@ description: >-
   PostgreSQL 18 + pgvector로 시작하고 Elasticsearch + Nori는 Phase 2로 미룬 이유(ADR 0001),
   쇼핑몰 여러 곳을 동시에 호출하는 워크로드라 Java 25 가상 스레드 + Spring Boot 4를 고른 이유
   (ADR 0002·0007), 2인이 도메인 경계를 지키려고 택한 Spring Modulith 모듈러 모놀리스(ADR 0006·0011),
-  "번 만큼만 크롤링한다"는 3-path 전략과 법적 안전(ADR 0003), Clerk 대신 자체 OAuth(ADR 0013),
+  "번 만큼만 크롤링한다"는 3-path 전략과 법적 안전(ADR 0003), 인증 SaaS 대신 자체 OAuth(ADR 0013),
   OCI Always Free로 인프라 비용을 0원에 맞춘 선택(ADR 0004·0017), Gemini Flash 무료 티어 +
   모델 라우팅 + 캐싱으로 AI 비용을 통제하는 전략, 그리고 첫 POC smoke(무신사 100개 표본 비교
   매칭 89%, POC 게이트 80% 통과)까지, 결정과 막 시작된 실측을 정직하게 적었습니다.
@@ -20,7 +20,7 @@ descriptionEn: >-
   deferring Elasticsearch + Nori to Phase 2 (ADR 0001), choosing Java 25 virtual threads
   + Spring Boot 4 for a fan-out workload (ADR 0002/0007), a modular monolith with Spring
   Modulith for a two-person team (ADR 0006/0011), a "crawl only what you have earned"
-  three-path strategy (ADR 0003), self-hosted OAuth instead of Clerk (ADR 0013), a
+  three-path strategy (ADR 0003), self-hosted OAuth instead of an auth SaaS (ADR 0013), a
   zero-dollar infra target on OCI Always Free (ADR 0004/0017), and a first POC smoke
   (89% match on a 100-product Musinsa sample, clearing the 80% gate).
 date: 2026-06-08T00:00:00.000Z
@@ -234,17 +234,31 @@ MVP는 **Path 2만** 써요. 사용자가 직접 상품을 연 행동이 트리�
 
 핵심 원칙은 하나예요. **"아직 못 번 데이터는 긁지 않는다."** 속도와 법적 안전을 둘 다 챙기는 길이라고 봤어요.
 
+### 무엇을 DB에 저장하고, 무엇을 안 하나
+
+"1시간 캐시 후 폐기"만 보면 "아무것도 안 남기나?" 싶은데, 그렇진 않아요. 별찌도 일부는 DB에 저장해요 — 다만 **무엇을 저장하느냐의 경계**가 법적 안전의 핵심이에요. 셋으로 갈라요.
+
+| 구분 | 무엇 | 어떻게 |
+|------|------|--------|
+| **TTL 캐시** (DB에 두되 자동 삭제) | 가격(`price_snapshots`), 사용자가 본 상품 메타(`products_cache`) | 가격은 `expires_at` 1시간 + cron 삭제, 상품 메타는 30일 미사용 파기. 영구화를 **DB 레벨에서 막아요** |
+| **사용자 스코프 영구** (OK) | 위시리스트에 담은 상품의 가격 이력(`price_history`) | 사용자가 "추적해줘"라고 담은 것만. 위시 삭제 시 cascade |
+| **금지** | 페이지 전체 HTML, 리뷰 전문, 이미지 파일, 로그인 영역, 대량 카탈로그 | 아예 안 가져오거나 안 저장 |
+
+법적 위험은 "남의 데이터를 가져오는 것" 자체가 아니라 **"사용자 행동과 무관하게, 대량으로, 영구히 쌓아 남의 카탈로그를 복제하는 것"** 이에요(저작권법 §93 DB제작자 권리·부정경쟁방지법). 그래서 가격 같은 시점 정보는 DB에 두더라도 `expires_at`로 영구화를 막고, **영구 저장은 "사용자가 위시에 담아 추적을 요청한 것"처럼 사용자가 명시적으로 요청한 범위로만** 한정했어요. 이미지는 끝까지 핫링크(URL 참조)고 파일은 안 받고요.
+
+즉 "가져오면 다 저장"도, "절대 저장 안 함"도 아니에요. **"사용자가 만진 만큼만, 시점 정보는 캐시로, 영구는 사용자 스코프로"** 가 경계예요.
+
 ---
 
-## 6. Clerk 대신 자체 OAuth (ADR 0013)
+## 6. 인증 SaaS 대신 자체 OAuth (ADR 0013)
 
-여기는 제가 단독으로 맡은 Identity 도메인이라, 결정도 제가 직접 내렸어요. 인증은 Clerk 같은 SaaS를 쓰면 UX가 편하죠. 그런데 별찌가 필요한 건 **소셜 로그인뿐**이에요(카카오·구글, 이메일 가입 없음). Clerk의 비밀번호·MFA 같은 강점은 거의 안 쓰는 거예요.
+여기는 제가 단독으로 맡은 Identity 도메인이라, 결정도 제가 직접 내렸어요. 인증은 외부 인증 SaaS를 쓰면 UX가 편하죠. 그런데 별찌가 필요한 건 **소셜 로그인뿐**이에요(카카오·구글, 이메일 가입 없음). SaaS가 자랑하는 비밀번호·MFA·이메일 검증 같은 기능은 거의 안 쓰는 거예요.
 
 그래서 따져 보니 자체 구현이 합리적이었어요.
 
-- **비용**: Clerk 무료 티어는 10K MAU에서 끝나요. 별찌는 Phase 2에 그 지점을 지나서 월 $25+가 붙어요. Spring Security OAuth면 $0이고요.
-- **개인정보**: Clerk를 쓰면 동의서에 "Clerk Inc.(미국)" 국외 이전 항목이 생겨요. 자체 구현이면 그 줄이 없어져서 사용자 마찰이 줄어요.
-- **표준**: 카카오·구글 연동은 Spring Security에 잘 정리돼 있어서, Clerk만의 고유 가치가 없었어요.
+- **비용**: 인증 SaaS 무료 티어는 보통 1만 MAU 안팎에서 끝나요. 별찌는 Phase 2에 그 지점을 지나서 월 $25+가 붙는데, Spring Security OAuth면 $0이고요.
+- **개인정보**: 해외 SaaS를 쓰면 동의서에 "개인정보 국외 이전(미국 등)" 항목이 생겨요. 자체 구현이면 그 줄이 없어져서 사용자 마찰이 줄어요.
+- **표준**: 카카오·구글 연동은 Spring Security에 잘 정리돼 있어서, SaaS만의 고유 가치가 없었어요.
 
 그래서 Spring Security OAuth 2.0 클라이언트 + 자체 발급 JWT로 갔어요. Access 15분 / Refresh 7일에, refresh token 로테이션과 탈취 감지(family_id)를 위해 `refresh_tokens` 테이블을 따로 뒀어요. "유명한 도구"가 아니라 "우리 제약에 맞는 도구"를 고른 거예요.
 
@@ -305,7 +319,7 @@ MVP 통과 기준도 미리 박아 뒀어요 — 알파 20명 중 50% 이상이 
 
 ## 마무리
 
-별찌를 만들면서 가장 많이 한 일은 코드가 아니라 **"이건 지금 안 한다"를 정하는 일**이었어요. Elasticsearch도, 백그라운드 크롤링도, 마이크로서비스도, Clerk도 — 좋은 도구지만 지금 우리 제약(2인·0원·법 먼저)에는 과했어요.
+별찌를 만들면서 가장 많이 한 일은 코드가 아니라 **"이건 지금 안 한다"를 정하는 일**이었어요. Elasticsearch도, 백그라운드 크롤링도, 마이크로서비스도, 외부 인증 SaaS도 — 좋은 도구지만 지금 우리 제약(2인·0원·법 먼저)에는 과했어요.
 
 2인 부트스트랩에서 배운 건, **복잡도는 자랑이 아니라 부채**라는 거예요. 4일 만에 ADR 13개를 쌓았다가 POC로 되돌린 그 순간이, 지금까지 가장 잘한 결정이었다고 생각해요. 검증된 만큼만 짓고, 데이터가 말할 때 다음 칸을 켜는 것 — 그게 지금 별찌를 만드는 방식이에요.
 
