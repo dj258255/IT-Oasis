@@ -4,24 +4,24 @@ titleEn: 'Byeolchi - Freezing 13 ADRs After 4 Days and Restarting from a POC'
 description: >-
   이미 보고 있는 상품을 기준으로 여러 쇼핑몰의 가격과 중고 대안을 한 화면에서 비교해 주는
   AI 패션 쇼핑 어시스턴트 별찌를, 백엔드 2인으로 만들고 있는 현재진행형 기록입니다. 4일 만에
-  ADR 13개·이슈 27개까지 설계가 부풀어 오른 뒤 POC부터 다시 시작한 이야기(ADR 0014), 데이터는
-  PostgreSQL 18 + pgvector로 시작하고 Elasticsearch + Nori는 Phase 2로 미룬 이유(ADR 0001),
+  ADR 13개·이슈 27개까지 설계가 부풀어 오른 뒤 POC부터 다시 시작한 이야기(ADR), 데이터는
+  PostgreSQL 18 + pgvector로 시작하고 Elasticsearch + Nori는 Phase 2로 미룬 이유(ADR),
   쇼핑몰 여러 곳을 동시에 호출하는 워크로드라 Java 25 가상 스레드 + Spring Boot 4를 고른 이유
-  (ADR 0002·0007), 2인이 도메인 경계를 지키려고 택한 Spring Modulith 모듈러 모놀리스(ADR 0006·0011),
-  "번 만큼만 크롤링한다"는 3-path 전략과 법적 안전(ADR 0003), 인증 SaaS 대신 자체 OAuth(ADR 0013),
-  OCI Always Free로 인프라 비용을 0원에 맞춘 선택(ADR 0004·0017), Gemini Flash 무료 티어 +
+  (ADR), 2인이 도메인 경계를 지키려고 택한 Spring Modulith 모듈러 모놀리스(ADR),
+  "번 만큼만 크롤링한다"는 3-path 전략과 법적 안전(ADR), 인증 SaaS 대신 자체 OAuth(ADR),
+  OCI Always Free로 인프라 비용을 0원에 맞춘 선택(ADR), Gemini Flash 무료 티어 +
   모델 라우팅 + 캐싱으로 AI 비용을 통제하는 전략, 그리고 첫 POC smoke(무신사 100개 표본 비교
   매칭 89%, POC 게이트 80% 통과)까지, 결정과 막 시작된 실측을 정직하게 적었습니다.
 descriptionEn: >-
   A work-in-progress log of Byeolchi, an AI fashion shopping assistant that compares
   prices and second-hand alternatives across malls on the product page you are already
   viewing, built by two backend engineers. Covers the POC-first reset after the design
-  ballooned to 13 ADRs in 4 days (ADR 0014), starting on PostgreSQL 18 + pgvector and
-  deferring Elasticsearch + Nori to Phase 2 (ADR 0001), choosing Java 25 virtual threads
-  + Spring Boot 4 for a fan-out workload (ADR 0002/0007), a modular monolith with Spring
-  Modulith for a two-person team (ADR 0006/0011), a "crawl only what you have earned"
-  three-path strategy (ADR 0003), self-hosted OAuth instead of an auth SaaS (ADR 0013), a
-  zero-dollar infra target on OCI Always Free (ADR 0004/0017), and a first POC smoke
+  ballooned to 13 ADRs in 4 days (ADR), starting on PostgreSQL 18 + pgvector and
+  deferring Elasticsearch + Nori to Phase 2 (ADR), choosing Java 25 virtual threads
+  + Spring Boot 4 for a fan-out workload (ADR), a modular monolith with Spring
+  Modulith for a two-person team (ADR), a "crawl only what you have earned"
+  three-path strategy (ADR), self-hosted OAuth instead of an auth SaaS (ADR), a
+  zero-dollar infra target on OCI Always Free (ADR), and a first POC smoke
   (89% match on a 100-product Musinsa sample, clearing the 80% gate).
 date: 2026-06-08T00:00:00.000Z
 tags:
@@ -86,13 +86,13 @@ series: "Byeolchi"
 
 ---
 
-## 1. 왜 POC부터 다시 시작했나 (ADR 0014)
+## 1. 왜 POC부터 다시 시작했나 (ADR)
 
 처음엔 의욕이 앞섰어요. 설계를 시작한 지 4일 만에 ADR 13건, ERD 테이블 17개, Linear 이슈 27개까지 만들어졌어요. 문서만 보면 거의 production-ready였어요.
 
 그런데 한 발 떨어져서 보니 이상했어요. **아직 "이 비교 매칭이 기술적으로 되긴 하나?"를 한 번도 확인하지 않았는데**, 인증·결제·추천·관측성 설계부터 빼곡했던 거예요. 전형적인 매몰 비용 함정이었어요. "이만큼 설계했으니 그냥 가자"는 마음이 스멀스멀 올라왔거든요.
 
-그래서 멈추고 ADR 0014를 썼어요. 결정은 이거였어요.
+그래서 멈추고 ADR을 썼어요. 결정은 이거였어요.
 
 > MVP를 바로 짓지 않는다. 먼저 **1주짜리 POC** 하나로 단 하나의 질문에만 답한다 — "확장 프로그램이 상품 1건의 가격 비교를 실제로 띄울 수 있는가?"
 
@@ -130,7 +130,7 @@ category_noise가 실패의 절반이라, 다음 개선 후보는 "검색 엔진
 
 ---
 
-## 2. 데이터·검색 스택 — 지금은 PostgreSQL 18 + pgvector, Elasticsearch는 Phase 2로 (ADR 0001)
+## 2. 데이터·검색 스택 — 지금은 PostgreSQL 18 + pgvector, Elasticsearch는 Phase 2로 (ADR)
 
 별찌의 검색은 한국어가 핵심이에요. "베이지 정장" 같은 질의를 제대로 받으려면 형태소 분석(Nori)이 거의 필수예요. 그래서 처음엔 자연스럽게 "Elasticsearch + Nori + 벡터 검색을 본 스택으로 깔자"는 그림이 나왔어요.
 
@@ -159,7 +159,7 @@ category_noise가 실패의 절반이라, 다음 개선 후보는 "검색 엔진
 
 ---
 
-## 3. 쇼핑몰 여러 곳을 동시에 — Java 25 가상 스레드 + Spring Boot 4 (ADR 0002·0007)
+## 3. 쇼핑몰 여러 곳을 동시에 — Java 25 가상 스레드 + Spring Boot 4 (ADR)
 
 별찌의 백엔드 워크로드는 한 줄로 요약돼요. **"한 요청에 외부를 여러 번 두드린다."** 상품 하나를 비교하려면 쇼핑몰 여러 곳의 가격을 동시에 가져오고, 어필리에이트 API를 호출하고, LLM도 부르거든요. 전형적인 I/O 바운드 + 팬아웃이에요.
 
@@ -171,7 +171,7 @@ category_noise가 실패의 절반이라, 다음 개선 후보는 "검색 엔진
 
 단, 가상 스레드가 만능은 아니에요. 진짜 천장은 스레드가 아니라 **DB 커넥션 풀과 외부 사이트의 레이트 리밋**이에요. 가상 스레드를 아무리 많이 띄워도 HikariCP가 20개면 DB 앞에서 줄을 서고, 쇼핑몰도 분당 호출 상한이 있어요. 그래서 정확히 말하면 "스레드 고민이 사라진다"가 아니라 **"병목이 스레드에서 커넥션·외부 한도로 옮겨간다"** 예요. 그 한도는 캐싱(1시간 가격 캐시)과 레이트 리밋(5번)으로 관리해요.
 
-그래서 런타임은 Java 25 LTS, 프레임워크는 Spring Boot로 갔어요. 버전을 고를 때 한 번 더 따졌는데(ADR 0007), **Spring Boot 4.0** 을 골랐어요.
+그래서 런타임은 Java 25 LTS, 프레임워크는 Spring Boot로 갔어요. 버전을 고를 때 한 번 더 따졌는데(ADR), **Spring Boot 4.0** 을 골랐어요.
 
 - Boot 4는 Java 25를 1급으로 지원해서 가상 스레드 pinning 이슈가 정리돼 있어요.
 - Boot 4 + Spring Modulith 2.0 + Spring Security 7이 같은 시점에 GA라, 버전 엇갈림 리스크가 없어요.
@@ -182,7 +182,7 @@ Node.js는 Java 25급 동시성 이점이 없어서, Kotlin은 초기 채용 풀
 
 ---
 
-## 4. 2인이 경계를 지키는 법 — Spring Modulith 모듈러 모놀리스 (ADR 0006·0011)
+## 4. 2인이 경계를 지키는 법 — Spring Modulith 모듈러 모놀리스 (ADR)
 
 2인 팀에서 제일 무서운 건 트래픽이 아니라 **코드가 서로 엉키는 거**예요. 도메인끼리 내부 패키지를 직접 import하기 시작하면, 몇 주 만에 "어디를 고치면 어디가 터지는지 모르는" 상태가 돼요.
 
@@ -192,7 +192,7 @@ Node.js는 Java 25급 동시성 이점이 없어서, Kotlin은 초기 채용 풀
 - 경계는 지키되 배포는 하나라, 2인이 운영 가능한 단순함을 유지해요.
 - 나중에 정말 쪼개야 하면, 모듈이 그대로 서비스 분리의 이음매가 돼요.
 
-도메인은 셋으로 나눴어요(ADR 0011).
+도메인은 셋으로 나눴어요(ADR).
 
 | 도메인 | 소유 | 비고 |
 |--------|------|------|
@@ -206,7 +206,7 @@ Discovery가 유독 무거워요. 외부 API, 법적 이슈, 성능, 비용이 �
 
 ---
 
-## 5. "번 만큼만 크롤링한다" — 3-path 전략과 법적 안전 (ADR 0003)
+## 5. "번 만큼만 크롤링한다" — 3-path 전략과 법적 안전 (ADR)
 
 크롤링은 별찌에서 기술 문제이기 전에 **법 문제**예요. 비교 서비스의 선례를 보면, 파트너십 없이 전체 카탈로그를 긁는 순간 저작권·부정경쟁방지법 리스크가 확 올라가요. 그래서 데이터를 가져오는 경로를 셋으로 나누고, MVP에서는 가장 안전한 하나만 쓰기로 했어요.
 
@@ -250,7 +250,7 @@ MVP는 **Path 2만** 써요. 사용자가 직접 상품을 연 행동이 트리�
 
 ---
 
-## 6. 인증 SaaS 대신 자체 OAuth (ADR 0013)
+## 6. 인증 SaaS 대신 자체 OAuth (ADR)
 
 여기는 제가 단독으로 맡은 Identity 도메인이라, 결정도 제가 직접 내렸어요. 인증은 외부 인증 SaaS를 쓰면 UX가 편하죠. 그런데 별찌가 필요한 건 **소셜 로그인뿐**이에요(카카오·구글, 이메일 가입 없음). SaaS가 자랑하는 비밀번호·MFA·이메일 검증 같은 기능은 거의 안 쓰는 거예요.
 
@@ -266,7 +266,7 @@ MVP는 **Path 2만** 써요. 사용자가 직접 상품을 연 행동이 트리�
 
 ---
 
-## 7. 인프라 0원에 맞추기 — OCI Always Free (ADR 0004·0017)
+## 7. 인프라 0원에 맞추기 — OCI Always Free (ADR)
 
 가상 스레드를 쓰려면 Java 25가 돌 곳이 필요한데, Vercel Functions 같은 서버리스와는 잘 안 맞아요. 그렇다고 AWS·GCP·Render로 가면 부트스트랩 흑자 전에 월 $20~$100이 먼저 나가요.
 
@@ -274,7 +274,7 @@ MVP는 **Path 2만** 써요. 사용자가 직접 상품을 연 행동이 트리�
 
 - Ampere A1 Flex(4 OCPU, 24GB RAM)를 사실상 $0으로 써요. Phase 1~2는 단일 호스트 Docker Compose로 버티고, 규모가 커지면 수직 확장 → 그래도 부족하면 OCI Kubernetes Engine으로 수평 확장하는 경로예요. "한 대로 몇 만 명"은 측정한 적 없는 가정이라, 어디서 깨지는지는 부하 테스트로 봐야 해요.
 - 리전은 서울이라 한국 사용자 지연이 낮아요.
-- 백엔드뿐 아니라 프론트도 Vercel을 빼고 OCI nginx 정적 호스팅 + Cloudflare CDN으로 통일했어요(ADR 0017). 단일 벤더라 운영이 단순하고, egress 비용이 없어요.
+- 백엔드뿐 아니라 프론트도 Vercel을 빼고 OCI nginx 정적 호스팅 + Cloudflare CDN으로 통일했어요(ADR). 단일 벤더라 운영이 단순하고, egress 비용이 없어요.
 
 모니터링은 Sentry(에러) + PostHog(제품 분석) + OCI Monitoring(기본 지표)으로, 객체 스토리지는 egress가 무료인 Cloudflare R2로 맞췄어요. 전부 "초반 0원" 제약에서 역산한 선택이에요.
 
