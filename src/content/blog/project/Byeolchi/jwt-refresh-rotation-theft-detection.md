@@ -2,7 +2,7 @@
 title: '훔친 refresh token은 두 번째 사용에서 들킨다 - 회전·재사용 감지·family 무효화 직접 구현'
 titleEn: 'A Stolen Refresh Token Gets Caught on Its Second Use - Rotation, Reuse Detection, and Family Revocation'
 description: >-
-  별찌 Identity 도메인에서 Clerk 없이 직접 구현한 JWT 인증의 핵심 — Access는 stateless
+  별찌 Identity 도메인에서 외부 인증 SaaS 없이 직접 구현한 JWT 인증의 핵심 — Access는 stateless
   15분, Refresh는 stateful 7일로 비대칭을 두고, 회전(rotation)·재사용 감지(reuse
   detection)·token family 무효화로 토큰 탈취를 막은 과정을 실제 코드로 정리합니다. refresh
   token 원본을 저장하지 않고 SHA-256 해시만 두는 이유, family_id·parent_token_id로 회전
@@ -12,7 +12,7 @@ description: >-
   grace + noRollbackFor로 풀고, 20스레드 동시 갱신 오탐 0을 testcontainers 회귀 테스트로
   검증하기까지 담았습니다.
 descriptionEn: >-
-  How Byeolchi's Identity domain implements self-issued JWT auth without Clerk —
+  How Byeolchi's Identity domain implements self-issued JWT auth without an auth SaaS —
   asymmetric lifetimes (stateless 15-minute access, stateful 7-day refresh),
   refresh token rotation, reuse detection, and token-family revocation against
   token theft, all with real code. Covers why only the SHA-256 hash is stored,
@@ -41,9 +41,9 @@ coverImage: /uploads/project/Byeolchi/jwt-refresh-rotation/cover.svg
 series: "Byeolchi"
 ---
 
-별찌에서 인증(Identity)은 제가 단독으로 맡은 도메인이에요. [별찌를 만드는 중](/blog/project/byeolchi/byeolchi-building) 글에서 "Clerk 대신 자체 OAuth"를 골랐다고 적었는데, 자체 구현을 택한 순간 따라오는 진짜 숙제는 로그인이 아니에요. **토큰을 훔쳤을 때 어떻게 되는가**예요.
+별찌에서 인증(Identity)은 제가 단독으로 맡은 도메인이에요. [별찌를 만드는 중](/blog/project/byeolchi/byeolchi-building) 글에서 "인증 SaaS 대신 자체 OAuth"를 골랐다고 적었는데, 자체 구현을 택한 순간 따라오는 진짜 숙제는 로그인이 아니에요. **토큰을 훔쳤을 때 어떻게 되는가**예요.
 
-소셜 로그인 자체는 Spring Security가 거의 다 해줘요. 문제는 그다음이에요. 로그인 한 번에 토큰을 주고, 그 토큰으로 API를 계속 호출하게 하는데 — 그 토큰이 새거나 탈취되면? Clerk을 썼으면 Clerk이 알아서 했을 부분을, 안 쓰기로 한 이상 제가 직접 책임져야 했어요. 이 글은 그 부분을 실제 코드로 정리한 거예요.
+소셜 로그인 자체는 Spring Security가 거의 다 해줘요. 문제는 그다음이에요. 로그인 한 번에 토큰을 주고, 그 토큰으로 API를 계속 호출하게 하는데 — 그 토큰이 새거나 탈취되면? 인증 SaaS를 썼으면 그쪽이 알아서 했을 부분을, 안 쓰기로 한 이상 제가 직접 책임져야 했어요. 이 글은 그 부분을 실제 코드로 정리한 거예요.
 
 ## 출발점 — 토큰이 새는 건 "혹시"가 아니라 "언제"
 
@@ -281,8 +281,10 @@ grace는 10초로 뒀어요. 모바일 동시 요청은 수 ms~수백 ms 안에 
 
 이번엔 "다음 글에서"가 아니라 지금 검증했어요. row lock은 진짜 DB라야 의미가 있어서 testcontainers로 실제 Postgres(pgvector/pgvector:pg18)를 띄웠어요.
 
-- **정상 동시 갱신**: 20스레드가 같은 `R1`으로 동시에 `rotate()` → `reuse_detected(오탐) = 0`, `family_compromised = 0`, 20스레드 **전부 유효 토큰 수령**, family 생존. (grace를 1초로 좁혀 테스트)
-- **진짜 재사용**: 1회 정상 회전 후 grace(1초)를 넘겨 `R1` 재사용 → `family_compromised`, 생존 토큰 0.
+- **정상 동시 갱신**: 20스레드가 같은 `R1`으로 동시에 `rotate()` → `success=20`, `reuse_detected(오탐)=0`, `family_compromised=0`, `live_leaves=20`(살아있는 리프 토큰). 20스레드 **전부 유효 토큰 수령**, family는 하나도 안 끊김. (grace를 1초로 좁혀 테스트)
+- **진짜 재사용**: 1회 정상 회전 후 grace(1초)를 넘겨 `R1` 재사용 → `family_compromised` 발생, 생존 토큰 0.
+
+한 줄 더. 정상 동시 갱신 쪽 `family_rows=21`이 깔끔한 증거예요 — `R1`(부모, rotated로 revoked) + 자식 20개 = 21행. 첫 요청은 정상 회전, 나머지 19개는 grace 안 재발급으로 흡수돼서, **20스레드가 다 통과했는데 family는 한 번도 안 끊긴** 거예요.
 
 "정상 동시 요청은 흡수, 진짜 재사용은 차단"이 한 테스트 안에서 둘 다 통과해요. 표준이 안 알려준 부분을 직접 메우고, 회귀 테스트로 못 박은 지점이에요.
 
@@ -311,7 +313,8 @@ grace는 10초로 뒀어요. 모바일 동시 요청은 수 ms~수백 ms 안에 
 
 ---
 
-Sources:
+## 참고 자료
+
 - [RFC 9700 - Best Current Practice for OAuth 2.0 Security](https://datatracker.ietf.org/doc/rfc9700/)
 - [Refresh Token Rotation - Auth0 Docs](https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
 - [OAuth best practices: We read RFC 9700 so you don't have to — WorkOS](https://workos.com/blog/oauth-best-practices)
