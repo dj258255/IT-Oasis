@@ -292,9 +292,9 @@ grace는 10초로 뒀어요. 모바일 동시 요청은 수 ms~수백 ms 안에 
 
 무기 하나를 깊게 파면, 그 옆의 선택들도 같이 설명돼야 정직해요.
 
-- **HS256 단일 시크릿.** 지금은 대칭키(HS256)예요. 단일 백엔드라 검증 주체가 하나니 충분하고 단순해요. 대신 시크릿을 회전하면 그 순간 살아있는 Access token이 전부 무효가 되는데 — 수명이 15분이라 **blast radius가 최대 15분**이에요. 서비스가 여러 개로 쪼개져 검증 주체가 늘면 RS256(비대칭)으로 바꿔서, 검증 측엔 공개키만 주고 서명키는 발급 측만 쥐는 그림으로 갈 거예요(ADR 0013에 미리 적어둠).
-- **IP·UA는 지금 포렌식용.** 발급 시점 IP·User-Agent를 저장하지만, 회전 시 "IP가 갑자기 바뀌었으니 막자" 같은 능동 차단엔 아직 안 써요. 정상 사용자도 LTE↔WiFi로 IP가 자주 바뀌어서 오탐이 크거든요. 그리고 IP는 개인정보라 PIPA상 30일 후 마스킹 대상이에요. 그래서 "탈취 추적 단서"로만 두고, 차단 판단은 family 재사용이라는 더 확실한 신호에 맡겼어요.
-- **logout은 refresh만 죽여요.** `/api/auth/logout`은 해당 refresh token을 revoke하지만, 위에서 말한 대로 Access는 stateless라 최대 15분 더 살아요. "즉시 전부 차단"이 필요한 케이스(예: 계정 도용 신고)는 `revokeAllByUserId`로 그 사용자의 모든 family를 한 번에 끄는 경로를 따로 뒀어요.
+- **HS256 단일 시크릿.** 지금은 대칭키(HS256)예요. 단일 백엔드가 발급·검증을 다 하니 시크릿이 신뢰 경계 밖으로 안 나가요 — 이 단계엔 HS256가 맞는 선택이에요(RS256은 여러 서비스가 각자 검증하거나 외부가 검증할 때의 답이고요). HS256의 유일한 실질 약점은 약한 시크릿인데, 둘로 막았어요: `Keys.hmacShaKeyFor`가 256bit 미만 시크릿이면 부팅을 거부하고, prod 시크릿은 Ansible Vault에 둔 `openssl rand -hex 32`(256bit CSPRNG 랜덤)예요 — 사람이 친 문자열이 아니라서요. 시크릿을 회전하면 살아있는 Access가 전부 무효가 되지만 수명이 15분이라 **blast radius가 최대 15분**이고요. 서비스가 쪼개져 검증 주체가 늘면 RS256(검증 측엔 공개키만)으로 가는데, 그건 지금 고칠 코드가 아니라 멀티서비스 시점의 트리거 작업으로 따로 추적해요(ADR 0013에 미리 적어둠 — Redis 다중화를 트리거까지 미뤄둔 것과 같은 패턴이에요).
+- **IP·UA는 지금 포렌식용.** 발급 시점 IP·User-Agent를 저장하지만, 회전 시 "IP가 갑자기 바뀌었으니 막자" 같은 능동 차단엔 안 써요(`rotate()`가 둘을 받지만 저장에만 쓰고 어떤 판정에도 안 넣어요). 정상 사용자도 LTE↔WiFi로 IP가 자주 바뀌어서 오탐이 크거든요. IP는 개인정보라 오래 들고 있으면 안 되는데, 별도 마스킹 잡을 두는 대신 정리 배치가 **토큰 행(IP 포함)을 revoke·만료 7일 뒤에 통째로 삭제**해요 — 발급 기준 길어야 ~14일이면 사라지니, 마스킹보다 강한 삭제로 보관을 짧게 가져가요(정확히는 "마스킹"이 아니라 "삭제"예요). 그래서 IP는 "탈취 추적 단서"로만 두고, 차단 판단은 family 재사용이라는 더 확실한 신호에 맡겼어요.
+- **logout은 refresh만 죽여요.** `/api/auth/logout`은 해당 refresh token을 revoke하지만, 위에서 말한 대로 Access는 stateless라 최대 15분 더 살아요. "한 사용자의 모든 family를 한 번에 끄는" 기능(`revokeAllByUserId`)은 이미 만들어 뒀고, 지금은 계정 삭제 흐름에서 쓰고 있어요. 다만 "계정 도용 신고 → 즉시 전체 차단" 같은 사용자용 트리거(엔드포인트)는 아직 안 달았어요 — 총은 있는데 그 방아쇠는 후속 작업이에요. 이런 것까지 "이미 됐다"고 안 쓰고 "기반은 있고 트리거는 후속"이라고 적는 게 정직하다고 봤어요.
 
 ## 정리
 
@@ -316,3 +316,5 @@ Sources:
 - [Refresh Token Rotation - Auth0 Docs](https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
 - [OAuth best practices: We read RFC 9700 so you don't have to — WorkOS](https://workos.com/blog/oauth-best-practices)
 - [Refresh Token Rotation Grace Period (Overlap Window) — better-auth #8512](https://github.com/better-auth/better-auth/issues/8512)
+- [RS256 vs HS256: When to use which — WorkOS](https://workos.com/blog/rs256-vs-hs256-jwt-signing-algorithms)
+- [RS256 vs HS256: What's the difference — Auth0](https://auth0.com/blog/rs256-vs-hs256-whats-the-difference/)
