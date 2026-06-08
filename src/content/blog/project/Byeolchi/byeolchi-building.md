@@ -1,10 +1,10 @@
 ---
-title: '별찌 - 설계 4일 만에 ADR 13개를 멈추고, POC부터 다시 만드는 중'
-titleEn: 'Byeolchi - Freezing 13 ADRs After 4 Days and Restarting from a POC'
+title: '별찌 - 완벽한 설계보다 1주 POC, 빠르게 만들며 짓는 중'
+titleEn: 'Byeolchi - A One-Week POC Over a Perfect Design'
 description: >-
   이미 보고 있는 상품을 기준으로 여러 쇼핑몰의 가격과 중고 대안을 한 화면에서 비교해 주는
-  AI 패션 쇼핑 어시스턴트 별찌를, 백엔드 2인으로 만들고 있는 현재진행형 기록입니다. 4일 만에
-  ADR 13개·이슈 27개까지 설계가 부풀어 오른 뒤 POC부터 다시 시작한 이야기(ADR), 데이터는
+  AI 패션 쇼핑 어시스턴트 별찌를, 백엔드 2인으로 만들고 있는 현재진행형 기록입니다. 완벽한
+  설계보다 1주 POC로 빠르게 검증하고 짓는 방식(ADR), 데이터는
   PostgreSQL 18 + pgvector로 시작하고 Elasticsearch + Nori는 Phase 2로 미룬 이유(ADR),
   쇼핑몰 여러 곳을 동시에 호출하는 워크로드라 Java 25 가상 스레드 + Spring Boot 4를 고른 이유
   (ADR), 2인이 도메인 경계를 지키려고 택한 Spring Modulith 모듈러 모놀리스(ADR),
@@ -15,8 +15,8 @@ description: >-
 descriptionEn: >-
   A work-in-progress log of Byeolchi, an AI fashion shopping assistant that compares
   prices and second-hand alternatives across malls on the product page you are already
-  viewing, built by two backend engineers. Covers the POC-first reset after the design
-  ballooned to 13 ADRs in 4 days (ADR), starting on PostgreSQL 18 + pgvector and
+  viewing, built by two backend engineers. Covers a POC-first approach — ship fast,
+  validate, then build (ADR), starting on PostgreSQL 18 + pgvector and
   deferring Elasticsearch + Nori to Phase 2 (ADR), choosing Java 25 virtual threads
   + Spring Boot 4 for a fan-out workload (ADR), a modular monolith with Spring
   Modulith for a two-person team (ADR), a "crawl only what you have earned"
@@ -86,13 +86,11 @@ series: "Byeolchi"
 
 ---
 
-## 1. 왜 POC부터 다시 시작했나 (ADR)
+## 1. 완벽한 설계보다 1주 POC — 빠르게 만들고 검증한다 (ADR)
 
-처음엔 의욕이 앞섰어요. 설계를 시작한 지 4일 만에 ADR 13건, ERD 테이블 17개, Linear 이슈 27개까지 만들어졌어요. 문서만 보면 거의 production-ready였어요.
+별찌의 개발 방식은 처음부터 하나로 잡았어요. **완벽하게 설계한 다음 만드는 게 아니라, 빠르게 만들어 배포하고 POC로 검증한 뒤 키운다.** 2인·0원 부트스트랩에선 잘 정리된 설계 문서보다 "돌아가는 1주짜리 검증"이 훨씬 값지거든요.
 
-그런데 한 발 떨어져서 보니 이상했어요. **아직 "이 비교 매칭이 기술적으로 되긴 하나?"를 한 번도 확인하지 않았는데**, 인증·결제·추천·관측성 설계부터 빼곡했던 거예요. 전형적인 매몰 비용 함정이었어요. "이만큼 설계했으니 그냥 가자"는 마음이 스멀스멀 올라왔거든요.
-
-그래서 멈추고 ADR을 썼어요. 결정은 이거였어요.
+솔직히 초반엔 설계 욕심이 잠깐 앞서기도 했어요. 4일 만에 ADR 13건·ERD 17개·이슈 27개까지 문서가 불어났는데, 정작 **"이 비교 매칭이 기술적으로 되긴 하나?"는 한 번도 확인 안 한 상태**였거든요. 그래서 거기서 멈추고, "POC부터"로 방식을 또렷하게 못 박았어요. 결정은 이거였어요.
 
 > MVP를 바로 짓지 않는다. 먼저 **1주짜리 POC** 하나로 단 하나의 질문에만 답한다 — "확장 프로그램이 상품 1건의 가격 비교를 실제로 띄울 수 있는가?"
 
@@ -107,7 +105,7 @@ POC의 통과 기준도 미리 숫자로 박아 뒀어요.
 - POC가 **통과하면**: 얼려 둔 ADR 13건과 백로그 23건을 그때 풀어서 MVP를 단계별로 짓는다.
 - POC가 **실패하면**(매칭 80% 미달이거나 봇에 막히면): 3개월을 쏟기 전에 모델 자체를 다시 본다.
 
-여기서 배운 건 기술이 아니라 순서였어요. **검증되지 않은 핵심 가설 위에 production 설계를 쌓으면, 그 설계는 자산이 아니라 부채**가 돼요. 13개의 ADR은 버린 게 아니라 "POC 통과 후 활성화"로 미뤄 둔 것뿐이고요.
+핵심은 순서예요. **검증되지 않은 핵심 가설 위에 설계를 쌓으면, 그 설계는 자산이 아니라 부채**가 돼요. POC가 통과해야 그 위에 설계를 푸는 거고, 13건의 ADR은 버린 게 아니라 "POC 통과 후 활성화"로 미뤄 둔 거예요. 빠르게 만들어 검증하는 흐름을 지키려고, 일부러 설계를 뒤로 세운 거죠.
 
 ### 첫 POC smoke — 매칭 89%, 그리고 남은 11%의 모양
 
@@ -321,7 +319,7 @@ MVP 통과 기준도 미리 박아 뒀어요 — 알파 20명 중 50% 이상이 
 
 별찌를 만들면서 가장 많이 한 일은 코드가 아니라 **"이건 지금 안 한다"를 정하는 일**이었어요. Elasticsearch도, 백그라운드 크롤링도, 마이크로서비스도, 외부 인증 SaaS도 — 좋은 도구지만 지금 우리 제약(2인·0원·법 먼저)에는 과했어요.
 
-2인 부트스트랩에서 배운 건, **복잡도는 자랑이 아니라 부채**라는 거예요. 4일 만에 ADR 13개를 쌓았다가 POC로 되돌린 그 순간이, 지금까지 가장 잘한 결정이었다고 생각해요. 검증된 만큼만 짓고, 데이터가 말할 때 다음 칸을 켜는 것 — 그게 지금 별찌를 만드는 방식이에요.
+2인 부트스트랩에서 배운 건, **복잡도는 자랑이 아니라 부채**라는 거예요. 설계가 잠깐 앞서갔을 때 거기서 멈추고 "POC부터"로 다잡은 게, 지금까지 가장 잘한 판단이었다고 생각해요. 검증된 만큼만 짓고, 데이터가 말할 때 다음 칸을 켜는 것 — 그게 지금 별찌를 만드는 방식이에요.
 
 결정은 코드보다 ADR로 먼저 합의하고(지금 17건), POC 게이트로 검증한 뒤 푸는 식이에요. AI를 많이 쓰는 개발일수록 이 "계획 먼저, 검증 먼저" 순서가 안전벨트가 되더라고요 — 코드를 빨리 뽑는 것보다, 무엇을 안 만들지 먼저 정하는 게 더 중요했어요.
 
