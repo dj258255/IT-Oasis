@@ -5,12 +5,13 @@
   "icon": "rocket",
   "order": 3,
   "subcategories": [
-    { "name": "WikiEngine", "nameEn": "WikiEngine", "nameKo": "위키엔진", "order": 1 },
-    { "name": "Balruno", "nameEn": "Balruno", "nameKo": "발루노", "order": 2 },
-    { "name": "Tymee", "nameEn": "Tymee", "nameKo": "타이미", "order": 3 },
-    { "name": "Joying", "nameEn": "RentalJoying", "nameKo": "빌려조잉", "order": 4 },
-    { "name": "Orakgarak", "nameEn": "Orakgarak", "nameKo": "오락가락", "order": 5 },
-    { "name": "EduMeet", "nameEn": "EduMeet", "nameKo": "에듀밋", "order": 6 },
-    { "name": "IT Oasis", "nameEn": "IT Oasis", "nameKo": "IT Oasis", "order": 7 }
+    { "name": "Byeolchi", "nameEn": "Byeolchi", "nameKo": "별찌", "order": 1 },
+    { "name": "WikiEngine", "nameEn": "WikiEngine", "nameKo": "위키엔진", "order": 2 },
+    { "name": "Balruno", "nameEn": "Balruno", "nameKo": "발루노", "order": 3 },
+    { "name": "Tymee", "nameEn": "Tymee", "nameKo": "타이미", "order": 4 },
+    { "name": "Joying", "nameEn": "RentalJoying", "nameKo": "빌려조잉", "order": 5 },
+    { "name": "Orakgarak", "nameEn": "Orakgarak", "nameKo": "오락가락", "order": 6 },
+    { "name": "EduMeet", "nameEn": "EduMeet", "nameKo": "에듀밋", "order": 7 },
+    { "name": "IT Oasis", "nameEn": "IT Oasis", "nameKo": "IT Oasis", "order": 8 }
   ]
 }

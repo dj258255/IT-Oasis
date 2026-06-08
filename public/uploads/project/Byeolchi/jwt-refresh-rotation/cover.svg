@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="JWT refresh token rotation and theft detection">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a0d22"/>
+      <stop offset="0.55" stop-color="#2a1030"/>
+      <stop offset="1" stop-color="#0f0a18"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF3D8B"/>
+      <stop offset="1" stop-color="#A435F0"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#A435F0" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#A435F0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="930" cy="300" r="260" fill="url(#orb)"/>
+
+  <!-- rotation arrows around a token -->
+  <g transform="translate(930,300)" fill="none" stroke="url(#brand)" stroke-width="7" stroke-linecap="round">
+    <path d="M 0,-95 A 95,95 0 1 1 -82,48"/>
+    <path d="M -82,48 l -22,-6 m 22,6 l 6,-22"/>
+  </g>
+  <g transform="translate(930,300)">
+    <rect x="-46" y="-30" width="92" height="60" rx="12" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+    <path d="M -22,-30 v -14 a 22,22 0 0 1 44,0 v 14" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+    <circle cx="0" cy="-2" r="7" fill="#FF3D8B"/>
+    <rect x="-3" y="-2" width="6" height="18" rx="3" fill="#FF3D8B"/>
+  </g>
+
+  <text x="100" y="250" font-family="'Pretendard','Apple SD Gothic Neo',sans-serif" font-size="30" font-weight="600" letter-spacing="2" fill="#FF8FBF">별찌 · Identity</text>
+  <text x="100" y="330" font-family="'Pretendard','Apple SD Gothic Neo',sans-serif" font-size="66" font-weight="800" fill="#FFFFFF" letter-spacing="-2">훔친 refresh token은</text>
+  <text x="100" y="406" font-family="'Pretendard','Apple SD Gothic Neo',sans-serif" font-size="66" font-weight="800" fill="#FFFFFF" letter-spacing="-2">두 번째에서 들킨다</text>
+  <text x="103" y="470" font-family="'Pretendard','Apple SD Gothic Neo',sans-serif" font-size="28" font-weight="500" fill="#E9D9F2" opacity="0.9">회전 · 재사용 감지 · family 무효화 직접 구현</text>
+
+  <rect x="103" y="498" width="640" height="3" rx="1.5" fill="url(#brand)"/>
+  <text x="103" y="548" font-family="'JetBrains Mono','SF Mono',monospace" font-size="22" font-weight="500" fill="#B79BD6">Spring Security · self-issued JWT · SHA-256 · token family</text>
+</svg>
