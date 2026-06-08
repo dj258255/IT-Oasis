@@ -19,23 +19,23 @@ export async function getStaticPaths() {
   return buildable.map((post) => {
     const fullCat = post.data.category;
     const parentCat = parseCategory(fullCat).parent;
+
+    // Same subcategory only — these are the posts shown under the "'<category>' 의 다른 글" header.
+    // Don't pad with parent-category siblings here, or the header mislabels other categories
+    // (e.g. a Byeolchi post showing Balruno posts under "'프로젝트/별찌' 의 다른 글").
     let relatedPosts = posts
       .filter((p) => p.id !== post.id && p.data.category === fullCat)
       .slice(0, 4);
-
-    // Fallback: if not enough same-subcategory posts, fill from parent category
-    if (relatedPosts.length < 4) {
-      const existingIds = new Set([post.id, ...relatedPosts.map(p => p.id)]);
-      const parentPosts = posts
-        .filter((p) => !existingIds.has(p.id) && parseCategory(p.data.category).parent === parentCat)
-        .slice(0, 4 - relatedPosts.length);
-      relatedPosts = [...relatedPosts, ...parentPosts];
-    }
-
-    // Fallback: if no same-category posts at all, show recent posts
     const isSameCategory = relatedPosts.length > 0;
+
+    // Fallbacks (rendered under the generic "다른 글 둘러보기" header): same parent category, then recent.
     if (!isSameCategory) {
-      relatedPosts = posts.filter((p) => p.id !== post.id).slice(0, 4);
+      relatedPosts = posts
+        .filter((p) => p.id !== post.id && parseCategory(p.data.category).parent === parentCat)
+        .slice(0, 4);
+      if (relatedPosts.length === 0) {
+        relatedPosts = posts.filter((p) => p.id !== post.id).slice(0, 4);
+      }
     }
 
     // Unlisted posts sit outside the public sequence, so they get no prev/next.
