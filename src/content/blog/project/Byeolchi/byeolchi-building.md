@@ -20,8 +20,9 @@ descriptionEn: >-
   deferring Elasticsearch + Nori to Phase 2 (ADR 0001), choosing Java 25 virtual threads
   + Spring Boot 4 for a fan-out workload (ADR 0002/0007), a modular monolith with Spring
   Modulith for a two-person team (ADR 0006/0011), a "crawl only what you have earned"
-  three-path strategy (ADR 0003), self-hosted OAuth instead of Clerk (ADR 0013), and a
-  zero-dollar infra target on OCI Always Free (ADR 0004/0017).
+  three-path strategy (ADR 0003), self-hosted OAuth instead of Clerk (ADR 0013), a
+  zero-dollar infra target on OCI Always Free (ADR 0004/0017), and a first POC smoke
+  (89% match on a 100-product Musinsa sample, clearing the 80% gate).
 date: 2026-06-08T00:00:00.000Z
 tags:
   - Java 25
@@ -247,6 +248,8 @@ MVP는 **Path 2만** 써요. 사용자가 직접 상품을 연 행동이 트리�
 
 그래서 Spring Security OAuth 2.0 클라이언트 + 자체 발급 JWT로 갔어요. Access 15분 / Refresh 7일에, refresh token 로테이션과 탈취 감지(family_id)를 위해 `refresh_tokens` 테이블을 따로 뒀어요. "유명한 도구"가 아니라 "우리 제약에 맞는 도구"를 고른 거예요.
 
+이 회전·탈취 감지를 실제 코드로 어떻게 구현했는지, 그리고 표준(RFC 9700·Auth0)도 답을 안 주는 "정상 사용자가 동시에 갱신할 때 family가 오탐으로 꺼지는 레이스"를 어떻게 진단하고 푸는지는 [훔친 refresh token은 두 번째 사용에서 들킨다](/blog/project/byeolchi/jwt-refresh-rotation-theft-detection) 글에 따로 깊게 적었어요. 별찌에서 제가 단독으로 가장 깊이 판 부분이에요.
+
 ---
 
 ## 7. 인프라 0원에 맞추기 — OCI Always Free (ADR 0004·0017)
@@ -308,4 +311,4 @@ MVP 통과 기준도 미리 박아 뒀어요 — 알파 20명 중 50% 이상이 
 
 결정은 코드보다 ADR로 먼저 합의하고(지금 17건), POC 게이트로 검증한 뒤 푸는 식이에요. AI를 많이 쓰는 개발일수록 이 "계획 먼저, 검증 먼저" 순서가 안전벨트가 되더라고요 — 코드를 빨리 뽑는 것보다, 무엇을 안 만들지 먼저 정하는 게 더 중요했어요.
 
-다음 글은 POC 결과부터 시작할게요. 매칭이 80%를 넘었는지, 봇에 막혔는지, 아니면 모델을 다시 봤는지 — 숫자로 돌아올게요.
+첫 POC smoke로 매칭 80% 게이트는 넘겼으니, 다음 숫자는 거기서 이어져요. 남은 11%(category_noise)를 감점 정책으로 잡으면 매칭이 얼마나 오르는지, 부하를 걸어도 응답이 3초 안에 들어오는지, PG FTS만으로 한국어 검색이 버티는지, 그리고 알파 20명이 실제로 다시 오는지 — 가정에 박아 둔 칸들을 하나씩 실측으로 채워서 돌아올게요.

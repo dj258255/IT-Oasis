@@ -8,8 +8,9 @@ description: >-
   token 원본을 저장하지 않고 SHA-256 해시만 두는 이유, family_id·parent_token_id로 회전
   계보를 추적하는 스키마, 죽은 토큰이 다시 오면 family 전체를 끄는 JPQL, 그리고 표준(RFC
   9700·Auth0)이 알려주지 않는 가장 어려운 부분 — 정상 사용자가 토큰 만료 직후 동시에 갱신할
-  때 발생하는 race condition과 family 오탐(멀쩡한 사용자 강제 로그아웃)을 어떻게 진단하고
-  어떤 방향(PG row lock + grace window)으로 푸는지까지 담았습니다.
+  때 발생하는 race condition과 family 오탐(멀쩡한 사용자 강제 로그아웃)을 PG 행 잠금 + 10초
+  grace + noRollbackFor로 풀고, 20스레드 동시 갱신 오탐 0을 testcontainers 회귀 테스트로
+  검증하기까지 담았습니다.
 descriptionEn: >-
   How Byeolchi's Identity domain implements self-issued JWT auth without Clerk —
   asymmetric lifetimes (stateless 15-minute access, stateful 7-day refresh),
@@ -18,7 +19,9 @@ descriptionEn: >-
   the family_id/parent_token_id rotation lineage schema, the JPQL that revokes an
   entire family when a dead token reappears, and the hardest part the standards
   (RFC 9700, Auth0) leave unspecified: the concurrent-refresh race that triggers a
-  false-positive family compromise and logs out a legitimate user.
+  false-positive family compromise, solved with a PG row lock + 10s grace +
+  noRollbackFor and verified by a 20-thread testcontainers regression (zero false
+  positives).
 date: 2026-06-09T00:00:00.000Z
 tags:
   - JWT
@@ -136,7 +139,7 @@ private String sha256(String input) {
 회전 규칙은 단순해요. **refresh token은 일회용이에요.** `/api/auth/refresh`를 호출해 새 Access를 받는 순간, 방금 쓴 refresh token은 폐기되고 새 refresh token이 나와요.
 
 ```java
-// RefreshTokenService.java
+// RefreshTokenService.java — 처음 짠 버전. 동시성 구멍이 있어요('가장 어려운 부분'에서 고쳐요)
 @Transactional
 public RotatedTokens rotate(String presentedToken, String userAgent, String ipAddress) {
     String hash = sha256(presentedToken);
@@ -230,22 +233,60 @@ public void cleanup() {
 | B. grace window | 막 회전된 토큰을 N초(예: 10초) 안에 재사용하면, family를 끄는 대신 **직전에 발급한 자식 토큰을 그대로 돌려줌** | 정상 동시 요청을 흡수. 단 grace 동안은 재사용 감지가 살짝 느슨해짐 |
 | C. 분산 락 (Redis) | 토큰 키로 락 | 멀티 인스턴스엔 맞지만, 별찌는 아직 단일 인스턴스라 오버스펙 |
 
-별찌는 Phase 1이 **단일 PostgreSQL·단일 인스턴스**라, 결론은 **A를 기본으로, B를 얇게 얹는 것**이에요. `findByTokenHash`를 비관적 락으로 바꿔 같은 토큰의 회전을 직렬화하면 경우 A·B가 동시에 사라지고, 거기에 "막 회전된 직후의 부모 토큰 재사용"을 짧은 grace로 봐주면 모바일의 진짜 동시 요청까지 흡수돼요. 공격자의 재사용은 grace(수 초)를 한참 넘겨서 오니까 여전히 걸려요.
+별찌는 Phase 1이 **단일 PostgreSQL·단일 인스턴스**라, **A(행 잠금)를 기본으로 B(grace)를 얇게 얹는** 쪽으로 풀었어요(BYC-206).
+
+먼저 조회를 비관적 락으로 바꿔, 같은 토큰의 회전을 직렬화해요.
 
 ```java
-// 방향 (현재 코드엔 아직 미적용 — 다음 작업)
-// 1) 행 잠금으로 직렬화
+// RefreshTokenRepository.java — SELECT ... FOR UPDATE 로 같은 토큰 회전을 직렬화
 @Lock(LockModeType.PESSIMISTIC_WRITE)
-Optional<RefreshToken> findByTokenHashForUpdate(String tokenHash);
-
-// 2) rotate(): 락 획득 후 재확인.
-//    방금(grace 안에) rotated 됐고 자식이 이미 있으면 → 그 자식을 반환(정상 동시요청)
-//    grace 밖의 revoked 토큰이면 → 그때만 family_compromised(진짜 재사용)
+@Query("SELECT r FROM RefreshToken r WHERE r.tokenHash = :tokenHash")
+Optional<RefreshToken> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
 ```
 
-**정직하게 적어요. 지금 별찌 코드는 이 레이스를 아직 막지 않아요.** rotate()는 잘 도는데, 동시 갱신이라는 모서리에서 깨질 수 있다는 걸 직접 재현해서 알아챈 단계예요. 그래서 이게 지금 Identity에서 제가 푸는 가장 어려운 문제이고, 방향은 위(PG row lock + 짧은 grace)예요. 다음 글에서 적용 후 동시 요청 부하로 "오탐 0"을 확인한 수치를 들고 올게요.
+이러면 동시 요청 둘이 같은 토큰 행을 두고 줄을 서요(경우 A 이중 발급 소멸). 그리고 `isRevoked` 분기 안에서, "방금 rotated된 토큰을 grace(10초) 안에 다시 들고 온 것"은 모바일의 정상 동시 갱신으로 보고 family를 끄는 대신 새 자식을 재발급해요.
 
-이 한 장이 사실 이 글의 전부예요. 회전·재사용 감지는 검색하면 나오지만, **그걸 실제로 켰을 때 정상 사용자가 튕기는 레이스**는 직접 만들어보지 않으면 안 보여요.
+```java
+// noRollbackFor — 이게 핵심. 아래에서 설명.
+@Transactional(noRollbackFor = InvalidRefreshTokenException.class)
+public RotatedTokens rotate(String presentedToken, String userAgent, String ipAddress) {
+    String hash = sha256(presentedToken);
+    RefreshToken stored = repository.findByTokenHashForUpdate(hash)              // 행 잠금으로 직렬화
+            .orElseThrow(() -> new InvalidRefreshTokenException("Unknown refresh token"));
+    if (stored.isExpired()) throw new InvalidRefreshTokenException("Refresh token expired");
+
+    if (stored.isRevoked()) {
+        if (isWithinRotationGrace(stored)) {                                    // grace 안 = 정상 동시 갱신
+            IssuedRefreshToken regranted = issue(stored.getUserId(), stored.getFamilyId(), stored.getId(), userAgent, ipAddress);
+            return new RotatedTokens(stored.getUserId(), regranted);            // family 안 끄고 재발급
+        }
+        repository.revokeFamily(stored.getFamilyId(), now(), "family_compromised"); // grace 밖 = 진짜 재사용
+        throw new InvalidRefreshTokenException("Refresh token reuse detected (family compromised)");
+    }
+    stored.revoke("rotated");
+    return new RotatedTokens(stored.getUserId(), issue(stored.getUserId(), stored.getFamilyId(), stored.getId(), userAgent, ipAddress));
+}
+
+private boolean isWithinRotationGrace(RefreshToken stored) {
+    return stored.isRevokedReason("rotated") && stored.getRevokedAt() != null
+            && stored.getRevokedAt().isAfter(OffsetDateTime.now().minus(properties.refreshRotationGrace()));
+}
+```
+
+여기서 진짜 함정은 `noRollbackFor`였어요. 재사용을 감지하면 `revokeFamily`로 family를 끈 **다음에** `InvalidRefreshTokenException`을 던져 거부하는데 — 이 예외가 RuntimeException이라, 기본 `@Transactional`이면 그 예외로 **트랜잭션이 통째로 롤백**돼요. 즉 방금 한 family 무효화(보안 조치)가 같이 취소돼요. 거부는 했는데 토큰은 안 끊긴, 최악의 조용한 실패죠. 그래서 `noRollbackFor`로 "이 예외에는 롤백하지 마라"를 명시해서 **거부는 던지되 family 무효화는 커밋되게** 했어요. 이런 건 검색으론 안 나오고, 트랜잭션 경계를 직접 의심해봐야 보여요.
+
+grace는 10초로 뒀어요. 모바일 동시 요청은 수 ms~수백 ms 안에 들어오니 넉넉히 흡수되고, 탈취 replay는 분~시간 단위라 이 창을 한참 넘겨서 여전히 family_compromised로 잡혀요.
+
+### 테스트로 확인 — 20스레드 동시 갱신, 오탐 0
+
+이번엔 "다음 글에서"가 아니라 지금 검증했어요. row lock은 진짜 DB라야 의미가 있어서 testcontainers로 실제 Postgres(pgvector/pgvector:pg18)를 띄웠어요.
+
+- **정상 동시 갱신**: 20스레드가 같은 `R1`으로 동시에 `rotate()` → `reuse_detected(오탐) = 0`, `family_compromised = 0`, 20스레드 **전부 유효 토큰 수령**, family 생존. (grace를 1초로 좁혀 테스트)
+- **진짜 재사용**: 1회 정상 회전 후 grace(1초)를 넘겨 `R1` 재사용 → `family_compromised`, 생존 토큰 0.
+
+"정상 동시 요청은 흡수, 진짜 재사용은 차단"이 한 테스트 안에서 둘 다 통과해요. 표준이 안 알려준 부분을 직접 메우고, 회귀 테스트로 못 박은 지점이에요.
+
+이 한 장이 사실 이 글의 전부예요. 회전·재사용 감지는 검색하면 나오지만, **그걸 실제로 켰을 때 정상 사용자가 튕기는 레이스**, 그리고 **그 수정이 트랜잭션 롤백에 같이 쓸려나가는 함정**은 직접 만들어보지 않으면 안 보여요.
 
 ## 남은 트레이드오프들
 
@@ -264,9 +305,9 @@ Optional<RefreshToken> findByTokenHashForUpdate(String tokenHash);
 - 죽은 토큰이 다시 오면 family 전체를 끈다 — 훔친 토큰의 수명을 "다음 갱신까지"로 줄인다.
 - 원본은 저장하지 않는다 — DB가 유출돼도 토큰은 복원 불가.
 
-그리고 가장 중요한 한 가지. **표준대로 회전·재사용 감지를 켜면, 정상 사용자의 동시 갱신이 family 오탐으로 튕긴다.** 이 레이스는 RFC도 Auth0도 답을 주지 않아서 직접 풀어야 하고, 별찌는 단일 인스턴스라 PG row lock + 짧은 grace로 가는 중이에요. 지금 코드는 거기까진 안 갔고, 그게 다음 작업이에요.
+그리고 가장 중요한 한 가지. **표준대로 회전·재사용 감지를 켜면, 정상 사용자의 동시 갱신이 family 오탐으로 튕긴다.** 이 레이스는 RFC도 Auth0도 답을 주지 않아서 직접 풀어야 했고, 별찌는 단일 인스턴스라 PG 행 잠금(`FOR UPDATE`) + 10초 grace + `noRollbackFor`로 막았어요. 20스레드 동시 갱신에 오탐 0, 진짜 재사용은 그대로 family 무효화 — 둘 다 testcontainers 회귀 테스트로 못 박았어요.
 
-토큰 회전을 "구현했다"가 아니라, **구현했더니 보이는 다음 문제**까지가 이 도메인의 진짜 일이었어요.
+토큰 회전을 "구현했다"가 아니라, **구현했더니 보이는 다음 문제와 그 함정(트랜잭션 롤백)까지 풀고 테스트로 잠근 것**이 이 도메인의 진짜 일이었어요.
 
 ---
 
