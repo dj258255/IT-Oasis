@@ -1,8 +1,8 @@
 {
-  "title": "anime_os (토이 커널)",
-  "titleEn": "anime_os (Toy Kernel)",
-  "description": "Rust로 바닥부터 만든 x86_64 토이 커널. 부팅·화면 출력·예외 처리·키보드 입력까지 OS의 핵심 골격을 직접 구현한 학습 프로젝트.",
-  "descriptionEn": "An x86_64 toy kernel built from scratch in Rust. A learning project implementing the core OS skeleton: booting, screen output, exception handling, and keyboard input.",
+  "title": "anime_os — 토이 커널 (학습용 OS 커널)",
+  "titleEn": "anime_os — Toy Kernel (learning OS kernel)",
+  "description": "Rust로 바닥부터 만든 x86_64 토이 커널. 부팅·VGA 출력·CPU 예외 처리·하드웨어 인터럽트·키보드 입력·페이징/힙 할당·간단한 셸·async 멀티태스킹까지 OS의 핵심 골격을 직접 구현한 학습 프로젝트(상용 OS 아님).",
+  "descriptionEn": "An x86_64 toy kernel built from scratch in Rust. A learning project implementing the core OS skeleton end to end: booting, VGA output, CPU exceptions, hardware interrupts, keyboard input, paging/heap allocation, a simple shell, and async multitasking.",
   "image": "/uploads/hobby/anime-os-04/keyboard-input.png",
   "tags": ["Rust", "OS", "Kernel", "Bare Metal", "x86_64", "QEMU"],
   "category": "project",
