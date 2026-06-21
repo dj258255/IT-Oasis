@@ -150,7 +150,7 @@ SELECT만 실행하는 트랜잭션은 readOnly 여부와 관계없이 undo/redo
 
 ### DB Replication 환경에서 유용
 
-Master-Slave 구조라면 `readOnly = true` 쿼리를 자동으로 Slave로 라우팅할 수 있어요. Master 부하를 줄이고 읽기 성능을 높이는 효과가 있고요.
+Master-Slave 구조에서 `readOnly = true`를 읽기 복제본(Slave) 라우팅의 신호로 쓸 수 있어요. 다만 **자동은 아닙니다** — `AbstractRoutingDataSource`를 상속해 `TransactionSynchronizationManager.isCurrentTransactionReadOnly()`로 현재 트랜잭션이 읽기 전용인지 보고 DataSource를 고르도록 **직접 구현**해야 하고, 반드시 `LazyConnectionDataSourceProxy`로 감싸야 해요. 안 그러면 트랜잭션 동기화가 설정되기 전에 커넥션이 먼저 잡혀서 라우팅이 깨집니다(전부 Master로 감).
 
 ### 내가 쓰는 패턴
 
@@ -533,7 +533,7 @@ Transactions that only execute SELECTs do not generate undo/redo logs regardless
 
 ### Useful in DB Replication Environments
 
-In a Master-Slave architecture, queries marked with `readOnly = true` can be automatically routed to Slave replicas. This reduces Master load and improves read performance.
+In a Master-Slave architecture, `readOnly = true` can drive routing to Slave replicas — but **not automatically**. You must subclass `AbstractRoutingDataSource` and pick the DataSource based on `TransactionSynchronizationManager.isCurrentTransactionReadOnly()`, and wrap it with `LazyConnectionDataSourceProxy`. Otherwise the connection is acquired before transaction synchronization is initialized and routing breaks (everything goes to Master).
 
 ### The Pattern I Use
 

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="448" viewBox="0 0 720 448" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">
+  <rect width="720" height="448" rx="10" fill="#0d1117"/>
+  <rect width="720" height="40" rx="10" fill="#161b22"/>
+  <rect y="30" width="720" height="10" fill="#161b22"/>
+  <circle cx="24" cy="20" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="20" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="20" r="6" fill="#27c93f"/>
+  <text x="360" y="25" text-anchor="middle" fill="#6e7681" font-size="13">minidb — make test (layer 1: pager)</text>
+
+  <text x="24" y="72" fill="#c9d1d9"><tspan fill="#58a6ff">$</tspan> make test</text>
+  <text x="24" y="94" fill="#6e7681" font-size="13">cc -std=c11 -Wall -Wextra -Isrc tests/test_pager.c src/pager.c -o build/test_pager</text>
+  <text x="24" y="116" fill="#6e7681" font-size="13">./build/test_pager</text>
+
+  <g>
+    <text x="40" y="146"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">pager_open</tspan></text>
+    <text x="40" y="168"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">새 파일은 0 페이지</tspan></text>
+    <text x="40" y="190"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">첫 페이지 id == 0</tspan></text>
+    <text x="40" y="212"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">할당 후 1 페이지</tspan></text>
+    <text x="40" y="234"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">pager_write 페이지 0</tspan></text>
+    <text x="40" y="256"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">pager_read 페이지 0</tspan></text>
+    <text x="40" y="278"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">쓴 내용 == 읽은 내용</tspan></text>
+    <text x="40" y="300"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">둘째 페이지 id == 1</tspan></text>
+    <text x="40" y="322"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">재오픈</tspan></text>
+    <text x="40" y="344"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">재오픈 시 2 페이지</tspan></text>
+    <text x="40" y="366"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">재오픈 후 페이지 0 내용 유지</tspan></text>
+  </g>
+
+  <text x="24" y="404" fill="#3fb950" font-weight="700">전체 통과</text>
+</svg>
