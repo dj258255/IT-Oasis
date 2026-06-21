@@ -38,7 +38,7 @@ tags:
   - Architecture
   - Byeolchi
 category: project/Byeolchi
-draft: false
+draft: true
 coverImage: /uploads/project/Byeolchi/building/cover.svg
 series: "Byeolchi"
 ---

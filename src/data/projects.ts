@@ -22,6 +22,8 @@ export interface Project {
   website: LinkField;
   story: string;
   order?: number;
+  /** true면 프로젝트 카드를 목록에서 숨긴다 (포스트의 draft와 같은 개념). */
+  draft?: boolean;
 }
 
 const projDir = path.join(process.cwd(), 'src/data/projects');
@@ -45,6 +47,8 @@ export const projects: Project[] = files
       website: Array.isArray(data.website) ? data.website : (data.website || ''),
       story: data.story || '',
       order: data.order ?? 999,
+      draft: data.draft ?? false,
     };
   })
+  .filter(p => !p.draft)
   .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
