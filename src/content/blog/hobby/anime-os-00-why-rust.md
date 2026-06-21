@@ -3,7 +3,7 @@ title: '취미 OS 만들기 #0 — 왜 Rust로 토이 커널을 시작했나'
 titleEn: 'Building a Hobby OS #0 — Why I Started a Toy Kernel in Rust'
 description: 덕질 테마 OS를 만들겠다는 목표에서 출발해, 진짜 커널을 바닥부터 짜보기로 한 학습 여정. C·C++·어셈블리·Rust를 비교하고 Rust를 고른 이유, 그리고 macOS(애플 실리콘)에서 첫 베어메탈 빌드 환경을 세팅하기까지를 정리한다.
 descriptionEn: The start of a learning journey to build a toy OS kernel from scratch. Comparing C, C++, assembly, and Rust, why I chose Rust, and setting up the first bare-metal build environment on macOS (Apple Silicon).
-date: 2026-06-21T00:00:00.000Z
+date: 2026-04-28T00:00:00.000Z
 tags:
  - OS
  - Rust
@@ -11,6 +11,7 @@ tags:
  - Bare Metal
  - OSDev
 category: OS-취미
+coverImage: "/uploads/hobby/anime-os-00/cover.svg"
 draft: false
 series: "취미 OS 만들기"
 seriesOrder: 1

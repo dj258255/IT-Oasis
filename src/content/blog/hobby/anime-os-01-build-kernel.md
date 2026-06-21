@@ -3,7 +3,7 @@ title: '취미 OS 만들기 #1 — 부팅부터 키보드 입력까지'
 titleEn: 'Building a Hobby OS #1 — From Boot to Keyboard Input'
 description: Rust 토이 커널을 부팅시키고, VGA로 화면에 출력하고, println! 매크로를 직접 만들고, CPU 예외와 하드웨어 인터럽트를 처리해 키보드 입력까지 받는 과정을 한 번에 정리한다. 부트로더 PIE 디버깅 같은 실전 삽질도 함께.
 descriptionEn: A single walkthrough — booting a Rust toy kernel, printing to the VGA screen, implementing the println! macro, handling CPU exceptions and hardware interrupts, and finally receiving keyboard input. Including real debugging like the bootloader PIE issue.
-date: 2026-06-22T00:00:00.000Z
+date: 2026-05-15T00:00:00.000Z
 tags:
   - OS
   - Rust

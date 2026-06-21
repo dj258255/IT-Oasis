@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400">
+  <defs>
+    <style>
+      .mono { font-family: 'SF Mono','JetBrains Mono',Menlo,Consolas,monospace; }
+      .kr   { font-family: 'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; }
+    </style>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="720" height="400" fill="#0b0e14"/>
+  <circle cx="610" cy="80" r="170" fill="#f74c00" opacity="0.10"/>
+  <circle cx="120" cy="360" r="140" fill="#dea584" opacity="0.06"/>
+
+  <!-- 터미널 창 -->
+  <rect x="48" y="58" width="624" height="284" rx="14" fill="#11151d" stroke="#2a3140" stroke-width="1.5"/>
+  <!-- 신호등 -->
+  <circle cx="74" cy="82" r="6" fill="#ff5f56"/>
+  <circle cx="94" cy="82" r="6" fill="#ffbd2e"/>
+  <circle cx="114" cy="82" r="6" fill="#27c93f"/>
+  <text x="360" y="86" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">anime_os — build</text>
+  <line x1="48" y1="104" x2="672" y2="104" stroke="#2a3140" stroke-width="1.5"/>
+
+  <!-- 코드 -->
+  <g class="mono" font-size="15">
+    <text x="74" y="140" fill="#27c93f">$<tspan fill="#c9d1d9" dx="8">rustup default nightly</tspan></text>
+    <text x="74" y="166" fill="#27c93f">$<tspan fill="#c9d1d9" dx="8">cargo build --target x86_64-anime_os.json</tspan></text>
+    <text x="92" y="192" fill="#5b6473">Compiling core v0.0.0</text>
+    <text x="92" y="214" fill="#5b6473">Compiling anime_os v0.1.0</text>
+    <text x="86" y="236" fill="#dea584">Finished `dev` profile [unoptimized] target(s)</text>
+    <text x="74" y="278" fill="#f74c00"># 왜 C가 아니라 Rust였나</text>
+  </g>
+
+  <!-- 제목 배지 -->
+  <text x="74" y="312" class="kr" font-size="13" fill="#5b6473">취미 OS 만들기 · #0</text>
+</svg>

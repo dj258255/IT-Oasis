@@ -3,7 +3,7 @@ title: '취미 OS 만들기 #2 — 메모리 관리, 셸, 그리고 비동기 �
 titleEn: 'Building a Hobby OS #2 — Memory, a Shell, and Async Multitasking'
 description: 키보드 입력까지 받던 토이 커널에 힙 할당기를 붙여 Box/Vec을 쓰고, 그 위에 명령어를 입력받는 간단한 셸을 올린 뒤, async/await 실행기로 셸과 다른 태스크를 동시에 돌리기까지의 과정을 정리한다.
 descriptionEn: Adding a heap allocator to use Box/Vec, building a small command shell on top, and finally running the shell concurrently with another task using an async/await executor.
-date: 2026-06-22T00:00:00.000Z
+date: 2026-06-05T00:00:00.000Z
 tags:
   - OS
   - Rust
