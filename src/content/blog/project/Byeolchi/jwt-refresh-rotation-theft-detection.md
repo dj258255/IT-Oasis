@@ -36,7 +36,7 @@ tags:
   - Security
   - Byeolchi
 category: project/Byeolchi
-draft: false
+draft: true
 coverImage: /uploads/project/Byeolchi/jwt-refresh-rotation/cover.svg
 series: "Byeolchi"
 ---

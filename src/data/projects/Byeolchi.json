@@ -10,5 +10,6 @@
   "github": "",
   "website": "",
   "story": "/blog/project/byeolchi/byeolchi-building",
-  "order": 0
+  "order": 0,
+  "draft": true
 }
