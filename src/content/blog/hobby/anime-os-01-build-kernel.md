@@ -49,7 +49,7 @@ build-std = ["core", "compiler_builtins"]
 build-std-features = ["compiler-builtins-mem"]
 
 [build]
-target = "x86_64-anime_os.json"
+target = "x86_64-hobby_kernel.json"
 ```
 
 > 평소엔 rustup이 타겟별로 미리 빌드된 표준 라이브러리를 받아줘요. 그런데 우리 같은 듣도 보도 못한 커스텀 타겟엔 그게 없죠. `build-std`는 `core`를 내 타겟에 맞춰 그 자리에서 컴파일하라는 뜻이고, 0편에서 깔아둔 `rust-src` 컴포넌트가 이때 쓰여요.
@@ -59,7 +59,7 @@ target = "x86_64-anime_os.json"
 화면 출력의 가장 원초적인 방법이에요. 메모리 주소 `0xb8000`부터가 화면에 보이는 글자들의 저장소(VGA 텍스트 버퍼)라, 여기에 값을 쓰면 그대로 화면에 나타나요.
 
 ```rust
-static HELLO: &[u8] = b"Hello World! anime_os booted :)";
+static HELLO: &[u8] = b"Hello World! hobby_kernel booted :)";
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -78,7 +78,7 @@ pub extern "C" fn _start() -> ! {
 
 부트로더(`bootloader` 크레이트)와 `bootimage` 도구로 부팅 이미지를 만들어 QEMU로 실행하면, 첫 화면이 떠요.
 
-![anime_os가 부팅해 Hello World를 출력한 모습](/uploads/hobby/anime-os-01/boot-hello-world.png)
+![hobby_kernel가 부팅해 Hello World를 출력한 모습](/uploads/hobby/anime-os-01/boot-hello-world.png)
 
 ### 1.3 디버깅 무용담 — 부트로더가 죽었다
 
