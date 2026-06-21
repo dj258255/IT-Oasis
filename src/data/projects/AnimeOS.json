@@ -7,7 +7,7 @@
   "tags": ["Rust", "OS", "Kernel", "Bare Metal", "x86_64", "QEMU"],
   "category": "project",
   "date": "2026-06-22",
-  "github": "https://github.com/dj258255",
+  "github": "https://github.com/dj258255/anime_os",
   "website": "",
   "story": "/blog/hobby/anime-os-00-why-rust",
   "order": 0
