@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#58a6ff"/>
+      <stop offset="1" stop-color="#388bfd"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- 계층 스택: SQL(위) → 디스크(아래) -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">
+    <g transform="translate(140, 120)">
+      <rect width="520" height="56" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="24" y="35" fill="#8b949e">Parser → Planner → Executor</text>
+    </g>
+    <g transform="translate(160, 196)">
+      <rect width="520" height="56" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="24" y="35" fill="#8b949e">Catalog · Heap · B-Tree</text>
+    </g>
+    <g transform="translate(180, 272)">
+      <rect width="520" height="56" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="24" y="35" fill="#8b949e">Buffer Pool</text>
+    </g>
+    <g transform="translate(200, 348)">
+      <rect width="520" height="56" rx="8" fill="#13283f" stroke="#1f6feb"/>
+      <text x="24" y="35" fill="#58a6ff">Slotted Page · Pager</text>
+    </g>
+    <g transform="translate(220, 424)">
+      <rect width="520" height="56" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="24" y="35" fill="#8b949e">Disk — 4KB pages</text>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <text x="760" y="300" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="76" font-weight="700" fill="#f0f6fc">mini<tspan fill="url(#accent)">db</tspan></text>
+  <text x="762" y="350" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" fill="#8b949e">진짜 DB를 C로 밑바닥부터 해부</text>
+  <text x="762" y="392" font-family="ui-monospace, monospace" font-size="19" fill="#6e7681">pages · B-Tree · SQL · executor</text>
+</svg>

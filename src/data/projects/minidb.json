@@ -1,0 +1,14 @@
+{
+  "title": "minidb",
+  "titleEn": "minidb",
+  "description": "PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부하는 학습 프로젝트. 페이지 저장 → 슬롯 페이지 → 버퍼풀 → B-Tree → SQL 파서 → 실행기.",
+  "descriptionEn": "A learning project that dissects how relational databases like PostgreSQL and MySQL work inside, implemented layer by layer in C — page storage, slotted pages, buffer pool, B-Tree, SQL parser, executor.",
+  "image": "/uploads/project/minidb/cover.svg",
+  "tags": ["C", "Database Internals", "Storage Engine", "B-Tree", "SQL", "Learning"],
+  "category": "project",
+  "date": "2026-06-22",
+  "github": "",
+  "website": "",
+  "story": "/blog/project/minidb/minidb-dissecting-a-database",
+  "order": 0
+}

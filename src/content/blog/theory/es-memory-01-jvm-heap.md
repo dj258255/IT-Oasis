@@ -60,7 +60,7 @@ Oracle 공식 문서(JDK 8 GC Tuning Guide, "Generations" 챕터)의 정의:
 
 ### 3-2. Old Generation (구세대)
 
-장수 객체(live data)가 모이는 영역이에요. **Major GC(또는 Full GC)** 의 대상이에요. Young GC 대비 훨씬 비싸고 STW(Stop-the-World) 시간이 길어요.
+장수 객체(live data)가 모이는 영역이에요. **Major GC**(Old 영역 회수)의 대상이고, Young GC 대비 훨씬 비싸고 STW(Stop-the-World) 시간이 길어요. (Major GC는 Old 영역만, **Full GC**는 Young+Old 전체 힙을 STW로 쓸어담는 별개 개념이에요 — ②편에서 자세히.)
 
 ### 3-3. Metaspace (세대가 아님)
 
@@ -114,7 +114,7 @@ Oracle JDK 17 G1 Tuning Guide의 명시적 경고:
     - Eden과 다른 Survivor(S0)는 한 번에 비워져요.
 3. 다음 Minor GC에서 S1 → S0로 복사되며 age 카운트가 올라가요.
 4. age가 **tenuring threshold** 를 넘으면 → **Old Generation으로 Promotion**.
-5. Old Generation이 꽉 참 → **Major GC(혹은 Full GC)**.
+5. Old Generation이 꽉 참 → **Major GC**(필요 시 전체 힙 **Full GC**).
 
 > "At each garbage collection, the virtual machine chooses a threshold number, which is the number of times an object can be copied before it's old. This threshold is chosen to keep the survivors half full." — [Oracle JDK 17 GC Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
 
@@ -187,7 +187,7 @@ To summarize:
 
 ### 3-2. Old Generation
 
-The area where long-lived (live data) objects collect. Subject to **Major GC (or Full GC)**, which is much more expensive than Young GC and has longer STW (Stop-the-World) pauses.
+The area where long-lived (live data) objects collect. Subject to **Major GC** (reclaiming the Old generation), which is much more expensive than Young GC and has longer STW (Stop-the-World) pauses. (Major GC collects only the Old gen, while a **Full GC** sweeps the entire heap — Young+Old — in one STW; they are distinct. See Part 2.)
 
 ### 3-3. Metaspace (not a generation)
 
@@ -241,7 +241,7 @@ So in environments using G1 (= JDK 9+ default, which covers most Elasticsearch o
     - Eden and the other Survivor (S0) are wiped at once.
 3. On the next Minor GC, S1 → S0 copy happens and the age count goes up.
 4. When age exceeds the **tenuring threshold** → **promoted to the Old Generation**.
-5. Old Generation fills up → **Major GC (or Full GC)**.
+5. Old Generation fills up → **Major GC** (a whole-heap **Full GC** if needed).
 
 > "At each garbage collection, the virtual machine chooses a threshold number, which is the number of times an object can be copied before it's old. This threshold is chosen to keep the survivors half full." — [Oracle JDK 17 GC Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
 

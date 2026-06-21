@@ -160,7 +160,7 @@ PostgreSQL 인덱스에는 **visibility 정보가 없어요**. 즉 인덱스에�
 
 > **Visibility Map (VM)**: 각 heap relation마다 별도 파일로 저장되는 비트맵. 각 heap 페이지마다 2비트를 갖는다.
 
-- **첫 번째 비트 — all-visible**: 이 페이지의 모든 튜플이 모든 활성 트랜잭션에 보인다. dead 튜플이 없고, 진행 중인 변경도 없음.
+- **첫 번째 비트 — all-visible**: 이 페이지의 모든 튜플이 **현재와 미래의 모든 트랜잭션**에 보인다(공식 문서: *"visible to every current and future transaction"*). 즉 dead 튜플이 없어 어떤 스냅샷에서도 무조건 보이므로, visibility 체크를 건너뛰어도 안전하다.
 - **두 번째 비트 — all-frozen** (PostgreSQL 9.6+): 이 페이지의 모든 튜플이 frozen 상태 — transaction wraparound VACUUM이 건너뛸 수 있음.
 
 VM은 별도 파일에 저장돼요 (`<relation_filenode>_vm`). PostgreSQL 8.4에서 도입.
