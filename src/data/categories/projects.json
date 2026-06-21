@@ -5,7 +5,6 @@
   "icon": "rocket",
   "order": 3,
   "subcategories": [
-    { "name": "BranchDB", "nameEn": "BranchDB", "nameKo": "브랜치DB", "order": 0 },
     { "name": "Byeolchi", "nameEn": "Byeolchi", "nameKo": "별찌", "order": 1 },
     { "name": "WikiEngine", "nameEn": "WikiEngine", "nameKo": "위키엔진", "order": 2 },
     { "name": "Balruno", "nameEn": "Balruno", "nameKo": "발루노", "order": 3 },
