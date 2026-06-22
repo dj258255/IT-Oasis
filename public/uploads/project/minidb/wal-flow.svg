@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="500" viewBox="0 0 940 500" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="wfarrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+  <rect width="940" height="500" rx="12" fill="#0d1117"/>
+  <text x="470" y="40" text-anchor="middle" fill="#8b949e" font-size="18">WAL — 데이터를 고치기 전에 로그에 먼저 적는다 (write-ahead)</text>
+
+  <g font-family="ui-monospace, Menlo, monospace" font-size="14">
+    <!-- 단계 박스들 (가운데 열) -->
+    <g>
+      <rect x="300" y="66" width="340" height="44" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="470" y="93" text-anchor="middle" fill="#c9d1d9">① stage: 바뀐 페이지를 메모리에 모음</text>
+
+      <rect x="300" y="150" width="340" height="44" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="470" y="177" text-anchor="middle" fill="#c9d1d9">② 로그에 페이지 기록  [P][P]</text>
+
+      <rect x="300" y="234" width="340" height="48" rx="8" fill="#13283f" stroke="#1f6feb" stroke-width="2"/>
+      <text x="470" y="256" text-anchor="middle" fill="#58a6ff">③ 커밋 마커 [C] + fsync</text>
+      <text x="470" y="274" text-anchor="middle" fill="#6e7681" font-size="12">← 이 줄을 지나면 "내구"하다</text>
+
+      <rect x="300" y="322" width="340" height="44" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="470" y="349" text-anchor="middle" fill="#c9d1d9">④ 데이터 파일에 적용</text>
+
+      <rect x="300" y="406" width="340" height="44" rx="8" fill="#1f2937" stroke="#30363d"/>
+      <text x="470" y="433" text-anchor="middle" fill="#c9d1d9">⑤ 로그 비움 (체크포인트)</text>
+    </g>
+
+    <!-- 화살표 -->
+    <path d="M470 110 L470 148" stroke="#6e7681" stroke-width="1.5" marker-end="url(#wfarrow)"/>
+    <path d="M470 194 L470 232" stroke="#6e7681" stroke-width="1.5" marker-end="url(#wfarrow)"/>
+    <path d="M470 282 L470 320" stroke="#6e7681" stroke-width="1.5" marker-end="url(#wfarrow)"/>
+    <path d="M470 366 L470 404" stroke="#6e7681" stroke-width="1.5" marker-end="url(#wfarrow)"/>
+  </g>
+
+  <!-- 크래시 콜아웃: 커밋 전 -->
+  <g font-family="ui-sans-serif, system-ui, sans-serif">
+    <path d="M640 172 L700 172" stroke="#ff5f56" stroke-width="1.5"/>
+    <text x="710" y="162" fill="#ff5f56" font-size="13">✗ 여기서 크래시</text>
+    <text x="710" y="182" fill="#8b949e" font-size="13">커밋 마커 없음 → 복구가 버림</text>
+    <text x="710" y="200" fill="#8b949e" font-size="13">(원자성 / 롤백)</text>
+  </g>
+
+  <!-- 크래시 콜아웃: 커밋 후 -->
+  <g font-family="ui-sans-serif, system-ui, sans-serif">
+    <path d="M640 300 L700 300" stroke="#3fb950" stroke-width="1.5"/>
+    <text x="710" y="290" fill="#3fb950" font-size="13">✗ 여기서 크래시</text>
+    <text x="710" y="310" fill="#8b949e" font-size="13">커밋됨 → 복구가 재적용(redo)</text>
+    <text x="710" y="328" fill="#8b949e" font-size="13">(내구성)</text>
+  </g>
+
+  <!-- 왼쪽: 복구 규칙 -->
+  <g font-family="ui-sans-serif, system-ui, sans-serif">
+    <text x="40" y="245" fill="#6e7681" font-size="13">재시작 시 복구:</text>
+    <text x="40" y="266" fill="#3fb950" font-size="13">[C] 있으면 → redo</text>
+    <text x="40" y="287" fill="#ff5f56" font-size="13">[C] 없으면 → 버림</text>
+  </g>
+</svg>
