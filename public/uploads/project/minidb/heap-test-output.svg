@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="446" viewBox="0 0 760 446" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">
+  <rect width="760" height="446" rx="10" fill="#0d1117"/>
+  <rect width="760" height="40" rx="10" fill="#161b22"/>
+  <rect y="30" width="760" height="10" fill="#161b22"/>
+  <circle cx="24" cy="20" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="20" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="20" r="6" fill="#27c93f"/>
+  <text x="380" y="25" text-anchor="middle" fill="#6e7681" font-size="13">minidb — make test (layer 4: heap file)</text>
+
+  <text x="24" y="70" fill="#c9d1d9"><tspan fill="#58a6ff">$</tspan> make test</text>
+  <text x="24" y="92" fill="#6e7681" font-size="13">=== test_heap ===</text>
+
+  <g>
+    <text x="40" y="120"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">insert alpha</tspan></text>
+    <text x="40" y="142"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">insert beta</tspan></text>
+    <text x="40" y="164"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">insert gamma</tspan></text>
+    <text x="40" y="186"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">get alpha by RID</tspan></text>
+    <text x="40" y="208"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">스캔 3행</tspan></text>
+    <text x="40" y="230"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">스캔 203행 (멀티 페이지)</tspan></text>
+    <text x="40" y="252"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">여러 페이지에 걸쳐 저장됨</tspan></text>
+    <text x="40" y="274"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">delete beta</tspan></text>
+    <text x="40" y="296"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">삭제 후 스캔 202행</tspan></text>
+    <text x="40" y="318"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">삭제된 beta 조회 실패</tspan></text>
+    <text x="40" y="340"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">재오픈 후에도 202행</tspan></text>
+    <text x="40" y="362"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">재오픈 후 alpha 조회</tspan></text>
+  </g>
+
+  <text x="24" y="400" fill="#3fb950" font-weight="700">전체 통과</text>
+</svg>
