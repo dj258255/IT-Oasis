@@ -493,10 +493,13 @@ spring:
 
       # 생명주기
       max-lifetime: 580000            # 9분 40초 (DB wait_timeout보다 짧게)
-      idle-timeout: 600000            # 10분
+      idle-timeout: 0                 # 0 = 유휴 만료 없음
       keepalive-time: 30000           # 30초
-      # 주의: idle-timeout이 max-lifetime보다 길면 idle-timeout은 사실상 무의미하다
-      # (max-lifetime에 의해 먼저 제거됨). idle-timeout은 max-lifetime보다 짧게 설정해야 한다.
+      # 주의 1: idle-timeout은 max-lifetime보다 '짧을' 때만 의미가 있다
+      #         (길면 max-lifetime이 먼저 커넥션을 제거하므로 무의미).
+      # 주의 2: 아래 권장대로 minimum-idle == maximum-pool-size(고정 풀)면
+      #         HikariCP가 유휴 제거 자체를 비활성화하므로 idle-timeout은 어차피 동작하지 않는다.
+      #         그래서 여기선 0으로 명시했다.
 
       # 기타
       auto-commit: true

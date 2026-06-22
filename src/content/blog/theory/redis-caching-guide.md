@@ -1118,7 +1118,8 @@ class UserService {
         // 캐시 확인 (get 1번으로 통합 — hasKey + get 2번 호출은 불필요한 RTT 발생)
         Object cached = redis.opsForValue().get(key);
         if (cached != null) {
-            if (cached instanceof NullValue) return null;  // null 캐싱된 경우
+            // "없음"이 캐싱된 경우 → DB로 안 가고 동일하게 not-found 처리
+            if (cached instanceof NullValue) throw new UserNotFoundException(id);
             return (User) cached;
         }
 
@@ -1130,8 +1131,10 @@ class UserService {
             redis.set(key, user.get(), 1, TimeUnit.HOURS);
             return user.get();
         } else {
-            // 없어도 5분 캐싱 (null)
-            redis.set(key, null, 5, TimeUnit.MINUTES);
+            // 없음도 5분 캐싱 — 단, raw null이 아니라 NullValue '마커'를 저장한다.
+            // (null을 그대로 넣으면 읽을 때 NullValue로 복원된다는 보장이 없어
+            //  캐시 미스로 취급 → 관통 방어가 무력화됨)
+            redis.set(key, NullValue.INSTANCE, 5, TimeUnit.MINUTES);
             throw new UserNotFoundException(id);
         }
     }
