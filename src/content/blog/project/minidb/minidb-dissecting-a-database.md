@@ -1,91 +1,134 @@
 ---
-title: '진짜 데이터베이스를 C로 밑바닥부터 해부하기 — minidb를 시작하며'
-titleEn: 'Dissecting a Real Database from Scratch in C — Starting minidb'
-description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 구현하기로 했다. 새로운 걸 발명하려는 게 아니라 진짜를 정확히 재현하는 학습 프로젝트. 첫 글은 모든 것이 그 위에 쌓이는 맨 밑바닥 — 페이지와 디스크 관리자(Pager)."
-descriptionEn: "To really understand how PostgreSQL and MySQL work inside, I decided to rebuild their structure in C, one layer at a time. Not to invent something new, but to reproduce the real thing accurately. This first post covers the very bottom that everything else sits on: pages and the disk manager (Pager)."
+title: '진짜 데이터베이스를 C로 밑바닥부터 만들기 — minidb 전 과정'
+titleEn: 'Building a Real Database from Scratch in C — The Whole minidb'
+description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 만들었다. 고정 크기 페이지부터 슬롯 페이지·버퍼 풀·힙·SQL 파서·실행기·B+Tree 인덱스·WAL까지 — 9개 계층을 밑바닥부터 쌓아 CREATE/INSERT/SELECT가 도는 미니 관계형 DB를 만든 전 과정을 한 글에 담았다."
+descriptionEn: "To really understand how PostgreSQL and MySQL work inside, I built their structure in C, one layer at a time — from fixed-size pages up through slotted pages, a buffer pool, a heap, a SQL parser, an executor, a B+Tree index, and a write-ahead log. This single post walks the whole thing: nine layers from scratch into a mini relational database where CREATE/INSERT/SELECT actually run."
 date: 2026-06-22
 tags:
   - C
   - Database Internals
   - Storage Engine
+  - B-Tree
+  - SQL
+  - WAL
   - Learning
-  - Devlog
-category: project/minidb
 coverImage: /uploads/project/minidb/cover.svg
 draft: false
-series: "minidb"
-seriesOrder: 1
 ---
 
-데이터베이스를 직접 만들어보고 싶었다. 처음엔 "세상에 없는 새로운 DB"를 찾아 한참 헤맸는데, 파고들수록 분명해진 게 있다. DB든 검색엔진이든 인프라 영역은 거의 다 누군가 이미 잘 만들어놨고, "아무도 안 한 빈칸"은 사실상 유니콘이다. 그래서 목표를 바꿨다. 새로운 걸 발명하는 대신, **이미 있는 진짜를 정확히 재현하면서 그 구조를 손으로 이해하기.**
+데이터베이스를 직접 만들어보고 싶었다. 처음엔 "세상에 없는 새로운 DB"를 찾아 한참 헤맸는데, 파고들수록 분명해진 게 있다. 인프라 영역은 거의 다 누군가 이미 잘 만들어놨고, "아무도 안 한 빈칸"은 사실상 유니콘이다. 그래서 목표를 바꿨다. 새로운 걸 발명하는 대신, **이미 있는 진짜를 정확히 재현하면서 그 구조를 손으로 이해하기.**
 
-그렇게 시작한 게 minidb다. PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부하는 학습 프로젝트다.
+그렇게 만든 게 **minidb** 다. PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부한 학습 프로젝트다. 이 글은 9개 계층을 밑바닥부터 쌓아 올린 전 과정을 한 번에 담는다. 각 계층은 전부 테스트로 검증했다(총 89개).
 
-## 진짜 DB를 해부하면 나오는 계층들
+## 전체 지도
 
-DB는 한 덩어리가 아니라 여러 계층의 합이다. 위에서 아래로 이렇게 쌓여 있다.
+DB는 한 덩어리가 아니라 여러 계층의 합이다. 위에서 아래로 이렇게 쌓인다.
 
 ```
  SQL 텍스트
    │
    ▼ [1] Parser      토크나이저 + 파서 → AST
    ▼ [2] Planner     AST → 실행 계획 (풀스캔 vs 인덱스)
-   ▼ [3] Executor    계획 실행 (Volcano/iterator 모델)
+   ▼ [3] Executor    계획 실행
    │
-   ▼ [4] Catalog     시스템 테이블 (스키마 메타데이터)        ← pg_catalog
-   │
+   ▼ [4] Catalog     스키마 메타데이터
    ▼ [5] Access      Heap(테이블) + B-Tree(인덱스)
-   ▼ [6] Buffer Pool 페이지 캐시 + 교체(LRU)                  ← InnoDB buffer pool
+   ▼ [6] Buffer Pool 페이지 캐시 + LRU 교체
    ▼ [7] Page        슬롯 페이지: 행을 고정 크기 페이지에 패킹
-   ▼ [8] Pager/Disk  페이지 ↔ 단일 파일 (고정 크기 I/O)
-   │
-   ▼ [9] WAL/Txn     쓰기 선행 로그 + MVCC/락 (고급)
+   ▼ [8] Pager/Disk  페이지 ↔ 단일 파일
+   ▼ [9] WAL         쓰기 선행 로그 + 크래시 복구
 ```
 
-핵심 사실 하나만 기억하면 된다. **모든 것은 "고정 크기 페이지" 위에 쌓인다.** PostgreSQL은 8KB, MySQL InnoDB는 16KB, SQLite는 4KB 페이지가 기본이다. 디스크는 페이지 단위로만 읽고 쓰고, 그 위에 슬롯 페이지 → 힙/B-Tree → 버퍼풀 → 실행기가 차곡차곡 얹힌다. 그래서 맨 아래(Pager)부터 짓는다. 위층이 전부 이걸 딛고 서니까.
+핵심 사실: **모든 것은 고정 크기 페이지 위에 쌓인다.** (PostgreSQL 8KB, MySQL InnoDB 16KB, SQLite 4KB.) 그래서 맨 아래(페이저)부터 짓는다.
 
-## 왜 C인가
+**왜 C인가.** 목표가 "진짜 구조를 있는 그대로 해부"라면, 진짜 DB가 쓰는 언어로 하는 게 맞다. DB 내부는 메모리·포인터·바이트 레이아웃이 곧 학습 내용인데, 언어가 이걸 추상화로 가리면 정작 배우려는 걸 못 본다. C는 아무것도 안 가린다.
 
-언어를 한참 고민했는데, 목표가 "진짜 구조를 있는 그대로 해부"라면 답은 명확했다. **진짜 DB가 쓰는 언어로 하는 것.** PostgreSQL·SQLite·MySQL이 전부 C/C++다.
+---
 
-DB 내부는 메모리·포인터·바이트 레이아웃이 곧 학습 내용이다. "페이지를 버퍼에 올리고, 슬롯에 바이트를 패킹하고, 포인터로 B-Tree를 따라간다" — 이게 DB의 본질인데, 언어가 이걸 추상화로 가려버리면 정작 배우려는 걸 못 본다. C는 아무것도 안 가린다. segfault와 씨름하는 것조차 "DB가 왜 이렇게 메모리를 다루나"를 몸으로 배우는 과정이다.
+## 1. 페이저 — 페이지를 디스크에 읽고 쓰기
 
-## 1단계 — Pager: 페이지를 디스크에 어떻게 읽고 쓰나
-
-가장 밑바닥. Pager는 딱 하나만 책임진다. *"page_id로 페이지를 읽고 쓴다."*
-
-페이지를 고정 크기로 잡으면, N번 페이지가 파일의 어디에 사는지는 곱셈 한 번으로 정해진다.
+가장 밑바닥. 페이저는 "page_id로 페이지를 읽고 쓴다"만 책임진다. 페이지를 고정 크기로 잡으면 N번 페이지의 디스크 위치는 곱셈 한 번으로 정해진다.
 
 ```c
-off_t offset = (off_t)page_id * PAGE_SIZE;   // N번 페이지 = N * 4096 바이트 위치
-```
-
-읽기·쓰기는 `pread`/`pwrite`로 그 위치를 직접 지정한다. `lseek`로 위치를 옮기고 `read`하는 것과 달리, offset을 인자로 줘서 한 번에 끝낸다(스레드 안전하기도 하다).
-
-```c
-int pager_read(Pager *pager, page_id_t page_id, void *buf) {
-    off_t offset = (off_t)page_id * PAGE_SIZE;
-    ssize_t n = pread(pager->fd, buf, PAGE_SIZE, offset);
-    return (n == (ssize_t)PAGE_SIZE) ? 0 : -1;
-}
-
-int pager_write(Pager *pager, page_id_t page_id, const void *buf) {
-    off_t offset = (off_t)page_id * PAGE_SIZE;
-    ssize_t n = pwrite(pager->fd, buf, PAGE_SIZE, offset);
+int pager_read(Pager *p, page_id_t id, void *buf) {
+    off_t offset = (off_t)id * PAGE_SIZE;   // N번 페이지 = N * 4096
+    ssize_t n = pread(p->fd, buf, PAGE_SIZE, offset);
     return (n == (ssize_t)PAGE_SIZE) ? 0 : -1;
 }
 ```
 
-다섯 줄짜리지만, 이 곱셈 하나가 PostgreSQL·MySQL·SQLite가 전부 그 위에 서 있는 토대다. 새 페이지 할당은 그냥 파일 끝에 빈 페이지를 한 장 더 쓰는 것이고, 파일 크기를 페이지 크기로 나누면 현재 페이지 수가 나온다.
+다섯 줄짜리 이 곱셈이 PostgreSQL·MySQL·SQLite가 전부 그 위에 서 있는 토대다.
 
-검증은 두 가지를 본다. 쓴 내용이 그대로 읽히는가(라운드트립), 그리고 프로그램을 껐다 켜도 살아있는가(영속성). 후자가 메모리 자료구조와 DB를 가르는 지점이다.
+![페이저 테스트 — 라운드트립 + 재오픈 영속성 11개 통과](/uploads/project/minidb/pager-test-output.svg)
 
-![make test 결과 — pager 테스트 11개 모두 통과, 재오픈 후 내용 유지 포함](/uploads/project/minidb/pager-test-output.svg)
+## 2. 슬롯 페이지 — 4096바이트 안에 행 욱여넣기
 
-`재오픈 시 2 페이지`, `재오픈 후 페이지 0 내용 유지` 가 통과한다는 건, 파일에 진짜로 영속화됐다는 뜻이다. 이게 데이터베이스의 출발점이다.
+페이지는 아직 그냥 바이트 덩어리다. 가변 길이 행 여러 개를 한 페이지에 넣으려면 **슬롯 페이지** 가 필요하다. PostgreSQL heap·InnoDB 페이지가 이 구조다. 헤더 뒤로 슬롯 배열이 아래로 자라고, 레코드는 끝에서 위로 자라며, 가운데가 빈 공간이다.
 
-## 다음
+![슬롯 페이지 레이아웃 — 슬롯 배열은 아래로, 레코드는 위로, 가운데 빈 공간](/uploads/project/minidb/slotted-page-layout.svg)
 
-다음은 [2] 슬롯 페이지다. 지금은 페이지가 그냥 4096바이트 덩어리지만, 실제 DB는 그 안을 *슬롯 디렉터리 + 가변 길이 행*으로 나눠 여러 레코드를 패킹한다. 행을 어떻게 페이지에 욱여넣고, 지우고, 빈 공간을 추적하는지 — PostgreSQL과 InnoDB의 페이지 레이아웃을 그대로 따라 만들어볼 생각이다.
+묘수는 **슬롯 번호가 행의 안정적인 주소**가 된다는 것이다. 레코드가 페이지 안에서 옮겨져도 슬롯 번호는 안 바뀐다 — 이게 PostgreSQL의 TID, InnoDB 레코드 포인터의 기반이다.
 
-> 이 시리즈는 진짜 DB의 내부 구조를 C로 한 겹씩 재현하며 기록한다. 목표는 새로움이 아니라, 끝까지 내려가 보는 것이다.
+## 3. 버퍼 풀 — 디스크를 매번 때리지 않기
+
+페이지를 매번 디스크에서 읽으면 느리다. 버퍼 풀은 자주 쓰는 페이지를 메모리에 캐시하고 꽉 차면 LRU로 교체한다(InnoDB buffer pool). 단순 캐시와 DB 버퍼 풀의 차이는 세 가지다: **pin count**(쓰는 중인 페이지는 못 쫓아냄), **dirty 플래그**(수정된 페이지는 쫓겨나기 전에 디스크로 flush), **LRU**(가장 안 쓴 걸 victim으로).
+
+![버퍼 풀 — 프레임(page/pin/dirty/LRU), miss는 디스크 로드, dirty면 evict 시 flush](/uploads/project/minidb/buffer-pool.svg)
+
+이 셋이 "캐시인데 데이터가 안 깨지는" 비결이다.
+
+## 4. 힙 파일 — 드디어 테이블
+
+페이저·슬롯 페이지·버퍼 풀을 묶으면 **테이블** 이 나온다. 힙 파일은 순서 없는 페이지들의 모음이다. 행을 넣으면 마지막 페이지에 들어가고, 꽉 차면 새 페이지를 할당한다. 행의 주소는 **RID = (page_id, slot)**.
+
+![힙 파일 — 여러 페이지에 행이 슬롯으로 담기고, full scan은 모든 페이지를 훑는다](/uploads/project/minidb/heap-file.svg)
+
+`SELECT * FROM t` 의 가장 기본 형태인 풀 스캔은 모든 페이지의 모든 슬롯을 훑는 이중 루프다. 모든 관계형 DB의 출발점이고, 나중에 인덱스를 붙이는 이유가 바로 이걸 피하기 위해서다.
+
+## 5. SQL 파서 — 텍스트를 AST로
+
+여기서부터 위쪽(프런트엔드)이다. `"SELECT * FROM users WHERE id = 1"` 문자열을 구조로 바꾼다. 두 단계다. **토크나이저(lexer)** 가 토큰으로 쪼개고, **재귀 하강 파서** 가 트리(AST)로 조립한다.
+
+![SQL 텍스트 → 토큰 → AST](/uploads/project/minidb/sql-to-ast.svg)
+
+재귀 하강은 문법 규칙 하나하나가 함수 하나가 된다. `SELECT` 규칙은 거의 영어 그대로 읽힌다 — "STAR가 와야 하고, FROM이 와야 하고, 이름이 오고, WHERE는 있어도 되고". 외부 파서 라이브러리 없이 손으로 썼다.
+
+## 6. 실행기와 REPL — SELECT가 행을 돌려준다
+
+파서의 AST와 힙 파일을 잇는 게 실행기다. 값을 스키마대로 바이트로 인코딩하고(tuple codec: INT 4바이트, TEXT 길이+바이트), `CREATE`는 스키마를 만들고, `INSERT`는 `heap_insert`하고, `SELECT`는 `heap_scan`으로 훑으며 `WHERE`로 거른다.
+
+![tuple codec — (1, 'kim')이 스키마대로 바이트열로 인코딩](/uploads/project/minidb/tuple-encoding.svg)
+
+REPL을 붙이면 드디어 진짜 SQL을 타이핑해 결과를 받는다.
+
+![minidb REPL 세션 — CREATE/INSERT/SELECT가 실제로 동작](/uploads/project/minidb/repl-session.svg)
+
+`SELECT * FROM users WHERE id = 2` 가 `2 | lee` 를 돌려주기까지, 글자가 토큰이 되고(렉서), 토큰이 AST가 되고(파서), AST가 힙 스캔이 되고(실행기), 스캔이 버퍼 풀을 거쳐(캐시), 페이지가 슬롯에서 풀려(슬롯 페이지), 디스크 오프셋에서 읽혔다(페이저). 여섯 계층이 전부 맞물린 결과다.
+
+## 7. B+Tree 인덱스 — 풀 스캔을 피하기
+
+`WHERE` 가 모든 행을 훑으면 O(n)이다. **인덱스** 로 O(log n)에 찾아간다. B+Tree는 내부 노드(길잡이: 키 + 자식)와 리프 노드(실제 키·값, 옆으로 연결됨)로 된 균형 트리다.
+
+![B+Tree 구조 — 내부 노드에서 리프로 내려가는 검색 경로](/uploads/project/minidb/btree-diagram.svg)
+
+어려운 부분은 **노드 분할(split)** 이다. 리프가 꽉 차면 반으로 쪼개고 가운데 키를 부모로 올린다. 루트까지 올라가 루트가 쪼개지면 트리 높이가 1 자란다 — 그래서 모든 리프가 항상 같은 깊이에 있고, 트리가 한쪽으로 안 기운다. 디스크에 저장되는 B+Tree를 직접 짜고, 키 1000개를 넣어 다단계 분할을 일으킨 뒤 오름차순 스캔으로 구조 무결성을 증명했다.
+
+그리고 이 인덱스를 실행기에 연결했다. INSERT는 `(PK → RID)` 를 인덱스에 등록하고, `WHERE id = 2` 처럼 인덱스된 컬럼을 쓰면 풀 스캔 대신 `btree_search` → `heap_get` 한 줄만 읽는다. "쓸 수 있으면 인덱스를 쓴다"는 이 분기가 **쿼리 플래너의 가장 단순한 형태** 다.
+
+## 8. WAL — 쓰다가 전원이 꺼져도
+
+마지막 정체성, 내구성과 원자성. 데이터 파일을 고치는 도중 전원이 꺼지면 파일이 깨질 수 있다. **WAL(Write-Ahead Log)** 은 데이터를 고치기 전에 바뀔 내용을 로그에 먼저 적고 fsync 한다.
+
+![WAL 흐름 — stage → 로그+커밋마커 fsync(내구성 분기점) → 데이터 적용 → 로그 비움](/uploads/project/minidb/wal-flow.svg)
+
+복구 규칙은 단 하나다. 재시작 시 로그에 **커밋 마커가 있으면 데이터에 재적용(redo), 없으면 버린다(rollback).** 테스트에서 정확히 두 위험한 순간에 크래시를 주입했다 — 커밋 마커 fsync 직후(데이터 적용 전)에 멈추면 복구가 redo하고(내구성), 커밋 마커 전에 멈추면 복구가 버린다(원자성). 전원이 꺼져도 데이터가 안 깨진다는 걸 실제로 크래시를 일으켜 증명했다.
+
+![WAL 테스트 — 커밋 후 크래시 redo, 커밋 전 크래시 discard 6개 통과](/uploads/project/minidb/wal-test-output.svg)
+
+---
+
+## 닫으며
+
+새로운 걸 발명하진 않았다. 대신 PostgreSQL·MySQL이 매일 하는 일 — 글자를 받아 페이지를 읽고 행을 돌려주는 그 일 — 을 밑바닥부터 한 겹씩 직접 만들며 이해했다. 페이지에 저장하고(페이저·슬롯 페이지), 메모리에 캐시하고(버퍼 풀), 테이블로 묶고(힙), SQL을 받고(파서·실행기), 빠르게 찾고(B+Tree), 전원이 꺼져도 안 깨진다(WAL).
+
+이제 `SELECT` 를 칠 때마다 그 아래 아홉 계층에서 무슨 일이 벌어지는지 안다. 그게 이 프로젝트의 전부였다.
