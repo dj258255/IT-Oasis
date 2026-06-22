@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">
+  <defs>
+    <marker id="bparrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="42" text-anchor="middle" fill="#8b949e" font-size="18">버퍼 풀 — 페이지를 메모리에 캐시하고 LRU로 교체</text>
+
+  <!-- fetch 요청 -->
+  <text x="120" y="100" text-anchor="middle" fill="#c9d1d9" font-family="ui-monospace, monospace" font-size="15">fetch(page_id)</text>
+  <path d="M120 110 L120 150" stroke="#6e7681" stroke-width="1.5" marker-end="url(#bparrow)"/>
+
+  <!-- 버퍼 풀 (메모리) -->
+  <rect x="60" y="150" width="520" height="200" rx="8" fill="#0d1b2a" stroke="#1f6feb"/>
+  <text x="80" y="178" fill="#58a6ff" font-size="15">메모리: 버퍼 풀 (프레임 3개)</text>
+
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+    <!-- 헤더 -->
+    <text x="92" y="206" fill="#6e7681">frame</text>
+    <text x="190" y="206" fill="#6e7681">page</text>
+    <text x="290" y="206" fill="#6e7681">pin</text>
+    <text x="370" y="206" fill="#6e7681">dirty</text>
+    <text x="470" y="206" fill="#6e7681">LRU</text>
+    <!-- 행들 -->
+    <g fill="#c9d1d9">
+      <rect x="80" y="216" width="480" height="34" rx="5" fill="#132a1f" stroke="#30363d"/>
+      <text x="100" y="238">0</text><text x="190" y="238">p7</text><text x="296" y="238">1</text><text x="378" y="238" fill="#6e7681">-</text><text x="470" y="238">42</text>
+      <rect x="80" y="254" width="480" height="34" rx="5" fill="#2a2113" stroke="#30363d"/>
+      <text x="100" y="276">1</text><text x="190" y="276">p3</text><text x="296" y="276" fill="#6e7681">0</text><text x="378" y="276" fill="#f97316">✱</text><text x="470" y="276">39</text>
+      <rect x="80" y="292" width="480" height="34" rx="5" fill="#1f2937" stroke="#30363d"/>
+      <text x="100" y="314">2</text><text x="190" y="314">p9</text><text x="296" y="314" fill="#6e7681">0</text><text x="378" y="314" fill="#6e7681">-</text><text x="470" y="314">41</text>
+    </g>
+  </g>
+  <text x="320" y="372" text-anchor="middle" fill="#6e7681" font-size="13">pin&gt;0 = 사용 중(못 쫓아냄) · dirty(✱) = 수정됨 · LRU 작을수록 오래됨</text>
+
+  <!-- 디스크 -->
+  <rect x="700" y="150" width="240" height="200" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="720" y="178" fill="#8b949e" font-size="15">디스크 (파일)</text>
+  <g font-family="ui-monospace, monospace" font-size="13" fill="#6e7681">
+    <text x="720" y="212">p0 p1 p2 p3 ...</text>
+    <text x="720" y="240">고정 4KB 페이지들</text>
+  </g>
+
+  <!-- miss: 디스크에서 로드 -->
+  <path d="M700 250 L580 250" stroke="#f97316" stroke-width="1.5" marker-end="url(#bparrow)"/>
+  <text x="640" y="242" text-anchor="middle" fill="#f97316" font-size="13">miss → 로드</text>
+
+  <!-- evict + flush: 메모리에서 디스크로 -->
+  <path d="M580 300 L700 300" stroke="#ff5f56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#bparrow)"/>
+  <text x="640" y="320" text-anchor="middle" fill="#ff5f56" font-size="13">evict (dirty면 flush)</text>
+
+  <!-- hit -->
+  <text x="120" y="420" text-anchor="middle" fill="#3fb950" font-size="14">hit → 디스크 안 가고 프레임에서 바로 반환</text>
+</svg>
