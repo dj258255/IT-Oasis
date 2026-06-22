@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">
+  <defs>
+    <marker id="sqarrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="470" rx="12" fill="#0d1117"/>
+
+  <!-- SQL 텍스트 -->
+  <text x="450" y="48" text-anchor="middle" fill="#c9d1d9" font-family="ui-monospace, Menlo, monospace" font-size="17">SELECT * FROM users WHERE id = 1</text>
+
+  <text x="700" y="84" fill="#6e7681" font-size="13">토크나이저(lexer)</text>
+  <path d="M450 58 L450 86" stroke="#6e7681" stroke-width="1.5" marker-end="url(#sqarrow)"/>
+
+  <!-- 토큰 칩들 -->
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+    <g>
+      <rect x="60" y="98" width="86" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="103" y="119" text-anchor="middle" fill="#58a6ff">SELECT</text>
+      <rect x="156" y="98" width="40" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="176" y="119" text-anchor="middle" fill="#c9d1d9">*</text>
+      <rect x="206" y="98" width="64" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="238" y="119" text-anchor="middle" fill="#58a6ff">FROM</text>
+      <rect x="280" y="98" width="86" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="323" y="119" text-anchor="middle" fill="#c9d1d9">users</text>
+      <rect x="376" y="98" width="74" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="413" y="119" text-anchor="middle" fill="#58a6ff">WHERE</text>
+      <rect x="460" y="98" width="50" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="485" y="119" text-anchor="middle" fill="#c9d1d9">id</text>
+      <rect x="520" y="98" width="40" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="540" y="119" text-anchor="middle" fill="#c9d1d9">=</text>
+      <rect x="570" y="98" width="40" height="32" rx="6" fill="#1f2937" stroke="#30363d"/><text x="590" y="119" text-anchor="middle" fill="#3fb950">1</text>
+    </g>
+  </g>
+
+  <text x="700" y="168" fill="#6e7681" font-size="13">파서(recursive descent)</text>
+  <path d="M450 134 L450 162" stroke="#6e7681" stroke-width="1.5" marker-end="url(#sqarrow)"/>
+
+  <!-- AST 트리 -->
+  <g font-family="ui-monospace, Menlo, monospace" font-size="14">
+    <!-- 루트 -->
+    <rect x="395" y="178" width="110" height="40" rx="8" fill="#13283f" stroke="#1f6feb"/><text x="450" y="203" text-anchor="middle" fill="#58a6ff">Select</text>
+    <!-- 가지 -->
+    <path d="M450 218 L230 270" stroke="#30363d" stroke-width="1.5"/>
+    <path d="M450 218 L450 270" stroke="#30363d" stroke-width="1.5"/>
+    <path d="M450 218 L690 270" stroke="#30363d" stroke-width="1.5"/>
+    <!-- 자식 -->
+    <rect x="170" y="272" width="120" height="40" rx="8" fill="#1f2937" stroke="#30363d"/><text x="230" y="297" text-anchor="middle" fill="#c9d1d9">columns: *</text>
+    <rect x="385" y="272" width="130" height="40" rx="8" fill="#1f2937" stroke="#30363d"/><text x="450" y="297" text-anchor="middle" fill="#c9d1d9">table: users</text>
+    <rect x="620" y="272" width="140" height="40" rx="8" fill="#13281c" stroke="#3fb950"/><text x="690" y="297" text-anchor="middle" fill="#3fb950">where</text>
+    <!-- where 자식 -->
+    <path d="M690 312 L690 350" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="610" y="352" width="160" height="40" rx="8" fill="#1f2937" stroke="#30363d"/><text x="690" y="377" text-anchor="middle" fill="#c9d1d9">id = 1 (INT)</text>
+  </g>
+
+  <text x="450" y="440" text-anchor="middle" fill="#8b949e" font-size="14">구조화된 AST가 나오면, 실행기가 이걸 보고 테이블을 스캔하고 필터링한다</text>
+</svg>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="520" viewBox="0 0 620 520" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">
+  <rect width="620" height="520" rx="10" fill="#0d1117"/>
+  <rect width="620" height="38" rx="10" fill="#161b22"/>
+  <rect y="28" width="620" height="10" fill="#161b22"/>
+  <circle cx="22" cy="19" r="5.5" fill="#ff5f56"/>
+  <circle cx="40" cy="19" r="5.5" fill="#ffbd2e"/>
+  <circle cx="58" cy="19" r="5.5" fill="#27c93f"/>
+  <text x="310" y="24" text-anchor="middle" fill="#6e7681" font-size="12">minidb — make test (layer 6: sql parser)</text>
+
+  <text x="20" y="64" fill="#c9d1d9"><tspan fill="#58a6ff">$</tspan> make test</text>
+  <text x="20" y="84" fill="#6e7681" font-size="12">=== test_sql ===</text>
+
+  <g>
+    <text x="34" y="110"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">CREATE 파싱 성공</tspan></text>
+    <text x="34" y="129"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">타입 CREATE</tspan></text>
+    <text x="34" y="148"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">테이블 users</tspan></text>
+    <text x="34" y="167"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">컬럼 2개</tspan></text>
+    <text x="34" y="186"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">컬럼0 id INT</tspan></text>
+    <text x="34" y="205"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">컬럼1 name TEXT</tspan></text>
+    <text x="34" y="224"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">INSERT 파싱 성공</tspan></text>
+    <text x="34" y="243"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">INSERT 값 2개</tspan></text>
+    <text x="34" y="262"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">값0 = 정수 1</tspan></text>
+    <text x="34" y="281"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">값1 = 'kim'</tspan></text>
+    <text x="34" y="300"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">SELECT 파싱 성공</tspan></text>
+    <text x="34" y="319"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">WHERE 없음</tspan></text>
+    <text x="34" y="338"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">SELECT 테이블 users</tspan></text>
+    <text x="34" y="357"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">SELECT WHERE 파싱 성공</tspan></text>
+    <text x="34" y="376"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">WHERE col = id</tspan></text>
+    <text x="34" y="395"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">WHERE 값 = 1</tspan></text>
+    <text x="34" y="414"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">소문자 키워드도 파싱</tspan></text>
+    <text x="34" y="433"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">WHERE 값 = 'kim'</tspan></text>
+    <text x="34" y="452"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">잘못된 SELECT는 오류</tspan></text>
+    <text x="34" y="471"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">미지원 문장은 오류</tspan></text>
+  </g>
+
+  <text x="20" y="502" fill="#3fb950" font-weight="700">전체 통과</text>
+</svg>
