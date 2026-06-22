@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="350" viewBox="0 0 780 350" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">
+  <rect width="780" height="350" rx="10" fill="#0d1117"/>
+  <rect width="780" height="40" rx="10" fill="#161b22"/>
+  <rect y="30" width="780" height="10" fill="#161b22"/>
+  <circle cx="24" cy="20" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="20" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="20" r="6" fill="#27c93f"/>
+  <text x="390" y="25" text-anchor="middle" fill="#6e7681" font-size="13">minidb — make test (layer 3: buffer pool)</text>
+
+  <text x="24" y="70" fill="#c9d1d9"><tspan fill="#58a6ff">$</tspan> make test</text>
+  <text x="24" y="92" fill="#6e7681" font-size="13">=== test_bufpool ===</text>
+
+  <g>
+    <text x="40" y="120"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">bufpool_create</tspan></text>
+    <text x="40" y="142"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">p0 재요청은 cache hit</tspan></text>
+    <text x="40" y="164"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">p0 내용 유지</tspan></text>
+    <text x="40" y="186"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">쫓겨난 p1 재요청은 miss</tspan></text>
+    <text x="40" y="208"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">쫓겨난 dirty 페이지가 디스크에 flush됐다</tspan></text>
+    <text x="40" y="230"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">flush 후 새 페이저로 읽어도 p2 유지</tspan></text>
+    <text x="40" y="252"><tspan fill="#3fb950">ok</tspan>  <tspan fill="#c9d1d9">모두 pin되면 자리 없음(NULL)</tspan></text>
+  </g>
+
+  <text x="24" y="290" fill="#3fb950" font-weight="700">전체 통과</text>
+</svg>
