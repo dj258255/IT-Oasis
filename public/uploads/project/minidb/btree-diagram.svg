@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="btarrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+    <marker id="btpath" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#f0b429"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="430" rx="12" fill="#0d1117"/>
+  <text x="500" y="42" text-anchor="middle" fill="#8b949e" font-size="18">B+Tree 인덱스 — O(log n) 검색 (예: search 17)</text>
+
+  <g font-family="ui-monospace, Menlo, monospace" font-size="15">
+    <!-- 루트 (내부 노드) -->
+    <g transform="translate(420, 90)">
+      <rect width="160" height="44" rx="6" fill="#13283f" stroke="#1f6feb"/>
+      <line x1="53" y1="0" x2="53" y2="44" stroke="#1f6feb"/>
+      <line x1="107" y1="0" x2="107" y2="44" stroke="#1f6feb"/>
+      <text x="27" y="29" text-anchor="middle" fill="#6e7681">·</text>
+      <text x="80" y="29" text-anchor="middle" fill="#58a6ff">10</text>
+      <text x="133" y="29" text-anchor="middle" fill="#58a6ff">20</text>
+    </g>
+    <text x="600" y="118" fill="#6e7681" font-size="13">내부 노드 = 길잡이 (키 + 자식 포인터)</text>
+
+    <!-- 자식 연결선 -->
+    <path d="M447 134 L210 210" stroke="#30363d" stroke-width="1.5"/>
+    <path d="M500 134 L500 210" stroke="#f0b429" stroke-width="2" marker-end="url(#btpath)"/>
+    <path d="M553 134 L790 210" stroke="#30363d" stroke-width="1.5"/>
+
+    <!-- 검색 경로: 루트 진입 -->
+    <path d="M500 70 L500 88" stroke="#f0b429" stroke-width="2" marker-end="url(#btpath)"/>
+    <text x="500" y="64" text-anchor="middle" fill="#f0b429" font-size="13">17 ≥ 10, 17 &lt; 20 → 가운데로</text>
+
+    <!-- 리프들 -->
+    <g>
+      <rect x="120" y="212" width="180" height="44" rx="6" fill="#13281c" stroke="#3fb950"/>
+      <text x="210" y="240" text-anchor="middle" fill="#3fb950">1 · 4 · 7</text>
+
+      <rect x="410" y="212" width="180" height="44" rx="6" fill="#1f3326" stroke="#f0b429" stroke-width="2"/>
+      <text x="500" y="240" text-anchor="middle" fill="#f0b429">10 · 14 · 17</text>
+
+      <rect x="700" y="212" width="180" height="44" rx="6" fill="#13281c" stroke="#3fb950"/>
+      <text x="790" y="240" text-anchor="middle" fill="#3fb950">20 · 25 · 30</text>
+    </g>
+    <text x="660" y="240" fill="#f0b429" font-size="13">← 17 발견</text>
+
+    <!-- 리프 체인 (next_leaf) -->
+    <path d="M300 234 L406 234" stroke="#6e7681" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#btarrow)"/>
+    <path d="M590 234 L696 234" stroke="#6e7681" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#btarrow)"/>
+    <text x="500" y="296" text-anchor="middle" fill="#6e7681" font-size="13">리프 = 실제 (키, 값) · 리프끼리 연결(next_leaf) → 오름차순 스캔</text>
+  </g>
+
+  <text x="500" y="356" text-anchor="middle" fill="#8b949e" font-size="14">리프가 꽉 차면 반으로 쪼개고 가운데 키를 부모로 올린다(split) → 루트까지 올라가면 높이 +1, 항상 균형</text>
+  <text x="500" y="384" text-anchor="middle" fill="#6e7681" font-size="13">1000개 키라도 높이 3~4 → 풀 스캔 1000번 대신 서너 번 만에 도달</text>
+</svg>
