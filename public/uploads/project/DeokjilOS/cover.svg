@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400">
+  <defs>
+    <style>
+      .kr { font-family: 'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; }
+      .mono { font-family: 'SF Mono','JetBrains Mono',Menlo,monospace; }
+    </style>
+  </defs>
+
+  <!-- 배경 (우분투 어버진 톤의 다크) -->
+  <rect width="720" height="400" fill="#241730"/>
+  <circle cx="120" cy="80" r="150" fill="#9b59ff" opacity="0.10"/>
+  <circle cx="620" cy="330" r="170" fill="#e95420" opacity="0.08"/>
+
+  <!-- 데스크톱 창 목업 -->
+  <rect x="60" y="70" width="600" height="210" rx="14" fill="#2e2040" stroke="#43335c" stroke-width="1.5"/>
+  <rect x="60" y="70" width="600" height="34" rx="14" fill="#372650"/>
+  <rect x="60" y="92" width="600" height="12" fill="#372650"/>
+  <circle cx="84" cy="87" r="5" fill="#ff5f56"/>
+  <circle cx="102" cy="87" r="5" fill="#ffbd2e"/>
+  <circle cx="120" cy="87" r="5" fill="#27c93f"/>
+  <text x="360" y="91" text-anchor="middle" class="mono" font-size="11" fill="#9a8bb0">customize.sh</text>
+
+  <!-- "강조색 자유 선택" 스와치 (DEOKJIL_ACCENT 옵션) -->
+  <text x="90" y="140" class="kr" font-size="13" fill="#c9bce0">강조색을 자유롭게</text>
+  <g>
+    <rect x="90"  y="152" width="36" height="36" rx="8" fill="#3584e4"/>
+    <rect x="134" y="152" width="36" height="36" rx="8" fill="#2190a4"/>
+    <rect x="178" y="152" width="36" height="36" rx="8" fill="#3a944a"/>
+    <rect x="222" y="152" width="36" height="36" rx="8" fill="#c88800"/>
+    <rect x="266" y="152" width="36" height="36" rx="8" fill="#ed5b00"/>
+    <rect x="310" y="152" width="36" height="36" rx="8" fill="#e62d42"/>
+    <rect x="354" y="152" width="36" height="36" rx="8" fill="#d56199"/>
+    <rect x="398" y="152" width="36" height="36" rx="8" fill="#9141ac" stroke="#ffffff" stroke-width="2.5"/>
+  </g>
+
+  <!-- 설정 토글 미니 -->
+  <text x="90" y="226" class="kr" font-size="13" fill="#c9bce0">테마 · 배경 · 마스코트</text>
+  <rect x="90" y="238" width="44" height="22" rx="11" fill="#9141ac"/>
+  <circle cx="123" cy="249" r="8" fill="#ffffff"/>
+  <text x="148" y="254" class="kr" font-size="12" fill="#9a8bb0">전부 config로</text>
+
+  <!-- 제목 -->
+  <text x="60" y="328" class="kr" font-size="34" font-weight="700" fill="#ffffff">Deokjil OS</text>
+  <text x="62" y="358" class="kr" font-size="15" fill="#b3a4c8">우분투 개인화 툴킷 · 마스코트 강제 없이 자유롭게 커스텀</text>
+</svg>
