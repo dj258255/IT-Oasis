@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">
+  <defs>
+    <marker id="hfarrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#58a6ff"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="430" rx="12" fill="#0d1117"/>
+  <text x="500" y="44" text-anchor="middle" fill="#8b949e" font-size="18">힙 파일 — 테이블 = 페이지들의 모음</text>
+
+  <!-- full scan 화살표 -->
+  <text x="120" y="92" fill="#58a6ff" font-size="14">full scan</text>
+  <path d="M200 86 L860 86" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#hfarrow)"/>
+
+  <!-- 페이지들 -->
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+    <!-- Page 0 -->
+    <g transform="translate(110, 120)">
+      <rect width="240" height="240" rx="8" fill="#0d1b2a" stroke="#30363d"/>
+      <rect width="240" height="34" rx="8" fill="#161b22"/>
+      <text x="16" y="23" fill="#8b949e">Page 0</text>
+      <rect x="16" y="48" width="208" height="40" rx="5" fill="#13281c" stroke="#3fb950"/><text x="28" y="73" fill="#3fb950">slot 0: alpha</text>
+      <rect x="16" y="96" width="208" height="40" rx="5" fill="#13281c" stroke="#3fb950"/><text x="28" y="121" fill="#3fb950">slot 1: beta</text>
+      <rect x="16" y="144" width="208" height="40" rx="5" fill="#13281c" stroke="#3fb950"/><text x="28" y="169" fill="#3fb950">slot 2: gamma</text>
+      <text x="16" y="216" fill="#6e7681">... (꽉 참)</text>
+    </g>
+    <!-- Page 1 -->
+    <g transform="translate(380, 120)">
+      <rect width="240" height="240" rx="8" fill="#0d1b2a" stroke="#30363d"/>
+      <rect width="240" height="34" rx="8" fill="#161b22"/>
+      <text x="16" y="23" fill="#8b949e">Page 1</text>
+      <rect x="16" y="48" width="208" height="40" rx="5" fill="#13281c" stroke="#3fb950"/><text x="28" y="73" fill="#3fb950">slot 0: ...</text>
+      <rect x="16" y="96" width="208" height="40" rx="5" fill="#13281c" stroke="#3fb950"/><text x="28" y="121" fill="#3fb950">slot 1: ...</text>
+      <rect x="16" y="144" width="208" height="40" rx="5" fill="#1f3326" stroke="#f0b429" stroke-width="2"/><text x="28" y="169" fill="#f0b429">slot 2: ★</text>
+      <text x="16" y="216" fill="#6e7681">...</text>
+    </g>
+    <!-- Page 2 -->
+    <g transform="translate(650, 120)">
+      <rect width="240" height="240" rx="8" fill="#0d1b2a" stroke="#1f6feb"/>
+      <rect width="240" height="34" rx="8" fill="#161b22"/>
+      <text x="16" y="23" fill="#58a6ff">Page 2 (마지막)</text>
+      <rect x="16" y="48" width="208" height="40" rx="5" fill="#13281c" stroke="#3fb950"/><text x="28" y="73" fill="#3fb950">slot 0: ...</text>
+      <rect x="16" y="96" width="208" height="40" rx="5" fill="#0d1117" stroke="#1f6feb" stroke-dasharray="4 4"/><text x="28" y="121" fill="#58a6ff">← append</text>
+      <text x="16" y="200" fill="#6e7681">빈 공간</text>
+    </g>
+  </g>
+
+  <!-- RID 콜아웃 -->
+  <text x="500" y="408" text-anchor="middle" fill="#f0b429" font-size="14" font-family="ui-monospace, monospace">★ 의 주소 = RID (page_id=1, slot=2) — 행이 옮겨져도 안 바뀌는 영구 주소 (PostgreSQL TID)</text>
+</svg>
