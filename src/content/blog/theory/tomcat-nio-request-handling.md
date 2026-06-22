@@ -322,7 +322,7 @@ class Poller implements Runnable {
 // Before (BIO): 1000개 연결 = 1000개 스레드 필요
 // 메모리: 1000 × 1MB = 1GB
 
-// After (NIO): 1000개 연결 = Poller 1~2개 + 필요할 때만 워커 스레드
+// After (NIO): 1000개 연결 = Poller 1개(8.5+ 고정) + 필요할 때만 워커 스레드
 // 메모리: 2MB (Poller) + 동적 할당
 ```
 
