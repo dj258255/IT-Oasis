@@ -358,7 +358,7 @@ BIO:
 
 NIO:
 200개 워커 스레드
-+ Poller 스레드 2개
++ Poller 스레드 1개 (Tomcat 8.5+는 커넥터당 1개로 고정)
 = 최대 8,192개 동시 연결 (Tomcat 8 기본값)
 ```
 
@@ -407,8 +407,8 @@ Keep-Alive 대기 중인 연결은 Selector가 관리하고, 실제로 데이터
 http-nio-8080-Acceptor-0 (1개)
   → 연결 수락
 
-http-nio-8080-ClientPoller (Tomcat 8.5+ 기준 1개, 8.0에서는 2개)
-  (Tomcat 8.0 이전에는 pollerThreadCount 설정으로 조절 가능)
+http-nio-8080-ClientPoller (Tomcat 8.5+는 커넥터당 1개로 고정)
+  (8.5에서 pollerThreadCount 옵션 제거 — "one poller thread is sufficient". 8.0 이전엔 min(2, 코어수)였음)
   → Selector로 연결 감시
 
 http-nio-8080-exec-1 (10~200개)
@@ -1415,7 +1415,7 @@ BIO:
 
 NIO:
 200 worker threads
-+ 2 Poller threads
++ 1 Poller thread (Tomcat 8.5+ uses one poller per connector)
 = max 8,192 concurrent connections (Tomcat 8 default)
 ```
 
@@ -1464,8 +1464,7 @@ The Tomcat NIO connector uses several types of threads:
 http-nio-8080-Acceptor-0 (1)
   -> Accepts connections
 
-http-nio-8080-ClientPoller-0 (2)
-http-nio-8080-ClientPoller-1
+http-nio-8080-ClientPoller (Tomcat 8.5+: one poller per connector)
   -> Monitors connections via Selector
 
 http-nio-8080-exec-1 (10~200)

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" font-family="ui-sans-serif, system-ui, sans-serif" font-size="16">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="440" rx="12" fill="#0d1117"/>
+  <text x="500" y="48" text-anchor="middle" fill="#8b949e" font-size="18">슬롯 페이지 레이아웃 — 하나의 4096바이트 페이지</text>
+
+  <!-- 방향 안내 -->
+  <text x="200" y="120" text-anchor="middle" fill="#1f6feb" font-size="14">슬롯 배열: 왼쪽 → 오른쪽으로 자람</text>
+  <text x="800" y="120" text-anchor="middle" fill="#3fb950" font-size="14">레코드: 오른쪽 → 왼쪽으로 자람</text>
+
+  <!-- 페이지 바 -->
+  <g stroke="#30363d" font-family="ui-monospace, Menlo, monospace" font-size="15">
+    <!-- Header -->
+    <rect x="60" y="150" width="80" height="92" fill="#1f6feb" stroke="#388bfd"/>
+    <text x="100" y="202" text-anchor="middle" fill="#ffffff" stroke="none">Hdr</text>
+    <!-- Slots -->
+    <rect x="140" y="150" width="80" height="92" fill="#13283f" stroke="#1f6feb"/>
+    <text x="180" y="202" text-anchor="middle" fill="#58a6ff" stroke="none">Slot 0</text>
+    <rect x="220" y="150" width="80" height="92" fill="#13283f" stroke="#1f6feb"/>
+    <text x="260" y="202" text-anchor="middle" fill="#58a6ff" stroke="none">Slot 1</text>
+    <!-- Free space -->
+    <rect x="300" y="150" width="380" height="92" fill="#0d1117" stroke="#30363d" stroke-dasharray="5 5"/>
+    <text x="490" y="202" text-anchor="middle" fill="#6e7681" stroke="none">←  빈 공간 (free space)  →</text>
+    <!-- Records -->
+    <rect x="680" y="150" width="130" height="92" fill="#13281c" stroke="#3fb950"/>
+    <text x="745" y="202" text-anchor="middle" fill="#3fb950" stroke="none">Rec 1</text>
+    <rect x="810" y="150" width="130" height="92" fill="#13281c" stroke="#3fb950"/>
+    <text x="875" y="202" text-anchor="middle" fill="#3fb950" stroke="none">Rec 0</text>
+  </g>
+
+  <!-- offset 라벨 -->
+  <text x="60" y="270" text-anchor="middle" fill="#6e7681" font-size="13" font-family="ui-monospace, monospace">offset 0</text>
+  <text x="940" y="270" text-anchor="middle" fill="#6e7681" font-size="13" font-family="ui-monospace, monospace">4096</text>
+
+  <!-- 슬롯 → 레코드 포인터 -->
+  <path d="M180 242 C 180 330, 875 330, 875 246" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M260 242 C 260 300, 745 300, 745 246" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="500" y="360" text-anchor="middle" fill="#8b949e" font-size="14">각 슬롯은 (offset, length)로 자기 레코드를 가리킨다 — 슬롯 번호는 안 바뀌는 안정적인 주소</text>
+</svg>

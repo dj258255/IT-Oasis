@@ -268,6 +268,8 @@ binarySem.release();  // 카운터: 1 (가능!)
 // 스레드 A가 acquire했지만, 스레드 B가 release 가능
 ```
 
+> **주의 — Java `Semaphore`는 "0/1" 상한을 강제하지 않아요.** `release()`는 대응하는 `acquire()`가 없어도 **항상 카운터를 1 증가**시켜요(상한은 사실상 `Integer.MAX_VALUE`). 즉 `new Semaphore(1)`이라도 누군가 `release()`를 한 번 더 부르면 카운터가 2가 되어 "이진"이 깨지고, 버그로 두 번 release하면 **이진 세마포어가 영영 열린 채로** 남습니다. 소유권으로 이런 실수를 막아주는 뮤텍스와의 결정적 차이예요. (출처: [Baeldung - Semaphores in Java](https://www.baeldung.com/java-semaphore), [OpenJDK JDK-8255491](https://bugs.openjdk.org/browse/JDK-8255491))
+
 반면 뮤텍스는 Lock을 건 스레드만 Unlock할 수 있어요.
 
 > 출처: [Velog - [OS] 세마포어와 뮤텍스](https://velog.io/@conatuseus/OS-세마포어와-뮤텍스), [Baeldung - Binary Semaphore vs Reentrant Lock](https://www.baeldung.com/java-binary-semaphore-vs-reentrant-lock)

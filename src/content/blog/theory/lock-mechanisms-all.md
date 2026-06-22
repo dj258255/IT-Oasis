@@ -829,12 +829,14 @@ public class CouponService {
 - Redis 1개가 다운되어도 락 유지
 - 과반수만 살아있으면 작동
 
-**단점:**
-- 네트워크 지연으로 인한 복잡성
-- 시계 동기화 문제 (NTP)
-- 성능 오버헤드
+**단점 (Kleppmann의 핵심 비판):**
+- **fencing token 부재 — 가장 치명적.** Redlock의 랜덤 값은 **단조 증가(monotonic)** 하지 않아서, 락을 잃은 줄 모르는 클라이언트의 **stale write를 저장소가 거부할 방법이 없어요**. 안전한 분산 락은 락을 줄 때마다 증가하는 토큰(fencing token)을 함께 발급하고, 저장소가 더 작은 토큰의 쓰기를 막아야 해요.
+- **타이밍 가정의 붕괴.** Redlock은 "네트워크 지연·프로세스 정지·시계 오차가 모두 유계(bounded)"라고 가정하는데, 실제로는 **GC 30초 stop-the-world, NTP 시계 점프, 긴 네트워크 지연**이 이 가정을 깨고 → **두 클라이언트가 동시에 락을 보유**할 수 있어요.
+- 그 결과: **정합성(correctness)이 걸린 락엔 Redlock 부적합** → ZooKeeper 같은 합의(consensus) 기반 락 권장. 효율(efficiency) 목적의 락이면 단일 Redis로도 충분.
 
-> 출처: [Redis Redlock](https://redis.io/docs/manual/patterns/distributed-locks/#the-redlock-algorithm), [Antirez - Is Redlock safe?](http://antirez.com/news/101), [Martin Kleppmann - Redlock criticism](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)
+> 즉 단점은 "느리다/복잡하다"가 아니라 **"상호배제를 보장하지 못한다"** 는 안전성 문제예요. (성능 오버헤드·NTP는 부차적.)
+
+> 출처: [Martin Kleppmann - How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) (fencing token·타이밍 비판), [Antirez - Is Redlock safe?](http://antirez.com/news/101) (창시자 반론), [Redis Redlock](https://redis.io/docs/manual/patterns/distributed-locks/#the-redlock-algorithm)
 
 ## 5. 락의 문제점과 해결 방법
 
