@@ -1,10 +1,10 @@
 {
   "title": "minidb",
   "titleEn": "minidb",
-  "description": "PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부하는 학습 프로젝트. 페이지 저장·슬롯 페이지·버퍼풀·힙·B+Tree 인덱스·SQL 파서/실행기·WAL·트랜잭션, 그리고 테이블마다 파일을 따로 두는 다중 테이블과 중첩 루프 조인까지. CREATE/INSERT/SELECT(JOIN·ORDER BY·LIMIT)/UPDATE/DELETE가 도는 미니 RDBMS.",
-  "descriptionEn": "A learning project dissecting how relational databases like PostgreSQL and MySQL work inside, built layer by layer in C — page storage, buffer pool, heap, B+Tree index, SQL parser/executor, write-ahead log, transactions, plus a file-per-table multi-table catalog and nested-loop joins — into a mini RDBMS that runs CREATE/INSERT/SELECT (JOIN, ORDER BY, LIMIT)/UPDATE/DELETE.",
+  "description": "PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부하는 학습 프로젝트. 페이지 저장·슬롯 페이지·버퍼풀·힙·B+Tree 인덱스·SQL 파서/실행기·WAL·트랜잭션, 테이블마다 파일을 따로 두는 다중 테이블, 별칭·self-join, 집계·GROUP BY, 그리고 레벨마다 인덱스/해시/중첩 루프를 고르는 조인까지. CREATE/INSERT/SELECT/UPDATE/DELETE가 도는 미니 RDBMS.",
+  "descriptionEn": "A learning project dissecting how relational databases like PostgreSQL and MySQL work inside, built layer by layer in C — page storage, buffer pool, heap, B+Tree index, SQL parser/executor, write-ahead log, transactions, a file-per-table multi-table catalog, aliases/self-joins, aggregates/GROUP BY, and joins that pick index/hash/nested-loop per level — into a mini RDBMS that runs CREATE/INSERT/SELECT/UPDATE/DELETE.",
   "image": "/uploads/project/minidb/cover.svg",
-  "tags": ["C", "Database Internals", "Storage Engine", "B+Tree", "SQL", "JOIN", "WAL", "Transactions", "Learning"],
+  "tags": ["C", "Database Internals", "Storage Engine", "B+Tree", "SQL", "JOIN", "Query Planner", "WAL", "Transactions", "Learning"],
   "category": "project",
   "date": "2026-06-22",
   "github": "https://github.com/dj258255/minidb",
