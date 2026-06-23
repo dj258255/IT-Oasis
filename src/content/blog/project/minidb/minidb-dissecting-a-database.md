@@ -1,7 +1,7 @@
 ---
 title: '진짜 데이터베이스를 C로 밑바닥부터 만들기 — minidb 전 과정'
 titleEn: 'Building a Real Database from Scratch in C — The Whole minidb'
-description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 만들었다. 고정 크기 페이지부터 슬롯 페이지·버퍼 풀·힙·SQL 파서·실행기·B+Tree 인덱스·WAL까지 — 9개 계층을 밑바닥부터 쌓아 CREATE/INSERT/SELECT가 도는 미니 관계형 DB를 만든 전 과정을 한 글에 담았다."
+description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 만들었다. 고정 크기 페이지부터 슬롯 페이지·버퍼 풀·힙·SQL 파서·실행기·B+Tree 인덱스·WAL·트랜잭션까지 — 밑바닥부터 쌓아 CREATE/INSERT/SELECT와 BEGIN/COMMIT/ROLLBACK이 도는 미니 관계형 DB를 만든 전 과정을 한 글에 담았다."
 descriptionEn: "To really understand how PostgreSQL and MySQL work inside, I built their structure in C, one layer at a time — from fixed-size pages up through slotted pages, a buffer pool, a heap, a SQL parser, an executor, a B+Tree index, and a write-ahead log. This single post walks the whole thing: nine layers from scratch into a mini relational database where CREATE/INSERT/SELECT actually run."
 date: 2026-06-22
 tags:
@@ -127,8 +127,18 @@ REPL을 붙이면 드디어 진짜 SQL을 타이핑해 결과를 받는다.
 
 ---
 
+## 9. 트랜잭션 — BEGIN / COMMIT / ROLLBACK
+
+WAL이 원자성·내구성의 원리를 줬으니, 이제 SQL 레벨에서 묶음 작업을 다룬다. 여러 변경을 한 단위로 묶어 전부 확정(COMMIT)하거나 전부 되돌린다(ROLLBACK).
+
+구현은 **no-steal + 커밋 시 force** 정책이다. 트랜잭션 중 바뀐 페이지는 버퍼 풀 메모리에만 두고 디스크엔 안 흘린다(no-steal). `COMMIT`이면 flush + fsync 해서 확정하고, `ROLLBACK`이면 dirty 프레임을 버리고 트랜잭션이 할당한 페이지를 잘라 디스크 원본 상태로 되돌린다. 핵심은 **힙과 B+Tree 인덱스를 둘 다 되돌린다**는 것 — 그래야 롤백한 INSERT가 행도, 인덱스 항목도 남기지 않는다.
+
+![minidb 트랜잭션 세션 — BEGIN 후 INSERT한 lee를 ROLLBACK하면 SELECT에 1행(kim)만 남는다](/uploads/project/minidb/txn-session.svg)
+
+`BEGIN` 으로 시작해 `lee` 를 넣고 `ROLLBACK` 하니, `SELECT` 에는 `kim` 한 줄만 남는다. `lee` 는 행도 인덱스도 흔적 없이 사라졌다. (학습용이라 격리 수준·동시성 — ACID의 I — 은 없다. 한 번에 한 트랜잭션이다.)
+
 ## 닫으며
 
-새로운 걸 발명하진 않았다. 대신 PostgreSQL·MySQL이 매일 하는 일 — 글자를 받아 페이지를 읽고 행을 돌려주는 그 일 — 을 밑바닥부터 한 겹씩 직접 만들며 이해했다. 페이지에 저장하고(페이저·슬롯 페이지), 메모리에 캐시하고(버퍼 풀), 테이블로 묶고(힙), SQL을 받고(파서·실행기), 빠르게 찾고(B+Tree), 전원이 꺼져도 안 깨진다(WAL).
+새로운 걸 발명하진 않았다. 대신 PostgreSQL·MySQL이 매일 하는 일 — 글자를 받아 페이지를 읽고 행을 돌려주는 그 일 — 을 밑바닥부터 한 겹씩 직접 만들며 이해했다. 페이지에 저장하고(페이저·슬롯 페이지), 메모리에 캐시하고(버퍼 풀), 테이블로 묶고(힙), SQL을 받고(파서·실행기), 빠르게 찾고(B+Tree), 전원이 꺼져도 안 깨지고(WAL), 묶음 작업을 원자적으로 처리한다(트랜잭션).
 
-이제 `SELECT` 를 칠 때마다 그 아래 아홉 계층에서 무슨 일이 벌어지는지 안다. 그게 이 프로젝트의 전부였다.
+이제 `SELECT` 를 칠 때마다 그 아래 계층들에서 무슨 일이 벌어지는지 안다. 그게 이 프로젝트의 전부였다.
