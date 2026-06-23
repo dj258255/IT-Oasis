@@ -10,5 +10,6 @@
   "github": "https://github.com/dj258255/deokjil-os",
   "website": "",
   "story": "",
-  "order": 0
+  "order": 0,
+  "draft": true
 }
