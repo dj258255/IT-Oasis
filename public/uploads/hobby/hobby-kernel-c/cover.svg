@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400">
+  <defs>
+    <style>.mono{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;}</style>
+  </defs>
+
+  <rect width="720" height="400" fill="#0b0e14"/>
+  <circle cx="600" cy="90" r="170" fill="#2a7de1" opacity="0.10"/>
+  <circle cx="120" cy="350" r="150" fill="#3a944a" opacity="0.07"/>
+
+  <!-- 터미널 창 -->
+  <rect x="44" y="46" width="632" height="308" rx="14" fill="#11151d" stroke="#2a3140" stroke-width="1.5"/>
+  <circle cx="70" cy="70" r="6" fill="#ff5f56"/>
+  <circle cx="90" cy="70" r="6" fill="#ffbd2e"/>
+  <circle cx="110" cy="70" r="6" fill="#27c93f"/>
+  <text x="360" y="74" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">hobby-kernel — qemu riscv64</text>
+  <line x1="44" y1="92" x2="676" y2="92" stroke="#2a3140" stroke-width="1.5"/>
+
+  <g class="mono" font-size="14.5">
+    <text x="66" y="122" fill="#5b6473">OpenSBI v1.5.1  →  S-mode</text>
+    <text x="66" y="148" fill="#c9d1d9">hobby-kernel v0.1  (C / RISC-V)</text>
+    <text x="66" y="170" fill="#3a944a">[ok]<tspan fill="#8a94a6" dx="6">page allocator: 32238 free pages</tspan></text>
+    <text x="66" y="200" fill="#dea584">hobby&gt;<tspan fill="#c9d1d9" dx="8">help</tspan></text>
+    <text x="66" y="222" fill="#8a94a6">commands: help, about, uptime, mem, clear ...</text>
+    <text x="66" y="248" fill="#dea584">hobby&gt;<tspan fill="#c9d1d9" dx="8">uptime</tspan></text>
+    <text x="66" y="270" fill="#8a94a6">uptime: 3 sec</text>
+    <text x="66" y="296" fill="#dea584">hobby&gt;<tspan fill="#c9d1d9" dx="8">mem</tspan></text>
+    <text x="66" y="318" fill="#8a94a6">free pages: 32238  (~125 MB free)</text>
+    <text x="66" y="340" fill="#dea584">hobby&gt;<tspan fill="#27c93f" dx="8">_</tspan></text>
+  </g>
+</svg>
