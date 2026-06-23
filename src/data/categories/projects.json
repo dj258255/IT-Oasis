@@ -13,6 +13,7 @@
     { "name": "Joying", "nameEn": "RentalJoying", "nameKo": "빌려조잉", "order": 5 },
     { "name": "Orakgarak", "nameEn": "Orakgarak", "nameKo": "오락가락", "order": 6 },
     { "name": "EduMeet", "nameEn": "EduMeet", "nameKo": "에듀밋", "order": 7 },
-    { "name": "IT Oasis", "nameEn": "IT Oasis", "nameKo": "IT Oasis", "order": 8 }
+    { "name": "IT Oasis", "nameEn": "IT Oasis", "nameKo": "IT Oasis", "order": 8 },
+    { "name": "hobby-kernel", "nameEn": "hobby-kernel", "nameKo": "토이 커널", "order": 9 }
   ]
 }
