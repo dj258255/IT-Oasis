@@ -12,6 +12,7 @@ tags:
   - SQL
   - WAL
   - Learning
+category: project/minidb
 coverImage: /uploads/project/minidb/cover.svg
 draft: false
 ---
