@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="624" viewBox="0 0 900 624" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">
+  <defs>
+    <marker id="lmarrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#58a6ff"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="624" rx="12" fill="#0d1117"/>
+  <text x="450" y="40" text-anchor="middle" fill="#8b949e" font-size="18">minidb 계층 지도 — SQL 텍스트에서 디스크까지</text>
+
+  <!-- SQL 텍스트 입력 -->
+  <text x="450" y="82" text-anchor="middle" fill="#c9d1d9" font-family="ui-monospace, Menlo, monospace" font-size="15">SQL 텍스트</text>
+
+  <!-- 아래로 흐르는 화살표 -->
+  <path d="M70 100 L70 568" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#lmarrow)"/>
+  <text x="58" y="340" fill="#6e7681" font-size="12" transform="rotate(-90 58 340)" text-anchor="middle">아래로 갈수록 디스크에 가까움</text>
+
+  <g font-family="ui-monospace, Menlo, monospace">
+    <!-- 프런트엔드 [1][2][3] : 파랑 -->
+    <g transform="translate(120, 100)">
+      <rect width="700" height="46" rx="7" fill="#0d1b2a" stroke="#1f6feb"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#102a43" stroke="#58a6ff"/><text x="27" y="28" fill="#58a6ff" text-anchor="middle" font-size="13">1</text>
+      <text x="56" y="29" fill="#58a6ff" font-size="15">Parser</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">토크나이저 + 파서 -&gt; AST</text>
+    </g>
+    <g transform="translate(120, 154)">
+      <rect width="700" height="46" rx="7" fill="#0d1b2a" stroke="#1f6feb"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#102a43" stroke="#58a6ff"/><text x="27" y="28" fill="#58a6ff" text-anchor="middle" font-size="13">2</text>
+      <text x="56" y="29" fill="#58a6ff" font-size="15">Planner</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">AST -&gt; 실행 계획 (풀스캔 vs 인덱스)</text>
+    </g>
+    <g transform="translate(120, 208)">
+      <rect width="700" height="46" rx="7" fill="#0d1b2a" stroke="#1f6feb"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#102a43" stroke="#58a6ff"/><text x="27" y="28" fill="#58a6ff" text-anchor="middle" font-size="13">3</text>
+      <text x="56" y="29" fill="#58a6ff" font-size="15">Executor</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">계획 실행</text>
+    </g>
+
+    <!-- 저장 계층 [4]~[8] : 초록 -->
+    <g transform="translate(120, 270)">
+      <rect width="700" height="46" rx="7" fill="#0d1b14" stroke="#238636"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#0f2417" stroke="#3fb950"/><text x="27" y="28" fill="#3fb950" text-anchor="middle" font-size="13">4</text>
+      <text x="56" y="29" fill="#3fb950" font-size="15">Catalog</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">스키마 메타데이터</text>
+    </g>
+    <g transform="translate(120, 324)">
+      <rect width="700" height="46" rx="7" fill="#0d1b14" stroke="#238636"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#0f2417" stroke="#3fb950"/><text x="27" y="28" fill="#3fb950" text-anchor="middle" font-size="13">5</text>
+      <text x="56" y="29" fill="#3fb950" font-size="15">Access</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">Heap(테이블) + B-Tree(인덱스)</text>
+    </g>
+    <g transform="translate(120, 378)">
+      <rect width="700" height="46" rx="7" fill="#0d1b14" stroke="#238636"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#0f2417" stroke="#3fb950"/><text x="27" y="28" fill="#3fb950" text-anchor="middle" font-size="13">6</text>
+      <text x="56" y="29" fill="#3fb950" font-size="15">Buffer Pool</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">페이지 캐시 + LRU 교체</text>
+    </g>
+    <g transform="translate(120, 432)">
+      <rect width="700" height="46" rx="7" fill="#0d1b14" stroke="#238636"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#0f2417" stroke="#3fb950"/><text x="27" y="28" fill="#3fb950" text-anchor="middle" font-size="13">7</text>
+      <text x="56" y="29" fill="#3fb950" font-size="15">Page</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">슬롯 페이지: 행을 고정 크기 페이지에 패킹</text>
+    </g>
+    <g transform="translate(120, 486)">
+      <rect width="700" height="46" rx="7" fill="#0d1b14" stroke="#238636"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#0f2417" stroke="#3fb950"/><text x="27" y="28" fill="#3fb950" text-anchor="middle" font-size="13">8</text>
+      <text x="56" y="29" fill="#3fb950" font-size="15">Pager/Disk</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">페이지 &lt;-&gt; 단일 파일 (고정 크기 I/O)</text>
+    </g>
+
+    <!-- WAL [9] : 앰버 (내구성) -->
+    <g transform="translate(120, 548)">
+      <rect width="700" height="46" rx="7" fill="#1f1808" stroke="#9e6a03"/>
+      <rect x="14" y="11" width="26" height="24" rx="5" fill="#2a2008" stroke="#f0b429"/><text x="27" y="28" fill="#f0b429" text-anchor="middle" font-size="13">9</text>
+      <text x="56" y="29" fill="#f0b429" font-size="15">WAL</text>
+      <text x="200" y="29" fill="#8b949e" font-size="14">쓰기 선행 로그 + 크래시 복구</text>
+    </g>
+  </g>
+</svg>
