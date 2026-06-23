@@ -26,17 +26,17 @@ DB는 한 덩어리가 아니라 여러 계층의 합이다. 위에서 아래로
 
 ```
  SQL 텍스트
-   │
-   ▼ [1] Parser      토크나이저 + 파서 → AST
-   ▼ [2] Planner     AST → 실행 계획 (풀스캔 vs 인덱스)
-   ▼ [3] Executor    계획 실행
-   │
-   ▼ [4] Catalog     스키마 메타데이터
-   ▼ [5] Access      Heap(테이블) + B-Tree(인덱스)
-   ▼ [6] Buffer Pool 페이지 캐시 + LRU 교체
-   ▼ [7] Page        슬롯 페이지: 행을 고정 크기 페이지에 패킹
-   ▼ [8] Pager/Disk  페이지 ↔ 단일 파일
-   ▼ [9] WAL         쓰기 선행 로그 + 크래시 복구
+   |
+   v [1] Parser      토크나이저 + 파서 -> AST
+   v [2] Planner     AST -> 실행 계획 (풀스캔 vs 인덱스)
+   v [3] Executor    계획 실행
+   |
+   v [4] Catalog     스키마 메타데이터
+   v [5] Access      Heap(테이블) + B-Tree(인덱스)
+   v [6] Buffer Pool 페이지 캐시 + LRU 교체
+   v [7] Page        슬롯 페이지: 행을 고정 크기 페이지에 패킹
+   v [8] Pager/Disk  페이지 <-> 단일 파일
+   v [9] WAL         쓰기 선행 로그 + 크래시 복구
 ```
 
 핵심 사실: **모든 것은 고정 크기 페이지 위에 쌓인다.** (PostgreSQL 8KB, MySQL InnoDB 16KB, SQLite 4KB.) 그래서 맨 아래(페이저)부터 짓는다.
@@ -89,7 +89,7 @@ int pager_read(Pager *p, page_id_t id, void *buf) {
 
 여기서부터 위쪽(프런트엔드)이다. `"SELECT * FROM users WHERE id = 1"` 문자열을 구조로 바꾼다. 두 단계다. **토크나이저(lexer)** 가 토큰으로 쪼개고, **재귀 하강 파서** 가 트리(AST)로 조립한다.
 
-![SQL 텍스트 → 토큰 → AST](/uploads/project/minidb/sql-to-ast.svg)
+![SQL 텍스트 -> 토큰 -> AST](/uploads/project/minidb/sql-to-ast.svg)
 
 재귀 하강은 문법 규칙 하나하나가 함수 하나가 된다. `SELECT` 규칙은 거의 영어 그대로 읽힌다 — "STAR가 와야 하고, FROM이 와야 하고, 이름이 오고, WHERE는 있어도 되고". 외부 파서 라이브러리 없이 손으로 썼다.
 
@@ -117,13 +117,13 @@ REPL을 붙이면 드디어 진짜 SQL을 타이핑해 결과를 받는다.
 
 어려운 부분은 **노드 분할(split)** 이다. 리프가 꽉 차면 반으로 쪼개고 가운데 키를 부모로 올린다. 루트까지 올라가 루트가 쪼개지면 트리 높이가 1 자란다 — 그래서 모든 리프가 항상 같은 깊이에 있고, 트리가 한쪽으로 안 기운다. 디스크에 저장되는 B+Tree를 직접 짜고, 키 1000개를 넣어 다단계 분할을 일으킨 뒤 오름차순 스캔으로 구조 무결성을 증명했다.
 
-그리고 이 인덱스를 실행기에 연결했다. INSERT는 `(PK → RID)` 를 인덱스에 등록하고, `WHERE id = 2` 처럼 인덱스된 컬럼을 쓰면 풀 스캔 대신 `btree_search` → `heap_get` 한 줄만 읽는다. "쓸 수 있으면 인덱스를 쓴다"는 이 분기가 **쿼리 플래너의 가장 단순한 형태** 다.
+그리고 이 인덱스를 실행기에 연결했다. INSERT는 `(PK -> RID)` 를 인덱스에 등록하고, `WHERE id = 2` 처럼 인덱스된 컬럼을 쓰면 풀 스캔 대신 `btree_search` -> `heap_get` 한 줄만 읽는다. "쓸 수 있으면 인덱스를 쓴다"는 이 분기가 **쿼리 플래너의 가장 단순한 형태** 다.
 
 ## 8. WAL — 쓰다가 전원이 꺼져도
 
 마지막 정체성, 내구성과 원자성. 데이터 파일을 고치는 도중 전원이 꺼지면 파일이 깨질 수 있다. **WAL(Write-Ahead Log)** 은 데이터를 고치기 전에 바뀔 내용을 로그에 먼저 적고 fsync 한다.
 
-![WAL 흐름 — stage → 로그+커밋마커 fsync(내구성 분기점) → 데이터 적용 → 로그 비움](/uploads/project/minidb/wal-flow.svg)
+![WAL 흐름 — stage -> 로그+커밋마커 fsync(내구성 분기점) -> 데이터 적용 -> 로그 비움](/uploads/project/minidb/wal-flow.svg)
 
 복구 규칙은 단 하나다. 재시작 시 로그에 **커밋 마커가 있으면 데이터에 재적용(redo), 없으면 버린다(rollback).** 테스트에서 정확히 두 위험한 순간에 크래시를 주입했다 — 커밋 마커 fsync 직후(데이터 적용 전)에 멈추면 복구가 redo하고(내구성), 커밋 마커 전에 멈추면 복구가 버린다(원자성). 전원이 꺼져도 데이터가 안 깨진다는 걸 실제로 크래시를 일으켜 증명했다.
 
