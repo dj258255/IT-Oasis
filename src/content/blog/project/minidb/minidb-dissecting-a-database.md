@@ -1,7 +1,7 @@
 ---
 title: '진짜 데이터베이스를 C로 밑바닥부터 만들기 — minidb 전 과정'
 titleEn: 'Building a Real Database from Scratch in C — The Whole minidb'
-description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 만들었다. 고정 크기 페이지부터 슬롯 페이지·버퍼 풀·힙·SQL 파서·실행기·B+Tree 인덱스·WAL·트랜잭션까지 — 밑바닥부터 쌓아 CREATE/INSERT/SELECT와 BEGIN/COMMIT/ROLLBACK이 도는 미니 관계형 DB를 만든 전 과정을 한 글에 담았다."
+description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 만들었다. 고정 크기 페이지부터 슬롯 페이지·버퍼 풀·힙·SQL 파서·실행기·B+Tree 인덱스·WAL·트랜잭션까지 — 밑바닥부터 쌓아 CREATE/INSERT/SELECT/UPDATE/DELETE와 BEGIN/COMMIT/ROLLBACK이 도는 미니 관계형 DB를 만든 전 과정을 한 글에 담았다."
 descriptionEn: "To really understand how PostgreSQL and MySQL work inside, I built their structure in C, one layer at a time — from fixed-size pages up through slotted pages, a buffer pool, a heap, a SQL parser, an executor, a B+Tree index, and a write-ahead log. This single post walks the whole thing: nine layers from scratch into a mini relational database where CREATE/INSERT/SELECT actually run."
 date: 2026-06-22
 tags:
@@ -104,6 +104,10 @@ REPL을 붙이면 드디어 진짜 SQL을 타이핑해 결과를 받는다.
 ![minidb REPL 세션 — CREATE/INSERT/SELECT가 실제로 동작](/uploads/project/minidb/repl-session.svg)
 
 `SELECT * FROM users WHERE id = 2` 가 `2 | lee` 를 돌려주기까지, 글자가 토큰이 되고(렉서), 토큰이 AST가 되고(파서), AST가 힙 스캔이 되고(실행기), 스캔이 버퍼 풀을 거쳐(캐시), 페이지가 슬롯에서 풀려(슬롯 페이지), 디스크 오프셋에서 읽혔다(페이저). 여섯 계층이 전부 맞물린 결과다.
+
+실행기에는 `DELETE` 와 `UPDATE` 도 붙여 CRUD를 완성했다. `DELETE` 는 힙 슬롯을 tombstone하고(인덱스 항목은 남아도 `heap_get` 이 -1을 돌려줘 무해하다), `UPDATE` 는 가변 길이라 "삭제 + 재삽입" 으로 처리한 뒤 **인덱스를 새 위치(RID)로 갱신** 한다 — 안 하면 옮겨진 행이 인덱스에서 사라진다.
+
+![minidb CRUD 세션 — UPDATE로 kim을 KIM으로, DELETE로 id=2를 지우면 SELECT에 1행(KIM)만 남는다](/uploads/project/minidb/crud-session.svg)
 
 ## 7. B+Tree 인덱스 — 풀 스캔을 피하기
 
