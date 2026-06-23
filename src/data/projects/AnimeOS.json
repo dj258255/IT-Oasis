@@ -1,14 +1,14 @@
 {
   "title": "hobby-kernel — C/RISC-V 토이 커널",
   "titleEn": "hobby-kernel — A C/RISC-V Toy Kernel",
-  "description": "C로 바닥부터 만든 RISC-V 토이 커널. 부팅·UART 출력·트랩/타이머 인터럽트·키보드 입력·커널 셸·페이지 할당기까지 OS 핵심 골격을 직접 구현한 학습 프로젝트(상용 OS 아님). 처음엔 Rust/x86으로 시작했다 학습 효율과 xv6 정렬을 위해 C/RISC-V로 전면 재작성.",
-  "descriptionEn": "A RISC-V toy kernel built from scratch in C: booting, UART output, trap/timer interrupts, keyboard input, a kernel shell, and a page allocator. Originally started in Rust/x86, then fully rewritten in C/RISC-V to align with xv6 and ease learning.",
+  "description": "C로 바닥부터 만든 RISC-V 토이 커널. 부팅·UART 출력·트랩/타이머 인터럽트·키보드 입력·커널 셸·페이지 할당기까지 OS 핵심 골격을 직접 구현한 학습 프로젝트(상용 OS 아님). xv6(MIT 6.S081)를 참고서로 진행.",
+  "descriptionEn": "A RISC-V toy kernel built from scratch in C: booting, UART output, trap/timer interrupts, keyboard input, a kernel shell, and a page allocator. A learning project following xv6 (MIT 6.S081).",
   "image": "/uploads/hobby/hobby-kernel-c/cover.svg",
   "tags": ["C", "OS", "Kernel", "Bare Metal", "RISC-V", "QEMU", "xv6"],
   "category": "project",
   "date": "2026-06-05",
   "github": "https://github.com/dj258255/hobby-kernel",
   "website": "",
-  "story": "/blog/hobby/anime-os-00-why-rust",
+  "story": "",
   "order": 0
 }
