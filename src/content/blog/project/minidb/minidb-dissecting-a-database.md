@@ -2,7 +2,7 @@
 title: '진짜 데이터베이스를 C로 밑바닥부터 만들기 — minidb 전 과정'
 titleEn: 'Building a Real Database from Scratch in C — The Whole minidb'
 description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 제대로 이해하고 싶어서, 그 구조를 C로 한 겹씩 직접 만들었다. 고정 크기 페이지부터 슬롯 페이지·버퍼 풀·힙·SQL 파서·실행기·B+Tree 인덱스·WAL·트랜잭션까지 — 밑바닥부터 쌓아 CREATE/INSERT/SELECT/UPDATE/DELETE와 BEGIN/COMMIT/ROLLBACK이 도는 미니 관계형 DB를 만든 전 과정을 한 글에 담았다."
-descriptionEn: "To really understand how PostgreSQL and MySQL work inside, I built their structure in C, one layer at a time — from fixed-size pages up through slotted pages, a buffer pool, a heap, a SQL parser, an executor, a B+Tree index, and a write-ahead log. This single post walks the whole thing: nine layers from scratch into a mini relational database where CREATE/INSERT/SELECT actually run."
+descriptionEn: "To really understand how PostgreSQL and MySQL work inside, I built their structure in C, one layer at a time — from fixed-size pages up through slotted pages, a buffer pool, a heap, a SQL parser and executor, a B+Tree index, a write-ahead log, and transactions. This single post walks the whole thing: a mini relational database from scratch where CREATE/INSERT/SELECT/UPDATE/DELETE and BEGIN/COMMIT/ROLLBACK actually run."
 date: 2026-06-22
 tags:
   - C
@@ -18,7 +18,7 @@ draft: false
 
 데이터베이스를 직접 만들어보고 싶었다. 처음엔 "세상에 없는 새로운 DB"를 찾아 한참 헤맸는데, 파고들수록 분명해진 게 있다. 인프라 영역은 거의 다 누군가 이미 잘 만들어놨고, "아무도 안 한 빈칸"은 사실상 유니콘이다. 그래서 목표를 바꿨다. 새로운 걸 발명하는 대신, **이미 있는 진짜를 정확히 재현하면서 그 구조를 손으로 이해하기.**
 
-그렇게 만든 게 **minidb** 다. PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부한 학습 프로젝트다. 이 글은 9개 계층을 밑바닥부터 쌓아 올린 전 과정을 한 번에 담는다. 각 계층은 전부 테스트로 검증했다(총 89개).
+그렇게 만든 게 **minidb** 다. PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부한 학습 프로젝트다. 이 글은 9개 계층을 밑바닥부터 쌓아 올린 전 과정을 한 번에 담는다. 각 계층은 전부 테스트로 검증했다(총 110개).
 
 ## 전체 지도
 
