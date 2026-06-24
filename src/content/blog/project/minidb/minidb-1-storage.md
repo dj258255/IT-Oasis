@@ -1,6 +1,6 @@
 ---
-title: 'minidb — 저장 계층: 페이지에서 힙까지'
-titleEn: 'minidb — The Storage Layer: From Pages to the Heap'
+title: '저장 계층: 페이지에서 힙까지'
+titleEn: 'The Storage Layer: From Pages to the Heap'
 description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 이해하려고 관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈. 1편은 가장 아래 저장 계층 — 고정 크기 페이지를 디스크에 읽고 쓰는 페이저, 가변 길이 행을 페이지에 욱여넣는 슬롯 페이지, 디스크를 매번 때리지 않게 하는 버퍼 풀(pin/dirty/LRU), 그리고 이 셋을 묶어 만든 첫 테이블인 힙 파일까지 직접 구현한다."
 descriptionEn: "minidb is a relational database built from scratch in C to understand how PostgreSQL and MySQL work inside. Part 1 builds the storage layer from the bottom: a pager that reads/writes fixed-size pages, slotted pages that pack variable-length rows, a buffer pool (pin/dirty/LRU), and the heap file that ties them into a first table."
 date: 2026-06-22
@@ -19,7 +19,7 @@ seriesOrder: 1
 
 데이터베이스를 직접 만들어보고 싶었다. 처음엔 "세상에 없는 새로운 DB"를 찾아 한참 헤맸는데, 파고들수록 분명해진 게 있다. 인프라 영역은 거의 다 누군가 이미 잘 만들어놨고, "아무도 안 한 빈칸"은 사실상 유니콘이다. 그래서 목표를 바꿨다. 새로운 걸 발명하는 대신, **이미 있는 진짜를 정확히 재현하면서 그 구조를 손으로 이해하기.**
 
-그렇게 만든 게 **minidb** 다. PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부한 학습 프로젝트다. 이 시리즈는 페이저부터 트랜잭션·조인·집계까지 밑바닥부터 쌓아 올린 전 과정을 다섯 편으로 나눠 담는다(전 계층 테스트 200개). 그 첫 편인 이 글은 맨 아래 — 바이트를 디스크에 얹는 **저장 계층** 을 짓는다.
+그렇게 만든 게 **minidb** 다. PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부한 학습 프로젝트다. 이 시리즈는 페이저부터 트랜잭션·조인·집계까지 밑바닥부터 쌓아 올린 전 과정을 다섯 편으로 나눠 담는다(전 계층 테스트 202개). 그 첫 편인 이 글은 맨 아래 — 바이트를 디스크에 얹는 **저장 계층** 을 짓는다.
 
 ## 전체 지도
 

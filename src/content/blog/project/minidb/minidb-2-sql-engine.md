@@ -1,6 +1,6 @@
 ---
-title: 'minidb — SQL 엔진: 파서와 실행기'
-titleEn: 'minidb — The SQL Engine: Parser and Executor'
+title: 'SQL 엔진: 파서와 실행기'
+titleEn: 'The SQL Engine: Parser and Executor'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 2편. 저장 계층 위에 SQL 프런트엔드를 얹는다. 손으로 쓴 토크나이저와 재귀 하강 파서로 SQL 문자열을 AST로 바꾸고, 실행기가 값을 스키마대로 바이트로 인코딩(tuple codec)해 힙을 훑으며 CREATE/INSERT/SELECT/UPDATE/DELETE를 처리한다. REPL로 진짜 SQL을 타이핑해 결과를 받기까지."
 descriptionEn: "Part 2 of building a relational database from scratch in C. On top of the storage layer we add the SQL frontend: a hand-written tokenizer and recursive-descent parser turn SQL text into an AST, and an executor encodes values to bytes (tuple codec) and scans the heap to run CREATE/INSERT/SELECT/UPDATE/DELETE — with a REPL to type real SQL and get rows back."
 date: 2026-06-22

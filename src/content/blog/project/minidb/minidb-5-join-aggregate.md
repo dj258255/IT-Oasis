@@ -1,6 +1,6 @@
 ---
-title: 'minidb — 조인과 집계: JOIN, GROUP BY, 조인 알고리즘'
-titleEn: 'minidb — Joins and Aggregation: JOIN, GROUP BY, Join Algorithms'
+title: '조인과 집계: JOIN, GROUP BY, 조인 알고리즘'
+titleEn: 'Joins and Aggregation: JOIN, GROUP BY, Join Algorithms'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 마지막 편. 한 테이블을 넘어 테이블 여러 개를 둔다. PostgreSQL의 relfilenode처럼 테이블마다 파일을 따로 두고 카탈로그로 묶은 뒤, 재귀적 N-way 중첩 루프 조인을 짠다. 그리고 별칭·self-join, 집계(COUNT/SUM/MIN/MAX/AVG)·GROUP BY, 레벨마다 인덱스/해시/중첩 루프를 고르는 조인 알고리즘 선택까지 — 진짜 옵티마이저가 하는 일을 코드로 드러낸다."
 descriptionEn: "The final part of building a relational database from scratch in C. Going beyond a single table: each table is its own files (like PostgreSQL's relfilenode) tied by a catalog, with a recursive N-way nested-loop join. Plus aliases/self-joins, aggregates (COUNT/SUM/MIN/MAX/AVG) with GROUP BY, and per-level join-method selection (index / hash / nested-loop) — the work a real optimizer does, made visible in code."
 date: 2026-06-22
@@ -126,6 +126,21 @@ park
 ```
 
 LEFT JOIN으로 미매칭을 NULL로 만들고, `IS NULL` 로 그 NULL을 잡으면 "주문이 하나도 없는 사용자"가 나온다. 차집합이 두 기능의 결합으로 자연히 떨어진다. 끝으로 `SELECT DISTINCT` 도 더했는데, 구현은 "모든 출력 컬럼으로 GROUP BY 한 것"과 같다 — 출력 행을 전체 컬럼으로 정렬한 뒤 인접한 중복을 지우면 끝이다.
+
+## 쿼리 안의 쿼리: 서브쿼리
+
+마지막으로 `WHERE col IN (SELECT ...)` — **서브쿼리** 를 얹었다. 여기서 AST가 처음으로 재귀가 된다. WHERE 조건의 오른쪽이 값이 아니라 또 다른 `SELECT` 라서, `Condition` 이 `SelectStmt` 를 품고(자기참조라 전방 선언 + 포인터 + malloc) 파서가 자신을 다시 부른다.
+
+핵심은 **상관 없는(uncorrelated) 서브쿼리는 한 번만 돈다**는 것이다. `IN (SELECT uid FROM orders)` 의 안쪽은 바깥 행과 무관하니, 바깥을 스캔하기 전에 안쪽을 한 번 돌려 값 집합을 만들어두고(prepare 단계), 바깥은 그 집합에 멤버십만 검사한다. 행마다 다시 돌리면 O(행 x 서브쿼리)지만, 미리 캐시하면 O(행)이다.
+
+```
+SELECT * FROM users WHERE id IN (SELECT uid FROM orders)
+id | name
+1 | kim
+2 | lee
+```
+
+`orders` 에 주문을 낸 사용자(uid 1,2)만 나온다. 안쪽 결과를 집합으로 만들고 바깥이 그걸 조회하는 게, 곧 서브쿼리의 가장 단순한 실행 모델이다.
 
 ## 닫으며
 
