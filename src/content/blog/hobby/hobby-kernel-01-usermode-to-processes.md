@@ -238,3 +238,225 @@ w_sstatus(r_sstatus() | SSTATUS_SUM);  // 커널이 항상 유저 페이지 접�
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/)
 - [OSDev Wiki](https://wiki.osdev.org/)
+
+<!-- EN -->
+
+## Introduction
+
+In [Part 1](/blog/hobby/hobby-kernel-00-boot-to-paging) I built the **skeleton** of the kernel — boot, UART output, traps/timer, keyboard + shell, page allocator, Sv39 paging. But up to that point, **every line of code runs with kernel privilege (S-mode)**. What actually makes an operating system an operating system is the **boundary**: "a low-privilege user program asks the kernel to do work on its behalf."
+
+This post is about building that boundary and putting **processes** on top of it. It splits into three parts.
+
+1. **User mode + system calls** — drop into U-mode and call the kernel via `ecall`
+2. **Processes + a preemptive scheduler** — alternate between multiple execution flows via context switching
+3. **User processes** — give each process its own page table to isolate its address space
+
+At the end I'll go over the two things I learned from debugging while building this (shared CSRs, the SUM bit). Honestly, those two bugs were where I learned the most in this stage.
+
+> The reference is still [xv6 (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html). But rather than dropping in the textbook structures like a trampoline and per-process trap frames all at once, I took the simplest path that works first (and you'll see the price of that below).
+
+## 1. User Mode + System Calls
+
+On RISC-V the privilege levels are M (machine) > S (supervisor) > U (user). The kernel runs in S-mode, user programs run in U-mode. U-mode can't touch CSRs or device memory. So how does something like screen output happen? It **asks the kernel**. That's a system call, and on RISC-V you trigger a trap with the `ecall` instruction.
+
+A user program looks like this. Put the arguments in registers (`a7` = call number, `a0` = argument) and `ecall`.
+
+```asm
+li a7, 1      # SYS_putchar
+li a0, 85     # 'U'
+ecall         # 커널아, 이 글자 좀 찍어줘
+```
+
+Doing `ecall` from U-mode raises a trap with `scause` = 8 (U-mode ecall). You only need to add one branch to the trap handler built in Part 1.
+
+```c
+// trap.c
+} else if (cause == SCAUSE_U_ECALL) {
+    syscall(f);        // a7로 분기해서 처리(아래)
+    f->sepc += 4;      // ecall(4바이트) 다음 명령으로 복귀
+}
+```
+
+```c
+// user.c — 시스템콜 디스패치
+void syscall(struct regframe *f) {
+    switch (f->a7) {
+    case SYS_putchar: uart_putc((char)f->a0); break;  // 유저가 부탁한 글자 출력
+    case SYS_print:   uart_puts("Hello from user mode!\n"); break;
+    // ...
+    }
+}
+```
+
+"Dropping" into U-mode is a single `sret`. Set the bits in `sstatus` (this part causes trouble later), put the return address (`sepc`) at the user entry point, and `sret` — the CPU falls into U-mode.
+
+```c
+s &= ~SSTATUS_SPP;   // SPP=0 → sret 시 U-mode로
+s |= SSTATUS_SPIE;   // U-mode에서 인터럽트 enable
+w_sepc(USERVA);      // 유저 진입점
+// ... sret
+```
+
+```
+[kernel] entering user mode (U-mode)...
+Hello from user mode! (printed by the kernel, requested via ecall)
+```
+
+A program running in U-mode made a request via `ecall` and the kernel handled it. It may look like a trivial one-liner, but it matters: it's **the first time we crossed the privilege boundary**.
+
+## 2. Processes + a Preemptive Scheduler
+
+Running just one program isn't an OS yet. You need to **alternate between multiple execution flows**. The key is the **context switch** — saving the current flow's registers and restoring another flow's registers.
+
+All you need to save are the callee-saved registers + `ra` (return address) + `sp` (stack). 14 lines of assembly.
+
+```asm
+# swtch.S — void swtch(struct context *old, struct context *new)
+swtch:
+    sd ra, 0(a0)        # 현재 흐름 저장
+    sd sp, 8(a0)
+    sd s0, 16(a0)       # ... s1~s11
+    ld ra, 0(a1)        # 새 흐름 복원
+    ld sp, 8(a1)
+    ld s0, 16(a1)       # ...
+    ret                 # ra(=새 흐름)로 점프 → 갈아탔다
+```
+
+The magic is `ret` jumping to the new flow's `ra`. You call a function, but **you wake up in a different execution flow**.
+
+The scheduler picks a runnable (`RUNNABLE`) process, enters it via `swtch`, and when that process yields (`yield`), control returns and it picks the next process (round-robin).
+
+```c
+void scheduler(void) {
+    for (;;)
+        for (each proc p)
+            if (p->state == RUNNABLE) {
+                p->state = RUNNING; cur = p;
+                swtch(&sched_context, &p->context);  // p 실행 → yield 시 복귀
+            }
+}
+```
+
+The heart of "preemptive" is the **timer**. Even if a process never yields voluntarily, the timer interrupt forces a `yield` and hands off to the next process. Just one more line on top of the timer built in Part 1.
+
+```c
+// trap.c — 타이머 인터럽트
+ticks++;
+w_stimecmp(r_time() + TIMER_INTERVAL);
+if (current_proc()) yield();   // 실행 중인 프로세스를 강제로 양보(선점)
+```
+
+I brought the shell back too. The shell runs off UART interrupts, so it responds no matter which process is running. And to actually see two threads running concurrently, I added a `ps` command — each thread spins incrementing a counter, and when the timer preempts back and forth between them, both counters climb together.
+
+```
+hobby> ps
+threads (preemptively scheduled):
+  spinA: ticks=34888638
+  spinB: ticks=31213595
+hobby> ps                      (1.2초 후)
+  spinA: ticks=64687087        +30M
+  spinB: ticks=61305716        +30M
+```
+
+Over 1.2 seconds both counters grew by ~30M each. **Preemptive multitasking** is running.
+
+## 3. User Processes = Isolated Address Spaces
+
+The "processes" so far were really kernel threads (S-mode, sharing the same page table). A real process has **its own address space**. So we give each process a separate **page table**.
+
+Each process's page table = the kernel region (identity mapping) + that process's user code/stack (`PTE_U`).
+
+```c
+// vm.c
+pagetable_t proc_pagetable(uint64 ucode_pa, uint64 ustack_pa) {
+    pagetable_t pt = kalloc_zeroed();
+    map_kernel(pt);                                       // 커널을 모든 테이블에 식별 매핑
+    mappages(pt, USERVA,    PGSIZE, ucode_pa,  PTE_R|PTE_X|PTE_U);
+    mappages(pt, USERSTACK, PGSIZE, ustack_pa, PTE_R|PTE_W|PTE_U);
+    return pt;
+}
+```
+
+> **Why map the kernel into every page table?** It's the core of going without a trampoline. When a trap fires in U-mode, `satp` still points at that process's table. The kernel code (the trap handler) has to be mapped at the same address inside that table, so the handler runs as-is without changing `satp`. xv6 solves this elegantly with a single trampoline page, but we took the simpler path of "replicating the kernel into every table."
+
+Right before entering a process, the scheduler switches `satp` to that process's table, **switching the address space along with it**.
+
+```c
+switch_satp(p->pagetable);          // 이 프로세스 주소공간으로
+swtch(&sched_context, &p->context); // 실행
+switch_satp(kernel_pt());           // 복귀 후 커널 주소공간으로
+```
+
+What's clean is that kernel threads and user processes are **unified under the same `swtch`**. The only difference is the initial entry point (`context.ra`) — a kernel thread enters as a plain function, while a user process enters a function that drops into U-mode via `sret`.
+
+The demo schedules 1 kernel thread + 1 user process together. The user process greets once, counts 40 ticks while doing a bit of work, then terminates via `SYS_exit`.
+
+```
+hobby> ps
+threads (preemptively scheduled):
+  spinK: ticks=22453788        ← 커널 스레드(S-mode)
+  userP: ticks=9               ← 유저 프로세스(U-mode, 자체 페이지 테이블)
+hobby> ps                      (1.5초 후)
+  spinK: ticks=59812260
+  userP: ticks=23              ← 카운터 증가 중
+hobby> ps                      (4초 후)
+  spinK: ticks=215041281
+                               ← userP가 SYS_exit으로 종료 → 사라짐
+```
+
+A user process with an isolated address space gets preemptively scheduled alongside a kernel thread, and cleanly disappears once it's done. The **skeleton of a small OS** is standing.
+
+## 4. Two Things I Learned from Debugging
+
+Part 3 didn't work on the first try. The user process only printed its greeting and then **froze** (with no fault). Here I learned two deep OS principles.
+
+### (1) There's Only One CSR — Save It in the Trap Frame
+
+At first, my trap entry point saved only the 31 general-purpose registers and didn't save `sepc` (the return PC) or `sstatus` (the mode bits). But **`sepc`/`sstatus` are a single CSR each**, so if the scheduler switches from process A to process B mid-way through A's trap handling and B raises another trap, A's `sepc` gets overwritten with B's value. Then when you return to A, you `sret` to the wrong place and a page fault occurs.
+
+In the kernel-thread-only stage (Part 2) this never blew up — the threads ran *the same code*, so the return PC didn't matter wherever it pointed (we just got lucky). But once a U-mode user process and an S-mode kernel thread were mixed together, it surfaced immediately.
+
+The fix is to **save/restore `sepc`/`sstatus` in the trap frame too**, so each trap holds its own return state independently. This is in fact the core of the xv6 trap frame.
+
+```asm
+# kernelvec.S — 레지스터 저장 후
+csrr t0, sepc
+sd   t0, 240(sp)       # 복귀 PC도 프레임에 (트랩마다 독립 → 인터리빙 안전)
+csrr t0, sstatus
+sd   t0, 248(sp)       # 모드 비트도
+```
+
+### (2) The SUM Bit — the Kernel's Permission to Touch User Pages
+
+It still froze. This time it was a complete hang with **no output and no fault message**. When I made the kernel thread periodically print a dot (`.`) for instrumentation, even the dots stopped printing — the scheduler could never escape from the user process.
+
+The cause was the `SUM` bit. For simplicity I ran **the user process's trap handler on the user stack** (with no separate kernel stack). But for S-mode to access a user (U) page, you need `sstatus.SUM=1`. And once I made `sstatus` save/restore per trap in (1), SUM started varying per process. The kernel thread would run with SUM=0 and stall, and the moment the scheduler resumed the user process's trap handler (running on the user stack), SUM=0 → **accessing the user stack faulted** → trying to handle that fault faulted again → an endless re-fault with no output (= hang).
+
+The fix is to **turn SUM on at boot and always keep it 1**. Since this is a learning kernel I kept it simple (xv6 solves it more properly with a separate kernel stack and `sscratch`).
+
+```c
+// trap_init() — 한 번만
+w_sstatus(r_sstatus() | SSTATUS_SUM);  // 커널이 항상 유저 페이지 접근 가능
+```
+
+It's a two-line fix, but getting here let me understand the interplay of traps/CSRs/permissions by working it out hands-on. It's the part I'd just skim past when reading a book.
+
+## Closing
+
+I put the heart of an OS on top of the skeleton.
+
+- User mode (U-mode) + the system-call (`ecall`) boundary
+- Context switching + a preemptive round-robin scheduler
+- Per-process page tables = address-space isolation
+- The process lifecycle (`SYS_exit`)
+
+Now it's a small operating system where **multiple programs are created and terminated, preemptively, each in its own isolated address space**. Next up is the side that deals with real programs — **fork/exec + an ELF loader** (right now the programs are embedded), and then a **filesystem**.
+
+> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Next post: **fork/exec + filesystem (coming soon)**
+
+### References
+
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
+- [RISC-V Privileged Specification](https://riscv.org/technical/specifications/)
+- [OSDev Wiki](https://wiki.osdev.org/)

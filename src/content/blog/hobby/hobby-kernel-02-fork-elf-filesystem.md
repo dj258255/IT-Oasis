@@ -167,3 +167,154 @@ static volatile struct virtq_used *used;  // 디바이스가 비동기 갱신 �
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 - [Virtio 1.1 Specification (OASIS)](https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.html)
 - [ELF-64 Object File Format](https://uclibc.org/docs/elf-64-gen.pdf)
+
+<!-- EN -->
+
+## Introduction
+
+In [part 2](/blog/hobby/hobby-kernel-01-usermode-to-processes) we got all the way to user processes — U-mode, syscalls, a preemptive scheduler, per-process address spaces. This post builds on that foundation, adding the rest of the Unix process model and a brand-new pillar: **storage**.
+
+1. **fork()** — a process duplicates itself
+2. **ELF loader** — load a real, separately-compiled program instead of inline assembly
+3. **filesystem** — read a virtio-blk disk to provide `ls` / `cat`
+
+Number 3 didn't work on the first try. The single line of `volatile` I ran into while debugging the virtio driver is the highlight of this post.
+
+## 1. fork() — process duplication
+
+`fork()` is the icon of Unix. Call it and the process becomes two; it returns **the child's pid to the parent, and 0 to the child**. The same code branches at the very same point.
+
+The elegance of the implementation comes from the fact that "the child's user stack is a copy of the parent's." When the parent does a `fork` `ecall`, the trap frame is saved on the parent's user stack. Copy that whole stack page, and the child's stack ends up with the same frame **at the same virtual address**. So the child just needs to return to the exact same point as the parent — with a single exception: change the return value `a0` to 0, and that's it.
+
+```c
+// proc.c — proc_fork() 핵심
+char *code = kalloc(), *ustack = kalloc();
+copybytes(code,   parent->ucode,  PGSIZE);   // 코드 페이지 복사
+copybytes(ustack, parent->ustack, PGSIZE);   // 스택 페이지 복사(트랩 프레임 포함)
+child->pagetable = proc_pagetable((uint64)code, (uint64)ustack);
+
+// 복사된 스택 안의 트랩 프레임을 손본다
+struct regframe *cf = (struct regframe *)(ustack + ((uint64)f - USERSTACK));
+cf->a0   = 0;             // 자식의 fork() 반환값 = 0
+cf->sepc = f->sepc + 4;   // ecall 다음 명령부터(부모와 같은 지점)
+
+child->context.ra = (uint64)forkret;   // 자식 첫 진입점
+child->context.s0 = (uint64)f;          // 프레임 VA(자식에서도 동일)
+```
+
+When the child is first scheduled, it enters `forkret`, sets `sp` from `s0` (the frame VA), and takes the **common trap-return path** (`trapret`). It ultimately drops into U-mode through the same `sret` mechanism as the parent — only the return value is 0.
+
+```
+  [parent] fork() returned a child; we are two now.
+  [child]  hello -- I was created by fork().
+hobby> ps
+  spinK  (kernel pid=0): ticks=7945564
+  userP  (user pid=1):   ticks=13        ← 부모
+  userP+ (user pid=2):   ticks=10        ← fork로 태어난 자식
+```
+
+What was a single user process becomes two, and together with the kernel thread, all three are preemptively scheduled.
+
+## 2. ELF loader — loading a real program
+
+Until now the user program was embedded inside the kernel as inline assembly. We replace that with a **real, separately-compiled ELF binary**. We compile user space (`user/init.c`) on its own, embed the built ELF into the kernel image with `.incbin`, and have the kernel parse and load it at boot.
+
+The essence of exec is "drawing the address space by reading the ELF's map." Each `PT_LOAD` entry in the ELF's **program header** is an instruction: "load this part of the file, at this virtual address, this much."
+
+```c
+// elf.c — PT_LOAD 세그먼트 적재
+for (int i = 0; i < eh->e_phnum; i++) {
+    const struct elf64_phdr *ph = ...;
+    if (ph->p_type != PT_LOAD) continue;
+    uint64 off = ph->p_vaddr - USERVA;
+    copyb(codepage + off, img + ph->p_offset, ph->p_filesz);
+    // p_memsz > p_filesz 부분(.bss)은 codepage가 미리 0이라 자동 처리
+}
+```
+
+If you link the user program at USERVA (`0x1000`) and keep it within one page, it stays compatible with the address layout we've used since part 1 and with fork (page copying). Now `user/init.c` is an ordinary C program.
+
+```c
+// user/init.c
+void _start(void) {
+    long pid = sys_fork();   // 자신을 복제
+    sys_print(pid);          // 부모/자식 메시지
+    for (int i = 0; i < 25; i++) { sys_tick(); /* busy wait */ }
+    sys_exit();
+}
+```
+
+## 3. Filesystem — virtio-blk disk
+
+The last piece is a completely new pillar: **storage**. We attach QEMU's virtio-blk disk and put a very simple read-only filesystem on top of it.
+
+```
+블록 0   슈퍼블록 (magic + 파일 수)
+블록 1   디렉터리 (이름, 크기, 시작 블록)
+블록 2.. 파일 데이터
+```
+
+On the host (a Mac) we build the disk image with an `mkfs` tool and attach it to QEMU. The kernel reads the disk with its own driver to provide `ls` / `cat`.
+
+virtio is a standard where "guest and host talk over shared-memory rings." Rather than writing commands directly to the disk, you build a **descriptor chain** in memory (request header + data buffer + status byte), put it in the available ring, knock once on an MMIO register (notify) to signal the device, and then poll until the **used ring** is updated.
+
+```c
+// virtio.c — 한 블록 읽기
+desc[0] = {요청헤더, NEXT→1};
+desc[1] = {데이터버퍼, WRITE|NEXT→2};   // 디바이스가 여기에 데이터를 씀
+desc[2] = {상태바이트, WRITE};
+avail->ring[avail->idx % NUM] = 0;
+avail->idx += 1;
+R32(MMIO_QUEUE_NOTIFY) = 0;             // 디바이스에 알림
+while (used->idx == used_seen) ;        // 완료까지 폴링
+```
+
+```
+[ok] virtio-blk disk ready
+[ok] filesystem mounted: 2 files
+hobby> ls
+  motd.txt  (162 bytes)
+  readme.txt  (240 bytes)
+hobby> cat motd.txt
+Welcome to hobby-kernel (C / RISC-V).
+This text lives on a virtio-blk disk and was read by the kernel's
+own filesystem driver -- not baked into the kernel image.
+```
+
+This text really does live inside the disk image, and the kernel read it with its own driver and printed it — it is not baked into the kernel image.
+
+### Debugging: why did it hang?
+
+This stage got stuck three times. All of them were textbook pitfalls.
+
+- **virtio MMIO mapping** — After turning on paging, I hadn't mapped `0x10001000` (the virtio registers), so the first access caused a page fault. Added it to the kernel page table.
+- **modern vs legacy** — QEMU's virtio-mmio defaults to legacy (version 1). My driver is modern (version 2), so I forced it with `-global virtio-mmio.force-legacy=false`. And in modern mode, the queue only works once the driver accepts `VIRTIO_F_VERSION_1` (feature bit 32, in the **upper word**).
+- **`volatile`** — This was my favorite. The device had successfully processed the request (`used->idx` became 1 and the status byte became 0), yet the polling loop never finished. The cause: `used` wasn't `volatile`, so the compiler cached `used->idx` in a register and never saw the memory change. Memory that hardware updates asynchronously must always be read as `volatile`.
+
+```c
+static volatile struct virtq_used *used;  // 디바이스가 비동기 갱신 → volatile
+```
+
+When I read the one-liner "MMIO is volatile" in a book, I glossed right over it — but after wandering lost for an hour myself, I now understand why in my bones.
+
+## Wrapping up
+
+By getting here, all **five pillars** of an operating system are working.
+
+- CPU — traps, interrupts, preemptive scheduling
+- Memory — Sv39 paging, per-process address-space isolation
+- Process — fork, ELF loading, lifecycle
+- Storage — virtio-blk disk, filesystem
+- Interface — an interactive kernel shell
+
+Boot up, type commands, run multiple programs concurrently in isolation, read files from disk — it has become a small but genuine operating system. My goal was to write it from the ground up in C using xv6 as a reference, and to understand "how an OS runs" hands-on; I think I've reached that goal.
+
+If I were to go further, what remains is a userspace shell (moving the shell itself onto disk as a program and `exec`-ing it from a file), a writable filesystem, and a runtime `exec()` syscall. But this is a good place to pause for breath.
+
+> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+
+### References
+
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
+- [Virtio 1.1 Specification (OASIS)](https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.html)
+- [ELF-64 Object File Format](https://uclibc.org/docs/elf-64-gen.pdf)

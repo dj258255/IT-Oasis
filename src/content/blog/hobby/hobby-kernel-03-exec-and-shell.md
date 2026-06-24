@@ -177,3 +177,164 @@ nope: command not found
 
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 - [xv6 book — Chapter 7 (Scheduling), Chapter 1 (exec)](https://pdos.csail.mit.edu/6.828/2023/xv6/book-riscv-rev3.pdf)
+
+<!-- EN -->
+
+## Introduction
+
+In [Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem) we got all the way to fork, an ELF loader, and a filesystem. Now two final pieces complete our "small Unix."
+
+1. **Runtime exec()** — replacing a running process with a different program from disk
+2. **Userspace shell** — a shell running outside the kernel that takes commands and runs programs
+
+Put together, these become **the way Unix runs every command** — the shell `fork`s, the child becomes a program via `exec`, and the parent waits with `wait`. That core loop.
+
+## 1. Runtime exec()
+
+Until now, user programs were loaded just once, at boot. `exec()` is the system call by which **a running process replaces itself with a different program from disk**. When the shell types `hello`, the child process becomes the hello program via `exec("hello")`.
+
+The tricky part of exec is that it's like "swapping the engine of a moving car." A process tears down its own address space and loads a new program, while the code doing that runs inside that very address space. In particular, **touching the user stack** would corrupt exec's own local variables.
+
+So we use one trick — **leave the page table and stack in place, and swap only the code page**. We read the new program from disk and load it into a fresh code page, then re-point only the `USERVA` mapping in the existing page table to the new code. The stack is reused, with `sp` reset to the top. Since the address space (`satp`) doesn't change, the stack stays intact, and the old code page is reclaimed.
+
+```c
+// proc.c — proc_exec()
+int sz = fs_read(path, elfbuf, sizeof(elfbuf));   // 디스크에서 프로그램 읽기
+char *newcode = kalloc();
+load_elf(elfbuf, newcode, &entry);                // ELF 적재
+
+remap_user_code(p->pagetable, (uint64)newcode);   // USERVA → 새 코드로 리매핑
+kfree(p->ucode);                                  // 옛 코드 회수
+p->ucode = newcode;
+
+// 스택 재사용 + U-mode 진입 (satp 그대로라 스택이 안 바뀜)
+w_sepc(entry);
+asm volatile("mv sp, %0\n sret\n" :: "r"(USERSTACKTOP));
+```
+
+## 2. Userspace shell — sleep / wakeup
+
+Until now the shell lived inside the kernel (S-mode). In real Unix, the shell is just **another user program**. To move the shell out of the kernel, it has to be able to wait for input via `read()`. But what if there's no input yet? It has to **block** — yield the CPU to another process, sleep, and wake up when input arrives.
+
+This is **sleep / wakeup**.
+
+```c
+// proc.c
+void sleep(void *chan) {
+    cur->chan = chan;
+    cur->state = SLEEPING;
+    swtch(&cur->context, &sched_context);  // 깨어날 때까지 스케줄러로
+}
+void wakeup(void *chan) {
+    for (each proc p)
+        if (p->state == SLEEPING && p->chan == chan)
+            p->state = RUNNABLE;
+}
+```
+
+When the input buffer is empty, `read()` sleeps with `sleep(&inbuf)`. The UART interrupt accumulates characters into the buffer, and once a line is complete (`\n`) it wakes the sleeper with `wakeup(&inbuf)`.
+
+```c
+// console.c
+int console_read(char *dst, int n) {
+    int i = 0;
+    while (i < n) {
+        while (in_r == in_w)
+            sleep(&inbuf);          // 입력 없으면 잠든다
+        char c = inbuf[in_r++ % INBUF];
+        dst[i++] = c;
+        if (c == '\n') break;
+    }
+    return i;
+}
+```
+
+> How do we prevent a **lost wakeup**? If an interrupt slips in between the "is the buffer empty?" check and the `sleep`, and we miss the `wakeup`, we'll never wake up. The key is — `read()` runs inside a system call (a trap), and **interrupts are disabled during trap handling (SIE=0)**. So "check -> sleep" is atomic, and no console interrupt can slip in between.
+
+When the shell sleeps, the scheduler has no process to run. At that point it rests with `wfi` (wait-for-interrupt), and resumes when a console/timer interrupt wakes it.
+
+## 3. wait() — waiting for a child
+
+When the shell runs a command, it has to **wait until that command finishes**. Otherwise the program's output and the next prompt would get mixed together. That's `wait()`.
+
+When a child `exit`s, it doesn't vanish immediately — it becomes a **ZOMBIE** and wakes its parent. The parent's `wait()`, on finding a zombie child, reaps it (releasing its resources) and returns its pid.
+
+```c
+void proc_exit(void) {
+    wakeup(cur->parent);    // wait 중인 부모 깨우기
+    cur->state = ZOMBIE;
+    swtch(&cur->context, &sched_context);  // 다신 안 돌아옴
+}
+int proc_wait(void) {
+    for (;;) {
+        for (each child q of cur)
+            if (q->state == ZOMBIE) { reap(q); return q->pid; }
+        sleep(cur);         // 자식이 깨울 때까지
+    }
+}
+```
+
+## 4. Putting it all together — the userspace shell
+
+The shell is now an ordinary C program. It prints a prompt, reads a line, handles built-in commands (`ls`/`cat`) directly, and for everything else does `fork` -> child `exec`s -> parent `wait`s.
+
+```c
+// user/init.c — 유저공간 셸
+for (;;) {
+    puts("$ ");
+    sys_read(line, sizeof(line));
+    if (streq(line, "ls"))  { sys_ls();  continue; }       // 내장
+    long pid = sys_fork();
+    if (pid == 0) {
+        sys_exec(line);                                    // 디스크 프로그램으로
+        puts("command not found\n");
+        sys_exit();
+    }
+    sys_wait();                                            // 끝날 때까지 대기
+}
+```
+
+At boot, the kernel launches this shell as the first user process.
+
+```
+hobby-kernel userspace shell. try: ls, cat motd.txt, hello
+$ ls
+  motd.txt  (162 bytes)
+  readme.txt  (240 bytes)
+  hello  (7352 bytes)
+$ hello
+  [hello] I am a separate program, exec'd from disk!
+$ cat motd.txt
+Welcome to hobby-kernel (C / RISC-V). ...
+$ nope
+nope: command not found
+```
+
+Type `hello` and — the shell forks, the child execs hello from disk to become that program, hello prints and exits, the shell's wait returns and the prompt comes back. **The very mechanism by which Unix runs commands** is working.
+
+## Wrapping up — a small Unix, complete
+
+From boot to here, the skeleton of an operating system is fully in place.
+
+```
+부팅 → 트랩/타이머 → 키보드 → 페이지 할당기 → 페이징(Sv39)
+→ 유저모드+syscall → 프로세스+선점 스케줄러 → 유저 프로세스(격리)
+→ fork → ELF 로더 → 파일시스템 → 런타임 exec → 유저공간 셸
+```
+
+- CPU — traps, interrupts, preemptive scheduling, sleep/wakeup
+- Memory — Sv39 paging, per-process address space isolation
+- Processes — fork, exec, wait, lifecycle
+- Storage — virtio-blk disk, filesystem
+- Interface — a userspace shell launches disk programs via fork+exec
+
+Reading "how an OS runs" in a book, versus spending an hour stuck because of one missing `volatile` line and getting blocked by a single `SUM` bit — those were entirely different kinds of understanding. Building it from the ground up in C and touching it with my own hands is what this whole project was about.
+
+What's left is all refinement — a writable filesystem, inodes, full resource reclamation on exit, shell pipes and redirection. Not new core features, just polish. This four-part series wraps up here.
+
+> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+
+### References
+
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
+- [xv6 book — Chapter 7 (Scheduling), Chapter 1 (exec)](https://pdos.csail.mit.edu/6.828/2023/xv6/book-riscv-rev3.pdf)
