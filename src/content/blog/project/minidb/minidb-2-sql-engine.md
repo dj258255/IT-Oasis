@@ -21,28 +21,41 @@ seriesOrder: 2
 
 ## SQL 파서 — 텍스트를 AST로
 
-`"SELECT * FROM users WHERE id = 1"` 문자열을 구조로 바꾼다. 두 단계다. **토크나이저(lexer)** 가 토큰으로 쪼개고, **재귀 하강 파서** 가 트리(AST)로 조립한다.
+`"SELECT * FROM users WHERE id = 1"` 은 사람에겐 한 문장이지만 컴퓨터에겐 그냥 글자 나열이다. 이걸 실행기가 다룰 수 있는 **구조(트리)** 로 바꾸는 게 파서다. 모든 컴파일러·인터프리터가 그렇듯 두 단계로 나뉜다.
+
+**1단계 — 토크나이저(lexer).** 글자 스트림을 의미 단위 **토큰**으로 쪼갠다. `SELECT * FROM users WHERE id = 1` -> `[SELECT] [*] [FROM] [IDENT:users] [WHERE] [IDENT:id] [=] [INT:1]`. 공백을 건너뛰고, 연속된 글자를 식별자/키워드로 묶고, `<=`·`!=` 같은 두 글자 연산자를 한 토큰으로 인식하고, `'...'` 안을 문자열 리터럴로 떼낸다. 키워드(SELECT/FROM/…)와 일반 식별자(테이블·컬럼 이름)는 토큰 종류로 구분해 두면, 파서가 "users는 이름이고 FROM은 키워드"임을 헷갈리지 않는다.
+
+**2단계 — 재귀 하강 파서(recursive descent).** 토큰을 트리(AST)로 조립한다. 재귀 하강의 묘미는 **문법 규칙 하나하나가 함수 하나**가 된다는 것이다.
 
 ![SQL 텍스트 -> 토큰 -> AST](/uploads/project/minidb/sql-to-ast.svg)
 
-재귀 하강은 문법 규칙 하나하나가 함수 하나가 된다. `SELECT` 규칙은 거의 영어 그대로 읽힌다 — "STAR가 와야 하고, FROM이 와야 하고, 이름이 오고, WHERE는 있어도 되고". 외부 파서 라이브러리 없이 손으로 썼다.
+`parse_select`는 거의 영어 그대로 읽힌다 — "STAR(또는 컬럼 목록)가 와야 하고, FROM이 와야 하고, 테이블 이름이 오고, WHERE는 있어도 되고, ORDER BY·LIMIT도 있어도 되고". `WHERE`의 조건은 `parse_where`가, 그 안의 한 조건(`id = 1`)은 또 다른 함수가 맡는다. 문법이 중첩되면 함수가 중첩 호출되고, 나중에 서브쿼리(`WHERE id IN (SELECT ...)`)를 붙일 때는 파서가 **자기 자신을 재귀 호출**한다 — 그게 [5편 서브쿼리](/blog/project/minidb/minidb-5-join-aggregate)에서 다시 나온다. yacc/ANTLR 같은 파서 생성기 없이 손으로 쓴 건, 문법이 작고(학습용), 손으로 쓰면 매 단계가 코드로 그대로 보여 배우기 좋기 때문이다.
 
-## 실행기와 REPL — SELECT가 행을 돌려준다
+## 실행기 — AST를 힙에 연결
 
-파서의 AST와 힙 파일을 잇는 게 실행기다. 값을 스키마대로 바이트로 인코딩하고(tuple codec: INT 4바이트, TEXT 길이+바이트), `CREATE`는 스키마를 만들고, `INSERT`는 `heap_insert`하고, `SELECT`는 `heap_scan`으로 훑으며 `WHERE`로 거른다.
+파서가 만든 AST(예: `Select{ table:"users", where: id=2 }`)와 [1편의 힙 파일](/blog/project/minidb/minidb-1-storage)을 잇는 게 실행기다. 핵심 한 가지는 **튜플 코덱(tuple codec)** — SQL 값을 디스크에 넣을 바이트열로, 또 그 반대로 바꾸는 인코더/디코더다. minidb의 규칙은 단순하다: `INT`는 4바이트 정수(int32), `TEXT`는 "2바이트 길이 + 그 길이만큼의 바이트". 그래서 `(1, 'kim')`은 `01 00 00 00 | 03 00 | 6B 69 6D`(id=1, 길이 3, "kim")으로 인코딩된다. 길이를 앞에 적는 이 방식이 가변 길이 TEXT를 슬롯 페이지에 담는 표준 트릭이다.
 
 ![tuple codec — (1, 'kim')이 스키마대로 바이트열로 인코딩](/uploads/project/minidb/tuple-encoding.svg)
+
+이 코덱 위에서 실행기는 문장 종류대로 저장 계층을 부린다. `CREATE`는 스키마(카탈로그)를 기록하고, `INSERT`는 값을 인코딩해 `heap_insert`로 넣고, `SELECT`는 `heap_scan`으로 힙을 훑으며 디코딩한 행을 `WHERE`로 거른다. `WHERE id = 2`는 지금은 그냥 모든 행을 풀 스캔하며 비교하는 O(n)인데, 다음 편에서 인덱스를 붙여 이 분기가 곧 **쿼리 플래너**의 씨앗이 된다.
 
 REPL을 붙이면 드디어 진짜 SQL을 타이핑해 결과를 받는다.
 
 ![minidb REPL 세션 — CREATE/INSERT/SELECT가 실제로 동작](/uploads/project/minidb/repl-session.svg)
 
-`SELECT * FROM users WHERE id = 2` 가 `2 | lee` 를 돌려주기까지, 글자가 토큰이 되고(렉서), 토큰이 AST가 되고(파서), AST가 힙 스캔이 되고(실행기), 스캔이 버퍼 풀을 거쳐(캐시), 페이지가 슬롯에서 풀려(슬롯 페이지), 디스크 오프셋에서 읽혔다(페이저). 여섯 계층이 전부 맞물린 결과다.
+`SELECT * FROM users WHERE id = 2` 한 줄이 `2 | lee` 를 돌려주기까지의 길을 따라가 보면 지금까지 만든 게 전부 맞물린다 — 글자가 토큰이 되고(렉서), 토큰이 AST가 되고(파서), AST가 힙 스캔이 되고(실행기), 스캔이 버퍼 풀을 거쳐(캐시), 페이지가 슬롯에서 풀려(슬롯 페이지), 디스크 오프셋에서 읽혔다(페이저). 여섯 계층의 합주다.
 
-실행기에는 `DELETE` 와 `UPDATE` 도 붙여 CRUD를 완성했다. `DELETE` 는 힙 슬롯을 tombstone하고(인덱스 항목은 남아도 `heap_get` 이 -1을 돌려줘 무해하다), `UPDATE` 는 가변 길이라 "삭제 + 재삽입" 으로 처리한 뒤 **인덱스를 새 위치(RID)로 갱신** 한다 — 안 하면 옮겨진 행이 인덱스에서 사라진다.
+## CRUD 완성 — DELETE와 UPDATE의 함정
+
+`DELETE`와 `UPDATE`를 붙여 CRUD를 완성했는데, 둘 다 인덱스(다음 편) 때문에 미리 신경 쓸 게 있었다.
+
+- **`DELETE`** 는 행을 실제로 지우지 않고 힙 슬롯을 **tombstone**(무효 표시)만 한다. [1편](/blog/project/minidb/minidb-1-storage)에서 본 대로, 인덱스가 "키 -> RID"로 가리키던 주소를 깨지 않기 위해서다. 인덱스 항목은 그대로 남지만, 그 RID로 `heap_get`을 하면 tombstone이라 -1을 돌려줘 결과에서 자연히 빠진다 — stale 인덱스 항목이 무해해지는 이유다.
+- **`UPDATE`** 는 더 까다롭다. 행이 가변 길이라(예: 'kim' -> 'alexander') 제자리 수정이 안 될 수 있어, "옛 행 삭제 + 새 행 삽입"으로 처리한다. 그러면 **RID가 바뀐다.** 그래서 인덱스를 새 RID로 갱신해야 하는데, 이걸 빼먹으면 인덱스가 삭제된 옛 위치를 가리켜 그 행이 쿼리에서 사라진다. (실제 PostgreSQL은 이 write amplification을 줄이려 HOT update라는 기법을 쓴다 — 아래 링크.)
 
 ![minidb CRUD 세션 — UPDATE로 kim을 KIM으로, DELETE로 id=2를 지우면 SELECT에 1행(KIM)만 남는다](/uploads/project/minidb/crud-session.svg)
 
+> 더 깊이: [DB 스토리지 내부 ③: HOT Update와 Visibility Map](/blog/theory/db-storage-03-hot-update-visibility-map) — UPDATE가 RID(ctid)를 바꿔 인덱스까지 갱신해야 하는 write amplification을, PostgreSQL이 HOT update로 어떻게 줄이는지.
+
 ---
 
-이제 SQL이 돈다. 하지만 `WHERE` 가 매번 모든 행을 훑는 O(n)이다. [다음 편](/blog/project/minidb/minidb-3-index-wal)에선 이걸 O(log n)으로 줄이는 B+Tree 인덱스를 짓고, 전원이 꺼져도 데이터가 안 깨지게 하는 WAL을 붙인다.
+이제 SQL이 돈다. 하지만 `WHERE` 가 매번 모든 행을 훑는 O(n)이다. 데이터가 100만 행이면 `id = 2` 하나 찾자고 100만 번 비교한다. [다음 편](/blog/project/minidb/minidb-3-index-wal)에선 이걸 O(log n)으로 줄이는 B+Tree 인덱스를 짓고, 그 위에 전원이 꺼져도 데이터가 안 깨지게 하는 WAL을 붙인다.
