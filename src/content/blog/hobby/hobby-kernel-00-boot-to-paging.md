@@ -180,3 +180,167 @@ free pages: 32169  (~125 MB free)
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 - [OSDev Wiki](https://wiki.osdev.org/)
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/)
+
+<!-- EN -->
+
+## Introduction
+
+I wanted to really understand how an operating system works under the hood, so I decided to **build a kernel from scratch in C**. The target is RISC-V (rv64), the emulator is QEMU's `virt` machine, and the reference is [xv6 (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html).
+
+> Why C/RISC-V: C is the canonical language for kernels (Linux, xv6, and BSD are all C), and since the xv6 reference is also C/RISC-V, the code maps 1:1 with the least friction. RISC-V has a simple ISA that's great for learning, and on a Mac (Apple Silicon) the toolchain sets up cleanly with `riscv64-elf-gcc`.
+
+This post covers **from boot to paging** — building the skeleton of the kernel. One nice thing about RISC-V: running with `-nographic` sends UART straight to the terminal's stdout, so you can check the output directly without screenshots.
+
+## 1. Boot + UART output
+
+Since this is an Apple Silicon Mac, a cross-compiler is needed.
+
+```bash
+brew install riscv64-elf-gcc qemu
+```
+
+When you start QEMU virt, **OpenSBI** (the firmware) first finishes the M-mode setup, then jumps to our kernel at `0x8020_0000` in **S-mode**. So the kernel is linked at that address, and at the entry point it just sets up a stack and hands off to C.
+
+```asm
+# entry.S
+_entry:
+        la      sp, stack_top   # 스택 설정
+        call    kmain           # C 커널 시작
+```
+
+For screen output, the most primitive approach — writing directly to the **memory-mapped UART** (`0x1000_0000`). OpenSBI has already initialized it, so you only need to write to the transmit register.
+
+```c
+// uart.c
+#define UART0 0x10000000L
+void uart_putc(char c) {
+    while ((uart[UART_LSR] & LSR_TX_IDLE) == 0) ;  // 송신 버퍼 빌 때까지
+    uart[UART_THR] = c;
+}
+```
+
+```
+OpenSBI v1.5.1 ...
+Domain0 Next Address : 0x0000000080200000   ← 우리 커널로
+Domain0 Next Mode    : S-mode
+========================================
+  hobby-kernel v0.1  (C / RISC-V)
+========================================
+Hello from a C kernel!
+```
+
+## 2. Traps/interrupts + timer
+
+When the CPU hits an interrupt/exception, it jumps to the handler pointed to by `stvec`. There it saves all the registers, calls the C handler, then restores them and returns with `sret`.
+
+```c
+// trap.c — kernelvec.S가 레지스터 저장 후 호출
+void kerneltrap(void) {
+    uint64 cause = r_scause();
+    if (cause & SCAUSE_INTERRUPT) {
+        if ((cause & 0xff) == SCAUSE_S_TIMER) {
+            ticks++;
+            w_stimecmp(r_time() + TIMER_INTERVAL);  // 다음 타이머 예약
+        }
+        // ...
+    }
+}
+```
+
+The timer uses RISC-V's **sstc extension** (the `stimecmp` CSR) to write the "time of the next interrupt" directly, producing periodic ticks. The top bit of `scause` distinguishes interrupt from exception, and code 5 is the S-mode timer.
+
+## 3. Keyboard input + shell
+
+Keyboard input (UART input) comes in as an S-mode external interrupt through the **PLIC** (interrupt controller). The interrupt handler asks the PLIC who raised the interrupt (claim); if it's the UART, it reads the received character and passes it to the shell, then signals that handling is done (complete).
+
+```c
+// trap.c
+} else if ((cause & 0xff) == SCAUSE_S_EXTERNAL) {
+    int irq = plic_claim();
+    if (irq == UART0_IRQ) uart_intr();   // 받은 글자 → shell_input()
+    if (irq) plic_complete(irq);
+}
+```
+
+The shell collects characters into a line and runs the command on Enter. With no libc, even string comparison is written by hand.
+
+```
+type 'help' for commands.
+hobby> help
+commands: help, about, uptime, mem, clear, whoami, echo <text>
+hobby> uptime
+uptime: 3 sec
+```
+
+The fact that `uptime` works means that **while the shell is processing input, the timer interrupt is running concurrently and counting ticks**.
+
+## 4. Physical page allocator
+
+The foundation for a `Vec` or any dynamic data structure is the **memory allocator**. The free memory from the end of the kernel (`end`) to the end of RAM (`PHYSTOP`) is split into 4KB pages and managed as a free list (xv6's `kalloc`).
+
+```c
+// kalloc.c
+void *kalloc(void) {
+    struct run *r = freelist;
+    if (r) { freelist = r->next; freecnt--; }
+    return (void *)r;
+}
+```
+
+```
+hobby> mem
+free pages: 32238  (~125 MB free)
+```
+
+Of the 128MB of RAM, about 125MB remains after subtracting OpenSBI and the kernel, managed in page-sized units.
+
+## 5. Paging (Sv39)
+
+Last. **Sv39** translates a 39-bit virtual address through a 3-level page table. The kernel maps everything with **identity mapping (va == pa)**, so even after paging is turned on the addresses stay the same and execution doesn't break.
+
+```c
+// vm.c — 커널 페이지 테이블 매핑
+kvmmap(kpt, UART0,    UART0,    PGSIZE,  PTE_R|PTE_W);          // UART
+kvmmap(kpt, PLIC,     PLIC,     0x400000,PTE_R|PTE_W);          // PLIC
+kvmmap(kpt, KERNBASE, KERNBASE, etext-KERNBASE, PTE_R|PTE_X);   // 텍스트 R/X
+kvmmap(kpt, etext,    etext,    PHYSTOP-etext,  PTE_R|PTE_W);   // 데이터 R/W
+```
+
+`walk()` follows the 3-level table to find the PTE, and if an intermediate table is missing it creates one with `kalloc`. Once mapping is done, the page table is loaded into the `satp` register and `sfence.vma` flushes the TLB to turn paging on.
+
+```c
+void kvminithart(void) {
+    sfence_vma();
+    w_satp(MAKE_SATP(kernel_pagetable));  // 페이징 ON
+    sfence_vma();
+}
+```
+
+```
+[ok] paging enabled (Sv39 kernel page table)
+hobby> mem
+free pages: 32169  (~125 MB free)
+```
+
+Even after paging is enabled, the shell, timer, and I/O all keep working exactly as before (because the addresses are mapped identically). The drop in `mem` from 32238 to 32169 is because about 69 pages went into the page table structure.
+
+## Wrapping up
+
+That's the **skeleton** of the kernel.
+
+- S-mode boot + UART output
+- Trap/timer interrupts
+- PLIC keyboard input + kernel shell
+- Physical page allocator
+- Sv39 paging
+
+With `make run` it boots into an interactive kernel where you can type commands. In the next post we get into the real heart of an OS — **user mode and system calls**. Right now all code runs at kernel privilege (S-mode); the goal is to build the boundary where "a user program asks the kernel for a favor (syscall)." This is the part that makes an OS an OS.
+
+> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Next post: **User mode + system calls (coming soon)**
+
+### References
+
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
+- [OSDev Wiki](https://wiki.osdev.org/)
+- [RISC-V Privileged Specification](https://riscv.org/technical/specifications/)
