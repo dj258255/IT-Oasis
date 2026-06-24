@@ -39,6 +39,8 @@ seriesOrder: 3
 
 ![WAL 테스트 — 커밋 후 크래시 redo, 커밋 전 크래시 discard 6개 통과](/uploads/project/minidb/wal-test-output.svg)
 
+처음엔 이 WAL이 독립 모듈이었지만, 나중에 **실제 쓰기 경로에 연결**했다. 지금은 모든 커밋(명시적 `COMMIT` 이든 문장별 autocommit이든)이 — 데이터 파일에 직접 쓰는 대신 — 바뀐 페이지를 WAL에 stage하고, 커밋 마커+fsync 뒤에야 데이터에 적용한다. 그래서 여러 페이지를 거는 커밋이 **원자적**이 됐고(중간에 꺼져도 찢어지지 않음), 테이블을 열 때 `wal_open`이 로그를 보고 redo/discard로 복구한다. 핵심은 **커밋 전 dirty 페이지가 디스크로 새지 않게** 하는 것(no-steal) — 이 redo 전용 WAL엔 undo가 없으니, 로그보다 데이터가 먼저 나가면 안 된다. 진짜 `INSERT` 도중에 크래시를 주입해 재시작 시 redo/discard가 도는 걸 테스트로 증명했다. (인덱스 `.idx` 는 아직 같은 flush 방식이라, 같은 패턴으로 확장하면 된다.)
+
 ---
 
 WAL이 원자성·내구성의 "원리"를 줬다. [다음 편](/blog/project/minidb/minidb-4-transactions)에선 이걸 SQL 레벨로 끌어올려 `BEGIN`/`COMMIT`/`ROLLBACK` 으로 묶음 작업을 다룬다.
