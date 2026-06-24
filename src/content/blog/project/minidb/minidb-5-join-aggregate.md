@@ -116,6 +116,17 @@ park | 1 | 0
 
 `park` 은 주문이 없어 NULL 한 줄로 보존됐는데, `COUNT(*)` 는 그 행을 세서 1, `COUNT(orders.oid)` 는 NULL을 건너뛰어 0이다. 이 둘의 차이가 곧 NULL의 의미론이다 — `COUNT(*)` 는 행을 세고, `COUNT(컬럼)` 은 NULL 아닌 값을 센다. `SUM`·`AVG`·`MIN`·`MAX` 도 NULL을 무시하고, NULL은 무엇과도(심지어 NULL과도) 같지 않다(`WHERE` 에서 NULL 비교는 거짓).
 
+그래서 NULL을 검사하려면 별도 연산자가 필요하다 — `IS NULL` / `IS NOT NULL`. `=` 는 NULL에 항상 거짓이니 NULL을 잡을 방법이 이것뿐이다. 이게 생기니 **anti-join** 이 공짜로 열린다.
+
+```
+SELECT users.name FROM users LEFT JOIN orders ON users.id = orders.uid
+  WHERE orders.oid IS NULL
+users.name
+park
+```
+
+LEFT JOIN으로 미매칭을 NULL로 만들고, `IS NULL` 로 그 NULL을 잡으면 "주문이 하나도 없는 사용자"가 나온다. 차집합이 두 기능의 결합으로 자연히 떨어진다. 끝으로 `SELECT DISTINCT` 도 더했는데, 구현은 "모든 출력 컬럼으로 GROUP BY 한 것"과 같다 — 출력 행을 전체 컬럼으로 정렬한 뒤 인접한 중복을 지우면 끝이다.
+
 ## 닫으며
 
 새로운 걸 발명하진 않았다. 대신 PostgreSQL·MySQL이 매일 하는 일 — 글자를 받아 페이지를 읽고 행을 돌려주는 그 일 — 을 밑바닥부터 한 겹씩 직접 만들며 이해했다. 페이지에 저장하고(페이저·슬롯 페이지), 메모리에 캐시하고(버퍼 풀), 테이블로 묶고(힙), SQL을 받고(파서·실행기), 빠르게 찾고(B+Tree), 전원이 꺼져도 안 깨지고(WAL), 묶음 작업을 원자적으로 처리하고(트랜잭션), 테이블을 여러 개 두고 조인하고(다중 테이블·INNER/LEFT 조인), 행을 접어 집계한다(GROUP BY·HAVING). 조인은 인덱스·해시·중첩 루프 중에서 골라 가며, 매칭 없는 행은 NULL로 채워 가며.
