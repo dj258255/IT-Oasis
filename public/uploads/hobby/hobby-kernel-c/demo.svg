@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 487" width="740" height="487">
+  <defs>
+    <style>.mono{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;}</style>
+    <clipPath id="clip195"><rect x="83.2" y="242.5" width="0" height="20.5"><animate attributeName="width" from="0" to="21.2" begin="1.95s" dur="0.14s" fill="freeze"/></rect></clipPath>
+    <clipPath id="clip305"><rect x="83.2" y="280.5" width="0" height="20.5"><animate attributeName="width" from="0" to="47.1" begin="3.05s" dur="0.35s" fill="freeze"/></rect></clipPath>
+    <clipPath id="clip434"><rect x="83.2" y="318.5" width="0" height="20.5"><animate attributeName="width" from="0" to="107.4" begin="4.35s" dur="0.84s" fill="freeze"/></rect></clipPath>
+    <clipPath id="clip605"><rect x="83.2" y="375.5" width="0" height="20.5"><animate attributeName="width" from="0" to="29.9" begin="6.05s" dur="0.21s" fill="freeze"/></rect></clipPath>
+  </defs>
+  <rect width="740" height="487" fill="#0b0e14"/>
+  <circle cx="620" cy="80" r="180" fill="#2a7de1" opacity="0.10"/>
+  <circle cx="120" cy="447" r="150" fill="#3a944a" opacity="0.07"/>
+  <rect x="40" y="44" width="660" height="425" rx="14" fill="#11151d" stroke="#2a3140" stroke-width="1.5"/>
+  <circle cx="66" cy="68" r="6" fill="#ff5f56"/>
+  <circle cx="86" cy="68" r="6" fill="#ffbd2e"/>
+  <circle cx="106" cy="68" r="6" fill="#27c93f"/>
+  <text x="370" y="72" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">hobby-kernel — qemu riscv64</text>
+  <line x1="40" y1="90" x2="700" y2="90" stroke="#2a3140" stroke-width="1.5"/>
+  <g class="mono" font-size="14.5" xml:space="preserve">
+    <text x="66" y="124.0" visibility="hidden"><tspan fill="#5b6473">OpenSBI v1.5.1   -&gt;  S-mode</tspan><set attributeName="visibility" to="visible" begin="0.15s" fill="freeze"/></text>
+    <text x="66" y="143.0" visibility="hidden"><tspan fill="#c9d1d9">hobby-kernel v0.1  (C / RISC-V)</tspan><set attributeName="visibility" to="visible" begin="0.35s" fill="freeze"/></text>
+    <text x="66" y="162.0" visibility="hidden"><tspan fill="#3a944a">[ok]</tspan><tspan fill="#8a94a6" dx="6">paging enabled (Sv39)</tspan><set attributeName="visibility" to="visible" begin="0.60s" fill="freeze"/></text>
+    <text x="66" y="181.0" visibility="hidden"><tspan fill="#3a944a">[ok]</tspan><tspan fill="#8a94a6" dx="6">virtio-blk disk ready</tspan><set attributeName="visibility" to="visible" begin="0.85s" fill="freeze"/></text>
+    <text x="66" y="200.0" visibility="hidden"><tspan fill="#3a944a">[ok]</tspan><tspan fill="#8a94a6" dx="6">filesystem mounted: 3 files</tspan><set attributeName="visibility" to="visible" begin="1.10s" fill="freeze"/></text>
+    <text x="66" y="238.0" visibility="hidden"><tspan fill="#5b6473">hobby-kernel userspace shell. try: ls, cat motd.txt, hello</tspan><set attributeName="visibility" to="visible" begin="1.45s" fill="freeze"/></text>
+    <text x="66" y="257.0" fill="#dea584" visibility="hidden">$<set attributeName="visibility" to="visible" begin="1.95s" fill="freeze"/></text>
+    <text x="83.2" y="257.0" fill="#c9d1d9" clip-path="url(#clip195)">ls</text>
+    <text x="66" y="276.0" visibility="hidden"><tspan fill="#8a94a6">  motd.txt   readme.txt   hello</tspan><set attributeName="visibility" to="visible" begin="2.45s" fill="freeze"/></text>
+    <text x="66" y="295.0" fill="#dea584" visibility="hidden">$<set attributeName="visibility" to="visible" begin="3.05s" fill="freeze"/></text>
+    <text x="83.2" y="295.0" fill="#c9d1d9" clip-path="url(#clip305)">hello</text>
+    <text x="66" y="314.0" visibility="hidden"><tspan fill="#c9d1d9">  [hello] I am a separate program, exec&#x27;d from disk!</tspan><set attributeName="visibility" to="visible" begin="3.70s" fill="freeze"/></text>
+    <text x="66" y="333.0" fill="#dea584" visibility="hidden">$<set attributeName="visibility" to="visible" begin="4.35s" fill="freeze"/></text>
+    <text x="83.2" y="333.0" fill="#c9d1d9" clip-path="url(#clip434)">cat motd.txt</text>
+    <text x="66" y="352.0" visibility="hidden"><tspan fill="#8a94a6">Welcome to hobby-kernel (C / RISC-V).</tspan><set attributeName="visibility" to="visible" begin="5.30s" fill="freeze"/></text>
+    <text x="66" y="371.0" visibility="hidden"><tspan fill="#8a94a6">This text lives on a virtio-blk disk, read by the kernel.</tspan><set attributeName="visibility" to="visible" begin="5.45s" fill="freeze"/></text>
+    <text x="66" y="390.0" fill="#dea584" visibility="hidden">$<set attributeName="visibility" to="visible" begin="6.05s" fill="freeze"/></text>
+    <text x="83.2" y="390.0" fill="#c9d1d9" clip-path="url(#clip605)">mem</text>
+    <text x="66" y="409.0" visibility="hidden"><tspan fill="#8a94a6">free pages: 32091  (~125 MB)</tspan><set attributeName="visibility" to="visible" begin="6.55s" fill="freeze"/></text>
+    <text x="66" y="428.0" fill="#dea584" visibility="hidden">$<set attributeName="visibility" to="visible" begin="7.05s" fill="freeze"/></text>
+    <rect x="83.2" y="414.5" width="9" height="16.5" fill="#27c93f" visibility="hidden"><set attributeName="visibility" to="visible" begin="7.15s" fill="freeze"/><animate attributeName="opacity" values="1;1;0;0" dur="1s" begin="7.15s" repeatCount="indefinite"/></rect>
+  </g>
+</svg>
