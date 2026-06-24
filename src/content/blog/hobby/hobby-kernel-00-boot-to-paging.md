@@ -19,6 +19,10 @@ seriesOrder: 1
 ---
 
 
+![hobby-kernel 유저공간 셸 데모](/uploads/hobby/hobby-kernel-c/demo.svg)
+
+*부팅부터 유저공간 셸까지 — 이 연재(4편)에서 바닥부터 만드는 것.*
+
 ## 들어가며
 
 운영체제가 안에서 어떻게 도는지 제대로 알고 싶어서, **C로 바닥부터 커널을 만들기로** 했어요. 타겟은 RISC-V(rv64), 에뮬레이터는 QEMU의 `virt` 머신, 참고서는 [xv6(MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)예요.
@@ -182,6 +186,10 @@ free pages: 32169  (~125 MB free)
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/)
 
 <!-- EN -->
+
+![hobby-kernel userspace shell demo](/uploads/hobby/hobby-kernel-c/demo.svg)
+
+*From boot to a userspace shell — what this 4-part series builds from scratch.*
 
 ## Introduction
 
