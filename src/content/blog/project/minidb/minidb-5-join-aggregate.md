@@ -96,6 +96,10 @@ lee | 1 | 12
 
 **조인 알고리즘 선택.** 지금까지 조인은 중첩 루프(+안쪽 PK면 인덱스 점 조회)였다. 여기에 **해시 조인** 을 더했다. 안쪽 테이블을 조인 컬럼으로 미리 해시 테이블로 만들어 두면, 바깥 행마다 O(1)로 짝을 찾는다 — 인덱스가 없어도 O(바깥 x 안쪽)을 O(바깥 + 안쪽)으로 줄인다. 그래서 minidb는 조인 레벨마다 **셋 중 하나를 고른다**: 안쪽 PK가 조인 키면 인덱스 NLJ, 그 밖의 등식 조인이면 해시 조인, 아니면 중첩 루프. 한 쿼리 안에서 레벨마다 다른 방법이 섞이는 게(`(N행, 인덱스+해시 조인)`) 곧 옵티마이저가 조인 계획을 짜는 일이다.
 
+이 "조인 방법 선택"이 실무에서 얼마나 중요한지는, 같은 조인을 어떻게 거느냐로 응답이 수천 배 갈리는 사례에서 드러난다.
+
+> 더 깊이, 조인·페이지네이션 최적화 실전: [Deferred Join 적용기 — 기대한 40배 vs 현실 13%](/blog/project/WikiEngine/deferred-join-optimization)(거대 OFFSET 페이지네이션에서 조인을 늦춰 읽는 트릭과 EXPLAIN 분석) · [COUNT(*) 제거와 페이지 제한으로 19,424ms -> 8ms](/blog/project/WikiEngine/query-refactoring-optimization)(1,425만 행에서 COUNT 제거·Deferred Join으로 19초를 8ms로). 스캔 종류와 옵티마이저의 선택은 [DB 인덱스 ②](/blog/theory/db-index-02-scan-types)에서.
+
 ## LEFT JOIN과 NULL의 등장
 
 지금까지 조인은 전부 INNER였다 — 양쪽이 맞는 쌍만 내보낸다. 하지만 "주문이 하나도 없는 사용자까지" 보려면 **LEFT JOIN** 이 필요하다. 왼쪽(바깥) 행은 매칭이 없어도 살리고, 오른쪽 컬럼을 **NULL** 로 채운다.
@@ -143,6 +147,8 @@ id | name
 `orders` 에 주문을 낸 사용자(uid 1,2)만 나온다. 안쪽 결과를 집합으로 만들고 바깥이 그걸 조회하는 게, 곧 서브쿼리의 가장 단순한 실행 모델이다. 멤버십을 뒤집은 `NOT IN`, 그리고 한 값과 비교하는 **스칼라 서브쿼리** (`WHERE v > (SELECT v FROM t WHERE id = 2)`)도 같이 붙였다 — IN이 "집합에 있나"라면 스칼라는 "그 한 값과 비교"라, 같은 prepare 인프라를 쓰고 비교 방식만 다르다.
 
 마지막 마무리로 **다중 컬럼 `ORDER BY`** (`ORDER BY dept, amt DESC`)와 **`OFFSET`** (`LIMIT 2 OFFSET 1` — 페이지네이션)도 넣었다. 정렬 비교기를 단일 키에서 키 목록으로 일반화하니, 키마다 ASC/DESC를 적용하게 됐고 — 덤으로 "오름차순 정렬 후 통째로 뒤집기" 같던 옛 DESC 처리 꼼수도 사라졌다. 비교기가 키를 차례로 훑다 차이가 나는 첫 키에서 방향을 적용해 결과를 낸다.
+
+> 더 깊이: 집계(`SUM`/`COUNT`)는 "여러 행을 한 컬럼으로 접는" OLAP 성향이 강한데, 그래서 분석용 DB는 행이 아니라 컬럼으로 저장한다 — [DB 스토리지 내부 ②: Row Store vs Column Store](/blog/theory/db-storage-02-row-vs-column). 우리가 만든 정렬 기반 집계(GroupAggregate)와 옵티마이저의 스캔 선택은 [DB 인덱스 ②](/blog/theory/db-index-02-scan-types)에서.
 
 ## 닫으며
 
