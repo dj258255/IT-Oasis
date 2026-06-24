@@ -1,6 +1,6 @@
 ---
-title: 'minidb — 트랜잭션: BEGIN / COMMIT / ROLLBACK'
-titleEn: 'minidb — Transactions: BEGIN / COMMIT / ROLLBACK'
+title: '트랜잭션: BEGIN / COMMIT / ROLLBACK'
+titleEn: 'Transactions: BEGIN / COMMIT / ROLLBACK'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 4편. WAL이 준 원자성·내구성의 원리를 SQL 레벨로 끌어올린다. no-steal + 커밋 시 force 정책으로 BEGIN/COMMIT/ROLLBACK을 구현하고, 롤백 시 힙과 B+Tree 인덱스를 둘 다 원상복구해 되돌린 INSERT가 행도 인덱스 항목도 남기지 않게 한다."
 descriptionEn: "Part 4 of building a relational database from scratch in C. We lift WAL's atomicity/durability up to the SQL level: BEGIN/COMMIT/ROLLBACK with a no-steal + force-at-commit policy, where rollback reverts both the heap and the B+Tree index so an undone INSERT leaves neither a row nor an index entry."
 date: 2026-06-22
