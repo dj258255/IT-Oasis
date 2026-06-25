@@ -1,7 +1,7 @@
 ---
-title: 'SQL을 더 채우다: BETWEEN과 LIKE, 그리고 와일드카드 매칭'
-titleEn: 'Filling Out the SQL: BETWEEN, LIKE, and Wildcard Matching'
-description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 부록. WHERE에 BETWEEN과 LIKE를 더하면서 두 가지 다른 구현 전략을 본다 - BETWEEN은 실행기를 한 줄도 안 건드리고 파서에서 >= AND <= 로 푸는 문법 설탕(desugaring), LIKE는 %·_ 와일드카드를 백트래킹 two-pointer 매처로 직접 매칭하는 새 연산자. 그리고 왜 LIKE '%키워드%'가 실무에서 느린지, 진짜 DB는 prefix 인덱스·트라이그램으로 어떻게 푸는지까지."
+title: 'SQL을 더 채우다: BETWEEN·LIKE·IN, 그리고 와일드카드 매칭'
+titleEn: 'Filling Out the SQL: BETWEEN, LIKE, IN, and Wildcard Matching'
+description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 부록. WHERE에 BETWEEN과 LIKE를 더하면서 두 가지 다른 구현 전략을 본다 - BETWEEN은 실행기를 한 줄도 안 건드리고 파서에서 >= AND <= 로 푸는 문법 설탕(desugaring), LIKE는 %·_ 와일드카드를 백트래킹 two-pointer 매처로 직접 매칭하는 새 연산자. 그리고 왜 LIKE '%키워드%'가 실무에서 느린지, 진짜 DB는 prefix 인덱스·트라이그램으로 어떻게 푸는지까지. 끝으로 IN 값 목록도 기존 멤버십 머신을 그대로 재사용해 더했다."
 descriptionEn: "An addendum to the minidb series. Adding BETWEEN and LIKE to WHERE shows two different implementation strategies: BETWEEN is desugared in the parser into >= AND <= (zero executor changes), while LIKE is a real new operator with a backtracking two-pointer wildcard matcher. Plus why LIKE '%term%' is slow in practice and how real databases use prefix indexes and trigrams."
 date: 2026-06-08
 tags:
@@ -155,11 +155,33 @@ minidb에서 `LIKE`를 풀 스캔으로 구현하며 "왜 이게 느릴 수밖�
 
 > 더 깊이: [DB 인덱스 ①: 인덱스 기초와 EXPLAIN 읽기](/blog/theory/db-index-01-explain-basics)와 [② 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types) - 왜 어떤 조건은 인덱스를 타고 어떤 건 풀 스캔으로 떨어지는지, 옵티마이저의 판단을 실제 DB로.
 
+## 한 번 더 공짜: IN (값 목록)
+
+BETWEEN을 쓰고 나서 `IN (1, 3, 5)` 같은 값 목록도 채웠는데, 이게 또 비슷한 이야기였다.
+minidb엔 이미 `IN (SELECT ...)` 서브쿼리가 있었다.
+그게 동작하는 방식은 "서브쿼리를 한 번 돌려 값 집합(`in_set`)을 만들어 두고, 바깥 행이 그 집합에 들었는지 멤버십만 검사"하는 거였다.
+그렇다면 `IN (1, 3, 5)`는? 서브쿼리가 만들어 주던 그 `in_set`을, 파서가 파싱하면서 직접 채워 넣으면 끝이다.
+
+```c
+if (p->cur.type == TOK_SELECT) {   /* IN (SELECT ...) — 기존 서브쿼리 경로 */
+    ...
+} else {                            /* IN (v1, v2, ...) — 값 목록을 바로 in_set에 채운다 */
+    do { parse_value(p, &set[n++]); } while (p_accept(p, TOK_COMMA));
+    c->in_sub = 1;        /* 멤버십 머신 재사용 */
+    c->in_set = set;      /* 서브쿼리 대신 파서가 채운 값 집합 */
+}
+```
+
+멤버십을 검사하는 실행기 코드도, 메모리를 정리하는 코드도, 인덱스 플래너도 한 줄을 안 고쳤다.
+서브쿼리가 없으면(`sub`가 NULL이면) 실행 직전 prepare 단계가 알아서 건너뛰도록 이미 짜여 있었기 때문이다.
+BETWEEN이 "기존 문법으로 환원"이었다면, IN 값 목록은 "기존 실행 경로(멤버십)의 입력을 다른 데서 채우기"였다 - 방향만 다를 뿐 발상은 같다.
+
 ## 정리
 
-두 연산자를 붙이며 배운 건 결국 **"새 기능에 항상 새 코드가 필요한 건 아니다"** 였다.
-BETWEEN은 기존 문법으로 환원되는 설탕이라 파서에서 풀어 실행기를 0줄 건드렸고, LIKE는 환원이 안 되는 진짜 새 연산이라 매처를 짰다.
-기능을 받으면 먼저 "이게 기존 것의 조합으로 표현되나?"를 묻는 습관 - 이게 desugaring이 가르쳐준 가장 실용적인 교훈이다.
+세 기능을 붙이며 배운 건 결국 **"새 기능에 항상 새 코드가 필요한 건 아니다"** 였다.
+BETWEEN은 기존 문법으로 환원되는 설탕이라 파서에서 풀어 실행기를 0줄 건드렸고, IN 값 목록은 기존 멤버십 머신의 입력만 파서에서 채워 역시 실행기를 안 건드렸다.
+진짜 새 코드가 필요했던 건 셋 중 LIKE 하나뿐이었다 - 와일드카드 매칭은 어떤 기존 비교로도 환원되지 않으니까.
+기능을 받으면 먼저 "이게 기존 것의 조합으로 표현되나?"를 묻는 습관, 이게 이 셋을 붙이며 굳어진 가장 실용적인 교훈이다.
 
-여기까지 더해 minidb의 테스트는 218개가 됐다.
-다음에 또 SQL을 채운다면 `IN (값 목록)`이나 `ORDER BY` 다중 키 같은, 역시 기존 것으로 환원되는지부터 따져볼 생각이다.
+여기까지 더해 minidb의 테스트는 223개가 됐다.
+새 기능 앞에서 "이건 진짜 새 코드가 필요한가, 아니면 있는 걸 다시 쓰면 되나"를 먼저 묻는 것 - 작은 DB를 키우며 가장 자주 써먹은 사고였다.
