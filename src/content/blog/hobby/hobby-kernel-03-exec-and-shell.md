@@ -3,7 +3,7 @@ title: 'exec와 유저공간 셸'
 titleEn: 'exec and a Userspace Shell'
 description: 작은 유닉스의 마지막 조각. 실행 중인 프로세스를 디스크의 다른 프로그램으로 바꾸는 런타임 exec(), 그리고 sleep/wakeup·read·wait로 커널 밖에서 도는 유저공간 셸까지. 셸이 fork+exec로 디스크 프로그램을 띄우는 유닉스의 핵심 루프를 완성한다.
 descriptionEn: "The last piece of a small Unix — a runtime exec() that swaps a running process for another program from disk, and a userspace shell built on sleep/wakeup, read, and wait. Completing the Unix core loop where a shell launches disk programs via fork+exec."
-date: 2026-06-25T00:00:00.000Z
+date: 2026-06-16T00:00:00.000Z
 tags:
   - OS
   - C
