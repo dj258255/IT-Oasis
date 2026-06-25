@@ -21,7 +21,7 @@ seriesOrder: 1
 
 ![hobby-kernel 유저공간 셸 데모](/uploads/hobby/hobby-kernel-c/demo.svg)
 
-*부팅부터 유저공간 셸까지 — 이 연재(4편)에서 바닥부터 만드는 것.*
+*부팅부터 유저 스레드까지 — 이 연재(전 11편)에서 바닥부터 만드는 것. 이 글은 그 첫 편(부팅~페이징).*
 
 ## 들어가며
 
@@ -30,7 +30,22 @@ seriesOrder: 1
 
 > 왜 C/RISC-V인가: 커널의 정석 언어는 C이고(리눅스·xv6·BSD 전부 C), 참고서 xv6도 C/RISC-V라 코드가 1:1로 매핑돼 마찰이 가장 적어요. RISC-V는 ISA가 단순해 학습에 좋고, 맥(애플 실리콘)에서 `riscv64-elf-gcc`로 툴체인도 깔끔하게 잡혀요.
 
-이번 글은 **부팅부터 페이징까지** — 커널의 골격을 세우는 과정이에요.
+이 연재는 **부팅부터 유저 스레드까지, xv6의 학습 랩을 전부 직접 구현한 11편**의 기록이에요(이미 완성).
+다루는 것을 미리 펼쳐 보면:
+
+1. 부팅 → 페이징(가상메모리) ← *이 글*
+2. 유저모드 → 프로세스 → 시스템콜
+3. fork · ELF 로더 · 파일시스템
+4. exec · 유저공간 셸
+5. demand paging · mmap · 쓰기 가능 FS
+6. 멀티코어(SMP)와 락
+7. 네트워킹(virtio-net · ARP · IP · UDP · ICMP · DNS)
+8. Copy-on-Write fork
+9. 저널링 파일시스템
+10. TCP
+11. 유저 스레드(uthread)
+
+이번 글은 그 첫 편, **부팅부터 페이징까지** — 커널의 골격을 세우는 과정이에요.
 RISC-V의 좋은 점 하나: `-nographic`으로 돌리면 UART가 그대로 터미널 stdout으로 나와서, 스크린샷 없이 출력을 바로 확인할 수 있어요.
 
 ## 1. 부팅 + UART 출력
@@ -205,7 +220,7 @@ free pages: 32169  (~125 MB free)
 
 ![hobby-kernel userspace shell demo](/uploads/hobby/hobby-kernel-c/demo.svg)
 
-*From boot to a userspace shell — what this 4-part series builds from scratch.*
+*From boot to user threads — what this 11-part series builds from scratch. This is Part 1 (boot to paging).*
 
 ## Introduction
 
@@ -214,7 +229,22 @@ The target is RISC-V (rv64), the emulator is QEMU's `virt` machine, and the refe
 
 > Why C/RISC-V: C is the canonical language for kernels (Linux, xv6, and BSD are all C), and since the xv6 reference is also C/RISC-V, the code maps 1:1 with the least friction. RISC-V has a simple ISA that's great for learning, and on a Mac (Apple Silicon) the toolchain sets up cleanly with `riscv64-elf-gcc`.
 
-This post covers **from boot to paging** — building the skeleton of the kernel.
+This series is an **11-part record of implementing the full set of xv6 learning labs from scratch, from boot to user threads** (already complete).
+Laid out up front, it covers:
+
+1. Boot → paging (virtual memory) ← *this post*
+2. User mode → processes → system calls
+3. fork · ELF loader · filesystem
+4. exec · userspace shell
+5. demand paging · mmap · writable FS
+6. Multicore (SMP) and locks
+7. Networking (virtio-net · ARP · IP · UDP · ICMP · DNS)
+8. Copy-on-Write fork
+9. Journaling filesystem
+10. TCP
+11. User threads (uthread)
+
+This post is the first, **from boot to paging** — building the skeleton of the kernel.
 One nice thing about RISC-V: running with `-nographic` sends UART straight to the terminal's stdout, so you can check the output directly without screenshots.
 
 ## 1. Boot + UART output
