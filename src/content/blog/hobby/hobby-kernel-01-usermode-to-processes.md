@@ -3,7 +3,7 @@ title: '유저모드에서 프로세스까지'
 titleEn: 'From User Mode to Processes'
 description: 커널의 골격 위에 OS의 진짜 핵심을 올린다. 유저모드(U-mode) 진입과 시스템콜(ecall) 경계, 컨텍스트 스위치와 선점형 라운드로빈 스케줄러, 그리고 프로세스별 페이지 테이블로 주소공간을 격리한 유저 프로세스까지. 디버깅에서 만난 공유 CSR 문제와 SUM 비트 이야기도 함께 정리한다.
 descriptionEn: "Building the real heart of an OS on top of the kernel skeleton — entering user mode (U-mode) and the system-call boundary via ecall, context switching with a preemptive round-robin scheduler, and user processes isolated by per-process page tables. Plus two debugging lessons: the shared-CSR trap-frame problem and the SUM bit."
-date: 2026-06-24T00:00:00.000Z
+date: 2026-06-04T00:00:00.000Z
 tags:
   - OS
   - C
