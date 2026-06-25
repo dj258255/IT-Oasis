@@ -1,8 +1,8 @@
 {
   "title": "hobby-kernel — C/RISC-V 토이 커널",
   "titleEn": "hobby-kernel — A C/RISC-V Toy Kernel",
-  "description": "C로 바닥부터 만든 RISC-V 토이 커널. 부팅·페이징(가상메모리)·프로세스·시스템콜·fork/exec·파일시스템부터 demand paging·mmap·copy-on-write·멀티코어(SMP)·네트워크(UDP/TCP)·유저 스레드·저널링 FS까지 — xv6(MIT 6.S081) 학습 랩을 전부 직접 구현. 부팅부터 유저 스레드까지 11편 연재로 정리한 학습 프로젝트(상용 OS 아님).",
-  "descriptionEn": "A RISC-V toy kernel built from scratch in C — from boot, paging (virtual memory), processes, system calls, fork/exec, and a filesystem to demand paging, mmap, copy-on-write, multicore (SMP), networking (UDP/TCP), user threads, and a journaling FS. Implements the full set of xv6 (MIT 6.S081) labs, documented as an 11-part series from boot to user threads.",
+  "description": "C로 바닥부터 만든 RISC-V 토이 커널. 부팅·페이징(가상메모리)·프로세스·시스템콜·fork/exec·파일시스템, 그리고 demand paging·mmap·copy-on-write·멀티코어(SMP)·네트워크(UDP/TCP)·유저 스레드·저널링 FS — xv6(MIT 6.S081) 학습 랩을 전부 직접 구현해 11편 연재로 정리한 학습 프로젝트(상용 OS 아님).",
+  "descriptionEn": "A RISC-V toy kernel built from scratch in C — boot, paging (virtual memory), processes, system calls, fork/exec, a filesystem, plus demand paging, mmap, copy-on-write, multicore (SMP), networking (UDP/TCP), user threads, and a journaling FS. Implements the full set of xv6 (MIT 6.S081) labs, documented as an 11-part series.",
   "image": "/uploads/hobby/hobby-kernel-c/cover.svg",
   "tags": ["C", "OS", "Kernel", "Bare Metal", "RISC-V", "QEMU", "xv6", "Network", "TCP"],
   "category": "project",
