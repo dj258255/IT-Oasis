@@ -3,7 +3,7 @@ title: '저장 계층: 페이지에서 힙까지'
 titleEn: 'The Storage Layer: From Pages to the Heap'
 description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 이해하려고 관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈. 1편은 가장 아래 저장 계층 — 고정 크기 페이지를 디스크에 읽고 쓰는 페이저, 가변 길이 행을 페이지에 욱여넣는 슬롯 페이지, 디스크를 매번 때리지 않게 하는 버퍼 풀(pin/dirty/LRU), 그리고 이 셋을 묶어 만든 첫 테이블인 힙 파일까지 직접 구현한다."
 descriptionEn: "minidb is a relational database built from scratch in C to understand how PostgreSQL and MySQL work inside. Part 1 builds the storage layer from the bottom: a pager that reads/writes fixed-size pages, slotted pages that pack variable-length rows, a buffer pool (pin/dirty/LRU), and the heap file that ties them into a first table."
-date: 2026-06-22
+date: 2026-05-11
 tags:
   - C
   - Database Internals
