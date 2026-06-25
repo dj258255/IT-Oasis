@@ -3,7 +3,7 @@ title: '조인과 집계: JOIN, GROUP BY, 조인 알고리즘'
 titleEn: 'Joins and Aggregation: JOIN, GROUP BY, Join Algorithms'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 마지막 편. 한 테이블을 넘어 테이블 여러 개를 둔다. PostgreSQL의 relfilenode처럼 테이블마다 파일을 따로 두고 카탈로그로 묶은 뒤, 재귀적 N-way 중첩 루프 조인을 짠다. 그리고 별칭·self-join, 집계(COUNT/SUM/MIN/MAX/AVG)·GROUP BY, 레벨마다 인덱스/해시/중첩 루프를 고르는 조인 알고리즘 선택까지 — 진짜 옵티마이저가 하는 일을 코드로 드러낸다."
 descriptionEn: "The final part of building a relational database from scratch in C. Going beyond a single table: each table is its own files (like PostgreSQL's relfilenode) tied by a catalog, with a recursive N-way nested-loop join. Plus aliases/self-joins, aggregates (COUNT/SUM/MIN/MAX/AVG) with GROUP BY, and per-level join-method selection (index / hash / nested-loop) — the work a real optimizer does, made visible in code."
-date: 2026-06-22
+date: 2026-05-30
 tags:
   - C
   - Database Internals

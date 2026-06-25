@@ -3,7 +3,7 @@ title: '인덱스와 WAL: B+Tree와 크래시 복구'
 titleEn: 'Index and WAL: B+Tree and Crash Recovery'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 3편. 풀 스캔 O(n)을 O(log n)으로 줄이는 디스크 기반 B+Tree 인덱스를 노드 분할까지 직접 구현하고, 연산자에 따라 점 조회·범위 스캔·풀 스캔을 가르는 플래너의 첫 형태를 만든다. 그리고 전원이 꺼져도 데이터가 안 깨지도록 WAL(쓰기 선행 로그)을 붙이고, 크래시를 실제로 주입해 redo/discard 복구를 증명한다."
 descriptionEn: "Part 3 of building a relational database from scratch in C. We implement a disk-based B+Tree index (with node splits) to turn O(n) scans into O(log n), add a tiny planner that routes operators to point lookup / range scan / full scan, and bolt on a write-ahead log — proving crash recovery (redo/discard) by actually injecting crashes."
-date: 2026-06-22
+date: 2026-05-20
 tags:
   - C
   - Database Internals
