@@ -21,7 +21,7 @@ seriesOrder: 1
 
 ![hobby-kernel 유저공간 셸 데모](/uploads/hobby/hobby-kernel-c/demo.svg)
 
-*부팅부터 유저 스레드까지 — 이 연재(전 11편)에서 바닥부터 만드는 것. 이 글은 그 첫 편(부팅~페이징).*
+*바닥부터 직접 만드는 RISC-V 토이 커널 연재(전 11편). 이 글은 1편 — 부팅과 페이징(가상메모리).*
 
 ## 들어가며
 
@@ -30,7 +30,7 @@ seriesOrder: 1
 
 > 왜 C/RISC-V인가: 커널의 정석 언어는 C이고(리눅스·xv6·BSD 전부 C), 참고서 xv6도 C/RISC-V라 코드가 1:1로 매핑돼 마찰이 가장 적어요. RISC-V는 ISA가 단순해 학습에 좋고, 맥(애플 실리콘)에서 `riscv64-elf-gcc`로 툴체인도 깔끔하게 잡혀요.
 
-이 연재는 **부팅부터 유저 스레드까지, xv6의 학습 랩을 전부 직접 구현한 11편**의 기록이에요(이미 완성).
+이 연재는 **xv6의 학습 랩을 전부 직접 구현한 11편**의 기록이에요(이미 완성).
 다루는 것을 미리 펼쳐 보면:
 
 1. 부팅 → 페이징(가상메모리) ← *이 글*
@@ -45,7 +45,7 @@ seriesOrder: 1
 10. TCP
 11. 유저 스레드(uthread)
 
-이번 글은 그 첫 편, **부팅부터 페이징까지** — 커널의 골격을 세우는 과정이에요.
+이번 글은 그 1편 — 부팅과 페이징, 커널의 골격을 세우는 과정이에요.
 RISC-V의 좋은 점 하나: `-nographic`으로 돌리면 UART가 그대로 터미널 stdout으로 나와서, 스크린샷 없이 출력을 바로 확인할 수 있어요.
 
 ## 1. 부팅 + UART 출력
@@ -158,11 +158,15 @@ free pages: 32238  (~125 MB free)
 
 128MB RAM 중 OpenSBI와 커널을 뺀 약 125MB가 페이지 단위로 잡혀요.
 
-## 5. 페이징 (Sv39)
+## 5. 페이징 (Sv39) — 가상메모리의 토대
 
-마지막.
+마지막은 **가상메모리(virtual memory)** 예요.
+페이징은 그 가상메모리를 구현하는 하드웨어 메커니즘 — **가상주소를 물리주소로 번역**하고, 나중엔 프로세스마다 독립된 주소공간을 줘서 서로 못 건드리게(격리) 만들어요.
+
 **Sv39**는 39비트 가상주소를 3단계 페이지 테이블로 번역해요.
 커널은 **식별 매핑(va == pa)** 으로 매핑해서, 페이징을 켜도 주소가 그대로 유지돼 실행이 끊기지 않아요.
+
+> 이 글에선 커널을 식별 매핑하는 데까지예요. 가상메모리의 진짜 힘 — **프로세스별 주소공간 격리**는 [2편](/blog/hobby/hobby-kernel-01-usermode-to-processes), 그 위의 **demand paging·mmap**은 [5편](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), **copy-on-write**는 [8편](/blog/hobby/hobby-kernel-07-copy-on-write)에서 이어집니다. 즉 가상메모리는 한 글이 아니라 이 연재 전체에 걸쳐 완성돼요.
 
 ```c
 // vm.c — 커널 페이지 테이블 매핑
@@ -220,7 +224,7 @@ free pages: 32169  (~125 MB free)
 
 ![hobby-kernel userspace shell demo](/uploads/hobby/hobby-kernel-c/demo.svg)
 
-*From boot to user threads — what this 11-part series builds from scratch. This is Part 1 (boot to paging).*
+*A RISC-V toy kernel built from scratch — an 11-part series. This is Part 1: booting and paging (virtual memory).*
 
 ## Introduction
 
@@ -229,7 +233,7 @@ The target is RISC-V (rv64), the emulator is QEMU's `virt` machine, and the refe
 
 > Why C/RISC-V: C is the canonical language for kernels (Linux, xv6, and BSD are all C), and since the xv6 reference is also C/RISC-V, the code maps 1:1 with the least friction. RISC-V has a simple ISA that's great for learning, and on a Mac (Apple Silicon) the toolchain sets up cleanly with `riscv64-elf-gcc`.
 
-This series is an **11-part record of implementing the full set of xv6 learning labs from scratch, from boot to user threads** (already complete).
+This series is an **11-part record of implementing the full set of xv6 learning labs from scratch** (already complete).
 Laid out up front, it covers:
 
 1. Boot → paging (virtual memory) ← *this post*
@@ -244,7 +248,7 @@ Laid out up front, it covers:
 10. TCP
 11. User threads (uthread)
 
-This post is the first, **from boot to paging** — building the skeleton of the kernel.
+This post is Part 1 — booting and paging, building the skeleton of the kernel.
 One nice thing about RISC-V: running with `-nographic` sends UART straight to the terminal's stdout, so you can check the output directly without screenshots.
 
 ## 1. Boot + UART output
@@ -357,11 +361,15 @@ free pages: 32238  (~125 MB free)
 
 Of the 128MB of RAM, about 125MB remains after subtracting OpenSBI and the kernel, managed in page-sized units.
 
-## 5. Paging (Sv39)
+## 5. Paging (Sv39) — the foundation of virtual memory
 
-Last.
+Last comes **virtual memory**.
+Paging is the hardware mechanism that implements it — it **translates virtual addresses to physical ones**, and later gives each process its own isolated address space so they can't touch one another.
+
 **Sv39** translates a 39-bit virtual address through a 3-level page table.
 The kernel maps everything with **identity mapping (va == pa)**, so even after paging is turned on the addresses stay the same and execution doesn't break.
+
+> This post goes only as far as identity-mapping the kernel. Virtual memory's real power — **per-process address-space isolation** continues in [Part 2](/blog/hobby/hobby-kernel-01-usermode-to-processes), **demand paging / mmap** in [Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), and **copy-on-write** in [Part 8](/blog/hobby/hobby-kernel-07-copy-on-write). Virtual memory isn't one post but is built across the whole series.
 
 ```c
 // vm.c — 커널 페이지 테이블 매핑
