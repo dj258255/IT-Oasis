@@ -19,51 +19,79 @@ seriesOrder: 3
 ---
 
 
-## 들어가며
+## 0. 들어가며
 
 [2편](/blog/hobby/hobby-kernel-01-usermode-to-processes)에서 유저 프로세스까지 왔어요 — U-mode, 시스템콜, 선점형 스케줄러, 프로세스별 주소공간.
-이번 글은 그 위에 유닉스 프로세스 모델의 나머지와, 완전히 새로운 축인 **저장장치**를 붙여요.
+이번 글은 그 위에 유닉스 프로세스 모델의 나머지와, 완전히 새로운 축인 **저장장치**를 붙입니다.
 
-1. **fork()** — 프로세스가 자신을 복제한다
-2. **ELF 로더** — 인라인 어셈블리 대신 따로 컴파일한 진짜 프로그램을 적재한다
-3. **파일시스템** — virtio-blk 디스크를 읽어 `ls` / `cat`
+세 가지 기능을 올리는데, 셋 다 결국 **"무엇을 복사하고, 무엇을 공유하고, 무엇을 그대로 두느냐"**라는 같은 질문을 풉니다.
+
+1. **fork()** — 주소공간을 복제한다: 무엇을 복사하고 무엇을 공유할까?
+2. **ELF 로더** — 따로 컴파일한 진짜 프로그램을 적재한다: 파일의 어느 바이트를 메모리 어디에 둘까?
+3. **파일시스템** — virtio-blk 디스크를 읽어 `ls` / `cat`: 헐벗은 블록 배열을 어떻게 "파일"로 약속할까?
 
 3번은 한 번에 안 됐어요.
 virtio 드라이버를 디버깅하며 만난 `volatile` 한 줄이 이번 글의 하이라이트예요.
+이 글은 그 세 질문을, ACID 시리즈와 같은 결로 — **문제 먼저, 경우 나열, 비교 표, 오해 정정** 순서로 — 실제 커널 코드에 기대어 풀어 봅니다.
 
-## 1. fork() — 프로세스 복제
+## 1. fork()가 풀어야 하는 진짜 문제
 
-### 왜 fork가 필요할까
+> "프로세스가 자신을 복제한다." 한 번 호출했는데 **둘**이 되고, 부모에겐 자식 pid를, 자식에겐 0을 반환한다.
 
-`fork()`는 유닉스의 상징이에요.
-호출하면 프로세스가 **둘**이 되고, **부모에겐 자식의 pid를, 자식에겐 0을** 반환해요.
-이게 왜 필요하냐면, 유닉스에서 새 프로그램을 띄우는 방식이 "fork로 나를 복제한 뒤, 그 복제본만 새 프로그램으로 갈아끼운다(exec)"이기 때문이에요.
-"복제"와 "교체"를 두 단계로 쪼개 둔 거죠 — 그 사이에 자식의 환경을 손볼 틈이 생겨요(파일 리다이렉트, 권한 낮추기 등).
+말은 단순하지만 구현은 까다롭습니다.
+유닉스에서 새 프로그램을 띄우는 방식이 "fork로 나를 복제한 뒤, 그 복제본만 새 프로그램으로 갈아끼운다(exec)"라서, "복제"와 "교체"를 두 단계로 쪼개 둔 거예요 — 그 사이에 자식의 환경을 손볼 틈이 생기죠(파일 리다이렉트, 권한 낮추기 등).
 
 겉보기에 fork는 마술 같아요.
 한 번 호출했는데 **두 곳에서 리턴**하거든요 — 부모 쪽에서 한 번, 자식 쪽에서 한 번.
-하지만 안을 들여다보면 마술이 아니라, 1편의 페이징과 2편의 트랩 프레임을 그대로 재활용한 영리한 트릭이에요.
+구현 관점에서 fork가 진짜로 답해야 하는 질문은 딱 둘입니다:
 
-### 메커니즘 — "스택을 복사하면 복귀 지점도 따라온다"
+1. **자식의 주소공간을 어떻게 만드는가** — 부모 메모리의 무엇을 복사하고 무엇을 공유할 것인가?
+2. **자식이 어떻게 "fork에서 0을 받고 돌아온" 상태로 깨어나는가** — 새 복귀 코드 없이?
 
-핵심 직관은 **"자식의 유저 스택을 부모 것의 복사본으로 만든다"**예요.
+이 두 질문을 1편의 페이징과 2편의 트랩 프레임을 그대로 재활용해 풀어요. 마술이 아니라 영리한 트릭이에요.
+
+### 경우 나누기 — 페이지마다 복사 정책이 다르다
+
+자식의 주소공간을 만들 때, 부모의 모든 페이지를 같은 정책으로 다루면 안 됩니다.
+**페이지의 성격(읽기전용이냐, 사적으로 고쳐야 하느냐)**에 따라 셋으로 갈려요.
+
+#### 코드 페이지 — 공유한다
+
+> 둘이 같은 물리 페이지를 가리켜도 안전한가?
+
+유저 코드는 `R|X`(읽기·실행)라 누가 덮어쓸 일이 없어요.
+그래서 **복사하지 않고 공유**합니다 — 같은 물리 페이지를 부모·자식이 같이 가리키죠.
+실제 코드에선 참조 카운트만 하나 올려요(`kref_inc`). fork가 가벼워지고 메모리도 아낍니다.
+
+#### 스택 페이지 — 사적으로 복사한다
+
+> 자식만 고쳐 써야 하는 데이터를 공유하면?
+
+스택은 공유하면 안 돼요.
+바로 그 위에 얹힌 트랩 프레임에서 **자식 것만** `a0`을 0으로 바꿔야 하는데, 공유하면 부모 프레임까지 망가지거든요.
+그래서 `kalloc()`으로 새 페이지를 받아 부모 스택을 통째로 `copybytes`로 복사해요.
+
+#### 트랩 프레임 — 복사된 스택 안에서 두 필드만 수정한다
+
+> 복사하면 복귀 지점도 따라온다 — 그럼 무엇이 달라야 하나?
 
 2편에서 본 것처럼, 유저가 `ecall`로 시스템콜을 부르면 커널은 그 순간의 레지스터 전부(=**트랩 프레임**, `struct regframe`)를 **유저 스택 위에** 저장해요.
-이 프레임 안에는 "어디로 돌아갈지(`sepc`)"와 "무슨 값을 들고 돌아갈지(`a0`, 반환 레지스터)"가 들어 있죠.
+이 프레임 안에 "어디로 돌아갈지(`sepc`)"와 "무슨 값을 들고 돌아갈지(`a0`)"가 들어 있죠.
+부모 스택을 통째로 복사하면 자식 스택에도 **같은 가상주소에** 같은 프레임이 들어가니, 자식이 할 일은 그 프레임에서 **`a0`만 0으로** 바꾸는 것뿐이에요.
+나머지(돌아갈 주소, 스택 포인터, 모든 변수)는 부모와 글자 하나 안 틀리니까요.
 
-그러니 부모의 스택 페이지를 통째로 복사하면, 자식의 스택에도 **똑같은 가상주소에** 똑같은 트랩 프레임이 들어가요.
-자식 입장에선 "방금 `fork` `ecall`을 마친 직후" 상태가 그대로 복제된 거예요.
-그럼 자식이 할 일은 딱 하나 — 그 프레임에서 **반환값 `a0`만 0으로** 바꾸는 거예요.
-나머지(돌아갈 주소, 스택 포인터, 모든 변수)는 부모와 글자 하나 안 틀리게 같으니까요.
+| 구분 | 복사 정책 | 이유 | 실제 코드 |
+|------|-----------|------|-----------|
+| 코드 페이지 | **공유** (전체 복사 안 함) | `R\|X` 읽기전용 → 충돌 없음 | `kref_inc(parent->ucode)` |
+| 스택 페이지 | **사적 복사** | 자식 프레임만 고쳐야 함 | `copybytes(ustack, parent->ustack, PGSIZE)` |
+| 트랩 프레임 | 복사본 안에서 **2필드 수정** | "fork에서 0 받고 복귀" 흉내 | `cf->a0=0; cf->sepc=f->sepc+4` |
 
-비유하면, 게임을 세이브한 슬롯을 통째로 복사해 두 번째 슬롯을 만든 다음, 그 사본에서 캐릭터 이름 한 글자만 바꾸는 셈이에요.
-나머지 진행 상황은 완벽히 같으니, 어느 슬롯에서 이어 해도 바로 그 지점부터예요.
+> 비유하면, 게임 세이브 슬롯을 통째로 복사해 두 번째 슬롯을 만든 다음 그 사본에서 캐릭터 이름 한 글자만 바꾸는 셈이에요. 나머지 진행 상황은 완벽히 같으니, 어느 슬롯에서 이어 해도 바로 그 지점부터죠.
 
 ### 우리 코드는 어떻게
 
-실제 `proc.c`의 `proc_fork()`예요.
-한 가지 디테일이 있는데, **코드 페이지는 복사하지 않고 공유**해요 — 유저 코드는 `R|X`(읽기·실행)라 누가 덮어쓸 일이 없으니, 같은 물리 페이지를 둘이 같이 가리켜도 안전하거든요(메모리·시간 절약).
-반면 **스택은 사적으로 복사**해야 해요 — 바로 그 위의 트랩 프레임을 자식 것만 골라 고쳐 써야 하는데, 공유하면 부모 프레임까지 망가지니까요.
+실제 `proc.c`의 `proc_fork()` 핵심이에요.
+위 세 경우가 코드에 그대로 드러납니다.
 
 ```c
 // proc.c — proc_fork(struct regframe *f) 핵심
@@ -95,11 +123,11 @@ child->tf_va      = (uint64)f;             // 트랩 프레임 VA(자식에서�
 
 여기서 `off = (uint64)f - USERSTACK`이 핵심이에요.
 부모 프레임이 유저 가상주소 `f`에 있다면, 스택 페이지 시작(`USERSTACK`)으로부터의 거리(`off`)는 부모·자식이 같아요.
-그래서 자식의 **물리** 복사본(`ustack`)에서 같은 `off`만큼 들어가면, 자식 프레임의 정확한 위치를 짚어요.
-거기서 `a0`과 `sepc`만 고치는 거죠.
-(`sepc + 4`는 "`ecall` 명령 다음으로" — `ecall`이 4바이트라 4를 더해요. 안 그러면 자식이 영원히 `fork`만 다시 부르겠죠.)
+그래서 자식의 **물리** 복사본(`ustack`)에서 같은 `off`만큼 들어가면 자식 프레임의 정확한 위치를 짚고, 거기서 `a0`과 `sepc`만 고치는 거죠.
 
-자식이 처음으로 스케줄되면 `context.ra`를 따라 **`forkret`**으로 들어가요.
+> **흔한 오해 정정**: `sepc + 4`를 "그냥 +4"로 외우면 안 돼요. 이건 "`ecall` 명령 **다음**으로 돌아가라"는 뜻이고, `ecall`이 4바이트라 4를 더하는 거예요. 빼먹으면 자식이 복귀하자마자 같은 `ecall`을 다시 만나 **영원히 `fork`만 재호출**합니다. 부모는 왜 안 그럴까요? 부모의 `sepc+4`는 트랩 진입·복귀 공통 경로가 이미 처리해 주거든요. 자식은 그 경로를 타기 *전에* 프레임을 직접 만들어 넣는 거라, 여기서 손수 더해 줘야 해요.
+
+자식이 처음 스케줄되면 `context.ra`를 따라 **`forkret`**으로 들어가요.
 
 ```c
 // proc.c — fork된 자식의 첫 실행 진입점
@@ -113,7 +141,7 @@ void forkret(void) {
 `forkret`은 기억해 둔 `tf_va`(프레임 VA)로 `sp`를 잡고, **2편에서 만든 트랩 복귀 공통 경로**(`trapret_from`)를 그대로 타요.
 이 공통 경로는 프레임에서 레지스터를 복원하고 `sret`으로 U-mode에 떨어뜨리는 코드 — 부모가 시스템콜에서 돌아갈 때 타는 길과 **똑같아요**.
 즉 자식은 "부모가 시스템콜에서 복귀하는 길"을 그대로 따라가되, 프레임 안 `a0`만 0이라 반환값만 달라지는 거예요.
-fork를 위해 새 복귀 코드를 짤 필요가 전혀 없었던 거죠.
+**fork를 위해 새 복귀 코드를 짤 필요가 전혀 없었던 거죠** — 위에서 던진 두 번째 질문의 답이에요.
 
 ### 한 장으로 정리
 
@@ -135,24 +163,33 @@ hobby> ps
 하나였던 유저 프로세스가 둘이 되어(`userP` → `userP`+`userP+`), 커널 스레드(`spinK`)와 함께 셋이 선점 스케줄돼요.
 자식 이름 끝의 `+`는 `proc_fork`가 부모 이름에 붙여 준 표식이에요.
 
-## 2. ELF 로더 — 진짜 프로그램 적재
+## 2. ELF 로더가 풀어야 하는 진짜 문제
 
-### 왜 ELF 로더가 필요할까
+> "따로 컴파일한 진짜 프로그램을 적재한다." 파일의 어느 바이트를, 메모리 어디에, 어떻게 펼쳐 놓을 것인가?
 
 지금까지(2편) 유저 프로그램은 커널 소스 안에 **인라인 어셈블리로 박혀** 있었어요.
-부팅용 데모로는 충분했지만, 한계가 뻔하죠 — 프로그램을 바꿀 때마다 커널을 다시 빌드해야 하고, C로 짠 진짜 프로그램을 못 올려요.
+부팅용 데모로는 충분했지만 한계가 뻔하죠 — 프로그램을 바꿀 때마다 커널을 다시 빌드해야 하고, C로 짠 진짜 프로그램을 못 올려요.
 
 그래서 이번엔 유저 프로그램을 **따로 컴파일한 진짜 ELF 바이너리**로 바꿔요.
 `riscv64-elf-gcc`로 `user/init.c`를 독립 컴파일하면 `ELF` 파일이 나오는데, 이걸 `.incbin`으로 커널 이미지에 데이터로 임베드해 두고(`initcode[]`), 부팅 때 커널이 **파싱해서 적재**해요.
 나중(이 글 후반)엔 같은 로더로 **디스크에 있는 프로그램**도 적재하게 되니, 로더는 exec의 심장이에요.
 
+### 배경 개념 — ELF라는 적재 지도
+
+#### ELF 헤더 — 지도책의 표지
+
+> "이 바이트 덩어리가 진짜 실행 파일인가? 진입점은 어디인가?"
+
 > ELF(Executable and Linkable Format)는 리눅스·BSD가 쓰는 표준 실행 파일 포맷이에요.
 > 핵심만 보면 "**헤더 + 세그먼트들의 목록**"이에요 — "이 바이트 덩어리를 메모리 어디에 어떻게 펼쳐 놓아라"라는 지도책이죠.
 
-### 메커니즘 — 프로그램 헤더라는 적재 지도
+ELF 맨 앞 **ELF 헤더**에 매직 넘버(`0x7F 'E' 'L' 'F'`), 진입점(`e_entry`), 그리고 "프로그램 헤더가 어디 있는지(`e_phoff`)·몇 개인지(`e_phnum`)"가 적혀 있어요.
 
-exec의 본질은 **"ELF의 지도를 보고 주소공간을 그리는 것"**이에요.
-ELF 맨 앞 **ELF 헤더**에 진입점(`e_entry`)과 "프로그램 헤더가 어디 있는지(`e_phoff`)·몇 개인지(`e_phnum`)"가 적혀 있고, 각 **프로그램 헤더**(`PT_LOAD` 항목)가 한 줄의 적재 지시예요.
+#### 프로그램 헤더 — 한 줄짜리 적재 지시
+
+> "이 세그먼트를 파일 어디서 가져와, 메모리 어디에, 얼마나 펼치라는 건가?"
+
+각 **프로그램 헤더**(`PT_LOAD` 항목)가 한 줄의 적재 지시예요.
 
 - `p_offset` : 파일의 이 위치에서
 - `p_filesz` : 이만큼 바이트를
@@ -165,7 +202,7 @@ ELF 맨 앞 **ELF 헤더**에 진입점(`e_entry`)과 "프로그램 헤더가 �
 ### 우리 코드는 어떻게
 
 실제 `elf.c`의 `load_elf()`예요.
-먼저 매직 넘버(`0x7F 'E' 'L' 'F'`)로 진짜 ELF인지 확인하고, 프로그램 헤더를 한 줄씩 훑어 `PT_LOAD`만 적재해요.
+먼저 매직 넘버로 진짜 ELF인지 확인하고, 프로그램 헤더를 한 줄씩 훑어 `PT_LOAD`만 적재해요.
 
 ```c
 // elf.c — PT_LOAD 세그먼트 적재
@@ -195,9 +232,7 @@ int load_elf(const char *img, char *codepage, uint64 *entry) {
 유저 프로그램을 `USERVA`(`0x1000`)에 링크했으니, `p_vaddr`에서 `USERVA`를 빼면 "한 장짜리 코드 페이지 안에서의 위치"가 나와요.
 그래서 우리는 페이지 테이블을 거치지 않고 **그냥 식별 매핑된 커널 메모리(`codepage`)에 직접 펼쳐** 두고, 나중에 그 물리 페이지를 유저의 `USERVA`에 매핑하면 끝이에요.
 
-그리고 `.bss`를 따로 0으로 채우는 코드가 **없다는 점**을 보세요.
-호출하는 쪽(`make_user_proc`)이 `kalloc()` 직후 `zero(code, PGSIZE)`로 페이지를 미리 0으로 밀어 두기 때문에, `p_filesz`만큼만 복사하면 그 뒤(`.bss`)는 저절로 0이에요.
-"미리 0으로 깔아 두고 필요한 만큼만 덮어쓴다" — 1편 demand paging에서도 본 패턴이죠.
+> **흔한 오해 정정**: "`.bss`는 로더가 0으로 채운다"고 흔히 생각하지만, 이 로더엔 `.bss`를 따로 0으로 미는 코드가 **없어요**. 호출하는 쪽(`make_user_proc`)이 `kalloc()` 직후 `zero(code, PGSIZE)`로 페이지를 미리 0으로 밀어 두기 때문에, `p_filesz`만큼만 복사하면 그 뒤(`.bss`)는 저절로 0이거든요. "미리 0으로 깔아 두고 필요한 만큼만 덮어쓴다" — 1편 demand paging에서도 본 패턴이에요.
 
 ```c
 // proc.c — make_user_proc(): 로더를 부르는 쪽
@@ -212,7 +247,7 @@ if (entry != USERVA)                        // _start는 USERVA에 링크돼 있
 
 ### 함정 / 주의
 
-- **한 페이지 제한**: 지금 로더는 세그먼트가 한 페이지(4KB)를 넘으면 거절해요(`off + p_memsz > PGSIZE`). 그 대신 주소 배치가 1편부터 써온 "코드 1페이지 + 스택 1페이지"와 정확히 맞아떨어져, fork(스택 복사)·페이징과 마찰이 없어요. 더 큰 프로그램은 나중 편에서 멀티 페이지로 확장해요.
+- **한 페이지 제한**: 지금 로더는 세그먼트가 한 페이지(4KB)를 넘으면 거절해요(`off + p_memsz > PGSIZE`). 그 대신 주소 배치가 1편부터 써온 "코드 1페이지 + 스택 1페이지"와 정확히 맞아떨어져, 1절의 fork(스택 복사)·페이징과 마찰이 없어요. 더 큰 프로그램은 나중 편에서 멀티 페이지로 확장해요.
 - **링크 주소 고정**: `_start`가 반드시 `USERVA`에 링크돼 있어야 `off` 계산이 맞아요. 그래서 위에서 `entry != USERVA`를 경고로 잡아 둔 거예요.
 
 이제 `user/init.c`는 커널과 무관한 **평범한 C 프로그램**이에요.
@@ -228,14 +263,16 @@ void _start(void) {
 }
 ```
 
-## 3. 파일시스템 — virtio-blk 디스크
+## 3. 파일시스템이 풀어야 하는 진짜 문제
+
+> "헐벗은 블록 배열에서 파일을 읽는다." 512바이트 블록이 쭉 늘어선 배열을, 어떻게 `ls`/`cat`이 되는 "파일"로 약속할 것인가?
 
 마지막은 완전히 새로운 축, **저장장치**예요.
 지금까지는 모든 게 RAM 안에서만 살았는데, 이제 전원을 꺼도 남는 디스크를 붙이고 거기서 파일을 읽어요.
 이번 글에선 가장 단순한 형태 — **읽기 전용 파일시스템**으로 시작해요.
-(파일을 만들고 지우는 쓰기, 크래시에도 안 깨지는 저널링은 다음 편 주제예요. 여기선 "디스크에서 읽어 보여 주기"에만 집중해요.)
+(파일을 만들고 지우는 쓰기, 크래시에도 안 깨지는 저널링은 다음 편 주제예요. 이번 글에서 다룰 트랜잭션은 ACID 시리즈의 영역이고, 여기 커널에선 "디스크에서 읽어 보여 주기"에만 집중합니다.)
 
-이 절은 두 층으로 나눠 봐야 해요.
+이 문제는 두 층으로 갈라야 풀려요.
 
 - **아래층(블록 드라이버)** — virtio-blk 디스크에서 "512바이트 블록 하나"를 읽고 쓰는 법
 - **위층(파일시스템)** — 그 블록들 위에 "파일"이라는 개념을 올려 `ls`/`cat`을 제공하는 법
@@ -272,9 +309,22 @@ struct fs_dirent {              // 64바이트 → 한 블록(512)에 8개
 
 이제 "블록 하나 읽어와"를 실제로 어떻게 하느냐예요.
 디스크에 직접 명령을 쓰는 게 아니에요.
-QEMU의 가상 디스크는 **virtio** 규약을 따르는데, virtio는 "게스트(우리 커널)와 호스트(디바이스)가 **공유 메모리 위의 링**으로 대화하는" 표준이에요.
 
-비유하면 식당의 주문표 시스템이에요.
+#### 왜 PIO가 아니라 virtio인가
+
+> "장치 레지스터를 직접 두드리는 PIO와, 공유 메모리 링으로 대화하는 virtio는 무엇이 다른가?"
+
+QEMU의 가상 디스크는 **virtio** 규약을 따르는데, virtio는 "게스트(우리 커널)와 호스트(디바이스)가 **공유 메모리 위의 링**으로 대화하는" 표준이에요.
+실제 하드웨어를 흉내 내는 대신 가상화에 최적화된 인터페이스라, 매 바이트마다 레지스터를 두드리는 PIO보다 훨씬 적은 트랩으로 한 요청을 끝냅니다.
+
+| 구분 | PIO(레지스터 직접 제어) | virtio(가상 디바이스) |
+|------|-------------------------|------------------------|
+| 데이터 전달 | 레지스터를 통해 한 워드씩 | 공유 메모리 버퍼를 디바이스가 DMA |
+| 한 요청당 트랩/MMIO | 많음(바이트·워드마다) | 적음(디스크립터 1체인 + 알림 1번) |
+| 완료 통지 | 폴링/인터럽트 | used 링 갱신 → 폴링 또는 인터럽트 |
+| 우리 구현 | — | 3-디스크립터 체인 + **폴링** |
+
+#### 비유 — 식당 주문표 시스템
 
 1. 게스트가 메모리에 **주문서**를 적는다 — 이게 **디스크립터 체인**: `[요청 헤더] → [데이터 버퍼] → [상태 바이트]` 세 칸이 `next`로 엮인 거예요.
 2. 게스트가 "주문 넣었음"을 **available 링**에 끼워 넣는다(주문 대기열).
@@ -352,14 +402,12 @@ for (int i = 0; i < nfiles; i++) {
 `ls`는 디렉터리 항목을 그냥 쭉 출력하고(`fs_ls`), `cat`은 위와 똑같이 블록을 이어 읽어 UART로 흘려보내요(`fs_cat`).
 파일이 **연속 블록**으로 놓여 있어서 "시작 블록 + 크기"만으로 전부 읽을 수 있는 거예요 — 단순한 만큼 빠르죠.
 
-> 디스크 I/O 버퍼(`fsbuf`)가 `static`인 데는 이유가 있어요.
-> virtio는 게스트가 준 주소를 **물리주소로** 그대로 DMA에 쓰는데, 커널 `.bss`(식별 매핑이라 va==pa)에 있는 `static` 버퍼라야 그 주소가 진짜 물리주소와 일치하거든요.
-> 스택 위 지역 변수를 넘기면 주소가 어긋나 디바이스가 엉뚱한 데를 읽어요.
+> **흔한 오해 정정**: 디스크 I/O 버퍼(`fsbuf`)를 `static`으로 둔 건 멋이 아니라 **DMA 정확성** 때문이에요. virtio는 게스트가 준 주소를 **물리주소로** 그대로 DMA에 쓰는데, 커널 `.bss`(식별 매핑이라 va==pa)에 있는 `static` 버퍼라야 그 주소가 진짜 물리주소와 일치하거든요. 스택 위 지역 변수를 넘기면 주소가 어긋나 디바이스가 엉뚱한 데를 읽어요. — 1절 fork의 "공유 vs 사적 복사"가 가상주소 차원의 약속이었다면, 여기선 *물리주소* 차원에서 같은 주의가 필요한 셈이죠.
 
 이 텍스트는 진짜로 디스크 이미지 안에 있고, 커널이 제 드라이버로 읽어 출력한 거예요.
 커널 이미지에 박혀 있는 게 아니고요.
 
-### 디버깅: 왜 멈췄을까
+### 3-4. 디버깅: 왜 멈췄을까
 
 이 단계는 세 번 막혔어요.
 전부 교과서적인 함정이었는데, 직접 밟아 보니 책에서 한 줄로 넘어가던 게 왜 중요한지 몸으로 알겠더라고요.
@@ -398,9 +446,15 @@ R32(MMIO_DRIVER_FEAT) = feat_hi;          // 그대로 수락(VERSION_1 포함)
 static volatile struct virtq_used *used;  // 디바이스가 비동기 갱신 → volatile
 ```
 
-"하드웨어가 비동기로 갱신하는 메모리(MMIO·DMA 링)는 반드시 `volatile`로 읽는다" — 책에서 한 줄로 넘어가던 규칙인데, 한 시간 헤매고 나니 왜 그런지 몸으로 알겠더라고요.
+> **하드웨어가 비동기로 갱신하는 메모리(MMIO·DMA 링)는 반드시 `volatile`로 읽는다.** 책에서 한 줄로 넘어가던 규칙인데, 한 시간 헤매고 나니 왜 그런지 몸으로 알겠더라고요.
 
-## 마치며
+## 정리
+
+이번 글의 세 기능은 결국 **"무엇을 복사하고, 무엇을 공유하고, 무엇을 그대로 두느냐"**라는 한 질문의 세 변주였어요.
+
+- **fork** — 코드 페이지는 공유(`kref_inc`), 스택은 사적 복사(`copybytes`), 트랩 프레임은 복사본 안에서 두 필드(`a0=0`, `sepc+=4`)만 수정. 새 복귀 코드 없이 2편의 `trapret_from`을 그대로 재활용해 "fork에서 0 받고 복귀한" 자식을 만든다.
+- **ELF 로더** — 프로그램 헤더(`p_offset/p_filesz/p_vaddr/p_memsz`)를 한 줄짜리 적재 지시로 읽고, `off = p_vaddr - USERVA`로 한 페이지 안에 펼친다. `.bss`는 미리 0으로 깐 페이지 덕에 저절로 처리된다.
+- **파일시스템** — 슈퍼블록/디렉터리/연속 데이터라는 단순 약속(`fsformat.h`) 위에서, 3-디스크립터 virtio 체인으로 블록을 읽어 `ls`/`cat`을 올린다. DMA 정확성 때문에 버퍼는 식별 매핑된 `static`이어야 한다.
 
 여기까지 오면서 운영체제의 **다섯 축**이 전부 동작해요.
 
@@ -413,64 +467,92 @@ static volatile struct virtq_used *used;  // 디바이스가 비동기 갱신 �
 부팅해서 명령을 치고, 여러 프로그램이 격리된 채 동시에 돌고, 디스크에서 파일을 읽는 — 작지만 진짜 운영체제가 됐어요.
 xv6를 참고서 삼아 바닥부터 C로 짜며, "OS가 어떻게 도는가"를 손으로 만져 이해하는 게 목표였는데, 그 목표는 이룬 것 같아요.
 
-다음으로 더 간다면 유저공간 셸(셸 자체를 디스크의 프로그램으로 내리고 파일에서 `exec`), 쓰기 가능한 파일시스템, 런타임 `exec()` 시스템콜이 남아 있어요.
+다음으로 더 간다면 유저공간 셸(셸 자체를 디스크의 프로그램으로 내리고 파일에서 `exec`), **쓰기 가능한 파일시스템과 크래시에도 안 깨지는 저널링(트랜잭션·원자성)**, 런타임 `exec()` 시스템콜이 남아 있어요.
 하지만 한 호흡은 여기서.
 
 > 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
 
-### 참고 자료
+## 참고 (1차 자료 우선)
 
-- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 - [Virtio 1.1 Specification (OASIS)](https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.html)
 - [ELF-64 Object File Format](https://uclibc.org/docs/elf-64-gen.pdf)
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 
 <!-- EN -->
 
-## Introduction
+## 0. Introduction
 
 In [part 2](/blog/hobby/hobby-kernel-01-usermode-to-processes) we got all the way to user processes — U-mode, syscalls, a preemptive scheduler, per-process address spaces.
 This post builds on that foundation, adding the rest of the Unix process model and a brand-new pillar: **storage**.
 
-1. **fork()** — a process duplicates itself
-2. **ELF loader** — load a real, separately-compiled program instead of inline assembly
-3. **filesystem** — read a virtio-blk disk to provide `ls` / `cat`
+We add three features, and all three end up answering the same question: **what do we copy, what do we share, and what do we leave alone?**
+
+1. **fork()** — duplicate an address space: what to copy and what to share?
+2. **ELF loader** — load a real, separately-compiled program: which bytes of the file go where in memory?
+3. **filesystem** — read a virtio-blk disk for `ls` / `cat`: how do we agree a bare array of blocks into "files"?
 
 Number 3 didn't work on the first try.
 The single line of `volatile` I ran into while debugging the virtio driver is the highlight of this post.
+This post tackles those three questions in the same spirit as the ACID series — **problem first, cases enumerated, comparison tables, misconception fixes** — grounded in the actual kernel code.
 
-## 1. fork() — process duplication
+## 1. The Real Problem fork() Has to Solve
 
-### Why do we need fork
+> "A process duplicates itself." You call it once and become **two**; it returns the child's pid to the parent and 0 to the child.
 
-`fork()` is the icon of Unix.
-Call it and the process becomes **two**; it returns **the child's pid to the parent, and 0 to the child**.
-Why does this matter? Because the Unix way to launch a new program is "fork to duplicate myself, then replace just the copy with the new program (exec)."
-Splitting "duplicate" and "replace" into two steps gives you a window in between to tweak the child's environment (redirect files, drop privileges, and so on).
+Simple to state, tricky to implement.
+The Unix way to launch a new program is "fork to duplicate myself, then replace just the copy with the new program (exec)," so "duplicate" and "replace" are split into two steps — giving you a window in between to tweak the child's environment (redirect files, drop privileges, and so on).
 
 On the surface, fork looks like magic.
 You call it once, yet it **returns in two places** — once on the parent side, once on the child side.
-But look inside and it's not magic at all: it's a clever trick that reuses Part 1's paging and Part 2's trap frame as-is.
+From an implementation angle, fork really has to answer just two questions:
 
-### The mechanism — "copy the stack and the return point comes with it"
+1. **How do we build the child's address space** — what of the parent's memory do we copy, and what do we share?
+2. **How does the child wake up as if it "returned 0 from fork"** — without any new return code?
 
-The key intuition is: **make the child's user stack a copy of the parent's.**
+We solve both by reusing Part 1's paging and Part 2's trap frame as-is. Not magic, just a clever trick.
 
-As we saw in Part 2, when a user program calls a syscall via `ecall`, the kernel saves all of the registers at that instant — the **trap frame** (`struct regframe`) — **onto the user stack**.
-That frame contains "where to return (`sepc`)" and "what value to return with (`a0`, the return register)."
+### Enumerating the cases — copy policy differs per page
 
-So if you copy the parent's stack page wholesale, the child's stack ends up with the same trap frame **at the same virtual address**.
-From the child's point of view, the exact state of "just finished the `fork` `ecall`" has been duplicated.
-The child's only remaining job is to flip **the return value `a0` to 0** in that frame.
+When building the child's address space, you must not treat every page of the parent the same way.
+It splits into three, depending on **the nature of the page** (read-only, or something only the child must edit).
+
+#### Code page — share it
+
+> Is it safe for two processes to point at the same physical page?
+
+User code is `R|X` (read/execute), so nobody ever overwrites it.
+So we **share instead of copy** — parent and child point at the same physical page.
+In the real code we just bump a reference count (`kref_inc`). fork gets cheap and we save memory.
+
+#### Stack page — copy it privately
+
+> What if you share data that only the child must edit?
+
+The stack must not be shared.
+We need to flip `a0` to 0 in the trap frame sitting on it — for the child **only** — and sharing would corrupt the parent's frame too.
+So we `kalloc()` a fresh page and `copybytes` the parent's stack wholesale.
+
+#### Trap frame — patch exactly two fields inside the copied stack
+
+> Copy the stack and the return point comes with it — so what must differ?
+
+As in Part 2, when a user calls a syscall via `ecall`, the kernel saves all the registers at that instant — the **trap frame** (`struct regframe`) — **onto the user stack**.
+That frame holds "where to return (`sepc`)" and "what to return with (`a0`)."
+Copying the parent's stack wholesale gives the child the same frame **at the same virtual address**, so the child's only job is to flip **`a0` to 0** in that frame.
 Everything else (return address, stack pointer, every variable) is identical to the parent's, down to the last bit.
 
-By analogy: copy a saved game slot to make a second slot, then change just one letter of the character's name in the copy.
-The rest of the progress is perfectly identical, so resuming from either slot picks up at the very same point.
+| Aspect | Copy policy | Why | Real code |
+|--------|-------------|-----|-----------|
+| Code page | **Share** (no full copy) | `R\|X` read-only → no conflict | `kref_inc(parent->ucode)` |
+| Stack page | **Private copy** | only the child's frame is edited | `copybytes(ustack, parent->ustack, PGSIZE)` |
+| Trap frame | **Patch 2 fields** in the copy | mimic "returned 0 from fork" | `cf->a0=0; cf->sepc=f->sepc+4` |
+
+> By analogy: copy a saved game slot to make a second slot, then change just one letter of the character's name in the copy. The rest of the progress is perfectly identical, so resuming from either slot picks up at the very same point.
 
 ### How our code does it
 
-Here's the real `proc_fork()` from `proc.c`.
-One detail: **the code page is not copied but shared** — user code is `R|X` (read/execute), so nobody overwrites it, and two processes can safely point at the same physical page (saving memory and time).
-The **stack, however, must be privately copied** — we need to edit the child's trap frame, which sits right on it, and sharing would corrupt the parent's frame too.
+Here's the heart of the real `proc_fork()` from `proc.c`.
+The three cases above show up directly in the code.
 
 ```c
 // proc.c — heart of proc_fork(struct regframe *f)
@@ -502,9 +584,9 @@ child->tf_va      = (uint64)f;             // trap-frame VA (identical in the ch
 
 The line `off = (uint64)f - USERSTACK` is the crux.
 If the parent's frame is at user virtual address `f`, then its distance from the start of the stack page (`USERSTACK`) — `off` — is the same for parent and child.
-So stepping `off` bytes into the child's **physical** copy (`ustack`) lands on exactly the child's frame.
-There we fix only `a0` and `sepc`.
-(`sepc + 4` means "the instruction after `ecall`" — `ecall` is 4 bytes, so we add 4. Otherwise the child would forever re-issue `fork`.)
+So stepping `off` bytes into the child's **physical** copy (`ustack`) lands on exactly the child's frame, where we fix only `a0` and `sepc`.
+
+> **Common misconception fix**: don't memorize `sepc + 4` as "just add 4." It means "return to the instruction **after** `ecall`," and `ecall` is 4 bytes, hence +4. Skip it and the child, right after returning, hits the same `ecall` again and **re-issues `fork` forever**. Why doesn't the parent? Because the parent's `sepc+4` is already handled by the shared trap entry/return path. The child builds its frame *before* taking that path, so it has to add 4 by hand here.
 
 When the child is first scheduled, it follows `context.ra` into **`forkret`**.
 
@@ -520,7 +602,7 @@ void forkret(void) {
 `forkret` sets `sp` from the remembered `tf_va` (the frame VA) and rides the **common trap-return path built in Part 2** (`trapret_from`) as-is.
 That common path restores registers from the frame and drops into U-mode via `sret` — the **very same** road the parent takes when returning from a syscall.
 So the child simply follows "the parent's path back from a syscall," except `a0` in its frame is 0, so only the return value differs.
-We never had to write any new return code for fork.
+**We never had to write any new return code for fork** — that's the answer to the second question above.
 
 ### One screen to sum up
 
@@ -542,9 +624,9 @@ hobby> ps
 What was a single user process becomes two (`userP` → `userP` + `userP+`), and together with the kernel thread (`spinK`), all three are preemptively scheduled.
 The trailing `+` in the child's name is a marker that `proc_fork` appends to the parent's name.
 
-## 2. ELF loader — loading a real program
+## 2. The Real Problem an ELF Loader Has to Solve
 
-### Why do we need an ELF loader
+> "Load a real, separately-compiled program." Which bytes of the file, placed where in memory, spread out how?
 
 Until now (Part 2), the user program was **embedded in the kernel source as inline assembly**.
 Fine as a boot-time demo, but the limits are obvious — you have to rebuild the kernel every time you change the program, and you can't load a real C program.
@@ -553,13 +635,22 @@ So this time we replace the user program with a **real, separately-compiled ELF 
 Compiling `user/init.c` standalone with `riscv64-elf-gcc` produces an `ELF` file; we embed it into the kernel image as data with `.incbin` (`initcode[]`), and at boot the kernel **parses and loads** it.
 Later (in the second half of this post) the same loader will load a **program that lives on disk**, so the loader is the heart of exec.
 
+### Background — ELF as a loading map
+
+#### ELF header — the atlas's cover
+
+> "Is this chunk of bytes really an executable? Where is the entry point?"
+
 > ELF (Executable and Linkable Format) is the standard executable format on Linux and BSD.
 > Boil it down and it's "**a header plus a list of segments**" — an atlas saying "spread this chunk of bytes into memory here, like this."
 
-### The mechanism — the program header as a loading map
+The **ELF header** at the very front records the magic number (`0x7F 'E' 'L' 'F'`), the entry point (`e_entry`), and "where the program headers are (`e_phoff`) and how many (`e_phnum`)."
 
-The essence of exec is **"drawing the address space by reading the ELF's map."**
-The **ELF header** at the very front records the entry point (`e_entry`) and "where the program headers are (`e_phoff`) and how many (`e_phnum`)," and each **program header** (a `PT_LOAD` entry) is one line of loading instructions:
+#### Program header — one line of loading instructions
+
+> "Where in the file does this segment come from, where in memory does it go, and how much do we spread?"
+
+Each **program header** (a `PT_LOAD` entry) is one line of loading instructions:
 
 - `p_offset` : from this position in the file
 - `p_filesz` : take this many bytes
@@ -572,7 +663,7 @@ The file doesn't bother storing zeros (`p_filesz < p_memsz`), so we just zero-fi
 ### How our code does it
 
 Here's the real `load_elf()` from `elf.c`.
-It first checks the magic number (`0x7F 'E' 'L' 'F'`) to confirm it's really an ELF, then walks the program headers and loads only the `PT_LOAD` ones.
+It first checks the magic number to confirm it's really an ELF, then walks the program headers and loads only the `PT_LOAD` ones.
 
 ```c
 // elf.c — load a PT_LOAD segment
@@ -602,9 +693,7 @@ The single line `off = ph->p_vaddr - USERVA` is clever.
 We link the user program at `USERVA` (`0x1000`), so subtracting `USERVA` from `p_vaddr` gives "the position within a one-page code page."
 That lets us spread the program **directly into identity-mapped kernel memory (`codepage`)** without going through a page table, and later map that physical page at the user's `USERVA`.
 
-Notice there's **no code that separately zeros `.bss`**.
-The caller (`make_user_proc`) pre-zeros the page with `zero(code, PGSIZE)` right after `kalloc()`, so copying only `p_filesz` bytes leaves everything after it (`.bss`) zero automatically.
-"Lay down zeros first, overwrite only what's needed" — the same pattern we saw with demand paging in Part 1.
+> **Common misconception fix**: people often think "the loader zeros `.bss`," but this loader has **no code** that separately zeros `.bss`. The caller (`make_user_proc`) pre-zeros the page with `zero(code, PGSIZE)` right after `kalloc()`, so copying only `p_filesz` bytes leaves everything after it (`.bss`) zero automatically. "Lay down zeros first, overwrite only what's needed" — the same pattern we saw with demand paging in Part 1.
 
 ```c
 // proc.c — make_user_proc(): the caller invoking the loader
@@ -619,7 +708,7 @@ if (entry != USERVA)                        // _start must be linked at USERVA
 
 ### Pitfalls / caveats
 
-- **One-page limit**: the loader currently rejects a segment larger than one page (4KB) (`off + p_memsz > PGSIZE`). In return, the address layout matches exactly the "one code page + one stack page" we've used since Part 1, so it never fights with fork (stack copy) or paging. Larger programs get multi-page support in a later post.
+- **One-page limit**: the loader currently rejects a segment larger than one page (4KB) (`off + p_memsz > PGSIZE`). In return, the address layout matches exactly the "one code page + one stack page" we've used since Part 1, so it never fights with Section 1's fork (stack copy) or paging. Larger programs get multi-page support in a later post.
 - **Fixed link address**: `_start` must be linked at `USERVA` for the `off` computation to hold. That's why we catch `entry != USERVA` with a warning above.
 
 Now `user/init.c` is an **ordinary C program**, unrelated to the kernel.
@@ -635,14 +724,16 @@ void _start(void) {
 }
 ```
 
-## 3. Filesystem — virtio-blk disk
+## 3. The Real Problem a Filesystem Has to Solve
+
+> "Read a file from a bare array of blocks." Given 512-byte blocks laid out in a row, how do we agree them into "files" that `ls`/`cat` can serve?
 
 The last piece is a completely new pillar: **storage**.
 Until now everything lived only in RAM; now we attach a disk that survives a power-off and read files from it.
 In this post we start with the simplest form — a **read-only filesystem**.
-(Creating and deleting files — writes — and journaling that survives crashes are topics for the next post. Here we focus only on "read from disk and show it.")
+(Creating and deleting files — writes — and journaling that survives crashes are topics for the next post. The transactions involved there belong to the ACID series; here in the kernel we focus only on "read from disk and show it.")
 
-Read this section as two layers:
+This problem only cracks open once you split it into two layers:
 
 - **The lower layer (block driver)** — how to read and write "one 512-byte block" on the virtio-blk disk
 - **The upper layer (filesystem)** — how to put the notion of a "file" on top of those blocks and provide `ls`/`cat`
@@ -679,9 +770,22 @@ struct fs_dirent {              // 64 bytes → 8 per block (512)
 
 Now, how do we actually do "read one block"?
 You don't write commands directly to the disk.
-QEMU's virtual disk follows the **virtio** convention, where "the guest (our kernel) and the host (the device) talk over **rings in shared memory**."
 
-By analogy, it's a restaurant order-ticket system.
+#### Why virtio rather than PIO
+
+> "How does PIO — poking device registers directly — differ from virtio's shared-memory rings?"
+
+QEMU's virtual disk follows the **virtio** convention, where "the guest (our kernel) and the host (the device) talk over **rings in shared memory**."
+It's an interface optimized for virtualization rather than imitating real hardware, so a single request finishes with far fewer traps than PIO, which pokes a register for every word.
+
+| Aspect | PIO (direct register control) | virtio (virtual device) |
+|--------|-------------------------------|--------------------------|
+| Data transfer | one word at a time via registers | device DMAs a shared-memory buffer |
+| Traps/MMIO per request | many (per byte/word) | few (1 descriptor chain + 1 notify) |
+| Completion notice | polling / interrupt | used-ring update → poll or interrupt |
+| Our implementation | — | 3-descriptor chain + **polling** |
+
+#### Analogy — a restaurant order-ticket system
 
 1. The guest writes an **order** into memory — this is the **descriptor chain**: three slots `[request header] → [data buffer] → [status byte]` linked by `next`.
 2. The guest drops "order placed" into the **available ring** (the order queue).
@@ -759,13 +863,11 @@ for (int i = 0; i < nfiles; i++) {
 `ls` just prints the directory entries (`fs_ls`), and `cat` reads blocks the same way and streams them to the UART (`fs_cat`).
 Because files are laid out in **contiguous blocks**, "start block + size" is enough to read the whole thing — simple, and therefore fast.
 
-> There's a reason the disk I/O buffer (`fsbuf`) is `static`.
-> virtio DMAs to the **physical address** the guest hands it as-is, and only a `static` buffer in the kernel's `.bss` (identity-mapped, so va == pa) makes that address match the real physical one.
-> Pass a local variable on the stack and the address is off, so the device reads the wrong place.
+> **Common misconception fix**: making the disk I/O buffer (`fsbuf`) `static` isn't stylistic — it's about **DMA correctness**. virtio DMAs to the **physical address** the guest hands it as-is, and only a `static` buffer in the kernel's `.bss` (identity-mapped, so va == pa) makes that address match the real physical one. Pass a local variable on the stack and the address is off, so the device reads the wrong place. — Where Section 1's fork was about "share vs private copy" at the *virtual* address level, here the same care is needed at the *physical* address level.
 
 This text really does live inside the disk image, and the kernel read it with its own driver and printed it — it is not baked into the kernel image.
 
-### Debugging: why did it hang?
+### 3-4. Debugging: why did it hang?
 
 This stage got stuck three times.
 All of them were textbook pitfalls — but walking through them myself taught me why those one-liners in books actually matter.
@@ -804,9 +906,15 @@ Adding `volatile` says "this memory can change behind my back, so **re-read it f
 static volatile struct virtq_used *used;  // device updates it asynchronously → volatile
 ```
 
-"Memory that hardware updates asynchronously (MMIO, DMA rings) must be read as `volatile`" — a rule books cover in one line, but after wandering lost for an hour, I now understand why in my bones.
+> **Memory that hardware updates asynchronously (MMIO, DMA rings) must be read as `volatile`.** A rule books cover in one line, but after wandering lost for an hour, I now understand why in my bones.
 
-## Wrapping up
+## Wrap-up
+
+The three features in this post were really three variations on one question: **what do we copy, what do we share, and what do we leave alone?**
+
+- **fork** — share the code page (`kref_inc`), privately copy the stack (`copybytes`), and patch only two fields (`a0=0`, `sepc+=4`) in the copied trap frame. With no new return code, it reuses Part 2's `trapret_from` as-is to produce a child that "returned 0 from fork."
+- **ELF loader** — read each program header (`p_offset/p_filesz/p_vaddr/p_memsz`) as one line of loading instructions and spread it into one page via `off = p_vaddr - USERVA`. `.bss` is handled for free thanks to the pre-zeroed page.
+- **filesystem** — on a simple convention of superblock/directory/contiguous data (`fsformat.h`), read blocks over the 3-descriptor virtio chain to serve `ls`/`cat`. For DMA correctness the buffer must be an identity-mapped `static`.
 
 By getting here, all **five pillars** of an operating system are working.
 
@@ -819,13 +927,13 @@ By getting here, all **five pillars** of an operating system are working.
 Boot up, type commands, run multiple programs concurrently in isolation, read files from disk — it has become a small but genuine operating system.
 My goal was to write it from the ground up in C using xv6 as a reference, and to understand "how an OS runs" hands-on; I think I've reached that goal.
 
-If I were to go further, what remains is a userspace shell (moving the shell itself onto disk as a program and `exec`-ing it from a file), a writable filesystem, and a runtime `exec()` syscall.
+If I were to go further, what remains is a userspace shell (moving the shell itself onto disk as a program and `exec`-ing it from a file), **a writable filesystem with crash-safe journaling (transactions and atomicity)**, and a runtime `exec()` syscall.
 But this is a good place to pause for breath.
 
 > Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
 
-### References
+## References (Primary Sources First)
 
-- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
 - [Virtio 1.1 Specification (OASIS)](https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.html)
 - [ELF-64 Object File Format](https://uclibc.org/docs/elf-64-gen.pdf)
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html)
