@@ -8,7 +8,7 @@ tags:
   - C
   - Database Internals
   - SQL
-  - NULL
+  - "NULL"
   - Learning
 category: project/minidb
 coverImage: /uploads/project/minidb/cover.svg
