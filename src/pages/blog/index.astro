@@ -47,6 +47,47 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
   if (aIsSub && !bIsSub) return 1;
   return a[1].ko.localeCompare(b[1].ko);
 });
+
+// Group into parents (+ optional children) for the toggle UI.
+// Parents with children render as an expandable group; parents without
+// children render as a plain pill. sortedCats is already ordered, so
+// insertion order + children push order are preserved.
+type CatGroup = {
+  parentKey: string;
+  parentKo: string;
+  parentEn: string;
+  selfKey: string | null; // a parent-only post (category without "/"), if any
+  children: { key: string; ko: string; en: string }[];
+};
+const groupsMap = new Map<string, CatGroup>();
+for (const [key, val] of sortedCats) {
+  const p = val.parent;
+  if (!groupsMap.has(p)) {
+    groupsMap.set(p, {
+      parentKey: p,
+      parentKo: catDisplayKo.get(p) || p,
+      parentEn: catI18n.get(p) || p,
+      selfKey: null,
+      children: [],
+    });
+  }
+  const g = groupsMap.get(p)!;
+  if (key.includes('/')) {
+    const childPart = key.split('/')[1];
+    g.children.push({
+      key,
+      ko: catDisplayKo.get(childPart) || childPart,
+      en: catI18n.get(childPart) || childPart,
+    });
+  } else {
+    g.selfKey = key;
+  }
+}
+const groups = [...groupsMap.values()].sort((a, b) => {
+  const ia = parentDisplayOrder.indexOf(a.parentKey);
+  const ib = parentDisplayOrder.indexOf(b.parentKey);
+  return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+});
 ---
 
 <BaseLayout title="스토리 — IT Oasis">
@@ -57,7 +98,8 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
         <span class="gradient-text" data-ko="카테고리" data-en="Category">카테고리</span>
       </h2>
     </div>
-    <div class="cat-filter-area flex flex-wrap gap-2 px-1 justify-center mb-10" id="category-filters">
+    {/* Top row: parent / single pills (always one tidy row) */}
+    <div class="cat-filter-area flex flex-wrap items-center gap-2 px-1 justify-center mb-3" id="category-filters">
       <button
         class="cat-filter-btn active"
         data-category="all"
@@ -67,16 +109,51 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
         <span class="lang-ko">전체</span>
         <span class="lang-en hidden">All</span>
       </button>
-      {sortedCats.map(([key, val]) => (
-        <button
-          class="cat-filter-btn"
-          data-category={key}
-          data-ko={val.ko}
-          data-en={val.en}
-        >
-          <span class="lang-ko">{val.ko}</span>
-          <span class="lang-en hidden">{val.en}</span>
-        </button>
+      {groups.map((g) => (
+        g.children.length === 0 ? (
+          <button
+            class="cat-filter-btn"
+            data-category={g.selfKey || g.parentKey}
+            data-ko={g.parentKo}
+            data-en={g.parentEn}
+          >
+            <span class="lang-ko">{g.parentKo}</span>
+            <span class="lang-en hidden">{g.parentEn}</span>
+          </button>
+        ) : (
+          <button
+            class="cat-filter-btn cat-parent-btn"
+            data-category={g.parentKey}
+            data-parent={g.parentKey}
+            aria-expanded="false"
+            data-ko={g.parentKo}
+            data-en={g.parentEn}
+          >
+            <span class="lang-ko">{g.parentKo}</span>
+            <span class="lang-en hidden">{g.parentEn}</span>
+            <span class="cat-caret" aria-hidden="true">&#8250;</span>
+          </button>
+        )
+      ))}
+    </div>
+
+    {/* Sub row: children of the expanded parent appear on the next line */}
+    <div class="cat-subrow mb-10" id="category-subrow">
+      {groups.filter((g) => g.children.length > 0).map((g) => (
+        <div class="cat-subpanel" data-group={g.parentKey}>
+          {g.children.map((c, i) => (
+            <button
+              class="cat-filter-btn cat-child-btn"
+              data-category={c.key}
+              data-ko={c.ko}
+              data-en={c.en}
+              style={`--i:${i}`}
+            >
+              <span class="lang-ko">{c.ko}</span>
+              <span class="lang-en hidden">{c.en}</span>
+            </button>
+          ))}
+        </div>
       ))}
     </div>
 
@@ -114,7 +191,7 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
   <style>
     /* Category filter area - fixed height to prevent layout shift */
     .cat-filter-area {
-      min-height: 88px;
+      min-height: 44px;
       align-content: flex-start;
     }
 
@@ -160,6 +237,78 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
     /* prevent layout shift on active toggle */
     .cat-filter-btn {
       box-sizing: border-box;
+    }
+
+    /* ── Toggle parents (이론 / 프로젝트) ── */
+    .cat-parent-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cat-caret {
+      display: inline-block;
+      font-size: 16px;
+      line-height: 1;
+      transition: transform 0.3s ease;
+    }
+    .cat-parent-btn[aria-expanded='true'] .cat-caret {
+      transform: rotate(90deg);
+    }
+    /* subtle highlight on the parent when one of its children is active */
+    .cat-parent-btn.has-active {
+      border-color: rgba(0, 0, 0, 0.4);
+      color: #222;
+    }
+    :global(.dark) .cat-parent-btn.has-active {
+      border-color: rgba(255, 255, 255, 0.45);
+      color: #eee;
+    }
+
+    /* ── Sub row: children appear on the next line when the parent is open ── */
+    .cat-subrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .cat-subpanel {
+      display: none; /* only the open panel participates in layout */
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      max-width: 760px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+    }
+    .cat-subpanel.open {
+      display: flex;
+      max-height: 400px;
+      opacity: 1;
+      padding: 6px 0 2px;
+    }
+    /* staggered drop-in for that "쫙" feel */
+    .cat-child-btn {
+      transform: translateY(-6px);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease, background 0.25s ease,
+        border-color 0.25s ease, color 0.25s ease;
+    }
+    .cat-subpanel.open .cat-child-btn {
+      transform: translateY(0);
+      opacity: 1;
+      transition-delay: calc(var(--i, 0) * 0.035s);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cat-subpanel,
+      .cat-child-btn,
+      .cat-caret {
+        transition: none;
+      }
+      .cat-child-btn {
+        transform: none;
+      }
     }
 
     /* ── Pagination (global because JS creates these elements dynamically) ── */
@@ -431,9 +580,38 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
         return pages;
       }
 
-      // Category filter click
+      // Category filter click (parent toggles a sub-row of children below)
+      const subpanels = Array.from(document.querySelectorAll<HTMLElement>('.cat-subpanel'));
+      const parentBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-parent-btn'));
+
+      // Accordion: open the panel for `key` (or close everything when null).
+      function openOnly(key: string | null) {
+        subpanels.forEach(p => p.classList.toggle('open', p.dataset.group === key));
+        parentBtns.forEach(b => b.setAttribute('aria-expanded', String(b.dataset.parent === key)));
+      }
+
       filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+          const isParent = !!btn.dataset.parent;
+          const ownerKey = btn.closest<HTMLElement>('.cat-subpanel')?.dataset.group || null;
+
+          if (isParent) {
+            const key = btn.dataset.parent!;
+            const panel = subpanels.find(p => p.dataset.group === key);
+            const isOpen = panel?.classList.contains('open');
+            // toggle: clicking the open parent again collapses it (filter stays)
+            openOnly(isOpen ? null : key);
+          } else {
+            // child keeps its parent open; single/all (ownerKey null) closes all
+            openOnly(ownerKey);
+          }
+
+          // highlight the owning parent when one of its children is active
+          parentBtns.forEach(b => b.classList.remove('has-active'));
+          if (ownerKey) {
+            parentBtns.find(b => b.dataset.parent === ownerKey)?.classList.add('has-active');
+          }
+
           filterBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           activeCategory = btn.dataset.category || 'all';
