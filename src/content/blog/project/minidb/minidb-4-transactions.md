@@ -26,7 +26,9 @@ seriesOrder: 4
 - **steal** — 커밋 *전*에 dirty 페이지를 디스크로 내보낼 수 있나? 가능하면(steal) 메모리는 아끼지만, 커밋 안 된 변경이 디스크에 박히니 롤백·크래시 때 **undo**(되돌리기)가 필요하다.
 - **force** — 커밋 *시점*에 그 트랜잭션의 모든 변경을 디스크로 강제하나? force면 커밋 즉시 내구성이 보장되지만 random write가 많아 느리다. no-force면 빠르지만 크래시 후 **redo**(재적용)가 필요하다.
 
-진짜 DB(InnoDB 등)는 성능을 위해 **steal + no-force**를 쓰고, 그래서 undo·redo 로그가 둘 다 필요하다(ARIES). minidb는 학습용으로 가장 단순한 조합 — **no-steal**을 골랐다. 커밋 전 dirty 페이지는 [1편 버퍼 풀](/blog/project/minidb/minidb-1-storage)의 no-steal 규칙으로 메모리에만 잡아두니 undo가 필요 없고, 커밋은 [3편 WAL](/blog/project/minidb/minidb-3-index-wal)을 통해 한다(로그에 먼저 적고 적용). 즉 "no-steal + WAL redo".
+네 조합 중 양 극단을 보면 트레이드오프가 분명해진다. **no-steal + force**는 가장 안전하고 단순하다 — 커밋 안 된 건 디스크에 없고(undo 불필요), 커밋하면 다 디스크에 있다(redo 불필요). 대신 끔찍하게 느리다. 커밋마다 그 트랜잭션의 모든 dirty 페이지를 흩어진 위치에 random write로 강제 flush해야 하고, 큰 트랜잭션은 버퍼 풀에 다 들고 있어야 하니 메모리도 터진다. 정반대인 **steal + no-force**는 가장 빠르다 — 메모리가 빠듯하면 커밋 전이라도 페이지를 내보내고(steal), 커밋은 로그만 적고 데이터 적용은 나중에 미룬다(no-force). 그래서 InnoDB·PostgreSQL 같은 진짜 DB가 이걸 쓰는데, 대가로 **undo와 redo 로그가 둘 다** 필요하다. 크래시 후 "커밋 안 됐는데 디스크에 새어나간 변경"을 undo하고 "커밋됐는데 아직 데이터에 없는 변경"을 redo해야 하니까 — 이 둘을 정교하게 엮은 게 그 유명한 **ARIES** 알고리즘이다.
+
+minidb는 그 가운데서 학습용으로 **no-steal + WAL redo**를 골랐다. no-steal로 커밋 전 dirty 페이지를 [1편 버퍼 풀](/blog/project/minidb/minidb-1-storage)에 묶어 두면 "디스크에 샌 미완성 변경"이 아예 없으니 **undo 로그를 안 만들어도 된다.** 절반의 복잡도를 통째로 들어낸 셈이다. 대신 force는 안 하고 [3편 WAL](/blog/project/minidb/minidb-3-index-wal)로 redo만 한다 — 로그에 먼저 적고 커밋 마커를 찍은 뒤 데이터에 적용. 큰 트랜잭션이 버퍼 풀을 넘으면 못 받는다는 한계가 따라오지만(no-steal의 값), 학습용으론 "undo 없이 WAL의 본질(redo로 원자·내구)만" 보여주기에 이 조합이 딱이었다.
 
 ## BEGIN / COMMIT / ROLLBACK
 
