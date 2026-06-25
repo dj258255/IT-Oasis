@@ -21,7 +21,7 @@ seriesOrder: 1
 
 ![hobby-kernel 유저공간 셸 데모](/uploads/hobby/hobby-kernel-c/demo.svg)
 
-*바닥부터 직접 만드는 RISC-V 토이 커널 연재(전 11편). 이 글은 1편 — 부팅과 페이징(가상메모리).*
+*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 1편 — 부팅과 페이징(가상메모리).*
 
 ## 들어가며
 
@@ -30,7 +30,7 @@ seriesOrder: 1
 
 > 왜 C/RISC-V인가: 커널의 정석 언어는 C이고(리눅스·xv6·BSD 전부 C), 참고서 xv6도 C/RISC-V라 코드가 1:1로 매핑돼 마찰이 가장 적어요. RISC-V는 ISA가 단순해 학습에 좋고, 맥(애플 실리콘)에서 `riscv64-elf-gcc`로 툴체인도 깔끔하게 잡혀요.
 
-이 연재는 **xv6의 학습 랩을 전부 직접 구현한 11편**의 기록이에요(이미 완성).
+이 연재는 **xv6의 학습 랩을 전부 직접 구현해온 기록**이에요(이미 완성).
 다루는 것을 미리 펼쳐 보면:
 
 1. 부팅 → 페이징(가상메모리) ← *이 글*
@@ -224,7 +224,7 @@ free pages: 32169  (~125 MB free)
 
 ![hobby-kernel userspace shell demo](/uploads/hobby/hobby-kernel-c/demo.svg)
 
-*A RISC-V toy kernel built from scratch — an 11-part series. This is Part 1: booting and paging (virtual memory).*
+*A RISC-V toy kernel built from scratch — a blog series. This is Part 1: booting and paging (virtual memory).*
 
 ## Introduction
 
@@ -233,7 +233,7 @@ The target is RISC-V (rv64), the emulator is QEMU's `virt` machine, and the refe
 
 > Why C/RISC-V: C is the canonical language for kernels (Linux, xv6, and BSD are all C), and since the xv6 reference is also C/RISC-V, the code maps 1:1 with the least friction. RISC-V has a simple ISA that's great for learning, and on a Mac (Apple Silicon) the toolchain sets up cleanly with `riscv64-elf-gcc`.
 
-This series is an **11-part record of implementing the full set of xv6 learning labs from scratch** (already complete).
+This series is a **record of implementing the full set of xv6 learning labs from scratch** (already complete).
 Laid out up front, it covers:
 
 1. Boot → paging (virtual memory) ← *this post*
