@@ -39,7 +39,7 @@ seriesOrder: 6
 4. **가장 고약했던 버그** — 코어 번호가 틀어지던 문제
 5. **나머지 공유 자원 잠그기**
 
-순서는 우연이 아니에요. 부팅이 돼야 코어가 여럿이 되고, 스핀락이 있어야 공유 자료구조를 지키고, 그 스핀락을 컨텍스트 스위치를 가로질러 넘길 줄 알아야 스케줄러가 멀티코어에서 안 깨져요.
+쌓는 순서는 **부팅 → 스핀락 → 락 baton**이고, 그 이유는 각 단계가 다음의 전제이기 때문이에요 — 부팅이 돼야 코어가 여럿이 되고, 스핀락이 있어야 공유 자료구조를 지키고, 그 스핀락을 컨텍스트 스위치를 가로질러 넘길 줄 알아야 스케줄러가 멀티코어에서 안 깨지거든요.
 **스케줄러가 한가운데 오는 건, 그 앞의 모든 것(부팅·스핀락)을 전제로 깔기 때문**입니다.
 
 > 참고서는 여전히 [xv6(MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html).
@@ -568,7 +568,7 @@ The flow stacks in one direction.
 4. **The nastiest bug** — a corrupted core id
 5. **Locking the remaining shared resources**
 
-The order isn't accidental. You need boot before there are several cores, spinlocks to guard shared structures, and the ability to hand that spinlock across a context switch before the scheduler stops breaking on multicore.
+We build in the order **boot → spinlocks → lock baton**, because each is a prerequisite for the next: you need boot before there are several cores, spinlocks to guard shared structures, and the ability to hand a spinlock across a context switch before the scheduler stops breaking on multicore.
 **The scheduler sits in the middle precisely because it stands on everything before it (boot and spinlocks).**
 
 > The reference is still [xv6 (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html).

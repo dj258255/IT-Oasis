@@ -350,7 +350,7 @@ int proc_wait(void) {
 2절에서 `&inbuf`를 채널로 썼던 것과 **똑같은 메커니즘**이에요 — 채널은 그냥 "약속한 주소"일 뿐이고, 입력 버퍼든 부모 구조체든 상관없습니다.
 이것도 sleep/wakeup이 같은 `pt_lock` 아래서 돌기 때문에, "좀비 검사 → sleep" 사이에 자식의 exit가 끼어들어도 wakeup을 잃지 않아요(2절의 잃어버린 wakeup 방어가 그대로 재사용됩니다).
 
-> **흔한 오해 정정**: *"exit하면 자식이 스스로 다 정리하면 되지 않나?"* — 안 됩니다. 자식은 지금 **자기 커널 스택 위에서 `proc_exit`을 실행 중**이라, 그 스택을 자기 손으로 `kfree`하면 즉시 발밑이 꺼져요. 그래서 자식은 ZOMBIE로 시신만 남기고, **부모의 `proc_freeimage`가** 커널 스택을 포함한 나머지를 회수합니다. "회수 주체"가 자식이 아니라 부모인 건 우연이 아니라 필연이에요.
+> **흔한 오해 정정**: *"exit하면 자식이 스스로 다 정리하면 되지 않나?"* — 안 됩니다. 자식은 지금 **자기 커널 스택 위에서 `proc_exit`을 실행 중**이라, 그 스택을 자기 손으로 `kfree`하면 즉시 발밑이 꺼져요. 그래서 자식은 ZOMBIE로 시신만 남기고, **부모의 `proc_freeimage`가** 커널 스택을 포함한 나머지를 회수합니다. "회수 주체"가 자식이 아니라 부모인 건 그래서예요 — 자기가 올라타 있는 스택은 자기 손으로 못 치우니까요.
 
 자원 회수(`proc_freeimage`)는 실제로 유저 코드/스택 페이지, 지연 할당된 힙·mmap 페이지, 커널 스택, 그리고 페이지 테이블 트리까지 전부 `kfree`로 free list에 돌려줍니다.
 이게 1편에서 만든 물리 페이지 할당기가 "받은 페이지를 다시 돌려받는" 마지막 고리예요.
@@ -787,7 +787,7 @@ Since they use the same address (the parent proc) as the token, exactly that par
 It's the **exact same mechanism** as using `&inbuf` as the channel in §2 — a channel is just "an agreed-upon address," whether it's an input buffer or a parent struct.
 And because sleep/wakeup again run under the same `pt_lock`, even if the child's exit slips in between the "zombie check" and the `sleep`, no wakeup is lost (the lost-wakeup defense from §2 is reused as-is).
 
-> **Common misconception fix**: *"On exit, can't the child just clean everything up itself?"* — no. The child is currently **running `proc_exit` on its own kernel stack**, so if it `kfree`s that stack with its own hands, the floor drops out immediately. That's why the child leaves only the body as a ZOMBIE, and **the parent's `proc_freeimage`** reclaims the rest, kernel stack included. The reclaimer being the parent rather than the child isn't a coincidence — it's a necessity.
+> **Common misconception fix**: *"On exit, can't the child just clean everything up itself?"* — no. The child is currently **running `proc_exit` on its own kernel stack**, so if it `kfree`s that stack with its own hands, the floor drops out immediately. That's why the child leaves only the body as a ZOMBIE, and **the parent's `proc_freeimage`** reclaims the rest, kernel stack included. That's why the reclaimer is the parent, not the child — you can't free the very stack you're standing on.
 
 Resource reclamation (`proc_freeimage`) actually returns the user code/stack pages, the demand-allocated heap and mmap pages, the kernel stack, and even the page-table tree, all back to the free list via `kfree`.
 This is the final link where the physical page allocator from Part 1 "gets back the pages it handed out."
