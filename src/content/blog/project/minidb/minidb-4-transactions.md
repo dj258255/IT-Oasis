@@ -3,7 +3,7 @@ title: '트랜잭션은 어떻게 동작하는가 — BEGIN / COMMIT / ROLLBACK�
 titleEn: 'How Do Transactions Work? — Building BEGIN / COMMIT / ROLLBACK by Hand'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 4편. WAL이 준 원자성·내구성의 원리를 SQL 레벨로 끌어올립니다. steal/force라는 버퍼 관리 정책 4분면에서 minidb가 고른 no-steal + 커밋 시 force가 왜 가장 단순하고 안전한지 보고, 그 정책으로 BEGIN/COMMIT/ROLLBACK을 구현합니다. 롤백 시 힙과 B+Tree 인덱스를 둘 다 원상복구해 되돌린 INSERT가 행도 인덱스 항목도 남기지 않게 하고, PostgreSQL·InnoDB(ARIES)와 표로 비교합니다."
 descriptionEn: "Part 4 of minidb, a relational database built from scratch in C. We lift WAL's atomicity and durability up to the SQL level. In the steal/force buffer-policy quadrant we see why minidb's pick — no-steal + force-at-commit — is the simplest and safest, and implement BEGIN/COMMIT/ROLLBACK with it. Rollback reverts both the heap and the B+Tree index so an undone INSERT leaves neither a row nor an index entry, compared with PostgreSQL and InnoDB (ARIES) in tables."
-date: 2026-05-25
+date: 2026-05-21
 tags:
   - C
   - Database Internals

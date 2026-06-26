@@ -3,7 +3,7 @@ title: 'WHERE를 더 채우다 — BETWEEN·LIKE·IN과 와일드카드 매칭�
 titleEn: 'Filling Out WHERE — How Are BETWEEN, LIKE, IN, and Wildcard Matching Implemented?'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 6편. WHERE에 BETWEEN·LIKE·IN을 더하며 '새 기능에 항상 새 코드가 필요한가'를 묻습니다 — BETWEEN은 실행기를 한 줄도 안 건드리고 파서에서 >= AND <= 로 푸는 문법 설탕(desugaring), LIKE는 %·_ 와일드카드를 백트래킹 two-pointer로 직접 매칭하는 진짜 새 연산자, IN 값 목록은 기존 멤버십 머신의 입력만 파서에서 채우기. 그리고 왜 LIKE '%키워드%'가 실무에서 인덱스를 못 타 느린지, PostgreSQL은 트라이그램(pg_trgm)으로 어떻게 푸는지를 LIKE 패턴별 인덱스 사용 표로 비교합니다."
 descriptionEn: "Part 6 of minidb, a relational database built from scratch in C. Adding BETWEEN, LIKE, and IN to WHERE we ask 'does a new feature always need new code?' — BETWEEN is syntactic sugar desugared in the parser into >= AND <= (zero executor changes), LIKE is a real new operator with a backtracking two-pointer wildcard matcher, and the IN value list just refills the input of the existing membership machine. Plus why LIKE '%term%' can't use an index and is slow in practice, and how PostgreSQL solves it with trigrams (pg_trgm), compared in a per-pattern index-usability table."
-date: 2026-06-08
+date: 2026-05-28
 tags:
   - C
   - Database Internals

@@ -3,7 +3,7 @@ title: '보조 인덱스: PK가 몰래 기대던 가정들을 갚기'
 titleEn: 'Secondary Indexes: Paying Back the Assumptions the PK Quietly Leaned On'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈. 3편의 B+Tree 인덱스는 첫 컬럼(PK)에만 걸렸다. 진짜 DB처럼 아무 컬럼에나 CREATE INDEX를 걸려면 네 단계가 필요했다 - 비유니크 키를 받는 B+Tree(중복이 분할로 흩어지는 문제와 하한 탐색), 기존 행으로 인덱스를 짓고 카탈로그에 영속화, INSERT/UPDATE가 인덱스를 함께 갱신하고 트랜잭션 롤백 시 되돌리는 WAL, 그리고 플래너가 그 인덱스를 골라 find_all + heap_get + WHERE 재검사로 거르는 인덱스 스캔. PK 인덱스가 유니크라서 조용히 기대던 가정들을 하나씩 갚는 과정이다."
 descriptionEn: "Part 10 of building a relational database from scratch in C. The part-3 B+Tree only indexed the first column (PK). To CREATE INDEX on any column like a real DB took four stages: a B+Tree that accepts duplicate keys (and the lower-bound search needed because duplicates scatter across leaves on split), building the index from existing rows and persisting it in the catalog, INSERT/UPDATE maintaining it with transaction rollback via WAL, and the planner picking it for an index scan with find_all + heap_get + WHERE recheck. It's all about paying back the assumptions the unique PK index quietly relied on."
-date: 2026-06-22
+date: 2026-06-10
 tags:
   - C
   - Database Internals

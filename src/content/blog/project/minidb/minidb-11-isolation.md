@@ -3,7 +3,7 @@ title: '격리는 어떻게 구현되는가 — 단일 스레드 DB에서 트랜
 titleEn: 'How Is Isolation Implemented? — Guarding Between Transactions in a Single-Threaded DB'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 11편. 4편에서 '안 만든 가장 어려운 절반'이라고 인정했던 ACID의 I(격리)를 만듭니다. minidb는 단일 스레드라 진짜 동시성이 없는데 무엇을 격리하나 — 그 긴장이 설계를 정합니다. 인터리브된 in-process 트랜잭션 + 2PL 테이블 락으로, 충돌을 (블록 대신) 거부해 dirty read와 lost update를 막고, wait-for 그래프로 교착(deadlock) 순환을 탐지합니다. S/X 호환 행렬, strict 2PL, 거부 vs 블록, 그리고 2PL vs MVCC를 표로 비교하며 실제 코드로 짚습니다."
 descriptionEn: "Part 11 of building a relational database from scratch in C. We build the I in ACID (isolation) — the half Part 4 admitted was the hardest and left out. minidb is single-threaded, so what is there to isolate? That tension drives the design: interleaved in-process transactions plus 2PL table locks, where a conflict is rejected (not blocked on) to prevent dirty reads and lost updates, and a wait-for graph detects deadlock cycles. We compare the S/X matrix, strict 2PL, reject vs block, and 2PL vs MVCC in tables, grounded in real code."
-date: 2026-06-26
+date: 2026-06-13
 tags:
   - C
   - Database Internals

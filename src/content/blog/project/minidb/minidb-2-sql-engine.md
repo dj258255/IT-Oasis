@@ -3,7 +3,7 @@ title: 'SQL 엔진은 어떻게 동작하는가 — 텍스트에서 행까지'
 titleEn: 'How Does the SQL Engine Work? — From Text to Rows'
 description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 이해하려고 관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 2편. 1편의 저장 계층 위에 SQL 프런트엔드를 얹습니다 — 손으로 쓴 토크나이저(렉서)와 재귀 하강 파서로 SQL 문자열을 AST로 바꾸고, 튜플 코덱이 값을 스키마대로 바이트로 인코딩하고, 실행기가 힙을 훑어 CREATE/INSERT/SELECT/UPDATE/DELETE를 처리합니다. 손으로 쓴 파서 vs 파서 생성기, length-prefixed vs 널 종료, tombstone 삭제 같은 설계 선택을 PostgreSQL·MySQL과 비교합니다."
 descriptionEn: "Part 2 of minidb, a relational database built from scratch in C to understand how PostgreSQL and MySQL work inside. On top of Part 1's storage layer we add the SQL frontend — a hand-written tokenizer (lexer) and recursive-descent parser turn SQL text into an AST, a tuple codec encodes values to bytes by schema, and an executor scans the heap to run CREATE/INSERT/SELECT/UPDATE/DELETE. We compare design choices — hand-written parser vs parser generator, length-prefixed vs null-terminated, tombstone deletes — against PostgreSQL and MySQL."
-date: 2026-05-15
+date: 2026-05-14
 tags:
   - C
   - Database Internals

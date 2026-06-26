@@ -3,7 +3,7 @@ title: '잠금이냐 버전이냐 — 2PL과 MVCC, 격리의 두 길'
 titleEn: 'Locks or Versions? — 2PL and MVCC, Two Roads to Isolation'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 12편. 11편에서 2PL 잠금으로 격리를 만들었는데, 진짜 PostgreSQL은 잠금이 아니라 MVCC(다중 버전)를 쓴다. 같은 목표(격리)에 정반대 철학의 두 길을 나란히 놓고 본다 — 2PL은 충돌을 미리 막고(비관적, 읽기가 쓰기를 막음), MVCC는 쓰면 새 버전을 만들고 읽으면 자기 스냅샷을 봐서 충돌을 피한다(읽기가 쓰기를 안 막음). 각 방식이 dirty read·lost update·non-repeatable read를 어떻게 막는지, 그 대가가 무엇인지(교착 vs VACUUM), 그리고 minidb의 저장 구조가 왜 이미 MVCC에 맞는지까지."
 descriptionEn: "Part 12 of building a relational database from scratch in C. In part 11 we built isolation with 2PL locks, but real PostgreSQL uses MVCC (multi-version) instead. We put the two opposite philosophies side by side: 2PL prevents conflicts up front (pessimistic, readers block writers), while MVCC creates a new version on write and reads from a snapshot, so it avoids conflicts (readers don't block writers). How each prevents dirty reads, lost updates, and non-repeatable reads; what each costs (deadlocks vs VACUUM); and why minidb's storage is already shaped for MVCC."
-date: 2026-06-26
+date: 2026-06-16
 tags:
   - C
   - Database Internals

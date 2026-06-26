@@ -64,7 +64,7 @@ int pager_read(Pager *p, page_id_t id, void *buf) {
 
 `read`/`write` 대신 `pread`/`pwrite`를 쓴 것도 의도가 있어요. 보통의 `read`/`write`는 파일의 "현재 위치"를 들고 다녀서 엉뚱한 데를 읽으려면 `lseek`로 먼저 옮겨야 하는데, `pread(fd, buf, len, offset)`는 오프셋을 인자로 받으니 그 단계가 없습니다. 페이지 위치가 곱셈 하나로 나오는 우리 모델엔 이게 더 자연스럽고, 덤으로 멀티스레드에서도 안전해요(우린 단일 스레드라 덤일 뿐이지만).
 
-페이지를 왜 하필 4KB로 잡았을까요. 사실 정답은 없고 DB마다 다른데, 이게 그냥 취향이 아니라 1985년 Jim Gray의 **5분 규칙(Five-Minute Rule)** 에서 나온 경제학적 계산이에요. "디스크에서 읽어온 페이지를 메모리에 얼마나 들고 있어야 본전인가"를 디스크값·램값으로 따지면 8KB 안팎이 나오고, 그래서 1980년대 Berkeley POSTGRES가 8KB를 골랐습니다(당시 OS 가상 메모리 페이지가 4~8KB라 한 페이지가 OS 페이지에 딱 맞물리는 이점도 있었어요).
+페이지를 왜 하필 4KB로 잡았을까요. 사실 정답은 없고 DB마다 다른데, 이게 그냥 취향이 아니라 1987년 Jim Gray와 Gianfranco Putzolu의 **5분 규칙(Five-Minute Rule)** 에서 나온 경제학적 계산이에요. "디스크에서 읽어온 페이지를 메모리에 얼마나 들고 있어야 본전인가"를 디스크값·램값으로 따지면 8KB 안팎이 나오고, 그래서 1980년대 Berkeley POSTGRES가 8KB를 골랐습니다(당시 OS 가상 메모리 페이지가 4~8KB라 한 페이지가 OS 페이지에 딱 맞물리는 이점도 있었어요).
 
 > **실무/면접 포인트**: 큰 페이지는 메타데이터 오버헤드가 적은 대신 SSD에서 IOPS가 떨어지고(예: 어떤 인텔 SSD는 4KB로 75,000 IOPS인데 8KB면 47,500으로 약 37% 하락), 같은 캐시 메모리에 들어가는 페이지 수도 절반이 됩니다. "페이지 크기는 메타데이터 오버헤드 vs IOPS·캐시 효율의 트레이드오프"가 정확한 설명이에요. minidb는 학습용이라 "한 페이지에 행 몇 개"가 눈에 잘 들어오게 작은 4KB로 갔습니다 — 어떤 크기든 "고정 크기"이기만 하면 위 코드는 안 바뀌니까요.
 
@@ -202,7 +202,7 @@ int pager_read(Pager *p, page_id_t id, void *buf) {
 
 Using `pread`/`pwrite` over `read`/`write` is deliberate. Plain `read`/`write` carry a "current position", so reading elsewhere needs an `lseek` first; `pread(fd, buf, len, offset)` takes the offset as an argument, skipping that step. It fits a model where the page offset is a single multiplication, and it is thread-safe for free (we are single-threaded, so that is just a bonus).
 
-Why 4KB? There is no single right answer, and it is not a matter of taste — it comes from Jim Gray's 1985 **Five-Minute Rule**, an economic calculation of "how long should you keep a page read from disk in memory to break even" against disk and RAM prices. It lands around 8KB, which is why 1980s Berkeley POSTGRES chose 8KB (back then OS virtual-memory pages were 4-8KB, so a DB page matched an OS page nicely).
+Why 4KB? There is no single right answer, and it is not a matter of taste — it comes from the 1987 **Five-Minute Rule** by Jim Gray and Gianfranco Putzolu, an economic calculation of "how long should you keep a page read from disk in memory to break even" against disk and RAM prices. It lands around 8KB, which is why 1980s Berkeley POSTGRES chose 8KB (back then OS virtual-memory pages were 4-8KB, so a DB page matched an OS page nicely).
 
 > **Practical/interview note**: a larger page has less metadata overhead but lower SSD IOPS (e.g., one Intel SSD does 75,000 IOPS at 4KB but 47,500 at 8KB, ~37% lower) and halves how many pages fit in the same cache memory. The precise framing is "page size is a trade-off between metadata overhead and IOPS/cache efficiency." minidb went small (4KB) so "how many rows per page" is easy to see — and any fixed size leaves the code above unchanged.
 

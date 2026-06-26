@@ -3,7 +3,7 @@ title: 'MVCC는 어떻게 구현되는가 — minidb에 직접 심어보며'
 titleEn: 'How Is MVCC Implemented? — Grafting It onto minidb'
 description: "PostgreSQL식 힙 엔진 minidb에 MVCC(다중 버전 동시성 제어)를 실제 코드로 심어봅니다. 가시성 규칙(xmin/xmax + 트랜잭션 상태)이 왜 MVCC의 핵심 한 줄인지, 롤백이 왜 O(1)로 공짜가 되는지, 읽기 경로가 어떻게 버전을 거르는지를 minidb 코드로 보고, PostgreSQL·InnoDB와 표로 비교합니다. 그리고 진짜 동시 MVCC가 no-steal/단일 트랜잭션 코어와 충돌해 멈춘 지점 — '어떤 기능은 끼워넣는 게 아니라 처음부터 그걸 위해 설계해야 한다'는 교훈까지."
 descriptionEn: "We graft MVCC (multi-version concurrency control) onto minidb, a PostgreSQL-style heap engine, with real code. Why the visibility rule (xmin/xmax + transaction status) is the one-line core of MVCC, why rollback becomes O(1) and free, and how the read path filters versions — shown in minidb code and compared with PostgreSQL and InnoDB in tables. Then the wall: where true concurrent MVCC collides with minidb's no-steal, single-transaction core — and the lesson that some features cannot be bolted on, they must be designed for from the start."
-date: 2026-06-27T00:00:00.000Z
+date: 2026-06-20
 tags:
   - C
   - Database Internals
