@@ -157,7 +157,7 @@ static void log_write(uint32 dst, const uint8 *data) {
 
 `log_n`번째 `log_write`는 데이터를 디스크 블록 `LOGSTART + log_n`(로그 영역)에 쓰고, `log_blk[log_n] = dst`로 "이건 나중에 `dst`로 가야 해"를 적어둬요.
 
-> **상한 처리**: 로그(16블록)보다 큰 트랜잭션은 *부분만* 커밋하면 디스크가 깨지므로, `log_write`가 오버플로를 표시하고 `log_commit`이 **트랜잭션을 통째로 거부**해요(부분 커밋 방지 + 경고 출력). 다만 호출부에 실패를 *전파*하진 않아요 — 더 정석은 `-ENOSPC`를 올려 호출자가 알게 하는 거고, 그 부분은 토이 단순화로 남겨뒀어요.
+> **상한 처리**: 로그(16블록)보다 큰 트랜잭션은 *부분만* 커밋하면 디스크가 깨져요. 그래서 `fs_create`가 **트랜잭션을 시작하기 전에 크기를 검사해 `-1`로 거부**하고(메모리도 안 건드려 롤백이 필요 없음), 그 `-1`이 셸까지 올라가 `write: failed`로 표시돼요. 만에 하나 그 검사를 지나치더라도, `log_commit`이 오버플로 트랜잭션을 **통째로 abort**(부분 커밋 방지)하는 2차 방어선을 둡니다.
 이 시점에 죽어도 안전해요 — 진짜 위치는 아직 옛 값 그대로니까요.
 
 ### log_commit — 커밋 비트를 찍는 그 한 순간
@@ -579,7 +579,7 @@ static void log_write(uint32 dst, const uint8 *data) {
 
 The `log_n`-th `log_write` writes data to disk block `LOGSTART + log_n` (the log region) and records `log_blk[log_n] = dst` ("this goes to `dst` later").
 
-> **Size cap**: a transaction larger than the log (16 blocks) would corrupt the disk if only *partially* committed, so `log_write` flags the overflow and `log_commit` **rejects the whole transaction** (no partial commit, plus a warning). It still doesn't *propagate* the failure to the caller — the more proper design returns `-ENOSPC` so the caller knows — and that part remains a toy simplification.
+> **Size cap**: a transaction larger than the log (16 blocks) would corrupt the disk if only *partially* committed. So `fs_create` **checks the size before starting the transaction and rejects it with `-1`** (without touching memory, so no rollback is needed), and that `-1` propagates up to the shell as `write: failed`. As a second line of defense, even if that check were bypassed, `log_commit` **aborts** an overflowing transaction outright (no partial commit).
 Dying at this point is safe — the real location still holds its old value.
 
 ### log_commit — the single moment the commit bit is stamped
