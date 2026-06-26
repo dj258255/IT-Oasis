@@ -3,7 +3,7 @@ title: '옵티마이저를 눈에 보이게 만들기 — EXPLAIN 짓기'
 titleEn: 'Making the Optimizer Visible — Building EXPLAIN'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 8편. 3편·5편에서 만든 플래너(인덱스 점조회/범위/풀스캔, 조인 방법 선택)는 실행 안에 숨어 보이지 않았습니다. EXPLAIN을 붙여 그 결정을 트리로 출력합니다. 핵심은 별도 추정기를 만들지 않고 실행기가 결정을 내리는 바로 그 지점에서 플랜을 찍는 것 — 그래서 플랜과 실제 실행이 절대 어긋나지 않습니다. 덤으로 ORDER BY나 LIMIT만 붙어도 인덱스가 꺼지는 minidb의 한계가 플랜에 정직하게 드러납니다. 규칙 기반 vs 비용 기반, EXPLAIN vs EXPLAIN ANALYZE를 실제 DB와 비교합니다."
 descriptionEn: "Part 8 of building a relational database from scratch in C. The planner built in parts 3 and 5 (index point/range/scan, join-method choice) was invisible, buried inside execution. EXPLAIN prints those decisions as a tree. The key: don't build a separate estimator — emit the plan at the exact point the executor makes the decision, so the plan can never diverge from reality. As a bonus, minidb's limits (ORDER BY or LIMIT disabling the index) show up honestly in the plan. We compare rule-based vs cost-based and EXPLAIN vs EXPLAIN ANALYZE against real DBs."
-date: 2026-06-15
+date: 2026-06-04
 tags:
   - C
   - Database Internals

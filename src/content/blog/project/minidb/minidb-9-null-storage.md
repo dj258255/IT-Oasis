@@ -3,7 +3,7 @@ title: 'NULL은 어떻게 저장되는가 — null 비트맵과 3값 논리'
 titleEn: 'How Is NULL Stored? — The Null Bitmap and Three-Valued Logic'
 description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 이해하려고 관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 9편. 지금까지 NULL은 LEFT JOIN 결과에만 잠깐 나타났고 진짜 행엔 못 들어갔어요. 이번엔 INSERT (1, NULL)을 실제로 저장합니다 — 핵심은 '값이 없음'을 바이트로 표시하는 null 비트맵(컬럼당 1비트를 행 앞에 붙이는 진짜 DB 행 포맷의 방식)입니다. 그리고 저장만 뚫으니 비교·집계·정렬이 그대로 동작했어요. 5편 LEFT JOIN 때 깔아 둔 NULL 처리가 이미 거기 있었으니까요. 3값 논리(=로도 !=로도 NULL이 안 잡힌다), NOT NULL 제약, NULLS LAST 정렬까지 PostgreSQL·InnoDB와 비교합니다."
 descriptionEn: "Part 9 of minidb, a relational database built from scratch in C to understand how PostgreSQL and MySQL work inside. Until now NULL only appeared transiently in LEFT JOIN results and couldn't live in stored rows. This time we actually store INSERT (1, NULL) — the key is a null bitmap, one bit per column at the front of each row, exactly how real DB row formats mark absence. And once storage was unblocked, comparison, aggregation, and sorting just worked, because the NULL handling built for LEFT JOIN in Part 5 was already there. We cover three-valued logic (NULL isn't caught by = or !=), the NOT NULL constraint, and NULLS-LAST sorting, comparing with PostgreSQL and InnoDB."
-date: 2026-06-18
+date: 2026-06-07
 tags:
   - C
   - Database Internals

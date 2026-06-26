@@ -3,7 +3,7 @@ title: '인덱스와 WAL은 어떻게 동작하는가 — B+Tree와 크래시 �
 titleEn: 'How Do Indexes and the WAL Work? — B+Tree and Crash Recovery'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 3편. 풀 스캔 O(n)을 O(log n)으로 줄이는 디스크 기반 B+Tree 인덱스를 노드 분할·범위 스캔까지 직접 구현하고, 연산자에 따라 점 조회·범위 스캔·풀 스캔을 가르는 플래너의 첫 형태를 만듭니다. 그리고 전원이 꺼져도 데이터가 안 깨지도록 WAL(쓰기 선행 로그)을 붙이고, 크래시를 실제로 주입해 redo/discard 복구를 증명합니다. B+Tree vs 해시 vs LSM-tree, no-steal vs steal 같은 설계 선택을 PostgreSQL·InnoDB와 비교합니다."
 descriptionEn: "Part 3 of minidb, a relational database built from scratch in C. We implement a disk-based B+Tree index (with node splits and range scans) to turn O(n) scans into O(log n), build the first shape of a planner that routes operators to point lookup / range scan / full scan, and bolt on a write-ahead log — proving crash recovery (redo/discard) by actually injecting crashes. We compare design choices like B+Tree vs hash vs LSM-tree and no-steal vs steal against PostgreSQL and InnoDB."
-date: 2026-05-20
+date: 2026-05-17
 tags:
   - C
   - Database Internals

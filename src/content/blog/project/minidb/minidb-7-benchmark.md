@@ -3,7 +3,7 @@ title: '직접 재보기 — 인덱스는 정말 빠른가, 내구성은 얼마�
 titleEn: 'Measuring It — Is the Index Really Faster, and How Expensive Is Durability?'
 description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 7편. 앞 편들에서 말로만 주장했던 두 가지 — '인덱스는 O(n)을 O(log n)으로 줄인다', 'WAL은 커밋마다 fsync로 내구성을 산다' — 를 직접 측정해 확인합니다. B+Tree 점 조회(O(log n))와 풀 스캔(O(n))의 지연을 테이블 크기 1천->1만->10만으로 키우며 재고(10만 행에서 416배), 커밋을 행마다 하느냐 묶느냐로 fsync 비용을 재서 내구성의 가격(23배)을 드러냅니다. 측정 코드·환경·정직한 한계까지."
 descriptionEn: "Part 7 of minidb, a relational database built from scratch in C. I measure the two claims earlier parts only asserted in words — 'an index turns O(n) into O(log n)' and 'WAL buys durability with an fsync per commit'. Point lookup via B+Tree (O(log n)) vs full scan (O(n)) for the same single-row lookup as the table grows 1k->10k->100k (416x at 100k rows), and the cost of durability via fsync by committing per-row vs batched (23x). With the benchmark code, environment, and honest limitations."
-date: 2026-06-12
+date: 2026-05-31
 tags:
   - C
   - Database Internals
