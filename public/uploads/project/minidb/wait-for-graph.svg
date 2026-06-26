@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="330" viewBox="0 0 1000 330" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="wfred" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#f85149"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="330" rx="12" fill="#0d1117"/>
+  <text x="500" y="40" text-anchor="middle" fill="#8b949e" font-size="18">wait-for 그래프 — 순환(cycle)이 있으면 교착(deadlock)</text>
+  <line x1="500" y1="78" x2="500" y2="300" stroke="#21262d" stroke-dasharray="4 6"/>
+
+  <!-- ===== Panel 1: 2중 순환 ===== -->
+  <text x="250" y="92" text-anchor="middle" fill="#6e7681" font-size="13">두 트랜잭션이 서로 기다림</text>
+  <circle cx="170" cy="175" r="34" fill="#13283f" stroke="#1f6feb"/>
+  <text x="170" y="181" text-anchor="middle" fill="#58a6ff" font-family="ui-monospace, Menlo, monospace" font-size="16">T1</text>
+  <circle cx="330" cy="175" r="34" fill="#13283f" stroke="#1f6feb"/>
+  <text x="330" y="181" text-anchor="middle" fill="#58a6ff" font-family="ui-monospace, Menlo, monospace" font-size="16">T2</text>
+  <path d="M196,153 Q250,115 304,153" fill="none" stroke="#f85149" stroke-width="2" marker-end="url(#wfred)"/>
+  <path d="M304,197 Q250,235 196,197" fill="none" stroke="#f85149" stroke-width="2" marker-end="url(#wfred)"/>
+  <text x="250" y="113" text-anchor="middle" fill="#8b949e" font-size="12">기다림</text>
+  <text x="250" y="248" text-anchor="middle" fill="#8b949e" font-size="12">기다림</text>
+  <text x="250" y="292" text-anchor="middle" fill="#f85149" font-size="13">2중 순환 → 교착</text>
+
+  <!-- ===== Panel 2: 3중 순환 ===== -->
+  <text x="750" y="92" text-anchor="middle" fill="#6e7681" font-size="13">셋이 고리를 이루며 기다림</text>
+  <circle cx="750" cy="130" r="32" fill="#13283f" stroke="#1f6feb"/>
+  <text x="750" y="136" text-anchor="middle" fill="#58a6ff" font-family="ui-monospace, Menlo, monospace" font-size="16">T1</text>
+  <circle cx="680" cy="230" r="32" fill="#13283f" stroke="#1f6feb"/>
+  <text x="680" y="236" text-anchor="middle" fill="#58a6ff" font-family="ui-monospace, Menlo, monospace" font-size="16">T2</text>
+  <circle cx="820" cy="230" r="32" fill="#13283f" stroke="#1f6feb"/>
+  <text x="820" y="236" text-anchor="middle" fill="#58a6ff" font-family="ui-monospace, Menlo, monospace" font-size="16">T3</text>
+  <line x1="734" y1="158" x2="696" y2="202" stroke="#f85149" stroke-width="2" marker-end="url(#wfred)"/>
+  <line x1="712" y1="230" x2="788" y2="230" stroke="#f85149" stroke-width="2" marker-end="url(#wfred)"/>
+  <line x1="804" y1="202" x2="766" y2="158" stroke="#f85149" stroke-width="2" marker-end="url(#wfred)"/>
+  <text x="652" y="190" text-anchor="middle" fill="#8b949e" font-size="11">기다림</text>
+  <text x="750" y="223" text-anchor="middle" fill="#8b949e" font-size="11">기다림</text>
+  <text x="848" y="190" text-anchor="middle" fill="#8b949e" font-size="11">기다림</text>
+  <text x="750" y="292" text-anchor="middle" fill="#f85149" font-size="13">3중 순환 → 교착</text>
+</svg>

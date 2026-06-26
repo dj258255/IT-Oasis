@@ -130,10 +130,7 @@ INSERT INTO t VALUES (3, 30);   -- ERROR: t가 잠겨 있습니다 (쓰기 충�
 
 그래도 교착 탐지를 만들었어요. **"만약 거부 대신 기다린다면" 필요해지는 것**을 보이기 위해서입니다. 누가 누구를 기다리는지를 그래프로 적어요 — **wait-for 그래프**. T1이 (T2가 쥔) B를 기다리면 `T1 -> T2` 간선을 긋습니다. 이 그래프에 **순환**이 있으면 교착이에요.
 
-```
-T1 --기다림--> T2 --기다림--> T1     (2중 순환 = 교착)
-T1 -> T2 -> T3 -> T1                 (3중 순환 = 교착)
-```
+![wait-for 그래프 — T1⇄T2 2중 순환과 T1→T2→T3→T1 3중 순환은 둘 다 교착](/uploads/project/minidb/wait-for-graph.svg)
 
 순환은 DFS로 찾아요. `dfs_cycle`이 경로(`path`)를 따라가다 같은 트랜잭션이 다시 나오면 순환으로 판정해 그 victim을 돌려줍니다.
 
@@ -312,10 +309,7 @@ Here something interesting happens. **The reject model can never deadlock.** Dea
 
 I built deadlock detection anyway, to show **what becomes necessary "if we waited instead of rejecting."** I record who waits for whom as a graph — the **wait-for graph**. If T1 waits for B (held by T2), draw a `T1 -> T2` edge. A **cycle** in this graph is a deadlock.
 
-```
-T1 --waits--> T2 --waits--> T1     (2-cycle = deadlock)
-T1 -> T2 -> T3 -> T1               (3-cycle = deadlock)
-```
+![wait-for graph — a T1⇄T2 2-cycle and a T1→T2→T3→T1 3-cycle are both deadlocks](/uploads/project/minidb/wait-for-graph.svg)
 
 I find cycles with DFS. `dfs_cycle` walks a `path` and, if the same transaction appears again, declares a cycle and returns that victim.
 
