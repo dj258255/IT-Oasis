@@ -320,7 +320,7 @@ QEMU의 가상 디스크는 **virtio** 규약을 따르는데, virtio는 "게스
 
 | 구분 | PIO(레지스터 직접 제어) | virtio(가상 디바이스) |
 |------|-------------------------|------------------------|
-| 데이터 전달 | 레지스터를 통해 한 워드씩 | 공유 메모리 버퍼를 디바이스가 DMA |
+| 데이터 전달 | 레지스터를 통해 한 워드씩 | 공유 메모리 버퍼를 디바이스가 DMA(직접 메모리 접근) |
 | 한 요청당 트랩/MMIO | 많음(바이트·워드마다) | 적음(디스크립터 1체인 + 알림 1번) |
 | 완료 통지 | 폴링/인터럽트 | used 링 갱신 → 폴링 또는 인터럽트 |
 | 우리 구현 | — | 3-디스크립터 체인 + **폴링** |
@@ -782,7 +782,7 @@ It's an interface optimized for virtualization rather than imitating real hardwa
 
 | Aspect | PIO (direct register control) | virtio (virtual device) |
 |--------|-------------------------------|--------------------------|
-| Data transfer | one word at a time via registers | device DMAs a shared-memory buffer |
+| Data transfer | one word at a time via registers | device DMAs (direct memory access) a shared-memory buffer |
 | Traps/MMIO per request | many (per byte/word) | few (1 descriptor chain + 1 notify) |
 | Completion notice | polling / interrupt | used-ring update → poll or interrupt |
 | Our implementation | — | 3-descriptor chain + **polling** |
