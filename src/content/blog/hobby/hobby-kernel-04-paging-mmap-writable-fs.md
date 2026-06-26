@@ -400,18 +400,7 @@ hello from a writable fs           ← 디스크에 박혀 살아남았다
 
 **demand paging도 mmap도 결국 같은 페이지 폴트 핸들러의 두 분기**예요 — 둘 다 "빈 페이지를 하나 만들어 매핑한다"는 똑같은 일을 하고, **차이는 그 페이지를 무엇으로 채우느냐 하나뿐**입니다(힙은 `zero`, mmap은 `fs_read_page`). 전혀 다른 기술처럼 보이지만, 커널 입장에선 한 핸들러의 분기 둘이죠.
 
-```
-            페이지 폴트 (scause 12/13/15, stval = 폴트 주소)
-                              │  sepc 그대로 (그 명령을 재실행하려고)
-                              ▼
-                    proc_pagefault(stval, is_store)
-          ┌───────────────────┼───────────────────┐
-          ▼                    ▼                    ▼
-       힙 영역?             mmap 영역?            그 외
-   kalloc → zero        kalloc → fs_read_page   (널·범위 밖)
-   → map(R|W|U)         → map(R|U, 읽기전용)     → 0 반환 = kill
-          └──── 1 반환 → 같은 명령을 재실행 ────┘
-```
+![페이지 폴트가 proc_pagefault 한 핸들러의 세 분기로 갈린다: 힙=kalloc+zero, mmap=kalloc+fs_read_page(읽기전용), 그 외=0 반환 kill. 1 반환 시 같은 명령 재실행](/uploads/hobby/hobby-kernel-c/pagefault-branch.svg)
 
 그리고 매 단계가 *일부러* 단순한 길을 골랐어요. 정석을 몰라서가 아니라 알고 포기한 것 — 쓰기 가능 mmap, COW, 저널링은 다음 글들의 몫으로 남겨뒀습니다.
 
@@ -809,18 +798,7 @@ The common thread is **"only when needed, only as much as needed"** — neither 
 
 **Demand paging and mmap are really two branches of the same page-fault handler** — both do the identical thing, "make one empty page and map it," and the **only difference is what fills that page** (the heap uses `zero`, mmap uses `fs_read_page`). They look like entirely different techniques, but to the kernel they're two branches of one handler.
 
-```
-            page fault (scause 12/13/15, stval = faulting address)
-                              │  sepc unchanged (to re-run that instruction)
-                              ▼
-                    proc_pagefault(stval, is_store)
-          ┌───────────────────┼───────────────────┐
-          ▼                    ▼                    ▼
-       heap area?           mmap area?           otherwise
-   kalloc → zero        kalloc → fs_read_page   (null / out of range)
-   → map(R|W|U)         → map(R|U, read-only)   → return 0 = kill
-          └──── return 1 → re-run the same instruction ────┘
-```
+![A page fault splits into three branches of one proc_pagefault handler — heap (kalloc+zero), mmap (kalloc+fs_read_page, read-only), else (return 0 = kill); returning 1 re-runs the instruction](/uploads/hobby/hobby-kernel-c/pagefault-branch-en.svg)
 
 And at every step we *deliberately* chose the simple path. Not out of ignorance but knowingly forgone — writable mmap, COW, and journaling are left for later posts.
 

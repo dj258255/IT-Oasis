@@ -163,23 +163,7 @@ U-mode로 떨어진 프로그램이 `ecall`로 부탁하고, 커널이 받아서
 
 이 한 장이면 권한 경계를 넘나드는 한 번의 왕복이 한눈에 들어와요.
 
-```
-User mode      printf()
-                  │ ecall
-                  ▼
-   ─────────── 권한 경계 (U → S) ───────────
-                  │
-S mode         kernelvec  (레지스터·CSR을 트랩 프레임에 저장)
-                  │
-               syscall 디스패치
-                  │
-               uart_putc()  ← 실제 일 처리
-                  │ sret
-                  ▼
-   ─────────── 권한 경계 (S → U) ───────────
-                  │
-User mode      printf() 다음 줄로 복귀
-```
+![유저모드 printf가 ecall로 S-mode에 진입해 kernelvec·syscall 디스패치·uart_putc를 거쳐 sret로 다시 유저모드로 복귀하는 권한 경계 왕복](/uploads/hobby/hobby-kernel-c/priv-boundary.svg)
 
 별것 아닌 한 줄처럼 보이지만, **권한 경계를 처음 넘은 순간**이라 의미가 커요.
 지금까지 한 덩어리였던 "커널"이, 비로소 "커널"과 "그 위에서 도는 프로그램"으로 갈라진 거니까요.
@@ -745,23 +729,7 @@ A program dropped into U-mode made a request via `ecall`, and the kernel receive
 
 This one picture captures the round trip across the privilege boundary.
 
-```
-User mode      printf()
-                  │ ecall
-                  ▼
-   ─────────── privilege boundary (U → S) ───────────
-                  │
-S mode         kernelvec  (save registers + CSRs into the trap frame)
-                  │
-               syscall dispatch
-                  │
-               uart_putc()  ← the actual work
-                  │ sret
-                  ▼
-   ─────────── privilege boundary (S → U) ───────────
-                  │
-User mode      resume after printf()
-```
+![User-mode printf crosses into S-mode via ecall, through kernelvec, syscall dispatch and uart_putc, then returns to user mode via sret](/uploads/hobby/hobby-kernel-c/priv-boundary-en.svg)
 
 It may look like a trivial one-liner, but it matters: it's **the first time we crossed the privilege boundary**.
 What used to be a single blob called "the kernel" has finally split into "the kernel" and "a program running on top of it."

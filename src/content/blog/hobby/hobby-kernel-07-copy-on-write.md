@@ -279,16 +279,7 @@ if (a >= HEAPBASE && a < p->heap_top) {     // --- 힙: 빈 페이지 (demand pa
 
 순서를 뒤집으면(demand를 먼저 검사하면) 어떻게 깨지는지 그림으로 보면:
 
-```
-  공유 페이지(값 42, 읽기전용 — PTE_W 없음)
-        │  자식이 씀 → store 폴트(scause=15)
-        ▼
-  COW를 안 보고 "힙 주소네 → demand"로 착각
-        ▼
-  빈 페이지를 새로 kalloc → 0으로 덮음
-        ▼
-  42가 사라짐  ✗     ← 그래서 COW를 "먼저" 검사해야 한다
-```
+![순서를 뒤집어 demand를 먼저 검사하면, 값 42의 읽기전용 공유 페이지가 store 폴트 후 demand로 오인돼 0으로 덮여 42가 사라진다 — 그래서 COW를 먼저 검사해야 한다](/uploads/hobby/hobby-kernel-c/cow-wrong-order.svg)
 
 > **핵심 교훈**: COW의 전부는 이 흐름이에요 — **fork는 가벼워지고**(복사 0회), **복사는 진짜 쓰는 순간, 쓰는 쪽이 그 페이지의 사본을 하나 만드는 것**뿐이에요(쓰기 한 번 = 사본 한 장). fork 직후 곧장 exec하는 자식은 공유 페이지에 쓸 일이 없으니 복사가 **아예 안 일어나죠.** 1절에서 본 낭비가 정확히 사라집니다.
 
@@ -711,16 +702,7 @@ But the fault address is also in the heap region, so if we don't check COW first
 
 Here's how it breaks if you reverse the order (check demand first):
 
-```
-  shared page (value 42, read-only — no PTE_W)
-        │  child writes → store fault (scause=15)
-        ▼
-  skip COW, mistake it for "a heap address → demand"
-        ▼
-  kalloc a fresh page → overwrite with zeros
-        ▼
-  42 is gone  ✗     ← which is why COW must be checked *first*
-```
+![Reversing the order to check demand first: the read-only shared page holding 42 takes a store fault, is mistaken for demand, overwritten with zeros, and 42 is lost — so COW must be checked first](/uploads/hobby/hobby-kernel-c/cow-wrong-order-en.svg)
 
 > **Key lesson**: all of COW is this flow — **fork gets lighter** (0 copies), and **the copy happens at the moment of a real write, where the writing side makes its own copy of that one page** (one write = one copy). A child that execs right after fork never writes the shared pages, so the copy happens **not even once.** The waste from Section 1 vanishes exactly.
 

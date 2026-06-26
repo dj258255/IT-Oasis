@@ -302,24 +302,7 @@ if (n >= 0 && (fl & TH_FIN))
 
 그리고 한 연결이 거쳐 가는 상태를 그림으로 보면 — 우리 코드는 이 흐름을 **명시적 상태 변수 없이 일직선 코드로** 밟아 갑니다:
 
-```
-   LISTEN
-     │ SYN 받음 → SYN-ACK 보냄
-     ▼
-  SYN_RCVD
-     │ ACK 받음 (핸드셰이크 완료)
-     ▼
- ESTABLISHED ─── 데이터 수신 → 에코 송신
-     │ 상대 FIN 받음
-     ▼
- CLOSE_WAIT
-     │ 내 FIN 보냄
-     ▼
-  LAST_ACK
-     │ 마지막 ACK
-     ▼
-   CLOSED
-```
+![수동 개방 서버가 거치는 TCP 상태: LISTEN → SYN_RCVD → ESTABLISHED(데이터 수신·에코) → CLOSE_WAIT → LAST_ACK → CLOSED](/uploads/hobby/hobby-kernel-c/tcp-states.svg)
 
 진짜 TCP는 이 상태들을 상태 머신으로 명시 관리하지만(동시 연결·재전송 때문), 우리 수동 개방 서버는 한 연결을 순서대로 처리하니 코드의 진행이 곧 상태 전이예요.
 
@@ -531,7 +514,7 @@ SYN is `+1`, data is `+n`, FIN is `+1` too.
 
 A connection begins with three greetings.
 
-![TCP 3-way handshake: client SYN(seq=x) → server SYN-ACK(seq=y, ack=x+1) → client ACK(ack=y+1) → connection ESTABLISHED](/uploads/hobby/hobby-kernel-c/tcp-handshake.svg)
+![TCP 3-way handshake: client SYN(seq=x) → server SYN-ACK(seq=y, ack=x+1) → client ACK(ack=y+1) → connection ESTABLISHED](/uploads/hobby/hobby-kernel-c/tcp-handshake-en.svg)
 
 ### Why not two, not four, but three
 
@@ -700,24 +683,7 @@ This is the moment you confirm in code that the §2 rule — *"SYN and FIN consu
 
 And here's the lifecycle a connection walks through — our code walks it **with no explicit state variable, just straight-line code**:
 
-```
-   LISTEN
-     │ got SYN → sent SYN-ACK
-     ▼
-  SYN_RCVD
-     │ got ACK (handshake done)
-     ▼
- ESTABLISHED ─── receive data → echo back
-     │ got peer's FIN
-     ▼
- CLOSE_WAIT
-     │ sent my FIN
-     ▼
-  LAST_ACK
-     │ final ACK
-     ▼
-   CLOSED
-```
+![TCP states a passive-open server walks: LISTEN → SYN_RCVD → ESTABLISHED (receive data, echo) → CLOSE_WAIT → LAST_ACK → CLOSED](/uploads/hobby/hobby-kernel-c/tcp-states-en.svg)
 
 Real TCP manages these states explicitly with a state machine (for concurrent connections and retransmission), but our passive-open server handles one connection in order, so the code's progress *is* the state transition.
 
