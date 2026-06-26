@@ -87,13 +87,24 @@ static int encode_row(const CreateStmt *schema, const Value *vals, int nvals,
 - `DELETE`한 트랜잭션을 abort -> 그 행의 `xmax`가 아보트 상태 -> **행이 다시 보임**
 - `UPDATE`(옛 버전에 xmax + 새 버전 xmin)도 abort 한 번에 옛 버전 복귀·새 버전 소멸
 
+그림으로 보면 한눈에 들어와요 — `UPDATE`는 옛 버전에 xmax를 찍고 새 버전을 만들 뿐이고, 보이고/안 보이고는 **트랜잭션 상태**가 정합니다.
+
+```
+UPDATE id=1   (트랜잭션 10이 실행)
+  옛 버전:  xmin=5,  xmax=10    ← 트랜잭션 5가 만들고, 10이 지움
+  새 버전:  xmin=10, xmax=0     ← 트랜잭션 10이 만듦
+
+트랜잭션 10 COMMIT →  옛 버전 안 보임 / 새 버전 보임
+트랜잭션 10 ABORT  →  옛 버전 다시 보임 / 새 버전 사라짐   (행은 그대로, 상태만 바꿨을 뿐!)
+```
+
 `truncate`도 `discard`도 없어요. minidb의 `test_mvcc`가 이걸 그대로 검증합니다 — `txnlog_abort` 한 번에 그 트랜잭션이 만든 행이 안 보이고, 지운 행이 다시 보입니다. 이게 PostgreSQL 코어 개발자 Tom Lane이 말한 "commit과 abort는 둘 다 O(1)"의 정체예요([ACID ①](/blog/theory/transaction-acid-01-atomicity) 인용).
 
 > **실무/면접 포인트**: PostgreSQL의 롤백이 O(1)인 건 "되돌릴 게 없어서"가 아니라 **"되돌리지 않고 안 보이게만 하기 때문"** 입니다. 미커밋 행은 디스크에 그대로 남고(공간 차지), 나중에 VACUUM이 청소해요. 반대로 InnoDB는 Undo Log를 역재생하니 롤백이 O(N)입니다. "이전 버전을 저장하는 위치가 달라서 롤백 비용 구조가 다르다"가 정확한 설명이에요.
 
 ## 4. 읽기 경로가 버전을 거른다
 
-규칙과 헤더가 있으면, 이제 `SELECT`가 **보이는 버전만** 내보내야 해요. minidb의 단일 테이블 풀스캔 경로(`select_visit`)에 게이트를 달았습니다.
+MVCC에서 `SELECT`는 더 이상 "행을 읽는 함수"가 아니에요 — 한 행의 여러 후보 버전 가운데 **"내 스냅샷에서 보여야 하는 버전"을 고르는 함수**가 됩니다. 가시성 규칙이 MVCC의 두뇌라면, 그 두뇌가 실제로 작동하는 곳이 바로 이 읽기 경로예요. 규칙과 헤더가 있으면, 이제 `SELECT`가 **보이는 버전만** 내보내야 해요. minidb의 단일 테이블 풀스캔 경로(`select_visit`)에 게이트를 달았습니다.
 
 ```c
 static int select_visit(RID rid, const void *rec, uint16_t len, void *ctx_) {
@@ -143,7 +154,7 @@ PostgreSQL이 힙(append-only)·dead tuple·VACUUM·CLOG·hint bit를 가진 건
 
 ## 7. 정리
 
-| 항목 | minidb | 비고 |
+| 항목 | minidb | 왜 (가능 / 한계) |
 |---|---|---|
 | 가시성 규칙(xmin/xmax + 상태) | O | `mvcc_visible` — MVCC의 두뇌 |
 | 행 버전 헤더 | O | PG 튜플 헤더식, 힙 안에 |
@@ -230,13 +241,24 @@ Here MVCC's elegance shows. Because rows carry `xmin`/`xmax` and visibility is d
 - Abort the transaction that `DELETE`d -> that row's `xmax` is aborted -> **the row is visible again**
 - `UPDATE` (old version's xmax + new version's xmin) is undone by one abort: old version returns, new version vanishes
 
+A diagram makes it click — `UPDATE` just stamps xmax on the old version and writes a new one; what is visible is decided by **transaction status**.
+
+```
+UPDATE id=1   (run by transaction 10)
+  old version:  xmin=5,  xmax=10    <- made by txn 5, deleted by txn 10
+  new version:  xmin=10, xmax=0     <- made by txn 10
+
+txn 10 COMMIT ->  old invisible / new visible
+txn 10 ABORT  ->  old visible again / new gone   (rows untouched, only the status changed!)
+```
+
 No `truncate`, no `discard`. minidb's `test_mvcc` verifies exactly this — one `txnlog_abort` hides rows the transaction created and brings back rows it deleted. This is what Tom Lane meant by "commit and abort are both O(1)" (quoted in [ACID ①](/blog/theory/transaction-acid-01-atomicity)).
 
 > **Practical/interview note**: PostgreSQL's rollback is O(1) not because "there is nothing to undo" but because **it does not undo — it just makes things invisible**. Uncommitted rows stay on disk (taking space) and VACUUM cleans them later. InnoDB, by contrast, replays the Undo Log, so its rollback is O(N). The precise framing is "the place where the previous version is stored differs, so the rollback cost structure differs."
 
 ## 4. The Read Path Filters Versions
 
-With the rule and the header in place, `SELECT` must emit **only visible versions**. minidb's single-table full-scan path (`select_visit`) gained a gate.
+Under MVCC, `SELECT` is no longer a "function that reads a row" — it becomes a **function that picks, among a row's candidate versions, the one that should be visible to my snapshot**. If the visibility rule is MVCC's brain, the read path is where that brain actually runs. With the rule and the header in place, `SELECT` must emit **only visible versions**. minidb's single-table full-scan path (`select_visit`) gained a gate.
 
 ```c
 static int select_visit(RID rid, const void *rec, uint16_t len, void *ctx_) {
@@ -286,7 +308,7 @@ PostgreSQL has its heap (append-only), dead tuples, VACUUM, CLOG, and hint bits 
 
 ## 7. Wrap-up
 
-| Item | minidb | Note |
+| Item | minidb | Why (possible / limit) |
 |---|---|---|
 | Visibility rule (xmin/xmax + status) | O | `mvcc_visible` — MVCC's brain |
 | Row version header | O | PG-tuple-header style, in the heap |
