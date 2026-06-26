@@ -150,8 +150,6 @@ double scan_us = (now_sec() - t0) / iter_scan * 1e6;
 
 만들면서 "왜 이렇게 하는지"를 이해했다면, 재보면서는 "정말 그런지"를 확인합니다. 다음에 새 기능을 넣을 때도 — 말로 끝내지 말고 `make bench`에 한 줄 더 보태 재볼 생각이에요.
 
-> **시리즈**: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · 7. 직접 재보기 · [코드(GitHub)](https://github.com/dj258255/minidb)
-
 ## 참고
 
 - [PostgreSQL Documentation: synchronous_commit](https://www.postgresql.org/docs/current/runtime-config-wal.html)
@@ -292,8 +290,6 @@ The two claims I wrote in words in Part 3 — "an index is O(log n)" and "durabi
 - **Honestly**: macOS's `fsync` is not `F_FULLFSYNC`, so the throughput above is an optimistic lower bound, and it is a small-scale micro-measurement.
 
 If building taught me "why it is done this way", measuring confirms "whether it is really so". Next time I add a feature, I plan not to stop at words — I will add one more line to `make bench` and measure.
-
-> **Series**: [1. Storage Layer](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index and WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join and Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN and LIKE](/blog/project/minidb/minidb-6-between-like) · 7. Measuring It · [Code (GitHub)](https://github.com/dj258255/minidb)
 
 ## References
 

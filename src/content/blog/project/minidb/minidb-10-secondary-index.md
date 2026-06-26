@@ -297,8 +297,6 @@ EXPLAIN과 실행기가 "어떤 인덱스를 쓸지" 판단하는 함수(`sec_in
 
 같은 B+Tree인데, 유일성이라는 특권을 내려놓으니 할 일이 이렇게 많아진다는 걸 손으로 배웠어요.
 
-> **시리즈**: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · [7. 직접 재보기](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain) · [9. NULL 저장](/blog/project/minidb/minidb-9-null-storage) · 10. 보조 인덱스
-
 ## 참고
 
 - [PostgreSQL Documentation: Index Access Method Interface (recheck, lossy)](https://www.postgresql.org/docs/current/indexam.html)
@@ -588,8 +586,6 @@ In four stages:
 - **Planner + recheck** — gather candidates with find_all, then keep only real rows with **heap_get + WHERE recheck**. "The index narrows candidates, the truth lives in the heap."
 
 It is the same B+Tree, yet setting down the privilege of uniqueness made the work multiply this much — and I learned it by hand.
-
-> **Series**: [1. Storage Layer](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index and WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join and Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN and LIKE](/blog/project/minidb/minidb-6-between-like) · [7. Benchmark](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain) · [9. NULL Storage](/blog/project/minidb/minidb-9-null-storage) · 10. Secondary Indexes
 
 ## References
 

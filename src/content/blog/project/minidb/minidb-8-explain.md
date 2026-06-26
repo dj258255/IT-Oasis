@@ -155,8 +155,6 @@ EXPLAIN은 새 기능이라기보다 **이미 만든 것을 보이게 하는 창
 
 그리고 그 트리는 자랑이 아니라 고백이었어요 — "나는 ORDER BY가 붙으면 인덱스를 못 써요"라고. 실행기를 만들던 단계가 "동작"이었다면, EXPLAIN은 그 동작을 **설명할 수 있게** 만드는 단계였어요. 만든 걸 재보는 게 [7편](/blog/project/minidb/minidb-7-benchmark)이었다면, 만든 걸 들여다보는 건 이 EXPLAIN입니다.
 
-> **시리즈**: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · [7. 직접 재보기](/blog/project/minidb/minidb-7-benchmark) · 8. EXPLAIN · [코드(GitHub)](https://github.com/dj258255/minidb)
-
 ## 참고
 
 - [PostgreSQL Documentation: Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html)
@@ -303,8 +301,6 @@ EXPLAIN was less a new feature than **a window that makes what you already built
 - **The right match for rule-based** — without statistics or a cost model it can't reach EXPLAIN ANALYZE, but an EXPLAIN that shows the rules fits a rule-based planner perfectly.
 
 And that tree was a confession, not a boast — "I can't use the index once there's an ORDER BY." If building the executor was the "doing" stage, EXPLAIN was the stage that made that doing **explainable**. If [Part 7](/blog/project/minidb/minidb-7-benchmark) measured what we built, this EXPLAIN looks inside it.
-
-> **Series**: [1. Storage Layer](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index and WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join and Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN and LIKE](/blog/project/minidb/minidb-6-between-like) · [7. Benchmarking](/blog/project/minidb/minidb-7-benchmark) · 8. EXPLAIN · [Code (GitHub)](https://github.com/dj258255/minidb)
 
 ## References
 
