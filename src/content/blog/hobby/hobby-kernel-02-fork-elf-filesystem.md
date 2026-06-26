@@ -28,7 +28,7 @@ seriesOrder: 3
 
 1. **fork()** — 주소공간을 복제한다: 무엇을 복사하고 무엇을 공유할까?
 2. **ELF 로더** — 따로 컴파일한 진짜 프로그램을 적재한다: 파일의 어느 바이트를 메모리 어디에 둘까?
-3. **파일시스템** — virtio-blk 디스크를 읽어 `ls` / `cat`: 헐벗은 블록 배열을 어떻게 "파일"로 약속할까?
+3. **파일시스템** — virtio-blk 디스크(**virtio** = 가상머신용 표준 가상 장치 규약)를 읽어 `ls` / `cat`: 헐벗은 블록 배열을 어떻게 "파일"로 약속할까?
 
 3번은 한 번에 안 됐어요.
 virtio 드라이버를 디버깅하며 만난 `volatile` 한 줄이 이번 글의 하이라이트예요.
@@ -171,7 +171,7 @@ hobby> ps
 지금까지(2편) 유저 프로그램은 커널 소스 안에 **인라인 어셈블리로 박혀** 있었어요.
 부팅용 데모로는 충분했지만 한계가 뻔하죠 — 프로그램을 바꿀 때마다 커널을 다시 빌드해야 하고, C로 짠 진짜 프로그램을 못 올려요.
 
-그래서 이번엔 유저 프로그램을 **따로 컴파일한 진짜 ELF 바이너리**로 바꿔요.
+그래서 이번엔 유저 프로그램을 **따로 컴파일한 진짜 ELF 바이너리**(ELF = Executable and Linkable Format — 리눅스 등에서 쓰는 실행파일 표준 포맷)로 바꿔요.
 `riscv64-elf-gcc`로 `user/init.c`를 독립 컴파일하면 `ELF` 파일이 나오는데, 이걸 `.incbin`으로 커널 이미지에 데이터로 임베드해 두고(`initcode[]`), 부팅 때 커널이 **파싱해서 적재**해요.
 나중(이 글 후반)엔 같은 로더로 **디스크에 있는 프로그램**도 적재하게 되니, 로더는 exec의 심장이에요.
 
@@ -490,7 +490,7 @@ We add three features, and all three end up answering the same question: **what 
 
 1. **fork()** — duplicate an address space: what to copy and what to share?
 2. **ELF loader** — load a real, separately-compiled program: which bytes of the file go where in memory?
-3. **filesystem** — read a virtio-blk disk for `ls` / `cat`: how do we agree a bare array of blocks into "files"?
+3. **filesystem** — read a virtio-blk disk (**virtio** = the standard virtual-device interface for VMs) for `ls` / `cat`: how do we agree a bare array of blocks into "files"?
 
 Number 3 didn't work on the first try.
 The single line of `volatile` I ran into while debugging the virtio driver is the highlight of this post.
@@ -633,7 +633,7 @@ The trailing `+` in the child's name is a marker that `proc_fork` appends to the
 Until now (Part 2), the user program was **embedded in the kernel source as inline assembly**.
 Fine as a boot-time demo, but the limits are obvious — you have to rebuild the kernel every time you change the program, and you can't load a real C program.
 
-So this time we replace the user program with a **real, separately-compiled ELF binary**.
+So this time we replace the user program with a **real, separately-compiled ELF binary** (ELF = Executable and Linkable Format — the standard executable format on Linux and friends).
 Compiling `user/init.c` standalone with `riscv64-elf-gcc` produces an `ELF` file; we embed it into the kernel image as data with `.incbin` (`initcode[]`), and at boot the kernel **parses and loads** it.
 Later (in the second half of this post) the same loader will load a **program that lives on disk**, so the loader is the heart of exec.
 

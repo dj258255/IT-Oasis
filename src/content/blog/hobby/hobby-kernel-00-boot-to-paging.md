@@ -59,7 +59,7 @@ Domain0 Next Mode    : S-mode
 ```
 
 그래서 우리가 할 일은 두 가지뿐이에요 — 커널을 그 주소(`0x8020_0000`)에 링크하고, 진입점에서 **스택만 잡아** C로 넘어가는 것.
-이 커널은 처음부터 멀티코어(하트, hart)를 염두에 둬서, 진입점이 코어마다 자기 스택을 잡습니다.
+이 커널은 처음부터 멀티코어(**하트, hart** — "HARdware Thread", RISC-V에서 CPU 코어 하나를 부르는 말)를 염두에 둬서, 진입점이 코어마다 자기 스택을 잡습니다.
 
 ```asm
 # entry.S — OpenSBI가 a0=hartid로 여기로 점프시킨다
@@ -88,7 +88,7 @@ _entry:
 
 ### 화면 출력 — 메모리에 글자를 "쓰면" 화면에 나온다
 
-출력은 가장 원초적인 방법으로 합니다 — **메모리 매핑된 UART**(`0x1000_0000`)에 직접 쓰기.
+출력은 가장 원초적인 방법으로 합니다 — **메모리 매핑된 UART**(`0x1000_0000`)에 직접 쓰기. (이렇게 장치 레지스터를 메모리 주소처럼 읽고 쓰는 방식을 **MMIO**, memory-mapped I/O라고 해요.)
 RISC-V virt에서는 장치 레지스터가 메모리 주소에 매핑돼 있어서, 그 주소에 바이트를 쓰는 게 곧 "글자를 보내라"는 명령이에요.
 QEMU virt 환경에서는 UART가 이미 사용 가능한 상태이고, OpenSBI도 같은 UART를 콘솔로 씁니다. 그래서 별도 초기화 없이 송신 레지스터에 쓰기만 해도 출력돼요. (우리는 SBI 콘솔 호출을 거치지 않고 MMIO에 직접 쓰는, 즉 OpenSBI와 같은 장치를 공유하는 방식이에요 — 실제 하드웨어라면 충돌 소지가 있지만 QEMU virt에선 안전합니다.)
 
@@ -149,7 +149,7 @@ void kerneltrap(struct regframe *f) {
 
 > 주기적인 틱은 어떻게 만들까요?
 
-**Sstc 확장**을 지원하는 환경에서는 `stimecmp` CSR에 "다음 인터럽트를 울릴 시각"을 직접 적을 수 있어요. (Sstc가 없으면 SBI 타이머 호출로 M-mode(OpenSBI)가 대신 예약하는 게 기본이고, Sstc는 그 오버헤드를 없애려 S-mode가 직접 쓰게 한 확장이에요. QEMU virt + 최근 OpenSBI는 Sstc를 지원합니다.)
+**Sstc 확장**을 지원하는 환경에서는 `stimecmp` **CSR**(제어·상태 레지스터 — `satp`·`stvec`처럼 CPU 설정·상태를 담는 특수 레지스터로, 전용 명령으로만 읽고 씀)에 "다음 인터럽트를 울릴 시각"을 직접 적을 수 있어요. (Sstc가 없으면 SBI 타이머 호출로 M-mode(OpenSBI)가 대신 예약하는 게 기본이고, Sstc는 그 오버헤드를 없애려 S-mode가 직접 쓰게 한 확장이에요. QEMU virt + 최근 OpenSBI는 Sstc를 지원합니다.)
 현재 시각(`r_time()`)에 간격을 더해 써 두면, 그 시각이 되는 순간 타이머 인터럽트가 발생합니다.
 핸들러는 틱을 올리고 **즉시 다음 알람을 다시 예약**해서 주기를 유지해요.
 
@@ -375,7 +375,7 @@ static void map_kernel(pagetable_t pt) {
 
 (실제 코드엔 virtio-mmio 장치 매핑도 한 줄 더 있지만, 골자는 위와 같아요.)
 
-매핑을 다 만들었으면, 페이지 테이블의 물리주소를 **`satp` 레지스터**에 적재하고 `sfence.vma`로 TLB를 비우면 새 페이지 테이블이 적용돼요 — 그 순간 페이징이 켜집니다.
+매핑을 다 만들었으면, 페이지 테이블의 물리주소를 **`satp` 레지스터**(Supervisor Address Translation and Protection — 지금 쓸 페이지 테이블을 가리키는 CSR)에 적재하고 `sfence.vma`로 TLB를 비우면 새 페이지 테이블이 적용돼요 — 그 순간 페이징이 켜집니다.
 `sfence.vma`는 CPU가 캐시해 둔 옛 번역(TLB)을 비우는 명령이에요 — 매핑을 바꿨으니 옛 캐시를 버리라는 거죠.
 
 ```c
@@ -472,7 +472,7 @@ Domain0 Next Mode    : S-mode
 ```
 
 So we only have two jobs — link the kernel at that address (`0x8020_0000`), and at the entry point just **set up a stack** and hand off to C.
-This kernel is multicore-aware (harts) from the start, so the entry point gives each core its own stack.
+This kernel is multicore-aware (**harts** — "HARdware Thread", RISC-V's name for a single CPU core) from the start, so the entry point gives each core its own stack.
 
 ```asm
 # entry.S — OpenSBI jumps here with a0=hartid
@@ -501,7 +501,7 @@ Assembly may look unfamiliar, but it does something simple — line by line:
 
 ### Screen output — "writing" a byte to memory shows it on screen
 
-Output is done the most primitive way — writing directly to the **memory-mapped UART** (`0x1000_0000`).
+Output is done the most primitive way — writing directly to the **memory-mapped UART** (`0x1000_0000`). (Treating device registers as memory addresses like this is called **MMIO**, memory-mapped I/O.)
 On RISC-V virt, device registers are mapped at memory addresses, so writing a byte to that address *is* the command "send this character."
 On QEMU virt the UART is already usable, and OpenSBI uses the same UART as its console — so with no extra initialization you can just write to the transmit register. (We don't go through the SBI console call; we write the MMIO directly, i.e. we share the very device OpenSBI also uses — on real hardware that could conflict, but on QEMU virt it's safe.)
 
@@ -562,7 +562,7 @@ The top bit of `scause` distinguishes **interrupt from exception**, and the low 
 
 > How do we produce periodic ticks?
 
-On a platform that supports the **Sstc extension** you can write the "time to fire the next interrupt" directly into the `stimecmp` CSR. (Without Sstc, the default is an SBI timer call where M-mode (OpenSBI) schedules it on your behalf; Sstc removes that overhead by letting S-mode write the register itself. QEMU virt with a recent OpenSBI supports Sstc.)
+On a platform that supports the **Sstc extension** you can write the "time to fire the next interrupt" directly into the `stimecmp` **CSR** (control & status register — special registers like `satp`/`stvec` that hold CPU config/state and are accessed only via dedicated instructions). (Without Sstc, the default is an SBI timer call where M-mode (OpenSBI) schedules it on your behalf; Sstc removes that overhead by letting S-mode write the register itself. QEMU virt with a recent OpenSBI supports Sstc.)
 Add an interval to the current time (`r_time()`) and write it, and a timer interrupt fires the moment that time arrives.
 The handler bumps the tick count and **immediately schedules the next alarm**, keeping the period.
 
@@ -788,7 +788,7 @@ static void map_kernel(pagetable_t pt) {
 
 (The real code has one more line mapping the virtio-mmio devices, but the gist is the above.)
 
-Once the mapping is built, loading the page table's physical address into the **`satp` register** and flushing the TLB with `sfence.vma` applies the new page table — that's the instant paging turns on.
+Once the mapping is built, loading the page table's physical address into the **`satp` register** (Supervisor Address Translation and Protection — the CSR that points at the active page table) and flushing the TLB with `sfence.vma` applies the new page table — that's the instant paging turns on.
 `sfence.vma` flushes the CPU's cached old translations (the TLB) — we changed the mapping, so throw away the old cache.
 
 ```c
