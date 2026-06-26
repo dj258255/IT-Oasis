@@ -33,7 +33,7 @@ const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
     <div class="px-5 pt-5 sm:px-6 sm:pt-6">
     <div class="thumb-frame aspect-[16/10] rounded-xl relative overflow-hidden">
       {image && (
-        <img src={image} alt="" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
+        <img src={image} alt="" class="w-full h-full object-fill absolute inset-0 group-hover:scale-105 transition-transform duration-700" loading="lazy" onerror="this.style.display='none'" />
       )}
       <div class="w-full h-full flex items-center justify-center">
         <svg class="w-10 h-10 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">

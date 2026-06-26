@@ -5,7 +5,7 @@ const siteSettings = getSiteSettings();
 ---
 
 <div class="author-card">
-  <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 p-6 sm:p-8 md:p-10">
+  <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-6 sm:p-8 md:p-10">
     <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary/20 via-accent/15 to-rose/20">
       {siteSettings.authorImage ? (
         <img src={assetPath(siteSettings.authorImage)} alt="Author" class="w-full h-full object-cover object-top" />
@@ -21,10 +21,11 @@ const siteSettings = getSiteSettings();
         <span class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 tracking-wider uppercase" data-ko="작성자" data-en="Written by">작성자</span>
         <a href={`${base}/about`} class="text-[12px] sm:text-[13px] font-bold px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light hover:bg-primary/20 dark:hover:bg-primary-light/20 transition-colors duration-200" data-ko="@범수" data-en="@Su-Beom">@범수</a>
       </div>
-      <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed mb-5" data-ko={siteSettings.authorBio} data-en={siteSettings.authorBioEn}>
+      <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed max-w-md mx-auto sm:mx-0" data-ko={siteSettings.authorBio} data-en={siteSettings.authorBioEn}>
         {siteSettings.authorBio}
       </p>
-      <div class="flex items-center justify-center sm:justify-start gap-2">
+      </div>
+      <div class="flex sm:flex-col items-center gap-2.5 shrink-0">
         {(siteSettings.socialLinks || []).map((link: any) => {
           const href = link.type === 'email' ? `mailto:${link.url}` : link.url;
           const label = link.label || link.type;
@@ -61,24 +62,28 @@ const siteSettings = getSiteSettings();
           );
         })}
       </div>
-    </div>
   </div>
 </div>
 
 <style>
   .author-card {
-    background: rgba(255, 255, 255, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
+    border: 1px solid rgba(15, 40, 80, 0.08);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
     border-radius: 1.25rem;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.04);
+    box-shadow:
+      0 8px 28px rgba(15, 40, 80, 0.06),
+      0 1px 3px rgba(15, 40, 80, 0.05),
+      inset 0 1px 1px rgba(255, 255, 255, 0.9);
   }
 
   :global(.dark) .author-card {
-    background: rgba(30, 30, 40, 0.45);
-    border-color: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.28),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
   }
 
   .author-social-btn {
