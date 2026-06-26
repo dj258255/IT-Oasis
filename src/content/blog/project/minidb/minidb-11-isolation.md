@@ -1,8 +1,8 @@
 ---
 title: '격리는 어떻게 구현되는가 — 단일 스레드 DB에서 트랜잭션 사이를 지키기'
 titleEn: 'How Is Isolation Implemented? — Guarding Between Transactions in a Single-Threaded DB'
-description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 11편. 4편에서 '안 만든 가장 어려운 절반'이라고 인정했던 ACID의 I(격리)를 만듭니다. minidb는 단일 스레드라 진짜 동시성이 없는데 무엇을 격리하나 — 그 긴장이 설계를 정합니다. 인터리브된 in-process 트랜잭션 + 2PL 테이블 락으로, 충돌을 (블록 대신) 거부해 dirty read와 lost update를 막고, wait-for 그래프로 교착(deadlock) 순환을 탐지합니다. S/X 호환 행렬, strict 2PL, 거부 vs 블록, 그리고 2PL vs MVCC를 표로 비교하며 실제 코드로 짚습니다."
-descriptionEn: "Part 11 of building a relational database from scratch in C. We build the I in ACID (isolation) — the half Part 4 admitted was the hardest and left out. minidb is single-threaded, so what is there to isolate? That tension drives the design: interleaved in-process transactions plus 2PL table locks, where a conflict is rejected (not blocked on) to prevent dirty reads and lost updates, and a wait-for graph detects deadlock cycles. We compare the S/X matrix, strict 2PL, reject vs block, and 2PL vs MVCC in tables, grounded in real code."
+description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 11편. 4편에서 '안 만든 가장 어려운 절반'이라고 인정했던 ACID의 I(격리)를 만듭니다. minidb는 단일 스레드라 진짜 동시성이 없는데 무엇을 격리하나 — 그 긴장이 설계를 정합니다. 인터리브된 in-process 트랜잭션 + 2PL 테이블 락으로, 충돌을 (블록 대신) 거부해 dirty read와 lost update를 막고, wait-for 그래프로 교착(deadlock) 순환을 탐지합니다. S/X 호환 행렬, rigorous 2PL, 거부 vs 블록, 그리고 2PL vs MVCC를 표로 비교하며 실제 코드로 짚습니다."
+descriptionEn: "Part 11 of building a relational database from scratch in C. We build the I in ACID (isolation) — the half Part 4 admitted was the hardest and left out. minidb is single-threaded, so what is there to isolate? That tension drives the design: interleaved in-process transactions plus 2PL table locks, where a conflict is rejected (not blocked on) to prevent dirty reads and lost updates, and a wait-for graph detects deadlock cycles. We compare the S/X matrix, rigorous 2PL, reject vs block, and 2PL vs MVCC in tables, grounded in real code."
 date: 2026-06-13
 tags:
   - C
@@ -79,7 +79,7 @@ int lock_acquire(LockManager *lm, int txn, const char *table, long key, LockMode
 
 ## 3. 거부, 블록이 아니라
 
-이제 락을 실행기에 연결합니다. `INSERT`/`UPDATE`/`DELETE`는 그 테이블에 X 락을, `SELECT`는 S 락을 잡아요. 명시적 트랜잭션(`BEGIN`)이면 그 락을 **`COMMIT`/`ROLLBACK`까지 쥡니다** — 이게 **strict 2PL(2단계 잠금)** 이에요. autocommit 문장이면 문장 끝에 바로 풉니다.
+이제 락을 실행기에 연결합니다. `INSERT`/`UPDATE`/`DELETE`는 그 테이블에 X 락을, `SELECT`는 S 락을 잡아요. 명시적 트랜잭션(`BEGIN`)이면 그 락을 — 읽기(S)든 쓰기(X)든 — **`COMMIT`/`ROLLBACK`까지 쥡니다.** autocommit 문장이면 문장 끝에 바로 풀고요. X뿐 아니라 S까지 끝까지 쥐므로, 정확히는 strict 2PL보다 한 단계 강한 **rigorous 2PL(strong strict 2PL)** 이에요 — strict 2PL은 X(쓰기) 락만 커밋까지 유지하고 S(읽기)는 더 일찍 풀 수도 있는 변형입니다.
 
 실행기 배선([`db.c`](https://github.com/dj258255/minidb))은 이렇게 갈려요.
 
@@ -102,7 +102,7 @@ if (acquire_stmt_locks(db, &st, lock_txn, out) != 0) {  /* 충돌이면 여기�
 | 충돌 시 | 앞 트랜잭션이 풀 때까지 대기 | 즉시 `ERROR` 반환 |
 | 필요한 것 | 대기할 스레드 | 없음(단일 스레드) |
 | 교착 가능성 | 있음(대기 순환) | **없음**(대기가 없음) |
-| 격리 효과 | 동일 | 동일(충돌을 직렬화) |
+| 충돌 직렬화 | 대기로 줄 세움 | 거부로 줄 세움 (목적은 같지만 사용자는 재시도해야) |
 
 이걸로 진짜 엔진에서 격리를 시연할 수 있어요. 다른 트랜잭션(T99)이 테이블 `t`에 X 락을 쥔 상황을 만들어 두고:
 
@@ -171,7 +171,7 @@ static int dfs_cycle(const LockManager *lm, int txn, int *path, int depth) {
 | 대가 | 동시성 저하, 교착 | 죽은 버전 누적, VACUUM |
 | minidb 구현 | 테이블 락 + 거부 | 가시성 규칙(토대까지) |
 
-하지만 격리의 **메커니즘**은 다 들어 있어요. S/X 락과 호환 행렬, 트랜잭션이 끝까지 락을 쥐는 strict 2PL, 충돌로 막히는 dirty read·lost update, 그리고 wait-for 그래프로 보는 교착.
+하지만 격리의 **메커니즘**은 다 들어 있어요. S/X 락과 호환 행렬, 트랜잭션이 S·X를 끝까지 쥐는 rigorous 2PL, 충돌로 거부되는 dirty read·lost update, 그리고 wait-for 그래프로 보는 교착.
 
 "트랜잭션 사이"라는, 단일 트랜잭션 엔진엔 없던 개념을 처음부터 발명해야 했어요 — 락 소유자 id, 충돌 규칙, 대기 그래프 전부가 "다른 트랜잭션이 존재한다"를 코드로 표현한 것입니다. 4편에서 가장 어렵다고 미뤘던 절반이 왜 어려운지, 만들면서 알았어요.
 
@@ -185,10 +185,10 @@ static int dfs_cycle(const LockManager *lm, int txn, int *path, int depth) {
 |---|---|---|---|
 | **A** 원자성 | 전부 아니면 전무 | 롤백(WAL truncate) | [4편](/blog/project/minidb/minidb-4-transactions) |
 | **C** 일관성 | 제약 위반 차단 | NOT NULL 제약 | [9편](/blog/project/minidb/minidb-9-null-storage) |
-| **I** 격리 | 트랜잭션 사이 보호 | 2PL 테이블 락 + 거부 | 이번 편 |
+| **I** 격리 | 트랜잭션 사이 보호 | 2PL 테이블 락 + 거부 (락 기반 *메커니즘*; 격리 수준·스냅샷은 아님) | 이번 편 |
 | **D** 내구성 | 커밋은 안 사라짐 | WAL | [3편](/blog/project/minidb/minidb-3-index-wal) |
 
-어느 하나도 "진짜 DB만큼"은 아니지만, 각 글자가 코드로 무엇을 뜻하는지는 이제 손에 잡혀요. 특히 I는, 단일 스레드라는 제약이 오히려 "격리가 정확히 무엇을 막는 것인가"를 더 또렷이 보게 해 줬습니다. 다음 [12편](/blog/project/minidb/minidb-12-2pl-vs-mvcc)에서 2PL과 MVCC를 개념으로 비교하고, [13편](/blog/project/minidb/minidb-13-mvcc)에서 그 MVCC를 minidb에 실제 코드로 심어 봐요.
+어느 하나도 "진짜 DB만큼"은 아니지만(특히 I는 락 기반 메커니즘이지 격리 수준·스냅샷까지는 아니에요), 각 글자가 코드로 무엇을 뜻하는지는 이제 손에 잡혀요. 4편에서 가장 어렵다고 미뤘던 절반이 왜 어려운지도 만들며 알았고요. 다음 [12편](/blog/project/minidb/minidb-12-2pl-vs-mvcc)에서 2PL과 MVCC를 개념으로 비교하고, [13편](/blog/project/minidb/minidb-13-mvcc)에서 그 MVCC를 minidb에 실제 코드로 심어 봐요.
 
 > **시리즈**: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · [7. 직접 재보기](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain) · [9. NULL 저장](/blog/project/minidb/minidb-9-null-storage) · [10. 보조 인덱스](/blog/project/minidb/minidb-10-secondary-index) · 11. 격리 · [코드(GitHub)](https://github.com/dj258255/minidb)
 
@@ -263,7 +263,7 @@ The key is that a conflict **returns `-1` instead of blocking** (why, in the nex
 
 ## 3. Reject, Not Block
 
-Now I wire the locks into the executor. `INSERT`/`UPDATE`/`DELETE` take an X lock on the table, `SELECT` an S lock. In an explicit transaction (`BEGIN`), it **holds the lock until `COMMIT`/`ROLLBACK`** — this is **strict 2PL (two-phase locking)**. An autocommit statement releases right at statement end.
+Now I wire the locks into the executor. `INSERT`/`UPDATE`/`DELETE` take an X lock on the table, `SELECT` an S lock. In an explicit transaction (`BEGIN`), it **holds the lock — S for reads, X for writes — until `COMMIT`/`ROLLBACK`**; an autocommit statement releases right at statement end. Since it holds S as well as X to the end, this is more precisely **rigorous 2PL (strong strict 2PL)**, one notch stronger than strict 2PL (which keeps only X locks to commit and may release S earlier).
 
 The executor wiring ([`db.c`](https://github.com/dj258255/minidb)) splits like this.
 
@@ -286,7 +286,7 @@ Here the single-threaded nature shows. A real DB would **block** a conflicting l
 | On conflict | wait until prior txn releases | return `ERROR` immediately |
 | Needs | a thread to wait | none (single-threaded) |
 | Deadlock possible | yes (wait cycles) | **no** (no waiting) |
-| Isolation effect | same | same (serializes conflicts) |
+| Conflict serialization | lines them up by waiting | lines them up by rejecting (same goal, but the user must retry) |
 
 This lets me demonstrate isolation on the real engine. Set up another transaction (T99) holding an X lock on table `t`:
 
@@ -355,7 +355,7 @@ The two techniques solve isolation with opposite philosophies.
 | Cost | low concurrency, deadlocks | dead-version buildup, VACUUM |
 | minidb impl | table locks + reject | visibility rule (foundation only) |
 
-But the **mechanism** of isolation is all here. S/X locks and the compatibility matrix, strict 2PL where a transaction holds locks to the end, dirty read and lost update blocked by conflict, and deadlock seen through the wait-for graph.
+But the **mechanism** of isolation is all here. S/X locks and the compatibility matrix, rigorous 2PL where a transaction holds both S and X to the end, dirty read and lost update rejected on conflict, and deadlock seen through the wait-for graph.
 
 I had to invent from scratch the concept of "between transactions," which a single-transaction engine never had — the lock owner id, the conflict rules, the wait graph are all "another transaction exists" expressed in code. Building it, I understood why the half I deferred in Part 4 as the hardest is hard.
 
@@ -369,10 +369,10 @@ With this, minidb has touched all four letters of ACID.
 |---|---|---|---|
 | **A** atomicity | all or nothing | rollback (WAL truncate) | [Part 4](/blog/project/minidb/minidb-4-transactions) |
 | **C** consistency | block constraint violations | NOT NULL constraints | [Part 9](/blog/project/minidb/minidb-9-null-storage) |
-| **I** isolation | protect between transactions | 2PL table locks + reject | this part |
+| **I** isolation | protect between transactions | 2PL table locks + reject (a lock-based *mechanism*; not isolation levels or snapshots) | this part |
 | **D** durability | commits don't vanish | WAL | [Part 3](/blog/project/minidb/minidb-3-index-wal) |
 
-None of them is "as much as a real DB," but what each letter means in code is now graspable. In particular, the single-threaded constraint for I made it clearer to see exactly what isolation prevents. Next, [Part 12](/blog/project/minidb/minidb-12-2pl-vs-mvcc) compares 2PL and MVCC at the concept level, and [Part 13](/blog/project/minidb/minidb-13-mvcc) grafts that MVCC onto minidb with real code.
+None of them is "as much as a real DB" (for I in particular, it's a lock-based mechanism, not isolation levels or snapshots), but what each letter means in code is now graspable — and building it, I saw why the half I deferred in Part 4 as the hardest is hard. Next, [Part 12](/blog/project/minidb/minidb-12-2pl-vs-mvcc) compares 2PL and MVCC at the concept level, and [Part 13](/blog/project/minidb/minidb-13-mvcc) grafts that MVCC onto minidb with real code.
 
 > **Series**: [1. Storage Layer](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index & WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join & Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN & LIKE](/blog/project/minidb/minidb-6-between-like) · [7. Benchmark](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain) · [9. NULL Storage](/blog/project/minidb/minidb-9-null-storage) · [10. Secondary Index](/blog/project/minidb/minidb-10-secondary-index) · 11. Isolation · [Code (GitHub)](https://github.com/dj258255/minidb)
 
