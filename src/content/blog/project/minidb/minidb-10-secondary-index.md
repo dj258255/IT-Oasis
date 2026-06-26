@@ -34,6 +34,16 @@ seriesOrder: 10
 
 > **왜 보조 인덱스인가**: 실무에서 인덱스를 거는 컬럼은 대부분 PK가 아니에요. 자주 검색하는 `email`, `status`, `created_at` 같은 컬럼이죠. 이것들은 유니크하지 않고, 끊임없이 INSERT/UPDATE/DELETE의 영향을 받습니다. "보조 인덱스가 어렵다"의 정체가 바로 이 비유니크성과 유지보수예요. 실제 코드는 [btree.c](https://github.com/dj258255/minidb)와 db.c에 있습니다.
 
+PK 인덱스와 보조 인덱스가 어디서 갈리는지 한눈에:
+
+| | PK 인덱스 | 보조 인덱스 |
+|---|---|---|
+| 키 | 유일 | 중복 가능 |
+| 탐색 | `btree_find`(하나) | `btree_find_all`(하한 탐색) |
+| 한 키의 RID | 하나 | 여럿 |
+| 조회 후 | 바로 사용 | 힙 재검사 필요 |
+| UPDATE(RID 변경) | 영향 적음 | 모든 보조 인덱스 갱신 |
+
 ## 1. 같은 값이 여럿이다 — 중복 키 B+Tree
 
 PK는 유일해요. 그래서 3편의 B+Tree는 "키 하나에 값 하나"였고, `btree_insert`는 같은 키가 들어오면 **덮어썼습니다**. PK에선 같은 키가 두 번 올 일이 없으니 이 덮어쓰기가 문제될 일도 없었죠.
@@ -66,7 +76,7 @@ if (!allow_dup && i < n->num_keys && n->keys[i] == key) {
 
 20이 잔뜩 쌓여 리프가 쪼개지면, 분할의 경계 키(분리키)가 하필 20이 될 수 있어요. 그러면 20짜리 항목이 왼쪽 리프에도, 오른쪽 리프에도 걸칩니다. 3편의 검색은 분리키와 같으면 오른쪽으로 갔는데(`>=`), 그러면 왼쪽에 흩어진 20들을 놓쳐요.
 
-> **핵심**: 유니크 키였다면 한 항목만 찾으면 그만이니 "어느 한쪽"만 가도 됐다. 비유니크에선 같은 키가 두 리프에 걸쳐 있을 수 있어서, "가장 왼쪽 후보부터 시작해 같은 값이 끝날 때까지 훑어야" 한다.
+> **핵심**: 같은 키가 하나뿐이면(유니크) 그 하나만 찾으면 그만이라 "어느 한쪽"만 가도 됐다. 비유니크에선 같은 키가 두 리프에 걸쳐 있을 수 있어서, "가장 왼쪽 후보부터 시작해 같은 값이 끝날 때까지 훑어야" 한다.
 
 그래서 **하한 탐색(lower bound)** 이 필요했어요. 분리키와 같으면 오른쪽으로 넘어가지 않고(`>`, `>=` 아님) 왼쪽 자식으로 내려가, 20이 시작될 수 있는 가장 왼쪽 리프에 닿습니다.
 
@@ -167,7 +177,7 @@ minidb의 UPDATE는 가변 길이라 제자리 수정이 안 돼서, **옛 행�
 
 처음엔 "바뀐 컬럼의 인덱스만 갱신하면 되겠지" 했는데, 아니었어요. RID가 통째로 바뀌니, **인덱싱한 컬럼이 안 바뀌었어도** 그 인덱스가 옛 RID(이제 tombstone)를 가리키게 됩니다. 그러면 그 행이 검색에서 사라져요.
 
-> **핵심**: 보조 인덱스는 "컬럼값 -> RID"의 매핑이다. UPDATE가 RID를 바꾸면, 컬럼값이 그대로여도 그 매핑의 오른쪽(RID)이 낡는다. 그래서 UPDATE는 바뀐 컬럼과 무관하게 **모든 보조 인덱스에 새 RID를 다시 등록**해야 한다.
+> **핵심**: 보조 인덱스는 "컬럼값 -> RID"의 매핑이다. RID가 **물리 위치**인 minidb(힙 모델)에선 UPDATE가 RID를 바꾸면 컬럼값이 그대로여도 그 매핑의 오른쪽(RID)이 낡는다. 그래서 UPDATE는 바뀐 컬럼과 무관하게 **모든 보조 인덱스에 새 RID를 다시 등록**해야 한다(InnoDB처럼 PK 값을 가리키는 구조라면 안 그래도 된다 — 아래 표).
 
 ```c
 for (모든 보조 인덱스 k) {
@@ -185,9 +195,9 @@ for (모든 보조 인덱스 k) {
 
 ### DELETE — 아무것도 안 해도 됐다
 
-DELETE는 반대로, 아무것도 안 해도 됐어요. 삭제는 힙 행을 tombstone 처리할 뿐, 인덱스 항목은 그냥 둡니다. 나중에 그 stale 항목을 따라가도 `heap_get`이 tombstone을 만나 걸러요(4단계에서 봅니다).
+DELETE는 minidb에선 인덱스를 거의 안 건드려도 됐어요 — 정확히는 **지연 삭제(lazy deletion)** 를 택한 거예요. 삭제는 힙 행을 tombstone 처리할 뿐 인덱스 항목은 그냥 두고, 나중에 그 stale 항목을 따라가도 `heap_get`이 tombstone을 만나 걸러요(4단계). 다만 이건 보조 인덱스의 일반 성질이 아니라 구현 선택이에요 — 진짜 DB는 그 죽은 항목을 언젠가 VACUUM/purge로 정리해 공간을 회수합니다.
 
-> **주의**: 이게 작동하는 건 4단계의 재검사 덕분이다. 인덱스에 stale 항목이 남아 있어도 결과가 정확한 건, 최종 판정을 인덱스가 아니라 실제 행으로 하기 때문. 그래서 **B+Tree 삭제를 안 만들어도 됐다** — PK 인덱스가 줄곧 그래 왔던 것과 같다.
+> **주의**: 이게 작동하는 건 **힙을 항상 최종 진실로 삼는 구조**(tombstone + 4단계 재검사) 덕분이다. 인덱스에 stale 항목이 남아 있어도 최종 판정을 인덱스가 아니라 실제 행으로 하니 결과가 정확하다. 그래서 minidb는 **B+Tree 물리 삭제를 구현하지 않아도 됐다**(PK 인덱스가 줄곧 그래 온 것과 같다) — 어디까지나 minidb의 구현 선택이고, 진짜 DB는 죽은 엔트리를 결국 정리·회수한다.
 
 ### WAL — 인덱스도 함께 묶기
 
@@ -239,7 +249,7 @@ static int sec_scan_visit(bkey_t key, bval_t val, void *ctx_) {
 }
 ```
 
-이게 실제 DB가 하는 "**index scan + recheck**"와 같은 패턴이에요. 인덱스는 "후보를 좁혀주는" 역할이고, 최종 판정은 실제 행으로 한 번 더 합니다. 덕분에 B+Tree에 삭제 기능이 없어도, stale 항목이 남아 있어도 결과는 정확해요.
+이건 실제 DB의 Bitmap Heap Scan 등에서 보이는 recheck와 **비슷한 아이디어**예요 — 인덱스는 "후보를 좁혀주는" 역할이고 최종 판정은 실제 행으로 한 번 더. 덕분에 B+Tree에 삭제 기능이 없어도, stale 항목이 남아 있어도 결과는 정확해요. 다만 *이유*는 좀 달라요: PostgreSQL의 recheck는 인덱스가 후보만 보장하는 lossy 인덱스(GIN/GiST/BRIN, Bitmap)에서 주로 나오고 B-tree 등식 스캔엔 보통 recheck가 없는데, minidb의 재검사는 stale RID(tombstone·슬롯 재사용) 때문이거든요.
 
 > **핵심**: "인덱스는 후보를 좁히고, 진실은 힙에 있다"가 인덱스 스캔의 본질이다. 3단계에서 DELETE에 손 안 대도 됐던 것, B+Tree 삭제를 안 만들어도 됐던 것 모두 이 재검사가 받쳐 줬기에 가능했다.
 
@@ -271,7 +281,7 @@ EXPLAIN과 실행기가 "어떤 인덱스를 쓸지" 판단하는 함수(`sec_in
 
 - **INT 컬럼만.** B+Tree 키가 int64라, TEXT 컬럼 인덱스는 문자열 키 B+Tree가 필요해 아직 못 했습니다.
 - **`=` 조건만.** 보조 인덱스로 범위(`age > 20`)는 아직 안 탑니다(PK는 됨). find_all을 범위 버전으로 확장하면 되는 다음 숙제예요.
-- **NULL은 색인 안 함.** NULL은 B+Tree 키가 될 수 없어 인덱스에서 빠집니다(실제 DB도 보통 NULL을 따로 다뤄요).
+- **NULL은 색인 안 함.** minidb는 단순화를 위해 NULL을 인덱싱하지 않습니다 — B+Tree 자체가 NULL을 못 담는 건 아니에요(실제 PostgreSQL·InnoDB는 NULL도 인덱스에 넣고, NULL 정렬 위치만 따로 정합니다).
 - **비용 모델이 없음.** 인덱스가 항상 이득이라 가정하고 씁니다. 전체의 90%가 걸리는 조건이면 풀 스캔이 더 빠른데, 그 판단은 [DB 인덱스 ②](/blog/theory/db-index-02-scan-types)의 영역이에요.
 
 ## 6. 정리
@@ -316,6 +326,16 @@ We build the secondary index in four stages. Here is the whole map first.
 
 > **Why secondary indexes**: in practice the columns you index are mostly not the PK. They are columns you search often — `email`, `status`, `created_at`. These are not unique and are constantly hit by INSERT/UPDATE/DELETE. The essence of "secondary indexes are hard" is exactly this non-uniqueness and maintenance. The real code is in [btree.c](https://github.com/dj258255/minidb) and db.c.
 
+Where the PK index and a secondary index part ways, at a glance:
+
+| | PK index | Secondary index |
+|---|---|---|
+| Key | unique | duplicates allowed |
+| Search | `btree_find` (one) | `btree_find_all` (lower bound) |
+| RIDs per key | one | many |
+| After lookup | use directly | heap recheck needed |
+| UPDATE (RID change) | little impact | every secondary index updates |
+
 ## 1. The Same Value Appears Many Times — Duplicate-Key B+Tree
 
 A PK is unique. So Part 3's B+Tree was "one value per key", and `btree_insert` **overwrote** when the same key came in. Since a PK never sees the same key twice, that overwrite never caused trouble.
@@ -348,7 +368,7 @@ Writing was one flag. **Reading** is where I got stuck. To find every entry with
 
 When lots of 20s pile up and a leaf splits, the split's boundary key (the separator) can end up being 20. Then entries of 20 straddle both the left and right leaf. Part 3's search went right when it equaled the separator (`>=`), and that misses the 20s scattered on the left.
 
-> **Key point**: with a unique key, finding one entry is enough, so going to "either side" worked. With non-unique, the same key can straddle two leaves, so you must "start from the leftmost candidate and sweep until the value ends".
+> **Key point**: when there's only one entry per key (unique), finding that one is enough, so going to "either side" worked. With non-unique, the same key can straddle two leaves, so you must "start from the leftmost candidate and sweep until the value ends".
 
 So I needed a **lower-bound search**. When it equals the separator, it does not cross right (`>`, not `>=`) but descends the left child, landing on the leftmost leaf where 20 could begin.
 
@@ -449,7 +469,7 @@ minidb's UPDATE cannot edit in place (variable length), so it **deletes the old 
 
 At first I thought "I only need to update the index for the changed column." Wrong. Since the RID changes wholesale, **even if the indexed column did not change**, that index ends up pointing at the old RID (now a tombstone). And then that row vanishes from search.
 
-> **Key point**: a secondary index is a mapping "column value -> RID". When UPDATE changes the RID, the right side (RID) of that mapping goes stale even if the column value is unchanged. So UPDATE must **re-register the new RID in every secondary index**, regardless of which column changed.
+> **Key point**: a secondary index is a mapping "column value -> RID". In minidb, where the RID is a **physical location** (the heap model), when UPDATE changes the RID the right side (RID) of that mapping goes stale even if the column value is unchanged. So UPDATE must **re-register the new RID in every secondary index**, regardless of which column changed (a structure that points at the PK value, like InnoDB, avoids this — see the table below).
 
 ```c
 for (every secondary index k) {
@@ -467,9 +487,9 @@ This is the cost of minidb using the RID as a physical location (the heap model)
 
 ### DELETE — Nothing to Do
 
-DELETE, conversely, needs nothing. A delete just tombstones the heap row and leaves the index entry alone. Even if you later follow that stale entry, `heap_get` meets the tombstone and filters it (covered in Stage 4).
+DELETE, in minidb, barely touches the index — more precisely, it's a **lazy-deletion** choice. A delete just tombstones the heap row and leaves the index entry alone, and even if you later follow that stale entry, `heap_get` meets the tombstone and filters it (Stage 4). But this is an implementation choice, not a general property of secondary indexes — a real DB eventually cleans up those dead entries via VACUUM/purge and reclaims the space.
 
-> **Caution**: this works thanks to the Stage-4 recheck. The result stays correct even with stale entries in the index because the final verdict is made on the real row, not the index. That is why **I did not have to implement B+Tree deletion** — exactly as the PK index has done all along.
+> **Caution**: this works thanks to a **structure that always treats the heap as the final truth** (tombstone + the Stage-4 recheck). The result stays correct even with stale entries because the final verdict is made on the real row, not the index. That is why minidb **did not have to implement physical B+Tree deletion** (exactly as the PK index has done all along) — but that is minidb's implementation choice; a real DB eventually cleans up and reclaims dead entries.
 
 ### WAL — Bind the Index In Too
 
@@ -521,7 +541,7 @@ static int sec_scan_visit(bkey_t key, bval_t val, void *ctx_) {
 }
 ```
 
-This is the same "**index scan + recheck**" pattern a real DB does. The index "narrows candidates", and the final verdict is made once more on the real row. Thanks to that, the result is correct even without B+Tree deletion and even with stale entries lying around.
+This is a **similar idea** to the recheck seen in a real DB's Bitmap Heap Scan — the index "narrows candidates", and the final verdict is made once more on the real row. Thanks to that, the result is correct even without B+Tree deletion and even with stale entries lying around. The *reason* differs, though: PostgreSQL's recheck shows up mainly with lossy indexes (GIN/GiST/BRIN, Bitmap) that only guarantee candidates, and a B-tree equality scan usually has no recheck — whereas minidb's recheck is for stale RIDs (tombstones, slot reuse).
 
 > **Key point**: "the index narrows candidates, the truth lives in the heap" is the essence of an index scan. Not touching DELETE in Stage 3, not implementing B+Tree deletion — all of it was possible because this recheck backs it up.
 
@@ -553,7 +573,7 @@ This is not the whole story. Let me be honest about what I deliberately skipped 
 
 - **INT columns only.** The B+Tree key is int64, so a TEXT-column index needs a string-key B+Tree, which I have not done yet.
 - **`=` conditions only.** A secondary index does not yet take ranges (`age > 20`) (the PK does). Extending find_all to a range version is the next homework.
-- **NULL is not indexed.** NULL cannot be a B+Tree key, so it drops out of the index (real DBs usually handle NULL specially too).
+- **NULL is not indexed.** minidb skips indexing NULL for simplicity — it's not that a B+Tree can't hold NULL (real PostgreSQL/InnoDB do index NULLs, just deciding where NULL sorts).
 - **No cost model.** It assumes an index is always a win. If a condition matches 90% of everything, a full scan is faster — but that judgment belongs to [DB Index ②](/blog/theory/db-index-02-scan-types).
 
 ## 6. Wrap-up
