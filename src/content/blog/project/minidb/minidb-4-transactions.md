@@ -21,7 +21,7 @@ seriesOrder: 4
 
 ## 0. 들어가며 — WAL의 원리를 SQL로 끌어올리기
 
-[3편](/blog/project/minidb/minidb-3-index-wal)에서 WAL을 만들며 원자성·내구성의 *원리*를 손에 넣었어요 — 로그에 먼저 적고, 커밋 마커를 찍고, 그 다음에 데이터에 적용한다. 크래시가 나면 마커 유무로 redo할지 버릴지가 갈립니다.
+[3편](/blog/project/minidb/minidb-3-index-wal)에서 WAL로 원자성·내구성의 *원리*를 손에 넣었어요 — 로그 먼저, 커밋 마커, 그 다음 데이터, 크래시 땐 마커 유무로 redo/버림(자세한 복습은 3편에).
 
 그런데 거기까지는 "페이지 한 묶음을 원자적으로 디스크에 박는" 저수준 기계였어요. 사용자가 실제로 쓰는 건 SQL이죠. 이번 편은 그 원리를 **SQL 레벨에서 쓸 수 있게 묶습니다** — 여러 변경을 한 단위로 묶어 전부 확정(`COMMIT`)하거나 전부 되돌리는(`ROLLBACK`) 것, 즉 트랜잭션입니다.
 
@@ -62,7 +62,7 @@ no-steal로 커밋 전 dirty 페이지를 [1편 버퍼 풀](/blog/project/minidb
 
 | | minidb | PostgreSQL·InnoDB |
 |---|---|---|
-| 정책 | no-steal + force(커밋 시 WAL flush) | steal + no-force |
+| 정책 | no-steal + 커밋 시 force | steal + no-force |
 | 미커밋 변경이 디스크에 | 안 감 (버퍼 풀에 묶임) | 갈 수 있음 |
 | undo 로그 | **불필요** | 필요 |
 | redo | WAL로 | WAL로 |
@@ -183,7 +183,7 @@ static int exec_rollback(Database *db, FILE *out) {
 
 ## 0. Introduction — Lifting WAL's Principle Up to SQL
 
-In [Part 3](/blog/project/minidb/minidb-3-index-wal) we built WAL and got the *principle* of atomicity and durability in hand — write to the log first, stamp a commit marker, then apply to data. On a crash, the presence or absence of the marker decides whether to redo or discard.
+In [Part 3](/blog/project/minidb/minidb-3-index-wal) we built WAL and got the *principle* of atomicity and durability in hand — log first, commit marker, then data, and on a crash the marker decides redo vs discard (full refresher in Part 3).
 
 But that was a low-level machine that "atomically pins one batch of pages to disk". What users actually use is SQL. This part **bundles that principle so it can be used at the SQL level** — grouping several changes into one unit and either committing them all (`COMMIT`) or undoing them all (`ROLLBACK`). That is a transaction.
 
@@ -224,7 +224,7 @@ And instead of force-flushing indiscriminately on every commit, we do only redo 
 
 | | minidb | PostgreSQL·InnoDB |
 |---|---|---|
-| Policy | no-steal + force (WAL flush at commit) | steal + no-force |
+| Policy | no-steal + force at commit | steal + no-force |
 | Uncommitted change to disk | never (pinned in buffer pool) | possible |
 | undo log | **not needed** | needed |
 | redo | via WAL | via WAL |
