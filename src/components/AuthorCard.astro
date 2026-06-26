@@ -5,8 +5,8 @@ const siteSettings = getSiteSettings();
 ---
 
 <div class="author-card">
-  <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-6 sm:p-8 md:p-10">
-    <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary/20 via-accent/15 to-rose/20">
+  <div class="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-7 sm:gap-9 p-7 sm:p-9 md:p-10">
+    <div class="w-28 h-28 sm:w-[7.5rem] sm:h-[7.5rem] rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-primary/20 via-accent/15 to-rose/20 ring-4 ring-white/70 dark:ring-white/10 shadow-xl shadow-primary/10">
       {siteSettings.authorImage ? (
         <img src={assetPath(siteSettings.authorImage)} alt="Author" class="w-full h-full object-cover object-top" />
       ) : (
@@ -16,16 +16,15 @@ const siteSettings = getSiteSettings();
         </>
       )}
     </div>
-    <div class="flex-1 min-w-0 text-center sm:text-left">
-      <div class="flex items-center justify-center sm:justify-start gap-2.5 mb-3">
-        <span class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 tracking-wider uppercase" data-ko="작성자" data-en="Written by">작성자</span>
-        <a href={`${base}/about`} class="text-[12px] sm:text-[13px] font-bold px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light hover:bg-primary/20 dark:hover:bg-primary-light/20 transition-colors duration-200" data-ko="@범수" data-en="@Su-Beom">@범수</a>
+    <div class="text-center sm:text-left max-w-md">
+      <div class="flex items-center justify-center sm:justify-start gap-2.5 mb-2.5">
+        <span class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500 tracking-[0.15em] uppercase font-semibold" data-ko="작성자" data-en="Written by">작성자</span>
+        <a href={`${base}/about`} class="text-[13px] sm:text-[14px] font-bold px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light hover:bg-primary/20 dark:hover:bg-primary-light/20 transition-colors duration-200" data-ko="@범수" data-en="@Su-Beom">@범수</a>
       </div>
-      <p class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400 leading-relaxed max-w-md mx-auto sm:mx-0" data-ko={siteSettings.authorBio} data-en={siteSettings.authorBioEn}>
+      <p class="text-[14px] sm:text-[15px] text-gray-600 dark:text-gray-300 leading-relaxed" data-ko={siteSettings.authorBio} data-en={siteSettings.authorBioEn}>
         {siteSettings.authorBio}
       </p>
-      </div>
-      <div class="flex sm:flex-col items-center gap-2.5 shrink-0">
+      <div class="flex items-center justify-center sm:justify-start gap-2.5 mt-5">
         {(siteSettings.socialLinks || []).map((link: any) => {
           const href = link.type === 'email' ? `mailto:${link.url}` : link.url;
           const label = link.label || link.type;
@@ -62,11 +61,14 @@ const siteSettings = getSiteSettings();
           );
         })}
       </div>
+    </div>
   </div>
 </div>
 
 <style>
   .author-card {
+    position: relative;
+    overflow: hidden;
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
     border: 1px solid rgba(15, 40, 80, 0.08);
     backdrop-filter: blur(22px) saturate(170%);
@@ -76,6 +78,24 @@ const siteSettings = getSiteSettings();
       0 8px 28px rgba(15, 40, 80, 0.06),
       0 1px 3px rgba(15, 40, 80, 0.05),
       inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  /* Soft ambient glow filling the open space */
+  .author-card::before {
+    content: '';
+    position: absolute;
+    top: -55%;
+    right: -6%;
+    width: 360px;
+    height: 360px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.13), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  :global(.dark) .author-card::before {
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.1), transparent 70%);
   }
 
   :global(.dark) .author-card {
@@ -90,27 +110,33 @@ const siteSettings = getSiteSettings();
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.06);
-    color: #6b7280;
-    transition: all 0.2s ease;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(15, 40, 80, 0.08);
+    color: #64748b;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .author-social-btn:hover {
-    background: rgba(56, 189, 248, 0.1);
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.32);
     color: #0284c7;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
 
   :global(.dark) .author-social-btn {
     background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
     color: #9ca3af;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.06);
   }
 
   :global(.dark) .author-social-btn:hover {
-    background: rgba(100, 160, 200, 0.1);
+    background: rgba(56, 189, 248, 0.16);
+    border-color: rgba(56, 189, 248, 0.3);
     color: #8db8d0;
   }
 </style>
