@@ -21,7 +21,7 @@ seriesOrder: 10
 ---
 
 
-*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 10편 — UDP까지 올린 [네트워크 스택](/blog/hobby/hobby-kernel-06-networking) 위에 TCP를 얹습니다.*
+*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 10편 — UDP까지 올린 [네트워크 스택](/blog/hobby/hobby-kernel-06-networking) 위에 **최소 TCP**(3-way 핸드셰이크 + seq/ack 회계)를 얹습니다.*
 
 ## 0. 들어가며
 
@@ -30,7 +30,7 @@ UDP는 단순합니다 — 패킷 하나를 만들어 던지면 끝이에요.
 도착했는지, 순서가 맞는지 신경 쓰지 않아요. **던지고 잊어버립니다(fire and forget).**
 
 TCP는 다른 약속을 해요.
-"보낸 건 반드시, 보낸 순서대로 도착한다."
+"보낸 바이트는 빠짐없이, 보낸 순서대로 — 애플리케이션에게 — 전달된다." (패킷 자체는 뒤바뀌거나 중복돼 도착할 수 있고, TCP가 내부에서 재정렬해 *앱에는* 순서대로 보이게 하는 거예요.)
 그런데 우리가 쓰는 네트워크 계층(IP)은 그런 약속을 전혀 하지 않아요 — 패킷은 사라질 수도, 뒤바뀔 수도, 복제될 수도 있습니다.
 TCP는 **그 못 믿을 바닥 위에 믿을 수 있는 바이트 스트림을 세우는** 프로토콜이에요.
 
@@ -66,7 +66,7 @@ UDP 헤더에는 **포트와 길이와 체크섬**밖에 없어요.
 
 세 문제의 공통 해법이 바로 **"모든 바이트에 번호를 매긴다"** 예요.
 번호가 있으면 *"몇 번까지 받았다"* 를 말할 수 있고(도착 확인), *"빠진 번호가 있다"* 를 알 수 있고(재전송 트리거), *"번호 순서대로 재배열"* 할 수 있어요(재정렬).
-이 글에서 우리가 직접 구현하는 건 1·3번의 **씨앗**이고(도착 확인과 연결 합의), 2번과 본격적인 1번(재전송·재정렬)은 5절에서 *"왜 일부러 뺐는지"* 로 다룹니다.
+이 글에서 우리가 직접 구현하는 건 1·3번의 **씨앗**이고(도착 확인과 연결 합의), 2번과 본격적인 1번(재전송·재정렬), 그리고 TCP의 또 다른 핵심인 **흐름 제어(윈도우)** 는 5절에서 *"왜 일부러 뺐는지"* 로 다룹니다.
 
 ## 2. 사전 지식 — 시퀀스 번호 회계라는 양방향 장부
 
@@ -103,7 +103,7 @@ uint32 cliack = cliseq + 1;    // "상대에게서 다음에 기대하는 seq" =
 ```c
 // SYN-ACK를 보낸 뒤, 우리 seq를 1 올린다 (SYN이 seq 1을 소비)
 tcp_send(pmac, pip, myport, pport, myseq, cliseq + 1, TH_SYN | TH_ACK, 0, 0);
-myseq += 1;                    // ← SYN 한 개 = seq 1 소비
+myseq += 1;                    // ← SYN 플래그가 seq 1 소비 (RFC: "SYN occupies one sequence number")
 ```
 
 ```c
@@ -127,7 +127,7 @@ SYN은 `+1`, 데이터는 `+n`, FIN도 `+1`.
 | 헤더 크기 | 8바이트 | 최소 20바이트 |
 | 우리 구현 범위 | 7편에서 완성 | seq/ack 회계 + 핸드셰이크 + 에코(이 글) |
 
-> **핵심 교훈**: UDP와 TCP의 모든 차이는 결국 **"헤더에 번호를 적느냐"** 한 가지에서 파생돼요. 번호가 있으니 확인(ack)이 가능하고, 확인이 가능하니 재전송이 가능하고, 번호가 있으니 재정렬이 가능합니다. **신뢰성은 번호 매기기에서 옵니다.**
+> **핵심 교훈**: UDP와 TCP의 모든 차이는 결국 **"헤더에 번호를 적느냐"** 한 가지에서 파생돼요. 번호가 있으니 확인(ack)이 가능하고, 번호와 ack가 있으니 (타이머와 함께) 재전송을 **구현할 수 있고**, 번호가 있으니 재정렬이 가능합니다. (번호만으로 재전송이 되는 건 아니에요 — 언제 잃었는지는 ACK·타이머가 알려주죠. 이 글은 그 토대까지만.) **신뢰성은 번호 매기기에서 옵니다.**
 
 ## 3. 3-way 핸드셰이크 — 왜 하필 세 번인가
 
@@ -241,7 +241,7 @@ put16(t + 16, 0);  put16(t + 18, 0);          // checksum 자리, urgent
 > 체크섬은 "전송 중 비트가 깨지지 않았나"를 검증해요. 그런데 TCP 체크섬은 TCP 헤더만 보는 게 아니라, **IP 주소까지 끌어와서** 계산해요. 왜 자기 계층도 아닌 IP 주소를 넣을까요?
 
 이유는 *"이 세그먼트가 정말 이 출발지→도착지 쌍으로 가는 게 맞나"* 까지 검증하기 위해서예요.
-IP 헤더가 중간에 망가져 엉뚱한 곳으로 배달돼도, 의사헤더(pseudo-header)에 출발/도착 IP를 섞어 계산하면 체크섬이 안 맞아 걸러집니다.
+IP 헤더 자체는 이미 IP 체크섬(IPv4)으로 보호돼요. 의사헤더(pseudo-header)의 목적은 따로 있어요 — 세그먼트가 **다른 endpoint로 잘못 전달되는 경우(misdelivery)** 를 잡는 거죠. 출발/도착 IP를 체크섬에 섞으면, 엉뚱한 목적지로 새어든 세그먼트는 체크섬이 안 맞아 걸러집니다.
 
 이건 [7편의 UDP](/blog/hobby/hobby-kernel-06-networking)와 **완전히 같은 방식**이에요. 딱 하나, 의사헤더의 프로토콜 번호만 UDP(17)에서 TCP(6)로 바뀝니다.
 
@@ -306,6 +306,31 @@ if (n >= 0 && (fl & TH_FIN))
 마지막 ACK에서 내 seq가 `myseq + 1`인 건 **방금 보낸 FIN이 seq 1을 소비했기 때문**이고, ack가 `rseq + 1`인 건 **상대 FIN도 seq 1을 소비했기 때문**이에요.
 2절에서 *"SYN과 FIN은 데이터 없이 seq 1을 소비한다"* 고 한 규칙이, 연결의 양 끝(SYN으로 열고 FIN으로 닫는)에서 똑같이 작동하는 걸 코드로 확인하는 순간이에요.
 
+> 실제 TCP 종료는 보통 **FIN → ACK → FIN → ACK** 네 단계(각자 따로 닫음)인데, 우리는 양쪽을 합쳐 단순화했어요.
+
+그리고 한 연결이 거쳐 가는 상태를 그림으로 보면 — 우리 코드는 이 흐름을 **명시적 상태 변수 없이 일직선 코드로** 밟아 갑니다:
+
+```
+   LISTEN
+     │ SYN 받음 → SYN-ACK 보냄
+     ▼
+  SYN_RCVD
+     │ ACK 받음 (핸드셰이크 완료)
+     ▼
+ ESTABLISHED ─── 데이터 수신 → 에코 송신
+     │ 상대 FIN 받음
+     ▼
+ CLOSE_WAIT
+     │ 내 FIN 보냄
+     ▼
+  LAST_ACK
+     │ 마지막 ACK
+     ▼
+   CLOSED
+```
+
+진짜 TCP는 이 상태들을 상태 머신으로 명시 관리하지만(동시 연결·재전송 때문), 우리 수동 개방 서버는 한 연결을 순서대로 처리하니 코드의 진행이 곧 상태 전이예요.
+
 ### 폴링이라는 단순화
 
 한 가지 솔직하게 짚을 게 있어요 — 우리 스택은 **인터럽트 없이 used 링을 폴링**해요(7편에서 만든 그대로).
@@ -366,7 +391,7 @@ host got echo: b'hi from host over TCP\n'   ← 게스트가 에코한 걸 그�
 | **재전송 타이머** | ACK가 안 오면 타이머 만료 후 다시 보냄 | 폴링 한 흐름이라 손실을 가정하지 않음 |
 | **혼잡 제어**(슬로스타트·AIMD) | 네트워크가 막히면 전송 속도를 줄임 | 인터넷 규모의 문제 — 토이 커널 범위 밖 |
 | **윈도우/흐름 제어** | 받는 쪽이 감당할 만큼만 보냄 | 한 세그먼트씩만 주고받음(window 값은 고정) |
-| **재정렬 버퍼** | 순서 뒤바뀐 세그먼트를 모아 재배열 | 한 번에 하나만 in-flight이라 뒤바뀜이 안 생김 |
+| **재정렬 버퍼** | 순서 뒤바뀐 세그먼트를 모아 재배열 | 재전송이 없고 한 번에 하나만 in-flight이라 뒤바뀜이 사실상 안 생김 |
 
 > **흔한 오해 정정**: *"이걸 다 빼면 TCP가 아니지 않나?"* — 맞기도 하고 틀리기도 해요. 우리가 구현한 건 **TCP 와이어 포맷과 상태 전이의 핵심**(시퀀스 회계 + 3-way 핸드셰이크 + 의사헤더 체크섬)이고, 뺀 것들은 *"신뢰성을 실제 인터넷 환경에서 견고하게 만드는 메커니즘"* 이에요. 핵심은 동작하지만, 이대로 패킷 손실이 잦은 실제 망에 던지면 멈춰버립니다. 그래서 정직하게 *"교육용 최소 구현"* 이라고 부르는 거예요.
 
@@ -385,7 +410,7 @@ UDP에서 TCP로 오는 길은 *"패킷"* 에서 *"스트림"* 으로, *"던지�
 - **hostfwd 검증** — `SYN → SYN-ACK → ACK → 데이터 → 에코 → FIN`의 전 생애가 호스트↔게스트 왕복 한 번으로 동작했어요.
 - **일부러 뺀 것** — 재전송·혼잡 제어·윈도우·재정렬. 핵심은 살리고, 인터넷 규모의 견고함은 트레이드오프로 미뤘어요.
 
-seq와 ack라는 두 숫자가 못 믿을 네트워크 위에 믿을 수 있는 바이트 스트림을 세운다는 게 TCP의 우아함이에요.
+seq와 ack라는 두 숫자가 신뢰성의 **출발점**이라는 게 TCP의 우아함이에요(완전한 신뢰성엔 타이머·재전송·윈도우·혼잡 제어·상태 머신이 더 필요하지만, 그 모든 회계의 씨앗이 이 두 숫자죠).
 그 우아함의 씨앗을 핸드셰이크 한 번과 에코 한 번으로 손에 쥐어 본 게 이번 작업이었어요.
 
 > 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
@@ -402,7 +427,7 @@ seq와 ack라는 두 숫자가 못 믿을 네트워크 위에 믿을 수 있는 
 
 <!-- EN -->
 
-*A RISC-V toy kernel built from scratch — a blog series. This is Part 10: putting TCP on top of the [network stack](/blog/hobby/hobby-kernel-06-networking) that went up to UDP.*
+*A RISC-V toy kernel built from scratch — a blog series. This is Part 10: putting a **minimal TCP** (3-way handshake + seq/ack accounting) on top of the [network stack](/blog/hobby/hobby-kernel-06-networking) that went up to UDP.*
 
 ## 0. Introduction
 
@@ -411,7 +436,7 @@ UDP is simple — build one packet, fire it off, done.
 It doesn't care whether it arrived or whether the order is right. It **fires and forgets**.
 
 TCP makes a different promise.
-"What you send arrives, and arrives in the order you sent it."
+"What you send is delivered, in order, *to the application*." (The packets themselves may arrive out of order or duplicated; TCP reorders them internally so the *app* sees them in order.)
 But the network layer we ride on (IP) makes no such promise — packets can vanish, get reordered, or be duplicated.
 TCP is the protocol that **builds a trustworthy byte stream on top of that untrustworthy floor**.
 
@@ -447,7 +472,7 @@ So TCP's problem boils down to three things.
 
 The common solution to all three is **"number every byte."**
 With numbers you can say *"I received up to N"* (delivery check), spot *"a number is missing"* (retransmit trigger), and *"reorder by number"* (reordering).
-What we implement in this post are the **seeds** of #1 and #3 (delivery confirmation and connection agreement); #2 and full #1 (retransmission/reordering) we cover in §7 as *"why we left them out on purpose."*
+What we implement in this post are the **seeds** of #1 and #3 (delivery confirmation and connection agreement); #2 and full #1 (retransmission/reordering), plus TCP's other core piece — **flow control (the window)** — we cover in §7 as *"why we left them out on purpose."*
 
 ## 2. Background — Sequence Accounting as a Two-Way Ledger
 
@@ -484,7 +509,7 @@ This rule is baked directly into the code.
 ```c
 // after sending SYN-ACK, bump our seq by 1 (the SYN consumed seq 1)
 tcp_send(pmac, pip, myport, pport, myseq, cliseq + 1, TH_SYN | TH_ACK, 0, 0);
-myseq += 1;                    // ← one SYN = one seq consumed
+myseq += 1;                    // ← the SYN flag consumes seq 1 (RFC: "SYN occupies one sequence number")
 ```
 
 ```c
@@ -508,7 +533,7 @@ SYN is `+1`, data is `+n`, FIN is `+1` too.
 | Header size | 8 bytes | 20 bytes minimum |
 | Our implementation scope | finished in Part 7 | seq/ack accounting + handshake + echo (this post) |
 
-> **Key lesson**: every difference between UDP and TCP derives from one thing — **whether the header records a number**. With numbers, confirmation (ack) is possible; with confirmation, retransmission is possible; with numbers, reordering is possible. **Reliability comes from numbering.**
+> **Key lesson**: every difference between UDP and TCP derives from one thing — **whether the header records a number**. With numbers, confirmation (ack) is possible; with numbers and acks you can *implement* retransmission (together with a timer); with numbers, reordering is possible. (Numbering alone doesn't retransmit — acks and a timer are what tell you *when* something was lost; this post builds only that foundation.) **Reliability comes from numbering.**
 
 ## 3. The 3-Way Handshake — Why Exactly Three
 
@@ -622,7 +647,7 @@ Flags are one bit each. The five we use:
 > The checksum verifies "no bits got corrupted in transit." But the TCP checksum doesn't cover just the TCP header — it **pulls in the IP addresses too**. Why include IP addresses that aren't even its own layer?
 
 The reason is to also verify *"is this segment really going to this exact source→destination pair?"*
-Even if the IP header gets mangled mid-flight and delivered to the wrong place, mixing the source/destination IPs into the pseudo-header makes the checksum fail, so it's filtered out.
+The IP header itself is already protected by the IP checksum (IPv4). The pseudo-header's purpose is different — to catch a segment **misdelivered to the wrong endpoint.** By mixing the source/destination IPs into the checksum, a segment that leaked to the wrong destination fails the checksum and is filtered out.
 
 This is **exactly the same scheme** as [UDP in Part 7](/blog/hobby/hobby-kernel-06-networking). Just one thing changes: the protocol number in the pseudo-header, from UDP (17) to TCP (6).
 
@@ -687,6 +712,31 @@ if (n >= 0 && (fl & TH_FIN))
 In the final ACK, my seq being `myseq + 1` is **because the FIN I just sent consumed seq 1**, and the ack being `rseq + 1` is **because the peer's FIN also consumed seq 1**.
 This is the moment you confirm in code that the §2 rule — *"SYN and FIN consume seq 1 with no data"* — works identically at both ends of the connection (opening with SYN, closing with FIN).
 
+> A real TCP close is usually **FIN → ACK → FIN → ACK** (each side closes separately); we simplified it by combining the two sides.
+
+And here's the lifecycle a connection walks through — our code walks it **with no explicit state variable, just straight-line code**:
+
+```
+   LISTEN
+     │ got SYN → sent SYN-ACK
+     ▼
+  SYN_RCVD
+     │ got ACK (handshake done)
+     ▼
+ ESTABLISHED ─── receive data → echo back
+     │ got peer's FIN
+     ▼
+ CLOSE_WAIT
+     │ sent my FIN
+     ▼
+  LAST_ACK
+     │ final ACK
+     ▼
+   CLOSED
+```
+
+Real TCP manages these states explicitly with a state machine (for concurrent connections and retransmission), but our passive-open server handles one connection in order, so the code's progress *is* the state transition.
+
 ### Polling as a simplification
 
 One thing to state honestly — our stack **polls the used ring with no interrupts** (exactly as built in Part 7).
@@ -747,7 +797,7 @@ The heavy parts that hold up real TCP we left out on purpose — and here's an h
 | **Retransmission timers** | resend after the timer expires when no ACK comes | a single polling flow, so we don't assume loss |
 | **Congestion control** (slow start, AIMD) | slow the send rate when the network is congested | an internet-scale problem — outside a toy kernel |
 | **Window / flow control** | send only as much as the receiver can handle | we exchange one segment at a time (window is fixed) |
-| **Reordering buffers** | collect and reorder out-of-order segments | only one in-flight at a time, so nothing gets reordered |
+| **Reordering buffers** | collect and reorder out-of-order segments | no retransmission and only one in-flight at a time, so reordering effectively never happens |
 
 > **Common misconception fix**: *"If you remove all of that, isn't it not TCP anymore?"* — both right and wrong. What we implemented is the **core of TCP's wire format and state transitions** (sequence accounting + 3-way handshake + pseudo-header checksum); what we left out are *"the mechanisms that make reliability robust in real internet conditions."* The core works, but throw it as-is onto a real network with frequent packet loss and it stalls. That's why we honestly call it an *"educational minimal implementation."*
 
@@ -766,7 +816,7 @@ The road from UDP to TCP was a shift from *"packet"* to *"stream,"* from *"fire 
 - **hostfwd verification** — the full life `SYN → SYN-ACK → ACK → data → echo → FIN` worked in a single host↔guest round-trip.
 - **Deliberately left out** — retransmission, congestion control, windows, reordering. We kept the core and deferred internet-scale robustness as a trade-off.
 
-That two numbers, seq and ack, build a trustworthy byte stream on top of an untrustworthy network — that's the elegance of TCP.
+That two numbers, seq and ack, are the **starting point** of reliability on top of an untrustworthy network — that's the elegance of TCP (full reliability also needs timers, retransmission, windows, congestion control, and a state machine, but the seed of all that accounting is these two numbers).
 Holding the seed of that elegance in hand through one handshake and one echo was the reward of this work.
 
 > Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)

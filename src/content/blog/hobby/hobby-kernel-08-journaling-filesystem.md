@@ -29,7 +29,7 @@ seriesOrder: 9
 이 셋은 "전부 함께" 반영돼야 의미가 있는데, 디스크 쓰기는 한 블록씩 따로 일어나요.
 그 사이에 전원이 나가면 파일시스템이 **절반만 쓰인** 상태로 깨집니다.
 
-이건 데이터베이스가 트랜잭션으로 푸는 문제와 **글자 그대로 같은 문제**예요.
+이건 데이터베이스가 트랜잭션으로 푸는 문제와 **원자성(atomicity) 측면에서 같은 문제**예요(DB는 격리·동시성까지 다루지만, 그중 "전부 아니면 전무"라는 원자성만큼은 똑같아요).
 DB가 `UPDATE` 두 개를 "전부 아니면 전무"로 묶는 것과, 파일시스템이 데이터+디렉터리+슈퍼블록을 묶는 것은 같은 원자성(atomicity) 요구입니다.
 그래서 해법도 같아요 — **WAL(write-ahead log)**, 파일시스템 용어로는 **저널링(journaling)**.
 이 글에선 [트랜잭션 ACID ①](/blog/theory/transaction-acid-01-atomicity)에서 본 WAL 아이디어를 **토이 커널의 실제 코드**(`src/fs.c`)로 손에 잡히게 구현합니다.
@@ -84,11 +84,11 @@ WAL의 발상은 한 줄이에요 — **진짜 위치를 건드리기 전에, �
 | 변경을 어디에 먼저 쓰나 | 데이터의 진짜 위치에 곧장 | 별도 로그 영역에 먼저 모음 |
 | 원자적 분기점 | 없음 (쓰기마다 따로) | 커밋 비트 하나 (한 블록 쓰기) |
 | 중간에 죽으면 | 절반만 쓰임 → 복구 단서 없음 | 커밋 전=무시 / 커밋 후=replay |
-| 디스크 쓰기 횟수 | N번 | 약 2N번 (로그 + 제자리) |
+| 디스크 쓰기 횟수 | N번 | 대략 두 배 (로그 N + 제자리 N + 헤더 2) |
 | 크래시 일관성 | 보장 못 함 | 보장됨 (전부 또는 전무) |
 
 핵심은 **커밋 비트 하나**예요.
-디스크는 "한 블록 쓰기"는 원자적으로 해줘요(섹터 단위 쓰기는 깨지지 않는다고 가정).
+이 글은 **"블록 하나의 쓰기는 원자적"이라는 저장장치 모델을 가정**해요(섹터 단위 쓰기는 안 깨진다고 봄 — 실제론 write cache·flush 순서·FUA·전원보호 같은 전제가 더 필요해요). WAL은 그 가정 위에서 **여러 블록 쓰기를 원자적으로 보이게** 만드는 기법이에요.
 그 원자적인 한 블록 쓰기에 "이 트랜잭션은 완성됐다"는 신호를 담으면, 그 한 줄이 **전부/전무를 가르는 분기점**이 됩니다.
 커밋 비트가 0인 채로 죽으면 → 없던 일. 1로 박힌 뒤 죽으면 → 마저 끝내면 됨.
 
@@ -156,6 +156,8 @@ static void log_write(uint32 dst, const uint8 *data) {
 ```
 
 `log_n`번째 `log_write`는 데이터를 디스크 블록 `LOGSTART + log_n`(로그 영역)에 쓰고, `log_blk[log_n] = dst`로 "이건 나중에 `dst`로 가야 해"를 적어둬요.
+
+> **상한 처리**: 로그(16블록)보다 큰 트랜잭션은 *부분만* 커밋하면 디스크가 깨지므로, `log_write`가 오버플로를 표시하고 `log_commit`이 **트랜잭션을 통째로 거부**해요(부분 커밋 방지 + 경고 출력). 다만 호출부에 실패를 *전파*하진 않아요 — 더 정석은 `-ENOSPC`를 올려 호출자가 알게 하는 거고, 그 부분은 토이 단순화로 남겨뒀어요.
 이 시점에 죽어도 안전해요 — 진짜 위치는 아직 옛 값 그대로니까요.
 
 ### log_commit — 커밋 비트를 찍는 그 한 순간
@@ -178,7 +180,7 @@ static void log_commit(void) {
 이 블록 쓰기가 디스크에 박히는 순간 — 그 직전까지는 "없던 일"이고, 그 직후부터는 "반드시 완성될 일"이 돼요.
 ACID 글에서 *"커밋 보장은 WAL의 fsync로 결정된다"* 던 그 지점이 여기예요.
 
-**(2) `log_install`은 로그의 블록들을 각자의 목적지로 복사**해요.
+**(2) `log_install`은 로그의 블록들을 각자의 목적지로 복사**해요. `fsbuf`는 임시 버퍼 하나라, 매 반복마다 로그 블록 하나를 **읽어 `fsbuf`에 담고 곧바로 목적지에 써요**(읽기 → 덮어쓰기 → 쓰기의 반복이지, 첫 블록만 계속 쓰는 게 아니에요).
 
 ```c
 // 로그 데이터 블록들을 각자의 목적지로 복사(install).
@@ -263,11 +265,14 @@ static void recover(void) {
 
 여기서 가장 중요한 성질은 **멱등성**이에요.
 `log_install`을 한 번 하든 열 번 하든 결과가 같아요 — *"같은 데이터를 같은 자리에 또 쓸 뿐"* 이니까요.
+복구를 마치면 `write_loghdr(0,0,0)`으로 헤더를 비우는데, 이게 중요해요 — 안 그러면 `committed=1`이 남아 **부팅할 때마다 같은 트랜잭션을 또 replay**하거든요.
 
 그래서 **"복구 도중에 또 죽어도"** 안전해요.
 설치를 절반 하다 죽으면? 헤더는 아직 `committed=1`이니, 다음 부팅이 또 `recover()`를 돌려 처음부터 다시 설치합니다.
 이미 설치된 블록은 같은 값으로 또 덮어쓰일 뿐, 손상되지 않아요.
 ACID 글의 **Redo phase**가 멱등이라 몇 번이고 재시작할 수 있던 것과 똑같은 원리예요.
+
+우리 로그는 **redo-only**예요 — 커밋 안 된 변경은 애초에 제자리에 안 쓰고 로그에만 모으니, 되돌릴(undo) 게 없거든요. (ARIES가 undo까지 두는 건 커밋 전 더티 페이지를 제자리에 미리 쓰는 STEAL 정책 때문인데, 우리는 그렇게 안 합니다.)
 
 > **흔한 오해 정정 — "fsync 한 번이면 원자성 끝 아닌가?"**: `fsync`(디스크에 강제로 쓰기)는 *"이 한 블록이 디스크에 확실히 박혔다"* 만 보장하지, *"여러 블록이 함께/전혀"* 는 보장 못 해요. 원자성은 **여러 쓰기를 묶는 프로토콜**(로그에 모으고 → 커밋 비트 → 설치)에서 나오지, 개별 쓰기의 내구성 하나로는 안 나옵니다. 우리 코드에서 그 프로토콜을 떠받치는 단 하나의 원자적 단위가 "로그 헤더 한 블록 쓰기"예요.
 
@@ -285,7 +290,7 @@ ACID 글의 **Redo phase**가 멱등이라 몇 번이고 재시작할 수 있던
 그런데 비트맵을 **디스크에** 두면, 그것도 바뀔 때마다 트랜잭션으로 보호해야 해서 로그가 더 복잡해져요.
 
 다행히 우리 FS엔 영리한 지름길이 있어요 — **디렉터리 자체가 이미 할당 정보**거든요.
-각 파일이 `start`(시작 블록)와 `size`(크기)를 가지니, 디렉터리만 훑으면 "어느 블록이 어느 파일 거"인지 다 알 수 있어요.
+슈퍼블록의 `nfiles`와 디렉터리를 함께 읽으면, 각 파일의 `start`(시작 블록)·`size`(크기)로 "어느 블록이 어느 파일 거"인지 다 계산할 수 있어요.
 그래서 비트맵을 디스크에 영구 저장하지 않고, **마운트할 때 디렉터리를 훑어 메모리에서 재구성**합니다.
 
 | 구분 | 비트맵을 디스크에 저장 | 디렉터리에서 메모리 재구성(우리 방식) |
@@ -295,7 +300,7 @@ ACID 글의 **Redo phase**가 멱등이라 몇 번이고 재시작할 수 있던
 | 진실의 원천(source of truth) | 비트맵과 디렉터리 둘 (불일치 위험) | 디렉터리 하나뿐 |
 | 비용 | 적음 | 마운트 때 O(파일 수) 스캔 |
 
-진실의 원천이 **디렉터리 하나**라는 게 큰 장점이에요 — 비트맵과 디렉터리가 어긋날 일이 아예 없어요(ACID 글의 *"진실의 원천이 갈리면 일관성 위반"* 과 같은 맥락).
+진실의 원천이 **디렉터리 하나**라는 게 큰 장점이에요 — **디스크엔 디렉터리만** 저장되니, 영속 상태에서 두 메타데이터가 어긋날 일이 없어요(메모리 비트맵은 재구성 전까지 디렉터리와 다를 수 있지만, *디스크에는 진실이 하나뿐*이라는 뜻이에요 — ACID 글의 *"진실의 원천이 갈리면 일관성 위반"* 과 같은 맥락).
 
 ### build_bitmap — 마운트 때 메모리에서 재구성
 
@@ -446,7 +451,7 @@ Creating a single file writes to disk **several times** — data blocks, the dir
 The three only make sense if they land "all together," yet disk writes happen one block at a time.
 If the power dies in between, the filesystem is left **half-written** and corrupt.
 
-This is **literally the same problem** databases solve with transactions.
+This is **the same problem databases solve with transactions, in terms of atomicity** (a DB also handles isolation and concurrency, but the "all-or-nothing" atomicity is identical).
 A DB bundling two `UPDATE`s as "all-or-nothing" and a filesystem bundling data + directory + superblock are the same atomicity requirement.
 So the solution is the same too — **WAL (write-ahead log)**, called **journaling** in filesystem terms.
 This post implements the WAL idea from [Transaction ACID ①](/blog/theory/transaction-acid-01-atomicity) in **the toy kernel's actual code** (`src/fs.c`), making it tangible.
@@ -501,11 +506,11 @@ Then atomically stamp a **commit mark** ("everything's gathered now"), and only 
 | Where changes go first | straight to the real location | gathered in a separate log region |
 | Atomic branch point | none (each write separate) | one commit bit (one block write) |
 | If it dies mid-way | half-written → no recovery clue | before commit = ignore / after = replay |
-| Disk write count | N | about 2N (log + in place) |
+| Disk write count | N | roughly double (log N + in place N + header 2) |
 | Crash consistency | not guaranteed | guaranteed (all or nothing) |
 
 The key is **one commit bit**.
-The disk gives us atomic "single block writes" (we assume a sector-sized write is never torn).
+This post **assumes a storage model where "a single block write is atomic"** (a sector-sized write is never torn — in reality this also needs write-cache, flush ordering, FUA, power-loss protection). WAL is the technique that, on top of that assumption, makes **multi-block writes appear atomic.**
 If that atomic single-block write carries the signal "this transaction is complete," that one line becomes the **branch point that splits all-or-nothing**.
 Die with the commit bit at 0 → as if nothing happened. Die after it's stamped 1 → just finish the rest.
 
@@ -573,6 +578,8 @@ static void log_write(uint32 dst, const uint8 *data) {
 ```
 
 The `log_n`-th `log_write` writes data to disk block `LOGSTART + log_n` (the log region) and records `log_blk[log_n] = dst` ("this goes to `dst` later").
+
+> **Size cap**: a transaction larger than the log (16 blocks) would corrupt the disk if only *partially* committed, so `log_write` flags the overflow and `log_commit` **rejects the whole transaction** (no partial commit, plus a warning). It still doesn't *propagate* the failure to the caller — the more proper design returns `-ENOSPC` so the caller knows — and that part remains a toy simplification.
 Dying at this point is safe — the real location still holds its old value.
 
 ### log_commit — the single moment the commit bit is stamped
@@ -595,7 +602,7 @@ It writes `committed=1` and the destination table `blk[]` into the log header (b
 The instant that block write lands on disk — everything before it is "as if nothing happened," and everything after is "guaranteed to complete."
 This is exactly the spot where the ACID post said *"the commit guarantee is decided by WAL fsync."*
 
-**(2) `log_install` copies the log's blocks to their destinations.**
+**(2) `log_install` copies the log's blocks to their destinations.** `fsbuf` is a single temp buffer, so each iteration **reads one log block into `fsbuf` and immediately writes it to the destination** (read → overwrite → write, repeated — it isn't writing the first block over and over).
 
 ```c
 // copy log data blocks to their respective destinations (install).
@@ -680,11 +687,14 @@ static void recover(void) {
 
 The most important property here is **idempotency**.
 Running `log_install` once or ten times gives the same result — it *"just writes the same data to the same place."*
+After recovery, `write_loghdr(0,0,0)` clears the header — and that matters: otherwise `committed=1` lingers and the **same transaction would replay on every boot.**
 
 So even **"dying again during recovery"** is safe.
 Die halfway through the install? The header is still `committed=1`, so the next boot runs `recover()` again and reinstalls from the start.
 Already-installed blocks are simply overwritten with the same value, never corrupted.
 Same principle as the ACID post's **Redo phase** being idempotent, which is what let it restart any number of times.
+
+Our log is **redo-only** — uncommitted changes are never written in place to begin with (they only sit in the log), so there's nothing to undo. (ARIES keeps undo too because of its STEAL policy, which writes dirty pages in place before commit; we don't.)
 
 > **Common misconception fix — "isn't one fsync the whole of atomicity?"**: `fsync` (forcing a write to disk) only guarantees *"this one block definitely landed on disk,"* not *"several blocks together or not at all."* Atomicity comes from a **protocol that bundles several writes** (gather in the log → commit bit → install), not from the durability of any single write. In our code the one atomic unit that props up that protocol is "writing the one log-header block."
 
@@ -702,7 +712,7 @@ The standard solution is a **free-block bitmap** (one used/free bit per block).
 But putting the bitmap **on disk** means protecting it with a transaction every time it changes too, making the log more complex.
 
 Luckily our FS has a clever shortcut — **the directory itself is already the allocation info.**
-Each file carries `start` and `size`, so scanning the directory tells us exactly "which block belongs to which file."
+Reading the superblock's `nfiles` together with the directory, each file's `start` and `size` lets us compute exactly "which block belongs to which file."
 So instead of persisting the bitmap on disk, we **rebuild it in memory by scanning the directory at mount**.
 
 | Aspect | Bitmap on disk | Rebuild in memory from directory (our way) |
@@ -712,7 +722,7 @@ So instead of persisting the bitmap on disk, we **rebuild it in memory by scanni
 | Source of truth | both bitmap and directory (risk of mismatch) | the directory alone |
 | Cost | low | an O(#files) scan at mount |
 
-Having a **single source of truth** (the directory) is the big win — the bitmap and directory can never disagree (the same logic as the ACID post's *"a split source of truth is a consistency violation"*).
+Having a **single source of truth** (the directory) is the big win — **only the directory is stored on disk**, so in the persistent state the two metadata can never get out of sync (the in-memory bitmap may differ from the directory until it's rebuilt, but *on disk there's only one truth* — the same logic as the ACID post's *"a split source of truth is a consistency violation"*).
 
 ### build_bitmap — rebuild in memory at mount
 

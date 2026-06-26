@@ -74,13 +74,13 @@ _entry:
         call    kmain              # C 커널 시작
 ```
 
-> **핵심 질문에 대한 답**: 부트로더를 직접 안 짜도 되는 이유는 OpenSBI가 M-mode 일을 대신 해주기 때문이고, 우리는 S-mode에서 깨끗하게 시작합니다. 스택 한 줄만 잡으면 그다음부터는 평범한 C예요.
+> **핵심 질문에 대한 답**: 부트로더를 직접 안 짜도 되는 이유는 OpenSBI가 M-mode 초기화와 SBI 서비스를 제공하기 때문이고, 우리는 S-mode에서 깨끗하게 시작합니다. 스택 한 줄만 잡으면 그다음부터는 평범한 C예요.
 
 ### 화면 출력 — 메모리에 글자를 "쓰면" 화면에 나온다
 
 출력은 가장 원초적인 방법으로 합니다 — **메모리 매핑된 UART**(`0x1000_0000`)에 직접 쓰기.
 RISC-V virt에서는 장치 레지스터가 메모리 주소에 매핑돼 있어서, 그 주소에 바이트를 쓰는 게 곧 "글자를 보내라"는 명령이에요.
-OpenSBI가 UART를 이미 초기화해 둬서, 송신 레지스터에 쓰기만 하면 됩니다.
+QEMU virt 환경에서는 UART가 이미 사용 가능한 상태이고, OpenSBI도 같은 UART를 콘솔로 씁니다. 그래서 별도 초기화 없이 송신 레지스터에 쓰기만 해도 출력돼요. (우리는 SBI 콘솔 호출을 거치지 않고 MMIO에 직접 쓰는, 즉 OpenSBI와 같은 장치를 공유하는 방식이에요 — 실제 하드웨어라면 충돌 소지가 있지만 QEMU virt에선 안전합니다.)
 
 ```c
 // uart.c
@@ -133,13 +133,13 @@ void kerneltrap(struct regframe *f) {
 }
 ```
 
-`scause`의 최상위 비트가 **인터럽트냐 예외냐**를 구분하고, 하위 코드가 종류를 알려줘요(코드 5 = S-mode 타이머).
+`scause`의 최상위 비트가 **인터럽트냐 예외냐**를 구분하고, 하위 코드가 종류를 알려줘요(Supervisor Timer Interrupt — 인터럽트 코드 5; 같은 5라도 *예외* 코드 5는 Load access fault라 그냥 "코드 5"라고만 하면 헷갈리기 쉬워요).
 
 ### 타이머 — "다음 알람 시각"을 직접 쓴다
 
 > 주기적인 틱은 어떻게 만들까요?
 
-RISC-V의 **sstc 확장**을 쓰면 `stimecmp` CSR에 "다음 인터럽트를 울릴 시각"을 직접 적을 수 있어요.
+**Sstc 확장**을 지원하는 환경에서는 `stimecmp` CSR에 "다음 인터럽트를 울릴 시각"을 직접 적을 수 있어요. (Sstc가 없으면 SBI 타이머 호출로 M-mode(OpenSBI)가 대신 예약하는 게 기본이고, Sstc는 그 오버헤드를 없애려 S-mode가 직접 쓰게 한 확장이에요. QEMU virt + 최근 OpenSBI는 Sstc를 지원합니다.)
 현재 시각(`r_time()`)에 간격을 더해 써 두면, 그 시각이 되는 순간 타이머 인터럽트가 발생합니다.
 핸들러는 틱을 올리고 **즉시 다음 알람을 다시 예약**해서 주기를 유지해요.
 
@@ -232,7 +232,7 @@ void *kalloc(void) {
     if (r) {
         freelist = r->next;               // 맨 앞 페이지를 꺼낸다
         freecnt--;
-        refcnt[refidx(r)] = 1;            // 새 페이지는 소유자 1명
+        refcnt[refidx(r)] = 1;            // 새 페이지의 참조 카운트를 1로 초기화
     }
     release(&kmem_lock);
     return (void *)r;                      // 0이면 메모리 부족
@@ -268,7 +268,7 @@ free pages: 32238  (~125 MB free)
 
 해결책은 한 줄로 요약돼요 — **각 프로그램에게 "나만의 메모리"라는 환상을 준다.**
 프로그램은 `0x1000`부터 시작하는 깨끗한 자기만의 주소공간을 보지만, 그 주소는 **진짜 주소가 아니라 가짜(가상)** 예요.
-CPU가 메모리에 접근할 때마다 이 **가상주소를 실제 물리주소로 몰래 번역**해줘요.
+CPU는 메모리에 접근할 때 이 **가상주소를 실제 물리주소로 몰래 번역**해줘요(대부분은 번역 캐시인 TLB에서 바로 가져오고, TLB가 빗나갈 때만 페이지 테이블을 따라갑니다).
 A의 `0x1000`과 B의 `0x1000`은 서로 다른 물리 페이지로 번역되니, 같은 주소를 써도 안 부딪혀요.
 
 > **흔한 오해 정정**: "페이징 = 스왑(디스크로 내보내기)"이라고 묶어 생각하기 쉬운데, 둘은 층이 달라요. **페이징은 가상주소를 물리주소로 번역하는 메커니즘**이고, 스왑은 그 메커니즘 위에서 "지금 물리 페이지가 없으면 디스크에서 가져온다"는 한 가지 응용일 뿐이에요. 이 커널은 페이징은 켜지만 스왑은 안 합니다 — 번역만으로도 격리·보호·유연성을 다 얻거든요.
@@ -309,9 +309,9 @@ PTE에는 "이 가상 페이지가 가리킬 물리 페이지 번호" + **권한
 
 ### Sv39 — 왜 한 장이 아니라 3단계 트리인가
 
-> 39비트 주소공간을 4KB 페이지로 나누면 페이지가 1억 개가 넘습니다. 이걸 한 장의 표로 만들면 표 자체가 기가바이트급이에요. 어떻게 작게 유지할까요?
+> 39비트 가상 주소공간을 4KB 페이지로 나누면 페이지가 1억 개가 넘습니다. 이걸 한 장의 표로 만들면 표 자체가 기가바이트급이에요. 어떻게 작게 유지할까요?
 
-RISC-V의 **Sv39**는 39비트 가상주소를 쓰고, 페이지 테이블을 **3단계 트리**로 둡니다(각 단계는 4KB, 512개 PTE).
+RISC-V의 **Sv39**는 39비트 가상주소를 쓰고, 페이지 테이블을 **3단계 트리**로 둡니다(각 단계는 4KB, 512개 PTE — 4KB ÷ 8B = 512개).
 실제로 프로그램이 쓰는 주소는 **드문드문(sparse)** 해요 — 코드 조금, 스택 조금, 힙 조금.
 3단계 트리로 두면 **실제로 쓰는 가지만 만들면 되니** 표가 작아져요.
 
@@ -365,7 +365,7 @@ static void map_kernel(pagetable_t pt) {
 
 (실제 코드엔 virtio-mmio 장치 매핑도 한 줄 더 있지만, 골자는 위와 같아요.)
 
-매핑을 다 만들었으면, 페이지 테이블의 물리주소를 **`satp` 레지스터**에 적재하는 순간 페이징이 켜져요.
+매핑을 다 만들었으면, 페이지 테이블의 물리주소를 **`satp` 레지스터**에 적재하고 `sfence.vma`로 TLB를 비우면 새 페이지 테이블이 적용돼요 — 그 순간 페이징이 켜집니다.
 `sfence.vma`는 CPU가 캐시해 둔 옛 번역(TLB)을 비우는 명령이에요 — 매핑을 바꿨으니 옛 캐시를 버리라는 거죠.
 
 ```c
@@ -382,7 +382,7 @@ hobby> mem
 free pages: 32169  (~125 MB free)
 ```
 
-페이징을 켠 뒤에도 셸·타이머·입출력이 **전부 그대로** 동작해요 — 식별 매핑이라 주소가 안 바뀌었으니까요.
+페이징을 켠 뒤에도 셸·타이머·입출력이 **전부 그대로** 동작해요 — 식별 매핑이라 번역은 일어나되 결과가 같은 물리주소(va == pa)로 나오니까요.
 빈 페이지가 32238 → 32169로 약 69개 줄었는데, 그게 바로 `walk()`가 **페이지 테이블 트리를 짓느라 `kalloc`으로 떼어 간 물리 페이지들**이에요.
 4절에서 만든 할당기가 5절에서 진짜 일을 한 거죠 — 두 절이 코드 한 줄(`kalloc`)로 맞물립니다.
 
@@ -406,7 +406,7 @@ free pages: 32169  (~125 MB free)
 - **물리 페이지 할당기** — 빈 RAM을 4KB 페이지로 쪼개 free list로 관리. `kalloc`/`kfree`가 O(1)이고, 이게 페이지 테이블의 토대가 됩니다.
 - **Sv39 페이징** — 가상주소를 물리주소로 번역하는 메커니즘. 이 글에선 커널 식별 매핑(va == pa)으로 켜서, 페이징을 켜도 커널이 매끄럽게 이어지게 했어요.
 
-순서가 핵심이에요 — **페이징이 맨 마지막에 오는 건, 그 앞의 모든 것(특히 4절의 할당기)을 전제로 깔기 때문**입니다.
+순서가 핵심이에요 — **앞 절에서 만든 것이 다음 절의 기반이 됩니다.** UART는 디버깅을 가능하게 하고, 트랩은 비동기를 처리하며, 할당기는 페이지 테이블을 만들고, 그 위에서 비로소 가상메모리가 동작해요. 페이징이 맨 마지막에 오는 건, 그 앞의 모든 것(특히 4절의 할당기)을 전제로 깔기 때문입니다.
 `make run`으로 직접 부팅해 명령어를 칠 수 있는 커널이 됐고, 다음 글에서는 OS를 OS답게 만드는 경계 — **유저모드와 시스템콜**로 들어가요.
 
 > 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
@@ -477,13 +477,13 @@ _entry:
         call    kmain              # into the C kernel
 ```
 
-> **Answer to the key question**: we don't write a bootloader because OpenSBI does the M-mode work for us, and we start cleanly in S-mode. One line to set up the stack, and from there on it's ordinary C.
+> **Answer to the key question**: we don't write a bootloader because OpenSBI does the M-mode initialization and provides the SBI services for us, and we start cleanly in S-mode. One line to set up the stack, and from there on it's ordinary C.
 
 ### Screen output — "writing" a byte to memory shows it on screen
 
 Output is done the most primitive way — writing directly to the **memory-mapped UART** (`0x1000_0000`).
 On RISC-V virt, device registers are mapped at memory addresses, so writing a byte to that address *is* the command "send this character."
-OpenSBI already initialized the UART, so you only need to write to the transmit register.
+On QEMU virt the UART is already usable, and OpenSBI uses the same UART as its console — so with no extra initialization you can just write to the transmit register. (We don't go through the SBI console call; we write the MMIO directly, i.e. we share the very device OpenSBI also uses — on real hardware that could conflict, but on QEMU virt it's safe.)
 
 ```c
 // uart.c
@@ -536,13 +536,13 @@ void kerneltrap(struct regframe *f) {
 }
 ```
 
-The top bit of `scause` distinguishes **interrupt from exception**, and the low code tells the kind (code 5 = S-mode timer).
+The top bit of `scause` distinguishes **interrupt from exception**, and the low code tells the kind (Supervisor Timer Interrupt — interrupt code 5; note that *exception* code 5 is a Load access fault, so a bare "code 5" is ambiguous).
 
 ### Timer — write the "time of the next alarm" directly
 
 > How do we produce periodic ticks?
 
-With RISC-V's **sstc extension** you can write the "time to fire the next interrupt" directly into the `stimecmp` CSR.
+On a platform that supports the **Sstc extension** you can write the "time to fire the next interrupt" directly into the `stimecmp` CSR. (Without Sstc, the default is an SBI timer call where M-mode (OpenSBI) schedules it on your behalf; Sstc removes that overhead by letting S-mode write the register itself. QEMU virt with a recent OpenSBI supports Sstc.)
 Add an interval to the current time (`r_time()`) and write it, and a timer interrupt fires the moment that time arrives.
 The handler bumps the tick count and **immediately schedules the next alarm**, keeping the period.
 
@@ -635,7 +635,7 @@ void *kalloc(void) {
     if (r) {
         freelist = r->next;               // take the front page
         freecnt--;
-        refcnt[refidx(r)] = 1;            // a fresh page has one owner
+        refcnt[refidx(r)] = 1;            // initialize the new page's reference count to 1
     }
     release(&kmem_lock);
     return (void *)r;                      // 0 means out of memory
@@ -671,7 +671,7 @@ Three things break.
 
 The fix is one line — **give each program the illusion of "memory that's all mine."**
 A program sees its own clean address space starting at `0x1000`, but those addresses aren't real — they're **fake (virtual)**.
-Every time the CPU touches memory, it **quietly translates this virtual address into a real physical one**.
+When the CPU touches memory, it **quietly translates this virtual address into a real physical one** (most of the time straight from the TLB, a translation cache; only on a TLB miss does it walk the page table).
 A's `0x1000` and B's `0x1000` translate to different physical pages, so they never collide even using the same address.
 
 > **Common misconception fix**: it's easy to lump "paging = swapping (pushing pages to disk)," but they sit at different layers. **Paging is the mechanism that translates virtual addresses to physical ones**; swapping is just one application on top of it — "if there's no physical page right now, fetch it from disk." This kernel turns paging on but does no swapping — translation alone already buys isolation, protection, and flexibility.
@@ -712,9 +712,9 @@ Map code pages as `R|X` (read/execute, no write) and data as `R|W`, and a bug th
 
 ### Sv39 — why a 3-level tree instead of one flat table
 
-> Splitting a 39-bit space into 4KB pages gives over 100 million pages. One flat table for that would itself be gigabytes. How do we keep it small?
+> Splitting a 39-bit virtual address space into 4KB pages gives over 100 million pages. One flat table for that would itself be gigabytes. How do we keep it small?
 
-RISC-V's **Sv39** uses 39-bit virtual addresses and a **3-level tree** of page tables (each level 4KB, 512 PTEs).
+RISC-V's **Sv39** uses 39-bit virtual addresses and a **3-level tree** of page tables (each level 4KB, 512 PTEs — 4KB ÷ 8B = 512).
 A program's actually-used addresses are **sparse** — a little code, a little stack, a little heap.
 With a 3-level tree you **only build the branches you actually use**, so the table stays small.
 
@@ -768,7 +768,7 @@ static void map_kernel(pagetable_t pt) {
 
 (The real code has one more line mapping the virtio-mmio devices, but the gist is the above.)
 
-Once the mapping is built, loading the page table's physical address into the **`satp` register** turns paging on at that instant.
+Once the mapping is built, loading the page table's physical address into the **`satp` register** and flushing the TLB with `sfence.vma` applies the new page table — that's the instant paging turns on.
 `sfence.vma` flushes the CPU's cached old translations (the TLB) — we changed the mapping, so throw away the old cache.
 
 ```c
@@ -785,7 +785,7 @@ hobby> mem
 free pages: 32169  (~125 MB free)
 ```
 
-Even after paging is on, the shell, timer, and I/O all keep working **exactly as before** — identity mapping kept the addresses unchanged.
+Even after paging is on, the shell, timer, and I/O all keep working **exactly as before** — with identity mapping, translation still happens but yields the same physical address (va == pa).
 Free pages dropped from 32238 to 32169, about 69 — and those are precisely the **physical pages `walk()` carved out via `kalloc` to build the page table tree**.
 The allocator from §4 just did its real work in §5 — the two sections interlock on a single line of code (`kalloc`).
 
@@ -809,7 +809,7 @@ This post took a freshly powered CPU and raised the skeleton up to an **interact
 - **Physical page allocator** — slice free RAM into 4KB pages managed by a free list. `kalloc`/`kfree` are O(1), and this is the foundation for page tables.
 - **Sv39 paging** — the mechanism that translates virtual addresses to physical ones. This post turns it on with kernel identity mapping (va == pa), so the kernel continues seamlessly even with paging on.
 
-The order is the point — **paging comes last because it stands on everything before it (especially §4's allocator).**
+The order is the point — **each section becomes the ground the next one stands on.** UART makes debugging possible, traps handle the asynchronous, the allocator builds page tables, and only on top of all that does virtual memory work. Paging comes last because it stands on everything before it (especially §4's allocator).
 With `make run` it boots into a kernel where you can type commands, and in the next post we get into the boundary that makes an OS an OS — **user mode and system calls**.
 
 > Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
