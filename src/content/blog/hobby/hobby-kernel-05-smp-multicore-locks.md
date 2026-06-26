@@ -3,7 +3,7 @@ title: '멀티코어로 가다 — SMP와 락'
 titleEn: 'Going Multicore — SMP and Locks'
 description: 단일 코어 커널을 여러 코어가 함께 도는 SMP 커널로 키운다. SBI HSM으로 보조 코어를 깨워 부팅하고, 스핀락으로 공유 자료구조를 보호하고, 컨텍스트 스위치를 가로지르며 락을 넘기는 baton 방식으로 멀티코어 스케줄러를 만든다. 그 과정에서 만난 가장 고약한 버그 — 유저가 tp 레지스터를 덮어 코어 번호가 틀어지던 문제 — 와 그 해결까지.
 descriptionEn: "Growing a single-core kernel into an SMP kernel that runs on several cores at once. Booting secondary cores via SBI HSM, protecting shared structures with spinlocks, and building a multicore scheduler with a lock baton handed across the context switch. Plus the nastiest bug along the way — a clobbered tp register that corrupted the core id — and how it was fixed."
-date: 2026-06-20T00:00:00.000Z
+date: 2026-06-08T00:00:00.000Z
 tags:
   - OS
   - C

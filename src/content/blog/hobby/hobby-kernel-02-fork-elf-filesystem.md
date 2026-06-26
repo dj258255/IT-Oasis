@@ -3,7 +3,7 @@ title: 'fork, ELF 로더, 그리고 파일시스템'
 titleEn: 'fork, an ELF Loader, and a Filesystem'
 description: 프로세스 모델을 완성하고 저장장치를 붙인다. 주소공간을 복사하는 fork(), 따로 컴파일한 진짜 ELF 프로그램을 파싱해 적재하는 로더, 그리고 virtio-blk 디스크 위에 올린 읽기 전용 파일시스템(ls/cat)까지. 디버깅에서 만난 volatile과 virtio 기능 협상 이야기를 곁들인다.
 descriptionEn: "Completing the process model and attaching storage — fork() that duplicates an address space, a loader that parses a real separately-compiled ELF program, and a read-only filesystem on a virtio-blk disk (ls/cat). With debugging notes on volatile and virtio feature negotiation."
-date: 2026-06-10T00:00:00.000Z
+date: 2026-05-29T00:00:00.000Z
 tags:
   - OS
   - C

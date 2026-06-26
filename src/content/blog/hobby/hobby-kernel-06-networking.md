@@ -3,7 +3,7 @@ title: '네트워킹 — virtio-net과 미니 TCP/IP 스택'
 titleEn: 'Networking — virtio-net and a Mini TCP/IP Stack'
 description: 토이 커널에 네트워크를 붙인다. virtio-net 드라이버로 프레임을 주고받고, 이더넷·ARP·IP·UDP·ICMP를 직접 구현해, QEMU user 네트워킹(SLIRP)을 상대로 게이트웨이 MAC을 ARP로 알아내고, ICMP로 ping을 왕복하고, DNS로 도메인을 해석한다. 패킷 하나가 바이트로 어떻게 조립되는지를 손으로 만져 이해하는 마지막 단계.
 descriptionEn: "Adding networking to the toy kernel. A virtio-net driver moves frames in and out, and a hand-written Ethernet/ARP/IP/UDP/ICMP stack talks to QEMU's user networking (SLIRP) — resolving the gateway MAC with ARP, round-tripping a ping over ICMP, and resolving a domain over DNS. The final step in feeling, byte by byte, how a packet is assembled."
-date: 2026-06-24T00:00:00.000Z
+date: 2026-06-12T00:00:00.000Z
 tags:
   - OS
   - C

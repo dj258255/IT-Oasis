@@ -3,7 +3,7 @@ title: 'TCP — 신뢰성은 번호 매기기에서 온다'
 titleEn: 'TCP — Reliability Comes from Numbering'
 description: UDP는 패킷을 던지고 잊는다. TCP는 "내가 어디까지 보냈고 어디까지 받았나"를 시퀀스 번호로 추적해, 순서와 도착을 보장한다. net 스택 위에 TCP 세그먼트와 3-way 핸드셰이크를 올려, 수동 개방 서버를 만든다. 호스트가 접속해 보낸 데이터를 게스트 커널이 받아 에코하고, 그 왕복으로 핸드셰이크부터 종료까지를 검증한다. 그리고 우리가 일부러 빼놓은 것 — 재전송, 혼잡 제어, 윈도우 — 의 트레이드오프까지.
 descriptionEn: "UDP fires and forgets. TCP tracks 'how far I've sent and how far I've received' with sequence numbers, guaranteeing order and delivery. On top of the net stack we add TCP segments and the 3-way handshake to build a passive-open server. A host connects and sends data, the guest kernel receives and echoes it, and that round-trip verifies everything from handshake to close. Plus the trade-offs of what we deliberately left out — retransmission, congestion control, windows."
-date: 2026-06-30T00:00:00.000Z
+date: 2026-06-18T00:00:00.000Z
 tags:
   - OS
   - C
@@ -155,6 +155,8 @@ SYN은 `+1`, 데이터는 `+n`, FIN도 `+1`.
 
 즉 *"알림+확인"* 쌍이 두 개 필요한데, 가운데 2번 메시지가 **서버의 SYN과 클라이언트 SYN에 대한 ACK를 한 번에 겸하기 때문에** 네 번이 세 번으로 줄어요.
 그래서 최소가 정확히 **세 번**입니다.
+
+> 한 걸음 더 — RFC가 드는 더 근본적인 이유는 **"오래된 중복 SYN"을 걸러내는 것**이에요([RFC 9293](https://datatracker.ietf.org/doc/html/rfc9293)). 옛 연결의 SYN이 네트워크에 뒤늦게 떠돌다 도착할 수 있는데, 3-way로 ISN을 주고받으면 *상대가 확인(ACK)하지 못하는* 유령 SYN은 자연히 무시돼요. 그래서 3-way는 "ISN 동기화"인 동시에 **"오래된 중복 패킷 방어"** 이기도 합니다. 이 글의 "알림+확인" 프레이밍은 그 동기화 측면을 보는 거예요.
 
 > **흔한 오해 정정**: *"핸드셰이크는 연결을 '여는' 의식일 뿐, 데이터 전송과는 별개"* 라고 생각하기 쉬운데, 핸드셰이크 자체가 이미 **시퀀스 회계의 시작**이에요. SYN이 ISN을 싣고, 그 ISN이 seq 1을 소비하고, 상대가 `ISN+1`로 ack를 답하는 — 2절에서 본 회계가 핸드셰이크에서 그대로 작동합니다. 핸드셰이크는 "회계 장부의 첫 줄"을 양쪽이 맞추는 일이에요.
 
@@ -534,6 +536,8 @@ A connection is bidirectional, so there are **two streams**, and each stream nee
 
 So you need two *"announce+confirm"* pairs, but the middle message 2 **serves as both the server's SYN and the ACK of the client's SYN**, collapsing four into three.
 That's why the minimum is exactly **three**.
+
+> Going one step deeper — the more fundamental reason the RFC gives is to **reject "old duplicate SYNs"** ([RFC 9293](https://datatracker.ietf.org/doc/html/rfc9293)). A SYN from an old connection can linger in the network and arrive late; with the 3-way exchange of ISNs, a ghost SYN the peer *can't confirm (ACK)* is naturally ignored. So the 3-way is both "ISN synchronization" and **"defense against old duplicate packets."** This post's "announce+confirm" framing is looking at the synchronization side.
 
 > **Common misconception fix**: it's easy to think *"the handshake is merely the ritual that 'opens' a connection, separate from data transfer"* — but the handshake is already **the start of sequence accounting**. The SYN carries an ISN, that ISN consumes seq 1, and the peer replies with `ISN+1` as ack — the very accounting from §2 is at work in the handshake. The handshake is both sides agreeing on "the first line of the ledger."
 

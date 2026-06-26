@@ -3,7 +3,7 @@ title: '유저 스레드 — 커널 없이 갈아타기'
 titleEn: 'User Threads — Switching Without the Kernel'
 description: 스레드는 꼭 커널이 만들어줘야 할까. 한 프로세스 안에서, 커널의 도움 없이 유저 공간만으로 실행 흐름을 갈아타는 협조적 유저 스레드를 만든다. 이건 이 시리즈에서 한 번 실패했다 되돌렸던 주제다. 진짜 원인 — 단일 페이지 모델의 전역 변수 제약, 그리고 힙 스택 위에 트랩 프레임을 저장하다 나는 커널 페이지 폴트 — 을 찾아내고, 커널을 전혀 바꾸지 않고 두 가지 우회로 해결한다.
 descriptionEn: "Must the kernel be the one to create threads? Inside a single process, with no help from the kernel, we build cooperative user threads that switch execution flows purely in user space. This is a topic I once failed at and reverted in this series. We track down the real causes — the single-page model's ban on globals, and a kernel page fault from saving a trap frame on a heap stack — and solve them with two workarounds, changing the kernel not at all."
-date: 2026-07-02T00:00:00.000Z
+date: 2026-06-20T00:00:00.000Z
 tags:
   - OS
   - C
