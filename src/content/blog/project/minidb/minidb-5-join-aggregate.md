@@ -112,7 +112,7 @@ m.tname[0] = sel->alias[0] ? sel->alias : m.tabs[0]->schema.table;
 
 `WHERE` 가 행을 거르고 조인이 행을 잇는다면, `GROUP BY` 와 집계 함수는 여러 행을 **하나로 접습니다**. 여기서 처음으로 "행 하나가 행 하나로" 대응되지 않는 연산이 등장해요.
 
-집계는 정렬 못 하는 `ORDER BY` 처럼 스트리밍이 안 돼요 — 그룹 전체를 봐야 `COUNT` 가 나오니까요. 그래서 행을 모아 그룹 키로 정렬한 뒤, 같은 키의 연속 구간마다 누산기를 돌립니다. **PostgreSQL의 정렬 기반 `GroupAggregate` 와 같은 방식**이에요.
+한 그룹의 `COUNT`는 그 그룹 전체를 봐야 나오죠. 그래서 minidb는 행을 모아 그룹 키로 정렬한 뒤, 같은 키의 연속 구간마다 누산기를 돌립니다 — **PostgreSQL의 정렬 기반 `GroupAggregate` 와 같은 방식**이에요. (입력이 이미 그룹 키로 정렬돼 들어오면 한 그룹이 끝날 때마다 바로 흘려보낼 수도 있어요 — PG의 스트리밍 GroupAggregate가 그렇습니다 — 다만 minidb는 단순하게 전부 모아 정렬하는 길을 택했어요.)
 
 ```
 SELECT dept, COUNT(*), SUM(amt), AVG(amt) FROM sales GROUP BY dept
@@ -121,7 +121,7 @@ eng | 2 | 300 | 150
 sales | 3 | 500 | 166.667
 ```
 
-> **왜 집계는 스트리밍이 안 되나**: `WHERE`나 단순 `SELECT`는 행 하나를 보고 즉시 통과/탈락을 정할 수 있어 한 행씩 흘려보내면 된다(스트리밍). 하지만 `COUNT(*)`는 그룹의 마지막 행까지 다 세야 값이 나온다 — 그래서 행을 일단 다 모아 정렬하는 materialize 경로가 필요하다. [정렬 기반 vs 해시 기반]이 곧 PostgreSQL의 GroupAggregate vs HashAggregate인데, minidb는 단순한 정렬 기반을 골랐다.
+> **minidb 집계가 모아서 처리하는 이유**: `WHERE`나 단순 `SELECT`는 행 하나를 보고 즉시 통과/탈락을 정할 수 있어 한 행씩 흘려보내면 된다(스트리밍). 하지만 `COUNT(*)`는 그룹의 마지막 행까지 다 세야 값이 나온다 — 입력이 그룹 키로 정렬돼 있지 않으면 행을 일단 다 모아 정렬하는 materialize 경로가 필요하다. 실제 PostgreSQL은 입력이 이미 정렬됐으면 스트리밍하는 GroupAggregate, 아니면 HashAggregate도 쓰는데, minidb는 단순한 "모아서 정렬 기반" 하나만 골랐다.
 
 ### HAVING과 집계 결과 정렬
 
@@ -168,7 +168,7 @@ lee | 1 | 12
 
 ## 5. 조인 알고리즘 선택 — 옵티마이저의 핵심 결정
 
-지금까지 조인은 중첩 루프(+안쪽 PK면 인덱스 점 조회)였어요. 여기에 **해시 조인** 을 더했습니다. 안쪽 테이블을 조인 컬럼으로 미리 해시 테이블로 만들어 두면, 바깥 행마다 O(1)로 짝을 찾아요 — 인덱스가 없어도 O(바깥 x 안쪽)을 O(바깥 + 안쪽)으로 줄입니다.
+지금까지 조인은 중첩 루프(+안쪽 PK면 인덱스 점 조회)였어요. 여기에 **해시 조인** 을 더했습니다. 안쪽 테이블을 한 번 훑어 **조인 키 -> 행 목록** 해시를 만들어 두고(build), 바깥 테이블을 한 번 훑으며 그 해시를 조회만 하면(probe) 짝이 나와요. 각 테이블을 한 번씩만 보니 O(바깥 x 안쪽)이 O(바깥 + 안쪽)으로 줄어듭니다 — 인덱스가 없어도요.
 
 그래서 minidb는 조인 레벨마다 **셋 중 하나를 고릅니다**: 안쪽 PK가 조인 키면 인덱스 NLJ, 그 밖의 등식 조인이면 해시 조인, 아니면 중첩 루프.
 
@@ -198,7 +198,7 @@ if (kcol >= 0) {
 | 빛나는 곳 | 한쪽이 작고 안쪽에 인덱스(OLTP) | 양쪽 크고 정렬 안 됨(OLAP) | 양쪽 이미 정렬됐거나 너무 커서 해시 불가 |
 | minidb | O (스캔/인덱스) | O | X (안 만듦) |
 
-정렬 병합은 양쪽을 조인 키로 정렬해 두고 지퍼 잠그듯 나란히 훑는 방식인데, 양쪽이 이미 정렬돼 나오거나(인덱스 스캔 결과 등) 둘 다 해시가 메모리에 안 들어갈 만큼 거대할 때 빛나요. 안 만든 건 게을러서가 아니라, 정렬 인프라가 더 필요하고 우리 규모에선 보여줄 게 적어서입니다.
+정렬 병합은 양쪽을 조인 키로 정렬해 두고 지퍼 잠그듯 나란히 훑는 방식인데, 정렬된 입력에선 해시보다 메모리를 덜 쓰고 등식뿐 아니라 범위 조인까지 처리할 수 있어 대용량 데이터 웨어하우스에서 자주 쓰여요. 특히 양쪽이 이미 정렬돼 나오거나(인덱스 스캔 결과 등) 둘 다 해시가 메모리에 안 들어갈 만큼 거대할 때 빛납니다. 안 만든 건 게을러서가 아니라, 정렬 인프라가 더 필요하고 우리 규모에선 보여줄 게 적어서예요.
 
 ### 진짜 옵티마이저는 비용 모델로 고른다
 
@@ -208,7 +208,7 @@ if (kcol >= 0) {
 - 양쪽이 크고 정렬 안 됐으면 **해시** (OLAP에서 흔함)
 - 양쪽이 이미 정렬됐거나 너무 커서 해시도 안 들어가면 **정렬 병합**
 
-minidb의 "레벨마다 인덱스/해시/스캔 중 하나"는 이 비용 모델의 아주 거친 버전인 셈이에요.
+minidb의 "레벨마다 인덱스/해시/스캔 중 하나"는 이 비용 모델의 아주 거친 버전인 셈이에요. 그리고 진짜 옵티마이저가 조인 방법보다 먼저 고민하는 게 **조인 순서(join order)** 예요 — `A JOIN B JOIN C`라도 `(A JOIN B) JOIN C`가 아니라 `(B JOIN C) JOIN A`가 훨씬 빠를 수 있어서, PostgreSQL은 가능한 순서들을 비용으로 비교합니다. minidb는 그냥 **FROM 절에 적힌 순서를 그대로** 써요.
 
 > **실무/면접 포인트**: 이 "조인 방법 선택"이 실무에서 얼마나 중요한지는, 같은 조인을 어떻게 거느냐로 응답이 수천 배 갈리는 사례에서 드러난다. 옵티마이저가 잘못된 조인 방법이나 순서를 고르면(예: 큰 테이블을 바깥으로) 같은 쿼리가 수십 배 느려진다 — 그래서 `EXPLAIN`으로 실제 선택을 확인하는 게 튜닝의 첫걸음이다.
 
@@ -260,6 +260,13 @@ park
 LEFT JOIN으로 미매칭을 NULL로 만들고, `IS NULL` 로 그 NULL을 잡으면 "주문이 하나도 없는 사용자"가 나옵니다. **차집합이 두 기능(LEFT JOIN + IS NULL)의 결합으로 자연히 떨어져요.**
 
 끝으로 `SELECT DISTINCT` 도 더했는데, 구현은 "모든 출력 컬럼으로 GROUP BY 한 것"과 같아요 — 출력 행을 전체 컬럼으로 정렬한 뒤 인접한 중복을 지우면 끝입니다. 4절의 정렬 기반 집계 인프라가 그대로 재활용돼요.
+
+```
+SELECT DISTINCT dept FROM sales
+dept
+eng
+sales
+```
 
 ## 7. 더 진짜 SQL처럼 ③ — 쿼리 안의 쿼리, 서브쿼리
 
@@ -412,7 +419,7 @@ Then `e` and `m` are distinguished as different instances of the same `emp`, and
 
 If `WHERE` filters rows and joins stitch rows, `GROUP BY` and aggregate functions **fold many rows into one**. This is the first operation where one row does not map to one row.
 
-Aggregation cannot stream, like a `ORDER BY` that cannot sort — you must see the whole group before `COUNT` emerges. So we collect rows, sort by group key, and run an accumulator over each contiguous run of equal keys. This is the **same approach as PostgreSQL's sort-based `GroupAggregate`**.
+A group's `COUNT` only emerges once you have seen the whole group. So minidb collects rows, sorts by group key, and runs an accumulator over each contiguous run of equal keys — the **same approach as PostgreSQL's sort-based `GroupAggregate`**. (If the input already arrives sorted by the group key, you could emit each group as it ends — that is PG's streaming GroupAggregate — but minidb takes the simple collect-and-sort path.)
 
 ```
 SELECT dept, COUNT(*), SUM(amt), AVG(amt) FROM sales GROUP BY dept
@@ -421,7 +428,7 @@ eng | 2 | 300 | 150
 sales | 3 | 500 | 166.667
 ```
 
-> **Why aggregation cannot stream**: `WHERE` or a plain `SELECT` can decide pass/fail on one row immediately, so it can stream rows one by one. But `COUNT(*)` needs to count to the last row of the group before its value emerges — so a materialize path that collects and sorts all rows first is required. [Sort-based vs hash-based] is exactly PostgreSQL's GroupAggregate vs HashAggregate; minidb chose the simpler sort-based one.
+> **Why minidb's aggregation collects first**: `WHERE` or a plain `SELECT` can decide pass/fail on one row immediately, so it can stream rows one by one. But `COUNT(*)` needs to count to the last row of the group before its value emerges — so unless the input is already sorted by the group key, a materialize path that collects and sorts all rows first is required. Real PostgreSQL streams via GroupAggregate when the input is already sorted, and otherwise uses HashAggregate; minidb chose only the simple sort-based path.
 
 ### HAVING and Sorting Aggregate Results
 
@@ -468,7 +475,7 @@ lee | 1 | 12
 
 ## 5. Join-Method Selection — The Optimizer's Core Decision
 
-So far joins were nested-loop (+ index point lookup if inner PK). We added **hash join**. Pre-build the inner table into a hash table on the join column, and each outer row finds its pair in O(1) — even without an index, it shrinks O(outer x inner) to O(outer + inner).
+So far joins were nested-loop (+ index point lookup if inner PK). We added **hash join**. Scan the inner table once to build a **join key -> row list** hash (build), then scan the outer table once doing only hash lookups (probe) to find pairs. Seeing each table just once shrinks O(outer x inner) to O(outer + inner) — even without an index.
 
 So minidb **picks one of three** per join level: index NLJ if the inner PK is the join key, hash join for other equi-joins, else nested loop.
 
@@ -498,7 +505,7 @@ Textbook join algorithms are three, but I built only two (nested loop, hash) and
 | Shines when | one side small, inner indexed (OLTP) | both large, unsorted (OLAP) | both already sorted, or too big for hash |
 | minidb | yes (scan/index) | yes | no (not built) |
 
-Sort-merge sorts both sides by join key and combs them side by side like a zipper, shining when both already come sorted (e.g. index-scan output) or both are too huge for a hash to fit in memory. Not building it was not laziness — it needs more sort infrastructure and has little to show at our scale.
+Sort-merge sorts both sides by join key and combs them side by side like a zipper; on sorted input it uses less memory than a hash and handles range joins (not just equi-joins), so it is common in large data warehouses. It especially shines when both already come sorted (e.g. index-scan output) or both are too huge for a hash to fit in memory. Not building it was not laziness — it needs more sort infrastructure and has little to show at our scale.
 
 ### A Real Optimizer Picks by a Cost Model
 
@@ -508,7 +515,7 @@ The real PostgreSQL optimizer picks among these three by a **cost model** — we
 - both large and unsorted -> **hash** (common in OLAP)
 - both already sorted, or too big for even a hash -> **sort-merge**
 
-minidb's "one of index/hash/scan per level" is a very coarse version of this cost model.
+minidb's "one of index/hash/scan per level" is a very coarse version of this cost model. And what a real optimizer weighs even before the join method is **join order** — for `A JOIN B JOIN C`, `(B JOIN C) JOIN A` can be far faster than `(A JOIN B) JOIN C`, so PostgreSQL compares the possible orders by cost. minidb just uses **the order written in the FROM clause** as-is.
 
 > **Practical/interview note**: how much this "join-method selection" matters in practice shows in cases where the same join's response varies thousands of times by how you filter it. If the optimizer picks the wrong method or order (e.g. the big table as outer), the same query gets tens of times slower — so checking the actual choice with `EXPLAIN` is the first step of tuning.
 
@@ -560,6 +567,13 @@ park
 Make unmatched rows NULL with LEFT JOIN, then catch that NULL with `IS NULL`, and "users with no orders at all" come out. **Set difference falls out naturally from combining two features (LEFT JOIN + IS NULL).**
 
 Finally we added `SELECT DISTINCT`, implemented the same as "GROUP BY every output column" — sort output rows by all columns then drop adjacent duplicates. Section 4's sort-based aggregation infrastructure is reused as-is.
+
+```
+SELECT DISTINCT dept FROM sales
+dept
+eng
+sales
+```
 
 ## 7. Closer to Real SQL ③ — A Query Inside a Query, the Subquery
 
