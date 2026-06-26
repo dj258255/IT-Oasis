@@ -44,7 +44,7 @@ seriesOrder: 2
 
 말은 단순한데, 이 둘은 정면으로 충돌해요.
 지금까지 우리 커널은 **전부 S-mode**에서 돌았어요 — 셸도, 타이머도, 페이지 할당기도요.
-S-mode는 사실상 못 하는 게 없어요 — CSR을 마음껏 읽고 쓰고, 장치 메모리(UART·PLIC)에 직접 접근하고, 페이지 테이블도 갈아끼워요.
+S-mode는 사실상 못 하는 게 없어요 — **CSR**(제어·상태 레지스터 — `satp`·`sstatus`처럼 CPU 설정·상태를 담는 특수 레지스터)을 마음껏 읽고 쓰고, 장치 메모리(UART·PLIC)에 직접 접근하고, 페이지 테이블도 갈아끼워요.
 
 문제는 "프로그램"을 이 권한으로 돌리면 곤란하다는 거예요.
 
@@ -610,7 +610,7 @@ Honestly those two bugs were where I learned the most in this stage, so I broke 
 
 Simple to state, but those two pull in opposite directions.
 Until now our whole kernel ran in **S-mode** — the shell, the timer, the page allocator, all of it.
-S-mode can do basically anything: read and write CSRs freely, touch device memory (UART, PLIC), swap out page tables.
+S-mode can do basically anything: read and write **CSRs** (control & status registers — special registers like `satp`/`sstatus` that hold CPU config/state) freely, touch device memory (UART, PLIC), swap out page tables.
 
 The problem is that running a "program" with that much power is dangerous.
 

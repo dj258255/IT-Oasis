@@ -27,7 +27,7 @@ seriesOrder: 6
 프로세스가 동시에 도는 것처럼 보여도, 사실은 한 코어가 빠르게 번갈아 돌린 거였죠([4편의 선점형 스케줄러](/blog/hobby/hobby-kernel-03-exec-and-shell)).
 타이머가 울릴 때마다 `yield()`로 실행 중인 프로세스를 갈아끼웠으니까, **시분할(time-sharing)** 이었지 진짜 병렬이 아니었어요.
 
-이번 글의 주제는 **진짜 동시 실행** — 여러 코어(RISC-V에선 hart)가 같은 커널을 같은 순간에 함께 도는 거예요.
+이번 글의 주제는 **진짜 동시 실행** — 여러 코어(RISC-V에선 **hart** — "HARdware Thread", CPU 코어 하나)가 같은 커널을 같은 순간에 함께 도는 거예요.
 이게 OS에서 제일 어려운 부분 중 하나예요.
 왜냐하면 두 코어가 같은 자료구조를 정말로 동시에 만지면, 단일 코어에선 평생 멀쩡하던 코드가 비결정적으로 깨지거든요.
 
@@ -556,7 +556,7 @@ Up to now the kernel assumed a **single core**.
 Processes looked concurrent, but really one core was switching between them quickly ([the preemptive scheduler in Part 4](/blog/hobby/hobby-kernel-03-exec-and-shell)).
 Every timer tick called `yield()` to swap out the running process — so it was **time-sharing**, not true parallelism.
 
-This post is about **true concurrent execution** — several cores (harts, in RISC-V) running the same kernel at the very same instant.
+This post is about **true concurrent execution** — several cores (**harts** in RISC-V — "HARdware Thread", a single CPU core) running the same kernel at the very same instant.
 This is one of the hardest parts of an OS.
 Because when two cores really do touch the same data structure at once, code that was fine on a single core forever breaks nondeterministically.
 
