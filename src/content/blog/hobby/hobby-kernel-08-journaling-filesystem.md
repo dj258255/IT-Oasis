@@ -3,7 +3,7 @@ title: '저널링 파일시스템 — 절반만 쓰이지 않게'
 titleEn: 'A Journaling Filesystem — Never Half-Written'
 description: 쓰기 도중 전원이 나가면 파일시스템은 어떻게 될까. 데이터는 썼는데 디렉터리는 못 썼다면 디스크가 깨진다. 저널링(write-ahead log)은 이걸 막는다 — 변경을 제자리에 바로 쓰지 않고 먼저 로그에 모은 뒤, 커밋 표시를 찍고, 그제서야 설치한다. 크래시가 나도 "전부 반영" 또는 "전혀 반영 안 됨" 둘 중 하나라 디스크는 항상 일관적이다. 여기에 삭제(rm)와 빈 블록 재사용까지 더해 읽기 전용이던 FS를 진짜 읽기-쓰기로 키운다.
 descriptionEn: "What happens to a filesystem if the power dies mid-write? If the data was written but the directory wasn't, the disk is corrupt. Journaling (a write-ahead log) prevents this — changes aren't written in place but gathered in a log first, marked committed, and only then installed. Even on a crash it's all-or-nothing, so the disk is always consistent. Adding delete (rm) and free-block reuse turns a read-only FS into a real read-write one."
-date: 2026-06-28T00:00:00.000Z
+date: 2026-06-16T00:00:00.000Z
 tags:
   - OS
   - C
@@ -408,7 +408,7 @@ RUN 1에서 6개였다가 `write` 후 RUN 2에서 7개로 늘었고, **남은 �
 | 복구의 복잡도 | 단순(블록을 그대로 복사) | 복잡(연산을 재실행, 멱등성 관리 필요) |
 | 멱등성 | 자명(같은 블록 덮어쓰기) | 직접 보장해야 함 |
 
-실제 파일시스템(ext4 등)은 로그를 줄이려고 메타데이터만 로깅하거나 논리 로깅을 쓰지만, 토이 커널에선 **물리 로깅이 가장 단순하고 정확**해요.
+실제 파일시스템은 로그를 줄이려고 여러 최적화를 써요 — 예를 들어 ext4(JBD2)는 기본값에서 **메타데이터만**(데이터는 저널 안 함) 물리 저널링하고, 어떤 시스템은 변경을 "연산"으로 적는 논리 로깅을 쓰기도 하죠. 토이 커널에선 **블록 통째 물리 로깅이 가장 단순하고 정확**해서 그걸 택했어요.
 블록을 통째로 베껴 두면 복구가 그냥 "복사"라 멱등성이 공짜로 따라와요(4절).
 **"단순함 ↔ 효율"** 에서 또 단순함을 택한 거죠 — 이 연재의 일관된 선택이에요([1편의 free list](/blog/hobby/hobby-kernel-00-boot-to-paging)도 같은 정신).
 
@@ -825,7 +825,7 @@ One more thing: our log is **physical, block-level logging** (the whole changed 
 | Recovery complexity | simple (copy the block as-is) | complex (re-run the operation, must manage idempotency) |
 | Idempotency | trivial (overwrite the same block) | must be guaranteed by hand |
 
-Real filesystems (ext4 etc.) log only metadata or use logical logging to shrink the log, but in a toy kernel **physical logging is the simplest and most correct**.
+Real filesystems use various optimizations to shrink the log — e.g. ext4 (JBD2) by default physically journals **only metadata** (data isn't journaled), while some systems use logical logging that records changes as "operations." In a toy kernel **whole-block physical logging is the simplest and most correct**, so that's what we picked.
 Copying the whole block makes recovery a plain "copy," so idempotency comes for free (§4).
 Between **"simplicity ↔ efficiency"** I again chose simplicity — the consistent choice of this series (the [free list in Part 1](/blog/hobby/hobby-kernel-00-boot-to-paging) shares the same spirit).
 

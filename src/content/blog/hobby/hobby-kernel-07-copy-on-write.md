@@ -3,7 +3,7 @@ title: 'Copy-on-Write fork — 복사를 미루는 기술'
 titleEn: 'Copy-on-Write fork — the Art of Deferring the Copy'
 description: fork는 주소공간을 통째로 복사한다. 하지만 대부분의 자식은 곧장 exec해 그 복사본을 버린다. Copy-on-Write는 이 낭비를 없앤다 — fork 때는 페이지를 복사하지 않고 부모와 읽기 전용으로 공유하다가, 누군가 쓰는 "그 순간"에만 복제한다. 물리 페이지 참조 카운트와 쓰기 페이지 폴트로 이걸 구현하고, 우리 커널만의 설계 제약(스택은 공유 못 한다)과 그 트레이드오프까지 짚는다.
 descriptionEn: "fork copies the whole address space. But most children immediately exec and throw that copy away. Copy-on-Write removes the waste — at fork time pages aren't copied but shared read-only with the parent, and the copy happens only at the moment someone writes. We implement it with physical-page reference counts and a write page fault, and walk through our kernel's own design constraint (the stack can't be shared) and its trade-off."
-date: 2026-06-26T00:00:00.000Z
+date: 2026-06-14T00:00:00.000Z
 tags:
   - OS
   - C

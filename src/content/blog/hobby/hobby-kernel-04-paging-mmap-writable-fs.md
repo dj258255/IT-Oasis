@@ -3,7 +3,7 @@ title: 'demand paging, mmap, 그리고 쓰기 가능 파일시스템'
 titleEn: 'Demand Paging, mmap, and a Writable Filesystem'
 description: 작은 유닉스 위에 메모리 관리를 깊이 올린다. 예외 핸들러를 "출력만 하던 것"에서 "실제로 페이지를 만드는 것"으로 키워, sbrk 기반 지연 할당(demand paging)과 파일을 메모리처럼 읽는 mmap을 구현한다. 그리고 읽기 전용이던 파일시스템을 블록 할당과 디스크 쓰기로 쓰기 가능하게 만들어, 파일이 재부팅에도 살아남게 한다. 페이지 폴트가 RISC-V에서 어떻게 S-mode로 전달되는지(medeleg)부터 차근히.
 descriptionEn: "Deepening memory management on top of a small Unix. The exception handler grows from merely printing to actually creating pages — implementing sbrk-based demand paging (lazy allocation) and mmap that reads a file as if it were memory. Then the read-only filesystem becomes writable via block allocation and disk writes, so files survive a reboot. Starting from how page faults are delegated to S-mode on RISC-V (medeleg)."
-date: 2026-06-18T00:00:00.000Z
+date: 2026-06-06T00:00:00.000Z
 tags:
   - OS
   - C

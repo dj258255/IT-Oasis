@@ -3,7 +3,7 @@ title: '유저모드에서 프로세스까지'
 titleEn: 'From User Mode to Processes'
 description: 커널의 골격 위에 OS의 진짜 핵심을 올린다. 유저모드(U-mode) 진입과 시스템콜(ecall) 경계, 컨텍스트 스위치와 선점형 라운드로빈 스케줄러, 그리고 프로세스별 페이지 테이블로 주소공간을 격리한 유저 프로세스까지. 디버깅에서 만난 공유 CSR 문제와 SUM 비트 이야기도 함께 정리한다.
 descriptionEn: "Building the real heart of an OS on top of the kernel skeleton — entering user mode (U-mode) and the system-call boundary via ecall, context switching with a preemptive round-robin scheduler, and user processes isolated by per-process page tables. Plus two debugging lessons: the shared-CSR trap-frame problem and the SUM bit."
-date: 2026-06-04T00:00:00.000Z
+date: 2026-05-23T00:00:00.000Z
 tags:
   - OS
   - C
@@ -190,6 +190,9 @@ U-mode로 떨어진 프로그램이 `ecall`로 부탁하고, 커널이 받아서
 `swtch`는 **평범한 C 함수처럼** 호출되거든요.
 C 호출 규약(calling convention)상, 함수를 호출하면 `a0`~`a7`이나 `t0`~`t6` 같은 caller-saved 레지스터는 호출한 쪽이 이미 알아서 스택에 대피시켜요.
 그러니 `swtch`가 따로 챙길 건 **callee-saved 레지스터(`s0`~`s11`) + `ra`(복귀 주소) + `sp`(스택 포인터)** — 딱 14개예요.
+한 가지 짚고 갈 게 있어요 — `ra`와 `sp`는 호출 규약상 엄밀히는 **caller-saved**인데, 왜 `swtch`가 직접 저장할까요?
+`swtch`는 보통 함수처럼 *자기를 부른 쪽* 으로 돌아가는 게 아니라, **다른 실행 흐름으로 돌아가기** 때문이에요.
+`ra`(어디로 돌아갈지)와 `sp`(어느 스택인지)가 바로 그 *"흐름의 정체"* 라, 이 둘을 저장·복원하는 게 흐름 전환의 본질이에요. 그래서 일반 함수의 caller-saved 규칙과 무관하게 `swtch`만큼은 직접 챙깁니다.
 
 ```asm
 # swtch.S — void swtch(struct context *old, struct context *new)
@@ -747,6 +750,9 @@ There are 31 general registers, but you don't need to save all of them.
 `swtch` is called **like an ordinary C function**.
 By the C calling convention, when you call a function the caller has already spilled the caller-saved registers (`a0`–`a7`, `t0`–`t6`) to the stack itself.
 So all `swtch` has to preserve is the **callee-saved registers (`s0`–`s11`) + `ra` (return address) + `sp` (stack pointer)** — exactly 14.
+One thing to note — strictly by the ABI, `ra` and `sp` are **caller-saved**, so why does `swtch` save them itself?
+Because `swtch` doesn't return to *its caller* like an ordinary function — it returns into **a different execution flow**.
+`ra` (where to resume) and `sp` (which stack) *are* the "identity of the flow," so saving and restoring those two is the essence of switching flows. That's why `swtch` handles them itself, regardless of the ordinary caller-saved rule.
 
 ```asm
 # swtch.S — void swtch(struct context *old, struct context *new)
