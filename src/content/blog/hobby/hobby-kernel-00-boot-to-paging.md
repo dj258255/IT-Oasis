@@ -119,8 +119,8 @@ void uart_putc(char c) {
 이 가로채기를 통틀어 **트랩(trap)** 이라고 불러요.
 트랩에는 크게 세 종류가 있습니다 — 외부에서 비동기로 오는 **인터럽트**(타이머·장치), 명령 실행이 만든 **예외**(페이지 폴트·잘못된 명령), 그리고 유저가 일부러 일으키는 **시스템콜**(다음 글 주제).
 
-CPU가 트랩을 만나면 `stvec` 레지스터가 가리키는 핸들러로 점프해요.
-거기서 레지스터를 전부 저장하고, C 핸들러를 부른 뒤, 복원하고 `sret`로 원래 흐름에 복귀합니다.
+CPU가 트랩을 만나면 **`stvec`**(Supervisor Trap-Vector — 트랩이 나면 점프할 핸들러 주소를 담아 두는 CSR) 레지스터가 가리키는 핸들러로 점프해요.
+거기서 레지스터를 전부 저장하고, C 핸들러를 부른 뒤, 복원하고 **`sret`**(Supervisor RETurn — 트랩에서 빠져나와 직전 모드·위치로 돌아가는 명령)로 원래 흐름에 복귀합니다.
 저장·복원은 어셈블리(`kernelvec.S`)가 맡고, 판단은 C가 해요.
 
 ```c
@@ -531,8 +531,8 @@ Now that we have a debugging channel, we can raise the rest.
 This interception is collectively called a **trap**.
 There are three broad kinds — asynchronous **interrupts** from outside (timer, devices), **exceptions** produced by an instruction (page fault, illegal instruction), and **system calls** a user intentionally raises (the next post's topic).
 
-When the CPU hits a trap, it jumps to the handler pointed to by the `stvec` register.
-There it saves all registers, calls a C handler, then restores them and returns to the original flow with `sret`.
+When the CPU hits a trap, it jumps to the handler pointed to by the **`stvec`** (Supervisor Trap-Vector — the CSR holding the address of the trap handler) register.
+There it saves all registers, calls a C handler, then restores them and returns to the original flow with **`sret`** (Supervisor RETurn — the instruction that leaves a trap and returns to the previous mode and location).
 The save/restore is assembly (`kernelvec.S`); the decisions are C.
 
 ```c
