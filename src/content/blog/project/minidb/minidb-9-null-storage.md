@@ -34,7 +34,7 @@ seriesOrder: 9
 
 처음 떠오르는 건 **특별한 값을 약속**하는 겁니다 — 예를 들어 정수 `-1`을 NULL로 치자. 바로 막힙니다. `-1`은 멀쩡한 정수 값이에요. 누군가 진짜로 `-1`을 저장하려 하면 NULL과 구분이 안 됩니다. TEXT도 마찬가지예요. 빈 문자열 `''`은 NULL이 아니라 "길이 0인 문자열"이라는 엄연히 다른 값이고요.
 
-> **핵심 사실**: NULL은 값이 아니라 **"값이 없음"** 이다. 데이터 안의 어떤 값으로도 표현할 수 없으니, 데이터 **바깥**에 따로 표시해야 한다. 이게 NULL을 저장하는 모든 어려움의 출발점이다.
+> **핵심 사실**: NULL은 일반 데이터 값이 아니라 **"값이 없음"을 나타내는 특수 표지(marker)** 다. 타입도 갖고 컬럼에도 저장되지만, 일반 INT·TEXT 데이터 *그 자체* 로는 표현할 수 없으니 데이터 **바깥**에 따로 표시해야 한다. 이게 NULL을 저장하는 모든 어려움의 출발점이다.
 
 그래서 진짜 DB가 쓰는 방법이 **null 비트맵(null bitmap)** 입니다. 행 맨 앞에 컬럼 수만큼의 비트를 두고, i번째 비트가 1이면 "i번째 컬럼은 NULL"이라는 뜻이에요. NULL인 컬럼은 비트만 켜고 값 바이트는 아예 안 씁니다(공간도 아낍니다). PostgreSQL도 InnoDB도 행 헤더에 이 null 비트맵을 둬요.
 
@@ -45,7 +45,7 @@ seriesOrder: 9
 | NULL 컬럼의 값 바이트 | 아예 안 씀(공간 절약) | 아예 안 씀 | 아예 안 씀 |
 | nullable 아닌 컬럼 | 비트는 두되 항상 0 | 모두 NOT NULL이면 비트맵 자체를 생략 | NOT NULL 컬럼은 비트맵에서 제외 |
 
-세부는 달라도 발상은 똑같아요 — "어느 컬럼이 NULL인지"를 값 바이트가 아니라 **별도의 비트**로 적는다.
+세부는 달라도 대표적인 row-store DB(PostgreSQL·InnoDB)에선 발상이 똑같아요 — "어느 컬럼이 NULL인지"를 값 바이트가 아니라 **별도의 비트**로 적는다. (Oracle·SQL Server·SQLite는 행 포맷이 또 꽤 달라요.)
 
 ## 2. null 비트맵 — 행 앞에 비트 한 줌
 
@@ -82,7 +82,7 @@ for (int i = 0; i < schema->num_columns; i++) {
 }
 ```
 
-> **왜 비트맵을 맨 앞에 두나**: 값을 읽기 **전에** "이 컬럼이 NULL인지"를 먼저 알아야, 그 자리에서 4바이트(INT)를 읽을지 아니면 0바이트를 건너뛸지를 정할 수 있다. 비트맵이 값들 뒤에 있으면 닭이 먼저냐 달걀이 먼저냐가 된다 — 값을 다 읽어야 비트맵에 닿는데, 어디까지가 값인지를 알려면 비트맵이 필요하니까. 그래서 비트맵은 반드시 값보다 앞이다.
+> **왜 비트맵을 맨 앞에 두나**: 값을 읽기 **전에** "이 컬럼이 NULL인지"를 먼저 알아야, 그 자리에서 4바이트(INT)를 읽을지 아니면 0바이트를 건너뛸지를 정할 수 있다. 비트맵이 값들 뒤에 있으면 닭이 먼저냐 달걀이 먼저냐가 된다 — 값을 다 읽어야 비트맵에 닿는데, 어디까지가 값인지를 알려면 비트맵이 필요하니까. 그래서 값을 순차로 읽는 minidb 같은 포맷에선 비트맵이 값보다 앞에 있어야 한다. (offset 배열이나 컬럼 디렉터리를 쓰는 포맷은 이 제약이 느슨해져요 — 진짜 요건은 "값을 해석하기 전에 NULL 여부를 알 수 있을 것"뿐이다.)
 
 ## 3. 저장만 뚫으니 나머지는 이미 돌아갔다
 
@@ -90,7 +90,7 @@ for (int i = 0; i < schema->num_columns; i++) {
 
 `WHERE name IS NULL`도, `COUNT(*)`와 `COUNT(name)`의 차이도, NULL이 섞인 `ORDER BY`도 전부 그냥 동작했어요. 이유는 [5편](/blog/project/minidb/minidb-5-join-aggregate) 덕분입니다. 그때 LEFT JOIN의 임시 NULL을 처리하려고 비교 함수(NULL은 어떤 것과도 같지 않다), 집계(`COUNT(col)`·`SUM`·`AVG`는 NULL을 건너뛴다), 정렬 비교기까지 전부 `VAL_NULL`을 아는 코드로 만들어 뒀거든요.
 
-그 NULL이 "조인이 만든 것"이든 "디스크에서 읽은 것"이든 코드 입장에선 똑같은 `VAL_NULL`이에요. 그래서 저장이라는 **입구** 하나만 열어 주니, 그 뒤 파이프라인은 손 안 대고 통째로 재사용됐습니다.
+그 NULL이 "조인이 만든 것"이든 "디스크에서 읽은 것"이든 코드 입장에선 똑같은 `VAL_NULL`이에요. 그래서 저장이라는 **입구** 하나만 열어 주니, 그 뒤 파이프라인은 손 안 대고 통째로 재사용됐습니다(어디까지나 minidb가 구현한 기능 범위에서요 — 진짜 DB는 UNIQUE·DISTINCT·GROUP BY·조인 등식·인덱스마다 NULL 정책이 더 붙습니다).
 
 > **설계 보상 — 계층을 잘 끊으면 받는 것**: NULL의 "의미"(비교·집계·정렬 규칙)와 NULL의 "저장"(바이트 표현)을 따로 만들어 뒀더니, 한쪽을 나중에 채워도 다른 쪽이 안 흔들렸다. 5편에서 의미를, 9편에서 저장을 채웠는데 둘이 깔끔하게 맞물렸다. "관심사 분리"가 추상적 구호가 아니라 실제로 일을 덜어 주는 걸 손으로 본 순간이다.
 
@@ -100,7 +100,7 @@ NULL을 저장하고 나니 SQL에서 제일 헷갈리는 주제를 직접 마�
 
 보통 조건은 참 아니면 거짓이에요. 그런데 NULL이 끼면 세 번째 값, **모름(unknown)** 이 생깁니다.
 
-> **3값 논리란**: NULL이 낀 비교의 결과는 참도 거짓도 아닌 **모름(unknown)** 이다. `name = 'kim'`인데 `name`이 NULL이면, "이름이 없는 사람의 이름이 kim인가"는 답할 수 없다 — 모름이다. 그리고 SQL은 `WHERE`에서 **모름을 거짓처럼 취급**해 그 행을 결과에서 뺀다.
+> **3값 논리란**: NULL이 낀 비교의 결과는 참도 거짓도 아닌 **모름(unknown)** 이다. `name = 'kim'`인데 `name`이 NULL이면, "이름이 없는 사람의 이름이 kim인가"는 답할 수 없다 — 모름이다. 그리고 SQL `WHERE`는 **TRUE인 행만 통과**시키므로, FALSE도 UNKNOWN(모름)도 똑같이 탈락한다 — 즉 모름은 거짓처럼 결과에서 빠진다.
 
 그래서 이런 일이 벌어져요.
 
@@ -191,7 +191,7 @@ static int value_cmp(const Value *x, const Value *y) {
 
 ## 6. PK는 NULL일 수 없다 — NOT NULL 제약
 
-딱 한 곳, NULL을 막아 둔 데가 있어요 — **첫 컬럼(PK)** 입니다. minidb는 첫 컬럼을 유일 키로 보고 B+Tree 인덱스를 거는데([3편](/blog/project/minidb/minidb-3-index-wal)), 인덱스의 키가 NULL이면 "정렬된 트리에서 NULL을 어디에 꽂나"부터 막혀요. 그래서 `INSERT INTO t VALUES (NULL, 'x')`는 거부합니다. 진짜 DB에서 기본 키가 항상 `NOT NULL`인 것과 같은 이유예요.
+딱 한 곳, NULL을 막아 둔 데가 있어요 — **첫 컬럼(PK)** 입니다. 이유는 정렬이 아니라 **PK의 정의**예요 — PK는 행을 유일하게 식별하는 키인데, "모름"인 NULL을 키로 허용하면 유일 식별이 깨지니까요(그래서 SQL 표준도 PK에 NOT NULL을 강제합니다). minidb는 첫 컬럼을 유일 키로 보고 B+Tree 인덱스를 걸며([3편](/blog/project/minidb/minidb-3-index-wal)), 그래서 `INSERT INTO t VALUES (NULL, 'x')`를 거부해요. (B+Tree 자체는 NULL도 정렬할 수 있어요 — 실제 PostgreSQL은 NULL이 든 B-tree 인덱스도 만듭니다. minidb가 PK 키에 NULL을 안 받는 건 구현 단순화 + PK 의미 때문이에요.)
 
 거기에 더해, 컬럼별로 `NOT NULL` 제약을 직접 걸 수도 있어요. `CREATE TABLE`에서 컬럼 뒤에 `NOT NULL`을 붙이면 파서가 그 컬럼에 플래그를 세웁니다.
 
@@ -230,10 +230,10 @@ NULL 저장은 코드량으로 보면 작은 작업이었어요 — 행 앞에 �
 
 - **null 비트맵** — "값이 없음"은 데이터 안의 어떤 값으로도 표현 못 하니, 행 앞에 컬럼당 1비트로 데이터 바깥에 표시한다. 비트는 반드시 값보다 **앞**(값을 읽기 전에 NULL 여부를 알아야 하니까). PostgreSQL·InnoDB 행 포맷과 같은 발상.
 - **3값 논리** — NULL이 낀 비교는 참도 거짓도 아닌 "모름"이고, WHERE는 모름을 거짓 취급한다. 그래서 `=`로도 `!=`로도 NULL이 안 잡히고, NULL을 잡는 유일한 길은 `IS NULL`/`IS NOT NULL`.
-- **집계·정렬** — `COUNT(*)`는 행을, `COUNT(col)`/`SUM`/`AVG`는 NULL을 건너뛴 값을 센다. 정렬은 NULL을 가장 크게 쳐 NULLS LAST(PostgreSQL과 동일, MySQL은 반대).
+- **집계·정렬** — `COUNT(*)`는 행을, `COUNT(col)`/`SUM`/`AVG`는 NULL을 건너뛴 값을 센다. 정렬은 NULL을 가장 크게 쳐 ASC에선 NULLS LAST, DESC에선 NULLS FIRST가 되는데 — 방향만 뒤집을 뿐이라 둘 다 PostgreSQL 기본과 같다(MySQL은 반대).
 - **NOT NULL·PK** — PK는 항상 NOT NULL(NULL은 유일 식별을 깨니까). 컬럼별 `NOT NULL` 제약도 INSERT에서 검증한다.
 
-"값이 없음"을 값으로 표현할 수 없어 데이터 바깥에 비트로 표시해야 한다는 것, 그래서 `=`로는 영영 NULL을 못 잡는다는 것 — 글로 읽을 땐 외우던 규칙이, 직접 비트맵을 깔고 나니 당연한 귀결로 보였어요.
+"값이 없음"을 값으로 표현할 수 없어 데이터 바깥에 비트로 표시해야 한다는 것 — 이건 직접 비트맵을 깔며 손에 잡혔어요. 그리고 그 과정에서 "NULL은 일반 값과 다르다"가 실감 나니, `=`로는 영영 NULL을 못 잡는 3값 논리가 왜 필요한지도 비로소 이해됐습니다(3값 논리는 저장 방식이 아니라 SQL 언어 설계지만, 저장을 만지며 그 필요성이 또렷해졌어요).
 
 ## 참고
 
@@ -259,7 +259,7 @@ In [Part 2's tuple codec](/blog/project/minidb/minidb-2-sql-engine), `INT` is 4 
 
 The first idea is to **reserve a special value** — say, treat the integer `-1` as NULL. It breaks immediately. `-1` is a perfectly valid integer; if someone really stores `-1`, you can't tell it from NULL. TEXT is the same: the empty string `''` isn't NULL but "a string of length 0", a genuinely different value.
 
-> **Key fact**: NULL isn't a value — it's **"the absence of a value."** No value inside the data can represent it, so it must be marked **outside** the data. This is the starting point of every difficulty in storing NULL.
+> **Key fact**: NULL isn't an ordinary data value — it's a **special marker for "the absence of a value."** It has a type, lives in columns, and is testable via IS NULL, but no ordinary INT or TEXT data by *itself* can represent it, so it must be marked **outside** the data. This is the starting point of every difficulty in storing NULL.
 
 So real DBs use a **null bitmap**. At the front of each row sit as many bits as there are columns; if bit i is 1, "column i is NULL". A NULL column gets only its bit set and writes no value bytes at all (saving space too). Both PostgreSQL and InnoDB keep this null bitmap in the row header.
 
@@ -270,7 +270,7 @@ So real DBs use a **null bitmap**. At the front of each row sit as many bits as 
 | Value bytes of a NULL column | not written (space saved) | not written | not written |
 | Non-nullable columns | bit kept but always 0 | bitmap omitted entirely if all NOT NULL | excluded from the bitmap |
 
-Details differ, but the idea is identical — record "which column is NULL" with a **separate bit**, not with the value bytes.
+Details differ, but the idea is identical across these row-store DBs — record "which column is NULL" with a **separate bit**, not with the value bytes. (Other engines like Oracle, SQL Server, and SQLite lay out rows quite differently.)
 
 ## 2. The Null Bitmap — A Handful of Bits at the Front of the Row
 
@@ -307,7 +307,7 @@ for (int i = 0; i < schema->num_columns; i++) {
 }
 ```
 
-> **Why put the bitmap at the very front**: you must know "is this column NULL?" **before** reading its value, so you can decide whether to read 4 bytes (INT) or skip 0 bytes here. If the bitmap sat after the values, it becomes chicken-and-egg — you'd have to read all the values to reach the bitmap, but you need the bitmap to know where the values end. So the bitmap must come before the values.
+> **Why put the bitmap at the very front**: you must know "is this column NULL?" **before** reading its value, so you can decide whether to read 4 bytes (INT) or skip 0 bytes here. If the bitmap sat after the values, it becomes chicken-and-egg — you'd have to read all the values to reach the bitmap, but you need the bitmap to know where the values end. So in a format like minidb's that reads values sequentially, the bitmap must come before the values. (Formats with offset arrays or column directories relax this — the real requirement is just that NULL status be knowable before interpreting a value.)
 
 ## 3. Once Storage Was Unblocked, the Rest Already Worked
 
@@ -315,7 +315,7 @@ Here's the fun part. Once I'd built store/restore with the null bitmap, **there 
 
 `WHERE name IS NULL`, the difference between `COUNT(*)` and `COUNT(name)`, an `ORDER BY` with NULLs mixed in — they all just worked. Thanks to [Part 5](/blog/project/minidb/minidb-5-join-aggregate). Back then, to handle the LEFT JOIN's transient NULLs, I'd already made the comparison function (NULL equals nothing), aggregation (`COUNT(col)`/`SUM`/`AVG` skip NULL), and the sort comparator all aware of `VAL_NULL`.
 
-Whether that NULL was "made by a join" or "read from disk", it's the same `VAL_NULL` to the code. So opening just the one **entry point** — storage — let the whole pipeline behind it be reused untouched.
+Whether that NULL was "made by a join" or "read from disk", it's the same `VAL_NULL` to the code. So opening just the one **entry point** — storage — let the whole pipeline behind it be reused untouched (within the feature scope minidb implements — real DBs have extra NULL policies for UNIQUE, DISTINCT, GROUP BY, join equality, and indexes).
 
 > **A design reward — what cutting layers cleanly buys you**: by building NULL's "meaning" (comparison/aggregation/sort rules) separately from NULL's "storage" (byte representation), filling in one side later didn't shake the other. Part 5 filled the meaning, Part 9 filled the storage, and the two meshed cleanly. It was the moment I saw with my own hands that "separation of concerns" isn't an abstract slogan but something that actually cuts the work.
 
@@ -325,7 +325,7 @@ Storing NULL brought me face to face with the most confusing topic in SQL — **
 
 A condition is usually either true or false. But once NULL enters, a third value appears: **unknown**.
 
-> **What three-valued logic is**: the result of a comparison involving NULL is neither true nor false but **unknown**. If `name = 'kim'` and `name` is NULL, "is the name of a nameless person kim?" is unanswerable — unknown. And SQL **treats unknown like false** in a `WHERE`, dropping that row from the result.
+> **What three-valued logic is**: the result of a comparison involving NULL is neither true nor false but **unknown**. If `name = 'kim'` and `name` is NULL, "is the name of a nameless person kim?" is unanswerable — unknown. And a SQL `WHERE` **keeps only rows that are TRUE**, so both FALSE and UNKNOWN are dropped alike — that is, unknown falls out of the result just like false.
 
 So this happens:
 
@@ -416,7 +416,7 @@ static int value_cmp(const Value *x, const Value *y) {
 
 ## 6. A PK Can't Be NULL — The NOT NULL Constraint
 
-There's exactly one place NULL is blocked — the **first column (the PK)**. minidb treats the first column as a unique key and builds a B+Tree index on it ([Part 3](/blog/project/minidb/minidb-3-index-wal)); if the index key were NULL, you'd be stuck on "where do you slot NULL into a sorted tree" from the start. So `INSERT INTO t VALUES (NULL, 'x')` is rejected — the same reason a primary key is always `NOT NULL` in a real DB.
+There's exactly one place NULL is blocked — the **first column (the PK)**. The reason is not sorting but the **definition of a PK** — it uniquely identifies a row, and allowing "unknown" NULL as a key would break that unique identification (which is why the SQL standard forces NOT NULL on PKs). minidb treats the first column as a unique key with a B+Tree index ([Part 3](/blog/project/minidb/minidb-3-index-wal)), so `INSERT INTO t VALUES (NULL, 'x')` is rejected. (A B+Tree can perfectly well sort NULLs — real PostgreSQL even builds B-tree indexes containing NULLs; minidb disallows a NULL PK key for implementation simplicity plus PK semantics.)
 
 On top of that, you can put a `NOT NULL` constraint on a column directly. Append `NOT NULL` after a column in `CREATE TABLE` and the parser sets a flag on it.
 
@@ -455,10 +455,10 @@ Storing NULL was a small task by line count — a handful of bits at the front o
 
 - **Null bitmap** — "no value" can't be expressed by any value inside the data, so mark it outside the data with one bit per column at the front of the row. The bits must come **before** the values (you must know the NULL status before reading a value). Same idea as PostgreSQL's and InnoDB's row formats.
 - **Three-valued logic** — a comparison involving NULL is neither true nor false but "unknown", and WHERE treats unknown as false. So NULL is caught by neither `=` nor `!=`, and the only way to catch it is `IS NULL`/`IS NOT NULL`.
-- **Aggregation/sorting** — `COUNT(*)` counts rows; `COUNT(col)`/`SUM`/`AVG` count values skipping NULL. Sorting ranks NULL largest for NULLS LAST (same as PostgreSQL; MySQL is the opposite).
+- **Aggregation/sorting** — `COUNT(*)` counts rows; `COUNT(col)`/`SUM`/`AVG` count values skipping NULL. Sorting ranks NULL largest, giving NULLS LAST on ASC and NULLS FIRST on DESC — only the direction flips, so both match PostgreSQL's default (MySQL is the opposite).
 - **NOT NULL/PK** — a PK is always NOT NULL (NULL breaks unique identification). Per-column `NOT NULL` constraints are validated at INSERT too.
 
-That "no value" can't be expressed as a value and must be marked with a bit outside the data, and that `=` can therefore never catch NULL — rules I used to memorize from text became obvious consequences once I'd laid down the bitmap myself.
+That "no value" can't be expressed as a value and must be marked with a bit outside the data — that became tangible once I'd laid down the bitmap myself. And once "NULL is unlike an ordinary value" sank in, I finally understood why three-valued logic (where `=` never catches NULL) is needed — three-valued logic is SQL's language design, not a storage detail, but building the storage made its necessity vivid.
 
 ## References
 
