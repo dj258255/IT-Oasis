@@ -17,190 +17,234 @@ const seriesPosts = allPosts
     if (orderA !== orderB) return orderA - orderB;
     return a.data.date.valueOf() - b.data.date.valueOf();
   });
+
+const total = seriesPosts.length;
+const currentIndex = seriesPosts.findIndex((p) => p.id === currentPostId);
+const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
+const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
 ---
 
 {seriesPosts.length > 0 && (
   <aside class="series-nav">
-    <p class="series-nav-title">
-      <strong data-ko={`${series} 시리즈`} data-en={`${series} Series`}>{series} 시리즈</strong>
-    </p>
-    <ul class="series-nav-list">
-      {seriesPosts.map((p) => {
+    <div class="series-nav-head">
+      <div class="series-nav-titlewrap">
+        <svg class="series-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16M4 12h16M4 18h10" />
+        </svg>
+        <strong class="series-nav-title" data-ko={`${series} 시리즈`} data-en={`${series} Series`}>{series} 시리즈</strong>
+      </div>
+      {currentNo > 0 && (
+        <span class="series-nav-count">
+          <span class="series-nav-count-now">{currentNo}</span><span class="series-nav-count-sep">/</span>{total}
+          <span class="lang-ko">편</span>
+        </span>
+      )}
+    </div>
+
+    <div class="series-nav-bar" role="presentation">
+      <div class="series-nav-bar-fill" style={`width:${progressPct}%`}></div>
+    </div>
+
+    <ol class="series-nav-list">
+      {seriesPosts.map((p, i) => {
         const isCurrent = p.id === currentPostId;
         const titleKo = p.data.title;
         const titleEn = p.data.titleEn || titleKo;
+        const no = i + 1;
         return (
-          <li>
+          <li class:list={['series-item', isCurrent && 'is-current']}>
             {isCurrent ? (
-              <>
-                <strong data-ko={titleKo} data-en={titleEn}>{titleKo}</strong>
-                <span class="current-marker" data-ko=" (현재 글)" data-en=" (current)"> (현재 글)</span>
-              </>
+              <span class="series-link" aria-current="true">
+                <span class="series-no">{no}</span>
+                <span class="series-text" data-ko={titleKo} data-en={titleEn}>{titleKo}</span>
+                <span class="series-now" data-ko="현재" data-en="now">현재</span>
+              </span>
             ) : (
-              <a href={`${base}/blog/${p.id}`} data-ko={titleKo} data-en={titleEn}>{titleKo}</a>
+              <a class="series-link" href={`${base}/blog/${p.id}`}>
+                <span class="series-no">{no}</span>
+                <span class="series-text" data-ko={titleKo} data-en={titleEn}>{titleKo}</span>
+              </a>
             )}
           </li>
         );
       })}
-    </ul>
+    </ol>
   </aside>
 )}
 
 <style>
+  /* Panel: same calm white-glass family as cards/reading surface — no standalone blue island */
   .series-nav {
     position: relative;
     margin: 1.5rem 0 2rem;
-    padding: 1rem 1.25rem 1.1rem;
+    padding: 1.05rem 1.25rem 1.15rem;
     border-radius: 1.125rem;
-    background:
-      linear-gradient(140deg, rgba(255, 255, 255, 0.78) 0%, rgba(106, 173, 202, 0.16) 100%);
-    backdrop-filter: blur(24px) saturate(175%);
-    -webkit-backdrop-filter: blur(24px) saturate(175%);
-    border: 1px solid rgba(15, 40, 80, 0.09);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid rgba(15, 40, 80, 0.08);
     box-shadow:
-      0 8px 24px rgba(15, 40, 80, 0.06),
+      0 8px 28px rgba(15, 40, 80, 0.06),
       0 1px 3px rgba(15, 40, 80, 0.05),
       inset 0 1px 1px rgba(255, 255, 255, 0.9);
-    overflow: hidden;
-  }
-
-  /* Top specular gloss line */
-  .series-nav::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 12%;
-    right: 12%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
-    pointer-events: none;
   }
 
   @media (min-width: 640px) {
     .series-nav {
-      padding: 1.125rem 1.5rem 1.25rem;
+      padding: 1.15rem 1.5rem 1.3rem;
       border-radius: 1.25rem;
     }
   }
 
   :global(.dark) .series-nav {
-    background:
-      linear-gradient(140deg, rgba(255, 255, 255, 0.07) 0%, rgba(106, 173, 202, 0.1) 100%);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow:
       0 8px 28px rgba(0, 0, 0, 0.28),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
   }
 
-  :global(.dark) .series-nav::before {
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  /* Header: title + progress count */
+  .series-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
   }
+
+  .series-nav-titlewrap {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .series-nav-icon {
+    width: 15px;
+    height: 15px;
+    color: #0ea5e9;
+    flex: none;
+  }
+  :global(.dark) .series-nav-icon { color: #38bdf8; }
 
   .series-nav-title {
     font-size: 14px;
-    color: #374151;
-    margin: 0 0 0.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #334155;
   }
+  @media (min-width: 640px) { .series-nav-title { font-size: 15px; } }
+  :global(.dark) .series-nav-title { color: #e5e7eb; }
 
-  @media (min-width: 640px) {
-    .series-nav-title {
-      font-size: 15px;
-    }
-  }
-
-  :global(.dark) .series-nav-title {
-    color: #e5e7eb;
-  }
-
-  .series-nav-list {
-    font-size: 13px;
-    line-height: 1.7;
-    margin: 0;
-    padding-left: 1.1rem;
-    list-style: disc;
-    max-height: 18rem;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
-  }
-
-  .series-nav-list::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .series-nav-list::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .series-nav-list::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.3);
-    border-radius: 4px;
-  }
-
-  @media (min-width: 640px) {
-    .series-nav-list {
-      font-size: 14px;
-    }
-  }
-
-  .series-nav-list li {
-    color: #4b5563;
-    padding: 0.1rem 0;
-  }
-
-  :global(.dark) .series-nav-list li {
-    color: #9ca3af;
-  }
-
-  .series-nav-list a {
-    color: #0ea5e9;
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .series-nav-list a:hover {
-    text-decoration: underline;
-  }
-
-  :global(.dark) .series-nav-list a {
-    color: #7dd3fc;
-  }
-
-  .series-nav-list strong {
-    color: #0f172a;
+  .series-nav-count {
+    flex: none;
+    font-size: 12px;
     font-weight: 600;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .series-nav-count-now { color: #0284c7; font-weight: 700; }
+  .series-nav-count-sep { margin: 0 1px; opacity: 0.6; }
+  .series-nav-count .lang-ko { margin-left: 2px; }
+  :global(.dark) .series-nav-count { color: #64748b; }
+  :global(.dark) .series-nav-count-now { color: #38bdf8; }
+
+  /* Progress bar */
+  .series-nav-bar {
+    height: 3px;
+    border-radius: 100px;
+    background: rgba(15, 40, 80, 0.08);
+    overflow: hidden;
+    margin-bottom: 0.9rem;
+  }
+  :global(.dark) .series-nav-bar { background: rgba(255, 255, 255, 0.1); }
+
+  .series-nav-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, #38bdf8, #06b6d4);
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  :global(.dark) .series-nav-list strong {
-    color: #f1f5f9;
+  /* Numbered list — two columns to fill the width, column-wise fill */
+  .series-nav-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    column-count: 1;
+    column-gap: 1.75rem;
+  }
+  @media (min-width: 640px) {
+    .series-nav-list { column-count: 2; }
   }
 
-  .current-marker {
-    color: #6b7280;
-    font-weight: 400;
-    font-size: 0.92em;
+  .series-item {
+    break-inside: avoid;
+    margin: 0;
   }
 
-  :global(.dark) .current-marker {
-    color: #9ca3af;
+  .series-link {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 9px;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
   }
+
+  .series-no {
+    flex: none;
+    min-width: 1.5em;
+    text-align: right;
+    font-size: 0.78em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #94a3b8;
+  }
+  :global(.dark) .series-no { color: #64748b; }
+
+  .series-text {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #475569;
+  }
+  @media (min-width: 640px) { .series-text { font-size: 14px; } }
+  :global(.dark) .series-text { color: #cbd5e1; }
+
+  a.series-link:hover {
+    background: rgba(56, 189, 248, 0.08);
+  }
+  a.series-link:hover .series-text { color: #0284c7; }
+  a.series-link:hover .series-no { color: #0ea5e9; }
+  :global(.dark) a.series-link:hover { background: rgba(56, 189, 248, 0.12); }
+  :global(.dark) a.series-link:hover .series-text { color: #7dd3fc; }
+
+  /* Current post — accent pill */
+  .is-current .series-link {
+    background: rgba(56, 189, 248, 0.12);
+    cursor: default;
+  }
+  .is-current .series-no { color: #0284c7; font-weight: 700; }
+  .is-current .series-text { color: #0f172a; font-weight: 700; }
+  :global(.dark) .is-current .series-link { background: rgba(56, 189, 248, 0.16); }
+  :global(.dark) .is-current .series-no { color: #38bdf8; }
+  :global(.dark) .is-current .series-text { color: #f1f5f9; }
+
+  .series-now {
+    margin-left: auto;
+    flex: none;
+    align-self: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.2rem 0.45rem;
+    border-radius: 100px;
+    color: #0369a1;
+    background: rgba(56, 189, 248, 0.18);
+    letter-spacing: 0.02em;
+  }
+  :global(.dark) .series-now { color: #bae6fd; background: rgba(56, 189, 248, 0.2); }
 </style>
-
-<script>
-  function scrollCurrentIntoView() {
-    document.querySelectorAll<HTMLElement>('.series-nav-list').forEach((list) => {
-      if (list.scrollHeight <= list.clientHeight) return;
-      const current = list.querySelector<HTMLElement>('li strong');
-      if (current) {
-        const li = current.closest('li');
-        if (li) {
-          const offset = li.offsetTop - list.clientHeight / 2 + li.offsetHeight / 2;
-          list.scrollTop = Math.max(0, offset);
-        }
-      }
-    });
-  }
-  scrollCurrentIntoView();
-  document.addEventListener('astro:page-load', scrollCurrentIntoView);
-</script>
