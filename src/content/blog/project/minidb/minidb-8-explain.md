@@ -60,18 +60,12 @@ if (sel->explain) {
 
 복잡한 쿼리 하나를 EXPLAIN해 보면 이렇게 나와요.
 
-```
+```sql
 EXPLAIN SELECT users.name, COUNT(*) FROM users JOIN orders ON users.id = orders.uid
         WHERE users.id > 2 GROUP BY users.name ORDER BY 2 DESC LIMIT 5;
-
-Limit  (limit=5)
-  Sort  (keys: col2 DESC)
-    GroupAggregate  (group: name; aggs: COUNT(*))
-      Filter  (users.id > 2)
-        Nested-Loop Join  (2 tables)
-          Seq Scan on users  (outer)
-          Hash Join -> orders  (build hash on join col)
 ```
+
+![EXPLAIN 플랜 트리 — Limit → Sort → GroupAggregate → Filter → Nested-Loop Join → (Seq Scan, Hash Join). 위가 마지막 일, 아래가 첫 일이라 실행은 아래에서 위로](/uploads/project/minidb/explain-plan-tree.svg)
 
 아래에서 위로 읽으면 그대로 실행 순서예요. `users`를 훑고(Seq Scan), `orders`를 조인 컬럼으로 해시 빌드해 잇고(Hash Join), `users.id > 2`로 거르고(Filter), 이름으로 묶어 세고(GroupAggregate), 집계값으로 정렬하고(Sort), 위 5개만(Limit). 참고로 위는 **minidb의 출력 형태**예요 — 실제 PostgreSQL은 이런 행 필터를 보통 스캔 노드 밑(`Seq Scan` + `Filter`)으로 내려 붙입니다.
 
@@ -207,18 +201,12 @@ Query execution is a pipeline. A scan emits rows -> WHERE filters -> the join st
 
 EXPLAIN one complex query and it comes out like this.
 
-```
+```sql
 EXPLAIN SELECT users.name, COUNT(*) FROM users JOIN orders ON users.id = orders.uid
         WHERE users.id > 2 GROUP BY users.name ORDER BY 2 DESC LIMIT 5;
-
-Limit  (limit=5)
-  Sort  (keys: col2 DESC)
-    GroupAggregate  (group: name; aggs: COUNT(*))
-      Filter  (users.id > 2)
-        Nested-Loop Join  (2 tables)
-          Seq Scan on users  (outer)
-          Hash Join -> orders  (build hash on join col)
 ```
+
+![EXPLAIN plan tree — Limit → Sort → GroupAggregate → Filter → Nested-Loop Join → (Seq Scan, Hash Join). The top is the last step, the bottom the first, so execution runs bottom to top](/uploads/project/minidb/explain-plan-tree.svg)
 
 Read bottom to top and it is the execution order verbatim. Scan `users` (Seq Scan), stitch `orders` by building a hash on the join column (Hash Join), filter by `users.id > 2` (Filter), group by name and count (GroupAggregate), sort by the aggregate (Sort), keep the top 5 (Limit). Note this is **minidb's output shape** — real PostgreSQL usually pushes such a row filter down under the scan node (`Seq Scan` + `Filter`).
 

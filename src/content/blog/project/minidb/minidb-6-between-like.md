@@ -123,14 +123,7 @@ static int like_match(const char *s, const char *pat) {
 
 `name LIKE '%a%'`로 `park`를 맞추는 흐름을 따라가 보면:
 
-```
-패턴 %a%  입력 park
-  % 만남 -> star=%, ss=p, 패턴은 'a'로 전진 (0글자 가정)
-  'a' vs 'p' 불일치, star 있음 -> ss를 a로 밀고 재시도
-  'a' vs 'a' 일치! 둘 다 전진
-  % 만남 -> 남은 입력(rk) 다 흡수
-  입력 끝, 남은 패턴 % 건너뛰면 끝 -> 매칭
-```
+![LIKE '%a%' 가 'park' 와 매칭 — 가운데 a는 직접 일치, 앞 %는 'p'를·뒤 %는 'rk'를 흡수(0+글자)](/uploads/project/minidb/like-wildcard-match.svg)
 
 이 방식은 재귀 없이 공간 O(1)이고, 시간은 현실 패턴에선 평균적으로 거의 선형(O(n))에 가까워요 — 다만 `%`가 잔뜩 박힌 인위적 최악 패턴에선 백트래킹이 반복돼 O(n·m)까지 출렁입니다. 위키피디아 "Matching wildcards" 항목이나 여러 글롭 구현이 정확히 이 골격을 쓰는데, 현실의 패턴에선 단순 반복문이 NFA 같은 정교한 방식보다 대체로 빨라요. 학습용으로도, 실용으로도 합리적인 타협점이었습니다.
 
@@ -313,14 +306,7 @@ On hitting `%`, assume "it ate 0 chars" and advance the pattern by one (recordin
 
 Tracing `name LIKE '%a%'` against `park`:
 
-```
-pattern %a%  input park
-  hit % -> star=%, ss=p, advance pattern to 'a' (assume 0 chars)
-  'a' vs 'p' mismatch, star set -> push ss to a, retry
-  'a' vs 'a' match! advance both
-  hit % -> absorb the rest of input (rk)
-  input ends, skip trailing % -> match
-```
+![LIKE '%a%' matching 'park' — the middle 'a' matches directly, the leading % absorbs 'p' and the trailing % absorbs 'rk' (0+ chars)](/uploads/project/minidb/like-wildcard-match.svg)
 
 This runs in O(1) space, no recursion, and in time it is on average near-linear (O(n)) on real-world patterns — only on artificial worst cases (patterns crammed with `%`) does the backtracking repeat up to O(n·m). Wikipedia's "Matching wildcards" entry and many glob implementations use exactly this skeleton, and on real-world patterns a plain loop is generally faster than fancier NFA-style approaches. A reasonable compromise for both learning and practice.
 

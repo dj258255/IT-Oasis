@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="330" viewBox="0 0 1000 330" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <rect width="1000" height="330" rx="12" fill="#0d1117"/>
+  <text x="500" y="38" text-anchor="middle" fill="#8b949e" font-size="18">테이블 = 파일 (PostgreSQL relfilenode식) — 테이블마다 .tbl/.idx 를 따로</text>
+
+  <!-- 카탈로그 -->
+  <g font-family="ui-monospace, Menlo, monospace" font-size="14">
+    <rect x="340" y="64" width="320" height="50" rx="6" fill="#1c1408" stroke="#9e6a03"/>
+    <text x="500" y="85" text-anchor="middle" fill="#f0b429">mydb  (카탈로그)</text>
+    <text x="500" y="103" text-anchor="middle" fill="#6e7681" font-size="12">테이블 목록 + 스키마 + 인덱스 정의</text>
+  </g>
+
+  <!-- 연결선 -->
+  <line x1="500" y1="114" x2="500" y2="135" stroke="#30363d"/>
+  <line x1="270" y1="135" x2="730" y2="135" stroke="#30363d"/>
+  <line x1="270" y1="135" x2="270" y2="158" stroke="#30363d"/>
+  <line x1="730" y1="135" x2="730" y2="158" stroke="#30363d"/>
+
+  <!-- users 그룹 -->
+  <rect x="90" y="158" width="360" height="138" rx="8" fill="none" stroke="#21262d" stroke-dasharray="4 5"/>
+  <text x="110" y="180" fill="#6e7681" font-size="13">users 테이블</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13.5">
+    <rect x="110" y="194" width="320" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="126" y="219" fill="#58a6ff">mydb.users.tbl <tspan fill="#6e7681">— 행 (Heap)</tspan></text>
+    <rect x="110" y="244" width="320" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="126" y="269" fill="#58a6ff">mydb.users.idx <tspan fill="#6e7681">— PK 인덱스 (B+Tree)</tspan></text>
+  </g>
+
+  <!-- orders 그룹 -->
+  <rect x="550" y="158" width="360" height="138" rx="8" fill="none" stroke="#21262d" stroke-dasharray="4 5"/>
+  <text x="570" y="180" fill="#6e7681" font-size="13">orders 테이블</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13.5">
+    <rect x="570" y="194" width="320" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="586" y="219" fill="#58a6ff">mydb.orders.tbl <tspan fill="#6e7681">— 행 (Heap)</tspan></text>
+    <rect x="570" y="244" width="320" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="586" y="269" fill="#58a6ff">mydb.orders.idx <tspan fill="#6e7681">— PK 인덱스</tspan></text>
+  </g>
+</svg>
