@@ -133,3 +133,30 @@ const catDisplayKo = getCategoryDisplayKo();
     </div>
   </div>
 </aside>
+
+<script>
+  // Auto-hide sidebar scrollbar: visible only while actively scrolling
+  let sidebarScrollController: AbortController | null = null;
+
+  function initSidebarScrollReveal() {
+    sidebarScrollController?.abort();
+    sidebarScrollController = new AbortController();
+    const { signal } = sidebarScrollController;
+
+    document.querySelectorAll<HTMLElement>('.sidebar-scroll, .toc-scroll').forEach((el) => {
+      let timer: number | undefined;
+      el.addEventListener(
+        'scroll',
+        () => {
+          el.classList.add('is-scrolling');
+          if (timer) clearTimeout(timer);
+          timer = window.setTimeout(() => el.classList.remove('is-scrolling'), 800);
+        },
+        { passive: true, signal }
+      );
+    });
+  }
+
+  initSidebarScrollReveal();
+  document.addEventListener('astro:page-load', initSidebarScrollReveal);
+</script>
