@@ -33,7 +33,7 @@ seriesOrder: 4
 
 > **steal**: 커밋 *전*에 dirty 페이지를 디스크로 내보낼 수 있나? 가능하면(steal) 메모리는 아끼지만, 커밋 안 된 변경이 디스크에 박히니 롤백·크래시 때 **undo**(되돌리기)가 필요하다.
 
-> **force**: 커밋 *시점*에 그 트랜잭션의 모든 변경을 디스크로 강제하나? force면 커밋 즉시 내구성이 보장되지만 random write가 많아 느리다. no-force면 빠르지만 크래시 후 **redo**(재적용)가 필요하다.
+> **force**: 커밋 *시점*에 그 트랜잭션의 dirty 페이지를 **데이터 파일까지** 반드시 기록하나? force면 커밋 직후 데이터 파일이 최신이라 redo가 필요 없지만 random write가 많아 느리다. no-force면 빠르지만 크래시 후 **redo**(재적용)가 필요하다. (내구성 자체는 force가 아니라 WAL+`fsync`만으로도 확보된다 — force는 "데이터 파일까지 언제 따라잡나"의 문제다.)
 
 두 축을 곱하면 네 분면이 나오고, 각 칸이 "undo가 필요한가 / redo가 필요한가"를 결정합니다.
 
@@ -56,7 +56,7 @@ minidb는 그 4분면에서 학습용으로 **no-steal(커밋 시 force) + WAL r
 
 no-steal로 커밋 전 dirty 페이지를 [1편 버퍼 풀](/blog/project/minidb/minidb-1-storage)에 묶어 두면, "디스크에 샌 미완성 변경"이 아예 없습니다. 그러니 **undo 로그를 만들 필요가 없어요.** ARIES의 절반(undo phase·rollback segment·before-image)을 통째로 들어낸 셈이에요.
 
-대신 force로 매 커밋마다 무차별 flush하는 대신, [3편 WAL](/blog/project/minidb/minidb-3-index-wal)로 redo만 합니다 — 로그에 먼저 적고, 커밋 마커를 찍고(`fsync`), 그 다음 데이터에 적용. 정확히는 "커밋 시 그 트랜잭션의 변경을 WAL에 force-flush하되, 데이터 파일 적용은 같은 커밋 안에서 순서대로" 하는 구조라, 표의 `no-steal` 행에 앉되 redo의 이점(로그만 fsync하면 내구)을 빌려옵니다.
+대신 force로 매 커밋마다 무차별 flush하는 대신, [3편 WAL](/blog/project/minidb/minidb-3-index-wal)로 redo만 합니다 — 로그에 먼저 적고, 커밋 마커를 찍고(`fsync`), 그 다음 데이터에 적용. 정확히는 "커밋 시 그 트랜잭션의 변경을 WAL에 force-flush하되, 데이터 파일 적용은 같은 커밋 안에서 순서대로" 하는 구조라, 표의 `no-steal` 행에 앉되 redo의 이점(로그만 fsync하면 내구)을 빌려옵니다. 그래서 minidb는 교과서적인 force/no-force 어느 쪽에도 딱 안 들어가요 — 정통 force 구현은 아니지만 데이터 적용을 같은 커밋 흐름 안에서 끝내므로, 여기서는 force 쪽 성격에 가깝게 봅니다.
 
 > **주의 — no-steal의 값**: 큰 트랜잭션이 버퍼 풀 용량을 넘으면 못 받습니다(커밋 전엔 한 페이지도 못 내보내니까). 진짜 DB가 steal을 쓰는 바로 그 이유예요. 하지만 학습용으로는 "undo 없이 WAL의 본질(redo로 원자·내구)만" 또렷하게 보여주기에 이 조합이 딱이었어요. 코드가 복잡해질수록 정작 배우려는 원리가 가려지니까요.
 
@@ -73,7 +73,7 @@ no-steal로 커밋 전 dirty 페이지를 [1편 버퍼 풀](/blog/project/minidb
 
 이 정책 위에서 세 명령을 짓습니다. 핵심은 세 명령이 전부 "버퍼 풀의 no-steal을 켜고/끄고, dirty 페이지를 WAL로 보내거나 버리는" 일로 환원된다는 거예요.
 
-- **`BEGIN`** — 모든 테이블의 버퍼 풀에 no-steal을 켜고, 롤백에 대비해 현재 파일 페이지 수를 스냅샷해 둡니다(트랜잭션이 새로 할당한 페이지를 나중에 잘라내려고).
+- **`BEGIN`** — 모든 테이블의 버퍼 풀에 no-steal을 켜고, 롤백에 대비해 현재 파일 페이지 수를 스냅샷해 둡니다(트랜잭션이 새로 할당한 페이지를 나중에 잘라내려고). 이게 켜진 뒤로는 INSERT를 아무리 여러 번 해도 그 변경이 **아직 확정되지 않고** 버퍼 풀 안에만 머물러요 — `COMMIT`을 만나야 비로소 WAL을 거쳐 디스크에 반영됩니다. 그래서 BEGIN이 "지금부터 한 묶음"의 경계가 돼요.
 - **`COMMIT`** — 트랜잭션 동안 메모리에 쌓인 dirty 데이터 페이지를 [3편 WAL](/blog/project/minidb/minidb-3-index-wal)에 stage -> `wal_commit`(로그+커밋 마커+`fsync` -> 데이터 적용 -> 로그 비움)으로 **원자적으로** 확정합니다. 여러 문장을 묶었어도 커밋 마커 하나로 전부 또는 전무가 돼요.
 - **`ROLLBACK`** — 아무것도 로그에 안 적었으니 그냥 버리면 됩니다. dirty 프레임을 디스크에 안 쓰고 무효화하고(`bufpool_discard_dirty`), 트랜잭션이 할당했던 새 페이지를 잘라(`pager_truncate`) 파일을 BEGIN 시점으로 되돌려요.
 
@@ -109,7 +109,7 @@ static int exec_commit(Database *db, FILE *out) {
 
 여기서 `wal_commit`이 [3편](/blog/project/minidb/minidb-3-index-wal)에서 만든 그 원자적 커밋이에요 — 바뀐 페이지를 로그에 쓰고(write-ahead), 커밋 마커 + `fsync`("이 줄을 지나면 내구하다"), 데이터 파일에 적용, 마지막으로 로그를 비웁니다(체크포인트). 여러 INSERT/UPDATE를 묶은 트랜잭션이라도 커밋 마커는 **딱 하나**라, 마커 직전에 크래시가 나면 전부 버려지고 마커 직후면 전부 redo됩니다 — 이게 "전부 또는 전무"의 물리적 정체예요.
 
-`ROLLBACK`은 가장 단순합니다. no-steal 덕에 로그에 아무것도 안 적혔으니, 메모리의 dirty를 버리고 늘어난 페이지를 잘라내면 끝이에요.
+`ROLLBACK`은 가장 단순합니다. no-steal 덕에 로그에 아무것도 안 적혔으니, 메모리의 dirty를 버리고 늘어난 페이지를 잘라내면 끝이에요. **여기가 이 편의 핵심이에요** — undo 로그를 재생해 되돌리는 게 아니라, 애초에 디스크에 안 썼으니 메모리만 버리면 끝납니다. "undo가 왜 필요 없는가"의 답이 바로 이 한 줄이에요.
 
 ```c
 static int exec_rollback(Database *db, FILE *out) {
@@ -149,7 +149,7 @@ static int exec_rollback(Database *db, FILE *out) {
 | ACID | minidb가 구현했나 | 어떻게 |
 |---|---|---|
 | **A** 원자성 | O | no-steal + WAL: 커밋 마커 하나로 전부 또는 전무 |
-| **C** 일관성 | △ | A·I·D의 결과로 따라옴 (제약은 일부) |
+| **C** 일관성 | △ | A·I·D가 받쳐주면 따라오지만 일관성의 전부는 아님 — 제약조건·외래키·CHECK·트리거·애플리케이션 규칙까지 포함하는 개념이라 minidb는 NOT NULL 등 일부만 본다 |
 | **I** 격리 | **X** | 단일 스레드 — 동시 트랜잭션 자체가 없음 |
 | **D** 내구성 | O | WAL `fsync` + 마커 이후 redo |
 
@@ -169,7 +169,7 @@ static int exec_rollback(Database *db, FILE *out) {
 - **힙·인덱스 둘 다 롤백** — 한쪽만 되돌리면 인덱스가 빈 자리를 가리켜 깨진다. 분할로 바뀐 B+Tree 루트는 다시 읽어 온다.
 - **A·D는 만들고 I는 비웠다** — 단일 스레드라 격리 문제가 없다. 그 절반이 DB의 가장 어려운 부분.
 
-여기까지가 "한 테이블짜리 DB"의 완성형이에요 — 저장·SQL·인덱스·내구성·트랜잭션. [마지막 편](/blog/project/minidb/minidb-5-join-aggregate)에선 테이블을 여러 개 두고 잇습니다 — 다중 테이블, JOIN(중첩 루프·인덱스·해시), 그리고 집계(GROUP BY·HAVING)와 서브쿼리까지.
+여기까지가 "한 테이블짜리 DB"의 완성형이에요 — 저장·SQL·인덱스·내구성·트랜잭션. 이제 저장·실행·트랜잭션까지 갖춘 이 DB 위에, [마지막 편](/blog/project/minidb/minidb-5-join-aggregate)에선 **여러 테이블을 연결하고 SQL의 표현력을 넓힙니다** — 다중 테이블, JOIN(중첩 루프·인덱스·해시), 그리고 집계(GROUP BY·HAVING)와 서브쿼리까지.
 
 ## 참고
 
@@ -195,7 +195,7 @@ The textbook splits transaction buffer management along two axes. Both ask "when
 
 > **steal**: can a dirty page be flushed to disk *before* commit? If yes (steal), you save memory, but uncommitted changes land on disk, so rollback/crash needs **undo**.
 
-> **force**: at commit *time*, are all of that transaction's changes forced to disk? With force, durability is guaranteed the moment you commit, but it is slow due to scattered random writes. With no-force it is fast, but a crash needs **redo**.
+> **force**: at commit *time*, are that transaction's dirty pages necessarily written **all the way to the data file**? With force, the data file is current right after commit so no redo is needed, but it is slow due to scattered random writes. With no-force it is fast, but a crash needs **redo**. (Durability itself is secured by WAL + `fsync` alone, not by force — force is about *when the data file catches up*.)
 
 Multiply the two axes and you get four quadrants, each cell deciding "is undo needed / is redo needed".
 
@@ -218,7 +218,7 @@ In that quadrant minidb chose, for learning, **no-steal (force at commit) + WAL 
 
 With no-steal, dirty pages are pinned in the [Part 1 buffer pool](/blog/project/minidb/minidb-1-storage) before commit, so there is no "half-finished change leaked to disk" at all. Hence **you do not need an undo log**. That excises half of ARIES (the undo phase, rollback segments, before-images) wholesale.
 
-And instead of force-flushing indiscriminately on every commit, we do only redo with the [Part 3 WAL](/blog/project/minidb/minidb-3-index-wal) — write to the log first, stamp the commit marker (`fsync`), then apply to data. Precisely, it "force-flushes that transaction's changes to the WAL at commit, then applies to the data file in order within the same commit", so it sits on the `no-steal` row of the table while borrowing redo's benefit (only the log needs fsync for durability).
+And instead of force-flushing indiscriminately on every commit, we do only redo with the [Part 3 WAL](/blog/project/minidb/minidb-3-index-wal) — write to the log first, stamp the commit marker (`fsync`), then apply to data. Precisely, it "force-flushes that transaction's changes to the WAL at commit, then applies to the data file in order within the same commit", so it sits on the `no-steal` row of the table while borrowing redo's benefit (only the log needs fsync for durability). So minidb does not fall cleanly into the textbook force/no-force boxes — it is not a classic force implementation, but since it finishes applying to data within the same commit flow, we treat it as closer to the force side here.
 
 > **Caveat — the price of no-steal**: a transaction larger than the buffer pool capacity cannot be served (not a single page can be evicted before commit). That is exactly why real DBs use steal. But for learning, this combo is perfect for showing "the essence of WAL (atomicity/durability via redo) with no undo" cleanly. The more complex the code gets, the more the principle you came to learn gets hidden.
 
@@ -235,7 +235,7 @@ And instead of force-flushing indiscriminately on every commit, we do only redo 
 
 On top of this policy we build the three commands. The key is that all three reduce to "toggle the buffer pool's no-steal, and send dirty pages to the WAL or discard them".
 
-- **`BEGIN`** — turn on no-steal for every table's buffer pool, and snapshot the current file page count in case of rollback (to truncate pages the transaction newly allocates).
+- **`BEGIN`** — turn on no-steal for every table's buffer pool, and snapshot the current file page count in case of rollback (to truncate pages the transaction newly allocates). Once it is on, no matter how many times you INSERT, those changes are **not yet committed** — they stay inside the buffer pool, and only when `COMMIT` arrives do they reach disk via the WAL. So BEGIN marks "the batch starts here".
 - **`COMMIT`** — stage the dirty data pages accumulated in memory during the transaction to the [Part 3 WAL](/blog/project/minidb/minidb-3-index-wal) -> commit **atomically** via `wal_commit` (log + commit marker + `fsync` -> apply to data -> clear log). Even bundling many statements, a single commit marker makes it all-or-nothing.
 - **`ROLLBACK`** — since nothing was written to the log, just throw it away. Invalidate dirty frames without writing them to disk (`bufpool_discard_dirty`), and truncate the new pages the transaction allocated (`pager_truncate`) to rewind the file to the BEGIN point.
 
@@ -271,7 +271,7 @@ static int exec_commit(Database *db, FILE *out) {
 
 Here `wal_commit` is that atomic commit from [Part 3](/blog/project/minidb/minidb-3-index-wal) — write the changed pages to the log (write-ahead), commit marker + `fsync` ("past this line it is durable"), apply to the data file, and finally clear the log (checkpoint). Even a transaction bundling many INSERT/UPDATEs has **exactly one** commit marker, so a crash just before the marker discards everything and just after redoes everything — that is the physical identity of "all-or-nothing".
 
-`ROLLBACK` is the simplest. Thanks to no-steal nothing was written to the log, so discarding the in-memory dirty and truncating the grown pages is all it takes.
+`ROLLBACK` is the simplest. Thanks to no-steal nothing was written to the log, so discarding the in-memory dirty and truncating the grown pages is all it takes. **This is the heart of this part** — we do not replay an undo log to reverse anything; since nothing was written to disk in the first place, throwing away memory is the whole job. That one line is the answer to "why no undo log is needed".
 
 ```c
 static int exec_rollback(Database *db, FILE *out) {
@@ -311,7 +311,7 @@ Here is something to state honestly. Of the four ACID letters, what we built in 
 | ACID | Did minidb build it | How |
 |---|---|---|
 | **A** Atomicity | O | no-steal + WAL: one commit marker = all-or-nothing |
-| **C** Consistency | △ | follows from A·I·D (constraints partial) |
+| **C** Consistency | △ | follows when A·I·D hold, but not the whole story — consistency spans constraints, foreign keys, CHECKs, triggers, and application rules, of which minidb does only some (e.g. NOT NULL) |
 | **I** Isolation | **X** | single-threaded — no concurrent transactions at all |
 | **D** Durability | O | WAL `fsync` + redo after the marker |
 
@@ -331,7 +331,7 @@ A transaction came down to **when you write the buffer pool to disk**. That choi
 - **Roll back both heap and index** — reverting only one breaks things as the index points to an empty slot. A B+Tree root changed by a split is reread.
 - **Built A·D, left I empty** — single-threaded, so no isolation problem. That half is the hardest part of a DB.
 
-This is the complete form of a "single-table DB" — storage, SQL, index, durability, transactions. In the [final part](/blog/project/minidb/minidb-5-join-aggregate) we place multiple tables and join them — multi-table, JOIN (nested loop, index, hash), and aggregation (GROUP BY, HAVING) and subqueries.
+This is the complete form of a "single-table DB" — storage, SQL, index, durability, transactions. Now, on top of this DB that has storage, execution, and transactions, the [final part](/blog/project/minidb/minidb-5-join-aggregate) **connects multiple tables and widens SQL's expressive power** — multi-table, JOIN (nested loop, index, hash), and aggregation (GROUP BY, HAVING) and subqueries.
 
 ## References
 
