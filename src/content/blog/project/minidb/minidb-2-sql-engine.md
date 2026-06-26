@@ -25,13 +25,13 @@ seriesOrder: 2
 
 이번 편은 그 위에 **SQL 프런트엔드** 를 얹습니다 — 텍스트를 구조로 바꾸는 **파서**, 그리고 그 구조를 힙에 연결하는 **실행기**. 다 만들고 나면 `SELECT * FROM users WHERE id = 2` 한 줄을 타이핑해 `2 | lee` 라는 행을 돌려받기까지, 1편에서 만든 여섯 계층이 한 번에 맞물려 돌아가는 걸 볼 수 있어요.
 
-> **이번 편의 목표**: SQL 텍스트 -> 토큰(렉서) -> AST(파서) -> 힙 연산(실행기). 모든 DB가 텍스트로 들어온 쿼리를 처리하는 바로 그 파이프라인을, C로 한 단계씩 짓습니다.
+> **이번 편의 목표**: SQL 텍스트 -> 토큰(렉서) -> AST(파서) -> 힙 연산(실행기). 대부분의 관계형 DB가 텍스트로 들어온 쿼리를 처리하는 바로 그 파이프라인을, C로 한 단계씩 짓습니다. (실제 DB는 파서와 실행기 **사이에 옵티마이저·실행 계획 생성** 계층이 더 들어가는데, minidb는 그 축소판을 실행기 안에 녹였어요 — [3편](/blog/project/minidb/minidb-3-index-wal)·[8편 EXPLAIN](/blog/project/minidb/minidb-8-explain)에서 본격적으로 나옵니다.)
 
 ## 1. 큰 그림 — 컴파일러의 앞단을 빌려온다
 
 `"SELECT * FROM users WHERE id = 1"` 은 사람에겐 한 문장이지만 컴퓨터에겐 그냥 글자 나열이에요. 이걸 실행기가 다룰 수 있는 **구조(트리)** 로 바꾸는 게 파서이고, 그 구조를 1편의 힙에 연결해 진짜 행을 돌려주는 게 실행기입니다.
 
-이 흐름은 사실 DB가 발명한 게 아니라 **컴파일러·인터프리터의 앞단을 그대로 빌려온 것**이에요. 소스 코드를 토큰으로 쪼개고(렉싱), 토큰을 트리로 조립하고(파싱), 그 트리를 실행하는(평가) 세 단계는 어느 언어 처리기에서나 같습니다.
+이 흐름의 **앞단(렉싱·파싱)** 은 사실 DB가 발명한 게 아니라 컴파일러·인터프리터에서 그대로 빌려온 거예요. 소스 코드를 토큰으로 쪼개고(렉싱), 토큰을 트리로 조립하고(파싱)까지는 대부분의 언어 처리기에서 같습니다. 다만 그 **뒤는 갈라져요** — 컴파일러는 코드 생성으로 가고, DB는 관계 대수·비용 추정에 기반한 쿼리 옵티마이저라는, 앞단만 닮았지 뒤는 거의 다른 분야로 갑니다.
 
 | 단계 | 컴파일러 용어 | minidb에서 | 입력 -> 출력 |
 |---|---|---|---|
@@ -39,7 +39,7 @@ seriesOrder: 2
 | 2 | 파싱(parsing) | 재귀 하강 파서 | 토큰 -> AST |
 | 3 | 평가(evaluation) | 실행기 | AST -> 힙 연산 -> 행 |
 
-> **핵심 사실**: DB의 SQL 처리는 "작은 프로그래밍 언어 인터프리터"다. SQL은 그 언어이고, 파서가 컴파일러 앞단, 실행기가 평가기다. 이렇게 보면 "쿼리 플래너"가 곧 옵티마이저라는 것도 자연스럽다.
+> **핵심 사실**: SQL 처리를 "작은 언어 인터프리터"에 빗댈 수 있다 — SQL이 그 언어, 파서가 앞단, 실행기가 평가기다. 다만 이 비유는 minidb나 SQLite처럼 **AST를 비교적 직접 실행**하는 구현에 가깝고, PostgreSQL·MySQL은 AST를 그대로 실행하지 않는다 — 재작성(rewrite)·옵티마이저를 거쳐 **실행 계획(plan tree)** 을 만든 뒤 그걸 실행한다. minidb는 학습용이라 AST를 바로 실행하고, "쿼리 플래너"는 그 안의 작은 분기로 들어 있다.
 
 ## 2. 토크나이저(렉서) — 글자를 토큰으로
 
@@ -72,7 +72,7 @@ if (c == '=' || c == '<' || c == '>' || c == '!') {
 }
 ```
 
-> **왜 두 글자를 먼저 보나(maximal munch)**: `<=`를 만났을 때 `<` 하나만 떼면 그 뒤 `=`가 엉뚱하게 따로 떨어진다. 렉서는 "가능한 한 긴 토큰을 먼저 집는다"는 maximal munch 규칙을 따른다 — 모든 진짜 렉서가 쓰는 원칙이다.
+> **왜 두 글자를 먼저 보나(maximal munch)**: `<=`를 만났을 때 `<` 하나만 떼면 그 뒤 `=`가 엉뚱하게 따로 떨어진다. 렉서는 "가능한 한 긴 토큰을 먼저 집는다"는 maximal munch(longest match) 규칙을 따른다 — 거의 대부분의 렉서가 쓰는 원칙이다(Python의 들여쓰기, Go의 세미콜론 자동 삽입처럼 토큰화에 별도 규칙을 더 얹는 언어도 있긴 하다).
 
 키워드와 일반 식별자를 어떻게 가르냐가 또 하나의 포인트예요. minidb는 식별자처럼 한 덩어리를 다 읽은 **뒤에**, 그 문자열이 예약어인지 표로 한 번 조회합니다(`keyword_of`). `users`면 `TOK_IDENT`, `FROM`이면 `TOK_FROM`. 대소문자는 `strcasecmp`로 무시해서 `select`도 `SELECT`도 같은 토큰이 돼요.
 
@@ -86,7 +86,7 @@ static TokType keyword_of(const char *s) {
 }
 ```
 
-> **실무/면접 포인트**: 키워드를 토큰 종류로 미리 갈라두면, 파서가 "users는 이름이고 FROM은 키워드"임을 헷갈리지 않는다. 이게 SQL의 예약어(reserved word)가 생기는 이유다 — `SELECT`가 키워드라 컬럼 이름으로 `select`를 쓰면 충돌한다. 진짜 DB는 비예약 키워드(non-reserved)를 둬서 일부를 식별자로도 허용하지만, 원리는 같다.
+> **실무/면접 포인트**: 키워드를 토큰 종류로 미리 갈라두면, 파서가 "users는 이름이고 FROM은 키워드"임을 헷갈리지 않는다. 이게 SQL의 예약어(reserved word)가 생기는 이유다 — `SELECT`가 키워드라 컬럼 이름으로 그냥 `select`를 쓰면 충돌한다. 다만 "아예 못 쓴다"기보단 **따옴표로 감싸 escape하면 쓸 수 있다** — PostgreSQL은 `"select"`, MySQL은 백틱 `` `select` ``, SQL Server는 `[select]`. 진짜 DB는 비예약 키워드(non-reserved)도 둬서 일부는 그냥도 허용하는데, 원리는 같다.
 
 ## 3. 재귀 하강 파서 — 토큰을 AST로
 
@@ -120,7 +120,7 @@ static void parse_select_stmt(Parser *p, SelectStmt *s) {
 
 문법이 중첩되면 함수가 중첩 호출돼요. `WHERE`의 조건들은 `parse_where`가, 그 안의 OR로 이어진 AND 묶음은 `parse_and_group`이, 그 안의 한 조건(`id = 1`)은 또 그 아래가 맡습니다. 그리고 서브쿼리(`WHERE id IN (SELECT ...)`)를 만나면 파서가 **자기 자신을 재귀 호출**해요 — `parse_and_group` 안에서 다시 `parse_select_stmt`를 부릅니다. 이게 "재귀 하강"이라는 이름의 정체이고, [5편의 서브쿼리](/blog/project/minidb/minidb-5-join-aggregate)에서 다시 나옵니다.
 
-> **WHERE는 DNF로 푼다**: minidb의 WHERE는 `term (OR term)*`이고 각 term은 `cond (AND cond)*`다. AND가 OR보다 먼저 묶이므로 `a AND b OR c`는 자동으로 `(a AND b) OR c`가 된다 — 이게 선언적 우선순위(precedence)를 함수 호출 순서로 표현한 것이다. `BETWEEN a AND b` 같은 문법 설탕도 파서가 그 자리에서 `(col >= a) AND (col <= b)` 두 조건으로 풀어버린다.
+> **WHERE는 OR-of-AND 형태만 받는다(DNF 변환은 아니다)**: minidb의 WHERE는 `term (OR term)*`이고 각 term은 `cond (AND cond)*`다. AND가 OR보다 먼저 묶이므로 `a AND b OR c`는 `(a AND b) OR c`로 파싱된다 — 선언적 우선순위(precedence)를 함수 호출 순서로 표현한 것이다. 주의: 이건 입력을 OR-of-AND(결과적으로 DNF 모양)로 **제한해서 받는** 것이지, `(a OR b) AND c`를 `(a AND c) OR (b AND c)`로 바꾸는 **DNF 정규화가 아니다**(애초에 minidb는 괄호 친 WHERE를 파싱하지 않는다). `BETWEEN a AND b` 같은 문법 설탕은 minidb 파서가 그 자리에서 `(col >= a) AND (col <= b)`로 풀어버리는데, 이것도 minidb의 선택이다 — PostgreSQL은 파스 트리에 BETWEEN 노드를 남겼다가 나중에 변환한다.
 
 ### 손으로 쓴 파서 vs 파서 생성기
 
@@ -161,7 +161,7 @@ if (schema->columns[i].type == COL_INT) {
 }
 ```
 
-디코드는 정확히 그 역순이에요 — INT면 4바이트를 읽고, TEXT면 길이 2바이트를 먼저 읽어 그만큼 또 읽습니다. 인코드/디코드가 **같은 스키마 순서**를 따르기 때문에 바이트열 안에 "어디가 어느 컬럼"이라는 표시가 따로 없어도 됩니다.
+디코드는 정확히 그 역순이에요 — INT면 4바이트를 읽고, TEXT면 길이 2바이트를 먼저 읽어 그만큼 또 읽습니다. 인코드/디코드가 **같은 스키마 순서**를 따르기 때문에 바이트열 안에 "어디가 어느 컬럼"이라는 표시가 따로 없어도 됩니다. (참고로 정수를 `memcpy`로 그대로 담아서 바이트 순서가 호스트 엔디안을 따라요 — 학습용이라 괜찮지만 엔디안이 다른 머신으로 파일을 옮기면 깨지니, 실제 DB는 엔디안을 고정해 저장합니다.)
 
 > **TEXT를 왜 "길이 + 바이트"로 했나(length-prefixed)**: C 문자열처럼 끝에 `\0`를 붙이는 방법(널 종료)도 있지만, 그러면 길이를 알려고 끝까지 스캔해야 하고 문자열 안에 `\0`가 섞이면 깨진다. 길이를 앞에 박아두면 한 번에 "여기서 3바이트"라고 점프할 수 있다.
 
@@ -172,13 +172,13 @@ if (schema->columns[i].type == COL_INT) {
 | 다음 컬럼 점프 | 곱셈/덧셈 한 번 | 스캔해야 위치를 앎 |
 | 쓰는 곳 | PostgreSQL varlena, Pascal 문자열, 네트워크 프로토콜 | C 문자열 |
 
-이건 내가 발명한 게 아니라 가변 길이 데이터의 정석이고, Pascal 문자열부터 네트워크 프로토콜, 그리고 실제 DB의 행 포맷까지 다 이 방식이에요. PostgreSQL의 가변 길이 타입(varlena)도 앞에 길이 헤더를 답니다. 정수를 고정 4바이트로 둔 것도 같은 맥락 — 길이가 안 변하니 다음 컬럼 위치 계산이 덧셈으로 끝나요.
+이건 내가 발명한 게 아니라 가변 길이 데이터의 정석이고, Pascal 문자열부터 네트워크 프로토콜, 그리고 실제 DB의 행 포맷까지 다 이 방식이에요. PostgreSQL의 가변 길이 타입(varlena)도 앞에 길이 헤더를 다는데, 같은 *아이디어*일 뿐 같은 *방식*은 아니에요 — varlena는 1바이트(짧은 값)나 4바이트 헤더를 쓰고, 값이 크면 TOAST로 따로 떼어 저장하거나 압축까지 합니다. 정수를 고정 4바이트로 둔 것도 같은 맥락 — 길이가 안 변하니 다음 컬럼 위치 계산이 덧셈으로 끝나요.
 
 > **실무/면접 포인트**: 실제 minidb 코드의 행 포맷은 여기에 두 가지가 더 붙어 있다 — 컬럼당 1비트씩의 **null 비트맵**(어느 컬럼이 NULL인지), 그리고 [13편 MVCC](/blog/project/minidb/minidb-13-mvcc)에서 추가한 8바이트 **xmin/xmax 헤더**. 이 글에선 핵심인 INT/TEXT 인코딩에 집중하지만, "행 = 헤더 + null 비트맵 + 값들"이라는 레이아웃은 PostgreSQL 튜플과 똑같은 발상이다.
 
 ## 5. 실행기 — AST를 힙 연산으로
 
-이 코덱 위에서 실행기는 문장 종류대로 1편의 저장 계층을 부립니다. SQL 한 문장이 어떤 저장 연산으로 떨어지는지를 보면, "SQL이 결국 힙 위의 얇은 껍데기"라는 게 보여요.
+이 코덱 위에서 실행기는 문장 종류대로 1편의 저장 계층을 부립니다. 이번 minidb에선 SQL 한 문장이 결국 몇 개의 저장 계층 연산으로 번역되는 모습을 직접 볼 수 있어요. 실제 관계형 DB는 이 사이에 옵티마이저·실행 계획 생성 같은 계층이 더 들어가지만(SQL의 진짜 무게는 거기 있어요), 기본 흐름은 같습니다.
 
 | SQL | 실행기가 하는 일 | 저장 계층 호출 |
 |---|---|---|
@@ -220,11 +220,11 @@ REPL을 붙이면 드디어 진짜 SQL을 타이핑해 결과를 받습니다.
 
 `DELETE`와 `UPDATE`를 붙여 CRUD를 완성했는데, 둘 다 인덱스(다음 편) 때문에 미리 신경 쓸 게 있었어요.
 
-- **`DELETE`** 는 행을 실제로 지우지 않고 힙 슬롯을 **tombstone**(무효 표시)만 합니다. [1편](/blog/project/minidb/minidb-1-storage)에서 본 대로, 인덱스가 "키 -> RID"로 가리키던 주소를 깨지 않기 위해서예요. 인덱스 항목은 그대로 남지만, 그 RID로 `heap_get`을 하면 tombstone이라 -1을 돌려줘 결과에서 자연히 빠집니다 — stale 인덱스 항목이 무해해지는 이유예요(코드 주석에도 "가리키는 슬롯이 tombstone이라 heap_get이 -1을 돌려줘 결과에서 자동으로 빠진다"고 적어뒀습니다).
-- **`UPDATE`** 는 더 까다롭습니다. 행이 가변 길이라(예: 'kim' -> 'alexander') 제자리 수정이 안 될 수 있어, **"옛 행 삭제 + 새 행 삽입"** 으로 처리해요. 그러면 **RID가 바뀝니다.** 그래서 모든 인덱스를 새 RID로 갱신해야 하는데(바뀐 컬럼과 무관하게 RID 자체가 통째로 바뀌니까), 이걸 빼먹으면 인덱스가 삭제된 옛 위치를 가리켜 그 행이 쿼리에서 사라져요.
+- **`DELETE`** 는 (minidb에선) 행을 실제로 지우지 않고 힙 슬롯을 **tombstone**(무효 표시)만 합니다. [1편](/blog/project/minidb/minidb-1-storage)에서 본 대로, 인덱스가 "키 -> RID"로 가리키던 주소를 깨지 않기 위해서예요. (PostgreSQL도 즉시 지우진 않지만 그쪽은 MVCC의 dead tuple·visibility와 얽혀 있고 VACUUM이 나중에 정리해요 — [13편](/blog/project/minidb/minidb-13-mvcc). minidb의 tombstone은 그 단순화 버전입니다.) 인덱스 항목은 그대로 남지만, 그 RID로 `heap_get`을 하면 tombstone이라 -1을 돌려줘 결과에서 자연히 빠집니다 — stale 인덱스 항목이 무해해지는 이유예요(코드 주석에도 "가리키는 슬롯이 tombstone이라 heap_get이 -1을 돌려줘 결과에서 자동으로 빠진다"고 적어뒀습니다).
+- **`UPDATE`** 는 더 까다롭습니다. 행이 가변 길이라 제자리 수정이 **항상 되는 건 아니라서**(길이가 같거나 페이지에 여유가 있으면 제자리도 가능하지만, 'kim' -> 'alexander'처럼 길어지면 안 들어가요), minidb는 단순하게 **언제나 "옛 행 삭제 + 새 행 삽입"** 으로 처리해요. 그러면 **RID가 바뀝니다.** 그래서 모든 인덱스를 새 RID로 갱신해야 하는데(바뀐 컬럼과 무관하게 RID 자체가 통째로 바뀌니까), 이걸 빼먹으면 인덱스가 삭제된 옛 위치를 가리켜 그 행이 쿼리에서 사라져요.
 
 ```c
-/* UPDATE: 가변 길이라 제자리 수정이 안 된다 -> 옛 행 삭제 + 새 행 삽입 */
+/* UPDATE: minidb는 제자리 수정을 안 하고 언제나 옛 행 삭제 + 새 행 삽입 */
 heap_delete(&t->heap, ctx.rids[i]);
 RID newrid;
 heap_insert(&t->heap, newbuf, newlen, &newrid);
@@ -235,7 +235,7 @@ if (t->has_index && row[0].type == VAL_INT)
 
 ![minidb CRUD 세션 — UPDATE로 kim을 KIM으로, DELETE로 id=2를 지우면 SELECT에 1행(KIM)만 남는다](/uploads/project/minidb/crud-session.svg)
 
-이 "지우지 않고 새로 쓰는" 방식은 실제 PostgreSQL과 똑같아요. PostgreSQL도 UPDATE를 제자리 수정이 아니라 새 튜플 삽입으로 처리하고, 그래서 ctid(=RID)가 바뀝니다. 다만 이게 write amplification(한 번의 UPDATE가 여러 인덱스 쓰기를 부름)을 일으켜서, PostgreSQL은 이를 줄이려 **HOT update**라는 기법을 씁니다.
+이 "지우지 않고 새로 쓰는" 방식은 실제 PostgreSQL과 닮았어요. PostgreSQL도 UPDATE를 제자리 수정이 아니라 새 튜플 삽입으로 처리해 ctid(=RID)가 바뀌는데, 그 **주된 이유는 가변 길이가 아니라 MVCC**예요 — 옛 버전을 동시에 읽는 트랜잭션이 있을 수 있어 새 버전을 따로 만드는 거죠([13편](/blog/project/minidb/minidb-13-mvcc)). 가변 길이는 부차적 이유고요. 다만 이게 write amplification(한 번의 UPDATE가 여러 인덱스 쓰기를 부름)을 일으켜서, PostgreSQL은 이를 줄이려 **HOT update**라는 기법을 씁니다.
 
 | | minidb UPDATE | PostgreSQL UPDATE | InnoDB UPDATE |
 |---|---|---|---|
@@ -250,9 +250,9 @@ if (t->has_index && row[0].type == VAL_INT)
 SQL 엔진은 "텍스트를 행으로 바꾸는" 세 단계예요. 글자 -> 토큰(렉서) -> AST(파서) -> 힙 연산(실행기). 핵심 설계 선택을 정리하면:
 
 - **렉서** — maximal munch로 두 글자 연산자를 먼저 집고, 식별자를 다 읽은 뒤 키워드 표로 조회해 예약어를 가른다.
-- **재귀 하강 파서** — 문법 규칙 하나가 함수 하나. 서브쿼리는 파서의 자기 재귀로 떨어지고, WHERE는 DNF(AND 묶음을 OR로)로 푼다. 손으로 쓴 파서는 통제·디버깅이 쉽고(SQLite식), 생성기는 큰 문법에서 빛난다(MySQL bison).
+- **재귀 하강 파서** — (LL 방식이라) 문법 규칙 하나가 함수 하나. 서브쿼리는 파서의 자기 재귀로 떨어지고, WHERE는 OR-of-AND(DNF 모양)만 받는다(임의 식의 DNF 변환은 아님). 손으로 쓴 파서는 통제·디버깅이 쉽고(SQLite식), 생성기는 큰 문법에서 빛난다(MySQL bison).
 - **튜플 코덱** — INT 4바이트 고정, TEXT는 length-prefixed. 길이를 앞에 박아 O(1) 점프·바이너리 안전. 실DB 행 포맷과 같은 발상.
-- **실행기** — SQL 한 문장 = 힙 연산 몇 개. DELETE는 tombstone, UPDATE는 삭제+삽입이라 RID가 바뀌어 인덱스를 다시 써야 한다(PostgreSQL의 dead tuple·HOT과 같은 자리).
+- **실행기** — minidb에선 SQL 한 문장이 힙 연산 몇 개로 번역된다(실DB는 그 사이에 옵티마이저가 더 있다). DELETE는 tombstone, UPDATE는 (minidb에선 언제나) 삭제+삽입이라 RID가 바뀌어 인덱스를 다시 써야 한다(PostgreSQL은 MVCC 때문에 새 튜플을 쓰고, HOT으로 인덱스 갱신을 줄인다).
 
 이제 SQL이 돌아요. 하지만 `WHERE` 가 매번 모든 행을 훑는 O(n)입니다. 데이터가 100만 행이면 `id = 2` 하나 찾자고 100만 번 비교해요. [다음 편](/blog/project/minidb/minidb-3-index-wal)에선 이걸 O(log n)으로 줄이는 B+Tree 인덱스를 짓고, 그 위에 전원이 꺼져도 데이터가 안 깨지게 하는 WAL을 붙입니다.
 
@@ -273,13 +273,13 @@ In [Part 1](/blog/project/minidb/minidb-1-storage) we built the storage layer th
 
 This part puts the **SQL frontend** on top — a **parser** that turns text into structure, and an **executor** that connects that structure to the heap. Once it is done, typing `SELECT * FROM users WHERE id = 2` returns the row `2 | lee`, and you get to watch all six layers from Part 1 mesh at once.
 
-> **Goal of this part**: SQL text -> tokens (lexer) -> AST (parser) -> heap operations (executor). We build, step by step in C, the exact pipeline every DB uses to process a query that arrived as text.
+> **Goal of this part**: SQL text -> tokens (lexer) -> AST (parser) -> heap operations (executor). We build, step by step in C, the very pipeline most relational DBs use to process a query that arrived as text. (Real DBs insert an **optimizer / plan-generation** layer between the parser and executor; minidb folds a tiny version of it into the executor — it shows up properly in [Part 3](/blog/project/minidb/minidb-3-index-wal) and [Part 8 EXPLAIN](/blog/project/minidb/minidb-8-explain).)
 
 ## 1. The Big Picture — Borrowing a Compiler's Front End
 
 `"SELECT * FROM users WHERE id = 1"` is one sentence to a human but just a run of characters to a computer. Turning it into a **structure (tree)** the executor can handle is the parser's job; connecting that structure to Part 1's heap to return real rows is the executor's.
 
-This flow is not a DB invention — it **borrows a compiler/interpreter's front end** wholesale. Splitting source into tokens (lexing), assembling tokens into a tree (parsing), and running that tree (evaluation) are the same three stages in any language processor.
+This flow's **front end (lexing, parsing)** is not a DB invention — it borrows from compilers/interpreters. Splitting source into tokens (lexing) and assembling them into a tree (parsing) are the same in most language processors. But the **back ends diverge** — a compiler heads to code generation, while a DB goes to a query optimizer built on relational algebra and cost estimation: the front ends rhyme, the back ends mostly do not.
 
 | Stage | Compiler term | In minidb | Input -> output |
 |---|---|---|---|
@@ -287,7 +287,7 @@ This flow is not a DB invention — it **borrows a compiler/interpreter's front 
 | 2 | parsing | recursive-descent parser | tokens -> AST |
 | 3 | evaluation | executor | AST -> heap ops -> rows |
 
-> **Key fact**: a DB's SQL processing is "a tiny programming-language interpreter". SQL is that language, the parser is the compiler front end, the executor is the evaluator. Seen this way, "query planner = optimizer" follows naturally.
+> **Key fact**: SQL processing can be likened to "a tiny language interpreter" — SQL is the language, the parser the front end, the executor the evaluator. But this analogy fits implementations that run the AST fairly **directly**, like minidb or SQLite; PostgreSQL and MySQL do not run the AST as-is — they pass it through rewrite and an optimizer to build a **plan tree**, then run that. minidb, being for learning, runs the AST directly, with the "query planner" living as a small branch inside it.
 
 ## 2. The Tokenizer (Lexer) — Chars to Tokens
 
@@ -320,7 +320,7 @@ if (c == '=' || c == '<' || c == '>' || c == '!') {
 }
 ```
 
-> **Why check two chars first (maximal munch)**: on `<=`, peeling only `<` would leave `=` dangling on its own. The lexer follows the maximal-munch rule — "grab the longest possible token first" — which every real lexer uses.
+> **Why check two chars first (maximal munch)**: on `<=`, peeling only `<` would leave `=` dangling on its own. The lexer follows the maximal-munch (longest-match) rule — "grab the longest possible token first" — which almost every lexer uses (some languages layer extra tokenization rules on top, like Python's indentation or Go's semicolon insertion).
 
 How keywords split from plain identifiers is another point. minidb reads a whole identifier-like chunk **first**, then looks it up once in a table (`keyword_of`) to see if it is reserved. `users` is `TOK_IDENT`; `FROM` is `TOK_FROM`. Case is ignored via `strcasecmp`, so `select` and `SELECT` become the same token.
 
@@ -334,7 +334,7 @@ static TokType keyword_of(const char *s) {
 }
 ```
 
-> **Practical/interview note**: splitting keywords into token kinds up front keeps the parser from confusing "users is a name and FROM is a keyword". This is why SQL has reserved words — since `SELECT` is a keyword, using `select` as a column name clashes. Real DBs add non-reserved keywords to allow some as identifiers, but the principle is the same.
+> **Practical/interview note**: splitting keywords into token kinds up front keeps the parser from confusing "users is a name and FROM is a keyword". This is why SQL has reserved words — since `SELECT` is a keyword, using a bare `select` as a column name clashes. But rather than "cannot use it at all," you **escape it with quotes**: PostgreSQL `"select"`, MySQL `` `select` ``, SQL Server `[select]`. Real DBs also add non-reserved keywords to allow some bare, but the principle is the same.
 
 ## 3. The Recursive-Descent Parser — Tokens to AST
 
@@ -368,7 +368,7 @@ The parser rests on exactly three tools — they are basically all of recursive 
 
 When grammar nests, functions nest. `WHERE`'s conditions go to `parse_where`, its OR-joined AND-groups to `parse_and_group`, and one condition (`id = 1`) below that. And on a subquery (`WHERE id IN (SELECT ...)`) the parser **calls itself recursively** — `parse_and_group` calls `parse_select_stmt` again. That is the meaning behind the name "recursive descent", and it returns in [Part 5's subqueries](/blog/project/minidb/minidb-5-join-aggregate).
 
-> **WHERE is solved as DNF**: minidb's WHERE is `term (OR term)*` with each term `cond (AND cond)*`. Since AND binds before OR, `a AND b OR c` automatically becomes `(a AND b) OR c` — declarative precedence expressed as call order. Syntactic sugar like `BETWEEN a AND b` is unfolded right there into two conditions, `(col >= a) AND (col <= b)`.
+> **WHERE only accepts OR-of-AND form (this is not DNF conversion)**: minidb's WHERE is `term (OR term)*` with each term `cond (AND cond)*`. Since AND binds before OR, `a AND b OR c` parses as `(a AND b) OR c` — declarative precedence expressed as call order. The nuance: this **restricts input** to OR-of-AND (which happens to already be in DNF shape); it does **not normalize** `(a OR b) AND c` into `(a AND c) OR (b AND c)` (minidb does not even parse parenthesized WHERE). Sugar like `BETWEEN a AND b` is unfolded right there into `(col >= a) AND (col <= b)` — also minidb's choice; PostgreSQL keeps a BETWEEN node in the parse tree and transforms it later.
 
 ### Hand-Written Parser vs Parser Generator
 
@@ -409,7 +409,7 @@ if (schema->columns[i].type == COL_INT) {
 }
 ```
 
-Decoding is exactly the reverse — for INT read 4 bytes, for TEXT read the 2-byte length first then that many bytes. Because encode and decode follow the **same schema order**, the byte stream needs no marker for "which part is which column".
+Decoding is exactly the reverse — for INT read 4 bytes, for TEXT read the 2-byte length first then that many bytes. Because encode and decode follow the **same schema order**, the byte stream needs no marker for "which part is which column". (Note: `memcpy`-ing the integer raw means the byte order follows the host endianness — fine for learning, but moving the file to a machine of different endianness would break it, which is why real DBs store with a fixed endianness.)
 
 > **Why "length + bytes" for TEXT (length-prefixed)**: you could null-terminate like a C string, but then finding the length means scanning to the end, and an embedded `\0` corrupts it. Stamping the length up front lets you jump "3 bytes from here" in one step.
 
@@ -420,13 +420,13 @@ Decoding is exactly the reverse — for INT read 4 bytes, for TEXT read the 2-by
 | Jump to next column | one add/multiply | must scan to find position |
 | Used by | PostgreSQL varlena, Pascal strings, network protocols | C strings |
 
-This is not my invention but the standard for variable-length data, used from Pascal strings to network protocols to real DB row formats. PostgreSQL's variable-length types (varlena) also carry a length header up front. Fixing integers at 4 bytes is the same idea — the length never varies, so computing the next column's position is just an add.
+This is not my invention but the standard for variable-length data, used from Pascal strings to network protocols to real DB row formats. PostgreSQL's variable-length types (varlena) also carry a length header up front — the same *idea*, but not the same *method*: varlena uses a 1-byte (short) or 4-byte header, and large values get TOASTed out-of-line or even compressed. Fixing integers at 4 bytes is the same idea — the length never varies, so computing the next column's position is just an add.
 
 > **Practical/interview note**: the real minidb row format adds two more things — a **null bitmap** (one bit per column, marking which is NULL) and an 8-byte **xmin/xmax header** added in [Part 13 MVCC](/blog/project/minidb/minidb-13-mvcc). This article focuses on the core INT/TEXT encoding, but the layout "row = header + null bitmap + values" is the same idea as a PostgreSQL tuple.
 
 ## 5. The Executor — AST to Heap Operations
 
-On top of this codec, the executor drives Part 1's storage layer per statement kind. Seeing which storage operation each SQL statement lowers to reveals that "SQL is a thin shell over the heap".
+On top of this codec, the executor drives Part 1's storage layer per statement kind. In this minidb you can watch each SQL statement get translated into a handful of storage-layer operations. A real relational DB inserts more layers in between — an optimizer and plan generation, where SQL's real weight lives — but the basic flow is the same.
 
 | SQL | What the executor does | Storage call |
 |---|---|---|
@@ -468,11 +468,11 @@ Tracing how one line `SELECT * FROM users WHERE id = 2` returns `2 | lee` shows 
 
 Adding `DELETE` and `UPDATE` completes CRUD, and both had something to mind ahead of the index (next part).
 
-- **`DELETE`** does not really erase a row; it only **tombstones** (marks invalid) the heap slot. As seen in [Part 1](/blog/project/minidb/minidb-1-storage), this keeps the address an index pointed at via "key -> RID" from breaking. The index entry remains, but `heap_get` on that RID returns -1 because it is a tombstone, so the row drops from results naturally — that is why a stale index entry is harmless (the code comment even says "the slot it points to is a tombstone, so heap_get returns -1 and it drops from results automatically").
-- **`UPDATE`** is trickier. Since rows are variable-length (e.g. 'kim' -> 'alexander'), in-place editing may not fit, so it is done as **"delete the old row + insert a new row"**. That **changes the RID.** So every index must be updated to the new RID (the RID changes wholesale regardless of which column changed), and skipping this leaves an index pointing at the deleted old location, making the row vanish from queries.
+- **`DELETE`** (in minidb) does not really erase a row; it only **tombstones** (marks invalid) the heap slot. As seen in [Part 1](/blog/project/minidb/minidb-1-storage), this keeps the address an index pointed at via "key -> RID" from breaking. (PostgreSQL also defers erasure, but there it is tangled with MVCC dead tuples and visibility, cleaned later by VACUUM — [Part 13](/blog/project/minidb/minidb-13-mvcc). minidb's tombstone is the simplified version.) The index entry remains, but `heap_get` on that RID returns -1 because it is a tombstone, so the row drops from results naturally — that is why a stale index entry is harmless (the code comment even says "the slot it points to is a tombstone, so heap_get returns -1 and it drops from results automatically").
+- **`UPDATE`** is trickier. Since rows are variable-length, in-place editing is **not always possible** (same length or enough free space on the page allows it, but growing 'kim' -> 'alexander' may not fit), so minidb simply **always** does **"delete the old row + insert a new row"**. That **changes the RID.** So every index must be updated to the new RID (the RID changes wholesale regardless of which column changed), and skipping this leaves an index pointing at the deleted old location, making the row vanish from queries.
 
 ```c
-/* UPDATE: variable-length means no in-place edit -> delete old row + insert new row */
+/* UPDATE: minidb never edits in place; always delete old row + insert new row */
 heap_delete(&t->heap, ctx.rids[i]);
 RID newrid;
 heap_insert(&t->heap, newbuf, newlen, &newrid);
@@ -483,7 +483,7 @@ if (t->has_index && row[0].type == VAL_INT)
 
 ![minidb CRUD session — UPDATE turns kim into KIM, DELETE removes id=2, so SELECT leaves one row (KIM)](/uploads/project/minidb/crud-session.svg)
 
-This "don't erase, write anew" approach is exactly PostgreSQL's. PostgreSQL also handles UPDATE as a new tuple insert, not an in-place edit, so the ctid (= RID) changes. But this causes write amplification (one UPDATE triggers several index writes), so PostgreSQL uses a technique called **HOT update** to reduce it.
+This "don't erase, write anew" approach resembles PostgreSQL's. PostgreSQL also handles UPDATE as a new tuple insert so the ctid (= RID) changes — but the **main reason is MVCC, not variable length**: a concurrent transaction may still be reading the old version, so a new version is made alongside it ([Part 13](/blog/project/minidb/minidb-13-mvcc)). Variable length is a secondary reason. But this causes write amplification (one UPDATE triggers several index writes), so PostgreSQL uses a technique called **HOT update** to reduce it.
 
 | | minidb UPDATE | PostgreSQL UPDATE | InnoDB UPDATE |
 |---|---|---|---|
@@ -498,9 +498,9 @@ This "don't erase, write anew" approach is exactly PostgreSQL's. PostgreSQL also
 The SQL engine is three stages that "turn text into rows": chars -> tokens (lexer) -> AST (parser) -> heap ops (executor). The key design choices:
 
 - **Lexer** — maximal munch grabs two-char operators first; identifiers are read whole then looked up in a keyword table to split off reserved words.
-- **Recursive-descent parser** — one grammar rule, one function. Subqueries fall out of the parser recursing on itself, and WHERE is solved as DNF (AND-groups joined by OR). Hand-written parsers are easy to control and debug (SQLite-style); generators shine on large grammars (MySQL's bison).
+- **Recursive-descent parser** — being LL, one grammar rule, one function. Subqueries fall out of the parser recursing on itself, and WHERE only accepts OR-of-AND (DNF shape), not arbitrary-expression DNF conversion. Hand-written parsers are easy to control and debug (SQLite-style); generators shine on large grammars (MySQL's bison).
 - **Tuple codec** — INT fixed at 4 bytes, TEXT length-prefixed. The leading length gives O(1) jumps and binary safety. Same idea as real DB row formats.
-- **Executor** — one SQL statement = a few heap ops. DELETE is a tombstone; UPDATE is delete+insert, so the RID changes and indexes must be rewritten (the same spot as PostgreSQL's dead tuples and HOT).
+- **Executor** — in minidb one SQL statement is translated into a few heap ops (a real DB has an optimizer in between). DELETE is a tombstone; UPDATE is (always, in minidb) delete+insert, so the RID changes and indexes must be rewritten (PostgreSQL writes a new tuple because of MVCC, and trims index updates with HOT).
 
 SQL runs now. But `WHERE` scans every row, O(n). At a million rows, finding `id = 2` means a million comparisons. [The next part](/blog/project/minidb/minidb-3-index-wal) builds a B+Tree index to cut that to O(log n), and adds a WAL on top so data survives a power loss.
 
