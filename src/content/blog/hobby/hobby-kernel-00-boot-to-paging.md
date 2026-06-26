@@ -30,7 +30,7 @@ seriesOrder: 1
 
 이 글은 그 커널의 **첫 골격**을 세웁니다.
 정확히 무엇을 세우느냐면 — 전원이 들어온 직후의 CPU를 받아서, 출력·인터럽트·입력·메모리 관리라는 네 기둥을 차례로 올리고, 마지막에 **페이징(가상메모리)** 까지 켜는 것입니다.
-순서는 우연이 아니에요. 출력이 있어야 디버깅을 하고, 타이머가 있어야 시간이 흐르고, 입력이 있어야 셸을 돌리고, 물리 페이지 할당기가 있어야 페이지 테이블을 지을 수 있습니다.
+쌓는 순서는 **출력 → 트랩·타이머 → 입력 → 페이지 할당기 → 페이징**이고, 그 이유는 각 단계가 다음 단계의 전제이기 때문이에요 — 출력이 있어야 디버깅을 하고, 타이머가 있어야 시간이 흐르고, 입력이 있어야 셸을 돌리고, 할당기가 있어야 페이지 테이블을 지을 수 있거든요.
 **페이징은 맨 마지막에 오는데, 그 앞의 모든 것을 전제로 깔기 때문**입니다.
 
 > 왜 C/RISC-V인가: 커널의 정석 언어는 C이고(리눅스·xv6·BSD 전부 C), 참고서 xv6도 C/RISC-V라 코드가 1:1로 매핑돼 마찰이 가장 적어요. RISC-V는 ISA가 단순해 학습에 좋고, 맥(애플 실리콘)에서 `riscv64-elf-gcc`로 툴체인도 깔끔하게 잡혀요.
@@ -50,6 +50,7 @@ RISC-V의 좋은 점 하나: `-nographic`으로 돌리면 UART가 그대로 터�
 x86이라면 BIOS·부트로더의 미로를 통과해야 합니다.
 RISC-V는 그 단계를 **OpenSBI**라는 펌웨어가 표준화해 둬서 훨씬 깔끔해요.
 QEMU virt를 켜면 OpenSBI가 먼저 **M-mode**(머신 모드, 최고 권한) 셋업을 끝내고, 우리 커널을 `0x8020_0000`으로 **S-mode**(슈퍼바이저 모드)에서 점프시켜요.
+여기서 `0x8020_0000`은 **RAM이 시작하는 `0x8000_0000`에서 2MB 뒤**예요 — 앞쪽 2MB엔 OpenSBI가 자리 잡고, 그 뒤부터가 우리 커널 몫이죠. (RISC-V엔 고정된 "0번지 RAM"이 없고, QEMU virt가 RAM을 `0x8000_0000`부터 배치하기 때문에 이 숫자가 나와요.)
 
 ```
 OpenSBI v1.5.1 ...
@@ -73,6 +74,15 @@ _entry:
         add     sp, sp, t0
         call    kmain              # C 커널 시작
 ```
+
+어셈블리가 낯설어도 하는 일은 단순해요 — 줄 단위로 보면:
+
+- `mv tp, a0` — OpenSBI가 `a0`로 넘겨준 **코어 번호(hartid)** 를 `tp` 레지스터에 보관
+- `csrw sscratch, a0` — 같은 hartid를 트랩 때 되찾으려고 `sscratch`에도 백업 ([5편](/blog/hobby/hobby-kernel-05-smp-multicore-locks)에서 이 한 줄이 버그의 핵심이 돼요)
+- 가운데 다섯 줄 — `sp`(스택 포인터)를 `stacks + (hartid+1)×4096`으로 계산해, 코어마다 **서로 겹치지 않는 자기 4KB 스택의 꼭대기**를 가리키게 함
+- `call kmain` — 여기서부터 **C로 작성된 커널 본체 함수 `kmain`** 으로 점프해요. 스택이 잡혔으니 이제 평범한 C가 돌아갑니다
+
+> **왜 스택부터 잡나?** C 함수는 지역변수와 복귀 주소를 스택에 쌓는데, 부팅 직후엔 그 스택이 아직 없어요. 그래서 C(`kmain`)로 넘어가기 전에 어셈블리로 `sp` 한 줄만 세팅하는 거예요.
 
 > **핵심 질문에 대한 답**: 부트로더를 직접 안 짜도 되는 이유는 OpenSBI가 M-mode 초기화와 SBI 서비스를 제공하기 때문이고, 우리는 S-mode에서 깨끗하게 시작합니다. 스택 한 줄만 잡으면 그다음부터는 평범한 C예요.
 
@@ -433,7 +443,7 @@ The target is RISC-V (rv64), the emulator is QEMU's `virt` machine, and the refe
 
 This post raises the kernel's **first skeleton**.
 Concretely: take the CPU right after power-on, stack up four pillars in order — output, interrupts, input, memory management — and finally turn on **paging (virtual memory)**.
-The order is not accidental. You need output to debug, a timer for time to pass, input to run a shell, and a physical page allocator to build page tables.
+We stack in the order **output → traps/timer → input → page allocator → paging**, because each step is a prerequisite for the next: output to debug, a timer for time to pass, input to run a shell, and a physical page allocator to build page tables.
 **Paging comes dead last precisely because it stands on everything before it.**
 
 > Why C/RISC-V: C is the canonical language for kernels (Linux, xv6, and BSD are all C), and since the xv6 reference is also C/RISC-V, the code maps 1:1 with the least friction. RISC-V has a simple ISA that's great for learning, and on a Mac (Apple Silicon) the toolchain sets up cleanly with `riscv64-elf-gcc`.
@@ -453,6 +463,7 @@ One nice thing about RISC-V: running with `-nographic` sends UART straight to th
 On x86 you'd thread through a maze of BIOS and bootloader.
 RISC-V standardizes that stage behind a firmware called **OpenSBI**, which is far cleaner.
 When you start QEMU virt, OpenSBI first finishes the **M-mode** (machine mode, highest privilege) setup, then jumps to our kernel at `0x8020_0000` in **S-mode** (supervisor mode).
+That `0x8020_0000` is **2MB past `0x8000_0000`, where RAM begins** — OpenSBI sits in the first 2MB, and our kernel gets everything after. (RISC-V has no fixed "RAM at address 0"; QEMU virt places RAM starting at `0x8000_0000`, which is where this number comes from.)
 
 ```
 OpenSBI v1.5.1 ...
@@ -476,6 +487,15 @@ _entry:
         add     sp, sp, t0
         call    kmain              # into the C kernel
 ```
+
+Assembly may look unfamiliar, but it does something simple — line by line:
+
+- `mv tp, a0` — keep the **core number (hartid)** OpenSBI passed in `a0` in the `tp` register
+- `csrw sscratch, a0` — also back up that hartid in `sscratch` to recover it on a trap (this one line becomes the crux of a bug in [Part 5](/blog/hobby/hobby-kernel-05-smp-multicore-locks))
+- the middle five lines — compute `sp` (the stack pointer) as `stacks + (hartid+1)×4096`, so each core points at the **top of its own non-overlapping 4KB stack**
+- `call kmain` — jump into **`kmain`, the kernel's main function written in C**; now that a stack exists, ordinary C can run
+
+> **Why set up the stack first?** C functions push local variables and return addresses onto a stack, but right after boot there is no stack yet. So before handing off to C (`kmain`), we set up `sp` in assembly — just one line.
 
 > **Answer to the key question**: we don't write a bootloader because OpenSBI does the M-mode initialization and provides the SBI services for us, and we start cleanly in S-mode. One line to set up the stack, and from there on it's ordinary C.
 

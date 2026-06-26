@@ -31,7 +31,7 @@ seriesOrder: 7
 
 그래서 이 글은 네트워크 스택을 **계층 순서대로** 쌓아 올립니다.
 NIC 드라이버(virtio-net)로 프레임을 주고받는 토대를 깔고 → 이더넷/ARP로 게이트웨이 MAC을 알아내고 → 그 위에 IP를 얹고 → ICMP로 IP 계층을 검증하고 → UDP로 포트 다중화를 더하고 → 마지막에 DNS로 도메인을 해석해요.
-순서는 우연이 아니에요. **아래 계층이 동작해야 위 계층을 검증할 수 있기 때문**입니다 — 프레임을 못 보내면 ARP를 못 하고, MAC을 모르면 IP를 못 얹고, IP가 안 되면 UDP도 의미가 없어요.
+쌓는 순서는 **아래 계층부터 위로**예요. **아래 계층이 동작해야 위 계층을 검증할 수 있기 때문**입니다 — 프레임을 못 보내면 ARP를 못 하고, MAC을 모르면 IP를 못 얹고, IP가 안 되면 UDP도 의미가 없어요.
 
 검증 환경은 QEMU의 **user 네트워킹(SLIRP)** 이에요.
 SLIRP는 게이트웨이(10.0.2.2)·DNS(10.0.2.3)·DHCP를 흉내내는 가상 네트워크라, 호스트 설정 없이도 ARP·ICMP·DNS에 응답해줍니다.
@@ -444,7 +444,7 @@ The goal of this post fits in one line — **feel, end to end, "how a packet is 
 
 So this post builds the network stack **in layer order, bottom up**.
 Lay the foundation with a NIC driver (virtio-net) that moves frames → resolve the gateway MAC with Ethernet/ARP → put IP on top → verify the IP layer with ICMP → add port multiplexing with UDP → finally resolve a domain with DNS.
-The order is not accidental. **You can only verify an upper layer once the layer beneath it works** — you can't ARP without sending frames, can't put IP on the wire without a MAC, and UDP is meaningless if IP is broken.
+We stack from the bottom layer up, because **you can only verify an upper layer once the layer beneath it works** — you can't ARP without sending frames, can't put IP on the wire without a MAC, and UDP is meaningless if IP is broken.
 
 The test environment is QEMU's **user networking (SLIRP)**.
 SLIRP is a virtual network that emulates a gateway (10.0.2.2), DNS (10.0.2.3), and DHCP, so it answers ARP, ICMP, and DNS without any host-side setup.
