@@ -155,7 +155,7 @@ EXPLAIN은 새 기능이라기보다 **이미 만든 것을 보이게 하는 창
 - [PostgreSQL Documentation: Planner/Optimizer](https://www.postgresql.org/docs/current/planner-optimizer.html)
 - [MySQL Reference Manual: Optimizing Queries with EXPLAIN](https://dev.mysql.com/doc/refman/8.0/en/using-explain.html)
 - 본 블로그: [DB 인덱스 ①: 인덱스 기초와 EXPLAIN 읽기](/blog/theory/db-index-01-explain-basics) · [DB 인덱스 ②: 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -296,4 +296,4 @@ And that tree was a confession, not a boast — "I can't use the index once ther
 - [PostgreSQL Documentation: Planner/Optimizer](https://www.postgresql.org/docs/current/planner-optimizer.html)
 - [MySQL Reference Manual: Optimizing Queries with EXPLAIN](https://dev.mysql.com/doc/refman/8.0/en/using-explain.html)
 - This blog: [DB Index ①: Index Basics and Reading EXPLAIN](/blog/theory/db-index-01-explain-basics) · [DB Index ②: Scan Types and the Optimizer's Choice](/blog/theory/db-index-02-scan-types)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)

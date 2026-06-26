@@ -314,7 +314,7 @@ id | name
 - 본 블로그: [DB 인덱스 ②: 스캔 종류와 옵티마이저](/blog/theory/db-index-02-scan-types) · [DB 스토리지 내부 ②: Row Store vs Column Store](/blog/theory/db-storage-02-row-vs-column)
 - 실전 최적화: [Deferred Join 적용기](/blog/project/WikiEngine/deferred-join-optimization) · [COUNT(*) 제거와 페이지 제한](/blog/project/WikiEngine/query-refactoring-optimization)
 - minidb 시리즈: [1편 저장 계층](/blog/project/minidb/minidb-1-storage) · [2편 SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3편 인덱스·WAL](/blog/project/minidb/minidb-3-index-wal) · [4편 트랜잭션](/blog/project/minidb/minidb-4-transactions)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -613,6 +613,6 @@ Now I know what happens in the layers underneath every time I type `SELECT`. Tha
 - This blog: [DB Index ②: Scan Types and the Optimizer](/blog/theory/db-index-02-scan-types) · [DB Storage Internals ②: Row Store vs Column Store](/blog/theory/db-storage-02-row-vs-column)
 - Hands-on optimization: [Applying Deferred Join](/blog/project/WikiEngine/deferred-join-optimization) · [Removing COUNT(*) and capping pages](/blog/project/WikiEngine/query-refactoring-optimization)
 - minidb series: [Part 1 Storage](/blog/project/minidb/minidb-1-storage) · [Part 2 SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [Part 3 Index·WAL](/blog/project/minidb/minidb-3-index-wal) · [Part 4 Transactions](/blog/project/minidb/minidb-4-transactions)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)
 </content>
 </invoke>

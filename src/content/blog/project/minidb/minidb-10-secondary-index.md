@@ -32,7 +32,7 @@ seriesOrder: 10
 | **3. DML 유지보수 + WAL** | "인덱스가 알아서 맞다" 착각 | INSERT/UPDATE 갱신, 인덱스 WAL |
 | **4. 플래너 + 재검사** | "RID를 곧이곧대로 믿는다" 가정 | find_all + heap_get + WHERE recheck |
 
-> **왜 보조 인덱스인가**: 실무에서 인덱스를 거는 컬럼은 대부분 PK가 아니에요. 자주 검색하는 `email`, `status`, `created_at` 같은 컬럼이죠. 이것들은 유니크하지 않고, 끊임없이 INSERT/UPDATE/DELETE의 영향을 받습니다. "보조 인덱스가 어렵다"의 정체가 바로 이 비유니크성과 유지보수예요. 실제 코드는 [btree.c](https://github.com/dj258255/minidb)와 db.c에 있습니다.
+> **왜 보조 인덱스인가**: 실무에서 인덱스를 거는 컬럼은 대부분 PK가 아니에요. 자주 검색하는 `email`, `status`, `created_at` 같은 컬럼이죠. 이것들은 유니크하지 않고, 끊임없이 INSERT/UPDATE/DELETE의 영향을 받습니다. "보조 인덱스가 어렵다"의 정체가 바로 이 비유니크성과 유지보수예요. 실제 코드는 [btree.c](https://github.com/dj258255/db-hobby)와 db.c에 있습니다.
 
 PK 인덱스와 보조 인덱스가 어디서 갈리는지 한눈에:
 
@@ -303,7 +303,7 @@ EXPLAIN과 실행기가 "어떤 인덱스를 쓸지" 판단하는 함수(`sec_in
 - [PostgreSQL Documentation: CREATE INDEX](https://www.postgresql.org/docs/current/sql-createindex.html)
 - [PostgreSQL Documentation: Indexes (pg_index, secondary index as separate relation)](https://www.postgresql.org/docs/current/indexes.html)
 - 본 블로그: [DB 인덱스 ②: 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types) · [③ Covering Index](/blog/theory/db-index-03-covering-index-ios) · [⑤ 클러스터형 인덱스와 DBMS별 차이](/blog/theory/db-index-05-clustered-dbms)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -322,7 +322,7 @@ We build the secondary index in four stages. Here is the whole map first.
 | **3. DML maintenance + WAL** | "the index stays correct on its own" | INSERT/UPDATE upkeep, index WAL |
 | **4. Planner + recheck** | "trust the RID as-is" | find_all + heap_get + WHERE recheck |
 
-> **Why secondary indexes**: in practice the columns you index are mostly not the PK. They are columns you search often — `email`, `status`, `created_at`. These are not unique and are constantly hit by INSERT/UPDATE/DELETE. The essence of "secondary indexes are hard" is exactly this non-uniqueness and maintenance. The real code is in [btree.c](https://github.com/dj258255/minidb) and db.c.
+> **Why secondary indexes**: in practice the columns you index are mostly not the PK. They are columns you search often — `email`, `status`, `created_at`. These are not unique and are constantly hit by INSERT/UPDATE/DELETE. The essence of "secondary indexes are hard" is exactly this non-uniqueness and maintenance. The real code is in [btree.c](https://github.com/dj258255/db-hobby) and db.c.
 
 Where the PK index and a secondary index part ways, at a glance:
 
@@ -593,6 +593,6 @@ It is the same B+Tree, yet setting down the privilege of uniqueness made the wor
 - [PostgreSQL Documentation: CREATE INDEX](https://www.postgresql.org/docs/current/sql-createindex.html)
 - [PostgreSQL Documentation: Indexes (pg_index, secondary index as separate relation)](https://www.postgresql.org/docs/current/indexes.html)
 - This blog: [DB Index ②: Scan Types and the Optimizer's Choice](/blog/theory/db-index-02-scan-types) · [③ Covering Index](/blog/theory/db-index-03-covering-index-ios) · [⑤ Clustered Index and Per-DBMS Differences](/blog/theory/db-index-05-clustered-dbms)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)
 </content>
 </invoke>

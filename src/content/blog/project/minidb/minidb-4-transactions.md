@@ -177,7 +177,7 @@ static int exec_rollback(Database *db, FILE *out) {
 - [PostgreSQL Documentation: Reliability and the Write-Ahead Log](https://www.postgresql.org/docs/current/wal-reliability.html)
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992)
 - 본 블로그: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [② Isolation](/blog/theory/transaction-acid-02-isolation) · [③ Consistency](/blog/theory/transaction-acid-03-consistency) · [④ Durability](/blog/theory/transaction-acid-04-durability) · [락 메커니즘의 모든 것](/blog/theory/lock-mechanisms-all) · [DB 커넥션 풀](/blog/theory/db-connection-pool)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -339,4 +339,4 @@ This is the complete form of a "single-table DB" — storage, SQL, index, durabi
 - [PostgreSQL Documentation: Reliability and the Write-Ahead Log](https://www.postgresql.org/docs/current/wal-reliability.html)
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992)
 - This blog: [Transaction ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [② Isolation](/blog/theory/transaction-acid-02-isolation) · [③ Consistency](/blog/theory/transaction-acid-03-consistency) · [④ Durability](/blog/theory/transaction-acid-04-durability) · [Everything About Lock Mechanisms](/blog/theory/lock-mechanisms-all) · [DB Connection Pool](/blog/theory/db-connection-pool)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)

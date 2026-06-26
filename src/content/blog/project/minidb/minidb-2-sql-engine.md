@@ -263,7 +263,7 @@ SQL 엔진은 "텍스트를 행으로 바꾸는" 세 단계예요. 글자 -> 토
 - [SQLite: The Lemon Parser Generator](https://www.sqlite.org/lemon.html)
 - 본 블로그: [DB 스토리지 내부 ③: HOT Update와 Visibility Map](/blog/theory/db-storage-03-hot-update-visibility-map)
 - minidb 시리즈: [1편 저장 계층](/blog/project/minidb/minidb-1-storage) · [3편 인덱스·WAL](/blog/project/minidb/minidb-3-index-wal) · [5편 JOIN·집계·서브쿼리](/blog/project/minidb/minidb-5-join-aggregate) · [13편 MVCC](/blog/project/minidb/minidb-13-mvcc)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -511,4 +511,4 @@ SQL runs now. But `WHERE` scans every row, O(n). At a million rows, finding `id 
 - [SQLite: The Lemon Parser Generator](https://www.sqlite.org/lemon.html)
 - This blog: [DB Storage Internals ③: HOT Update and the Visibility Map](/blog/theory/db-storage-03-hot-update-visibility-map)
 - minidb series: [Part 1 Storage](/blog/project/minidb/minidb-1-storage) · [Part 3 Index·WAL](/blog/project/minidb/minidb-3-index-wal) · [Part 5 JOIN·Aggregate·Subquery](/blog/project/minidb/minidb-5-join-aggregate) · [Part 13 MVCC](/blog/project/minidb/minidb-13-mvcc)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)

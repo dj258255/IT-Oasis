@@ -136,7 +136,7 @@ PostgreSQL이 버전의 길을 골랐기에 그 높은 읽기 동시성을 얻�
 - [PostgreSQL Documentation: Routine Vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html)
 - [The Internals of PostgreSQL: Concurrency Control (xmin/xmax, clog, visibility)](https://www.interdb.jp/pg/pgsql05.html)
 - 본 시리즈: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [② Isolation](/blog/theory/transaction-acid-02-isolation)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -258,4 +258,4 @@ PostgreSQL chose the road of versions, so it gained that high read concurrency a
 - [PostgreSQL Documentation: Routine Vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html)
 - [The Internals of PostgreSQL: Concurrency Control (xmin/xmax, clog, visibility)](https://www.interdb.jp/pg/pgsql05.html)
 - This series: [Transaction ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [② Isolation](/blog/theory/transaction-acid-02-isolation)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)
