@@ -43,7 +43,7 @@ seriesOrder: 7
 
 둘 다 결과는 한 행으로 같고, **길만 다릅니다**. 그래서 순수하게 "어떻게 찾느냐"의 비용만 비교돼요. PK 조건이냐 아니냐로 [3편의 플래너](/blog/project/minidb/minidb-3-index-wal)가 길을 갈라주는 걸 그대로 이용한 겁니다.
 
-> **방법론**: 측정은 `clock_gettime(CLOCK_MONOTONIC)`로 같은 조회를 수천 번 반복해 평균을 냈습니다. `SELECT` 출력은 `/dev/null`로 버려 인쇄 비용을 뺐고(엔진 시간만 잰다), 난수는 고정 시드 xorshift64라 매번 같은 행을 같은 순서로 찾아 재현됩니다. `make bench` 한 줄이면 누구나 똑같이 돌려볼 수 있어요([코드](https://github.com/dj258255/minidb)의 `tests/bench.c`).
+> **방법론**: 측정은 `clock_gettime(CLOCK_MONOTONIC)`로, 인덱스 점 조회는 5,000회·풀 스캔은 N에 따라 300~3,000회 반복한 **평균**입니다(중앙값·표준편차는 따로 안 냈고, 적재 직후 warm 상태라 별도 워밍업 루프는 두지 않았어요 — 블로그용 마이크로 측정 수준의 단순함입니다). cold cache는 OS 페이지 캐시·저장장치 상태에 크게 휘둘려 재현성이 낮아서, 엔진 자체의 자료구조 비용만 보려고 warm만 비교했습니다. `SELECT` 출력은 `/dev/null`로 버려 인쇄 비용을 뺐고(엔진 시간만 잰다), 난수는 고정 시드 xorshift64라 매번 같은 행을 같은 순서로 찾아 재현됩니다. `make bench` 한 줄이면 누구나 똑같이 돌려볼 수 있어요([코드](https://github.com/dj258255/minidb)의 `tests/bench.c`).
 
 측정 루프의 핵심은 이렇게 생겼어요 — 두 길 모두 같은 범위에서 랜덤 키를 뽑고, 차이는 `WHERE` 절뿐입니다.
 
@@ -85,10 +85,10 @@ double scan_us = (now_sec() - t0) / iter_scan * 1e6;
 | 10,000 | 5.05 us | 274.28 us | 54배 |
 | 100,000 | 7.52 us | 3,126.74 us | 416배 |
 
-숫자 하나하나보다 **두 열이 자라는 모양**이 핵심이에요.
+숫자 하나하나보다 **두 열이 자라는 모양**이 핵심이에요(실행 시간엔 캐시·파싱·할당 비용도 섞여 있어 순수 복잡도 그 자체는 아니지만, 증가 *양상* 은 복잡도 모양을 그대로 드러냅니다).
 
-- **풀 스캔 열**: N이 10배 될 때마다 34 -> 274 -> 3,127로 거의 정확히 10배씩 뜁니다. 이게 **O(n)** 이에요. 행이 늘면 늘어난 만큼 더 훑으니까요. 정직하게 선형입니다.
-- **인덱스 열**: N이 100배(1천->10만) 되는 동안 3.25 -> 7.52로 **2.3배밖에** 안 늘었어요. 이게 **O(log n)** 입니다. 데이터가 100배가 돼도 트리 높이는 몇 단 더 깊어질 뿐이라, 조회 비용이 거의 안 움직여요.
+- **풀 스캔 열**: N이 10배 될 때마다 34 -> 274 -> 3,127로 거의 정확히 10배씩 뜁니다. 이 선형 증가가 곧 **O(n)** 의 모양이에요. 행이 늘면 늘어난 만큼 더 훑으니까요.
+- **인덱스 열**: N이 100배(1천->10만) 되는 동안 3.25 -> 7.52로 **2.3배밖에** 안 늘었어요. 이 거의-평평한 증가가 **O(log n)** 의 로그 곡선에 들어맞습니다. 데이터가 100배가 돼도 트리 높이는 몇 단 더 깊어질 뿐이라, 조회 비용이 거의 안 움직여요.
 
 그래서 배율이 11배 -> 54배 -> 416배로 벌어집니다. O(log n)과 O(n)을 나란히 표로 보면 모양 차이가 또렷해요.
 
@@ -98,7 +98,7 @@ double scan_us = (now_sec() - t0) / iter_scan * 1e6;
 | 1만 -> 10만 (x10) | x1.5 | x11.4 |
 | 1천 -> 10만 (x100) | x2.3 | x91 |
 
-> **실무/면접 포인트**: 흥미로운 건 이 격차가 **N이 클수록 더 벌어진다**는 거예요. 작은 테이블(1천 행)에선 인덱스가 11배 빠른 정도라 "굳이?" 싶지만, 10만 행에선 416배입니다. 인덱스의 가치는 데이터가 많아질수록 커집니다 — 정확히 인덱스가 필요해지는 그 지점에서요. 100만, 1000만 행이면 이 곡선은 더 극단으로 갑니다. [WikiEngine](/blog/project/WikiEngine/lucene-decision)에서 1,215만 행에 인덱스 없는 검색이 5초 타임아웃 났던 게 바로 이 O(n) 열의 맨 끝이었어요.
+> **실무/면접 포인트**: 흥미로운 건 이 격차가 **N이 클수록 더 벌어진다**는 거예요. 작은 테이블(1천 행)에선 인덱스가 11배 빠른 정도라 "굳이?" 싶지만, 10만 행에선 (이 환경·이 데이터에선) 416배까지 벌어졌습니다. 인덱스의 가치는 데이터가 많아질수록 커집니다 — 정확히 인덱스가 필요해지는 그 지점에서요. 100만, 1000만 행이면 이 곡선은 더 극단으로 갑니다. [WikiEngine](/blog/project/WikiEngine/lucene-decision)에서 1,215만 행에 인덱스 없는 검색이 5초 타임아웃 났던 게 바로 이 O(n) 열의 맨 끝이었어요.
 
 > 더 깊이: 실제 옵티마이저가 "언제 인덱스를 타고 언제 풀 스캔이 오히려 빠른지"를 비용으로 고르는 이야기는 [DB 인덱스 ②: 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types). (그렇습니다. 행을 거의 다 읽을 거면 풀 스캔이 더 빠를 때도 있어요.)
 
@@ -114,7 +114,7 @@ double scan_us = (now_sec() - t0) / iter_scan * 1e6;
 | 행마다 커밋 | 1.483 s | 3,372 rows/s | 5,000회 |
 | 50행씩 묶어 커밋 | 0.063 s | 79,039 rows/s | 약 100회 |
 
-**같은 5천 행인데 묶음이 23배 빠릅니다.** 한 일은 똑같아요 — 5천 행을 인코딩해 힙과 인덱스에 넣는 것. 유일한 차이는 `fsync`를 5,000번 하느냐 100번 하느냐예요. 즉 이 23배 격차의 대부분이 **순수한 `fsync` 비용**입니다. 디스크에 "정말 내려갔는지" 확인받는 그 한 번이, CPU가 하는 실제 일보다 압도적으로 비싸요.
+**같은 5천 행인데 묶음이 23배 빠릅니다.** 한 일은 똑같아요 — 5천 행을 인코딩해 힙과 인덱스에 넣는 것. 유일한 차이는 `fsync`를 5,000번 하느냐 100번 하느냐예요. 즉 이 23배 격차의 대부분이 **`fsync`와 커밋 동기화 비용**입니다(트랜잭션 begin/end·로그 버퍼 같은 부수 비용도 섞여 있지만, 대부분은 fsync예요). 디스크에 "정말 내려갔는지" 확인받는 그 한 번이, CPU가 하는 실제 일보다 압도적으로 비싸요.
 
 > **방법론**: 묶음 쪽은 `i % 50 == 1`에서 `BEGIN`, `i % 50 == 0`에서 `COMMIT`을 거는 식으로 50행마다 한 트랜잭션을 끊었습니다(50을 고른 건 minidb 스테이징 한계 64 안쪽이라). 행당 쪽은 트랜잭션을 전혀 열지 않아 문장 하나하나가 곧 한 트랜잭션 = 한 fsync가 되고요. 두 경로 모두 같은 `load`/`INSERT` 코드를 타므로, 인코딩·힙 삽입·인덱스 갱신 비용은 양쪽이 동일합니다.
 
@@ -144,7 +144,7 @@ double scan_us = (now_sec() - t0) / iter_scan * 1e6;
 
 3편에서 말로 적은 두 주장 — "인덱스는 O(log n)", "내구성은 `fsync` 값을 치른다" — 을 이제 숫자로 봤습니다.
 
-- **인덱스 vs 풀 스캔**: 같은 한 행을 찾을 때 인덱스 열은 N=100배에도 2.3배밖에 안 자라고(O(log n)), 풀 스캔 열은 10배마다 10배씩 자랍니다(O(n)). 그래서 배율이 11배 -> 54배 -> 416배로 벌어져요. "정렬 구조라 빠르다"가 추상이 아니라 측정 가능한 사실로 손에 잡혔습니다.
+- **인덱스 vs 풀 스캔**: 같은 한 행을 찾을 때 인덱스 열은 N=100배에도 2.3배밖에 안 자라고(O(log n)), 풀 스캔 열은 10배마다 10배씩 자랍니다(O(n)). 그래서 배율이 11배 -> 54배 -> 416배로 벌어져요. "정렬 구조라 빠르다"는 설명이, 이번 측정에선 실제 실행 시간의 증가 양상으로도 확인됐습니다.
 - **내구성의 가격**: `fsync` 하나가 행당 vs 묶음을 23배로 가릅니다. 진짜 DB들이 왜 커밋 정책(group commit, `synchronous_commit` 등)에 그렇게 많은 손잡이를 두는지가 비로소 납득됐어요.
 - **정직하게**: macOS의 `fsync`는 `F_FULLFSYNC`가 아니라 위 처리량은 낙관적 하한이고, 규모도 작은 마이크로 측정입니다.
 
@@ -186,7 +186,7 @@ The method is simple. Insert `1..N` into `t(id INT, name TEXT)` (`id` is the PK,
 
 Both return the same single row; only the **path differs**. So we compare purely the cost of "how you find it". It directly exploits how [Part 3's planner](/blog/project/minidb/minidb-3-index-wal) splits the path by whether the condition is on the PK.
 
-> **Methodology**: timing uses `clock_gettime(CLOCK_MONOTONIC)`, repeating the same lookup thousands of times and averaging. `SELECT` output is dumped to `/dev/null` to remove print cost (engine time only), and the randomness is a fixed-seed xorshift64, so it finds the same rows in the same order every run — reproducible. One `make bench` lets anyone run the exact same thing ([`tests/bench.c`](https://github.com/dj258255/minidb) in the code).
+> **Methodology**: timing uses `clock_gettime(CLOCK_MONOTONIC)`, the **mean** of 5,000 iterations for the index point lookup and 300-3,000 for the full scan depending on N (no median/stddev, and no separate warmup loop since it measures warm right after loading — micro-measurement simple, blog-grade). cold cache is heavily swayed by the OS page cache and storage state and reproduces poorly, so to see the engine's own data-structure cost I compared warm only. `SELECT` output is dumped to `/dev/null` to remove print cost (engine time only), and the randomness is a fixed-seed xorshift64, so it finds the same rows in the same order every run — reproducible. One `make bench` lets anyone run the exact same thing ([`tests/bench.c`](https://github.com/dj258255/minidb) in the code).
 
 The core of the measurement loop looks like this — both paths draw a random key from the same range; the only difference is the `WHERE` clause.
 
@@ -228,10 +228,10 @@ First question. Finding the same single row by two paths — how much do they di
 | 10,000 | 5.05 us | 274.28 us | 54x |
 | 100,000 | 7.52 us | 3,126.74 us | 416x |
 
-More than any single number, the **shape of how the two columns grow** is the point.
+More than any single number, the **shape of how the two columns grow** is the point (run time also mixes in cache, parse, and allocation cost, so it is not pure complexity itself — but the *growth pattern* still reflects the complexity shape).
 
-- **Full scan column**: every time N goes 10x, it jumps 34 -> 274 -> 3,127, almost exactly 10x each. This is **O(n)**. More rows, more to scan, proportionally. Honestly linear.
-- **Index column**: while N goes 100x (1k->100k), it grows 3.25 -> 7.52, only **2.3x**. This is **O(log n)**. Even at 100x the data, the tree height only gets a few levels deeper, so lookup cost barely moves.
+- **Full scan column**: every time N goes 10x, it jumps 34 -> 274 -> 3,127, almost exactly 10x each. This linear growth is the shape of **O(n)**. More rows, more to scan, proportionally.
+- **Index column**: while N goes 100x (1k->100k), it grows 3.25 -> 7.52, only **2.3x**. This nearly-flat growth fits the logarithmic curve of **O(log n)**. Even at 100x the data, the tree height only gets a few levels deeper, so lookup cost barely moves.
 
 That is why the ratio widens 11x -> 54x -> 416x. Laying O(log n) and O(n) side by side as a table makes the shape difference sharp.
 
@@ -241,7 +241,7 @@ That is why the ratio widens 11x -> 54x -> 416x. Laying O(log n) and O(n) side b
 | 10k -> 100k (x10) | x1.5 | x11.4 |
 | 1k -> 100k (x100) | x2.3 | x91 |
 
-> **Practical/interview note**: the interesting part is that the gap **widens the larger N gets**. On a small table (1k rows) the index is only ~11x faster, so you might think "really, why bother?" — but at 100k rows it is 416x. An index's value grows as the data grows — at exactly the point you start needing one. At 1M, 10M rows this curve goes more extreme. In [WikiEngine](/blog/project/WikiEngine/lucene-decision), an unindexed search over 12.15M rows timing out at 5 seconds was the far end of this very O(n) column.
+> **Practical/interview note**: the interesting part is that the gap **widens the larger N gets**. On a small table (1k rows) the index is only ~11x faster, so you might think "really, why bother?" — but at 100k rows it widened to 416x (in this environment, on this data). An index's value grows as the data grows — at exactly the point you start needing one. At 1M, 10M rows this curve goes more extreme. In [WikiEngine](/blog/project/WikiEngine/lucene-decision), an unindexed search over 12.15M rows timing out at 5 seconds was the far end of this very O(n) column.
 
 > Deeper: how a real optimizer picks "when to take the index and when a full scan is actually faster" by cost is in [DB Index ②: Scan Types and the Optimizer's Choice](/blog/theory/db-index-02-scan-types). (Yes. If you are going to read almost all the rows, a full scan is sometimes faster.)
 
@@ -257,7 +257,7 @@ On to the second question. In [Part 3](/blog/project/minidb/minidb-3-index-wal) 
 | Commit per row | 1.483 s | 3,372 rows/s | 5,000 |
 | Commit per 50 rows | 0.063 s | 79,039 rows/s | ~100 |
 
-**Same 5,000 rows, yet the batch is 23x faster.** The work is identical — encode 5,000 rows and put them into the heap and the index. The only difference is doing `fsync` 5,000 times vs 100. So most of this 23x gap is **pure `fsync` cost**. That one confirmation that it "really hit the disk" is overwhelmingly more expensive than the actual work the CPU does.
+**Same 5,000 rows, yet the batch is 23x faster.** The work is identical — encode 5,000 rows and put them into the heap and the index. The only difference is doing `fsync` 5,000 times vs 100. So most of this 23x gap is **`fsync` plus commit-synchronization cost** (some incidental cost like transaction begin/end and log buffering is mixed in too, but it is mostly fsync). That one confirmation that it "really hit the disk" is overwhelmingly more expensive than the actual work the CPU does.
 
 > **Methodology**: the batch side cuts one transaction every 50 rows — `BEGIN` at `i % 50 == 1`, `COMMIT` at `i % 50 == 0` (50 chosen because it is within minidb's staging limit of 64). The per-row side opens no transaction at all, so each statement is its own transaction = one fsync. Both paths run the same `load`/`INSERT` code, so encoding, heap insert, and index update cost are identical on both sides.
 
@@ -287,7 +287,7 @@ The rest of the limitations too.
 
 The two claims I wrote in words in Part 3 — "an index is O(log n)" and "durability pays the `fsync` price" — we have now seen as numbers.
 
-- **Index vs full scan**: finding the same single row, the index column grows only 2.3x at N=100x (O(log n)), while the full scan column grows 10x per 10x (O(n)). That is why the ratio widens 11x -> 54x -> 416x. "It is fast because it is a sorted structure" became a measurable fact, not an abstraction.
+- **Index vs full scan**: finding the same single row, the index column grows only 2.3x at N=100x (O(log n)), while the full scan column grows 10x per 10x (O(n)). That is why the ratio widens 11x -> 54x -> 416x. The explanation "it is fast because it is a sorted structure" was, in this measurement, also confirmed by the growth pattern of actual run time.
 - **The price of durability**: one `fsync` splits per-row vs batch by 23x. It finally clicked why real DBs put so many knobs on commit policy (group commit, `synchronous_commit`, and so on).
 - **Honestly**: macOS's `fsync` is not `F_FULLFSYNC`, so the throughput above is an optimistic lower bound, and it is a small-scale micro-measurement.
 
