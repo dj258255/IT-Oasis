@@ -138,8 +138,6 @@ PostgreSQL이 버전의 길을 골랐기에 그 높은 읽기 동시성을 얻�
 - 본 시리즈: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [② Isolation](/blog/theory/transaction-acid-02-isolation)
 - [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
 
-> **시리즈**: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · [7. 직접 재보기](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain) · [9. NULL 저장](/blog/project/minidb/minidb-9-null-storage) · [10. 보조 인덱스](/blog/project/minidb/minidb-10-secondary-index) · [11. 격리](/blog/project/minidb/minidb-11-isolation) · 12. 2PL과 MVCC · [13. MVCC 구현](/blog/project/minidb/minidb-13-mvcc) · [코드(GitHub)](https://github.com/dj258255/minidb)
-
 <!-- EN -->
 
 ## 0. Introduction — Same Isolation, Two Opposite Philosophies
@@ -261,5 +259,3 @@ PostgreSQL chose the road of versions, so it gained that high read concurrency a
 - [The Internals of PostgreSQL: Concurrency Control (xmin/xmax, clog, visibility)](https://www.interdb.jp/pg/pgsql05.html)
 - This series: [Transaction ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [② Isolation](/blog/theory/transaction-acid-02-isolation)
 - [minidb on GitHub](https://github.com/dj258255/minidb)
-
-> **Series**: [1. Storage Layer](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index and WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join and Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN and LIKE](/blog/project/minidb/minidb-6-between-like) · [7. Benchmark](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain) · [9. NULL Storage](/blog/project/minidb/minidb-9-null-storage) · [10. Secondary Index](/blog/project/minidb/minidb-10-secondary-index) · [11. Isolation](/blog/project/minidb/minidb-11-isolation) · 12. 2PL and MVCC · [13. Implementing MVCC](/blog/project/minidb/minidb-13-mvcc) · [Code (GitHub)](https://github.com/dj258255/minidb)
