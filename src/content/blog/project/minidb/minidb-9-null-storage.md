@@ -241,7 +241,7 @@ NULL 저장은 코드량으로 보면 작은 작업이었어요 — 행 앞에 �
 - [PostgreSQL Documentation: NULL과 비교 (`IS NULL`, 3값 논리)](https://www.postgresql.org/docs/current/functions-comparison.html)
 - [SQL standard: three-valued logic — Wikipedia: Null (SQL)](https://en.wikipedia.org/wiki/Null_(SQL))
 - minidb 시리즈: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · [7. 직접 재보기](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -466,5 +466,5 @@ That "no value" can't be expressed as a value and must be marked with a bit outs
 - [PostgreSQL Documentation: Comparison with NULL (`IS NULL`, three-valued logic)](https://www.postgresql.org/docs/current/functions-comparison.html)
 - [SQL standard: three-valued logic — Wikipedia: Null (SQL)](https://en.wikipedia.org/wiki/Null_(SQL))
 - minidb series: [1. Storage](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index & WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join & Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN & LIKE](/blog/project/minidb/minidb-6-between-like) · [7. Benchmark](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)
 ```

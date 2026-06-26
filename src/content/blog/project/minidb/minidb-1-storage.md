@@ -153,7 +153,7 @@ minidb가 삭제할 때 실제로 안 지우고 슬롯만 **tombstone**(무효 �
 - [PostgreSQL Documentation: Physical Storage (relfilenode, heap)](https://www.postgresql.org/docs/current/storage.html)
 - Jim Gray & Franco Putzolu, *The 5 Minute Rule for Trading Memory for Disc Accesses* (1987)
 - 본 블로그: [DB 스토리지 내부 ①: Heap, Page, Index, B-Tree](/blog/theory/db-storage-01-heap-page-index) · [DB 인덱스 ⑤: 클러스터형 인덱스와 DBMS별 차이](/blog/theory/db-index-05-clustered-dbms) · [캐시와 버퍼](/blog/theory/cache-and-buffer)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -291,4 +291,4 @@ No SQL yet. [Next](/blog/project/minidb/minidb-2-sql-engine) we put SQL on top �
 - [PostgreSQL Documentation: Physical Storage (relfilenode, heap)](https://www.postgresql.org/docs/current/storage.html)
 - Jim Gray & Franco Putzolu, *The 5 Minute Rule for Trading Memory for Disc Accesses* (1987)
 - This blog: [DB Storage Internals ①](/blog/theory/db-storage-01-heap-page-index) · [DB Index ⑤: Clustered](/blog/theory/db-index-05-clustered-dbms) · [Cache vs Buffer](/blog/theory/cache-and-buffer)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)

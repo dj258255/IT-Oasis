@@ -302,7 +302,7 @@ minidb가 **no-steal**을 고른 덕에 undo 로그 없이 redo만으로 복구�
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992)
 - 본 블로그: [DB 인덱스 ①: 기초와 EXPLAIN](/blog/theory/db-index-01-explain-basics) · [② 스캔의 종류](/blog/theory/db-index-02-scan-types) · [③ Covering Index](/blog/theory/db-index-03-covering-index-ios) · [④ 복합 인덱스](/blog/theory/db-index-04-composite-leftmost) · [트랜잭션 ACID ④: Durability](/blog/theory/transaction-acid-04-durability)
 - 본 시리즈: [1편 저장 계층](/blog/project/minidb/minidb-1-storage) · [2편 SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [4편 트랜잭션](/blog/project/minidb/minidb-4-transactions). WikiEngine 실전편: [자동완성 B-Tree 인덱스](/blog/project/WikiEngine/autocomplete-btree-index) · [FULLTEXT ngram 인덱스](/blog/project/WikiEngine/fulltext-ngram-index)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -588,4 +588,4 @@ The index gave "fast," the WAL gave "crash-proof." In particular the WAL handed 
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992)
 - This blog: [DB Index ①: Basics and EXPLAIN](/blog/theory/db-index-01-explain-basics) · [② Scan Types](/blog/theory/db-index-02-scan-types) · [③ Covering Index](/blog/theory/db-index-03-covering-index-ios) · [④ Composite Index](/blog/theory/db-index-04-composite-leftmost) · [Transaction ACID ④: Durability](/blog/theory/transaction-acid-04-durability)
 - This series: [Part 1 Storage](/blog/project/minidb/minidb-1-storage) · [Part 2 SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [Part 4 Transactions](/blog/project/minidb/minidb-4-transactions). WikiEngine field posts: [Autocomplete B-Tree Index](/blog/project/WikiEngine/autocomplete-btree-index) · [FULLTEXT ngram Index](/blog/project/WikiEngine/fulltext-ngram-index)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)

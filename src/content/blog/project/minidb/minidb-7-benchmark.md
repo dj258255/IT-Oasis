@@ -43,7 +43,7 @@ seriesOrder: 7
 
 둘 다 결과는 한 행으로 같고, **길만 다릅니다**. 그래서 순수하게 "어떻게 찾느냐"의 비용만 비교돼요. PK 조건이냐 아니냐로 [3편의 플래너](/blog/project/minidb/minidb-3-index-wal)가 길을 갈라주는 걸 그대로 이용한 겁니다.
 
-> **방법론**: 측정은 `clock_gettime(CLOCK_MONOTONIC)`로, 인덱스 점 조회는 5,000회·풀 스캔은 N에 따라 300~3,000회 반복한 **평균**입니다(중앙값·표준편차는 따로 안 냈고, 적재 직후 warm 상태라 별도 워밍업 루프는 두지 않았어요 — 블로그용 마이크로 측정 수준의 단순함입니다). cold cache는 OS 페이지 캐시·저장장치 상태에 크게 휘둘려 재현성이 낮아서, 엔진 자체의 자료구조 비용만 보려고 warm만 비교했습니다. `SELECT` 출력은 `/dev/null`로 버려 인쇄 비용을 뺐고(엔진 시간만 잰다), 난수는 고정 시드 xorshift64라 매번 같은 행을 같은 순서로 찾아 재현됩니다. `make bench` 한 줄이면 누구나 똑같이 돌려볼 수 있어요([코드](https://github.com/dj258255/minidb)의 `tests/bench.c`).
+> **방법론**: 측정은 `clock_gettime(CLOCK_MONOTONIC)`로, 인덱스 점 조회는 5,000회·풀 스캔은 N에 따라 300~3,000회 반복한 **평균**입니다(중앙값·표준편차는 따로 안 냈고, 적재 직후 warm 상태라 별도 워밍업 루프는 두지 않았어요 — 블로그용 마이크로 측정 수준의 단순함입니다). cold cache는 OS 페이지 캐시·저장장치 상태에 크게 휘둘려 재현성이 낮아서, 엔진 자체의 자료구조 비용만 보려고 warm만 비교했습니다. `SELECT` 출력은 `/dev/null`로 버려 인쇄 비용을 뺐고(엔진 시간만 잰다), 난수는 고정 시드 xorshift64라 매번 같은 행을 같은 순서로 찾아 재현됩니다. `make bench` 한 줄이면 누구나 똑같이 돌려볼 수 있어요([코드](https://github.com/dj258255/db-hobby)의 `tests/bench.c`).
 
 측정 루프의 핵심은 이렇게 생겼어요 — 두 길 모두 같은 범위에서 랜덤 키를 뽑고, 차이는 `WHERE` 절뿐입니다.
 
@@ -156,7 +156,7 @@ double scan_us = (now_sec() - t0) / iter_scan * 1e6;
 - [MySQL Documentation: innodb_flush_log_at_trx_commit](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit)
 - [Apple Developer Documentation: fcntl(2) — F_FULLFSYNC](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fcntl.2.html)
 - 본 블로그: [DB 인덱스 ②: 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb) — `tests/bench.c`, `make bench`
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `tests/bench.c`, `make bench`
 
 <!-- EN -->
 
@@ -184,7 +184,7 @@ The method is simple. Insert `1..N` into `t(id INT, name TEXT)` (`id` is the PK,
 
 Both return the same single row; only the **path differs**. So we compare purely the cost of "how you find it". It directly exploits how [Part 3's planner](/blog/project/minidb/minidb-3-index-wal) splits the path by whether the condition is on the PK.
 
-> **Methodology**: timing uses `clock_gettime(CLOCK_MONOTONIC)`, the **mean** of 5,000 iterations for the index point lookup and 300-3,000 for the full scan depending on N (no median/stddev, and no separate warmup loop since it measures warm right after loading — micro-measurement simple, blog-grade). cold cache is heavily swayed by the OS page cache and storage state and reproduces poorly, so to see the engine's own data-structure cost I compared warm only. `SELECT` output is dumped to `/dev/null` to remove print cost (engine time only), and the randomness is a fixed-seed xorshift64, so it finds the same rows in the same order every run — reproducible. One `make bench` lets anyone run the exact same thing ([`tests/bench.c`](https://github.com/dj258255/minidb) in the code).
+> **Methodology**: timing uses `clock_gettime(CLOCK_MONOTONIC)`, the **mean** of 5,000 iterations for the index point lookup and 300-3,000 for the full scan depending on N (no median/stddev, and no separate warmup loop since it measures warm right after loading — micro-measurement simple, blog-grade). cold cache is heavily swayed by the OS page cache and storage state and reproduces poorly, so to see the engine's own data-structure cost I compared warm only. `SELECT` output is dumped to `/dev/null` to remove print cost (engine time only), and the randomness is a fixed-seed xorshift64, so it finds the same rows in the same order every run — reproducible. One `make bench` lets anyone run the exact same thing ([`tests/bench.c`](https://github.com/dj258255/db-hobby) in the code).
 
 The core of the measurement loop looks like this — both paths draw a random key from the same range; the only difference is the `WHERE` clause.
 
@@ -297,4 +297,4 @@ If building taught me "why it is done this way", measuring confirms "whether it 
 - [MySQL Documentation: innodb_flush_log_at_trx_commit](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit)
 - [Apple Developer Documentation: fcntl(2) — F_FULLFSYNC](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fcntl.2.html)
 - This blog: [DB Index ②: Scan Types and the Optimizer's Choice](/blog/theory/db-index-02-scan-types)
-- [minidb on GitHub](https://github.com/dj258255/minidb) — `tests/bench.c`, `make bench`
+- [minidb on GitHub](https://github.com/dj258255/db-hobby) — `tests/bench.c`, `make bench`

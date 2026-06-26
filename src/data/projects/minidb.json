@@ -7,7 +7,7 @@
   "tags": ["C", "Database Internals", "Storage Engine", "B+Tree", "SQL", "JOIN", "Query Planner", "WAL", "Transactions", "Learning"],
   "category": "project",
   "date": "2026-05-11",
-  "github": "https://github.com/dj258255/minidb",
+  "github": "https://github.com/dj258255/db-hobby",
   "website": "",
   "story": "/blog/project/minidb/minidb-1-storage",
   "order": 0

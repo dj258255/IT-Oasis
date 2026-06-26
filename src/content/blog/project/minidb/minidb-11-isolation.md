@@ -24,7 +24,7 @@ seriesOrder: 11
 
 그런데 시작하자마자 벽에 부딪혀요 — minidb는 단일 스레드입니다. 트랜잭션이 한 번에 하나씩만 도는데, **대체 무엇을 격리하나?** 이 질문이 이 글의 설계를 전부 정했어요. 그래서 이 편은 "락을 어떻게 짜느냐"보다 **"단일 스레드라는 제약이 격리를 어떻게 비추는가"** 를 따라갑니다.
 
-> **이번 편의 목표**: 인터리브된 in-process 트랜잭션 사이의 충돌을 2PL 테이블 락으로 잡아 dirty read·lost update를 막고, wait-for 그래프로 교착을 탐지하기까지. 진짜 동시성(MVCC)은 아니지만, 격리의 **메커니즘** 자체를 손으로 만져 봅니다. 실제 코드는 [`lock.c`](https://github.com/dj258255/minidb)와 실행기 배선([`db.c`](https://github.com/dj258255/minidb))입니다.
+> **이번 편의 목표**: 인터리브된 in-process 트랜잭션 사이의 충돌을 2PL 테이블 락으로 잡아 dirty read·lost update를 막고, wait-for 그래프로 교착을 탐지하기까지. 진짜 동시성(MVCC)은 아니지만, 격리의 **메커니즘** 자체를 손으로 만져 봅니다. 실제 코드는 [`lock.c`](https://github.com/dj258255/db-hobby)와 실행기 배선([`db.c`](https://github.com/dj258255/db-hobby))입니다.
 
 ## 1. 단일 스레드인데 격리할 게 있나
 
@@ -81,7 +81,7 @@ int lock_acquire(LockManager *lm, int txn, const char *table, long key, LockMode
 
 이제 락을 실행기에 연결합니다. `INSERT`/`UPDATE`/`DELETE`는 그 테이블에 X 락을, `SELECT`는 S 락을 잡아요. 명시적 트랜잭션(`BEGIN`)이면 그 락을 — 읽기(S)든 쓰기(X)든 — **`COMMIT`/`ROLLBACK`까지 쥡니다.** autocommit 문장이면 문장 끝에 바로 풀고요. X뿐 아니라 S까지 끝까지 쥐므로, 정확히는 strict 2PL보다 한 단계 강한 **rigorous 2PL(strong strict 2PL)** 이에요 — strict 2PL은 X(쓰기) 락만 커밋까지 유지하고 S(읽기)는 더 일찍 풀 수도 있는 변형입니다.
 
-실행기 배선([`db.c`](https://github.com/dj258255/minidb))은 이렇게 갈려요.
+실행기 배선([`db.c`](https://github.com/dj258255/db-hobby))은 이렇게 갈려요.
 
 ```c
 /* 격리(2PL): 명시적 트랜잭션이면 그 txn id로 잡아 COMMIT/ROLLBACK까지 쥐고,
@@ -193,7 +193,7 @@ static int dfs_cycle(const LockManager *lm, int txn, int *path, int depth) {
 - [PostgreSQL Documentation: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)
 - [MySQL Reference Manual: Deadlock Detection](https://dev.mysql.com/doc/refman/8.0/en/innodb-deadlock-detection.html)
 - 본 블로그: [트랜잭션 ACID ②: Isolation은 어떻게 구현되는가](/blog/theory/transaction-acid-02-isolation) · [락 메커니즘의 모든 것](/blog/theory/lock-mechanisms-all)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -203,7 +203,7 @@ In [Part 4](/blog/project/minidb/minidb-4-transactions) I built A (atomicity) an
 
 And right away there is a wall — minidb is single-threaded. Transactions run one at a time, so **what is there to isolate?** That question drove the entire design of this post. So this part follows not "how to write a lock" but **"how the single-threaded constraint illuminates isolation."**
 
-> **Goal of this part**: catch conflicts between interleaved in-process transactions with 2PL table locks to prevent dirty reads and lost updates, and detect deadlocks with a wait-for graph. It is not real concurrency (MVCC), but it makes the **mechanism** of isolation tangible by hand. The real code is [`lock.c`](https://github.com/dj258255/minidb) and the executor wiring ([`db.c`](https://github.com/dj258255/minidb)).
+> **Goal of this part**: catch conflicts between interleaved in-process transactions with 2PL table locks to prevent dirty reads and lost updates, and detect deadlocks with a wait-for graph. It is not real concurrency (MVCC), but it makes the **mechanism** of isolation tangible by hand. The real code is [`lock.c`](https://github.com/dj258255/db-hobby) and the executor wiring ([`db.c`](https://github.com/dj258255/db-hobby)).
 
 ## 1. Single-Threaded — Is There Anything to Isolate?
 
@@ -260,7 +260,7 @@ The key is that a conflict **returns `-1` instead of blocking** (why, in the nex
 
 Now I wire the locks into the executor. `INSERT`/`UPDATE`/`DELETE` take an X lock on the table, `SELECT` an S lock. In an explicit transaction (`BEGIN`), it **holds the lock — S for reads, X for writes — until `COMMIT`/`ROLLBACK`**; an autocommit statement releases right at statement end. Since it holds S as well as X to the end, this is more precisely **rigorous 2PL (strong strict 2PL)**, one notch stronger than strict 2PL (which keeps only X locks to commit and may release S earlier).
 
-The executor wiring ([`db.c`](https://github.com/dj258255/minidb)) splits like this.
+The executor wiring ([`db.c`](https://github.com/dj258255/db-hobby)) splits like this.
 
 ```c
 /* isolation (2PL): in an explicit txn, lock under that txn id and hold to COMMIT/ROLLBACK;
@@ -372,4 +372,4 @@ None of them is "as much as a real DB" (for I in particular, it's a lock-based m
 - [PostgreSQL Documentation: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)
 - [MySQL Reference Manual: Deadlock Detection](https://dev.mysql.com/doc/refman/8.0/en/innodb-deadlock-detection.html)
 - This blog: [Transaction ACID ②: How Isolation Is Implemented](/blog/theory/transaction-acid-02-isolation) · [Everything About Lock Mechanisms](/blog/theory/lock-mechanisms-all)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)

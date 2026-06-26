@@ -197,7 +197,7 @@ if (p->cur.type == TOK_SELECT) {   /* IN (SELECT ...) — 기존 서브쿼리 �
 - [Wikipedia: Matching wildcards](https://en.wikipedia.org/wiki/Matching_wildcards)
 - 본 블로그: [DB 인덱스 ①: 인덱스 기초와 EXPLAIN 읽기](/blog/theory/db-index-01-explain-basics) · [② 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types) · [WikiEngine: LIKE에서 Lucene으로](/blog/project/WikiEngine/lucene-decision) · [WikiEngine: FULLTEXT ngram 인덱스](/blog/project/WikiEngine/fulltext-ngram-index)
 - minidb 시리즈: [2편 SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3편 인덱스·WAL](/blog/project/minidb/minidb-3-index-wal) · [5편 조인·집계](/blog/project/minidb/minidb-5-join-aggregate)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/minidb)
+- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
@@ -380,4 +380,4 @@ Three features added, but **only one new execution path was born — LIKE** — 
 - [Wikipedia: Matching wildcards](https://en.wikipedia.org/wiki/Matching_wildcards)
 - This blog: [DB Index ①: Index Basics and Reading EXPLAIN](/blog/theory/db-index-01-explain-basics) · [② Scan Types and the Optimizer's Choice](/blog/theory/db-index-02-scan-types) · [WikiEngine: From LIKE to Lucene](/blog/project/WikiEngine/lucene-decision) · [WikiEngine: FULLTEXT ngram Index](/blog/project/WikiEngine/fulltext-ngram-index)
 - minidb series: [Part 2 SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [Part 3 Index·WAL](/blog/project/minidb/minidb-3-index-wal) · [Part 5 Join·Aggregate](/blog/project/minidb/minidb-5-join-aggregate)
-- [minidb on GitHub](https://github.com/dj258255/minidb)
+- [minidb on GitHub](https://github.com/dj258255/db-hobby)
