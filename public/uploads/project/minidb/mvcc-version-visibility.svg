@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="360" viewBox="0 0 1000 360" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="mvarrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="360" rx="12" fill="#0d1117"/>
+  <text x="500" y="40" text-anchor="middle" fill="#8b949e" font-size="18">MVCC — UPDATE는 버전을 쌓고, 보임/안 보임은 '트랜잭션 상태'가 정한다</text>
+
+  <!-- 좌: 저장된 두 버전 -->
+  <text x="180" y="84" text-anchor="middle" fill="#6e7681" font-size="13">행 id=1 의 두 버전 (힙에 그대로 존재)</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="14">
+    <rect x="58" y="100" width="244" height="48" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="180" y="129" text-anchor="middle" fill="#58a6ff">옛 버전  ·  xmin=5  xmax=10</text>
+    <rect x="58" y="172" width="244" height="48" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="180" y="201" text-anchor="middle" fill="#58a6ff">새 버전  ·  xmin=10  xmax=0</text>
+  </g>
+
+  <!-- 화살표 -->
+  <path d="M306,124 C370,124 380,130 436,130" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mvarrow)"/>
+  <path d="M306,196 C370,196 380,255 436,255" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mvarrow)"/>
+
+  <!-- 우상: COMMIT -->
+  <rect x="442" y="86" width="500" height="106" rx="8" fill="#0e1b12" stroke="#238636"/>
+  <text x="462" y="114" fill="#3fb950" font-size="15">트랜잭션 10  COMMIT</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13.5">
+    <text x="462" y="143" fill="#8b949e">옛 버전 (xmax=10 커밋) <tspan fill="#6e7681">→</tspan> <tspan fill="#f85149">안 보임</tspan></text>
+    <text x="462" y="170" fill="#8b949e">새 버전 (xmin=10 커밋) <tspan fill="#6e7681">→</tspan> <tspan fill="#3fb950">보임</tspan></text>
+  </g>
+
+  <!-- 우하: ABORT -->
+  <rect x="442" y="206" width="500" height="106" rx="8" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="462" y="234" fill="#f0b429" font-size="15">트랜잭션 10  ABORT</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13.5">
+    <text x="462" y="263" fill="#8b949e">옛 버전 (xmax 무효) <tspan fill="#6e7681">→</tspan> <tspan fill="#3fb950">다시 보임</tspan></text>
+    <text x="462" y="290" fill="#8b949e">새 버전 (xmin 무효) <tspan fill="#6e7681">→</tspan> <tspan fill="#f85149">사라짐</tspan></text>
+  </g>
+
+  <text x="500" y="344" text-anchor="middle" fill="#6e7681" font-size="13">행은 디스크에 그대로 — 트랜잭션 상태만 바뀐다 → 롤백이 O(1)</text>
+</svg>

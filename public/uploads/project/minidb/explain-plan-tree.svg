@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="epup" markerWidth="11" markerHeight="11" refX="4" refY="8" orient="auto">
+      <path d="M4,0 L8,8 L0,8 Z" fill="#f0b429"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="430" rx="12" fill="#0d1117"/>
+  <text x="500" y="38" text-anchor="middle" fill="#8b949e" font-size="18">EXPLAIN 플랜은 트리 — 위가 마지막 일, 아래가 첫 일</text>
+  <text x="500" y="60" text-anchor="middle" fill="#6e7681" font-size="13">SELECT users.name, COUNT(*) FROM users JOIN orders … WHERE users.id &gt; 2 GROUP BY … ORDER BY 2 DESC LIMIT 5</text>
+
+  <!-- 실행 순서 화살표 (아래→위) -->
+  <line x1="70" y1="388" x2="70" y2="96" stroke="#f0b429" stroke-width="2" marker-end="url(#epup)"/>
+  <text x="58" y="245" fill="#f0b429" font-size="12" transform="rotate(-90 58 245)" text-anchor="middle">실행 순서 (아래 → 위)</text>
+
+  <g font-family="ui-monospace, Menlo, monospace" font-size="14">
+    <!-- 후처리 노드 (파랑) -->
+    <rect x="320" y="84"  width="360" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="338" y="109" fill="#58a6ff">Limit  <tspan fill="#6e7681">(limit=5)</tspan></text>
+    <line x1="500" y1="124" x2="500" y2="138" stroke="#30363d"/>
+
+    <rect x="320" y="138" width="360" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="338" y="163" fill="#58a6ff">Sort  <tspan fill="#6e7681">(keys: col2 DESC)</tspan></text>
+    <line x1="500" y1="178" x2="500" y2="192" stroke="#30363d"/>
+
+    <rect x="320" y="192" width="360" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="338" y="217" fill="#58a6ff">GroupAggregate  <tspan fill="#6e7681">(COUNT(*))</tspan></text>
+    <line x1="500" y1="232" x2="500" y2="246" stroke="#30363d"/>
+
+    <rect x="320" y="246" width="360" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="338" y="271" fill="#58a6ff">Filter  <tspan fill="#6e7681">(users.id &gt; 2)</tspan></text>
+    <line x1="500" y1="286" x2="500" y2="300" stroke="#30363d"/>
+
+    <rect x="320" y="300" width="360" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="338" y="325" fill="#58a6ff">Nested-Loop Join  <tspan fill="#6e7681">(2 tables)</tspan></text>
+
+    <!-- 두 자식: 접근 방법 노드 (초록) -->
+    <line x1="430" y1="340" x2="430" y2="362" stroke="#30363d"/>
+    <line x1="670" y1="340" x2="670" y2="362" stroke="#30363d"/>
+    <line x1="430" y1="340" x2="670" y2="340" stroke="#30363d"/>
+    <rect x="250" y="362" width="280" height="44" rx="6" fill="#0e1b12" stroke="#238636"/>
+    <text x="268" y="389" fill="#3fb950">Seq Scan on users <tspan fill="#6e7681">(outer)</tspan></text>
+    <rect x="560" y="362" width="300" height="44" rx="6" fill="#0e1b12" stroke="#238636"/>
+    <text x="578" y="389" fill="#3fb950">Hash Join → orders <tspan fill="#6e7681">(build)</tspan></text>
+  </g>
+
+  <text x="855" y="100" fill="#6e7681" font-size="12">파랑 = 후처리</text>
+  <text x="855" y="118" fill="#3fb950" font-size="12">초록 = 접근 방법(첫 일)</text>
+</svg>

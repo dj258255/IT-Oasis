@@ -31,13 +31,7 @@ seriesOrder: 5
 
 진짜 DB처럼 테이블 여러 개를 두고 조인하려면 저장 구조부터 바꿔야 했어요. **PostgreSQL이 릴레이션마다 디스크 파일을 따로 두는 방식(relfilenode)** 을 그대로 따랐습니다. 어떤 테이블이 있는지는 카탈로그 파일이 들고(`pg_class` 격), 각 테이블의 행과 인덱스는 테이블별 파일에 살아요.
 
-```
-mydb              카탈로그 — 테이블 목록 + 스키마
-mydb.users.tbl    users 행 (Heap)
-mydb.users.idx    users PK 인덱스 (B+Tree)
-mydb.orders.tbl   orders 행
-mydb.orders.idx   orders PK 인덱스
-```
+![relfilenode식 파일 배치 — 카탈로그(mydb) 아래 테이블마다 .tbl(힙)·.idx(B+Tree) 파일을 따로 둔다](/uploads/project/minidb/relfilenode-layout.svg)
 
 이 결정이 왜 중요하냐면, 테이블이 파일별로 나뉘니 **앞서 만든 힙·B+Tree 코드를 한 줄도 안 고치고 테이블 수만큼 복제하면 됐다**는 거예요. [1편의 힙](/blog/project/minidb/minidb-1-storage)과 [3편의 B+Tree](/blog/project/minidb/minidb-3-index-wal)가 "테이블 하나"를 다루는 코드였는데, 그게 그대로 N개로 늘어납니다. 트랜잭션만 모든 테이블에 걸쳐 작동하도록 넓혔어요.
 
@@ -336,13 +330,7 @@ This final part puts down multiple tables and joins them. That meant reworking t
 
 To put down several tables and join them like a real DB, the storage layout had to change first. We followed **PostgreSQL's way of giving each relation its own disk files (relfilenode)** verbatim. A catalog file holds which tables exist (the `pg_class` equivalent), and each table's rows and index live in per-table files.
 
-```
-mydb              catalog — table list + schema
-mydb.users.tbl    users rows (Heap)
-mydb.users.idx    users PK index (B+Tree)
-mydb.orders.tbl   orders rows
-mydb.orders.idx   orders PK index
-```
+![relfilenode-style file layout — under the catalog (mydb), each table keeps its own .tbl (heap) and .idx (B+Tree) files](/uploads/project/minidb/relfilenode-layout.svg)
 
 Why this decision matters: because tables are split per file, **the heap and B+Tree code built earlier could be replicated per table without changing a single line**. [Part 1's heap](/blog/project/minidb/minidb-1-storage) and [Part 3's B+Tree](/blog/project/minidb/minidb-3-index-wal) were code for "one table", and it scales straight to N. Only the transactions were broadened to work across all tables.
 

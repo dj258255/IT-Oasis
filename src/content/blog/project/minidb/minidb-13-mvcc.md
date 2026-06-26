@@ -89,14 +89,7 @@ static int encode_row(const CreateStmt *schema, const Value *vals, int nvals,
 
 그림으로 보면 한눈에 들어와요 — `UPDATE`는 옛 버전에 xmax를 찍고 새 버전을 만들 뿐이고, 보이고/안 보이고는 **트랜잭션 상태**가 정합니다.
 
-```
-UPDATE id=1   (트랜잭션 10이 실행)
-  옛 버전:  xmin=5,  xmax=10    ← 트랜잭션 5가 만들고, 10이 지움
-  새 버전:  xmin=10, xmax=0     ← 트랜잭션 10이 만듦
-
-트랜잭션 10 COMMIT →  옛 버전 안 보임 / 새 버전 보임
-트랜잭션 10 ABORT  →  옛 버전 다시 보임 / 새 버전 사라짐   (행은 그대로, 상태만 바꿨을 뿐!)
-```
+![MVCC 버전 가시성 — UPDATE는 옛 버전에 xmax를 찍고 새 버전을 만들며, 트랜잭션 10의 COMMIT/ABORT가 옛·새 버전의 보임/안 보임을 정한다](/uploads/project/minidb/mvcc-version-visibility.svg)
 
 `truncate`도 `discard`도 없어요. minidb의 `test_mvcc`가 이걸 그대로 검증합니다 — `txnlog_abort` 한 번에 그 트랜잭션이 만든 행이 안 보이고, 지운 행이 다시 보입니다. 이게 PostgreSQL 코어 개발자 Tom Lane이 말한 "commit과 abort는 둘 다 O(1)"의 정체예요([ACID ①](/blog/theory/transaction-acid-01-atomicity) 인용).
 
@@ -243,14 +236,7 @@ Here MVCC's elegance shows. Because rows carry `xmin`/`xmax` and visibility is d
 
 A diagram makes it click — `UPDATE` just stamps xmax on the old version and writes a new one; what is visible is decided by **transaction status**.
 
-```
-UPDATE id=1   (run by transaction 10)
-  old version:  xmin=5,  xmax=10    <- made by txn 5, deleted by txn 10
-  new version:  xmin=10, xmax=0     <- made by txn 10
-
-txn 10 COMMIT ->  old invisible / new visible
-txn 10 ABORT  ->  old visible again / new gone   (rows untouched, only the status changed!)
-```
+![MVCC version visibility — UPDATE stamps xmax on the old version and adds a new one; transaction 10's COMMIT/ABORT decides which of the old/new versions is visible](/uploads/project/minidb/mvcc-version-visibility.svg)
 
 No `truncate`, no `discard`. minidb's `test_mvcc` verifies exactly this — one `txnlog_abort` hides rows the transaction created and brings back rows it deleted. This is what Tom Lane meant by "commit and abort are both O(1)" (quoted in [ACID ①](/blog/theory/transaction-acid-01-atomicity)).
 
