@@ -20,7 +20,7 @@ seriesOrder: 11
 ---
 
 
-*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 마지막 편 — 협조적 유저 스레드(uthread).*
+*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 협조적 유저 스레드(uthread) 편이에요.*
 
 ## 0. 들어가며
 
@@ -33,9 +33,9 @@ seriesOrder: 11
 답은 "있다"이고, 그게 **유저 스레드**(user-level thread, green thread)예요. 커널은 이걸 그냥 평범한 한 프로세스로만 알고, 그 안에서 여러 흐름이 자기들끼리 번갈아 도는 거죠.
 
 그런데 이 주제는 솔직히 말하면 이 시리즈에서 **한 번 실패하고 되돌렸던** 거예요.
-"교과서대로 짜면 되겠지" 하고 덤볐다가, 워커가 엉뚱한 스택에서 돌다 죽었고, 원인이 안 보여서 통째로 revert 했었습니다.
+"교과서대로 짜면 되겠지" 하고 덤볐다가, 스레드가 엉뚱한 스택에서 돌다 죽었고, 원인이 안 보여서 통째로 revert 했었습니다.
 이번 글은 그 실패를 다시 꺼내 **진짜 원인 두 가지**를 끝까지 추적하고, 커널은 한 줄도 안 고치고 푸는 이야기예요.
-연재의 마지막 편이라, 끝에는 부팅부터 여기까지 온 여정도 함께 돌아봅니다.
+끝에는 부팅부터 여기까지 온 여정도 잠깐 돌아봐요.
 
 ## 1. 유저 스레드가 풀어야 하는 진짜 문제
 
@@ -78,7 +78,7 @@ struct thread *current_thread;       // 전역
 그런데 우리 유저 프로그램은 그 코드 페이지 하나가 전부라, 전역 변수가 사는 `.data`/`.bss`도 결국 같은 `R|X` 페이지에 얹혀요.
 
 결과는 명확해요 — **전역에 쓰는 순간 쓰기 금지 폴트**가 나요.
-처음 실패가 딱 이거였어요. 전역 `current_thread`에 값을 넣는 순간 스레드 컨텍스트(특히 `sp`)가 엉뚱한 값으로 채워졌고, 워커가 쓰레기 `sp`를 들고 잘못된 스택에서 돌다 죽었습니다.
+처음 실패가 딱 이거였어요. 전역 `current_thread`에 값을 넣는 순간 스레드 컨텍스트(특히 `sp`)가 엉뚱한 값으로 채워졌고, 스레드가 쓰레기 `sp`를 들고 잘못된 스택에서 돌다 죽었습니다.
 증상(엉뚱한 스택)과 원인(전역 쓰기 금지)이 한참 떨어져 있어서, 한 번에 안 보였어요.
 
 > **흔한 오해 정정**: *"전역 변수는 그냥 메모리니까 항상 쓸 수 있다"* 고 생각하기 쉬운데, 아니에요. 전역이 **어느 페이지에, 어떤 권한으로 매핑됐는지**가 전부예요. 보통 OS는 `.data`/`.bss`를 `R|W` 세그먼트로 따로 매핑해 주기 때문에 안 보일 뿐이고, 우리처럼 코드 한 페이지만 주는 미니멀 모델에선 *"전역에 쓰기"* 가 곧 *"코드 페이지에 쓰기"* 라 막혀요.
@@ -337,6 +337,7 @@ uthread: all threads finished
 |------|------------------------|--------------------------|
 | 전환을 누가 일으키나 | 스레드 스스로 `uyield()` | 타이머 인터럽트가 강제 |
 | 전환 비용 | 싸다 (레지스터 14개, 커널 진입 없음) | 비싸다 (트랩 진입+프레임 저장) |
+| 컨텍스트 스위치 시 페이지 테이블 | 안 바꿈 (같은 주소공간) | 프로세스 전환이면 바꿈 (`satp`) |
 | 폭주 스레드 | 한 스레드가 멈추면 전부 멈춤 | 강제로 빼앗아 격리됨 |
 | 필요한 장치 | 없음 (유저 코드만) | 타이머 인터럽트 + 커널 |
 
@@ -381,13 +382,13 @@ uthread: all threads finished
 
 두 벽 모두 처음 실패의 원인이었고, **커널을 한 줄도 안 고치고** 두 가지 우회로 풀었어요.
 
-### 연재 전체 회고 — 부팅부터 유저 스레드까지
+### 여기까지의 여정 — 부팅부터 유저 스레드까지
 
 부팅의 첫 글자(`1편`)부터 여기까지 왔어요.
 [부팅·페이징](/blog/hobby/hobby-kernel-00-boot-to-paging), [유저모드·프로세스](/blog/hobby/hobby-kernel-01-usermode-to-processes), 시스템콜, fork/exec, [선점형 스케줄러](/blog/hobby/hobby-kernel-03-exec-and-shell), 파일시스템, [demand paging·mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), [멀티코어와 락](/blog/hobby/hobby-kernel-05-smp-multicore-locks), 네트워크(UDP·TCP), [copy-on-write](/blog/hobby/hobby-kernel-07-copy-on-write), 저널링, 그리고 이 유저 스레드까지.
 교과서의 그림들을 하나하나 직접 코드로 만져봤어요.
 
-이 마지막 작업이 특히 의미 있었던 건, **한 번 실패했던 걸 되돌아와 풀었기** 때문이에요.
+이번 작업이 특히 의미 있었던 건, **한 번 실패했던 걸 되돌아와 풀었기** 때문이에요.
 실패의 진짜 원인(전역 제약 + 트랩 프레임 폴트)은 코드만 읽어선 안 보였고, 직접 돌려 크래시 로그(`scause`/`sepc`/`stval`)를 한 줄씩 읽어야 보였어요.
 "OS가 안에서 어떻게 도는가"를 알고 싶어 시작한 여정에서, **가장 많이 배운 건 언제나 막히고, 깨지고, 추적한 지점들**이었어요.
 잘 도는 코드는 빠르게 지나갔지만, 죽은 코드 앞에서 `sepc`가 왜 커널 주소인지 따져 묻던 순간들이 진짜 공부였습니다.
@@ -409,7 +410,7 @@ uthread: all threads finished
 
 <!-- EN -->
 
-*A RISC-V toy kernel built from scratch — a blog series. This is the final part: cooperative user threads (uthread).*
+*A RISC-V toy kernel built from scratch — a blog series. This installment: cooperative user threads (uthread).*
 
 ## 0. Introduction
 
@@ -422,9 +423,9 @@ Can we switch execution flows **with no help from the kernel, inside a single pr
 The answer is yes, and that's a **user thread** (user-level thread, green thread). The kernel just sees it as one ordinary process, while several flows take turns among themselves inside it.
 
 Honestly, this topic is one I **failed at and reverted** earlier in this series.
-I charged in thinking "just write it the textbook way," watched the worker run on a bogus stack and die, couldn't see the cause, and reverted the whole thing.
+I charged in thinking "just write it the textbook way," watched the thread run on a bogus stack and die, couldn't see the cause, and reverted the whole thing.
 This post pulls that failure back out, tracks down **the two real causes** to the end, and solves them without changing the kernel by a single line.
-Since this is the final part of the series, at the end I also look back on the whole journey from boot to here.
+At the end I also look back on the journey from boot to here.
 
 ## 1. The Real Problem User Threads Have to Solve
 
@@ -467,7 +468,7 @@ As we saw in [Part 1](/blog/hobby/hobby-kernel-00-boot-to-paging), page permissi
 But our user program *is* just that one code page, so the `.data`/`.bss` where globals live ends up riding on the same `R|X` page.
 
 The result is plain — **the moment you write to a global, you get a write-protection fault.**
-The original failure was exactly this. Writing to the global `current_thread` filled the thread context (especially `sp`) with the wrong value, the worker grabbed garbage `sp`, ran on a bogus stack, and died.
+The original failure was exactly this. Writing to the global `current_thread` filled the thread context (especially `sp`) with the wrong value, the thread grabbed garbage `sp`, ran on a bogus stack, and died.
 The symptom (bogus stack) and the cause (globals not writable) were far apart, so it didn't show up at a glance.
 
 > **Common misconception fix**: it's easy to think *"a global is just memory, so it's always writable."* It isn't. What matters is **which page a global is mapped on, with what permissions.** Ordinary OSes map `.data`/`.bss` as a separate `R|W` segment, so you never notice; in a minimal model like ours that hands out only one code page, *"write to a global"* *is* *"write to the code page,"* and it's blocked.
@@ -726,6 +727,7 @@ A timer interrupt periodically entered the kernel and forcibly called `yield()`,
 |--------|-----------------------------------|--------------------------------------|
 | Who triggers the switch | the thread itself via `uyield()` | a timer interrupt, forcibly |
 | Switch cost | cheap (14 registers, no kernel entry) | expensive (trap entry + frame save) |
+| Page table on context switch | unchanged (same address space) | changed on a process switch (`satp`) |
 | Runaway thread | one stalling stalls all | forcibly preempted, isolated |
 | Hardware needed | none (user code only) | timer interrupt + kernel |
 
@@ -770,13 +772,13 @@ This post built cooperative user threads that **switch execution flows inside a 
 
 Both walls caused the original failure, and we solved them with two workarounds, **changing the kernel not at all.**
 
-### Looking back on the whole series — from boot to user threads
+### The journey so far — from boot to user threads
 
 From the first character of boot (`Part 1`) to here.
 [Boot and paging](/blog/hobby/hobby-kernel-00-boot-to-paging), [user mode and processes](/blog/hobby/hobby-kernel-01-usermode-to-processes), system calls, fork/exec, [the preemptive scheduler](/blog/hobby/hobby-kernel-03-exec-and-shell), the filesystem, [demand paging and mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), [multicore and locks](/blog/hobby/hobby-kernel-05-smp-multicore-locks), networking (UDP·TCP), [copy-on-write](/blog/hobby/hobby-kernel-07-copy-on-write), journaling, and this user thread.
 I got to touch the textbook diagrams as real code, one by one.
 
-This last piece was especially meaningful because it was **coming back to something I'd failed at and solving it.**
+This piece was especially meaningful because it was **coming back to something I'd failed at and solving it.**
 The real causes of the failure (the global constraint + the trap-frame fault) weren't visible from reading the code; I had to run it and read the crash logs (`scause`/`sepc`/`stval`) line by line to see them.
 On a journey that began wanting to know "how an OS runs inside," **what I learned most from was always the places where I got stuck, broke things, and traced them down.**
 Working code flew by, but the moments standing in front of dead code asking *why is `sepc` a kernel address?* were the real studying.

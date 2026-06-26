@@ -97,9 +97,9 @@ ecall         # "커널아, 이 글자 좀 찍어줘"
 ```
 
 여기서 `f->sepc += 4`가 중요해요.
-`sepc`엔 트랩을 일으킨 `ecall` 명령 **자기 자신의 주소**가 들어 있어요.
+`sepc`엔 **트랩이 발생한 명령의 PC**가 들어가요 — `ecall` 같은 예외는 그 명령 *자신*의 주소가, 인터럽트는 *다음에 재개할* 주소가 담깁니다. `ecall`은 예외라 `ecall` 자기 자신의 주소가 들어 있죠.
 그대로 복귀하면 같은 `ecall`을 또 실행해서 무한 루프에 빠져요.
-RISC-V 명령은 4바이트니까, `sepc`에 4를 더해 **그 다음 명령**으로 복귀시켜요.
+`ecall`은 (압축 형식이 없어) 항상 4바이트라, `sepc`에 4를 더해 **그 다음 명령**으로 복귀시켜요.
 
 > **흔한 오해 정정**: 왜 `w_sepc()`로 CSR을 직접 안 고치고 `f->sepc`(프레임 사본)를 고칠까요? *"어차피 같은 값 아니냐"* 싶지만 아니에요. CSR `sepc`는 코어에 하나뿐이라 트랩이 인터리빙되면 덮여버려요. 트랩 프레임 안의 사본을 고쳐야 그 트랩만의 복귀 상태로 안전하게 남습니다. 이 정확한 이유가 5절의 첫 번째 디버깅 이야기예요.
 
@@ -131,7 +131,7 @@ void syscall(struct regframe *f) {
 
 `sret`은 원래 "트랩에서 복귀" 명령이에요.
 CPU는 `sret`을 보면 `sstatus.SPP` 비트를 보고 "트랩 직전에 어느 모드였지?"를 판단해, 그 모드로 돌아가요.
-그래서 우리가 **마치 U-mode에서 트랩이 났던 것처럼 상태를 꾸며두고** `sret`하면, CPU는 군말 없이 U-mode로 "복귀"해요.
+그래서 우리가 **마치 U-mode에서 트랩이 났던 것처럼 상태를 꾸며두고** `sret`하면, CPU는 그대로 U-mode로 "복귀"해요.
 실제로는 한 번도 U-mode에 있던 적이 없는데 말이죠.
 
 우리 코드에선 `enter_user()`가 그 일을 해요.
@@ -151,7 +151,7 @@ static void enter_user(void) {
 }
 ```
 
-`SPP=0`이 "직전이 U-mode였다"는 거짓말이고, `SPIE`가 "U-mode에선 인터럽트를 켜라"(이게 있어야 타이머가 유저를 선점해요), `sepc=USERVA`가 "여기로 복귀하라"예요.
+`SPP=0`이 "직전이 U-mode였다"는 거짓말이고, `SPIE`가 "U-mode에선 인터럽트를 켜라"(이게 있어야 타이머가 유저를 선점해요 — 엄밀히는 `SPIE`는 *복귀 후 SIE로 복원될 값*이라, `sret` 순간 `SIE ← SPIE`로 인터럽트가 켜집니다), `sepc=USERVA`가 "여기로 복귀하라"예요.
 `sret`을 때리면 CPU는 권한을 U-mode로 낮추고 `USERVA`로 점프해요 — 유저 프로그램의 첫 명령이 거기 있죠.
 
 ```
@@ -160,7 +160,28 @@ Hello from user mode! (printed by the kernel, requested via ecall)
 ```
 
 U-mode로 떨어진 프로그램이 `ecall`로 부탁하고, 커널이 받아서 처리한 거예요.
-별것 아닌 한 줄 같지만, **권한 경계를 처음 넘은 순간**이라 의미가 커요.
+
+이 한 장이면 권한 경계를 넘나드는 한 번의 왕복이 한눈에 들어와요.
+
+```
+User mode      printf()
+                  │ ecall
+                  ▼
+   ─────────── 권한 경계 (U → S) ───────────
+                  │
+S mode         kernelvec  (레지스터·CSR을 트랩 프레임에 저장)
+                  │
+               syscall 디스패치
+                  │
+               uart_putc()  ← 실제 일 처리
+                  │ sret
+                  ▼
+   ─────────── 권한 경계 (S → U) ───────────
+                  │
+User mode      printf() 다음 줄로 복귀
+```
+
+별것 아닌 한 줄처럼 보이지만, **권한 경계를 처음 넘은 순간**이라 의미가 커요.
 지금까지 한 덩어리였던 "커널"이, 비로소 "커널"과 "그 위에서 도는 프로그램"으로 갈라진 거니까요.
 
 > **권한 경계는 "막는 것"이자 "넘겨주는 것"이다.** U-mode가 못 하게 막는 장치(폴트)와, 합법적으로 넘어가게 해주는 통로(`ecall`/`sret`)는 한 쌍이에요.
@@ -377,6 +398,7 @@ pagetable_t proc_pagetable(uint64 ucode_pa, uint64 ustack_pa) {
 
 그게 `satp` 레지스터예요(1편에서 페이징을 켰던 그 레지스터).
 스케줄러가 프로세스에 진입하기 직전에 `satp`을 그 프로세스 테이블로 바꾸고, 양보받아 돌아오면 다시 커널 테이블로 되돌려요.
+`satp`을 바꾸는 순간부터 **같은 가상주소라도 전혀 다른 물리 페이지**로 번역돼요 — 이게 프로세스마다 독립된 주소공간이 생기는 원리예요.
 
 ```c
 // proc.c — scheduler() 안
@@ -658,9 +680,9 @@ So we just add one branch to the trap handler built in Part 1.
 ```
 
 That `f->sepc += 4` matters.
-`sepc` holds the address of the `ecall` instruction **itself**.
+`sepc` holds **the PC of the instruction that trapped** — for an exception like `ecall` it's that instruction *itself*, whereas for an interrupt it's the address to *resume at*. `ecall` is an exception, so `sepc` holds the address of the `ecall` instruction itself.
 Returning as-is would re-run the same `ecall` and spin forever.
-RISC-V instructions are 4 bytes, so we add 4 to `sepc` to return to **the next instruction**.
+`ecall` is always a 4-byte instruction (it has no compressed form), so we add 4 to `sepc` to return to **the next instruction**.
 
 > **Common misconception fix**: why patch `f->sepc` (a frame copy) instead of writing the CSR directly with `w_sepc()`? You might think *"it's the same value anyway"* — it isn't. The CSR `sepc` is a single register per core, so it gets overwritten when traps interleave. Patching the copy inside the trap frame keeps that one trap's return state safe. The precise reason is the first debugging story in §4.
 
@@ -711,7 +733,7 @@ static void enter_user(void) {
 }
 ```
 
-`SPP=0` is the lie "the previous mode was U-mode," `SPIE` says "enable interrupts once in U-mode" (you need this for the timer to preempt the user), and `sepc=USERVA` says "return here."
+`SPP=0` is the lie "the previous mode was U-mode," `SPIE` says "enable interrupts once in U-mode" (you need this for the timer to preempt the user — strictly, `SPIE` is *the value SIE is restored to*, so on `sret` interrupts come on via `SIE ← SPIE`), and `sepc=USERVA` says "return here."
 Hitting `sret` drops privilege to U-mode and jumps to `USERVA`, where the user program's first instruction lives.
 
 ```
@@ -720,6 +742,27 @@ Hello from user mode! (printed by the kernel, requested via ecall)
 ```
 
 A program dropped into U-mode made a request via `ecall`, and the kernel received and handled it.
+
+This one picture captures the round trip across the privilege boundary.
+
+```
+User mode      printf()
+                  │ ecall
+                  ▼
+   ─────────── privilege boundary (U → S) ───────────
+                  │
+S mode         kernelvec  (save registers + CSRs into the trap frame)
+                  │
+               syscall dispatch
+                  │
+               uart_putc()  ← the actual work
+                  │ sret
+                  ▼
+   ─────────── privilege boundary (S → U) ───────────
+                  │
+User mode      resume after printf()
+```
+
 It may look like a trivial one-liner, but it matters: it's **the first time we crossed the privilege boundary**.
 What used to be a single blob called "the kernel" has finally split into "the kernel" and "a program running on top of it."
 
@@ -937,6 +980,7 @@ The cost is that every page table carries the kernel mapping, so we use a bit mo
 
 That's the `satp` register (the one we used to turn paging on in Part 1).
 Right before entering a process the scheduler points `satp` at that process's table, and once it yields back, points it at the kernel table again.
+From the instant `satp` changes, **the same virtual address translates to an entirely different physical page** — that's how each process gets its own independent address space.
 
 ```c
 // proc.c — inside scheduler()

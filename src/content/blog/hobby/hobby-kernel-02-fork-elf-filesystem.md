@@ -62,6 +62,7 @@ virtio 드라이버를 디버깅하며 만난 `volatile` 한 줄이 이번 글�
 유저 코드는 `R|X`(읽기·실행)라 누가 덮어쓸 일이 없어요.
 그래서 **복사하지 않고 공유**합니다 — 같은 물리 페이지를 부모·자식이 같이 가리키죠.
 실제 코드에선 참조 카운트만 하나 올려요(`kref_inc`). fork가 가벼워지고 메모리도 아낍니다.
+일반적으로 **읽기 전용으로 매핑된 페이지**라면 코드뿐 아니라 `.rodata`(읽기 전용 데이터)도 같은 식으로 공유할 수 있어요 — 우리 구현은 한 장짜리 코드 페이지만 써서, 결과적으로 코드와 읽기전용 데이터가 한 페이지에 담겨 함께 공유됩니다.
 
 #### 스택 페이지 — 사적으로 복사한다
 
@@ -125,7 +126,7 @@ child->tf_va      = (uint64)f;             // 트랩 프레임 VA(자식에서�
 부모 프레임이 유저 가상주소 `f`에 있다면, 스택 페이지 시작(`USERSTACK`)으로부터의 거리(`off`)는 부모·자식이 같아요.
 그래서 자식의 **물리** 복사본(`ustack`)에서 같은 `off`만큼 들어가면 자식 프레임의 정확한 위치를 짚고, 거기서 `a0`과 `sepc`만 고치는 거죠.
 
-> **흔한 오해 정정**: `sepc + 4`를 "그냥 +4"로 외우면 안 돼요. 이건 "`ecall` 명령 **다음**으로 돌아가라"는 뜻이고, `ecall`이 4바이트라 4를 더하는 거예요. 빼먹으면 자식이 복귀하자마자 같은 `ecall`을 다시 만나 **영원히 `fork`만 재호출**합니다. 부모는 왜 안 그럴까요? 부모의 `sepc+4`는 트랩 진입·복귀 공통 경로가 이미 처리해 주거든요. 자식은 그 경로를 타기 *전에* 프레임을 직접 만들어 넣는 거라, 여기서 손수 더해 줘야 해요.
+> **흔한 오해 정정**: `sepc + 4`를 "그냥 +4"로 외우면 안 돼요. 이건 "`ecall` 명령 **다음**으로 돌아가라"는 뜻이고, `ecall`은 (압축 형식이 없어) RISC-V에서 항상 4바이트 명령이라 4를 더하는 거예요. 빼먹으면 자식이 복귀하자마자 같은 `ecall`을 다시 만나 **영원히 `fork`만 재호출**합니다. 부모는 왜 안 그럴까요? 부모의 `sepc+4`는 트랩 진입·복귀 공통 경로가 이미 처리해 주거든요. 자식은 그 경로를 타기 *전에* 프레임을 직접 만들어 넣는 거라, 여기서 손수 더해 줘야 해요.
 
 자식이 처음 스케줄되면 `context.ra`를 따라 **`forkret`**으로 들어가요.
 
@@ -315,7 +316,7 @@ struct fs_dirent {              // 64바이트 → 한 블록(512)에 8개
 > "장치 레지스터를 직접 두드리는 PIO와, 공유 메모리 링으로 대화하는 virtio는 무엇이 다른가?"
 
 QEMU의 가상 디스크는 **virtio** 규약을 따르는데, virtio는 "게스트(우리 커널)와 호스트(디바이스)가 **공유 메모리 위의 링**으로 대화하는" 표준이에요.
-실제 하드웨어를 흉내 내는 대신 가상화에 최적화된 인터페이스라, 매 바이트마다 레지스터를 두드리는 PIO보다 훨씬 적은 트랩으로 한 요청을 끝냅니다.
+실제 하드웨어를 흉내 내는 대신 가상화에 최적화된 인터페이스예요. PIO든 MMIO든 CPU 입장에선 똑같이 load/store지만, virtio는 **데이터를 공유 메모리에 두고 MMIO는 "알림"에만** 쓰기 때문에, 매 워드마다 레지스터로 옮기는 PIO보다 레지스터 접근 횟수가 크게 줄어 한 요청을 가볍게 끝냅니다.
 
 | 구분 | PIO(레지스터 직접 제어) | virtio(가상 디바이스) |
 |------|-------------------------|------------------------|
@@ -362,7 +363,7 @@ used_seen = used->idx;
 return (bstatus == 0) ? 0 : -1;      // 디바이스가 0을 적었으면 성공
 ```
 
-`mb()`(메모리 배리어, `fence`)는 "디스크립터를 다 적은 게 디바이스 눈에 보인 **다음에** 알림이 가도록" 쓰기 순서를 강제하는 거예요 — 종을 울렸는데 주문서가 아직 안 적혀 있으면 안 되니까요.
+`mb()`(메모리 배리어, `fence`)는 "디스크립터를 다 적은 게 디바이스 눈에 보인 **다음에** 알림이 가도록" 쓰기 순서를 강제하는 거예요 — **CPU와 컴파일러가 메모리 접근 순서를 재배치하지 못하게** 막죠. 종을 울렸는데 주문서가 아직 안 적혀 있으면 안 되니까요.
 
 호스트에서 `mkfs`로 만든 디스크 이미지를 QEMU에 붙이고 커널을 켜면, 부팅 로그에 드라이버와 마운트가 뜨고 `ls`/`cat`이 동작해요.
 
@@ -446,7 +447,7 @@ R32(MMIO_DRIVER_FEAT) = feat_hi;          // 그대로 수락(VERSION_1 포함)
 static volatile struct virtq_used *used;  // 디바이스가 비동기 갱신 → volatile
 ```
 
-> **하드웨어가 비동기로 갱신하는 메모리(MMIO·DMA 링)는 반드시 `volatile`로 읽는다.** 책에서 한 줄로 넘어가던 규칙인데, 한 시간 헤매고 나니 왜 그런지 몸으로 알겠더라고요.
+> **하드웨어가 비동기로 갱신하는 메모리(MMIO·DMA 링)는 반드시 `volatile`로 읽는다.** 다만 `volatile`은 컴파일러가 접근을 **생략**하지 못하게 할 뿐, 접근들 사이의 **순서**까지 보장하진 않아요 — 순서가 필요한 곳(위의 디스크립터 → 알림)은 `mb()` 같은 메모리 배리어를 따로 써야 합니다. 책에서 한 줄로 넘어가던 규칙인데, 한 시간 헤매고 나니 왜 그런지 몸으로 알겠더라고요.
 
 ## 정리
 
@@ -523,6 +524,7 @@ It splits into three, depending on **the nature of the page** (read-only, or som
 User code is `R|X` (read/execute), so nobody ever overwrites it.
 So we **share instead of copy** — parent and child point at the same physical page.
 In the real code we just bump a reference count (`kref_inc`). fork gets cheap and we save memory.
+In general **any read-only-mapped page** can be shared this way — not just code but `.rodata` (read-only data) too. Our implementation uses a single code page, so code and read-only data end up sharing one page together.
 
 #### Stack page — copy it privately
 
@@ -586,7 +588,7 @@ The line `off = (uint64)f - USERSTACK` is the crux.
 If the parent's frame is at user virtual address `f`, then its distance from the start of the stack page (`USERSTACK`) — `off` — is the same for parent and child.
 So stepping `off` bytes into the child's **physical** copy (`ustack`) lands on exactly the child's frame, where we fix only `a0` and `sepc`.
 
-> **Common misconception fix**: don't memorize `sepc + 4` as "just add 4." It means "return to the instruction **after** `ecall`," and `ecall` is 4 bytes, hence +4. Skip it and the child, right after returning, hits the same `ecall` again and **re-issues `fork` forever**. Why doesn't the parent? Because the parent's `sepc+4` is already handled by the shared trap entry/return path. The child builds its frame *before* taking that path, so it has to add 4 by hand here.
+> **Common misconception fix**: don't memorize `sepc + 4` as "just add 4." It means "return to the instruction **after** `ecall`," and `ecall` is always a 4-byte instruction on RISC-V (it has no compressed form), hence +4. Skip it and the child, right after returning, hits the same `ecall` again and **re-issues `fork` forever**. Why doesn't the parent? Because the parent's `sepc+4` is already handled by the shared trap entry/return path. The child builds its frame *before* taking that path, so it has to add 4 by hand here.
 
 When the child is first scheduled, it follows `context.ra` into **`forkret`**.
 
@@ -776,7 +778,7 @@ You don't write commands directly to the disk.
 > "How does PIO — poking device registers directly — differ from virtio's shared-memory rings?"
 
 QEMU's virtual disk follows the **virtio** convention, where "the guest (our kernel) and the host (the device) talk over **rings in shared memory**."
-It's an interface optimized for virtualization rather than imitating real hardware, so a single request finishes with far fewer traps than PIO, which pokes a register for every word.
+It's an interface optimized for virtualization rather than imitating real hardware. To the CPU, PIO and MMIO are both just loads/stores; virtio is lighter because it **keeps the data in shared memory and uses MMIO only for the "notify"**, so it needs far fewer register accesses than PIO, which moves a register per word.
 
 | Aspect | PIO (direct register control) | virtio (virtual device) |
 |--------|-------------------------------|--------------------------|
@@ -823,7 +825,7 @@ used_seen = used->idx;
 return (bstatus == 0) ? 0 : -1;      // success if the device wrote 0
 ```
 
-`mb()` (a memory barrier, `fence`) forces the write order so that "the notify goes out **after** the device can see the fully-written descriptors" — you mustn't ring the bell while the order ticket is still half-written.
+`mb()` (a memory barrier, `fence`) forces the write order so that "the notify goes out **after** the device can see the fully-written descriptors" — it stops **the CPU and the compiler from reordering memory accesses**. You mustn't ring the bell while the order ticket is still half-written.
 
 Attach the `mkfs`-built disk image to QEMU, boot the kernel, and the boot log shows the driver and the mount, and `ls`/`cat` work.
 
@@ -906,7 +908,7 @@ Adding `volatile` says "this memory can change behind my back, so **re-read it f
 static volatile struct virtq_used *used;  // device updates it asynchronously → volatile
 ```
 
-> **Memory that hardware updates asynchronously (MMIO, DMA rings) must be read as `volatile`.** A rule books cover in one line, but after wandering lost for an hour, I now understand why in my bones.
+> **Memory that hardware updates asynchronously (MMIO, DMA rings) must be read as `volatile`.** Note, though, that `volatile` only stops the compiler from **eliding** accesses — it does **not** guarantee ordering between them; where order matters (the descriptors → notify above) you still need a memory barrier like `mb()`. A rule books cover in one line, but after wandering lost for an hour, I now understand why in my bones.
 
 ## Wrap-up
 

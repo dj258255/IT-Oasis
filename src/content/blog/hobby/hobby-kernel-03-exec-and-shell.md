@@ -70,7 +70,7 @@ exec 한 번에 바뀌어야 하는 상태를 분리해서 보면 설계 선택�
 > 유저 스택을 통째로 갈아엎을 것인가, 재사용할 것인가?
 
 갈아엎으면 "깨끗한 새 프로그램"이라는 의미엔 충실하지만, exec를 수행 중인 `proc_exec`의 지역변수가 죽어요.
-우리 커널은 **스택 페이지를 재사용**하되 `sp`만 top으로 리셋해서 깨끗한 것처럼 보이게 합니다.
+우리 커널은 **스택 페이지를 재사용**하되 `sp`만 top으로 리셋해요 — 옛 스택 내용을 지우는 게 아니라, `sp`를 맨 위로 되돌려 새 스택처럼 쓰는 거죠(그 아래에 남은 옛 데이터는 새 프로그램이 건드리지 않습니다).
 
 #### 주소공간(satp)
 
@@ -89,10 +89,12 @@ exec 한 번에 바뀌어야 하는 상태를 분리해서 보면 설계 선택�
 | 유저 스택 | 새 스택 페이지 | 기존 스택 재사용(`sp`만 리셋) |
 | 유저 진입 방식 | `userret_to(entry, sp, satp)` — 레지스터만 | 인라인 `mv sp; sret` |
 | 전환 후 스택 접근 | **절대 금지**(다른 물리 페이지) | 자유(같은 주소공간) |
-| 비용 | 페이지 테이블 빌드 + `sfence.vma` | remap 1회, TLB 플러시 불필요 |
+| 비용 | 페이지 테이블 빌드 + `sfence.vma` | remap 1회 + `sfence.vma` (페이지 테이블 빌드 없음) |
 | 격리 수준 | 옛 매핑이 한 톨도 안 남음 | 코드만 갈리고 나머지 매핑 유지 |
 
 정통 경로가 더 깨끗하지만(옛 프로그램의 매핑이 완전히 사라짐), 우리 목적엔 코드 페이지 remap만으로 충분하고 훨씬 가벼워요.
+
+> 한 가지 주의: remap도 **PTE를 바꾸는 것**이라, satp가 그대로여도 옛 번역이 TLB에 남을 수 있어 `sfence.vma`로 비워야 해요(실제 `remap_user_code`가 그렇게 합니다). 가벼운 건 "TLB flush가 없어서"가 아니라 **페이지 테이블을 새로 짓지 않아서**예요.
 
 ### 우리 코드 — proc_exec()
 
@@ -189,11 +191,11 @@ exec에서 제일 흔한 함정은 "실패했을 때"예요.
 |------|--------------------|--------------------|
 | 입력 없을 때 | `while (입력 없음) ;` 빙빙 | CPU 양보 후 SLEEPING |
 | CPU 점유 | 100%, 무의미하게 태움 | 0%, 다른 프로세스가 씀 |
-| 인터럽트 핸들러 | 핸들러조차 CPU를 못 받아 입력이 영영 안 옴 | wfi로 쉬다 인터럽트로 깨어남 |
+| CPU 사용 | 100% 태우며 헛돌아 전력·효율 낭비 | wfi로 쉬다 인터럽트로 깨어남 |
 | 깨어나는 방식 | (애초에 못 깨어남) | 채널 매칭으로 정확히 깨움 |
 | 위험 | 데드락성 기아 | 잃어버린 wakeup(아래에서 해결) |
 
-바쁜 대기는 최악이에요 — 셸이 CPU를 100% 잡고 빙빙 돌면서, 정작 입력을 처리할 인터럽트 핸들러나 다른 프로세스에 CPU를 안 줍니다.
+바쁜 대기는 비효율적이에요 — 셸이 CPU를 100% 잡고 빙빙 돌며 아무 유용한 일도 못 한 채 전력만 태웁니다. (우리 커널은 선점형이라 타이머 인터럽트가 끼어들어 핸들러·다른 프로세스가 굶지는 않아요 — 문제는 입력이 올 때까지 CPU를 통째로 낭비한다는 점이에요.)
 올바른 답은 **블록(block)**: 입력이 없으면 CPU를 양보하고 잠들었다가, 글자가 들어오면 깨어나는 거예요.
 
 ### 사전 지식 — 채널
@@ -281,7 +283,7 @@ read는 "비었네" → (인터럽트가 글자 넣고 wakeup) → `sleep`(잠�
 > **흔한 오해 정정**: *"트랩 중엔 인터럽트가 꺼져 있으니(SIE=0) 잃어버린 wakeup은 SIE만 끄면 막힌다"* — 단일 코어에선 그럴듯하지만 틀린 일반화예요. 우리 커널은 멀티코어를 염두에 둡니다 — **다른 코어**의 인터럽트가 동시에 `console_intr`을 돌릴 수 있죠. 그러니 자기 코어의 인터럽트를 끄는 것만으론 부족하고, **공유 데이터(`inbuf`, `in_w`, 프로세스 상태)를 스핀락으로 감싸 검사~sleep을 한 덩어리로 묶는 게** 진짜 방어선입니다. 이래서 `console_intr`도 굳이 `pt_lock`을 잡는 거예요.
 
 셸이 잠들고 다른 돌릴 프로세스도 없으면, 스케줄러는 할 일이 없어요.
-이때 코어는 `wfi`(wait-for-interrupt)로 전력을 아끼며 쉬다가, 콘솔/타이머 인터럽트가 들어오면 깨어나 다시 스캔합니다.
+이때 스케줄러가 훑어 **RUNNABLE이 하나도 없을 때만** 코어가 `wfi`(wait-for-interrupt)로 전력을 아끼며 쉬다가, 콘솔/타이머 인터럽트가 들어오면 깨어나 다시 스캔합니다.
 방금 그 콘솔 인터럽트가 `wakeup`으로 셸을 RUNNABLE로 만들어 놨으니, 스케줄러는 셸을 다시 골라 돌려요.
 
 > 검사와 sleep을 같은 락 아래 묶는다 — 동기화의 절반은 "원자적으로 묶어야 할 두 동작이 무엇인가"를 찾는 일입니다.
@@ -302,7 +304,7 @@ read는 "비었네" → (인터럽트가 글자 넣고 wakeup) → `sleep`(잠�
 그래서 자식은 `exit` 시 곧장 사라지지 않고 **ZOMBIE** 상태로 잠깐 남아요.
 "죽었다고 표시는 했지만 아직 시신은 안 치운" 상태죠.
 그리고 부모를 `wakeup`으로 깨워 "나 끝났어, 와서 치워줘"라고 알립니다.
-부모의 `wait`는 좀비가 된 자식을 발견하면 자원을 회수(reap)하고 그 자리를 `UNUSED`로 비운 뒤, 그 pid를 반환해요.
+부모의 `wait`는 좀비가 된 자식을 발견하면 자원을 회수(reap)하고 그 자리를 `UNUSED`로 비운 뒤, 그 pid를 반환해요. (실제 유닉스의 `wait`는 자식의 **종료 코드**도 함께 회수하지만, 우리 구현은 pid만 돌려줍니다.)
 
 ```c
 // proc.c — 실제 코드
@@ -408,6 +410,30 @@ nope: command not found
 `hello`를 치면 — 셸이 fork하고, 자식이 디스크의 hello를 exec해서 그 프로그램이 되고, hello가 출력하고 exit하면, 셸의 wait가 돌아와 프롬프트를 다시 띄웁니다.
 **유닉스가 명령을 실행하는 바로 그 메커니즘**이 동작해요.
 
+이 한 장이면 fork → exec → wait의 흐름이 한눈에 들어와요.
+
+```
+Shell
+ │
+ ├─ fork()
+ │
+ ├───────────────┐
+ │               │
+부모            자식
+ │               │
+wait()        exec("hello")
+ │               │
+ │           hello 실행
+ │               │
+ │           exit()  → ZOMBIE
+ │               │
+ └──── wakeup ◀──┘
+      │
+   wait 반환(자식 pid)
+      │
+  다음 프롬프트 출력
+```
+
 ## 5. 정리
 
 작은 유닉스의 마지막 루프는 결국 **세 가지 "자기 발밑" 문제**의 모음이었어요.
@@ -501,7 +527,7 @@ The old code page (`oldcode`) is no longer used, so it must go back via `kfree` 
 > Replace the user stack wholesale, or reuse it?
 
 Replacing it honors the "clean new program" semantics, but it kills the locals of `proc_exec`, which is mid-exec.
-Our kernel **reuses the stack page** and merely resets `sp` to the top to make it look clean.
+Our kernel **reuses the stack page** and merely resets `sp` to the top — it doesn't erase the old stack contents; it just rewinds `sp` to the top and uses it like a fresh stack (the leftover data below is never touched by the new program).
 
 #### The address space (satp)
 
@@ -520,10 +546,12 @@ The same exec can be implemented two ways, and we chose the latter.
 | User stack | New stack page | Reuse existing (`sp` reset only) |
 | User entry | `userret_to(entry, sp, satp)` — registers only | Inline `mv sp; sret` |
 | Stack access after switch | **Forbidden** (different physical page) | Free (same address space) |
-| Cost | Page-table build + `sfence.vma` | One remap, no TLB flush |
+| Cost | Page-table build + `sfence.vma` | One remap + `sfence.vma` (no page-table build) |
 | Isolation | Not a single old mapping remains | Only code swaps; rest of mappings kept |
 
 The textbook path is cleaner (the old program's mappings vanish entirely), but for our purposes remapping the code page is enough and far lighter.
+
+> One caveat: a remap also **changes a PTE**, so even with satp unchanged the old translation may linger in the TLB and must be flushed with `sfence.vma` (which is exactly what `remap_user_code` does). It's lighter not because "there's no TLB flush" but because **we don't build a new page table.**
 
 ### Our code — proc_exec()
 
@@ -620,11 +648,11 @@ But what if the user hasn't typed anything yet?
 |--------|-----------|---------------------|
 | When no input | `while (no input) ;` spinning | Yield the CPU, go SLEEPING |
 | CPU usage | 100%, burned for nothing | 0%, used by other processes |
-| Interrupt handler | Even the handler can't get the CPU, so input never arrives | Rests on wfi, woken by interrupt |
+| CPU use | Burns 100% spinning, wasting power and cycles | Rests on wfi, woken by interrupt |
 | How it wakes | (can't wake at all) | Woken precisely by channel match |
 | Risk | Deadlock-like starvation | Lost wakeup (solved below) |
 
-Busy-wait is the worst case — the shell pins the CPU at 100% spinning, starving the very interrupt handlers and other processes that would feed it input.
+Busy-wait is inefficient — the shell pins the CPU at 100%, spinning while doing no useful work and just burning power. (Our kernel is preemptive, so the timer interrupt still cuts in and handlers/other processes don't starve — the problem is that the CPU is wasted wholesale until input arrives.)
 The right answer is to **block**: when there's no input, yield the CPU and sleep, then wake up when a character arrives.
 
 ### Background — the channel
@@ -712,7 +740,7 @@ Everything from the check to actually falling asleep is protected as one unit.
 > **Common misconception fix**: *"Interrupts are off during a trap (SIE=0), so a lost wakeup is prevented just by clearing SIE"* — plausible on a single core, but a wrong generalization. Our kernel is written with multicore in mind — **another core's** interrupt could run `console_intr` concurrently. So clearing your own core's interrupts isn't enough; the real defense is to **wrap the shared data (`inbuf`, `in_w`, process state) in a spinlock so check~sleep is one unit**. That's why `console_intr` bothers to acquire `pt_lock` too.
 
 When the shell sleeps and there's no other process to run, the scheduler has nothing to do.
-At that point the core rests with `wfi` (wait-for-interrupt) to save power, and wakes when a console/timer interrupt comes in.
+At that point, **only when the scheduler scans and finds nothing RUNNABLE**, the core rests with `wfi` (wait-for-interrupt) to save power, and wakes when a console/timer interrupt comes in.
 That console interrupt has just made the shell RUNNABLE via `wakeup`, so the scheduler picks the shell and runs it again.
 
 > Bind the check and the sleep under the same lock — half of synchronization is finding *which two actions must be made atomic*.
@@ -733,7 +761,7 @@ A child can't fully clean up its own resources at `exit` — for instance, it ca
 So at `exit` the child doesn't vanish; it lingers briefly in the **ZOMBIE** state.
 "Marked as dead, but the body isn't cleared yet."
 And it wakes its parent via `wakeup` to say "I'm done, come clean me up."
-The parent's `wait`, on finding a zombie child, reaps its resources, frees the slot to `UNUSED`, and returns its pid.
+The parent's `wait`, on finding a zombie child, reaps its resources, frees the slot to `UNUSED`, and returns its pid. (Real Unix's `wait` also collects the child's **exit code**, but our implementation only returns the pid.)
 
 ```c
 // proc.c — the real code
@@ -838,6 +866,30 @@ nope: command not found
 
 Type `hello` and — the shell forks, the child execs hello from disk to become that program, hello prints and exits, the shell's wait returns and the prompt comes back.
 **The very mechanism by which Unix runs commands** is working.
+
+This one picture captures the whole fork → exec → wait flow at a glance.
+
+```
+Shell
+ │
+ ├─ fork()
+ │
+ ├───────────────┐
+ │               │
+Parent         Child
+ │               │
+wait()        exec("hello")
+ │               │
+ │           run hello
+ │               │
+ │           exit()  → ZOMBIE
+ │               │
+ └──── wakeup ◀──┘
+      │
+   wait returns (child pid)
+      │
+  print next prompt
+```
 
 ## 5. Wrap-up
 

@@ -27,7 +27,7 @@ seriesOrder: 7
 
 네트워킹은 xv6 랩 중에서도 코드 표면이 가장 넓습니다.
 하드웨어(NIC)부터 이더넷·ARP·IP·UDP까지, 계층을 손으로 직접 쌓아야 비로소 패킷 하나가 나갔다 들어와요.
-이 글의 목표는 한 줄로 요약돼요 — **"패킷이 바이트로 어떻게 조립되고, 선을 타고 나갔다 돌아오는가"를 끝까지 손으로 만져본다.**
+이 글의 목표는 한 줄로 요약돼요 — **"패킷이 바이트 배열에서 어떻게 조립되고, NIC를 거쳐 나갔다 돌아오는가"를 끝까지 손으로 만져본다.**
 
 그래서 이 글은 네트워크 스택을 **계층 순서대로** 쌓아 올립니다.
 NIC 드라이버(virtio-net)로 프레임을 주고받는 토대를 깔고 → 이더넷/ARP로 게이트웨이 MAC을 알아내고 → 그 위에 IP를 얹고 → ICMP로 IP 계층을 검증하고 → UDP로 포트 다중화를 더하고 → 마지막에 DNS로 도메인을 해석해요.
@@ -53,7 +53,7 @@ QEMU virt에서 그 약속이 **virtio**예요 — 게스트와 가상 장치가
 
 ### virtio-blk vs virtio-net — 무엇이 다른가
 
-같은 전송 계층 위에 있지만, 디스크와 네트워크는 세 군데서 갈립니다.
+같은 전송 계층 위에 있지만, 디스크와 네트워크는 몇 군데서 갈립니다.
 
 | 구분 | virtio-blk (디스크, [3편](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)) | virtio-net (네트워크, 이 글) |
 |------|------------------------------------|------------------------------|
@@ -71,7 +71,7 @@ QEMU virt에서 그 약속이 **virtio**예요 — 게스트와 가상 장치가
 > 디바이스는 체크섬 오프로드, GSO, 머지 버퍼, 제어 큐 같은 화려한 기능을 잔뜩 제공하겠다고 합니다. 우리는 무엇을 받아야 할까요?
 
 학습용 스택의 정답은 **"최대한 끈다"** 예요.
-받은 기능은 곧 우리가 구현해야 할 코드라서, 켤수록 드라이버가 복잡해지고 버그가 늘어나거든요.
+수락한 기능은 장치와 우리가 모두 쓰기로 약속한 기능이라, 켤수록 드라이버가 지원해야 할 코드가 늘고 버그도 늘거든요.
 그래서 `net_init`은 하위 32비트에서 `VIRTIO_NET_F_MAC`(MAC을 config에서 읽는 기능) 하나만 남기고, 상위 32비트에선 `VERSION_1`만 수락합니다.
 
 ```c
@@ -96,7 +96,7 @@ NR32(MMIO_DRIVER_FEAT) = hi;
 
 수신에는 한 가지 비대칭이 있어요.
 **송신은 우리가 보낼 때 버퍼를 만들면 되지만, 수신은 패킷이 "언제 올지" 모릅니다.**
-그래서 RX는 **빈 버퍼를 미리 디바이스에 등록해두는** 방식을 써요.
+그래서 RX는 **빈 버퍼를 미리 디바이스에 등록해두는** 방식을 써요. 즉 수신 큐는 디바이스가 언제 프레임을 넣어도 되도록 **항상 "사용 가능한 빈 버퍼"를 유지**해야 해요(그래서 처리한 버퍼를 곧바로 다시 채워 넣습니다).
 RX 큐에 빈 버퍼 8개를 깔아두면, 패킷이 도착할 때 디바이스가 그중 하나에 써넣고 used 링을 갱신합니다.
 
 ```c
@@ -147,7 +147,7 @@ MAC 주소는 디바이스 설정공간(MMIO 오프셋 `0x100`)에서 6바이트
 이 둘은 다른 주소 체계라서, "IP X를 가진 장치의 MAC은 무엇인가"를 알아내는 번역 과정이 반드시 필요해요.
 그 번역기가 **ARP**(Address Resolution Protocol)입니다.
 
-그런데 닭과 달걀 문제가 있죠 — MAC을 모르는데 어떻게 그 상대에게 물어보지?
+그런데 닭과 달걀 문제가 있죠 — MAC을 모르는데 어떻게 물어보지? (상대 하나에게 콕 집어 묻는 게 아니라 **LAN 전체에게 브로드캐스트로** 묻는 게 ARP의 핵심이에요.)
 ARP의 해법은 **브로드캐스트**예요.
 "이 LAN에 10.0.2.2 가진 사람? MAC 좀 알려줘"를 모두에게(`ff:ff:ff:ff:ff:ff`) 외치고, 해당 IP 주인만 유니캐스트로 답합니다.
 
@@ -185,7 +185,7 @@ copy(r + 18, a + 8, 6);  copy(r + 24, a + 14, 4);  // 요청자에게 돌려보�
 ```
 
 이 한 줄이 뜬다는 건 의외로 큰 사건이에요.
-프레임을 **보냈고**(드라이버 TX + 이더넷 인코딩), 응답이 **돌아왔고**(드라이버 RX + 폴링), ARP 요청/응답 형식이 **맞았다**는 걸 한 번에 증명하거든요.
+프레임을 **보냈고**(드라이버 TX + 이더넷 인코딩), 응답이 **돌아왔고**(드라이버 RX + 폴링), ARP 요청/응답 형식이 **맞았다**는 걸 한 번에 증명하거든요. 다시 말해 **브로드캐스트 요청과 유니캐스트 응답이 둘 다 성공**했다는 뜻이에요.
 1절의 드라이버와 2절의 이더넷/ARP가 한 줄로 맞물리는 순간입니다.
 
 > **흔한 오해 정정**: "ARP는 라우터를 거쳐 멀리 있는 IP의 MAC도 알아낸다"고 오해하기 쉬운데, 아니에요. ARP는 **같은 LAN(브로드캐스트가 닿는 범위)** 안에서만 동작합니다. 인터넷 저편의 서버로 보낼 때도 우리가 ARP로 알아내는 건 그 서버의 MAC이 아니라 **게이트웨이의 MAC**이에요 — 일단 게이트웨이에게 넘기면 그다음은 게이트웨이가 라우팅하는 거죠. 그래서 우리 스택이 게이트웨이 MAC 하나만 알면 바깥으로 나가는 모든 패킷을 보낼 수 있습니다.
@@ -216,7 +216,7 @@ static uint16 cksum(const uint8 *data, int len) {
 }
 ```
 
-받는 쪽은 헤더 전체를 같은 방식으로 더했을 때 0이 나오면 "손상 없음"으로 봐요.
+받는 쪽은 헤더 전체(체크섬 필드 포함)를 같은 방식으로 접어요 — 자리올림까지 접은 합이 `0xFFFF`(전부 1)면 정상이고, 그 1의 보수가 `0`이에요. 즉 위 `checksum()`을 그대로 다시 돌려 `0`이 나오면 "손상 없음"으로 봐요.
 이 단순한 산수 하나가 IP·ICMP·UDP·TCP 전부의 무결성 검사를 담당합니다.
 
 ### ICMP ping — IP 계층을 검증하는 가장 깔끔한 방법
@@ -238,7 +238,7 @@ put16(icmp + 2, cksum(icmp, 8 + 32));   // ICMP 체크섬
 
 여기에 학습 환경의 묘미가 있어요 — **SLIRP는 게이트웨이 ping을 자기 내부에서 응답합니다.**
 즉 바깥 인터넷이 한 줄도 안 열려 있어도, ping이 왕복하면 그것만으로 **우리 IP 헤더 빌드 + 체크섬 + 드라이버 송수신이 전부 정확하다**는 게 증명돼요.
-오프라인에서도 IP 계층을 검증할 수 있는 거죠.
+오프라인에서도 IP 계층을 검증할 수 있는 거죠. (따라서 실제 인터넷까지 패킷이 나간 건 아니고, SLIRP가 게이트웨이 역할을 대신 응답해 주는 거예요.)
 
 ```
 [net] ping 10.0.2.2 ... reply
@@ -265,7 +265,7 @@ for (int i = 0; i + 1 < udplen; i += 2) sum += get16(pkt + 20 + i);
 
 왜 IP 주소까지 섞을까요?
 "이 UDP 세그먼트가 **정말 이 출발지→도착지 쌍**으로 가는 게 맞나"까지 한 번 더 검증하려는 설계예요.
-헤더가 중간에 엉뚱하게 바뀌어 다른 곳으로 새는 패킷을 잡아내려는 안전장치죠.
+헤더가 중간에 엉뚱하게 바뀌어 **다른 목적지로 잘못 전달되는 경우**를 잡아내려는 안전장치죠.
 (참고로 [10편의 TCP](/blog/hobby/hobby-kernel-09-tcp)도 똑같은 의사헤더 방식을 씁니다 — 그래서 UDP에서 한 번 익혀두면 TCP 체크섬은 그대로 따라와요.)
 
 ### 한 장으로 보는 계층
@@ -310,7 +310,7 @@ put16(q + p, 1); p += 2;    // QCLASS = IN
 ### 응답 파싱의 함정 — 이름 압축
 
 응답을 읽을 때 함정이 하나 있어요 — **이름 압축(compression pointer)** 입니다.
-응답은 질문에 있던 도메인 이름을 그대로 반복하는 대신, "그 이름은 메시지 12바이트 앞에 이미 있으니 거길 봐"라는 2바이트 포인터(`0xC0..`)로 가리켜요.
+응답은 질문에 있던 도메인 이름을 그대로 반복하는 대신, "그 이름은 메시지 12바이트 앞에 이미 있으니 거길 봐"라는 2바이트 포인터(`0xC0..`)로 가리켜요. `0xC0`은 이진수 `11000000` — **상위 두 비트가 `11`이면 압축 포인터**라는 약속이라, 나머지 비트로 "메시지 시작에서 몇 바이트 위치"인지를 가리킵니다.
 DNS 응답엔 같은 이름이 여러 번 나오니, 대역폭을 아끼려는 영리한 설계죠.
 대신 파서는 NAME 자리를 만날 때마다 **첫 바이트 상위 2비트가 `11`이면 압축 포인터(2바이트), 아니면 일반 라벨열**로 구분해야 합니다.
 
@@ -392,12 +392,30 @@ TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](
 
 ## 정리
 
-이 글은 NIC 드라이버부터 응용 프로토콜까지 **계층을 아래에서 위로** 쌓아, 패킷 한 장이 선을 타고 나갔다 돌아오는 길을 손으로 만져봤어요.
+이 글은 NIC 드라이버부터 응용 프로토콜까지 **계층을 아래에서 위로** 쌓아, 패킷 한 장이 NIC를 거쳐 나갔다 돌아오는 길을 손으로 만져봤어요.
 
 - **virtio-net 드라이버** — virtio-blk과 같은 전송 계층 위에서 device-id=1, RX(큐0)/TX(큐1) 두 큐, 모든 프레임 앞 12바이트 헤더. 기능은 일부러 거의 다 끄고, RX는 버퍼를 미리 깔아 폴링.
 - **이더넷 + ARP** — IP를 MAC으로 번역해 게이트웨이를 찾고, 우리 IP를 묻는 요청엔 응답. `who-has ... is-at` 한 줄이 드라이버+이더넷+ARP를 한 번에 증명.
 - **IP·ICMP·UDP** — 20바이트 IP 헤더 + 공용 16비트 체크섬. ping 왕복으로 IP 계층을 오프라인에서 검증하고, UDP는 포트 다중화 + 의사헤더 체크섬을 더함.
 - **DNS** — UDP 위에서 이름→주소 번역. 압축 포인터를 파싱하고, 타임아웃은 코드 버그가 아니라 외부망 차단임을 계층으로 분리해 읽음.
+
+그동안 따로따로 설명한 헤더들을, DNS 질의 한 장으로 포개 보면 이래요 — **위가 먼저 나가는 바깥 계층**이에요.
+
+```
+DNS 질의 한 장의 레이아웃 (총 ~50B+)
+
+┌──────────────────────────────┐
+│ Ethernet 헤더 (14B)          │  dst MAC · src MAC · ethertype=0x0800
+├──────────────────────────────┤
+│ IP 헤더 (20B)                │  version·TTL · protocol=17(UDP) · src IP · dst IP · checksum
+├──────────────────────────────┤
+│ UDP 헤더 (8B)                │  src port · dst port · length · checksum
+├──────────────────────────────┤
+│ DNS                          │  header · question(이름 → 타입)
+└──────────────────────────────┘
+```
+
+결국 네트워크 스택도 **메모리 위에 바이트를 차곡차곡 쌓는** 과정이에요. 각 계층은 바로 아래 계층을 믿고 **자기 헤더만** 더할 뿐이고, 그렇게 완성된 패킷 한 장이 NIC를 통해 세상으로 나갑니다.
 
 ```
 [ok] virtio-net ready, mac 52:54:00:12:34:56
@@ -434,7 +452,7 @@ Now the last piece: **networking**.
 
 Networking has the widest code surface of all the xv6 labs.
 From the hardware (the NIC) up through Ethernet, ARP, IP, and UDP, you have to stack the layers yourself before a single packet goes out and comes back.
-The goal of this post fits in one line — **feel, end to end, "how a packet is assembled from bytes, goes out over the wire, and returns."**
+The goal of this post fits in one line — **feel, end to end, "how a packet is assembled from a byte array, goes out through the NIC, and returns."**
 
 So this post builds the network stack **in layer order, bottom up**.
 Lay the foundation with a NIC driver (virtio-net) that moves frames → resolve the gateway MAC with Ethernet/ARP → put IP on top → verify the IP layer with ICMP → add port multiplexing with UDP → finally resolve a domain with DNS.
@@ -460,7 +478,7 @@ Disk or network, the flow is the same: the guest builds buffers in memory, puts 
 
 ### virtio-blk vs virtio-net — what's different
 
-They ride the same transport, but disk and network diverge in three places.
+They ride the same transport, but disk and network diverge in a few places.
 
 | Aspect | virtio-blk (disk, [Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)) | virtio-net (network, this post) |
 |--------|------------------------------------|------------------------------|
@@ -505,6 +523,7 @@ Receiving has one asymmetry.
 **For TX you can build a buffer when you're ready to send, but for RX you don't know *when* a packet will arrive.**
 So RX **pre-registers empty buffers with the device**.
 Stage 8 empty buffers in the RX queue, and when a packet arrives the device writes into one and bumps the used ring.
+In other words the RX queue must **always keep "available" empty buffers** so the device can deposit a frame at any moment — so we refill a buffer right after handling it.
 
 ```c
 // register 8 RX buffers as device-writable
@@ -554,7 +573,7 @@ Here's the essence of layering.
 These are different addressing schemes, so we need a translation step that answers "what is the MAC of the device with IP X?"
 That translator is **ARP** (Address Resolution Protocol).
 
-But there's a chicken-and-egg problem — how do you ask a peer whose MAC you don't know?
+But there's a chicken-and-egg problem — how do you ask when you don't know the MAC? (The key to ARP is that you don't ask one specific peer — you **broadcast the question to the whole LAN**.)
 ARP's answer is **broadcast**.
 Shout "anyone on this LAN with 10.0.2.2? tell me your MAC" to everyone (`ff:ff:ff:ff:ff:ff`), and only the owner of that IP replies by unicast.
 
@@ -592,7 +611,7 @@ The boot log shows this conversation directly.
 ```
 
 That one line appearing is a bigger event than it looks.
-It proves, all at once, that a frame **went out** (driver TX + Ethernet encoding), a reply **came back** (driver RX + polling), and the ARP request/reply format was **correct**.
+It proves, all at once, that a frame **went out** (driver TX + Ethernet encoding), a reply **came back** (driver RX + polling), and the ARP request/reply format was **correct**. In other words, **both the broadcast request and the unicast reply succeeded.**
 It's the moment §1's driver and §2's Ethernet/ARP interlock on a single line.
 
 > **Common misconception fix**: it's easy to assume "ARP resolves the MAC of a far-off IP through routers." It doesn't. ARP only works **within the same LAN (the reach of broadcast)**. Even when sending to a server across the internet, what we resolve via ARP isn't that server's MAC but the **gateway's MAC** — hand the packet to the gateway and it routes from there. That's why our stack can send every outbound packet knowing just the one gateway MAC.
@@ -623,7 +642,7 @@ static uint16 cksum(const uint8 *data, int len) {
 }
 ```
 
-The receiver sums the whole header the same way; if it comes out to 0, it's "uncorrupted."
+The receiver folds the whole header (including the checksum field) the same way; a valid header sums — with carries folded — to `0xFFFF` (all ones), whose one's complement is `0`. So re-running `checksum()` and getting `0` means "uncorrupted."
 This one bit of arithmetic handles integrity for IP, ICMP, UDP, and TCP alike.
 
 ### ICMP ping — the cleanest way to verify the IP layer
@@ -645,7 +664,7 @@ put16(icmp + 2, cksum(icmp, 8 + 32));   // ICMP checksum
 
 Here's the charm of the learning environment — **SLIRP answers a gateway ping from inside itself.**
 So even without a single byte of outside internet, a ping round-trip alone proves **our IP-header build + checksum + driver TX/RX are all correct**.
-You can verify the IP layer fully offline.
+You can verify the IP layer fully offline. (So the packet doesn't actually reach the real internet — SLIRP answers in the gateway's stead.)
 
 ```
 [net] ping 10.0.2.2 ... reply
@@ -672,7 +691,7 @@ for (int i = 0; i + 1 < udplen; i += 2) sum += get16(pkt + 20 + i);
 
 Why mix in the IP addresses?
 It's a design that double-checks "is this UDP segment really going for **this source→destination pair**."
-A safeguard to catch a packet whose header got mangled mid-flight and is leaking elsewhere.
+A safeguard to catch a packet whose header got mangled mid-flight and would be **misdelivered to the wrong destination.**
 (For the record, [Part 10's TCP](/blog/hobby/hobby-kernel-09-tcp) uses the same pseudo-header scheme — so learning it once in UDP, the TCP checksum follows for free.)
 
 ### The layers on one screen
@@ -717,7 +736,7 @@ put16(q + p, 1); p += 2;    // QCLASS = IN
 ### The trap in parsing the reply — name compression
 
 Reading the reply has one trap — **name compression (compression pointer)**.
-Instead of repeating the domain name from the question, the reply points to it with a 2-byte pointer (`0xC0..`) meaning "that name already appears 12 bytes into the message, look there."
+Instead of repeating the domain name from the question, the reply points to it with a 2-byte pointer (`0xC0..`) meaning "that name already appears 12 bytes into the message, look there." `0xC0` is binary `11000000` — **when the top two bits are `11` it marks a compression pointer**, and the remaining bits give the byte offset from the start of the message.
 The same name shows up several times in a DNS reply, so it's a clever bandwidth saver.
 But the parser, every time it meets a NAME field, must distinguish: **if the top 2 bits of the first byte are `11` it's a compression pointer (2 bytes), otherwise a normal label sequence**.
 
@@ -799,12 +818,30 @@ A real NIC driver wakes on a receive interrupt, but for a single learning-orient
 
 ## Wrap-up
 
-This post stacked the layers **bottom to top**, from the NIC driver up to an application protocol, and got to touch by hand the path of a single packet riding the wire out and back.
+This post stacked the layers **bottom to top**, from the NIC driver up to an application protocol, and got to touch by hand the path of a single packet going out through the NIC and back.
 
 - **virtio-net driver** — on the same transport as virtio-blk, with device-id=1, two queues RX (queue 0) / TX (queue 1), and a 12-byte header before every frame. Turn off almost all features on purpose; RX pre-stages buffers and polls.
 - **Ethernet + ARP** — translate IP to MAC to find the gateway, and reply to requests for our IP. The single `who-has ... is-at` line proves driver+Ethernet+ARP at once.
 - **IP, ICMP, UDP** — a 20-byte IP header + a shared 16-bit checksum. A ping round-trip verifies the IP layer offline, and UDP adds port multiplexing + the pseudo-header checksum.
 - **DNS** — name→address translation over UDP. Parse the compression pointer, and read the timeout — separated by layer — as a blocked external network, not a code bug.
+
+Folding the headers we explained separately into a single DNS query, it looks like this — **the outer layers go out first**:
+
+```
+Layout of one DNS query (~50B+)
+
+┌──────────────────────────────┐
+│ Ethernet header (14B)        │  dst MAC · src MAC · ethertype=0x0800
+├──────────────────────────────┤
+│ IP header (20B)              │  version·TTL · protocol=17(UDP) · src IP · dst IP · checksum
+├──────────────────────────────┤
+│ UDP header (8B)              │  src port · dst port · length · checksum
+├──────────────────────────────┤
+│ DNS                          │  header · question (name → type)
+└──────────────────────────────┘
+```
+
+In the end, a network stack is also just **stacking bytes in memory, one on top of another**. Each layer trusts the layer right below it and only adds **its own header** — and the one finished packet goes out through the NIC into the world.
 
 ```
 [ok] virtio-net ready, mac 52:54:00:12:34:56

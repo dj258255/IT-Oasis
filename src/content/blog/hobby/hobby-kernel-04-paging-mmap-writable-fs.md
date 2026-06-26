@@ -397,6 +397,22 @@ hello from a writable fs           ← 디스크에 박혀 살아남았다
 - **쓰기 가능 FS (4절)** — 빈 블록 할당 → 데이터 쓰기 → 디렉터리·슈퍼블록 갱신 → 재부팅 영속. write-once 수준의 가장 단순한 골격.
 
 공통 줄기는 **"필요할 때, 필요한 만큼만"** 이에요 — 힙도 파일도 미리 다 잡지 않고 폴트 순간에 만들죠.
+
+**demand paging도 mmap도 결국 같은 페이지 폴트 핸들러의 두 분기**예요 — 둘 다 "빈 페이지를 하나 만들어 매핑한다"는 똑같은 일을 하고, **차이는 그 페이지를 무엇으로 채우느냐 하나뿐**입니다(힙은 `zero`, mmap은 `fs_read_page`). 전혀 다른 기술처럼 보이지만, 커널 입장에선 한 핸들러의 분기 둘이죠.
+
+```
+            페이지 폴트 (scause 12/13/15, stval = 폴트 주소)
+                              │  sepc 그대로 (그 명령을 재실행하려고)
+                              ▼
+                    proc_pagefault(stval, is_store)
+          ┌───────────────────┼───────────────────┐
+          ▼                    ▼                    ▼
+       힙 영역?             mmap 영역?            그 외
+   kalloc → zero        kalloc → fs_read_page   (널·범위 밖)
+   → map(R|W|U)         → map(R|U, 읽기전용)     → 0 반환 = kill
+          └──── 1 반환 → 같은 명령을 재실행 ────┘
+```
+
 그리고 매 단계가 *일부러* 단순한 길을 골랐어요. 정석을 몰라서가 아니라 알고 포기한 것 — 쓰기 가능 mmap, COW, 저널링은 다음 글들의 몫으로 남겨뒀습니다.
 
 > 가상메모리와 파일시스템은 여기서 끝이 아니에요. 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**는 [8편](/blog/hobby/hobby-kernel-07-copy-on-write), 파일 쓰기를 트랜잭션으로 원자화하는 **저널링**은 [9편](/blog/hobby/hobby-kernel-08-journaling-filesystem)에서 이어집니다.
@@ -790,6 +806,22 @@ This post grew the page fault handler **from "printing and stopping" into "a mec
 - **writable FS (§4)** — free-block allocation → data write → directory/superblock update → survives a reboot. The simplest write-once skeleton.
 
 The common thread is **"only when needed, only as much as needed"** — neither the heap nor the file is grabbed up front; both are made at fault time.
+
+**Demand paging and mmap are really two branches of the same page-fault handler** — both do the identical thing, "make one empty page and map it," and the **only difference is what fills that page** (the heap uses `zero`, mmap uses `fs_read_page`). They look like entirely different techniques, but to the kernel they're two branches of one handler.
+
+```
+            page fault (scause 12/13/15, stval = faulting address)
+                              │  sepc unchanged (to re-run that instruction)
+                              ▼
+                    proc_pagefault(stval, is_store)
+          ┌───────────────────┼───────────────────┐
+          ▼                    ▼                    ▼
+       heap area?           mmap area?           otherwise
+   kalloc → zero        kalloc → fs_read_page   (null / out of range)
+   → map(R|W|U)         → map(R|U, read-only)   → return 0 = kill
+          └──── return 1 → re-run the same instruction ────┘
+```
+
 And at every step we *deliberately* chose the simple path. Not out of ignorance but knowingly forgone — writable mmap, COW, and journaling are left for later posts.
 
 > Virtual memory and the filesystem don't end here. Sharing a physical page and copying only on write — **copy-on-write** — is [Part 8](/blog/hobby/hobby-kernel-07-copy-on-write); atomizing file writes into transactions — **journaling** — is [Part 9](/blog/hobby/hobby-kernel-08-journaling-filesystem).

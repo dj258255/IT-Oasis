@@ -78,7 +78,7 @@ static long sbi_hart_start(uint64 hartid, uint64 addr) {
 ```
 
 `a7`에 EID `0x48534D`("HSM"의 ASCII)를, `a6`에 FID 0(`hart_start`)을 넣고 `ecall`을 때리는 게 전부예요.
-깨워진 코어는 `addr`(우리는 `_entry`를 넘김)에서, `a0`에 자기 hartid를 들고 S-mode로 깨어나요 — 부팅 하트가 처음 진입했던 바로 그 경로 그대로요.
+깨워진 코어는 `addr`(우리는 `_entry`를 넘김)에서 S-mode로 깨어나요 — 이때 **`a0`·`a1`은 OpenSBI가 채워 줍니다**(`a0`=hartid, `a1`=우리가 넘긴 opaque 값). 우리가 `a0`에 hartid를 손수 넣는 게 아니라, 펌웨어가 새 하트를 시작시키며 SBI 규약대로 넣어 주는 거예요 — 부팅 하트가 처음 진입했던 바로 그 경로 그대로요.
 
 ### 코어마다 자기 스택 — 한 스택을 둘이 쓰면 즉사
 
@@ -99,7 +99,7 @@ _entry:
         call    kmain
 ```
 
-`stacks`는 `.bss`에 `4096 * 4`(NCPU=4)로 잡아 둔 한 덩어리고, hartid에 4KB씩 곱해 각 코어가 겹치지 않는 자기 구간의 top을 잡아요.
+`stacks`는 `.bss`에 `4096 * 4`(NCPU=4)로 잡아 둔 한 덩어리고, hartid에 4KB씩 곱해 각 코어가 겹치지 않는 자기 구간의 top을 잡아요. 스택은 그 top에서 **아래 방향으로** 자라요(`stacks`는 배열 시작이고 `sp`는 끝으로 가야 하니까요).
 여기서 `csrw sscratch, a0` 한 줄을 눈여겨봐 두세요 — 지금은 그냥 "hartid를 한 군데 더 백업해 둔다" 정도지만, **4절의 가장 고약한 버그를 막는 핵심**이 됩니다.
 
 ### 흔한 오해 정정 — "부팅 하트는 항상 0번"
@@ -178,7 +178,7 @@ A가 (1)에서 `freelist`(페이지 X)를 읽고, B도 (1)에서 **같은 X**를
 
 해답이 RISC-V의 **원자적 교환** 명령 `amoswap`이에요.
 *"잠금 변수를 1로 바꾸면서, 바뀌기 전 값을 본다"* 를 하드웨어가 **한 명령**으로, 다른 코어가 끼어들 틈 없이 처리해요.
-C에선 GCC 내장 `__sync_lock_test_and_set`이 이 `amoswap`으로 컴파일돼요.
+C에선 GCC 내장 `__sync_lock_test_and_set`이 보통 이 `amoswap`(정확히는 `amoswap.w.aq` 같은 acquire 변형)으로 컴파일돼요 — 타깃·최적화에 따라 `LR/SC` 루프가 나올 수도 있지만, 보장되는 건 "원자적 교환"이라는 **의미**예요.
 
 이전 값이 0이었으면 *"풀려 있던 걸 내가 잠갔다"* 는 뜻이고, 1이었으면 *"남이 쥐고 있다"* 는 뜻이라 풀릴 때까지 제자리에서 빙빙 돌아요(spin).
 
@@ -200,7 +200,7 @@ void release(struct spinlock *lk) {
 ```
 
 `__sync_synchronize()`는 **메모리 배리어**예요.
-컴파일러나 CPU가 성능을 위해 메모리 접근 순서를 멋대로 바꾸는데, 락 안에서 그게 일어나면 *"락을 풀기도 전에 임계구역의 쓰기가 다른 코어에 안 보이는"* 사태가 나요. 배리어가 그 재배치를 막아 순서를 못 박아 줍니다.
+컴파일러나 CPU가 성능을 위해 메모리 접근 순서를 바꿀 수 있는데, 락 안에서 그게 일어나면 *"락을 풀었는데도 임계구역의 쓰기가 다른 코어에 아직 안 보이는"* 일이 생길 수 있어요. 배리어가 그 재배치를 막아 순서를 못 박아 줍니다. (참고로 `__sync_lock_test_and_set`/`__sync_lock_release` 자체도 acquire/release 의미를 가져서, 이 배리어는 그 위에 순서를 한 번 더 분명히 못 박는 셈이에요.)
 
 ### 락 없음(레이스) vs 스핀락
 
@@ -456,7 +456,7 @@ struct proc *current_proc(void) { return cpu_proc[r_tp()]; }
 ### 왜 단일 코어에선 안 터졌나
 
 이 버그는 4편까지 단 한 번도 안 터졌어요.
-단일 코어에선 부팅 하트가 우연히 0번이고, 유저 프로그램의 `tp` 초기값도 0이라서, **유저가 덮어써도 `r_tp()`가 0** → `cpu_proc[0]`이 맞는 답이라 *우연히* 맞아떨어졌거든요.
+단일 코어에선 부팅 하트가 우연히 0번이고, 유저 프로그램의 `tp` 초기값도 (ABI가 보장하는 값은 아니지만) 우연히 0이라서, **유저가 덮어써도 `r_tp()`가 0** → `cpu_proc[0]`이 맞는 답이라 *우연히* 맞아떨어졌거든요.
 
 그런데 멀티코어에선 프로세스가 1번·2번 코어에서 돌아요.
 유저 `tp`(0)와 실제 코어 번호(1, 2)가 달라지는 순간, `cpu_proc[0]`은 *그 코어의* 현재 proc이 아니라 엉뚱한 슬롯이라 바로 드러났어요.
@@ -465,7 +465,7 @@ struct proc *current_proc(void) { return cpu_proc[r_tp()]; }
 ### 해결 — sscratch로 tp를 복구
 
 해결은 xv6와 같아요.
-hartid의 **진짜 출처**를 유저가 못 건드리는 곳에 따로 둬야 해요. 그게 1절에서 봐 둔 `sscratch`(S-mode 스크래치 CSR)예요 — U-mode에선 접근조차 못 하니 유저가 덮을 수 없어요.
+hartid의 **진짜 출처**를 유저가 못 건드리는 곳에 따로 둬야 해요. 그게 1절에서 봐 둔 `sscratch`(S-mode 스크래치 CSR)예요 — U-mode에선 접근조차 못 하니 유저가 덮을 수 없어요. (CSR은 **privilege가 다르면 읽고 쓸 수 없어요** — `sscratch`는 S-mode 것이라 U-mode에선 건드릴 방법이 아예 없죠.)
 
 부팅 때 hartid를 `sscratch`에도 박아 두고(1절의 `csrw sscratch, a0`), **트랩에 진입하는 순간 `tp`를 거기서 복구**해요.
 
@@ -534,7 +534,7 @@ $ hello
 파일시스템(virtio+버퍼)은 단일 사용자 셸이라 동시 접근이 안 생겨 아직 락이 없고요(일반적으론 필요).
 유저 스레드(uthread)는 우리 단일 페이지 프로그램 모델 제약으로 보류, 네트워크 스택은 별도의 큰 여정이에요.
 
-부팅부터 멀티코어까지, "OS가 어떻게 도는가"를 손으로 만져 이해하는 여정은 여기서 한 매듭을 지어요.
+지금까지 만든 건 부팅·유저 프로그램 실행·시스템콜·가상메모리·선점형 스케줄링, 그리고 이제 SMP까지 갖춘 **작은 유닉스 계열 커널**이에요. 파일시스템 확장과 네트워크처럼 갈 길은 남았지만, **운영체제의 핵심 골격은 이제 거의 다 손으로 직접 만든 셈**이에요 — "OS가 어떻게 도는가"를 손으로 만져 이해하는 이 여정이 여기서 한 매듭을 짓습니다.
 
 > 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
 
@@ -607,7 +607,7 @@ static long sbi_hart_start(uint64 hartid, uint64 addr) {
 ```
 
 Putting EID `0x48534D` (ASCII for "HSM") in `a7`, FID 0 (`hart_start`) in `a6`, and issuing `ecall` is all there is to it.
-The woken core comes up at `addr` (we pass `_entry`) with its own hartid in `a0`, in S-mode — exactly the path the boot hart first took.
+The woken core comes up at `addr` (we pass `_entry`) in S-mode — and **OpenSBI fills `a0` and `a1`** (`a0` = hartid, `a1` = the opaque value we passed). We don't put hartid in `a0` ourselves; the firmware sets it per the SBI convention as it starts the new hart — exactly the path the boot hart first took.
 
 ### A stack per core — sharing one stack is instant death
 
@@ -628,7 +628,7 @@ _entry:
         call    kmain
 ```
 
-`stacks` is one `.bss` block of `4096 * 4` (NCPU=4), and we multiply hartid by 4KB so each core gets the top of its own non-overlapping slice.
+`stacks` is one `.bss` block of `4096 * 4` (NCPU=4), and we multiply hartid by 4KB so each core gets the top of its own non-overlapping slice. The stack then grows **downward** from that top (`stacks` is the array's start, while `sp` must sit at the end).
 Note that one line, `csrw sscratch, a0` — right now it's just "back up hartid in one more place," but it becomes **the key to defeating the nastiest bug in §4.**
 
 ### Common misconception fix — "the boot hart is always hart 0"
@@ -707,7 +707,7 @@ That *"read-modify-write"* region is a **critical section**, and a spinlock is w
 
 The answer is RISC-V's **atomic exchange** instruction, `amoswap`.
 *"Set the lock variable to 1 and read its pre-change value"* is done by hardware as **one instruction**, with no window for another core to slip in.
-In C, GCC's builtin `__sync_lock_test_and_set` compiles to this `amoswap`.
+In C, GCC's builtin `__sync_lock_test_and_set` usually compiles to this `amoswap` (precisely an acquire variant like `amoswap.w.aq`) — depending on the target and optimization it may instead emit an `LR/SC` loop, but what's guaranteed is the *meaning*: an atomic exchange.
 
 If the previous value was 0, it means *"it was free and I locked it"*; if it was 1, *"someone else holds it,"* so we spin in place until it frees up.
 
@@ -729,7 +729,7 @@ void release(struct spinlock *lk) {
 ```
 
 `__sync_synchronize()` is a **memory barrier**.
-The compiler and CPU reorder memory accesses for performance, and if that happens inside the lock you get *"the critical section's writes aren't visible to other cores even though the lock is already released."* The barrier blocks that reordering and pins the order down.
+The compiler and CPU may reorder memory accesses for performance, and if that happens inside the lock you can get *"the critical section's writes still aren't visible to other cores even though the lock is released."* The barrier blocks that reordering and pins the order down. (Note that `__sync_lock_test_and_set`/`__sync_lock_release` themselves carry acquire/release semantics, so this barrier just makes the ordering even more explicit on top of that.)
 
 ### No lock (race) vs spinlock
 
@@ -985,7 +985,7 @@ So `r_tp()` returns the user's garbage instead of hartid → `cpu_proc[garbage]`
 ### Why it never blew up on a single core
 
 This bug never fired once through Part 4.
-On a single core the boot hart happened to be 0 and the user program's initial `tp` was also 0, so **even after the user clobbered it, `r_tp()` was 0** → `cpu_proc[0]` was the right answer, *by luck.*
+On a single core the boot hart happened to be 0 and the user program's initial `tp` also happened to be 0 (nothing in the ABI guarantees that), so **even after the user clobbered it, `r_tp()` was 0** → `cpu_proc[0]` was the right answer, *by luck.*
 
 On multicore, processes run on cores 1 and 2.
 The moment the user `tp` (0) diverged from the real core id (1, 2), `cpu_proc[0]` was no longer *that core's* current proc but a wrong slot, and it surfaced immediately.
@@ -994,7 +994,7 @@ The moment the user `tp` (0) diverged from the real core id (1, 2), `cpu_proc[0]
 ### The fix — restore tp from sscratch
 
 The fix is the same as xv6's.
-We must keep the **true source** of hartid somewhere the user can't touch. That's `sscratch` (the S-mode scratch CSR) we set aside in §1 — U-mode can't even access it, so the user can't clobber it.
+We must keep the **true source** of hartid somewhere the user can't touch. That's `sscratch` (the S-mode scratch CSR) we set aside in §1 — U-mode can't even access it, so the user can't clobber it. (A CSR **can't be read or written from a different privilege level** — `sscratch` belongs to S-mode, so U-mode has no way to touch it.)
 
 We stamp hartid into `sscratch` at boot (§1's `csrw sscratch, a0`), and **restore `tp` from there the instant we enter a trap.**
 
@@ -1063,7 +1063,7 @@ A note on what's left.
 The filesystem (virtio + buffer) still has no lock, because a single-user shell never triggers concurrent access (in general it would need one).
 User threads (uthread) are on hold due to our single-page program model, and the network stack is a separate big journey.
 
-From boot to multicore, this hands-on journey of understanding "how an OS actually runs" reaches a milestone here.
+What we've built is a **small Unix-like kernel** with boot, user-program execution, system calls, virtual memory, preemptive scheduling, and now SMP. There's still road ahead — a richer filesystem, networking — but **the core skeleton of an operating system is now almost entirely hand-built.** From boot to multicore, this hands-on journey of understanding "how an OS actually runs" reaches a milestone here.
 
 > Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
 

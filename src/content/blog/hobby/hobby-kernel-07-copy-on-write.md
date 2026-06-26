@@ -31,10 +31,10 @@ COW의 핵심 아이디어는 한 문장이에요 — **"복사를 쓰기 시점
 fork 때는 부모와 자식이 같은 물리 페이지를 **읽기 전용으로 공유**하고, 누군가 그 페이지에 **쓰려고 할 때 비로소** 복제해요.
 
 이걸 구현하는 데 필요한 부품은 딱 두 개예요 — 물리 페이지마다 **참조 카운트**를 달고, **쓰기 페이지 폴트**가 났을 때 그 페이지만 복제하는 것.
-그리고 우리 커널만의 재미있는 제약도 하나 나와요 — **스택은 COW로 공유하지 못한다.**
+그리고 우리 커널만의 재미있는 제약도 하나 나와요 — **(우리 구현에선) 스택은 COW로 공유하지 못한다.** (리눅스·xv6 같은 일반 커널은 스택도 COW 하지만, 우리 설계에선 못 해요 — 이유는 4절에서.)
 그 제약이 왜 생기고, 그게 어떤 트레이드오프인지까지 정확히 짚어볼게요.
 
-> 왜 지금 COW인가: 이건 [5편의 demand paging](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)과 정확히 같은 철학이에요 — "필요해질 때까지 일을 미룬다." 거기선 페이지 **할당**을 미뤘고, 여기선 페이지 **복사**를 미뤄요. 그래서 그때 만든 페이지 폴트 핸들러를 거의 그대로 재사용합니다. COW는 새 메커니즘이라기보다 **있던 부품의 재조합**에 가까워요.
+> 왜 지금 COW인가: 이건 [5편의 demand paging](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)과 정확히 같은 철학이에요 — "필요해질 때까지 일을 미룬다." 거기선 페이지 **할당**을 미뤘고, 여기선 페이지 **복사**를 미뤄요. 그래서 그때 만든 페이지 폴트 핸들러를 거의 그대로 재사용합니다. COW는 **새 메커니즘이 아니라, 기존 페이지 폴트 메커니즘 위에 얹은 새 정책**에 가까워요 — 페이지 폴트·페이지 테이블·참조 카운트라는 있던 부품의 재조합이죠.
 
 ## 1. Copy-on-Write가 풀어야 하는 진짜 문제
 
@@ -67,7 +67,7 @@ if (fork() == 0) {
 
 | 구분 | fork 시 전체 복사 | Copy-on-Write |
 |------|----------------|---------------|
-| fork의 비용 | 모든 페이지 `kalloc` + `memcpy` (무거움) | PTE 권한만 손보고 refcount++ (가벼움) |
+| fork의 비용 | 모든 페이지 `kalloc` + `memcpy` (무거움) | 페이지 복사 없이 PTE 권한 수정 + refcount++ (가벼움) |
 | 복사 시점 | **fork 그 순간** (선불) | **누군가 쓰는 순간** (후불, 페이지 단위) |
 | fork 후 곧 exec | 복사 → 즉시 폐기 (전부 낭비) | 복사 **아예 안 일어남** |
 | 안 쓰는 페이지 | 그래도 복사됨 | 끝까지 공유, 복사 0회 |
@@ -153,7 +153,7 @@ void kinit(void) {
 `refcnt`를 먼저 1로 세팅한 뒤 `kfree`를 부르는 게 핵심이에요.
 그러면 "반납"이 언제나 `kfree`라는 **한 경로**를 통하게 돼서, 초기화든 평소 해제든 코드가 갈라지지 않아요.
 
-> **흔한 오해 정정**: `refcnt`를 보고 *"가비지 컬렉터냐?"* 고 묶기 쉬운데, 아니에요. GC는 *"아무도 안 가리키는 객체를 런타임이 추적해서 자동으로 찾아 회수"* 하는 거고, 여기 참조 카운트는 그냥 **공유한 사람이 직접 +1, 떠나는 사람이 직접 -1** 하는 명시적 카운터예요. 순환 참조 같은 GC의 골치 아픈 문제도 없어요 — 주소공간이 페이지를 순환 참조할 일이 없으니까요. **"누가 마지막인지 세는 도구"** 그 이상도 이하도 아닙니다.
+> **흔한 오해 정정**: `refcnt`를 보고 *"가비지 컬렉터냐?"* 고 묶기 쉬운데, 아니에요. GC는 *"아무도 안 가리키는 객체를 런타임이 추적해서 자동으로 찾아 회수"* 하는 거고, 여기 참조 카운트는 그냥 **공유한 사람이 직접 +1, 떠나는 사람이 직접 -1** 하는 명시적 카운터예요. **"누가 마지막인지 세는 도구"** 그 이상도 이하도 아닙니다.
 
 > **핵심 교훈**: 공유의 전제는 **수명 관리**예요. "같이 쓰자"는 쉽지만, "그럼 언제 버리지?"가 진짜 문제고, 참조 카운트가 그 답이에요. 이 한 겹이 깔려야 그 위에 COW를 안전하게 올릴 수 있어요.
 
@@ -248,6 +248,7 @@ int uvm_cow_fault(pagetable_t pt, uint64 va) {
 
 순서대로 — 새 페이지를 `kalloc`으로 받아서, 옛 공유 페이지 내용을 `memcopy`로 복사하고, PTE를 새 페이지로 바꾸면서 `PTE_COW`를 떼고 `PTE_W`를 복원해요.
 마지막에 `kfree(old)`로 옛 공유 페이지의 참조 카운트를 깎아요 — 이제 이 주소공간은 옛 페이지를 안 보니까요.
+중간의 `sfence_vma()`는 TLB를 비우는 건데 — CPU가 옛 PTE(읽기 전용 COW 매핑)를 TLB에 캐시해 뒀을 수 있어서, 새 PTE(쓰기 가능)가 곧바로 보이도록 하려는 거예요.
 
 여기서 `kfree`가 **무조건 반납이 아니라는 점**이 빛나요.
 부모와 자식이 공유 중이었다면 옛 페이지의 `refcnt`는 2였고, `kfree`는 1로 깎기만 하고 페이지는 살려둬요 — 아직 다른 쪽이 쓰고 있으니까요.
@@ -276,7 +277,20 @@ if (a >= HEAPBASE && a < p->heap_top) {     // --- 힙: 빈 페이지 (demand pa
 그런데 폴트 주소가 힙 영역이기도 해서, COW를 먼저 안 보고 demand 분기로 가면 "빈 페이지를 새로 할당"해서 **이미 있던 공유 데이터(42 같은 값)를 0으로 덮어써** 버려요.
 "이미 매핑된 페이지의 쓰기 폴트"(=COW)와 "매핑이 아예 없는 페이지의 폴트"(=demand)는 다른 사건이고, COW가 더 구체적인 경우라 먼저 걸러야 합니다.
 
-> **핵심 교훈**: COW의 전부는 이 흐름이에요 — **fork는 가벼워지고**(복사 0회), **복사는 진짜 쓸 때 딱 그 페이지만 한 번**. fork 직후 곧장 exec하는 자식은 공유 페이지에 쓸 일이 없으니 복사가 **아예 안 일어나죠.** 1절에서 본 낭비가 정확히 사라집니다.
+순서를 뒤집으면(demand를 먼저 검사하면) 어떻게 깨지는지 그림으로 보면:
+
+```
+  공유 페이지(값 42, 읽기전용 — PTE_W 없음)
+        │  자식이 씀 → store 폴트(scause=15)
+        ▼
+  COW를 안 보고 "힙 주소네 → demand"로 착각
+        ▼
+  빈 페이지를 새로 kalloc → 0으로 덮음
+        ▼
+  42가 사라짐  ✗     ← 그래서 COW를 "먼저" 검사해야 한다
+```
+
+> **핵심 교훈**: COW의 전부는 이 흐름이에요 — **fork는 가벼워지고**(복사 0회), **복사는 진짜 쓰는 순간, 쓰는 쪽이 그 페이지의 사본을 하나 만드는 것**뿐이에요(쓰기 한 번 = 사본 한 장). fork 직후 곧장 exec하는 자식은 공유 페이지에 쓸 일이 없으니 복사가 **아예 안 일어나죠.** 1절에서 본 낭비가 정확히 사라집니다.
 
 ## 4. fork가 실제로 무엇을 공유하나 — 코드·힙·스택
 
@@ -297,7 +311,7 @@ child->pagetable = proc_pagetable((uint64)parent->ucode, (uint64)ustack);
 uvm_cow_share(parent->pagetable, child->pagetable, HEAPBASE, parent->heap_top);
 ```
 
-- **코드 페이지**는 `R|X|U`라 쓰기 폴트가 날 일이 없어요. 그래서 `PTE_COW` 표시도 필요 없이 그냥 같은 물리 페이지를 자식 테이블에 매핑하고 `kref_inc`만 해요. 가장 단순한 공유예요.
+- **코드 페이지**는 `R|X|U`라 쓰기 폴트가 날 일이 없어요. 그래서 (우리 구현에선) `PTE_COW` 표시도 필요 없이 그냥 같은 물리 페이지를 자식 테이블에 매핑하고 `kref_inc`만 해요. 가장 단순한 공유예요.
 - **힙 페이지**는 `R|W`라 쓰기 폴트가 날 수 있어요. 그래서 `uvm_cow_share`로 양쪽 다 `PTE_W`를 떼고 `PTE_COW`를 달아 3절의 복제 흐름에 태워요. `HEAPBASE`부터 `parent->heap_top`까지, **부모가 실제로 건드린 힙만** 대상이에요(아직 안 만든 힙은 자식이 demand로 따로 받음).
 - **스택 페이지**만 옛날 방식 그대로 `kalloc` + `copybytes`로 통째 복사해요. 왜 스택만 특별 취급일까요?
 
@@ -335,7 +349,7 @@ cf->sepc = f->sepc + 4; // ecall 다음 명령부터(부모는 자식 pid를 받
 | 스택 COW 가능? | 가능(프레임이 스택 밖이라) | **불가**(프레임이 스택 안이라) |
 
 xv6는 트랩 프레임을 스택 밖 **별도 커널 페이지**에 둬서 스택도 COW로 공유할 수 있어요.
-우리는 트램폴린을 단순화하려고 프레임을 유저 스택 위에 얹었고, 그 단순함의 대가가 "스택은 COW 못 함"이에요.
+우리는 트램폴린을 단순화하려고 프레임을 유저 스택 위에 얹었고, 그 단순함의 대가가 "스택은 COW 못 함"이에요. 즉 이건 COW의 보편적 한계가 아니라 **우리 설계 선택의 결과**예요 — 리눅스나 xv6는 스택도 COW로 공유합니다.
 
 그래도 손해는 작아요.
 스택은 보통 **한 페이지**고, 정작 덩치 큰 힙과 코드는 COW로 공유하니까요.
@@ -425,7 +439,7 @@ fork가 "주소공간 통째 복사"에서 "포인터 몇 개 공유 + 카운터
 
 돌아보면 이번 작업은 **이미 가진 부품의 재조합**이었어요.
 페이지 폴트 핸들러(5편), 페이지 테이블 조작(1편), 물리 할당기와 참조 카운트(1편) — 전부 있던 걸 엮으니 COW가 됐죠.
-*"새 기능은 대개 기존 메커니즘의 새로운 조합"* 이라는 걸 다시 느꼈어요.
+*"새 기능은 대개 기존 메커니즘의 새로운 조합"* 이라는 걸 다시 느꼈어요. COW는 페이지 복사 알고리즘을 새로 만든 게 아니라, **페이지 폴트·페이지 테이블·참조 카운트라는 기존 메커니즘을 조합한 결과**예요.
 
 > 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
 > 다음 글: **멀티코어 (예정)**
@@ -450,9 +464,9 @@ This post rewrites that `fork` as **Copy-on-Write (COW)**.
 The core idea is one sentence — **"defer the copy until the write."**
 At fork time the parent and child **share the same physical pages read-only**, and only when someone **tries to write** is the page copied.
 
-We need exactly two parts to build this — a **reference count** on each physical page, and a **write page fault** that copies just that one page. And there's an interesting constraint unique to our kernel — **the stack can't be shared via COW.** We'll walk through why that constraint exists and what trade-off it represents.
+We need exactly two parts to build this — a **reference count** on each physical page, and a **write page fault** that copies just that one page. And there's an interesting constraint unique to our kernel — **in our implementation, the stack can't be shared via COW.** (General kernels like Linux and xv6 do COW their stacks; ours can't — why is in §4.) We'll walk through why that constraint exists and what trade-off it represents.
 
-> Why COW now: this is exactly the same philosophy as [demand paging in Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) — "defer the work until it's actually needed." There we deferred page **allocation**; here we defer page **copying**. So we reuse the page fault handler we built back then almost verbatim. COW is less a new mechanism than a **recombination of parts we already have**.
+> Why COW now: this is exactly the same philosophy as [demand paging in Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) — "defer the work until it's actually needed." There we deferred page **allocation**; here we defer page **copying**. So we reuse the page fault handler we built back then almost verbatim. COW isn't a new mechanism so much as **a new policy laid on top of the existing page-fault mechanism** — a recombination of parts we already have: page faults, page tables, and reference counts.
 
 ## 1. The Real Problem Copy-on-Write Has to Solve
 
@@ -485,7 +499,7 @@ The crux is **"when do you pay the cost."** Same structure as paging in Part 1 a
 
 | Aspect | Full copy at fork | Copy-on-Write |
 |--------|-------------------|---------------|
-| Cost of fork | `kalloc` + `memcpy` every page (heavy) | tweak PTE permissions, refcount++ (light) |
+| Cost of fork | `kalloc` + `memcpy` every page (heavy) | no page copy — tweak PTE permissions + refcount++ (light) |
 | When the copy happens | **at the fork instant** (up front) | **the moment someone writes** (deferred, per page) |
 | fork then exec | copy → discard immediately (all wasted) | copy **never happens** |
 | pages never written | copied anyway | shared to the end, copied 0 times |
@@ -571,7 +585,7 @@ void kinit(void) {
 The point is setting `refcnt` to 1 *first*, then calling `kfree`.
 That way "reclaim" always goes through the **single path** of `kfree`, so init and ordinary frees never branch into separate code.
 
-> **Common misconception fix**: seeing `refcnt`, it's tempting to lump it in as *"a garbage collector?"* — it's not. GC means *"the runtime tracks objects nobody points at and reclaims them automatically"*; this reference count is just an explicit counter where the **sharer does +1 and the leaver does −1** by hand. None of GC's headaches like cyclic references apply either — address spaces can't form a reference cycle over pages. It's **"a tool to count who's last"**, nothing more, nothing less.
+> **Common misconception fix**: seeing `refcnt`, it's tempting to lump it in as *"a garbage collector?"* — it's not. GC means *"the runtime tracks objects nobody points at and reclaims them automatically"*; this reference count is just an explicit counter where the **sharer does +1 and the leaver does −1** by hand. It's **"a tool to count who's last"**, nothing more, nothing less.
 
 > **Key lesson**: the prerequisite for sharing is **lifetime management.** "Let's share" is easy; the real question is "so when do we throw it away?", and the reference count is the answer. Only with this one layer in place can you safely stack COW on top.
 
@@ -665,6 +679,7 @@ int uvm_cow_fault(pagetable_t pt, uint64 va) {
 ```
 
 In order — grab a new page with `kalloc`, copy the old shared page's contents with `memcopy`, point the PTE at the new page while stripping `PTE_COW` and restoring `PTE_W`.
+The `sfence_vma()` in the middle flushes the TLB — the CPU may still be caching the old PTE (the read-only COW mapping), so we flush to make the new PTE (now writable) visible immediately.
 Finally `kfree(old)` decrements the old shared page's reference count — this address space no longer looks at the old page.
 
 Here's where `kfree` being **not an unconditional reclaim** shines.
@@ -694,7 +709,20 @@ Why order matters — a COW page **already has a physical page mapped** (read-on
 But the fault address is also in the heap region, so if we don't check COW first and fall into the demand branch, it would "allocate a fresh page" and **overwrite the existing shared data (a value like 42) with zeros.**
 "A write fault on an already-mapped page" (COW) and "a fault on a page with no mapping at all" (demand) are different events, and COW is the more specific case, so it must be filtered first.
 
-> **Key lesson**: all of COW is this flow — **fork gets lighter** (0 copies), and **the copy happens once, only on a real write, only for that one page.** A child that execs right after fork never writes the shared pages, so the copy happens **not even once.** The waste from Section 1 vanishes exactly.
+Here's how it breaks if you reverse the order (check demand first):
+
+```
+  shared page (value 42, read-only — no PTE_W)
+        │  child writes → store fault (scause=15)
+        ▼
+  skip COW, mistake it for "a heap address → demand"
+        ▼
+  kalloc a fresh page → overwrite with zeros
+        ▼
+  42 is gone  ✗     ← which is why COW must be checked *first*
+```
+
+> **Key lesson**: all of COW is this flow — **fork gets lighter** (0 copies), and **the copy happens at the moment of a real write, where the writing side makes its own copy of that one page** (one write = one copy). A child that execs right after fork never writes the shared pages, so the copy happens **not even once.** The waste from Section 1 vanishes exactly.
 
 ## 4. What fork Actually Shares — Code, Heap, Stack
 
@@ -753,7 +781,7 @@ This is a cost that comes from a [design different from xv6's](/blog/hobby/hobby
 | Stack COW possible? | yes (frame is outside the stack) | **no** (frame is inside the stack) |
 
 xv6 keeps the trap frame in a **separate kernel page** outside the stack, so it can COW-share the stack too.
-We put the frame on the user stack to simplify the trampoline, and the price of that simplicity is "the stack can't be COW."
+We put the frame on the user stack to simplify the trampoline, and the price of that simplicity is "the stack can't be COW." So this isn't a universal limit of COW but **a consequence of our design choice** — Linux and xv6 do COW-share the stack.
 
 Still, the loss is small.
 The stack is usually **one page**, while the bulky heap and code are shared via COW.
@@ -841,7 +869,7 @@ fork went from "copy the whole address space" to "share a few pointers + bump a 
 - **Our own constraint** — code and heap are COW-shared, but the **stack is copied whole.** fork edits the trap frame directly on the user stack, and sharing would corrupt the parent's stack. The price of a simple trampoline design.
 - **Verification** — `cowtest` confirms isolation with child 99 / parent 42, and free pages **stay fixed at 32058**, so there's no leak.
 
-Looking back, this work was a **recombination of parts we already had.**
+Looking back, this work was a **recombination of parts we already had.** COW didn't invent a new page-copying algorithm — it's the result of combining existing mechanisms: page faults, page tables, and reference counts.
 The page fault handler (Part 5), page table manipulation (Part 1), the physical allocator and reference count (Part 1) — tying them together gave us COW.
 It reminded me again that *"a new feature is usually a new combination of existing mechanisms."*
 
