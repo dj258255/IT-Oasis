@@ -133,15 +133,7 @@ SYN은 `+1`, 데이터는 `+n`, FIN도 `+1`.
 
 연결은 세 번의 인사로 시작해요.
 
-```
-클라이언트            서버
-   |---- SYN(seq=x) ------>|     "x번부터 시작할게"
-   |<-- SYN-ACK(seq=y, ----|     "좋아, 난 y번부터. x+1 기다릴게"
-   |        ack=x+1)        |
-   |---- ACK(ack=y+1) ---->|     "확인, 너의 y+1 기다릴게"
-   |                        |
-   |======= 연결 수립 =======|
-```
+![TCP 3-way 핸드셰이크: 클라이언트 SYN(seq=x) → 서버 SYN-ACK(seq=y, ack=x+1) → 클라이언트 ACK(ack=y+1) → 연결 수립(ESTABLISHED)](/uploads/hobby/hobby-kernel-c/tcp-handshake.svg)
 
 ### 왜 두 번도 네 번도 아닌 세 번인가
 
@@ -539,15 +531,7 @@ SYN is `+1`, data is `+n`, FIN is `+1` too.
 
 A connection begins with three greetings.
 
-```
-client                  server
-   |---- SYN(seq=x) ------>|     "I'll start from x"
-   |<-- SYN-ACK(seq=y, ----|     "ok, I'm from y. I'll wait for x+1"
-   |        ack=x+1)        |
-   |---- ACK(ack=y+1) ---->|     "got it, I'll wait for your y+1"
-   |                        |
-   |==== connection up =====|
-```
+![TCP 3-way handshake: client SYN(seq=x) → server SYN-ACK(seq=y, ack=x+1) → client ACK(ack=y+1) → connection ESTABLISHED](/uploads/hobby/hobby-kernel-c/tcp-handshake.svg)
 
 ### Why not two, not four, but three
 
