@@ -75,12 +75,11 @@ _entry:
         call    kmain              # C 커널 시작
 ```
 
-어셈블리가 낯설어도 하는 일은 단순해요 — 줄 단위로 보면:
+명령어를 하나하나 외울 필요는 없어요 — 이 블록이 통째로 하는 일은 **"C로 넘어가기 전 최소 준비"** 하나예요:
 
-- `mv tp, a0` — OpenSBI가 `a0`로 넘겨준 **코어 번호(hartid)** 를 `tp` 레지스터에 보관
-- `csrw sscratch, a0` — 같은 hartid를 트랩 때 되찾으려고 `sscratch`에도 백업 ([5편](/blog/hobby/hobby-kernel-05-smp-multicore-locks)에서 이 한 줄이 버그의 핵심이 돼요)
-- 가운데 다섯 줄 — `sp`(스택 포인터)를 `stacks + (hartid+1)×4096`으로 계산해, 코어마다 **서로 겹치지 않는 자기 4KB 스택의 꼭대기**를 가리키게 함
-- `call kmain` — 여기서부터 **C로 작성된 커널 본체 함수 `kmain`** 으로 점프해요. 스택이 잡혔으니 이제 평범한 C가 돌아갑니다
+1. OpenSBI가 준 **코어 번호(hartid)** 를 챙겨 둔다 (`tp`에 두고, 트랩 때 되찾으려 `sscratch`에도 백업 — [5편](/blog/hobby/hobby-kernel-05-smp-multicore-locks)에서 이게 버그의 핵심이 돼요)
+2. **코어마다 겹치지 않는 자기 스택**을 잡는다 (`sp`를 자기 구간 꼭대기로)
+3. `call kmain`으로 **C로 작성된 커널 본체 함수 `kmain`** 에 진입한다 — 스택이 잡혔으니 이제 평범한 C예요
 
 > **왜 스택부터 잡나?** C 함수는 지역변수와 복귀 주소를 스택에 쌓는데, 부팅 직후엔 그 스택이 아직 없어요. 그래서 C(`kmain`)로 넘어가기 전에 어셈블리로 `sp` 한 줄만 세팅하는 거예요.
 
@@ -488,12 +487,11 @@ _entry:
         call    kmain              # into the C kernel
 ```
 
-Assembly may look unfamiliar, but it does something simple — line by line:
+You don't need to memorize each instruction — as a whole, this block does one thing: **the minimum setup before handing off to C**:
 
-- `mv tp, a0` — keep the **core number (hartid)** OpenSBI passed in `a0` in the `tp` register
-- `csrw sscratch, a0` — also back up that hartid in `sscratch` to recover it on a trap (this one line becomes the crux of a bug in [Part 5](/blog/hobby/hobby-kernel-05-smp-multicore-locks))
-- the middle five lines — compute `sp` (the stack pointer) as `stacks + (hartid+1)×4096`, so each core points at the **top of its own non-overlapping 4KB stack**
-- `call kmain` — jump into **`kmain`, the kernel's main function written in C**; now that a stack exists, ordinary C can run
+1. Stash the **core number (hartid)** OpenSBI handed us (in `tp`, and backed up in `sscratch` to recover on a trap — this becomes the crux of a bug in [Part 5](/blog/hobby/hobby-kernel-05-smp-multicore-locks))
+2. Give each core **its own non-overlapping stack** (point `sp` at the top of its slice)
+3. `call kmain` to enter **`kmain`, the kernel's main function written in C** — now that a stack exists, it's ordinary C from here
 
 > **Why set up the stack first?** C functions push local variables and return addresses onto a stack, but right after boot there is no stack yet. So before handing off to C (`kmain`), we set up `sp` in assembly — just one line.
 
