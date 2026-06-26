@@ -6,7 +6,7 @@
   "image": "/uploads/hobby/hobby-kernel-c/cover.svg",
   "tags": ["C", "OS", "Kernel", "Bare Metal", "RISC-V", "QEMU", "xv6", "Network", "TCP"],
   "category": "project",
-  "date": "2026-06-20",
+  "date": "2026-05-16",
   "github": "https://github.com/dj258255/hobby-kernel",
   "website": "",
   "story": "/blog/hobby/hobby-kernel-00-boot-to-paging",
