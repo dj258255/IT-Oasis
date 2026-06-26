@@ -48,7 +48,7 @@ RISC-V의 좋은 점 하나: `-nographic`으로 돌리면 UART가 그대로 터�
 > CPU에 전원이 들어왔습니다. 그런데 "내 코드"는 어떻게, 어느 모드에서, 어느 주소에서 처음 실행될까요?
 
 x86이라면 BIOS·부트로더의 미로를 통과해야 합니다.
-RISC-V는 그 단계를 **OpenSBI**라는 펌웨어가 표준화해 둬서 훨씬 깔끔해요.
+RISC-V는 그 단계를 **OpenSBI**라는 펌웨어가 표준화해 둬서 훨씬 깔끔해요. (**SBI** = Supervisor Binary Interface — OS와 펌웨어 사이의 표준 호출 규약이고, OpenSBI는 그 구현체예요.)
 QEMU virt를 켜면 OpenSBI가 먼저 **M-mode**(머신 모드, 최고 권한) 셋업을 끝내고, 우리 커널을 `0x8020_0000`으로 **S-mode**(슈퍼바이저 모드)에서 점프시켜요.
 여기서 `0x8020_0000`은 **RAM이 시작하는 `0x8000_0000`에서 2MB 뒤**예요 — 앞쪽 2MB엔 OpenSBI가 자리 잡고, 그 뒤부터가 우리 커널 몫이죠. (RISC-V엔 고정된 "0번지 RAM"이 없고, QEMU virt가 RAM을 `0x8000_0000`부터 배치하기 때문에 이 숫자가 나와요.)
 
@@ -460,7 +460,7 @@ One nice thing about RISC-V: running with `-nographic` sends UART straight to th
 > The CPU just powered on. But how, in which mode, and at which address does *my* code first run?
 
 On x86 you'd thread through a maze of BIOS and bootloader.
-RISC-V standardizes that stage behind a firmware called **OpenSBI**, which is far cleaner.
+RISC-V standardizes that stage behind a firmware called **OpenSBI**, which is far cleaner. (**SBI** = Supervisor Binary Interface — the standard call interface between an OS and firmware; OpenSBI is its implementation.)
 When you start QEMU virt, OpenSBI first finishes the **M-mode** (machine mode, highest privilege) setup, then jumps to our kernel at `0x8020_0000` in **S-mode** (supervisor mode).
 That `0x8020_0000` is **2MB past `0x8000_0000`, where RAM begins** — OpenSBI sits in the first 2MB, and our kernel gets everything after. (RISC-V has no fixed "RAM at address 0"; QEMU virt places RAM starting at `0x8000_0000`, which is where this number comes from.)
 

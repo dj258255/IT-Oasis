@@ -26,7 +26,7 @@ seriesOrder: 7
 이번엔 마지막 조각, **네트워크**예요.
 
 네트워킹은 xv6 랩 중에서도 코드 표면이 가장 넓습니다.
-하드웨어(NIC)부터 이더넷·ARP·IP·UDP까지, 계층을 손으로 직접 쌓아야 비로소 패킷 하나가 나갔다 들어와요.
+하드웨어(**NIC** — Network Interface Card, 네트워크 카드)부터 이더넷·ARP·IP·UDP까지, 계층을 손으로 직접 쌓아야 비로소 패킷 하나가 나갔다 들어와요.
 이 글의 목표는 한 줄로 요약돼요 — **"패킷이 바이트 배열에서 어떻게 조립되고, NIC를 거쳐 나갔다 돌아오는가"를 끝까지 손으로 만져본다.**
 
 그래서 이 글은 네트워크 스택을 **계층 순서대로** 쌓아 올립니다.
@@ -439,7 +439,7 @@ So far the kernel reached all the way to disk — boot, paging, processes, a fil
 Now the last piece: **networking**.
 
 Networking has the widest code surface of all the xv6 labs.
-From the hardware (the NIC) up through Ethernet, ARP, IP, and UDP, you have to stack the layers yourself before a single packet goes out and comes back.
+From the hardware (the **NIC** — Network Interface Card) up through Ethernet, ARP, IP, and UDP, you have to stack the layers yourself before a single packet goes out and comes back.
 The goal of this post fits in one line — **feel, end to end, "how a packet is assembled from a byte array, goes out through the NIC, and returns."**
 
 So this post builds the network stack **in layer order, bottom up**.
