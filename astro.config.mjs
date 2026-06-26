@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import expressiveCode from 'astro-expressive-code';
+import { pluginLineNumbers } from '@expressive-code/plugin-line-numbers';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import remarkGithubAlerts from 'remark-github-blockquote-alert';
@@ -108,6 +109,7 @@ export default defineConfig({
   },
   integrations: [
     expressiveCode({
+      plugins: [pluginLineNumbers()],
       themes: ['catppuccin-mocha', 'catppuccin-latte'],
       themeCssSelector: (theme) =>
         theme.type === 'dark' ? '.dark' : ':root:not(.dark)',
@@ -125,6 +127,8 @@ export default defineConfig({
       },
       defaultProps: {
         wrap: false,
+        // Line numbers on every code block by default
+        showLineNumbers: true,
       },
     }),
   ],
