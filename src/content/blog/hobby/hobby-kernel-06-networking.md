@@ -401,19 +401,7 @@ TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](
 
 그동안 따로따로 설명한 헤더들을, DNS 질의 한 장으로 포개 보면 이래요 — **위가 먼저 나가는 바깥 계층**이에요.
 
-```
-DNS 질의 한 장의 레이아웃 (총 ~50B+)
-
-┌──────────────────────────────┐
-│ Ethernet 헤더 (14B)          │  dst MAC · src MAC · ethertype=0x0800
-├──────────────────────────────┤
-│ IP 헤더 (20B)                │  version·TTL · protocol=17(UDP) · src IP · dst IP · checksum
-├──────────────────────────────┤
-│ UDP 헤더 (8B)                │  src port · dst port · length · checksum
-├──────────────────────────────┤
-│ DNS                          │  header · question(이름 → 타입)
-└──────────────────────────────┘
-```
+![DNS 질의 한 장의 계층 레이아웃 — 바깥부터 Ethernet 헤더(14B), IP 헤더(20B), UDP 헤더(8B), DNS 순으로 포개진다](/uploads/hobby/hobby-kernel-c/packet-layout.svg)
 
 결국 네트워크 스택도 **메모리 위에 바이트를 차곡차곡 쌓는** 과정이에요. 각 계층은 바로 아래 계층을 믿고 **자기 헤더만** 더할 뿐이고, 그렇게 완성된 패킷 한 장이 NIC를 통해 세상으로 나갑니다.
 
@@ -827,19 +815,7 @@ This post stacked the layers **bottom to top**, from the NIC driver up to an app
 
 Folding the headers we explained separately into a single DNS query, it looks like this — **the outer layers go out first**:
 
-```
-Layout of one DNS query (~50B+)
-
-┌──────────────────────────────┐
-│ Ethernet header (14B)        │  dst MAC · src MAC · ethertype=0x0800
-├──────────────────────────────┤
-│ IP header (20B)              │  version·TTL · protocol=17(UDP) · src IP · dst IP · checksum
-├──────────────────────────────┤
-│ UDP header (8B)              │  src port · dst port · length · checksum
-├──────────────────────────────┤
-│ DNS                          │  header · question (name → type)
-└──────────────────────────────┘
-```
+![Layered layout of one DNS query — from the outside in, Ethernet header (14B), IP header (20B), UDP header (8B), then DNS](/uploads/hobby/hobby-kernel-c/packet-layout-en.svg)
 
 In the end, a network stack is also just **stacking bytes in memory, one on top of another**. Each layer trusts the layer right below it and only adds **its own header** — and the one finished packet goes out through the NIC into the world.
 

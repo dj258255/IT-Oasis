@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 320" width="600" height="320" role="img" aria-label="If you reverse the order and check demand first: a read-only shared page holding 42 takes a store fault when the child writes; skipping COW it is mistaken for a heap demand fault, a fresh page is overwritten with zeros, and 42 is lost. So COW must be checked first.">
+  <defs>
+    <style>.mono{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;}</style>
+    <marker id="ah" markerWidth="10" markerHeight="8" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#c9d1d9"/></marker>
+  </defs>
+  <rect width="600" height="320" rx="14" fill="#0b0e14"/>
+  <text x="300" y="32" text-anchor="middle" class="mono" font-size="12.5" fill="#5b6473">Reverse the order (check demand first) — the broken path</text>
+  <g class="mono" text-anchor="middle" font-size="12.5">
+    <text x="300" y="66" fill="#c9d1d9">shared page (value 42, read-only — no PTE_W)</text>
+    <text x="300" y="86" font-size="11.5" fill="#8a94a6">child writes → store fault (scause=15)</text>
+    <line x1="300" y1="92" x2="300" y2="116" stroke="#2a3140" stroke-width="1.6" marker-end="url(#ah)"/>
+    <text x="300" y="136" fill="#dea584">skip COW, mistake it for "a heap address → demand"</text>
+    <line x1="300" y1="144" x2="300" y2="168" stroke="#2a3140" stroke-width="1.6" marker-end="url(#ah)"/>
+    <text x="300" y="188" fill="#c9d1d9">kalloc a fresh page → overwrite with zeros</text>
+    <line x1="300" y1="196" x2="300" y2="220" stroke="#2a3140" stroke-width="1.6" marker-end="url(#ah)"/>
+    <rect x="216" y="230" width="168" height="34" rx="8" fill="#1a1014" stroke="#c66" stroke-width="1.5"/>
+    <text x="300" y="252" fill="#e08" font-size="13">42 is lost  ✗</text>
+    <text x="300" y="290" font-size="12" fill="#5ec46e">→ which is why COW must be checked "first"</text>
+  </g>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" width="720" height="380" role="img" aria-label="TCP 3-way handshake: the client sends SYN(seq=x), the server replies SYN-ACK(seq=y, ack=x+1), the client confirms with ACK(ack=y+1), and the connection is ESTABLISHED.">
+  <defs>
+    <style>.mono{font-family:'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;}</style>
+    <marker id="ah" markerWidth="10" markerHeight="8" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#c9d1d9"/></marker>
+  </defs>
+  <rect width="720" height="380" rx="14" fill="#0b0e14"/>
+  <circle cx="610" cy="70" r="150" fill="#2a7de1" opacity="0.08"/>
+  <circle cx="120" cy="330" r="130" fill="#3a944a" opacity="0.06"/>
+  <text x="360" y="40" text-anchor="middle" class="mono" font-size="14" fill="#5b6473">TCP 3-way handshake</text>
+  <g class="mono" font-size="14.5">
+    <rect x="120" y="56" width="120" height="30" rx="6" fill="#11151d" stroke="#2a3140" stroke-width="1.5"/>
+    <text x="180" y="76" text-anchor="middle" fill="#c9d1d9">client</text>
+    <rect x="480" y="56" width="120" height="30" rx="6" fill="#11151d" stroke="#2a3140" stroke-width="1.5"/>
+    <text x="540" y="76" text-anchor="middle" fill="#c9d1d9">server</text>
+  </g>
+  <line x1="180" y1="90" x2="180" y2="330" stroke="#2a3140" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <line x1="540" y1="90" x2="540" y2="330" stroke="#2a3140" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <text x="360" y="124" text-anchor="middle" class="mono" font-size="13.5"><tspan fill="#dea584">SYN</tspan><tspan fill="#8a94a6" dx="8">seq=x</tspan></text>
+  <line x1="180" y1="134" x2="538" y2="134" stroke="#c9d1d9" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text x="360" y="152" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">“I'll start from x”</text>
+  <text x="360" y="196" text-anchor="middle" class="mono" font-size="13.5"><tspan fill="#3a944a">SYN-ACK</tspan><tspan fill="#8a94a6" dx="8">seq=y, ack=x+1</tspan></text>
+  <line x1="540" y1="206" x2="182" y2="206" stroke="#c9d1d9" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text x="360" y="224" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">“ok, I'm from y — I'll wait for x+1”</text>
+  <text x="360" y="268" text-anchor="middle" class="mono" font-size="13.5"><tspan fill="#dea584">ACK</tspan><tspan fill="#8a94a6" dx="8">ack=y+1</tspan></text>
+  <line x1="180" y1="278" x2="538" y2="278" stroke="#c9d1d9" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text x="360" y="296" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">“got it — I'll wait for your y+1”</text>
+  <line x1="180" y1="322" x2="540" y2="322" stroke="#3a944a" stroke-width="2"/>
+  <rect x="276" y="334" width="168" height="30" rx="15" fill="#11241a" stroke="#3a944a" stroke-width="1.5"/>
+  <text x="360" y="354" text-anchor="middle" class="mono" font-size="13" fill="#5ec46e">connection ESTABLISHED</text>
+</svg>

@@ -412,27 +412,7 @@ nope: command not found
 
 이 한 장이면 fork → exec → wait의 흐름이 한눈에 들어와요.
 
-```
-Shell
- │
- ├─ fork()
- │
- ├───────────────┐
- │               │
-부모            자식
- │               │
-wait()        exec("hello")
- │               │
- │           hello 실행
- │               │
- │           exit()  → ZOMBIE
- │               │
- └──── wakeup ◀──┘
-      │
-   wait 반환(자식 pid)
-      │
-  다음 프롬프트 출력
-```
+![셸이 fork해 부모·자식으로 갈리고, 자식이 exec로 hello가 되어 실행 후 exit(ZOMBIE)하며 부모를 wakeup, 부모 wait가 자식 pid를 반환한 뒤 다음 프롬프트 출력](/uploads/hobby/hobby-kernel-c/fork-exec-wait.svg)
 
 ## 5. 정리
 
@@ -869,27 +849,7 @@ Type `hello` and — the shell forks, the child execs hello from disk to become 
 
 This one picture captures the whole fork → exec → wait flow at a glance.
 
-```
-Shell
- │
- ├─ fork()
- │
- ├───────────────┐
- │               │
-Parent         Child
- │               │
-wait()        exec("hello")
- │               │
- │           run hello
- │               │
- │           exit()  → ZOMBIE
- │               │
- └──── wakeup ◀──┘
-      │
-   wait returns (child pid)
-      │
-  print next prompt
-```
+![The shell forks into parent and child; the child execs hello, runs, exits (ZOMBIE) and wakes the parent, whose wait returns the child pid before printing the next prompt](/uploads/hobby/hobby-kernel-c/fork-exec-wait-en.svg)
 
 ## 5. Wrap-up
 
