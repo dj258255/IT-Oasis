@@ -224,7 +224,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
               )}
             </p>
             <div class="h-px bg-gray-200/80 dark:bg-gray-700/50 mb-5"></div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5">
+            <div class="flex flex-col gap-2.5">
               {relatedPosts.map((rp) => (
                 <a href={`${base}/blog/${rp.id}`} class="related-post-link group flex items-center justify-between gap-4">
                   <p class="text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 truncate" data-ko={rp.data.title} data-en={rp.data.titleEn || rp.data.title}>
