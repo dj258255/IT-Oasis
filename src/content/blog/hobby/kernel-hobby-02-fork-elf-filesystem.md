@@ -11,8 +11,8 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 3
@@ -21,7 +21,7 @@ seriesOrder: 3
 
 ## 0. 들어가며
 
-[2편](/blog/hobby/hobby-kernel-01-usermode-to-processes)에서 유저 프로세스까지 왔어요 — U-mode, 시스템콜, 선점형 스케줄러, 프로세스별 주소공간.
+[2편](/blog/hobby/kernel-hobby-01-usermode-to-processes)에서 유저 프로세스까지 왔어요 — U-mode, 시스템콜, 선점형 스케줄러, 프로세스별 주소공간.
 이번 글은 그 위에 유닉스 프로세스 모델의 나머지와, 완전히 새로운 축인 **저장장치**를 붙입니다.
 
 세 가지 기능을 올리는데, 셋 다 결국 **"무엇을 복사하고, 무엇을 공유하고, 무엇을 그대로 두느냐"**라는 같은 질문을 풉니다.
@@ -471,7 +471,7 @@ xv6를 참고서 삼아 바닥부터 C로 짜며, "OS가 어떻게 도는가"를
 다음으로 더 간다면 유저공간 셸(셸 자체를 디스크의 프로그램으로 내리고 파일에서 `exec`), **쓰기 가능한 파일시스템과 크래시에도 안 깨지는 저널링(트랜잭션·원자성)**, 런타임 `exec()` 시스템콜이 남아 있어요.
 하지만 한 호흡은 여기서.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
@@ -483,7 +483,7 @@ xv6를 참고서 삼아 바닥부터 C로 짜며, "OS가 어떻게 도는가"를
 
 ## 0. Introduction
 
-In [part 2](/blog/hobby/hobby-kernel-01-usermode-to-processes) we got all the way to user processes — U-mode, syscalls, a preemptive scheduler, per-process address spaces.
+In [part 2](/blog/hobby/kernel-hobby-01-usermode-to-processes) we got all the way to user processes — U-mode, syscalls, a preemptive scheduler, per-process address spaces.
 This post builds on that foundation, adding the rest of the Unix process model and a brand-new pillar: **storage**.
 
 We add three features, and all three end up answering the same question: **what do we copy, what do we share, and what do we leave alone?**
@@ -932,7 +932,7 @@ My goal was to write it from the ground up in C using xv6 as a reference, and to
 If I were to go further, what remains is a userspace shell (moving the shell itself onto disk as a program and `exec`-ing it from a file), **a writable filesystem with crash-safe journaling (transactions and atomicity)**, and a runtime `exec()` syscall.
 But this is a good place to pause for breath.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 

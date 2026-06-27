@@ -11,8 +11,8 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 5
@@ -23,7 +23,7 @@ seriesOrder: 5
 
 ## 0. 들어가며
 
-[4편](/blog/hobby/hobby-kernel-03-exec-and-shell)까지 와서 작은 유닉스가 완성됐어요 — 부팅, 페이징, 프로세스, fork/exec/wait, 파일시스템, 유저공간 셸.
+[4편](/blog/hobby/kernel-hobby-03-exec-and-shell)까지 와서 작은 유닉스가 완성됐어요 — 부팅, 페이징, 프로세스, fork/exec/wait, 파일시스템, 유저공간 셸.
 그런데 거기까지의 메모리 관리는 좀 단순했습니다.
 **프로세스를 만들 때 필요한 페이지를 미리 다 잡아주고, 페이지 폴트가 나면 그냥 정보를 찍고 멈췄거든요.**
 
@@ -97,7 +97,7 @@ Boot HART MEDELEG : 0x0000000000f0b509
 
 > **흔한 오해 정정**: "폴트 = 프로그램이 잘못한 것"이라고만 생각하기 쉬운데, 폴트는 둘로 갈려요. **고칠 수 있는 폴트**(우리가 페이지를 만들어주면 되는 것 — 힙·mmap 영역)와 **진짜 폴트**(매핑할 근거가 없는 것 — 널 포인터, 범위 밖). `proc_pagefault`가 1을 반환하면 전자라 재시도하고, 0이면 후자라 멈춰요. 같은 하드웨어 예외가 "정상 동작의 일부"일 수도, "버그"일 수도 있다는 게 demand paging의 출발점입니다.
 
-> **이 글에선 다루지 않는 분기**: 실제 `proc_pagefault` 코드를 보면 맨 앞에 "이미 매핑돼 있는데 쓰기 폴트가 난" 경우를 가로채는 분기가 하나 더 있어요. 그건 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**인데, 연재상 [8편 Copy-on-Write](/blog/hobby/hobby-kernel-07-copy-on-write)의 주제라 여기선 넘어갑니다. 이 글의 두 분기(힙·mmap)는 둘 다 "**매핑이 아예 없던** 주소"를 다루는, 더 단순한 경우예요.
+> **이 글에선 다루지 않는 분기**: 실제 `proc_pagefault` 코드를 보면 맨 앞에 "이미 매핑돼 있는데 쓰기 폴트가 난" 경우를 가로채는 분기가 하나 더 있어요. 그건 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**인데, 연재상 [8편 Copy-on-Write](/blog/hobby/kernel-hobby-07-copy-on-write)의 주제라 여기선 넘어갑니다. 이 글의 두 분기(힙·mmap)는 둘 다 "**매핑이 아예 없던** 주소"를 다루는, 더 단순한 경우예요.
 
 ## 2. demand paging이 풀어야 하는 진짜 문제
 
@@ -298,9 +298,9 @@ PTE에 `PTE_W`를 안 줬어요(`PTE_R | PTE_U`만).
 
 여기서부턴 메모리가 아니라 **저장장치**예요.
 
-> [4편](/blog/hobby/hobby-kernel-03-exec-and-shell)의 파일시스템은 읽기 전용이었어요 — 디스크에 미리 구운 파일을 `ls`/`cat`만 했죠. 셸에서 새 파일을 만들려면, 빈 디스크 공간을 찾아 데이터를 쓰고, "이 파일이 여기 있다"는 사실까지 디스크에 박아야 해요. 무엇을, 어떤 순서로 써야 재부팅 후에도 파일이 살아남을까요?
+> [4편](/blog/hobby/kernel-hobby-03-exec-and-shell)의 파일시스템은 읽기 전용이었어요 — 디스크에 미리 구운 파일을 `ls`/`cat`만 했죠. 셸에서 새 파일을 만들려면, 빈 디스크 공간을 찾아 데이터를 쓰고, "이 파일이 여기 있다"는 사실까지 디스크에 박아야 해요. 무엇을, 어떤 순서로 써야 재부팅 후에도 파일이 살아남을까요?
 
-우리 온디스크 포맷은 단순해요(자세한 구조는 [3편](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)에서).
+우리 온디스크 포맷은 단순해요(자세한 구조는 [3편](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)에서).
 
 ```
 블록 0      슈퍼블록 (magic, 파일 수, next_free)
@@ -380,12 +380,12 @@ hello from a writable fs           ← 디스크에 박혀 살아남았다
 
 - **write-once (생성 시 내용 확정)** — 파일을 만들 때 내용을 다 받아 한 번에 쓰고, 그 뒤엔 수정·추가를 안 해요. 그래서 "빈 블록 회수"나 "단편화" 관리가 필요 없어 코드가 짧습니다. 대신 파일을 **키우거나 고치거나 지울 수 없어요.** 진짜 FS는 파일이 자라고 줄어드니, 빈 블록을 비트맵으로 관리하고 회수해야 해요.
 - **연속 블록 할당 (vs inode/간접 블록)** — 파일을 `start`부터 연속된 블록에 담아요. 순차 읽기가 빠르고 메타데이터가 "시작 블록 + 크기" 둘뿐이라 단순합니다. 대신 **파일 크기가 "연속된 빈 공간"에 묶이고**, 파일들이 생기고 지워지면 중간에 구멍(단편화)이 나서 큰 파일을 못 넣게 돼요. 그래서 유닉스 FS는 **inode + 간접 블록**(데이터 블록의 주소들을 따로 모은 블록)을 써서, 흩어진 블록들로 큰 파일을 구성합니다.
-- **단일 쓰기 — 크래시에 취약** — 파일 생성은 ① 데이터 ② 디렉터리 ③ 슈퍼블록을 **순서대로** 디스크에 써요. 만약 ②와 ③ 사이에 전원이 나가면? 디렉터리엔 파일이 있는데 슈퍼블록의 `next_free`는 안 갱신돼서 — **파일시스템이 어긋나요.** 이 묶음을 "전부 적용되거나 전혀 안 된 것처럼" 원자화하는 게 **저널링**인데, 그건 연재상 [9편 저널링 파일시스템](/blog/hobby/hobby-kernel-08-journaling-filesystem)의 주제예요. 이 글의 FS는 그 앞 단계 — **단일 쓰기(write-once)** 수준이고, 우린 단일 사용자·학습용이라 이 위험을 감수하고 단순함을 택했습니다.
+- **단일 쓰기 — 크래시에 취약** — 파일 생성은 ① 데이터 ② 디렉터리 ③ 슈퍼블록을 **순서대로** 디스크에 써요. 만약 ②와 ③ 사이에 전원이 나가면? 디렉터리엔 파일이 있는데 슈퍼블록의 `next_free`는 안 갱신돼서 — **파일시스템이 어긋나요.** 이 묶음을 "전부 적용되거나 전혀 안 된 것처럼" 원자화하는 게 **저널링**인데, 그건 연재상 [9편 저널링 파일시스템](/blog/hobby/kernel-hobby-08-journaling-filesystem)의 주제예요. 이 글의 FS는 그 앞 단계 — **단일 쓰기(write-once)** 수준이고, 우린 단일 사용자·학습용이라 이 위험을 감수하고 단순함을 택했습니다.
 
 세 가지 다 "단순함 ↔ 견고함/유연함"의 트레이드오프예요.
 학습 커널에선 단순함이 이기지만, 어떤 복잡함을 *왜* 감수해야 하는지를 알고 포기하는 것과, 몰라서 안 하는 건 전혀 달라요.
 
-> **핵심 교훈**: "쓰기 가능"은 한 번에 완성되지 않아요. 이 글은 **빈 블록 할당 + 데이터 쓰기 + 메타데이터 갱신 → 재부팅 영속**이라는 가장 기본 골격(write-once)까지입니다. 그 쓰기를 **트랜잭션으로 원자화**해서 크래시에도 깨지지 않게 하는 건 [9편 저널링 파일시스템](/blog/hobby/hobby-kernel-08-journaling-filesystem)에서 이어집니다 — 트랜잭션의 ACID와 정확히 같은 발상이에요.
+> **핵심 교훈**: "쓰기 가능"은 한 번에 완성되지 않아요. 이 글은 **빈 블록 할당 + 데이터 쓰기 + 메타데이터 갱신 → 재부팅 영속**이라는 가장 기본 골격(write-once)까지입니다. 그 쓰기를 **트랜잭션으로 원자화**해서 크래시에도 깨지지 않게 하는 건 [9편 저널링 파일시스템](/blog/hobby/kernel-hobby-08-journaling-filesystem)에서 이어집니다 — 트랜잭션의 ACID와 정확히 같은 발상이에요.
 
 ## 정리
 
@@ -400,13 +400,13 @@ hello from a writable fs           ← 디스크에 박혀 살아남았다
 
 **demand paging도 mmap도 결국 같은 페이지 폴트 핸들러의 두 분기**예요 — 둘 다 "빈 페이지를 하나 만들어 매핑한다"는 똑같은 일을 하고, **차이는 그 페이지를 무엇으로 채우느냐 하나뿐**입니다(힙은 `zero`, mmap은 `fs_read_page`). 전혀 다른 기술처럼 보이지만, 커널 입장에선 한 핸들러의 분기 둘이죠.
 
-![페이지 폴트가 proc_pagefault 한 핸들러의 세 분기로 갈린다: 힙=kalloc+zero, mmap=kalloc+fs_read_page(읽기전용), 그 외=0 반환 kill. 1 반환 시 같은 명령 재실행](/uploads/hobby/hobby-kernel-c/pagefault-branch.svg)
+![페이지 폴트가 proc_pagefault 한 핸들러의 세 분기로 갈린다: 힙=kalloc+zero, mmap=kalloc+fs_read_page(읽기전용), 그 외=0 반환 kill. 1 반환 시 같은 명령 재실행](/uploads/hobby/kernel-hobby-c/pagefault-branch.svg)
 
 그리고 매 단계가 *일부러* 단순한 길을 골랐어요. 정석을 몰라서가 아니라 알고 포기한 것 — 쓰기 가능 mmap, COW, 저널링은 다음 글들의 몫으로 남겨뒀습니다.
 
-> 가상메모리와 파일시스템은 여기서 끝이 아니에요. 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**는 [8편](/blog/hobby/hobby-kernel-07-copy-on-write), 파일 쓰기를 트랜잭션으로 원자화하는 **저널링**은 [9편](/blog/hobby/hobby-kernel-08-journaling-filesystem)에서 이어집니다.
+> 가상메모리와 파일시스템은 여기서 끝이 아니에요. 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**는 [8편](/blog/hobby/kernel-hobby-07-copy-on-write), 파일 쓰기를 트랜잭션으로 원자화하는 **저널링**은 [9편](/blog/hobby/kernel-hobby-08-journaling-filesystem)에서 이어집니다.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
@@ -423,7 +423,7 @@ hello from a writable fs           ← 디스크에 박혀 살아남았다
 
 ## 0. Introduction
 
-By [Part 4](/blog/hobby/hobby-kernel-03-exec-and-shell) we had a small Unix up and running — boot, paging, processes, fork/exec/wait, a filesystem, and a user-space shell.
+By [Part 4](/blog/hobby/kernel-hobby-03-exec-and-shell) we had a small Unix up and running — boot, paging, processes, fork/exec/wait, a filesystem, and a user-space shell.
 But the memory management up to that point was fairly naive.
 **When a process was created, we allocated every page it might need up front, and when a page fault occurred we simply printed it and stopped.**
 
@@ -497,7 +497,7 @@ The user program doesn't even know it briefly stalled.
 
 > **Common misconception fix**: it's easy to think "fault = the program did something wrong," but faults split in two. A **fixable fault** (one we just need to make a page for — the heap/mmap regions) and a **real fault** (one with no basis to map — a null pointer, out of range). When `proc_pagefault` returns 1 it's the former, so we retry; when it returns 0 it's the latter, so we halt. The very starting point of demand paging is that the *same* hardware exception can be "part of normal operation" or "a bug."
 
-> **A branch this post does not cover**: the actual `proc_pagefault` code has one more branch up front that catches the case where "a page is *already* mapped but a write fault occurred." That's **copy-on-write** — copying a shared physical page on write — and it's the subject of [Part 8: Copy-on-Write](/blog/hobby/hobby-kernel-07-copy-on-write), so we skip it here. This post's two branches (heap and mmap) both handle a "**not-yet-mapped** address," the simpler case.
+> **A branch this post does not cover**: the actual `proc_pagefault` code has one more branch up front that catches the case where "a page is *already* mapped but a write fault occurred." That's **copy-on-write** — copying a shared physical page on write — and it's the subject of [Part 8: Copy-on-Write](/blog/hobby/kernel-hobby-07-copy-on-write), so we skip it here. This post's two branches (heap and mmap) both handle a "**not-yet-mapped** address," the simpler case.
 
 ## 2. The Real Problem demand paging Must Solve
 
@@ -698,9 +698,9 @@ Read-only avoids all of that while still showing the heart of mmap (loading a fi
 
 From here on it's not memory but **storage**.
 
-> The filesystem from [Part 4](/blog/hobby/hobby-kernel-03-exec-and-shell) was read-only — we could only `ls`/`cat` files pre-baked onto the disk. To create a new file from the shell, we have to find free disk space, write the data, and nail down the fact that "this file is here" onto the disk too. What do we write, and in what order, so the file survives a reboot?
+> The filesystem from [Part 4](/blog/hobby/kernel-hobby-03-exec-and-shell) was read-only — we could only `ls`/`cat` files pre-baked onto the disk. To create a new file from the shell, we have to find free disk space, write the data, and nail down the fact that "this file is here" onto the disk too. What do we write, and in what order, so the file survives a reboot?
 
-Our on-disk format is simple (for the detailed structure, see [Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)).
+Our on-disk format is simple (for the detailed structure, see [Part 3](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)).
 
 ```
 block 0      superblock (magic, file count, next_free)
@@ -778,12 +778,12 @@ Each one tells you, in reverse, why a real filesystem (e.g. ext4, xv6's fs) is m
 
 - **write-once (contents fixed at creation)** — when a file is created we take all its contents and write them at once, and after that we don't modify or append. So we need no "free block reclamation" or "fragmentation" management, which keeps the code short. In exchange, you **can't grow, edit, or delete a file.** A real FS has files grow and shrink, so it has to manage free blocks with a bitmap and reclaim them.
 - **contiguous block allocation (vs inode/indirect blocks)** — we store a file in contiguous blocks starting from `start`. Sequential reads are fast and the metadata is just two things, "start block + size," so it's simple. In exchange, **a file's size is tied to "contiguous free space,"** and as files are created and deleted, holes (fragmentation) open up in the middle so large files no longer fit. That's why Unix FSes use **inode + indirect blocks** (a block that separately gathers the addresses of data blocks) to compose large files out of scattered blocks.
-- **single write — fragile to crashes** — file creation writes ① data ② directory ③ superblock to disk **in order**. What if power is lost between ② and ③? The directory has the file but the superblock's `next_free` isn't updated — so **the filesystem goes inconsistent.** Atomizing this bundle so it's "all applied or as if none was" is **journaling**, and that's the subject of [Part 9: Journaling Filesystem](/blog/hobby/hobby-kernel-08-journaling-filesystem). This post's FS is the step before it — the **single-write (write-once)** level — and being single-user and for learning, we accepted this risk and chose simplicity.
+- **single write — fragile to crashes** — file creation writes ① data ② directory ③ superblock to disk **in order**. What if power is lost between ② and ③? The directory has the file but the superblock's `next_free` isn't updated — so **the filesystem goes inconsistent.** Atomizing this bundle so it's "all applied or as if none was" is **journaling**, and that's the subject of [Part 9: Journaling Filesystem](/blog/hobby/kernel-hobby-08-journaling-filesystem). This post's FS is the step before it — the **single-write (write-once)** level — and being single-user and for learning, we accepted this risk and chose simplicity.
 
 All three are "simplicity ↔ robustness/flexibility" trade-offs.
 In a teaching kernel simplicity wins, but knowing *why* you'd take on a given complexity and choosing to forgo it is entirely different from not doing it because you didn't know.
 
-> **Key takeaway**: "writable" isn't finished in one go. This post goes only as far as the most basic skeleton (write-once): **free-block allocation + data write + metadata update → survives a reboot.** Atomizing that write into a **transaction** so it can't break under a crash continues in [Part 9: Journaling Filesystem](/blog/hobby/hobby-kernel-08-journaling-filesystem) — it's exactly the same idea as a transaction's ACID.
+> **Key takeaway**: "writable" isn't finished in one go. This post goes only as far as the most basic skeleton (write-once): **free-block allocation + data write + metadata update → survives a reboot.** Atomizing that write into a **transaction** so it can't break under a crash continues in [Part 9: Journaling Filesystem](/blog/hobby/kernel-hobby-08-journaling-filesystem) — it's exactly the same idea as a transaction's ACID.
 
 ## Wrap-up
 
@@ -798,13 +798,13 @@ The common thread is **"only when needed, only as much as needed"** — neither 
 
 **Demand paging and mmap are really two branches of the same page-fault handler** — both do the identical thing, "make one empty page and map it," and the **only difference is what fills that page** (the heap uses `zero`, mmap uses `fs_read_page`). They look like entirely different techniques, but to the kernel they're two branches of one handler.
 
-![A page fault splits into three branches of one proc_pagefault handler — heap (kalloc+zero), mmap (kalloc+fs_read_page, read-only), else (return 0 = kill); returning 1 re-runs the instruction](/uploads/hobby/hobby-kernel-c/pagefault-branch-en.svg)
+![A page fault splits into three branches of one proc_pagefault handler — heap (kalloc+zero), mmap (kalloc+fs_read_page, read-only), else (return 0 = kill); returning 1 re-runs the instruction](/uploads/hobby/kernel-hobby-c/pagefault-branch-en.svg)
 
 And at every step we *deliberately* chose the simple path. Not out of ignorance but knowingly forgone — writable mmap, COW, and journaling are left for later posts.
 
-> Virtual memory and the filesystem don't end here. Sharing a physical page and copying only on write — **copy-on-write** — is [Part 8](/blog/hobby/hobby-kernel-07-copy-on-write); atomizing file writes into transactions — **journaling** — is [Part 9](/blog/hobby/hobby-kernel-08-journaling-filesystem).
+> Virtual memory and the filesystem don't end here. Sharing a physical page and copying only on write — **copy-on-write** — is [Part 8](/blog/hobby/kernel-hobby-07-copy-on-write); atomizing file writes into transactions — **journaling** — is [Part 9](/blog/hobby/kernel-hobby-08-journaling-filesystem).
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 

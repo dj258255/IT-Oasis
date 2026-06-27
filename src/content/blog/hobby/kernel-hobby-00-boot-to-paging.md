@@ -11,15 +11,15 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 1
 ---
 
 
-![hobby-kernel 유저공간 셸 데모](/uploads/hobby/hobby-kernel-c/demo.svg)
+![hobby-kernel 유저공간 셸 데모](/uploads/hobby/kernel-hobby-c/demo.svg)
 
 *바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 1편 — 부팅과 페이징(가상메모리).*
 
@@ -37,7 +37,7 @@ seriesOrder: 1
 
 이 연재는 **xv6의 학습 랩을 직접 구현해온 기록**이에요.
 부팅·페이징부터 프로세스·시스템콜·파일시스템, 그 위의 demand paging·mmap·copy-on-write, 멀티코어와 네트워크(UDP·TCP), 유저 스레드까지 — OS의 핵심을 한 조각씩 손으로 만들어 봐요.
-(전체 진행 상황과 앞으로의 주제는 [저장소 README의 로드맵](https://github.com/dj258255/hobby-kernel#readme)에 정리돼 있어요.)
+(전체 진행 상황과 앞으로의 주제는 [저장소 README의 로드맵](https://github.com/dj258255/kernel-hobby#readme)에 정리돼 있어요.)
 
 RISC-V의 좋은 점 하나: `-nographic`으로 돌리면 UART가 그대로 터미널 stdout으로 나와서, 스크린샷 없이 출력을 바로 확인할 수 있어요.
 
@@ -77,7 +77,7 @@ _entry:
 
 명령어를 하나하나 외울 필요는 없어요 — 이 블록이 통째로 하는 일은 **"C로 넘어가기 전 최소 준비"** 하나예요:
 
-1. OpenSBI가 준 **코어 번호(hartid)** 를 챙겨 둔다 (`tp`에 두고, 트랩 때 되찾으려 `sscratch`에도 백업 — [5편](/blog/hobby/hobby-kernel-05-smp-multicore-locks)에서 이게 버그의 핵심이 돼요)
+1. OpenSBI가 준 **코어 번호(hartid)** 를 챙겨 둔다 (`tp`에 두고, 트랩 때 되찾으려 `sscratch`에도 백업 — [5편](/blog/hobby/kernel-hobby-05-smp-multicore-locks)에서 이게 버그의 핵심이 돼요)
 2. **코어마다 겹치지 않는 자기 스택**을 잡는다 (`sp`를 자기 구간 꼭대기로)
 3. `call kmain`으로 **C로 작성된 커널 본체 함수 `kmain`** 에 진입한다 — 스택이 잡혔으니 이제 평범한 C예요
 
@@ -251,7 +251,7 @@ void *kalloc(void) {
 초기화(`kinit`)는 `end`부터 `PHYSTOP`까지 4KB씩 순회하며 전부 `kfree`로 free list에 밀어 넣는 것뿐이에요.
 `kalloc`/`kfree`가 각각 O(1)인 이유가 여기 있습니다 — 그냥 리스트 머리에서 떼고 머리에 붙이니까요.
 
-> **흔한 오해 정정**: `kfree`에 `refcnt`(참조 카운트)가 보여서 "벌써 가비지 컬렉션이냐?"고 놀랄 수 있는데, 아니에요. 이건 한 물리 페이지를 여러 주소공간이 공유하는 **copy-on-write**([8편](/blog/hobby/hobby-kernel-07-copy-on-write))를 위한 장치라, 공유 중인 페이지(`refcnt > 1`)는 반납하지 않고 카운트만 깎습니다. 이 글 범위에선 모든 페이지의 `refcnt`가 1이라 평범한 free list처럼 동작해요.
+> **흔한 오해 정정**: `kfree`에 `refcnt`(참조 카운트)가 보여서 "벌써 가비지 컬렉션이냐?"고 놀랄 수 있는데, 아니에요. 이건 한 물리 페이지를 여러 주소공간이 공유하는 **copy-on-write**([8편](/blog/hobby/kernel-hobby-07-copy-on-write))를 위한 장치라, 공유 중인 페이지(`refcnt > 1`)는 반납하지 않고 카운트만 깎습니다. 이 글 범위에선 모든 페이지의 `refcnt`가 1이라 평범한 free list처럼 동작해요.
 
 ```
 hobby> mem
@@ -350,7 +350,7 @@ static pte_t *walk(pagetable_t pagetable, uint64 va, int alloc) {
 
 ### 이 글에선 — 커널 식별 매핑
 
-> 가상메모리의 진짜 힘(프로세스마다 다른 번역)은 유저 프로세스가 생기는 [다음 글](/blog/hobby/hobby-kernel-01-usermode-to-processes)부터예요. 그럼 이번 글에선 페이지 테이블을 어디에 쓸까요?
+> 가상메모리의 진짜 힘(프로세스마다 다른 번역)은 유저 프로세스가 생기는 [다음 글](/blog/hobby/kernel-hobby-01-usermode-to-processes)부터예요. 그럼 이번 글에선 페이지 테이블을 어디에 쓸까요?
 
 이번 글에선 **커널 자신**을 위한 페이지 테이블 한 장만 만들어요.
 그런데 여기엔 함정이 있어요 — 페이징을 켜는 순간부터 모든 주소가 번역되는데, 지금 실행 중인 커널 코드의 주소도 갑자기 바뀌면 그다음 명령을 못 찾아 죽어요.
@@ -403,7 +403,7 @@ free pages: 32169  (~125 MB free)
 - **페이징** = 그 번역을 페이지 단위로 하는 *메커니즘*
 - **가상메모리** = 페이징으로 얻는 *추상화*(격리·보호·유연성)
 
-> 가상메모리는 한 글로 끝나지 않아요. 프로세스마다 **다른 번역 표**를 줘서 격리하는 건 [2편](/blog/hobby/hobby-kernel-01-usermode-to-processes), 페이지를 미리 안 주고 접근할 때 만드는 **demand paging·mmap**은 [5편](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**는 [8편](/blog/hobby/hobby-kernel-07-copy-on-write)에서 이어집니다.
+> 가상메모리는 한 글로 끝나지 않아요. 프로세스마다 **다른 번역 표**를 줘서 격리하는 건 [2편](/blog/hobby/kernel-hobby-01-usermode-to-processes), 페이지를 미리 안 주고 접근할 때 만드는 **demand paging·mmap**은 [5편](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs), 같은 물리 페이지를 공유하다 쓸 때 복제하는 **copy-on-write**는 [8편](/blog/hobby/kernel-hobby-07-copy-on-write)에서 이어집니다.
 
 ## 정리
 
@@ -418,7 +418,7 @@ free pages: 32169  (~125 MB free)
 순서가 핵심이에요 — **앞 절에서 만든 것이 다음 절의 기반이 됩니다.** UART는 디버깅을 가능하게 하고, 트랩은 비동기를 처리하며, 할당기는 페이지 테이블을 만들고, 그 위에서 비로소 가상메모리가 동작해요. 페이징이 맨 마지막에 오는 건, 그 앞의 모든 것(특히 4절의 할당기)을 전제로 깔기 때문입니다.
 `make run`으로 직접 부팅해 명령어를 칠 수 있는 커널이 됐고, 다음 글에서는 OS를 OS답게 만드는 경계 — **유저모드와 시스템콜**로 들어가요.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 > 다음 글: **유저모드 + 시스템콜 (예정)**
 
 ## 참고 (1차 자료 우선)
@@ -431,7 +431,7 @@ free pages: 32169  (~125 MB free)
 
 <!-- EN -->
 
-![hobby-kernel userspace shell demo](/uploads/hobby/hobby-kernel-c/demo.svg)
+![hobby-kernel userspace shell demo](/uploads/hobby/kernel-hobby-c/demo.svg)
 
 *A RISC-V toy kernel built from scratch — a blog series. This is Part 1: booting and paging (virtual memory).*
 
@@ -449,7 +449,7 @@ We stack in the order **output → traps/timer → input → page allocator → 
 
 This series is a **record of implementing the xv6 learning labs from scratch**.
 From boot and paging through processes, system calls, and a filesystem, then demand paging, mmap, copy-on-write, multicore, networking (UDP·TCP), and user threads — building the core of an OS one piece at a time.
-(Overall progress and upcoming topics are tracked in the [repo's README roadmap](https://github.com/dj258255/hobby-kernel#readme).)
+(Overall progress and upcoming topics are tracked in the [repo's README roadmap](https://github.com/dj258255/kernel-hobby#readme).)
 
 One nice thing about RISC-V: running with `-nographic` sends UART straight to the terminal's stdout, so you can check the output directly without screenshots.
 
@@ -489,7 +489,7 @@ _entry:
 
 You don't need to memorize each instruction — as a whole, this block does one thing: **the minimum setup before handing off to C**:
 
-1. Stash the **core number (hartid)** OpenSBI handed us (in `tp`, and backed up in `sscratch` to recover on a trap — this becomes the crux of a bug in [Part 5](/blog/hobby/hobby-kernel-05-smp-multicore-locks))
+1. Stash the **core number (hartid)** OpenSBI handed us (in `tp`, and backed up in `sscratch` to recover on a trap — this becomes the crux of a bug in [Part 5](/blog/hobby/kernel-hobby-05-smp-multicore-locks))
 2. Give each core **its own non-overlapping stack** (point `sp` at the top of its slice)
 3. `call kmain` to enter **`kmain`, the kernel's main function written in C** — now that a stack exists, it's ordinary C from here
 
@@ -663,7 +663,7 @@ void *kalloc(void) {
 Initialization (`kinit`) is just walking from `end` to `PHYSTOP` in 4KB steps, pushing each into the free list with `kfree`.
 That's why `kalloc`/`kfree` are each O(1) — pop from the head, push onto the head.
 
-> **Common misconception fix**: seeing `refcnt` (a reference count) in `kfree` might make you think "garbage collection already?" — it's not. It's machinery for **copy-on-write** ([Part 8](/blog/hobby/hobby-kernel-07-copy-on-write)), where one physical page is shared by several address spaces, so a shared page (`refcnt > 1`) isn't returned — only its count is decremented. Within this post's scope every page has `refcnt` of 1, so it behaves like a plain free list.
+> **Common misconception fix**: seeing `refcnt` (a reference count) in `kfree` might make you think "garbage collection already?" — it's not. It's machinery for **copy-on-write** ([Part 8](/blog/hobby/kernel-hobby-07-copy-on-write)), where one physical page is shared by several address spaces, so a shared page (`refcnt > 1`) isn't returned — only its count is decremented. Within this post's scope every page has `refcnt` of 1, so it behaves like a plain free list.
 
 ```
 hobby> mem
@@ -762,7 +762,7 @@ This `walk()` is the **first place §4's physical page allocator does real work*
 
 ### In this post — kernel identity mapping
 
-> Virtual memory's real power (a different translation per process) starts in the [next post](/blog/hobby/hobby-kernel-01-usermode-to-processes), once user processes exist. So what do we use a page table for in this post?
+> Virtual memory's real power (a different translation per process) starts in the [next post](/blog/hobby/kernel-hobby-01-usermode-to-processes), once user processes exist. So what do we use a page table for in this post?
 
 Here we build just one page table, for the **kernel itself**.
 And there's a trap: the moment paging turns on, *every* address gets translated — including the address of the kernel code currently running. If that suddenly changes, the next instruction can't be found and we die.
@@ -815,7 +815,7 @@ The allocator from §4 just did its real work in §5 — the two sections interl
 - **Paging** = the *mechanism* that does that translation per page
 - **Virtual memory** = the *abstraction* paging buys you (isolation, protection, flexibility)
 
-> Virtual memory doesn't end in one post. Isolating processes by giving each a **different translation table** is [Part 2](/blog/hobby/hobby-kernel-01-usermode-to-processes); not handing pages out until they're touched (**demand paging / mmap**) is [Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs); sharing a physical page and copying only on write (**copy-on-write**) is [Part 8](/blog/hobby/hobby-kernel-07-copy-on-write).
+> Virtual memory doesn't end in one post. Isolating processes by giving each a **different translation table** is [Part 2](/blog/hobby/kernel-hobby-01-usermode-to-processes); not handing pages out until they're touched (**demand paging / mmap**) is [Part 5](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs); sharing a physical page and copying only on write (**copy-on-write**) is [Part 8](/blog/hobby/kernel-hobby-07-copy-on-write).
 
 ## Wrap-up
 
@@ -830,7 +830,7 @@ This post took a freshly powered CPU and raised the skeleton up to an **interact
 The order is the point — **each section becomes the ground the next one stands on.** UART makes debugging possible, traps handle the asynchronous, the allocator builds page tables, and only on top of all that does virtual memory work. Paging comes last because it stands on everything before it (especially §4's allocator).
 With `make run` it boots into a kernel where you can type commands, and in the next post we get into the boundary that makes an OS an OS — **user mode and system calls**.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 > Next post: **User mode + system calls (coming soon)**
 
 ## References (Primary Sources First)

@@ -11,8 +11,8 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 4
@@ -21,7 +21,7 @@ seriesOrder: 4
 
 ## 0. 들어가며
 
-[3편](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)에서 fork, ELF 로더, 파일시스템까지 왔어요.
+[3편](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)에서 fork, ELF 로더, 파일시스템까지 왔어요.
 이제 마지막 조각 두 개로 "작은 유닉스"를 완성합니다.
 
 1. **런타임 exec()** — 실행 중인 프로세스를 디스크의 다른 프로그램으로 교체
@@ -412,7 +412,7 @@ nope: command not found
 
 이 한 장이면 fork → exec → wait의 흐름이 한눈에 들어와요.
 
-![셸이 fork해 부모·자식으로 갈리고, 자식이 exec로 hello가 되어 실행 후 exit(ZOMBIE)하며 부모를 wakeup, 부모 wait가 자식 pid를 반환한 뒤 다음 프롬프트 출력](/uploads/hobby/hobby-kernel-c/fork-exec-wait.svg)
+![셸이 fork해 부모·자식으로 갈리고, 자식이 exec로 hello가 되어 실행 후 exit(ZOMBIE)하며 부모를 wakeup, 부모 wait가 자식 pid를 반환한 뒤 다음 프롬프트 출력](/uploads/hobby/kernel-hobby-c/fork-exec-wait.svg)
 
 ## 5. 정리
 
@@ -445,7 +445,7 @@ nope: command not found
 새 핵심 기능이 아니라 다듬기예요.
 4편에 걸친 연재는 여기서 매듭짓습니다.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
@@ -458,7 +458,7 @@ nope: command not found
 
 ## 0. Introduction
 
-In [Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem) we got all the way to fork, an ELF loader, and a filesystem.
+In [Part 3](/blog/hobby/kernel-hobby-02-fork-elf-filesystem) we got all the way to fork, an ELF loader, and a filesystem.
 Now two final pieces complete our "small Unix."
 
 1. **Runtime exec()** — replacing a running process with a different program from disk
@@ -849,7 +849,7 @@ Type `hello` and — the shell forks, the child execs hello from disk to become 
 
 This one picture captures the whole fork → exec → wait flow at a glance.
 
-![The shell forks into parent and child; the child execs hello, runs, exits (ZOMBIE) and wakes the parent, whose wait returns the child pid before printing the next prompt](/uploads/hobby/hobby-kernel-c/fork-exec-wait-en.svg)
+![The shell forks into parent and child; the child execs hello, runs, exits (ZOMBIE) and wakes the parent, whose wait returns the child pid before printing the next prompt](/uploads/hobby/kernel-hobby-c/fork-exec-wait-en.svg)
 
 ## 5. Wrap-up
 
@@ -882,7 +882,7 @@ What's left is all refinement — a writable filesystem, inodes, full resource r
 Not new core features, just polish.
 This four-part series wraps up here.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 

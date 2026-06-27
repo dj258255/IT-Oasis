@@ -11,8 +11,8 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 6
@@ -24,7 +24,7 @@ seriesOrder: 6
 ## 0. 들어가며
 
 지금까지의 커널은 **코어 하나**를 전제로 짜였어요.
-프로세스가 동시에 도는 것처럼 보여도, 사실은 한 코어가 빠르게 번갈아 돌린 거였죠([4편의 선점형 스케줄러](/blog/hobby/hobby-kernel-03-exec-and-shell)).
+프로세스가 동시에 도는 것처럼 보여도, 사실은 한 코어가 빠르게 번갈아 돌린 거였죠([4편의 선점형 스케줄러](/blog/hobby/kernel-hobby-03-exec-and-shell)).
 타이머가 울릴 때마다 `yield()`로 실행 중인 프로세스를 갈아끼웠으니까, **시분할(time-sharing)** 이었지 진짜 병렬이 아니었어요.
 
 이번 글의 주제는 **진짜 동시 실행** — 여러 코어(RISC-V에선 **hart** — "HARdware Thread", CPU 코어 하나)가 같은 커널을 같은 순간에 함께 도는 거예요.
@@ -536,7 +536,7 @@ $ hello
 
 지금까지 만든 건 부팅·유저 프로그램 실행·시스템콜·가상메모리·선점형 스케줄링, 그리고 이제 SMP까지 갖춘 **작은 유닉스 계열 커널**이에요. 파일시스템 확장과 네트워크처럼 갈 길은 남았지만, **운영체제의 핵심 골격은 이제 거의 다 손으로 직접 만든 셈**이에요 — "OS가 어떻게 도는가"를 손으로 만져 이해하는 이 여정이 여기서 한 매듭을 짓습니다.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
@@ -553,7 +553,7 @@ $ hello
 ## 0. Introduction
 
 Up to now the kernel assumed a **single core**.
-Processes looked concurrent, but really one core was switching between them quickly ([the preemptive scheduler in Part 4](/blog/hobby/hobby-kernel-03-exec-and-shell)).
+Processes looked concurrent, but really one core was switching between them quickly ([the preemptive scheduler in Part 4](/blog/hobby/kernel-hobby-03-exec-and-shell)).
 Every timer tick called `yield()` to swap out the running process — so it was **time-sharing**, not true parallelism.
 
 This post is about **true concurrent execution** — several cores (**harts** in RISC-V — "HARdware Thread", a single CPU core) running the same kernel at the very same instant.
@@ -1065,7 +1065,7 @@ User threads (uthread) are on hold due to our single-page program model, and the
 
 What we've built is a **small Unix-like kernel** with boot, user-program execution, system calls, virtual memory, preemptive scheduling, and now SMP. There's still road ahead — a richer filesystem, networking — but **the core skeleton of an operating system is now almost entirely hand-built.** From boot to multicore, this hands-on journey of understanding "how an OS actually runs" reaches a milestone here.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 
