@@ -118,6 +118,7 @@ export default defineConfig({
         borderColor: 'rgba(100, 160, 200, 0.2)',
         codePaddingBlock: '1.25rem',
         codePaddingInline: '1.5rem',
+        codeFontFamily: "'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
         codeFontSize: '0.85rem',
         codeLineHeight: '1.75',
         frames: {
