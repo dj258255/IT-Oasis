@@ -517,7 +517,7 @@ UART 락을 항상 **가장 안쪽(leaf)** — 그 락을 쥔 동안엔 다른 �
 
 ```
 [ok] boot hart 0 up; waking other cores + starting shell
-hobby-kernel userspace shell. try: ls, cat motd.txt, hello
+kernel-hobby userspace shell. try: ls, cat motd.txt, hello
 $ [ok] hart 2 online -> joining scheduler
 [ok] hart 1 online -> joining scheduler
 $ hello
@@ -1046,7 +1046,7 @@ Now booting with `-smp 3` runs **3 cores pulling processes from a shared proctab
 
 ```
 [ok] boot hart 0 up; waking other cores + starting shell
-hobby-kernel userspace shell. try: ls, cat motd.txt, hello
+kernel-hobby userspace shell. try: ls, cat motd.txt, hello
 $ [ok] hart 2 online -> joining scheduler
 [ok] hart 1 online -> joining scheduler
 $ hello

@@ -12,12 +12,12 @@
   <circle cx="70" cy="70" r="6" fill="#ff5f56"/>
   <circle cx="90" cy="70" r="6" fill="#ffbd2e"/>
   <circle cx="110" cy="70" r="6" fill="#27c93f"/>
-  <text x="360" y="74" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">hobby-kernel — qemu riscv64</text>
+  <text x="360" y="74" text-anchor="middle" class="mono" font-size="12" fill="#5b6473">kernel-hobby — qemu riscv64</text>
   <line x1="44" y1="92" x2="676" y2="92" stroke="#2a3140" stroke-width="1.5"/>
 
   <g class="mono" font-size="14.5">
     <text x="66" y="122" fill="#5b6473">OpenSBI v1.5.1  →  S-mode</text>
-    <text x="66" y="148" fill="#c9d1d9">hobby-kernel v0.1  (C / RISC-V)</text>
+    <text x="66" y="148" fill="#c9d1d9">kernel-hobby v0.1  (C / RISC-V)</text>
     <text x="66" y="170" fill="#3a944a">[ok]<tspan fill="#8a94a6" dx="6">page allocator: 32238 free pages</tspan></text>
     <text x="66" y="200" fill="#dea584">hobby&gt;<tspan fill="#c9d1d9" dx="8">help</tspan></text>
     <text x="66" y="222" fill="#8a94a6">commands: help, about, uptime, mem, clear ...</text>

@@ -19,7 +19,7 @@ seriesOrder: 1
 ---
 
 
-![hobby-kernel 유저공간 셸 데모](/uploads/hobby/kernel-hobby-c/demo.svg)
+![kernel-hobby 유저공간 셸 데모](/uploads/hobby/kernel-hobby-c/demo.svg)
 
 *바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 1편 — 부팅과 페이징(가상메모리).*
 
@@ -102,7 +102,7 @@ void uart_putc(char c) {
 
 ```
 ========================================
-  hobby-kernel v0.1  (C / RISC-V)
+  kernel-hobby v0.1  (C / RISC-V)
   booted in S-mode under OpenSBI
 ========================================
 ```
@@ -431,7 +431,7 @@ free pages: 32169  (~125 MB free)
 
 <!-- EN -->
 
-![hobby-kernel userspace shell demo](/uploads/hobby/kernel-hobby-c/demo.svg)
+![kernel-hobby userspace shell demo](/uploads/hobby/kernel-hobby-c/demo.svg)
 
 *A RISC-V toy kernel built from scratch — a blog series. This is Part 1: booting and paging (virtual memory).*
 
@@ -514,7 +514,7 @@ void uart_putc(char c) {
 
 ```
 ========================================
-  hobby-kernel v0.1  (C / RISC-V)
+  kernel-hobby v0.1  (C / RISC-V)
   booted in S-mode under OpenSBI
 ========================================
 ```
