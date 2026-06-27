@@ -11,8 +11,8 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 8
@@ -23,7 +23,7 @@ seriesOrder: 8
 
 ## 0. 들어가며
 
-[2편에서 만든 `fork`](/blog/hobby/hobby-kernel-01-usermode-to-processes)는 정직하지만 무식해요.
+[2편에서 만든 `fork`](/blog/hobby/kernel-hobby-01-usermode-to-processes)는 정직하지만 무식해요.
 부모의 주소공간을 **통째로 복사**하거든요 — 코드 페이지, 스택 페이지, 힙 전부.
 
 이 글은 그 `fork`를 **Copy-on-Write(COW)** 로 다시 짜는 과정을 정리합니다.
@@ -34,7 +34,7 @@ fork 때는 부모와 자식이 같은 물리 페이지를 **읽기 전용으로
 그리고 우리 커널만의 재미있는 제약도 하나 나와요 — **(우리 구현에선) 스택은 COW로 공유하지 못한다.** (리눅스·xv6 같은 일반 커널은 스택도 COW 하지만, 우리 설계에선 못 해요 — 이유는 4절에서.)
 그 제약이 왜 생기고, 그게 어떤 트레이드오프인지까지 정확히 짚어볼게요.
 
-> 왜 지금 COW인가: 이건 [5편의 demand paging](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)과 정확히 같은 철학이에요 — "필요해질 때까지 일을 미룬다." 거기선 페이지 **할당**을 미뤘고, 여기선 페이지 **복사**를 미뤄요. 그래서 그때 만든 페이지 폴트 핸들러를 거의 그대로 재사용합니다. COW는 **새 메커니즘이 아니라, 기존 페이지 폴트 메커니즘 위에 얹은 새 정책**에 가까워요 — 페이지 폴트·페이지 테이블·참조 카운트라는 있던 부품의 재조합이죠.
+> 왜 지금 COW인가: 이건 [5편의 demand paging](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)과 정확히 같은 철학이에요 — "필요해질 때까지 일을 미룬다." 거기선 페이지 **할당**을 미뤘고, 여기선 페이지 **복사**를 미뤄요. 그래서 그때 만든 페이지 폴트 핸들러를 거의 그대로 재사용합니다. COW는 **새 메커니즘이 아니라, 기존 페이지 폴트 메커니즘 위에 얹은 새 정책**에 가까워요 — 페이지 폴트·페이지 테이블·참조 카운트라는 있던 부품의 재조합이죠.
 
 ## 1. Copy-on-Write가 풀어야 하는 진짜 문제
 
@@ -87,7 +87,7 @@ if (fork() == 0) {
 > 물리 페이지 하나를 여러 주소공간이 공유할 때, 언제 그 페이지를 진짜로 반납해도 안전할까요?
 
 답은 **참조 카운트**예요. 물리 페이지마다 "지금 몇 명이 이 페이지를 쓰나"를 세는 카운터를 둡니다.
-[1편의 할당기](/blog/hobby/hobby-kernel-00-boot-to-paging)에 이미 깔아둔 `refcnt` 배열이 그거예요.
+[1편의 할당기](/blog/hobby/kernel-hobby-00-boot-to-paging)에 이미 깔아둔 `refcnt` 배열이 그거예요.
 
 ```c
 // kalloc.c — 물리 페이지마다 참조 카운트. 인덱스 = (pa - RAMBASE) / 4096.
@@ -279,7 +279,7 @@ if (a >= HEAPBASE && a < p->heap_top) {     // --- 힙: 빈 페이지 (demand pa
 
 순서를 뒤집으면(demand를 먼저 검사하면) 어떻게 깨지는지 그림으로 보면:
 
-![순서를 뒤집어 demand를 먼저 검사하면, 값 42의 읽기전용 공유 페이지가 store 폴트 후 demand로 오인돼 0으로 덮여 42가 사라진다 — 그래서 COW를 먼저 검사해야 한다](/uploads/hobby/hobby-kernel-c/cow-wrong-order.svg)
+![순서를 뒤집어 demand를 먼저 검사하면, 값 42의 읽기전용 공유 페이지가 store 폴트 후 demand로 오인돼 0으로 덮여 42가 사라진다 — 그래서 COW를 먼저 검사해야 한다](/uploads/hobby/kernel-hobby-c/cow-wrong-order.svg)
 
 > **핵심 교훈**: COW의 전부는 이 흐름이에요 — **fork는 가벼워지고**(복사 0회), **복사는 진짜 쓰는 순간, 쓰는 쪽이 그 페이지의 사본을 하나 만드는 것**뿐이에요(쓰기 한 번 = 사본 한 장). fork 직후 곧장 exec하는 자식은 공유 페이지에 쓸 일이 없으니 복사가 **아예 안 일어나죠.** 1절에서 본 낭비가 정확히 사라집니다.
 
@@ -331,7 +331,7 @@ cf->sepc = f->sepc + 4; // ecall 다음 명령부터(부모는 자식 pid를 받
 
 ### 단순함 ↔ 최적화 완전함 사이의 선택
 
-이건 [xv6와 다른 설계](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)에서 온 비용이에요.
+이건 [xv6와 다른 설계](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)에서 온 비용이에요.
 
 | 구분 | xv6 | 우리 커널 |
 |------|-----|----------|
@@ -432,14 +432,14 @@ fork가 "주소공간 통째 복사"에서 "포인터 몇 개 공유 + 카운터
 페이지 폴트 핸들러(5편), 페이지 테이블 조작(1편), 물리 할당기와 참조 카운트(1편) — 전부 있던 걸 엮으니 COW가 됐죠.
 *"새 기능은 대개 기존 메커니즘의 새로운 조합"* 이라는 걸 다시 느꼈어요. COW는 페이지 복사 알고리즘을 새로 만든 게 아니라, **페이지 폴트·페이지 테이블·참조 카운트라는 기존 메커니즘을 조합한 결과**예요.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 > 다음 글: **멀티코어 (예정)**
 
 ## 참고 (1차 자료 우선)
 
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/) — PTE의 **RSW(소프트웨어 예약) 비트**(`PTE_COW`가 여기 얹힘), store 페이지 폴트(`scause=15`), `sfence.vma`의 1차 정의
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — **COW fork 랩**. `kalloc`의 참조 카운트, `uvmcopy`/usertrap의 COW 분기가 1:1로 대응
-- 관련 글: [부팅부터 페이징까지(할당기·참조 카운트)](/blog/hobby/hobby-kernel-00-boot-to-paging) · [demand paging과 mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) · [fork와 ELF 로더](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)
+- 관련 글: [부팅부터 페이징까지(할당기·참조 카운트)](/blog/hobby/kernel-hobby-00-boot-to-paging) · [demand paging과 mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) · [fork와 ELF 로더](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)
 - [OSDev Wiki](https://wiki.osdev.org/) — 보조 자료
 
 <!-- EN -->
@@ -448,7 +448,7 @@ fork가 "주소공간 통째 복사"에서 "포인터 몇 개 공유 + 카운터
 
 ## 0. Introduction
 
-The [`fork` we built in Part 2](/blog/hobby/hobby-kernel-01-usermode-to-processes) is honest but brute-force.
+The [`fork` we built in Part 2](/blog/hobby/kernel-hobby-01-usermode-to-processes) is honest but brute-force.
 It **copies the parent's entire address space** — code page, stack page, the whole heap.
 
 This post rewrites that `fork` as **Copy-on-Write (COW)**.
@@ -457,7 +457,7 @@ At fork time the parent and child **share the same physical pages read-only**, a
 
 We need exactly two parts to build this — a **reference count** on each physical page, and a **write page fault** that copies just that one page. And there's an interesting constraint unique to our kernel — **in our implementation, the stack can't be shared via COW.** (General kernels like Linux and xv6 do COW their stacks; ours can't — why is in §4.) We'll walk through why that constraint exists and what trade-off it represents.
 
-> Why COW now: this is exactly the same philosophy as [demand paging in Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) — "defer the work until it's actually needed." There we deferred page **allocation**; here we defer page **copying**. So we reuse the page fault handler we built back then almost verbatim. COW isn't a new mechanism so much as **a new policy laid on top of the existing page-fault mechanism** — a recombination of parts we already have: page faults, page tables, and reference counts.
+> Why COW now: this is exactly the same philosophy as [demand paging in Part 5](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) — "defer the work until it's actually needed." There we deferred page **allocation**; here we defer page **copying**. So we reuse the page fault handler we built back then almost verbatim. COW isn't a new mechanism so much as **a new policy laid on top of the existing page-fault mechanism** — a recombination of parts we already have: page faults, page tables, and reference counts.
 
 ## 1. The Real Problem Copy-on-Write Has to Solve
 
@@ -510,7 +510,7 @@ To know "reclaim only when the last one leaves," you have to **count heads.**
 > When several address spaces share one physical page, when is it actually safe to reclaim that page?
 
 The answer is a **reference count**. Each physical page gets a counter for "how many are using this page right now."
-The `refcnt` array we already laid down in [Part 1's allocator](/blog/hobby/hobby-kernel-00-boot-to-paging) is exactly that.
+The `refcnt` array we already laid down in [Part 1's allocator](/blog/hobby/kernel-hobby-00-boot-to-paging) is exactly that.
 
 ```c
 // kalloc.c — a reference count per physical page. index = (pa - RAMBASE) / 4096.
@@ -702,7 +702,7 @@ But the fault address is also in the heap region, so if we don't check COW first
 
 Here's how it breaks if you reverse the order (check demand first):
 
-![Reversing the order to check demand first: the read-only shared page holding 42 takes a store fault, is mistaken for demand, overwritten with zeros, and 42 is lost — so COW must be checked first](/uploads/hobby/hobby-kernel-c/cow-wrong-order-en.svg)
+![Reversing the order to check demand first: the read-only shared page holding 42 takes a store fault, is mistaken for demand, overwritten with zeros, and 42 is lost — so COW must be checked first](/uploads/hobby/kernel-hobby-c/cow-wrong-order-en.svg)
 
 > **Key lesson**: all of COW is this flow — **fork gets lighter** (0 copies), and **the copy happens at the moment of a real write, where the writing side makes its own copy of that one page** (one write = one copy). A child that execs right after fork never writes the shared pages, so the copy happens **not even once.** The waste from Section 1 vanishes exactly.
 
@@ -754,7 +754,7 @@ So the stack alone must stay a **private copy.**
 
 ### A choice between simplicity and completeness of optimization
 
-This is a cost that comes from a [design different from xv6's](/blog/hobby/hobby-kernel-02-fork-elf-filesystem).
+This is a cost that comes from a [design different from xv6's](/blog/hobby/kernel-hobby-02-fork-elf-filesystem).
 
 | Aspect | xv6 | Our kernel |
 |--------|-----|------------|
@@ -855,12 +855,12 @@ Looking back, this work was a **recombination of parts we already had.** COW did
 The page fault handler (Part 5), page table manipulation (Part 1), the physical allocator and reference count (Part 1) — tying them together gave us COW.
 It reminded me again that *"a new feature is usually a new combination of existing mechanisms."*
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 > Next post: **Multicore (coming soon)**
 
 ## References (Primary Sources First)
 
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/) — the primary definition of the PTE's **RSW (reserved-for-software) bits** (where `PTE_COW` rides), the store page fault (`scause=15`), and `sfence.vma`
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — the **COW fork lab**; `kalloc`'s reference count and the COW branches in `uvmcopy`/usertrap map 1:1
-- Related: [From Boot to Paging (allocator and reference count)](/blog/hobby/hobby-kernel-00-boot-to-paging) · [demand paging and mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) · [fork and the ELF loader](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)
+- Related: [From Boot to Paging (allocator and reference count)](/blog/hobby/kernel-hobby-00-boot-to-paging) · [demand paging and mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) · [fork and the ELF loader](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)
 - [OSDev Wiki](https://wiki.osdev.org/) — supplementary reference

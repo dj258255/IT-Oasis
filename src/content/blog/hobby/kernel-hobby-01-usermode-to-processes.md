@@ -11,8 +11,8 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 2
@@ -21,7 +21,7 @@ seriesOrder: 2
 
 ## 0. 들어가며
 
-[1편](/blog/hobby/hobby-kernel-00-boot-to-paging)에서 커널의 **골격**을 세웠어요 — 부팅, UART 출력, 트랩/타이머, 키보드+셸, 페이지 할당기, Sv39 페이징.
+[1편](/blog/hobby/kernel-hobby-00-boot-to-paging)에서 커널의 **골격**을 세웠어요 — 부팅, UART 출력, 트랩/타이머, 키보드+셸, 페이지 할당기, Sv39 페이징.
 그런데 거기까진 **모든 코드가 커널 권한(S-mode)에서** 돌아요.
 운영체제를 운영체제답게 만드는 건, "권한이 낮은 유저 프로그램이 커널에 일을 부탁한다"는 **경계**예요.
 
@@ -163,7 +163,7 @@ U-mode로 떨어진 프로그램이 `ecall`로 부탁하고, 커널이 받아서
 
 이 한 장이면 권한 경계를 넘나드는 한 번의 왕복이 한눈에 들어와요.
 
-![유저모드 printf가 ecall로 S-mode에 진입해 kernelvec·syscall 디스패치·uart_putc를 거쳐 sret로 다시 유저모드로 복귀하는 권한 경계 왕복](/uploads/hobby/hobby-kernel-c/priv-boundary.svg)
+![유저모드 printf가 ecall로 S-mode에 진입해 kernelvec·syscall 디스패치·uart_putc를 거쳐 sret로 다시 유저모드로 복귀하는 권한 경계 왕복](/uploads/hobby/kernel-hobby-c/priv-boundary.svg)
 
 별것 아닌 한 줄처럼 보이지만, **권한 경계를 처음 넘은 순간**이라 의미가 커요.
 지금까지 한 덩어리였던 "커널"이, 비로소 "커널"과 "그 위에서 도는 프로그램"으로 갈라진 거니까요.
@@ -573,7 +573,7 @@ xv6는 트랩을 **별도 커널 스택**에서 처리하고 `sscratch`로 유�
 이제 **여러 프로그램이 각자 격리된 주소공간에서, 선점적으로, 생성·종료되는** 작은 운영체제가 됐어요.
 다음은 진짜 프로그램을 다루는 쪽 — **fork/exec + ELF 로더**(지금은 임베드된 프로그램), 그리고 **파일시스템**으로 가요.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 > 다음 글: **fork/exec + 파일시스템 (예정)**
 
 ## 참고 (1차 자료 우선)
@@ -587,7 +587,7 @@ xv6는 트랩을 **별도 커널 스택**에서 처리하고 `sscratch`로 유�
 
 ## 0. Introduction
 
-In [Part 1](/blog/hobby/hobby-kernel-00-boot-to-paging) I built the **skeleton** of the kernel — boot, UART output, traps/timer, keyboard + shell, page allocator, Sv39 paging.
+In [Part 1](/blog/hobby/kernel-hobby-00-boot-to-paging) I built the **skeleton** of the kernel — boot, UART output, traps/timer, keyboard + shell, page allocator, Sv39 paging.
 But up to that point, **every line of code runs with kernel privilege (S-mode)**.
 What actually makes an operating system an operating system is the **boundary**: "a low-privilege user program asks the kernel to do work on its behalf."
 
@@ -729,7 +729,7 @@ A program dropped into U-mode made a request via `ecall`, and the kernel receive
 
 This one picture captures the round trip across the privilege boundary.
 
-![User-mode printf crosses into S-mode via ecall, through kernelvec, syscall dispatch and uart_putc, then returns to user mode via sret](/uploads/hobby/hobby-kernel-c/priv-boundary-en.svg)
+![User-mode printf crosses into S-mode via ecall, through kernelvec, syscall dispatch and uart_putc, then returns to user mode via sret](/uploads/hobby/kernel-hobby-c/priv-boundary-en.svg)
 
 It may look like a trivial one-liner, but it matters: it's **the first time we crossed the privilege boundary**.
 What used to be a single blob called "the kernel" has finally split into "the kernel" and "a program running on top of it."
@@ -1139,7 +1139,7 @@ And the two debugging episodes along the way exposed the heart of the design:
 Now it's a small operating system where **multiple programs are created and terminated, preemptively, each in its own isolated address space**.
 Next up is the side that deals with real programs — **fork/exec + an ELF loader** (right now the programs are embedded), and then a **filesystem**.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 > Next post: **fork/exec + filesystem (coming soon)**
 
 ## References (Primary Sources First)

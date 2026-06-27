@@ -12,8 +12,8 @@ tags:
   - xv6
   - QEMU
   - Thread
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 11
@@ -25,7 +25,7 @@ seriesOrder: 11
 ## 0. 들어가며
 
 지금까지 이 커널에서 "동시에 도는 것"은 전부 **커널이** 만들어 줬어요.
-[4편의 스케줄러](/blog/hobby/hobby-kernel-03-exec-and-shell)가 프로세스를 갈아탔고, [6편의 멀티코어](/blog/hobby/hobby-kernel-05-smp-multicore-locks)가 코어를 나눠 가졌죠.
+[4편의 스케줄러](/blog/hobby/kernel-hobby-03-exec-and-shell)가 프로세스를 갈아탔고, [6편의 멀티코어](/blog/hobby/kernel-hobby-05-smp-multicore-locks)가 코어를 나눠 가졌죠.
 둘 다 공통점이 하나 있어요 — **갈아타는 결정을 커널이 내린다**는 점입니다. 타이머 인터럽트가 커널로 들어오고, 커널의 `swtch`가 다음 흐름으로 점프하고, 커널이 페이지 테이블을 바꿔요.
 
 이 글은 그 전제를 한 번 뒤집어 봅니다.
@@ -74,7 +74,7 @@ struct thread *current_thread;       // 전역
 ### 그런데 우리 커널에선 그게 깨졌다
 
 우리만의 설계가 발목을 잡았어요 — **유저 프로그램은 코드가 단일 페이지(`R|X`)로만 매핑**돼요.
-[1편에서 봤듯](/blog/hobby/hobby-kernel-00-boot-to-paging) 페이지 권한은 영역별로 다르게 줄 수 있고, 코드 페이지는 `R|X`(읽기·실행, **쓰기 금지**)예요.
+[1편에서 봤듯](/blog/hobby/kernel-hobby-00-boot-to-paging) 페이지 권한은 영역별로 다르게 줄 수 있고, 코드 페이지는 `R|X`(읽기·실행, **쓰기 금지**)예요.
 그런데 우리 유저 프로그램은 그 코드 페이지 하나가 전부라, 전역 변수가 사는 `.data`/`.bss`도 결국 같은 `R|X` 페이지에 얹혀요.
 
 결과는 명확해요 — **전역에 쓰는 순간 쓰기 금지 폴트**가 나요.
@@ -93,7 +93,7 @@ struct thread *current_thread;       // 전역
 | ② 전역을 안 쓴다 | 상태를 쓰기 가능한 힙에 둔다 | 코드 트릭 하나면 됨 | 커널을 한 줄도 안 건드리고 푼다 |
 
 저는 **②번**을 택했어요.
-이미 [5편에서 demand paging 힙](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)을 만들어 뒀고, 그 힙은 `R|W`로 매핑돼서 쓰기 가능하거든요.
+이미 [5편에서 demand paging 힙](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)을 만들어 뒀고, 그 힙은 `R|W`로 매핑돼서 쓰기 가능하거든요.
 그러니 스레드 상태를 전역 대신 **힙에 통째로 올리면**, 단일 페이지 제약을 정면으로 피해 가요.
 
 > **핵심 교훈**: 제약을 만났을 때 항상 시스템을 고쳐야 하는 건 아니에요. *"무엇이 쓰기 가능한가"* 를 먼저 따져 보면, 이미 있는 자원(여기선 힙)으로 우회할 길이 보일 때가 많습니다.
@@ -159,7 +159,7 @@ struct sys {
 
 ### 범인: 우리 트랩 진입 방식
 
-범인은 우리 [트랩 처리 방식](/blog/hobby/hobby-kernel-01-usermode-to-processes)이에요.
+범인은 우리 [트랩 처리 방식](/blog/hobby/kernel-hobby-01-usermode-to-processes)이에요.
 우리 커널은 트랩이 나면 **그 순간의 `sp` 바로 아래에 트랩 프레임을 저장**해요. `kernelvec.S`의 첫 줄이 그걸 합니다.
 
 ```asm
@@ -173,7 +173,7 @@ kernelvec:
 
 평소 프로세스에선 이 `sp`가 커널 스택이라 아무 문제 없어요. 그런데 유저 스레드는 **유저 모드의 `sp`가 힙 스택을 가리키는 채로** `ecall`을 해요.
 스레드가 힙 스택(예: `0x111E0`)에서 돌다가 `sys_putchar`를 부르려고 `ecall`하면, 커널은 그 `sp`에서 256을 빼 `0x110E0`부터 프레임을 쓰기 시작해요.
-그런데 그 힙 페이지가 아직 [demand paging](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)으로 **매핑되기 전**이면, 커널의 `sd` 명령이 미매핑 주소에 쓰다가 폴트를 내요.
+그런데 그 힙 페이지가 아직 [demand paging](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)으로 **매핑되기 전**이면, 커널의 `sd` 명령이 미매핑 주소에 쓰다가 폴트를 내요.
 
 즉 **유저 스택 demand paging**과 **"커널이 유저 스택 위에 트랩 프레임을 저장한다"는 우리 설계**가 정면충돌한 거예요.
 보통 OS라면 트랩 프레임을 커널 스택(항상 매핑됨)에 따로 저장하니 이 충돌이 안 나는데, 우리 미니멀 모델은 그 둘을 한 스택에서 처리하다 보니 이런 골목이 생겼어요.
@@ -190,7 +190,7 @@ for (unsigned long a = 0; a < 16384; a += 4096)   // 각 4KB 페이지를 미리
     *((volatile unsigned char *)(HEAPBASE + a)) = 0;
 ```
 
-작동 원리는 우리 [demand paging 분기](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)에 정확히 맞물려요.
+작동 원리는 우리 [demand paging 분기](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)에 정확히 맞물려요.
 `sys_sbrk(16384)`는 `heap_top`만 올려 주소 범위를 확보하고 물리 페이지는 아직 안 줘요(지연 할당).
 그다음 루프가 각 페이지를 한 번씩 건드리면, **유저 모드에서** 안전하게 폴트가 나고, `proc_pagefault`가 힙 분기로 들어가 빈 페이지를 `R|W|U`로 매핑해 줘요.
 
@@ -215,7 +215,7 @@ if (a >= HEAPBASE && a < p->heap_top) {
 
 ### 커널 swtch와 같은 원리
 
-스레드를 갈아타는 건 [커널의 `swtch`](/blog/hobby/hobby-kernel-03-exec-and-shell)와 **완전히 똑같은 원리**예요.
+스레드를 갈아타는 건 [커널의 `swtch`](/blog/hobby/kernel-hobby-03-exec-and-shell)와 **완전히 똑같은 원리**예요.
 callee-saved 레지스터와 `ra`, `sp`를 메모리에 저장하고 다른 묶음에서 복원하면, 마지막 `ret`이 **다른 실행 흐름**으로 점프해요.
 다른 점은 단 하나 — 이건 커널이 아니라 **유저 공간에서 도는 `uswitch`**라는 것뿐이에요. 특권 명령이 하나도 없어서 유저 모드에서 그대로 돌아갑니다.
 
@@ -330,7 +330,7 @@ uthread: all threads finished
 스레드가 **스스로** `uyield()`를 불러야 다른 스레드가 돌 기회를 얻어요.
 어떤 스레드가 양보를 안 하고 무한 루프를 돌면? 나머지는 영영 못 돌아요. 전환을 강제할 수단이 유저 공간엔 없거든요.
 
-[커널 스케줄러(4편)](/blog/hobby/hobby-kernel-03-exec-and-shell)는 달랐죠 — 그건 **선점적(preemptive)** 이었어요.
+[커널 스케줄러(4편)](/blog/hobby/kernel-hobby-03-exec-and-shell)는 달랐죠 — 그건 **선점적(preemptive)** 이었어요.
 타이머 인터럽트가 주기적으로 커널에 들어와 `yield()`를 강제로 불러, 양보 안 하는 프로세스도 CPU를 빼앗았어요.
 
 | 구분 | 협조적 (이 글의 uthread) | 선점적 (4편 커널 스케줄러) |
@@ -385,7 +385,7 @@ uthread: all threads finished
 ### 여기까지의 여정 — 부팅부터 유저 스레드까지
 
 부팅의 첫 글자(`1편`)부터 여기까지 왔어요.
-[부팅·페이징](/blog/hobby/hobby-kernel-00-boot-to-paging), [유저모드·프로세스](/blog/hobby/hobby-kernel-01-usermode-to-processes), 시스템콜, fork/exec, [선점형 스케줄러](/blog/hobby/hobby-kernel-03-exec-and-shell), 파일시스템, [demand paging·mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), [멀티코어와 락](/blog/hobby/hobby-kernel-05-smp-multicore-locks), 네트워크(UDP·TCP), [copy-on-write](/blog/hobby/hobby-kernel-07-copy-on-write), 저널링, 그리고 이 유저 스레드까지.
+[부팅·페이징](/blog/hobby/kernel-hobby-00-boot-to-paging), [유저모드·프로세스](/blog/hobby/kernel-hobby-01-usermode-to-processes), 시스템콜, fork/exec, [선점형 스케줄러](/blog/hobby/kernel-hobby-03-exec-and-shell), 파일시스템, [demand paging·mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs), [멀티코어와 락](/blog/hobby/kernel-hobby-05-smp-multicore-locks), 네트워크(UDP·TCP), [copy-on-write](/blog/hobby/kernel-hobby-07-copy-on-write), 저널링, 그리고 이 유저 스레드까지.
 교과서의 그림들을 하나하나 직접 코드로 만져봤어요.
 
 이번 작업이 특히 의미 있었던 건, **한 번 실패했던 걸 되돌아와 풀었기** 때문이에요.
@@ -399,14 +399,14 @@ uthread: all threads finished
 읽어주셔서 고마워요.
 여기까지가 **C로 만드는 토이 커널**, 부팅부터 유저 스레드까지의 기록이에요.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — 이 글의 직접 출발점인 **uthread 랩**(유저 공간 스레드 전환의 표준 교보재)
 - [RISC-V Calling Convention / ABI (psABI)](https://github.com/riscv-non-isa/riscv-elf-psabi-doc) — callee-saved(`s0`~`s11`) vs caller-saved, `sp` 16바이트 정렬 규칙의 1차 정의 (`uswitch`가 왜 14개만 저장하는지의 근거)
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/) — `scause`/`sepc`/`stval` 트랩 CSR의 정의 (크래시 추적에 읽은 그 값들)
-- 관련 글: [부팅부터 페이징까지](/blog/hobby/hobby-kernel-00-boot-to-paging) · [선점형 스케줄러](/blog/hobby/hobby-kernel-03-exec-and-shell) · [demand paging·mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) · [멀티코어와 락](/blog/hobby/hobby-kernel-05-smp-multicore-locks)
+- 관련 글: [부팅부터 페이징까지](/blog/hobby/kernel-hobby-00-boot-to-paging) · [선점형 스케줄러](/blog/hobby/kernel-hobby-03-exec-and-shell) · [demand paging·mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) · [멀티코어와 락](/blog/hobby/kernel-hobby-05-smp-multicore-locks)
 
 <!-- EN -->
 
@@ -415,7 +415,7 @@ uthread: all threads finished
 ## 0. Introduction
 
 So far in this kernel, everything that "runs concurrently" was created **by the kernel**.
-[The scheduler in Part 4](/blog/hobby/hobby-kernel-03-exec-and-shell) switched processes; [multicore in Part 6](/blog/hobby/hobby-kernel-05-smp-multicore-locks) split the cores.
+[The scheduler in Part 4](/blog/hobby/kernel-hobby-03-exec-and-shell) switched processes; [multicore in Part 6](/blog/hobby/kernel-hobby-05-smp-multicore-locks) split the cores.
 Both share one thing — **the kernel makes the decision to switch.** A timer interrupt enters the kernel, the kernel's `swtch` jumps to the next flow, the kernel swaps page tables.
 
 This post flips that premise once.
@@ -464,7 +464,7 @@ In an ordinary environment there's no problem — `.data`/`.bss` is of course wr
 ### But it broke in our kernel
 
 Our own design tripped us — **a user program's code is mapped as a single page (`R|X`) only**.
-As we saw in [Part 1](/blog/hobby/hobby-kernel-00-boot-to-paging), page permissions can differ per region, and a code page is `R|X` (read/execute, **no write**).
+As we saw in [Part 1](/blog/hobby/kernel-hobby-00-boot-to-paging), page permissions can differ per region, and a code page is `R|X` (read/execute, **no write**).
 But our user program *is* just that one code page, so the `.data`/`.bss` where globals live ends up riding on the same `R|X` page.
 
 The result is plain — **the moment you write to a global, you get a write-protection fault.**
@@ -483,7 +483,7 @@ There were two ways out.
 | ② Don't use globals | Put the state on the writable heap | One code trick | Solve it without touching the kernel at all |
 
 I chose **option ②**.
-We already built a [demand-paging heap in Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), and that heap is mapped `R|W`, so it's writable.
+We already built a [demand-paging heap in Part 5](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs), and that heap is mapped `R|W`, so it's writable.
 So if we put all the thread state on the **heap** instead of in globals, we sidestep the single-page constraint head-on.
 
 > **Key takeaway**: hitting a constraint doesn't always mean you have to change the system. If you first ask *"what is writable here,"* you'll often find a way around using a resource you already have (the heap, in this case).
@@ -549,7 +549,7 @@ That last line is decisive. It means **the kernel**, not user code, faulted whil
 
 ### The culprit: our trap-entry path
 
-The culprit is our [trap handling](/blog/hobby/hobby-kernel-01-usermode-to-processes).
+The culprit is our [trap handling](/blog/hobby/kernel-hobby-01-usermode-to-processes).
 On a trap, our kernel **saves the trap frame just below the current `sp`.** The very first line of `kernelvec.S` does it.
 
 ```asm
@@ -563,7 +563,7 @@ kernelvec:
 
 For an ordinary process this `sp` is the kernel stack, so no problem. But a user thread does its `ecall` **with the user-mode `sp` pointing at a heap stack.**
 When a thread running on a heap stack (say `0x111E0`) calls `sys_putchar` via `ecall`, the kernel subtracts 256 from that `sp` and starts writing the frame at `0x110E0`.
-But if that heap page hasn't been mapped yet by [demand paging](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), the kernel's `sd` instruction faults writing to an unmapped address.
+But if that heap page hasn't been mapped yet by [demand paging](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs), the kernel's `sd` instruction faults writing to an unmapped address.
 
 In other words, **user-stack demand paging** and **our design where "the kernel saves the trap frame onto the user stack"** collided head-on.
 An ordinary OS saves the trap frame on a separate kernel stack (always mapped), so this collision never happens; our minimal model handles both on one stack, which is how this alleyway appeared.
@@ -580,7 +580,7 @@ for (unsigned long a = 0; a < 16384; a += 4096)   // touch each 4KB page up fron
     *((volatile unsigned char *)(HEAPBASE + a)) = 0;
 ```
 
-The mechanism dovetails exactly with our [demand-paging branch](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs).
+The mechanism dovetails exactly with our [demand-paging branch](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs).
 `sys_sbrk(16384)` only bumps `heap_top` to reserve the address range; it doesn't hand out physical pages yet (lazy allocation).
 Then the loop touches each page once, so a fault happens safely **in user mode**, and `proc_pagefault` takes the heap branch and maps a fresh page as `R|W|U`.
 
@@ -605,7 +605,7 @@ With both walls cleared, now the real heart of it — **switching flows.**
 
 ### Same principle as the kernel's swtch
 
-Switching threads works **exactly** like [the kernel's `swtch`](/blog/hobby/hobby-kernel-03-exec-and-shell).
+Switching threads works **exactly** like [the kernel's `swtch`](/blog/hobby/kernel-hobby-03-exec-and-shell).
 Save the callee-saved registers, `ra`, and `sp` to memory, restore them from another bundle, and the final `ret` jumps into **a different execution flow**.
 The only difference is one thing — this is **`uswitch`, running in user space**, not the kernel. There's not a single privileged instruction, so it runs in user mode as-is.
 
@@ -720,7 +720,7 @@ Our user threads are **cooperative.**
 A thread must call `uyield()` **itself** for any other thread to get a chance to run.
 What if a thread never yields and spins forever? The rest never run. There's no way to force a switch from user space.
 
-The [kernel scheduler (Part 4)](/blog/hobby/hobby-kernel-03-exec-and-shell) was different — that one was **preemptive.**
+The [kernel scheduler (Part 4)](/blog/hobby/kernel-hobby-03-exec-and-shell) was different — that one was **preemptive.**
 A timer interrupt periodically entered the kernel and forcibly called `yield()`, taking the CPU even from a process that wouldn't give it up.
 
 | Aspect | Cooperative (this post's uthread) | Preemptive (Part 4 kernel scheduler) |
@@ -775,7 +775,7 @@ Both walls caused the original failure, and we solved them with two workarounds,
 ### The journey so far — from boot to user threads
 
 From the first character of boot (`Part 1`) to here.
-[Boot and paging](/blog/hobby/hobby-kernel-00-boot-to-paging), [user mode and processes](/blog/hobby/hobby-kernel-01-usermode-to-processes), system calls, fork/exec, [the preemptive scheduler](/blog/hobby/hobby-kernel-03-exec-and-shell), the filesystem, [demand paging and mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs), [multicore and locks](/blog/hobby/hobby-kernel-05-smp-multicore-locks), networking (UDP·TCP), [copy-on-write](/blog/hobby/hobby-kernel-07-copy-on-write), journaling, and this user thread.
+[Boot and paging](/blog/hobby/kernel-hobby-00-boot-to-paging), [user mode and processes](/blog/hobby/kernel-hobby-01-usermode-to-processes), system calls, fork/exec, [the preemptive scheduler](/blog/hobby/kernel-hobby-03-exec-and-shell), the filesystem, [demand paging and mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs), [multicore and locks](/blog/hobby/kernel-hobby-05-smp-multicore-locks), networking (UDP·TCP), [copy-on-write](/blog/hobby/kernel-hobby-07-copy-on-write), journaling, and this user thread.
 I got to touch the textbook diagrams as real code, one by one.
 
 This piece was especially meaningful because it was **coming back to something I'd failed at and solving it.**
@@ -789,11 +789,11 @@ A map tells you the way, but only someone who has walked it knows the road's rea
 Thank you for reading.
 This is the end of **A Toy Kernel in C**, the record from boot to user threads.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — the direct starting point for this post, the **uthread lab** (the standard teaching material for user-space thread switching)
 - [RISC-V Calling Convention / ABI (psABI)](https://github.com/riscv-non-isa/riscv-elf-psabi-doc) — the primary definition of callee-saved (`s0`~`s11`) vs caller-saved and the 16-byte `sp` alignment rule (why `uswitch` saves only 14 registers)
 - [RISC-V Privileged Specification](https://riscv.org/technical/specifications/) — the definition of the `scause`/`sepc`/`stval` trap CSRs (the very values we read while tracing the crash)
-- Related: [From boot to paging](/blog/hobby/hobby-kernel-00-boot-to-paging) · [The preemptive scheduler](/blog/hobby/hobby-kernel-03-exec-and-shell) · [Demand paging and mmap](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) · [Multicore and locks](/blog/hobby/hobby-kernel-05-smp-multicore-locks)
+- Related: [From boot to paging](/blog/hobby/kernel-hobby-00-boot-to-paging) · [The preemptive scheduler](/blog/hobby/kernel-hobby-03-exec-and-shell) · [Demand paging and mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) · [Multicore and locks](/blog/hobby/kernel-hobby-05-smp-multicore-locks)

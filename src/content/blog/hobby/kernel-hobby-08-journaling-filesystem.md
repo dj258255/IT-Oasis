@@ -12,8 +12,8 @@ tags:
   - xv6
   - QEMU
   - Filesystem
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 9
@@ -24,7 +24,7 @@ seriesOrder: 9
 
 ## 0. 들어가며
 
-[3편에서 만든 파일시스템](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)과 [5편에서 더한 쓰기](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)에는 숨은 위험이 있었어요.
+[3편에서 만든 파일시스템](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)과 [5편에서 더한 쓰기](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)에는 숨은 위험이 있었어요.
 파일 하나를 만들 때 우리는 디스크에 **여러 번** 씁니다 — 데이터 블록들, 디렉터리, 슈퍼블록.
 이 셋은 "전부 함께" 반영돼야 의미가 있는데, 디스크 쓰기는 한 블록씩 따로 일어나요.
 그 사이에 전원이 나가면 파일시스템이 **절반만 쓰인** 상태로 깨집니다.
@@ -97,7 +97,7 @@ WAL의 발상은 한 줄이에요 — **진짜 위치를 건드리기 전에, �
 ### 디스크 레이아웃 — 로그 영역을 끼워 넣는다
 
 이걸 구현하려면 디스크에 **로그를 둘 자리**가 필요해요.
-[3편/5편](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)의 레이아웃에 블록 몇 개를 추가했습니다(`src/fsformat.h`).
+[3편/5편](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)의 레이아웃에 블록 몇 개를 추가했습니다(`src/fsformat.h`).
 
 ```
 블록 0            : 슈퍼블록   (magic, nfiles, next_free, total_blocks)
@@ -415,7 +415,7 @@ RUN 1에서 6개였다가 `write` 후 RUN 2에서 7개로 늘었고, **남은 �
 
 실제 파일시스템은 로그를 줄이려고 여러 최적화를 써요 — 예를 들어 ext4(JBD2)는 기본값에서 **메타데이터만**(데이터는 저널 안 함) 물리 저널링하고, 어떤 시스템은 변경을 "연산"으로 적는 논리 로깅을 쓰기도 하죠. 토이 커널에선 **블록 통째 물리 로깅이 가장 단순하고 정확**해서 그걸 택했어요.
 블록을 통째로 베껴 두면 복구가 그냥 "복사"라 멱등성이 공짜로 따라와요(4절).
-**"단순함 ↔ 효율"** 에서 또 단순함을 택한 거죠 — 이 연재의 일관된 선택이에요([1편의 free list](/blog/hobby/hobby-kernel-00-boot-to-paging)도 같은 정신).
+**"단순함 ↔ 효율"** 에서 또 단순함을 택한 거죠 — 이 연재의 일관된 선택이에요([1편의 free list](/blog/hobby/kernel-hobby-00-boot-to-paging)도 같은 정신).
 
 ## 정리
 
@@ -431,14 +431,14 @@ RUN 1에서 6개였다가 `write` 후 RUN 2에서 7개로 늘었고, **남은 �
 크래시 일관성이라는 추상적인 말이, 로그 영역 16블록과 커밋 비트 하나로 손에 잡히는 게 이번 작업의 수확이었어요.
 다음 글에서는 이 FS 위에서 더 큰 OS 조각으로 이어갑니다.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — 이 커널의 참고서. `log.c`(logging)가 우리 `fs.c`의 저널링과 1:1로 대응
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992) — WAL·redo·멱등 복구의 1차 정의(파일시스템 저널의 이론적 뿌리)
 - [PostgreSQL Documentation: Write-Ahead Logging (WAL)](https://www.postgresql.org/docs/current/wal-intro.html) — "로그 먼저, 데이터 나중"의 표준 서술
-- 관련 글: [트랜잭션 ACID ① 원자성](/blog/theory/transaction-acid-01-atomicity) · [트랜잭션 ACID ④ 지속성](/blog/theory/transaction-acid-04-durability) · [쓰기 가능 파일시스템](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)
+- 관련 글: [트랜잭션 ACID ① 원자성](/blog/theory/transaction-acid-01-atomicity) · [트랜잭션 ACID ④ 지속성](/blog/theory/transaction-acid-04-durability) · [쓰기 가능 파일시스템](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)
 
 <!-- EN -->
 
@@ -446,7 +446,7 @@ RUN 1에서 6개였다가 `write` 후 RUN 2에서 7개로 늘었고, **남은 �
 
 ## 0. Introduction
 
-The [filesystem from Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem) and the [writes added in Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) had a hidden danger.
+The [filesystem from Part 3](/blog/hobby/kernel-hobby-02-fork-elf-filesystem) and the [writes added in Part 5](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) had a hidden danger.
 Creating a single file writes to disk **several times** — data blocks, the directory, the superblock.
 The three only make sense if they land "all together," yet disk writes happen one block at a time.
 If the power dies in between, the filesystem is left **half-written** and corrupt.
@@ -519,7 +519,7 @@ Die with the commit bit at 0 → as if nothing happened. Die after it's stamped 
 ### Disk layout — slotting in a log region
 
 To implement this we need **a place on disk for the log**.
-I added a few blocks to the [Part 3 / Part 5](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs) layout (`src/fsformat.h`).
+I added a few blocks to the [Part 3 / Part 5](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) layout (`src/fsformat.h`).
 
 ```
 block 0             : superblock   (magic, nfiles, next_free, total_blocks)
@@ -837,7 +837,7 @@ One more thing: our log is **physical, block-level logging** (the whole changed 
 
 Real filesystems use various optimizations to shrink the log — e.g. ext4 (JBD2) by default physically journals **only metadata** (data isn't journaled), while some systems use logical logging that records changes as "operations." In a toy kernel **whole-block physical logging is the simplest and most correct**, so that's what we picked.
 Copying the whole block makes recovery a plain "copy," so idempotency comes for free (§4).
-Between **"simplicity ↔ efficiency"** I again chose simplicity — the consistent choice of this series (the [free list in Part 1](/blog/hobby/hobby-kernel-00-boot-to-paging) shares the same spirit).
+Between **"simplicity ↔ efficiency"** I again chose simplicity — the consistent choice of this series (the [free list in Part 1](/blog/hobby/kernel-hobby-00-boot-to-paging) shares the same spirit).
 
 ## Wrap-up
 
@@ -853,11 +853,11 @@ A database's WAL ([Transaction ACID](/blog/theory/transaction-acid-01-atomicity)
 Watching the abstract phrase "crash consistency" become tangible — 16 log blocks and a single commit bit — was the reward of this work.
 The next post builds on this FS toward a bigger piece of the OS.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — this kernel's reference; `log.c` (logging) maps 1:1 to our `fs.c` journaling
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992) — the primary definition of WAL, redo, and idempotent recovery (the theoretical root of filesystem journals)
 - [PostgreSQL Documentation: Write-Ahead Logging (WAL)](https://www.postgresql.org/docs/current/wal-intro.html) — the standard account of "log first, data later"
-- Related: [Transaction ACID ① Atomicity](/blog/theory/transaction-acid-01-atomicity) · [Transaction ACID ④ Durability](/blog/theory/transaction-acid-04-durability) · [Writable filesystem](/blog/hobby/hobby-kernel-04-paging-mmap-writable-fs)
+- Related: [Transaction ACID ① Atomicity](/blog/theory/transaction-acid-01-atomicity) · [Transaction ACID ④ Durability](/blog/theory/transaction-acid-04-durability) · [Writable filesystem](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs)

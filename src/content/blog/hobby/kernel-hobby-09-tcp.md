@@ -13,19 +13,19 @@ tags:
   - QEMU
   - Network
   - TCP
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 10
 ---
 
 
-*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 10편 — UDP까지 올린 [네트워크 스택](/blog/hobby/hobby-kernel-06-networking) 위에 **최소 TCP**(3-way 핸드셰이크 + seq/ack 회계)를 얹습니다.*
+*바닥부터 직접 만드는 RISC-V 토이 커널 연재. 이 글은 10편 — UDP까지 올린 [네트워크 스택](/blog/hobby/kernel-hobby-06-networking) 위에 **최소 TCP**(3-way 핸드셰이크 + seq/ack 회계)를 얹습니다.*
 
 ## 0. 들어가며
 
-[7편에서 만든 네트워크 스택](/blog/hobby/hobby-kernel-06-networking)은 UDP까지였어요.
+[7편에서 만든 네트워크 스택](/blog/hobby/kernel-hobby-06-networking)은 UDP까지였어요.
 UDP는 단순합니다 — 패킷 하나를 만들어 던지면 끝이에요.
 도착했는지, 순서가 맞는지 신경 쓰지 않아요. **던지고 잊어버립니다(fire and forget).**
 
@@ -133,7 +133,7 @@ SYN은 `+1`, 데이터는 `+n`, FIN도 `+1`.
 
 연결은 세 번의 인사로 시작해요.
 
-![TCP 3-way 핸드셰이크: 클라이언트 SYN(seq=x) → 서버 SYN-ACK(seq=y, ack=x+1) → 클라이언트 ACK(ack=y+1) → 연결 수립(ESTABLISHED)](/uploads/hobby/hobby-kernel-c/tcp-handshake.svg)
+![TCP 3-way 핸드셰이크: 클라이언트 SYN(seq=x) → 서버 SYN-ACK(seq=y, ack=x+1) → 클라이언트 ACK(ack=y+1) → 연결 수립(ESTABLISHED)](/uploads/hobby/kernel-hobby-c/tcp-handshake.svg)
 
 ### 왜 두 번도 네 번도 아닌 세 번인가
 
@@ -235,7 +235,7 @@ put16(t + 16, 0);  put16(t + 18, 0);          // checksum 자리, urgent
 이유는 *"이 세그먼트가 정말 이 출발지→도착지 쌍으로 가는 게 맞나"* 까지 검증하기 위해서예요.
 IP 헤더 자체는 이미 IP 체크섬(IPv4)으로 보호돼요. 의사헤더(pseudo-header)의 목적은 따로 있어요 — 세그먼트가 **다른 endpoint로 잘못 전달되는 경우(misdelivery)** 를 잡는 거죠. 출발/도착 IP를 체크섬에 섞으면, 엉뚱한 목적지로 새어든 세그먼트는 체크섬이 안 맞아 걸러집니다.
 
-이건 [7편의 UDP](/blog/hobby/hobby-kernel-06-networking)와 **완전히 같은 방식**이에요. 딱 하나, 의사헤더의 프로토콜 번호만 UDP(17)에서 TCP(6)로 바뀝니다.
+이건 [7편의 UDP](/blog/hobby/kernel-hobby-06-networking)와 **완전히 같은 방식**이에요. 딱 하나, 의사헤더의 프로토콜 번호만 UDP(17)에서 TCP(6)로 바뀝니다.
 
 ```c
 // tcp_send: 의사헤더(출발IP+도착IP+proto+길이) + TCP 세그먼트를 16비트씩 합산
@@ -302,7 +302,7 @@ if (n >= 0 && (fl & TH_FIN))
 
 그리고 한 연결이 거쳐 가는 상태를 그림으로 보면 — 우리 코드는 이 흐름을 **명시적 상태 변수 없이 일직선 코드로** 밟아 갑니다:
 
-![수동 개방 서버가 거치는 TCP 상태: LISTEN → SYN_RCVD → ESTABLISHED(데이터 수신·에코) → CLOSE_WAIT → LAST_ACK → CLOSED](/uploads/hobby/hobby-kernel-c/tcp-states.svg)
+![수동 개방 서버가 거치는 TCP 상태: LISTEN → SYN_RCVD → ESTABLISHED(데이터 수신·에코) → CLOSE_WAIT → LAST_ACK → CLOSED](/uploads/hobby/kernel-hobby-c/tcp-states.svg)
 
 진짜 TCP는 이 상태들을 상태 머신으로 명시 관리하지만(동시 연결·재전송 때문), 우리 수동 개방 서버는 한 연결을 순서대로 처리하니 코드의 진행이 곧 상태 전이예요.
 
@@ -388,7 +388,7 @@ UDP에서 TCP로 오는 길은 *"패킷"* 에서 *"스트림"* 으로, *"던지�
 seq와 ack라는 두 숫자가 신뢰성의 **출발점**이라는 게 TCP의 우아함이에요(완전한 신뢰성엔 타이머·재전송·윈도우·혼잡 제어·상태 머신이 더 필요하지만, 그 모든 회계의 씨앗이 이 두 숫자죠).
 그 우아함의 씨앗을 핸드셰이크 한 번과 에코 한 번으로 손에 쥐어 본 게 이번 작업이었어요.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## 참고 (1차 자료 우선)
 
@@ -398,15 +398,15 @@ seq와 ack라는 두 숫자가 신뢰성의 **출발점**이라는 게 TCP의 �
 - [RFC 1122 — Requirements for Internet Hosts](https://www.rfc-editor.org/rfc/rfc1122) — 호스트 구현 요구사항(체크섬·재전송 등)
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — 이 커널의 참고서
 - [QEMU User Networking (SLIRP) / hostfwd](https://www.qemu.org/docs/master/system/devices/net.html) — hostfwd로 호스트→게스트 포트 포워딩
-- 관련 글: [네트워킹 — virtio-net과 미니 스택](/blog/hobby/hobby-kernel-06-networking) — 이 글이 올라탄 UDP까지의 스택
+- 관련 글: [네트워킹 — virtio-net과 미니 스택](/blog/hobby/kernel-hobby-06-networking) — 이 글이 올라탄 UDP까지의 스택
 
 <!-- EN -->
 
-*A RISC-V toy kernel built from scratch — a blog series. This is Part 10: putting a **minimal TCP** (3-way handshake + seq/ack accounting) on top of the [network stack](/blog/hobby/hobby-kernel-06-networking) that went up to UDP.*
+*A RISC-V toy kernel built from scratch — a blog series. This is Part 10: putting a **minimal TCP** (3-way handshake + seq/ack accounting) on top of the [network stack](/blog/hobby/kernel-hobby-06-networking) that went up to UDP.*
 
 ## 0. Introduction
 
-The [network stack from Part 7](/blog/hobby/hobby-kernel-06-networking) went up to UDP.
+The [network stack from Part 7](/blog/hobby/kernel-hobby-06-networking) went up to UDP.
 UDP is simple — build one packet, fire it off, done.
 It doesn't care whether it arrived or whether the order is right. It **fires and forgets**.
 
@@ -514,7 +514,7 @@ SYN is `+1`, data is `+n`, FIN is `+1` too.
 
 A connection begins with three greetings.
 
-![TCP 3-way handshake: client SYN(seq=x) → server SYN-ACK(seq=y, ack=x+1) → client ACK(ack=y+1) → connection ESTABLISHED](/uploads/hobby/hobby-kernel-c/tcp-handshake-en.svg)
+![TCP 3-way handshake: client SYN(seq=x) → server SYN-ACK(seq=y, ack=x+1) → client ACK(ack=y+1) → connection ESTABLISHED](/uploads/hobby/kernel-hobby-c/tcp-handshake-en.svg)
 
 ### Why not two, not four, but three
 
@@ -616,7 +616,7 @@ Flags are one bit each. The five we use:
 The reason is to also verify *"is this segment really going to this exact source→destination pair?"*
 The IP header itself is already protected by the IP checksum (IPv4). The pseudo-header's purpose is different — to catch a segment **misdelivered to the wrong endpoint.** By mixing the source/destination IPs into the checksum, a segment that leaked to the wrong destination fails the checksum and is filtered out.
 
-This is **exactly the same scheme** as [UDP in Part 7](/blog/hobby/hobby-kernel-06-networking). Just one thing changes: the protocol number in the pseudo-header, from UDP (17) to TCP (6).
+This is **exactly the same scheme** as [UDP in Part 7](/blog/hobby/kernel-hobby-06-networking). Just one thing changes: the protocol number in the pseudo-header, from UDP (17) to TCP (6).
 
 ```c
 // tcp_send: sum the pseudo-header (src IP + dst IP + proto + len) + TCP segment in 16-bit words
@@ -683,7 +683,7 @@ This is the moment you confirm in code that the §2 rule — *"SYN and FIN consu
 
 And here's the lifecycle a connection walks through — our code walks it **with no explicit state variable, just straight-line code**:
 
-![TCP states a passive-open server walks: LISTEN → SYN_RCVD → ESTABLISHED (receive data, echo) → CLOSE_WAIT → LAST_ACK → CLOSED](/uploads/hobby/hobby-kernel-c/tcp-states-en.svg)
+![TCP states a passive-open server walks: LISTEN → SYN_RCVD → ESTABLISHED (receive data, echo) → CLOSE_WAIT → LAST_ACK → CLOSED](/uploads/hobby/kernel-hobby-c/tcp-states-en.svg)
 
 Real TCP manages these states explicitly with a state machine (for concurrent connections and retransmission), but our passive-open server handles one connection in order, so the code's progress *is* the state transition.
 
@@ -769,7 +769,7 @@ The road from UDP to TCP was a shift from *"packet"* to *"stream,"* from *"fire 
 That two numbers, seq and ack, are the **starting point** of reliability on top of an untrustworthy network — that's the elegance of TCP (full reliability also needs timers, retransmission, windows, congestion control, and a state machine, but the seed of all that accounting is these two numbers).
 Holding the seed of that elegance in hand through one handshake and one echo was the reward of this work.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
 ## References (Primary Sources First)
 
@@ -779,4 +779,4 @@ Holding the seed of that elegance in hand through one handshake and one echo was
 - [RFC 1122 — Requirements for Internet Hosts](https://www.rfc-editor.org/rfc/rfc1122) — host implementation requirements (checksums, retransmission, etc.)
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — this kernel's reference
 - [QEMU User Networking (SLIRP) / hostfwd](https://www.qemu.org/docs/master/system/devices/net.html) — host→guest port forwarding via hostfwd
-- Related: [Networking — virtio-net and a mini stack](/blog/hobby/hobby-kernel-06-networking) — the up-to-UDP stack this post rides on
+- Related: [Networking — virtio-net and a mini stack](/blog/hobby/kernel-hobby-06-networking) — the up-to-UDP stack this post rides on

@@ -12,8 +12,8 @@ tags:
   - xv6
   - QEMU
   - Network
-category: project/hobby-kernel
-coverImage: "/uploads/hobby/hobby-kernel-c/cover.svg"
+category: project/kernel-hobby
+coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 7
@@ -22,7 +22,7 @@ seriesOrder: 7
 
 ## 0. 들어가며
 
-지금까지 커널은 디스크까지 다뤘어요 — 부팅, 페이징, 프로세스, 파일시스템, 그리고 [6편의 멀티코어](/blog/hobby/hobby-kernel-05-smp-multicore-locks)까지.
+지금까지 커널은 디스크까지 다뤘어요 — 부팅, 페이징, 프로세스, 파일시스템, 그리고 [6편의 멀티코어](/blog/hobby/kernel-hobby-05-smp-multicore-locks)까지.
 이번엔 마지막 조각, **네트워크**예요.
 
 네트워킹은 xv6 랩 중에서도 코드 표면이 가장 넓습니다.
@@ -37,7 +37,7 @@ NIC 드라이버(virtio-net)로 프레임을 주고받는 토대를 깔고 → �
 SLIRP는 게이트웨이(10.0.2.2)·DNS(10.0.2.3)·DHCP를 흉내내는 가상 네트워크라, 호스트 설정 없이도 ARP·ICMP·DNS에 응답해줍니다.
 우리 게스트는 SLIRP가 기본으로 나눠주는 주소 `10.0.2.15`를 씁니다.
 
-> 이 글의 스택은 **UDP까지**예요. **TCP는 일부러 [10편](/blog/hobby/hobby-kernel-09-tcp)으로 미뤘습니다.** 연결 상태머신·재전송·혼잡 제어를 제대로 하려면 그 자체로 한 편이 필요하거든요. 왜 여기서 끊는 게 합리적인지는 6절에서 따로 설명할게요.
+> 이 글의 스택은 **UDP까지**예요. **TCP는 일부러 [10편](/blog/hobby/kernel-hobby-09-tcp)으로 미뤘습니다.** 연결 상태머신·재전송·혼잡 제어를 제대로 하려면 그 자체로 한 편이 필요하거든요. 왜 여기서 끊는 게 합리적인지는 6절에서 따로 설명할게요.
 
 ## 1. virtio-net 드라이버가 풀어야 하는 진짜 문제
 
@@ -47,7 +47,7 @@ NIC(Network Interface Card)는 외부 장치예요.
 우리 커널이 직접 전선을 흔들 수는 없으니, **NIC에게 일을 시키는 약속된 방법**이 필요합니다.
 QEMU virt에서 그 약속이 **virtio**예요 — 게스트와 가상 장치가 공유 메모리의 링(ring) 자료구조로 작업을 주고받는 표준이죠.
 
-좋은 소식 하나 — 우리는 이미 [3편에서 virtio-blk 디스크 드라이버](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)를 만들었어요.
+좋은 소식 하나 — 우리는 이미 [3편에서 virtio-blk 디스크 드라이버](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)를 만들었어요.
 그때 만든 **전송 계층**(virtio-mmio: 디스크립터 체인 + available/used 링 + 기능 협상)이 virtio-net에도 **거의 그대로** 재사용됩니다.
 디스크든 네트워크든, 게스트가 메모리에 버퍼를 만들어 available 링에 넣고 `QUEUE_NOTIFY`로 알린 뒤 used 링이 갱신될 때까지 폴링하는 흐름은 동일해요.
 
@@ -55,7 +55,7 @@ QEMU virt에서 그 약속이 **virtio**예요 — 게스트와 가상 장치가
 
 같은 전송 계층 위에 있지만, 디스크와 네트워크는 몇 군데서 갈립니다.
 
-| 구분 | virtio-blk (디스크, [3편](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)) | virtio-net (네트워크, 이 글) |
+| 구분 | virtio-blk (디스크, [3편](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)) | virtio-net (네트워크, 이 글) |
 |------|------------------------------------|------------------------------|
 | device-id | 2 | **1** |
 | 큐 개수 | 1개 | **2개** — 큐0=수신(RX), 큐1=송신(TX) |
@@ -266,7 +266,7 @@ for (int i = 0; i + 1 < udplen; i += 2) sum += get16(pkt + 20 + i);
 왜 IP 주소까지 섞을까요?
 "이 UDP 세그먼트가 **정말 이 출발지→도착지 쌍**으로 가는 게 맞나"까지 한 번 더 검증하려는 설계예요.
 헤더가 중간에 엉뚱하게 바뀌어 **다른 목적지로 잘못 전달되는 경우**를 잡아내려는 안전장치죠.
-(참고로 [10편의 TCP](/blog/hobby/hobby-kernel-09-tcp)도 똑같은 의사헤더 방식을 씁니다 — 그래서 UDP에서 한 번 익혀두면 TCP 체크섬은 그대로 따라와요.)
+(참고로 [10편의 TCP](/blog/hobby/kernel-hobby-09-tcp)도 똑같은 의사헤더 방식을 씁니다 — 그래서 UDP에서 한 번 익혀두면 TCP 체크섬은 그대로 따라와요.)
 
 ### 한 장으로 보는 계층
 
@@ -364,12 +364,12 @@ ARP가 되면 드라이버와 이더넷이 증명되고, ping이 되면 그 위 
 ## 6. 왜 여기서 끊는가 — UDP까지의 트레이드오프
 
 이 글의 스택은 **UDP까지**입니다.
-**TCP는 일부러 [10편](/blog/hobby/hobby-kernel-09-tcp)으로 미뤘어요.**
+**TCP는 일부러 [10편](/blog/hobby/kernel-hobby-09-tcp)으로 미뤘어요.**
 이건 게으름이 아니라 의도된 트레이드오프예요.
 
 ### UDP vs TCP — 무엇이 더 필요한가
 
-| 구분 | UDP (이 글) | TCP ([10편](/blog/hobby/hobby-kernel-09-tcp)) |
+| 구분 | UDP (이 글) | TCP ([10편](/blog/hobby/kernel-hobby-09-tcp)) |
 |------|------------|---------|
 | 연결 | 없음(보내고 끝) | 3-way 핸드셰이크(SYN/SYN-ACK/ACK) |
 | 신뢰성 | 없음(유실 무시) | ACK + 재전송 타이머 |
@@ -383,7 +383,7 @@ UDP는 "포트를 붙여 보내고 끝"이라 8바이트 헤더와 체크섬만�
 
 이 시리즈의 학습 목표는 **"패킷이 바이트로 어떻게 조립되고 오가는가"** 였어요.
 그 목표에는 **ARP·IP·ICMP·UDP만으로도 NIC부터 응용까지 계층이 어떻게 포개지는지**를 전부 만져볼 수 있어서, UDP까지가 비용 대비 효과가 가장 좋았습니다.
-TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](/blog/hobby/hobby-kernel-09-tcp)에서 따로 다뤄요 — 다행히 IP 헤더·의사헤더 체크섬·드라이버는 이 글에서 만든 걸 그대로 재사용합니다.
+TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](/blog/hobby/kernel-hobby-09-tcp)에서 따로 다뤄요 — 다행히 IP 헤더·의사헤더 체크섬·드라이버는 이 글에서 만든 걸 그대로 재사용합니다.
 
 > **핵심 교훈**: 학습용 시스템에선 "무엇을 만드느냐"만큼 **"무엇을 안 만드느냐"** 가 중요해요. 의사헤더 체크섬처럼 TCP까지 곧장 이어지는 토대는 UDP에서 미리 깔아두되, 상태머신처럼 독립적으로 무거운 건 경계를 그어 다음 편으로 넘깁니다.
 
@@ -401,7 +401,7 @@ TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](
 
 그동안 따로따로 설명한 헤더들을, DNS 질의 한 장으로 포개 보면 이래요 — **위가 먼저 나가는 바깥 계층**이에요.
 
-![DNS 질의 한 장의 계층 레이아웃 — 바깥부터 Ethernet 헤더(14B), IP 헤더(20B), UDP 헤더(8B), DNS 순으로 포개진다](/uploads/hobby/hobby-kernel-c/packet-layout.svg)
+![DNS 질의 한 장의 계층 레이아웃 — 바깥부터 Ethernet 헤더(14B), IP 헤더(20B), UDP 헤더(8B), DNS 순으로 포개진다](/uploads/hobby/kernel-hobby-c/packet-layout.svg)
 
 결국 네트워크 스택도 **메모리 위에 바이트를 차곡차곡 쌓는** 과정이에요. 각 계층은 바로 아래 계층을 믿고 **자기 헤더만** 더할 뿐이고, 그렇게 완성된 패킷 한 장이 NIC를 통해 세상으로 나갑니다.
 
@@ -414,10 +414,10 @@ TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](
 ```
 
 순서가 핵심이에요 — **아래 계층이 동작해야 위 계층을 검증할 수 있고, 그래서 ARP→ICMP→UDP→DNS 순으로 쌓으면 검증도 그 순서로 누적**됩니다.
-신뢰성과 연결이 필요한 **TCP는 [10편](/blog/hobby/hobby-kernel-09-tcp)** 에서, 이 글에서 만든 IP·체크섬·드라이버를 그대로 딛고 이어가요.
+신뢰성과 연결이 필요한 **TCP는 [10편](/blog/hobby/kernel-hobby-09-tcp)** 에서, 이 글에서 만든 IP·체크섬·드라이버를 그대로 딛고 이어가요.
 
-> 코드: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
-> 다음 글: **TCP — 연결 상태머신과 신뢰성 ([10편](/blog/hobby/hobby-kernel-09-tcp))**
+> 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
+> 다음 글: **TCP — 연결 상태머신과 신뢰성 ([10편](/blog/hobby/kernel-hobby-09-tcp))**
 
 ## 참고 (1차 자료 우선)
 
@@ -429,13 +429,13 @@ TCP의 상태머신과 신뢰성 메커니즘은 그것대로 깊어서 [10편](
 - [RFC 1035 — Domain Names: Implementation and Specification (DNS)](https://www.rfc-editor.org/rfc/rfc1035) — 메시지 포맷, A 레코드, 이름 압축 포인터
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — 이 커널의 참고서, virtio 드라이버의 폴링 구조
 - [QEMU user networking (SLIRP)](https://wiki.qemu.org/Documentation/Networking#User_Networking_(SLIRP)) — 10.0.2.2/10.0.2.3, 게이트웨이 ICMP 내부 응답
-- 시리즈 1편: [부팅부터 페이징까지](/blog/hobby/hobby-kernel-00-boot-to-paging)
+- 시리즈 1편: [부팅부터 페이징까지](/blog/hobby/kernel-hobby-00-boot-to-paging)
 
 <!-- EN -->
 
 ## 0. Introduction
 
-So far the kernel reached all the way to disk — boot, paging, processes, a filesystem, and [multicore in Part 6](/blog/hobby/hobby-kernel-05-smp-multicore-locks).
+So far the kernel reached all the way to disk — boot, paging, processes, a filesystem, and [multicore in Part 6](/blog/hobby/kernel-hobby-05-smp-multicore-locks).
 Now the last piece: **networking**.
 
 Networking has the widest code surface of all the xv6 labs.
@@ -450,7 +450,7 @@ The test environment is QEMU's **user networking (SLIRP)**.
 SLIRP is a virtual network that emulates a gateway (10.0.2.2), DNS (10.0.2.3), and DHCP, so it answers ARP, ICMP, and DNS without any host-side setup.
 Our guest uses `10.0.2.15`, the address SLIRP hands out by default.
 
-> This post's stack goes **up to UDP**. **TCP is deliberately deferred to [Part 10](/blog/hobby/hobby-kernel-09-tcp).** Doing the connection state machine, retransmission, and congestion control properly needs a whole post of its own. Why stopping here is reasonable is its own discussion in §6.
+> This post's stack goes **up to UDP**. **TCP is deliberately deferred to [Part 10](/blog/hobby/kernel-hobby-09-tcp).** Doing the connection state machine, retransmission, and congestion control properly needs a whole post of its own. Why stopping here is reasonable is its own discussion in §6.
 
 ## 1. The real problem the virtio-net driver must solve
 
@@ -460,7 +460,7 @@ A NIC (Network Interface Card) is an external device.
 Our kernel can't wiggle the wires itself, so we need an **agreed-upon way to give the NIC work**.
 On QEMU virt that agreement is **virtio** — a standard where the guest and a virtual device exchange work through ring data structures in shared memory.
 
-One piece of good news — we already built a [virtio-blk disk driver in Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem).
+One piece of good news — we already built a [virtio-blk disk driver in Part 3](/blog/hobby/kernel-hobby-02-fork-elf-filesystem).
 The **transport layer** we built then (virtio-mmio: descriptor chains + available/used rings + feature negotiation) carries over to virtio-net **almost verbatim**.
 Disk or network, the flow is the same: the guest builds buffers in memory, puts them on the available ring, rings `QUEUE_NOTIFY`, and polls until the used ring advances.
 
@@ -468,7 +468,7 @@ Disk or network, the flow is the same: the guest builds buffers in memory, puts 
 
 They ride the same transport, but disk and network diverge in a few places.
 
-| Aspect | virtio-blk (disk, [Part 3](/blog/hobby/hobby-kernel-02-fork-elf-filesystem)) | virtio-net (network, this post) |
+| Aspect | virtio-blk (disk, [Part 3](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)) | virtio-net (network, this post) |
 |--------|------------------------------------|------------------------------|
 | device-id | 2 | **1** |
 | number of queues | 1 | **2** — queue 0 = RX, queue 1 = TX |
@@ -680,7 +680,7 @@ for (int i = 0; i + 1 < udplen; i += 2) sum += get16(pkt + 20 + i);
 Why mix in the IP addresses?
 It's a design that double-checks "is this UDP segment really going for **this source→destination pair**."
 A safeguard to catch a packet whose header got mangled mid-flight and would be **misdelivered to the wrong destination.**
-(For the record, [Part 10's TCP](/blog/hobby/hobby-kernel-09-tcp) uses the same pseudo-header scheme — so learning it once in UDP, the TCP checksum follows for free.)
+(For the record, [Part 10's TCP](/blog/hobby/kernel-hobby-09-tcp) uses the same pseudo-header scheme — so learning it once in UDP, the TCP checksum follows for free.)
 
 ### The layers on one screen
 
@@ -778,12 +778,12 @@ The reward for stacking the layers in order is that verification, too, happens i
 ## 6. Why stop here — the up-to-UDP trade-off
 
 This post's stack goes **up to UDP**.
-**TCP is deliberately deferred to [Part 10](/blog/hobby/hobby-kernel-09-tcp).**
+**TCP is deliberately deferred to [Part 10](/blog/hobby/kernel-hobby-09-tcp).**
 This isn't laziness but an intended trade-off.
 
 ### UDP vs TCP — what more is needed
 
-| Aspect | UDP (this post) | TCP ([Part 10](/blog/hobby/hobby-kernel-09-tcp)) |
+| Aspect | UDP (this post) | TCP ([Part 10](/blog/hobby/kernel-hobby-09-tcp)) |
 |--------|-----------------|---------|
 | connection | none (fire and forget) | 3-way handshake (SYN/SYN-ACK/ACK) |
 | reliability | none (loss ignored) | ACK + retransmission timers |
@@ -797,7 +797,7 @@ TCP done properly, by contrast, needs a connection state machine, retransmission
 
 This series' learning goal was **"how a packet is assembled from bytes and travels."**
 For that goal, **ARP/IP/ICMP/UDP alone let you touch how the layers stack** all the way from the NIC to the application, so stopping at UDP gave the best bang for the buck.
-TCP's state machine and reliability machinery are deep in their own right, covered separately in [Part 10](/blog/hobby/hobby-kernel-09-tcp) — and happily, the IP header, pseudo-header checksum, and driver from this post carry over unchanged.
+TCP's state machine and reliability machinery are deep in their own right, covered separately in [Part 10](/blog/hobby/kernel-hobby-09-tcp) — and happily, the IP header, pseudo-header checksum, and driver from this post carry over unchanged.
 
 > **Key takeaway**: in a learning system, "what you *don't* build" matters as much as what you do. Foundations that lead straight into TCP — like the pseudo-header checksum — you lay early in UDP, but something independently heavy like a state machine you draw a boundary around and push to the next post.
 
@@ -815,7 +815,7 @@ This post stacked the layers **bottom to top**, from the NIC driver up to an app
 
 Folding the headers we explained separately into a single DNS query, it looks like this — **the outer layers go out first**:
 
-![Layered layout of one DNS query — from the outside in, Ethernet header (14B), IP header (20B), UDP header (8B), then DNS](/uploads/hobby/hobby-kernel-c/packet-layout-en.svg)
+![Layered layout of one DNS query — from the outside in, Ethernet header (14B), IP header (20B), UDP header (8B), then DNS](/uploads/hobby/kernel-hobby-c/packet-layout-en.svg)
 
 In the end, a network stack is also just **stacking bytes in memory, one on top of another**. Each layer trusts the layer right below it and only adds **its own header** — and the one finished packet goes out through the NIC into the world.
 
@@ -828,10 +828,10 @@ In the end, a network stack is also just **stacking bytes in memory, one on top 
 ```
 
 The order is the point — **you can only verify an upper layer once the one below works, so stacking ARP→ICMP→UDP→DNS makes verification accumulate in that same order**.
-**TCP**, which needs reliability and connections, continues in **[Part 10](/blog/hobby/hobby-kernel-09-tcp)**, standing directly on the IP, checksum, and driver built here.
+**TCP**, which needs reliability and connections, continues in **[Part 10](/blog/hobby/kernel-hobby-09-tcp)**, standing directly on the IP, checksum, and driver built here.
 
-> Code: [github.com/dj258255/hobby-kernel](https://github.com/dj258255/hobby-kernel)
-> Next post: **TCP — the connection state machine and reliability ([Part 10](/blog/hobby/hobby-kernel-09-tcp))**
+> Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
+> Next post: **TCP — the connection state machine and reliability ([Part 10](/blog/hobby/kernel-hobby-09-tcp))**
 
 ## References (Primary Sources First)
 
@@ -843,4 +843,4 @@ The order is the point — **you can only verify an upper layer once the one bel
 - [RFC 1035 — Domain Names: Implementation and Specification (DNS)](https://www.rfc-editor.org/rfc/rfc1035) — message format, A records, and name compression pointers
 - [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — this kernel's reference, and the polling structure of the virtio drivers
 - [QEMU user networking (SLIRP)](https://wiki.qemu.org/Documentation/Networking#User_Networking_(SLIRP)) — 10.0.2.2/10.0.2.3, and the gateway's internal ICMP replies
-- Series Part 1: [From Boot to Paging](/blog/hobby/hobby-kernel-00-boot-to-paging)
+- Series Part 1: [From Boot to Paging](/blog/hobby/kernel-hobby-00-boot-to-paging)
