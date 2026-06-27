@@ -394,7 +394,7 @@ for (;;) {
 부팅하면 커널이 이 셸을 첫 유저 프로세스로 띄워요.
 
 ```
-hobby-kernel userspace shell. try: ls, cat motd.txt, hello
+kernel-hobby userspace shell. try: ls, cat motd.txt, hello
 $ ls
   motd.txt  (162 bytes)
   readme.txt  (240 bytes)
@@ -402,7 +402,7 @@ $ ls
 $ hello
   [hello] I am a separate program, exec'd from disk!
 $ cat motd.txt
-Welcome to hobby-kernel (C / RISC-V). ...
+Welcome to kernel-hobby (C / RISC-V). ...
 $ nope
 nope: command not found
 ```
@@ -831,7 +831,7 @@ This shows how "a failed exec returns -1 instead of killing the process" from §
 At boot, the kernel launches this shell as the first user process.
 
 ```
-hobby-kernel userspace shell. try: ls, cat motd.txt, hello
+kernel-hobby userspace shell. try: ls, cat motd.txt, hello
 $ ls
   motd.txt  (162 bytes)
   readme.txt  (240 bytes)
@@ -839,7 +839,7 @@ $ ls
 $ hello
   [hello] I am a separate program, exec'd from disk!
 $ cat motd.txt
-Welcome to hobby-kernel (C / RISC-V). ...
+Welcome to kernel-hobby (C / RISC-V). ...
 $ nope
 nope: command not found
 ```

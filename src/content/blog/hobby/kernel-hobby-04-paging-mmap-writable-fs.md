@@ -262,7 +262,7 @@ $ mmaptest
 mmaptest: mmap("motd.txt")
 reading the file as memory (no read() -- page faults load it):
 [pagefault] mmap loaded a file page at va=0x0000000000100000
-Welcome to hobby-kernel (C / RISC-V).
+Welcome to kernel-hobby (C / RISC-V).
 This text lives on a virtio-blk disk and was read by the kernel's
 own filesystem driver -- not baked into the kernel image.
 ```
@@ -662,7 +662,7 @@ $ mmaptest
 mmaptest: mmap("motd.txt")
 reading the file as memory (no read() -- page faults load it):
 [pagefault] mmap loaded a file page at va=0x0000000000100000
-Welcome to hobby-kernel (C / RISC-V).
+Welcome to kernel-hobby (C / RISC-V).
 This text lives on a virtio-blk disk and was read by the kernel's
 own filesystem driver -- not baked into the kernel image.
 ```

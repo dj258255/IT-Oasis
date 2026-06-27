@@ -374,7 +374,7 @@ hobby> ls
   motd.txt  (162 bytes)
   readme.txt  (240 bytes)
 hobby> cat motd.txt
-Welcome to hobby-kernel (C / RISC-V).
+Welcome to kernel-hobby (C / RISC-V).
 This text lives on a virtio-blk disk and was read by the kernel's
 own filesystem driver -- not baked into the kernel image.
 ```
@@ -836,7 +836,7 @@ hobby> ls
   motd.txt  (162 bytes)
   readme.txt  (240 bytes)
 hobby> cat motd.txt
-Welcome to hobby-kernel (C / RISC-V).
+Welcome to kernel-hobby (C / RISC-V).
 This text lives on a virtio-blk disk and was read by the kernel's
 own filesystem driver -- not baked into the kernel image.
 ```
