@@ -385,8 +385,8 @@ UDP에서 TCP로 오는 길은 *"패킷"* 에서 *"스트림"* 으로, *"던지�
 - **hostfwd 검증** — `SYN → SYN-ACK → ACK → 데이터 → 에코 → FIN`의 전 생애가 호스트↔게스트 왕복 한 번으로 동작했어요.
 - **일부러 뺀 것** — 재전송·혼잡 제어·윈도우·재정렬. 핵심은 살리고, 인터넷 규모의 견고함은 트레이드오프로 미뤘어요.
 
-seq와 ack라는 두 숫자가 신뢰성의 **출발점**이라는 게 TCP의 우아함이에요(완전한 신뢰성엔 타이머·재전송·윈도우·혼잡 제어·상태 머신이 더 필요하지만, 그 모든 회계의 씨앗이 이 두 숫자죠).
-그 우아함의 씨앗을 핸드셰이크 한 번과 에코 한 번으로 손에 쥐어 본 게 이번 작업이었어요.
+seq와 ack라는 두 숫자가 신뢰성의 **출발점**이라는 게 TCP의 핵심이에요(완전한 신뢰성엔 타이머·재전송·윈도우·혼잡 제어·상태 머신이 더 필요하지만, 그 모든 회계의 씨앗이 이 두 숫자죠).
+그 씨앗을 핸드셰이크 한 번과 에코 한 번으로 손에 쥐어 본 게 이번 작업이었어요.
 
 > 코드: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 
@@ -766,8 +766,8 @@ The road from UDP to TCP was a shift from *"packet"* to *"stream,"* from *"fire 
 - **hostfwd verification** — the full life `SYN → SYN-ACK → ACK → data → echo → FIN` worked in a single host↔guest round-trip.
 - **Deliberately left out** — retransmission, congestion control, windows, reordering. We kept the core and deferred internet-scale robustness as a trade-off.
 
-That two numbers, seq and ack, are the **starting point** of reliability on top of an untrustworthy network — that's the elegance of TCP (full reliability also needs timers, retransmission, windows, congestion control, and a state machine, but the seed of all that accounting is these two numbers).
-Holding the seed of that elegance in hand through one handshake and one echo was the reward of this work.
+That two numbers, seq and ack, are the **starting point** of reliability on top of an untrustworthy network — that's the heart of TCP (full reliability also needs timers, retransmission, windows, congestion control, and a state machine, but the seed of all that accounting is these two numbers).
+Holding that seed in hand through one handshake and one echo was the reward of this work.
 
 > Code: [github.com/dj258255/kernel-hobby](https://github.com/dj258255/kernel-hobby)
 

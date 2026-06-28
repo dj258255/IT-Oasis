@@ -269,7 +269,7 @@ own filesystem driver -- not baked into the kernel image.
 
 첫 글자 `p[0]`을 읽는 순간 폴트가 나고, 커널이 `motd.txt`의 첫 블록을 디스크에서 읽어 그 페이지에 담아요.
 그 뒤로는 메모리 읽기만으로 파일 내용이 줄줄 나옵니다.
-이게 mmap의 매력이에요 — **파일과 메모리의 경계가 사라지는** 거죠.
+이게 mmap이 보여주는 거예요 — **파일과 메모리의 경계가 사라지는** 거죠.
 
 ### read()로 복사 vs mmap으로 직접 접근
 
@@ -669,7 +669,7 @@ own filesystem driver -- not baked into the kernel image.
 
 The moment we read the first character `p[0]`, a fault occurs and the kernel reads the first block of `motd.txt` from disk into that page.
 After that, the file's contents pour out from memory reads alone.
-This is the charm of mmap — **the boundary between file and memory disappears.**
+This is what mmap gives you — **the boundary between file and memory disappears.**
 
 ### read() copies vs mmap accesses directly
 
