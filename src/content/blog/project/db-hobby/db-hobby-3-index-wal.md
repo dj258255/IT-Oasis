@@ -1,8 +1,8 @@
 ---
 title: '인덱스와 WAL은 어떻게 동작하는가 — B+Tree와 크래시 복구'
 titleEn: 'How Do Indexes and the WAL Work? — B+Tree and Crash Recovery'
-description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 3편. 풀 스캔 O(n)을 O(log n)으로 줄이는 디스크 기반 B+Tree 인덱스를 노드 분할·범위 스캔까지 직접 구현하고, 연산자에 따라 점 조회·범위 스캔·풀 스캔을 가르는 플래너의 첫 형태를 만듭니다. 그리고 전원이 꺼져도 데이터가 안 깨지도록 WAL(쓰기 선행 로그)을 붙이고, 크래시를 실제로 주입해 redo/discard 복구를 증명합니다. B+Tree vs 해시 vs LSM-tree, no-steal vs steal 같은 설계 선택을 PostgreSQL·InnoDB와 비교합니다."
-descriptionEn: "Part 3 of minidb, a relational database built from scratch in C. We implement a disk-based B+Tree index (with node splits and range scans) to turn O(n) scans into O(log n), build the first shape of a planner that routes operators to point lookup / range scan / full scan, and bolt on a write-ahead log — proving crash recovery (redo/discard) by actually injecting crashes. We compare design choices like B+Tree vs hash vs LSM-tree and no-steal vs steal against PostgreSQL and InnoDB."
+description: "관계형 DB를 C로 밑바닥부터 만든 db-hobby 시리즈 3편. 풀 스캔 O(n)을 O(log n)으로 줄이는 디스크 기반 B+Tree 인덱스를 노드 분할·범위 스캔까지 직접 구현하고, 연산자에 따라 점 조회·범위 스캔·풀 스캔을 가르는 플래너의 첫 형태를 만듭니다. 그리고 전원이 꺼져도 데이터가 안 깨지도록 WAL(쓰기 선행 로그)을 붙이고, 크래시를 실제로 주입해 redo/discard 복구를 증명합니다. B+Tree vs 해시 vs LSM-tree, no-steal vs steal 같은 설계 선택을 PostgreSQL·InnoDB와 비교합니다."
+descriptionEn: "Part 3 of db-hobby, a relational database built from scratch in C. We implement a disk-based B+Tree index (with node splits and range scans) to turn O(n) scans into O(log n), build the first shape of a planner that routes operators to point lookup / range scan / full scan, and bolt on a write-ahead log — proving crash recovery (redo/discard) by actually injecting crashes. We compare design choices like B+Tree vs hash vs LSM-tree and no-steal vs steal against PostgreSQL and InnoDB."
 date: 2026-05-17
 tags:
   - C
@@ -13,31 +13,31 @@ tags:
   - PostgreSQL
   - InnoDB
   - Learning
-category: project/minidb
-coverImage: /uploads/project/minidb/cover.svg
+category: project/db-hobby
+coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
-series: "minidb"
+series: "db-hobby"
 seriesOrder: 3
 ---
 
 ## 0. 들어가며 — 빠르게, 그리고 안 깨지게
 
-[2편](/blog/project/minidb/minidb-2-sql-engine)에서 드디어 SQL이 돌기 시작했어요. 하지만 한 가지 약점이 있었습니다 — `WHERE`가 매번 모든 행을 훑는 O(n)이라는 점이에요. 100만 행에서 한 줄을 찾자고 100만 번을 비교하죠.
+[2편](/blog/project/db-hobby/db-hobby-2-sql-engine)에서 드디어 SQL이 돌기 시작했어요. 하지만 한 가지 약점이 있었습니다 — `WHERE`가 매번 모든 행을 훑는 O(n)이라는 점이에요. 100만 행에서 한 줄을 찾자고 100만 번을 비교하죠.
 
 이번 편은 그 약점을 정면으로 칩니다. 두 계층을 새로 얹어요.
 
 - **B+Tree 인덱스** — 풀 스캔 O(n)을 O(log n)으로 줄여 DB를 "빠르게" 만드는 계층.
 - **WAL(쓰기 선행 로그)** — 전원이 꺼져도 파일이 안 깨지게 해 DB를 "안 깨지게" 만드는 계층.
 
-이 둘은 성격이 정반대예요. 인덱스는 **속도**(성능)를, WAL은 **안전**(내구성·원자성)을 책임집니다. 그런데 둘 다 결국 [1편](/blog/project/minidb/minidb-1-storage)에서 만든 **고정 크기 페이지** 위에서 돌아간다는 공통점이 있어요. 인덱스도 페이지에 살고, WAL도 (minidb에선) 페이지를 통째로 로그에 적습니다. 그래서 한 편에 묶었습니다.
+이 둘은 성격이 정반대예요. 인덱스는 **속도**(성능)를, WAL은 **안전**(내구성·원자성)을 책임집니다. 그런데 둘 다 결국 [1편](/blog/project/db-hobby/db-hobby-1-storage)에서 만든 **고정 크기 페이지** 위에서 돌아간다는 공통점이 있어요. 인덱스도 페이지에 살고, WAL도 (db-hobby에선) 페이지를 통째로 로그에 적습니다. 그래서 한 편에 묶었습니다.
 
 ## 1. 인덱스는 왜 필요한가 — O(n)이라는 벽
 
-`WHERE id = 2`를 실행하면 [1편](/blog/project/minidb/minidb-1-storage)에서 본 **풀 스캔(sequential scan)** 이 돌아요. 힙의 모든 페이지, 페이지 안의 모든 슬롯을 훑는 이중 루프죠. 행이 100만 개면 100만 번을 봅니다 — O(n).
+`WHERE id = 2`를 실행하면 [1편](/blog/project/db-hobby/db-hobby-1-storage)에서 본 **풀 스캔(sequential scan)** 이 돌아요. 힙의 모든 페이지, 페이지 안의 모든 슬롯을 훑는 이중 루프죠. 행이 100만 개면 100만 번을 봅니다 — O(n).
 
-**인덱스**는 이걸 O(log n)으로 줄여요. 아이디어는 단순합니다 — 정렬된 탐색 구조에 "키 -> 그 행의 주소(RID)"를 담아 두는 것이에요. [1편](/blog/project/minidb/minidb-1-storage)에서 만든 그 `RID = (page_id, slot)`이 여기서 다시 등장합니다. 인덱스는 값을 들고 있지 않고, "그 값을 가진 행이 힙 어디에 있는지"만 가리켜요.
+**인덱스**는 이걸 O(log n)으로 줄여요. 아이디어는 단순합니다 — 정렬된 탐색 구조에 "키 -> 그 행의 주소(RID)"를 담아 두는 것이에요. [1편](/blog/project/db-hobby/db-hobby-1-storage)에서 만든 그 `RID = (page_id, slot)`이 여기서 다시 등장합니다. 인덱스는 값을 들고 있지 않고, "그 값을 가진 행이 힙 어디에 있는지"만 가리켜요.
 
-> **핵심 정의**: (minidb·PostgreSQL 같은 힙 기반에서) 인덱스는 "키 -> RID" 매핑을 담은, **데이터와 분리된 정렬 탐색 구조**다. 힙은 순서 없이 행을 쌓아두고(O(n) 스캔), 인덱스가 그 위에 정렬된 길을 따로 깔아 O(log n) 조회를 가능하게 한다. (InnoDB의 클러스터드 인덱스는 리프에 데이터 자체가 있어 "값을 안 들고 RID만"이 아니다 — [1편](/blog/project/minidb/minidb-1-storage) 참고.)
+> **핵심 정의**: (db-hobby·PostgreSQL 같은 힙 기반에서) 인덱스는 "키 -> RID" 매핑을 담은, **데이터와 분리된 정렬 탐색 구조**다. 힙은 순서 없이 행을 쌓아두고(O(n) 스캔), 인덱스가 그 위에 정렬된 길을 따로 깔아 O(log n) 조회를 가능하게 한다. (InnoDB의 클러스터드 인덱스는 리프에 데이터 자체가 있어 "값을 안 들고 RID만"이 아니다 — [1편](/blog/project/db-hobby/db-hobby-1-storage) 참고.)
 
 ## 2. 왜 이진 트리가 아니라 B+Tree인가 — 디스크가 답이다
 
@@ -52,9 +52,9 @@ seriesOrder: 3
 - **내부 노드(internal node)** — 길잡이만 합니다. "키 + 자식 포인터"를 들고, "찾는 키가 17보다 작으면 왼쪽, 크면 오른쪽 자식으로" 식으로 내려보내요. 실제 값(RID)은 없습니다.
 - **리프 노드(leaf node)** — 진짜 "키 -> 값(RID)"이 여기 있고, **옆 리프와 사슬로 연결**돼 있어요(`next_leaf`). 이 사슬이 곧 범위 스캔의 핵심입니다(4절).
 
-![B+Tree 구조 — 내부 노드에서 리프로 내려가는 검색 경로](/uploads/project/minidb/btree-diagram.svg)
+![B+Tree 구조 — 내부 노드에서 리프로 내려가는 검색 경로](/uploads/project/db-hobby/btree-diagram.svg)
 
-minidb의 노드는 페이지에 그대로 덮어 해석하는 구조체예요. 내부 노드의 자식 배열과 리프 노드의 값 배열을 `union`으로 같은 자리에 겹쳐 둡니다.
+db-hobby의 노드는 페이지에 그대로 덮어 해석하는 구조체예요. 내부 노드의 자식 배열과 리프 노드의 값 배열을 `union`으로 같은 자리에 겹쳐 둡니다.
 
 ```c
 #define BT_MAX_KEYS 8   /* 학습용으로 작게: 분할/다단계가 잘 보이게 */
@@ -71,7 +71,7 @@ typedef struct {
 } BTNode;
 ```
 
-> **주의**: minidb는 노드당 키를 8개로 작게 잡았어요. 진짜 DB는 페이지를 꽉 채워 수백 개를 담습니다. 작게 잡은 이유는 **분할이 자주 일어나 눈에 잘 보이게** 하려는 학습용 선택이에요 — 키가 적든 많든 알고리즘은 한 글자도 안 바뀝니다.
+> **주의**: db-hobby는 노드당 키를 8개로 작게 잡았어요. 진짜 DB는 페이지를 꽉 채워 수백 개를 담습니다. 작게 잡은 이유는 **분할이 자주 일어나 눈에 잘 보이게** 하려는 학습용 선택이에요 — 키가 적든 많든 알고리즘은 한 글자도 안 바뀝니다.
 
 ## 3. 가장 어려운 부분 — 노드 분할(split)
 
@@ -121,7 +121,7 @@ if (sp == 1) {   /* 루트가 쪼개짐 -> 새 루트(높이 +1) */
 
 인덱스를 꼭 B+Tree로 해야 하는 건 아니에요. 갈림길이 둘 더 있는데, **왜 그걸 안 골랐는지가 오히려 B+Tree를 잘 설명해 줍니다.**
 
-| | B+Tree (minidb·PG·InnoDB) | 해시 인덱스 | LSM-tree (RocksDB·Cassandra) |
+| | B+Tree (db-hobby·PG·InnoDB) | 해시 인덱스 | LSM-tree (RocksDB·Cassandra) |
 |---|---|---|---|
 | 점 조회 `= 5` | O(log n) | **O(1)** (가장 빠름) | 여러 덩어리 탐색 (느림) |
 | 범위·정렬 `> 5`, `ORDER BY` | 됨 (리프 사슬) | **안 됨** (순서 없음) | 됨 (정렬된 SSTable) |
@@ -132,13 +132,13 @@ if (sp == 1) {   /* 루트가 쪼개짐 -> 새 루트(높이 +1) */
 - **해시 인덱스** — 키를 해시해 바로 버킷으로 가니 점 조회가 평균 O(1)로 빨라요(충돌이 많으면 최악 O(n)). 그런데 해시는 순서를 안 지킵니다. `id > 5`나 `ORDER BY id` 같은 **범위·정렬이 통째로 안 돼요.** PostgreSQL 해시 인덱스도 요즘은 WAL 기록·crash-safe까지 되지만, B+Tree가 워낙 범용이라 여전히 훨씬 덜 쓰입니다. SQL은 범위 질의가 너무 흔해서, "점 조회 + 범위 + 정렬"을 한 구조로 다 받는 B+Tree가 기본값이 됩니다.
 - **LSM-tree** — RocksDB·Cassandra·ScyllaDB가 쓰는 구조예요. B+Tree는 INSERT마다 트리 곳곳을 고치는 **무작위 쓰기**라, 쓰기가 폭주하는 워크로드에선 디스크(특히 SSD)가 버거워합니다. LSM은 쓰기를 일단 메모리(memtable)와 append-only 로그에 쌓았다가 정렬된 덩어리(SSTable)로 한꺼번에 내리며 **무작위 쓰기를 순차 쓰기로 바꿔요.** 쓰기 처리량은 좋지만 읽기는 여러 덩어리(SSTable)를 뒤져야 해 더 느려질 수 있어요(read amplification) — 이를 줄이려 **Bloom 필터**로 없는 키를 빨리 걸러내고, 백그라운드 **compaction**으로 덩어리를 정리합니다.
 
-> **설계 선택**: minidb는 PK 점 조회와 범위 조회를 둘 다 단순하게 보여주고 싶었고, 트랜잭션도 붙일 거라 B+Tree가 맞았어요. 이것도 "정답"이 아니라 워크로드에 따른 선택입니다 — "읽기·쓰기 균형 + 트랜잭션"이면 B+Tree(MySQL·PostgreSQL), "쓰기 폭주 + 로그성"이면 LSM으로 갈립니다.
+> **설계 선택**: db-hobby는 PK 점 조회와 범위 조회를 둘 다 단순하게 보여주고 싶었고, 트랜잭션도 붙일 거라 B+Tree가 맞았어요. 이것도 "정답"이 아니라 워크로드에 따른 선택입니다 — "읽기·쓰기 균형 + 트랜잭션"이면 B+Tree(MySQL·PostgreSQL), "쓰기 폭주 + 로그성"이면 LSM으로 갈립니다.
 
 ## 5. 인덱스를 실행기에 연결하기 — 플래너의 씨앗
 
 이제 이 인덱스를 실행기에 연결하면 **쿼리 플래너의 씨앗**이 생깁니다. `INSERT`는 `(PK -> RID)`를 인덱스에 등록하고, `WHERE id = 2`처럼 인덱스된 PK를 쓰면 실행기가 풀 스캔 대신 `btree_search`(O(log n)) -> `heap_get`으로 한 줄만 읽어요.
 
-"쓸 수 있으면 인덱스를 쓴다"는 이 분기가 플래너의 씨앗이에요. minidb에선 **연산자 하나로 실행 계획이 갈립니다** — 다만 이건 규칙 기반 디스패치일 뿐, 진짜 플래너는 통계(statistics)로 선택도(selectivity)·카디널리티를 추정해 비용으로 고릅니다. 그래서 실제 DB에선 `id > 1`처럼 대부분 행이 걸리는 조건이면 인덱스보다 Seq Scan이 더 빠를 수도 있어 무조건 인덱스를 쓰진 않아요.
+"쓸 수 있으면 인덱스를 쓴다"는 이 분기가 플래너의 씨앗이에요. db-hobby에선 **연산자 하나로 실행 계획이 갈립니다** — 다만 이건 규칙 기반 디스패치일 뿐, 진짜 플래너는 통계(statistics)로 선택도(selectivity)·카디널리티를 추정해 비용으로 고릅니다. 그래서 실제 DB에선 `id > 1`처럼 대부분 행이 걸리는 조건이면 인덱스보다 Seq Scan이 더 빠를 수도 있어 무조건 인덱스를 쓰진 않아요.
 
 | WHERE 조건 | 실행 계획 | 동작 |
 |---|---|---|
@@ -184,9 +184,9 @@ int btree_seek_scan(BTree *bt, bkey_t start, btree_visit_fn visit, void *ctx) {
 }
 ```
 
-연산자 하나로 실행 계획이 갈리는 이 모습이 옵티마이저가 하는 일의 (아주 단순한) 축소판이에요. 조건은 `AND`로 묶고 `OR`로 이을 수도 있는데(`a AND b OR c`는 AND가 OR보다 먼저 묶여 OR-of-AND, 즉 DNF 모양으로 파싱 — 임의 식을 DNF로 변환하는 건 아니에요), 복합 조건은 인덱스를 안 쓰고 풀 스캔으로 평가합니다. `ORDER BY <컬럼> [DESC]`·`LIMIT`도 붙였는데, **minidb는** 정렬 키가 인덱스든 아니든 일단 행을 다 모았다가 정렬하는 별도 경로(PostgreSQL의 **Sort 노드**)로 보냈어요 — 사실 정렬 키가 B+Tree 인덱스와 맞으면 인덱스 순서대로 읽어 **정렬 없이 스트리밍**할 수 있지만(실제 DB의 Index Scan이 그래서 Sort를 생략해요), minidb는 단순화를 위해 항상 모아서 정렬합니다.
+연산자 하나로 실행 계획이 갈리는 이 모습이 옵티마이저가 하는 일의 (아주 단순한) 축소판이에요. 조건은 `AND`로 묶고 `OR`로 이을 수도 있는데(`a AND b OR c`는 AND가 OR보다 먼저 묶여 OR-of-AND, 즉 DNF 모양으로 파싱 — 임의 식을 DNF로 변환하는 건 아니에요), 복합 조건은 인덱스를 안 쓰고 풀 스캔으로 평가합니다. `ORDER BY <컬럼> [DESC]`·`LIMIT`도 붙였는데, **db-hobby는** 정렬 키가 인덱스든 아니든 일단 행을 다 모았다가 정렬하는 별도 경로(PostgreSQL의 **Sort 노드**)로 보냈어요 — 사실 정렬 키가 B+Tree 인덱스와 맞으면 인덱스 순서대로 읽어 **정렬 없이 스트리밍**할 수 있지만(실제 DB의 Index Scan이 그래서 Sort를 생략해요), db-hobby는 단순화를 위해 항상 모아서 정렬합니다.
 
-> **실무/면접 포인트**: 우리 인덱스는 단일 PK 컬럼만 다뤄요. 진짜 DB의 복합 인덱스·커버링 인덱스·인덱스 온리 스캔은 아래 링크에서. 옵티마이저가 "어떤 인덱스를 쓸지, 아니면 풀 스캔이 더 싼지"를 비용으로 따져 고르는 게 비용 기반 최적화(CBO)인데, minidb는 "쓸 수 있으면 무조건 쓴다"는 규칙 기반(RBO)의 가장 단순한 형태예요.
+> **실무/면접 포인트**: 우리 인덱스는 단일 PK 컬럼만 다뤄요. 진짜 DB의 복합 인덱스·커버링 인덱스·인덱스 온리 스캔은 아래 링크에서. 옵티마이저가 "어떤 인덱스를 쓸지, 아니면 풀 스캔이 더 싼지"를 비용으로 따져 고르는 게 비용 기반 최적화(CBO)인데, db-hobby는 "쓸 수 있으면 무조건 쓴다"는 규칙 기반(RBO)의 가장 단순한 형태예요.
 
 > 더 깊이, 실제 DB의 인덱스: [DB 인덱스 ①: 기초와 EXPLAIN 읽기](/blog/theory/db-index-01-explain-basics) · [② 스캔의 종류와 옵티마이저의 선택](/blog/theory/db-index-02-scan-types)(Seq/Index/Index-Only/Bitmap 스캔과 비용 기반 선택) · [③ Covering Index와 Index-Only Scan](/blog/theory/db-index-03-covering-index-ios) · [④ 복합 인덱스와 좌측 컬럼 규칙](/blog/theory/db-index-04-composite-leftmost). 그리고 실전에서 B-Tree 인덱스로 자동완성을 푼 [자동완성 B-Tree 인덱스 걸기](/blog/project/WikiEngine/autocomplete-btree-index), B-Tree의 한계를 만나 역색인(FULLTEXT)으로 넘어간 [FULLTEXT ngram 인덱스](/blog/project/WikiEngine/fulltext-ngram-index)도.
 
@@ -194,15 +194,15 @@ int btree_seek_scan(BTree *bt, bkey_t start, btree_visit_fn visit, void *ctx) {
 
 이제 정반대 정체성으로 갑니다 — 내구성(Durability)과 원자성(Atomicity)이에요.
 
-문제는 이렇습니다. 한 트랜잭션이 여러 페이지를 고치는데, 그걸 데이터 파일에 하나씩 쓰는 도중 전원이 꺼지면? 일부 페이지만 반영되고 일부는 안 돼 트랜잭션이 **반쪽만 남아요(partial update).** (이건 한 페이지가 절반만 기록되는 **torn page**와는 다른 문제예요 — torn page는 한 페이지 내부가 찢어지는 것이고, 여기선 여러 페이지 중 일부만 반영되는 거죠.) 게다가 디스크 쓰기는 `write()` 했다고 끝이 아니라 OS 페이지 캐시에 머물 수 있어서([1편에서 본 이중 캐시](/blog/project/minidb/minidb-1-storage)), `fsync()`로 강제로 내려야 진짜 디스크에 닿습니다.
+문제는 이렇습니다. 한 트랜잭션이 여러 페이지를 고치는데, 그걸 데이터 파일에 하나씩 쓰는 도중 전원이 꺼지면? 일부 페이지만 반영되고 일부는 안 돼 트랜잭션이 **반쪽만 남아요(partial update).** (이건 한 페이지가 절반만 기록되는 **torn page**와는 다른 문제예요 — torn page는 한 페이지 내부가 찢어지는 것이고, 여기선 여러 페이지 중 일부만 반영되는 거죠.) 게다가 디스크 쓰기는 `write()` 했다고 끝이 아니라 OS 페이지 캐시에 머물 수 있어서([1편에서 본 이중 캐시](/blog/project/db-hobby/db-hobby-1-storage)), `fsync()`로 강제로 내려야 진짜 디스크에 닿습니다.
 
 **WAL(Write-Ahead Log)** 의 아이디어는 단순해요. 데이터 파일을 고치기 **전에**, 바뀔 내용을 **로그에 먼저 순차로 적고 `fsync`** 합니다. "Write-Ahead" — 데이터보다 로그를 앞서 쓴다는 뜻이에요.
 
-> **핵심 정의**: WAL은 "데이터 파일을 고치기 전에, 그 변경을 로그에 먼저 적고 fsync한다"는 프로토콜이다. 데이터 파일은 흩어진 페이지에 **무작위 쓰기**지만 로그는 끝에 이어 붙이는 **순차 쓰기**라 빠르고, 한 번의 `fsync`로 트랜잭션 전체를 원자적으로 "확정"할 수 있다. (덧붙임: minidb는 단순함을 위해 **바뀐 페이지 전체를 그대로** WAL에 적는다 — physical page logging. 실제 PostgreSQL·InnoDB는 보통 변경 *내용*만 적는 **redo 레코드**를 쓰고, 전체 페이지 이미지는 특정 상황에서만 기록한다.)
+> **핵심 정의**: WAL은 "데이터 파일을 고치기 전에, 그 변경을 로그에 먼저 적고 fsync한다"는 프로토콜이다. 데이터 파일은 흩어진 페이지에 **무작위 쓰기**지만 로그는 끝에 이어 붙이는 **순차 쓰기**라 빠르고, 한 번의 `fsync`로 트랜잭션 전체를 원자적으로 "확정"할 수 있다. (덧붙임: db-hobby는 단순함을 위해 **바뀐 페이지 전체를 그대로** WAL에 적는다 — physical page logging. 실제 PostgreSQL·InnoDB는 보통 변경 *내용*만 적는 **redo 레코드**를 쓰고, 전체 페이지 이미지는 특정 상황에서만 기록한다.)
 
-![WAL 흐름 — stage -> 로그+커밋마커 fsync(내구성 분기점) -> 데이터 적용 -> 로그 비움](/uploads/project/minidb/wal-flow.svg)
+![WAL 흐름 — stage -> 로그+커밋마커 fsync(내구성 분기점) -> 데이터 적용 -> 로그 비움](/uploads/project/db-hobby/wal-flow.svg)
 
-minidb의 `wal_commit`은 정확히 네 단계예요. 핵심은 **커밋 마커 + fsync 한 줄이 "내구성의 분기점"** 이라는 점입니다 — 그 줄을 지나야 비로소 "이 트랜잭션은 살아남는다"가 보장돼요.
+db-hobby의 `wal_commit`은 정확히 네 단계예요. 핵심은 **커밋 마커 + fsync 한 줄이 "내구성의 분기점"** 이라는 점입니다 — 그 줄을 지나야 비로소 "이 트랜잭션은 살아남는다"가 보장돼요.
 
 ```c
 int wal_commit(Wal *w) {
@@ -226,7 +226,7 @@ int wal_commit(Wal *w) {
 
 ## 7. 복구 규칙은 단 하나 — redo 아니면 discard
 
-재시작했을 때 minidb의 복구 규칙은 놀랍도록 단순합니다. **로그에 커밋 마커가 있으면 데이터에 재적용(redo), 없으면 버린다(discard).** 그게 전부예요. (실제 DB의 복구는 이보다 훨씬 복잡해요 — 체크포인트·LSN·PageLSN으로 어디부터 redo할지 정하고, steal을 쓰면 undo까지 합니다. 아래 표에서 곧 봅니다.)
+재시작했을 때 db-hobby의 복구 규칙은 놀랍도록 단순합니다. **로그에 커밋 마커가 있으면 데이터에 재적용(redo), 없으면 버린다(discard).** 그게 전부예요. (실제 DB의 복구는 이보다 훨씬 복잡해요 — 체크포인트·LSN·PageLSN으로 어디부터 redo할지 정하고, steal을 쓰면 undo까지 합니다. 아래 표에서 곧 봅니다.)
 
 ```c
 static int wal_recover(Wal *w) {
@@ -257,7 +257,7 @@ static int wal_recover(Wal *w) {
 
 전자는 "커밋했다고 사용자에게 답한 변경이 살아남는가"(내구성), 후자는 "커밋 안 된 절반의 변경이 찢어진 채 남지 않는가"(원자성)예요. 전원이 꺼져도 데이터가 안 깨진다는 걸 **실제로 크래시를 일으켜** 증명했습니다.
 
-![WAL 테스트 — 커밋 후 크래시 redo, 커밋 전 크래시 discard 6개 통과](/uploads/project/minidb/wal-test-output.svg)
+![WAL 테스트 — 커밋 후 크래시 redo, 커밋 전 크래시 discard 6개 통과](/uploads/project/db-hobby/wal-test-output.svg)
 
 ## 8. WAL을 실제 쓰기 경로에 연결하기 — 그리고 no-steal
 
@@ -265,15 +265,15 @@ static int wal_recover(Wal *w) {
 
 핵심 제약이 하나 있어요 — **커밋 전 dirty 페이지가 로그보다 먼저 디스크로 새면 안 됩니다.** 이 WAL은 redo만 있고 undo(되돌리기 로그)가 없어서, 로그에 안 적힌 변경이 데이터에 먼저 박히면 복구할 방법이 없거든요.
 
-그래서 [1편 버퍼 풀](/blog/project/minidb/minidb-1-storage)에서 예고한 **no-steal**을 WAL 쓰기 내내 켜 둡니다 — 커밋 안 된 dirty 페이지를 victim으로 안 골라, 디스크로 빠져나가지 못하게 막는 것이에요. 이게 교과서적인 steal/no-steal × WAL 상호작용입니다.
+그래서 [1편 버퍼 풀](/blog/project/db-hobby/db-hobby-1-storage)에서 예고한 **no-steal**을 WAL 쓰기 내내 켜 둡니다 — 커밋 안 된 dirty 페이지를 victim으로 안 골라, 디스크로 빠져나가지 못하게 막는 것이에요. 이게 교과서적인 steal/no-steal × WAL 상호작용입니다.
 
 | 버퍼 정책 | 미커밋 dirty 페이지를 디스크에? | 복구에 필요한 것 | 채택 |
 |---|---|---|---|
 | **steal + no-force** (ARIES) | 쓸 수 있음 | redo **+ undo** | PostgreSQL·InnoDB |
 | **no-steal + force** | 못 씀 / 커밋 시 강제 flush | undo·redo 둘 다 거의 불필요 | (느려서 잘 안 씀) |
-| **no-steal + no-force** (minidb) | 못 씀 (커밋까지 메모리에 묶음) | **redo만** (undo 불필요) | minidb |
+| **no-steal + no-force** (db-hobby) | 못 씀 (커밋까지 메모리에 묶음) | **redo만** (undo 불필요) | db-hobby |
 
-minidb가 **no-steal**을 고른 덕에 undo 로그 없이 redo만으로 복구가 끝나요. 대신 큰 트랜잭션은 dirty 페이지를 전부 메모리에 들고 있어야 한다는 대가가 있는데, 학습용으로는 이 단순함이 압도적으로 유리합니다. 왜 진짜 DB는 거꾸로 steal+no-force(=ARIES)를 고르는지, 그 트레이드오프는 [4편](/blog/project/minidb/minidb-4-transactions)에서 자세히 다뤄요.
+db-hobby가 **no-steal**을 고른 덕에 undo 로그 없이 redo만으로 복구가 끝나요. 대신 큰 트랜잭션은 dirty 페이지를 전부 메모리에 들고 있어야 한다는 대가가 있는데, 학습용으로는 이 단순함이 압도적으로 유리합니다. 왜 진짜 DB는 거꾸로 steal+no-force(=ARIES)를 고르는지, 그 트레이드오프는 [4편](/blog/project/db-hobby/db-hobby-4-transactions)에서 자세히 다뤄요.
 
 진짜 `INSERT` 도중에 크래시를 주입해 재시작 시 redo(내구성)/discard(원자성)가 도는 걸 테스트로 증명했어요. 처음엔 데이터(`.tbl`)만 WAL로 감쌌다가, 같은 방식으로 인덱스(`.idx`)도 자기 WAL(`.idx.wal`)로 감쌌습니다 — 그래서 크래시 후 재시작하면 데이터뿐 아니라 인덱스 항목까지 redo되고, 복구된 행을 `WHERE id = N` 인덱스 조회로도 다시 찾을 수 있어요.
 
@@ -289,9 +289,9 @@ minidb가 **no-steal**을 고른 덕에 undo 로그 없이 redo만으로 복구�
 - **노드 분할** — 리프에서 자라 위로 전파되므로 모든 리프가 같은 깊이(균형). 리프는 키 복사, 내부는 키 push up.
 - **인덱스 ≠ B+Tree** — 점 조회 전용이면 해시, 쓰기 폭주면 LSM. "점 조회+범위+정렬"을 다 받아서 B+Tree가 기본값.
 - **플래너의 씨앗** — 연산자 하나(`=` / `<>` / 복합)로 점 조회·범위 스캔·풀 스캔이 갈린다. 범위 스캔은 리프 사슬 덕에 트리를 한 번만 탄다.
-- **WAL** — 데이터보다 로그를 먼저 쓰고 fsync. 복구 규칙은 "커밋 마커 있으면 redo, 없으면 discard" 하나. minidb는 **no-steal + no-force**라 undo 없이 redo만으로 복구한다.
+- **WAL** — 데이터보다 로그를 먼저 쓰고 fsync. 복구 규칙은 "커밋 마커 있으면 redo, 없으면 discard" 하나. db-hobby는 **no-steal + no-force**라 undo 없이 redo만으로 복구한다.
 
-인덱스가 "빠르게"를, WAL이 "안 깨지게"를 줬어요. 특히 WAL이 원자성·내구성의 **"원리"** 를 손에 쥐여줬습니다. [다음 편](/blog/project/minidb/minidb-4-transactions)에선 이걸 SQL 레벨로 끌어올려 `BEGIN`/`COMMIT`/`ROLLBACK`으로 묶음 작업을 다뤄요 — no-steal을 왜 골랐는지, ARIES와 무엇이 다른지도 거기서 깊이 들어갑니다.
+인덱스가 "빠르게"를, WAL이 "안 깨지게"를 줬어요. 특히 WAL이 원자성·내구성의 **"원리"** 를 손에 쥐여줬습니다. [다음 편](/blog/project/db-hobby/db-hobby-4-transactions)에선 이걸 SQL 레벨로 끌어올려 `BEGIN`/`COMMIT`/`ROLLBACK`으로 묶음 작업을 다뤄요 — no-steal을 왜 골랐는지, ARIES와 무엇이 다른지도 거기서 깊이 들어갑니다.
 
 ## 참고
 
@@ -301,29 +301,29 @@ minidb가 **no-steal**을 고른 덕에 undo 로그 없이 redo만으로 복구�
 - Douglas Comer, *The Ubiquitous B-Tree* (ACM Computing Surveys, 1979)
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992)
 - 본 블로그: [DB 인덱스 ①: 기초와 EXPLAIN](/blog/theory/db-index-01-explain-basics) · [② 스캔의 종류](/blog/theory/db-index-02-scan-types) · [③ Covering Index](/blog/theory/db-index-03-covering-index-ios) · [④ 복합 인덱스](/blog/theory/db-index-04-composite-leftmost) · [트랜잭션 ACID ④: Durability](/blog/theory/transaction-acid-04-durability)
-- 본 시리즈: [1편 저장 계층](/blog/project/minidb/minidb-1-storage) · [2편 SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [4편 트랜잭션](/blog/project/minidb/minidb-4-transactions). WikiEngine 실전편: [자동완성 B-Tree 인덱스](/blog/project/WikiEngine/autocomplete-btree-index) · [FULLTEXT ngram 인덱스](/blog/project/WikiEngine/fulltext-ngram-index)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
+- 본 시리즈: [1편 저장 계층](/blog/project/db-hobby/db-hobby-1-storage) · [2편 SQL 엔진](/blog/project/db-hobby/db-hobby-2-sql-engine) · [4편 트랜잭션](/blog/project/db-hobby/db-hobby-4-transactions). WikiEngine 실전편: [자동완성 B-Tree 인덱스](/blog/project/WikiEngine/autocomplete-btree-index) · [FULLTEXT ngram 인덱스](/blog/project/WikiEngine/fulltext-ngram-index)
+- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
 ## 0. Introduction — Fast, and Crash-Proof
 
-In [Part 2](/blog/project/minidb/minidb-2-sql-engine) SQL finally started running. But it had one weakness — `WHERE` was an O(n) scan over every row each time. To find one row out of a million, it compared a million times.
+In [Part 2](/blog/project/db-hobby/db-hobby-2-sql-engine) SQL finally started running. But it had one weakness — `WHERE` was an O(n) scan over every row each time. To find one row out of a million, it compared a million times.
 
 This part attacks that weakness head-on. We stack two new layers.
 
 - **B+Tree index** — the layer that makes the DB "fast" by turning an O(n) full scan into O(log n).
 - **WAL (write-ahead log)** — the layer that makes the DB "crash-proof" so the file never corrupts even on a power loss.
 
-These two have opposite personalities. The index is about **speed** (performance); the WAL is about **safety** (durability, atomicity). Yet both ultimately run on the same **fixed-size pages** we built in [Part 1](/blog/project/minidb/minidb-1-storage) — the index lives in pages, and the WAL (in minidb) logs whole pages. That is why they share one part.
+These two have opposite personalities. The index is about **speed** (performance); the WAL is about **safety** (durability, atomicity). Yet both ultimately run on the same **fixed-size pages** we built in [Part 1](/blog/project/db-hobby/db-hobby-1-storage) — the index lives in pages, and the WAL (in db-hobby) logs whole pages. That is why they share one part.
 
 ## 1. Why Indexes Exist — the O(n) Wall
 
-Running `WHERE id = 2` triggers the **sequential scan** from [Part 1](/blog/project/minidb/minidb-1-storage) — a double loop over every page of the heap and every slot in a page. A million rows means a million comparisons — O(n).
+Running `WHERE id = 2` triggers the **sequential scan** from [Part 1](/blog/project/db-hobby/db-hobby-1-storage) — a double loop over every page of the heap and every slot in a page. A million rows means a million comparisons — O(n).
 
-An **index** cuts that to O(log n). The idea is simple — keep a "key -> the row's address (RID)" mapping in a sorted search structure. That `RID = (page_id, slot)` from [Part 1](/blog/project/minidb/minidb-1-storage) returns here. The index does not hold the values; it only points at "where in the heap the row with that value lives."
+An **index** cuts that to O(log n). The idea is simple — keep a "key -> the row's address (RID)" mapping in a sorted search structure. That `RID = (page_id, slot)` from [Part 1](/blog/project/db-hobby/db-hobby-1-storage) returns here. The index does not hold the values; it only points at "where in the heap the row with that value lives."
 
-> **Definition** (for heap-based engines like minidb·PostgreSQL): an index is a **sorted search structure separate from the data**, holding a "key -> RID" mapping. The heap piles rows unordered (O(n) scan); the index lays a separate sorted path on top to enable O(log n) lookups. (InnoDB's clustered index holds the data itself in its leaves, so it is not "no values, just RIDs" — see [Part 1](/blog/project/minidb/minidb-1-storage).)
+> **Definition** (for heap-based engines like db-hobby·PostgreSQL): an index is a **sorted search structure separate from the data**, holding a "key -> RID" mapping. The heap piles rows unordered (O(n) scan); the index lays a separate sorted path on top to enable O(log n) lookups. (InnoDB's clustered index holds the data itself in its leaves, so it is not "no values, just RIDs" — see [Part 1](/blog/project/db-hobby/db-hobby-1-storage).)
 
 ## 2. Why a B+Tree, Not a Binary Tree — Disk Is the Answer
 
@@ -338,9 +338,9 @@ It splits into two node kinds.
 - **Internal node** — just a guide. It holds "key + child pointer" and routes "if the key is below 17 go left, else go right." No actual values (RIDs).
 - **Leaf node** — the real "key -> value (RID)" lives here, and it is **chained to its sibling leaf** (`next_leaf`). That chain is the heart of range scans (section 4).
 
-![B+Tree structure — search path from internal nodes down to a leaf](/uploads/project/minidb/btree-diagram.svg)
+![B+Tree structure — search path from internal nodes down to a leaf](/uploads/project/db-hobby/btree-diagram.svg)
 
-minidb's node is a struct reinterpreted directly over a page. The internal node's child array and the leaf node's value array overlap in the same place via a `union`.
+db-hobby's node is a struct reinterpreted directly over a page. The internal node's child array and the leaf node's value array overlap in the same place via a `union`.
 
 ```c
 #define BT_MAX_KEYS 8   /* small for learning: splits/multi-level stay visible */
@@ -357,7 +357,7 @@ typedef struct {
 } BTNode;
 ```
 
-> **Note**: minidb caps keys per node at 8. Real DBs fill a page with hundreds. The small cap is a learning choice — it makes **splits happen often and stay visible**. Few keys or many, the algorithm does not change one line.
+> **Note**: db-hobby caps keys per node at 8. Real DBs fill a page with hundreds. The small cap is a learning choice — it makes **splits happen often and stay visible**. Few keys or many, the algorithm does not change one line.
 
 ## 3. The Hardest Part — Node Splits
 
@@ -407,7 +407,7 @@ I proved the structural integrity of this disk-resident B+Tree by **inserting 10
 
 An index does not have to be a B+Tree. Two other forks exist, and **why we did not pick them explains the B+Tree well.**
 
-| | B+Tree (minidb·PG·InnoDB) | Hash index | LSM-tree (RocksDB·Cassandra) |
+| | B+Tree (db-hobby·PG·InnoDB) | Hash index | LSM-tree (RocksDB·Cassandra) |
 |---|---|---|---|
 | Point lookup `= 5` | O(log n) | **O(1)** (fastest) | search several runs (slow) |
 | Range/sort `> 5`, `ORDER BY` | yes (leaf chain) | **no** (unordered) | yes (sorted SSTables) |
@@ -418,13 +418,13 @@ An index does not have to be a B+Tree. Two other forks exist, and **why we did n
 - **Hash index** — hashing a key jumps straight to a bucket, so point lookups are average O(1), even faster than a B+Tree (worst case O(n) under heavy collisions). But hashes do not keep order. `id > 5` or `ORDER BY id` — **ranges and sorting are entirely out**. PostgreSQL's hash index is WAL-logged and crash-safe these days, but the B+Tree is so general-purpose that it stays far more used. SQL has range queries so often that the B+Tree, which takes "point + range + sort" in one structure, becomes the default.
 - **LSM-tree** — used by RocksDB, Cassandra, ScyllaDB. A B+Tree does **random writes**, fixing the tree all over on every INSERT, so a write-heavy workload strains the disk (especially SSDs). LSM piles writes into memory (memtable) and an append-only log first, then flushes them as sorted runs (SSTables) all at once, **turning random writes into sequential writes**. Write throughput is great, but reads can be slower because they must dig through several runs/SSTables (read amplification) — mitigated with **Bloom filters** to skip missing keys fast and background **compaction** to merge runs.
 
-> **A design choice**: minidb wanted to show PK point lookups and range lookups both simply, and it would add transactions, so a B+Tree fit. This too is not "the answer" but a workload choice — "balanced read/write + transactions" goes B+Tree (MySQL, PostgreSQL), "write-heavy + log-like" goes LSM.
+> **A design choice**: db-hobby wanted to show PK point lookups and range lookups both simply, and it would add transactions, so a B+Tree fit. This too is not "the answer" but a workload choice — "balanced read/write + transactions" goes B+Tree (MySQL, PostgreSQL), "write-heavy + log-like" goes LSM.
 
 ## 5. Wiring the Index into the Executor — the Seed of a Planner
 
 Wire this index into the executor and you get **the seed of a query planner**. `INSERT` registers `(PK -> RID)` in the index, and a query like `WHERE id = 2` on an indexed PK has the executor read one row via `btree_search` (O(log n)) -> `heap_get` instead of a full scan.
 
-This branch — "use the index if you can" — is the seed of a planner. In minidb, **one operator splits the execution plan** — but this is just rule-based dispatch; a real planner estimates selectivity and cardinality from statistics and chooses by cost. So in a real DB `id > 1` (which matches most rows) may be faster as a Seq Scan than via the index — it does not always use the index.
+This branch — "use the index if you can" — is the seed of a planner. In db-hobby, **one operator splits the execution plan** — but this is just rule-based dispatch; a real planner estimates selectivity and cardinality from statistics and chooses by cost. So in a real DB `id > 1` (which matches most rows) may be faster as a Seq Scan than via the index — it does not always use the index.
 
 | WHERE condition | Plan | Action |
 |---|---|---|
@@ -470,9 +470,9 @@ int btree_seek_scan(BTree *bt, bkey_t start, btree_visit_fn visit, void *ctx) {
 }
 ```
 
-One operator splitting the execution plan is a (very simple) miniature of what an optimizer does. Conditions can be grouped with `AND` and joined with `OR` (`a AND b OR c` parses as OR-of-AND, i.e. DNF shape, with AND binding before OR — not a conversion of arbitrary expressions to DNF); compound conditions skip the index and are evaluated with a full scan. `ORDER BY <column> [DESC]` and `LIMIT` are in too, but **minidb** always gathers rows then sorts (PostgreSQL's **Sort node**), whether or not the sort key is indexed — even though a sort key matching a B+Tree could be read in index order and **streamed without sorting** (that is why a real DB's Index Scan can skip the Sort); minidb just always gathers-and-sorts for simplicity.
+One operator splitting the execution plan is a (very simple) miniature of what an optimizer does. Conditions can be grouped with `AND` and joined with `OR` (`a AND b OR c` parses as OR-of-AND, i.e. DNF shape, with AND binding before OR — not a conversion of arbitrary expressions to DNF); compound conditions skip the index and are evaluated with a full scan. `ORDER BY <column> [DESC]` and `LIMIT` are in too, but **db-hobby** always gathers rows then sorts (PostgreSQL's **Sort node**), whether or not the sort key is indexed — even though a sort key matching a B+Tree could be read in index order and **streamed without sorting** (that is why a real DB's Index Scan can skip the Sort); db-hobby just always gathers-and-sorts for simplicity.
 
-> **Practical/interview note**: our index handles only a single PK column. Real DBs' composite indexes, covering indexes, and index-only scans are in the links below. An optimizer weighing "which index to use, or whether a full scan is cheaper" by cost is cost-based optimization (CBO); minidb is the simplest rule-based form (RBO) — "use it if you can."
+> **Practical/interview note**: our index handles only a single PK column. Real DBs' composite indexes, covering indexes, and index-only scans are in the links below. An optimizer weighing "which index to use, or whether a full scan is cheaper" by cost is cost-based optimization (CBO); db-hobby is the simplest rule-based form (RBO) — "use it if you can."
 
 > Deeper, real-DB indexes: [DB Index ①: Basics and Reading EXPLAIN](/blog/theory/db-index-01-explain-basics) · [② Scan Types and the Optimizer's Choice](/blog/theory/db-index-02-scan-types) · [③ Covering Index and Index-Only Scan](/blog/theory/db-index-03-covering-index-ios) · [④ Composite Index and the Leftmost Rule](/blog/theory/db-index-04-composite-leftmost). And from the field: [Autocomplete with a B-Tree Index](/blog/project/WikiEngine/autocomplete-btree-index) and, hitting the B-Tree's limits, [FULLTEXT ngram Index](/blog/project/WikiEngine/fulltext-ngram-index).
 
@@ -480,15 +480,15 @@ One operator splitting the execution plan is a (very simple) miniature of what a
 
 Now to the opposite identity — Durability and Atomicity.
 
-The problem is this. A transaction modifies several pages, and the power cuts while writing them to the data file one by one? Some pages land and some do not, leaving the transaction **half-applied (a partial update).** (This is different from a **torn page** — a single page written only halfway; here it is some-of-several-pages applied.) And a disk write is not done just because `write()` returned — it can linger in the OS page cache (the [double cache from Part 1](/blog/project/minidb/minidb-1-storage)), so only `fsync()` forces it to truly reach disk.
+The problem is this. A transaction modifies several pages, and the power cuts while writing them to the data file one by one? Some pages land and some do not, leaving the transaction **half-applied (a partial update).** (This is different from a **torn page** — a single page written only halfway; here it is some-of-several-pages applied.) And a disk write is not done just because `write()` returned — it can linger in the OS page cache (the [double cache from Part 1](/blog/project/db-hobby/db-hobby-1-storage)), so only `fsync()` forces it to truly reach disk.
 
 The **WAL (Write-Ahead Log)** idea is simple. **Before** modifying the data file, **write the change to the log first, sequentially, and `fsync`**. "Write-Ahead" — log ahead of data.
 
-> **Definition**: WAL is the protocol "before modifying the data file, write the change to the log first and fsync." The data file is **random writes** to scattered pages, but the log is **sequential writes** appended at the end, so it is fast, and a single `fsync` atomically "commits" the whole transaction. (Aside: minidb, for simplicity, logs the **whole changed page** to the WAL — physical page logging. Real PostgreSQL/InnoDB normally log only the *change* as a **redo record**, writing a full page image only in specific cases.)
+> **Definition**: WAL is the protocol "before modifying the data file, write the change to the log first and fsync." The data file is **random writes** to scattered pages, but the log is **sequential writes** appended at the end, so it is fast, and a single `fsync` atomically "commits" the whole transaction. (Aside: db-hobby, for simplicity, logs the **whole changed page** to the WAL — physical page logging. Real PostgreSQL/InnoDB normally log only the *change* as a **redo record**, writing a full page image only in specific cases.)
 
-![WAL flow — stage -> log + commit marker fsync (durability point) -> apply to data -> clear log](/uploads/project/minidb/wal-flow.svg)
+![WAL flow — stage -> log + commit marker fsync (durability point) -> apply to data -> clear log](/uploads/project/db-hobby/wal-flow.svg)
 
-minidb's `wal_commit` is exactly four steps. The key is that the **commit marker + fsync line is "the durability boundary"** — only past that line is "this transaction survives" guaranteed.
+db-hobby's `wal_commit` is exactly four steps. The key is that the **commit marker + fsync line is "the durability boundary"** — only past that line is "this transaction survives" guaranteed.
 
 ```c
 int wal_commit(Wal *w) {
@@ -512,7 +512,7 @@ int wal_commit(Wal *w) {
 
 ## 7. The Recovery Rule Is Just One — redo or discard
 
-On restart minidb's recovery rule is shockingly simple. **If the log has a commit marker, reapply to the data (redo); if not, throw it away (discard).** That is all. (A real DB's recovery is far more involved — checkpoints, LSN/PageLSN to decide where redo starts, and undo when steal is used. The table below shows why.)
+On restart db-hobby's recovery rule is shockingly simple. **If the log has a commit marker, reapply to the data (redo); if not, throw it away (discard).** That is all. (A real DB's recovery is far more involved — checkpoints, LSN/PageLSN to decide where redo starts, and undo when steal is used. The table below shows why.)
 
 ```c
 static int wal_recover(Wal *w) {
@@ -543,7 +543,7 @@ To prove this, the test **injects a crash at exactly the two dangerous moments.*
 
 The former is "does a change we told the user was committed survive" (durability); the latter is "does half of an uncommitted change not remain torn" (atomicity). I proved the data does not corrupt on power loss **by actually causing crashes.**
 
-![WAL tests — redo on post-commit crash, discard on pre-commit crash, 6 pass](/uploads/project/minidb/wal-test-output.svg)
+![WAL tests — redo on post-commit crash, discard on pre-commit crash, 6 pass](/uploads/project/db-hobby/wal-test-output.svg)
 
 ## 8. Wiring the WAL into the Real Write Path — and no-steal
 
@@ -551,15 +551,15 @@ At first this WAL was a standalone module. Later I **wired it into the real writ
 
 There is one core constraint — **before commit, a dirty page must not leak to disk ahead of the log.** This WAL has only redo, no undo (rollback log), so if a change not yet logged lands in the data first, there is no way to recover.
 
-So we keep **no-steal**, foreshadowed in the [Part 1 buffer pool](/blog/project/minidb/minidb-1-storage), on throughout WAL writes — never pick an uncommitted dirty page as a victim, so it cannot escape to disk. This is the textbook steal/no-steal × WAL interaction.
+So we keep **no-steal**, foreshadowed in the [Part 1 buffer pool](/blog/project/db-hobby/db-hobby-1-storage), on throughout WAL writes — never pick an uncommitted dirty page as a victim, so it cannot escape to disk. This is the textbook steal/no-steal × WAL interaction.
 
 | Buffer policy | Uncommitted dirty page to disk? | Recovery needs | Adoption |
 |---|---|---|---|
 | **steal + no-force** (ARIES) | allowed | redo **+ undo** | PostgreSQL·InnoDB |
 | **no-steal + force** | not allowed / force-flush at commit | neither undo nor redo, basically | (slow, rarely used) |
-| **no-steal + no-force** (minidb) | not allowed (pinned until commit) | **redo only** (no undo) | minidb |
+| **no-steal + no-force** (db-hobby) | not allowed (pinned until commit) | **redo only** (no undo) | db-hobby |
 
-Because minidb chose **no-steal**, recovery finishes with redo alone, no undo log. The price is that a big transaction must hold all its dirty pages in memory — but for learning this simplicity wins overwhelmingly. Why real DBs choose the opposite, steal + no-force (= ARIES), and that trade-off, is covered in detail in [Part 4](/blog/project/minidb/minidb-4-transactions).
+Because db-hobby chose **no-steal**, recovery finishes with redo alone, no undo log. The price is that a big transaction must hold all its dirty pages in memory — but for learning this simplicity wins overwhelmingly. Why real DBs choose the opposite, steal + no-force (= ARIES), and that trade-off, is covered in detail in [Part 4](/blog/project/db-hobby/db-hobby-4-transactions).
 
 I proved redo (durability) / discard (atomicity) run on restart by injecting a crash mid-real-`INSERT`. At first only the data (`.tbl`) was wrapped in a WAL; then, the same way, the index (`.idx`) got its own WAL (`.idx.wal`) — so after a crash-restart, not only data but index entries get redone, and a recovered row is findable again via a `WHERE id = N` index lookup.
 
@@ -575,9 +575,9 @@ This part stacked two layers of opposite personality — the **speed** of the in
 - **Node split** — it grows at the leaves and propagates up, so all leaves are at equal depth (balanced). Leaves copy the key up, internals push it up.
 - **Index ≠ B+Tree** — point-lookup-only goes hash, write-heavy goes LSM. Taking "point + range + sort" all at once makes the B+Tree the default.
 - **The seed of a planner** — one operator (`=` / `<>` / compound) splits point lookup, range scan, full scan. The range scan traverses the tree only once thanks to the leaf chain.
-- **WAL** — log ahead of data, then fsync. The recovery rule is just one: "marker present, redo; absent, discard." minidb is **no-steal + no-force**, so it recovers with redo alone, no undo.
+- **WAL** — log ahead of data, then fsync. The recovery rule is just one: "marker present, redo; absent, discard." db-hobby is **no-steal + no-force**, so it recovers with redo alone, no undo.
 
-The index gave "fast," the WAL gave "crash-proof." In particular the WAL handed us the **"principle"** of atomicity and durability. [Next](/blog/project/minidb/minidb-4-transactions) we lift this to the SQL level and handle batched work with `BEGIN`/`COMMIT`/`ROLLBACK` — and go deep there on why we picked no-steal and how it differs from ARIES.
+The index gave "fast," the WAL gave "crash-proof." In particular the WAL handed us the **"principle"** of atomicity and durability. [Next](/blog/project/db-hobby/db-hobby-4-transactions) we lift this to the SQL level and handle batched work with `BEGIN`/`COMMIT`/`ROLLBACK` — and go deep there on why we picked no-steal and how it differs from ARIES.
 
 ## References
 
@@ -587,5 +587,5 @@ The index gave "fast," the WAL gave "crash-proof." In particular the WAL handed 
 - Douglas Comer, *The Ubiquitous B-Tree* (ACM Computing Surveys, 1979)
 - ARIES: A Transaction Recovery Method (Mohan et al., 1992)
 - This blog: [DB Index ①: Basics and EXPLAIN](/blog/theory/db-index-01-explain-basics) · [② Scan Types](/blog/theory/db-index-02-scan-types) · [③ Covering Index](/blog/theory/db-index-03-covering-index-ios) · [④ Composite Index](/blog/theory/db-index-04-composite-leftmost) · [Transaction ACID ④: Durability](/blog/theory/transaction-acid-04-durability)
-- This series: [Part 1 Storage](/blog/project/minidb/minidb-1-storage) · [Part 2 SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [Part 4 Transactions](/blog/project/minidb/minidb-4-transactions). WikiEngine field posts: [Autocomplete B-Tree Index](/blog/project/WikiEngine/autocomplete-btree-index) · [FULLTEXT ngram Index](/blog/project/WikiEngine/fulltext-ngram-index)
-- [minidb on GitHub](https://github.com/dj258255/db-hobby)
+- This series: [Part 1 Storage](/blog/project/db-hobby/db-hobby-1-storage) · [Part 2 SQL Engine](/blog/project/db-hobby/db-hobby-2-sql-engine) · [Part 4 Transactions](/blog/project/db-hobby/db-hobby-4-transactions). WikiEngine field posts: [Autocomplete B-Tree Index](/blog/project/WikiEngine/autocomplete-btree-index) · [FULLTEXT ngram Index](/blog/project/WikiEngine/fulltext-ngram-index)
+- [db-hobby on GitHub](https://github.com/dj258255/db-hobby)

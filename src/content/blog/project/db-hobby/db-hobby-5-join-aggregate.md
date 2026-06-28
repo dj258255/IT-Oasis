@@ -1,7 +1,7 @@
 ---
 title: '조인은 어떻게 동작하는가 — 두 테이블을 잇고 행을 접기까지'
 titleEn: 'How Do Joins Work? — From Joining Two Tables to Folding Rows'
-description: "관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 마지막 편. 한 테이블을 넘어 테이블 여러 개를 둔다. PostgreSQL의 relfilenode처럼 테이블마다 파일을 따로 두고 카탈로그로 묶은 뒤, 재귀적 N-way 중첩 루프 조인을 짠다. 그리고 별칭·self-join, 집계(COUNT/SUM/MIN/MAX/AVG)·GROUP BY, 레벨마다 인덱스/해시/중첩 루프를 고르는 조인 알고리즘 선택, LEFT JOIN과 NULL, 서브쿼리까지 — 진짜 옵티마이저가 하는 일을 코드로 드러낸다."
+description: "관계형 DB를 C로 밑바닥부터 만든 db-hobby 시리즈 마지막 편. 한 테이블을 넘어 테이블 여러 개를 둔다. PostgreSQL의 relfilenode처럼 테이블마다 파일을 따로 두고 카탈로그로 묶은 뒤, 재귀적 N-way 중첩 루프 조인을 짠다. 그리고 별칭·self-join, 집계(COUNT/SUM/MIN/MAX/AVG)·GROUP BY, 레벨마다 인덱스/해시/중첩 루프를 고르는 조인 알고리즘 선택, LEFT JOIN과 NULL, 서브쿼리까지 — 진짜 옵티마이저가 하는 일을 코드로 드러낸다."
 descriptionEn: "The final part of building a relational database from scratch in C. Going beyond a single table: each table is its own files (like PostgreSQL's relfilenode) tied by a catalog, with a recursive N-way nested-loop join. Plus aliases/self-joins, aggregates (COUNT/SUM/MIN/MAX/AVG) with GROUP BY, per-level join-method selection (index / hash / nested-loop), LEFT JOIN and NULL, and subqueries — the work a real optimizer does, made visible in code."
 date: 2026-05-24
 tags:
@@ -12,16 +12,16 @@ tags:
   - Hash Join
   - SQL
   - Learning
-category: project/minidb
-coverImage: /uploads/project/minidb/cover.svg
+category: project/db-hobby
+coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
-series: "minidb"
+series: "db-hobby"
 seriesOrder: 5
 ---
 
 ## 0. 들어가며 — 한 테이블에서 여러 테이블로
 
-[4편](/blog/project/minidb/minidb-4-transactions)까지로 "한 테이블짜리 DB"가 완성됐어요 — 저장·SQL·인덱스·내구성·트랜잭션. 페이지에 행을 얹고, SQL을 받고, 빠르게 찾고, 전원이 꺼져도 안 깨지고, 묶음 작업을 원자적으로 처리하는 데까지 왔습니다. 그런데 진짜 DB는 테이블 하나로 안 끝나죠 — `users`와 `orders`를 **잇고**, 그 결과를 부서별로 **접어** 집계합니다.
+[4편](/blog/project/db-hobby/db-hobby-4-transactions)까지로 "한 테이블짜리 DB"가 완성됐어요 — 저장·SQL·인덱스·내구성·트랜잭션. 페이지에 행을 얹고, SQL을 받고, 빠르게 찾고, 전원이 꺼져도 안 깨지고, 묶음 작업을 원자적으로 처리하는 데까지 왔습니다. 그런데 진짜 DB는 테이블 하나로 안 끝나죠 — `users`와 `orders`를 **잇고**, 그 결과를 부서별로 **접어** 집계합니다.
 
 이번 마지막 편은 테이블을 여러 개 두고 잇습니다. 그러려면 저장 구조부터 손봐야 했어요. 다 만들고 나면 `SELECT users.name, COUNT(*) FROM users JOIN orders ON users.id = orders.uid GROUP BY users.name` 같은 진짜 분석 쿼리가 도는 걸 볼 수 있습니다.
 
@@ -31,9 +31,9 @@ seriesOrder: 5
 
 진짜 DB처럼 테이블 여러 개를 두고 조인하려면 저장 구조부터 바꿔야 했어요. **PostgreSQL이 릴레이션마다 디스크 파일을 따로 두는 방식(relfilenode)** 을 그대로 따랐습니다. 어떤 테이블이 있는지는 카탈로그 파일이 들고(`pg_class` 격), 각 테이블의 행과 인덱스는 테이블별 파일에 살아요.
 
-![relfilenode식 파일 배치 — 카탈로그(mydb) 아래 테이블마다 .tbl(힙)·.idx(B+Tree) 파일을 따로 둔다](/uploads/project/minidb/relfilenode-layout.svg)
+![relfilenode식 파일 배치 — 카탈로그(mydb) 아래 테이블마다 .tbl(힙)·.idx(B+Tree) 파일을 따로 둔다](/uploads/project/db-hobby/relfilenode-layout.svg)
 
-이 결정이 왜 중요하냐면, 테이블이 파일별로 나뉘니 **앞서 만든 힙·B+Tree 코드를 한 줄도 안 고치고 테이블 수만큼 복제하면 됐다**는 거예요. [1편의 힙](/blog/project/minidb/minidb-1-storage)과 [3편의 B+Tree](/blog/project/minidb/minidb-3-index-wal)가 "테이블 하나"를 다루는 코드였는데, 그게 그대로 N개로 늘어납니다. 트랜잭션만 모든 테이블에 걸쳐 작동하도록 넓혔어요.
+이 결정이 왜 중요하냐면, 테이블이 파일별로 나뉘니 **앞서 만든 힙·B+Tree 코드를 한 줄도 안 고치고 테이블 수만큼 복제하면 됐다**는 거예요. [1편의 힙](/blog/project/db-hobby/db-hobby-1-storage)과 [3편의 B+Tree](/blog/project/db-hobby/db-hobby-3-index-wal)가 "테이블 하나"를 다루는 코드였는데, 그게 그대로 N개로 늘어납니다. 트랜잭션만 모든 테이블에 걸쳐 작동하도록 넓혔어요.
 
 > **왜 테이블 = 파일인가**: 릴레이션마다 파일을 따로 두면 한 테이블의 저장 로직이 다른 테이블과 완전히 격리된다. 그래서 "한 테이블짜리 힙 코드"를 그대로 N벌 복제하는 게 가능하다 — 이게 PostgreSQL relfilenode 방식의 학습적 이점이다. InnoDB도 `innodb_file_per_table` 옵션으로 같은 구조를 택할 수 있다(끄면 한 공유 테이블스페이스에 다 몰아넣는다).
 
@@ -55,9 +55,9 @@ users.id | users.name | orders.oid | orders.uid | orders.item
 
 ### 인덱스 중첩 루프 조인 — 안쪽 루프를 점 조회로
 
-여기서 한 걸음 더 갔어요. 안쪽 테이블의 **PK가 마침 `ON` 컬럼이면**, 안쪽을 전부 훑을 필요가 없습니다. 바깥 행의 키로 [3편에서 만든 B+Tree](/blog/project/minidb/minidb-3-index-wal)를 점 조회하면 끝 — O(바깥 x 안쪽)이 O(바깥 x log 안쪽)으로 줄어들어요. 이게 옵티마이저가 인덱스가 있을 때 고르는 **인덱스 중첩 루프 조인(index nested-loop join)** 입니다.
+여기서 한 걸음 더 갔어요. 안쪽 테이블의 **PK가 마침 `ON` 컬럼이면**, 안쪽을 전부 훑을 필요가 없습니다. 바깥 행의 키로 [3편에서 만든 B+Tree](/blog/project/db-hobby/db-hobby-3-index-wal)를 점 조회하면 끝 — O(바깥 x 안쪽)이 O(바깥 x log 안쪽)으로 줄어들어요. 이게 옵티마이저가 인덱스가 있을 때 고르는 **인덱스 중첩 루프 조인(index nested-loop join)** 입니다.
 
-minidb는 조인 시 안쪽 PK가 조인 키인지 보고, 맞으면 전체 스캔 대신 `btree_search` 로 바꿉니다(`(N행, 인덱스 조인)` 으로 표시).
+db-hobby는 조인 시 안쪽 PK가 조인 키인지 보고, 맞으면 전체 스캔 대신 `btree_search` 로 바꿉니다(`(N행, 인덱스 조인)` 으로 표시).
 
 ```c
 if (level >= 1 && m->method[level] == JM_INDEX) {
@@ -87,7 +87,7 @@ users.id | users.name | orders.oid | orders.uid | orders.item | products.pid | p
 (2행, 인덱스 조인)
 ```
 
-> **재귀가 N-way를 공짜로 푸는 이유**: 조인 체인을 "레벨"로 보면, 각 레벨은 "그 테이블을 스캔하고, 짝이 맞으면 다음 레벨로 내려간다"는 똑같은 일을 한다. 그러니 2단이든 5단이든 함수 하나가 자신을 깊이 N까지 재귀 호출하면 끝이다 — [2편의 재귀 하강 파서](/blog/project/minidb/minidb-2-sql-engine)에서 문법 규칙이 함수로 떨어졌던 것과 같은, "재귀적 구조엔 재귀 함수"라는 발상이다.
+> **재귀가 N-way를 공짜로 푸는 이유**: 조인 체인을 "레벨"로 보면, 각 레벨은 "그 테이블을 스캔하고, 짝이 맞으면 다음 레벨로 내려간다"는 똑같은 일을 한다. 그러니 2단이든 5단이든 함수 하나가 자신을 깊이 N까지 재귀 호출하면 끝이다 — [2편의 재귀 하강 파서](/blog/project/db-hobby/db-hobby-2-sql-engine)에서 문법 규칙이 함수로 떨어졌던 것과 같은, "재귀적 구조엔 재귀 함수"라는 발상이다.
 
 ## 3. 더 진짜 SQL처럼 ① — 별칭과 self-join
 
@@ -106,7 +106,7 @@ m.tname[0] = sel->alias[0] ? sel->alias : m.tabs[0]->schema.table;
 
 `WHERE` 가 행을 거르고 조인이 행을 잇는다면, `GROUP BY` 와 집계 함수는 여러 행을 **하나로 접습니다**. 여기서 처음으로 "행 하나가 행 하나로" 대응되지 않는 연산이 등장해요.
 
-한 그룹의 `COUNT`는 그 그룹 전체를 봐야 나오죠. 그래서 minidb는 행을 모아 그룹 키로 정렬한 뒤, 같은 키의 연속 구간마다 누산기를 돌립니다 — **PostgreSQL의 정렬 기반 `GroupAggregate` 와 같은 방식**이에요. (입력이 이미 그룹 키로 정렬돼 들어오면 한 그룹이 끝날 때마다 바로 흘려보낼 수도 있어요 — PG의 스트리밍 GroupAggregate가 그렇습니다 — 다만 minidb는 단순하게 전부 모아 정렬하는 길을 택했어요.)
+한 그룹의 `COUNT`는 그 그룹 전체를 봐야 나오죠. 그래서 db-hobby는 행을 모아 그룹 키로 정렬한 뒤, 같은 키의 연속 구간마다 누산기를 돌립니다 — **PostgreSQL의 정렬 기반 `GroupAggregate` 와 같은 방식**이에요. (입력이 이미 그룹 키로 정렬돼 들어오면 한 그룹이 끝날 때마다 바로 흘려보낼 수도 있어요 — PG의 스트리밍 GroupAggregate가 그렇습니다 — 다만 db-hobby는 단순하게 전부 모아 정렬하는 길을 택했어요.)
 
 ```
 SELECT dept, COUNT(*), SUM(amt), AVG(amt) FROM sales GROUP BY dept
@@ -115,7 +115,7 @@ eng | 2 | 300 | 150
 sales | 3 | 500 | 166.667
 ```
 
-> **minidb 집계가 모아서 처리하는 이유**: `WHERE`나 단순 `SELECT`는 행 하나를 보고 즉시 통과/탈락을 정할 수 있어 한 행씩 흘려보내면 된다(스트리밍). 하지만 `COUNT(*)`는 그룹의 마지막 행까지 다 세야 값이 나온다 — 입력이 그룹 키로 정렬돼 있지 않으면 행을 일단 다 모아 정렬하는 materialize 경로가 필요하다. 실제 PostgreSQL은 입력이 이미 정렬됐으면 스트리밍하는 GroupAggregate, 아니면 HashAggregate도 쓰는데, minidb는 단순한 "모아서 정렬 기반" 하나만 골랐다.
+> **db-hobby 집계가 모아서 처리하는 이유**: `WHERE`나 단순 `SELECT`는 행 하나를 보고 즉시 통과/탈락을 정할 수 있어 한 행씩 흘려보내면 된다(스트리밍). 하지만 `COUNT(*)`는 그룹의 마지막 행까지 다 세야 값이 나온다 — 입력이 그룹 키로 정렬돼 있지 않으면 행을 일단 다 모아 정렬하는 materialize 경로가 필요하다. 실제 PostgreSQL은 입력이 이미 정렬됐으면 스트리밍하는 GroupAggregate, 아니면 HashAggregate도 쓰는데, db-hobby는 단순한 "모아서 정렬 기반" 하나만 골랐다.
 
 ### HAVING과 집계 결과 정렬
 
@@ -164,7 +164,7 @@ lee | 1 | 12
 
 지금까지 조인은 중첩 루프(+안쪽 PK면 인덱스 점 조회)였어요. 여기에 **해시 조인** 을 더했습니다. 안쪽 테이블을 한 번 훑어 **조인 키 -> 행 목록** 해시를 만들어 두고(build), 바깥 테이블을 한 번 훑으며 그 해시를 조회만 하면(probe) 짝이 나와요. 각 테이블을 한 번씩만 보니 O(바깥 x 안쪽)이 O(바깥 + 안쪽)으로 줄어듭니다 — 인덱스가 없어도요.
 
-그래서 minidb는 조인 레벨마다 **셋 중 하나를 고릅니다**: 안쪽 PK가 조인 키면 인덱스 NLJ, 그 밖의 등식 조인이면 해시 조인, 아니면 중첩 루프.
+그래서 db-hobby는 조인 레벨마다 **셋 중 하나를 고릅니다**: 안쪽 PK가 조인 키면 인덱스 NLJ, 그 밖의 등식 조인이면 해시 조인, 아니면 중첩 루프.
 
 ```c
 m.method[k] = JM_SCAN;
@@ -190,7 +190,7 @@ if (kcol >= 0) {
 | 조인 조건 | 등식·비등식 다 됨 | **등식만** | 등식·범위 |
 | 메모리 | 적음 | 해시가 메모리에 들어가야 | 정렬 버퍼 |
 | 빛나는 곳 | 한쪽이 작고 안쪽에 인덱스(OLTP) | 양쪽 크고 정렬 안 됨(OLAP) | 양쪽 이미 정렬됐거나 너무 커서 해시 불가 |
-| minidb | O (스캔/인덱스) | O | X (안 만듦) |
+| db-hobby | O (스캔/인덱스) | O | X (안 만듦) |
 
 정렬 병합은 양쪽을 조인 키로 정렬해 두고 지퍼 잠그듯 나란히 훑는 방식인데, 정렬된 입력에선 해시보다 메모리를 덜 쓰고 등식뿐 아니라 범위 조인까지 처리할 수 있어 대용량 데이터 웨어하우스에서 자주 쓰여요. 특히 양쪽이 이미 정렬돼 나오거나(인덱스 스캔 결과 등) 둘 다 해시가 메모리에 안 들어갈 만큼 거대할 때 빛납니다. 안 만든 건 게을러서가 아니라, 정렬 인프라가 더 필요하고 우리 규모에선 보여줄 게 적어서예요.
 
@@ -202,7 +202,7 @@ if (kcol >= 0) {
 - 양쪽이 크고 정렬 안 됐으면 **해시** (OLAP에서 흔함)
 - 양쪽이 이미 정렬됐거나 너무 커서 해시도 안 들어가면 **정렬 병합**
 
-minidb의 "레벨마다 인덱스/해시/스캔 중 하나"는 이 비용 모델의 아주 거친 버전인 셈이에요. 그리고 진짜 옵티마이저가 조인 방법보다 먼저 고민하는 게 **조인 순서(join order)** 예요 — `A JOIN B JOIN C`라도 `(A JOIN B) JOIN C`가 아니라 `(B JOIN C) JOIN A`가 훨씬 빠를 수 있어서, PostgreSQL은 가능한 순서들을 비용으로 비교합니다. minidb는 그냥 **FROM 절에 적힌 순서를 그대로** 써요.
+db-hobby의 "레벨마다 인덱스/해시/스캔 중 하나"는 이 비용 모델의 아주 거친 버전인 셈이에요. 그리고 진짜 옵티마이저가 조인 방법보다 먼저 고민하는 게 **조인 순서(join order)** 예요 — `A JOIN B JOIN C`라도 `(A JOIN B) JOIN C`가 아니라 `(B JOIN C) JOIN A`가 훨씬 빠를 수 있어서, PostgreSQL은 가능한 순서들을 비용으로 비교합니다. db-hobby는 그냥 **FROM 절에 적힌 순서를 그대로** 써요.
 
 > **실무/면접 포인트**: 이 "조인 방법 선택"이 실무에서 얼마나 중요한지는, 같은 조인을 어떻게 거느냐로 응답이 수천 배 갈리는 사례에서 드러난다. 옵티마이저가 잘못된 조인 방법이나 순서를 고르면(예: 큰 테이블을 바깥으로) 같은 쿼리가 수십 배 느려진다 — 그래서 `EXPLAIN`으로 실제 선택을 확인하는 게 튜닝의 첫걸음이다.
 
@@ -212,7 +212,7 @@ minidb의 "레벨마다 인덱스/해시/스캔 중 하나"는 이 비용 모델
 
 지금까지 조인은 전부 INNER였어요 — 양쪽이 맞는 쌍만 내보냅니다. 하지만 "주문이 하나도 없는 사용자까지" 보려면 **LEFT JOIN** 이 필요해요. 왼쪽(바깥) 행은 매칭이 없어도 살리고, 오른쪽 컬럼을 **NULL** 로 채웁니다.
 
-여기서 minidb에 처음으로 NULL이 들어왔어요. 중요한 건 **NULL이 저장 행엔 절대 안 생긴다**는 점입니다(`INSERT` 는 값을 다 받아요). NULL은 오직 결과에만, 그것도 LEFT JOIN의 미매칭 오른쪽 같은 자리에만 transient하게 등장해요. 그래서 변경 범위가 값 모델·비교·집계로 좁게 묶였습니다.
+여기서 db-hobby에 처음으로 NULL이 들어왔어요. 중요한 건 **NULL이 저장 행엔 절대 안 생긴다**는 점입니다(`INSERT` 는 값을 다 받아요). NULL은 오직 결과에만, 그것도 LEFT JOIN의 미매칭 오른쪽 같은 자리에만 transient하게 등장해요. 그래서 변경 범위가 값 모델·비교·집계로 좁게 묶였습니다.
 
 재귀 조인에는 딱 한 가지만 더했어요 — **"이번 바깥 행이 매칭됐나"는 플래그**. 레벨 k의 후보를 다 돌렸는데 매칭이 0이고 그 조인이 LEFT면, 그 테이블 컬럼을 NULL로 채워 한 번 내려보냅니다.
 
@@ -264,11 +264,11 @@ sales
 
 ## 7. 더 진짜 SQL처럼 ③ — 쿼리 안의 쿼리, 서브쿼리
 
-마지막으로 `WHERE col IN (SELECT ...)` — **서브쿼리** 를 얹었어요. 여기서 AST가 처음으로 재귀가 됩니다. WHERE 조건의 오른쪽이 값이 아니라 또 다른 `SELECT` 라서, `Condition` 이 `SelectStmt` 를 품고(자기참조라 전방 선언 + 포인터 + malloc) [2편의 파서](/blog/project/minidb/minidb-2-sql-engine)가 자신을 다시 부릅니다.
+마지막으로 `WHERE col IN (SELECT ...)` — **서브쿼리** 를 얹었어요. 여기서 AST가 처음으로 재귀가 됩니다. WHERE 조건의 오른쪽이 값이 아니라 또 다른 `SELECT` 라서, `Condition` 이 `SelectStmt` 를 품고(자기참조라 전방 선언 + 포인터 + malloc) [2편의 파서](/blog/project/db-hobby/db-hobby-2-sql-engine)가 자신을 다시 부릅니다.
 
 핵심은 **상관 없는(uncorrelated) 서브쿼리는 한 번만 돈다**는 거예요. `IN (SELECT uid FROM orders)` 의 안쪽은 바깥 행과 무관하니, 바깥을 스캔하기 전에 안쪽을 한 번 돌려 값 집합을 만들어두고(prepare 단계), 바깥은 그 집합에 멤버십만 검사합니다.
 
-| | 미리 캐시 (minidb) | 행마다 재실행 (순진한 구현) |
+| | 미리 캐시 (db-hobby) | 행마다 재실행 (순진한 구현) |
 |---|---|---|
 | 안쪽 실행 횟수 | 1번 (prepare) | 바깥 행 수만큼 |
 | 복잡도 | O(행) | O(행 x 서브쿼리) |
@@ -313,14 +313,14 @@ id | name
 - [PostgreSQL Documentation: Controlling the Planner (work_mem, join cost)](https://www.postgresql.org/docs/current/runtime-config-resource.html)
 - 본 블로그: [DB 인덱스 ②: 스캔 종류와 옵티마이저](/blog/theory/db-index-02-scan-types) · [DB 스토리지 내부 ②: Row Store vs Column Store](/blog/theory/db-storage-02-row-vs-column)
 - 실전 최적화: [Deferred Join 적용기](/blog/project/WikiEngine/deferred-join-optimization) · [COUNT(*) 제거와 페이지 제한](/blog/project/WikiEngine/query-refactoring-optimization)
-- minidb 시리즈: [1편 저장 계층](/blog/project/minidb/minidb-1-storage) · [2편 SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3편 인덱스·WAL](/blog/project/minidb/minidb-3-index-wal) · [4편 트랜잭션](/blog/project/minidb/minidb-4-transactions)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
+- db-hobby 시리즈: [1편 저장 계층](/blog/project/db-hobby/db-hobby-1-storage) · [2편 SQL 엔진](/blog/project/db-hobby/db-hobby-2-sql-engine) · [3편 인덱스·WAL](/blog/project/db-hobby/db-hobby-3-index-wal) · [4편 트랜잭션](/blog/project/db-hobby/db-hobby-4-transactions)
+- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
 ## 0. Introduction — From One Table to Many
 
-Through [Part 4](/blog/project/minidb/minidb-4-transactions) the "single-table DB" was complete — storage, SQL, indexes, durability, transactions. We got to laying rows onto pages, taking SQL, finding fast, surviving a power loss, and handling batched work atomically. But a real DB does not stop at one table — it **joins** `users` and `orders`, then **folds** the result per department to aggregate.
+Through [Part 4](/blog/project/db-hobby/db-hobby-4-transactions) the "single-table DB" was complete — storage, SQL, indexes, durability, transactions. We got to laying rows onto pages, taking SQL, finding fast, surviving a power loss, and handling batched work atomically. But a real DB does not stop at one table — it **joins** `users` and `orders`, then **folds** the result per department to aggregate.
 
 This final part puts down multiple tables and joins them. That meant reworking the storage layout first. Once done, you get to watch a real analytical query run, like `SELECT users.name, COUNT(*) FROM users JOIN orders ON users.id = orders.uid GROUP BY users.name`.
 
@@ -330,9 +330,9 @@ This final part puts down multiple tables and joins them. That meant reworking t
 
 To put down several tables and join them like a real DB, the storage layout had to change first. We followed **PostgreSQL's way of giving each relation its own disk files (relfilenode)** verbatim. A catalog file holds which tables exist (the `pg_class` equivalent), and each table's rows and index live in per-table files.
 
-![relfilenode-style file layout — under the catalog (mydb), each table keeps its own .tbl (heap) and .idx (B+Tree) files](/uploads/project/minidb/relfilenode-layout.svg)
+![relfilenode-style file layout — under the catalog (mydb), each table keeps its own .tbl (heap) and .idx (B+Tree) files](/uploads/project/db-hobby/relfilenode-layout.svg)
 
-Why this decision matters: because tables are split per file, **the heap and B+Tree code built earlier could be replicated per table without changing a single line**. [Part 1's heap](/blog/project/minidb/minidb-1-storage) and [Part 3's B+Tree](/blog/project/minidb/minidb-3-index-wal) were code for "one table", and it scales straight to N. Only the transactions were broadened to work across all tables.
+Why this decision matters: because tables are split per file, **the heap and B+Tree code built earlier could be replicated per table without changing a single line**. [Part 1's heap](/blog/project/db-hobby/db-hobby-1-storage) and [Part 3's B+Tree](/blog/project/db-hobby/db-hobby-3-index-wal) were code for "one table", and it scales straight to N. Only the transactions were broadened to work across all tables.
 
 > **Why table = file**: giving each relation its own file isolates one table's storage logic completely from the others. That is what makes it possible to replicate the "single-table heap code" N times as-is — the learning benefit of the PostgreSQL relfilenode approach. InnoDB can pick the same structure via `innodb_file_per_table` (turn it off and everything lands in one shared tablespace).
 
@@ -354,9 +354,9 @@ This nested-loop join is what actually drops out when the optimizer cannot use a
 
 ### Index Nested-Loop Join — Inner Loop as a Point Lookup
 
-We went one step further. If the inner table's **PK happens to be the `ON` column**, there is no need to scan the inner table whole. Point-look up [the B+Tree from Part 3](/blog/project/minidb/minidb-3-index-wal) with the outer row's key and you are done — O(outer x inner) shrinks to O(outer x log inner). This is the **index nested-loop join** the optimizer picks when an index exists.
+We went one step further. If the inner table's **PK happens to be the `ON` column**, there is no need to scan the inner table whole. Point-look up [the B+Tree from Part 3](/blog/project/db-hobby/db-hobby-3-index-wal) with the outer row's key and you are done — O(outer x inner) shrinks to O(outer x log inner). This is the **index nested-loop join** the optimizer picks when an index exists.
 
-On a join, minidb checks whether the inner PK is the join key, and if so swaps the full scan for `btree_search` (shown as `(N rows, index join)`).
+On a join, db-hobby checks whether the inner PK is the join key, and if so swaps the full scan for `btree_search` (shown as `(N rows, index join)`).
 
 ```c
 if (level >= 1 && m->method[level] == JM_INDEX) {
@@ -386,7 +386,7 @@ users.id | users.name | orders.oid | orders.uid | orders.item | products.pid | p
 (2 rows, index join)
 ```
 
-> **Why recursion solves N-way for free**: viewing the join chain as "levels", each level does the same thing — "scan that table, and if the pair matches, descend to the next level". So whether 2 levels or 5, one function recursing into itself to depth N suffices — the same "recursive structure wants a recursive function" idea as when grammar rules fell into functions in [Part 2's recursive-descent parser](/blog/project/minidb/minidb-2-sql-engine).
+> **Why recursion solves N-way for free**: viewing the join chain as "levels", each level does the same thing — "scan that table, and if the pair matches, descend to the next level". So whether 2 levels or 5, one function recursing into itself to depth N suffices — the same "recursive structure wants a recursive function" idea as when grammar rules fell into functions in [Part 2's recursive-descent parser](/blog/project/db-hobby/db-hobby-2-sql-engine).
 
 ## 3. Closer to Real SQL ① — Aliases and Self-Joins
 
@@ -405,7 +405,7 @@ Then `e` and `m` are distinguished as different instances of the same `emp`, and
 
 If `WHERE` filters rows and joins stitch rows, `GROUP BY` and aggregate functions **fold many rows into one**. This is the first operation where one row does not map to one row.
 
-A group's `COUNT` only emerges once you have seen the whole group. So minidb collects rows, sorts by group key, and runs an accumulator over each contiguous run of equal keys — the **same approach as PostgreSQL's sort-based `GroupAggregate`**. (If the input already arrives sorted by the group key, you could emit each group as it ends — that is PG's streaming GroupAggregate — but minidb takes the simple collect-and-sort path.)
+A group's `COUNT` only emerges once you have seen the whole group. So db-hobby collects rows, sorts by group key, and runs an accumulator over each contiguous run of equal keys — the **same approach as PostgreSQL's sort-based `GroupAggregate`**. (If the input already arrives sorted by the group key, you could emit each group as it ends — that is PG's streaming GroupAggregate — but db-hobby takes the simple collect-and-sort path.)
 
 ```
 SELECT dept, COUNT(*), SUM(amt), AVG(amt) FROM sales GROUP BY dept
@@ -414,7 +414,7 @@ eng | 2 | 300 | 150
 sales | 3 | 500 | 166.667
 ```
 
-> **Why minidb's aggregation collects first**: `WHERE` or a plain `SELECT` can decide pass/fail on one row immediately, so it can stream rows one by one. But `COUNT(*)` needs to count to the last row of the group before its value emerges — so unless the input is already sorted by the group key, a materialize path that collects and sorts all rows first is required. Real PostgreSQL streams via GroupAggregate when the input is already sorted, and otherwise uses HashAggregate; minidb chose only the simple sort-based path.
+> **Why db-hobby's aggregation collects first**: `WHERE` or a plain `SELECT` can decide pass/fail on one row immediately, so it can stream rows one by one. But `COUNT(*)` needs to count to the last row of the group before its value emerges — so unless the input is already sorted by the group key, a materialize path that collects and sorts all rows first is required. Real PostgreSQL streams via GroupAggregate when the input is already sorted, and otherwise uses HashAggregate; db-hobby chose only the simple sort-based path.
 
 ### HAVING and Sorting Aggregate Results
 
@@ -463,7 +463,7 @@ lee | 1 | 12
 
 So far joins were nested-loop (+ index point lookup if inner PK). We added **hash join**. Scan the inner table once to build a **join key -> row list** hash (build), then scan the outer table once doing only hash lookups (probe) to find pairs. Seeing each table just once shrinks O(outer x inner) to O(outer + inner) — even without an index.
 
-So minidb **picks one of three** per join level: index NLJ if the inner PK is the join key, hash join for other equi-joins, else nested loop.
+So db-hobby **picks one of three** per join level: index NLJ if the inner PK is the join key, hash join for other equi-joins, else nested loop.
 
 ```c
 m.method[k] = JM_SCAN;
@@ -489,7 +489,7 @@ Textbook join algorithms are three, but I built only two (nested loop, hash) and
 | Join condition | equi and non-equi | **equi only** | equi and range |
 | Memory | low | hash must fit in memory | sort buffers |
 | Shines when | one side small, inner indexed (OLTP) | both large, unsorted (OLAP) | both already sorted, or too big for hash |
-| minidb | yes (scan/index) | yes | no (not built) |
+| db-hobby | yes (scan/index) | yes | no (not built) |
 
 Sort-merge sorts both sides by join key and combs them side by side like a zipper; on sorted input it uses less memory than a hash and handles range joins (not just equi-joins), so it is common in large data warehouses. It especially shines when both already come sorted (e.g. index-scan output) or both are too huge for a hash to fit in memory. Not building it was not laziness — it needs more sort infrastructure and has little to show at our scale.
 
@@ -501,7 +501,7 @@ The real PostgreSQL optimizer picks among these three by a **cost model** — we
 - both large and unsorted -> **hash** (common in OLAP)
 - both already sorted, or too big for even a hash -> **sort-merge**
 
-minidb's "one of index/hash/scan per level" is a very coarse version of this cost model. And what a real optimizer weighs even before the join method is **join order** — for `A JOIN B JOIN C`, `(B JOIN C) JOIN A` can be far faster than `(A JOIN B) JOIN C`, so PostgreSQL compares the possible orders by cost. minidb just uses **the order written in the FROM clause** as-is.
+db-hobby's "one of index/hash/scan per level" is a very coarse version of this cost model. And what a real optimizer weighs even before the join method is **join order** — for `A JOIN B JOIN C`, `(B JOIN C) JOIN A` can be far faster than `(A JOIN B) JOIN C`, so PostgreSQL compares the possible orders by cost. db-hobby just uses **the order written in the FROM clause** as-is.
 
 > **Practical/interview note**: how much this "join-method selection" matters in practice shows in cases where the same join's response varies thousands of times by how you filter it. If the optimizer picks the wrong method or order (e.g. the big table as outer), the same query gets tens of times slower — so checking the actual choice with `EXPLAIN` is the first step of tuning.
 
@@ -511,7 +511,7 @@ minidb's "one of index/hash/scan per level" is a very coarse version of this cos
 
 So far all joins were INNER — emitting only matching pairs. But to see "even users with no orders at all", you need **LEFT JOIN**. Keep the left (outer) row even with no match, and fill the right columns with **NULL**.
 
-This is where NULL first entered minidb. The key point is that **NULL never arises in stored rows** (`INSERT` takes all values). NULL appears only in results, and only transiently, in spots like the unmatched right side of a LEFT JOIN. So the change scope stayed narrowly bound to the value model, comparison, and aggregation.
+This is where NULL first entered db-hobby. The key point is that **NULL never arises in stored rows** (`INSERT` takes all values). NULL appears only in results, and only transiently, in spots like the unmatched right side of a LEFT JOIN. So the change scope stayed narrowly bound to the value model, comparison, and aggregation.
 
 The recursive join needed just one addition — a **"did this outer row match" flag**. If level k's candidates are all exhausted with zero matches and that join is LEFT, fill that table's columns with NULL and descend once.
 
@@ -563,11 +563,11 @@ sales
 
 ## 7. Closer to Real SQL ③ — A Query Inside a Query, the Subquery
 
-Lastly we put on `WHERE col IN (SELECT ...)` — the **subquery**. Here the AST becomes recursive for the first time. Since the right side of the WHERE condition is not a value but another `SELECT`, a `Condition` holds a `SelectStmt` (self-referential, so forward declaration + pointer + malloc) and [Part 2's parser](/blog/project/minidb/minidb-2-sql-engine) calls itself again.
+Lastly we put on `WHERE col IN (SELECT ...)` — the **subquery**. Here the AST becomes recursive for the first time. Since the right side of the WHERE condition is not a value but another `SELECT`, a `Condition` holds a `SelectStmt` (self-referential, so forward declaration + pointer + malloc) and [Part 2's parser](/blog/project/db-hobby/db-hobby-2-sql-engine) calls itself again.
 
 The key is that **an uncorrelated subquery runs only once**. The inside of `IN (SELECT uid FROM orders)` is independent of the outer row, so before scanning the outer we run the inner once to build a value set (the prepare step), and the outer only tests membership against that set.
 
-| | Pre-cached (minidb) | Re-run per row (naive) |
+| | Pre-cached (db-hobby) | Re-run per row (naive) |
 |---|---|---|
 | Inner executions | once (prepare) | as many as outer rows |
 | Complexity | O(rows) | O(rows x subquery) |
@@ -612,7 +612,7 @@ Now I know what happens in the layers underneath every time I type `SELECT`. Tha
 - [PostgreSQL Documentation: Controlling the Planner (work_mem, join cost)](https://www.postgresql.org/docs/current/runtime-config-resource.html)
 - This blog: [DB Index ②: Scan Types and the Optimizer](/blog/theory/db-index-02-scan-types) · [DB Storage Internals ②: Row Store vs Column Store](/blog/theory/db-storage-02-row-vs-column)
 - Hands-on optimization: [Applying Deferred Join](/blog/project/WikiEngine/deferred-join-optimization) · [Removing COUNT(*) and capping pages](/blog/project/WikiEngine/query-refactoring-optimization)
-- minidb series: [Part 1 Storage](/blog/project/minidb/minidb-1-storage) · [Part 2 SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [Part 3 Index·WAL](/blog/project/minidb/minidb-3-index-wal) · [Part 4 Transactions](/blog/project/minidb/minidb-4-transactions)
-- [minidb on GitHub](https://github.com/dj258255/db-hobby)
+- db-hobby series: [Part 1 Storage](/blog/project/db-hobby/db-hobby-1-storage) · [Part 2 SQL Engine](/blog/project/db-hobby/db-hobby-2-sql-engine) · [Part 3 Index·WAL](/blog/project/db-hobby/db-hobby-3-index-wal) · [Part 4 Transactions](/blog/project/db-hobby/db-hobby-4-transactions)
+- [db-hobby on GitHub](https://github.com/dj258255/db-hobby)
 </content>
 </invoke>
