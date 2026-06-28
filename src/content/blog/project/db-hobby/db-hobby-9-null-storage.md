@@ -1,8 +1,8 @@
 ---
 title: 'NULL은 어떻게 저장되는가 — null 비트맵과 3값 논리'
 titleEn: 'How Is NULL Stored? — The Null Bitmap and Three-Valued Logic'
-description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 이해하려고 관계형 DB를 C로 밑바닥부터 만든 minidb 시리즈 9편. 지금까지 NULL은 LEFT JOIN 결과에만 잠깐 나타났고 진짜 행엔 못 들어갔어요. 이번엔 INSERT (1, NULL)을 실제로 저장합니다 — 핵심은 '값이 없음'을 바이트로 표시하는 null 비트맵(컬럼당 1비트를 행 앞에 붙이는 진짜 DB 행 포맷의 방식)입니다. 그리고 저장만 뚫으니 비교·집계·정렬이 그대로 동작했어요. 5편 LEFT JOIN 때 깔아 둔 NULL 처리가 이미 거기 있었으니까요. 3값 논리(=로도 !=로도 NULL이 안 잡힌다), NOT NULL 제약, NULLS LAST 정렬까지 PostgreSQL·InnoDB와 비교합니다."
-descriptionEn: "Part 9 of minidb, a relational database built from scratch in C to understand how PostgreSQL and MySQL work inside. Until now NULL only appeared transiently in LEFT JOIN results and couldn't live in stored rows. This time we actually store INSERT (1, NULL) — the key is a null bitmap, one bit per column at the front of each row, exactly how real DB row formats mark absence. And once storage was unblocked, comparison, aggregation, and sorting just worked, because the NULL handling built for LEFT JOIN in Part 5 was already there. We cover three-valued logic (NULL isn't caught by = or !=), the NOT NULL constraint, and NULLS-LAST sorting, comparing with PostgreSQL and InnoDB."
+description: "PostgreSQL·MySQL이 내부에서 어떻게 동작하는지 이해하려고 관계형 DB를 C로 밑바닥부터 만든 db-hobby 시리즈 9편. 지금까지 NULL은 LEFT JOIN 결과에만 잠깐 나타났고 진짜 행엔 못 들어갔어요. 이번엔 INSERT (1, NULL)을 실제로 저장합니다 — 핵심은 '값이 없음'을 바이트로 표시하는 null 비트맵(컬럼당 1비트를 행 앞에 붙이는 진짜 DB 행 포맷의 방식)입니다. 그리고 저장만 뚫으니 비교·집계·정렬이 그대로 동작했어요. 5편 LEFT JOIN 때 깔아 둔 NULL 처리가 이미 거기 있었으니까요. 3값 논리(=로도 !=로도 NULL이 안 잡힌다), NOT NULL 제약, NULLS LAST 정렬까지 PostgreSQL·InnoDB와 비교합니다."
+descriptionEn: "Part 9 of db-hobby, a relational database built from scratch in C to understand how PostgreSQL and MySQL work inside. Until now NULL only appeared transiently in LEFT JOIN results and couldn't live in stored rows. This time we actually store INSERT (1, NULL) — the key is a null bitmap, one bit per column at the front of each row, exactly how real DB row formats mark absence. And once storage was unblocked, comparison, aggregation, and sorting just worked, because the NULL handling built for LEFT JOIN in Part 5 was already there. We cover three-valued logic (NULL isn't caught by = or !=), the NOT NULL constraint, and NULLS-LAST sorting, comparing with PostgreSQL and InnoDB."
 date: 2026-06-07
 tags:
   - C
@@ -13,16 +13,16 @@ tags:
   - PostgreSQL
   - InnoDB
   - Learning
-category: project/minidb
-coverImage: /uploads/project/minidb/cover.svg
+category: project/db-hobby
+coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
-series: "minidb"
+series: "db-hobby"
 seriesOrder: 9
 ---
 
 ## 0. 들어가며 — "값이 없음"을 어떻게 저장하나
 
-[5편](/blog/project/minidb/minidb-5-join-aggregate)에서 NULL이 처음 등장했어요. 하지만 그건 LEFT JOIN의 미매칭 오른쪽을 채우는 **임시** NULL이었습니다 — 조인 결과에만 잠깐 나타났다 사라지는 값이지, 디스크에 저장된 적은 없어요. 정작 `INSERT INTO t VALUES (1, NULL)`은 거부됐습니다. 진짜 행엔 NULL을 못 담았으니까요.
+[5편](/blog/project/db-hobby/db-hobby-5-join-aggregate)에서 NULL이 처음 등장했어요. 하지만 그건 LEFT JOIN의 미매칭 오른쪽을 채우는 **임시** NULL이었습니다 — 조인 결과에만 잠깐 나타났다 사라지는 값이지, 디스크에 저장된 적은 없어요. 정작 `INSERT INTO t VALUES (1, NULL)`은 거부됐습니다. 진짜 행엔 NULL을 못 담았으니까요.
 
 이번 편은 그걸 뚫습니다. 별것 아닌 것 같은데, 막상 해 보니 "값이 없다"를 바이트로 어떻게 표시하느냐가 생각보다 까다로웠고, 동시에 예전에 깔아 둔 게 얼마나 많은 일을 대신 해 주는지도 봤어요.
 
@@ -30,7 +30,7 @@ seriesOrder: 9
 
 ## 1. NULL은 데이터 안의 어떤 값으로도 표현할 수 없다
 
-[2편의 튜플 코덱](/blog/project/minidb/minidb-2-sql-engine)에서 `INT`는 4바이트, `TEXT`는 "길이 + 바이트"로 인코딩한다고 했어요. 그런데 NULL은 어디에 적나요?
+[2편의 튜플 코덱](/blog/project/db-hobby/db-hobby-2-sql-engine)에서 `INT`는 4바이트, `TEXT`는 "길이 + 바이트"로 인코딩한다고 했어요. 그런데 NULL은 어디에 적나요?
 
 처음 떠오르는 건 **특별한 값을 약속**하는 겁니다 — 예를 들어 정수 `-1`을 NULL로 치자. 바로 막힙니다. `-1`은 멀쩡한 정수 값이에요. 누군가 진짜로 `-1`을 저장하려 하면 NULL과 구분이 안 됩니다. TEXT도 마찬가지예요. 빈 문자열 `''`은 NULL이 아니라 "길이 0인 문자열"이라는 엄연히 다른 값이고요.
 
@@ -38,7 +38,7 @@ seriesOrder: 9
 
 그래서 진짜 DB가 쓰는 방법이 **null 비트맵(null bitmap)** 입니다. 행 맨 앞에 컬럼 수만큼의 비트를 두고, i번째 비트가 1이면 "i번째 컬럼은 NULL"이라는 뜻이에요. NULL인 컬럼은 비트만 켜고 값 바이트는 아예 안 씁니다(공간도 아낍니다). PostgreSQL도 InnoDB도 행 헤더에 이 null 비트맵을 둬요.
 
-| | null 비트맵 (minidb) | PostgreSQL | InnoDB |
+| | null 비트맵 (db-hobby) | PostgreSQL | InnoDB |
 |---|---|---|---|
 | 위치 | 행 헤더(MVCC) 뒤, 값 앞 | 튜플 헤더의 `t_bits` | 행 헤더(가변 부분) |
 | 크기 | 컬럼당 1비트(컬럼 8개당 1바이트) | 컬럼당 1비트 | nullable 컬럼당 1비트 |
@@ -49,7 +49,7 @@ seriesOrder: 9
 
 ## 2. null 비트맵 — 행 앞에 비트 한 줌
 
-minidb의 인코딩은 이렇게 바뀌었어요. 행 맨 앞 [MVCC 헤더](/blog/project/minidb/minidb-2-sql-engine)(xmin/xmax, 8바이트) 바로 뒤에 null 비트맵을 깔고, 그 뒤부터 값들을 적습니다.
+db-hobby의 인코딩은 이렇게 바뀌었어요. 행 맨 앞 [MVCC 헤더](/blog/project/db-hobby/db-hobby-2-sql-engine)(xmin/xmax, 8바이트) 바로 뒤에 null 비트맵을 깔고, 그 뒤부터 값들을 적습니다.
 
 ```c
 /* 행 = MVCC 헤더(8B) + null 비트맵 + 값들. 비트가 1이면 그 컬럼은 NULL */
@@ -82,15 +82,15 @@ for (int i = 0; i < schema->num_columns; i++) {
 }
 ```
 
-> **왜 비트맵을 맨 앞에 두나**: 값을 읽기 **전에** "이 컬럼이 NULL인지"를 먼저 알아야, 그 자리에서 4바이트(INT)를 읽을지 아니면 0바이트를 건너뛸지를 정할 수 있다. 비트맵이 값들 뒤에 있으면 닭이 먼저냐 달걀이 먼저냐가 된다 — 값을 다 읽어야 비트맵에 닿는데, 어디까지가 값인지를 알려면 비트맵이 필요하니까. 그래서 값을 순차로 읽는 minidb 같은 포맷에선 비트맵이 값보다 앞에 있어야 한다. (offset 배열이나 컬럼 디렉터리를 쓰는 포맷은 이 제약이 느슨해져요 — 진짜 요건은 "값을 해석하기 전에 NULL 여부를 알 수 있을 것"뿐이다.)
+> **왜 비트맵을 맨 앞에 두나**: 값을 읽기 **전에** "이 컬럼이 NULL인지"를 먼저 알아야, 그 자리에서 4바이트(INT)를 읽을지 아니면 0바이트를 건너뛸지를 정할 수 있다. 비트맵이 값들 뒤에 있으면 닭이 먼저냐 달걀이 먼저냐가 된다 — 값을 다 읽어야 비트맵에 닿는데, 어디까지가 값인지를 알려면 비트맵이 필요하니까. 그래서 값을 순차로 읽는 db-hobby 같은 포맷에선 비트맵이 값보다 앞에 있어야 한다. (offset 배열이나 컬럼 디렉터리를 쓰는 포맷은 이 제약이 느슨해져요 — 진짜 요건은 "값을 해석하기 전에 NULL 여부를 알 수 있을 것"뿐이다.)
 
 ## 3. 저장만 뚫으니 나머지는 이미 돌아갔다
 
 여기서 재밌는 일이 있었어요. null 비트맵으로 저장·복원을 만들고 나니, **그 외엔 거의 고칠 게 없었습니다.**
 
-`WHERE name IS NULL`도, `COUNT(*)`와 `COUNT(name)`의 차이도, NULL이 섞인 `ORDER BY`도 전부 그냥 동작했어요. 이유는 [5편](/blog/project/minidb/minidb-5-join-aggregate) 덕분입니다. 그때 LEFT JOIN의 임시 NULL을 처리하려고 비교 함수(NULL은 어떤 것과도 같지 않다), 집계(`COUNT(col)`·`SUM`·`AVG`는 NULL을 건너뛴다), 정렬 비교기까지 전부 `VAL_NULL`을 아는 코드로 만들어 뒀거든요.
+`WHERE name IS NULL`도, `COUNT(*)`와 `COUNT(name)`의 차이도, NULL이 섞인 `ORDER BY`도 전부 그냥 동작했어요. 이유는 [5편](/blog/project/db-hobby/db-hobby-5-join-aggregate) 덕분입니다. 그때 LEFT JOIN의 임시 NULL을 처리하려고 비교 함수(NULL은 어떤 것과도 같지 않다), 집계(`COUNT(col)`·`SUM`·`AVG`는 NULL을 건너뛴다), 정렬 비교기까지 전부 `VAL_NULL`을 아는 코드로 만들어 뒀거든요.
 
-그 NULL이 "조인이 만든 것"이든 "디스크에서 읽은 것"이든 코드 입장에선 똑같은 `VAL_NULL`이에요. 그래서 저장이라는 **입구** 하나만 열어 주니, 그 뒤 파이프라인은 손 안 대고 통째로 재사용됐습니다(어디까지나 minidb가 구현한 기능 범위에서요 — 진짜 DB는 UNIQUE·DISTINCT·GROUP BY·조인 등식·인덱스마다 NULL 정책이 더 붙습니다).
+그 NULL이 "조인이 만든 것"이든 "디스크에서 읽은 것"이든 코드 입장에선 똑같은 `VAL_NULL`이에요. 그래서 저장이라는 **입구** 하나만 열어 주니, 그 뒤 파이프라인은 손 안 대고 통째로 재사용됐습니다(어디까지나 db-hobby가 구현한 기능 범위에서요 — 진짜 DB는 UNIQUE·DISTINCT·GROUP BY·조인 등식·인덱스마다 NULL 정책이 더 붙습니다).
 
 > **설계 보상 — 계층을 잘 끊으면 받는 것**: NULL의 "의미"(비교·집계·정렬 규칙)와 NULL의 "저장"(바이트 표현)을 따로 만들어 뒀더니, 한쪽을 나중에 채워도 다른 쪽이 안 흔들렸다. 5편에서 의미를, 9편에서 저장을 채웠는데 둘이 깔끔하게 맞물렸다. "관심사 분리"가 추상적 구호가 아니라 실제로 일을 덜어 주는 걸 손으로 본 순간이다.
 
@@ -109,7 +109,7 @@ SELECT * FROM nt WHERE name = 'kim';      -- name이 NULL인 행: 안 나옴
 SELECT * FROM nt WHERE name != 'kim';     -- name이 NULL인 행: 이것도 안 나옴 (!)
 ```
 
-`=`로도 `!=`로도 NULL 행이 안 잡혀요. 둘 다 "모름"이라 거짓 처리되니까요. minidb의 비교 함수가 이 규칙을 한 줄로 박아둡니다.
+`=`로도 `!=`로도 NULL 행이 안 잡혀요. 둘 다 "모름"이라 거짓 처리되니까요. db-hobby의 비교 함수가 이 규칙을 한 줄로 박아둡니다.
 
 ```c
 static int values_equal(const Value *a, const Value *b) {
@@ -130,7 +130,7 @@ static int values_equal(const Value *a, const Value *b) {
 
 > **실무/면접 포인트 — 왜 `!=`로 NULL이 안 잡히나**: "kim이 아닌 사람"을 뽑으려고 `name != 'kim'`을 썼는데 정작 이름이 빈(NULL) 사람이 쏙 빠진다. `!=`도 NULL과 비교하면 "모름"이라 거짓 처리되기 때문이다. 그래서 NULL을 잡는 **유일한** 방법이 따로 있다 — `IS NULL` / `IS NOT NULL`. `=`/`!=`는 NULL에 영영 참이 안 되니, NULL 검사에는 전용 연산자가 필요하다. 이게 SQL 초심자가 가장 자주 데이는 지점이다.
 
-minidb도 그래서 `IS NULL` / `IS NOT NULL`을 따로 처리해요.
+db-hobby도 그래서 `IS NULL` / `IS NOT NULL`을 따로 처리해요.
 
 ```c
 if (cond->op == CMP_IS_NULL)     return cell && cell->type == VAL_NULL;
@@ -157,7 +157,7 @@ SELECT COUNT(*), COUNT(v), SUM(v) FROM na;   -- v가 (10, NULL)일 때
 | `MIN`/`MAX(v)` | NULL 건너뜀 | 10 / 10 |
 | (전부 NULL일 때) | 결과가 NULL | NULL |
 
-"평균을 낼 때 값이 없는 행은 분모에서도 빠진다"는 게 이 규칙에서 나옵니다. minidb의 SUM/AVG 코드가 그대로예요.
+"평균을 낼 때 값이 없는 행은 분모에서도 빠진다"는 게 이 규칙에서 나옵니다. db-hobby의 SUM/AVG 코드가 그대로예요.
 
 ```c
 for (int r = s; r < e; r++) {
@@ -170,7 +170,7 @@ if (cnt == 0) { c.is_null = 1; return c; }  // 전부 NULL -> 결과도 NULL
 c.num = (it->agg == AGG_SUM) ? (double)sum : (double)sum / cnt;
 ```
 
-정렬에선 NULL을 **어디에 둘지**를 정해야 해요. minidb는 NULL을 가장 크게 쳐서 오름차순(ASC)에선 맨 뒤로 보냅니다 — PostgreSQL의 기본값인 `NULLS LAST`와 같아요.
+정렬에선 NULL을 **어디에 둘지**를 정해야 해요. db-hobby는 NULL을 가장 크게 쳐서 오름차순(ASC)에선 맨 뒤로 보냅니다 — PostgreSQL의 기본값인 `NULLS LAST`와 같아요.
 
 ```c
 /* NULL은 가장 크게 친다(ASC 정렬 시 끝 = PostgreSQL의 NULLS LAST). */
@@ -182,16 +182,16 @@ static int value_cmp(const Value *x, const Value *y) {
 }
 ```
 
-| | minidb | PostgreSQL | MySQL |
+| | db-hobby | PostgreSQL | MySQL |
 |---|---|---|---|
 | ASC에서 NULL 위치 | 맨 뒤 (NULLS LAST) | 맨 뒤 (NULLS LAST, 기본) | 맨 앞 (NULL을 가장 작게) |
 | 표준이 정하나 | — | SQL 표준은 미지정 | SQL 표준은 미지정 |
 
-> **주의 — NULL 정렬은 DB마다 다르다**: SQL 표준은 "NULL을 정렬에서 어디에 둘지"를 정해주지 않는다. 그래서 PostgreSQL은 NULL을 가장 크게(ASC면 뒤), MySQL은 가장 작게(ASC면 앞) 친다. minidb는 PostgreSQL을 따라 NULLS LAST로 갔다. 이식성이 필요하면 `ORDER BY col NULLS LAST`처럼 명시하는 게 안전하다(다만 minidb는 아직 그 문법은 없다).
+> **주의 — NULL 정렬은 DB마다 다르다**: SQL 표준은 "NULL을 정렬에서 어디에 둘지"를 정해주지 않는다. 그래서 PostgreSQL은 NULL을 가장 크게(ASC면 뒤), MySQL은 가장 작게(ASC면 앞) 친다. db-hobby는 PostgreSQL을 따라 NULLS LAST로 갔다. 이식성이 필요하면 `ORDER BY col NULLS LAST`처럼 명시하는 게 안전하다(다만 db-hobby는 아직 그 문법은 없다).
 
 ## 6. PK는 NULL일 수 없다 — NOT NULL 제약
 
-딱 한 곳, NULL을 막아 둔 데가 있어요 — **첫 컬럼(PK)** 입니다. 이유는 정렬이 아니라 **PK의 정의**예요 — PK는 행을 유일하게 식별하는 키인데, "모름"인 NULL을 키로 허용하면 유일 식별이 깨지니까요(그래서 SQL 표준도 PK에 NOT NULL을 강제합니다). minidb는 첫 컬럼을 유일 키로 보고 B+Tree 인덱스를 걸며([3편](/blog/project/minidb/minidb-3-index-wal)), 그래서 `INSERT INTO t VALUES (NULL, 'x')`를 거부해요. (B+Tree 자체는 NULL도 정렬할 수 있어요 — 실제 PostgreSQL은 NULL이 든 B-tree 인덱스도 만듭니다. minidb가 PK 키에 NULL을 안 받는 건 구현 단순화 + PK 의미 때문이에요.)
+딱 한 곳, NULL을 막아 둔 데가 있어요 — **첫 컬럼(PK)** 입니다. 이유는 정렬이 아니라 **PK의 정의**예요 — PK는 행을 유일하게 식별하는 키인데, "모름"인 NULL을 키로 허용하면 유일 식별이 깨지니까요(그래서 SQL 표준도 PK에 NOT NULL을 강제합니다). db-hobby는 첫 컬럼을 유일 키로 보고 B+Tree 인덱스를 걸며([3편](/blog/project/db-hobby/db-hobby-3-index-wal)), 그래서 `INSERT INTO t VALUES (NULL, 'x')`를 거부해요. (B+Tree 자체는 NULL도 정렬할 수 있어요 — 실제 PostgreSQL은 NULL이 든 B-tree 인덱스도 만듭니다. db-hobby가 PK 키에 NULL을 안 받는 건 구현 단순화 + PK 의미 때문이에요.)
 
 거기에 더해, 컬럼별로 `NOT NULL` 제약을 직접 걸 수도 있어요. `CREATE TABLE`에서 컬럼 뒤에 `NOT NULL`을 붙이면 파서가 그 컬럼에 플래그를 세웁니다.
 
@@ -216,7 +216,7 @@ for (int i = 0; i < in->num_values && i < t->schema.num_columns; i++) {
 }
 ```
 
-> **실무/면접 포인트 — PK는 왜 항상 NOT NULL인가**: 기본 키는 행을 **유일하게 식별**하는 키다. NULL은 "모름"이라 두 NULL이 같은지조차 판정할 수 없으니(3값 논리), NULL을 키로 허용하면 "유일 식별"이라는 PK의 존재 이유가 깨진다. 그래서 SQL 표준도, 모든 실제 DB도 PK 컬럼에 NOT NULL을 강제한다. minidb가 첫 컬럼 NULL을 막는 것도 정확히 같은 자리다 — 인덱스 키로 NULL을 꽂을 수 없다는 구현 사정과, "PK는 유일 식별자"라는 의미 사정이 같은 결론으로 만난다.
+> **실무/면접 포인트 — PK는 왜 항상 NOT NULL인가**: 기본 키는 행을 **유일하게 식별**하는 키다. NULL은 "모름"이라 두 NULL이 같은지조차 판정할 수 없으니(3값 논리), NULL을 키로 허용하면 "유일 식별"이라는 PK의 존재 이유가 깨진다. 그래서 SQL 표준도, 모든 실제 DB도 PK 컬럼에 NOT NULL을 강제한다. db-hobby가 첫 컬럼 NULL을 막는 것도 정확히 같은 자리다 — 인덱스 키로 NULL을 꽂을 수 없다는 구현 사정과, "PK는 유일 식별자"라는 의미 사정이 같은 결론으로 만난다.
 
 ## 7. 덤 — 만들다 보니 옛 글의 거짓말이 드러났다
 
@@ -240,14 +240,14 @@ NULL 저장은 코드량으로 보면 작은 작업이었어요 — 행 앞에 �
 - [PostgreSQL Documentation: Database Page Layout (튜플 헤더·null bitmap)](https://www.postgresql.org/docs/current/storage-page-layout.html)
 - [PostgreSQL Documentation: NULL과 비교 (`IS NULL`, 3값 논리)](https://www.postgresql.org/docs/current/functions-comparison.html)
 - [SQL standard: three-valued logic — Wikipedia: Null (SQL)](https://en.wikipedia.org/wiki/Null_(SQL))
-- minidb 시리즈: [1. 저장 계층](/blog/project/minidb/minidb-1-storage) · [2. SQL 엔진](/blog/project/minidb/minidb-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/minidb/minidb-3-index-wal) · [4. 트랜잭션](/blog/project/minidb/minidb-4-transactions) · [5. 조인과 집계](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/minidb/minidb-6-between-like) · [7. 직접 재보기](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain)
-- [minidb 코드 (GitHub)](https://github.com/dj258255/db-hobby)
+- db-hobby 시리즈: [1. 저장 계층](/blog/project/db-hobby/db-hobby-1-storage) · [2. SQL 엔진](/blog/project/db-hobby/db-hobby-2-sql-engine) · [3. 인덱스와 WAL](/blog/project/db-hobby/db-hobby-3-index-wal) · [4. 트랜잭션](/blog/project/db-hobby/db-hobby-4-transactions) · [5. 조인과 집계](/blog/project/db-hobby/db-hobby-5-join-aggregate) · [6. BETWEEN과 LIKE](/blog/project/db-hobby/db-hobby-6-between-like) · [7. 직접 재보기](/blog/project/db-hobby/db-hobby-7-benchmark) · [8. EXPLAIN](/blog/project/db-hobby/db-hobby-8-explain)
+- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby)
 
 <!-- EN -->
 
 ## 0. Introduction — How Do You Store "No Value"?
 
-NULL first appeared back in [Part 5](/blog/project/minidb/minidb-5-join-aggregate). But that was a **transient** NULL filling the unmatched right side of a LEFT JOIN — a value that flashes into a join result and vanishes, never stored on disk. `INSERT INTO t VALUES (1, NULL)` itself was rejected, because a real stored row couldn't hold a NULL.
+NULL first appeared back in [Part 5](/blog/project/db-hobby/db-hobby-5-join-aggregate). But that was a **transient** NULL filling the unmatched right side of a LEFT JOIN — a value that flashes into a join result and vanishes, never stored on disk. `INSERT INTO t VALUES (1, NULL)` itself was rejected, because a real stored row couldn't hold a NULL.
 
 This part unblocks that. It sounds trivial, but doing it showed that marking "no value" in bytes is trickier than expected — and at the same time it showed how much the groundwork laid earlier does for free.
 
@@ -255,7 +255,7 @@ This part unblocks that. It sounds trivial, but doing it showed that marking "no
 
 ## 1. NULL Can't Be Expressed by Any Value Inside the Data
 
-In [Part 2's tuple codec](/blog/project/minidb/minidb-2-sql-engine), `INT` is 4 bytes and `TEXT` is "length + bytes". So where do you write NULL?
+In [Part 2's tuple codec](/blog/project/db-hobby/db-hobby-2-sql-engine), `INT` is 4 bytes and `TEXT` is "length + bytes". So where do you write NULL?
 
 The first idea is to **reserve a special value** — say, treat the integer `-1` as NULL. It breaks immediately. `-1` is a perfectly valid integer; if someone really stores `-1`, you can't tell it from NULL. TEXT is the same: the empty string `''` isn't NULL but "a string of length 0", a genuinely different value.
 
@@ -263,7 +263,7 @@ The first idea is to **reserve a special value** — say, treat the integer `-1`
 
 So real DBs use a **null bitmap**. At the front of each row sit as many bits as there are columns; if bit i is 1, "column i is NULL". A NULL column gets only its bit set and writes no value bytes at all (saving space too). Both PostgreSQL and InnoDB keep this null bitmap in the row header.
 
-| | Null bitmap (minidb) | PostgreSQL | InnoDB |
+| | Null bitmap (db-hobby) | PostgreSQL | InnoDB |
 |---|---|---|---|
 | Location | after the row (MVCC) header, before values | the tuple header's `t_bits` | the row header (variable part) |
 | Size | 1 bit per column (1 byte per 8 columns) | 1 bit per column | 1 bit per nullable column |
@@ -274,7 +274,7 @@ Details differ, but the idea is identical across these row-store DBs — record 
 
 ## 2. The Null Bitmap — A Handful of Bits at the Front of the Row
 
-minidb's encoding changed like this. Right after the row's [MVCC header](/blog/project/minidb/minidb-2-sql-engine) (xmin/xmax, 8 bytes) comes the null bitmap, and the values follow after that.
+db-hobby's encoding changed like this. Right after the row's [MVCC header](/blog/project/db-hobby/db-hobby-2-sql-engine) (xmin/xmax, 8 bytes) comes the null bitmap, and the values follow after that.
 
 ```c
 /* row = MVCC header (8B) + null bitmap + values. bit 1 means that column is NULL */
@@ -307,15 +307,15 @@ for (int i = 0; i < schema->num_columns; i++) {
 }
 ```
 
-> **Why put the bitmap at the very front**: you must know "is this column NULL?" **before** reading its value, so you can decide whether to read 4 bytes (INT) or skip 0 bytes here. If the bitmap sat after the values, it becomes chicken-and-egg — you'd have to read all the values to reach the bitmap, but you need the bitmap to know where the values end. So in a format like minidb's that reads values sequentially, the bitmap must come before the values. (Formats with offset arrays or column directories relax this — the real requirement is just that NULL status be knowable before interpreting a value.)
+> **Why put the bitmap at the very front**: you must know "is this column NULL?" **before** reading its value, so you can decide whether to read 4 bytes (INT) or skip 0 bytes here. If the bitmap sat after the values, it becomes chicken-and-egg — you'd have to read all the values to reach the bitmap, but you need the bitmap to know where the values end. So in a format like db-hobby's that reads values sequentially, the bitmap must come before the values. (Formats with offset arrays or column directories relax this — the real requirement is just that NULL status be knowable before interpreting a value.)
 
 ## 3. Once Storage Was Unblocked, the Rest Already Worked
 
 Here's the fun part. Once I'd built store/restore with the null bitmap, **there was almost nothing else to fix.**
 
-`WHERE name IS NULL`, the difference between `COUNT(*)` and `COUNT(name)`, an `ORDER BY` with NULLs mixed in — they all just worked. Thanks to [Part 5](/blog/project/minidb/minidb-5-join-aggregate). Back then, to handle the LEFT JOIN's transient NULLs, I'd already made the comparison function (NULL equals nothing), aggregation (`COUNT(col)`/`SUM`/`AVG` skip NULL), and the sort comparator all aware of `VAL_NULL`.
+`WHERE name IS NULL`, the difference between `COUNT(*)` and `COUNT(name)`, an `ORDER BY` with NULLs mixed in — they all just worked. Thanks to [Part 5](/blog/project/db-hobby/db-hobby-5-join-aggregate). Back then, to handle the LEFT JOIN's transient NULLs, I'd already made the comparison function (NULL equals nothing), aggregation (`COUNT(col)`/`SUM`/`AVG` skip NULL), and the sort comparator all aware of `VAL_NULL`.
 
-Whether that NULL was "made by a join" or "read from disk", it's the same `VAL_NULL` to the code. So opening just the one **entry point** — storage — let the whole pipeline behind it be reused untouched (within the feature scope minidb implements — real DBs have extra NULL policies for UNIQUE, DISTINCT, GROUP BY, join equality, and indexes).
+Whether that NULL was "made by a join" or "read from disk", it's the same `VAL_NULL` to the code. So opening just the one **entry point** — storage — let the whole pipeline behind it be reused untouched (within the feature scope db-hobby implements — real DBs have extra NULL policies for UNIQUE, DISTINCT, GROUP BY, join equality, and indexes).
 
 > **A design reward — what cutting layers cleanly buys you**: by building NULL's "meaning" (comparison/aggregation/sort rules) separately from NULL's "storage" (byte representation), filling in one side later didn't shake the other. Part 5 filled the meaning, Part 9 filled the storage, and the two meshed cleanly. It was the moment I saw with my own hands that "separation of concerns" isn't an abstract slogan but something that actually cuts the work.
 
@@ -334,7 +334,7 @@ SELECT * FROM nt WHERE name = 'kim';      -- rows where name is NULL: not return
 SELECT * FROM nt WHERE name != 'kim';     -- rows where name is NULL: also not returned (!)
 ```
 
-NULL rows are caught by neither `=` nor `!=`. Both are "unknown", so both are treated as false. minidb's comparison function pins this rule down in one line.
+NULL rows are caught by neither `=` nor `!=`. Both are "unknown", so both are treated as false. db-hobby's comparison function pins this rule down in one line.
 
 ```c
 static int values_equal(const Value *a, const Value *b) {
@@ -355,7 +355,7 @@ static int values_equal(const Value *a, const Value *b) {
 
 > **Practical/interview note — why `!=` doesn't catch NULL**: you write `name != 'kim'` to pull out "people who aren't kim", and yet people with no name (NULL) quietly drop out. Because `!=` against NULL is also "unknown", treated as false. So there's a single way to catch NULL — `IS NULL` / `IS NOT NULL`. Since `=`/`!=` are never true against NULL, checking for NULL needs a dedicated operator. This is where SQL beginners get burned most often.
 
-That's why minidb handles `IS NULL` / `IS NOT NULL` separately too.
+That's why db-hobby handles `IS NULL` / `IS NOT NULL` separately too.
 
 ```c
 if (cond->op == CMP_IS_NULL)     return cell && cell->type == VAL_NULL;
@@ -382,7 +382,7 @@ SELECT COUNT(*), COUNT(v), SUM(v) FROM na;   -- when v is (10, NULL)
 | `MIN`/`MAX(v)` | skips NULL | 10 / 10 |
 | (when all NULL) | result is NULL | NULL |
 
-"When averaging, rows with no value drop out of the denominator too" comes from this rule. minidb's SUM/AVG code is exactly that.
+"When averaging, rows with no value drop out of the denominator too" comes from this rule. db-hobby's SUM/AVG code is exactly that.
 
 ```c
 for (int r = s; r < e; r++) {
@@ -395,7 +395,7 @@ if (cnt == 0) { c.is_null = 1; return c; }  // all NULL -> result is NULL
 c.num = (it->agg == AGG_SUM) ? (double)sum : (double)sum / cnt;
 ```
 
-For sorting, you must decide **where to put NULL**. minidb ranks NULL as the largest, so ascending (ASC) sends it to the back — the same as PostgreSQL's default, `NULLS LAST`.
+For sorting, you must decide **where to put NULL**. db-hobby ranks NULL as the largest, so ascending (ASC) sends it to the back — the same as PostgreSQL's default, `NULLS LAST`.
 
 ```c
 /* rank NULL largest (so on ASC it lands at the end = PostgreSQL's NULLS LAST). */
@@ -407,16 +407,16 @@ static int value_cmp(const Value *x, const Value *y) {
 }
 ```
 
-| | minidb | PostgreSQL | MySQL |
+| | db-hobby | PostgreSQL | MySQL |
 |---|---|---|---|
 | NULL position on ASC | back (NULLS LAST) | back (NULLS LAST, default) | front (NULL ranked smallest) |
 | Does the standard fix it | — | SQL standard leaves it unspecified | SQL standard leaves it unspecified |
 
-> **Caution — NULL sort order differs per DB**: the SQL standard doesn't fix "where NULL goes in sorting". So PostgreSQL ranks NULL largest (back on ASC), MySQL smallest (front on ASC). minidb followed PostgreSQL with NULLS LAST. If you need portability, it's safer to spell it out like `ORDER BY col NULLS LAST` (though minidb doesn't have that syntax yet).
+> **Caution — NULL sort order differs per DB**: the SQL standard doesn't fix "where NULL goes in sorting". So PostgreSQL ranks NULL largest (back on ASC), MySQL smallest (front on ASC). db-hobby followed PostgreSQL with NULLS LAST. If you need portability, it's safer to spell it out like `ORDER BY col NULLS LAST` (though db-hobby doesn't have that syntax yet).
 
 ## 6. A PK Can't Be NULL — The NOT NULL Constraint
 
-There's exactly one place NULL is blocked — the **first column (the PK)**. The reason is not sorting but the **definition of a PK** — it uniquely identifies a row, and allowing "unknown" NULL as a key would break that unique identification (which is why the SQL standard forces NOT NULL on PKs). minidb treats the first column as a unique key with a B+Tree index ([Part 3](/blog/project/minidb/minidb-3-index-wal)), so `INSERT INTO t VALUES (NULL, 'x')` is rejected. (A B+Tree can perfectly well sort NULLs — real PostgreSQL even builds B-tree indexes containing NULLs; minidb disallows a NULL PK key for implementation simplicity plus PK semantics.)
+There's exactly one place NULL is blocked — the **first column (the PK)**. The reason is not sorting but the **definition of a PK** — it uniquely identifies a row, and allowing "unknown" NULL as a key would break that unique identification (which is why the SQL standard forces NOT NULL on PKs). db-hobby treats the first column as a unique key with a B+Tree index ([Part 3](/blog/project/db-hobby/db-hobby-3-index-wal)), so `INSERT INTO t VALUES (NULL, 'x')` is rejected. (A B+Tree can perfectly well sort NULLs — real PostgreSQL even builds B-tree indexes containing NULLs; db-hobby disallows a NULL PK key for implementation simplicity plus PK semantics.)
 
 On top of that, you can put a `NOT NULL` constraint on a column directly. Append `NOT NULL` after a column in `CREATE TABLE` and the parser sets a flag on it.
 
@@ -441,7 +441,7 @@ for (int i = 0; i < in->num_values && i < t->schema.num_columns; i++) {
 }
 ```
 
-> **Practical/interview note — why a PK is always NOT NULL**: a primary key is the key that **uniquely identifies** a row. NULL is "unknown", so you can't even judge whether two NULLs are equal (three-valued logic); allowing NULL as a key would break the very reason a PK exists — unique identification. So the SQL standard, and every real DB, enforces NOT NULL on PK columns. minidb blocking a NULL first column sits in exactly the same spot — the implementation fact (you can't slot NULL as an index key) and the semantic fact ("a PK is a unique identifier") meet at the same conclusion.
+> **Practical/interview note — why a PK is always NOT NULL**: a primary key is the key that **uniquely identifies** a row. NULL is "unknown", so you can't even judge whether two NULLs are equal (three-valued logic); allowing NULL as a key would break the very reason a PK exists — unique identification. So the SQL standard, and every real DB, enforces NOT NULL on PK columns. db-hobby blocking a NULL first column sits in exactly the same spot — the implementation fact (you can't slot NULL as an index key) and the semantic fact ("a PK is a unique identifier") meet at the same conclusion.
 
 ## 7. A Bonus — Building It Exposed Lies in Old Writing
 
@@ -465,6 +465,6 @@ That "no value" can't be expressed as a value and must be marked with a bit outs
 - [PostgreSQL Documentation: Database Page Layout (tuple header, null bitmap)](https://www.postgresql.org/docs/current/storage-page-layout.html)
 - [PostgreSQL Documentation: Comparison with NULL (`IS NULL`, three-valued logic)](https://www.postgresql.org/docs/current/functions-comparison.html)
 - [SQL standard: three-valued logic — Wikipedia: Null (SQL)](https://en.wikipedia.org/wiki/Null_(SQL))
-- minidb series: [1. Storage](/blog/project/minidb/minidb-1-storage) · [2. SQL Engine](/blog/project/minidb/minidb-2-sql-engine) · [3. Index & WAL](/blog/project/minidb/minidb-3-index-wal) · [4. Transactions](/blog/project/minidb/minidb-4-transactions) · [5. Join & Aggregate](/blog/project/minidb/minidb-5-join-aggregate) · [6. BETWEEN & LIKE](/blog/project/minidb/minidb-6-between-like) · [7. Benchmark](/blog/project/minidb/minidb-7-benchmark) · [8. EXPLAIN](/blog/project/minidb/minidb-8-explain)
-- [minidb on GitHub](https://github.com/dj258255/db-hobby)
+- db-hobby series: [1. Storage](/blog/project/db-hobby/db-hobby-1-storage) · [2. SQL Engine](/blog/project/db-hobby/db-hobby-2-sql-engine) · [3. Index & WAL](/blog/project/db-hobby/db-hobby-3-index-wal) · [4. Transactions](/blog/project/db-hobby/db-hobby-4-transactions) · [5. Join & Aggregate](/blog/project/db-hobby/db-hobby-5-join-aggregate) · [6. BETWEEN & LIKE](/blog/project/db-hobby/db-hobby-6-between-like) · [7. Benchmark](/blog/project/db-hobby/db-hobby-7-benchmark) · [8. EXPLAIN](/blog/project/db-hobby/db-hobby-8-explain)
+- [db-hobby on GitHub](https://github.com/dj258255/db-hobby)
 ```
