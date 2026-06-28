@@ -58,7 +58,7 @@ if (fork() == 0) {
 - 둘 중 **누군가 그 페이지에 쓰기 전까지는** 사본이 따로 필요 없다.
 - 대부분의 페이지는 **아무도 안 쓴 채로** 자식의 `exec`/`exit`에서 사라진다.
 
-그러니 똑똑한 전략은 명확해요 — **fork 시점엔 복사하지 말고, 일단 같이 보게 하다가, 쓰는 그 순간에만 그 페이지 하나를 복제한다.**
+그러니 전략은 명확해요 — **fork 시점엔 복사하지 말고, 일단 같이 보게 하다가, 쓰는 그 순간에만 그 페이지 하나를 복제한다.**
 이게 Copy-on-Write입니다.
 
 ### fork 시 전체 복사 vs Copy-on-Write
@@ -419,7 +419,7 @@ free pages: 32058     ← 정확히 원래대로 복귀
 
 ## 6. 정리
 
-Copy-on-Write는 작은 코드로 큰 효과를 내는, OS의 우아한 최적화예요.
+Copy-on-Write는 작은 코드로 큰 효과를 내는, OS 최적화예요.
 fork가 "주소공간 통째 복사"에서 "포인터 몇 개 공유 + 카운터 증가"로 가벼워졌고, 정작 복사는 진짜 쓸 때 딱 그 페이지만 한 번 일어나요.
 
 - **풀려는 문제** — fork는 주소공간을 통째 복사하는데, 대부분의 자식은 곧장 exec해 그 복사본을 버려요. 복사한 만큼이 낭비.
@@ -481,7 +481,7 @@ The key observation here:
 - No separate copy is needed **until one of them writes** to a page.
 - Most pages **vanish, never written**, at the child's `exec`/`exit`.
 
-So the smart strategy is clear — **don't copy at fork time; let them share for now, and copy that single page only at the moment it's written.**
+So the strategy is clear — **don't copy at fork time; let them share for now, and copy that single page only at the moment it's written.**
 That's Copy-on-Write.
 
 ### Full copy at fork vs Copy-on-Write
@@ -842,7 +842,7 @@ The number `32058 → 32058` is quantitative proof that the invariant held.
 
 ## 6. Wrap-up
 
-Copy-on-Write is one of those elegant OS optimizations that achieve a lot with little code.
+Copy-on-Write is one of those OS optimizations that achieve a lot with little code.
 fork went from "copy the whole address space" to "share a few pointers + bump a counter," and the copy itself happens once, only for the one page actually written.
 
 - **The problem** — fork copies the address space whole, but most children exec right away and throw the copy out. Everything copied is waste.

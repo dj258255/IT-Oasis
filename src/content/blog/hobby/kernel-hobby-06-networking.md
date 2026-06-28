@@ -236,7 +236,7 @@ put16(icmp + 2, cksum(icmp, 8 + 32));   // ICMP 체크섬
 // → 20바이트 IP 헤더(proto=1)로 감싸 게이트웨이 MAC으로 eth_tx
 ```
 
-여기에 학습 환경의 묘미가 있어요 — **SLIRP는 게이트웨이 ping을 자기 내부에서 응답합니다.**
+여기에 학습 환경의 한 가지 이점이 드러나요 — **SLIRP는 게이트웨이 ping을 자기 내부에서 응답합니다.**
 즉 바깥 인터넷이 한 줄도 안 열려 있어도, ping이 왕복하면 그것만으로 **우리 IP 헤더 빌드 + 체크섬 + 드라이버 송수신이 전부 정확하다**는 게 증명돼요.
 오프라인에서도 IP 계층을 검증할 수 있는 거죠. (따라서 실제 인터넷까지 패킷이 나간 건 아니고, SLIRP가 게이트웨이 역할을 대신 응답해 주는 거예요.)
 
@@ -311,7 +311,7 @@ put16(q + p, 1); p += 2;    // QCLASS = IN
 
 응답을 읽을 때 함정이 하나 있어요 — **이름 압축(compression pointer)** 입니다.
 응답은 질문에 있던 도메인 이름을 그대로 반복하는 대신, "그 이름은 메시지 12바이트 앞에 이미 있으니 거길 봐"라는 2바이트 포인터(`0xC0..`)로 가리켜요. `0xC0`은 이진수 `11000000` — **상위 두 비트가 `11`이면 압축 포인터**라는 약속이라, 나머지 비트로 "메시지 시작에서 몇 바이트 위치"인지를 가리킵니다.
-DNS 응답엔 같은 이름이 여러 번 나오니, 대역폭을 아끼려는 영리한 설계죠.
+DNS 응답엔 같은 이름이 여러 번 나오니, 대역폭을 아끼려는 설계죠.
 대신 파서는 NAME 자리를 만날 때마다 **첫 바이트 상위 2비트가 `11`이면 압축 포인터(2바이트), 아니면 일반 라벨열**로 구분해야 합니다.
 
 ```c
@@ -650,7 +650,7 @@ put16(icmp + 2, cksum(icmp, 8 + 32));   // ICMP checksum
 // → wrap in a 20-byte IP header (proto=1) and eth_tx to the gateway MAC
 ```
 
-Here's the charm of the learning environment — **SLIRP answers a gateway ping from inside itself.**
+Here is one upside of the learning environment — **SLIRP answers a gateway ping from inside itself.**
 So even without a single byte of outside internet, a ping round-trip alone proves **our IP-header build + checksum + driver TX/RX are all correct**.
 You can verify the IP layer fully offline. (So the packet doesn't actually reach the real internet — SLIRP answers in the gateway's stead.)
 
@@ -725,7 +725,7 @@ put16(q + p, 1); p += 2;    // QCLASS = IN
 
 Reading the reply has one trap — **name compression (compression pointer)**.
 Instead of repeating the domain name from the question, the reply points to it with a 2-byte pointer (`0xC0..`) meaning "that name already appears 12 bytes into the message, look there." `0xC0` is binary `11000000` — **when the top two bits are `11` it marks a compression pointer**, and the remaining bits give the byte offset from the start of the message.
-The same name shows up several times in a DNS reply, so it's a clever bandwidth saver.
+The same name shows up several times in a DNS reply, so it's a bandwidth saver.
 But the parser, every time it meets a NAME field, must distinguish: **if the top 2 bits of the first byte are `11` it's a compression pointer (2 bytes), otherwise a normal label sequence**.
 
 ```c

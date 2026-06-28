@@ -289,7 +289,7 @@ ACID 글의 **Redo phase**가 멱등이라 몇 번이고 재시작할 수 있던
 표준 해법은 **빈 블록 비트맵**(블록마다 사용중/빈 1비트)이에요.
 그런데 비트맵을 **디스크에** 두면, 그것도 바뀔 때마다 트랜잭션으로 보호해야 해서 로그가 더 복잡해져요.
 
-다행히 우리 FS엔 영리한 지름길이 있어요 — **디렉터리 자체가 이미 할당 정보**거든요.
+다행히 우리 FS엔 지름길이 하나 있어요 — **디렉터리 자체가 이미 할당 정보**거든요.
 슈퍼블록의 `nfiles`와 디렉터리를 함께 읽으면, 각 파일의 `start`(시작 블록)·`size`(크기)로 "어느 블록이 어느 파일 거"인지 다 계산할 수 있어요.
 그래서 비트맵을 디스크에 영구 저장하지 않고, **마운트할 때 디렉터리를 훑어 메모리에서 재구성**합니다.
 
@@ -711,7 +711,7 @@ With no delete, there was no way to reuse freed spots.
 The standard solution is a **free-block bitmap** (one used/free bit per block).
 But putting the bitmap **on disk** means protecting it with a transaction every time it changes too, making the log more complex.
 
-Luckily our FS has a clever shortcut — **the directory itself is already the allocation info.**
+Luckily our FS has a shortcut — **the directory itself is already the allocation info.**
 Reading the superblock's `nfiles` together with the directory, each file's `start` and `size` lets us compute exactly "which block belongs to which file."
 So instead of persisting the bitmap on disk, we **rebuild it in memory by scanning the directory at mount**.
 

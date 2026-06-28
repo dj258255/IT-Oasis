@@ -228,7 +228,7 @@ QEMU `virt`는 128MB를 주는데, 주소로 보면 `0x8000_0000`부터 `0x8800_
 
 잘라낸 페이지들을 **free list**(빈 페이지를 잇는 연결 리스트)로 엮어 두고, 필요하면 앞에서 하나 떼주고(`kalloc`) 다 쓰면 다시 앞에 끼워 넣어요(`kfree`).
 리스트의 `next` 포인터를 어디 둘까요?
-영리하게도 **빈 페이지 그 자체의 첫 8바이트**에 둬요 — 어차피 빈 메모리니까 따로 메타데이터 공간이 필요 없죠.
+**빈 페이지 그 자체의 첫 8바이트**에 둬요 — 어차피 빈 메모리니까 따로 메타데이터 공간이 필요 없죠.
 
 ```c
 // kalloc.c — 빈 페이지 첫 8바이트에 다음 빈 페이지 주소를 저장
@@ -640,7 +640,7 @@ Why 4KB? Because the paging we're about to build uses a 4KB unit, and matching t
 
 We string the sliced pages into a **free list** (a linked list of free pages), handing one off the front when needed (`kalloc`) and pushing it back when done (`kfree`).
 Where do we store the list's `next` pointer?
-Cleverly, in the **first 8 bytes of the free page itself** — it's free memory anyway, so we need no separate metadata.
+In the **first 8 bytes of the free page itself** — it's free memory anyway, so we need no separate metadata.
 
 ```c
 // kalloc.c — store the next free-page address in the page's first 8 bytes
