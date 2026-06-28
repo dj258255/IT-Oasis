@@ -16,7 +16,10 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # 로컬(macOS, 대소문자 무시)과 동일 환경에서 빌드한다.
+    # ubuntu(대소문자 구분)에서는 Astro glob 콘텐츠 로더의 fresh sync가
+    # 일부 글(minidb·WikiEngine 일부 등)을 조용히 누락시켜 587→487로 잘렸다.
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
