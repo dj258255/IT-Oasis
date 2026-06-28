@@ -21,8 +21,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install, build, and upload
-        uses: withastro/action@v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Astro의 콘텐츠 데이터스토어는 CI에서 캐시하지 않는다.
+      # 캐시를 복원하면 astro.config 변경 시 "Clearing content store"와
+      # glob 로더 증분 동기화가 충돌해 일부 글이 누락된 채 빌드되는 버그가 있다.
+      - name: Build (clean content store)
+        run: |
+          rm -rf node_modules/.astro
+          pnpm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
 
   deploy:
     needs: build
