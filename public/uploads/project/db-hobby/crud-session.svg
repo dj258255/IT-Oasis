@@ -5,21 +5,21 @@
   <circle cx="22" cy="19" r="5.5" fill="#ff5f56"/>
   <circle cx="40" cy="19" r="5.5" fill="#ffbd2e"/>
   <circle cx="58" cy="19" r="5.5" fill="#27c93f"/>
-  <text x="350" y="24" text-anchor="middle" fill="#6e7681" font-size="12">minidb — UPDATE / DELETE (CRUD)</text>
+  <text x="350" y="24" text-anchor="middle" fill="#6e7681" font-size="12">db-hobby — UPDATE / DELETE (CRUD)</text>
 
   <g>
-    <text x="20" y="64"><tspan fill="#58a6ff">minidb&gt;</tspan> <tspan fill="#e6edf3">CREATE TABLE users (id INT, name TEXT);</tspan></text>
+    <text x="20" y="64"><tspan fill="#58a6ff">db-hobby&gt;</tspan> <tspan fill="#e6edf3">CREATE TABLE users (id INT, name TEXT);</tspan></text>
     <text x="20" y="86" fill="#8b949e">테이블 'users' 생성됨 (컬럼 2개)</text>
     <text x="20" y="108" fill="#8b949e">  (인덱스: id 컬럼)</text>
-    <text x="20" y="130"><tspan fill="#58a6ff">minidb&gt;</tspan> <tspan fill="#e6edf3">INSERT INTO users VALUES (1, 'kim');</tspan></text>
+    <text x="20" y="130"><tspan fill="#58a6ff">db-hobby&gt;</tspan> <tspan fill="#e6edf3">INSERT INTO users VALUES (1, 'kim');</tspan></text>
     <text x="20" y="152" fill="#8b949e">1개 행 삽입됨</text>
-    <text x="20" y="174"><tspan fill="#58a6ff">minidb&gt;</tspan> <tspan fill="#e6edf3">INSERT INTO users VALUES (2, 'lee');</tspan></text>
+    <text x="20" y="174"><tspan fill="#58a6ff">db-hobby&gt;</tspan> <tspan fill="#e6edf3">INSERT INTO users VALUES (2, 'lee');</tspan></text>
     <text x="20" y="196" fill="#8b949e">1개 행 삽입됨</text>
-    <text x="20" y="218"><tspan fill="#58a6ff">minidb&gt;</tspan> <tspan fill="#e6edf3">UPDATE users SET name = 'KIM' WHERE id = 1;</tspan></text>
+    <text x="20" y="218"><tspan fill="#58a6ff">db-hobby&gt;</tspan> <tspan fill="#e6edf3">UPDATE users SET name = 'KIM' WHERE id = 1;</tspan></text>
     <text x="20" y="240" fill="#f0b429">1개 행 수정됨</text>
-    <text x="20" y="262"><tspan fill="#58a6ff">minidb&gt;</tspan> <tspan fill="#e6edf3">DELETE FROM users WHERE id = 2;</tspan></text>
+    <text x="20" y="262"><tspan fill="#58a6ff">db-hobby&gt;</tspan> <tspan fill="#e6edf3">DELETE FROM users WHERE id = 2;</tspan></text>
     <text x="20" y="284" fill="#f0b429">1개 행 삭제됨</text>
-    <text x="20" y="306"><tspan fill="#58a6ff">minidb&gt;</tspan> <tspan fill="#e6edf3">SELECT * FROM users;</tspan></text>
+    <text x="20" y="306"><tspan fill="#58a6ff">db-hobby&gt;</tspan> <tspan fill="#e6edf3">SELECT * FROM users;</tspan></text>
     <text x="20" y="328" fill="#6e7681">id | name</text>
     <text x="20" y="350" fill="#3fb950">1 | KIM</text>
     <text x="20" y="372" fill="#6e7681">(1행)</text>
