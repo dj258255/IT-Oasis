@@ -5,7 +5,7 @@
   <circle cx="22" cy="19" r="5.5" fill="#ff5f56"/>
   <circle cx="40" cy="19" r="5.5" fill="#ffbd2e"/>
   <circle cx="58" cy="19" r="5.5" fill="#27c93f"/>
-  <text x="310" y="24" text-anchor="middle" fill="#6e7681" font-size="12">minidb — make test (layer 6: sql parser)</text>
+  <text x="310" y="24" text-anchor="middle" fill="#6e7681" font-size="12">db-hobby — make test (layer 6: sql parser)</text>
 
   <text x="20" y="64" fill="#c9d1d9"><tspan fill="#58a6ff">$</tspan> make test</text>
   <text x="20" y="84" fill="#6e7681" font-size="12">=== test_sql ===</text>

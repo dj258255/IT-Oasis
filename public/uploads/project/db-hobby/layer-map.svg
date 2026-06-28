@@ -6,7 +6,7 @@
   </defs>
 
   <rect width="900" height="624" rx="12" fill="#0d1117"/>
-  <text x="450" y="40" text-anchor="middle" fill="#8b949e" font-size="18">minidb 계층 지도 — SQL 텍스트에서 디스크까지</text>
+  <text x="450" y="40" text-anchor="middle" fill="#8b949e" font-size="18">db-hobby 계층 지도 — SQL 텍스트에서 디스크까지</text>
 
   <!-- SQL 텍스트 입력 -->
   <text x="450" y="82" text-anchor="middle" fill="#c9d1d9" font-family="ui-monospace, Menlo, monospace" font-size="15">SQL 텍스트</text>
