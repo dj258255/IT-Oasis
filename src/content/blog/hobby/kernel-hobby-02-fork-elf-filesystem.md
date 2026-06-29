@@ -48,7 +48,7 @@ virtio 드라이버를 디버깅하며 만난 `volatile` 한 줄이 이번 글�
 1. **자식의 주소공간을 어떻게 만드는가** — 부모 메모리의 무엇을 복사하고 무엇을 공유할 것인가?
 2. **자식이 어떻게 "fork에서 0을 받고 돌아온" 상태로 깨어나는가** — 새 복귀 코드 없이?
 
-이 두 질문을 1편의 페이징과 2편의 트랩 프레임을 그대로 재활용해 풀어요. 마술이 아니라, 있던 걸 다시 쓰는 거예요.
+이 두 질문을 1편의 페이징과 2편의 트랩 프레임을 그대로 재활용해 풀어요.
 
 ### 경우 나누기 — 페이지마다 복사 정책이 다르다
 
@@ -510,7 +510,7 @@ From an implementation angle, fork really has to answer just two questions:
 1. **How do we build the child's address space** — what of the parent's memory do we copy, and what do we share?
 2. **How does the child wake up as if it "returned 0 from fork"** — without any new return code?
 
-We solve both by reusing Part 1's paging and Part 2's trap frame as-is. Not magic, just reusing what we already built.
+We solve both by reusing Part 1's paging and Part 2's trap frame as-is.
 
 ### Enumerating the cases — copy policy differs per page
 
