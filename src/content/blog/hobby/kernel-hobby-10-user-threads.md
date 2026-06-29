@@ -297,7 +297,11 @@ static void tcreate(int i, void (*fn)(void)) {
 셸에서 `uthread`를 돌리면, 세 스레드가 협조적으로 번갈아 돌아요.
 
 ```
-hobby> uthread
+$ uthread
+[pagefault] demand-allocated a heap page at va=0x0000000000010000
+[pagefault] demand-allocated a heap page at va=0x0000000000011000
+[pagefault] demand-allocated a heap page at va=0x0000000000012000
+[pagefault] demand-allocated a heap page at va=0x0000000000013000
 uthread: cooperative user threads (state on heap, no kernel changes)
   [thread A] step 1
   [thread B] step 1
@@ -313,6 +317,8 @@ uthread: cooperative user threads (state on heap, no kernel changes)
   [thread C] done
 uthread: all threads finished
 ```
+
+> 맨 앞 네 줄 `[pagefault] demand-allocated …`이 바로 위에서 설명한 **힙 페이지 pre-fault**예요 — 상태(`0x10000`)와 스레드 스택용 페이지를 유저 모드에서 미리 폴트시켜 매핑해 둔 흔적이죠. 그래서 이후 스레드가 `ecall`해도 커널이 미매핑 페이지를 안 만나요.
 
 `A→B→C→A→B→C...` 깔끔한 round-robin이에요.
 출력 한 줄 한 줄을 따라가 보면 전체 그림이 보여요 — A가 step 1을 찍고 `uyield()`로 양보하면, 스케줄러가 B를 깨우고, B도 한 번 찍고 양보하고… 세 스레드가 각자 자기 힙 스택 위에서 자기 진도(`step 1→2→3→done`)를 들고 번갈아 달려요.
@@ -687,7 +693,11 @@ From the thread's point of view it starts naturally, as if it "returned" into it
 Running `uthread` from the shell, three threads take turns cooperatively.
 
 ```
-hobby> uthread
+$ uthread
+[pagefault] demand-allocated a heap page at va=0x0000000000010000
+[pagefault] demand-allocated a heap page at va=0x0000000000011000
+[pagefault] demand-allocated a heap page at va=0x0000000000012000
+[pagefault] demand-allocated a heap page at va=0x0000000000013000
 uthread: cooperative user threads (state on heap, no kernel changes)
   [thread A] step 1
   [thread B] step 1
@@ -703,6 +713,8 @@ uthread: cooperative user threads (state on heap, no kernel changes)
   [thread C] done
 uthread: all threads finished
 ```
+
+> The first four lines, `[pagefault] demand-allocated …`, are exactly the **heap-page pre-fault** described above — the state page (`0x10000`) and the threads' stack pages are faulted in ahead of time in user mode. That's why a thread's later `ecall` never hits an unmapped page in the kernel.
 
 `A→B→C→A→B→C...` a clean round-robin.
 Follow the output line by line and the whole picture appears — A prints step 1 and yields with `uyield()`, the scheduler wakes B, B prints once and yields… three threads each run on their own heap stack, carrying their own progress (`step 1→2→3→done`), taking turns.
