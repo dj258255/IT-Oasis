@@ -47,7 +47,7 @@ NIC(Network Interface Card)는 외부 장치예요.
 우리 커널이 직접 전선을 흔들 수는 없으니, **NIC에게 일을 시키는 약속된 방법**이 필요합니다.
 QEMU virt에서 그 약속이 **virtio**예요 — 게스트와 가상 장치가 공유 메모리의 링(ring) 자료구조로 작업을 주고받는 표준이죠.
 
-좋은 소식 하나 — 우리는 이미 [3편에서 virtio-blk 디스크 드라이버](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)를 만들었어요.
+좋은 소식 하나 — 저는 이미 [3편에서 virtio-blk 디스크 드라이버](/blog/hobby/kernel-hobby-02-fork-elf-filesystem)를 만들었어요.
 그때 만든 **전송 계층**(virtio-mmio: 디스크립터 체인 + available/used 링 + 기능 협상)이 virtio-net에도 **거의 그대로** 재사용됩니다.
 디스크든 네트워크든, 게스트가 메모리에 버퍼를 만들어 available 링에 넣고 `QUEUE_NOTIFY`로 알린 뒤 used 링이 갱신될 때까지 폴링하는 흐름은 동일해요.
 
