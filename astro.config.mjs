@@ -99,11 +99,25 @@ function rehypeTableWrapper() {
   };
 }
 
+// 옛 minidb URL → 새 db-hobby URL (프로젝트 리브랜드. 정적 사이트라 수동 리다이렉트로 404 방지)
+const dbHobbySlugs = [
+  '1-storage', '2-sql-engine', '3-index-wal', '4-transactions', '5-join-aggregate',
+  '6-between-like', '7-benchmark', '8-explain', '9-null-storage', '10-secondary-index',
+  '11-isolation', '12-2pl-vs-mvcc', '13-mvcc',
+];
+const minidbRedirects = Object.fromEntries(
+  dbHobbySlugs.map((s) => [
+    `/blog/project/minidb/minidb-${s}`,
+    `${base}/blog/project/db-hobby/db-hobby-${s}`,
+  ]),
+);
+
 // https://astro.build/config
 export default defineConfig({
   site: isProd ? 'https://dj258255.github.io' : 'http://localhost:4321',
   base: base || '/',
   output: 'static',
+  redirects: minidbRedirects,
   build: {
     concurrency: 1,
   },
