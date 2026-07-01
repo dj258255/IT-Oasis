@@ -12,7 +12,7 @@ tags:
   - k6
   - Performance
   - Grafana
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-k6-result.png
 draft: false
 series: "WikiEngine"

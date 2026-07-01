@@ -10,7 +10,7 @@ tags:
   - IntelliJ Plugin
   - VS Code Extension
   - User Feedback
-category: project/CodingTestKit
+category: personal/CodingTestKit
 coverImage: /uploads/project/CodingTestKit/review-thanks.png
 draft: false
 series: "CodingTestKit"

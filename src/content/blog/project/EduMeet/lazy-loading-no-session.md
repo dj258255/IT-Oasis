@@ -10,7 +10,7 @@ tags:
   - EntityGraph
   - Hibernate
   - Spring Data JPA
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/lazy-loading-no-session/lazy-no-session-error.png"
 series: "EduMeet"

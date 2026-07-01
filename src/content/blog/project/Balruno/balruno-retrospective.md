@@ -49,7 +49,7 @@ tags:
   - Architecture
   - Retrospective
   - Balruno
-category: project/Balruno
+category: personal/Balruno
 coverImage: /uploads/project/Balruno/retrospective/title.png
 draft: false
 series: "Balruno"

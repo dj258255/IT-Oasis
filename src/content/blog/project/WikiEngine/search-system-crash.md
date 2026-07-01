@@ -11,7 +11,7 @@ tags:
   - HikariCP
   - Connection Pool
   - EXPLAIN
-category: project/WikiEngine
+category: personal/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/search-system-crash/server-status.png"
 series: "WikiEngine"

@@ -22,7 +22,7 @@ tags:
   - Retrospective
   - Spring Boot
   - Wiki
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/wiki-engine-retrospective/wikiengine-architecture.svg
 draft: false
 series: "WikiEngine"

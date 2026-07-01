@@ -13,7 +13,7 @@ tags:
   - k6
   - Grafana
   - Monitoring
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/caching-strategy/C-2-spring-boot-cache.png
 draft: false
 series: "WikiEngine"

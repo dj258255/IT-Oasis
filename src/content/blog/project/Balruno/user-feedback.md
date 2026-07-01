@@ -12,7 +12,7 @@ tags:
   - React
   - Spreadsheet
   - Accessibility
-category: project/Balruno
+category: personal/Balruno
 coverImage: "/uploads/project/Balruno/user-feedback/cover.svg"
 draft: false
 series: "Balruno"

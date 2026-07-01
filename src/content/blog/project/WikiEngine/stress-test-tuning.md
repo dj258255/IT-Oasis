@@ -12,7 +12,7 @@ tags:
   - HikariCP
   - Grafana
   - Tomcat
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/stress-test-tuning/A-2-k6-grafana-overview.png
 draft: false
 series: "WikiEngine"

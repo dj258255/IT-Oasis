@@ -11,7 +11,7 @@ tags:
   - Monitoring
   - Alertmanager
   - Docker Compose
-category: project/Orakgarak
+category: team/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/prometheus-grafana-loki-monitoring/monitoring-stack-architecture.png"
 series: "Orakgarak"

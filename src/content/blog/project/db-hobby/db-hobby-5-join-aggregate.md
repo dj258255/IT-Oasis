@@ -12,7 +12,7 @@ tags:
   - Hash Join
   - SQL
   - Learning
-category: project/db-hobby
+category: study/db-hobby
 coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "db-hobby"

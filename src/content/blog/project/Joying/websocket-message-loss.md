@@ -10,7 +10,7 @@ tags:
   - MongoDB
   - Cursor Pagination
   - Message Recovery
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/websocket-message-loss/unified-api.svg"
 series: "Joying"

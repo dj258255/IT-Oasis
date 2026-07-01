@@ -1,0 +1,14 @@
+{
+  "name": "study",
+  "nameEn": "Learning Projects",
+  "nameKo": "학습 프로젝트",
+  "icon": "cpu",
+  "order": 5,
+  "subcategories": [
+    { "name": "db-hobby", "nameEn": "db-hobby", "nameKo": "토이 DB", "order": 1 },
+    { "name": "kernel-hobby", "nameEn": "kernel-hobby", "nameKo": "토이 커널", "order": 2 },
+    { "name": "java-hobby", "nameEn": "java-hobby", "nameKo": "토이 JVM", "order": 3 },
+    { "name": "kafka-hobby", "nameEn": "kafka-hobby", "nameKo": "토이 Kafka", "order": 4 },
+    { "name": "distributed-systems", "nameEn": "Distributed Systems", "nameKo": "분산 시스템", "order": 5 }
+  ]
+}

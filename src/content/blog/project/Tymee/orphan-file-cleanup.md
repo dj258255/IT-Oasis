@@ -11,7 +11,7 @@ tags:
   - TransactionalEventListener
   - Batch Scheduler
   - R2
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/orphan-file-cleanup/immediate-delete-complexity.png"
 series: "Tymee"

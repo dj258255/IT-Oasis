@@ -15,7 +15,7 @@ tags:
   - Grafana
   - Ansible
   - GTID
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/replication/phase12-mysql-primary-replica.png
 draft: false
 series: "WikiEngine"

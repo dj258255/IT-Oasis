@@ -10,7 +10,7 @@ tags:
   - JWT
   - OAuth2
   - Authentication
-category: project/Orakgarak
+category: team/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/spring-security-multi-filterchain/filterchain-flow.svg"
 series: "Orakgarak"

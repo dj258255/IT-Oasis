@@ -5,7 +5,7 @@
   "descriptionEn": "Self-improving evaluation loop engine for LLM workflows — validation gates, failure analysis, auto rule generation, and regression testing in a single TUI/CLI tool",
   "image": "/uploads/project/EEDGate/logo.svg",
   "tags": ["TypeScript", "Node.js", "LLM", "CLI", "TUI", "Zod", "YAML", "Vitest"],
-  "category": "project",
+  "category": "personal",
   "date": "2026-03-28",
   "github": "https://github.com/dj258255/eddgate",
   "website": "",

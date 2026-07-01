@@ -10,7 +10,7 @@ tags:
   - Wiki
   - Oracle Cloud
   - Architecture
-category: project/WikiEngine
+category: personal/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/wiki-search-overview/architecture.png"
 series: "WikiEngine"

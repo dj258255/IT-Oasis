@@ -10,7 +10,7 @@ tags:
   - Version Catalog
   - Spring BOM
   - Build Management
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/gradle-multimodule-dependency/direct-version.svg"
 series: "Tymee"

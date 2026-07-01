@@ -12,7 +12,7 @@ tags:
   - Performance
   - Spring Boot
   - Wiki
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-category-facet/phase17-after-category-filter-search.png
 draft: false
 series: "WikiEngine"

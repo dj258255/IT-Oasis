@@ -10,7 +10,7 @@ tags:
   - Distributed Systems
   - MongoDB
   - Timestamp
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/chat-message-ordering/server-scaling.svg"
 series: "Joying"

@@ -15,7 +15,7 @@ tags:
   - Monitoring
   - Docker
   - Ansible
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/redis-l2-cache/after-03-spring-boot-system-tiered.png
 draft: false
 series: "WikiEngine"

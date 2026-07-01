@@ -14,7 +14,7 @@ tags:
   - Troubleshooting
   - Spring Boot
   - Wiki
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/nori-stop-filter-fix/search-annyeong-zero.png
 draft: false
 series: "WikiEngine"

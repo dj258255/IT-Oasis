@@ -10,7 +10,7 @@ tags:
   - CVE
   - Docker
   - Defense in Depth
-category: project/Joying
+category: team/Joying
 draft: false
 series: "Joying"
 ---

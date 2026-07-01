@@ -11,7 +11,7 @@ tags:
   - Search Engine
   - Cost Analysis
   - BM25
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/lucene-decision/cqrs-architecture.svg
 draft: false
 series: "WikiEngine"

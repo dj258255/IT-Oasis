@@ -11,7 +11,7 @@ tags:
   - Redis
   - Refresh Token
   - Spring Security
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/mobile-jwt-auth/xss-attack-diagram.png"
 series: "Tymee"

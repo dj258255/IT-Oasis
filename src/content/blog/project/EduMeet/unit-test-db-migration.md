@@ -11,7 +11,7 @@ tags:
   - Spring Profile
   - TDD
   - CI/CD
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/unit-test-db-migration/h2.png"
 series: "EduMeet"

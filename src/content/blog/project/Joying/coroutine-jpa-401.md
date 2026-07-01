@@ -11,7 +11,7 @@ tags:
   - Hibernate
   - Spring MVC
   - Fetch Join
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/coroutine-jpa-401/async-parallel-query.svg"
 series: "Joying"

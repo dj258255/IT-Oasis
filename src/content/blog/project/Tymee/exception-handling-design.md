@@ -11,7 +11,7 @@ tags:
   - Error Code
   - RFC 9457
   - REST API
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/exception-handling-design/filter-exception-scope.png"
 series: "Tymee"

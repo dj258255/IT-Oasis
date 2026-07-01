@@ -10,7 +10,7 @@ tags:
   - Partitioning
   - Consumer Lag
   - Performance
-category: project/Orakgarak
+category: team/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-kafka-partition-imbalance/uploadid-partitioning.svg"
 series: "Orakgarak"

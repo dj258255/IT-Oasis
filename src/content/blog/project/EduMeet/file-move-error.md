@@ -10,7 +10,7 @@ tags:
   - Layered Architecture
   - Dependency Inversion
   - Repository Pattern
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/file-move-error/file-moveerror.png"
 series: "EduMeet"

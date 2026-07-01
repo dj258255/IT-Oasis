@@ -10,7 +10,7 @@ tags:
   - Authentication
   - Custom Annotation
   - ArgumentResolver
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/current-user-annotation/security-context-holder-direct.png"
 series: "Tymee"

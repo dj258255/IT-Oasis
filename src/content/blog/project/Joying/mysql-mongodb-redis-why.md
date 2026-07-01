@@ -10,7 +10,7 @@ tags:
   - Redis
   - Polyglot Persistence
   - Event-Driven
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/mysql-mongodb-redis-why/mysql-relational-data.svg"
 series: "Joying"

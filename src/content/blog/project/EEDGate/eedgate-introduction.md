@@ -12,7 +12,7 @@ tags:
   - TUI
   - Evaluation
   - Workflow
-category: project/EEDGate
+category: personal/EEDGate
 coverImage: /uploads/project/EEDGate/logo.svg
 draft: false
 ---

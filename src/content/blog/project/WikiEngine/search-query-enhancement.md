@@ -14,7 +14,7 @@ tags:
   - Performance
   - Spring Boot
   - Wiki
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ai.png
 draft: false
 series: "WikiEngine"

@@ -5,7 +5,7 @@
   "descriptionEn": "A learning project dissecting how relational databases like PostgreSQL and MySQL work inside, built layer by layer in C — page storage, buffer pool, heap, B+Tree index, SQL parser/executor, write-ahead log, transactions, a file-per-table multi-table catalog, aliases/self-joins, aggregates/GROUP BY, and joins that pick index/hash/nested-loop per level — into a mini RDBMS that runs CREATE/INSERT/SELECT/UPDATE/DELETE.",
   "image": "/uploads/project/db-hobby/cover.svg",
   "tags": ["C", "Database Internals", "Storage Engine", "B+Tree", "SQL", "JOIN", "Query Planner", "WAL", "Transactions", "Learning"],
-  "category": "project",
+  "category": "study",
   "date": "2026-05-11",
   "github": "https://github.com/dj258255/db-hobby",
   "website": "",

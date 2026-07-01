@@ -32,7 +32,7 @@ tags:
   - Redis
   - MongoDB
   - Kotlin
-category: project/Joying
+category: team/Joying
 coverImage: /uploads/project/Joying/retrospective/title.gif
 draft: false
 series: "Joying"

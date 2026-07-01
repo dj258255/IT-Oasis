@@ -10,7 +10,7 @@ tags:
   - Domain Model
   - Object Mapping
   - Spring Boot
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/mapstruct-usage/manual-mapping-problem.png"
 series: "Tymee"

@@ -15,7 +15,7 @@ tags:
   - Kafka
   - Debezium
   - Docker
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-overview.png
 draft: false
 series: "WikiEngine"
