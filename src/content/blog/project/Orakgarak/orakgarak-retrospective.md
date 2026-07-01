@@ -11,7 +11,7 @@ tags:
   - Prometheus
   - Grafana
   - AWS S3
-category: project/Orakgarak
+category: team/Orakgarak
 coverImage: /uploads/project/Orakgarak/retrospective/title.png
 draft: false
 series: "Orakgarak"

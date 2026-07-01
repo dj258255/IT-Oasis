@@ -11,7 +11,7 @@ tags:
   - Dependency Inversion
   - Clean Architecture
   - Spring
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-entity-db.png"
 series: "EduMeet"

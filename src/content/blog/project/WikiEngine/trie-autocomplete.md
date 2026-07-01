@@ -14,7 +14,7 @@ tags:
   - Volatile
   - Copy-on-Write
   - Cold Start
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/trie-autocomplete/B-4-api-trie-hit.png
 draft: false
 series: "WikiEngine"

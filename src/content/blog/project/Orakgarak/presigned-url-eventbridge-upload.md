@@ -10,7 +10,7 @@ tags:
   - EventBridge
   - File Upload
   - Architecture
-category: project/Orakgarak
+category: team/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/presigned-url-eventbridge-upload/double-handling-network-cost.png"
 series: "Orakgarak"

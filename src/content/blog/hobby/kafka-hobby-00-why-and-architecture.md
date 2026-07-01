@@ -11,7 +11,7 @@ tags:
   - Log
   - Replication
   - Raft
-category: project/kafka-hobby
+category: study/kafka-hobby
 draft: true
 series: "Java로 만드는 토이 Kafka"
 seriesOrder: 1
@@ -94,7 +94,7 @@ Kafka를 처음부터 "여러 노드"로 시작하면 **"분산"과 "네트워�
 
 국면 1(트랙 A~C)에서 와이어 프로토콜과 로그 저장을 완성해 "동작하는 카프카"를 만들고, 국면 2(트랙 D~E)에서 복제(ISR)와 **합의(Raft/KRaft)**를 얹어 "분산 카프카"로 키워요. 분산 학습의 진짜 알맹이는 국면 2에 있지만, 국면 1이 없으면 얹을 곳이 없죠.
 
-> 재밌는 지점: **Kafka의 메타데이터 합의(KRaft)를 제대로 만들면 Raft를 안 만들 수가 없어요.** Raft는 etcd·Consul·CockroachDB의 심장이라, 카프카 하나 만들면서 분산 합의까지 통째로 배우게 돼요.
+> 재밌는 지점: **Kafka의 메타데이터 합의(KRaft)를 제대로 만들면 Raft를 안 만들 수가 없어요.** Raft는 etcd·Consul·CockroachDB의 심장이라, 카프카 하나 만들면서 분산 합의까지 통째로 배우게 돼요. (→ 다만 Raft는 [MIT 6.5840로 먼저 제대로 배우고 이식](/blog/distributed-systems/distsys-00-why-and-plan)하기로 했어요. 자작만으론 네트워크 분단 같은 실패를 스스로 테스트할 수 없거든요.)
 
 ## 4. 이번엔 "테스트" 대신 "상황 시뮬레이션"
 

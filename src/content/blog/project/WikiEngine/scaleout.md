@@ -17,7 +17,7 @@ tags:
   - Grafana
   - Ansible
   - Docker
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/scaleout/step9-load-grafana-overview.png
 draft: false
 series: "WikiEngine"

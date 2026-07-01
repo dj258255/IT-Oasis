@@ -16,7 +16,7 @@ tags:
   - MySQL
   - Lucene
   - Grafana
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/cdc/phase14-cdc-k6-overview.png
 draft: false
 series: "WikiEngine"

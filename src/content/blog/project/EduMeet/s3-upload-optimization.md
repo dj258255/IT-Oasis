@@ -12,7 +12,7 @@ tags:
   - Presigned URL
   - MySQL
   - InnoDB
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/s3-upload-optimization/section.svg"
 series: "EduMeet"

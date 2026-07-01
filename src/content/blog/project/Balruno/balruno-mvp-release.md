@@ -12,7 +12,7 @@ tags:
   - DPS
   - Economy Simulator
   - Curve Fitting
-category: project/Balruno
+category: personal/Balruno
 draft: false
 coverImage: "/uploads/project/Balruno/balruno-mvp-release/calculator-feature.png"
 series: "Balruno"

@@ -10,7 +10,7 @@ tags:
   - YAML
   - Properties
   - Spring Profile
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/spring-boot-config/properties-example.svg"
 series: "Tymee"

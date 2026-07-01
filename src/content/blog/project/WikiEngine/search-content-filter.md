@@ -12,7 +12,7 @@ tags:
   - Caching
   - Spring Boot
   - Wiki
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png
 draft: false
 series: "WikiEngine"

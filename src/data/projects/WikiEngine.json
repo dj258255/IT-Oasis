@@ -5,7 +5,7 @@
   "descriptionEn": "Unified search engine over 14.25M wiki documents",
   "image": "/uploads/project/WikiEngine/wikiengine-icon.svg",
   "tags": ["Spring Boot", "Lucene", "MySQL", "Redis", "Kafka", "Debezium", "Nginx", "Docker", "k6", "Grafana"],
-  "category": "project",
+  "category": "personal",
   "date": "2026-03-24",
   "github": "https://github.com/dj258255/wikiEngine",
   "story": "/blog/project/wikiengine/wiki-engine-retrospective",

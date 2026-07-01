@@ -11,7 +11,7 @@ tags:
   - MySQL
   - Distributed Systems
   - Primary Key
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/snowflake-id/snowflake-id-implementation.png"
 series: "Tymee"

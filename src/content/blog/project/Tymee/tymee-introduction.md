@@ -9,7 +9,7 @@ tags:
   - Mobile App
   - Gamification
   - Focus Timer
-category: project/Tymee
+category: personal/Tymee
 draft: false
 series: "Tymee"
 ---

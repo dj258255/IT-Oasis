@@ -35,7 +35,7 @@ tags:
   - Concurrency
   - Security
   - Byeolchi
-category: project/Byeolchi
+category: team/Byeolchi
 draft: true
 coverImage: /uploads/project/Byeolchi/jwt-refresh-rotation/cover.svg
 series: "Byeolchi"

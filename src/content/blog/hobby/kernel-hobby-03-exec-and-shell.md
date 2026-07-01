@@ -11,7 +11,7 @@ tags:
   - RISC-V
   - xv6
   - QEMU
-category: project/kernel-hobby
+category: study/kernel-hobby
 coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"

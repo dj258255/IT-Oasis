@@ -20,7 +20,7 @@ tags:
   - Performance
   - Spring Boot
   - Wiki
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-after-java-frontend.png
 draft: false
 series: "WikiEngine"

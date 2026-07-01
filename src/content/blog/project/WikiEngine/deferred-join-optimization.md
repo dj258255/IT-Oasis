@@ -11,7 +11,7 @@ tags:
   - EXPLAIN
   - Keyset Pagination
   - Performance
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/deferred-join-optimization/request-flow.svg
 draft: false
 series: "WikiEngine"

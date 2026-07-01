@@ -11,7 +11,7 @@ tags:
   - Product Validation
   - User Feedback
   - Game Balance
-category: project/Balruno
+category: personal/Balruno
 draft: false
 coverImage: "/uploads/project/Balruno/indie-balance-tool-market-research/21-research.png"
 series: "Balruno"

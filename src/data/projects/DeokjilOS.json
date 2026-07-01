@@ -5,7 +5,7 @@
   "descriptionEn": "An Ubuntu personalization toolkit. Instead of forcing a fixed mascot, it lets each user freely swap themes, accent colors, wallpapers, and mascots through a single config file — a modular, config-driven customization system.",
   "image": "/uploads/project/DeokjilOS/cover.svg",
   "tags": ["Ubuntu", "GNOME", "Bash", "Customization", "Linux"],
-  "category": "project",
+  "category": "personal",
   "date": "2026-06-20",
   "github": "https://github.com/dj258255/deokjil-os",
   "website": "",

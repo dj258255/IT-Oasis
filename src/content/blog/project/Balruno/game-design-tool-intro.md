@@ -13,7 +13,7 @@ tags:
   - Unity
   - Godot
   - Unreal
-category: project/Balruno
+category: personal/Balruno
 draft: false
 coverImage: "/uploads/project/Balruno/game-design-tool-intro/image.png"
 series: "Balruno"

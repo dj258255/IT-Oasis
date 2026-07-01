@@ -11,7 +11,7 @@ tags:
   - Multi-Module
   - DDD
   - Spring Boot
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/architecture-selection/hexagonal-architecture.png"
 series: "Tymee"

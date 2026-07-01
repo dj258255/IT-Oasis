@@ -11,7 +11,7 @@ tags:
   - SameSite
   - XSS
   - Vite Proxy
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/jwt-cookie-security/spa.svg"
 series: "Joying"

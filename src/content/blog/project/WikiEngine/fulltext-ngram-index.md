@@ -11,7 +11,7 @@ tags:
   - Inverted Index
   - Information Retrieval
   - BOOLEAN MODE
-category: project/WikiEngine
+category: personal/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/fulltext-ngram-index/search-expected.png"
 series: "WikiEngine"

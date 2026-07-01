@@ -10,7 +10,7 @@ tags:
   - Product
   - Game Design
   - Balruno
-category: project/Balruno
+category: personal/Balruno
 coverImage: /uploads/project/Balruno/powerbalance-feedback.png
 draft: false
 ---

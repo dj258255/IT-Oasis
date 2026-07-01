@@ -17,7 +17,7 @@ tags:
   - Spreadsheet
   - Open Source
   - Balruno
-category: project/Balruno
+category: personal/Balruno
 coverImage: "/uploads/project/Balruno/table-drag-performance/cover.svg"
 draft: false
 series: "Balruno"

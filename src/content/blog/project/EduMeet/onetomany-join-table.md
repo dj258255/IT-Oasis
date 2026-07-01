@@ -10,7 +10,7 @@ tags:
   - mappedBy
   - Hibernate
   - Entity Mapping
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/onetomany-join-table/onetomany-join-table-creation.png"
 series: "EduMeet"

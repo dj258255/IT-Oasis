@@ -10,7 +10,7 @@ tags:
   - Static Site
   - i18n
   - Blog
-category: project/IT Oasis
+category: personal/IT Oasis
 coverImage: /uploads/project/IT-Oasis/it-oasis-blog-intro/blog-homepage.png
 draft: false
 ---

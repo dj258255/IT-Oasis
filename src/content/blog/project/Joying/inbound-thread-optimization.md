@@ -11,7 +11,7 @@ tags:
   - Coroutine
   - Thread Pool
   - Non-blocking
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/inbound-thread-optimization/problem.svg"
 series: "Joying"

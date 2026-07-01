@@ -11,7 +11,7 @@ tags:
   - Semaphore
   - ThreadPool
   - Concurrency
-category: project/Orakgarak
+category: team/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-gpu-oom-concurrent-requests/threadpool-semaphore-dual-control.svg"
 series: "Orakgarak"

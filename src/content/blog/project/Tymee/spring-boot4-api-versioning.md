@@ -9,7 +9,7 @@ tags:
   - API Versioning
   - Spring Framework 7
   - WebMvcConfigurer
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/spring-boot4-api-versioning/api-version-config.png"
 series: "Tymee"

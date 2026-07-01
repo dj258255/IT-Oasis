@@ -11,7 +11,7 @@ tags:
   - Cursor Pagination
   - SockJS
   - Instant
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/server-scaling-troubleshooting/simple-broker.svg"
 series: "Joying"

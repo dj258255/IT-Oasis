@@ -13,7 +13,7 @@ tags:
   - Spring Boot
   - Grafana
   - Docker
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/redis-sharding/phase15-k6-load2-overview.png
 draft: false
 series: "WikiEngine"

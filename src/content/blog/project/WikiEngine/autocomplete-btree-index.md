@@ -11,7 +11,7 @@ tags:
   - Autocomplete
   - EXPLAIN
   - Leftmost Prefix
-category: project/WikiEngine
+category: personal/WikiEngine
 draft: false
 coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-expected.png"
 series: "WikiEngine"

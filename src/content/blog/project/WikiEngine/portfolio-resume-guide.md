@@ -8,7 +8,7 @@ tags:
   - Resume
   - Portfolio
   - Career
-category: project/WikiEngine
+category: personal/WikiEngine
 draft: true
 series: "WikiEngine"
 ---

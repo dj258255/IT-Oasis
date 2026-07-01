@@ -5,7 +5,7 @@
   "descriptionEn": "A Korean AI fashion shopping assistant that compares prices and second-hand alternatives across malls right on the product page you are already viewing",
   "image": "/uploads/project/Byeolchi/building/cover.svg",
   "tags": ["Java 25", "Spring Boot 4", "Spring Modulith", "PostgreSQL 18", "pgvector", "Redis", "Gemini", "WXT", "React Native", "OCI"],
-  "category": "project",
+  "category": "team",
   "date": "2026-06-08",
   "github": "",
   "website": "",

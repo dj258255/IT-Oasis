@@ -11,7 +11,7 @@ tags:
   - GitHub Actions
   - Linear
   - OAuth
-category: project/Tymee
+category: personal/Tymee
 coverImage: /uploads/project/Tymee/retrospective/title.svg
 draft: false
 series: "Tymee"

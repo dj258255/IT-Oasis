@@ -11,7 +11,7 @@ tags:
   - Validation
   - Spring
   - JPA
-category: project/EduMeet
+category: team/EduMeet
 draft: false
 coverImage: "/uploads/project/EduMeet/edge-case-issues/title-board-register-edge-test.png"
 series: "EduMeet"

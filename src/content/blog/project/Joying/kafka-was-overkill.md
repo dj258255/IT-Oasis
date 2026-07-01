@@ -11,7 +11,7 @@ tags:
   - NATS
   - WebSocket
   - STOMP
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/kafka-was-overkill/kafka.svg"
 series: "Joying"

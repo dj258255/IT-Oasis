@@ -32,8 +32,8 @@ for (const post of posts) {
   }
 }
 
-// Fixed order: 일상 → 활동 → 이론 → 프로젝트(서브카테고리 by count desc)
-const parentDisplayOrder = ['daily', 'activity', 'theory', 'project'];
+// Fixed order: 일상 → 활동 → 이론 → 팀 프로젝트 → 개인 프로젝트 → 학습 프로젝트
+const parentDisplayOrder = ['daily', 'activity', 'theory', 'team', 'personal', 'study'];
 const sortedCats = [...allCats.entries()].sort((a, b) => {
   const idxA = parentDisplayOrder.indexOf(a[1].parent);
   const idxB = parentDisplayOrder.indexOf(b[1].parent);
@@ -459,7 +459,7 @@ const groups = [...groupsMap.values()].sort((a, b) => {
         if (activeCategory === 'all') return allCards;
         return allCards.filter(c => {
           const full = c.dataset.postCategory || '';
-          // Exact match for subcategory (e.g. "project/WikiEngine")
+          // Exact match for subcategory (e.g. "personal/WikiEngine")
           // or parent match for parent-only categories (e.g. "theory")
           return full === activeCategory || c.dataset.postParent === activeCategory;
         });

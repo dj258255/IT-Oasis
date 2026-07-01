@@ -3,7 +3,7 @@
   "nameEn": "Theory",
   "nameKo": "이론",
   "icon": "book",
-  "order": 4,
+  "order": 6,
   "subcategories": [
     { "name": "JVM-Memory", "nameEn": "JVM Memory", "nameKo": "JVM 메모리", "order": 1 },
     { "name": "Concurrency", "nameEn": "Concurrency", "nameKo": "동시성", "order": 2 },

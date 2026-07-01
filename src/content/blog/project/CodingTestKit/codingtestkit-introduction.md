@@ -10,7 +10,7 @@ tags:
   - TypeScript
   - IntelliJ Plugin
   - VS Code Extension
-category: project/CodingTestKit
+category: personal/CodingTestKit
 coverImage: /uploads/project/CodingTestKit/title.png
 draft: false
 series: "CodingTestKit"

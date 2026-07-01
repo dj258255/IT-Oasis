@@ -12,7 +12,7 @@ tags:
   - JaCoCo
   - Codecov
   - CI/CD
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/code-quality-management/spotless-config.svg"
 series: "Tymee"

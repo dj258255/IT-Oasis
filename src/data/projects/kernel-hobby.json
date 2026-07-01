@@ -5,7 +5,7 @@
   "descriptionEn": "A RISC-V toy kernel built from scratch in C — boot, paging (virtual memory), processes, system calls, fork/exec, a filesystem, plus demand paging, mmap, copy-on-write, multicore (SMP), networking (UDP/TCP), user threads, and a journaling FS. Implements the full set of xv6 (MIT 6.S081) labs, documented as a blog series.",
   "image": "/uploads/hobby/kernel-hobby-c/cover.svg",
   "tags": ["C", "OS", "Kernel", "Bare Metal", "RISC-V", "QEMU", "xv6", "Network", "TCP"],
-  "category": "project",
+  "category": "study",
   "date": "2026-05-16",
   "github": "https://github.com/dj258255/kernel-hobby",
   "website": "",

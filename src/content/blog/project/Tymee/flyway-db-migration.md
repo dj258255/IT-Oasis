@@ -10,7 +10,7 @@ tags:
   - JPA
   - Spring Boot
   - Schema Management
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/flyway-db-migration/gradle-version-catalog.svg"
 series: "Tymee"

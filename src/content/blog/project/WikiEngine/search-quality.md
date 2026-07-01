@@ -13,7 +13,7 @@ tags:
   - Ranking
   - Nori
   - Performance
-category: project/WikiEngine
+category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop4.png
 draft: false
 series: "WikiEngine"

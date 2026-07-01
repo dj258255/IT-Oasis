@@ -11,7 +11,7 @@ tags:
   - MGET
   - Cache
   - MongoDB
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/chatroom-list-slow-query/problem.svg"
 series: "Joying"

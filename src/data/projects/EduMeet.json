@@ -5,7 +5,7 @@
   "descriptionEn": "An online education platform that supports learning for the hearing-impaired through real-time speech-to-subtitle conversion",
   "image": "/uploads/project/EduMeet/EduMeetTitle.png",
   "tags": ["Java", "Spring Boot", "JPA", "QueryDSL", "MySQL", "AWS S3", "Docker"],
-  "category": "project",
+  "category": "team",
   "date": "2025-08-15",
   "github": "https://github.com/dj258255/edumeet",
   "website": "",

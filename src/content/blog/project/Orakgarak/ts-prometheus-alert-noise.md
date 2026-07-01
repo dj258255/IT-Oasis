@@ -10,7 +10,7 @@ tags:
   - Alertmanager
   - Alert Fatigue
   - Monitoring
-category: project/Orakgarak
+category: team/Orakgarak
 draft: false
 coverImage: "/uploads/project/Orakgarak/ts-prometheus-alert-noise/alertmanager-routing.svg"
 series: "Orakgarak"

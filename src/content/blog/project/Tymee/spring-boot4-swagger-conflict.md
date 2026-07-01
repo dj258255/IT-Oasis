@@ -10,7 +10,7 @@ tags:
   - OpenAPI
   - API Versioning
   - Troubleshooting
-category: project/Tymee
+category: personal/Tymee
 draft: false
 coverImage: "/uploads/project/Tymee/spring-boot4-swagger-conflict/security-config-swagger.png"
 series: "Tymee"

@@ -5,7 +5,7 @@
   "descriptionEn": "A C2C sharing platform for lending and borrowing items between neighbors",
   "image": "/uploads/project/Joying/retrospective/title.gif",
   "tags": ["Java", "Kotlin", "Spring Boot", "WebSocket", "Redis", "MongoDB", "MySQL"],
-  "category": "project",
+  "category": "team",
   "date": "2025-11-20",
   "github": "https://github.com/dj258255/joying",
   "website": "",

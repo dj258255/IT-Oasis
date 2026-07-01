@@ -10,7 +10,7 @@ tags:
   - JPA
   - MySQL
   - AWS S3
-category: project/EduMeet
+category: team/EduMeet
 coverImage: /uploads/project/EduMeet/retrospective/title.png
 draft: false
 series: "EduMeet"

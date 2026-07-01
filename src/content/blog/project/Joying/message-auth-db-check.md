@@ -10,7 +10,7 @@ tags:
   - CQRS
   - Permission
   - Async
-category: project/Joying
+category: team/Joying
 draft: false
 coverImage: "/uploads/project/Joying/message-auth-db-check/why-permission-check.svg"
 series: "Joying"
