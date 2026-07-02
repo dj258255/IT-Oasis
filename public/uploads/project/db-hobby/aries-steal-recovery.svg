@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="420" viewBox="0 0 1000 420" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="sarrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="420" rx="12" fill="#0d1117"/>
+  <text x="500" y="38" text-anchor="middle" fill="#8b949e" font-size="18">steal + undo — before-image를 로그에 먼저, 커밋 마커가 redo/undo를 가른다</text>
+  <text x="500" y="62" text-anchor="middle" fill="#6e7681" font-size="13">트랜잭션 중 dirty 페이지를 steal할 때: REC_UNDO(before-image)를 fsync한 뒤에야 디스크에 쓴다 (WAL 규칙)</text>
+
+  <!-- WAL 로그 스트림 -->
+  <text x="48" y="100" fill="#6e7681" font-size="13">WAL 로그 (한 트랜잭션분)</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+    <rect x="48" y="112" width="168" height="48" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="132" y="134" text-anchor="middle" fill="#58a6ff">REC_BEGIN</text>
+    <text x="132" y="151" text-anchor="middle" fill="#6e7681">base = N</text>
+
+    <rect x="228" y="112" width="168" height="48" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="312" y="134" text-anchor="middle" fill="#58a6ff">REC_UNDO</text>
+    <text x="312" y="151" text-anchor="middle" fill="#6e7681">p=12 · before</text>
+
+    <rect x="408" y="112" width="168" height="48" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="492" y="134" text-anchor="middle" fill="#58a6ff">REC_UNDO</text>
+    <text x="492" y="151" text-anchor="middle" fill="#6e7681">p=13 · before</text>
+
+    <rect x="588" y="112" width="168" height="48" rx="6" fill="#0e1b12" stroke="#238636"/>
+    <text x="672" y="134" text-anchor="middle" fill="#3fb950">REC_PAGE</text>
+    <text x="672" y="151" text-anchor="middle" fill="#6e7681">after · 커밋 시</text>
+
+    <rect x="768" y="112" width="184" height="48" rx="6" fill="#161b22" stroke="#6e7681" stroke-dasharray="4 3"/>
+    <text x="860" y="134" text-anchor="middle" fill="#8b949e">REC_COMMIT?</text>
+    <text x="860" y="151" text-anchor="middle" fill="#6e7681">있을 수도 / 없을 수도</text>
+  </g>
+  <text x="132" y="182" text-anchor="middle" fill="#6e7681" font-size="12">steal이 남김 (fsync 먼저)</text>
+  <text x="672" y="182" text-anchor="middle" fill="#6e7681" font-size="12">커밋이 남김</text>
+
+  <!-- 크래시/재오픈 분기점 -->
+  <text x="500" y="228" text-anchor="middle" fill="#f0b429" font-size="14">⚡ 크래시 → 재오픈 시 복구가 커밋 마커로 갈린다</text>
+
+  <!-- 분기 화살표 -->
+  <path d="M820,196 C760,232 560,244 470,266" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#sarrow)"/>
+  <path d="M900,196 C940,232 700,246 620,266" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#sarrow)"/>
+
+  <!-- 좌: 커밋 마커 있음 -> REDO -->
+  <rect x="48" y="272" width="440" height="118" rx="8" fill="#0e1b12" stroke="#238636"/>
+  <text x="68" y="300" fill="#3fb950" font-size="15">커밋 마커 있음 → REDO</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+    <text x="68" y="328" fill="#8b949e">REC_PAGE(after)를 데이터에 재적용</text>
+    <text x="68" y="352" fill="#8b949e">stolen 페이지는 이미 디스크(fsync됨)</text>
+    <text x="68" y="376" fill="#6e7681">→ 커밋 지점까지 복원 (내구성)</text>
+  </g>
+
+  <!-- 우: 커밋 마커 없음 -> UNDO -->
+  <rect x="512" y="272" width="440" height="118" rx="8" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="532" y="300" fill="#f0b429" font-size="15">커밋 마커 없음(loser) → UNDO</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+    <text x="532" y="328" fill="#8b949e">REC_UNDO(before)로 디스크 원복</text>
+    <text x="532" y="352" fill="#8b949e">새로 할당한 페이지는 base로 truncate</text>
+    <text x="532" y="376" fill="#6e7681">→ 트랜잭션 흔적 없음 (원자성)</text>
+  </g>
+</svg>
