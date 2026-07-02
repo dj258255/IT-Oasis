@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="450" viewBox="0 0 1000 450" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="vsarrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="450" rx="12" fill="#0d1117"/>
+  <text x="500" y="36" text-anchor="middle" fill="#8b949e" font-size="18">VACUUM — 지운 것(xmax)을 치우는 것(공간 회수)은 별도의 작업이다</text>
+
+  <!-- 좌: 청소 전 (bloat) -->
+  <text x="60" y="74" fill="#6e7681" font-size="13">청소 전 — 죽은 버전이 쌓인 힙 (bloat)</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="12.5">
+    <rect x="60" y="86" width="330" height="36" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="225" y="109" text-anchor="middle" fill="#58a6ff">id=1 xmax=0 <tspan fill="#3fb950">살아있음</tspan></text>
+    <rect x="60" y="128" width="330" height="36" rx="6" fill="#161b22" stroke="#6e7681"/>
+    <text x="225" y="151" text-anchor="middle" fill="#8b949e">id=2 <tspan fill="#f85149">xmax=9✓</tspan> DELETE됨 <tspan fill="#6e7681">죽음</tspan></text>
+    <rect x="60" y="170" width="330" height="36" rx="6" fill="#161b22" stroke="#6e7681"/>
+    <text x="225" y="193" text-anchor="middle" fill="#8b949e">id=1 <tspan fill="#f85149">xmax=8✓</tspan> UPDATE 옛 버전 <tspan fill="#6e7681">죽음</tspan></text>
+    <rect x="60" y="212" width="330" height="36" rx="6" fill="#161b22" stroke="#6e7681" stroke-dasharray="4 3"/>
+    <text x="225" y="235" text-anchor="middle" fill="#6e7681">(전부 죽은 꼬리 페이지)</text>
+  </g>
+  <text x="60" y="272" fill="#f0b429" font-size="12.5">파일은 자라기만 한다 — 스캔은 죽은 버전을 읽고 게이트에서 버린다</text>
+
+  <!-- 중앙: VACUUM 3단계 -->
+  <path d="M400,170 C430,170 440,170 465,170" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#vsarrow)"/>
+  <rect x="472" y="86" width="240" height="196" rx="8" fill="#0e1b12" stroke="#238636"/>
+  <text x="592" y="114" text-anchor="middle" fill="#3fb950" font-size="15">VACUUM</text>
+  <g font-size="12.5" fill="#8b949e">
+    <text x="490" y="144">① 인덱스 항목 lazy 삭제</text>
+    <text x="490" y="162" fill="#6e7681">   (키,RID) 짝만 · 재분배 없음</text>
+    <text x="490" y="188">② 슬롯 비움 + compaction</text>
+    <text x="490" y="206" fill="#6e7681">   슬롯 번호 = RID 불변</text>
+    <text x="490" y="232">③ 꼬리 빈 페이지 truncate</text>
+    <text x="490" y="250" fill="#6e7681">   가운데 빈 페이지는 남는다</text>
+  </g>
+  <path d="M712,170 C742,170 752,170 777,170" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#vsarrow)"/>
+
+  <!-- 우: 청소 후 -->
+  <text x="784" y="74" fill="#6e7681" font-size="13">청소 후</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="12.5">
+    <rect x="784" y="86" width="156" height="36" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="862" y="109" text-anchor="middle" fill="#58a6ff">id=1 살아있음</text>
+    <rect x="784" y="128" width="156" height="36" rx="6" fill="#0d1117" stroke="#238636" stroke-dasharray="4 3"/>
+    <text x="862" y="151" text-anchor="middle" fill="#3fb950">회수된 공간</text>
+    <text x="862" y="193" text-anchor="middle" fill="#6e7681" font-size="12">꼬리 페이지 → 파일 축소</text>
+  </g>
+
+  <!-- 하단: PK 보존 함정 -->
+  <rect x="60" y="304" width="880" height="60" rx="8" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="84" y="328" fill="#f0b429" font-size="14">함정 — UPDATE된 키의 PK 항목은 살아있는 새 버전을 가리킨다: 지우면 살아있는 행이 인덱스에서 사라진다</text>
+  <text x="84" y="350" fill="#8b949e" font-size="13" font-family="ui-monospace, Menlo, monospace">인덱스 값 == 죽은 RID 일 때만 삭제 (btree_search로 확인 후 btree_delete_val)</text>
+
+  <text x="500" y="398" text-anchor="middle" fill="#6e7681" font-size="13">tombstone(heap_delete)은 DELETE의 의미론에서 쫓겨나 VACUUM의 청소 도구로 제 역할을 찾았다</text>
+  <text x="500" y="424" text-anchor="middle" fill="#6e7681" font-size="13">13(버전) → 14(steal·undo) → 15(no-force) → 16(DELETE=xmax) → 17(청소) — 한 사이클 완성</text>
+</svg>
