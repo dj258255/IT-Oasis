@@ -12,7 +12,7 @@ tags:
   - Kafka
   - Consensus
 category: study/distributed-systems
-draft: true
+draft: false
 series: "분산 시스템 공부기 (MIT 6.5840)"
 seriesOrder: 1
 ---
