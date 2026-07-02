@@ -47,8 +47,10 @@ jobs:
           EXPECTED=$((TOTAL - DRAFT - UNLISTED))
           echo "expected published posts: $EXPECTED (total=$TOTAL draft=$DRAFT unlisted=$UNLISTED)"
           RENDERED=0
-          for i in $(seq 1 12); do
-            rm -rf node_modules/.astro dist
+          for i in $(seq 1 20); do
+            # clean BOTH the root .astro (types/settings) and node_modules/.astro
+            # (content data store) so each attempt is a truly independent cold build
+            rm -rf .astro node_modules/.astro dist
             pnpm run build
             RENDERED=$(grep -oE 'data-en="All">[^<]*</span>[[:space:]]*<span class="sidebar-count">[0-9]+' dist/index.html 2>/dev/null | grep -oE '[0-9]+$' | head -1)
             RENDERED=${RENDERED:-0}
@@ -58,8 +60,9 @@ jobs:
               exit 0
             fi
             echo "incomplete ($RENDERED/$EXPECTED), retrying..."
+            sleep 3
           done
-          echo "::error::content sync incomplete after 12 attempts ($RENDERED/$EXPECTED) — aborting deploy to keep last good site live"
+          echo "::error::content sync incomplete after 20 attempts ($RENDERED/$EXPECTED) — aborting deploy to keep last good site live"
           exit 1
 
       - name: Upload Pages artifact
