@@ -12,7 +12,7 @@ tags:
   - Replication
   - Raft
 category: study/kafka-hobby
-draft: true
+draft: false
 series: "Java로 만드는 토이 Kafka"
 seriesOrder: 1
 ---
