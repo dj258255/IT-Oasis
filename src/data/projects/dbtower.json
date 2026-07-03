@@ -1,14 +1,14 @@
 {
-  "title": "DBHub — 이기종 DBMS 운영 관리 플랫폼",
-  "titleEn": "DBHub — Heterogeneous DBMS Operations Platform",
+  "title": "DBTower — 이기종 DBMS 운영 관리 플랫폼",
+  "titleEn": "DBTower — Heterogeneous DBMS Operations Platform",
   "description": "MySQL·PostgreSQL·SQL Server처럼 서로 다른 DBMS를 하나의 플랫폼에서 등록하고 모니터링·시점 비교·백업 정책까지 일괄 관리하는 컨트롤 플레인. 기종마다 다른 통계 소스(performance_schema·pg_stat_statements·DMV)와 구문을 DbmsOperator 인터페이스 뒤로 추상화했다. 평소 구간과 문제 구간을 비교해 신규 쿼리·호출량 급증·읽는 행수 폭증을 잡아내는 시점 비교, 플랫폼 자신을 관리 대상으로 등록해 자기 병목을 진단·개선한 도그푸딩(Seq Scan 21.3ms에서 인덱스 후 0.06ms), 커넥션 풀·배치 저장 등 측정으로 검증한 개선 기록까지.",
   "descriptionEn": "A control plane that registers heterogeneous DBMSs (MySQL, PostgreSQL, SQL Server) and manages monitoring, point-in-time comparison, and backup policies in one place. Per-engine stat sources (performance_schema, pg_stat_statements, DMVs) and syntax differences are abstracted behind a DbmsOperator interface. Features window comparison that catches new queries, call-volume spikes, and rows-per-call explosions, plus dogfooding — the platform registers itself as a target and diagnosed its own Seq Scan (21.3ms to 0.06ms after indexing) — with every improvement verified by measurement.",
-  "image": "/uploads/project/dbhub/cover.svg",
+  "image": "/uploads/project/dbtower/cover.svg",
   "tags": ["Java", "Spring Boot", "MySQL", "PostgreSQL", "SQL Server", "DBRE", "Control Plane", "HikariCP", "k6", "Docker"],
   "category": "personal",
   "date": "2026-07-02",
-  "github": "https://github.com/dj258255/dbhub",
+  "github": "https://github.com/dj258255/dbtower",
   "website": "",
-  "story": "/blog/project/dbhub/dbhub-1-why-and-design",
+  "story": "/blog/project/dbtower/dbtower-1-why-and-design",
   "order": 2
 }
