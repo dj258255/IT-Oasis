@@ -1,8 +1,8 @@
 ---
-title: '"30분 주기 백업해줘" 한 줄이 세 갈래로 갈라진다 — DBHub 추상화와 회귀 감지'
-titleEn: 'One Line — "Back Up Every 30 Minutes" — Splits Three Ways: DBHub Abstraction and Regression Detection'
-description: "이기종 DBMS 운영 관리 플랫폼 DBHub 2편. 같은 '백업'이 mysqldump·pg_dump·BACKUP DATABASE로 갈라지는 과정을 DbmsOperator 인터페이스로 흡수한 이야기, 플랫폼이 자기 자신을 관리 대상으로 등록해 병목을 진단·개선한 도그푸딩(Seq Scan 21ms에서 0.06ms), 그리고 시점 비교를 사람이 아니라 플랫폼이 스스로 돌리는 쿼리 회귀 자동 감지와 Discord 알림까지 — 만들면서 실제로 겪은 이슈와 수치를 기록합니다."
-descriptionEn: "Part 2 of DBHub, a heterogeneous DBMS operations platform. How the DbmsOperator interface absorbs the same 'backup' splitting into mysqldump / pg_dump / BACKUP DATABASE, dogfooding where the platform registers itself as a target to diagnose and fix its own bottleneck (Seq Scan 21ms to 0.06ms), and query regression detection that runs window comparison automatically with Discord alerts — with the real issues and numbers hit along the way."
+title: '"30분 주기 백업해줘" 한 줄이 세 갈래로 갈라진다 — DBTower 추상화와 회귀 감지'
+titleEn: 'One Line — "Back Up Every 30 Minutes" — Splits Three Ways: DBTower Abstraction and Regression Detection'
+description: "이기종 DBMS 운영 관리 플랫폼 DBTower 2편. 같은 '백업'이 mysqldump·pg_dump·BACKUP DATABASE로 갈라지는 과정을 DbmsOperator 인터페이스로 흡수한 이야기, 플랫폼이 자기 자신을 관리 대상으로 등록해 병목을 진단·개선한 도그푸딩(Seq Scan 21ms에서 0.06ms), 그리고 시점 비교를 사람이 아니라 플랫폼이 스스로 돌리는 쿼리 회귀 자동 감지와 Discord 알림까지 — 만들면서 실제로 겪은 이슈와 수치를 기록합니다."
+descriptionEn: "Part 2 of DBTower, a heterogeneous DBMS operations platform. How the DbmsOperator interface absorbs the same 'backup' splitting into mysqldump / pg_dump / BACKUP DATABASE, dogfooding where the platform registers itself as a target to diagnose and fix its own bottleneck (Seq Scan 21ms to 0.06ms), and query regression detection that runs window comparison automatically with Discord alerts — with the real issues and numbers hit along the way."
 date: 2026-07-03
 tags:
   - Java
@@ -11,16 +11,16 @@ tags:
   - Ansible
   - Prometheus
   - Discord
-category: project/dbhub
-coverImage: /uploads/project/dbhub/cover.svg
+category: project/dbtower
+coverImage: /uploads/project/dbtower/cover.svg
 draft: true
-series: "dbhub"
+series: "dbtower"
 seriesOrder: 2
 ---
 
 ## 0. 들어가며 — 추상화가 진짜로 값을 하는 순간
 
-[1편](/blog/project/dbhub/dbhub-1-why-and-design)에서 `DbmsOperator` 인터페이스 하나로 기종 차이를 흡수하겠다고 했어요. 인터페이스를 나눠두는 건 쉽지만, 그게 정말 값을 하는지는 실제 기능을 붙여봐야 압니다. 이번 편은 백업·복제·회귀 감지를 붙이면서 "같은 요청 한 줄이 기종마다 완전히 다른 실행으로 갈라지는" 지점을 직접 만난 기록입니다.
+[1편](/blog/project/dbtower/dbtower-1-why-and-design)에서 `DbmsOperator` 인터페이스 하나로 기종 차이를 흡수하겠다고 했어요. 인터페이스를 나눠두는 건 쉽지만, 그게 정말 값을 하는지는 실제 기능을 붙여봐야 압니다. 이번 편은 백업·복제·회귀 감지를 붙이면서 "같은 요청 한 줄이 기종마다 완전히 다른 실행으로 갈라지는" 지점을 직접 만난 기록입니다.
 
 ## 1. "30분 주기 백업해줘" — 한 줄이 세 갈래로
 
@@ -57,8 +57,8 @@ MSSQL  SUCCESS
 해결책으로 백업 명령을 플레이스홀더 템플릿으로 바꿨습니다.
 
 ```yaml
-mysqldump-command: "docker exec -e MYSQL_PWD dbhub-mysql mysqldump -h localhost -P 3306 -u {user} --single-transaction --databases {db}"
-pg-dump-command: "docker exec dbhub-postgres pg_dump -U {user} -d {db}"
+mysqldump-command: "docker exec -e MYSQL_PWD dbtower-mysql mysqldump -h localhost -P 3306 -u {user} --single-transaction --databases {db}"
+pg-dump-command: "docker exec dbtower-postgres pg_dump -U {user} -d {db}"
 ```
 
 실행 위치(호스트/컨테이너/원격 에이전트)마다 달라지는 접속 관점을 **코드가 아니라 설정이 흡수**하게 만든 거예요. 수정 후 3종 전부 성공했습니다(214KB / 165KB / 서버측 bak). 1분 주기 정책을 걸자 폴러가 정확히 1분 간격으로 실행되는 것도 확인했고요.
@@ -77,9 +77,9 @@ pg-dump-command: "docker exec dbhub-postgres pg_dump -U {user} -d {db}"
 
 ## 4. 도그푸딩 — 플랫폼으로 플랫폼을 진단하다
 
-이 프로젝트에서 제일 좋아하는 부분이에요. 플랫폼 자체 데이터(레지스트리·스냅샷)를 PostgreSQL에 저장하는데, 그 PostgreSQL을 **DBHub 자신에게 관리 대상으로 등록**했습니다(`dbhub-self`). 그러면 DBHub의 진단 기능으로 DBHub 자신의 쿼리를 볼 수 있어요.
+이 프로젝트에서 제일 좋아하는 부분이에요. 플랫폼 자체 데이터(레지스트리·스냅샷)를 PostgreSQL에 저장하는데, 그 PostgreSQL을 **DBTower 자신에게 관리 대상으로 등록**했습니다(`dbtower-self`). 그러면 DBTower의 진단 기능으로 DBTower 자신의 쿼리를 볼 수 있어요.
 
-시점 비교가 읽는 스냅샷 테이블을 일부러 인덱스 없이 시작했고, 벤치마크용 합성 데이터 50만 행을 채운 뒤 DBHub의 explain API로 자기 쿼리를 진단시켰습니다. 자체 규칙 분석기가 자기 자신을 이렇게 지적했어요.
+시점 비교가 읽는 스냅샷 테이블을 일부러 인덱스 없이 시작했고, 벤치마크용 합성 데이터 50만 행을 채운 뒤 DBTower의 explain API로 자기 쿼리를 진단시켰습니다. 자체 규칙 분석기가 자기 자신을 이렇게 지적했어요.
 
 ```
 findings: ["Seq Scan 발생 — 테이블 전체를 읽고 있습니다. WHERE 조건에 맞는 인덱스를 검토하세요"]
@@ -95,7 +95,7 @@ Execution Time: 0.062 ms
 
 21.269ms에서 0.062ms — 343배였어요. 개선 전후를 측정한 도구가 곧 제가 만든 기능이라는 점이 좋았습니다. 이것 말고도 커넥션 풀 도입(수집 지연 최대 4배), 스냅샷 저장의 JDBC 배치 전환(행당 13.8배), MySQL digest 절단 재현 같은 개선을 전부 실측 로그로 남겨 뒀습니다.
 
-수집을 붙이면서 정합성 버그도 하나 잡았어요. PostgreSQL의 `pg_stat_statements`는 클러스터 전역 뷰라, `dbid` 필터 없이 조회하면 같은 클러스터의 다른 데이터베이스 쿼리까지 섞입니다. `sample`과 `dbhub`가 서로의 쿼리를 보고 있던 걸 발견하고 현재 DB로 필터를 걸었습니다. 이런 건 DB 내부를 알아야 보이는 지점인데, [db-hobby](/blog/project/db-hobby/db-hobby-1-storage)에서 저장 계층을 만들어봤던 게 도움이 됐어요.
+수집을 붙이면서 정합성 버그도 하나 잡았어요. PostgreSQL의 `pg_stat_statements`는 클러스터 전역 뷰라, `dbid` 필터 없이 조회하면 같은 클러스터의 다른 데이터베이스 쿼리까지 섞입니다. `sample`과 `dbtower`가 서로의 쿼리를 보고 있던 걸 발견하고 현재 DB로 필터를 걸었습니다. 이런 건 DB 내부를 알아야 보이는 지점인데, [db-hobby](/blog/project/db-hobby/db-hobby-1-storage)에서 저장 계층을 만들어봤던 게 도움이 됐어요.
 
 ## 5. 회귀 자동 감지 — 시점 비교를 사람이 아니라 플랫폼이 돌린다
 
@@ -120,7 +120,7 @@ String payload = webhookUrl.contains("discord.com")
         : "{\"text\": %s}".formatted(json(message));     // Slack
 ```
 
-Discord는 `content`, Slack은 `text` — 필드 이름만 다릅니다. URL은 비밀값이라 커밋하지 않고 환경변수(`DBHUB_WEBHOOK_URL`)로만 주입하고요. 실제로 Discord 웹훅을 걸어 회귀 감지 알림이 채널에 뜨는 것까지 확인했습니다(HTTP 204).
+Discord는 `content`, Slack은 `text` — 필드 이름만 다릅니다. URL은 비밀값이라 커밋하지 않고 환경변수(`DBTOWER_WEBHOOK_URL`)로만 주입하고요. 실제로 Discord 웹훅을 걸어 회귀 감지 알림이 채널에 뜨는 것까지 확인했습니다(HTTP 204).
 
 ## 7. AI 1차 분석 — 판단을 통째로 맡기지 않는다
 
@@ -132,4 +132,4 @@ Discord는 `content`, Slack은 `text` — 필드 이름만 다릅니다. URL은 
 
 DbmsOperator 인터페이스 하나가 백업·복제·통계·회귀 감지까지 붙이는 내내 값을 했어요. 새 기능을 붙일 때마다 "이건 기종마다 어떻게 다른가"를 먼저 묻고, 그 차이를 구현체 안으로 밀어 넣으면 플랫폼 코드는 계속 단순하게 유지됐습니다. SQL Server 어댑터를 마지막에 붙일 때 플랫폼 코드 수정이 0이었다는 게 그 증거고요.
 
-만들면서 겪은 실패들 — 백업 버전 불일치, digest 절단, 통계 오염 — 이 오히려 이 도메인의 진짜 어려움이 어디에 있는지 알려줬습니다. 코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbhub)에 있어요.
+만들면서 겪은 실패들 — 백업 버전 불일치, digest 절단, 통계 오염 — 이 오히려 이 도메인의 진짜 어려움이 어디에 있는지 알려줬습니다. 코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있어요.
