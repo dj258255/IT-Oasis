@@ -1,14 +1,14 @@
 {
   "title": "db-hobby — C로 만든 미니 RDBMS",
   "titleEn": "db-hobby — A Mini RDBMS in C",
-  "description": "PostgreSQL·MySQL 같은 관계형 DB가 내부에서 어떻게 동작하는지를, C로 한 겹씩 직접 구현하며 해부하는 학습 프로젝트. 페이지 저장·슬롯 페이지·버퍼풀·힙·B+Tree 인덱스·SQL 파서/실행기·WAL·트랜잭션, 테이블마다 파일을 따로 두는 다중 테이블, 별칭·self-join, 집계·GROUP BY, 그리고 레벨마다 인덱스/해시/중첩 루프를 고르는 조인까지. CREATE/INSERT/SELECT/UPDATE/DELETE가 도는 미니 RDBMS.",
-  "descriptionEn": "A learning project dissecting how relational databases like PostgreSQL and MySQL work inside, built layer by layer in C — page storage, buffer pool, heap, B+Tree index, SQL parser/executor, write-ahead log, transactions, a file-per-table multi-table catalog, aliases/self-joins, aggregates/GROUP BY, and joins that pick index/hash/nested-loop per level — into a mini RDBMS that runs CREATE/INSERT/SELECT/UPDATE/DELETE.",
+  "description": "C로 맨땅에서 만든 미니 관계형 DB — 진짜 psql이 붙고(PostgreSQL wire protocol), reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구(steal+no-force), VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저까지. 페이지 한 장에서 SQL 실행까지 바닥부터 쌓아 PostgreSQL·MySQL 내부를 해부한다. 테스트 425개/28스위트, 동시성은 ThreadSanitizer로 검증. 각 편이 '앞 편이 만든 문제를 다음 편이 푸는' 23편 시리즈로 기록.",
+  "descriptionEn": "A mini relational database built from scratch in C — a real psql connects to it (PostgreSQL wire protocol), MVCC snapshot isolation where readers don't block writers, WAL crash recovery (steal+no-force), VACUUM, a thread-safe buffer pool, and a cost-based optimizer. Stacked bottom-up from a single page to running SQL, dissecting PostgreSQL/MySQL internals. 425 tests / 28 suites, concurrency verified under ThreadSanitizer. Documented as a 23-part series where each part solves the problem the previous created.",
   "image": "/uploads/project/db-hobby/cover.svg",
-  "tags": ["C", "Database Internals", "Storage Engine", "B+Tree", "SQL", "JOIN", "Query Planner", "WAL", "Transactions", "Learning"],
+  "tags": ["C", "Database Internals", "MVCC", "WAL", "Concurrency", "PostgreSQL", "Wire Protocol", "Query Optimizer", "B+Tree", "Learning"],
   "category": "study",
   "date": "2026-05-11",
   "github": "https://github.com/dj258255/db-hobby",
   "website": "",
-  "story": "/blog/project/db-hobby/db-hobby-1-storage",
+  "story": "/blog/project/db-hobby/db-hobby-0-overview",
   "order": 0
 }
