@@ -25,8 +25,8 @@ seriesOrder: 0
 
 - **진짜 `psql`이 붙습니다** — PostgreSQL v3 wire protocol을 말하는 400줄 서버라, psql은 상대가 진짜 PG인지 구분 못 해요.
 - **reader가 writer를 안 막습니다** — MVCC 스냅샷 격리. 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽은 옛 버전을 막힘 없이 읽어요.
-- **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
-- **테스트 440개 / 29스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **primary→replica 복제**까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
+- **테스트 458개 / 30스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## 이 시리즈를 읽는 법
 
@@ -74,7 +74,7 @@ seriesOrder: 0
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | 지운 것과 치운 것은 다르다, B+Tree 삭제 |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | 다중 트랜잭션 | reader가 writer를 안 막는 걸 진짜로 |
 
-### 5부. 네트워크·동시성·최적화 (19~24)
+### 5부. 네트워크·동시성·최적화·복제 (19~25)
 
 | 편 | 제목 | 푸는 문제 |
 |---|---|---|
@@ -84,12 +84,13 @@ seriesOrder: 0
 | [22](/blog/project/db-hobby/db-hobby-22-latch-crabbing) | latch crabbing | B+Tree를 동시에 타기 |
 | [23](/blog/project/db-hobby/db-hobby-23-clustered-vs-heap) | 힙 vs 클러스터드 | PG vs MySQL을 한 코드에서 벤치 |
 | [24](/blog/project/db-hobby/db-hobby-24-join-order) | 조인 순서 최적화 | 여러 테이블을 어느 순서로 조인하나 (Selinger DP) |
+| [25](/blog/project/db-hobby/db-hobby-25-replication) | WAL 로그 시핑 복제 | primary→replica, 복구의 redo를 스트림으로 |
 
 ## 직접 돌려보기
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 440개 테스트
+make test            # 458개 테스트
 make repl && ./build/db-hobby my.db   # REPL에서 SQL
 
 # 또는 진짜 psql로 접속:
@@ -113,8 +114,8 @@ Today db-hobby:
 
 - **A real `psql` connects to it** — a 400-line server speaking PostgreSQL's v3 wire protocol, so psql can't tell it isn't real PG.
 - **Readers don't block writers** — MVCC snapshot isolation. Even while one transaction holds an uncommitted UPDATE, another reads the old version, unblocked.
-- **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer** — nearly every axis of a real database, touched by hand.
-- **440 tests / 29 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication** — nearly every axis of a real database, touched by hand.
+- **458 tests / 30 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## How to Read This Series
 
@@ -162,7 +163,7 @@ Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | deleting vs cleaning; B+Tree deletion |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | Multi-transaction | readers really not blocking writers |
 
-### Part V. Network, Concurrency, Optimization (19–24)
+### Part V. Network, Concurrency, Optimization, Replication (19–25)
 
 | # | Title | Problem it solves |
 |---|---|---|
@@ -172,12 +173,13 @@ Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby
 | [22](/blog/project/db-hobby/db-hobby-22-latch-crabbing) | latch crabbing | traversing a B+Tree concurrently |
 | [23](/blog/project/db-hobby/db-hobby-23-clustered-vs-heap) | Heap vs clustered | PG vs MySQL, benchmarked in one codebase |
 | [24](/blog/project/db-hobby/db-hobby-24-join-order) | Join order optimization | in what order to join many tables (Selinger DP) |
+| [25](/blog/project/db-hobby/db-hobby-25-replication) | WAL log-shipping replication | primary→replica, recovery's redo as a stream |
 
 ## Run It Yourself
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 440 tests
+make test            # 458 tests
 make repl && ./build/db-hobby my.db   # SQL in the REPL
 
 # or connect with a real psql:

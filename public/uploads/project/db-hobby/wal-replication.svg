@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="500" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">WAL 로그 시핑 복제 — replica는 커밋된 after-image를 tail하며 재생한다</text>
+  <text x="500" y="56" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">복구의 redo Pass를 '파괴적 복구'가 아니라 '증분·연속'으로 — PostgreSQL walreceiver와 같은 구조</text>
+
+  <!-- Primary -->
+  <rect x="30" y="78" width="270" height="120" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="30" y="78" width="270" height="26" rx="10" fill="#13283f"/>
+  <text x="165" y="95" text-anchor="middle" fill="#58a6ff" font-size="12.5">Primary (쓰기)</text>
+  <text x="48" y="128" fill="#c9d1d9" font-size="12">COMMIT txn → WAL에 append:</text>
+  <text x="48" y="150" fill="#3fb950" font-size="12">  REC_PAGE(after-image) ×N</text>
+  <text x="48" y="168" fill="#3fb950" font-size="12">  REC_COMMIT ← 내구성 지점(fsync)</text>
+  <text x="48" y="188" fill="#6e7681" font-size="11.5">데이터엔 no-force로 반영(15편)</text>
+
+  <!-- WAL 로그 스트림 (가운데) -->
+  <text x="500" y="238" text-anchor="middle" fill="#8b949e" font-size="12">십된 WAL 로그 (진실의 원천) — type(1B)+lsn(8B)+payload</text>
+  <!-- 레코드 칸들 -->
+  <g font-size="10.5">
+    <rect x="40" y="250" width="70" height="40" rx="4" fill="#0e1b12" stroke="#238636"/>
+    <text x="75" y="266" text-anchor="middle" fill="#3fb950">PAGE</text><text x="75" y="281" text-anchor="middle" fill="#6e7681">lsn 8</text>
+    <rect x="112" y="250" width="70" height="40" rx="4" fill="#0e1b12" stroke="#238636"/>
+    <text x="147" y="266" text-anchor="middle" fill="#3fb950">PAGE</text><text x="147" y="281" text-anchor="middle" fill="#6e7681">lsn 9</text>
+    <rect x="184" y="250" width="78" height="40" rx="4" fill="#13283f" stroke="#1f6feb"/>
+    <text x="223" y="266" text-anchor="middle" fill="#58a6ff">COMMIT</text><text x="223" y="281" text-anchor="middle" fill="#6e7681">lsn 10</text>
+
+    <rect x="272" y="250" width="70" height="40" rx="4" fill="#0e1b12" stroke="#238636"/>
+    <text x="307" y="266" text-anchor="middle" fill="#3fb950">PAGE</text><text x="307" y="281" text-anchor="middle" fill="#6e7681">lsn 11</text>
+    <rect x="344" y="250" width="78" height="40" rx="4" fill="#13283f" stroke="#1f6feb"/>
+    <text x="383" y="266" text-anchor="middle" fill="#58a6ff">COMMIT</text><text x="383" y="281" text-anchor="middle" fill="#6e7681">lsn 12</text>
+
+    <!-- 적용 경계 표시 -->
+    <line x1="424" y1="242" x2="424" y2="298" stroke="#3fb950" stroke-width="2" stroke-dasharray="3 3"/>
+    <text x="424" y="312" text-anchor="middle" fill="#3fb950" font-size="10.5">replica apply_off (lsn 12까지 적용)</text>
+
+    <rect x="430" y="250" width="70" height="40" rx="4" fill="#0e1b12" stroke="#238636"/>
+    <text x="465" y="266" text-anchor="middle" fill="#3fb950">PAGE</text><text x="465" y="281" text-anchor="middle" fill="#6e7681">lsn 13</text>
+    <!-- 미완 꼬리 -->
+    <rect x="502" y="250" width="86" height="40" rx="4" fill="#1c1408" stroke="#9e6a03" stroke-dasharray="4 3"/>
+    <text x="545" y="264" text-anchor="middle" fill="#f0b429" font-size="10">PAGE(미완)</text>
+    <text x="545" y="281" text-anchor="middle" fill="#6e7681">마커 없음</text>
+  </g>
+  <text x="595" y="275" fill="#6e7681" font-size="11">← 커밋 마커 전이라 replica는 적용 보류(읽기 일관성)</text>
+
+  <!-- Replica -->
+  <rect x="700" y="78" width="270" height="120" rx="10" fill="#010409" stroke="#238636"/>
+  <rect x="700" y="78" width="270" height="26" rx="10" fill="#0e1b12"/>
+  <text x="835" y="95" text-anchor="middle" fill="#3fb950" font-size="12.5">Replica (읽기 복제본)</text>
+  <text x="718" y="128" fill="#c9d1d9" font-size="12">apply_off부터 로그 tail:</text>
+  <text x="718" y="150" fill="#c9d1d9" font-size="12">  REC_COMMIT까지 모은</text>
+  <text x="718" y="168" fill="#c9d1d9" font-size="12">  after-image를 데이터에 재적용</text>
+  <text x="718" y="188" fill="#6e7681" font-size="11.5">lsn ≤ 적용분이면 건너뜀(idempotent)</text>
+
+  <!-- 화살표: primary -> 로그 -> replica -->
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+  <line x1="165" y1="200" x2="120" y2="246" stroke="#8b949e" marker-end="url(#ah)"/>
+  <text x="70" y="228" fill="#6e7681" font-size="11">append</text>
+  <line x1="560" y1="246" x2="820" y2="200" stroke="#8b949e" marker-end="url(#ah)"/>
+  <text x="700" y="228" fill="#6e7681" font-size="11">tail &amp; replay</text>
+
+  <!-- 하단 설명 박스 -->
+  <rect x="40" y="340" width="920" height="72" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="60" y="364" fill="#c9d1d9" font-size="12.5">왜 공짜에 가깝나: 로그는 이미 crash 복구가 쓰는 redo 스트림이다. replica는 그 redo를 파괴적 복구 대신 증분으로 돌린다.</text>
+  <text x="60" y="386" fill="#c9d1d9" font-size="12.5">페이지 전체 물리 로깅이라 redo가 idempotent → 같은 구간을 다시 적용해도 안전 → lsn으로 중복만 거르면 체크포인트 truncate에도 견딘다.</text>
+
+  <text x="500" y="440" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">일관성 모델: 비동기 · 최종 일관성 · replica는 커밋된 상태만, primary보다 뒤처질 수 있다(lag)</text>
+  <text x="500" y="466" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">정직한 경계(프론티어): TCP walsender/walreceiver · 복제 슬롯(로그 pin) · 자동 failover·합의(Raft=H2)</text>
+  <text x="500" y="487" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">test_replica: 커밋 복제 · 증분 catch-up · 미완 꼬리 미적용 · 되감기 후 중복 없음 (18 checks)</text>
+</svg>
