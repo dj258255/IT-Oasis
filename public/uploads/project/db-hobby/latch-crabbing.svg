@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="450" viewBox="0 0 1000 450" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="lcarrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="450" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-size="18">latch crabbing — 자식을 잡은 뒤에야 부모를 놓는다 (게처럼)</text>
+
+  <!-- 트리 (읽기 crabbing) -->
+  <text x="245" y="66" text-anchor="middle" fill="#6e7681" font-size="13">읽기: 한 번에 최대 2노드만 latch</text>
+  <!-- root -->
+  <rect x="185" y="80" width="120" height="34" rx="6" fill="#161b22" stroke="#6e7681"/>
+  <text x="245" y="102" text-anchor="middle" fill="#6e7681" font-size="12.5">루트 (놓음)</text>
+  <!-- mid (held) -->
+  <rect x="120" y="150" width="120" height="34" rx="6" fill="#13283f" stroke="#1f6feb"/>
+  <text x="180" y="172" text-anchor="middle" fill="#58a6ff" font-size="12.5">내부 (잡음)</text>
+  <rect x="290" y="150" width="120" height="34" rx="6" fill="#161b22" stroke="#6e7681"/>
+  <text x="350" y="172" text-anchor="middle" fill="#6e7681" font-size="12.5">내부</text>
+  <!-- leaf (held) -->
+  <rect x="120" y="220" width="120" height="34" rx="6" fill="#13283f" stroke="#1f6feb"/>
+  <text x="180" y="242" text-anchor="middle" fill="#58a6ff" font-size="12.5">리프 (잡음)</text>
+  <!-- edges -->
+  <path d="M235,114 L200,150" stroke="#6e7681" stroke-width="1.3" fill="none"/>
+  <path d="M262,114 L320,150" stroke="#6e7681" stroke-width="1.3" fill="none"/>
+  <path d="M180,184 L180,220" stroke="#1f6feb" stroke-width="1.6" fill="none"/>
+  <text x="300" y="242" fill="#f0b429" font-size="12">← 자식 잡고 → 부모 놓기 (2노드)</text>
+
+  <!-- 오른쪽: 삽입 crabbing -->
+  <rect x="470" y="72" width="490" height="150" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="490" y="98" fill="#3fb950" font-size="15">삽입: "안전한 노드"에서 조상을 놓는다</text>
+  <g font-size="12.5" fill="#8b949e">
+    <text x="490" y="124">자식 wlatch → 자식이 <tspan fill="#3fb950">안전</tspan>(여유 있음)이면:</text>
+    <text x="510" y="146" fill="#6e7681">붙들던 조상 latch 전부 해제 (분할이 여기서 흡수)</text>
+    <text x="490" y="172">안 안전(꽉 참)이면: 붙들었다가 분할을 위로 전파</text>
+    <text x="490" y="196" fill="#f0b429">→ 평상시 2노드, 분할 시만 여러 조상</text>
+  </g>
+
+  <!-- 루트 분할 header 트릭 -->
+  <rect x="470" y="238" width="490" height="86" rx="10" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="490" y="264" fill="#f0b429" font-size="14">루트 분할 = header 노드 트릭</text>
+  <text x="490" y="288" fill="#8b949e" font-size="12.5" font-family="ui-monospace, Menlo, monospace">header->child[0] = 진짜 루트 · 루트 접근은 header latch 먼저</text>
+  <text x="490" y="308" fill="#6e7681" font-size="12.5">→ 루트 교체가 특수 케이스 아님 (붕 뜨는 포인터 없음)</text>
+
+  <!-- 하단 -->
+  <rect x="40" y="290" width="410" height="34" rx="6" fill="#161b22" stroke="#6e7681"/>
+  <text x="60" y="312" fill="#8b949e" font-size="12.5">루트→리프 단방향이라 교착 불가</text>
+
+  <rect x="40" y="340" width="920" height="56" rx="8" fill="#0e1b12" stroke="#238636"/>
+  <text x="60" y="364" fill="#3fb950" font-size="14">증명: 분할 폭풍(노드당 4키) 속 8스레드 동시 삽입 + 읽기/쓰기 혼합 → ThreadSanitizer 클린</text>
+  <text x="60" y="384" fill="#8b949e" font-size="12.5">읽기가 "반쯤 쪼개진 트리"를 안 봄 · 리프 체인 온전 · 모든 키 정확히 조회</text>
+
+  <text x="500" y="422" text-anchor="middle" fill="#6e7681" font-size="12.5">독립 인메모리 모듈 — 굵은 엔진 latch를 계층별로 걷어낼 때 쓸 기법을 격리해 증명(엔진 배선은 프론티어)</text>
+</svg>
