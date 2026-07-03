@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="450" viewBox="0 0 1000 450" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">
+  <defs>
+    <marker id="tsarrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="450" rx="12" fill="#0d1117"/>
+  <text x="500" y="36" text-anchor="middle" fill="#8b949e" font-size="18">스레드 안전 버퍼 풀 — latch는 메타데이터를, pin은 반환된 데이터를 지킨다</text>
+
+  <!-- 좌: 커넥션 스레드들 -->
+  <text x="120" y="80" text-anchor="middle" fill="#6e7681" font-size="13">커넥션당 스레드 (진짜 병렬)</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="12.5">
+    <rect x="40" y="92" width="160" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="120" y="117" text-anchor="middle" fill="#58a6ff">스레드 A · fetch(p)</text>
+    <rect x="40" y="140" width="160" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="120" y="165" text-anchor="middle" fill="#58a6ff">스레드 B · fetch(q)</text>
+    <rect x="40" y="188" width="160" height="40" rx="6" fill="#13283f" stroke="#1f6feb"/>
+    <text x="120" y="213" text-anchor="middle" fill="#58a6ff">스레드 C · fetch(p)</text>
+  </g>
+
+  <!-- 중앙: latch 임계구역 -->
+  <path d="M202,112 C232,112 236,150 266,150" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#tsarrow)"/>
+  <path d="M202,160 C232,160 236,158 266,158" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#tsarrow)"/>
+  <path d="M202,208 C232,208 236,170 266,170" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#tsarrow)"/>
+
+  <rect x="270" y="92" width="330" height="200" rx="10" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="435" y="116" text-anchor="middle" fill="#f0b429" font-size="14">latch (임계구역) — 한 번에 하나</text>
+  <g font-size="12.5" fill="#8b949e" font-family="ui-monospace, Menlo, monospace">
+    <text x="290" y="144">프레임 테이블 = 메타데이터</text>
+    <text x="306" y="166" fill="#6e7681">pin_count ++/--</text>
+    <text x="306" y="186" fill="#6e7681">valid · dirty · LRU 시계</text>
+    <text x="306" y="206" fill="#6e7681">page ↔ frame 매핑 · victim 선택</text>
+    <text x="290" y="234" fill="#8b949e">I/O(read/write)도 latch 안 (직렬화)</text>
+    <text x="290" y="262" fill="#f0b429">→ 짧게 잡고 pin만 들고 나온다</text>
+  </g>
+
+  <!-- 우: pin이 지키는 데이터 -->
+  <path d="M602,180 C632,180 636,180 666,180" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#tsarrow)"/>
+  <rect x="670" y="110" width="290" height="150" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="815" y="136" text-anchor="middle" fill="#3fb950" font-size="14">반환된 페이지 데이터</text>
+  <g font-size="12.5" fill="#8b949e">
+    <text x="690" y="164">pin > 0 인 프레임은</text>
+    <text x="690" y="186" fill="#3fb950">victim이 될 수 없다</text>
+    <text x="690" y="212">→ latch 밖에서 오래 읽고 써도</text>
+    <text x="690" y="234" fill="#6e7681">   그 자리에 그대로 (pin 프로토콜)</text>
+  </g>
+
+  <!-- 하단: 증명 + 한계 -->
+  <rect x="40" y="312" width="440" height="60" rx="8" fill="#0e1b12" stroke="#238636"/>
+  <text x="60" y="336" fill="#3fb950" font-size="13.5">증명: ThreadSanitizer 클린 (make test-tsan)</text>
+  <text x="60" y="358" fill="#8b949e" font-size="12.5">"통과"가 아니라 "관측된 실행에 data race 없음"</text>
+
+  <rect x="500" y="312" width="460" height="60" rx="8" fill="#161b22" stroke="#6e7681"/>
+  <text x="520" y="336" fill="#8b949e" font-size="13.5">아직: 실행은 굵은 엔진 latch로 직렬화</text>
+  <text x="520" y="358" fill="#6e7681" font-size="12.5">버퍼 풀 latch = 그 굵은 락을 계층별로 걷어낼 첫 발판</text>
+
+  <text x="500" y="404" text-anchor="middle" fill="#6e7681" font-size="13">큰 락 하나로 정확성을 사고 → 계층마다 쪼개 병렬성을 되산다 (다음: B+Tree crabbing)</text>
+  <text x="500" y="428" text-anchor="middle" fill="#6e7681" font-size="12.5">PostgreSQL의 buffer pin + content lock, InnoDB buf_page pin과 같은 두 겹 구조</text>
+</svg>
