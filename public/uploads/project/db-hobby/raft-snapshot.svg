@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">Raft 스냅샷 — 로그가 무한히 자라는 걸 막는다 (§7)</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">28편이 남긴 '로그 무한 성장' 프론티어를 닫는다 · 인덱스에 log_base 오프셋 도입</text>
+
+  <defs>
+    <marker id="as" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- ① 로그 압축 -->
+  <text x="250" y="90" text-anchor="middle" fill="#8b949e" font-size="13">① 로그 압축 (raft_snapshot)</text>
+  <text x="40" y="118" fill="#6e7681" font-size="11">압축 전:</text>
+  <g font-size="10.5">
+    <rect x="40" y="124" width="40" height="26" rx="3" fill="#161b22" stroke="#30363d"/><text x="60" y="141" text-anchor="middle" fill="#6e7681">1</text>
+    <rect x="82" y="124" width="40" height="26" rx="3" fill="#161b22" stroke="#30363d"/><text x="102" y="141" text-anchor="middle" fill="#6e7681">2</text>
+    <rect x="124" y="124" width="40" height="26" rx="3" fill="#161b22" stroke="#30363d"/><text x="144" y="141" text-anchor="middle" fill="#6e7681">3</text>
+    <rect x="166" y="124" width="40" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="186" y="141" text-anchor="middle" fill="#3fb950">4</text>
+    <rect x="208" y="124" width="40" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="228" y="141" text-anchor="middle" fill="#3fb950">5</text>
+  </g>
+  <text x="40" y="180" fill="#6e7681" font-size="11">압축 후 (index 3까지 스냅샷):</text>
+  <g font-size="10.5">
+    <rect x="40" y="186" width="90" height="26" rx="3" fill="#13283f" stroke="#1f6feb"/><text x="85" y="203" text-anchor="middle" fill="#58a6ff">snapshot ≤3</text>
+    <rect x="132" y="186" width="40" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="152" y="203" text-anchor="middle" fill="#3fb950">4</text>
+    <rect x="174" y="186" width="40" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="194" y="203" text-anchor="middle" fill="#3fb950">5</text>
+  </g>
+  <text x="40" y="234" fill="#f0b429" font-size="11">log[0]=마커(term), log_base=3 · 논리 인덱스는 그대로 4,5</text>
+
+  <!-- ② 인덱스 변환 -->
+  <rect x="470" y="100" width="490" height="118" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="490" y="124" fill="#c9d1d9" font-size="12.5">② 인덱스 변환 — 위험의 핵심</text>
+  <text x="490" y="148" fill="#3fb950" font-size="12">논리 인덱스 i → 물리 log[i - log_base]</text>
+  <text x="490" y="170" fill="#f0b429" font-size="11.5">log_base=0이면 무연산 → 기존 테스트가 버그를 못 잡는다</text>
+  <text x="490" y="190" fill="#8b949e" font-size="11.5">그래서 테스트가 반드시 log_base&gt;0 경로를 관통해야 한다</text>
+  <text x="490" y="208" fill="#6e7681" font-size="10.5">(압축 후 복제·커밋·InstallSnapshot·apply 전부)</text>
+
+  <!-- ③ InstallSnapshot -->
+  <text x="500" y="272" text-anchor="middle" fill="#8b949e" font-size="13">③ InstallSnapshot — 압축돼 사라진 prefix를 통째로 전송</text>
+
+  <rect x="60" y="290" width="300" height="120" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <text x="210" y="312" text-anchor="middle" fill="#58a6ff" font-size="12">Leader (log_base=6)</text>
+  <text x="78" y="336" fill="#c9d1d9" font-size="11.5">팔로워가 필요로 하는 1..6이</text>
+  <text x="78" y="356" fill="#c9d1d9" font-size="11.5">이미 압축돼 사라짐</text>
+  <text x="78" y="378" fill="#f0b429" font-size="11.5">→ AppendEntries 불가</text>
+  <text x="78" y="398" fill="#3fb950" font-size="11.5">→ 스냅샷을 통째로 전송</text>
+
+  <line x1="360" y1="350" x2="640" y2="350" stroke="#8b949e" stroke-width="2" marker-end="url(#as)"/>
+  <text x="500" y="342" text-anchor="middle" fill="#6e7681" font-size="11">InstallSnapshot(lastIncludedIndex=6, value)</text>
+
+  <rect x="640" y="290" width="300" height="120" rx="10" fill="#010409" stroke="#238636"/>
+  <text x="790" y="312" text-anchor="middle" fill="#3fb950" font-size="12">Follower (뒤처짐)</text>
+  <text x="658" y="336" fill="#c9d1d9" font-size="11.5">로그 버리고 log_base=6로 점프</text>
+  <text x="658" y="356" fill="#c9d1d9" font-size="11.5">SM에 스냅샷 값 설치</text>
+  <text x="658" y="378" fill="#c9d1d9" font-size="11.5">commit=applied=6</text>
+  <text x="658" y="398" fill="#3fb950" font-size="11.5">→ 리더와 즉시 일치(catch-up)</text>
+
+  <text x="500" y="442" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">test_raft +20: 압축 후 복제·커밋 · InstallSnapshot 따라잡기 · 재기동 시 SM 시드 · 재압축 거부 (Raft 스위트 57 checks)</text>
+  <text x="500" y="462" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">정직한 경계: 팔로워는 스냅샷 설치 시 로그 전체 폐기(꼬리 보존 안 함, 안전하나 약간 비효율) · 멤버십 변경(§6)은 여전히 프론티어</text>
+</svg>
