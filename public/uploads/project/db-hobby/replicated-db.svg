@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="460" viewBox="0 0 1000 460" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="460" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">캡스톤 — 복제를 '진짜 엔진'에 배선: 독립 모듈에서 진짜 복제되는 DB로</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">실제 db_exec 커밋이 쓴 WAL을 replica가 재생 → 복제본이 SELECT를 서빙 (pg_basebackup + WAL replay)</text>
+
+  <defs>
+    <marker id="ac" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- Primary -->
+  <rect x="30" y="80" width="300" height="180" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="30" y="80" width="300" height="26" rx="10" fill="#13283f"/>
+  <text x="180" y="97" text-anchor="middle" fill="#58a6ff" font-size="12.5">Primary — 진짜 db.c 엔진</text>
+  <text x="48" y="128" fill="#c9d1d9" font-size="12">db_exec("CREATE TABLE t ...")</text>
+  <text x="48" y="150" fill="#c9d1d9" font-size="12">db_exec("INSERT INTO t ...") ×10</text>
+  <rect x="48" y="166" width="264" height="34" rx="5" fill="#161b22" stroke="#30363d"/>
+  <text x="180" y="188" text-anchor="middle" fill="#8b949e" font-size="11">.t.tbl (힙) + .t.wal (커밋 로그)</text>
+  <text x="48" y="224" fill="#3fb950" font-size="11.5">각 INSERT 커밋 → .t.wal에</text>
+  <text x="48" y="242" fill="#3fb950" font-size="11.5">REC_PAGE(after-image)+REC_COMMIT</text>
+
+  <!-- 화살표: base snapshot -->
+  <line x1="180" y1="260" x2="180" y2="300" stroke="#8b949e" marker-end="url(#ac)"/>
+  <text x="196" y="284" fill="#6e7681" font-size="10.5">① CREATE 직후 빈 힙 base 복사</text>
+
+  <!-- WAL stream -->
+  <line x1="330" y1="200" x2="620" y2="200" stroke="#8b949e" stroke-width="2" marker-end="url(#ac)"/>
+  <text x="475" y="190" text-anchor="middle" fill="#6e7681" font-size="11">② .t.wal replay (replica_apply)</text>
+
+  <!-- Replica -->
+  <rect x="620" y="80" width="350" height="180" rx="10" fill="#010409" stroke="#238636"/>
+  <rect x="620" y="80" width="350" height="26" rx="10" fill="#0e1b12"/>
+  <text x="795" y="97" text-anchor="middle" fill="#3fb950" font-size="12.5">Replica — 복제본 DB</text>
+  <text x="638" y="128" fill="#c9d1d9" font-size="12">replica.c가 primary .t.wal을 tail·redo</text>
+  <text x="638" y="150" fill="#3fb950" font-size="11.5">→ replica .t.tbl이 primary와 바이트 동일</text>
+  <text x="638" y="176" fill="#c9d1d9" font-size="12">db_open(replica) — 진짜 Database로</text>
+  <text x="638" y="200" fill="#58a6ff" font-size="12">db_exec("SELECT * FROM t") → 10행</text>
+  <text x="638" y="224" fill="#8b949e" font-size="11">카탈로그(next_txn) 복사로 MVCC 가시성 성립</text>
+  <text x="638" y="242" fill="#3fb950" font-size="11.5">PK 인덱스 점 조회(id=7)도 동작</text>
+
+  <!-- 하단: landmine 박스 -->
+  <rect x="30" y="290" width="940" height="88" rx="8" fill="#161b22" stroke="#9e6a03" stroke-opacity="0.5"/>
+  <text x="50" y="314" fill="#f0b429" font-size="12.5">리서치 서브에이전트가 파낸 landmine — naive 구현이 조용히 깨지는 곳:</text>
+  <text x="50" y="336" fill="#c9d1d9" font-size="12">• wal_open이 매 재오픈마다 .wal을 truncate + LSN을 1로 리셋 → primary를 '재오픈'하면 신규 커밋이 조용히 스킵됨</text>
+  <text x="50" y="356" fill="#c9d1d9" font-size="12">→ 그래서 primary는 한 세션 내내 열어두고, base 스냅샷은 writer_txn=0인 조용한 시점에, 카탈로그는 db_close로 next_txn 확정 후 복사</text>
+
+  <text x="500" y="404" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">25·26편의 '독립 모듈'이 실제 엔진의 커밋을 복제하는 걸 증명 — test_repl_e2e (8 checks)</text>
+  <text x="500" y="430" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">정직한 경계: 단일 테이블·단일 세션 데모 · 복제 슬롯·다중 테이블/인덱스 스트리밍·동기 커밋·live 소켓(--replica) 모드는 프론티어</text>
+</svg>
