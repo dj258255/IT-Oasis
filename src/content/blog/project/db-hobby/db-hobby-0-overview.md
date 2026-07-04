@@ -1,8 +1,8 @@
 ---
-title: 'db-hobby 전체 지도 — C로 만든 미니 RDBMS, 33편 읽기 가이드'
-titleEn: 'The db-hobby Map — a Mini RDBMS in C, a Reading Guide to 33 Parts'
-description: "C로 맨땅에서 만든 미니 관계형 DB db-hobby의 33편 시리즈 전체 지도. 진짜 psql이 붙고, reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구, VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓 복제, LSM 엔진, Raft 합의까지 — 페이지 한 장에서 SQL 실행까지 바닥부터 올라간 기록이다. 각 편이 '앞 편이 만든 문제를 다음 편이 푼다'는 장애-해결 사슬로 이어진다. 어디서 시작할지, 무엇이 하이라이트인지, 어떻게 직접 돌려보는지를 한 페이지에 담은 읽기 가이드."
-descriptionEn: "The full map of db-hobby, a mini relational database built from scratch in C across 33 parts. A real psql connects to it; MVCC snapshot isolation where readers don't block writers; WAL crash recovery; VACUUM; a thread-safe buffer pool; a cost-based optimizer; socket replication; an LSM engine; Raft consensus — built bottom-up from a single page to running SQL. Each part chains as failure-then-fix: the next part solves the problem the previous one created. A one-page reading guide to where to start, what the highlights are, and how to run it yourself."
+title: 'db-hobby 전체 지도 — C로 만든 미니 RDBMS, 34편 읽기 가이드'
+titleEn: 'The db-hobby Map — a Mini RDBMS in C, a Reading Guide to 34 Parts'
+description: "C로 맨땅에서 만든 미니 관계형 DB db-hobby의 34편 시리즈 전체 지도. 진짜 psql이 붙고, reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구, VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓 복제, LSM 엔진, Raft 합의까지 — 페이지 한 장에서 SQL 실행까지 바닥부터 올라간 기록이다. 각 편이 '앞 편이 만든 문제를 다음 편이 푼다'는 장애-해결 사슬로 이어진다. 어디서 시작할지, 무엇이 하이라이트인지, 어떻게 직접 돌려보는지를 한 페이지에 담은 읽기 가이드."
+descriptionEn: "The full map of db-hobby, a mini relational database built from scratch in C across 34 parts. A real psql connects to it; MVCC snapshot isolation where readers don't block writers; WAL crash recovery; VACUUM; a thread-safe buffer pool; a cost-based optimizer; socket replication; an LSM engine; Raft consensus — built bottom-up from a single page to running SQL. Each part chains as failure-then-fix: the next part solves the problem the previous one created. A one-page reading guide to where to start, what the highlights are, and how to run it yourself."
 date: 2026-07-04
 tags:
   - C
@@ -26,7 +26,7 @@ seriesOrder: 0
 - **진짜 `psql`이 붙습니다** — PostgreSQL v3 wire protocol을 말하는 400줄 서버라, psql은 상대가 진짜 PG인지 구분 못 해요.
 - **reader가 writer를 안 막습니다** — MVCC 스냅샷 격리. 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽은 옛 버전을 막힘 없이 읽어요.
 - **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **소켓으로 도는 primary→replica 복제**, **LSM 저장 엔진**, **Raft 합의**(리더 선출·분단 내성)까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
-- **테스트 596개 / 35스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **테스트 603개 / 35스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## 이 시리즈를 읽는 법
 
@@ -74,7 +74,7 @@ seriesOrder: 0
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | 지운 것과 치운 것은 다르다, B+Tree 삭제 |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | 다중 트랜잭션 | reader가 writer를 안 막는 걸 진짜로 |
 
-### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의·캡스톤·HA (19~33)
+### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의·캡스톤·HA (19~34)
 
 | 편 | 제목 | 푸는 문제 |
 |---|---|---|
@@ -93,12 +93,13 @@ seriesOrder: 0
 | [31](/blog/project/db-hobby/db-hobby-31-replicated-db) | 캡스톤 — 복제를 엔진에 배선 | 독립 모듈을 진짜 복제되는 DB로 (실엔진 WAL 재생→SELECT) |
 | [32](/blog/project/db-hobby/db-hobby-32-raft-membership) | Raft 멤버십 변경 | 돌아가는 중에 노드 추가·제거 (겹치는 과반, §6) |
 | [33](/blog/project/db-hobby/db-hobby-33-raft-replicated-db) | Raft로 복제되는 HA DB | 실엔진 쓰기를 Raft로 복제, 리더 죽어도 살아남음 (SMR·failover) |
+| [34](/blog/project/db-hobby/db-hobby-34-linearizable-reads) | 선형화 읽기 | 파티션된 옛 리더가 낡은 값 못 주게 (ReadIndex, §8) |
 
 ## 직접 돌려보기
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 596개 테스트
+make test            # 603개 테스트
 make repl && ./build/db-hobby my.db   # REPL에서 SQL
 
 # 또는 진짜 psql로 접속:
@@ -110,7 +111,7 @@ psql 두 개를 나란히 띄우면, 위 [18편](/blog/project/db-hobby/db-hobby
 
 ## 정직하게 남긴 것
 
-완성이 아니라 **정직한 경계**를 그은 곳들입니다. 조인 순서 옵티마이저(24)·복제(25·26)·LSM(27)·Raft(합의 28·지속성 29·스냅샷 30·멤버십 32)는 **코어까지** 세우고, 그 너머(더 깊은 엔진 통합·joint consensus·선형화 읽기·진짜 병렬 실행)는 각 편에서 "여기까지, 그 너머는 이런 이유로"라고 명시해 뒀어요. 특히 22·24·27·28편은 400개 넘는 green 테스트를 지키려 **독립 모듈**로 세웠고, [31편(캡스톤)](/blog/project/db-hobby/db-hobby-31-replicated-db)에서 복제를 실제 엔진에 배선하고, [33편](/blog/project/db-hobby/db-hobby-33-raft-replicated-db)에서 **Raft로 실제 엔진을 복제**해 리더가 죽어도 살아남는 **HA DB**까지 이었습니다. 무엇을 안 했는지를 아는 것도 무엇을 했는지만큼 중요하니까요.
+완성이 아니라 **정직한 경계**를 그은 곳들입니다. 조인 순서 옵티마이저(24)·복제(25·26)·LSM(27)·Raft(합의 28·지속성 29·스냅샷 30·멤버십 32)는 **코어까지** 세우고, 그 너머(더 깊은 엔진 통합·joint consensus·진짜 병렬 실행)는 각 편에서 "여기까지, 그 너머는 이런 이유로"라고 명시해 뒀어요. 특히 22·24·27·28편은 400개 넘는 green 테스트를 지키려 **독립 모듈**로 세웠고, [31편(캡스톤)](/blog/project/db-hobby/db-hobby-31-replicated-db)에서 복제를 실제 엔진에 배선하고, [33편](/blog/project/db-hobby/db-hobby-33-raft-replicated-db)에서 **Raft로 실제 엔진을 복제**해 리더가 죽어도 살아남는 **HA DB**까지 이었습니다. 무엇을 안 했는지를 아는 것도 무엇을 했는지만큼 중요하니까요.
 
 <!-- EN -->
 
@@ -123,7 +124,7 @@ Today db-hobby:
 - **A real `psql` connects to it** — a 400-line server speaking PostgreSQL's v3 wire protocol, so psql can't tell it isn't real PG.
 - **Readers don't block writers** — MVCC snapshot isolation. Even while one transaction holds an uncommitted UPDATE, another reads the old version, unblocked.
 - **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication over a socket**, an **LSM storage engine**, **Raft consensus** (leader election, partition tolerance) — nearly every axis of a real database, touched by hand.
-- **596 tests / 35 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **603 tests / 35 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## How to Read This Series
 
@@ -171,7 +172,7 @@ Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | deleting vs cleaning; B+Tree deletion |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | Multi-transaction | readers really not blocking writers |
 
-### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus, Capstone, HA (19–33)
+### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus, Capstone, HA (19–34)
 
 | # | Title | Problem it solves |
 |---|---|---|
@@ -190,12 +191,13 @@ Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/
 | [31](/blog/project/db-hobby/db-hobby-31-replicated-db) | Capstone — wiring replication into the engine | from standalone module to a real replicated DB (real-engine WAL replay → SELECT) |
 | [32](/blog/project/db-hobby/db-hobby-32-raft-membership) | Raft membership changes | add/remove nodes on a live cluster (overlapping majorities, §6) |
 | [33](/blog/project/db-hobby/db-hobby-33-raft-replicated-db) | Raft-replicated HA DB | replicate real-engine writes via Raft, survives leader death (SMR, failover) |
+| [34](/blog/project/db-hobby/db-hobby-34-linearizable-reads) | Linearizable reads | stop a partitioned old leader serving stale data (ReadIndex, §8) |
 
 ## Run It Yourself
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 596 tests
+make test            # 603 tests
 make repl && ./build/db-hobby my.db   # SQL in the REPL
 
 # or connect with a real psql:
@@ -207,4 +209,4 @@ Open two psql clients side by side and you'll see "readers don't block writers" 
 
 ## What Was Left Honest
 
-Not "unfinished" but places where an **honest boundary** was drawn. The join-ordering optimizer (24), replication (25–26), LSM (27), and Raft (consensus 28, persistence 29, snapshots 30, membership 32) are built **to their cores**, with everything beyond (deeper engine integration, joint consensus, linearizable reads, true parallel execution) marked in each part as "this far, and beyond it for these reasons." Parts 22, 24, 27, and 28 in particular stand as **standalone modules** to keep 400+ green tests safe — and [Part 31 (the capstone)](/blog/project/db-hobby/db-hobby-31-replicated-db) **wires replication into the real engine**, and [Part 33](/blog/project/db-hobby/db-hobby-33-raft-replicated-db) **replicates the real engine through Raft** into an **HA DB that survives leader death.** Knowing what you didn't do matters as much as what you did.
+Not "unfinished" but places where an **honest boundary** was drawn. The join-ordering optimizer (24), replication (25–26), LSM (27), and Raft (consensus 28, persistence 29, snapshots 30, membership 32) are built **to their cores**, with everything beyond (deeper engine integration, joint consensus, true parallel execution) marked in each part as "this far, and beyond it for these reasons." Parts 22, 24, 27, and 28 in particular stand as **standalone modules** to keep 400+ green tests safe — and [Part 31 (the capstone)](/blog/project/db-hobby/db-hobby-31-replicated-db) **wires replication into the real engine**, and [Part 33](/blog/project/db-hobby/db-hobby-33-raft-replicated-db) **replicates the real engine through Raft** into an **HA DB that survives leader death.** Knowing what you didn't do matters as much as what you did.
