@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">LSM-Tree — B+Tree의 쓰기 최적화 대척점 · "제자리에서 절대 안 고친다"</text>
+  <text x="500" y="56" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">쓰기는 순차 append + background merge · 읽기는 여러 SSTable 탐색(read amplification)</text>
+
+  <defs>
+    <marker id="a3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- 쓰기 경로 -->
+  <text x="230" y="92" text-anchor="middle" fill="#3fb950" font-size="13">쓰기 경로 (순차·빠름)</text>
+  <rect x="120" y="104" width="220" height="46" rx="8" fill="#0e1b12" stroke="#238636"/>
+  <text x="230" y="124" text-anchor="middle" fill="#3fb950" font-size="12.5">memtable (인메모리 정렬)</text>
+  <text x="230" y="141" text-anchor="middle" fill="#6e7681" font-size="11">put/delete를 append (제자리 갱신 X)</text>
+
+  <text x="230" y="172" text-anchor="middle" fill="#6e7681" font-size="11">임계치 넘으면 통째로 flush ↓</text>
+  <line x1="230" y1="176" x2="230" y2="196" stroke="#8b949e" marker-end="url(#a3)"/>
+
+  <!-- SSTable 스택 -->
+  <rect x="120" y="200" width="220" height="30" rx="5" fill="#161b22" stroke="#1f6feb"/>
+  <text x="230" y="220" text-anchor="middle" fill="#58a6ff" font-size="11.5">SSTable-3 (최신, 불변·정렬)</text>
+  <rect x="120" y="236" width="220" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+  <text x="230" y="256" text-anchor="middle" fill="#c9d1d9" font-size="11.5">SSTable-2 (불변·정렬)</text>
+  <rect x="120" y="272" width="220" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+  <text x="230" y="292" text-anchor="middle" fill="#8b949e" font-size="11.5">SSTable-1 (오래됨)</text>
+
+  <!-- 읽기 경로 -->
+  <text x="620" y="92" text-anchor="middle" fill="#f0b429" font-size="13">읽기 경로 (여러 겹 탐색·느림)</text>
+  <text x="620" y="118" text-anchor="middle" fill="#c9d1d9" font-size="12">lsm_get(key): 최신부터 아래로</text>
+  <rect x="520" y="130" width="200" height="28" rx="5" fill="#0e1b12" stroke="#238636"/>
+  <text x="620" y="149" text-anchor="middle" fill="#3fb950" font-size="11">1) memtable 확인</text>
+  <rect x="520" y="164" width="200" height="28" rx="5" fill="#161b22" stroke="#1f6feb"/>
+  <text x="620" y="183" text-anchor="middle" fill="#58a6ff" font-size="11">2) SSTable 최신 → 오래된</text>
+  <rect x="520" y="198" width="200" height="28" rx="5" fill="#161b22" stroke="#30363d"/>
+  <text x="620" y="217" text-anchor="middle" fill="#c9d1d9" font-size="11">처음 만난 버전이 이긴다(shadow)</text>
+  <rect x="520" y="232" width="200" height="28" rx="5" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="620" y="251" text-anchor="middle" fill="#f0b429" font-size="11">tombstone이면 "삭제됨"</text>
+  <text x="620" y="278" text-anchor="middle" fill="#6e7681" font-size="10.5">← 여러 겹을 뒤짐 = read amplification</text>
+
+  <!-- compaction -->
+  <line x1="340" y1="251" x2="440" y2="251" stroke="#8b949e" stroke-width="2" marker-end="url(#a3)"/>
+  <rect x="360" y="320" width="620" height="60" rx="8" fill="#161b22" stroke="#238636"/>
+  <text x="380" y="343" fill="#3fb950" font-size="12.5">compaction: 모든 SSTable을 하나로 merge</text>
+  <text x="380" y="363" fill="#c9d1d9" font-size="12">키마다 최신만 남기고, 옛 데이터가 다 사라지므로 tombstone도 버린다 → SSTable 개수↓, read amp↓</text>
+
+  <rect x="24" y="320" width="300" height="60" rx="8" fill="#010409" stroke="#f85149" stroke-opacity="0.5"/>
+  <text x="44" y="343" fill="#f85149" font-size="12.5">B+Tree(PG/InnoDB)와 대조</text>
+  <text x="44" y="363" fill="#8b949e" font-size="11.5">제자리 갱신 = 랜덤 I/O·페이지 분할</text>
+
+  <text x="500" y="408" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">삭제=tombstone은 이 프로젝트의 MVCC DELETE(xmax)·VACUUM 지연삭제와 같은 발상 · RocksDB/LevelDB/Cassandra 계열</text>
+  <text x="500" y="434" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">정직한 경계: db.c 저장계층 미배선(독립 모듈) · bloom filter 없음 · leveled/tiered 계층화 없음 · 단일 스레드</text>
+  <text x="500" y="455" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">test_lsm: put/get·갱신·tombstone·flush·compaction·reopen·scan (24 checks)</text>
+</svg>
