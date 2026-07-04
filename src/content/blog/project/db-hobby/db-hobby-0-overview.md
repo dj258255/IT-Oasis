@@ -25,8 +25,8 @@ seriesOrder: 0
 
 - **진짜 `psql`이 붙습니다** — PostgreSQL v3 wire protocol을 말하는 400줄 서버라, psql은 상대가 진짜 PG인지 구분 못 해요.
 - **reader가 writer를 안 막습니다** — MVCC 스냅샷 격리. 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽은 옛 버전을 막힘 없이 읽어요.
-- **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **소켓으로 도는 primary→replica 복제**, **LSM 저장 엔진**까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
-- **테스트 499개 / 32스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **소켓으로 도는 primary→replica 복제**, **LSM 저장 엔진**, **Raft 합의**(리더 선출·분단 내성)까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
+- **테스트 525개 / 33스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## 이 시리즈를 읽는 법
 
@@ -74,7 +74,7 @@ seriesOrder: 0
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | 지운 것과 치운 것은 다르다, B+Tree 삭제 |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | 다중 트랜잭션 | reader가 writer를 안 막는 걸 진짜로 |
 
-### 5부. 네트워크·동시성·최적화·복제·저장엔진 (19~27)
+### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의 (19~28)
 
 | 편 | 제목 | 푸는 문제 |
 |---|---|---|
@@ -87,12 +87,13 @@ seriesOrder: 0
 | [25](/blog/project/db-hobby/db-hobby-25-replication) | WAL 로그 시핑 복제 | primary→replica, 복구의 redo를 스트림으로 |
 | [26](/blog/project/db-hobby/db-hobby-26-tcp-replication) | WAL을 소켓으로 | 복제를 진짜 네트워크로 (walsender/walreceiver) |
 | [27](/blog/project/db-hobby/db-hobby-27-lsm-engine) | LSM-Tree | 제자리 안 고치는 쓰기 최적 엔진 (B+Tree 대척점) |
+| [28](/blog/project/db-hobby/db-hobby-28-raft-consensus) | Raft 합의 | primary가 죽으면? 리더 선출·로그 복제·안전성 |
 
 ## 직접 돌려보기
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 499개 테스트
+make test            # 525개 테스트
 make repl && ./build/db-hobby my.db   # REPL에서 SQL
 
 # 또는 진짜 psql로 접속:
@@ -104,7 +105,7 @@ psql 두 개를 나란히 띄우면, 위 [18편](/blog/project/db-hobby/db-hobby
 
 ## 정직하게 남긴 것
 
-완성이 아니라 **정직한 경계**를 그은 곳들입니다 — 진짜 병렬 실행(엔진 latch 제거)·조인 순서 옵티마이저·분산(복제·Raft)은 각 편에서 "여기까지, 그 너머는 이런 이유로"라고 명시해 뒀어요. 무엇을 안 했는지를 아는 것도 무엇을 했는지만큼 중요하니까요.
+완성이 아니라 **정직한 경계**를 그은 곳들입니다. 조인 순서 옵티마이저(24)·복제(25·26)·LSM(27)·Raft 합의(28)는 **코어까지** 세우고, 그 너머(엔진 배선·스냅샷·멤버십 변경·진짜 병렬 실행)는 각 편에서 "여기까지, 그 너머는 이런 이유로"라고 명시해 뒀어요. 특히 22·24·27·28편은 400개 넘는 green 테스트를 지키려 **독립 모듈**로 세웠습니다. 무엇을 안 했는지를 아는 것도 무엇을 했는지만큼 중요하니까요.
 
 <!-- EN -->
 
@@ -116,8 +117,8 @@ Today db-hobby:
 
 - **A real `psql` connects to it** — a 400-line server speaking PostgreSQL's v3 wire protocol, so psql can't tell it isn't real PG.
 - **Readers don't block writers** — MVCC snapshot isolation. Even while one transaction holds an uncommitted UPDATE, another reads the old version, unblocked.
-- **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication over a socket**, an **LSM storage engine** — nearly every axis of a real database, touched by hand.
-- **499 tests / 32 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication over a socket**, an **LSM storage engine**, **Raft consensus** (leader election, partition tolerance) — nearly every axis of a real database, touched by hand.
+- **525 tests / 33 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## How to Read This Series
 
@@ -165,7 +166,7 @@ Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | deleting vs cleaning; B+Tree deletion |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | Multi-transaction | readers really not blocking writers |
 
-### Part V. Network, Concurrency, Optimization, Replication, Storage Engines (19–27)
+### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus (19–28)
 
 | # | Title | Problem it solves |
 |---|---|---|
@@ -178,12 +179,13 @@ Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby
 | [25](/blog/project/db-hobby/db-hobby-25-replication) | WAL log-shipping replication | primary→replica, recovery's redo as a stream |
 | [26](/blog/project/db-hobby/db-hobby-26-tcp-replication) | WAL over a socket | replication over a real network (walsender/walreceiver) |
 | [27](/blog/project/db-hobby/db-hobby-27-lsm-engine) | LSM-Tree | write-optimized, never-in-place engine (B+Tree's counterpart) |
+| [28](/blog/project/db-hobby/db-hobby-28-raft-consensus) | Raft consensus | what if the primary dies? election, log replication, safety |
 
 ## Run It Yourself
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 499 tests
+make test            # 525 tests
 make repl && ./build/db-hobby my.db   # SQL in the REPL
 
 # or connect with a real psql:
@@ -195,4 +197,4 @@ Open two psql clients side by side and you'll see "readers don't block writers" 
 
 ## What Was Left Honest
 
-Not "unfinished" but places where an **honest boundary** was drawn — true parallel execution (dropping the engine latch), a join-ordering optimizer, distribution (replication, Raft) are each marked in their parts as "this far, and beyond it for these reasons." Knowing what you didn't do matters as much as what you did.
+Not "unfinished" but places where an **honest boundary** was drawn. The join-ordering optimizer (24), replication (25–26), LSM (27), and Raft consensus (28) are built **to their cores**, with everything beyond (engine wiring, snapshots, membership changes, true parallel execution) marked in each part as "this far, and beyond it for these reasons." Parts 22, 24, 27, and 28 in particular stand as **standalone modules** to keep 400+ green tests safe. Knowing what you didn't do matters as much as what you did.

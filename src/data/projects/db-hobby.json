@@ -1,10 +1,10 @@
 {
   "title": "db-hobby — C로 만든 미니 RDBMS",
   "titleEn": "db-hobby — A Mini RDBMS in C",
-  "description": "C로 맨땅에서 만든 미니 관계형 DB — 진짜 psql이 붙고(PostgreSQL wire protocol), reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구(steal+no-force), VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓으로 도는 primary→replica 복제, LSM 저장 엔진까지. 페이지 한 장에서 SQL 실행까지 바닥부터 쌓아 PostgreSQL·MySQL 내부를 해부한다. 테스트 499개/32스위트, 동시성은 ThreadSanitizer로 검증. 각 편이 '앞 편이 만든 문제를 다음 편이 푸는' 27편 시리즈로 기록.",
-  "descriptionEn": "A mini relational database built from scratch in C — a real psql connects to it (PostgreSQL wire protocol), MVCC snapshot isolation where readers don't block writers, WAL crash recovery (steal+no-force), VACUUM, a thread-safe buffer pool, a cost-based optimizer, primary→replica replication over a socket, and an LSM storage engine. Stacked bottom-up from a single page to running SQL, dissecting PostgreSQL/MySQL internals. 499 tests / 32 suites, concurrency verified under ThreadSanitizer. Documented as a 27-part series where each part solves the problem the previous created.",
+  "description": "C로 맨땅에서 만든 미니 관계형 DB — 진짜 psql이 붙고(PostgreSQL wire protocol), reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구(steal+no-force), VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓으로 도는 primary→replica 복제, LSM 저장 엔진, Raft 합의(리더 선출·분단 내성)까지. 페이지 한 장에서 SQL 실행까지 바닥부터 쌓아 PostgreSQL·MySQL 내부를 해부한다. 테스트 525개/33스위트, 동시성은 ThreadSanitizer로 검증. 각 편이 '앞 편이 만든 문제를 다음 편이 푸는' 28편 시리즈로 기록.",
+  "descriptionEn": "A mini relational database built from scratch in C — a real psql connects to it (PostgreSQL wire protocol), MVCC snapshot isolation where readers don't block writers, WAL crash recovery (steal+no-force), VACUUM, a thread-safe buffer pool, a cost-based optimizer, primary→replica replication over a socket, an LSM storage engine, and Raft consensus (leader election, partition tolerance). Stacked bottom-up from a single page to running SQL, dissecting PostgreSQL/MySQL internals. 525 tests / 33 suites, concurrency verified under ThreadSanitizer. Documented as a 28-part series where each part solves the problem the previous created.",
   "image": "/uploads/project/db-hobby/cover.svg",
-  "tags": ["C", "Database Internals", "MVCC", "WAL", "Replication", "LSM-Tree", "Concurrency", "PostgreSQL", "Query Optimizer", "Learning"],
+  "tags": ["C", "Database Internals", "MVCC", "WAL", "Replication", "Raft", "LSM-Tree", "Distributed Systems", "PostgreSQL", "Learning"],
   "category": "study",
   "date": "2026-05-11",
   "github": "https://github.com/dj258255/db-hobby",
