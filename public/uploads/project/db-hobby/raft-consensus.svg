@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="500" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">Raft 합의 — 리더 선출 + 로그 복제 + 안전성</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">primary가 죽으면 누가 대신 서나 · split-brain을 어떻게 막나 → 복제가 아니라 '합의'의 문제</text>
+
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- 역할 전이 -->
+  <text x="200" y="86" text-anchor="middle" fill="#8b949e" font-size="13">① 역할 전이</text>
+  <rect x="70" y="100" width="110" height="40" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="125" y="124" text-anchor="middle" fill="#c9d1d9" font-size="12">Follower</text>
+  <rect x="70" y="180" width="110" height="40" rx="8" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="125" y="204" text-anchor="middle" fill="#f0b429" font-size="12">Candidate</text>
+  <rect x="230" y="180" width="110" height="40" rx="8" fill="#13283f" stroke="#1f6feb"/>
+  <text x="285" y="204" text-anchor="middle" fill="#58a6ff" font-size="12">Leader</text>
+  <line x1="125" y1="140" x2="125" y2="178" stroke="#8b949e" marker-end="url(#ar)"/>
+  <text x="133" y="164" fill="#6e7681" font-size="10">선거 타임아웃</text>
+  <line x1="180" y1="200" x2="228" y2="200" stroke="#8b949e" marker-end="url(#ar)"/>
+  <text x="150" y="238" fill="#6e7681" font-size="10">과반 득표</text>
+  <path d="M 260 178 Q 200 150 150 140" fill="none" stroke="#8b949e" marker-end="url(#ar)"/>
+  <text x="196" y="132" fill="#6e7681" font-size="10">더 높은 term ↑</text>
+
+  <!-- 로그 복제 + 커밋 규칙 -->
+  <text x="620" y="86" text-anchor="middle" fill="#8b949e" font-size="13">② 로그 복제 + 과반 커밋</text>
+  <text x="420" y="112" fill="#58a6ff" font-size="11.5">Leader</text>
+  <g font-size="10.5">
+    <rect x="420" y="118" width="34" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="437" y="135" text-anchor="middle" fill="#3fb950">111</text>
+    <rect x="456" y="118" width="34" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="473" y="135" text-anchor="middle" fill="#3fb950">222</text>
+    <rect x="492" y="118" width="34" height="26" rx="3" fill="#1c1408" stroke="#9e6a03"/><text x="509" y="135" text-anchor="middle" fill="#f0b429">333</text>
+  </g>
+  <text x="620" y="135" fill="#6e7681" font-size="10.5">AppendEntries(prev 검사) →</text>
+  <text x="420" y="168" fill="#8b949e" font-size="11">Follower A</text>
+  <g font-size="10.5">
+    <rect x="500" y="154" width="34" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="517" y="171" text-anchor="middle" fill="#3fb950">111</text>
+    <rect x="536" y="154" width="34" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="553" y="171" text-anchor="middle" fill="#3fb950">222</text>
+  </g>
+  <text x="420" y="200" fill="#8b949e" font-size="11">Follower B</text>
+  <g font-size="10.5">
+    <rect x="500" y="186" width="34" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="517" y="203" text-anchor="middle" fill="#3fb950">111</text>
+    <rect x="536" y="186" width="34" height="26" rx="3" fill="#0e1b12" stroke="#238636"/><text x="553" y="203" text-anchor="middle" fill="#3fb950">222</text>
+  </g>
+  <rect x="590" y="152" width="380" height="66" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="608" y="174" fill="#3fb950" font-size="11.5">111·222: 과반 복제됨 → commit → 상태기계 적용</text>
+  <text x="608" y="194" fill="#f0b429" font-size="11.5">333: 아직 과반 아님 → 미커밋(안전)</text>
+  <text x="608" y="210" fill="#6e7681" font-size="10.5">§5.4.2: 리더는 '현재 term' 엔트리가 과반에 닿을 때만 커밋</text>
+
+  <!-- 분단 안전성 -->
+  <text x="500" y="262" text-anchor="middle" fill="#8b949e" font-size="13">③ 분단 안전성 — split-brain을 term이 막는다</text>
+  <rect x="60" y="278" width="270" height="120" rx="10" fill="#010409" stroke="#f85149" stroke-opacity="0.5"/>
+  <text x="195" y="300" text-anchor="middle" fill="#f85149" font-size="12">소수파 (고립된 옛 리더)</text>
+  <text x="78" y="324" fill="#8b949e" font-size="11.5">노드0: 아직 자기가 리더인 줄 안다</text>
+  <text x="78" y="344" fill="#8b949e" font-size="11.5">(term 1) — 하지만 과반이 없어</text>
+  <text x="78" y="364" fill="#f85149" font-size="11.5">새 커맨드를 커밋 못 한다</text>
+  <text x="78" y="386" fill="#6e7681" font-size="10.5">치유 시 더 높은 term 보고 강등</text>
+
+  <rect x="670" y="278" width="270" height="120" rx="10" fill="#010409" stroke="#238636"/>
+  <text x="805" y="300" text-anchor="middle" fill="#3fb950" font-size="12">다수파 (새 리더)</text>
+  <text x="688" y="324" fill="#c9d1d9" font-size="11.5">타임아웃 → term 2로 새 선거</text>
+  <text x="688" y="344" fill="#c9d1d9" font-size="11.5">과반 득표 → 새 리더</text>
+  <text x="688" y="364" fill="#3fb950" font-size="11.5">계속 커밋 진행</text>
+  <text x="688" y="386" fill="#6e7681" font-size="10.5">치유 시 갈린 꼬리를 덮어씀(Log Matching)</text>
+
+  <text x="500" y="330" text-anchor="middle" fill="#8b949e" font-size="11">term이</text>
+  <text x="500" y="348" text-anchor="middle" fill="#8b949e" font-size="11">한 시대에</text>
+  <text x="500" y="366" text-anchor="middle" fill="#8b949e" font-size="11">리더 하나를</text>
+  <text x="500" y="384" text-anchor="middle" fill="#8b949e" font-size="11">보장</text>
+
+  <text x="500" y="432" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">§5 안전성 5종: Election Safety · Leader Append · Log Matching · Leader Completeness · State Machine Safety</text>
+  <text x="500" y="458" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">왜 소켓(26편) 아닌 결정적 시뮬레이션: 합의 정확성은 적대적 스케줄링(분단·재정렬·크래시)에서 증명 → 벽시계 소켓으론 결정적 재현 불가</text>
+  <text x="500" y="480" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">test_raft: 선출·복제·분단→새 리더→강등→화해·선거 제약·크래시 복구 (26 checks) · 프론티어: 스냅샷·멤버십 변경·디스크 지속성·선형화 읽기</text>
+</svg>
