@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="440" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">WAL을 소켓으로 — 네트워크 계층은 '바이트를 옮기는 파이프'일 뿐</text>
+  <text x="500" y="56" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">25편의 '네트워크 전송 없음' 프론티어를 닫는다 · replica.c는 한 줄도 안 고침</text>
+
+  <defs>
+    <marker id="a2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- Primary side -->
+  <rect x="24" y="86" width="300" height="300" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="24" y="86" width="300" height="26" rx="10" fill="#13283f"/>
+  <text x="174" y="103" text-anchor="middle" fill="#58a6ff" font-size="12.5">Primary 노드</text>
+
+  <rect x="48" y="130" width="252" height="40" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="174" y="155" text-anchor="middle" fill="#c9d1d9" font-size="12">COMMIT → WAL 파일에 append</text>
+
+  <rect x="48" y="196" width="252" height="52" rx="6" fill="#0e1b12" stroke="#238636"/>
+  <text x="174" y="217" text-anchor="middle" fill="#3fb950" font-size="12.5">walsender_send()</text>
+  <text x="174" y="236" text-anchor="middle" fill="#6e7681" font-size="11">새로 붙은 바이트를 sent_off부터 읽어</text>
+
+  <text x="174" y="300" text-anchor="middle" fill="#c9d1d9" font-size="11.5">프레임 = [길이 8B][WAL 바이트]</text>
+  <rect x="60" y="312" width="60" height="30" rx="4" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="90" y="331" text-anchor="middle" fill="#f0b429" font-size="11">len=N</text>
+  <rect x="122" y="312" width="178" height="30" rx="4" fill="#0e1b12" stroke="#238636"/>
+  <text x="211" y="331" text-anchor="middle" fill="#3fb950" font-size="11">PAGE…COMMIT (N바이트)</text>
+
+  <!-- socket -->
+  <line x1="324" y1="327" x2="676" y2="327" stroke="#8b949e" stroke-width="2" marker-end="url(#a2)"/>
+  <rect x="430" y="300" width="140" height="26" rx="13" fill="#010409" stroke="#8b949e"/>
+  <text x="500" y="317" text-anchor="middle" fill="#8b949e" font-size="11.5">SOCK_STREAM</text>
+  <text x="500" y="348" text-anchor="middle" fill="#6e7681" font-size="10.5">socketpair/TCP — 흐르는 바이트는 동일</text>
+
+  <!-- Replica side -->
+  <rect x="676" y="86" width="300" height="300" rx="10" fill="#010409" stroke="#238636"/>
+  <rect x="676" y="86" width="300" height="26" rx="10" fill="#0e1b12"/>
+  <text x="826" y="103" text-anchor="middle" fill="#3fb950" font-size="12.5">Replica 노드</text>
+
+  <rect x="700" y="130" width="252" height="52" rx="6" fill="#0e1b12" stroke="#238636"/>
+  <text x="826" y="151" text-anchor="middle" fill="#3fb950" font-size="12.5">walreceiver_recv()</text>
+  <text x="826" y="170" text-anchor="middle" fill="#6e7681" font-size="11">프레임을 로컬 로그 파일에 append</text>
+
+  <rect x="700" y="200" width="252" height="40" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="826" y="225" text-anchor="middle" fill="#c9d1d9" font-size="12">로컬 WAL 파일 (수신본)</text>
+
+  <rect x="700" y="258" width="252" height="52" rx="6" fill="#13283f" stroke="#1f6feb"/>
+  <text x="826" y="279" text-anchor="middle" fill="#58a6ff" font-size="12.5">replica_apply()  ← 25편 그대로</text>
+  <text x="826" y="298" text-anchor="middle" fill="#6e7681" font-size="11">커밋된 after-image를 데이터에 redo</text>
+
+  <line x1="826" y1="182" x2="826" y2="198" stroke="#8b949e" marker-end="url(#a2)"/>
+  <line x1="826" y1="240" x2="826" y2="256" stroke="#8b949e" marker-end="url(#a2)"/>
+
+  <text x="500" y="410" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">전송(walsender/walreceiver)과 정확성(replica_apply의 lsn 게이트·idempotent redo)의 관심사 분리</text>
+  <text x="500" y="430" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">프론티어: 복제 슬롯 · 동기 커밋(quorum ack) · 재연결·흐름제어 · TLS/인증</text>
+</svg>
