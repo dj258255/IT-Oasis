@@ -26,7 +26,7 @@ seriesOrder: 0
 - **진짜 `psql`이 붙습니다** — PostgreSQL v3 wire protocol을 말하는 400줄 서버라, psql은 상대가 진짜 PG인지 구분 못 해요.
 - **reader가 writer를 안 막습니다** — MVCC 스냅샷 격리. 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽은 옛 버전을 막힘 없이 읽어요.
 - **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **소켓으로 도는 primary→replica 복제**, **LSM 저장 엔진**, **Raft 합의**(리더 선출·분단 내성)까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
-- **테스트 525개 / 33스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **테스트 536개 / 33스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## 이 시리즈를 읽는 법
 
@@ -74,7 +74,7 @@ seriesOrder: 0
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | 지운 것과 치운 것은 다르다, B+Tree 삭제 |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | 다중 트랜잭션 | reader가 writer를 안 막는 걸 진짜로 |
 
-### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의 (19~28)
+### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의 (19~29)
 
 | 편 | 제목 | 푸는 문제 |
 |---|---|---|
@@ -88,12 +88,13 @@ seriesOrder: 0
 | [26](/blog/project/db-hobby/db-hobby-26-tcp-replication) | WAL을 소켓으로 | 복제를 진짜 네트워크로 (walsender/walreceiver) |
 | [27](/blog/project/db-hobby/db-hobby-27-lsm-engine) | LSM-Tree | 제자리 안 고치는 쓰기 최적 엔진 (B+Tree 대척점) |
 | [28](/blog/project/db-hobby/db-hobby-28-raft-consensus) | Raft 합의 | primary가 죽으면? 리더 선출·로그 복제·안전성 |
+| [29](/blog/project/db-hobby/db-hobby-29-raft-persistence) | Raft 지속성 | votedFor를 fsync로 — 이중 투표 방지 |
 
 ## 직접 돌려보기
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 525개 테스트
+make test            # 536개 테스트
 make repl && ./build/db-hobby my.db   # REPL에서 SQL
 
 # 또는 진짜 psql로 접속:
@@ -118,7 +119,7 @@ Today db-hobby:
 - **A real `psql` connects to it** — a 400-line server speaking PostgreSQL's v3 wire protocol, so psql can't tell it isn't real PG.
 - **Readers don't block writers** — MVCC snapshot isolation. Even while one transaction holds an uncommitted UPDATE, another reads the old version, unblocked.
 - **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication over a socket**, an **LSM storage engine**, **Raft consensus** (leader election, partition tolerance) — nearly every axis of a real database, touched by hand.
-- **525 tests / 33 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **536 tests / 33 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## How to Read This Series
 
@@ -166,7 +167,7 @@ Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | deleting vs cleaning; B+Tree deletion |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | Multi-transaction | readers really not blocking writers |
 
-### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus (19–28)
+### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus (19–29)
 
 | # | Title | Problem it solves |
 |---|---|---|
@@ -180,12 +181,13 @@ Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby
 | [26](/blog/project/db-hobby/db-hobby-26-tcp-replication) | WAL over a socket | replication over a real network (walsender/walreceiver) |
 | [27](/blog/project/db-hobby/db-hobby-27-lsm-engine) | LSM-Tree | write-optimized, never-in-place engine (B+Tree's counterpart) |
 | [28](/blog/project/db-hobby/db-hobby-28-raft-consensus) | Raft consensus | what if the primary dies? election, log replication, safety |
+| [29](/blog/project/db-hobby/db-hobby-29-raft-persistence) | Raft persistence | fsync votedFor — preventing the double vote |
 
 ## Run It Yourself
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 525 tests
+make test            # 536 tests
 make repl && ./build/db-hobby my.db   # SQL in the REPL
 
 # or connect with a real psql:

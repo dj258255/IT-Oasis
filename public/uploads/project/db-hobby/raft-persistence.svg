@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="440" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">Raft 지속성 — votedFor가 크래시를 살아남아 이중 투표를 막는다</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">28편은 지속 상태를 '구조체로 모델링'만 했다 · 29편은 진짜 디스크에 fsync</text>
+
+  <defs>
+    <marker id="ap" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- 지속 3종 -->
+  <rect x="40" y="84" width="240" height="120" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <text x="160" y="106" text-anchor="middle" fill="#58a6ff" font-size="12.5">지속 상태 (persistent)</text>
+  <text x="58" y="132" fill="#c9d1d9" font-size="12">currentTerm</text>
+  <text x="58" y="156" fill="#f0b429" font-size="12">votedFor  ← 이번 term에 준 표</text>
+  <text x="58" y="180" fill="#c9d1d9" font-size="12">log[]</text>
+  <text x="58" y="197" fill="#6e7681" font-size="10.5">휘발(commitIndex 등)은 안 남겨도 됨</text>
+
+  <line x1="280" y1="144" x2="340" y2="144" stroke="#8b949e" stroke-width="2" marker-end="url(#ap)"/>
+  <text x="310" y="134" text-anchor="middle" fill="#3fb950" font-size="11">fsync</text>
+
+  <!-- 디스크 -->
+  <rect x="350" y="100" width="150" height="90" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="425" y="130" text-anchor="middle" fill="#3fb950" font-size="12.5">디스크</text>
+  <text x="425" y="152" text-anchor="middle" fill="#6e7681" font-size="11">raft_save()</text>
+  <text x="425" y="172" text-anchor="middle" fill="#8b949e" font-size="10.5">내구성의 지점</text>
+
+  <!-- 크래시 & 복구 -->
+  <line x1="500" y1="144" x2="560" y2="144" stroke="#8b949e" stroke-width="2" marker-end="url(#ap)"/>
+  <text x="530" y="134" text-anchor="middle" fill="#f85149" font-size="11">💥 크래시</text>
+  <rect x="570" y="84" width="390" height="120" rx="10" fill="#010409" stroke="#8b949e"/>
+  <text x="765" y="106" text-anchor="middle" fill="#c9d1d9" font-size="12.5">재시작 — raft_load()로 복구</text>
+  <text x="588" y="132" fill="#8b949e" font-size="11.5">새 노드: votedFor = -1 (아무 기억 없음)</text>
+  <text x="588" y="154" fill="#3fb950" font-size="11.5">복구 후: currentTerm=5, votedFor=0 ← 디스크에서 되살림</text>
+  <text x="588" y="176" fill="#6e7681" font-size="11">volatile은 init 기본값(§5.1: 크래시 시 잃어도 됨)</text>
+
+  <!-- 이중 투표 방지 -->
+  <rect x="40" y="230" width="920" height="120" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="60" y="256" fill="#c9d1d9" font-size="13">왜 중요한가 — votedFor가 안 남으면:</text>
+  <text x="60" y="282" fill="#f85149" font-size="12">  term5에 후보 A에게 투표 → 크래시 → (기억 없이) 재시작 → 같은 term5에 후보 B에게도 투표</text>
+  <text x="60" y="304" fill="#f85149" font-size="12">  → A와 B 둘 다 과반을 얻어 리더가 둘 = Election Safety 붕괴 = split-brain</text>
+  <text x="60" y="330" fill="#3fb950" font-size="12">  votedFor를 fsync로 남기면: 복구 후 후보 B에게 "이미 A에게 줬다"며 거절 → 안전</text>
+
+  <text x="500" y="384" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">15편 WAL의 no-force와 같은 뿌리: 무엇을 언제 fsync하느냐가 정확성의 경계 · 표는 '응답 전에' 내구화</text>
+  <text x="500" y="410" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">test_raft +11: 진짜 디스크 라운드트립(구조체 재생성+load)으로 이중 투표 방지·로그 생존 증명 · 프론티어: 스냅샷(§7)·멤버십 변경(§6)</text>
+</svg>
