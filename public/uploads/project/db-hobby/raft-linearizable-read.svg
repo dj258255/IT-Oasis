@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">선형화 읽기 (ReadIndex) — 낡은 읽기를 막는다</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">33편이 만든 문제: 읽기가 아무 노드에서나 실행돼 낡을 수 있다 → 리더가 '지금도 리더'임을 과반으로 확인한 뒤에만 읽는다</text>
+
+  <defs>
+    <marker id="al" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- 정상: 확인된 리더 -->
+  <text x="250" y="90" text-anchor="middle" fill="#3fb950" font-size="13">확인된 리더 → 서빙</text>
+  <rect x="60" y="104" width="200" height="120" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <text x="160" y="126" text-anchor="middle" fill="#58a6ff" font-size="12">리더 (term 5)</text>
+  <text x="78" y="150" fill="#c9d1d9" font-size="11">① read index = commit_index</text>
+  <text x="78" y="170" fill="#c9d1d9" font-size="11">② 과반 하트비트로 확인</text>
+  <text x="78" y="190" fill="#c9d1d9" font-size="11">③ 그 index까지 적용 대기</text>
+  <text x="78" y="212" fill="#3fb950" font-size="11.5">④ 자기 상태기계에서 읽기</text>
+
+  <line x1="260" y1="150" x2="330" y2="140" stroke="#8b949e" marker-end="url(#al)"/>
+  <line x1="260" y1="180" x2="330" y2="210" stroke="#8b949e" marker-end="url(#al)"/>
+  <rect x="330" y="120" width="120" height="40" rx="6" fill="#0e1b12" stroke="#238636"/>
+  <text x="390" y="144" text-anchor="middle" fill="#3fb950" font-size="11">팔로워 ack ✓</text>
+  <rect x="330" y="196" width="120" height="40" rx="6" fill="#0e1b12" stroke="#238636"/>
+  <text x="390" y="220" text-anchor="middle" fill="#3fb950" font-size="11">팔로워 ack ✓</text>
+  <text x="250" y="252" text-anchor="middle" fill="#3fb950" font-size="11.5">과반(자기+1) 확인 → 최신 데이터 서빙</text>
+
+  <!-- 고립된 옛 리더: 거부 -->
+  <text x="740" y="90" text-anchor="middle" fill="#f85149" font-size="13">고립된 옛 리더 → 거부</text>
+  <rect x="560" y="104" width="200" height="120" rx="10" fill="#010409" stroke="#f85149" stroke-opacity="0.6"/>
+  <text x="660" y="126" text-anchor="middle" fill="#f85149" font-size="12">옛 리더 (분단됨)</text>
+  <text x="578" y="150" fill="#c9d1d9" font-size="11">여전히 자기가 리더인 줄 안다</text>
+  <text x="578" y="172" fill="#c9d1d9" font-size="11">하트비트를 보내지만…</text>
+  <text x="578" y="196" fill="#f85149" font-size="11.5">과반 ack가 안 온다</text>
+  <text x="578" y="216" fill="#f85149" font-size="11.5">→ 확인 실패 → 읽기 거부</text>
+
+  <line x1="760" y1="164" x2="830" y2="164" stroke="#f85149" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#al)"/>
+  <text x="895" y="150" text-anchor="middle" fill="#6e7681" font-size="10.5">분단</text>
+  <text x="895" y="168" text-anchor="middle" fill="#6e7681" font-size="10.5">✗ 도달 못함</text>
+  <text x="740" y="252" text-anchor="middle" fill="#3fb950" font-size="11.5">낡은 데이터를 서빙하지 않는다(안전)</text>
+
+  <!-- 하단 대조 박스 -->
+  <rect x="60" y="286" width="880" height="76" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="80" y="310" fill="#c9d1d9" font-size="12.5">왜 확인이 필요한가: 파티션된 옛 리더는 자기가 강등된 걸 모른다. 그냥 자기 상태기계에서 읽으면 새 리더가 이미 커밋한 걸 놓쳐 낡은 값을 준다.</text>
+  <text x="80" y="332" fill="#3fb950" font-size="12.5">ReadIndex: 읽기 직전 과반 하트비트로 '아직 내가 리더'를 확인. 과반이 응답해야만 읽는다 → 파티션된 리더는 확인 실패 → 안전.</text>
+  <text x="80" y="352" fill="#6e7681" font-size="11">시계 가정이 필요한 leader-lease 대신 ReadIndex(Raft §8)를 쓴다 — 결정적 시뮬에 맞다.</text>
+
+  <text x="500" y="398" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">33편의 정직한 경계('읽기가 낡을 수 있다')를 이 편이 닫는다 — 사슬의 '앞 편이 만든 문제를 다음 편이 푼다'</text>
+  <text x="500" y="424" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">test_raftdb +4: 확인된 리더에서 서빙 · 고립된 리더는 거부(낡은 읽기 방지) · 비선형화 직접 읽기와 대조</text>
+  <text x="500" y="446" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">정직한 경계: 새 리더의 no-op 커밋(§8)·leader-lease 최적화·joint consensus는 프론티어</text>
+</svg>
