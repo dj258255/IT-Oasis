@@ -32,7 +32,7 @@ seriesOrder: 0
 
 핵심은 **각 편이 앞 편이 만든 문제를 푼다**는 겁니다 — steal이 undo를 부르고, DELETE=xmax가 VACUUM을 부르고, 단일 스레드 서버가 스레드 안전을 부르는 식으로. 그래서 순서대로 읽으면 "장애 → 해결 → 새 장애" 사슬을 따라가게 돼요.
 
-바쁘면 **하이라이트만**: [14편(steal+undo)](/blog/project/db-hobby/db-hobby-14-steal-undo) → [18편(다중 트랜잭션)](/blog/project/db-hobby/db-hobby-18-multi-txn) → [19편(psql 서버)](/blog/project/db-hobby/db-hobby-19-wire-protocol) → [21편(비용 옵티마이저)](/blog/project/db-hobby/db-hobby-21-cost-optimizer). 이 네 편이 시리즈의 결을 압축합니다.
+바쁘면 **하이라이트만**. 엔진: [14편(steal+undo)](/blog/project/db-hobby/db-hobby-14-steal-undo) → [18편(다중 트랜잭션)](/blog/project/db-hobby/db-hobby-18-multi-txn) → [19편(psql 서버)](/blog/project/db-hobby/db-hobby-19-wire-protocol) → [21편(비용 옵티마이저)](/blog/project/db-hobby/db-hobby-21-cost-optimizer). 분산: [25편(복제)](/blog/project/db-hobby/db-hobby-25-replication) → [28편(Raft 합의)](/blog/project/db-hobby/db-hobby-28-raft-consensus) → [30편(스냅샷)](/blog/project/db-hobby/db-hobby-30-raft-snapshot). 이 흐름이 시리즈의 결을 압축합니다.
 
 ## 전체 목록
 
@@ -126,7 +126,7 @@ Today db-hobby:
 
 The key idea: **each part solves the problem the previous one created** — steal calls for undo, DELETE=xmax calls for VACUUM, a single-threaded server calls for thread safety. Read in order and you follow a "failure → fix → new failure" chain.
 
-Short on time? **The highlights**: [Part 14 (steal+undo)](/blog/project/db-hobby/db-hobby-14-steal-undo) → [Part 18 (multi-transaction)](/blog/project/db-hobby/db-hobby-18-multi-txn) → [Part 19 (psql server)](/blog/project/db-hobby/db-hobby-19-wire-protocol) → [Part 21 (cost optimizer)](/blog/project/db-hobby/db-hobby-21-cost-optimizer). These four compress the series' spirit.
+Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/db-hobby/db-hobby-14-steal-undo) → [Part 18 (multi-transaction)](/blog/project/db-hobby/db-hobby-18-multi-txn) → [Part 19 (psql server)](/blog/project/db-hobby/db-hobby-19-wire-protocol) → [Part 21 (cost optimizer)](/blog/project/db-hobby/db-hobby-21-cost-optimizer). Distributed: [Part 25 (replication)](/blog/project/db-hobby/db-hobby-25-replication) → [Part 28 (Raft consensus)](/blog/project/db-hobby/db-hobby-28-raft-consensus) → [Part 30 (snapshots)](/blog/project/db-hobby/db-hobby-30-raft-snapshot). This arc compresses the series' spirit.
 
 ## The Full List
 
