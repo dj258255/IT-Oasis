@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="480" viewBox="0 0 1000 480" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="480" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">Raft로 복제되는 db-hobby — 진짜 고가용 DB (상태기계 복제)</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">쓰기를 '바로 실행하지 않고' Raft에 제안 → 과반 커밋 → 모든 노드가 자기 엔진에 같은 순서로 적용</text>
+
+  <defs>
+    <marker id="ard" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- 클라이언트 -->
+  <text x="60" y="150" fill="#c9d1d9" font-size="12">클라이언트</text>
+  <text x="60" y="170" fill="#58a6ff" font-size="11.5">INSERT INTO t ...</text>
+  <line x1="150" y1="164" x2="220" y2="164" stroke="#8b949e" marker-end="url(#ard)"/>
+  <text x="185" y="156" text-anchor="middle" fill="#6e7681" font-size="10">제안</text>
+
+  <!-- 리더 -->
+  <rect x="220" y="110" width="230" height="110" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="220" y="110" width="230" height="24" rx="10" fill="#13283f"/>
+  <text x="335" y="127" text-anchor="middle" fill="#58a6ff" font-size="12">노드0 (리더)</text>
+  <text x="238" y="152" fill="#c9d1d9" font-size="11.5">1) Raft 로그에 append</text>
+  <text x="238" y="172" fill="#f0b429" font-size="11.5">아직 엔진에 실행 안 함!</text>
+  <text x="238" y="196" fill="#6e7681" font-size="10.5">엔진: db-hobby (.node0.db)</text>
+
+  <!-- Raft 복제 -->
+  <line x1="450" y1="150" x2="540" y2="130" stroke="#8b949e" marker-end="url(#ard)"/>
+  <line x1="450" y1="180" x2="540" y2="240" stroke="#8b949e" marker-end="url(#ard)"/>
+  <text x="500" y="120" text-anchor="middle" fill="#3fb950" font-size="10.5">AppendEntries</text>
+
+  <rect x="540" y="100" width="220" height="60" rx="8" fill="#010409" stroke="#238636"/>
+  <text x="650" y="122" text-anchor="middle" fill="#3fb950" font-size="12">노드1 (팔로워)</text>
+  <text x="650" y="142" text-anchor="middle" fill="#6e7681" font-size="10.5">엔진 (.node1.db)</text>
+  <rect x="540" y="216" width="220" height="60" rx="8" fill="#010409" stroke="#238636"/>
+  <text x="650" y="238" text-anchor="middle" fill="#3fb950" font-size="12">노드2 (팔로워)</text>
+  <text x="650" y="258" text-anchor="middle" fill="#6e7681" font-size="10.5">엔진 (.node2.db)</text>
+
+  <!-- 커밋+적용 -->
+  <rect x="220" y="250" width="540" height="72" rx="8" fill="#161b22" stroke="#238636"/>
+  <text x="240" y="274" fill="#3fb950" font-size="12.5">2) 과반이 복제하면 커밋 → 3) 모든 노드(리더 포함)가 커밋된 SQL을 자기 엔진에 db_exec</text>
+  <text x="240" y="296" fill="#c9d1d9" font-size="12">같은 명령을 같은 순서로 적용 → 세 엔진이 완전히 수렴. SELECT 결과 일치.</text>
+  <text x="240" y="314" fill="#6e7681" font-size="10.5">리더는 '제안'만, '커밋 후'에 다른 노드와 똑같이 적용 — 정석 SMR</text>
+
+  <!-- failover -->
+  <rect x="60" y="344" width="880" height="70" rx="8" fill="#010409" stroke="#f0b429" stroke-opacity="0.5"/>
+  <text x="80" y="368" fill="#f0b429" font-size="12.5">failover — 리더가 죽어도:</text>
+  <text x="80" y="390" fill="#c9d1d9" font-size="12">노드0(리더) 크래시 → 남은 {1,2}가 새 리더 선출(더 높은 term) → 클라이언트 쓰기를 이어받아 계속 복제</text>
+  <text x="80" y="408" fill="#3fb950" font-size="12">→ 커밋된 데이터는 안 잃고(Leader Completeness), 생존 노드가 여전히 일관</text>
+
+  <text x="500" y="446" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">28~32편 Raft(합의) + db.c(엔진)를 SMR로 배선 — "독립 모듈"이 아니라 진짜 복제되는 DB · test_raftdb (10 checks)</text>
+  <text x="500" y="468" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5">정직한 경계: 인프로세스 시뮬(로그는 seq만, SQL은 공유메모리 — 합의는 진짜) · 낡은 읽기(선형화는 다음) · 크래시 노드 rejoin은 프론티어</text>
+</svg>
