@@ -6,9 +6,9 @@
   "image": "/uploads/project/Orakgarak/retrospective/title.png",
   "tags": ["Java", "Spring Boot", "Kafka", "Prometheus", "Grafana", "AWS S3"],
   "category": "team",
-  "date": "2025-09-30",
+  "date": "2025-09-01",
   "github": "https://github.com/dj258255",
   "website": "",
   "story": "/blog/project/orakgarak/orakgarak-retrospective",
-  "order": 8
+  "order": 14
 }

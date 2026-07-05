@@ -6,8 +6,8 @@
   "image": "/uploads/project/WikiEngine/wikiengine-icon.svg",
   "tags": ["Spring Boot", "Lucene", "MySQL", "Redis", "Kafka", "Debezium", "Nginx", "Docker", "k6", "Grafana"],
   "category": "personal",
-  "date": "2026-03-24",
+  "date": "2026-01-27",
   "github": "https://github.com/dj258255/wikiEngine",
   "story": "/blog/project/wikiengine/wiki-engine-retrospective",
-  "order": 1
+  "order": 8
 }
