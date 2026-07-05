@@ -21,7 +21,7 @@ seriesOrder: 1
 
 ## 0. 들어가며
 
-[커널](/blog/hobby/kernel-hobby-00-boot-to-paging)도, [DB](/blog/project/db-hobby/db-hobby-1-storage)도, [JVM](/blog/hobby/java-hobby-00-why-and-architecture)도 밑바닥부터 만들어봤어요. 그런데 전부 **컴퓨터 한 대 안**의 이야기더라고요. 다음 축은 분명했어요 — **여러 대가 협력하는 분산 시스템.**
+[커널](/blog/hobby/kernel-hobby-00-boot-to-paging)도, [DB](/blog/project/db-hobby/db-internals-01-storage)도, [JVM](/blog/hobby/java-hobby-00-why-and-architecture)도 밑바닥부터 만들어봤어요. 그런데 전부 **컴퓨터 한 대 안**의 이야기더라고요. 다음 축은 분명했어요 — **여러 대가 협력하는 분산 시스템.**
 
 그럼 어떻게 배우지? 제 방식대로면 "분산 시스템 하나를 밑바닥부터 만들어보자"가 자연스러워요 (그게 [Kafka를 만들기로 한 이유](/blog/hobby/kafka-hobby-00-why-and-architecture)고요). 그런데 계획을 짜다 보니, **자작만으로는 분산을 "제대로" 배울 수 없는 이유**가 걸렸어요. 그래서 순서를 정했습니다 — **분산 fundamentals를 먼저 제대로 배우고(MIT 6.5840), 그 위에 Kafka를 짓는다.** 이 글은 그 이유와 계획이에요.
 

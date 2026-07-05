@@ -21,7 +21,7 @@ seriesOrder: 1
 
 ## 0. 들어가며
 
-[C로 토이 커널](/blog/hobby/kernel-hobby-00-boot-to-paging)을 만들고, [C로 미니 RDBMS](/blog/project/db-hobby/db-hobby-1-storage)를 만들고, [C로 토이 JVM](/blog/hobby/java-hobby-00-why-and-architecture)까지 손을 대면서, 뒤늦게 한 가지가 눈에 들어왔어요 — **내가 만든 건 전부 "컴퓨터 한 대 안"의 이야기더라고요.**
+[C로 토이 커널](/blog/hobby/kernel-hobby-00-boot-to-paging)을 만들고, [C로 미니 RDBMS](/blog/project/db-hobby/db-internals-01-storage)를 만들고, [C로 토이 JVM](/blog/hobby/java-hobby-00-why-and-architecture)까지 손을 대면서, 뒤늦게 한 가지가 눈에 들어왔어요 — **내가 만든 건 전부 "컴퓨터 한 대 안"의 이야기더라고요.**
 
 커널도, DB도, JVM도 전부 단일 노드예요. 그런데 진짜 백엔드 시스템은 결국 **여러 대의 컴퓨터가 협력**하죠. 복제, 합의, 파티셔닝 — 이 "가로축"을 나는 한 번도 안 판 거예요.
 
