@@ -12,7 +12,7 @@ tags:
   - Flyway
 category: project/dbtower
 coverImage: /uploads/project/dbtower/cover.svg
-draft: true
+draft: false
 series: "dbtower"
 seriesOrder: 5
 ---

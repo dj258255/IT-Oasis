@@ -3,7 +3,7 @@ title: 'DB를 만들어봤으니, 이제 DB들을 부리는 플랫폼 — DBTowe
 titleEn: 'Built a Database, Now Building the Platform That Manages Them — DBTower Design'
 description: "MySQL·PostgreSQL·SQL Server처럼 서로 다른 DBMS를 하나의 플랫폼에서 등록·모니터링·백업까지 일괄 관리하는 컨트롤 플레인 DBTower 시리즈 1편. 왜 DB 운영을 자동화하는 플랫폼을 만들기로 했는지, 기종마다 전부 다른 통계 소스(performance_schema·pg_stat_statements·DMV)를 DbmsOperator 인터페이스 하나로 어떻게 묶었는지, 그리고 '부하 상위 쿼리가 곧 범인이 아니다'라는 문제의식에서 나온 시점 비교 기능의 원리까지 — 설계 결정과 그 이유를 기록합니다."
 descriptionEn: "Part 1 of DBTower, a control plane that registers, monitors, and backs up heterogeneous DBMSs (MySQL, PostgreSQL, SQL Server) in one place. Why I decided to build a DB operations automation platform, how per-engine stat sources (performance_schema, pg_stat_statements, DMVs) are unified behind a single DbmsOperator interface, and the principle behind window comparison born from the insight that the heaviest query is not always the culprit."
-date: 2026-07-02
+date: 2026-03-17
 tags:
   - Java
   - Spring Boot
@@ -14,7 +14,7 @@ tags:
   - Control Plane
 category: project/dbtower
 coverImage: /uploads/project/dbtower/cover.svg
-draft: true
+draft: false
 series: "dbtower"
 seriesOrder: 1
 ---

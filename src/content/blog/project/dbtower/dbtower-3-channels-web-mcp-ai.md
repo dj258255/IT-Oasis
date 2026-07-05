@@ -3,7 +3,7 @@ title: '코어는 하나, 채널만 갈아끼운다 — 웹 콘솔, MCP, 그리�
 titleEn: 'One Core, Swappable Channels: Web Console, MCP, and AI Analysis Without an API Key'
 description: "이기종 DBMS 운영 관리 플랫폼 DBTower 3편. 같은 분석 코어를 사람에게는 웹 콘솔로, AI 에이전트에게는 MCP 도구로, 온콜에게는 웹훅 push로 노출하는 채널 설계 이야기. 활동 그래프를 드래그해서 시점 비교 구간을 고르는 UI, JSON-RPC 2.0을 SDK 없이 직접 구현하며 배운 MCP 프로토콜의 규약들, 그리고 API 키가 없으면 claude CLI를 headless로 불러 쓰는 AI 백엔드 자동 선택까지 — hidden 속성이 display:flex에 지는 것 같은 사소하지만 실전적인 함정들과 함께 기록합니다."
 descriptionEn: "Part 3 of DBTower, a heterogeneous DBMS operations platform. Exposing one analysis core through three channels: a web console for humans, MCP tools for AI agents, and webhook push for on-call. Drag-to-select comparison windows on an activity graph, MCP protocol lessons from implementing JSON-RPC 2.0 without an SDK, and an AI backend that falls back to headless claude CLI when no API key is set — recorded with small but practical pitfalls like the hidden attribute losing to display:flex."
-date: 2026-07-04
+date: 2026-05-04
 tags:
   - Java
   - Spring Boot
@@ -12,7 +12,7 @@ tags:
   - Claude
 category: project/dbtower
 coverImage: /uploads/project/dbtower/cover.svg
-draft: true
+draft: false
 series: "dbtower"
 seriesOrder: 3
 ---
