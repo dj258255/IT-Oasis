@@ -3,7 +3,7 @@ title: 'DBA가 매일 보는 화면, 그리고 JPA/Native Query로 통일 안 �
 titleEn: "The Screen a DBA Opens Every Day — and Why I Didn't Unify Everything Under JPA"
 description: "이기종 DBMS 운영 관리 플랫폼 DBTower 6편. load%가 '어떤 쿼리가 시간을 쓰나'를 답한다면 Wait Event는 '그 시간에 무엇을 기다렸나'(CPU/IO/Lock/Latch)를 답한다 — DBA가 장애 때 가장 먼저 보는 축을 5기종 통합으로 붙이면서, 기종마다 '대기'의 의미론이 다르다는 현실과 관제 도구가 대상 설정을 바꾸지 않는 정직성 설계를 기록합니다. 그리고 'Operator 계층도 JPA+Lombok+Native Query로 추상화하면 깔끔하지 않냐'는 질문에 대한 답으로서의 적재적소 — 플랫폼 자기 저장소는 Spring Data JPA(파생 메서드·@Query·Specification 3층위), 대상 DB 조회는 JdbcTemplate과 Mongo 드라이버, 경계는 DbmsOperator 인터페이스라는 지도를 왜 그렇게 그렸는지, 감사 로그 검색을 Specification의 제자리로 든 이야기까지."
 descriptionEn: "Part 6 of DBTower. If load% answers 'which query spends time,' Wait Events answer 'what did that time wait on' (CPU/IO/Lock/Latch) — the axis a DBA checks first during an incident. Unifying it across five engines surfaced how each engine means something different by 'wait,' and a control-tool honesty principle: never change the target's settings. Then the answer to 'why not abstract the Operator layer under JPA+Lombok+Native Query too': the right tool in the right place — the platform's own store uses Spring Data JPA (derived methods, @Query, Specification), target-DB reads use JdbcTemplate and the Mongo driver, and the boundary is the DbmsOperator interface."
-date: 2026-07-05
+date: 2026-07-04
 tags:
   - Java
   - Spring Boot
@@ -12,7 +12,7 @@ tags:
   - Spring Data
 category: project/dbtower
 coverImage: /uploads/project/dbtower/cover.svg
-draft: true
+draft: false
 series: "dbtower"
 seriesOrder: 6
 ---

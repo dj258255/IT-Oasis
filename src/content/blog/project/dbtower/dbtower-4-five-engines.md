@@ -3,7 +3,7 @@ title: '"새 기종 = 구현체 1개"를 증명하러 Oracle과 MongoDB를 추�
 titleEn: 'Proving "New Engine = One Implementation": Adding Oracle and MongoDB'
 description: "이기종 DBMS 운영 관리 플랫폼 DBTower 4편. 문서에 계속 적어온 '새 기종 추가 = Operator 구현체 1개'라는 주장을 검증하러, 성격이 정반대인 두 기종을 실제로 추가한 기록. SQL도 JDBC도 없는 MongoDB가 인터페이스 뒤로 들어오는 과정, 같은 FULL 백업이 네 가지 실행 모델(env·stdin·서버 SQL·서버 API)로 갈라지는 현실, Hibernate가 만든 CHECK 제약이 enum 확장을 막는 함정, 그리고 mongodump stdin에 숨어 있던 YAML 주입 가능성을 보안 리뷰로 잡아 막은 이야기까지 — 플랫폼 코드 0줄 수정이라는 결과와 함께 남깁니다."
 descriptionEn: "Part 4 of DBTower. To verify the claim 'a new engine costs exactly one Operator implementation,' I added two engines with opposite personalities: MongoDB, which has neither SQL nor JDBC, and Oracle, a commercial DB with its own privilege and backup model. The same FULL backup policy splits into four execution models (env, stdin, server-side SQL, server-side API), a Hibernate-generated CHECK constraint blocks enum expansion, and a YAML injection hiding in mongodump's stdin config gets caught by security review — all with zero platform-code changes."
-date: 2026-07-04
+date: 2026-05-25
 tags:
   - Java
   - Spring Boot
@@ -12,7 +12,7 @@ tags:
   - Oracle
 category: project/dbtower
 coverImage: /uploads/project/dbtower/cover.svg
-draft: true
+draft: false
 series: "dbtower"
 seriesOrder: 4
 ---

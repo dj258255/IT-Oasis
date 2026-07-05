@@ -3,7 +3,7 @@ title: '"30분 주기 백업해줘" 한 줄이 세 갈래로 갈라진다 — DB
 titleEn: 'One Line — "Back Up Every 30 Minutes" — Splits Three Ways: DBTower Abstraction and Regression Detection'
 description: "이기종 DBMS 운영 관리 플랫폼 DBTower 2편. 같은 '백업'이 mysqldump·pg_dump·BACKUP DATABASE로 갈라지는 과정을 DbmsOperator 인터페이스로 흡수한 이야기, 플랫폼이 자기 자신을 관리 대상으로 등록해 병목을 진단·개선한 도그푸딩(Seq Scan 21ms에서 0.06ms), 그리고 시점 비교를 사람이 아니라 플랫폼이 스스로 돌리는 쿼리 회귀 자동 감지와 Discord 알림까지 — 만들면서 실제로 겪은 이슈와 수치를 기록합니다."
 descriptionEn: "Part 2 of DBTower, a heterogeneous DBMS operations platform. How the DbmsOperator interface absorbs the same 'backup' splitting into mysqldump / pg_dump / BACKUP DATABASE, dogfooding where the platform registers itself as a target to diagnose and fix its own bottleneck (Seq Scan 21ms to 0.06ms), and query regression detection that runs window comparison automatically with Discord alerts — with the real issues and numbers hit along the way."
-date: 2026-07-03
+date: 2026-04-05
 tags:
   - Java
   - Spring Boot
@@ -13,7 +13,7 @@ tags:
   - Discord
 category: project/dbtower
 coverImage: /uploads/project/dbtower/cover.svg
-draft: true
+draft: false
 series: "dbtower"
 seriesOrder: 2
 ---
