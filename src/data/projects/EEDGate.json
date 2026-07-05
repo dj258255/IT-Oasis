@@ -1,10 +1,19 @@
 {
   "title": "EEDGate",
   "titleEn": "EEDGate",
-  "description": "LLM 워크플로우를 위한 자기 개선 평가 루프 엔진 — 검증 게이트, 실패 분석, 규칙 자동 생성, 회귀 테스트를 하나의 TUI/CLI 도구로 제공",
-  "descriptionEn": "Self-improving evaluation loop engine for LLM workflows — validation gates, failure analysis, auto rule generation, and regression testing in a single TUI/CLI tool",
+  "description": "LLM 워크플로우의 실패를 유형으로 자동 분석해 규칙을 스스로 만들어내는 자기 개선 평가 루프 — 검증 게이트·회귀 테스트를 하나의 TUI/CLI로.",
+  "descriptionEn": "A self-improving evaluation loop that auto-clusters LLM-workflow failures and generates rules from them — verification gates and regression tests in one TUI/CLI.",
   "image": "/uploads/project/EEDGate/logo.svg",
-  "tags": ["TypeScript", "Node.js", "LLM", "CLI", "TUI", "Zod", "YAML", "Vitest"],
+  "tags": [
+    "TypeScript",
+    "Node.js",
+    "LLM",
+    "CLI",
+    "TUI",
+    "Zod",
+    "YAML",
+    "Vitest"
+  ],
   "category": "personal",
   "date": "2026-03-28",
   "github": "https://github.com/dj258255/eddgate",
