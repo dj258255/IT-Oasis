@@ -44,6 +44,8 @@ seriesOrder: 12
 
 동시에 OS를 공부하면서 다른 자각이 왔어요 — 페이지, 캐시, 동시성, fsync… **DB라는 게 결국 OS가 주는 원시 재료 위에 데이터 계층을 다시 쌓은 종합 시스템**이더라고요. 그렇다면 한 겹씩 직접 쌓아 보면, 그 문장들이 전부 "외운 것"에서 "유도할 수 있는 것"으로 바뀌겠다 — 그게 이 프로젝트의 문제 정의였습니다.
 
+사실 이 프로젝트의 첫 삽은 Rust였어요 — 포크 가능한 임베디드 KV 저장소(영속 불변 트리로 데이터셋을 O(1)에 분기하는 실험)를 며칠 만지다, "이걸 제대로 하려면 DB 내부부터 알아야겠다"는 생각에 C 미니 RDBMS로 방향을 틀었습니다. 그 전향이 곧 이 시리즈의 출발점이에요.
+
 **왜 C였나** — 목표가 "진짜 구조의 재현"인데, DB 내부는 메모리·포인터·바이트 레이아웃이 곧 학습 내용이에요. 언어가 그걸 추상화로 가리면 정작 배우려는 게 안 보입니다(중간에 Java 재작성도 검토했지만, 버퍼 풀을 GC 위에 올리는 순간 "버퍼 풀을 왜 만드나"라는 질문 자체가 증발해서 접었어요). **왜 발명이 아니라 재현이었나** — 새 걸 만드는 게 아니라 PostgreSQL·InnoDB가 왜 그렇게 생겼는지를 이해하는 게 목적이라, 매 계층마다 "실제 DB는 여기서 어떻게 하나"를 대조하는 걸 규칙으로 삼았습니다.
 
 ## 2. 어떻게 일했나 — 주장은 테스트로, 검증은 분리해서
@@ -165,6 +167,8 @@ It began with a discomfort about my own knowledge. I *could* say these sentences
 One follow-up question collapsed any of them. **Why a B+Tree and not a binary tree?** What exactly does fsync guarantee — the data file or the log? If reads don't block, what *does* prevent dirty reads? Knowledge that can't answer is memorized, not understood — and memorized knowledge fails precisely in the deformed situations of practice (when EXPLAIN skips your index; when VACUUM doesn't shrink the disk).
 
 Studying operating systems brought the other realization: pages, caches, concurrency, fsync… **a database is a data layer restacked on the raw materials the OS provides.** Build it one layer at a time, then, and every one of those sentences would turn from "memorized" into "derivable." That was this project's problem statement.
+
+This project's first cut was actually in Rust — a forkable embedded KV store (an experiment in branching a whole dataset in O(1) via a persistent immutable tree). After a few days I realized "to do this right I'd have to understand database internals first," and pivoted to a C mini RDBMS. That pivot is where this series begins.
 
 **Why C** — when the goal is reproducing real structure, memory, pointers, and byte layout *are* the curriculum; a language that abstracts them hides exactly what I came to learn. (I considered a Java rewrite midway and dropped it — put the buffer pool on top of a GC and the question "why does a buffer pool exist" itself evaporates.) **Why reproduce rather than invent** — the goal was understanding why PostgreSQL and InnoDB look the way they do, so every layer carries a "here's how real DBs do it" comparison as a rule.
 
