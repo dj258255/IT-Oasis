@@ -11,7 +11,7 @@ tags:
   - Buffer Pool
   - Latch
   - C
-category: project/db-hobby
+category: study/db-hobby
 coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
