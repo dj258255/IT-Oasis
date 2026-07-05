@@ -6,7 +6,7 @@
   "image": "/uploads/project/db-hobby/cover.svg",
   "tags": ["C", "Database Internals", "MVCC", "WAL", "Replication", "Raft", "LSM-Tree", "Distributed Systems", "PostgreSQL", "Learning"],
   "category": "study",
-  "date": "2026-05-11",
+  "date": "2026-01-08",
   "github": "https://github.com/dj258255/db-hobby",
   "website": "",
   "story": "/blog/project/db-hobby/db-internals-12-retrospective",
