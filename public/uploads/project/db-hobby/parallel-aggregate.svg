@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">병렬 집계 — 그리고 'materialize cap' silent 절단 버그까지 고친다</text>
+
+  <text x="500" y="62" text-anchor="middle" fill="#c9d1d9" font-size="14">SELECT COUNT(*), SUM(v) FROM big   <tspan fill="#6e7681">(6000행)</tspan></text>
+
+  <!-- LEFT: serial (buggy) -->
+  <rect x="40" y="84" width="440" height="180" rx="10" fill="#1c1408" stroke="#f85149"/>
+  <text x="260" y="108" text-anchor="middle" fill="#f85149" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">직렬 (기존) — 조용히 틀린다</text>
+  <text x="60" y="134" fill="#c9d1d9" font-size="12">1) 행을 rows[]에 모은다 (mat_visit)</text>
+  <rect x="60" y="146" width="360" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
+  <text x="70" y="163" fill="#8b949e" font-size="12">rows[0 .. SELECT_MAX_ROWS)  ← 상한 4096</text>
+  <text x="60" y="192" fill="#f0b429" font-size="12">2) 4096행에서 조용히 멈춤 (나머지 1904행 버려짐)</text>
+  <text x="60" y="216" fill="#c9d1d9" font-size="12">3) compute_cell로 집계</text>
+  <rect x="60" y="228" width="360" height="26" rx="4" fill="#0d1117" stroke="#f85149"/>
+  <text x="70" y="246" fill="#f85149" font-size="12">COUNT(*) = 4096  ✗   SUM = 8390656  ✗</text>
+
+  <!-- RIGHT: parallel (fixed) -->
+  <rect x="520" y="84" width="440" height="180" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="740" y="108" text-anchor="middle" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">병렬 (38편) — 정답 + 코어 활용</text>
+  <text x="540" y="134" fill="#c9d1d9" font-size="12">1) 워커가 가시성+WHERE 병렬 평가</text>
+  <g>
+    <rect x="540" y="144" width="95" height="22" rx="4" fill="#13283f" stroke="#238636"/><text x="587" y="160" text-anchor="middle" fill="#3fb950" font-size="11">w0 pages</text>
+    <rect x="643" y="144" width="95" height="22" rx="4" fill="#13283f" stroke="#238636"/><text x="690" y="160" text-anchor="middle" fill="#3fb950" font-size="11">w1 pages</text>
+    <rect x="746" y="144" width="95" height="22" rx="4" fill="#13283f" stroke="#238636"/><text x="793" y="160" text-anchor="middle" fill="#3fb950" font-size="11">w2 pages</text>
+    <rect x="849" y="144" width="95" height="22" rx="4" fill="#13283f" stroke="#238636"/><text x="896" y="160" text-anchor="middle" fill="#3fb950" font-size="11">w3 pages</text>
+  </g>
+  <text x="540" y="192" fill="#c9d1d9" font-size="12">2) 매칭 RID를 <tspan fill="#f0b429">'cap 없이'</tspan> 전부 수집 (6000)</text>
+  <text x="540" y="216" fill="#c9d1d9" font-size="12">3) 같은 aggregate_rowset로 집계 (형식 동일)</text>
+  <rect x="540" y="228" width="404" height="26" rx="4" fill="#0d1117" stroke="#238636"/>
+  <text x="550" y="246" fill="#3fb950" font-size="12">COUNT(*) = 6000  ✓   SUM = 18003000  ✓</text>
+
+  <!-- reuse note -->
+  <rect x="40" y="282" width="920" height="52" rx="10" fill="#13283f" stroke="#1f6feb"/>
+  <text x="60" y="304" fill="#58a6ff" font-size="13">37편과 같은 역할 분담을 재사용</text>
+  <text x="60" y="324" fill="#8b949e" font-size="12">워커: parscan_collect + parsel_pred(가시성 게이트 + where_matches) — 읽기 전용, 병렬. leader: 매칭 행으로 rows 채워 기존 집계 코드에 넘김.</text>
+
+  <!-- verify -->
+  <rect x="40" y="350" width="920" height="100" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="60" y="374" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">검증 — 수학 oracle + MVCC + 레이스 없음</text>
+  <text x="60" y="398" fill="#c9d1d9">COUNT/SUM/MIN/MAX/AVG를 <tspan fill="#f0b429">수학적 정답</tspan>과 대조(SUM=n(n+1)/2 …), UPDATE/DELETE 가시성 반영, GROUP BY도 cap 없이.</text>
+  <text x="60" y="420" fill="#8b949e" font-size="12">엔진 ThreadSanitizer 클린(data race 0) — 워커들의 row_visible/where_matches/decode_row 동시 호출이 안전.</text>
+  <text x="60" y="440" fill="#6e7681" font-size="12">정직한 경계: 매칭 행을 모두 담는다(cap 제거의 대가). 누적만 하는 진짜 partial aggregation(메모리 O(1))은 프론티어.</text>
+</svg>
