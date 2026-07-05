@@ -11,10 +11,10 @@ tags:
   - Query Optimization
   - MySQL
   - PostgreSQL
-category: project/dbtower
+category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
-series: "dbtower"
+series: "DBTower"
 seriesOrder: 9
 ---
 
