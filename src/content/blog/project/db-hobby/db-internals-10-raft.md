@@ -112,7 +112,7 @@ Raft의 뼈대는 셋입니다.
 - **ReadIndex** — 읽기 전에 "지금도 리더"를 과반으로 확인. 파티션된 옛 리더는 거부된다. epoch 없는 ack 집계는 재정렬에 뚫린다.
 - **적대적 리뷰의 가치** — 스냅샷 미설치 발산, apply 에러 무시, epoch 부재: 전부 "테스트는 초록인데 원리상 틀린" 종류였다. 합의 코드는 독립적인 회의주의자가 필요하다.
 
-이 시리즈는 여기까지예요 — 페이지 한 장에서 시작해, 진짜 psql이 붙고, MVCC로 격리하고, 병렬로 돌고, 합의로 복제되는 미니 DB까지. 각 편의 "정직한 경계"들이 다음 여정의 지도입니다.
+저장·복구·격리·최적화·병렬·분산의 여정은 여기서 정점이에요 — 페이지 한 장에서 시작해, 진짜 psql이 붙고, MVCC로 격리하고, 병렬로 돌고, 합의로 복제되는 미니 DB까지. 마지막 [11편](/blog/project/db-hobby/db-internals-11-sql-executor)은 부록 격으로, 이 모든 것의 입구였던 **SQL 실행기 자체**(파서·조인·집계·3값 논리)를 완결합니다.
 
 ## 참고 (1차 자료 우선)
 
@@ -219,7 +219,7 @@ The decisive safety: **a partitioned old leader never gets its majority ack, so 
 - **ReadIndex** — confirm "still leader" by majority before reading; the partitioned old leader is refused. Epoch-less ack counting falls to reordering.
 - **The value of adversarial review** — snapshot-not-installed divergence, swallowed apply errors, the missing epoch: all of the "tests green, wrong in principle" kind. Consensus code needs an independent skeptic.
 
-That's the series — from one page, to a DB a real psql connects to, isolated by MVCC, running in parallel, and replicated by consensus. Each part's "honest boundaries" are the map for the next journey.
+The journey through storage, recovery, isolation, optimization, parallelism, and distribution peaks here — from one page to a DB a real psql connects to, isolated by MVCC, running in parallel, replicated by consensus. The final [Part 11](/blog/project/db-hobby/db-internals-11-sql-executor) closes the loop as an appendix: **the SQL executor itself** (parser, joins, aggregation, three-valued logic) — the entrance to everything above.
 
 ## References (primary sources first)
 
