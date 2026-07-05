@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="500" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">병렬 풀 스캔 — 굵은 engine_mtx를 걷어낼 첫 발판 (버퍼 풀 latch 위에서)</text>
+
+  <!-- Serialization reality (left small) -->
+  <rect x="40" y="58" width="300" height="96" rx="10" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="190" y="82" text-anchor="middle" fill="#f0b429" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">지금: 실행은 직렬</text>
+  <text x="190" y="104" text-anchor="middle" fill="#c9d1d9" font-size="12">커넥션마다 스레드 O — 네트워크는 병렬</text>
+  <text x="190" y="122" text-anchor="middle" fill="#c9d1d9" font-size="12">그러나 db_exec는 <tspan fill="#f85149">engine_mtx</tspan> 하나로 직렬</text>
+  <text x="190" y="140" text-anchor="middle" fill="#6e7681" font-size="12">MVCC는 논리적 동시성, 물리 실행은 한 줄</text>
+
+  <!-- Insight arrow -->
+  <text x="500" y="94" text-anchor="middle" fill="#8b949e" font-size="12">버퍼 풀은 이미 스레드 안전(트랙 D)</text>
+  <text x="500" y="114" text-anchor="middle" fill="#58a6ff" font-size="12">→ read-only 스캔은 전역 latch 없이 병렬 가능</text>
+  <line x1="345" y1="106" x2="655" y2="106" stroke="#30363d" stroke-dasharray="4 3"/>
+
+  <!-- Right: one query, parallel scan -->
+  <rect x="660" y="58" width="300" height="96" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="810" y="82" text-anchor="middle" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">이 편: 한 스캔을 N워커로</text>
+  <text x="810" y="104" text-anchor="middle" fill="#c9d1d9" font-size="12">워커가 disjoint 페이지 범위를 동시에</text>
+  <text x="810" y="122" text-anchor="middle" fill="#c9d1d9" font-size="12">leader가 페이지 순서로 merge</text>
+  <text x="810" y="140" text-anchor="middle" fill="#6e7681" font-size="12">PostgreSQL parallel seq scan 계열</text>
+
+  <!-- Workers over page ranges -->
+  <text x="70" y="196" fill="#8b949e" font-size="12">4 워커 · 연속 블록 분배</text>
+  <g>
+    <!-- worker 0 -->
+    <rect x="70" y="210" width="200" height="30" rx="5" fill="#13283f" stroke="#1f6feb"/>
+    <text x="86" y="230" fill="#58a6ff" font-size="12">worker 0</text>
+    <text x="230" y="230" text-anchor="end" fill="#8b949e" font-size="12">pages [0,5)</text>
+    <!-- worker 1 -->
+    <rect x="70" y="246" width="200" height="30" rx="5" fill="#13283f" stroke="#1f6feb"/>
+    <text x="86" y="266" fill="#58a6ff" font-size="12">worker 1</text>
+    <text x="230" y="266" text-anchor="end" fill="#8b949e" font-size="12">pages [5,10)</text>
+    <!-- worker 2 -->
+    <rect x="70" y="282" width="200" height="30" rx="5" fill="#13283f" stroke="#1f6feb"/>
+    <text x="86" y="302" fill="#58a6ff" font-size="12">worker 2</text>
+    <text x="230" y="302" text-anchor="end" fill="#8b949e" font-size="12">pages [10,15)</text>
+    <!-- worker 3 -->
+    <rect x="70" y="318" width="200" height="30" rx="5" fill="#13283f" stroke="#1f6feb"/>
+    <text x="86" y="338" fill="#58a6ff" font-size="12">worker 3</text>
+    <text x="230" y="338" text-anchor="end" fill="#8b949e" font-size="12">pages [15,18)</text>
+  </g>
+
+  <!-- each worker keeps its own local result (no lock) -->
+  <text x="300" y="196" fill="#8b949e" font-size="12">워커별 지역 결과 (락 없음)</text>
+  <g fill="#161b22" stroke="#30363d">
+    <rect x="300" y="210" width="150" height="30" rx="5"/>
+    <rect x="300" y="246" width="150" height="30" rx="5"/>
+    <rect x="300" y="282" width="150" height="30" rx="5"/>
+    <rect x="300" y="318" width="150" height="30" rx="5"/>
+  </g>
+  <text x="375" y="230" text-anchor="middle" fill="#8b949e" font-size="12">local RIDs</text>
+  <text x="375" y="266" text-anchor="middle" fill="#8b949e" font-size="12">local RIDs</text>
+  <text x="375" y="302" text-anchor="middle" fill="#8b949e" font-size="12">local RIDs</text>
+  <text x="375" y="338" text-anchor="middle" fill="#8b949e" font-size="12">local RIDs</text>
+
+  <!-- merge arrow -->
+  <line x1="452" y1="278" x2="500" y2="278" stroke="#6e7681" marker-end="url(#a)"/>
+  <rect x="500" y="255" width="130" height="46" rx="6" fill="#13283f" stroke="#1f6feb"/>
+  <text x="565" y="274" text-anchor="middle" fill="#58a6ff" font-size="12">leader merge</text>
+  <text x="565" y="291" text-anchor="middle" fill="#8b949e" font-size="11">페이지 순서 보존</text>
+
+  <!-- shared thread-safe buffer pool underneath -->
+  <rect x="660" y="200" width="300" height="150" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="810" y="224" text-anchor="middle" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">공유 버퍼 풀 (스레드 안전)</text>
+  <text x="680" y="248" fill="#c9d1d9" font-size="12">· fetch/unpin이 latch 아래 pin_count 관리</text>
+  <text x="680" y="270" fill="#c9d1d9" font-size="12">· eviction victim은 pin된 프레임 배제</text>
+  <text x="680" y="292" fill="#c9d1d9" font-size="12">· 같은 페이지 동시 read = 안전(read-only)</text>
+  <text x="680" y="318" fill="#f0b429" font-size="12">주의: 워커당 페이지 1개 pin</text>
+  <text x="680" y="336" fill="#6e7681" font-size="11">→ 풀 프레임 수 ≥ nworkers 필요</text>
+  <!-- arrows workers -> pool -->
+  <line x1="270" y1="225" x2="655" y2="250" stroke="#30363d" stroke-dasharray="3 3"/>
+  <line x1="270" y1="333" x2="655" y2="300" stroke="#30363d" stroke-dasharray="3 3"/>
+
+  <!-- bottom: correctness + honest boundary -->
+  <rect x="40" y="372" width="920" height="106" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="60" y="396" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">검증 — 병렬 결과가 직렬과 완전 동일 + 레이스 없음</text>
+  <text x="60" y="420" fill="#c9d1d9">1~16 워커 모두 직렬 heap_scan과 <tspan fill="#f0b429">RID 집합·순서까지 동일</tspan>. ThreadSanitizer 클린(0 data race).</text>
+  <text x="60" y="442" fill="#8b949e" font-size="12">이득: 워밍된 캐시에서 슬롯 스캔·술어 평가·가시성 판정이 코어 수만큼 병렬. (콜드 캐시의 pager_read는 풀 latch가 직렬 — 더 세밀한 풀이 프론티어)</text>
+  <text x="60" y="463" fill="#6e7681" font-size="12">정직한 경계: read-only 스캔만 병렬화. engine_mtx를 통째로 걷어내 '서로 다른 트랜잭션'을 동시에 돌리려면 카탈로그·WAL·txn 스레드 안전화가 필요 — 프론티어.</text>
+
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+</svg>
