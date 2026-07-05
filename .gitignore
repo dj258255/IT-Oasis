@@ -41,3 +41,6 @@ firebase-debug.log
 # playwright mcp tool cache
 .playwright-mcp/
 
+
+# 구직 리서치(로컬 전용, 공개 안 함)
+pay-research/
