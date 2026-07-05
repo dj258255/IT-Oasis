@@ -95,7 +95,9 @@ Execution Time: 0.062 ms
 
 21.269ms에서 0.062ms — 343배였어요. 개선 전후를 측정한 도구가 곧 제가 만든 기능이라는 점이 좋았습니다. 이것 말고도 커넥션 풀 도입(수집 지연 최대 4배), 스냅샷 저장의 JDBC 배치 전환(행당 13.8배), MySQL digest 절단 재현 같은 개선을 전부 실측 로그로 남겨 뒀습니다.
 
-수집을 붙이면서 정합성 버그도 하나 잡았어요. PostgreSQL의 `pg_stat_statements`는 클러스터 전역 뷰라, `dbid` 필터 없이 조회하면 같은 클러스터의 다른 데이터베이스 쿼리까지 섞입니다. `sample`과 `dbtower`가 서로의 쿼리를 보고 있던 걸 발견하고 현재 DB로 필터를 걸었습니다. 이런 건 DB 내부를 알아야 보이는 지점인데, [db-hobby](/blog/project/db-hobby/db-hobby-1-storage)에서 저장 계층을 만들어봤던 게 도움이 됐어요.
+수집을 붙이면서 정합성 버그도 하나 잡았어요. PostgreSQL의 `pg_stat_statements`는 클러스터 전역 뷰라, `dbid` 필터 없이 조회하면 같은 클러스터의 다른 데이터베이스 쿼리까지 섞입니다. `sample`과 `dbtower`가 서로의 쿼리를 보고 있던 걸 발견하고 현재 DB로 필터를 걸었습니다. 이런 건 DB 내부를 알아야 보이는 지점인데, [db-hobby](/blog/project/db-hobby/db-internals-01-storage)에서 저장 계층을 만들어봤던 게 도움이 됐어요.
+
+![실행계획 화면 — 도그푸딩 때 자기 쿼리의 풀스캔을 잡아낸 그 기능](/uploads/project/dbtower/explain.png)
 
 ## 5. 회귀 자동 감지 — 시점 비교를 사람이 아니라 플랫폼이 돌린다
 

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="500" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">Phase E — 셀프호스트: 비밀은 사용자 인프라를 떠나지 않는다</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">SaaS의 네 벽(자격증명 수탁·사설망 도달·멀티테넌시·비용)은 도구가 사용자 인프라 안으로 들어가면 사라진다</text>
+
+  <defs>
+    <marker id="sa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- GHCR (외부) -->
+  <rect x="30" y="90" width="220" height="84" rx="10" fill="#010409" stroke="#30363d"/>
+  <text x="140" y="116" text-anchor="middle" fill="#c9d1d9" font-size="12.5">GHCR (공개 레지스트리)</text>
+  <text x="140" y="138" text-anchor="middle" fill="#8b949e" font-size="11">ghcr.io/dj258255/dbtower</text>
+  <text x="140" y="158" text-anchor="middle" fill="#8b949e" font-size="11">v태그 push = 릴리스 (테스트 게이트)</text>
+
+  <line x1="250" y1="132" x2="316" y2="132" stroke="#8b949e" marker-end="url(#sa)"/>
+  <text x="283" y="122" text-anchor="middle" fill="#6e7681" font-size="10.5">pull만</text>
+
+  <!-- 사용자 인프라 경계 -->
+  <rect x="324" y="80" width="646" height="396" rx="12" fill="none" stroke="#3fb950" stroke-dasharray="8,5"/>
+  <text x="647" y="104" text-anchor="middle" fill="#3fb950" font-size="12.5">사용자 인프라 (자격증명·쿼리 텍스트·백업이 이 선을 안 넘는다)</text>
+
+  <!-- DBTower 앱 컨테이너 -->
+  <rect x="352" y="122" width="320" height="160" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="352" y="122" width="320" height="26" rx="10" fill="#13283f"/>
+  <text x="512" y="139" text-anchor="middle" fill="#58a6ff" font-size="12.5">dbtower 컨테이너 (배터리 포함, 751MB)</text>
+  <text x="370" y="168" fill="#c9d1d9" font-size="11.5">JRE 21 + 비루트(uid 1001) + HEALTHCHECK</text>
+  <rect x="370" y="182" width="284" height="56" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="512" y="202" text-anchor="middle" fill="#8b949e" font-size="11">번들 CLI — mysqldump 8.0 / pg_dump 16(PGDG)</text>
+  <text x="512" y="222" text-anchor="middle" fill="#8b949e" font-size="11">/ mongodump (백업이 조용히 실패하지 않게)</text>
+  <text x="370" y="264" fill="#3fb950" font-size="11">docker 프로파일 — 대상에 직접 네트워크 접속</text>
+
+  <!-- meta-db -->
+  <rect x="712" y="122" width="230" height="160" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="712" y="122" width="230" height="26" rx="10" fill="#13283f"/>
+  <text x="827" y="139" text-anchor="middle" fill="#58a6ff" font-size="12.5">meta-db (PostgreSQL 16)</text>
+  <text x="730" y="168" fill="#c9d1d9" font-size="11.5">플랫폼 자기 저장소</text>
+  <text x="730" y="188" fill="#c9d1d9" font-size="11.5">스냅샷·감사·베이스라인·SLO</text>
+  <text x="730" y="208" fill="#c9d1d9" font-size="11.5">Flyway 자동 마이그레이션</text>
+  <text x="730" y="236" fill="#8b949e" font-size="11">대상 비밀번호는 AES-256-GCM</text>
+  <text x="730" y="254" fill="#8b949e" font-size="11">(DBTOWER_ENCRYPTION_KEY)</text>
+
+  <line x1="672" y1="202" x2="712" y2="202" stroke="#8b949e" marker-end="url(#sa)"/>
+
+  <!-- 대상 DB들 -->
+  <line x1="512" y1="282" x2="512" y2="322" stroke="#8b949e" marker-end="url(#sa)"/>
+  <text x="530" y="308" fill="#6e7681" font-size="10.5">조회·진단 (쿼리 타임아웃 + 수집 백오프)</text>
+
+  <rect x="352" y="330" width="590" height="118" rx="10" fill="#010409" stroke="#30363d"/>
+  <text x="647" y="356" text-anchor="middle" fill="#c9d1d9" font-size="12.5">사용자의 관리 대상 DB (웹 UI에서 등록)</text>
+  <rect x="376" y="372" width="100" height="52" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="426" y="402" text-anchor="middle" fill="#8b949e" font-size="11">MySQL</text>
+  <rect x="490" y="372" width="112" height="52" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="546" y="402" text-anchor="middle" fill="#8b949e" font-size="11">PostgreSQL</text>
+  <rect x="616" y="372" width="112" height="52" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="672" y="402" text-anchor="middle" fill="#8b949e" font-size="11">SQL Server</text>
+  <rect x="742" y="372" width="86" height="52" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="785" y="402" text-anchor="middle" fill="#8b949e" font-size="11">Oracle</text>
+  <rect x="842" y="372" width="86" height="52" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="885" y="402" text-anchor="middle" fill="#8b949e" font-size="11">MongoDB</text>
+</svg>
