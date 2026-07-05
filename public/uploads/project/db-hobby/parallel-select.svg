@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="460" viewBox="0 0 1000 460" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="460" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">병렬 스캔을 실제 SELECT에 배선 — 워커는 판정, 출력은 leader (직렬과 바이트 동일)</text>
+
+  <!-- Query + gate -->
+  <rect x="40" y="58" width="920" height="52" rx="8" fill="#13283f" stroke="#1f6feb"/>
+  <text x="60" y="80" fill="#58a6ff" font-size="13">SELECT * FROM big WHERE v &gt; 11990   <tspan fill="#6e7681">— 비인덱스 full-scan</tspan></text>
+  <text x="60" y="99" fill="#8b949e" font-size="12">게이트: 큰 테이블(≥16페이지) · 서브쿼리 없는 WHERE · ORDER/LIMIT 없음 → 병렬. 아니면 직렬 폴백.</text>
+
+  <!-- workers do the hot work -->
+  <text x="70" y="140" fill="#8b949e" font-size="12">워커 4개 — 뜨거운 부분을 병렬로 (가시성 게이트 + WHERE 평가)</text>
+  <g>
+    <rect x="70" y="152" width="200" height="34" rx="5" fill="#0e1b12" stroke="#238636"/>
+    <text x="86" y="173" fill="#3fb950" font-size="12">worker 0 · pages [0,5)</text>
+    <rect x="290" y="152" width="200" height="34" rx="5" fill="#0e1b12" stroke="#238636"/>
+    <text x="306" y="173" fill="#3fb950" font-size="12">worker 1 · pages [5,10)</text>
+    <rect x="510" y="152" width="200" height="34" rx="5" fill="#0e1b12" stroke="#238636"/>
+    <text x="526" y="173" fill="#3fb950" font-size="12">worker 2 · pages [10,15)</text>
+    <rect x="730" y="152" width="200" height="34" rx="5" fill="#0e1b12" stroke="#238636"/>
+    <text x="746" y="173" fill="#3fb950" font-size="12">worker 3 · pages [15,18)</text>
+  </g>
+  <text x="500" y="206" text-anchor="middle" fill="#8b949e" font-size="12">각 워커: row_visible(스냅샷) + where_matches — 모두 읽기 전용 · 매칭 RID를 지역 결과에 (락 없음)</text>
+
+  <!-- collect RIDs in page order -->
+  <rect x="270" y="222" width="460" height="34" rx="6" fill="#13283f" stroke="#1f6feb"/>
+  <text x="500" y="243" text-anchor="middle" fill="#58a6ff" font-size="12">parscan_collect → 매칭 RID를 '페이지 순서'로 병합</text>
+  <line x1="500" y1="186" x2="500" y2="222" stroke="#6e7681" marker-end="url(#a)"/>
+
+  <!-- leader prints serially -->
+  <rect x="270" y="278" width="460" height="46" rx="6" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="500" y="298" text-anchor="middle" fill="#f0b429" font-size="13">leader (직렬): heap_get → decode_row → print_row</text>
+  <text x="500" y="316" text-anchor="middle" fill="#8b949e" font-size="11">유일하게 스레드 안전하지 않은 '출력'은 한 스레드가 페이지 순서로</text>
+  <line x1="500" y1="256" x2="500" y2="278" stroke="#6e7681" marker-end="url(#a)"/>
+
+  <!-- result -->
+  <rect x="360" y="342" width="280" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+  <text x="500" y="362" text-anchor="middle" fill="#c9d1d9" font-size="12">5996 | 11992  …  6000 | 12000  (5행)</text>
+  <line x1="500" y1="324" x2="500" y2="342" stroke="#6e7681" marker-end="url(#a)"/>
+
+  <!-- bottom claims -->
+  <rect x="40" y="392" width="920" height="52" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="60" y="414" fill="#3fb950" font-size="13">직렬 경로와 바이트 동일 + 레이스 없음</text>
+  <text x="60" y="433" fill="#8b949e" font-size="12">같은 row_visible/where_matches/decode_row/print_row를 재사용 — 병렬은 'RID 수집'만. 엔진 ThreadSanitizer 클린(data race 0). 정직한 경계: 읽기 전용 스트리밍 SELECT만 · engine_mtx 완전 제거는 프론티어.</text>
+
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+</svg>
