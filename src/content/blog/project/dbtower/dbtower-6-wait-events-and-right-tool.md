@@ -53,6 +53,8 @@ MCP:    도구 9종(wait_events 포함), 웹 콘솔 Monitoring 탭 카드 렌더
 
 **둘, 필터는 실측으로 보강한다.** SQL Server는 1차 응답에서 `SOS_WORK_DISPATCHER` 같은 idle 대기가 8억 ms로 화면을 도배했어요. 교과서적인 idle 필터 목록이 있긴 하지만, 실제 응답을 보고 무엇이 노이즈인지 확인한 뒤 필터를 보강했습니다.
 
+![Wait Events — 그 시간에 무엇을 기다렸나, 비활성 instrument 범위까지 응답에 명시](/uploads/project/dbtower/wait-events.png)
+
 ## 2. "JPA + Native Query로 통일하면 되지 않냐"에 대한 답
 
 이제 두 번째 질문이에요. 다섯 기종을 다루니까, "Operator도 JPA로 추상화하고 시스템 뷰 조회는 Native Query로 하면 깔끔하지 않냐"는 제안이 자연스러워 보였어요. 그런데 분석해 보니 방향이 반대였습니다.

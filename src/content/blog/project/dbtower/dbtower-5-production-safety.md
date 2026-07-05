@@ -48,6 +48,8 @@ admin:   GET  .../mcp-token         -> 200      (MCP 카드가 이걸로 등록 
 
 여기서 Spring Boot 4 / Security 7 함정을 둘 밟았어요. 하나는 **AntPathRequestMatcher가 아예 사라진 것** — Security 7에서 제거돼 람다 RequestMatcher로 대체했습니다. 다른 하나는 **로그인하면 CSRF 토큰이 회전한다**는 것. 세션 고정 방어로 인증 성공 시 기존 CSRF 토큰이 무효화되는데, curl로 E2E를 짜면서 로그인 전 토큰을 재사용했다가 403을 맞고 알았어요(브라우저 SPA는 매 요청 쿠키를 다시 읽으니 자연히 무관합니다). 보안 테스트 10건으로 이 인가 표를 코드로 고정해서, 누가 규칙을 바꾸면 CI가 잡게 했습니다.
 
+![로그인 — 최초 기동 admin 부트스트랩, 기본 비밀번호 하드코딩 없이](/uploads/project/dbtower/login.png)
+
 ## 2. A2 비밀번호 암호화 — 평문 저장을 닫다
 
 등록된 인스턴스의 비밀번호가 메타 DB에 **평문**으로 저장되고 있었어요. 메타 DB가 유출되면 관리 대상 DB 전체의 열쇠가 함께 새는 구조죠. AES-256-GCM으로 암호화했습니다. 랜덤 IV 12바이트를 암호문 앞에 붙이고 128비트 태그, 키는 `DBTOWER_ENCRYPTION_KEY`(base64 32바이트) 환경변수로만.
@@ -91,6 +93,8 @@ POST /api/instances/8/explain 실행 후 GET /api/audit ->
 ```
 
 여기서도 Security 7.1 함정이 있었어요. `InteractiveAuthenticationSuccessEvent`가 더 이상 `AuthenticationSuccessEvent` 하위 타입이 아니고, `AuthorizationFilter`가 이벤트에 싣는 객체가 `RequestAuthorizationContext`가 아니라 `HttpServletRequest`였습니다. 첫 테스트가 실패해서 발견했어요.
+
+![감사 로그 — 누가 언제 무엇을 했나, 사용자·action·결과·기간 동적 필터](/uploads/project/dbtower/audit.png)
 
 ## 6. A8 최소 권한 계정 — 권한 0에서 시작해 실측으로 확정
 

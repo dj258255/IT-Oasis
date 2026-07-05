@@ -39,11 +39,15 @@ seriesOrder: 8
 
 설계에서 신경 쓴 두 가지. **하나, 고정 임계를 없애지 않고 공존시켰어요.** 베이스라인은 학습 데이터가 필요하고, 갓 등록된 인스턴스에는 없거든요. **둘, 데이터 부족은 "학습 중"으로 보류합니다.** 관측이 부족한 버킷에서 판정을 내리면 신규 인스턴스마다 오탐이 쏟아져요. 응답에 `learningCount`를 실어서 "아직 판단 안 한다"를 명시하게 했습니다 — 모르는 것을 모른다고 말하는 것도 감지기의 정직성이에요.
 
+![이상 감지 — "현재 이상 없음"과 함께 학습 중 12건은 관측 8회 미만이라 판정 보류를 명시](/uploads/project/dbtower/anomaly.png)
+
 ## 2. Advisors — 운영 문서를 코드로, 인터페이스 변경 0
 
 시리즈를 쓰면서 쌓인 운영 문서가 있어요. digest 테이블이 차면 새 쿼리가 통계에서 사라진다(operations.md), 기종별 최소 권한 목록(least-privilege.md) 같은 것들요. 문서의 문제는 **사람이 기억해야 작동한다**는 겁니다. 그래서 이 규칙들을 Advisor 6종 코드로 옮겨 일일 스윕(HA 분산 락)으로 자동 점검하게 했어요.
 
 재밌는 건 구현 비용이에요. **operator 인터페이스 변경이 0이었습니다.** 기존의 `parameters()`, `describeSchema()`, `tableStats()`, `queryStats()`를 재사용해서 판정만 얹은 거라, "새 능력 = 메서드 1개"조차 필요 없던 케이스예요. 실측(MySQL)에서 "digest 테이블 포화 위험"과 "위험 파라미터값"이 VIOLATIONS로, 중복 인덱스는 OK로, 기종에 무관한 점검은 UNSUPPORTED로 나뉘어 나옵니다.
+
+![Advisors — digest 포화 위험을 권고와 함께 지적, 무관한 점검은 미지원으로 정직 표기](/uploads/project/dbtower/advisors.png)
 
 ## 3. 자연어 진단 — AI에게 도구를 쥐여주되, 읽기 전용만
 
@@ -74,9 +78,13 @@ SLO를 만들려면 레이턴시 백분위(p95/p99)가 필요한데, 여기서 �
 | PostgreSQL | 평균 + 1.645 x 표준편차 (정규분포 가정) | ESTIMATED |
 | SQL Server / Oracle | 통계 뷰에 분위수도 표준편차도 없음 | UNSUPPORTED |
 
+![레이턴시 백분위 — 같은 p95인데 소스 라벨(실측·직접계산·추정·미지원)이 다르다](/uploads/project/dbtower/latency.png)
+
 핵심은 **네 라벨을 절대 섞지 않는 것**이에요. ESTIMATED를 NATIVE인 척 보여주면 사용자는 추정치를 실측으로 믿고 결정을 내리게 됩니다. 백업 검증의 3값(5편), Terraform validate(7편)와 같은 계열의 정직성이에요.
 
 이 위에 Google SRE의 SLO 모델을 얹었습니다. 원칙은 "인프라 지표(CPU)가 아니라 사용자 경험 지표" — 레이턴시 SLI는 방금의 p95를 재사용하고, UNSUPPORTED 기종은 평균 레이턴시로 폴백하되 `source=AVG_FALLBACK`으로 표기해요. 가용성 SLI는 헬스 샘플 이력의 up 비율이고, 에러 버짓(허용 다운타임 대비 소진율)과 번 레이트로 EXHAUSTED/WARNING/OK를 판정합니다. 실측에서 MySQL이 NATIVE 기반 BREACHING, Oracle이 AVG_FALLBACK, 가용성은 MEETING으로 나왔어요.
+
+![SLO / 에러 버짓 — 레이턴시 SLI 위반과 가용성 충족, 에러 버짓 소진율과 번인 레이트](/uploads/project/dbtower/slo.png)
 
 ## 5. 파티션·FinOps·백업 신선도 — 신호를 채우다
 
@@ -104,6 +112,8 @@ canary 인스턴스 kill -> F 35점으로 최상단 부상
 ```
 
 canary를 죽이자마자 최상단에 떠오르는 걸 보고 이 화면의 역할이 분명해졌어요 — 대시보드가 아니라 **분류(triage) 큐**입니다.
+
+![통합 헬스 스코어 — 감점 사유 분해와 나쁜 순 정렬, 아침에 여는 첫 화면](/uploads/project/dbtower/health-score.png)
 
 ## 7. 마치며 — 읽기만 하는 자율
 

@@ -24,6 +24,8 @@ seriesOrder: 7
 
 그런데 현업에서 DB는 그렇게 오지 않아요. Kubernetes에서는 Operator가 만들고, VM에서는 Ansible이 깔고, 클라우드에서는 Terraform이 RDS를 띄웁니다. DB가 IaC로 태어나는데 관제 등록은 사람이 수동으로 한다면, 생성과 관제 사이가 끊겨 있는 거예요. 이 끊김을 이으려는 게 Phase C입니다. ROADMAP에 적어둔 문장 그대로 — **"생성과 관제가 이어져야 플랫폼이고, 끊어져 있으면 도구 모음이다."**
 
+![Phase C 구조 — 세 층의 프로비저닝이 멱등 PUT 하나로 관제탑에 모인다](/uploads/project/dbtower/provisioning-flow.svg)
+
 ## 1. 전제부터 — 등록이 멱등이어야 한다
 
 프로비저닝 도구를 붙이기 전에 먼저 고쳐야 할 게 있었어요. 기존 등록은 `POST /api/instances`인데, IaC는 **재실행되는 물건**입니다. Ansible 플레이북을 두 번 돌리고, Terraform을 다시 apply하고, K8s Job이 재시도되죠. 그때마다 POST가 인스턴스를 하나씩 더 만든다면 관제탑에 같은 DB가 세 개 등록되는 거예요.

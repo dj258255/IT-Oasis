@@ -81,6 +81,8 @@ ERROR: new row for relation "database_instance"
 
 등록하고 부하를 걸자 MongoDB의 활동 그래프에 QPS 급증(0 → 10.67)이 그려지고, 시점 비교가 신규 쿼리 2건을 NEW로 잡고, regex 검색이 호출당 20,000 문서를 훑는다는 것(rowsExamined)까지 수치로 나왔어요. MCP로도 여섯 인스턴스가 그대로 보이고요. 채널도 코어도, 새 기종이 온 것을 모릅니다.
 
+![대시보드 — 다섯 기종 여섯 인스턴스가 한 화면에, 같은 카드 같은 그래프로](/uploads/project/dbtower/dashboard.png)
+
 마무리로 이 산식들이 회귀하지 않게 단위 테스트 31건(시점 비교 차분·경계, 회귀 감지 임계값·쿨다운, 백업 명령 주입 방어, MCP 프로토콜 규약, 5기종 판정 규칙)을 깔고 GitHub Actions CI를 붙였습니다. 테스트가 실 DB 없이 돌도록 인메모리 H2 설정을 분리한 것까지가 이번 확장의 끝이에요.
 
 코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
