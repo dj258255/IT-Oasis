@@ -1,8 +1,8 @@
 ---
-title: 'db-hobby 전체 지도 — C로 만든 미니 RDBMS, 40편 읽기 가이드'
-titleEn: 'The db-hobby Map — a Mini RDBMS in C, a Reading Guide to 40 Parts'
-description: "C로 맨땅에서 만든 미니 관계형 DB db-hobby의 40편 시리즈 전체 지도. 진짜 psql이 붙고, reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구, VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓 복제, LSM 엔진, Raft 합의까지 — 페이지 한 장에서 SQL 실행까지 바닥부터 올라간 기록이다. 각 편이 '앞 편이 만든 문제를 다음 편이 푼다'는 장애-해결 사슬로 이어진다. 어디서 시작할지, 무엇이 하이라이트인지, 어떻게 직접 돌려보는지를 한 페이지에 담은 읽기 가이드."
-descriptionEn: "The full map of db-hobby, a mini relational database built from scratch in C across 40 parts. A real psql connects to it; MVCC snapshot isolation where readers don't block writers; WAL crash recovery; VACUUM; a thread-safe buffer pool; a cost-based optimizer; socket replication; an LSM engine; Raft consensus — built bottom-up from a single page to running SQL. Each part chains as failure-then-fix: the next part solves the problem the previous one created. A one-page reading guide to where to start, what the highlights are, and how to run it yourself."
+title: 'db-hobby 전체 지도 — C로 만든 미니 RDBMS, 41편 읽기 가이드'
+titleEn: 'The db-hobby Map — a Mini RDBMS in C, a Reading Guide to 41 Parts'
+description: "C로 맨땅에서 만든 미니 관계형 DB db-hobby의 41편 시리즈 전체 지도. 진짜 psql이 붙고, reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구, VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓 복제, LSM 엔진, Raft 합의까지 — 페이지 한 장에서 SQL 실행까지 바닥부터 올라간 기록이다. 각 편이 '앞 편이 만든 문제를 다음 편이 푼다'는 장애-해결 사슬로 이어진다. 어디서 시작할지, 무엇이 하이라이트인지, 어떻게 직접 돌려보는지를 한 페이지에 담은 읽기 가이드."
+descriptionEn: "The full map of db-hobby, a mini relational database built from scratch in C across 41 parts. A real psql connects to it; MVCC snapshot isolation where readers don't block writers; WAL crash recovery; VACUUM; a thread-safe buffer pool; a cost-based optimizer; socket replication; an LSM engine; Raft consensus — built bottom-up from a single page to running SQL. Each part chains as failure-then-fix: the next part solves the problem the previous one created. A one-page reading guide to where to start, what the highlights are, and how to run it yourself."
 date: 2026-07-04
 tags:
   - C
@@ -26,7 +26,7 @@ seriesOrder: 0
 - **진짜 `psql`이 붙습니다** — PostgreSQL v3 wire protocol을 말하는 400줄 서버라, psql은 상대가 진짜 PG인지 구분 못 해요.
 - **reader가 writer를 안 막습니다** — MVCC 스냅샷 격리. 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽은 옛 버전을 막힘 없이 읽어요.
 - **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **소켓으로 도는 primary→replica 복제**, **LSM 저장 엔진**, **Raft 합의**(리더 선출·분단 내성)까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
-- **테스트 682개 / 41스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **테스트 686개 / 42스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## 이 시리즈를 읽는 법
 
@@ -74,7 +74,7 @@ seriesOrder: 0
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | 지운 것과 치운 것은 다르다, B+Tree 삭제 |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | 다중 트랜잭션 | reader가 writer를 안 막는 걸 진짜로 |
 
-### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의·캡스톤·HA (19~40)
+### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의·캡스톤·HA (19~41)
 
 | 편 | 제목 | 푸는 문제 |
 |---|---|---|
@@ -100,12 +100,13 @@ seriesOrder: 0
 | [38](/blog/project/db-hobby/db-hobby-38-parallel-aggregate) | 병렬 집계 | 그리고 조용히 틀리던 집계(materialize cap 절단) 버그를 고침 |
 | [39](/blog/project/db-hobby/db-hobby-39-partial-aggregate) | 진짜 부분 집계 | 행을 안 모으고 누적만 — 메모리 O(1) (Partial→Finalize) |
 | [40](/blog/project/db-hobby/db-hobby-40-parallel-benchmark) | 병렬 실행, 진짜 빨라졌나? | 실측 최고 2.16x, 12코어인데 ~2x — 천장은 공유 latch |
+| [41](/blog/project/db-hobby/db-hobby-41-io-out-of-latch) | 읽기 I/O를 풀 latch 밖으로 | 40편이 잰 콜드 병목 닫기(read-in-progress) — 콜드 4워커 1.08→2.39x |
 
 ## 직접 돌려보기
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 682개 테스트
+make test            # 686개 테스트
 make repl && ./build/db-hobby my.db   # REPL에서 SQL
 
 # 또는 진짜 psql로 접속:
@@ -130,7 +131,7 @@ Today db-hobby:
 - **A real `psql` connects to it** — a 400-line server speaking PostgreSQL's v3 wire protocol, so psql can't tell it isn't real PG.
 - **Readers don't block writers** — MVCC snapshot isolation. Even while one transaction holds an uncommitted UPDATE, another reads the old version, unblocked.
 - **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication over a socket**, an **LSM storage engine**, **Raft consensus** (leader election, partition tolerance) — nearly every axis of a real database, touched by hand.
-- **682 tests / 41 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **686 tests / 42 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## How to Read This Series
 
@@ -178,7 +179,7 @@ Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | deleting vs cleaning; B+Tree deletion |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | Multi-transaction | readers really not blocking writers |
 
-### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus, Capstone, HA (19–40)
+### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus, Capstone, HA (19–41)
 
 | # | Title | Problem it solves |
 |---|---|---|
@@ -204,12 +205,13 @@ Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/
 | [38](/blog/project/db-hobby/db-hobby-38-parallel-aggregate) | Parallel aggregation | and fixing an aggregate that was silently wrong (materialize-cap truncation) |
 | [39](/blog/project/db-hobby/db-hobby-39-partial-aggregate) | True partial aggregation | accumulate, never collect — O(1) memory (Partial→Finalize) |
 | [40](/blog/project/db-hobby/db-hobby-40-parallel-benchmark) | Did parallelism help? | measured peak 2.16x, ~2x on 12 cores — the ceiling is the shared latch |
+| [41](/blog/project/db-hobby/db-hobby-41-io-out-of-latch) | Read I/O out of the pool latch | closing Part 40's cold bottleneck (read-in-progress) — cold 4w 1.08→2.39x |
 
 ## Run It Yourself
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 682 tests
+make test            # 686 tests
 make repl && ./build/db-hobby my.db   # SQL in the REPL
 
 # or connect with a real psql:
