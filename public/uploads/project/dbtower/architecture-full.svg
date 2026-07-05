@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="620" viewBox="0 0 1000 620" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="620" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">DBTower 전체 구조 — 차이를 경계 뒤로 숨기는 세 겹</text>
+  <text x="500" y="54" text-anchor="middle" fill="#6e7681" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5">소비자 차이는 채널 뒤로, 기종 차이는 DbmsOperator 뒤로, 기술 차이는 각자의 제자리로</text>
+
+  <defs>
+    <marker id="fa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+  </defs>
+
+  <!-- 채널 층 -->
+  <rect x="60" y="76" width="270" height="64" rx="10" fill="#010409" stroke="#30363d"/>
+  <text x="195" y="102" text-anchor="middle" fill="#c9d1d9" font-size="12.5">웹 콘솔 (사람)</text>
+  <text x="195" y="122" text-anchor="middle" fill="#8b949e" font-size="11">의존성 0 정적 SPA · 드래그 시점 비교</text>
+  <rect x="365" y="76" width="270" height="64" rx="10" fill="#010409" stroke="#30363d"/>
+  <text x="500" y="102" text-anchor="middle" fill="#c9d1d9" font-size="12.5">MCP 서버 (AI 에이전트)</text>
+  <text x="500" y="122" text-anchor="middle" fill="#8b949e" font-size="11">JSON-RPC 2.0 직접 구현 · 도구 13종 (pull)</text>
+  <rect x="670" y="76" width="270" height="64" rx="10" fill="#010409" stroke="#30363d"/>
+  <text x="805" y="102" text-anchor="middle" fill="#c9d1d9" font-size="12.5">웹훅 (온콜)</text>
+  <text x="805" y="122" text-anchor="middle" fill="#8b949e" font-size="11">회귀·이상·운영 경보 push (Discord/Slack)</text>
+
+  <line x1="195" y1="140" x2="420" y2="172" stroke="#8b949e" marker-end="url(#fa)"/>
+  <line x1="500" y1="140" x2="500" y2="172" stroke="#8b949e" marker-end="url(#fa)"/>
+  <line x1="805" y1="140" x2="580" y2="172" stroke="#8b949e" marker-end="url(#fa)"/>
+
+  <!-- 코어 -->
+  <rect x="120" y="180" width="620" height="150" rx="10" fill="#010409" stroke="#1f6feb"/>
+  <rect x="120" y="180" width="620" height="26" rx="10" fill="#13283f"/>
+  <text x="430" y="197" text-anchor="middle" fill="#58a6ff" font-size="12.5">분석 코어 — 채널이 무엇이든 같은 판단</text>
+  <text x="140" y="228" fill="#c9d1d9" font-size="11.5">시점 비교(구간 차분) · 회귀 감지(고정 임계) · 이상 감지(요일x시간대 z-score)</text>
+  <text x="140" y="250" fill="#c9d1d9" font-size="11.5">실행계획 규칙 + AI 1차 분석 · 심층 원인 진단(추정 vs 실제) · Advisors · SLO/에러 버짓</text>
+  <text x="140" y="272" fill="#c9d1d9" font-size="11.5">통합 헬스 스코어(나쁜 순) · 백업 정책/복원 검증 · FinOps 신호 · 감사 로그</text>
+  <text x="140" y="302" fill="#3fb950" font-size="11">Spring Modulith 모듈 8개 — 순환 의존은 빌드가 실패시킨다 (도입 때 실제 순환 2개 해소)</text>
+
+  <!-- 메타 DB -->
+  <rect x="770" y="180" width="180" height="150" rx="10" fill="#010409" stroke="#30363d"/>
+  <text x="860" y="206" text-anchor="middle" fill="#c9d1d9" font-size="12">메타 DB (PostgreSQL)</text>
+  <text x="860" y="228" text-anchor="middle" fill="#8b949e" font-size="10.5">스냅샷·베이스라인·감사</text>
+  <text x="860" y="246" text-anchor="middle" fill="#8b949e" font-size="10.5">Spring Data JPA 3층위</text>
+  <text x="860" y="264" text-anchor="middle" fill="#8b949e" font-size="10.5">대량 쓰기는 JDBC batch</text>
+  <text x="860" y="288" text-anchor="middle" fill="#3fb950" font-size="10.5">Operator 지원 기종이라</text>
+  <text x="860" y="304" text-anchor="middle" fill="#3fb950" font-size="10.5">자기 자신도 관리 대상(도그푸딩)</text>
+  <line x1="740" y1="255" x2="770" y2="255" stroke="#8b949e" marker-end="url(#fa)"/>
+
+  <!-- 경계 -->
+  <line x1="430" y1="330" x2="430" y2="360" stroke="#8b949e" marker-end="url(#fa)"/>
+  <rect x="120" y="368" width="620" height="44" rx="10" fill="#161b22" stroke="#d29922"/>
+  <text x="430" y="388" text-anchor="middle" fill="#d29922" font-size="12.5">DbmsOperator 인터페이스 — 경계는 SQL이 아니라 "운영 행위"에</text>
+  <text x="430" y="405" text-anchor="middle" fill="#8b949e" font-size="10.5">새 능력 = 메서드 1개 · 새 기종 = 구현체 1개 · 못 하는 기종은 UNSUPPORTED로 정직하게</text>
+
+  <line x1="430" y1="412" x2="430" y2="440" stroke="#8b949e" marker-end="url(#fa)"/>
+
+  <!-- 5기종 -->
+  <rect x="40" y="448" width="176" height="140" rx="8" fill="#010409" stroke="#30363d"/>
+  <text x="128" y="472" text-anchor="middle" fill="#c9d1d9" font-size="12">MySQL</text>
+  <text x="128" y="494" text-anchor="middle" fill="#8b949e" font-size="10">performance_schema</text>
+  <text x="128" y="512" text-anchor="middle" fill="#8b949e" font-size="10">EXPLAIN ANALYZE(TREE)</text>
+  <text x="128" y="530" text-anchor="middle" fill="#8b949e" font-size="10">mysqldump (비밀번호 env)</text>
+  <text x="128" y="552" text-anchor="middle" fill="#6e7681" font-size="10">p95: QUANTILE 실측</text>
+
+  <rect x="232" y="448" width="176" height="140" rx="8" fill="#010409" stroke="#30363d"/>
+  <text x="320" y="472" text-anchor="middle" fill="#c9d1d9" font-size="12">PostgreSQL</text>
+  <text x="320" y="494" text-anchor="middle" fill="#8b949e" font-size="10">pg_stat_statements</text>
+  <text x="320" y="512" text-anchor="middle" fill="#8b949e" font-size="10">EXPLAIN(ANALYZE,BUFFERS)</text>
+  <text x="320" y="530" text-anchor="middle" fill="#8b949e" font-size="10">pg_dump / HypoPG 가상 인덱스</text>
+  <text x="320" y="552" text-anchor="middle" fill="#6e7681" font-size="10">p95: 평균+1.645σ 추정 표기</text>
+
+  <rect x="424" y="448" width="176" height="140" rx="8" fill="#010409" stroke="#30363d"/>
+  <text x="512" y="472" text-anchor="middle" fill="#c9d1d9" font-size="12">SQL Server</text>
+  <text x="512" y="494" text-anchor="middle" fill="#8b949e" font-size="10">DMV (dm_exec_query_stats)</text>
+  <text x="512" y="512" text-anchor="middle" fill="#8b949e" font-size="10">SET STATISTICS XML</text>
+  <text x="512" y="530" text-anchor="middle" fill="#8b949e" font-size="10">서버 사이드 BACKUP DATABASE</text>
+  <text x="512" y="552" text-anchor="middle" fill="#6e7681" font-size="10">p95: 원자료 없음 미지원</text>
+
+  <rect x="616" y="448" width="176" height="140" rx="8" fill="#010409" stroke="#30363d"/>
+  <text x="704" y="472" text-anchor="middle" fill="#c9d1d9" font-size="12">Oracle</text>
+  <text x="704" y="494" text-anchor="middle" fill="#8b949e" font-size="10">V$SQL</text>
+  <text x="704" y="512" text-anchor="middle" fill="#8b949e" font-size="10">DISPLAY_CURSOR(ALLSTATS)</text>
+  <text x="704" y="530" text-anchor="middle" fill="#8b949e" font-size="10">서버 사이드 DBMS_DATAPUMP</text>
+  <text x="704" y="552" text-anchor="middle" fill="#6e7681" font-size="10">복원 자동검증: 미지원 표기</text>
+
+  <rect x="808" y="448" width="176" height="140" rx="8" fill="#010409" stroke="#30363d"/>
+  <text x="896" y="472" text-anchor="middle" fill="#c9d1d9" font-size="12">MongoDB</text>
+  <text x="896" y="494" text-anchor="middle" fill="#8b949e" font-size="10">system.profile (SQL/JDBC 없음)</text>
+  <text x="896" y="512" text-anchor="middle" fill="#8b949e" font-size="10">explain executionStats</text>
+  <text x="896" y="530" text-anchor="middle" fill="#8b949e" font-size="10">mongodump (비밀번호 stdin)</text>
+  <text x="896" y="552" text-anchor="middle" fill="#6e7681" font-size="10">파티션: 개념 없음 미지원</text>
+</svg>
