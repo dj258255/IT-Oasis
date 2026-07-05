@@ -1,10 +1,20 @@
 {
   "title": "java-hobby — C로 만드는 토이 JVM",
   "titleEn": "java-hobby — A Toy JVM in C",
-  "description": "Java가 바이트코드를 어떻게 실행하는지를, C로 바닥부터 직접 구현하며 해부하는 학습 프로젝트. .class 파서·런타임 데이터 영역·바이트코드 인터프리터·객체 모델(vtable)·mark-sweep GC·예외 처리·자작 java.* 표준 라이브러리 서브셋·소켓/스레드, 그리고 핫스팟 탐지 기반 JIT까지. 실제 OpenJDK(openjdk/jdk) 구조를 따라 VM(hotspot)·컴파일러(jdk.compiler)·표준 라이브러리(java.base)를 한 레포에 두고, 자작 커널·DB와 통합해 자작 스택만으로 웹 애플리케이션을 돌리는 것이 목표(상용 JVM 아님).",
-  "descriptionEn": "A learning project dissecting how Java runs bytecode, built from scratch in C — a .class parser, runtime data areas, a bytecode interpreter, an object model with vtables, a mark-sweep GC, exception handling, a hand-written java.* standard-library subset, sockets/threads, and a hot-spot-detecting JIT. Mirrors the real OpenJDK (openjdk/jdk) layout with the VM (hotspot), compiler (jdk.compiler), and library (java.base) in one repo, aiming to run a web application on a fully self-built stack.",
+  "description": "Java가 바이트코드를 실행하는 원리를 C로 재현한 자작 JVM — .class 파서·바이트코드 인터프리터·vtable 객체 모델·mark-sweep GC에 핫스팟 JIT까지, OpenJDK 구조를 따라 바닥부터.",
+  "descriptionEn": "A homemade JVM reproducing how Java executes bytecode, in C — a .class parser, bytecode interpreter, vtable object model, mark-sweep GC, and a hotspot-detecting JIT, structured after OpenJDK from the ground up.",
   "image": "/uploads/hobby/java-hobby/cover.svg",
-  "tags": ["C", "JVM", "Bytecode", "Interpreter", "GC", "JIT", "Compiler", "OpenJDK", "Learning"],
+  "tags": [
+    "C",
+    "JVM",
+    "Bytecode",
+    "Interpreter",
+    "GC",
+    "JIT",
+    "Compiler",
+    "OpenJDK",
+    "Learning"
+  ],
   "category": "study",
   "date": "2026-07-01",
   "github": "https://github.com/dj258255/java-hobby",

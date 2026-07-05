@@ -1,10 +1,16 @@
 {
   "title": "IT Oasis",
   "titleEn": "IT Oasis",
-  "description": "Astro 5.x 기반 기술 블로그 — CSS View Transitions, 다국어(KO/EN) 토글, 카테고리/태그 시스템, 다크모드",
-  "descriptionEn": "Technical blog built with Astro 5.x — CSS View Transitions, bilingual (KO/EN) toggle, category/tag system, dark mode",
+  "description": "이 블로그 자체 — Astro 5.x로 만든 다국어(KO/EN) 기술 블로그로, View Transitions·다크모드·카테고리/태그 검색까지 직접 구현했다.",
+  "descriptionEn": "This very blog — a bilingual (KO/EN) tech blog built on Astro 5.x, hand-implementing View Transitions, dark mode, and category/tag search.",
   "image": "/uploads/banners/banner-main.png",
-  "tags": ["Astro", "TypeScript", "TailwindCSS", "View Transitions", "i18n"],
+  "tags": [
+    "Astro",
+    "TypeScript",
+    "TailwindCSS",
+    "View Transitions",
+    "i18n"
+  ],
   "category": "personal",
   "date": "2026-01-15",
   "github": "https://github.com/dj258255/IT-Oasis",

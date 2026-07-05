@@ -1,10 +1,18 @@
 {
   "title": "빌려조잉",
   "titleEn": "Joying",
-  "description": "물건을 서로 빌리고 빌려주는 C2C 공유 플랫폼",
-  "descriptionEn": "A C2C sharing platform for lending and borrowing items between neighbors",
+  "description": "삼성전자 우수상을 받은 C2C 대여 플랫폼 — 실시간 채팅 병목을 코루틴 전환으로 150ms에서 1ms 미만까지 줄인 6인 팀 프로젝트.",
+  "descriptionEn": "A C2C rental platform awarded by Samsung — where real-time chat latency was cut from 150ms to under 1ms via a coroutine rewrite, built by a 6-person team.",
   "image": "/uploads/project/Joying/retrospective/title.gif",
-  "tags": ["Java", "Kotlin", "Spring Boot", "WebSocket", "Redis", "MongoDB", "MySQL"],
+  "tags": [
+    "Java",
+    "Kotlin",
+    "Spring Boot",
+    "WebSocket",
+    "Redis",
+    "MongoDB",
+    "MySQL"
+  ],
   "category": "team",
   "date": "2025-11-01",
   "github": "https://github.com/dj258255/joying",

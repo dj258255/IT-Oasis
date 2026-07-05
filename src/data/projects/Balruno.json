@@ -1,10 +1,16 @@
 {
   "title": "발루노",
   "titleEn": "Balruno",
-  "description": "게임 기획자를 위한 오픈소스 밸런싱 플랫폼",
-  "descriptionEn": "An open-source game balancing platform for indie game designers",
+  "description": "게임 기획자를 위한 오픈소스 밸런싱 플랫폼 — JSONB 1만 건에서도 시트 조회 p95를 500ms 이하로 유지하고, 멱등 저장·블루/그린 무중단 배포까지 갖췄다.",
+  "descriptionEn": "An open-source balancing platform for game designers — keeping sheet-read p95 under 500ms even over 10k JSONB rows, with idempotent writes and blue/green zero-downtime deploys.",
   "image": "/uploads/project/Balruno/retrospective/title.png",
-  "tags": ["React", "TypeScript", "Zustand", "TailwindCSS", "Vercel"],
+  "tags": [
+    "React",
+    "TypeScript",
+    "Zustand",
+    "TailwindCSS",
+    "Vercel"
+  ],
   "category": "personal",
   "date": "2025-12-05",
   "github": "https://github.com/dj258255/balruno",

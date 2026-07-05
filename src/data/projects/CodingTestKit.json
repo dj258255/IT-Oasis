@@ -1,10 +1,16 @@
 {
   "title": "코딩테스트 도구",
   "titleEn": "CodingTestKit",
-  "description": "IDE에서 코딩테스트 문제를 가져오고, 테스트하고, 제출하는 올인원 플러그인",
-  "descriptionEn": "An all-in-one IDE plugin to fetch, test, and submit coding test problems without leaving your editor",
+  "description": "IDE를 떠나지 않고 코딩테스트 문제를 가져오고·테스트하고·제출하는 올인원 플러그인.",
+  "descriptionEn": "An all-in-one plugin to fetch, test, and submit coding-test problems without ever leaving your IDE.",
   "image": "/uploads/project/CodingTestKit/title.png",
-  "tags": ["Kotlin", "IntelliJ Plugin", "VS Code Extension", "TypeScript", "Gradle"],
+  "tags": [
+    "Kotlin",
+    "IntelliJ Plugin",
+    "VS Code Extension",
+    "TypeScript",
+    "Gradle"
+  ],
   "category": "personal",
   "date": "2026-03-01",
   "website": [

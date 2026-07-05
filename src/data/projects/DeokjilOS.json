@@ -1,10 +1,16 @@
 {
   "title": "Deokjil OS — 우분투 개인화 툴킷",
   "titleEn": "Deokjil OS — Ubuntu Personalization Toolkit",
-  "description": "덕질하는 사람을 위한 우분투 개인화 툴킷. 특정 마스코트를 강제하지 않고, 사용자가 테마·강조색·배경·마스코트를 config 한 파일로 자유롭게 바꾸도록 설계한 모듈식 커스터마이징 시스템.",
-  "descriptionEn": "An Ubuntu personalization toolkit. Instead of forcing a fixed mascot, it lets each user freely swap themes, accent colors, wallpapers, and mascots through a single config file — a modular, config-driven customization system.",
+  "description": "테마·강조색·배경·마스코트를 config 파일 하나로 바꾸는 모듈식 우분투 개인화 툴킷 — 특정 마스코트를 강제하지 않는 '덕질' 커스터마이징 시스템.",
+  "descriptionEn": "A modular Ubuntu personalization toolkit that swaps theme, accent, wallpaper, and mascot from a single config file — a fandom customization system that forces no specific mascot.",
   "image": "/uploads/project/DeokjilOS/cover.svg",
-  "tags": ["Ubuntu", "GNOME", "Bash", "Customization", "Linux"],
+  "tags": [
+    "Ubuntu",
+    "GNOME",
+    "Bash",
+    "Customization",
+    "Linux"
+  ],
   "category": "personal",
   "date": "2026-06-20",
   "github": "https://github.com/dj258255/deokjil-os",

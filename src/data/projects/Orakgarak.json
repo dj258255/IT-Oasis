@@ -1,10 +1,17 @@
 {
   "title": "오락가락",
   "titleEn": "Orakgarak",
-  "description": "내 목소리 데이터를 기반으로 노래를 추천받는 음성 분석 플랫폼",
-  "descriptionEn": "A voice analysis platform that recommends songs based on your vocal range data",
+  "description": "내 목소리를 분석해 부를 노래를 추천하는 플랫폼 — 5~30초 걸리던 동기 음성 처리를 Kafka 비동기 파이프라인으로 200ms 응답 + DLQ 실패 복구까지 재설계한 팀 프로젝트.",
+  "descriptionEn": "A platform that recommends songs by analyzing your voice — re-architecting 5–30s synchronous audio processing into a Kafka async pipeline with sub-200ms response and DLQ failure recovery.",
   "image": "/uploads/project/Orakgarak/retrospective/title.png",
-  "tags": ["Java", "Spring Boot", "Kafka", "Prometheus", "Grafana", "AWS S3"],
+  "tags": [
+    "Java",
+    "Spring Boot",
+    "Kafka",
+    "Prometheus",
+    "Grafana",
+    "AWS S3"
+  ],
   "category": "team",
   "date": "2025-09-01",
   "github": "https://github.com/dj258255",
