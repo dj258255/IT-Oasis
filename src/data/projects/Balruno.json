@@ -6,9 +6,9 @@
   "image": "/uploads/project/Balruno/retrospective/title.png",
   "tags": ["React", "TypeScript", "Zustand", "TailwindCSS", "Vercel"],
   "category": "personal",
-  "date": "2026-02-15",
+  "date": "2025-12-05",
   "github": "https://github.com/dj258255/balruno",
   "website": "https://www.balruno.com/",
   "story": "/blog/project/balruno/balruno-retrospective",
-  "order": 2
+  "order": 11
 }

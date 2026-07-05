@@ -6,9 +6,9 @@
   "image": "/uploads/project/EduMeet/EduMeetTitle.png",
   "tags": ["Java", "Spring Boot", "JPA", "QueryDSL", "MySQL", "AWS S3", "Docker"],
   "category": "team",
-  "date": "2025-08-15",
+  "date": "2025-07-05",
   "github": "https://github.com/dj258255/edumeet",
   "website": "",
   "story": "/blog/project/edumeet/edumeet-retrospective",
-  "order": 9
+  "order": 15
 }

@@ -6,9 +6,9 @@
   "image": "/uploads/project/Joying/retrospective/title.gif",
   "tags": ["Java", "Kotlin", "Spring Boot", "WebSocket", "Redis", "MongoDB", "MySQL"],
   "category": "team",
-  "date": "2025-11-20",
+  "date": "2025-11-01",
   "github": "https://github.com/dj258255/joying",
   "website": "",
   "story": "/blog/project/joying/joying-retrospective",
-  "order": 7
+  "order": 13
 }
