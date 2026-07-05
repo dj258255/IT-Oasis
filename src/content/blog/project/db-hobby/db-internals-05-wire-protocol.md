@@ -3,7 +3,7 @@ title: 'DB 내부 ⑤: 진짜 psql이 붙는 서버 — PostgreSQL wire protocol
 titleEn: 'DB Internals ⑤: A Server a Real psql Connects To — Dissecting the PostgreSQL Wire Protocol'
 description: "DB 서버와 클라이언트 사이엔 '프로토콜이라는 계약'이 있다 — 그 계약만 지키면 상대는 내가 진짜 PostgreSQL인지 구분하지 못한다. PostgreSQL wire protocol v3를 바이트로 뜯는다: 유일한 변칙인 startup 핸드셰이크와 SSLRequest 거절, [타입 1B][길이 4B][페이로드] 프레임, RowDescription/DataRow/CommandComplete의 세 가지 응답 모양, 그리고 psql 프롬프트(=> / =*> / =!>)를 바꾸는 ReadyForQuery 상태 바이트 한 개까지. 400줄 서버로 실제 psql 14가 접속했고, 좋은 계층 분리 덕에 SQL 실행기는 한 줄도 안 바꿨다. 클라이맥스는 두 psql 터미널 — 한쪽이 미커밋 UPDATE를 쥔 채로 다른 쪽이 옛 버전을 막힘 없이 읽는, MVCC의 존재 이유가 네트워크 너머에서 증명되는 장면. 커넥션당 스레드와 그 뒤에 숨은 굵은 latch의 한계까지 정리해요."
 descriptionEn: "Between a DB server and its clients sits a contract called the protocol — honor it and the other side can't tell you're not real PostgreSQL. We dissect wire protocol v3 byte by byte: the startup handshake (the one irregularity) and refusing SSLRequest, the [type 1B][length 4B][payload] frame, the three response shapes (RowDescription/DataRow/CommandComplete), and the single ReadyForQuery status byte that switches psql's prompt (=> / =*> / =!>). A 400-line server that a real psql 14 connects to — without changing one line of the SQL executor, thanks to clean layering. The climax: two psql terminals, one holding an uncommitted UPDATE while the other reads the old version unblocked — MVCC's reason for existing, proven across the network. Plus thread-per-connection and the coarse latch hiding behind it."
-date: 2026-07-05T00:00:00.000Z
+date: 2026-04-20T00:00:00.000Z
 tags:
   - Database Internals
   - Wire Protocol

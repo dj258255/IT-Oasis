@@ -3,7 +3,7 @@ title: 'DB 내부 ①: 저장의 뼈대 — 페이지·슬롯·행 포맷·힙·
 titleEn: 'DB Internals ①: The Storage Skeleton — How Pages, Slots, Row Format, Heap, and the Buffer Pool Interlock'
 description: "관계형 DB의 맨 아래는 다섯 겹이다 — 고정 크기 페이지(왜 모든 DB가 블록 단위인가), 슬롯 페이지(가변 행 + 안정적 주소), 행 포맷(null 비트맵), 힙 파일(RID), 그리고 버퍼 풀(캐시인데 안 깨지는 이유). PostgreSQL 8KB·InnoDB 16KB가 왜 그 크기인지, TID/RID가 왜 인덱스의 기반인지, NULL은 왜 값이 아니라 비트로 저장되는지, pin 프로토콜이 어떻게 latch와 분업해 멀티스레드에서 페이지를 지키는지 — C로 미니 DB를 직접 구현하고 ThreadSanitizer로 계측하며 확인한 내용을 1차 자료 기준으로 정리해요."
 descriptionEn: "The bottom of a relational DB is five layers — fixed-size pages (why every DB works in blocks), the slotted page (variable-length rows + stable addresses), the row format (null bitmap), the heap file (RID), and the buffer pool (why a cache that holds the source of truth doesn't corrupt). Why PostgreSQL chose 8KB and InnoDB 16KB, why TID/RID is the foundation indexes point at, why NULL is stored as a bit rather than a value, and how the pin protocol divides labor with the latch to protect pages under real threads — verified by building a mini DB in C and measuring with ThreadSanitizer, grounded in primary sources."
-date: 2026-07-05T00:00:00.000Z
+date: 2026-01-18T00:00:00.000Z
 tags:
   - Database Internals
   - Storage
