@@ -12,10 +12,10 @@ tags:
   - PostgreSQL
   - SQL Server
   - Control Plane
-category: project/dbtower
+category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
-series: "dbtower"
+series: "DBTower"
 seriesOrder: 1
 ---
 
