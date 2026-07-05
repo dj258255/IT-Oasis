@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="520" rx="12" fill="#0d1117"/>
+  <text x="500" y="34" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">교체 가능한 PK 인덱스 — 실행기는 'PK → RID' 매핑만 안다 (USING lsm)</text>
+
+  <!-- Executor / abstraction layer -->
+  <rect x="300" y="58" width="400" height="52" rx="8" fill="#13283f" stroke="#1f6feb"/>
+  <text x="500" y="82" text-anchor="middle" fill="#58a6ff" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">실행기 (exec_insert / select / vacuum)</text>
+  <text x="500" y="100" text-anchor="middle" fill="#8b949e">pidx_insert · pidx_find_all · pidx_range · pidx_delete  (Table Access Method)</text>
+
+  <!-- routing arrows -->
+  <line x1="420" y1="110" x2="250" y2="150" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="580" y1="110" x2="750" y2="150" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="316" y="134" text-anchor="middle" fill="#6e7681" font-size="12">index_kind==0</text>
+  <text x="686" y="134" text-anchor="middle" fill="#6e7681" font-size="12">index_kind==1</text>
+
+  <!-- LEFT: B+Tree in-place -->
+  <rect x="40" y="152" width="420" height="196" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="250" y="178" text-anchor="middle" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">B+Tree — 제자리 갱신(in-place)</text>
+  <text x="250" y="199" text-anchor="middle" fill="#8b949e" font-size="12">읽기 최적 · 랜덤 쓰기 + 페이지 분할 (PostgreSQL/InnoDB)</text>
+  <!-- tree -->
+  <rect x="205" y="214" width="90" height="26" rx="4" fill="#13283f" stroke="#238636"/>
+  <text x="250" y="231" text-anchor="middle" fill="#3fb950">root [7 | 14]</text>
+  <rect x="90" y="262" width="90" height="26" rx="4" fill="#161b22" stroke="#30363d"/>
+  <text x="135" y="279" text-anchor="middle" fill="#8b949e">3 5 7</text>
+  <rect x="205" y="262" width="90" height="26" rx="4" fill="#161b22" stroke="#30363d"/>
+  <text x="250" y="279" text-anchor="middle" fill="#8b949e">9 12 14</text>
+  <rect x="320" y="262" width="90" height="26" rx="4" fill="#161b22" stroke="#30363d"/>
+  <text x="365" y="279" text-anchor="middle" fill="#8b949e">18 21</text>
+  <line x1="235" y1="240" x2="150" y2="262" stroke="#30363d"/>
+  <line x1="250" y1="240" x2="250" y2="262" stroke="#30363d"/>
+  <line x1="265" y1="240" x2="360" y2="262" stroke="#30363d"/>
+  <text x="250" y="316" text-anchor="middle" fill="#f0b429" font-size="12">UPDATE(9): 리프 페이지를 찾아가 그 자리에서 고친다</text>
+  <text x="250" y="334" text-anchor="middle" fill="#6e7681" font-size="12">롤백 = 인덱스 WAL로 되돌림</text>
+
+  <!-- RIGHT: LSM append -->
+  <rect x="540" y="152" width="420" height="196" rx="10" fill="#1c1408" stroke="#9e6a03"/>
+  <text x="750" y="178" text-anchor="middle" fill="#f0b429" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">LSM — 절대 제자리 안 고침(append)</text>
+  <text x="750" y="199" text-anchor="middle" fill="#8b949e" font-size="12">쓰기 최적 · 순차 flush + merge (RocksDB/MyRocks)</text>
+  <!-- memtable + sstables -->
+  <rect x="565" y="214" width="140" height="26" rx="4" fill="#13283f" stroke="#9e6a03"/>
+  <text x="635" y="231" text-anchor="middle" fill="#f0b429">memtable (최신)</text>
+  <rect x="565" y="248" width="140" height="22" rx="4" fill="#161b22" stroke="#30363d"/>
+  <text x="635" y="264" text-anchor="middle" fill="#8b949e" font-size="12">SSTable seq=2</text>
+  <rect x="565" y="276" width="140" height="22" rx="4" fill="#161b22" stroke="#30363d"/>
+  <text x="635" y="292" text-anchor="middle" fill="#6e7681" font-size="12">SSTable seq=1</text>
+  <line x1="712" y1="225" x2="740" y2="225" stroke="#6e7681" marker-end="url(#a)"/>
+  <text x="820" y="222" text-anchor="middle" fill="#8b949e" font-size="12">put = append</text>
+  <text x="820" y="240" text-anchor="middle" fill="#8b949e" font-size="12">delete = tombstone</text>
+  <text x="820" y="268" text-anchor="middle" fill="#6e7681" font-size="11">read: memtable→</text>
+  <text x="820" y="284" text-anchor="middle" fill="#6e7681" font-size="11">SSTable 최신→옛</text>
+  <text x="750" y="316" text-anchor="middle" fill="#f0b429" font-size="12">UPDATE(9): 새 (9,rid) 짝을 append (옛것은 남는다)</text>
+  <text x="750" y="334" text-anchor="middle" fill="#6e7681" font-size="12">롤백 = heap에서 재구축 (WAL 미참여)</text>
+
+  <!-- Bottom: the MVCC multi-value insight -->
+  <rect x="40" y="372" width="920" height="120" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="60" y="398" fill="#58a6ff" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">왜 인덱스는 단순 key→value가 아닌가 — MVCC 다중버전</text>
+  <text x="60" y="424" fill="#c9d1d9">UPDATE는 옛 버전을 남기고 새 버전을 추가한다. 그래서 <tspan fill="#f0b429">한 PK → 여러 RID</tspan> (비유니크 멀티맵).</text>
+  <text x="60" y="446" fill="#c9d1d9">unique LSM(키당 값 하나)로는 못 담는다 → <tspan fill="#3fb950">멀티값 모드</tspan>: dedup 단위를 key가 아니라 <tspan fill="#f0b429">(key, val)</tspan> 짝으로.</text>
+  <text x="60" y="468" fill="#8b949e" font-size="12">점 조회: find_all(PK)로 그 PK의 모든 버전 RID를 받아 → heap 가시성 게이트가 스냅샷에 보이는 하나를 고른다.</text>
+  <text x="60" y="485" fill="#6e7681" font-size="12">정직한 경계: LSM 인덱스는 WAL-durable이 아닌 heap 파생 가속기 — 재오픈·롤백 시 heap에서 재구축. dangling은 가시성 게이트가 무해화.</text>
+
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#6e7681"/>
+    </marker>
+  </defs>
+</svg>
