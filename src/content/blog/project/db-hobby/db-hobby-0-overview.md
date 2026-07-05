@@ -1,8 +1,8 @@
 ---
-title: 'db-hobby 전체 지도 — C로 만든 미니 RDBMS, 35편 읽기 가이드'
-titleEn: 'The db-hobby Map — a Mini RDBMS in C, a Reading Guide to 35 Parts'
-description: "C로 맨땅에서 만든 미니 관계형 DB db-hobby의 35편 시리즈 전체 지도. 진짜 psql이 붙고, reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구, VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓 복제, LSM 엔진, Raft 합의까지 — 페이지 한 장에서 SQL 실행까지 바닥부터 올라간 기록이다. 각 편이 '앞 편이 만든 문제를 다음 편이 푼다'는 장애-해결 사슬로 이어진다. 어디서 시작할지, 무엇이 하이라이트인지, 어떻게 직접 돌려보는지를 한 페이지에 담은 읽기 가이드."
-descriptionEn: "The full map of db-hobby, a mini relational database built from scratch in C across 35 parts. A real psql connects to it; MVCC snapshot isolation where readers don't block writers; WAL crash recovery; VACUUM; a thread-safe buffer pool; a cost-based optimizer; socket replication; an LSM engine; Raft consensus — built bottom-up from a single page to running SQL. Each part chains as failure-then-fix: the next part solves the problem the previous one created. A one-page reading guide to where to start, what the highlights are, and how to run it yourself."
+title: 'db-hobby 전체 지도 — C로 만든 미니 RDBMS, 36편 읽기 가이드'
+titleEn: 'The db-hobby Map — a Mini RDBMS in C, a Reading Guide to 36 Parts'
+description: "C로 맨땅에서 만든 미니 관계형 DB db-hobby의 36편 시리즈 전체 지도. 진짜 psql이 붙고, reader가 writer를 안 막는 MVCC 스냅샷 격리, WAL 크래시 복구, VACUUM, 스레드 안전 버퍼 풀, 비용 기반 옵티마이저, 소켓 복제, LSM 엔진, Raft 합의까지 — 페이지 한 장에서 SQL 실행까지 바닥부터 올라간 기록이다. 각 편이 '앞 편이 만든 문제를 다음 편이 푼다'는 장애-해결 사슬로 이어진다. 어디서 시작할지, 무엇이 하이라이트인지, 어떻게 직접 돌려보는지를 한 페이지에 담은 읽기 가이드."
+descriptionEn: "The full map of db-hobby, a mini relational database built from scratch in C across 36 parts. A real psql connects to it; MVCC snapshot isolation where readers don't block writers; WAL crash recovery; VACUUM; a thread-safe buffer pool; a cost-based optimizer; socket replication; an LSM engine; Raft consensus — built bottom-up from a single page to running SQL. Each part chains as failure-then-fix: the next part solves the problem the previous one created. A one-page reading guide to where to start, what the highlights are, and how to run it yourself."
 date: 2026-07-04
 tags:
   - C
@@ -26,7 +26,7 @@ seriesOrder: 0
 - **진짜 `psql`이 붙습니다** — PostgreSQL v3 wire protocol을 말하는 400줄 서버라, psql은 상대가 진짜 PG인지 구분 못 해요.
 - **reader가 writer를 안 막습니다** — MVCC 스냅샷 격리. 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽은 옛 버전을 막힘 없이 읽어요.
 - **WAL 크래시 복구**(steal + no-force), **VACUUM**, **스레드 안전 버퍼 풀**, **비용 기반 옵티마이저**, **소켓으로 도는 primary→replica 복제**, **LSM 저장 엔진**, **Raft 합의**(리더 선출·분단 내성)까지 — 진짜 DB의 거의 모든 축을 한 번씩 만졌습니다.
-- **테스트 634개 / 36스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **테스트 645개 / 37스위트**, 동시성은 ThreadSanitizer로 검증. 코드: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## 이 시리즈를 읽는 법
 
@@ -74,7 +74,7 @@ seriesOrder: 0
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | 지운 것과 치운 것은 다르다, B+Tree 삭제 |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | 다중 트랜잭션 | reader가 writer를 안 막는 걸 진짜로 |
 
-### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의·캡스톤·HA (19~35)
+### 5부. 네트워크·동시성·최적화·복제·저장엔진·합의·캡스톤·HA (19~36)
 
 | 편 | 제목 | 푸는 문제 |
 |---|---|---|
@@ -95,12 +95,13 @@ seriesOrder: 0
 | [33](/blog/project/db-hobby/db-hobby-33-raft-replicated-db) | Raft로 복제되는 HA DB | 실엔진 쓰기를 Raft로 복제, 리더 죽어도 살아남음 (SMR·failover) |
 | [34](/blog/project/db-hobby/db-hobby-34-linearizable-reads) | 선형화 읽기 | 파티션된 옛 리더가 낡은 값 못 주게 (ReadIndex, §8) |
 | [35](/blog/project/db-hobby/db-hobby-35-lsm-pk-index) | LSM을 진짜 PK 인덱스로 | `USING lsm` — 왜 인덱스는 단순 key→value가 아닌가(MVCC 멀티값) |
+| [36](/blog/project/db-hobby/db-hobby-36-parallel-scan) | 병렬 풀 스캔 | 굵은 engine_mtx를 걷어낼 첫 발판 (버퍼 풀 latch 위, ThreadSanitizer 클린) |
 
 ## 직접 돌려보기
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 634개 테스트
+make test            # 645개 테스트
 make repl && ./build/db-hobby my.db   # REPL에서 SQL
 
 # 또는 진짜 psql로 접속:
@@ -125,7 +126,7 @@ Today db-hobby:
 - **A real `psql` connects to it** — a 400-line server speaking PostgreSQL's v3 wire protocol, so psql can't tell it isn't real PG.
 - **Readers don't block writers** — MVCC snapshot isolation. Even while one transaction holds an uncommitted UPDATE, another reads the old version, unblocked.
 - **WAL crash recovery** (steal + no-force), **VACUUM**, a **thread-safe buffer pool**, a **cost-based optimizer**, **primary→replica replication over a socket**, an **LSM storage engine**, **Raft consensus** (leader election, partition tolerance) — nearly every axis of a real database, touched by hand.
-- **634 tests / 36 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
+- **645 tests / 37 suites**, concurrency verified under ThreadSanitizer. Code: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
 
 ## How to Read This Series
 
@@ -173,7 +174,7 @@ Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/
 | [17](/blog/project/db-hobby/db-hobby-17-vacuum) | VACUUM | deleting vs cleaning; B+Tree deletion |
 | [18](/blog/project/db-hobby/db-hobby-18-multi-txn) | Multi-transaction | readers really not blocking writers |
 
-### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus, Capstone, HA (19–35)
+### Part V. Network, Concurrency, Optimization, Replication, Storage Engines, Consensus, Capstone, HA (19–36)
 
 | # | Title | Problem it solves |
 |---|---|---|
@@ -194,12 +195,13 @@ Short on time? **The highlights**. Engine: [Part 14 (steal+undo)](/blog/project/
 | [33](/blog/project/db-hobby/db-hobby-33-raft-replicated-db) | Raft-replicated HA DB | replicate real-engine writes via Raft, survives leader death (SMR, failover) |
 | [34](/blog/project/db-hobby/db-hobby-34-linearizable-reads) | Linearizable reads | stop a partitioned old leader serving stale data (ReadIndex, §8) |
 | [35](/blog/project/db-hobby/db-hobby-35-lsm-pk-index) | LSM as a real PK index | `USING lsm` — why an index isn't a simple key→value store (MVCC multi-value) |
+| [36](/blog/project/db-hobby/db-hobby-36-parallel-scan) | Parallel sequential scan | the first foothold to peel off the coarse engine_mtx (over the buffer-pool latch, ThreadSanitizer-clean) |
 
 ## Run It Yourself
 
 ```sh
 git clone https://github.com/dj258255/db-hobby && cd db-hobby
-make test            # 634 tests
+make test            # 645 tests
 make repl && ./build/db-hobby my.db   # SQL in the REPL
 
 # or connect with a real psql:
