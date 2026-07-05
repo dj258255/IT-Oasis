@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">읽기 I/O를 풀 latch 밖으로 — 40편이 잰 콜드 병목을 닫다</text>
+
+  <!-- BEFORE -->
+  <rect x="40" y="56" width="440" height="200" rx="10" fill="#1c1408" stroke="#f85149"/>
+  <text x="260" y="80" text-anchor="middle" fill="#f85149" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">before — pager_read를 latch 안에서</text>
+  <text x="260" y="100" text-anchor="middle" fill="#8b949e" font-size="12">워커 넷이 풀 latch에서 줄 서고 I/O가 직렬</text>
+  <!-- workers -->
+  <g font-size="11">
+    <rect x="62" y="116" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="98" y="130" text-anchor="middle" fill="#8b949e">w0</text>
+    <rect x="62" y="140" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="98" y="154" text-anchor="middle" fill="#8b949e">w1</text>
+    <rect x="62" y="164" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="98" y="178" text-anchor="middle" fill="#8b949e">w2</text>
+    <rect x="62" y="188" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="98" y="202" text-anchor="middle" fill="#8b949e">w3</text>
+  </g>
+  <!-- serialized I/O timeline -->
+  <text x="150" y="230" fill="#6e7681" font-size="11">latch 안 pager_read (직렬):</text>
+  <g font-size="10">
+    <rect x="150" y="116" width="70" height="20" rx="2" fill="#9e6a03"/><text x="185" y="130" text-anchor="middle" fill="#0d1117">I/O</text>
+    <rect x="224" y="140" width="70" height="20" rx="2" fill="#9e6a03"/><text x="259" y="154" text-anchor="middle" fill="#0d1117">I/O</text>
+    <rect x="298" y="164" width="70" height="20" rx="2" fill="#9e6a03"/><text x="333" y="178" text-anchor="middle" fill="#0d1117">I/O</text>
+    <rect x="372" y="188" width="70" height="20" rx="2" fill="#9e6a03"/><text x="407" y="202" text-anchor="middle" fill="#0d1117">I/O</text>
+  </g>
+  <text x="260" y="248" text-anchor="middle" fill="#f85149" font-size="12">4워커 1.08x · 8워커 0.62x (직렬보다 느림)</text>
+
+  <!-- AFTER -->
+  <rect x="520" y="56" width="440" height="200" rx="10" fill="#0e1b12" stroke="#238636"/>
+  <text x="740" y="80" text-anchor="middle" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">after — pager_read를 latch 밖에서</text>
+  <text x="740" y="100" text-anchor="middle" fill="#8b949e" font-size="12">프레임 예약(io_pending+pin) 후 latch 놓고 병렬 I/O</text>
+  <g font-size="11">
+    <rect x="542" y="116" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="578" y="130" text-anchor="middle" fill="#8b949e">w0</text>
+    <rect x="542" y="140" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="578" y="154" text-anchor="middle" fill="#8b949e">w1</text>
+    <rect x="542" y="164" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="578" y="178" text-anchor="middle" fill="#8b949e">w2</text>
+    <rect x="542" y="188" width="72" height="20" rx="3" fill="#13283f" stroke="#30363d"/><text x="578" y="202" text-anchor="middle" fill="#8b949e">w3</text>
+  </g>
+  <text x="640" y="230" fill="#6e7681" font-size="11">병렬 pager_read (겹침):</text>
+  <g font-size="10">
+    <rect x="640" y="116" width="70" height="20" rx="2" fill="#238636"/><text x="675" y="130" text-anchor="middle" fill="#0d1117">I/O</text>
+    <rect x="640" y="140" width="70" height="20" rx="2" fill="#238636"/><text x="675" y="154" text-anchor="middle" fill="#0d1117">I/O</text>
+    <rect x="640" y="164" width="70" height="20" rx="2" fill="#238636"/><text x="675" y="178" text-anchor="middle" fill="#0d1117">I/O</text>
+    <rect x="640" y="188" width="70" height="20" rx="2" fill="#238636"/><text x="675" y="202" text-anchor="middle" fill="#0d1117">I/O</text>
+  </g>
+  <text x="740" y="248" text-anchor="middle" fill="#3fb950" font-size="12">4워커 2.39x · 8워커 1.36x</text>
+
+  <!-- mechanism -->
+  <rect x="40" y="272" width="920" height="70" rx="10" fill="#13283f" stroke="#1f6feb"/>
+  <text x="60" y="296" fill="#58a6ff" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">read-in-progress — 중복 로드 없이 latch 밖 I/O</text>
+  <text x="60" y="318" fill="#c9d1d9" font-size="12">miss → victim을 <tspan fill="#f0b429">io_pending + pin</tspan>으로 예약(축출 방지) → latch 놓고 pager_read → 재획득·io_pending=0·<tspan fill="#f0b429">broadcast</tspan>.</text>
+  <text x="60" y="336" fill="#8b949e" font-size="12">같은 페이지를 동시에 miss한 스레드는 io_cond에서 대기했다 깨어나 hit로 잡는다 → 중복 로드 없음. pin+io_pending이 로딩 중 프레임을 지켜 레이스 없음.</text>
+
+  <!-- verify -->
+  <rect x="40" y="356" width="920" height="94" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="60" y="380" fill="#3fb950" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">검증 — 같은 프로세스 A/B + 레이스 없음</text>
+  <text x="60" y="403" fill="#c9d1d9" font-size="12">bufpool_set_io_in_latch로 같은 프로세스·같은 워밍에서 before/after 측정(변수는 latch 안/밖 하나뿐).</text>
+  <text x="60" y="423" fill="#8b949e" font-size="12">test_iobypass: 콜드 70k행 8워커 동시 로딩이 수학 정답과 일치 · A/B 두 경로 결과 바이트 동일 · 축출 폭풍 ThreadSanitizer 클린(0 race).</text>
+  <text x="60" y="441" fill="#6e7681" font-size="12">남은 천장: 스레드 오버헤드 · 작은 풀(64프레임) · dirty 쓰기는 아직 latch 안 · engine_mtx → 더 큰/세밀한 풀과 engine_mtx 제거가 프론티어.</text>
+</svg>
