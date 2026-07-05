@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+  <rect width="1000" height="470" rx="12" fill="#0d1117"/>
+  <text x="500" y="32" text-anchor="middle" fill="#8b949e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17">병렬 실행, 진짜 빨라졌나? — 실측 speedup (12코어)</text>
+
+  <!-- speedup bars -->
+  <text x="40" y="64" fill="#8b949e" font-size="12">워커 1(직렬 기준) 대비 최고 speedup · 최소시간</text>
+
+  <!-- scale reference: 1x at x=250, 3x at x=760 (170px per 1x). ideal linear 12x is way off-chart -->
+  <line x1="250" y1="80" x2="250" y2="330" stroke="#30363d" stroke-dasharray="3 3"/>
+  <text x="250" y="350" text-anchor="middle" fill="#6e7681" font-size="11">1x</text>
+  <line x1="420" y1="80" x2="420" y2="330" stroke="#21262d"/>
+  <text x="420" y="350" text-anchor="middle" fill="#6e7681" font-size="11">2x</text>
+  <line x1="590" y1="80" x2="590" y2="330" stroke="#21262d"/>
+  <text x="590" y="350" text-anchor="middle" fill="#6e7681" font-size="11">3x</text>
+
+  <!-- bar rows: base x=250, width = (speedup-... ) actually width from 250, 170px/1x means bar length = (s-0? no, from 0). Use bar from x=80 baseline mapping: len = s*170 - offset. Simpler: bar starts at 250(=1x anchor is wrong). Use bar from left=250 representing >1x gain: len=(s-1)*170. -->
+  <!-- workload 1: heavy multi-agg+WHERE 4w = 2.16x -->
+  <text x="44" y="102" fill="#c9d1d9" font-size="12">COUNT,SUM,MIN,MAX + WHERE (4w)</text>
+  <rect x="250" y="110" width="197" height="22" rx="3" fill="#238636"/>
+  <text x="457" y="127" fill="#3fb950" font-size="12">2.16x</text>
+
+  <!-- workload 2: COUNT+WHERE 4w = 1.98x -->
+  <text x="44" y="150" fill="#c9d1d9" font-size="12">COUNT(*) + WHERE (4w)</text>
+  <rect x="250" y="158" width="167" height="22" rx="3" fill="#238636"/>
+  <text x="427" y="175" fill="#3fb950" font-size="12">1.98x</text>
+
+  <!-- workload 3: cold SUM 2w = 1.70x -->
+  <text x="44" y="198" fill="#c9d1d9" font-size="12">SUM(v) 콜드(&gt;풀) (2w)</text>
+  <rect x="250" y="206" width="119" height="22" rx="3" fill="#9e6a03"/>
+  <text x="379" y="223" fill="#f0b429" font-size="12">1.70x</text>
+
+  <!-- workload 4: light SUM 2w = 1.58x -->
+  <text x="44" y="246" fill="#c9d1d9" font-size="12">SUM(v) 가벼운 per-row (2w)</text>
+  <rect x="250" y="254" width="99" height="22" rx="3" fill="#1f6feb"/>
+  <text x="359" y="271" fill="#58a6ff" font-size="12">1.58x</text>
+
+  <!-- ideal linear pointer -->
+  <line x1="760" y1="96" x2="905" y2="96" stroke="#f85149" stroke-dasharray="5 3"/>
+  <path d="M905,96 l-8,-4 l0,8 z" fill="#f85149"/>
+  <text x="905" y="90" text-anchor="end" fill="#f85149" font-size="12">이상적 선형 = 12x (12코어)</text>
+  <text x="905" y="112" text-anchor="end" fill="#6e7681" font-size="11">실측은 여기 근처도 못 감 →</text>
+
+  <text x="44" y="300" fill="#8b949e" font-size="12">패턴: per-row 작업이 클수록 speedup↑ · 2~4워커에서 정점 후 하락(8워커는 항상 더 느림)</text>
+
+  <!-- ceiling reasons -->
+  <rect x="40" y="366" width="920" height="86" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="60" y="390" fill="#58a6ff" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">왜 12코어인데 ~2x인가 — 천장 셋</text>
+  <text x="60" y="413" fill="#c9d1d9" font-size="12">① sub-ms 쿼리라 <tspan fill="#f0b429">스레드 생성 오버헤드</tspan>가 큼   ② 굵은 <tspan fill="#f85149">버퍼 풀 latch가 page fetch를 직렬화</tspan>(콜드에서 극대화)   ③ 메모리 대역폭</text>
+  <text x="60" y="434" fill="#8b949e" font-size="12">콜드 체제가 ②를 증명: 풀(64프레임)보다 큰 테이블은 pager_read가 latch 안에서 직렬 → 8워커는 오히려 0.65x. 천장은 CPU가 아니라 <tspan fill="#f85149">공유 latch</tspan>다.</text>
+  <text x="60" y="451" fill="#3fb950" font-size="11">→ 다음 프론티어: 더 크고 세밀한(per-page latch) 버퍼 풀 · engine_mtx 제거. 측정이 그 동기를 숫자로 보여준다.</text>
+</svg>
