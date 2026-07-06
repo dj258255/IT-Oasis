@@ -76,6 +76,10 @@ public void approve(String approver) {
 
 (2인 흐름을 시연하려면 어드민이 둘 필요해서, `admin2`를 하나 추가했어요. 어드민이 하나뿐이면 모든 승인이 자기 승인이 되어 항상 막히거든요.)
 
+데모 콘솔에서 요청자 본인이 승인을 누르면 이렇게 막혀요.
+
+![강제취소 요청자 본인 승인 차단 — MAKER_CHECKER_VIOLATION](/uploads/project/pay/demo/demo-maker-checker.png)
+
 ## 3. 승인 = 실행, 그런데 기존 걸 재사용
 
 승인이 통과하면 실제 취소를 해야 해요. 여기서 새 취소 로직을 또 짜지 않았어요. [이미 있는 `PaymentService.cancel`](/blog/project/pay/pay-18-order-cancel)을 그대로 불렀어요.
