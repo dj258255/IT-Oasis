@@ -20,7 +20,7 @@ seriesOrder: 1
 
 ## 0. 들어가며 — 만들어 보며 확인한 것만 적습니다
 
-이 시리즈는 PostgreSQL·MySQL InnoDB 같은 관계형 DB의 내부를, **C로 미니 DB([db-hobby](https://github.com/dj258255/db-hobby))를 밑바닥부터 직접 구현하며** 확인한 기록이에요. 페이지 한 장에서 시작해 MVCC 스냅샷 격리, 진짜 `psql`이 붙는 wire protocol 서버, 병렬 실행, Raft 합의로 복제되는 HA 구성까지 올라갔고, 전 계층이 **테스트 686개 / 42스위트**로 덮여 있으며 동시성은 ThreadSanitizer로 계측했습니다.
+이 시리즈는 PostgreSQL·MySQL InnoDB 같은 관계형 DB의 내부를, **C로 미니 DB([db-hobby](https://github.com/dj258255/db-hobby))를 밑바닥부터 직접 구현하며** 확인한 기록이에요. 페이지 한 장에서 시작해 MVCC 스냅샷 격리, 진짜 `psql`이 붙는 wire protocol 서버, 병렬 실행, Raft 합의로 복제되는 HA 구성까지 올라갔고, 전 계층이 **테스트 694개 / 42스위트**로 덮여 있으며 동시성은 ThreadSanitizer로 계측했습니다.
 
 문헌 요약이 아니라, **구현하다 부딪힌 벽이 곧 목차**입니다. "왜 이렇게 설계했는가"는 만들어 보면 몸으로 알게 되거든요. 각 편은 한 주제를 완결로 다루고, 실제 DB(PostgreSQL·InnoDB)가 같은 문제를 어떻게 푸는지 1차 자료 기준으로 대조합니다.
 
@@ -261,7 +261,7 @@ TSan이 경고를 안 냈다는 건 "이번엔 안 터졌다"가 아니라 **관
 
 ## 0. Introduction — Only What I Verified by Building
 
-This series is a record of dissecting the internals of relational databases like PostgreSQL and MySQL InnoDB by **building a mini DB ([db-hobby](https://github.com/dj258255/db-hobby)) from scratch in C.** It grew from a single page up to MVCC snapshot isolation, a wire-protocol server a real `psql` connects to, parallel execution, and an HA configuration replicated by Raft consensus — with every layer covered by **686 checks across 42 suites**, and the concurrency measured under ThreadSanitizer.
+This series is a record of dissecting the internals of relational databases like PostgreSQL and MySQL InnoDB by **building a mini DB ([db-hobby](https://github.com/dj258255/db-hobby)) from scratch in C.** It grew from a single page up to MVCC snapshot isolation, a wire-protocol server a real `psql` connects to, parallel execution, and an HA configuration replicated by Raft consensus — with every layer covered by **694 checks across 42 suites**, and the concurrency measured under ThreadSanitizer.
 
 It isn't a literature summary: **the walls I hit while building are the table of contents.** "Why was it designed this way" is something you learn in your bones by building it. Each part treats one topic to completion and contrasts how real DBs (PostgreSQL, InnoDB) solve the same problem, grounded in primary sources.
 

@@ -1,8 +1,8 @@
 {
   "title": "db-hobby — C로 만든 미니 RDBMS",
   "titleEn": "db-hobby — A Mini RDBMS in C",
-  "description": "진짜 psql이 그대로 접속하는 자작 RDBMS — 페이지 한 장에서 MVCC·WAL·비용 기반 옵티마이저·Raft 합의까지, PostgreSQL·MySQL 내부를 C로 바닥부터 재현하고 686개 테스트로 검증했다.",
-  "descriptionEn": "A homemade RDBMS a real psql connects to unmodified — from a single page up through MVCC, WAL, a cost-based optimizer, and Raft consensus, reproducing PostgreSQL/MySQL internals in C from the ground up, verified by 686 tests.",
+  "description": "진짜 psql이 그대로 접속하는 자작 RDBMS — 페이지 한 장에서 MVCC·WAL·비용 기반 옵티마이저·Raft 합의까지, PostgreSQL·MySQL 내부를 C로 바닥부터 재현하고 694개 테스트로 검증했다.",
+  "descriptionEn": "A homemade RDBMS a real psql connects to unmodified — from a single page up through MVCC, WAL, a cost-based optimizer, and Raft consensus, reproducing PostgreSQL/MySQL internals in C from the ground up, verified by 694 tests.",
   "image": "/uploads/project/db-hobby/cover.svg",
   "tags": [
     "C",
