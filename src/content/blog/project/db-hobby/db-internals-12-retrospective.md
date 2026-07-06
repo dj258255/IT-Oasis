@@ -1,8 +1,8 @@
 ---
 title: 'DB 내부 ⑫ (회고): 나는 왜 DB를 밑바닥부터 만들었나 — 만들어서 증명한 것들'
 titleEn: 'DB Internals ⑫ (Retrospective): Why I Built a Database from Scratch — and What Building It Proved'
-description: "이 글은 db-hobby의 회고이자, 이 시리즈 전체의 포트폴리오다. 출발점은 하나의 자각이었다 — '인덱스는 B+Tree라 빠르다'고 말할 수는 있는데, 왜 이진 트리가 아니라 B+Tree인지, 커밋의 fsync가 정확히 무엇을 보장하는지 설명하지 못했다. 설명할 수 없으면 모르는 것이다. 그래서 페이지 한 장부터 Raft 합의까지 C로 직접 만들었고, 모든 주장을 직접 측정한 수치로 바꿨다: 인덱스는 10만 행에서 풀 스캔보다 416배 빨랐고, 같은 5천 행 적재가 fsync 횟수에 따라 23배 갈렸고, 12코어 병렬화는 2.16배가 천장이었는데 그 천장의 정체(버퍼 풀 latch의 I/O 직렬화)를 A/B 실험으로 확증하고 고치자 콜드 스캔이 0.62배에서 2.39배가 됐다. 성능 작업 중 조용히 틀린 답을 내던 집계 버그를 발굴했고, 구현과 검증을 분리한 적대적 리뷰가 '테스트는 초록인데 원리상 틀린' 합의 버그 여섯을 잡았다. 686개 테스트, ThreadSanitizer/ASan 계측, 크래시 주입, 결정적 시뮬레이션 — 무엇을 만들었는지가 아니라 어떻게 검증했고 왜 그 선택을 했는지의 기록이다. 무엇을 안 했는지(정직한 경계)까지 포함해서."
-descriptionEn: "This is db-hobby's retrospective and the portfolio of the whole series. It began with one realization — I could say 'indexes are fast because they're B+Trees,' but I couldn't explain why a B+Tree and not a binary tree, or what exactly a commit's fsync guarantees. If you can't explain it, you don't know it. So I built it in C, from a single page to Raft consensus, converting every claim into numbers I measured myself: the index beat a full scan by 416× at 100k rows; the same 5,000-row load differed 23× by fsync count; 12-core parallelism ceilinged at 2.16× — and after identifying that ceiling (the buffer-pool latch serializing I/O) and confirming it with an A/B experiment, the cold scan went from 0.62× to 2.39×. Performance work unearthed an aggregate that silently returned wrong answers, and adversarial reviews separating implementation from verification caught six consensus bugs of the 'tests green, wrong in principle' kind. 686 tests, ThreadSanitizer/ASan instrumentation, crash injection, deterministic simulation — a record not of what was built, but of how it was verified and why each choice was made. Including what was deliberately not built (the honest boundaries)."
+description: "이 글은 db-hobby의 회고이자, 이 시리즈 전체의 포트폴리오다. 출발점은 하나의 자각이었다 — '인덱스는 B+Tree라 빠르다'고 말할 수는 있는데, 왜 이진 트리가 아니라 B+Tree인지, 커밋의 fsync가 정확히 무엇을 보장하는지 설명하지 못했다. 설명할 수 없으면 모르는 것이다. 그래서 페이지 한 장부터 Raft 합의까지 C로 직접 만들었고, 모든 주장을 직접 측정한 수치로 바꿨다: 인덱스는 10만 행에서 풀 스캔보다 416배 빨랐고, 같은 5천 행 적재가 fsync 횟수에 따라 23배 갈렸고, 12코어 병렬화는 2.16배가 천장이었는데 그 천장의 정체(버퍼 풀 latch의 I/O 직렬화)를 A/B 실험으로 확증하고 고치자 콜드 스캔이 4워커 기준 1.08배에서 2.39배가 됐다(8워커는 0.62배에서 1.36배). 성능 작업 중 조용히 틀린 답을 내던 집계 버그를 발굴했고, 구현과 검증을 분리한 적대적 리뷰가 '테스트는 초록인데 원리상 틀린' 합의 버그 일곱을 잡았다. 686개 테스트, ThreadSanitizer/ASan 계측, 크래시 주입, 결정적 시뮬레이션 — 무엇을 만들었는지가 아니라 어떻게 검증했고 왜 그 선택을 했는지의 기록이다. 무엇을 안 했는지(정직한 경계)까지 포함해서."
+descriptionEn: "This is db-hobby's retrospective and the portfolio of the whole series. It began with one realization — I could say 'indexes are fast because they're B+Trees,' but I couldn't explain why a B+Tree and not a binary tree, or what exactly a commit's fsync guarantees. If you can't explain it, you don't know it. So I built it in C, from a single page to Raft consensus, converting every claim into numbers I measured myself: the index beat a full scan by 416× at 100k rows; the same 5,000-row load differed 23× by fsync count; 12-core parallelism ceilinged at 2.16× — and after identifying that ceiling (the buffer-pool latch serializing I/O) and confirming it with an A/B experiment, the cold scan went from 1.08× to 2.39× at 4 workers (0.62× to 1.36× at 8). Performance work unearthed an aggregate that silently returned wrong answers, and adversarial reviews separating implementation from verification caught seven consensus bugs of the 'tests green, wrong in principle' kind. 686 tests, ThreadSanitizer/ASan instrumentation, crash injection, deterministic simulation — a record not of what was built, but of how it was verified and why each choice was made. Including what was deliberately not built (the honest boundaries)."
 date: 2026-07-06T00:00:00.000Z
 tags:
   - Database Internals
@@ -23,10 +23,10 @@ seriesOrder: 12
 
 | 주장 | 직접 측정한 근거 |
 |---|---|
-| 인덱스는 O(log n)이다 | 풀 스캔 대비 1천 행 **11배** → 10만 행 **416배** (격차가 N과 함께 벌어짐 = 로그 곡선 그 자체) |
+| 인덱스는 O(log n)이다 | 풀 스캔 대비 1천 행 **11배** → 10만 행 **416배** (격차가 N과 함께 벌어짐 = 로그 곡선과 일치) |
 | 내구성(fsync)은 비싸다 | 같은 5천 행 적재: 행당 커밋 3,372 rows/s vs 50행 묶음 79,039 rows/s — **23배** |
 | 클러스터드는 지역성이 무기다 | InnoDB식이 PK 범위 스캔 **3.8배** 빠름, 대신 보조 인덱스 점 조회 **2배** 느림(이중 조회) |
-| 병렬화의 천장은 CPU가 아니다 | 12코어 병렬 집계 최고 **2.16배**(선형 아님) — 천장의 정체는 버퍼 풀 latch. 고치자 콜드 스캔 **0.62배 → 2.39배** |
+| 병렬화의 천장은 CPU가 아니다 | 12코어 병렬 집계 최고 **2.16배**(선형 아님) — 천장의 정체는 버퍼 풀 latch. 고치자 콜드 스캔 4워커 **1.08배 → 2.39배**(8워커 0.62배 → 1.36배) |
 | 전부 검증됐다 | **테스트 686개 / 42스위트**, ThreadSanitizer·ASan/UBSan 클린, 크래시 주입, 결정적 시뮬레이션 |
 | 진짜 프로토콜이다 | **실제 psql 14.19가 접속**해 MVCC("reader가 writer를 안 막는다")를 두 터미널로 시연 |
 
@@ -97,7 +97,7 @@ seriesOrder: 12
 |---|---|---|
 | 저장은 힙(PG식) | INSERT 단순, 인덱스를 "키→RID"로 깔끔히 분리해 학습 | 클러스터드(InnoDB식)는 나중에 **벤치 모듈로 대조**(3.8배/2배 실측) — 엔진 배선은 실행기 재작성 대비 학습 효익이 낮아 안 함 |
 | 복구는 no-steal부터 | redo-only의 단순함으로 원리를 먼저 | 그 대가(트랜잭션 크기가 풀에 못 박힘)에 **실제로 부딪힌 뒤** steal+undo로 — "정책이 복구를 결정한다"를 몸으로 배우는 순서 |
-| pageLSN·CLR 생략 | 페이지 전체 물리 로깅이라 redo가 멱등 → 불필요함을 **크래시 주입으로 증명**하고 닫음 | 화물숭배 금지 — 기법은 필요해지는 문제가 나타날 때 들여온다 |
+| pageLSN·CLR 생략 | 페이지 전체 물리 로깅이라 redo가 멱등 → 불필요함을 논증하고, **크래시 주입으로 반례 없음을 확인**한 뒤 닫음 | 화물숭배 금지 — 기법은 필요해지는 문제가 나타날 때 들여온다 |
 | 선형화 읽기는 ReadIndex | 과반 확인만으로 성립, 결정적 시뮬레이션과 궁합 | leader lease는 시계 가정이 필요 — 테스트 인프라와 안 맞음 (etcd 기본값도 ReadIndex) |
 | B+Tree 삭제는 lazy | PostgreSQL nbtree도 재분배를 안 한다 — 교과서(병합·재분배) 이식 전에 실제 DB를 먼저 확인 | "교과서적으로 완전한" 것보다 "실제 시스템이 왜 그 절충을 했는지"가 이 프로젝트의 질문 |
 
@@ -106,7 +106,7 @@ seriesOrder: 12
 한 것만큼 안 한 것도 적어야 이 회고가 정직해져요. 의도적으로 남긴 경계들입니다:
 
 - **inter-query 병렬 없음** — 병렬화는 한 쿼리 안(intra-query)까지. 서로 다른 트랜잭션의 동시 실행은 여전히 엔진 latch가 직렬화합니다. 카탈로그·테이블 WAL·트랜잭션 상태 전부의 스레드 안전화가 필요한, 이 프로젝트 최대의 남은 산.
-- **행 단위 락 없음** — 쓰기 충돌은 테이블 granularity의 first-updater-wins. 원리는 PostgreSQL과 같고 입자만 거칠어요.
+- **행 단위 락 없음** — 쓰기 충돌은 테이블 granularity의 first-updater-wins. 원리는 PostgreSQL(REPEATABLE READ 기준 — first-updater-wins abort는 PG의 RR 동작이고, READ COMMITTED는 abort 대신 최신 버전 재평가로 진행해요)과 같고 입자만 거칠어요.
 - **physiological 로깅·히스토그램·정렬 병합 조인·extended query protocol 없음** — 각각 "어떤 문제가 그걸 필요하게 만드는지"를 해당 편에 적고 닫았습니다.
 - **프로덕션이 아님** — 이건 학습 프로젝트예요. 목적은 PostgreSQL을 대체하는 게 아니라 PostgreSQL을 **읽을 수 있게 되는 것.**
 
@@ -116,8 +116,8 @@ seriesOrder: 12
 
 - "인덱스를 걸었는데 왜 안 타요?" → 옵티마이저가 통계로 "페치할 행 > 페이지 수"를 계산해 일부러 안 탄 것. `random_page_cost`의 직관을 비용 모델로 직접 구현해 봤으니까.
 - "VACUUM 했는데 디스크가 안 줄어요" → truncate는 파일 꼬리의 전부-빈 페이지만. 그 코드를 직접 썼으니까.
-- "커밋이 느려요" → fsync 23배를 직접 쟀고, group commit 계열 다이얼(`innodb_flush_log_at_trx_commit`·`synchronous_commit`)이 정확히 무엇을 트레이드하는지 아니까.
-- "replica가 낡은 값을 줘요" → 복제 lag의 구조(커밋 후 비동기 전송)와, 그걸 정말 없애려면 합의(ReadIndex)까지 가야 한다는 것을 만들어 봤으니까.
+- "커밋이 느려요" → fsync 23배를 직접 쟀고, fsync 완화 다이얼(`innodb_flush_log_at_trx_commit`·`synchronous_commit` — 내구성을 걸고 fsync를 분리·지연)이 정확히 무엇을 트레이드하는지 아니까. 동시 커밋을 한 번의 fsync로 묶는 group commit(PG의 `commit_delay`)은 내구성을 깎지 않는 별개 메커니즘이라는 것까지 포함해서.
+- "replica가 낡은 값을 줘요" → 복제 lag의 구조(커밋 후 비동기 전송 — 9편의 미니 DB 기준이고, 실제 PostgreSQL은 WAL을 생성 즉시 스트리밍하며 lag은 전송·재생 지연에서 와요)와, 그걸 정말 없애려면 합의(ReadIndex)까지 가야 한다는 것을 만들어 봤으니까.
 
 그리고 부수적인 소득 하나 — 이 시리즈 자체가 그 증거물이에요. 처음엔 41편의 시간순 빌드로그로 썼다가, 독자가 주제를 배우러 온다는 걸 인정하고 **주제별 완결 11편 + 이 회고**로 전면 재편했습니다. 글의 구조도 코드처럼 리팩토링 대상이라는 것, 그것도 이 프로젝트에서 배운 것 중 하나입니다.
 
@@ -147,10 +147,10 @@ Conclusions first. **db-hobby** is a mini relational database built from scratch
 
 | Claim | Evidence I measured myself |
 |---|---|
-| Indexes are O(log n) | vs full scan: **11×** at 1k rows → **416×** at 100k (the gap widening with N *is* the log curve) |
+| Indexes are O(log n) | vs full scan: **11×** at 1k rows → **416×** at 100k (the gap widening with N matches the log curve) |
 | Durability (fsync) is expensive | the same 5,000-row load: 3,372 rows/s per-row commits vs 79,039 rows/s in batches of 50 — **23×** |
 | Clustering's weapon is locality | InnoDB-style wins PK range scans **3.8×**, loses secondary point lookups **2×** (double lookup) |
-| Parallelism's ceiling isn't CPU | 12-core parallel aggregation peaked at **2.16×** — the ceiling was the buffer-pool latch; fixing it took the cold scan from **0.62× to 2.39×** |
+| Parallelism's ceiling isn't CPU | 12-core parallel aggregation peaked at **2.16×** — the ceiling was the buffer-pool latch; fixing it took the cold scan from **1.08× to 2.39×** at 4 workers (0.62× → 1.36× at 8) |
 | All of it is verified | **686 checks / 42 suites**, ThreadSanitizer & ASan/UBSan clean, crash injection, deterministic simulation |
 | It speaks a real protocol | **an actual psql 14.19 connects** and demonstrates MVCC ("readers don't block writers") across two terminals |
 
@@ -221,7 +221,7 @@ Every technical choice keeps its "why this, why not the alternative." Five repre
 |---|---|---|
 | Heap storage (PG-style) | simple INSERTs; the index separates cleanly as "key→RID" for learning | clustered (InnoDB-style) was later **contrasted in a bench module** (3.8×/2× measured) — engine wiring would cost an executor rewrite for little learning |
 | Recovery starts at no-steal | learn the principle via redo-only simplicity | after **actually hitting** its price (transaction size nailed to the pool), move to steal+undo — the order that teaches "policy determines recovery" in the flesh |
-| pageLSN & CLR omitted | whole-page physical logging makes redo idempotent — proved unnecessary **by crash injection**, then closed | no cargo-culting — a technique enters when the problem demanding it appears |
+| pageLSN & CLR omitted | whole-page physical logging makes redo idempotent — argued unnecessary, **confirmed no counterexample by crash injection**, then closed | no cargo-culting — a technique enters when the problem demanding it appears |
 | Linearizable reads via ReadIndex | needs only a majority round; fits deterministic simulation | leader leases need clock assumptions — mismatched with the test infrastructure (etcd defaults to ReadIndex too) |
 | Lazy B+Tree deletion | PostgreSQL's nbtree doesn't rebalance either — checked the real DB before porting the textbook | "textbook completeness" mattered less than "why real systems chose that compromise" |
 
@@ -230,7 +230,7 @@ Every technical choice keeps its "why this, why not the alternative." Five repre
 The retrospective is honest only if what wasn't done is written too. Boundaries left deliberately:
 
 - **No inter-query parallelism** — parallelism reaches within one query (intra-query). Different transactions still serialize under the engine latch. Making the catalog, per-table WAL, and transaction state thread-safe is the largest remaining mountain.
-- **No row-level locks** — write conflicts use table-granularity first-updater-wins. Same principle as PostgreSQL, coarser grain.
+- **No row-level locks** — write conflicts use table-granularity first-updater-wins. Same principle as PostgreSQL at REPEATABLE READ (first-updater-wins abort is PG's RR behavior; READ COMMITTED proceeds by re-evaluating the newest version instead), coarser grain.
 - **No physiological logging, histograms, sort-merge join, or extended query protocol** — each closed with a note on which problem would make it necessary.
 - **Not production** — this is a learning project. The goal was never to replace PostgreSQL but to become **able to read it.**
 
@@ -240,8 +240,8 @@ The difference before and after is that practical situations moved from "memoriz
 
 - "I added an index — why isn't it used?" → the optimizer computed rows-to-fetch > page count from statistics and skipped it on purpose. I implemented the `random_page_cost` intuition as a cost model myself.
 - "I ran VACUUM and the disk didn't shrink" → truncation trims only all-empty trailing pages. I wrote that code.
-- "Commits are slow" → I measured the 23× fsync gap myself and know exactly what the group-commit dials (`innodb_flush_log_at_trx_commit`, `synchronous_commit`) trade.
-- "The replica serves stale data" → I built the structure of replication lag (async, send-after-commit) — and learned that truly eliminating it takes consensus (ReadIndex).
+- "Commits are slow" → I measured the 23× fsync gap myself and know exactly what the fsync-relaxation dials (`innodb_flush_log_at_trx_commit`, `synchronous_commit` — detaching or deferring the fsync at durability's expense) trade — including that group commit (PG's `commit_delay`), which batches concurrent commits into one fsync, is a separate mechanism that spends no durability.
+- "The replica serves stale data" → I built the structure of replication lag (async send-after-commit — that's Part 9's mini DB; production PostgreSQL streams WAL as it's generated, and lag comes from transmission and replay delay) — and learned that truly eliminating it takes consensus (ReadIndex).
 
 One side dividend — this series itself is evidence. It was first written as a 41-part chronological build log; admitting that readers come to learn topics, I restructured it wholesale into **11 topic-complete parts plus this retrospective.** That prose structure is a refactoring target just like code — that, too, is something this project taught.
 
