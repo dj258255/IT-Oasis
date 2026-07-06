@@ -34,6 +34,8 @@ seriesOrder: 2
 | 10,000 | 5.05 µs | 274.28 µs | 54배 |
 | 100,000 | 7.52 µs | 3,126.74 µs | **416배** |
 
+(이 수치는 warm 캐시 — 페이지가 버퍼 풀에 상주한 상태 — 기준이에요. 콜드 캐시에서 진짜 디스크 I/O가 끼면 격차는 더 벌어집니다.)
+
 숫자 하나하나보다 **두 열이 자라는 모양**이 핵심이에요. 풀 스캔 열은 N이 10배 될 때마다 거의 10배씩 뜁니다 — O(n)의 모양. 인덱스 열은 N이 100배 되는 동안 2.3배밖에 안 늘어요 — O(log n)의 로그 곡선. 그래서 격차가 **N이 클수록 벌어집니다.** 인덱스의 가치는 데이터가 많아질수록 커져요 — 정확히 인덱스가 필요해지는 그 지점에서요.
 
 이 편은 그 인덱스를 실제로 지으며 확인한 것들입니다 — 왜 하필 B+Tree인지, 뭐가 가장 어려운지, 그리고 **유일성을 내려놓는 순간**(보조 인덱스) 어떤 가정들이 깨지는지.
@@ -42,9 +44,11 @@ seriesOrder: 2
 
 정렬된 탐색 구조라면 이진 탐색 트리(BST)도 되지 않을까요? 핵심은 **디스크**입니다.
 
-인덱스도 페이지 단위로 디스크에 살아요. 이진 트리는 노드 하나에 키가 하나라 높이가 log₂(n)으로 깊습니다. 한 단계 내려갈 때마다 페이지를 한 번 읽어야 하니, 100만 행이면 최악의 경우 약 20번 페이지를 읽어요(버퍼 풀에 올라온 페이지는 예외지만요).
+인덱스도 페이지 단위로 디스크에 살아요. 이진 트리를 **노드 = 페이지로 순진하게 저장하면**, 노드 하나에 키가 하나라 높이가 log₂(n)으로 깊습니다. 한 단계 내려갈 때마다 페이지를 한 번 읽어야 하니, 100만 행이면 최악의 경우 약 20번 페이지를 읽어요(버퍼 풀에 올라온 페이지는 예외지만요).
 
 **B+Tree**는 **노드 하나(=페이지 하나)에 키를 수십~수백 개** 담아 부채살처럼 갈라져요(high fan-out, f). 높이가 log₂N이 아니라 **log_f N** — 같은 100만 행이라도 fan-out이 수백이면 대략 3~4단에 그칩니다(8KB 페이지 기준). **"한 번의 디스크 I/O로 가능한 많은 키를 본다"** — 이게 B+Tree의 전부예요.
+
+> **실무/면접 포인트**: 이 "3~4단"은 암산으로 나옵니다. 8KB 페이지에 엔트리(키+포인터) 하나가 수십 바이트면 fan-out은 수백 — 300으로 잡으면 300³ ≈ 2,700만, 300⁴ ≈ 81억. 그래서 "수천만~수십억 행도 트리 높이는 3~4"라는 감이 서요. 게다가 루트·내부 노드는 거의 항상 버퍼 풀에 상주하니, 점 조회의 실제 디스크 I/O는 리프 근처 1~2번입니다.
 
 구조는 두 종류의 노드로 나뉩니다.
 
@@ -87,7 +91,11 @@ n->next_leaf = rpid;           /* 옛 리프는 새 리프를 가리킨다 */
 
 내부 노드 분할은 미묘하게 달라요 — 가운데 키를 복사가 아니라 **위로 올려보냅니다(push up).** 내부 노드의 키는 길잡이일 뿐이라 양쪽에 둘 필요가 없거든요.
 
-> **핵심 구분**: 리프는 copy up, 내부는 push up. 이 차이가 **B+Tree**(값은 리프에만, 리프끼리 옆으로 연결)와 **B-Tree**(값이 내부 노드에도 들어감)를 가르는 지점이기도 하다. PostgreSQL nbtree·InnoDB 모두 B+Tree 계열이다.
+> **핵심 구분**: 리프는 copy up, 내부는 push up. 이 차이가 **B+Tree**(값은 리프에만, 리프끼리 옆으로 연결)와 **B-Tree**(값이 내부 노드에도 들어감)를 가르는 지점이기도 하다. PostgreSQL nbtree·InnoDB 모두 B+Tree 계열이다. 더 정확히 말하면 PostgreSQL nbtree는 **Lehman-Yao B-link tree** — 모든 노드가 우측 형제로 가는 링크를 하나 더 들고, 분할과 동시 탐색이 겹치는 순간을 이 링크가 구한다. 그 latch 이야기는 [8편(병렬 실행)](/blog/project/db-hobby/db-internals-08-parallel)에서.
+
+분할 "비율"도 실전 다이얼이에요. db-hobby는 항상 반반으로 쪼개지만, PostgreSQL은 **최우측 리프**가 차면 90/10으로 쪼갭니다 — 단조 증가 키(AUTO_INCREMENT, 타임스탬프)의 삽입은 항상 오른쪽 끝에서만 일어나니, 왼쪽에 반을 남겨봐야 영영 안 채워지거든요.
+
+> **실무 안티패턴**: 랜덤 UUIDv4를 InnoDB PK로 쓰는 것. InnoDB는 데이터 자체가 PK 순서로 정렬된 클러스터드 구조라, 랜덤 키는 삽입을 트리 전역에 흩뿌려 **분할 폭풍과 버퍼 풀 오염**(사실상 모든 리프가 워킹셋)을 부릅니다. 대안은 순차성 있는 키 — AUTO_INCREMENT, 또는 시간 정렬 UUIDv7. 힙 vs 클러스터드가 이 비용을 어떻게 가르는지는 [7편](/blog/project/db-hobby/db-internals-07-storage-engines)에서 실측해요.
 
 디스크에 저장되는 이 트리에 키 1000개를 넣어 다단계 분할을 일으킨 뒤, 리프 사슬을 따라 끝까지 훑어 "정렬이 한 번도 깨지지 않았는지"로 구조 무결성을 검증했어요. 분할이 루트까지 전파돼도 **리프 전체는 여전히 하나의 정렬된 사슬**이라는 게 핵심입니다.
 
@@ -110,14 +118,18 @@ int btree_seek_scan(BTree *bt, bkey_t start, btree_visit_fn visit, void *ctx) {
 }
 ```
 
+정직한 경계 하나 — db-hobby의 리프 사슬은 `next_leaf` **단방향**이라, 역방향 스캔(`ORDER BY ... DESC`)은 이 구조로 못 받아요. PostgreSQL의 리프는 양방향 링크라 거꾸로도 훑습니다.
+
 해시 인덱스가 절대 못 하는 게 바로 이거예요 — 해시는 순서를 안 지키니 `>`도 `ORDER BY`도 통째로 안 됩니다. SQL은 범위 질의가 너무 흔해서, "점 조회 + 범위 + 정렬"을 한 구조로 다 받는 B+Tree가 기본값이 된 거예요.
 
 | | B+Tree (PG·InnoDB·db-hobby) | 해시 인덱스 | LSM-tree (RocksDB·Cassandra) |
 |---|---|---|---|
-| 점 조회 `= 5` | O(log n) | **O(1)** | 여러 덩어리 탐색 (느림) |
+| 점 조회 `= 5` | O(log n) | **O(1)** | 여러 SSTable 후보 탐색 — Bloom filter로 완화, 최악은 느림 |
 | 범위·정렬 | 됨 (리프 사슬) | **안 됨** | 됨 (정렬된 SSTable) |
 | 쓰기 패턴 | 무작위 쓰기 | 무작위 쓰기 | **순차 쓰기** (append) |
 | 적합 워크로드 | 읽기·쓰기 균형 + 트랜잭션 | 점 조회 전용 | 쓰기 폭주 + 로그성 |
+
+> **흔한 오해 정정**: *"PostgreSQL 해시 인덱스는 쓰면 안 되는 물건이다?"* — 10 이전 얘기예요. 그때는 해시 인덱스가 WAL 로깅이 안 돼 크래시에 유실되고 복제도 안 됐지만, PostgreSQL 10부터는 WAL 로깅되어 크래시에 안전하고 복제도 됩니다. 다만 등호 조회밖에 못 받는 건 구조 그대로라, 범위나 정렬이 하나라도 필요하면 여전히 B-Tree입니다.
 
 LSM은 무작위 쓰기를 순차 쓰기로 바꾸는 정반대 내기인데, 이 갈림길은 [7편(저장 엔진의 세 철학)](/blog/project/db-hobby/db-internals-07-storage-engines)에서 직접 구현해 대조합니다.
 
@@ -147,6 +159,13 @@ while (i < n->num_keys && key > n->keys[i]) {  /* '>=' 아니라 '>' */
 ```
 
 > **주의**: `>=`를 `>`로 바꾸는 한 글자가 전부처럼 보이지만, 이게 안 되면 결과가 **조용히 일부만** 나온다. 에러도 안 나고 그냥 행 몇 개가 빠진다. 인덱스 버그 중 가장 잡기 어려운 종류 — **"틀린 결과를 멀쩡한 얼굴로 돌려주는" 버그**다. 같은 키 50개를 일부러 여러 리프로 쪼갠 뒤 전부 찾아지는지가 이 코드의 회귀 테스트다.
+
+> **흔한 오해 정정**: *"실제 DB도 중복 키를 이렇게 하한 탐색으로 푼다?"* — 방향이 반대예요. db-hobby는 유일성을 **내려놓고** 읽기 쪽(하한 탐색)을 고치는 길을 갔지만, 실제 DB는 유일성을 **인공적으로 복원**합니다. PostgreSQL은 12부터 모든 인덱스 엔트리에 heap TID를 마지막 정렬 컬럼처럼 붙여요 — nbtree README의 표현 그대로 *"heap TID is treated as a tiebreaker column"* — 그래서 트리 안의 모든 엔트리가 (키, TID) 조합으로 다시 유일해지고, "같은 키 어디로 내려가지?"라는 문제 자체가 사라집니다. 13부터는 같은 키의 엔트리들을 deduplication으로 압축까지 해요. InnoDB는 보조 인덱스 키 뒤에 PK를 suffix로 붙여 같은 효과를 냅니다.
+
+| | db-hobby | PostgreSQL (12+) | InnoDB |
+|---|---|---|---|
+| 중복 키 전략 | 중복 허용 + 하한 탐색 | heap TID를 tiebreaker 컬럼으로 → 전 엔트리 유일 | 보조 인덱스 키 + PK suffix → 유일 |
+| 추가 장치 | — | 13+ deduplication 압축 | — |
 
 참고로 인덱스는 재시작에도 살아남아야 하므로, "이 테이블엔 age_idx가 age 컬럼에 있다"는 정의를 카탈로그에 적고 인덱스 자체는 별도 파일에 둡니다 — PostgreSQL이 `pg_class`/`pg_index`에 메타데이터를 적고 인덱스를 별도 relation(relfilenode 파일)에 두는 것과 같은 분리예요.
 
@@ -182,6 +201,8 @@ while (i < n->num_keys && key > n->keys[i]) {  /* '>=' 아니라 '>' */
 
 다만 이건 "쓸 수 있으면 무조건 인덱스"라는 **규칙 기반(RBO)** 의 가장 단순한 형태예요. 진짜 플래너는 통계로 선택도를 추정해 **비용**으로 고릅니다 — `id > 1`처럼 대부분 행이 걸리는 조건이면 풀 스캔이 오히려 빠르거든요. 그 얘기는 [6편(비용 기반 옵티마이저)](/blog/project/db-hobby/db-internals-06-optimizer)에서 규칙이 실제로 틀리는 순간부터 시작합니다.
 
+그리고 인덱스 자체도 공짜가 아니에요 — 인덱스가 하나 늘 때마다 모든 INSERT/UPDATE/DELETE가 그 B+Tree까지 함께 고쳐야 하니, 읽기 한 종류를 빠르게 하려고 **쓰기 전부에 세금을 매기는** 셈입니다. "일단 다 걸어두자"가 안 되는 이유예요.
+
 ## 7. 정리
 
 - **B+Tree인 이유는 디스크** — 노드=페이지, fan-out이 높이를 log_f N으로 무너뜨린다. "한 번의 I/O로 최대한 많은 키를."
@@ -197,7 +218,10 @@ while (i < n->num_keys && key > n->keys[i]) {  /* '>=' 아니라 '>' */
 
 - [PostgreSQL Documentation: B-Tree Indexes (nbtree)](https://www.postgresql.org/docs/current/btree.html)
 - [PostgreSQL Documentation: Index Access Method Interface](https://www.postgresql.org/docs/current/indexam.html)
+- [PostgreSQL Documentation: Hash Indexes](https://www.postgresql.org/docs/current/hash-index.html)
+- [PostgreSQL source: nbtree README](https://github.com/postgres/postgres/blob/master/src/backend/access/nbtree/README) — heap TID tiebreaker · deduplication · Lehman-Yao
 - [MySQL 8.0 Reference: InnoDB Index Types](https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html)
+- Lehman & Yao, *Efficient Locking for Concurrent Operations on B-Trees* (ACM TODS, 1981)
 - Goetz Graefe, *Modern B-Tree Techniques* (Foundations and Trends in Databases, 2011)
 - 본 블로그: [DB 인덱스 ①: 기초와 EXPLAIN](/blog/theory/db-index-01-explain-basics) · [②: 스캔의 종류](/blog/theory/db-index-02-scan-types) · [③: Covering Index](/blog/theory/db-index-03-covering-index-ios) · [④: 복합 인덱스](/blog/theory/db-index-04-composite-leftmost) · [⑤: 클러스터형](/blog/theory/db-index-05-clustered-dbms)
 - [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `btree.c`
@@ -220,6 +244,8 @@ Numbers first. Finding the same single row two ways while growing table size N (
 | 10,000 | 5.05 µs | 274.28 µs | 54× |
 | 100,000 | 7.52 µs | 3,126.74 µs | **416×** |
 
+(These numbers are warm-cache — pages resident in the buffer pool. With a cold cache and real disk I/O in the loop, the gap widens further.)
+
 What matters is **the shape of the two columns**, not the individual numbers. The full-scan column multiplies ~10× every time N does — the shape of O(n). The index column grows just 2.3× while N grows 100× — the log curve of O(log n). So the gap **widens as N grows.** An index's value grows with the data — precisely where you need it.
 
 This part builds that index and records what you learn by building it — why a B+Tree, what's hardest, and what assumptions break **the moment you give up uniqueness** (secondary indexes).
@@ -228,9 +254,11 @@ This part builds that index and records what you learn by building it — why a 
 
 Wouldn't a binary search tree do? The crux is the **disk.**
 
-An index also lives on disk in pages. A binary tree holds one key per node, so its height is log₂(n) — one page read per level. A million rows ≈ 20 levels ≈ up to 20 page reads (minus buffer-pool hits).
+An index also lives on disk in pages. Store a binary tree **naively as node = page** and, with one key per node, its height is log₂(n) — one page read per level. A million rows ≈ 20 levels ≈ up to 20 page reads (minus buffer-pool hits).
 
 A **B+Tree** packs **dozens to hundreds of keys into one node (= one page)**, fanning out wide (fan-out f). Height becomes **log_f N** instead of log₂N — for the same million rows, with fan-out in the hundreds it's roughly 3–4 levels (8KB pages). **"See as many keys as possible per disk I/O"** — that's the whole point of a B+Tree.
+
+> **Practical/interview point**: that "3–4 levels" comes out of mental arithmetic. With an 8KB page and entries (key + pointer) of a few dozen bytes, fan-out lands in the hundreds — take 300: 300³ ≈ 27 million, 300⁴ ≈ 8.1 billion. Hence the intuition "tens of millions to billions of rows, tree height still 3–4." And since the root and internal nodes are almost always resident in the buffer pool, a point lookup's real disk I/O is 1–2 reads near the leaf.
 
 Two node kinds:
 
@@ -273,7 +301,11 @@ n->next_leaf = rpid;           /* old leaf points at the new one */
 
 An internal split differs subtly — the middle key is **pushed up**, not copied: internal keys are guides only, no need to keep them on both sides.
 
-> **Key distinction**: leaves copy up, internals push up. That difference is also what separates a **B+Tree** (values only in leaves, leaves chained) from a **B-Tree** (values in internal nodes too). PostgreSQL's nbtree and InnoDB are both B+Tree-family.
+> **Key distinction**: leaves copy up, internals push up. That difference is also what separates a **B+Tree** (values only in leaves, leaves chained) from a **B-Tree** (values in internal nodes too). PostgreSQL's nbtree and InnoDB are both B+Tree-family. More precisely, PostgreSQL's nbtree is a **Lehman-Yao B-link tree** — every node carries one extra link to its right sibling, and that link is what saves the moment a split and a concurrent search collide. The latch story comes in [Part 8 (Parallel Execution)](/blog/project/db-hobby/db-internals-08-parallel).
+
+The split *ratio* is a practical dial too. db-hobby always splits half-and-half, but PostgreSQL splits the **rightmost leaf** 90/10 — with monotonically increasing keys (AUTO_INCREMENT, timestamps) inserts only ever land at the right end, so leaving half the space on the left would never get filled.
+
+> **Real-world anti-pattern**: using random UUIDv4 as an InnoDB PK. InnoDB is clustered — the data itself is sorted by PK — so random keys scatter inserts across the entire tree, inviting a **split storm and buffer pool pollution** (effectively every leaf becomes the working set). The alternative is a key with sequential character — AUTO_INCREMENT, or time-ordered UUIDv7. How heap vs clustered splits this cost is measured in [Part 7](/blog/project/db-hobby/db-internals-07-storage-engines).
 
 Integrity was verified by inserting 1,000 keys to force multi-level splits, then walking the leaf chain end to end checking the ordering never breaks. Even as splits propagate to the root, **the leaves remain one sorted chain.**
 
@@ -296,14 +328,18 @@ int btree_seek_scan(BTree *bt, bkey_t start, btree_visit_fn visit, void *ctx) {
 }
 ```
 
+One honest boundary — db-hobby's leaf chain is **one-directional** (`next_leaf`), so backward scans (`ORDER BY ... DESC`) can't ride this structure. PostgreSQL's leaves are doubly linked and sweep both ways.
+
 This is exactly what a hash index can never do — hashes keep no order, so `>` and `ORDER BY` are impossible wholesale. SQL is so full of range queries that the B+Tree — point + range + order in one structure — became the default.
 
 | | B+Tree (PG · InnoDB · db-hobby) | Hash index | LSM-tree (RocksDB · Cassandra) |
 |---|---|---|---|
-| Point lookup `= 5` | O(log n) | **O(1)** | searches multiple runs (slower) |
+| Point lookup `= 5` | O(log n) | **O(1)** | probes multiple SSTable candidates — mitigated by Bloom filters, slow in the worst case |
 | Range/order | yes (leaf chain) | **no** | yes (sorted SSTables) |
 | Write pattern | random writes | random writes | **sequential** (append) |
 | Fits | balanced R/W + transactions | point-lookup-only | write-heavy, log-like |
+
+> **Common misconception, corrected**: *"PostgreSQL hash indexes are a forbidden feature?"* — That's pre-10 lore. Back then hash indexes weren't WAL-logged, so they were lost on crash and never replicated; since PostgreSQL 10 they are WAL-logged, crash-safe, and replicable. The structural limit stands, though — equality lookups only — so the moment you need any range or ordering, it's still the B-Tree.
 
 The LSM is the opposite bet — turning random writes into sequential ones — built and contrasted head-on in [Part 7](/blog/project/db-hobby/db-internals-07-storage-engines).
 
@@ -333,6 +369,13 @@ while (i < n->num_keys && key > n->keys[i]) {  /* '>' — not '>=' */
 ```
 
 > **Warning**: changing `>=` to `>` looks like one character, but without it results come back **silently partial.** No error — just missing rows. The hardest class of index bug: **one that returns wrong results with a straight face.** The regression test plants 50 identical keys deliberately split across leaves and asserts all 50 are found.
+
+> **Common misconception, corrected**: *"real DBs also solve duplicate keys with lower-bound search?"* — The direction is reversed. db-hobby **gives up** uniqueness and fixes the read side (lower-bound search); real DBs **artificially restore** uniqueness. Since version 12, PostgreSQL appends the heap TID to every index entry as if it were a trailing sort column — in the nbtree README's own words, *"heap TID is treated as a tiebreaker column"* — so every entry in the tree is unique again as a (key, TID) pair, and the question "which way down for equal keys?" simply disappears. Since 13, entries with equal keys are further compressed by deduplication. InnoDB gets the same effect by suffixing the PK onto secondary index keys.
+
+| | db-hobby | PostgreSQL (12+) | InnoDB |
+|---|---|---|---|
+| Duplicate-key strategy | allow duplicates + lower-bound search | heap TID as a tiebreaker column → all entries unique | secondary key + PK suffix → unique |
+| Extra machinery | — | 13+ deduplication | — |
 
 Since indexes must also survive restarts, the definition ("table t has age_idx on column age") goes into the catalog and the index lives in its own file — the same separation as PostgreSQL recording metadata in `pg_class`/`pg_index` while the index lives in its own relation (relfilenode) file.
 
@@ -368,6 +411,8 @@ Wiring the index into the executor plants the seed of a query planner:
 
 But this is the crudest **rule-based (RBO)** form: "use an index whenever possible." A real planner estimates selectivity from statistics and chooses by **cost** — for a condition like `id > 1` matching most rows, a full scan is actually faster. That story starts in [Part 6 (Cost-Based Optimizer)](/blog/project/db-hobby/db-internals-06-optimizer), at the exact moment the rule goes wrong.
 
+And indexes themselves aren't free — every additional index means every INSERT/UPDATE/DELETE must also maintain that B+Tree. To speed up one kind of read, you're **taxing every write.** That's why "just index everything" doesn't work.
+
 ## 7. Wrap-up
 
 - **The reason it's a B+Tree is the disk** — node = page; fan-out collapses height to log_f N. "As many keys per I/O as possible."
@@ -383,7 +428,10 @@ Next: the write path's great event — **what if the power dies mid-write?** WAL
 
 - [PostgreSQL Documentation: B-Tree Indexes (nbtree)](https://www.postgresql.org/docs/current/btree.html)
 - [PostgreSQL Documentation: Index Access Method Interface](https://www.postgresql.org/docs/current/indexam.html)
+- [PostgreSQL Documentation: Hash Indexes](https://www.postgresql.org/docs/current/hash-index.html)
+- [PostgreSQL source: nbtree README](https://github.com/postgres/postgres/blob/master/src/backend/access/nbtree/README) — heap TID tiebreaker · deduplication · Lehman-Yao
 - [MySQL 8.0 Reference: InnoDB Index Types](https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html)
+- Lehman & Yao, *Efficient Locking for Concurrent Operations on B-Trees* (ACM TODS, 1981)
 - Goetz Graefe, *Modern B-Tree Techniques* (Foundations and Trends in Databases, 2011)
 - This blog: [DB Index ①–⑤](/blog/theory/db-index-01-explain-basics)
 - [db-hobby source (GitHub)](https://github.com/dj258255/db-hobby) — `btree.c`

@@ -38,8 +38,8 @@ seriesOrder: 4
 | 이상현상 | 2PL의 처방 | MVCC의 처방 |
 |---|---|---|
 | dirty read | X 잠긴 행을 못 읽음 | 미커밋 버전은 애초에 안 보임 |
-| lost update | X 락으로 쓰기 직렬화 | 행 락 + first-updater-wins |
-| non-repeatable read | S 락을 커밋까지 쥠 | 스냅샷이 시작 시점에 고정 |
+| lost update | X 락으로 쓰기 직렬화 | 쓰기 충돌만 별도 처리 — 방식은 DB마다 다름(5절 표) |
+| non-repeatable read | S 락을 커밋까지 쥠 | 스냅샷을 트랜잭션 단위로 고정할 때 차단 |
 
 같은 문제를 한쪽은 "잠가서", 한쪽은 "버전을 갈라서" 풀어요. 그리고 공짜 점심은 없습니다:
 
@@ -60,7 +60,7 @@ MVCC는 "버전을 쌓는다"가 전부처럼 보이지만, 그걸 작동시키�
 - `xmin` — 이 버전을 만든(INSERT한) 트랜잭션
 - `xmax` — 이 버전을 지운(DELETE한) 트랜잭션 (0이면 아직)
 
-> **가시성 규칙**: 어떤 행 버전은, `xmin`이 커밋됐고 AND (`xmax`가 0이거나 아직 커밋 안 됨)일 때만 보인다.
+> **가시성 규칙**: 어떤 행 버전은, (`xmin`이 **나 자신**이거나 커밋됐고) AND NOT (`xmax`가 **나 자신**이거나 커밋됨)일 때만 보인다.
 
 ```c
 int mvcc_visible(const TxnLog *log, int xmin, int xmax) {
@@ -71,6 +71,10 @@ int mvcc_visible(const TxnLog *log, int xmin, int xmax) {
 ```
 
 `TxnLog`는 트랜잭션 id마다 상태(진행/커밋/아보트)를 담은 배열 — PostgreSQL의 **CLOG**(`pg_xact`)에 대응해요. 행 저장은 [1편의 행 포맷](/blog/project/db-hobby/db-internals-01-storage) 맨 앞에 8바이트 헤더(`[xmin(4)][xmax(4)]`)를 붙이는 것으로 끝납니다.
+
+코드의 `mvcc_visible`은 **남의 트랜잭션**에 대한 핵심 판정이에요. 실제 게이트(`db.c`의 `row_visible`)엔 `xmin == my_txn || …` 조항이 하나 더 붙습니다 — **자기 트랜잭션의 미커밋 쓰기는 자기에겐 보여야** 하니까요(방금 INSERT한 행을 내 다음 SELECT가 못 보면 곤란하죠). PostgreSQL은 여기서 한 단계 더 갑니다 — 같은 트랜잭션 안에서도 `cmin`/`cmax`로 **문장 단위** 가시성을 갈라서, 실행 중인 UPDATE가 자기가 방금 만든 새 버전을 또 읽어 다시 갱신하는 사고(Halloween problem)를 막아요.
+
+> **왜 PostgreSQL 튜플 헤더엔 hint bits가 있나**: db-hobby의 TxnLog는 메모리 배열이라 상태 조회가 즉시지만, PostgreSQL의 CLOG(`pg_xact`)는 디스크에 있어요(SLRU 캐시 경유). 매 가시성 판정마다 CLOG를 뒤지면 비싸니, 한 번 알아낸 커밋/아보트 결과를 **튜플 헤더의 hint bits에 캐시**합니다. 이 캐시 쓰기 때문에 "대량 적재 직후 첫 SELECT가 유난히 느리다(읽기가 쓰기를 유발한다)"는 PostgreSQL 특유의 현상이 생겨요.
 
 ![행 버전과 가시성 — xmin/xmax와 트랜잭션 상태가 버전의 보임/안 보임을 가른다](/uploads/project/db-hobby/mvcc-version-visibility.svg)
 
@@ -83,6 +87,8 @@ int mvcc_visible(const TxnLog *log, int xmin, int xmax) {
 | 트랜잭션 상태 | TxnLog | CLOG(`pg_xact`) | rollback segment 포인터 |
 
 db-hobby는 PostgreSQL을 따라 **같은 힙 안**(append-only)에 둡니다. 이 선택의 우아한 보상이 하나 있어요 — **롤백이 공짜**입니다. abort하면 TxnLog에 "아보트"라 적기만 하면, 그 트랜잭션이 만든 모든 버전이 가시성 규칙에 의해 **자동으로 안 보이게** 돼요. 행을 하나하나 되돌릴 필요가 없습니다. (InnoDB는 반대로 undo log를 재생해 물리적으로 되돌리는 대신, 힙이 항상 최신 버전만 들고 있어 읽기가 가볍습니다 — 이 트레이드오프의 전체 그림은 [ACID ①](/blog/theory/transaction-acid-01-atomicity).)
+
+> **흔한 오해 정정**: *"롤백은 어느 DB든 싸다"* — 옛 버전을 어디 두느냐가 롤백 비용까지 정해요. PostgreSQL은 db-hobby처럼 CLOG에 '아보트'라 적으면 끝이라 즉시 반환되지만, 만들어 둔 dead tuple의 청구서는 VACUUM으로 이월됩니다. InnoDB는 undo log를 재생해 물리적으로 되돌리니 **대형 트랜잭션의 롤백이 커밋보다 오래 걸릴 수 있어요** — 수백만 행 UPDATE를 롤백해 본 사람이 아는 그 대기 시간입니다.
 
 ## 3. DELETE는 지우지 않는다 — xmax 도장과 아홉 갈래 게이트
 
@@ -117,7 +123,7 @@ UPDATE도 같은 결이에요 — 옛 버전에 `stamp_xmax`, 새 버전을 새 
 
 이제 새 문제가 생겼습니다. DELETE가 안 지우니 **죽은 버전(dead tuple)이 무한히 쌓여요.** DELETE를 해도 파일이 1바이트도 안 줄어듭니다. 이게 MVCC가 청구하는 비용이고, 청소부가 **VACUUM**이에요.
 
-**누가 죽었는가** — 판정 원칙은 "지금은 물론 앞으로도 아무 트랜잭션에게 보일 수 없는 버전". 일반적으론 실행 중인 모든 스냅샷을 고려하는 까다로운 판정인데(PostgreSQL의 oldest xmin horizon), 단일 노드 미니 DB에선 "커밋된 xmax가 찍힌 버전"으로 떨어집니다. VACUUM은 PostgreSQL처럼 트랜잭션 안에서는 거부하고요(`VACUUM cannot run inside a transaction block`).
+**누가 죽었는가** — 판정 원칙은 "지금은 물론 앞으로도 아무 트랜잭션에게 보일 수 없는 버전". 일반적으론 실행 중인 모든 스냅샷을 고려하는 까다로운 판정인데(PostgreSQL의 oldest xmin horizon), db-hobby에선 "커밋된 xmax가 찍힌 버전"으로 떨어집니다 — `exec_vacuum`이 어느 세션이든 열린 트랜잭션이 있으면 VACUUM 자체를 거부해서, 판정 시점에 살아있는 스냅샷이 없음이 보장되거든요. PostgreSQL은 다르게 갑니다 — 다른 세션의 트랜잭션이 열려 있어도 VACUUM은 돌고, 다만 oldest xmin보다 새로운 dead tuple을 그 회차에 못 치울 뿐이에요. 자기 자신이 트랜잭션 블록 안이면 실행 불가(`VACUUM cannot run inside a transaction block`)라는 건 그와 별개의 제약이고요.
 
 **청소부의 세 가지 일** — 순서가 중요해요.
 
@@ -132,6 +138,10 @@ UPDATE도 같은 결이에요 — 옛 버전에 `stamp_xmax`, 새 버전을 새 
 ②에서 슬롯 번호를 보존하는 이유는 [1편](/blog/project/db-hobby/db-internals-01-storage)의 그 원칙 — 슬롯 번호가 곧 RID고 인덱스가 RID로 가리키니까요. ③은 **파일 끝의 전부-빈 페이지만** 자르고 가운데 빈 페이지는 남깁니다 — PostgreSQL VACUUM도 정확히 이래서, **"VACUUM 했는데 파일이 안 줄어요"** 가 흔한 겁니다(공간은 재사용 가능해졌지만 OS에 반납되진 않은 상태).
 
 **B+Tree 삭제 — 교과서와 다르게.** 죽은 버전을 치우면 인덱스 항목이 허공을 가리키니 지워야 하는데, 교과서(병합·재분배)를 이식하기 전에 진짜 DB를 봤어요. **PostgreSQL nbtree는 재분배를 안 합니다** — 리프에서 항목을 지우고, 페이지가 완전히 비면 트리에서 떼어 재활용할 뿐. 노드가 반쯤 비어도 그냥 둡니다. 그래서 **lazy 삭제**로 충분해요. 포인트는 키가 아니라 **(키, RID) 짝**을 지우는 것 — UPDATE된 PK는 같은 키가 살아있는 새 버전을 가리키고 있어서, 짝으로 지워야 산 항목을 안 다칩니다.
+
+**트랜잭션 ID도 유한하다.** db-hobby의 TxnLog는 고정 배열(`TXN_MAX`)이라 ID를 소진하면 재시작 전까진 끝입니다 — 미니 DB라서 허용한 한계예요. PostgreSQL의 XID는 32비트 순환 카운터라 약 40억에서 한 바퀴 돌아요(wraparound). 옛 튜플의 xmin이 '미래'로 해석되는 순간 데이터가 사라져 보이기 때문에, VACUUM이 충분히 오래된 튜플의 xmin을 '영원히 과거'(frozen)로 바꿔 둡니다. 공식 문서가 routine vacuuming의 존재 이유로 *"to protect against loss of very old data due to transaction ID wraparound"* 를 명시할 만큼 운영에서 무거운 주제예요.
+
+> **실무 안티패턴**: 트랜잭션을 열어 둔 채 방치하는 것(idle in transaction). PostgreSQL에선 그 세션의 스냅샷이 oldest xmin을 붙들어 **그보다 새로운 dead tuple을 VACUUM이 못 치우고**, 테이블이 부풀어요(bloat). `pg_stat_activity`의 `xact_start`로 오래 열린 트랜잭션을, `pg_stat_user_tables`의 `n_dead_tup`으로 쌓인 시체를 확인하고, `idle_in_transaction_session_timeout`으로 방치 자체를 끊는 게 상비책입니다.
 
 ## 5. 진짜 스냅샷 격리 — reader의 락을 없애다
 
@@ -149,11 +159,23 @@ static int acquire_stmt_locks(Database *db, const Statement *st, int txn, FILE *
 
 "락 없이 dirty read를 어떻게 막지?" — **그건 더 이상 락의 일이 아닙니다.** writer의 미커밋 버전은 xmin이 미커밋이라 게이트가 걸러요. UPDATE의 옛 버전은 xmax가 미커밋이라 **여전히 보이고요.** reader는 거부당하는 게 아니라 그냥 **옛 버전을 읽습니다.** 막는 대신 가르기 — 1절의 표가 코드가 된 순간이에요.
 
-**시간을 고정한다 — BEGIN 시점 스냅샷.** 락을 없앴으니 격리는 온전히 가시성이 정하는데, "지금 커밋된 것"을 보면 read committed예요(같은 SELECT 두 번 사이에 남이 커밋하면 결과가 바뀜). 스냅샷 격리라 부르려면 시간을 BEGIN에 고정해야 합니다. 구현은 PostgreSQL 스냅샷의 축소판 — BEGIN 때 ① 이후에 태어날 트랜잭션의 경계(`snap_next`)와 ② 지금 열려 있는 남의 트랜잭션 목록(`snap_inprog`)을 기록하고, 가시성 판정이 이 스냅샷을 통과해야 "커밋됨"으로 칩니다. PG 스냅샷의 `xmax`(경계)와 `xip`(in-progress 목록)에 정확히 대응해요. 이로써 트랜잭션 안은 REPEATABLE READ, 밖의 단문은 read committed — PostgreSQL의 기본 구도와 같은 두 층입니다.
+**시간을 고정한다 — BEGIN 시점 스냅샷.** 락을 없앴으니 격리는 온전히 가시성이 정하는데, "지금 커밋된 것"을 보면 read committed예요(같은 SELECT 두 번 사이에 남이 커밋하면 결과가 바뀜). 스냅샷 격리라 부르려면 시간을 BEGIN에 고정해야 합니다. 구현은 PostgreSQL 스냅샷의 축소판 — BEGIN 때 ① 이후에 태어날 트랜잭션의 경계(`snap_next`)와 ② 지금 열려 있는 남의 트랜잭션 목록(`snap_inprog`)을 기록하고, 가시성 판정이 이 스냅샷을 통과해야 "커밋됨"으로 칩니다. PG 스냅샷의 `xmax`(경계)와 `xip`(in-progress 목록)에 정확히 대응해요. 이로써 db-hobby는 트랜잭션 안은 REPEATABLE READ, 밖의 단문은 read committed — PostgreSQL로 치면 `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`를 항상 켜 둔 셈입니다. PostgreSQL의 기본값(READ COMMITTED)은 명시적 트랜잭션 **안에서도** 문장마다 새 스냅샷을 찍고, "트랜잭션 안 = 스냅샷 고정"이 기본인 건 오히려 InnoDB(기본 REPEATABLE READ)의 구도예요.
 
-**쓰기-쓰기만은 막는다 — first-updater-wins.** 두 트랜잭션이 같은 데이터를 고치는 것만은 버전으로 못 피해요(lost update). 답은 쓰기에만 X락을 유지하고, 충돌 시 뒤에 온 쪽이 물러나는 것. PostgreSQL은 이걸 **행 단위**로 하고(REPEATABLE READ에선 serialization failure), db-hobby는 테이블 단위라 더 거칠지만 — granularity의 차이지 철학의 차이가 아닙니다.
+> **흔한 오해 정정**: *"스냅샷은 BEGIN이 찍는다"* — db-hobby는 정말 BEGIN 시점에 찍지만, 실제 DB들은 미룹니다. PostgreSQL의 REPEATABLE READ가 고정하는 건 공식 문서 표현으로 *"a snapshot as of the start of the first non-transaction-control statement in the transaction"* — BEGIN이 아니라 **첫 일반 문장** 시점이에요. InnoDB도 첫 consistent read 시점이고, 시작하자마자 고정하려면 `START TRANSACTION WITH CONSISTENT SNAPSHOT`을 명시해야 합니다. "BEGIN만 해 두면 그 시각이 기준"이라는 가정은 두 DB 모두에서 어긋나요.
 
-**예상 못 한 여파 — PK 인덱스가 다중 버전이 되어야 했다.** 여기까지 하고 테스트를 돌리니 스냅샷 시나리오가 깨졌어요. 범인은 PK 인덱스 — 지금까지 유니크라서 UPDATE가 키의 항목을 새 RID로 **덮어썼는데**, 그 순간 **옛 버전으로 가는 인덱스 경로가 끊깁니다.** 스냅샷 reader가 인덱스로 조회하면 빈 결과, 풀스캔으론 보이는 모순. 답은 PostgreSQL이 이미 알고 있었어요 — **인덱스도 버전마다 항목을 갖는다.** PK 인덱스가 한 키에 여러 RID를 매다는 멀티맵(`btree_insert_dup`)이 되고, 조회가 후보들 중 보이는 버전을 고릅니다. [2편](/blog/project/db-hobby/db-internals-02-btree-index)의 부제("인덱스는 왜 단순 key→value가 아닌가")의 답이 이거예요.
+**쓰기-쓰기만은 막는다.** 두 트랜잭션이 같은 데이터를 고치는 것만은 버전으로 못 피해요(lost update). db-hobby의 답은 쓰기에만 X락(테이블 단위)을 유지하고, 충돌하면 기다리지 않고 뒤에 온 쪽이 즉시 에러를 받는 것(no-wait). 그런데 이 지점이야말로 이론과 구현이, 구현과 구현이 갈립니다:
+
+| | 동시 UPDATE 충돌 처리 |
+|---|---|
+| 이론의 SI (Berenson et al. 1995) | **first-committer-wins** — 커밋 시점에 뒤에 커밋하는 쪽이 abort |
+| PostgreSQL READ COMMITTED | 행 락 **대기** → 상대가 커밋하면 최신 버전으로 조건 재평가 후 진행 |
+| PostgreSQL REPEATABLE READ | 행 락 **대기** → 상대가 커밋하면 `ERROR: could not serialize access due to concurrent update` |
+| InnoDB REPEATABLE READ | 행 락 **대기** → 그대로 덮어씀 — 충돌 감지 없음(lost update는 애플리케이션 몫) |
+| db-hobby | 테이블 락 no-wait — 즉시 에러 |
+
+> **실무/면접 포인트**: "MVCC는 lost update를 어떻게 막나"에 한 줄로 답하면 위험한 이유가 이 표다. 이론의 SI는 first-committer-wins인데 PostgreSQL은 **first-updater-wins**(먼저 행을 갱신한 쪽이 이기고, 뒤에 온 쪽은 대기 후 진행 또는 에러)로 구현했고, InnoDB의 REPEATABLE READ는 아예 감지하지 않아 `SELECT ... FOR UPDATE`나 낙관적 버전 컬럼으로 애플리케이션이 직접 막아야 한다.
+
+**예상 못 한 여파 — PK 인덱스가 다중 버전이 되어야 했다.** 여기까지 하고 테스트를 돌리니 스냅샷 시나리오가 깨졌어요. 범인은 PK 인덱스 — 지금까지 유니크라서 UPDATE가 키의 항목을 새 RID로 **덮어썼는데**, 그 순간 **옛 버전으로 가는 인덱스 경로가 끊깁니다.** 스냅샷 reader가 인덱스로 조회하면 빈 결과, 풀스캔으론 보이는 모순. 답은 PostgreSQL이 이미 알고 있었어요 — **인덱스 컬럼이 바뀌었거나 HOT이 불가능한 UPDATE에서는, 인덱스도 버전마다 항목을 갖는다.** (PostgreSQL은 인덱스 컬럼이 안 바뀌고 같은 페이지에 자리가 있으면 HOT(Heap-Only Tuple) 업데이트로 새 인덱스 항목 없이 힙 안의 버전 체인만 늘리고, 인덱스는 체인의 루트만 가리켜요. db-hobby엔 HOT이 없으니 모든 UPDATE가 항목을 하나 더 답니다.) PK 인덱스가 한 키에 여러 RID를 매다는 멀티맵(`btree_insert_dup`)이 되고, 조회가 후보들 중 보이는 버전을 고릅니다. [2편](/blog/project/db-hobby/db-internals-02-btree-index)의 부제("인덱스는 왜 단순 key→value가 아닌가")의 답이 이거예요.
 
 ![다중 세션 — 한 트랜잭션이 미커밋 UPDATE를 쥐어도 다른 세션은 옛 버전을 막힘 없이 읽는다](/uploads/project/db-hobby/multi-txn-sessions.svg)
 
@@ -170,21 +192,26 @@ SESSION 1> SELECT * FROM t WHERE id = 1;
 
 **reader가 writer를 안 막는다** — 시연이 아니라 실행으로.
 
+하나만 선을 그어 둘게요 — 여기 세운 건 스냅샷 격리(SI)지 SERIALIZABLE이 아닙니다. 두 트랜잭션이 서로의 행을 읽고 **각자 다른 행**을 고치는 write skew(당직 의사 둘이 서로만 남은 걸 확인하고 동시에 퇴근하는 그 시나리오)는 first-updater-wins로도 못 잡아요 — 같은 행을 안 건드리니 충돌 자체가 없거든요. PostgreSQL이 SERIALIZABLE에서 SSI로 이걸 잡는 이야기는 [트랜잭션 ACID ②: Isolation](/blog/theory/transaction-acid-02-isolation)에 있습니다.
+
 ## 6. 정리
 
 - **두 철학**: 2PL은 충돌을 막고(락, 교착의 비용), MVCC는 버전을 갈라 피한다(dead tuple과 VACUUM의 비용). 비용 청구 시점이 다르다 — 실행 중 vs 백그라운드.
 - **MVCC의 두뇌는 가시성 규칙 한 줄** — xmin 커밋 AND xmax 미커밋. 트랜잭션 상태 배열(CLOG)과 행 헤더 8바이트가 전부다. **롤백이 공짜**로 나온다.
 - **DELETE는 지우지 않는다** — xmax 도장. 그 대가로 힙을 읽는 아홉 갈래 전부에 게이트, 그리고 **"인덱스는 MVCC를 모른다"** 원칙.
-- **VACUUM** — dead 판정(커밋된 xmax), 인덱스 (키,RID) 짝 삭제(lazy — PG nbtree도 재분배 안 함), RID 불변 compaction, 꼬리만 truncate(그래서 파일이 잘 안 줄어든다).
-- **스냅샷 격리** — reader 락 제거 + BEGIN 스냅샷(xmax/xip) + 쓰기만 first-updater-wins. 여파로 **PK 인덱스가 다중 버전 멀티맵**이 된다.
+- **VACUUM** — dead 판정(커밋된 xmax — 열린 트랜잭션이 있으면 거부하기에 가능한 단순화), 인덱스 (키,RID) 짝 삭제(lazy — PG nbtree도 재분배 안 함), RID 불변 compaction, 꼬리만 truncate(그래서 파일이 잘 안 줄어든다).
+- **스냅샷 격리** — reader 락 제거 + BEGIN 스냅샷(xmax/xip) + 쓰기 충돌만 별도 처리(db-hobby는 no-wait 즉시 에러, PG는 first-updater-wins). 여파로 **PK 인덱스가 다중 버전 멀티맵**이 된다.
 
 다음 편은 이 엔진에 **네트워크**를 뚫습니다 — 진짜 `psql`이 접속하는 PostgreSQL wire protocol 서버.
 
 ## 참고 (1차 자료 우선)
 
 - [PostgreSQL Documentation: MVCC — Concurrency Control](https://www.postgresql.org/docs/current/mvcc.html)
+- [PostgreSQL Documentation: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) — REPEATABLE READ의 스냅샷 시점과 동시 UPDATE 동작의 1차 근거
 - [PostgreSQL Documentation: Routine Vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html)
+- [PostgreSQL Documentation: Heap-Only Tuples (HOT)](https://www.postgresql.org/docs/current/storage-hot.html)
 - [MySQL 8.0 Reference: InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html)
+- [MySQL 8.0 Reference: Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.0/en/innodb-consistent-read.html)
 - Hal Berenson et al., *A Critique of ANSI SQL Isolation Levels* (SIGMOD 1995) — 스냅샷 격리의 고전
 - 본 블로그: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [②: Isolation](/blog/theory/transaction-acid-02-isolation) · [락 메커니즘 총정리](/blog/theory/lock-mechanisms-all)
 - [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `mvcc.c` · `lock.c` · `db.c`
@@ -210,8 +237,8 @@ When two transactions touch the same row, there are two ways to be safe.
 | Anomaly | 2PL's remedy | MVCC's remedy |
 |---|---|---|
 | dirty read | can't read an X-locked row | uncommitted versions simply aren't visible |
-| lost update | X locks serialize writes | row lock + first-updater-wins |
-| non-repeatable read | hold S locks to commit | snapshot pinned at start |
+| lost update | X locks serialize writes | write conflicts handled separately — varies by DB (table in §5) |
+| non-repeatable read | hold S locks to commit | blocked when the snapshot is pinned per transaction |
 
 Same problems — one side locks, the other splits versions. And there's no free lunch:
 
@@ -232,7 +259,7 @@ MVCC looks like "stack versions," but the brain that makes it work is the **visi
 - `xmin` — the transaction that created (INSERTed) this version
 - `xmax` — the transaction that deleted it (0 = not yet)
 
-> **Visibility rule**: a row version is visible iff `xmin` committed AND (`xmax` is 0 or not yet committed).
+> **Visibility rule**: a row version is visible iff (`xmin` is **me** or committed) AND NOT (`xmax` is **me** or committed).
 
 ```c
 int mvcc_visible(const TxnLog *log, int xmin, int xmax) {
@@ -243,6 +270,10 @@ int mvcc_visible(const TxnLog *log, int xmin, int xmax) {
 ```
 
 `TxnLog` is just an array of per-transaction status (in-progress / committed / aborted) — corresponding to PostgreSQL's **CLOG** (`pg_xact`). Storage-wise, an 8-byte header (`[xmin(4)][xmax(4)]`) goes at the front of [Part 1's row format](/blog/project/db-hobby/db-internals-01-storage).
+
+The `mvcc_visible` shown is the core judgment for **other transactions.** The actual gate (`row_visible` in `db.c`) carries one more clause — `xmin == my_txn || …` — because **your own uncommitted writes must be visible to you** (a row you just INSERTed had better show up in your next SELECT). PostgreSQL goes one step further: even within a transaction it splits visibility **per statement** via `cmin`/`cmax`, preventing a running UPDATE from re-reading and re-updating the new versions it just wrote (the Halloween problem).
+
+> **Why do PostgreSQL tuple headers carry hint bits?** db-hobby's TxnLog is an in-memory array, so a status lookup is instant; PostgreSQL's CLOG (`pg_xact`) lives on disk (behind an SLRU cache). Consulting CLOG on every visibility check would be expensive, so once a commit/abort verdict is learned it's **cached in the tuple header's hint bits.** That cache write is why "the first SELECT right after a bulk load is oddly slow (reads causing writes)" is a distinctly PostgreSQL phenomenon.
 
 ![Row versions and visibility — xmin/xmax plus transaction status decide whether a version is seen](/uploads/project/db-hobby/mvcc-version-visibility.svg)
 
@@ -255,6 +286,8 @@ int mvcc_visible(const TxnLog *log, int xmin, int xmax) {
 | Txn status | TxnLog | CLOG (`pg_xact`) | rollback segment pointers |
 
 db-hobby follows PostgreSQL — old versions stay **in the same heap** (append-only). That choice pays one elegant dividend: **rollback is free.** Abort by marking "aborted" in the TxnLog, and every version that transaction created becomes invisible **automatically** by the visibility rule. Nothing to physically revert. (InnoDB inverts the trade: it replays undo to physically revert, but its heap always holds only the latest version, keeping reads light — the full picture in [ACID ①](/blog/theory/transaction-acid-01-atomicity).)
+
+> **Common misconception, corrected**: *"Rollback is cheap in every DB"* — where the old versions live also decides the cost of rollback. PostgreSQL, like db-hobby, just marks 'aborted' in the CLOG and returns immediately — but the bill for the dead tuples it created is deferred to VACUUM. InnoDB replays the undo log to physically revert, so **a large transaction's rollback can take longer than its commit** — the wait anyone who has rolled back a multi-million-row UPDATE knows.
 
 ## 3. DELETE Doesn't Delete — the xmax Stamp and Nine Gates
 
@@ -289,7 +322,7 @@ The reward came instantly — **DELETE rollback comes back to life.** If the tra
 
 Now a new problem: since DELETE doesn't delete, **dead tuples pile up forever.** DELETE all you want; the file shrinks by zero bytes. This is MVCC's bill, and the janitor is **VACUUM.**
 
-**Who's dead?** The principle: "a version that cannot be visible to any transaction, now or ever." In general that's a delicate judgment over all live snapshots (PostgreSQL's oldest-xmin horizon); in a single-node mini DB it collapses to "a version with a committed xmax." Like PostgreSQL, VACUUM refuses to run inside a transaction block.
+**Who's dead?** The principle: "a version that cannot be visible to any transaction, now or ever." In general that's a delicate judgment over all live snapshots (PostgreSQL's oldest-xmin horizon); in db-hobby it collapses to "a version with a committed xmax" — because `exec_vacuum` refuses to run at all while any session has an open transaction, guaranteeing no live snapshots exist at judgment time. PostgreSQL goes the other way: VACUUM runs even while other sessions hold open transactions — it just can't remove dead tuples newer than the oldest xmin on that pass. That it can't run inside your own transaction block (`VACUUM cannot run inside a transaction block`) is a separate constraint.
 
 **The janitor's three jobs** — order matters:
 
@@ -304,6 +337,10 @@ Now a new problem: since DELETE doesn't delete, **dead tuples pile up forever.**
 ② preserves slot numbers for [Part 1](/blog/project/db-hobby/db-internals-01-storage)'s reason — the slot number *is* the RID and indexes point at it. ③ trims **only all-empty trailing pages**, leaving empty pages in the middle — exactly what PostgreSQL's VACUUM does, which is why **"I ran VACUUM and the file didn't shrink"** is so common (space became reusable but wasn't returned to the OS).
 
 **B+Tree deletion — unlike the textbook.** Cleaning dead versions leaves index entries pointing at nothing, so they must go. Before porting the textbook (merge/redistribute), look at a real DB: **PostgreSQL's nbtree doesn't redistribute** — it removes leaf entries and recycles fully-empty pages, leaving half-empty nodes alone. So **lazy deletion** suffices. The point is deleting **(key, RID) pairs**, not keys — an UPDATEd PK's key already points at the live new version, so deleting by pair protects live entries.
+
+**Transaction IDs are finite too.** db-hobby's TxnLog is a fixed array (`TXN_MAX`) — exhaust the IDs and that's it until restart, a limit accepted for a mini DB. PostgreSQL's XID is a 32-bit circular counter that wraps around at about four billion. The moment an old tuple's xmin reads as "the future," data appears to vanish — so VACUUM rewrites sufficiently old tuples' xmin as "forever in the past" (frozen). The official docs list, among routine vacuuming's reasons for existing, *"to protect against loss of very old data due to transaction ID wraparound"* — it's that heavy a topic in operations.
+
+> **Production anti-pattern**: leaving transactions open and idle (idle in transaction). In PostgreSQL that session's snapshot pins the oldest xmin, so **VACUUM cannot remove any dead tuple newer than it**, and the table bloats. The standing remedy: spot long-open transactions via `pg_stat_activity`'s `xact_start`, watch the body count via `pg_stat_user_tables`' `n_dead_tup`, and cut off the neglect itself with `idle_in_transaction_session_timeout`.
 
 ## 5. True Snapshot Isolation — Removing the Readers' Locks
 
@@ -321,11 +358,23 @@ static int acquire_stmt_locks(Database *db, const Statement *st, int txn, FILE *
 
 "How do you prevent dirty reads without locks?" — **that's no longer the lock's job.** A writer's uncommitted version has an uncommitted xmin, so the gate filters it. An UPDATE's old version has an uncommitted xmax, so it's **still visible.** The reader isn't rejected — it simply **reads the old version.** Splitting instead of blocking; §1's table became code.
 
-**Pinning time — the BEGIN snapshot.** With locks gone, isolation is decided wholly by visibility — but seeing "what's committed *now*" is read committed (a neighbor's commit between two identical SELECTs changes the result). For snapshot isolation, pin time at BEGIN. The implementation is a miniature of PostgreSQL's snapshot: record ① the boundary of transactions born later (`snap_next`) and ② the list of others' transactions currently open (`snap_inprog`); visibility counts a transaction as "committed" only if it also passes the snapshot. Exactly PG's `xmax` (boundary) and `xip` (in-progress list). Inside a transaction: REPEATABLE READ; bare statements outside: read committed — the same two-layer scheme as PostgreSQL's defaults.
+**Pinning time — the BEGIN snapshot.** With locks gone, isolation is decided wholly by visibility — but seeing "what's committed *now*" is read committed (a neighbor's commit between two identical SELECTs changes the result). For snapshot isolation, pin time at BEGIN. The implementation is a miniature of PostgreSQL's snapshot: record ① the boundary of transactions born later (`snap_next`) and ② the list of others' transactions currently open (`snap_inprog`); visibility counts a transaction as "committed" only if it also passes the snapshot. Exactly PG's `xmax` (boundary) and `xip` (in-progress list). So db-hobby runs REPEATABLE READ inside a transaction and read committed for bare statements outside — in PostgreSQL terms, as if `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ` were always on. PostgreSQL's default (READ COMMITTED) takes a fresh snapshot per statement **even inside an explicit transaction**; "inside a transaction = pinned snapshot" as the default is actually InnoDB's scheme (default REPEATABLE READ).
 
-**Blocking only write-write — first-updater-wins.** Two transactions modifying the same data is the one thing versions can't dodge (lost update). Keep X locks on writes only; on conflict, the latecomer yields. PostgreSQL does this **per row** (raising serialization failures under REPEATABLE READ); db-hobby's is per table — coarser, but a difference of granularity, not philosophy.
+> **Common misconception, corrected**: *"BEGIN takes the snapshot"* — db-hobby really does pin at BEGIN, but real DBs defer. What PostgreSQL's REPEATABLE READ pins is, in the official docs' words, *"a snapshot as of the start of the first non-transaction-control statement in the transaction"* — the **first ordinary statement**, not BEGIN. InnoDB likewise pins at the first consistent read; to pin right away you must say `START TRANSACTION WITH CONSISTENT SNAPSHOT`. The assumption "BEGIN alone fixes the reference time" fails in both.
 
-**An unexpected aftermath — the PK index had to go multi-version.** With all this in place, the snapshot tests broke. The culprit: the PK index, hitherto unique — UPDATE **overwrote** the key's entry with the new RID, and at that instant **the index path to the old version was severed.** A snapshot reader querying via the index got nothing while a full scan showed the row. PostgreSQL already knew the answer — **the index holds an entry per version.** The PK index becomes a multimap hanging several RIDs off one key (`btree_insert_dup`), and lookups pick the visible version among candidates. That is the answer to [Part 2](/blog/project/db-hobby/db-internals-02-btree-index)'s subtitle — "why an index isn't a simple key→value map."
+**Blocking only write-write.** Two transactions modifying the same data is the one thing versions can't dodge (lost update). db-hobby's answer: keep X locks (table granularity) on writes only, and on conflict the latecomer gets an immediate error instead of waiting (no-wait). But this is exactly where theory and implementations — and implementations and implementations — diverge:
+
+| | Concurrent UPDATE conflict handling |
+|---|---|
+| Theoretical SI (Berenson et al. 1995) | **first-committer-wins** — the later committer aborts at commit time |
+| PostgreSQL READ COMMITTED | **waits** on the row lock → after the other commits, re-evaluates the predicate on the newest version and proceeds |
+| PostgreSQL REPEATABLE READ | **waits** on the row lock → after the other commits, `ERROR: could not serialize access due to concurrent update` |
+| InnoDB REPEATABLE READ | **waits** on the row lock → then overwrites — no conflict detection (lost update is the application's problem) |
+| db-hobby | table lock, no-wait — immediate error |
+
+> **Practical/interview point**: this table is why a one-line answer to "how does MVCC prevent lost updates" is dangerous. Theoretical SI is first-committer-wins; PostgreSQL implemented **first-updater-wins** (the first to update the row wins; the latecomer waits, then proceeds or errors); and InnoDB's REPEATABLE READ doesn't detect it at all — the application must guard itself with `SELECT ... FOR UPDATE` or an optimistic version column.
+
+**An unexpected aftermath — the PK index had to go multi-version.** With all this in place, the snapshot tests broke. The culprit: the PK index, hitherto unique — UPDATE **overwrote** the key's entry with the new RID, and at that instant **the index path to the old version was severed.** A snapshot reader querying via the index got nothing while a full scan showed the row. PostgreSQL already knew the answer — **when an UPDATE changes an indexed column or can't go HOT, the index holds an entry per version.** (If no indexed column changed and the page has room, PostgreSQL does a HOT — Heap-Only Tuple — update: no new index entry, just a longer version chain inside the heap, with the index pointing only at the chain's root. db-hobby has no HOT, so every UPDATE adds an entry.) The PK index becomes a multimap hanging several RIDs off one key (`btree_insert_dup`), and lookups pick the visible version among candidates. That is the answer to [Part 2](/blog/project/db-hobby/db-internals-02-btree-index)'s subtitle — "why an index isn't a simple key→value map."
 
 ![Multiple sessions — one transaction holds an uncommitted UPDATE while another reads the old version unblocked](/uploads/project/db-hobby/multi-txn-sessions.svg)
 
@@ -342,21 +391,26 @@ SESSION 1> SELECT * FROM t WHERE id = 1;
 
 **Readers don't block writers** — as execution, not demonstration.
 
+One line to draw, though — what stands here is snapshot isolation (SI), not SERIALIZABLE. Write skew — two transactions each reading the other's row and modifying **different rows** (the two on-call doctors who each check that the other is still rostered and both sign off) — slips past first-updater-wins too: they never touch the same row, so there's no conflict to detect. How PostgreSQL catches it with SSI under SERIALIZABLE is in [Transaction ACID ②: Isolation](/blog/theory/transaction-acid-02-isolation).
+
 ## 6. Wrap-up
 
 - **Two philosophies**: 2PL prevents (locks; deadlock cost), MVCC avoids by splitting versions (dead tuples; VACUUM cost). The bill arrives at different times — during execution vs in the background.
 - **MVCC's brain is one line** — xmin committed AND xmax not. A transaction-status array (CLOG) plus an 8-byte row header is all it takes. **Rollback falls out for free.**
 - **DELETE doesn't delete** — it stamps xmax. The price: gates on all nine heap-reading paths, and the principle **"indexes don't know MVCC."**
-- **VACUUM** — dead = committed xmax; delete index (key,RID) pairs lazily (PG's nbtree doesn't redistribute either); RID-preserving compaction; truncate only the tail (hence files rarely shrink).
-- **Snapshot isolation** — remove reader locks + BEGIN snapshot (xmax/xip) + first-updater-wins on writes only. Aftermath: **the PK index becomes a multi-version multimap.**
+- **VACUUM** — dead = committed xmax (a simplification made possible by refusing to run while any transaction is open); delete index (key,RID) pairs lazily (PG's nbtree doesn't redistribute either); RID-preserving compaction; truncate only the tail (hence files rarely shrink).
+- **Snapshot isolation** — remove reader locks + BEGIN snapshot (xmax/xip) + separate handling of write conflicts only (db-hobby: no-wait immediate error; PG: first-updater-wins). Aftermath: **the PK index becomes a multi-version multimap.**
 
 Next: punching a **network** hole into this engine — a PostgreSQL wire protocol server that a real `psql` connects to.
 
 ## References (primary sources first)
 
 - [PostgreSQL Documentation: Concurrency Control (MVCC)](https://www.postgresql.org/docs/current/mvcc.html)
+- [PostgreSQL Documentation: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) — primary source for REPEATABLE READ's snapshot timing and concurrent-UPDATE behavior
 - [PostgreSQL Documentation: Routine Vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html)
+- [PostgreSQL Documentation: Heap-Only Tuples (HOT)](https://www.postgresql.org/docs/current/storage-hot.html)
 - [MySQL 8.0 Reference: InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html)
+- [MySQL 8.0 Reference: Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.0/en/innodb-consistent-read.html)
 - Hal Berenson et al., *A Critique of ANSI SQL Isolation Levels* (SIGMOD 1995)
 - This blog: [Transaction ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [②: Isolation](/blog/theory/transaction-acid-02-isolation) · [Lock Mechanisms](/blog/theory/lock-mechanisms-all)
 - [db-hobby source (GitHub)](https://github.com/dj258255/db-hobby) — `mvcc.c` · `lock.c` · `db.c`

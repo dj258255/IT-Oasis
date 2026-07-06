@@ -31,7 +31,7 @@ seriesOrder: 3
 
 **WAL(Write-Ahead Log)** 의 아이디어는 단순해요. 데이터 파일을 고치기 **전에**, 바뀔 내용을 **로그에 먼저 순차로 적고 fsync**합니다.
 
-> **핵심 정의**: WAL은 "데이터 파일을 고치기 전에 그 변경을 로그에 먼저 적고 fsync한다"는 프로토콜이다. 데이터 파일은 흩어진 페이지에 **무작위 쓰기**지만 로그는 끝에 이어 붙이는 **순차 쓰기**라 빠르고, 한 번의 fsync로 트랜잭션 전체를 원자적으로 "확정"할 수 있다. (db-hobby는 단순함을 위해 바뀐 페이지 **전체**를 적는 physical page logging — PostgreSQL·InnoDB는 보통 변경 *내용*만 적는 redo 레코드를 쓰고 전체 페이지 이미지는 특정 상황에서만 기록한다.)
+> **핵심 정의**: WAL은 "데이터 파일을 고치기 전에 그 변경을 로그에 먼저 적고 fsync한다"는 프로토콜이다. 데이터 파일은 흩어진 페이지에 **무작위 쓰기**지만 로그는 끝에 이어 붙이는 **순차 쓰기**라 빠르고, 한 번의 fsync로 트랜잭션 전체를 원자적으로 "확정"할 수 있다. (db-hobby는 단순함을 위해 바뀐 페이지 **전체**를 적는 physical page logging이다. PostgreSQL은 보통 변경 *내용*만 적는 WAL 레코드를 쓰되, full-page image라는 예외를 둔다 — `full_page_writes`가 켜져 있으면 공식 문서 표현 그대로 *"writes the entire content of each disk page to WAL during the first modification of that page after a checkpoint"*, 즉 체크포인트 후 그 페이지의 **첫 수정 때만** 페이지 전체를 WAL에 적는다. 반쯤 쓰인 페이지 위에서도 redo를 시작할 발판을 만들기 위해서다. InnoDB는 redo 로그에 FPI를 쓰지 않는다 — torn page 방어는 **doublewrite buffer**라는 별도 장치의 몫이다.)
 
 ![WAL 흐름 — stage → 로그+커밋마커 fsync(내구성 분기점) → 데이터 적용 → 로그 비움](/uploads/project/db-hobby/wal-flow.svg)
 
@@ -75,10 +75,16 @@ WAL의 fsync가 실제로 얼마인지, 5천 행을 두 방식으로 적재해 �
 | 다이얼 | 무엇을 하나 |
 |---|---|
 | **group commit** | 여러 트랜잭션의 fsync를 한 번에 몰아서 (위의 "묶음"이 거친 수동 버전) |
-| MySQL `innodb_flush_log_at_trx_commit` | 커밋마다 fsync할지, 1초에 한 번 할지 |
+| MySQL `innodb_flush_log_at_trx_commit` | **1** = 커밋마다 write+flush (기본) · **2** = 커밋마다 write, flush는 ~1초마다 (OS 크래시에 마지막 ~1초 유실 가능) · **0** = write·flush 모두 ~1초마다 (mysqld 크래시만으로도 유실 가능) |
 | PostgreSQL `synchronous_commit` | 커밋이 fsync를 기다릴지 말지 |
 
 전부 "내구성 granularity를 처리량과 맞바꾸는" 다이얼이에요.
+
+덧붙일 것 하나 — 위 실험의 "묶음"은 사용자가 트랜잭션을 직접 묶은 것이지만, 실제 DB의 group commit은 **사용자가 안 묶어도** 동시에 도착한 커밋들의 fsync를 자동으로 합칩니다(PostgreSQL `commit_delay`, InnoDB group commit). 동시성이 높은 서버에선 fsync 한 번이 여러 트랜잭션에 분할 상환되는 거예요.
+
+> **실무 안티패턴**: ORM이 행마다 flush/commit을 날리는 패턴(flush-per-row). 위 실측의 "행마다 커밋" 행이 정확히 그 모드예요 — 같은 일에 23배를 내고 있을 수 있습니다. 대량 적재의 첫 번째 처방은 배치 커밋이에요.
+
+> **흔한 오해 정정**: *"fsync가 실패하면 재시도하면 된다?"* — 2018년 PostgreSQL 커뮤니티를 뒤흔든 **fsyncgate**가 보여준 함정이에요. 리눅스를 비롯한 여러 커널에서 fsync가 실패하면 커널이 dirty 페이지를 **clean으로 표시해 버려서**, 재시도한 fsync는 태연히 성공을 돌려줍니다 — 데이터는 디스크에 안 내려갔는데도요. 그래서 PostgreSQL 12부터는 fsync 실패 시 재시도하지 않고 **PANIC으로 즉시 내려갑니다** — 재시작해서 WAL redo부터 다시 밟는 것만이 안전한 경로거든요.
 
 > 더 깊이: [트랜잭션 ACID ④: Durability](/blog/theory/transaction-acid-04-durability) — group commit·doublewrite buffer·체크포인트까지, 실제 DB 관점의 전체 그림.
 
@@ -89,14 +95,16 @@ WAL의 fsync가 실제로 얼마인지, 5천 행을 두 방식으로 적재해 �
 - **STEAL**: 커밋 전의 dirty 페이지를 디스크에 써도 되는가?
 - **FORCE**: 커밋 시 모든 dirty 페이지를 디스크에 강제로 내리는가?
 
-| | 커밋 전 미커밋 페이지를 디스크에? | 필요한 복구 |
-|---|---|---|
-| **NO-STEAL** | 못 씀 | redo만 (되돌릴 게 없음) |
-| **STEAL** (PostgreSQL·InnoDB) | 씀 | **undo 필요** |
-| **FORCE** | 커밋 시 전부 flush | redo 최소 |
-| **NO-FORCE** (PostgreSQL·InnoDB) | 커밋 시 로그만 flush | redo 필요 |
+두 축을 교차하면 사분면이 나오고, 각 사분면이 필요로 하는 복구가 달라져요.
 
-> **핵심 프레임**: **"어느 버퍼 정책을 고르느냐가 어떤 복구 로직을 필수로 만든다."** STEAL은 UNDO를 데려오고(미커밋이 디스크에 새니까), NO-FORCE는 REDO를 데려온다(커밋본이 디스크에 없을 수 있으니까). 진짜 DB는 대개 **(steal, no-force)** — 가장 유연하지만 redo·undo를 다 갖춰야 한다.
+| | **FORCE** (커밋 시 데이터도 전부 flush) | **NO-FORCE** (커밋 시 로그만 flush) |
+|---|---|---|
+| **NO-STEAL** (미커밋 페이지 못 내림) | undo 불필요 · redo 최소 — 가장 단순 (1절의 db-hobby) | undo 불필요 · **redo 필요** |
+| **STEAL** (미커밋 페이지 내려도 됨) | **undo 정보 필요** · redo 최소 | **redo + undo 정보 둘 다 필요** (PostgreSQL·InnoDB — 그리고 이 편의 종착지) |
+
+> **핵심 프레임**: **"어느 버퍼 정책을 고르느냐가 어떤 복구 로직을 필수로 만든다."** STEAL은 UNDO 정보를 데려오고(미커밋이 디스크에 새니까), NO-FORCE는 REDO를 데려온다(커밋본이 디스크에 없을 수 있으니까). 진짜 DB는 대개 **(steal, no-force)** — 가장 유연하지만 redo·undo 정보를 다 갖춰야 한다.
+
+> **흔한 오해 정정**: *"steal이면 크래시 복구에 반드시 undo 패스가 있다?"* — 정확히는 **undo "정보"가 필요**한 것이고, 그 정보를 어디에 두고 언제 쓰느냐는 DB마다 다릅니다. InnoDB는 undo log에 두고 복구 때 미커밋 변경을 롤백해요. 반면 PostgreSQL은 steal인데도 **크래시 복구에 undo 패스가 없습니다** — MVCC가 행의 옛 버전을 힙에 그대로 두니, 미커밋 트랜잭션이 디스크에 남긴 새 버전 튜플은 clog에서 abort로 판정되어 **아무에게도 안 보이고**, 물리적 청소는 나중에 VACUUM이 하면 그만이거든요. "undo 정보를 어디에 두느냐"의 답이 InnoDB는 undo log, PostgreSQL은 **힙의 옛 버전 자체**인 셈이에요 — 이 구조는 [4편(MVCC)](/blog/project/db-hobby/db-internals-04-mvcc)에서 본격적으로 다룹니다.
 
 1절의 WAL은 **(no-steal, force)** 였어요. no-steal이면 디스크엔 **커밋된 페이지만** 존재하니, 복구가 redo/discard로 끝납니다 — 되돌릴 게 아예 없거든요. 이 단순함은 공짜가 아니었습니다.
 
@@ -151,7 +159,7 @@ int wal_steal(Wal *w, page_id_t pid, const void *buf) {
 남은 건 FORCE예요. 지금 커밋은 로그 fsync 후 **모든 페이지를 데이터 파일에도 fsync**합니다. 이걸 고치는 동기는 속도보다 **구조** 세 가지였어요.
 
 1. 커밋 비용이 dirty 페이지 수에 **비례**한다 — 트랜잭션이 클수록 커밋이 느려지는 모델.
-2. 로그를 커밋마다 버린다 — WAL이 "일어난 일의 기록"이 아니라 일회용 임시 버퍼. 진짜 DB의 WAL은 복제·PITR까지 받치는 **진실의 원천(source of truth)** 인데.
+2. 로그를 커밋마다 버린다 — WAL이 "일어난 일의 기록"이 아니라 일회용 임시 버퍼. PostgreSQL의 WAL은 복제·PITR까지 받치는 **진실의 원천(source of truth)** 인데 말이죠. (MySQL은 복제가 redo 로그가 아니라 별도의 **binlog**로 돕니다 — 그래서 커밋마다 InnoDB redo와 binlog를 내부 2단계 커밋으로 정합시켜요.)
 3. 체크포인트·MVCC 같은 다음 단계들이 전부 "로그가 쌓이고 데이터는 게으르게 따라가는" 모델을 전제한다.
 
 원리는 단순합니다 — **내구성은 로그가 책임진다.** after-image가 로그에 fsync됐다면, 데이터 파일이 크래시로 못 따라왔어도 복구가 로그에서 redo하면 돼요. 그럼 커밋은 로그 fsync에서 끝나도 됩니다.
@@ -174,20 +182,27 @@ int wal_commit(Wal *w) {
 
 > **실무/면접 포인트**: PostgreSQL 튜닝의 `max_wal_size`·`checkpoint_timeout`이 중요한 이유가 정확히 이 트레이드오프다. 체크포인트를 자주 하면 복구가 빠르지만 flush I/O가 몰리고, 드물게 하면 런타임은 가볍지만 복구가 길어진다. **"no-force가 만든 빚(로그)을 언제 갚느냐"** 로 이해하면 그 파라미터들이 한 줄로 꿰인다.
 
+이 트레이드오프는 운영 로그에서 실물로 만납니다 — PostgreSQL이 `LOG: checkpoints are occurring too frequently (9 seconds apart)` 를 찍고 있다면, 쓰기 부하가 `max_wal_size`를 계속 뚫어 체크포인트가 강제로 앞당겨지고 있다는 신호예요.
+
 여기까지로 db-hobby는 진짜 DB와 같은 **(steal, no-force)** 사분면에 도착했습니다. 커밋 = 순차 로그 하나에 fsync 한 번. 데이터 페이지 수십 개에 무작위 fsync 하던 시절과 구조적으로 달라요.
 
 ## 7. 진짜 ARIES와의 거리 — 정직한 경계
 
-위 구현은 **ARIES의 발상**을 미니 DB 규모로 옮긴 것이지, 교과서 ARIES 그대로가 아니에요. 차이를 뭉뚱그리면 틀립니다.
+위 구현은 **ARIES의 발상**을 미니 DB 규모로 옮긴 것이지, 교과서 ARIES 그대로가 아니에요. 그리고 "진짜 DB"의 복구도 하나가 아닙니다 — 흔히 "PostgreSQL·InnoDB는 ARIES 계열"로 뭉뚱그리는데, 그것부터 부정확해요. **교과서 ARIES에 가장 가까운 건 SQL Server**(Analysis→Redo→Undo 3-패스, CLR)고, **InnoDB가 그다음**(redo 로그로 재적용 + undo log로 미커밋 롤백)이며, **PostgreSQL은 ARIES가 아닙니다** — 복구가 redo 단일 패스로 끝나고, undo 패스도 CLR도 없어요. 미커밋 데이터의 뒤처리는 복구가 아니라 MVCC(힙의 옛 버전 + clog 가시성 판정)와 VACUUM의 몫이거든요(3절의 상자). 복구 아키텍처를 나란히 놓으면:
 
-| | db-hobby | 진짜 ARIES (PostgreSQL·InnoDB 계열) |
-|---|---|---|
-| 로깅 단위 | 페이지 **전체** (물리) | **physiological** (연산+데이터, 훨씬 작음) |
-| pageLSN | 없음 | 페이지마다 LSN으로 재적용 판정 |
-| 복구 패스 | redo/undo 2-패스 | Analysis → Redo → Undo 3-패스 |
-| CLR (보상 로그) | 없음 | undo도 로깅해 재크래시에 안전 |
+| | db-hobby | PostgreSQL | InnoDB | SQL Server |
+|---|---|---|---|---|
+| 로깅 단위 | 페이지 **전체** (물리) | physiological WAL 레코드 (+ 체크포인트 후 첫 수정 시 FPI) | physiological redo + 별도 undo log | physiological |
+| pageLSN | 없음 | 있음 | 있음 | 있음 |
+| 복구 패스 | redo/undo 2-패스 | **redo 단일 패스** | redo 후 undo log로 미커밋 롤백 | Analysis → Redo → Undo 3-패스 |
+| 미커밋 잔재 처리 | before-image로 undo | MVCC 옛 버전 + VACUUM (복구 밖에서) | undo log 롤백 | Undo 패스 |
+| CLR (보상 로그) | 없음 | 없음 (undo 패스 자체가 없음) | 유사 장치 | 있음 |
 
-여기서 중요한 통찰이 하나 있어요 — **pageLSN과 CLR이 "없어도 되는" 이유가 있습니다.** db-hobby는 페이지 전체를 물리 로깅하므로 redo가 **멱등(idempotent)** 이에요. 전체 페이지를 덮어쓰는 건 몇 번을 해도 같으니까, "이 페이지에 이 로그가 이미 적용됐나"를 판정하는 pageLSN이 필요 없고, undo 도중 재크래시해도 같은 undo를 다시 하면 그만이라 CLR도 필요 없어요. 진짜 DB는 로그를 작게 하려고 physiological 로깅을 쓰고, **그래서** pageLSN·CLR이 필요해집니다.
+여기서 중요한 통찰이 하나 있어요 — **pageLSN과 CLR이 "없어도 되는" 이유가 있습니다.** db-hobby는 페이지 전체를 물리 로깅하므로 redo가 **멱등(idempotent)** 이에요. 전체 페이지를 덮어쓰는 건 몇 번을 해도 같으니까, "이 페이지에 이 로그가 이미 적용됐나"를 판정하는 pageLSN이 필요 없고, undo 도중 재크래시해도 같은 undo를 다시 하면 그만이라 CLR도 필요 없어요. 진짜 DB는 로그를 작게 하려고 physiological 로깅을 쓰고, **그래서** pageLSN이 필요해집니다 — 전체 페이지 덮어쓰기가 아니니 redo의 멱등성이 공짜로 오지 않거든요. CLR까지 필요한지는 복구에 undo 패스가 있느냐로 갈려요 — SQL Server는 있어서 CLR이 필수고, PostgreSQL은 undo 패스 자체가 없으니 CLR도 없습니다.
+
+> **실무/면접 포인트**: "PostgreSQL 크래시 복구엔 왜 undo 패스가 없는가?"는 steal/no-force를 제대로 이해했는지 가르는 질문이에요. 답의 뼈대 — steal로 미커밋 튜플이 디스크에 남아도, MVCC 세계에선 그건 "지워야 할 오염"이 아니라 "커밋 안 된 버전"일 뿐입니다. clog에 abort로 기록되는 순간 모든 스냅샷에서 안 보이게 되고, 물리적 청소는 VACUUM이 나중에 해요. undo를 복구 시점에 하느냐(InnoDB·SQL Server), 평상시에 게으르게 하느냐(PostgreSQL)의 차이입니다.
+
+정직한 경계가 하나 더 있어요 — **torn page**. db-hobby는 "페이지 쓰기는 통째로 되거나 통째로 안 된다"는 원자성을 가정하지만, 실제 디스크는 페이지를 512B~4KB 섹터로 나눠 쓰다 전원이 꺼지면 **반쯤 쓰인 페이지**를 남길 수 있습니다. 실제 DB는 이걸 이중으로 방어해요 — WAL 레코드엔 CRC를 달아 로그의 유효한 끝을 판별하고, 데이터 페이지 쪽은 PostgreSQL이 `full_page_writes`(1절 상자의 FPI)로, InnoDB가 doublewrite buffer로 막습니다.
 
 > **화물숭배 금지**: 기법은 그게 필요해지는 문제가 나타날 때 들여온다. CLR·퍼지 체크포인트·3-패스는 "이 엔진에선 불필요"를 (크래시 주입 테스트로) 증명하고 닫았다 — physiological 로깅과 동시 운영이 등장하면 그때 "필요해서" 들어온다. 이 구분이 ARIES를 외우는 것과 이해하는 것의 차이다.
 
@@ -197,7 +212,7 @@ int wal_commit(Wal *w) {
 - **fsync는 비싸다** — 같은 5천 행이 커밋 granularity에 따라 **23배** 차이. group commit 계열 다이얼의 존재 이유.
 - **STEAL/FORCE 사분면이 복구를 결정한다** — no-steal은 redo만으로 충분하지만 트랜잭션 크기가 버퍼 풀에 못 박히고, steal은 그 벽을 없애는 대신 **undo를 필연**으로 만든다.
 - **no-force** — 커밋 = 로그 fsync 하나. 로그가 진실의 원천이 되고, 복구는 역사의 재생이 되며, 체크포인트가 "빚을 갚는" 장치로 필요해진다.
-- **ARIES와의 거리** — 페이지 전체 물리 로깅이라 redo가 멱등 → pageLSN·CLR이 불필요. physiological 로깅으로 가면 그것들이 "필요해서" 들어온다.
+- **ARIES와의 거리** — 페이지 전체 물리 로깅이라 redo가 멱등 → pageLSN·CLR이 불필요. physiological 로깅으로 가면 pageLSN이 "필요해서" 들어온다. 그리고 진짜 DB의 복구도 하나가 아니다 — SQL Server는 교과서 ARIES, InnoDB는 redo+undo log, **PostgreSQL은 redo 단일 패스**(미커밋 뒤처리는 MVCC·VACUUM의 몫).
 
 이제 크래시엔 안 깨져요. 다음 문제는 **동시에 여럿이 쓸 때**입니다 — 잠금이냐 버전이냐, 2PL에서 MVCC 스냅샷 격리까지.
 
@@ -205,7 +220,12 @@ int wal_commit(Wal *w) {
 
 - C. Mohan et al., *ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging* (ACM TODS, 1992)
 - [PostgreSQL Documentation: WAL — Reliability and the Write-Ahead Log](https://www.postgresql.org/docs/current/wal.html)
+- [PostgreSQL Documentation: WAL Configuration (`full_page_writes` · `commit_delay`)](https://www.postgresql.org/docs/current/runtime-config-wal.html)
 - [MySQL 8.0 Reference: InnoDB Redo Log](https://dev.mysql.com/doc/refman/8.0/en/innodb-redo-log.html)
+- [MySQL 8.0 Reference: InnoDB Doublewrite Buffer](https://dev.mysql.com/doc/refman/8.0/en/innodb-doublewrite-buffer.html)
+- [MySQL 8.0 Reference: `innodb_flush_log_at_trx_commit`](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit)
+- [MySQL 8.0 Reference: The Binary Log](https://dev.mysql.com/doc/refman/8.0/en/binary-log.html)
+- [LWN: PostgreSQL's fsync() surprise](https://lwn.net/Articles/752063/) — fsyncgate (2018)
 - Hellerstein, Stonebraker & Hamilton, *Architecture of a Database System* (2007) — §6 (Transactions: Concurrency Control and Recovery)
 - 본 블로그: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [④: Durability](/blog/theory/transaction-acid-04-durability)
 - [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `wal.c` · `bufpool.c`
@@ -224,7 +244,7 @@ This part solves that in three stages: build the simplest WAL (redo-only) → hi
 
 The idea of the **Write-Ahead Log** is simple: **before** touching the data file, append the changes to a log **and fsync it.**
 
-> **Key definition**: WAL is the protocol "write the change to the log and fsync it before modifying the data file." The data file takes **random writes** to scattered pages, but the log is an **appending sequential write** — fast — and one fsync atomically "confirms" the whole transaction. (db-hobby logs entire changed pages for simplicity — physical page logging. PostgreSQL/InnoDB usually write redo records describing just the *change*, with full-page images only in specific situations.)
+> **Key definition**: WAL is the protocol "write the change to the log and fsync it before modifying the data file." The data file takes **random writes** to scattered pages, but the log is an **appending sequential write** — fast — and one fsync atomically "confirms" the whole transaction. (db-hobby logs entire changed pages for simplicity — physical page logging. PostgreSQL usually writes WAL records describing just the *change*, with one exception, the full-page image: with `full_page_writes` on, in the official docs' words, it *"writes the entire content of each disk page to WAL during the first modification of that page after a checkpoint"* — only the **first** modification after a checkpoint, to give redo solid ground even atop a half-written page. InnoDB puts no FPIs in its redo log — torn-page defense is the job of a separate mechanism, the **doublewrite buffer**.)
 
 ![WAL flow — stage → log + commit marker fsync (durability watershed) → apply to data → clear log](/uploads/project/db-hobby/wal-flow.svg)
 
@@ -267,11 +287,17 @@ Why this matters: durability (the D in ACID) isn't a free property but **a cost 
 
 | Dial | What it does |
 |---|---|
-| **group commit** | batch several transactions' fsyncs into one |
-| MySQL `innodb_flush_log_at_trx_commit` | fsync per commit, or once a second |
+| **group commit** | batch several transactions' fsyncs into one (the manual "batching" above, refined) |
+| MySQL `innodb_flush_log_at_trx_commit` | **1** = write+flush at every commit (default) · **2** = write at every commit, flush ~once a second (an OS crash can lose the last ~second) · **0** = write and flush both ~once a second (even a mysqld crash can lose data) |
 | PostgreSQL `synchronous_commit` | whether a commit waits for the fsync |
 
 All are dials trading durability granularity for throughput.
+
+One more note — the "batching" in the experiment above was the user grouping transactions by hand, but real DBs' group commit merges the fsyncs of concurrently arriving commits **even when the user doesn't batch anything** (PostgreSQL `commit_delay`, InnoDB group commit). On a highly concurrent server, one fsync amortizes across many transactions.
+
+> **Real-world anti-pattern**: the ORM flush-per-row pattern — a flush/commit fired for every row. The "commit per row" line in the measurement above is exactly that mode: you may be paying 23× for the same work. The first prescription for bulk loads is batched commits.
+
+> **Common misconception, corrected**: *"if fsync fails, just retry it?"* — The trap exposed by **fsyncgate**, which shook the PostgreSQL community in 2018. On Linux and several other kernels, when fsync fails the kernel **marks the dirty pages clean anyway**, so a retried fsync blithely returns success — even though the data never reached disk. That's why, since PostgreSQL 12, an fsync failure is not retried but triggers an immediate **PANIC** — restarting and replaying WAL redo from scratch is the only safe path.
 
 > Deeper: [Transaction ACID ④: Durability](/blog/theory/transaction-acid-04-durability) — group commit, the doublewrite buffer, checkpoints, from the real-DB perspective.
 
@@ -282,14 +308,16 @@ Now the main act. Recovery policy splits along two axes:
 - **STEAL**: may uncommitted dirty pages be written to disk?
 - **FORCE**: must all dirty pages be forced to disk at commit?
 
-| | Uncommitted pages to disk? | Recovery required |
-|---|---|---|
-| **NO-STEAL** | never | redo only (nothing to undo) |
-| **STEAL** (PostgreSQL · InnoDB) | yes | **undo required** |
-| **FORCE** | flush everything at commit | minimal redo |
-| **NO-FORCE** (PostgreSQL · InnoDB) | only the log at commit | redo required |
+Cross the two axes and you get quadrants, each demanding different recovery:
 
-> **Key frame**: **"the buffer policy you choose determines which recovery logic is mandatory."** STEAL brings UNDO (uncommitted data leaks to disk); NO-FORCE brings REDO (committed data may not be on disk). Real DBs are usually **(steal, no-force)** — the most flexible, at the cost of needing both.
+| | **FORCE** (flush all data at commit) | **NO-FORCE** (flush only the log at commit) |
+|---|---|---|
+| **NO-STEAL** (uncommitted pages never written) | no undo · minimal redo — simplest (the db-hobby of §1) | no undo · **redo required** |
+| **STEAL** (uncommitted pages may be written) | **undo information required** · minimal redo | **both redo + undo information** (PostgreSQL · InnoDB — and this part's destination) |
+
+> **Key frame**: **"the buffer policy you choose determines which recovery logic is mandatory."** STEAL brings UNDO information (uncommitted data leaks to disk); NO-FORCE brings REDO (committed data may not be on disk). Real DBs are usually **(steal, no-force)** — the most flexible, at the cost of needing both.
+
+> **Common misconception, corrected**: *"steal implies an undo pass in crash recovery?"* — Precisely speaking, steal requires **undo *information***; where that information lives and when it's used differs per DB. InnoDB keeps it in the undo log and rolls back uncommitted changes during recovery. PostgreSQL, though, is steal and yet has **no undo pass in crash recovery** — MVCC keeps old row versions in the heap, so the new-version tuples an uncommitted transaction left on disk are judged aborted via clog, become **visible to no one**, and physical cleanup is simply VACUUM's job later. The answer to "where does the undo information live" is the undo log for InnoDB and **the old versions in the heap themselves** for PostgreSQL — a structure treated in earnest in [Part 4 (MVCC)](/blog/project/db-hobby/db-internals-04-mvcc).
 
 The WAL of §1 was **(no-steal, force)**: with no-steal, the disk contains **only committed pages**, so recovery ends at redo/discard — there's nothing to undo. That simplicity was not free.
 
@@ -344,7 +372,7 @@ Verified: ① a 2,000-row (pool-exceeding) transaction commits and survives reop
 FORCE remains. Commit currently fsyncs the log and then **fsyncs every page to the data file too.** The motivation to fix it is structural, threefold:
 
 1. Commit cost is **proportional to dirty page count** — bigger transactions mean slower commits, by design.
-2. The log is discarded at every commit — the WAL is a disposable buffer, not "the record of what happened." A real DB's WAL is the **source of truth** underpinning replication and PITR.
+2. The log is discarded at every commit — the WAL is a disposable buffer, not "the record of what happened." PostgreSQL's WAL, by contrast, is the **source of truth** underpinning replication and PITR. (MySQL replication runs not on the redo log but on a separate log, the **binlog** — which is why every commit reconciles InnoDB redo and the binlog through an internal two-phase commit.)
 3. Everything that follows (checkpoints, MVCC) presumes the "log accumulates, data lazily follows" model.
 
 The principle is simple — **the log owns durability.** If the after-images are fsynced in the log, recovery can redo them even if the data file never caught up. So commit may end at the log fsync:
@@ -367,20 +395,27 @@ int wal_commit(Wal *w) {
 
 > **Practical/interview point**: this is precisely why `max_wal_size` and `checkpoint_timeout` matter in PostgreSQL tuning. Frequent checkpoints → fast recovery but bursty flush I/O; rare ones → light runtime but long recovery. Read them as **"when do you repay the debt (the log) that no-force created"** and the parameters string onto one line.
 
+You meet this trade-off in the flesh in production logs — if PostgreSQL is printing `LOG: checkpoints are occurring too frequently (9 seconds apart)`, write load keeps blowing through `max_wal_size` and checkpoints are being forced early.
+
 db-hobby has now arrived in the same **(steal, no-force)** quadrant as real DBs. Commit = one fsync on one sequential log.
 
 ## 7. The Distance to Real ARIES — an Honest Boundary
 
-This implementation carries **the idea of ARIES** at mini-DB scale; it is not textbook ARIES. Blurring the difference would be wrong:
+This implementation carries **the idea of ARIES** at mini-DB scale; it is not textbook ARIES. And "real DB" recovery isn't one thing either — the common shorthand "PostgreSQL and InnoDB are ARIES-family" is itself inaccurate. **Closest to textbook ARIES is SQL Server** (Analysis→Redo→Undo 3-pass, CLRs); **InnoDB comes next** (redo log for re-application + undo log for rolling back uncommitted work); and **PostgreSQL is not ARIES** — its recovery finishes in a single redo pass, with no undo pass and no CLRs. Cleaning up uncommitted data is the job not of recovery but of MVCC (old heap versions + clog visibility) and VACUUM (the box in §3). Side by side:
 
-| | db-hobby | Real ARIES (PostgreSQL · InnoDB lineage) |
-|---|---|---|
-| Logging unit | whole **pages** (physical) | **physiological** (operation + data; far smaller) |
-| pageLSN | none | per-page LSN decides re-application |
-| Recovery passes | redo/undo, 2-pass | Analysis → Redo → Undo, 3-pass |
-| CLR (compensation log) | none | undo itself is logged; safe across re-crashes |
+| | db-hobby | PostgreSQL | InnoDB | SQL Server |
+|---|---|---|---|---|
+| Logging unit | whole **pages** (physical) | physiological WAL records (+ FPI on first post-checkpoint modification) | physiological redo + separate undo log | physiological |
+| pageLSN | none | yes | yes | yes |
+| Recovery passes | redo/undo, 2-pass | **single redo pass** | redo, then undo-log rollback of uncommitted work | Analysis → Redo → Undo, 3-pass |
+| Uncommitted residue | undone via before-images | MVCC old versions + VACUUM (outside recovery) | undo-log rollback | Undo pass |
+| CLR (compensation log) | none | none (no undo pass at all) | analogous machinery | yes |
 
-One insight matters here — **there is a reason pageLSN and CLR can be absent.** Because db-hobby logs whole pages physically, redo is **idempotent**: overwriting a full page any number of times yields the same result. So no pageLSN is needed to ask "was this log already applied to this page," and re-crashing during undo just repeats the same undo — no CLR needed. Real DBs use physiological logging to keep logs small, and **that** is what makes pageLSN and CLR necessary.
+One insight matters here — **there is a reason pageLSN and CLR can be absent.** Because db-hobby logs whole pages physically, redo is **idempotent**: overwriting a full page any number of times yields the same result. So no pageLSN is needed to ask "was this log already applied to this page," and re-crashing during undo just repeats the same undo — no CLR needed. Real DBs use physiological logging to keep logs small, and **that** is what makes pageLSN necessary — without full-page overwrites, redo's idempotence no longer comes free. Whether CLRs are needed too splits on whether recovery has an undo pass — SQL Server does, so CLRs are essential; PostgreSQL has no undo pass at all, hence no CLRs.
+
+> **Practical/interview point**: "Why does PostgreSQL crash recovery have no undo pass?" is the question that separates people who truly understand steal/no-force. The skeleton of the answer — even though steal leaves uncommitted tuples on disk, in an MVCC world they are not "contamination to erase" but merely "versions that never committed." The moment the transaction is recorded as aborted in clog, they become invisible to every snapshot, and physical cleanup falls to VACUUM later. It's the difference between undoing at recovery time (InnoDB, SQL Server) and undoing lazily during normal operation (PostgreSQL).
+
+One more honest boundary — the **torn page**. db-hobby assumes page writes are all-or-nothing, but real disks write a page in 512B–4KB sectors, and losing power mid-way can leave a **half-written page**. Real DBs defend in two layers — WAL records carry CRCs to find the log's valid end, and on the data-page side PostgreSQL uses `full_page_writes` (the FPI from the box in §1) while InnoDB uses the doublewrite buffer.
 
 > **No cargo-culting**: bring in a technique when the problem that demands it appears. CLR, fuzzy checkpoints, and 3-pass were closed with a proof (crash-injection tests) that "this engine doesn't need them" — they enter when physiological logging and concurrent operation arrive, *because needed*. That distinction is the difference between memorizing ARIES and understanding it.
 
@@ -390,7 +425,7 @@ One insight matters here — **there is a reason pageLSN and CLR can be absent.*
 - **fsync is expensive** — the same 5,000 rows differ **23×** by commit granularity. Hence the group-commit family of dials.
 - **The STEAL/FORCE quadrant determines recovery** — no-steal keeps redo-only recovery but nails transaction size to the pool; steal removes that wall at the price of making **undo inevitable.**
 - **No-force** — commit = one log fsync. The log becomes the source of truth, recovery becomes a replay of history, and checkpoints appear as the debt-repayment device.
-- **The distance to ARIES** — whole-page physical logging makes redo idempotent → pageLSN/CLR unnecessary. Move to physiological logging and they enter *because needed*.
+- **The distance to ARIES** — whole-page physical logging makes redo idempotent → pageLSN/CLR unnecessary. Move to physiological logging and pageLSN enters *because needed*. And real-DB recovery isn't one thing — SQL Server is textbook ARIES, InnoDB is redo + undo log, **PostgreSQL is a single redo pass** (uncommitted cleanup belongs to MVCC and VACUUM).
 
 Crashes no longer corrupt us. The next problem is **many writers at once** — locks or versions: from 2PL to MVCC snapshot isolation.
 
@@ -398,7 +433,12 @@ Crashes no longer corrupt us. The next problem is **many writers at once** — l
 
 - C. Mohan et al., *ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging* (ACM TODS, 1992)
 - [PostgreSQL Documentation: Reliability and the Write-Ahead Log](https://www.postgresql.org/docs/current/wal.html)
+- [PostgreSQL Documentation: WAL Configuration (`full_page_writes` · `commit_delay`)](https://www.postgresql.org/docs/current/runtime-config-wal.html)
 - [MySQL 8.0 Reference: InnoDB Redo Log](https://dev.mysql.com/doc/refman/8.0/en/innodb-redo-log.html)
+- [MySQL 8.0 Reference: InnoDB Doublewrite Buffer](https://dev.mysql.com/doc/refman/8.0/en/innodb-doublewrite-buffer.html)
+- [MySQL 8.0 Reference: `innodb_flush_log_at_trx_commit`](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit)
+- [MySQL 8.0 Reference: The Binary Log](https://dev.mysql.com/doc/refman/8.0/en/binary-log.html)
+- [LWN: PostgreSQL's fsync() surprise](https://lwn.net/Articles/752063/) — fsyncgate (2018)
 - Hellerstein, Stonebraker & Hamilton, *Architecture of a Database System* (2007), §6
 - This blog: [Transaction ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [④: Durability](/blog/theory/transaction-acid-04-durability)
 - [db-hobby source (GitHub)](https://github.com/dj258255/db-hobby) — `wal.c` · `bufpool.c`

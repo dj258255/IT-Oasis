@@ -40,7 +40,7 @@ DB는 한 덩어리가 아니라 계층의 합이에요. 위에서 아래로:
 |---|---|
 | **db-hobby** | 4KB |
 | PostgreSQL | 8KB |
-| MySQL InnoDB | 16KB |
+| MySQL InnoDB | 기본 16KB (`innodb_page_size` 4K~64K 설정 가능) |
 | SQLite | 기본 4KB (3.12.0/2016~, 이전 기본 1KB · 512B~64KB 설정 가능) |
 
 ## 2. 페이저 — 왜 행이 아니라 페이지 단위인가
@@ -71,7 +71,7 @@ int pager_read(Pager *p, page_id_t id, void *buf) {
 
 ## 3. 슬롯 페이지 — 가변 행, 그리고 안정적 주소
 
-페이지는 아직 4096바이트 덩어리일 뿐이에요. 여기에 **가변 길이** 행을 여러 개 담으려면 문제가 있습니다. `'kim'`은 3바이트, `'alexander'`는 9바이트 — 길이가 제각각인 행이 어디서 어디까지인지 어떻게 알고, 중간 행이 지워지면 어떻게 정리할까요? 답이 **슬롯 페이지(slotted page)** 입니다. PostgreSQL heap 페이지, InnoDB 페이지가 전부 이 구조예요.
+페이지는 아직 4096바이트 덩어리일 뿐이에요. 여기에 **가변 길이** 행을 여러 개 담으려면 문제가 있습니다. `'kim'`은 3바이트, `'alexander'`는 9바이트 — 길이가 제각각인 행이 어디서 어디까지인지 어떻게 알고, 중간 행이 지워지면 어떻게 정리할까요? 답이 **슬롯 페이지(slotted page)** 입니다. PostgreSQL heap 페이지가 정확히 이 구조고, db-hobby도 같은 길을 갔어요. (InnoDB 페이지는 비슷해 보이지만 성격이 다릅니다 — 아래 상자에서.)
 
 레이아웃은 양쪽에서 가운데로 자라는 모양이에요. 페이지 **앞**에는 헤더 뒤로 **슬롯 배열**(각 슬롯 = "이 행은 offset 몇, 길이 몇")이 아래로 자라고, 페이지 **끝**에서는 실제 레코드 바이트가 위로 자랍니다. 둘이 만나면 꽉 찬 거예요.
 
@@ -86,9 +86,11 @@ int pager_read(Pager *p, page_id_t id, void *buf) {
 | 삭제·compact | 슬롯 번호 유지, offset만 수정 | 자리 재사용 어려움 |
 | 채택 | 거의 모든 관계형 DB | 옛날·일부 임베디드 |
 
-> **슬롯 페이지의 두 가지 값어치**: 하나는 가변 길이 행을 담는 것. 다른 하나는 — 어쩌면 더 중요한 — **슬롯 번호가 행의 안정적인 주소**가 된다는 것이다. 행이 지워져 페이지를 compact하며 레코드가 물리적으로 옮겨져도 슬롯 번호는 그대로다(슬롯 안의 offset만 고치면 되니까). 그래서 바깥(인덱스)에서 "페이지 5의 슬롯 2"로 행을 가리켜도 주소가 안 깨진다. PostgreSQL은 이걸 **TID(ctid)**, InnoDB는 레코드 포인터라 부른다.
+> **슬롯 페이지의 두 가지 값어치**: 하나는 가변 길이 행을 담는 것. 다른 하나는 — 어쩌면 더 중요한 — **슬롯 번호가 행의 안정적인 주소**가 된다는 것이다. 행이 지워져 페이지를 compact하며 레코드가 물리적으로 옮겨져도 슬롯 번호는 그대로다(슬롯 안의 offset만 고치면 되니까). 그래서 바깥(인덱스)에서 "페이지 5의 슬롯 2"로 행을 가리켜도 주소가 안 깨진다. PostgreSQL은 이걸 **TID(ctid)** 라 부른다 — 그리고 이 "슬롯 = 안정적 외부 주소" 성질은 PostgreSQL·db-hobby 쪽 이야기다.
 
-> **실무/면접 포인트**: InnoDB도 페이지 안에선 Page Directory라는 sparse 디렉터리로 위치를 좁힌 뒤 레코드 체인을 따라갑니다. 다만 행을 PK 순서로 정렬해 저장하는 클러스터드 구조라, 보조 인덱스가 행을 가리킬 때 물리 포인터가 아니라 **PK 값**을 써요. "행을 물리 위치로 식별하느냐(PG) PK로 식별하느냐(InnoDB)"가 저장 엔진이 갈리는 지점입니다 — [7편](/blog/project/db-hobby/db-internals-07-storage-engines)에서 실측으로 대조해요.
+> **실무/면접 포인트**: InnoDB 페이지에도 Page Directory라는 게 있지만 성격이 달라요 — 슬롯 하나가 행 하나가 아니라 **4~8개 레코드당 슬롯 하나**인 sparse 디렉터리라, 슬롯으로 근처까지 좁힌 뒤 레코드 체인을 따라갑니다. 즉 InnoDB에는 TID급의 안정적 외부 주소가 사실상 없어요. 행을 PK 순서로 정렬해 저장하는 클러스터드 구조라, 보조 인덱스가 행을 가리킬 때도 물리 포인터가 아니라 **PK 값**을 씁니다. "행을 물리 위치로 식별하느냐(PG) PK로 식별하느냐(InnoDB)"가 저장 엔진이 갈리는 지점이에요 — [7편](/blog/project/db-hobby/db-internals-07-storage-engines)에서 실측으로 대조해요.
+
+덧붙이면 PostgreSQL은 페이지에 일부러 빈 공간을 남겨두는 다이얼도 줍니다 — `FILLFACTOR`. 기본값 100은 페이지를 꽉 채우고, 90으로 낮추면 10%를 UPDATE 몫으로 남겨둬요. 새 버전이 같은 페이지에 들어갈 자리가 있으면 인덱스를 안 고치고 끝나는 **HOT(Heap-Only Tuple)** 업데이트가 가능해지거든요 — UPDATE가 왜 "새 버전 만들기"인지는 [4편(MVCC)](/blog/project/db-hobby/db-internals-04-mvcc)에서 다룹니다.
 
 ## 4. 행 포맷 — 값을 바이트로, 그리고 NULL은 비트로
 
@@ -109,7 +111,9 @@ int pager_read(Pager *p, page_id_t id, void *buf) {
 | 위치 | MVCC 헤더 뒤, 값 앞 | 튜플 헤더의 `t_bits` | 행 헤더(가변 부분) |
 | 크기 | 컬럼당 1비트 | 컬럼당 1비트 | nullable 컬럼당 1비트 |
 | NULL 컬럼의 값 바이트 | 안 씀 | 안 씀 | 안 씀 |
-| 전부 NOT NULL이면 | 비트는 두되 항상 0 | 비트맵 자체를 생략 | NOT NULL 컬럼은 비트맵에서 제외 |
+| 비트맵 생략 | 안 함 (항상 존재) | **그 행에 NULL이 없으면** 그 행에서 생략 — 스키마가 아니라 행 단위 판정 | NOT NULL 컬럼은 비트맵에서 제외 |
+
+PostgreSQL의 생략 판정은 행마다예요 — 헤더의 `HEAP_HASNULL` 플래그가 그 스위치고, 공식 문서 표현 그대로 *"There is a null bitmap only if the HEAP_HASNULL bit is set in t_infomask."* 즉 같은 테이블 안에서도 NULL이 없는 행은 비트맵 없이, NULL이 있는 행은 비트맵을 달고 저장됩니다.
 
 ```c
 /* 인코딩: 행 = MVCC 헤더(8B) + null 비트맵 + 값들 */
@@ -127,11 +131,23 @@ for (int i = 0; i < schema->num_columns; i++) {
 
 덧붙이면, NULL의 **저장**(바이트 표현)과 NULL의 **의미**(3값 논리, `COUNT(col)`이 NULL을 건너뛰는 것, 정렬에서의 NULLS LAST)는 별개 관심사예요. db-hobby에선 의미 쪽을 실행기에 먼저 만들어 뒀더니, 저장(비트맵)을 나중에 뚫자 `WHERE x IS NULL`·집계·정렬이 손도 안 대고 그대로 돌았습니다 — 계층을 잘 끊으면 받는 보상을 손으로 확인한 순간이었어요.
 
+### 행이 페이지보다 크면 — TOAST와 오버플로
+
+여기까지는 "행이 페이지 하나에 들어간다"는 전제였어요. db-hobby는 그 전제를 아예 제약으로 못 박았습니다 — **행 ≤ 페이지**, 넘치는 삽입은 거부해요. 그럼 실제 DB에서 8KB 페이지에 1MB짜리 TEXT는 어떻게 들어갈까요? PostgreSQL 문서도 전제는 같습니다 — *"PostgreSQL uses a fixed page size (commonly 8 kB), and does not allow tuples to span multiple pages."* — 대신 우회로를 둡니다. **TOAST**: 행이 임계(기본 ~2KB)를 넘으면 큰 컬럼 값을 먼저 압축하고, 그래도 크면 별도의 TOAST 테이블로 잘라 내보내고 본 행엔 포인터만 남겨요. InnoDB는 **off-page 저장** — DYNAMIC 행 포맷에선 긴 가변 길이 컬럼을 오버플로 페이지로 빼고 본 행엔 20바이트 포인터만 둡니다. SQLite는 오버플로 페이지를 사슬로 잇고요.
+
+| | PostgreSQL | InnoDB | SQLite | db-hobby |
+|---|---|---|---|---|
+| 행 > 페이지 처리 | **TOAST** (~2KB 임계: 압축 → 외부 테이블 + 포인터) | **off-page** (DYNAMIC: 오버플로 페이지 + 20B 포인터) | overflow page chain | **미지원 — 행 ≤ 페이지 제약** |
+
 ## 5. 힙 파일 — 드디어 테이블, 그리고 RID
 
 페이저·슬롯 페이지·행 포맷을 묶으면 비로소 **테이블**이 나옵니다. 힙 파일(heap file)은 **순서 없는** 페이지들의 모음이에요 — "heap"은 자료구조 힙이 아니라 "아무렇게나 쌓아둔 더미"라는 뜻입니다. 행을 넣으면 빈자리가 있는 페이지에, 없으면 새 페이지에. 정렬도 위치 규칙도 없어요(PostgreSQL은 FSM(Free Space Map)으로 빈 공간 있는 페이지를 찾습니다).
 
 행의 주소는 **RID = (page_id, slot)** — "몇 번 페이지의 몇 번 슬롯". 슬롯 번호가 안정적이라 행이 페이지 안에서 옮겨져도 RID는 안 바뀝니다. PostgreSQL의 TID(ctid)가 정확히 같은 역할이고, [2편](/blog/project/db-hobby/db-internals-02-btree-index)에서 만들 B+Tree 인덱스가 "키 → RID"로 이걸 가리켜요.
+
+> **흔한 오해 정정**: *"ctid는 행의 안정적 주소니까 애플리케이션에서 행 식별자로 써도 된다?"* — 아니요. 이 안정성은 **페이지 안 compact에 한한** 이야기예요. PostgreSQL 공식 문서는 ctid에 대해 *"ctid will change if it is updated or moved by VACUUM FULL... useless as a long-term row identifier"* 라고 못 박습니다 — UPDATE는 (MVCC 때문에) 행의 새 버전을 다른 자리에 만들고, VACUUM FULL은 행을 페이지 밖으로 통째로 옮기니까요. 인덱스가 기대는 "짧은 수명의 물리 주소"와 앱이 원하는 "영속 식별자"는 다른 물건입니다.
+
+> **실무 안티패턴**: ctid를 애플리케이션의 행 식별자(URL 파라미터, 외래 참조 대용)로 쓰는 것. UPDATE 한 번, VACUUM FULL 한 번에 조용히 끊어져요. 영속 식별자는 PK로.
 
 ![힙 파일 — 여러 페이지에 행이 슬롯으로 담기고, full scan은 모든 페이지를 훑는다](/uploads/project/db-hobby/heap-file.svg)
 
@@ -146,7 +162,7 @@ for (int i = 0; i < schema->num_columns; i++) {
 
 ## 6. 버퍼 풀 — 캐시인데 데이터가 안 깨지는 이유
 
-페이지를 읽을 때마다 디스크를 때리면 느립니다. 메모리는 디스크보다 수만~수십만 배 빠르니, 자주 쓰는 페이지는 메모리에 들고 있어야 해요. **버퍼 풀**이 그 역할 — 고정 개수의 "프레임"에 페이지를 캐시하고, hit면 그대로, miss면 디스크에서 올리고, 자리가 없으면 LRU로 victim을 골라 쫓아냅니다(InnoDB buffer pool, PostgreSQL shared buffers).
+페이지를 읽을 때마다 디스크를 때리면 느립니다. 메모리는 HDD 랜덤 I/O 기준 수만 배, NVMe SSD 기준으로도 수백 배 빠르니, 자주 쓰는 페이지는 메모리에 들고 있어야 해요. **버퍼 풀**이 그 역할 — 고정 개수의 "프레임"에 페이지를 캐시하고, hit면 그대로, miss면 디스크에서 올리고, 자리가 없으면 victim을 골라 쫓아냅니다. db-hobby의 victim 선택은 가장 단순한 순수 LRU예요(같은 자리를 InnoDB buffer pool, PostgreSQL shared buffers가 맡는데, 교체 정책은 일부러 다르게 갑니다 — 아래에서).
 
 그런데 단순 LRU 캐시와 DB 버퍼 풀은 달라요. **캐시에 든 게 "원본"이고 수정도 여기서 일어나기 때문**에 안전장치가 붙습니다.
 
@@ -158,7 +174,14 @@ for (int i = 0; i < schema->num_columns; i++) {
 
 ![버퍼 풀 — 프레임(page/pin/dirty/LRU), miss는 디스크 로드, dirty면 evict 시 flush](/uploads/project/db-hobby/buffer-pool.svg)
 
-(트랜잭션이 붙으면 여기에 **no-steal/steal** 정책이 얹히는데, 그건 [3편(WAL과 복구)](/blog/project/db-hobby/db-internals-03-wal-recovery)의 주제입니다.)
+> **흔한 오해 정정**: *"버퍼 풀은 그냥 LRU 캐시다?"* — db-hobby는 순수 LRU가 맞지만, 실제 DB는 순수 LRU를 **일부러 피합니다.** 대형 순차 스캔 한 번이, 다시 안 읽을 페이지들로 캐시 전체를 밀어내 버리는 문제 때문이에요. PostgreSQL shared buffers는 LRU가 아니라 **clock-sweep** — 프레임마다 `usage_count`를 두고 시계바늘이 돌며 깎아, 여러 번 쓰인 페이지가 살아남습니다 — 이고, 대형 순차 스캔엔 아예 작은 전용 **ring buffer**를 줘서 본 캐시를 오염시키지 않아요. InnoDB buffer pool은 LRU의 변형인 **midpoint insertion** — 리스트를 new/old sublist로 나누고 새 페이지를 중간(old sublist 머리)에 넣어, 한 번 읽히고 마는 페이지가 hot 구역에 못 들어오게 합니다(`innodb_old_blocks_pct`·`innodb_old_blocks_time`). MySQL 매뉴얼의 표현 그대로 — *"a variation of the least recently used (LRU) algorithm... midpoint insertion strategy."*
+
+| | db-hobby | PostgreSQL | InnoDB |
+|---|---|---|---|
+| 교체 정책 | 순수 LRU | clock-sweep (`usage_count`) | midpoint insertion LRU (new/old sublist) |
+| 순차 스캔 방어 | 없음 | 전용 ring buffer | old sublist + `innodb_old_blocks_time` |
+
+(트랜잭션이 붙으면 여기에 **no-steal/steal** 정책이 얹히고, 페이지가 절반만 디스크에 내려간 채 전원이 꺼지는 **torn page** 문제와 페이지 체크섬(PostgreSQL `data_checksums`) 얘기도 나오는데, 그건 [3편(WAL과 복구)](/blog/project/db-hobby/db-internals-03-wal-recovery)의 주제입니다.)
 
 ### 스레드를 켜면 가장 먼저 깨지는 곳
 
@@ -205,6 +228,8 @@ $ make test-tsan
 
 TSan이 경고를 안 냈다는 건 "이번엔 안 터졌다"가 아니라 **관측된 실행에 data race가 실제로 없었다**는 뜻입니다. 훨씬 강한 증거예요.
 
+> **실무 안티패턴**: "캐시는 클수록 좋다"며 PostgreSQL `shared_buffers`를 RAM 대부분으로 잡는 것. PostgreSQL은 OS 페이지 캐시 **위에서** 도는 구조라 같은 페이지가 두 캐시에 이중으로 얹히고 체크포인트 flush 부담도 커져요 — 공식 문서가 RAM의 25% 안팎을 출발점으로 권하는 이유입니다. 같은 결로, UPDATE가 잦은 테이블을 `FILLFACTOR` 기본값 100으로 방치하는 것도 HOT 업데이트(3절) 기회를 스스로 닫는 셈이에요.
+
 > 더 깊이: [캐시와 버퍼: 속도 차이를 극복하는 두 가지 방법](/blog/theory/cache-and-buffer) · [JVM 메모리 ④: OS Page Cache](/blog/theory/es-memory-04-page-cache) — DB 버퍼 풀과 별개로 OS가 또 한 겹 캐시하는 이중 캐시 구조.
 
 ## 7. 정리
@@ -223,7 +248,11 @@ TSan이 경고를 안 냈다는 건 "이번엔 안 터졌다"가 아니라 **관
 
 - [PostgreSQL Documentation: Database Page Layout](https://www.postgresql.org/docs/current/storage-page-layout.html)
 - [PostgreSQL Documentation: Physical Storage](https://www.postgresql.org/docs/current/storage.html)
+- [PostgreSQL Documentation: TOAST](https://www.postgresql.org/docs/current/storage-toast.html)
+- [PostgreSQL Documentation: System Columns (ctid)](https://www.postgresql.org/docs/current/ddl-system-columns.html)
+- [PostgreSQL Documentation: Resource Consumption (shared_buffers)](https://www.postgresql.org/docs/current/runtime-config-resource.html)
 - [MySQL 8.0 Reference: InnoDB Row Formats](https://dev.mysql.com/doc/refman/8.0/en/innodb-row-format.html)
+- [MySQL 8.0 Reference: Buffer Pool (midpoint insertion LRU)](https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool.html)
 - Jim Gray & Gianfranco Putzolu, *The 5 Minute Rule for Trading Memory for Disc Accesses* (1987)
 - 본 블로그: [DB 스토리지 내부 ①](/blog/theory/db-storage-01-heap-page-index) · [DB 인덱스 ⑤: 클러스터형 인덱스와 DBMS별 차이](/blog/theory/db-index-05-clustered-dbms) · [캐시와 버퍼](/blog/theory/cache-and-buffer)
 - [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `pager.c` · `page.c` · `heap.c` · `bufpool.c`
@@ -252,7 +281,7 @@ The size of that "one page" differs per DB:
 |---|---|
 | **db-hobby** | 4KB |
 | PostgreSQL | 8KB |
-| MySQL InnoDB | 16KB |
+| MySQL InnoDB | default 16KB (`innodb_page_size` configurable 4K–64K) |
 | SQLite | default 4KB (since 3.12.0/2016; previously 1KB; configurable 512B–64KB) |
 
 ## 2. The Pager — Why Pages, Not Rows
@@ -283,7 +312,7 @@ There's no single right answer. A frequently-cited starting point is the **Five-
 
 ## 3. The Slotted Page — Variable-Length Rows and Stable Addresses
 
-A page is still just a 4096-byte blob. To pack multiple **variable-length** rows into it there's a problem: `'kim'` is 3 bytes, `'alexander'` is 9. How do you know where each row starts and ends, and how do you tidy up when a middle row is deleted? The answer is the **slotted page** — the structure of PostgreSQL heap pages and InnoDB pages alike.
+A page is still just a 4096-byte blob. To pack multiple **variable-length** rows into it there's a problem: `'kim'` is 3 bytes, `'alexander'` is 9. How do you know where each row starts and ends, and how do you tidy up when a middle row is deleted? The answer is the **slotted page** — exactly the structure of PostgreSQL heap pages, and the road db-hobby took as well. (InnoDB pages look similar but differ in character — see the box below.)
 
 The layout grows from both ends toward the middle. At the **front**, after the header, a **slot array** (each slot = "this row is at offset X, length Y") grows downward; from the **end**, actual record bytes grow upward. When they meet, the page is full.
 
@@ -298,9 +327,11 @@ Compared to the simpler road (fixed-length records: row N = `header + N × rowsi
 | Delete/compact | slot number stays, only offset changes | hard to reuse space |
 | Adoption | almost every relational DB | legacy, some embedded |
 
-> **The slotted page's two dividends**: one is packing variable-length rows. The other — perhaps more important — is that **the slot number becomes a stable address for the row.** Even when deletions trigger compaction and records physically move within the page, the slot number stays (only the offset inside the slot changes). So the outside world (an index) can point at "page 5, slot 2" without the address breaking. PostgreSQL calls this the **TID (ctid)**; InnoDB has record pointers.
+> **The slotted page's two dividends**: one is packing variable-length rows. The other — perhaps more important — is that **the slot number becomes a stable address for the row.** Even when deletions trigger compaction and records physically move within the page, the slot number stays (only the offset inside the slot changes). So the outside world (an index) can point at "page 5, slot 2" without the address breaking. PostgreSQL calls this the **TID (ctid)** — and this "slot = stable external address" property is a PostgreSQL/db-hobby story.
 
-> **Practical/interview point**: within a page, InnoDB also narrows position via a sparse Page Directory and then follows the record chain. But because it stores rows physically sorted by PK (clustered), its secondary indexes identify rows by **PK value**, not physical pointers. "Identify rows by physical location (PG) or by PK (InnoDB)" is where storage engines diverge — measured head-to-head in [Part 7](/blog/project/db-hobby/db-internals-07-storage-engines).
+> **Practical/interview point**: InnoDB pages also have something called a Page Directory, but its character differs — it's a **sparse** directory with one slot per 4–8 records, not one per row: the slot narrows you to the neighborhood, then you follow the record chain. In other words, InnoDB has no real TID-grade stable external address. Because it stores rows physically sorted by PK (clustered), its secondary indexes identify rows by **PK value**, not physical pointers. "Identify rows by physical location (PG) or by PK (InnoDB)" is where storage engines diverge — measured head-to-head in [Part 7](/blog/project/db-hobby/db-internals-07-storage-engines).
+
+One more dial: PostgreSQL lets you deliberately leave free space in a page — `FILLFACTOR`. The default 100 packs pages full; lowering it to 90 reserves 10% for UPDATEs. If the new version of a row fits in the same page, a **HOT (Heap-Only Tuple)** update becomes possible — one that finishes without touching the indexes. Why an UPDATE means "creating a new version" is covered in [Part 4 (MVCC)](/blog/project/db-hobby/db-internals-04-mvcc).
 
 ## 4. The Row Format — Values as Bytes, and NULL as Bits
 
@@ -321,7 +352,9 @@ So the method representative row-store DBs use is the **null bitmap**: one bit p
 | Location | after MVCC header, before values | tuple header's `t_bits` | row header (variable part) |
 | Size | 1 bit per column | 1 bit per column | 1 bit per nullable column |
 | Value bytes for NULL | none | none | none |
-| If all NOT NULL | bits present but always 0 | bitmap omitted entirely | NOT NULL columns excluded |
+| Bitmap omission | never (always present) | omitted for **rows with no NULLs** — a per-row decision, not per-schema | NOT NULL columns excluded |
+
+PostgreSQL decides per row — the `HEAP_HASNULL` flag in the header is the switch, in the official docs' words: *"There is a null bitmap only if the HEAP_HASNULL bit is set in t_infomask."* So even within one table, rows without NULLs are stored bitmap-free while rows with NULLs carry one.
 
 ```c
 /* encode: row = MVCC header (8B) + null bitmap + values */
@@ -339,11 +372,23 @@ for (int i = 0; i < schema->num_columns; i++) {
 
 One more note: the **storage** of NULL (byte representation) and the **semantics** of NULL (three-valued logic, `COUNT(col)` skipping NULLs, NULLS LAST in sorting) are separate concerns. In db-hobby the semantics were built into the executor first; when storage (the bitmap) was later unblocked, `WHERE x IS NULL`, aggregates, and sorting all worked untouched — a hands-on payoff of cutting layers cleanly.
 
+### When a Row Outgrows the Page — TOAST and Overflow
+
+Everything so far assumed "a row fits in one page." db-hobby nails that assumption down as a hard constraint — **row ≤ page**, oversized inserts are rejected. So how does a 1MB TEXT fit into an 8KB page in a real DB? PostgreSQL starts from the same premise — *"PostgreSQL uses a fixed page size (commonly 8 kB), and does not allow tuples to span multiple pages."* — but provides a detour. **TOAST**: when a row exceeds a threshold (~2KB by default), large column values are first compressed, and if still too big, sliced out into a separate TOAST table with only a pointer left in the main row. InnoDB uses **off-page storage** — in the DYNAMIC row format, long variable-length columns move to overflow pages, leaving a 20-byte pointer in the row. SQLite chains overflow pages.
+
+| | PostgreSQL | InnoDB | SQLite | db-hobby |
+|---|---|---|---|---|
+| Row > page handling | **TOAST** (~2KB threshold: compress → external table + pointer) | **off-page** (DYNAMIC: overflow pages + 20B pointer) | overflow page chain | **unsupported — row ≤ page constraint** |
+
 ## 5. The Heap File — Finally a Table, and the RID
 
 Bundle the pager, slotted page, and row format and you finally get a **table**. A heap file is a collection of **unordered** pages — "heap" as in "a pile," not the data structure. Insert a row into any page with room, or append a new page. No ordering, no placement rule (PostgreSQL finds pages with free space via the FSM, its Free Space Map).
 
 A row's address is the **RID = (page_id, slot)** — "which slot of which page." Because slot numbers are stable, the RID survives records moving within a page. PostgreSQL's TID (ctid) plays exactly this role, and the B+Tree index built in [Part 2](/blog/project/db-hobby/db-internals-02-btree-index) points at it as "key → RID."
+
+> **Common misconception, corrected**: *"ctid is a stable row address, so an application can use it as a row identifier?"* — No. The stability holds **only across in-page compaction.** The PostgreSQL docs are blunt about ctid: *"ctid will change if it is updated or moved by VACUUM FULL... useless as a long-term row identifier"* — an UPDATE creates a new version of the row elsewhere (because of MVCC), and VACUUM FULL moves rows across pages wholesale. The "short-lived physical address" an index leans on and the "persistent identifier" an application wants are different things.
+
+> **Real-world anti-pattern**: using ctid as an application-level row identifier (URL parameter, foreign-reference substitute). One UPDATE or one VACUUM FULL silently severs it. Persistent identifiers belong to the PK.
 
 ![Heap file — rows packed into slots across pages; a full scan sweeps every page](/uploads/project/db-hobby/heap-file.svg)
 
@@ -358,7 +403,7 @@ The basic form of `SELECT * FROM t` is the **sequential scan** — a double loop
 
 ## 6. The Buffer Pool — Why a Cache Holding the Source of Truth Doesn't Corrupt
 
-Hitting disk for every page read is slow; memory is orders of magnitude faster, so hot pages must stay in memory. That's the **buffer pool** — cache pages in a fixed number of "frames": hit → serve; miss → load from disk; no room → evict an LRU victim (InnoDB buffer pool, PostgreSQL shared buffers).
+Hitting disk for every page read is slow; memory is tens of thousands of times faster than random HDD I/O and still hundreds of times faster than NVMe, so hot pages must stay in memory. That's the **buffer pool** — cache pages in a fixed number of "frames": hit → serve; miss → load from disk; no room → pick a victim and evict. db-hobby picks victims with the simplest pure LRU (the same seat is held by the InnoDB buffer pool and PostgreSQL shared buffers, whose replacement policies deliberately diverge — see below).
 
 But a DB buffer pool differs from a plain LRU cache: **what's in the cache is the original, and modifications happen there.** Hence the safeguards:
 
@@ -370,7 +415,14 @@ But a DB buffer pool differs from a plain LRU cache: **what's in the cache is th
 
 ![Buffer pool — frames (page/pin/dirty/LRU); a miss loads from disk; dirty pages flush on eviction](/uploads/project/db-hobby/buffer-pool.svg)
 
-(When transactions arrive, a **no-steal/steal** policy is layered on top — the subject of [Part 3 (WAL and Recovery)](/blog/project/db-hobby/db-internals-03-wal-recovery).)
+> **Common misconception, corrected**: *"a buffer pool is just an LRU cache?"* — True for db-hobby, but real DBs **deliberately avoid pure LRU.** The problem: one large sequential scan flushes the entire cache with pages that will never be read again. PostgreSQL shared buffers use not LRU but **clock-sweep** — each frame carries a `usage_count` that a clock hand decrements as it sweeps, so pages touched repeatedly survive — and large sequential scans get a small dedicated **ring buffer** so they can't pollute the main cache. The InnoDB buffer pool uses an LRU variant, **midpoint insertion** — the list splits into new/old sublists and new pages enter at the midpoint (head of the old sublist), so read-once pages never reach the hot region (`innodb_old_blocks_pct`, `innodb_old_blocks_time`). In the MySQL manual's own words: *"a variation of the least recently used (LRU) algorithm... midpoint insertion strategy."*
+
+| | db-hobby | PostgreSQL | InnoDB |
+|---|---|---|---|
+| Replacement policy | pure LRU | clock-sweep (`usage_count`) | midpoint insertion LRU (new/old sublists) |
+| Sequential-scan defense | none | dedicated ring buffer | old sublist + `innodb_old_blocks_time` |
+
+(When transactions arrive, a **no-steal/steal** policy is layered on top — along with the **torn page** problem (power dying with a page half-written) and page checksums (PostgreSQL `data_checksums`) — the subject of [Part 3 (WAL and Recovery)](/blog/project/db-hobby/db-internals-03-wal-recovery).)
 
 ### The First Thing That Breaks Under Threads
 
@@ -417,6 +469,8 @@ all passed       ← zero ThreadSanitizer warnings
 
 TSan staying silent doesn't mean "it didn't blow up this time" — it means **no data race existed in the observed execution.** Much stronger evidence.
 
+> **Real-world anti-pattern**: setting PostgreSQL `shared_buffers` to most of RAM on the theory that "a bigger cache is always better." PostgreSQL runs **on top of** the OS page cache, so the same pages get cached twice and checkpoint flush pressure grows — which is why the official docs suggest starting around 25% of RAM. In the same spirit, leaving `FILLFACTOR` at the default 100 on UPDATE-heavy tables closes the door on HOT updates (§3) all by yourself.
+
 > Deeper: [Cache and Buffer](/blog/theory/cache-and-buffer) · [JVM Memory ④: OS Page Cache](/blog/theory/es-memory-04-page-cache) — the double-caching structure where the OS caches another layer besides the DB buffer pool.
 
 ## 7. Wrap-up
@@ -435,7 +489,11 @@ Next, a **B+Tree index** goes on top of this heap, turning the O(n) full scan in
 
 - [PostgreSQL Documentation: Database Page Layout](https://www.postgresql.org/docs/current/storage-page-layout.html)
 - [PostgreSQL Documentation: Physical Storage](https://www.postgresql.org/docs/current/storage.html)
+- [PostgreSQL Documentation: TOAST](https://www.postgresql.org/docs/current/storage-toast.html)
+- [PostgreSQL Documentation: System Columns (ctid)](https://www.postgresql.org/docs/current/ddl-system-columns.html)
+- [PostgreSQL Documentation: Resource Consumption (shared_buffers)](https://www.postgresql.org/docs/current/runtime-config-resource.html)
 - [MySQL 8.0 Reference: InnoDB Row Formats](https://dev.mysql.com/doc/refman/8.0/en/innodb-row-format.html)
+- [MySQL 8.0 Reference: Buffer Pool (midpoint insertion LRU)](https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool.html)
 - Jim Gray & Gianfranco Putzolu, *The 5 Minute Rule for Trading Memory for Disc Accesses* (1987)
 - This blog: [DB Storage Internals ①](/blog/theory/db-storage-01-heap-page-index) · [DB Index ⑤: Clustered Indexes Across DBMSs](/blog/theory/db-index-05-clustered-dbms) · [Cache and Buffer](/blog/theory/cache-and-buffer)
 - [db-hobby source (GitHub)](https://github.com/dj258255/db-hobby) — `pager.c` · `page.c` · `heap.c` · `bufpool.c`
