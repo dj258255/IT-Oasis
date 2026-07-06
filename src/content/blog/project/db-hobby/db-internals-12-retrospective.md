@@ -1,8 +1,8 @@
 ---
 title: 'DB 내부 ⑫ (회고): 나는 왜 DB를 밑바닥부터 만들었나 — 만들어서 증명한 것들'
 titleEn: 'DB Internals ⑫ (Retrospective): Why I Built a Database from Scratch — and What Building It Proved'
-description: "이 글은 db-hobby의 회고이자, 이 시리즈 전체의 포트폴리오다. 출발점은 하나의 자각이었다 — '인덱스는 B+Tree라 빠르다'고 말할 수는 있는데, 왜 이진 트리가 아니라 B+Tree인지, 커밋의 fsync가 정확히 무엇을 보장하는지 설명하지 못했다. 설명할 수 없으면 모르는 것이다. 그래서 페이지 한 장부터 Raft 합의까지 C로 직접 만들었고, 모든 주장을 직접 측정한 수치로 바꿨다: 인덱스는 10만 행에서 풀 스캔보다 416배 빨랐고, 같은 5천 행 적재가 fsync 횟수에 따라 23배 갈렸고, 12코어 병렬화는 2.16배가 천장이었는데 그 천장의 정체(버퍼 풀 latch의 I/O 직렬화)를 A/B 실험으로 확증하고 고치자 콜드 스캔이 4워커 기준 1.08배에서 2.39배가 됐다(8워커는 0.62배에서 1.36배). 성능 작업 중 조용히 틀린 답을 내던 집계 버그를 발굴했고, 구현과 검증을 분리한 적대적 리뷰가 '테스트는 초록인데 원리상 틀린' 합의 버그 일곱을 잡았다. 686개 테스트, ThreadSanitizer/ASan 계측, 크래시 주입, 결정적 시뮬레이션 — 무엇을 만들었는지가 아니라 어떻게 검증했고 왜 그 선택을 했는지의 기록이다. 무엇을 안 했는지(정직한 경계)까지 포함해서."
-descriptionEn: "This is db-hobby's retrospective and the portfolio of the whole series. It began with one realization — I could say 'indexes are fast because they're B+Trees,' but I couldn't explain why a B+Tree and not a binary tree, or what exactly a commit's fsync guarantees. If you can't explain it, you don't know it. So I built it in C, from a single page to Raft consensus, converting every claim into numbers I measured myself: the index beat a full scan by 416× at 100k rows; the same 5,000-row load differed 23× by fsync count; 12-core parallelism ceilinged at 2.16× — and after identifying that ceiling (the buffer-pool latch serializing I/O) and confirming it with an A/B experiment, the cold scan went from 1.08× to 2.39× at 4 workers (0.62× to 1.36× at 8). Performance work unearthed an aggregate that silently returned wrong answers, and adversarial reviews separating implementation from verification caught seven consensus bugs of the 'tests green, wrong in principle' kind. 686 tests, ThreadSanitizer/ASan instrumentation, crash injection, deterministic simulation — a record not of what was built, but of how it was verified and why each choice was made. Including what was deliberately not built (the honest boundaries)."
+description: "이 글은 db-hobby의 회고이자, 이 시리즈 전체의 포트폴리오다. 출발점은 하나의 자각이었다 — '인덱스는 B+Tree라 빠르다'고 말할 수는 있는데, 왜 이진 트리가 아니라 B+Tree인지, 커밋의 fsync가 정확히 무엇을 보장하는지 설명하지 못했다. 설명할 수 없으면 모르는 것이다. 그래서 페이지 한 장부터 Raft 합의까지 C로 직접 만들었고, 모든 주장을 직접 측정한 수치로 바꿨다: 인덱스는 10만 행에서 풀 스캔보다 416배 빨랐고, 같은 5천 행 적재가 fsync 횟수에 따라 23배 갈렸고, 12코어 병렬화는 2.16배가 천장이었는데 그 천장의 정체(버퍼 풀 latch의 I/O 직렬화)를 A/B 실험으로 확증하고 고치자 콜드 스캔이 4워커 기준 1.08배에서 2.39배가 됐다(8워커는 0.62배에서 1.36배). 성능 작업 중 조용히 틀린 답을 내던 집계 버그를 발굴했고, 구현과 검증을 분리한 적대적 리뷰가 '테스트는 초록인데 원리상 틀린' 합의 버그 일곱을 잡았다. 694개 테스트, ThreadSanitizer/ASan 계측, 크래시 주입, 결정적 시뮬레이션 — 무엇을 만들었는지가 아니라 어떻게 검증했고 왜 그 선택을 했는지의 기록이다. 무엇을 안 했는지(정직한 경계)까지 포함해서."
+descriptionEn: "This is db-hobby's retrospective and the portfolio of the whole series. It began with one realization — I could say 'indexes are fast because they're B+Trees,' but I couldn't explain why a B+Tree and not a binary tree, or what exactly a commit's fsync guarantees. If you can't explain it, you don't know it. So I built it in C, from a single page to Raft consensus, converting every claim into numbers I measured myself: the index beat a full scan by 416× at 100k rows; the same 5,000-row load differed 23× by fsync count; 12-core parallelism ceilinged at 2.16× — and after identifying that ceiling (the buffer-pool latch serializing I/O) and confirming it with an A/B experiment, the cold scan went from 1.08× to 2.39× at 4 workers (0.62× to 1.36× at 8). Performance work unearthed an aggregate that silently returned wrong answers, and adversarial reviews separating implementation from verification caught seven consensus bugs of the 'tests green, wrong in principle' kind. 694 tests, ThreadSanitizer/ASan instrumentation, crash injection, deterministic simulation — a record not of what was built, but of how it was verified and why each choice was made. Including what was deliberately not built (the honest boundaries)."
 date: 2026-07-06T00:00:00.000Z
 tags:
   - Database Internals
@@ -27,7 +27,7 @@ seriesOrder: 12
 | 내구성(fsync)은 비싸다 | 같은 5천 행 적재: 행당 커밋 3,372 rows/s vs 50행 묶음 79,039 rows/s — **23배** |
 | 클러스터드는 지역성이 무기다 | InnoDB식이 PK 범위 스캔 **3.8배** 빠름, 대신 보조 인덱스 점 조회 **2배** 느림(이중 조회) |
 | 병렬화의 천장은 CPU가 아니다 | 12코어 병렬 집계 최고 **2.16배**(선형 아님) — 천장의 정체는 버퍼 풀 latch. 고치자 콜드 스캔 4워커 **1.08배 → 2.39배**(8워커 0.62배 → 1.36배) |
-| 전부 검증됐다 | **테스트 686개 / 42스위트**, ThreadSanitizer·ASan/UBSan 클린, 크래시 주입, 결정적 시뮬레이션 |
+| 전부 검증됐다 | **테스트 694개 / 42스위트**, ThreadSanitizer·ASan/UBSan 클린, 크래시 주입, 결정적 시뮬레이션 |
 | 진짜 프로토콜이다 | **실제 psql 14.19가 접속**해 MVCC("reader가 writer를 안 막는다")를 두 터미널로 시연 |
 
 이 글은 그 여정의 회고예요 — **왜 만들었고, 어떻게 검증했고, 왜 그 선택들을 했는지.** 기능 나열은 안 합니다(그건 [시리즈 1~11편](/blog/project/db-hobby/db-internals-01-storage)이 이미 해요).
@@ -52,7 +52,7 @@ seriesOrder: 12
 
 이 프로젝트에서 가장 의식적으로 지킨 건 기능이 아니라 **검증 문화**였어요. 네 겹입니다.
 
-**① 모든 계층은 테스트가 주장한다.** "동작한다"가 아니라 테스트 686개가 말하게 했어요. 특히 복구 계층은 **크래시를 실제로 주입**했습니다 — 커밋 마커 fsync 직후에 죽이면 redo로 살아나는지(내구성), 마커 전에 죽이면 깨끗이 버려지는지(원자성). "전원이 꺼져도 안 깨진다"는 크래시를 일으켜 보기 전엔 주장일 뿐이니까요.
+**① 모든 계층은 테스트가 주장한다.** "동작한다"가 아니라 테스트 694개가 말하게 했어요. 특히 복구 계층은 **크래시를 실제로 주입**했습니다 — 커밋 마커 fsync 직후에 죽이면 redo로 살아나는지(내구성), 마커 전에 죽이면 깨끗이 버려지는지(원자성). "전원이 꺼져도 안 깨진다"는 크래시를 일으켜 보기 전엔 주장일 뿐이니까요.
 
 **② 동시성은 계측한다.** 동시성 코드에서 "테스트 통과"는 약한 증거예요 — 레이스는 대부분의 실행에서 안 터지니까. 그래서 버퍼 풀 축출 폭풍, latch crabbing, 병렬 스캔 전부를 **ThreadSanitizer로 계측**해 "관측된 실행에 data race가 없었다"를 얻었습니다. 분산(Raft)은 한 발 더 — 합의 버그는 특정 메시지 순서에서만 터지는데 진짜 소켓 위에선 그 스케줄을 재현할 수 없어서, 논리 시계·메시지 큐·분단 행렬을 테스트가 소유하는 **결정적 시뮬레이션 네트워크**를 만들어 적대적 시나리오를 똑같이 반복 재생했어요.
 
@@ -151,7 +151,7 @@ Conclusions first. **db-hobby** is a mini relational database built from scratch
 | Durability (fsync) is expensive | the same 5,000-row load: 3,372 rows/s per-row commits vs 79,039 rows/s in batches of 50 — **23×** |
 | Clustering's weapon is locality | InnoDB-style wins PK range scans **3.8×**, loses secondary point lookups **2×** (double lookup) |
 | Parallelism's ceiling isn't CPU | 12-core parallel aggregation peaked at **2.16×** — the ceiling was the buffer-pool latch; fixing it took the cold scan from **1.08× to 2.39×** at 4 workers (0.62× → 1.36× at 8) |
-| All of it is verified | **686 checks / 42 suites**, ThreadSanitizer & ASan/UBSan clean, crash injection, deterministic simulation |
+| All of it is verified | **694 checks / 42 suites**, ThreadSanitizer & ASan/UBSan clean, crash injection, deterministic simulation |
 | It speaks a real protocol | **an actual psql 14.19 connects** and demonstrates MVCC ("readers don't block writers") across two terminals |
 
 This is the retrospective of that journey — **why I built it, how I verified it, and why I made each choice.** No feature listing (Parts [1–11](/blog/project/db-hobby/db-internals-01-storage) already do that).
@@ -176,7 +176,7 @@ This project's first cut was actually in Rust — a forkable embedded KV store (
 
 What I most deliberately protected wasn't features but a **verification culture.** Four layers.
 
-**① Every layer's claims are made by tests.** Not "it works" — 686 checks say so. The recovery layer in particular **injects real crashes**: die right after the commit-marker fsync and the change must survive via redo (durability); die before the marker and it must vanish cleanly (atomicity). "Power loss doesn't corrupt" is only a claim until you actually cut the power.
+**① Every layer's claims are made by tests.** Not "it works" — 694 checks say so. The recovery layer in particular **injects real crashes**: die right after the commit-marker fsync and the change must survive via redo (durability); die before the marker and it must vanish cleanly (atomicity). "Power loss doesn't corrupt" is only a claim until you actually cut the power.
 
 **② Concurrency is instrumented.** "Tests passed" is weak evidence for concurrent code — races don't fire on most runs. So buffer-pool eviction storms, latch crabbing, and parallel scans all ran under **ThreadSanitizer**, yielding "no data race existed in the observed execution." Distribution (Raft) went a step further: consensus bugs fire only under particular message schedules, unreproducible over real sockets — so the tests own a **deterministic simulated network** (logical clock, message queues, partition matrix) that replays adversarial scenarios identically.
 
