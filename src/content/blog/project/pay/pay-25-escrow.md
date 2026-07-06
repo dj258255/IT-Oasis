@@ -46,6 +46,10 @@ seriesOrder: 25
 
 에스크로는 결제·정산 모듈이 자기를 구독하는지도 몰라요. 그냥 결제 이벤트를 듣고 홀드를 만들 뿐이죠.
 
+데모 콘솔에서 승인까지 마치면, 주문 `PAID` · 결제 `DONE`과 함께 에스크로가 `HELD`로 잡히는 걸 볼 수 있어요(오른쪽 상태 카드).
+
+![결제 플로우 데모 — 주문 PAID / 결제 DONE / 에스크로 HELD](/uploads/project/pay/demo/demo-checkout.png)
+
 ## 2. 판단 ①: 구매확정은 누가 할 수 있나 — 경계 설계
 
 구매확정은 돈을 판매자에게 풀어주는(RELEASED) 행위예요. 그러니 **아무나 하면 안 되고, 그 주문의 구매자 본인만** 할 수 있어야 해요([IDOR 방지](/blog/project/pay/pay-10-composite-payment)).
