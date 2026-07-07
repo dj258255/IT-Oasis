@@ -1,8 +1,8 @@
 ---
 title: '내가 만든 걸 감사하다 — 4축 감사에서 나온 것들을 실제로 고치기'
 titleEn: 'Auditing What I Built: Turning a Four-Axis Audit into Real Fixes'
-description: "이기종 DBMS 운영 관리 플랫폼 DBTower 13편. 심화 아크 넷을 끝낸 뒤, 만든 것을 스스로 감사했습니다 — 동시성·자원누수, 기종별 정확성, 보안, HA·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조했죠. 나온 결함을 전부 고치진 않았습니다. 코드로 재검증하고 근거를 확인해 FIX와 SKIP을 갈랐고, 그 결정 자체를 로드맵에 남겼습니다. 흥미로운 세 장면 — 내 코드가 이미 정답을 알고 있던 곳(DeepAnalyzer는 XXE를 올바르게 막는데 파서 세 곳만 빠졌다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만 실제로는 저장돼 수정이 작동했다)을 라이브 실측과 스크린샷으로 기록합니다."
-descriptionEn: "Part 13 of DBTower. After finishing four deepening arcs, I audited what I had built — sweeping four axes (concurrency/resource leaks, per-engine correctness, security, HA/lifecycle) in parallel and cross-checking against OWASP, CWE, and vendor docs via web search. I didn't fix everything. I re-verified each finding against code, confirmed the evidence, split FIX from SKIP, and left the decisions themselves in a roadmap. Three scenes stand out — where my own code already knew the right answer (DeepAnalyzer blocks XXE correctly, three parsers didn't), where parallelization revived a trap (the scale arc amplified connection-pool contention), and where live measurement beat the audit again (the audit said microseconds aren't stored, but they were, so the fix works) — all recorded with live measurement and screenshots."
+description: "이기종 DBMS 운영 관리 플랫폼 DBTower 13편. 심화 아크 넷을 끝낸 뒤, 만든 것을 스스로 감사했습니다 — 동시성·자원누수, 기종별 정확성, 보안, HA·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조했죠. 나온 결함을 전부 고치진 않았습니다. 코드로 재검증하고 근거를 확인해 FIX와 SKIP을 갈랐고, 그 결정 자체를 문서로 남겼습니다. 흥미로운 세 장면 — 내 코드가 이미 정답을 알고 있던 곳(DeepAnalyzer는 XXE를 올바르게 막는데 파서 세 곳만 빠졌다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만 실제로는 저장돼 수정이 작동했다)을 라이브 실측과 스크린샷으로 기록합니다."
+descriptionEn: "Part 13 of DBTower. After finishing four deepening arcs, I audited what I had built — sweeping four axes (concurrency/resource leaks, per-engine correctness, security, HA/lifecycle) in parallel and cross-checking against OWASP, CWE, and vendor docs via web search. I didn't fix everything. I re-verified each finding against code, confirmed the evidence, split FIX from SKIP, and left the decisions themselves in a written record. Three scenes stand out — where my own code already knew the right answer (DeepAnalyzer blocks XXE correctly, three parsers didn't), where parallelization revived a trap (the scale arc amplified connection-pool contention), and where live measurement beat the audit again (the audit said microseconds aren't stored, but they were, so the fix works) — all recorded with live measurement and screenshots."
 date: 2026-07-07
 tags:
   - Java
@@ -28,7 +28,7 @@ seriesOrder: 13
 
 ## 1. 전부 고치지 않는다 — FIX와 SKIP을 가르다
 
-감사 결과를 받자마자 코드로 재검증했습니다. 어떤 건 확인됐고, 어떤 건 우리가 명시한 전제(지원 버전·데모 환경) 안에선 문제가 아니었어요. 그래서 각 항목을 FIX / SKIP으로 갈라 **로드맵 문서**에 근거와 함께 남겼습니다.
+감사 결과를 받자마자 코드로 재검증했습니다. 어떤 건 확인됐고, 어떤 건 우리가 명시한 전제(지원 버전·데모 환경) 안에선 문제가 아니었어요. 그래서 각 항목을 FIX / SKIP으로 갈라 **수정 계획 문서**에 근거와 함께 남겼습니다.
 
 - **SKIP** 예: MySQL 5.7·PostgreSQL 12 이하 비호환 → 우리는 8.0/13+를 명시 지원. Oracle `v$` vs `gv$`(RAC) → 데모는 단일 인스턴스 Oracle Free. ShedLock 쿨다운의 노드 로컬 한계 → 이미 코드 주석이 인정한 것이고 완전 해소는 큰 변경. 이런 건 "지원 전제"로 문서화하고 지나갑니다.
 - **FIX** 예: XXE, 삭제 시 자원 누수, 커넥션 풀 경합, 타임존 미고정, sub-second 슬로우쿼리 0ms…
@@ -76,10 +76,10 @@ seriesOrder: 13
 
 ## 4. 마치며 — 만든 걸 의심하는 습관
 
-이번 아크에 새 기능은 없습니다. 대신 **만든 걸 스스로 의심하는 과정**을 남겼어요. 감사를 병렬로 돌리고, 웹서칭으로 대조하고, 코드로 재검증하고, 전부 고치는 대신 FIX/SKIP을 근거와 함께 갈라 로드맵에 적고, 고친 뒤엔 라이브로 확인하고, 그 결정과 실측을 문서에 남기는 것.
+이번 아크에 새 기능은 없습니다. 대신 **만든 걸 스스로 의심하는 과정**을 남겼어요. 감사를 병렬로 돌리고, 웹서칭으로 대조하고, 코드로 재검증하고, 전부 고치는 대신 FIX/SKIP을 근거와 함께 갈라 문서에 적고, 고친 뒤엔 라이브로 확인하고, 그 결정과 실측을 문서에 남기는 것.
 
 세 장면이 알려준 건 결국 같은 이야기였습니다 — **정답은 종종 내 코드 어딘가에 이미 있고(DeepAnalyzer), 개선은 다른 곳에 부채를 남기며(병렬화), 문서는 실측 앞에서 틀릴 수 있다(마이크로초).** 이걸 아는 유일한 방법은 만든 걸 의심하고 직접 돌려보는 것뿐이더군요.
 
-정직한 잔여도 남깁니다 — 저장 컬럼의 `Instant` 전환, 쿨다운의 메타 DB 외부화, 대규모 보존의 배치 삭제는 이번 범위 밖으로 로드맵에 적어뒀습니다. 다음에 팔 곳의 지도죠.
+정직한 잔여도 남깁니다 — 저장 컬럼의 `Instant` 전환, 쿨다운의 메타 DB 외부화, 대규모 보존의 배치 삭제는 이번 범위 밖이라고 적어뒀습니다. 다음에 팔 곳의 지도죠.
 
-로드맵·감사 결과·수정·실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
+감사 결과·수정 계획·실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
