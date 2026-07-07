@@ -1,7 +1,7 @@
 ---
-title: '완결 뒤에 더 깊이 — 다섯 기종을 파고든 네 개의 심화 아크 (합본)'
-titleEn: 'Deeper After Done: Four Deepening Arcs Across Five Engines (Omnibus)'
-description: "이기종 DBMS 운영 관리 플랫폼 DBTower 12편. 로드맵을 완주하고 완결을 선언한 뒤, 남겨둔 숙제를 붙잡고 다시 파고든 네 개의 심화 아크를 한 편에 전문 그대로 담았습니다. 아크 1 — 실행계획 변경(plan flip) 감지를 PostgreSQL만 되던 것에서 다섯 기종으로 완성: 계획 형태를 얻는 경로가 기종마다 전혀 달라(MySQL 리터럴 샘플 재EXPLAIN, SQL Server Query Store, Oracle plan_hash_value, Mongo 프로파일러 명령) shape 정규화 한 겹으로 통일하고, 덤으로 PG 복제 슬롯 감시와 블로트 신호까지. 아크 2 — p95의 정직 등급 올리기: 누적을 최근 구간으로(0.48→0.19), 미지원을 추정으로, 프로파일러가 꺼져도 인스턴스 p95를 살리고, 못 올리는 Oracle은 그대로 두어 라벨로 대비. 라이브에서 2^64 센티넬 오버플로와 최소권한 조용한 폴백 버그를 잡음. 아크 3 — 설정 변경 0으로 데드락 읽기: 세 기종의 관측 입도가 다르고, 조사와 정반대로 데드락이 파일이 아니라 링버퍼에만 있던 현실. 아크 4 — 관제가 부하가 되지 않게 하는 스케일 제어 다섯 축(병렬 수집·풀 분리·알림 폭주 제어·격리 토글·스코어 캐시)."
+title: '완주 뒤에 더 깊이 — 다섯 기종을 파고든 네 개의 심화 아크 (합본)'
+titleEn: 'Deeper After Finishing the Roadmap: Four Deepening Arcs Across Five Engines (Omnibus)'
+description: "이기종 DBMS 운영 관리 플랫폼 DBTower 12편. 로드맵을 완주한 뒤, 남겨둔 숙제를 붙잡고 다시 파고든 네 개의 심화 아크를 한 편에 전문 그대로 담았습니다. 아크 1 — 실행계획 변경(plan flip) 감지를 PostgreSQL만 되던 것에서 다섯 기종으로 완성: 계획 형태를 얻는 경로가 기종마다 전혀 달라(MySQL 리터럴 샘플 재EXPLAIN, SQL Server Query Store, Oracle plan_hash_value, Mongo 프로파일러 명령) shape 정규화 한 겹으로 통일하고, 덤으로 PG 복제 슬롯 감시와 블로트 신호까지. 아크 2 — p95의 정직 등급 올리기: 누적을 최근 구간으로(0.48→0.19), 미지원을 추정으로, 프로파일러가 꺼져도 인스턴스 p95를 살리고, 못 올리는 Oracle은 그대로 두어 라벨로 대비. 라이브에서 2^64 센티넬 오버플로와 최소권한 조용한 폴백 버그를 잡음. 아크 3 — 설정 변경 0으로 데드락 읽기: 세 기종의 관측 입도가 다르고, 조사와 정반대로 데드락이 파일이 아니라 링버퍼에만 있던 현실. 아크 4 — 관제가 부하가 되지 않게 하는 스케일 제어 다섯 축(병렬 수집·풀 분리·알림 폭주 제어·격리 토글·스코어 캐시)."
 descriptionEn: "Part 12 of DBTower. After completing the roadmap and declaring done, I went back to the homework I had left and dug deeper — four deepening arcs, collected here in full. Arc 1: completing plan-flip detection from PostgreSQL-only to all five engines, where the path to obtain a plan shape differs wildly per engine and a single shape-normalization layer unifies them, plus PG replication-slot and bloat signals. Arc 2: raising p95's honesty grade — cumulative to recent-window (0.48 to 0.19), unsupported to estimated, keeping an instance p95 alive with the profiler off, leaving Oracle unraised so labels contrast — with real bugs caught live (a 2^64 sentinel overflow, a least-privilege silent fallback). Arc 3: reading deadlocks with zero config change across three engines of different granularity, where the deadlock lived in the ring buffer, not the file — the opposite of the research. Arc 4: five axes of scale control so the watchtower never becomes the load."
 date: 2026-07-07
 tags:
@@ -21,7 +21,7 @@ series: "DBTower"
 seriesOrder: 12
 ---
 
-앞 편에서 로드맵을 완주하고 "완결"을 선언하면서, 정직하게 숙제를 남겨뒀습니다. 그리고 그 숙제를 붙잡고 다시 파고들었어요. 결과가 **네 개의 심화 아크**입니다. 원래 네 편의 글이었지만 하나의 흐름이라 한 편에 **전문 그대로** 묶습니다 — 관통하는 태도는 같습니다. 못 하는 걸 하는 척하지 않고, 아는 만큼만 정직하게 말하되, 그 아는 것을 라이브로 확인한다.
+앞 편에서 로드맵을 완주하면서, 정직하게 숙제를 남겨뒀습니다. 그리고 그 숙제를 붙잡고 다시 파고들었어요. 결과가 **네 개의 심화 아크**입니다. 원래 네 편의 글이었지만 하나의 흐름이라 한 편에 **전문 그대로** 묶습니다 — 관통하는 태도는 같습니다. 못 하는 걸 하는 척하지 않고, 아는 만큼만 정직하게 말하되, 그 아는 것을 라이브로 확인한다.
 
 - **아크 1** — 플랜 플립 감지를 다섯 기종으로 완성 (+ PG 슬롯·블로트)
 - **아크 2** — 다섯 p95의 정직 등급을 올리다
