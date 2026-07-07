@@ -1,7 +1,7 @@
 ---
-title: 'DBTower 총정리 — 5기종 DBMS, 인터페이스 1개, 실측 52절'
-titleEn: 'DBTower, the Complete Story — Five DBMS Engines, One Interface, 52 Sections of Measured Evidence'
-description: "MySQL·PostgreSQL·SQL Server·Oracle·MongoDB를 하나의 관제탑에서 등록·진단·백업·자율 감시하는 컨트롤 플레인 DBTower의 전체 기록을 한 편에 정리합니다. 문제 정의(도구 파편화와 DBA 반복 문의)에서 시작해, 추상화 경계를 SQL이 아니라 '운영 행위'에 그은 설계 결정과 그 검증(새 기종 추가 = 구현체 1개, 플랫폼 코드 0줄 수정 실측), 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms→0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 실제 실행 계획의 추정 vs 실제 괴리로 지목하는 심층 진단, '진단이 부하 유발자가 되면 안 된다'는 보호장치의 트레이드오프, 못 하는 것을 UNSUPPORTED로 표기하는 정직성 설계, AI를 판단자가 아니라 1차 분석기로 묶는 안전 장치(read-only 도구 화이트리스트), 그리고 비용 관점과 남은 한계까지 — 모든 수치는 직접 측정했고 재현 기록 52절이 저장소에 있습니다."
+title: 'DBTower 총정리 — 5기종 DBMS, 인터페이스 1개, 실측 62절'
+titleEn: 'DBTower, the Complete Story — Five DBMS Engines, One Interface, 62 Sections of Measured Evidence'
+description: "MySQL·PostgreSQL·SQL Server·Oracle·MongoDB를 하나의 관제탑에서 등록·진단·백업·자율 감시하는 컨트롤 플레인 DBTower의 전체 기록을 한 편에 정리합니다. 문제 정의(도구 파편화와 DBA 반복 문의)에서 시작해, 추상화 경계를 SQL이 아니라 '운영 행위'에 그은 설계 결정과 그 검증(새 기종 추가 = 구현체 1개, 플랫폼 코드 0줄 수정 실측), 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms→0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 실제 실행 계획의 추정 vs 실제 괴리로 지목하는 심층 진단, '진단이 부하 유발자가 되면 안 된다'는 보호장치의 트레이드오프, 못 하는 것을 UNSUPPORTED로 표기하는 정직성 설계, AI를 판단자가 아니라 1차 분석기로 묶는 안전 장치(read-only 도구 화이트리스트), 완결 뒤에 다시 파고든 심화 네 아크(플랜 플립 5기종·p95 정직 등급·데드락·스케일 제어)와 내가 만든 걸 스스로 감사해 고친 하드닝까지 — 모든 수치는 직접 측정했고 재현 기록 62절이 저장소에 있습니다."
 descriptionEn: "The complete story of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. From problem definition (tool fragmentation and repeated DBA inquiries) through the design decision to draw the abstraction boundary at 'operational actions' rather than SQL — verified by adding new engines with zero platform-code changes — dogfooding that caught the platform's own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from estimated-vs-actual row gaps in real execution plans, the trade-offs behind 'diagnosis must never become the load,' honesty-by-design (UNSUPPORTED instead of fake passes), AI constrained to a first-pass analyst with a read-only tool whitelist, cost awareness, and the remaining limits. Every number was measured firsthand; 52 sections of reproduction logs live in the repository."
 date: 2026-07-06
 tags:
@@ -22,11 +22,11 @@ seriesOrder: 0
 
 ## 0. 이 글 하나로
 
-이 글은 DBTower 시리즈 10편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
+이 글은 DBTower 시리즈 13편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
 
 한 줄로 요약하면 — **서로 다른 DBMS 5기종(MySQL·PostgreSQL·SQL Server·Oracle·MongoDB)의 운영을, 인터페이스 하나(`DbmsOperator`) 뒤에서 등록부터 진단·백업·자율 감시까지 처리하는 컨트롤 플레인**입니다. Java 21 + Spring Boot 4, 코드는 [GitHub](https://github.com/dj258255/dbtower)에 공개되어 있습니다.
 
-숫자부터 놓고 시작할게요. 전부 직접 측정했고, 명령·출력·환경이 담긴 재현 기록([VERIFICATION.md](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md) 52절)이 저장소에 있습니다.
+숫자부터 놓고 시작할게요. 전부 직접 측정했고, 명령·출력·환경이 담긴 재현 기록([VERIFICATION.md](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md) 62절)이 저장소에 있습니다.
 
 | 항목 | 수치 |
 |---|---|
@@ -34,7 +34,8 @@ seriesOrder: 0
 | 새 기종 추가 비용 | Operator 구현체 1개 — 플랫폼 코드 0줄 수정 (실측) |
 | 성능 개선 | 수집 4.0배 · 저장 13.8배 · 조회 343배 (전부 전후 비교 측정) |
 | 부하 상한 | k6 10 VU 30s — 2,832 req/s, P95 5.86ms, 실패 0 |
-| 테스트 / 기록 | 259건 (CI 게이트) / VERIFICATION 52절 |
+| 테스트 / 기록 | 356건 (CI 게이트) / VERIFICATION 62절 |
+| 심화·자기검증 | 완결 뒤 심화 네 아크 + 4축 자체 감사로 하드닝 (라이브에서 진짜 버그 여럿 잡음) |
 | 규모 가정 | 관제 도구 특성상 실사용은 수십 RPS면 충분 — 상한은 그래도 실측해 뒀습니다 |
 
 측정 환경은 공통적으로 로컬 Docker(Apple Silicon) 위의 대상 DB 5기종이며, 각 수치의 상세 조건은 해당 절에 명시했습니다.
@@ -147,7 +148,9 @@ AI 기능은 두 가지 원칙으로 묶었습니다.
 
 **판단 기준은 사람이 문서로 정한다.** 실행계획 판정 규칙(기종별 비효율 신호, 근거, 예외)을 문서로 만들어 시스템 프롬프트로 주입합니다. 같은 입력에 일관된 판정이 나오고, **근거가 없으면 모른다고 답하게** 했어요 — 실측에서 데이터에 없는 질문("작년 크리스마스 접속자 수")에 수치를 지어내지 않고 confidence=low로 답하는 것까지 확인했습니다.
 
-**AI에게 도구를 주되, 읽기 전용만.** 자연어 진단("이 DB 왜 느려?")은 AI가 MCP 도구를 스스로 연쇄 호출하는 루프(최대 5스텝)인데, **read-only 12종 화이트리스트**만 노출해 kill·backup·online-ddl 같은 쓰기 도구는 루프에 아예 존재하지 않습니다. AI가 어떤 판단을 해도 대상 DB 변경이 0인 게 구조로 보장돼요. 그 MCP 서버 자체도 SDK 없이 JSON-RPC 2.0을 직접 구현했고(stdio/HTTP 전송이 프로토콜 코어 공유), 스펙 준수를 테스트로 고정했습니다([3편](/blog/project/dbtower/dbtower-3-channels-web-mcp-ai)).
+**AI에게 도구를 주되, 읽기 전용만.** 자연어 진단("이 DB 왜 느려?")은 AI가 MCP 도구를 스스로 연쇄 호출하는 루프(최대 5스텝)인데, **read-only 화이트리스트**만 노출해 kill·backup·online-ddl 같은 쓰기 도구는 루프에 아예 존재하지 않습니다. AI가 어떤 판단을 해도 대상 DB 변경이 0인 게 구조로 보장돼요. 그 MCP 서버 자체도 SDK 없이 JSON-RPC 2.0을 직접 구현했고(stdio/HTTP 전송이 프로토콜 코어 공유), 스펙 준수를 테스트로 고정했습니다([3편](/blog/project/dbtower/dbtower-3-channels-web-mcp-ai)).
+
+![MCP 도구 목록 — read-only 도구만 화이트리스트로 노출(런타임 Bearer 토큰은 마스킹)](/uploads/project/dbtower/mcp.png)
 
 ## 10. 비용 관점 — 관제 도구는 남의 자원을 쓴다
 
@@ -174,9 +177,33 @@ AI 기능은 두 가지 원칙으로 묶었습니다.
 
 한 줄로 요약하면 — **읽고 판단하는 것은 깊게, 대상을 바꾸는 것은 최소한으로, 바꾸는 주체가 따로 있는 일은 그 주체와 잇는다.**
 
-완주 선언이 끝은 아니었어요. 남겨둔 잔여 중 셋 — 실행계획 변경 감지(플랜 플립: "쿼리는 그대로인데 느려짐 = 옵티마이저가 계획을 갈아탐"을 회귀 쿼리만 shape 비교로), 백업 원격 보관(S3 호환 오프사이트로 3-2-1 완성), TLS 강제 접속(관리형 서비스 대응, 검증 우회 옵션은 일부러 없음) — 을 심화 아크로 닫았습니다([11편](/blog/project/dbtower/dbtower-11-deepening)).
+## 12. 완결 뒤에 더 깊이 — 심화 네 아크와 자기 검증
 
-여전히 정직하게 남겨둔 것들: 알림 쿨다운의 설정 외부화, Vault 동적 계정, 백업 산출물 암호화, 히스토그램 기반 구간 p95, 그리고 플랜 변경 감지의 기종 한계(정규화 텍스트는 PostgreSQL GENERIC_PLAN만 완전). 반대로 의도적으로 안 하는 것도 있습니다 — 자동 인덱스 생성, SQL 승인 워크플로 같은 "대상 DB를 스스로 바꾸는" 기능은 이 제품의 정체성(읽고 판단한다) 밖이라 범위에서 제외했어요.
+완주 선언이 끝은 아니었어요. 오히려 거기서부터가 진짜 깊이였습니다.
+
+먼저 완결하며 정직하게 남겨둔 잔여 셋을 닫았습니다([11편](/blog/project/dbtower/dbtower-11-deepening)) — 실행계획 변경 감지(플랜 플립), 백업 원격 보관(S3 호환 오프사이트로 3-2-1 완성), TLS 강제 접속(검증 우회 옵션은 일부러 없음). 그리고 그 숙제를 실마리로 **심화 네 아크**를 더 팠습니다([12편](/blog/project/dbtower/dbtower-12-deepening-four-arcs)).
+
+**하나의 기능을 다섯 기종으로.** 플랜 플립 감지가 PostgreSQL만 되던 걸 다섯 기종으로 완성했어요. 계획 형태를 얻는 경로가 기종마다 전혀 다른데(MySQL 리터럴 샘플 재EXPLAIN·SQL Server Query Store·Oracle plan_hash_value·Mongo 프로파일러 명령), `planShapeForDigest` 메서드 하나 뒤로 숨기고 shape 정규화 한 겹으로 통일했습니다.
+
+**p95의 정직 등급을 올리다.** 값은 다 냈지만 신뢰 등급이 제각각이던 레이턴시 백분위를 손봤어요. MySQL은 히스토그램 스냅샷을 차분해 누적 0.48ms를 최근 구간 0.19ms로 갈랐고, SQL Server는 미지원을 추정으로 풀었고, Mongo는 프로파일러가 꺼져도 인스턴스 p95를 살렸고, **못 올리는 Oracle은 그대로 UNSUPPORTED로 두어** 라벨로 대비시켰습니다. 여기서 2^64 센티넬 오버플로, 최소권한 계정의 조용한 폴백 같은 진짜 버그를 라이브로 잡았어요.
+
+![레이턴시 카드 — 실측누적·실측구간·히스토그램·추정·미지원이 배지로 갈린다](/uploads/project/dbtower/latency-windowed.png)
+
+**설정 변경 0으로 데드락을 읽다.** 세 기종의 데드락 관측 입도가 근본적으로 달라(SQL Server XE는 풍부·MySQL은 최근 1건·PG는 카운터뿐), 두 갈래로 다뤘습니다. 여기서 착수 조사와 **정반대**의 현실을 만났어요 — "ring_buffer 쓰지 마라"던 조사와 달리, 방금 난 데드락이 파일이 아니라 링버퍼에만 있었습니다. 실측이 문서를 이긴 순간이었죠.
+
+![SQL Server 데드락 카드 — victim(spid)·경합 인덱스·관여 문장까지](/uploads/project/dbtower/deadlock-mssql.png)
+
+**관제가 부하가 되지 않게.** 인스턴스가 수십 개로 늘 때를 대비해 수집 병렬화(ShedLock 노드 배타는 유지)·스케줄러 풀 분리·알림 폭주 제어·격리 토글·헬스 스코어 캐시 다섯 축을 넣었습니다. 문제 인스턴스를 삭제 없이 관제에서 잠시 빼는 스위치까지요.
+
+![인스턴스 목록 — 전부 '수집중', 격리한 하나만 '격리됨'](/uploads/project/dbtower/collection-toggle.png)
+
+그리고 마지막으로, **내가 만든 걸 스스로 감사**했습니다([13편](/blog/project/dbtower/dbtower-13-hardening-arc)). 동시성·기종정확성·보안·HA 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조해, 나온 결함을 **전부 고치는 대신 FIX/SKIP으로 갈라** 근거와 함께 로드맵에 남겼어요. 세 장면이 기억에 남습니다 — 내 코드가 이미 정답을 알고 있던 곳(XXE는 다른 파일에서 이미 올바르게 막고 있었다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만, 실제로는 저장돼 있어 수정이 작동했다).
+
+![슬로우쿼리 카드 — 1초 미만 쿼리가 실측 ms로(구코드는 전부 0), 시각은 UTC 고정](/uploads/project/dbtower/slowquery-subsecond.png)
+
+## 13. 남은 한계와 결산
+
+여전히 정직하게 남겨둔 것들: 알림 쿨다운의 설정 외부화, Vault 동적 계정, 백업 산출물 암호화, 저장 컬럼의 `Instant` 전환, 대규모 보존의 배치 삭제. 반대로 의도적으로 안 하는 것도 있습니다 — 자동 인덱스 생성, SQL 승인 워크플로 같은 "대상 DB를 스스로 바꾸는" 기능은 이 제품의 정체성(읽고 판단한다) 밖이라 범위에서 제외했어요.
 
 돌아보면 이 프로젝트를 관통한 건 세 문장입니다.
 
@@ -184,4 +211,4 @@ AI 기능은 두 가지 원칙으로 묶었습니다.
 2. **주장은 실측으로** — 확장성 주장은 기종을 실제로 추가해서, 성능 주장은 전후 측정으로, 능력 표기는 안 되는 것의 명시로
 3. **관제 도구는 힘이 아니라 신뢰로 완성된다** — 마지막에 추가한 기능이 "내가 부하가 되지 않는 장치"였고, 제품화의 첫 결정이 "비밀은 사용자 인프라를 떠나지 않는다"였습니다
 
-전 과정의 상세는 시리즈 [1편(설계)](/blog/project/dbtower/dbtower-1-why-and-design)부터 [10편(제품화)](/blog/project/dbtower/dbtower-10-guardrails-and-selfhost)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. 셀프호스트로 직접 띄워보실 수 있어요.
+전 과정의 상세는 시리즈 [1편(설계)](/blog/project/dbtower/dbtower-1-why-and-design)부터 [13편(하드닝)](/blog/project/dbtower/dbtower-13-hardening-arc)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. 셀프호스트로 직접 띄워보실 수 있어요.
