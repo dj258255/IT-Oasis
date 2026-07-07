@@ -1,8 +1,8 @@
 ---
 title: 'DBTower 총정리 — 5기종 DBMS, 인터페이스 1개, 실측 62절'
 titleEn: 'DBTower, the Complete Story — Five DBMS Engines, One Interface, 62 Sections of Measured Evidence'
-description: "MySQL·PostgreSQL·SQL Server·Oracle·MongoDB를 하나의 관제탑에서 등록·진단·백업·자율 감시하는 컨트롤 플레인 DBTower의 전체 기록을 한 편에 정리합니다. 문제 정의(도구 파편화와 DBA 반복 문의)에서 시작해, 추상화 경계를 SQL이 아니라 '운영 행위'에 그은 설계 결정과 그 검증(새 기종 추가 = 구현체 1개, 플랫폼 코드 0줄 수정 실측), 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms→0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 실제 실행 계획의 추정 vs 실제 괴리로 지목하는 심층 진단, '진단이 부하 유발자가 되면 안 된다'는 보호장치의 트레이드오프, 못 하는 것을 UNSUPPORTED로 표기하는 정직성 설계, AI를 판단자가 아니라 1차 분석기로 묶는 안전 장치(read-only 도구 화이트리스트), 로드맵 완주 뒤에 다시 파고든 심화 네 아크(플랜 플립 5기종·p95 정직 등급·데드락·스케일 제어)와 내가 만든 걸 스스로 감사해 고친 하드닝까지 — 모든 수치는 직접 측정했고 재현 기록 62절이 저장소에 있습니다."
-descriptionEn: "The complete story of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. From problem definition (tool fragmentation and repeated DBA inquiries) through the design decision to draw the abstraction boundary at 'operational actions' rather than SQL — verified by adding new engines with zero platform-code changes — dogfooding that caught the platform's own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from estimated-vs-actual row gaps in real execution plans, the trade-offs behind 'diagnosis must never become the load,' honesty-by-design (UNSUPPORTED instead of fake passes), AI constrained to a first-pass analyst with a read-only tool whitelist, cost awareness, four deepening arcs after finishing the roadmap, a self-audit hardening pass, and the remaining limits. Every number was measured firsthand; 62 sections of reproduction logs live in the repository."
+description: "MySQL·PostgreSQL·SQL Server·Oracle·MongoDB를 하나의 관제탑에서 등록·진단·백업·자율 감시하는 컨트롤 플레인 DBTower의 전체 기록을 한 편에 정리합니다. 문제 정의(도구 파편화와 DBA 반복 문의)에서 시작해, 추상화 경계를 SQL이 아니라 '운영 행위'에 그은 설계 결정과 그 검증(새 기종 추가 = 구현체 1개, 플랫폼 코드 0줄 수정 실측), 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms→0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 실제 실행 계획의 추정 vs 실제 괴리로 지목하는 심층 진단, '진단이 부하 유발자가 되면 안 된다'는 보호장치의 트레이드오프, 못 하는 것을 UNSUPPORTED로 표기하는 정직성 설계, AI를 판단자가 아니라 1차 분석기로 묶는 안전 장치(read-only 도구 화이트리스트), v1.0.0 뒤에도 쓰다 보니 필요해서 다시 파고든 심화 네 아크(플랜 플립 5기종·p95 정직 등급·데드락·스케일 제어)와 내가 만든 걸 스스로 감사해 고친 하드닝까지 — 모든 수치는 직접 측정했고 재현 기록 62절이 저장소에 있습니다."
+descriptionEn: "The complete story of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. From problem definition (tool fragmentation and repeated DBA inquiries) through the design decision to draw the abstraction boundary at 'operational actions' rather than SQL — verified by adding new engines with zero platform-code changes — dogfooding that caught the platform's own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from estimated-vs-actual row gaps in real execution plans, the trade-offs behind 'diagnosis must never become the load,' honesty-by-design (UNSUPPORTED instead of fake passes), AI constrained to a first-pass analyst with a read-only tool whitelist, cost awareness, four deepening arcs that real use demanded after v1.0.0, a self-audit hardening pass, and the remaining limits. Every number was measured firsthand; 62 sections of reproduction logs live in the repository."
 date: 2026-07-06
 tags:
   - Java
@@ -35,7 +35,7 @@ seriesOrder: 0
 | 성능 개선 | 수집 4.0배 · 저장 13.8배 · 조회 343배 (전부 전후 비교 측정) |
 | 부하 상한 | k6 10 VU 30s — 2,832 req/s, P95 5.86ms, 실패 0 |
 | 테스트 / 기록 | 356건 (CI 게이트) / VERIFICATION 62절 |
-| 심화·자기검증 | 완주 뒤 심화 네 아크 + 4축 자체 감사로 하드닝 (라이브에서 진짜 버그 여럿 잡음) |
+| 심화·자기검증 | v1.0.0 뒤 심화 네 아크 + 4축 자체 감사로 하드닝 (라이브에서 진짜 버그 여럿 잡음) |
 | 규모 가정 | 관제 도구 특성상 실사용은 수십 RPS면 충분 — 상한은 그래도 실측해 뒀습니다 |
 
 측정 환경은 공통적으로 로컬 Docker(Apple Silicon) 위의 대상 DB 5기종이며, 각 수치의 상세 조건은 해당 절에 명시했습니다.
@@ -110,7 +110,7 @@ seriesOrder: 0
 
 ## 6. 트레이드오프 하나 — 진단이 부하가 되면 안 된다
 
-로드맵의 마지막 기능은 화려한 게 아니라 보호장치였습니다([10편](/blog/project/dbtower/dbtower-10-guardrails-and-selfhost)). 심층 진단은 쿼리를 실제로 실행하고, 수집 폴러는 1분마다 대상들을 두드립니다. 관제 도구가 관제 대상을 느리게 만들면 본말전도예요.
+마지막으로 꼭 필요하다고 생각한 기능은 화려한 게 아니라 보호장치였습니다([10편](/blog/project/dbtower/dbtower-10-guardrails-and-selfhost)). 심층 진단은 쿼리를 실제로 실행하고, 수집 폴러는 1분마다 대상들을 두드립니다. 관제 도구가 관제 대상을 느리게 만들면 본말전도예요.
 
 구현보다 결정이 어려웠던 지점을 하나만 꺼내면 — MongoDB 타임아웃입니다. 드라이버에 CSOT(클라이언트 전역 operation timeout)라는 정석이 있는데 **일부러 안 썼어요.** CSOT를 켜면 드라이버가 심층 진단이 명령에 직접 실은 서버측 `maxTimeMS`를 무시하고 자기 예산으로 재계산합니다. 전역 안전장치(정석)가 정밀 안전장치를 덮어쓰는 간섭이라, 소켓 read 상한 + 명령별 maxTimeMS 조합을 택하고 **이유를 코드 주석으로 남겼습니다** — 나중에 누가 "왜 정석을 안 썼지?"라며 바꾸면 조용히 망가질 지점이니까요. 정석을 아는 것과, 정석이 내 맥락에 맞는지 판단하는 건 다른 일이라고 배웠습니다.
 
@@ -177,11 +177,11 @@ AI 기능은 두 가지 원칙으로 묶었습니다.
 
 한 줄로 요약하면 — **읽고 판단하는 것은 깊게, 대상을 바꾸는 것은 최소한으로, 바꾸는 주체가 따로 있는 일은 그 주체와 잇는다.**
 
-## 12. 완주 뒤에 더 깊이 — 심화 네 아크와 자기 검증
+## 12. v1.0.0 뒤에 더 깊이 — 심화 네 아크와 자기 검증
 
 완주 선언이 끝은 아니었어요. 오히려 거기서부터가 진짜 깊이였습니다.
 
-먼저 완주하며 정직하게 남겨둔 잔여 셋을 닫았습니다([11편](/blog/project/dbtower/dbtower-11-deepening)) — 실행계획 변경 감지(플랜 플립), 백업 원격 보관(S3 호환 오프사이트로 3-2-1 완성), TLS 강제 접속(검증 우회 옵션은 일부러 없음). 그리고 그 숙제를 실마리로 **심화 네 아크**를 더 팠습니다([12편](/blog/project/dbtower/dbtower-12-deepening-four-arcs)).
+먼저 v1.0.0을 찍으며 정직하게 남겨둔 잔여 셋을 닫았습니다([11편](/blog/project/dbtower/dbtower-11-deepening)) — 실행계획 변경 감지(플랜 플립), 백업 원격 보관(S3 호환 오프사이트로 3-2-1 완성), TLS 강제 접속(검증 우회 옵션은 일부러 없음). 그리고 그 숙제를 실마리로 **심화 네 아크**를 더 팠습니다([12편](/blog/project/dbtower/dbtower-12-deepening-four-arcs)).
 
 **하나의 기능을 다섯 기종으로.** 플랜 플립 감지가 PostgreSQL만 되던 걸 다섯 기종으로 완성했어요. 계획 형태를 얻는 경로가 기종마다 전혀 다른데(MySQL 리터럴 샘플 재EXPLAIN·SQL Server Query Store·Oracle plan_hash_value·Mongo 프로파일러 명령), `planShapeForDigest` 메서드 하나 뒤로 숨기고 shape 정규화 한 겹으로 통일했습니다.
 
@@ -197,7 +197,7 @@ AI 기능은 두 가지 원칙으로 묶었습니다.
 
 ![인스턴스 목록 — 전부 '수집중', 격리한 하나만 '격리됨'](/uploads/project/dbtower/collection-toggle.png)
 
-그리고 마지막으로, **내가 만든 걸 스스로 감사**했습니다([13편](/blog/project/dbtower/dbtower-13-hardening-arc)). 동시성·기종정확성·보안·HA 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조해, 나온 결함을 **전부 고치는 대신 FIX/SKIP으로 갈라** 근거와 함께 로드맵에 남겼어요. 세 장면이 기억에 남습니다 — 내 코드가 이미 정답을 알고 있던 곳(XXE는 다른 파일에서 이미 올바르게 막고 있었다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만, 실제로는 저장돼 있어 수정이 작동했다).
+그리고 마지막으로, **내가 만든 걸 스스로 감사**했습니다([13편](/blog/project/dbtower/dbtower-13-hardening-arc)). 동시성·기종정확성·보안·HA 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조해, 나온 결함을 **전부 고치는 대신 FIX/SKIP으로 갈라** 근거와 함께 문서로 남겼어요. 세 장면이 기억에 남습니다 — 내 코드가 이미 정답을 알고 있던 곳(XXE는 다른 파일에서 이미 올바르게 막고 있었다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만, 실제로는 저장돼 있어 수정이 작동했다).
 
 ![슬로우쿼리 카드 — 1초 미만 쿼리가 실측 ms로(구코드는 전부 0), 시각은 UTC 고정](/uploads/project/dbtower/slowquery-subsecond.png)
 

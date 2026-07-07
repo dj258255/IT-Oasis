@@ -22,7 +22,7 @@ seriesOrder: 7
 
 [6편](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool)까지의 DBTower에는 한 가지 전제가 숨어 있었어요. **"관리할 DB가 이미 존재한다"**는 전제요. 인스턴스는 사람이 API로 등록했고, 그 DB가 어디서 왔는지는 플랫폼의 관심 밖이었습니다.
 
-그런데 현업에서 DB는 그렇게 오지 않아요. Kubernetes에서는 Operator가 만들고, VM에서는 Ansible이 깔고, 클라우드에서는 Terraform이 RDS를 띄웁니다. DB가 IaC로 태어나는데 관제 등록은 사람이 수동으로 한다면, 생성과 관제 사이가 끊겨 있는 거예요. 이 끊김을 이으려는 게 Phase C입니다. ROADMAP에 적어둔 문장 그대로 — **"생성과 관제가 이어져야 플랫폼이고, 끊어져 있으면 도구 모음이다."**
+그런데 현업에서 DB는 그렇게 오지 않아요. Kubernetes에서는 Operator가 만들고, VM에서는 Ansible이 깔고, 클라우드에서는 Terraform이 RDS를 띄웁니다. DB가 IaC로 태어나는데 관제 등록은 사람이 수동으로 한다면, 생성과 관제 사이가 끊겨 있는 거예요. 이 끊김을 이으려고 이번 축을 만들었습니다. 설계 노트에 적어둔 문장 그대로 — **"생성과 관제가 이어져야 플랫폼이고, 끊어져 있으면 도구 모음이다."**
 
 ![Phase C 구조 — 세 층의 프로비저닝이 멱등 PUT 하나로 관제탑에 모인다](/uploads/project/dbtower/provisioning-flow.svg)
 
