@@ -1,8 +1,8 @@
 ---
 title: '내가 만든 걸 감사하다 — 4축 감사에서 나온 것들을 실제로 고치기'
 titleEn: 'Auditing What I Built: Turning a Four-Axis Audit into Real Fixes'
-description: "이기종 DBMS 운영 관리 플랫폼 DBTower 16편. 심화 아크 넷을 끝낸 뒤, 만든 것을 스스로 감사했습니다 — 동시성·자원누수, 기종별 정확성, 보안, HA·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조했죠. 나온 결함을 전부 고치진 않았습니다. 코드로 재검증하고 근거를 확인해 FIX와 SKIP을 갈랐고, 그 결정 자체를 로드맵에 남겼습니다. 흥미로운 세 장면 — 내 코드가 이미 정답을 알고 있던 곳(DeepAnalyzer는 XXE를 올바르게 막는데 파서 세 곳만 빠졌다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만 실제로는 저장돼 수정이 작동했다)을 라이브 실측과 스크린샷으로 기록합니다."
-descriptionEn: "Part 16 of DBTower. After finishing four deepening arcs, I audited what I had built — sweeping four axes (concurrency/resource leaks, per-engine correctness, security, HA/lifecycle) in parallel and cross-checking against OWASP, CWE, and vendor docs via web search. I didn't fix everything. I re-verified each finding against code, confirmed the evidence, split FIX from SKIP, and left the decisions themselves in a roadmap. Three scenes stand out — where my own code already knew the right answer (DeepAnalyzer blocks XXE correctly, three parsers didn't), where parallelization revived a trap (the scale arc amplified connection-pool contention), and where live measurement beat the audit again (the audit said microseconds aren't stored, but they were, so the fix works) — all recorded with live measurement and screenshots."
+description: "이기종 DBMS 운영 관리 플랫폼 DBTower 13편. 심화 아크 넷을 끝낸 뒤, 만든 것을 스스로 감사했습니다 — 동시성·자원누수, 기종별 정확성, 보안, HA·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조했죠. 나온 결함을 전부 고치진 않았습니다. 코드로 재검증하고 근거를 확인해 FIX와 SKIP을 갈랐고, 그 결정 자체를 로드맵에 남겼습니다. 흥미로운 세 장면 — 내 코드가 이미 정답을 알고 있던 곳(DeepAnalyzer는 XXE를 올바르게 막는데 파서 세 곳만 빠졌다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만 실제로는 저장돼 수정이 작동했다)을 라이브 실측과 스크린샷으로 기록합니다."
+descriptionEn: "Part 13 of DBTower. After finishing four deepening arcs, I audited what I had built — sweeping four axes (concurrency/resource leaks, per-engine correctness, security, HA/lifecycle) in parallel and cross-checking against OWASP, CWE, and vendor docs via web search. I didn't fix everything. I re-verified each finding against code, confirmed the evidence, split FIX from SKIP, and left the decisions themselves in a roadmap. Three scenes stand out — where my own code already knew the right answer (DeepAnalyzer blocks XXE correctly, three parsers didn't), where parallelization revived a trap (the scale arc amplified connection-pool contention), and where live measurement beat the audit again (the audit said microseconds aren't stored, but they were, so the fix works) — all recorded with live measurement and screenshots."
 date: 2026-07-07
 tags:
   - Java
@@ -15,12 +15,12 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 16
+seriesOrder: 13
 ---
 
 ## 0. 들어가며 — 만든 사람이 만든 걸 감사할 때
 
-심화 아크 넷(플랜 플립 5기종·p95 정직 등급·데드락 축·스케일 제어)을 끝낸 뒤, 스스로에게 물었습니다. "이제 여기저기 에러사항·애로사항이 있을 텐데, 뭐가 있지?" 그래서 **내가 만든 걸 감사**하기로 했습니다.
+앞 편의 심화 아크 넷(플랜 플립 5기종·p95 정직 등급·데드락 축·스케일 제어)을 끝낸 뒤, 스스로에게 물었습니다. "이제 여기저기 에러사항·애로사항이 있을 텐데, 뭐가 있지?" 그래서 **내가 만든 걸 감사**하기로 했습니다.
 
 혼자 훑으면 놓칩니다. 그래서 네 개의 축으로 **병렬 감사**를 돌렸어요 — (1) 동시성·자원누수, (2) 기종별 정확성·버전 호환, (3) 보안, (4) HA·수명주기. 각 축은 코드를 정독하고, **웹서칭으로 OWASP·CWE·벤더 문서와 대조**해 "이건 진짜 깨지나"를 확인했습니다.
 
@@ -51,7 +51,7 @@ seriesOrder: 16
 
 인스턴스별 커넥션 풀이 max=2인데, 같은 인스턴스에 폴러가 8개 넘게 붙습니다(스냅샷·운영경보·SLO·백업·이상·회귀·Advisor·스코어). 3번째 동시 요청부터 대기하다 타임아웃 → SnapshotScheduler가 이걸 "죽은 대상"으로 오인해 최대 16분 백오프 + 허위 "수집 정지" 경보를 냅니다. **자원 경합이 곧 허위 장애 신호로 증폭**되는 거죠.
 
-아이러니한 건, 바로 직전 스케일 제어 아크에서 넣은 **수집 병렬화(워커 4개)가 이 경합을 키웠다**는 것입니다. 성능을 위한 병렬화가 풀 경합이라는 옛 함정을 되살린 셈이에요. 풀 크기를 설정값으로 올리고(2→6), 지터에 상한을 씌우고, `Future.get`의 예외 처리를 바로잡아 정리했습니다. "개선이 다른 곳에 부채를 만든다"는 걸 감사가 아니었으면 몰랐을 겁니다.
+아이러니한 건, 바로 앞 편의 스케일 제어 아크에서 넣은 **수집 병렬화(워커 4개)가 이 경합을 키웠다**는 것입니다. 성능을 위한 병렬화가 풀 경합이라는 옛 함정을 되살린 셈이에요. 풀 크기를 설정값으로 올리고(2→6), 지터에 상한을 씌우고, `Future.get`의 예외 처리를 바로잡아 정리했습니다. "개선이 다른 곳에 부채를 만든다"는 걸 감사가 아니었으면 몰랐을 겁니다.
 
 ### 장면 3 — 실측이 감사를 다시 이겼다
 
@@ -61,7 +61,7 @@ seriesOrder: 16
 
 ![슬로우쿼리 카드 — sub-second 쿼리가 실측 ms로(SLEEP 0.58=581ms, 0.75=750ms). 구코드는 전부 0. 시각은 UTC로 고정](/uploads/project/dbtower/slowquery-subsecond.png)
 
-감사 문서를 그대로 믿고 "TABLE이라 어쩔 수 없다"며 넘어갔다면 이 수정을 안 했을 겁니다. 3편(데드락)에서 "ring_buffer 쓰지 마라"는 조사를 라이브가 뒤집었던 것과 똑같은 교훈 — **실측이 문서를 이깁니다.** 이번엔 그 문서가 내가 시킨 감사였다는 게 다를 뿐이죠.
+감사 문서를 그대로 믿고 "TABLE이라 어쩔 수 없다"며 넘어갔다면 이 수정을 안 했을 겁니다. 앞 편의 데드락에서 "ring_buffer 쓰지 마라"는 조사를 라이브가 뒤집었던 것과 똑같은 교훈 — **실측이 문서를 이깁니다.** 이번엔 그 문서가 내가 시킨 감사였다는 게 다를 뿐이죠.
 
 ## 3. 라이브로 확인한 것들
 
