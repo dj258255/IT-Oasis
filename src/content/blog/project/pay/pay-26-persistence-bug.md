@@ -79,9 +79,9 @@ update stock ...                    ← 재고 차감(명시 쿼리)
 
 즉 문제는 **"이 트랜잭션의 영속성 컨텍스트가 커밋 때 변경분을 flush하지 않는다"**였어요. IDENTITY 즉시 INSERT가 이 문제를 가려서, "주문 행은 있으니 저장은 되는 줄" 착각하게 만든 거예요.
 
-원인을 좁히니 두 가지가 얽혀 있었어요.
+원인을 좁히니 이 트랜잭션의 세션이 **커밋 시점에 변경분을 flush하지 않는다**는 게 핵심이었어요.
 
-> 이 프로젝트는 [OSIV를 껐어요](/blog/project/pay/pay-17-load-test-finds-bottleneck)(`open-in-view: false`, 커넥션 점유 방지). 이 환경에서 서비스 트랜잭션 안의 세션이, 코드가 finder로 불러온 엔티티의 변경을 커밋 시 자동으로 flush하지 못하는 상황이 생겼어요. 그래서 `order.markPaid()`, `payment.approve()` 같은 **dirty-checking 변경이 메모리에만 남고 사라진** 거예요.
+> ⚠️ **정정(나중에 더 정확히 알게 된 것)**: 처음엔 이걸 "[OSIV를 꺼서](/blog/project/pay/pay-17-load-test-finds-bottleneck)(`open-in-view: false`) 그렇다"고 이해했는데, 그건 부정확했어요. **일반적인 read-write 트랜잭션 안에선 OSIV 여부와 무관하게 커밋 때 dirty-check가 flush돼요**(managed 엔티티라면). 진짜 원인은 **이 경로의 세션 FlushMode가 AUTO가 아니었다**는 거예요 — `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꿔서, 이후 dirty 변경이 커밋 때 flush되지 않아요. 거기에 "불러온 엔티티가 detached라 merge가 필요한" 경우까지 겹치면서, `order.markPaid()`·`payment.approve()` 같은 변경이 **메모리에만 남고 사라진** 거죠. OSIV off는 detached를 만드는 배경일 뿐, flush를 막는 직접 원인은 아니었어요.
 
 ## 3. 고치기: 애그리거트를 명시적으로 영속
 
