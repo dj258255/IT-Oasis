@@ -1,7 +1,7 @@
 ---
-title: '완결을 선언하고 남겨둔 숙제 세 개 — 플랜 플립 감지, 3-2-1 완성, TLS의 벽'
-titleEn: 'Three Assignments Left After Declaring It Done — Plan Flip Detection, Completing 3-2-1, and the TLS Wall'
-description: "이기종 DBMS 운영 관리 플랫폼 DBTower 11편. 10편에서 완결을 선언했지만, 문서에 '정직한 잔여'로 남겨둔 것들이 있었습니다. 새 기능 축을 늘리는 대신 그중 셋을 골라 깊이 팠습니다. '쿼리도 데이터도 그대로인데 갑자기 느려짐 = 옵티마이저가 플랜을 갈아탐'이라는 현업 단골 장애를 잡는 실행계획 변경 감지 — 정규화 텍스트($1)는 EXPLAIN이 안 된다는 벽을 PostgreSQL 16의 GENERIC_PLAN으로 넘고, 추정치를 버린 계획 shape만 해시 비교해 가짜 변경을 막고, 회귀 감지된 쿼리만 계획을 뜨는 부하 원칙까지. 그리고 로컬에만 있던 백업을 S3 호환 오프사이트로 올려 3-2-1을 완성한 이야기(업로드 실패는 백업 실패가 아니다), TLS 강제 관리형 서비스에 붙지 못하던 벽을 제거하되 인증서 검증 우회 옵션은 일부러 안 만든 결정까지 — 전부 실측으로 닫습니다."
+title: '로드맵을 완주하고 남겨둔 숙제 세 개 — 플랜 플립 감지, 3-2-1 완성, TLS의 벽'
+titleEn: 'Three Assignments Left After Finishing the Roadmap — Plan Flip Detection, Completing 3-2-1, and the TLS Wall'
+description: "이기종 DBMS 운영 관리 플랫폼 DBTower 11편. 10편에서 로드맵을 완주했지만, 문서에 '정직한 잔여'로 남겨둔 것들이 있었습니다. 새 기능 축을 늘리는 대신 그중 셋을 골라 깊이 팠습니다. '쿼리도 데이터도 그대로인데 갑자기 느려짐 = 옵티마이저가 플랜을 갈아탐'이라는 현업 단골 장애를 잡는 실행계획 변경 감지 — 정규화 텍스트($1)는 EXPLAIN이 안 된다는 벽을 PostgreSQL 16의 GENERIC_PLAN으로 넘고, 추정치를 버린 계획 shape만 해시 비교해 가짜 변경을 막고, 회귀 감지된 쿼리만 계획을 뜨는 부하 원칙까지. 그리고 로컬에만 있던 백업을 S3 호환 오프사이트로 올려 3-2-1을 완성한 이야기(업로드 실패는 백업 실패가 아니다), TLS 강제 관리형 서비스에 붙지 못하던 벽을 제거하되 인증서 검증 우회 옵션은 일부러 안 만든 결정까지 — 전부 실측으로 닫습니다."
 descriptionEn: "Part 11 of DBTower. Part 10 declared the project complete — but the docs honestly listed leftovers. Instead of adding new feature axes, I picked three and dug deep: plan-flip detection for the classic incident where 'the query and data are unchanged but suddenly slow = the optimizer swapped plans' — crossing the wall that normalized statement texts ($1) cannot be EXPLAINed via PostgreSQL 16's GENERIC_PLAN, hashing only the plan shape (estimates stripped) to avoid false flips, and diagnosing only already-regressed queries per the load principle; completing the 3-2-1 rule by shipping backups to S3-compatible offsite storage (an upload failure is not a backup failure); and removing the TLS wall for managed services while deliberately not offering a certificate-verification bypass."
 date: 2026-07-06
 tags:
@@ -18,7 +18,7 @@ series: "DBTower"
 seriesOrder: 11
 ---
 
-## 0. 들어가며 — 완결 선언의 각주
+## 0. 들어가며 — 완주 선언의 각주
 
 [10편](/blog/project/dbtower/dbtower-10-guardrails-and-selfhost)에서 로드맵 완주와 v1.0.0을 선언했어요. 그런데 그 선언에는 각주가 붙어 있었습니다 — 문서 곳곳에 "정직한 잔여"로 남겨둔 것들이요. 백업 원격 보관은 VERIFICATION 29절에, TLS는 셀프호스트 점검에서, 그리고 발행 후 리뷰에서 나온 "검증 루프" 계열의 다음 질문이 하나 더 있었죠.
 
@@ -105,6 +105,6 @@ tls-mssql  (자가서명, useTls=true)   -> "접속 실패로 등록 거부"
 
 세 개를 닫고 잔여 목록을 갱신합니다. 백업 원격 보관과 TLS는 지웠고, 남은 것: 알림 쿨다운 설정 외부화, Vault 동적 계정, 백업 산출물 암호화, 히스토그램 기반 구간 p95. 그리고 이번에 새로 생긴 잔여도 정직하게 — 플랜 변경 감지는 정규화 텍스트에 대해 PostgreSQL만 완전하고(GENERIC_PLAN), 타 기종은 플레이스홀더 없는 쿼리로 한정됩니다.
 
-돌아보면 이번 세 개의 공통점은 "완결 선언이 끝이 아니라 기준선"이라는 거예요. 문서에 적어둔 잔여는 부채 목록이 아니라 **다음에 팔 곳의 지도**였습니다. 잔여를 정직하게 적는 습관이 없었다면, 완결 선언 뒤에 뭘 해야 할지부터 다시 조사해야 했을 거예요.
+돌아보면 이번 세 개의 공통점은 "완주가 끝이 아니라 기준선"이라는 거예요. 문서에 적어둔 잔여는 부채 목록이 아니라 **다음에 팔 곳의 지도**였습니다. 잔여를 정직하게 적는 습관이 없었다면, 완주 뒤에 뭘 해야 할지부터 다시 조사해야 했을 거예요.
 
 코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
