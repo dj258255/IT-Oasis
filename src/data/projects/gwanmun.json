@@ -1,0 +1,15 @@
+{
+  "title": "gwanmun(관문) — 레거시 전문 ↔ 현대 REST 연계 게이트웨이",
+  "titleEn": "gwanmun — Legacy Message ↔ Modern REST Integration Gateway",
+  "description": "20년 된 계정계는 고정길이 전문(電文)+TCP로, 모바일은 JSON+REST로 말한다. 둘 다 못 고치니 중간에 통역기를 세운다 — 전문↔JSON 매핑·TCP↔HTTP 변환(연계)에 인증·라우팅·유량제어(API 게이트웨이)를 한 흐름으로 얹은 미들웨어.",
+  "descriptionEn": "A legacy core-banking system speaks fixed-length messages over TCP; mobile speaks JSON over REST. Neither can be rewritten, so a translator sits between them — fixed-length↔JSON mapping and TCP↔HTTP conversion (integration) plus auth, routing, and rate limiting (API gateway) in one flow.",
+  "image": "/uploads/project/gwanmun/cover.svg",
+  "tags": ["Java", "Spring Boot", "Netty", "TCP", "API Gateway", "EAI", "FEP", "금융IT"],
+  "category": "personal",
+  "date": "2026-07-08",
+  "github": "https://github.com/dj258255/gwanmun",
+  "website": "",
+  "story": "/blog/project/gwanmun/gwanmun-0-why",
+  "order": 6,
+  "draft": true
+}
