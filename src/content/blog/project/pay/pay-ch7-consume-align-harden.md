@@ -8,7 +8,7 @@ tags:
   - Spring Modulith
   - 결제 시스템
 category: project/pay
-draft: true
+draft: false
 series: "결제 시스템 만들기"
 seriesOrder: 7
 ---
