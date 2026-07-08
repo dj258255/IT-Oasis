@@ -1,0 +1,14 @@
+{
+  "title": "pay — Spring Modulith 결제 시스템",
+  "titleEn": "pay — A Payment System on Spring Modulith",
+  "description": "실 서비스 운영을 상정한 결제 백엔드. 정상 경로보다 실패·정합성 처리에 무게를 뒀다 — 타임아웃·중복·장애를 상태로 보존하고 복구 배치로 확정한다. 복식부기 원장·정산/대사·체크아웃 사가(PG 콜을 트랜잭션 밖으로)·멀티PG·구독·선불 월렛·회원·분쟁/차지백까지. 실 MySQL 라이브 검증과 자가 감사로 자금 손실 버그를 잡아가며 다졌다.",
+  "descriptionEn": "A payment backend built for real-world operation — weighted toward failure and consistency handling over the happy path. Timeouts, duplicates, and faults are preserved as state and reconciled by recovery batches. Double-entry ledger, settlement/reconciliation, a checkout saga (PG call outside the transaction), multi-PG routing, subscriptions, prepaid wallet, membership, and disputes/chargebacks — hardened through live MySQL verification and self-audits that caught money-loss bugs.",
+  "image": "/uploads/project/pay/demo/demo-checkout.png",
+  "tags": ["Payment", "Spring Boot", "Spring Modulith", "Java 21", "MySQL", "Kafka", "Redis"],
+  "category": "project",
+  "date": "2026-02-15",
+  "github": "https://github.com/dj258255/payment-system",
+  "website": "",
+  "story": "/blog/project/pay/pay-ch1-payment-core",
+  "order": 0
+}
