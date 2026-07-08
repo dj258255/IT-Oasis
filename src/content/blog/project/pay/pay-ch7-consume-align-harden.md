@@ -21,31 +21,31 @@ seriesOrder: 7
 
 ### 0. 구독자 없는 외부화는 약속일 뿐
 
-[Kafka 외부화 편](/blog/project/pay/pay-ch4-arch-events-ops)에서 결제 이벤트에 `@Externalized`를 달아 Kafka로 내보냈어요. 목적은 분명했죠 — **프로세스 밖 소비자**(분석, 별도 서비스, 다른 팀)가 이벤트 모델 무수정으로 구독할 수 있게.
+[Kafka 외부화 편](/blog/project/pay/pay-ch4-arch-events-ops)에서 결제 이벤트에 `@Externalized`를 달아 Kafka로 내보냈어요. 목적은 분명했죠. **프로세스 밖 소비자**(분석, 별도 서비스, 다른 팀)가 이벤트 모델을 고치지 않고 구독할 수 있게 하는 거였어요.
 
-그런데 돌아보니, 정작 **구독하는 프로세스 밖 소비자가 하나도 없었어요.** 토픽에 이벤트가 실리는 것까진 확인했지만, "다른 프로세스가 실제로 받아서 쓸 수 있다"는 건 여전히 **약속**이었지 실증이 아니었죠. [FDS 엔진](/blog/project/pay/pay-ch5-runtime-truths)도 [대사 엔진](/blog/project/pay/pay-ch6-security-queue)도 "만들어두고 안 연결된" 상태였다가 연결하며 완성됐듯 — 외부화도 소비자가 있어야 완성이에요.
+그런데 돌아보니, 정작 **구독하는 프로세스 밖 소비자가 하나도 없었어요.** 토픽에 이벤트가 실리는 것까진 확인했지만, "다른 프로세스가 실제로 받아서 쓸 수 있다"는 건 여전히 **약속**이었지 실증이 아니었죠. [FDS 엔진](/blog/project/pay/pay-ch5-runtime-truths)도 [대사 엔진](/blog/project/pay/pay-ch6-security-queue)도 "만들어두고 안 연결된" 상태였다가 연결하며 완성됐듯, 외부화도 소비자가 있어야 완성이에요.
 
 그래서 만들었어요. 그리고 이번에도, **실제로 붙여보니 몰랐던 게 드러났어요.**
 
 ### 1. 소비자 앱 — 메인과 완전히 분리
 
-소비자는 "정산 알림" 데모 워커예요. `payment.confirmed`/`payment.canceled`를 구독해 구조화 로그를 남기는 경량 앱. 설계에서 지킨 분리 원칙 세 가지 —
+소비자는 "정산 알림" 데모 워커예요. `payment.confirmed`/`payment.canceled`를 구독해 구조화 로그를 남기는 경량 앱이에요. 설계에서 지킨 분리 원칙은 세 가지입니다.
 
 **(1) 빌드부터 분리.** `consumer-app/`은 자체 `settings.gradle`을 가진 **독립 Gradle 프로젝트**예요. 루트 멀티모듈에 include하지 않아서, 메인의 빌드·테스트·CI가 이 앱의 존재조차 몰라요. 실행만 wrapper를 공유하죠(`./gradlew -p consumer-app bootRun`). "별도 서비스"라면 빌드 생명주기부터 별도여야 하니까요.
 
-**(2) 타입도 분리.** 소비자는 메인 앱의 이벤트 클래스를 import하지 않아요. 값을 **String으로 받아 Jackson `readTree`로 파싱**해요. producer가 붙이는 타입 헤더(`__TypeId__: com.beomsu.pay...PaymentConfirmedEvent`)에 기대면, 소비자가 발행자의 **내부 클래스명에 결합**돼요 — 그 순간 "프로세스 밖"의 의미가 사라지죠. 계약은 클래스가 아니라 **JSON 스키마**여야 해요.
+**(2) 타입도 분리.** 소비자는 메인 앱의 이벤트 클래스를 import하지 않아요. 값을 **String으로 받아 Jackson `readTree`로 파싱**해요. producer가 붙이는 타입 헤더(`__TypeId__: com.beomsu.pay...PaymentConfirmedEvent`)에 기대면, 소비자가 발행자의 **내부 클래스명에 결합**돼요. 그 순간 "프로세스 밖"의 의미가 사라지죠. 계약은 클래스가 아니라 **JSON 스키마**여야 해요.
 
-**(3) 실패도 분리.** 파싱 안 되는 메시지(포이즌)는 warn 찍고 건너뛰어요 — 이상한 메시지 하나가 파티션 소비 전체를 멈추면 안 되니까요. 그리고 [outbox 재발행](/blog/project/pay/pay-ch4-arch-events-ops)은 at-least-once라 **중복 수신이 가능**하다는 것, 그래서 실소비자는 orderNo/paymentId 기반 멱등 처리가 필수라는 걸 코드에 명시했어요.
+**(3) 실패도 분리.** 파싱 안 되는 메시지(포이즌)는 warn 찍고 건너뛰어요. 이상한 메시지 하나가 파티션 소비 전체를 멈추면 안 되니까요. 그리고 [outbox 재발행](/blog/project/pay/pay-ch4-arch-events-ops)은 at-least-once라 **중복 수신이 가능**하다는 것, 그래서 실소비자는 orderNo/paymentId 기반 멱등 처리가 필수라는 걸 코드에 명시했어요.
 
 ### 2. 붙여보니 — 와이어에 base64가 흐르고 있었다
 
-두 앱을 나란히 띄우고 결제를 일으켰어요. 소비자가 이벤트를 받긴 받았는데 —
+두 앱을 나란히 띄우고 결제를 일으켰어요. 소비자가 이벤트를 받긴 받았어요.
 
 ```
 [정산알림] 결제 완료 수신 orderNo= amount=0 ...   ← 빈 값?!
 ```
 
-파싱이 전부 빈 값이에요. 토픽을 직접 덤프해보니 —
+파싱이 전부 빈 값이에요. 토픽을 직접 덤프해봤어요.
 
 ```
 "eyJvcmRlck5vIjoiMDFLV1c2OFpFMldNOVNFQVY5SEFONjdHSlEiLCJwYXltZW50SWQiOjEsImFtb3VudCI6MTAwMDAsIn..."
@@ -53,11 +53,11 @@ seriesOrder: 7
 
 JSON이 아니라 **base64 문자열**이 흐르고 있었어요. 디코드하니 그 안에 정확한 JSON이 들어 있었고요. 이중 인코딩이죠.
 
-> 원인은 직렬화기 궁합이었어요. Modulith 외부화는 이벤트를 **이미 JSON byte[]로 직렬화해서** KafkaTemplate에 넘겨요. 그런데 producer의 value-serializer가 `JsonSerializer`였고 — Jackson은 byte[]를 받으면 **base64 문자열로 JSON 인코딩**해요. 이미 JSON인 걸 한 번 더 감싼 거예요.
+> 원인은 직렬화기 궁합이었어요. Modulith 외부화는 이벤트를 **이미 JSON byte[]로 직렬화해서** KafkaTemplate에 넘겨요. 그런데 producer의 value-serializer가 `JsonSerializer`였어요. Jackson은 byte[]를 받으면 **base64 문자열로 JSON 인코딩**하죠. 이미 JSON인 걸 한 번 더 감싼 거예요.
 >
 > 수정은 한 줄: `value-serializer: ByteArraySerializer`. 이미 직렬화된 byte[]를 **그대로** 와이어에 싣는 거죠.
 
-고치고 다시 돌리니 —
+고치고 다시 돌렸어요.
 
 ```
 [정산알림] 결제 완료 수신 orderNo=01KWW6HR... amount=10000 partition=0 offset=1
@@ -68,13 +68,13 @@ JSON이 아니라 **base64 문자열**이 흐르고 있었어요. 디코드하�
 
 ### 3. 왜 이 버그는 지금까지 숨어 있었나
 
-곱씹어볼 지점이에요. 이 이중 인코딩은 [외부화를 만든 시점](/blog/project/pay/pay-ch4-arch-events-ops)부터 있었어요. 그런데 아무 테스트도 못 잡았죠 — 발행 측 설정 테스트는 "토픽으로 나간다"까지만 봤고, **와이어 포맷을 읽는 쪽이 없었으니** 포맷이 틀렸는지 알 길이 없었어요.
+곱씹어볼 지점이에요. 이 이중 인코딩은 [외부화를 만든 시점](/blog/project/pay/pay-ch4-arch-events-ops)부터 있었어요. 그런데 아무 테스트도 못 잡았죠. 발행 측 설정 테스트는 "토픽으로 나간다"까지만 봤고, **와이어 포맷을 읽는 쪽이 없었으니** 포맷이 틀렸는지 알 길이 없었어요.
 
 이 시리즈에서 반복된 패턴이 또 나온 거예요.
 
-> [결제 확정 버그](/blog/project/pay/pay-ch5-runtime-truths)는 실기동 E2E가, [outbox 데드락](/blog/project/pay/pay-ch6-security-queue)은 스파이크 실측이, 이번 이중 인코딩은 **실제 소비자를 붙이는 것**이 드러냈어요. 공통점 — **소비하는 쪽이 생기기 전까지, 만드는 쪽은 자기가 옳다고 믿는다.** 계약의 검증은 언제나 반대편 끝에서 옵니다.
+> [결제 확정 버그](/blog/project/pay/pay-ch5-runtime-truths)는 실기동 E2E가, [outbox 데드락](/blog/project/pay/pay-ch6-security-queue)은 스파이크 실측이, 이번 이중 인코딩은 **실제 소비자를 붙이는 것**이 드러냈어요. 공통점이 있죠. **소비하는 쪽이 생기기 전까지, 만드는 쪽은 자기가 옳다고 믿는다.** 계약의 검증은 언제나 반대편 끝에서 옵니다.
 
-Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 **더미라도 좋으니 진짜로 읽는 소비자를 하나 두는 것** — 그게 와이어 계약의 테스트예요.
+Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 더미라도 좋으니 진짜로 읽는 소비자를 하나 두세요. 그게 와이어 계약의 테스트예요.
 
 ### 마치며
 
@@ -96,11 +96,11 @@ Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 **더미
 
 기능이 거의 다 완성된 뒤, 코드베이스를 **전수 감사**했어요("시스템이 암묵적으로 가정하는 것"을 다 찾아내자). 17건이 나왔는데, 그중 하나가 유독 걸렸어요.
 
-> **[3] 정산이 에스크로와 분리** — 정산 적재가 `PaymentConfirmedEvent`(승인 즉시)에서 일어나고, `EscrowReleasedEvent`는 **구독자 0**(죽은 이벤트). "구매확정 전 보류"가 정산에 미반영.
+> **[3] 정산이 에스크로와 분리**: 정산 적재가 `PaymentConfirmedEvent`(승인 즉시)에서 일어나고, `EscrowReleasedEvent`는 **구독자 0**(죽은 이벤트). "구매확정 전 보류"가 정산에 미반영.
 
-읽고 나서 "아…" 했어요. [에스크로 편](/blog/project/pay/pay-ch4-arch-events-ops)에서 분명히 이렇게 만들었거든요 — 결제금을 **구매확정 전까지 HELD로 보류**하고, 구매자가 확정하면 RELEASED로 풀어 정산 가능하게. 자금이 판매자 것이 되는 건 **구매확정 시점**이라고요.
+읽고 나서 "아…" 했어요. [에스크로 편](/blog/project/pay/pay-ch4-arch-events-ops)에서 분명히 이렇게 만들었거든요. 결제금을 **구매확정 전까지 HELD로 보류**하고, 구매자가 확정하면 RELEASED로 풀어 정산 가능하게요. 자금이 판매자 것이 되는 건 **구매확정 시점**이라고요.
 
-그런데 [정산 모듈](/blog/project/pay/pay-ch1-payment-core)은 그걸 몰랐어요. `PaymentSettlementListener`가 **결제 승인 이벤트**를 받아, 승인되자마자 정산 항목을 쌓고 있었죠. 즉 —
+그런데 [정산 모듈](/blog/project/pay/pay-ch1-payment-core)은 그걸 몰랐어요. `PaymentSettlementListener`가 **결제 승인 이벤트**를 받아, 승인되자마자 정산 항목을 쌓고 있었죠.
 
 > **에스크로는 "구매확정 전엔 못 준다"고 하는데, 정산은 "승인됐으니 지급 목록에 올린다"고 하고 있었어요.** 같은 시스템 안에서 두 모듈이 "돈이 언제 판매자 것이 되는가"를 **정반대로** 알고 있던 거예요.
 
@@ -113,7 +113,7 @@ Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 **더미
 - 너무 일찍 (승인 시점) 정산하면 → 미배송·분쟁 때 [이미 나간 돈을 회수 못 해요](/blog/project/pay/pay-ch4-arch-events-ops).
 - 그래서 에스크로가 있는 거고, 정산은 **구매확정(에스크로 릴리스)에 맞춰야** 해요.
 
-정답은 명확했어요 — **정산의 트리거를 승인이 아니라 구매확정으로 옮기는 것.** 죽어 있던 `EscrowReleasedEvent`를 정산이 구독하게 하면 돼요.
+정답은 명확했어요. **정산의 트리거를 승인이 아니라 구매확정으로 옮기는 것.** 죽어 있던 `EscrowReleasedEvent`를 정산이 구독하게 하면 돼요.
 
 ### 2. 정산 항목에 생명주기를 주다
 
@@ -141,7 +141,7 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 }
 ```
 
-**(3) 배치는 CONFIRMED만 집계.** 일 단위 정산 배치가 `PENDING` 대신 **`CONFIRMED`만** 합산해요. 구매확정 안 된 `PENDING_CONFIRMATION` 항목은 지급에서 **자동으로 빠져요.** 이게 "구매확정 전 보류"가 정산에 실제로 반영되는 지점이에요 — 보류가 말이 아니라 동작이 된 거죠.
+**(3) 배치는 CONFIRMED만 집계.** 일 단위 정산 배치가 `PENDING` 대신 **`CONFIRMED`만** 합산해요. 구매확정 안 된 `PENDING_CONFIRMATION` 항목은 지급에서 **자동으로 빠져요.** 이게 "구매확정 전 보류"가 정산에 실제로 반영되는 지점이에요. 보류가 말이 아니라 동작이 된 거죠.
 
 실기동으로 확인했어요.
 
@@ -168,11 +168,11 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 
 ### 4. 경계는 여기서도 단방향
 
-정산이 에스크로 이벤트를 구독하니, `settlement`가 `escrow`에 의존해요. 방향을 확인했어요 — **settlement → escrow 단방향**. 에스크로는 정산을 몰라요(자기 이벤트만 던질 뿐). [모듈 경계](/blog/project/pay/pay-ch4-arch-events-ops)를 CI가 강제하니, 순환이 생겼으면 빌드가 깨졌을 거예요. 통과했고요.
+정산이 에스크로 이벤트를 구독하니, `settlement`가 `escrow`에 의존해요. 방향을 확인했어요. **settlement → escrow 단방향**이에요. 에스크로는 정산을 몰라요(자기 이벤트만 던질 뿐). [모듈 경계](/blog/project/pay/pay-ch4-arch-events-ops)를 CI가 강제하니, 순환이 생겼으면 빌드가 깨졌을 거예요. 통과했고요.
 
 ### 마치며
 
-이번 건 이 시리즈에서 반복된 패턴의 **정점** 같아요. [실기동이](/blog/project/pay/pay-ch5-runtime-truths), [스파이크가](/blog/project/pay/pay-ch6-security-queue), [소비자를 붙이는 게](/blog/project/pay/pay-ch7-consume-align-harden) 숨은 문제를 드러냈듯 — 이번엔 **전수 감사**가 "두 모듈이 같은 사실을 다르게 알고 있는" 도메인 모순을 짚었어요.
+이번 건 이 시리즈에서 반복된 패턴의 **정점** 같아요. [실기동이](/blog/project/pay/pay-ch5-runtime-truths), [스파이크가](/blog/project/pay/pay-ch6-security-queue), [소비자를 붙이는 게](/blog/project/pay/pay-ch7-consume-align-harden) 숨은 문제를 드러냈듯, 이번엔 **전수 감사**가 "두 모듈이 같은 사실을 다르게 알고 있는" 도메인 모순을 짚었어요.
 
 그리고 그 모순의 증거가 **죽은 이벤트**였다는 게 인상적이었어요. 아무도 안 듣는 이벤트를 계속 던지고 있었다는 건, 설계 의도(구매확정 시 정산)와 실제 동작(승인 시 정산)이 갈라져 있었다는 신호였거든요. 죽은 이벤트를 살리는 건 단순히 리스너 하나 붙이는 게 아니라, **갈라진 두 모듈의 세계관을 다시 합치는** 일이었어요.
 
@@ -190,7 +190,7 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 
 [전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)에서 나온 또 하나의 항목이에요.
 
-> **[5] 핵심 배치 스케줄러 부재** — @Scheduled는 2개뿐. 미확정 결제 복구·구독 dunning·주문/VA 만료 배치가 **로직만 있고 부르는 스케줄러가 없음**.
+> **[5] 핵심 배치 스케줄러 부재**: @Scheduled는 2개뿐. 미확정 결제 복구·구독 dunning·주문/VA 만료 배치가 **로직만 있고 부르는 스케줄러가 없음**.
 
 특히 미확정 복구가 재밌었어요. `PaymentRecoveryService`의 javadoc엔 이렇게 적혀 있었거든요.
 
@@ -208,18 +208,18 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 
 | 배치 | 로직 | 스케줄러 |
 |---|---|---|
-| 미확정(UNKNOWN) 결제 복구 | `recoverUnknownPayments()` ✅ | ❌ (javadoc은 있다고 주장) |
-| 가상계좌 만료 | `expireOverdue(now)` ✅ | ❌ |
-| 구독 정기결제(dunning) | `runBillingCycle(today)` ✅ | ❌ |
-| 주문 만료 | `Order.markExpired()` ✅ | ❌ (스캔 서비스도 없음) |
+| 미확정(UNKNOWN) 결제 복구 | `recoverUnknownPayments()` 있음 | 없음 (javadoc은 있다고 주장) |
+| 가상계좌 만료 | `expireOverdue(now)` 있음 | 없음 |
+| 구독 정기결제(dunning) | `runBillingCycle(today)` 있음 | 없음 |
+| 주문 만료 | `Order.markExpired()` 있음 | 없음 (스캔 서비스도 없음) |
 
 가장 심각한 건 **주문 만료**였어요. `Order.markExpired()`(PENDING_PAYMENT → EXPIRED)는 있는데, "만료 배치가 이 값으로 스캔한다"는 [주석](/blog/project/pay/pay-ch1-payment-core)의 그 배치가 **존재하지 않았어요.**
 
-> 즉, 결제 안 하고 방치된 PENDING_PAYMENT 주문이 **영원히 만료되지 않아요.** 30분 유효시간이 지나도 상태가 그대로라, 재고 선점(있었다면)이나 통계가 계속 오염돼요. 만료 로직은 있는데 아무도 그걸 실행하지 않으니, 사실상 없는 기능이었죠.
+> 결제 안 하고 방치된 PENDING_PAYMENT 주문이 **영원히 만료되지 않아요.** 30분 유효시간이 지나도 상태가 그대로라, 재고 선점(있었다면)이나 통계가 계속 오염돼요. 만료 로직은 있는데 아무도 그걸 실행하지 않으니, 사실상 없는 기능이었죠.
 
 ### 2. 스케줄러를 다는 것도 그냥 붙이면 안 된다
 
-배치 4개에 스케줄러를 달았어요. 그런데 이 프로젝트엔 스케줄러를 켜고 끄는 원칙이 이미 있었어요 — [보상 태스크·에스크로 자동 릴리스](/blog/project/pay/pay-ch3-perf-cancel)처럼 **프로퍼티 게이트(기본 off)**로요.
+배치 4개에 스케줄러를 달았어요. 그런데 이 프로젝트엔 스케줄러를 켜고 끄는 원칙이 이미 있었어요. [보상 태스크·에스크로 자동 릴리스](/blog/project/pay/pay-ch3-perf-cancel)처럼 **프로퍼티 게이트(기본 off)**로요.
 
 ```java
 @Configuration @EnableScheduling
@@ -227,9 +227,9 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 class OrderExpirySchedulingConfig {}   // 프로퍼티 off면 스케줄링 인프라 자체가 안 뜬다
 ```
 
-기본을 off로 두는 이유는 테스트·부트에 부작용이 없게 하기 위해서예요. 여기서 신경 쓴 게 하나 있어요 — **여러 `@EnableScheduling`이 공존해도 되나?**
+기본을 off로 두는 이유는 테스트·부트에 부작용이 없게 하기 위해서예요. 여기서 신경 쓴 게 하나 있어요. **여러 `@EnableScheduling`이 공존해도 되나?**
 
-> 이미 order(보상)·escrow(자동 릴리스)에 각각 `@EnableScheduling` 게이트가 있고, 여기에 복구·만료·dunning·outbox까지 더하면 `@EnableScheduling`이 여러 개가 돼요. 괜찮을까? — 괜찮아요. `@EnableScheduling`은 `ScheduledAnnotationBeanPostProcessor`를 **고정된 빈 이름**으로 등록하는데, Spring이 같은 이름의 중복 등록을 dedup해요. 그래서 게이트를 몇 개를 켜도 스케줄링 처리기는 한 번만 뜨죠. 각 프로퍼티를 켠 스케줄러만 독립적으로 돌아요.
+> 이미 order(보상)·escrow(자동 릴리스)에 각각 `@EnableScheduling` 게이트가 있고, 여기에 복구·만료·dunning·outbox까지 더하면 `@EnableScheduling`이 여러 개가 돼요. 괜찮을까요? 괜찮아요. `@EnableScheduling`은 `ScheduledAnnotationBeanPostProcessor`를 **고정된 빈 이름**으로 등록하는데, Spring이 같은 이름의 중복 등록을 dedup해요. 그래서 게이트를 몇 개를 켜도 스케줄링 처리기는 한 번만 뜨죠. 각 프로퍼티를 켠 스케줄러만 독립적으로 돌아요.
 
 새로 만든 건 주문 만료 스캔 서비스 하나뿐이었어요(나머지는 기존 로직에 스케줄러만).
 
@@ -242,7 +242,7 @@ public int expireOverdue(Instant now) {
 
 [예의 saveAndFlush](/blog/project/pay/pay-ch5-runtime-truths)와 [한 건 실패 격리](/blog/project/pay/pay-ch4-arch-events-ops)는 이젠 반사적으로 들어가요.
 
-실기동으로 확인했어요 — 주문을 만들고 만료시각을 과거로 backdate한 뒤 스케줄러를 켜니,
+실기동으로 확인했어요. 주문을 만들고 만료시각을 과거로 backdate한 뒤 스케줄러를 켜니,
 
 ```
 주문 → PENDING_PAYMENT
@@ -255,13 +255,13 @@ public int expireOverdue(Instant now) {
 
 ### 3. 무한히 자라던 테이블
 
-마지막은 눈에 안 보이던 문제 — **outbox 테이블의 무한 성장**이었어요.
+마지막은 눈에 안 보이던 문제예요. **outbox 테이블의 무한 성장**이요.
 
-이 시스템은 [Modulith의 Event Publication Registry](/blog/project/pay/pay-ch1-payment-core)를 outbox로 써요(`event_publication` 테이블). 이벤트를 발행하면 여기 기록되고, 리스너가 처리하면 완료 표시돼요. 그런데 —
+이 시스템은 [Modulith의 Event Publication Registry](/blog/project/pay/pay-ch1-payment-core)를 outbox로 써요(`event_publication` 테이블). 이벤트를 발행하면 여기 기록되고, 리스너가 처리하면 완료 표시돼요.
 
 > **완료된 이벤트를 지우거나 아카이브하는 게 없었어요.** 게다가 `republish-outstanding-events-on-restart: true`라 재기동 때 미완료분을 재발행하죠. 그래서 이 테이블은 **매 결제마다 커지기만** 했어요. 몇 달이면 수백만 행이 쌓여 조회·재발행이 느려지고, 결국 성능 문제가 돼요.
 
-Modulith가 이걸 위한 API를 줘요 — `CompletedEventPublications.deletePublicationsOlderThan(Duration)`. 완료된 지 N일 지난 이벤트를 지우는 거죠. 주기 정리 스케줄러를 붙였어요(기본 7일 보존).
+Modulith가 이걸 위한 API를 줘요. `CompletedEventPublications.deletePublicationsOlderThan(Duration)`으로 완료된 지 N일 지난 이벤트를 지우는 거죠. 주기 정리 스케줄러를 붙였어요(기본 7일 보존).
 
 > 참고로 Modulith 1.3엔 `completion-mode`로 `DELETE`(완료 즉시 삭제)나 `ARCHIVE`(별도 테이블로 이동) 모드도 있어요. 감사 이력을 잠깐이라도 남기고 싶어서 "완료 유지 + 주기 purge"를 택했어요. outbox는 유실 방지가 목적이지 영구 보관이 목적은 아니니까요.
 
@@ -269,7 +269,7 @@ Modulith가 이걸 위한 API를 줘요 — `CompletedEventPublications.deletePu
 
 이번 건 화려하진 않아요. 스케줄러 4개 + 정리 잡 하나니까요. 하지만 **"로직이 있다 ≠ 동작한다"**를 다시 보여준 편이에요.
 
-배치 로직을 아무리 잘 짜도, 그걸 **주기적으로 부르는 사람이 없으면** 그건 죽은 코드예요. 그리고 javadoc이 "스케줄러가 돈다"고 적혀 있다고 실제로 도는 게 아니고요. [실기동이](/blog/project/pay/pay-ch5-runtime-truths), [실측이](/blog/project/pay/pay-ch6-security-queue) 그랬듯 — 감사가 "문서의 주장과 코드의 현실"이 갈라진 곳을 짚어줬어요. 만들어둔 걸 실제로 **살아 움직이게** 하는 것도, 만드는 것만큼 중요한 일이더라고요.
+배치 로직을 아무리 잘 짜도, 그걸 **주기적으로 부르는 사람이 없으면** 그건 죽은 코드예요. 그리고 javadoc이 "스케줄러가 돈다"고 적혀 있다고 실제로 도는 게 아니고요. [실기동이](/blog/project/pay/pay-ch5-runtime-truths), [실측이](/blog/project/pay/pay-ch6-security-queue) 그랬듯, 감사가 "문서의 주장과 코드의 현실"이 갈라진 곳을 짚어줬어요. 만들어둔 걸 실제로 **살아 움직이게** 하는 것도, 만드는 것만큼 중요한 일이더라고요.
 
 ---
 
@@ -283,13 +283,13 @@ Modulith가 이걸 위한 API를 줘요 — `CompletedEventPublications.deletePu
 
 ### 0. 금고는 있는데 비어 있었다
 
-[필드 암호화](/blog/project/pay/pay-ch2-payment-methods)를 만들고, [envelope로 키 로테이션까지](/blog/project/pay/pay-ch6-security-queue) 정성껏 확장했어요. AES-256-GCM, DEK/KEK, 블라인드 인덱스, JPA 컨버터 — 민감 데이터를 잠글 금고를 완비했죠.
+[필드 암호화](/blog/project/pay/pay-ch2-payment-methods)를 만들고, [envelope로 키 로테이션까지](/blog/project/pay/pay-ch6-security-queue) 정성껏 확장했어요. AES-256-GCM, DEK/KEK, 블라인드 인덱스, JPA 컨버터까지, 민감 데이터를 잠글 금고를 완비했죠.
 
 그런데 [감사](/blog/project/pay/pay-ch7-consume-align-harden)가 이렇게 짚었어요.
 
-> **[4] 필드 암호화 인프라 전부 미사용** — `@Convert`가 **어느 엔티티 컬럼에도 적용 안 됨**. 가상계좌 계좌번호·빌링키가 평문.
+> **[4] 필드 암호화 인프라 전부 미사용**: `@Convert`가 **어느 엔티티 컬럼에도 적용 안 됨**. 가상계좌 계좌번호·빌링키가 평문.
 
-금고를 만들어놓고 **아무것도 안 넣은** 거예요. 계좌번호도, 카드 토큰인 빌링키도 DB에 평문으로 누워 있었죠. [FDS 엔진처럼](/blog/project/pay/pay-ch5-runtime-truths), [대사 엔진처럼](/blog/project/pay/pay-ch6-security-queue) — 만들고 안 연결한 또 하나였어요.
+금고를 만들어놓고 **아무것도 안 넣은** 거예요. 계좌번호도, 카드 토큰인 빌링키도 DB에 평문으로 누워 있었죠. [FDS 엔진처럼](/blog/project/pay/pay-ch5-runtime-truths), [대사 엔진처럼](/blog/project/pay/pay-ch6-security-queue), 만들고 안 연결한 또 하나였어요.
 
 ### 1. 그냥 붙이면 되는 게 아니었다
 
@@ -303,7 +303,7 @@ Modulith가 이걸 위한 API를 줘요 — `CompletedEventPublications.deletePu
 private String accountNumber;
 ```
 
-문제는 **빌링키**였어요. 코드를 보니 —
+문제는 **빌링키**였어요. 코드를 봤어요.
 
 ```java
 Optional<BillingKey> findByBillingKey(String billingKey);   // 값으로 조회
@@ -311,9 +311,9 @@ Optional<BillingKey> findByBillingKey(String billingKey);   // 값으로 조회
 private String billingKey;
 ```
 
-빌링키는 **유니크**이고, **값으로 조회**돼요. 여기에 암호화를 붙이면 —
+빌링키는 **유니크**이고, **값으로 조회**돼요. 여기에 암호화를 붙이면 문제가 생겨요.
 
-> envelope 암호화는 **매번 새 DEK와 IV**를 써요([그래서 안전하죠](/blog/project/pay/pay-ch6-security-queue) — 같은 값도 매번 다른 암호문). 그런데 그게 바로 문제예요. **같은 빌링키가 저장할 때마다 다른 암호문**이 되니, (1) `WHERE billing_key = '암호화된값'` 조회가 절대 안 맞고, (2) 유니크 제약이 무의미해져요(다른 암호문이라 절대 충돌 안 함). 보안을 위한 암호화가 **조회와 유니크를 깨뜨리는** 거예요.
+> envelope 암호화는 **매번 새 DEK와 IV**를 써요([그래서 안전하죠](/blog/project/pay/pay-ch6-security-queue). 같은 값도 매번 다른 암호문이 나오고요). 그런데 그게 바로 문제예요. **같은 빌링키가 저장할 때마다 다른 암호문**이 되니, (1) `WHERE billing_key = '암호화된값'` 조회가 절대 안 맞고, (2) 유니크 제약이 무의미해져요(다른 암호문이라 절대 충돌 안 함). 보안을 위한 암호화가 **조회와 유니크를 깨뜨리는** 거예요.
 
 암호화하면 못 찾고, 못 찾으면 결제를 못 해요. 이 딜레마가 결제 시스템에서 민감 필드를 다룰 때 항상 나오는 벽이에요.
 
@@ -326,7 +326,7 @@ billing_key         env:v1:...    ← envelope 암호문 (비결정적, 안전)
 billing_key_index   a3f9c2...     ← HMAC-SHA256 (결정적, 유니크·조회용)
 ```
 
-**블라인드 인덱스**는 빌링키를 secret으로 HMAC 해싱한 값이에요. 같은 빌링키는 **항상 같은 인덱스**가 나와요. 그래서 —
+**블라인드 인덱스**는 빌링키를 secret으로 HMAC 해싱한 값이에요. 같은 빌링키는 **항상 같은 인덱스**가 나오죠. 덕분에 두 가지가 풀려요.
 
 - **유니크**를 인덱스 컬럼으로 옮겨요(같은 빌링키 → 같은 인덱스 → 충돌 감지).
 - **조회**를 인덱스로 해요: `findByBillingKey(raw)` → `raw`를 해싱 → `findByBillingKeyIndex(hash)`.
@@ -337,19 +337,19 @@ public Optional<BillingKey> findByBillingKey(String raw) {
 }
 ```
 
-빌링키 자체는 여전히 암호문으로 잠겨 있고(유출돼도 못 읽음), 조회·유니크는 인덱스가 대신해요. **HMAC은 일방향**이라 인덱스만 봐선 빌링키를 역산 못 하고, secret이 없으면 인덱스를 만들 수도 없어요. 이게 [블라인드 인덱스 클래스](/blog/project/pay/pay-ch2-payment-methods)를 애초에 만든 이유였는데 — 이번에 **실제로 쓰면서** 왜 필요한지 몸으로 알았어요.
+빌링키 자체는 여전히 암호문으로 잠겨 있고(유출돼도 못 읽음), 조회·유니크는 인덱스가 대신해요. **HMAC은 일방향**이라 인덱스만 봐선 빌링키를 역산 못 하고, secret이 없으면 인덱스를 만들 수도 없어요. 이게 [블라인드 인덱스 클래스](/blog/project/pay/pay-ch2-payment-methods)를 애초에 만든 이유였는데, 이번에 **실제로 쓰면서** 왜 필요한지 몸으로 알았어요.
 
-정리하면 필드마다 전략이 달라요.
+그래서 필드마다 전략이 달라요.
 
 | 필드 | 조회? | 전략 |
 |---|---|---|
-| 계좌번호 | ✗ | 단순 암호화 |
-| 구독의 빌링키 참조 | ✗ (userId로 조회) | 단순 암호화 |
-| **빌링키(원본)** | ✓ 유니크·값 조회 | **암호화 + 블라인드 인덱스** |
+| 계좌번호 | 안 함 | 단순 암호화 |
+| 구독의 빌링키 참조 | 안 함 (userId로 조회) | 단순 암호화 |
+| **빌링키(원본)** | 함 (유니크·값 조회) | **암호화 + 블라인드 인덱스** |
 
 ### 3. 이미 있던 평문은 어쩌나
 
-마지막 현실 문제 — 마이그레이션 전에 저장된 **평문 행**들이요. 그걸 복호화하려 하면 `env:` 형식이 아니라 예외가 나요.
+마지막 현실 문제는 마이그레이션 전에 저장된 **평문 행**들이에요. 그걸 복호화하려 하면 `env:` 형식이 아니라 예외가 나요.
 
 그래서 하위호환 한 줄을 넣었어요.
 
@@ -360,13 +360,13 @@ public String decrypt(String ciphertext) {
 }
 ```
 
-`env:`로 시작 안 하면 "이건 마이그레이션 전 평문이구나" 하고 그대로 돌려줘요. 새로 저장되는 값은 항상 암호화되고, 옛 평문은 읽기만 되고요. 이렇게 하면 **점진적 마이그레이션**이 가능해요 — 한 번에 다 재암호화하지 않고, 읽을 때/쓸 때 자연스럽게 넘어가죠.
+`env:`로 시작 안 하면 "이건 마이그레이션 전 평문이구나" 하고 그대로 돌려줘요. 새로 저장되는 값은 항상 암호화되고, 옛 평문은 읽기만 되고요. 이렇게 하면 **점진적 마이그레이션**이 가능해요. 한 번에 다 재암호화하지 않고, 읽을 때·쓸 때 자연스럽게 넘어가죠.
 
 ### 마치며
 
 이번 건 "만든 걸 실제로 쓰는" 이 시리즈 후반의 패턴이 또 반복된 편이에요. 하지만 붙이는 과정에서 만난 **조회되는 비밀 필드의 딜레마**가 진짜 배움이었어요.
 
-암호화는 "잠그면 끝"이 아니에요. 잠근 걸 여전히 **찾고, 유니크를 지키고, 결제에 써야** 하죠. 그 요구를 암호문 하나로는 못 채우니, 블라인드 인덱스라는 짝을 두는 거예요. 보안 인프라를 만드는 것과, 그걸 **실제 도메인의 조회·제약과 함께** 쓰는 것은 다른 난이도라는 걸 — 금고를 채우면서야 알았어요.
+암호화는 "잠그면 끝"이 아니에요. 잠근 걸 여전히 **찾고, 유니크를 지키고, 결제에 써야** 하죠. 그 요구를 암호문 하나로는 못 채우니, 블라인드 인덱스라는 짝을 두는 거예요. 보안 인프라를 만드는 것과, 그걸 **실제 도메인의 조회·제약과 함께** 쓰는 것은 다른 난이도라는 걸 금고를 채우면서야 알았어요.
 
 ---
 
@@ -380,7 +380,7 @@ public String decrypt(String ciphertext) {
 
 ### 0. 감사가 짚은 넷
 
-[전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)의 보안 관련 항목 넷을 이번에 마감했어요. 각각 성격이 다른데, 관통하는 주제가 있었어요 — **보안 상태의 수명**과 **문서의 진실성**.
+[전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)의 보안 관련 항목 넷을 이번에 마감했어요. 각각 성격이 다른데, 관통하는 주제가 있었어요. **보안 상태의 수명**과 **문서의 진실성**이요.
 
 ### 1. 조용한 기본값 — 웹훅 시크릿
 
@@ -400,7 +400,7 @@ public WebhookSignatureVerifier(@Value("${payment.webhook.secret}") String secre
 }
 ```
 
-실기동으로 확인했어요 — 빈 시크릿으로 띄우니 앱이 **뜨지 않아요.**
+실기동으로 확인했어요. 빈 시크릿으로 띄우니 앱이 **뜨지 않아요.**
 
 ```
 Caused by: IllegalStateException: payment.webhook.secret 미설정 — 웹훅 서명 시크릿을 환경변수/시크릿으로 주입해야 합니다.
@@ -416,11 +416,11 @@ Caused by: IllegalStateException: payment.webhook.secret 미설정 — 웹훅 �
 private final Set<String> cardBlacklist = ConcurrentHashMap.newKeySet();   // in-memory
 ```
 
-**메모리에만** 있었어요. 즉 —
+**메모리에만** 있었어요.
 
 > 앱을 재시작하면(배포, 장애 복구) **블랙리스트가 통째로 사라져요.** 어제 사기로 차단한 카드가, 오늘 배포 후엔 다시 통과해요. 보안 상태가 프로세스 수명만큼만 사는 거죠. 결제 차단 같은 건 프로세스보다 오래 살아야 하는데요.
 
-여기서 판단이 하나 있었어요 — 블랙리스트를 어디에 저장하나? 새 테이블을 만들 수도 있지만, **진실 원천은 이미 DB에 있었어요.** 사기로 거부한 심사 리뷰(`REJECTED`)가 `fraud_reviews`에 남아 있거든요.
+여기서 판단이 하나 있었어요. 블랙리스트를 어디에 저장하나? 새 테이블을 만들 수도 있지만, **진실 원천은 이미 DB에 있었어요.** 사기로 거부한 심사 리뷰(`REJECTED`)가 `fraud_reviews`에 남아 있거든요.
 
 > 그래서 별도 저장소 대신, **기동 시 REJECTED 리뷰에서 블랙리스트를 재구축**하기로 했어요. 인메모리 Set은 "캐시"로 두고, 진실 원천은 DB의 심사 이력으로요.
 
@@ -440,7 +440,7 @@ void reload() {
 
 > 서버가 여러 대면(실서비스는 당연히), 각 인스턴스가 **자기가 받은 요청만** 세요. 공격자가 1분에 100번을 쳐도, 10대에 분산되면 각각 10번밖에 못 봐서 velocity 룰이 **안 걸려요.** 인메모리 카운터는 다중 인스턴스에서 사실상 무력한 거죠.
 
-이건 [rate limiter](/blog/project/pay/pay-ch6-security-queue)나 [토큰 저장소](/blog/project/pay/pay-ch6-security-queue)와 정확히 같은 문제였고, 해법도 같았어요 — **Redis 공유 카운터.**
+이건 [rate limiter](/blog/project/pay/pay-ch6-security-queue)나 [토큰 저장소](/blog/project/pay/pay-ch6-security-queue)와 정확히 같은 문제였고, 해법도 같았어요. **Redis 공유 카운터**요.
 
 ```java
 // velocity:{cardKey}:{분} 을 모든 인스턴스가 공유해 INCR
@@ -463,17 +463,17 @@ velocity:card:pk-98E5E60F...:29723098
 
 > README는 "MySQL + JPA + **QueryDSL**", "settlement — **Spring Batch** 정산"이라 명시하나, `build.gradle`에 둘 다 **의존조차 없다.**
 
-쓰지도 않는 기술을 쓴다고 적어놨던 거예요. 아마 초기 계획엔 있었는데 실제론 안 쓰고, 문서만 안 고친 거죠. 이건 사소해 보여도 **정직성 문제**예요 — 코드를 읽는 사람이 문서를 믿을 수 없게 되니까요.
+쓰지도 않는 기술을 쓴다고 적어놨던 거예요. 아마 초기 계획엔 있었는데 실제론 안 쓰고, 문서만 안 고친 거죠. 이건 사소해 보여도 **정직성 문제**예요. 코드를 읽는 사람이 문서를 믿을 수 없게 되니까요.
 
-그래서 정직하게 고쳤어요. QueryDSL은 삭제하고, 정산은 "일 단위 배치 집계(서비스 루프; 대용량은 Spring Batch로 확장 여지)"로 사실화했어요. 그리고 README에 **"가정과 한계"** 절을 새로 뒀어요 — 데모 사용자(인메모리), 단일 통화(KRW), 로컬 기본 시크릿(운영은 env 필수), 멀티 PG 미배선 같은 걸 **숨기지 않고** 적었어요.
+그래서 정직하게 고쳤어요. QueryDSL은 삭제하고, 정산은 "일 단위 배치 집계(서비스 루프; 대용량은 Spring Batch로 확장 여지)"로 사실화했어요. 그리고 README에 **"가정과 한계"** 절을 새로 뒀어요. 데모 사용자(인메모리), 단일 통화(KRW), 로컬 기본 시크릿(운영은 env 필수), 멀티 PG 미배선 같은 걸 **숨기지 않고** 적었어요.
 
 > "이건 이렇게 가정했고, 여기까진 안 했다"를 적는 게, "다 완벽하다"고 적는 것보다 훨씬 믿음직해요. 특히 결제처럼 신뢰가 생명인 도메인에선요.
 
 ### 마치며
 
-이번 건 새 기능이 아니라 **마감**이에요. 그런데 마감이 보여준 게 있어요 — 보안은 "잠그면 끝"이 아니라 **상태가 얼마나 오래, 어디까지 사느냐**의 문제라는 것. 블랙리스트는 재시작을 넘어 살아야 하고, velocity는 인스턴스를 넘어 공유돼야 하고, 시크릿은 조용히 약해지면 안 돼요.
+이번 건 새 기능이 아니라 **마감**이에요. 그런데 마감이 보여준 게 있어요. 보안은 "잠그면 끝"이 아니라 **상태가 얼마나 오래, 어디까지 사느냐**의 문제라는 것이죠. 블랙리스트는 재시작을 넘어 살아야 하고, velocity는 인스턴스를 넘어 공유돼야 하고, 시크릿은 조용히 약해지면 안 돼요.
 
-그리고 코드만큼 **문서도 정직해야** 한다는 것. 안 쓰는 걸 쓴다고 적고, 가정을 숨기는 문서는 — 그 자체가 신뢰의 구멍이더라고요.
+그리고 코드만큼 **문서도 정직해야** 한다는 것. 안 쓰는 걸 쓴다고 적고 가정을 숨기는 문서는, 그 자체가 신뢰의 구멍이더라고요.
 
 ---
 
@@ -491,7 +491,7 @@ velocity:card:pk-98E5E60F...:29723098
 
 ### 1. 배포하는 순간 결제가 끊기면 안 된다
 
-제일 중요했던 건 **graceful shutdown**이었어요. 이게 없으면 —
+제일 중요했던 건 **graceful shutdown**이었어요. 이게 없으면 이렇게 돼요.
 
 > 배포할 때(또는 재시작할 때) 컨테이너가 SIGTERM을 받으면, 앱이 **즉시** 종료돼요. 그 순간 처리 중이던 결제 승인 요청이 **강제로 끊겨요.** PG엔 승인 요청이 갔는데 우리 응답은 중단된, [정확히 UNKNOWN을 유발하는](/blog/project/pay/pay-ch1-payment-core) 상황이죠. 배포할 때마다 미확정 결제가 생기는 거예요.
 
@@ -533,7 +533,7 @@ Graceful shutdown complete
 
 [Kafka 소비자 앱](/blog/project/pay/pay-ch7-consume-align-harden)을 **독립 Gradle 프로젝트**로 만들었잖아요. 그게 장점이자 함정이었어요.
 
-> 독립 프로젝트라 루트 빌드가 존재조차 몰라요 — 그래서 [CI](/blog/project/pay/pay-ch4-arch-events-ops)가 소비자 앱을 **빌드도 테스트도 안 했어요.** 소비자 앱이 깨져도 CI는 초록불이었죠. "분리"의 대가로 "검증 사각지대"가 생긴 거예요.
+> 독립 프로젝트라 루트 빌드가 존재조차 몰라요. 그래서 [CI](/blog/project/pay/pay-ch4-arch-events-ops)가 소비자 앱을 **빌드도 테스트도 안 했어요.** 소비자 앱이 깨져도 CI는 초록불이었죠. "분리"의 대가로 "검증 사각지대"가 생긴 거예요.
 
 CI에 한 스텝을 추가했어요.
 
@@ -550,13 +550,13 @@ CI에 한 스텝을 추가했어요.
 
 > 단일 유저가 초당 수십 번을 치니, per-user 5/s 제한에 **자기가 걸려서** 대량 429가 나요. 성능을 재려는 테스트가 자기 방어 장치에 막혀 측정이 왜곡되는 거죠.
 
-이건 스크립트를 고치기보단 **문서로 정합**시켰어요 — checkout-load는 성능 측정용이니 `APP_RATELIMIT_ENABLED=false`로 돌리고, spike-test는 반대로 rate limit을 켜서 [shed를 측정](/blog/project/pay/pay-ch6-security-queue)한다고요. 두 테스트의 목적이 다르니 실행 방식도 다른 걸 명시했어요.
+이건 스크립트를 고치기보단 **문서로 정합**시켰어요. checkout-load는 성능 측정용이니 `APP_RATELIMIT_ENABLED=false`로 돌리고, spike-test는 반대로 rate limit을 켜서 [shed를 측정](/blog/project/pay/pay-ch6-security-queue)한다고요. 두 테스트의 목적이 다르니 실행 방식도 다른 걸 명시했어요.
 
 ### 마치며
 
-이번 편은 새 기능이 하나도 없어요. 배포가 결제를 안 끊게, 어드민이 힙을 안 태우게, CI가 사각지대를 안 남기게, 테스트가 자기모순에 안 빠지게 — **"실제로 운영 가능하게"** 만드는 마감들이었죠.
+이번 편은 새 기능이 하나도 없어요. 배포가 결제를 안 끊게, 어드민이 힙을 안 태우게, CI가 사각지대를 안 남기게, 테스트가 자기모순에 안 빠지게. **"실제로 운영 가능하게"** 만드는 마감들이었죠.
 
-기능을 만드는 것과 그게 **운영에서 버티게** 하는 것은 다른 일이에요. graceful shutdown 두 줄, 페이지네이션 한 파라미터 — 작지만 이런 게 없으면 첫 배포·첫 트래픽에서 바로 티가 나요. 결제 시스템의 완성도는 화려한 기능이 아니라, 이런 **운영성의 마감**에서 갈리더라고요.
+기능을 만드는 것과 그게 **운영에서 버티게** 하는 것은 다른 일이에요. graceful shutdown 두 줄, 페이지네이션 한 파라미터. 작지만 이런 게 없으면 첫 배포·첫 트래픽에서 바로 티가 나요. 결제 시스템의 완성도는 화려한 기능이 아니라 이런 **운영성의 마감**에서 갈리더라고요.
 
 ---
 
@@ -570,9 +570,9 @@ CI에 한 스텝을 추가했어요.
 
 ### 0. JSON은 있는데, 그걸 볼 스택이 없었다
 
-[전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)가 이 시리즈 후반에 반복해서 짚은 패턴이 있어요 — **"만들어는 놨는데 실제로 연결은 안 했다."** [암호화 금고를 만들고 안 넣었고](/blog/project/pay/pay-ch7-consume-align-harden), [배치 로직을 짜고 스케줄러를 안 달았죠](/blog/project/pay/pay-ch7-consume-align-harden). 관측성도 똑같았어요.
+[전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)가 이 시리즈 후반에 반복해서 짚은 패턴이 있어요. **"만들어는 놨는데 실제로 연결은 안 했다."** [암호화 금고를 만들고 안 넣었고](/blog/project/pay/pay-ch7-consume-align-harden), [배치 로직을 짜고 스케줄러를 안 달았죠](/blog/project/pay/pay-ch7-consume-align-harden). 관측성도 똑같았어요.
 
-`monitoring/dashboard.json`은 있었어요. 근데 —
+`monitoring/dashboard.json`은 있었어요. 근데 정작 볼 스택이 없었죠.
 
 > **그라파나가 없어요.** 프로메테우스도 없고, 둘을 compose에 배선한 것도, 대시보드를 자동 로드하는 프로비저닝도, 알림 룰도 없었어요. dashboard.json은 "언젠가 그라파나에 수동 임포트하면 되는" 죽은 파일이었죠. 관측성이라기보단 관측성의 **스크린샷**이었어요.
 
@@ -591,7 +591,7 @@ Gauge.builder("payment.unknown.oldest.age", this, PaymentSloMetrics::unknownOlde
         .register(meterRegistry);
 ```
 
-이게 왜 중요하냐면 — [PG 타임아웃은 결과를 모르는 UNKNOWN으로 보존](/blog/project/pay/pay-ch1-payment-core)하고, [복구 배치가 나중에 조회로 확정](/blog/project/pay/pay-ch7-consume-align-harden)한다고 했잖아요. 그럼 **"UNKNOWN이 몇 건이냐"보다 "가장 오래된 UNKNOWN이 얼마나 오래 미확정이냐"가 진짜 신호**예요. 복구 배치가 밀리거나 망취소가 안 돌면 이 값이 계속 커지거든요. 10분 넘게 미확정인 결제가 있다? 그건 고객 돈이 붕 뜬 채로 방치되고 있다는 뜻이에요.
+이게 왜 중요하냐면요. [PG 타임아웃은 결과를 모르는 UNKNOWN으로 보존](/blog/project/pay/pay-ch1-payment-core)하고, [복구 배치가 나중에 조회로 확정](/blog/project/pay/pay-ch7-consume-align-harden)한다고 했잖아요. 그럼 **"UNKNOWN이 몇 건이냐"보다 "가장 오래된 UNKNOWN이 얼마나 오래 미확정이냐"가 진짜 신호**예요. 복구 배치가 밀리거나 망취소가 안 돌면 이 값이 계속 커지거든요. 10분 넘게 미확정인 결제가 있다? 그건 고객 돈이 붕 뜬 채로 방치되고 있다는 뜻이에요.
 
 두 번째는 대사예요.
 
@@ -603,7 +603,7 @@ Gauge.builder("recon.pending.count", this, m -> repository.countByStatus(ReconSt
 
 [대사는 최종 방어선](/blog/project/pay/pay-ch6-security-queue)이라, 내부 장부와 PG 파일이 안 맞는 PENDING 예외가 쌓인다는 건 "누군가 봐야 할 불일치가 적체되고 있다"는 신호죠.
 
-게이지 supplier는 스크레이프마다(15초) 단일 집계 쿼리만 돌아요 — `min(requestedAt)` 하나, `count` 하나. 가벼워요.
+게이지 supplier는 스크레이프마다(15초) 단일 집계 쿼리만 돌아요. `min(requestedAt)` 하나, `count` 하나뿐이라 가벼워요.
 
 ![Grafana 결제 SLO 대시보드 — 성공률·TPS·미확정 나이·대사 적체·결과별 rate·p95/p99·HikariCP](/uploads/project/pay/demo/demo-grafana-dashboard.png)
 
@@ -623,11 +623,11 @@ Gauge.builder("recon.pending.count", this, m -> repository.countByStatus(ReconSt
 
 ![Prometheus 결제 SLO 알림 룰 5종 — 모두 inactive](/uploads/project/pay/demo/demo-prometheus-alerts.png)
 
-지금은 5개 모두 **inactive**예요. 시스템이 건강하니까요. 알림은 "아무 일 없을 땐 조용하고, 조건이 맞으면 운다" — 이 상태가 정상이에요.
+지금은 5개 모두 **inactive**예요. 시스템이 건강하니까요. 알림은 아무 일 없을 땐 조용하고 조건이 맞으면 웁니다. 이 상태가 정상이에요.
 
 여기서 성공률 알림에 미묘한 게 하나 있었어요.
 
-> 성공률 = `성공/전체`인데, 트래픽이 아예 없으면 분모가 0이라 `0/0 = NaN`이 돼요. 그럼 `< 0.95` 비교가 참일까요? 아니에요 — 프로메테우스는 NaN을 비교에서 빼서 **발화하지 않아요.** 덕분에 새벽에 트래픽이 0일 때 "성공률 0%!" 오탐이 안 떠요. 이걸 몰랐으면 `or vector(1)` 같은 방어를 넣었을 텐데, 산술 자체가 알아서 해결해줬죠.
+> 성공률 = `성공/전체`인데, 트래픽이 아예 없으면 분모가 0이라 `0/0 = NaN`이 돼요. 그럼 `< 0.95` 비교가 참일까요? 아니에요. 프로메테우스는 NaN을 비교에서 빼서 **발화하지 않아요.** 덕분에 새벽에 트래픽이 0일 때 "성공률 0%!" 오탐이 안 떠요. 이걸 몰랐으면 `or vector(1)` 같은 방어를 넣었을 텐데, 산술 자체가 알아서 해결해줬죠.
 
 ### 3. 진짜 배움 — 실기동하니 스크레이프가 401이었다
 
@@ -638,26 +638,26 @@ GET /actuator/prometheus  →  401 Unauthorized
 WWW-Authenticate: Bearer
 ```
 
-[시큐리티](/blog/project/pay/pay-ch3-perf-cancel)가 `/actuator/**`를 ADMIN 뒤에 두고 있었거든요. 근데 프로메테우스 수집기는 JWT를 들고 다니지 않아요 — 그냥 15초마다 익명으로 GET 할 뿐이죠. 그러니 **전부 401.** 대시보드는 텅 비고요.
+[시큐리티](/blog/project/pay/pay-ch3-perf-cancel)가 `/actuator/**`를 ADMIN 뒤에 두고 있었거든요. 근데 프로메테우스 수집기는 JWT를 들고 다니지 않아요. 그냥 15초마다 익명으로 GET 할 뿐이죠. 그러니 **전부 401.** 대시보드는 텅 비고요.
 
 이게 이번 편의 진짜 배움이었어요.
 
 > compose가 파싱되고 테스트가 초록불이라고 "관측성이 된다"가 아니에요. **"프로메테우스 → 시큐리티 필터체인 → /actuator/prometheus"라는 런타임 경로**가 실제로 뚫려야 되는 거예요. HTTP 200 하나를 보는 게 아니라, [실기동해서](/blog/project/pay/pay-ch5-runtime-truths) 스크레이프가 진짜 긁히는지를 봐야 알아요.
 
-고친 건 최소 개방이에요 — `/actuator/prometheus`만 열고(수집기가 인증 없이 긁어야 하니), 나머지 actuator(env·heapdump 같은 정찰 소지)는 계속 ADMIN으로 잠갔어요.
+고친 건 최소 개방이에요. `/actuator/prometheus`만 열고(수집기가 인증 없이 긁어야 하니), 나머지 actuator(env·heapdump 같은 정찰 소지)는 계속 ADMIN으로 잠갔어요.
 
 ```java
 .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
 .requestMatchers("/actuator/**").hasRole("ADMIN")
 ```
 
-운영에선 `management.server.port`를 내부망 전용 포트로 분리해서 스크레이프하는 게 정석이에요. 여기선 로컬 프로메테우스를 위해 이 엔드포인트만 열되, [그 가정을 README에 적었어요](/blog/project/pay/pay-ch7-consume-align-harden) — 숨기지 않고요.
+운영에선 `management.server.port`를 내부망 전용 포트로 분리해서 스크레이프하는 게 정석이에요. 여기선 로컬 프로메테우스를 위해 이 엔드포인트만 열되, [그 가정을 README에 적었어요](/blog/project/pay/pay-ch7-consume-align-harden). 숨기지 않고요.
 
 ### 4. p99가 No data였다
 
 스크레이프가 뚫린 뒤에도 "요청 p99 레이턴시" 패널만 **No data**였어요. 이유가 재밌어요.
 
-> p99는 `histogram_quantile(0.99, ...http_server_requests_seconds_bucket...)`로 구해요. **버킷**이 있어야 분위수를 내죠. 근데 Micrometer는 기본적으로 HTTP 요청에 **히스토그램 버킷을 안 만들어요** — `_count`, `_sum`, `_max`만 내요. 그래서 `_bucket` 계열이 없어서 쿼리가 통째로 비었던 거예요.
+> p99는 `histogram_quantile(0.99, ...http_server_requests_seconds_bucket...)`로 구해요. **버킷**이 있어야 분위수를 내죠. 근데 Micrometer는 기본적으로 HTTP 요청에 **히스토그램 버킷을 안 만들어요.** `_count`, `_sum`, `_max`만 내죠. 그래서 `_bucket` 계열이 없어서 쿼리가 통째로 비었던 거예요.
 > 평균(`sum/count`)은 낼 수 있어도 p99는 못 내요. 평균은 "느린 1%"를 숨기니까, 결제엔 p99가 훨씬 중요한데 말이죠.
 
 설정 한 줄로 버킷을 켰어요.
@@ -676,7 +676,7 @@ management:
 
 이번 편도 "만든 걸 실제로 쓰다"의 반복이에요. dashboard.json이라는 껍데기에 프로메테우스·그라파나·알림·게이지를 붙여 살아 움직이게 했죠.
 
-근데 두 가지가 남아요. 하나는 **결제 관측성은 CPU가 아니라 도메인 언어여야** 한다는 것 — "미확정 결제가 얼마나 오래 방치됐나", "대사가 몇 건 밀렸나"처럼, 그 시스템이 정말 걱정해야 할 걸 봐야 해요. 다른 하나는 **관측성도 실기동으로만 검증된다**는 것. 스크레이프를 막은 시큐리티도, 버킷이 없어 빈 p99도, 코드를 아무리 읽어도 안 보였어요. 띄워서 프로메테우스가 진짜 긁는 걸 보고서야 알았죠.
+근데 두 가지가 남아요. 하나는 **결제 관측성은 CPU가 아니라 도메인 언어여야** 한다는 것이에요. "미확정 결제가 얼마나 오래 방치됐나", "대사가 몇 건 밀렸나"처럼 그 시스템이 정말 걱정해야 할 걸 봐야 하죠. 다른 하나는 **관측성도 실기동으로만 검증된다**는 것이고요. 스크레이프를 막은 시큐리티도, 버킷이 없어 빈 p99도, 코드를 아무리 읽어도 안 보였어요. 띄워서 프로메테우스가 진짜 긁는 걸 보고서야 알았죠.
 
 대시보드는 코드예요. 그리고 코드가 그렇듯, **돌려봐야** 진짜 도는지 알아요.
 
