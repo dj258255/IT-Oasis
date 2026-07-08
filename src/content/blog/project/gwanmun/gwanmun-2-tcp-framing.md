@@ -13,7 +13,7 @@ tags:
   - EAI
 category: personal/gwanmun
 coverImage: /uploads/project/gwanmun/cover.svg
-draft: true
+draft: false
 series: "gwanmun"
 seriesOrder: 2
 ---
