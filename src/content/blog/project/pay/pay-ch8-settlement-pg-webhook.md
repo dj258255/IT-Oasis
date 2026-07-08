@@ -30,7 +30,7 @@ private static final long FEE_PERCENT = 3;
 
 총액의 **3%**를 떼는 게 전부였어요. 실무 정산은 이것보다 한 겹 더 있어요.
 
-> PG/가맹점 정산은 **수수료(정률)** 에 그 **수수료의 부가세 10%** 를 더 떼고, 지급이 **언제** 이뤄지는지(**지급예정일**)까지 계산해요. 예를 들어 승인 100,000원이면 — 수수료 2.7%인 2,700원, 거기에 VAT 270원, 그래서 실지급은 97,030원. 그리고 이 돈은 오늘이 아니라 **정산일+2영업일**에 들어와요.
+> PG/가맹점 정산은 **수수료(정률)** 에 그 **수수료의 부가세 10%** 를 더 떼고, 지급이 **언제** 이뤄지는지(**지급예정일**)까지 계산해요. 예를 들어 승인 100,000원이면 수수료 2.7%인 2,700원, 거기에 VAT 270원이 붙어 실지급은 97,030원입니다. 그리고 이 돈은 오늘이 아니라 **정산일+2영업일**에 들어와요.
 
 "3%만 떼기"는 이 셋 중 하나만 있고 둘이 빠진 거였죠. 실무형으로 채웠어요.
 
@@ -38,7 +38,7 @@ private static final long FEE_PERCENT = 3;
 
 수수료율을 `0.027`(double)로 두고 `gross * 0.027`을 하면 편해 보여요. 근데 이 프로젝트는 [KRW를 소수점 없는 정수(long)로만 다룬다](/blog/project/pay/pay-ch1-payment-core)는 원칙이 있어요. 부동소수를 돈 계산에 끼우면 반올림 오차가 쌓이거든요.
 
-그래서 수수료율을 **basis point(bps)** 로 뒀어요 — 270 bps = 2.7%.
+그래서 수수료율을 **basis point(bps)** 로 뒀어요. 270 bps가 2.7%예요.
 
 ```java
 long fee    = Math.multiplyExact(gross, feeBps) / 10000;  // 정수 나눗셈(floor)
@@ -46,9 +46,9 @@ long feeVat = fee / 10;                                    // 수수료의 10%
 long net    = gross - fee - feeVat;
 ```
 
-검산해보면 gross=100,000 → fee=2,700 → feeVat=270 → net=**97,030**. 부동소수 없이 정확히 떨어져요. 이 검산값을 테스트로 못박아 뒀어요(`settleFeeModelExactValues`) — 수수료 로직은 한 번 틀어지면 돈이 새니까요.
+검산해보면 gross=100,000 → fee=2,700 → feeVat=270 → net=**97,030**. 부동소수 없이 정확히 떨어져요. 이 검산값을 테스트로 못박아 뒀어요(`settleFeeModelExactValues`). 수수료 로직은 한 번 틀어지면 돈이 새니까요.
 
-정산 집계의 불변식도 넓혔어요. 기존 `net = gross - fee`에서 **`net = gross - fee - feeVat`** 로요. 재밌는 건, 마이그레이션에서 레거시 정산은 `feeVat = 0`으로 백필하니 **옛 불변식이 그대로 성립**한다는 거예요 — net을 다시 계산할 필요가 없었죠.
+정산 집계의 불변식도 기존 `net = gross - fee`에서 **`net = gross - fee - feeVat`** 로 넓혔어요. 마이그레이션에서 레거시 정산은 `feeVat = 0`으로 백필하니 **옛 불변식이 그대로 성립**해서, net을 다시 계산할 필요가 없었고요.
 
 ### 2. 지급예정일 = 정산일 + 2영업일
 
@@ -74,7 +74,7 @@ src/test/.../SettlementServiceTest.java:  service.settle(DATE)   ← 테스트�
 
 [스케줄러 없던 배치들](/blog/project/pay/pay-ch7-consume-align-harden)과 **똑같은 패턴**이었어요. 정산 로직은 완성돼 있는데, 운영에서 그걸 주기적으로 부르는 스케줄러도, 수동으로 돌릴 어드민도 없었죠. 정산이 영원히 안 만들어지니 "지급 확정"할 대상도 없고요.
 
-그래서 배선했어요 — 기존 [스케줄러 게이트 패턴](/blog/project/pay/pay-ch7-consume-align-harden)(기본 off) 그대로 일 단위 스케줄러를 달고, 어드민에 조회·수동실행·지급확정을 뒀어요. 정산 상태에 `PAID_OUT`을 추가하고요.
+그래서 배선했어요. 기존 [스케줄러 게이트 패턴](/blog/project/pay/pay-ch7-consume-align-harden)(기본 off) 그대로 일 단위 스케줄러를 달고, 어드민에 조회·수동실행·지급확정을 뒀어요. 정산 상태에 `PAID_OUT`을 추가하고요.
 
 ```java
 public void markPaidOut() {
@@ -99,13 +99,13 @@ public void markPaidOut() {
 /** <p>Spring Batch 기반 일 단위 거래 집계 → 수수료 계산 → ... */
 ```
 
-**Spring Batch를 안 쓰는데** 쓴다고 적혀 있었어요(실제론 서비스 루프). README는 앞서 고쳤는데 package-info는 남아 있던 거죠. "서비스 루프 집계, 대용량은 Spring Batch로 확장 여지"로 사실화했어요. 문서의 거짓말은 한 군데만 있는 게 아니더라고요 — 같은 주장을 여기저기 복붙해뒀으면 다 찾아 고쳐야 해요.
+**Spring Batch를 안 쓰는데** 쓴다고 적혀 있었어요(실제론 서비스 루프). README는 앞서 고쳤는데 package-info는 남아 있던 거죠. "서비스 루프 집계, 대용량은 Spring Batch로 확장 여지"로 사실화했어요. 문서의 거짓말은 한 군데만 있는 게 아니더라고요. 같은 주장을 여기저기 복붙해뒀으면 다 찾아 고쳐야 해요.
 
 ### 마치며
 
 정산은 "수수료 떼면 끝"처럼 보이지만, 실은 **수수료 + 그 수수료의 부가세 + 언제 주느냐**가 다 얽힌 도메인이에요. 한 줄로 뭉뚱그렸던 걸 실무 구조로 풀면서, 돈은 정수로 지키고(bps), 지급일은 영업일로 세고, 못 하는 것(공휴일)은 솔직히 적었어요.
 
-그리고 또 만났죠 — **로직은 있는데 부르는 사람이 없는 배치.** 이 시리즈가 반복해서 보여주는, "만들었다 ≠ 동작한다"의 정산 버전이었어요. 도메인을 정교하게 모델링하는 것과, 그게 **실제 운영 흐름에 배선되어 도는 것**은 끝까지 다른 일이더라고요.
+그리고 또 만났어요. **로직은 있는데 부르는 사람이 없는 배치.** 이 시리즈가 반복해서 보여주는 "만들었다 ≠ 동작한다"의 정산 버전이었어요. 도메인을 정교하게 모델링하는 것과, 그게 **실제 운영 흐름에 배선되어 도는 것**은 끝까지 다른 일이더라고요.
 
 ---
 
@@ -119,9 +119,9 @@ public void markPaidOut() {
 
 ### 0. 또 하나의 "만들고 안 쓴 것"
 
-[전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)가 짚은 패턴 — [금고를 만들고 안 채웠고](/blog/project/pay/pay-ch7-consume-align-harden), [배치를 만들고 안 불렀던](/blog/project/pay/pay-ch7-consume-align-harden) 그 패턴이 PG에도 있었어요.
+[전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)가 짚은 패턴이 PG에도 있었어요. [금고를 만들고 안 채웠고](/blog/project/pay/pay-ch7-consume-align-harden), [배치를 만들고 안 불렀던](/blog/project/pay/pay-ch7-consume-align-harden) 바로 그 패턴이요.
 
-`RoutingPgClient` — 여러 PG를 가중치 순으로 시도하고 장애 시 다음 PG로 넘기는(failover) 라우터를 꽤 정성껏 만들어놨어요. 서킷브레이커도 PG별로 붙이고, 단위 테스트도 촘촘했죠. 그런데 —
+`RoutingPgClient`, 여러 PG를 가중치 순으로 시도하고 장애 시 다음 PG로 넘기는(failover) 라우터를 꽤 정성껏 만들어놨어요. 서킷브레이커도 PG별로 붙이고, 단위 테스트도 촘촘했죠. 그런데요.
 
 > `grep`해보니 이 라우터를 참조하는 건 **자기 테스트뿐**이었어요. 어느 `@Configuration`에서도 빈으로 등록되지 않았고, 실제 결제는 여전히 단일 PG(`ResilientPgClient`가 감싼 하나)로만 흘렀어요. failover 로직이 **테스트에서만 살아 있던** 거예요.
 
@@ -129,7 +129,7 @@ public void markPaidOut() {
 
 ### 1. 진짜 문제는 @Primary였다
 
-결제는 `PgClient` 인터페이스로 PG를 부르고, 그 구현으로 `ResilientPgClient`가 `@Primary`로 주입돼요(서킷브레이커·재시도를 입힌 데코레이터). 여기에 라우터를 넣으려니 —
+결제는 `PgClient` 인터페이스로 PG를 부르고, 그 구현으로 `ResilientPgClient`가 `@Primary`로 주입돼요(서킷브레이커·재시도를 입힌 데코레이터). 여기에 라우터를 넣으려니 문제가 걸렸어요.
 
 > `RoutingPgClient`를 또 `@Primary`로 두면? **`@Primary`가 둘**이 되어 "어느 걸 주입할지" 스프링이 못 정해요. 그렇다고 `ResilientPgClient`의 `@Primary`를 떼면, 그게 주던 재시도·외곽 서킷을 잃죠.
 
@@ -162,15 +162,15 @@ PaymentService → ResilientPgClient(@Primary, 외곽 서킷·query 재시도)
               → [primary PG, secondary PG]
 ```
 
-`@Primary`는 `ResilientPgClient` 하나로 그대로 두고, 그 아래 `pgDelegate`만 "단일 PG → 라우터"로 바뀌는 거죠. 데코레이터 패턴이 이래서 좋아요 — 바깥 껍질은 안쪽이 하나든 라우터든 몰라요.
+`@Primary`는 `ResilientPgClient` 하나로 그대로 두고, 그 아래 `pgDelegate`만 "단일 PG → 라우터"로 바뀌는 거죠. 데코레이터 패턴이 이래서 좋아요. 바깥 껍질은 안쪽이 하나든 라우터든 몰라요.
 
 ### 2. qualifier가 둘이 되는 함정
 
 한 가지 걸린 게 있었어요. `FakePgClient`는 **항상** `@Qualifier("pgDelegate")`였거든요. 라우터도 `pgDelegate`로 등록하면 **같은 이름표가 둘**이 되어 다시 주입이 모호해져요.
 
-> 그래서 `FakePgClient`의 `pgDelegate` 역할을 **라우팅이 꺼졌을 때만**으로 조건화했어요. `@ConditionalOnProperty(name="app.pg.routing.enabled", havingValue="false", matchIfMissing=true)` — 라우팅을 켜면 이 빈은 아예 등록되지 않고, 라우터가 유일한 `pgDelegate`가 돼요. 라우터 내부 경로는 자체 `new FakePgClient()`로 만들고요.
+> 그래서 `FakePgClient`의 `pgDelegate` 역할을 **라우팅이 꺼졌을 때만**으로 조건화했어요. `@ConditionalOnProperty(name="app.pg.routing.enabled", havingValue="false", matchIfMissing=true)`. 라우팅을 켜면 이 빈은 아예 등록되지 않고, 라우터가 유일한 `pgDelegate`가 돼요. 라우터 내부 경로는 자체 `new FakePgClient()`로 만들고요.
 
-토글 하나로 `FakePgClient`의 등록과 `PgRoutingConfig`의 등록이 **함께** 뒤집혀요 — 정확히 하나만 `pgDelegate`가 되도록.
+토글 하나로 `FakePgClient`의 등록과 `PgRoutingConfig`의 등록이 **함께** 뒤집혀요. 정확히 하나만 `pgDelegate`가 되도록요.
 
 실기동으로 확인했어요.
 
@@ -184,16 +184,16 @@ APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
 
 failover의 어려운 부분은 "언제 넘길까"가 아니라 **"언제 넘기면 안 되나"**예요. `RoutingPgClient`가 결과를 이렇게 나눠요.
 
-| PG 응답 | failover? | 이유 |
+| PG 응답 | failover | 이유 |
 |---|---|---|
-| SUCCESS | ✗ | 성공 — 끝 |
-| FAILED(카드 거절) | ✗ | 다른 PG도 거절할 것 |
-| **TIMEOUT(미확정)** | **✗ 절대** | **다른 PG로 재시도 = 이중결제 위험** |
-| 예외·서킷 오픈 | ✓ | PG가 요청을 못 받음 → 다음 PG |
+| SUCCESS | 안 함 | 성공, 끝 |
+| FAILED(카드 거절) | 안 함 | 다른 PG도 거절할 것 |
+| **TIMEOUT(미확정)** | **절대 안 함** | **다른 PG로 재시도 = 이중결제 위험** |
+| 예외·서킷 오픈 | 함 | PG가 요청을 못 받음 → 다음 PG |
 
 제일 중요한 게 세 번째예요.
 
-> [PG 타임아웃은 "결과를 모른다"는 뜻](/blog/project/pay/pay-ch1-payment-core)이에요 — 원 PG에서 이미 승인됐을 수도 있어요. 이때 "실패했나 보다" 하고 다른 PG로 넘겨 재승인하면? **두 PG에서 이중으로 결제**돼요. 그래서 TIMEOUT은 failover하지 않고 그대로 UNKNOWN으로 돌려, [복구 배치가 나중에 조회로 확정](/blog/project/pay/pay-ch7-consume-align-harden)하게 맡겨요. failover는 "PG가 요청을 **못 받았을 때**"(연결 실패·서킷 오픈)만 하는 거예요.
+> [PG 타임아웃은 "결과를 모른다"는 뜻](/blog/project/pay/pay-ch1-payment-core)이에요. 원 PG에서 이미 승인됐을 수도 있어요. 이때 "실패했나 보다" 하고 다른 PG로 넘겨 재승인하면? **두 PG에서 이중으로 결제**돼요. 그래서 TIMEOUT은 failover하지 않고 그대로 UNKNOWN으로 돌려, [복구 배치가 나중에 조회로 확정](/blog/project/pay/pay-ch7-consume-align-harden)하게 맡겨요. failover는 "PG가 요청을 **못 받았을 때**"(연결 실패·서킷 오픈)만 하는 거예요.
 
 failover를 "실패하면 다음으로"라고 단순하게 짜면 바로 이 이중결제 함정에 빠져요. 결제에서 재시도·failover는 항상 **멱등성과 이중청구**를 먼저 물어야 해요.
 
@@ -205,9 +205,9 @@ failover를 "실패하면 다음으로"라고 단순하게 짜면 바로 이 이
 
 ### 마치며
 
-이번 건도 새 로직이 아니라 **배선**이에요. 잘 만들어둔 failover 라우터가 테스트에서만 살아 있었고, 그걸 실제 결제 경로에 끼웠죠. 배우는 건 두 가지였어요 — **`@Primary`와 qualifier로 이미 있는 seam에 데코레이터를 겹쳐 끼우는 법**, 그리고 **failover조차 결제에선 "이중결제 안 나게" 조심스럽게 해야 한다**는 것.
+이번 건도 새 로직이 아니라 **배선**이에요. 잘 만들어둔 failover 라우터가 테스트에서만 살아 있었고, 그걸 실제 결제 경로에 끼웠죠. 배운 건 두 가지예요. **`@Primary`와 qualifier로 이미 있는 seam에 데코레이터를 겹쳐 끼우는 법**, 그리고 **failover조차 결제에선 "이중결제 안 나게" 조심스럽게 해야 한다**는 것.
 
-만드는 것과 **실제 흐름에 배선하는 것**은 다르다 — 이 시리즈가 계속 반복하는 교훈의, PG 버전이었어요.
+만드는 것과 **실제 흐름에 배선하는 것**은 다르다. 이 시리즈가 계속 반복하는 교훈의 PG 버전이었어요.
 
 ---
 
@@ -221,7 +221,7 @@ failover를 "실패하면 다음으로"라고 단순하게 짜면 바로 이 이
 
 ### 0. 10초 규약
 
-PG 웹훅엔 시간 규약이 있어요 — **10초 안에 2xx**를 못 주면 PG가 "못 받았나 보다" 하고 **재전송**해요(토스는 최대 7회, 며칠에 걸쳐). 그래서 웹훅 응답은 빨라야 해요.
+PG 웹훅엔 시간 규약이 있어요. **10초 안에 2xx**를 못 주면 PG가 "못 받았나 보다" 하고 **재전송**해요(토스는 최대 7회, 며칠에 걸쳐). 그래서 웹훅 응답은 빨라야 해요.
 
 그런데 [웹훅 처리 코드](/blog/project/pay/pay-ch1-payment-core)를 보니 이랬어요.
 
@@ -234,17 +234,17 @@ public void handle(...) {
 
 `process`는 [페이로드를 믿지 않고 PG 조회 API로 실제 상태를 재검증](/blog/project/pay/pay-ch1-payment-core)해요. 문제는 그 **PG 조회 네트워크 왕복이 응답 경로에 얹혀 있다**는 거예요.
 
-> PG가 느리거나 일시 장애면 이 조회가 몇 초씩 걸려요. 그럼 웹훅 응답이 10초를 넘고, PG는 재전송을 시작하죠. 재전송이 또 조회를 유발하고 — 느릴 때 더 부하가 쌓이는 악순환이에요. 수신 확인과 실제 해석은 시간 특성이 완전히 다른데 한 스레드에 묶여 있던 거예요.
+> PG가 느리거나 일시 장애면 이 조회가 몇 초씩 걸려요. 그럼 웹훅 응답이 10초를 넘고, PG는 재전송을 시작하죠. 재전송이 또 조회를 유발하니, 느릴 때 더 부하가 쌓이는 악순환이에요. 수신 확인과 실제 해석은 시간 특성이 완전히 다른데 한 스레드에 묶여 있던 거예요.
 
-다행히 예전의 제가 `receive`와 `process`를 이미 나눠뒀고, javadoc에 "나중에 process만 비동기로 떼어낸다"고 적어놨어요. 이번에 실제로 뗐어요. 그런데 "이벤트로 떼면 되겠지"가 — 두 번 막혔어요.
+다행히 예전의 제가 `receive`와 `process`를 이미 나눠뒀고, javadoc에 "나중에 process만 비동기로 떼어낸다"고 적어놨어요. 이번에 실제로 뗐어요. 그런데 "이벤트로 떼면 되겠지"가 두 번 막혔어요.
 
 ### 1. 왜 @Async 대신 아웃박스인가
 
-단순하게 `process`에 `@Async`를 붙일 수도 있어요. 근데 [이 시스템은 신뢰성을 아웃박스로 보장](/blog/project/pay/pay-ch1-payment-core)해요. `@Async`는 인메모리 스레드풀이라 —
+단순하게 `process`에 `@Async`를 붙일 수도 있어요. 근데 [이 시스템은 신뢰성을 아웃박스로 보장](/blog/project/pay/pay-ch1-payment-core)해요. `@Async`는 인메모리 스레드풀이라 문제가 있어요.
 
 > 200을 응답한 뒤, `@Async` 작업이 실행되기 전에 앱이 죽으면(배포·크래시) 그 **해석 작업이 통째로 사라져요.** PG는 200을 받았으니 재전송도 안 하고요. 웹훅은 받았는데 해석은 안 된 채 유실되는 거죠.
 
-그래서 `@Async` 대신 **Modulith 이벤트**로 뗐어요. `receive`가 신규 이벤트에 `WebhookReceivedEvent`를 발행하면, [Event Publication Registry(아웃박스)](/blog/project/pay/pay-ch1-payment-core)에 수신과 함께 기록되고, 커밋 후 `@ApplicationModuleListener`가 별도 스레드에서 해석해요. 앱이 죽어도 재기동 때 재발행돼요 — 유실이 없죠.
+그래서 `@Async` 대신 **Modulith 이벤트**로 뗐어요. `receive`가 신규 이벤트에 `WebhookReceivedEvent`를 발행하면, [Event Publication Registry(아웃박스)](/blog/project/pay/pay-ch1-payment-core)에 수신과 함께 기록되고, 커밋 후 `@ApplicationModuleListener`가 별도 스레드에서 해석해요. 앱이 죽어도 재기동 때 재발행돼요. 유실이 없죠.
 
 ```java
 @Transactional
@@ -263,10 +263,10 @@ void onWebhookReceived(WebhookReceivedEvent e) {
 
 ### 2. 함정 하나 — 자기호출이 트랜잭션을 삼켰다
 
-코드는 완벽해 보였어요. 테스트도 통과했고요. 그런데 **실기동해서** 웹훅을 쏴보니 —
+코드는 완벽해 보였어요. 테스트도 통과했고요. 그런데 **실기동해서** 웹훅을 쏴보니 이상한 게 나왔어요.
 
 ```
-웹훅 POST → 200 (0.02초, 빠름 ✓)
+웹훅 POST → 200 (0.02초, 빠름)
 직후 DB: RECEIVED
 3초 후 DB: 여전히 RECEIVED (?!)
 event_publication: WebhookReceivedEvent, 완료 안 됨
@@ -274,9 +274,9 @@ event_publication: WebhookReceivedEvent, 완료 안 됨
 
 해석이 **아예 실행되지 않았어요.** 발행은 아웃박스에 기록됐는데, 리스너가 안 불린 거예요. 다른 이벤트(`PaymentConfirmedEvent` 3444건)는 다 완료되는데 이것만.
 
-차이는 하나였어요 — **자기호출(self-invocation).**
+차이는 하나, **자기호출(self-invocation)**이었어요.
 
-> `@ApplicationModuleListener`는 `AFTER_COMMIT`이라, 발행이 **커밋되는 트랜잭션 안**에서 일어나야 걸려요. 그런데 컨트롤러가 부른 `handle()`이 `this.receive()`를 부르는데, 이건 **프록시를 거치지 않아** `receive()`의 `@Transactional`이 **무시돼요.** 그래서 발행이 트랜잭션 밖에서 일어났고 — 커밋할 트랜잭션이 없으니 `AFTER_COMMIT`이 영원히 안 걸린 거예요. (저장은 Spring Data가 자체 커밋해서 행은 남았고요. 그래서 더 헷갈렸죠.)
+> `@ApplicationModuleListener`는 `AFTER_COMMIT`이라, 발행이 **커밋되는 트랜잭션 안**에서 일어나야 걸려요. 그런데 컨트롤러가 부른 `handle()`이 `this.receive()`를 부르는데, 이건 **프록시를 거치지 않아** `receive()`의 `@Transactional`이 **무시돼요.** 그래서 발행이 트랜잭션 밖에서 일어났고, 커밋할 트랜잭션이 없으니 `AFTER_COMMIT`이 영원히 안 걸린 거예요. (저장은 Spring Data가 자체 커밋해서 행은 남았고요. 그래서 더 헷갈렸죠.)
 
 `handle()`을 트랜잭션 경계로 만들어 고쳤어요.
 
@@ -326,17 +326,17 @@ repository.save(event);
 실기동으로 최종 확인했어요.
 
 ```
-정상 웹훅(실제 결제) → 200(0.02s) → 별도 스레드 → PROCESSED, 발행 완료 ✓
-실패 웹훅(없는 결제)  → 200(0.02s) → 해석 실패 전파 → 발행 미완료(재시도 대기) ✓
+정상 웹훅(실제 결제) → 200(0.02s) → 별도 스레드 → PROCESSED, 발행 완료
+실패 웹훅(없는 결제)  → 200(0.02s) → 해석 실패 전파 → 발행 미완료(재시도 대기)
 ```
 
 성공은 완료되고, 실패는 유실 없이 재시도 큐에 남아요.
 
 ### 마치며
 
-이번 편의 배선 자체는 두 줄이에요 — 발행 하나, 리스너 하나. 근데 그 사이에 **트랜잭션 함정 둘**이 있었고, 둘 다 [코드 리뷰로는 안 보이고 실기동에서만](/blog/project/pay/pay-ch5-runtime-truths) 드러났어요. 자기호출이 트랜잭션을 우회한 것도, 예외가 트랜잭션을 오염시킨 것도, "웹훅을 쏴보고 DB를 열어보고 나서야" 알았죠.
+이번 편의 배선 자체는 두 줄이에요. 발행 하나, 리스너 하나. 근데 그 사이에 **트랜잭션 함정 둘**이 있었고, 둘 다 [코드 리뷰로는 안 보이고 실기동에서만](/blog/project/pay/pay-ch5-runtime-truths) 드러났어요. 자기호출이 트랜잭션을 우회한 것도, 예외가 트랜잭션을 오염시킨 것도, "웹훅을 쏴보고 DB를 열어보고 나서야" 알았죠.
 
-비동기는 "떼면 끝"이 아니에요. **어디서 트랜잭션이 열리고 커밋되는지**, **실패가 그 트랜잭션을 어떻게 오염시키는지**를 알아야 진짜로 동작해요. 그리고 그 앎은 — 늘 그렇듯 — 돌려보고 나서야 왔어요.
+비동기는 "떼면 끝"이 아니에요. **어디서 트랜잭션이 열리고 커밋되는지**, **실패가 그 트랜잭션을 어떻게 오염시키는지**를 알아야 진짜로 동작해요. 그리고 그 앎은, 늘 그렇듯, 돌려보고 나서야 왔어요.
 
 ---
 
@@ -350,7 +350,7 @@ repository.save(event);
 
 ### 0. "더 있나?" 하고 다시 봤더니
 
-[정산을 에스크로에 정렬](/blog/project/pay/pay-ch7-consume-align-harden)하고, [수수료·부가세·지급예정일까지 고도화](/blog/project/pay/pay-ch8-settlement-pg-webhook)한 뒤였어요. 다 됐다 싶어 코드베이스를 결제 도메인 리뷰어 시각으로 **한 번 더** 훑었어요. 그러다 정산에서 조용한 버그 하나를 만났어요 — 에러도 안 나고, 테스트도 초록불인데, **가맹점에 돈이 안 나가는** 버그를요.
+[정산을 에스크로에 정렬](/blog/project/pay/pay-ch7-consume-align-harden)하고, [수수료·부가세·지급예정일까지 고도화](/blog/project/pay/pay-ch8-settlement-pg-webhook)한 뒤였어요. 다 됐다 싶어 코드베이스를 결제 도메인 리뷰어 시각으로 **한 번 더** 훑었어요. 그러다 정산에서 조용한 버그 하나를 만났어요. 에러도 안 나고, 테스트도 초록불인데 **가맹점에 돈이 안 나가는** 버그를요.
 
 ### 1. 집계 키가 잘못된 날짜였다
 
@@ -368,13 +368,13 @@ itemRepository.findByStatusAndConfirmedDate(CONFIRMED, date);
 LocalDate confirmedDate = LocalDate.ofInstant(event.approvedAt(), UTC);  // ← 승인일
 ```
 
-이름은 `confirmedDate`("구매확정일")인데, 실제로 담긴 건 **승인일**이었어요. 그리고 항목이 `CONFIRMED`(정산 가능)로 바뀌는 건 [에스크로 릴리스(구매확정)](/blog/project/pay/pay-ch4-arch-events-ops) 시점이고, 그 전이는 `confirmedDate`를 **재스탬프하지 않았어요.**
+이름은 `confirmedDate`("구매확정일")인데 실제로 담긴 건 **승인일**이었어요. 항목이 `CONFIRMED`(정산 가능)로 바뀌는 건 [에스크로 릴리스(구매확정)](/blog/project/pay/pay-ch4-arch-events-ops) 시점인데, 그 전이는 `confirmedDate`를 **재스탬프하지 않았고요.**
 
-이게 왜 치명적이냐면 — **에스크로는 며칠 홀드돼요**(기본 7일).
+이게 왜 치명적이냐면, **에스크로는 며칠 홀드되거든요**(기본 7일).
 
 > 결제가 D일에 승인 → 항목 적재(`confirmedDate = D`, PENDING). D+1일에 `settle(D)` 배치가 도는데, 이 항목은 아직 PENDING이라 제외돼요. **D+7일**에 에스크로가 릴리스되어 CONFIRMED가 되지만, `confirmedDate`는 **여전히 D.** 그런데 `settle(D)`는 D+1에 이미 실행됐고, [재실행은 멱등하게 skip](/blog/project/pay/pay-ch8-settlement-pg-webhook)돼요(그 날짜 정산이 이미 있으니까). 스케줄러는 매일 `settle(어제)`만 돌지, 과거를 다시 안 돌아요.
 >
-> 결과 — 이 항목은 **CONFIRMED인 채로 영원히 집계되지 않아요.** "그 날짜에 CONFIRMED된 항목"이라는 조건을, 어떤 배치도 만족시키지 못해요. `settle(D)`가 돌 땐 PENDING이었고, `settle(D+7)`엔 `confirmedDate`가 안 맞으니까요. **가맹점은 돈을 못 받아요.**
+> 결과적으로 이 항목은 **CONFIRMED인 채로 영원히 집계되지 않아요.** "그 날짜에 CONFIRMED된 항목"이라는 조건을, 어떤 배치도 만족시키지 못해요. `settle(D)`가 돌 땐 PENDING이었고, `settle(D+7)`엔 `confirmedDate`가 안 맞으니까요. **가맹점은 돈을 못 받아요.**
 
 제일 무서운 건, 에스크로 홀드가 본질적으로 며칠짜리라 이게 **예외가 아니라 거의 모든 항목의 기본 경로**라는 거예요. "구매확정 시점 정산"을 하겠다고 한 [바로 그 리워크](/blog/project/pay/pay-ch7-consume-align-harden)가, 정작 지급을 막고 있었어요.
 
@@ -390,7 +390,7 @@ private static SettlementItem confirmedItem(...) {
 }
 ```
 
-**승인하자마자 같은 날 확정**하니, `confirmedDate`와 `settle` 대상 날짜가 늘 일치했어요. 그래서 모든 테스트가 통과했죠. 하지만 실제로 "승인하자마자 같은 날 구매확정"은 **거의 안 일어나요** — 에스크로가 며칠 홀드하니까요.
+**승인하자마자 같은 날 확정**하니, `confirmedDate`와 `settle` 대상 날짜가 늘 일치했어요. 그래서 모든 테스트가 통과했죠. 하지만 실제로 "승인하자마자 같은 날 구매확정"은 **거의 안 일어나요.** 에스크로가 며칠 홀드하니까요.
 
 > 테스트가 "승인일 == 확정일"이라는, 현실에선 드문 조건에서만 돌아서 버그를 통째로 가렸어요. [실기동 검증](/blog/project/pay/pay-ch5-runtime-truths) 때도 저는 결제 후 **바로** 구매확정을 눌렀거든요. 그러니 그때도 우연히 통과했고요. 승인과 확정 사이의 **시간 간격**이라는 결제 정산의 본질을, 테스트도 저도 좁혀서 안 보고 있던 거예요.
 
@@ -414,9 +414,9 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 }
 ```
 
-이제 릴리스일 R로 재스탬프되니, **R+1의 `settle(R)`이 정확히 이 항목을 집계**해요. 재밌는 건, 이 수정이 필드 이름도 바로잡았다는 거예요 — 이제 `confirmedDate`는 정말로 "구매확정일"이에요(전엔 이름과 달리 승인일이었죠).
+이제 릴리스일 R로 재스탬프되니 **R+1의 `settle(R)`이 정확히 이 항목을 집계**해요. 이 수정으로 필드 이름도 바로잡혔어요. 이제 `confirmedDate`는 정말로 "구매확정일"이에요(전엔 이름과 달리 승인일이었죠).
 
-그리고 회귀 테스트를 심었어요 — 승인 D일 적재 → D+7 릴리스 → **릴리스일 배치가 잡는지**. 이제 이 테스트가 있으니, 누가 다시 승인일로 되돌리면 빨간불이 떠요.
+회귀 테스트도 심었어요. 승인 D일 적재 → D+7 릴리스 → **릴리스일 배치가 잡는지**. 이제 이 테스트가 있으니, 누가 다시 승인일로 되돌리면 빨간불이 떠요.
 
 실 MySQL로 확인했어요.
 
@@ -430,11 +430,11 @@ settle(2026-07-07) → 집계 → SETTLED, 정산 생성(net 9,703)
 
 ### 마치며
 
-이번 건 "만들었는데 안 돌더라"의 가장 **조용한** 버전이었어요. 컴파일도 되고, 테스트도 통과하고, 데모도 됐어요 — 근데 프로덕션 타이밍(승인과 확정 사이 며칠)에선 가맹점에 돈이 안 나갔죠.
+이번 건 "만들었는데 안 돌더라"의 가장 **조용한** 버전이었어요. 컴파일도 되고, 테스트도 통과하고, 데모도 됐어요. 근데 프로덕션 타이밍(승인과 확정 사이 며칠)에선 가맹점에 돈이 안 나갔죠.
 
-두 가지를 다시 배웠어요. 하나는 **집계 키는 그 상태로 전이되는 시점의 값이어야** 한다는 것 — "그 날짜에 X된 것"을 찾을 거면, X가 일어난 날짜를 키로 삼아야지, 다른 사건(승인)의 날짜를 쓰면 조건이 영영 안 맞아요. 다른 하나는 **테스트가 시간을 압축하면 시간 버그를 못 잡는다**는 것. 같은 날 승인·확정하는 테스트는, 며칠 걸리는 실제 흐름의 버그에 눈을 감아요.
+두 가지를 다시 배웠어요. 하나는 **집계 키는 그 상태로 전이되는 시점의 값이어야** 한다는 것. "그 날짜에 X된 것"을 찾을 거면 X가 일어난 날짜를 키로 삼아야지, 다른 사건(승인)의 날짜를 쓰면 조건이 영영 안 맞아요. 다른 하나는 **테스트가 시간을 압축하면 시간 버그를 못 잡는다**는 것. 같은 날 승인·확정하는 테스트는 며칠 걸리는 실제 흐름의 버그에 눈을 감아요.
 
-그리고 이걸 잡은 건 새 기능이 아니라, "**다 됐나?" 하고 한 번 더 본** 재감사였어요. 결제처럼 돈이 오가는 도메인에선, 초록불 뒤를 한 번 더 의심하는 게 기능을 하나 더 만드는 것만큼 중요하더라고요.
+이걸 잡은 건 새 기능이 아니라 "**다 됐나?" 하고 한 번 더 본** 재감사였어요. 결제처럼 돈이 오가는 도메인에선 초록불 뒤를 한 번 더 의심하는 게, 기능을 하나 더 만드는 것만큼 중요하더라고요.
 
 ---
 
