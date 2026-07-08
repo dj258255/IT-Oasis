@@ -1,6 +1,6 @@
 ---
 title: '보안·대기열·유입제어'
-description: 무상태 토큰의 폐기(JWT 갱신·denylist), PG 정산 파일 대사, 선착순 대기열, Envelope 암호화와 키 로테이션, 폭주를 429로 쳐내는 유입제어, 데드락 재시도.
+description: '무상태 토큰의 폐기(JWT 갱신·denylist), PG 정산 파일 대사, 선착순 대기열, Envelope 암호화와 키 로테이션, 폭주를 429로 쳐내는 유입제어, 데드락 재시도.'
 date: 2025-12-21T00:00:00.000Z
 tags:
   - Payment
