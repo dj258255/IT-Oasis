@@ -13,7 +13,7 @@ tags:
   - Idempotency
 category: personal/lakehouse
 coverImage: /uploads/project/lakehouse/cover.svg
-draft: true
+draft: false
 series: "lakehouse"
 seriesOrder: 2
 ---
