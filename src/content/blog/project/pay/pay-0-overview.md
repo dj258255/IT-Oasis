@@ -11,7 +11,7 @@ tags:
   - Java 21
   - Distributed Systems
   - Learning
-category: project/pay
+category: study/pay
 draft: false
 series: "결제 시스템 만들기"
 seriesOrder: 0

@@ -7,7 +7,7 @@ tags:
   - Spring Boot
   - Spring Modulith
   - 결제 시스템
-category: project/pay
+category: study/pay
 draft: false
 series: "결제 시스템 만들기"
 seriesOrder: 10
