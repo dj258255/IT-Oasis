@@ -1,9 +1,9 @@
 ---
 title: 'TCP는 한 전문을 한 번에 주지 않는다 — 프레이밍을 손으로'
 titleEn: 'TCP Never Hands You a Whole Message at Once — Framing by Hand'
-description: "Phase 1에서 만든 전문 파서를 실제 소켓에 붙였습니다. 그런데 TCP는 바이트 스트림이라 '고정 61byte 전문'이라도 소켓 read 한 번이 그걸 온전히 준다는 보장이 없습니다. 반쪽만 왔다가 나머지가 뒤에 오고(partial read), 두 전문이 붙어 오기도 합니다(뭉침). 필요한 바이트가 다 모일 때까지 버퍼에 누적한 뒤에야 한 전문으로 넘기는 프레이밍을 순수 java.net 소켓으로 직접 짜고, 목업 계정계 TCP 서버와 REST→전문→TCP→전문→JSON 왕복을 실제 두 프로세스로 붙인 기록입니다. 반쪽 도착 재조립을 테스트로 강제하고, 소켓을 타고 오간 진짜 hex를 화면과 curl로 남겼습니다."
-descriptionEn: "I wired the fixed-length message parser from Phase 1 onto a real socket. But TCP is a byte stream: even for a fixed 61-byte message, a single socket read is not guaranteed to hand you the whole thing. Half arrives, the rest comes later (partial read); or two messages arrive glued together. I hand-wrote a framer in plain java.net sockets that accumulates bytes until a full message is present before passing it on, stood up a mock core-banking TCP server, and wired a REST→message→TCP→message→JSON round trip across two real processes. Partial-read reassembly is forced by tests, and the real bytes that crossed the socket are captured on screen and via curl."
-date: 2026-07-08
+description: "앞 편에서 만든 전문 파서를 실제 소켓에 붙였습니다. 그런데 TCP는 바이트 스트림이라 '고정 61byte 전문'이라도 소켓 read 한 번이 그걸 온전히 준다는 보장이 없습니다. 반쪽만 왔다가 나머지가 뒤에 오고(partial read), 두 전문이 붙어 오기도 합니다(뭉침). 필요한 바이트가 다 모일 때까지 버퍼에 누적한 뒤에야 한 전문으로 넘기는 프레이밍을 순수 java.net 소켓으로 직접 짜고, 목업 계정계 TCP 서버와 REST→전문→TCP→전문→JSON 왕복을 실제 두 프로세스로 붙인 기록입니다. 반쪽 도착 재조립을 테스트로 강제하고, 소켓을 타고 오간 진짜 hex를 화면과 curl로 남겼습니다."
+descriptionEn: "I wired the fixed-length message parser from stage 1 onto a real socket. But TCP is a byte stream: even for a fixed 61-byte message, a single socket read is not guaranteed to hand you the whole thing. Half arrives, the rest comes later (partial read); or two messages arrive glued together. I hand-wrote a framer in plain java.net sockets that accumulates bytes until a full message is present before passing it on, stood up a mock core-banking TCP server, and wired a REST→message→TCP→message→JSON round trip across two real processes. Partial-read reassembly is forced by tests, and the real bytes that crossed the socket are captured on screen and via curl."
+date: 2025-07-20
 tags:
   - Java
   - Spring Boot
@@ -26,7 +26,7 @@ seriesOrder: 2
 
 > REST로 들어온 잔액조회(JSON)를 → 요청 전문으로 만들어 → **TCP 소켓**으로 계정계에 보내고 → 응답 전문을 받아 → JSON으로 돌려준다.
 
-그러려면 상대가 필요합니다. 진짜 은행 계정계는 없으니 **목업 계정계 TCP 서버**를 만들어, 잔액조회 요청 전문(30byte)을 받으면 응답 전문(61byte)을 돌려주게 했습니다. 그리고 앱과 계정계를 실제로 **소켓으로** 대화시킵니다. 여기서 Phase 1에는 없던 함정이 하나 튀어나옵니다.
+그러려면 상대가 필요합니다. 진짜 은행 계정계는 없으니 **목업 계정계 TCP 서버**를 만들어, 잔액조회 요청 전문(30byte)을 받으면 응답 전문(61byte)을 돌려주게 했습니다. 그리고 앱과 계정계를 실제로 **소켓으로** 대화시킵니다. 여기서 앞 편에는 없던 함정이 하나 튀어나옵니다.
 
 ## 2. 함정 — "고정 61byte"인데 한 번에 안 온다
 
@@ -164,7 +164,7 @@ out.write(request, 12, 18); out.flush();
 // 서버가 재조립해 61byte 응답을 보내야 한다
 ```
 
-뭉침(두 전문이 한 조각에), 한 연결로 연속 3건, 동시 10건도 테스트로 덮었습니다. `./gradlew test`는 **37개 전부 그린**입니다(Phase 1의 20개 + 이번 17개).
+뭉침(두 전문이 한 조각에), 한 연결로 연속 3건, 동시 10건도 테스트로 덮었습니다. `./gradlew test`는 **37개 전부 그린**입니다(앞 편의 20개 + 이번 17개).
 
 ## 6. 잔여 — 정직하게 안 한 것
 

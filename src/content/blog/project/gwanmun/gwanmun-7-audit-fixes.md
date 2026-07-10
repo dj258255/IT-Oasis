@@ -2,8 +2,8 @@
 title: '감사가 찾은 것들: 풀 고갈이 서킷을 여는 버그 — RuntimeException 하나가 만든 3중 오작동'
 titleEn: 'What the Audit Found: the Bug Where Pool Exhaustion Opens the Circuit — a Triple Malfunction from a Single RuntimeException'
 description: "6편까지는 기능을 쌓았고, 7편은 방향을 뒤집어 전체 코드 감사를 돌렸습니다. 가장 큰 발견은 풀 고갈의 3중 오작동입니다. PoolExhaustedException이 RuntimeException으로 모든 처리 경로를 관통해서 — 계정계가 멀쩡한데 내부 풀 고갈 3연속이면 서킷이 열리고(오보), 고갈 요청은 500으로 터지며 원장에서 통째로 증발하고, 재시도 경로도 안 탑니다. 같은 축의 두 번째 구멍: 계정계가 쓰레기 응답을 주면 왕복 성공 이후의 파싱 예외가 관통해 역시 500 + 원장 공백. 동일 시나리오(동시 8건 슬로우 계좌)를 수정 전 코드와 수정 후 코드에서 각각 실측해 대비를 남겼습니다 — 수정 전: 500 4건 + 원장 5행(4건 증발) + 서킷 OPEN + 직후 멀쩡한 계좌 503 거절. 수정 후: 503 4건('포화 상태' + 거래ID) + 원장 9행 완결 + 서킷 CLOSED + 직후 멀쩡한 계좌 200. 이 편의 문장은 하나입니다 — 타입이 계약이다. 계약에 없는 타입이 흐르면 모든 안전장치가 동시에 헛돕니다. 유휴 커넥션 TTL(isValid()는 로컬 플래그만 본다), 채번기 자정 재시드, EUC-KR 무음 '?' 치환의 fail-closed 전환, API 키 기동 로그 노출 제거, 무인증 실거래 경로(/api/history) 관문 편입, 에러 응답의 내부 정보 일반화까지 — 감사 확정 결함을 소탕하고 회귀 테스트 18건으로 고정했습니다(129→147). 안 한 것(A3 서킷 stale 귀속)은 백로그에 정직하게 남겼습니다."
-descriptionEn: "Phases 1-6 built features; Phase 7 flips direction and runs a full code audit. The biggest find is a triple malfunction on pool exhaustion. PoolExhaustedException, a RuntimeException, pierced every handling path — three consecutive internal exhaustions open the circuit breaker while the core system is perfectly healthy (a false alarm), exhausted requests blow up as 500s and vanish from the ledger entirely, and the retry path never engages. A second hole on the same axis: when the core returns a garbage response, post-roundtrip parse exceptions pierce through for another 500 + ledger gap. I ran the identical scenario (8 concurrent slow-account requests) against the pre-fix and post-fix code — before: four 500s, a 5-row ledger (4 transactions vanished), circuit OPEN, and the next healthy request rejected with 503. After: four 503s with a clear saturation reason and transaction IDs, a complete 9-row ledger, circuit CLOSED, and the next healthy request served 200. The lesson in one line: types are contracts — when an unconsidered type flows, every safety device fails at once. Also fixed: idle-connection TTL (isValid() only checks local flags), transaction-ID reseeding at midnight rollover, fail-closed EUC-KR encoding instead of silent '?' substitution, API keys removed from startup logs, the unauthenticated real-transaction path (/api/history) brought inside the gateway guard, and error responses generalized. 18 regression tests pin it all down (129 to 147). What I didn't do (A3, stale-result attribution in the breaker) is honestly logged in the backlog."
-date: 2026-07-09
+descriptionEn: "Stages 1-6 built features; Stage 7 flips direction and runs a full code audit. The biggest find is a triple malfunction on pool exhaustion. PoolExhaustedException, a RuntimeException, pierced every handling path — three consecutive internal exhaustions open the circuit breaker while the core system is perfectly healthy (a false alarm), exhausted requests blow up as 500s and vanish from the ledger entirely, and the retry path never engages. A second hole on the same axis: when the core returns a garbage response, post-roundtrip parse exceptions pierce through for another 500 + ledger gap. I ran the identical scenario (8 concurrent slow-account requests) against the pre-fix and post-fix code — before: four 500s, a 5-row ledger (4 transactions vanished), circuit OPEN, and the next healthy request rejected with 503. After: four 503s with a clear saturation reason and transaction IDs, a complete 9-row ledger, circuit CLOSED, and the next healthy request served 200. The lesson in one line: types are contracts — when an unconsidered type flows, every safety device fails at once. Also fixed: idle-connection TTL (isValid() only checks local flags), transaction-ID reseeding at midnight rollover, fail-closed EUC-KR encoding instead of silent '?' substitution, API keys removed from startup logs, the unauthenticated real-transaction path (/api/history) brought inside the gateway guard, and error responses generalized. 18 regression tests pin it all down (129 to 147). What I didn't do (A3, stale-result attribution in the breaker) is honestly logged in the backlog."
+date: 2025-10-04
 tags:
   - Java
   - Spring Boot
@@ -28,15 +28,15 @@ seriesOrder: 7
 
 ## 2. 함정 — RuntimeException 하나가 만든 3중 오작동
 
-Phase 4에서 커넥션 풀을 만들 때, 고갈 정책의 예외를 이렇게 선언했습니다.
+앞서 커넥션 풀을 만들 때, 고갈 정책의 예외를 이렇게 선언했습니다.
 
 ```java
 public class PoolExhaustedException extends RuntimeException {
 ```
 
-당시엔 자연스러웠습니다. "풀이 가득 차서 거절한다"는 언체크드 예외로 두는 게 관례고, 호출부에 throws를 강제하고 싶지 않았으니까요. 문제는 그 뒤로 두 개 Phase에 걸쳐 쌓인 처리 경로들이 전부 **이 타입을 모르는 채로** 설계됐다는 겁니다.
+당시엔 자연스러웠습니다. "풀이 가득 차서 거절한다"는 언체크드 예외로 두는 게 관례고, 호출부에 throws를 강제하고 싶지 않았으니까요. 문제는 그 뒤 두 단계에 걸쳐 쌓인 처리 경로들이 전부 **이 타입을 모르는 채로** 설계됐다는 겁니다.
 
-**경로 1 — 서킷브레이커가 내부 사정을 백엔드 장애로 계수한다.** Phase 6의 실행기는 시도 실패를 이렇게 나눴습니다.
+**경로 1 — 서킷브레이커가 내부 사정을 백엔드 장애로 계수한다.** 앞 편의 실행기는 시도 실패를 이렇게 나눴습니다.
 
 ```java
 } catch (IOException e) {
@@ -51,7 +51,7 @@ public class PoolExhaustedException extends RuntimeException {
 
 `catch (RuntimeException)`은 "예상 못 한 것도 실패는 실패"라는 방어 코드였는데, 풀 고갈이 정확히 이 그물에 걸립니다. 서킷 임계가 3이니 **동시 요청 폭주로 풀 고갈이 3번 연속되면 서킷이 열립니다.** 서킷이 열리면 이후 모든 거래가 계정계 호출 없이 즉시 거절 — 즉, 게이트웨이 내부 자원이 잠깐 모자랐다는 이유로 멀쩡한 계정계로 가는 통로를 스스로 차단합니다. 서킷의 존재 이유(죽은 백엔드에 매달리지 않기)와 정반대의 오보입니다.
 
-**경로 2 — 서비스와 컨트롤러가 이 타입을 모른다.** GatewayService는 `IOException`만, 컨트롤러는 `GatewayException`만 잡습니다. RuntimeException인 풀 고갈은 둘 다 뚫고 스프링 기본 500으로 터집니다. 더 아픈 건 원장입니다 — 원장 기록은 catch 블록 안에 있으므로, **관통한 거래는 원장에 한 줄도 남지 않습니다.** Phase 5에서 "모든 거래는 원장에 남는다"고 못 박았고, `TransactionStatus` 주석에는 "풀 고갈 → FAILED"라고 적어 뒀는데, 그 경로는 실제로는 도달 불가능한 문서였던 겁니다. 주석은 계약을 적었고, 타입은 계약을 어겼습니다.
+**경로 2 — 서비스와 컨트롤러가 이 타입을 모른다.** GatewayService는 `IOException`만, 컨트롤러는 `GatewayException`만 잡습니다. RuntimeException인 풀 고갈은 둘 다 뚫고 스프링 기본 500으로 터집니다. 더 아픈 건 원장입니다 — 원장 기록은 catch 블록 안에 있으므로, **관통한 거래는 원장에 한 줄도 남지 않습니다.** 원장을 만든 편에서 "모든 거래는 원장에 남는다"고 못 박았고, `TransactionStatus` 주석에는 "풀 고갈 → FAILED"라고 적어 뒀는데, 그 경로는 실제로는 도달 불가능한 문서였던 겁니다. 주석은 계약을 적었고, 타입은 계약을 어겼습니다.
 
 **경로 3 — 재시도 판단도 IOException만 본다.** 조회성 재시도는 `catch (IOException)` 안에서만 작동하니 풀 고갈은 재시도 대상도 아닙니다(이건 결과적으로는 맞는 동작입니다만, "설계돼서 안 하는 것"과 "그물에 안 걸려서 안 되는 것"은 다릅니다).
 
@@ -62,7 +62,7 @@ public class PoolExhaustedException extends RuntimeException {
 - **A4** — 풀의 `isValid()`가 로컬 소켓 플래그만 봅니다. 계정계가 FIN을 보내고 죽어도 이쪽 소켓은 멀쩡해 보이고, write는 OS 버퍼에 들어가 "성공"한 뒤 read에서야 EOF가 납니다. 유휴로 오래 논 소켓에 변경성 전문(망취소)이 타면 억울한 UNKNOWN이 됩니다.
 - **A5** — 채번기 일련번호가 날짜가 바뀌어도 리셋되지 않습니다. "시드 = 자정 이후 흐른 밀리초 × 10"이라는 재기동 안전의 불변식이, 자정을 넘겨 살아 있는 프로세스에서 깨집니다 — 자정 직후 발급분이 어제 저녁 크기의 일련번호를 달고, 같은 날 저녁 자연 시드가 그 구간을 다시 밟으면 충돌. 그리고 그 unique 위반은 비동기 적재의 WARN 로그로 조용히 삼켜집니다.
 - **A6** — `String.getBytes(charset)`는 EUC-KR로 표현 못 하는 문자(이모지 등)를 **조용히 '?'로 치환**합니다. 금융 전문에서 데이터가 소리 없이 바뀌는 건 실패보다 나쁩니다.
-- **B1/B2/B4** — 기동 로그에 API 키 원문(`map.keySet()`을 그대로 로깅), 실제 계정계 거래를 유발하는 `/api/history`가 무인증·무유량제어(Phase 4의 "데모 편의" 예외가 보안 구멍으로 잔존), 에러 응답 바디에 내부 host:port와 예외 원문·입력 원문 에코.
+- **B1/B2/B4** — 기동 로그에 API 키 원문(`map.keySet()`을 그대로 로깅), 실제 계정계 거래를 유발하는 `/api/history`가 무인증·무유량제어(풀을 만든 편의 "데모 편의" 예외가 보안 구멍으로 잔존), 에러 응답 바디에 내부 host:port와 예외 원문·입력 원문 에코.
 
 ## 3. 판단 — 타입이 계약이다
 

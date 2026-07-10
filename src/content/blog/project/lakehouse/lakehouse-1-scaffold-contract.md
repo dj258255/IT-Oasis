@@ -1,9 +1,9 @@
 ---
 title: '계약 먼저 — DAG를 짜기 전에 무엇을 옮길지부터 못박다'
 titleEn: 'Contract First — Nailing Down What to Move Before Writing a Single DAG'
-description: "코드부터 짜고 싶었지만 참았습니다. 파이프라인의 버그는 대부분 '계약 불명확'에서 오니까요 — dt 경계가 UTC냐 KST냐, 파티션 키가 뭐냐, 스키마가 바뀌면 옛 파일은 어떻게 읽냐. 그래서 Phase 0에서는 Airflow(LocalExecutor) 스캐폴드를 세우고, 원천 스키마·파티셔닝·포맷·워터마크를 담은 데이터 계약 문서를 먼저 썼습니다. 공식 docker-compose의 CeleryExecutor 대신 LocalExecutor를 고른 이유, start_date를 @daily 자정에 정렬해 첫 인터벌 어긋남을 막은 이유, 기존 dbtower-minio를 external network로 재사용한 이유를 실측과 함께 기록합니다."
-descriptionEn: "I wanted to start with code, but held back. Most pipeline bugs come from an unclear contract — is the dt boundary UTC or KST, what's the partition key, how do you read old files when the schema changes. So in Phase 0 I stood up an Airflow (LocalExecutor) scaffold and wrote a data contract first, capturing source schema, partitioning, format, and watermark. I record — with live checks — why I chose LocalExecutor over the official compose's CeleryExecutor, why I aligned start_date to the @daily midnight boundary to avoid a skewed first interval, and why I reused the existing dbtower-minio over an external network."
-date: 2026-07-08
+description: "코드부터 짜고 싶었지만 참았습니다. 파이프라인의 버그는 대부분 '계약 불명확'에서 오니까요 — dt 경계가 UTC냐 KST냐, 파티션 키가 뭐냐, 스키마가 바뀌면 옛 파일은 어떻게 읽냐. 그래서 0단계에서는 Airflow(LocalExecutor) 스캐폴드를 세우고, 원천 스키마·파티셔닝·포맷·워터마크를 담은 데이터 계약 문서를 먼저 썼습니다. 공식 docker-compose의 CeleryExecutor 대신 LocalExecutor를 고른 이유, start_date를 @daily 자정에 정렬해 첫 인터벌 어긋남을 막은 이유, 기존 dbtower-minio를 external network로 재사용한 이유를 실측과 함께 기록합니다."
+descriptionEn: "I wanted to start with code, but held back. Most pipeline bugs come from an unclear contract — is the dt boundary UTC or KST, what's the partition key, how do you read old files when the schema changes. So in phase 0 I stood up an Airflow (LocalExecutor) scaffold and wrote a data contract first, capturing source schema, partitioning, format, and watermark. I record — with live checks — why I chose LocalExecutor over the official compose's CeleryExecutor, why I aligned start_date to the @daily midnight boundary to avoid a skewed first interval, and why I reused the existing dbtower-minio over an external network."
+date: 2026-04-11
 tags:
   - Airflow
   - Docker Compose
@@ -26,9 +26,9 @@ seriesOrder: 1
 - dt 경계가 UTC냐 KST냐? (하루가 어긋나면 어제 데이터가 두 파티션에 쪼개집니다.)
 - 파티션 키가 뭐냐? (나중에 바꾸면 그동안 쌓은 파일을 못 읽습니다.)
 - 스키마가 진화하면 옛 파일은 어떻게 읽냐?
-- calls 같은 숫자가 **누적값이냐 구간값이냐?** (이걸 착각하면 Phase 2의 모든 집계가 조용히 틀립니다.)
+- calls 같은 숫자가 **누적값이냐 구간값이냐?** (이걸 착각하면 2단계의 모든 집계가 조용히 틀립니다.)
 
-이걸 코드로 먼저 굳혀 버리면, 나중에 규칙이 흔들릴 때 backfill이 통째로 깨집니다. 그래서 Phase 0의 목표는 "돌아가는 DAG"가 아니라 **계약과 스캐폴드**입니다.
+이걸 코드로 먼저 굳혀 버리면, 나중에 규칙이 흔들릴 때 backfill이 통째로 깨집니다. 그래서 0단계의 목표는 "돌아가는 DAG"가 아니라 **계약과 스캐폴드**입니다.
 
 ## 1. 계약 — 원천을 코드로 먼저 확인하다
 
@@ -59,7 +59,7 @@ captured_at              | calls | total_time_ms
 
 61 → 204 → 348 → … 단조 증가하다가, 실행이 없는 구간엔 값이 그대로 유지됩니다. 감소가 없어요. **누적이 확실합니다.**
 
-중요한 건, **Phase 1(EL)은 이 판단이 없어도 정확하다**는 점입니다. 원본을 그대로 parquet로 내리니까요. 누적→일간 델타 변환은 Phase 2(dbt)의 몫입니다. 그래서 여기선 "누적이다"라는 **사실만** 계약서(`docs/CONTRACT.md`)에 적어 두고, 변환은 뒤로 미룹니다. 확인 안 된 걸 단정하지 않는 게 계약의 핵심이에요.
+중요한 건, **1단계(EL)는 이 판단이 없어도 정확하다**는 점입니다. 원본을 그대로 parquet로 내리니까요. 누적→일간 델타 변환은 2단계(dbt)의 몫입니다. 그래서 여기선 "누적이다"라는 **사실만** 계약서(`docs/CONTRACT.md`)에 적어 두고, 변환은 뒤로 미룹니다. 확인 안 된 걸 단정하지 않는 게 계약의 핵심이에요.
 
 계약서에 굳힌 규칙은 이렇습니다.
 
@@ -119,7 +119,7 @@ DAG는 떴지만 아직 껍데기입니다. MinIO 버킷은 비어 있어요 —
 
 ## 4. 잔여 — 아직 데이터는 안 흐른다
 
-Phase 0은 여기까지입니다. 계약이 서고 스캐폴드가 떴지만, **아직 한 줄도 안 옮겼어요.** DAG는 껍데기고, MinIO 버킷은 비어 있습니다.
+0단계는 여기까지입니다. 계약이 서고 스캐폴드가 떴지만, **아직 한 줄도 안 옮겼어요.** DAG는 껍데기고, MinIO 버킷은 비어 있습니다.
 
 다음 편에서 그 껍데기에 실제 추출·적재 로직을 넣습니다. 그리고 마주칠 함정이 하나 예고돼 있어요 — DBTower의 인덱스는 `(instance_id, captured_at)` 순서라, `captured_at` 단독 조건으로 뽑으면 인덱스 선두를 못 탑니다. 관제탑을 느리게 하지 않으면서 어제치를 안전하게 내리는 방법이 [2편](/blog/project/lakehouse/lakehouse-2-extract-load)의 주제입니다.
 

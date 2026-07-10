@@ -3,7 +3,7 @@ title: '바이트가 진실이다 — 고정길이 전문 파서를 손으로 �
 titleEn: 'Bytes Are the Truth — Building a Fixed-Length Message Parser by Hand'
 description: "은행 계정계가 보내는 고정길이 전문(電文)을 모바일 앱이 알아듣는 JSON으로, 그 반대로도 바꾸는 변환 엔진을 만들었습니다. 핵심은 하나입니다 — 한글이 섞인 전문을 String.substring으로 자르면 깨진다는 것. EUC-KR에서 한글 한 글자는 2byte라, 자르기도 패딩 제거도 전부 byte[] 위에서 해야 합니다. 필드 레이아웃을 어노테이션 스펙으로 선언하고, 오프셋을 자동 계산해 byte[]↔DTO↔JSON을 양방향 변환하는 과정을, 왕복 무손실 테스트와 hex 덤프로 검증한 기록입니다."
 descriptionEn: "I built an engine that converts a bank core system's fixed-length messages into JSON the mobile app understands, and back. The crux is one thing: slicing a message that contains Korean with String.substring breaks it. In EUC-KR a single Korean character is 2 bytes, so both slicing and padding removal must happen on byte[]. A record of declaring field layouts as annotation specs, auto-computing offsets, and converting byte[]↔DTO↔JSON in both directions — verified with lossless round-trip tests and hex dumps."
-date: 2026-07-08
+date: 2025-07-12
 tags:
   - Java
   - Spring Boot
@@ -24,7 +24,7 @@ seriesOrder: 1
 
 > 계정계가 보낸 `"0210" + "12345678901234" + "IN01" + ...` 같은 **바이트 덩어리**를 `{"accountNo":"12345678901234", ...}` **JSON**으로 바꾸고, 반대로도 바꾼다.
 
-네트워크(TCP 소켓)는 그다음입니다. 소켓으로 아무리 잘 받아와도, 그 바이트를 해석하지 못하면 통역은 시작조차 안 되니까요. 그래서 Phase 1은 오직 **전문 ↔ DTO ↔ JSON 변환 엔진** 하나만 만듭니다.
+네트워크(TCP 소켓)는 그다음입니다. 소켓으로 아무리 잘 받아와도, 그 바이트를 해석하지 못하면 통역은 시작조차 안 되니까요. 그래서 이번 편은 오직 **전문 ↔ DTO ↔ JSON 변환 엔진** 하나만 만듭니다.
 
 전문이 낯설 수 있어서 짚고 갑니다. 고정길이 전문은 이렇게 생겼습니다.
 
@@ -162,6 +162,6 @@ POST /api/parse →
 
 - **부호(음수 금액)**: 레거시 전문은 음수를 마지막 자리 오버펀치(예: `1234A`가 특정 부호를 의미) 같은 관례로 표현하기도 합니다. 복잡하고 규격마다 달라서 이번 범위 밖으로 두고 문서에만 남겼습니다.
 - **실제 은행 표준 전문**: 여기 쓴 잔액조회 요청(30byte)·응답(61byte)은 **학습용 합성 스펙**입니다. 금융결제원·은행별 실제 규격을 베끼지 않았고, 구조만 현실적으로 흉내 냈습니다. "표준 전수 구현"이 아닙니다.
-- **네트워크**: 파서는 바이트를 해석할 뿐, 아직 소켓이 없습니다. TCP로 전문을 받아 이 파서에 물리고, 다시 전문으로 만들어 돌려보내는 **프로토콜 변환**이 다음 편(Phase 2)입니다. TCP는 스트림이라 "고정 61byte"라도 한 번에 다 안 오는 문제(partial read)가 기다리고 있고요.
+- **네트워크**: 파서는 바이트를 해석할 뿐, 아직 소켓이 없습니다. TCP로 전문을 받아 이 파서에 물리고, 다시 전문으로 만들어 돌려보내는 **프로토콜 변환**이 다음 편입니다. TCP는 스트림이라 "고정 61byte"라도 한 번에 다 안 오는 문제(partial read)가 기다리고 있고요.
 
 파싱만으로는 아직 "연계"가 아닙니다. 하지만 통역의 사전은 만들었습니다. 바이트를 문장으로, 문장을 바이트로 옮기는 규칙. 다음 편에서 이 사전을 들고 소켓 앞에 섭니다.
