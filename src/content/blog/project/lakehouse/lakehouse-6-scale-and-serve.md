@@ -14,12 +14,12 @@ category: personal/lakehouse
 coverImage: /uploads/project/lakehouse/cover.svg
 draft: false
 series: "lakehouse"
-seriesOrder: 10
+seriesOrder: 6
 ---
 
 ## 0. 상황 — 초 단위라는 착각
 
-9편까지 오면서 저는 꽤 많은 걸 실측했습니다. 게이트가 반쪽 데이터를 막고, 알림이
+5편까지 오면서 저는 꽤 많은 걸 실측했습니다. 게이트가 반쪽 데이터를 막고, 알림이
 울고, 계약이 빌드를 막고, deadman이 침묵을 잡는 걸 전부 라이브로 돌려 봤죠. 그런데
 그 모든 실측에는 공통점이 하나 있었습니다 — **닫힌 dt가 3개뿐**이었어요. 07-05,
 07-06, 그리고 진행 중인 07-07. 수십만 행. 그 규모에서는 뭘 재도 전부 초 단위로

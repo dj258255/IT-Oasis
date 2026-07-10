@@ -20,7 +20,7 @@ seriesOrder: 0
 
 ## 0. 이 글 하나로
 
-이 글은 gwanmun(관문) 시리즈 9편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
+이 글은 gwanmun(관문) 시리즈 본편 5편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
 
 한 줄로 요약하면 — **고정길이 전문(電文)+TCP로만 말하는 은행 계정계와, JSON+HTTP REST로만 말하는 앱 사이에 세운 연계 게이트웨이**입니다. 둘 다 못 고치니 가운데에 통역기를 두는데, 그 통역기는 두 층이에요 — 전문↔JSON을 변환하는 **연계층**과, 통로를 인증·라우팅·유량제어로 지키는 **API 게이트웨이층**. 진짜 은행 없이 로컬에서 전 과정을 재현했고, 전문을 주고받는 목업 계정계까지 직접 세웠습니다. Java 21 + Spring Boot 3.5, 코드는 [GitHub](https://github.com/dj258255/gwanmun)에 공개되어 있습니다.
 
@@ -69,20 +69,20 @@ seriesOrder: 0
 
 | 단계 | 상황(무엇이 깨졌나) | 만든 것 | 핵심 실측 |
 |---|---|---|---|
-| [1~2](/blog/project/gwanmun/gwanmun-1-message-parser) | 전문↔JSON 변환, TCP는 스트림이라 한 전문이 한 번에 안 옴 | 스펙 선언 파서/빌더 · 프레이밍 · 목업 계정계 TCP 서버 | 요청 30B/응답 61B가 **실소켓** 왕복(elapsedMs 12), EUC-KR 한글 무손실, partial read 재조립·뭉침 분리 |
-| [3](/blog/project/gwanmun/gwanmun-3-gateway-filters) | 통로가 외부에 열림 — 아무나 못 들어오게 | 손으로 짠 필터 체인(인증→라우팅→유량제어) + 모듈러 모놀리스 | 무키 401 · 잘못된 키 403 · 모르는 경로 404 · 용량 5 초과 시 6번째 429(Retry-After) |
-| [4](/blog/project/gwanmun/gwanmun-4-variable-length-pool) | 거래내역은 건수만큼 길이가 매번 다름 · 요청당 소켓 낭비 | 길이 프리픽스 2단계 프레이밍 · 스레드 안전 커넥션 풀 | 가변 309B(헤더4+본문305) 왕복, 동시 폭주 시 created=4(==max) · reused=12 |
-| [5](/blog/project/gwanmun/gwanmun-5-transaction-ledger) | 게이트웨이가 거래를 아무것도 기억 못 함 | 거래ID 채번 · 3값 원장(SUCCESS/FAILED/UNKNOWN) · 마스킹 · 메트릭 | 타임아웃 3.06초 → 504 + **UNKNOWN 기록**(FAILED로 단정 안 함), 계좌는 마스킹 형태만 저장 |
-| [6](/blog/project/gwanmun/gwanmun-6-resilience-netcancel) | 계정계 장애가 게이트웨이로 전파 · UNKNOWN 방치 | 자체 서킷브레이커 · 성격별 재시도 · UNKNOWN 해소 | 계정계 kill → 502 → **503×4 즉시 거절** → 재기동 후 HALF_OPEN 탐침 → CLOSED 복귀; 처리됨→망취소→CANCELED, 미처리→FAILED |
-| [7](/blog/project/gwanmun/gwanmun-7-audit-fixes) | 궂은 날엔 오작동 — 감사가 확정 결함 6건 + 보안 3건 | 풀 고갈 3중 오작동 소탕 · 원장 공백 금지 · 보안 경화 | (전) 고갈 4건 HTTP 500·**원장 4건 증발**·서킷 오보 OPEN → (후) 503·**원장 9행 완결**·서킷 CLOSED |
-| [8](/blog/project/gwanmun/gwanmun-8-load-and-ci) | 테스트가 로컬에서만 돎 · 부하 앞 서킷 미검증(A3) | 세대 permit 서킷 · k6 하네스 · CI · Boot 3.5 | 부하가 A3 stale 레이스를 **staleResultsTotal=197**(15초)로 실증; 무릎 ~10–12k req/s; 서킷 off 351 vs on 9,425 req/s |
-| [9](/blog/project/gwanmun/gwanmun-9-idempotency-reconciliation) | 호출자 재전송을 구분 못 함 · 원장이 한 번도 대조 안 됨 | 멱등키(DB 유니크 선점) · EOD 대사 배치 | 같은 키 2회 → 계정계 **1회**·원장 **1행**(이중거래 0); 대사 4유형 분류 + UNKNOWN 자동해소 |
+| [1~2](/blog/project/gwanmun/gwanmun-1-parser-and-framing) | 전문↔JSON 변환, TCP는 스트림이라 한 전문이 한 번에 안 옴 | 스펙 선언 파서/빌더 · 프레이밍 · 목업 계정계 TCP 서버 | 요청 30B/응답 61B가 **실소켓** 왕복(elapsedMs 12), EUC-KR 한글 무손실, partial read 재조립·뭉침 분리 |
+| [3](/blog/project/gwanmun/gwanmun-2-gateway-skeleton) | 통로가 외부에 열림 — 아무나 못 들어오게 | 손으로 짠 필터 체인(인증→라우팅→유량제어) + 모듈러 모놀리스 | 무키 401 · 잘못된 키 403 · 모르는 경로 404 · 용량 5 초과 시 6번째 429(Retry-After) |
+| [4](/blog/project/gwanmun/gwanmun-2-gateway-skeleton) | 거래내역은 건수만큼 길이가 매번 다름 · 요청당 소켓 낭비 | 길이 프리픽스 2단계 프레이밍 · 스레드 안전 커넥션 풀 | 가변 309B(헤더4+본문305) 왕복, 동시 폭주 시 created=4(==max) · reused=12 |
+| [5](/blog/project/gwanmun/gwanmun-3-ledger-and-resilience) | 게이트웨이가 거래를 아무것도 기억 못 함 | 거래ID 채번 · 3값 원장(SUCCESS/FAILED/UNKNOWN) · 마스킹 · 메트릭 | 타임아웃 3.06초 → 504 + **UNKNOWN 기록**(FAILED로 단정 안 함), 계좌는 마스킹 형태만 저장 |
+| [6](/blog/project/gwanmun/gwanmun-3-ledger-and-resilience) | 계정계 장애가 게이트웨이로 전파 · UNKNOWN 방치 | 자체 서킷브레이커 · 성격별 재시도 · UNKNOWN 해소 | 계정계 kill → 502 → **503×4 즉시 거절** → 재기동 후 HALF_OPEN 탐침 → CLOSED 복귀; 처리됨→망취소→CANCELED, 미처리→FAILED |
+| [7](/blog/project/gwanmun/gwanmun-4-audit-and-load) | 궂은 날엔 오작동 — 감사가 확정 결함 6건 + 보안 3건 | 풀 고갈 3중 오작동 소탕 · 원장 공백 금지 · 보안 경화 | (전) 고갈 4건 HTTP 500·**원장 4건 증발**·서킷 오보 OPEN → (후) 503·**원장 9행 완결**·서킷 CLOSED |
+| [8](/blog/project/gwanmun/gwanmun-4-audit-and-load) | 테스트가 로컬에서만 돎 · 부하 앞 서킷 미검증(A3) | 세대 permit 서킷 · k6 하네스 · CI · Boot 3.5 | 부하가 A3 stale 레이스를 **staleResultsTotal=197**(15초)로 실증; 무릎 ~10–12k req/s; 서킷 off 351 vs on 9,425 req/s |
+| [9](/blog/project/gwanmun/gwanmun-5-idempotency-reconciliation) | 호출자 재전송을 구분 못 함 · 원장이 한 번도 대조 안 됨 | 멱등키(DB 유니크 선점) · EOD 대사 배치 | 같은 키 2회 → 계정계 **1회**·원장 **1행**(이중거래 0); 대사 4유형 분류 + UNKNOWN 자동해소 |
 
 각 단계의 잔여가 다음 단계의 상황이 됩니다. 원장 편이 "UNKNOWN을 적기만 한다"를 남기면 장애 내성 편이 그 해소를 만들고, 장애 내성 편이 "부하 미검증"을 남기면 부하 편이 그걸 다시 재고, 부하 편이 "멱등키 없음"을 남기면 멱등 편이 그 자리를 채우는 식이에요.
 
 ## 4. 심층 사례 — RuntimeException 하나가 서킷을 여는 이유
 
-6편까지 "기능이 도는 것"을 실측으로 증명했다면, [7편](/blog/project/gwanmun/gwanmun-7-audit-fixes)은 방향을 뒤집어 전체 코드를 감사했습니다. 기능이 도는 것과 궂은 날에도 옳게 도는 것은 다른 문제니까요. 그중 가장 날카로웠던 결함(A1) 하나를 통째로 보여드릴게요.
+3편까지 "기능이 도는 것"을 실측으로 증명했다면, [4편](/blog/project/gwanmun/gwanmun-4-audit-and-load)은 방향을 뒤집어 전체 코드를 감사했습니다. 기능이 도는 것과 궂은 날에도 옳게 도는 것은 다른 문제니까요. 그중 가장 날카로웠던 결함(A1) 하나를 통째로 보여드릴게요.
 
 **상황을 이렇게 만들었습니다.** 목업 계정계는 끝까지 멀쩡합니다. 지연 계좌의 응답 지연(5초)이 read 타임아웃(8초)보다 짧아, 풀을 쥔 요청은 전부 성공하게 설계했어요. 실패 원인을 **오직 내부 커넥션 풀 고갈**(풀 4, borrow 대기 1초) 하나로 고립시킨 겁니다. 동시 8건을 슬로우 계좌로 던지면 4건은 풀을 쥐고, 나머지 4건은 풀이 없어 대기하다 `PoolExhaustedException`을 만납니다.
 
@@ -121,7 +121,7 @@ seriesOrder: 0
 
 ## 5. 정직성과 트레이드오프
 
-**서킷브레이커를 직접 구현했습니다(Resilience4j를 안 썼어요).** 완제품이 더 견고할 수 있는데도 손으로 짠 이유는, 게이트웨이가 장애를 어떻게 격리하는지를 상태 전이 단위로 이해하려는 것이었습니다. 그리고 그 선택이 [부하 편](/blog/project/gwanmun/gwanmun-8-load-and-ci)에서 값을 했어요 — 직접 짠 서킷이라 **A3(stale 결과 귀속)** 같은 미묘한 동시성 결함을 세대(generation) permit으로 파고들 수 있었습니다. `acquire()`가 상태 세대를 담은 permit을 발급하고, 결과 보고는 세대가 일치할 때만 상태에 반영합니다. 부하 창에서 이 stale 결과가 15초에 **197번** 실제로 도착했다는 걸 `staleResultsTotal=197`로 계수했어요. 완제품을 썼다면 이 층위를 열어 보지 못했을 겁니다.
+**서킷브레이커를 직접 구현했습니다(Resilience4j를 안 썼어요).** 완제품이 더 견고할 수 있는데도 손으로 짠 이유는, 게이트웨이가 장애를 어떻게 격리하는지를 상태 전이 단위로 이해하려는 것이었습니다. 그리고 그 선택이 [부하 편](/blog/project/gwanmun/gwanmun-4-audit-and-load)에서 값을 했어요 — 직접 짠 서킷이라 **A3(stale 결과 귀속)** 같은 미묘한 동시성 결함을 세대(generation) permit으로 파고들 수 있었습니다. `acquire()`가 상태 세대를 담은 permit을 발급하고, 결과 보고는 세대가 일치할 때만 상태에 반영합니다. 부하 창에서 이 stale 결과가 15초에 **197번** 실제로 도착했다는 걸 `staleResultsTotal=197`로 계수했어요. 완제품을 썼다면 이 층위를 열어 보지 못했을 겁니다.
 
 **학습판 경계는 정직하게 긋습니다.** 금융결제원 표준 전문을 전수 구현한 게 아니라 대표 거래 몇 종으로 핵심 흐름을 다뤘고, 전문은 평문 로컬 소켓(암호화·전용선 미적용)이며, 채번·대사·rate limit은 단일 노드 전제입니다. 이것들을 "했다"고 말하지 않고 각 편의 "잔여" 절에 못 한 것으로 적었어요.
 
@@ -138,7 +138,7 @@ seriesOrder: 0
 - **가상스레드 전면 전환 — 안 함.** 무제한 수용은 커넥션 풀 고갈·pinning을 유발합니다. 실무 실측 결론도 "기본 off, I/O 무거운 구간만 상한 걸린 executor로 선별 적용"이에요.
 - **금융 표준 전문 전수·전문 암호화·전용선 — 범위 밖.** "표준 전수 아님"을 정직하게 표기합니다.
 
-이 판단들이 자의적이지 않도록 실무 실태를 조사해 근거를 댔습니다. 이 도메인이 유효하다는 1차 사료가 여럿이에요 — 은행·카드·VAN 연동용 TCP Gateway 구축 후기는 겪은 문제(동시 세션 제한 → 풀 크기를 계약값에 일치, 기관이 커넥션을 임의로 끊음 → 헬스체크·재수립, 전문 분할 도착 → 길이 필드 프레이밍, 타임아웃 → 처리결과조회, 대사·재처리를 게이트웨이 부속 기능으로 내장)가 이 프로젝트의 단계들과 그대로 겹칩니다. 타임아웃 3값 처리도 도메인 공식 관례로, 은행 공동망 에러코드 42는 "(TIME OUT) 처리결과조회로 거래성립여부 확인요망"이고 오픈뱅킹도 무응답 시 결과조회 절차를 규정합니다 — [5편](/blog/project/gwanmun/gwanmun-5-transaction-ledger)~[6편](/blog/project/gwanmun/gwanmun-6-resilience-netcancel)의 UNKNOWN·상태조회 설계와 정확히 일치해요. 대외계 장애의 실제 병목이 관측성이라는 점(어느 전문이 어디서 죽었는지 추적하는 능력이 곧 복구 시간)은 correlation ID·원장의 방향을 뒷받침합니다.
+이 판단들이 자의적이지 않도록 실무 실태를 조사해 근거를 댔습니다. 이 도메인이 유효하다는 1차 사료가 여럿이에요 — 은행·카드·VAN 연동용 TCP Gateway 구축 후기는 겪은 문제(동시 세션 제한 → 풀 크기를 계약값에 일치, 기관이 커넥션을 임의로 끊음 → 헬스체크·재수립, 전문 분할 도착 → 길이 필드 프레이밍, 타임아웃 → 처리결과조회, 대사·재처리를 게이트웨이 부속 기능으로 내장)가 이 프로젝트의 단계들과 그대로 겹칩니다. 타임아웃 3값 처리도 도메인 공식 관례로, 은행 공동망 에러코드 42는 "(TIME OUT) 처리결과조회로 거래성립여부 확인요망"이고 오픈뱅킹도 무응답 시 결과조회 절차를 규정합니다 — [3편](/blog/project/gwanmun/gwanmun-3-ledger-and-resilience)의 UNKNOWN·상태조회 설계와 정확히 일치해요. 대외계 장애의 실제 병목이 관측성이라는 점(어느 전문이 어디서 죽었는지 추적하는 능력이 곧 복구 시간)은 correlation ID·원장의 방향을 뒷받침합니다.
 
 ## 7. 커버리지와 남은 한계 — 결산
 
@@ -160,4 +160,4 @@ seriesOrder: 0
 2. **타임아웃은 실패가 아니다** — 응답을 못 받은 거래는 "모름"(UNKNOWN)이고, 확정은 조회로 한다. 임의로 실패 처리하면 이중 거래가 난다.
 3. **신뢰는 궂은 날에 증명된다** — 계정계를 실제로 죽이고, 풀을 실제로 고갈시키고, 부하를 실제로 걸어 서킷 stale을 계수하기 전까지, "된다"는 주장은 빚이다.
 
-전 과정의 상세는 시리즈 [1편(전문 파서)](/blog/project/gwanmun/gwanmun-1-message-parser)부터 [9편(멱등키·대사)](/blog/project/gwanmun/gwanmun-9-idempotency-reconciliation)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/gwanmun)에 있습니다.
+전 과정의 상세는 시리즈 [1편(전문 파서·프레이밍)](/blog/project/gwanmun/gwanmun-1-parser-and-framing)부터 [5편(멱등키·대사)](/blog/project/gwanmun/gwanmun-5-idempotency-reconciliation)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/gwanmun)에 있습니다.
