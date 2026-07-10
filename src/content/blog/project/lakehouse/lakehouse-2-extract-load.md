@@ -3,7 +3,7 @@ title: '어제치를 안전하게 내리다 — 인덱스 선두를 타는 Extra
 titleEn: 'Offloading Yesterday Safely — Extract & Load That Rides the Index Prefix'
 description: "어제 쌓인 스냅샷은 6일 뒤 삭제됩니다. 삭제 전에 MinIO로 안전하게 내려야 하는데, 추출이 관제탑(메타 PG)을 느리게 하면 자기모순입니다. DBTower의 인덱스는 (instance_id, captured_at) 순서라 captured_at 단독 조건은 선두 컬럼을 못 탑니다. 그래서 인스턴스별 등치 질의로 인덱스 선두를 타게 하고, 읽기 전용 세션 + 서버커서로 부하를 눌렀습니다. 멱등성은 파티션 통째 덮어쓰기로. 실측으로 원천 PG 행수 = MinIO parquet = DuckDB count 3자 일치를 확인하고, 닫힌 구간을 두 번 돌려 79,894행이 불변임을(중복 0) 증명합니다. Airflow 스케줄러가 부른 태스크가 원천→parquet→조회까지 정확히 흐른 것도 dags test로 확인했습니다."
 descriptionEn: "Yesterday's snapshots get deleted in six days. They must be offloaded to MinIO before that — but if the extraction slows the control tower (metadata PG), it's self-contradictory. DBTower's index is ordered (instance_id, captured_at), so a captured_at-only predicate can't ride the leading column. So I query per instance with an equality predicate to ride the index prefix, and pin down load with a read-only session plus a server-side cursor. Idempotency comes from whole-partition overwrite. Live checks confirm source PG rows = MinIO parquet = DuckDB count agree three ways, and a closed window run twice holds at 79,894 rows (zero duplication). I also verified via dags test that a scheduler-invoked task flows source → parquet → query exactly."
-date: 2026-07-08
+date: 2026-04-19
 tags:
   - Airflow
   - PostgreSQL
@@ -159,7 +159,7 @@ offload.py: 적재 완료 dt=2026-07-05 총 149259행
 Marking task as SUCCESS
 ```
 
-여기서 재밌는 게 보입니다. 논리 실행일 `2026-07-06`의 `data_interval_start`는 **2026-07-05**라, 태스크가 처리한 건 dt=2026-07-05입니다. 즉 "어제"를 정확히 집었어요 — Phase 0에서 start_date를 @daily 자정에 정렬해 둔 게 이렇게 맞아떨어집니다. 이 파티션도 원천 149,259 = DuckDB 149,259로 일치했습니다.
+여기서 재밌는 게 보입니다. 논리 실행일 `2026-07-06`의 `data_interval_start`는 **2026-07-05**라, 태스크가 처리한 건 dt=2026-07-05입니다. 즉 "어제"를 정확히 집었어요 — 0단계에서 start_date를 @daily 자정에 정렬해 둔 게 이렇게 맞아떨어집니다. 이 파티션도 원천 149,259 = DuckDB 149,259로 일치했습니다.
 
 ![Airflow 성공 런 — snapshot_offload 태스크 SUCCESS](/uploads/project/lakehouse/airflow-run-success.png)
 

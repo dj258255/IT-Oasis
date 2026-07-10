@@ -1,9 +1,9 @@
 ---
 title: '통로를 외부에 열기 전에 — 문지기를 손으로: 인증·라우팅·유량제어 필터 체인'
 titleEn: 'Before Opening the Path to the Outside — A Gatekeeper by Hand: Auth, Routing, Rate-Limit Filter Chain'
-description: "Phase 2에서 전문↔JSON 왕복 통로를 열었습니다. 그런데 이 통로는 아무나 드나들 수 있습니다. 그래서 /api/gateway/** 앞에 필터 체인을 손으로 세웠습니다 — 인증(X-API-Key, 없으면 401·잘못되면 403), 라우팅(모르는 경로 404), 유량제어(클라이언트별 토큰버킷, 초과 429 + Retry-After). 완제품 프레임워크에 맡기지 않고 GatewayFilter 인터페이스와 체인 실행기, 서블릿 브릿지로 직접 짰습니다. 직접 짜는 유량제어의 두 함정(벽시계로 인한 시간 역행, 같은 버킷을 치는 스레드 경쟁)을 단조 시계와 버킷 단위 동기화로 막고, 401/403/404/429를 진짜 curl 응답과 화면으로 남겼습니다. 겸사겸사 코드베이스를 Spring Modulith 모듈러 모놀리스로 재정렬해, 모듈 경계를 verify()가 강제하게 했습니다."
-descriptionEn: "In Phase 2 I opened a path that translates messages to JSON and back. But anyone could walk through it. So I put a filter chain in front of /api/gateway/** by hand: authentication (X-API-Key; 401 if missing, 403 if wrong), routing (404 for unknown paths), and rate limiting (per-client token bucket; 429 + Retry-After on excess). Instead of leaning on a finished framework, I wrote a GatewayFilter interface, a chain runner, and a servlet bridge myself. I closed the two traps of a hand-rolled rate limiter — clock going backwards with wall-clock time, and threads racing on the same bucket — with a monotonic clock and per-bucket synchronization, and captured 401/403/404/429 as real curl responses and on screen. Along the way I restructured the codebase into a Spring Modulith modular monolith so that verify() enforces the module boundaries."
-date: 2026-07-08
+description: "앞 편에서 전문↔JSON 왕복 통로를 열었습니다. 그런데 이 통로는 아무나 드나들 수 있습니다. 그래서 /api/gateway/** 앞에 필터 체인을 손으로 세웠습니다 — 인증(X-API-Key, 없으면 401·잘못되면 403), 라우팅(모르는 경로 404), 유량제어(클라이언트별 토큰버킷, 초과 429 + Retry-After). 완제품 프레임워크에 맡기지 않고 GatewayFilter 인터페이스와 체인 실행기, 서블릿 브릿지로 직접 짰습니다. 직접 짜는 유량제어의 두 함정(벽시계로 인한 시간 역행, 같은 버킷을 치는 스레드 경쟁)을 단조 시계와 버킷 단위 동기화로 막고, 401/403/404/429를 진짜 curl 응답과 화면으로 남겼습니다. 겸사겸사 코드베이스를 Spring Modulith 모듈러 모놀리스로 재정렬해, 모듈 경계를 verify()가 강제하게 했습니다."
+descriptionEn: "In stage 2 I opened a path that translates messages to JSON and back. But anyone could walk through it. So I put a filter chain in front of /api/gateway/** by hand: authentication (X-API-Key; 401 if missing, 403 if wrong), routing (404 for unknown paths), and rate limiting (per-client token bucket; 429 + Retry-After on excess). Instead of leaning on a finished framework, I wrote a GatewayFilter interface, a chain runner, and a servlet bridge myself. I closed the two traps of a hand-rolled rate limiter — clock going backwards with wall-clock time, and threads racing on the same bucket — with a monotonic clock and per-bucket synchronization, and captured 401/403/404/429 as real curl responses and on screen. Along the way I restructured the codebase into a Spring Modulith modular monolith so that verify() enforces the module boundaries."
+date: 2025-08-02
 tags:
   - Java
   - Spring Boot
@@ -245,7 +245,7 @@ now.set(과거값);                          // 벽시계 보정 흉내
 assertThat(bucket.tryConsume()).isFalse(); // 폭증 없음
 ```
 
-모듈 경계 검증까지 합쳐 `./gradlew test`는 **52개 전부 그린**입니다(Phase 1~2의 37개 + 이번 15개). `ModularityTest`의 `verify()`가 그린이라는 건, 위에 그린 모듈 DAG가 코드로 지켜지고 있다는 뜻입니다.
+모듈 경계 검증까지 합쳐 `./gradlew test`는 **52개 전부 그린**입니다(앞 두 편의 37개 + 이번 15개). `ModularityTest`의 `verify()`가 그린이라는 건, 위에 그린 모듈 DAG가 코드로 지켜지고 있다는 뜻입니다.
 
 ## 7. 잔여 — 정직하게 안 한 것
 
