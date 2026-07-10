@@ -6,7 +6,7 @@
   "image": "/uploads/project/lakehouse/cover.svg",
   "tags": ["Airflow", "dbt", "DuckDB", "DuckLake", "MinIO", "Parquet", "Data Engineering", "ELT"],
   "category": "personal",
-  "date": "2026-07-08",
+  "date": "2026-04-11",
   "github": "https://github.com/dj258255/dbtower-lakehouse",
   "website": "",
   "story": "/blog/project/lakehouse/lakehouse-0-why",
