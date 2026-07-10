@@ -1,7 +1,7 @@
 ---
 title: '질문에 답하는 화면 — Metabase가 DuckLake를 읽기까지의 세 가지 함정'
 titleEn: 'A Screen That Answers the Question — Three Traps on the Way to Metabase Reading DuckLake'
-description: "0편의 질문은 '지난달보다 느려진 쿼리 있어?'였습니다. 여섯 편에 걸쳐 파이프라인을 만들었는데, 정작 그 답을 보려면 아직도 DuckDB 셸에 SQL을 쳐야 했어요 — 마트는 있는데 소비자가 없는, 출구 없는 공장이었습니다. 이 편에서 Metabase 대시보드로 출구를 답니다. 그런데 화면 한 장 다는 데 함정이 셋이었어요. 공식 Metabase 이미지는 Alpine이라 DuckDB 드라이버의 네이티브 라이브러리가 아예 안 뜨고(UnsatisfiedLinkError 실측), dbt가 굽는 DuckDB 파일을 BI가 직접 물면 프로세스 간 단일 쓰기라 같은 호스트에선 새벽 transform이 'Conflicting lock is held'로 죽는데 — 컨테이너 경계에선 반대로 그 잠금마저 전파되지 않아 dbt가 열린 리더 밑에서 파일을 소리 없이 재작성했습니다(둘 다 실측 — 시끄럽게 죽거나 조용히 위험하거나). 그래서 DAG 끝에 publish 태스크를 달아 마트를 DuckLake로 발행하고 Metabase는 DuckLake만 read-only로 읽게 했는데, 이번엔 대시보드가 카드 3장을 동시에 쏘자 커넥션마다 도는 init_sql의 CREATE SECRET이 write-write conflict로 충돌했어요(세션 로컬 SET s3_*로 해소). 실측으로 닫습니다: 4태스크 e2e success, 마트-API-화면 3자 수치 일치(instance 8 Oracle, 25.89ms → 64.50ms, +149.1%), 발행 커밋과 겹친 연속 41회 읽기 전부 무중단. 대시보드 정의는 손 클릭이 아니라 REST API 스크립트라 빈 Metabase에서 명령 두 줄로 재현됩니다."
+description: "0편의 질문은 '지난달보다 느려진 쿼리 있어?'였습니다. 앞의 세 편에 걸쳐 파이프라인을 만들었는데, 정작 그 답을 보려면 아직도 DuckDB 셸에 SQL을 쳐야 했어요 — 마트는 있는데 소비자가 없는, 출구 없는 공장이었습니다. 이 편에서 Metabase 대시보드로 출구를 답니다. 그런데 화면 한 장 다는 데 함정이 셋이었어요. 공식 Metabase 이미지는 Alpine이라 DuckDB 드라이버의 네이티브 라이브러리가 아예 안 뜨고(UnsatisfiedLinkError 실측), dbt가 굽는 DuckDB 파일을 BI가 직접 물면 프로세스 간 단일 쓰기라 같은 호스트에선 새벽 transform이 'Conflicting lock is held'로 죽는데 — 컨테이너 경계에선 반대로 그 잠금마저 전파되지 않아 dbt가 열린 리더 밑에서 파일을 소리 없이 재작성했습니다(둘 다 실측 — 시끄럽게 죽거나 조용히 위험하거나). 그래서 DAG 끝에 publish 태스크를 달아 마트를 DuckLake로 발행하고 Metabase는 DuckLake만 read-only로 읽게 했는데, 이번엔 대시보드가 카드 3장을 동시에 쏘자 커넥션마다 도는 init_sql의 CREATE SECRET이 write-write conflict로 충돌했어요(세션 로컬 SET s3_*로 해소). 실측으로 닫습니다: 4태스크 e2e success, 마트-API-화면 3자 수치 일치(instance 8 Oracle, 25.89ms → 64.50ms, +149.1%), 발행 커밋과 겹친 연속 41회 읽기 전부 무중단. 대시보드 정의는 손 클릭이 아니라 REST API 스크립트라 빈 Metabase에서 명령 두 줄로 재현됩니다."
 descriptionEn: "Part 0 asked: which queries got slower than last month? Six parts of pipeline later, seeing the answer still required typing SQL into a DuckDB shell — marts without a consumer, a factory with no exit. This part adds the exit: a Metabase dashboard. Three traps stood in the way. The official Metabase image is Alpine-based, so the DuckDB driver's native library never loads (measured UnsatisfiedLinkError). Pointing BI directly at the DuckDB file dbt builds trips single-writer semantics: on one host the nightly transform dies with 'Conflicting lock is held' — while across container boundaries the lock silently fails to propagate and dbt rewrote the file under a live reader (both measured: die loudly or be quietly unsafe). So a publish task at the end of the DAG ships the marts to DuckLake and Metabase reads only DuckLake, read-only — at which point the dashboard firing three cards at once made per-connection init_sql CREATE SECRET statements collide with a write-write conflict (fixed with session-local SET s3_*). Closed with measurements: a four-task e2e success, mart-API-screen numbers agreeing three ways (instance 8 Oracle, 25.89ms to 64.50ms, +149.1%), and 41 consecutive reads overlapping publish commits, all uninterrupted. The dashboard is defined by a REST API script, reproducible from an empty Metabase in two commands."
 date: 2026-06-14
 tags:
@@ -14,14 +14,14 @@ category: personal/lakehouse
 coverImage: /uploads/project/lakehouse/cover.svg
 draft: false
 series: "lakehouse"
-seriesOrder: 7
+seriesOrder: 4
 ---
 
 ## 0. 상황 — 마트는 있는데 소비자가 없다
 
-[0편](/blog/project/lakehouse/lakehouse-0-why)은 질문 하나로 시작했습니다. **"지난달보다 느려진 쿼리 있어?"** DBTower는 스냅샷을 7일 뒤 지우니까 구조적으로 답할 수 없고, 그래서 버려지기 직전의 데이터를 내려 장기 이력을 만드는 파이프라인을 지었습니다. 추출하고(2편), 델타로 변환하고(3편), 반쪽 데이터를 막고(4편), 테이블 포맷으로 버전을 쌓고(5편), 실패하면 알리게(6편)까지 했어요.
+[0편](/blog/project/lakehouse/lakehouse-0-why)은 질문 하나로 시작했습니다. **"지난달보다 느려진 쿼리 있어?"** DBTower는 스냅샷을 7일 뒤 지우니까 구조적으로 답할 수 없고, 그래서 버려지기 직전의 데이터를 내려 장기 이력을 만드는 파이프라인을 지었습니다. 추출하고(1편), 델타로 변환하고 반쪽 데이터를 막고(2편), 테이블 포맷으로 버전을 쌓고 실패하면 알리게(3편)까지 했어요.
 
-그런데 6편을 끝내고 그 질문에 실제로 답해보려니, 저는 여전히 **DuckDB 셸을 열고 SQL을 치고** 있었습니다. `mart_query_regression`은 매일 구워지는데, 그걸 볼 수 있는 사람이 SQL 칠 줄 아는 저 하나뿐인 거예요. 질문을 던진 사람은 SQL을 치는 사람이 아닙니다. **마트에 소비자가 없으면 파이프라인은 출구 없는 공장입니다.** 매일 물건을 만들어 창고에 쌓는데 출하문이 없는 것과 같아요.
+그런데 3편을 끝내고 그 질문에 실제로 답해보려니, 저는 여전히 **DuckDB 셸을 열고 SQL을 치고** 있었습니다. `mart_query_regression`은 매일 구워지는데, 그걸 볼 수 있는 사람이 SQL 칠 줄 아는 저 하나뿐인 거예요. 질문을 던진 사람은 SQL을 치는 사람이 아닙니다. **마트에 소비자가 없으면 파이프라인은 출구 없는 공장입니다.** 매일 물건을 만들어 창고에 쌓는데 출하문이 없는 것과 같아요.
 
 이 편은 그 출구 — 클릭 몇 번으로 0편의 질문에 답하는 화면 — 을 답니다. 그리고 화면 한 장 다는 일이 생각보다 함정이 많았다는 이야기입니다.
 
@@ -82,7 +82,7 @@ TransactionContext Error: Catalog write-write conflict on alter with "minio"
 
 ## 3. 개선 — 서빙 계층은 lakehouse 그 자체
 
-함정 2의 답은 "파일 말고 무엇을 물릴까"입니다. 마트를 PostgreSQL로 내보내고 PG 커넥터로 붙는 안도 검토했어요 — 드라이버가 아예 버전 비호환이었다면 그렇게 갔을 겁니다. 그런데 우리에겐 이미 5편에서 세운 **DuckLake**가 있습니다. 카탈로그는 PG 트랜잭션이고 데이터는 S3 parquet — 읽기와 쓰기가 파일 잠금이 아니라 **DB 트랜잭션(스냅샷 격리)** 으로 중재됩니다. raw가 이미 사는 곳이라 서비스 추가도 0이고요.
+함정 2의 답은 "파일 말고 무엇을 물릴까"입니다. 마트를 PostgreSQL로 내보내고 PG 커넥터로 붙는 안도 검토했어요 — 드라이버가 아예 버전 비호환이었다면 그렇게 갔을 겁니다. 그런데 우리에겐 이미 3편에서 세운 **DuckLake**가 있습니다. 카탈로그는 PG 트랜잭션이고 데이터는 S3 parquet — 읽기와 쓰기가 파일 잠금이 아니라 **DB 트랜잭션(스냅샷 격리)** 으로 중재됩니다. raw가 이미 사는 곳이라 서비스 추가도 0이고요.
 
 그래서 DAG 끝에 태스크 하나를 달았습니다.
 
@@ -90,7 +90,7 @@ TransactionContext Error: Catalog write-write conflict on alter with "minio"
 offload → quality_gate → transform → publish
 ```
 
-`publish`는 dbt가 구운 마트 두 장(fct_query_daily, mart_query_regression)을 DuckLake로 통째 복사합니다. 마트는 일간 집계라 수천 행 규모 — 증분보다 통째 교체가 단순하고 멱등합니다. DuckLake에선 DROP+CREATE가 **한 커밋**이라 읽는 쪽은 언제나 발행 전이나 후의 온전한 버전만 봅니다. 발행 후엔 행수를 원본과 대조해서 다르면 태스크를 실패시키고요(그 실패도 6편의 webhook으로 옵니다).
+`publish`는 dbt가 구운 마트 두 장(fct_query_daily, mart_query_regression)을 DuckLake로 통째 복사합니다. 마트는 일간 집계라 수천 행 규모 — 증분보다 통째 교체가 단순하고 멱등합니다. DuckLake에선 DROP+CREATE가 **한 커밋**이라 읽는 쪽은 언제나 발행 전이나 후의 온전한 버전만 봅니다. 발행 후엔 행수를 원본과 대조해서 다르면 태스크를 실패시키고요(그 실패도 3편의 webhook으로 옵니다).
 
 Metabase는 이제 파일이 아니라 DuckLake를 뭅니다. 드라이버가 1.4.1.0부터 `ducklake:` 접두사를 지원해서, 커넥션의 데이터베이스 경로에 카탈로그 PG DSN을 그대로 씁니다:
 
@@ -128,7 +128,7 @@ publish       success   fct_query_daily 1,749행 · mart_query_regression 22행 
 
 ![Metabase 대시보드 전체 — 악화 쿼리 수, 일별 호출량 추이, 악화 쿼리 랭킹, 인스턴스 필터](/uploads/project/lakehouse/metabase-dashboard.png)
 
-랭킹 표 클로즈업입니다. 답은 "있다"예요 — **instance 8(Oracle)의 `g108q7fj4pmkv`가 구간 첫날 평균 25.89ms에서 마지막 날 64.50ms로, +149.1%** 느려졌습니다. 3편에서 SQL로 캤던 그 값이 이제 클릭 한 번의 화면입니다.
+랭킹 표 클로즈업입니다. 답은 "있다"예요 — **instance 8(Oracle)의 `g108q7fj4pmkv`가 구간 첫날 평균 25.89ms에서 마지막 날 64.50ms로, +149.1%** 느려졌습니다. 2편에서 SQL로 캤던 그 값이 이제 클릭 한 번의 화면입니다.
 
 ![악화 쿼리 랭킹 클로즈업 — instance 8, 25.89ms → 64.50ms, +149.1%](/uploads/project/lakehouse/metabase-regression.png)
 
@@ -148,11 +148,11 @@ publish       success   fct_query_daily 1,749행 · mart_query_regression 22행 
 - **인스턴스가 숫자 id로 보입니다.** 원천의 database_instance(이름·기종)를 dim으로 내리지 않아 화면엔 "instance 8"뿐입니다. 기종 라벨이 필요해지면 작은 dim 추출을 추가해야 합니다.
 - **Metabase 앱 DB가 H2 단일 파일입니다.** 로컬 데모 규모의 선택이고, 운영이면 PG로 빼고 백업 대상에 넣어야 합니다.
 - **알림과 대시보드가 아직 별개입니다.** 게이트 FAIL이 webhook으로는 오지만 대시보드에 배지로 뜨지는 않습니다 — 파이프라인 상태 카드가 다음 후보입니다.
-- 6편의 잔여도 그대로 유효합니다 — 마트 전체 재빌드(증분 전환), dbt 태스크 분해(Cosmos), 적응형 CHECKPOINT.
+- 3편의 잔여도 그대로 유효합니다 — 마트 전체 재빌드(증분 전환), dbt 태스크 분해(Cosmos), 적응형 CHECKPOINT.
 
 ## 6. 마치며 — 원이 닫혔다
 
-0편은 답할 수 없는 질문에서 시작했습니다. 일곱 편이 지나고 이제 그 질문은 대시보드 이름이 됐어요. 매일 새벽 파이프라인이 스냅샷을 내리고, 검문하고, 델타로 갈아 마트를 굽고, DuckLake로 발행하면 — 화면이 답합니다. "있어. instance 8의 이 쿼리, +149.1%."
+0편은 답할 수 없는 질문에서 시작했습니다. 네 편이 지나고 이제 그 질문은 대시보드 이름이 됐어요. 매일 새벽 파이프라인이 스냅샷을 내리고, 검문하고, 델타로 갈아 마트를 굽고, DuckLake로 발행하면 — 화면이 답합니다. "있어. instance 8의 이 쿼리, +149.1%."
 
 버려지던 데이터에 두 번째 삶을 주겠다는 게 이 시리즈의 약속이었습니다. 두 번째 삶이란 결국 **누군가의 질문에 답하는 것**이더라고요. 파이프라인은 그 답을 만드는 공정이었고, 이번 편의 화면이 그 답이 나오는 창구입니다.
 

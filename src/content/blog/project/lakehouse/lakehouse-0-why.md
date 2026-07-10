@@ -20,7 +20,7 @@ seriesOrder: 0
 
 ## 0. 이 글 하나로
 
-이 글은 dbtower-lakehouse 시리즈 열한 편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
+이 글은 dbtower-lakehouse 시리즈 본편 여섯 편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
 
 한 줄로 요약하면 — **[DBTower](/blog/project/dbtower/dbtower-0-overview)가 7일 뒤 버리는 쿼리 스냅샷을, 버려지기 직전에 컬럼나 저장소로 내려(ELT) 장기 이력으로 만드는 데이터 파이프라인**입니다. Airflow로 오케스트레이션하고, MinIO에 Parquet로 적재하고, dbt로 변환하고, DuckLake로 질의합니다. 코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 공개되어 있습니다.
 
@@ -62,15 +62,15 @@ seriesOrder: 0
 
 | 단계 | 상황 | 만든 것 | 핵심 실측 |
 |---|---|---|---|
-| 1 [EL](/blog/project/lakehouse/lakehouse-2-extract-load) | 6일 뒤 삭제 전 안전하게 내려야 | 인덱스 선두를 타는 인스턴스별 추출 + 파티션 통째 덮어쓰기 | 원천·적재·조회 **3자 일치**, 같은 날짜 2회 실행에 79,894행·오브젝트 6 불변 |
-| 3 [변환](/blog/project/lakehouse/lakehouse-3-transform) | 누적값 raw로는 "느려진 쿼리"에 답 못 함 | 하루 first-vs-last 차분 + `GREATEST(0,…)` 리셋 클램프 | 지문 충돌 12,743키를 SUM으로 접고, 순리셋 219그레인을 0에 클램프(음수 0건) |
-| 4 [품질 게이트](/blog/project/lakehouse/lakehouse-4-quality-gate) | 반쪽 파티션 위 랭킹이 조용히 오답 | reconciliation·completeness·freshness·스키마 드리프트 4축 fail-closed | inst 3 파티션(20,158행) 삭제 주입 → 2축 동시 FAIL, **dbt 미실행(exit 2)** |
-| 5 [DuckLake](/blog/project/lakehouse/lakehouse-5-ducklake) | 덮어쓰기만으론 ACID·타임트래블 없음 | PG 카탈로그 + S3 데이터 테이블 포맷 | 과거 버전 행수·행 값 복원(0.55→1000.55), ROLLBACK로 229,153 원복 |
-| 6 [운영 경화](/blog/project/lakehouse/lakehouse-6-ops-hardening) | 막았는데 아무도 모름 + transform이 수동 | 컨테이너 내 dbt e2e·webhook·retry·CHECKPOINT | 3태스크 한 컨테이너 success, CHECKPOINT 스냅샷 **11→2**(행수 불변) |
-| 7 [대시보드](/blog/project/lakehouse/lakehouse-7-dashboard) | 마트는 있는데 소비자가 없음 | Metabase가 DuckLake를 read-only로 | DuckDB 파일 직결 실격 판정, 악화 랭킹 instance 8 **+149.1%** 3자 대조 |
-| 8 [감사 소탕](/blog/project/lakehouse/lakehouse-8-audit-fixes) | 장치가 자기 원칙을 자신엔 안 씀 | 아카이브 자기파괴 가드·게이트 인덱스·발행 원자성 | 게이트 Seq Scan **332ms → Index 20ms**, pytest 35 |
-| 9 [신뢰](/blog/project/lakehouse/lakehouse-9-ci-deadman-contracts) | 테스트는 로컬 자산, 침묵은 못 잡음 | CI 3관문·deadman heartbeat·dbt contracts | 30h 침묵 경보 발화, 계약 위반 주입 시 **빌드 차단**(data type mismatch) |
-| 10 [규모](/blog/project/lakehouse/lakehouse-10-scale-and-serve) | 며칠치로는 "버틴다"를 증명 못 함 | 365dt 합성 → 증분 전환·롤링 윈도우·운영 대시보드 | fct 전체 재빌드 **407.62s → 4s**, 파일 평균 177KB(128MB 타깃의 1/741) |
+| 1 [EL](/blog/project/lakehouse/lakehouse-1-contract-and-load) | 6일 뒤 삭제 전 안전하게 내려야 | 인덱스 선두를 타는 인스턴스별 추출 + 파티션 통째 덮어쓰기 | 원천·적재·조회 **3자 일치**, 같은 날짜 2회 실행에 79,894행·오브젝트 6 불변 |
+| 3 [변환](/blog/project/lakehouse/lakehouse-2-transform-and-gate) | 누적값 raw로는 "느려진 쿼리"에 답 못 함 | 하루 first-vs-last 차분 + `GREATEST(0,…)` 리셋 클램프 | 지문 충돌 12,743키를 SUM으로 접고, 순리셋 219그레인을 0에 클램프(음수 0건) |
+| 4 [품질 게이트](/blog/project/lakehouse/lakehouse-2-transform-and-gate) | 반쪽 파티션 위 랭킹이 조용히 오답 | reconciliation·completeness·freshness·스키마 드리프트 4축 fail-closed | inst 3 파티션(20,158행) 삭제 주입 → 2축 동시 FAIL, **dbt 미실행(exit 2)** |
+| 5 [DuckLake](/blog/project/lakehouse/lakehouse-3-ducklake-and-ops) | 덮어쓰기만으론 ACID·타임트래블 없음 | PG 카탈로그 + S3 데이터 테이블 포맷 | 과거 버전 행수·행 값 복원(0.55→1000.55), ROLLBACK로 229,153 원복 |
+| 6 [운영 경화](/blog/project/lakehouse/lakehouse-3-ducklake-and-ops) | 막았는데 아무도 모름 + transform이 수동 | 컨테이너 내 dbt e2e·webhook·retry·CHECKPOINT | 3태스크 한 컨테이너 success, CHECKPOINT 스냅샷 **11→2**(행수 불변) |
+| 7 [대시보드](/blog/project/lakehouse/lakehouse-4-dashboard) | 마트는 있는데 소비자가 없음 | Metabase가 DuckLake를 read-only로 | DuckDB 파일 직결 실격 판정, 악화 랭킹 instance 8 **+149.1%** 3자 대조 |
+| 8 [감사 소탕](/blog/project/lakehouse/lakehouse-5-audit-and-trust) | 장치가 자기 원칙을 자신엔 안 씀 | 아카이브 자기파괴 가드·게이트 인덱스·발행 원자성 | 게이트 Seq Scan **332ms → Index 20ms**, pytest 35 |
+| 9 [신뢰](/blog/project/lakehouse/lakehouse-5-audit-and-trust) | 테스트는 로컬 자산, 침묵은 못 잡음 | CI 3관문·deadman heartbeat·dbt contracts | 30h 침묵 경보 발화, 계약 위반 주입 시 **빌드 차단**(data type mismatch) |
+| 10 [규모](/blog/project/lakehouse/lakehouse-6-scale-and-serve) | 며칠치로는 "버틴다"를 증명 못 함 | 365dt 합성 → 증분 전환·롤링 윈도우·운영 대시보드 | fct 전체 재빌드 **407.62s → 4s**, 파일 평균 177KB(128MB 타깃의 1/741) |
 
 아래에서 각 아크의 핵심만 짚습니다.
 
@@ -125,7 +125,7 @@ fail-closed 게이트가 반쪽 데이터를 잘 막았는데, 막았다는 사�
 
 ## 3. 심층 사례 — 아카이브가 자신을 지우는 경로
 
-포트폴리오용 요약이 아니라 실제 결함 하나를 통째로 보여드릴게요([8편](/blog/project/lakehouse/lakehouse-8-audit-fixes) 상세). 내가 만든 걸 스스로 감사하다 잡은 것 중 제일 무서운 결함이었습니다.
+포트폴리오용 요약이 아니라 실제 결함 하나를 통째로 보여드릴게요([5편](/blog/project/lakehouse/lakehouse-5-audit-and-trust) 상세). 내가 만든 걸 스스로 감사하다 잡은 것 중 제일 무서운 결함이었습니다.
 
 **정상 상태** — offload는 멱등을 위해 파티션을 통째로 덮어씁니다. `delete-first`, 즉 기존 파티션 오브젝트를 지우고 새로 씁니다. 원천에 데이터가 있는 한, 지운 자리에 같은 데이터가 다시 써지니 안전합니다.
 
@@ -155,7 +155,7 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 
 ## 4. 규모 — 며칠치로는 "버틴다"를 증명 못 한다
 
-9단계까지 모든 실측은 닫힌 dt 3개(수십만 행)에서 돌았습니다. 그 규모에선 전부 초 단위라 "규모에서도 버틴다"고 말하고 싶어지는데, 그건 증명이 아니라 희망이에요. fct 마트는 매일 O(전체 이력)을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐입니다. 그래서 감이 아니라 **1년치를 실제로 만들어** 어디가 먼저 무너지는지 쟀습니다([10편](/blog/project/lakehouse/lakehouse-10-scale-and-serve)).
+9단계까지 모든 실측은 닫힌 dt 3개(수십만 행)에서 돌았습니다. 그 규모에선 전부 초 단위라 "규모에서도 버틴다"고 말하고 싶어지는데, 그건 증명이 아니라 희망이에요. fct 마트는 매일 O(전체 이력)을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐입니다. 그래서 감이 아니라 **1년치를 실제로 만들어** 어디가 먼저 무너지는지 쟀습니다([6편](/blog/project/lakehouse/lakehouse-6-scale-and-serve)).
 
 닫힌 dt parquet를 날짜 시프트 복제해 **365dt × 6인스턴스 = 2,190파일(54,479,535행, 396.6MB)**을 격리 프리픽스에 생성했어요(실데이터·원천 무접촉, 끝나고 2,196 오브젝트 전부 정리).
 
@@ -217,7 +217,7 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 
 ## 7. 신뢰 — 커밋마다 검증되고, 침묵해도 잡힌다
 
-8단계에서 pytest 35개로 로직을 고정했지만 그건 로컬 자산입니다 — 내 노트북에서만 돌아요. 세 구멍을 닫았습니다([9편](/blog/project/lakehouse/lakehouse-9-ci-deadman-contracts)).
+8단계에서 pytest 35개로 로직을 고정했지만 그건 로컬 자산입니다 — 내 노트북에서만 돌아요. 세 구멍을 닫았습니다([5편](/blog/project/lakehouse/lakehouse-5-audit-and-trust)).
 
 **CI 3관문** — GitHub Actions가 커밋마다 ruff·pytest·dbt(deps/parse/build)를 강제합니다. 이 스택의 강점이 CI에서 드러나요 — 쿼리 엔진 DuckDB가 임베디드라 MinIO·PG 없는 러너에서 tiny 픽스처 parquet 몇 장으로 staging→fct→mart를 **실제로 짓고** 데이터 테스트·계약·unit test까지 한 번에 돕니다(dbt build PASS=25→26). **dbt unit test**는 이 프로젝트의 심장(누적→일간 델타)을 정적 입력→기대 출력으로 고정했어요 — first-vs-last 차분, 순리셋 클램프, 하루 1스냅샷 델타 0, 지문 충돌 SUM, 롤링 윈도우까지 5건.
 
@@ -243,4 +243,4 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 2. **주장은 실측으로** — 멱등은 닫힌 창 재실행으로, 품질은 장애 주입으로, 규모는 1년치를 실제로 만들어서, 최적화는 병목 수치가 정당화할 때만.
 3. **안 하는 것에도 이유를** — Kafka·Spark·Iceberg를 안 넣은 근거가 넣은 것만큼 이 파이프라인의 성격을 보여줍니다.
 
-전 과정의 상세는 시리즈 [1편(계약)](/blog/project/lakehouse/lakehouse-1-scaffold-contract)부터 [10편(규모)](/blog/project/lakehouse/lakehouse-10-scale-and-serve)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
+전 과정의 상세는 시리즈 [1편(계약·적재)](/blog/project/lakehouse/lakehouse-1-contract-and-load)부터 [6편(규모)](/blog/project/lakehouse/lakehouse-6-scale-and-serve)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.

@@ -1,8 +1,8 @@
 ---
 title: '재전송이 이중 거래를 부르고, 원장은 대조된 적이 없었다 — 멱등키와 EOD 대사'
 titleEn: 'Retries Cause Double Transactions, and the Ledger Was Never Reconciled — Idempotency Keys and EOD Reconciliation'
-description: "8편까지 원장은 거래를 3값(SUCCESS/FAILED/UNKNOWN)으로 적고 UNKNOWN을 수동으로 해소할 수 있었지만, 두 구멍이 남아 있었습니다. 하나, 게이트웨이는 호출자의 재전송을 구분하지 못합니다 — 타임아웃(UNKNOWN)을 받은 호출자가 같은 요청을 다시 보내면 그건 새 거래고, 계정계에서 두 번 실행돼 이중 거래가 됩니다. 둘, 원장은 한 번도 계정계와 대조된 적이 없는 진실입니다. 9편은 둘을 채웁니다. 멱등키는 (키+메서드+경로)를 DB 유니크 제약으로 원자적 선점합니다 — 앱 락이 아니라 DB가 동시 재요청을 하나로 만듭니다. 처리 중 재요청은 409, 완료된 요청 재수신은 저장된 원응답을 재실행 없이 재반환합니다. 같은 키로 잔액조회를 두 번 보내니 계정계 로그에 요청 수신은 1회, 원장에 그 거래는 1행 — 이중 거래 0을 psql로 확인했습니다. EOD 대사는 계정계 당일 처리내역(가변 전문)을 원장 전량과 거래고유번호로 대조해 4유형으로 가릅니다: 양쪽일치 / 금액상이 / 우리만있음 / 저쪽만있음. UNKNOWN은 대조 전에 상태조회·망취소로 자동 해소합니다. 통제된 5건으로 {MATCH:2, MISMATCH:1, LEDGER_ONLY:1, CORE_ONLY:1, UNKNOWN_RESOLVED:1}을 실측했고, 여기서 순서 함정을 하나 발견했습니다 — 자동 해소의 망취소가 계정계 기록도 바꾸므로, 계정계 스냅샷은 해소 이후에 떠야 합니다. 마지막으로 원장 PG를 DBTower 관제 대상으로 등록 가능하게 준비했습니다."
-descriptionEn: "Through stage 8 the ledger recorded transactions in three states (SUCCESS/FAILED/UNKNOWN) and could resolve UNKNOWNs manually, but two holes remained. First, the gateway can't tell a caller's retry apart — a caller who got a timeout (UNKNOWN) and re-sends the same request creates a new transaction, executed twice at the core: a double transaction. Second, the ledger is a truth that was never reconciled against the core. Stage 9 fills both. The idempotency key claims (key+method+path) atomically via a DB unique constraint — the DB, not an app lock, collapses concurrent retries into one. An in-flight retry gets 409; a completed request's re-receipt replays the stored original response without re-executing. Sending the same balance inquiry twice, the core log shows one request received and the ledger holds one row for it — double transaction zero, verified in psql. EOD reconciliation pulls the core's same-day processed list (a variable-length message) and matches it against the whole ledger by transaction id, sorting into four types: both-match / amount-mismatch / ledger-only / core-only. UNKNOWNs are auto-resolved by status-inquiry/net-cancel before matching. A controlled five-record run produced {MATCH:2, MISMATCH:1, LEDGER_ONLY:1, CORE_ONLY:1, UNKNOWN_RESOLVED:1}, and surfaced an ordering trap — the net-cancel of auto-resolution also flips the core's record, so the core snapshot must be taken after resolution. Finally, the ledger PG was prepared to register as a DBTower monitoring target."
+description: "4편까지 원장은 거래를 3값(SUCCESS/FAILED/UNKNOWN)으로 적고 UNKNOWN을 수동으로 해소할 수 있었지만, 두 구멍이 남아 있었습니다. 하나, 게이트웨이는 호출자의 재전송을 구분하지 못합니다 — 타임아웃(UNKNOWN)을 받은 호출자가 같은 요청을 다시 보내면 그건 새 거래고, 계정계에서 두 번 실행돼 이중 거래가 됩니다. 둘, 원장은 한 번도 계정계와 대조된 적이 없는 진실입니다. 5편은 둘을 채웁니다. 멱등키는 (키+메서드+경로)를 DB 유니크 제약으로 원자적 선점합니다 — 앱 락이 아니라 DB가 동시 재요청을 하나로 만듭니다. 처리 중 재요청은 409, 완료된 요청 재수신은 저장된 원응답을 재실행 없이 재반환합니다. 같은 키로 잔액조회를 두 번 보내니 계정계 로그에 요청 수신은 1회, 원장에 그 거래는 1행 — 이중 거래 0을 psql로 확인했습니다. EOD 대사는 계정계 당일 처리내역(가변 전문)을 원장 전량과 거래고유번호로 대조해 4유형으로 가릅니다: 양쪽일치 / 금액상이 / 우리만있음 / 저쪽만있음. UNKNOWN은 대조 전에 상태조회·망취소로 자동 해소합니다. 통제된 5건으로 {MATCH:2, MISMATCH:1, LEDGER_ONLY:1, CORE_ONLY:1, UNKNOWN_RESOLVED:1}을 실측했고, 여기서 순서 함정을 하나 발견했습니다 — 자동 해소의 망취소가 계정계 기록도 바꾸므로, 계정계 스냅샷은 해소 이후에 떠야 합니다. 마지막으로 원장 PG를 DBTower 관제 대상으로 등록 가능하게 준비했습니다."
+descriptionEn: "Through stage 4 the ledger recorded transactions in three states (SUCCESS/FAILED/UNKNOWN) and could resolve UNKNOWNs manually, but two holes remained. First, the gateway can't tell a caller's retry apart — a caller who got a timeout (UNKNOWN) and re-sends the same request creates a new transaction, executed twice at the core: a double transaction. Second, the ledger is a truth that was never reconciled against the core. Stage 5 fills both. The idempotency key claims (key+method+path) atomically via a DB unique constraint — the DB, not an app lock, collapses concurrent retries into one. An in-flight retry gets 409; a completed request's re-receipt replays the stored original response without re-executing. Sending the same balance inquiry twice, the core log shows one request received and the ledger holds one row for it — double transaction zero, verified in psql. EOD reconciliation pulls the core's same-day processed list (a variable-length message) and matches it against the whole ledger by transaction id, sorting into four types: both-match / amount-mismatch / ledger-only / core-only. UNKNOWNs are auto-resolved by status-inquiry/net-cancel before matching. A controlled five-record run produced {MATCH:2, MISMATCH:1, LEDGER_ONLY:1, CORE_ONLY:1, UNKNOWN_RESOLVED:1}, and surfaced an ordering trap — the net-cancel of auto-resolution also flips the core's record, so the core snapshot must be taken after resolution. Finally, the ledger PG was prepared to register as a DBTower monitoring target."
 date: 2025-11-08
 tags:
   - Java
@@ -15,23 +15,23 @@ category: personal/gwanmun
 coverImage: /uploads/project/gwanmun/cover.svg
 draft: false
 series: "gwanmun"
-seriesOrder: 9
+seriesOrder: 5
 ---
 
 ## 1. 상황 — 재전송을 구분 못 하고, 원장은 대조된 적이 없다
 
-[8편](/blog/project/gwanmun/gwanmun-8-load-and-ci)까지 원장은 모든 거래를 3값(SUCCESS/FAILED/**UNKNOWN**)으로 적었고, UNKNOWN을 상태조회·망취소로 해소할 수 있었습니다. 하지만 5편부터 8편까지 "잔여"에 계속 적어 둔 두 문장이 있었습니다.
+[4편](/blog/project/gwanmun/gwanmun-4-audit-and-load)까지 원장은 모든 거래를 3값(SUCCESS/FAILED/**UNKNOWN**)으로 적었고, UNKNOWN을 상태조회·망취소로 해소할 수 있었습니다. 하지만 3편부터 4편까지 "잔여"에 계속 적어 둔 두 문장이 있었습니다.
 
 > 멱등키 없음(같은 요청의 재시도를 게이트웨이가 구분하지 못한다).
 > 해소는 수동 트리거만(주기 대사 배치는 확장 지점).
 
-이 둘은 같은 뿌리에서 나옵니다. **타임아웃은 실패가 아니라 미확인(UNKNOWN)이다** — 5편의 이 규칙이 옳으려면, 미확인을 받은 호출자가 그 다음에 무엇을 하느냐를 다뤄야 합니다.
+이 둘은 같은 뿌리에서 나옵니다. **타임아웃은 실패가 아니라 미확인(UNKNOWN)이다** — 3편의 이 규칙이 옳으려면, 미확인을 받은 호출자가 그 다음에 무엇을 하느냐를 다뤄야 합니다.
 
 호출자는 504(결과 미확인)를 받으면 자연스럽게 같은 요청을 다시 보냅니다. 그런데 게이트웨이 입장에서 그건 **새 거래**입니다 — 새 거래고유번호를 채번하고, 새 원장 행을 만들고, 계정계에 다시 보냅니다. 계정계에서 첫 요청이 이미 처리됐다면, 두 번째는 **이중 거래**입니다. "임의로 FAILED로 적지 않는다"는 규칙이 이중 거래를 막아 주지는 않습니다. 그건 재시도의 방아쇠를 당기지 않을 뿐이고, 방아쇠는 호출자 손에 있습니다.
 
 그리고 원장은 여전히 **한 번도 계정계와 대조된 적이 없는 진실**입니다. "우리 원장에 SUCCESS로 적힌 이 거래가 정말 계정계에서 처리됐나? 우리가 UNKNOWN으로 둔 저 거래를 계정계는 처리했나?" — 이걸 확인하는 절차가 없었습니다. 실무 조사에서 반복해서 나온 문장이 "대사가 신뢰도를 결정한다, 특히 취소·미확인 건에서"였습니다.
 
-그래서 9편의 두 축은 이렇게 정해졌습니다 — **재전송을 게이트웨이가 막고(멱등키), 매일 장부를 대조한다(EOD 대사).**
+그래서 이번 편의 두 축은 이렇게 정해졌습니다 — **재전송을 게이트웨이가 막고(멱등키), 매일 장부를 대조한다(EOD 대사).**
 
 ## 2. 멱등키 — 동시성의 열쇠는 앱 락이 아니라 DB 유니크 제약
 
@@ -41,7 +41,7 @@ seriesOrder: 9
 2. **처리 중인 요청의 동시 재요청** → 409.
 3. **같은 키에 다른 본문** → 거절(계약 위반).
 
-처음엔 인메모리 맵 + 락으로 짜려다 멈췄습니다. 8편에서 부하가 A3 서킷 레이스를 드러냈던 걸 떠올리면, 인메모리 락은 **단일 노드에서만** 맞습니다. 두 요청이 같은 키로 동시에 들어올 때, 이걸 하나로 만드는 건 애플리케이션 락이 아니라 **DB 유니크 제약**이어야 합니다 — 그건 노드가 몇 개든 안 깨집니다.
+처음엔 인메모리 맵 + 락으로 짜려다 멈췄습니다. 4편에서 부하가 A3 서킷 레이스를 드러냈던 걸 떠올리면, 인메모리 락은 **단일 노드에서만** 맞습니다. 두 요청이 같은 키로 동시에 들어올 때, 이걸 하나로 만드는 건 애플리케이션 락이 아니라 **DB 유니크 제약**이어야 합니다 — 그건 노드가 몇 개든 안 깨집니다.
 
 그래서 멱등키를 원장 PG의 테이블 하나로 두고, `(키, 메서드, 경로)`에 유니크 제약을 걸었습니다. 흐름은 begin → (처리) → complete입니다.
 
@@ -114,7 +114,7 @@ req2 HTTP 409  {"error":"같은 멱등키의 요청이 처리 중입니다. 잠�
 - **LEDGER_ONLY** — 우리만있음(계정계 미처리인데 원장은 SUCCESS)
 - **CORE_ONLY** — 저쪽만있음(계정계 처리했는데 원장은 UNKNOWN이거나 아예 누락)
 
-그리고 대조 **전에** UNKNOWN을 자동 해소합니다. 6편의 해소 절차(상태조회 → 처리됐으면 망취소 → CANCELED, 미처리면 FAILED)를 그대로 돌립니다 — 미확인이 남은 채 대조하면 불일치가 아니라 "아직 모름"이 섞이니까요.
+그리고 대조 **전에** UNKNOWN을 자동 해소합니다. 3편의 해소 절차(상태조회 → 처리됐으면 망취소 → CANCELED, 미처리면 FAILED)를 그대로 돌립니다 — 미확인이 남은 채 대조하면 불일치가 아니라 "아직 모름"이 섞이니까요.
 
 여기서 실측 중에 순서 함정을 하나 밟았습니다. 처음엔 이렇게 짰습니다.
 
@@ -180,7 +180,7 @@ gwanmun=# SELECT settle_date, match_count, mismatch_count,
 
 마지막 축은 [DBTower](https://github.com/dj258255/dbtower)와의 느슨한 연결입니다. gwanmun은 데이터 경로 **위**에서 전문을 중계하는 인라인 미들웨어이고, DBTower는 데이터 경로 **밖**에서 DB를 관찰하는 아웃오브밴드 관제탑입니다. 성격이 정반대라 별도 저장소로 두되, 원장 PG를 DBTower의 관측 대상으로 등록하는 것만 연결합니다.
 
-왜 원장 PG인가 하면 — 부하가 커지면 모든 거래 경로가 지나는 원장 insert에서 경합·슬로우쿼리·락이 생깁니다. 7편의 `gwanmun.ledger.dropped` 카운터는 유실을 세지만 **왜** 느린지는 못 봅니다. 그건 gwanmun 자신이 안에서 못 보는 것(자기 커넥션 지연은 알아도 DB 서버 관점의 경합·플랜은 모름)이고, 관제가 밖에서 `pg_stat_statements`로 봅니다.
+왜 원장 PG인가 하면 — 부하가 커지면 모든 거래 경로가 지나는 원장 insert에서 경합·슬로우쿼리·락이 생깁니다. 4편의 `gwanmun.ledger.dropped` 카운터는 유실을 세지만 **왜** 느린지는 못 봅니다. 그건 gwanmun 자신이 안에서 못 보는 것(자기 커넥션 지연은 알아도 DB 서버 관점의 경합·플랜은 모름)이고, 관제가 밖에서 `pg_stat_statements`로 봅니다.
 
 DBTower 앱 자체를 띄워 등록 API까지 부르지는 않았습니다(관제탑은 자기 컨트롤 플레인 DB가 필요한 별도 스택입니다). 대신 **대상 DB를 실제로 등록 가능한 상태까지 준비하고, 관제가 볼 그 수치를 그 계정으로 직접 조회**했습니다. `pg_stat_statements`를 로드하고, DBTower가 쓰는 최소 권한 계정(`pg_read_all_stats`)을 만든 뒤:
 
@@ -205,4 +205,4 @@ $ PGPASSWORD=... psql -U dbtower_monitor -d gwanmun -c "SELECT version();"
 
 테스트는 **168건**(기존 150 + 이번 편 18)이 그린이고, 모듈 경계 `verify()`도 그대로 그린입니다. 각 단계의 함정·판단·검증은 저장소의 [ROADMAP](https://github.com/dj258255/gwanmun/blob/main/docs/ROADMAP.md)·[VERIFICATION](https://github.com/dj258255/gwanmun/blob/main/docs/VERIFICATION.md)에 있습니다.
 
-5편에서 "타임아웃은 실패가 아니라 미확인"이라고 적었을 때, 그 규칙이 온전해지려면 미확인 이후의 세계 — 호출자의 재전송과 장부의 대조 — 를 다뤄야 한다는 걸 이번에야 마무리했습니다. 재전송을 막고, 매일 장부를 대조합니다.
+3편에서 "타임아웃은 실패가 아니라 미확인"이라고 적었을 때, 그 규칙이 온전해지려면 미확인 이후의 세계 — 호출자의 재전송과 장부의 대조 — 를 다뤄야 한다는 걸 이번에야 마무리했습니다. 재전송을 막고, 매일 장부를 대조합니다.
