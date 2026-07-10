@@ -1,5 +1,5 @@
 ---
-title: 'gwanmun 총정리 — 전문·TCP와 JSON·REST 사이의 연계 게이트웨이, 실측 9단계'
+title: '관문(gwanmun) 총정리 — 전문·TCP와 JSON·REST 사이의 연계 게이트웨이, 실측 9단계'
 titleEn: 'gwanmun, the Complete Story — An Integration Gateway Between Fixed-Length TCP and JSON REST, Measured Across Nine Stages'
 description: "은행 계정계는 고정길이 전문(電文)과 TCP로만, 모바일 앱은 JSON과 HTTP REST로만 말합니다. 둘 다 못 고치니 가운데에 통역기를 세웁니다 — 전문↔JSON을 변환하는 연계층과, 그 통로를 지키는 API 게이트웨이층. 이 글은 그 통역기를 목업 계정계까지 세워 직접 만든 9단계의 총정리입니다. 계정계를 실제로 죽여 서킷이 OPEN→503으로 격리하는 것, RuntimeException 하나(풀 고갈)가 서킷을 열고 원장 4건을 증발시킨 감사 결함과 그 수정(503+원장 완결), 부하가 서킷 stale 레이스를 staleResultsTotal=197로 실증한 것, 한계 ~10–12k req/s와 게이트웨이 오버헤드 ~0.21ms, 죽은 백엔드에서 서킷 off 351 vs on 9,425 req/s, 같은 멱등키 2회에도 계정계 1회·원장 1행(이중거래 0)까지 — 전부 VERIFICATION에 명령·출력이 남은 실측이고, 안 만든 것은 왜 안 만들었는지 적었습니다."
 descriptionEn: "A bank's core system speaks only fixed-length messages over TCP; the mobile app speaks only JSON over HTTP REST. Neither can be rewritten, so a translator goes in the middle — an integration layer that converts between messages and JSON, and an API gateway layer that guards the channel. This is the complete story of building that translator by hand across nine stages, mock core included: killing the core to watch the circuit isolate it (OPEN, then 503), a single RuntimeException (pool exhaustion) that opened the circuit and vanished four ledger rows plus its fix, load proving a stale-circuit race at staleResultsTotal=197, a knee around 10–12k req/s and ~0.21ms gateway overhead, a dead backend at 351 vs 9,425 req/s with the circuit off vs on, and the same idempotency key twice yielding one core call and one ledger row. Every number is measured; everything not built says why."
@@ -20,7 +20,7 @@ seriesOrder: 0
 
 ## 0. 이 글 하나로
 
-이 글은 gwanmun(관문) 시리즈 본편 5편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
+이 글은 관문(gwanmun) 시리즈 본편 5편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했어요.
 
 한 줄로 요약하면 — **고정길이 전문(電文)+TCP로만 말하는 은행 계정계와, JSON+HTTP REST로만 말하는 앱 사이에 세운 연계 게이트웨이**입니다. 둘 다 못 고치니 가운데에 통역기를 두는데, 그 통역기는 두 층이에요 — 전문↔JSON을 변환하는 **연계층**과, 통로를 인증·라우팅·유량제어로 지키는 **API 게이트웨이층**. 진짜 은행 없이 로컬에서 전 과정을 재현했고, 전문을 주고받는 목업 계정계까지 직접 세웠습니다. Java 21 + Spring Boot 3.5, 코드는 [GitHub](https://github.com/dj258255/gwanmun)에 공개되어 있습니다.
 
@@ -62,6 +62,14 @@ seriesOrder: 0
 경계 하나를 더 그었습니다. 이 프로젝트는 [DBTower](/blog/project/dbtower/dbtower-0-overview)와 성격이 정반대라 별도 저장소로 둡니다 — gwanmun은 **데이터 경로 위에서 메시지를 중계**하는 미들웨어(인라인)이고, DBTower는 **데이터 경로 밖에서 관찰**하는 관제(아웃오브밴드)예요. 둘을 한 코드베이스에 섞으면 두 정체성이 흐려집니다. 느슨한 연결(gwanmun의 원장 DB를 DBTower가 관측)만 남겼습니다.
 
 코드베이스 자체도 Spring Modulith 모듈로 경계를 지어, 모듈 간 순환 의존을 빌드에서 실패시킵니다(`ApplicationModules.verify()`가 전 단계 그린). message·core·gateway·ledger·web가 단방향 DAG로 물려 있어요.
+
+두 층 그림을 코드 단위로 내리면 이렇게 됩니다. 색 구역이 방금 말한 5모듈의 경계이고, 필터 체인(인증→라우팅→유량제어)·장애 내성 3겹(데드라인·재시도·서킷)·커넥션 풀·비동기 원장 적재 스레드가 각각 어느 모듈에 사는지, 목업 계정계 3서버(9099·9098·9097)와 원장 PostgreSQL(25432)이 어떤 포트로 물리는지까지 실제 코드 그대로예요.
+
+![gwanmun 상세 서버 아키텍처 — 5모듈 경계, 필터 체인, 장애 내성, 비동기 원장 적재, 목업 계정계 3서버](/uploads/project/gwanmun/architecture-detail.svg)
+
+원장 DB 쪽 경계도 미리 그려두면 뒤 편들이 읽기 쉬워집니다. 테이블은 딱 3개 — 거래 원장(`transaction_ledger`), 멱등키(`idempotency_key`), EOD 대사 이력(`reconciliation_run`)이고, 테이블 사이는 물리 FK 없이 값(`tran_id`·`settle_date`)으로 잇는 논리 관계입니다. 원장 적재가 비동기라 멱등키를 적는 시점에 원장 행이 아직 없을 수 있어서, FK를 두지 않는 게 설계상 맞았어요.
+
+![gwanmun 원장 DB ERD — transaction_ledger · idempotency_key · reconciliation_run](/uploads/project/gwanmun/erd.svg)
 
 ## 3. 개선 아크 — 상황이 밀어붙인 9단계
 

@@ -56,6 +56,14 @@ seriesOrder: 0
 
 즉 이 프로젝트는 **버려지는 관측 데이터의 두 번째 삶**입니다. DBTower가 7일 만에 버리는 데이터를, 분석계가 받아 오래 기억하는 거죠. 스택은 2026년 기준 소규모 팀의 정석 계보(Airflow + dbt + Parquet/객체스토리지 + DuckDB + DuckLake + Metabase)이고, 각 선택의 근거는 뒤에서 수치로 답합니다.
 
+구조를 한 단계 더 뜯어보면 이렇습니다. 컨테이너 경계와 포트(원천 PG 15432 · MinIO 19000 · Airflow 8080 · Metabase 13001), 다섯 태스크 체인 `offload → quality_gate → transform → publish → heartbeat`, 품질 FAIL 시 webhook으로 빠지는 분기, 성공 신호(heartbeat)를 역방향으로 감시하는 deadman, 주간 CHECKPOINT 유지보수까지 — 위 그림의 상세판입니다.
+
+![상세 서버/데이터 아키텍처 — Airflow 태스크 체인과 FAIL 분기, MinIO 경로 레이아웃, DuckLake 카탈로그(PG)/데이터(S3) 분리, Metabase read-only](/uploads/project/lakehouse/architecture-detail.svg)
+
+데이터가 어떤 모양으로 흐르는지도 컬럼 단위로 그렸습니다. 원천 두 테이블(`query_snapshot`·`database_instance`)에서 raw parquet(dt·instance_id 파티션 키), staging의 SUM 정규화, `fct_query_daily`의 일간 델타 — 누적 카운터가 일간 발생량으로 접히는 변환 지점이 여기입니다 — 그리고 `mart_query_regression`의 롤링 윈도우 컬럼과 운영 테이블(`pipeline_run_log`·`pipeline_heartbeat`)까지의 계보예요.
+
+![데이터 모델 — 원천에서 마트·운영 테이블까지의 컬럼 계보, 누적에서 일간 델타로의 변환 지점 표기](/uploads/project/lakehouse/erd.svg)
+
 ## 2. 개선 아크 요약 — 단계별 (상황 → 만든 것 → 핵심 실측)
 
 시리즈는 "어떤 상황에서 무엇이 깨지고, 그래서 무엇을 만드는가"의 개선 아크로 씁니다. 전/후가 있는 건 전/후로 실측했어요.
