@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 860" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .bg    { fill:#ffffff; }
+    .card  { fill:#f8fafc; stroke:#cbd5e1; }
+    .gw    { fill:none;    stroke:#6366f1; stroke-width:2; }
+    .m-web { fill:#eef2ff; stroke:#c7d2fe; }
+    .m-gwm { fill:#faf5ff; stroke:#e9d5ff; }
+    .m-msg { fill:#fffbeb; stroke:#fde68a; }
+    .m-core{ fill:#ecfdf5; stroke:#a7f3d0; }
+    .m-led { fill:#f0f9ff; stroke:#bae6fd; }
+    .node  { fill:#ffffff; stroke:#94a3b8; }
+    .title { fill:#0f172a; font-weight:700; }
+    .sub   { fill:#475569; }
+    .label { fill:#334155; }
+    .gwname{ fill:#4338ca; font-weight:700; letter-spacing:.5px; }
+    .mod   { fill:#334155; font-weight:700; }
+    .a-req { stroke:#6366f1; fill:none; stroke-width:2; }
+    .a-res { stroke:#64748b; fill:none; stroke-width:2; }
+    .h-req { fill:#6366f1; }
+    .h-res { fill:#64748b; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill:#0b1220; }
+      .card  { fill:#111827; stroke:#334155; }
+      .gw    { stroke:#818cf8; }
+      .m-web { fill:#1e1b4b; stroke:#3730a3; }
+      .m-gwm { fill:#2e1065; stroke:#6d28d9; }
+      .m-msg { fill:#451a03; stroke:#92400e; }
+      .m-core{ fill:#052e2b; stroke:#134e4a; }
+      .m-led { fill:#082f49; stroke:#0c4a6e; }
+      .node  { fill:#111827; stroke:#475569; }
+      .title { fill:#e2e8f0; }
+      .sub   { fill:#94a3b8; }
+      .label { fill:#cbd5e1; }
+      .gwname{ fill:#a5b4fc; }
+      .mod   { fill:#cbd5e1; }
+      .a-req { stroke:#818cf8; }
+      .a-res { stroke:#94a3b8; }
+      .h-req { fill:#818cf8; }
+      .h-res { fill:#94a3b8; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1240" height="860" rx="14"/>
+
+  <text class="title" x="24" y="36" font-size="16">gwanmun 상세 서버 아키텍처</text>
+  <text class="sub"   x="24" y="56" font-size="11">Spring Modulith 5모듈 — 색 구역이 모듈 경계 (ApplicationModules.verify로 강제)</text>
+
+  <!-- 외부 클라이언트 -->
+  <rect class="card" x="24" y="140" width="150" height="104" rx="10"/>
+  <text class="title" x="99" y="176" font-size="14" text-anchor="middle">모바일 · 핀테크</text>
+  <text class="sub"   x="99" y="198" font-size="11" text-anchor="middle">REST / JSON</text>
+  <text class="sub"   x="99" y="216" font-size="10.5" text-anchor="middle">API 키 · Idempotency-Key</text>
+
+  <!-- gwanmun 앱 -->
+  <rect class="gw" x="210" y="64" width="650" height="700" rx="14"/>
+  <text class="gwname" x="535" y="92" font-size="15" text-anchor="middle">gwanmun 앱 :8090</text>
+
+  <!-- web 모듈 -->
+  <rect class="m-web" x="228" y="120" width="614" height="112" rx="9"/>
+  <text class="mod" x="240" y="140" font-size="12">web · REST 조립</text>
+  <rect class="node" x="240" y="152" width="186" height="30" rx="6"/>
+  <text class="label" x="333" y="171" font-size="10.5" text-anchor="middle">CorrelationIdFilter (MDC cid)</text>
+  <rect class="node" x="436" y="152" width="394" height="30" rx="6"/>
+  <text class="label" x="633" y="171" font-size="10" text-anchor="middle">GatewayController · TransactionHistoryController · LedgerController</text>
+  <rect class="node" x="240" y="190" width="590" height="30" rx="6"/>
+  <text class="label" x="535" y="209" font-size="10" text-anchor="middle">ReconciliationService·Scheduler(EOD 대사) · ResolutionController · ResilienceController(서킷·풀 관측)</text>
+
+  <!-- gateway 모듈 -->
+  <rect class="m-gwm" x="228" y="248" width="396" height="170" rx="9"/>
+  <text class="mod" x="240" y="268" font-size="12">gateway · 관문(필터 체인)</text>
+  <text class="sub" x="240" y="283" font-size="9.5">GatewayGuardFilter — /api/gateway/* · /api/history 검문</text>
+  <rect class="node" x="240" y="292" width="116" height="36" rx="6"/>
+  <text class="label" x="298" y="307" font-size="9.5" text-anchor="middle">AuthenticationFilter</text>
+  <text class="sub"   x="298" y="320" font-size="9" text-anchor="middle">#10 · 401/403</text>
+  <rect class="node" x="372" y="292" width="116" height="36" rx="6"/>
+  <text class="label" x="430" y="307" font-size="9.5" text-anchor="middle">RoutingFilter</text>
+  <text class="sub"   x="430" y="320" font-size="9" text-anchor="middle">#20 · RouteTable·404</text>
+  <rect class="node" x="504" y="292" width="108" height="36" rx="6"/>
+  <text class="label" x="558" y="307" font-size="9.5" text-anchor="middle">RateLimitFilter</text>
+  <text class="sub"   x="558" y="320" font-size="9" text-anchor="middle">#30 · TokenBucket·429</text>
+  <path class="a-req" d="M356 310 L370 310"/>
+  <polygon class="h-req" points="370,310 362,306 362,314"/>
+  <path class="a-req" d="M488 310 L502 310"/>
+  <polygon class="h-req" points="502,310 494,306 494,314"/>
+  <rect class="node" x="240" y="342" width="372" height="62" rx="6"/>
+  <text class="label" x="426" y="366" font-size="11" text-anchor="middle">GatewayService — REST↔전문 왕복 배선</text>
+  <text class="sub"   x="426" y="386" font-size="10" text-anchor="middle">TransactionResolutionService — 상태조회·망취소(UNKNOWN 해소)</text>
+
+  <!-- message 모듈 -->
+  <rect class="m-msg" x="228" y="434" width="396" height="96" rx="9"/>
+  <text class="mod" x="240" y="454" font-size="12">message · 전문 코덱</text>
+  <rect class="node" x="240" y="464" width="372" height="54" rx="6"/>
+  <text class="label" x="426" y="486" font-size="10" text-anchor="middle">MessageCodec(고정길이 전문) · VariableMessageCodec(가변 전문)</text>
+  <text class="sub"   x="426" y="504" font-size="10" text-anchor="middle">MessageSpec 어노테이션 · EUC-KR · AccountMasker(계좌 마스킹)</text>
+
+  <!-- core 모듈 -->
+  <rect class="m-core" x="228" y="546" width="396" height="202" rx="9"/>
+  <text class="mod" x="240" y="566" font-size="12">core · 계정계 연동</text>
+  <rect class="node" x="240" y="576" width="372" height="46" rx="6"/>
+  <text class="label" x="426" y="594" font-size="10" text-anchor="middle">ResilientExecutor — 거래 데드라인 5s · 조회성 한정 재시도(2회)</text>
+  <text class="sub"   x="426" y="611" font-size="10" text-anchor="middle">CircuitBreaker (CLOSED / OPEN / HALF_OPEN · 연속 실패 3)</text>
+  <rect class="node" x="240" y="632" width="372" height="28" rx="6"/>
+  <text class="label" x="426" y="650" font-size="10" text-anchor="middle">ConnectionPool — max 4 · borrow 2s · 유휴 TTL 30s</text>
+  <rect class="node" x="240" y="670" width="372" height="66" rx="6"/>
+  <text class="label" x="426" y="688" font-size="10" text-anchor="middle">CoreBankingClient(:9099) · TransactionHistoryClient(:9098)</text>
+  <text class="label" x="426" y="704" font-size="10" text-anchor="middle">SettlementClient(:9097)</text>
+  <text class="sub"   x="426" y="722" font-size="9.5" text-anchor="middle">FramedConnection(고정길이) · LengthPrefixedConnection(길이 프리픽스)</text>
+
+  <!-- ledger 모듈 -->
+  <rect class="m-led" x="640" y="248" width="202" height="330" rx="9"/>
+  <text class="mod" x="652" y="268" font-size="12">ledger · 거래 원장</text>
+  <rect class="node" x="652" y="280" width="178" height="44" rx="6"/>
+  <text class="label" x="741" y="297" font-size="10" text-anchor="middle">TransactionIdGenerator</text>
+  <text class="sub"   x="741" y="313" font-size="9.5" text-anchor="middle">GWMNU+날짜8+일련9 채번</text>
+  <rect class="node" x="652" y="334" width="178" height="58" rx="6"/>
+  <text class="label" x="741" y="351" font-size="10" text-anchor="middle">IdempotencyService</text>
+  <text class="sub"   x="741" y="366" font-size="9.5" text-anchor="middle">(키+메서드+경로) 유니크 선점</text>
+  <text class="sub"   x="741" y="380" font-size="9.5" text-anchor="middle">처리중 409 · 완료 원응답 재반환</text>
+  <rect class="node" x="652" y="402" width="178" height="70" rx="6"/>
+  <text class="label" x="741" y="419" font-size="10" text-anchor="middle">TransactionLedger</text>
+  <text class="sub"   x="741" y="434" font-size="9.5" text-anchor="middle">비동기 큐 1,000</text>
+  <text class="sub"   x="741" y="448" font-size="9.5" text-anchor="middle">ledger-writer 1스레드</text>
+  <text class="sub"   x="741" y="462" font-size="9.5" text-anchor="middle">적재 실패해도 거래는 진행</text>
+  <rect class="node" x="652" y="482" width="178" height="44" rx="6"/>
+  <text class="label" x="741" y="499" font-size="10" text-anchor="middle">ReconciliationLog</text>
+  <text class="sub"   x="741" y="515" font-size="9.5" text-anchor="middle">대사 실행 이력(4유형 건수)</text>
+  <text class="sub"   x="741" y="552" font-size="9.5" text-anchor="middle">계좌는 마스킹 형태만 저장</text>
+
+  <!-- 클라이언트 -> web -->
+  <path class="a-req" d="M174 172 L226 172"/>
+  <polygon class="h-req" points="226,172 216,167 216,177"/>
+  <text class="label" x="200" y="162" font-size="10" text-anchor="middle">REST</text>
+  <path class="a-res" d="M226 208 L174 208"/>
+  <polygon class="h-res" points="174,208 184,203 184,213"/>
+  <text class="label" x="200" y="226" font-size="10" text-anchor="middle">JSON</text>
+
+  <!-- 모듈 간 흐름 (요청 아래로 / 응답 위로) -->
+  <path class="a-req" d="M380 232 L380 246"/>
+  <polygon class="h-req" points="380,246 375,238 385,238"/>
+  <path class="a-res" d="M470 246 L470 232"/>
+  <polygon class="h-res" points="470,232 465,240 475,240"/>
+  <path class="a-req" d="M380 418 L380 432"/>
+  <polygon class="h-req" points="380,432 375,424 385,424"/>
+  <path class="a-res" d="M470 432 L470 418"/>
+  <polygon class="h-res" points="470,418 465,426 475,426"/>
+  <path class="a-req" d="M380 530 L380 544"/>
+  <polygon class="h-req" points="380,544 375,536 385,536"/>
+  <path class="a-res" d="M470 544 L470 530"/>
+  <polygon class="h-res" points="470,530 465,538 475,538"/>
+
+  <!-- web -> ledger (채번·멱등·적재) -->
+  <path class="a-req" d="M741 232 L741 246"/>
+  <polygon class="h-req" points="741,246 736,238 746,238"/>
+  <text class="sub" x="753" y="243" font-size="9">채번 · 멱등 · 적재</text>
+
+  <!-- ledger -> PostgreSQL -->
+  <rect class="card" x="920" y="350" width="250" height="120" rx="10"/>
+  <text class="title" x="1045" y="382" font-size="13" text-anchor="middle">원장 DB — PostgreSQL :25432</text>
+  <text class="sub"   x="1045" y="404" font-size="10.5" text-anchor="middle">docker compose · postgres 프로파일</text>
+  <text class="sub"   x="1045" y="422" font-size="10.5" text-anchor="middle">기본은 H2 인메모리(개발·테스트)</text>
+  <text class="sub"   x="1045" y="440" font-size="10.5" text-anchor="middle">pg_stat_statements — DBTower 관측 대상</text>
+  <path class="a-req" d="M842 437 L918 414"/>
+  <polygon class="h-req" points="918,414 909,412 912,421"/>
+  <text class="label" x="876" y="402" font-size="9.5" text-anchor="middle">JPA insert</text>
+
+  <!-- 목업 계정계 3서버 -->
+  <text class="title" x="1068" y="526" font-size="13" text-anchor="middle">목업 계정계 — TCP 서버 (내장/독립 기동)</text>
+  <rect class="card" x="920" y="540" width="296" height="62" rx="10"/>
+  <text class="title" x="1068" y="565" font-size="12" text-anchor="middle">잔액조회 · 상태조회 · 망취소 :9099</text>
+  <text class="sub"   x="1068" y="585" font-size="10" text-anchor="middle">고정길이 전문 · MockCoreBankingServer</text>
+  <rect class="card" x="920" y="616" width="296" height="62" rx="10"/>
+  <text class="title" x="1068" y="641" font-size="12" text-anchor="middle">거래내역 조회 :9098</text>
+  <text class="sub"   x="1068" y="661" font-size="10" text-anchor="middle">길이 프리픽스 · MockTransactionHistoryServer</text>
+  <rect class="card" x="920" y="692" width="296" height="62" rx="10"/>
+  <text class="title" x="1068" y="717" font-size="12" text-anchor="middle">당일 처리내역(EOD 대사) :9097</text>
+  <text class="sub"   x="1068" y="737" font-size="10" text-anchor="middle">길이 프리픽스 · :9099와 같은 프로세스</text>
+
+  <!-- core -> 목업 계정계 -->
+  <text class="label" x="770" y="664" font-size="9.5" text-anchor="middle">TCP 전문 왕복</text>
+  <path class="a-req" d="M612 680 L880 680 L880 571 L918 571"/>
+  <polygon class="h-req" points="918,571 908,566 908,576"/>
+  <path class="a-req" d="M612 696 L890 696 L890 647 L918 647"/>
+  <polygon class="h-req" points="918,647 908,642 908,652"/>
+  <path class="a-req" d="M612 712 L870 712 L870 723 L918 723"/>
+  <polygon class="h-req" points="918,723 908,718 908,728"/>
+
+  <!-- 관측 -->
+  <rect class="card" x="300" y="792" width="470" height="52" rx="10"/>
+  <text class="title" x="535" y="812" font-size="11.5" text-anchor="middle">관측 — /actuator/health(liveness·readiness) · /actuator/prometheus</text>
+  <text class="sub"   x="535" y="831" font-size="9.5" text-anchor="middle">커스텀 메트릭: 원장 상태·적재 유실 · 서킷 상태 · 풀 사용률 — Prometheus 스크레이프</text>
+  <path class="a-res" d="M535 764 L535 790"/>
+  <polygon class="h-res" points="535,790 530,782 540,782"/>
+</svg>

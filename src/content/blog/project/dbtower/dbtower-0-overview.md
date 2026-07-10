@@ -62,6 +62,14 @@ seriesOrder: 0
 
 **경계는 문서가 아니라 빌드가 지킨다.** 패키지 8개를 Spring Modulith 모듈로 선언하고, 모듈 간 순환 의존을 테스트가 빌드에서 실패시킵니다. 도입 첫 실행에서 실제로 순환 2개(registry↔operator, insight↔alert)가 잡혀서 의존 역전으로 해소했어요 — 규칙이 실제로 작동한다는 증거를 도입 당일에 얻은 셈입니다.
 
+경계 이야기를 한 층 더 내려가면 이렇습니다. 채널 3종(웹 콘솔·MCP·웹훅)에서 기종 어댑터와 외부 의존(메타 PG·MinIO·AI 백엔드·관측 스택)까지, 실제 모듈명과 docker-compose 포트 기준의 상세도예요 — 모듈은 이후 페이즈에서 advisor·finops·score·slo·audit·onlineddl이 더해져 현재 14개입니다.
+
+![DBTower 상세 아키텍처 — 채널 3종 · 모듈 14개 · 관제 대상 5기종](/uploads/project/dbtower/architecture-detail.svg)
+
+플랫폼 자신의 상태가 어디에 어떻게 쌓이는지도 스키마로 고정해 뒀습니다. 메타 DB의 단일 권위는 Flyway 마이그레이션(V1~V10)이고(엔티티는 ddl-auto=validate로 검증만), 표 9개의 관계는 아래 ERD와 같아요. 인스턴스 한 행을 지우면 자식 다섯 표가 FK ON DELETE CASCADE(V10)로 함께 정리되고, 감사 로그만 일부러 FK 없이 남습니다 — 기록은 삭제와 무관하게 보존해야 하니까요.
+
+![DBTower 메타 DB ERD — Flyway V1~V10 기준 표 9개](/uploads/project/dbtower/erd.svg)
+
 ## 3. 주장은 검증 전까지 빚이다 — "새 기종 = 구현체 1개"
 
 설계 문서에 계속 적어온 주장이 있었습니다. "새 기종 추가 = Operator 구현체 1개, 플랫폼 코드 수정 없음." 주장은 검증 전까지 빚이라, 성격이 정반대인 두 기종을 실제로 추가해 갚았습니다([4편](/blog/project/dbtower/dbtower-4-five-engines)) — 상용 DB의 대표 Oracle과, SQL도 JDBC도 없는 MongoDB.

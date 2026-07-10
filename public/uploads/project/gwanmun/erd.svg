@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 710" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <style>
+    .bg    { fill:#ffffff; }
+    .card  { fill:#f8fafc; stroke:#cbd5e1; }
+    .thead { fill:#eef2ff; stroke:#c7d2fe; }
+    .tbody { fill:#ffffff; stroke:#cbd5e1; }
+    .tname { fill:#4338ca; font-weight:700; }
+    .tsub  { fill:#6366f1; }
+    .title { fill:#0f172a; font-weight:700; }
+    .sub   { fill:#475569; }
+    .col   { fill:#334155; }
+    .typ   { fill:#64748b; }
+    .pk    { fill:#d97706; font-weight:700; }
+    .uk    { fill:#059669; font-weight:700; }
+    .fk    { fill:#0284c7; font-weight:700; }
+    .sep   { stroke:#e2e8f0; }
+    .rel   { stroke:#6366f1; stroke-dasharray:6 4; fill:none; stroke-width:1.8; }
+    .rlab  { fill:#4338ca; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill:#0b1220; }
+      .card  { fill:#111827; stroke:#334155; }
+      .thead { fill:#1e1b4b; stroke:#3730a3; }
+      .tbody { fill:#111827; stroke:#334155; }
+      .tname { fill:#a5b4fc; }
+      .tsub  { fill:#818cf8; }
+      .title { fill:#e2e8f0; }
+      .sub   { fill:#94a3b8; }
+      .col   { fill:#cbd5e1; }
+      .typ   { fill:#94a3b8; }
+      .pk    { fill:#fbbf24; }
+      .uk    { fill:#34d399; }
+      .fk    { fill:#38bdf8; }
+      .sep   { stroke:#334155; }
+      .rel   { stroke:#818cf8; }
+      .rlab  { fill:#a5b4fc; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1020" height="710" rx="14"/>
+
+  <text class="title" x="24" y="36" font-size="16">gwanmun 원장 DB ERD</text>
+  <text class="sub"   x="24" y="56" font-size="11">기본 H2 인메모리 · postgres 프로파일 시 PostgreSQL :25432(docker compose) · JPA ddl-auto: update</text>
+
+  <!-- transaction_ledger -->
+  <rect class="thead" x="70" y="150" width="380" height="30" rx="8"/>
+  <rect class="tbody" x="70" y="180" width="380" height="312"/>
+  <text class="tname" x="82"  y="170" font-size="13">transaction_ledger</text>
+  <text class="tsub"  x="438" y="170" font-size="10" text-anchor="end">LedgerEntry</text>
+
+  <text class="pk"  x="82" y="200" font-size="10">PK</text><text class="col" x="112" y="200" font-size="10.5">id</text><text class="typ" x="438" y="200" font-size="10" text-anchor="end">BIGINT · IDENTITY</text>
+  <text class="uk"  x="82" y="218" font-size="10">UK</text><text class="col" x="112" y="218" font-size="10.5">transaction_id</text><text class="typ" x="438" y="218" font-size="10" text-anchor="end">VARCHAR(32) · NN</text>
+  <text class="col" x="112" y="236" font-size="10.5">tx_code</text><text class="typ" x="438" y="236" font-size="10" text-anchor="end">VARCHAR(8) · NN</text>
+  <text class="col" x="112" y="254" font-size="10.5">account_masked</text><text class="typ" x="438" y="254" font-size="10" text-anchor="end">VARCHAR(40) · NN</text>
+  <text class="col" x="112" y="272" font-size="10.5">status</text><text class="typ" x="438" y="272" font-size="10" text-anchor="end">VARCHAR(10) · NN</text>
+  <text class="col" x="112" y="290" font-size="10.5">response_code</text><text class="typ" x="438" y="290" font-size="10" text-anchor="end">VARCHAR(8)</text>
+  <text class="col" x="112" y="308" font-size="10.5">amount</text><text class="typ" x="438" y="308" font-size="10" text-anchor="end">BIGINT</text>
+  <text class="col" x="112" y="326" font-size="10.5">detail</text><text class="typ" x="438" y="326" font-size="10" text-anchor="end">VARCHAR(200)</text>
+  <text class="col" x="112" y="344" font-size="10.5">requested_at</text><text class="typ" x="438" y="344" font-size="10" text-anchor="end">TIMESTAMP · NN</text>
+  <text class="col" x="112" y="362" font-size="10.5">responded_at</text><text class="typ" x="438" y="362" font-size="10" text-anchor="end">TIMESTAMP · NN</text>
+  <text class="col" x="112" y="380" font-size="10.5">elapsed_ms</text><text class="typ" x="438" y="380" font-size="10" text-anchor="end">BIGINT · NN</text>
+  <text class="col" x="112" y="398" font-size="10.5">correlation_id</text><text class="typ" x="438" y="398" font-size="10" text-anchor="end">VARCHAR(64)</text>
+  <text class="col" x="112" y="416" font-size="10.5">resolved_at</text><text class="typ" x="438" y="416" font-size="10" text-anchor="end">TIMESTAMP</text>
+  <text class="col" x="112" y="434" font-size="10.5">resolution_method</text><text class="typ" x="438" y="434" font-size="10" text-anchor="end">VARCHAR(20)</text>
+  <line class="sep" x1="70" y1="444" x2="450" y2="444"/>
+  <text class="sub" x="82" y="460" font-size="9.5">UNIQUE idx_ledger_tx_id(transaction_id) · INDEX idx_ledger_status(status)</text>
+  <text class="sub" x="82" y="474" font-size="9.5">status: SUCCESS · FAILED · UNKNOWN · CANCELED(해소 절차로만 진입)</text>
+  <text class="sub" x="82" y="488" font-size="9.5">resolution_method: NET_CANCEL · STATUS_INQUIRY — 계좌는 마스킹만 저장</text>
+
+  <!-- idempotency_key -->
+  <rect class="thead" x="600" y="90" width="380" height="30" rx="8"/>
+  <rect class="tbody" x="600" y="120" width="380" height="270"/>
+  <text class="tname" x="612" y="110" font-size="13">idempotency_key</text>
+  <text class="tsub"  x="968" y="110" font-size="10" text-anchor="end">IdempotencyEntry</text>
+
+  <text class="pk"  x="612" y="140" font-size="10">PK</text><text class="col" x="642" y="140" font-size="10.5">id</text><text class="typ" x="968" y="140" font-size="10" text-anchor="end">BIGINT · IDENTITY</text>
+  <text class="uk"  x="612" y="158" font-size="10">UK</text><text class="col" x="642" y="158" font-size="10.5">idem_key</text><text class="typ" x="968" y="158" font-size="10" text-anchor="end">VARCHAR(128) · NN</text>
+  <text class="uk"  x="612" y="176" font-size="10">UK</text><text class="col" x="642" y="176" font-size="10.5">method</text><text class="typ" x="968" y="176" font-size="10" text-anchor="end">VARCHAR(8) · NN</text>
+  <text class="uk"  x="612" y="194" font-size="10">UK</text><text class="col" x="642" y="194" font-size="10.5">path</text><text class="typ" x="968" y="194" font-size="10" text-anchor="end">VARCHAR(200) · NN</text>
+  <text class="col" x="642" y="212" font-size="10.5">fingerprint (SHA-256)</text><text class="typ" x="968" y="212" font-size="10" text-anchor="end">VARCHAR(64) · NN</text>
+  <text class="col" x="642" y="230" font-size="10.5">state</text><text class="typ" x="968" y="230" font-size="10" text-anchor="end">VARCHAR(12) · NN</text>
+  <text class="col" x="642" y="248" font-size="10.5">http_status</text><text class="typ" x="968" y="248" font-size="10" text-anchor="end">INTEGER</text>
+  <text class="col" x="642" y="266" font-size="10.5">response_body</text><text class="typ" x="968" y="266" font-size="10" text-anchor="end">VARCHAR(20000)</text>
+  <text class="fk"  x="612" y="284" font-size="10">FK*</text><text class="col" x="642" y="284" font-size="10.5">tran_id</text><text class="typ" x="968" y="284" font-size="10" text-anchor="end">VARCHAR(32)</text>
+  <text class="col" x="642" y="302" font-size="10.5">created_at</text><text class="typ" x="968" y="302" font-size="10" text-anchor="end">TIMESTAMP · NN</text>
+  <text class="col" x="642" y="320" font-size="10.5">expires_at</text><text class="typ" x="968" y="320" font-size="10" text-anchor="end">TIMESTAMP · NN</text>
+  <line class="sep" x1="600" y1="330" x2="980" y2="330"/>
+  <text class="sub" x="612" y="346" font-size="9.5">UNIQUE uq_idem_key_method_path(idem_key, method, path)</text>
+  <text class="sub" x="612" y="360" font-size="9.5">state: IN_PROGRESS(재요청 409) · COMPLETED(원응답 재반환) — TTL 24h</text>
+  <text class="sub" x="612" y="374" font-size="9.5">DB 유니크 제약이 동시 재요청을 원자적으로 가른다(먼저 INSERT한 쪽이 처리)</text>
+
+  <!-- reconciliation_run -->
+  <rect class="thead" x="600" y="440" width="380" height="30" rx="8"/>
+  <rect class="tbody" x="600" y="470" width="380" height="216"/>
+  <text class="tname" x="612" y="460" font-size="13">reconciliation_run</text>
+  <text class="tsub"  x="968" y="460" font-size="10" text-anchor="end">ReconciliationRun</text>
+
+  <text class="pk"  x="612" y="490" font-size="10">PK</text><text class="col" x="642" y="490" font-size="10.5">id</text><text class="typ" x="968" y="490" font-size="10" text-anchor="end">BIGINT · IDENTITY</text>
+  <text class="col" x="642" y="508" font-size="10.5">ran_at</text><text class="typ" x="968" y="508" font-size="10" text-anchor="end">TIMESTAMP · NN</text>
+  <text class="col" x="642" y="526" font-size="10.5">settle_date</text><text class="typ" x="968" y="526" font-size="10" text-anchor="end">VARCHAR(8) · NN</text>
+  <text class="col" x="642" y="544" font-size="10.5">match_count</text><text class="typ" x="968" y="544" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <text class="col" x="642" y="562" font-size="10.5">mismatch_count</text><text class="typ" x="968" y="562" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <text class="col" x="642" y="580" font-size="10.5">ledger_only_count</text><text class="typ" x="968" y="580" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <text class="col" x="642" y="598" font-size="10.5">core_only_count</text><text class="typ" x="968" y="598" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <text class="col" x="642" y="616" font-size="10.5">unknown_resolved_count</text><text class="typ" x="968" y="616" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <text class="col" x="642" y="634" font-size="10.5">ledger_total</text><text class="typ" x="968" y="634" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <text class="col" x="642" y="652" font-size="10.5">core_total</text><text class="typ" x="968" y="652" font-size="10" text-anchor="end">INTEGER · NN</text>
+  <line class="sep" x1="600" y1="662" x2="980" y2="662"/>
+  <text class="sub" x="612" y="678" font-size="9.5">EOD 대사 1회 = 1행 — 불일치 4유형 건수 + UNKNOWN 자동 해소 건수</text>
+
+  <!-- 관계: idempotency_key.tran_id -> transaction_ledger.transaction_id -->
+  <path class="rel" d="M600 280 L490 280 L490 214 L452 214"/>
+  <polygon class="rlab" points="452,214 462,209 462,219"/>
+  <text class="rlab" x="527" y="238" font-size="9.5" text-anchor="middle">tran_id → transaction_id</text>
+  <text class="rlab" x="527" y="252" font-size="9.5" text-anchor="middle">멱등키 ↔ 원장 거래 매핑</text>
+  <text class="rlab" x="527" y="266" font-size="9.5" text-anchor="middle">(1 : 0..1 · 논리 참조, 물리 FK 없음)</text>
+
+  <!-- 관계: reconciliation_run.settle_date -> transaction_ledger -->
+  <path class="rel" d="M600 522 L490 522 L490 440 L452 440"/>
+  <polygon class="rlab" points="452,440 462,435 462,445"/>
+  <text class="rlab" x="530" y="480" font-size="9.5" text-anchor="middle">settle_date 기준</text>
+  <text class="rlab" x="530" y="494" font-size="9.5" text-anchor="middle">당일 원장 전량 대조</text>
+  <text class="rlab" x="530" y="508" font-size="9.5" text-anchor="middle">(1 : N · 논리 관계)</text>
+
+  <!-- 범례 -->
+  <rect class="card" x="70" y="540" width="380" height="96" rx="10"/>
+  <text class="title" x="82" y="564" font-size="11.5">범례</text>
+  <text class="sub" x="82" y="584" font-size="9.5"><tspan class="pk">PK</tspan> 기본키 · <tspan class="uk">UK</tspan> 유니크 제약 · <tspan class="fk">FK*</tspan> 논리 참조 · NN = NOT NULL</text>
+  <text class="sub" x="82" y="602" font-size="9.5">점선 = 값으로 잇는 논리 관계 — 물리 FK를 두지 않는다</text>
+  <text class="sub" x="82" y="616" font-size="9.5">(원장은 비동기 적재라 멱등키 시점에 원장 행이 아직 없을 수 있다)</text>
+  <text class="sub" x="82" y="630" font-size="9.5">물리 컬럼명은 Spring Boot 기본 네이밍(camelCase → snake_case)</text>
+</svg>
