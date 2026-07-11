@@ -3,7 +3,7 @@
   "titleEn": "DBTower — Heterogeneous DBMS Operations Platform",
   "description": "다섯 기종(MySQL·PostgreSQL·Oracle·SQL Server·MongoDB)을 하나의 인터페이스 뒤로 추상화한 DB 관제탑 — SQL도 JDBC도 없는 MongoDB를 플랫폼 코드 0줄 수정으로 얹어 그 추상화를 실측으로 증명했다.",
   "descriptionEn": "A DB control tower abstracting five engines (MySQL, PostgreSQL, Oracle, SQL Server, MongoDB) behind one interface — proven by bolting on MongoDB, which has neither SQL nor JDBC, with zero platform-code changes.",
-  "image": "/uploads/project/dbtower/cover.svg",
+  "image": "/uploads/project/dbtower/cover-icon.svg",
   "tags": [
     "Java",
     "Spring Boot",
