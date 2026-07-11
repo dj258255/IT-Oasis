@@ -38,7 +38,7 @@
   <text x="860" y="246" text-anchor="middle" fill="#8b949e" font-size="10.5">Spring Data JPA 3층위</text>
   <text x="860" y="264" text-anchor="middle" fill="#8b949e" font-size="10.5">대량 쓰기는 JDBC batch</text>
   <text x="860" y="288" text-anchor="middle" fill="#3fb950" font-size="10.5">Operator 지원 기종이라</text>
-  <text x="860" y="304" text-anchor="middle" fill="#3fb950" font-size="10.5">자기 자신도 관리 대상(도그푸딩)</text>
+  <text x="860" y="304" text-anchor="middle" fill="#3fb950" font-size="10.5">자기 자신도 관리 대상(자기 진단)</text>
   <line x1="740" y1="255" x2="770" y2="255" stroke="#8b949e" marker-end="url(#fa)"/>
 
   <!-- 경계 -->
