@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#1e2327"/>
+  <!-- outer arch (the 관문 / gateway) -->
+  <path d="M144 380 V236 a112 112 0 0 1 224 0 V380"
+        fill="none" stroke="#4ade80" stroke-width="38" stroke-linecap="round"/>
+  <!-- inner passage -->
+  <path d="M212 380 V262 a44 44 0 0 1 88 0 V380"
+        fill="none" stroke="#22d3ee" stroke-width="28" stroke-linecap="round"/>
+  <!-- traffic passing through -->
+  <circle cx="256" cy="296" r="15" fill="#f59e0b"/>
+  <circle cx="256" cy="346" r="11" fill="#f59e0b" opacity="0.55"/>
+</svg>
