@@ -66,6 +66,10 @@ seriesOrder: 0
 
 ![DBTower 상세 아키텍처 — 채널 3종 · 모듈 14개 · 관제 대상 5기종](/uploads/project/dbtower/architecture-detail.svg)
 
+채널 중 웹훅이 하는 일을 실물로 보면 이렇습니다. 자동 경보(회귀·이상·플랜 플립)가 플랫폼이 사람에게 미는 push라면, 웹 콘솔의 "DB팀에 문의" 버튼은 방향은 같되 트리거가 사람인 push예요 — 현재 패널의 쿼리·실행계획·규칙 지적·AI 분석을 embed 카드 한 장으로 묶어 같은 웹훅 어댑터로 보냅니다.
+
+![DB팀 문의 — Discord embed 실물. 요청자·인스턴스·쿼리(sql 코드블록)·실행계획·규칙 지적·AI 분석이 카드 한 장에](/uploads/project/dbtower/inquiry-discord.png)
+
 플랫폼 자신의 상태가 어디에 어떻게 쌓이는지도 스키마로 고정해 뒀습니다. 메타 DB의 단일 권위는 Flyway 마이그레이션(V1~V10)이고(엔티티는 ddl-auto=validate로 검증만), 표 9개의 관계는 아래 ERD와 같아요. 인스턴스 한 행을 지우면 자식 다섯 표가 FK ON DELETE CASCADE(V10)로 함께 정리되고, 감사 로그만 일부러 FK 없이 남습니다 — 기록은 삭제와 무관하게 보존해야 하니까요.
 
 ![DBTower 메타 DB ERD — Flyway V1~V10 기준 표 9개](/uploads/project/dbtower/erd.svg)
