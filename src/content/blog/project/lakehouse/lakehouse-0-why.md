@@ -66,19 +66,19 @@ seriesOrder: 0
 
 ## 2. 개선 아크 요약 — 단계별 (상황 → 만든 것 → 핵심 실측)
 
-시리즈는 "어떤 상황에서 무엇이 깨지고, 그래서 무엇을 만드는가"의 개선 아크로 씁니다. 전/후가 있는 건 전/후로 실측했어요.
+시리즈는 "어떤 상황에서 무엇이 깨지고, 그래서 무엇을 만드는가"의 개선 아크로 씁니다. 전/후가 있는 건 전/후로 실측했어요. 표의 단계 번호는 저장소 [ROADMAP](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/ROADMAP.md)의 아크 번호라서 블로그 편 번호와 다릅니다 — 열 단계를 본편 여섯 편(1~6편)으로 묶었고, 각 행에 해당 편을 링크했어요. 4단계(Serve)는 반쪽 데이터 위 서빙을 피하려 7단계(대시보드)에서 함께 구현해 표에선 7단계 행에 합쳤습니다.
 
 | 단계 | 상황 | 만든 것 | 핵심 실측 |
 |---|---|---|---|
-| 1 [EL](/blog/project/lakehouse/lakehouse-1-contract-and-load) | 6일 뒤 삭제 전 안전하게 내려야 | 인덱스 선두를 타는 인스턴스별 추출 + 파티션 통째 덮어쓰기 | 원천·적재·조회 **3자 일치**, 같은 날짜 2회 실행에 79,894행·오브젝트 6 불변 |
-| 3 [변환](/blog/project/lakehouse/lakehouse-2-transform-and-gate) | 누적값 raw로는 "느려진 쿼리"에 답 못 함 | 하루 first-vs-last 차분 + `GREATEST(0,…)` 리셋 클램프 | 지문 충돌 12,743키를 SUM으로 접고, 순리셋 219그레인을 0에 클램프(음수 0건) |
-| 4 [품질 게이트](/blog/project/lakehouse/lakehouse-2-transform-and-gate) | 반쪽 파티션 위 랭킹이 조용히 오답 | reconciliation·completeness·freshness·스키마 드리프트 4축 fail-closed | inst 3 파티션(20,158행) 삭제 주입 → 2축 동시 FAIL, **dbt 미실행(exit 2)** |
-| 5 [DuckLake](/blog/project/lakehouse/lakehouse-3-ducklake-and-ops) | 덮어쓰기만으론 ACID·타임트래블 없음 | PG 카탈로그 + S3 데이터 테이블 포맷 | 과거 버전 행수·행 값 복원(0.55→1000.55), ROLLBACK로 229,153 원복 |
-| 6 [운영 경화](/blog/project/lakehouse/lakehouse-3-ducklake-and-ops) | 막았는데 아무도 모름 + transform이 수동 | 컨테이너 내 dbt e2e·webhook·retry·CHECKPOINT | 3태스크 한 컨테이너 success, CHECKPOINT 스냅샷 **11→2**(행수 불변) |
-| 7 [대시보드](/blog/project/lakehouse/lakehouse-4-dashboard) | 마트는 있는데 소비자가 없음 | Metabase가 DuckLake를 read-only로 | DuckDB 파일 직결 실격 판정, 악화 랭킹 instance 8 **+149.1%** 3자 대조 |
-| 8 [감사 소탕](/blog/project/lakehouse/lakehouse-5-audit-and-trust) | 장치가 자기 원칙을 자신엔 안 씀 | 아카이브 자기파괴 가드·게이트 인덱스·발행 원자성 | 게이트 Seq Scan **332ms → Index 20ms**, pytest 35 |
-| 9 [신뢰](/blog/project/lakehouse/lakehouse-5-audit-and-trust) | 테스트는 로컬 자산, 침묵은 못 잡음 | CI 3관문·deadman heartbeat·dbt contracts | 30h 침묵 경보 발화, 계약 위반 주입 시 **빌드 차단**(data type mismatch) |
-| 10 [규모](/blog/project/lakehouse/lakehouse-6-scale-and-serve) | 며칠치로는 "버틴다"를 증명 못 함 | 365dt 합성 → 증분 전환·롤링 윈도우·운영 대시보드 | fct 전체 재빌드 **407.62s → 4s**, 파일 평균 177KB(128MB 타깃의 1/741) |
+| 1 EL — [1편](/blog/project/lakehouse/lakehouse-1-contract-and-load) | 6일 뒤 삭제 전 안전하게 내려야 | 인덱스 선두를 타는 인스턴스별 추출 + 파티션 통째 덮어쓰기 | 원천·적재·조회 **3자 일치**, 같은 날짜 2회 실행에 79,894행·오브젝트 6 불변 |
+| 2 변환 — [2편](/blog/project/lakehouse/lakehouse-2-transform-and-gate) | 누적값 raw로는 "느려진 쿼리"에 답 못 함 | 하루 first-vs-last 차분 + `GREATEST(0,…)` 리셋 클램프 | 지문 충돌 12,743키를 SUM으로 접고, 순리셋 219그레인을 0에 클램프(음수 0건) |
+| 3 품질 게이트 — [2편](/blog/project/lakehouse/lakehouse-2-transform-and-gate) | 반쪽 파티션 위 랭킹이 조용히 오답 | reconciliation·completeness·freshness·스키마 드리프트 4축 fail-closed | inst 3 파티션(20,158행) 삭제 주입 → 2축 동시 FAIL, **dbt 미실행(exit 2)** |
+| 5 DuckLake — [3편](/blog/project/lakehouse/lakehouse-3-ducklake-and-ops) | 덮어쓰기만으론 ACID·타임트래블 없음 | PG 카탈로그 + S3 데이터 테이블 포맷 | 과거 버전 행수·행 값 복원(0.55→1000.55), ROLLBACK로 229,153 원복 |
+| 6 운영 경화 — [3편](/blog/project/lakehouse/lakehouse-3-ducklake-and-ops) | 막았는데 아무도 모름 + transform이 수동 | 컨테이너 내 dbt e2e·webhook·retry·CHECKPOINT | 3태스크 한 컨테이너 success, CHECKPOINT 스냅샷 **11→2**(행수 불변) |
+| 4·7 대시보드 — [4편](/blog/project/lakehouse/lakehouse-4-dashboard) | 마트는 있는데 소비자가 없음 | Metabase가 DuckLake를 read-only로 | DuckDB 파일 직결 실격 판정, 악화 랭킹 instance 8 **+149.1%** 3자 대조 |
+| 8 감사 소탕 — [5편](/blog/project/lakehouse/lakehouse-5-audit-and-trust) | 장치가 자기 원칙을 자신엔 안 씀 | 아카이브 자기파괴 가드·게이트 인덱스·발행 원자성 | 게이트 Seq Scan **332ms → Index 20ms**, pytest 35 |
+| 9 신뢰 — [5편](/blog/project/lakehouse/lakehouse-5-audit-and-trust) | 테스트는 로컬 자산, 침묵은 못 잡음 | CI 3관문·deadman heartbeat·dbt contracts | 30h 침묵 경보 발화, 계약 위반 주입 시 **빌드 차단**(data type mismatch) |
+| 10 규모 — [6편](/blog/project/lakehouse/lakehouse-6-scale-and-serve) | 며칠치로는 "버틴다"를 증명 못 함 | 365dt 합성 → 증분 전환·롤링 윈도우·운영 대시보드 | fct 전체 재빌드 **407.62s → 4s**, 파일 평균 177KB(128MB 타깃의 1/741) |
 
 아래에서 각 아크의 핵심만 짚습니다.
 
