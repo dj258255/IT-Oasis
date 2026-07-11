@@ -56,6 +56,10 @@ seriesOrder: 0
 
 즉 이 프로젝트는 **버려지는 관측 데이터의 두 번째 삶**입니다. DBTower가 7일 만에 버리는 데이터를, 분석계가 받아 오래 기억하는 거죠. 스택은 2026년 기준 소규모 팀의 정석 계보(Airflow + dbt + Parquet/객체스토리지 + DuckDB + DuckLake + Metabase)이고, 각 선택의 근거는 뒤에서 수치로 답합니다.
 
+단계 관점으로 다시 그리면 셋으로 접힙니다. 추출·적재(EL)가 원천을 다치지 않게 내리고, 게이트와 dbt가 검증·변환을 맡고, DuckLake와 Metabase가 발행·서빙·감시를 맡아요. 각 단에 그 단만의 안전장치(자기파괴 가드, fail-closed 게이트, deadman)가 붙어 있는 게 이 파이프라인의 성격입니다.
+
+![파이프라인 흐름 — 추출·적재, 검증·변환, 발행·서빙·감시 3단과 각 단의 안전장치](/uploads/project/lakehouse/pipeline-flow.svg)
+
 구조를 한 단계 더 뜯어보면 이렇습니다. 컨테이너 경계와 포트(원천 PG 15432 · MinIO 19000 · Airflow 8080 · Metabase 13001), 다섯 태스크 체인 `offload → quality_gate → transform → publish → heartbeat`, 품질 FAIL 시 webhook으로 빠지는 분기, 성공 신호(heartbeat)를 역방향으로 감시하는 deadman, 주간 CHECKPOINT 유지보수까지 — 위 그림의 상세판입니다.
 
 ![상세 서버/데이터 아키텍처 — Airflow 태스크 체인과 FAIL 분기, MinIO 경로 레이아웃, DuckLake 카탈로그(PG)/데이터(S3) 분리, Metabase read-only](/uploads/project/lakehouse/architecture-detail.svg)
