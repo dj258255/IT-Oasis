@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#0b1220"/>
+  <defs><clipPath id="hexclip"><polygon points="0,-136 118,-68 118,68 0,136 -118,68 -118,-68"/></clipPath></defs>
+  <g transform="translate(600,458) scale(1.35)">
+    <g clip-path="url(#hexclip)">
+      <rect x="-118" y="18" width="236" height="120" fill="#0891b2"/>
+      <rect x="-118" y="-26" width="236" height="42" fill="#22d3ee"/>
+      <rect x="-118" y="-70" width="236" height="42" fill="#67e8f9"/>
+    </g>
+    <polygon points="0,-136 118,-68 118,68 0,136 -118,68 -118,-68" fill="none" stroke="#22d3ee" stroke-width="26" stroke-linejoin="round"/>
+    <circle cx="0" cy="-160" r="20" fill="#34d399"/>
+  </g>
+</svg>
