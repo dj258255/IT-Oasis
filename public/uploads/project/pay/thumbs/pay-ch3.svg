@@ -1,0 +1,20 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <defs>
+    <marker id="am" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#e67e22"/></marker>
+    <marker id="amg" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#94a3b8"/></marker>
+    <marker id="amr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#e74c3c"/></marker>
+  </defs>
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#e67e22"/>
+  <rect x="820" y="120" width="370" height="400" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <path d="M 870 400 A 130 130 0 0 1 1130 400" fill="none" stroke="#e2e8f0" stroke-width="22" stroke-linecap="round"/>
+  <path d="M 870 400 A 130 130 0 0 1 1000 270" fill="none" stroke="#e67e22" stroke-width="22" stroke-linecap="round"/>
+  <line x1="1000" y1="400" x2="920" y2="330" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="1000" cy="400" r="12" fill="#1e293b"/>
+  <text x="1000" y="450" text-anchor="middle" font-size="22" font-weight="800" fill="#e67e22">p95 3.08s → 52ms</text>
+  <text x="72" y="120" font-size="19" font-weight="700" fill="#e67e22" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#e67e22" opacity="0.92">03</text>
+  <text x="72" y="330" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">성능·취소·보상</text>
+  <text x="72" y="410" font-size="19" fill="#64748b">부하테스트가 짚은 병목 · 포인트 우선 환불 · 망취소</text>
+  <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · Java 21 · MySQL · 실패 설계와 정합성 학습기</text>
+</svg>

@@ -1,0 +1,230 @@
+<svg viewBox="0 0 1200 880" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <defs>
+    <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/></filter>
+    <marker id="one" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto"><path d="M11 0 L11 10 M6 0 L6 10" stroke="#64748b" stroke-width="1.4" fill="none"/></marker>
+    <marker id="many" markerWidth="14" markerHeight="12" refX="13" refY="6" orient="auto"><path d="M1 6 L13 0 M1 6 L13 12 M1 6 L13 6" stroke="#64748b" stroke-width="1.3" fill="none"/></marker>
+  </defs>
+
+  <rect width="1200" height="880" rx="12" fill="#f8fafb"/>
+
+  <text x="600" y="34" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">pay ERD — 핵심 테이블과 관계</text>
+  <text x="600" y="53" text-anchor="middle" font-size="11" fill="#94a3b8">MySQL 8.4 · Flyway V1~V18 · 33 테이블 중 자금 흐름 핵심만 표기 · 금액은 KRW 정수(BIGINT)</text>
+
+  <!-- ═══ 주문 그룹 ═══ -->
+  <rect x="36" y="76" width="280" height="230" rx="12" fill="#f0f9f1" stroke="#27ae60" stroke-width="1" opacity="0.85"/>
+  <text x="52" y="98" font-size="11" font-weight="700" fill="#1d7a3e">주문</text>
+
+  <rect x="52" y="108" width="248" height="112" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.6" filter="url(#sh)"/>
+  <rect x="52" y="108" width="248" height="22" rx="8" fill="#27ae60"/>
+  <text x="176" y="123" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">orders</text>
+  <text x="64" y="145" font-size="9.5" fill="#334155">order_no  UK · ULID (PG orderId)</text>
+  <text x="64" y="161" font-size="9.5" fill="#334155">user_id → members.id</text>
+  <text x="64" y="177" font-size="9.5" fill="#334155">total_amount  서버 검증 기준값</text>
+  <text x="64" y="193" font-size="9.5" fill="#334155">status  주문 상태머신</text>
+  <text x="64" y="209" font-size="9.5" fill="#334155">version  낙관적 락</text>
+
+  <rect x="52" y="230" width="116" height="60" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="110" y="252" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">order_items</text>
+  <text x="110" y="268" text-anchor="middle" font-size="8.5" fill="#64748b">product_id · qty</text>
+  <text x="110" y="281" text-anchor="middle" font-size="8.5" fill="#64748b">unit_price</text>
+
+  <rect x="184" y="230" width="116" height="60" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="242" y="252" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">products · stock</text>
+  <text x="242" y="268" text-anchor="middle" font-size="8.5" fill="#64748b">재고 조건부 UPDATE</text>
+  <text x="242" y="281" text-anchor="middle" font-size="8.5" fill="#64748b">quantity ≥ 0 보장</text>
+
+  <!-- ═══ 결제 그룹 ═══ -->
+  <rect x="340" y="76" width="300" height="360" rx="12" fill="#fef7ec" stroke="#e67e22" stroke-width="1" opacity="0.9"/>
+  <text x="356" y="98" font-size="11" font-weight="700" fill="#b45309">결제</text>
+
+  <rect x="356" y="108" width="268" height="128" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.6" filter="url(#sh)"/>
+  <rect x="356" y="108" width="268" height="22" rx="8" fill="#e67e22"/>
+  <text x="490" y="123" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">payments</text>
+  <text x="368" y="145" font-size="9.5" fill="#334155">order_id  FK → orders</text>
+  <text x="368" y="161" font-size="9.5" fill="#334155">payment_key  UK · PG 발급</text>
+  <text x="368" y="177" font-size="9.5" fill="#334155">amount · balance_amount(취소 후 잔액)</text>
+  <text x="368" y="193" font-size="9.5" fill="#334155">status  DONE·CANCELED·UNKNOWN…</text>
+  <text x="368" y="209" font-size="9.5" fill="#334155">pg_provider  멀티 PG 라우팅</text>
+  <text x="368" y="225" font-size="9.5" fill="#334155">method  CARD·POINT·WALLET·VIRTUAL</text>
+
+  <rect x="356" y="246" width="126" height="56" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="419" y="266" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">payment_history</text>
+  <text x="419" y="281" text-anchor="middle" font-size="8.5" fill="#64748b">상태 전이 이력</text>
+  <text x="419" y="293" text-anchor="middle" font-size="8.5" fill="#64748b">append-only</text>
+
+  <rect x="498" y="246" width="126" height="56" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="561" y="266" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">idempotency_keys</text>
+  <text x="561" y="281" text-anchor="middle" font-size="8.5" fill="#64748b">유니크 제약 = 처리권</text>
+  <text x="561" y="293" text-anchor="middle" font-size="8.5" fill="#64748b">TTL 15일 · purge 배치</text>
+
+  <rect x="356" y="312" width="126" height="56" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="419" y="332" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">compensation_tasks</text>
+  <text x="419" y="347" text-anchor="middle" font-size="8.5" fill="#64748b">망취소 보상 큐</text>
+  <text x="419" y="359" text-anchor="middle" font-size="8.5" fill="#64748b">재시도 · DLQ</text>
+
+  <rect x="498" y="312" width="126" height="56" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="561" y="332" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">virtual_accounts</text>
+  <text x="561" y="347" text-anchor="middle" font-size="8.5" fill="#64748b">입금 대기 · 만료</text>
+  <text x="561" y="359" text-anchor="middle" font-size="8.5" fill="#64748b">billing_keys(구독)</text>
+
+  <rect x="356" y="378" width="268" height="46" rx="8" fill="#fff" stroke="#e67e22" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="490" y="397" text-anchor="middle" font-size="10" font-weight="700" fill="#1e293b">webhook_events · processed_events</text>
+  <text x="490" y="412" text-anchor="middle" font-size="8.5" fill="#64748b">서명 검증 후 저장 → 비동기 해석 · 소비 멱등 가드</text>
+
+  <!-- ═══ 원장 그룹 ═══ -->
+  <rect x="664" y="76" width="250" height="230" rx="12" fill="#f3eefb" stroke="#9b59b6" stroke-width="1" opacity="0.9"/>
+  <text x="680" y="98" font-size="11" font-weight="700" fill="#7c3aed">원장 (복식부기)</text>
+
+  <rect x="680" y="108" width="218" height="80" rx="8" fill="#fff" stroke="#9b59b6" stroke-width="1.6" filter="url(#sh)"/>
+  <rect x="680" y="108" width="218" height="22" rx="8" fill="#9b59b6"/>
+  <text x="789" y="123" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">ledger_transactions</text>
+  <text x="692" y="145" font-size="9.5" fill="#334155">order_no · type (PAYMENT·CANCEL…)</text>
+  <text x="692" y="161" font-size="9.5" fill="#334155">분개 단위 — 취소는 역분개로</text>
+  <text x="692" y="177" font-size="9.5" fill="#334155">idempotent by (order_no, type)</text>
+
+  <rect x="680" y="198" width="218" height="96" rx="8" fill="#fff" stroke="#9b59b6" stroke-width="1.6" filter="url(#sh)"/>
+  <rect x="680" y="198" width="218" height="22" rx="8" fill="#9b59b6"/>
+  <text x="789" y="213" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">ledger_entries</text>
+  <text x="692" y="235" font-size="9.5" fill="#334155">transaction_id  FK</text>
+  <text x="692" y="251" font-size="9.5" fill="#334155">account  CASH·REVENUE·POINT…</text>
+  <text x="692" y="267" font-size="9.5" fill="#334155">direction  DEBIT / CREDIT</text>
+  <text x="692" y="283" font-size="9.5" fill="#334155">불변식: Σ차변 = Σ대변</text>
+
+  <!-- ═══ 정산·대사 그룹 ═══ -->
+  <rect x="938" y="76" width="226" height="360" rx="12" fill="#eef6fb" stroke="#4a8db8" stroke-width="1" opacity="0.9"/>
+  <text x="954" y="98" font-size="11" font-weight="700" fill="#1e5f8a">정산 · 대사</text>
+
+  <rect x="954" y="108" width="194" height="80" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.6" filter="url(#sh)"/>
+  <rect x="954" y="108" width="194" height="22" rx="8" fill="#4a8db8"/>
+  <text x="1051" y="123" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">settlements</text>
+  <text x="966" y="145" font-size="9.5" fill="#334155">정산일 · 상태 (CREATED→PAID_OUT)</text>
+  <text x="966" y="161" font-size="9.5" fill="#334155">fee(bps) + fee_vat(10%)</text>
+  <text x="966" y="177" font-size="9.5" fill="#334155">지급예정일 = +2영업일</text>
+
+  <rect x="954" y="198" width="194" height="70" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="1051" y="220" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">settlement_items</text>
+  <text x="1051" y="236" text-anchor="middle" font-size="8.5" fill="#64748b">결제별 정산 라인 · 릴리스일 집계</text>
+  <text x="1051" y="250" text-anchor="middle" font-size="8.5" fill="#64748b">부분취소 = 잔액 세팅(멱등)</text>
+
+  <rect x="954" y="278" width="194" height="70" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="1051" y="300" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">reconciliation_results</text>
+  <text x="1051" y="316" text-anchor="middle" font-size="8.5" fill="#64748b">내부 vs PG 파일 대조 4분류</text>
+  <text x="1051" y="330" text-anchor="middle" font-size="8.5" fill="#64748b">미해결 → 수기 확정 큐</text>
+
+  <rect x="954" y="358" width="194" height="56" rx="8" fill="#fff" stroke="#4a8db8" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="1051" y="378" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">internal_records</text>
+  <text x="1051" y="394" text-anchor="middle" font-size="8.5" fill="#64748b">대사용 내부 기록 스냅샷</text>
+
+  <!-- ═══ 회원·에스크로·분쟁 그룹 ═══ -->
+  <rect x="36" y="330" width="280" height="290" rx="12" fill="#fdf2f4" stroke="#e74c3c" stroke-width="1" opacity="0.85"/>
+  <text x="52" y="352" font-size="11" font-weight="700" fill="#b91c1c">회원 · 에스크로 · 분쟁</text>
+
+  <rect x="52" y="362" width="248" height="70" rx="8" fill="#fff" stroke="#e74c3c" stroke-width="1.4" filter="url(#sh)"/>
+  <rect x="52" y="362" width="248" height="22" rx="8" fill="#e74c3c"/>
+  <text x="176" y="377" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">members</text>
+  <text x="64" y="399" font-size="9.5" fill="#334155">email UK · password(BCrypt) · role</text>
+  <text x="64" y="415" font-size="9.5" fill="#334155">숫자 id = 기존 userId 계약 유지</text>
+
+  <rect x="52" y="442" width="248" height="76" rx="8" fill="#fff" stroke="#e74c3c" stroke-width="1.4" filter="url(#sh)"/>
+  <rect x="52" y="442" width="248" height="22" rx="8" fill="#e74c3c"/>
+  <text x="176" y="457" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">escrow_holds</text>
+  <text x="64" y="479" font-size="9.5" fill="#334155">order_no UK · amount</text>
+  <text x="64" y="495" font-size="9.5" fill="#334155">HELD → RELEASED(구매확정)</text>
+  <text x="64" y="511" font-size="9.5" fill="#334155">        → REFUNDED(취소)</text>
+
+  <rect x="52" y="528" width="248" height="80" rx="8" fill="#fff" stroke="#e74c3c" stroke-width="1.4" filter="url(#sh)"/>
+  <rect x="52" y="528" width="248" height="22" rx="8" fill="#e74c3c"/>
+  <text x="176" y="543" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">disputes</text>
+  <text x="64" y="565" font-size="9.5" fill="#334155">payment_key · dispute_key UK</text>
+  <text x="64" y="581" font-size="9.5" fill="#334155">상태기계 OPEN→UNDER_REVIEW→WON/LOST</text>
+  <text x="64" y="597" font-size="9.5" fill="#334155">LOST → 원장 역분개 · version 낙관 락</text>
+
+  <!-- ═══ 지갑·포인트 그룹 ═══ -->
+  <rect x="340" y="456" width="300" height="260" rx="12" fill="#f0f9f1" stroke="#27ae60" stroke-width="1" opacity="0.85"/>
+  <text x="356" y="478" font-size="11" font-weight="700" fill="#1d7a3e">결제수단 잔액 — 덮어쓰지 않고 이력으로</text>
+
+  <rect x="356" y="488" width="130" height="64" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="421" y="508" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">wallet_accounts</text>
+  <text x="421" y="524" text-anchor="middle" font-size="8.5" fill="#64748b">balance · 기명한도</text>
+  <text x="421" y="538" text-anchor="middle" font-size="8.5" fill="#64748b">전금법 200만원</text>
+
+  <rect x="502" y="488" width="122" height="64" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="563" y="508" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">point_accounts</text>
+  <text x="563" y="524" text-anchor="middle" font-size="8.5" fill="#64748b">balance</text>
+  <text x="563" y="538" text-anchor="middle" font-size="8.5" fill="#64748b">saveAndFlush 정책</text>
+
+  <rect x="356" y="562" width="130" height="72" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="421" y="582" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">wallet_transactions</text>
+  <text x="421" y="598" text-anchor="middle" font-size="8.5" fill="#64748b">CHARGE·USE</text>
+  <text x="421" y="612" text-anchor="middle" font-size="8.5" fill="#64748b">RESTORE(보상·멱등)</text>
+  <text x="421" y="626" text-anchor="middle" font-size="8.5" fill="#64748b">REFUND(취소)</text>
+
+  <rect x="502" y="562" width="122" height="72" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="563" y="582" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">point_histories</text>
+  <text x="563" y="598" text-anchor="middle" font-size="8.5" fill="#64748b">EARN·USE·REFUND</text>
+  <text x="563" y="612" text-anchor="middle" font-size="8.5" fill="#64748b">EARN_REVERSAL(회수)</text>
+  <text x="563" y="626" text-anchor="middle" font-size="8.5" fill="#64748b">append-only 합산</text>
+
+  <rect x="356" y="644" width="268" height="60" rx="8" fill="#fff" stroke="#27ae60" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="490" y="666" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">subscriptions · dunning_attempts</text>
+  <text x="490" y="682" text-anchor="middle" font-size="8.5" fill="#64748b">빌링키 자동결제 · 실패 시 재시도 일정(dunning) · 만료 해지</text>
+
+  <!-- ═══ 인프라 그룹 ═══ -->
+  <rect x="664" y="456" width="500" height="260" rx="12" fill="#f1f5f9" stroke="#64748b" stroke-width="1" opacity="0.9"/>
+  <text x="680" y="478" font-size="11" font-weight="700" fill="#475569">이벤트 · 운영 인프라</text>
+
+  <rect x="680" y="488" width="220" height="70" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="790" y="510" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">event_publication</text>
+  <text x="790" y="526" text-anchor="middle" font-size="8.5" fill="#64748b">Modulith Outbox · at-least-once</text>
+  <text x="790" y="540" text-anchor="middle" font-size="8.5" fill="#64748b">미완료 재발행 · 완료분 정리 배치</text>
+
+  <rect x="920" y="488" width="228" height="70" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="1034" y="510" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">dead_letters</text>
+  <text x="1034" y="526" text-anchor="middle" font-size="8.5" fill="#64748b">소비 실패 격리 · 어드민 재처리</text>
+  <text x="1034" y="540" text-anchor="middle" font-size="8.5" fill="#64748b">죽은 이벤트가 도메인 모순을 가리킴</text>
+
+  <rect x="680" y="568" width="220" height="66" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="790" y="590" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">force_cancel_requests</text>
+  <text x="790" y="606" text-anchor="middle" font-size="8.5" fill="#64748b">강제취소 maker-checker</text>
+  <text x="790" y="620" text-anchor="middle" font-size="8.5" fill="#64748b">요청자 ≠ 승인자 2인 승인</text>
+
+  <rect x="920" y="568" width="228" height="66" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.4" filter="url(#sh)"/>
+  <text x="1034" y="590" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">fraud_reviews · audit_logs</text>
+  <text x="1034" y="606" text-anchor="middle" font-size="8.5" fill="#64748b">FDS 사후 탐지 REVIEW 큐</text>
+  <text x="1034" y="620" text-anchor="middle" font-size="8.5" fill="#64748b">어드민 행위 감사 추적</text>
+
+  <rect x="680" y="644" width="468" height="60" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.2" filter="url(#sh)"/>
+  <text x="914" y="666" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e293b">cash_receipts</text>
+  <text x="914" y="682" text-anchor="middle" font-size="8.5" fill="#64748b">현금영수증 발급·취소 연쇄 — PaymentCanceledEvent 구독으로 자동 취소</text>
+
+  <!-- ═══ 관계선 ═══ -->
+  <!-- orders 1—N order_items -->
+  <line x1="110" y1="220" x2="110" y2="230" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+  <!-- orders 1—N payments -->
+  <line x1="300" y1="164" x2="356" y2="164" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+  <text x="328" y="158" text-anchor="middle" font-size="8" fill="#94a3b8">1:N</text>
+  <!-- payments — payment_history -->
+  <line x1="419" y1="236" x2="419" y2="246" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+  <!-- payments — compensation -->
+  <line x1="470" y1="236" x2="430" y2="312" stroke="#64748b" stroke-width="1" stroke-dasharray="3 3"/>
+  <!-- ledger tx 1—N entries -->
+  <line x1="789" y1="188" x2="789" y2="198" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+  <!-- settlements 1—N items -->
+  <line x1="1051" y1="188" x2="1051" y2="198" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+  <!-- members — orders -->
+  <line x1="140" y1="362" x2="140" y2="306" stroke="#e74c3c" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="146" y="340" font-size="8" fill="#e74c3c">user_id</text>
+  <!-- payments — disputes -->
+  <line x1="356" y1="200" x2="300" y2="556" stroke="#e74c3c" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="322" y="470" font-size="8" fill="#e74c3c">payment_key</text>
+  <!-- wallet accounts — tx -->
+  <line x1="421" y1="552" x2="421" y2="562" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+  <line x1="563" y1="552" x2="563" y2="562" stroke="#64748b" stroke-width="1.3" marker-start="url(#one)" marker-end="url(#many)"/>
+
+  <!-- 푸터 -->
+  <rect x="36" y="736" width="1128" height="120" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1"/>
+  <text x="600" y="762" text-anchor="middle" font-size="12" font-weight="700" fill="#1e5f8a">스키마 설계 원칙</text>
+  <text x="600" y="786" text-anchor="middle" font-size="10.5" fill="#334155">돈은 BIGINT 정수(KRW) — 부동소수 금지, 수수료율은 bps 정수 · 잔액성 데이터는 덮어쓰기 대신 append-only 이력 + 합산</text>
+  <text x="600" y="808" text-anchor="middle" font-size="10.5" fill="#334155">멱등은 DB 유니크 제약이 최종 방어선(INSERT 성공 = 처리권) · 상태는 상태머신으로만 전이, 이력 테이블이 전이를 증언</text>
+  <text x="600" y="830" text-anchor="middle" font-size="10.5" fill="#334155">전체 33 테이블 정의와 각 설계 결정의 이유는 docs/09-ERD-설계.md 참고</text>
+</svg>

@@ -12,6 +12,7 @@ tags:
   - Distributed Systems
   - Learning
 category: study/pay
+coverImage: "/uploads/project/pay/thumbs/pay-0-overview.svg"
 draft: false
 series: "결제 시스템 만들기"
 seriesOrder: 0
@@ -31,6 +32,8 @@ pay는 주문 → 승인 → 취소 → 정산 → 대사까지 결제의 전체
 
 모듈형 모놀리스를 골랐다. 1인 학습 프로젝트에서 MSA로 시작하면 서비스별 배포와 네트워크라는 인프라 복잡도가 정작 배우려던 도메인 설계를 덮어버린다. [Spring Modulith](/blog/project/pay/pay-ch1-payment-core) 위에서 패키지 하나가 모듈 하나이고, 모듈 사이는 직접 호출 대신 도메인 이벤트로만 잇는다.
 
+![pay 아키텍처 — 유입·인증(대기열·JWT) → 결제 코어(체크아웃 사가·PG 어댑터·결제수단) → Outbox 도메인 이벤트 → 구독자(원장·에스크로·정산·대사·분쟁·FDS) → MySQL·Redis·Kafka·복구 배치](/uploads/project/pay/diagrams/architecture.svg)
+
 이 경계는 문서가 아니라 CI가 지킨다. `ModularityTests`가 모듈 규칙을 검증해서 경계를 깨면 빌드가 깨진다. 결제 이벤트는 나중에 [Kafka로 외부화](/blog/project/pay/pay-ch4-arch-events-ops)해 모놀리스 안에서만 울리던 이벤트를 프로세스 밖 소비자까지 배달했고, 그 소비자를 실제로 붙여보다 이중 인코딩 문제를 만나 고친 기록이 [이벤트 소비 편](/blog/project/pay/pay-ch7-consume-align-harden)에 있다.
 
 ## 결제 코어 — 무엇을 신뢰하는가
@@ -38,6 +41,8 @@ pay는 주문 → 승인 → 취소 → 정산 → 대사까지 결제의 전체
 검증 로직보다 신뢰 경계가 먼저였다. 결제 금액을 클라이언트가 보내는 순간 가격 조작이 가능해지므로, 서버가 주문을 근거로 금액을 계산하고 클라이언트 값은 대조용으로만 쓴다. 주문·결제는 상태머신으로 관리해 허용되지 않은 전이(`PAID`가 아닌 주문의 취소 같은)를 코드 레벨에서 거부한다.
 
 중복 결제는 `Idempotency-Key`와 DB 유니크 제약으로 막는다. INSERT에 성공한 요청만 처리권을 가지므로 "따닥" 연타에도 결제는 한 번만 일어난다. 자세한 구현은 [결제 코어와 실패 설계](/blog/project/pay/pay-ch1-payment-core)에 있다.
+
+![결제 플로우 데모 — 주문 생성부터 승인·취소까지 데모 콘솔에서 눌러보는 화면](/uploads/project/pay/demo/demo-checkout.png)
 
 ## 실패 설계 — 타임아웃은 실패가 아니다
 
@@ -53,13 +58,19 @@ pay는 주문 → 승인 → 취소 → 정산 → 대사까지 결제의 전체
 
 잔액을 숫자 하나로 덮어쓰지 않는다. 모든 자금 이동을 복식부기 분개로 남기고, 차변 합과 대변 합이 항상 같아야 한다는 불변식이 곧 돈이 안 샜다는 증명이 된다. 흔한 결제 예제가 거의 안 가는 곳이라 [결제 코어 편](/blog/project/pay/pay-ch1-payment-core) 후반을 통째로 여기에 썼다.
 
+![pay ERD — 주문·결제·원장(복식부기)·정산/대사·회원/에스크로/분쟁·월렛/포인트·이벤트 인프라 테이블 그룹과 관계](/uploads/project/pay/diagrams/erd.svg)
+
 정산은 하루치 결제를 집계해 수수료와 부가세를 떼고 판매자 지급액과 지급예정일을 계산한다. 처음엔 총액의 3%만 떼고 있었고, 부가세와 지급예정일이 빠져 있었다. 더 아픈 버그는 집계 키가 승인일이던 것. 구매확정으로 릴리스된 결제가 승인일 기준으로 묶이면서 정산이 조용히 가맹점에 돈을 안 주고 있었다. 이 두 사건은 [정산 정확성 편](/blog/project/pay/pay-ch8-settlement-pg-webhook)에 있다. 대사는 내 기록과 PG 정산 파일을 대조해 네 가지로 분류하고, 자동으로 못 맞춘 건은 사람이 확정하는 큐로 넘긴다. 파일을 넣을 입구가 없어 [업로드 API로 루프를 닫은 것](/blog/project/pay/pay-ch6-security-queue)까지가 한 세트다.
+
+![정산 데모 — 총액 30,000원에서 수수료 810 + VAT 81을 떼고 29,109원, 지급예정일은 2영업일 뒤](/uploads/project/pay/demo/demo-settlement.png)
 
 ## 성능과 동시성 — 감이 아니라 실측
 
 재고 차감 락은 세 가지를 같은 부하로 돌려 골랐다. 비관적 락, 낙관적 락, 조건부 UPDATE를 비교해 이중 차감과 마이너스 재고가 0건인지, 처리량이 어떤지 쟀고 조건부 UPDATE가 이겼다. 실측 수치는 [결제 코어 편](/blog/project/pay/pay-ch1-payment-core)에 있다.
 
 시스템 전체를 처음 부하테스트에 올렸을 때는 p95가 3초를 넘겼다. 병목을 추적하니 요청당 BCrypt 해싱이었고, JWT 인증으로 걷어낸 전후 수치를 [성능·취소·보상 편](/blog/project/pay/pay-ch3-perf-cancel)에 남겼다. 폭주에는 두 겹으로 대비했다. 한정판 오픈처럼 유입 자체가 몰리는 상황은 Redis Sorted Set 선착순 대기열로 줄 세우고, 그걸 뚫고 오는 초과 요청은 429로 쳐내 성공한 요청의 속도를 지킨다. 둘 다 [보안·대기열·유입제어 편](/blog/project/pay/pay-ch6-security-queue)에 있다.
+
+![폭주 제어 데모 — rate limit 429로 초과 유입을 쳐내고 대기열 게이트로 줄을 세우는 화면](/uploads/project/pay/demo/demo-overload.png)
 
 ## 취소 — 결제의 거울상이 아니다
 
@@ -90,9 +101,15 @@ pay는 주문 → 승인 → 취소 → 정산 → 대사까지 결제의 전체
 
 자동 복구가 포기하는 순간은 반드시 온다. 그때 사람이 이어받을 도구를 만들었다. 미확정 결제 강제 조회, 보상 재처리, 수기 대사 확정, 그리고 강제취소에는 한 사람이 남의 돈을 다루지 못하게 maker-checker 2인 승인을 걸었다. [어드민 편](/blog/project/pay/pay-ch4-arch-events-ops)과 [운영 완성 편](/blog/project/pay/pay-ch5-runtime-truths)에 나눠 담았다.
 
+![운영 콘솔 데모 — 미확정 결제·보상 재처리·대사 큐를 다루는 백오피스 화면](/uploads/project/pay/demo/demo-admin.png)
+
+![maker-checker 데모 — 강제취소를 요청한 사람이 스스로 승인하려 하면 차단되는 화면](/uploads/project/pay/demo/demo-maker-checker.png)
+
 돈을 바로 주지 않는 장치도 있다. 구매확정 전까지 판매자 정산을 보류하는 에스크로다. 구매확정 이벤트가 죽은 채 쌓이는 걸 추적하다 구매확정 전에 정산되고 있던 [도메인 모순](/blog/project/pay/pay-ch7-consume-align-harden)을 찾은 게 이 장치 덕이었다.
 
 관측성은 결제 도메인의 언어로 만들었다. CPU 대신 미확정 결제 최고 경과 시간, 대사 미해결 건수 같은 지표를 SLO 대시보드와 알림으로 노출했다. 배포하는 순간 결제가 끊기지 않게 운영성 마감도 별도로 정리했다. [하드닝 편](/blog/project/pay/pay-ch7-consume-align-harden)에 있다.
+
+![Grafana 결제 SLO 대시보드 — 미확정 결제 나이·대사 미해결 건수 같은 도메인 지표](/uploads/project/pay/demo/demo-grafana-dashboard.png)
 
 ## 보안 — 상태의 수명까지가 설계
 
