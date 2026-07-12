@@ -44,3 +44,9 @@ firebase-debug.log
 
 # 구직 리서치(로컬 전용, 공개 안 함)
 pay-research/
+
+# 이력서·자소서 등 개인 작업 공간 (절대 공개 금지)
+_workspace/
+
+# python artifacts
+__pycache__/
