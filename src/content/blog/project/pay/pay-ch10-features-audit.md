@@ -20,7 +20,7 @@ seriesOrder: 10
 
 ### 0. 또 "만들고 안 쓴 것" — 이번엔 통째로
 
-이번에 찾은 건 파일 몇 개가 아니라 모듈 하나였다. [감사](/blog/project/pay/pay-ch7-consume-align-harden)와 [재감사](/blog/project/pay/pay-ch8-settlement-pg-webhook)로 "만들어놓고 배선 안 한 것들"을 계속 잡아왔는데, 전체 기능 관점에서 훑어보니 `subscription`(구독)이 통째로 숨어 있었다.
+지금까지는 파일 몇 개 수준이었는데, 이번에 찾은 건 모듈 하나였다. [감사](/blog/project/pay/pay-ch7-consume-align-harden)와 [재감사](/blog/project/pay/pay-ch8-settlement-pg-webhook)로 "만들어놓고 배선 안 한 것들"을 계속 잡아왔는데, 전체 기능 관점에서 훑어보니 `subscription`(구독)이 통째로 숨어 있었다.
 
 안을 열어보니 이미 꽤 정성껏 지어져 있었다.
 
@@ -61,7 +61,7 @@ private Subscription requireOwned(Long subscriptionId, long userId) {
 }
 ```
 
-[주문에서 IDOR를 막던 것](/blog/project/pay/pay-ch5-runtime-truths)과 같은 원칙이다. userId는 클라이언트가 아니라 **인증 principal에서** 얻고, 소유권 검증을 다른 무엇보다 앞에 둔다. 실기동으로 user2가 user1의 구독을 조회하면 **403**이 나는 것까지 확인했다.
+[주문에서 IDOR를 막던 것](/blog/project/pay/pay-ch5-runtime-truths)과 같은 원칙이다. userId는 **인증 principal에서** 얻고(클라이언트가 준 값은 믿지 않는다), 소유권 검증을 다른 무엇보다 앞에 둔다. 실기동으로 user2가 user1의 구독을 조회하면 **403**이 나는 것까지 확인했다.
 
 ### 2. 배치와 즉시청구가 한 로직을 공유하게
 
@@ -116,8 +116,8 @@ user2가 user1 구독 조회 → 403 (IDOR 차단)
 
 월렛은 토스·카카오페이 어디에나 있는 핵심 결제수단이라, 이번엔 두 가지를 했다.
 
-1. **사용자 표면** — 충전·잔액·이력 REST (`/api/v1/wallet`).
-2. **체크아웃 배선** — 카드·포인트와 함께 쓰는 **복합결제 수단**.
+1. **사용자 표면**: 충전·잔액·이력 REST (`/api/v1/wallet`).
+2. **체크아웃 배선**: 카드·포인트와 함께 쓰는 **복합결제 수단**.
 
 미리 말해두면, 2번을 하다가 생각보다 깊은 걸 마주쳤다. 월렛을 포인트처럼 취급하면 자금 손실 버그가 된다.
 
@@ -267,7 +267,7 @@ long pointAmount  = order.getTotalAmount() - cardAmount - walletAmount;
 GET /api/v1/orders     내 주문 목록(최신 50건 요약)
 ```
 
-여기서 IDOR(남의 주문 조회)를 막는 방식이 [단건 조회 때](/blog/project/pay/pay-ch5-runtime-truths)와 다르다. 단건은 주문을 불러온 뒤 `verifyOwner`로 막지만, 목록은 **쿼리 자체가 본인 것만** 가져온다.
+여기서 IDOR(남의 주문 조회)를 막는 방식이 [단건 조회 때](/blog/project/pay/pay-ch5-runtime-truths)와 다르다. 단건은 주문을 불러온 뒤 `verifyOwner`로 막았다. 목록은 **쿼리 자체가 본인 것만** 가져온다.
 
 ```java
 public List<OrderSummaryView> myOrders(long authenticatedUserId) {
@@ -277,7 +277,7 @@ public List<OrderSummaryView> myOrders(long authenticatedUserId) {
 }
 ```
 
-userId는 인증 principal에서 오고, WHERE 절이 그걸로 걸리니 **남의 주문은 애초에 조회 대상이 아니다.** 검증으로 걸러내는 게 아니라 아예 안 가져오는, IDOR 방어의 가장 단순한 형태다. 실기동으로 user1은 자기 주문이 최신순으로 뜨고, user2는 0건인 걸 확인했다. `Top50`으로 상한을 둬 무한 적재도 막았다.
+userId는 인증 principal에서 오고, WHERE 절이 그걸로 걸리니 **남의 주문은 애초에 조회 대상이 아니다.** 불러온 뒤 검증으로 걸러낼 것도 없이 아예 안 가져오니, IDOR 방어 중에서도 가장 단순한 형태다. 실기동으로 user1은 자기 주문이 최신순으로 뜨고, user2는 0건인 걸 확인했다. `Top50`으로 상한을 둬 무한 적재도 막았다.
 
 ### 2. 원장 감사 뷰 — 차변·대변 균형까지
 
@@ -296,7 +296,7 @@ static LedgerView from(LedgerTransaction tx) {
 }
 ```
 
-감사자가 정합 위반을 한눈에 보라는 뜻이다. 실기동으로 보니 재밌는 게 있었다. 카드 14,000 + 월렛 6,000으로 결제한 주문의 원장 분개가 **20,000이 아니라 14,000**이었다.
+감사자가 정합 위반을 한눈에 보라는 뜻이다. 실기동으로 보니 재밌는 게 있었다. 카드 14,000 + 월렛 6,000으로 결제한 주문의 원장 분개가 **14,000**이었다. 총액 20,000이 아니었다.
 
 > 월렛 6,000은 **이미 받아둔 선불(prepaid)**이라, 새로 생기는 PG 미수금이 아니다. 그래서 원장엔 카드분 14,000만 `PG미수금 ↔ 매출`로 잡힌다. [사가에서 본 결제수단의 경제적 의미 차이](/blog/project/pay/pay-ch10-features-audit)가 이번엔 **장부에 그대로 드러난** 것이고, 회계가 맞으려면 이게 맞아야 한다.
 
@@ -375,7 +375,7 @@ long userId = Long.parseLong(principal.getName());
 
 ### 2. 복합 UserDetailsService — 이메일로 찾되 숫자로 돌려준다
 
-열쇠는 Spring Security의 동작 하나다. `DaoAuthenticationProvider`는 인증에 성공하면 **내가 입력한 로그인 식별자가 아니라, 로드된 `UserDetails.getUsername()`을 principal 이름으로 삼는다.** 여기에 답이 있었다. 로그인 식별자로 회원을 찾을 때, username을 **회원의 숫자 id로 바꿔서** 돌려주면 된다.
+열쇠는 Spring Security의 동작 하나다. `DaoAuthenticationProvider`는 인증에 성공하면 **로드된 `UserDetails.getUsername()`을 principal 이름으로 삼는다.** 내가 뭘 입력해 로그인했는지는 principal에 남지 않는다. 여기에 답이 있었다. 로그인 식별자로 회원을 찾을 때, username을 **회원의 숫자 id로 바꿔서** 돌려주면 된다.
 
 ```java
 return username -> {
@@ -437,7 +437,7 @@ alter table members auto_increment = 1000;
 
 ### 결제는 되는데, 지면 어쩔 건데
 
-데모를 돌리다 문득 이상했다. 결제는 승인되고, 취소도 되고, 정산도 붙는데 **차지백**이 오면 아무 일도 일어나지 않았다. 카드 결제에서 차지백은 예외가 아니라 일상이다. 고객이 "이거 내가 안 샀다"고 카드사에 이의를 걸면, 카드사는 일단 돈을 고객에게 돌려주고 가맹점에 통보한다. 가맹점은 정해진 기한 안에 "정상 거래였다"는 증빙을 제출해 다퉈야 하고, 지면 그 매출은 사라진다.
+데모를 돌리다 문득 이상했다. 결제는 승인되고, 취소도 되고, 정산도 붙는데 **차지백**이 오면 아무 일도 일어나지 않았다. 카드 결제에서 차지백은 일상으로 온다. 고객이 "이거 내가 안 샀다"고 카드사에 이의를 걸면, 카드사는 일단 돈을 고객에게 돌려주고 가맹점에 통보한다. 가맹점은 정해진 기한 안에 "정상 거래였다"는 증빙을 제출해 다퉈야 하고, 지면 그 매출은 사라진다.
 
 승인만 있고 이 사후 흐름이 없으면, 장부는 계속 "매출이 있다"고 우기는데 실제 돈은 빠져나간 상태가 된다. 결제 시스템의 정합성이 조용히 깨지는 지점이다. 그래서 `dispute` 모듈을 새로 만들었다.
 
@@ -451,7 +451,7 @@ OPEN ──submitEvidence──▶ EVIDENCE_SUBMITTED
   └──────resolve(win)───────────┴──▶ WON / LOST
 ```
 
-상태 전이는 서비스가 아니라 **엔티티 메서드**가 강제한다. `submitEvidence()`는 `OPEN`에서만, `resolve()`는 `OPEN`/`EVIDENCE_SUBMITTED`에서만 동작하고, 이미 확정(`WON`/`LOST`)된 분쟁을 다시 건드리면 예외를 던진다.
+상태 전이는 **엔티티 메서드**가 강제한다. 서비스는 그걸 부를 뿐이다. `submitEvidence()`는 `OPEN`에서만, `resolve()`는 `OPEN`/`EVIDENCE_SUBMITTED`에서만 동작하고, 이미 확정(`WON`/`LOST`)된 분쟁을 다시 건드리면 예외를 던진다.
 
 ```java
 public void submitEvidence(String memo) {
@@ -623,6 +623,6 @@ login/signup을 **클라이언트 IP 기준**으로 제한하게 했다. 그런�
 
 감사에서 나온 건 자금 손실 2(치명)·원장 오염 3·인증 갭 3, 거기에 방어 코드의 스푸핑 구멍까지. 전부 "완성했다"고 생각한 신규 코드에서 나왔다. 자금 손실 두 개는 **같은 실수**에서 왔다. 새 결제수단(월렛)을 기존의 검증된 계약(포인트의 예약·보상·취소·멱등)에 대칭시키지 않은 것.
 
-새 결제수단을 추가한다는 건 happy path를 잇는 게 아니라, 기존 수단이 가진 모든 계약(예약→확정→취소→복구, 멱등의 수명)을 빠짐없이 대칭시키는 일이다. 하나라도 반만 베끼면 그 틈으로 돈이 샌다. "동작하니 됐다"는 결제 도메인에서 가장 비싼 착각이고, 그걸 깨는 건 mock 유닛테스트가 아니라 실 MySQL 라이브 재현이었다. 적립 회수 버그는 유닛테스트 초록불 아래 숨어 있다가 라이브에서야 잡혔다.
+새 결제수단을 추가한다는 건 기존 수단이 가진 모든 계약(예약→확정→취소→복구, 멱등의 수명)을 빠짐없이 대칭시키는 일이다. happy path만 이어놓고 끝낼 수 있는 작업이 아니었다. 하나라도 반만 베끼면 그 틈으로 돈이 샌다. "동작하니 됐다"는 결제 도메인에서 가장 비싼 착각이고, 그걸 깨준 건 실 MySQL 라이브 재현이었다. 적립 회수 버그는 유닛테스트 초록불 아래 숨어 있다가 라이브에서야 잡혔다.
 
 전부 회귀 테스트로 고정했고, 마이그레이션은 통합 테스트가 검증한다.
