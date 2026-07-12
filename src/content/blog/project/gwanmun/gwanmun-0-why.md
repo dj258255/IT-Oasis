@@ -7,7 +7,6 @@ date: 2025-11-15
 tags:
   - Java
   - Spring Boot
-  - Netty
   - TCP
   - API Gateway
   - EAI
