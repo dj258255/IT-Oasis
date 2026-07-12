@@ -1,8 +1,8 @@
 ---
-title: '며칠치로는 규모를 증명 못 합니다 — 1년치를 만들어 재보고, 수치가 요구할 때만 최적화했어요'
-titleEn: "Three Days Can't Prove It Holds at Scale — I Built a Year, Measured, and Optimized Only Where the Numbers Demanded"
-description: "지금까지 제 모든 실측은 닫힌 dt 3개, 수십만 행에서 돌았습니다. 그 규모에선 전부 초 단위라 '규모에서도 버틴다'고 말하고 싶어졌어요. 하지만 그건 증명이 아니라 희망이었습니다. 마트(fct)는 매일 전체 이력을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐이거든요. 그래서 닫힌 dt를 날짜 시프트로 복제해 365dt×6인스턴스=2,190파일(54.5M행)을 격리 프리픽스에 합성 적재하고(실데이터·원천 무접촉, 끝나고 정리) 어디가 먼저 무너지는지 쟀습니다. 병목은 하나였어요 — fct 전체 재빌드 407.62초. 나머지는 규모에서도 초 단위였습니다(mart 0.31초·게이트 8~22ms·CHECKPOINT 0.47초). 파일은 평균 177KB로 실무 타깃 128MB의 1/741, 소파일 폭증도 계측했고요. 그 407초가 정당화해서 fct를 증분(delete+insert)으로 전환했는데, 스칼라 서브쿼리 워터마크로는 파티션 프루닝이 안 걸려 여전히 느렸고, 컴파일 타임 리터럴로 구워 넣자 407.62초 → 4초(약 100배)가 됐습니다. mart_query_regression은 '전체 이력 첫날 vs 마지막날'을 '최근 7일 vs 직전 30일' 롤링 창으로 재설계했고, 매 런 메타를 pipeline_run_log로 발행해 운영 대시보드를 분석 대시보드와 이원화했습니다. 회귀는 없었어요 — verify ALL MATCH, 합성 데이터는 전부 정리."
-descriptionEn: "Every measurement so far ran on three closed dt partitions, a few hundred thousand rows. At that size everything is sub-second, so it's tempting to say it holds at scale — but that's hope, not proof. The fct mart recomputes the whole history every day; it just didn't hurt with three days of it. So I date-shifted a closed partition into 365 dt × 6 instances = 2,190 files (54.5M rows) in an isolated prefix (no real data or source touched, cleaned up after) and measured where it breaks first. One bottleneck: fct full rebuild at 407.62s. Everything else stayed sub-second at scale (mart 0.31s, gate 8-22ms, CHECKPOINT 0.47s). Files averaged 177KB — 1/741 of the 128MB industry target, quantifying the small-file blowup. That 407s justified switching fct to incremental (delete+insert); a scalar-subquery watermark failed to prune partitions and stayed slow, but a compile-time literal turned 407.62s into 4s (~100x). I redesigned mart_query_regression from 'first vs last of all history' to a rolling recent-7-vs-prior-30 window, and published per-run metadata to pipeline_run_log to split an operational dashboard from the analytical one. No regression — verify ALL MATCH, synthetic data fully cleaned up."
+title: '며칠치로는 규모를 증명 못 해서 1년치를 만들어 재봤고, 수치가 요구할 때만 최적화했어요'
+titleEn: 'Three Days Can''t Prove Scale, So I Built a Year, Measured It, and Optimized Only Where the Numbers Demanded'
+description: '지금까지 제 모든 실측은 닫힌 dt 3개, 수십만 행에서 돌았습니다. 그 규모에선 전부 초 단위라 ''규모에서도 버틴다''고 말하고 싶어졌어요. 하지만 그건 증명이 아니라 희망이었습니다. 마트(fct)는 매일 전체 이력을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐이거든요. 그래서 닫힌 dt를 날짜 시프트로 복제해 365dt×6인스턴스=2,190파일(54.5M행)을 격리 프리픽스에 합성 적재하고(실데이터·원천 무접촉, 끝나고 정리) 어디가 먼저 무너지는지 쟀습니다. 병목은 하나, fct 전체 재빌드 407.62초였어요. 나머지는 규모에서도 초 단위였습니다(mart 0.31초·게이트 8~22ms·CHECKPOINT 0.47초). 파일은 평균 177KB로 실무 타깃 128MB의 1/741이라 소파일 폭증도 계측했고요. 그 407초가 정당화해서 fct를 증분(delete+insert)으로 전환했는데, 스칼라 서브쿼리 워터마크로는 파티션 프루닝이 안 걸려 여전히 느렸고, 컴파일 타임 리터럴로 구워 넣자 407.62초 → 4초(약 100배)가 됐습니다. mart_query_regression은 ''전체 이력 첫날 vs 마지막날''을 ''최근 7일 vs 직전 30일'' 롤링 창으로 재설계했고, 매 런 메타를 pipeline_run_log로 발행해 운영 대시보드를 분석 대시보드와 이원화했습니다. 회귀는 없었어요. verify ALL MATCH였고, 합성 데이터는 전부 정리했습니다.'
+descriptionEn: 'Every measurement so far ran on three closed dt partitions, a few hundred thousand rows. At that size everything is sub-second, so it''s tempting to say it holds at scale, but that''s hope, not proof. The fct mart recomputes the whole history every day; it just didn''t hurt with three days of it. So I date-shifted a closed partition into 365 dt × 6 instances = 2,190 files (54.5M rows) in an isolated prefix (no real data or source touched, cleaned up after) and measured where it breaks first. There was one bottleneck: the fct full rebuild at 407.62s. Everything else stayed sub-second at scale (mart 0.31s, gate 8-22ms, CHECKPOINT 0.47s). Files averaged 177KB, 1/741 of the 128MB industry target, quantifying the small-file blowup. That 407s justified switching fct to incremental (delete+insert); a scalar-subquery watermark failed to prune partitions and stayed slow, but a compile-time literal turned 407.62s into 4s (~100x). I redesigned mart_query_regression from ''first vs last of all history'' to a rolling recent-7-vs-prior-30 window, and published per-run metadata to pipeline_run_log to split an operational dashboard from the analytical one. No regression: verify ALL MATCH, and the synthetic data was fully cleaned up.'
 date: 2026-07-09
 tags:
   - Data Engineering
@@ -17,16 +17,16 @@ series: "lakehouse"
 seriesOrder: 6
 ---
 
-## 0. 상황 — 초 단위라는 착각
+## 0. 초 단위라는 착각에서 출발하다
 
-5편까지 오면서 저는 꽤 많은 걸 실측했습니다. 게이트가 반쪽 데이터를 막고, 알림이
-울고, 계약이 빌드를 막고, deadman이 침묵을 잡는 걸 전부 라이브로 돌려 봤죠. 그런데
-그 모든 실측에는 공통점이 하나 있었습니다 — **닫힌 dt가 3개뿐**이었어요. 07-05,
+5편까지 오면서 저는 꽤 많은 걸 실측했습니다. 게이트가 반쪽 데이터를 막고 알림이
+울고 계약이 빌드를 막고 deadman이 침묵을 잡는 걸 전부 라이브로 돌려 봤죠. 그런데
+그 모든 실측에는 공통점이 하나 있었습니다. **닫힌 dt가 3개뿐**이었어요. 07-05,
 07-06, 그리고 진행 중인 07-07. 수십만 행. 그 규모에서는 뭘 재도 전부 초 단위로
 끝납니다. dbt 빌드도 몇 초, 게이트도 몇 초.
 
 그러다 문득 이런 생각이 들었어요. "이걸로 '규모에서도 버틴다'고 말할 수 있나?"
-없더라고요. 그건 증명이 아니라 희망이었습니다. 특히 마트를 다시 들여다보니 마음이
+없더라고요. 그건 증명이 아니었어요. 그냥 희망이었죠. 특히 마트를 다시 들여다보니 마음이
 불편했어요. `fct_query_daily`는 매일 **전체 이력을 다시 계산**합니다. 하루 발생량을
 그날 파티션의 양 끝 차분으로 구하는데, dbt는 그냥 전체를 table로 다시 굽거든요.
 이력이 3일이라 안 아팠을 뿐이지, 1년이 쌓이면 어떻게 될지 저는 몰랐습니다. 모르는
@@ -35,13 +35,13 @@ seriesOrder: 6
 두 번째로 마음에 걸린 건 롤링 윈도우였습니다. 0편에서 제가 던진 질문은 "이번 달 vs
 지난달 느려진 쿼리 있어?"였는데, `mart_query_regression`은 "전체 이력의 첫 활동일 vs
 마지막 활동일"을 비교합니다. 이력이 3일일 땐 그럴듯했어요. 그런데 1년이 쌓이면 그건
-"1년 전 대비 지금"이 됩니다 — 제가 답하려던 질문이 아니에요.
+"1년 전 대비 지금"이 됩니다. 제가 답하려던 질문이 아니에요.
 
 세 번째는 화면이었습니다. 파이프라인 상태를 보는 수단이 알림(실패하면 운다)과
 heartbeat(성공이 안 남으면 운다)뿐인데, 둘 다 이벤트예요. "지금 전반적으로 건강한가"를
 한눈에 보는 화면이 없었습니다.
 
-## 1. 판단 — 먼저 재보고, 수치가 요구할 때만
+## 1. 먼저 재보고 수치가 요구할 때만 판단한다
 
 여기서 제가 안 하려고 한 게 있습니다. **증분 모델부터 도입하는 것.** "전체 재빌드는
 느리다더라, 그러니 microbatch를 쓰자"는 감으로 최적화하는 거요. 그건 이 프로젝트가
@@ -52,20 +52,20 @@ DBTower에서 계승한 원칙("정직한 필요에서 시작한다")에 어긋�
 그 수치가 요구할 때만 최적화한다.** 만약 규모에서도 전체 재빌드가 여전히 빠르면,
 "지금은 증분을 도입하지 않는다"를 그 수치로 정당화하고 넘어갑니다.
 
-## 2. 1년치를 어떻게 만드나 — 격리가 전부
+## 2. 1년치는 어떻게 만드나, 격리가 전부다
 
 문제가 하나 있었습니다. 원천 수집기는 07-07에 멈췄고(원천 시계로 이미 지난 날들),
-7일 보존이라 과거를 다시 뽑을 수도 없습니다. 그리고 이 프로젝트의 철칙 — **원천을
+7일 보존이라 과거를 다시 뽑을 수도 없습니다. 그리고 이 프로젝트엔 철칙이 있죠. **원천을
 오염시키지 않는다, 실데이터를 건드리지 않는다.**
 
 그래서 합성 데이터는 이렇게 만들었습니다. 닫힌 dt=2026-07-05의 6개 인스턴스 parquet
 (149,259행)를 메모리로 읽어, 그걸 365개 날짜 경로로 **복제**합니다. 서버 부하 0,
-원천 PG 무접촉이에요 — 이미 MinIO에 있는 parquet를 날짜만 바꿔 다시 쓰는 거니까요.
-쓰는 곳도 실데이터 `raw/`가 아니라 **별도 프리픽스 `scale/`**입니다. 물리적으로
+원천 PG 무접촉이에요. 이미 MinIO에 있는 parquet를 날짜만 바꿔 다시 쓰는 거니까요.
+쓰는 곳도 실데이터 `raw/`를 놔두고 **별도 프리픽스 `scale/`**에 씁니다. 물리적으로
 격리했고, 끝나면 프리픽스를 통째로 지워 원상 복구할 수 있게 했어요.
 
 파일 크기·개수 프로파일은 실제와 똑같습니다. dt당 6파일(인스턴스당 1개), 365dt면
-**2,190파일, 54,479,535행, 396.6MB**. 이게 핵심이에요 — "작은 파일 폭증"이라는
+**2,190파일, 54,479,535행, 396.6MB**. 이게 핵심이에요. "작은 파일 폭증"이라는
 실무 1순위 고통을 그대로 재현해야 하니까요.
 
 한 가지만 손댔습니다. 롤링 윈도우를 검증하려면 최근이 직전보다 나빠지는 신호가
@@ -74,7 +74,7 @@ DBTower에서 계승한 원칙("정직한 필요에서 시작한다")에 어긋�
 쿼리별 균일 계수를 곱하니까 하루 양 끝 차분도 같은 계수로 스케일되고, 결국
 avg_latency가 그 계수만큼 오릅니다.
 
-## 3. 규모 수치 — 병목은 하나였습니다
+## 3. 규모 수치로 보니 병목은 하나였다
 
 만들어 놓고 하나씩 쟀습니다. 실데이터 3dt와 나란히요.
 
@@ -96,7 +96,7 @@ avg_latency가 그 계수만큼 오릅니다.
 - **mart 재빌드는 0.31초.** 마트는 fct를 훑는 롤링 집계지만, fct가 이미 사전집계라
   입력이 작습니다(365dt여도 fct는 195k행). 여기를 최적화하면 복잡도만 늘어요.
 - **게이트와 verify는 8~22ms.** 이건 제가 재보기 전엔 몰랐던 사실인데, 게이트는
-  dt별 파티션(6파일)만 봅니다 — 이력이 3일이든 365일이든 상관없어요. O(1 파티션).
+  dt별 파티션(6파일)만 봅니다. 이력이 3일이든 365일이든 상관없어요. O(1 파티션).
   즉 게이트는 규모에서 아예 안 느려집니다.
 - **CHECKPOINT는 0.47초.** 1년치 366커밋이 366개 소파일을 쌓았는데, CHECKPOINT가
   그걸 1파일로 컴팩션하는 데 반 초입니다. 6단계에서 붙인 유지보수가 소파일 누적을
@@ -107,13 +107,13 @@ avg_latency가 그 계수만큼 오릅니다.
 나타나느냐가 중요한데, (a) 글롭 리스팅 2.2초와 (b) DuckLake 커밋 누적으로 나타나고,
 후자는 CHECKPOINT가 이미 잡고 있었습니다.
 
-## 4. 증분 전환 — 407초가 정당화했습니다
+## 4. 407초가 정당화한 증분 전환
 
 407초는 초 단위가 아닙니다. 전체 재빌드를 매일 돌리면 이력이 1년일 때 매일 7분씩
 걸린다는 뜻이에요. 이건 수치가 최적화를 **요구하는** 경우입니다.
 
 다행히 fct는 증분으로 바꾸기 좋은 구조였어요. 하루 발생량은 그날 파티션 양 끝의
-차분이라, **dt 단위로 완전히 독립**입니다 — 다른 날과 섞이지 않아요. 그러니 새 dt만
+차분이라, **dt 단위로 완전히 독립**입니다. 다른 날과 섞이지 않아요. 그러니 새 dt만
 계산해 붙이면 결과가 전체 재빌드와 같습니다.
 
 전략 선택에서 한 번 짚고 갈 게 있었어요. dbt-duckdb 1.10.1은 `append`, `delete+insert`,
@@ -121,7 +121,7 @@ avg_latency가 그 계수만큼 오릅니다.
 적어 뒀었는데, 실제로 보니 microbatch는 event_time을 요구하고 unique_key로 파티션을
 교체하는 방식이 아니었어요. 우리 grain은 (instance, query, dt)라 **`delete+insert` +
 `unique_key`**가 더 정확하고 단순합니다. 새 dt는 순수 insert, 같은 dt 재실행(당일
-재시도)은 그 dt만 삭제 후 재삽입 — 멱등성이 그대로 유지되고요.
+재시도)은 그 dt만 삭제 후 재삽입합니다. 멱등성은 그대로 유지되고요.
 
 그런데 여기서 함정에 빠졌습니다. 증분 predicate를 이렇게 썼어요.
 
@@ -164,9 +164,9 @@ where dt >= '{{ max_dt }}'
 정직하게 남길 함정 하나. 워터마크가 `>= max(dt)`라, **이미 지나간 과거 dt를 정정**하면
 일반 `dbt run`은 그 dt를 안 건드립니다. 과거 dt 정정은 `--full-refresh`가 필요해요
 (RUNBOOK에 절차를 적었습니다). 그리고 계약(contract)과 증분을 같이 쓰면
-`on_schema_change`를 명시하라고 dbt가 강제합니다 — 이것도 배웠고요.
+`on_schema_change`를 명시하라고 dbt가 강제합니다. 이것도 배웠고요.
 
-## 5. 롤링 윈도우 — "지난달 대비"로 되돌리기
+## 5. 롤링 윈도우를 "지난달 대비"로 되돌리기
 
 `mart_query_regression`을 최신 dt 기준 **최근 N일 vs 직전 M일**(기본 7 vs 30)의
 미끄러지는 창으로 재설계했습니다. 이력이 아무리 길어져도 창은 항상 "최근 대 직전"으로
@@ -185,28 +185,28 @@ pct 분포:  +47.5% 8건 · +138.1% 6건
 ```
 
 `recent_days_seen=7`, `prior_days_seen=30` 정확히 나오고, 제가 주입한 두 악화 계층이
-랭킹으로 분리돼 떴습니다. 그런데 정확히 +50/+150이 아니라 +47.5/+138.1이에요. 왜냐하면
+랭킹으로 분리돼 떴습니다. 그런데 정확히 +50/+150은 아니고 +47.5/+138.1이에요. 왜냐하면
 주입 경계(마지막 7일)와 롤링 창의 직전 30일 경계가 하루 겹쳐서, 직전 창 평균에
-boosted된 하루가 섞였거든요. 롤링 평균이 그걸 정직하게 반영한 결과입니다 — 창을
+boosted된 하루가 섞였거든요. 롤링 평균이 그걸 정직하게 반영한 결과입니다. 창을
 제가 예쁘게 지어내지 않았다는 증거이기도 하고요.
 
 정직하게 하나 더. **실데이터 3dt에서는 이 마트가 0행입니다.** 최근 7일이 3개 dt를 다
 삼키고 직전 30일이 비어서 비교할 게 없어요. 이력 부족을 조용히 지어내는 대신 정직하게
-비웁니다. "3일치로 지난달을 논할 수 없다" — 이게 맞는 답이에요. 이 랭킹은 이력이
+비웁니다. "3일치로 지난달을 논할 수 없다", 이게 맞는 답이에요. 이 랭킹은 이력이
 쌓여야 실데이터에서도 채워집니다. 그래서 dbt unit test로 로직만은 못박아 뒀어요
 (최근>직전만, 양 창 관측 필수, 저콜 제외).
 
-## 6. 운영 대시보드 — 세 번째 축
+## 6. 세 번째 축이 된 운영 대시보드
 
 마지막으로, 매 런의 메타(dt·게이트 축별 상태·소요·행수·heartbeat)를 DuckLake
 `pipeline_run_log` 테이블로 발행하게 했습니다. 마트와 같은 카탈로그라 Metabase가 이미
-붙어 있는 DuckLake 커넥션으로 그대로 읽어요 — 서비스도 커넥션도 추가 0입니다.
+붙어 있는 DuckLake 커넥션으로 그대로 읽어요. 서비스도 커넥션도 추가 0입니다.
 
-실데이터 닫힌 dt로 발행해 봤어요. 07-05·06·07은 전부 OK, 그리고 07-08 — 수집기가
-멈춰서 데이터가 없는 날 — 은 completeness와 freshness가 FAIL로 찍혔습니다. 게이트가
+실데이터 닫힌 dt로 발행해 봤어요. 07-05·06·07은 전부 OK, 그리고 수집기가 멈춰서
+데이터가 없는 07-08은 completeness와 freshness가 FAIL로 찍혔습니다. 게이트가
 실제로 잡는 나쁜 날이죠. 그걸 화면으로 옮긴 게 이겁니다.
 
-![파이프라인 운영 상태 — 마지막 성공 dt·오늘 게이트 상태·최근 런](/uploads/project/lakehouse/lh10_ops_dashboard.png)
+![마지막 성공 dt와 오늘 게이트 상태, 최근 런을 보여주는 파이프라인 운영 상태 화면](/uploads/project/lakehouse/lh10_ops_dashboard.png)
 
 - **마지막 성공 dt**: 2026-07-07
 - **오늘 게이트 상태**: 07-08이 FAIL(completeness·freshness), 나머지 축은 OK
@@ -214,21 +214,21 @@ boosted된 하루가 섞였거든요. 롤링 평균이 그걸 정직하게 반�
 
 분석 대시보드("지난 구간보다 느려진 쿼리 있어?")와 운영 대시보드("파이프라인이
 건강한가")를 **이원화**했습니다. 알림(실패)·heartbeat(성공의 부재)에 더한 세 번째
-축이에요 — 지금 상태를 한 화면으로. 8단계에서 이미 알림 payload에 `dashboard_url`
+축이에요. 지금 상태를 한 화면으로 보여줍니다. 8단계에서 이미 알림 payload에 `dashboard_url`
 필드를 심어 뒀으니, 알림을 받으면 이 화면으로 한 클릭입니다.
 
-## 7. 잔여 — 정직하게
+## 7. 남은 것을 정직하게
 
 - **과거 dt 정정은 `--full-refresh`가 필요합니다.** 증분 워터마크가 `>= max(dt)`라
   최신만 갱신하거든요. 최신 dt 재실행은 멱등하지만, 지나간 dt를 고치려면 그 모델을
   명시적으로 다시 지어야 해요.
 - **롤링 윈도우는 이력이 쌓여야 실데이터에서 참입니다.** 지금 닫힌 dt가 3개뿐이라
-  실운영 마트는 0행이에요 — 규모(365dt 합성)에서만 랭킹이 나옵니다. 구조는 검증됐고,
+  실운영 마트는 0행이에요. 규모(365dt 합성)에서만 랭킹이 나옵니다. 구조는 검증됐고,
   이력이 recent+prior만큼 쌓이면 실데이터에서도 채워집니다.
 - **합성은 파일 규모는 정확하지만 쿼리 다양성은 하루치의 반복입니다.** "파티션 수·파일
   수·바이트"의 규모는 실제와 똑같이 재현했지만, "고유 쿼리 수 폭증"은 재현하지
   않았어요(그건 원천 다양성의 문제라 복제로는 안 됩니다).
-- **mart는 여전히 전체 재빌드입니다.** 다만 사전집계라 규모에서도 0.31초예요 —
+- **mart는 여전히 전체 재빌드입니다.** 다만 사전집계라 규모에서도 0.31초예요.
   fct(407초)와 달리 수치가 증분화를 정당화하지 않습니다. 초 단위인 곳을 증분화하면
   복잡도만 늡니다.
 
@@ -239,4 +239,4 @@ boosted된 하루가 섞였거든요. 롤링 평균이 그걸 정직하게 반�
 제 예상과 달리 딱 하나였고(fct 407초), 제가 걱정하던 다른 곳들은 규모에서도 초
 단위였습니다. 그래서 fct만 증분으로 바꿨고, 나머지는 "지금은 안 한다"를 수치로
 정당화했어요. 문제 없는 곳을 최적화하지 않는 것도 엔지니어링입니다. 그리고 그 판단의
-근거를 감이 아니라 실측 수치로 남기는 것 — 그게 이 프로젝트가 계속 지키려는 원칙이고요.
+근거를 감으로 채우지 않고 실측 수치로 남기는 것, 그게 이 프로젝트가 계속 지키려는 원칙이고요.
