@@ -18,15 +18,15 @@ series: "요청 처리"
 ---
 
 
-커넥션 풀을 공부하고 나니 또 다른 의문이 생겼어요. "그래서 애초에 요청은 어떻게 들어오는 거지?" 톰캣이 수천, 수만 개의 요청을 동시에 받아서 스레드 풀에 넘기고, DB 커넥션 풀을 사용한다는 건 알겠는데, 정작 **톰캣이 어떻게 그 많은 요청을 받아들이는지**는 정확히, 제대로 알지는 못 했거든요.
+커넥션 풀을 공부하고 나니 또 다른 의문이 생겼습니다. "그래서 애초에 요청은 어떻게 들어오는 거지?" 톰캣이 수천, 수만 개의 요청을 동시에 받아서 스레드 풀에 넘기고, DB 커넥션 풀을 사용한다는 건 알겠는데, 정작 **톰캣이 어떻게 그 많은 요청을 받아들이는지**는 정확히, 제대로 알지는 못했습니다.
 
-그래서 톰캣 커넥터와 NIO, 그리고 Spring MVC의 요청 처리 과정까지 파헤쳐 보기로 했어요.
+그래서 톰캣 커넥터와 NIO, 그리고 Spring MVC의 요청 처리 과정까지 파헤쳐 보기로 했습니다.
 
 ## 1. BIO vs NIO: 왜 톰캣은 바뀌어야 했나?
 
 ### 1.1 BIO Connector의 문제점
 
-톰캣 8.0 이전까지는 **BIO(Blocking I/O) Connector**를 사용했어요. 구조는 단순했죠.
+톰캣 8.0 이전까지는 **BIO(Blocking I/O) Connector**를 사용했습니다. 구조는 단순했습니다.
 
 ```java
 // BIO Connector의 동작 방식 (의사 코드)
@@ -65,12 +65,12 @@ class BIOConnector {
 
 **문제가 뭘까?**
 
-HTTP Keep-Alive를 사용하는 경우를 생각해 볼게요. 클라이언트가 첫 요청을 보내고, 2초 후에 두 번째 요청을 보낸다고 해볼게요.
+HTTP Keep-Alive를 사용하는 경우를 생각해 보겠습니다. 클라이언트가 첫 요청을 보내고, 2초 후에 두 번째 요청을 보낸다고 해보겠습니다.
 
 ![](/uploads/theory/tomcat-nio-request-handling/11-bio-connector-problem.svg)
 
 
-스레드가 1.9초 동안 **아무것도 안 하고 대기만** 했어요. 이게 연결이 1000개라면?
+스레드가 1.9초 동안 **아무것도 안 하고 대기만** 했습니다. 이게 연결이 1000개라면?
 
 ```java
 // 최악의 시나리오
@@ -96,7 +96,7 @@ class BIOProblem {
 
 ### 1.2 NIO Connector의 등장
 
-톰캣 8.0부터 **NIO(Non-blocking I/O) Connector**가 기본이 되었어요. 무엇이 달라졌을까요?
+톰캣 8.0부터 **NIO(Non-blocking I/O) Connector**가 기본이 되었습니다. 무엇이 달라졌을까요?
 
 **핵심 아이디어**: 스레드가 데이터를 기다리지 말고, **데이터가 준비되었을 때만** 스레드를 할당하자.
 
@@ -142,7 +142,7 @@ class NIOConnector {
 
 ### 1.3 실제 성능 차이
 
-간단한 벤치마크를 해볼게요.
+간단한 벤치마크를 해보겠습니다.
 
 ```yaml
 # 테스트 환경
@@ -208,13 +208,13 @@ NIO:
 연결 수와 무관 → Poller가 모두 감시 → 준비된 것만 워커 스레드 할당
 ```
 
-톰캣 9.0부터는 BIO Connector가 완전히 제거되었어요. 성능 차이가 너무 명확했기 때문이에요.
+톰캣 9.0부터는 BIO Connector가 완전히 제거되었습니다. 성능 차이가 너무 명확했기 때문입니다.
 
 > 출처: [Velog - Tomcat BIO Connector & NIO Connector](https://velog.io/@appti/Tomcat-BIO-Connector-NIO-Connector)
 
 ## 2. NIO Connector의 구조: Acceptor, Poller, Executor
 
-NIO Connector는 세 가지 주요 컴포넌트로 구성돼요.
+NIO Connector는 세 가지 주요 컴포넌트로 구성됩니다.
 
 ### 2.1 전체 구조
 
@@ -272,7 +272,7 @@ class AcceptorPerformance {
 
 ### 2.3 Poller: 이벤트 감지
 
-Poller가 NIO의 핵심이에요.
+Poller가 NIO의 핵심입니다.
 
 ```java
 // Poller의 역할 (의사 코드)
@@ -361,7 +361,7 @@ class SocketProcessor implements Runnable {
 }
 ```
 
-**중요한 점**: 워커 스레드는 실제 처리 시간만 사용하고 즉시 반환돼요.
+**중요한 점**: 워커 스레드는 실제 처리 시간만 사용하고 즉시 반환됩니다.
 
 > 중요: NIO 커넥터라 하더라도, 워커 스레드(Executor)에서의 서블릿 처리는 여전히 Blocking I/O이다. DB 조회, 외부 API 호출 등 모든 I/O 작업이 워커 스레드를 점유한다. NIO가 Non-blocking인 것은 연결 관리(Acceptor/Poller) 계층뿐이다.
 
@@ -382,7 +382,7 @@ Poller 감시 (2초) → 스레드 할당 → 처리 (0.1초) → 스레드 반�
 ![](/uploads/theory/tomcat-nio-request-handling/25-selector-how-operation.svg)
 
 
-Java의 Selector는 운영체제의 I/O 멀티플렉싱 기능을 활용해요.
+Java의 Selector는 운영체제의 I/O 멀티플렉싱 기능을 활용합니다.
 
 **Linux: epoll**
 
@@ -476,17 +476,17 @@ epoll:  ready FD만 반환 → 수μs
 
 **NIO Connector 동작 순서**
 
-1. Acceptor가 소켓의 요청을 받아요.
+1. Acceptor가 소켓의 요청을 받습니다.
 
-2. 소켓에서 객체를 얻어 PollerEvent 객체로 변환해 줘요.
+2. 소켓에서 객체를 얻어 PollerEvent 객체로 변환해 줍니다.
 
-3. PollerEvent Queue에 넣어요.
+3. PollerEvent Queue에 넣습니다.
 
-4. Poller thread 속 Selector Object를 이용하여 여러 채널을 관리해요.
+4. Poller thread 속 Selector Object를 이용하여 여러 채널을 관리합니다.
 
-5. 상태를 모니터링하다가 데이터를 읽을 수 있는 소켓을 얻고, worker thread를 얻으면 해당 소켓을 thread에 연결해 줘요.
+5. 상태를 모니터링하다가 데이터를 읽을 수 있는 소켓을 얻고, worker thread를 얻으면 해당 소켓을 thread에 연결해 줍니다.
 
-6. worker thread에서 작업을 처리하면 해당 소켓으로 응답을 건네주면서 끝이에요.
+6. worker thread에서 작업을 처리하면 해당 소켓으로 응답을 건네주면서 끝납니다.
 
 
 >출처: [[Tomcat]NIO Connector를 중심으로](https://px201226.github.io/tomcat/)
@@ -497,7 +497,7 @@ epoll:  ready FD만 반환 → 수μs
 ![](/uploads/theory/tomcat-nio-request-handling/3-tomcat-config-max-threads-max-connections-accept.svg)
 
 
-이제 톰캣 설정값들이 어떤 의미인지 이해할 수 있어요.
+이제 톰캣 설정값들이 어떤 의미인지 이해할 수 있습니다.
 
 ### 3.1 세 가지 설정의 관계
 
@@ -667,7 +667,7 @@ acceptCount = 5
 
 **Netflix의 Fail-Fast 전략**:
 
-Netflix는 acceptCount를 **의도적으로 작게** 설정했어요.
+Netflix는 acceptCount를 **의도적으로 작게** 설정했습니다.
 
 ```yaml
 # Netflix의 설정 (추정)
@@ -730,7 +730,7 @@ server:
 
 ## 4. Spring MVC 요청 처리 과정
 
-톰캣이 요청을 받았어요. 이제 Spring MVC로 넘어갈게요.
+톰캣이 요청을 받았습니다. 이제 Spring MVC로 넘어가겠습니다.
 
 ### 4.1 전체 흐름
 
@@ -866,7 +866,7 @@ HandlerExecutionChain getHandler(HttpServletRequest request) {
 
 **왜 HandlerAdapter가 필요할까?**
 
-Controller가 여러 형태를 가질 수 있기 때문이에요.
+Controller가 여러 형태를 가질 수 있기 때문입니다.
 
 ```java
 // 형태 1: @Controller 애너테이션
@@ -989,7 +989,7 @@ public List<UserDto> getUsers() {
 // 실제 로직: 650ms (99.6%)
 ```
 
-**결론**: Spring MVC 자체는 매우 빨라요. 병목은 대부분 비즈니스 로직에 있어요.
+**결론**: Spring MVC 자체는 매우 빠릅니다. 병목은 대부분 비즈니스 로직에 있습니다.
 
 ## 5. 실제 트러블슈팅 사례
 
@@ -999,7 +999,7 @@ public List<UserDto> getUsers() {
 
 **문제 상황**:
 
-카카오페이 정산플랫폼팀에서 유저 등급 업데이트 배치 작업을 실행했어요. 5만 개 레코드 처리에 **1시간 이상** 소요되었죠.
+카카오페이 정산플랫폼팀에서 유저 등급 업데이트 배치 작업을 실행했습니다. 5만 개 레코드 처리에 **1시간 이상** 소요되었습니다.
 
 ```kotlin
 // 문제가 있던 코드 (단순화)
@@ -1104,7 +1104,7 @@ UPDATE users SET grade = 'BRONZE' WHERE id IN (801, 802, ..., 1000);
 
 **상황**:
 
-라이브 스트리밍 서비스에서 갑자기 응답이 느려졌어요.
+라이브 스트리밍 서비스에서 갑자기 응답이 느려졌습니다.
 
 ```yaml
 # 기존 설정
@@ -1229,7 +1229,7 @@ NIO 환경에서는 유휴 연결을 Poller가 효율적으로 관리하므로
 ## 6. 전체 흐름 정리
 
 
-이제 전체 그림이 보여요.
+이제 전체 그림이 보입니다.
 
 ![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary.svg)
 
@@ -1240,11 +1240,11 @@ NIO 환경에서는 유휴 연결을 Poller가 효율적으로 관리하므로
 ![](/uploads/theory/tomcat-nio-request-handling/6-overall-flow-summary-2.svg)
 
 
-**결론**: 대부분의 경우 DB가 병목이에요. 톰캣과 Spring MVC는 충분히 빨라요.
+**결론**: 대부분의 경우 DB가 병목입니다. 톰캣과 Spring MVC는 충분히 빠릅니다.
 
 ## 7. 마치며
 
-톰캣 커넥터부터 Spring MVC까지 공부하고 나니, 이제 요청 하나가 어떻게 처리되는지 전체 그림이 그려져요.
+톰캣 커넥터부터 Spring MVC까지 공부하고 나니, 이제 요청 하나가 어떻게 처리되는지 전체 그림이 그려집니다.
 
 **핵심 정리**:
 
@@ -1255,7 +1255,7 @@ NIO 환경에서는 유휴 연결을 Poller가 효율적으로 관리하므로
 5. **Spring MVC**: DispatcherServlet이 중앙 집중식으로 요청 분배
 6. **병목은 대부분 DB**: 쿼리 최적화가 제일 중요
 
-나중에는 비동기 처리(WebFlux)와 리액티브 프로그래밍을 공부해서, 더 효율적인 서버를 만들어 봐야겠어요.
+나중에는 비동기 처리(WebFlux)와 리액티브 프로그래밍을 공부해서, 더 효율적인 서버를 만들어 봐야겠습니다.
 
 ## 참고 자료
 

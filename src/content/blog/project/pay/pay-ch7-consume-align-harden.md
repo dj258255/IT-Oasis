@@ -14,9 +14,9 @@ series: "결제 시스템 만들기"
 seriesOrder: 7
 ---
 
-*결제 시스템 시리즈 — 이벤트 소비·도메인 정합·하드닝. 원 연재 여러 편을 한 챕터로 묶었고, 각 절이 원래 한 편이다. 챕터 전체를 관통하는 주제는 하나다. 만들어둔 것과 실제로 도는 것 사이의 간극.*
+*결제 시스템 시리즈: 이벤트 소비·도메인 정합·하드닝. 원 연재 여러 편을 한 챕터로 묶었고, 각 절이 원래 한 편이다. 챕터 전체를 관통하는 주제는 하나다. 만들어둔 것과 실제로 도는 것 사이의 간극.*
 
-## 프로세스 밖 소비자"라는 약속을 실제로 지키기 — 그리고 붙여보니 드러난 이중 인코딩
+## 프로세스 밖 소비자"라는 약속을 실제로 지키기: 붙여보니 드러난 이중 인코딩
 
 외부화해둔 Kafka 이벤트를 구독하는 소비자를 드디어 만들었다. 그리고 붙이자마자 알았다. JSON이어야 할 와이어에 base64가 흐르고 있었다.
 
@@ -28,7 +28,7 @@ seriesOrder: 7
 
 그래서 만들었다. 이번에도 실제로 붙여보니 몰랐던 게 드러났다.
 
-### 1. 소비자 앱 — 메인과 완전히 분리
+### 1. 소비자 앱: 메인과 완전히 분리
 
 소비자는 "정산 알림" 데모 워커다. `payment.confirmed`/`payment.canceled`를 구독해 구조화 로그를 남기는 경량 앱. 설계에서 지킨 분리 원칙은 세 가지다.
 
@@ -38,7 +38,7 @@ seriesOrder: 7
 
 **(3) 실패도 분리.** 파싱 안 되는 메시지(포이즌)는 warn 찍고 건너뛴다. 이상한 메시지 하나가 파티션 소비 전체를 멈추면 안 된다. [outbox 재발행](/blog/project/pay/pay-ch4-arch-events-ops)은 at-least-once라 중복 수신이 가능하다는 것, 그래서 실소비자는 orderNo/paymentId 기반 멱등 처리가 필수라는 것도 코드에 명시했다.
 
-### 2. 붙여보니 — 와이어에 base64가 흐르고 있었다
+### 2. 붙여보니: 와이어에 base64가 흐르고 있었다
 
 두 앱을 나란히 띄우고 결제를 일으켰다. 소비자가 이벤트를 받긴 받았다.
 
@@ -87,7 +87,7 @@ Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 더미�
 
 <hr />
 
-## 구매확정 전에 정산되고 있었다 — 죽은 이벤트가 가리킨 도메인 모순
+## 구매확정 전에 정산되고 있었다: 죽은 이벤트가 가리킨 도메인 모순
 
 구독자 없이 죽어 있던 건 Kafka 토픽만이 아니었다. 코드베이스를 전수 감사하다 구독자 0인 `EscrowReleasedEvent`를 발견했고, 그 끝에는 두 모듈이 "돈이 언제 판매자 것이 되는가"를 정반대로 알고 있던 도메인 모순이 있었다.
 
@@ -151,7 +151,7 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 부분취소 3000  → settlement_items: amount 7000           (역반영)
 ```
 
-### 3. 취소는 정산에 어떻게 반영하나 — 그리고 정직한 한계
+### 3. 취소는 정산에 어떻게 반영하나: 정직한 한계
 
 정산은 취소 이벤트도 구독하게 했다(`PaymentCanceledEvent`). 그런데 여기 미묘한 경우들이 있다.
 
@@ -179,7 +179,7 @@ void onEscrowReleased(EscrowReleasedEvent event) {
 
 <hr />
 
-## 아무도 부르지 않는 배치들 — javadoc은 스케줄러가 있다고 믿었다
+## 아무도 부르지 않는 배치들: javadoc은 스케줄러가 있다고 믿었다
 
 죽은 이벤트 다음은 죽은 배치였다. 같은 감사에서, 복구·만료·dunning 배치가 로직만 완성된 채 부르는 스케줄러 없이 잠들어 있다는 게 드러났다. 심지어 javadoc은 있지도 않은 스케줄러가 돈다고 적고 있었다.
 
@@ -272,7 +272,7 @@ Modulith가 이걸 위한 API를 준다. `CompletedEventPublications.deletePubli
 
 <hr />
 
-## 금고를 만들어놓고 아무것도 안 넣었다 — 암호화를 실제 컬럼에, 그리고 조회의 딜레마
+## 금고를 만들어놓고 아무것도 안 넣었다: 암호화를 실제 컬럼에, 그리고 조회의 딜레마
 
 감사가 짚은 다음 간극은 더 민감한 곳, 암호화였다. AES-256-GCM 금고까지 완비해놓고 어느 컬럼에도 적용하지 않아, 계좌번호와 빌링키가 DB에 평문으로 누워 있었다.
 
@@ -367,7 +367,7 @@ public String decrypt(String ciphertext) {
 
 <hr />
 
-## 재시작하면 블랙리스트가 사라진다 — 보안 상태의 수명, 그리고 README의 거짓말
+## 재시작하면 블랙리스트가 사라진다: 보안 상태의 수명, 그리고 README의 거짓말
 
 저장된 데이터를 잠갔으니 다음은 살아 움직이는 보안 상태다. 차단·검증에 쓰이는 상태가 얼마나 오래, 어디까지 사는지를 감사가 짚었고, 덤으로 문서의 거짓말까지 나왔다.
 
@@ -375,7 +375,7 @@ public String decrypt(String ciphertext) {
 
 [전수 감사](/blog/project/pay/pay-ch7-consume-align-harden)의 보안 관련 항목 넷을 이번에 마감했다. 각각 성격이 다른데 관통하는 주제가 있다. 보안 상태의 수명, 그리고 문서의 진실성.
 
-### 1. 조용한 기본값 — 웹훅 시크릿
+### 1. 조용한 기본값: 웹훅 시크릿
 
 [웹훅 서명 검증](/blog/project/pay/pay-ch1-payment-core)은 HMAC 시크릿으로 "이 웹훅이 진짜 PG가 보낸 것인지"를 확인한다. 그런데 그 시크릿이 이렇게 주입되고 있었다.
 
@@ -454,7 +454,7 @@ velocity:card:pk-98E5E60F...:29723098
 
 마지막 항목은 문서였다. 감사가 이걸 짚었다.
 
-> README는 "MySQL + JPA + **QueryDSL**", "settlement — **Spring Batch** 정산"이라 명시하나, `build.gradle`에 둘 다 **의존조차 없다.**
+> README는 "MySQL + JPA + **QueryDSL**", "settlement: **Spring Batch** 정산"이라 명시하나, `build.gradle`에 둘 다 **의존조차 없다.**
 
 쓰지도 않는 기술을 쓴다고 적어놨던 것이다. 초기 계획엔 있었는데 실제론 안 쓰게 됐고, 문서만 안 고친 듯하다. 사소해 보여도 정직성 문제다. 코드를 읽는 사람이 문서를 믿을 수 없게 된다.
 
@@ -472,7 +472,7 @@ velocity:card:pk-98E5E60F...:29723098
 
 <hr />
 
-## 배포하는 순간 결제가 끊기면 안 된다 — 운영성 마감 네 가지
+## 배포하는 순간 결제가 끊기면 안 된다: 운영성 마감 네 가지
 
 보안 상태를 마감했으니 남은 건 운영이다. graceful shutdown, 어드민 페이지네이션, CI 사각지대, 부하테스트의 자기모순. 넷 다 화려하지 않지만, 없으면 첫 배포·첫 트래픽에서 바로 티가 나는 것들이다.
 
@@ -553,7 +553,7 @@ CI에 한 스텝을 추가했다.
 
 <hr />
 
-## CPU 말고 "미확정 결제 나이"를 본다 — 결제 SLO를 대시보드와 알림으로, 그리고 스크레이프를 막은 시큐리티
+## CPU 말고 "미확정 결제 나이"를 본다: 결제 SLO를 대시보드와 알림으로, 그리고 스크레이프를 막은 시큐리티
 
 마지막 간극은 관측성이다. dashboard.json 파일은 있는데 그걸 볼 프로메테우스도 그라파나도 없었고, 배선해서 띄우자 이번엔 시큐리티가 스크레이프를 401로 막고 있었다.
 
@@ -567,7 +567,7 @@ CI에 한 스텝을 추가했다.
 
 이번엔 이걸 진짜로 돌아가게 만들었다. 배선하는 과정에서 "결제 시스템의 관측성이란 뭘 봐야 하나"라는 질문과 실기동해야만 보이는 벽, 둘 다를 만났다.
 
-### 1. CPU가 아니라 "결제가 건강한가"를 본다
+### 1. CPU 너머 "결제가 건강한가"를 본다
 
 관측성의 기본은 CPU·메모리·힙 같은 시스템 메트릭이고, 그건 Micrometer가 공짜로 준다. 하지만 그것만으론 "이 결제 시스템이 건강한가"를 답하지 못한다. CPU가 20%여도 결제는 다 실패하고 있을 수 있다.
 
@@ -594,7 +594,7 @@ Gauge.builder("recon.pending.count", this, m -> repository.countByStatus(ReconSt
 
 게이지 supplier는 스크레이프마다(15초) 단일 집계 쿼리만 돈다. `min(requestedAt)` 하나, `count` 하나뿐이라 가볍다.
 
-![Grafana 결제 SLO 대시보드 — 성공률·TPS·미확정 나이·대사 적체·결과별 rate·p95/p99·HikariCP](/uploads/project/pay/demo/demo-grafana-dashboard.png)
+![Grafana 결제 SLO 대시보드: 성공률·TPS·미확정 나이·대사 적체·결과별 rate·p95/p99·HikariCP](/uploads/project/pay/demo/demo-grafana-dashboard.png)
 
 성공률 100%, 처리량 1.24 req/s, 미확정 0초, 대사 0건. 결제 언어로 시스템 상태를 한눈에 본다.
 
@@ -610,7 +610,7 @@ Gauge.builder("recon.pending.count", this, m -> repository.countByStatus(ReconSt
 | DeadlockRetrySpike | [데드락 재시도](/blog/project/pay/pay-ch6-security-queue) > 10회/분 | warning |
 | ReconPendingBacklog | 대사 PENDING > 0 (15분+) | warning |
 
-![Prometheus 결제 SLO 알림 룰 5종 — 모두 inactive](/uploads/project/pay/demo/demo-prometheus-alerts.png)
+![Prometheus 결제 SLO 알림 룰 5종: 모두 inactive](/uploads/project/pay/demo/demo-prometheus-alerts.png)
 
 지금은 5개 모두 inactive다. 시스템이 건강하기 때문이다. 알림은 아무 일 없을 땐 조용하고 조건이 맞으면 운다. 이 상태가 정상이다.
 
@@ -618,7 +618,7 @@ Gauge.builder("recon.pending.count", this, m -> repository.countByStatus(ReconSt
 
 > 성공률 = `성공/전체`인데, 트래픽이 아예 없으면 분모가 0이라 `0/0 = NaN`이 된다. 그럼 `< 0.95` 비교가 참일까? 아니다. 프로메테우스는 NaN을 비교에서 빼서 발화하지 않는다. 덕분에 새벽에 트래픽이 0일 때 "성공률 0%!" 오탐이 안 뜬다. 이걸 몰랐으면 `or vector(1)` 같은 방어를 넣었을 텐데, 산술 자체가 알아서 해결해줬다.
 
-### 3. 진짜 배움 — 실기동하니 스크레이프가 401이었다
+### 3. 진짜 배움: 실기동하니 스크레이프가 401이었다
 
 여기까지는 코드다. compose도 파싱되고, 테스트도 통과하고, 대시보드 JSON도 유효하다. 근데 실제로 띄워보니 프로메테우스가 아무것도 못 긁고 있었다.
 

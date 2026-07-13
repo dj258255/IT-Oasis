@@ -1,5 +1,5 @@
 ---
-title: 'Lucene Replica 인덱스 동기화 — rsync 경로 오류에서 atomic swap까지'
+title: 'Lucene Replica 인덱스 동기화: rsync 경로 오류에서 atomic swap까지'
 titleEn: 'Lucene Replica Index Sync — From rsync Path Mismatch to Atomic Swap'
 description: 2대 서버 환경에서 Lucene 인덱스를 rsync로 동기화하는 과정에서 발생한 문제들을 추적합니다. sync-index.sh의 glob 삭제 버그, Docker 볼륨 경로 불일치(named volume vs bind mount), Redis 배치 version 충돌, 자동완성 Lucene fallback 실패를 하나씩 디버깅하며, 최종적으로 temp directory + atomic swap 패턴과 경로 수정으로 해결합니다.
 descriptionEn: Traces index synchronization issues between primary and replica Lucene servers in a 2-node setup. Debugs sync-index.sh glob deletion bug, Docker volume path mismatch (named volume vs bind mount), Redis batch version collision, and autocomplete Lucene fallback failure, ultimately resolving with temp directory + atomic swap pattern and correct path configuration.
@@ -20,7 +20,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[Nori 형태소 분석기 Stop Filter 문제 — "안녕" 검색 0건의 원인과 해결](/blog/project/wikiengine/nori-stop-filter-fix)에서 Nori의 `DEFAULT_STOP_TAGS`에 포함된 IC(감탄사) 필터를 제거하고, `title_ngram` 2-3gram 필드를 추가하여 dis_max 쿼리로 형태소 분석 실패를 보완했습니다.
+[Nori 형태소 분석기 Stop Filter 문제: "안녕" 검색 0건의 원인과 해결](/blog/project/wikiengine/nori-stop-filter-fix)에서 Nori의 `DEFAULT_STOP_TAGS`에 포함된 IC(감탄사) 필터를 제거하고, `title_ngram` 2-3gram 필드를 추가하여 dis_max 쿼리로 형태소 분석 실패를 보완했습니다.
 
 | 지표 | 결과 |
 |------|------|
@@ -33,11 +33,11 @@ series: "WikiEngine"
 
 ---
 
-## 1. 정상 상태 --- 인덱스 동기화 아키텍처
+## 1. 정상 상태: 인덱스 동기화 아키텍처
 
 wikiEngine은 2대의 ARM 서버에서 운영됩니다. Lucene 인덱스의 쓰기는 서버1(primary)에서만 수행하고, 서버2(replica)는 읽기 전용으로 동작합니다. MySQL의 Primary-Replica 패턴과 동일한 사고 모델입니다.
 
-![wikiEngine Primary-Replica 아키텍처 — 서버1은 IndexWriter/NRT SearcherManager로 쓰기 전용, 서버2는 DirectoryReader로 읽기 전용, 사이를 rsync로 동기화](/uploads/project/WikiEngine/lucene-replica-sync-troubleshooting/primary-replica-architecture.svg)
+![wikiEngine Primary-Replica 아키텍처: 서버1은 IndexWriter/NRT SearcherManager로 쓰기 전용, 서버2는 DirectoryReader로 읽기 전용, 사이를 rsync로 동기화](/uploads/project/WikiEngine/lucene-replica-sync-troubleshooting/primary-replica-architecture.svg)
 
 서버1의 앱은 Kafka CDC 이벤트를 수신하여 실시간으로 Lucene 인덱스를 갱신합니다. `IndexWriter`로 문서를 추가/수정/삭제하고, `SearcherManager`의 NRT(Near Real-Time) 리더가 변경사항을 반영합니다.
 
@@ -54,7 +54,7 @@ wikiEngine은 2대의 ARM 서버에서 운영됩니다. Lucene 인덱스의 쓰�
 
 ---
 
-## 2. 문제 발생 --- 재색인 후 자동완성이 안 됨
+## 2. 문제 발생: 재색인 후 자동완성이 안 됨
 
 `title_ngram` 필드 추가를 위해 로컬에서 전체 재색인을 수행한 뒤, `sync-index.sh`로 양쪽 서버에 인덱스를 배포했습니다.
 
@@ -68,7 +68,7 @@ wikiEngine은 2대의 ARM 서버에서 운영됩니다. Lucene 인덱스의 쓰�
 
 ---
 
-## 3. 원인 추적 1 --- sync-index.sh glob 삭제 버그
+## 3. 원인 추적 1: sync-index.sh glob 삭제 버그
 
 첫 번째로 의심한 것은 인덱스 파일 동기화 자체였습니다. 서버2에서 Lucene 인덱스 디렉토리의 파일 수를 확인했습니다.
 
@@ -106,7 +106,7 @@ ssh $SERVER2 "rm -rf ${SERVER2_BASE}/wiki-index && mkdir -p ${SERVER2_BASE}/wiki
 
 ---
 
-## 4. 원인 추적 2 --- Redis 배치 version 불일치
+## 4. 원인 추적 2: Redis 배치 version 불일치
 
 glob 삭제를 수정하고 다시 동기화했지만, 자동완성 문제가 완전히 해결되지 않았습니다. 여전히 서버2에서 일부 키워드의 자동완성이 실패했습니다.
 
@@ -151,7 +151,7 @@ public void runAutocompleteBuildJob() {
 
 ---
 
-## 5. 원인 추적 3 --- 자동완성 Lucene fallback (title_jamo에서 title_raw로)
+## 5. 원인 추적 3: 자동완성 Lucene fallback (title_jamo에서 title_raw로)
 
 Redis 배치 문제를 수정한 뒤에도, Redis에 캐싱되지 않은 키워드의 자동완성이 여전히 불안정했습니다. Redis miss일 때 Lucene fallback이 제대로 동작하지 않는 것이었습니다.
 
@@ -182,9 +182,9 @@ if (JamoDecomposer.containsJamo(normalized)) {
 
 ---
 
-## 6. 원인 추적 4 --- Docker 볼륨 경로 불일치 (근본 원인)
+## 6. 원인 추적 4: Docker 볼륨 경로 불일치 (근본 원인)
 
-세 가지 문제를 모두 수정했는데도 서버2에서 특정 키워드의 자동완성이 실패한다는 것은, 서버2의 인덱스 자체에 근본적인 문제가 있다는 뜻이었습니다. 여기서부터는 추측이 아니라 **인덱스 내부를 직접 들여다보는** 접근이 필요했습니다.
+세 가지 문제를 모두 수정했는데도 서버2에서 특정 키워드의 자동완성이 실패한다는 것은, 서버2의 인덱스 자체에 근본적인 문제가 있다는 뜻이었습니다. 여기서부터는 추측을 멈추고 **인덱스 내부를 직접 들여다보는** 접근이 필요했습니다.
 
 ### 디버그 엔드포인트 추가
 
@@ -225,7 +225,7 @@ public Map<String, Object> debugTitleRaw(@RequestParam String prefix,
 
 이 엔드포인트가 문제의 핵심을 드러냈습니다.
 
-### 서버1 결과 --- 정상
+### 서버1 결과: 정상
 
 ```json
 {
@@ -243,7 +243,7 @@ public Map<String, Object> debugTitleRaw(@RequestParam String prefix,
 
 5개 세그먼트 모두 `title_raw=DOCS`입니다. 필드가 정상적으로 존재하며, PrefixQuery가 6건을 반환합니다.
 
-### 서버2 결과 --- 비정상
+### 서버2 결과: 비정상
 
 ```json
 {
@@ -262,7 +262,7 @@ public Map<String, Object> debugTitleRaw(@RequestParam String prefix,
 
 세그먼트 이름도 서버1(`_li~_lm`)과 완전히 다릅니다(`_2o8, _h2h~_hjb`). rsync로 동기화했다면 같은 세그먼트가 있어야 합니다. 서버2는 **rsync가 전혀 반영되지 않은 별도의 인덱스**를 사용하고 있었습니다.
 
-### 진짜 원인 --- named volume vs bind mount
+### 진짜 원인: named volume vs bind mount
 
 여기서 양쪽 서버의 `docker-compose.yml`을 비교했습니다.
 
@@ -337,7 +337,7 @@ $ docker volume inspect mysql-replica_lucene_index
 
 ---
 
-## 7. 추가 개선 --- temp directory + atomic swap
+## 7. 추가 개선: temp directory + atomic swap
 
 경로를 수정하면서 `sync-index.sh` 전체를 재설계했습니다. 기존 방식은 live 디렉토리에서 바로 삭제하고 rsync하기 때문에, rsync 중간에 실패하면 **삭제는 완료됐는데 복사는 불완전한** 상태가 됩니다. 이 경우 앱이 시작되면 corrupt된 인덱스를 읽게 됩니다.
 
@@ -367,7 +367,7 @@ Solr의 Leader/Follower 복제에서도 유사한 패턴을 사용합니다. Sol
 
 ---
 
-## 8. 현업 조사 --- Lucene replica 동기화 패턴
+## 8. 현업 조사: Lucene replica 동기화 패턴
 
 이번 문제를 계기로 프로덕션에서 Lucene replica 인덱스를 동기화하는 방법을 조사했습니다. rsync 기반 동기화가 현업에서도 유효한 패턴인지 확인하기 위해서입니다.
 
@@ -384,7 +384,7 @@ rsync 기반 동기화는 위 시스템들에 비해 단순하지만, 2대 규�
 
 ---
 
-## 9. 검증 --- Before / After
+## 9. 검증: Before / After
 
 ### Before (경로 수정 전)
 
@@ -425,11 +425,11 @@ rsync 기반 동기화는 위 시스템들에 비해 단순하지만, 2대 규�
 
 **Docker의 named volume과 bind mount는 겉으로 비슷하지만 호스트 경로가 완전히 다릅니다.** 두 서버의 `docker-compose.yml`이 같은 이름의 volume을 선언하더라도 `driver_opts`에 따라 실제 호스트 경로가 달라집니다. 인덱스 동기화, 백업, 모니터링 등 **호스트 파일시스템에 직접 접근하는** 작업에서는 `docker volume inspect`로 실제 마운트 포인트를 반드시 확인해야 합니다.
 
-**분산 환경에서 "되었다 안 되었다"하는 문제는 대부분 서버 간 상태 불일치입니다.** 50%라는 숫자가 단서였습니다. Nginx load balancing으로 어느 서버에 걸리느냐에 따라 증상이 달라지므로, 각 서버를 직접 호출하여 차이를 확인하는 것이 첫 번째 디버깅 단계였어야 합니다. MySQL Replication lag, Redis 캐시 불일치, 파일 동기화 실패 --- 2대 이상의 서버를 운영하면 "서버 간 상태가 같은가?"라는 질문이 항상 첫 번째여야 합니다.
+**분산 환경에서 "되었다 안 되었다"하는 문제는 대부분 서버 간 상태 불일치입니다.** 50%라는 숫자가 단서였습니다. Nginx load balancing으로 어느 서버에 걸리느냐에 따라 증상이 달라지므로, 각 서버를 직접 호출하여 차이를 확인하는 것이 첫 번째 디버깅 단계였어야 합니다. MySQL Replication lag, Redis 캐시 불일치, 파일 동기화 실패까지, 2대 이상의 서버를 운영하면 "서버 간 상태가 같은가?"라는 질문이 항상 첫 번째여야 합니다.
 
 **디버그 엔드포인트를 추가하는 것이 가장 빠른 디버깅 방법이었습니다.** 세그먼트별 필드 존재 여부를 확인하는 엔드포인트 하나(`/admin/lucene/debug-title-raw`)로 근본 원인을 찾았습니다. Lucene의 인덱스 파일을 직접 분석하거나, `luke` 같은 외부 도구를 사용하는 것보다, 애플리케이션에 간단한 진단 API를 추가하는 것이 운영 환경에서는 훨씬 효율적입니다.
 
-**rsync + Lucene replica는 현업에서도 사용하는 패턴이지만, 구현 세부사항에서 문제가 발생합니다.** 경로가 맞는지, 삭제가 완전한지, 전송 중 인덱스가 corrupt되지 않는지 --- 동기화의 "무엇을"보다 "어떻게"에서 버그가 숨어 있었습니다. temp directory + atomic swap 패턴으로 전송 중 안전성을 확보하고, 경로를 정확히 설정하는 것이 운영 안정성의 기본입니다.
+**rsync + Lucene replica는 현업에서도 사용하는 패턴이지만, 구현 세부사항에서 문제가 발생합니다.** 경로가 맞는지, 삭제가 완전한지, 전송 중 인덱스가 corrupt되지 않는지가 관건이었습니다. 동기화의 "무엇을"보다 "어떻게"에서 버그가 숨어 있었습니다. temp directory + atomic swap 패턴으로 전송 중 안전성을 확보하고, 경로를 정확히 설정하는 것이 운영 안정성의 기본입니다.
 
 ---
 

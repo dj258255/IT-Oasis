@@ -1,5 +1,5 @@
 ---
-title: '타이미(Tymee) — 집중의 시간을 게임처럼 재밌게'
+title: '타이미(Tymee): 집중의 시간을 게임처럼 재밌게'
 titleEn: 'Tymee — Making Focus Time Fun Like a Game'
 description: 즉각적인 피드백과 성취 공유 욕구를 결합하여 집중을 게임처럼 만드는 앱, 타이미의 기획 의도와 프로젝트 소개.
 descriptionEn: Introduces Tymee, an app that makes focus fun like a game by combining instant feedback with the desire to share achievements.
@@ -18,7 +18,7 @@ series: "Tymee"
 이번에 사이드 프로젝트로 **타이미(Tymee)**라는 앱을 개발하게 되었습니다. 기획부터 디자인, 개발까지 혼자서 진행하고 있는 1인 프로젝트입니다.
 
 # 시작은 단순한 관찰에서
-친구가 공부할 때마다 탁상시계 앱을 켜두는 습관이 있었습니다. 스마트폰을 시계처럼 세워두고, 시간이 흘러가는 걸 보면서 집중한다고 하더라고요. 처음엔 그냥 "독특한 습관이네" 하고 넘겼는데, 문득 예전에 봤던 뉴스 하나가 떠올랐습니다.
+친구가 공부할 때마다 탁상시계 앱을 켜두는 습관이 있었습니다. 스마트폰을 시계처럼 세워두고, 시간이 흘러가는 걸 보면서 집중한다고 했습니다. 처음엔 그냥 "독특한 습관이네" 하고 넘겼는데, 문득 예전에 봤던 뉴스 하나가 떠올랐습니다.
 
 # 왜 게임은 재밌고, 공부는 지루할까
 그 뉴스의 핵심은 이랬습니다.

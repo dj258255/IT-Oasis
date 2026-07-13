@@ -1,7 +1,7 @@
 ---
 title: 'JVM과 Garbage Collection 이해하기'
 titleEn: 'Understanding JVM and Garbage Collection'
-description: JVM 메모리 시리즈의 출발점. Class Loader, Runtime Data Areas, Execution Engine, JIT 컴파일러까지 JVM 아키텍처 전반을 정리하고, Heap 구조·GC 알고리즘 같은 메모리 세부 주제는 ①~⑤편으로 이어가요.
+description: JVM 메모리 시리즈의 출발점. Class Loader, Runtime Data Areas, Execution Engine, JIT 컴파일러까지 JVM 아키텍처 전반을 정리하고, Heap 구조·GC 알고리즘 같은 메모리 세부 주제는 ①~⑤편으로 이어갑니다.
 descriptionEn: Starting point of the JVM memory series. Covers JVM architecture — Class Loader, Runtime Data Areas, Execution Engine, JIT — with deeper Heap structure and GC algorithm details continuing in parts ①–⑤.
 date: 2026-01-09T00:00:00.000Z
 tags:
@@ -20,32 +20,32 @@ seriesOrder: 0
 
 ## 0. 이 글의 위치
 
-이 시리즈는 **JVM 메모리**를 1차 소스(Oracle JDK docs, OpenJDK JEP, Linux kernel docs) 기준으로 정리한 6편이에요. 지금 읽는 **0편은 JVM 자체가 어떻게 생겼는지**를 훑는 아키텍처 개론이에요. Heap 내부 구조(Young/Old/Eden), GC 알고리즘(G1/ZGC/Shenandoah), Off-heap, OS Page Cache 같은 주제는 **①~⑤편으로 각각 독립 편성**했으니 여기서는 반복하지 않고 링크로만 연결할게요.
+이 시리즈는 **JVM 메모리**를 1차 소스(Oracle JDK docs, OpenJDK JEP, Linux kernel docs) 기준으로 정리한 6편입니다. 지금 읽는 **0편은 JVM 자체가 어떻게 생겼는지**를 훑는 아키텍처 개론입니다. Heap 내부 구조(Young/Old/Eden), GC 알고리즘(G1/ZGC/Shenandoah), Off-heap, OS Page Cache 같은 주제는 **①~⑤편으로 각각 독립 편성**했으니 여기서는 반복하지 않고 링크로만 연결하겠습니다.
 
-따라서 이 글의 목표는 딱 이것이에요:
+따라서 이 글의 목표는 딱 이것입니다:
 
 - JVM이 `.class` 파일을 메모리에 어떻게 얹고(Class Loader)
 - 프로그램 실행 중 어떤 메모리 영역을 쓰고(Runtime Data Areas)
 - 바이트코드를 어떻게 기계어로 바꿔서 돌리는지(Execution Engine, JIT)
 - 객체는 Heap 안에서 어떻게 배치되는지(Object Layout)
 
-이 전반을 "한 그림"으로 잡아두는 거예요.
+이 전반을 "한 그림"으로 잡아두는 것입니다.
 
 ---
 
 ## 1. JVM 아키텍처 개요
 
-JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신이에요. "Write Once, Run Anywhere"를 가능하게 하는 핵심 컴포넌트예요.
+JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신입니다. "Write Once, Run Anywhere"를 가능하게 하는 핵심 컴포넌트입니다.
 
 ![](/uploads/theory/jvm-and-gc/jvm-architecture.png)
 
 > 출처: [The Java Virtual Machine Specification, Java SE 21](https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html)
 
-크게 세 개의 서브시스템으로 나눠서 볼 수 있어요.
+크게 세 개의 서브시스템으로 나눠서 볼 수 있습니다.
 
-1. **Class Loader Subsystem** — `.class` 파일을 읽어 메모리에 얹고 링크하는 역할
-2. **Runtime Data Areas** — 실행 중에 쓰는 메모리 (Method Area, Heap, Stack, PC Register, Native Method Stack)
-3. **Execution Engine** — 바이트코드를 해석(Interpreter)하거나 네이티브로 컴파일(JIT)해서 실행
+1. **Class Loader Subsystem**: `.class` 파일을 읽어 메모리에 얹고 링크하는 역할
+2. **Runtime Data Areas**: 실행 중에 쓰는 메모리 (Method Area, Heap, Stack, PC Register, Native Method Stack)
+3. **Execution Engine**: 바이트코드를 해석(Interpreter)하거나 네이티브로 컴파일(JIT)해서 실행
 
 ---
 
@@ -55,7 +55,7 @@ JVM(Java Virtual Machine)은 Java 바이트코드를 실행하는 가상 머신�
 
 ### 2.1 3단계 Class Loader 계층 (JDK 9+)
 
-Java 9 모듈 시스템 도입 이후 built-in class loader가 다음 3개로 재정의됐어요. **Extension class loader가 Platform class loader로 교체**된 게 핵심 변화예요.
+Java 9 모듈 시스템 도입 이후 built-in class loader가 다음 3개로 재정의됐습니다. **Extension class loader가 Platform class loader로 교체**된 게 핵심 변화입니다.
 
 | 계층 | 이름 | 역할 |
 |---|---|---|
@@ -104,18 +104,18 @@ System.out.println(MyClass.class.getClassLoader());     // AppClassLoader
 
 ![](/uploads/theory/jvm-and-gc/initialization.png)
 
-static 변수에 **실제 값** 할당, `static {}` 블록 실행. 이 시점부터 클래스가 "사용 가능" 상태가 돼요.
+static 변수에 **실제 값** 할당, `static {}` 블록 실행. 이 시점부터 클래스가 "사용 가능" 상태가 됩니다.
 
 ---
 
 ## 3. Runtime Data Areas
 
-JVM이 프로그램 실행 중 사용하는 메모리 영역들이에요.
+JVM이 프로그램 실행 중 사용하는 메모리 영역들입니다.
 
 ![](/uploads/theory/jvm-and-gc/runtime-data-areas.png)
 ![](/uploads/theory/jvm-and-gc/runtime-data-areas-2.png)
 
-스레드 공유 영역과 스레드별 영역으로 나뉘어요.
+스레드 공유 영역과 스레드별 영역으로 나뉩니다.
 
 - **모든 스레드 공유**: Method Area(Metaspace), Heap
 - **스레드별 생성**: JVM Stack, PC Register, Native Method Stack
@@ -140,31 +140,31 @@ JVM이 프로그램 실행 중 사용하는 메모리 영역들이에요.
 
 **PermGen → Metaspace 변경 이유**
 
-- PermGen은 Heap의 일부로 관리됐고 크기 제한 때문에 `OutOfMemoryError: PermGen space`가 자주 발생했어요.
-- Metaspace는 Native Memory를 써서 자동으로 확장 가능해요.
+- PermGen은 Heap의 일부로 관리됐고 크기 제한 때문에 `OutOfMemoryError: PermGen space`가 자주 발생했습니다.
+- Metaspace는 Native Memory를 써서 자동으로 확장 가능합니다.
 
 ![](/uploads/theory/jvm-and-gc/permgen-to-metaspace.png)
 
-> 참고: Java 7부터 static 변수의 참조는 Heap으로 이동했어요. Metaspace에는 클래스 메타데이터만 남아 있어요.
+> 참고: Java 7부터 static 변수의 참조는 Heap으로 이동했습니다. Metaspace에는 클래스 메타데이터만 남아 있습니다.
 
 > 출처: [About G1 Garbage Collector, Permanent Generation, and Metaspace - Oracle](https://blogs.oracle.com/poonam/post/about-g1-garbage-collector-permanent-generation-and-metaspace)
 
 ### 3.2 Heap
 
-모든 객체와 배열이 할당되는 영역이며, **GC의 주요 대상**이에요.
+모든 객체와 배열이 할당되는 영역이며, **GC의 주요 대상**입니다.
 
 ```java
 User user = new User();   // Heap에 생성
 int[] arr = new int[10];  // 배열도 Heap에 생성
 ```
 
-Heap의 **세대별 구조**(Young/Old/Eden/Survivor), **Minor GC → Promotion → Full GC** 흐름, **NewRatio/SurvivorRatio** 같은 튜닝 파라미터는 이 시리즈의 ①편에서 1차 소스 기준으로 자세히 다뤘어요.
+Heap의 **세대별 구조**(Young/Old/Eden/Survivor), **Minor GC → Promotion → Full GC** 흐름, **NewRatio/SurvivorRatio** 같은 튜닝 파라미터는 이 시리즈의 ①편에서 1차 소스 기준으로 자세히 다뤘습니다.
 
 [**① JVM Heap의 세대별 구조**](/blog/theory/es-memory-01-jvm-heap)
 
 ### 3.3 JVM Stack (스레드별)
 
-각 스레드마다 별도로 생성되며 **Stack Frame**들의 집합이에요.
+각 스레드마다 별도로 생성되며 **Stack Frame**들의 집합입니다.
 
 ![](/uploads/theory/jvm-and-gc/jvm-stack.png)
 
@@ -205,9 +205,9 @@ void infinite() {
 
 ### 3.4 PC Register & Native Method Stack
 
-**PC Register** — 현재 실행 중인 명령어의 주소를 저장. 스레드마다 별도로 존재해요. (Native 메서드 실행 중이면 undefined)
+**PC Register**: 현재 실행 중인 명령어의 주소를 저장. 스레드마다 별도로 존재합니다. (Native 메서드 실행 중이면 undefined)
 
-**Native Method Stack** — JNI(Java Native Interface)로 호출되는 네이티브 메서드(C/C++)용 스택.
+**Native Method Stack**: JNI(Java Native Interface)로 호출되는 네이티브 메서드(C/C++)용 스택.
 
 ![](/uploads/theory/jvm-and-gc/native-method-stack.png)
 
@@ -217,11 +217,11 @@ void infinite() {
 
 ![](/uploads/theory/jvm-and-gc/execution-engine.png)
 
-바이트코드를 실제 기계어로 변환해서 실행해요. **Interpreter + JIT Compiler** 조합이 HotSpot의 핵심이에요.
+바이트코드를 실제 기계어로 변환해서 실행합니다. **Interpreter + JIT Compiler** 조합이 HotSpot의 핵심입니다.
 
 ### 4.1 Interpreter
 
-바이트코드를 한 줄씩 읽어서 실행해요. **시작은 빠르지만 반복 실행 시 느려요**.
+바이트코드를 한 줄씩 읽어서 실행합니다. **시작은 빠르지만 반복 실행 시 느립니다**.
 
 ![](/uploads/theory/jvm-and-gc/interpreter.png)
 
@@ -229,12 +229,12 @@ void infinite() {
 
 ![](/uploads/theory/jvm-and-gc/jit-compiler.png)
 
-자주 실행되는 코드(**Hot Spot**)를 **네이티브 코드로 컴파일**하여 캐싱해요.
+자주 실행되는 코드(**Hot Spot**)를 **네이티브 코드로 컴파일**하여 캐싱합니다.
 
 ![](/uploads/theory/jvm-and-gc/jit-compilation-flow.png)
 
 1. 바이트코드 (인터프리터로 실행)
-2. 프로파일링 (실행 횟수 측정 — 메서드/루프)
+2. 프로파일링 (실행 횟수 측정: 메서드/루프)
 3. Hot Spot 감지 (임계값 초과)
 4. 컴파일 (네이티브 코드 생성)
 
@@ -248,7 +248,7 @@ void infinite() {
 
 ![](/uploads/theory/jvm-and-gc/tiered-compilation.png)
 
-HotSpot은 두 개의 JIT 컴파일러를 **단계적으로** 결합해요.
+HotSpot은 두 개의 JIT 컴파일러를 **단계적으로** 결합합니다.
 
 | Tier | 컴파일러 | 용도 |
 |---|---|---|
@@ -256,23 +256,23 @@ HotSpot은 두 개의 JIT 컴파일러를 **단계적으로** 결합해요.
 | 1~3 | **C1** (Client) | 빠른 컴파일, 가벼운 최적화, 프로파일링 데이터 수집 |
 | 4 | **C2** (Server) | 공격적 최적화, 오랜 컴파일 시간, 최고 성능 |
 
-코드는 0 → 3 → 4 식으로 단계적으로 승급돼요. 초반엔 C1으로 빠르게 돌리다가 정말 뜨거운 코드만 C2로 재컴파일되는 식이에요.
+코드는 0 → 3 → 4 식으로 단계적으로 승급됩니다. 초반엔 C1으로 빠르게 돌리다가 정말 뜨거운 코드만 C2로 재컴파일됩니다.
 
 ### 4.4 JIT 최적화 기법
 
-**1) Inlining** — 메서드 호출을 본문으로 대체
+**1) Inlining**: 메서드 호출을 본문으로 대체
 
 ![](/uploads/theory/jvm-and-gc/inlining.png)
 
-**2) Loop Unrolling** — 루프 반복 줄이기
+**2) Loop Unrolling**: 루프 반복 줄이기
 
 ![](/uploads/theory/jvm-and-gc/loop-unrolling.png)
 
-**3) Escape Analysis** — 객체가 메서드 밖으로 탈출하지 않으면 스택에 할당
+**3) Escape Analysis**: 객체가 메서드 밖으로 탈출하지 않으면 스택에 할당
 
 ![](/uploads/theory/jvm-and-gc/escape-analysis.png)
 
-**4) Dead Code Elimination** — 사용되지 않는 코드 제거
+**4) Dead Code Elimination**: 사용되지 않는 코드 제거
 
 ```bash
 # JIT 관련 옵션
@@ -281,7 +281,7 @@ HotSpot은 두 개의 JIT 컴파일러를 **단계적으로** 결합해요.
 -XX:-TieredCompilation             # Tiered Compilation 비활성화
 ```
 
-> 참고: Tiered Compilation이 활성화된 상태(Java 8+ 기본값)에서는 `CompileThreshold`가 무시돼요. 각 레벨별로 별도 임계값이 쓰여요.
+> 참고: Tiered Compilation이 활성화된 상태(Java 8+ 기본값)에서는 `CompileThreshold`가 무시됩니다. 각 레벨별로 별도 임계값이 쓰입니다.
 
 > 출처: [Java HotSpot Virtual Machine Performance Enhancements - Oracle](https://docs.oracle.com/en/java/javase/17/vm/java-hotspot-virtual-machine-performance-enhancements.html)
 
@@ -289,15 +289,15 @@ HotSpot은 두 개의 JIT 컴파일러를 **단계적으로** 결합해요.
 
 ## 5. Object Memory Layout
 
-Java 객체가 Heap에서 어떻게 저장되는지 살펴볼게요.
+Java 객체가 Heap에서 어떻게 저장되는지 살펴보겠습니다.
 
 ![](/uploads/theory/jvm-and-gc/object-memory-layout.png)
 
-객체는 대략 세 부분으로 구성돼요.
+객체는 대략 세 부분으로 구성됩니다.
 
-1. **Object Header** (12~16 byte) — Mark Word(락·GC 정보) + Class Pointer
-2. **Instance Data** — 필드 값들 (alignment 맞춰 정렬)
-3. **Padding** — 8-byte alignment 맞추기 위한 채움
+1. **Object Header** (12~16 byte): Mark Word(락·GC 정보) + Class Pointer
+2. **Instance Data**: 필드 값들 (alignment 맞춰 정렬)
+3. **Padding**: 8-byte alignment 맞추기 위한 채움
 
 ![](/uploads/theory/jvm-and-gc/object-size-example.png)
 
@@ -311,7 +311,7 @@ Java 객체가 Heap에서 어떻게 저장되는지 살펴볼게요.
 -XX:-UseCompressedOops     # 비활성화
 ```
 
-> 왜 정확히 32GB까지 가능한지, Elasticsearch가 "힙 26~30GB에서 끊어라"라고 권고하는 이유(zero-based compressed oops)는 ⑤편의 [Compressed OOPs와 32GB 한계](/blog/theory/es-memory-05-elasticsearch#3-원칙-2-compressed-oops와-32gb-한계) 섹션에서 깊게 다뤘어요.
+> 왜 정확히 32GB까지 가능한지, Elasticsearch가 "힙 26~30GB에서 끊어라"라고 권고하는 이유(zero-based compressed oops)는 ⑤편의 [Compressed OOPs와 32GB 한계](/blog/theory/es-memory-05-elasticsearch#3-원칙-2-compressed-oops와-32gb-한계) 섹션에서 깊게 다뤘습니다.
 
 > 출처: [HotSpot Glossary - OpenJDK](https://openjdk.org/groups/hotspot/docs/HotSpotGlossary.html)
 
@@ -319,7 +319,7 @@ Java 객체가 Heap에서 어떻게 저장되는지 살펴볼게요.
 
 ## 6. String Pool과 Interning
 
-String은 특별 취급돼요. **String Pool**에서 중복을 제거해요.
+String은 특별 취급됩니다. **String Pool**에서 중복을 제거합니다.
 
 ![](/uploads/theory/jvm-and-gc/string-pool.png)
 
@@ -346,22 +346,22 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 ## 7. Garbage Collection의 존재 이유
 
-프로그래머가 직접 메모리를 해제하지 않아도 **JVM이 사용하지 않는 객체를 자동 회수**해주는 시스템이 GC예요.
+프로그래머가 직접 메모리를 해제하지 않아도 **JVM이 사용하지 않는 객체를 자동 회수**해주는 시스템이 GC입니다.
 
 ![](/uploads/theory/jvm-and-gc/gc-overview.png)
 
-편하지만 **공짜는 아니에요** — GC가 돌 때 **Stop-the-World(STW)** 라는 성능 비용이 발생해요. 그래서 JVM 튜닝의 핵심이 GC 튜닝이에요.
+편하지만 공짜는 아닙니다. GC가 돌 때 **Stop-the-World(STW)**라는 성능 비용이 발생합니다. 그래서 JVM 튜닝의 핵심이 GC 튜닝입니다.
 
-이 시리즈는 GC를 두 편으로 나눠서 다뤘어요.
+이 시리즈는 GC를 두 편으로 나눠서 다뤘습니다.
 
-- [**① JVM Heap의 세대별 구조**](/blog/theory/es-memory-01-jvm-heap) — 어디서 객체가 살고 죽는지 (Generational Hypothesis, Young/Old, TLAB, Promotion, Premature Promotion)
-- [**② GC 알고리즘과 Stop-the-World**](/blog/theory/es-memory-02-gc) — 어떻게 회수하는지 (Safepoint, Mark-Sweep-Compact, Serial/Parallel/G1/ZGC/Shenandoah, JDK 17 default)
+- [**① JVM Heap의 세대별 구조**](/blog/theory/es-memory-01-jvm-heap): 어디서 객체가 살고 죽는지 (Generational Hypothesis, Young/Old, TLAB, Promotion, Premature Promotion)
+- [**② GC 알고리즘과 Stop-the-World**](/blog/theory/es-memory-02-gc): 어떻게 회수하는지 (Safepoint, Mark-Sweep-Compact, Serial/Parallel/G1/ZGC/Shenandoah, JDK 17 default)
 
-그 다음 편들은 GC 영역 바깥까지 확장해요:
+그 다음 편들은 GC 영역 바깥까지 확장합니다:
 
-- [**③ JVM Off-heap과 Direct Memory**](/blog/theory/es-memory-03-off-heap) — Heap 바깥의 DirectByteBuffer, mmap, Foreign Memory API
-- [**④ OS Page Cache가 ES 성능을 결정하는 이유**](/blog/theory/es-memory-04-page-cache) — Linux 커널 관점
-- [**⑤ 힙 50% 룰 · mmap · Circuit Breaker**](/blog/theory/es-memory-05-elasticsearch) — Elasticsearch 운영 맥락으로 통합
+- [**③ JVM Off-heap과 Direct Memory**](/blog/theory/es-memory-03-off-heap): Heap 바깥의 DirectByteBuffer, mmap, Foreign Memory API
+- [**④ OS Page Cache가 ES 성능을 결정하는 이유**](/blog/theory/es-memory-04-page-cache): Linux 커널 관점
+- [**⑤ 힙 50% 룰 · mmap · Circuit Breaker**](/blog/theory/es-memory-05-elasticsearch): Elasticsearch 운영 맥락으로 통합
 
 ---
 
@@ -369,7 +369,7 @@ System.out.println(s1 == s4);     // true (intern으로 Pool 참조)
 
 > "JVM은 **Class Loader가 `.class`를 메모리에 얹고**, **Runtime Data Areas에 객체·스택·메타데이터를 배치**하고, **Execution Engine(인터프리터 + JIT)이 바이트코드를 기계어로 번역·실행**하는 가상 머신이며, 그 과정에서 Heap에 남은 쓰레기를 **GC가 주기적으로 회수**한다."
 
-이 한 문장이 성립한다면 0편의 목표는 달성된 거예요. 구체적인 메모리 내부와 성능 튜닝은 ①편부터 이어서 읽으면 돼요.
+이 한 문장이 성립한다면 0편의 목표는 달성된 것입니다. 구체적인 메모리 내부와 성능 튜닝은 ①편부터 이어서 읽으면 됩니다.
 
 ---
 

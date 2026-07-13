@@ -18,23 +18,23 @@ series: "Joying"
 
 ## 들어가며
 
-이번 프로젝트에서 채팅 기능을 새로 개발하게 됐어요.
+이번 프로젝트에서 채팅 기능을 새로 개발하게 됐습니다.
 기존 코드는 전부 Java + Lombok으로 되어있는데, 새 기능은 Kotlin으로 작성하기로 했습니다.
 
 **왜 Kotlin?** 채팅 시스템은 WebSocket 메시지 처리에서 비동기 I/O가 핵심이다. Kotlin Coroutine은 `suspend fun` + `async` 조합으로 비동기 코드를 동기 코드처럼 작성할 수 있어서, Java의 `CompletableFuture` 체이닝보다 가독성과 유지보수성이 좋다. 기존 Java 코드(회원, 상품 등)는 그대로 두고, 새로 개발하는 채팅 모듈만 Kotlin으로 작성하는 점진적 도입 전략을 택했다.
 
-Kotlin이 Java와 100% 호환된다고 하니까 문제없을 줄 알았어요.
+Kotlin이 Java와 100% 호환된다고 하니까 문제없을 줄 알았습니다.
 
 근데 아니었습니다.
 
 ## 문제 발견: Lombok이 안 보인다고?
 
-채팅방 컨트롤러를 Kotlin으로 작성하다가 기존 Java 엔티티를 사용하려고 했어요.
+채팅방 컨트롤러를 Kotlin으로 작성하다가 기존 Java 엔티티를 사용하려고 했습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/problem-found.svg)
 
 
-이런식으로 다른 팀원이 만든 코드에 접근하려고 했어요.
+이런식으로 다른 팀원이 만든 코드에 접근하려고 했습니다.
 
 그런데 빌드하니까 이런 에러가 떴습니다.
 
@@ -44,7 +44,7 @@ e: Unresolved reference 'getTitle'.
 e: Unresolved reference 'getMemberId'.
 ```
 
-Java 엔티티는 분명히 Lombok `@Getter`를 사용하고 있었거든요.
+Java 엔티티는 분명히 Lombok `@Getter`를 사용하고 있었습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/problem-found-2.svg)
 
@@ -53,7 +53,7 @@ Java 엔티티는 분명히 Lombok `@Getter`를 사용하고 있었거든요.
 
 ## 첫 번째 시도: 프로퍼티 접근으로 바꿔보자
 
-Kotlin은 getter를 자동으로 프로퍼티로 변환해준다고 했으니까, 이렇게 바꿔봤어요.
+Kotlin은 getter를 자동으로 프로퍼티로 변환해준다고 했으니까, 이렇게 바꿔봤습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/first-attempt.svg)
 
@@ -63,20 +63,20 @@ Kotlin은 getter를 자동으로 프로퍼티로 변환해준다고 했으니까
 
 e: Cannot access 'field productId: Long!': it is private in 'Product'
 
-당연히 안돼요. Lombok이 getter를 만들어주기 전이니까 private 필드에 직접 접근하려고 하는 거였습니다.
+당연히 안 됩니다. Lombok이 getter를 만들어주기 전이니까 private 필드에 직접 접근하려고 하는 거였습니다.
 
 ## 두 번째 시도: kapt에 Lombok 추가
 
-Kotlin annotation processing을 사용하면 되지 않을까 싶어서 kapt에 Lombok을 추가해봤어요.
+Kotlin annotation processing을 사용하면 되지 않을까 싶어서 kapt에 Lombok을 추가해봤습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/second-attempt.svg)
 
 
-이것도 안됐어요. kapt는 Kotlin annotation processing이지 Java annotation processing이 아니었거든요.
+이것도 안 됐습니다. kapt는 Kotlin annotation processing이지 Java annotation processing이 아니었습니다.
 
 그리고 생각해보니 빌드 순서의 문제인가?
 
-`--dry-run`으로 확인해봤어요.
+`--dry-run`으로 확인해봤습니다.
 
 ```bash
 ./gradlew compileJava --dry-run
@@ -96,7 +96,7 @@ Kotlin annotation processing을 사용하면 되지 않을까 싶어서 kapt에 
 3. **Java annotation processing 실행** (Lombok 등)
 4. **Java 소스 컴파일** (`compileJava`)
 
-인데 알아보니 Gradle에서 Kotlin과 Java를 함께 사용할 때 기본 빌드 순서는 저런식으로 작동해요.
+인데 알아보니 Gradle에서 Kotlin과 Java를 함께 사용할 때 기본 빌드 순서는 저런식으로 작동합니다.
 
 Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직 안 만들어놨으니 당연히 못 찾는거였습니다.
 
@@ -110,11 +110,11 @@ Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직
 ![](/uploads/project/Joying/kotlin-lombok-interop/build-order-2.svg)
 
 
-타이밍이 안 맞아요. Kotlin이 너무 일찍 컴파일되는 거예요.
+타이밍이 안 맞습니다. Kotlin이 너무 일찍 컴파일됩니다.
 
 ## 세 번째 시도: 빌드 순서를 바꿔보자
 
-그럼 Java를 먼저 컴파일하면 되지 않을까? Kotlin 컴파일 태스크가 Java 컴파일을 기다리게 만들어봤어요.
+그럼 Java를 먼저 컴파일하면 되지 않을까? Kotlin 컴파일 태스크가 Java 컴파일을 기다리게 만들어봤습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/third-attempt.svg)
 
@@ -130,7 +130,7 @@ Circular dependency between the following tasks:
      \--- :compileJava (*)
 ```
 
-순환 의존성이 발생했어요. Java도 Kotlin 코드를 참조하니까 서로 기다리는 상황이 된 거예요.
+순환 의존성이 발생했습니다. Java도 Kotlin 코드를 참조하니까 서로 기다리는 상황이 된 것입니다.
 
 ```
 compileKotlin → compileJava를 기다림
@@ -138,20 +138,20 @@ compileJava → compileKotlin을 기다림
 ...무한 대기...
 ```
 
-막막했어요. 빌드 순서를 바꿀 수도 없고, kapt로도 안되고... 이거 어떻게 해결하지?
+막막했습니다. 빌드 순서를 바꿀 수도 없고, kapt로도 안되고... 이거 어떻게 해결하지?
 
 ## 진짜 해결책: Kotlin Lombok 플러그인
 
-찾아보니까 Kotlin 1.7.20 버전부터 Lombok 플러그인을 공식 지원한다고 해요.
+찾아보니까 Kotlin 1.7.20 버전부터 Lombok 플러그인을 공식 지원한다고 합니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/solution.svg)
 
 
-이 플러그인을 추가하니까 Kotlin 컴파일러가 Lombok 어노테이션을 인식할 수 있게 됐어요.
+이 플러그인을 추가하니까 Kotlin 컴파일러가 Lombok 어노테이션을 인식할 수 있게 됐습니다.
 
 ### kotlin("plugin.lombok")이 뭘 하는거지?
 
-이 플러그인은 Kotlin 컴파일러가 Java 소스의 Lombok 어노테이션을 미리 읽고, 마치 getter/setter가 이미 존재하는 것처럼 처리하게 만들어요.
+이 플러그인은 Kotlin 컴파일러가 Java 소스의 Lombok 어노테이션을 미리 읽고, 마치 getter/setter가 이미 존재하는 것처럼 처리하게 만듭니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/kotlinpluginlombok.svg)
 
@@ -161,13 +161,13 @@ Kotlin 컴파일러가 이걸 보면:
 ![](/uploads/project/Joying/kotlin-lombok-interop/kotlinpluginlombok-2.svg)
 
 
-그래서 Kotlin 코드에서 `getProductId()`를 호출해도 컴파일 에러가 안 나요.
+그래서 Kotlin 코드에서 `getProductId()`를 호출해도 컴파일 에러가 안 납니다.
 
 ```
 BUILD SUCCESSFUL in 1s
 ```
 
-드디어 Kotlin 컴파일이 성공했어요!
+드디어 Kotlin 컴파일이 성공했습니다!
 
 ...근데 기뻐한 것도 잠시, 또 다른 에러가 떴다.
 
@@ -184,25 +184,25 @@ error: cannot find symbol
   location: class Member
 ```
 
-이번엔 Java 컴파일이 실패했어요. Java 파일에서 Lombok getter를 못 찾는다고?
+이번엔 Java 컴파일이 실패했습니다. Java 파일에서 Lombok getter를 못 찾는다고?
 
-`build/generated/sources` 디렉토리를 확인해보니 비어있었습니다. Lombok이 코드를 생성하지 않은 거였어요.
+`build/generated/sources` 디렉토리를 확인해보니 비어있었습니다. Lombok이 코드를 생성하지 않은 것이었습니다.
 
 Gradle에서 Java annotation processor가 제대로 실행되지 않았던 겁니다.
 
 ### 왜 Java annotation processing이 안 됐을까?
 
-`kotlin("plugin.lombok")`은 **Kotlin 컴파일러만** 도와줘요. Java 컴파일에는 영향을 주지 않습니다.
+`kotlin("plugin.lombok")`은 Kotlin 컴파일러만 도와줍니다. Java 컴파일에는 영향을 주지 않습니다.
 
-Java 컴파일을 위해서는 여전히 Lombok annotation processor가 제대로 실행되어야 하는데, Gradle 설정이 부족했던 거예요.
+Java 컴파일을 위해서는 여전히 Lombok annotation processor가 제대로 실행되어야 하는데, Gradle 설정이 부족했던 것입니다.
 
-IntelliJ로 빌드하면 되긴 했어요. IntelliJ는 자체적으로 Lombok 플러그인이 있어서 IDE에서 빌드하면 잘 됐거든요.
+IntelliJ로 빌드하면 되긴 했습니다. IntelliJ는 자체적으로 Lombok 플러그인이 있어서 IDE에서 빌드하면 잘 됐습니다.
 
-하지만 그건 해결책이 아니었습니다. **배포 CI/CD 환경에서도 통해야 하는데, 거기서는 Gradle만 사용하니까요.**
+하지만 그건 해결책이 아니었습니다. 배포 CI/CD 환경에서도 통해야 하는데, 거기서는 Gradle만 사용합니다.
 
 ## 완벽한 해결: io.freefair.lombok 플러그인
 
-Gradle에서 Java Lombok annotation processing을 제대로 처리하려면 또 다른 플러그인이 필요했어요.
+Gradle에서 Java Lombok annotation processing을 제대로 처리하려면 또 다른 플러그인이 필요했습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/solution-2.svg)
 
@@ -216,11 +216,11 @@ Gradle에서 Java Lombok annotation processing을 제대로 처리하려면 또 
 | `kotlin("plugin.lombok")` | Kotlin 컴파일러가 Lombok을 "인식"하게 함 | Kotlin 컴파일 |
 | `io.freefair.lombok` | Java annotation processing을 실제로 "실행"함 | Java 컴파일 |
 
-두 플러그인은 **각자 다른 역할**을 해요:
+두 플러그인은 각자 다른 역할을 합니다:
 - 첫 번째는 Kotlin이 "getter가 있을 거야"라고 가정하게 만듦
 - 두 번째는 Java에서 실제로 getter를 생성함
 
-이 플러그인을 추가하니까 Java 컴파일도 성공했어요.
+이 플러그인을 추가하니까 Java 컴파일도 성공했습니다.
 
 ```
 BUILD SUCCESSFUL in 4s
@@ -240,37 +240,37 @@ error: constructor UploadType in enum UploadType cannot be applied to given type
   reason: actual and formal argument lists differ in length
 ```
 
-이번엔 Enum이 문제였어요. 프로젝트에 있는 모든 Enum이 이런 식으로 작성되어 있었습니다.
+이번엔 Enum이 문제였습니다. 프로젝트에 있는 모든 Enum이 이런 식으로 작성되어 있었습니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/third-problem.svg)
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/third-problem-2.svg)
 
 
-Enum에 `@RequiredArgsConstructor`를 썼는데, Lombok이 생성자를 안 만들어주는 거였어요.
+Enum에 `@RequiredArgsConstructor`를 썼는데, Lombok이 생성자를 안 만들어주는 것이었습니다.
 
 ### 왜 Enum에서 안 될까?
 
-일반 클래스에서는 `@RequiredArgsConstructor`가 잘 작동했어요. 근데 Enum에서만 안됐습니다.
+일반 클래스에서는 `@RequiredArgsConstructor`가 잘 작동했습니다. 그런데 Enum에서만 안 됐습니다.
 
-원인은 `kotlin("plugin.lombok")` 플러그인과의 호환성 문제였어요. 이 플러그인은 Enum의 `@RequiredArgsConstructor`를 제대로 처리하지 못해요.
+원인은 `kotlin("plugin.lombok")` 플러그인과의 호환성 문제였습니다. 이 플러그인은 Enum의 `@RequiredArgsConstructor`를 제대로 처리하지 못합니다.
 
 ### 일반적인 해결 방법
 
-보통은 Enum에서 Lombok을 쓰지 않고 직접 생성자를 작성해요.
+보통은 Enum에서 Lombok을 쓰지 않고 직접 생성자를 작성합니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/solution-3.svg)
 
 
-하지만 내 상황에서는 **Java 파일을 건드릴 수 없었어요. 왜냐하면 내가 맡은 역할도 아니고 수정했다가 여기저기 터질 수도 있기 때문이에요**. 기존 코드를 수정하지 않고 해결해야 했습니다.
+하지만 내 상황에서는 Java 파일을 건드릴 수 없었습니다. 내가 맡은 역할도 아니고 수정했다가 여기저기 터질 수도 있기 때문입니다. 기존 코드를 수정하지 않고 해결해야 했습니다.
 
 ## Enum 문제 해결: delombok으로 우회
 
-Java 파일을 수정하지 않으려면 다른 방법이 필요했어요.
+Java 파일을 수정하지 않으려면 다른 방법이 필요했습니다.
 
 ### delombok이 뭐지?
 
-`delombok`은 Lombok 어노테이션을 실제 Java 코드로 변환해주는 도구예요.
+`delombok`은 Lombok 어노테이션을 실제 Java 코드로 변환해주는 도구입니다.
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/delombok.svg)
 
@@ -280,11 +280,11 @@ delombok을 실행하면:
 ![](/uploads/project/Joying/kotlin-lombok-interop/delombok-2.svg)
 
 
-보다시피 **생성자가 제대로 만들어졌다.**
+보다시피 생성자가 제대로 만들어졌다.
 
 ### delombok 실행해보기
 
-`io.freefair.lombok` 플러그인은 자동으로 `delombok` 태스크를 제공해요.
+`io.freefair.lombok` 플러그인은 자동으로 `delombok` 태스크를 제공합니다.
 
 ```bash
 ./gradlew delombok
@@ -314,7 +314,7 @@ RentMethod.java
 
 ### Java 컴파일이 delombok된 소스를 사용하게 만들기
 
-이제 Java 컴파일 태스크가 원본 소스 대신 delombok된 소스를 사용하도록 설정만 바꾸면 돼요.
+이제 Java 컴파일 태스크가 원본 소스 대신 delombok된 소스를 사용하도록 설정만 바꾸면 됩니다.
 ![](/uploads/project/Joying/kotlin-lombok-interop/delombok-3.svg)
 
 
@@ -342,11 +342,11 @@ RentMethod.java
 BUILD SUCCESSFUL in 8s
 ```
 
-**완벽하게 성공했어요!**
+완벽하게 성공했습니다!
 
 ## 정리 및 최종 설정
 
-최종적으로 정리한 `build.gradle.kts` 설정은 이래요.
+최종적으로 정리한 `build.gradle.kts` 설정은 다음과 같습니다.
 ![](/uploads/project/Joying/kotlin-lombok-interop/summary.svg)
 
 
@@ -373,7 +373,7 @@ BUILD SUCCESSFUL in 8s
 
 ## 빌드 순서 다이어그램
 
-최종 빌드 순서는 이렇게 돼요:
+최종 빌드 순서는 다음과 같습니다:
 
 
 ![](/uploads/project/Joying/kotlin-lombok-interop/build-order.png)
@@ -402,7 +402,7 @@ BUILD SUCCESSFUL in 8s
 
 ## 결론
 
-Kotlin과 Java의 상호 운용성은 런타임에서는 거의 완벽하지만, **컴파일 타임에는 여전히 함정이 있어요.** 특히 Lombok처럼 annotation processing에 의존하는 라이브러리를 사용할 때는 더욱 그렇습니다.
+Kotlin과 Java의 상호 운용성은 런타임에서는 거의 완벽하지만, 컴파일 타임에는 여전히 함정이 있습니다. 특히 Lombok처럼 annotation processing에 의존하는 라이브러리를 사용할 때는 더욱 그렇습니다.
 
 ### 핵심 문제: 빌드 순서
 
@@ -410,7 +410,7 @@ Kotlin과 Java의 상호 운용성은 런타임에서는 거의 완벽하지만,
 Kotlin 컴파일 (2단계) → Java annotation processing (3단계) → Java 컴파일 (4단계)
 ```
 
-Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직 생성하지 않았어요. 그래서 Kotlin이 Java Lombok getter를 찾지 못하는 거예요.
+Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직 생성하지 않았습니다. 그래서 Kotlin이 Java Lombok getter를 찾지 못하는 것입니다.
 
 ### 최종 해결책: 3가지 조합
 
@@ -418,11 +418,11 @@ Kotlin이 먼저 컴파일되는데, 그 시점에는 Lombok이 getter를 아직
 2. **io.freefair.lombok**: Gradle에서 Java annotation processing 올바르게 실행
 3. **delombok + source 변경**: Enum의 `@RequiredArgsConstructor` 문제 우회
 
-이 세 가지를 모두 적용해야 완벽하게 작동해요.
+이 세 가지를 모두 적용해야 완벽하게 작동합니다.
 
 ### 트레이드오프
 
-Java 원본 코드를 수정하지 않고 CI/CD에서 Gradle만으로 빌드할 수 있게 됐어요. 대신 빌드 설정이 복잡해졌고, delombok 때문에 빌드 시간이 약간 늘어납니다(첫 빌드만 체감됨, 이후는 캐시). 새 팀원이 이 설정을 이해하려면 설명이 필요하다는 점도 고려해야 해요.
+Java 원본 코드를 수정하지 않고 CI/CD에서 Gradle만으로 빌드할 수 있게 됐습니다. 대신 빌드 설정이 복잡해졌고, delombok 때문에 빌드 시간이 약간 늘어납니다(첫 빌드만 체감됨, 이후는 캐시). 새 팀원이 이 설정을 이해하려면 설명이 필요하다는 점도 고려해야 합니다.
 
 `kotlin("plugin.lombok")`은 Kotlin 2.0부터 Stable이지만, 이번 Enum 문제처럼 모든 Lombok 기능을 완벽히 지원하지는 않습니다.
 

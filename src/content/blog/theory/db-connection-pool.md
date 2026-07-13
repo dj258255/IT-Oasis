@@ -1,7 +1,7 @@
 ---
 title: 'DB 커넥션 풀, 왜 필요하고 어떻게 설정해야 할까'
 titleEn: 'DB Connection Pool: Why You Need It and How to Configure It'
-description: JDBC의 매번 커넥션 생성 문제부터 HikariCP의 동작 원리, 적정 커넥션 수 공식, 데드락 방지 전략까지 DB 커넥션 풀을 깊이 있게 정리했어요.
+description: JDBC의 매번 커넥션 생성 문제부터 HikariCP의 동작 원리, 적정 커넥션 수 공식, 데드락 방지 전략까지 DB 커넥션 풀을 깊이 있게 정리했습니다.
 descriptionEn: Deep dive into DB connection pools from JDBC overhead to HikariCP internals, optimal pool sizing formulas, and deadlock prevention strategies.
 date: 2025-08-23T00:00:00.000Z
 tags:
@@ -17,13 +17,13 @@ coverImage: "/uploads/theory/db-connection-pool/cost.svg"
 ---
 
 
-스레드 풀에 대해 공부하고 개념을 재정립 했는데, 자연스럽게 또 다른 의문이 생겼어요. "그럼 DB 커넥션은 어떻게 관리되는 거지?" 스레드 풀이 200개로 제한되어 있다면, DB 커넥션도 제한이 있을 것 같았거든요. 그래서 DB 커넥션 풀에 대해 파헤쳐 보기로 했어요.
+스레드 풀을 공부하고 개념을 재정립하고 나니 자연스럽게 또 다른 의문이 생겼습니다. "그럼 DB 커넥션은 어떻게 관리되는 거지?" 스레드 풀이 200개로 제한되어 있다면 DB 커넥션에도 제한이 있을 것 같았습니다. 그래서 DB 커넥션 풀을 파헤쳐 보기로 했습니다.
 
 ## 1. 왜 커넥션 풀이 필요할까?
 
 ### 1.1 JDBC의 등장과 문제점
 
-1997년, Java에 JDBC(Java Database Connectivity)가 등장했어요. 드디어 자바에서 데이터베이스를 다룰 수 있게 된 거예요. 하지만 JDBC에는 치명적인 문제가 있었어요.
+1997년, Java에 JDBC(Java Database Connectivity)가 등장했습니다. 드디어 자바에서 데이터베이스를 다룰 수 있게 됐습니다. 하지만 JDBC에는 치명적인 문제가 있었습니다.
 
 ```java
 // 1997년 스타일 JDBC 코드
@@ -47,20 +47,20 @@ class OldSchoolDatabase {
 }
 ```
 
-**매번 커넥션을 생성하고 제거하는 비용이 엄청나게 비쌌어요.** TCP 연결 수립(3-way handshake), DB 인증, 메모리 할당 등 수많은 작업이 필요했거든요.
+**매번 커넥션을 생성하고 제거하는 비용이 엄청나게 비쌌습니다.** TCP 연결 수립(3-way handshake), DB 인증, 메모리 할당 등 수많은 작업이 필요했기 때문입니다.
 
 > 출처: [Baeldung - A Simple Guide to Connection Pooling in Java](https://www.baeldung.com/java-connection-pooling), [Progress - JDBC Connection Pooling in Java Tutorial](https://www.progress.com/tutorials/jdbc/jdbc-jdbc-connection-pooling)
 
 ### 1.2 커넥션 한 번 만드는 데 얼마나 걸릴까?
 
-실제로 DB 커넥션을 생성하는 과정은 다음과 같아요:
+실제로 DB 커넥션을 생성하는 과정은 다음과 같습니다:
 
 1. **TCP 소켓 연결**: 네트워크를 통해 DB 서버와 3-way handshake
 2. **DB 인증**: 사용자 이름/비밀번호 검증
 3. **세션 생성**: DB 서버 내부에 세션 객체 할당
 4. **메타데이터 로딩**: 데이터베이스 설정, 인코딩 정보 등
 
-이 과정은 **수십 밀리초에서 수백 밀리초**가 걸려요. 로컬 네트워크에서도 20~50ms 정도 소요돼요. 만약 초당 1000개의 요청이 들어온다면? 그냥 커넥션 만드는 데만 20초가 걸린다는 뜻이에요. (단일 스레드 직렬 처리를 가정한 계산. 멀티스레드 환경에서는 병렬로 커넥션을 생성하므로 실제 시간은 이보다 짧지만, 오버헤드가 크다는 점은 동일)
+이 과정은 **수십 밀리초에서 수백 밀리초**가 걸립니다. 로컬 네트워크에서도 20~50ms 정도 소요됩니다. 만약 초당 1000개의 요청이 들어온다면? 그냥 커넥션 만드는 데만 20초가 걸린다는 뜻입니다. (단일 스레드 직렬 처리를 가정한 계산. 멀티스레드 환경에서는 병렬로 커넥션을 생성하므로 실제 시간은 이보다 짧지만, 오버헤드가 크다는 점은 동일)
 
 ```java
 // 커넥션 생성 비용 측정
@@ -84,7 +84,7 @@ class ConnectionBenchmark {
 
 ### 1.3 커넥션 풀의 탄생
 
-이 문제를 해결하기 위해 **커넥션 풀(Connection Pool)** 개념이 등장했어요.
+이 문제를 해결하기 위해 **커넥션 풀(Connection Pool)** 개념이 등장했습니다.
 
 ```java
 // 커넥션 풀의 개념
@@ -119,7 +119,7 @@ class SimpleConnectionPool {
 
 ### 1.4 왜 커넥션 풀은 싱글톤으로 만들까?
 
-커넥션 풀 자체를 싱글톤 패턴으로 구현하는 이유는 **커넥션 풀을 만드는 것도 비용이 엄청나게 비싸기 때문**이에요.
+커넥션 풀 자체를 싱글톤 패턴으로 구현하는 이유는 **커넥션 풀을 만드는 것도 비용이 엄청나게 비싸기 때문**입니다.
 
 #### 커넥션 풀 생성 비용
 
@@ -196,7 +196,7 @@ class UserService {
 
 #### Spring의 DataSource 빈
 
-Spring에서는 자동으로 싱글톤으로 관리해 줘요:
+Spring에서는 자동으로 싱글톤으로 관리해 줍니다:
 
 ```yaml
 # application.yml
@@ -273,10 +273,10 @@ class MemoryEfficient {
 
 **커넥션 풀을 싱글톤으로 만드는 이유**:
 
-1. **초기화 비용 절감**: 풀 생성 시 모든 커넥션을 미리 만드는데, 이 과정을 한 번만 하면 돼요
-2. **메모리 효율성**: 하나의 풀만 유지하므로 메모리 사용량이 최소화돼요
-3. **커넥션 재사용 극대화**: 애플리케이션 전체에서 같은 커넥션들을 공유해서 사용해요
-4. **리소스 관리 단순화**: 풀이 하나만 있으면 모니터링과 관리가 쉬워요
+1. **초기화 비용 절감**: 풀 생성 시 모든 커넥션을 미리 만드는데, 이 과정을 한 번만 하면 됩니다
+2. **메모리 효율성**: 하나의 풀만 유지하므로 메모리 사용량이 최소화됩니다
+3. **커넥션 재사용 극대화**: 애플리케이션 전체에서 같은 커넥션들을 공유해서 사용합니다
+4. **리소스 관리 단순화**: 풀이 하나만 있으면 모니터링과 관리가 쉽습니다
 
 **싱글톤이 아니었다면?**
 - 커넥션 풀의 의미가 없어진다 (매번 새로 만들면 일반 커넥션과 다를 게 없음)
@@ -289,13 +289,13 @@ class MemoryEfficient {
 
 ### 2.1 초기 구현체들 (2000년대 초반)
 
-JDBC 2.0에서 커넥션 풀링을 위한 표준 API가 추가되었고, JDBC 3.0에서는 핵심 API에 포함되었어요. 하지만 JDBC는 **인터페이스만 제공**했고, 실제 구현은 각 라이브러리가 담당했어요.
+JDBC 2.0에서 커넥션 풀링을 위한 표준 API가 추가되었고, JDBC 3.0에서는 핵심 API에 포함되었습니다. 하지만 JDBC는 **인터페이스만 제공**했고, 실제 구현은 각 라이브러리가 담당했습니다.
 
 > 출처: [Progress - JDBC Connection Pooling in Java Tutorial](https://www.progress.com/tutorials/jdbc/jdbc-jdbc-connection-pooling), [PostgreSQL JDBC - Connection Pools and Data Sources](https://jdbc.postgresql.org/documentation/datasource/)
 
 #### C3P0 (2001년 경)
 
-가장 오래되고 유명한 커넥션 풀 라이브러리였어요. 하이버네이트와 함께 많이 사용되었고요.
+가장 오래되고 유명한 커넥션 풀 라이브러리였습니다. 하이버네이트와 함께 많이 사용되었습니다.
 
 ```xml
 <!-- C3P0 설정 (2000년대 스타일) -->
@@ -314,23 +314,23 @@ JDBC 2.0에서 커넥션 풀링을 위한 표준 API가 추가되었고, JDBC 3.
 ```
 
 **문제점**:
-- 설정이 너무 복잡했어요
-- 잘못 설정하면 성능 이슈나 데드락이 발생했어요
-- 멀티 코어 CPU를 제대로 활용하지 못했어요 (단일 락 사용)
+- 설정이 너무 복잡했습니다
+- 잘못 설정하면 성능 이슈나 데드락이 발생했습니다
+- 멀티 코어 CPU를 제대로 활용하지 못했습니다 (단일 락 사용)
 - 프로젝트가 사실상 중단됨 (2017년 기준 기여자 2명, 커밋 2개)
 
 #### Apache Commons DBCP (2001년)
 
-아파치 재단에서 만든 커넥션 풀이었어요. 많은 프로젝트에서 사용되었고요.
+아파치 재단에서 만든 커넥션 풀이었습니다. 많은 프로젝트에서 사용되었습니다.
 
 **문제점** (DBCP 1.x 기준. DBCP 2.x는 Apache Commons Pool 2 기반으로 상당히 개선되었다):
-- 단일 스레드와 락을 사용해 전체 풀을 잠가 스레드 안전성을 보장했어요
-- 느렸고 멀티 코어 CPU를 제대로 활용하지 못했어요
+- 단일 스레드와 락을 사용해 전체 풀을 잠가 스레드 안전성을 보장했습니다
+- 느렸고 멀티 코어 CPU를 제대로 활용하지 못했습니다
 - HikariCP 저자가 작성한 벤치마크(특정 시나리오)에서 HikariCP 대비 **2,000배 이상 느렸다** (21.75 ops/ms vs 45,289 ops/ms)
 
 #### Tomcat JDBC Pool (2010년)
 
-톰캣 팀이 DBCP의 문제를 개선하기 위해 만든 풀이었어요.
+톰캣 팀이 DBCP의 문제를 개선하기 위해 만든 풀이었습니다.
 
 ```java
 // Tomcat JDBC Pool 설정
@@ -350,9 +350,9 @@ DBCP보다 성능이 훨씬 좋았지만, 여전히 HikariCP에는 미치지 못
 
 ### 2.2 HikariCP의 등장 (2012년)
 
-2012년, Brett Wooldridge는 회사 프로토타입을 만들면서 커넥션 풀이 필요했어요. 기존 풀들을 사용해 봤지만 로드 테스트 중 데드락과 예외가 계속 발생했거든요.
+2012년, Brett Wooldridge는 회사 프로토타입을 만들면서 커넥션 풀이 필요했습니다. 기존 풀들을 사용해 봤지만 로드 테스트 중 데드락과 예외가 계속 발생했습니다.
 
-오픈소스니까 코드를 받아서 고쳐보려고 했는데, **예상보다 수천 줄이나 더 많은 코드**를 발견했어요. 결국 좌절과 필요성 때문에 직접 만들기로 결심했어요. 그렇게 HikariCP가 탄생했죠.
+오픈소스니까 코드를 받아서 고쳐보려고 했는데, **예상보다 수천 줄이나 더 많은 코드**를 발견했습니다. 결국 좌절과 필요성 때문에 직접 만들기로 결심했습니다. 그렇게 HikariCP가 탄생했습니다.
 
 **HikariCP의 설계 철학**:
 - **"Fast, simple, reliable"**
@@ -373,7 +373,7 @@ DBCP보다 성능이 훨씬 좋았지만, 여전히 HikariCP에는 미치지 못
 
 ### 2.3 Spring Boot의 선택 (2018년)
 
-2018년, Spring Boot 2.0부터 **HikariCP를 기본 커넥션 풀로 채택**했어요. 이전에는 Tomcat JDBC Pool을 사용했었고요.
+2018년, Spring Boot 2.0부터 **HikariCP를 기본 커넥션 풀로 채택**했습니다. 이전에는 Tomcat JDBC Pool을 사용했습니다.
 
 ```yaml
 # Spring Boot 2.0+ 기본 설정
@@ -389,7 +389,7 @@ spring:
 
 ### 3.1 바이트코드 수준의 최적화
 
-Brett Wooldridge는 자바 바이트코드 수준까지 내려가서 최적화했어요. 몇 가지 예시를 볼게요.
+Brett Wooldridge는 자바 바이트코드 수준까지 내려가서 최적화했습니다. 몇 가지 예시를 보겠습니다.
 
 #### 불필요한 메서드 호출 제거
 
@@ -442,7 +442,7 @@ class ConcurrentBag<T> {
 }
 ```
 
-**핵심**: 스레드별 전용 리스트를 사용해 락 경합을 최소화했어요.
+**핵심**: 스레드별 전용 리스트를 사용해 락 경합을 최소화했습니다.
 
 > 출처: [HikariCP GitHub](https://github.com/brettwooldridge/HikariCP) - ConcurrentBag 구현, [jOOQ Blog - Brett Wooldridge Shows What it Takes to Write the Fastest Java Connection Pool](https://blog.jooq.org/jooq-tuesdays-brett-wooldridge-shows-what-it-takes-to-write-the-fastest-java-connection-pool/)
 
@@ -450,7 +450,7 @@ class ConcurrentBag<T> {
 
 #### PreparedStatement 캐싱을 하지 않는 이유
 
-HikariCP는 커넥션 풀 레벨의 PreparedStatement 캐싱이 JDBC 스펙과 맞지 않아 버그를 유발할 수 있다고 판단하여 제공하지 않아요. 대신 JDBC 드라이버 설정(예: MySQL의 `cachePrepStmts=true`, `prepStmtCacheSize=250`)을 사용하라고 권장해요.
+HikariCP는 커넥션 풀 레벨의 PreparedStatement 캐싱이 JDBC 스펙과 맞지 않아 버그를 유발할 수 있다고 판단하여 제공하지 않습니다. 대신 JDBC 드라이버 설정(예: MySQL의 `cachePrepStmts=true`, `prepStmtCacheSize=250`)을 사용하라고 권장합니다.
 
 ```java
 // MySQL Connector/J 드라이버 설정으로 캐싱 활성화
@@ -459,7 +459,7 @@ Connection conn = dataSource.getConnection();
 PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?");
 ```
 
-HikariCP는 커넥션 풀 레벨에서의 PS 캐싱을 과감히 제거하고, 드라이버 레벨 캐싱에 맡기는 방식을 선택했어요.
+HikariCP는 커넥션 풀 레벨에서의 PS 캐싱을 과감히 제거하고, 드라이버 레벨 캐싱에 맡기는 방식을 선택했습니다.
 
 > 출처: [HikariCP GitHub - About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing), [MySQL Connector/J Connection Pooling](https://dev.mysql.com/doc/connector-j/en/connector-j-usagenotes-j2ee-concepts-connection-pooling.html)
 
@@ -600,7 +600,7 @@ class UserService {
 
 ### 5.1 유명한 공식
 
-HikariCP 위키에 나오는 공식이 있어요:
+HikariCP 위키에 나오는 공식이 있습니다:
 
 ```
 connections = (core_count × 2) + effective_spindle_count
@@ -615,7 +615,7 @@ connections = (core_count × 2) + effective_spindle_count
 
 ### 5.2 왜 "core_count × 2"일까?
 
-CPU와 디스크/네트워크의 속도 차이 때문이에요.
+CPU와 디스크/네트워크의 속도 차이 때문입니다.
 
 ```
 CPU: 1 GHz = 10억 사이클/초
@@ -625,7 +625,7 @@ CPU: 1 GHz = 10억 사이클/초
 속도 차이: 약 100만 배!
 ```
 
-CPU가 디스크나 네트워크를 기다리는 동안 **다른 스레드를 처리**할 수 있어요. 그래서 코어 수보다 많은 커넥션이 필요해요.
+CPU가 디스크나 네트워크를 기다리는 동안 **다른 스레드를 처리**할 수 있습니다. 그래서 코어 수보다 많은 커넥션이 필요합니다.
 
 ```java
 // 커넥션이 작업하는 시간 분석
@@ -647,7 +647,7 @@ class ConnectionWorkload {
 }
 ```
 
-CPU가 98% 시간을 놀고 있어요! 그래서 CPU 코어당 2개 이상의 커넥션이 효율적이에요.
+CPU가 98% 시간을 놀고 있습니다. 그래서 CPU 코어당 2개 이상의 커넥션이 효율적입니다.
 
 ### 5.3 실제로는 어떻게 정할까?
 
@@ -698,11 +698,11 @@ pool_size = thread_count × (connections_per_task - 1) + 1
 - 작업당 커넥션: 1개
 - pool_size = 200 × (1 - 1) + 1 = **1개**?!
 
-이 공식은 **데드락 방지를 위한 최소 풀 크기**이지, 성능 최적값이 아니에요. 작업당 커넥션이 1개면 데드락이 원리적으로 발생할 수 없으므로 최소 1개로도 동작한다는 의미예요 (극도로 느리겠지만요).
+이 공식은 성능 최적값이 아니라 **데드락 방지를 위한 최소 풀 크기**입니다. 작업당 커넥션이 1개면 데드락이 원리적으로 발생할 수 없으므로 최소 1개로도 동작한다는 의미입니다 (극도로 느리겠지만요).
 
 #### 단계 4: 실제 동시성 고려
 
-톰캣 스레드가 200개라고 해서 **동시에 200개가 모두 DB를 쓰는 건 아니에요**.
+톰캣 스레드가 200개라고 해서 **동시에 200개가 모두 DB를 쓰는 건 아닙니다**.
 
 ```java
 @RestController
@@ -729,7 +729,7 @@ class StreamingController {
 
 ### 5.4 넷마블의 게임 서버 설정
 
-넷마블 기술 블로그에 따르면, 게임 서버에서는 다음과 같이 설정했어요:
+넷마블 기술 블로그에 따르면, 게임 서버에서는 다음과 같이 설정했습니다:
 
 ```yaml
 hikari:
@@ -1067,9 +1067,9 @@ r2dbcPool.warmup().block()
 ```
 
 **교훈**:
-- 개발 환경과 운영 환경의 차이를 검증하세요
-- IDE의 자동화 기능이 실제 동작을 왜곡할 수 있어요
-- 새로운 기술 도입 시 기대 동작과 실제 동작을 확인하세요
+- 개발 환경과 운영 환경의 차이를 검증해야 합니다
+- IDE의 자동화 기능이 실제 동작을 왜곡할 수 있습니다
+- 새로운 기술 도입 시 기대 동작과 실제 동작을 확인해야 합니다
 
 ### 7.2 SK C&C: MySQL wait_timeout 문제
 
@@ -1102,9 +1102,9 @@ wait_timeout: 180      # 3분
 ```
 
 **교훈**:
-- DB 타임아웃 설정은 신중하게 해야 해요
-- HikariCP의 `max-lifetime`은 DB `wait_timeout`보다 짧게 설정하세요
-- 너무 짧은 타임아웃은 성능 저하를 유발해요
+- DB 타임아웃 설정은 신중하게 해야 합니다
+- HikariCP의 `max-lifetime`은 DB `wait_timeout`보다 짧게 설정해야 합니다
+- 너무 짧은 타임아웃은 성능 저하를 유발합니다
 
 ### 7.3 개인 프로젝트: 커넥션 누수
 
@@ -1137,9 +1137,9 @@ hikari:
 ```
 
 **교훈**:
-- 너무 짧은 누수 감지 시간은 오탐을 유발해요
-- 정상 트랜잭션 처리 시간을 고려해야 해요
-- 60초 정도가 적절해요
+- 너무 짧은 누수 감지 시간은 오탐을 유발합니다
+- 정상 트랜잭션 처리 시간을 고려해야 합니다
+- 60초 정도가 적절합니다
 
 ### 7.4 생산성 저하: MySQL AbandonedConnectionCleanupThread
 
@@ -1164,9 +1164,9 @@ hikari:
 ```
 
 **교훈**:
-- 일반 서비스는 커넥션을 직접 관리하지 않아요
-- JDBC 드라이버의 자동 정리 기능이 오히려 해가 될 수 있어요
-- 불필요한 기능은 비활성화하세요
+- 일반 서비스는 커넥션을 직접 관리하지 않습니다
+- JDBC 드라이버의 자동 정리 기능이 오히려 해가 될 수 있습니다
+- 불필요한 기능은 비활성화해야 합니다
 
 > 출처: [카카오페이 - R2DBC Connection Pool 실종 사건](https://tech.kakaopay.com/post/r2dbc-connection-pool-missing/), [SK C&C - MySql/MariaDB에서 발생하는 Connection 끊김 문제 해결하기](https://engineering-skcc.github.io/cloud/tomcat/apache/performancetest/MySqlDBWaitTimeOut/), [velog - DB 커넥션 풀 누수 문제](https://velog.io/@dev_tmb/DB-커넥션-풀-누수-문제)
 
@@ -1174,7 +1174,7 @@ hikari:
 
 ### 8.1 HikariCP 메트릭
 
-HikariCP는 다양한 메트릭을 제공해요.
+HikariCP는 다양한 메트릭을 제공합니다.
 
 ```yaml
 # Actuator 설정
@@ -1301,12 +1301,12 @@ spring:
 
 ### 9.3 마치며
 
-스레드 풀에 이어 커넥션 풀까지 공부하고 나니, 이제 라이브 스트리밍 서버가 어떻게 동시 요청을 처리하는지 전체 그림이 보이기 시작했어요.
+스레드 풀에 이어 커넥션 풀까지 공부하고 나니, 이제 라이브 스트리밍 서버가 어떻게 동시 요청을 처리하는지 전체 그림이 보이기 시작했습니다.
 
 ![](/uploads/theory/db-connection-pool/93.svg)
 
 
-다음엔 캐싱과 비동기 처리에 대해 더 공부해서, cs 개념을 재정립하고 더 빠르고 안정적인 서버를 만들도록 노력해야겠어요.
+다음엔 캐싱과 비동기 처리를 더 공부해서, CS 개념을 재정립하고 더 빠르고 안정적인 서버를 만들도록 노력해야겠습니다.
 
 ## 참고 자료
 

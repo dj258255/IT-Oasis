@@ -23,12 +23,12 @@ series: "EduMeet"
 
 ## 1. 아키텍처란?
 
-팀원들과 아키텍처를 논의하면서 여러 선택지가 나왔어요:
+팀원들과 아키텍처를 논의하면서 여러 선택지가 나왔습니다:
 1. Controller - Service - DTO - DAO (전통적 MVC)
 2. Presentation - Application - Domain - Infrastructure (레이어드)
 3. 헥사고날 아키텍처
 
-아키텍처에 대한 정확한 정의를 찾기 어려웠지만, 공통적으로 언급되는 핵심이 있었어요:
+아키텍처에 대한 정확한 정의를 찾기 어려웠지만, 공통적으로 언급되는 핵심이 있었습니다:
 
 > **"아키텍처는 제약 조건을 통해 목적을 달성한다."**
 
@@ -54,7 +54,7 @@ series: "EduMeet"
 
 **클린 아키텍처란?**
 
-로버트 C. 마틴(엉클 밥)이 제안한 아키텍처로, 핵심 원칙은 **"의존성은 안쪽으로만 향한다"**예요:
+로버트 C. 마틴(엉클 밥)이 제안한 아키텍처로, 핵심 원칙은 **"의존성은 안쪽으로만 향한다"**입니다:
 
 ```
 [Frameworks & Drivers] → [Interface Adapters] → [Use Cases] → [Entities]
@@ -76,8 +76,8 @@ series: "EduMeet"
 | 팀 역량 | 레이어드 익숙 | 새 아키텍처 학습 비용 |
 | 외부 시스템 연동 | 적음 | 포트-어댑터 패턴 필요성 낮음 |
 
-**결론:** 클린/헥사고날은 **도메인 복잡도가 높거나**, **외부 시스템 연동이 많거나**, **장기 유지보수**가 필요할 때 빛을 발해요.
-6주 프로젝트에서는 레이어드로 충분하고, 필요시 의존성 역전을 부분 적용하는 전략을 선택했어요.
+정리하면 클린과 헥사고날은 도메인 복잡도가 높거나, 외부 시스템 연동이 많거나, 장기 유지보수가 필요할 때 빛을 발합니다.
+6주 프로젝트에서는 레이어드로 충분하고, 필요할 때 의존성 역전을 부분 적용하는 전략을 선택했습니다.
 
 ### 전통적 MVC vs 레이어드
 
@@ -98,7 +98,7 @@ series: "EduMeet"
 
 ## 3. 개발 접근법: 무엇부터 만들까?
 
-레이어드 아키텍처에서 개발 순서는 크게 두 가지로 나뉘어요:
+레이어드 아키텍처에서 개발 순서는 크게 두 가지로 나뉩니다.
 - **하향식(Top-Down)**: Presentation → Application → Domain → Infrastructure
 - **상향식(Bottom-Up)**: Infrastructure → Domain → Application → Presentation
 
@@ -106,8 +106,8 @@ series: "EduMeet"
 
 ![JPA 엔티티 우선 접근](/uploads/project/EduMeet/architecture-evolution/approach-1-jpa-entity-db.png)
 
-Infrastructure(DB)부터 시작하는 상향식 접근이에요.
-JPA 엔티티부터 만든다는 건 DDL(테이블)을 먼저 설계하겠다는 것과 같아요.
+Infrastructure(DB)부터 시작하는 상향식 접근입니다.
+JPA 엔티티부터 만든다는 건 DDL(테이블)을 먼저 설계하겠다는 것과 같습니다.
 
 **문제점:**
 - DDL이 만들어지기 전까지 다른 개발자가 대기해야 함
@@ -118,8 +118,8 @@ JPA 엔티티부터 만든다는 건 DDL(테이블)을 먼저 설계하겠다는
 
 ![API 엔드포인트 우선 접근](/uploads/project/EduMeet/architecture-evolution/approach-2-api.png)
 
-Presentation(Controller)부터 시작하는 하향식 접근이에요.
-RequestBody/ResponseEntity를 먼저 고민하는 방식이에요.
+Presentation(Controller)부터 시작하는 하향식 접근입니다.
+RequestBody/ResponseEntity를 먼저 고민하는 방식입니다.
 
 **문제점:**
 - 도메인 분석 전에 기술 스펙(Spring Web, JPA, JWT 등)을 먼저 결정
@@ -189,7 +189,7 @@ After:  Service → Repository (인터페이스) ← JpaRepositoryImpl
 
 ![헥사고날 비교](/uploads/project/EduMeet/architecture-evolution/layered-hexagonal.png)
 
-의존성 역전을 적용한 레이어드 아키텍처는 **헥사고날 아키텍처와 본질적으로 동일**해요.
+의존성 역전을 적용한 레이어드 아키텍처는 **헥사고날 아키텍처와 본질적으로 동일**합니다.
 
 **깨달은 점:**
 - 헥사고날의 "포트-어댑터 패턴" = 의존성 역전의 다른 이름
@@ -231,13 +231,13 @@ After:  Service → Repository (인터페이스) ← JpaRepositoryImpl
 
 ### 의존성 역전이 실제로 도움이 된 사례
 
-1. **QueryDSL Repository 분리**: `BoardJpaRepository`(JPA 기본 CRUD)와 `BoardSearchRepository`(QueryDSL 검색)를 분리했어요. 인터페이스를 Application 레이어에, 구현체를 Infrastructure 레이어에 배치하여 Service가 QueryDSL에 직접 의존하지 않는 구조를 만들었어요. 이 과정에서 Spring Data JPA의 네이밍 규칙 충돌 문제를 경험하고 해결했어요 → [파일 이동 오류](/blog/project/edumeet/file-move-error)
+1. **QueryDSL Repository 분리**: `BoardJpaRepository`(JPA 기본 CRUD)와 `BoardSearchRepository`(QueryDSL 검색)를 분리했습니다. 인터페이스를 Application 레이어에, 구현체를 Infrastructure 레이어에 배치하여 Service가 QueryDSL에 직접 의존하지 않는 구조를 만들었습니다. 이 과정에서 Spring Data JPA의 네이밍 규칙 충돌 문제를 경험하고 해결했습니다. → [파일 이동 오류](/blog/project/edumeet/file-move-error)
 
-2. **테스트 DB 교체**: Service가 Repository 인터페이스에 의존하고, 인터페이스 뒤의 구현체가 JPA/H2/MySQL을 결정하는 구조였기에, 테스트 환경에서 MySQL → H2 전환이 `application-test.properties` 변경만으로 가능했어요 → [단위테스트 DB 마이그레이션](/blog/project/edumeet/unit-test-db-migration)
+2. **테스트 DB 교체**: Service가 Repository 인터페이스에 의존하고, 인터페이스 뒤의 구현체가 JPA/H2/MySQL을 결정하는 구조였기에, 테스트 환경에서 MySQL → H2 전환이 `application-test.properties` 변경만으로 가능했습니다. → [단위테스트 DB 마이그레이션](/blog/project/edumeet/unit-test-db-migration)
 
 ### 도메인 중심 개발이 안 된 부분 (반성)
 
-솔직히 완벽하게 적용하지는 못했어요. JPA 엔티티(`@Entity`)가 도메인 객체를 겸하고 있어요. 6주 일정에서 도메인 모델과 영속성 객체를 분리하면 `from()`/`toModel()` 변환 코드가 늘어나서 개발 속도가 떨어진다고 판단했어요. 트레이드오프의 결과인데, 도메인이 더 복잡했다면 분리가 필수였을 거예요.
+솔직히 완벽하게 적용하지는 못했습니다. JPA 엔티티(`@Entity`)가 도메인 객체를 겸하고 있습니다. 6주 일정에서 도메인 모델과 영속성 객체를 분리하면 `from()`/`toModel()` 변환 코드가 늘어나서 개발 속도가 떨어진다고 판단했습니다. 트레이드오프의 결과인데, 도메인이 더 복잡했다면 분리가 필수였을 것입니다.
 
 ---
 

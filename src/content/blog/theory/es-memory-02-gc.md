@@ -1,7 +1,7 @@
 ---
 title: 'JVM 메모리 ②: GC 알고리즘과 Stop-the-World'
 titleEn: 'JVM Memory ②: GC Algorithms and Stop-the-World'
-description: Serial/Parallel/G1/ZGC/Shenandoah 각각이 언제 STW로 멈추고 언제 concurrent로 돌아가는지 OpenJDK JEP와 Oracle JDK 17 공식 문서 기준으로 정리했어요. Shenandoah가 Oracle JDK 빌드에 빠져있다는 사실까지.
+description: Serial/Parallel/G1/ZGC/Shenandoah 각각이 언제 STW로 멈추고 언제 concurrent로 돌아가는지 OpenJDK JEP와 Oracle JDK 17 공식 문서 기준으로 정리했습니다. Shenandoah가 Oracle JDK 빌드에 빠져있다는 사실까지.
 descriptionEn: When each GC (Serial/Parallel/G1/ZGC/Shenandoah) pauses (STW) vs runs concurrently, based on OpenJDK JEPs and Oracle JDK 17 docs. Including the fact that Shenandoah is absent from Oracle JDK builds.
 date: 2026-04-11T00:00:00.000Z
 tags:
@@ -19,17 +19,17 @@ series: "JVM 메모리"
 seriesOrder: 2
 ---
 
-> 본 문서는 **Oracle JDK 17 HotSpot VM** + OpenJDK JEP 1차 소스 기준이에요. Safepoint·Mark-Sweep 같은 **일반론**은 [0편](/blog/theory/jvm-and-gc)에서 간단히 다뤘고, 이 글은 **Elasticsearch 운영에 직접 영향을 주는 G1/ZGC/Shenandoah**와 **Oracle JDK 빌드 포함 여부** 같은 실무 관점에 집중해요.
+> 본 문서는 **Oracle JDK 17 HotSpot VM** + OpenJDK JEP 1차 소스 기준입니다. Safepoint·Mark-Sweep 같은 **일반론**은 [0편](/blog/theory/jvm-and-gc)에서 간단히 다뤘고, 이 글은 **Elasticsearch 운영에 직접 영향을 주는 G1/ZGC/Shenandoah**와 **Oracle JDK 빌드 포함 여부** 같은 실무 관점에 집중합니다.
 
 ## 1. 왜 이 이론을 알아야 하는가
 
-Elasticsearch 운영에서 가장 자주 만나는 장애 유형이 **"GC 오래 걸려서 노드가 이탈했다"** 예요. Elastic 공식 문서도 heap size 가이드를 설명할 때 **"Larger heaps can also cause longer garbage collection pauses"** 라고 직접적으로 경고해요. ([Elastic — Advanced configuration](https://www.elastic.co/guide/en/elasticsearch/reference/current/advanced-configuration.html))
+Elasticsearch 운영에서 가장 자주 만나는 장애 유형이 **"GC 오래 걸려서 노드가 이탈했다"**입니다. Elastic 공식 문서도 heap size 가이드를 설명할 때 **"Larger heaps can also cause longer garbage collection pauses"** 라고 직접적으로 경고합니다. ([Elastic — Advanced configuration](https://www.elastic.co/guide/en/elasticsearch/reference/current/advanced-configuration.html))
 
-그래서 "무슨 GC가 있고, 각각 언제/왜 멈추는지" 는 Elasticsearch 운영의 최소 조건이에요.
+그래서 "무슨 GC가 있고, 각각 언제/왜 멈추는지" 는 Elasticsearch 운영의 최소 조건입니다.
 
 ## 2. GC가 해야 하는 일
 
-GC는 **더 이상 참조되지 않는 객체(garbage)를 찾아 회수**하는 것이 전부예요. 이걸 "안전하게" 하려면 애플리케이션 스레드가 객체 그래프를 수정하는 도중 GC가 탐색하면 안 돼요. 그래서 HotSpot은 **Safepoint** 라는 동기화 지점을 써요.
+GC는 **더 이상 참조되지 않는 객체(garbage)를 찾아 회수**하는 것이 전부입니다. 이걸 "안전하게" 하려면 애플리케이션 스레드가 객체 그래프를 수정하는 도중 GC가 탐색하면 안 됩니다. 그래서 HotSpot은 **Safepoint** 라는 동기화 지점을 씁니다.
 
 ### 2-1. Safepoint와 Stop-the-World (STW)
 
@@ -37,13 +37,13 @@ OpenJDK HotSpot Glossary의 공식 정의:
 
 > "safepoint: A point during program execution at which all GC roots are known and all heap object contents are consistent. From a global point of view, all threads must block at a safepoint before the GC can run. (As a special case, threads running JNI code can continue to run, because they use only handles. During a safepoint they must block instead of loading the contents of the handle.) From a local point of view, a safepoint is a distinguished point in a block of code where the executing thread may block for the GC." — [OpenJDK HotSpot Glossary](https://openjdk.org/groups/hotspot/docs/HotSpotGlossary.html)
 
-즉 **Stop-the-World** 는 GC가 실행되기 전에 모든 Java 스레드를 safepoint에서 블록시킨 상태를 말해요. JNI 네이티브 코드는 handle만 쓰므로 계속 돌 수 있지만, handle 내용을 건드리려 하면 역시 블록돼요. GC의 성능은 대부분 **"STW 구간을 얼마나 짧게 하느냐"** 로 판가름 나요.
+즉 **Stop-the-World** 는 GC가 실행되기 전에 모든 Java 스레드를 safepoint에서 블록시킨 상태를 말합니다. JNI 네이티브 코드는 handle만 쓰므로 계속 돌 수 있지만, handle 내용을 건드리려 하면 역시 블록됩니다. GC의 성능은 대부분 **"STW 구간을 얼마나 짧게 하느냐"** 로 판가름 납니다.
 
-추가 참고: [OpenJDK HotSpot Runtime Overview](https://openjdk.org/groups/hotspot/docs/RuntimeOverview.html) 는 VM 전체 런타임 구조에서 safepoint의 쓰임새를 설명해요(VM 종료 시 "Stop VM thread, it will bring the remaining VM to a safepoint" 등).
+추가 참고: [OpenJDK HotSpot Runtime Overview](https://openjdk.org/groups/hotspot/docs/RuntimeOverview.html) 는 VM 전체 런타임 구조에서 safepoint의 쓰임새를 설명합니다(VM 종료 시 "Stop VM thread, it will bring the remaining VM to a safepoint" 등).
 
 ## 3. HotSpot이 제공하는 Collector 목록 (JDK 17)
 
-Oracle JDK 17 공식 문서 ["Available Collectors"](https://docs.oracle.com/en/java/javase/17/gctuning/available-collectors.html) 에서 명시된 것만 정리해요.
+Oracle JDK 17 공식 문서 ["Available Collectors"](https://docs.oracle.com/en/java/javase/17/gctuning/available-collectors.html) 에서 명시된 것만 정리합니다.
 
 | Collector | Flag | 성격 | 목적 | Oracle JDK 17 포함 여부 |
 |---|---|---|---|---|
@@ -53,25 +53,25 @@ Oracle JDK 17 공식 문서 ["Available Collectors"](https://docs.oracle.com/en/
 | Z GC | `-XX:+UseZGC` | **fully concurrent** | 초저지연 (수 ms) | O (JDK 15부터 production) |
 | Shenandoah | `-XX:+UseShenandoahGC` | **fully concurrent** | 힙 크기와 무관한 pause | **X (Oracle JDK 빌드는 미포함)** |
 
-**JDK 17에서 default는 G1** 이에요. Oracle 문서: *"G1 is selected by default on most hardware and operating system configurations"* ([Oracle JDK 17 — Available Collectors](https://docs.oracle.com/en/java/javase/17/gctuning/available-collectors.html))
+**JDK 17에서 default는 G1**입니다. Oracle 문서: *"G1 is selected by default on most hardware and operating system configurations"* ([Oracle JDK 17 — Available Collectors](https://docs.oracle.com/en/java/javase/17/gctuning/available-collectors.html))
 
-> G1이 default가 된 것은 **JDK 9부터**이고, 그 근거는 [OpenJDK JEP 248 — Make G1 the Default Garbage Collector](https://openjdk.org/jeps/248) 이에요. 이전(JDK 8 이하)의 default는 Parallel GC였어요.
+> G1이 default가 된 것은 **JDK 9부터**이고, 그 근거는 [OpenJDK JEP 248 — Make G1 the Default Garbage Collector](https://openjdk.org/jeps/248)입니다. 이전(JDK 8 이하)의 default는 Parallel GC였습니다.
 
-> 참고: **JEP 523**은 JDK 25를 타깃으로 "G1을 모든 환경(클라이언트 포함)에서 default로" 확정하려는 제안이에요. ([OpenJDK JEP 523](https://openjdk.org/jeps/523))
+> 참고: **JEP 523**은 JDK 25를 타깃으로 "G1을 모든 환경(클라이언트 포함)에서 default로" 확정하려는 제안입니다. ([OpenJDK JEP 523](https://openjdk.org/jeps/523))
 
-### 3-1. Shenandoah는 Oracle JDK에 들어있지 않아요 (중요)
+### 3-1. Shenandoah는 Oracle JDK에 들어있지 않습니다 (중요)
 
-Shenandoah는 OpenJDK 상류(upstream)에는 포함되어 있지만 **Oracle이 배포하는 Oracle JDK 빌드에서는 빌드 시 제외**돼요. 즉:
+Shenandoah는 OpenJDK 상류(upstream)에는 포함되어 있지만 **Oracle이 배포하는 Oracle JDK 빌드에서는 빌드 시 제외**됩니다. 즉:
 
-- **Oracle JDK 17 설치 후 `-XX:+UseShenandoahGC` 를 주면 실행 실패**해요.
-- Shenandoah를 쓰려면 **Red Hat build of OpenJDK, Eclipse Temurin, Azul Zulu, Amazon Corretto** 등 OpenJDK 기반 배포판을 써야 해요.
+- **Oracle JDK 17 설치 후 `-XX:+UseShenandoahGC` 를 주면 실행 실패**합니다.
+- Shenandoah를 쓰려면 **Red Hat build of OpenJDK, Eclipse Temurin, Azul Zulu, Amazon Corretto** 등 OpenJDK 기반 배포판을 써야 합니다.
 
 Shenandoah의 상태 관련 JEP:
 
 - [JEP 189 — Shenandoah (Experimental, JDK 12)](https://openjdk.org/jeps/189)
 - [JEP 379 — Shenandoah: Production (JDK 15)](https://openjdk.org/jeps/379)
 
-Elasticsearch는 기본 번들 JDK로 Eclipse Temurin 계열 OpenJDK를 포함하기 때문에 Shenandoah 사용이 이론상 가능하지만, **운영 권장 GC는 여전히 G1이며 Shenandoah/ZGC는 특수 상황용**이에요.
+Elasticsearch는 기본 번들 JDK로 Eclipse Temurin 계열 OpenJDK를 포함하기 때문에 Shenandoah 사용이 이론상 가능하지만, **운영 권장 GC는 여전히 G1이며 Shenandoah/ZGC는 특수 상황용**입니다.
 
 ## 4. 주요 Collector 상세
 
@@ -81,7 +81,7 @@ Elasticsearch는 기본 번들 JDK로 Eclipse Temurin 계열 OpenJDK를 포함�
 
 - 싱글스레드 STW.
 - Young은 복사, Old는 **mark-sweep-compact**.
-- 작은 힙(~100MB)이나 컨테이너/단일 CPU 환경에서 의미가 있어요. Elasticsearch에서는 쓸 일이 거의 없어요.
+- 작은 힙(~100MB)이나 컨테이너/단일 CPU 환경에서 의미가 있습니다. Elasticsearch에서는 쓸 일이 거의 없습니다.
 
 ### 4-2. Parallel GC (Throughput Collector)
 
@@ -91,38 +91,38 @@ Elasticsearch는 기본 번들 JDK로 Eclipse Temurin 계열 OpenJDK를 포함�
 - **throughput**(단위시간 대비 application 실행 비율)이 목적. pause time은 길 수 있음.
 - 배치·오프라인 처리에 적합. 검색엔진(실시간 쿼리)에는 부적합.
 
-### 4-3. G1 GC (Garbage-First) — JDK 17 default
+### 4-3. G1 GC (Garbage-First): JDK 17 default
 
-G1은 가장 중요한 collector이므로 Oracle 공식 문서 ["Garbage-First (G1) Garbage Collector"](https://docs.oracle.com/en/java/javase/17/gctuning/garbage-first-g1-garbage-collector1.html)의 정의를 그대로 인용해요.
+G1은 가장 중요한 collector이므로 Oracle 공식 문서 ["Garbage-First (G1) Garbage Collector"](https://docs.oracle.com/en/java/javase/17/gctuning/garbage-first-g1-garbage-collector1.html)의 정의를 그대로 인용합니다.
 
 #### 구조
 
 > "G1 partitions the heap into a set of equally sized heap regions, each a contiguous range of virtual memory."
 
-즉, Young/Old를 **고정된 연속 메모리 블록으로 나누지 않고, 같은 크기의 region 집합**으로 쪼개요. region은 1~32MB이며, **전체 약 2048개 region**이 되도록 자동 계산돼요.
+즉, Young/Old를 하나의 고정된 연속 메모리 블록으로 잡는 대신 **같은 크기의 region 집합**으로 쪼갭니다. region은 1~32MB이며, **전체 약 2048개 region**이 되도록 자동 계산됩니다.
 
-region은 다음 중 하나의 역할을 해요:
+region은 다음 중 하나의 역할을 합니다:
 
 - **Eden region**
 - **Survivor region**
 - **Old region**
-- **Humongous region** — region 크기의 절반 이상인 큰 객체 전용. 여러 region을 연속으로 차지해요.
+- **Humongous region**: region 크기의 절반 이상인 큰 객체 전용. 여러 region을 연속으로 차지합니다.
 
 #### 수거 방식
 
 > "G1 reclaims space mostly by using evacuation: live objects found within selected memory areas to collect are copied into new memory areas, compacting them in the process." — 같은 출처
 
-- **evacuation(대피)**: 회수 대상 region에서 살아있는 객체만 다른 region으로 복사. 이 과정에서 자연스럽게 **compaction**이 이뤄져요.
-- **Collection Set(CSet)**: 이번 GC에서 회수할 region들의 집합. 이 개념 덕분에 **"비용 대비 수거량이 많은 region부터 고를 수 있다"** → 이게 G1 이름의 유래(Garbage-First)예요.
+- **evacuation(대피)**: 회수 대상 region에서 살아있는 객체만 다른 region으로 복사. 이 과정에서 자연스럽게 **compaction**이 이뤄집니다.
+- **Collection Set(CSet)**: 이번 GC에서 회수할 region들의 집합. 이 개념 덕분에 **"비용 대비 수거량이 많은 region부터 고를 수 있다"** → 이게 G1 이름의 유래(Garbage-First)입니다.
 - **Remembered Set(RSet)**: region 밖에서 region 안으로 들어오는 참조를 기록. 전체 heap을 스캔하지 않고 region 단위로 GC 가능.
 
 #### 페이즈
 
-1. **Young-only phase** — Eden/Survivor만 모으는 일반 young collection.
-2. **Concurrent Start** — Old Generation 점유율이 IHOP(Initiating Heap Occupancy Percent)에 도달하면 concurrent marking 시작.
-3. **Remark / Cleanup** — 마킹 마무리, 완전히 빈 region 즉시 회수.
-4. **Space-Reclamation phase (Mixed GC)** — Young + 일부 Old region을 같이 evacuation.
-5. **Full GC** — 비상 수단. 힙 전체를 STW compaction. 되도록 안 일어나는 것이 G1의 설계 목적이에요.
+1. **Young-only phase**: Eden/Survivor만 모으는 일반 young collection.
+2. **Concurrent Start**: Old Generation 점유율이 IHOP(Initiating Heap Occupancy Percent)에 도달하면 concurrent marking 시작.
+3. **Remark / Cleanup**: 마킹 마무리, 완전히 빈 region 즉시 회수.
+4. **Space-Reclamation phase (Mixed GC)**: Young + 일부 Old region을 같이 evacuation.
+5. **Full GC**: 비상 수단. 힙 전체를 STW compaction. 되도록 안 일어나는 것이 G1의 설계 목적입니다.
 
 #### Pause time 목표
 
@@ -134,9 +134,9 @@ default 목표: `-XX:MaxGCPauseMillis=200` (200ms).
 
 > "It takes a virtual snapshot of the heap at the time of the Initial Mark pause, when all objects that were live at the start of marking are considered live for the remainder of marking." — 같은 출처
 
-이걸 **SATB(Snapshot-At-The-Beginning)** 이라고 해요.
+이걸 **SATB(Snapshot-At-The-Beginning)** 이라고 합니다.
 
-> 용어 변경 주의: 과거(JDK 8~9 시절)에는 이 페이즈를 **"Initial Mark"** 라고 불렀지만, JDK 10 이후 Oracle 문서에서는 **"Concurrent Start"** 라는 용어로 바뀌었어요. 위 인용은 옛 용어를 그대로 쓰고 있는데, 최신 G1 설명에서 "Concurrent Start" 가 나오면 같은 것을 가리키는 거예요.
+> 용어 변경 주의: 과거(JDK 8~9 시절)에는 이 페이즈를 **"Initial Mark"** 라고 불렀지만, JDK 10 이후 Oracle 문서에서는 **"Concurrent Start"** 라는 용어로 바뀌었습니다. 위 인용은 옛 용어를 그대로 쓰고 있는데, 최신 G1 설명에서 "Concurrent Start" 가 나오면 같은 것을 가리킵니다.
 
 ### 4-4. ZGC (Z Garbage Collector)
 
@@ -150,14 +150,14 @@ OpenJDK 제안 문서의 목표 (JEP 333, 도입 당시):
 
 ZGC 상태 변천:
 
-- [JEP 333 (JDK 11)](https://openjdk.org/jeps/333) — **Experimental**로 도입.
-- [JEP 377 (JDK 15)](https://openjdk.org/jeps/377) — **Production ready** 선언. `-XX:+UnlockExperimentalVMOptions` 가 더 이상 필요없게 됨.
-- [JEP 439 — Generational ZGC](https://openjdk.org/jeps/439) — JDK 21부터 Young/Old 세대 분리 버전 도입.
+- [JEP 333 (JDK 11)](https://openjdk.org/jeps/333): **Experimental**로 도입.
+- [JEP 377 (JDK 15)](https://openjdk.org/jeps/377): **Production ready** 선언. `-XX:+UnlockExperimentalVMOptions` 가 더 이상 필요없게 됨.
+- [JEP 439 — Generational ZGC](https://openjdk.org/jeps/439): JDK 21부터 Young/Old 세대 분리 버전 도입.
 
 구현 핵심:
 
-- **Colored Pointers** — 64비트 포인터에 metadata(mark, remap 플래그)를 박아넣어 load barrier로 상태 판단.
-- **Load Barrier** — 참조를 읽을 때마다 barrier를 통해 포인터 상태를 보정.
+- **Colored Pointers**: 64비트 포인터에 metadata(mark, remap 플래그)를 박아넣어 load barrier로 상태 판단.
+- **Load Barrier**: 참조를 읽을 때마다 barrier를 통해 포인터 상태를 보정.
 
 ### 4-5. Shenandoah
 
@@ -181,16 +181,16 @@ OpenJDK **JEP 189**의 핵심 목표(Red Hat 주도):
 
 ## 6. Elasticsearch 관점에서의 의미
 
-1. **최근 Elasticsearch 버전의 기본 GC는 G1**. JDK 9부터 HotSpot 자체의 default가 G1으로 바뀌었기 때문에, Elasticsearch도 번들 JDK 교체와 함께 자연스럽게 G1으로 전환됐어요. 관련 Elastic Labs 문서: [Elasticsearch heap size usage and JVM garbage collection](https://www.elastic.co/search-labs/blog/elasticsearch-heap-size-jvm-garbage-collection)
-2. **STW 장시간 발생 시 노드가 클러스터에서 제거**돼요. master가 fault detection ping에 응답이 없으면 해당 노드를 비정상으로 봐요.
-3. **힙이 커질수록 G1의 CSet/RSet 관리 비용이 커져요** → pause time도 길어질 가능성 → ES가 heap을 크게 주지 말라고 하는 근거 중 하나예요.
-4. ES가 `-XX:+UseG1GC` 대신 ZGC를 쓰는 경우도 있지만, 일반 운영 권장은 여전히 G1이에요.
+1. **최근 Elasticsearch 버전의 기본 GC는 G1**. JDK 9부터 HotSpot 자체의 default가 G1으로 바뀌었기 때문에, Elasticsearch도 번들 JDK 교체와 함께 자연스럽게 G1으로 전환됐습니다. 관련 Elastic Labs 문서: [Elasticsearch heap size usage and JVM garbage collection](https://www.elastic.co/search-labs/blog/elasticsearch-heap-size-jvm-garbage-collection)
+2. **STW 장시간 발생 시 노드가 클러스터에서 제거**됩니다. master가 fault detection ping에 응답이 없으면 해당 노드를 비정상으로 봅니다.
+3. **힙이 커질수록 G1의 CSet/RSet 관리 비용이 커집니다** → pause time도 길어질 가능성 → ES가 heap을 크게 주지 말라고 하는 근거 중 하나입니다.
+4. ES가 `-XX:+UseG1GC` 대신 ZGC를 쓰는 경우도 있지만, 일반 운영 권장은 여전히 G1입니다.
 
 ## 7. 자주 혼동되는 포인트
 
-- "Full GC = Major GC = Old GC" 아니에요. **G1의 Full GC는 "비상 STW"** 이고, Major GC는 Old를 건드리는 광의의 표현이에요.
-- "Minor GC는 짧다" 도 절대적이지 않아요. Young이 비정상적으로 크면 Minor도 길어져요.
-- **CMS(Concurrent Mark Sweep)는 JDK 9부터 deprecated, JDK 14부터 제거**됐어요. 아직도 CMS를 언급하는 블로그는 과거 버전 기준이에요.
+- "Full GC = Major GC = Old GC" 는 아닙니다. **G1의 Full GC는 "비상 STW"** 이고, Major GC는 Old를 건드리는 광의의 표현입니다.
+- "Minor GC는 짧다" 도 절대적이지 않습니다. Young이 비정상적으로 크면 Minor도 길어집니다.
+- **CMS(Concurrent Mark Sweep)는 JDK 9부터 deprecated, JDK 14부터 제거**됐습니다. 아직도 CMS를 언급하는 블로그는 과거 버전 기준입니다.
 
 ## 참고 문헌 (1차 소스)
 

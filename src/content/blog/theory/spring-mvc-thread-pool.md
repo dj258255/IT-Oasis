@@ -18,15 +18,15 @@ series: "요청 처리"
 ---
 
 
-동시 접속자 처리를 고민하다가 궁금해진 부분을 정리해봤어요.
+동시 접속자 처리를 고민하다가 궁금해진 부분을 정리해봤습니다.
 
 ---
 
 ## 들어가며
 
-스프링 부트로 서버 만들 때 항상 신경 쓰이는 게 "이 서버가 과연 몇 명을 동시에 받을 수 있을까?"였어요. 설정 파일을 열어보면 톰캣 스레드 최대치가 200으로 박혀있는데, 이게 왜 200인지는 아무도 안 알려줍니다.
+스프링 부트로 서버 만들 때 항상 신경 쓰이는 게 "이 서버가 과연 몇 명을 동시에 받을 수 있을까?"였습니다. 설정 파일을 열어보면 톰캣 스레드 최대치가 200으로 박혀있는데, 이게 왜 200인지는 아무도 안 알려줍니다.
 
-처음엔 그냥 "200명까지만 받을 수 있나?" 싶었는데, 찾아보니 생각보다 복잡한 이유가 있었어요.
+처음엔 그냥 "200명까지만 받을 수 있나?" 싶었는데, 찾아보니 생각보다 복잡한 이유가 있었습니다.
 
 ---
 
@@ -34,29 +34,29 @@ series: "요청 처리"
 
 ### CGI: 프로세스 지옥의 시작
 
-1990년대 초반, 웹은 정적인 HTML 파일만 보여주는 수준이었어요. 사용자 입력에 따라 동적으로 페이지를 만들 방법이 필요했고, CGI(Common Gateway Interface)가 등장했죠.
+1990년대 초반, 웹은 정적인 HTML 파일만 보여주는 수준이었습니다. 사용자 입력에 따라 동적으로 페이지를 만들 방법이 필요했고, CGI(Common Gateway Interface)가 등장했습니다.
 
 > 출처: [Velog - CGI와 서블릿, JSP의 연관관계](https://velog.io/@suhongkim98/CGI와-서블릿-JSP의-연관관계-알아보기)
 
-CGI는 간단했어요. 요청이 오면 프로그램을 실행하고 결과를 HTML로 반환하면 끝이었죠.
+CGI는 간단했습니다. 요청이 오면 프로그램을 실행하고 결과를 HTML로 반환하면 끝이었습니다.
 
 ![](/uploads/theory/spring-mvc-thread-pool/cgi-process-hell-start.svg)
 
-문제는 성능이었어요.
+문제는 성능이었습니다.
 
 **요청 하나당 프로세스 하나.**
 
-10명이 동시 접속하면 프로세스 10개, 100명이면 100개. 프로세스 생성하는데 수십 ms씩 걸렸고, 메모리는 프로세스마다 수 MB씩 먹었어요. 컨텍스트 스위칭도 무시할 수 없었고요.
+10명이 동시 접속하면 프로세스 10개, 100명이면 100개. 프로세스 생성하는데 수십 ms씩 걸렸고, 메모리는 프로세스마다 수 MB씩 먹었습니다. 컨텍스트 스위칭도 무시할 수 없었습니다.
 
-동시 접속자 100명만 넘어가도 서버가 터졌어요.
+동시 접속자 100명만 넘어가도 서버가 터졌습니다.
 
 > 출처: [80000coding - 웹 서버와 WAS, CGI](https://80000coding.oopy.io/2352c04e-8f98-4695-a5fe-8c789ee94d98)
 
 ### 서블릿: 스레드 기반의 혁명
 
-1997년, Sun이 해결책을 내놓았어요. Java Servlet이었죠.
+1997년, Sun이 해결책을 내놓았습니다. Java Servlet이었습니다.
 
-핵심 아이디어는 **프로세스 대신 스레드를 쓰자**는 것이었어요.
+핵심 아이디어는 **프로세스 대신 스레드를 쓰자**는 것이었습니다.
 
 
 CGI 방식
@@ -69,7 +69,7 @@ CGI 방식
 
 
 
-스레드는 프로세스보다 가볍고 빨랐어요. 생성 비용도 낮고 메모리도 덜 먹었고요. 무엇보다 **스레드 풀**을 만들어서 재사용할 수 있었어요.
+스레드는 프로세스보다 가볍고 빨랐습니다. 생성 비용도 낮고 메모리도 덜 먹었습니다. 무엇보다 **스레드 풀**을 만들어서 재사용할 수 있었습니다.
 
 > 출처: [Wikipedia - 자바 서블릿](https://ko.wikipedia.org/wiki/자바_서블릿), [Pearson IT Certification - Servlet and JSP History](https://www.pearsonitcertification.com/articles/article.aspx?p=29786&seqNum=3)
 
@@ -87,13 +87,13 @@ class ServletContainer {
 }
 ```
 
-이게 바로 톰캣의 시작이었어요. 1999년, Sun이 톰캣 코드를 Apache 재단에 기부하면서 Apache Tomcat이 탄생했죠.
+이게 바로 톰캣의 시작이었습니다. 1999년, Sun이 톰캣 코드를 Apache 재단에 기부하면서 Apache Tomcat이 탄생했습니다.
 
 > 출처: [Apache Tomcat Heritage](https://tomcat.apache.org/heritage.html)
 
 ### 서블릿의 내부 구조
 
-서블릿이 프로세스보다 효율적인 이유를 좀 더 깊이 파헤쳐볼게요.
+서블릿이 프로세스보다 효율적인 이유를 좀 더 깊이 파헤쳐 보겠습니다.
 
 #### CGI vs 서블릿: 메모리 구조 비교
 
@@ -109,13 +109,13 @@ CGI 방식:
 → Code, Data, Heap은 공유하고 Stack만 따로!
 
 
-**핵심**: 스레드는 Code, Data, Heap 영역을 공유하고 Stack만 각자 가져요. 메모리 효율이 압도적으로 좋죠.
+**핵심**: 스레드는 Code, Data, Heap 영역을 공유하고 Stack만 각자 가집니다. 메모리 효율이 압도적으로 좋습니다.
 
 > 출처: [Velog - 자바 서블릿에 대해 알아보자](https://velog.io/@jakeseo_me/자바-서블릿에-대해-알아보자.-근데-톰캣과-스프링을-살짝-곁들인)
 
 #### 서블릿의 라이프사이클
 
-서블릿은 한 번 생성되면 메모리에 계속 남아있어요. **싱글톤 패턴**처럼 동작하거든요.
+서블릿은 한 번 생성되면 메모리에 계속 남아있습니다. **싱글톤 패턴**처럼 동작합니다.
 
 ```java
 // 서블릿 라이프사이클
@@ -157,7 +157,7 @@ public class MyServlet extends HttpServlet {
 
 
 
-실제로 측정해보면 차이가 확연해요:
+실제로 측정해보면 차이가 확연합니다:
 
 ```java
 // 첫 번째 요청
@@ -175,7 +175,7 @@ GET http://localhost:8080/myServlet
 
 #### Lazy Loading: 필요할 때만 만든다
 
-서블릿은 **처음 접근할 때** 생성돼요. 서버가 시작될 때 모든 서블릿을 만들지 않아요.
+서블릿은 **처음 접근할 때** 생성됩니다. 서버가 시작될 때 모든 서블릿을 만들지 않습니다.
 ![](/uploads/theory/spring-mvc-thread-pool/lazy-loading-need.svg)
 
 
@@ -186,7 +186,7 @@ GET http://localhost:8080/myServlet
 
 #### 싱글톤의 함정: 공유 메모리 문제
 
-서블릿이 싱글톤이라는 건, **모든 스레드가 같은 서블릿 객체를 공유**한다는 뜻이에요.
+서블릿이 싱글톤이라는 건, **모든 스레드가 같은 서블릿 객체를 공유**한다는 뜻입니다.
 
 ```java
 // 위험한 코드!
@@ -236,13 +236,13 @@ public class SynchronizedServlet extends HttpServlet {
 }
 ```
 
-**권장**: 서블릿에서는 **상태를 저장하지 말고**, 요청 처리 후 바로 잊어버리는 게 좋아요.
+**권장**: 서블릿에서는 **상태를 저장하지 말고**, 요청 처리 후 바로 잊어버리는 게 좋습니다.
 
 > 출처: [Velog - 자바 서블릿에 대해 알아보자](https://velog.io/@jakeseo_me/자바-서블릿에-대해-알아보자.-근데-톰캣과-스프링을-살짝-곁들인)
 
 #### 스프링의 DispatcherServlet
 
-스프링은 **단 하나의 서블릿**으로 모든 요청을 처리해요.
+스프링은 **단 하나의 서블릿**으로 모든 요청을 처리합니다.
 
 ```java
 // 스프링의 핵심: DispatcherServlet
@@ -274,7 +274,7 @@ public class DispatcherServlet extends FrameworkServlet {
 ![](/uploads/theory/spring-mvc-thread-pool/spring-dispatcherservlet.svg)
 
 
-**핵심**: 개발자는 `@RestController`나 `@Controller`만 만들면 되고, 서블릿 코드는 스프링이 알아서 처리해줘요.
+**핵심**: 개발자는 `@RestController`나 `@Controller`만 만들면 되고, 서블릿 코드는 스프링이 알아서 처리해 줍니다.
 
 > 출처: [Velog - 자바 서블릿에 대해 알아보자](https://velog.io/@jakeseo_me/자바-서블릿에-대해-알아보자.-근데-톰캣과-스프링을-살짝-곁들인)
 
@@ -284,29 +284,29 @@ public class DispatcherServlet extends FrameworkServlet {
 
 ### Tomcat 7 이전: BIO의 시대
 
-초기 톰캣은 BIO(Blocking I/O) 커넥터를 기본으로 썼어요.
+초기 톰캣은 BIO(Blocking I/O) 커넥터를 기본으로 썼습니다.
 
-동작 방식은 이랬어요:
+동작 방식은 이랬습니다:
 
 ![](/uploads/theory/spring-mvc-thread-pool/tomcat-7-bio.svg)
 
 
-문제는 **Keep-Alive**였어요.
+문제는 **Keep-Alive**였습니다.
 
-HTTP/1.1에서는 연결을 재사용해요. 요청 처리하고 나서도 연결을 끊지 않고 다음 요청을 기다리죠. 보통 5-30초 정도 기다려요.
+HTTP/1.1에서는 연결을 재사용합니다. 요청 처리하고 나서도 연결을 끊지 않고 다음 요청을 기다립니다. 보통 5-30초 정도 기다립니다.
 
 ![](/uploads/theory/spring-mvc-thread-pool/tomcat-7-bio-2.svg)
 
 
-BIO에서는 이 5초 동안 스레드가 아무것도 안 하고 대기해요. 스레드 풀이 200개면, 200명이 동시 접속하면 끝이었죠. 201번째 사용자는 누군가 연결을 끊을 때까지 기다려야 했어요.
+BIO에서는 이 5초 동안 스레드가 아무것도 안 하고 대기합니다. 스레드 풀이 200개면, 200명이 동시 접속하면 끝이었습니다. 201번째 사용자는 누군가 연결을 끊을 때까지 기다려야 했습니다.
 
 > 출처: [Velog - 아파치 톰캣의 NIO Connector와 BIO Connector](https://velog.io/@cjh8746/아파치-톰캣의-NIO-Connector-와-BIO-Connector에-대해-알아보자)
 
 ### C10K 문제
 
-1999년, Dan Kegel이 문제를 제기했어요. **"10,000개 동시 연결을 어떻게 처리할 것인가?"**
+1999년, Dan Kegel이 문제를 제기했습니다. **"10,000개 동시 연결을 어떻게 처리할 것인가?"**
 
-BIO 방식으로는 불가능했어요. 10,000개 스레드를 만들면:
+BIO 방식으로는 불가능했습니다. 10,000개 스레드를 만들면:
 
 ```
 메모리: 10,000 * 1MB = 10GB
@@ -318,9 +318,9 @@ CPU: 코어당 2,500개 스레드 스케줄링으로 유효 CPU 시간이 크게
 
 ### Tomcat 8: NIO로의 전환
 
-2014년, Tomcat 8이 나오면서 NIO(Non-blocking I/O)가 기본이 됐어요.
+2014년, Tomcat 8이 나오면서 NIO(Non-blocking I/O)가 기본이 됐습니다.
 
-NIO의 핵심은 **Selector**예요.
+NIO의 핵심은 **Selector**입니다.
 
 ```java
 // NIO Connector의 동작 방식
@@ -350,7 +350,7 @@ class NioConnector {
 }
 ```
 
-이제 연결 개수와 스레드 개수가 분리됐어요.
+이제 연결 개수와 스레드 개수가 분리됐습니다.
 
 ```
 BIO:
@@ -362,13 +362,13 @@ NIO:
 = 최대 8,192개 동시 연결 (Tomcat 8 기본값)
 ```
 
-Keep-Alive 대기 중인 연결은 Selector가 관리하고, 실제로 데이터가 오면 그때 워커 스레드를 할당해요.
+Keep-Alive 대기 중인 연결은 Selector가 관리하고, 실제로 데이터가 오면 그때 워커 스레드를 할당합니다.
 
 > 출처: [Stack Overflow - Tomcat NIO thread pools](https://stackoverflow.com/questions/40722254/tomcat-nio-thread-pools)
 
 ### Tomcat 8.5/9: BIO 완전 제거
 
-2016년, Tomcat 8.5와 9가 나오면서 BIO는 완전히 사라졌어요.
+2016년, Tomcat 8.5와 9가 나오면서 BIO는 완전히 사라졌습니다.
 
 ```java
 // Tomcat 8.5부터
@@ -388,7 +388,7 @@ Keep-Alive 대기 중인 연결은 Selector가 관리하고, 실제로 데이터
 
 ### 기본 설정값
 
-스프링 부트에 내장된 톰캣의 기본 설정은 이래요:
+스프링 부트에 내장된 톰캣의 기본 설정은 이렇습니다:
 
 | 설정 | 기본값 | 설명 |
 |------|--------|------|
@@ -401,7 +401,7 @@ Keep-Alive 대기 중인 연결은 Selector가 관리하고, 실제로 데이터
 
 ### NIO 커넥터의 스레드 구조
 
-톰캣 NIO 커넥터는 여러 종류의 스레드를 써요:
+톰캣 NIO 커넥터는 여러 종류의 스레드를 씁니다:
 
 ```
 http-nio-8080-Acceptor-0 (1개)
@@ -418,13 +418,13 @@ http-nio-8080-exec-200
   → 실제 요청 처리
 ```
 
-Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 감지하면 Exec 스레드에게 작업을 줘요.
+Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 감지하면 Exec 스레드에게 작업을 줍니다.
 
 > 출처: [DZone - Understanding the Tomcat NIO Connector](https://dzone.com/articles/understanding-tomcat-nio)
 
 ### 요청 처리 흐름
 
-스프링 부트는 이렇게 요청을 처리해요:
+스프링 부트는 이렇게 요청을 처리합니다:
 
 ![](/uploads/theory/spring-mvc-thread-pool/request-handle-flow.svg)
 
@@ -448,7 +448,7 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 ### 1. 메모리와의 균형
 
-먼저 JVM 메모리 구조부터 이해해야 해요.
+먼저 JVM 메모리 구조부터 이해해야 합니다.
 
 #### JVM 메모리 구조
 
@@ -469,9 +469,9 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 #### 스레드 메모리 계산
 
-64비트 JVM에서 스레드 하나는 기본 1MB 스택을 먹어요.
+64비트 JVM에서 스레드 하나는 기본 1MB 스택을 먹습니다.
 
-실제로는 이래요:
+실제로는 이렇습니다:
 
 ```
 스레드가 sleep 상태일 때: 약 16KB (물리 RAM)
@@ -492,13 +492,13 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 = 총 2.5GB 정도
 ```
 
-이 정도면 일반적인 서버 메모리(4-8GB)에서 무리 없어요.
+이 정도면 일반적인 서버 메모리(4-8GB)에서 무리 없습니다.
 
 > 출처: [Stack Overflow - Java thread memory calculation](https://stackoverflow.com/questions/67068623/java-thread-memory-calculation), [DZone - How Much Memory Does a Java Thread Take?](https://dzone.com/articles/how-much-memory-does-a-java-thread-take)
 
 ### 2. 컨텍스트 스위칭 비용
 
-현대 리눅스에서 컨텍스트 스위칭은 1-2 마이크로초 걸려요.
+현대 리눅스에서 컨텍스트 스위칭은 1-2 마이크로초 걸립니다.
 
 ```
 스레드 A 레지스터 저장 → 스레드 B 레지스터 복원 → TLB flush
@@ -511,7 +511,7 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 4 / 200 = 0.02 (2%)
 ```
 
-적당히 많으면서도 컨텍스트 스위칭 오버헤드가 크지 않은 수준이에요.
+적당히 많으면서도 컨텍스트 스위칭 오버헤드가 크지 않은 수준입니다.
 
 만약 2000개 스레드를 만들면:
 
@@ -525,7 +525,7 @@ Acceptor가 연결을 받으면 Poller에게 넘기고, Poller가 데이터를 �
 
 ### 3. 역사적 이유
 
-초기 톰캣(1999년)이 나왔을 때 서버 스펙은 이랬어요:
+초기 톰캣(1999년)이 나왔을 때 서버 스펙은 이랬습니다:
 
 ```
 CPU: Pentium III 500MHz
@@ -533,7 +533,7 @@ RAM: 128-512MB
 동시 접속자: 수백 명 수준
 ```
 
-이 환경에서 테스트하면서 "150-200개 정도가 적당하다"는 결론이 나왔어요. 그게 지금까지 기본값으로 남아있죠.
+이 환경에서 테스트하면서 "150-200개 정도가 적당하다"는 결론이 나왔습니다. 그게 지금까지 기본값으로 남아있습니다.
 
 > 출처: [Medium - Tomcat Why 200 Threads](https://alpitanand20.medium.com/tomcat-why-just-200-default-threads-febd2411b904)
 
@@ -541,7 +541,7 @@ RAM: 128-512MB
 
 > "The default configuration is intended for medium load/complexity applications on average hardware."
 
-평범한 하드웨어에서 중간 규모 부하를 처리하도록 설계됐다는 뜻이에요.
+평범한 하드웨어에서 중간 규모 부하를 처리하도록 설계됐다는 뜻입니다.
 
 ---
 
@@ -549,7 +549,7 @@ RAM: 128-512MB
 
 ### EC2 t4g.small 테스트
 
-한 개발자가 EC2 t4g.small (2코어, 2GB RAM)에서 스프링 부트 3.1.5로 부하 테스트를 돌렸어요.
+한 개발자가 EC2 t4g.small (2코어, 2GB RAM)에서 스프링 부트 3.1.5로 부하 테스트를 돌렸습니다.
 
 **기본 설정 (threads.max=200):**
 
@@ -566,7 +566,7 @@ RAM: 128-512MB
 
 > 참고: Thread.sleep 같은 가벼운 요청은 실제 스레드 스택을 거의 사용하지 않으므로, 2000개 스레드가 모두 1MB씩 사용하지는 않는다. 실제 메모리 사용량은 활성 스택 프레임 깊이에 따라 다르다.
 
-서버 성능은 하드웨어와 설정에 크게 의존한다는 걸 보여주죠.
+서버 성능은 하드웨어와 설정에 크게 의존한다는 걸 보여줍니다.
 
 > 출처: [HARIL - Spring MVC Traffic Testing](https://haril.dev/blog/2023/11/10/Spring-MVC-Traffic-Testing)
 
@@ -605,7 +605,7 @@ threads.max=2000
 
 ## 스레드 풀 크기 계산 공식
 
-이론적으로는 이 공식을 써요:
+이론적으로는 이 공식을 씁니다:
 
 ```
 스레드 풀 크기 = CPU 코어 수 × (1 + 대기 시간 / 처리 시간)
@@ -623,7 +623,7 @@ CPU: 4코어
                = 40
 ```
 
-하지만 실제로는 **부하 테스트로 찾아야** 해요. 애플리케이션마다 특성이 다르기 때문이에요.
+하지만 실제로는 **부하 테스트로 찾아야** 합니다. 애플리케이션마다 특성이 다르기 때문입니다.
 
 > 출처: [Medium - 스레드 풀의 적절한 크기](https://medium.com/@10x.developer.kr/스레드-풀의-적절한-크기를-구하는-합리적인-방법-7af84b615623)
 
@@ -673,19 +673,19 @@ Spring Boot 2.3 이전: server.tomcat.max-threads
 
 ### 시나리오 1: OutOfMemoryError - unable to create new native thread
 
-스레드를 너무 많이 만들면 JVM이 터져요.
+스레드를 너무 많이 만들면 JVM이 터집니다.
 
 ```
 java.lang.OutOfMemoryError: unable to create new native thread
 ```
 
-**중요한 사실:** 이건 Heap 메모리 부족이 아니에요. 스레드는 Heap이 아니라 **OS 네이티브 메모리**에 생성돼요.
+**중요한 사실:** 이건 Heap 메모리 부족이 아닙니다. 스레드는 Heap이 아니라 **OS 네이티브 메모리**에 생성됩니다.
 
 > 출처: [Baeldung - OutOfMemoryError unable to create new native thread](https://www.baeldung.com/java-outofmemoryerror-unable-to-create-new-native-thread)
 
 #### 왜 터지는가?
 
-리눅스는 프로세스당 생성할 수 있는 스레드 개수를 제한해요.
+리눅스는 프로세스당 생성할 수 있는 스레드 개수를 제한합니다.
 
 ```bash
 # 확인 방법
@@ -747,7 +747,7 @@ class ThreadBomb {
 
 ### 시나리오 2: 스레드 고갈로 인한 응답 불가
 
-스레드가 부족하면 새 요청을 받지 못해요.
+스레드가 부족하면 새 요청을 받지 못합니다.
 
 ```
 톰캣 설정:
@@ -772,7 +772,7 @@ All threads (200) are currently busy
 
 #### 실제 사례
 
-라이브 스트리밍 서버에서 이런 식으로 터질 수 있어요:
+라이브 스트리밍 서버에서 이런 식으로 터질 수 있습니다:
 
 ```java
 @RestController
@@ -805,7 +805,7 @@ class StreamController {
 
 ### 시나리오 3: 메모리 누수로 인한 OOM
 
-스레드가 메모리를 안 놓으면 Heap이 터져요.
+스레드가 메모리를 안 놓으면 Heap이 터집니다.
 
 ```
 java.lang.OutOfMemoryError: Java heap space
@@ -872,7 +872,7 @@ class EventProcessor {
 
 ### 시나리오 4: OS 레벨 제한
 
-리눅스 커널 파라미터가 부족하면 터져요.
+리눅스 커널 파라미터가 부족하면 터집니다.
 
 ```bash
 # 주요 커널 파라미터
@@ -962,7 +962,7 @@ class AsyncConfig {
 
 ## 모니터링 지표
 
-톰캣 스레드 풀을 모니터링할 때 봐야 할 지표예요:
+톰캣 스레드 풀을 모니터링할 때 봐야 할 지표입니다:
 
 ```
 요청 관련:
@@ -1000,7 +1000,7 @@ class AsyncConfig {
 
 ### 결국 답은
 
-200이라는 숫자는 마법의 값이 아니에요. **애플리케이션 특성에 맞게 튜닝해야 해요.**
+200이라는 숫자는 마법의 값이 아닙니다. **애플리케이션 특성에 맞게 튜닝해야 합니다.**
 
 ```
 I/O 작업 많으면 (DB 쿼리, API 호출):
@@ -1015,7 +1015,7 @@ CPU 작업 많으면 (이미지 처리, 암호화):
 
 **Virtual Threads (Java 21+):** Virtual Thread는 스택을 수 KB만 사용하여 수백만 개를 생성할 수 있다. Spring Boot 3.2+에서는 `spring.threads.virtual.enabled=true` 설정으로 적용 가능하며, 이 경우 플랫폼 스레드 풀 크기 제한이 더 이상 병목이 되지 않는다. "왜 200개인가"라는 질문 자체가 Virtual Thread 환경에서는 의미를 잃는다.
 
-라이브 스트리밍 서버는 WebSocket, DB 쿼리, OAuth API 호출 전부 I/O bound라 스레드를 늘려도 될 것 같아요. 부하 테스트 돌려보고 최적값을 찾아봐야겠어요.
+라이브 스트리밍 서버는 WebSocket, DB 쿼리, OAuth API 호출 전부 I/O bound라 스레드를 늘려도 될 것 같습니다. 부하 테스트 돌려보고 최적값을 찾아봐야겠습니다.
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 'Redis L2 캐시 + 자동완성 flat KV — Trie 퇴역과 Stateless 전환'
+title: 'Redis L2 캐시 + 자동완성 flat KV: Trie 퇴역과 Stateless 전환'
 titleEn: 'Redis L2 Cache + Autocomplete Flat KV — Retiring Trie and Stateless Transition'
 description: Caffeine(L1) + Redis(L2) 2계층 캐시를 구현하고, Trie 자동완성을 Redis flat KV O(1) GET으로 전환하여 Stateless 앱을 만든 뒤 k6 부하 테스트로 Before/After를 비교한 과정을 정리합니다. 분산 전환 순서(Redis → Replication → 스케일아웃)의 의존 관계와 비용 분석을 포함합니다.
 descriptionEn: Implements Caffeine(L1) + Redis(L2) tiered cache, replaces Trie autocomplete with Redis flat KV O(1) GET for stateless transition, validates with k6 load testing. Covers distributed transition ordering (Redis → Replication → Scale-out) dependencies and cost analysis.
@@ -51,11 +51,11 @@ JVM/Tomcat 튜닝(스레드 200→100)은 **79% 악화**로 역효과. CPU-bound
 
 ## 개요
 
-### 분산 전환 3단계 — 왜 Redis가 먼저인가
+### 분산 전환 3단계: 왜 Redis가 먼저인가
 
-"CPU가 병목이니 서버를 늘리자"가 아니라 **인프라 준비 → 앱 확장** 순서(Bottom-Up)로 진행합니다.
+"CPU가 병목이니 서버를 늘리자"로 곧장 가지 않고, **인프라 준비 → 앱 확장** 순서(Bottom-Up)로 진행합니다.
 
-![분산 전환 의존 관계 — Redis → Replication → 스케일아웃](/uploads/project/WikiEngine/redis-l2-cache/distributed-dependency.svg)
+![분산 전환 의존 관계: Redis → Replication → 스케일아웃](/uploads/project/WikiEngine/redis-l2-cache/distributed-dependency.svg)
 
 앱 스케일아웃을 먼저 하면 생기는 문제:
 
@@ -65,7 +65,7 @@ JVM/Tomcat 튜닝(스레드 200→100)은 **79% 악화**로 역효과. CPU-bound
 | Replication 없이 앱 3대 | HikariCP 커넥션 3배(20×3=60). 단일 MySQL이 감당 못함 |
 | TokenBlacklist 미공유 | 인스턴스 A에서 로그아웃 → B에서 여전히 접속 가능 (보안 결함) |
 
-**핵심 개념 — Stateless 전환**: 앱이 내부에 상태(Caffeine 캐시, Trie, TokenBlacklist)를 들고 있으면 Stateful → 스케일아웃 시 상태 불일치. Redis로 상태를 외부화하면 Stateless → 인스턴스 자유롭게 추가/제거 가능.
+**핵심 개념, Stateless 전환**: 앱이 내부에 상태(Caffeine 캐시, Trie, TokenBlacklist)를 들고 있으면 Stateful → 스케일아웃 시 상태 불일치. Redis로 상태를 외부화하면 Stateless → 인스턴스 자유롭게 추가/제거 가능.
 
 ### CPU 포화의 근본 원인
 
@@ -77,9 +77,9 @@ Caffeine 캐시 히트율 96% → 4% 미스
 ```
 
 Redis L2 캐시를 도입하면:
-1. **다중 인스턴스 캐시 공유** — Caffeine은 인스턴스별 독립. Redis는 공유 캐시이므로 히트율 유지
-2. **자동완성 flat KV** — Trie DFS 제거, O(1) GET, CPU 부하 감소
-3. **Origin 도달률 감소** — L1 + L2 2계층으로 DB/Lucene 접근 확률 감소
+1. **다중 인스턴스 캐시 공유**: Caffeine은 인스턴스별 독립. Redis는 공유 캐시이므로 히트율 유지
+2. **자동완성 flat KV**: Trie DFS 제거, O(1) GET, CPU 부하 감소
+3. **Origin 도달률 감소**: L1 + L2 2계층으로 DB/Lucene 접근 확률 감소
 
 ### 이 단계의 목표
 
@@ -92,7 +92,7 @@ Redis L2 캐시를 도입하면:
 
 ---
 
-## 인프라 구성 — 서버 2대 체제 전환
+## 인프라 구성: 서버 2대 체제 전환
 
 [stress 테스트](/blog/project/wikiengine/stress-test-tuning)까지는 단일 서버에서 모든 것을 처리했습니다. 이 글부터 Oracle Cloud 추가 인스턴스를 생성하여 **서버 2대 체제**로 전환합니다.
 
@@ -118,7 +118,7 @@ Redis L2 캐시를 도입하면:
 
 ---
 
-## 왜 Redis인가 — Memcached와의 비교
+## 왜 Redis인가: Memcached와의 비교
 
 분산 캐시의 양대 선택지는 Redis와 Memcached입니다.
 
@@ -133,14 +133,14 @@ Redis L2 캐시를 도입하면:
 **Memcached가 더 적합한 경우**: 순수 캐시만 필요하고, 수백GB 규모의 단순 key-value를 멀티스레드로 처리해야 할 때.
 
 **이 프로젝트에서 Redis가 필수인 이유:**
-1. **자동완성 데이터 영속성** — prefix_topk는 매시간 배치로 생성되므로 유실 시 최대 1시간 자동완성 불능
-2. **TokenBlacklist** — JWT 로그아웃을 위한 블랙리스트를 다중 인스턴스가 공유해야 함 (Set + TTL)
-3. **Pub/Sub 캐시 무효화** — 스케일아웃 시 인스턴스 A의 게시글 수정 → Pub/Sub → 인스턴스 B/C의 L1 캐시 무효화
-4. **후속 활용** — CDC 이벤트, 조회수 Redis INCR 등 캐시 이상의 역할
+1. **자동완성 데이터 영속성**: prefix_topk는 매시간 배치로 생성되므로 유실 시 최대 1시간 자동완성 불능
+2. **TokenBlacklist**: JWT 로그아웃을 위한 블랙리스트를 다중 인스턴스가 공유해야 함 (Set + TTL)
+3. **Pub/Sub 캐시 무효화**: 스케일아웃 시 인스턴스 A의 게시글 수정 → Pub/Sub → 인스턴스 B/C의 L1 캐시 무효화
+4. **후속 활용**: CDC 이벤트, 조회수 Redis INCR 등 캐시 이상의 역할
 
 ---
 
-## Redis 도입 비용 분석 — "Redis 없이 해결할 수 없었는가?"
+## Redis 도입 비용 분석: "Redis 없이 해결할 수 없었는가?"
 
 Redis를 추가하기 전에, **기존 인프라 튜닝만으로 해결할 수 없는지** 4가지 대안을 검토했습니다:
 
@@ -175,7 +175,7 @@ Redis 도입의 이득:
   → Redis 300MB 투자 가치 있음
 ```
 
-> **Redis 장애 시 데이터 유실 범위**: AOF/RDB를 모두 미사용하므로 Redis 재시작 시 모든 캐시 데이터가 유실된다. L2 캐시와 자동완성 KV는 origin(MySQL/Lucene)에서 재로딩되고, 조회수는 최대 30초(flush 주기) 분량만 유실된다. 토큰 블랙리스트는 JWT 만료시간(24h) 내 데이터이므로, Redis 재시작 시 로그아웃된 토큰이 만료 전까지 다시 유효해질 수 있다 — 이 보안 트레이드오프는 [Redis 샤딩](/blog/project/wikiengine/redis-sharding)에서 전용 인스턴스 분리로 blast radius를 축소했다.
+> **Redis 장애 시 데이터 유실 범위**: AOF/RDB를 모두 미사용하므로 Redis 재시작 시 모든 캐시 데이터가 유실된다. L2 캐시와 자동완성 KV는 origin(MySQL/Lucene)에서 재로딩되고, 조회수는 최대 30초(flush 주기) 분량만 유실된다. 토큰 블랙리스트는 JWT 만료시간(24h) 내 데이터이므로, Redis 재시작 시 로그아웃된 토큰이 만료 전까지 다시 유효해질 수 있다. 이 보안 트레이드오프는 [Redis 샤딩](/blog/project/wikiengine/redis-sharding)에서 전용 인스턴스 분리로 blast radius를 축소했다.
 
 > **AWS 환경에서의 비용 비교 참고**: ElastiCache(t3.micro 기준 월 ~3만원)를 추가하고, DB 부하 감소분만큼 RDS를 다운스케일(예: db.r6g.large → medium, 월 ~13만원 절감)하면 총 인프라 비용이 줄어드는지가 도입 근거가 됩니다. 관리형 서비스 여부와 관계없이 **자원 배분 트레이드오프 분석**은 동일한 사고 과정입니다.
 
@@ -291,7 +291,7 @@ public class TieredCacheService {
 | 현재 (단일 인스턴스) | L1 evict + L2 삭제 | 없음 |
 | 스케일아웃 후 (멀티 인스턴스) | Redis Pub/Sub 브로드캐스트 + L1 TTL 보완 | ~수 ms (Pub/Sub) ~ 최대 5분 (TTL 만료) |
 
-**Pub/Sub의 한계 — at-most-once 전송**: Redis Pub/Sub은 fire-and-forget 방식입니다. 구독자가 일시적으로 연결이 끊기면 그 사이의 메시지는 **영원히 유실**됩니다.
+**Pub/Sub의 한계(at-most-once 전송)**: Redis Pub/Sub은 fire-and-forget 방식입니다. 구독자가 일시적으로 연결이 끊기면 그 사이의 메시지는 **영원히 유실**됩니다.
 
 | 대안 | 장점 | 단점 | 판단 |
 |------|------|------|------|
@@ -316,11 +316,11 @@ Redis 장애 시:
                               ↓ L1에만 저장
 ```
 
-자동완성은 예외 — prefix_topk 데이터가 Redis에만 있으므로, Redis 장애 시 **Lucene PrefixQuery fallback**으로 자동 전환됩니다. Trie를 퇴역시키되 Lucene PrefixQuery를 fallback으로 유지한 이유가 여기에 있습니다.
+자동완성은 예외입니다. prefix_topk 데이터가 Redis에만 있으므로, Redis 장애 시 **Lucene PrefixQuery fallback**으로 자동 전환됩니다. Trie를 퇴역시키되 Lucene PrefixQuery를 fallback으로 유지한 이유가 여기에 있습니다.
 
 ---
 
-## 2. 자동완성 flat KV — Trie 퇴역
+## 2. 자동완성 flat KV: Trie 퇴역
 
 ### Trie의 한계 ([Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 확인)
 
@@ -417,7 +417,7 @@ public void buildPrefixTopK() {
 
 ---
 
-## 3. 직렬화 — Jackson JSON 선택
+## 3. 직렬화: Jackson JSON 선택
 
 | 방식 | 크기 | 속도 | 가독성 | 의존성 |
 |------|------|------|--------|--------|
@@ -427,7 +427,7 @@ public void buildPrefixTopK() {
 
 **Jackson JSON을 선택한 근거**:
 
-캐시 데이터 합계 ~31MB. MessagePack으로 바꿔도 ~22MB (9MB 절감) — Redis maxmemory 256MB 대비 3.5%. 직렬화 속도 차이(~0.5μs)도 네트워크 RTT(~1ms) 대비 무시 가능합니다. `redis-cli`에서 사람이 읽을 수 있어 디버깅이 훨씬 쉽고, 추가 의존성도 없습니다.
+캐시 데이터 합계 ~31MB. MessagePack으로 바꿔도 ~22MB (9MB 절감)이고, 이는 Redis maxmemory 256MB 대비 3.5%입니다. 직렬화 속도 차이(~0.5μs)도 네트워크 RTT(~1ms) 대비 무시 가능합니다. `redis-cli`에서 사람이 읽을 수 있어 디버깅이 훨씬 쉽고, 추가 의존성도 없습니다.
 
 > **전환 기준**: Redis 메모리가 maxmemory의 80%(~200MB)에 도달하면 MessagePack 전환을 검토합니다. 현재 실측 28.4%(~73MB)이므로 전환은 한참 먼 상태입니다.
 
@@ -463,14 +463,14 @@ redis:
 
 | 키 유형 | TTL 설정 | 삭제 시 영향 |
 |---------|---------|-------------|
-| 캐시 (searchResults, postDetail) | 10분 | DB에서 재조회 — 허용 가능 |
-| prefix_topk (자동완성) | 2시간 | 자동완성 불능 — **위험** |
-| prefix:current_version | TTL 없음 | 자동완성 전체 불능 — **치명적** |
-| TokenBlacklist | 토큰 만료 | 로그아웃 무효화 — **보안 결함** |
+| 캐시 (searchResults, postDetail) | 10분 | DB에서 재조회, 허용 가능 |
+| prefix_topk (자동완성) | 2시간 | 자동완성 불능, **위험** |
+| prefix:current_version | TTL 없음 | 자동완성 전체 불능, **치명적** |
+| TokenBlacklist | 토큰 만료 | 로그아웃 무효화, **보안 결함** |
 
 `volatile-lru`는 **TTL이 설정된 키만** 퇴거 대상으로 삼습니다. TTL이 없는 `prefix:current_version`은 절대 퇴거되지 않습니다.
 
-### 보안 — 포트 노출 제거 + 인증
+### 보안: 포트 노출 제거 + 인증
 
 Docker Compose 내부 네트워크에서 앱 컨테이너는 서비스명(`redis:6379`)으로 접근합니다. 호스트에 6379 포트를 노출하지 않고, `requirepass`로 비밀번호를 설정합니다.
 
@@ -550,7 +550,7 @@ Redis 컨테이너는 떠 있지만 앱 코드는 아직 Caffeine + Trie를 사�
 | 에러율 | **0%** |
 | 최대 TPS | 58.4 req/s |
 
-![Before — k6 Overview: 평균 38.2ms, P95 150ms, 에러율 0%](/uploads/project/WikiEngine/redis-l2-cache/before-01-k6-overview.png)
+![Before k6 Overview: 평균 38.2ms, P95 150ms, 에러율 0%](/uploads/project/WikiEngine/redis-l2-cache/before-01-k6-overview.png)
 
 ### 시나리오별 응답시간 + 검색 빈도별 성능
 
@@ -569,7 +569,7 @@ Redis 컨테이너는 떠 있지만 앱 코드는 아직 Caffeine + Trie를 사�
 
 > **핵심 관측**: 고빈도 토큰("대한민국", "history" 등)의 평균 75ms, P95 405ms가 전체 응답시간을 끌어올리고 있습니다. posting list가 길어 BM25 점수 계산에 CPU를 많이 소모하기 때문입니다. 이것이 Redis L2 캐시로 Lucene 접근을 줄여야 하는 직접적 근거입니다.
 
-![Before — 시나리오별 응답시간 + 검색 빈도별 성능 비교](/uploads/project/WikiEngine/redis-l2-cache/before-02-scenario-frequency.png)
+![Before: 시나리오별 응답시간 + 검색 빈도별 성능 비교](/uploads/project/WikiEngine/redis-l2-cache/before-02-scenario-frequency.png)
 
 ### 네트워크 상세
 
@@ -581,7 +581,7 @@ Redis 컨테이너는 떠 있지만 앱 코드는 아직 Caffeine + Trie를 사�
 | 수신 데이터 | 228 MiB |
 | 송신 데이터 | 7.91 MiB |
 
-![Before — 네트워크 상세: TTFB 40.1ms](/uploads/project/WikiEngine/redis-l2-cache/before-03-network.png)
+![Before 네트워크 상세: TTFB 40.1ms](/uploads/project/WikiEngine/redis-l2-cache/before-03-network.png)
 
 ### 시스템 수치
 
@@ -595,7 +595,7 @@ Redis 컨테이너는 떠 있지만 앱 코드는 아직 Caffeine + Trie를 사�
 
 ---
 
-## 핵심 구현 — 코드 변경
+## 핵심 구현: 코드 변경
 
 | # | 작업 | 상태 |
 |---|------|------|
@@ -626,7 +626,7 @@ Redis 컨테이너는 떠 있지만 앱 코드는 아직 Caffeine + Trie를 사�
 
 | # | 검증 항목 | 결과 |
 |---|----------|------|
-| 1 | 자동완성 API | `prefix=삼성` → `["삼성전자","삼성물산","삼성 sdi"]` — Redis flat KV O(1) |
+| 1 | 자동완성 API | `prefix=삼성` → `["삼성전자","삼성물산","삼성 sdi"]`, Redis flat KV O(1) |
 | 2 | 검색 캐시 | 1회차 origin → 2회차 L1 히트. Redis에 키 생성 확인 |
 | 3 | 게시글 상세 캐시 | Redis에 `post:571474` 캐시 키 생성 |
 | 4 | prefix_topk 배치 | 앱 기동 시 자동 빌드: `keys=390, 소스 쿼리=42, 833ms` |
@@ -661,8 +661,8 @@ Before(Caffeine + Trie)와 동일 조건(100 VU, 20분)으로 재측정합니다
 | Slowlog | **1** (정상) |
 | Keys | 4,620개 |
 
-![Redis Overview — 메모리, 히트율, 연결 수](/uploads/project/WikiEngine/redis-l2-cache/after-05-redis-overview.png)
-![Redis Operations — OPS, 히트/미스, Eviction, Slowlog](/uploads/project/WikiEngine/redis-l2-cache/after-06-redis-operations.png)
+![Redis Overview: 메모리, 히트율, 연결 수](/uploads/project/WikiEngine/redis-l2-cache/after-05-redis-overview.png)
+![Redis Operations: OPS, 히트/미스, Eviction, Slowlog](/uploads/project/WikiEngine/redis-l2-cache/after-06-redis-operations.png)
 
 ### Lettuce 레이턴시
 
@@ -690,11 +690,11 @@ Before(Caffeine + Trie)와 동일 조건(100 VU, 20분)으로 재측정합니다
 | Lettuce P95 | N/A | ~2.5ms | SLA 달성 |
 | 에러율 | 0% | ~0% | 동일 |
 
-![Spring Boot HTTP — 응답시간, 처리량](/uploads/project/WikiEngine/redis-l2-cache/after-01-spring-boot-http.png)
+![Spring Boot HTTP: 응답시간, 처리량](/uploads/project/WikiEngine/redis-l2-cache/after-01-spring-boot-http.png)
 ![JVM Heap + HikariCP](/uploads/project/WikiEngine/redis-l2-cache/after-02-spring-boot-jvm-hikari.png)
-![MySQL — QPS, Buffer Pool](/uploads/project/WikiEngine/redis-l2-cache/after-08-mysql.png)
-![Infrastructure — Host CPU, 메모리](/uploads/project/WikiEngine/redis-l2-cache/after-10-infra-host.png)
-![Containers — cAdvisor](/uploads/project/WikiEngine/redis-l2-cache/after-11-infra-containers.png)
+![MySQL: QPS, Buffer Pool](/uploads/project/WikiEngine/redis-l2-cache/after-08-mysql.png)
+![Infrastructure: Host CPU, 메모리](/uploads/project/WikiEngine/redis-l2-cache/after-10-infra-host.png)
+![Containers: cAdvisor](/uploads/project/WikiEngine/redis-l2-cache/after-11-infra-containers.png)
 
 ### 자동완성 Before/After
 
@@ -710,16 +710,16 @@ Before(Caffeine + Trie)와 동일 조건(100 VU, 20분)으로 재측정합니다
 
 ## 핵심 성과
 
-단일 인스턴스 100 VU에서 응답시간/CPU는 유사하지만, 이 단계의 진짜 성과는 **수치 개선이 아닌 구조 전환**입니다:
+단일 인스턴스 100 VU에서 응답시간/CPU는 유사하지만, 이 단계의 진짜 성과는 수치 개선보다 **구조 전환**에 있습니다:
 
-1. **Stateless 전환 완료** — Caffeine, Trie, TokenBlacklist를 Redis로 외부화하여 App 스케일아웃의 전제조건 충족
-2. **Origin 도달률 19%** — L1+L2 2계층으로 인스턴스를 추가해도 DB/Lucene 부하가 선형 증가하지 않는 구조 확보
-3. **자동완성 Trie 퇴역** — O(1) Redis GET으로 전환, 인스턴스 간 일관성 확보, JVM 힙 ~66MB 절약
-4. **Redis 인프라 안정** — Eviction 0, Lettuce P95 2.5ms, 메모리 사용률 28.4%
+1. **Stateless 전환 완료**: Caffeine, Trie, TokenBlacklist를 Redis로 외부화하여 App 스케일아웃의 전제조건 충족
+2. **Origin 도달률 19%**: L1+L2 2계층으로 인스턴스를 추가해도 DB/Lucene 부하가 선형 증가하지 않는 구조 확보
+3. **자동완성 Trie 퇴역**: O(1) Redis GET으로 전환, 인스턴스 간 일관성 확보, JVM 힙 ~66MB 절약
+4. **Redis 인프라 안정**: Eviction 0, Lettuce P95 2.5ms, 메모리 사용률 28.4%
 
 ---
 
-## 후속 개선 — Spring Batch 전환
+## 후속 개선: Spring Batch 전환
 
 `RedisAutocompleteService.buildPrefixTopK()`의 `@Scheduled` 방식을 **Spring Batch Job(Tasklet)**으로 전환했습니다.
 
@@ -736,9 +736,9 @@ Before(Caffeine + Trie)와 동일 조건(100 VU, 20분)으로 재측정합니다
 - **Write**: Redis 버전 네임스페이스 적재 → 포인터 원자적 전환
 
 관련 파일:
-- `AutocompleteBatchConfig.java` — Job/Step/Tasklet 정의
-- `AutocompleteBatchScheduler.java` — 매시간 Job 트리거
-- `RedisAutocompleteService.java` — `buildPrefixTopK()` 제거, 초기화만 유지
+- `AutocompleteBatchConfig.java`: Job/Step/Tasklet 정의
+- `AutocompleteBatchScheduler.java`: 매시간 Job 트리거
+- `RedisAutocompleteService.java`: `buildPrefixTopK()` 제거, 초기화만 유지
 
 ---
 
@@ -823,7 +823,7 @@ Redis L2 cache benefits:
 
 Up to [Stress Test](/blog/project/wikiengine/stress-test-tuning), everything ran on a single server. Starting from this post, we create an additional Oracle Cloud instance for a **dual server setup**.
 
-![Server topology — Redis L2 캐시 → Replication → 스케일아웃](/uploads/project/WikiEngine/redis-l2-cache/server-topology.svg)
+![Server topology: Redis L2 캐시 → Replication → 스케일아웃](/uploads/project/WikiEngine/redis-l2-cache/server-topology.svg)
 
 ### Server Specs
 

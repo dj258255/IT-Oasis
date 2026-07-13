@@ -1,5 +1,5 @@
 ---
-title: 'CDC (Change Data Capture) — 이벤트 기반 동기화'
+title: 'CDC (Change Data Capture): 이벤트 기반 동기화'
 titleEn: 'CDC (Change Data Capture) — Event-Driven Synchronization'
 description: PostService의 dual-write 구조(MySQL + Lucene 직접 호출)가 데이터 불일치, 강결합, 불완전한 캐시 무효화를 유발하는 문제를 점진적으로 해결합니다. Spring ApplicationEvent로 디커플링 → @ApplicationModuleListener 비동기 전환(쓰기 5,315ms→33ms) → Debezium + Kafka CDC로 binlog 기반 모든 변경 캡처까지. 100 VU 부하 테스트로 각 전환을 검증하고, dual-write를 원천 차단하여 검색 인덱스 정확성을 보장합니다.
 descriptionEn: Resolves dual-write issues (MySQL + direct Lucene calls) causing data inconsistency, tight coupling, and incomplete cache invalidation through staged evolution. Spring ApplicationEvent decoupling → @ApplicationModuleListener async (write 5,315ms→33ms) → Debezium + Kafka CDC for binlog-based change capture. Each stage verified with 100 VU load tests, eliminating dual-write to guarantee search index correctness.
@@ -47,7 +47,7 @@ series: "WikiEngine"
 
 ## 1. 정상 상태 인식
 
-### 현재 아키텍처 — PostService의 dual-write 구조
+### 현재 아키텍처: PostService의 dual-write 구조
 
 `PostService`가 MySQL에 쓰기를 하면서 동시에 여러 Read Model을 직접 갱신하고 있다:
 
@@ -96,7 +96,7 @@ public void deletePost(Long id, Long userId) {
 
 ## 2. 문제 상황 인식
 
-### 문제 1: Dual-Write 불일치 — DB 성공 + Lucene 실패 = 영구 불일치
+### 문제 1: Dual-Write 불일치: DB 성공 + Lucene 실패 = 영구 불일치
 
 ```java
 private void indexSafely(Post post) {
@@ -115,7 +115,7 @@ private void indexSafely(Post post) {
 
 실측: [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning)(200 VU)에서 Lucene indexing이 IOException으로 실패한 케이스가 관찰되었다. CPU 포화 상태에서 MMapDirectory I/O 타임아웃 발생.
 
-### 문제 2: PostService 강결합 — 6개 의존성
+### 문제 2: PostService 강결합: 6개 의존성
 
 PostService가 알아야 하는 것:
 
@@ -132,7 +132,7 @@ PostService가 알아야 하는 것:
 | 게시글 삭제 | O 무효화                | **무효화 안 됨**        | **최대 2시간 stale** |
 | 좋아요    | **무효화 안 됨**          | **무효화 안 됨**        | 해당 없음            |
 
-게시글을 삭제해도 검색 결과에 최대 30분간 계속 노출된다(검색 결과 캐시 TTL 만료까지). 삭제된 게시글 링크를 클릭하면 404 — 사용자 경험 저하.
+게시글을 삭제해도 검색 결과에 최대 30분간 계속 노출된다(검색 결과 캐시 TTL 만료까지). 삭제된 게시글 링크를 클릭하면 404가 떠서 사용자 경험이 나빠진다.
 
 ### 문제 4: Lucene 랭킹 필드 stale
 
@@ -145,7 +145,7 @@ Lucene 인덱스에 `FeatureField("features", "viewCount")`와 `FeatureField("fe
 
 ---
 
-## 3. 문제 분석 — 왜 dual-write가 구조적으로 위험한가
+## 3. 문제 분석: 왜 dual-write가 구조적으로 위험한가
 
 ### Dual-Write의 본질적 문제
 
@@ -287,19 +287,19 @@ public void pollAndPublish() {
 | **Airbnb** | Transactional Outbox + Kafka | 이벤트 유실 방지를 위한 2-step 패턴 |
 | **Debezium 공식** | Outbox + CDC 조합 | "log-based CDC is a great fit for capturing new entries in the outbox table" |
 
-> **Outbox + CDC 조합**: 업계 best practice는 Outbox 테이블에 이벤트를 저장한 뒤, **폴링이 아닌 CDC(Debezium)**로 outbox 테이블의 변경을 감지하여 Kafka에 전달하는 것이다. 이 프로젝트에서는 폴링 Outbox → CDC Outbox로 자연스럽게 진화할 수 있다.
+> **Outbox + CDC 조합**: 업계 best practice는 Outbox 테이블에 이벤트를 저장한 뒤, 폴링 대신 **CDC(Debezium)로** outbox 테이블의 변경을 감지하여 Kafka에 전달하는 것이다. 이 프로젝트에서는 폴링 Outbox → CDC Outbox로 자연스럽게 진화할 수 있다.
 
 ### 비용 분석
 
 ![비용 비교](/uploads/project/WikiEngine/cdc/cost-comparison.svg)
 
-### 운영 복잡도 정당화 — "일 200건에 Kafka가 필요한가?"
+### 운영 복잡도 정당화: "일 200건에 Kafka가 필요한가?"
 
 이 질문에 대한 답은 **"Kafka를 운영하는 비용"과 "dual-write 불일치를 수동으로 복구하는 비용"의 비교**다.
 
 | 항목 | Kafka 없이 (@ApplicationModuleListener) | Kafka 있으면 (CDC) |
 |------|------------------------|------------------------|
-| 직접 SQL/배치 JPQL 후 Lucene 불일치 복구 | **수동** — 전체 재인덱싱 28분 + 불일치 감지 수단 없음 | **자동** — binlog에서 캡처, 0.7초 내 반영 |
+| 직접 SQL/배치 JPQL 후 Lucene 불일치 복구 | **수동**: 전체 재인덱싱 28분 + 불일치 감지 수단 없음 | **자동**: binlog에서 캡처, 0.7초 내 반영 |
 | Lucene 인덱스 손상 시 복구 | 전체 재인덱싱 28분, 그 동안 검색 품질 저하 | Kafka 토픽 리플레이로 **증분 재구축** |
 | 앱 장애 중 이벤트 | JVM 내부 이벤트 중단, Event Publication Log에 의존 | Kafka에 보존, 앱 복구 후 이어서 소비 |
 | 멀티 인스턴스 L1 캐시 무효화 | App 1 이벤트를 App 2가 모름 (TTL 만료까지 stale) | **양쪽 모두 CDC 이벤트로 즉시 무효화** |
@@ -365,7 +365,7 @@ public sealed interface PostEvent {
 | `indexSafely(post)` + `tieredCacheService.evict(...)` | `eventPublisher.publishEvent(new PostEvent.Updated(id, post))` |
 | `deleteFromIndexSafely(id)` + `tieredCacheService.evict(...)` | `eventPublisher.publishEvent(new PostEvent.Deleted(id))` |
 
-![코드 diff — Before(좌) / After(우)](/uploads/project/WikiEngine/cdc/phase14-code-diff-before-after.png)
+![코드 diff: Before(좌) / After(우)](/uploads/project/WikiEngine/cdc/phase14-code-diff-before-after.png)
 
 ### PostService 의존성 변화
 
@@ -392,18 +392,18 @@ public sealed interface PostEvent {
 
 | 파일 | 역할 |
 |------|------|
-| `PostEvent.java` | sealed interface — Created, Updated, Deleted, LikeChanged |
-| `LuceneIndexEventHandler.java` | `@ApplicationModuleListener` — 비동기 Lucene 인덱스 갱신 |
-| `CacheInvalidationEventHandler.java` | `@ApplicationModuleListener` — 게시글 상세 캐시(L1+L2) 무효화 |
-| `SearchCacheEventHandler.java` | `@ApplicationModuleListener` — 검색 결과 캐시 L1 무효화 |
+| `PostEvent.java` | sealed interface: Created, Updated, Deleted, LikeChanged |
+| `LuceneIndexEventHandler.java` | `@ApplicationModuleListener`: 비동기 Lucene 인덱스 갱신 |
+| `CacheInvalidationEventHandler.java` | `@ApplicationModuleListener`: 게시글 상세 캐시(L1+L2) 무효화 |
+| `SearchCacheEventHandler.java` | `@ApplicationModuleListener`: 검색 결과 캐시 L1 무효화 |
 
 ---
 
-## 6. k6 부하 테스트 — @TransactionalEventListener (100 VU, 20분)
+## 6. k6 부하 테스트: @TransactionalEventListener (100 VU, 20분)
 
 ### Overview
 
-![k6 Overview — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-k6-overview.png)
+![k6 Overview: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-k6-overview.png)
 
 | 지표 | 스케일아웃 | @TransactionalEventListener | 변화 |
 |------|----------|-----------|------|
@@ -426,11 +426,11 @@ public sealed interface PostEvent {
 
 **에러율 12.6%의 원인은 쓰기 타임아웃.** 읽기 경로는 이벤트 전환의 영향 없음.
 
-![시나리오별 응답시간 — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-k6-scenarios.png)
+![시나리오별 응답시간: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-k6-scenarios.png)
 
-### 쓰기 병목 분석 — HikariCP Primary Pool 고갈
+### 쓰기 병목 분석: HikariCP Primary Pool 고갈
 
-![HikariCP — 커넥션 고갈](/uploads/project/WikiEngine/cdc/phase14-grafana-hikari.png)
+![HikariCP: 커넥션 고갈](/uploads/project/WikiEngine/cdc/phase14-grafana-hikari.png)
 
 Spring의 `AbstractPlatformTransactionManager.processCommit()` 소스코드 기준으로, `afterCommit()` 콜백은 **커넥션이 풀에 반환되기 전에** 실행된다:
 
@@ -446,7 +446,7 @@ Lucene 인덱싱(~100ms)과 캐시 무효화가 끝날 때까지 DB 커넥션이
 
 ### Grafana 대시보드
 
-![캐시 히트율 — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-cache.png)
+![캐시 히트율: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-cache.png)
 
 | 계층 | 히트 비율 |
 |------|---------|
@@ -456,15 +456,15 @@ Lucene 인덱싱(~100ms)과 캐시 무효화가 끝날 때까지 DB 커넥션이
 
 L1+L2 합산 **77%** 히트. [스케일아웃](/blog/project/wikiengine/scaleout)(81%)과 유사.
 
-![MySQL — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-mysql.png)
+![MySQL: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-mysql.png)
 
-![Redis — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-redis.png)
+![Redis: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-redis.png)
 
-![Host — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-host.png)
+![Host: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-host.png)
 
-![Replication — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-replication.png)
+![Replication: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-grafana-replication.png)
 
-![k6 터미널 — @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-k6-terminal.png)
+![k6 터미널: @TransactionalEventListener](/uploads/project/WikiEngine/cdc/phase14-k6-terminal.png)
 
 ```
 총 요청 수: 30,553
@@ -476,7 +476,7 @@ L1+L2 합산 **77%** 히트. [스케일아웃](/blog/project/wikiengine/scaleout
 
 ---
 
-## 7. @ApplicationModuleListener 전환 — 비동기 이벤트 + Event Publication Log
+## 7. @ApplicationModuleListener 전환: 비동기 이벤트 + Event Publication Log
 
 `@TransactionalEventListener(AFTER_COMMIT)` → `@ApplicationModuleListener`로 전환. Spring Modulith가 내부적으로 `@Async + @TransactionalEventListener(AFTER_COMMIT) + @Transactional(REQUIRES_NEW)`를 결합하여 제공한다.
 
@@ -487,9 +487,9 @@ L1+L2 합산 **77%** 히트. [스케일아웃](/blog/project/wikiengine/scaleout
 | HTTP 응답 | Lucene 끝난 후 반환 | **커밋 즉시 반환** |
 | 이벤트 유실 | 앱 죽으면 유실 | **Event Publication Log로 재시도** |
 
-### k6 결과 — @ApplicationModuleListener 전환 후 (100 VU, 20분)
+### k6 결과: @ApplicationModuleListener 전환 후 (100 VU, 20분)
 
-![k6 Overview — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-k6-overview.png)
+![k6 Overview: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-k6-overview.png)
 
 | 지표 | @TransactionalEventListener | @ApplicationModuleListener | 변화 |
 |------|---------------------------|--------------------------|------|
@@ -500,7 +500,7 @@ L1+L2 합산 **77%** 히트. [스케일아웃](/blog/project/wikiengine/scaleout
 | 처리량 (피크) | ~41 req/s | **~58 req/s** | **1.4배 증가** |
 | 총 요청 수 | 30,553 | **42,007** | **37% 증가** |
 
-![시나리오별 — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-k6-scenarios.png)
+![시나리오별: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-k6-scenarios.png)
 
 | 시나리오 | Before 평균 | After 평균 | 변화 |
 |---------|-----------|----------|------|
@@ -512,16 +512,16 @@ L1+L2 합산 **77%** 히트. [스케일아웃](/blog/project/wikiengine/scaleout
 
 **쓰기 병목 완전 해소.** 읽기 성능은 동등 유지.
 
-### HikariCP — 커넥션 대기 해소
+### HikariCP: 커넥션 대기 해소
 
-![JVM + HikariCP — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-jvm-hikari.png)
+![JVM + HikariCP: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-jvm-hikari.png)
 
 - 커넥션 획득 시간: **4~5초 → ~1ms** (즉시 획득)
 - DB 커밋 즉시 커넥션 반환 → Lucene 인덱싱은 별도 스레드에서 독립 실행
 
 ### Grafana 대시보드
 
-![캐시 — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-cache.png)
+![캐시: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-cache.png)
 
 | 계층 | Before | After |
 |------|--------|-------|
@@ -531,13 +531,13 @@ L1+L2 합산 **77%** 히트. [스케일아웃](/blog/project/wikiengine/scaleout
 
 L1+L2 합산 **79%** 히트. 동등.
 
-![MySQL — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-mysql.png)
+![MySQL: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-mysql.png)
 
-![Host — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-host.png)
+![Host: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-host.png)
 
-![Containers — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-containers.png)
+![Containers: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-grafana-containers.png)
 
-![k6 터미널 — @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-k6-terminal.png)
+![k6 터미널: @ApplicationModuleListener](/uploads/project/WikiEngine/cdc/phase14-async-k6-terminal.png)
 
 ```
 총 요청 수: 42,007
@@ -565,7 +565,7 @@ Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는�
 
 ![Event Publication Log 재시도 검증](/uploads/project/WikiEngine/cdc/event-publication-test.svg)
 
-**알려진 한계**: (1) 이벤트 클래스의 FQCN이 DB에 저장되므로, 클래스를 리네임/이동하면 기존 미완료 이벤트의 재시도가 `ClassNotFoundException`으로 실패한다. 이벤트 클래스 변경 전 미완료 이벤트를 반드시 소진해야 한다. (2) [GitHub Issue #835](https://github.com/spring-projects/spring-modulith/issues/835)에서 런타임 중 리스너가 호출되지 않는 케이스가 보고되었다. 이 프로젝트에서는 재현되지 않았지만, Kafka CDC로 진화하는 추가적인 동기가 된다. (3) 멀티 인스턴스에서 재시작 시 미완료 이벤트 재처리가 인스턴스별로 독립적이므로 중복 처리 가능 — Consumer 멱등성이 전제조건이다.
+**알려진 한계**: (1) 이벤트 클래스의 FQCN이 DB에 저장되므로, 클래스를 리네임/이동하면 기존 미완료 이벤트의 재시도가 `ClassNotFoundException`으로 실패한다. 이벤트 클래스 변경 전 미완료 이벤트를 반드시 소진해야 한다. (2) [GitHub Issue #835](https://github.com/spring-projects/spring-modulith/issues/835)에서 런타임 중 리스너가 호출되지 않는 케이스가 보고되었다. 이 프로젝트에서는 재현되지 않았지만, Kafka CDC로 진화하는 추가적인 동기가 된다. (3) 멀티 인스턴스에서 재시작 시 미완료 이벤트 재처리가 인스턴스별로 독립적이므로 중복 처리가 가능하고, 따라서 Consumer 멱등성이 전제조건이다.
 
 ---
 
@@ -577,9 +577,9 @@ Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는�
 
 | Outbox의 목표 | Spring Modulith 제공 여부 |
 |-------------|----------------------|
-| 이벤트 유실 방지 (DB 저장) | **Event Publication Log** — 이벤트를 DB 테이블에 기록, 미완료 시 재시도 |
-| 앱 재시작 후 미발행 이벤트 처리 | **자동 재시도** — `IncompleteEventPublications` 스케줄러가 미완료 이벤트 재처리 |
-| 리스너 실패 시 재시도 | **기본 제공** — 리스너 예외 시 미완료 상태 유지 후 다음 주기에 재시도 |
+| 이벤트 유실 방지 (DB 저장) | **Event Publication Log**: 이벤트를 DB 테이블에 기록, 미완료 시 재시도 |
+| 앱 재시작 후 미발행 이벤트 처리 | **자동 재시도**: `IncompleteEventPublications` 스케줄러가 미완료 이벤트 재처리 |
+| 리스너 실패 시 재시도 | **기본 제공**: 리스너 예외 시 미완료 상태 유지 후 다음 주기에 재시도 |
 
 ### 왜 이렇게 진화했는가
 
@@ -643,7 +643,7 @@ Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는�
 | `_debezium_status` | Debezium Connector 상태 저장 |
 | `_schema_history` | MySQL 스키마 변경 이력 |
 
-### 코드 구조 — Kafka 유무에 따른 자동 전환
+### 코드 구조: Kafka 유무에 따른 자동 전환
 
 ![Kafka 유무에 따른 자동 전환](/uploads/project/WikiEngine/cdc/kafka-fallback-switch.svg)
 
@@ -651,13 +651,13 @@ Spring Modulith의 Event Publication Log가 실제로 재시도에 성공하는�
 
 ![CDC 파이프라인 성공](/uploads/project/WikiEngine/cdc/phase14-cdc-final-success.png)
 
-![CDC 파이프라인 동작 — 게시글 생성](/uploads/project/WikiEngine/cdc/cdc-create-flow.svg)
+![CDC 파이프라인 동작: 게시글 생성](/uploads/project/WikiEngine/cdc/cdc-create-flow.svg)
 
 ### CDC Consumer 아키텍처 버그 발견 및 수정
 
 Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**를 발견했다.
 
-![CDC 버그 — 수정 전](/uploads/project/WikiEngine/cdc/cdc-bug-before.svg)
+![CDC 버그: 수정 전](/uploads/project/WikiEngine/cdc/cdc-bug-before.svg)
 
 **근본 원인**: `docker-compose.yml.j2`(App 1)에서 `SPRING_KAFKA_BOOTSTRAP_SERVERS` 환경변수 매핑이 빠져 있었다.
 
@@ -669,9 +669,9 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 > **Consumer Group 분리 이유**: App 1과 App 2가 CDC로 하는 일이 다르므로(인덱싱 vs 캐시 무효화), **브로드캐스트 패턴**(별도 Consumer Group)을 적용했다.
 
-### CDC 정확성 검증 — 직접 SQL DELETE 테스트
+### CDC 정확성 검증: 직접 SQL DELETE 테스트
 
-![CDC 정확성 검증 — 직접 SQL DELETE 테스트](/uploads/project/WikiEngine/cdc/cdc-sql-delete-test.svg)
+![CDC 정확성 검증: 직접 SQL DELETE 테스트](/uploads/project/WikiEngine/cdc/cdc-sql-delete-test.svg)
 
 ### CDC End-to-End 지연 측정
 
@@ -681,7 +681,7 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ---
 
-## 9. k6 부하 테스트 — Kafka CDC (100 VU, 20분)
+## 9. k6 부하 테스트: Kafka CDC (100 VU, 20분)
 
 ### 성능 비교
 
@@ -695,7 +695,7 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 | 처리량 (피크) | ~41 req/s | ~58 req/s | **~58 req/s** |
 | 총 요청 수 | 30,553 | 42,007 | **42,084** |
 
-> @ApplicationModuleListener와 Kafka CDC의 **읽기/쓰기 성능이 동등**하다. 성능 차이가 아니라 **아키텍처 정확성(correctness)의 차이**가 CDC 도입의 핵심 이유다.
+> @ApplicationModuleListener와 Kafka CDC의 **읽기/쓰기 성능이 동등**하다. CDC를 도입한 핵심 이유는 성능보다 **아키텍처 정확성(correctness)**에 있다.
 
 ### k6 터미널 결과
 
@@ -762,7 +762,7 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ![Kafka 대시보드](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-kafka.png)
 
-- **Lag by Consumer Group**: `wiki-cdc-consumer` — **lag 0**. Consumer가 메시지를 즉시 소비
+- **Lag by Consumer Group**: `wiki-cdc-consumer`의 **lag 0**. Consumer가 메시지를 즉시 소비
 
 ![Kafka Partitions per Topic](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-kafka-partitions.png)
 
@@ -782,7 +782,7 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ![Classloading + Buffer Pools](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-classloading-buffers.png)
 
-- **Mapped buffer**: **~30 GB** — Lucene 인덱스 파일의 memory-mapped I/O. 1,215만 건 인덱스
+- **Mapped buffer**: **~30 GB**, Lucene 인덱스 파일의 memory-mapped I/O. 1,215만 건 인덱스
 
 ### Nginx
 
@@ -790,7 +790,7 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ### 인프라 (Host)
 
-![Host — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-host.png)
+![Host: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-host.png)
 
 | 서버 | CPU 피크 | 메모리 | Swap |
 |------|---------|-------|------|
@@ -800,13 +800,13 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ### 컨테이너별 리소스
 
-![Containers — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-containers.png)
+![Containers: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-containers.png)
 
-- **wiki-app-prod CPU**: 피크 ~70% — @ApplicationModuleListener(~100%)보다 낮음. CDC가 Lucene 인덱싱을 분리
+- **wiki-app-prod CPU**: 피크 ~70%로 @ApplicationModuleListener(~100%)보다 낮음. CDC가 Lucene 인덱싱을 분리
 
 ### MySQL
 
-![MySQL — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-mysql.png)
+![MySQL: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-mysql.png)
 
 | 지표 | Primary | Replica |
 |------|---------|---------|
@@ -818,14 +818,14 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 
 ### MySQL Replication
 
-![MySQL Replication — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-replication.png)
+![MySQL Replication: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-replication.png)
 
 - **Replication Lag**: 0~1초 사이 진동 (정상)
 - CDC(Debezium)는 **Primary의 binlog**를 직접 읽으므로, Replication Lag과 무관하게 동작
 
 ### Redis
 
-![Redis — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-redis.png)
+![Redis: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-redis.png)
 
 | 지표 | 값 |
 |------|---|
@@ -835,25 +835,25 @@ Kafka CDC 배포 후 **게시글 생성 → 검색 노출이 안 되는 문제**
 | OPS (피크) | ~60 ops/s |
 | Eviction | **0** |
 
-![Redis Network — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-redis-network.png)
+![Redis Network: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-redis-network.png)
 
 ### Application HTTP
 
-![Application HTTP — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-http.png)
+![Application HTTP: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-http.png)
 
 - 두 인스턴스 모두 안정 구간에서 **~50ms 이하**
 - HTTP 에러율: 초기 시점 후 **0%**
 
 ### HikariCP
 
-![HikariCP — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-hikari.png)
+![HikariCP: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-hikari.png)
 
 - 커넥션 획득 시간: **~1ms 이하**
 - 프로세스 CPU: 피크 ~50% (@ApplicationModuleListener ~100% 대비 감소)
 
 ### Tiered Cache
 
-![Tiered Cache — CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-cache.png)
+![Tiered Cache: CDC](/uploads/project/WikiEngine/cdc/phase14-cdc-grafana-cache.png)
 
 | 계층 | @ApplicationModuleListener | Kafka CDC | 변화 |
 |------|------------|-----------|------|
@@ -872,7 +872,7 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 | **dual-write 원천 차단** | MySQL binlog → Debezium → Kafka 경로로 모든 DB 변경 캡처. 직접 SQL도 감지 |
 | **이벤트 기반 디커플링** | PostService → Lucene/캐시 직접 호출 제거. OCP 준수 |
 | **비동기 실행** | 쓰기 응답에서 Lucene/캐시 완전 분리. HTTP 스레드 점유 없음 |
-| **성능** | 평균 35.6ms / P95 138ms / P99 294ms / 에러율 0% — 쓰기 33ms → 24ms 소폭 개선 |
+| **성능** | 평균 35.6ms / P95 138ms / P99 294ms / 에러율 0%, 쓰기 33ms → 24ms 소폭 개선 |
 | **CDC 파이프라인 안정성** | Debezium CDC Lag ~0ms 수렴, Consumer Lag 0, Erroneous Events 0, Disconnects 0 |
 | **이벤트 유실 방지** | Kafka 디스크 기반 보존 (7일). 앱 장애 시에도 이벤트 보존 |
 | **이벤트 리플레이** | Kafka 토픽에서 리플레이하여 Lucene 인덱스 재구축 가능 |
@@ -897,7 +897,7 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 ---
 
-## 부록: 검색엔진 자동완성 시스템 설계 — 대규모 아키텍처 관점
+## 부록: 검색엔진 자동완성 시스템 설계: 대규모 아키텍처 관점
 
 > 이 부록은 시스템 디자인 인터뷰 대비 정리이며, wikiEngine의 현재 구현과는 규모가 다르다.
 
@@ -919,7 +919,7 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 이 둘을 하나의 데이터 구조로 함께 처리하면, 빠르게 보여주는 일과 정확하게 누적하는 일이 서로를 방해할 수 있습니다. 그래서 조회 경로와 집계 경로를 분리해, 자동완성은 이미 준비된 결과를 즉시 반환하고, 검색어 집계는 뒤에서 안정적으로 누적·정리하는 구조가 더 적합하다고 판단했습니다.
 
-### Trie 자료구조 — naive 구현의 한계와 프로덕션 최적화
+### Trie 자료구조: naive 구현의 한계와 프로덕션 최적화
 
 자동완성을 생각하면 가장 먼저 떠오르는 건 Trie입니다. 소규모에서는 접두사 탐색에 자연스러운 선택이지만, 규모가 커질수록 모든 후보를 메모리에 유지하는 비용이 커지고, 특히 1~2글자 접두사에서는 분기 수가 급격히 늘어나 원하는 순서로 다시 정렬하는 과정까지 포함하면 응답 시간을 안정적으로 맞추기 어려워집니다.
 
@@ -927,7 +927,7 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 물론 Trie 계열 자체가 항상 부적합한 것은 아닙니다. 규모가 큰 서비스는 Trie 변형이나 FST처럼 메모리와 탐색 비용을 줄인 자료구조를 사용하기도 합니다. 다만 이 글에서 강조하고 싶은 건 "어떤 자료구조가 더 멋진가"보다, 요구사항과 운영 제약 안에서 어떤 조회 방식이 더 단순하고 안정적인가를 먼저 판단했다는 점입니다.
 
-### 데이터 처리 파이프라인 — MapReduce 패턴과 현대 구현
+### 데이터 처리 파이프라인: MapReduce 패턴과 현대 구현
 
 자동완성 결과는 검색처럼 매 요청마다 즉시 다시 계산해야 하는 기능은 아니라고 봤습니다. 최신 결과가 약간 늦게 반영되어도 괜찮다는 전제가 있었기 때문에, 모든 입력을 실시간으로 처리하는 복잡한 구조보다 일정 주기로 모아 집계하는 방식이 더 적합했습니다.
 
@@ -935,9 +935,9 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 여기서 말하는 MapReduce는 특정 프레임워크 이름이 아니라, "데이터를 나누고, 같은 키끼리 모으고, 다시 집계한다"는 사고 패턴에 가깝습니다. 핵심은 대규모 처리 기술을 과시하는 것이 아니라, 요구사항이 허용하는 지연 범위 안에서 가장 단순하고 운영 가능한 흐름을 선택했다는 점입니다.
 
-### 데이터 동기화 — 변경 전파 구조
+### 데이터 동기화: 변경 전파 구조
 
-![자동완성 데이터 동기화 — CDC 흐름](/uploads/project/WikiEngine/cdc/autocomplete-cdc-flow.svg)
+![자동완성 데이터 동기화: CDC 흐름](/uploads/project/WikiEngine/cdc/autocomplete-cdc-flow.svg)
 
 자동완성 데이터의 원천은 사용자의 검색 행동이고, 게시글 데이터의 원천은 서비스의 저장소입니다. 이 둘은 성격이 다르기 때문에 같은 방식으로 다루지 않았습니다. 검색어 순위는 집계 흐름으로 만들고, 게시글 제목 변경처럼 자동완성 결과 자체에 영향을 주는 데이터는 변경 사항이 뒤에서 자동으로 전파되도록 설계했습니다.
 
@@ -955,25 +955,25 @@ L1+L2 합산: 79% → **73%**. CDC Consumer가 캐시를 더 적극적으로 무
 
 ---
 
-## 후속 개선 — CDC 에러 핸들링 강화
+## 후속 개선: CDC 에러 핸들링 강화
 
 ### DLQ(Dead Letter Topic) + 재시도 로직
 
 | 항목 | 변경 전 | 변경 후 |
 |------|--------|--------|
-| 예외 처리 | `catch(Exception) { log.error(); }` — 예외 삼킴, 메시지 유실 | `throw new RuntimeException(e)` — Spring Kafka DefaultErrorHandler가 재시도 |
+| 예외 처리 | `catch(Exception) { log.error(); }`: 예외 삼킴, 메시지 유실 | `throw new RuntimeException(e)`: Spring Kafka DefaultErrorHandler가 재시도 |
 | 재시도 | 없음 | 1초 간격 9회 = 총 10회 시도 (FixedBackOff) |
 | 실패 후 처리 | 로그만 | DLT(`{토픽}.DLT`)로 격리, 사후 분석/재처리 가능 |
 | offset 커밋 | `enable-auto-commit` 미명시 | `enable-auto-commit=false` + `ack-mode=RECORD` 명시 |
 
-**왜 예외를 throw해야 하는가**: Spring Kafka의 `DefaultErrorHandler`는 리스너가 예외를 throw할 때만 동작합니다. `catch`에서 예외를 삼키면 Kafka 입장에서 "정상 처리"로 간주되어 offset이 커밋되고, 재시도도 DLQ 격리도 일어나지 않습니다. Confluent 공식 문서에서도 DLQ는 "운영 관찰성 시그널"로 — DLT에 메시지가 쌓이면 알림을 보내 원인을 분석하는 패턴을 권장합니다.
+**왜 예외를 throw해야 하는가**: Spring Kafka의 `DefaultErrorHandler`는 리스너가 예외를 throw할 때만 동작합니다. `catch`에서 예외를 삼키면 Kafka 입장에서 "정상 처리"로 간주되어 offset이 커밋되고, 재시도도 DLQ 격리도 일어나지 않습니다. Confluent 공식 문서에서도 DLQ를 "운영 관찰성 시그널"로 보고, DLT에 메시지가 쌓이면 알림을 보내 원인을 분석하는 패턴을 권장합니다.
 
 **AckMode.RECORD를 명시한 이유**: `enable-auto-commit=true`(기본값)면 poll() 주기마다 자동 커밋되어, 처리 실패한 메시지도 커밋될 수 있습니다. `enable-auto-commit=false` + `ack-mode=RECORD`로 설정하면 각 레코드 처리 완료 후에만 offset이 커밋되어, 실패 시 해당 레코드부터 재처리됩니다.
 
 관련 파일:
-- `CdcErrorHandlerConfig.java` — `DefaultErrorHandler` + `DeadLetterPublishingRecoverer`
-- `DebeziumCdcConsumer.java` — catch에서 throw 추가
-- `application.yml` — `enable-auto-commit: false`, `ack-mode: RECORD`
+- `CdcErrorHandlerConfig.java`: `DefaultErrorHandler` + `DeadLetterPublishingRecoverer`
+- `DebeziumCdcConsumer.java`: catch에서 throw 추가
+- `application.yml`: `enable-auto-commit: false`, `ack-mode: RECORD`
 
 <!-- EN -->
 

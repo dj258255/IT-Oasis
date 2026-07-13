@@ -1,7 +1,7 @@
 ---
 title: '세마포어와 뮤텍스 - 동기화 메커니즘의 이해'
 titleEn: 'Semaphore and Mutex: Understanding Synchronization Mechanisms'
-description: 임계영역, 세마포어, 뮤텍스의 개념과 차이를 OS 레벨부터 Java 구현까지 정리하고, 실무에서 흔히 혼동하는 부분을 명확히 해봤어요.
+description: 임계영역, 세마포어, 뮤텍스의 개념과 차이를 OS 레벨부터 Java 구현까지 정리하고, 실무에서 흔히 혼동하는 부분을 명확히 해봤습니다.
 descriptionEn: Clarifies critical sections, semaphores, and mutexes from OS-level concepts to Java implementation, addressing common confusions.
 date: 2025-06-04T00:00:00.000Z
 tags:
@@ -21,9 +21,9 @@ seriesOrder: 1
 
 ## 들어가며
 
-멀티스레드 프로그래밍에서 가장 어려운 문제 중 하나는 **동기화(Synchronization)**예요. 여러 스레드가 동시에 공유 자원에 접근하면 데이터 불일치, 경쟁 상태(Race Condition), 교착 상태(Deadlock) 같은 문제가 발생해요. 이를 방지하기 위해 운영체제는 세마포어(Semaphore)와 뮤텍스(Mutex)라는 동기화 기법을 제공해요.
+멀티스레드 프로그래밍에서 가장 어려운 문제 중 하나는 **동기화(Synchronization)**입니다. 여러 스레드가 동시에 공유 자원에 접근하면 데이터 불일치, 경쟁 상태(Race Condition), 교착 상태(Deadlock) 같은 문제가 발생합니다. 이를 방지하기 위해 운영체제는 세마포어(Semaphore)와 뮤텍스(Mutex)라는 동기화 기법을 제공합니다.
 
-면접에서 "세마포어와 뮤텍스의 차이"는 단골 질문이에요. 두 개념 모두 임계영역(Critical Section)을 보호하지만, **소유권**, **사용 목적**, **카운팅 방식**에서 근본적인 차이가 있어요.
+면접에서 "세마포어와 뮤텍스의 차이"는 단골 질문입니다. 두 개념 모두 임계영역(Critical Section)을 보호하지만, **소유권**, **사용 목적**, **카운팅 방식**에서 근본적인 차이가 있습니다.
 
 > 출처: [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/), [Baeldung - Semaphore vs. Mutex](https://www.baeldung.com/java-mutex)
 
@@ -31,7 +31,7 @@ seriesOrder: 1
 
 ### 임계영역 (Critical Section)
 
-임계영역은 **여러 프로세스/스레드가 공유하는 자원에 접근하는 코드 영역**이에요. 동시에 두 개 이상의 스레드가 임계영역에 진입하면 데이터 불일치가 발생해요.
+임계영역은 **여러 프로세스/스레드가 공유하는 자원에 접근하는 코드 영역**입니다. 동시에 두 개 이상의 스레드가 임계영역에 진입하면 데이터 불일치가 발생합니다.
 
 ```java
 // 은행 계좌 출금 예시 (임계영역)
@@ -55,13 +55,13 @@ class BankAccount {
 
 
 
-스레드 A와 B가 동시에 잔액을 확인했기 때문에, 둘 다 출금 가능하다고 판단했어요. 이런 문제를 방지하려면 **임계영역을 보호**해야 해요.
+스레드 A와 B가 동시에 잔액을 확인했기 때문에, 둘 다 출금 가능하다고 판단했습니다. 이런 문제를 방지하려면 **임계영역을 보호**해야 합니다.
 
 > 출처: [Wikipedia - Race Condition](https://en.wikipedia.org/wiki/Race_condition), [GeeksforGeeks - Race Condition](https://www.geeksforgeeks.org/introduction-of-process-synchronization/)
 
 ### 동기화의 필요성
 
-동기화는 여러 프로세스/스레드가 공유 자원에 **순차적으로 접근**하도록 보장하는 메커니즘이에요.
+동기화는 여러 프로세스/스레드가 공유 자원에 **순차적으로 접근**하도록 보장하는 메커니즘입니다.
 
 **동기화의 조건:**
 
@@ -75,19 +75,19 @@ class BankAccount {
 
 ### 뮤텍스란
 
-뮤텍스(Mutual Exclusion)는 **상호 배제를 구현하기 위한 잠금 메커니즘**이에요. 공유 자원에 대한 접근을 동시에 **오직 하나의 스레드만** 가능하게 제한해요.
+뮤텍스(Mutual Exclusion)는 **상호 배제를 구현하기 위한 잠금 메커니즘**입니다. 공유 자원에 대한 접근을 동시에 **오직 하나의 스레드만** 가능하게 제한합니다.
 
 **핵심 특징:**
 - **소유권(Ownership)이 있다**: Lock을 건 스레드만 Unlock 가능
 - **이진(Binary) 상태**: Locked(1) 또는 Unlocked(0)
-- **소유권**: 락을 획득한 스레드만 해제 가능. 재진입은 구현에 따라 다름 — Java의 synchronized와 ReentrantLock은 재진입 가능하지만, POSIX PTHREAD_MUTEX_NORMAL은 재진입 시 데드락 발생
+- **소유권**: 락을 획득한 스레드만 해제 가능. 재진입은 구현에 따라 다름. Java의 synchronized와 ReentrantLock은 재진입 가능하지만, POSIX PTHREAD_MUTEX_NORMAL은 재진입 시 데드락 발생
 
 > 출처: [Velog - [OS]뮤텍스(Mutex)와 세마포어(Semaphore)](https://velog.io/@dodozee/뮤텍스Mutex와-세마포어Semaphore), [GeeksforGeeks - Mutex vs Semaphore](https://www.geeksforgeeks.org/mutex-vs-semaphore/)
 
 ### 뮤텍스 동작 원리
 ![](/uploads/theory/semaphore-mutex-sync/mutex-operation-principle.svg)
 
-**중요:** 스레드 B는 스레드 A의 Lock을 해제할 수 없어요. 오직 소유자인 스레드 A만 Unlock 가능해요.
+**중요:** 스레드 B는 스레드 A의 Lock을 해제할 수 없습니다. 오직 소유자인 스레드 A만 Unlock 가능합니다.
 
 > 출처: [Baeldung - Using a Mutex Object in Java](https://www.baeldung.com/java-mutex), [GeeksforGeeks - Mutual Exclusion in Synchronization](https://www.geeksforgeeks.org/operating-systems/mutual-exclusion-in-synchronization/)
 
@@ -111,9 +111,9 @@ class BankAccount {
 }
 ```
 
-`synchronized` 키워드는 메서드나 블록에 대한 암묵적 뮤텍스를 제공해요. 한 스레드가 `synchronized` 메서드를 실행 중이면, 다른 스레드는 대기해야 해요.
+`synchronized` 키워드는 메서드나 블록에 대한 암묵적 뮤텍스를 제공합니다. 한 스레드가 `synchronized` 메서드를 실행 중이면, 다른 스레드는 대기해야 합니다.
 
-참고: Java의 synchronized도 재진입 가능하다 — synchronized 메서드 안에서 같은 객체의 다른 synchronized 메서드를 호출해도 데드락이 발생하지 않는다.
+참고: Java의 synchronized도 재진입 가능하다. synchronized 메서드 안에서 같은 객체의 다른 synchronized 메서드를 호출해도 데드락이 발생하지 않는다.
 
 > 출처: [Java Documentation - synchronized](https://docs.oracle.com/javase/tutorial/essential/concurrency/sync.html), [Baeldung - Guide to synchronized](https://www.baeldung.com/java-synchronized)
 
@@ -143,7 +143,7 @@ class BankAccount {
 }
 ```
 
-`ReentrantLock`은 명시적 뮤텍스로, `synchronized`보다 세밀한 제어가 가능해요.
+`ReentrantLock`은 명시적 뮤텍스로, `synchronized`보다 세밀한 제어가 가능합니다.
 
 **ReentrantLock의 장점:**
 - 공정성(Fairness) 설정 가능: 대기 시간이 긴 스레드에 우선권 부여
@@ -167,7 +167,7 @@ if (lock.tryLock(1, TimeUnit.SECONDS)) {  // 1초 대기
 
 ### 재진입 가능 (Reentrant)
 
-`ReentrantLock`이라는 이름에서 알 수 있듯이, 같은 스레드가 이미 소유한 Lock을 다시 획득할 수 있어요.
+`ReentrantLock`이라는 이름에서 알 수 있듯이, 같은 스레드가 이미 소유한 Lock을 다시 획득할 수 있습니다.
 
 ```java
 Lock lock = new ReentrantLock();
@@ -196,7 +196,7 @@ public void innerMethod() {
 ![](/uploads/theory/semaphore-mutex-sync/reentrant-possible-reentrant.svg)
 
 
-재진입이 불가능하다면, `innerMethod()`에서 데드락이 발생해요.
+재진입이 불가능하다면, `innerMethod()`에서 데드락이 발생합니다.
 
 > 출처: [Medium - Mutex and Semaphore](https://medium.com/@irfanhaydararman/mutex-and-semaphore-e223321ddd7c), [Oracle - Lock Interface](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Lock.html)
 
@@ -204,7 +204,7 @@ public void innerMethod() {
 
 ### 세마포어란
 
-세마포어는 **신호 메커니즘(Signaling Mechanism)**으로, **여러 프로세스/스레드가 제한된 개수의 자원에 접근**할 수 있도록 제어해요.
+세마포어는 **신호 메커니즘(Signaling Mechanism)**으로, **여러 프로세스/스레드가 제한된 개수의 자원에 접근**할 수 있도록 제어합니다.
 
 **핵심 특징:**
 - **소유권이 없다**: 어떤 스레드든 signal() 호출 가능
@@ -215,7 +215,7 @@ public void innerMethod() {
 
 ### 세마포어 동작 원리
 
-세마포어는 정수형 카운터로 구현돼요.
+세마포어는 정수형 카운터로 구현됩니다.
 
 
 ![](/uploads/theory/semaphore-mutex-sync/semaphore-operation-principle.svg)
@@ -231,7 +231,7 @@ public void innerMethod() {
 
 #### 1. 이진 세마포어 (Binary Semaphore)
 
-카운터가 0 또는 1만 가질 수 있는 세마포어예요.
+카운터가 0 또는 1만 가질 수 있는 세마포어입니다.
 
 ```c
 // 이진 세마포어 의사코드
@@ -252,8 +252,8 @@ signal(binary_sem) {
 ```
 
 **뮤텍스와의 차이:**
-- 이진 세마포어는 **신호 메커니즘**이에요 (소유권 없음)
-- 뮤텍스는 **잠금 메커니즘**이에요 (소유권 있음)
+- 이진 세마포어는 **신호 메커니즘**입니다 (소유권 없음)
+- 뮤텍스는 **잠금 메커니즘**입니다 (소유권 있음)
 
 ```java
 // 이진 세마포어 예시
@@ -268,15 +268,15 @@ binarySem.release();  // 카운터: 1 (가능!)
 // 스레드 A가 acquire했지만, 스레드 B가 release 가능
 ```
 
-> **주의 — Java `Semaphore`는 "0/1" 상한을 강제하지 않아요.** `release()`는 대응하는 `acquire()`가 없어도 **항상 카운터를 1 증가**시켜요(상한은 사실상 `Integer.MAX_VALUE`). 즉 `new Semaphore(1)`이라도 누군가 `release()`를 한 번 더 부르면 카운터가 2가 되어 "이진"이 깨지고, 버그로 두 번 release하면 **이진 세마포어가 영영 열린 채로** 남습니다. 소유권으로 이런 실수를 막아주는 뮤텍스와의 결정적 차이예요. (출처: [Baeldung - Semaphores in Java](https://www.baeldung.com/java-semaphore), [OpenJDK JDK-8255491](https://bugs.openjdk.org/browse/JDK-8255491))
+> **주의: Java `Semaphore`는 "0/1" 상한을 강제하지 않습니다.** `release()`는 대응하는 `acquire()`가 없어도 **항상 카운터를 1 증가**시킵니다(상한은 사실상 `Integer.MAX_VALUE`). 즉 `new Semaphore(1)`이라도 누군가 `release()`를 한 번 더 부르면 카운터가 2가 되어 "이진"이 깨지고, 버그로 두 번 release하면 **이진 세마포어가 영영 열린 채로** 남습니다. 소유권으로 이런 실수를 막아주는 뮤텍스와의 결정적 차이입니다. (출처: [Baeldung - Semaphores in Java](https://www.baeldung.com/java-semaphore), [OpenJDK JDK-8255491](https://bugs.openjdk.org/browse/JDK-8255491))
 
-반면 뮤텍스는 Lock을 건 스레드만 Unlock할 수 있어요.
+반면 뮤텍스는 Lock을 건 스레드만 Unlock할 수 있습니다.
 
 > 출처: [Velog - [OS] 세마포어와 뮤텍스](https://velog.io/@conatuseus/OS-세마포어와-뮤텍스), [Baeldung - Binary Semaphore vs Reentrant Lock](https://www.baeldung.com/java-binary-semaphore-vs-reentrant-lock)
 
 #### 2. 카운팅 세마포어 (Counting Semaphore)
 
-카운터가 0 이상의 임의의 정수 값을 가질 수 있어요.
+카운터가 0 이상의 임의의 정수 값을 가질 수 있습니다.
 
 ```java
 // 카운팅 세마포어 예시: 주차장 (5개의 주차 공간)
@@ -345,7 +345,7 @@ pool.releaseConnection(conn);            // 카운터: 10
 // 11번째 요청이 오면 대기
 ```
 
-세마포어는 **제한된 자원의 풀(Pool)**을 관리할 때 유용해요.
+세마포어는 **제한된 자원의 풀(Pool)**을 관리할 때 유용합니다.
 
 > 출처: [Baeldung - Java Concurrency – Semaphore](https://www.baeldung.com/java-semaphore), [Oracle - Semaphore](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Semaphore.html)
 
@@ -390,7 +390,7 @@ sem.acquire();      // 카운터: 0
 sem.release();      // 카운터: 1 (가능!)
 ```
 
-이 차이는 **프로세스 간 동기화**에서 중요해요. 세마포어는 프로세스 A가 wait()하고 프로세스 B가 signal()할 수 있지만, 뮤텍스는 같은 프로세스/스레드가 Lock과 Unlock을 담당해야 해요.
+이 차이는 **프로세스 간 동기화**에서 중요합니다. 세마포어는 프로세스 A가 wait()하고 프로세스 B가 signal()할 수 있지만, 뮤텍스는 같은 프로세스/스레드가 Lock과 Unlock을 담당해야 합니다.
 
 > 출처: [Velog - 뮤텍스(Mutex)와 세마포어(Semaphore)의 차이](https://velog.io/@heetaeheo/뮤텍스Mutex와-세마포어Semaphore의-차이), [Baeldung - Semaphore vs. Mutex](https://www.baeldung.com/cs/semaphore-vs-mutex)
 
@@ -398,13 +398,13 @@ sem.release();      // 카운터: 1 (가능!)
 
 ### 문제 설명
 
-1965년 다익스트라가 제안한 **식사하는 철학자 문제(Dining Philosophers Problem)**는 교착 상태를 설명하기 위한 고전적 문제예요.
+1965년 다익스트라가 제안한 **식사하는 철학자 문제(Dining Philosophers Problem)**는 교착 상태를 설명하기 위한 고전적 문제입니다.
 
 **상황:**
-- 5명의 철학자가 원탁에 앉아있어요
+- 5명의 철학자가 원탁에 앉아 있습니다
 - 각 철학자 사이에 포크가 1개씩 (총 5개)
-- 스파게티를 먹으려면 양손에 포크를 하나씩 들어야 해요
-- 철학자는 생각하거나 먹어요
+- 스파게티를 먹으려면 양손에 포크를 하나씩 들어야 합니다
+- 철학자는 생각하거나 먹습니다
 
 ```
         포크0
@@ -456,20 +456,20 @@ class Philosopher extends Thread {
 ![](/uploads/theory/semaphore-mutex-sync/wrong-impl-deadlock-occurrence.svg)
 
 
-모든 철학자가 왼쪽 포크를 들고 오른쪽 포크를 기다리므로, 아무도 식사할 수 없게 돼요.
+모든 철학자가 왼쪽 포크를 들고 오른쪽 포크를 기다리므로, 아무도 식사할 수 없게 됩니다.
 
 > 출처: [Wikipedia - Dining Philosophers Problem](https://en.wikipedia.org/wiki/Dining_philosophers_problem), [GeeksforGeeks - Deadlock in Operating System](https://www.geeksforgeeks.org/introduction-of-deadlock-in-operating-system/)
 
 ### 데드락 발생의 4가지 필요조건 (Coffman)
 
-데드락이 발생하려면 다음 4가지 조건이 **동시에** 성립해야 해요:
+데드락이 발생하려면 다음 4가지 조건이 **동시에** 성립해야 합니다:
 
 1. **상호 배제 (Mutual Exclusion)**: 포크는 한 번에 한 철학자만 사용 가능
 2. **점유 대기 (Hold and Wait)**: 왼쪽 포크를 든 채 오른쪽 포크를 기다림
 3. **비선점 (No Preemption)**: 다른 철학자의 포크를 강제로 빼앗을 수 없음
 4. **순환 대기 (Circular Wait)**: 철학자 0→1→2→3→4→0 순환 대기 구조
 
-해결 방법은 이 4가지 중 **하나를 깨뜨리는 것**이에요.
+해결 방법은 이 4가지 중 **하나를 깨뜨리는 것**입니다.
 
 ### 해결 방법 1: 홀수/짝수 철학자 분리 (순환 대기 제거)
 
@@ -506,7 +506,7 @@ class Philosopher extends Thread {
 }
 ```
 
-대칭성을 깨뜨려서 데드락을 방지하는 방식이에요.
+대칭성을 깨뜨려서 데드락을 방지하는 방식입니다.
 
 > 출처: [Velog - [Philosophers] 예시/예제로 보는 뮤텍스와 세마포어의 차이](https://velog.io/@hidaehyunlee/Philosophers-예시예제로-보는-뮤텍스와-세마포어의-차이), [GeeksforGeeks - Dining Philosopher Problem Using Semaphores](https://www.geeksforgeeks.org/dining-philosopher-problem-using-semaphores/)
 
@@ -539,7 +539,7 @@ class DiningPhilosophers {
 }
 ```
 
-최대 4명만 동시에 앉을 수 있으므로, 적어도 1명은 포크 2개를 집을 수 있어요.
+최대 4명만 동시에 앉을 수 있으므로, 적어도 1명은 포크 2개를 집을 수 있습니다.
 
 > 출처: [GeeksforGeeks - Dining Philosopher Problem Using Semaphores](https://www.geeksforgeeks.org/dining-philosopher-problem-using-semaphores/), [Wikipedia - Dining Philosophers Problem](https://en.wikipedia.org/wiki/Dining_philosophers_problem)
 
@@ -547,7 +547,7 @@ class DiningPhilosophers {
 
 ### 문제 설명
 
-우선순위 역전은 **낮은 우선순위의 스레드가 높은 우선순위 스레드보다 먼저 실행**되는 현상이에요.
+우선순위 역전은 **낮은 우선순위의 스레드가 높은 우선순위 스레드보다 먼저 실행**되는 현상입니다.
 
 **시나리오:**
 ![](/uploads/theory/semaphore-mutex-sync/problem-description.svg)
@@ -557,7 +557,7 @@ class DiningPhilosophers {
 
 ### 화성 탐사선 사례 (Mars Pathfinder)
 
-1997년 NASA의 Mars Pathfinder 탐사선에서 실제로 발생한 사건이에요.
+1997년 NASA의 Mars Pathfinder 탐사선에서 실제로 발생한 사건입니다.
 
 **문제 상황:**
 - 정보 수집 스레드(낮은 우선순위): 버스 관리 뮤텍스 Lock
@@ -566,7 +566,7 @@ class DiningPhilosophers {
 - 결과: 통신 스레드가 타임아웃으로 시스템 리셋
 
 **해결 방법:**
-NASA는 VxWorks 운영체제의 **우선순위 상속(Priority Inheritance)** 기능을 활성화했어요.
+NASA는 VxWorks 운영체제의 **우선순위 상속(Priority Inheritance)** 기능을 활성화했습니다.
 
 > 출처: [Rapita Systems - What Really Happened on Mars Pathfinder?](https://www.rapitasystems.com/blog/what-really-happened-software-mars-pathfinder-spacecraft), [Embedded.com - Maximizing visibility through logging](https://www.embedded.com/maximizing-visibility-through-logging-as-on-mars-pathfinder/)
 
@@ -576,7 +576,7 @@ NASA는 VxWorks 운영체제의 **우선순위 상속(Priority Inheritance)** �
 ![](/uploads/theory/semaphore-mutex-sync/priority-inheritance-priority-inheritance.svg)
 
 
-Java에서는 직접 구현해야 하지만, RTOS(Real-Time OS)에서는 기본 제공해요.
+Java에서는 직접 구현해야 하지만, RTOS(Real-Time OS)에서는 기본 제공합니다.
 
 > 출처: [FreeRTOS Documentation - Priority Inheritance](https://www.freertos.org/Real-time-embedded-RTOS-mutexes.html), [Wikipedia - Priority Inheritance](https://en.wikipedia.org/wiki/Priority_inheritance)
 
@@ -584,10 +584,10 @@ Java에서는 직접 구현해야 하지만, RTOS(Real-Time OS)에서는 기본 
 
 ### 우아한형제들: MySQL을 이용한 분산 락
 
-우아한형제들은 광고 시스템에서 여러 서버에 걸친 동시성 문제를 해결하기 위해 MySQL의 **User-Level Lock**을 활용했어요.
+우아한형제들은 광고 시스템에서 여러 서버에 걸친 동시성 문제를 해결하기 위해 MySQL의 **User-Level Lock**을 활용했습니다.
 
 #### 문제 상황
-여러 서버가 동일한 자원에 접근할 때, 단일 서버의 뮤텍스나 세마포어로는 해결할 수 없는 **분산 환경의 동시성 문제**가 발생했어요.
+여러 서버가 동일한 자원에 접근할 때, 단일 서버의 뮤텍스나 세마포어로는 해결할 수 없는 **분산 환경의 동시성 문제**가 발생했습니다.
 
 #### 해결 방법: MySQL GET_LOCK
 
@@ -648,10 +648,10 @@ public class MySQLDistributedLock {
 
 ### 카카오페이: Redis 분산 락으로 따닥 이슈 해결
 
-카카오페이에서는 사용자 혜택 서비스를 개발하면서 발생한 "따닥 이슈"를 Redis 분산 락으로 해결했어요.
+카카오페이에서는 사용자 혜택 서비스를 개발하면서 발생한 "따닥 이슈"를 Redis 분산 락으로 해결했습니다.
 
 #### 문제 상황: 따닥 이슈
-사용자가 버튼을 한 순간에 여러 번 클릭하여 **API 호출이 중복**으로 일어나는 문제가 발생했어요. 혜택 서비스에서 페이포인트를 지급하는데, 동시 요청이 비즈니스 로직을 모두 통과하면서 **포인트가 중복 지급**될 위험이 있었어요.
+사용자가 버튼을 한 순간에 여러 번 클릭하여 **API 호출이 중복**으로 일어나는 문제가 발생했습니다. 혜택 서비스에서 페이포인트를 지급하는데, 동시 요청이 비즈니스 로직을 모두 통과하면서 **포인트가 중복 지급**될 위험이 있었습니다.
 
 #### 해결 방법: Redis SETNX를 이용한 분산 락
 
@@ -741,14 +741,14 @@ public ResponseEntity<?> claimReward(@RequestBody RewardRequest request) {
 
 참고: 아래 사례는 뮤텍스/세마포어와는 다른 동시성 패러다임이지만, 락 없이 동시성을 달성하는 대안적 접근으로 비교 참고할 만하다.
 
-LINE Engineering에서는 비동기 서버에서 이벤트 루프를 활용한 동시성 처리를 상세히 설명했어요.
+LINE Engineering에서는 비동기 서버에서 이벤트 루프를 활용한 동시성 처리를 상세히 설명했습니다.
 
 #### 멀티플렉싱 기반 동시성
 
-전통적인 멀티스레드 방식과 달리, **이벤트 루프**는 단일 스레드로 수만 개의 연결을 동시에 처리할 수 있어요.
+전통적인 멀티스레드 방식과 달리, **이벤트 루프**는 단일 스레드로 수만 개의 연결을 동시에 처리할 수 있습니다.
 
 **멀티플렉싱이란?**
-하나의 프로세스/스레드에서 입력과 출력을 모두 다룰 수 있는 기술이에요. 각 요청마다 별도 스레드를 할당하지 않고, 준비된 I/O만 처리해요.
+하나의 프로세스/스레드에서 입력과 출력을 모두 다룰 수 있는 기술입니다. 각 요청마다 별도 스레드를 할당하지 않고, 준비된 I/O만 처리합니다.
 
 **이벤트 루프 동작 원리:**
 
@@ -782,7 +782,7 @@ while (true) {
 
 #### 블로킹의 위험성
 
-이벤트 루프 스레드에서 블로킹 작업을 수행하면 **전체 서버가 멈춰요**.
+이벤트 루프 스레드에서 블로킹 작업을 수행하면 **전체 서버가 멈춥니다**.
 
 **잘못된 예시:**
 ```java
@@ -906,7 +906,7 @@ public CompletableFuture<HttpResponse> serve(ServiceRequestContext ctx,
 
 ## 정리
 
-뮤텍스와 세마포어는 모두 동기화를 위한 도구지만, 목적과 특성이 달라요.
+뮤텍스와 세마포어는 모두 동기화를 위한 도구지만, 목적과 특성이 다릅니다.
 
 **뮤텍스 (Mutex):**
 - **잠금 메커니즘** (Locking Mechanism)

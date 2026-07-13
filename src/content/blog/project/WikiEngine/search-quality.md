@@ -1,5 +1,5 @@
 ---
-title: '검색 품질 고도화 — 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가'
+title: '검색 품질 고도화: 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가'
 titleEn: 'Search Quality Enhancement — Phrase Search, Community Ranking, and P@10/MAP Evaluation'
 description: PhraseQuery(slop=2)로 구절 검색을 구현하고, FeatureField 기반 BM25 + 인기도 + 최신성 커뮤니티 랭킹을 적용한 뒤, P@10/MAP 지표로 검색 품질을 정량 평가한 과정을 정리합니다.
 descriptionEn: Implements phrase search with PhraseQuery(slop=2), applies community ranking combining BM25 + popularity (FeatureField) + recency decay, and measures search quality with P@10 and MAP metrics.
@@ -42,7 +42,7 @@ k6 load 테스트(100 VU, 20분) 결과:
 
 ## 개요
 
-이 글에서는 **검색 품질** 자체를 개선합니다. 성능이 아닌 **결과의 정확도와 순위**가 주제입니다.
+이 글에서는 **검색 품질** 자체를 개선합니다. 이번 주제는 성능이 아니라 **결과의 정확도와 순위**입니다.
 
 실제 구현 대상은 3개이며, 나머지 3개는 이미 완료/SKIP/Lucene 자동 적용으로 별도 구현이 불필요합니다.
 
@@ -82,7 +82,7 @@ k6 load 테스트(100 VU, 20분) 결과:
 **이 프로젝트의 현재 설정**: `new KoreanAnalyzer()` = **`DecompoundMode.DISCARD`** (기본값).
 복합명사를 분해하되 원형을 폐기합니다. "세종시"로 검색하면 내부적으로 "세종" + "시"로 분해됩니다.
 
-![Nori DISCARD 모드 — 복합명사 분해, 원형 폐기](/uploads/project/WikiEngine/search-quality/nori-discard-mode.svg)
+![Nori DISCARD 모드: 복합명사 분해, 원형 폐기](/uploads/project/WikiEngine/search-quality/nori-discard-mode.svg)
 
 DISCARD 모드에서 PhraseQuery(slop=0)이 실패하는 이유는 position 충돌이 아니라 **조사 삽입** 때문입니다:
 - "인공지능**의** 기술" → "인공" + "지능" + "기술" (조사 "의"는 POS StopFilter로 제거)
@@ -92,7 +92,7 @@ DISCARD 모드에서 PhraseQuery(slop=0)이 실패하는 이유는 position 충�
 
 `DecompoundMode.MIXED`는 원형과 분해 토큰이 **같은 position에 겹치면서** 구절 검색이 더 불안정해집니다:
 
-![Nori MIXED 모드 — 원형과 분해 토큰이 같은 position에 겹침](/uploads/project/WikiEngine/search-quality/nori-mixed-mode.svg)
+![Nori MIXED 모드: 원형과 분해 토큰이 같은 position에 겹침](/uploads/project/WikiEngine/search-quality/nori-mixed-mode.svg)
 
 **결론**: DISCARD든 MIXED든 한국어 구절 검색에서는 **slop=2가 실용적**입니다. DISCARD에서는 조사/수식어 삽입을, MIXED에서는 position 겹침까지 추가로 흡수합니다.
 
@@ -104,19 +104,19 @@ DISCARD 모드에서 PhraseQuery(slop=0)이 실패하는 이유는 position 충�
 | **PhraseQuery (slop=2)** | compound 분해 차이를 흡수, 조사 허용 | 약간의 false positive | **채택** |
 | **BooleanQuery (MUST)** | 가장 안전, position 무관 | 구절 순서 무시 | 현재 기본 검색 |
 
-![PhraseQuery(slop=2) 매칭 예시 — 편집 거리 기반](/uploads/project/WikiEngine/search-quality/phrasequery-slop2-examples.svg)
+![PhraseQuery(slop=2) 매칭 예시: 편집 거리 기반](/uploads/project/WikiEngine/search-quality/phrasequery-slop2-examples.svg)
 
 > **참고**: PhraseQuery의 slop은 단순한 position 차이가 아니라 **편집 거리**(term 이동 횟수)입니다. 순서를 뒤집으려면 2회 이동이 필요하므로, slop=2이면 2-term 역전도 매칭됩니다. 순서 역전을 명시적으로 차단하려면 `SpanNearQuery(inOrder=true)`를 사용해야 합니다.
 
-### 실제 구현 — `LuceneSearchService.buildQuery()` 수정
+### 실제 구현: `LuceneSearchService.buildQuery()` 수정
 
 기존 `MultiFieldQueryParser.escape(keyword)`는 모든 특수문자를 이스케이프하여 `"`가 `\"`로 변환되었습니다.
 사용자가 `"삼성전자 반도체"`를 입력해도 PhraseQuery가 생성되지 않는 문제가 있었습니다.
 
 **변경 내용:**
 
-1. `parser.setPhraseSlop(2)` — Nori 복합명사 분해 차이를 흡수하는 기본 slop 설정
-2. `escapePreservingPhrases()` — 큰따옴표 구절은 보존하고 나머지만 escape하는 유틸리티
+1. `parser.setPhraseSlop(2)`: Nori 복합명사 분해 차이를 흡수하는 기본 slop 설정
+2. `escapePreservingPhrases()`: 큰따옴표 구절은 보존하고 나머지만 escape하는 유틸리티
 
 ```java
 // Before
@@ -141,7 +141,7 @@ private Query buildQuery(String keyword) throws ParseException {
 
 ### 수행 결과
 
-#### Baseline — BooleanQuery (BM25 only)
+#### Baseline: BooleanQuery (BM25 only)
 
 > viewCount/likeCount는 초기 데이터(위키 덤프 임포트)이므로 전부 0입니다.
 
@@ -178,7 +178,7 @@ private Query buildQuery(String keyword) throws ParseException {
 
 ---
 
-## 2. 커뮤니티 검색 랭킹 — BM25 + 인기도 + 최신성
+## 2. 커뮤니티 검색 랭킹: BM25 + 인기도 + 최신성
 
 > **원래 설계**: 위키 내부 링크 기반 PageRank + 앵커 텍스트
 > **재정의 이유**: wikiEngine은 커뮤니티(게시판)이며, 게시글 간 `[[내부 링크]]` 패턴이 존재하지 않습니다.
@@ -186,7 +186,7 @@ private Query buildQuery(String keyword) throws ParseException {
 
 ### 현업 커뮤니티 랭킹 분석
 
-**Reddit — Hot Ranking Algorithm** ([원본 소스코드](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx)):
+**Reddit의 Hot Ranking Algorithm** ([원본 소스코드](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx)):
 
 ```
 s = ups - downs
@@ -198,7 +198,7 @@ hot_score = sign * order + seconds / 45000
 
 → **투표 수(로그 스케일)에 부호를 곱하고, 시간을 더함**. 최신 글이 기본적으로 유리하되, 투표가 많으면 오래 살아남습니다. 비추가 많으면 투표 점수가 음수가 됩니다.
 
-**Stack Overflow — Relevance + Quality + Recency** ([학술 모델](https://www.sciencedirect.com/science/article/abs/pii/S030645732100056X)):
+**Stack Overflow의 Relevance + Quality + Recency** ([학술 모델](https://www.sciencedirect.com/science/article/abs/pii/S030645732100056X)):
 
 ```
 Score = (log10(views)*4 + (answers*score)/5 + sum(answer_scores))
@@ -207,7 +207,7 @@ Score = (log10(views)*4 + (answers*score)/5 + sum(answer_scores))
 
 → **조회수(로그) + 투표 + 답변 품질 + 시간 감쇠**. 위 공식은 Stack Overflow를 분석한 학술 논문의 제안 모델이며, SO의 공식 알고리즘은 비공개입니다.
 
-**네이버 — C-Rank + D.I.A:**
+**네이버의 C-Rank + D.I.A:**
 
 - **C-Rank (Creator Rank)**: 출처의 **주제별 신뢰도**
 - **D.I.A (Deep Intent Analysis)**: 사용자 **반응**(체류 시간, 공감, 댓글)으로 문서 품질 평가
@@ -324,8 +324,8 @@ final_score = BM25(title^3, content^1)          // 텍스트 관련성
   실제 운영 데이터 축적 후 A/B 테스트로 재검증이 필요.
 ```
 
-> **왜 PageRank가 아닌 인기도 + 최신성인가:**
-> - PageRank는 **문서 간 링크 그래프**가 핵심 — 커뮤니티에는 이 구조가 없음
+> **PageRank 대신 인기도 + 최신성을 쓰는 이유:**
+> - PageRank는 **문서 간 링크 그래프**가 핵심인데, 커뮤니티에는 이 구조가 없음
 > - Reddit, Stack Overflow, 네이버 카페 모두 **사용자 참여도 + 시간**이 랭킹의 핵심
 > - Google조차 PageRank의 비중을 크게 줄이고 사용자 시그널을 더 중시하는 추세 (Google의 Gary Illyes는 PageRank가 수백 가지 시그널 중 하나일 뿐이라고 공개 발언)
 
@@ -343,7 +343,7 @@ DocValues 타입과 접근 API 대응:
 
 ### 수행 결과
 
-#### STOP 3 — BM25 + viewCount + likeCount + recency (전체 결합)
+#### STOP 3: BM25 + viewCount + likeCount + recency (전체 결합)
 
 > viewCount/likeCount가 전부 0인 초기 데이터이므로 인기도 부스트의 실질 효과는 미미하며, **recency decay**만 유의미하게 작동합니다.
 
@@ -355,9 +355,9 @@ DocValues 타입과 접근 API 대응:
 
 viewCount/likeCount가 전부 0이므로 BM25가 여전히 지배적입니다. 커뮤니티 운영으로 실제 사용자 트래픽이 쌓이면 랭킹 효과가 본격적으로 체감됩니다.
 
-![STOP 3 — BM25 + 인기도 + 최신성 검색 결과](/uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop3.png)
+![STOP 3: BM25 + 인기도 + 최신성 검색 결과](/uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop3.png)
 
-#### STOP 4 — 인기도 부스트 효과 검증 (viewCount/likeCount 설정 후)
+#### STOP 4: 인기도 부스트 효과 검증 (viewCount/likeCount 설정 후)
 
 5개 게시글에 테스트 데이터를 설정한 뒤 단건 재인덱싱으로 FeatureField를 갱신하여 측정했습니다.
 
@@ -382,17 +382,17 @@ viewCount/likeCount가 전부 0이므로 BM25가 여전히 지배적입니다. �
 | 프로그래밍 | 양자 프로그래밍 (v:60000) | 4위 → **1위** | **+3 상승** |
 
 **관찰:**
-- **5개 쿼리 모두에서 부스트 대상 게시글의 순위가 상승** — FeatureField saturation 기반 인기도 부스트가 정상 동작
-- "어보브반도체"(v:30000)는 3위까지만 상승 — BM25 텍스트 관련성이 높은 문서를 넘지 못함. **BM25와 인기도의 균형이 적절하게 작동**
-- "대한민국역사박물관"도 2위까지 상승했지만, BM25 점수가 매우 높은 "대한민국의 역사"는 넘지 못함 — **관련성이 비슷한 문서 간에는 인기도가 순위를 결정**하고, **관련성 차이가 큰 문서는 인기도로 뒤집히지 않는** 건강한 구조
+- **5개 쿼리 모두에서 부스트 대상 게시글의 순위가 상승**했고, FeatureField saturation 기반 인기도 부스트가 정상 동작함
+- "어보브반도체"(v:30000)는 3위까지만 상승했다. BM25 텍스트 관련성이 높은 문서를 넘지 못했고, **BM25와 인기도의 균형이 적절하게 작동**한다
+- "대한민국역사박물관"도 2위까지 상승했지만, BM25 점수가 매우 높은 "대한민국의 역사"는 넘지 못했다. **관련성이 비슷한 문서 간에는 인기도가 순위를 결정**하고, **관련성 차이가 큰 문서는 인기도로 뒤집히지 않는** 건강한 구조다
 
 > **검증 범위의 한계**: 이 테스트는 인위적으로 설정한 5개 게시글에서 **FeatureField saturation 함수가 수학적으로 정상 동작하는지** 확인한 것입니다. 실제 커뮤니티에서 다양한 인기도 분포를 가진 문서들 사이에서 이 가중치 조합이 유용한 랭킹을 만들어내는지는, 운영 데이터 축적 후 별도 검증이 필요합니다.
 
-![STOP 4 — 인기도 부스트 효과 검증](/uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop4.png)
+![STOP 4: 인기도 부스트 효과 검증](/uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop4.png)
 
 ---
 
-## 3. 검색 품질 평가 — P@10, MAP
+## 3. 검색 품질 평가: P@10, MAP
 
 ### 목표
 

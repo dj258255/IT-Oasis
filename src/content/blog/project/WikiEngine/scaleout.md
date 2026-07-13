@@ -1,7 +1,7 @@
 ---
-title: 'App 스케일아웃 — Nginx L7 로드밸런싱 + Lucene Replica'
+title: 'App 스케일아웃: Nginx L7 로드밸런싱 + Lucene Replica'
 titleEn: 'App Scale-Out — Nginx L7 Load Balancing + Lucene Replica'
-description: App CPU 100% 병목을 해소하기 위해 App 인스턴스를 2대로 확장합니다. Nginx map 기반 HTTP 메서드 라우팅(least_conn), Lucene Primary/Replica 모드 분리(SnapshotDeletionPolicy + Refresh Pause + rsync), TokenBlacklist Redis 전환, 조회수 Redis INCR 배치 flush 전환까지 — 100 VU 기준 에러율 13.25%→0.00%, P95 2,300ms→158ms, 평균 482ms→37ms로 개선합니다.
+description: App CPU 100% 병목을 해소하기 위해 App 인스턴스를 2대로 확장합니다. Nginx map 기반 HTTP 메서드 라우팅(least_conn), Lucene Primary/Replica 모드 분리(SnapshotDeletionPolicy + Refresh Pause + rsync), TokenBlacklist Redis 전환, 조회수 Redis INCR 배치 flush 전환까지 적용해 100 VU 기준 에러율 13.25%→0.00%, P95 2,300ms→158ms, 평균 482ms→37ms로 개선합니다.
 descriptionEn: Resolves App CPU 100% bottleneck by scaling out to 2 app instances. Implements Nginx map-based HTTP method routing (least_conn), Lucene Primary/Replica mode separation (SnapshotDeletionPolicy + Refresh Pause + rsync), TokenBlacklist Redis migration, and view count Redis INCR batch flush — achieving error rate 13.25%→0.00%, P95 2,300ms→158ms, avg 482ms→37ms at 100 VU.
 date: 2026-03-21T00:00:00.000Z
 tags:
@@ -25,7 +25,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[MySQL Replication — R/W 분리와 DataSource 라우팅](/blog/project/wikiengine/replication)에서 MySQL Replication으로 읽기/쓰기를 분리하고, Spring AbstractRoutingDataSource + LazyConnectionDataSourceProxy로 자동 라우팅을 구현했습니다.
+[MySQL Replication: R/W 분리와 DataSource 라우팅](/blog/project/wikiengine/replication)에서 MySQL Replication으로 읽기/쓰기를 분리하고, Spring AbstractRoutingDataSource + LazyConnectionDataSourceProxy로 자동 라우팅을 구현했습니다.
 
 ---
 
@@ -47,7 +47,7 @@ DB는 여유 있지만(Primary Slow Query 0건, InnoDB 히트율 99.5%), **앱 C
 
 ## 왜 스케일아웃이 필요한가
 
-### App CPU가 병목이다 — 데이터 근거
+### App CPU가 병목이다: 데이터 근거
 
 [stress 테스트](/blog/project/wikiengine/stress-test-tuning)와 [Replication](/blog/project/wikiengine/replication)(After 측정)에서 일관되게 확인된 병목:
 
@@ -67,9 +67,9 @@ DB는 여유 있지만(Primary Slow Query 0건, InnoDB 히트율 99.5%), **앱 C
 
 **스케일아웃의 효과 추정:**
 
-![스케일아웃 효과 추정 — Queueing Theory](/uploads/project/WikiEngine/scaleout/scaleout-queueing.svg)
+![스케일아웃 효과 추정: Queueing Theory](/uploads/project/WikiEngine/scaleout/scaleout-queueing.svg)
 
-### 대안 검토 — 스케일아웃 외에 선택지는 없는가?
+### 대안 검토: 스케일아웃 외에 선택지는 없는가?
 
 | 대안 | 검토 결과 | 판단 |
 |------|----------|------|
@@ -108,7 +108,7 @@ App 스케일아웃   → 앱 인스턴스 확장 (CPU 분산)                  
 
 ### 요청 흐름
 
-![요청 흐름 — GET/POST 라우팅](/uploads/project/WikiEngine/scaleout/request-flow.svg)
+![요청 흐름: GET/POST 라우팅](/uploads/project/WikiEngine/scaleout/request-flow.svg)
 
 ### Lucene 인덱스 동기화 전략
 
@@ -125,7 +125,7 @@ App 2대에서 Lucene을 운영하는 핵심 도전은 **인덱스 동기화**�
 | **Redis Pub/Sub 알림** | 거의 실시간 동기화 | dual-write, 향후 CDC와 역할 중복 | **검토** (향후) |
 | **쓰기 App 1 고정 + rsync** | 단순, 단일 writer, MySQL Primary-Replica와 동일 패턴 | 최대 5분 stale | **선택** |
 
-**비슷한 상황에서 검토할 수 있는 대안 — 왜 이 프로젝트에서 ES/NFS를 쓰지 않는가:**
+**비슷한 상황에서 검토할 수 있는 대안, 왜 이 프로젝트에서 ES/NFS를 쓰지 않는가:**
 
 현업에서 멀티 노드 검색을 운영할 때 가장 일반적인 방법은 **Elasticsearch**입니다. ES는 내부적으로 Lucene 기반이지만, 샤드 복제/리밸런싱/장애 복구를 프레임워크가 자동 처리하므로 인덱스 동기화를 개발자가 직접 다룰 필요가 없습니다. 두 번째로 **공유 파일시스템(AWS EFS, OCI FSS)**을 양쪽 서버에 NFS 마운트하여 하나의 인덱스를 공유하는 방식이 있습니다.
 
@@ -133,14 +133,14 @@ App 2대에서 Lucene을 운영하는 핵심 도전은 **인덱스 동기화**�
 
 | 방식 | 장점 | 이 프로젝트에서 쓰지 않는 이유 |
 |------|---------------|--------------------------|
-| **Elasticsearch** | 샤드 복제 자동, REST API, 운영 도구 풍부 | ① ES 최소 메모리 4GB — 자원 부족 ② MySQL→검색엔진 동기화 문제는 여전히 별도 관리 필요 ③ 현재 규모에서는 검색 클러스터 운영 비용이 App 2대 확장의 목적보다 큼 |
-| **NFS/OCI FSS** | 단일 인덱스, rsync 불필요 | ① Lucene MMapDirectory는 OS 페이지 캐시에 의존 — NFS 위에서는 매 검색 I/O마다 네트워크 왕복 발생, BM25 스코어링 시 랜덤 I/O 누적으로 성능 수 배 저하 (Lucene JIRA LUCENE-673, Atlassian 공식 경고) ② OCI FSS는 월 ~$3 비용 발생 |
+| **Elasticsearch** | 샤드 복제 자동, REST API, 운영 도구 풍부 | ① ES 최소 메모리 4GB라 자원 부족 ② MySQL→검색엔진 동기화 문제는 여전히 별도 관리 필요 ③ 현재 규모에서는 검색 클러스터 운영 비용이 App 2대 확장의 목적보다 큼 |
+| **NFS/OCI FSS** | 단일 인덱스, rsync 불필요 | ① Lucene MMapDirectory는 OS 페이지 캐시에 의존하는데, NFS 위에서는 매 검색 I/O마다 네트워크 왕복 발생, BM25 스코어링 시 랜덤 I/O 누적으로 성능 수 배 저하 (Lucene JIRA LUCENE-673, Atlassian 공식 경고) ② OCI FSS는 월 ~$3 비용 발생 |
 
-**현업 사례 — Yelp nrtsearch**: Yelp는 프로덕션에서 raw Lucene 기반 검색 시스템(nrtsearch)을 운영합니다. "dedicated primary/writer node that takes care of indexing operations and expensive operations like segment merges, allowing the replicas' system resources to be dedicated entirely for search queries". Replica는 "sync with the current primary and update their indexes using Lucene's NRT APIs"로 동기화합니다 ([Yelp Engineering Blog](https://engineeringblog.yelp.com/2021/09/nrtsearch-yelps-fast-scalable-and-cost-effective-search-engine.html)). 이 프로젝트의 Primary/Replica 패턴과 동일한 구조입니다.
+**Yelp nrtsearch 사례**: Yelp는 프로덕션에서 raw Lucene 기반 검색 시스템(nrtsearch)을 운영합니다. "dedicated primary/writer node that takes care of indexing operations and expensive operations like segment merges, allowing the replicas' system resources to be dedicated entirely for search queries". Replica는 "sync with the current primary and update their indexes using Lucene's NRT APIs"로 동기화합니다 ([Yelp Engineering Blog](https://engineeringblog.yelp.com/2021/09/nrtsearch-yelps-fast-scalable-and-cost-effective-search-engine.html)). 이 프로젝트의 Primary/Replica 패턴과 동일한 구조입니다.
 
 **이 프로젝트의 판단 기준**: 이 시점의 목적은 검색 클러스터를 새로 운영하는 것이 아니라, 현재 자원 안에서 App CPU 병목을 나누면서도 검색 인덱스 일관성을 유지하는 것이었습니다. raw Lucene을 유지하면 인덱스 생명주기와 동기화 시점을 애플리케이션에서 직접 제어할 수 있고, 별도 검색 프로세스 없이 현재 자원 안에서 목적을 달성할 수 있었습니다. 반대로 Elasticsearch는 동기화 문제를 완전히 없애주지 않으면서도 메모리와 운영 복잡도를 더 크게 늘리는 선택이었습니다.
 
-**참고 — CI/CD와 데이터 동기화는 별개 파이프라인**: GitHub Actions CI/CD는 **코드**를 배포하는 것이지, **데이터**(Lucene 인덱스 29GB)를 배포하는 것이 아닙니다. 인덱스 데이터 동기화는 rsync cron이라는 별도 파이프라인으로 처리하며, 이는 MySQL Replication이 CI/CD와 별개인 것과 같은 원리입니다.
+**CI/CD와 데이터 동기화는 별개 파이프라인**: GitHub Actions CI/CD는 **코드**를 배포하는 것이지, **데이터**(Lucene 인덱스 29GB)를 배포하는 것이 아닙니다. 인덱스 데이터 동기화는 rsync cron이라는 별도 파이프라인으로 처리하며, 이는 MySQL Replication이 CI/CD와 별개인 것과 같은 원리입니다.
 
 **"쓰기 App 1 고정 + rsync" 선택 근거:**
 
@@ -156,13 +156,13 @@ App 2대에서 Lucene을 운영하는 핵심 도전은 **인덱스 동기화**�
 
 ![Lucene 인덱스 파일 구조](/uploads/project/WikiEngine/scaleout/lucene-index-structure.svg)
 
-**rsync 안전성 — SnapshotDeletionPolicy 기반:**
+**rsync 안전성: SnapshotDeletionPolicy 기반**
 
 rsync는 **파일 복사 순서를 보장하지 않습니다**. 단순 rsync만으로는 segments_N이 세그먼트 파일보다 먼저 복사될 수 있고, 이 경우 App 2의 `maybeRefresh()`가 아직 없는 세그먼트를 참조하여 IOException이 발생합니다.
 
-Lucene 커미터 Mike McCandless의 권고: *"You must first close the IndexWriter when using rsync, else the copy can be corrupt."* ([Lucene's NRT segment index replication](https://blog.mikemccandless.com/2017/09/lucenes-near-real-time-segment-index.html)) — 또는 `SnapshotDeletionPolicy`를 사용하여 일관된 스냅샷을 잡은 후 rsync해야 합니다.
+Lucene 커미터 Mike McCandless의 권고: *"You must first close the IndexWriter when using rsync, else the copy can be corrupt."* ([Lucene's NRT segment index replication](https://blog.mikemccandless.com/2017/09/lucenes-near-real-time-segment-index.html)). 또는 `SnapshotDeletionPolicy`를 사용하여 일관된 스냅샷을 잡은 후 rsync해야 합니다.
 
-![rsync 동기화 흐름 — SnapshotDeletionPolicy + Refresh Pause](/uploads/project/WikiEngine/scaleout/rsync-flow.svg)
+![rsync 동기화 흐름: SnapshotDeletionPolicy + Refresh Pause](/uploads/project/WikiEngine/scaleout/rsync-flow.svg)
 
 **동기화 스크립트 (cron, 5분 주기):**
 
@@ -219,7 +219,7 @@ App 스케일아웃:
                       → POST/PUT/DELETE  → app_write
 ```
 
-**map 기반 라우팅 선택 근거**: Nginx의 `if` 디렉티브는 `location` 블록 내에서 예측 불가능한 동작을 하므로("if is evil" — Nginx 공식 위키), `map` 디렉티브로 변수를 미리 설정한 후 `proxy_pass`에서 사용합니다. `map`은 설정 로드 시 해시 테이블을 컴파일하고, 요청 시 O(1) 해시 lookup으로 변수를 평가합니다(lazy evaluation). `if` 디렉티브의 예측 불가능한 동작 대비 안전하고 성능도 무시 가능한 수준입니다.
+**map 기반 라우팅 선택 근거**: Nginx의 `if` 디렉티브는 `location` 블록 내에서 예측 불가능한 동작을 하므로("if is evil", Nginx 공식 위키), `map` 디렉티브로 변수를 미리 설정한 후 `proxy_pass`에서 사용합니다. `map`은 설정 로드 시 해시 테이블을 컴파일하고, 요청 시 O(1) 해시 lookup으로 변수를 평가합니다(lazy evaluation). `if` 디렉티브의 예측 불가능한 동작 대비 안전하고 성능도 무시 가능한 수준입니다.
 
 **로드밸런싱 알고리즘: `least_conn`**
 
@@ -319,7 +319,7 @@ public class RedisTokenBlacklist implements TokenBlacklist {
 
 ## 구현 계획
 
-### 작업 항목 — 실행 순서
+### 작업 항목: 실행 순서
 
 ```
 전체 흐름:
@@ -351,15 +351,15 @@ public class RedisTokenBlacklist implements TokenBlacklist {
 
 ---
 
-### Step 2. TokenBlacklist Redis 전환 — 코드 완료
+### Step 2. TokenBlacklist Redis 전환: 코드 완료
 
 | # | 작업 | 확인 방법 | 상태 |
 |---|------|----------|------|
 | 1 | `TokenBlacklist` 인터페이스 추출 | 컴파일 + 테스트 109개 통과 | **완료** |
 | 2 | `RedisTokenBlacklist` 구현 (StringRedisTemplate + 남은 TTL) | 컴파일 + 테스트 109개 통과 | **완료** |
 | 3 | 기존 Caffeine 기반 `TokenBlacklist` 제거 (인터페이스로 대체) | 컴파일 + 테스트 109개 통과 | **완료** |
-| 4 | `JwtAuthenticationFilter` 변경 불필요 확인 (인터페이스 타입으로 주입) | 코드 확인 — `@RequiredArgsConstructor`로 `TokenBlacklist` 타입 주입 | **완료** |
-| 5 | `AuthService` 변경 불필요 확인 | 코드 확인 — 동일 | **완료** |
+| 4 | `JwtAuthenticationFilter` 변경 불필요 확인 (인터페이스 타입으로 주입) | 코드 확인: `@RequiredArgsConstructor`로 `TokenBlacklist` 타입 주입 | **완료** |
+| 5 | `AuthService` 변경 불필요 확인 | 코드 확인: 동일 | **완료** |
 | 6 | 테스트: 로그아웃 → 같은 토큰으로 재요청 → 401 | 수동 또는 통합 테스트 | 배포 대기 |
 | 7 | 테스트: JWT 만료 후 Redis 키 자동 삭제 | Redis CLI `TTL blacklist:...` | 배포 대기 |
 
@@ -384,16 +384,16 @@ public class RedisTokenBlacklist implements TokenBlacklist {
 
 ---
 
-### Step 3. Lucene Primary/Replica 모드 분리 — 코드 완료
+### Step 3. Lucene Primary/Replica 모드 분리: 코드 완료
 
 | # | 작업 | 확인 방법 | 상태 |
 |---|------|----------|------|
 | 1 | `application.yml`에 `lucene.mode` 프로퍼티 추가 | 설정 파일 확인 | **완료** |
-| 2 | `LuceneConfig` — `SnapshotDeletionPolicy` + `@ConditionalOnProperty` | 컴파일 + 테스트 109개 통과 | **완료** |
-| 3 | `LuceneConfig` — Directory 기반 SearcherManager (replica) | 컴파일 + 테스트 109개 통과 | **완료** |
-| 4 | `LuceneIndexService` — IndexWriter null 시 쓰기 skip (indexPost, deleteFromIndex, indexAll) | 컴파일 + 테스트 109개 통과 | **완료** |
-| 5 | `LuceneInternalController` — snapshot/commit/refresh/pause-refresh/resume-refresh | 컴파일 | **완료** |
-| 6 | `LuceneReplicaRefresher` — 30초 주기 refresh + pause/resume + 30초 auto-resume | 컴파일 | **완료** |
+| 2 | `LuceneConfig`: `SnapshotDeletionPolicy` + `@ConditionalOnProperty` | 컴파일 + 테스트 109개 통과 | **완료** |
+| 3 | `LuceneConfig`: Directory 기반 SearcherManager (replica) | 컴파일 + 테스트 109개 통과 | **완료** |
+| 4 | `LuceneIndexService`: IndexWriter null 시 쓰기 skip (indexPost, deleteFromIndex, indexAll) | 컴파일 + 테스트 109개 통과 | **완료** |
+| 5 | `LuceneInternalController`: snapshot/commit/refresh/pause-refresh/resume-refresh | 컴파일 | **완료** |
+| 6 | `LuceneReplicaRefresher`: 30초 주기 refresh + pause/resume + 30초 auto-resume | 컴파일 | **완료** |
 | 7 | Replica 모드 기동 확인 | 배포 후 로그 확인 | 배포 대기 |
 | 8 | `/internal/lucene/*` 엔드포인트 curl 테스트 | 배포 후 확인 | 배포 대기 |
 
@@ -562,7 +562,7 @@ LUCENE_MODE=replica
 
 ---
 
-### Step 4. 서버 2 App 배포 (Ansible) — 완료
+### Step 4. 서버 2 App 배포 (Ansible): 완료
 
 | # | 작업 | 확인 방법 | 상태 |
 |---|------|----------|------|
@@ -585,15 +585,15 @@ LUCENE_MODE=replica
 5. **LUCENE_INDEX_PATH 불일치**: 하드코딩 `/data/lucene` → `{{ lucene_index_path }}` 변수 참조로 수정
 6. **healthcheck 타임아웃**: `wait_timeout` 120→300초
 
-![서버 1 docker ps — App 1 + Redis + Nginx 전체 컨테이너](/uploads/project/WikiEngine/scaleout/step4-server1-docker-ps.png)
+![서버 1 docker ps: App 1 + Redis + Nginx 전체 컨테이너](/uploads/project/WikiEngine/scaleout/step4-server1-docker-ps.png)
 
-![서버 2 docker ps — App 2 + MySQL Replica](/uploads/project/WikiEngine/scaleout/step4-server2-docker-ps.png)
+![서버 2 docker ps: App 2 + MySQL Replica](/uploads/project/WikiEngine/scaleout/step4-server2-docker-ps.png)
 
 ![서버 2 App 2 health UP](/uploads/project/WikiEngine/scaleout/step4-app2-health-up.png)
 
-![서버 2 App 2 검색 결과 — "대한민국" 정상 반환](/uploads/project/WikiEngine/scaleout/step4-app2-search-result.png)
+![서버 2 App 2 검색 결과: "대한민국" 정상 반환](/uploads/project/WikiEngine/scaleout/step4-app2-search-result.png)
 
-**배포 순서 — Lucene 인덱스 없이 트래픽 유입 방지:**
+**배포 순서: Lucene 인덱스 없이 트래픽 유입 방지**
 
 App 2를 Nginx 풀에 투입하기 **전에** Lucene 인덱스가 완전히 복사되어야 합니다. 인덱스 없이 healthcheck만 통과하면 검색 요청이 빈 결과를 반환하거나 예외가 발생합니다.
 
@@ -613,7 +613,7 @@ App 2를 Nginx 풀에 투입하기 **전에** Lucene 인덱스가 완전히 복�
 
 App 2 기동 직후 Caffeine L1 캐시가 비어 있어, App 1(warm cache) 대비 캐시 미스율이 높습니다. 이 기간 동안 App 2의 Lucene 조회 비율이 높아져 CPU 사용량이 일시적으로 App 1보다 높을 수 있습니다. `least_conn`이 이를 자동으로 보상하여 App 2에 덜 라우팅하므로 서비스 영향은 없지만, After 측정 시 **warm-up 완료 후** 측정해야 정확한 비교가 됩니다. warm-up 시간은 트래픽 패턴에 따라 수 분~수십 분.
 
-**서버 1 Redis 포트 노출 (필수 — 현재 Docker 내부만 접근 가능):**
+**서버 1 Redis 포트 노출 (필수, 현재 Docker 내부만 접근 가능):**
 
 현재 서버 1의 Redis는 `ports` 지시자가 없어 Docker bridge 네트워크 내부에서만 접근 가능합니다. 서버 2의 App 2가 Redis에 접근하려면 [Replication](/blog/project/wikiengine/replication)에서 MySQL Primary 포트를 private IP에 바인딩한 것과 동일한 패턴으로 포트를 노출해야 합니다:
 
@@ -633,7 +633,7 @@ redis:
 
 > `--bind 0.0.0.0`: Redis 7.x 기본 bind는 `127.0.0.1`이므로, 외부에서 접근하려면 명시적으로 변경해야 합니다. `--requirepass`가 설정되어 있으므로 protected-mode는 자동 비활성화됩니다.
 
-**SSH 키 교환 (rsync용 — 필수):**
+**SSH 키 교환 (rsync용, 필수):**
 
 `lucene-sync.sh`는 cron에서 비대화형으로 실행되므로 **패스워드리스 SSH 인증**이 필수입니다. 패스워드 프롬프트가 뜨면 스크립트가 무한 대기하며 실패합니다.
 
@@ -743,7 +743,7 @@ TOMCAT_MAX_THREADS=200
 
 > **주의 1**: App 2의 `DB_PRIMARY_HOST`는 서버 1의 private IP(원격), `DB_REPLICA_HOST`는 `mysql-replica`(로컬 Docker 서비스). 이는 서버 1의 App과 반대 방향입니다 (서버 1은 Primary가 로컬, Replica가 원격).
 >
-> **주의 2 — Flyway 비활성화**: App 1과 App 2가 동시에 기동되면 둘 다 Flyway 마이그레이션을 시도합니다. Flyway는 DB 테이블 락(`LOCK TABLES flyway_schema_history`)으로 동시 실행을 방지하지만, 한쪽이 락 대기하여 기동이 지연됩니다. App 2에서는 Flyway를 비활성화하고, 스키마 변경은 Replication으로 자동 전파합니다.
+> **주의 2**: Flyway 비활성화. App 1과 App 2가 동시에 기동되면 둘 다 Flyway 마이그레이션을 시도합니다. Flyway는 DB 테이블 락(`LOCK TABLES flyway_schema_history`)으로 동시 실행을 방지하지만, 한쪽이 락 대기하여 기동이 지연됩니다. App 2에서는 Flyway를 비활성화하고, 스키마 변경은 Replication으로 자동 전파합니다.
 
 **HikariCP Primary 풀 사이즈 재분배:**
 
@@ -788,7 +788,7 @@ DB_REPLICA_POOL_SIZE=15  # Replica는 로컬이므로 넉넉히
 
 ---
 
-### Step 5. Nginx 로드밸런싱 설정 — 완료
+### Step 5. Nginx 로드밸런싱 설정: 완료
 
 | # | 작업 | 확인 방법 | 상태 |
 |---|------|----------|------|
@@ -798,7 +798,7 @@ DB_REPLICA_POOL_SIZE=15  # Replica는 로컬이므로 넉넉히
 | 4 | Nginx LB를 통한 검색 5회 | 5회 모두 200 OK | **완료** |
 | 5 | App 2 장애 시 failover | 배포 후 검증 | 검증 대기 |
 
-![Nginx LB 5회 요청 — 모두 200 OK](/uploads/project/WikiEngine/scaleout/step5-nginx-lb-5requests.png)
+![Nginx LB 5회 요청: 모두 200 OK](/uploads/project/WikiEngine/scaleout/step5-nginx-lb-5requests.png)
 
 **nginx-https.conf.j2 변경:**
 
@@ -880,7 +880,7 @@ Nginx max_fails=3, fail_timeout=30s:
 
 ---
 
-### Step 6. Lucene 인덱스 동기화 (rsync) — 완료
+### Step 6. Lucene 인덱스 동기화 (rsync): 완료
 
 | # | 작업 | 확인 방법 | 상태 |
 |---|------|----------|------|
@@ -1031,7 +1031,7 @@ location /internal {
 
 ---
 
-### Step 7. 모니터링 추가 — 완료
+### Step 7. 모니터링 추가: 완료
 
 | # | 작업 | 확인 방법 | 상태 |
 |---|------|----------|------|
@@ -1040,7 +1040,7 @@ location /internal {
 | 3 | Grafana HikariCP 대시보드에 App 2 풀 | 인스턴스별 primary-pool/replica-pool | After 측정 시 확인 |
 | 4 | Loki에 App 2 로그 수집 | Alloy 임시 비활성화로 보류 | **보류** |
 
-![Prometheus App 2 scrape 정상 — up=1](/uploads/project/WikiEngine/scaleout/step7-prometheus-app2-up.png)
+![Prometheus App 2 scrape 정상: up=1](/uploads/project/WikiEngine/scaleout/step7-prometheus-app2-up.png)
 
 **Prometheus 추가 scrape target:**
 
@@ -1065,7 +1065,7 @@ location /internal {
 
 ---
 
-### Step 8. 기능 검증 — 완료
+### Step 8. 기능 검증: 완료
 
 | # | 검증 항목 | 결과 | 상태 |
 |---|----------|------|------|
@@ -1087,13 +1087,13 @@ App 2 재사용:     /auth/me          → 401 (차단 — Redis 공유)
 App 1 재사용:     /auth/me          → 401 (차단)
 ```
 
-![TokenBlacklist 크로스 서버 테스트 — App 2 로그인 → App 1 로그아웃 → 양쪽 401](/uploads/project/WikiEngine/scaleout/step8-tokenblacklist-cross-server.png)
+![TokenBlacklist 크로스 서버 테스트: App 2 로그인 → App 1 로그아웃 → 양쪽 401](/uploads/project/WikiEngine/scaleout/step8-tokenblacklist-cross-server.png)
 
 ---
 
 ### Step 9. After 측정
 
-**Smoke 테스트 (5 VU, 2분) — 서비스 정상 동작 확인:**
+**Smoke 테스트 (5 VU, 2분): 서비스 정상 동작 확인**
 
 | 시나리오 | 평균 | P95 |
 |---------|------|-----|
@@ -1112,7 +1112,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 
 ![Smoke 테스트 결과](/uploads/project/WikiEngine/scaleout/step9-smoke-result.png)
 
-**Load 테스트 1차 (100 VU, 20분) — 스케일아웃만 적용, 조회수 DB UPDATE 유지:**
+**Load 테스트 1차 (100 VU, 20분): 스케일아웃만 적용, 조회수 DB UPDATE 유지**
 
 | 시나리오 | 평균 | P95 |
 |---------|------|-----|
@@ -1128,13 +1128,13 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | 에러율 | **11.10%** | - |
 | 총 요청 수 | 41,629 | - |
 
-![k6 Load 1차 결과 — 스케일아웃만 적용, 에러율 11.10%](/uploads/project/WikiEngine/scaleout/step9-load-k6-before-viewcount.png)
+![k6 Load 1차 결과: 스케일아웃만 적용, 에러율 11.10%](/uploads/project/WikiEngine/scaleout/step9-load-k6-before-viewcount.png)
 
-> **에러율 11.10%의 원인 분석**: 이 에러의 대부분은 **상세 조회(`GET /posts/{id}`)에서 500 에러**였습니다. 로그를 확인하니 `java.sql.SQLException: The MySQL server is running with the --read-only option` — GET 요청 안의 `incrementViewCount()` DB UPDATE가 R/W 분리 라우팅과 충돌하는 문제였습니다. 이를 발견하여 **조회수 Redis INCR + 배치 flush 전환**을 즉시 적용했습니다. (상세: [조회수 Redis INCR + 배치 flush 전환](/blog/project/wikiengine/view-count-redis))
+> **에러율 11.10%의 원인 분석**: 이 에러의 대부분은 **상세 조회(`GET /posts/{id}`)에서 500 에러**였습니다. 로그를 확인하니 `java.sql.SQLException: The MySQL server is running with the --read-only option`. 원인은 GET 요청 안의 `incrementViewCount()` DB UPDATE가 R/W 분리 라우팅과 충돌한 것이었습니다. 이를 발견하여 **조회수 Redis INCR + 배치 flush 전환**을 즉시 적용했습니다. (상세: [조회수 Redis INCR + 배치 flush 전환](/blog/project/wikiengine/view-count-redis))
 
 ---
 
-**Load 테스트 2차 (100 VU, 20분) — 스케일아웃 + 조회수 Redis INCR 적용 (최종):**
+**Load 테스트 2차 (100 VU, 20분): 스케일아웃 + 조회수 Redis INCR 적용 (최종)**
 
 | 시나리오 | 평균 | P95 |
 |---------|------|-----|
@@ -1150,7 +1150,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | 에러율 | **0.00%** | - |
 | 총 요청 수 | 41,873 | - |
 
-![k6 Load 2차 결과 — 스케일아웃 + Redis INCR, 에러율 0.00%](/uploads/project/WikiEngine/scaleout/step9-load-k6-after-viewcount.png)
+![k6 Load 2차 결과: 스케일아웃 + Redis INCR, 에러율 0.00%](/uploads/project/WikiEngine/scaleout/step9-load-k6-after-viewcount.png)
 
 > 조회수 Redis INCR 적용 후 에러율이 **11.10% → 0.00%**로 완전 해소되었습니다. 상세 조회의 500 에러가 사라진 것은 물론, 전체 평균 응답시간도 40.93ms → 37.23ms로 9% 추가 개선되었습니다. GET 요청에서 DB UPDATE가 제거되면서 Primary MySQL 부하가 감소하고, Row Lock 경합이 사라진 효과입니다.
 
@@ -1168,13 +1168,13 @@ App 1 재사용:     /auth/me          → 401 (차단)
 
 **인스턴스별 CPU 분산 (핵심 증거):**
 
-- App 1 (10.0.0.47): 피크 ~40% — 쓰기(POST) + 읽기(GET) 분담
-- App 2 (10.0.0.242): 피크 ~40% — 읽기(GET) 분담
+- App 1 (10.0.0.47): 피크 ~40%, 쓰기(POST) + 읽기(GET) 분담
+- App 2 (10.0.0.242): 피크 ~40%, 읽기(GET) 분담
 - [Replication](/blog/project/wikiengine/replication)에서 단일 App이 ~100% 포화되던 것이 2대로 분산되어 각 ~40%로 안정화
 
 **Grafana 최종 측정 대시보드 (2026-03-21, 조회수 Redis INCR 적용 후):**
 
-![Grafana Overview — 평균 37.2ms, P95 158ms, P99 328ms, 에러율 0%](/uploads/project/WikiEngine/scaleout/step9-load-grafana-overview.png)
+![Grafana Overview: 평균 37.2ms, P95 158ms, P99 328ms, 에러율 0%](/uploads/project/WikiEngine/scaleout/step9-load-grafana-overview.png)
 
 ![HTTP 요청 응답시간 + 처리량 + P95/P99 + 에러율 + JVM Heap + GC](/uploads/project/WikiEngine/scaleout/step9-load-http-jvm.png)
 
@@ -1226,7 +1226,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 
 ![MySQL QPS / 커넥션 수 / InnoDB 히트율(99.9%/99.6%) / Slow Queries / Row Lock](/uploads/project/WikiEngine/scaleout/step9-load-mysql.png)
 
-![InnoDB Row 연산 — Rows Read/Inserted/Updated/Deleted 추이](/uploads/project/WikiEngine/scaleout/step9-load-innodb-row.png)
+![InnoDB Row 연산: Rows Read/Inserted/Updated/Deleted 추이](/uploads/project/WikiEngine/scaleout/step9-load-innodb-row.png)
 
 ![Replication Lag(0~1초) / IO/SQL Thread Running / Primary vs Replica 명령별 비교](/uploads/project/WikiEngine/scaleout/step9-load-replication.png)
 
@@ -1267,24 +1267,24 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | P95 | 2,300ms | < 1,000ms | 개선 |
 | 총 TPS | ~200 ops/s | ~350+ ops/s | 증가 |
 
-> 선형 확장(2배)은 아닌 이유: USL(Universal Scalability Law, Neil Gunther)에 따르면 노드 추가 시 직렬화 비용(serialization — MySQL Primary 쓰기 직렬 처리) + 일관성 비용(coherence — Redis 네트워크 왕복, Nginx 라우팅 오버헤드)이 발생합니다. Amdahl's Law는 직렬 분율만 고려하지만, USL은 coherence 항을 추가하여 노드 추가 시 오히려 성능이 감소하는 retrograde scaling도 예측합니다. 이 프로젝트에서는 2대 수준이므로 retrograde 구간에는 진입하지 않지만, 이론적 2배(TPS 400 ops/s)에는 미치지 못합니다.
+> 선형 확장(2배)은 아닌 이유: USL(Universal Scalability Law, Neil Gunther)에 따르면 노드 추가 시 직렬화 비용(serialization, MySQL Primary 쓰기 직렬 처리) + 일관성 비용(coherence, Redis 네트워크 왕복, Nginx 라우팅 오버헤드)이 발생합니다. Amdahl's Law는 직렬 분율만 고려하지만, USL은 coherence 항을 추가하여 노드 추가 시 오히려 성능이 감소하는 retrograde scaling도 예측합니다. 이 프로젝트에서는 2대 수준이므로 retrograde 구간에는 진입하지 않지만, 이론적 2배(TPS 400 ops/s)에는 미치지 못합니다.
 
 ---
 
-### Step 10. 결과 정리 — 완료
+### Step 10. 결과 정리: 완료
 
 **성과 요약:**
 
 | 목표 | 결과 |
 |------|------|
-| App 스케일아웃 (CPU 병목 해소) | **완료** — App CPU 100% → 각 ~40% 분산 |
-| Nginx L7 로드밸런싱 | **완료** — map 메서드 라우팅, least_conn |
-| TokenBlacklist Redis 전환 | **완료** — 크로스 서버 블랙리스트 공유 증명 |
-| Lucene Primary/Replica 모드 | **완료** — SnapshotDeletionPolicy + Refresh Pause |
-| 모니터링 (인스턴스별 비교) | **완료** — Grafana 대시보드 인스턴스별 분리 |
-| CI/CD matrix 전략 | **완료** — 서버별 독립 배포/재실행 |
-| 로그 수집 (Alloy) | **완료** — 서버 2 Alloy + host 라벨 표준화 |
-| 조회수 Redis INCR 전환 | **완료** — GET에서 DB 쓰기 제거, 동시성 해결 |
+| App 스케일아웃 (CPU 병목 해소) | **완료**: App CPU 100% → 각 ~40% 분산 |
+| Nginx L7 로드밸런싱 | **완료**: map 메서드 라우팅, least_conn |
+| TokenBlacklist Redis 전환 | **완료**: 크로스 서버 블랙리스트 공유 증명 |
+| Lucene Primary/Replica 모드 | **완료**: SnapshotDeletionPolicy + Refresh Pause |
+| 모니터링 (인스턴스별 비교) | **완료**: Grafana 대시보드 인스턴스별 분리 |
+| CI/CD matrix 전략 | **완료**: 서버별 독립 배포/재실행 |
+| 로그 수집 (Alloy) | **완료**: 서버 2 Alloy + host 라벨 표준화 |
+| 조회수 Redis INCR 전환 | **완료**: GET에서 DB 쓰기 제거, 동시성 해결 |
 
 **조회수 Redis INCR 전환 (부가 성과):**
 
@@ -1292,7 +1292,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 
 > 상세: [조회수 Redis INCR + 배치 flush 전환](/blog/project/wikiengine/view-count-redis)
 
-**핵심 수치 — Before/After (최종):**
+**핵심 수치: Before/After (최종)**
 
 | 지표 | Before ([Replication](/blog/project/wikiengine/replication), App 1대) | After (App 스케일아웃, App 2대 + Redis INCR) | 개선 |
 |------|---------------------------|--------------------------------------|------|
@@ -1306,21 +1306,21 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | 캐시 Origin 도달률 | 42% | **19%** | **55%↓** |
 | InnoDB 히트율 | 99.5% | **99.9%** | 안정 |
 
-### 시스템 설계 관점 — 프로젝트 진화와 업계 패턴 대응
+### 시스템 설계 관점: 프로젝트 진화와 업계 패턴 대응
 
 이 프로젝트의 최적화 과정은 대규모 시스템 설계에서 사용되는 표준 패턴을 **직접 구현하고 검증**하는 과정이다.
 
 | 구현 내용 | 대응하는 시스템 설계 패턴 |
 |---------|---------------------|
-| Caffeine L1 로컬 캐시 | **Cache-Aside Pattern** — 읽기 경로 최적화 |
-| prefix → top-K flat KV 매핑 (Redis) | **CQRS** — 쓰기(MySQL)와 읽기(Redis flat KV)를 분리. 자동완성 설계에서 "접두사 → 인기순 10개 제안 목록"의 단순 매핑이 바로 이것 |
-| Trie → flat KV 전환 | **Trie 진화** — naive Trie의 서브트리 순회 O(N) 한계를 인지하고, prefix→top-K O(1) flat KV 매핑으로 전환. 이는 Google(노드에 top-K 미리 저장)·Bing(Trie 기반 자동완성)과 본질적으로 동일한 패턴 — Trie 구조를 제거하고 결과만 KV에 물화(materialize) |
-| hourly `@Scheduled` 배치 빌드 | **MapReduce 패턴** — 검색 로그를 집계하여 prefix별 top-K를 산출하는 배치 파이프라인 |
-| MySQL Primary-Replica | **읽기 복제** — DB 레벨 수평 확장 |
-| App 2대 + Nginx LB | **서비스 계층 수평 확장** — 로드밸런서 + 인스턴스 그룹 |
-| Redis INCR + 배치 flush | **Write-Behind Pattern** — 쓰기 경로 최적화. Sentry/YouTube 패턴과 동일 |
-| Spring Event → Outbox → Debezium+Kafka (예정) | **CDC + 이벤트 기반 동기화** — dual-write 제거, Read Model 독립 갱신 |
-| Redis Consistent Hashing (예정) | **샤딩 + 동적 복제** — 핫스팟 해결, 수평 확장 |
+| Caffeine L1 로컬 캐시 | **Cache-Aside Pattern**: 읽기 경로 최적화 |
+| prefix → top-K flat KV 매핑 (Redis) | **CQRS**: 쓰기(MySQL)와 읽기(Redis flat KV)를 분리. 자동완성 설계에서 "접두사 → 인기순 10개 제안 목록"의 단순 매핑이 바로 이것 |
+| Trie → flat KV 전환 | **Trie 진화**: naive Trie의 서브트리 순회 O(N) 한계를 인지하고, prefix→top-K O(1) flat KV 매핑으로 전환. 이는 Google(노드에 top-K 미리 저장)·Bing(Trie 기반 자동완성)과 본질적으로 동일한 패턴으로, Trie 구조를 제거하고 결과만 KV에 물화(materialize) |
+| hourly `@Scheduled` 배치 빌드 | **MapReduce 패턴**: 검색 로그를 집계하여 prefix별 top-K를 산출하는 배치 파이프라인 |
+| MySQL Primary-Replica | **읽기 복제**: DB 레벨 수평 확장 |
+| App 2대 + Nginx LB | **서비스 계층 수평 확장**: 로드밸런서 + 인스턴스 그룹 |
+| Redis INCR + 배치 flush | **Write-Behind Pattern**: 쓰기 경로 최적화. Sentry/YouTube 패턴과 동일 |
+| Spring Event → Outbox → Debezium+Kafka (예정) | **CDC + 이벤트 기반 동기화**: dual-write 제거, Read Model 독립 갱신 |
+| Redis Consistent Hashing (예정) | **샤딩 + 동적 복제**: 핫스팟 해결, 수평 확장 |
 
 > 단순히 기술을 나열한 것이 아니라, 성능 병목을 측정 → 원인 분석 → 대안 비교 → 실측 검증하는 과정을 반복했고, 그 결과가 업계 표준 시스템 설계 패턴과 자연스럽게 대응된다. 특히 Trie → flat KV 전환은 자동완성 시스템 설계에서 "naive Trie의 서브트리 순회 한계를 인지하고 prefix→top-K flat KV로 물화(materialize)한다"는 패턴을 직접 구현한 것이다. Bing, Google, Elasticsearch 모두 Trie 변형(FST, PruningRadixTrie) + flat KV 서빙의 2단계 구조를 사용한다.
 

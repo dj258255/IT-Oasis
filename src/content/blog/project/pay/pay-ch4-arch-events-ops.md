@@ -14,9 +14,9 @@ series: "결제 시스템 만들기"
 seriesOrder: 4
 ---
 
-*결제 시스템 시리즈 — 아키텍처 가드·이벤트·운영. 원 연재 여러 편을 한 챕터로 묶었고, 각 절이 원래 한 편이다.*
+*결제 시스템 시리즈: 아키텍처 가드·이벤트·운영. 원 연재 여러 편을 한 챕터로 묶었고, 각 절이 원래 한 편이다.*
 
-## 아키텍처를 문서가 아니라 CI가 지키게 — 모듈 경계를 깨면 빌드가 깨진다
+## 아키텍처를 CI가 지키게: 모듈 경계를 깨면 빌드가 깨진다
 
 ### 0. 문서로 적은 규칙은 무너진다
 
@@ -87,7 +87,7 @@ order는 shared·payment·point에만 의존할 수 있다. 누군가 order에�
 
 <hr />
 
-## 모놀리스 안에서만 울리던 이벤트를 밖으로 — Kafka로 결제 이벤트를 외부화한 이유
+## 모놀리스 안에서만 울리던 이벤트를 밖으로: Kafka로 결제 이벤트를 외부화한 이유
 
 ### 0. 이벤트는 이 프로세스 안에서만 울렸다
 
@@ -113,7 +113,7 @@ Spring Modulith의 `@ApplicationModuleListener`는 이벤트를 `event_publicati
 
 Spring Modulith가 이걸 위한 도구를 준다. `@Externalized`다.
 
-### 2. `@Externalized` — 애노테이션 하나로 밖에 싣기
+### 2. `@Externalized`: 애노테이션 하나로 밖에 싣기
 
 이벤트 타입에 애노테이션 하나만 붙이면 된다.
 
@@ -167,7 +167,7 @@ producer 쪽도 `acks=all`에 멱등 producer로 뒀다. 브로커가 확실히 
 
 <hr />
 
-## 자동 복구가 포기한 순간, 운영은 무엇을 할 수 있나 — 손댈 수 있는 어드민 만들기
+## 자동 복구가 포기한 순간, 운영은 무엇을 할 수 있나: 손댈 수 있는 어드민 만들기
 
 ### 0. 자동으로 다 되는데, 안 되면?
 
@@ -193,7 +193,7 @@ producer 쪽도 `acks=all`에 멱등 producer로 뒀다. 브로커가 확실히 
 
 만든 건 세 가지다. 데모 콘솔의 운영 콘솔 탭이 이 손잡이들을 한데 모아둔 모습이다.
 
-![운영 콘솔 데모 — 미확정 복구·보상 재처리·정산 대사·강제취소 2인 승인·FDS 심사·DLQ](/uploads/project/pay/demo/demo-admin.png)
+![운영 콘솔 데모: 미확정 복구·보상 재처리·정산 대사·강제취소 2인 승인·FDS 심사·DLQ](/uploads/project/pay/demo/demo-admin.png)
 
 ### 2. 보상 태스크: 소진된 걸 다시 무장하기
 
@@ -259,7 +259,7 @@ record CompensationTaskView(Long id, String orderNo, long amount,
 
 <hr />
 
-## 장애가 나도 괜찮다"는 말을 증명하기 — 서킷브레이커 단위 테스트와 Toxiproxy 카오스
+## 장애가 나도 괜찮다"는 말을 증명하기: 서킷브레이커 단위 테스트와 Toxiproxy 카오스
 
 ### 0. 복원력을 "만들기"만 했다
 
@@ -350,7 +350,7 @@ Toxiproxy 테스트는 컨테이너 2개(MySQL + Toxiproxy)에 앱 부팅까지 
 
 <hr />
 
-## 돈을 바로 주지 않는다 — 구매확정 전까지 판매자 정산을 보류하는 에스크로
+## 돈을 바로 주지 않는다: 구매확정 전까지 판매자 정산을 보류하는 에스크로
 
 ### 0. 승인되면 곧장 판매자 돈이 된다
 
@@ -384,9 +384,9 @@ Toxiproxy 테스트는 컨테이너 2개(MySQL + Toxiproxy)에 앱 부팅까지 
 
 데모 콘솔에서 승인까지 마치면, 주문 `PAID`와 결제 `DONE`과 함께 에스크로가 `HELD`로 잡히는 걸 볼 수 있다(오른쪽 상태 카드).
 
-![결제 플로우 데모 — 주문 PAID / 결제 DONE / 에스크로 HELD](/uploads/project/pay/demo/demo-checkout.png)
+![결제 플로우 데모: 주문 PAID / 결제 DONE / 에스크로 HELD](/uploads/project/pay/demo/demo-checkout.png)
 
-### 2. 판단 ①: 구매확정은 누가 할 수 있나 — 경계 설계
+### 2. 판단 ①: 구매확정은 누가 할 수 있나, 경계 설계
 
 구매확정은 돈을 판매자에게 풀어주는(RELEASED) 행위다. 아무나 하면 안 되고, 그 주문의 구매자 본인만 할 수 있어야 한다([IDOR 방지](/blog/project/pay/pay-ch2-payment-methods)).
 
@@ -443,7 +443,7 @@ public int autoReleaseDue() {
 
 스케줄러는 [보상 태스크](/blog/project/pay/pay-ch3-perf-cancel)와 같은 방식으로 프로퍼티 게이트(`app.escrow.auto-release.enabled`)로 켜고 끈다. 기본은 꺼둬서 테스트·로컬에 부작용이 없다.
 
-### 5. 그리고 — 이걸 붙이다 큰 버그를 하나 잡았다
+### 5. 이걸 붙이다 큰 버그를 하나 잡았다
 
 에스크로를 붙이고 실기동으로 검증하다가, 원래 있던 치명적인 버그를 발견했다. 구매확정이 자꾸 "결제 완료 주문만 확정할 수 있습니다"(409)로 막히길래 DB를 봤더니, 결제 승인 응답은 PAID인데 DB에는 주문이 PENDING_PAYMENT로 남아 있었다. 결제가 실제로는 DB에 확정되지 않고 있었던 것이다.
 

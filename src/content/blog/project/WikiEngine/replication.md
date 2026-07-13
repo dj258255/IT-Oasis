@@ -1,5 +1,5 @@
 ---
-title: 'MySQL Replication — R/W 분리와 DataSource 라우팅'
+title: 'MySQL Replication: R/W 분리와 DataSource 라우팅'
 titleEn: 'MySQL Replication — Read/Write Splitting and DataSource Routing'
 description: MySQL Replication으로 읽기/쓰기를 분리하고, Spring AbstractRoutingDataSource + LazyConnectionDataSourceProxy로 @Transactional(readOnly=true) 기반 자동 라우팅을 구현합니다. CLONE PLUGIN으로 133.5GB 초기 동기화, HikariCP 풀 분리(Primary 5 + Replica 15), k6 100 VU load 테스트로 R/W 분리 실측까지 정리합니다.
 descriptionEn: Implements MySQL Replication for read/write splitting with Spring AbstractRoutingDataSource + LazyConnectionDataSourceProxy for automatic routing based on @Transactional(readOnly=true). Covers CLONE PLUGIN for 133.5GB initial sync, HikariCP pool separation (Primary 5 + Replica 15), and k6 100 VU load test validation.
@@ -23,7 +23,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[Redis L2 캐시 + 자동완성 flat KV — Trie 퇴역과 Stateless 전환](/blog/project/wikiengine/redis-l2-cache)에서 Caffeine(L1) + Redis(L2) 2계층 캐시를 구현하고, Trie 자동완성을 Redis flat KV O(1) GET으로 전환하여 앱을 Stateless로 만들었습니다.
+[Redis L2 캐시 + 자동완성 flat KV: Trie 퇴역과 Stateless 전환](/blog/project/wikiengine/redis-l2-cache)에서 Caffeine(L1) + Redis(L2) 2계층 캐시를 구현하고, Trie 자동완성을 Redis flat KV O(1) GET으로 전환하여 앱을 Stateless로 만들었습니다.
 
 ---
 
@@ -50,7 +50,7 @@ JVM/Tomcat 튜닝(스레드 200→100)은 **79% 악화**로 역효과. CPU-bound
 
 ---
 
-## 1. 정상 상태 — MySQL은 병목이 아니다
+## 1. 정상 상태: MySQL은 병목이 아니다
 
 [stress 테스트](/blog/project/wikiengine/stress-test-tuning)와 [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache) 데이터를 보면 **MySQL은 현재 병목이 아닙니다**:
 
@@ -66,7 +66,7 @@ JVM/Tomcat 튜닝(스레드 200→100)은 **79% 악화**로 역효과. CPU-bound
 
 ---
 
-## 2. 문제 인식 — 그런데 왜 Replication인가
+## 2. 문제 인식: 그런데 왜 Replication인가
 
 **다음 단계인 App 스케일아웃의 전제조건(Bottom-Up 인프라 준비)**입니다.
 
@@ -94,15 +94,15 @@ MySQL 공식 문서([19.4.5 Using Replication for Scale-Out](https://dev.mysql.c
 
 AWS RDS 공식 문서([Read Replicas](https://aws.amazon.com/rds/features/read-replicas/))에서도 "읽기 작업을 수평 확장(elastically scale out)하여 단일 DB 인스턴스의 용량 제약을 넘어서라"고 권장하며, Aurora는 Auto Scaling으로 Replica를 자동 조절하는 기능까지 제공합니다. Replica는 "문제 발생 후 대응"이 아니라 **"확장 계획에 맞춘 사전 구성"**입니다.
 
-단, Replica 도입 전에 **애플리케이션 레벨 최적화가 먼저 완료되어야** 합니다 — 쿼리 튜닝, 인덱싱, 캐싱 없이 Replica만 추가하면 오히려 성능이 악화될 수 있습니다([Medium - Your Read Replicas Aren't Helping](https://medium.com/@jholt1055/your-read-replicas-arent-helping-they-re-making-things-worse-1956f5c4b01f)). 이 프로젝트에서는 [FULLTEXT ngram](/blog/project/wikiengine/fulltext-ngram-index)부터 [Lucene 전환](/blog/project/wikiengine/lucene-decision), [캐싱 전략](/blog/project/wikiengine/caching-strategy), [Redis L2](/blog/project/wikiengine/redis-l2-cache)까지 애플리케이션 레벨 최적화를 모두 완료한 후에 Replica를 도입하므로, 올바른 순서를 따르고 있습니다.
+단, Replica 도입 전에 **애플리케이션 레벨 최적화가 먼저 완료되어야** 합니다. 쿼리 튜닝, 인덱싱, 캐싱 없이 Replica만 추가하면 오히려 성능이 악화될 수 있습니다([Medium - Your Read Replicas Aren't Helping](https://medium.com/@jholt1055/your-read-replicas-arent-helping-they-re-making-things-worse-1956f5c4b01f)). 이 프로젝트에서는 [FULLTEXT ngram](/blog/project/wikiengine/fulltext-ngram-index)부터 [Lucene 전환](/blog/project/wikiengine/lucene-decision), [캐싱 전략](/blog/project/wikiengine/caching-strategy), [Redis L2](/blog/project/wikiengine/redis-l2-cache)까지 애플리케이션 레벨 최적화를 모두 완료한 후에 Replica를 도입하므로, 올바른 순서를 따르고 있습니다.
 
 ---
 
-## 3. 대안 검토 — Replication을 건너뛸 수 없는 이유
+## 3. 대안 검토: Replication을 건너뛸 수 없는 이유
 
 | 대안 | 검토 결과 | 판단 |
 |------|----------|------|
-| **Replication 건너뛰고 바로 App 2대** | 현재 MySQL이 여유 있으니 2대 운영해도 버틸 수 있다. 하지만 App 2대 × HikariCP 20 = 40 커넥션이 단일 MySQL에 몰리고, 향후 App 3대 이상 확장 시 DB가 병목이 될 수 있다. **사전 분리가 없으면 나중에 서비스 운영 중 긴급 Replication 구성이 필요** — 훨씬 위험 | **탈락** |
+| **Replication 건너뛰고 바로 App 2대** | 현재 MySQL이 여유 있으니 2대 운영해도 버틸 수 있다. 하지만 App 2대 × HikariCP 20 = 40 커넥션이 단일 MySQL에 몰리고, 향후 App 3대 이상 확장 시 DB가 병목이 될 수 있다. **사전 분리가 없으면 나중에 서비스 운영 중 긴급 Replication 구성이 필요**하며, 훨씬 위험 | **탈락** |
 | **HikariCP 커넥션 풀 크기만 증가** (20→40) | [stress 테스트](/blog/project/wikiengine/stress-test-tuning)에서 확인: HikariCP 병목은 풀 부족이 아니라 CPU 포화의 증상. 풀을 올려도 근본 해결 안 됨 | **탈락** |
 | **Redis L2 캐시 히트율 더 올리기** | [Redis L2](/blog/project/wikiengine/redis-l2-cache)에서 L1+L2 합산 82% 히트, Origin 19%. 나머지 19%는 cold query + 쓰기 연산이라 캐시로 더 줄이기 어려움 | **탈락** |
 | **ProxySQL (커넥션 프록시)** | 앱 코드 변경 없이 R/W 분리 가능. 하지만 프록시 서버 추가 필요 (Free Tier 자원 소모), 쿼리 파싱 오버헤드, 장애 포인트 추가 | **탈락** (앱 레벨 라우팅이 더 단순) |
@@ -281,7 +281,7 @@ mysql-replica:
 
 > `--super-read-only=ON`은 `--read-only=ON`만으로는 SUPER 권한 사용자가 쓸 수 있는 구멍을 막습니다 (Percona 권장).
 
-**초기 데이터 동기화 — mysqldump에서 CLONE PLUGIN으로 전환:**
+**초기 데이터 동기화: mysqldump에서 CLONE PLUGIN으로 전환:**
 
 처음에는 `mysqldump`(102GB)로 시도했으나 3가지 문제가 발생했습니다:
 1. dump 파일에 `CREATE TABLE`이 누락 (스키마와 데이터 분리 필요)
@@ -388,7 +388,7 @@ spring:
 
 **기존 코드 변경 최소화**: `PostService`, `UserService`, `CategoryService` 등은 이미 `@Transactional(readOnly = true)` / `@Transactional`을 구분하고 있으므로, DataSource 라우팅만 추가하면 자동으로 Read/Write 분리가 동작합니다.
 
-**Flyway 마이그레이션 — Primary 전용 실행:**
+**Flyway 마이그레이션: Primary 전용 실행:**
 
 Flyway 자동설정은 컨텍스트의 `DataSource` 빈을 잡아서 마이그레이션을 실행합니다. Routing DataSource(LazyProxy)를 받으면 마이그레이션 시점에 트랜잭션이 없으므로 라우팅이 불확실합니다. `@FlywayDataSource`로 Primary를 명시하여 마이그레이션이 항상 Primary에서만 실행되도록 합니다:
 
@@ -440,7 +440,7 @@ Grafana 알림:
 
 ### k6 100 VU load 테스트 결과
 
-> **테스트 환경**: 서버 1 ARM 2코어/12GB — Spring Boot 2GB(JVM 힙 1GB) + MySQL Primary 4GB(InnoDB BP 2GB) + Redis 256MB. 서버 2 ARM 2코어/12GB — MySQL Replica 4GB(InnoDB BP 2GB). 데이터: 1,215만 건.
+> **테스트 환경**: 서버 1 ARM 2코어/12GB에 Spring Boot 2GB(JVM 힙 1GB) + MySQL Primary 4GB(InnoDB BP 2GB) + Redis 256MB. 서버 2 ARM 2코어/12GB에 MySQL Replica 4GB(InnoDB BP 2GB). 데이터: 1,215만 건.
 
 ![k6 콘솔 결과](/uploads/project/WikiEngine/replication/phase12-k6-console-result.png)
 
@@ -557,11 +557,11 @@ R/W 분리는 정상 동작합니다:
 
 | 목표 | 결과 |
 |------|------|
-| MySQL R/W 분리 | **완료** — `@Transactional(readOnly=true)` → Replica, 기본 → Primary |
-| Replication 구성 | **완료** — GTID 비동기, CLONE PLUGIN 133.5GB 복사 |
-| HikariCP 풀 분리 | **완료** — Primary 5 + Replica 15 (합계 20 유지) |
-| 모니터링 | **완료** — Replication Lag/Thread 패널 + 알림 3개 |
-| App 스케일아웃 전제조건 | **달성** — App 2대 확장 시 DB 읽기 부하 분산 준비 완료 |
+| MySQL R/W 분리 | **완료**: `@Transactional(readOnly=true)` → Replica, 기본 → Primary |
+| Replication 구성 | **완료**: GTID 비동기, CLONE PLUGIN 133.5GB 복사 |
+| HikariCP 풀 분리 | **완료**: Primary 5 + Replica 15 (합계 20 유지) |
+| 모니터링 | **완료**: Replication Lag/Thread 패널 + 알림 3개 |
+| App 스케일아웃 전제조건 | **달성**: App 2대 확장 시 DB 읽기 부하 분산 준비 완료 |
 
 ### 서버 현황
 
@@ -572,7 +572,7 @@ R/W 분리는 정상 동작합니다:
 | Monitoring #1 | AMD 1GB + Swap 1GB | Loki + Grafana + Nginx (HTTPS) |
 | Monitoring #2 | AMD 1GB + Swap 1GB | Prometheus |
 
-**다음 단계**: App 스케일아웃 — 서버 2에 App 인스턴스를 추가하여 CPU 병목을 분산합니다.
+**다음 단계**: App 스케일아웃. 서버 2에 App 인스턴스를 추가하여 CPU 병목을 분산합니다.
 
 <!-- EN -->
 

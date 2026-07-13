@@ -14,11 +14,11 @@ series: "결제 시스템 만들기"
 seriesOrder: 10
 ---
 
-*결제 시스템 시리즈 — 기능 확장과 정밀 감사. 원 연재 여러 편을 한 챕터로 묶었고, 각 절이 원래 한 편이다.*
+*결제 시스템 시리즈: 기능 확장과 정밀 감사. 원 연재 여러 편을 한 챕터로 묶었고, 각 절이 원래 한 편이다.*
 
-## 빌링키도 dunning도 다 만들어놓고 — 구독을 부를 방법이 없었다
+## 빌링키도 dunning도 다 만들어놓고: 구독을 부를 방법이 없었다
 
-### 0. 또 "만들고 안 쓴 것" — 이번엔 통째로
+### 0. 또 "만들고 안 쓴 것", 이번엔 통째로
 
 지금까지는 파일 몇 개 수준이었는데, 이번에 찾은 건 모듈 하나였다. [감사](/blog/project/pay/pay-ch7-consume-align-harden)와 [재감사](/blog/project/pay/pay-ch8-settlement-pg-webhook)로 "만들어놓고 배선 안 한 것들"을 계속 잡아왔는데, 전체 기능 관점에서 훑어보니 `subscription`(구독)이 통째로 숨어 있었다.
 
@@ -34,7 +34,7 @@ seriesOrder: 10
 
 구독은 SaaS·멤버십 어디에나 있는 핵심 결제 상품이라, 이 표면부터 완성했다.
 
-### 1. 사용자 표면 — 개시·조회·해지·즉시청구
+### 1. 사용자 표면: 개시·조회·해지·즉시청구
 
 REST 표면을 얹었다.
 
@@ -85,7 +85,7 @@ private void bill(Subscription subscription, LocalDate today) {
 
 데모 콘솔에 구독 패널을 붙였다.
 
-![구독 정기결제 데모 — 개시·상태·청구주기·해지](/uploads/project/pay/demo/demo-subscription.png)
+![구독 정기결제 데모: 개시·상태·청구주기·해지](/uploads/project/pay/demo/demo-subscription.png)
 
 빌링키로 구독을 개시하면 `ACTIVE`로 뜨고 다음 청구일이 한 달 뒤로 잡힌다. "즉시 청구"를 누르면 청구가 일어나 다음 청구일이 갱신되고, 상세에는 청구 이력(성공/decline)이 쌓인다. 해지하면 `CANCELED`. 서비스 계층에만 있던 구독이 이제 눌러볼 수 있는 기능이 됐다.
 
@@ -108,7 +108,7 @@ user2가 user1 구독 조회 → 403 (IDOR 차단)
 
 <hr />
 
-## 결제수단마다 롤백 계약이 다르다 — 월렛을 체크아웃에 배선하며 배운 것
+## 결제수단마다 롤백 계약이 다르다: 월렛을 체크아웃에 배선하며 배운 것
 
 ### 0. 이번 고아는 "표면도 없고 배선도 없는" 완전체였다
 
@@ -132,7 +132,7 @@ GET  /api/v1/wallet          잔액 + 최근 거래 이력 20건
 
 이력은 `findTop20ByUserIdOrderByIdDesc`다. `Top20`으로 **DB에서 LIMIT**을 걸어 무한 적재를 막고, `id`(단조증가) 정렬로 같은 시각 거래의 타이순서 흔들림도 없앴다. userId는 [늘 그렇듯](/blog/project/pay/pay-ch5-runtime-truths) 인증 principal에서 얻어 본인 월렛만 본다. 실 MySQL로 5만→3만 누적 8만, 이력 2건, 한도초과 409까지 확인했다. 여기까진 평이했다.
 
-### 2. 체크아웃에 넣으려다 마주친 것 — 롤백 계약이 다르다
+### 2. 체크아웃에 넣으려다 마주친 것: 롤백 계약이 다르다
 
 기존 체크아웃은 이미 **카드 + 포인트** 복합결제를 하고 있었다([사가 편](/blog/project/pay/pay-ch9-audit-saga)). "월렛도 세 번째 몫으로 끼우면 되겠네" 하고 포인트를 흉내 내려다, 둘이 **근본적으로 다르다**는 걸 알았다.
 
@@ -206,7 +206,7 @@ catch (DataIntegrityViolationException e) { return balance(userId); }
 
 그리고 `reserve`에서 월렛 차감을 **맨 마지막**(주문 저장 후)에 뒀다. 커밋되는 부수효과라, 뒤에 실패할 in-tx 작업이 남아 있으면 그만큼 고아가 될 창이 생긴다. 맨 뒤에 두면 그 창이 사라진다.
 
-### 4. 복구는 "분할"을 어디서 아는가 — 원장에서 역산
+### 4. 복구는 "분할"을 어디서 아는가: 원장에서 역산
 
 미묘한 문제가 하나 더 있었다. 크래시 복구가 `settle`을 재실행하려면 카드·포인트·월렛 **각 몫**을 알아야 하는데, 원 요청의 분할은 **주문에 저장돼 있지 않다.** 기존 복구는 `포인트 = 총액 - 카드`로 역산했는데, 월렛이 끼면 `총액 - 카드 = 포인트 + 월렛`이라 둘을 못 나눈다.
 
@@ -223,7 +223,7 @@ long pointAmount  = order.getTotalAmount() - cardAmount - walletAmount;
 
 데모 콘솔에 월렛 패널을 붙이고, 체크아웃에 월렛 몫을 넣을 수 있게 했다.
 
-![선불 월렛 데모 — 충전·잔액·이력, 체크아웃 복합결제 수단](/uploads/project/pay/demo/demo-wallet.png)
+![선불 월렛 데모: 충전·잔액·이력, 체크아웃 복합결제 수단](/uploads/project/pay/demo/demo-wallet.png)
 
 실 MySQL로 전 흐름을 확인했다.
 
@@ -247,7 +247,7 @@ long pointAmount  = order.getTotalAmount() - cardAmount - walletAmount;
 
 <hr />
 
-## 쌓이기만 하고 안 보이던 것들 — 주문 목록·원장·포인트 적립을 표면으로
+## 쌓이기만 하고 안 보이던 것들: 주문 목록·원장·포인트 적립을 표면으로
 
 ### 0. 또 "만들어지는데 안 보이는 것"
 
@@ -259,7 +259,7 @@ long pointAmount  = order.getTotalAmount() - cardAmount - walletAmount;
 
 셋 다 작지만 같은 병의 다른 얼굴이라, 한 번에 정리했다.
 
-### 1. 내 주문 목록 — 소유권을 쿼리로 격리
+### 1. 내 주문 목록: 소유권을 쿼리로 격리
 
 목록 API를 얹었다.
 
@@ -279,7 +279,7 @@ public List<OrderSummaryView> myOrders(long authenticatedUserId) {
 
 userId는 인증 principal에서 오고, WHERE 절이 그걸로 걸리니 **남의 주문은 애초에 조회 대상이 아니다.** 불러온 뒤 검증으로 걸러낼 것도 없이 아예 안 가져오니, IDOR 방어 중에서도 가장 단순한 형태다. 실기동으로 user1은 자기 주문이 최신순으로 뜨고, user2는 0건인 걸 확인했다. `Top50`으로 상한을 둬 무한 적재도 막았다.
 
-### 2. 원장 감사 뷰 — 차변·대변 균형까지
+### 2. 원장 감사 뷰: 차변·대변 균형까지
 
 [복식부기 원장](/blog/project/pay/pay-ch1-payment-core)은 결제 승인마다 `PG미수금(차변) ↔ 매출(대변)` 분개를 append-only로 쌓는다. 그런데 운영자가 그걸 볼 수가 없었다. 감사용 어드민 뷰를 얹었다.
 
@@ -302,7 +302,7 @@ static LedgerView from(LedgerTransaction tx) {
 
 비관리자가 이 엔드포인트를 부르면 403이 나는 것도 확인했다.
 
-### 3. 포인트 적립 — 실결제액 기준, 이중적립 없이
+### 3. 포인트 적립: 실결제액 기준, 이중적립 없이
 
 포인트는 쓸 줄만 알았다(USE). 결제가 끝나면 적립(EARN)이 돼야 하는데 그게 없었다. 사가의 **성공 분기**(`markPaid`)에 적립을 붙였다.
 
@@ -322,7 +322,7 @@ if (allDeducted) {
 
 조회 표면(`GET /api/v1/points`)도 함께 얹어, 사용자가 잔액·적립 이력을 보게 했다.
 
-![포인트·월렛 데모 — 적립·잔액·이력](/uploads/project/pay/demo/demo-points.png)
+![포인트·월렛 데모: 적립·잔액·이력](/uploads/project/pay/demo/demo-points.png)
 
 실기동으로 확인했다.
 
@@ -343,7 +343,7 @@ if (allDeducted) {
 
 <hr />
 
-## 데모 계정밖에 없던 인증에 진짜 회원을 붙이다 — 숫자 userId 계약을 지키면서
+## 데모 계정밖에 없던 인증에 진짜 회원을 붙이다: 숫자 userId 계약을 지키면서
 
 ### 0. 로그인은 되는데, "회원"이 없었다
 
@@ -373,7 +373,7 @@ long userId = Long.parseLong(principal.getName());
 
 그런데 회원은 이메일로 로그인하고 싶어 한다. `principal.getName()`이 `alice@example.com`이 되어버리면 `Long.parseLong`이 그 자리에서 터지고, **전 모듈의 소유권 검증이 한꺼번에 무너진다.** 이게 이번 작업의 핵심 제약이었다.
 
-### 2. 복합 UserDetailsService — 이메일로 찾되 숫자로 돌려준다
+### 2. 복합 UserDetailsService: 이메일로 찾되 숫자로 돌려준다
 
 열쇠는 Spring Security의 동작 하나다. `DaoAuthenticationProvider`는 인증에 성공하면 **로드된 `UserDetails.getUsername()`을 principal 이름으로 삼는다.** 내가 뭘 입력해 로그인했는지는 principal에 남지 않는다. 여기에 답이 있었다. 로그인 식별자로 회원을 찾을 때, username을 **회원의 숫자 id로 바꿔서** 돌려주면 된다.
 
@@ -429,7 +429,7 @@ alter table members auto_increment = 1000;
 
 <hr />
 
-## 결제는 됐는데 그다음이 없었다 — 차지백/분쟁을 상태기계·멱등 웹훅·패소 역분개로
+## 결제는 됐는데 그다음이 없었다: 차지백/분쟁을 상태기계·멱등 웹훅·패소 역분개로
 
 회원까지 붙이고 나니 가입 → 로그인 → 결제 → 정산이 한 줄로 이어진다. 그런데 그 줄의 끝, 결제 "이후"가 비어 있었다.
 
@@ -473,7 +473,7 @@ public void resolve(boolean win) {
 
 전이 규칙이 엔티티 안에 있으니, 서비스든 배치든 컨트롤러든 어디서 호출해도 잘못된 전이는 물리적으로 불가능하다. 상태를 문자열로 훑어보며 "지금 이거 해도 되나" 방어 코드를 흩뿌릴 필요가 없다.
 
-### 웹훅은 두 번 온다 — 멱등키는 차지백 식별자
+### 웹훅은 두 번 온다: 멱등키는 차지백 식별자
 
 PG 웹훅의 제1원칙은 **같은 이벤트가 두 번 온다**는 것. 네트워크가 흔들리거나 우리가 200을 늦게 주면 PG는 재전송한다. 차지백 웹훅을 순진하게 받으면 같은 차지백에 대해 분쟁이 두 건, 세 건 생긴다.
 
@@ -499,7 +499,7 @@ public DisputeView openFromChargeback(String chargebackId, String orderNo, Long 
 
 인증은 기존 PG 웹훅과 **같은 HMAC 서명 검증기**를 그대로 재사용했다. Spring Modulith에서 payment 모듈의 웹훅 서명 검증기를 `webhook` 명명 인터페이스로 노출하고, dispute가 그것만 참조하게 배선했다. 검증기 하나 쓰자고 payment 내부를 통째로 열지는 않는다. 서명 위조만 401로 돌려주고, 나머지 처리 예외는 재전송 폭주를 막으려 200으로 흡수하는 것도 기존 웹훅 컨트롤러와 같다.
 
-### 지면 되돌린다 — 패소 역분개
+### 지면 되돌린다: 패소 역분개
 
 핵심은 여기다. **패소(LOST)하면 원매출을 원장에서 되돌려야 한다.** 이 시스템의 원장은 [복식부기](pay-5-lock-comparison)라 원거래를 지우지 않는다. 대신 반대 방향 분개를 하나 더 쌓아 이력을 보존한다. 결제 승인이 `PG미수금(차변) ↔ 매출(대변)`이었으니, 패소 역분개는 그 반대인 `매출(차변) ↔ PG미수금(대변)`, 결제 취소와 같은 방향이다.
 
@@ -537,13 +537,13 @@ public void recordDisputeLost(DisputeLostEvent event) {
 
 <hr />
 
-## 취소가 월렛을 몰랐다 — 신규 코드 정밀 감사에서 잡은 자금 버그들
+## 취소가 월렛을 몰랐다: 신규 코드 정밀 감사에서 잡은 자금 버그들
 
 ### 0. 기능을 늘렸으면, 그 코드를 의심해야 한다
 
 결과부터. [회원](/blog/project/pay/pay-ch10-features-audit)·[분쟁/차지백](/blog/project/pay/pay-ch10-features-audit)·[월렛 배선](/blog/project/pay/pay-ch10-features-audit)까지 확정 기능을 다 만든 뒤 바로 그 신규 코드를 정면으로 감사했고, **치명 2건 포함 자금·보안 버그 11건**이 나왔다. [지난 감사들](/blog/project/pay/pay-ch8-settlement-pg-webhook)이 매번 실 자금 버그를 잡아왔으니, 돈과 인증을 새로 건드린 코드가 무사할 리 없다고 봤는데 역시나였다. 하나씩 보면 전부 "기능은 각자 옳은데, 만나는 지점이 틀린" 종류였다.
 
-### 1. [치명] 취소가 월렛을 몰랐다 — 환불 증발
+### 1. [치명] 취소가 월렛을 몰랐다: 환불 증발
 
 라이브로 재현부터 했다. 주문 20,000원을 카드 14,000 + 월렛 6,000으로 결제하고 취소하면:
 
@@ -591,7 +591,7 @@ if (refundableAmount(orderNo) > 0) {   // USE − RESTORE − REFUND
 
 > **멱등 키의 수명은 예약의 수명과 같아야 한다.** "한 번 기록되면 영원히 skip"은 보상 트랜잭션이 있는 세계에서는 틀린 모델이다.
 
-### 3. [높음] 취소로 포인트 파밍 — 적립 회수 부재
+### 3. [높음] 취소로 포인트 파밍: 적립 회수 부재
 
 [포인트 적립](/blog/project/pay/pay-ch10-features-audit)을 만들 때 취소를 잊었다. 100,000원 결제 → 1,000P 적립 → 전액취소(카드 100% 환불) → **적립은 그대로.** 반복하면 무비용 포인트 파밍이다.
 
@@ -600,7 +600,7 @@ if (refundableAmount(orderNo) > 0) {   // USE − RESTORE − REFUND
 - **적립분 상한 캡**: 부분취소가 여러 번 와도 적립보다 많이 회수하지 않게 `min(요청, EARN−EARN_REVERSAL)`.
 - **음수 잔액 허용**: 이미 적립분을 써버렸어도 회수를 관철해야 파밍이 막힌다. 음수분(적립 채무)은 이후 적립으로 상계된다.
 
-### 4. 분쟁 쪽 — 입력을 믿은 죄
+### 4. 분쟁 쪽: 입력을 믿은 죄
 
 분쟁/차지백 모듈은 상태기계와 원장 멱등은 견고했는데, **입력 검증**이 구멍이었다.
 
@@ -609,7 +609,7 @@ if (refundableAmount(orderNo) > 0) {   // USE − RESTORE − REFUND
 - **위험한 기본값**: resolve가 `"WON".equalsIgnoreCase(outcome)`라, 오타든 null이든 **"WON"이 아니면 전부 LOST(비가역 역분개)**였다. WON/LOST 외에는 400으로 거부하게 했다. 라이브로 `"WIN"` 오타가 400, 상태 OPEN 유지 확인.
 - **동시 승패 확정**: `@Version`이 없어 두 어드민이 동시에 WON/LOST를 확정하면 최종 상태는 WON인데 LOST 이벤트가 이미 발행될 수 있었다(승소에 역분개). 낙관적 락을 추가했다.
 
-### 5. 인증 쪽 — BCrypt가 무기가 된다
+### 5. 인증 쪽: BCrypt가 무기가 된다
 
 login/signup에 rate limit이 전혀 없었다. 두 경로는 요청마다 BCrypt(~110ms CPU)를 태우니, 미인증 공격자에게 **비대칭 DoS**가 된다. 공격자는 요청 한 번으로 서버 CPU 110ms를 강제로 태운다. 알려진 이메일에 비밀번호를 무제한 시도하는 크리덴셜 브루트포스도 열려 있었다. 기존 유입제어(`RateLimitFilter`)는 인증된 쓰기 경로만 막고 미인증은 그냥 통과시켰기 때문이다.
 

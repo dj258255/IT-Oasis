@@ -38,7 +38,7 @@ series: "WikiEngine"
 
 ---
 
-## 2. 문제 발생 — 자동완성도 타임아웃
+## 2. 문제 발생: 자동완성도 타임아웃
 
 자동완성 API를 호출하자, 검색과 동일하게 5초 타임아웃이 발생했습니다.
 
@@ -53,7 +53,7 @@ series: "WikiEngine"
 
 ---
 
-## 3. 원인 분석 — 인덱스가 없으면 prefix도 Full Table Scan
+## 3. 원인 분석: 인덱스가 없으면 prefix도 Full Table Scan
 
 ### EXPLAIN 확인
 
@@ -73,12 +73,12 @@ title 컬럼에 인덱스 자체가 없으면 활용할 인덱스가 없으므�
 
 ---
 
-## 4. 인덱스 설계 — 대안 검토
+## 4. 인덱스 설계: 대안 검토
 
 자동완성 쿼리가 하는 일은 세 가지입니다:
-1. **WHERE**: title이 prefix로 시작하는 행을 찾는다
-2. **ORDER BY**: view_count 내림차순으로 정렬해요
-3. **LIMIT**: 상위 10건만 반환해요
+1. **WHERE**: title이 prefix로 시작하는 행을 찾습니다
+2. **ORDER BY**: view_count 내림차순으로 정렬합니다
+3. **LIMIT**: 상위 10건만 반환합니다
 
 이 세 가지를 모두 만족하는 인덱스를 설계해야 합니다.
 
@@ -127,7 +127,7 @@ title          | view_count
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/composite-index-structure.png)
 
 - `title`이 선행 컬럼이므로 `LIKE '페텔%'`에서 range scan이 가능합니다
-- 선행 컬럼에 range 조건이 걸리면 후행 컬럼의 정렬 순서는 **활용되지 않습니다** — 각 title 값 내에서는 view_count DESC로 정렬되어 있지만, 서로 다른 title 간의 view_count는 전역 정렬이 아니므로 filesort가 필요합니다
+- 선행 컬럼에 range 조건이 걸리면 후행 컬럼의 정렬 순서는 **활용되지 않습니다.** 각 title 값 내에서는 view_count DESC로 정렬되어 있지만, 서로 다른 title 간의 view_count는 전역 정렬이 아니므로 filesort가 필요합니다
 - `LIMIT 10`이 걸려있고, range scan으로 줄어든 결과에 대한 filesort이므로 비용은 미미합니다
 
 만약 컬럼 순서가 반대라면 `(view_count DESC, title)`:
@@ -163,7 +163,7 @@ CREATE INDEX idx_title_viewcount ON posts(title, view_count DESC);
 
 ### 응답시간 측정
 
-> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: 1,215만 건.
+> **테스트 환경**: ARM 2코어 / 12GB RAM. Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: 1,215만 건.
 
 ![](/uploads/project/WikiEngine/autocomplete-btree-index/response-time-after.png)
 

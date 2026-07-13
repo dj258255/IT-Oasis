@@ -19,22 +19,22 @@ series: "Orakgarak"
 
 ## 한 줄 요약
 
-Exception 로그가 여러 줄로 분리되어 Grafana에서 스택트레이스 검색이 안 됐어요.
-Log4j2를 JSON 포맷으로 바꾸고 Promtail JSON 파이프라인을 설정해서 해결했어요.
+Exception 로그가 여러 줄로 분리되어 Grafana에서 스택트레이스 검색이 안 됐습니다.
+Log4j2를 JSON 포맷으로 바꾸고 Promtail JSON 파이프라인을 설정해서 해결했습니다.
 
 ---
 
 ## 정상 상태
 
-Spring Boot + Log4j2가 텍스트 포맷(PatternLayout)으로 로그를 stdout에 출력하고, Promtail이 이를 수집해서 Loki로 전송하는 구조였어요.
-일반 로그(단일 줄)는 정상적으로 수집되고 Grafana에서 검색이 가능했어요.
+Spring Boot + Log4j2가 텍스트 포맷(PatternLayout)으로 로그를 stdout에 출력하고, Promtail이 이를 수집해서 Loki로 전송하는 구조였습니다.
+일반 로그(단일 줄)는 정상적으로 수집되고 Grafana에서 검색이 가능했습니다.
 
 ---
 
 ## 증상
 
-Grafana에서 `NullPointerException`을 검색하면 에러 메시지 한 줄만 나오고, 실제 스택트레이스는 보이지 않았어요.
-스택트레이스의 각 줄이 별도의 로그 엔트리로 저장되고 있었거든요.
+Grafana에서 `NullPointerException`을 검색하면 에러 메시지 한 줄만 나오고, 실제 스택트레이스는 보이지 않았습니다.
+스택트레이스의 각 줄이 별도의 로그 엔트리로 저장되고 있었습니다.
 
 예를 들어 이런 로그가 있으면:
 
@@ -45,8 +45,8 @@ java.lang.NullPointerException: null
     at com.example.Controller.handle(Controller.java:20)
 ```
 
-Promtail이 줄 단위로 파싱해서 첫 줄, 둘째 줄, 셋째 줄이 각각 별개의 로그 엔트리가 돼요.
-"NullPointerException"을 검색하면 둘째 줄만 나오는데, 그 로그에 대한 컨텍스트(어떤 서비스에서, 어떤 요청에 의해)가 전혀 없어요.
+Promtail이 줄 단위로 파싱해서 첫 줄, 둘째 줄, 셋째 줄이 각각 별개의 로그 엔트리가 됩니다.
+"NullPointerException"을 검색하면 둘째 줄만 나오는데, 그 로그에 대한 컨텍스트(어떤 서비스에서, 어떤 요청에 의해)가 전혀 없습니다.
 
 ## 환경
 
@@ -58,8 +58,8 @@ Promtail이 줄 단위로 파싱해서 첫 줄, 둘째 줄, 셋째 줄이 각각
 
 ## 원인 분석
 
-Promtail은 기본적으로 `\n`(개행)을 로그 엔트리 경계로 인식해요.
-Java 스택트레이스는 여러 줄로 출력되니, Promtail이 각 줄을 독립된 로그 엔트리로 분리하는 건 당연한 동작이에요.
+Promtail은 기본적으로 `\n`(개행)을 로그 엔트리 경계로 인식합니다.
+Java 스택트레이스는 여러 줄로 출력되니, Promtail이 각 줄을 독립된 로그 엔트리로 분리하는 건 당연한 동작입니다.
 
 ---
 
@@ -71,18 +71,18 @@ Java 스택트레이스는 여러 줄로 출력되니, Promtail이 각 줄을 �
 | **Log4j2 JSON 포맷 전환** | 스택트레이스가 JSON 필드 안에 이스케이프되어 자동으로 한 줄. 구조화 쿼리(level, traceId 등) 가능 | 로그 크기 증가 (JSON 메타데이터), 사람이 읽기 어려움 | **선택** |
 | **Fluentd/Fluent Bit** | 멀티라인 파서 내장 | Promtail을 교체해야 함. Loki와의 호환성 유지가 목표인데 인프라 변경 과잉 | 탈락 |
 
-multiline stage도 검토했지만, 텍스트 로그에서 정규식으로 멀티라인을 묶으면 "타임스탬프로 시작하는 줄"을 엔트리 경계로 잡아야 하는데, 로그 포맷이 바뀔 때마다 정규식을 수정해야 해요. JSON 전환하면 멀티라인 문제가 원천적으로 사라지고, 덤으로 구조화 쿼리(level="ERROR", traceId 기반 추적)가 가능해져서 JSON을 택했어요.
+multiline stage도 검토했지만, 텍스트 로그에서 정규식으로 멀티라인을 묶으면 "타임스탬프로 시작하는 줄"을 엔트리 경계로 잡아야 하는데, 로그 포맷이 바뀔 때마다 정규식을 수정해야 합니다. JSON 전환하면 멀티라인 문제가 원천적으로 사라지고, 덤으로 구조화 쿼리(level="ERROR", traceId 기반 추적)가 가능해져서 JSON을 택했습니다.
 
 ---
 
 ## 해결: Log4j2 JSON 포맷 + Promtail 파이프라인
 
-핵심은 스택트레이스를 한 줄로 만드는 거였어요.
-JSON 포맷으로 바꾸면 스택트레이스가 `thrown` 필드(Log4j2 JsonLayout 기준) 안에 이스케이프된 문자열로 들어가니, 전체 로그 이벤트가 한 줄의 JSON이 되어 Promtail이 하나의 엔트리로 인식해요.
+핵심은 스택트레이스를 한 줄로 만드는 것이었습니다.
+JSON 포맷으로 바꾸면 스택트레이스가 `thrown` 필드(Log4j2 JsonLayout 기준) 안에 이스케이프된 문자열로 들어가니, 전체 로그 이벤트가 한 줄의 JSON이 되어 Promtail이 하나의 엔트리로 인식합니다.
 
 ### 1. Log4j2 JSON Layout 적용
 
-Log4j2의 JsonLayout을 사용해서 로그를 JSON으로 출력하게 변경했어요.
+Log4j2의 JsonLayout을 사용해서 로그를 JSON으로 출력하게 변경했습니다.
 
 ![](/uploads/project/Orakgarak/ts-loki-stacktrace-parsing/log4j2-json-layout.svg)
 
@@ -92,20 +92,20 @@ Log4j2의 JsonLayout을 사용해서 로그를 JSON으로 출력하게 변경했
 
 ### 2. Promtail JSON 파이프라인 설정
 
-Promtail이 JSON을 파싱해서 level, logger 등을 Loki 레이블로 추출하도록 설정했어요.
+Promtail이 JSON을 파싱해서 level, logger 등을 Loki 레이블로 추출하도록 설정했습니다.
 
 ![](/uploads/project/Orakgarak/ts-loki-stacktrace-parsing/promtail-pipeline.svg)
 
 ### 3. 환경별 로그 레벨 분리
 
-운영 환경에서는 Kafka, Redis 내부 로그를 WARN 이상만 남기도록 설정했어요.
-이런 라이브러리 로그가 Loki 용량을 불필요하게 차지하는 걸 방지하기 위해서예요.
+운영 환경에서는 Kafka, Redis 내부 로그를 WARN 이상만 남기도록 설정했습니다.
+이런 라이브러리 로그가 Loki 용량을 불필요하게 차지하는 걸 방지하기 위해서입니다.
 
 ![](/uploads/project/Orakgarak/ts-loki-stacktrace-parsing/log-level-config.svg)
 
 ### 4. 비동기 로깅
 
-로그 출력이 애플리케이션 스레드를 블로킹하지 않도록 AsyncLogger를 적용했어요.
+로그 출력이 애플리케이션 스레드를 블로킹하지 않도록 AsyncLogger를 적용했습니다.
 
 ![](/uploads/project/Orakgarak/ts-loki-stacktrace-parsing/async-logging.svg)
 
@@ -129,7 +129,7 @@ Promtail이 JSON을 파싱해서 level, logger 등을 Loki 레이블로 추출�
 → 전체 스택트레이스 포함, 구조화 쿼리 가능
 ```
 
-traceId 기반 요청 추적도 가능해졌어요:
+traceId 기반 요청 추적도 가능해졌습니다:
 ```
 {job="orakgaraki"} | json | traceId="3fa414eac33375e9"
 ```

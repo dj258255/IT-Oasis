@@ -31,7 +31,7 @@ series: "WikiEngine"
 
 k6 부하 테스트를 처음 실행한 결과, **검색이 아니라 최신 게시글 목록 조회가 최대 병목**이었습니다.
 
-> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
+> **테스트 환경**: ARM 2코어 / 12GB RAM. Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB로 나뉘고, 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap)입니다.
 
 | 시나리오 | smoke (5 VU) | load (100 VU) |
 |----------|-------------|---------------|
@@ -41,12 +41,12 @@ k6 부하 테스트를 처음 실행한 결과, **검색이 아니라 최신 게
 | 상세 조회 (MySQL) | 53ms | 3,345ms |
 | 에러율 | 0% | **32.53%** |
 
-smoke에서 검색(66ms)보다 최신 게시글 목록 조회(2,518ms)가 **38배 느렸습니다.**
-load에서는 최신 게시글 목록 조회의 heavy OFFSET이 CPU를 포화시키면서 **모든 시나리오가 연쇄적으로 무너졌습니다.**
+smoke에서 검색(66ms)보다 최신 게시글 목록 조회(2,518ms)가 38배 느렸습니다.
+load에서는 최신 게시글 목록 조회의 heavy OFFSET이 CPU를 포화시키면서 모든 시나리오가 연쇄적으로 무너졌습니다.
 
 ---
 
-## 1. 문제 발견 — 검색이 아니라 최신 게시글 목록 조회가 병목이었다
+## 1. 문제 발견: 검색이 아니라 최신 게시글 목록 조회가 병목이었다
 
 > 이 문제는 **최신 게시글 목록 조회**(`GET /api/v1.0/posts`)에 해당합니다.
 > Lucene 검색(`GET /api/v1.0/posts/search`)은 역색인에서 직접 결과를 반환하므로 OFFSET 문제가 없습니다.
@@ -63,7 +63,7 @@ LIMIT 20 OFFSET 20000;  -- page 1001
 
 ---
 
-## 2. 원인 분석 — SELECT * + OFFSET의 구조적 비효율
+## 2. 원인 분석: SELECT * + OFFSET의 구조적 비효율
 
 MySQL의 `SELECT *` + OFFSET은 다음 과정을 거칩니다:
 
@@ -180,7 +180,7 @@ EXPLAIN 분석 결과:
 ## 4. 해결 2: 최대 페이지 수 제한
 
 OFFSET의 근본 한계(O(N) 스캔)는 Deferred Join으로 완화되지만, 무제한 페이지는 여전히 위험합니다.
-Google은 ~30페이지, 네이버도 ~30페이지가 한계입니다. **최대 페이지 수를 제한하여 worst-case를 통제합니다.**
+Google은 ~30페이지, 네이버도 ~30페이지가 한계입니다. 최대 페이지 수를 제한하여 worst-case를 통제합니다.
 
 ### 현업 페이지 제한 비교
 
@@ -266,21 +266,21 @@ Spring Data의 `Page<T>` 반환 시 이 countQuery가 **매 요청마다** 자�
 
 ---
 
-### 트레이드오프 분석 — "총 N개" 표시가 정말 필요한가?
+### 트레이드오프 분석: "총 N개" 표시가 정말 필요한가?
 
 COUNT(*)를 제거하려면 "총 N개 결과" 표시를 포기해야 합니다.
 이 트레이드오프를 판단하기 위해, 실제 서비스들이 어떻게 하고 있는지 조사했습니다.
 
 #### 현업 사례 조사
 
-**1) Google — 2024년에 결과 수 표시를 아예 제거**
+**1) Google: 2024년에 결과 수 표시를 아예 제거**
 
 Google은 검색 초기부터 "약 45,700,000개 결과"를 표시해왔습니다.
 하지만 2024년, [검색 결과 페이지에서 이 숫자를 완전히 제거했습니다](https://searchengineland.com/google-hides-search-results-count-under-tools-section-440299).
 
 제거 이유:
-- 이 숫자는 **추정치**였습니다 — 페이지를 넘기면 값이 바뀌는 현상이 일상적이었습니다
-- 사용자에게 유용하지 않다고 판단 — "4,570만 개 결과"를 보고 의사결정하는 사용자는 없습니다
+- 이 숫자는 **추정치**였고, 페이지를 넘기면 값이 바뀌는 현상이 일상적이었습니다
+- 사용자에게 유용하지 않다고 판단했습니다. "4,570만 개 결과"를 보고 의사결정하는 사용자는 없습니다
 - 계산 비용 대비 가치가 없습니다
 
 ```
@@ -293,7 +293,7 @@ After (2024년~):
 
 > 출처: [Google Drops Result Count From Search Results Page — Search Engine Roundtable](https://www.seroundtable.com/google-drops-result-count-from-search-results-page-37348.html)
 
-**2) Slack — offset+page에서 cursor로 전환, total_count 제거**
+**2) Slack: offset+page에서 cursor로 전환, total_count 제거**
 
 Slack은 초기에 `count` + `page` 파라미터로 OFFSET 페이지네이션을 제공했습니다.
 이후 [cursor 기반으로 전환하면서 total_count를 제거했습니다](https://slack.engineering/evolving-api-pagination-at-slack/).
@@ -310,7 +310,7 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 
 > 출처: [Evolving API Pagination at Slack — Slack Engineering](https://slack.engineering/evolving-api-pagination-at-slack/)
 
-**3) 네이버 — 섹션별 분리 + 최대 ~30페이지 제한, 전체 건수 미노출**
+**3) 네이버: 섹션별 분리 + 최대 ~30페이지 제한, 전체 건수 미노출**
 
 네이버는 Google과 달리 통합 검색 결과를 **섹션별로 분리**합니다 (블로그, 뉴스, 카페, 웹문서 등).
 각 섹션은 최초 5건 정도만 보여주고 "더보기"로 해당 섹션 전용 페이지로 이동시킵니다.
@@ -326,12 +326,12 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 > 네이버는 2024년 이후 AI 기반 검색(Cue:)으로 전환을 진행 중이며,
 > 전통적인 10-blue-links 페이지네이션 자체가 줄어드는 추세입니다.
 
-**4) Twitter(X), Instagram — 무한 스크롤, 총 건수 없음**
+**4) Twitter(X), Instagram: 무한 스크롤, 총 건수 없음**
 
 피드 기반 서비스는 총 건수 자체가 의미 없습니다.
 커서 기반 + `hasNext`만으로 동작합니다.
 
-**5) Stack Overflow, Reddit — 페이지 번호 UI + 총 건수 표시**
+**5) Stack Overflow, Reddit: 페이지 번호 UI + 총 건수 표시**
 
 전통적인 게시판 UI를 유지하는 서비스는 여전히 총 건수를 표시합니다.
 다만 이 서비스들은 데이터 규모가 상대적으로 작거나, 캐싱으로 COUNT 비용을 흡수하고 있습니다.
@@ -345,7 +345,7 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 | **총 건수 없음 (hasNext만)** | Google (현재), Slack, Twitter | COUNT 쿼리 0, 최고 성능 | "총 N페이지" 표시 불가 |
 | **섹션별 분리 + 페이지 제한** | 네이버 | 섹션별 최적화, 깊은 페이지 차단 | 통합 건수 없음, 최대 ~30페이지 |
 
-#### UX 관점 — 총 페이지 수가 100 이상이면 무의미합니다
+#### UX 관점: 총 페이지 수가 100 이상이면 무의미합니다
 
 [NN/g(Nielsen Norman Group) 연구](https://www.nngroup.com/articles/item-list-view-all/)와 [UX 디자인 가이드](https://coyleandrew.medium.com/design-better-pagination-a022a3b161e1)에 따르면:
 
@@ -357,7 +357,7 @@ Slack의 현재 API: `next_cursor`가 빈 문자열이면 마지막 페이지. �
 
 ---
 
-### 결론: Google 현재 방식을 따른다 — hasNext만, 총 건수 없음
+### 결론: Google 현재 방식을 따른다 (hasNext만, 총 건수 없음)
 
 | 판단 기준 | 이 프로젝트의 상황 | 결론 |
 |----------|-----------------|------|
@@ -390,7 +390,7 @@ Google 검색도 2024년 이후 이 방식을 사용하고 있습니다.
 현재 `findAllWithDeferredJoin`은 서브쿼리 안에 명시적 `LIMIT/OFFSET`이 있는 nativeQuery입니다.
 이 구조에서 `Slice<T>`를 반환 타입으로 단순 교체하면 문제가 발생할 수 있습니다.
 
-**왜 충돌하는가? — Spring Data의 페이지네이션 내부 동작**
+**왜 충돌하는가? Spring Data의 페이지네이션 내부 동작**
 
 Spring Data JPA가 `Pageable` 파라미터를 처리하는 과정:
 
@@ -435,19 +435,19 @@ Spring Data는 nativeQuery의 내부 구조를 파싱하지 못하므로, 서브
 
 이 패턴은 현업에서 널리 검증된 방식입니다:
 
-- **Slack Engineering** — `limit + 1`개를 조회하여 `has_more`를 판별하는 것이 Slack의 cursor 기반 페이지네이션의 핵심 메커니즘
+- **Slack Engineering**: `limit + 1`개를 조회하여 `has_more`를 판별하는 것이 Slack의 cursor 기반 페이지네이션의 핵심 메커니즘
   ([Evolving API Pagination at Slack](https://slack.engineering/evolving-api-pagination-at-slack/))
-- **Baeldung** — Hibernate `query.setMaxResults(pageSize + 1)` + 수동 `SliceImpl` 구성을 "extra row" 패턴으로 소개
+- **Baeldung**: Hibernate `query.setMaxResults(pageSize + 1)` + 수동 `SliceImpl` 구성을 "extra row" 패턴으로 소개
   ([Hibernate Pagination — Baeldung](https://www.baeldung.com/hibernate-pagination))
-- **Vlad Mihalcea (Hibernate 핵심 기여자)** — nativeQuery에서 `setFirstResult`/`setMaxResults`를 직접 제어할 것을 권장
+- **Vlad Mihalcea (Hibernate 핵심 기여자)**: nativeQuery에서 `setFirstResult`/`setMaxResults`를 직접 제어할 것을 권장
   ([Query Pagination with JPA and Hibernate](https://vladmihalcea.com/query-pagination-jpa-hibernate/))
-- **Spring Data JPA GitHub Gist** — `List<T>` 반환 + `new SliceImpl<>(content, pageable, hasNext)` 패턴이 Specification 기반 쿼리에서도 사용됨
+- **Spring Data JPA GitHub Gist**: `List<T>` 반환 + `new SliceImpl<>(content, pageable, hasNext)` 패턴이 Specification 기반 쿼리에서도 사용됨
   ([GitHub Gist — Limit results without count query](https://gist.github.com/tcollins/0ebd1dfa78028ecdef0b))
 
 Spring Data의 자동 처리에 의존하지 않으므로 nativeQuery 호환성 문제가 없습니다.
 **이 패턴이 Deferred Join + nativeQuery에서 가장 안전하고 확실한 방법입니다.**
 
-**Step 1: Repository — `List<Post>` 반환, LIMIT/OFFSET 명시적 파라미터**
+**Step 1: Repository에서 `List<Post>` 반환, LIMIT/OFFSET 명시적 파라미터**
 
 ```java
 // Before: Page<T> — countQuery 자동 실행 (매 요청 COUNT(*) 풀 스캔)
@@ -475,7 +475,7 @@ Page<Post> findAllWithDeferredJoin(Pageable pageable);
 List<Post> findAllWithDeferredJoin(@Param("limit") int limit, @Param("offset") long offset);
 ```
 
-**Step 2: Service — 수동 Slice 구성 (LIMIT+1 패턴)**
+**Step 2: Service에서 수동 Slice 구성 (LIMIT+1 패턴)**
 
 ```java
 // PostService.java
@@ -503,7 +503,7 @@ public Slice<Post> getPosts(Pageable pageable) {
 > `new SliceImpl<>(content, pageable, hasNext)`로 생성하며,
 > `hasNext()`, `hasPrevious()`, `getContent()`, `getNumber()` 등을 모두 지원합니다.
 
-**Step 3: Controller — 반환 타입 변경**
+**Step 3: Controller 반환 타입 변경**
 
 ```java
 // PostController.java
@@ -573,7 +573,7 @@ public Slice<PostSummaryResponse> getPosts(
 
 ![EXPLAIN ANALYZE SELECT COUNT(*) FROM posts — actual time=2014ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-count-explain.png)
 
-![쿼리 실행 Duration — COUNT(*) 2.038초, SHOW GLOBAL STATUS 0.015초](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-query-duration.png)
+![쿼리 실행 Duration: COUNT(*) 2.038초, SHOW GLOBAL STATUS 0.015초](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-query-duration.png)
 
 ```
 -> Count rows in posts  (actual time=2014..2014 rows=1 loops=1)
@@ -629,7 +629,7 @@ Slice 전환 후 `totalElements`와 `totalPages` 필드가 사라지고, `hasNex
 
 **5. MySQL 상태:**
 
-![SHOW GLOBAL STATUS LIKE 'Slow_queries' — 79,505건](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-slow-queries.png)
+![SHOW GLOBAL STATUS LIKE 'Slow_queries': 79,505건](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-before-slow-queries.png)
 
 ```
 Slow_queries: 79505
@@ -639,7 +639,7 @@ Slow_queries: 79505
 
 **6. Deep OFFSET 실행 비용 (page 1000, Deferred Join 적용 상태):**
 
-![EXPLAIN ANALYZE — Deferred Join + OFFSET 19,980 실행 계획](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-explain-deep-offset-page1000.png)
+![EXPLAIN ANALYZE: Deferred Join + OFFSET 19,980 실행 계획](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-explain-deep-offset-page1000.png)
 
 ```sql
 EXPLAIN ANALYZE
@@ -671,7 +671,7 @@ page 30(OFFSET 580)이면 600행만 스캔하므로 사실상 무시할 수준�
 
 ### 변경 후 API 응답 검증
 
-**1. Slice 응답 확인** — `GET /api/v1.0/posts?page=0&size=20`:
+**1. Slice 응답 확인** (`GET /api/v1.0/posts?page=0&size=20`):
 
 ```json
 {
@@ -692,7 +692,7 @@ page 30(OFFSET 580)이면 600행만 스캔하므로 사실상 무시할 수준�
 
 **`totalElements`, `totalPages` 필드 완전 제거됨.** COUNT(*) 쿼리가 더 이상 실행되지 않습니다.
 
-**2. 페이지 제한 확인** — `GET /api/v1.0/posts?page=11&size=20`:
+**2. 페이지 제한 확인** (`GET /api/v1.0/posts?page=11&size=20`):
 
 ![page=11 요청 시 400 PAGE_LIMIT_EXCEEDED 응답](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-after-page-limit-exceeded.png)
 
@@ -710,11 +710,11 @@ page=31(0-indexed, 즉 32번째 페이지) 요청 시 `MAX_LIST_PAGE = 30`을 �
 
 ---
 
-### k6 smoke (5 VU, 2분) — 변경 전후 비교
+### k6 smoke (5 VU, 2분) 변경 전후 비교
 
 > ARM 2코어, Spring Boot JVM 1GB, MySQL InnoDB BP 2GB
 
-![k6 smoke After 결과 — 에러율 0%, 최신 게시글 목록 17.56ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-after-smoke-result.png)
+![k6 smoke After 결과: 에러율 0%, 최신 게시글 목록 17.56ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-after-smoke-result.png)
 
 | 시나리오 | Before (Deferred Join만) | After (+ 페이지 30 제한 + COUNT 제거) | 개선율 |
 |----------|------------------------|------------------------------------|--------|
@@ -748,11 +748,11 @@ Before(2,518ms)에는 세 가지 병목이 겹쳐 있었습니다:
 | Deferred Join (page 0~30)   | ~50ms               | ~18ms             |
 | **합계**                      | **~2,518ms**        | **~18ms**         |
 
-### k6 load (100 VU, 20분) — 변경 전후 비교
+### k6 load (100 VU, 20분) 변경 전후 비교
 
 > ARM 2코어, Spring Boot JVM 1GB, MySQL InnoDB BP 2GB
 
-![k6 load After 결과 — 42,401 요청, 에러율 0%, 최신 게시글 목록 8.33ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-k6-result.png)
+![k6 load After 결과: 42,401 요청, 에러율 0%, 최신 게시글 목록 8.33ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-k6-result.png)
 
 | 시나리오 | Before | After | 개선율 |
 |----------|------------------------|-------------------|--------|
@@ -772,7 +772,7 @@ Before(2,518ms)에는 세 가지 병목이 겹쳐 있었습니다:
 
 #### 검색 빈도별 성능 비교 (load 테스트)
 
-![Grafana — 검색 빈도별 평균/P95 응답시간](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-k6-detail.png)
+![Grafana: 검색 빈도별 평균/P95 응답시간](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-k6-detail.png)
 
 k6 스크립트에서 검색어를 빈도별로 분류하여 Lucene posting list 길이에 따른 성능 차이를 측정했습니다:
 
@@ -786,9 +786,9 @@ k6 스크립트에서 검색어를 빈도별로 분류하여 Lucene posting list
 posting list가 길수록 더 많은 문서를 스코어링해야 하므로 Lucene의 구조적 특성입니다.
 다만 고빈도에서도 P95 63.72ms로 충분히 빠르며, **부하 테스트 기준 SLA(P95 < 300ms)를 여유있게 충족**합니다.
 
-### Grafana 대시보드 — k6
+### Grafana 대시보드: k6
 
-![k6 Grafana Overview — 평균 30.1ms, P95 119ms, P99 228ms, 에러율 0%](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-k6-overview.png)
+![k6 Grafana Overview: 평균 30.1ms, P95 119ms, P99 228ms, 에러율 0%](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-k6-overview.png)
 
 - 평균 응답시간 30.1ms, P95 119ms, P99 228ms
 - 처리량: 평균 17.6 req/s, 피크 58.8 req/s (100 VU 구간)
@@ -823,13 +823,13 @@ posting list가 길수록 더 많은 문서를 스코어링해야 하므로 Luce
 
 ### Spring Boot 지표
 
-![Spring Boot HTTP — 평균 응답시간, 처리량](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-http.png)
+![Spring Boot HTTP: 평균 응답시간, 처리량](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-http.png)
 
-![Spring Boot JVM — Heap 안정, GC Pause ~1ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-jvm.png)
+![Spring Boot JVM: Heap 안정, GC Pause ~1ms](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-jvm.png)
 
 ![Spring Boot HikariCP — Active 20, Pending 0](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-hikari.png)
 
-![Spring Boot System — App CPU 60%, 스레드 34](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-system.png)
+![Spring Boot System: App CPU 60%, 스레드 34](/uploads/project/WikiEngine/query-refactoring-optimization/phase6-load-grafana-springboot-system.png)
 
 | Spring Boot 지표 | Before | After | 변화 |
 |----------------|--------|-------|------|

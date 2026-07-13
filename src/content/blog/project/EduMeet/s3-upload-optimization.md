@@ -26,11 +26,11 @@ series: "EduMeet"
 
 ### 왜 UUID를 PK로 쓰면 안 되는가?
 
-**결론부터 말하면: "UUID 자체가 문제가 아니라, RDBMS의 Clustered Index 구조와 UUID의 랜덤성이 충돌하기 때문이에요."**
+**문제의 본질은 UUID 그 자체가 아니라, RDBMS의 Clustered Index 구조와 UUID의 랜덤성이 충돌한다는 데 있습니다.**
 
 #### InnoDB의 Clustered Index 구조
 
-MySQL InnoDB는 PK를 기준으로 **Clustered Index**를 생성해요.
+MySQL InnoDB는 PK를 기준으로 **Clustered Index**를 생성합니다.
 
 ```
 Clustered Index = 데이터 자체가 PK 순서로 물리적으로 정렬되어 저장됨
@@ -42,7 +42,7 @@ Clustered Index = 데이터 자체가 PK 순서로 물리적으로 정렬되어 
 
 #### UUID v4의 문제: 랜덤 삽입
 
-UUID v4는 122비트가 완전 랜덤이에요.
+UUID v4는 122비트가 완전 랜덤입니다.
 
 ```
 Auto Increment: 항상 마지막 Leaf 노드에 추가 (순차 삽입)
@@ -69,7 +69,7 @@ UUID v4: 랜덤한 위치의 Leaf 노드에 삽입 (랜덤 삽입)
 
 ### Auto Increment의 문제점
 
-단순히 "숫자가 고갈되면 어떡하지?"보다 실무에서 더 중요한 문제들이 있어요.
+단순히 "숫자가 고갈되면 어떡하지?"보다 실무에서 더 중요한 문제들이 있습니다.
 
 #### 메모리/스토리지 오버헤드
 
@@ -91,7 +91,7 @@ UUID v4: 랜덤한 위치의 Leaf 노드에 삽입 (랜덤 삽입)
 
 ### 대안: Snowflake ID
 
-Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 모두 지원해요.
+Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 모두 지원합니다.
 
 ![](/uploads/project/EduMeet/s3-upload-optimization/snowflake-id.png)
 
@@ -102,7 +102,7 @@ Twitter가 만든 **Snowflake ID**는 64비트로 순차성과 분산 환경을 
 
 #### Snowflake ID의 비즈니스적 이점
 
-ID 자체가 정보를 담고 있다는 점이 핵심이에요.
+ID 자체가 정보를 담고 있다는 점이 핵심입니다.
 
 ```
 Snowflake ID: 6920399584824147968
@@ -138,14 +138,14 @@ Snowflake ID: 6920399584824147968
 
 ## 2. S3 업로드 방식 비교
 
-Spring Boot에서 S3에 파일을 업로드하는 세 가지 방법을 검토했어요.
+Spring Boot에서 S3에 파일을 업로드하는 세 가지 방법을 검토했습니다.
 
 ### 2.1 Stream 업로드
 
 ![Stream 업로드 아키텍처](/uploads/project/EduMeet/s3-upload-optimization/stream-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-HttpServletRequest의 InputStream을 이용해 S3에 직접 전송하는 방식이에요. 파일 바이너리를 서버에 저장하지 않아요.
+HttpServletRequest의 InputStream을 이용해 S3에 직접 전송하는 방식입니다. 파일 바이너리를 서버에 저장하지 않습니다.
 
 **단점:** 대용량 파일 시 속도 문제 (937MB → 약 16분), 이미지 전처리 불가, 진행 상태 제공 불가
 
@@ -154,7 +154,7 @@ HttpServletRequest의 InputStream을 이용해 S3에 직접 전송하는 방식�
 ![MultipartFile 업로드 아키텍처](/uploads/project/EduMeet/s3-upload-optimization/multipartfile-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tomcat)가 임시 디렉터리에 파일을 저장해요.
+Spring의 MultipartFile 인터페이스를 활용하는 방식입니다. WAS(Tomcat)가 임시 디렉터리에 파일을 저장합니다.
 
 ![MultipartFile 동작 원리](/uploads/project/EduMeet/s3-upload-optimization/multipartfile-upload-02.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
@@ -167,7 +167,7 @@ Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tom
 ![AWS Multipart 업로드](/uploads/project/EduMeet/s3-upload-optimization/aws-multipart-upload.png)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
 
-파일을 작은 part로 나누어 개별 업로드하는 방식이에요. Spring Boot를 거치지 않고 S3에 직접 업로드하죠.
+파일을 작은 part로 나누어 개별 업로드하는 방식입니다. Spring Boot를 거치지 않고 S3에 직접 업로드합니다.
 
 ![AWS Multipart 진행 상태](/uploads/project/EduMeet/s3-upload-optimization/aws-multipart-upload-02.gif)
 *이미지 출처: [우아한형제들 기술블로그](https://techblog.woowahan.com/11392/)*
@@ -195,7 +195,7 @@ Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tom
 클라이언트 → 서버 업로드 → 이미지 처리 → S3 업로드
 ```
 
-서버에서 일관된 이미지 처리가 가능하고, 클라이언트 구현이 단순해요.
+서버에서 일관된 이미지 처리가 가능하고, 클라이언트 구현이 단순합니다.
 
 ### Presigned URL 방식
 
@@ -203,11 +203,11 @@ Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tom
 클라이언트 → Presigned URL 요청 → S3 직접 업로드
 ```
 
-서버 부하가 최소화되지만, 클라이언트에서 이미지 처리가 필요해요.
+서버 부하가 최소화되지만, 클라이언트에서 이미지 처리가 필요합니다.
 
 ### 선택 이유
 
-세 가지 방식을 검토한 뒤 **MultipartFile 업로드**를 선택했어요.
+세 가지 방식을 검토한 뒤 **MultipartFile 업로드**를 선택했습니다.
 
 | 후보 | 탈락/선택 이유 |
 |------|--------------|
@@ -215,16 +215,16 @@ Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tom
 | Presigned URL | 서버 부하는 줄지만, 리사이징을 클라이언트에서 해야 함. 프론트엔드 3명이 이미지 처리 라이브러리까지 담당하면 6주 일정에 병목이 되고, 리사이징 품질이 브라우저/디바이스마다 달라질 수 있음 |
 | **MultipartFile** | 서버에서 일관된 리사이징 처리 가능. 구현 복잡도가 낮고 6주 일정에 적합. 동시 업로드가 몰릴 때 스레드 고갈 위험이 있지만, 6주 프로젝트의 트래픽 규모에서는 문제 없다고 판단 |
 
-단, 운영 환경에서 트래픽이 늘어나면 Presigned URL 방식으로 전환해야 해요. MultipartFile은 서버가 파일을 받아서 다시 S3로 보내는 구조라 **네트워크 비용이 2배** (클라이언트→서버, 서버→S3) 발생하고, 서버 CPU를 리사이징에 사용하기 때문이에요.
+단, 운영 환경에서 트래픽이 늘어나면 Presigned URL 방식으로 전환해야 합니다. MultipartFile은 서버가 파일을 받아서 다시 S3로 보내는 구조라 네트워크 비용이 2배(클라이언트→서버, 서버→S3)로 발생하고, 서버 CPU를 리사이징에 사용하기 때문입니다.
 
 ### CDN을 안 쓴 이유
 
-이미지 서빙에는 CloudFront 같은 CDN이 더 적합한 경우가 많아요. 하지만 이 프로젝트에서는:
+이미지 서빙에는 CloudFront 같은 CDN이 더 적합한 경우가 많습니다. 하지만 이 프로젝트에서는 사정이 달랐습니다.
 - S3에서 직접 서빙해도 6주 프로젝트의 트래픽으로는 지연이 체감되지 않음
 - CloudFront 설정(배포, 캐시 무효화, Origin Access Control)까지 구성하면 일정 부담
 - 리사이징으로 이미지 용량을 91.8% 줄였기 때문에 전송 속도 문제가 크지 않음
 
-운영 환경이라면 CloudFront를 앞단에 두는 것이 맞아요. S3 직접 서빙은 요청당 GET 비용($0.0004/1000건)이 발생하지만, CloudFront를 쓰면 엣지 캐싱으로 Origin 요청이 줄어들어 비용과 속도 모두 개선돼요.
+운영 환경이라면 CloudFront를 앞단에 두는 것이 맞습니다. S3 직접 서빙은 요청당 GET 비용($0.0004/1000건)이 발생하지만, CloudFront를 쓰면 엣지 캐싱으로 Origin 요청이 줄어들어 비용과 속도 모두 개선됩니다.
 
 ---
 
@@ -232,7 +232,7 @@ Spring의 MultipartFile 인터페이스를 활용하는 방식이에요. WAS(Tom
 
 ### 문제
 
-OS마다 파일 경로가 달라요 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`, macOS: `/var/folders/...`).
+OS마다 파일 경로가 다릅니다 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`, macOS: `/var/folders/...`).
 
 ### 해결: 환경변수 + 기본값
 
@@ -240,7 +240,7 @@ OS마다 파일 경로가 달라요 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`
 
 ![](/uploads/project/EduMeet/s3-upload-optimization/solution-02.svg)
 
-`EDUMEET_UPLOAD_PATH` 환경변수가 있으면 해당 값을, 없으면 `${java.io.tmpdir}/edumeet-upload` 기본값을 사용해요.
+`EDUMEET_UPLOAD_PATH` 환경변수가 있으면 해당 값을, 없으면 `${java.io.tmpdir}/edumeet-upload` 기본값을 사용합니다.
 
 ---
 
@@ -248,14 +248,14 @@ OS마다 파일 경로가 달라요 (Windows: `C:\Users\...\Temp`, Linux: `/tmp`
 
 ![리사이징 결과](/uploads/project/EduMeet/s3-upload-optimization/result-thumbnail-resizing-effect.png)
 
-위 스크린샷은 drawio 다이어그램 이미지(85.5KB → 7.1KB, 91.7% 감소)의 업로드 결과예요. `s_` 접두사가 썸네일 파일이에요. 아래 수치는 실제 서비스 대상인 스마트폰 촬영 사진 기준으로 별도 측정한 결과예요.
+위 스크린샷은 drawio 다이어그램 이미지(85.5KB → 7.1KB, 91.7% 감소)의 업로드 결과입니다. `s_` 접두사가 썸네일 파일입니다. 아래 수치는 실제 서비스 대상인 스마트폰 촬영 사진 기준으로 별도 측정한 결과입니다.
 
-리사이징에는 **Thumbnailator** 라이브러리를 사용했어요. Java의 기본 `ImageIO`는 리사이징 시 품질 조절이 번거롭고, 코드가 길어지거든요. Thumbnailator는 `Thumbnails.of(file).size(800, 600).toFile(output)` 한 줄로 처리할 수 있어요.
+리사이징에는 **Thumbnailator** 라이브러리를 사용했습니다. Java의 기본 `ImageIO`는 리사이징 시 품질 조절이 번거롭고 코드가 길어집니다. Thumbnailator는 `Thumbnails.of(file).size(800, 600).toFile(output)` 한 줄로 처리할 수 있습니다.
 
 **800×600 크기를 선택한 근거:**
-- 게시판 목록에서 썸네일은 카드 UI의 200×150px 영역에 표시돼요. 실제 표시 크기의 4배(Retina 대응)인 800×600이면 어떤 디바이스에서도 깨지지 않아요
-- 1024×768로 테스트했을 때 용량이 약 680KB(86.4% 감소)였고, 800×600은 410KB(91.8% 감소)였어요. 시각적 품질 차이는 카드 UI에서 구분 불가능했기에 더 작은 크기를 선택했어요
-- 상세 페이지에서는 원본을 별도로 제공하므로, 썸네일 품질이 리스트 외 용도에 영향을 주지 않아요
+- 게시판 목록에서 썸네일은 카드 UI의 200×150px 영역에 표시됩니다. 실제 표시 크기의 4배(Retina 대응)인 800×600이면 어떤 디바이스에서도 깨지지 않습니다
+- 1024×768로 테스트했을 때 용량이 약 680KB(86.4% 감소)였고, 800×600은 410KB(91.8% 감소)였습니다. 시각적 품질 차이는 카드 UI에서 구분할 수 없었기에 더 작은 크기를 선택했습니다
+- 상세 페이지에서는 원본을 별도로 제공하므로, 썸네일 품질이 리스트 외 용도에 영향을 주지 않습니다
 
 테스트에 사용한 이미지(스마트폰 촬영 사진 기준):
 

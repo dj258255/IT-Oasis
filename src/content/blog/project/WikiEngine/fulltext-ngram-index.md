@@ -42,7 +42,7 @@ series: "WikiEngine"
 
 ---
 
-## 2. 문제 상태 — 검색 100% 타임아웃
+## 2. 문제 상태: 검색 100% 타임아웃
 
 인덱스 적용 후에도 검색 쿼리는 변함없이 타임아웃이 발생합니다.
 
@@ -70,14 +70,14 @@ series: "WikiEngine"
 
 ---
 
-## 3. 대안 검토 — 왜 FULLTEXT ngram인가
+## 3. 대안 검토: 왜 FULLTEXT ngram인가
 
 ### B-Tree 인덱스의 한계
 
 `LIKE '%keyword%'`는 선행 와일드카드입니다.
 B-Tree 인덱스는 값의 **앞부분부터 정렬**되어 있으므로, 키워드가 문자열 어디에 위치하는지 알 수 없어 인덱스를 사용할 수 없습니다.
 
-![B-Tree 인덱스의 한계 — 선행 와일드카드 사용 불가](/uploads/project/WikiEngine/fulltext-ngram-index/btree-index-limitation.svg)
+![B-Tree 인덱스의 한계: 선행 와일드카드 사용 불가](/uploads/project/WikiEngine/fulltext-ngram-index/btree-index-limitation.svg)
 
 - `LIKE '페텔%'` -> "페" 위치부터 range scan 가능
 - `LIKE '%페텔%'` -> "페텔"이 문자열 어디에 있는지 알 수 없음 -> 전체 스캔
@@ -89,19 +89,19 @@ B-Tree 인덱스는 값의 **앞부분부터 정렬**되어 있으므로, 키워
 그렇다면 "특정 키워드가 포함된 문서를 빠르게 찾는" 자료구조는 무엇일까?
 이 질문에서 출발해 정보 검색(Information Retrieval) 관점에서 어떤 자료구조가 이 문제에 맞는지 다시 검토했습니다.
 
-### 역색인 — IR 교재에서 찾은 해답
+### 역색인: IR 교재에서 찾은 해답
 
 *Introduction to Information Retrieval* 3장(토큰과 텀)과 [정보검색의 이론과 실제] 2장(역색인)을 참고해, 텍스트 검색의 핵심 자료구조가 **역색인(inverted index)**이라는 점을 확인했습니다.
 
 역색인은 **사전(Dictionary)** 과 **포스팅 목록(Posting List)** 으로 구성됩니다. 사전은 문서 모음에 포함된 모든 텀의 목록이고, 각 텀은 해당 텀이 출현한 문서를 가리키는 포스팅 목록으로 연결됩니다.
 
-![역색인 구조 — 사전 + 포스팅 목록](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-concept.svg)
+![역색인 구조: 사전 + 포스팅 목록](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-concept.svg)
 
 `LIKE '%keyword%'`가 느린 이유는 역색인이 없기 때문입니다.
 역색인 없이는 키워드가 어떤 문서에 포함되어 있는지 알 수 없어 **모든 행을 읽어야** 합니다.
 역색인이 있으면 키워드를 사전에서 찾고, 포스팅 목록에서 문서 ID를 바로 반환할 수 있습니다.
 
-![역색인 Before/After — Full Scan vs O(1) 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-before-after.svg)
+![역색인 Before/After: Full Scan vs O(1) 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-before-after.svg)
 
 이것이 KMP, Trie, Bloom Filter 같은 문자열 알고리즘과의 근본적 차이입니다.
 KMP는 **행 1개 안에서 비교 속도를 O(n*m) -> O(n+m)으로** 줄이는 것이고, 역색인은 **읽어야 할 행 수 자체를 줄이는 것**입니다.
@@ -132,7 +132,7 @@ Elasticsearch도 내부적으로 Lucene의 역색인을 사용합니다.
 
 ---
 
-## 4. 해결 — FULLTEXT ngram 인덱스
+## 4. 해결: FULLTEXT ngram 인덱스
 
 ### ngram parser란
 
@@ -181,11 +181,11 @@ BOOLEAN MODE를 선택한 이유는 두 가지입니다:
 
 FULLTEXT 인덱스를 생성하기 전에, 현재 테이블의 디스크 크기와 content 컬럼의 통계를 먼저 측정했습니다.
 
-테이블 디스크 크기 — 데이터 122GB, 인덱스 0MB:
+테이블 디스크 크기, 데이터 122GB, 인덱스 0MB:
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/table-disk-size.png)
 
-content 컬럼 통계 — 14,768,700행, 평균 6,586자, 최대 2,521,624자 (쿼리 소요 439초):
+content 컬럼 통계, 14,768,700행, 평균 6,586자, 최대 2,521,624자 (쿼리 소요 439초):
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/content-stats.png)
 
@@ -227,7 +227,7 @@ command: >
 CREATE FULLTEXT INDEX ft_title_content ON posts(title, content) WITH PARSER ngram;
 ```
 
-### posts 테이블 인덱스 생성 시도 — 디스크 초과
+### posts 테이블 인덱스 생성 시도: 디스크 초과
 
 1,477만 건 posts 테이블에 FULLTEXT ngram 인덱스를 생성했으나, 85분 경과 시점에 디스크가 가득 찼습니다.
 
@@ -325,8 +325,8 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 | 구분 | type | key | rows | Extra |
 |------|------|-----|------|-------|
-| Before — `LIKE '%페텔%'` | ALL | NULL | 577,017 | Using where; Using filesort |
-| After — `MATCH AGAINST` | fulltext | ft_title_content | 1 | Using where; Ft_hints: sorted, limit = 20 |
+| Before: `LIKE '%페텔%'` | ALL | NULL | 577,017 | Using where; Using filesort |
+| After: `MATCH AGAINST` | fulltext | ft_title_content | 1 | Using where; Ft_hints: sorted, limit = 20 |
 
 - **type**: ALL(전체 행 스캔) → fulltext(역색인 탐색). 스캔 방식 자체가 바뀌었습니다.
 - **rows**: 577,017 → 1. 옵티마이저가 역색인에서 바로 결과를 가져오므로 추정 스캔 행이 1입니다.
@@ -334,14 +334,14 @@ Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 ### 응답시간 측정
 
-> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: tmp_namu_posts (57만 건, 12GB).
+> **테스트 환경**: ARM 2코어 / 12GB RAM. Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB). 데이터: tmp_namu_posts (57만 건, 12GB).
 
-Before — `LIKE '%페텔%'`: 12.766초, 6건 반환 (title만 검색):
+Before `LIKE '%페텔%'`: 12.766초, 6건 반환 (title만 검색):
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/like-response-time.png)
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/like-results.png)
 
-After — `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`: 0.006초, 20건 반환 (title + content 검색):
+After `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`: 0.006초, 20건 반환 (title + content 검색):
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/fulltext-response-time.png)
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/fulltext-results.png)
@@ -352,10 +352,10 @@ After — `MATCH(title, content) AGAINST('페텔' IN BOOLEAN MODE)`: 0.006초, 2
 | 검색 결과 수         | 6건 (title만)     | 20건 (title + content) | 본문 검색 복원                     |
 | 스캔 방식           | Full Table Scan | 역색인 탐색                | EXPLAIN type: ALL → fulltext |
 | 정렬 방식           | filesort (디스크)  | FULLTEXT 엔진 내부 정렬     | 별도 정렬 비용 제거                  |
-| 테이블 크기          | —               | 12 GB (57만 건)         | tmp_namu_posts 데이터           |
+| 테이블 크기          | 측정 안 함          | 12 GB (57만 건)         | tmp_namu_posts 데이터           |
 | FULLTEXT 인덱스 크기 | 없음              | 6.7 GB                | 데이터 대비 약 56%                 |
 
-### 결과 수 차이 — 6건 vs 20건
+### 결과 수 차이: 6건 vs 20건
 
 Before(6건)와 After(20건)의 결과 수 차이는 **검색 범위**가 다르기 때문입니다.
 
@@ -379,13 +379,13 @@ ngram FULLTEXT는 `LIKE '%keyword%'` 대비 극적인 성능 개선을 제공하
 
 2-gram 토큰화는 단어 경계 정보를 보존하지 않습니다.
 
-![ngram False Positive — 단어 경계 미보존](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-false-positive.svg)
+![ngram False Positive: 단어 경계 미보존](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-false-positive.svg)
 
 ### 6-2. 형태소 분석 미지원
 
 ngram은 글자 단위로 잘라낼 뿐 형태소 분석을 수행하지 않습니다.
 
-![형태소 분석 미지원 — 토큰 불일치](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-morpheme-mismatch.svg)
+![형태소 분석 미지원: 토큰 불일치](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-morpheme-mismatch.svg)
 
 ### 6-3. 고빈도 토큰 성능 저하 ([MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880))
 
@@ -399,10 +399,10 @@ MySQL 자체 튜닝 가능성을 검토한 결과:
 
 | 방법 | 효과 | 판단 |
 |------|------|------|
-| `innodb_ft_result_cache_limit` 증가 | X — 메모리 상한만 조절, 탐색 알고리즘 그대로 | 효과 없음 |
+| `innodb_ft_result_cache_limit` 증가 | X. 메모리 상한만 조절, 탐색 알고리즘 그대로 | 효과 없음 |
 | `ngram_token_size` 3으로 증가 | 고빈도 2-gram 문제 감소 | **"한국", "사과", "경제" 등 2글자 검색 불가** → 한국어에서 치명적 |
 | 커스텀 스톱워드 ("대한" 등 제거) | 해당 토큰 타임아웃 해소 | **해당 단어 포함 검색 자체 불가능** → 위키 검색에서 허용 불가 |
-| WHERE 조건 추가로 범위 축소 | X — MySQL은 FULLTEXT를 먼저 전체 스캔 후 WHERE 적용 | FULLTEXT 단계 병목 그대로 |
+| WHERE 조건 추가로 범위 축소 | X. MySQL은 FULLTEXT를 먼저 전체 스캔 후 WHERE 적용 | FULLTEXT 단계 병목 그대로 |
 
 Lucene의 Nori 형태소 분석기는 "대한민국"을 형태소 단위로 분석하므로, ngram의 고빈도 2-gram 토큰 문제가 원천적으로 발생하지 않습니다.
 
@@ -451,11 +451,11 @@ MySQL FULLTEXT는 `Ft_hints: sorted, limit = N`으로 내부적으로 상위 N�
 
 **결론:** ngram 환경에서 고빈도 토큰 타임아웃은 **구조적으로 해결 불가능**합니다. 복합 검색어 강제, 불용어 등록 등은 모두 검색 기능을 제한하는 트레이드오프를 수반합니다. 근본 원인은 ngram이 글자를 기계적으로 2개씩 잘라 의미와 무관한 토큰을 대량 생성하는 데 있으며, 이는 형태소 분석 기반 토큰화로만 해결할 수 있습니다.
 
-#### InnoDB FULLTEXT 내부 아키텍처 — 왜 고빈도 ngram은 구조적으로 해결 불가능한가
+#### InnoDB FULLTEXT 내부 아키텍처: 왜 고빈도 ngram은 구조적으로 해결 불가능한가
 
 위에서 "vector 순차 탐색"이 병목이라고 언급했습니다. 이 절에서는 InnoDB FULLTEXT 엔진이 내부적으로 어떤 자료구조와 알고리즘을 사용하며, 왜 고빈도 토큰에서 성능이 폭발하는지를 소스 코드(`fts0que.cc`) 수준에서 분석합니다.
 
-**1) 저장 구조 — 6개 보조 테이블(Auxiliary Tables)**
+**1) 저장 구조: 6개 보조 테이블(Auxiliary Tables)**
 
 FULLTEXT 인덱스를 생성하면 MySQL은 [6개의 보조 테이블](https://dev.mysql.com/doc/refman/8.4/en/innodb-fulltext-index.html)을 자동 생성합니다.
 
@@ -469,13 +469,13 @@ FULLTEXT 인덱스를 생성하면 MySQL은 [6개의 보조 테이블](https://d
 
 또한 InnoDB는 빈번한 소규모 INSERT 시 보조 테이블의 동시 접근 경합을 줄이기 위해 **FTS 캐시**를 유지합니다. 최근 삽입된 행의 토큰을 메모리에 임시 저장한 후, 캐시가 차면 보조 테이블로 일괄 flush합니다. 검색 시에는 보조 테이블(디스크)과 캐시(메모리) 결과를 병합합니다.
 
-**2) 쿼리 처리 파이프라인 — `fts0que.cc`**
+**2) 쿼리 처리 파이프라인: `fts0que.cc`**
 
 [`fts0que.cc`](https://dev.mysql.com/doc/dev/mysql-server/latest/fts0que_8cc.html)는 InnoDB FULLTEXT 검색의 핵심 쿼리 처리 엔진입니다. `MATCH(title, content) AGAINST('대한민국' IN BOOLEAN MODE)` 실행 시 내부 처리 흐름:
 
 ![InnoDB FTS 쿼리 처리 파이프라인](/uploads/project/WikiEngine/fulltext-ngram-index/fts-query-pipeline.svg)
 
-**3) 교집합 단계 (3단계) — RB-tree, 여기는 OK**
+**3) 교집합 단계 (3단계): RB-tree, 여기는 OK**
 
 `fts_query_intersect()`는 RB-tree(Red-Black Tree)를 사용합니다.
 
@@ -483,7 +483,7 @@ FULLTEXT 인덱스를 생성하면 MySQL은 [6개의 보조 테이블](https://d
 
 RB-tree는 O(log n) 탐색이므로 이 단계 자체는 치명적이지 않습니다.
 
-**4) 구절 검증 단계 (4단계) — `ib_vector_t` 순차 탐색, 여기가 병목**
+**4) 구절 검증 단계 (4단계): `ib_vector_t` 순차 탐색, 여기가 병목**
 
 ngram 검색에서 "대한민국"은 3개 토큰의 **구절(phrase) 검색**입니다. 교집합으로 후보를 줄인 후, 각 후보 문서에서 **토큰이 연속 위치에 존재하는지** 검증해야 합니다.
 
@@ -519,23 +519,23 @@ for (i = phrase->match->start; i < ib_vector_size(positions); i++) {
 
 **문제의 본질:**
 
-![구절 검증 비용 — 순차 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/phrase-verify-cost.svg)
+![구절 검증 비용: 순차 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/phrase-verify-cost.svg)
 
 **5) 고빈도 토큰에서 폭발하는 이유**
 
 단일 토큰 검색("대한")의 경우, 교집합 없이 196,593건 전부가 후보가 됩니다.
 
-![고빈도 vs 희귀 토큰 — 성능 차이](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
+![고빈도 vs 희귀 토큰: 성능 차이](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
 
-희귀 토큰 "페텔" 검색 결과 — 20건, 0.023초:
+희귀 토큰 "페텔" 검색 결과는 20건, 0.023초:
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/search-petel-results.png)
 
-"페텔" 매칭 문서 수 — 406건:
+"페텔" 매칭 문서 수는 406건:
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/count-petel-406.png)
 
-고빈도 토큰 "한국" 매칭 문서 수 — 196,593건:
+고빈도 토큰 "한국" 매칭 문서 수는 196,593건:
 
 ![](/uploads/project/WikiEngine/fulltext-ngram-index/count-hanguk-196k.png)
 
@@ -547,7 +547,7 @@ for (i = phrase->match->start; i < ib_vector_size(positions); i++) {
 
 **시간이 매칭 문서 수에 선형 비례한다.** 매칭 문서가 500배 늘면 시간도 ~500배 느려집니다.
 
-**6) Bug #85880 리포터가 제안한 해결책 — Oracle이 거부**
+**6) Bug #85880 리포터가 제안한 해결책: Oracle이 거부**
 
 [Bug #85880](https://bugs.mysql.com/bug.php?id=85880) 리포터는 한국어 검색에서 "중국가을"(토큰: "중국" 22만 건, "국가" 5.9만 건, "가을" 4.5만 건)이 7.55초 걸리는 문제를 재현하고, 두 가지 패치를 제안했습니다:
 
@@ -687,7 +687,7 @@ Autocomplete works, but search remains unusable. Cannot find documents by keywor
 
 `LIKE '%keyword%'` uses a leading wildcard. B-Tree indexes are sorted **from the beginning of values**, so they cannot determine where a keyword is located within a string and thus cannot use the index.
 
-![B-Tree 인덱스의 한계 — 선행 와일드카드 사용 불가](/uploads/project/WikiEngine/fulltext-ngram-index/btree-index-limitation.svg)
+![B-Tree 인덱스의 한계: 선행 와일드카드 사용 불가](/uploads/project/WikiEngine/fulltext-ngram-index/btree-index-limitation.svg)
 
 - `LIKE '페텔%'` -> Can range scan from the "페" position
 - `LIKE '%페텔%'` -> Cannot determine where "페텔" is in the string -> full scan
@@ -702,11 +702,11 @@ From *Introduction to Information Retrieval* Chapter 3 (Tokens and Terms) and [T
 
 An inverted index consists of a **Dictionary** and **Posting Lists**. The dictionary is a list of all terms in the document collection, and each term links to a posting list pointing to documents where that term appears.
 
-![역색인 구조 — 사전 + 포스팅 목록](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-concept.svg)
+![역색인 구조: 사전 + 포스팅 목록](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-concept.svg)
 
 The reason `LIKE '%keyword%'` is slow is the absence of an inverted index. Without one, there is no way to know which documents contain the keyword, so **every row must be read**. With an inverted index, you look up the keyword in the dictionary and immediately return document IDs from the posting list.
 
-![역색인 Before/After — Full Scan vs O(1) 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-before-after.svg)
+![역색인 Before/After: Full Scan vs O(1) 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/inverted-index-before-after.svg)
 
 This is the fundamental difference from string algorithms like KMP, Trie, or Bloom Filter. KMP **reduces comparison speed within a single row from O(n*m) to O(n+m)**, while inverted indexes **reduce the number of rows that need to be read**. The bottleneck is not string comparison but disk I/O reading 14.77 million rows, so an inverted index is needed.
 
@@ -964,13 +964,13 @@ ngram FULLTEXT provides dramatic performance improvement over `LIKE '%keyword%'`
 
 2-gram tokenization does not preserve word boundary information.
 
-![ngram False Positive — 단어 경계 미보존](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-false-positive.svg)
+![ngram False Positive: 단어 경계 미보존](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-false-positive.svg)
 
 ### 6-2. No Morphological Analysis
 
 ngram simply splits by character count without performing morphological analysis.
 
-![형태소 분석 미지원 — 토큰 불일치](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-morpheme-mismatch.svg)
+![형태소 분석 미지원: 토큰 불일치](/uploads/project/WikiEngine/fulltext-ngram-index/ngram-morpheme-mismatch.svg)
 
 ### 6-3. High-Frequency Token Performance Degradation ([MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880))
 
@@ -1102,13 +1102,13 @@ for (i = phrase->match->start; i < ib_vector_size(positions); i++) {
 
 **The Core Problem:**
 
-![구절 검증 비용 — 순차 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/phrase-verify-cost.svg)
+![구절 검증 비용: 순차 탐색](/uploads/project/WikiEngine/fulltext-ngram-index/phrase-verify-cost.svg)
 
 **5) Why It Explodes with High-Frequency Tokens**
 
 For single-token search ("대한"), all 196,593 documents become candidates without intersection.
 
-![고빈도 vs 희귀 토큰 — 성능 차이](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
+![고빈도 vs 희귀 토큰: 성능 차이](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
 
 Rare token "페텔" search results — 20 results, 0.023s:
 

@@ -18,11 +18,11 @@ coverImage: "/uploads/project/Tymee/code-quality-management/spotless-config.svg"
 series: "Tymee"
 ---
 
-> 일관성 있는 코드를 유지하고 일정 수준 이상의 품질을 보장하기 위해 도입했어요.
+> 일관성 있는 코드를 유지하고 일정 수준 이상의 품질을 보장하기 위해 도입했습니다.
 
 ## 도구 선택
 
-SonarQube(올인원)와 개별 도구 조합을 비교했어요. SonarQube는 대시보드와 이력 관리가 편하지만, SonarCloud는 private 레포에서 유료이고 SonarQube 셀프호스팅은 4GB+ RAM이 필요합니다. 1인 개발에 private 레포로 운영하는 상황에서 무료로 쓸 수 있는 개별 도구 조합(Spotless + Checkstyle + SpotBugs + JaCoCo + Codecov)을 선택했어요.
+SonarQube(올인원)와 개별 도구 조합을 비교했습니다. SonarQube는 대시보드와 이력 관리가 편하지만, SonarCloud는 private 레포에서 유료이고 SonarQube 셀프호스팅은 4GB+ RAM이 필요합니다. 1인 개발에 private 레포로 운영하는 상황에서 무료로 쓸 수 있는 개별 도구 조합(Spotless + Checkstyle + SpotBugs + JaCoCo + Codecov)을 선택했습니다.
 
 ---
 
@@ -32,7 +32,7 @@ SonarQube(올인원)와 개별 도구 조합을 비교했어요. SonarQube는 �
 
 **역할:** 코드 스타일 자동 통일
 
-IDE 포맷터나 EditorConfig만으로는 Java의 import 순서, 중괄호 위치 같은 언어별 규칙까지 통일하기 어려워요. Spotless는 Google Java Format을 Gradle 빌드에 통합해서 CI에서 자동 검증하고, 로컬에서 `./gradlew spotlessApply` 한 번으로 자동 수정됩니다.
+IDE 포맷터나 EditorConfig만으로는 Java의 import 순서, 중괄호 위치 같은 언어별 규칙까지 통일하기 어렵습니다. Spotless는 Google Java Format을 Gradle 빌드에 통합해서 CI에서 자동 검증하고, 로컬에서 `./gradlew spotlessApply` 한 번으로 자동 수정됩니다.
 
 **동작 방식:**
 ```bash
@@ -53,7 +53,7 @@ IDE 포맷터나 EditorConfig만으로는 Java의 import 순서, 중괄호 위�
 
 **역할:** 코딩 규칙 준수 검사
 
-SpotBugs는 바이트코드 분석으로 **버그 패턴**을 찾고, Checkstyle은 소스코드에서 **코딩 컨벤션**을 검사해요. 역할이 다르므로 둘 다 사용합니다. PMD(코드 복잡도, 중복 코드 탐지)는 SpotBugs가 일부 역할을 대체하므로 제외했어요. Google Java Style Guide 기반 규칙을 적용하고, suppressions 파일로 특정 클래스를 예외 처리할 수 있습니다.
+SpotBugs는 바이트코드 분석으로 **버그 패턴**을 찾고, Checkstyle은 소스코드에서 **코딩 컨벤션**을 검사합니다. 역할이 다르므로 둘 다 사용합니다. PMD(코드 복잡도, 중복 코드 탐지)는 SpotBugs가 일부 역할을 대체하므로 제외했습니다. Google Java Style Guide 기반 규칙을 적용하고, suppressions 파일로 특정 클래스를 예외 처리할 수 있습니다.
 
 **주요 검사 항목:**
 - 네이밍 규칙 (camelCase, CONSTANT_CASE)
@@ -70,15 +70,15 @@ SpotBugs는 바이트코드 분석으로 **버그 패턴**을 찾고, Checkstyle
 
 #### 네임스페이스 충돌
 
-`java.util.Date`와 `java.sql.Date`를 동시에 star import하면 `Date` 클래스가 어느 패키지인지 모호해져요. 컴파일러가 에러를 내거나, 의도하지 않은 클래스가 사용될 수 있습니다.
+`java.util.Date`와 `java.sql.Date`를 동시에 star import하면 `Date` 클래스가 어느 패키지인지 모호해집니다. 컴파일러가 에러를 내거나, 의도하지 않은 클래스가 사용될 수 있습니다.
 
 #### 의존성 불명확
 
-코드만 보고 어떤 클래스를 실제로 사용하는지 파악할 수 없어요. 코드 리뷰나 디버깅 시 불편합니다.
+코드만 보고 어떤 클래스를 실제로 사용하는지 파악할 수 없습니다. 코드 리뷰나 디버깅 시 불편합니다.
 
 #### 라이브러리 업그레이드 위험
 
-라이브러리 새 버전에서 추가된 클래스가 기존 코드의 클래스명과 충돌할 수 있어요. 명시적 import는 이 위험을 방지합니다.
+라이브러리 새 버전에서 추가된 클래스가 기존 코드의 클래스명과 충돌할 수 있습니다. 명시적 import는 이 위험을 방지합니다.
 
 > 참고: [Google Java Style Guide - Import statements](https://google.github.io/styleguide/javaguide.html#s3.3-import-statements)
 
@@ -87,7 +87,7 @@ SpotBugs는 바이트코드 분석으로 **버그 패턴**을 찾고, Checkstyle
 
 
 **Suppressions:**
-DTO, Entity, Config, Test 클래스는 일부 규칙을 완화했어요. 이들은 구조적으로 많은 필드나 긴 설정을 가질 수밖에 없기 때문이에요.
+DTO, Entity, Config, Test 클래스는 일부 규칙을 완화했습니다. 이들은 구조적으로 많은 필드나 긴 설정을 가질 수밖에 없기 때문입니다.
 
 ---
 
@@ -95,7 +95,7 @@ DTO, Entity, Config, Test 클래스는 일부 규칙을 완화했어요. 이들�
 
 **역할:** 잠재적 버그 패턴 탐지
 
-FindBugs가 2015년 이후 업데이트가 중단되어 그 후속인 SpotBugs를 선택했어요. Google의 Error Prone(컴파일 타임 버그 탐지)도 검토했지만, Gradle 설정이 복잡하고 SpotBugs가 더 많은 버그 패턴을 탐지합니다. 바이트코드 분석으로 소스코드만으로는 찾기 어려운 버그를 잡아줘요.
+FindBugs가 2015년 이후 업데이트가 중단되어 그 후속인 SpotBugs를 선택했습니다. Google의 Error Prone(컴파일 타임 버그 탐지)도 검토했지만, Gradle 설정이 복잡하고 SpotBugs가 더 많은 버그 패턴을 탐지합니다. 바이트코드 분석으로 소스코드만으로는 찾기 어려운 버그를 잡아줍니다.
 
 **탐지하는 버그 유형:**
 - Null 포인터 역참조 가능성
@@ -109,7 +109,7 @@ FindBugs가 2015년 이후 업데이트가 중단되어 그 후속인 SpotBugs�
 
 
 **Exclude 설정:**
-DTO, Entity의 getter가 가변 객체를 반환하는 경고(EI_EXPOSE_REP)는 의도된 동작이므로 제외했어요.
+DTO, Entity의 getter가 가변 객체를 반환하는 경고(EI_EXPOSE_REP)는 의도된 동작이므로 제외했습니다.
 
 ---
 
@@ -117,7 +117,7 @@ DTO, Entity의 getter가 가변 객체를 반환하는 경고(EI_EXPOSE_REP)는 
 
 **역할:** 코드 커버리지 측정 및 검증
 
-Cobertura는 2015년 이후 업데이트가 느려졌고, IntelliJ 내장 커버리지는 IDE에서만 확인 가능해요. JaCoCo는 Eclipse Foundation에서 관리하면서 최신 Java 버전을 빠르게 지원하고, Gradle 통합과 Codecov 연동이 잘 되어 CI 자동화에 적합합니다.
+Cobertura는 2015년 이후 업데이트가 느려졌고, IntelliJ 내장 커버리지는 IDE에서만 확인 가능합니다. JaCoCo는 Eclipse Foundation에서 관리하면서 최신 Java 버전을 빠르게 지원하고, Gradle 통합과 Codecov 연동이 잘 되어 CI 자동화에 적합합니다.
 
 **커버리지 기준:**
 ![jacoco-coverage-config](/uploads/project/Tymee/code-quality-management/jacoco-coverage-config.svg)
@@ -125,7 +125,7 @@ Cobertura는 2015년 이후 업데이트가 느려졌고, IntelliJ 내장 커버
 
 **왜 60%/70%인가?**
 
-40% 미만은 테스트가 거의 없는 상태고, 60%면 핵심 비즈니스 로직은 테스트된 상태로 초기 프로젝트에서 현실적인 목표예요. 80%면 대부분의 코드가 테스트된 안정화 단계이고, 100%는 getter/setter까지 모두 테스트해야 하므로 ROI가 낮아 현실적이지 않습니다.
+40% 미만은 테스트가 거의 없는 상태고, 60%면 핵심 비즈니스 로직은 테스트된 상태로 초기 프로젝트에서 현실적인 목표입니다. 80%면 대부분의 코드가 테스트된 안정화 단계이고, 100%는 getter/setter까지 모두 테스트해야 하므로 ROI가 낮아 현실적이지 않습니다.
 
 > 참고: [Martin Fowler - Test Coverage](https://martinfowler.com/bliki/TestCoverage.html)
 
@@ -135,15 +135,15 @@ Cobertura는 2015년 이후 업데이트가 느려졌고, IntelliJ 내장 커버
 
 **역할:** 커버리지 시각화 및 이력 관리
 
-Coveralls도 무료 커버리지 대시보드를 제공하지만, Codecov가 PR 코멘트가 더 깔끔하고 GitHub Actions 통합이 쉬워요. SonarCloud는 private 레포에서 유료이고, 이미 개별 도구를 쓰고 있어서 커버리지 대시보드만 필요했습니다. Codecov는 개인 프로젝트 무료이고 JaCoCo XML 리포트를 업로드하면 바로 동작해요.
+Coveralls도 무료 커버리지 대시보드를 제공하지만, Codecov가 PR 코멘트가 더 깔끔하고 GitHub Actions 통합이 쉽습니다. SonarCloud는 private 레포에서 유료이고, 이미 개별 도구를 쓰고 있어서 커버리지 대시보드만 필요했습니다. Codecov는 개인 프로젝트 무료이고 JaCoCo XML 리포트를 업로드하면 바로 동작합니다.
 
 #### Codecov vs Coveralls 실제 비교
 
 ![codecov-vs-coveralls](/uploads/project/Tymee/code-quality-management/codecov-vs-coveralls.png)
 
-위 이미지에서 중요한 차이가 보여요. Codecov는 비율이 아닌 정확한 줄 수로 표시하고, 패치 밖에서 바뀐 커버리지 여부와 패치 안의 코드 커버리지를 구분해서 보여줍니다.
+위 이미지에서 중요한 차이가 보입니다. Codecov는 비율이 아닌 정확한 줄 수로 표시하고, 패치 밖에서 바뀐 커버리지 여부와 패치 안의 코드 커버리지를 구분해서 보여줍니다.
 
-Coveralls는 커버리지가 올랐는지 내렸는지만 보여줘서 숫자 게임처럼 느껴져요. 실제로 패치가 모두 커버되는지 확인하려면 웹사이트에 직접 방문해야 합니다. 반면 Codecov는 PR 코멘트에서 패치에 대한 상세 정보를 바로 확인할 수 있어요.
+Coveralls는 커버리지가 올랐는지 내렸는지만 보여줘서 숫자 게임처럼 느껴집니다. 실제로 패치가 모두 커버되는지 확인하려면 웹사이트에 직접 방문해야 합니다. 반면 Codecov는 PR 코멘트에서 패치에 대한 상세 정보를 바로 확인할 수 있습니다.
 
 > 출처: [Codecov vs Coveralls](https://text.youknowone.org/post/144201220021/codecov-vs-coveralls)
 
@@ -158,7 +158,7 @@ Coveralls는 커버리지가 올랐는지 내렸는지만 보여줘서 숫자 �
 - Private 레포 (1~5명): 무료
 - Private 레포 (6명 이상): 유료 플랜
 
-private 레포이지만 혼자 만들고 있으니 무료 범위에 해당해요.
+private 레포이지만 혼자 만들고 있으니 무료 범위에 해당합니다.
 
 > 참고: [Codecov Pricing](https://about.codecov.io/pricing/)
 
@@ -169,7 +169,7 @@ private 레포이지만 혼자 만들고 있으니 무료 범위에 해당해요
 
 **codecov.yml 파일 위치:**
 
-모노레포 구조에서 `codecov.yml`은 반드시 **레포지토리 루트**에 위치해야 해요. `backend/` 폴더에 넣으면 인식되지 않습니다.
+모노레포 구조에서 `codecov.yml`은 반드시 **레포지토리 루트**에 위치해야 합니다. `backend/` 폴더에 넣으면 인식되지 않습니다.
 
 - 허용 위치: `/`, `/dev/`, `/.github/`
 - 서브 디렉토리 (예: `/backend/`)에는 배치 불가
@@ -237,7 +237,7 @@ IntelliJ IDEA:
 | SpotBugs Annotations | 4.9.8 | O | |
 | JaCoCo | **0.8.14** | O | 0.8.12는 Java 22까지만 지원 |
 
-Java 25 LTS를 사용하려면 위 버전 이상을 사용해야 해요.
+Java 25 LTS를 사용하려면 위 버전 이상을 사용해야 합니다.
 
 ---
 
@@ -258,16 +258,16 @@ Java 25 LTS를 사용하려면 위 버전 이상을 사용해야 해요.
 
 ## 실제 효과
 
-도구를 세팅만 하고 끝나면 의미가 없어요. 실제로 잡아준 문제들을 정리합니다.
+도구를 세팅만 하고 끝나면 의미가 없습니다. 실제로 잡아준 문제들을 정리합니다.
 
 | 도구 | 잡아준 문제 예시 |
 |------|-----------------|
-| Spotless | PR 리뷰에서 포맷팅 지적이 0건으로 줄었어요. 코드 리뷰가 로직에만 집중할 수 있게 됨 |
+| Spotless | PR 리뷰에서 포맷팅 지적이 0건으로 줄었습니다. 코드 리뷰가 로직에만 집중할 수 있게 됨 |
 | Checkstyle | star import 3건, 미사용 import 5건+를 CI에서 자동 차단. 네이밍 규칙 위반도 커밋 전에 잡힘 |
 | SpotBugs | DTO의 가변 객체 반환(EI_EXPOSE_REP) 경고로 방어적 복사 필요성을 인지. 의도된 동작은 exclude 처리 |
 | JaCoCo | 초기에 커버리지 42%에서 시작해서 현재 60%+ 달성. 테스트 안 된 서비스 메서드를 시각적으로 파악 가능 |
 
-핵심은 "버그를 몇 개 잡았다"보다 **코드 리뷰의 기계적 지적을 자동화해서 리뷰 품질을 높인 것**이에요.
+핵심은 "버그를 몇 개 잡았다"보다 **코드 리뷰의 기계적 지적을 자동화해서 리뷰 품질을 높인 것**입니다.
 
 ---
 

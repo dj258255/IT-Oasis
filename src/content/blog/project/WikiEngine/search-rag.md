@@ -1,5 +1,5 @@
 ---
-title: 'AI 검색 요약 — RAG 파이프라인 + SSE 스트리밍 + 비용 모니터링'
+title: 'AI 검색 요약: RAG 파이프라인 + SSE 스트리밍 + 비용 모니터링'
 titleEn: 'AI Search Summary — RAG Pipeline + SSE Streaming + Cost Monitoring'
 description: Lucene BM25 검색 결과 Top-5 문서를 LLM 컨텍스트에 주입하는 RAG(Retrieval-Augmented Generation) 파이프라인을 구축합니다. Spring AI 2.0 + Gemini 2.0 Flash로 SSE 스트리밍 답변을 생성하고, 인라인 출처 배지를 파싱하여 게시글 링크로 연결합니다. 할루시네이션 방지(문서 기반 답변 제한 + 인용 강제), AI 요약 트리거 조건(네비게이션 의도 스킵), Redis Token Bucket rate limiting(10 RPM 전역), 동일 쿼리 캐싱(TTL 30분, LLM 비용 40-60% 절감), Grafana 7패널 대시보드(RPM, 응답시간, 토큰, 피드백, 비용 추정)까지 포함합니다. BM25가 이 프로젝트에서 Dense Retrieval보다 적합한 근거와, Hybrid Retrieval 전환 로드맵도 정리합니다.
 descriptionEn: Builds a RAG pipeline injecting Lucene BM25 Top-5 search results into LLM context. Uses Spring AI 2.0 + Gemini 2.0 Flash for SSE streaming answers with inline citation badges parsed to post links. Includes hallucination prevention, trigger conditions (skip navigation intent), Redis Token Bucket rate limiting (10 RPM global), query caching (30min TTL, 40-60% LLM cost reduction), and Grafana 7-panel dashboard. Documents why BM25 outperforms Dense Retrieval for this project and the Hybrid Retrieval roadmap.
@@ -25,7 +25,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[콘텐츠 필터링 — 운영 안전장치](/blog/project/wikiengine/search-content-filter)에서 Aho-Corasick 금칙어 필터링, 블라인드 게시글 검색 제외, Negative Caching, 자동완성 안전장치를 구축했습니다.
+[콘텐츠 필터링: 운영 안전장치](/blog/project/wikiengine/search-content-filter)에서 Aho-Corasick 금칙어 필터링, 블라인드 게시글 검색 제외, Negative Caching, 자동완성 안전장치를 구축했습니다.
 
 | 지표 | 결과 |
 |------|------|
@@ -37,11 +37,11 @@ series: "WikiEngine"
 
 ---
 
-## 1. 정상 상태 — 현재 검색 경험
+## 1. 정상 상태: 현재 검색 경험
 
-![현재 검색 경험 — 문서 목록만 제공](/uploads/project/WikiEngine/search-rag/current-search-experience.svg)
+![현재 검색 경험: 문서 목록만 제공](/uploads/project/WikiEngine/search-rag/current-search-experience.svg)
 
-프론트엔드에 "AI 요약" 섹션이 있지만, 현재 구현은 **검색 결과와 무관하게 LLM에 쿼리만 전달**하는 방식이다 — 검색된 문서를 컨텍스트로 주입하지 않으므로 **할루시네이션 위험이 높고, 출처 인용이 불가능**하다.
+프론트엔드에 "AI 요약" 섹션이 있지만, 현재 구현은 **검색 결과와 무관하게 LLM에 쿼리만 전달**하는 방식이다. 검색된 문서를 컨텍스트로 주입하지 않으므로 **할루시네이션 위험이 높고, 출처 인용이 불가능**하다.
 
 | | 기존 구현 | RAG (이 글) |
 |---|---|---|
@@ -61,7 +61,7 @@ series: "WikiEngine"
 
 ---
 
-## 2. 문제 상황 — 기존 검색의 한계
+## 2. 문제 상황: 기존 검색의 한계
 
 1. **정보 탐색 비용**: 10개 링크 중 어떤 게시글이 답을 포함하는지 모름
 2. **지식 종합 불가**: "자바 GC 종류와 각각의 장단점"처럼 여러 문서에 분산된 정보를 하나로 종합할 수 없음
@@ -69,7 +69,7 @@ series: "WikiEngine"
 
 ### RAG로 해결
 
-![RAG 파이프라인 — Retrieval → Augmentation → Generation](/uploads/project/WikiEngine/search-rag/rag-pipeline-simple.svg)
+![RAG 파이프라인: Retrieval → Augmentation → Generation](/uploads/project/WikiEngine/search-rag/rag-pipeline-simple.svg)
 
 ---
 
@@ -100,7 +100,7 @@ series: "WikiEngine"
 
 [Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 **Lexical(BM25) to Graph(동의어) to Embedding(벡터)** 순서로 진화합니다.
 
-![Retrieval 개선 로드맵 — BM25 → Hybrid](/uploads/project/WikiEngine/search-rag/retrieval-roadmap.svg)
+![Retrieval 개선 로드맵: BM25 → Hybrid](/uploads/project/WikiEngine/search-rag/retrieval-roadmap.svg)
 
 **벡터 검색 도입 시 인프라:**
 
@@ -112,7 +112,7 @@ series: "WikiEngine"
 
 ### 4-1. RAG 파이프라인
 
-![RAG 파이프라인 상세 — 5단계](/uploads/project/WikiEngine/search-rag/rag-pipeline-detailed.svg)
+![RAG 파이프라인 상세: 5단계](/uploads/project/WikiEngine/search-rag/rag-pipeline-detailed.svg)
 
 ### 4-2. Context 구성
 
@@ -144,7 +144,7 @@ public class RAGContextBuilder {
 }
 ```
 
-### 4-3. LLM API 호출 -- Spring AI 2.0
+### 4-3. LLM API 호출: Spring AI 2.0
 
 ```java
 @Service
@@ -225,9 +225,9 @@ public SseEmitter aiSummaryStream(@RequestParam String q) {
 
 ## 5. 비용 분석 + 모니터링
 
-### Rate Limiting -- Redis Token Bucket
+### Rate Limiting: Redis Token Bucket
 
-![비용 최적화 — Rate Limiting + 캐싱](/uploads/project/WikiEngine/search-rag/cost-optimization.svg)
+![비용 최적화: Rate Limiting + 캐싱](/uploads/project/WikiEngine/search-rag/cost-optimization.svg)
 
 ### 비용 추정
 
@@ -258,13 +258,13 @@ CREATE TABLE ai_summary_feedback (
 
 ### Grafana 대시보드
 
-Spring Boot 대시보드에 "AI 요약" 섹션 추가 -- 7개 패널:
+Spring Boot 대시보드에 "AI 요약" 섹션 추가, 7개 패널:
 - LLM 호출 RPM, 응답시간 avg/max, 토큰 사용량, 피드백 결과, 일별 토큰, 일별 비용 추정
-- 비용 임계값: $1(노랑), $5(빨강) -- Gemini 2.0 Flash 단가 기준
+- 비용 임계값: $1(노랑), $5(빨강), Gemini 2.0 Flash 단가 기준
 
 ---
 
-## 6. 검증 -- Before/After
+## 6. 검증: Before/After
 
 ### AI 요약 + 출처 + 피드백
 
@@ -280,11 +280,11 @@ Spring Boot 대시보드에 "AI 요약" 섹션 추가 -- 7개 패널:
 
 > "자바" 검색 -> BM25 Top-5 문서 Retrieval -> Gemini 2.0 Flash SSE 스트리밍 -> 토큰 단위 타이핑 -> 인라인 출처 배지 + 하단 출처 링크 표시. 검색 결과는 즉시 렌더링되고, AI 요약은 별도 SSE 채널로 비동기 수신.
 
-### 트리거 스킵 -- 네비게이션 의도
+### 트리거 스킵: 네비게이션 의도
 
 ![트리거 스킵](/uploads/project/WikiEngine/search-rag/trigger-skip-naver.png)
 
-> "네이버" 검색 시 AI 요약 미표시 (네비게이션 의도 -- 사용자가 네이버에 가고 싶은 것이지, 네이버에 대한 설명을 원하는 게 아님).
+> "네이버" 검색 시 AI 요약 미표시 (네비게이션 의도, 사용자가 네이버에 가고 싶은 것이지 네이버에 대한 설명을 원하는 게 아님).
 
 ### 자동완성 자모 매칭 + prefix 하이라이트
 
@@ -322,7 +322,7 @@ Spring Boot 대시보드에 "AI 요약" 섹션 추가 -- 7개 패널:
 
 ---
 
-## 8. snippetSource 개선 -- Wikipedia CirrusSearch 패턴
+## 8. snippetSource 개선: Wikipedia CirrusSearch 패턴
 
 ### 문제
 
@@ -385,8 +385,8 @@ String snippetSource = cleaned.substring(0, Math.min(cleaned.length(), 500));
 | 1 | [카테고리 검색 필터링 + Facet 집계](/blog/project/wikiengine/search-category-facet) | Lucene FILTER 절, DB GROUP BY Facet |
 | 2 | [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement) | 동의어, 오타 교정, UnifiedHighlighter, 재색인 인프라 |
 | 3 | [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking) | XGBoost LambdaMART, LLM-as-a-Judge, Facet 네이티브 전환 |
-| 4 | [콘텐츠 필터링 -- 운영 안전장치](/blog/project/wikiengine/search-content-filter) | Aho-Corasick 금칙어, 블라인드, Negative Caching |
-| 5 | **AI 검색 요약 -- RAG** (이 글) | RAG 파이프라인, SSE, 비용 모니터링 |
+| 4 | [콘텐츠 필터링: 운영 안전장치](/blog/project/wikiengine/search-content-filter) | Aho-Corasick 금칙어, 블라인드, Negative Caching |
+| 5 | **AI 검색 요약: RAG** (이 글) | RAG 파이프라인, SSE, 비용 모니터링 |
 
 ## 다음 글
 

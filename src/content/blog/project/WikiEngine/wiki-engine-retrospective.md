@@ -1,5 +1,5 @@
 ---
-title: 'WikiEngine 총정리 — 1,215만 건 검색 엔진의 설계부터 RAG까지'
+title: 'WikiEngine 총정리: 1,215만 건 검색 엔진의 설계부터 RAG까지'
 titleEn: 'WikiEngine Retrospective — From Design to RAG with 12.15M Documents'
 description: 나무위키+한국어 위키백과+영어 위키백과+뉴스+웹텍스트+C4 한국어 코퍼스 1,215만 건 검색 엔진 프로젝트를 2개월간 26편의 기술 블로그로 기록하고 총정리합니다. MySQL LIKE 5,000ms 타임아웃에서 시작하여 임베디드 Lucene + Nori 한국어 형태소 분석으로 전환하고, Caffeine+Redis 2계층 캐시(82% 히트율), MySQL Replication R/W 분리, Nginx 스케일아웃(에러율 13.25%→0%), Debezium+Kafka CDC, Redis 3노드 Consistent Hashing까지 분산 아키텍처를 완성합니다. 검색 품질은 동의어 확장, 오타 교정, UnifiedHighlighter snippet, LTR(NDCG +4.8%p), 카테고리 28개 자동 분류, Aho-Corasick 금칙어 필터링으로 고도화하고, RAG(Gemini SSE 스트리밍)로 AI 검색 요약을 제공합니다. 자동완성 시스템 설계(CQRS + MapReduce + CDC)의 이론과 실제 구현의 매핑, 26편 전체 시리즈 링크, 핵심 수치 총정리를 포함합니다.
 descriptionEn: A comprehensive retrospective of the WikiEngine search engine project documented across 26 technical blog posts over 2 months. From MySQL LIKE 5,000ms timeout to embedded Lucene + Nori, two-tier cache (82% hit), MySQL Replication, Nginx scale-out (error 13.25%→0%), Debezium+Kafka CDC, Redis 3-node Consistent Hashing. Search quality enhanced with synonyms, spell check, UnifiedHighlighter, LTR (NDCG +4.8%p), 28-category auto-classification, Aho-Corasick content filtering, and RAG with Gemini SSE streaming.
@@ -84,25 +84,25 @@ WikiEngine은 나무위키, 한국어/영어 위키백과, 뉴스, 웹텍스트 
 
 ---
 
-## 1. 검색 엔진 전환 — MySQL LIKE에서 Lucene까지
+## 1. 검색 엔진 전환: MySQL LIKE에서 Lucene까지
 
-### 1단계: 정상 상태 — MySQL LIKE 검색
+### 1단계 정상 상태: MySQL LIKE 검색
 
 초기 검색은 `MySQL LIKE '%keyword%'`로 본문을 검색했습니다. `posts` 테이블은 `id(PK, BIGINT AUTO_INCREMENT)`, `title(VARCHAR 500)`, `content(MEDIUMTEXT, 평균 6,586자)`, `category_id(FK)`, `view_count(BIGINT)`, `like_count(BIGINT)`, `created_at(DATETIME)` 구조였고, `categories`는 `posts:categories = N:1` 관계였습니다. 데이터는 이미 1,215만 건이었고, `content`에는 위키 마크업이 포함돼 있어 평균 행 크기도 컸습니다.
 
-### 2단계: 문제 인식 — 타임아웃과 cascade failure
+### 2단계 문제 인식: 타임아웃과 cascade failure
 
 k6 부하 테스트에서 검색 API가 5,000ms 이상 타임아웃되는 현상이 반복됐습니다. `EXPLAIN`으로 확인한 결과 `type=ALL, rows=27,443,742`였고, 결국 전체 테이블을 순차 스캔하고 있었습니다. `LIKE '%keyword%'`는 앞에 와일드카드가 있어 B-Tree 인덱스를 사용할 수 없고, 2,700만 건이 넘는 `MEDIUMTEXT`를 행마다 문자열 비교해야 했습니다. 더 심각했던 문제는 타임아웃 자체보다 cascade failure였습니다. 검색 쿼리 하나가 HikariCP 커넥션을 수 초간 점유하면 목록 조회, 상세 조회, 게시글 작성까지 커넥션을 얻지 못해 전체 서비스가 마비될 수 있었습니다.
 
-### 3단계: 문제 분석 — 왜 MySQL 전문 검색은 한계인가
+### 3단계 문제 분석: 왜 MySQL 전문 검색은 한계인가
 
-#### 1차 시도 — FULLTEXT ngram 인덱스
+#### 1차 시도: FULLTEXT ngram 인덱스
 
 첫 번째 시도는 MySQL FULLTEXT ngram 인덱스였습니다. 일부 쿼리에서는 **12초 → 6ms**로 개선되며 분명한 효과가 있었습니다. 하지만 고빈도 토큰 `대한`처럼 매우 자주 등장하는 2글자 토큰에서는 다시 posting list 순회가 폭발했고, 5,000ms 이상 타임아웃이 재발했습니다.
 
 문제는 성능만이 아니었습니다. ngram은 형태소 분석이 아니라 단순 2글자 분해이기 때문에 false positive가 많았고, 1,215만 건 x 평균 6,586자 x ngram 토큰 조합을 계산하면 인덱스 크기가 **300GB+**로 추정됐습니다. 당시 서버 디스크가 47GB 수준이었기 때문에 물리적으로 저장하는 것 자체가 불가능했습니다. MySQL FULLTEXT의 boolean mode는 50% 이상 문서에 포함된 term을 자동 제외하는데, 위키 데이터에서는 한국어 조사나 흔한 어미가 그 임계값을 넘으면서 검색 결과에서 빠지는 문제도 있었습니다. 이 단계에서 확인한 것은 "조금 더 빠른 MySQL 검색"이 아니라, MySQL 전문 검색이 현재 데이터 특성에 구조적으로 맞지 않는다는 사실이었습니다.
 
-### 4단계: 대안 비교 — 어떤 검색 엔진이 현재 제약에 맞는가
+### 4단계 대안 비교: 어떤 검색 엔진이 현재 제약에 맞는가
 
 이 단계의 핵심 질문은 "기능이 가장 많은 검색 엔진이 무엇인가"가 아니라, "지금 이 한 대의 서버에서 실제로 감당 가능한 검색 구조가 무엇인가"였습니다. 당시 환경은 2코어, 12GB RAM 단일 서버에서 애플리케이션, MySQL, Nginx가 함께 동작하는 구조였고, 먼저 필요했던 것은 대규모 분산 검색보다 타임아웃 없이 검색이 동작하고 인덱스를 현실적으로 운영할 수 있는 경로를 확보하는 일이었습니다.
 
@@ -110,7 +110,7 @@ Elasticsearch와 OpenSearch는 검색 기능과 운영 도구가 풍부하고, �
 
 반면 임베디드 Lucene은 애플리케이션 내부에서 직접 제어할 수 있었고, 별도 프로세스 없이 현재 서버 자원 안에 포함시킬 수 있었습니다. 네트워크 홉 없이 검색 경로를 단순하게 유지할 수 있었고, 한국어 형태소 분석, 랭킹 조정, 하이라이팅 같은 기능도 필요한 수준까지 직접 제어할 수 있었습니다. 즉, 이 단계에서 Lucene은 가장 화려한 선택이라기보다 단일 서버라는 제약 안에서 가장 현실적으로 운영 가능한 선택에 가까웠습니다.
 
-### 5단계: 결과 — Lucene 전환 후 무엇이 해결됐고, 무엇이 남았을까
+### 5단계 결과: Lucene 전환 후 무엇이 해결됐고, 무엇이 남았을까
 
 Lucene으로 전환한 뒤 가장 먼저 달라진 것은, 본문 검색이 더 이상 타임아웃에 기대는 기능이 아니라 안정적으로 응답하는 기능이 되었다는 점이었습니다. 일부 검색어에서 5초 이상 지연되거나 실패하던 본문 검색은 **29ms**, P95 **100ms** 수준으로 안정화됐습니다. 제목과 본문 가중치, 인기도, 최신성 같은 신호를 반영해 랭킹을 조정하면서 `P@10`도 **0.827 → 0.853**으로 개선됐습니다.
 
@@ -126,7 +126,7 @@ Lucene으로 전환한 뒤 가장 먼저 달라진 것은, 본문 검색이 더 
 
 ---
 
-## 2. 캐시 전략 + 자동완성 — 반복 계산을 줄이고 품질을 먼저 올린 단계
+## 2. 캐시 전략 + 자동완성: 반복 계산을 줄이고 품질을 먼저 올린 단계
 
 Lucene 검색 자체는 29ms까지 내려왔지만, 동일한 검색어에 대해 매번 인덱스를 다시 탐색하는 것은 여전히 CPU를 반복적으로 소모하는 작업이었습니다. 실제 검색 트래픽은 소수의 인기 검색어에 요청이 집중되는 분포를 보였고, k6 부하 테스트에서도 BM25 + FeatureField + RecencyDecay 계산이 CPU를 지속적으로 태우면서 100 VU 구간에서 **CPU 80~100%** 포화가 나타났습니다.
 
@@ -148,7 +148,7 @@ Lucene 검색 자체는 29ms까지 내려왔지만, 동일한 검색어에 대�
 
 ---
 
-## 3. 분산 아키텍처 — 서버를 늘리기 전에 상태, 읽기 부하, 변경 전파를 분리한 과정
+## 3. 분산 아키텍처: 서버를 늘리기 전에 상태, 읽기 부하, 변경 전파를 분리한 과정
 
 ### 단일 서버 한계 발견
 
@@ -164,7 +164,7 @@ Lucene 검색 자체는 29ms까지 내려왔지만, 동일한 검색어에 대�
 
 이후 구조에서는 총 캐시 히트율이 **82%**까지 올라갔고, DB와 검색 엔진까지 실제로 도달하는 비율은 **19%** 수준으로 낮아졌습니다. 자동완성은 Trie DFS에서 접두사별 flat KV 조회로 전환되면서 응답 경로를 단순화했고, 인스턴스 간 결과 일관성도 확보했습니다.
 
-### 3-2. 읽기/쓰기 분리 — App 스케일아웃 전에 DB 경로를 먼저 나눈 이유
+### 3-2. 읽기/쓰기 분리: App 스케일아웃 전에 DB 경로를 먼저 나눈 이유
 
 이 단계에서 본질적인 질문은 "지금 MySQL이 느린가?"가 아니라, "App 인스턴스를 늘린 뒤에도 현재 DB 구조가 버틸 수 있는가?"였습니다. 당시 측정 기준으로 보면 MySQL은 직접적인 병목이 아니었습니다. 버퍼 풀 히트율도 높았고, Slow Query도 거의 없었으며, CPU 역시 여유가 있었습니다. 하지만 그렇다고 해서 DB를 그대로 둔 채 App만 2대로 늘리는 것이 안전한 선택은 아니었습니다. App 인스턴스가 늘어나면 읽기 요청과 커넥션 수 역시 함께 증가하는데, 그 모든 읽기 부하가 단일 DB에 계속 몰리면 지금은 괜찮아 보여도 다음 단계에서 다시 병목이 생길 수 있기 때문입니다.
 
@@ -172,7 +172,7 @@ Lucene 검색 자체는 29ms까지 내려왔지만, 동일한 검색어에 대�
 
 일관성 측면에서는 강한 동기화보다 서비스 특성에 맞는 최종 일관성을 허용하는 쪽을 택했습니다. 게시글 수정 직후 아주 짧은 시간 동안 이전 데이터가 보일 가능성은 있었지만, 커뮤니티 게시판 특성상 이 정도 지연이 사용자 경험을 크게 해치지 않는다고 판단했습니다. 실제 복제 지연도 **0~1초** 수준으로 유지됐습니다.
 
-### 3-3. App 스케일아웃 — CPU 병목을 실제로 분산한 과정
+### 3-3. App 스케일아웃: CPU 병목을 실제로 분산한 과정
 
 단일 서버 한계 테스트와 읽기/쓰기 분리 이후에도 남아 있던 병목은 여전히 App CPU였습니다. 쿼리 최적화, 캐시, 자동완성 품질 개선까지 적용한 뒤에도 100 VU 구간에서 App CPU가 100%에 가까워졌고, P95는 **2,300ms**, 에러율은 **13.25%**까지 올라갔습니다. 반면 MySQL은 버퍼 풀 히트율이 높았고 Slow Query도 거의 없었으며, Redis 역시 상대적으로 여유가 있었습니다. 즉, 이 시점의 문제는 DB나 캐시가 아니라 읽기 요청이 하나의 App 인스턴스에 집중되면서 검색과 조회 경로의 CPU 비용이 한곳에 몰린다는 점이었습니다.
 
@@ -182,13 +182,13 @@ Lucene 검색 자체는 29ms까지 내려왔지만, 동일한 검색어에 대�
 
 이 전환의 결과, 읽기 부하가 여러 App으로 분산되면서 평균 응답시간은 **482ms → 40.93ms**, P95는 **2,300ms → 175ms**까지 크게 줄었습니다. 다만 이 과정에서 기존엔 가려져 있던 다른 구조 문제가 새롭게 드러났습니다. 상세 조회 GET 요청 안에 조회수 증가를 위한 DB UPDATE가 남아 있었고, 이 구조가 읽기 전용 경로와 충돌하면서 에러율 **11.10%**가 발생했습니다.
 
-### 3-4. 조회수 경로 재설계 — 읽기 요청 안의 쓰기를 없애다
+### 3-4. 조회수 경로 재설계: 읽기 요청 안의 쓰기를 없애다
 
 App을 2대로 늘린 뒤에는 "읽기 요청은 읽기 경로로 간다"는 가정과 달리, GET 요청 내부에서 조회수를 증가시키기 위해 DB UPDATE가 실행되고 있다는 점이 더 분명하게 드러났습니다. 단일 서버에서는 크게 눈에 띄지 않던 구조였지만, 읽기/쓰기 분리를 도입한 뒤에는 이 구조가 즉시 충돌로 나타났습니다. 읽기 요청이 읽기 전용 경로를 타고 들어왔는데 내부에서 다시 쓰기를 시도하다 보니 에러가 발생했고, 실제로 상세 조회 시나리오에서 500 에러가 집중적으로 나타났습니다.
 
 그래서 이 단계에서는 조회수 증가를 읽기 경로 밖으로 옮겼습니다. 요청 시점에는 공유 카운터에 원자적으로 누적만 하고, 실제 DB 반영은 짧은 주기의 배치로 모아서 처리하는 구조로 바꿨습니다. 그 결과 GET 요청에서 DB 쓰기가 완전히 제거됐고, 에러율은 **11.10% → 0.00%**로 해소됐습니다. 동시에 평균 응답시간은 **40.93ms → 37.23ms**, P95는 **175ms → 158ms**로 추가 개선됐습니다.
 
-### 3-5. 변경 전파 구조 재설계 — dual-write를 걷어내고 correctness를 확보한 과정
+### 3-5. 변경 전파 구조 재설계: dual-write를 걷어내고 correctness를 확보한 과정
 
 분산 구조가 어느 정도 자리를 잡아가면서 다음으로 보였던 문제는, 데이터 저장과 검색 반영을 서비스 코드 안에서 직접 함께 처리하는 구조였습니다. 게시글을 저장한 뒤 검색 인덱스를 바로 갱신하고, 관련 캐시까지 직접 무효화하는 방식은 처음에는 이해하기 쉽지만, 쓰기 지연이 커지고 한쪽만 성공하는 partial failure가 생기면 데이터 정합성이 흔들릴 수 있습니다.
 
@@ -198,7 +198,7 @@ App을 2대로 늘린 뒤에는 "읽기 요청은 읽기 경로로 간다"는 �
 
 그래서 최종적으로는 DB에 실제로 기록된 변경 사실을 기준으로, 검색 인덱스와 캐시가 이를 각자 독립적으로 소비하는 구조로 옮겼습니다. 여기서 Kafka와 CDC를 선택한 이유는 처리량 때문이 아니라 correctness와 replay 가능성 때문이었습니다. 비동기는 지금 응답을 가볍게 만드는 방법이지만, 재생 가능한 로그는 문제가 생겼을 때 어디까지 되돌아가 복구할 수 있는가를 결정하는 기준점입니다. 최종 구조에서 쓰기 평균은 **24ms** 수준으로 유지됐고, 더 중요했던 것은 dual-write를 서비스 코드에서 걷어내고 변경 이력을 다시 읽어 재반영할 기준점을 확보했다는 점이었습니다.
 
-### 3-6. Redis 워크로드 분리 — 성능 개선보다 간섭 제거와 영향 범위 축소
+### 3-6. Redis 워크로드 분리: 성능 개선보다 간섭 제거와 영향 범위 축소
 
 마지막으로 다룬 문제는 Redis를 쓰고 있다는 사실 자체가 아니라, 서로 성격이 전혀 다른 작업들이 하나의 Redis 인스턴스 안에서 함께 돌고 있다는 점이었습니다. 당시 한 인스턴스 안에는 자동완성 추천 결과, 일반 캐시, 조회수 카운터, 토큰 블랙리스트가 함께 들어 있었습니다. 자동완성은 주기적 대량 갱신이 일어났고, 일반 캐시는 TTL 기반으로 흐르며, 조회수는 짧은 주기의 고빈도 증가 연산이 중심이었고, 블랙리스트는 보안상 유실되면 안 되는 데이터였습니다.
 
@@ -206,7 +206,7 @@ App을 2대로 늘린 뒤에는 "읽기 요청은 읽기 경로로 간다"는 �
 
 이 과정에서 더 중요했던 것은 단순한 레이턴시가 아니라, 한 종류의 문제가 다른 기능까지 얼마나 넓게 번질 수 있느냐였습니다. 일반 캐시와 자동완성 데이터는 일부 유실되더라도 다시 만들 수 있지만, 토큰 블랙리스트는 보안상 잘못 다루면 바로 문제가 됩니다. 그래서 이 단계의 핵심은 Redis를 더 빠르게 만들었다기보다, Redis 안에서 서로 달라야 하는 것들을 구분해 운영 가능한 구조로 나눴다는 데 있었습니다. 그 결과 flush 시점에 기록되던 **34.6ms SLOWLOG** 블로킹은 사라졌고, 배치 작업과 실시간 요청이 서로 끌어내리던 현상도 크게 줄었습니다.
 
-### 3-7. 검증 결과 — 분산 구조가 실제로 버티는가
+### 3-7. 검증 결과: 분산 구조가 실제로 버티는가
 
 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC) 전환 후 200 VU stress 테스트를 다시 수행했습니다. 그 결과 에러율은 **13.25% → 0.09%**, 처리량은 **30 req/s → 109 req/s**, P95는 **2,300ms → 190ms**로 개선됐습니다. 100 VU 구간에서는 P95가 약 **200ms** 수준으로 SLA 300ms를 충족했습니다.
 
@@ -228,11 +228,11 @@ App을 2대로 늘린 뒤에는 "읽기 요청은 읽기 경로로 간다"는 �
 
 ![App 스케일아웃 지표 3](/uploads/project/WikiEngine/wiki-engine-retrospective/ppt/image14.png)
 
-관련 글: [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning), [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache), [MySQL Replication](/blog/project/wikiengine/replication), [App 스케일아웃](/blog/project/wikiengine/scaleout), [조회수 Redis INCR](/blog/project/wikiengine/view-count-redis), [CDC — 이벤트 기반 동기화](/blog/project/wikiengine/cdc), [Redis 샤딩](/blog/project/wikiengine/redis-sharding), [분산 안정성 검증](/blog/project/wikiengine/distributed-stability)
+관련 글: [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning), [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache), [MySQL Replication](/blog/project/wikiengine/replication), [App 스케일아웃](/blog/project/wikiengine/scaleout), [조회수 Redis INCR](/blog/project/wikiengine/view-count-redis), [CDC 이벤트 기반 동기화](/blog/project/wikiengine/cdc), [Redis 샤딩](/blog/project/wikiengine/redis-sharding), [분산 안정성 검증](/blog/project/wikiengine/distributed-stability)
 
 ---
 
-## 4. 검색 품질 — 더 맞게 찾게 하는 방향으로 고도화한 단계
+## 4. 검색 품질: 더 맞게 찾게 하는 방향으로 고도화한 단계
 
 ### 4-1. 동의어 확장 + 오타 교정 + snippet 개선
 
@@ -246,7 +246,7 @@ App을 2대로 늘린 뒤에는 "읽기 요청은 읽기 경로로 간다"는 �
 
 그 결과 `AI` 검색 시 `인공지능` 관련 문서가 상위에 노출되도록 바꿨고, `프로그래링` 같은 오타에도 `혹시 '프로그래밍'을 찾으셨나요?` 같은 보정 제안을 제공할 수 있게 됐습니다. snippet도 문서 앞부분이 아니라 검색어 주변 맥락을 기준으로 보여줄 수 있게 됐습니다. 이 과정에서 Nori 사용자 사전 **158,539개**를 적용해 복합어 보존도 함께 개선했고, 필드/분석기 변경이 필요했기 때문에 **12,156,589건 무중단 재색인 인프라**도 같이 구축했습니다. 인덱스 크기는 약 **42GB**, 재색인 시간은 약 **2시간**이었습니다.
 
-### 4-2. LTR 재랭킹 — XGBoost LambdaMART
+### 4-2. LTR 재랭킹: XGBoost LambdaMART
 
 이 단계의 문제는 검색 자체보다 "어떤 문서를 먼저 보여줄지"가 여전히 사람이 정한 선형 가중치에 의존하고 있다는 데 있었습니다. `자바` 검색에서 사용자는 대부분 `자바(프로그래밍 언어)`를 기대하지만, 실제 결과에서는 `자바 더 헛(스타워즈)` 같은 문서가 더 위로 올라오고 프로그래밍 언어 문서는 4위까지 밀려났습니다. popularity 피처의 변별력이 거의 없는 데이터셋에서 선형 부스팅은 결국 텍스트 매칭 점수에 더 많이 끌려갈 수밖에 없었습니다.
 
@@ -268,7 +268,7 @@ Facet 필터링 자체는 가능했지만, Facet은 실제 탐색 기능으로�
 
 그 다음 단계에서는 카테고리 필터와 Facet 집계를 모두 Lucene 내부로 가져왔습니다. 카테고리 값을 검색 인덱스에 함께 저장하고, Facet도 검색 결과와 동일한 reader 기준으로 계산하도록 바꾸면서, 필터링과 집계가 같은 기준 위에서 동작하도록 정리한 것입니다. 태그도 함께 검토했지만, **216만 개** 규모의 고카디널리티 태그에 Facet을 붙이면 집계 비용과 UI 복잡도만 커지고 사용자가 탐색에 활용하기 어렵다고 봤습니다. 그래서 태그는 검색 매칭 품질을 높이는 용도로만 인덱싱하고, Facet은 상대적으로 안정적이고 사람이 해석 가능한 카테고리 축에만 유지했습니다.
 
-### 4-4. 콘텐츠 필터링 — 운영 안전장치
+### 4-4. 콘텐츠 필터링: 운영 안전장치
 
 이 단계의 대상은 `POST /api/v1.0/posts` 작성 API와, 그 결과가 노출되는 검색/자동완성 경로였습니다. 당시 구조에서는 게시글 작성 시 본문과 제목에 대한 유해 콘텐츠 검사가 없었기 때문에 어떤 문자열이든 그대로 저장될 수 있었습니다. 문제는 이게 단순히 "나쁜 글이 저장된다"로 끝나지 않는다는 점이었습니다. 한 번 저장된 콘텐츠는 검색 결과와 자동완성 후보에도 그대로 반영되기 때문에, 검색 시스템 전체의 품질과 운영 안정성까지 함께 오염시킬 수 있었습니다.
 
@@ -276,7 +276,7 @@ Facet 필터링 자체는 가능했지만, Facet은 실제 탐색 기능으로�
 
 노출 제어도 별도로 설계했습니다. 금칙어가 포함된 게시글을 검색 인덱스에서 삭제하는 방법도 있었지만, 이 방식은 복구가 필요할 때 다시 인덱싱해야 합니다. 그래서 게시글에 `blinded` 같은 상태를 두고, 검색에서는 제외하되 복원은 즉시 가능하게 하는 방식으로 처리했습니다. 앱 기동 직후 검색 인덱스가 아직 완전히 준비되지 않았을 때 발생할 수 있는 빈 결과는 짧은 TTL로만 캐시해 cache penetration을 막으면서도 잘못된 상태가 오래 유지되지는 않도록 했습니다.
 
-### 4-5. AI 검색 요약 — RAG 파이프라인
+### 4-5. AI 검색 요약: RAG 파이프라인
 
 이 단계의 대상은 검색 결과 화면의 AI 요약 기능이었습니다. 당시 검색 엔진은 Lucene BM25 기반으로 관련 문서를 찾아 제목과 snippet을 보여줄 수 있었지만, 사용자는 여전히 여러 게시글을 직접 클릭해 읽어야 원하는 답을 얻을 수 있었습니다. 기존 AI 요약 구현도 검색된 문서를 컨텍스트로 주지 않고 쿼리만 LLM에 전달하는 방식이었기 때문에, 답변이 실제 검색 결과와 어긋날 수 있었고 출처를 붙일 수도 없었습니다.
 
@@ -308,7 +308,7 @@ Retrieval은 Dense Retrieval이 아니라 기존 BM25를 그대로 사용했습�
 
 ![RAG 지표 2](/uploads/project/WikiEngine/wiki-engine-retrospective/ppt/image24.png)
 
-관련 글: [카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet), [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement), [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking), [콘텐츠 필터링](/blog/project/wikiengine/search-content-filter), [AI 검색 요약 — RAG](/blog/project/wikiengine/search-rag)
+관련 글: [카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet), [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement), [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking), [콘텐츠 필터링](/blog/project/wikiengine/search-content-filter), [AI 검색 요약 RAG](/blog/project/wikiengine/search-rag)
 
 ---
 
@@ -417,8 +417,8 @@ MySQL Replication이 끊겨 DDL이 Replica에 전파되지 않았고, `ddl-auto:
 
 - 검색 인프라 구축: [검색 시스템 장애 방지](/blog/project/wikiengine/search-system-crash), [B-Tree 인덱스 자동완성](/blog/project/wikiengine/autocomplete-btree-index), [FULLTEXT ngram 인덱스](/blog/project/wikiengine/fulltext-ngram-index), [Lucene 전환](/blog/project/wikiengine/lucene-decision), [Deferred Join 최적화](/blog/project/wikiengine/deferred-join-optimization), [쿼리 리팩토링](/blog/project/wikiengine/query-refactoring-optimization), [검색 품질 평가](/blog/project/wikiengine/search-quality)
 - 캐시/자동완성: [캐싱 전략](/blog/project/wikiengine/caching-strategy), [Trie 자동완성](/blog/project/wikiengine/trie-autocomplete), [Redis L2 캐시](/blog/project/wikiengine/redis-l2-cache)
-- 분산 아키텍처: [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning), [MySQL Replication](/blog/project/wikiengine/replication), [App 스케일아웃](/blog/project/wikiengine/scaleout), [조회수 Redis INCR](/blog/project/wikiengine/view-count-redis), [CDC — 이벤트 기반 동기화](/blog/project/wikiengine/cdc), [Redis 샤딩](/blog/project/wikiengine/redis-sharding), [분산 안정성 검증](/blog/project/wikiengine/distributed-stability)
-- 검색 품질/AI: [카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet), [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement), [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking), [콘텐츠 필터링](/blog/project/wikiengine/search-content-filter), [AI 검색 요약 — RAG](/blog/project/wikiengine/search-rag), [인터뷰 예상 질문 정리](/blog/project/wikiengine/interview-qa)
+- 분산 아키텍처: [부하 테스트 튜닝](/blog/project/wikiengine/stress-test-tuning), [MySQL Replication](/blog/project/wikiengine/replication), [App 스케일아웃](/blog/project/wikiengine/scaleout), [조회수 Redis INCR](/blog/project/wikiengine/view-count-redis), [CDC 이벤트 기반 동기화](/blog/project/wikiengine/cdc), [Redis 샤딩](/blog/project/wikiengine/redis-sharding), [분산 안정성 검증](/blog/project/wikiengine/distributed-stability)
+- 검색 품질/AI: [카테고리 검색 필터링](/blog/project/wikiengine/search-category-facet), [쿼리 확장 + Query Understanding](/blog/project/wikiengine/search-query-enhancement), [LTR 재랭킹 + 카테고리 자동 분류](/blog/project/wikiengine/search-ltr-ranking), [콘텐츠 필터링](/blog/project/wikiengine/search-content-filter), [AI 검색 요약 RAG](/blog/project/wikiengine/search-rag), [인터뷰 예상 질문 정리](/blog/project/wikiengine/interview-qa)
 
 ---
 

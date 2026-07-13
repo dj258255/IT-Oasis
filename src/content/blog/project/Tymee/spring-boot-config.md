@@ -16,15 +16,15 @@ coverImage: "/uploads/project/Tymee/spring-boot-config/properties-example.svg"
 series: "Tymee"
 ---
 
-이 프로젝트에서는 멀티모듈 구조에 4개 프로필(local, test, staging, prod)을 관리해야 했어요.
+이 프로젝트에서는 멀티모듈 구조에 4개 프로필(local, test, staging, prod)을 관리해야 했습니다.
 처음 Spring Boot 프로젝트를 생성하면 `application.properties`가 기본으로 만들어지는데, yml로 바꿔서 사용했습니다.
-그 과정에서 두 형식의 차이와 Spring Boot가 왜 properties를 기본으로 생성하는지 알게 됐어요.
+그 과정에서 두 형식의 차이와 Spring Boot가 왜 properties를 기본으로 생성하는지 알게 됐습니다.
 
 ---
 
 ## application.properties
 
-Key-Value 쌍의 평면 구조예요. 단순하고 직관적이지만, 설정이 많아지면 중복 접두사가 반복되어 가독성이 떨어져요.
+Key-Value 쌍의 평면 구조입니다. 단순하고 직관적이지만, 설정이 많아지면 중복 접두사가 반복되어 가독성이 떨어집니다.
 
 ![properties-example](/uploads/project/Tymee/spring-boot-config/properties-example.svg)
 
@@ -32,40 +32,40 @@ Key-Value 쌍의 평면 구조예요. 단순하고 직관적이지만, 설정이
 
 ## application.yml
 
-YAML의 계층적 구조로 설정을 표현해요.
+YAML의 계층적 구조로 설정을 표현합니다.
 들여쓰기로 구조를 나타내서 복잡한 설정도 명확하게 보입니다.
 
 ![yml-example](/uploads/project/Tymee/spring-boot-config/yml-example.svg)
 
 ### 프로필 구분 기능
 
-yml은 하나의 파일 안에서 `---`로 프로필을 구분할 수 있어요.
+yml은 하나의 파일 안에서 `---`로 프로필을 구분할 수 있습니다.
 properties는 `application-local.properties`, `application-prod.properties`처럼 파일을 분리해야 합니다.
 
 ![yml-profile-separation](/uploads/project/Tymee/spring-boot-config/yml-profile-separation.svg)
 
-이 프로젝트는 local, test, staging, prod 4개 프로필이 필요했는데, yml 하나에 다 넣을 수 있어서 편했어요.
+이 프로젝트는 local, test, staging, prod 4개 프로필이 필요했는데, yml 하나에 다 넣을 수 있어서 편했습니다.
 
 ---
 
 ## 왜 Spring Boot는 기본으로 properties를 생성할까?
 
-yml이 더 편한데 왜 Spring Boot는 properties를 기본으로 만들까요? 조사해보니 몇 가지 이유가 있었어요.
+yml이 더 편한데 왜 Spring Boot는 properties를 기본으로 만들까요? 조사해보니 몇 가지 이유가 있었습니다.
 
 ### Java 생태계의 전통
 
-`.properties` 파일 형식은 Java에서 수십 년간 사용해온 전통적인 표준이에요.
+`.properties` 파일 형식은 Java에서 수십 년간 사용해온 전통적인 표준입니다.
 Java 생태계에 깊이 통합되어 있어 별도의 라이브러리 없이도 바로 동작합니다.
 
 ### YAML은 추가 의존성이 필요
 
-Spring Boot에서 YAML 파일을 사용하려면 클래스패스에 [SnakeYAML](https://github.com/snakeyaml/snakeyaml) 라이브러리가 있어야 해요.
+Spring Boot에서 YAML 파일을 사용하려면 클래스패스에 [SnakeYAML](https://github.com/snakeyaml/snakeyaml) 라이브러리가 있어야 합니다.
 반면 properties 파일은 Java 표준이므로 추가 의존성 없이 바로 사용 가능합니다.
-(참고: `spring-boot-starter`에는 SnakeYAML이 기본 포함되어 있어 실제로는 별도 설정 없이 yml 사용 가능해요)
+(참고: `spring-boot-starter`에는 SnakeYAML이 기본 포함되어 있어 실제로는 별도 설정 없이 yml 사용 가능합니다)
 
 ### @PropertySource 어노테이션의 제한
 
-YAML 파일은 `@PropertySource` 어노테이션으로 로드할 수 없어요.
+YAML 파일은 `@PropertySource` 어노테이션으로 로드할 수 없습니다.
 이 방식으로 설정값을 로드해야 하는 경우에는 반드시 properties 파일을 사용해야 합니다.
 
 ![property-source-annotation](/uploads/project/Tymee/spring-boot-config/property-source-annotation.svg)
@@ -73,24 +73,24 @@ YAML 파일은 `@PropertySource` 어노테이션으로 로드할 수 없어요.
 
 ### 우선순위: properties가 yml보다 높음
 
-두 파일이 동시에 존재할 경우, `application.properties`의 설정이 `application.yml`보다 우선 적용돼요.
-이건 하위 호환성을 위한 설계예요.
+두 파일이 동시에 존재할 경우, `application.properties`의 설정이 `application.yml`보다 우선 적용됩니다.
+이건 하위 호환성을 위한 설계입니다.
 
 ### 하위 호환성 (Backward Compatibility)
 
-Spring Boot는 하위 호환성을 중요시해요.
+Spring Boot는 하위 호환성을 중요시합니다.
 YAML 지원이 추가되기 전부터 properties 파일이 기본이었기 때문에, 기존 애플리케이션이 문제없이 동작하도록 properties를 기본값으로 유지하고 있습니다.
 
 ---
 
 ## 이 프로젝트의 선택
 
-yml을 선택했어요.
-멀티모듈 구조에서 프로필 4개를 관리해야 하는데, properties로 하면 파일이 4개 이상 필요하고 중복 접두사도 반복돼요.
+yml을 선택했습니다.
+멀티모듈 구조에서 프로필 4개를 관리해야 하는데, properties로 하면 파일이 4개 이상 필요하고 중복 접두사도 반복됩니다.
 yml의 계층 구조가 설정을 한눈에 파악하기 좋았습니다.
 
-Spring이 properties를 기본으로 생성하는 건 Java 표준 호환성과 하위 호환성 때문이에요.
-현대 Spring Boot 프로젝트에서는 대부분 yml을 쓰므로, 프로젝트 생성 후 바로 yml로 변환하면 돼요.
+Spring이 properties를 기본으로 생성하는 건 Java 표준 호환성과 하위 호환성 때문입니다.
+현대 Spring Boot 프로젝트에서는 대부분 yml을 쓰므로, 프로젝트 생성 후 바로 yml로 변환하면 됩니다.
 
 ---
 

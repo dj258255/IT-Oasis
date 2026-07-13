@@ -1,5 +1,5 @@
 ---
-title: '카테고리 검색 필터링 + Facet 집계 — Lucene FILTER 절 설계'
+title: '카테고리 검색 필터링 + Facet 집계: Lucene FILTER 절 설계'
 titleEn: 'Category Search Filtering + Facet Aggregation — Lucene FILTER Clause Design'
 description: 1,425만 건 Lucene 검색 엔진에 카테고리 필터링을 추가합니다. categoryId가 이미 LongField로 인덱싱되어 있지만 검색 쿼리(buildQuery)에서 사용하지 않고 있던 구조적 비대칭을 발견하고, Occur.FILTER 절로 해결합니다. DB Post-filter 방식이 pagination을 깨뜨리는 이유, FILTER가 MUST와 달리 스코어에 기여하지 않으면서 bitset 캐싱 대상이 되는 원리, DB GROUP BY 간이 Facet의 한계와 Lucene 네이티브 Facet 전환 계획까지 정리합니다.
 descriptionEn: Adds category filtering to a 14.25M-document Lucene search engine. Discovers that categoryId was already indexed as LongField but unused in buildQuery — a structural asymmetry. Solves it with Occur.FILTER clause. Explains why DB post-filtering breaks pagination, how FILTER differs from MUST (no score contribution + bitset caching), and the tradeoffs between DB GROUP BY approximate facets vs Lucene native SortedSetDocValuesFacetCounts.
@@ -20,7 +20,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[분산 안정성 검증 — stress 테스트 + 한계점 분석](/blog/project/wikiengine/distributed-stability)에서 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC)의 한계를 stress 테스트로 확인했습니다.
+[분산 안정성 검증: stress 테스트 + 한계점 분석](/blog/project/wikiengine/distributed-stability)에서 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC)의 한계를 stress 테스트로 확인했습니다.
 
 | 지표 | 100 VU | 200 VU (stress) |
 |------|--------|-----------------|
@@ -33,7 +33,7 @@ series: "WikiEngine"
 
 ---
 
-## 1. 정상 상태 — 현재 검색 아키텍처
+## 1. 정상 상태: 현재 검색 아키텍처
 
 ### 검색 흐름
 
@@ -85,7 +85,7 @@ categories 테이블:
   parent_id BIGINT (nullable) — 계층 구조 지원
 ```
 
-- Post 엔티티: `private Long categoryId;` (nullable — 미분류 게시글 허용)
+- Post 엔티티: `private Long categoryId;` (nullable, 미분류 게시글 허용)
 - Category 엔티티: `name` + `parentId` (계층 구조)
 - 위키피디아 임포트 시 카테고리가 함께 생성됨
 
@@ -110,7 +110,7 @@ public Slice<PostListResponse> getPosts(
 
 ---
 
-## 2. 문제 상황 — 검색에서 카테고리 필터링이 불가능하다
+## 2. 문제 상황: 검색에서 카테고리 필터링이 불가능하다
 
 ### 문제 1: 검색 API에 카테고리 필터 파라미터가 없다
 
@@ -128,7 +128,7 @@ public Slice<PostSearchResponse> search(
 
 `categoryId` 파라미터가 없다. 사용자가 "프로그래밍"을 검색하면 1,425만 건 전체에서 결과를 반환하며, 특정 카테고리로 좁히는 방법이 없다.
 
-검색 결과를 보고 "이 중에서 Java 관련만 보고 싶다"는 요구를 충족할 수 없다. 목록 조회(`GET /posts`)에서는 카테고리 필터가 되지만, **검색**에서는 안 된다 — 기능의 비대칭입니다.
+검색 결과를 보고 "이 중에서 Java 관련만 보고 싶다"는 요구를 충족할 수 없다. 목록 조회(`GET /posts`)에서는 카테고리 필터가 되지만, **검색**에서는 안 됩니다. 기능의 비대칭입니다.
 
 ### 문제 2: 검색 결과의 카테고리 분포를 알 수 없다 (Facet 부재)
 
@@ -147,7 +147,7 @@ Amazon: 상품 검색 → 좌측 카테고리 트리 + 각 카테고리별 건�
 
 ---
 
-## 3. 문제 분석 — 구조적 원인
+## 3. 문제 분석: 구조적 원인
 
 ### 카테고리 필터링이 안 되는 이유
 
@@ -189,7 +189,7 @@ Facet을 구현하려면 두 가지 경로가 있다:
 
 ---
 
-## 4. 대안 검토 — 왜 이 방법을 선택했는가
+## 4. 대안 검토: 왜 이 방법을 선택했는가
 
 ### 카테고리 필터링 방식
 
@@ -219,7 +219,7 @@ Facet을 구현하려면 두 가지 경로가 있다:
 
 ## 5. 구현
 
-### 5-1. 카테고리 필터링 — LuceneSearchService 수정
+### 5-1. 카테고리 필터링: LuceneSearchService 수정
 
 `categoryId`가 이미 `LongField`로 인덱싱되어 있으므로, `search()` 메서드에 categoryId 파라미터를 추가하고 `FILTER` 절을 추가합니다.
 
@@ -256,7 +256,7 @@ private Query buildQuery(String keyword, Long categoryId) throws ParseException 
 - `FILTER`는 `MUST`와 동일하게 필수 조건이지만 스코어에 기여하지 않는다. Lucene 내부적으로 FILTER 절은 **bitset 캐싱 대상**이 되어, 동일 카테고리 반복 검색 시 성능 이점이 있다.
 - 출처: [Lucene BooleanClause.Occur Javadoc](https://lucene.apache.org/core/10_1_0/core/org/apache/lucene/search/BooleanClause.Occur.html#FILTER)
 
-### 5-2. API 변경 — PostController + PostService
+### 5-2. API 변경: PostController + PostService
 
 ```java
 // PostController — 검색 엔드포인트에 categoryId 추가
@@ -284,7 +284,7 @@ public Slice<PostSearchResponse> search(String keyword, Long categoryId, Pageabl
 
 **캐시 키 변경 주의**: `categoryId`가 캐시 키에 포함되어야 합니다. 같은 키워드라도 카테고리별로 다른 결과를 반환하므로, 기존 캐시 키(`keyword:page:size`)에 categoryId를 추가해야 캐시 오염이 방지됩니다.
 
-### 5-3. 간이 Facet — DB GROUP BY
+### 5-3. 간이 Facet: DB GROUP BY
 
 Lucene 네이티브 Facet 대신, **검색 후 DB 집계로 카테고리 분포를 제공**한다.
 
@@ -370,15 +370,15 @@ public record SearchWithFacetsResponse(
 
 ---
 
-## 6. 검증 — Before/After
+## 6. 검증: Before/After
 
 ### Before: 카테고리 필터 없는 검색
 
-![Before — 카테고리 필터 없는 검색](/uploads/project/WikiEngine/search-category-facet/phase17-before-search-no-category-filter.png)
+![Before: 카테고리 필터 없는 검색](/uploads/project/WikiEngine/search-category-facet/phase17-before-search-no-category-filter.png)
 
 ### After: categoryId=7 필터 적용
 
-![After — categoryId=7 필터 적용](/uploads/project/WikiEngine/search-category-facet/phase17-after-category-filter-search.png)
+![After: categoryId=7 필터 적용](/uploads/project/WikiEngine/search-category-facet/phase17-after-category-filter-search.png)
 
 > "프로그래밍" 검색에 `categoryId=7`(컴퓨터 과학) 필터 적용 → `LongField.newExactQuery("categoryId", 7)` + `Occur.FILTER`로 해당 카테고리 결과만 반환. 기전공학, 스파게티 코드, 재구성 가능 컴퓨팅 등 컴퓨터 과학 카테고리 게시글만 노출됨.
 
@@ -395,7 +395,7 @@ public record SearchWithFacetsResponse(
 
 ## 다음 글
 
-[쿼리 확장 + Query Understanding — 검색 품질 고도화](/blog/project/wikiengine/search-query-enhancement)에서 동의어 확장("AI" → "인공지능"), 오타 교정(DirectSpellChecker), Nori 사용자 사전, UnifiedHighlighter 기반 snippet 개선, 그리고 전체 재색인 인프라를 구축합니다.
+[쿼리 확장 + Query Understanding: 검색 품질 고도화](/blog/project/wikiengine/search-query-enhancement)에서 동의어 확장("AI" → "인공지능"), 오타 교정(DirectSpellChecker), Nori 사용자 사전, UnifiedHighlighter 기반 snippet 개선, 그리고 전체 재색인 인프라를 구축합니다.
 
 ---
 

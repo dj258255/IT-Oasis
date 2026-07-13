@@ -1,7 +1,7 @@
 ---
 title: '트랜잭션 ACID ①: Atomicity는 어떻게 구현되는가'
 titleEn: 'Transaction ACID ①: How Is Atomicity Implemented?'
-description: PostgreSQL과 InnoDB가 같은 Atomicity 보장을 어떻게 다른 비용 구조로 구현하는지 — STEAL/NO-FORCE 정책, append-only vs in-place + Undo Log, ARIES 복구 vs 가시성 규칙까지 1차 자료 기준으로 정리해요.
+description: PostgreSQL과 InnoDB가 같은 Atomicity 보장을 어떻게 다른 비용 구조로 구현하는지, STEAL/NO-FORCE 정책, append-only vs in-place + Undo Log, ARIES 복구 vs 가시성 규칙까지 1차 자료 기준으로 정리합니다.
 descriptionEn: How PostgreSQL and InnoDB deliver the same Atomicity guarantee through fundamentally different cost structures — STEAL/NO-FORCE buffer policies, append-only vs in-place with Undo Log, ARIES recovery vs visibility rules — grounded in primary sources.
 date: 2026-04-15T00:00:00.000Z
 tags:
@@ -22,7 +22,7 @@ seriesOrder: 1
 
 ## 0. 들어가며
 
-PostgreSQL, MySQL InnoDB, SQL Server 셋 다 **WAL 프로토콜**을 따르고, 데이터 페이지는 모두 버퍼풀(메모리)에 두며 **WAL 로그만 fsync** 합니다. 진짜 차이는 **이전 버전을 어디에 두느냐**, 그리고 그로 인한 **롤백 메커니즘의 차이**예요.
+PostgreSQL, MySQL InnoDB, SQL Server 셋 다 **WAL 프로토콜**을 따르고, 데이터 페이지는 모두 버퍼풀(메모리)에 두며 **WAL 로그만 fsync** 합니다. 진짜 차이는 **이전 버전을 어디에 두느냐**, 그리고 그로 인한 **롤백 메커니즘의 차이**입니다.
 
 이 글은 그 정확한 차이를 Atomicity 관점에서 풀어봅니다.
 
@@ -40,9 +40,9 @@ UPDATE account SET balance = balance + 100 WHERE id = 2;  -- 실패
 COMMIT;
 ```
 
-첫 번째 `UPDATE`만 반영된 채로 끝나면 100원이 허공으로 사라져요. **일관성 위반의 근본 원인은 원자성 부재**입니다. A가 깨지면 C도 즉시 깨져요 — A는 C의 전제 조건처럼 작동합니다.
+첫 번째 `UPDATE`만 반영된 채로 끝나면 100원이 허공으로 사라집니다. **일관성 위반의 근본 원인은 원자성 부재**입니다. A가 깨지면 C도 즉시 깨집니다. A는 C의 전제 조건처럼 작동하기 때문입니다.
 
-DB가 보장해야 하는 시나리오는 세 가지예요:
+DB가 보장해야 하는 시나리오는 세 가지입니다:
 
 1. **트랜잭션 중 한 쿼리가 실패** → 지금까지 성공한 쿼리를 모두 되돌려야 함
 2. **사용자가 명시적으로 ROLLBACK** → 동일
@@ -50,11 +50,11 @@ DB가 보장해야 하는 시나리오는 세 가지예요:
 
 이 세 시나리오를 어떻게 구현하느냐가 곧 Atomicity 구현 전략이고, 여기서 DB마다 갈립니다.
 
-## 2. 사전 지식 — STEAL과 NO-FORCE
+## 2. 사전 지식: STEAL과 NO-FORCE
 
-DB 교과서의 표준 용어로 먼저 정리해요. Atomicity 메커니즘을 이해하려면 **버퍼 관리 정책 두 가지**를 알아야 합니다.
+DB 교과서의 표준 용어로 먼저 정리합니다. Atomicity 메커니즘을 이해하려면 **버퍼 관리 정책 두 가지**를 알아야 합니다.
 
-![STEAL + NO-FORCE — 거의 모든 현대 DB의 선택](/uploads/theory/transaction-acid/steal-noforce.svg)
+![STEAL + NO-FORCE: 거의 모든 현대 DB의 선택](/uploads/theory/transaction-acid/steal-noforce.svg)
 
 ### STEAL vs NO-STEAL
 
@@ -72,39 +72,39 @@ DB 교과서의 표준 용어로 먼저 정리해요. Atomicity 메커니즘을 
 
 ### 거의 모든 현대 DB는 STEAL + NO-FORCE를 씁니다
 
-PostgreSQL, MySQL InnoDB, SQL Server, Oracle 모두 마찬가지예요. 이유는 단순해요 — **성능** 때문입니다. STEAL이 없으면 큰 트랜잭션을 못 돌리고, NO-FORCE가 없으면 매 커밋마다 무차별 I/O가 터져요.
+PostgreSQL, MySQL InnoDB, SQL Server, Oracle 모두 마찬가지입니다. 이유는 단순합니다. **성능** 때문입니다. STEAL이 없으면 큰 트랜잭션을 못 돌리고, NO-FORCE가 없으면 매 커밋마다 무차별 I/O가 터집니다.
 
-대신 그 대가로 **redo와 undo 메커니즘**이 필요합니다. **ARIES 알고리즘**이 바로 STEAL + NO-FORCE 환경에서 어떻게 복구할지를 정의한 표준이고, InnoDB와 SQL Server가 이걸 따라요. PostgreSQL은 약간 다른 길을 갔는데, 뒤에서 다룹니다.
+대신 그 대가로 **redo와 undo 메커니즘**이 필요합니다. **ARIES 알고리즘**이 바로 STEAL + NO-FORCE 환경에서 어떻게 복구할지를 정의한 표준이고, InnoDB와 SQL Server가 이걸 따릅니다. PostgreSQL은 약간 다른 길을 갔는데, 뒤에서 다룹니다.
 
 ## 3. 롤백을 구현하는 두 가지 철학
 
-`ROLLBACK` 명령을 받았을 때 DB가 실제로 무엇을 하느냐? 두 가지 정반대 접근이 존재해요. 차이의 핵심은 **이전 버전을 어디에 저장하느냐** 입니다.
+`ROLLBACK` 명령을 받았을 때 DB가 실제로 무엇을 하느냐? 두 가지 정반대 접근이 존재합니다. 차이의 핵심은 **이전 버전을 어디에 저장하느냐** 입니다.
 
-![두 가지 롤백 철학 — 이전 버전을 어디에 두느냐](/uploads/theory/transaction-acid/rollback-philosophies.svg)
+![두 가지 롤백 철학: 이전 버전을 어디에 두느냐](/uploads/theory/transaction-acid/rollback-philosophies.svg)
 
-### 접근 1: PostgreSQL — Append-only + 가시성 규칙
+### 접근 1: PostgreSQL의 Append-only + 가시성 규칙
 
-PostgreSQL은 `UPDATE`를 받아도 기존 행을 수정하지 않아요. 같은 테이블(힙) 안에 **새 튜플을 추가**하고 옛 튜플은 그대로 둡니다. 각 튜플은 자신을 만든 트랜잭션 ID(`xmin`)와 자신을 삭제한 트랜잭션 ID(`xmax`)를 헤더에 가지고 있어요.
+PostgreSQL은 `UPDATE`를 받아도 기존 행을 수정하지 않습니다. 같은 테이블(힙) 안에 **새 튜플을 추가**하고 옛 튜플은 그대로 둡니다. 각 튜플은 자신을 만든 트랜잭션 ID(`xmin`)와 자신을 삭제한 트랜잭션 ID(`xmax`)를 헤더에 가지고 있습니다.
 
-`ROLLBACK`이 일어나면? 트랜잭션 상태를 **CLOG**(commit log, 현재는 `pg_xact`)에 `ABORTED`로 마킹하면 끝입니다. 그 트랜잭션이 만든 새 튜플들은 자동으로 *"xmin이 ABORTED 트랜잭션인 죽은 튜플"* 이 되어 **가시성 규칙(visibility rules)** 에 의해 다른 트랜잭션에게 보이지 않게 돼요.
+`ROLLBACK`이 일어나면? 트랜잭션 상태를 **CLOG**(commit log, 현재는 `pg_xact`)에 `ABORTED`로 마킹하면 끝입니다. 그 트랜잭션이 만든 새 튜플들은 자동으로 *"xmin이 ABORTED 트랜잭션인 죽은 튜플"* 이 되어 **가시성 규칙(visibility rules)** 에 의해 다른 트랜잭션에게 보이지 않게 됩니다.
 
 PostgreSQL 코어 개발자 Tom Lane이 메일링 리스트에서 직접 한 말:
 
 > "Commit and abort are both O(1). Where we pay the piper is in having to run VACUUM to clean up no-longer-needed row versions."
 
-즉 **롤백 연산 자체는 O(1)** 에 가까워요. 하지만 주의 — 이게 *"공짜"* 라는 뜻은 아닙니다:
+즉 **롤백 연산 자체는 O(1)** 에 가깝습니다. 하지만 주의할 점이 있습니다. 이게 *"공짜"* 라는 뜻은 아닙니다:
 
 - 트랜잭션이 만든 새 튜플들은 이미 WAL에 기록됐고 디스크 공간도 차지하고 있음
 - 그 튜플들을 물리적으로 청소하는 비용은 나중에 **VACUUM**이 치름
 - 인덱스 항목도 같이 누적됨
 
-> **"롤백 자체는 싸지만, 시스템 전체 비용은 공짜가 아니다."** PostgreSQL은 비용을 지금 즉시 치르는 대신 나중에 백그라운드로 치르는 구조예요.
+> **"롤백 자체는 싸지만, 시스템 전체 비용은 공짜가 아니다."** PostgreSQL은 비용을 지금 즉시 치르는 대신 나중에 백그라운드로 치르는 구조입니다.
 
-### 접근 2: InnoDB / Oracle — In-place 수정 + Undo Log
+### 접근 2: InnoDB / Oracle의 In-place 수정 + Undo Log
 
-InnoDB는 정반대예요. `UPDATE`가 오면 메인 테이블의 행을 **in-place로 수정**하고, 변경 전 이미지(before-image)를 별도의 **Undo Log**(rollback segment)에 기록합니다. 행 헤더의 `DB_ROLL_PTR`이 Undo Log 안의 옛 버전을 가리키는 포인터 역할을 해요.
+InnoDB는 정반대입니다. `UPDATE`가 오면 메인 테이블의 행을 **in-place로 수정**하고, 변경 전 이미지(before-image)를 별도의 **Undo Log**(rollback segment)에 기록합니다. 행 헤더의 `DB_ROLL_PTR`이 Undo Log 안의 옛 버전을 가리키는 포인터 역할을 합니다.
 
-`ROLLBACK`이 일어나면? Undo Log를 따라가서 행을 한 줄씩 되돌려야 해요. 100만 행을 수정한 트랜잭션을 롤백하면 **100만 번의 undo 작업**이 발생합니다. 진짜로 시간이 걸리는 작업이에요.
+`ROLLBACK`이 일어나면? Undo Log를 따라가서 행을 한 줄씩 되돌려야 합니다. 100만 행을 수정한 트랜잭션을 롤백하면 **100만 번의 undo 작업**이 발생합니다. 진짜로 시간이 걸리는 작업입니다.
 
 ### 비용은 어디로 가는가
 
@@ -113,42 +113,42 @@ InnoDB는 정반대예요. `UPDATE`가 오면 메인 테이블의 행을 **in-pl
 | 행 업데이트 | 새 튜플 추가 (append-only) | In-place + 옛 버전을 Undo Log에 |
 | 옛 버전의 위치 | 같은 테이블의 힙 | 별도 Undo Log (rollback segment) |
 | 가시성 판단 | xmin/xmax + CLOG + 스냅샷 + hint bit | Read view + DB_ROLL_PTR 포인터 체인 |
-| 롤백 자체의 비용 | **O(1)** — abort 마킹만 | **O(N)** — Undo Log 역재생 |
+| 롤백 자체의 비용 | **O(1)**, abort 마킹만 | **O(N)**, Undo Log 역재생 |
 | 이연 비용 | VACUUM (백그라운드 dead tuple 청소) | Undo tablespace 관리, purge thread |
 
-> **흔한 오해 정정**: *"낙관적 vs 비관적"* 이라는 표현은 정확하지 않아요. 낙관/비관은 원래 락 전략 용어이고, 여기서의 차이는 **MVCC 구현 방식**입니다. 면접에서는 *"이전 버전을 저장하는 위치가 다릅니다"* 라고 말하는 게 안전해요.
+> **흔한 오해 정정**: *"낙관적 vs 비관적"* 이라는 표현은 정확하지 않습니다. 낙관/비관은 원래 락 전략 용어이고, 여기서의 차이는 **MVCC 구현 방식**입니다. 면접에서는 *"이전 버전을 저장하는 위치가 다릅니다"* 라고 말하는 게 안전합니다.
 
 ## 4. 크래시가 났을 때의 Atomicity
 
-명시적 `ROLLBACK`은 그래도 쉬워요. 진짜 까다로운 건 **트랜잭션 도중에 DB가 다운되는 경우**입니다. 다운된 DB는 스스로 ROLLBACK을 호출할 수도 없어요.
+명시적 `ROLLBACK`은 그래도 쉽습니다. 진짜 까다로운 건 **트랜잭션 도중에 DB가 다운되는 경우**입니다. 다운된 DB는 스스로 ROLLBACK을 호출할 수도 없습니다.
 
 해결책은 재시작 시점의 **복구(recovery) 절차**입니다. 여기서도 두 학파가 갈립니다.
 
-![크래시 후 복구 — 두 학파](/uploads/theory/transaction-acid/recovery-flow.svg)
+![크래시 후 복구: 두 학파](/uploads/theory/transaction-acid/recovery-flow.svg)
 
-### ARIES 스타일 — Redo + Undo (InnoDB, SQL Server)
+### ARIES 스타일: Redo + Undo (InnoDB, SQL Server)
 
-표준 STEAL + NO-FORCE 환경의 표준 복구 알고리즘이에요. 재시작하면 **3단계**를 수행합니다:
+표준 STEAL + NO-FORCE 환경의 표준 복구 알고리즘입니다. 재시작하면 **3단계**를 수행합니다:
 
-1. **Analysis phase** — WAL을 읽어서 크래시 시점의 활성 트랜잭션과 dirty page 목록을 재구성
-2. **Redo phase** — 마지막 체크포인트 이후의 WAL을 순방향으로 재생해서 모든 변경(미커밋 포함)을 데이터 페이지에 반영
-3. **Undo phase** — 미커밋 트랜잭션의 변경을 Undo Log를 따라 역방향으로 되돌림
+1. **Analysis phase**: WAL을 읽어서 크래시 시점의 활성 트랜잭션과 dirty page 목록을 재구성
+2. **Redo phase**: 마지막 체크포인트 이후의 WAL을 순방향으로 재생해서 모든 변경(미커밋 포함)을 데이터 페이지에 반영
+3. **Undo phase**: 미커밋 트랜잭션의 변경을 Undo Log를 따라 역방향으로 되돌림
 
 이 세 단계를 거치면 재시작 후 DB는 *"커밋된 트랜잭션의 효과만 남고 미커밋의 흔적은 모두 사라진"* 상태가 됩니다.
 
-### PostgreSQL 스타일 — 명시적 Undo phase 없이 Redo + 가시성 규칙
+### PostgreSQL 스타일: 명시적 Undo phase 없이 Redo + 가시성 규칙
 
-PostgreSQL은 다른 길을 택했어요. 재시작 시 명시적인 Undo phase 없이 **Redo만 수행**하고, 미커밋 트랜잭션의 흔적은 **가시성 규칙**으로 처리합니다.
+PostgreSQL은 다른 길을 택했습니다. 재시작 시 명시적인 Undo phase 없이 **Redo만 수행**하고, 미커밋 트랜잭션의 흔적은 **가시성 규칙**으로 처리합니다.
 
 PostgreSQL 7.3 공식 문서:
 
 > "UNDO operation is not implemented. This means that changes made by aborted transactions will still occupy disk space"
 
-미커밋 트랜잭션의 흔적은 어떻게 사라질까요? **사라지지 않습니다.** 디스크에 그대로 남아있어요. 다만 그 튜플들의 `xmin`이 ABORTED 트랜잭션 ID이기 때문에, CLOG와 가시성 규칙이 그 튜플들을 안 보이게 만듭니다. 사용자 입장에서는 마치 없는 것처럼 보여요.
+미커밋 트랜잭션의 흔적은 어떻게 사라질까요? **사라지지 않습니다.** 디스크에 그대로 남아있습니다. 다만 그 튜플들의 `xmin`이 ABORTED 트랜잭션 ID이기 때문에, CLOG와 가시성 규칙이 그 튜플들을 안 보이게 만듭니다. 사용자 입장에서는 마치 없는 것처럼 보입니다.
 
-물리적 청소는 나중에 **VACUUM**이 해줍니다. **hint bit**가 한 번 설정되고 나면 CLOG를 매번 조회할 필요도 없어 효율이 더 올라가요.
+물리적 청소는 나중에 **VACUUM**이 해줍니다. **hint bit**가 한 번 설정되고 나면 CLOG를 매번 조회할 필요도 없어 효율이 더 올라갑니다.
 
-> **표현 주의**: PostgreSQL이 *"undo 개념이 아예 없다"* 고 하면 부정확해요. 전통적인 Undo Log 기반 롤백을 사용하지 않을 뿐이고, **CLOG와 가시성 규칙**(xmin/xmax + hint bit + 스냅샷)으로 동일한 효과를 냅니다. WAL은 이 과정에서 데이터 페이지의 **물리적 redo**를 담당할 뿐, abort 판정 자체의 메커니즘은 아니라는 점을 구분하세요.
+> **표현 주의**: PostgreSQL이 *"undo 개념이 아예 없다"* 고 하면 부정확합니다. 전통적인 Undo Log 기반 롤백을 사용하지 않을 뿐이고, **CLOG와 가시성 규칙**(xmin/xmax + hint bit + 스냅샷)으로 동일한 효과를 냅니다. WAL은 이 과정에서 데이터 페이지의 **물리적 redo**를 담당할 뿐, abort 판정 자체의 메커니즘은 아니라는 점을 구분해야 합니다.
 
 ### 같은 목적, 다른 메커니즘
 
@@ -159,11 +159,11 @@ PostgreSQL 7.3 공식 문서:
 | 미커밋 변경의 운명 | 물리적으로 되돌려짐 | 가시성 규칙으로 무시됨 → VACUUM이 청소 |
 | 핵심 자료구조 | Undo Log, rollback segment | CLOG (pg_xact), hint bit, xmin/xmax |
 
-둘 다 외부에서 보면 동일한 Atomicity 보장을 제공해요. 단지 **비용을 언제, 어떤 형태로 치르느냐** 가 다를 뿐입니다.
+둘 다 외부에서 보면 동일한 Atomicity 보장을 제공합니다. 단지 **비용을 언제, 어떤 형태로 치르느냐** 가 다를 뿐입니다.
 
-## 5. WAL은 모두 같은가? — 정확히 짚고 가자
+## 5. WAL은 모두 같은가? 정확히 짚고 가자
 
-세 DB가 WAL을 쓴다는 점은 같지만, 구현은 동일하지 않아요. 이 부분을 면접에서 *"다 같다"* 고 하면 깊이 없어 보입니다. 정확하게는:
+세 DB가 WAL을 쓴다는 점은 같지만, 구현은 동일하지 않습니다. 이 부분을 면접에서 *"다 같다"* 고 하면 깊이 없어 보입니다. 정확하게는:
 
 ### 공통점 (개념 수준)
 
@@ -173,16 +173,16 @@ PostgreSQL 7.3 공식 문서:
 
 ### 차이점 (구현 수준)
 
-- **flush 타이밍**: PostgreSQL의 `synchronous_commit`, InnoDB의 `innodb_flush_log_at_trx_commit`, SQL Server의 delayed durability — 다이얼이 다름
+- **flush 타이밍**: PostgreSQL의 `synchronous_commit`, InnoDB의 `innodb_flush_log_at_trx_commit`, SQL Server의 delayed durability까지 다이얼이 다름
 - **group commit**: 여러 트랜잭션을 묶어 한 번에 fsync하는 전략의 디테일이 다름
-- **doublewrite buffer**: InnoDB는 페이지 부분 쓰기(torn page)를 막기 위한 별도의 doublewrite 영역이 있음. PostgreSQL은 `full_page_writes`로, SQL Server는 다른 방식으로 같은 문제를 풀어요
-- **체크포인트 전략**: PostgreSQL의 `checkpoint_timeout`/`max_wal_size`, InnoDB의 fuzzy checkpointing, SQL Server의 indirect checkpoint — 모두 다름
+- **doublewrite buffer**: InnoDB는 페이지 부분 쓰기(torn page)를 막기 위한 별도의 doublewrite 영역이 있음. PostgreSQL은 `full_page_writes`로, SQL Server는 다른 방식으로 같은 문제를 풉니다
+- **체크포인트 전략**: PostgreSQL의 `checkpoint_timeout`/`max_wal_size`, InnoDB의 fuzzy checkpointing, SQL Server의 indirect checkpoint까지 모두 다름
 
-WAL의 자세한 동작은 **D편(Durability)** 에서 다뤄요. 여기서는 *"셋 다 WAL을 쓰지만 그 안의 디테일은 다르다"* 는 정도로 충분합니다.
+WAL의 자세한 동작은 **D편(Durability)** 에서 다룹니다. 여기서는 *"셋 다 WAL을 쓰지만 그 안의 디테일은 다르다"* 는 정도로 충분합니다.
 
 ## 6. 그래서 긴 트랜잭션이 어디서든 위험합니다
 
-Atomicity 메커니즘을 이해하면 **왜 긴 트랜잭션이 어디서든 안 좋은가**가 자연스럽게 보여요. 두 진영 모두 비용을 치르는데, 그 형태만 다릅니다.
+Atomicity 메커니즘을 이해하면 **왜 긴 트랜잭션이 어디서든 안 좋은가**가 자연스럽게 보입니다. 두 진영 모두 비용을 치르는데, 그 형태만 다릅니다.
 
 ### PostgreSQL의 부담
 
@@ -201,15 +201,15 @@ Atomicity 메커니즘을 이해하면 **왜 긴 트랜잭션이 어디서든 �
 - 마지막 체크포인트 이후의 WAL이 길어져서 **크래시 복구 시간**이 늘어남
 - 트랜잭션이 길수록 그 시간 안에 장애가 발생할 확률 자체가 비례해서 커짐
 
-> **트랜잭션은 짧고 응집력 있게.** 비즈니스 로직 단위로 명확하게 끊자. 이 격언의 진짜 근거가 위의 메커니즘들이에요.
+> **트랜잭션은 짧고 응집력 있게.** 비즈니스 로직 단위로 명확하게 끊자. 이 격언의 진짜 근거가 위의 메커니즘들입니다.
 
 ## 7. 정리
 
-Atomicity는 단순한 *"전부 성공 or 전부 실패"* 규칙이 아니라, **"부분 성공의 흔적을 어떻게 지울 것인가"** 라는 구현 문제예요. 거의 모든 현대 DB는 성능을 위해 **STEAL + NO-FORCE** 정책을 쓰고, 그 대가로 redo/undo 메커니즘을 갖춰야 합니다. 이 메커니즘을 두 가지 철학이 다르게 풀어요:
+Atomicity는 단순한 *"전부 성공 or 전부 실패"* 규칙에 그치지 않습니다. 실제로는 **"부분 성공의 흔적을 어떻게 지울 것인가"** 라는 구현 문제입니다. 거의 모든 현대 DB는 성능을 위해 **STEAL + NO-FORCE** 정책을 쓰고, 그 대가로 redo/undo 메커니즘을 갖춰야 합니다. 이 메커니즘을 두 가지 철학이 다르게 풀어냅니다:
 
-- **PostgreSQL** — Append-only + 가시성 규칙. 롤백은 abort 마킹만(O(1)), 명시적 Undo phase 없이 Redo + 가시성으로 처리. 비용은 VACUUM으로 이연.
-- **InnoDB / Oracle** — In-place 수정 + 별도 Undo Log. 롤백은 Undo Log 역재생, 크래시 복구는 ARIES 스타일 Redo + Undo.
-- **SQL Server** — InnoDB와 비슷한 ARIES 계열. 단 MVCC는 옵트인(스냅샷 격리)이고 version store는 tempdb에 둠.
+- **PostgreSQL**: Append-only + 가시성 규칙. 롤백은 abort 마킹만(O(1)), 명시적 Undo phase 없이 Redo + 가시성으로 처리. 비용은 VACUUM으로 이연.
+- **InnoDB / Oracle**: In-place 수정 + 별도 Undo Log. 롤백은 Undo Log 역재생, 크래시 복구는 ARIES 스타일 Redo + Undo.
+- **SQL Server**: InnoDB와 비슷한 ARIES 계열. 단 MVCC는 옵트인(스냅샷 격리)이고 version store는 tempdb에 둠.
 
 세 DB 모두 외부에서 보면 같은 Atomicity 보장을 제공하지만, 내부적으로는 **비용을 청구하는 시점과 형태**가 완전히 다릅니다.
 
