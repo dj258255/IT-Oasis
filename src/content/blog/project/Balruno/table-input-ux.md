@@ -1,7 +1,7 @@
 ---
-title: 'Balruno 테이블/입력 UX 기술 디테일 — 드래그 성능, 셀-수식바 동기화, IME 처리'
+title: 'Balruno 테이블/입력 UX 기술 디테일: 드래그 성능, 셀-수식바 동기화, IME 처리'
 titleEn: 'Balruno Table & Input UX Engineering — Drag Perf, Cell↔Formula Sync, IME Handling'
-description: 스프레드시트 UX의 체감을 결정하는 세 가지 — 드래그 성능(O(N)→O(1)+rafThrottle+DOM 직접 조작), 셀-수식바 동기화(debounce→rafThrottle→즉시 sync, 오픈소스 분석 기반), IME(한글/중국어/일본어) 입력 처리(Uncontrolled + Composition 이벤트)를 한 글에 정리했어요.
+description: 스프레드시트 UX의 체감을 결정하는 세 가지, 드래그 성능(O(N)→O(1)+rafThrottle+DOM 직접 조작), 셀-수식바 동기화(debounce→rafThrottle→즉시 sync, 오픈소스 분석 기반), IME(한글/중국어/일본어) 입력 처리(Uncontrolled + Composition 이벤트)를 한 글에 정리했습니다.
 descriptionEn: Three pieces of spreadsheet UX engineering, consolidated into one post — drag performance (O(N)→O(1) + rafThrottle + direct DOM), cell↔formula-bar sync (debounce → rafThrottle → immediate sync, guided by open-source analysis), and IME input handling (Uncontrolled + Composition events).
 date: 2026-01-23T00:00:00.000Z
 tags:
@@ -23,9 +23,9 @@ draft: false
 series: "Balruno"
 ---
 
-스프레드시트 UX의 체감은 결국 **셀 인터랙션의 디테일** 에서 결정돼요. Balruno에서 이 부분을 다듬어가며 가장 시간을 많이 쓴 세 가지 — 드래그 성능, 셀↔수식바 동기화, IME 입력 처리 — 를 한 글에 모았어요.
+스프레드시트 UX의 체감은 결국 **셀 인터랙션의 디테일**에서 결정됩니다. Balruno에서 이 부분을 다듬어가며 가장 시간을 많이 쓴 세 가지, 즉 드래그 성능, 셀↔수식바 동기화, IME 입력 처리를 한 글에 모았습니다.
 
-## 1. 테이블 드래그 성능 — O(N)에서 O(1)로
+## 1. 테이블 드래그 성능: O(N)에서 O(1)로
 
 ### 1.1 문제
 
@@ -35,7 +35,7 @@ series: "Balruno"
 
 ### 1.2 원인 분석
 
-React DevTools Profiler + 코드 정적 분석으로 세 지점이 병목으로 드러났어요.
+React DevTools Profiler + 코드 정적 분석으로 세 지점이 병목으로 드러났습니다.
 
 **문제 1 — O(N) 시간복잡도의 셀 상태 조회**
 
@@ -71,7 +71,7 @@ const columns = useMemo(() => {
 - `mousemove`는 마우스 폴링 레이트에 따라 초당 60–120+회 발생
 - 매 이벤트마다 `setSelectedCells` → 리렌더 → 브라우저 렌더 사이클(16.67ms)보다 빈번한 상태 업데이트
 
-### 1.3 1차 최적화 — Set 자료구조 + Throttle
+### 1.3 1차 최적화: Set 자료구조 + Throttle
 
 **Set 기반 O(1) 조회:**
 
@@ -89,7 +89,7 @@ const isCellSelected = useCallback(
 );
 ```
 
-기존 배열 구조는 유지하고 useMemo로 Set만 파생 — 기존 로직 변경 최소화.
+기존 배열 구조는 유지하고 useMemo로 Set만 파생해 기존 로직 변경을 최소화했습니다.
 
 **Throttle 유틸리티 (16ms = 60fps):**
 
@@ -121,7 +121,7 @@ function throttle<T extends (...args: Parameters<T>) => void>(fn: T, delay: numb
 | 100셀 선택 + 500셀 렌더 시 비교 | ~50,000회 | ~500회 | **99% 감소** |
 | 드래그 중 state 업데이트 빈도 | ~200회/초 | ~60회/초 | **70% 감소** |
 
-### 1.4 2차 최적화 — Excel 수준으로
+### 1.4 2차 최적화: Excel 수준으로
 
 오픈소스 스프레드시트(Handsontable, AG Grid, Google Sheets) 분석 후 추가 기법 도입.
 
@@ -178,7 +178,7 @@ const handleCellMouseEnterThrottled = useMemo(
 
 - 드래그 중에는 Virtual DOM Diff + Re-render 사이클을 우회
 - mouseup 시점에만 React state 동기화
-- 셀에 `data-cell-id` 속성 추가 (단, data-attribute selector는 class selector 대비 ~3배 느림 — 대규모 테이블에서는 JS Map으로 셀 요소를 직접 추적하는 편이 더 효율적)
+- 셀에 `data-cell-id` 속성 추가 (단, data-attribute selector는 class selector 대비 ~3배 느림. 대규모 테이블에서는 JS Map으로 셀 요소를 직접 추적하는 편이 더 효율적)
 
 **기법 3 — CSS `will-change` 힌트:**
 
@@ -186,7 +186,7 @@ const handleCellMouseEnterThrottled = useMemo(
 style={{ willChange: 'background, outline' }}
 ```
 
-브라우저가 별도 합성 레이어로 분리. 단 `background`/`outline`은 compositor-only 속성이 아니므로 해당 레이어 내 paint는 여전히 발생 — 진정한 GPU 합성만으로 처리되는 속성은 `transform`/`opacity`.
+브라우저가 별도 합성 레이어로 분리. 단 `background`/`outline`은 compositor-only 속성이 아니므로 해당 레이어 내 paint는 여전히 발생. 진정한 GPU 합성만으로 처리되는 속성은 `transform`/`opacity`.
 
 **2차 결과:**
 
@@ -198,13 +198,13 @@ style={{ willChange: 'background, outline' }}
 
 ### 1.5 핵심 교훈
 
-- **자료구조가 곧 성능** — 같은 기능도 Array vs Set에서 O(N) vs O(1) 차이
-- **useMemo 의존성은 최소** — 빈번히 바뀌는 값을 의존성에 넣으면 cascade 재렌더
-- **빈번한 UI 업데이트는 React를 우회** — 직접 DOM 조작 + ref로 중간 상태 보관, 완료 시점에만 state 동기화
+- **자료구조가 곧 성능**: 같은 기능도 Array vs Set에서 O(N) vs O(1) 차이
+- **useMemo 의존성은 최소**: 빈번히 바뀌는 값을 의존성에 넣으면 cascade 재렌더
+- **빈번한 UI 업데이트는 React를 우회**: 직접 DOM 조작 + ref로 중간 상태 보관, 완료 시점에만 state 동기화
 
 ---
 
-## 2. 셀↔수식바 동기화 — debounce → rafThrottle → 즉시 sync
+## 2. 셀↔수식바 동기화: debounce → rafThrottle → 즉시 sync
 
 ### 2.1 결론 먼저
 
@@ -217,9 +217,9 @@ onInput={(e) => {
 }}
 ```
 
-도달까지 두 번의 우회를 거쳤어요.
+도달까지 두 번의 우회를 거쳤습니다.
 
-### 2.2 1차 — debounce(150ms)
+### 2.2 1차: debounce(150ms)
 
 ```typescript
 const debouncedSetFormulaBarValue = useMemo(
@@ -230,7 +230,7 @@ const debouncedSetFormulaBarValue = useMemo(
 
 타이핑 후 150ms 지연 발생 → UX 저하.
 
-### 2.3 2차 — rafThrottle (60fps)
+### 2.3 2차: rafThrottle (60fps)
 
 ```typescript
 const throttledSetFormulaBarValue = useMemo(
@@ -241,7 +241,7 @@ const throttledSetFormulaBarValue = useMemo(
 
 더 빠르지만 여전히 프레임 단위 지연.
 
-### 2.4 3차 — 오픈소스 분석 후 즉시 동기화
+### 2.4 3차: 오픈소스 분석 후 즉시 동기화
 
 | 라이브러리 | 핵심 방식 | throttle/debounce |
 |---|---|---|
@@ -258,14 +258,14 @@ if ($copyTo) $copyTo.textContent = value;
 
 오픈소스가 즉시 동기화하는 이유:
 
-- Fortune-Sheet/Luckysheet — React를 안 쓰고 DOM 직접 조작이라 상태 관리 오버헤드 자체가 없음
-- Univer — RxJS Observable로 값 공유, 리렌더 없이 동기화
+- Fortune-Sheet/Luckysheet: React를 안 쓰고 DOM 직접 조작이라 상태 관리 오버헤드 자체가 없음
+- Univer: RxJS Observable로 값 공유, 리렌더 없이 동기화
 
 본 프로젝트에서 즉시 동기화가 가능한 이유:
 
-1. **수식바는 독립 컴포넌트** — 테이블 전체 리렌더 없음
-2. **React 18 batching** — 여러 setState가 자동으로 하나로
-3. **문자열만 업데이트** — 연산 부하 거의 없음
+1. **수식바는 독립 컴포넌트**: 테이블 전체 리렌더 없음
+2. **React 18 batching**: 여러 setState가 자동으로 하나로
+3. **문자열만 업데이트**: 연산 부하 거의 없음
 
 ### 2.5 교훈
 
@@ -274,7 +274,7 @@ if ($copyTo) $copyTo.textContent = value;
 | 추측으로 최적화 | 불필요한 복잡성 추가 |
 | 오픈소스 분석 | 검증된 패턴 발견 |
 
-> *"Premature optimization is the root of all evil"* — 실제로 문제가 되는지 먼저 확인하고, 오픈소스에서 검증된 방식을 따르는 게 정답.
+> *"Premature optimization is the root of all evil"*. 실제로 문제가 되는지 먼저 확인하고, 오픈소스에서 검증된 방식을 따르는 게 정답입니다.
 
 ---
 
@@ -288,10 +288,10 @@ if ($copyTo) $copyTo.textContent = value;
 
 ### 3.2 원인
 
-1. **React Controlled Component 문제** — `<input value={state} onChange={...} />`가 IME 조합 중에 `value`를 강제 재설정 → 조합 컨텍스트 끊김
-2. **편집 모드 전환 시 컴포넌트 재생성** — `compositionstart`에서 `setEditingCell()` 호출 → 새 input 렌더 → 기존 IME 조합 상태 손실
+1. **React Controlled Component 문제**: `<input value={state} onChange={...} />`가 IME 조합 중에 `value`를 강제 재설정 → 조합 컨텍스트 끊김
+2. **편집 모드 전환 시 컴포넌트 재생성**: `compositionstart`에서 `setEditingCell()` 호출 → 새 input 렌더 → 기존 IME 조합 상태 손실
 
-### 3.3 해결 — 4가지 패턴
+### 3.3 해결: 4가지 패턴
 
 **(1) Uncontrolled component:**
 
@@ -354,9 +354,9 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 ### 3.5 주의사항
 
-- **Enter 키** — IME 조합 중 Enter는 조합 확정용. `isComposing` 체크해 폼 제출 방지.
-- **Blur 이벤트** — 포커스 잃을 때 `isComposingRef` 초기화.
-- **접근성** — 숨겨진 input은 `aria-hidden="true"`, `tabIndex={-1}` 설정.
+- **Enter 키**: IME 조합 중 Enter는 조합 확정용. `isComposing` 체크해 폼 제출 방지.
+- **Blur 이벤트**: 포커스 잃을 때 `isComposingRef` 초기화.
+- **접근성**: 숨겨진 input은 `aria-hidden="true"`, `tabIndex={-1}` 설정.
 
 ---
 
@@ -368,7 +368,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 | 셀↔수식바 동기화 | 즉시 setState | 추측으로 최적화하기 전에 오픈소스 검증 패턴부터 확인 |
 | IME 입력 | Uncontrolled + Composition + 숨김 input | Controlled component를 IME 입력에 직접 결합하지 말 것 |
 
-세 영역 모두 *"React 자체의 추상화를 그대로 따르면 스프레드시트 UX는 60fps에 도달하지 못한다"* 는 점이 공통 결론이에요. ref + DOM 직접 접근 + 브라우저 API(`requestAnimationFrame`, Composition Events)를 적극적으로 쓸 때만 Excel/Google Sheets 수준의 체감이 나옵니다.
+세 영역 모두 *"React 자체의 추상화를 그대로 따르면 스프레드시트 UX는 60fps에 도달하지 못한다"* 는 점이 공통 결론입니다. ref + DOM 직접 접근 + 브라우저 API(`requestAnimationFrame`, Composition Events)를 적극적으로 쓸 때만 Excel/Google Sheets 수준의 체감이 나옵니다.
 
 ---
 

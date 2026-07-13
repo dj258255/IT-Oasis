@@ -17,13 +17,13 @@ coverImage: "/uploads/project/Joying/kafka-was-overkill/kafka.svg"
 series: "Joying"
 ---
 
-메시지 순서 문제를 해결하려고 메시지 브로커를 검토했어요. 처음에는 "실시간 메시징이니까 Kafka 써야 하는 거 아니야?"라는 생각이 있었습니다. 하지만 실제로 각 기술을 비교해보니 우리 상황에 맞는 답은 달랐어요.
+메시지 순서 문제를 해결하려고 메시지 브로커를 검토했습니다. 처음에는 "실시간 메시징이니까 Kafka 써야 하는 거 아니야?"라는 생각이 있었습니다. 하지만 실제로 각 기술을 비교해보니 우리 상황에 맞는 답은 달랐습니다.
 
 ---
 
 ## Kafka: 설정이 너무 복잡했다
 
-Kafka가 제일 먼저 후보에 올랐어요. 메시지를 디스크에 저장하고, 파티션 단위로 순서를 보장하고, 초당 수십만 건 처리도 가능하죠.
+Kafka가 제일 먼저 후보에 올랐습니다. 메시지를 디스크에 저장하고, 파티션 단위로 순서를 보장하고, 초당 수십만 건 처리도 가능합니다.
 
 설정을 시작했습니다.
 
@@ -34,68 +34,68 @@ KRaft 모드 설정, 클러스터 ID 생성, 메타데이터 디렉토리 포맷
 
 **6주 프로젝트에서 Kafka 설정에 2주를 쓸 수는 없었다.**
 
-Kafka가 필요한 경우는 명확해요:
+Kafka가 필요한 경우는 명확합니다:
 - 여러 서비스가 같은 메시지를 소비할 때 (번역, 필터링, 분석 등)
 - 메시지 재처리가 필요할 때 ("어제 메시지 전부 다시 분석해줘")
 - Exactly-Once 처리가 필요할 때 (결제, 포인트 적립)
 
-우리 요구사항은 달랐어요:
+우리 요구사항은 달랐습니다:
 - 채팅 메시지 전달만 하면 됨
 - 재처리 필요 없음
 - 중복 전달되어도 클라이언트가 중복 제거하면 됨
 
-**우리 트래픽에 Kafka는 오버 엔지니어링이었어요.** 트래픽 추정: 동시 접속 50-100명 × 채팅방당 1-2건/초 = 피크 시 **초당 100~200건** 수준. Redis Pub/Sub은 단일 인스턴스에서 초당 수십만 건 처리가 가능하므로([Redis 공식 벤치마크](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/) 기준) 현재 트래픽의 **1,000배 이상 여유**가 있다.
+**우리 트래픽에 Kafka는 오버 엔지니어링이었습니다.** 트래픽 추정: 동시 접속 50-100명 × 채팅방당 1-2건/초 = 피크 시 **초당 100~200건** 수준. Redis Pub/Sub은 단일 인스턴스에서 초당 수십만 건 처리가 가능하므로([Redis 공식 벤치마크](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/) 기준) 현재 트래픽의 **1,000배 이상 여유**가 있다.
 
 ---
 
 ## RabbitMQ: 1:1 채팅에는 과했다
 
-RabbitMQ는 메시지를 디스크에 저장하고, ACK 시스템으로 전달을 보장해요. Exchange 패턴으로 라우팅도 유연하고요.
+RabbitMQ는 메시지를 디스크에 저장하고, ACK 시스템으로 전달을 보장합니다. Exchange 패턴으로 라우팅도 유연합니다.
 
-문제는 RabbitMQ가 "메시지 큐"에 최적화되어 있다는 점이에요. 한 메시지를 한 소비자가 처리하는 구조에 강합니다.
+문제는 RabbitMQ가 "메시지 큐"에 최적화되어 있다는 점입니다. 한 메시지를 한 소비자가 처리하는 구조에 강합니다.
 
-1:1 채팅은 한 메시지를 2명(송신자, 수신자)에게 전달해야 해요. 서버를 여러 대로 확장하면 각 서버마다 별도 큐를 생성해야 해서 관리가 복잡해집니다.
+1:1 채팅은 한 메시지를 2명(송신자, 수신자)에게 전달해야 합니다. 서버를 여러 대로 확장하면 각 서버마다 별도 큐를 생성해야 해서 관리가 복잡해집니다.
 
-**이미 Redis를 쓰고 있었거든요.** 캐싱, 세션 관리에 Redis를 쓰는데, 새로운 미들웨어를 추가하는 건 운영 부담이었어요.
+**이미 Redis를 쓰고 있었습니다.** 캐싱, 세션 관리에 Redis를 쓰는데, 새로운 미들웨어를 추가하는 건 운영 부담이었습니다.
 
 ---
 
 ## Redis Stream: 용도가 달랐다
 
-Redis 5.0부터 추가된 Redis Stream을 검토했어요. 메시지가 저장되고, 순서가 보장되며, Consumer Group도 지원합니다.
+Redis 5.0부터 추가된 Redis Stream을 검토했습니다. 메시지가 저장되고, 순서가 보장되며, Consumer Group도 지원합니다.
 
 ```
 XADD chat:stream * message "안녕하세요"
 → ID: "1609459200000-0" (밀리초 타임스탬프-시퀀스)
 ```
 
-Redis는 명령 실행이 싱글 스레드이기 때문에(Redis 6+에서 I/O는 멀티스레드지만 명령 처리는 단일 스레드) ID가 순서대로 부여돼요.
+Redis는 명령 실행이 싱글 스레드이기 때문에(Redis 6+에서 I/O는 멀티스레드지만 명령 처리는 단일 스레드) ID가 순서대로 부여됩니다.
 
 **Consumer Group 코드:**
 
 ![](/uploads/project/Joying/kafka-was-overkill/redis-stream.svg)
 
 
-Consumer Group, Pending List, ACK 처리... 코드가 복잡해졌어요.
+Consumer Group, Pending List, ACK 처리... 코드가 복잡해졌습니다.
 
 팀 회의에서 질문이 나왔습니다.
 
 **"실시간 전달에 순서 보장이 꼭 필요한가?"**
 
-생각해보니 아니었어요.
+생각해보니 아니었습니다.
 
-1. **네트워크는 원래 불안정해요**: 서버에서 순서대로 보내도 클라이언트 네트워크 상황에 따라 도착 순서가 바뀔 수 있거든요.
-2. **클라이언트가 정렬하면 돼요**: 카카오톡, 슬랙, 디스코드 모두 DB에서 조회할 때 `ORDER BY timestamp`로 정렬합니다.
+1. **네트워크는 원래 불안정합니다**: 서버에서 순서대로 보내도 클라이언트 네트워크 상황에 따라 도착 순서가 바뀔 수 있습니다.
+2. **클라이언트가 정렬하면 됩니다**: 카카오톡, 슬랙, 디스코드 모두 DB에서 조회할 때 `ORDER BY timestamp`로 정렬합니다.
 
-**Redis Stream의 순서 보장은 실시간 전달에서만 의미 있는데, 어차피 네트워크 때문에 보장이 안 돼요.**
+**Redis Stream의 순서 보장은 실시간 전달에서만 의미 있는데, 어차피 네트워크 때문에 보장이 안 됩니다.**
 
-Consumer Group은 "작업 분배"에 최적화되어 있어요. 우리가 필요한 건 "메시지 브로드캐스트"였습니다.
+Consumer Group은 "작업 분배"에 최적화되어 있습니다. 우리가 필요한 건 "메시지 브로드캐스트"였습니다.
 
 ---
 
 ## NATS: 새 인프라 도입이 부담이었다
 
-NATS는 경량 메시징 시스템이에요. 설정이 단순하고, 지연 시간이 낮습니다.
+NATS는 경량 메시징 시스템입니다. 설정이 단순하고, 지연 시간이 낮습니다.
 
 
 **NATS Core**
@@ -107,15 +107,15 @@ NATS는 경량 메시징 시스템이에요. 설정이 단순하고, 지연 시�
 - At-least-once / Exactly-once 전달
 
 
-NATS Core는 Redis Pub/Sub과 비슷하게 메시지를 저장하지 않아요. JetStream을 쓰면 저장되지만 설정 복잡도가 올라갑니다.
+NATS Core는 Redis Pub/Sub과 비슷하게 메시지를 저장하지 않습니다. JetStream을 쓰면 저장되지만 설정 복잡도가 올라갑니다.
 
-**이미 Redis가 있었거든요.** Pub/Sub, 캐싱, 세션 관리를 Redis로 하고 있는데, NATS를 추가하면 인프라가 늘어나요. EC2 서버 1대로 Spring Boot, MySQL, MongoDB, Redis를 전부 돌리는 환경에서 새 미들웨어 도입은 부담이었습니다.
+**이미 Redis가 있었습니다.** Pub/Sub, 캐싱, 세션 관리를 Redis로 하고 있는데, NATS를 추가하면 인프라가 늘어납니다. EC2 서버 1대로 Spring Boot, MySQL, MongoDB, Redis를 전부 돌리는 환경에서 새 미들웨어 도입은 부담이었습니다.
 
 ---
 
 ## WebSocket 프로토콜: 왜 STOMP를 선택했나?
 
-메시지 브로커와 별개로, 클라이언트-서버 간 WebSocket 프로토콜도 선택해야 했어요.
+메시지 브로커와 별개로, 클라이언트-서버 간 WebSocket 프로토콜도 선택해야 했습니다.
 
 | 옵션 | 장점 | 단점 |
 |------|------|------|
@@ -125,7 +125,7 @@ NATS Core는 Redis Pub/Sub과 비슷하게 메시지를 저장하지 않아요. 
 
 ### Raw WebSocket
 
-Raw WebSocket으로 해도 돼요. 직접 메시지 타입을 정의하면 됩니다.
+Raw WebSocket으로도 구현할 수 있습니다. 직접 메시지 타입을 정의하면 됩니다.
 
 ![](/uploads/project/Joying/kafka-was-overkill/websocket.svg)
 
@@ -133,7 +133,7 @@ Raw WebSocket으로 해도 돼요. 직접 메시지 타입을 정의하면 됩�
 ![](/uploads/project/Joying/kafka-was-overkill/websocket-2.svg)
 
 
-문제는 직접 구현할 게 많다는 점이에요:
+문제는 직접 구현할 게 많다는 점입니다:
 - 메시지 타입별 라우팅
 - 구독/구독 해제 로직
 - Heartbeat 관리
@@ -142,16 +142,16 @@ Raw WebSocket으로 해도 돼요. 직접 메시지 타입을 정의하면 됩�
 
 ### Socket.io
 
-Socket.io는 Node.js 생태계에서 강력해요. 자동 재연결, 룸 관리, Fallback까지 다 됩니다.
+Socket.io는 Node.js 생태계에서 강력합니다. 자동 재연결, 룸 관리, Fallback까지 다 됩니다.
 
 ![](/uploads/project/Joying/kafka-was-overkill/socketio.svg)
 
 
-**문제는 우리가 Spring Boot를 쓴다는 점이에요.** Java용 Socket.io 서버 구현체(netty-socketio)가 있지만, Spring 생태계와의 통합이 약하고 유지보수가 활발하지 않습니다.
+**문제는 우리가 Spring Boot를 쓴다는 점입니다.** Java용 Socket.io 서버 구현체(netty-socketio)가 있지만, Spring 생태계와의 통합이 약하고 유지보수가 활발하지 않습니다.
 
 ### STOMP 선택 이유
 
-**솔직히 STOMP가 필수는 아니었어요.** Raw WebSocket으로도 충분히 구현 가능합니다.
+**솔직히 STOMP가 필수는 아니었습니다.** Raw WebSocket으로도 충분히 구현 가능합니다.
 
 그래도 STOMP를 선택한 이유:
 
@@ -162,8 +162,8 @@ Socket.io는 Node.js 생태계에서 강력해요. 자동 재연결, 룸 관리,
 ![](/uploads/project/Joying/kafka-was-overkill/stomp.svg)
 
 
-다만 STOMP의 SimpleBroker는 사용하지 않았어요.
-만약의 경우 서버 확장 시 메모리 기반 SimpleBroker는 다른 서버의 구독자를 모르기 때문이에요. 대신 Redis Pub/Sub으로 직접 브로드캐스트했습니다.
+다만 STOMP의 SimpleBroker는 사용하지 않았습니다.
+만약의 경우 서버 확장 시 메모리 기반 SimpleBroker는 다른 서버의 구독자를 모르기 때문입니다. 대신 Redis Pub/Sub으로 직접 브로드캐스트했습니다.
 
 ---
 
@@ -171,7 +171,7 @@ Socket.io는 Node.js 생태계에서 강력해요. 자동 재연결, 룸 관리,
 
 ![](/uploads/project/Joying/kafka-was-overkill/conclusion.png)
 
-Redis Pub/Sub은 코드가 단순해요 (Redis Stream의 1/3 수준). 순서는 MongoDB의 `createdAt`으로 보장하고, 추가 인프라도 필요 없습니다. Pub/Sub이 메시지를 저장하지 않는 건 MongoDB에 저장하니까 문제없고, 실시간 순서 보장이 안 되는 건 네트워크 특성상 어차피 보장할 수 없는 영역이에요.
+Redis Pub/Sub은 코드가 단순합니다 (Redis Stream의 1/3 수준). 순서는 MongoDB의 `createdAt`으로 보장하고, 추가 인프라도 필요 없습니다. Pub/Sub이 메시지를 저장하지 않는 건 MongoDB에 저장하니까 문제없고, 실시간 순서 보장이 안 되는 건 네트워크 특성상 어차피 보장할 수 없는 영역입니다.
 
 **트레이드오프: fire-and-forget의 위험**
 
@@ -190,7 +190,7 @@ Redis Pub/Sub은 메시지를 저장하지 않으므로, 구독자가 없는 순
 
 **선택: Redis Pub/Sub + MongoDB**
 
-나중에 트래픽이 폭발하면 NATS나 카프카로 마이그레이션하면 돼요. 이를 대비해 메시지 발행을 `ChatMessagePublisher` 인터페이스로 추상화해두었고, `RedisPubSubPublisher`가 이를 구현한다. Kafka 전환 시 `KafkaPublisher` 구현체만 추가하면 된다. 처음부터 완벽한 인프라를 갖추는 것보다, 현재 규모에 맞는 기술을 쓰고 필요할 때 교체하는 게 낫다고 판단했어요.
+나중에 트래픽이 폭발하면 NATS나 카프카로 마이그레이션하면 됩니다. 이를 대비해 메시지 발행을 `ChatMessagePublisher` 인터페이스로 추상화해두었고, `RedisPubSubPublisher`가 이를 구현한다. Kafka 전환 시 `KafkaPublisher` 구현체만 추가하면 된다. 처음부터 완벽한 인프라를 갖추는 것보다, 현재 규모에 맞는 기술을 쓰고 필요할 때 교체하는 게 낫다고 판단했습니다.
 
 <!-- EN -->
 

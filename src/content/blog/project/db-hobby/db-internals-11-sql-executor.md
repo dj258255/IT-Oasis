@@ -1,7 +1,7 @@
 ---
-title: 'DB 내부 ⑪: SQL 실행기 — 텍스트에서 행까지, 조인 3형제와 3값 논리'
+title: 'DB 내부 ⑪: SQL 실행기, 텍스트에서 행까지, 조인 3형제와 3값 논리'
 titleEn: 'DB Internals ⑪: The SQL Executor — From Text to Rows, the Three Joins, and Three-Valued Logic'
-description: "SQL은 '무엇을'만 말하는 선언형 언어다 — 그 텍스트가 실제 행이 되기까지의 파이프라인을 해부한다. 렉서(maximal munch, 예약어는 왜 생기나), 재귀 하강 파서(문법 규칙 하나 = 함수 하나, 서브쿼리에서 파서가 자기 자신을 부른다 — 손 파서 vs bison/Lemon의 갈림), 그리고 실행기에서 스트리밍과 materialize가 갈리는 이유. 본론은 조인 3형제 — 모든 조인의 출발점인 중첩 루프(이중 루프), 안쪽을 점 조회로 바꾸는 인덱스 NLJ, O(N+M)의 해시 조인, 그리고 안 만든 정렬 병합까지 선택 기준을 표로. GROUP BY가 왜 정렬(또는 해시)을 요구하는지(GroupAggregate vs HashAggregate), HAVING은 왜 그룹의 WHERE인지. 마지막으로 BETWEEN이 실행기 0줄로 끝난 이유(문법 설탕), LIKE의 백트래킹 two-pointer 매칭과 LIKE '%x%'가 B-tree를 못 타는 이유(트라이그램·역색인으로의 탈출구), uncorrelated 서브쿼리의 1회 실행 캐시, 그리고 NULL의 3값 논리(UNKNOWN, NOT IN + NULL 함정)까지 — 시리즈의 실행기 축을 완결한다."
+description: "SQL은 '무엇을'만 말하는 선언형 언어다. 그 텍스트가 실제 행이 되기까지의 파이프라인을 해부한다. 렉서(maximal munch, 예약어는 왜 생기나), 재귀 하강 파서(문법 규칙 하나 = 함수 하나, 서브쿼리에서 파서가 자기 자신을 부른다, 손 파서 vs bison/Lemon의 갈림), 그리고 실행기에서 스트리밍과 materialize가 갈리는 이유. 본론은 조인 3형제로, 모든 조인의 출발점인 중첩 루프(이중 루프), 안쪽을 점 조회로 바꾸는 인덱스 NLJ, O(N+M)의 해시 조인, 그리고 안 만든 정렬 병합까지 선택 기준을 표로. GROUP BY가 왜 정렬(또는 해시)을 요구하는지(GroupAggregate vs HashAggregate), HAVING은 왜 그룹의 WHERE인지. 마지막으로 BETWEEN이 실행기 0줄로 끝난 이유(문법 설탕), LIKE의 백트래킹 two-pointer 매칭과 LIKE '%x%'가 B-tree를 못 타는 이유(트라이그램·역색인으로의 탈출구), uncorrelated 서브쿼리의 1회 실행 캐시, 그리고 NULL의 3값 논리(UNKNOWN, NOT IN + NULL 함정)까지, 시리즈의 실행기 축을 완결한다."
 descriptionEn: "SQL is declarative — it says only 'what.' We dissect the pipeline that turns that text into actual rows: the lexer (maximal munch; why reserved words exist), the recursive-descent parser (one grammar rule = one function; on subqueries the parser calls itself — and the hand-written vs bison/Lemon fork), and why execution splits into streaming vs materializing. The main act is the three joins — the nested loop that every join begins as (a double loop), the index NLJ that turns the inner side into point lookups, the O(N+M) hash join, and the sort-merge we didn't build, with selection criteria in a table. Why GROUP BY demands sorting (or hashing) — GroupAggregate vs HashAggregate — and why HAVING is the WHERE of groups. Finally: why BETWEEN cost zero executor lines (syntactic sugar), LIKE's backtracking two-pointer matcher and why LIKE '%x%' can't use a B-tree (with trigram/inverted-index escape routes), the run-once cache for uncorrelated subqueries, and NULL's three-valued logic (UNKNOWN; the NOT IN + NULL trap) — completing the series' executor axis."
 date: 2026-07-01T00:00:00.000Z
 tags:
@@ -19,21 +19,21 @@ series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 11
 ---
 
-## 0. 들어가며 — 선언형 언어가 행이 되기까지
+## 0. 들어가며: 선언형 언어가 행이 되기까지
 
-이 시리즈의 [1~10편](/blog/project/db-hobby/db-internals-01-storage)은 저장·복구·격리·최적화·분산을 다뤘는데, 정작 한 축이 비어 있었어요 — **SQL 텍스트가 실제 행이 되기까지의 실행기 파이프라인** 그 자체. 이 편이 그 축을 완결합니다.
+이 시리즈의 [1~10편](/blog/project/db-hobby/db-internals-01-storage)은 저장·복구·격리·최적화·분산을 다뤘는데, 정작 한 축이 비어 있었습니다. **SQL 텍스트가 실제 행이 되기까지의 실행기 파이프라인** 그 자체입니다. 이 편이 그 축을 완결합니다.
 
-SQL은 선언형 언어예요 — "**무엇을**"만 말하고 "어떻게"는 안 말합니다. `SELECT * FROM users WHERE id = 1`이라는 문자열이 힙의 실제 행이 되려면 세 단계가 필요해요.
+SQL은 선언형 언어입니다. "**무엇을**"만 말하고 "어떻게"는 안 말합니다. `SELECT * FROM users WHERE id = 1`이라는 문자열이 힙의 실제 행이 되려면 세 단계가 필요합니다.
 
 ```
 SQL 텍스트 → [렉서] → 토큰 → [파서] → AST → [실행기] → 행
 ```
 
-컴파일러의 앞단을 그대로 빌려온 구조입니다 — 모든 DB의 프런트엔드가 이렇게 생겼어요. 실제 DB는 AST와 실행기 사이에 분석(analyze)·재작성(rewrite)·계획(plan) 단계가 더 있고요([6편](/blog/project/db-hobby/db-internals-06-optimizer)이 그 계획 단계) — 이 편이 다루는 건 그 앞뒤의 양 끝단입니다.
+컴파일러의 앞단을 그대로 빌려온 구조입니다. 모든 DB의 프런트엔드가 이렇게 생겼습니다. 실제 DB는 AST와 실행기 사이에 분석(analyze)·재작성(rewrite)·계획(plan) 단계가 더 있습니다([6편](/blog/project/db-hobby/db-internals-06-optimizer)이 그 계획 단계). 이 편이 다루는 건 그 앞뒤의 양 끝단입니다.
 
-## 1. 렉서 — 글자를 토큰으로
+## 1. 렉서: 글자를 토큰으로
 
-**1단계는 토크나이저(렉서).** `SELECT * FROM users WHERE id = 1` → `[SELECT] [*] [FROM] [IDENT:users] [WHERE] [IDENT:id] [=] [INT:1]`. 하는 일은 공백 건너뛰기, 글자 덩어리 묶기, `'...'` 문자열 떼기 — 그리고 미묘한 규칙 하나:
+**1단계는 토크나이저(렉서).** `SELECT * FROM users WHERE id = 1` → `[SELECT] [*] [FROM] [IDENT:users] [WHERE] [IDENT:id] [=] [INT:1]`. 하는 일은 공백 건너뛰기, 글자 덩어리 묶기, `'...'` 문자열 떼기, 그리고 미묘한 규칙 하나입니다:
 
 ```c
 /* 비교 연산자: 두 글자를 먼저 본다 */
@@ -42,15 +42,15 @@ if (c == '<' && nx == '>') { ...; t.type = TOK_NE; }   /* SQL의 <> */
 if (c == '<')              { ...; t.type = TOK_LT; }   /* 그냥 < */
 ```
 
-> **maximal munch**: `<=`를 만났을 때 `<` 하나만 떼면 뒤의 `=`가 엉뚱하게 따로 떨어진다. 렉서는 "가능한 한 긴 토큰을 먼저 집는다"(longest match) — 거의 모든 렉서의 원칙이다.
+> **maximal munch**: `<=`를 만났을 때 `<` 하나만 떼면 뒤의 `=`가 엉뚱하게 따로 떨어진다. 렉서는 "가능한 한 긴 토큰을 먼저 집는다"(longest match). 거의 모든 렉서의 원칙이다.
 
-키워드와 식별자의 구분도 여기서 정해져요 — 덩어리를 다 읽은 뒤 예약어 표를 조회해서(`strcasecmp`로 대소문자 무시) `users`는 `IDENT`, `FROM`은 키워드 토큰이 됩니다.
+키워드와 식별자의 구분도 여기서 정해집니다. 덩어리를 다 읽은 뒤 예약어 표를 조회해서(`strcasecmp`로 대소문자 무시) `users`는 `IDENT`, `FROM`은 키워드 토큰이 됩니다.
 
-> **실무/면접 포인트 — 예약어는 왜 생기나**: `SELECT`가 키워드 토큰이 되므로 컬럼 이름으로 그냥 `select`를 쓰면 파서가 헷갈린다. 그래서 예약어(reserved word)가 존재하고, 따옴표로 escape하면 쓸 수 있다 — PostgreSQL은 `"select"`, MySQL은 백틱, SQL Server는 `[select]`. 진짜 DB는 비예약(non-reserved) 키워드도 둬서 일부는 그냥도 허용한다.
+> **실무/면접 포인트, 예약어는 왜 생기나**: `SELECT`가 키워드 토큰이 되므로 컬럼 이름으로 그냥 `select`를 쓰면 파서가 헷갈린다. 그래서 예약어(reserved word)가 존재하고, 따옴표로 escape하면 쓸 수 있다. PostgreSQL은 `"select"`, MySQL은 백틱, SQL Server는 `[select]`. 진짜 DB는 비예약(non-reserved) 키워드도 둬서 일부는 그냥도 허용한다.
 
-## 2. 재귀 하강 파서 — 문법 규칙 하나 = 함수 하나
+## 2. 재귀 하강 파서: 문법 규칙 하나 = 함수 하나
 
-**2단계는 파서.** 토큰을 트리(AST)로 조립합니다. 재귀 하강(recursive descent)의 묘미는 **문법 규칙 하나하나가 함수 하나**가 된다는 것 — 파서 코드가 거의 영어로 읽혀요.
+**2단계는 파서.** 토큰을 트리(AST)로 조립합니다. 재귀 하강(recursive descent)의 묘미는 **문법 규칙 하나하나가 함수 하나**가 된다는 것입니다. 파서 코드가 거의 영어로 읽힙니다.
 
 ```c
 static void parse_select_stmt(Parser *p, SelectStmt *s) {
@@ -63,14 +63,14 @@ static void parse_select_stmt(Parser *p, SelectStmt *s) {
 }
 ```
 
-파서를 떠받치는 도구는 셋뿐이에요 — `p_accept`(있으면 소비, 선택 문법), `p_expect`(없으면 에러, 필수 문법), `p_advance`(다음 토큰). 이 셋이 재귀 하강의 전부라 해도 됩니다.
+파서를 떠받치는 도구는 셋뿐입니다. `p_accept`(있으면 소비, 선택 문법), `p_expect`(없으면 에러, 필수 문법), `p_advance`(다음 토큰)입니다. 이 셋이 재귀 하강의 전부라 해도 됩니다.
 
 ![SQL 텍스트 → 토큰 → AST](/uploads/project/db-hobby/sql-to-ast.svg)
 
-두 가지가 특히 배울 지점이에요.
+두 가지가 특히 배울 지점입니다.
 
-- **우선순위 = 함수 호출 순서.** WHERE는 `term (OR term)*`, term은 `cond (AND cond)*`로 파싱돼요 — AND가 OR보다 안쪽 함수라 `a AND b OR c`는 자연히 `(a AND b) OR c`가 됩니다. 연산자 우선순위를 표가 아니라 **호출 구조**로 표현하는 것.
-- **서브쿼리에서 파서가 자기 자신을 부른다.** `WHERE id IN (SELECT ...)`를 만나면 조건 파싱 함수 안에서 `parse_select_stmt`를 다시 불러요 — 문법이 재귀적이니 파서도 재귀적. "재귀 하강"이라는 이름의 정체입니다(AST의 `Condition`이 `SelectStmt*`를 품는 자기참조 구조가 되고요).
+- **우선순위 = 함수 호출 순서.** WHERE는 `term (OR term)*`, term은 `cond (AND cond)*`로 파싱됩니다. AND가 OR보다 안쪽 함수라 `a AND b OR c`는 자연히 `(a AND b) OR c`가 됩니다. 연산자 우선순위를 표가 아니라 **호출 구조**로 표현하는 것입니다.
+- **서브쿼리에서 파서가 자기 자신을 부른다.** `WHERE id IN (SELECT ...)`를 만나면 조건 파싱 함수 안에서 `parse_select_stmt`를 다시 부릅니다. 문법이 재귀적이니 파서도 재귀적입니다. "재귀 하강"이라는 이름의 정체입니다(AST의 `Condition`이 `SelectStmt*`를 품는 자기참조 구조가 됩니다).
 
 ### 손으로 쓴 파서 vs 파서 생성기
 
@@ -82,27 +82,27 @@ static void parse_select_stmt(Parser *p, SelectStmt *s) {
 | 큰 문법·복잡한 우선순위 | 함수가 늘어남 | 빛난다 (자동 처리) |
 | 채택 | **GCC/Clang, MSVC** | MySQL(bison), PostgreSQL(bison), SQLite(자체 LALR(1) 생성기 **Lemon**) |
 
-PostgreSQL과 MySQL은 bison(LALR 생성기)을 쓰고, SQLite도 자체 LALR(1) 생성기 Lemon으로 파서를 **생성**합니다 — 주요 DB의 파서는 생성기 쪽이 대세예요. 손 파서는 에러 메시지와 디버깅 통제가 쉬워 컴파일러 세계(GCC/Clang/MSVC)에선 오히려 주류고요 — 학습용으로도 "코드가 곧 문법"이라 압도적으로 유리합니다.
+PostgreSQL과 MySQL은 bison(LALR 생성기)을 쓰고, SQLite도 자체 LALR(1) 생성기 Lemon으로 파서를 **생성**합니다. 주요 DB의 파서는 생성기 쪽이 대세입니다. 손 파서는 에러 메시지와 디버깅 통제가 쉬워 컴파일러 세계(GCC/Clang/MSVC)에선 오히려 주류입니다. 학습용으로도 "코드가 곧 문법"이라 압도적으로 유리합니다.
 
-## 3. 실행기 — 스트리밍과 materialize가 갈리는 곳
+## 3. 실행기: 스트리밍과 materialize가 갈리는 곳
 
-**3단계, AST를 힙 연산으로.** 실행기의 큰 그림은 연산자 트리를 행이 흐르는 파이프라인으로 보는 **Volcano/iterator 모델**입니다 — 연산자마다 open·next·close를 두는 tuple-at-a-time 반복자 방식의 **정식화**가 Graefe(1994)예요. (발명이 아니라 정식화 — open-next-close 인터페이스 자체는 System R 계열부터 쓰였고, PostgreSQL 실행기도 Berkeley POSTGRES(1986~) 시절부터 이 반복자 모델을 따릅니다.) 미니 DB는 이를 콜백(visit) 스타일로 단순화했지만, 본질적 구분 하나는 그대로 드러나요:
+**3단계, AST를 힙 연산으로.** 실행기의 큰 그림은 연산자 트리를 행이 흐르는 파이프라인으로 보는 **Volcano/iterator 모델**입니다. 연산자마다 open·next·close를 두는 tuple-at-a-time 반복자 방식의 **정식화**가 Graefe(1994)입니다. (발명이 아니라 정식화입니다. open-next-close 인터페이스 자체는 System R 계열부터 쓰였고, PostgreSQL 실행기도 Berkeley POSTGRES(1986~) 시절부터 이 반복자 모델을 따릅니다.) 미니 DB는 이를 콜백(visit) 스타일로 단순화했지만, 본질적 구분 하나는 그대로 드러납니다:
 
-> **행이 흐르는 방식은 셋으로 갈린다.** ① **스트리밍** — `WHERE`는 행 하나로 통과/탈락이 정해지니 한 행씩 흘려보내면 된다. ② **blocking이지만 상태는 작음** — `COUNT(*)` 같은 집계는 마지막 행까지 소비해야 결과를 낼 수 있지만(blocking), 행을 쌓아 둘 필요는 없다 — 누산기만 갱신하면 되고 메모리는 O(그룹 수)다. ③ **진짜 materialize** — `ORDER BY`는 정렬할 행 전체를 적재해야 한다. 이 구분이 메모리 사용량과 첫 행 응답 시간을 가른다.
+> **행이 흐르는 방식은 셋으로 갈린다.** ① **스트리밍**: `WHERE`는 행 하나로 통과/탈락이 정해지니 한 행씩 흘려보내면 된다. ② **blocking이지만 상태는 작음**: `COUNT(*)` 같은 집계는 마지막 행까지 소비해야 결과를 낼 수 있지만(blocking), 행을 쌓아 둘 필요는 없다. 누산기만 갱신하면 되고 메모리는 O(그룹 수)다. ③ **진짜 materialize**: `ORDER BY`는 정렬할 행 전체를 적재해야 한다. 이 구분이 메모리 사용량과 첫 행 응답 시간을 가른다.
 
-이 구분은 이미 시리즈 곳곳에서 일했어요 — [8편](/blog/project/db-hobby/db-internals-08-parallel)의 병렬화가 스트리밍 SELECT와 집계를 다른 전략으로 다룬 이유가 이것입니다. 그리고 고백 하나 — 미니 DB의 집계는 ②를 ③처럼 구현했었어요. 누산기 대신 행을 4,096행 버퍼에 **모은 뒤** 계산하는 방식이었고, 그 버퍼 상한이 바로 8편의 silent 버그(6,000행 테이블에 COUNT가 에러 없이 4096)를 낳았습니다. 실제 DB의 집계 노드는 행을 버퍼링하지 않고 누산기만 흘려요 — ②와 ③을 섞으면 안 되는 이유를 버그로 배운 셈이죠.
+이 구분은 이미 시리즈 곳곳에서 일했습니다. [8편](/blog/project/db-hobby/db-internals-08-parallel)의 병렬화가 스트리밍 SELECT와 집계를 다른 전략으로 다룬 이유가 이것입니다. 그리고 고백 하나. 미니 DB의 집계는 ②를 ③처럼 구현했었습니다. 누산기 대신 행을 4,096행 버퍼에 **모은 뒤** 계산하는 방식이었고, 그 버퍼 상한이 바로 8편의 silent 버그(6,000행 테이블에 COUNT가 에러 없이 4096)를 낳았습니다. 실제 DB의 집계 노드는 행을 버퍼링하지 않고 누산기만 흘립니다. ②와 ③을 섞으면 안 되는 이유를 버그로 배운 셈입니다.
 
-Volcano 이후의 이야기도 한 단락만 — tuple-at-a-time은 행마다 함수 호출·분기 비용이 붙어 분석(OLAP) 워크로드에선 비쌉니다. 그래서 DuckDB·ClickHouse는 수천 행 단위 **벡터(배치)** 로 흘리는 벡터화 실행을 택했고, PostgreSQL은 11부터 표현식 평가를 **JIT 컴파일**하는 길을 더했어요. 모델의 뼈대(연산자 트리를 흐르는 데이터)는 그대로고, "한 번에 몇 행씩"이 바뀐 겁니다.
+Volcano 이후의 이야기도 한 단락만 덧붙입니다. tuple-at-a-time은 행마다 함수 호출·분기 비용이 붙어 분석(OLAP) 워크로드에선 비쌉니다. 그래서 DuckDB·ClickHouse는 수천 행 단위 **벡터(배치)** 로 흘리는 벡터화 실행을 택했고, PostgreSQL은 11부터 표현식 평가를 **JIT 컴파일**하는 길을 더했습니다. 모델의 뼈대(연산자 트리를 흐르는 데이터)는 그대로고, "한 번에 몇 행씩"이 바뀐 겁니다.
 
-## 4. 조인 3형제 — 모든 조인은 이중 루프에서 시작한다
+## 4. 조인 3형제: 모든 조인은 이중 루프에서 시작한다
 
-여러 테이블을 잇는 조인의 출발점은 **중첩 루프 조인(NLJ)** 이에요 — 바깥 테이블을 한 행씩 훑으며, 행마다 안쪽 테이블을 전부 스캔해 `ON`이 맞는 짝을 붙이는 이중 루프.
+여러 테이블을 잇는 조인의 출발점은 **중첩 루프 조인(NLJ)** 입니다. 바깥 테이블을 한 행씩 훑으며, 행마다 안쪽 테이블을 전부 스캔해 `ON`이 맞는 짝을 붙이는 이중 루프입니다.
 
 > **핵심 사실**: 모든 조인 알고리즘의 출발점은 중첩 루프다. "맞는 짝을 찾는다"의 가장 솔직한 표현이고, **인덱스·해시·정렬병합은 전부 이 안쪽 루프를 빠르게 만드는 변형**일 뿐이다.
 
-- **인덱스 NLJ** — 안쪽 테이블의 조인 키에 인덱스가 있으면, 안쪽 전체 스캔 대신 바깥 행의 키로 **점 조회**. O(N×M) → O(N×log M).
-- **해시 조인** — 안쪽을 한 번 훑어 `조인 키 → 행 목록` 해시를 만들고(build), 바깥을 한 번 훑으며 조회(probe). O(N×M) → **O(N+M)**, 인덱스가 없어도. 단 **등식 조인만** 됩니다(해시는 순서가 없으니까).
-- **정렬 병합 조인** — 양쪽을 조인 키로 정렬해 지퍼 잠그듯 나란히 훑기. 미니 DB는 안 만들었어요 — 정렬 인프라가 더 필요하고 우리 규모에선 보여줄 게 적어서(정직한 생략).
+- **인덱스 NLJ**: 안쪽 테이블의 조인 키에 인덱스가 있으면, 안쪽 전체 스캔 대신 바깥 행의 키로 **점 조회**. O(N×M) → O(N×log M).
+- **해시 조인**: 안쪽을 한 번 훑어 `조인 키 → 행 목록` 해시를 만들고(build), 바깥을 한 번 훑으며 조회(probe). O(N×M) → **O(N+M)**, 인덱스가 없어도. 단 **등식 조인만** 됩니다(해시는 순서가 없으니까).
+- **정렬 병합 조인**: 양쪽을 조인 키로 정렬해 지퍼 잠그듯 나란히 훑기. 미니 DB는 안 만들었습니다. 정렬 인프라가 더 필요하고 우리 규모에선 보여줄 게 적어서(정직한 생략).
 
 | | NLJ | 인덱스 NLJ | 해시 조인 | 정렬 병합 |
 |---|---|---|---|---|
@@ -111,32 +111,32 @@ Volcano 이후의 이야기도 한 단락만 — tuple-at-a-time은 행마다 �
 | 사전 준비 | 없음 | 인덱스 | 해시 빌드(메모리) | 양쪽 정렬 |
 | 빛나는 곳 | 한쪽이 아주 작을 때 | OLTP(안쪽에 인덱스) | 양쪽 크고 정렬 안 됨(OLAP) | 이미 정렬됐거나 해시가 메모리 초과 |
 
-미니 DB는 조인 레벨마다 "안쪽 PK가 조인 키면 인덱스 NLJ, 그 밖의 등식이면 해시, 아니면 스캔"으로 골라요 — [6편](/blog/project/db-hobby/db-internals-06-optimizer)의 비용 모델이 이 선택을 정교화한 거고요. PostgreSQL은 여기에 정렬 병합까지 셋을 비용(`work_mem`에 해시가 들어가나, 어느 쪽이 이미 정렬돼 있나)으로 저울질합니다.
+미니 DB는 조인 레벨마다 "안쪽 PK가 조인 키면 인덱스 NLJ, 그 밖의 등식이면 해시, 아니면 스캔"으로 고릅니다. [6편](/blog/project/db-hobby/db-internals-06-optimizer)의 비용 모델이 이 선택을 정교화한 것입니다. PostgreSQL은 여기에 정렬 병합까지 셋을 비용(`work_mem`에 해시가 들어가나, 어느 쪽이 이미 정렬돼 있나)으로 저울질합니다.
 
-> **실무/면접 포인트**: "해시 조인은 왜 등식만 되나"의 본질 — 해시는 **순서를 버리는 대가로 O(1) 조회**를 얻는 구조예요. 범위 비교에는 순서가 필요하니 양립 자체가 불가능하고, 해시 인덱스가 범위 스캔을 못 하는 것과 같은 뿌리입니다. "자료구조가 무엇을 버렸는지"가 곧 "어떤 연산을 못 하는지"예요.
+> **실무/면접 포인트**: "해시 조인은 왜 등식만 되나"의 본질입니다. 해시는 **순서를 버리는 대가로 O(1) 조회**를 얻는 구조입니다. 범위 비교에는 순서가 필요하니 양립 자체가 불가능하고, 해시 인덱스가 범위 스캔을 못 하는 것과 같은 뿌리입니다. "자료구조가 무엇을 버렸는지"가 곧 "어떤 연산을 못 하는지"입니다.
 
-**LEFT JOIN과 NULL의 등장** — INNER는 맞는 쌍만 내보내지만, LEFT는 왼쪽 행을 매칭이 없어도 살리고 오른쪽을 **NULL로 채워요.** 구현은 "이번 바깥 행이 매칭됐나" 플래그 하나 — 그리고 이 NULL 채움이 인덱스/해시/스캔 어느 방법과도 **직교**한다는 게 설계의 미덕입니다(방법 선택과 NULL 로직이 서로 안 얽힘).
+**LEFT JOIN과 NULL의 등장.** INNER는 맞는 쌍만 내보내지만, LEFT는 왼쪽 행을 매칭이 없어도 살리고 오른쪽을 **NULL로 채웁니다.** 구현은 "이번 바깥 행이 매칭됐나" 플래그 하나입니다. 그리고 이 NULL 채움이 인덱스/해시/스캔 어느 방법과도 **직교**한다는 게 설계의 미덕입니다(방법 선택과 NULL 로직이 서로 안 얽힘).
 
-## 5. 집계 — GROUP BY는 왜 정렬(또는 해시)인가
+## 5. 집계: GROUP BY는 왜 정렬(또는 해시)인가
 
-`WHERE`가 행을 거르고 조인이 행을 잇는다면, `GROUP BY`+집계는 여러 행을 **하나로 접습니다** — 처음으로 "행 하나 → 행 하나"가 아닌 연산이에요. 한 그룹의 `COUNT`는 그 그룹 전체를 봐야 나오니, **같은 그룹의 행들이 인접해야** 구간 단위로 누산기를 돌릴 수 있습니다. 그래서 길이 둘이에요:
+`WHERE`가 행을 거르고 조인이 행을 잇는다면, `GROUP BY`+집계는 여러 행을 **하나로 접습니다.** 처음으로 "행 하나 → 행 하나"가 아닌 연산입니다. 한 그룹의 `COUNT`는 그 그룹 전체를 봐야 나오니, **같은 그룹의 행들이 인접해야** 구간 단위로 누산기를 돌릴 수 있습니다. 그래서 길이 둘입니다:
 
-- **정렬 기반(GroupAggregate)** — 그룹 키로 정렬하면 같은 키가 연속 구간이 된다. 미니 DB와 PostgreSQL의 GroupAggregate 방식(PG는 입력이 이미 정렬돼 있으면 모으지 않고 스트리밍).
-- **해시 기반(HashAggregate)** — 그룹 키 → 누산기 해시를 두고 한 번에 스캔. 정렬이 필요 없지만 그룹 수만큼 메모리를 쓴다 — PostgreSQL에선 그 한도가 `work_mem × hash_mem_multiplier`이고, 13부터는 실행 중 한도를 넘어도 죽거나 계획을 못 바꾸는 대신 **디스크로 spill**해 계속 간다. PostgreSQL이 둘을 비용으로 고른다.
+- **정렬 기반(GroupAggregate)**: 그룹 키로 정렬하면 같은 키가 연속 구간이 된다. 미니 DB와 PostgreSQL의 GroupAggregate 방식(PG는 입력이 이미 정렬돼 있으면 모으지 않고 스트리밍).
+- **해시 기반(HashAggregate)**: 그룹 키 → 누산기 해시를 두고 한 번에 스캔. 정렬이 필요 없지만 그룹 수만큼 메모리를 쓴다. PostgreSQL에선 그 한도가 `work_mem × hash_mem_multiplier`이고, 13부터는 실행 중 한도를 넘어도 죽거나 계획을 못 바꾸는 대신 **디스크로 spill**해 계속 간다. PostgreSQL이 둘을 비용으로 고른다.
 
-`HAVING`은 **그룹의 WHERE**예요 — WHERE가 그룹핑 *전에* 개별 행을 거르고, HAVING이 집계가 끝난 *뒤에* 그룹을 거릅니다(`HAVING COUNT(*) > 2`). 적용 시점이 다르다는 것이 둘의 전부입니다.
+`HAVING`은 **그룹의 WHERE**입니다. WHERE가 그룹핑 *전에* 개별 행을 거르고, HAVING이 집계가 끝난 *뒤에* 그룹을 거릅니다(`HAVING COUNT(*) > 2`). 적용 시점이 다르다는 것이 둘의 전부입니다.
 
-이 "적용 시점"을 문장 전체로 넓힌 것이 SQL의 **논리적 평가 순서**예요 — 적는 순서(SELECT가 맨 앞)와 달리, 의미는 **FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY** 순으로 정의됩니다. `WHERE`에서 `SELECT`의 별칭을 못 쓰는 이유가 이것이에요 — 별칭은 SELECT 단계에서야 생기니까. 별칭을 볼 수 있는 절은 SELECT 뒤에 오는 ORDER BY뿐입니다. (어디까지나 *의미*의 순서예요 — 실제 실행 계획은 결과만 같으면 얼마든지 재배열합니다.)
+이 "적용 시점"을 문장 전체로 넓힌 것이 SQL의 **논리적 평가 순서**입니다. 적는 순서(SELECT가 맨 앞)와 달리, 의미는 **FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY** 순으로 정의됩니다. `WHERE`에서 `SELECT`의 별칭을 못 쓰는 이유가 이것입니다. 별칭은 SELECT 단계에서야 생기기 때문입니다. 별칭을 볼 수 있는 절은 SELECT 뒤에 오는 ORDER BY뿐입니다. (어디까지나 *의미*의 순서입니다. 실제 실행 계획은 결과만 같으면 얼마든지 재배열합니다.)
 
-> **흔한 오해 정정**: *"COUNT(1)이 COUNT(*)보다 빠르다?"* — PostgreSQL과 MySQL(InnoDB)에서 둘은 사실상 동등해요. `COUNT(*)`는 "모든 컬럼을 읽어라"가 아니라 "행 수를 세라"는 전용 의미라 컬럼을 볼 필요조차 없고, PostgreSQL에선 오히려 `COUNT(*)`가 더 잘 최적화된 경로를 탑니다. `*`를 컬럼 목록으로 읽은 직관이 이 미신의 뿌리인데, 여기서 `*`는 문법 기호일 뿐이에요.
+> **흔한 오해 정정**: *"COUNT(1)이 COUNT(*)보다 빠르다?"* PostgreSQL과 MySQL(InnoDB)에서 둘은 사실상 동등합니다. `COUNT(*)`는 "모든 컬럼을 읽어라"가 아니라 "행 수를 세라"는 전용 의미라 컬럼을 볼 필요조차 없고, PostgreSQL에선 오히려 `COUNT(*)`가 더 잘 최적화된 경로를 탑니다. `*`를 컬럼 목록으로 읽은 직관이 이 미신의 뿌리인데, 여기서 `*`는 문법 기호일 뿐입니다.
 
-## 6. WHERE의 확장 — 공짜인 것과 아닌 것
+## 6. WHERE의 확장: 공짜인 것과 아닌 것
 
-기능을 얹을 때마다 "새 코드가 필요한가"가 갈렸는데, 그 갈림 자체가 배울 거리예요.
+기능을 얹을 때마다 "새 코드가 필요한가"가 갈렸는데, 그 갈림 자체가 배울 거리입니다.
 
-**BETWEEN — 실행기 0줄 (문법 설탕).** `col BETWEEN a AND b`는 파서가 그 자리에서 `(col >= a) AND (col <= b)`로 풀어버리면 끝 — 실행기는 자기가 BETWEEN을 처리하는 줄도 모릅니다. (PostgreSQL은 파스 트리에 BETWEEN 노드를 남겼다가 나중에 변환해요 — 어디서 푸느냐는 구현 선택.) `IN (v1, v2, ...)`도 같은 결 — 값 집합 멤버십일 뿐.
+**BETWEEN, 실행기 0줄 (문법 설탕).** `col BETWEEN a AND b`는 파서가 그 자리에서 `(col >= a) AND (col <= b)`로 풀어버리면 끝입니다. 실행기는 자기가 BETWEEN을 처리하는 줄도 모릅니다. (PostgreSQL은 파스 트리에 BETWEEN 노드를 남겼다가 나중에 변환합니다. 어디서 푸느냐는 구현 선택입니다.) `IN (v1, v2, ...)`도 같은 결입니다. 값 집합 멤버십일 뿐입니다.
 
-**LIKE — 진짜 새 연산자.** `%`(0글자 이상)·`_`(한 글자) 와일드카드는 어떤 기존 비교로도 안 풀려요. 매칭 알고리즘의 갈림길이 셋인데:
+**LIKE, 진짜 새 연산자.** `%`(0글자 이상)·`_`(한 글자) 와일드카드는 어떤 기존 비교로도 안 풀립니다. 매칭 알고리즘의 갈림길이 셋인데:
 
 | 방식 | 시간 | 공간 | 문제 |
 |---|---|---|---|
@@ -158,40 +158,40 @@ static int like_match(const char *s, const char *pat) {
 }
 ```
 
-포인터 둘과 "마지막 `%` 위치"만 기억하는 O(1) 공간 매처예요.
+포인터 둘과 "마지막 `%` 위치"만 기억하는 O(1) 공간 매처입니다.
 
-> **실무/면접 포인트 — LIKE '%x%'는 왜 느린가**: 인덱스는 값을 **정렬한** 구조라, `'kim%'`처럼 앞이 고정된 패턴만 "정렬된 구간의 시작점"으로 점프할 수 있다. 앞이 `%`로 열리면 시작점을 특정할 수 없어 풀 스캔이다 — 미니 DB만이 아니라 **B-tree 인덱스의 본질적 한계.** 중간 일치가 필요하면 인덱스 자체를 바꾼다: PostgreSQL의 트라이그램(pg_trgm — 문자열을 3글자 조각으로 쪼개 색인), 또는 검색 엔진의 역색인(Lucene/Elasticsearch).
+> **실무/면접 포인트, LIKE '%x%'는 왜 느린가**: 인덱스는 값을 **정렬한** 구조라, `'kim%'`처럼 앞이 고정된 패턴만 "정렬된 구간의 시작점"으로 점프할 수 있다. 앞이 `%`로 열리면 시작점을 특정할 수 없어 풀 스캔이다. 미니 DB만이 아니라 **B-tree 인덱스의 본질적 한계**다. 중간 일치가 필요하면 인덱스 자체를 바꾼다: PostgreSQL의 트라이그램(pg_trgm, 문자열을 3글자 조각으로 쪼개 색인), 또는 검색 엔진의 역색인(Lucene/Elasticsearch).
 
-> **흔한 오해 정정**: *"접두 LIKE는 인덱스를 탄다?"* — PostgreSQL에선 조건이 하나 더 붙어요. 기본(비-C) collation으로 만든 일반 btree 인덱스는 `LIKE 'kim%'`**조차** 못 탑니다 — locale의 문자열 비교 규칙이 바이트 순서와 달라서, "kim으로 시작"을 "정렬된 한 구간"으로 변환할 수 없거든요. `text_pattern_ops` 연산자 클래스로 인덱스를 만들거나 C collation을 써야 접두 LIKE가 인덱스를 탑니다(PostgreSQL 문서 Operator Classes). "앞이 고정이면 된다"는 원리 위에 collation이라는 현실이 한 겹 더 있는 거예요.
+> **흔한 오해 정정**: *"접두 LIKE는 인덱스를 탄다?"* PostgreSQL에선 조건이 하나 더 붙습니다. 기본(비-C) collation으로 만든 일반 btree 인덱스는 `LIKE 'kim%'`**조차** 못 탑니다. locale의 문자열 비교 규칙이 바이트 순서와 달라서, "kim으로 시작"을 "정렬된 한 구간"으로 변환할 수 없기 때문입니다. `text_pattern_ops` 연산자 클래스로 인덱스를 만들거나 C collation을 써야 접두 LIKE가 인덱스를 탑니다(PostgreSQL 문서 Operator Classes). "앞이 고정이면 된다"는 원리 위에 collation이라는 현실이 한 겹 더 있는 겁니다.
 
-**타입 강제 변환 — `WHERE age = '30'`은 무슨 일을 하나.** 비교의 양변 타입이 다를 때 DB가 얼마나 관대하게 변환해 주느냐는 제품마다 완전히 달라요:
+**타입 강제 변환: `WHERE age = '30'`은 무슨 일을 하나.** 비교의 양변 타입이 다를 때 DB가 얼마나 관대하게 변환해 주느냐는 제품마다 완전히 다릅니다:
 
 | | PostgreSQL | MySQL | SQLite |
 |---|---|---|---|
-| 철학 | 명시적 — 정해진 캐스트 규칙만, 안 되면 에러 | 관대 — 암묵 변환을 넓게 허용 | type affinity — 컬럼의 "선호 타입"으로 저장 시점에 변환 |
+| 철학 | 명시적: 정해진 캐스트 규칙만, 안 되면 에러 | 관대: 암묵 변환을 넓게 허용 | type affinity: 컬럼의 "선호 타입"으로 저장 시점에 변환 |
 | `'1abc' + 1` | 에러 | `2` + warning (앞자리 숫자만 파싱) | 문맥에 따라 `2` |
 | 실패 방식 | 일찍, 시끄럽게 | 조용히 이상한 결과 | 스키마가 타입을 강제하지 않음 |
 
-미니 DB는 타입이 INT/TEXT 둘뿐이라 이 문제를 비켜갔지만, 실무의 함정은 의미만이 아니라 성능 쪽에도 있어요.
+미니 DB는 타입이 INT/TEXT 둘뿐이라 이 문제를 비켜갔지만, 실무의 함정은 의미만이 아니라 성능 쪽에도 있습니다.
 
-> **실무 안티패턴**: 인덱스 컬럼을 **다른 타입의 값과 비교**하는 것. 변환이 컬럼 쪽에 걸리는 순간 인덱스가 무력화돼요 — 예컨대 MySQL에서 문자열 컬럼을 숫자와 비교하면 컬럼 값이 행마다 숫자로 변환되며 풀 스캔이 됩니다. 전형적인 발생 경로가 애플리케이션의 **파라미터 바인딩 타입 불일치**(문자열 컬럼에 숫자 파라미터를 바인딩) — 코드도 SQL도 멀쩡해 보이고, EXPLAIN을 떠 봐야 드러나요.
+> **실무 안티패턴**: 인덱스 컬럼을 **다른 타입의 값과 비교**하는 것. 변환이 컬럼 쪽에 걸리는 순간 인덱스가 무력화됩니다. 예컨대 MySQL에서 문자열 컬럼을 숫자와 비교하면 컬럼 값이 행마다 숫자로 변환되며 풀 스캔이 됩니다. 전형적인 발생 경로가 애플리케이션의 **파라미터 바인딩 타입 불일치**(문자열 컬럼에 숫자 파라미터를 바인딩)입니다. 코드도 SQL도 멀쩡해 보이고, EXPLAIN을 떠 봐야 드러납니다.
 
-**서브쿼리 — uncorrelated는 한 번만 돈다.** `IN (SELECT uid FROM orders)`의 안쪽은 바깥 행과 무관하니, 바깥 스캔 **전에 한 번** 돌려 값 집합을 캐시하고 바깥은 멤버십만 검사해요. 행마다 재실행하면 O(행×서브쿼리), 캐시하면 O(행) — 이 구분(uncorrelated vs correlated)이 진짜 옵티마이저의 서브쿼리 unnesting이 하는 고민의 출발점입니다. 그리고 [8편](/blog/project/db-hobby/db-internals-08-parallel)에서 서브쿼리 WHERE가 병렬화 게이트에 걸렸던 이유도 이것 — 술어가 실행기를 재진입하니까요.
+**서브쿼리, uncorrelated는 한 번만 돈다.** `IN (SELECT uid FROM orders)`의 안쪽은 바깥 행과 무관하니, 바깥 스캔 **전에 한 번** 돌려 값 집합을 캐시하고 바깥은 멤버십만 검사합니다. 행마다 재실행하면 O(행×서브쿼리), 캐시하면 O(행)입니다. 이 구분(uncorrelated vs correlated)이 진짜 옵티마이저의 서브쿼리 unnesting이 하는 고민의 출발점입니다. 그리고 [8편](/blog/project/db-hobby/db-internals-08-parallel)에서 서브쿼리 WHERE가 병렬화 게이트에 걸렸던 이유도 이것입니다. 술어가 실행기를 재진입하기 때문입니다.
 
-## 7. NULL의 의미론 — 3값 논리
+## 7. NULL의 의미론: 3값 논리
 
-[1편](/blog/project/db-hobby/db-internals-01-storage)에서 NULL의 **저장**(비트맵)을 다뤘으니, 여기선 **의미**를 닫습니다. SQL의 비교는 참/거짓이 아니라 **3값** — TRUE / FALSE / **UNKNOWN**이에요.
+[1편](/blog/project/db-hobby/db-internals-01-storage)에서 NULL의 **저장**(비트맵)을 다뤘으니, 여기선 **의미**를 닫습니다. SQL의 비교는 참/거짓이 아니라 **3값**, 곧 TRUE / FALSE / **UNKNOWN**입니다.
 
-> **핵심 규칙**: NULL은 "값이 없음"이 아니라 **"모름"** 이다. 모르는 것과의 비교는 그 결과도 모른다 — `NULL = NULL`은 TRUE가 아니라 **UNKNOWN**이다(둘 다 모르는 값인데 같은지 어떻게 아나). 그리고 **WHERE는 TRUE만 통과**시킨다 — UNKNOWN은 FALSE처럼 걸러진다.
+> **핵심 규칙**: NULL은 "값이 없음"이 아니라 **"모름"** 이다. 모르는 것과의 비교는 그 결과도 모른다. `NULL = NULL`은 TRUE가 아니라 **UNKNOWN**이다(둘 다 모르는 값인데 같은지 어떻게 아나). 그리고 **WHERE는 TRUE만 통과**시킨다. UNKNOWN은 FALSE처럼 걸러진다.
 
-이 두 줄에서 실무의 함정들이 전부 유도돼요:
+이 두 줄에서 실무의 함정들이 전부 유도됩니다:
 
-- `WHERE col = NULL`은 **아무 행도 안 나온다** (전부 UNKNOWN). NULL 검사는 전용 연산자 `IS NULL` / `IS NOT NULL`로. PostgreSQL 문서가 명시적으로 경고하는 지점이에요 — *"Do not write expression = NULL because NULL is not 'equal to' NULL."*
-- **`NOT IN` + NULL 함정**: `x NOT IN (1, NULL)`은 `x != 1 AND x != NULL`인데 뒤가 UNKNOWN이라 전체가 최고 UNKNOWN — **절대 TRUE가 될 수 없어 결과가 통째로 빈다.** 서브쿼리 결과에 NULL이 하나만 섞여도 `NOT IN`이 전멸하는 유명한 사고. 대칭 케이스도 미묘해요 — `x IN (1, NULL)`은 x=1이면 TRUE지만, x≠1이면 FALSE가 아니라 **UNKNOWN**입니다(`x = NULL`이 UNKNOWN이라 OR 전체가 UNKNOWN). WHERE에선 어차피 걸러져 티가 안 나다가, NOT으로 뒤집는 순간 위의 함정이 되는 구조예요.
-- **집계는 NULL을 건너뛴다**: `COUNT(*)`는 행 수(NULL 포함), `COUNT(col)`/`SUM`/`AVG`는 비NULL만. `AVG`의 분모도 비NULL 개수다 — 이 구분은 [8편의 부분 집계](/blog/project/db-hobby/db-internals-08-parallel)에서 누산기를 둘로 나눈 이유였다.
-- **정렬에서 NULL의 자리**: 비교가 안 되니 위치를 **정해줘야** 한다. PostgreSQL은 기본 NULLS LAST(ASC 기준), 지정도 가능 — 미니 DB도 같은 기본값.
+- `WHERE col = NULL`은 **아무 행도 안 나온다** (전부 UNKNOWN). NULL 검사는 전용 연산자 `IS NULL` / `IS NOT NULL`로. PostgreSQL 문서가 명시적으로 경고하는 지점입니다. *"Do not write expression = NULL because NULL is not 'equal to' NULL."*
+- **`NOT IN` + NULL 함정**: `x NOT IN (1, NULL)`은 `x != 1 AND x != NULL`인데 뒤가 UNKNOWN이라 전체가 최고 UNKNOWN이다. **절대 TRUE가 될 수 없어 결과가 통째로 빈다.** 서브쿼리 결과에 NULL이 하나만 섞여도 `NOT IN`이 전멸하는 유명한 사고. 대칭 케이스도 미묘합니다. `x IN (1, NULL)`은 x=1이면 TRUE지만, x≠1이면 FALSE가 아니라 **UNKNOWN**입니다(`x = NULL`이 UNKNOWN이라 OR 전체가 UNKNOWN). WHERE에선 어차피 걸러져 티가 안 나다가, NOT으로 뒤집는 순간 위의 함정이 되는 구조입니다.
+- **집계는 NULL을 건너뛴다**: `COUNT(*)`는 행 수(NULL 포함), `COUNT(col)`/`SUM`/`AVG`는 비NULL만. `AVG`의 분모도 비NULL 개수다. 이 구분은 [8편의 부분 집계](/blog/project/db-hobby/db-internals-08-parallel)에서 누산기를 둘로 나눈 이유였다.
+- **정렬에서 NULL의 자리**: 비교가 안 되니 위치를 **정해줘야** 한다. PostgreSQL은 기본 NULLS LAST(ASC 기준)이고 지정도 가능하다. 미니 DB도 같은 기본값이다.
 
-정렬 기본값은 DB마다 달라서, 이식할 때 물어봐야 하는 항목이에요:
+정렬 기본값은 DB마다 달라서, 이식할 때 물어봐야 하는 항목입니다:
 
 | | 기본 위치 (ASC) | NULLS FIRST/LAST 문법 |
 |---|---|---|
@@ -199,25 +199,25 @@ static int like_match(const char *s, const char *pat) {
 | MySQL | NULL을 최솟값 취급 → 먼저 | 없음 (`ORDER BY col IS NULL` 트릭으로 우회) |
 | SQLite | 최솟값 취급 → 먼저 | 3.30부터 있음 |
 
-> **실무 안티패턴**: nullable 컬럼을 서브쿼리로 걸러야 할 때 `NOT IN (SELECT ...)`을 쓰는 것. 서브쿼리 결과에 NULL이 하나라도 있으면 결과가 통째로 비고(의미), 옵티마이저도 anti-join으로 풀기 어려워져요(성능) — 이중으로 손해입니다. `NOT EXISTS`는 NULL에 이 함정이 없고 anti-join으로 잘 풀립니다 — nullable이 끼면 기본값은 `NOT EXISTS`. 면접에서 "NOT IN vs NOT EXISTS"를 받으면, 성능 전에 **NULL이 있으면 결과 자체가 다르다**부터 답하는 게 정확한 순서예요.
+> **실무 안티패턴**: nullable 컬럼을 서브쿼리로 걸러야 할 때 `NOT IN (SELECT ...)`을 쓰는 것. 서브쿼리 결과에 NULL이 하나라도 있으면 결과가 통째로 비고(의미), 옵티마이저도 anti-join으로 풀기 어려워집니다(성능). 이중으로 손해입니다. `NOT EXISTS`는 NULL에 이 함정이 없고 anti-join으로 잘 풀립니다. nullable이 끼면 기본값은 `NOT EXISTS`입니다. 면접에서 "NOT IN vs NOT EXISTS"를 받으면, 성능 전에 **NULL이 있으면 결과 자체가 다르다**부터 답하는 게 정확한 순서입니다.
 
-그런데 SQL이 NULL을 언제나 "모름"으로 일관되게 다루느냐 하면 — 아니에요. 구문마다 태도가 갈립니다:
+그런데 SQL이 NULL을 언제나 "모름"으로 일관되게 다루느냐 하면, 아닙니다. 구문마다 태도가 갈립니다:
 
-- **GROUP BY / DISTINCT**는 NULL들을 **한 그룹**으로 묶어요 — 비교 기준이 equality가 아니라 "not distinct"라서(NULL은 NULL과 not distinct).
-- **UNIQUE 제약**은 반대로 NULL들을 **서로 다른 값**처럼 취급해 여러 행을 허용해요 — PostgreSQL의 기본이고, 15부터는 `NULLS NOT DISTINCT`로 바꿀 수 있습니다. SQL Server는 기본이 반대(NULL 1개만 허용).
-- **CHECK 제약**은 UNKNOWN을 **통과**시켜요 — PostgreSQL 문서의 표현으로 *"satisfied if the check expression evaluates to true or the null value."* WHERE(UNKNOWN 탈락)와 정반대 방향입니다.
+- **GROUP BY / DISTINCT**는 NULL들을 **한 그룹**으로 묶습니다. 비교 기준이 equality가 아니라 "not distinct"이기 때문입니다(NULL은 NULL과 not distinct).
+- **UNIQUE 제약**은 반대로 NULL들을 **서로 다른 값**처럼 취급해 여러 행을 허용합니다. PostgreSQL의 기본이고, 15부터는 `NULLS NOT DISTINCT`로 바꿀 수 있습니다. SQL Server는 기본이 반대(NULL 1개만 허용).
+- **CHECK 제약**은 UNKNOWN을 **통과**시킵니다. PostgreSQL 문서의 표현으로 *"satisfied if the check expression evaluates to true or the null value."* WHERE(UNKNOWN 탈락)와 정반대 방향입니다.
 
-> **흔한 오해 정정**: *"NULL은 그냥 특별한 값이다?"* — 값이라면 모든 구문에서 같은 규칙을 따라야 할 텐데, 비교에선 UNKNOWN을 낳고, GROUP BY에선 한 그룹이고, UNIQUE에선 서로 다르고, CHECK은 통과시켜요. NULL은 하나의 값이 아니라 **구문마다 다르게 답하는 "부재의 표시"** 에 가깝습니다 — 그래서 nullable 컬럼이 낀 로직은 구문별 규칙을 하나씩 확인해야 해요.
+> **흔한 오해 정정**: *"NULL은 그냥 특별한 값이다?"* 값이라면 모든 구문에서 같은 규칙을 따라야 할 텐데, 비교에선 UNKNOWN을 낳고, GROUP BY에선 한 그룹이고, UNIQUE에선 서로 다르고, CHECK은 통과시킵니다. NULL은 하나의 값이 아니라 **구문마다 다르게 답하는 "부재의 표시"** 에 가깝습니다. 그래서 nullable 컬럼이 낀 로직은 구문별 규칙을 하나씩 확인해야 합니다.
 
-## 8. 정리 — 시리즈의 실행기 축, 완결
+## 8. 정리: 시리즈의 실행기 축, 완결
 
 - **파이프라인**: 렉서(maximal munch, 예약어) → 재귀 하강 파서(문법=함수, 우선순위=호출 구조, 서브쿼리=자기 재귀) → 실행기(스트리밍 / blocking / materialize).
-- **조인 3형제**: 전부 중첩 루프의 변형 — 인덱스는 안쪽을 점 조회로, 해시는 O(N+M)으로(등식만), 정렬 병합은 정렬된 입력에서. LEFT JOIN의 NULL 채움은 방법 선택과 직교.
-- **집계**: 같은 그룹이 인접해야 접을 수 있다 — 정렬 기반(GroupAggregate) vs 해시 기반(HashAggregate). HAVING = 그룹의 WHERE.
-- **공짜 vs 진짜**: BETWEEN/IN(목록)은 파서의 문법 설탕(실행기 0줄), LIKE는 진짜 새 연산자(O(1) 공간 백트래킹 매처). `'%x%'`가 느린 건 B-tree의 본질 — 탈출구는 트라이그램·역색인.
-- **3값 논리**: NULL은 "모름", WHERE는 TRUE만 통과 — `NOT IN`+NULL 전멸, `COUNT(*) vs COUNT(col)`, NULLS LAST가 전부 여기서 유도된다. 단 GROUP BY(한 그룹)·UNIQUE(서로 다름)·CHECK(통과)은 각자 다른 규칙 — NULL은 구문마다 태도가 갈린다.
+- **조인 3형제**: 전부 중첩 루프의 변형. 인덱스는 안쪽을 점 조회로, 해시는 O(N+M)으로(등식만), 정렬 병합은 정렬된 입력에서. LEFT JOIN의 NULL 채움은 방법 선택과 직교.
+- **집계**: 같은 그룹이 인접해야 접을 수 있다. 정렬 기반(GroupAggregate) vs 해시 기반(HashAggregate). HAVING = 그룹의 WHERE.
+- **공짜 vs 진짜**: BETWEEN/IN(목록)은 파서의 문법 설탕(실행기 0줄), LIKE는 진짜 새 연산자(O(1) 공간 백트래킹 매처). `'%x%'`가 느린 건 B-tree의 본질이다. 탈출구는 트라이그램·역색인.
+- **3값 논리**: NULL은 "모름", WHERE는 TRUE만 통과. `NOT IN`+NULL 전멸, `COUNT(*) vs COUNT(col)`, NULLS LAST가 전부 여기서 유도된다. 단 GROUP BY(한 그룹)·UNIQUE(서로 다름)·CHECK(통과)은 각자 다른 규칙이다. NULL은 구문마다 태도가 갈린다.
 
-이로써 시리즈가 진짜 완결이에요 — 저장([①](/blog/project/db-hobby/db-internals-01-storage))부터 실행기(⑪)까지, 미니 DB가 가진 모든 축을 다뤘습니다.
+이로써 시리즈가 진짜 완결입니다. 저장([①](/blog/project/db-hobby/db-internals-01-storage))부터 실행기(⑪)까지, 미니 DB가 가진 모든 축을 다뤘습니다.
 
 ## 참고 (1차 자료 우선)
 
@@ -226,12 +226,12 @@ static int like_match(const char *s, const char *pat) {
 - [PostgreSQL Documentation: Pattern Matching (LIKE, pg_trgm)](https://www.postgresql.org/docs/current/functions-matching.html)
 - [SQLite: The Lemon LALR(1) Parser Generator](https://sqlite.org/lemon.html)
 - [PostgreSQL Documentation: Executor](https://www.postgresql.org/docs/current/executor.html)
-- [PostgreSQL Documentation: Operator Classes and Operator Families](https://www.postgresql.org/docs/current/indexes-opclass.html) — `text_pattern_ops`와 접두 LIKE
-- [PostgreSQL Documentation: Comparison Functions and Operators](https://www.postgresql.org/docs/current/functions-comparison.html) — *"Do not write expression = NULL ..."*
+- [PostgreSQL Documentation: Operator Classes and Operator Families](https://www.postgresql.org/docs/current/indexes-opclass.html): `text_pattern_ops`와 접두 LIKE
+- [PostgreSQL Documentation: Comparison Functions and Operators](https://www.postgresql.org/docs/current/functions-comparison.html): *"Do not write expression = NULL ..."*
 - [MySQL Reference Manual: Type Conversion in Expression Evaluation](https://dev.mysql.com/doc/refman/8.0/en/type-conversion.html)
 - [SQLite: Datatypes (Type Affinity)](https://www.sqlite.org/datatype3.html)
 - 본 블로그: [DB 인덱스 ①: EXPLAIN 읽기](/blog/theory/db-index-01-explain-basics)
-- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `sql.c`(렉서·파서) · `db.c`(실행기·조인·집계)
+- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby): `sql.c`(렉서·파서) · `db.c`(실행기·조인·집계)
 
 <!-- EN -->
 

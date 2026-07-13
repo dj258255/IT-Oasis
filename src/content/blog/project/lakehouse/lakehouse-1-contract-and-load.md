@@ -1,7 +1,7 @@
 ---
 title: '코드보다 데이터 계약을 먼저 쓰고, 인덱스 선두를 타며 어제치를 안전하게 내리는 Extract & Load'
 titleEn: 'Writing the Data Contract Before Any Code, Then Offloading Yesterday Safely by Riding the Index Prefix'
-description: '코드부터 짜고 싶었지만 참았습니다. 파이프라인의 버그는 대부분 ''계약 불명확''에서 오니까요. dt 경계가 UTC냐 KST냐, 파티션 키가 뭐냐, calls가 누적값이냐 구간값이냐 같은 것들이죠. 1부에서는 Airflow(LocalExecutor) 스캐폴드를 세우고 원천 스키마·파티셔닝·포맷·워터마크를 담은 데이터 계약을 먼저 씁니다. 2부에서는 그 계약 위에 실제 추출·적재를 얹습니다. 어제 쌓인 스냅샷은 6일 뒤 삭제되는데, 추출이 관제탑(메타 PG)을 느리게 하면 자기모순입니다. DBTower의 인덱스는 (instance_id, captured_at) 순서라 인스턴스별 등치 질의로 인덱스 선두를 타게 하고, 읽기 전용 세션과 서버커서로 부하를 눌렀습니다. 멱등성은 파티션 통째 덮어쓰기로 확보했습니다. 실측으로 원천 PG, MinIO parquet, DuckDB count의 3자 일치(닫힌 창 07-05=149,259 · 07-06=79,894)를 확인하고, 닫힌 구간을 두 번 돌려 79,894행이 불변임을(중복 0) 증명합니다. Airflow 스케줄러가 부른 태스크가 원천에서 parquet를 거쳐 조회까지 정확히 흐른 것도 dags test로 확인했습니다.'
+description: '코드부터 짜고 싶었지만 참았습니다. 파이프라인의 버그는 대부분 ''계약 불명확''에서 오기 때문입니다. dt 경계가 UTC냐 KST냐, 파티션 키가 뭐냐, calls가 누적값이냐 구간값이냐 같은 것들입니다. 1부에서는 Airflow(LocalExecutor) 스캐폴드를 세우고 원천 스키마·파티셔닝·포맷·워터마크를 담은 데이터 계약을 먼저 씁니다. 2부에서는 그 계약 위에 실제 추출·적재를 얹습니다. 어제 쌓인 스냅샷은 6일 뒤 삭제되는데, 추출이 관제탑(메타 PG)을 느리게 하면 자기모순입니다. DBTower의 인덱스는 (instance_id, captured_at) 순서라 인스턴스별 등치 질의로 인덱스 선두를 타게 하고, 읽기 전용 세션과 서버커서로 부하를 눌렀습니다. 멱등성은 파티션 통째 덮어쓰기로 확보했습니다. 실측으로 원천 PG, MinIO parquet, DuckDB count의 3자 일치(닫힌 창 07-05=149,259 · 07-06=79,894)를 확인하고, 닫힌 구간을 두 번 돌려 79,894행이 불변임을(중복 0) 증명합니다. Airflow 스케줄러가 부른 태스크가 원천에서 parquet를 거쳐 조회까지 정확히 흐른 것도 dags test로 확인했습니다.'
 descriptionEn: 'I wanted to start with code, but held back, because most pipeline bugs come from an unclear contract: is the dt boundary UTC or KST, what''s the partition key, are calls cumulative or interval values. Part 1 stands up an Airflow (LocalExecutor) scaffold and writes the data contract first, covering source schema, partitioning, format, and watermark. Part 2 builds the actual extract and load on that contract. Yesterday''s snapshots get deleted in six days, and an extraction that slows the control tower (the metadata PG) would be self-contradictory. DBTower''s index is ordered (instance_id, captured_at), so I query per instance with an equality predicate to ride the index prefix, using a read-only session and a server-side cursor. Idempotency comes from whole-partition overwrite. Live checks confirm that source PG, MinIO parquet, and DuckDB counts agree three ways (closed windows 07-05 = 149,259 and 07-06 = 79,894), and a closed window run twice holds at 79,894 rows with zero duplication. A scheduler-invoked task flowing from source to parquet to query was verified via dags test.'
 date: 2026-04-19
 tags:
@@ -25,7 +25,7 @@ seriesOrder: 1
 
 ### 0. 코드부터 짜고 싶은 유혹
 
-[0편](/blog/project/lakehouse/lakehouse-0-why)에서 "버려지는 7일을 분석계로 내린다"는 방향을 잡았습니다. 이제 DAG를 짜고 싶었어요.
+[0편](/blog/project/lakehouse/lakehouse-0-why)에서 "버려지는 7일을 분석계로 내린다"는 방향을 잡았습니다. 이제 DAG를 짜고 싶었습니다.
 
 참았습니다. 파이프라인의 버그는 대부분 코드에서 나오지 않습니다. **계약 불명확**에서 옵니다.
 
@@ -38,7 +38,7 @@ seriesOrder: 1
 
 ### 1. 원천을 코드로 먼저 확인하다
 
-가장 위험한 함정부터. `query_snapshot`의 `calls`·`total_time_ms`가 **누적인지 구간인지**를 단정하지 않고 확인했습니다. 두 경로로요.
+가장 위험한 함정부터. `query_snapshot`의 `calls`·`total_time_ms`가 **누적인지 구간인지**를 단정하지 않고 두 경로로 확인했습니다.
 
 **코드**: DBTower의 `QuerySnapshot` 엔티티 주석이 "쿼리별 **누적 통계** 한 줄"이라 못박고 있고, `ComparisonService`가 시점 비교를 이렇게 합니다.
 
@@ -48,7 +48,7 @@ long deltaCalls = start == null ? end.getCalls()
                                 : Math.max(0, end.getCalls() - start.getCalls());
 ```
 
-`end - start` 차분에 `Math.max(0, …)` 클램프가 걸려 있어요. 대상 DB가 재기동돼 카운터가 리셋되면 음수 델타가 나오는데, 그걸 0으로 눌러줍니다. 전형적인 **누적 카운터** 처리예요.
+`end - start` 차분에 `Math.max(0, …)` 클램프가 걸려 있습니다. 대상 DB가 재기동돼 카운터가 리셋되면 음수 델타가 나오는데, 그걸 0으로 눌러줍니다. 전형적인 **누적 카운터** 처리입니다.
 
 **실측**: 한 쿼리를 시간순으로 뽑아봤습니다.
 
@@ -63,9 +63,9 @@ captured_at              | calls | total_time_ms
 2026-07-03 21:00:52.238  |  1732 |   2812.3712   <- 유휴 구간엔 평탄(감소 없음)
 ```
 
-61 → 204 → 348 → … 단조 증가하다가 실행이 없는 구간엔 값이 그대로 유지됩니다. 감소가 없어요. **누적이 확실합니다.**
+61 → 204 → 348 → … 단조 증가하다가 실행이 없는 구간엔 값이 그대로 유지됩니다. 감소가 없습니다. **누적이 확실합니다.**
 
-중요한 건, **1단계(EL)는 이 판단이 없어도 정확하다**는 점입니다. 원본을 그대로 parquet로 내리니까요. 누적→일간 델타 변환은 2단계(dbt)의 몫입니다. 그래서 여기선 "누적이다"라는 **사실만** 계약서(`docs/CONTRACT.md`)에 적어 두고 변환은 뒤로 미룹니다. 확인 안 된 걸 단정하지 않는 게 계약의 핵심이에요.
+중요한 건, **1단계(EL)는 이 판단이 없어도 정확하다**는 점입니다. 원본을 그대로 parquet로 내리기 때문입니다. 누적→일간 델타 변환은 2단계(dbt)의 몫입니다. 그래서 여기선 "누적이다"라는 **사실만** 계약서(`docs/CONTRACT.md`)에 적어 두고 변환은 뒤로 미룹니다. 확인 안 된 걸 단정하지 않는 게 계약의 핵심입니다.
 
 계약서에 굳힌 규칙은 이렇습니다.
 
@@ -76,11 +76,11 @@ captured_at              | calls | total_time_ms
 
 ### 2. LocalExecutor를 고른 이유
 
-Airflow 공식 docker-compose의 기본은 **CeleryExecutor**입니다. Redis 브로커 + 별도 워커 컨테이너가 붙어요. 일 수만 행짜리 단일 노드 배치에는 과합니다.
+Airflow 공식 docker-compose의 기본은 **CeleryExecutor**입니다. Redis 브로커 + 별도 워커 컨테이너가 붙습니다. 일 수만 행짜리 단일 노드 배치에는 과합니다.
 
-그래서 **LocalExecutor**로 갔습니다. 스케줄러 프로세스 안에서 태스크를 병렬 실행하니 Redis도, 워커도 필요 없어요. 대신 메타DB는 SQLite로는 병렬이 안 되므로 PostgreSQL이 필요합니다. 그래서 Airflow 전용 PG 하나를 **격리**해서 띄웠습니다. DBTower 메타 PG(원천)와 물리적으로 분리해 관제 DB를 오염시키지 않게요.
+그래서 **LocalExecutor**로 갔습니다. 스케줄러 프로세스 안에서 태스크를 병렬 실행하니 Redis도, 워커도 필요 없습니다. 대신 메타DB는 SQLite로는 병렬이 안 되므로 PostgreSQL이 필요합니다. 그래서 Airflow 전용 PG 하나를 **격리**해서 띄웠습니다. DBTower 메타 PG(원천)와 물리적으로 분리해 관제 DB를 오염시키지 않게 했습니다.
 
-원천 PG와 MinIO는 이미 DBTower 데모 스택에 떠 있습니다. 중복 스택을 만들지 않고 **기존 네트워크를 재사용**했어요.
+원천 PG와 MinIO는 이미 DBTower 데모 스택에 떠 있습니다. 중복 스택을 만들지 않고 **기존 네트워크를 재사용**했습니다.
 
 ```yaml
 networks:
@@ -121,13 +121,13 @@ DAG가 임포트 에러 없이 목록에 뜹니다. MinIO health는 200, Airflow
 
 ![Airflow UI에서 snapshot_offload DAG가 임포트 에러 없이 목록에 뜬다(태그 el·extract·lakehouse, @daily)](/uploads/project/lakehouse/airflow-dag.png)
 
-DAG는 떴지만 아직 껍데기입니다. MinIO 버킷은 비어 있어요. 실제 데이터가 흐르는 건 이어지는 2부입니다.
+DAG는 떴지만 아직 껍데기입니다. MinIO 버킷은 비어 있습니다. 실제 데이터가 흐르는 건 이어지는 2부입니다.
 
 ### 4. 아직 데이터는 안 흐른다
 
-0단계는 여기까지입니다. 계약이 서고 스캐폴드가 떴지만, **아직 한 줄도 안 옮겼어요.** DAG는 껍데기고, MinIO 버킷은 비어 있습니다.
+0단계는 여기까지입니다. 계약이 서고 스캐폴드가 떴지만, **아직 한 줄도 안 옮겼습니다.** DAG는 껍데기고, MinIO 버킷은 비어 있습니다.
 
-2부에서 그 껍데기에 실제 추출·적재 로직을 넣습니다. 그리고 마주칠 함정도 하나 예고돼 있어요. DBTower의 인덱스는 `(instance_id, captured_at)` 순서라, `captured_at` 단독 조건으로 뽑으면 인덱스 선두를 못 탑니다. 관제탑을 느리게 하지 않으면서 어제치를 안전하게 내리는 방법이 이어지는 2부의 주제입니다.
+2부에서 그 껍데기에 실제 추출·적재 로직을 넣습니다. 그리고 마주칠 함정도 하나 예고돼 있습니다. DBTower의 인덱스는 `(instance_id, captured_at)` 순서라, `captured_at` 단독 조건으로 뽑으면 인덱스 선두를 못 탑니다. 관제탑을 느리게 하지 않으면서 어제치를 안전하게 내리는 방법이 이어지는 2부의 주제입니다.
 
 코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
 
@@ -137,7 +137,7 @@ DAG는 떴지만 아직 껍데기입니다. MinIO 버킷은 비어 있어요. �
 
 ### 0. 6일 남은 데이터
 
-어제 자정이 지났습니다. 어제 쌓인 스냅샷은 이제 **6일 남았어요**. DBTower가 7일 뒤 지우니까요. 6일 안에 안전하게 MinIO로 내려야 합니다.
+어제 자정이 지났습니다. 어제 쌓인 스냅샷은 이제 **6일 남았습니다**. DBTower가 7일 뒤 지우기 때문입니다. 6일 안에 안전하게 MinIO로 내려야 합니다.
 
 "안전하게"에 두 가지 뜻이 있습니다.
 
@@ -159,7 +159,7 @@ WHERE captured_at >= ? AND captured_at < ?   -- 어제 하루
 @Index(name = "idx_snapshot_instance_time", columnList = "instanceId, capturedAt")
 ```
 
-복합 인덱스 `(instance_id, captured_at)`의 **선두는 instance_id**입니다. `captured_at` 단독 조건은 선두 컬럼을 건너뛰므로 이 인덱스를 제대로 못 탑니다. 최악의 경우 풀스캔에 가까워집니다. 50만 행짜리 관제 DB에서 이건 그대로 부하가 됩니다. (DBTower 자신의 하드닝 감사에서 이미 지적된 실제 제약이에요.)
+복합 인덱스 `(instance_id, captured_at)`의 **선두는 instance_id**입니다. `captured_at` 단독 조건은 선두 컬럼을 건너뛰므로 이 인덱스를 제대로 못 탑니다. 최악의 경우 풀스캔에 가까워집니다. 50만 행짜리 관제 DB에서 이건 그대로 부하가 됩니다. (DBTower 자신의 하드닝 감사에서 이미 지적된 실제 제약입니다.)
 
 **판단**: 원천 인덱스를 함부로 바꾸지 않습니다(관제탑을 건드리는 최후 수단). 대신 **인스턴스별로 루프를 돌아** 등치 조건을 선두에 놓습니다.
 
@@ -174,7 +174,7 @@ ORDER BY captured_at
 
 부하를 더 눌렀습니다.
 
-- **읽기 전용 세션.** `conn.set_session(readonly=True)`로 세션 레벨에서 쓰기를 원천 차단합니다. "운영을 안 건드린다"를 코드에 맡기지 않고 트랜잭션이 보장하게요.
+- **읽기 전용 세션.** `conn.set_session(readonly=True)`로 세션 레벨에서 쓰기를 원천 차단합니다. "운영을 안 건드린다"를 코드에 맡기지 않고 트랜잭션이 보장하게 합니다.
 - **서버커서.** named cursor에 `itersize=50000`을 걸어 결과 전체를 클라이언트 메모리에 올리지 않고 나눠 읽습니다.
 
 ### 2. 명시 스키마와 멱등 덮어쓰기
@@ -202,7 +202,7 @@ _delete_prefix(s3, bucket, prefix)      # 이전 산출물 제거
 s3.put_object(Bucket=bucket, Key=prefix + "part-000.parquet", Body=buf)
 ```
 
-같은 날짜를 몇 번 돌려도 인스턴스당 오브젝트는 항상 1개, 행수는 원천과 동일합니다. 부분 실패로 낡은 파일이 남아 중복되는 일이 구조적으로 없어요.
+같은 날짜를 몇 번 돌려도 인스턴스당 오브젝트는 항상 1개, 행수는 원천과 동일합니다. 부분 실패로 낡은 파일이 남아 중복되는 일이 구조적으로 없습니다.
 
 압축은 zstd, 포맷은 zstd Parquet. 경로는 Hive 스타일이라 DuckDB가 `dt`·`instance_id`를 컬럼으로 직독합니다.
 
@@ -252,7 +252,7 @@ RESULT: ALL MATCH
 
 #### 닫힌 구간을 두 번 돌린 멱등성
 
-여기서 정직하게 짚을 게 있습니다. 원천 DBTower는 지금도 살아서 수집 중입니다. 그래서 **원천 DB의 시계 기준 '오늘'(dt=2026-07-07)은 열린 창**이에요. 세어 볼 때마다 값이 달라집니다(한때 269,354였다가 뒤에 279,002로 자라 있었어요). 열린 창을 스냅샷하면 그 순간의 값을 찍을 뿐이라, 행수 일치나 멱등성을 이 창으로 검증하면 안 됩니다. 그래서 **검증은 완전히 닫힌 과거 구간**(07-05·07-06)으로만 합니다. 아래는 닫힌 dt=2026-07-06을 두 번 돌린 결과예요.
+여기서 정직하게 짚을 게 있습니다. 원천 DBTower는 지금도 살아서 수집 중입니다. 그래서 **원천 DB의 시계 기준 '오늘'(dt=2026-07-07)은 열린 창**입니다. 세어 볼 때마다 값이 달라집니다(한때 269,354였다가 뒤에 279,002로 자라 있었습니다). 열린 창을 스냅샷하면 그 순간의 값을 찍을 뿐이라, 행수 일치나 멱등성을 이 창으로 검증하면 안 됩니다. 그래서 **검증은 완전히 닫힌 과거 구간**(07-05·07-06)으로만 합니다. 아래는 닫힌 dt=2026-07-06을 두 번 돌린 결과입니다.
 
 ```
 dt=2026-07-06 (닫힌 구간)
@@ -276,15 +276,15 @@ offload.py: 적재 완료 dt=2026-07-05 총 149259행
 Marking task as SUCCESS
 ```
 
-여기서 재밌는 게 보입니다. 논리 실행일 `2026-07-06`의 `data_interval_start`는 **2026-07-05**라, 태스크가 처리한 건 dt=2026-07-05입니다. 즉 "어제"를 정확히 집었어요. 0단계에서 start_date를 @daily 자정에 정렬해 둔 게 이렇게 맞아떨어집니다. 이 파티션도 원천 149,259 = DuckDB 149,259로 일치했습니다.
+여기서 재밌는 게 보입니다. 논리 실행일 `2026-07-06`의 `data_interval_start`는 **2026-07-05**라, 태스크가 처리한 건 dt=2026-07-05입니다. 즉 "어제"를 정확히 집었습니다. 0단계에서 start_date를 @daily 자정에 정렬해 둔 게 이렇게 맞아떨어집니다. 이 파티션도 원천 149,259 = DuckDB 149,259로 일치했습니다.
 
 ![snapshot_offload 태스크가 SUCCESS로 끝난 Airflow 성공 런](/uploads/project/lakehouse/airflow-run-success.png)
 
 ### 4. raw는 아직 질문에 못 답한다
 
-parquet는 내려왔지만, 이 raw는 **아직 "지난달보다 느려진 쿼리"에 답하지 못합니다.** calls/total_time_ms가 누적값이라, 그대로 더하면 의미가 없어요. 일간 델타로 바꿔야 하는데, 그게 [2편](/blog/project/lakehouse/lakehouse-2-transform-and-gate)의 dbt 변환입니다.
+parquet는 내려왔지만, 이 raw는 **아직 "지난달보다 느려진 쿼리"에 답하지 못합니다.** calls/total_time_ms가 누적값이라, 그대로 더하면 의미가 없습니다. 일간 델타로 바꿔야 하는데, 그게 [2편](/blog/project/lakehouse/lakehouse-2-transform-and-gate)의 dbt 변환입니다.
 
-그리고 하나 더. 어느 날 특정 인스턴스의 파티션이 수집 장애로 비면, 그 위에 만든 랭킹은 조용히 오답을 냅니다. 지금은 그걸 잡을 게 없어요. 품질 게이트는 뒤에서 세웁니다.
+그리고 하나 더. 어느 날 특정 인스턴스의 파티션이 수집 장애로 비면, 그 위에 만든 랭킹은 조용히 오답을 냅니다. 지금은 그걸 잡을 게 없습니다. 품질 게이트는 뒤에서 세웁니다.
 
 정직하게 남기는 한계:
 

@@ -1,5 +1,5 @@
 ---
-title: '분산 안정성 검증 — stress 테스트 + 한계점 분석'
+title: '분산 안정성 검증: stress 테스트 + 한계점 분석'
 titleEn: 'Distributed Stability Verification — Stress Test + Limit Analysis'
 description: 단일 서버에서 100-150 VU가 한계였던 시스템을 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC)로 전환한 후, stress 테스트(200 VU, 25분)로 한계점을 재탐색합니다. 100 VU에서 P95 200ms(SLA 충족), 200 VU에서 에러율 0.09%(단일 서버 13.25% → 0.09%), 처리량 109 req/s(3.6배↑). App CPU가 여전히 근본 병목임을 소거법으로 확인하고, MySQL/Redis/Kafka/Nginx 모두 여유임을 실측합니다.
 descriptionEn: After transitioning from single-server (100-150 VU limit) to distributed architecture (2 Apps + MySQL Replication + Redis 3-shard + Kafka CDC), runs stress test (200 VU, 25min) to find new limits. 100 VU P95 200ms (SLA met), 200 VU error rate 0.09% (down from 13.25%), throughput 109 req/s (3.6x). Confirms App CPU remains the bottleneck through elimination, with MySQL/Redis/Kafka/Nginx all having headroom.
@@ -23,7 +23,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[Redis 샤딩 — Consistent Hashing으로 워크로드 격리](/blog/project/wikiengine/redis-sharding)에서 KEYS 블로킹 안티패턴 제거, 3노드 Consistent Hashing, 블랙리스트 전용 인스턴스 격리를 완료했습니다. 이 글은 **분산 아키텍처 전체를 stress 테스트로 검증**하는 과정입니다.
+[Redis 샤딩: Consistent Hashing으로 워크로드 격리](/blog/project/wikiengine/redis-sharding)에서 KEYS 블로킹 안티패턴 제거, 3노드 Consistent Hashing, 블랙리스트 전용 인스턴스 격리를 완료했습니다. 이 글은 **분산 아키텍처 전체를 stress 테스트로 검증**하는 과정입니다.
 
 ---
 
@@ -34,7 +34,7 @@ series: "WikiEngine"
 | [Redis L2 캐시 + Stateless 전환](/blog/project/wikiengine/redis-l2-cache) | L1 73% + L2 9% = 82% 히트, Lettuce P95 2.5ms |
 | [MySQL Replication](/blog/project/wikiengine/replication) | GTID 비동기, Primary 5 + Replica 15, Lag 0~1초 |
 | [App 스케일아웃](/blog/project/wikiengine/scaleout) | 482ms → 37ms (92%↓), 에러 13.25% → 0%, CPU 100% → 50% |
-| [CDC — 이벤트 기반 동기화](/blog/project/wikiengine/cdc) | PostService dual-write 제거, OCP 준수 |
+| [CDC: 이벤트 기반 동기화](/blog/project/wikiengine/cdc) | PostService dual-write 제거, OCP 준수 |
 | [Redis 샤딩](/blog/project/wikiengine/redis-sharding) | KEYS→SCAN, 3노드 분리, 워크로드 격리 |
 
 [Redis 샤딩](/blog/project/wikiengine/redis-sharding) 이후 부하 테스트 (100 VU, 20분):
@@ -77,7 +77,7 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 - **Replication Lag 축적**: 부하 시 MySQL Replica가 점차 뒤처짐
 
 **현업 사례**:
-- **Netflix**: soak 테스트에서 48시간 후 Zuul 프록시의 DirectByteBuffer 누수 발견 — 짧은 테스트에서는 GC가 처리했지만 장시간 시 OOM
+- **Netflix**: soak 테스트에서 48시간 후 Zuul 프록시의 DirectByteBuffer 누수 발견. 짧은 테스트에서는 GC가 처리했지만 장시간 시 OOM
 - **LinkedIn**: 4시간 soak에서 Kafka Consumer의 `max.poll.records` 설정 오류로 rebalancing 반복 발견
 - **Stripe**: soak 테스트에서 Ruby GC의 heap fragmentation이 시간에 비례해 증가하여 P99 레이턴시가 2시간 후 3배 악화
 
@@ -167,25 +167,25 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ### k6 Overview 대시보드
 
-![k6 Overview — 응답시간, 처리량, 에러율, VU](/uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-overview.png)
+![k6 Overview: 응답시간, 처리량, 에러율, VU](/uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-overview.png)
 
 | 지표 | 값 | 분석 |
 |------|-----|------|
 | 평균 응답시간 | **1.08s** | 100 VU 구간(42.8ms) 대비 200 VU에서 급등 |
 | P95 | **2.20s** | [Redis 샤딩](/blog/project/wikiengine/redis-sharding) P95(190ms) 대비 11.5배 악화 |
-| P99 | **5.73s** | 극단적 지연 — CPU 포화 시 대기열 급증 |
+| P99 | **5.73s** | 극단적 지연, CPU 포화 시 대기열 급증 |
 | 에러율 | **0.105%** | 목표(< 1%) 달성 |
 | 피크 처리량 | **109 req/s** | 100 VU 구간에서 피크, 200 VU에서 오히려 하락 |
 
 **응답시간 추이**:
-- **0~8분** (0→100 VU): 평균 ~50ms, P95 ~200ms — Baseline과 일치
-- **8~12분** (100→200 VU): **P95가 분 단위로 급등** — CPU 포화 진입
-- **12~22분** (200 VU 유지): P95/P99가 **초 단위**까지 폭등 — 대기열 눈사태(queueing avalanche)
+- **0~8분** (0→100 VU): 평균 ~50ms, P95 ~200ms로 Baseline과 일치
+- **8~12분** (100→200 VU): **P95가 분 단위로 급등**하며 CPU 포화 진입
+- **12~22분** (200 VU 유지): P95/P99가 **초 단위**까지 폭등하는 대기열 눈사태(queueing avalanche)
 - **22~25분** (200→0 VU): 부하 감소 후 ~2분 내 정상 복귀
 
 ---
 
-## 5. 원인 분석 — App CPU 포화가 근본 병목
+## 5. 원인 분석: App CPU 포화가 근본 병목
 
 ### 100 VU vs 200 VU 비교
 
@@ -197,9 +197,9 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 | 처리량 | ~60 req/s | ~25 req/s (하락) | -58% |
 | App CPU | ~50% | **80-100%** | 포화 |
 
-처리량이 오히려 하락한 것은 **queueing avalanche** — 앱이 요청을 처리하는 속도보다 새 요청이 들어오는 속도가 빨라, 대기열이 눈덩이처럼 커지는 현상이다.
+처리량이 오히려 하락한 것은 **queueing avalanche** 때문이다. 앱이 요청을 처리하는 속도보다 새 요청이 들어오는 속도가 빨라, 대기열이 눈덩이처럼 커지는 현상이다.
 
-### 소거법 — CPU가 병목인 근거
+### 소거법: CPU가 병목인 근거
 
 | 컴포넌트 | 200 VU 상태 | 병목? |
 |---------|-----------|------|
@@ -208,7 +208,7 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 | Redis | OPS 50 ops/s (한계 10만), 메모리 0.6%, Eviction 0, Slowlog 0 | No |
 | Kafka | Consumer Lag 일시 3K → 0 수렴, CDC Lag ~40ms | No (일시적) |
 | Nginx | Active 200+, 자체 CPU 미미 | No (앱 대기) |
-| 네트워크 | TTFB 3.95s — **서버 응답 대기가 대부분** | No (CPU의 결과) |
+| 네트워크 | TTFB 3.95s로 **서버 응답 대기가 대부분** | No (CPU의 결과) |
 | Replication | Lag 0~1초, IO/SQL Thread Running | No |
 
 **[stress 테스트](/blog/project/wikiengine/stress-test-tuning)(단일 서버)와 동일한 결론**: 병목은 **App CPU (Lucene BM25 스코어링 + Nori 형태소 분석)**이다. [App 스케일아웃](/blog/project/wikiengine/scaleout)에서 App 2대로 확장하여 100 VU에서 CPU 50%로 안정화했지만, **200 VU에서 다시 CPU 포화에 도달**한다.
@@ -229,45 +229,45 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ![시나리오별 평균/P95 + 빈도별 비교](/uploads/project/WikiEngine/distributed-stability/phase16-stress-k6-scenario-detail.png)
 
-- 200 VU 구간에서 **모든 시나리오가 동시에 악화** — 특정 API 병목이 아닌 시스템 전체 CPU 포화
-- 상세 조회(P95 9.83s)가 가장 느림 — origin hit(Lucene + MySQL) 비율이 높기 때문
-- 희귀 토큰(10%) 검색이 고빈도(30%) 대비 빠름 — 고빈도 토큰은 매칭 문서가 많아 BM25 스코어링 비용이 큼
+- 200 VU 구간에서 **모든 시나리오가 동시에 악화**된다. 특정 API 하나가 병목이라기보다 시스템 전체가 CPU 포화에 빠졌다는 신호다
+- 상세 조회(P95 9.83s)가 가장 느림. origin hit(Lucene + MySQL) 비율이 높기 때문
+- 희귀 토큰(10%) 검색이 고빈도(30%) 대비 빠름. 고빈도 토큰은 매칭 문서가 많아 BM25 스코어링 비용이 큼
 
 ### Spring Boot HTTP + JVM
 
 ![HTTP 평균/P95/P99, 처리량, 에러율, JVM Heap/GC](/uploads/project/WikiEngine/distributed-stability/phase16-stress-springboot-http-jvm.png)
 
 - Heap: 두 인스턴스 모두 ~200-300MB 사용, 1G 한도 내 안정
-- GC Pause: 100 VU에서 ~0.5ms, **200 VU 진입 시 6ms까지 상승** — G1 Evacuation Pause 증가
+- GC Pause: 100 VU에서 ~0.5ms, **200 VU 진입 시 6ms까지 상승**하며 G1 Evacuation Pause 증가
 
 ### Tiered Cache + Lettuce
 
 ![L1/L2/Origin 히트율, Lettuce P95/P99](/uploads/project/WikiEngine/distributed-stability/phase16-stress-tiered-cache-lettuce.png)
 
-- Origin 도달률: 200 VU에서 **10 ops/s까지 상승** — 캐시 미스 증가로 Lucene/MySQL 부하 집중
+- Origin 도달률: 200 VU에서 **10 ops/s까지 상승**하며 캐시 미스 증가로 Lucene/MySQL 부하 집중
 - Lettuce P95: 100 VU에서 ~2ms → 200 VU에서 **10ms까지 스파이크** (CPU 경합으로 이벤트 루프 지연)
 
 ### HikariCP + CPU
 
 ![HikariCP 커넥션 풀, 커넥션 획득 시간, CPU, 스레드 수](/uploads/project/WikiEngine/distributed-stability/phase16-stress-hikaricp-cpu.png)
 
-- Replica 풀: Active **최대 14~15**까지 상승(200 VU) — 읽기 부하 집중
-- 커넥션 획득 시간: 200 VU 진입 직후 **200ms 스파이크** — CPU 포화의 증상
-- **App CPU**: 100 VU에서 ~40-60%, **200 VU에서 80-100%** — **병목 확인**
+- Replica 풀: Active **최대 14~15**까지 상승(200 VU). 읽기 부하 집중
+- 커넥션 획득 시간: 200 VU 진입 직후 **200ms 스파이크**. CPU 포화의 증상
+- **App CPU**: 100 VU에서 ~40-60%, **200 VU에서 80-100%**로 **병목 확인**
 
 ### 컨테이너별 리소스
 
 ![컨테이너별 CPU, 메모리, 네트워크, 디스크 I/O](/uploads/project/WikiEngine/distributed-stability/phase16-stress-containers-cadvisor.png)
 
 - wiki-app-prod CPU: 피크 **180%** (2코어 기준)
-- wiki-mysql-prod CPU: 거의 0% — **DB는 병목이 아님**
-- 메모리: App ~1G, MySQL ~3.5G — 안정적, OOM 위험 없음
+- wiki-mysql-prod CPU: 거의 0%, **DB는 병목이 아님**
+- 메모리: App ~1G, MySQL ~3.5G로 안정적, OOM 위험 없음
 
 ### Redis 샤드별
 
 ![샤드별 메모리, OPS, 키 수, 네트워크, 연결 수](/uploads/project/WikiEngine/distributed-stability/phase16-stress-redis-shard.png)
 
-- OPS: 200 VU에서 **50 ops/s** — 여유 (Redis 한계 10만 ops/s)
+- OPS: 200 VU에서 **50 ops/s**로 여유 (Redis 한계 10만 ops/s)
 - 키 수: shard-1 916개, shard-2 436개, shard-3 527개
 - 연결 수: 각 샤드 3개
 
@@ -275,8 +275,8 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ![메모리 사용률, L2 히트율, OPS, Eviction, Slowlog](/uploads/project/WikiEngine/distributed-stability/phase16-stress-redis-dashboard.png)
 
-- 메모리 사용률: **0.597%** — 극도로 여유
-- L2 캐시 히트율: **65.0%** — stress 부하로 cold query 비율 증가
+- 메모리 사용률: **0.597%**로 극도로 여유
+- L2 캐시 히트율: **65.0%**. stress 부하로 cold query 비율 증가
 - **Eviction: 0**, **Slowlog: 0**
 
 ![Redis 네트워크 I/O, Uptime](/uploads/project/WikiEngine/distributed-stability/phase16-stress-redis-network-uptime.png)
@@ -286,13 +286,13 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 ![Nginx 상태, 커넥션, 요청 수](/uploads/project/WikiEngine/distributed-stability/phase16-stress-nginx.png)
 
 - Active Connections: 200 VU에서 200+까지 상승
-- Waiting 커넥션: 200 VU에서 급증 — 앱 응답 대기 중인 커넥션
+- Waiting 커넥션: 200 VU에서 급증. 앱 응답 대기 중인 커넥션
 
 ### MySQL
 
 ![MySQL QPS, 커넥션, InnoDB 버퍼 풀, Slow Query, Row Lock](/uploads/project/WikiEngine/distributed-stability/phase16-stress-mysql-qps.png)
 
-- InnoDB 버퍼 풀 히트율: **Primary/Replica 모두 100%** — DB I/O 병목 없음
+- InnoDB 버퍼 풀 히트율: **Primary/Replica 모두 100%**로 DB I/O 병목 없음
 - Table Locks: **0**
 
 ![InnoDB Row Lock 대기시간, Row 연산별 처리량](/uploads/project/WikiEngine/distributed-stability/phase16-stress-mysql-row-lock.png)
@@ -301,7 +301,7 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ![Replication Lag, Thread 상태, Primary vs Replica 명령 비교](/uploads/project/WikiEngine/distributed-stability/phase16-stress-replication-lag.png)
 
-- Replication Lag: **0~1초 진동** — 정상 범위
+- Replication Lag: **0~1초 진동**으로 정상 범위
 - R/W 분리: Primary SELECT ~10 ops/s, Replica SELECT **~70 ops/s**
 
 ### Kafka + CDC
@@ -316,13 +316,13 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 ![Debezium 연결 상태, CDC Lag, Events/sec](/uploads/project/WikiEngine/distributed-stability/phase16-stress-debezium.png)
 
 - Connected: **CONNECTED** (전체 구간), Erroneous Events: **0**
-- CDC Lag: 피크 **~40ms** — 거의 실시간
+- CDC Lag: 피크 **~40ms**로 거의 실시간
 
 ### 네트워크 상세
 
 ![HTTP 요청 단계별 소요시간, 네트워크 트래픽](/uploads/project/WikiEngine/distributed-stability/phase16-stress-network-detail.png)
 
-- TTFB: **3.95s** — 200 VU 구간에서 서버 응답 대기가 대부분
+- TTFB: **3.95s**, 200 VU 구간에서 서버 응답 대기가 대부분
 - 총 수신 데이터: 242 MiB
 
 ### Host
@@ -363,10 +363,10 @@ soak 테스트로 찾는 "시간 기반" 문제들:
 
 ### 핵심 결론
 
-1. **100 VU에서 P95 200ms** — 정상 부하에서 SLA 충족
-2. **200 VU에서 에러율 0.09%** — [stress 테스트](/blog/project/wikiengine/stress-test-tuning)(단일, 100 VU에서 13.25%)보다 압도적 개선
-3. **App CPU가 여전히 근본 병목** — 3대 이상 확장 없이는 200 VU가 실질적 한계
-4. **MySQL, Redis, Kafka, Nginx 모두 여유** — 앱 CPU만 해결하면 더 확장 가능
+1. **100 VU에서 P95 200ms**로 정상 부하에서 SLA 충족
+2. **200 VU에서 에러율 0.09%**, [stress 테스트](/blog/project/wikiengine/stress-test-tuning)(단일, 100 VU에서 13.25%)보다 압도적 개선
+3. **App CPU가 여전히 근본 병목**이며, 3대 이상 확장 없이는 200 VU가 실질적 한계
+4. **MySQL, Redis, Kafka, Nginx 모두 여유**, 앱 CPU만 해결하면 더 확장 가능
 
 ---
 

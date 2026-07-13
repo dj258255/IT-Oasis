@@ -38,12 +38,12 @@ series: "Tymee"
 
 ![direct-version](/uploads/project/Tymee/gradle-multimodule-dependency/direct-version.svg)
 
-자주 썼던 방식이에요.
-6주 프로젝트나 토이프로젝트에서는 괜찮았거든요.
+자주 썼던 방식입니다.
+6주 프로젝트나 토이프로젝트에서는 괜찮았습니다.
 
-직관적이고 빌드 스크립트만 보면 모든 정보를 확인할 수 있어요.
+직관적이고 빌드 스크립트만 보면 모든 정보를 확인할 수 있습니다.
 하지만 모듈이 늘어나면 버전이 여러 파일에 흩어지고, 전체 업그레이드 시 모든 파일을 수정해야 합니다.
-단일 모듈이나 레거시 유지보수에 적합해요.
+단일 모듈이나 레거시 유지보수에 적합합니다.
 
 
 
@@ -53,9 +53,9 @@ series: "Tymee"
 
 ![ext-variable](/uploads/project/Tymee/gradle-multimodule-dependency/ext-variable.svg)
 
-AWS 관련 의존성 충돌 때문에 자주 썼던 방식이에요.
+AWS 관련 의존성 충돌 때문에 자주 썼던 방식입니다.
 
-버전을 한 곳에서 정의할 수 있어서 직접 명시보다 낫지만, IDE 자동완성이 약하고 타입 안전성이 없어서 오타를 잡기 어려워요.
+버전을 한 곳에서 정의할 수 있어서 직접 명시보다 낫지만, IDE 자동완성이 약하고 타입 안전성이 없어서 오타를 잡기 어렵습니다.
 Version Catalog 도입 전 중간 단계로 적합합니다.
 
 ---
@@ -64,11 +64,11 @@ Version Catalog 도입 전 중간 단계로 적합합니다.
 
 ![spring-bom](/uploads/project/Tymee/gradle-multimodule-dependency/spring-bom.svg)
 
-starter-web에서 자주 썼던 방식이에요.
+starter-web에서 자주 썼던 방식입니다.
 
-Spring 생태계 내 라이브러리 간 호환성을 BOM이 보장해주고, 버전 명시 없이 깔끔하게 선언할 수 있어요.
+Spring 생태계 내 라이브러리 간 호환성을 BOM이 보장해주고, 버전 명시 없이 깔끔하게 선언할 수 있습니다.
 다만 Flyway, jjwt 같은 Spring BOM 밖의 라이브러리는 별도로 관리해야 합니다.
-순수 Spring 프로젝트에 적합해요.
+순수 Spring 프로젝트에 적합합니다.
 
 ---
 
@@ -82,11 +82,11 @@ Spring 생태계 내 라이브러리 간 호환성을 BOM이 보장해주고, �
 ![version-catalog-usage](/uploads/project/Tymee/gradle-multimodule-dependency/version-catalog-usage.svg)
 
 
-IDE 자동완성이 완벽하게 지원되고, 오타 시 컴파일 에러가 나서 타입 안전해요.
+IDE 자동완성이 완벽하게 지원되고, 오타 시 컴파일 에러가 나서 타입 안전합니다.
 멀티모듈에서 자동 공유되고 Dependabot 같은 자동화 도구도 지원합니다.
 
-다만 Version Catalog만 단독으로 쓰면 Spring 내부 라이브러리 간 호환성을 직접 맞춰야 해요.
-`spring-boot-starter-web`이 의존하는 `spring-core` 버전을 수동으로 관리해야 하는 식이거든요.
+다만 Version Catalog만 단독으로 쓰면 Spring 내부 라이브러리 간 호환성을 직접 맞춰야 합니다.
+`spring-boot-starter-web`이 의존하는 `spring-core` 버전을 수동으로 관리해야 하는 식입니다.
 Spring 외 라이브러리가 많거나 비-Spring 프로젝트에 적합합니다.
 
 ---
@@ -98,8 +98,8 @@ Spring 외 라이브러리가 많거나 비-Spring 프로젝트에 적합합니�
 
 ![hybrid-usage](/uploads/project/Tymee/gradle-multimodule-dependency/hybrid-usage.svg)
 
-Spring 호환성은 BOM이 보장하고, Flyway나 jjwt 같은 외부 라이브러리는 Version Catalog로 중앙 관리해요.
-두 가지 시스템을 모두 이해해야 하고 어떤 라이브러리가 어디에서 관리되는지 구분이 필요하다는 점은 있지만, Spring 기반 멀티모듈에서는 이 조합이 가장 실용적이에요.
+Spring 호환성은 BOM이 보장하고, Flyway나 jjwt 같은 외부 라이브러리는 Version Catalog로 중앙 관리합니다.
+두 가지 시스템을 모두 이해해야 하고 어떤 라이브러리가 어디에서 관리되는지 구분이 필요하다는 점은 있지만, Spring 기반 멀티모듈에서는 이 조합이 가장 실용적입니다.
 
 ---
 
@@ -112,9 +112,9 @@ Spring 호환성은 BOM이 보장하고, Flyway나 jjwt 같은 외부 라이브�
 ![bundle-usage](/uploads/project/Tymee/gradle-multimodule-dependency/bundle-usage.svg)
 
 
-항상 함께 쓰는 라이브러리를 그룹화해서 누락을 방지할 수 있어요.
+항상 함께 쓰는 라이브러리를 그룹화해서 누락을 방지할 수 있습니다.
 다만 번들 내 개별 라이브러리의 scope를 다르게 지정할 수 없습니다.
-예를 들어 `jjwt-api`는 `api`로, 나머지는 `implementation`으로 하고 싶을 때 번들은 쓸 수 없어요.
+예를 들어 `jjwt-api`는 `api`로, 나머지는 `implementation`으로 하고 싶을 때 번들은 쓸 수 없습니다.
 
 ---
 
@@ -127,7 +127,7 @@ apache-commonsLang  -> commons-lang3
 failsafe-failsafe   -> failsafe
 
 
-**주의:** 대시(-)는 Kotlin에서 점(.)으로 변환돼요.
+**주의:** 대시(-)는 Kotlin에서 점(.)으로 변환됩니다.
 
 ```toml
 spring-boot-starter-web  # toml에서
@@ -157,7 +157,7 @@ backend/
 
 ## buildSrc에서 Version Catalog 사용
 
-buildSrc에서는 기본적으로 상위 빌드의 Version Catalog에 접근할 수 없어요.
+buildSrc에서는 기본적으로 상위 빌드의 Version Catalog에 접근할 수 없습니다.
 
 **settings.gradle.kts (buildSrc 내부)**
 

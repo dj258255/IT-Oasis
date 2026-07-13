@@ -1,5 +1,5 @@
 ---
-title: '위키 검색엔진 — 이력서·포트폴리오 작성 가이드'
+title: '위키 검색엔진: 이력서·포트폴리오 작성 가이드'
 titleEn: 'Wiki Search Engine — Resume & Portfolio Writing Guide'
 description: 위키 검색엔진 프로젝트의 모든 경험을 이력서와 포트폴리오에 효과적으로 녹이는 방법을 정리합니다. STAR 기법 기반 문장 템플릿, 면접 대비 질문, 기술 키워드를 포함합니다.
 descriptionEn: A comprehensive guide for converting all WikiEngine project experiences into effective resume and portfolio entries.
@@ -24,10 +24,10 @@ series: "WikiEngine"
 실무자는 이력서를 평균 30초 이내로 스캔합니다. 핵심 정보가 첫 2~3줄에 없으면 다음 이력서로 넘어갑니다.
 
 **절대 하지 말 것:**
-- "성능을 개선했습니다" — 얼마나? 뭐가? 왜?
-- "Lucene을 적용했습니다" — 왜? 다른 선택지는?
-- "캐싱을 도입했습니다" — 뭘? 어떤 근거로?
-- 기술 스택 나열만 하기 — "Java, Spring Boot, MySQL, Lucene"만으로는 아무것도 증명 안 됨
+- "성능을 개선했습니다": 얼마나? 뭐가? 왜?
+- "Lucene을 적용했습니다": 왜? 다른 선택지는?
+- "캐싱을 도입했습니다": 뭘? 어떤 근거로?
+- 기술 스택 나열만 하기: "Java, Spring Boot, MySQL, Lucene"만으로는 아무것도 증명 안 됨
 
 **반드시 할 것:**
 - 모든 문장에 **수치(Before/After)**를 포함
@@ -35,7 +35,7 @@ series: "WikiEngine"
 - 읽는 사람이 "그래서?"를 던질 틈이 없도록
 - 행동 동사(action verb)로 시작: "분석했다", "진단했다", "설계했다", "측정했다"
 
-> 출처: [Resume Worded — Backend Developer Resume Examples](https://resumeworded.com/backend-developer-resume-example), [우아한형제들 기술블로그 — 왕초보 신입 개발자의 우당탕탕 이력서 작성기](https://techblog.woowahan.com/11998/)
+> 출처: [Resume Worded — Backend Developer Resume Examples](https://resumeworded.com/backend-developer-resume-example), [우아한형제들 기술블로그: 왕초보 신입 개발자의 우당탕탕 이력서 작성기](https://techblog.woowahan.com/11998/)
 
 ### STAR 기법을 압축한다
 
@@ -56,7 +56,7 @@ series: "WikiEngine"
 
 ### 이력서용 (1줄)
 
-> 1,215만 건 위키 데이터 기반 커뮤니티 검색엔진 — LIKE → B-Tree → FULLTEXT ngram → Lucene 단계적 전환으로 시스템 마비 상태에서 P95 119ms, 에러율 0%까지 개선
+> 1,215만 건 위키 데이터 기반 커뮤니티 검색엔진. LIKE → B-Tree → FULLTEXT ngram → Lucene 단계적 전환으로 시스템 마비 상태에서 P95 119ms, 에러율 0%까지 개선
 
 ### 포트폴리오용 (3줄)
 
@@ -71,7 +71,7 @@ series: "WikiEngine"
 
 ---
 
-### 경험 1: 시스템 장애 대응 — 검색 한 번에 전체 API 마비
+### 경험 1: 시스템 장애 대응, 검색 한 번에 전체 API 마비
 
 **블로그:** [검색엔진이 시스템을 마비시킨 과정과 대응](/blog/project/wikiengine/search-system-crash)
 
@@ -83,7 +83,7 @@ series: "WikiEngine"
 
 > **상황:** 1,215만 건 위키 데이터가 적재된 MySQL에서 `LIKE '%keyword%'` 검색 API를 호출하자, 검색뿐 아니라 게시글 목록·상세 조회 등 **전혀 무관한 API까지 503을 반환**하며 서버 전체가 마비되었다.
 >
-> **원인 분석:** EXPLAIN으로 확인한 결과 `type=ALL`, `rows=27,443,742` — 인덱스 없이 전체 행을 순차 스캔하고 있었다. `content` 컬럼이 LONGTEXT(평균 6,586자)이므로 행마다 수 KB~수십 KB를 메모리에 로드하여 패턴 매칭하면서, 쿼리 하나가 수십 초간 커넥션을 점유했다. HikariCP `maximumPoolSize=10`이 소진되면서 **모든 API가 커넥션을 얻지 못해 연쇄 타임아웃**이 발생한 것이 핵심이었다.
+> **원인 분석:** EXPLAIN으로 확인한 결과 `type=ALL`, `rows=27,443,742`. 인덱스 없이 전체 행을 순차 스캔하고 있었다. `content` 컬럼이 LONGTEXT(평균 6,586자)이므로 행마다 수 KB~수십 KB를 메모리에 로드하여 패턴 매칭하면서, 쿼리 하나가 수십 초간 커넥션을 점유했다. HikariCP `maximumPoolSize=10`이 소진되면서 **모든 API가 커넥션을 얻지 못해 연쇄 타임아웃**이 발생한 것이 핵심이었다.
 >
 > **긴급 조치 (4가지):**
 > 1. content LIKE 제거 → 행당 비교 데이터 수 KB → 수십 바이트로 감소
@@ -115,7 +115,7 @@ series: "WikiEngine"
 
 #### 이력서용 (4줄)
 
-> MySQL FULLTEXT ngram으로 57만 건 한국어 검색을 12초→6ms(2,100배)로 복구했으나, 3가지 구조적 한계를 발견했다: (1) 고빈도 2-gram 토큰("대한")이 19.6만 건 포스팅 리스트를 순차 탐색하여 5초+ 타임아웃(InnoDB FTS ib_vector_t — MySQL Bug #85880), (2) 1,477만 건 전체 인덱스 300GB+ 디스크 초과(Row-Oriented 구조 한계), (3) 단어 경계 미보존 false positive. Lucene/Elasticsearch/벡터DB를 서버 비용 + CDC + 인건비까지 비교하고, 단일 서버에서 임베디드 Lucene + Nori 형태소 분석기를 선택하여 고빈도 토큰 타임아웃→12ms 해소, 전체 1,215만 건 검색 가능, false positive 제거를 달성했다.
+> MySQL FULLTEXT ngram으로 57만 건 한국어 검색을 12초→6ms(2,100배)로 복구했으나, 3가지 구조적 한계를 발견했다: (1) 고빈도 2-gram 토큰("대한")이 19.6만 건 포스팅 리스트를 순차 탐색하여 5초+ 타임아웃(InnoDB FTS ib_vector_t, MySQL Bug #85880), (2) 1,477만 건 전체 인덱스 300GB+ 디스크 초과(Row-Oriented 구조 한계), (3) 단어 경계 미보존 false positive. Lucene/Elasticsearch/벡터DB를 서버 비용 + CDC + 인건비까지 비교하고, 단일 서버에서 임베디드 Lucene + Nori 형태소 분석기를 선택하여 고빈도 토큰 타임아웃→12ms 해소, 전체 1,215만 건 검색 가능, false positive 제거를 달성했다.
 
 #### 포트폴리오용 (상세)
 
@@ -139,7 +139,7 @@ series: "WikiEngine"
 > **결과:**
 > - "대한" 검색: 5초+ 타임아웃 → **12ms**
 > - 검색 대상: 57만 건(한국어만) → **1,215만 건(전체)**
-> - 인덱스 크기: 6.7GB(57만 건) → 29GB(1,215만 건) — ngram 대비 4.3배 감소
+> - 인덱스 크기: 6.7GB(57만 건) → 29GB(1,215만 건), ngram 대비 4.3배 감소
 > - false positive: "대한국제공항" 매칭 → **매칭 안 됨** (Nori 형태소 분석)
 > - 추가 인프라 비용: **$0** (기존 서버에 내장)
 
@@ -160,7 +160,7 @@ series: "WikiEngine"
 
 ---
 
-### 경험 3: OFFSET 페이지네이션 최적화 — 99.96% 개선
+### 경험 3: OFFSET 페이지네이션 최적화로 99.96% 개선
 
 **블로그:** [Deferred Join 적용기](/blog/project/wikiengine/deferred-join-optimization) + [COUNT(*) 제거와 페이지 제한으로 19,424ms → 8ms](/blog/project/wikiengine/query-refactoring-optimization)
 
@@ -172,21 +172,21 @@ series: "WikiEngine"
 
 > **상황:** Lucene 검색 전환 후 k6 load 테스트를 최초 실행한 결과, **검색(66ms)이 아니라 최신 게시글 목록 조회(19,424ms)가 병목**이었다. 에러율 32.53%로 시스템이 무너졌다.
 >
-> **원인 분석:** k6 스크립트에서 30% 확률로 page=100~1000(OFFSET 최대 20,000)을 요청하는 조건이었다. `SELECT *` + deep OFFSET은 세컨더리 인덱스에서 PK를 획득한 뒤, 각 PK로 클러스터 인덱스에서 전체 행(LONGTEXT 포함)을 읽어야 한다. 20,000행 × ~13KB = ~260MB를 읽고 버리는 구조. InnoDB Buffer Pool 히트율이 100%인데 Slow Query가 14.8K건 — **메모리가 아닌 CPU가 병목**이었다.
+> **원인 분석:** k6 스크립트에서 30% 확률로 page=100~1000(OFFSET 최대 20,000)을 요청하는 조건이었다. `SELECT *` + deep OFFSET은 세컨더리 인덱스에서 PK를 획득한 뒤, 각 PK로 클러스터 인덱스에서 전체 행(LONGTEXT 포함)을 읽어야 한다. 20,000행 × ~13KB = ~260MB를 읽고 버리는 구조. InnoDB Buffer Pool 히트율이 100%인데 Slow Query가 14.8K건이었다. **메모리가 아닌 CPU가 병목**이었다.
 >
 > **해결 (3가지 조합):**
 >
 > | # | 조치 | 효과 |
 > |---|------|------|
-> | 1 | **Deferred Join** — 서브쿼리에서 `SELECT id`만 하여 Covering Index Scan, 외부에서 20개 PK만 클러스터 조회 | 클러스터 I/O 20,020회→20회 |
-> | 2 | **30페이지 제한** — Google/네이버 기준. OFFSET 20,000→580 | worst-case 34배 축소 |
-> | 3 | **COUNT(*) 제거** — Page\<T\>→Slice\<T\>. EXPLAIN ANALYZE로 COUNT(*) 단독 2,038ms 실측 | 매 요청 2,038ms 완전 제거 |
+> | 1 | **Deferred Join**: 서브쿼리에서 `SELECT id`만 하여 Covering Index Scan, 외부에서 20개 PK만 클러스터 조회 | 클러스터 I/O 20,020회→20회 |
+> | 2 | **30페이지 제한**: Google/네이버 기준. OFFSET 20,000→580 | worst-case 34배 축소 |
+> | 3 | **COUNT(*) 제거**: Page\<T\>→Slice\<T\>. EXPLAIN ANALYZE로 COUNT(*) 단독 2,038ms 실측 | 매 요청 2,038ms 완전 제거 |
 >
 > Spring Data의 `nativeQuery=true` + `Slice<T>` 조합에서 Hibernate가 LIMIT을 이중 적용하는 함정([DATAJPA-1464](https://github.com/spring-projects/spring-data-jpa/issues/1782))을 발견. `List<T>` 반환 + 서비스에서 수동 `SliceImpl` 구성(LIMIT+1 패턴)으로 우회했다. Slack Engineering, Vlad Mihalcea(Hibernate 핵심 기여자)가 권장하는 검증된 패턴.
 >
 > **결과:**
 > - 최신 게시글 목록: 19,424ms → **8.33ms** (-99.96%)
-> - 검색: 3,328ms → **20.51ms** (-99.4%) — cascade failure 해소로 원래 속도 복귀
+> - 검색: 3,328ms → **20.51ms** (-99.4%). cascade failure 해소로 원래 속도 복귀
 > - 에러율: 32.53% → **0.00%**
 > - CPU: 100% 포화 → 35%
 > - QPS: 50 → 300 (6배 증가)
@@ -196,7 +196,7 @@ series: "WikiEngine"
 | 역량 | 증거 |
 |------|------|
 | 진단 능력 | BP 100% + Slow Query 14.8K → "디스크가 아닌 CPU 병목" 진단 |
-| 정직함 | Deferred Join "기대 40배 vs 현실 13%" — EXPLAIN으로 인덱스 스캔 85%임을 분석 |
+| 정직함 | Deferred Join "기대 40배 vs 현실 13%", EXPLAIN으로 인덱스 스캔 85%임을 분석 |
 | 프레임워크 이해 | Spring Data 내부 동작(Hibernate setMaxResults)을 GitHub 이슈까지 추적 |
 | cascade failure | 단일 병목(deep OFFSET)이 전체 시스템을 무너뜨리는 패턴을 2번(여기 + 캐싱) 경험 |
 
@@ -208,9 +208,9 @@ series: "WikiEngine"
 
 ---
 
-### 경험 4: Caffeine L1 캐시 — cascade failure 해소
+### 경험 4: Caffeine L1 캐시로 cascade failure 해소
 
-**블로그:** [캐싱 전략 — Caffeine L1 로컬 캐시로 검색 응답 14배 개선](/blog/project/wikiengine/caching-strategy)
+**블로그:** [캐싱 전략: Caffeine L1 로컬 캐시로 검색 응답 14배 개선](/blog/project/wikiengine/caching-strategy)
 
 #### 이력서용 (3줄)
 
@@ -249,7 +249,7 @@ series: "WikiEngine"
 
 ### 경험 5: 검색 품질 정량 평가
 
-**블로그:** [검색 품질 고도화 — 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가](/blog/project/wikiengine/search-quality)
+**블로그:** [검색 품질 고도화: 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가](/blog/project/wikiengine/search-quality)
 
 #### 이력서용 (3줄)
 
@@ -262,9 +262,9 @@ series: "WikiEngine"
 
 ---
 
-## 기술 역량 섹션 — 키워드 문장
+## 기술 역량 섹션: 키워드 문장
 
-이력서의 "기술 역량" 또는 "Skills" 섹션에 기술 스택을 나열하지 말고, **경험과 연결된 문장**으로 쓰세요.
+이력서의 "기술 역량" 또는 "Skills" 섹션에는 기술 스택을 나열하지 말고, **경험과 연결된 문장**으로 씁니다.
 
 | 영역 | 문장 |
 |------|------|
@@ -276,7 +276,7 @@ series: "WikiEngine"
 
 ---
 
-## 프로젝트 기술 여정 — 시계열 요약
+## 프로젝트 기술 여정: 시계열 요약
 
 포트폴리오에 "이 프로젝트의 전체 흐름"을 보여줄 때 사용합니다.
 
@@ -309,14 +309,14 @@ series: "WikiEngine"
 
 ---
 
-## 수치 요약 — 한눈에 보는 Before/After
+## 수치 요약: 한눈에 보는 Before/After
 
 | 지표 | 최초 상태 | 최종 상태 | 개선율 |
 |------|---------|---------|--------|
 | 검색 (고빈도 "대한") | 시스템 마비 (Full Table Scan) | **12ms** (Lucene + Nori) | 타임아웃 해소 |
 | 최신 게시글 목록 (100 VU) | 19,424ms / 에러율 32.53% | **8.33ms / 에러율 0%** | **-99.96%** |
 | 전체 평균 (100 VU, 캐시 후) | 776ms | **54ms** | **14배** |
-| 검색 히트율 (Caffeine) | 0% (캐시 없음) | **81.8%** | — |
+| 검색 히트율 (Caffeine) | 0% (캐시 없음) | **81.8%** | - |
 | CPU (100 VU) | 100% 포화 | **20~40%** | 60%p 감소 |
 | 검색 대상 | 1,215만 건 (전체) | **1,215만 건 (전체)** | 25배 확대 |
 | 인덱스 크기 | 300GB+ (생성 불가) | **29GB** (Lucene) | 생성 가능 |
@@ -329,10 +329,10 @@ series: "WikiEngine"
 **이력서 작성:**
 - [Resume Worded — Backend Developer Resume Examples 2026](https://resumeworded.com/backend-developer-resume-example)
 - [Teal — Junior Backend Developer Resume Example 2025](https://www.tealhq.com/resume-example/junior-backend-developer)
-- [우아한형제들 기술블로그 — 왕초보 신입 개발자의 우당탕탕 이력서 작성기](https://techblog.woowahan.com/11998/)
+- [우아한형제들 기술블로그: 왕초보 신입 개발자의 우당탕탕 이력서 작성기](https://techblog.woowahan.com/11998/)
 - [개발자 이력서, STAR 기법으로 성과를 빛내세요!](https://dataengineeringstoic.co.kr/entry/%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%9D%B4%EB%A0%A5%EC%84%9C-STAR-%EA%B8%B0%EB%B2%95%EC%9C%BC%EB%A1%9C-%EC%84%B1%EA%B3%BC%EB%A5%BC-%EB%B9%9B%EB%82%B4%EC%84%B8%EC%9A%94)
 - [GitHub — Awesome Resume Portfolio](https://github.com/codingmonster-tv/Awesome_Resume_Portfolio)
-- [내일배움캠프 — 백엔드 포트폴리오 예시 모아보기](https://nbcamp.spartaclub.kr/blog/%EB%B0%B1%EC%97%94%EB%93%9C-%ED%8F%AC%ED%8A%B8%ED%8F%B4%EB%A6%AC%EC%98%A4-%EC%98%88%EC%8B%9C-%EB%AA%A8%EC%95%84%EB%B3%B4%EA%B8%B0-%EC%9E%91%EC%84%B1-%EA%BF%80%ED%8C%81%EA%B3%BC-8%EA%B0%9C-%ED%8F%AC%ED%8A%B8%ED%8F%B4%EB%A6%AC%EC%98%A4-%EA%B3%B5%EC%9C%A0--62754)
+- [내일배움캠프: 백엔드 포트폴리오 예시 모아보기](https://nbcamp.spartaclub.kr/blog/%EB%B0%B1%EC%97%94%EB%93%9C-%ED%8F%AC%ED%8A%B8%ED%8F%B4%EB%A6%AC%EC%98%A4-%EC%98%88%EC%8B%9C-%EB%AA%A8%EC%95%84%EB%B3%B4%EA%B8%B0-%EC%9E%91%EC%84%B1-%EA%BF%80%ED%8C%81%EA%B3%BC-8%EA%B0%9C-%ED%8F%AC%ED%8A%B8%ED%8F%B4%EB%A6%AC%EC%98%A4-%EA%B3%B5%EC%9C%A0--62754)
 
 **이력서 액션 동사:**
 - [Resume Worded — Software Engineering Action Verbs](https://resumeworded.com/software-engineer-resume-action-verbs)

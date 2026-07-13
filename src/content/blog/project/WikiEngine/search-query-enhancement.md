@@ -1,5 +1,5 @@
 ---
-title: '쿼리 확장 + Query Understanding — 동의어·오타 교정·snippet 고도화'
+title: '쿼리 확장 + Query Understanding: 동의어·오타 교정·snippet 고도화'
 titleEn: 'Query Expansion + Query Understanding — Synonyms, Spell Check, and Snippet Enhancement'
 description: Lucene 기반 검색 엔진의 Recall과 Precision을 동시에 개선합니다. 동의어 확장(DB 기반 쿼리 타임)으로 "AI" 검색 시 "인공지능" 문서를 포함시키고, DirectSpellChecker로 "프로그래링" → "프로그래밍" 오타 교정을 구현합니다. UnifiedHighlighter + snippetSource 500자 StoredField로 검색어 주변 맥락 snippet을 제공하고, 무중단 전체 재색인 인프라(Directory Swap + SearcherManager 재생성)를 구축하여 12,156,589건(42GB)을 ~2시간 만에 재색인합니다. 인덱스 타임 동의어가 IDF를 왜곡하는 원리, Nori 사용자 사전 158,539개 적용, BM25 변형(BM25+/L/F) 불필요 판단 근거까지 정리합니다.
 descriptionEn: Improves both Recall and Precision of a Lucene search engine. Implements query-time synonym expansion (DB-based) so "AI" search includes "인공지능" documents. Adds DirectSpellChecker for typo correction ("프로그래링" → "프로그래밍"). Deploys UnifiedHighlighter with 500-char snippetSource StoredField for contextual snippets. Builds zero-downtime full reindex infrastructure (Directory Swap + SearcherManager recreation) handling 12,156,589 docs (42GB) in ~2 hours.
@@ -34,7 +34,7 @@ series: "WikiEngine"
 
 ---
 
-## 1. 정상 상태 — 현재 검색 파이프라인
+## 1. 정상 상태: 현재 검색 파이프라인
 
 ### 검색 흐름
 
@@ -44,8 +44,8 @@ series: "WikiEngine"
 
 | 파라미터 | 현재 값 | 의미 |
 |---------|--------|------|
-| k1 | 1.2 (기본값) | TF 포화 속도 — 값이 클수록 term 반복에 민감 |
-| b | 0.75 (기본값) | 문서 길이 정규화 — 1이면 긴 문서 강하게 페널티 |
+| k1 | 1.2 (기본값) | TF 포화 속도, 값이 클수록 term 반복에 민감 |
+| b | 0.75 (기본값) | 문서 길이 정규화, 1이면 긴 문서 강하게 페널티 |
 | 필드 가중치 | title:3, content:1 | MultiFieldQueryParser로 적용 |
 
 BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](https://pmc.ncbi.nlm.nih.gov/articles/PMC7148026/)에서 변형 간 유의미한 성능 차이는 없었다. `MultiFieldQueryParser`로 title:3, content:1 가중치를 이미 적용 중이므로 BM25F의 효과를 일부 대체하고 있습니다.
@@ -54,13 +54,13 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 
 ---
 
-## 2. 문제 상황 — 세 가지 검색 품질 한계
+## 2. 문제 상황: 세 가지 검색 품질 한계
 
-![검색 품질 3대 문제 — 동의어, 오타, 복합어](/uploads/project/WikiEngine/search-query-enhancement/search-quality-issues.svg)
+![검색 품질 3대 문제: 동의어, 오타, 복합어](/uploads/project/WikiEngine/search-query-enhancement/search-quality-issues.svg)
 
-- **동의어 미지원**: "AI" 검색 시 "인공지능" 문서 누락 — **Recall 손실**
-- **오타 교정 미지원**: "프로그래링" 검색 시 결과 0건 — **사용자 이탈**
-- **복합어 과분해**: Nori `DecompoundMode.DISCARD`가 "운동화"를 "운동"+"화"로 분해 — **Precision 저하**
+- **동의어 미지원**: "AI" 검색 시 "인공지능" 문서 누락으로 **Recall 손실**
+- **오타 교정 미지원**: "프로그래링" 검색 시 결과 0건으로 **사용자 이탈**
+- **복합어 과분해**: Nori `DecompoundMode.DISCARD`가 "운동화"를 "운동"+"화"로 분해하여 **Precision 저하**
 
 ### 정리
 
@@ -72,9 +72,9 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 
 ---
 
-## 3. 문제 분석 — 검색 품질 개선의 두 축
+## 3. 문제 분석: 검색 품질 개선의 두 축
 
-![검색 품질 개선의 두 축 — Query Understanding + Query Expansion](/uploads/project/WikiEngine/search-query-enhancement/query-understanding-flow.svg)
+![검색 품질 개선의 두 축: Query Understanding + Query Expansion](/uploads/project/WikiEngine/search-query-enhancement/query-understanding-flow.svg)
 
 이 두 축이 **검색 쿼리가 Lucene에 도달하기 전**에 처리되어야 합니다. 현재 파이프라인에서 정규화(소문자 변환)만 있고, Query Understanding과 Query Expansion이 누락되어 있습니다.
 
@@ -101,9 +101,9 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 | **벡터 임베딩 (Word2Vec/BERT)** | "AI"↔"인공지능"을 자동 학습, 동의어 테이블 불필요 | 임베딩 모델 + 벡터 DB 필요, ARM 서버 추론 비용 | **탈락** ([AI 검색 요약](/blog/project/wikiengine/search-rag)에서 부분 도입 검토) |
 | **Elasticsearch Synonym API** | ES 생태계 네이티브, 동적 관리 | ES 별도 운영 필요, Free Tier 불가 | **탈락** |
 
-**선택 근거**: [Elastic 공식 블로그](https://www.elastic.co/blog/boosting-the-power-of-elasticsearch-with-synonyms)에서도 쿼리 타임 동의어를 권장한다 — "인덱스 크기 영향 없음, term 통계 불변, 동의어 변경 시 재색인 불필요". DB 기반으로 먼저 운영 유연성을 확보하고, 재색인 시 SynonymGraphFilter 파일로 전환합니다.
+**선택 근거**: [Elastic 공식 블로그](https://www.elastic.co/blog/boosting-the-power-of-elasticsearch-with-synonyms)도 "인덱스 크기 영향 없음, term 통계 불변, 동의어 변경 시 재색인 불필요"를 이유로 쿼리 타임 동의어를 권장한다. DB 기반으로 먼저 운영 유연성을 확보하고, 재색인 시 SynonymGraphFilter 파일로 전환합니다.
 
-> **쿼리 타임 동의어가 IDF를 왜곡하지 않는 이유**: 인덱스 타임 동의어는 인덱스에 동의어 term이 추가되어 document frequency가 인위적으로 높아지고, BM25 IDF 계산을 왜곡한다 — "AI"를 인덱싱할 때 "인공지능"도 함께 추가하면, "인공지능"의 DF가 실제보다 부풀려져 해당 term의 가중치가 낮아진다. 쿼리 타임 확장은 인덱스 term 통계가 불변이므로 이 문제가 없습니다. [OpenSource Connections의 "Solr Synonyms Mea Culpa"](https://opensourceconnections.com/blog/2017/11/21/solr-synonyms-mea-culpa/)에서도 인덱스 타임 동의어의 IDF 왜곡을 실사례로 경고합니다.
+> **쿼리 타임 동의어가 IDF를 왜곡하지 않는 이유**: 인덱스 타임 동의어는 인덱스에 동의어 term이 추가되어 document frequency가 인위적으로 높아지고, BM25 IDF 계산을 왜곡한다. 예를 들어 "AI"를 인덱싱할 때 "인공지능"도 함께 추가하면, "인공지능"의 DF가 실제보다 부풀려져 해당 term의 가중치가 낮아진다. 쿼리 타임 확장은 인덱스 term 통계가 불변이므로 이 문제가 없습니다. [OpenSource Connections의 "Solr Synonyms Mea Culpa"](https://opensourceconnections.com/blog/2017/11/21/solr-synonyms-mea-culpa/)에서도 인덱스 타임 동의어의 IDF 왜곡을 실사례로 경고합니다.
 
 > **벡터 방식을 선택하지 않은 이유**: [Eugene Yan의 "Search: Query Matching"](https://eugeneyan.com/writing/search-query-matching/)에서 정리한 것처럼 검색 시스템은 Lexical(BM25) → Graph(동의어) → Embedding(벡터) 순서로 진화합니다. 현재 wikiEngine은 BM25까지 완료되었으므로, 다음 단계는 동의어(Graph)입니다. 동의어 테이블 수십 개로 해결되는 문제에 임베딩 모델 + 벡터 DB를 도입하면 현재 요구사항 대비 운영 복잡도와 추론 비용이 더 크게 늘어납니다.
 
@@ -111,7 +111,7 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 
 | 방식 | 장점 | 단점 | 판단 |
 |------|------|------|------|
-| **Lucene DirectSpellChecker** | 인덱스가 곧 사전, 별도 구축 불필요 | 편집 거리(Damerau-Levenshtein) 기반 — 한국어 음절 단위 비교라 자모 교정에 약함. `lucene-suggest` 모듈 의존성 필요 | **선택** |
+| **Lucene DirectSpellChecker** | 인덱스가 곧 사전, 별도 구축 불필요 | 편집 거리(Damerau-Levenshtein) 기반이며 한국어 음절 단위 비교라 자모 교정에 약함. `lucene-suggest` 모듈 의존성 필요 | **선택** |
 | **검색 로그 기반 "Did you mean?"** | 실제 사용자 쿼리 기반, 정확도 높음 | 로그 축적 필요 (cold start) | 로그 축적 후 보강 |
 | **SymSpell** | O(1) 조회, 매우 빠름 | 메모리 사용 큼, 별도 사전 구축 | 규모 커지면 검토 |
 | **LLM 기반 교정** | 문맥 이해 가능 | 응답 지연, 비용 | **탈락** (240ms SLA 위반) |
@@ -155,7 +155,7 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 - **snippetSource 없음** → UnifiedHighlighter가 null 반환 → `PostSearchResponse.from(post)` fallback (앞 150자)
 - **Nori 사전 미변경** → 기존 분석기로 검색 (정확도는 약간 떨어지지만 동작함)
 
-#### 무중단 인덱스 교체 — Directory Swap
+#### 무중단 인덱스 교체: Directory Swap
 
 ```java
 // 1. 새 디렉토리에 전체 색인
@@ -223,11 +223,11 @@ public void incrementalIndex(Post post) throws IOException {
 | 세그먼트 병합 | forceMerge(5) |
 | 배치 크기 | 1,000건 (Producer-Consumer 파이프라인) |
 
-### Part 0.5: Snippet 개선 — UnifiedHighlighter
+### Part 0.5: Snippet 개선 (UnifiedHighlighter)
 
 #### 현재 방식의 한계
 
-![Snippet Before/After — 검색어 주변 맥락 추출](/uploads/project/WikiEngine/search-query-enhancement/snippet-comparison.svg)
+![Snippet Before/After: 검색어 주변 맥락 추출](/uploads/project/WikiEngine/search-query-enhancement/snippet-comparison.svg)
 
 #### 현업 표준: Lucene UnifiedHighlighter
 
@@ -315,7 +315,7 @@ INSERT INTO synonyms (term, synonym, weight) VALUES
     ('데이터베이스', 'DB', 1.0);
 ```
 
-#### 위키 리다이렉트 활용 — 자동 동의어 추출
+#### 위키 리다이렉트 활용: 자동 동의어 추출
 
 위키피디아 데이터에는 리다이렉트 정보가 포함되어 있습니다. 이를 활용하면 동의어를 자동 추출할 수 있습니다.
 
@@ -384,7 +384,7 @@ public class QueryExpansionService {
 
 ### Part 2: Query Understanding
 
-#### 2-1. 오타 교정 — Lucene DirectSpellChecker
+#### 2-1. 오타 교정: Lucene DirectSpellChecker
 
 ```java
 @Service
@@ -443,7 +443,7 @@ public class SpellCheckService {
 }
 ```
 
-#### 2-2. 복합어 보존 — Nori 사용자 사전
+#### 2-2. 복합어 보존: Nori 사용자 사전
 
 Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전으로 해결합니다.
 
@@ -462,38 +462,38 @@ Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전
 
 ### Part 3: 검색 파이프라인 통합
 
-![통합 검색 파이프라인 — "컴퓨텨 AI"](/uploads/project/WikiEngine/search-query-enhancement/integrated-pipeline.svg)
+![통합 검색 파이프라인: "컴퓨텨 AI"](/uploads/project/WikiEngine/search-query-enhancement/integrated-pipeline.svg)
 
 ---
 
-## 6. 검증 — Before/After 실측
+## 6. 검증: Before/After 실측
 
-### Before 1: "자바 가비지 컬렉션" 검색 — snippet이 검색어와 무관
+### Before 1: "자바 가비지 컬렉션" 검색, snippet이 검색어와 무관
 
-![Before — "자바 가비지 컬렉션" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-gc.png)
+![Before: "자바 가비지 컬렉션" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-gc.png)
 
 **관찰:**
-- 1위 "가비지": snippet이 "가비지(garbage)는 다음 등을 가리킨다. 쓰레기, 폐기물을 의미하는 영어 낱말..." — **자바 GC와 무관한 동음이의어 문서**
-- 2위 "자바 가상 머신": snippet이 "자바 가상 머신(, JVM)은 자바 바이트코드를 실행할 수 있는 주체이다..." — **GC와 관련 있지만 snippet 앞 150자에 "가비지 컬렉션"이라는 단어가 없음**
+- 1위 "가비지": snippet이 "가비지(garbage)는 다음 등을 가리킨다. 쓰레기, 폐기물을 의미하는 영어 낱말..."로, **자바 GC와 무관한 동음이의어 문서**
+- 2위 "자바 가상 머신": snippet이 "자바 가상 머신(, JVM)은 자바 바이트코드를 실행할 수 있는 주체이다..."로, **GC와 관련 있지만 snippet 앞 150자에 "가비지 컬렉션"이라는 단어가 없음**
 
-### Before 2: "AI" 검색 — "인공지능" 문서 미포함
+### Before 2: "AI" 검색, "인공지능" 문서 미포함
 
-![Before — "AI" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-ai.png)
+![Before: "AI" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-ai.png)
 
 **관찰:**
 - 1위 "Ai": 영문 위키 "AI most frequently refers to artificial intelligence..."
-- 2~5위: "Ai Ai Gasa", ".ai", "Ai Ai Syndrome" — **"인공지능"이라는 한국어 문서가 상위에 없음**
+- 2~5위 "Ai Ai Gasa", ".ai", "Ai Ai Syndrome": **"인공지능"이라는 한국어 문서가 상위에 없음**
 
-### Before 3: "컴퓨터" 검색 — 오타 교정 Before 기준
+### Before 3: "컴퓨터" 검색, 오타 교정 Before 기준
 
-![Before — "컴퓨터" 검색 (위키피디아)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-wiki.png)
-![Before — "컴퓨터" 검색 (나무위키)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-namu.png)
+![Before: "컴퓨터" 검색 (위키피디아)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-wiki.png)
+![Before: "컴퓨터" 검색 (나무위키)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-namu.png)
 
 "컴퓨터" 정상 검색 시 관련 문서 반환됨. 이 상태에서 "컴퓨텨" (오타)를 검색하면 **결과 0건**.
 
-### After 1: "AI" 검색 — 동의어 확장 성공
+### After 1: "AI" 검색, 동의어 확장 성공
 
-![After — "AI" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ai.png)
+![After: "AI" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ai.png)
 
 | | Before | After |
 |---|---|---|
@@ -505,30 +505,30 @@ Nori가 "운동화"를 "운동"+"화"로 분해하는 문제를 사용자 사전
 
 **결과**: "AI" 검색 시 동의어 "인공지능"이 확장되어, 한국어 인공지능 관련 문서가 상위에 노출됩니다. **Recall이 대폭 개선되었다.**
 
-### After 2: "ML" 검색 — 동의어 확장 성공
+### After 2: "ML" 검색, 동의어 확장 성공
 
-![After — "ML" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ml.png)
+![After: "ML" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ml.png)
 
-- 1위: **"인공지능과 머신러닝"** — ML의 동의어 "머신러닝"이 매칭
-- 4위: **"머신러닝 기반 스마트 크루즈 컨트롤"** — "머신러닝" 직접 매칭
+- 1위 **"인공지능과 머신러닝"**: ML의 동의어 "머신러닝"이 매칭
+- 4위 **"머신러닝 기반 스마트 크루즈 컨트롤"**: "머신러닝" 직접 매칭
 
-### After 3: "프로그래링" 검색 — 오타 교정
+### After 3: "프로그래링" 검색, 오타 교정
 
-![After — "프로그래링" 검색 → "프로그래밍" 교정 제안](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-typo-fixed.png)
+![After: "프로그래링" 검색 → "프로그래밍" 교정 제안](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-typo-fixed.png)
 
 **"혹시 '프로그래밍'을(를) 찾으셨나요?"** 제안이 검색 결과 위에 표시됨. DirectSpellChecker가 "프로그래링" 전체를 "프로그래밍"으로 교정 성공 (편집 거리 1).
 
 > **트리거 조건 개선**: 최초에는 "결과 3건 미만일 때만 교정"이었지만, Google의 ["Did you mean?" 패턴](https://blog.google/products/search/abcs-spelling-google-search/)에서는 결과 유무와 무관하게 교정 제안을 표시합니다. **항상 교정 시도 + 원본과 다르면 제안** 방식으로 변경했다.
 
-### After 4: "컴퓨터" 검색 — 정상 결과 (교정 미발생)
+### After 4: "컴퓨터" 검색, 정상 결과 (교정 미발생)
 
-![After — "컴퓨터" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-computer.png)
+![After: "컴퓨터" 검색](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-computer.png)
 
 정상 검색어에 대해서는 교정 제안이 뜨지 않는다 (정상 동작).
 
 ### After 5: Snippet 개선 (재색인 후)
 
-![After — "자바 가비지 컬렉션" 검색 (재색인 후)](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-gc-snippet.png)
+![After: "자바 가비지 컬렉션" 검색 (재색인 후)](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-gc-snippet.png)
 
 | | Before (앞 150자) | After (UnifiedHighlighter) |
 |---|---|---|
@@ -539,7 +539,7 @@ snippetSource(앞 500자) + UnifiedHighlighter 조합으로, 검색어 주변 �
 
 ### After 6: "AI" 검색 + snippet (재색인 후)
 
-![After — "AI" 검색 (재색인 후)](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ai-snippet.png)
+![After: "AI" 검색 (재색인 후)](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-ai-snippet.png)
 
 동의어 확장("AI" → "인공지능")이 유지되면서, snippet도 검색어 맥락을 반영. 동의어 확장 + snippet 개선이 동시에 동작 확인.
 
@@ -1016,21 +1016,21 @@ Solve Nori's "운동화" → "운동"+"화" decomposition with a user dictionary
 
 ### Part 3: Search pipeline integration
 
-![Integrated search pipeline — "컴퓨텨 AI"](/uploads/project/WikiEngine/search-query-enhancement/integrated-pipeline.svg)
+![Integrated search pipeline: "컴퓨텨 AI"](/uploads/project/WikiEngine/search-query-enhancement/integrated-pipeline.svg)
 
 ---
 
 ## 6. Verification — Before/After Measured
 
-### Before 1: "자바 가비지 컬렉션" — snippet unrelated to the query
+### Before 1: "자바 가비지 컬렉션" (snippet unrelated to the query)
 
-![Before — "자바 가비지 컬렉션" search](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-gc.png)
+![Before: "자바 가비지 컬렉션" search](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-gc.png)
 
 **Observations:**
 - #1 "가비지": snippet says "가비지(garbage)는 다음 등을 가리킨다. 쓰레기, 폐기물..." — **a homonym doc unrelated to Java GC**
 - #2 "자바 가상 머신": snippet says "자바 가상 머신(, JVM)은 자바 바이트코드를 실행할 수 있는 주체이다..." — **GC-related but the first 150 chars do not contain "가비지 컬렉션"**
 
-### Before 2: "AI" — "인공지능" docs missing
+### Before 2: "AI" ("인공지능" docs missing)
 
 ![Before — "AI" search](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-ai.png)
 
@@ -1038,10 +1038,10 @@ Solve Nori's "운동화" → "운동"+"화" decomposition with a user dictionary
 - #1 "Ai": English Wikipedia "AI most frequently refers to artificial intelligence..."
 - #2-5: "Ai Ai Gasa", ".ai", "Ai Ai Syndrome" — **no Korean "인공지능" doc on top**
 
-### Before 3: "컴퓨터" — typo-correction baseline
+### Before 3: "컴퓨터" (typo-correction baseline)
 
-![Before — "컴퓨터" search (Wikipedia)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-wiki.png)
-![Before — "컴퓨터" search (Namuwiki)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-namu.png)
+![Before: "컴퓨터" search (Wikipedia)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-wiki.png)
+![Before: "컴퓨터" search (Namuwiki)](/uploads/project/WikiEngine/search-query-enhancement/phase18-before-search-computer-namu.png)
 
 Searching "컴퓨터" returns related docs normally. From this state, searching "컴퓨텨" (typo) returns **0 results**.
 
@@ -1066,23 +1066,23 @@ Searching "컴퓨터" returns related docs normally. From this state, searching 
 - #1: **"인공지능과 머신러닝"** — ML synonym "머신러닝" matched
 - #4: **"머신러닝 기반 스마트 크루즈 컨트롤"** — direct "머신러닝" match
 
-### After 3: "프로그래링" search — typo correction
+### After 3: "프로그래링" search (typo correction)
 
-![After — "프로그래링" search → "프로그래밍" suggestion](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-typo-fixed.png)
+![After: "프로그래링" search → "프로그래밍" suggestion](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-typo-fixed.png)
 
 **"Did you mean '프로그래밍'?"** appears above the results. DirectSpellChecker corrects the entire "프로그래링" to "프로그래밍" (edit distance 1).
 
 > **Trigger improvement**: initially "only suggest when fewer than 3 results," but Google's ["Did you mean?" pattern](https://blog.google/products/search/abcs-spelling-google-search/) shows suggestions regardless of result count. Switched to **always attempt + suggest if differs from input.**
 
-### After 4: "컴퓨터" search — normal results (no correction)
+### After 4: "컴퓨터" search, normal results (no correction)
 
-![After — "컴퓨터" search](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-computer.png)
+![After: "컴퓨터" search](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-computer.png)
 
 For valid queries, no correction suggestion appears (correct).
 
 ### After 5: snippet improvement (after reindex)
 
-![After — "자바 가비지 컬렉션" search (after reindex)](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-gc-snippet.png)
+![After: "자바 가비지 컬렉션" search (after reindex)](/uploads/project/WikiEngine/search-query-enhancement/phase18-after-search-gc-snippet.png)
 
 | | Before (first 150 chars) | After (UnifiedHighlighter) |
 |---|---|---|

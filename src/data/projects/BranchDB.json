@@ -1,0 +1,14 @@
+{
+  "title": "브랜치DB",
+  "titleEn": "BranchDB",
+  "description": "AI 에이전트를 위한 포크 가능한 임베디드 키-값 저장소. 영속 불변 트리로 데이터셋 전체를 O(1)에 분기하고, 좋은 갈래만 합치고 나머지는 버린다.",
+  "descriptionEn": "An embedded, branchable key-value store for AI agents. Fork the whole dataset in O(1) via a persistent immutable tree, merge the good branches, throw the rest away.",
+  "image": "/uploads/project/BranchDB/cover.svg",
+  "tags": ["Rust", "Database", "Storage Engine", "Copy-on-Write", "Persistent Data Structure", "AI Agents"],
+  "category": "project",
+  "date": "2026-06-22",
+  "github": "",
+  "website": "",
+  "story": "/blog/project/branchdb/branchdb-why-i-build-it",
+  "order": 0
+}

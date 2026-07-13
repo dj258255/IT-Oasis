@@ -24,11 +24,11 @@ series: "WikiEngine"
 
 ---
 
-## 1. 정상 상태 — 검색이 동작하고 있었다
+## 1. 정상 상태: 검색이 동작하고 있었다
 
 [이전 글](/blog/project/wikiengine/fulltext-ngram-index) 완료 후, 한국어 57만 건(나무위키)에 대해 FULLTEXT ngram 인덱스가 동작하고 있었습니다.
 
-![Lucene 전환 전 기존 아키텍처 — 클라이언트 → Spring Boot → MySQL 8.0](/uploads/project/WikiEngine/lucene-decision/current-architecture.svg)
+![Lucene 전환 전 기존 아키텍처: 클라이언트 → Spring Boot → MySQL 8.0](/uploads/project/WikiEngine/lucene-decision/current-architecture.svg)
 
 서버는 Oracle Cloud ARM 인스턴스(2 vCPU, 12GB RAM)로, Always Free 티어라 월 운영비가 $0입니다.
 MySQL, Spring Boot, Nginx가 이 한 대에서 돌아가고 있으며, 모니터링 스택(Prometheus + Grafana + Loki)은 별도 AMD 인스턴스 2대(각 1 vCPU, 1GB)에 분리되어 있습니다.
@@ -40,7 +40,7 @@ MySQL, Spring Boot, Nginx가 이 한 대에서 돌아가고 있으며, 모니터
 
 ---
 
-## 2. 문제 인식 — "동작한다"와 "쓸 수 있다"는 달랐다
+## 2. 문제 인식: "동작한다"와 "쓸 수 있다"는 달랐다
 
 정상적으로 보이던 검색에서 세 가지 문제가 드러났습니다.
 
@@ -64,7 +64,7 @@ FULLTEXT ngram 인덱스는 한국어 57만 건에만 적용된 상태였습니�
 임시 정렬 파일까지 합치면 300GB+가 필요했고, 서버 디스크 여유(253GB)로는 감당이 안 됐습니다. 
 인덱스를 생성할 수 없으니, 영어 문서 1,420만 건은 검색 대상에서 아예 빠져 있는 상태였습니다.
 
-### 2-3. 검색 품질 — false positive
+### 2-3. 검색 품질: false positive
 
 "한국어"를 검색하면 "대한국제공항"이 결과에 섞여 나왔습니다. 
 ngram이 "한국"과 "국어"를 각각 독립 토큰으로 만들어서, "한국"만 포함된 문서도 매칭되기 때문입니다. 
@@ -74,7 +74,7 @@ ngram이 "한국"과 "국어"를 각각 독립 토큰으로 만들어서, "한�
 
 ---
 
-## 3. 문제 분석 — MySQL에서는 해결할 수 없는 이유
+## 3. 문제 분석: MySQL에서는 해결할 수 없는 이유
 
 > 이 절의 기술 분석(InnoDB FTS 내부 아키텍처, `fts0que.cc` 소스코드 분석, 쿼리 모드별 비교, 완화책 검토)은 [이전 글(FULLTEXT ngram 인덱스) §6](/blog/project/wikiengine/fulltext-ngram-index)에서 상세히 다뤘습니다. 
 > 여기서는 **Lucene 전환 결정에 필요한 핵심**만 요약합니다.
@@ -85,7 +85,7 @@ ngram은 "대한민국"을 "대한", "한민", "민국" 3개 토큰으로 쪼갭
 "대한"은 57만 건 중 19.6만 건의 문서에 등장하는 고빈도 토큰입니다. 
 InnoDB FTS 엔진이 이 19.6만 건의 포스팅 리스트를 순차 탐색하는 것이 병목이었습니다.
 
-**Lucene 전환의 핵심 근거 — N:M 포스팅 리스트 폭발:**
+**Lucene 전환의 핵심 근거, N:M 포스팅 리스트 폭발:**
 
 ngram과 형태소 분석기의 차이는 **토큰:문서 매핑 관계**에서 갈립니다.
 
@@ -115,7 +115,7 @@ MySQL 8.0의 FULLTEXT는 ngram(문자 n-gram)과 MeCab(일본어)만 지원합�
 
 ---
 
-## 4. 대안 검토 — 대안 기술 조사
+## 4. 대안 검토: 대안 기술 조사
 
 MySQL 밖에서 검색을 할 수 있는 기술은 크게 네 가지였습니다.
 
@@ -145,11 +145,11 @@ implementation 'org.apache.lucene:lucene-analysis-nori:10.2.1'
 
 | MySQL ngram의 한계 | Lucene의 해결 방식 |
 |--------------------|--------------------|
-| 고빈도 토큰 타임아웃 | Nori 형태소 분석기 — "대한민국"을 1토큰으로 처리. "대한"이라는 고빈도 2-gram 자체가 생성되지 않음 |
+| 고빈도 토큰 타임아웃 | Nori 형태소 분석기가 "대한민국"을 1토큰으로 처리. "대한"이라는 고빈도 2-gram 자체가 생성되지 않음 |
 | 인덱스 300GB+ (생성 불가) | 형태소 분석으로 토큰 수가 ngram의 20\~30%. 1,477만 건 전체가 10\~30GB로 추정 |
 | false positive, 형태소 미지원 | Nori가 어미/조사 제거. "대한민국을" -> "대한민국". "대한국제공항"은 "대한민국" 토큰과 매칭 안 됨 |
 
-**트레이드오프 — precision이 올라가면 recall은 떨어진다:**
+**트레이드오프: precision이 올라가면 recall은 떨어진다:**
 
 Nori로 전환하면 "한국어" 검색에서 "대한국제공항"이 사라지는 건 precision 향상입니다. 
 하지만 "대한"으로 검색했을 때, ngram은 "대한민국", "대한항공", "대한건설"까지 모두 매칭시키는 반면, Nori는 "대한"이 독립 형태소로 분석된 문서만 반환합니다. 
@@ -252,7 +252,7 @@ Elastic은 2024년 9월에 AGPL v3를 추가하여 OSI 인증 오픈소스로 �
 15M 문서의 실제 프로덕션 구성에서는 월 $500 이상이 됩니다. 
 2025년 1월에 프로덕션 워크로드 기준 약 30% 가격 인상이 있었습니다.
 
-### 4-3. 데이터 동기화 비용 — Elasticsearch/OpenSearch의 숨겨진 비용
+### 4-3. 데이터 동기화 비용: Elasticsearch/OpenSearch의 숨겨진 비용
 
 여기서 끝이 아닙니다. MySQL과 Elasticsearch는 별도 시스템이므로 데이터 동기화가 필요합니다. 
 게시글을 MySQL에 INSERT하면 Elasticsearch에도 보내야 합니다. 
@@ -314,24 +314,24 @@ CDC 없이 앱에서 직접 동기화할 수도 있습니다.
 
 | 기업 | 규모 | 사용 방식 |
 |------|------|-----------|
-| Twitter(X) | 수억 트윗/일 | Earlybird — Lucene 위에 커스텀 인메모리 포스팅 리스트 구축. MySQL 검색에서 전환 |
-| LinkedIn | 3억+ 프로필 | Galene — Lucene을 인덱싱 레이어로 사용 |
+| Twitter(X) | 수억 트윗/일 | Earlybird로 Lucene 위에 커스텀 인메모리 포스팅 리스트 구축. MySQL 검색에서 전환 |
+| LinkedIn | 3억+ 프로필 | Galene으로 Lucene을 인덱싱 레이어로 사용 |
 | Atlassian (Jira/Confluence) | 기업 위키 | 앱 내장 Lucene으로 검색 구현 |
 
 > 출처: [Twitter's New Search Architecture (2010)](https://blog.twitter.com/engineering/en_us/a/2010/twitters-new-search-architecture), [How Twitter Uses Apache Lucene (Lucidworks)](https://lucidworks.com/blog/how-twitter-uses-apache-lucene-for-real-time-search), [LinkedIn's Galene Search Architecture (Lucidworks)](https://lucidworks.com/blog/linkedins-galene-search-architecture-built-on-apache-lucene)
 
-Twitter 사례가 흥미로웠습니다. MySQL 기반 검색에서 Lucene으로 전환한 동기가 이 프로젝트와 동일합니다 — MySQL 검색의 구조적 한계.
+Twitter 사례가 흥미로웠습니다. MySQL 기반 검색에서 Lucene으로 전환한 동기가 이 프로젝트와 동일합니다. 바로 MySQL 검색의 구조적 한계입니다.
 
 **한국 기업:**
 
 | 기업 | 기술 | 맥락 |
 |------|------|------|
-| NHN | Elasticsearch | NHN FORWARD 22 — 상품 검색엔진. 다수의 서비스가 검색 인덱스를 공유 |
+| NHN | Elasticsearch | NHN FORWARD 22의 상품 검색엔진. 다수의 서비스가 검색 인덱스를 공유 |
 | 오늘의집 | Elasticsearch + Lucene 직접 튜닝 | Lucene 세그먼트 수를 직접 튜닝하여 성능 개선 |
 | 당근마켓 | Elasticsearch on K8s | Kubernetes에서 ES 클러스터 운영 |
 
 한국 대기업은 대부분 Elasticsearch를 사용합니다. 
-하지만 공통점이 있습니다 — **여러 팀과 서비스가 검색 인덱스를 공유하는 구조**입니다. 
+하지만 공통점이 있습니다. **여러 팀과 서비스가 검색 인덱스를 공유하는 구조**입니다. 
 단일 앱에서 검색을 제공하는 환경과는 상황이 다릅니다.
 
 오늘의집은 Elasticsearch를 쓰면서도 Lucene 세그먼트 레벨까지 내려가서 튜닝했습니다. 
@@ -341,7 +341,7 @@ Twitter 사례가 흥미로웠습니다. MySQL 기반 검색에서 Lucene으로 
 
 ---
 
-## 5. 적용 — 왜 임베디드 Lucene인가
+## 5. 적용: 왜 임베디드 Lucene인가
 
 ### 5-1. 비용 비교 전체 요약
 
@@ -393,7 +393,7 @@ Elasticsearch의 핵심 가치인 **분산 처리**가 필요하지 않습니다
 1,477만 건은 Lucene 단일 인덱스의 권장 범위(1~2.5억 건/노드) 안에 있습니다. 
 분산이 필요 없는 상황에서 분산 시스템을 운영하는 것은 비용만 추가하는 것입니다.
 
-### 5-2-1. 비용 요약 — RAM이 비용을 결정합니다
+### 5-2-1. 비용 요약: RAM이 비용을 결정합니다
 
 임베디드 Lucene은 총 시스템 RAM **8\~16GB**(JVM 힙 2\~4GB + 페이지 캐시)가 필요합니다. 
 Elasticsearch는 **16\~32GB**(JVM 힙 8\~16GB + 페이지 캐시)가 필요합니다. 
@@ -416,7 +416,7 @@ Elasticsearch는 JVM 힙만 8\~16GB를 요구하므로 서버 총 RAM을 초과�
 같은 Lucene 엔진을 쓰기 때문입니다. 
 차이는 순수하게 RAM 요구량 → 호스팅 비용 → 운영 복잡도입니다.
 
-### 5-3. 임베디드 Lucene vs Elasticsearch — 성능 차이가 비용 차이다
+### 5-3. 임베디드 Lucene vs Elasticsearch: 성능 차이가 비용 차이다
 
 검색 품질(Nori + BM25)은 동일합니다. 
 둘 다 같은 Lucene 엔진을 씁니다. 
@@ -449,7 +449,7 @@ Elasticsearch는 JVM 힙만 8\~16GB를 요구하므로 서버 총 RAM을 초과�
 
 JVM 힙만 보면 4~8배 차이지만, 페이지 캐시를 포함한 총 시스템 RAM은 1.3~2배 차이입니다. 
 차이가 줄어듭니다. 
-하지만 Elasticsearch의 분산 레이어(Netty, 클러스터)가 먹는 힙은 순수하게 낭비되는 리소스입니다 — 단일 노드에서는 아무 가치도 없습니다.
+하지만 Elasticsearch의 분산 레이어(Netty, 클러스터)가 먹는 힙은 순수하게 낭비되는 리소스입니다. 단일 노드에서는 아무 가치도 없습니다.
 
 **서버 비용 환산:**
 
@@ -467,7 +467,7 @@ Lucene을 앱 서버에 포함시키면 서버 비용이 더 줄지만, 앱 서�
 빠듯하지만 동작합니다. 
 Elasticsearch 힙 8~16GB는 서버 총 RAM(12GB)을 초과하므로 아예 올릴 수 없습니다.
 
-**처리량 차이 — 같은 하드웨어에서 더 많은 요청 처리:**
+**처리량 차이: 같은 하드웨어에서 더 많은 요청 처리:**
 
 Elasticsearch에서 쿼리 하나에 Lucene 검색 5ms + HTTP/serde 오버헤드 5ms = 총 10ms가 걸린다고 가정하겠습니다. 
 임베디드 Lucene은 순수 검색 5ms만 걸립니다. 
@@ -478,7 +478,7 @@ Lucene Nori로 같은 검색이 수 ms 만에 끝나면, 그 CPU 시간은 다�
 검색 트래픽이 늘어나도 서버를 스케일업해야 하는 시점이 뒤로 밀립니다. 
 이것이 장기적인 비용 이점입니다.
 
-### 5-4. Lucene이 싸면 왜 Elasticsearch를 쓰는가 — 서버 비용에 안 잡히는 비용
+### 5-4. Lucene이 싸면 왜 Elasticsearch를 쓰는가: 서버 비용에 안 잡히는 비용
 
 서버 비용만 보면 Lucene이 ES보다 쌉니다. 
 하지만 그게 전부라면 모든 회사가 임베디드 Lucene을 쓸 것입니다. 
@@ -552,7 +552,7 @@ ES에 월 $174 쓰는 게 개발자가 2주 더 일하는 것보다 쌉니다.
 [총 비용]       Lucene > ES         (대부분의 기업에서)
 ```
 
-**8) 현실의 증거 — Jira/Confluence가 겪는 임베디드 Lucene의 고통**
+**8) 현실의 증거: Jira/Confluence가 겪는 임베디드 Lucene의 고통**
 
 임베디드 Lucene을 가장 대규모로 쓴 제품이 Atlassian의 Jira와 Confluence입니다. 
 이 제품들이 겪는 문제가 위 1)~5)에서 경고한 것들과 정확히 일치합니다.
@@ -568,13 +568,13 @@ ES였으면 Alias 전환 한 줄이면 끝나는 걸, 직접 만들어야 했습
 
 > 출처: [Atlassian — Troubleshoot Lucene Index Corruption in Jira](https://confluence.atlassian.com/jirakb/troubleshoot-lucene-index-corruption-in-jira-server-931237172.html), [Atlassian — How to Reindex Jira Without Downtime](https://support.atlassian.com/jira/kb/how-to-reindex-jira-data-center-without-downtime/)
 
-**9) Lucene을 직접 쓴 기업은 세 곳뿐이다 — 그리고 전부 특수한 경우다**
+**9) Lucene을 직접 쓴 기업은 세 곳뿐이고, 전부 특수한 경우다**
 
 | 기업 | 왜 ES 대신 Lucene을 직접 썼는가 | 전담 팀 |
 |------|-------------------------------|--------|
 | Twitter (Earlybird) | 2010년 당시 ES가 없었음. 실시간 트윗 검색은 어떤 오픈소스도 지원 안 했음 | 검색 전담 팀 |
-| LinkedIn (Galene) | 3억+ 프로필의 개인화 실시간 랭킹 — ES의 범용 랭킹으로는 불가능 | 검색 전담 팀 |
-| Uber (Sia) | 운전자 위치가 초 단위로 변하는 인덱스 — ES는 concurrent read/write 미지원 | 검색 전담 팀 |
+| LinkedIn (Galene) | 3억+ 프로필의 개인화 실시간 랭킹, ES의 범용 랭킹으로는 불가능 | 검색 전담 팀 |
+| Uber (Sia) | 운전자 위치가 초 단위로 변하는 인덱스, ES는 concurrent read/write 미지원 | 검색 전담 팀 |
 
 공통점 세 가지:
 1. **ES로 해결 불가능한 극단적 요구사항**이 있었습니다 (실시간 인덱스, 개인화 랭킹, concurrent write)
@@ -597,7 +597,7 @@ ES 클러스터가 800억 건 문서, 초당 수십억 쿼리를 처리하고 �
 3. **1,477만 건은 Lucene 단일 인덱스 범위(1~2.5억 건/노드) 안에 있습니다.**
 4. **검색이 미션 크리티컬이 아닙니다.** 검색 다운타임 = 매출 손실인 서비스가 아닙니다. 재인덱싱 중 검색이 잠시 안 되어도 서비스 전체가 멈추지 않습니다.
 
-만약 검색 다운타임이 매출에 직결되거나, 팀에 여러 개발자가 동시에 인덱스에 접근하거나, 데이터가 1억 건을 넘긴다면 — Elasticsearch를 쓰는 게 맞습니다.
+만약 검색 다운타임이 매출에 직결되거나, 팀에 여러 개발자가 동시에 인덱스에 접근하거나, 데이터가 1억 건을 넘긴다면 Elasticsearch를 쓰는 게 맞습니다.
 
 ### 5-5. 전환 경로가 열려 있다
 
@@ -706,12 +706,12 @@ Lucene 전환 전에 기존 ngram 관련 리소스를 파악해야 합니다.
 
 | 리소스 | 크기/건수 | 용도 | Lucene 전환 후 |
 |--------|----------|------|---------------|
-| tmp_namu_posts 테이블 | 57만 건, 12GB | ngram 검색 대상 (한국어만) | 삭제 가능 — Lucene은 posts를 직접 인덱싱 |
+| tmp_namu_posts 테이블 | 57만 건, 12GB | ngram 검색 대상 (한국어만) | 삭제 가능. Lucene은 posts를 직접 인덱싱 |
 | FULLTEXT ngram 인덱스 | 6.7GB | title+content 토큰 인덱스 | DROP → 디스크 회수 |
-| B-Tree idx_title_viewcount (posts) | - | 자동완성/정렬 | 유지 — 목록 쿼리에서 사용 |
+| B-Tree idx_title_viewcount (posts) | - | 자동완성/정렬 | 유지. 목록 쿼리에서 사용 |
 | V3 마이그레이션 (Flyway) | - | ngram 인덱스 생성 DDL | Lucene 전환 후 V4에서 DROP |
 
-### 6-3. 데이터 검증 — 인덱싱 시점에 처리
+### 6-3. 데이터 검증: 인덱싱 시점에 처리
 
 1,477만 건(122GB) 테이블에서 `COUNT(*)`, `AVG(CHAR_LENGTH(content))` 같은 집계 쿼리는 Full Table Scan → 타임아웃이 불가피합니다. 사전 전수조사 대신 **인덱싱 코드에서 방어적으로 처리**합니다.
 
@@ -757,9 +757,9 @@ MMapDirectory는 OS 페이지 캐시를 활용하여 인덱스 파일을 메모�
 
 ![build.gradle Lucene 의존성 추가 diff](/uploads/project/WikiEngine/lucene-decision/step1-gradle-diff.png)
 
-![Lucene 인덱스 파일 목록 — 단일 세그먼트(_cla), 29GB](/uploads/project/WikiEngine/lucene-decision/step1-index-files.png)
+![Lucene 인덱스 파일 목록: 단일 세그먼트(_cla), 29GB](/uploads/project/WikiEngine/lucene-decision/step1-index-files.png)
 
-!["페텔" 검색 결과 — 567건 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step1-search-petel.png)
+!["페텔" 검색 결과: 567건 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step1-search-petel.png)
 
 **Step 2: 검색 품질 비교**
 
@@ -783,7 +783,7 @@ public List<Map<String, String>> analyze(@RequestParam String text) throws IOExc
 }
 ```
 
-**실측 결과 — Nori 토큰 분석:**
+**실측 결과, Nori 토큰 분석:**
 
 ```
 "대한민국을 사랑합니다" → ["대한", "민국", "사랑"]
@@ -797,7 +797,7 @@ public List<Map<String, String>> analyze(@RequestParam String text) throws IOExc
 | "대한" (고빈도) | 5초+ 타임아웃 (503) | 즉시 응답 |
 | "대한민국을" vs "대한민국" | 서로 다른 결과 | 어미 "을" 제거 → 동일 결과 |
 
-**실측 결과 — 검색 성능 비교:**
+**실측 결과, 검색 성능 비교:**
 
 | | Lucene + Nori | MySQL FULLTEXT ngram |
 |---|---|---|
@@ -807,15 +807,15 @@ public List<Map<String, String>> analyze(@RequestParam String text) throws IOExc
 
 25배 많은 데이터에서 검색하면서도 즉시 응답. MySQL FULLTEXT는 57만 건에서도 타임아웃.
 
-![Nori 토큰 분석 결과 — "대한민국을 사랑합니다" → 대한, 민국, 사랑](/uploads/project/WikiEngine/lucene-decision/step2-nori-analyze.png)
+![Nori 토큰 분석 결과: "대한민국을 사랑합니다" → 대한, 민국, 사랑](/uploads/project/WikiEngine/lucene-decision/step2-nori-analyze.png)
 
-![Lucene "대한민국" 검색 — 1,215만 건에서 2,144건 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step2-lucene-search-result.png)
+![Lucene "대한민국" 검색: 1,215만 건에서 2,144건 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step2-lucene-search-result.png)
 
-![ngram "대한민국" 검색 — 57만 건에서 503 QUERY_TIMEOUT](/uploads/project/WikiEngine/lucene-decision/step2-ngram-timeout.png)
+![ngram "대한민국" 검색: 57만 건에서 503 QUERY_TIMEOUT](/uploads/project/WikiEngine/lucene-decision/step2-ngram-timeout.png)
 
-![ngram "한국어" 검색 — "표준중국어", "국어국문학과" 등 오탐 포함 (15.3초)](/uploads/project/WikiEngine/lucene-decision/step2-ngram-false-positive.png)
+![ngram "한국어" 검색: "표준중국어", "국어국문학과" 등 오탐 포함 (15.3초)](/uploads/project/WikiEngine/lucene-decision/step2-ngram-false-positive.png)
 
-![Nori "한국어" 검색 — "한국어", "한국어 순화어" 등 정확한 결과만 반환 (2,041건)](/uploads/project/WikiEngine/lucene-decision/step2-nori-no-false-positive.png)
+![Nori "한국어" 검색: "한국어", "한국어 순화어" 등 정확한 결과만 반환 (2,041건)](/uploads/project/WikiEngine/lucene-decision/step2-nori-no-false-positive.png)
 
 **Step 3: 전체 데이터 인덱싱**
 | 항목 | 예상 | **실측** |
@@ -871,15 +871,15 @@ public void indexAll(long startId) throws IOException {
 | `_cla_Lucene90_0.dvd` | 112MB | doc values (정렬/필터용) |
 | `_cla.kdd` | 87MB | point values (숫자 필드) |
 
-![인덱싱 완료 — 14,247,466건, 23,985초, forceMerge 완료](/uploads/project/WikiEngine/lucene-decision/step3-indexing-complete.png)
+![인덱싱 완료: 14,247,466건, 23,985초, forceMerge 완료](/uploads/project/WikiEngine/lucene-decision/step3-indexing-complete.png)
 
-![인덱스 파일 목록 — 단일 세그먼트(_cla), 29GB, forceMerge(1) 완료](/uploads/project/WikiEngine/lucene-decision/step3-index-files.png)
+![인덱스 파일 목록: 단일 세그먼트(_cla), 29GB, forceMerge(1) 완료](/uploads/project/WikiEngine/lucene-decision/step3-index-files.png)
 
 배치 인덱싱 중 Hibernate 1차 캐시가 계속 쌓이면서 OOM이 발생했습니다.
 `entityManager.clear()`를 매 배치마다 호출하고, batch size를 축소하여 해결했습니다.
 Docker 컨테이너의 JAVA_OPTS로 `-Xmx1g`를 설정하여 힙 메모리를 확보했습니다.
 
-![du -sh — 전체 인덱스 29GB (ngram 6.7GB/57만 건 대비 전체 1,215만 건 커버)](/uploads/project/WikiEngine/lucene-decision/step3-du-sh.png)
+![du -sh: 전체 인덱스 29GB (ngram 6.7GB/57만 건 대비 전체 1,215만 건 커버)](/uploads/project/WikiEngine/lucene-decision/step3-du-sh.png)
 
 **Step 4: API 전환**
 ```
@@ -892,7 +892,7 @@ MySQL은 데이터 저장(CRUD)에만 사용하고, 검색은 Lucene이 전담�
 **전환 핵심 포인트:**
 - `PostService.search()`: MySQL FULLTEXT → `LuceneSearchService.search()` 위임
 - `PostService.autocomplete()`: MySQL `LIKE 'prefix%'` → Lucene `PrefixQuery` 위임
-- `@Transactional(timeout = 5)` 제거 — Lucene은 DB 트랜잭션이 아니므로 불필요, 커넥션 점유도 방지
+- `@Transactional(timeout = 5)` 제거. Lucene은 DB 트랜잭션이 아니므로 불필요하고, 커넥션 점유도 방지
 - 기존 `PostRepository.searchByKeyword()`는 성능 비교용으로 보존
 
 ```java
@@ -919,26 +919,26 @@ public List<String> autocomplete(String prefix) {
 }
 ```
 
-**자동완성 — Nori + PrefixQuery:**
+**자동완성: Nori + PrefixQuery:**
 - 입력 prefix를 Nori로 형태소 분석 → 첫 번째 토큰으로 PrefixQuery 생성
 - "대한"을 치면 "대한민국", "대한항공" 등 역색인에서 즉시 매칭
 - MySQL `LIKE 'prefix%'`는 B-Tree 인덱스를 타지만 1,477만 건에서는 여전히 느림
 
-**전환 후 검증 — 기존 `/posts/search` 엔드포인트에서 동일하게 동작:**
+**전환 후 검증: 기존 `/posts/search` 엔드포인트에서 동일하게 동작:**
 
 | 검색어 | Before (ngram) | After (Lucene Nori) |
 |--------|---------------|---------------------|
 | "대한민국" | 503 QUERY_TIMEOUT | **2,144건 즉시 반환** |
 
-![PostService Before — MySQL FULLTEXT + @Transactional(timeout=5)](/uploads/project/WikiEngine/lucene-decision/step4-postservice-before.png)
+![PostService Before: MySQL FULLTEXT + @Transactional(timeout=5)](/uploads/project/WikiEngine/lucene-decision/step4-postservice-before.png)
 
-![PostService After — Lucene + Nori, 트랜잭션 불필요](/uploads/project/WikiEngine/lucene-decision/step4-postservice-after.png)
+![PostService After: Lucene + Nori, 트랜잭션 불필요](/uploads/project/WikiEngine/lucene-decision/step4-postservice-after.png)
 
-![전환 후 /posts/search?q=대한민국 — Lucene으로 2,144건 즉시 반환 (1/2)](/uploads/project/WikiEngine/lucene-decision/step4-after-search-1.png)
+![전환 후 /posts/search?q=대한민국: Lucene으로 2,144건 즉시 반환 (1/2)](/uploads/project/WikiEngine/lucene-decision/step4-after-search-1.png)
 
-![전환 후 /posts/search?q=대한민국 — totalElements: 2,144 (2/2)](/uploads/project/WikiEngine/lucene-decision/step4-after-search-2.png)
+![전환 후 /posts/search?q=대한민국, totalElements: 2,144 (2/2)](/uploads/project/WikiEngine/lucene-decision/step4-after-search-2.png)
 
-![자동완성 — "대한" prefix로 "대한민국", "대한항공" 등 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step4-autocomplete.png)
+![자동완성: "대한" prefix로 "대한민국", "대한항공" 등 즉시 반환](/uploads/project/WikiEngine/lucene-decision/step4-autocomplete.png)
 
 **Step 5: Before/After 측정**
 | 항목 | Before (ngram) | After (Lucene Nori) | 개선 |
@@ -955,8 +955,8 @@ public List<String> autocomplete(String prefix) {
 중빈도 키워드("한국")도 281ms → 24ms로 91% 개선.
 디스크/페이지 캐시 측정은 서버 배포 후 진행.
 
-![5개 검색어 응답시간 측정 — 페텔 63ms, 한국 40ms, 대한 26ms, 한국어 19ms, 대한민국 22ms](/uploads/project/WikiEngine/lucene-decision/step5-performance.png)
-!["한국어" 검색 — Nori 형태소 분석으로 false positive 해소](/uploads/project/WikiEngine/lucene-decision/step2-nori-no-false-positive.png)
+![5개 검색어 응답시간 측정: 페텔 63ms, 한국 40ms, 대한 26ms, 한국어 19ms, 대한민국 22ms](/uploads/project/WikiEngine/lucene-decision/step5-performance.png)
+!["한국어" 검색: Nori 형태소 분석으로 false positive 해소](/uploads/project/WikiEngine/lucene-decision/step2-nori-no-false-positive.png)
 "대한민국을"과 "대한민국"을 각각 검색하면 동일하게 2,144건이 반환됩니다.
 Nori가 조사 "을"을 제거하고 "대한민국"으로 정규화하기 때문입니다.
 ngram에서는 "대한민국을" → ["대한","한민","민국","국을"] vs "대한민국" → ["대한","한민","민국"]으로 토큰이 달라 결과가 달랐습니다.
@@ -977,11 +977,11 @@ DROP TABLE IF EXISTS tmp_namu_posts;   -- 12GB 데이터 + 6.7GB FULLTEXT 회수
 -- posts 테이블의 FULLTEXT 인덱스는 이미 없음 (tmp_namu_posts에만 있었음)
 ```
 
-![DROP 전 df -h — /dev/disk3s5 Used 758Gi, 86%](/uploads/project/WikiEngine/lucene-decision/step6-df-before.png)
+![DROP 전 df -h: /dev/disk3s5 Used 758Gi, 86%](/uploads/project/WikiEngine/lucene-decision/step6-df-before.png)
 
-![DROP 후 df -h — Used 740Gi, 84% → 18GB 회수](/uploads/project/WikiEngine/lucene-decision/step6-df-after.png)
+![DROP 후 df -h: Used 740Gi, 84% → 18GB 회수](/uploads/project/WikiEngine/lucene-decision/step6-df-after.png)
 
-![information_schema.tables 조회 — tmp_namu_posts 0 rows, 삭제 확인](/uploads/project/WikiEngine/lucene-decision/step6-table-gone.png)
+![information_schema.tables 조회: tmp_namu_posts 0 rows, 삭제 확인](/uploads/project/WikiEngine/lucene-decision/step6-table-gone.png)
 
 ### 6-5. BM25 스코어링 튜닝
 
@@ -1072,7 +1072,7 @@ public List<String> autocomplete(String prefix, int limit) throws Exception {
 
 ---
 
-## 8. After 수집 — Lucene 전환 후
+## 8. After 수집: Lucene 전환 후
 
 이 글의 구현을 모두 마친 뒤, [이전 글(FULLTEXT ngram 인덱스)](/blog/project/wikiengine/fulltext-ngram-index)의 Before 측정과 동일한 조건으로 After를 측정합니다. Before와 After가 같은 조건이어야 비교가 의미 있습니다.
 
@@ -1096,9 +1096,9 @@ public List<String> autocomplete(String prefix, int limit) throws Exception {
 | 페이지 캐시 (`free -h`)      | 4.9GB (buff/cache) | **3.7GB (buff/cache)** | -1.2GB            |
 | CPU ("대한" 검색 시 Grafana) | 타임아웃 (측정 불가)        | **스파이크 없음 (12ms)**    | **타임아웃 해소**       |
 
-Before 기준 — Lucene 전환 전 서버 상태 (`df -h` + `free -h`):
+Before 기준, Lucene 전환 전 서버 상태 (`df -h` + `free -h`):
 
-![Before — df -h + free -h](/uploads/project/WikiEngine/lucene-decision/before-df-free.png)
+![Before: df -h + free -h](/uploads/project/WikiEngine/lucene-decision/before-df-free.png)
 
 ### 비용 변화
 
@@ -1143,7 +1143,7 @@ Before 기준 — Lucene 전환 전 서버 상태 (`df -h` + `free -h`):
 
 #### 테스트 시나리오 설계
 
-**시나리오 비율 (실제 커뮤니티 트래픽 반영 — 읽기 85%, 쓰기 15%):**
+**시나리오 비율 (실제 커뮤니티 트래픽 반영, 읽기 85%, 쓰기 15%):**
 
 | 시나리오  | 비율  | 측정 대상                    | 왜 측정하는가?                                        |
 | ----- | --- | ------------------------ | ----------------------------------------------- |
@@ -1168,7 +1168,7 @@ Lucene은 posting list 길이에 따라 성능이 달라지므로, 고빈도 토
 | 검색 P95 / P99 | < 300ms / < 500ms | 단일 쿼리 12~24ms이므로 동시 100명에서도 여유. [Google 연구](https://research.google/pubs/the-tail-at-scale/)에서 200~300ms가 사용자 이탈 경계 |
 | 자동완성 P95 / P99 | < 200ms / < 300ms | 타이핑 중 체감 지연 200ms 이내여야 "즉시 반응"으로 느껴짐 |
 | 최신 게시글 목록 조회 P95 | < 5,000ms | OFFSET 페이지네이션 baseline. keyset 전환 후 500ms로 하향 예정 |
-| 상세 조회 P95 | < 200ms | PK 조회 — 빨라야 정상 |
+| 상세 조회 P95 | < 200ms | PK 조회, 빨라야 정상 |
 | 쓰기 P95 | < 300ms | DB INSERT + Lucene NRT 색인 포함 |
 | 에러율 | < 1% | 99% 이상의 요청이 정상 응답해야 안정적 서비스 |
 
@@ -1176,7 +1176,7 @@ Lucene은 posting list 길이에 따라 성능이 달라지므로, 고빈도 토
 
 > **왜 글로벌과 엔드포인트별을 분리하는가?** `http_req_duration`(글로벌)만 두면 느린 최신 게시글 목록 조회가 전체 P95를 오염시켜 검색·자동완성의 실제 성능을 파악할 수 없습니다. 반대로 엔드포인트별만 두면 새 API 추가 시 threshold를 깜빡하면 모니터링 사각지대가 생깁니다.
 
-#### 부하 패턴 상세 (load 프로필 — baseline 측정용)
+#### 부하 패턴 상세 (load 프로필, baseline 측정용)
 
 | 구간 | 시간 | VU 수 | 목적 |
 |------|------|-------|------|
@@ -1203,13 +1203,13 @@ k6 run --out influxdb=http://localhost:8086/k6 \
   -e PROFILE=load -e BASE_URL=https://api.example.com ~/k6/baseline-load-test.js
 ```
 
-#### 측정 결과 — smoke 프로필 (스크립트 검증)
+#### 측정 결과: smoke 프로필 (스크립트 검증)
 
-> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
+> **테스트 환경**: ARM 2코어 / 12GB RAM에서 Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
 
 > smoke 프로필의 목적은 **스크립트가 에러 없이 동작하는지 검증**하는 것입니다. 5 VU / 2분이라 샘플 수가 적어 P99는 통계적으로 무의미하므로, 여기서는 평균과 P95만 봅니다. 성능 판단은 load 프로필부터입니다.
 
-![k6 smoke 테스트 결과 — 214건 요청, 에러율 0%, 모든 Threshold 통과](/uploads/project/WikiEngine/lucene-decision/k6-smoke-result.png)
+![k6 smoke 테스트 결과: 214건 요청, 에러율 0%, 모든 Threshold 통과](/uploads/project/WikiEngine/lucene-decision/k6-smoke-result.png)
 
 | 메트릭 | 검색 | 자동완성 | 최신 게시글 목록 조회 | 상세 조회 | 쓰기 |
 |--------|------|---------|----------|----------|------|
@@ -1228,9 +1228,9 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 **smoke에서 확인한 것:**
 - 6개 시나리오(검색, 자동완성, 목록, 상세, 생성, 좋아요)가 에러 없이 동작
 - Lucene 검색·자동완성은 동시 5명에서 충분히 빠름 (P95 128ms / 37ms)
-- 최신 게시글 목록 조회(OFFSET 페이지네이션)가 평균 2.5초로 가장 느림 — **예상된 병목**
+- 최신 게시글 목록 조회(OFFSET 페이지네이션)가 평균 2.5초로 가장 느림. **예상된 병목**
 
-**최신 게시글 목록 조회가 느린 이유 — MySQL(InnoDB)의 구조적 문제:**
+**최신 게시글 목록 조회가 느린 이유: MySQL(InnoDB)의 구조적 문제:**
 
 MySQL의 `AUTO_INCREMENT`는 테이블 내부에 종속되어 있고, InnoDB는 **클러스터 인덱스** 구조입니다. `SELECT *` + OFFSET을 하면 세컨더리 인덱스에서 PK를 얻고, 다시 클러스터 인덱스로 가서 `content`(LONGTEXT) 포함 **전체 행을 읽어야** 합니다. 반면 PostgreSQL/Oracle은 `SERIAL`(SEQUENCE) 타입으로 ID가 테이블 외부에서 관리되고, 인덱스에 힙 포인터가 있어 Index Only Scan으로 ID만 빠르게 참조할 수 있습니다.
 
@@ -1242,11 +1242,11 @@ k6 스크립트에서 30% 확률로 page=100~1000을 요청합니다. page 1000 
 
 ---
 
-#### 측정 결과 — load 프로필 (baseline 성능 측정)
+#### 측정 결과: load 프로필 (baseline 성능 측정)
 
 > load 프로필은 `--out influxdb`로 Grafana에 데이터를 전송하고, 대시보드에서 시계열 그래프로 확인합니다. 20분간의 VU 변화(50 → 100)에 따른 응답 시간 추이를 보는 것이 핵심입니다.
 
-![k6 load 테스트 터미널 결과 — 총 10,947건 요청, 에러율 32.53%, 모든 Threshold 실패](/uploads/project/WikiEngine/lucene-decision/k6-load-terminal.png)
+![k6 load 테스트 터미널 결과: 총 10,947건 요청, 에러율 32.53%, 모든 Threshold 실패](/uploads/project/WikiEngine/lucene-decision/k6-load-terminal.png)
 
 **API 응답 시간:**
 
@@ -1263,25 +1263,25 @@ k6 스크립트에서 30% 확률로 page=100~1000을 요청합니다. page 1000 
 | 전체 P95 | 25,872ms |
 | 모든 Threshold | **전체 실패** |
 
-![k6 시나리오별 응답 시간 — 최신 게시글 목록 조회(파란색)가 20초 이상으로 전체 성능을 끌어내림](/uploads/project/WikiEngine/lucene-decision/k6-load-per-scenario.png)
+![k6 시나리오별 응답 시간: 최신 게시글 목록 조회(파란색)가 20초 이상으로 전체 성능을 끌어내림](/uploads/project/WikiEngine/lucene-decision/k6-load-per-scenario.png)
 
 **결과 요약: 전면 실패.** smoke에서 5 VU로 문제없던 서비스가 50~100 VU에서 완전히 무너졌습니다. 특히 **smoke에서 66ms였던 검색이 3,328ms로 50배 느려졌고**, 최신 게시글 목록 조회는 평균 19.4초, 에러율 32.53%입니다. 최신 게시글 목록 조회만의 문제가 아니라, 최신 게시글 목록 조회의 heavy OFFSET이 CPU를 잡아먹으면서 **모든 시나리오가 연쇄적으로 무너진** 패턴입니다.
 
 ---
 
-##### 병목 분석 — 어디서 무너졌는가?
+##### 병목 분석: 어디서 무너졌는가?
 
-**1) CPU 포화 — 단일 코어 한계**
+**1) CPU 포화: 단일 코어 한계**
 
 ![Spring Boot 프로세스 CPU 100% 포화, JVM 스레드 20→120 급증](/uploads/project/WikiEngine/lucene-decision/k6-load-system.png)
 
 - **System CPU가 테스트 시작 직후 100%에 도달**하고 20분 내내 유지됨
-- JVM 스레드가 20 → 60 → 70 → 120으로 계단식 증가 — VU 증가에 따라 Tomcat 워커 스레드가 추가 생성됨
+- JVM 스레드가 20 → 60 → 70 → 120으로 계단식 증가. VU 증가에 따라 Tomcat 워커 스레드가 추가 생성됨
 - ARM 서버(OCI A1.Flex)는 **2 OCPU(2코어), 12GB RAM**. 메모리는 47%로 여유롭지만, CPU-bound 작업인 Lucene 검색과 MySQL 쿼리가 2코어를 놓고 경쟁
 
 **2) MySQL이 진짜 병목**
 
-![MySQL 모니터링 — Slow Queries 14.8K 누적, InnoDB 버퍼 풀 100% 히트](/uploads/project/WikiEngine/lucene-decision/k6-load-mysql.png)
+![MySQL 모니터링: Slow Queries 14.8K 누적, InnoDB 버퍼 풀 100% 히트](/uploads/project/WikiEngine/lucene-decision/k6-load-mysql.png)
 
 | MySQL 지표 | 값 | 해석 |
 |-----------|-----|------|
@@ -1296,7 +1296,7 @@ k6 스크립트에서 30% 확률로 page=100~1000을 요청합니다. page 1000 
 
 **3) 컨테이너별 리소스 사용**
 
-![cAdvisor 컨테이너 모니터링 — MySQL과 App 컨테이너가 CPU를 놓고 경쟁](/uploads/project/WikiEngine/lucene-decision/k6-load-containers.png)
+![cAdvisor 컨테이너 모니터링: MySQL과 App 컨테이너가 CPU를 놓고 경쟁](/uploads/project/WikiEngine/lucene-decision/k6-load-containers.png)
 
 - wiki-mysql-prod와 wiki-app-prod 두 컨테이너가 **같은 2코어 CPU를 놓고 경쟁**
 - MySQL 컨테이너 CPU가 150~200%까지 치솟음 (Docker의 CPU% = 코어 1개 기준, 2코어 중 거의 전부를 MySQL이 점유)
@@ -1304,14 +1304,14 @@ k6 스크립트에서 30% 확률로 page=100~1000을 요청합니다. page 1000 
 
 **4) Spring Boot HTTP 메트릭**
 
-![Spring Boot HTTP — 응답시간 5~30초, 5xx 에러율 최대 40%](/uploads/project/WikiEngine/lucene-decision/k6-load-springboot-http.png)
+![Spring Boot HTTP: 응답시간 5~30초, 5xx 에러율 최대 40%](/uploads/project/WikiEngine/lucene-decision/k6-load-springboot-http.png)
 
-- 대부분의 엔드포인트가 **500 에러를 반환** — CPU 포화 → 요청 타임아웃 → 5xx
+- 대부분의 엔드포인트가 **500 에러를 반환**. CPU 포화 → 요청 타임아웃 → 5xx
 - 검색(`/posts/search`)이 평균 25~30초로 가장 느림
-- `/actuator/health`만 정상 응답 — 무거운 로직이 없어 CPU 대기 중에도 처리됨
-- 5xx 에러율이 초반 40%에서 후반 15~20%로 감소 — VU ramp-up 완료 후 부하가 안정화되었지만 여전히 높음
+- `/actuator/health`만 정상 응답. 무거운 로직이 없어 CPU 대기 중에도 처리됨
+- 5xx 에러율이 초반 40%에서 후반 15~20%로 감소. VU ramp-up 완료 후 부하가 안정화되었지만 여전히 높음
 
-**5) JVM은 건강함 — 병목이 아님**
+**5) JVM은 건강함: 병목이 아님**
 
 ![JVM 힙 메모리 안정(~256MB/1GB), GC pause 1~4ms](/uploads/project/WikiEngine/lucene-decision/k6-load-jvm.png)
 
@@ -1325,7 +1325,7 @@ JVM 힙은 여유롭고 GC pause도 무시할 수준입니다. **병목은 JVM �
 
 **6) 인프라 전체 뷰**
 
-![인프라 모니터링 — CPU 45%, Memory 47%, Load Average 20+ 급등](/uploads/project/WikiEngine/lucene-decision/k6-load-infrastructure.png)
+![인프라 모니터링: CPU 45%, Memory 47%, Load Average 20+ 급등](/uploads/project/WikiEngine/lucene-decision/k6-load-infrastructure.png)
 
 | 인프라 지표 | 앱 서버 | 해석 |
 |-----------|--------|------|
@@ -1353,26 +1353,26 @@ JVM 힙은 여유롭고 GC pause도 무시할 수준입니다. **병목은 JVM �
   → HTTP 500 에러 → k6 에러율 32.53%
 ```
 
-> smoke(5 VU)에서 검색 66ms / 자동완성 25ms였던 것이 load(100 VU)에서 3,328ms / 3,339ms로 **50배 이상 느려진 것**이 핵심 증거입니다. InnoDB Buffer Pool 히트율 100%(디스크 I/O 0)임에도 Slow Query가 14.8K건 발생 — **메모리가 아닌 CPU가 병목**임을 확정합니다.
+> smoke(5 VU)에서 검색 66ms / 자동완성 25ms였던 것이 load(100 VU)에서 3,328ms / 3,339ms로 **50배 이상 느려진 것**이 핵심 증거입니다. InnoDB Buffer Pool 히트율 100%(디스크 I/O 0)임에도 Slow Query가 14.8K건 발생했고, 이는 **메모리가 아닌 CPU가 병목**임을 확정합니다.
 
 이 수치가 이후 캐싱, 페이지네이션 개선, 스케일업 등 개선의 **Baseline**이 됩니다.
 
 ---
 
-## 9. 다음 단계 — 서버 증설 없이 해결할 수 있는가?
+## 9. 다음 단계: 서버 증설 없이 해결할 수 있는가?
 
 부하 테스트 결과만 보면 "서버가 부족하다"고 결론 내리기 쉽지만, **소프트웨어 최적화로 해결할 수 있는 여지가 큽니다.**
 
 현재 100 VU에서 CPU가 포화된 이유를 다시 보면:
 - 같은 검색어를 여러 사용자가 입력해도 **매번 Lucene + MySQL을 치고 있음** (캐시 없음)
-- 최신 게시글 목록 조회 30%가 page 100~200 (OFFSET 2,000~4,000) — 매 요청마다 CPU-bound 인덱스 스캔
+- 최신 게시글 목록 조회 30%가 page 100~200 (OFFSET 2,000~4,000). 매 요청마다 CPU-bound 인덱스 스캔
 - 검색, 자동완성, 목록, 쓰기가 **2코어를 동시에 점유**
 
 캐시를 도입하면 반복 검색이 CPU를 사용하지 않으므로, 같은 2코어에서 훨씬 많은 요청을 처리할 수 있습니다.
 
 ### 개선 우선순위
 
-**1순위: Caffeine 로컬 캐시 — CPU 부하 직접 제거**
+**1순위: Caffeine 로컬 캐시로 CPU 부하 직접 제거**
 
 | 캐시 대상 | TTL | 예상 효과 |
 |----------|-----|----------|
@@ -1393,7 +1393,7 @@ JVM 힙은 여유롭고 GC pause도 무시할 수준입니다. **병목은 JVM �
 
 > 메시지 큐(Kafka 등)로 검색 요청을 비동기 처리하는 방식은 이 상황에 적합하지 않다. 검색은 **동기적 응답**이 필요한 작업이라 큐잉하면 사용자가 결과를 기다려야 한다. 메시지 큐가 맞는 경우는 비동기 처리 가능한 작업(글 생성 후 색인, 알림 발송 등)이다. CPU 포화의 핵심 해법은 **"일 자체를 줄이는 것"** → 캐시가 정답이다.
 
-**2순위: Tomcat 스레드풀 튜닝 — context switching 감소**
+**2순위: Tomcat 스레드풀 튜닝으로 context switching 감소**
 
 현재 `application.yml`에 Tomcat 스레드풀 설정이 없어 **기본값 200 스레드**가 적용된다. CPU-bound 워크로드에서 200 스레드는 과도하다.
 

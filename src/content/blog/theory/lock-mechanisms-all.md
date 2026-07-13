@@ -216,7 +216,7 @@ class Singleton {
 
 ### 2.1 스핀락이란?
 
-스핀락은 **락을 획득할 때까지 계속 확인**하는 방식이에요.
+스핀락은 **락을 획득할 때까지 계속 확인**하는 방식입니다.
 
 ```java
 class Spinlock {
@@ -298,7 +298,7 @@ spin_unlock(&my_lock);
 
 #### Shared Lock (공유 락, S-Lock)
 
-여러 트랜잭션이 **읽기 전용**으로 동시 접근 가능해요.
+여러 트랜잭션이 **읽기 전용**으로 동시 접근 가능합니다.
 
 ```sql
 -- Shared Lock 획득
@@ -319,7 +319,7 @@ SELECT * FROM users WHERE id = 1 LOCK IN SHARE MODE;
 
 #### Exclusive Lock (배타 락, X-Lock)
 
-**오직 하나의 트랜잭션만** 접근 가능해요.
+**오직 하나의 트랜잭션만** 접근 가능합니다.
 
 ```sql
 -- Exclusive Lock 획득
@@ -399,11 +399,11 @@ public class OrderService {
 
 ### 3.2 MongoDB의 재미있는 락 메커니즘
 
-MongoDB는 MySQL과 완전히 다른 방식으로 락을 관리해요.
+MongoDB는 MySQL과 완전히 다른 방식으로 락을 관리합니다.
 
 #### Intent Locks (의도 락)
 
-MongoDB는 **계층적 락** 구조를 사용해요.
+MongoDB는 **계층적 락** 구조를 사용합니다.
 
 ![](/uploads/theory/lock-mechanisms-all/intent-locks-intent-lock.svg)
 
@@ -589,7 +589,7 @@ public void updateStockWithRetry(Long productId, int quantity) {
 
 ### 4.1 왜 분산 락이 필요한가?
 
-마이크로서비스 환경에서는 **여러 인스턴스**가 동시에 실행돼요.
+마이크로서비스 환경에서는 **여러 인스턴스**가 동시에 실행됩니다.
 
 
 ![](/uploads/theory/lock-mechanisms-all/41-why-distributed-lock-needed.svg)
@@ -619,7 +619,7 @@ public void processCoupon(String couponCode) {
 }
 ```
 
-DB 락(SELECT FOR UPDATE)은 DB 서버 레벨에서 관리되므로 어떤 서버에서 오든 동일하게 차단해요. 하지만 DB 커넥션을 락 보유 동안 점유하고, DB 트랜잭션 범위 밖의 외부 자원(API 호출, 파일 등)에 대한 동기화는 불가능해요. 이런 한계 때문에 **분산 락**이 필요해요.
+DB 락(SELECT FOR UPDATE)은 DB 서버 레벨에서 관리되므로 어떤 서버에서 오든 동일하게 차단합니다. 하지만 DB 커넥션을 락 보유 동안 점유하고, DB 트랜잭션 범위 밖의 외부 자원(API 호출, 파일 등)에 대한 동기화는 불가능합니다. 이런 한계 때문에 **분산 락**이 필요합니다.
 
 > 출처: [Martin Kleppmann - How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)
 
@@ -775,13 +775,13 @@ public class CouponService {
 
 ### 4.3 Redlock 알고리즘
 
-단일 Redis 인스턴스는 **SPOF (Single Point of Failure)** 문제가 있어요.
+단일 Redis 인스턴스는 **SPOF (Single Point of Failure)** 문제가 있습니다.
 
 ```
 Redis 인스턴스 다운 → 모든 락 사라짐!
 ```
 
-**Redlock**: 여러 Redis 인스턴스에 분산 락을 획득해요.
+**Redlock**: 여러 Redis 인스턴스에 분산 락을 획득합니다.
 
 ![](/uploads/theory/lock-mechanisms-all/43-redlock-algorithm.svg)
 
@@ -830,11 +830,11 @@ public class CouponService {
 - 과반수만 살아있으면 작동
 
 **단점 (Kleppmann의 핵심 비판):**
-- **fencing token 부재 — 가장 치명적.** Redlock의 랜덤 값은 **단조 증가(monotonic)** 하지 않아서, 락을 잃은 줄 모르는 클라이언트의 **stale write를 저장소가 거부할 방법이 없어요**. 안전한 분산 락은 락을 줄 때마다 증가하는 토큰(fencing token)을 함께 발급하고, 저장소가 더 작은 토큰의 쓰기를 막아야 해요.
-- **타이밍 가정의 붕괴.** Redlock은 "네트워크 지연·프로세스 정지·시계 오차가 모두 유계(bounded)"라고 가정하는데, 실제로는 **GC 30초 stop-the-world, NTP 시계 점프, 긴 네트워크 지연**이 이 가정을 깨고 → **두 클라이언트가 동시에 락을 보유**할 수 있어요.
+- **fencing token 부재가 가장 치명적입니다.** Redlock의 랜덤 값은 **단조 증가(monotonic)** 하지 않아서, 락을 잃은 줄 모르는 클라이언트의 **stale write를 저장소가 거부할 방법이 없습니다**. 안전한 분산 락은 락을 줄 때마다 증가하는 토큰(fencing token)을 함께 발급하고, 저장소가 더 작은 토큰의 쓰기를 막아야 합니다.
+- **타이밍 가정의 붕괴.** Redlock은 "네트워크 지연·프로세스 정지·시계 오차가 모두 유계(bounded)"라고 가정하는데, 실제로는 **GC 30초 stop-the-world, NTP 시계 점프, 긴 네트워크 지연**이 이 가정을 깨고 → **두 클라이언트가 동시에 락을 보유**할 수 있습니다.
 - 그 결과: **정합성(correctness)이 걸린 락엔 Redlock 부적합** → ZooKeeper 같은 합의(consensus) 기반 락 권장. 효율(efficiency) 목적의 락이면 단일 Redis로도 충분.
 
-> 즉 단점은 "느리다/복잡하다"가 아니라 **"상호배제를 보장하지 못한다"** 는 안전성 문제예요. (성능 오버헤드·NTP는 부차적.)
+> 즉 단점은 "느리다/복잡하다"가 아니라 **"상호배제를 보장하지 못한다"** 는 안전성 문제입니다. (성능 오버헤드·NTP는 부차적.)
 
 > 출처: [Martin Kleppmann - How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) (fencing token·타이밍 비판), [Antirez - Is Redlock safe?](http://antirez.com/news/101) (창시자 반론), [Redis Redlock](https://redis.io/docs/manual/patterns/distributed-locks/#the-redlock-algorithm)
 
@@ -985,11 +985,11 @@ public void goodMethod() {
 
 ### 6.1 하이퍼커넥트: Redis 분산 락과 성능 최적화
 
-하이퍼커넥트의 아자르 API팀은 전 세계 트래픽을 받는 멀티 서버 환경에서 분산 락을 구현했어요.
+하이퍼커넥트의 아자르 API팀은 전 세계 트래픽을 받는 멀티 서버 환경에서 분산 락을 구현했습니다.
 
 #### 문제 상황
 
-단일 서버의 로컬 락으로는 여러 서버 간 동기화를 보장할 수 없었어요. "공통된 저장소를 이용하여 자원이 사용 중인지 체크"하는 분산 락이 필수적이었죠.
+단일 서버의 로컬 락으로는 여러 서버 간 동기화를 보장할 수 없었습니다. "공통된 저장소를 이용하여 자원이 사용 중인지 체크"하는 분산 락이 필수적이었습니다.
 
 #### 초기 구현의 3가지 문제점
 
@@ -1008,7 +1008,7 @@ public void processWithLock(String key) {
 }
 ```
 
-어플리케이션 오류로 락을 해제하지 못하면 다른 모든 서버가 **무한 대기** 상태에 빠져요.
+어플리케이션 오류로 락을 해제하지 못하면 다른 모든 서버가 **무한 대기** 상태에 빠집니다.
 
 **2. 무한 스핀락의 비효율성**
 
@@ -1035,7 +1035,7 @@ try {
 }
 ```
 
-락 획득 실패 시에도 finally에서 락을 해제하여 동기화가 깨져요.
+락 획득 실패 시에도 finally에서 락을 해제하여 동기화가 깨집니다.
 
 #### Redisson의 3가지 핵심 솔루션
 
@@ -1056,7 +1056,7 @@ if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
 }
 ```
 
-어플리케이션 장애 시에도 `leaseTime` 후 자동으로 락이 해제돼요.
+어플리케이션 장애 시에도 `leaseTime` 후 자동으로 락이 해제됩니다.
 
 **2. Pub/Sub 기반 알림**
 
@@ -1117,7 +1117,7 @@ return redis.call('pttl', KEYS[1]);
 
 ### 6.2 컬리: Redisson 분산락으로 재고 관리
 
-컬리의 풀필먼트 입고 서비스팀은 입고관리 시스템(RMS)에서 발생한 동시성 문제를 Redisson으로 해결했어요.
+컬리의 풀필먼트 입고 서비스팀은 입고관리 시스템(RMS)에서 발생한 동시성 문제를 Redisson으로 해결했습니다.
 
 #### 발생한 동시성 문제
 
@@ -1324,11 +1324,11 @@ public void processOrder(String orderId) {
 
 ### 6.3 우아한형제들: WMS 재고 이관 분산 락
 
-우아한형제들은 WMS(Warehouse Management System) 재고 이관 과정에서 분산 락을 사용했어요.
+우아한형제들은 WMS(Warehouse Management System) 재고 이관 과정에서 분산 락을 사용했습니다.
 
 #### 문제 상황
 
-여러 프로세스가 동일한 자원(재고)에 접근할 때 충돌이 발생했어요. 분산 환경에서 데이터 정합성을 유지하기 위해 분산 락이 필수적이었죠.
+여러 프로세스가 동일한 자원(재고)에 접근할 때 충돌이 발생했습니다. 분산 환경에서 데이터 정합성을 유지하기 위해 분산 락이 필수적이었습니다.
 
 #### 해결 방법
 

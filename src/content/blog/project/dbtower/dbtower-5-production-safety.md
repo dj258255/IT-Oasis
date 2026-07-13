@@ -66,7 +66,7 @@ admin:   GET  .../mcp-token         -> 200      (MCP 카드가 이걸로 등록 
 
 ## 3. A3 Flyway, 4편에서 밟은 그 함정의 정식 해결
 
-[4편](/blog/project/dbtower/dbtower-4-five-engines)에서 MongoDB를 등록하다 500을 맞았던 그 일 기억하시나요. Hibernate가 처음 만든 `CHECK (type IN ('MYSQL','POSTGRESQL','MSSQL'))` 제약을 `ddl-auto: update`가 갱신하지 않아서 enum에 값을 추가하는 게 배포로 끝나지 않고 스키마 마이그레이션이 돼버리는 문제였습니다. 그때는 수동 ALTER로 풀었는데, 이번에 스키마의 단일 권위를 Flyway로 정식 이관했습니다.
+[4편](/blog/project/dbtower/dbtower-4-five-engines)에서 MongoDB를 등록하다 500을 맞았던 그 일이 있었습니다. Hibernate가 처음 만든 `CHECK (type IN ('MYSQL','POSTGRESQL','MSSQL'))` 제약을 `ddl-auto: update`가 갱신하지 않아서 enum에 값을 추가하는 게 배포로 끝나지 않고 스키마 마이그레이션이 돼버리는 문제였습니다. 그때는 수동 ALTER로 풀었는데, 이번에 스키마의 단일 권위를 Flyway로 정식 이관했습니다.
 
 `V1__baseline.sql`에 테이블 5개(5기종 CHECK 포함)를 엔티티 소스와 라이브 스키마 `\d` 대조로 작성하고 `ddl-auto`를 `update`에서 `validate`로 바꿨습니다. 이제 엔티티-스키마 불일치는 조용히 드리프트로 남지 않고 **부팅 실패**로 터집니다. 기존 DB는 baseline-on-migrate로 비파괴 도입했습니다.
 

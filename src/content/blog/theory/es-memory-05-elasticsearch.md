@@ -1,7 +1,7 @@
 ---
 title: 'JVM 메모리 ⑤: Elasticsearch 메모리 모델'
 titleEn: 'JVM Memory ⑤: Applied to Elasticsearch'
-description: 앞선 0~4편의 JVM/OS 메모리 이론을 Elasticsearch 운영 맥락 하나로 묶는 캡스톤 편. 왜 Heap이 26~30GB에서 끊기는지(compressed oops), hybridfs가 어떤 파일만 mmap하는지, circuit breaker가 heap 40/60/95%에 왜 걸려있는지 공식 문서로 정리했어요.
+description: 앞선 0~4편의 JVM/OS 메모리 이론을 Elasticsearch 운영 맥락 하나로 묶는 캡스톤 편. 왜 Heap이 26~30GB에서 끊기는지(compressed oops), hybridfs가 어떤 파일만 mmap하는지, circuit breaker가 heap 40/60/95%에 왜 걸려있는지 공식 문서로 정리했습니다.
 descriptionEn: "Capstone — ties parts 0–4's JVM/OS memory theory into Elasticsearch operations. Why heap is capped at 26–30GB (compressed oops), which files hybridfs mmaps, and why circuit breakers sit at 40/60/95% of heap."
 date: 2026-04-14T00:00:00.000Z
 tags:
@@ -19,13 +19,13 @@ series: "JVM 메모리"
 seriesOrder: 5
 ---
 
-> 본 문서는 **Elastic 공식 reference** 와 **Elastic 엔지니어가 작성한 기술 블로그** 를 1차 소스로 해요. 문서 버전은 Elasticsearch 8.x 기준이에요. 0~4편에서 쌓은 JVM/OS 이론을 **Elasticsearch 운영 맥락 하나로 묶는 캡스톤** 편이에요.
+> 본 문서는 **Elastic 공식 reference** 와 **Elastic 엔지니어가 작성한 기술 블로그** 를 1차 소스로 합니다. 문서 버전은 Elasticsearch 8.x 기준입니다. 0~4편에서 쌓은 JVM/OS 이론을 **Elasticsearch 운영 맥락 하나로 묶는 캡스톤** 편입니다.
 
 ## 1. 왜 이 이론을 알아야 하는가
 
-앞선 네 글([JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap), [JVM의 GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc), [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap), [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache))를 **Elasticsearch 맥락 하나로 묶는 글**이에요.
+앞선 네 글([JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap), [JVM의 GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc), [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap), [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache))를 **Elasticsearch 맥락 하나로 묶는 글**입니다.
 
-Elasticsearch의 메모리 모델은 다음 네 가지 원칙을 모두 동시에 만족시키기 위한 설계예요.
+Elasticsearch의 메모리 모델은 다음 네 가지 원칙을 모두 동시에 만족시키기 위한 설계입니다.
 
 1. GC STW를 짧게 유지한다 → **Heap을 너무 키우지 말자**
 2. compressed oops를 유지한다 → **Heap을 32GB 근처에서 끊자**
@@ -42,10 +42,10 @@ Elastic 공식 문서의 직접 지시:
 
 - `Xms`와 `Xmx`는 **반드시 같은 값**으로 세팅 (*"The minimum and maximum values must be the same."*).
 - **RAM의 50% 이하**로 두는 이유 두 가지:
-  1. **off-heap buffer** (Netty 네트워크 버퍼 등) — [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
-  2. **filesystem cache** — [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
+  1. **off-heap buffer** (Netty 네트워크 버퍼 등): [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap)
+  2. **filesystem cache**: [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache)
 
-왜 `Xms = Xmx`인가요? JVM이 실행 중에 Heap을 동적으로 늘렸다 줄였다 하면 reserved memory 재계산, GC region 재조정 등의 비용이 발생해요. ES는 이걸 피해요.
+왜 `Xms = Xmx`여야 할까요? JVM이 실행 중에 Heap을 동적으로 늘렸다 줄였다 하면 reserved memory 재계산, GC region 재조정 등의 비용이 발생합니다. ES는 이걸 피합니다.
 
 ## 3. 원칙 2: Compressed OOPs와 32GB 한계
 
@@ -53,12 +53,12 @@ Elastic 공식 문서의 직접 지시:
 
 OOP = **Ordinary Object Pointer** (Java 객체에 대한 참조 포인터).
 
-64-bit JVM에서 포인터 하나가 원래 8바이트예요. 객체가 많으면 포인터 메모리 오버헤드가 엄청 커져요. **Compressed OOPs** 는 **heap 내부의 포인터를 4바이트로 저장**하고 실제 접근 시 8바이트 주소로 디코딩하는 최적화예요.
+64-bit JVM에서 포인터 하나가 원래 8바이트입니다. 객체가 많으면 포인터 메모리 오버헤드가 엄청 커집니다. **Compressed OOPs** 는 **heap 내부의 포인터를 4바이트로 저장**하고 실제 접근 시 8바이트 주소로 디코딩하는 최적화입니다.
 
 OpenJDK HotSpot Wiki의 공식 설명을 기반으로 정확히 정리하면:
 
-1. HotSpot은 **모든 객체를 8-byte alignment** 에 맞춰 할당해요. 즉 객체 주소의 하위 3비트가 항상 `000`이에요.
-2. 그 3비트를 저장할 필요가 없으므로 **32비트(narrow oop)로 저장**하고, 접근할 때 `<< 3` (× 8) 연산으로 복원해요.
+1. HotSpot은 **모든 객체를 8-byte alignment** 에 맞춰 할당합니다. 즉 객체 주소의 하위 3비트가 항상 `000`입니다.
+2. 그 3비트를 저장할 필요가 없으므로 **32비트(narrow oop)로 저장**하고, 접근할 때 `<< 3` (× 8) 연산으로 복원합니다.
 3. 디코딩 공식:
     ```
     real_address = narrow_oop_base + (narrow_oop << 3) + field_offset
@@ -67,43 +67,43 @@ OpenJDK HotSpot Wiki의 공식 설명을 기반으로 정확히 정리하면:
     ```
     2^32 × 8 byte = 32 GByte
     ```
-    가 최대 addressable 힙이 돼요. ([OpenJDK HotSpot — CompressedOops](https://wiki.openjdk.org/display/HotSpot/CompressedOops))
+    가 최대 addressable 힙이 됩니다. ([OpenJDK HotSpot — CompressedOops](https://wiki.openjdk.org/display/HotSpot/CompressedOops))
 
-Elastic 엔지니어링 블로그 *"A Heap of Trouble"* 는 같은 내용을 다음과 같이 서술해요:
+Elastic 엔지니어링 블로그 *"A Heap of Trouble"* 는 같은 내용을 다음과 같이 서술합니다:
 
 > "keep all objects aligned on 8-byte boundaries and then we can assume the last three bits of 35-bit oops are zeros." — [Elastic Blog — A Heap of Trouble](https://www.elastic.co/blog/a-heap-of-trouble)
 
-여기서 "35-bit oops" 는 **저장은 32비트지만 실제 표현하는 주소 공간이 2^35 = 32GB 이기 때문** 에 나온 표현이에요. 저장 비트 수와 표현 가능한 주소 범위를 구분해서 이해해야 해요.
+여기서 "35-bit oops" 는 **저장은 32비트지만 실제 표현하는 주소 공간이 2^35 = 32GB 이기 때문** 에 나온 표현입니다. 저장 비트 수와 표현 가능한 주소 범위를 구분해서 이해해야 합니다.
 
 ### 3-2. 32GB를 넘으면 무슨 일이 일어나는가
 
-Heap이 32GB를 넘으면 JVM은 compressed oops를 **끌 수밖에 없어요**. 그 순간:
+Heap이 32GB를 넘으면 JVM은 compressed oops를 **끌 수밖에 없습니다**. 그 순간:
 
-- 모든 포인터가 4바이트 → 8바이트로 2배 늘어나요.
-- 그래서 예를 들어 **33GB heap을 줬는데 실제 유효 공간은 30GB보다 작다** 는 역전 현상이 발생해요.
-- "32GB를 넘기느니 차라리 31GB로 둬라" 가 여기서 나와요.
+- 모든 포인터가 4바이트 → 8바이트로 2배 늘어납니다.
+- 그래서 예를 들어 **33GB heap을 줬는데 실제 유효 공간은 30GB보다 작다** 는 역전 현상이 발생합니다.
+- "32GB를 넘기느니 차라리 31GB로 둬라" 가 여기서 나옵니다.
 
-### 3-3. Zero-Based Compressed OOPs — 왜 26GB가 "안전한" 숫자인가
+### 3-3. Zero-Based Compressed OOPs: 왜 26GB가 "안전한" 숫자인가
 
-같은 Elastic 블로그에서 추가 최적화를 설명해요:
+같은 Elastic 블로그에서 추가 최적화를 설명합니다:
 
 > "a simple 3-bit shift is all that is needed for encoding and decoding between native 64-bit pointers and compressed oops." — [Elastic Blog — A Heap of Trouble](https://www.elastic.co/blog/a-heap-of-trouble)
 
-Heap이 주소 0부터 시작하면 압축 포인터 계산이 **3-bit shift 하나**로 끝나요(= zero-based compressed oops).
+Heap이 주소 0부터 시작하면 압축 포인터 계산이 **3-bit shift 하나**로 끝납니다(= zero-based compressed oops).
 
 하지만 OS 메모리 할당 상황에 따라 JVM이 **0번지에서 시작 못 하는 경우**가 있고, 그러면:
 
 > "a null check" and additional arithmetic operations, causing "a significant drop in performance." — 같은 출처
 
-그래서 Elastic은 보수적으로 **"26GB는 어디서든 안전, 30GB까지 가능"** 이라고 권고해요:
+그래서 Elastic은 보수적으로 **"26GB는 어디서든 안전, 30GB까지 가능"** 이라고 권고합니다:
 
 > "Set `Xms` and `Xmx` to no more than the threshold for compressed ordinary object pointers (oops). The exact threshold varies but 26GB is safe on most systems and can be as large as 30GB on some systems." — [Elastic — Advanced configuration](https://www.elastic.co/guide/en/elasticsearch/reference/current/advanced-configuration.html)
 
-확인 방법: ES 기동 로그에 `compressed ordinary object pointers [true]` 가 찍히는지 봐요.
+확인 방법: ES 기동 로그에 `compressed ordinary object pointers [true]` 가 찍히는지 봅니다.
 
 ### 3-4. 두 제약의 교집합
 
-실제 운영에서는 두 룰을 **같이** 적용해야 해요.
+실제 운영에서는 두 룰을 **같이** 적용해야 합니다.
 
 ```
 Xmx = min( RAM × 0.5, 30GB 근처 )
@@ -124,7 +124,7 @@ Elastic 공식 문서:
 
 > "The `hybridfs` type is a hybrid of `niofs` and `mmapfs`, which chooses the best file system type for each type of file based on the read access pattern. Currently only the Lucene term dictionary, norms and doc values files are memory mapped." — 같은 출처
 
-즉 Elasticsearch의 default는 **Lucene의 일부 파일만 mmap** 하고 나머지는 NIO로 읽는 하이브리드 전략이에요.
+즉 Elasticsearch의 default는 **Lucene의 일부 파일만 mmap** 하고 나머지는 NIO로 읽는 하이브리드 전략입니다.
 
 | 파일 타입 | 접근 방식 | 이유 |
 |---|---|---|
@@ -135,34 +135,34 @@ Elastic 공식 문서:
 
 ### 4-2. 왜 mmap을 "일부만"에 쓰는가
 
-- mmap은 **가상 주소 공간을 파일 크기만큼 차지**해요. 전체를 다 mmap하면 주소 공간 압박이 커져요.
-- 용량이 큰 postings를 통째로 mmap하면 **Page Cache 회전**이 잦아져요. 오히려 NIO로 필요한 만큼만 읽는 게 유리한 경우가 있어요.
+- mmap은 **가상 주소 공간을 파일 크기만큼 차지**합니다. 전체를 다 mmap하면 주소 공간 압박이 커집니다.
+- 용량이 큰 postings를 통째로 mmap하면 **Page Cache 회전**이 잦아집니다. 오히려 NIO로 필요한 만큼만 읽는 게 유리한 경우가 있습니다.
 
 ### 4-3. vm.max_map_count
 
-Elasticsearch가 mmap 기반으로 동작하기 때문에 **Linux 커널의 mmap 상한**이 낮으면 문제가 돼요. ES 문서가 공식적으로 요구하는 설정:
+Elasticsearch가 mmap 기반으로 동작하기 때문에 **Linux 커널의 mmap 상한**이 낮으면 문제가 됩니다. ES 문서가 공식적으로 요구하는 설정:
 
 ```
 sysctl -w vm.max_map_count=262144
 ```
 
-이건 mmap으로 만들 수 있는 VMA(Virtual Memory Area)의 최대 개수예요. 대부분의 Linux 배포판 default는 6만대 수준(예: 65530)이고, 대형 인덱스나 샤드가 많을 때 부족해져요. 그래서 ES는 공식적으로 `262144` 이상을 요구해요. ([Elastic — Virtual memory check](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html))
+이건 mmap으로 만들 수 있는 VMA(Virtual Memory Area)의 최대 개수입니다. 대부분의 Linux 배포판 default는 6만대 수준(예: 65530)이고, 대형 인덱스나 샤드가 많을 때 부족해집니다. 그래서 ES는 공식적으로 `262144` 이상을 요구합니다. ([Elastic — Virtual memory check](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html))
 
 ## 5. 원칙 4: Circuit Breaker
 
-Circuit breaker는 **요청이 heap을 먹어치우는 걸 사전 차단**하는 장치예요.
+Circuit breaker는 **요청이 heap을 먹어치우는 걸 사전 차단**하는 장치입니다.
 
 Elastic 공식 정의 (troubleshooting 문서):
 
 > "Elasticsearch uses circuit breakers to prevent nodes from running out of JVM heap memory. If Elasticsearch estimates an operation would exceed a circuit breaker, it stops the operation and returns an error." — [Elastic — Circuit breaker errors (Troubleshoot)](https://www.elastic.co/docs/troubleshoot/elasticsearch/circuit-breaker-errors)
 
-Reference 문서의 요약도 같은 취지로 다음과 같이 서술해요:
+Reference 문서의 요약도 같은 취지로 다음과 같이 서술합니다:
 
 > "Elasticsearch contains multiple circuit breakers used to prevent operations from using an excessive amount of memory. Each breaker tracks the memory used by certain operations and specifies a limit for how much memory it may track." — [Elastic — Circuit breaker settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/circuit-breaker.html)
 
 ### 5-1. Circuit Breaker 종류와 default 값 (ES 8.x 기준)
 
-아래 값은 Elasticsearch 현재 reference 문서에서 직접 확인했어요. ([Elastic — Circuit breaker settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/circuit-breaker.html))
+아래 값은 Elasticsearch 현재 reference 문서에서 직접 확인했습니다. ([Elastic — Circuit breaker settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/circuit-breaker.html))
 
 | Breaker | Default 한계 | 용도 |
 |---|---|---|
@@ -176,7 +176,7 @@ Reference 문서의 요약도 같은 취지로 다음과 같이 서술해요:
 | **Regex** | `script.painless.regex.limit-factor` 기반 | 정규식 복잡도 제한 |
 | **Synonym** | parent breaker 한계를 따름 | synonym 분석 로드 시 |
 
-> **주의**: 예전(7.x 초반) 문서에 있던 **"Accounting circuit breaker"** 는 **현재(8.x) 공식 breaker 목록에서 빠져 있어요.** 7.x 시절 블로그/답변을 참고할 때 함께 따라오는 "accounting breaker = 100%" 라는 서술은 **현재 문서 기준으로는 공식 값이 아니에요.** 본 문서는 최신 docs에 기재된 breaker만 공식 표로 실어요.
+> **주의**: 예전(7.x 초반) 문서에 있던 **"Accounting circuit breaker"** 는 **현재(8.x) 공식 breaker 목록에서 빠져 있습니다.** 7.x 시절 블로그/답변을 참고할 때 함께 따라오는 "accounting breaker = 100%" 라는 서술은 **현재 문서 기준으로는 공식 값이 아닙니다.** 본 문서는 최신 docs에 기재된 breaker만 공식 표로 싣습니다.
 
 ### 5-2. `indices.breaker.total.use_real_memory`
 
@@ -185,27 +185,27 @@ Reference 문서의 요약도 같은 취지로 다음과 같이 서술해요:
 - `true` (default): JVM이 실제로 쓰고 있는 메모리(`HeapUsed`)를 기반으로 판단 → 더 현실적.
 - `false`: 각 child breaker가 reserve한 값의 합만 보고 판단 → 실제 할당과 괴리.
 
-현대적 ES 운영에서는 `true`가 default이며, 이걸 **real memory circuit breaker** 라고 불러요. Elastic 블로그: [Improving Node Resiliency with the Real Memory Circuit Breaker](https://www.elastic.co/blog/improving-node-resiliency-with-the-real-memory-circuit-breaker).
+현대적 ES 운영에서는 `true`가 default이며, 이걸 **real memory circuit breaker** 라고 부릅니다. Elastic 블로그: [Improving Node Resiliency with the Real Memory Circuit Breaker](https://www.elastic.co/blog/improving-node-resiliency-with-the-real-memory-circuit-breaker).
 
 ### 5-3. 발동 시 동작
 
 한계를 넘을 것으로 추정되면:
 
 - 해당 요청이 거절되고,
-- `CircuitBreakingException`이 클라이언트에 반환돼요.
+- `CircuitBreakingException`이 클라이언트에 반환됩니다.
 
-이건 **node를 보호하기 위한 의도된 실패**예요. 에러 메시지에 `circuit_breaking_exception` 이 뜨면 로그·쿼리·집계·샤드 크기 중 뭐가 heap을 과소비하는지 추적해야 해요.
+이건 **node를 보호하기 위한 의도된 실패**입니다. 에러 메시지에 `circuit_breaking_exception` 이 뜨면 로그·쿼리·집계·샤드 크기 중 뭐가 heap을 과소비하는지 추적해야 합니다.
 
 ## 6. 전체 그림: ES 노드 한 대의 메모리 배분
 
-![Elasticsearch 노드 한 대의 Host RAM 메모리 배분 — JVM Heap, Off-heap, OS Page Cache](/uploads/theory/es-memory/host-ram-breakdown.svg)
+![Elasticsearch 노드 한 대의 Host RAM 메모리 배분: JVM Heap, Off-heap, OS Page Cache](/uploads/theory/es-memory/host-ram-breakdown.svg)
 
 ## 7. 자주 혼동되는 포인트
 
-- **"heap을 키우면 검색이 빨라진다"** — 틀렸어요. 오히려 Page Cache가 좁아져서 느려지고, GC STW가 길어져요.
-- **"RAM 128GB면 heap도 64GB 주면 된다"** — 틀렸어요. **30GB에서 끊어요.** 나머지는 Page Cache로.
-- **"fielddata는 off-heap이다"** — 기본적으로 **heap에 로드돼요.** `text` 필드에 sort/aggs를 걸면 매우 위험한 이유예요.
-- **"mmapfs가 무조건 빠르다"** — 아니에요. 파일 종류별 trade-off 때문에 ES default는 **hybridfs**예요.
+- **"heap을 키우면 검색이 빨라진다"**: 틀렸습니다. 오히려 Page Cache가 좁아져서 느려지고, GC STW가 길어집니다.
+- **"RAM 128GB면 heap도 64GB 주면 된다"**: 틀렸습니다. **30GB에서 끊습니다.** 나머지는 Page Cache로.
+- **"fielddata는 off-heap이다"**: 기본적으로 **heap에 로드됩니다.** `text` 필드에 sort/aggs를 걸면 매우 위험한 이유입니다.
+- **"mmapfs가 무조건 빠르다"**: 아닙니다. 파일 종류별 trade-off 때문에 ES default는 **hybridfs**입니다.
 
 ## 8. 1분 요약
 
@@ -240,11 +240,11 @@ Reference 문서의 요약도 같은 취지로 다음과 같이 서술해요:
 
 ### 같이 읽으면 좋은 글
 
-- [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap) — Young/Old Gen, Eden/Survivor 출발점
-- [JVM의 GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc) — G1 / ZGC / Shenandoah 비교
-- [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap) — Netty·Lucene이 Heap 밖에서 쓰는 메모리
-- [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache) — Linux 커널 관점
-- [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc) — JVM 아키텍처 전반을 다루는 교과서식 정리
+- [JVM Heap의 세대별 구조](/blog/theory/es-memory-01-jvm-heap): Young/Old Gen, Eden/Survivor 출발점
+- [JVM의 GC 알고리즘과 Stop-the-World](/blog/theory/es-memory-02-gc): G1 / ZGC / Shenandoah 비교
+- [JVM Off-heap과 Direct Memory](/blog/theory/es-memory-03-off-heap): Netty·Lucene이 Heap 밖에서 쓰는 메모리
+- [OS Page Cache가 ES 성능을 결정하는 이유](/blog/theory/es-memory-04-page-cache): Linux 커널 관점
+- [JVM과 Garbage Collection 이해하기](/blog/theory/jvm-and-gc): JVM 아키텍처 전반을 다루는 교과서식 정리
 
 <!-- EN -->
 

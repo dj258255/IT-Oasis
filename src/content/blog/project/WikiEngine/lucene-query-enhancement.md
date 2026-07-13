@@ -1,5 +1,5 @@
 ---
-title: 'Lucene 검색 고도화 — 동의어 확장과 쿼리 이해'
+title: 'Lucene 검색 고도화: 동의어 확장과 쿼리 이해'
 titleEn: 'Lucene Query Enhancement — Synonym Expansion and Query Understanding'
 description: Lucene 기반 검색 엔진에 동의어 처리(쿼리 확장)와 Query Understanding(오타 교정, 복합어 분리, 의도 파악)을 적용하는 설계를 정리합니다.
 descriptionEn: Designs synonym expansion (query expansion) and query understanding (spelling correction, query segmentation, intent detection) for a Lucene-based search engine.
@@ -31,13 +31,13 @@ series: "WikiEngine"
 | 변형 | 특징 | 적용 시점 |
 |------|------|----------|
 | BM25 (현재) | Lucene/ES/Solr 기본값, k1=1.2, b=0.75 | 현재 사용 중 |
-| BM25+ | 긴 문서 패널티 보정 — 긴 문서가 불공정하게 낮은 점수를 받는 문제 해결 | 문서 길이 편차가 크고 긴 문서가 누락될 때 |
+| BM25+ | 긴 문서 패널티 보정: 긴 문서가 불공정하게 낮은 점수를 받는 문제 해결 | 문서 길이 편차가 크고 긴 문서가 누락될 때 |
 | BM25L | BM25+와 유사, 긴 문서 부스트 | 위와 동일 |
 | BM25F | 필드별 가중치 (title, content 등을 스트림으로 분리) | 필드 가중치를 정밀 제어해야 할 때 |
 
 [뉴스 코퍼스 3개 실험 결과](https://pmc.ncbi.nlm.nih.gov/articles/PMC7148026/), BM25 변형 간 유의미한 성능 차이는 없었습니다.
 현재 `MultiFieldQueryParser`로 title:3, content:1 가중치를 이미 적용 중이므로, BM25F의 효과를 일부 대체하고 있습니다.
-**결론: 기본 BM25에서 시작하고, 검색 품질 이슈가 실제로 발생하면 변형을 검토합니다.**
+기본 BM25로 시작하고, 검색 품질 이슈가 실제로 발생하면 그때 변형을 검토하는 편이 합리적입니다.
 
 ### 0-2. 검색 품질 개선
 

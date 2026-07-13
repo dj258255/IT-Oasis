@@ -116,7 +116,7 @@ App 1(서버 1)에서 2건 발생, App 2(서버 2)에서 0건.
 
 `incrementViewCount()`에 `@Transactional(propagation = REQUIRES_NEW)`를 붙이면, 외부 트랜잭션(`readOnly=true`)과 독립적으로 새 트랜잭션을 열어 Primary로 라우팅한다.
 
-- **R/W 라우팅 문제는 해결됨** — 새 트랜잭션은 `readOnly=false`이므로 Primary로 정상 라우팅
+- **R/W 라우팅 문제는 해결됨**: 새 트랜잭션은 `readOnly=false`이므로 Primary로 정상 라우팅
 - **하지만 근본 문제가 남음**: 매 GET 요청마다 `UPDATE posts SET view_count = view_count + 1`이 Primary MySQL에 실행된다. 100 VU 동시 접속 시 동일 게시글에 대한 UPDATE는 InnoDB의 배타적 행 잠금(X Lock)을 유발하여 트랜잭션이 **직렬화**된다. 인기 게시글에 조회가 집중되면 Primary MySQL이 조회수 UPDATE의 Row Lock 경합으로 병목이 된다.
 - **추가 비용**: REQUIRES_NEW는 별도 DB 커넥션을 소비한다. HikariCP primary-pool에서 조회수 UPDATE만을 위한 커넥션이 추가로 점유되어, 실제 쓰기(게시글 생성/수정) 요청의 커넥션 획득 대기가 증가할 수 있다.
 
@@ -139,7 +139,7 @@ App 1(서버 1)에서 2건 발생, App 2(서버 2)에서 0건.
 
 `incrementViewCount()`에 `@Async`를 붙이면 호출 즉시 리턴하고 별도 스레드에서 DB UPDATE를 실행한다.
 
-- **응답시간은 개선됨** — 사용자 응답에서 UPDATE 대기 시간이 제거
+- **응답시간은 개선됨**: 사용자 응답에서 UPDATE 대기 시간이 제거
 - **하지만 문제가 이동했을 뿐**: 별도 스레드에서 매 요청마다 DB UPDATE가 실행되므로 Primary 부하는 동일. 스레드 풀 크기를 어떻게 설정할지(너무 작으면 큐 적체, 너무 크면 커넥션 풀 고갈), 스레드 풀 풀일 때 요청이 드롭되는 문제, 에러 발생 시 호출자에게 전파할 수 없는 문제가 추가된다.
 - **R/W 라우팅 문제**: `@Async` 메서드는 별도 스레드에서 실행되므로 기존 트랜잭션 컨텍스트를 물려받지 않는다. 별도 `@Transactional`이 필요하고, 이는 REQUIRES_NEW와 동일한 구조.
 
@@ -150,9 +150,9 @@ App 1(서버 1)에서 2건 발생, App 2(서버 2)에서 0건.
 각 App 인스턴스에서 `ConcurrentHashMap<Long, AtomicLong>`으로 조회수를 누적하고, 30초마다 DB에 배치 UPDATE한다.
 
 - **장점**: 추가 인프라 없음(Redis 불필요), 로컬 메모리 접근이므로 INCR 속도가 Redis보다 빠름(~1ns vs ~0.1ms)
-- **단점 1 — App 재시작 시 카운터 유실**: JVM 메모리에만 존재하므로 App이 재배포/재시작되면 flush 전 누적분이 소멸한다. 배포가 잦은 CI/CD 환경에서는 배포할 때마다 조회수가 유실된다.
-- **단점 2 — 중복 방지 불가**: 향후 동일 사용자의 중복 조회 방지(`SET post:viewed:{sessionId}:{postId} NX EX 86400`)를 구현하려면 **인스턴스 간 공유 상태**가 필요하다. Caffeine은 로컬이므로 App 1에서 조회한 사용자가 App 2에서 다시 조회하면 중복으로 카운트된다. 이 기능을 위해 결국 Redis가 필요하다.
-- **단점 3 — 관측 불가**: 현재 조회수가 얼마인지 확인하려면 각 App의 내부 상태를 개별 조회해야 한다. Redis는 `GET post:views:123`으로 즉시 확인 가능.
+- **단점 1, App 재시작 시 카운터 유실**: JVM 메모리에만 존재하므로 App이 재배포/재시작되면 flush 전 누적분이 소멸한다. 배포가 잦은 CI/CD 환경에서는 배포할 때마다 조회수가 유실된다.
+- **단점 2, 중복 방지 불가**: 향후 동일 사용자의 중복 조회 방지(`SET post:viewed:{sessionId}:{postId} NX EX 86400`)를 구현하려면 **인스턴스 간 공유 상태**가 필요하다. Caffeine은 로컬이므로 App 1에서 조회한 사용자가 App 2에서 다시 조회하면 중복으로 카운트된다. 이 기능을 위해 결국 Redis가 필요하다.
+- **단점 3, 관측 불가**: 현재 조회수가 얼마인지 확인하려면 각 App의 내부 상태를 개별 조회해야 한다. Redis는 `GET post:views:123`으로 즉시 확인 가능.
 
 > **단일 인스턴스에서는 유효하지만, 멀티 인스턴스([App 스케일아웃](/blog/project/wikiengine/scaleout))에서는 유실·중복 방지 불가·관측성 문제로 부적합.**
 
@@ -277,26 +277,26 @@ void incrementViewCountBy(@Param("id") Long id, @Param("delta") long delta);
 
 **k6 Before (조회수 DB UPDATE, 에러율 11.10%):**
 
-![k6 Load 테스트 — 조회수 DB UPDATE, 에러율 11.10%](/uploads/project/WikiEngine/scaleout/step9-load-k6-before-viewcount.png)
+![k6 Load 테스트: 조회수 DB UPDATE, 에러율 11.10%](/uploads/project/WikiEngine/scaleout/step9-load-k6-before-viewcount.png)
 
 **k6 After (조회수 Redis INCR, 에러율 0.00%):**
 
-![k6 Load 테스트 — 조회수 Redis INCR, 에러율 0.00%](/uploads/project/WikiEngine/scaleout/step9-load-k6-after-viewcount.png)
+![k6 Load 테스트: 조회수 Redis INCR, 에러율 0.00%](/uploads/project/WikiEngine/scaleout/step9-load-k6-after-viewcount.png)
 
 **Grafana After 대시보드:**
 
-![Grafana Overview — 평균 37.2ms, P95 158ms, P99 328ms, 에러율 0%](/uploads/project/WikiEngine/scaleout/step9-load-grafana-overview.png)
+![Grafana Overview: 평균 37.2ms, P95 158ms, P99 328ms, 에러율 0%](/uploads/project/WikiEngine/scaleout/step9-load-grafana-overview.png)
 
 ![시나리오별 응답시간 + 검색 빈도별 성능 비교](/uploads/project/WikiEngine/scaleout/step9-load-scenario-searchfreq.png)
 
 ---
 
-## 향후 개선 — 검토 결과
+## 향후 개선: 검토 결과
 
 | 항목 | 검토 결과 | 판단 |
 |------|---------|------|
 | **조회수 중복 방지** | 커뮤니티 게시판에서 조회수는 "정확한 유니크 방문자 수"가 아닌 **대략적인 인기도 지표**다. 디시인사이드·에펨코리아·네이버 블로그도 새로고침 시 조회수가 올라간다. 유튜브처럼 조회수가 수익과 직결되는 서비스가 아니므로 구현의 ROI가 낮다. `SET NX EX`를 추가하면 매 조회마다 Redis 명령 2개(INCR + SET NX), 24시간 TTL 키 대량 누적(256MB 제한), VPN/시크릿 모드 우회 가능 | **불필요** |
-| **Lua Script 원자적 flush** | 현재 `getAndDelete()`는 Redis `GETDEL` 명령으로 **이미 원자적**이다. `keys()` → `getAndDelete()` 사이에 새 INCR이 들어와도 유실이 없다 (GETDEL이 새 값을 포함하여 반환하거나, 키가 재생성되어 다음 flush에서 처리) | **불필요** — 현재 코드가 이미 안전 |
+| **Lua Script 원자적 flush** | 현재 `getAndDelete()`는 Redis `GETDEL` 명령으로 **이미 원자적**이다. `keys()` → `getAndDelete()` 사이에 새 INCR이 들어와도 유실이 없다 (GETDEL이 새 값을 포함하여 반환하거나, 키가 재생성되어 다음 flush에서 처리) | **불필요**, 현재 코드가 이미 안전 |
 | **Redis Pipeline** | ~1,000개 키 × private network 0.5ms RTT = ~500ms 절약이지만, 30초마다 실행되는 배치이므로 사용자 응답에 영향 없음 | **현재 불필요** |
 | **`KEYS` → `SCAN` 전환** | `KEYS`는 O(N) 블로킹. 현재 ~6,190개 키에서는 ~0.1ms로 무시 가능. 수만 개로 늘면 `SCAN` 커서 기반으로 전환 필요 | **규모 확대 시** |
 

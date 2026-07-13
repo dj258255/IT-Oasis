@@ -1,7 +1,7 @@
 ---
-title: 'MySQL 용량이 부족할 때 — 콘텐츠 저장 아키텍처 탐구'
+title: 'MySQL 용량이 부족할 때: 콘텐츠 저장 아키텍처 탐구'
 titleEn: 'When MySQL Runs Out of Space — Content Storage Architecture Deep Dive'
-description: 'FULLTEXT 인덱스가 디스크를 287GB까지 먹은 경험에서 출발해, 현업 7개 플랫폼의 콘텐츠 저장 방식, InnoDB 압축의 동작 원리, Object Storage 이동의 함정, Vertical Partitioning까지 정리해요.'
+description: 'FULLTEXT 인덱스가 디스크를 287GB까지 먹은 경험에서 출발해, 현업 7개 플랫폼의 콘텐츠 저장 방식, InnoDB 압축의 동작 원리, Object Storage 이동의 함정, Vertical Partitioning까지 정리합니다.'
 descriptionEn: 'Starting from a FULLTEXT index consuming 287GB of disk, explores content storage patterns of 7 production platforms, InnoDB compression internals, Object Storage trade-offs, and Vertical Partitioning strategies.'
 date: 2025-11-29T00:00:00.000Z
 tags:
@@ -16,9 +16,9 @@ draft: false
 coverImage: "/uploads/theory/mysql-storage-scaling/innodb-compression.svg"
 ---
 
-## 1. 들어가며 — 디스크가 꽉 찰 뻔한 이야기
+## 1. 들어가며: 디스크가 꽉 찰 뻔한 이야기
 
-1,477만 건, 122GB의 위키 데이터를 MySQL에 넣고 검색 인덱스를 만들려고 했어요.
+1,477만 건, 122GB의 위키 데이터를 MySQL에 넣고 검색 인덱스를 만들려고 했습니다.
 
 ```
 로컬 디스크: 994GB 중 960GB 사용 (34GB 여유)
@@ -32,11 +32,11 @@ MySQL data 볼륨: 122GB → 인덱스 생성 중 287.8GB (165GB 증가, 아직 
 - 디스크 꽉 찰 위험 → `KILL`로 강제 종료
 - 종료 후에도 볼륨: 249.6GB (부분 정리만 된 상태)
 
-**디스크를 많이 먹는 건 콘텐츠(122GB)가 아니라 FULLTEXT ngram 인덱스(100GB+)였어요.** 이 사실에서 "그렇다면 콘텐츠 저장 방식을 바꿔야 하나? 현업은 어떻게 하나?"라는 의문이 생겼고, 이 글은 그 탐구의 결과예요.
+**디스크를 많이 먹는 건 콘텐츠(122GB)가 아니라 FULLTEXT ngram 인덱스(100GB+)였습니다.** 이 사실에서 "그렇다면 콘텐츠 저장 방식을 바꿔야 하나? 현업은 어떻게 하나?"라는 의문이 생겼고, 이 글은 그 탐구의 결과입니다.
 
 ---
 
-## 2. 뭐가 용량을 먹는 건가 — 콘텐츠 vs 인덱스
+## 2. 뭐가 용량을 먹는 건가: 콘텐츠 vs 인덱스
 
 | 대상 | 문서당 평균 토큰 수 | 총 토큰 수 | 인덱스 추정 크기 |
 |------|---------------------|------------|------------------|
@@ -44,14 +44,14 @@ MySQL data 볼륨: 122GB → 인덱스 생성 중 287.8GB (165GB 증가, 아직 
 | content만 | 6,585개 | ~973억 개 | **50~150 GB+** |
 | title + content | ~6,611개 | ~976억 개 | **100~200 GB+** |
 
-content가 전체 토큰의 **99.6%**를 차지해요. ngram 파서는 텍스트를 n글자 단위로 분할하므로, 원본 텍스트 대비 토큰 수가 폭발적으로 증가해요. 예를 들어 '안녕하세요'라는 5글자 텍스트는 `ngram_token_size=2` 기준으로 4개의 토큰('안녕', '녕하', '하세', '세요')이 생성돼요. 이것이 FULLTEXT ngram 인덱스 크기가 원본 데이터보다 커지는 근본적인 이유예요.
+content가 전체 토큰의 **99.6%**를 차지합니다. ngram 파서는 텍스트를 n글자 단위로 분할하므로, 원본 텍스트 대비 토큰 수가 폭발적으로 증가합니다. 예를 들어 '안녕하세요'라는 5글자 텍스트는 `ngram_token_size=2` 기준으로 4개의 토큰('안녕', '녕하', '하세', '세요')이 생성됩니다. 이것이 FULLTEXT ngram 인덱스 크기가 원본 데이터보다 커지는 근본적인 이유입니다.
 
-여기서 핵심적인 구분이 필요해요:
+여기서 핵심적인 구분이 필요합니다:
 
-- **콘텐츠 데이터 자체**: 122GB — 이건 원본 텍스트
-- **FULLTEXT 인덱스**: 100GB+ — 이건 검색을 위한 역색인 자료구조
+- **콘텐츠 데이터 자체**: 122GB. 원본 텍스트입니다.
+- **FULLTEXT 인덱스**: 100GB+. 검색을 위한 역색인 자료구조입니다.
 
-콘텐츠를 압축하거나 Object Storage로 옮겨도 **인덱스 크기는 그대로**예요. 핵심 문제가 해결되지 않는다는 뜻이에요. 그래도 콘텐츠 저장 방식 자체가 궁금했기에, 현업이 어떻게 하는지 알아봤어요.
+콘텐츠를 압축하거나 Object Storage로 옮겨도 **인덱스 크기는 그대로**입니다. 핵심 문제가 해결되지 않는다는 뜻입니다. 그래도 콘텐츠 저장 방식 자체가 궁금했기에, 현업이 어떻게 하는지 알아봤습니다.
 
 ---
 
@@ -71,37 +71,37 @@ content가 전체 토큰의 **99.6%**를 차지해요. ngram 파서는 텍스트
 
 > 출처: [WordPress DB Structure](https://wp-staging.com/docs/the-wordpress-database-structure/), [Discourse PostgreSQL](https://blog.discourse.org/2021/04/standing-on-the-shoulders-of-a-giant-elephant/), [Stack Overflow Architecture 2016](https://nickcraver.com/blog/2016/02/17/stack-overflow-the-architecture-2016-edition/), [Notion Sharding](https://www.notion.com/blog/sharding-postgres-at-notion), [Wikipedia External Storage](https://wikitech.wikimedia.org/wiki/External_storage)
 
-거의 모든 플랫폼이 콘텐츠를 **DB에 직접 저장**해요. Object Storage로 이동하는 건 Wikipedia처럼 리비전 이력이 TB급일 때만 발생하는 예외적 패턴이에요.
+거의 모든 플랫폼이 콘텐츠를 **DB에 직접 저장**합니다. Object Storage로 이동하는 건 Wikipedia처럼 리비전 이력이 TB급일 때만 발생하는 예외적 패턴입니다.
 
 ### 3-2. 각 플랫폼에서 배울 점
 
-**Stack Overflow — 하드웨어로 해결:**
+**Stack Overflow, 하드웨어로 해결:**
 
 ```
 SQL Server Cluster 1: Dell R720xd — 384GB RAM, 4TB PCIe SSD, 2x12 cores
 SQL Server Cluster 2: Dell R730xd — 768GB RAM, 6TB PCIe SSD, 2x8 cores
 ```
 
-200M+ 요청/일을 SQL Server 2대로 처리해요. Elastic과 Redis는 읽기 캐시 역할이지, 콘텐츠의 원천은 SQL Server예요. 전체 DB에 stored procedure는 **1개뿐**이고, Dapper(Micro-ORM)로 직접 쿼리해요.
+200M+ 요청/일을 SQL Server 2대로 처리합니다. Elastic과 Redis는 읽기 캐시 역할이지, 콘텐츠의 원천은 SQL Server입니다. 전체 DB에 stored procedure는 **1개뿐**이고, Dapper(Micro-ORM)로 직접 쿼리합니다.
 
-**교훈:** 잘 튜닝된 RDBMS + 충분한 RAM + SSD면 콘텐츠를 DB 밖으로 뺄 필요가 없어요.
+**교훈:** 잘 튜닝된 RDBMS + 충분한 RAM + SSD면 콘텐츠를 DB 밖으로 뺄 필요가 없습니다.
 
 > 출처: [Stack Overflow Hardware 2016](https://nickcraver.com/blog/2016/03/29/stack-overflow-the-hardware-2016-edition/)
 
-**Notion — 샤딩으로 2,000억 블록 처리:**
+**Notion, 샤딩으로 2,000억 블록 처리:**
 
 | 시점 | 물리 인스턴스 | 논리 샤드 | 총 블록 수 |
 |------|-------------|----------|-----------|
 | 2021 | 32대 | - | 수십억 |
 | 2023 | 96대 | 480개 | 2,000억+ |
 
-`workspace_id` 기준 샤딩으로 수백 TB급 텍스트 데이터를 PostgreSQL에서 처리해요. Object Storage로 빼지 않아요.
+`workspace_id` 기준 샤딩으로 수백 TB급 텍스트 데이터를 PostgreSQL에서 처리합니다. Object Storage로 빼지 않습니다.
 
 > 출처: [Notion Sharding](https://www.notion.com/blog/sharding-postgres-at-notion), [Storing 200 Billion Entities — ByteByteGo](https://blog.bytebytego.com/p/storing-200-billion-entities-notions)
 
-**Wikipedia — 유일한 External Storage 사례:**
+**Wikipedia, 유일한 External Storage 사례:**
 
-Wikipedia만이 텍스트를 DB 밖으로 뺐어요. 이유는 **리비전 이력이 TB급**이기 때문이에요.
+Wikipedia만이 텍스트를 DB 밖으로 뺐습니다. 이유는 **리비전 이력이 TB급**이기 때문입니다.
 
 ```
 text 테이블 → 포인터 ("DB://cluster1/12345")
@@ -112,7 +112,7 @@ delta 압축: 첫 리비전=전문, 이후=차분만, 배치 gzip
   → 전체 이력이 원본의 2% 이하
 ```
 
-비압축 덤프 3TB+를 초과하는 규모에서만 External Storage가 정당화돼요.
+비압축 덤프 3TB+를 초과하는 규모에서만 External Storage가 정당화됩니다.
 
 > 출처: [External Storage — Wikitech](https://wikitech.wikimedia.org/wiki/External_storage)
 
@@ -132,9 +132,9 @@ delta 압축: 첫 리비전=전문, 이후=차분만, 배치 gzip
 
 > 출처: [AWS RDS Pricing](https://aws.amazon.com/rds/pricing/), [Cloudflare R2 Pricing](https://developers.cloudflare.com/r2/pricing/)
 
-RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 차액은 **월 $11** 수준이에요. 이게 아키텍처 변경을 정당화할 만큼의 차이인지 생각해봐야 해요.
+RDS 스토리지는 S3 대비 **5배** 비쌉니다. 하지만 122GB 규모에서 차액은 **월 $11** 수준입니다. 이게 아키텍처 변경을 정당화할 만큼의 차이인지 생각해봐야 합니다.
 
-### 4-2. 숨겨진 비용 — 스토리지 비용만이 전부가 아니다
+### 4-2. 숨겨진 비용: 스토리지 비용만이 전부가 아니다
 
 | 문제 | 설명 |
 |------|------|
@@ -145,7 +145,7 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 | **레이턴시 증가** | S3 GET: 50~200ms (Standard S3 같은 리전 기준. S3 Express One Zone은 single-digit ms 가능) vs DB Buffer Pool: sub-ms |
 | **Atomic UPDATE 불가** | 콘텐츠 수정 + 포인터 업데이트가 원자적이지 않음 |
 
-월 $11을 절감하려고 트랜잭션 일관성, JOIN, ORM 투명성을 포기하는 건 합리적이지 않아요. **현업 커뮤니티 플랫폼(Discourse, WordPress, Stack Overflow) 중 콘텐츠를 Object Storage로 뺀 곳은 없어요.**
+월 $11을 절감하려고 트랜잭션 일관성, JOIN, ORM 투명성을 포기하는 건 합리적이지 않습니다. **현업 커뮤니티 플랫폼(Discourse, WordPress, Stack Overflow) 중 콘텐츠를 Object Storage로 뺀 곳은 없습니다.**
 
 | 플랫폼 | 콘텐츠 저장 | Object Storage |
 |--------|------------|----------------|
@@ -158,13 +158,13 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 
 ---
 
-## 5. InnoDB 압축 — ROW_FORMAT=COMPRESSED
+## 5. InnoDB 압축: ROW_FORMAT=COMPRESSED
 
-콘텐츠를 DB에 유지하면서 용량을 줄이는 방법이 있어요. InnoDB 테이블 압축이에요.
+콘텐츠를 DB에 유지하면서 용량을 줄이는 방법이 있습니다. InnoDB 테이블 압축입니다.
 
 ### 5-1. MySQL 압축 두 가지 방식
 
-이름이 비슷하지만 완전히 다른 두 가지 압축이 있어요.
+이름이 비슷하지만 완전히 다른 두 가지 압축이 있습니다.
 
 | | ROW_FORMAT=COMPRESSED (테이블 압축) | COMPRESSION= (페이지 압축) |
 |---|---|---|
@@ -175,7 +175,7 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 | Buffer Pool | 압축본 + 원본 이중 저장 | 원본만 저장 (메모리 효율 좋음) |
 | 프로덕션 | 성숙, 안정적 | Percona: "프로덕션에 추천하기 어렵다" |
 
-**사용할 방식은 `ROW_FORMAT=COMPRESSED`예요.** 펀치 홀과 무관하고, InnoDB 내부에서 완결되는 전통적 압축이에요.
+**사용할 방식은 `ROW_FORMAT=COMPRESSED`입니다.** 펀치 홀과 무관하고, InnoDB 내부에서 완결되는 전통적 압축입니다.
 
 > **참고:** MySQL 8.0에서 InnoDB 압축 관련 설정에 대해 "향후 MySQL 릴리스에서 제거될 수 있습니다"라는 경고가 있다. 새 프로젝트에서는 페이지 압축(COMPRESSION='zlib')이나 외부 저장소 분리를 검토하는 것이 바람직하다.
 
@@ -183,11 +183,11 @@ RDS 스토리지는 S3 대비 **5배** 비싸요. 하지만 122GB 규모에서 �
 
 ### 5-2. 동작 원리
 
-InnoDB 내부에서 zlib으로 16KB 페이지를 더 작은 크기로 압축하여 디스크에 저장해요.
+InnoDB 내부에서 zlib으로 16KB 페이지를 더 작은 크기로 압축하여 디스크에 저장합니다.
 
 ![InnoDB ROW_FORMAT=COMPRESSED 동작 원리](/uploads/theory/mysql-storage-scaling/innodb-compression.svg)
 
-적용은 ALTER TABLE 한 줄이에요:
+적용은 ALTER TABLE 한 줄입니다:
 
 ```sql
 ALTER TABLE post_contents ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
@@ -195,11 +195,11 @@ ALTER TABLE post_contents ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
 
 > **주의:** 대용량 테이블에 ALTER TABLE을 실행하면 테이블 전체가 재구축되며, 디스크 공간이 임시로 2배 필요하고 장시간 락이 걸릴 수 있다. 프로덕션에서는 pt-online-schema-change나 gh-ost 같은 온라인 DDL 도구 사용을 권장한다.
 
-애플리케이션 코드 변경은 전혀 필요 없어요. `SELECT content FROM post_contents`가 자동으로 압축 해제된 원본을 반환합니다.
+애플리케이션 코드 변경은 전혀 필요 없습니다. `SELECT content FROM post_contents`가 자동으로 압축 해제된 원본을 반환합니다.
 
 ### 5-3. KEY_BLOCK_SIZE 선택
 
-KEY_BLOCK_SIZE는 압축된 페이지의 **목표 크기(KB)**예요. InnoDB 기본 페이지 16KB를 얼마나 줄일지 결정해요.
+KEY_BLOCK_SIZE는 압축된 페이지의 **목표 크기(KB)**입니다. InnoDB 기본 페이지 16KB를 얼마나 줄일지 결정합니다.
 
 | KEY_BLOCK_SIZE | 목표 압축률 | 특징 |
 |:-:|:-:|---|
@@ -208,9 +208,9 @@ KEY_BLOCK_SIZE는 압축된 페이지의 **목표 크기(KB)**예요. InnoDB 기
 | 4 | 75% | 공격적 압축, 실패율 높아질 수 있음 |
 | 2, 1 | 87~94% | 대부분 실패 → 이중 저장으로 오히려 손해 |
 
-**압축 실패가 중요한 이유:** 16KB를 8KB로 압축하는데 실패하면, 페이지 스플릿이 발생하고 Buffer Pool에 **압축본 + 원본 둘 다** 저장돼요. 실패율이 높으면 오히려 메모리를 더 써요.
+**압축 실패가 중요한 이유:** 16KB를 8KB로 압축하는데 실패하면, 페이지 스플릿이 발생하고 Buffer Pool에 **압축본 + 원본 둘 다** 저장됩니다. 실패율이 높으면 오히려 메모리를 더 씁니다.
 
-최적 값을 찾으려면 인덱스별 압축 통계를 확인해야 해요:
+최적 값을 찾으려면 인덱스별 압축 통계를 확인해야 합니다:
 
 ```sql
 -- 인덱스별 압축 통계 활성화 (테스트 시에만 ON)
@@ -240,7 +240,7 @@ FROM INFORMATION_SCHEMA.INNODB_CMP_PER_INDEX;
 
 ### 5-4. CRUD 패턴별 압축 적합도
 
-**핵심 원칙:** 읽기마다 해제, 쓰기마다 재압축이 반복되면 CPU 병목이 돼요. 따라서 **데이터의 사용 패턴**이 압축 적합도를 결정해요.
+**핵심 원칙:** 읽기마다 해제, 쓰기마다 재압축이 반복되면 CPU 병목이 됩니다. 따라서 **데이터의 사용 패턴**이 압축 적합도를 결정합니다.
 
 | CRUD 패턴                             | 압축 적합도  | 이유                             |
 | ----------------------------------- | :-----: | ------------------------------ |
@@ -252,13 +252,13 @@ FROM INFORMATION_SCHEMA.INNODB_CMP_PER_INDEX;
 **Basecamp 사례 (프로덕션 검증):**
 - 가장 큰 테이블: ~430GB → ROW_FORMAT=COMPRESSED 적용 후: **172GB (60% 절감)**
 - 새 레코드 평균 **40% 축소**
-- 슬로우 쿼리가 "거의 제거됨" — I/O 감소 + 메모리 압박 해소
+- 슬로우 쿼리가 "거의 제거됨" (I/O 감소 + 메모리 압박 해소)
 
 > 출처: [Scaling Your Database via InnoDB Table Compression — Signal v. Noise (Basecamp)](https://signalvnoise.com/posts/3571-scaling-your-database-via-innodb-table-compression)
 
 ### 5-5. PostgreSQL TOAST와 비교
 
-PostgreSQL을 쓰는 Discourse나 Reddit이 별도 압축 없이도 되는 이유는 **TOAST** 메커니즘 때문이에요.
+PostgreSQL을 쓰는 Discourse나 Reddit이 별도 압축 없이도 되는 이유는 **TOAST** 메커니즘 때문입니다.
 
 | 항목 | PostgreSQL TOAST | MySQL InnoDB COMPRESSED |
 |------|-----------------|------------------------|
@@ -267,25 +267,25 @@ PostgreSQL을 쓰는 Discourse나 Reddit이 별도 압축 없이도 되는 이�
 | 투명성 | 완전 투명 | 완전 투명 |
 | 압축 조건 | TOAST 임계값(약 2KB) 이하로 줄일 수 있거나 의미 있게 크기가 줄어들 때 | 항상 시도 (실패 시 이중 저장) |
 
-**핵심 차이:** PostgreSQL은 별도 설정 없이 TOAST가 자동으로 작동해요. MySQL은 명시적으로 적용해야 해요.
+**핵심 차이:** PostgreSQL은 별도 설정 없이 TOAST가 자동으로 작동합니다. MySQL은 명시적으로 적용해야 합니다.
 
 > 출처: [PostgreSQL TOAST Documentation](https://www.postgresql.org/docs/current/storage-toast.html)
 
 ---
 
-## 6. Vertical Partitioning — 무거운 TEXT 분리
+## 6. Vertical Partitioning: 무거운 TEXT 분리
 
 ### 6-1. 왜 분리하나
 
-MySQL의 TEXT/BLOB은 **overflow page**(16KB 청크)에 저장돼요. 이로 인해:
+MySQL의 TEXT/BLOB은 **overflow page**(16KB 청크)에 저장됩니다. 이로 인해:
 
 - 1MB TEXT를 읽으려면 **64개 overflow page × 16KB = 64 read IOPs** 필요
 - TEXT가 결과에 포함되면 **디스크 기반 임시 테이블** 강제 (MEMORY 엔진이 TEXT 미지원)
 - 목록 조회에서 10,000행 스캔 시 불필요한 overflow page까지 읽을 수 있음
 
-![Vertical Partitioning — 테이블 분리](/uploads/theory/mysql-storage-scaling/vertical-partitioning.svg)
+![Vertical Partitioning: 테이블 분리](/uploads/theory/mysql-storage-scaling/vertical-partitioning.svg)
 
-분리하면 메타데이터 테이블만 스캔하므로, 한 페이지에 더 많은 행이 들어가고 Buffer Pool 효율이 올라가요.
+분리하면 메타데이터 테이블만 스캔하므로, 한 페이지에 더 많은 행이 들어가고 Buffer Pool 효율이 올라갑니다.
 
 > 출처: [Why Everyone Avoids TEXT Fields in MySQL — Leapcell](https://leapcell.medium.com/why-everyone-avoids-text-fields-in-mysql-1a4000b95ce0), [How InnoDB Handles TEXT/BLOB — Percona](https://www.percona.com/blog/how-innodb-handles-text-blob-columns/)
 
@@ -295,13 +295,13 @@ MySQL의 TEXT/BLOB은 **overflow page**(16KB 청크)에 저장돼요. 이로 인
 - 데이터 크기가 수GB 이하인 경우
 - **경험 법칙:** TEXT/BLOB 평균 >4KB이고, 목록:상세 비율이 5:1 이상이면 분리가 이득
 
-**Confluence 사례:** `CONTENT` 테이블(메타데이터) + `BODYCONTENT` 테이블(본문)로 분리. 엔터프라이즈 위키의 대표적 Vertical Partitioning 사례예요.
+**Confluence 사례:** `CONTENT` 테이블(메타데이터) + `BODYCONTENT` 테이블(본문)로 분리. 엔터프라이즈 위키의 대표적 Vertical Partitioning 사례입니다.
 
 > 출처: [Confluence Data Model — Atlassian](https://confluence.atlassian.com/doc/confluence-data-model-127369837.html)
 
-### 6-3. binlog_row_image=NOBLOB — 테이블 분리 없이 복제 최적화
+### 6-3. binlog_row_image=NOBLOB: 테이블 분리 없이 복제 최적화
 
-Master-Slave 구성에서 LONGTEXT가 복제에 부담을 줄 수 있어요.
+Master-Slave 구성에서 LONGTEXT가 복제에 부담을 줄 수 있습니다.
 
 ```
 view_count UPDATE (+1)
@@ -310,7 +310,7 @@ view_count UPDATE (+1)
   → 바뀐 건 view_count 하나뿐인데 LONGTEXT가 매번 Slave로 전송
 ```
 
-해결은 설정 한 줄이에요:
+해결은 설정 한 줄입니다:
 
 ```sql
 SET GLOBAL binlog_row_image = 'NOBLOB';
@@ -318,19 +318,19 @@ SET GLOBAL binlog_row_image = 'NOBLOB';
 
 | 설정 | binlog 기록 |
 |------|------------|
-| `FULL` (기본) | 모든 컬럼 — content가 매 UPDATE마다 포함 |
+| `FULL` (기본) | 모든 컬럼, content가 매 UPDATE마다 포함 |
 | **`NOBLOB`** | BLOB/TEXT는 **변경된 경우만** 포함 |
 | `MINIMAL` | 변경된 컬럼 + PK만 |
 
-복제(replication) 트래픽 측면에서는 대형 컬럼 데이터 전송을 줄이는 유사한 효과가 있어요. 단, Vertical Partitioning의 핵심 이점인 목록 조회 시 Buffer Pool 효율 향상이나 임시 테이블 최적화는 해결되지 않아요.
+복제(replication) 트래픽 측면에서는 대형 컬럼 데이터 전송을 줄이는 유사한 효과가 있습니다. 단, Vertical Partitioning의 핵심 이점인 목록 조회 시 Buffer Pool 효율 향상이나 임시 테이블 최적화는 해결되지 않습니다.
 
 ---
 
-## 7. 데이터가 계속 커지면? — 현업의 대응 패턴
+## 7. 데이터가 계속 커지면? 현업의 대응 패턴
 
-디스크를 무한정 늘릴 수는 없어요. 현업에서는 **분리** 전략을 써요.
+디스크를 무한정 늘릴 수는 없습니다. 현업에서는 **분리** 전략을 씁니다.
 
-![데이터 증가 대응 — 현업 의사결정 플로차트](/uploads/theory/mysql-storage-scaling/data-growth-strategy.svg)
+![데이터 증가 대응: 현업 의사결정 플로차트](/uploads/theory/mysql-storage-scaling/data-growth-strategy.svg)
 
 | 전략 | 설명 | 적용 시점 |
 |------|------|-----------|
@@ -340,11 +340,11 @@ SET GLOBAL binlog_row_image = 'NOBLOB';
 | **Object Storage 분리** | content를 S3/R2로 이동 | TB급 + 리비전 이력 관리 필요 시 |
 | **샤딩** | tenant 기준 DB 분할 | 단일 DB 성능 한계 도달 시 |
 
-**핵심: 압축이 아니라 "분리"예요.** 검색은 검색엔진으로, 오래된 데이터는 아카이브로, 첨부파일은 Object Storage로.
+**핵심은 압축이 아니라 "분리"입니다.** 검색은 검색엔진으로, 오래된 데이터는 아카이브로, 첨부파일은 Object Storage로 보냅니다.
 
 ### CRUD 패턴별 최적 저장소
 
-데이터의 **읽기:쓰기 비율**이 저장소 선택의 핵심 기준이에요.
+데이터의 **읽기:쓰기 비율**이 저장소 선택의 핵심 기준입니다.
 
 | 워크로드 | 읽기:쓰기 | 최적 저장소 |
 |----------|:-:|---|
@@ -388,7 +388,7 @@ FULLTEXT ngram 인덱스 100GB+             검색 인덱스를 외부로 분리
 디스크 여유 부족                          디스크 확장이 가장 비용 효율적
 ```
 
-**디스크를 많이 먹는 건 콘텐츠가 아니라 ngram 인덱스예요.** 콘텐츠를 압축하거나 옮기는 게 아니라, 검색 인덱스를 외부 검색엔진으로 분리하는 것이 근본적인 해결이에요.
+**디스크를 많이 먹는 건 콘텐츠가 아니라 ngram 인덱스입니다.** 콘텐츠를 압축하거나 옮기는 게 아니라, 검색 인덱스를 외부 검색엔진으로 분리하는 것이 근본적인 해결입니다.
 
 ---
 

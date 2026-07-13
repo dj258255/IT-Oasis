@@ -1,5 +1,5 @@
 ---
-title: '캐싱 전략 — Caffeine L1 로컬 캐시로 검색 응답 14배 개선'
+title: '캐싱 전략: Caffeine L1 로컬 캐시로 검색 응답 14배 개선'
 titleEn: 'Caching Strategy — 14x Search Performance Improvement with Caffeine L1 Local Cache'
 description: Caffeine 로컬 캐시(L1)를 도입하여 검색/자동완성/상세 조회를 캐싱하고, @CacheEvict 무효화, Cache-Control 브라우저 캐싱, Actuator 모니터링까지 구현한 뒤 k6 부하 테스트로 Before/After를 비교한 과정을 정리합니다.
 descriptionEn: Introduces Caffeine local cache (L1) for search, autocomplete, and post detail caching with @CacheEvict invalidation, Cache-Control browser caching, and Actuator monitoring, then validates with k6 load testing showing 14x overall improvement.
@@ -21,7 +21,7 @@ series: "WikiEngine"
 
 ## 이전 글
 
-[검색 품질 고도화 — 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가](/blog/project/wikiengine/search-quality)에서 PhraseQuery(slop=2)로 구절 검색을 구현하고, BM25 + FeatureField(viewCount, likeCount) + RecencyDecay 결합 랭킹을 적용했습니다.
+[검색 품질 고도화: 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가](/blog/project/wikiengine/search-quality)에서 PhraseQuery(slop=2)로 구절 검색을 구현하고, BM25 + FeatureField(viewCount, likeCount) + RecencyDecay 결합 랭킹을 적용했습니다.
 
 ---
 
@@ -48,7 +48,7 @@ series: "WikiEngine"
 
 [검색 품질 고도화](/blog/project/wikiengine/search-quality)까지의 아키텍처:
 
-![현재 아키텍처 — Lucene + MySQL, 캐싱 레이어 없음](/uploads/project/WikiEngine/caching-strategy/current-architecture.svg)
+![현재 아키텍처: Lucene + MySQL, 캐싱 레이어 없음](/uploads/project/WikiEngine/caching-strategy/current-architecture.svg)
 
 현재 요청 흐름:
 - 검색: 클라이언트 → API 서버 → **Lucene 검색 (JVM 내부, SearcherManager acquire/release)**
@@ -67,17 +67,17 @@ series: "WikiEngine"
 
 이 말은 **같은 검색어에 대해 Lucene이 같은 검색을 반복 실행하고 있다**는 뜻입니다. "대한민국"을 100명이 검색하면, SearcherManager acquire → BM25 검색 → DB에서 Post 엔티티 조회를 100번 반복합니다. 99번은 낭비입니다.
 
-![캐시 Before/After — 100명 검색 시 Lucene+DB 부하 99% 감소](/uploads/project/WikiEngine/caching-strategy/cache-before-after.svg)
+![캐시 Before/After: 100명 검색 시 Lucene+DB 부하 99% 감소](/uploads/project/WikiEngine/caching-strategy/cache-before-after.svg)
 
 **핵심 문제: 부하를 줄여야 비용이 줄어듭니다.**
 
 Lucene 전환 이후, 검색 부하의 병목은 두 곳입니다:
-1. **JVM CPU** — Lucene BM25 검색, SearcherManager acquire/release, 인덱스 I/O
-2. **MySQL** — 검색 결과 Post ID → DB에서 엔티티 조회, 목록/상세 조회
+1. **JVM CPU**: Lucene BM25 검색, SearcherManager acquire/release, 인덱스 I/O
+2. **MySQL**: 검색 결과 Post ID → DB에서 엔티티 조회, 목록/상세 조회
 
 검색 결과를 캐싱하면 Lucene 검색 + DB 엔티티 조회가 모두 스킵됩니다. JVM CPU와 DB 부하가 동시에 줄어듭니다.
 
-속도 향상과 비용 절감은 별개가 아니라 인과관계입니다. 캐시가 검색 결과를 0.1ms 만에 반환하면, 그 요청은 MySQL의 CPU를 전혀 사용하지 않습니다. CPU를 안 쓰면 같은 인스턴스에서 더 많은 요청을 처리할 수 있고, 그러면 더 비싼 인스턴스로 올릴 필요가 없습니다. 즉, **속도가 빨라지면 비용이 줄어드는 건 당연한 결과**입니다.
+속도 향상과 비용 절감은 인과관계입니다. 캐시가 검색 결과를 0.1ms 만에 반환하면, 그 요청은 MySQL의 CPU를 전혀 사용하지 않습니다. CPU를 안 쓰면 같은 인스턴스에서 더 많은 요청을 처리할 수 있고, 그러면 더 비싼 인스턴스로 올릴 필요가 없습니다. 즉, **속도가 빨라지면 비용이 줄어드는 건 당연한 결과**입니다.
 
 ### 이 단계의 목표
 
@@ -141,7 +141,7 @@ AWS 공식 벤치마크에서 30,000 QPS를 달성하기 위해:
 
 서버가 1대이고 트래픽이 크지 않은 현 시점에서는, **시나리오 D (Caffeine + CDN)**가 비용 대비 가장 효율적입니다. 서버가 여러 대로 늘어나면 그때 Redis를 도입하면 됩니다.
 
-### 대안 검토 — Redis vs CDN vs Caffeine
+### 대안 검토: Redis vs CDN vs Caffeine
 
 #### 성능 비교
 
@@ -169,7 +169,7 @@ DB도 InnoDB Buffer Pool이라는 자체 메모리 캐시가 있습니다. Buffe
 
 실무에서는 한 가지 캐시만 쓰지 않습니다. 카카오페이, 올리브영 등 국내 기업들이 실제로 사용하는 구조입니다:
 
-![멀티 레이어 캐시 아키텍처 — L1(Caffeine) + L2(Redis) + L3(CDN) + MySQL](/uploads/project/WikiEngine/caching-strategy/multi-layer-cache.svg)
+![멀티 레이어 캐시 아키텍처: L1(Caffeine) + L2(Redis) + L3(CDN) + MySQL](/uploads/project/WikiEngine/caching-strategy/multi-layer-cache.svg)
 
 카카오페이는 L1(Caffeine) → L2(Redis) → DB 3계층 캐시를 사용하며, Redis Pub/Sub로 L1 캐시 동기화를 처리합니다.
 
@@ -236,9 +236,9 @@ Spring Cache 추상화(`@Cacheable`)를 쓰지 않는 수동 방식이었습니�
 [Lucene 전환](/blog/project/wikiengine/lucene-decision)에서 검색을 Lucene으로 전환했으므로, 포스팅 리스트는 Lucene이 MMapDirectory + OS page cache로 내부 캐싱합니다.
 앱 레벨에서 캐싱할 대상은 3가지입니다:
 
-![캐싱 대상 3가지 — 검색 결과, 자동완성, 게시글 상세](/uploads/project/WikiEngine/caching-strategy/cache-targets.svg)
+![캐싱 대상 3가지: 검색 결과, 자동완성, 게시글 상세](/uploads/project/WikiEngine/caching-strategy/cache-targets.svg)
 
-~~포스팅 리스트 캐싱~~ — Lucene MMapDirectory가 OS page cache 활용, 별도 앱 캐시 불필요
+~~포스팅 리스트 캐싱~~: Lucene MMapDirectory가 OS page cache를 활용하므로 별도 앱 캐시가 필요 없습니다
 
 ### 게시글 상세 캐싱 설계 결정
 
@@ -342,7 +342,7 @@ public class CacheConfig {
 
 검색에서 가장 일반적인 캐싱 전략은 Cache-Aside(Lazy Loading)입니다. 애플리케이션이 캐시와 DB를 명시적으로 관리합니다.
 
-![Cache-Aside 패턴 — 히트 시 즉시 반환, 미스 시 Lucene+DB 조회 후 캐시 저장](/uploads/project/WikiEngine/caching-strategy/cache-aside-flow.svg)
+![Cache-Aside 패턴: 히트 시 즉시 반환, 미스 시 Lucene+DB 조회 후 캐시 저장](/uploads/project/WikiEngine/caching-strategy/cache-aside-flow.svg)
 
 > 출처: [AWS — Database Caching Strategies Using Redis](https://docs.aws.amazon.com/whitepapers/latest/database-caching-strategies-using-redis/caching-patterns.html)
 
@@ -454,7 +454,7 @@ JVM CPU 스파이크, DB 과부하
 | TTL 랜덤화 | 기본 TTL에 +/- 10% 편차 추가 | 즉시 |
 | Probabilistic Early Expiration | TTL 만료 전에 일정 확률로 미리 갱신 | 채널톡 사례 |
 | Mutex Lock | 캐시 미스 시 하나의 스레드만 DB 조회, 나머지는 대기 | 고트래픽 |
-| `refreshAfterWrite` | Caffeine 내장 — TTL 만료 전 비동기 갱신 | 부하 테스트 후 |
+| `refreshAfterWrite` | Caffeine 내장: TTL 만료 전 비동기 갱신 | 부하 테스트 후 |
 
 ### Caffeine의 내장 해결: `refreshAfterWrite`
 
@@ -542,10 +542,10 @@ Caffeine.newBuilder()
 ```
 
 Spring Actuator 엔드포인트:
-- `/actuator/caches` — 등록된 캐시 목록
-- `/actuator/metrics/cache.gets` — 캐시 히트/미스 횟수
-- `/actuator/metrics/cache.evictions` — 축출 횟수
-- `/actuator/metrics/cache.size` — 현재 캐시 엔트리 수
+- `/actuator/caches`: 등록된 캐시 목록
+- `/actuator/metrics/cache.gets`: 캐시 히트/미스 횟수
+- `/actuator/metrics/cache.evictions`: 축출 횟수
+- `/actuator/metrics/cache.size`: 현재 캐시 엔트리 수
 
 ### Grafana 대시보드 연동
 
@@ -702,7 +702,7 @@ k6 run --out influxdb=http://localhost:8086/k6 \
 | 메모리 사용률 | 56.1% / 28.9% / 44.8% |
 | 컨테이너 CPU (wiki-mysql-prod) | 피크 ~170% |
 
-### [이전 글](/blog/project/wikiengine/query-refactoring-optimization) 대비 성능 변화 — 왜 70배 느려졌는가
+### [이전 글](/blog/project/wikiengine/query-refactoring-optimization) 대비 성능 변화: 왜 70배 느려졌는가
 
 #### 무엇이 바뀌었나
 
@@ -799,7 +799,7 @@ smoke(5 VU)에서 이를 확인할 수 있습니다:
 
 #### /actuator/caches 응답
 
-> 참고: 외부(Nginx) 경로는 403 Forbidden — 앱 서버에서 localhost:8080으로 직접 확인
+> 참고: 외부(Nginx) 경로는 403 Forbidden이 반환되므로 앱 서버에서 localhost:8080으로 직접 확인합니다.
 
 ![/actuator/caches 응답](/uploads/project/WikiEngine/caching-strategy/B-2-1-actuator-caches.png)
 
@@ -970,7 +970,7 @@ Before에서 검색 CPU 포화로 인해 검색과 무관한 API(자동완성, �
 | 최신 목록 | 392ms | **11.07ms** | 8.5ms |
 | 상세 조회 | 384ms | **19.51ms** | 12.5ms |
 
-캐시로 검색 CPU 부하를 제거하자, 자동완성/목록/상세가 **smoke 테스트(5 VU)와 거의 동일한 속도로 복귀**했습니다. 이것이 캐싱의 진짜 효과 — 직접 캐싱된 API뿐 아니라, CPU 경합이 해소되면서 **전체 API가 원래 성능을 되찾았습니다.**
+캐시로 검색 CPU 부하를 제거하자, 자동완성/목록/상세가 **smoke 테스트(5 VU)와 거의 동일한 속도로 복귀**했습니다. 이것이 캐싱의 진짜 효과입니다. 직접 캐싱된 API뿐 아니라, CPU 경합이 해소되면서 **전체 API가 원래 성능을 되찾았습니다.**
 
 ### OOM 안전성 검증
 

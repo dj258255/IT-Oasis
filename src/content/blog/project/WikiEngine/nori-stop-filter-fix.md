@@ -1,5 +1,5 @@
 ---
-title: Nori 형태소 분석기 Stop Filter 문제 — "안녕" 0건과 "안녕하세" 노이즈 해결
+title: 'Nori 형태소 분석기 Stop Filter 문제: "안녕" 0건과 "안녕하세" 노이즈 해결'
 titleEn: Nori Analyzer Stop Filter Fix — Resolving Zero Results and Noisy Rankings
 description: Lucene Nori 분석기에서 "안녕" 검색이 0건이 되는 IC 필터링 문제와, "안녕하세" 검색 시 "하세" 관련 문서만 나오는 형태소 분석 한계를 분석합니다. IC 제거 + title_ngram dis_max + PrefixQuery 폴백 3단계 해결을 적용하고, 자동완성 title_raw fallback까지 포함합니다.
 descriptionEn: Fixes two Nori analyzer issues — "안녕" returning zero results due to IC stop tag filtering, and "안녕하세" surfacing only "하세" documents due to incomplete morphological tokenization. Applies IC removal + title_ngram dis_max + PrefixQuery fallback, plus autocomplete title_raw fallback.
@@ -42,7 +42,7 @@ wikiEngine은 Lucene 10.3.2 + Nori 한국어 형태소 분석기 기반의 검�
 
 ---
 
-## 2. 문제 — 두 가지 증상
+## 2. 문제: 두 가지 증상
 
 ### 증상 1: "안녕" 검색 시 0건
 
@@ -71,7 +71,7 @@ wikiEngine은 Lucene 10.3.2 + Nori 한국어 형태소 분석기 기반의 검�
 
 ## 3. 원인 분석
 
-### 증상 1 원인 — IC(감탄사) Stop Filter
+### 증상 1 원인: IC(감탄사) Stop Filter
 
 Nori의 `DEFAULT_STOP_TAGS`에 IC(감탄사)가 포함되어 있다. 같은 "안녕"이라도 문맥에 따라 품사 태깅이 달라진다:
 
@@ -87,7 +87,7 @@ Nori의 `DEFAULT_STOP_TAGS`에 IC(감탄사)가 포함되어 있다. 같은 "안
 
 **핵심**: "안녕"이 단독으로 쓰이면 감탄사(IC)로 태깅되어 필터링된다. 하지만 인덱스에는 "안녕하세요"의 일부로 '안녕'(NNG)이 저장되어 있다. **인덱싱은 됐는데 검색이 안 되는 비대칭 문제**.
 
-### 증상 2 원인 — 불완전 입력의 비표준적 토큰화
+### 증상 2 원인: 불완전 입력의 비표준적 토큰화
 
 "안녕하세"는 Nori 사전에 없는 미완성 형태다. Nori는 이를 비표준적으로 분리한다:
 
@@ -103,7 +103,7 @@ OR 기반 쿼리에서 "하세"라는 제목의 문서(일본 성씨)가 title^3
 | "하세" (일본 성씨) | ['하세'] | X | O (title 완전 일치) | **매우 높음** |
 | "안녕하세요" | ['안녕'] | O (부분 매칭) | X | 낮음 |
 
-### 자동완성 원인 — title_jamo PrefixQuery의 한계
+### 자동완성 원인: title_jamo PrefixQuery의 한계
 
 Lucene fallback에서 title_jamo 필드의 PrefixQuery를 사용하는데, 12M건의 자모 분해 term이 너무 많아 완성 한글("황치열") 검색이 실패한다.
 
@@ -113,7 +113,7 @@ Lucene fallback에서 title_jamo 필드의 PrefixQuery를 사용하는데, 12M�
 
 두 증상이 원인이 다르므로 각각 해결책이 필요하다.
 
-### 증상 1 해결 — IC 제거
+### 증상 1 해결: IC 제거
 
 | 선택지 | 장점 | 단점 |
 |--------|------|------|
@@ -122,7 +122,7 @@ Lucene fallback에서 title_jamo 필드의 PrefixQuery를 사용하는데, 12M�
 
 IC를 제거하면 감탄사가 인덱싱되어 인덱스가 약간 커지지만, 한국어에서 감탄사 비중은 미미하다.
 
-### 증상 2 해결 — n-gram 보완
+### 증상 2 해결: n-gram 보완
 
 | 선택지 | "안녕하세" → "안녕하세요" | 기존 검색 영향 | 비용 |
 |--------|:---:|------|------|
@@ -133,7 +133,7 @@ IC를 제거하면 감탄사가 인덱싱되어 인덱스가 약간 커지지만
 
 title 필드에만 2-3gram 분석기를 추가하고 dis_max로 결합하면, 형태소 분석이 실패해도 n-gram이 문자 시퀀스 매칭으로 관련 문서를 올린다. 콘텐츠 전체를 n-gram으로 하면 토큰 6.5배 폭발이 발생하지만, title만 적용하면 36GB → 39GB(+8%)로 최소화된다.
 
-### 보험 — 토큰 전멸 폴백
+### 보험: 토큰 전멸 폴백
 
 | 선택지 | 설명 |
 |--------|------|
@@ -143,7 +143,7 @@ A와 B로 커버되지 않는 미지의 엣지 케이스에 대한 보험이다.
 
 ---
 
-## 5. 구현 — A + B + C
+## 5. 구현: A + B + C
 
 세 레이어가 각각 다른 실패 모드를 커버한다:
 - **A(IC 제거)**: 감탄사가 필터링되는 문제
@@ -201,7 +201,7 @@ new DisjunctionMaxQuery(
 
 처음부터 이 구조가 나온 게 아니라 시행착오가 있었다.
 
-**1차 — MUST + SHOULD 구조:**
+**1차, MUST + SHOULD 구조:**
 
 ```
 textQuery(MUST) + ngramQuery(SHOULD)
@@ -209,7 +209,7 @@ textQuery(MUST) + ngramQuery(SHOULD)
 
 textQuery가 MUST이므로 형태소 분석 결과가 검색을 지배한다. "안녕하세"에서 '하세' 토큰이 title^3 boost로 "하세" 문서를 상위에 올리고, n-gram은 SHOULD라서 순위를 뒤집지 못했다.
 
-**2차 — dis_max, textQuery에 3.0 boost:**
+**2차, dis_max로 전환하고 textQuery에 3.0 boost:**
 
 ```
 dis_max([BoostQuery(textQuery, 3.0), ngramQuery], tie_breaker=0.1)
@@ -217,11 +217,11 @@ dis_max([BoostQuery(textQuery, 3.0), ngramQuery], tie_breaker=0.1)
 
 textQuery 3.0 × title 내부 3.0 = 9배 부스트. "하세" 완전 일치가 n-gram을 압도해서 결과가 동일했다.
 
-**3차 — dis_max, boost 없이:**
+**3차, dis_max에 boost 없이:**
 
 title^3 내부 boost만으로도 "하세" title 완전 일치의 BM25 점수가 너무 높아 n-gram 부분 매칭으로는 부족했다.
 
-**최종 — ngramQuery에 2.0 boost:**
+**최종, ngramQuery에 2.0 boost:**
 
 n-gram에 2.0 boost를 줘서 title^3과 경쟁할 수 있게 했다.
 
@@ -259,29 +259,29 @@ title_raw는 분석기를 타지 않는 StringField로 이미 인덱싱되어 �
 
 ---
 
-## 6. 검증 — Before / After
+## 6. 검증: Before / After
 
 ### Before
 
-**"안녕하세" 검색 — "하세" 문서만:**
+**"안녕하세" 검색, "하세" 문서만:**
 
 ![안녕하세 하세 결과](/uploads/project/WikiEngine/nori-stop-filter-fix/before-search-annyeonghase-hase-results.png)
 
-**"황치열" 자동완성 — 빈 결과:**
+**"황치열" 자동완성, 빈 결과:**
 
 ![황치열 자동완성 안 됨](/uploads/project/WikiEngine/nori-stop-filter-fix/before-autocomplete-hwang-empty.png)
 
 ### After
 
-**"안녕" 검색 — 정상 반환 + AI 요약:**
+**"안녕" 검색, 정상 반환 + AI 요약:**
 
 ![안녕 검색 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeong.png)
 
-**"안녕하세" 검색 — "안녕하세요" 관련 문서 상위:**
+**"안녕하세" 검색, "안녕하세요" 관련 문서 상위:**
 
 ![안녕하세 dis_max 결과](/uploads/project/WikiEngine/nori-stop-filter-fix/after-search-annyeonghase-dismax.png)
 
-**"황" 자동완성 — "황치열" 정상:**
+**"황" 자동완성, "황치열" 정상:**
 
 ![황 자동완성 정상](/uploads/project/WikiEngine/nori-stop-filter-fix/after-autocomplete-hwang.png)
 
@@ -301,7 +301,7 @@ title_raw는 분석기를 타지 않는 StringField로 이미 인덱싱되어 �
 
 ## 7. Nori의 구조적 한계
 
-이번에 발견한 문제들은 Nori만의 문제가 아니라 **사전 기반 형태소 분석기의 공통 한계**다.
+이번에 발견한 문제들은 Nori에 국한되지 않는, **사전 기반 형태소 분석기의 공통 한계**다.
 
 | 한계 | 설명 |
 |------|------|

@@ -1,5 +1,5 @@
 ---
-title: '콘텐츠 필터링 — Aho-Corasick 금칙어 탐지와 운영 안전장치'
+title: '콘텐츠 필터링: Aho-Corasick 금칙어 탐지와 운영 안전장치'
 titleEn: 'Content Filtering — Aho-Corasick Banned Word Detection and Operational Safety'
 description: 커뮤니티 검색 서비스의 운영 안전장치를 구축합니다. 16,090개 금칙어를 Aho-Corasick O(N+Z) 알고리즘으로 탐지하여 자동완성 결과에서 유해 검색어를 필터링하고, 블라인드 게시글을 Lucene Occur.MUST_NOT으로 검색에서 제외합니다. 영어 금칙어의 Scunthorpe 문제(단어 경계 매칭), Negative Caching(빈 결과 30초 TTL)으로 cache penetration 방지, title_raw StringField로 자동완성 Lucene fallback 품질을 개선합니다.
 descriptionEn: Builds operational safety for a community search service. Detects 16,090 banned words with Aho-Corasick O(N+Z) algorithm to filter harmful autocomplete suggestions. Excludes blinded posts from search via Lucene Occur.MUST_NOT. Handles the Scunthorpe problem for English banned words with word-boundary matching. Implements Negative Caching (30s TTL for empty results) to prevent cache penetration, and title_raw StringField for better autocomplete Lucene fallback quality.
@@ -33,7 +33,7 @@ series: "WikiEngine"
 
 ---
 
-## 1. 정상 상태 — 현재 콘텐츠 관리 현황
+## 1. 정상 상태: 현재 콘텐츠 관리 현황
 
 현재 wikiEngine은 위키피디아 데이터 기반이므로, 콘텐츠 품질이 높고 유해 콘텐츠가 거의 없습니다. 하지만 사용자 게시글 작성이 가능해지면 다음 문제가 발생합니다:
 
@@ -49,13 +49,13 @@ series: "WikiEngine"
 
 ---
 
-## 2. 문제 상황 — 왜 지금 콘텐츠 필터링이 필요한가
+## 2. 문제 상황: 왜 지금 콘텐츠 필터링이 필요한가
 
 ### 구조적 문제
 
-1. **게시글 작성 API가 이미 열려 있다** — `POST /api/v1.0/posts`로 누구나(인증된 사용자) 게시글 작성 가능
-2. **k6 부하 테스트에서 게시글을 대량 생성한다** — 제목/본문에 아무 문자열이나 들어감
-3. **자동완성이 검색 로그 기반이다** — 유해 검색어가 자동완성에 그대로 노출될 수 있음
+1. **게시글 작성 API가 이미 열려 있다**. `POST /api/v1.0/posts`로 누구나(인증된 사용자) 게시글을 작성할 수 있다
+2. **k6 부하 테스트에서 게시글을 대량 생성한다**. 제목과 본문에 아무 문자열이나 들어간다
+3. **자동완성이 검색 로그 기반이다**. 유해 검색어가 자동완성에 그대로 노출될 수 있다
 
 `curl -X POST /api/v1.0/posts -d '{"title":"금칙어 포함 제목","content":"..."}'`를 보내면 **아무 검증 없이 DB에 저장되고 Lucene 인덱스에 포함됩니다.**
 
@@ -70,7 +70,7 @@ series: "WikiEngine"
 
 ---
 
-## 3. 문제 분석 — Aho-Corasick 선택 근거
+## 3. 문제 분석: Aho-Corasick 선택 근거
 
 금칙어 탐지 알고리즘 비교:
 
@@ -128,7 +128,7 @@ public class ContentFilterService {
 }
 ```
 
-**영어 Trie의 단어 경계 매칭 — Scunthorpe 문제**: "ass"를 금칙어로 등록하면 "assassination", "class", "Scunthorpe" 같은 정상 단어까지 차단됩니다. 영어 금칙어는 단어 경계(`\b`)로 매칭하여 이 문제를 방지합니다. 한국어는 교착어 특성상 부분 일치가 더 적합하다 ("금칙" → "금칙어", "금칙어목록" 등을 모두 잡아야 함).
+**영어 Trie의 단어 경계 매칭(Scunthorpe 문제)**: "ass"를 금칙어로 등록하면 "assassination", "class", "Scunthorpe" 같은 정상 단어까지 차단됩니다. 영어 금칙어는 단어 경계(`\b`)로 매칭하여 이 문제를 방지합니다. 한국어는 교착어 특성상 부분 일치가 더 적합하다 ("금칙" → "금칙어", "금칙어목록" 등을 모두 잡아야 함).
 
 #### 금칙어 사전
 
@@ -143,10 +143,10 @@ CREATE TABLE banned_words (
 );
 ```
 
-- 초기 데이터: **3,094개** 한국어 금칙어 — [LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2](https://github.com/LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2) `data/ko.txt`
+- 초기 데이터: **3,094개** 한국어 금칙어([LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2](https://github.com/LDNOOBWV2/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words_V2) `data/ko.txt`)
 - 금칙어 변경 시 Caffeine 캐시 갱신 (TTL 10분) → Aho-Corasick automaton 재빌드
 
-### 4-2. 블라인드 게시글 — Lucene 인덱스 연동
+### 4-2. 블라인드 게시글: Lucene 인덱스 연동
 
 ```java
 // 블라인드된 게시글은 검색에서 제외
@@ -190,13 +190,13 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 **해결**: `title_raw` StringField (untokenized, lowercased) 추가 + PrefixQuery 대상 변경. 한국어 "금칙" → "금칙어", 영어 "prog" → "programming".
 
 > **아키텍처 정리:**
-> - **Redis** (메인): 검색 로그 기반 인기 검색어 제안 — CQRS 읽기 경로, O(1)
+> - **Redis** (메인): 검색 로그 기반 인기 검색어 제안(CQRS 읽기 경로, O(1))
 > - **Lucene** (fallback): Redis 미스 시 문서 제목 기반 보조 제안
 >   - 단일 단어 ("자바") → `title_raw` PrefixQuery (untokenized)
 >   - 띄어쓰기 포함 ("자바 가비지") → BM25 `title` 검색 (Nori 분석)
 > - 자동완성 ≠ 형태소 분석 (현업 표준: 네이버/구글/ES 모두 별도 untokenized 필드 사용)
 
-### 4-5. Negative Caching — 빈 결과 짧은 TTL
+### 4-5. Negative Caching: 빈 결과 짧은 TTL
 
 **문제**: 앱 기동 직후 인덱스 로딩 전에 검색 → 0건 캐시 → 5~10분간 0건 유지.
 
@@ -206,29 +206,29 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 
 ---
 
-## 5. 검증 — Before/After
+## 5. 검증: Before/After
 
 ### 금칙어 자동완성 필터링
 
-**"바보" 입력 시 — 자동완성 제안 없음:**
+**"바보" 입력 시 자동완성 제안 없음:**
 
-![금칙어 자동완성 차단 — "바보" 입력 시 제안 없음](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-banned-babo.png)
+![금칙어 자동완성 차단, "바보" 입력 시 제안 없음](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-banned-babo.png)
 
-**"자바" 입력 시 — 정상 자동완성:**
+**"자바" 입력 시 정상 자동완성:**
 
-![정상 자동완성 — "자바" 입력 시 제안 목록 표시](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png)
+![정상 자동완성, "자바" 입력 시 제안 목록 표시](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png)
 
 > "바보"는 `banned_words_ko.txt`(3,094개)에 포함된 금칙어. Aho-Corasick `Trie.parseText()`로 O(N+Z) 탐지 → `ContentFilterService.filterSuggestions()`에서 제거.
 
 ### 블라인드 게시글 검색 제외
 
-**Before — id=619166 게시글이 검색 결과에 포함:**
+**Before: id=619166 게시글이 검색 결과에 포함**
 
-![블라인드 Before — 619166 포함](/uploads/project/WikiEngine/search-content-filter/phase20-blind-before-test-search.png)
+![블라인드 Before, 619166 포함](/uploads/project/WikiEngine/search-content-filter/phase20-blind-before-test-search.png)
 
-**After — id=619166 게시글이 검색 결과에서 제외됨:**
+**After: id=619166 게시글이 검색 결과에서 제외됨**
 
-![블라인드 After — 619166 제외](/uploads/project/WikiEngine/search-content-filter/phase20-blind-after-test-search.png)
+![블라인드 After, 619166 제외](/uploads/project/WikiEngine/search-content-filter/phase20-blind-after-test-search.png)
 
 > `POST /admin/lucene/reindex?ids=619166`으로 Lucene 인덱스에 `blinded=true` 반영 후, `Occur.MUST_NOT TermQuery("blinded","true")`에 의해 검색 결과에서 자동 제외. 블라인드 해제 시 `blinded=false`로 재인덱싱하면 검색에 복원됩니다.
 
@@ -236,7 +236,7 @@ builder.add(blindFilter, BooleanClause.Occur.MUST_NOT);
 
 ## 다음 글
 
-[AI 검색 요약 — RAG](/blog/project/wikiengine/search-rag)에서 Lucene BM25 검색 결과를 LLM 컨텍스트에 주입하여 AI 요약 답변을 생성하고, SSE 스트리밍, 출처 인용, 할루시네이션 방지, 비용 모니터링까지 구현합니다.
+[AI 검색 요약: RAG](/blog/project/wikiengine/search-rag)에서 Lucene BM25 검색 결과를 LLM 컨텍스트에 주입하여 AI 요약 답변을 생성하고, SSE 스트리밍, 출처 인용, 할루시네이션 방지, 비용 모니터링까지 구현합니다.
 
 ---
 
@@ -443,11 +443,11 @@ After filter:
 
 **Typing "바보" — no suggestions:**
 
-![Banned-word autocomplete blocked — no suggestions for "바보"](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-banned-babo.png)
+![Banned-word autocomplete blocked: no suggestions for "바보"](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-banned-babo.png)
 
 **Typing "자바" — normal autocomplete:**
 
-![Normal autocomplete — suggestion list shown for "자바"](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png)
+![Normal autocomplete: suggestion list shown for "자바"](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-normal-java.png)
 
 > "바보" is in `banned_words_ko.txt` (3,094 entries). Detected in O(N+Z) by Aho-Corasick `Trie.parseText()` and removed by `ContentFilterService.filterSuggestions()`.
 

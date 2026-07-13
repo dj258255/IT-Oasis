@@ -1,7 +1,7 @@
 ---
 title: 'JPA 영속성 컨텍스트와 트랜잭션 이해하기'
 titleEn: 'Understanding JPA Persistence Context and Transactions'
-description: '@Transactional의 프록시 동작 원리, 영속성 컨텍스트의 1차 캐시와 더티 체킹, 전파 속성, 그리고 실무에서 자주 발생하는 함정까지 정리했어요.'
+description: '@Transactional의 프록시 동작 원리, 영속성 컨텍스트의 1차 캐시와 더티 체킹, 전파 속성, 그리고 실무에서 자주 발생하는 함정까지 정리했습니다.'
 descriptionEn: 'Covers @Transactional proxy mechanics, persistence context 1st-level cache and dirty checking, propagation attributes, and common production pitfalls.'
 date: 2025-09-24T00:00:00.000Z
 tags:
@@ -16,15 +16,15 @@ draft: false
 coverImage: "/uploads/theory/jpa-persistence-context/transaction-basics.svg"
 ---
 
-사이드 프로젝트를 진행하면서 Spring 트랜잭션에 대해 배운 것들을 정리했어요.
-배우면서 햇갈렸던 것들을 다시 재정립 해서 내 지식으로 만들고 싶었거든요.
+사이드 프로젝트를 진행하면서 Spring 트랜잭션에 대해 배운 것들을 정리했습니다.
+배우면서 헷갈렸던 것들을 다시 재정립해서 내 지식으로 만들고 싶었습니다.
 
 ---
 
 ## @Transactional 기초
 
-계좌 이체처럼 여러 DB 작업이 하나의 단위로 묶여야 할 때 트랜잭션을 써요.
-출금은 됐는데 입금이 안 되면 큰일나니까요.
+계좌 이체처럼 여러 DB 작업이 하나의 단위로 묶여야 할 때 트랜잭션을 씁니다.
+출금은 됐는데 입금이 안 되면 큰일이 나기 때문입니다.
 
 ![](/uploads/theory/jpa-persistence-context/transaction-basics.svg)
 
@@ -44,16 +44,16 @@ coverImage: "/uploads/theory/jpa-persistence-context/transaction-basics.svg"
 
 ## @Transactional은 어떻게 동작할까?
 
-`@Transactional`을 붙이면 마법처럼 트랜잭션이 관리되는데, 내부적으로는 프록시 패턴을 써요.
+`@Transactional`을 붙이면 마법처럼 트랜잭션이 관리되는데, 내부적으로는 프록시 패턴을 씁니다.
 
-Spring은 `@Transactional`이 붙은 클래스에 대해 프록시 객체를 만들고, 이 프록시가 메서드 호출을 가로채서 트랜잭션을 시작/커밋/롤백해요.
+Spring은 `@Transactional`이 붙은 클래스에 대해 프록시 객체를 만들고, 이 프록시가 메서드 호출을 가로채서 트랜잭션을 시작/커밋/롤백합니다.
 
 ![](/uploads/theory/jpa-persistence-context/proxy-pattern.svg)
 
 
 ### 프록시 생성 방식
 
-Spring Boot는 CGLIB를 기본으로 써요. CGLIB는 바이트코드를 조작해서 런타임에 클래스를 상속받아 프록시를 만들어요.
+Spring Boot는 CGLIB를 기본으로 씁니다. CGLIB는 바이트코드를 조작해서 런타임에 클래스를 상속받아 프록시를 만듭니다.
 
 | 방식 | 설명 | 사용 조건 |
 |------|------|-----------|
@@ -73,16 +73,16 @@ CGLIB은 상속으로 프록시를 만들기 때문에:
 
 ### 내부 호출 함정
 
-이거 처음에 진짜 헷갈렸어요.
+이거 처음에 진짜 헷갈렸습니다.
 
 ![](/uploads/theory/jpa-persistence-context/internal-call-trap.svg)
 
 
-같은 클래스 안에서 메서드를 호출하면 프록시를 안 거치고 직접 호출돼요.
+같은 클래스 안에서 메서드를 호출하면 프록시를 안 거치고 직접 호출됩니다.
 
-그래서 `@Transactional`이 동작 안 해요.
+그래서 `@Transactional`이 동작하지 않습니다.
 
-해결하려면 별도 서비스 클래스로 분리하면 돼요.
+해결하려면 별도 서비스 클래스로 분리하면 됩니다.
 
 > **참고:**
 > - [AOP와 @Transactional의 동작 원리](https://velog.io/@ann0905/AOP와-Transactional의-동작-원리)
@@ -92,16 +92,16 @@ CGLIB은 상속으로 프록시를 만들기 때문에:
 
 ## readOnly = true는 왜 쓰나?
 
-조회 메서드에 `readOnly = true`를 붙이면 몇 가지 이점이 있어요.
+조회 메서드에 `readOnly = true`를 붙이면 몇 가지 이점이 있습니다.
 
 ![](/uploads/theory/jpa-persistence-context/readonly-declaration.svg)
 
 
-이렇게 선언하면 Spring과 JPA는 "이 메서드에서 쓰기 연산(persist, merge, remove)이 없을 것"이라고 가정하고 최적화를 수행해요.
+이렇게 선언하면 Spring과 JPA는 "이 메서드에서 쓰기 연산(persist, merge, remove)이 없을 것"이라고 가정하고 최적화를 수행합니다.
 
 ### JPA 레벨 최적화: Dirty Checking 생략
 
-JPA는 엔티티를 조회하면 영속성 컨텍스트에 저장하고, 이 객체가 변경되었는지 추적해요(Dirty Checking). 이때 원본 스냅샷을 만들어서 비교하고요.
+JPA는 엔티티를 조회하면 영속성 컨텍스트에 저장하고, 이 객체가 변경되었는지 추적합니다(Dirty Checking). 이때 원본 스냅샷을 만들어서 비교합니다.
 
 ```
 1. 엔티티 조회 -> 영속성 컨텍스트에 저장 + 스냅샷 생성
@@ -109,65 +109,65 @@ JPA는 엔티티를 조회하면 영속성 컨텍스트에 저장하고, 이 객
 3. 변경 있으면 -> UPDATE 쿼리 생성
 ```
 
-근데 `readOnly = true`면 이 과정 자체가 생략돼요:
+근데 `readOnly = true`면 이 과정 자체가 생략됩니다:
 
 - FlushMode가 MANUAL로 바뀜
 - flush 시점에 스냅샷 비교를 하지 않으므로 사실상 스냅샷이 무용해진다 (단, Hibernate 구현에 따라 스냅샷 자체는 여전히 생성될 수 있다)
 - flush() 호출 안 함
 - Dirty Checking 안 함
 
-불필요한 객체 복사와 추적 로직이 사라지니까 **메모리 사용량과 CPU 연산이 줄어들어요**.
+불필요한 객체 복사와 추적 로직이 사라지니까 **메모리 사용량과 CPU 연산이 줄어듭니다**.
 
 ### DB 레벨 최적화: READ ONLY 힌트 전달
 
-`readOnly = true`는 JPA 내부에서만 끝나는 게 아니에요.
+`readOnly = true`의 효과는 JPA 내부에서 그치지 않습니다.
 
-JDBC 트랜잭션을 통해 DB에도 "이 트랜잭션은 데이터를 변경하지 않는다"는 힌트를 전달해요.
+JDBC 트랜잭션을 통해 DB에도 "이 트랜잭션은 데이터를 변경하지 않는다"는 힌트를 전달합니다.
 
 ```java
 connection.setReadOnly(true);  // JDBC 레벨에서 설정됨
 ```
 
-PostgreSQL, Oracle, H2 등 일부 DB는 이 힌트를 통해 내부 처리를 최적화해요.
+PostgreSQL, Oracle, H2 등 일부 DB는 이 힌트를 통해 내부 처리를 최적화합니다.
 
 **1. 락 경합(Lock Contention) 감소**
 
-readOnly = true를 설정하면 JDBC 레벨에서 connection.setReadOnly(true)가 호출되며, DB 벤더에 따라 최적화가 적용될 수 있어요 (예: MySQL InnoDB에서 읽기 전용 트랜잭션은 트랜잭션 ID 할당을 생략하여 MVCC 오버헤드를 줄인다).
+readOnly = true를 설정하면 JDBC 레벨에서 connection.setReadOnly(true)가 호출되며, DB 벤더에 따라 최적화가 적용될 수 있습니다 (예: MySQL InnoDB에서 읽기 전용 트랜잭션은 트랜잭션 ID 할당을 생략하여 MVCC 오버헤드를 줄인다).
 
-근데 read-only 트랜잭션은 변경이 없다고 명시됐으니까 락을 최소화하거나 안 걸어요.
+근데 read-only 트랜잭션은 변경이 없다고 명시됐으니까 락을 최소화하거나 걸지 않습니다.
 
 결과적으로 동시에 여러 SELECT가 들어와도 락 충돌 없이 병렬 처리가 가능해집니다.
 
-고부하 환경에서 특히 효과적이에요.
+고부하 환경에서 특히 효과적입니다.
 
 **2. Undo/Redo 로그 감소**
 
-모든 트랜잭션은 롤백/복구를 위해 Undo/Redo 로그를 생성해요.
+모든 트랜잭션은 롤백/복구를 위해 Undo/Redo 로그를 생성합니다.
 
-근데 read-only 트랜잭션은 변경할 게 없으니까 복구할 것도 없어요.
+근데 read-only 트랜잭션은 변경할 게 없으니까 복구할 것도 없습니다.
 
-SELECT만 실행하는 트랜잭션은 readOnly 여부와 관계없이 undo/redo 로그를 생성하지 않아요. readOnly의 DB 레벨 효과는 벤더별로 다르며, MySQL InnoDB에서는 트랜잭션 ID 할당 생략 등의 최적화가 있어요.
+SELECT만 실행하는 트랜잭션은 readOnly 여부와 관계없이 undo/redo 로그를 생성하지 않습니다. readOnly의 DB 레벨 효과는 벤더별로 다르며, MySQL InnoDB에서는 트랜잭션 ID 할당 생략 등의 최적화가 있습니다.
 
 ### DB Replication 환경에서 유용
 
-Master-Slave 구조에서 `readOnly = true`를 읽기 복제본(Slave) 라우팅의 신호로 쓸 수 있어요. 다만 **자동은 아닙니다** — `AbstractRoutingDataSource`를 상속해 `TransactionSynchronizationManager.isCurrentTransactionReadOnly()`로 현재 트랜잭션이 읽기 전용인지 보고 DataSource를 고르도록 **직접 구현**해야 하고, 반드시 `LazyConnectionDataSourceProxy`로 감싸야 해요. 안 그러면 트랜잭션 동기화가 설정되기 전에 커넥션이 먼저 잡혀서 라우팅이 깨집니다(전부 Master로 감).
+Master-Slave 구조에서 `readOnly = true`를 읽기 복제본(Slave) 라우팅의 신호로 쓸 수 있습니다. 다만 **자동은 아닙니다**. `AbstractRoutingDataSource`를 상속해 `TransactionSynchronizationManager.isCurrentTransactionReadOnly()`로 현재 트랜잭션이 읽기 전용인지 보고 DataSource를 고르도록 **직접 구현**해야 하고, 반드시 `LazyConnectionDataSourceProxy`로 감싸야 합니다. 안 그러면 트랜잭션 동기화가 설정되기 전에 커넥션이 먼저 잡혀서 라우팅이 깨집니다(전부 Master로 감).
 
 ### 내가 쓰는 패턴
 
-클래스에 기본으로 `readOnly = true` 걸어두고, 쓰기 메서드에만 `@Transactional`로 오버라이드해요.
+클래스에 기본으로 `readOnly = true` 걸어두고, 쓰기 메서드에만 `@Transactional`로 오버라이드합니다.
 
 ![](/uploads/theory/jpa-persistence-context/version-optimistic-lock.svg)
 
 
 ### 주의: 낙관적 락(@Version)과의 충돌
 
-`readOnly = true`를 무분별하게 쓰면 안 되는 이유가 있어요. **낙관적 락(Optimistic Lock)**이 무력화될 수 있거든요.
+`readOnly = true`를 무분별하게 쓰면 안 되는 이유가 있습니다. **낙관적 락(Optimistic Lock)**이 무력화될 수 있습니다.
 
-JPA는 `@Version`으로 동시성을 제어해요:
+JPA는 `@Version`으로 동시성을 제어합니다:
 
 ![](/uploads/theory/jpa-persistence-context/readonly-pattern.svg)
 
-수정 시점에 version을 비교해서, 다른 트랜잭션이 먼저 수정했으면 `OptimisticLockException`을 던져요.
+수정 시점에 version을 비교해서, 다른 트랜잭션이 먼저 수정했으면 `OptimisticLockException`을 던집니다.
 
 근데 `readOnly = true`에서 엔티티를 수정하면?
 
@@ -179,11 +179,11 @@ JPA는 `@Version`으로 동시성을 제어해요:
 - @Version 비교도 안 됨
 - **충돌이 발생해도 감지 못함**
 
-수정한 내용이 DB에 반영되지 않아요 (flush가 안 되니까). 에러도 나지 않으므로, 개발자가 수정이 적용됐다고 착각할 수 있는 것이 진짜 위험이에요.
+수정한 내용이 DB에 반영되지 않습니다 (flush가 안 되니까). 에러도 나지 않으므로, 개발자가 수정이 적용됐다고 착각할 수 있는 것이 진짜 위험입니다.
 
 ### 결론
 
-`readOnly = true`는 **진짜로 읽기만 할 때만** 써야 해요.
+`readOnly = true`는 **진짜로 읽기만 할 때만** 써야 합니다.
 
 | 상황 | readOnly 사용 |
 |------|:------------:|
@@ -192,7 +192,7 @@ JPA는 `@Version`으로 동시성을 제어해요:
 | @Version 있는 엔티티 수정 | X |
 | 조회 결과로 비즈니스 판단만 | O |
 
-"조회니까 무조건 readOnly" 가 아니라, **수정 가능성이 조금이라도 있으면 쓰면 안 돼요**.
+조회 메서드라도 **수정 가능성이 조금이라도 있으면 readOnly를 쓰면 안 됩니다**.
 
 > **참고:** [JPA Transactional 잘 알고 쓰고 계신가요? - 카카오페이](https://tech.kakaopay.com/post/jpa-transactional-bri/)
 
@@ -200,20 +200,20 @@ JPA는 `@Version`으로 동시성을 제어해요:
 
 ## 트랜잭션 전파 (Propagation)
 
-트랜잭션 안에서 다른 트랜잭션 메서드를 호출하면 어떻게 될까요? 기존 트랜잭션에 참여할지, 새로 만들지를 결정하는 게 전파 속성이에요.
+트랜잭션 안에서 다른 트랜잭션 메서드를 호출하면 어떻게 될까요? 기존 트랜잭션에 참여할지, 새로 만들지를 결정하는 게 전파 속성입니다.
 
-처음에 이 개념이 헷갈렸는데, 물리 트랜잭션과 논리 트랜잭션을 구분하면 이해가 쉬워져요.
+처음에 이 개념이 헷갈렸는데, 물리 트랜잭션과 논리 트랜잭션을 구분하면 이해가 쉬워집니다.
 
 ### 물리 트랜잭션 vs 논리 트랜잭션
 
-**물리 트랜잭션**은 실제 DB 커넥션을 통한 트랜잭션이에요. 커밋/롤백하면 진짜 DB에 반영돼요.
+**물리 트랜잭션**은 실제 DB 커넥션을 통한 트랜잭션입니다. 커밋/롤백하면 진짜 DB에 반영됩니다.
 
-**논리 트랜잭션**은 스프링이 트랜잭션 매니저를 통해 관리하는 단위예요. 여러 논리 트랜잭션이 하나의 물리 트랜잭션을 공유할 수 있어요.
+**논리 트랜잭션**은 스프링이 트랜잭션 매니저를 통해 관리하는 단위입니다. 여러 논리 트랜잭션이 하나의 물리 트랜잭션을 공유할 수 있습니다.
 
 ![](/uploads/theory/jpa-persistence-context/physical-logical-transaction.svg)
 
 
-원칙은 단순해요:
+원칙은 단순합니다:
 - **모든 논리 트랜잭션이 커밋되어야** 물리 트랜잭션이 커밋됨
 - **하나라도 롤백되면** 물리 트랜잭션도 롤백됨
 
@@ -229,11 +229,11 @@ JPA는 `@Version`으로 동시성을 제어해요:
 | **NEVER** | 없이 진행 | 예외 발생 |
 | **NESTED** | 새로 생성 | 중첩 트랜잭션 생성 |
 
-실무에서는 REQUIRED랑 REQUIRES_NEW만 주로 써요.
+실무에서는 REQUIRED랑 REQUIRES_NEW만 주로 씁니다.
 
 ### REQUIRED (기본값)
 
-가장 많이 쓰는 기본 속성이에요. 기존 트랜잭션이 있으면 참여하고, 없으면 새로 만들어요.
+가장 많이 쓰는 기본 속성입니다. 기존 트랜잭션이 있으면 참여하고, 없으면 새로 만듭니다.
 
 ![](/uploads/theory/jpa-persistence-context/required-propagation.svg)
 
@@ -242,11 +242,11 @@ JPA는 `@Version`으로 동시성을 제어해요:
 - inner()에서 예외 터지면 -> outer()도 같이 롤백
 - outer()에서 예외 터지면 -> inner()도 같이 롤백
 
-inner()에서 롤백이 필요한데 outer()는 커밋하려고 하면? 스프링이 `UnexpectedRollbackException`을 던져서 "야 롤백해야 돼"라고 알려줘요.
+inner()에서 롤백이 필요한데 outer()는 커밋하려고 하면? 스프링이 `UnexpectedRollbackException`을 던져서 "야 롤백해야 돼"라고 알려줍니다.
 
 ### REQUIRES_NEW
 
-항상 새 트랜잭션을 만들어요. 기존 트랜잭션이 있어도 완전히 별개로 동작해요.
+항상 새 트랜잭션을 만듭니다. 기존 트랜잭션이 있어도 완전히 별개로 동작합니다.
 
 ![](/uploads/theory/jpa-persistence-context/requires-new-propagation.svg)
 
@@ -255,7 +255,7 @@ inner()에서 롤백이 필요한데 outer()는 커밋하려고 하면? 스프�
 
 
 
-inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 돼요. 그래서 **커넥션 2개를 동시에 씁니다**.
+inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 됩니다. 그래서 **커넥션 2개를 동시에 씁니다**.
 
 주의할 점:
 - 커넥션 풀 고갈 가능성이 있어서 남용하면 안됨
@@ -263,61 +263,61 @@ inner()가 실행되는 동안 outer()의 커넥션은 대기 상태가 돼요. 
 
 ### 언제 REQUIRES_NEW를 쓰나?
 
-내부 트랜잭션의 성공/실패가 외부 트랜잭션에 영향을 주면 안 될 때 써요.
+내부 트랜잭션의 성공/실패가 외부 트랜잭션에 영향을 주면 안 될 때 씁니다.
 
 예를 들어 주문 처리 중 알림 발송이 실패해도 주문은 성공해야 하는 경우:
 
 ![](/uploads/theory/jpa-persistence-context/requires-new-usecase.svg)
 
 
-근데 REQUIRES_NEW 없이도 해결 가능하면 그게 더 나아요. 별도 서비스로 분리하거나 이벤트로 처리하는 방법도 있거든요.
+근데 REQUIRES_NEW 없이도 해결 가능하면 그게 더 낫습니다. 별도 서비스로 분리하거나 이벤트로 처리하는 방법도 있습니다.
 
 실제로 내가 만드는 프로젝트에선
 
-[파일 업로드 시스템에서의 고아파일 정리](https://velog.io/@dj258255/%ED%8C%8C%EC%9D%BC-%EC%97%85%EB%A1%9C%EB%93%9C-%EC%8B%9C%EC%8A%A4%ED%85%9C%EC%97%90%EC%84%9C%EC%9D%98-%EA%B3%A0%EC%95%84%ED%8C%8C%EC%9D%BC-%EC%A0%95%EB%A6%AC) 에서 활용을 했어요.
+[파일 업로드 시스템에서의 고아파일 정리](https://velog.io/@dj258255/%ED%8C%8C%EC%9D%BC-%EC%97%85%EB%A1%9C%EB%93%9C-%EC%8B%9C%EC%8A%A4%ED%85%9C%EC%97%90%EC%84%9C%EC%9D%98-%EA%B3%A0%EC%95%84%ED%8C%8C%EC%9D%BC-%EC%A0%95%EB%A6%AC) 에서 활용했습니다.
 
 ### SUPPORTS
 
-트랜잭션이 있으면 참여하고, 없으면 트랜잭션 없이 실행해요.
+트랜잭션이 있으면 참여하고, 없으면 트랜잭션 없이 실행합니다.
 
 ![](/uploads/theory/jpa-persistence-context/supports-propagation.svg)
 
-단순 조회인데 호출하는 쪽에 트랜잭션이 있으면 그걸 쓰고, 없으면 그냥 실행해요. 조회 메서드에서 가끔 씁니다.
+단순 조회인데 호출하는 쪽에 트랜잭션이 있으면 그걸 쓰고, 없으면 그냥 실행합니다. 조회 메서드에서 가끔 씁니다.
 
 ### NOT_SUPPORTED
 
-트랜잭션 없이 실행해요. 기존 트랜잭션이 있으면 보류시킵니다.
+트랜잭션 없이 실행합니다. 기존 트랜잭션이 있으면 보류시킵니다.
 
 ![](/uploads/theory/jpa-persistence-context/not-supported-propagation.svg)
 
 
-트랜잭션이 필요 없는 작업(외부 API 호출, 파일 처리 등)에서 사용해요. 트랜잭션을 보류시키면 커넥션을 잡고 있지 않아서 리소스 낭비를 줄일 수 있어요.
+트랜잭션이 필요 없는 작업(외부 API 호출, 파일 처리 등)에서 사용합니다. 트랜잭션을 보류시키면 커넥션을 잡고 있지 않아서 리소스 낭비를 줄일 수 있습니다.
 
 ### MANDATORY
 
-반드시 기존 트랜잭션 안에서 실행되어야 해요. 트랜잭션 없이 호출하면 예외가 발생해요.
+반드시 기존 트랜잭션 안에서 실행되어야 합니다. 트랜잭션 없이 호출하면 예외가 발생합니다.
 
 ![](/uploads/theory/jpa-persistence-context/mandatory-propagation.svg)
 
 
-"이 메서드는 단독으로 호출하면 안 돼"라는 제약을 걸 때 사용해요. 실수로 트랜잭션 없이 호출하면 바로 에러가 나니까 버그를 빨리 잡을 수 있어요.
+"이 메서드는 단독으로 호출하면 안 돼"라는 제약을 걸 때 사용합니다. 실수로 트랜잭션 없이 호출하면 바로 에러가 나니까 버그를 빨리 잡을 수 있습니다.
 
 ### NEVER
 
-트랜잭션 없이 실행해요. 기존 트랜잭션이 있으면 예외가 발생하고요.
+트랜잭션 없이 실행합니다. 기존 트랜잭션이 있으면 예외가 발생합니다.
 
 ![](/uploads/theory/jpa-persistence-context/never-propagation.svg)
 
 
-MANDATORY의 반대예요. "이 메서드는 트랜잭션 안에서 호출하면 안 돼"라는 제약이에요. 거의 안 써요.
+MANDATORY의 반대입니다. "이 메서드는 트랜잭션 안에서 호출하면 안 돼"라는 제약입니다. 거의 쓰지 않습니다.
 
 ### NESTED
 
-얘는 좀 특이해요. 부모 트랜잭션 안에 자식 트랜잭션을 만드는 건데요:
+얘는 좀 특이합니다. 부모 트랜잭션 안에 자식 트랜잭션을 만듭니다:
 - 자식이 롤백되어도 부모는 커밋 가능
 - 부모가 롤백되면 자식도 같이 롤백
 
-JDBC savepoint 기능을 쓰는 거라 JPA에서는 사용 못해요. 그래서 잘 안 써요.
+JDBC savepoint 기능을 쓰는 것이라 JPA에서는 사용하지 못합니다. 그래서 잘 쓰지 않습니다.
 
 > **참고:** [MangKyu - 스프링의 트랜잭션 전파 속성](https://mangkyu.tistory.com/269)
 
@@ -327,12 +327,12 @@ JDBC savepoint 기능을 쓰는 거라 JPA에서는 사용 못해요. 그래서 
 
 ## 롤백 규칙
 
-기본적으로 RuntimeException이 터지면 롤백, Checked Exception은 롤백 안 돼요.
+기본적으로 RuntimeException이 터지면 롤백되고, Checked Exception은 롤백되지 않습니다.
 
 ![](/uploads/theory/jpa-persistence-context/rollback-rules.svg)
 
 
-왜 이런 규칙이냐면, EJB 시절부터 내려온 관례예요:
+왜 이런 규칙이냐면, EJB 시절부터 내려온 관례입니다:
 - RuntimeException: 시스템 오류라서 복구 불가능하니까 롤백
 - Checked Exception: 비즈니스 예외로 예상된 상황이니까 커밋 후 처리
 
@@ -341,7 +341,7 @@ Checked Exception에서도 롤백하고 싶으면:
 ![](/uploads/theory/jpa-persistence-context/rollback-checked-exception.svg)
 
 
-그리고 예외를 catch해서 삼키면 롤백 안 돼요. 롤백하려면 다시 던지거나 `setRollbackOnly()`를 호출해야 해요.
+그리고 예외를 catch해서 삼키면 롤백되지 않습니다. 롤백하려면 다시 던지거나 `setRollbackOnly()`를 호출해야 합니다.
 
 > **참고:** [Rolling Back a Declarative Transaction - Spring Docs](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html)
 
@@ -349,11 +349,11 @@ Checked Exception에서도 롤백하고 싶으면:
 
 ## 배운점
 
-이번에 트랜잭션 관련 내용을 정리하면서 가장 크게 깨달은 건 **"트랜잭션의 경계"**에 대한 이해였어요.
+이번에 트랜잭션 관련 내용을 정리하면서 가장 크게 깨달은 건 **"트랜잭션의 경계"**에 대한 이해였습니다.
 
 ### 외부 시스템은 트랜잭션 밖이다
 
-R2나 S3 같은 외부 스토리지는 DB 트랜잭션 안에 포함되지 않아요. 당연한 얘기지만, 직접 부딪혀보기 전까지는 크게 신경 쓰지 않았던 부분이에요.
+R2나 S3 같은 외부 스토리지는 DB 트랜잭션 안에 포함되지 않습니다. 당연한 얘기지만, 직접 부딪혀보기 전까지는 크게 신경 쓰지 않았던 부분입니다.
 
 ```java
 @Transactional
@@ -364,37 +364,37 @@ public void updateProfile(...) {
 }
 ```
 
-만약 ①②가 성공하고 ③에서 예외가 터지면? DB는 롤백되는데 R2 파일은 이미 삭제돼요. 데이터 불일치가 발생하죠.
+만약 ①②가 성공하고 ③에서 예외가 터지면? DB는 롤백되는데 R2 파일은 이미 삭제됩니다. 데이터 불일치가 발생합니다.
 
-그래서 `@TransactionalEventListener(AFTER_COMMIT)`을 써서 DB 커밋이 성공한 후에만 외부 시스템 작업을 하도록 했어요.
+그래서 `@TransactionalEventListener(AFTER_COMMIT)`을 써서 DB 커밋이 성공한 후에만 외부 시스템 작업을 하도록 했습니다.
 
 ### AFTER_COMMIT의 함정
 
-근데 여기서 또 한 가지 함정이 있었어요. AFTER_COMMIT 시점에서 `@Transactional` 메서드를 호출하면 당연히 새 트랜잭션이 시작될 줄 알았는데, 실제로는 DB에 반영이 안 됐거든요.
+근데 여기서 또 한 가지 함정이 있었습니다. AFTER_COMMIT 시점에서 `@Transactional` 메서드를 호출하면 당연히 새 트랜잭션이 시작될 줄 알았는데, 실제로는 DB에 반영이 안 됐습니다.
 
-알고 보니 DB 트랜잭션은 이미 종료됐지만 스프링 트랜잭션 컨텍스트는 아직 정리 전이라서, 기본 전파 속성(REQUIRED)으로는 "이미 종료된 트랜잭션에 참여"하려고 시도하기 때문이었어요.
+알고 보니 DB 트랜잭션은 이미 종료됐지만 스프링 트랜잭션 컨텍스트는 아직 정리 전이라서, 기본 전파 속성(REQUIRED)으로는 "이미 종료된 트랜잭션에 참여"하려고 시도하기 때문이었습니다.
 
-`REQUIRES_NEW`로 명시적으로 새 트랜잭션을 시작해야 한다는 걸 배웠어요.
+`REQUIRES_NEW`로 명시적으로 새 트랜잭션을 시작해야 한다는 걸 배웠습니다.
 
 ### readOnly는 양날의 검
 
-`@Transactional(readOnly = true)`가 성능에 좋다고 해서 무분별하게 쓰면 안 된다는 것도 알게 됐어요.
+`@Transactional(readOnly = true)`가 성능에 좋다고 해서 무분별하게 쓰면 안 된다는 것도 알게 됐습니다.
 
 - Dirty Checking 생략 → 성능 향상
 - 근데 `@Version` 기반 낙관적 락도 무력화됨
 - 실수로 수정해도 에러 안 나고 조용히 무시됨
 
-**"조회니까 무조건 readOnly"가 아니라, 수정 가능성이 조금이라도 있으면 쓰면 안 돼요.**
+**조회 메서드라도 수정 가능성이 조금이라도 있으면 readOnly를 쓰면 안 됩니다.**
 
 ### 전파 속성은 실제로 몇 개만 쓴다
 
-7가지 전파 속성을 다 정리했지만, 실무에서는 거의 `REQUIRED`랑 `REQUIRES_NEW`만 써요. 나머지는 특수한 상황에서나 쓰고, 대부분은 기본값으로 충분해요.
+7가지 전파 속성을 다 정리했지만, 실무에서는 거의 `REQUIRED`랑 `REQUIRES_NEW`만 씁니다. 나머지는 특수한 상황에서나 쓰고, 대부분은 기본값으로 충분합니다.
 
-근데 `REQUIRES_NEW`를 쓸 때 **커넥션 2개를 동시에 쓴다**는 점은 알고 있어야 해요. 남용하면 커넥션 풀 고갈될 수 있거든요.
+근데 `REQUIRES_NEW`를 쓸 때 **커넥션 2개를 동시에 쓴다**는 점은 알고 있어야 합니다. 남용하면 커넥션 풀 고갈될 수 있습니다.
 
 ### 결론
 
-결국 이번 정리를 통해 **"@Transactional 하나 붙이면 끝"이 아니라, 내부 동작 원리를 알아야 제대로 쓸 수 있다**는 걸 깨달았어요. 특히 프록시 동작 방식, 물리/논리 트랜잭션 구분, 외부 시스템과의 경계 등은 알고 있어야 디버깅할 때 헤매지 않거든요.
+결국 이번 정리를 통해 **@Transactional은 붙이기만 한다고 끝나는 게 아니라, 내부 동작 원리를 알아야 제대로 쓸 수 있다**는 걸 깨달았습니다. 특히 프록시 동작 방식, 물리/논리 트랜잭션 구분, 외부 시스템과의 경계 등은 알고 있어야 디버깅할 때 헤매지 않습니다.
 
 ---
 

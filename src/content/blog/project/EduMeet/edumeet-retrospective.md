@@ -38,7 +38,7 @@ EduMeet은 **실시간 음성-자막 변환으로 청각장애인의 학습을 �
 
 ## 주요 구현
 
-### N+1 문제 해결 — 쿼리 12개 → 4개, 응답 66.9% 개선
+### N+1 문제 해결: 쿼리 12개 → 4개, 응답 66.9% 개선
 
 Board-BoardImage-Reply 3개 테이블(1:N 관계)에서 게시판 목록 조회 시, 페이지 사이즈 10건마다 board_image를 개별 SELECT하는 N+1 문제를 발견했습니다. Hibernate SQL 로그와 통계 기능으로 쿼리 12개(목록 1 + N+1 10 + COUNT 1) 실행을 확인했습니다.
 
@@ -54,7 +54,7 @@ MySQL로 테스트를 돌리면 9.57초가 걸렸습니다. 디스크 I/O와 TCP
 
 > 상세 분석: [단위테스트 DB 마이그레이션](/blog/project/edumeet/unit-test-db-migration)
 
-### S3 이미지 업로드 최적화 — 용량 91.8% 감소
+### S3 이미지 업로드 최적화: 용량 91.8% 감소
 
 원본 이미지(약 5MB, 4032×3024)를 썸네일(약 410KB, 800×600)로 리사이징하여 **91.8% 용량 감소**를 달성했습니다. Stream/MultipartFile/AWS Multipart 3가지 업로드 방식을 비교하고, 서버 리사이징이 필수인 요구사항에 맞춰 MultipartFile을 선택했습니다.
 
@@ -76,7 +76,7 @@ DB PK는 InnoDB Clustered Index와의 호환성을 위해 Auto Increment, 외부
 
 3. **N+1 문제 발견**: @EntityGraph를 적용하면서 Lazy 로딩의 동작 원리를 파악했기에, 게시판 목록 조회에서 N+1이 발생하는 근본 원인(프록시 초기화 → 루프 내 추가 쿼리)을 빠르게 짚을 수 있었습니다. → [상세](/blog/project/edumeet/n-plus-1-issue)
 
-### QueryDSL 파일 이동 오류 — 아키텍처 원칙 vs 프레임워크 규칙
+### QueryDSL 파일 이동 오류: 아키텍처 원칙 vs 프레임워크 규칙
 
 레이어드 아키텍처에서 구현체를 Infrastructure 레이어로 이동했더니 "No property searchAll found for type Board" 에러가 발생했습니다. Spring Data JPA의 Custom Repository 네이밍 규칙과 레이어 분리 원칙이 충돌한 건데, AI가 제안한 2가지 방법 대신 **extends 분리 + 독립 빈 주입**이라는 아키텍처 관점의 해법을 선택했습니다.
 

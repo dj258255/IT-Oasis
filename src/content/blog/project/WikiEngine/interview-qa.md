@@ -108,7 +108,7 @@ ProxySQL은 쿼리를 SQL 레벨에서 파싱하여 SELECT/INSERT를 분기합�
 
 **Q: "DataSource 라우팅은 어떻게 구현했나요?"**
 
-`AbstractRoutingDataSource`를 상속하여 `TransactionSynchronizationManager.isCurrentTransactionReadOnly()`로 readOnly 트랜잭션이면 'replica', 아니면 'primary'를 반환합니다. 핵심은 `LazyConnectionDataSourceProxy`로 감싸는 것입니다. Spring은 트랜잭션 동기화 전에 `getConnection()`을 호출하므로, LazyProxy 없이는 readOnly 플래그가 항상 false를 반환합니다. HikariCP 풀은 Primary 5개 + Replica 15개로 분리했고(합계 20개 유지), 실측 결과 Primary Active 0~2, Replica Active 3~5로 안정적이었습니다. 또한 `@Configuration(proxyBeanMethods=false)` 환경에서는 `@Qualifier` 파라미터 주입을 써야 `@ConfigurationProperties`가 적용된 빈을 받을 수 있습니다 — 직접 메서드 호출은 빈 HikariDataSource를 생성합니다.
+`AbstractRoutingDataSource`를 상속하여 `TransactionSynchronizationManager.isCurrentTransactionReadOnly()`로 readOnly 트랜잭션이면 'replica', 아니면 'primary'를 반환합니다. 핵심은 `LazyConnectionDataSourceProxy`로 감싸는 것입니다. Spring은 트랜잭션 동기화 전에 `getConnection()`을 호출하므로, LazyProxy 없이는 readOnly 플래그가 항상 false를 반환합니다. HikariCP 풀은 Primary 5개 + Replica 15개로 분리했고(합계 20개 유지), 실측 결과 Primary Active 0~2, Replica Active 3~5로 안정적이었습니다. 또한 `@Configuration(proxyBeanMethods=false)` 환경에서는 `@Qualifier` 파라미터 주입을 써야 `@ConfigurationProperties`가 적용된 빈을 받을 수 있습니다. 직접 메서드 호출은 빈 HikariDataSource를 생성합니다.
 
 **Q: "Replication Lag이 크면 어떻게 되나요?"**
 
@@ -144,7 +144,7 @@ Replication After 측정에서 100 VU 부하 시 App CPU가 100%에 도달하여
 
 **Q: "Lucene 인덱스 동기화는 어떻게 했나요?"**
 
-MySQL Primary-Replica와 동일한 패턴을 적용했습니다. Nginx에서 HTTP 메서드 기반 라우팅으로 쓰기(POST/PUT/DELETE)를 App 1(Lucene Primary)로 고정하고, 읽기(GET)를 양쪽에 분산합니다. App 2의 Lucene은 5분 주기 rsync로 App 1의 인덱스를 복사합니다. 단순 rsync만으로는 안전하지 않습니다 — rsync는 파일 복사 순서를 보장하지 않아 segments_N이 세그먼트 파일보다 먼저 도착할 수 있고(LUCENE-628), IndexWriter 머지 중 세그먼트가 삭제될 수도 있습니다. 이를 해결하기 위해 두 가지 메커니즘을 적용합니다: App 1 측 `SnapshotDeletionPolicy`로 세그먼트 삭제를 방지하고, App 2 측 Refresh Pause로 rsync 중 `maybeRefresh()` 발동을 차단합니다.
+MySQL Primary-Replica와 동일한 패턴을 적용했습니다. Nginx에서 HTTP 메서드 기반 라우팅으로 쓰기(POST/PUT/DELETE)를 App 1(Lucene Primary)로 고정하고, 읽기(GET)를 양쪽에 분산합니다. App 2의 Lucene은 5분 주기 rsync로 App 1의 인덱스를 복사합니다. 단순 rsync만으로는 안전하지 않습니다. rsync는 파일 복사 순서를 보장하지 않아 segments_N이 세그먼트 파일보다 먼저 도착할 수 있고(LUCENE-628), IndexWriter 머지 중 세그먼트가 삭제될 수도 있습니다. 이를 해결하기 위해 두 가지 메커니즘을 적용합니다: App 1 측 `SnapshotDeletionPolicy`로 세그먼트 삭제를 방지하고, App 2 측 Refresh Pause로 rsync 중 `maybeRefresh()` 발동을 차단합니다.
 
 **Q: "NFS로 Lucene 인덱스를 공유하면 안 되나요?"**
 
@@ -302,11 +302,11 @@ MapReduce 결과를 DB에 쓸 때 CDC(Change Data Capture)로 **변경분만** A
 
 ---
 
-## CDC (Change Data Capture) — 이벤트 기반 동기화
+## CDC (Change Data Capture): 이벤트 기반 동기화
 
 **Q: "왜 Kafka를 안 쓰고 Spring Event부터 시작하나요?"**
 
-Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier에서 서버 2대의 여유 메모리로는 부족합니다. 하지만 문제의 핵심은 '메시지 브로커가 없다'가 아니라 'PostService가 6개 Read Model에 직접 결합되어 있다'입니다. Spring ApplicationEvent로 디커플링하면, 나중에 Kafka로 전환할 때 EventHandler만 Consumer로 교체하면 됩니다. 이 점진적 진화는 실무에서도 일반적인 접근입니다 — 처음부터 Kafka를 도입하기보다, 먼저 이벤트 기반 구조를 잡고 인프라를 점진적으로 확장합니다.
+Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier에서 서버 2대의 여유 메모리로는 부족합니다. 하지만 문제의 핵심은 '메시지 브로커가 없다'가 아니라 'PostService가 6개 Read Model에 직접 결합되어 있다'입니다. Spring ApplicationEvent로 디커플링하면, 나중에 Kafka로 전환할 때 EventHandler만 Consumer로 교체하면 됩니다. 이 점진적 진화는 실무에서도 일반적인 접근입니다. 처음부터 Kafka를 도입하기보다, 먼저 이벤트 기반 구조를 잡고 인프라를 점진적으로 확장합니다.
 
 **Q: "Spring Event는 이벤트가 유실될 수 있지 않나요?"**
 
@@ -326,7 +326,7 @@ Kafka + Debezium은 최소 5~8G RAM이 필요합니다. Oracle Cloud Free Tier�
 
 **Q: "EventHandler 멱등성은 어떻게 보장하나요?"**
 
-Lucene의 `updateDocument()`는 Term 기준으로 기존 문서를 삭제 후 재삽입하므로 자연 멱등적입니다. 캐시 `evict()`도 키가 없으면 no-op이라 멱등적입니다. 주의할 건 좋아요 카운터입니다 — `INCREMENT` 방식은 중복 실행 시 이중 증가하므로, 이벤트에 변경 후 절대값(예: likeCount=42)을 포함하여 `SET` 방식으로 갱신합니다. 설계 원칙은 '이벤트 핸들러는 SET, INCREMENT 금지'입니다.
+Lucene의 `updateDocument()`는 Term 기준으로 기존 문서를 삭제 후 재삽입하므로 자연 멱등적입니다. 캐시 `evict()`도 키가 없으면 no-op이라 멱등적입니다. 주의할 건 좋아요 카운터입니다. `INCREMENT` 방식은 중복 실행 시 이중 증가하므로, 이벤트에 변경 후 절대값(예: likeCount=42)을 포함하여 `SET` 방식으로 갱신합니다. 설계 원칙은 '이벤트 핸들러는 SET, INCREMENT 금지'입니다.
 
 **Q: "이미 Redis 쓰고 있는데 Redis Stream으로 하면 안 되나요? 왜 Kafka?"**
 

@@ -1,5 +1,5 @@
 ---
-title: 'Trie 기반 자동완성 — 사전순 → 인기순, 한글 자모 검색'
+title: 'Trie 기반 자동완성: 사전순 → 인기순, 한글 자모 검색'
 titleEn: 'Trie-Based Autocomplete — From Lexicographic to Popularity Ranking with Korean Jamo Support'
 description: Lucene PrefixQuery의 사전순 자동완성을 검색 로그 기반 인메모리 Trie로 전환하여 인기순 정렬 + 한글 자모 중간 입력("삼ㅅ" → "삼성전자") + 초성 검색("ㅅㅅ" → "삼성전자")을 구현한 과정을 정리합니다.
 descriptionEn: Replaces Lucene PrefixQuery lexicographic autocomplete with search-log-based in-memory Trie, implementing popularity ranking, Korean jamo mid-input matching, and choseong search.
@@ -32,11 +32,11 @@ Caffeine 캐시 덕분에 자동완성은 대부분 0.1ms에 반환됩니다. �
 
 ---
 
-## 1. 문제 — "삼성"을 입력하면 "르노삼성 QM3"이 먼저 나온다
+## 1. 문제: "삼성"을 입력하면 "르노삼성 QM3"이 먼저 나온다
 
 Lucene PrefixQuery는 term dictionary를 사전순(lexicographic order)으로 순회합니다. "삼성"으로 시작하는 제목 중 "ㄹ(르노삼성)"이 "ㅅ(삼성전자)"보다 유니코드 순서가 앞이므로, 사용자가 원하는 "삼성전자"가 아닌 "르노삼성 QM3"이 먼저 표시됩니다.
 
-![자동완성 Before — 사전순](/uploads/project/WikiEngine/trie-autocomplete/A-0-autocomplete-before.png)
+![자동완성 Before: 사전순](/uploads/project/WikiEngine/trie-autocomplete/A-0-autocomplete-before.png)
 
 PrefixQuery에 score를 부여하려면 전체 매칭 결과를 가져온 뒤 별도 정렬이 필요하여, prefix 검색의 O(m) 이점이 사라집니다.
 
@@ -44,7 +44,7 @@ PrefixQuery에 score를 부여하려면 전체 매칭 결과를 가져온 뒤 �
 
 ---
 
-## 2. 해결 전략 — 검색 로그 + 인메모리 Trie + 자모 분해
+## 2. 해결 전략: 검색 로그 + 인메모리 Trie + 자모 분해
 
 세 가지를 조합하여 해결했습니다:
 
@@ -54,7 +54,7 @@ PrefixQuery에 score를 부여하려면 전체 매칭 결과를 가져온 뒤 �
 
 ---
 
-## 3. 검색 로그 수집 — 시간 버킷 집계
+## 3. 검색 로그 수집: 시간 버킷 집계
 
 ### 왜 검색 로그가 필요한가
 
@@ -82,7 +82,7 @@ CREATE TABLE search_logs (
 
 누적 카운트는 "10000회가 6개월 전인지 오늘인지" 구분할 수 없어 시간 감쇠 점수 계산이 불가능합니다. 시간 버킷이면 `WHERE time_bucket >= NOW() - INTERVAL 7 DAY`로 윈도우별 집계가 가능합니다.
 
-### SearchLogCollector — volatile swap flush
+### SearchLogCollector: volatile swap flush
 
 매 요청마다 DB INSERT하면 쓰기 부하가 문제됩니다. `ConcurrentHashMap`에 인메모리 집계 후 5분마다 batch upsert합니다.
 
@@ -110,7 +110,7 @@ public void flush() {
 
 ---
 
-## 4. 인메모리 Trie — Copy-on-Write + 검색 로그 기반 초기화
+## 4. 인메모리 Trie: Copy-on-Write + 검색 로그 기반 초기화
 
 ### Copy-on-Write (volatile reference swap)
 
@@ -149,11 +149,11 @@ void initialize() {
 - 검색 로그가 없으면 빈 Trie → Lucene PrefixQuery fallback → **기존과 동일하게 동작**
 - 검색 로그가 쌓이면 자동으로 Trie가 풍부해짐
 
-![Trie 초기화 로그 — 41건, 185ms](/uploads/project/WikiEngine/trie-autocomplete/B-3-app-log-trie-init.png)
+![Trie 초기화 로그: 41건, 185ms](/uploads/project/WikiEngine/trie-autocomplete/B-3-app-log-trie-init.png)
 
 ### Before vs After
 
-![자동완성 After — 삼성전자 (인기순)](/uploads/project/WikiEngine/trie-autocomplete/B-4-api-trie-hit.png)
+![자동완성 After: 삼성전자 (인기순)](/uploads/project/WikiEngine/trie-autocomplete/B-4-api-trie-hit.png)
 
 | | Before (Lucene PrefixQuery) | After (Trie + 검색 로그) |
 |---|---|---|
@@ -163,13 +163,13 @@ void initialize() {
 
 ---
 
-## 5. 한글 자모 분해 — "삼ㅅ" → "삼성전자"
+## 5. 한글 자모 분해: "삼ㅅ" → "삼성전자"
 
 ### 문제
 
 한글은 자모 단위로 입력됩니다. "삼성"을 입력하는 과정에서 "삼ㅅ" 상태가 존재하는데, 원본 Trie는 완성된 음절("삼성")만 처리하므로 "삼ㅅ"에서 매칭이 끊깁니다.
 
-### 구현 — 원본 Trie + 자모 Trie 이중 구조
+### 구현: 원본 Trie + 자모 Trie 이중 구조
 
 한글 음절(U+AC00~U+D7AF)을 초성/중성/종성으로 분해합니다:
 
@@ -196,9 +196,9 @@ Before (버그): "삼ㅅ" → 자모Trie.search("삼ㅅ") → 매칭 실패
 After (수정): "삼ㅅ" → decompose("삼ㅅ")="ㅅㅏㅁㅅ" → 자모Trie.search("ㅅㅏㅁㅅ") → 삼성전자
 ```
 
-![자모 중간 입력 — "삼ㅅ" → 삼성전자](/uploads/project/WikiEngine/trie-autocomplete/C-2-api-jamo-middle.png)
+![자모 중간 입력: "삼ㅅ" → 삼성전자](/uploads/project/WikiEngine/trie-autocomplete/C-2-api-jamo-middle.png)
 
-![초성 검색 — "ㅅㅅ" → 삼성전자, 삼성sdi, 삼성물산](/uploads/project/WikiEngine/trie-autocomplete/C-3-api-choseong.png)
+![초성 검색: "ㅅㅅ" → 삼성전자, 삼성sdi, 삼성물산](/uploads/project/WikiEngine/trie-autocomplete/C-3-api-choseong.png)
 
 ---
 
@@ -215,7 +215,7 @@ After (수정): "삼ㅅ" → decompose("삼ㅅ")="ㅅㅏㅁㅅ" → 자모Trie.s
 
 k6 후 검색 로그: 49개 고유 검색어, 인공지능 78회 1위.
 
-![검색 로그 — k6 후](/uploads/project/WikiEngine/trie-autocomplete/D-6-search-logs-after-k6.png)
+![검색 로그: k6 후](/uploads/project/WikiEngine/trie-autocomplete/D-6-search-logs-after-k6.png)
 
 ---
 
@@ -225,7 +225,7 @@ k6 후 검색 로그: 49개 고유 검색어, 인공지능 78회 1위.
 |------|------|------|
 | `ORDER BY (view_count + like_count)` 기동 실패 | 인덱스 없는 표현식 정렬 → 14.25M건 Full Scan → connection leak | 검색 로그 기반으로 전환 |
 | `@PostConstruct` 기동 블로킹 | Trie 로드 시 health check 타임아웃 | `@EventListener(ApplicationReadyEvent)` |
-| viewCount=0 (위키 덤프) | Cold start — 인기도 데이터 없음 | search_logs 축적 → Trie rebuild |
+| viewCount=0 (위키 덤프) | Cold start, 인기도 데이터 없음 | search_logs 축적 → Trie rebuild |
 | `snapshot + clear()` 데이터 유실 | snapshot과 clear 사이에 record()가 끼어들면 유실 | volatile 참조 교체 (swap) |
 | `fixedRate` 데드락 가능 | 이전 flush 미완료 시 다음 flush 겹침 | `fixedDelay`로 변경 |
 | "삼ㅅ" 자모 검색 실패 | 자모 포함 입력을 분해하지 않고 검색 | 전체 분해 후 자모 Trie 검색 |

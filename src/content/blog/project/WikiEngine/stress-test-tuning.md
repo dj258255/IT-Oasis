@@ -1,5 +1,5 @@
 ---
-title: 'stress 테스트로 단일 서버 한계 확인 — 튜닝 실패에서 배운 것'
+title: 'stress 테스트로 단일 서버 한계 확인: 튜닝 실패에서 배운 것'
 titleEn: 'Stress Testing Single Server Limits — Lessons from a Failed Tuning Attempt'
 description: k6 stress 테스트(200 VU, 25분)로 단일 서버(ARM 2코어, 12GB)의 한계점(~100-150 VU)을 수치로 확인하고, JVM/Tomcat 튜닝이 CPU-bound 병목에서 역효과를 낸 과정과 배포 미반영 사고를 기록합니다.
 descriptionEn: Identifies single server limits (~100-150 VU) via k6 stress testing (200 VU, 25min), documents how JVM/Tomcat tuning backfired under CPU-bound bottleneck, and records a deployment misconfiguration incident.
@@ -45,9 +45,9 @@ stress 테스트로 단일 서버의 **한계점(breaking point)**을 수치로 
 
 | 테스트 | 목적 | VU | 시간 | 이 프로젝트에서의 의미 |
 |--------|------|-----|------|---------------------|
-| smoke | 동작 확인 | 5 | 2분 | "안 터지나?" — 이미 수행 완료 |
-| load | 예상 트래픽 성능 | 100 | 20분 | "정상 부하에서 성능은?" — 이미 수행 완료 |
-| **stress** | **한계점 탐색** | **200** | **25분** | **"어디서 터지나?" — 이 글에서 수행** |
+| smoke | 동작 확인 | 5 | 2분 | "안 터지나?" (이미 수행 완료) |
+| load | 예상 트래픽 성능 | 100 | 20분 | "정상 부하에서 성능은?" (이미 수행 완료) |
+| **stress** | **한계점 탐색** | **200** | **25분** | **"어디서 터지나?" (이 글에서 수행)** |
 | soak | 장기 안정성 | 50 | 4시간 | 분산 인프라 구축 후 |
 
 ---
@@ -64,7 +64,7 @@ stress 테스트로 단일 서버의 **한계점(breaking point)**을 수치로 
 
 ### k6 stress 프로필
 
-![k6 stress 프로필 — 200 VU까지 단계적 증가 후 회복](/uploads/project/WikiEngine/stress-test-tuning/stress-profile.svg)
+![k6 stress 프로필: 200 VU까지 단계적 증가 후 회복](/uploads/project/WikiEngine/stress-test-tuning/stress-profile.svg)
 
 > **25분 설정 근거**: k6 공식 권장은 ramp-up의 5배 이상 지속이므로 이상적으로는 45분+. 하지만 ARM 2코어 서버에서 200 VU를 30분 이상 유지하면 서버 자체가 불안정해질 수 있으므로, 과부하 구간 10분 + 회복 구간 5분 = 25분으로 설정. 한계점 확인이 목적이므로 지속 시간보다 **VU 수(200)**가 더 중요.
 
@@ -205,7 +205,7 @@ searchResults 96%라도 **4% 캐시 미스가 200 VU에서는 ~8 req/s의 Lucene
 
 ### 서버 메모리 배분
 
-![서버 메모리 배분 — 튜닝 전후](/uploads/project/WikiEngine/stress-test-tuning/memory-allocation.svg)
+![서버 메모리 배분: 튜닝 전후](/uploads/project/WikiEngine/stress-test-tuning/memory-allocation.svg)
 
 ### 적용한 튜닝
 
@@ -223,7 +223,7 @@ searchResults 96%라도 **4% 캐시 미스가 200 VU에서는 ~8 req/s의 Lucene
 
 ---
 
-## 2차 stress 결과 (튜닝 후 — 역효과 발생)
+## 2차 stress 결과 (튜닝 후, 역효과 발생)
 
 **결과: 모든 지표가 악화되었다.**
 
@@ -258,9 +258,9 @@ $ docker exec wiki-app-prod java -XshowSettings:vm -version 2>&1 | grep -i heap
   Max. Heap Size (Estimated): 512.00M
 ```
 
-**512MB** — 2g는커녕 1g도 아니었음.
+**512MB**. 2g는커녕 1g도 아니었음.
 
-![JVM Heap Max 512MB — Xmx 2g 미적용 확인](/uploads/project/WikiEngine/stress-test-tuning/B-12-jvm-heap-512m.png)
+![JVM Heap Max 512MB: Xmx 2g 미적용 확인](/uploads/project/WikiEngine/stress-test-tuning/B-12-jvm-heap-512m.png)
 
 ### 배포 미반영 발견 과정
 
@@ -321,9 +321,9 @@ JVM/Tomcat 튜닝을 시도했지만, **근본 병목이 GC가 아니라 CPU 자
 GC 튜닝이 필요한 건 "GC pause가 수백ms~초 단위로 응답시간을 잡아먹을 때"다. 이 프로젝트에서는 GC가 정상 범위였고, CPU 100% 포화가 진짜 병목이었다. Tomcat 스레드를 줄여봤지만 CPU-bound 상황에서 동시 처리 용량만 줄어들어 79% 악화. **"GC가 아닌 곳을 튜닝하면 효과가 없거나 역효과"**라는 것을 실측으로 확인했다.
 
 최적화 순서의 정석:
-1. 애플리케이션 레벨 최적화 (코드, 쿼리, 캐싱) — [캐싱 전략](/blog/project/wikiengine/caching-strategy)~[Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 완료
-2. 아키텍처 변경 (분산 캐시, DB 분산, 스케일아웃) — 다음에서 수행
-3. JVM/GC 튜닝 — 1, 2를 다 한 후에도 **GC가 병목일 때만**
+1. 애플리케이션 레벨 최적화 (코드, 쿼리, 캐싱): [캐싱 전략](/blog/project/wikiengine/caching-strategy)~[Trie 자동완성](/blog/project/wikiengine/trie-autocomplete)에서 완료
+2. 아키텍처 변경 (분산 캐시, DB 분산, 스케일아웃): 다음에서 수행
+3. JVM/GC 튜닝: 1, 2를 다 한 후에도 **GC가 병목일 때만**
 
 ---
 
@@ -338,16 +338,16 @@ GC 튜닝이 필요한 건 "GC pause가 수백ms~초 단위로 응답시간을 �
 
 **이 프로젝트에서 스케일 아웃을 선택한 이유:**
 
-1. **Oracle Cloud Free Tier라 스케일 업 불가** — ARM 2코어/12GB가 Free Tier 최대 사양
-2. **CPU가 병목** — 코어 수를 늘려야 하는데, 같은 서버에서는 불가
-3. **고가용성** — 서버 1대가 죽으면 전체 서비스 중단. 2대 이상이면 장애 격리 가능
-4. **확장 경로의 타당성** — 스케일 업은 단기 완화에는 유효하지만, 현재 제약에서는 불가능했다. 반면 스케일 아웃은 상태 공유, 로드밸런싱, 세션/캐시 일관성을 함께 정리해야 하므로 이후 구조 변경의 방향과도 맞았다
+1. **Oracle Cloud Free Tier라 스케일 업 불가**: ARM 2코어/12GB가 Free Tier 최대 사양
+2. **CPU가 병목**: 코어 수를 늘려야 하는데, 같은 서버에서는 불가
+3. **고가용성**: 서버 1대가 죽으면 전체 서비스 중단. 2대 이상이면 장애 격리 가능
+4. **확장 경로의 타당성**: 스케일 업은 단기 완화에는 유효하지만, 현재 제약에서는 불가능했다. 반면 스케일 아웃은 상태 공유, 로드밸런싱, 세션/캐시 일관성을 함께 정리해야 하므로 이후 구조 변경의 방향과도 맞았다
 
 > 실무에서는 "먼저 스케일 업(간단) → 한계 오면 스케일 아웃(확장성)"이 일반적이다. Free Tier 제약으로 스케일 업이 불가능하므로 바로 스케일 아웃으로 진행한다.
 
 ---
 
-## CPU 병목 해결 순서 — 왜 바로 스케일 아웃이 아닌가
+## CPU 병목 해결 순서: 왜 바로 스케일 아웃이 아닌가
 
 CPU가 병목이라고 무조건 서버를 늘리는 게 아니다. 실무에서는 아래 순서로 접근한다:
 
@@ -382,7 +382,7 @@ stress 테스트에서 단일 서버 한계를 확인한 후, "대규모에서�
 
 "MapReduce"는 **Hadoop MapReduce 프레임워크가 아니라** "데이터 분배 → 그룹핑 → 집계"라는 사고 패턴입니다.
 
-![대규모 자동완성 파이프라인 — 사고 패턴과 기술 비교](/uploads/project/WikiEngine/stress-test-tuning/mapreduce-pipeline.svg)
+![대규모 자동완성 파이프라인: 사고 패턴과 기술 비교](/uploads/project/WikiEngine/stress-test-tuning/mapreduce-pipeline.svg)
 
 현업(2025년 기준):
 - Hadoop MapReduce는 정부/전통 기업의 레거시 시스템에서만 사용

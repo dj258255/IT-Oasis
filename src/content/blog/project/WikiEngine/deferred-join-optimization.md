@@ -1,5 +1,5 @@
 ---
-title: 'Deferred Join 적용기 — 기대한 40배 vs 현실 13%'
+title: 'Deferred Join 적용기: 기대한 40배 vs 현실 13%'
 titleEn: 'Deferred Join on 14M Rows — Expected 40x vs Actual 13% Improvement'
 description: 1,475만 건 OFFSET 페이지네이션에 Deferred Join을 적용하고, EXPLAIN으로 기대만큼 빠르지 않은 이유를 분석합니다. Slack·Twitter 등 실서비스의 Keyset Pagination 사례와 비교하며 다음 단계를 도출합니다.
 descriptionEn: Applied Deferred Join to 14.75M-row OFFSET pagination, analyzed via EXPLAIN why improvement was only 13% instead of expected 40x, and compared with Keyset Pagination used by Slack and Twitter.
@@ -25,13 +25,13 @@ smoke 테스트 결과, 검색(66ms), 자동완성(25ms), 상세 조회(53ms)는
 
 ---
 
-## 1. 정상 상태 — 시스템이 어떻게 돌아가고 있었는가
+## 1. 정상 상태: 시스템이 어떻게 돌아가고 있었는가
 
 커뮤니티 게시판의 게시글 목록 API입니다.
 
 - **API**: `GET /api/v1.0/posts?page={N}&size=20`
-- **테이블**: `posts` — 1,475만 건
-- **인덱스**: `idx_posts_created_at (created_at DESC)` — Flyway V4에서 생성
+- **테이블**: `posts`, 1,475만 건
+- **인덱스**: `idx_posts_created_at (created_at DESC)`, Flyway V4에서 생성
 - **컬럼**: `id(PK)`, `title(VARCHAR 512)`, `content(LONGTEXT)`, `author_id`, `category_id`, `view_count`, `like_count`, `created_at`, `updated_at`
 
 ![OFFSET 페이지네이션 요청 흐름](/uploads/project/WikiEngine/deferred-join-optimization/request-flow.svg)
@@ -42,11 +42,11 @@ Spring Data JPA의 메서드 이름 기반 쿼리(`findAllByOrderByCreatedAtDesc
 
 ---
 
-## 2. 문제 인식 — 어떤 조건에서, 얼마나 느렸는가
+## 2. 문제 인식: 어떤 조건에서, 얼마나 느렸는가
 
 k6 smoke 테스트(5 VU, 2분)에서 시나리오별 응답 시간을 측정했습니다.
 
-> **테스트 환경**: ARM 2코어 / 12GB RAM — Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB. 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap).
+> **테스트 환경**: ARM 2코어 / 12GB RAM입니다. Spring Boot 2GB(JVM 힙 1GB) + MySQL 4GB(InnoDB BP 2GB) + 모니터링 에이전트 ~1GB이고, 나머지 ~5GB는 OS 페이지 캐시(Lucene MMap)입니다.
 
 | 시나리오 | 평균 | P95 |
 |----------|------|-----|
@@ -69,7 +69,7 @@ page 1000이면 `OFFSET 20,000`입니다. 이 30%의 deep page 요청이 평균�
 
 ---
 
-## 3. 문제 분석 — 왜 느린가
+## 3. 문제 분석: 왜 느린가
 
 ### OFFSET의 동작 원리
 
@@ -84,7 +84,7 @@ page 1000이면 `OFFSET 20,000`입니다. 이 30%의 deep page 요청이 평균�
 
 `created_at DESC` 인덱스가 있으므로 filesort(정렬)는 발생하지 않습니다. 문제는 **"읽고 버리는" 20,000개 행**입니다.
 
-### 왜 "읽고 버리는" 게 비싼가 — InnoDB의 클러스터 인덱스 구조
+### 왜 "읽고 버리는" 게 비싼가: InnoDB의 클러스터 인덱스 구조
 
 InnoDB에서 `SELECT *`가 실행되면:
 
@@ -99,7 +99,7 @@ InnoDB에서 `SELECT *`가 실행되면:
 | 구간 | 비용 | 설명 |
 |------|------|------|
 | 인덱스 탐색 | 낮음 | `idx_posts_created_at`로 created_at 순서대로 PK 획득 |
-| **클러스터 인덱스 랜덤 I/O** | **높음** | PK로 실제 행을 읽음 — LONGTEXT 포함 |
+| **클러스터 인덱스 랜덤 I/O** | **높음** | PK로 실제 행을 읽음(LONGTEXT 포함) |
 | OFFSET 행 버리기 | - | 읽은 20,000개 행을 버림 (I/O는 이미 발생) |
 | 결과 반환 | 낮음 | 남은 20개 행 반환 |
 
@@ -109,11 +109,11 @@ InnoDB에서 `SELECT *`가 실행되면:
 
 OFFSET에서 "읽고 버리는" 비용은 **행의 크기에 비례**합니다. `posts` 테이블의 컬럼 구성을 보면:
 
-![posts 테이블 행 크기 분해 — content가 대부분](/uploads/project/WikiEngine/deferred-join-optimization/row-size-breakdown.svg)
+![posts 테이블 행 크기 분해, content가 대부분](/uploads/project/WikiEngine/deferred-join-optimization/row-size-breakdown.svg)
 
 `content`(LONGTEXT)가 행 크기의 대부분을 차지합니다. 위키피디아 문서 평균 6,586자(약 13KB)이므로, OFFSET 20,000개 행을 읽으면 **약 260MB의 데이터를 읽고 버리는** 셈입니다. 만약 `content` 없이 나머지 컬럼만이라면 ~12MB로 1/20 수준입니다.
 
-이것이 Deferred Join의 핵심 동기입니다 — OFFSET 구간에서는 **id만** 읽고, 최종 결과 20개에 대해서만 전체 행을 읽으면 됩니다.
+이것이 Deferred Join의 핵심 동기입니다. OFFSET 구간에서는 **id만** 읽고, 최종 결과 20개에 대해서만 전체 행을 읽으면 됩니다.
 
 ### MySQL(InnoDB)에서 이 문제가 특히 심한 이유
 
@@ -121,8 +121,8 @@ PostgreSQL이나 Oracle에서는 이 문제가 다른 양상을 보입니다.
 
 | | MySQL (InnoDB) | PostgreSQL / Oracle |
 |--|----------------|---------------------|
-| 테이블 구조 | **클러스터 인덱스** — PK 순서로 데이터가 물리 저장 | **힙 테이블** — 삽입 순서대로 저장 |
-| PK 생성 방식 | `AUTO_INCREMENT` — **테이블 내부**에서 관리 | `SEQUENCE` / `SERIAL` — **테이블 외부** 객체로 관리 |
+| 테이블 구조 | **클러스터 인덱스**, PK 순서로 데이터가 물리 저장 | **힙 테이블**, 삽입 순서대로 저장 |
+| PK 생성 방식 | `AUTO_INCREMENT`, **테이블 내부**에서 관리 | `SEQUENCE` / `SERIAL`, **테이블 외부** 객체로 관리 |
 | 세컨더리 인덱스 | PK 값을 포인터로 저장 → **클러스터 인덱스를 다시 조회**해야 전체 행 획득 | 힙 포인터(ctid/rowid)를 저장 → **직접 힙으로 이동** |
 | OFFSET 시 | 세컨더리 인덱스 → PK 획득 → 클러스터 인덱스에서 **전체 행 읽기** | 인덱스에서 tid 획득 → 힙에서 행 읽기 (Index Only Scan 가능) |
 
@@ -132,7 +132,7 @@ MySQL InnoDB의 세컨더리 인덱스는 힙 포인터가 아닌 **PK 값을 �
 
 ---
 
-## 4. 대안 검토 — 어떤 해결책을 검토했는가
+## 4. 대안 검토: 어떤 해결책을 검토했는가
 
 ### 후보 1: Keyset Pagination (커서 기반)
 
@@ -157,7 +157,7 @@ ORDER BY p.created_at DESC
 
 OFFSET 구조를 유지하면서 성능을 개선합니다. 핵심은 **내부 서브쿼리가 인덱스만 스캔**한다는 점입니다.
 
-- 내부 쿼리: `SELECT id` — `idx_posts_created_at` 인덱스에 `created_at`과 `id`(PK)가 모두 포함되어 있으므로 **Covering Index Scan**으로 처리됩니다. 클러스터 인덱스를 읽을 필요가 없습니다. LONGTEXT를 건드리지 않습니다.
+- 내부 쿼리: `SELECT id`. `idx_posts_created_at` 인덱스에 `created_at`과 `id`(PK)가 모두 포함되어 있으므로 **Covering Index Scan**으로 처리됩니다. 클러스터 인덱스를 읽을 필요가 없습니다. LONGTEXT를 건드리지 않습니다.
 - 외부 쿼리: 내부에서 찾은 **20개 PK로만** 클러스터 인덱스를 조회합니다.
 
 결과적으로 클러스터 인덱스 랜덤 I/O가 20,020회에서 **20회**로 줄어듭니다.
@@ -232,7 +232,7 @@ Service와 Controller는 변경 없이 Repository 쿼리만 교체합니다.
 | 평균 응답시간 | 2,518ms | **2,199ms** | **-13%** |
 | P95 | 3,372ms | **2,741ms** | **-19%** |
 
-![k6 smoke 테스트 — Deferred Join 적용 후 결과](/uploads/project/WikiEngine/deferred-join-optimization/k6-smoke-after.png)
+![k6 smoke 테스트, Deferred Join 적용 후 결과](/uploads/project/WikiEngine/deferred-join-optimization/k6-smoke-after.png)
 
 전체 시나리오 결과 (After):
 
@@ -264,7 +264,7 @@ Deferred Join의 효과는 페이지 깊이에 따라 다르게 나타납니다.
 - 인덱스 스캔이 전체 비용의 **~85%를 차지**하므로, 클러스터 I/O를 제거해도 개선폭이 제한적
 - 그래도 LONGTEXT 읽기가 사라져 13~19%는 확실히 개선됨
 
-![OFFSET 크기와 Deferred Join 효과 — 얕을수록 효과 큼](/uploads/project/WikiEngine/deferred-join-optimization/deferred-join-effect-by-offset.svg)
+![OFFSET 크기와 Deferred Join 효과, 얕을수록 효과 큼](/uploads/project/WikiEngine/deferred-join-optimization/deferred-join-effect-by-offset.svg)
 
 즉, **Deferred Join은 OFFSET이 작을수록 효과가 크고, OFFSET이 커질수록 효과가 줄어듭니다.** 일반 사용자 트래픽의 대부분(~90%)은 page 1~10이므로, 평균 체감 개선은 k6 측정치(13%)보다 훨씬 클 수 있습니다.
 
@@ -272,11 +272,11 @@ Deferred Join의 효과는 페이지 깊이에 따라 다르게 나타납니다.
 
 ---
 
-## 6. EXPLAIN 분석 — 왜 기대만큼 빠르지 않았는가
+## 6. EXPLAIN 분석: 왜 기대만큼 빠르지 않았는가
 
 ### Deferred Join 쿼리의 실행 계획
 
-![EXPLAIN 결과 — Deferred Join 쿼리](/uploads/project/WikiEngine/deferred-join-optimization/explain-deferred-join.png)
+![EXPLAIN 결과, Deferred Join 쿼리](/uploads/project/WikiEngine/deferred-join-optimization/explain-deferred-join.png)
 
 ```sql
 EXPLAIN SELECT p.* FROM posts p
@@ -293,16 +293,16 @@ ORDER BY p.created_at DESC;
 | 1 | PRIMARY | p | eq_ref | PRIMARY | 1 | |
 | 2 | DERIVED | posts | index | idx_posts_created_at | 20,020 | **Using index** |
 
-![idx_posts_created_at 인덱스 — Collation D(DESC), Cardinality 11,612,065](/uploads/project/WikiEngine/deferred-join-optimization/show-index-created-at.png)
+![idx_posts_created_at 인덱스, Collation D(DESC), Cardinality 11,612,065](/uploads/project/WikiEngine/deferred-join-optimization/show-index-created-at.png)
 
 ### 행별 해석
 
-**id=2 (DERIVED — 내부 서브쿼리):**
+**id=2 (DERIVED, 내부 서브쿼리):**
 - `type=index`, `key=idx_posts_created_at`, `Extra=Using index`
 - **Covering Index Scan**: 인덱스만으로 20,020개 PK를 획득. 클러스터 인덱스를 읽지 않음
 - 이 부분은 의도대로 동작하고 있음
 
-**id=1 (PRIMARY — 외부 조인):**
+**id=1 (PRIMARY, 외부 조인):**
 - `<derived2>` 테이블: `type=ALL`, `Using temporary; Using filesort`
 - `p` 테이블: `type=eq_ref`, `key=PRIMARY`, `rows=1`
 - 서브쿼리 결과를 임시 테이블로 실체화(materialize)한 뒤, filesort로 정렬
@@ -332,13 +332,13 @@ Deferred Join은 15%에 해당하는 LONGTEXT 읽기를 제거했지만, 85%에 
 
 ### OFFSET이 근본적으로 느린 이유
 
-![OFFSET 스캔 비용 — O(N) 선형 증가](/uploads/project/WikiEngine/deferred-join-optimization/offset-scan-cost.svg)
+![OFFSET 스캔 비용, O(N) 선형 증가](/uploads/project/WikiEngine/deferred-join-optimization/offset-scan-cost.svg)
 
 OFFSET은 "N개를 건너뛰어라"가 아니라 "N개를 읽고 버려라"입니다. 인덱스가 있어도, B-Tree의 리프 노드를 하나씩 따라가며 20,020개를 카운트해야 합니다. 이건 Deferred Join으로 해결할 수 없는 구조적 한계입니다.
 
 ---
 
-## 7. 추가 조치 — 최대 페이지 깊이 제한
+## 7. 추가 조치: 최대 페이지 깊이 제한
 
 EXPLAIN 분석 결과, 병목의 85%가 OFFSET 자체(인덱스 N개 스캔)였습니다. Keyset Pagination으로 전환하기 전에 **즉시 적용 가능한 조치**로 최대 페이지를 200으로 제한했습니다.
 
@@ -381,7 +381,7 @@ Deferred Join(13%)과 페이지 제한을 합치면:
 
 ---
 
-## 8. 실무에서는 어떻게 하는가 — Keyset Pagination
+## 8. 실무에서는 어떻게 하는가: Keyset Pagination
 
 ### 주요 서비스의 페이지네이션 전략
 
@@ -415,7 +415,7 @@ Keyset은 인덱스에서 `created_at < X` 조건으로 바로 시작점을 찾�
 
 | | OFFSET + Deferred Join | Keyset Pagination |
 |--|----------------------|-------------------|
-| 성능 (deep page) | O(OFFSET) — 깊을수록 느림 | **O(1) — 항상 일정** |
+| 성능 (deep page) | O(OFFSET), 깊을수록 느림 | **O(1), 항상 일정** |
 | "N번째 페이지로 점프" | 가능 | **불가능** |
 | UI 패턴 | 페이지 번호 (1, 2, 3...) | 이전/다음, 무한 스크롤 |
 | API 변경 | 없음 | 커서 파라미터 추가 필요 |
@@ -436,7 +436,7 @@ Keyset Pagination(`WHERE created_at < :cursor`)은 OFFSET을 제거하여 O(1) �
 
 Slack, Twitter, Instagram이 커서 기반을 쓰는 이유는 **UI가 무한 스크롤**이기 때문입니다. 페이지 번호가 있는 게시판 UI에서는 "3페이지 → 7페이지"로 바로 이동하는 게 당연한 기대이고, 커서 방식은 이를 지원할 수 없습니다.
 
-![페이지네이션 UI 비교 — 페이지 번호 vs 무한 스크롤](/uploads/project/WikiEngine/deferred-join-optimization/pagination-ui-comparison.svg)
+![페이지네이션 UI 비교, 페이지 번호 vs 무한 스크롤](/uploads/project/WikiEngine/deferred-join-optimization/pagination-ui-comparison.svg)
 
 현재 서비스는 페이지 번호 UI를 사용하고 있으므로, **Deferred Join + 최대 페이지 제한** 조합이 현 요구사항에 맞는 선택입니다. 무한 스크롤 UI를 도입하게 되면 Keyset Pagination을 재검토할 예정입니다.
 

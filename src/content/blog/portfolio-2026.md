@@ -1,5 +1,5 @@
 ---
-title: '범수 — Backend Engineer 포트폴리오'
+title: '범수: Backend Engineer 포트폴리오'
 description: 오픈소스 기여(Spring Boot, Apache Lucene), 1,215만 건 데이터로 자체 구축한 임베디드 검색 엔진 WikiEngine, 실시간 협업 워크스페이스 Balruno를 정리한 백엔드 엔지니어 포트폴리오입니다.
 date: 2026-05-21T00:00:00.000Z
 tags:
@@ -17,22 +17,22 @@ draft: false
 unlisted: true
 ---
 
-# 범수 — Backend Engineer
+# 범수: Backend Engineer
 
 - 블로그: <http://dj258255.github.io/IT-Oasis>
 - 깃허브: <https://github.com/dj258255>
 
 이 포트폴리오는 세 가지 축으로 구성됩니다.
 
-1. **오픈소스 기여** — Spring Boot, Apache Lucene
-2. **WikiEngine** — 1,215만 건 위키 데이터로 자체 구축한 임베디드 검색 엔진
-3. **Balruno** — 게임 기획·밸런싱 워크플로우를 한 화면에 통합한 실시간 협업 워크스페이스
+1. **오픈소스 기여**: Spring Boot, Apache Lucene
+2. **WikiEngine**: 1,215만 건 위키 데이터로 자체 구축한 임베디드 검색 엔진
+3. **Balruno**: 게임 기획·밸런싱 워크플로우를 한 화면에 통합한 실시간 협업 워크스페이스
 
 ---
 
 ## 1. 오픈소스 기여
 
-### Spring Boot 기여 — Kotlin 테스트 API 사용성 개선
+### Spring Boot 기여: Kotlin 테스트 API 사용성 개선
 
 Spring Boot의 JPA 테스트 유틸리티인 `TestEntityManager`에 Kotlin reified extension functions를 추가했습니다.
 
@@ -44,23 +44,23 @@ Spring Boot의 JPA 테스트 유틸리티인 `TestEntityManager`에 Kotlin reifi
 - `persistAndGetId<Long>(entity)`
 - `getId<Long>(entity)`
 
-**검증** — Mockito 기반 단위 테스트를 작성해 각 확장 함수가 기존 `TestEntityManager` API로 올바르게 위임되는지 검증했습니다.
+**검증**: Mockito 기반 단위 테스트를 작성해 각 확장 함수가 기존 `TestEntityManager` API로 올바르게 위임되는지 검증했습니다.
 
-**성과** — Spring Boot 4.1.0-M2 New Features에 반영.
+**성과**: Spring Boot 4.1.0-M2 New Features에 반영.
 
-### Apache Lucene 기여 — IndexWriter 초기화 실패 시 리소스 누수 방지
+### Apache Lucene 기여: IndexWriter 초기화 실패 시 리소스 누수 방지
 
 Apache Lucene의 `IndexWriter` 초기화 실패 경로에서 발생하던 thread pool leak 문제를 수정했습니다.
 
 `ConcurrentMergeScheduler`는 초기화 과정에서 `CachedExecutor`를 생성하지만, 이후 `IndexWriter` 생성자가 실패하면 기존 예외 처리 로직이 `writeLock`만 닫고 `MergeScheduler`를 닫지 않아 `ThreadPoolExecutor`가 종료되지 않는 문제가 있었습니다.
 
-**검증** — `OpenMode.APPEND`와 빈 디렉터리를 사용해 초기화 실패 상황을 재현하고, `MergeScheduler.close()` 호출 여부를 `AtomicBoolean`으로 검증하는 회귀 테스트를 추가했습니다.
+**검증**: `OpenMode.APPEND`와 빈 디렉터리를 사용해 초기화 실패 상황을 재현하고, `MergeScheduler.close()` 호출 여부를 `AtomicBoolean`으로 검증하는 회귀 테스트를 추가했습니다.
 
-**성과** — Apache Lucene main branch merge, CHANGES.txt bug fix 기록.
+**성과**: Apache Lucene main branch merge, CHANGES.txt bug fix 기록.
 
 ---
 
-## 2. WikiEngine — 1,215만 건 임베디드 검색 엔진
+## 2. WikiEngine: 1,215만 건 임베디드 검색 엔진
 
 - Github: <https://github.com/dj258255/wikiEngine>
 - Blog: <https://dj258255.github.io/IT-Oasis/blog/project/wikiengine/wiki-engine-retrospective/>
@@ -106,21 +106,21 @@ WikiEngine은 나무위키, 한국어/영어 위키백과, 뉴스, 웹텍스트 
 
 ### 핵심 트러블슈팅 요약
 
-**01 검색엔진 전환** — MySQL LIKE → FULLTEXT ngram → 임베디드 Lucene + Nori
+**01 검색엔진 전환**: MySQL LIKE → FULLTEXT ngram → 임베디드 Lucene + Nori
 
 - 문제: LIKE 5,000ms 타임아웃. HikariCP 커넥션(10) 고갈로 검색 외 전체 API 503 cascade failure. `EXPLAIN` 결과 `type=ALL`, `Rows=27,443,742`, MEDIUMTEXT Full Table Scan
 - 분석: FULLTEXT ngram 시도 시 일부 쿼리 12s→6ms 개선되었으나 고빈도 토큰에서 12,766ms 타임아웃. 인덱스 추정 300GB+로 과도
 - 결정: 단일 서버 제약 → ES 대신 임베디드 Lucene + Nori 결정 (별도 프로세스 없이 JVM 내에서 직접 제어, 한국어 형태소 랭킹·하이라이팅까지 세밀 조정 가능)
 - 결과 (K6 부하 테스트 실측): 검색 P95 5,000ms+ → 100ms[평균 29ms], 에러율 32.53% → 0%, P@10 0.827 → 0.853
 
-**02 분산 아키텍처** — Stateless · R/W 분리 · Scale-out · CDC · Redis 샤딩
+**02 분산 아키텍처**: Stateless · R/W 분리 · Scale-out · CDC · Redis 샤딩
 
 - 단계: 상태 외부화(Stateless) → MySQL R/W 분리 → App 2대 스케일 아웃 → 조회수 Redis INCR + Write-Behind 30초 배치
 - 정합성: Debezium + Kafka CDC로 dual-write 제거. MySQL binlog를 단일 원본으로 삼고, 각 App이 Kafka consumer로 자기 Lucene을 비동기 갱신
 - 확장: Redis 3노드 Consistent Hashing, KEYS 블로킹을 SCAN 전환으로 해소
 - 결과 (K6 100 VU 실측): P95(100 VU) 2,300 → 190ms[12배], 에러율 13.25% → 0%, 게시글 생성(CDC) 5,315ms → 33ms[160배]
 
-**03 검색 품질** — 동의어 · 오타교정 · LTR · 카테고리 분류 · RAG · 금칙어
+**03 검색 품질**: 동의어 · 오타교정 · LTR · 카테고리 분류 · RAG · 금칙어
 
 - 쿼리 이해: DB 동의어 쿼리타임 확장(AI → 인공지능), DirectSpellchecker 오타 교정, UnifiedHighlighter snippet
 - 랭킹/분류: XGBoost LambdaMART 14피처 LTR, 키워드 배치 분류로 28개 카테고리 자동 부여
@@ -131,7 +131,7 @@ WikiEngine은 나무위키, 한국어/영어 위키백과, 뉴스, 웹텍스트 
 
 ---
 
-### 프로젝트 설계 — 자동완성 요구사항 정의
+### 프로젝트 설계: 자동완성 요구사항 정의
 
 구현에 앞서 자동완성 시스템이 정확히 무엇을 해야 하는지부터 명확히 했습니다.
 
@@ -156,7 +156,7 @@ WikiEngine은 나무위키, 한국어/영어 위키백과, 뉴스, 웹텍스트 
 
 ---
 
-### 1. 검색 엔진 전환 — 정상 상태에서 Lucene까지
+### 1. 검색 엔진 전환: 정상 상태에서 Lucene까지
 
 **정상 상태 → 문제 인식.** 초기 검색은 MySQL `LIKE %keyword%`로 본문을 검색했습니다. 대상 데이터는 12,156,589건이었고, `posts.content`는 위키 마크업이 포함된 MEDIUMTEXT(평균 6,586자)였습니다. k6 부하 테스트에서 검색 API가 5,000ms+로 타임아웃됐고, `EXPLAIN` 결과는 `type=ALL`, `rows=27,443,742`로 사실상 전체 테이블을 순차 스캔하고 있었습니다. `LIKE %keyword%`는 앞쪽 와일드카드 때문에 B-Tree 인덱스를 사용할 수 없었습니다. 더 큰 문제는 cascade failure였습니다. 검색 쿼리 하나가 HikariCP 커넥션을 수 초간 점유하면 다른 API도 함께 막혔고, `maximumPoolSize=10` 환경에서는 검색 쿼리 3~4개만 동시 실행돼도 나머지 커넥션이 모두 대기 상태에 빠졌습니다.
 
@@ -164,13 +164,13 @@ WikiEngine은 나무위키, 한국어/영어 위키백과, 뉴스, 웹텍스트 
 
 ![503 cascade failure](/uploads/project/WikiEngine/search-system-crash/503-timeout-response.png)
 
-**1차 시도 — FULLTEXT ngram.** MySQL FULLTEXT ngram을 적용해 성능이 12초 → 6ms로 크게 개선됐습니다. 하지만 ngram은 2글자 단위로 토큰을 분리하기 때문에 `대한` 같은 고빈도 토큰이 수백만 건에 매칭됐고, posting list 순회 비용이 다시 폭증하면서 5,000ms+ 타임아웃이 재발했습니다. 인덱스 크기도 300GB+로 추정돼 운영 부담이 매우 컸습니다.
+**1차 시도, FULLTEXT ngram.** MySQL FULLTEXT ngram을 적용해 성능이 12초 → 6ms로 크게 개선됐습니다. 하지만 ngram은 2글자 단위로 토큰을 분리하기 때문에 `대한` 같은 고빈도 토큰이 수백만 건에 매칭됐고, posting list 순회 비용이 다시 폭증하면서 5,000ms+ 타임아웃이 재발했습니다. 인덱스 크기도 300GB+로 추정돼 운영 부담이 매우 컸습니다.
 
 ![고빈도 토큰 폭발](/uploads/project/WikiEngine/fulltext-ngram-index/high-freq-token-explosion.svg)
 
-MySQL FULLTEXT의 세 가지 구조적 한계 — (1) ngram 토큰 폭발(`대한민국` → `대한`, `한민`, `민국`), (2) 12M건·평균 6,586자 기준 300GB+ 추정 인덱스, (3) NL mode에서 50% 이상 문서에 포함된 term 자동 제외. MySQL 기본 검색만으로는 1,215만 건 규모를 안정적으로 처리하기 어렵다고 판단했고, 별도의 전문 검색 엔진이 필요했습니다.
+MySQL FULLTEXT에는 세 가지 구조적 한계가 있습니다. (1) ngram 토큰 폭발(`대한민국` → `대한`, `한민`, `민국`), (2) 12M건·평균 6,586자 기준 300GB+ 추정 인덱스, (3) NL mode에서 50% 이상 문서에 포함된 term 자동 제외. MySQL 기본 검색만으로는 1,215만 건 규모를 안정적으로 처리하기 어렵다고 판단했고, 별도의 전문 검색 엔진이 필요했습니다.
 
-**대안 비교 — 어떤 엔진이 제약에 맞는가.** 핵심은 기능이 가장 많은 엔진이 아니라, 2코어·12GB RAM 단일 서버에서 실제로 운영 가능한 검색 구조였습니다. Elasticsearch/OpenSearch는 별도 프로세스를 띄우는 순간 JVM 힙과 페이지 캐시가 추가로 필요해 단일 서버에서 부담이 컸고, MySQL과의 데이터 동기화 문제도 남았습니다. 반면 임베디드 Lucene은 애플리케이션 내부에서 직접 제어할 수 있어 별도 프로세스 없이 현재 자원 안에서 운영할 수 있었고, 한국어 형태소 분석·랭킹 조정·하이라이팅도 필요한 수준까지 직접 제어할 수 있었습니다.
+**대안 비교: 어떤 엔진이 제약에 맞는가.** 핵심은 기능이 가장 많은 엔진이 아니라, 2코어·12GB RAM 단일 서버에서 실제로 운영 가능한 검색 구조였습니다. Elasticsearch/OpenSearch는 별도 프로세스를 띄우는 순간 JVM 힙과 페이지 캐시가 추가로 필요해 단일 서버에서 부담이 컸고, MySQL과의 데이터 동기화 문제도 남았습니다. 반면 임베디드 Lucene은 애플리케이션 내부에서 직접 제어할 수 있어 별도 프로세스 없이 현재 자원 안에서 운영할 수 있었고, 한국어 형태소 분석·랭킹 조정·하이라이팅도 필요한 수준까지 직접 제어할 수 있었습니다.
 
 ![ngram vs Nori posting list](/uploads/project/WikiEngine/lucene-decision/ngram-vs-nori-posting-list.svg)
 
@@ -184,7 +184,7 @@ MySQL FULLTEXT의 세 가지 구조적 한계 — (1) ngram 토큰 폭발(`대�
 
 ![다계층 캐시 구조](/uploads/project/WikiEngine/caching-strategy/multi-layer-cache.svg)
 
-결과 — searchResults 히트율 81.8%, autocomplete 99.9%, postDetail 40.5%, 전체 응답시간 775.89ms → 53.83ms(14.4배). 이 수치는 캐시에 유리한 조건이 아니라 희귀 토큰 10%·중빈도 60%·고빈도 30%를 섞고 postDetail은 1,200만 건 중 랜덤 조회로 캐시 미스를 계속 유도한 보수적 조건에서 나온 값이었습니다.
+결과는 다음과 같습니다. searchResults 히트율 81.8%, autocomplete 99.9%, postDetail 40.5%, 전체 응답시간 775.89ms → 53.83ms(14.4배). 이 수치는 캐시에 유리한 조건이 아니라 희귀 토큰 10%·중빈도 60%·고빈도 30%를 섞고 postDetail은 1,200만 건 중 랜덤 조회로 캐시 미스를 계속 유도한 보수적 조건에서 나온 값이었습니다.
 
 **자동완성 품질 개선.** 로컬 캐시 적용으로 응답시간 368ms → 4.67ms, 히트율 99.9%까지 올랐지만 품질 문제가 남았습니다. Prefix 기반 자동완성은 사전순으로 반환해 `삼성`을 입력해도 `삼성전자`보다 `르노삼성 QM3`가 먼저 노출됐고, `삼ㅅ`처럼 완성되지 않은 한글 입력에서는 추천이 끊겼습니다. 검색 로그 기반 인기 검색어를 인메모리 Trie에 적재해 검색 빈도순 Top-10을 반환하도록 하고, 초성·중성·종성 분해를 적용해 원본 Trie와 자모 Trie를 분리했습니다.
 
@@ -223,7 +223,7 @@ MySQL FULLTEXT의 세 가지 구조적 한계 — (1) ngram 토큰 폭발(`대�
 | 에러율 | 13.25% | 0% | 100%↓ |
 | 총 요청 수(20분) | 21,120 | 41,873 | 2배↑ |
 
-**4) 변경 전파 구조 재설계 — dual-write 제거.** 게시글 저장 후 검색 인덱스를 바로 갱신하고 캐시까지 직접 무효화하는 dual-write는 partial failure 시 정합성이 쉽게 흔들렸습니다. 먼저 애플리케이션 내부 비동기 이벤트로 전환해 게시글 생성 지연을 5,315ms → 33ms로 줄였지만, 이 방식은 애플리케이션을 통하지 않는 DB 변경을 반영할 수 없었습니다. 그래서 Kafka와 CDC를 선택한 이유는 처리량이 아니라 **correctness와 replay 가능성** 때문이었습니다. DB에 기록된 변경 사실을 기준으로 검색 인덱스와 캐시가 각자 독립적으로 소비하도록 바꿨고, Kafka는 변경 이벤트를 보관·재생할 수 있는 공용 로그 역할을 맡았습니다. 단일 브로커 제약 때문에 Kafka 장애 시에는 애플리케이션 내부 비동기 이벤트로 자동 전환되도록 설계했습니다.
+**4) 변경 전파 구조 재설계: dual-write 제거.** 게시글 저장 후 검색 인덱스를 바로 갱신하고 캐시까지 직접 무효화하는 dual-write는 partial failure 시 정합성이 쉽게 흔들렸습니다. 먼저 애플리케이션 내부 비동기 이벤트로 전환해 게시글 생성 지연을 5,315ms → 33ms로 줄였지만, 이 방식은 애플리케이션을 통하지 않는 DB 변경을 반영할 수 없었습니다. 그래서 Kafka와 CDC를 선택한 이유는 처리량이 아니라 **correctness와 replay 가능성** 때문이었습니다. DB에 기록된 변경 사실을 기준으로 검색 인덱스와 캐시가 각자 독립적으로 소비하도록 바꿨고, Kafka는 변경 이벤트를 보관·재생할 수 있는 공용 로그 역할을 맡았습니다. 단일 브로커 제약 때문에 Kafka 장애 시에는 애플리케이션 내부 비동기 이벤트로 자동 전환되도록 설계했습니다.
 
 ![CDC 파이프라인](/uploads/project/WikiEngine/cdc/cdc-pipeline-overview.svg)
 
@@ -240,9 +240,9 @@ MySQL FULLTEXT의 세 가지 구조적 한계 — (1) ngram 토큰 폭발(`대�
 
 **검증.** 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC) 전환 후 k6 200 VU stress 테스트 결과 에러율 13.25% → 0.00%, 처리량 30 → 109 req/s, P95 2,300 → 190ms로 개선됐고 100 VU에서 P95 200ms로 SLA 300ms를 충족했습니다. 분산 전환은 단일 서버 한계를 크게 완화했지만 최종 병목은 여전히 App CPU라는 점을 확인한 단계였습니다.
 
-### 4. 검색 품질 — 동의어 + 오타 교정 + Snippet
+### 4. 검색 품질: 동의어 + 오타 교정 + Snippet
 
-검색 응답속도는 이미 충분했지만 세 가지 품질 한계가 남았습니다 — (1) 동의어 미이해(`AI` 검색 시 `인공지능` 문서 누락), (2) 오타에 취약(`프로그래링` → 0건), (3) snippet이 문서 앞 150자만 잘라 검색어가 뒤쪽이면 왜 나왔는지 설명 못 함. 동의어는 인덱스 통계를 보존하고 운영 유연성도 확보할 수 있는 **DB 기반 쿼리 타임 확장**을 택했고, 오타는 기존 인덱스를 활용하는 `DirectSpellChecker`, snippet은 본문 전체 대신 `snippetSource` 500자 별도 저장 + `UnifiedHighlighter`로 해결했습니다.
+검색 응답속도는 이미 충분했지만 세 가지 품질 한계가 남았습니다. (1) 동의어 미이해(`AI` 검색 시 `인공지능` 문서 누락), (2) 오타에 취약(`프로그래링` → 0건), (3) snippet이 문서 앞 150자만 잘라 검색어가 뒤쪽이면 왜 나왔는지 설명 못 함. 동의어는 인덱스 통계를 보존하고 운영 유연성도 확보할 수 있는 **DB 기반 쿼리 타임 확장**을 택했고, 오타는 기존 인덱스를 활용하는 `DirectSpellChecker`, snippet은 본문 전체 대신 `snippetSource` 500자 별도 저장 + `UnifiedHighlighter`로 해결했습니다.
 
 ![쿼리 이해 파이프라인](/uploads/project/WikiEngine/search-query-enhancement/query-understanding-flow.svg)
 
@@ -252,7 +252,7 @@ MySQL FULLTEXT의 세 가지 구조적 한계 — (1) ngram 토큰 폭발(`대�
 
 Nori 사용자 사전 158,539개를 적용해 복합어 보존도 개선했고, 필드·분석기 변경은 전체 재색인이 필요했기에 12,156,589건 데이터를 대상으로 Directory Swap + SearcherManager 재생성 기반의 **무중단 재색인** 구조도 함께 구축했습니다. 인덱스 크기는 약 42GB였습니다.
 
-### 5. LTR 재랭킹 — XGBoost LambdaMART
+### 5. LTR 재랭킹: XGBoost LambdaMART
 
 BM25 기반에 제목/본문 가중치와 일부 popularity 신호를 수동 부스팅하는 구조였지만, 최종 순위는 사람이 정한 선형 규칙에 의존했습니다. `자바` 검색에서 사용자는 프로그래밍 언어를 기대하지만 `자바 더 헛` 같은 문서가 위에 노출되고 프로그래밍 언어 문서는 4위까지 밀렸습니다. LambdaMART는 `titleLength`, `tagOverlap`, `bm25Title` 같은 피처의 interaction을 학습할 수 있어 적합했습니다.
 
@@ -264,7 +264,7 @@ BM25 기반에 제목/본문 가중치와 일부 popularity 신호를 수동 부
 
 ![LTR 재랭킹 후 (자바)](/uploads/project/WikiEngine/search-ltr-ranking/phase19-ltr-after-java-frontend.png)
 
-품질은 분명히 개선됐습니다 — BM25 baseline NDCG@10 0.6910, LambdaMART 5-Fold CV NDCG@10 0.7387(+4.8%p). `자바`도 프로그래밍 언어가 1위로 올라왔습니다. **하지만 운영 테스트에서는 다른 결론이 나왔습니다.** 2코어 ARM에서 LTR를 켠 채 100 VU 부하를 주면 전체 평균 응답시간 42.81ms → 3,088ms, 검색 29.18ms → 8,826ms로 급격히 악화됐습니다. 문서당 14개 피처를 Top-200에 대해 추출하는 과정이 CPU를 과도하게 소모했기 때문입니다. 실제 운영에서는 `LTR_ENABLED=false`로 비활성화했고, 검색 품질 개선 가능성을 데이터로 검증하는 동시에 현재 인프라에서는 그 비용을 감당할 수 없다는 사실까지 확인한 단계였습니다.
+품질은 분명히 개선됐습니다. BM25 baseline NDCG@10 0.6910, LambdaMART 5-Fold CV NDCG@10 0.7387(+4.8%p). `자바`도 프로그래밍 언어가 1위로 올라왔습니다. **하지만 운영 테스트에서는 다른 결론이 나왔습니다.** 2코어 ARM에서 LTR를 켠 채 100 VU 부하를 주면 전체 평균 응답시간 42.81ms → 3,088ms, 검색 29.18ms → 8,826ms로 급격히 악화됐습니다. 문서당 14개 피처를 Top-200에 대해 추출하는 과정이 CPU를 과도하게 소모했기 때문입니다. 실제 운영에서는 `LTR_ENABLED=false`로 비활성화했고, 검색 품질 개선 가능성을 데이터로 검증하는 동시에 현재 인프라에서는 그 비용을 감당할 수 없다는 사실까지 확인한 단계였습니다.
 
 ### 6. 카테고리 자동 분류 + Facet 네이티브 전환
 
@@ -272,13 +272,13 @@ BM25 기반에 제목/본문 가중치와 일부 popularity 신호를 수동 부
 
 ![카테고리 필터 적용 후](/uploads/project/WikiEngine/search-category-facet/phase17-after-category-filter-search.png)
 
-### 7. 콘텐츠 필터링 — 운영 안전장치
+### 7. 콘텐츠 필터링: 운영 안전장치
 
 게시글 작성 시 유해 콘텐츠 검사가 없어 어떤 문자열이든 저장됐고, 이것이 검색 결과·자동완성 후보까지 오염시켰습니다. `String.contains()` 순회는 금칙어가 수만 개로 늘면 비용이 선형 증가하기에, 여러 패턴을 한 번의 텍스트 순회로 동시 탐지하는 **Aho-Corasick**(O(N+Z))을 선택했습니다. 한국어는 부분 일치만으로 문제 표현이 될 수 있어 영어(단어 경계)와 다른 기준으로 처리했습니다. 금칙어 게시글은 즉시 삭제 대신 `blinded` 상태로 관리(검색 제외하되 복원 가능)했고, 앱 기동 직후 빈 결과는 짧은 TTL로만 캐시해 cache penetration을 막았습니다.
 
 ![금칙어 자동완성 차단](/uploads/project/WikiEngine/search-content-filter/phase20-autocomplete-banned-babo.png)
 
-### 8. AI 검색 요약 — RAG 파이프라인
+### 8. AI 검색 요약: RAG 파이프라인
 
 검색 결과는 보여줄 수 있었지만 사용자는 여러 게시글을 직접 클릭해 읽어야 답을 얻었습니다. 기존 AI 요약은 검색 문서를 컨텍스트로 주지 않고 쿼리만 LLM에 전달해 답변이 실제 결과와 어긋날 수 있었고 출처도 붙일 수 없었습니다. 검색 결과를 그대로 LLM 입력 컨텍스트로 연결하는 **RAG 파이프라인**(쿼리 정제 → Lucene BM25 검색 → 상위 5개 문서 컨텍스트 → LLM 답변 → SSE 스트리밍)을 구성했습니다.
 
@@ -338,11 +338,11 @@ Retrieval은 기술 용어·개념 중심 키워드 검색 패턴과 이미 적�
 | AI요약 | 없음 | RAG + SSE + 출처 링크 | Gemini 15 RPM, 캐시 30분 TTL |
 | LTR ON 한계 | - | 3,088ms(72배 악화) | 2코어 ARM CPU 포화 → OFF |
 
-**인프라 규모** — Lucene 42GB(5seg), 재색인 ~2h, Nori 158,539, Redis 3노드(4,620키), HikariCP 5+15, Kafka KRaft+DLQ
+**인프라 규모**: Lucene 42GB(5seg), 재색인 ~2h, Nori 158,539, Redis 3노드(4,620키), HikariCP 5+15, Kafka KRaft+DLQ
 
 ---
 
-## 3. Balruno — 실시간 협업 워크스페이스
+## 3. Balruno: 실시간 협업 워크스페이스
 
 1인 오픈소스 SaaS (클라이언트 MIT, 백엔드 AGPL v3)
 
@@ -365,7 +365,7 @@ Balruno는 캐릭터 스탯, 무기 수치, 레벨 곡선, 드롭 확률처럼 �
 - Infra/DevOps: OCI Always Free, Ansible, Nginx, Cloudflare
 - Observability/Test: Prometheus, Loki, Alloy, Grafana, InfluxDB, blackbox_exporter, k6, JUnit 5, Testcontainers
 
-**맡은 역할** — (1) 백엔드 아키텍처 설계, (2) 실시간 동기화 구조 설계 및 구현, (3) DB 비교 실험 및 저장 구조 결정, (4) 배포·백업·모니터링 환경 구축, (5) 서비스 운영 및 성능 측정
+**맡은 역할**: (1) 백엔드 아키텍처 설계, (2) 실시간 동기화 구조 설계 및 구현, (3) DB 비교 실험 및 저장 구조 결정, (4) 배포·백업·모니터링 환경 구축, (5) 서비스 운영 및 성능 측정
 
 ### 문제를 어떻게 정의했는가
 
@@ -377,7 +377,7 @@ Balruno는 캐릭터 스탯, 무기 수치, 레벨 곡선, 드롭 확률처럼 �
 6. 데이터의 기준은 항상 서버 DB로 두고, 로컬 저장소는 반응 속도를 위한 캐시로만 쓴다.
 7. 초반에는 무료 인프라 + 단계적 확장만 허용한다.
 
-이 기준을 세운 뒤에는 기술 이름보다 구조를 먼저 판단했습니다 — (1) 시트와 문서를 같은 방식으로 동기화할지/나눌지, (2) 시트를 정규화할지 JSON 기반으로 받을지, (3) 온프레미스·매니지드·무료 인프라 중 무엇으로 시작할지. 이 세 갈래가 Balruno 전체 방향을 거의 결정했습니다.
+이 기준을 세운 뒤에는 기술 이름보다 구조를 먼저 판단했습니다. (1) 시트와 문서를 같은 방식으로 동기화할지/나눌지, (2) 시트를 정규화할지 JSON 기반으로 받을지, (3) 온프레미스·매니지드·무료 인프라 중 무엇으로 시작할지. 이 세 갈래가 Balruno 전체 방향을 거의 결정했습니다.
 
 ### 데이터 영역
 

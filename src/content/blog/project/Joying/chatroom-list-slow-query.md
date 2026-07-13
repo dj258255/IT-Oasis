@@ -17,7 +17,7 @@ coverImage: "/uploads/project/Joying/chatroom-list-slow-query/problem.svg"
 series: "Joying"
 ---
 
-MongoDB + Redis Pub/Sub 아키텍처를 설계했어요. 이제 채팅방 목록 조회 API를 만들 차례였습니다.
+MongoDB + Redis Pub/Sub 아키텍처를 설계했습니다. 이제 채팅방 목록 조회 API를 만들 차례였습니다.
 
 ---
 
@@ -37,7 +37,7 @@ MongoDB + Redis Pub/Sub 아키텍처를 설계했어요. 이제 채팅방 목록
 
 ## 1. 문제 상황
 
-채팅방 목록에는 생각보다 많은 정보가 필요했어요.
+채팅방 목록에는 생각보다 많은 정보가 필요했습니다.
 
 
 채팅방 목록에 보여줄 정보:
@@ -56,7 +56,7 @@ DTO 필드만 해도 이 정도였다:
 
 
 
-가장 직관적인 방법으로 구현했어요.
+가장 직관적인 방법으로 구현했습니다.
 
 ![](/uploads/project/Joying/chatroom-list-slow-query/problem-2.svg)
 
@@ -70,13 +70,13 @@ DTO 필드만 해도 이 정도였다:
 ![](/uploads/project/Joying/chatroom-list-slow-query/problem-3.png)
 
 
-**1.35초가 걸렸어요.** 채팅방이 많아질수록 선형으로 느려졌습니다.
+**1.35초가 걸렸습니다.** 채팅방이 많아질수록 선형으로 느려졌습니다.
 
 ---
 
 ## N+1 Query 문제
 
-핵심 문제는 N+1 Query였어요. 채팅방 N개에 대해 여러 종류의 추가 쿼리가 발생했습니다.
+핵심 문제는 N+1 Query였습니다. 채팅방 N개에 대해 여러 종류의 추가 쿼리가 발생했습니다.
 
 채팅방 10개 조회 시 발생하는 쿼리:
 >
@@ -89,7 +89,7 @@ DTO 필드만 해도 이 정도였다:
 >총 쿼리 수: 1 + 5N
 
 
-가장 느린 건 MongoDB count 쿼리였어요. 쿼리 1번당 평균 100ms가 걸렸습니다.
+가장 느린 건 MongoDB count 쿼리였습니다. 쿼리 1번당 평균 100ms가 걸렸습니다.
 
 >
 MongoDB count 쿼리 과정:
@@ -99,7 +99,7 @@ MongoDB count 쿼리 과정:
 4. 결과 반환
 >-> 디스크 I/O가 병목
 
-MongoDB가 느린 게 아니라, 쿼리를 너무 많이 날리는 것이 문제였어요.
+문제는 쿼리를 너무 많이 날리는 것이었습니다. MongoDB 자체가 느린 것은 아니었습니다.
 
 ### 해결: Fetch Join + 배치 조회 + Redis 캐싱
 
@@ -112,18 +112,18 @@ MongoDB가 느린 게 아니라, 쿼리를 너무 많이 날리는 것이 문제
 
 총 쿼리 수: 4번
 
-MySQL N+1은 Fetch Join과 배치 조회로 해결했어요. MongoDB N+1은 Redis 캐싱으로 해결했습니다.
+MySQL N+1은 Fetch Join과 배치 조회로 해결했습니다. MongoDB N+1은 Redis 캐싱으로 해결했습니다.
 
 ---
 
 ## 시도 1: MySQL 반정규화 (실패)
 
-처음엔 MySQL에 `unreadCount` 컬럼을 추가하면 되지 않을까 싶었어요.
+처음엔 MySQL에 `unreadCount` 컬럼을 추가하면 되지 않을까 싶었습니다.
 
 ![](/uploads/project/Joying/chatroom-list-slow-query/mysql-denormalization.svg)
 
 
-세 가지 문제가 있었어요.
+세 가지 문제가 있었습니다.
 
 ### 데이터 정합성 문제
 
@@ -158,39 +158,39 @@ Thread 2: unreadCount = 6으로 업데이트
 -> 실제론 7이어야 하는데 6
 
 
-분산 락이 필요하고, 복잡도가 급격히 올라갔어요.
+분산 락이 필요하고, 복잡도가 급격히 올라갔습니다.
 
 ---
 
 ## 캐싱 전략 검토
 
-N+1 문제를 해결하기 위한 캐싱 방법을 검토했어요.
+N+1 문제를 해결하기 위한 캐싱 방법을 검토했습니다.
 
 ### 1. 애플리케이션 메모리 캐시 (HashMap)
 
 ![](/uploads/project/Joying/chatroom-list-slow-query/app-memory-cache.svg)
 
-서버 JVM 힙에 캐시를 두면 빠르지만, 재시작하면 사라지고 서버를 여러 대로 확장하면 동기화가 안 돼요.
+서버 JVM 힙에 캐시를 두면 빠르지만, 재시작하면 사라지고 서버를 여러 대로 확장하면 동기화가 되지 않습니다.
 
 ### 2. MySQL 반정규화
 
-위에서 다뤘듯이 분산 트랜잭션과 동시성 문제가 발생해요.
+위에서 다뤘듯이 분산 트랜잭션과 동시성 문제가 발생합니다.
 
 ### 3. MongoDB Aggregation Pipeline
 
 ![](/uploads/project/Joying/chatroom-list-slow-query/mongodb-aggregation.svg)
 
-채팅방별로 안읽은 메시지를 한 번에 집계할 수 있지만, 집계 연산 자체가 무겁고 매번 계산하므로 캐싱 효과가 없어요.
+채팅방별로 안읽은 메시지를 한 번에 집계할 수 있지만, 집계 연산 자체가 무겁고 매번 계산하므로 캐싱 효과가 없습니다.
 
 ### 4. Redis 캐싱 (선택)
 
-메모리 기반이라 1ms 미만으로 빠르고, 이미 Redis Pub/Sub을 사용 중이라 추가 인프라가 필요 없어요. `INCR/DECR`로 원자적 증감이 가능해서 분산 락도 불필요합니다. 캐시와 DB 간 불일치(Eventual Consistency)가 발생할 수 있지만, 안읽은 메시지 개수가 1-2초 늦게 업데이트되어도 사용자가 거의 못 느껴요. 일관성보다 성능이 더 중요한 데이터였습니다.
+메모리 기반이라 1ms 미만으로 빠르고, 이미 Redis Pub/Sub을 사용 중이라 추가 인프라가 필요 없습니다. `INCR/DECR`로 원자적 증감이 가능해서 분산 락도 불필요합니다. 캐시와 DB 간 불일치(Eventual Consistency)가 발생할 수 있지만, 안읽은 메시지 개수가 1-2초 늦게 업데이트되어도 사용자가 거의 못 느낍니다. 일관성보다 성능이 더 중요한 데이터였습니다.
 
 ---
 
 ## 캐시 일관성 전략
 
-캐시 일관성 전략에는 여러 가지가 있어요.
+캐시 일관성 전략에는 여러 가지가 있습니다.
 
 
 **Write-through**
@@ -201,13 +201,13 @@ N+1 문제를 해결하기 위한 캐싱 방법을 검토했어요.
 읽기 시 캐시 확인 -> 없으면 DB 조회 -> 캐시에 저장
 
 
-우리는 **Write-through + Cache-aside 혼합**을 선택했어요.
+우리는 **Write-through + Cache-aside 혼합**을 선택했습니다.
 
 - 메시지 전송 시: Redis INCR (Write-through처럼 즉시 반영)
 - 읽음 처리 시: Redis DEL (캐시 무효화)
 - 조회 시: Redis 확인 -> 없으면 MongoDB에서 계산 후 캐싱 (Cache-aside)
 
-Write-behind는 메시지 유실 위험이 있어서 제외했어요. 채팅에서 "안읽은 개수"가 실제보다 적게 보이는 건 치명적이거든요.
+Write-behind는 메시지 유실 위험이 있어서 제외했습니다. 채팅에서 "안읽은 개수"가 실제보다 적게 보이는 건 치명적입니다.
 
 ---
 
@@ -220,7 +220,7 @@ Redis 조회: 1ms 미만 (메모리)
 -> 100배 빠름
 ```
 
-**추가 인프라 없이 바로 적용 가능했어요.** Redis는 이미 Pub/Sub과 세션 관리에 사용 중이었으므로 새 인스턴스 추가 비용이 0이다.
+**추가 인프라 없이 바로 적용 가능했습니다.** Redis는 이미 Pub/Sub과 세션 관리에 사용 중이었으므로 새 인스턴스 추가 비용이 0이다.
 
 ### 비용 관점
 
@@ -234,7 +234,7 @@ Redis 도입 후: 캐시 히트 시 1ms, 미스 시만 MongoDB → CPU 부하 95
 4GB RAM 중 50MB는 1.2% — 투자 대비 효과가 압도적
 ```
 
-실무(AWS) 환경으로 환산하면: ElastiCache cache.t3.micro(월 ~$15) 추가로 MongoDB Atlas M10(월 ~$57)의 읽기 부하를 95% 줄일 수 있으므로, MongoDB를 M0(무료) 또는 Serverless로 다운스케일할 여지가 생긴다. **Redis 도입이 "비용 증가"가 아니라 "DB 다운스케일 가능성"을 여는 선택이다.**
+실무(AWS) 환경으로 환산하면: ElastiCache cache.t3.micro(월 ~$15) 추가로 MongoDB Atlas M10(월 ~$57)의 읽기 부하를 95% 줄일 수 있으므로, MongoDB를 M0(무료) 또는 Serverless로 다운스케일할 여지가 생긴다. **Redis 도입은 비용을 늘리기보다 DB 다운스케일 가능성을 여는 선택이다.**
 
 "DB 인스턴스 스펙을 올리면 되지 않나?"라는 대안도 검토했다. MongoDB Atlas M20(월 ~$140)으로 올리면 countDocuments가 빨라지겠지만, N+1 구조 자체가 해결되지 않으므로 근본적 개선이 안 된다. 캐싱이 구조적으로 더 나은 선택이다.
 
@@ -242,9 +242,9 @@ Redis 도입 후: 캐시 히트 시 1ms, 미스 시만 MongoDB → CPU 부하 95
 
 ## 왜 Redis 캐싱이 효과적인가
 
-채팅방 목록은 같은 사용자가 반복 조회하는 데이터예요. 사용자 A가 09:00에 목록을 보고 09:01에 다시 보면, 같은 안읽은 개수를 또 계산할 이유가 없거든요. 이런 **시간 지역성**이 높은 데이터는 캐싱 효과가 극대화됩니다.
+채팅방 목록은 같은 사용자가 반복 조회하는 데이터입니다. 사용자 A가 09:00에 목록을 보고 09:01에 다시 보면, 같은 안읽은 개수를 또 계산할 이유가 없습니다. 이런 **시간 지역성**이 높은 데이터는 캐싱 효과가 극대화됩니다.
 
-Redis는 LRU(Least Recently Used)로 캐시를 관리해요. 활성 사용자의 데이터는 자주 조회되어 캐시에 유지되고, 비활성 사용자의 데이터는 자동으로 제거됩니다.
+Redis는 LRU(Least Recently Used)로 캐시를 관리합니다. 활성 사용자의 데이터는 자주 조회되어 캐시에 유지되고, 비활성 사용자의 데이터는 자동으로 제거됩니다.
 
 우리 시스템 기준으로 추산하면:
 
@@ -269,7 +269,7 @@ TTL: 7일
 
 ## Redis MGET: 조회 10번을 1번으로
 
-Redis에서 여러 값을 조회할 때 가장 중요한 건 명령 실행 횟수를 줄이는 거예요.
+Redis에서 여러 값을 조회할 때 가장 중요한 건 명령 실행 횟수를 줄이는 것입니다.
 
 ### 잘못된 방식
 
@@ -297,19 +297,19 @@ MGET (1번):
 -> 10배 빠름
 ```
 
-Redis는 명령 실행이 싱글 스레드예요 (Redis 6+에서 I/O는 멀티스레드지만, 명령 처리 자체는 단일 스레드). 명령을 10번 보내면 파싱 오버헤드가 10번 누적됩니다. MGET은 이걸 1번으로 줄여줘요.
+Redis는 명령 실행이 싱글 스레드입니다 (Redis 6+에서 I/O는 멀티스레드지만, 명령 처리 자체는 단일 스레드). 명령을 10번 보내면 파싱 오버헤드가 10번 누적됩니다. MGET은 이를 1번으로 줄여줍니다.
 
 ---
 
 ## Cache Warming 전략
 
-Redis 캐싱에서 가장 중요한 건 캐시 히트율이에요.
+Redis 캐싱에서 가장 중요한 건 캐시 히트율입니다.
 
 
 >캐시 히트율 = 캐시에서 찾은 횟수 / 전체 조회 횟수
 
 
-캐시 미스가 발생하면 MongoDB를 조회해야 해서 느려져요.
+캐시 미스가 발생하면 MongoDB를 조회해야 해서 느려집니다.
 
 ### 캐시를 미리 채우는 시점
 
@@ -344,10 +344,10 @@ Redis 캐싱에서 가장 중요한 건 캐시 히트율이에요.
 > **측정 조건**: EC2 t3.medium (2 vCPU, 4GB), MySQL/MongoDB/Redis 동일 서버, 단일 요청 기준. 사용자 100명, 채팅방 500개, MongoDB 메시지 75,000개 환경.
 
 **최적화 후 쿼리 시간 분해**:
-1. ChatRoom + Product + Member (Fetch Join): 50ms — MySQL 1회, 3개 테이블 JOIN
-2. ChatRoomMember 배치 조회: 15ms — `WHERE chat_room_id IN (...)` 1회
-3. ProductFile 배치 조회: 15ms — `WHERE product_id IN (...)` 1회
-4. Redis MGET (10개 키 일괄 조회): 5ms — 캐시 히트율 95%, 미스 시 MongoDB countDocuments + 캐시 저장
+1. ChatRoom + Product + Member (Fetch Join): 50ms, MySQL 1회로 3개 테이블 JOIN
+2. ChatRoomMember 배치 조회: 15ms, `WHERE chat_room_id IN (...)` 1회
+3. ProductFile 배치 조회: 15ms, `WHERE product_id IN (...)` 1회
+4. Redis MGET (10개 키 일괄 조회): 5ms, 캐시 히트율 95%이고 미스 시 MongoDB countDocuments 후 캐시 저장
 
 | 지표 | Before | After | 개선 |
 |------|--------|-------|------|
@@ -362,43 +362,43 @@ Redis 캐싱에서 가장 중요한 건 캐시 히트율이에요.
 
 ## 후기
 
-사실 이게 맞나 싶었어요.
+사실 이게 맞나 싶었습니다.
 
-안읽은 메시지 개수를 Redis에 캐싱하고, INCR/DEL로 관리하는 게 "정석"인지 확신이 없었거든요. 혹시 더 좋은 방법이 있는데 모르는 건 아닐까?
+안읽은 메시지 개수를 Redis에 캐싱하고, INCR/DEL로 관리하는 게 "정석"인지 확신이 없었습니다. 혹시 더 좋은 방법이 있는데 모르는 건 아닐까?
 
 ### 대규모 서비스에서의 Redis 캐싱 사례
 
-찾아보니 대형 서비스들도 비슷한 패턴을 쓰고 있었어요.
+찾아보니 대형 서비스들도 비슷한 패턴을 쓰고 있었습니다.
 
-**Twitter**는 타임라인 서비스에 Redis를 사용합니다. 초당 3,900만 건(39MM QPS)의 요청을 처리하고, 10,000개 이상의 Redis 인스턴스로 105TB의 데이터를 관리해요. 각 사용자의 타임라인에 최근 800개의 트윗 ID를 Redis에 저장하고, 이를 통해 빠른 조회를 제공합니다.
+**Twitter**는 타임라인 서비스에 Redis를 사용합니다. 초당 3,900만 건(39MM QPS)의 요청을 처리하고, 10,000개 이상의 Redis 인스턴스로 105TB의 데이터를 관리합니다. 각 사용자의 타임라인에 최근 800개의 트윗 ID를 Redis에 저장해서 빠른 조회를 제공합니다.
 
 > 출처: [How Twitter Uses Redis to Scale - High Scalability](http://highscalability.com/blog/2014/9/8/how-twitter-uses-redis-to-scale-105tb-ram-39mm-qps-10000-ins.html)
 
-**Pinterest**도 수십억 개의 관계 데이터를 Redis에 캐싱해요. 사용자 ID 공간을 8192개의 가상 샤드로 나누고, 여러 Redis 인스턴스에 분산 저장합니다. "이 사용자가 이 보드를 팔로우하는가?" 같은 빈번한 조회를 Redis로 처리해요.
+**Pinterest**도 수십억 개의 관계 데이터를 Redis에 캐싱합니다. 사용자 ID 공간을 8192개의 가상 샤드로 나누고, 여러 Redis 인스턴스에 분산 저장합니다. "이 사용자가 이 보드를 팔로우하는가?" 같은 빈번한 조회를 Redis로 처리합니다.
 
 > 출처: [Using Redis at Pinterest for Billions of Relationships - VMware Tanzu](https://blogs.vmware.com/tanzu/using-redis-at-pinterest-for-billions-of-relationships/)
 
 ### 국내 기업들의 Redis 캐싱 사례
 
-국내 대형 서비스들도 비슷한 패턴을 사용하고 있었어요.
+국내 대형 서비스들도 비슷한 패턴을 사용하고 있었습니다.
 
-**카카오페이**는 로컬 캐시와 Redis를 목적에 따라 구분해서 사용합니다. 자주 변하지 않는 조회성 데이터(상품, 통신사, 혜택 등)는 로컬 캐시에, 세션이나 자주 변경되는 동적 데이터는 Redis에 저장해요. Redis Pub/Sub으로 데이터 변경 이벤트를 발행하고, 각 서버가 구독해서 로컬 캐시를 무효화하는 방식으로 최종 일관성(Eventual Consistency)을 달성합니다.
+**카카오페이**는 로컬 캐시와 Redis를 목적에 따라 구분해서 사용합니다. 자주 변하지 않는 조회성 데이터(상품, 통신사, 혜택 등)는 로컬 캐시에, 세션이나 자주 변경되는 동적 데이터는 Redis에 저장합니다. Redis Pub/Sub으로 데이터 변경 이벤트를 발행하고, 각 서버가 구독해서 로컬 캐시를 무효화하는 방식으로 최종 일관성(Eventual Consistency)을 달성합니다.
 
 > 출처: [분산 시스템에서 로컬 캐시 활용하기 - 카카오페이 기술 블로그](https://tech.kakaopay.com/post/local-caching-in-distributed-systems/)
 
-**토스**는 Redis를 인메모리 캐시로 사용하면서 캐시 쇄도(Cache Stampede), 캐시 관통(Cache Penetration), 핫키 만료 등의 문제를 해결하기 위해 다양한 전략을 적용해요. 특히 핫키 만료 시 Redis의 싱글 스레드 특성을 활용한 레드락(Redlock) 알고리즘으로 분산 락을 구현합니다.
+**토스**는 Redis를 인메모리 캐시로 사용하면서 캐시 쇄도(Cache Stampede), 캐시 관통(Cache Penetration), 핫키 만료 등의 문제를 해결하기 위해 다양한 전략을 적용합니다. 특히 핫키 만료 시 Redis의 싱글 스레드 특성을 활용한 레드락(Redlock) 알고리즘으로 분산 락을 구현합니다.
 
 > 출처: [캐시 문제 해결 가이드 - 토스 기술 블로그](https://toss.tech/article/cache-traffic-tip)
 
-**올리브영**은 로컬 캐시(Caffeine)와 Redis를 결합한 다중 레이어 캐시를 적용했어요. Redis만 사용했을 때 네트워크 송신량이 높아지자, 로컬 캐시를 1차로 두고 Redis를 2차로 두는 구조로 변경했습니다. 결과적으로 TPS는 478% 증가하고, Redis 네트워크 송신량은 99.1% 감소했어요.
+**올리브영**은 로컬 캐시(Caffeine)와 Redis를 결합한 다중 레이어 캐시를 적용했습니다. Redis만 사용했을 때 네트워크 송신량이 높아지자, 로컬 캐시를 1차로 두고 Redis를 2차로 두는 구조로 변경했습니다. 결과적으로 TPS는 478% 증가하고, Redis 네트워크 송신량은 99.1% 감소했습니다.
 
 > 출처: [고성능 캐시 아키텍처 설계 - 올리브영 테크블로그](https://oliveyoung.tech/2024-12-10/present-promotion-multi-layer-cache/)
 
-안읽은 개수처럼 자주 조회되고, 정확도보다 속도가 중요한 데이터는 Redis 캐싱이 사실상 표준이었어요.
+안읽은 개수처럼 자주 조회되고, 정확도보다 속도가 중요한 데이터는 Redis 캐싱이 사실상 표준이었습니다.
 
 ### 6주 프로젝트의 한계
 
-다만 현업과 다른 점도 있었어요.
+다만 현업과 다른 점도 있었습니다.
 
 
 #### 6주 프로젝트에서 못 한 것
@@ -408,7 +408,7 @@ Redis 캐싱에서 가장 중요한 건 캐시 히트율이에요.
 - 캐시 워밍 배치 작업
 
 
-특히 **캐시 정합성 검증 로직**을 못 만든 게 아쉬웠어요. 현재 구현은 "캐시가 항상 맞다"고 가정하는데, 실무에서는 "캐시가 틀릴 수 있다"고 가정하고 검증 로직을 넣습니다.
+특히 **캐시 정합성 검증 로직**을 못 만든 게 아쉬웠습니다. 현재 구현은 "캐시가 항상 맞다"고 가정하는데, 실무에서는 "캐시가 틀릴 수 있다"고 가정하고 검증 로직을 넣습니다.
 
 ```kotlin
 // 만들고 싶었던 검증 배치
@@ -431,17 +431,17 @@ fun validateUnreadCountCache() {
 }
 ```
 
-이 로직이 있으면 INCR/DEL 과정에서 네트워크 장애로 캐시가 어긋나도 다음 날 새벽에 자동으로 보정돼요. 시간이 더 있었다면 불일치율 메트릭까지 수집해서 모니터링 대시보드를 만들고 싶었습니다.
+이 로직이 있으면 INCR/DEL 과정에서 네트워크 장애로 캐시가 어긋나도 다음 날 새벽에 자동으로 보정됩니다. 시간이 더 있었다면 불일치율 메트릭까지 수집해서 모니터링 대시보드를 만들고 싶었습니다.
 
 ### 현업에서의 캐시 동기화
 
-현업에서는 캐시 무효화를 자동화하기 위해 CDC(Change Data Capture) 패턴을 많이 사용해요.
+현업에서는 캐시 무효화를 자동화하기 위해 CDC(Change Data Capture) 패턴을 많이 사용합니다.
 
-**Debezium + Kafka** 조합이 대표적입니다. DB의 트랜잭션 로그를 감시하다가 데이터가 변경되면 Kafka로 이벤트를 발행하고, 이를 구독해서 캐시를 무효화해요. 우리 프로젝트처럼 애플리케이션 코드에서 수동으로 캐시를 관리하면 놓치는 케이스가 생길 수 있는데, CDC는 DB 레벨에서 모든 변경을 캡처하므로 누락이 없습니다.
+**Debezium + Kafka** 조합이 대표적입니다. DB의 트랜잭션 로그를 감시하다가 데이터가 변경되면 Kafka로 이벤트를 발행하고, 이를 구독해서 캐시를 무효화합니다. 우리 프로젝트처럼 애플리케이션 코드에서 수동으로 캐시를 관리하면 놓치는 케이스가 생길 수 있는데, CDC는 DB 레벨에서 모든 변경을 캡처하므로 누락이 없습니다.
 
 > 출처: [Automating Cache Invalidation With Change Data Capture - Debezium Blog](https://debezium.io/blog/2018/12/05/automating-cache-invalidation-with-change-data-capture/)
 
-**NATS**도 대안이 될 수 있어요. Kafka가 높은 처리량과 메시지 영속성에 최적화되어 있다면, NATS는 저지연과 경량화에 최적화되어 있습니다. 마이크로서비스 간 실시간 통신이나 캐시 무효화 이벤트 전달처럼 단순한 pub/sub 용도에는 NATS가 더 가볍고 빨라요. Tesla, PayPal, Walmart 같은 기업들이 NATS를 사용 중입니다.
+**NATS**도 대안이 될 수 있습니다. Kafka가 높은 처리량과 메시지 영속성에 최적화되어 있다면, NATS는 저지연과 경량화에 최적화되어 있습니다. 마이크로서비스 간 실시간 통신이나 캐시 무효화 이벤트 전달처럼 단순한 pub/sub 용도에는 NATS가 더 가볍고 빠릅니다. Tesla, PayPal, Walmart 같은 기업들이 NATS를 사용 중입니다.
 
 > 출처: [NATS and Kafka Compared - Synadia](https://www.synadia.com/blog/nats-and-kafka-compared)
 > 출처: [About NATS - NATS.io](https://nats.io/about/)
@@ -456,7 +456,7 @@ fun validateUnreadCountCache() {
 
 ### 배운 점
 
-그래도 "왜 Redis를 썼는지", "왜 INCR이 atomic한지", "캐시 일관성 전략이 뭔지" 정도는 설명할 수 있게 됐어요. 대규모 서비스들도 같은 패턴을 쓴다는 걸 확인하니 방향은 맞았다고 생각합니다. 6주 프로젝트치고는 충분히 깊이 있게 고민했어요.
+그래도 "왜 Redis를 썼는지", "왜 INCR이 atomic한지", "캐시 일관성 전략이 뭔지" 정도는 설명할 수 있게 됐습니다. 대규모 서비스들도 같은 패턴을 쓴다는 걸 확인하니 방향은 맞았다고 생각합니다. 6주 프로젝트치고는 충분히 깊이 있게 고민했습니다.
 
 <!-- EN -->
 
