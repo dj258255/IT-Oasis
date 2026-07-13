@@ -1,5 +1,5 @@
 ---
-title: '범수 — DBMS 플랫폼 엔지니어링 포트폴리오'
+title: '범수: DBMS 플랫폼 엔지니어링 포트폴리오'
 description: 'DBMS 운영 관리 플랫폼 직무를 위해 정리한 포트폴리오입니다. 이기종 5기종 관제 플랫폼 DBTower, 관측 데이터 장기 분석 파이프라인 DBTower-lakehouse, 오픈소스 기여(Spring Boot, Apache Lucene)를 아키텍처와 실측 수치, 재현 기록과 함께 담았습니다.'
 date: 2026-07-13T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ draft: false
 unlisted: true
 ---
 
-# 범수 — DBMS 플랫폼 엔지니어링 포트폴리오
+# 범수: DBMS 플랫폼 엔지니어링 포트폴리오
 
 **주장을 실측으로 증명하는 백엔드 엔지니어입니다.** 모든 프로젝트에 전/후 수치와 재현 기록(VERIFICATION)이 있습니다.
 
@@ -30,7 +30,7 @@ unlisted: true
 - **역할 분리**: 작업한 에이전트가 자기 결과를 채점하지 않도록 탐지·수정·검증을 별도 에이전트로 분리
 - **검증이 기본값**: AI가 만든 코드도 같은 관문(테스트 CI·전/후 실측)을 통과해야 채택
 
-## 오픈소스 기여 — Spring Boot · Apache Lucene
+## 오픈소스 기여: Spring Boot · Apache Lucene
 
 **쓰는 프레임워크의 문제를 직접 고쳐 반영된 기여 2건. 남의 코드를 읽고 직접 재현해 검증하는 눈을 여기서 배웠다.**
 
@@ -63,7 +63,7 @@ expectThrows(IndexNotFoundException.class, () -> new IndexWriter(emptyDir, cfg))
 assertTrue(schedulerClosed.get());
 ```
 
-## DBTower — 이기종 DBMS 5종 관제·진단 플랫폼
+## DBTower: 이기종 DBMS 5종 관제·진단 플랫폼
 
 **MySQL부터 MongoDB까지, 이기종 DBMS 5종의 등록·진단·백업·감시를 인터페이스 하나 뒤에서 처리한다.**
 
@@ -88,7 +88,7 @@ assertTrue(schedulerClosed.get());
 
 ### 아키텍처
 
-![DBTower 전체 구조 — 소비자 차이는 채널 뒤로, 기종 차이는 DbmsOperator 뒤로, 기술 차이는 각자의 제자리로](/uploads/project/dbtower/architecture-full.svg)
+![DBTower 전체 구조: 소비자 차이는 채널 뒤로, 기종 차이는 DbmsOperator 뒤로, 기술 차이는 각자의 제자리로](/uploads/project/dbtower/architecture-full.svg)
 
 - 소비자 3채널(웹 콘솔·MCP·웹훅) → 플랫폼 코어(수집 폴러·시점비교·회귀감지·헬스스코어·자율진단) → `DbmsOperator` 인터페이스 → 기종별 구현체 5개
 - 경계는 "운영 행위"에 있다. SQL 없는 MongoDB가 같은 인터페이스로 들어온 것이 그 증거다
@@ -96,7 +96,7 @@ assertTrue(schedulerClosed.get());
 
 ### 운영 상세 아키텍처
 
-![상세 아키텍처 — 컨테이너 경계·포트, 폴러와 채널의 실제 배선, 메타 DB와 대상 DB 5기종](/uploads/project/dbtower/architecture-detail.svg)
+![상세 아키텍처: 컨테이너 경계·포트, 폴러와 채널의 실제 배선, 메타 DB와 대상 DB 5기종](/uploads/project/dbtower/architecture-detail.svg)
 
 ### 식별에서 문의까지 이어지는 진단 흐름
 
@@ -112,16 +112,30 @@ assertTrue(schedulerClosed.get());
 
 | 영역 | 기능 |
 |---|---|
-| 관측 | 기종별 쿼리 통계·슬로우 쿼리 수집 폴러 · Wait Event · p95(실측/추정/미지원 라벨 분리) |
+| 관측 | 기종별 쿼리 통계·슬로우 쿼리 수집 폴러 · Wait Event · 복제 상태·레플리케이션 슬롯 · p95(실측/추정/미지원 라벨 분리) |
 | 진단 | 통합 헬스 스코어 → 시점 비교(구간 차분) → 회귀·이상 감지(요일x시간대 z-score) → 플랜 플립(60초 내) → 실행계획 규칙 → 심층 진단(추정 vs 실제) → 원클릭 재진단 → 처방·Advisors |
 | 운영 | 백업 정책·복원 자동 검증(VERIFIED/FAILED/UNSUPPORTED) · SLO/에러 버짓 · FinOps 신호 · 감사 로그 · 최소 권한 계정 |
 | 채널 | 웹 콘솔(의존성 0 정적 SPA) · MCP 도구 13종(JSON-RPC 2.0 직접 구현) · 웹훅 경보와 DB팀 문의(Discord embed) |
 | 프로비저닝(IaC) | DB가 태어나는 순간 자동 등록: K8s(CloudNativePG) 프로비저닝→등록→health up e2e 완주 · Ansible 멱등 등록(changed=0) · Terraform validate. 도구 셋이 멱등 등록 PUT 하나로 수렴 |
 | 안전 | 쿼리 타임아웃 15s · 지수 백오프 · 인스턴스당 풀 상한 · AI read-only 화이트리스트 · 스택 쿼리 차단 |
 
+### 백업 정책: 추상은 하나, 실행 모델은 네 갈래
+
+백업 정책(주기·보존·검증)은 플랫폼이 추상 수준에서 관리하고, 실행은 기종별 구현체가 각자 지원하는 방식으로 수행한다. 같은 "FULL 백업" 한 마디가 실제로는 네 가지 실행 모델로 갈라진다.
+
+| 실행 모델 | 기종 | 비밀번호 전달 |
+|---|---|---|
+| 외부 CLI + 환경변수 | MySQL(mysqldump), PostgreSQL(pg_dump) | `MYSQL_PWD` / `PGPASSWORD` |
+| 외부 CLI + stdin | MongoDB(mongodump) | `--config /dev/stdin` |
+| 서버 사이드 SQL | SQL Server | 필요 없음 (`BACKUP DATABASE`) |
+| 서버 사이드 API | Oracle | 필요 없음 (`DBMS_DATAPUMP` PL/SQL) |
+
+- mongodump의 stdin 설정에는 비밀번호에 개행을 넣으면 YAML의 다른 키를 주입할 수 있는 구멍이 있었다. 제어 문자를 거부하고 작은따옴표 스칼라 이스케이프를 넣어 막고, 주입 시도가 거부되는 것을 테스트로 고정했다
+- 백업의 성공 판정은 로그가 아니라 복원 검증이다. VERIFIED/FAILED/UNSUPPORTED 3값으로 표기하고, 3-2-1 원칙의 S3(MinIO) 오프사이트 사본까지 자동화했다
+
 ### 데이터 모델
 
-![메타 DB 데이터 모델 — 인스턴스 레지스트리·스냅샷·베이스라인·감사 테이블의 관계](/uploads/project/dbtower/erd.svg)
+![메타 DB 데이터 모델: 인스턴스 레지스트리·스냅샷·베이스라인·감사 테이블의 관계](/uploads/project/dbtower/erd.svg)
 
 ### 1. 새 기종을 추가해도 플랫폼은 그대로이도록 경계를 설계하고 실증했다 ([4편](/blog/project/dbtower/dbtower-4-five-engines))
 
@@ -137,7 +151,7 @@ assertTrue(schedulerClosed.get());
 - **해결**: 추정 300행 vs 실제 1행, **괴리 300배**에서 암시적 형변환을 지목. 수정안 SQL의 원클릭 재진단 before/after로 괴리 해소와 **Index lookup 전환**까지 확인했다
 - **정합성 위험까지 증명**: 수정 전의 "실제 1행"이 사실 `'012345'`가 캐스팅으로 잘못 매칭된 행이었다. 형변환은 성능 문제로 보이지만 실제로는 정확성 문제였다. 조회면 오답이고, UPDATE/DELETE였으면 데이터 사고다
 
-![심층 진단 실물 — 수정 전(괴리 300배·풀스캔)과 수정 후(괴리 없음·Index lookup) before/after](/uploads/project/dbtower/deep-before-after.png)
+![심층 진단 실물: 수정 전(괴리 300배·풀스캔)과 수정 후(괴리 없음·Index lookup) before/after](/uploads/project/dbtower/deep-before-after.png)
 
 ### 3. 만든 진단 도구를 자기 자신에게 먼저 쓴다
 
@@ -202,7 +216,7 @@ assertTrue(schedulerClosed.get());
 - **블로그 총정리 0편**: [설계 판단과 실측 과정 전체, 시리즈 0~13편](/blog/project/dbtower/dbtower-0-overview)
 - **직접 실행(GHCR)**: `docker pull ghcr.io/dj258255/dbtower` 원커맨드 compose, 포트 8080
 
-## DBTower-lakehouse — 버려지는 관측 데이터의 장기 분석 파이프라인
+## DBTower-lakehouse: 버려지는 관측 데이터의 장기 분석 파이프라인
 
 **DBTower가 7일 뒤 삭제하는 관측 데이터를 만료 전에 내려(ELT) 장기 질문에 답한다. 운영계와 분석계를 분리하고, 조용히 틀린 데이터는 fail-closed(이상하면 통과 대신 정지)로 차단한다.**
 
@@ -226,7 +240,7 @@ assertTrue(schedulerClosed.get());
 - **대시보드 이원화**: 분석 대시보드(데이터를 신뢰한 뒤의 질문)와 운영 대시보드(파이프라인 자체가 건강한가: 마지막 성공 날짜, 게이트 축별 상태)를 분리했다. 실제 수집 정지일이 completeness·freshness FAIL로 표시되는 것까지 확인했다
 - **자기 부하 발견**: 악화 랭킹에 오른 인스턴스 하나는 DBTower가 자기 메타 PG에 던지는 스냅샷 적재·조회 쿼리였다. 파이프라인이 준 부하를 파이프라인이 관측한다
 
-![Metabase 분석 대시보드 실물 — 인스턴스별 악화 랭킹과 장기 추이](/uploads/project/lakehouse/metabase-dashboard.png)
+![Metabase 분석 대시보드 실물: 인스턴스별 악화 랭킹과 장기 추이](/uploads/project/lakehouse/metabase-dashboard.png)
 
 ### 아키텍처
 
@@ -240,7 +254,7 @@ Airflow DAG 한 줄이 이 셋을 순서대로 지난다: offload → quality_ga
 
 ### 운영 상세 아키텍처
 
-![상세 아키텍처 — 컨테이너 경계·포트, 태스크 체인 5단, 품질 FAIL 시 webhook 분기, heartbeat를 역방향 감시하는 deadman, DuckLake 카탈로그(PG)와 데이터(S3) 분리](/uploads/project/lakehouse/architecture-detail.svg)
+![상세 아키텍처: 컨테이너 경계·포트, 태스크 체인 5단, 품질 FAIL 시 webhook 분기, heartbeat를 역방향 감시하는 deadman, DuckLake 카탈로그(PG)와 데이터(S3) 분리](/uploads/project/lakehouse/architecture-detail.svg)
 
 ### 기능 지도
 
@@ -254,7 +268,7 @@ Airflow DAG 한 줄이 이 셋을 순서대로 지난다: offload → quality_ga
 
 ### 데이터 모델
 
-![데이터 모델 — 원천 2테이블에서 raw parquet, staging, marts(contract 강제)와 운영 테이블까지의 컬럼 계보. 누적 카운터가 일간 델타로 접히는 변환 지점 표기](/uploads/project/lakehouse/erd.svg)
+![데이터 모델: 원천 2테이블에서 raw parquet, staging, marts(contract 강제)와 운영 테이블까지의 컬럼 계보. 누적 카운터가 일간 델타로 접히는 변환 지점 표기](/uploads/project/lakehouse/erd.svg)
 
 ### 1. 1년치를 만들어 재보고 수치가 요구한 곳만 최적화했다 ([6편](/blog/project/lakehouse/lakehouse-6-scale-and-serve))
 
@@ -285,7 +299,7 @@ Airflow DAG 한 줄이 이 셋을 순서대로 지난다: offload → quality_ga
 
 - **게이트 자신도 검문했다**: 게이트가 원천 전체를 훑고 있었다(Seq Scan, EXPLAIN 실측 332ms로 65만 행 중 51만 폐기). 인스턴스별 인덱스 등치 루프로 교체해 **332ms → 20ms**(Index Only Scan). "관제가 부하가 되면 안 된다"는 원칙을 게이트 자신에게도 적용한 것이다
 
-![품질 게이트 실측 — 정상 통과와 장애 주입 시 FAIL로 다운스트림 차단](/uploads/project/lakehouse/quality-gate.png)
+![품질 게이트 실측: 정상 통과와 장애 주입 시 FAIL로 다운스트림 차단](/uploads/project/lakehouse/quality-gate.png)
 
 ### 4. 파일 직결을 실측으로 실격 판정하고 DuckLake로 서빙한다 ([4편](/blog/project/lakehouse/lakehouse-4-dashboard))
 
@@ -329,7 +343,7 @@ Airflow DAG 한 줄이 이 셋을 순서대로 지난다: offload → quality_ga
 - **블로그 총정리 0편**: [왜 만들었는지부터 규모 실측까지, 시리즈 1~6편](/blog/project/lakehouse/lakehouse-0-why)
 - **운영 절차(RUNBOOK)**: [backfill·장애 대응·CHECKPOINT](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/RUNBOOK.md)
 
-## 관문(gwanmun) — 고정길이 전문과 REST 사이의 연계 게이트웨이
+## 관문(gwanmun): 고정길이 전문과 REST 사이의 연계 게이트웨이
 
 **저장소**: [github.com/dj258255/gwanmun](https://github.com/dj258255/gwanmun) · **시리즈 총정리**: [블로그 0편](/blog/project/gwanmun/gwanmun-0-why)
 
