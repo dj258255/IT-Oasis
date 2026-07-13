@@ -351,3 +351,5 @@ Airflow DAG 한 줄이 이 셋을 순서대로 지난다: offload → quality_ga
 | 기술 블로그 | [dj258255.github.io/IT-Oasis](https://dj258255.github.io/IT-Oasis) |
 | DBTower 시리즈 14편 | [총정리 0편](/blog/project/dbtower/dbtower-0-overview) |
 | lakehouse 시리즈 7편 | [총정리 0편](/blog/project/lakehouse/lakehouse-0-why) |
+| 자작 DB 내부 구현 시리즈 12편 | [1편: 스토리지 구조(페이지·슬롯·버퍼 풀)](/blog/project/db-hobby/db-internals-01-storage) |
+| 트랜잭션 ACID 구현 원리 시리즈 | [1편: 원자성은 어떻게 구현되는가](/blog/theory/transaction-acid-01-atomicity) |
