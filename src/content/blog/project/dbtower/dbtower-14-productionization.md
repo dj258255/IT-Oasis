@@ -1,8 +1,8 @@
 ---
 title: '기능은 풍부한데 남이 못 쓰는 상태였습니다 — 셀프호스트 제품으로'
 titleEn: 'Feature-Rich but Nobody Could Actually Use It — Turning It into a Self-Host Product'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 14편. 기능은 KDMS 레퍼런스를 넘어섰는데, 정작 "남이 클론해서 실제로 쓸 수 있나"를 물으니 답이 아니었습니다. 라이선스가 없어 법적으로 아무도 못 쓰고, 암호화 fail-closed가 하필 셀프호스트가 쓰는 docker 프로필만 비껴가 대상 DB 비밀번호가 평문으로 저장되고, 비밀번호 컬럼이 든 옛 H2 파일이 커밋돼 있고, AI 판단 규칙 파일이 이미지에서 빠져 빈 프롬프트로 돌고 있었습니다. 이 편은 이 프로젝트를 포트폴리오에서 실제 셀프호스트 제품으로 끌어올리는 아크의 시작입니다. Phase 0(배포 블로커) 넷을 없애며 발견한 반복되는 착각 — "대상을 향한 기능은 됐는데 플랫폼 자신을 향한 기능이 비어 있다" — 을 라이브 실측과 함께 기록합니다.'
-descriptionEn: 'Part 14 of DBTower. The features had already surpassed the KDMS reference, but when I asked "can a stranger clone this and actually run it?", the answer was no. No license meant nobody could legally use it; the encryption fail-closed guard happened to miss exactly the docker profile self-host uses, so target-DB passwords were stored in plaintext; an old H2 file with a password column was committed; and the AI judgment-rules file was excluded from the image, running on an empty prompt. This part starts the arc that lifts the project from a portfolio piece to a real self-host product. Removing the four Phase 0 deployment blockers surfaced a recurring illusion — target-facing features work, but platform-facing features are empty — recorded with live measurement.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 14편. 기능은 레퍼런스로 삼은 사례를 넘어섰는데, 정작 "남이 클론해서 실제로 쓸 수 있나"를 물으니 답이 아니었습니다. 라이선스가 없어 법적으로 아무도 못 쓰고, 암호화 fail-closed가 하필 셀프호스트가 쓰는 docker 프로필만 비껴가 대상 DB 비밀번호가 평문으로 저장되고, 비밀번호 컬럼이 든 옛 H2 파일이 커밋돼 있고, AI 판단 규칙 파일이 이미지에서 빠져 빈 프롬프트로 돌고 있었습니다. 이 편은 이 프로젝트를 포트폴리오에서 실제 셀프호스트 제품으로 끌어올리는 아크의 시작입니다. Phase 0(배포 블로커) 넷을 없애며 발견한 반복되는 착각 — "대상을 향한 기능은 됐는데 플랫폼 자신을 향한 기능이 비어 있다" — 을 라이브 실측과 함께 기록합니다.'
+descriptionEn: 'Part 14 of DBTower. The features had already surpassed the reference platform, but when I asked "can a stranger clone this and actually run it?", the answer was no. No license meant nobody could legally use it; the encryption fail-closed guard happened to miss exactly the docker profile self-host uses, so target-DB passwords were stored in plaintext; an old H2 file with a password column was committed; and the AI judgment-rules file was excluded from the image, running on an empty prompt. This part starts the arc that lifts the project from a portfolio piece to a real self-host product. Removing the four Phase 0 deployment blockers surfaced a recurring illusion — target-facing features work, but platform-facing features are empty — recorded with live measurement.'
 date: 2026-07-15
 tags:
   - Java
@@ -19,7 +19,7 @@ seriesOrder: 14
 
 ## 0. 들어가며, "되는 것"과 "남이 쓸 수 있는 것"은 다르다
 
-지난 13편까지, DBTower는 기능적으로는 레퍼런스로 삼은 당근 KDMS를 넘어섰습니다. 5기종 통합, 시점 비교, 회귀 자동 감지, MCP, 웹 콘솔, 자연어 진단까지. 그런데 문득 다른 질문이 떠올랐습니다. **"이걸 내가 아닌 누군가가 깃허브에서 클론해서, 실제로 자기 인프라에 띄울 수 있나?"**
+지난 13편까지, DBTower는 기능적으로는 레퍼런스로 삼은 사례를 넘어섰습니다. 5기종 통합, 시점 비교, 회귀 자동 감지, MCP, 웹 콘솔, 자연어 진단까지. 그런데 문득 다른 질문이 떠올랐습니다. **"이걸 내가 아닌 누군가가 깃허브에서 클론해서, 실제로 자기 인프라에 띄울 수 있나?"**
 
 물어보니 답이 아니었습니다. 기능이 되는 것과 남이 쓸 수 있는 것은 완전히 다른 문제였습니다. 그래서 이 프로젝트를 **포트폴리오에서 실제 셀프호스트 제품으로** 끌어올리기로 했습니다. 아무도 못 쓰는 상태 → 한 명 → 한 팀 → 여러 팀 → 수천 대. 이 순서로 벽을 하나씩 허무는 긴 아크의 시작입니다. 이번 편은 그 첫 계단, **"아무도 못 쓰는 이유"** 를 없앤 기록입니다.
 
