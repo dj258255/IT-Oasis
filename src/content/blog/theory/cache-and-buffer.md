@@ -841,7 +841,7 @@ HTTP 캐시를 효율적으로 관리하려면 Cache-Control 헤더를 섬세하
 - [카카오 기술블로그 - 카카오톡 캐싱 시스템의 진화](https://tech.kakao.com/2016/03/11/caching/) - 대규모 캐싱 시스템 설계
 - [LINE Engineering - Redis 성능 튜닝](https://engineering.linecorp.com/ko/blog/redis-cluster-optimization/) - Redis 클러스터 최적화
 - [토스 기술블로그 - 토스 코어 캐싱 전략](https://toss.tech/article/smart-web-service-cache) - 웹 서비스 캐시 전략
-- [당근마켓 - 대용량 트래픽 대응 아키텍처](https://medium.com/daangn/how-we-built-a-scalable-architecture-f3b7e1c7e8e9) - CDN과 캐싱 레이어
+- [대용량 트래픽 대응 아키텍처 사례](https://medium.com/daangn/how-we-built-a-scalable-architecture-f3b7e1c7e8e9) - CDN과 캐싱 레이어
 
 <!-- EN -->
 
@@ -1670,4 +1670,4 @@ Understanding both concepts accurately enables system performance optimization a
 - [Kakao Tech Blog - KakaoTalk Caching System Evolution](https://tech.kakao.com/2016/03/11/caching/) - Large-scale caching system design
 - [LINE Engineering - Redis Performance Tuning](https://engineering.linecorp.com/ko/blog/redis-cluster-optimization/) - Redis cluster optimization
 - [Toss Tech Blog - Toss Core Caching Strategy](https://toss.tech/article/smart-web-service-cache) - Web service cache strategy
-- [Karrot - High-Traffic Architecture](https://medium.com/daangn/how-we-built-a-scalable-architecture-f3b7e1c7e8e9) - CDN and caching layers
+- [High-Traffic Architecture Case](https://medium.com/daangn/how-we-built-a-scalable-architecture-f3b7e1c7e8e9) - CDN and caching layers
