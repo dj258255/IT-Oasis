@@ -328,7 +328,7 @@ Twitter 사례가 흥미로웠습니다. MySQL 기반 검색에서 Lucene으로 
 |------|------|------|
 | NHN | Elasticsearch | NHN FORWARD 22의 상품 검색엔진. 다수의 서비스가 검색 인덱스를 공유 |
 | 오늘의집 | Elasticsearch + Lucene 직접 튜닝 | Lucene 세그먼트 수를 직접 튜닝하여 성능 개선 |
-| 당근마켓 | Elasticsearch on K8s | Kubernetes에서 ES 클러스터 운영 |
+| 국내 커머스 기업 | Elasticsearch on K8s | Kubernetes에서 ES 클러스터 운영 |
 
 한국 대기업은 대부분 Elasticsearch를 사용합니다. 
 하지만 공통점이 있습니다. **여러 팀과 서비스가 검색 인덱스를 공유하는 구조**입니다. 
@@ -1844,7 +1844,7 @@ The Twitter case was interesting. The motivation for migrating from MySQL-based 
 |---------|-----------|---------|
 | NHN | Elasticsearch | NHN FORWARD 22 -- product search engine. Multiple services share search indexes |
 | Ohouse | Elasticsearch + direct Lucene tuning | Directly tuned Lucene segment count for performance improvement |
-| Karrot | Elasticsearch on K8s | Operating ES cluster on Kubernetes |
+| A Korean commerce company | Elasticsearch on K8s | Operating ES cluster on Kubernetes |
 
 Most large Korean companies use Elasticsearch.
 But they share a commonality -- **multiple teams and services share search indexes.**
