@@ -33,7 +33,9 @@ seriesOrder: 17
 
 스코프 밖 인스턴스를 id로 직접 찌르면 어떻게 될까요. 403 Forbidden을 주면 "당신은 못 보지만, **그 id의 인스턴스는 존재한다**"는 사실이 샙니다. 공격자 입장에선 id를 순회하며 인프라 지도를 그릴 수 있죠. 그래서 스코프 밖은 미등록과 **완전히 같은 404, 완전히 같은 메시지**를 받습니다. "등록되지 않은 인스턴스: 7" — 이 응답만 보고는 7번이 없는 건지, 남의 팀 것인지 구분할 수 없습니다. 단위 테스트가 이 메시지 동일성을 직접 단언합니다.
 
-라이브로 확인했습니다. local-mysql에 team-a, local-postgres에 team-b를 달고 viewer 계정을 team-a로 지정한 뒤 viewer로 로그인하니 — 목록에 5개(team-a 뱃지가 붙은 mysql + 라벨 없는 전역 4개)만 남고 postgres는 사라졌습니다. admin 화면엔 7개 전부 보이고요. postgres의 id를 직접 호출하면 404, 자기 팀 mysql은 200. 화면 스크린샷과 함께 검증 기록에 남겼습니다.
+라이브로 확인했습니다. local-mysql에 team-a, local-postgres에 team-b를 달고 viewer 계정을 team-a로 지정한 뒤 viewer로 로그인하니 — 목록에 5개(team-a 뱃지가 붙은 mysql + 라벨 없는 전역 4개)만 남고 postgres는 사라졌습니다. admin 화면엔 7개 전부 보이고요. postgres의 id를 직접 호출하면 404, 자기 팀 mysql은 200.
+
+![VIEWER(team-a)의 인스턴스 목록 — team-a 뱃지 + 전역만 보이고 team-b는 존재하지 않는 것처럼](/uploads/project/dbtower/lbac-viewer-scope.png)
 
 ## 3. 재시작을 견디는 로그인 — 그리고 조용한 폴백 두 번
 
