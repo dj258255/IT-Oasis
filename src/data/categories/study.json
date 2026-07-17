@@ -9,6 +9,7 @@
     { "name": "kernel-hobby", "nameEn": "kernel-hobby", "nameKo": "토이 커널", "order": 2 },
     { "name": "java-hobby", "nameEn": "java-hobby", "nameKo": "토이 JVM", "order": 3 },
     { "name": "kafka-hobby", "nameEn": "kafka-hobby", "nameKo": "토이 Kafka", "order": 4 },
-    { "name": "distributed-systems", "nameEn": "Distributed Systems", "nameKo": "분산 시스템", "order": 5 }
+    { "name": "distributed-systems", "nameEn": "Distributed Systems", "nameKo": "분산 시스템", "order": 5 },
+    { "name": "discord-bot", "nameEn": "Discord Bot", "nameKo": "디스코드 봇", "order": 6 }
   ]
 }
