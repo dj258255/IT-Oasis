@@ -1,8 +1,8 @@
 ---
 title: '"기능이 된다"와 "같은 화면이 나온다"는 다릅니다 — 화면 패리티와 세 개의 함정'
 titleEn: '"It Works" and "It Shows the Same Screen" Are Different — Screen Parity and Three Traps'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 15편. 레퍼런스 발표의 화면 11장을 옆에 놓고 컬럼 단위로 전수 대조했습니다. 뼈대는 다 돌아가는데 표의 컬럼이 달랐고, 그걸 맞추는 과정에서 함정 셋을 만났습니다. 단위 테스트 382건이 초록인데 웹 콘솔 전체가 백화된 채 커밋돼 있었고(중복 선언 하나가 SPA를 전멸시킴), "카탈로그 재구성(근사)"라는 배지는 사실 게으름의 라벨이었고(pg_get_constraintdef를 쓰면 근사가 아님), CPU 그래프를 붙이다 보니 활동 그래프가 9시간 미래의 빈 구간을 조회하고 있었습니다(UTC 고정 JVM vs 브라우저 벽시계). 테이블 상세 5기종, 표 컬럼 패리티, CPU·Connections 그래프 내장과 CPU 드래그까지 — 라이브 실측과 함께 기록합니다.'
-descriptionEn: 'Part 15 of DBTower. I put 11 slides of the reference platform side by side and compared column by column. The skeleton all worked, but table columns differed — and closing that gap surfaced three traps: 382 green unit tests while the entire web console was white-screened in a committed state (one duplicate declaration killed the whole SPA); the "catalog reconstruction (approximate)" badge was actually a label for laziness (with pg_get_constraintdef it is not approximate); and wiring the CPU graph revealed the activity chart had been querying an empty window nine hours in the future (UTC-pinned JVM vs browser wall clock). Table detail across five engines, column parity, built-in CPU/Connections graphs and CPU-drag selection — recorded with live measurements.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 14편. 레퍼런스 발표의 화면 11장을 옆에 놓고 컬럼 단위로 전수 대조했습니다. 뼈대는 다 돌아가는데 표의 컬럼이 달랐고, 그걸 맞추는 과정에서 함정 셋을 만났습니다. 단위 테스트 382건이 초록인데 웹 콘솔 전체가 백화된 채 커밋돼 있었고(중복 선언 하나가 SPA를 전멸시킴), "카탈로그 재구성(근사)"라는 배지는 사실 게으름의 라벨이었고(pg_get_constraintdef를 쓰면 근사가 아님), CPU 그래프를 붙이다 보니 활동 그래프가 9시간 미래의 빈 구간을 조회하고 있었습니다(UTC 고정 JVM vs 브라우저 벽시계). 테이블 상세 5기종, 표 컬럼 패리티, CPU·Connections 그래프 내장과 CPU 드래그까지 — 라이브 실측과 함께 기록합니다.'
+descriptionEn: 'Part 14 of DBTower. I put 11 slides of the reference platform side by side and compared column by column. The skeleton all worked, but table columns differed — and closing that gap surfaced three traps: 382 green unit tests while the entire web console was white-screened in a committed state (one duplicate declaration killed the whole SPA); the "catalog reconstruction (approximate)" badge was actually a label for laziness (with pg_get_constraintdef it is not approximate); and wiring the CPU graph revealed the activity chart had been querying an empty window nine hours in the future (UTC-pinned JVM vs browser wall clock). Table detail across five engines, column parity, built-in CPU/Connections graphs and CPU-drag selection — recorded with live measurements.'
 date: 2026-07-15
 tags:
   - Java
@@ -14,12 +14,12 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 15
+seriesOrder: 14
 ---
 
 ## 0. 들어가며, 화면을 옆에 놓고 대조하다
 
-14편에서 셀프호스트 블로커를 없애고 나서, 처음의 레퍼런스 발표 자료를 다시 꺼냈습니다. 이번엔 기능 목록이 아니라 **화면 11장**을 옆에 놓고 컬럼 단위로 대조했습니다. 결과가 흥미로웠습니다. 뼈대 — 3탭 구조, 시점 비교, 증감·신규 감지, 활용 사례 세 가지 흐름 — 는 전부 돌아가는데, **표에 찍히는 컬럼이 달랐습니다.**
+13편에서 셀프호스트 블로커를 없애고 나서, 처음의 레퍼런스 발표 자료를 다시 꺼냈습니다. 이번엔 기능 목록이 아니라 **화면 11장**을 옆에 놓고 컬럼 단위로 대조했습니다. 결과가 흥미로웠습니다. 뼈대 — 3탭 구조, 시점 비교, 증감·신규 감지, 활용 사례 세 가지 흐름 — 는 전부 돌아가는데, **표에 찍히는 컬럼이 달랐습니다.**
 
 레퍼런스의 상위 SQL 표는 Call/sec·Latency(ms)·Row Examined(Avg)를 보여주는데 DBTower는 누적 Calls·Total(ms)을 보여주고 있었고, 슬로우 쿼리 표엔 User@host와 Lock_time이 없었고, MongoDB 표엔 인덱스를 탔는지(IXSCAN/COLLSCAN)를 바로 보여주는 Plan 컬럼이 없었습니다. 기능이 된다는 것과 운영자가 매일 보는 화면이 같은 정보 밀도를 갖는 것은 다른 문제였습니다. 이번 편은 그 간극을 메운 기록이고, 메우는 과정에서 만난 함정 셋이 사실 본편입니다.
 
@@ -47,7 +47,7 @@ FK와 CHECK가 있는 데모 테이블을 만들어 확인하니 `CONSTRAINT dem
 
 테이블 상세 렌더를 붙이면서 추가한 `const fmtBytes`가, 파일 저 위에 이미 있던 같은 이름의 선언과 충돌한 겁니다. 자바스크립트에서 `const` 중복 선언은 실행 중 에러가 아니라 **파싱 에러**입니다. app.js 전체가 한 글자도 실행되지 못했고, SPA는 아무것도 렌더하지 못했습니다. 그리고 이 상태로 커밋까지 되어 있었습니다 — 단위 테스트 382건이 전부 초록이었으니까요.
 
-당연한 이야기지만 Java 단위 테스트도, curl로 하는 API 검증도 프론트 자바스크립트의 파싱을 거치지 않습니다. 13편의 YAML 중복 키(테스트는 통과, 실제 부팅에서 폭발)와 정확히 같은 결입니다. 검증 파이프라인에 `node --check`(구문 검사)를 넣고, 기능 검증은 API 응답 확인이 아니라 브라우저에서 실제 화면이 그려지는 것까지로 기준을 올렸습니다. 이 습관이 뒤에 나올 세 번째 함정도 잡아냅니다.
+당연한 이야기지만 Java 단위 테스트도, curl로 하는 API 검증도 프론트 자바스크립트의 파싱을 거치지 않습니다. 12편의 YAML 중복 키(테스트는 통과, 실제 부팅에서 폭발)와 정확히 같은 결입니다. 검증 파이프라인에 `node --check`(구문 검사)를 넣고, 기능 검증은 API 응답 확인이 아니라 브라우저에서 실제 화면이 그려지는 것까지로 기준을 올렸습니다. 이 습관이 뒤에 나올 세 번째 함정도 잡아냅니다.
 
 ## 3. 표 컬럼 패리티 — Call/sec의 정직
 
@@ -85,6 +85,6 @@ DBTower의 JVM은 **의도적으로 UTC에 고정**되어 있습니다(하드닝
 
 ## 6. 남은 조각
 
-화면 11장 기준으로 남은 건 이제 명확합니다. 활용 사례 화면 좌상단의 "Slack Group: 팀명 / 콘솔 딥링크" — 인스턴스마다 담당 팀과 콘솔 URL을 달아주는 메타데이터인데, 멀티팀 접근 제어(Phase 3)의 팀 라벨과 같은 컬럼으로 설계해야 마이그레이션을 두 번 하지 않습니다. AWS SDK를 붙이는 대신 URL 필드 하나로 일반화하면, 관리형 DB를 쓰는 조직은 PI 링크를, 셀프호스트는 Grafana 링크를 넣으면 됩니다. 그리고 14편에서 미뤄둔 데이터 마스킹 — 외부로 나가는 쿼리에서 리터럴만 가리는 스캐너는 써뒀고, 발신 지점 네 곳에 배선하는 일이 남았습니다.
+화면 11장 기준으로 남은 건 이제 명확합니다. 활용 사례 화면 좌상단의 "Slack Group: 팀명 / 콘솔 딥링크" — 인스턴스마다 담당 팀과 콘솔 URL을 달아주는 메타데이터인데, 멀티팀 접근 제어(Phase 3)의 팀 라벨과 같은 컬럼으로 설계해야 마이그레이션을 두 번 하지 않습니다. AWS SDK를 붙이는 대신 URL 필드 하나로 일반화하면, 관리형 DB를 쓰는 조직은 PI 링크를, 셀프호스트는 Grafana 링크를 넣으면 됩니다. 그리고 13편에서 미뤄둔 데이터 마스킹 — 외부로 나가는 쿼리에서 리터럴만 가리는 스캐너는 써뒀고, 발신 지점 네 곳에 배선하는 일이 남았습니다.
 
 "기능이 된다"에서 "같은 화면이 나온다"로 오는 데 함정이 셋이었습니다. 전부 단위 테스트 바깥에서만 보이는 것들이었고요. 다음 편은 아마 마스킹과 팀 라벨, 그러니까 "여러 팀이 한 콘솔을 쓰기 시작할 때"의 이야기가 될 겁니다.

@@ -1,8 +1,8 @@
 ---
 title: '내가 만든 걸 4축으로 감사하고, 거기서 나온 것들을 실제로 고쳤습니다'
 titleEn: 'I Audited What I Built Along Four Axes and Actually Fixed What Came Out'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 13편. 심화 아크 넷을 끝낸 뒤, 만든 것을 스스로 감사했습니다. 동시성·자원누수, 기종별 정확성, 보안, HA·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조했습니다. 나온 결함을 전부 고치진 않았습니다. 코드로 재검증하고 근거를 확인해 FIX와 SKIP을 갈랐고, 그 결정 자체를 문서로 남겼습니다. 흥미로운 세 장면이 있었습니다. 내 코드가 이미 정답을 알고 있던 곳(DeepAnalyzer는 XXE를 올바르게 막는데 파서 세 곳만 빠졌다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만 실제로는 저장돼 수정이 작동했다)을 라이브 실측과 스크린샷으로 기록합니다.'
-descriptionEn: 'Part 13 of DBTower. After finishing four deepening arcs, I audited what I had built, sweeping four axes (concurrency/resource leaks, per-engine correctness, security, HA/lifecycle) in parallel and cross-checking against OWASP, CWE, and vendor docs via web search. I didn''t fix everything. I re-verified each finding against code, confirmed the evidence, split FIX from SKIP, and left the decisions themselves in a written record. Three scenes stand out: where my own code already knew the right answer (DeepAnalyzer blocks XXE correctly, three parsers didn''t), where parallelization revived a trap (the scale arc amplified connection-pool contention), and where live measurement beat the audit again (the audit said microseconds aren''t stored, but they were, so the fix works). All of it is recorded with live measurement and screenshots.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 12편. 심화 아크 넷을 끝낸 뒤, 만든 것을 스스로 감사했습니다. 동시성·자원누수, 기종별 정확성, 보안, HA·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서까지 웹서칭으로 대조했습니다. 나온 결함을 전부 고치진 않았습니다. 코드로 재검증하고 근거를 확인해 FIX와 SKIP을 갈랐고, 그 결정 자체를 문서로 남겼습니다. 흥미로운 세 장면이 있었습니다. 내 코드가 이미 정답을 알고 있던 곳(DeepAnalyzer는 XXE를 올바르게 막는데 파서 세 곳만 빠졌다), 병렬화가 되살린 함정(스케일 아크가 커넥션 풀 경합을 키웠다), 그리고 실측이 감사를 다시 이긴 순간(감사는 마이크로초가 안 저장된다 했지만 실제로는 저장돼 수정이 작동했다)을 라이브 실측과 스크린샷으로 기록합니다.'
+descriptionEn: 'Part 12 of DBTower. After finishing four deepening arcs, I audited what I had built, sweeping four axes (concurrency/resource leaks, per-engine correctness, security, HA/lifecycle) in parallel and cross-checking against OWASP, CWE, and vendor docs via web search. I didn''t fix everything. I re-verified each finding against code, confirmed the evidence, split FIX from SKIP, and left the decisions themselves in a written record. Three scenes stand out: where my own code already knew the right answer (DeepAnalyzer blocks XXE correctly, three parsers didn''t), where parallelization revived a trap (the scale arc amplified connection-pool contention), and where live measurement beat the audit again (the audit said microseconds aren''t stored, but they were, so the fix works). All of it is recorded with live measurement and screenshots.'
 date: 2026-07-07
 tags:
   - Java
@@ -15,7 +15,7 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 13
+seriesOrder: 12
 ---
 
 ## 0. 들어가며, 만든 사람이 만든 걸 감사할 때

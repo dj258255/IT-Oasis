@@ -1,7 +1,7 @@
 ---
 title: '진단이 부하가 되면 안 된다는 보호장치를 달고, Grafana처럼 셀프호스트로 v1.0.0을 찍었습니다'
 titleEn: 'Guardrails So Diagnosis Never Becomes the Load, and a v1.0.0 Shipped Self-Hosted Like Grafana'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 마지막 10편. 마지막으로 꼭 필요하다고 생각한 기능은 화려한 게 아니라 겸손한 것이었습니다. 진단 도구가 대상 DB의 부하 유발자가 되지 않게 하는 보호장치입니다. 모든 JDBC 조회가 상속하는 단일 지점 쿼리 타임아웃, MongoDB에서 CSOT 대신 소켓 상한을 택한 이유, 죽은 인스턴스를 매 틱 두드리는 것 자체가 부하라서 넣은 지수 백오프(건너뛸틱 1→2 라이브 관측)까지 담았습니다. 그리고 ''이걸 누구에게 어떻게 줄 것인가''라는 질문에는 자격증명 수탁·사설망·멀티테넌시·비용이라는 SaaS의 네 벽을 피해 Grafana/PMM처럼 셀프호스트로 가기로 답했습니다. 백업 CLI를 번들한 배터리 포함 이미지(자신이 겪은 pg_dump 버전 스큐를 이미지에서 해결), docker compose 원커맨드, 태그가 곧 게시인 GHCR 릴리스로 v1.0.0을 찍은 기록입니다.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 마지막 9편. 마지막으로 꼭 필요하다고 생각한 기능은 화려한 게 아니라 겸손한 것이었습니다. 진단 도구가 대상 DB의 부하 유발자가 되지 않게 하는 보호장치입니다. 모든 JDBC 조회가 상속하는 단일 지점 쿼리 타임아웃, MongoDB에서 CSOT 대신 소켓 상한을 택한 이유, 죽은 인스턴스를 매 틱 두드리는 것 자체가 부하라서 넣은 지수 백오프(건너뛸틱 1→2 라이브 관측)까지 담았습니다. 그리고 ''이걸 누구에게 어떻게 줄 것인가''라는 질문에는 자격증명 수탁·사설망·멀티테넌시·비용이라는 SaaS의 네 벽을 피해 Grafana/PMM처럼 셀프호스트로 가기로 답했습니다. 백업 CLI를 번들한 배터리 포함 이미지(자신이 겪은 pg_dump 버전 스큐를 이미지에서 해결), docker compose 원커맨드, 태그가 곧 게시인 GHCR 릴리스로 v1.0.0을 찍은 기록입니다.'
 descriptionEn: 'The final part 10 of DBTower. The last feature the tool truly needed was not flashy but humble: guardrails so the diagnostic tool never becomes the load on its targets. That means a single-point query timeout inherited by every JDBC read, a socket read cap chosen over CSOT for MongoDB, and exponential backoff for dead instances (skip-ticks 1 to 2 observed live), because re-knocking a dead DB every tick is itself load. Then comes the question of how to hand this to people. Avoiding SaaS''s four walls (credential custody, private networks, multi-tenancy, cost), the project goes self-hosted like Grafana/PMM, with a batteries-included image bundling backup CLIs (fixing the pg_dump version skew the project itself once hit), a one-command docker compose, and a GHCR release where pushing a tag is the release, landing at v1.0.0.'
 date: 2026-07-05
 tags:
@@ -15,14 +15,14 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 10
+seriesOrder: 9
 ---
 
 ## 0. 들어가며, 마지막 항목은 화려하지 않다
 
-[9편](/blog/project/dbtower/dbtower-9-deep-diagnosis)을 끝내고 나니, 꼭 넣어야겠다고 미뤄둔 기능이 딱 하나 남아 있었습니다. 바로 **분석 보호장치**입니다. 진단 도구가 대상 DB의 부하 유발자가 되지 않게 하는 장치입니다. 이상 감지나 심층 진단과는 결이 다릅니다. "진단 도구가 대상 DB에 부하를 주지 않게 하라"는 겸손한 항목입니다.
+[8편](/blog/project/dbtower/dbtower-8-diagnosis)을 끝내고 나니, 꼭 넣어야겠다고 미뤄둔 기능이 딱 하나 남아 있었습니다. 바로 **분석 보호장치**입니다. 진단 도구가 대상 DB의 부하 유발자가 되지 않게 하는 장치입니다. 이상 감지나 심층 진단과는 결이 다릅니다. "진단 도구가 대상 DB에 부하를 주지 않게 하라"는 겸손한 항목입니다.
 
-그런데 9편 마지막에 쓴 문장이 정확히 이 항목을 가리키고 있었습니다. "실제 실행은 읽기여도 부하다." D9만의 얘기가 아닙니다. DBTower는 1분마다 대상 DB들의 통계를 읽고, 요청이 올 때마다 세션과 Wait Event를 조회합니다. 관제 도구가 관제 대상을 느리게 만든다면 본말전도입니다. 이번 편은 그 마지막 항목을 닫고, **"이걸 누구에게 어떻게 줄 것인가"**라는 남은 질문에 답하며 v1.0.0을 찍는 기록입니다.
+그런데 8편 마지막에 쓴 문장이 정확히 이 항목을 가리키고 있었습니다. "실제 실행은 읽기여도 부하다." D9만의 얘기가 아닙니다. DBTower는 1분마다 대상 DB들의 통계를 읽고, 요청이 올 때마다 세션과 Wait Event를 조회합니다. 관제 도구가 관제 대상을 느리게 만든다면 본말전도입니다. 이번 편은 그 마지막 항목을 닫고, **"이걸 누구에게 어떻게 줄 것인가"**라는 남은 질문에 답하며 v1.0.0을 찍는 기록입니다.
 
 ## 1. 보호장치 하나, 타임아웃은 단일 지점에
 
@@ -93,9 +93,9 @@ meta-db가 pg_isready로 Healthy가 된 뒤 앱이 뜨고 Flyway가 새 메타 D
 
 게시는 GitHub Actions로 합니다. `v1.0.0` 태그를 push하면 테스트를 게이트로 통과한 뒤 GHCR에 이미지가 올라갑니다(semver 태그 자동 파생). 사람이 하는 일은 태그 하나입니다.
 
-## 6. 마치며, 10편을 하나의 매듭으로
+## 6. 마치며, 9편을 하나의 매듭으로
 
-버전을 1.0.0으로 올리면서 시리즈도 여기서 접습니다. 1편의 문제 정의에서 시작해 추상화(2편), 채널(3편), 5기종 증명(4편), 운영 안전(5편), 적재적소(6편), 프로비저닝(7편), 자율 진단(8편), 심층 원인(9편), 그리고 보호장치와 제품화(10편)까지 왔습니다. 필요하다고 생각한 기능은 전부 닫혔고, 남은 건 의도적 잔여(쿨다운 설정 외부화, Vault 동적 계정, 백업 원격 보관)로 문서에 정직하게 적어뒀습니다.
+버전을 1.0.0으로 올리면서 시리즈도 여기서 접습니다. 1편의 문제 정의에서 시작해 추상화(2편), 채널(3편), 5기종 증명(4편), 운영 안전(5편), 적재적소(6편), 프로비저닝(7편), 자율 진단(8편), 심층 원인(8편), 그리고 보호장치와 제품화(9편)까지 왔습니다. 필요하다고 생각한 기능은 전부 닫혔고, 남은 건 의도적 잔여(쿨다운 설정 외부화, Vault 동적 계정, 백업 원격 보관)로 문서에 정직하게 적어뒀습니다.
 
 돌아보면 마지막 두 작업이 이 프로젝트의 성격을 제일 잘 보여주는 것 같습니다. 가장 마지막에 추가한 기능이 "내가 남에게 부하가 되지 않게 하는 장치"였고, 제품화의 첫 결정이 "사용자의 비밀은 사용자의 인프라를 떠나지 않는다"였습니다. 관제 도구는 힘이 세지는 방향으로 완성된다고 여기기 쉽지만, 실은 **믿을 수 있어지는 방향**으로 완성됩니다. 열 편을 관통한 결론입니다.
 

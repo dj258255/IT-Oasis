@@ -1,8 +1,8 @@
 ---
 title: 'v1.0.0 뒤에도 쓰다 보니 필요한 게 계속 보여서, 다섯 기종을 파고든 심화 아크 넷을 합본으로 담았습니다'
 titleEn: 'Going Deeper After v1.0.0, an Omnibus of Four Deepening Arcs Across Five Engines'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 12편. 만들 만큼 만들었다 싶었는데 쓰다 보니 필요한 게 계속 보여서, 남겨둔 숙제를 붙잡고 다시 파고든 네 개의 심화 아크를 한 편에 전문 그대로 담았습니다. 아크 1은 실행계획 변경(plan flip) 감지를 PostgreSQL만 되던 것에서 다섯 기종으로 완성한 이야기입니다. 계획 형태를 얻는 경로가 기종마다 전혀 달라(MySQL 리터럴 샘플 재EXPLAIN, SQL Server Query Store, Oracle plan_hash_value, Mongo 프로파일러 명령) shape 정규화 한 겹으로 통일했고, 덤으로 PG 복제 슬롯 감시와 블로트 신호까지 붙였습니다. 아크 2는 p95의 정직 등급 올리기입니다. 누적을 최근 구간으로(0.48→0.19), 미지원을 추정으로 올리고, 프로파일러가 꺼져도 인스턴스 p95를 살리고, 못 올리는 Oracle은 그대로 두어 라벨로 대비시켰습니다. 라이브에서 2^64 센티넬 오버플로와 최소권한 조용한 폴백 버그도 잡았습니다. 아크 3은 설정 변경 0으로 데드락을 읽는 이야기입니다. 세 기종의 관측 입도가 다르고, 조사와 정반대로 데드락이 파일이 아니라 링버퍼에만 있던 현실을 담았습니다. 아크 4는 관제가 부하가 되지 않게 하는 스케일 제어 다섯 축(병렬 수집·풀 분리·알림 폭주 제어·격리 토글·스코어 캐시)입니다.'
-descriptionEn: 'Part 12 of DBTower. I thought I had built enough, but real use kept surfacing needs, so I went back to the homework I had left and dug deeper. The result is four deepening arcs, collected here in full. Arc 1 completes plan-flip detection from PostgreSQL-only to all five engines, where the path to obtain a plan shape differs wildly per engine and a single shape-normalization layer unifies them, plus PG replication-slot and bloat signals. Arc 2 raises p95''s honesty grade: cumulative to recent-window (0.48 to 0.19), unsupported to estimated, keeping an instance p95 alive with the profiler off, and leaving Oracle unraised so the labels contrast, with real bugs caught live (a 2^64 sentinel overflow and a least-privilege silent fallback). Arc 3 reads deadlocks with zero config change across three engines of different granularity, where the deadlock lived in the ring buffer, not the file, the opposite of what the research said. Arc 4 is five axes of scale control so the watchtower never becomes the load.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 11편. 만들 만큼 만들었다 싶었는데 쓰다 보니 필요한 게 계속 보여서, 남겨둔 숙제를 붙잡고 다시 파고든 네 개의 심화 아크를 한 편에 전문 그대로 담았습니다. 아크 1은 실행계획 변경(plan flip) 감지를 PostgreSQL만 되던 것에서 다섯 기종으로 완성한 이야기입니다. 계획 형태를 얻는 경로가 기종마다 전혀 달라(MySQL 리터럴 샘플 재EXPLAIN, SQL Server Query Store, Oracle plan_hash_value, Mongo 프로파일러 명령) shape 정규화 한 겹으로 통일했고, 덤으로 PG 복제 슬롯 감시와 블로트 신호까지 붙였습니다. 아크 2는 p95의 정직 등급 올리기입니다. 누적을 최근 구간으로(0.48→0.19), 미지원을 추정으로 올리고, 프로파일러가 꺼져도 인스턴스 p95를 살리고, 못 올리는 Oracle은 그대로 두어 라벨로 대비시켰습니다. 라이브에서 2^64 센티넬 오버플로와 최소권한 조용한 폴백 버그도 잡았습니다. 아크 3은 설정 변경 0으로 데드락을 읽는 이야기입니다. 세 기종의 관측 입도가 다르고, 조사와 정반대로 데드락이 파일이 아니라 링버퍼에만 있던 현실을 담았습니다. 아크 4는 관제가 부하가 되지 않게 하는 스케일 제어 다섯 축(병렬 수집·풀 분리·알림 폭주 제어·격리 토글·스코어 캐시)입니다.'
+descriptionEn: 'Part 11 of DBTower. I thought I had built enough, but real use kept surfacing needs, so I went back to the homework I had left and dug deeper. The result is four deepening arcs, collected here in full. Arc 1 completes plan-flip detection from PostgreSQL-only to all five engines, where the path to obtain a plan shape differs wildly per engine and a single shape-normalization layer unifies them, plus PG replication-slot and bloat signals. Arc 2 raises p95''s honesty grade: cumulative to recent-window (0.48 to 0.19), unsupported to estimated, keeping an instance p95 alive with the profiler off, and leaving Oracle unraised so the labels contrast, with real bugs caught live (a 2^64 sentinel overflow and a least-privilege silent fallback). Arc 3 reads deadlocks with zero config change across three engines of different granularity, where the deadlock lived in the ring buffer, not the file, the opposite of what the research said. Arc 4 is five axes of scale control so the watchtower never becomes the load.'
 date: 2026-07-07
 tags:
   - Java
@@ -18,7 +18,7 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 12
+seriesOrder: 11
 ---
 
 앞 편까지로 만들 만큼 만들었다 싶었는데, 정직하게 남겨둔 숙제가 있었고 쓰다 보니 필요한 게 계속 보였습니다. 그래서 그 숙제를 붙잡고 다시 파고들었습니다. 결과가 **네 개의 심화 아크**입니다. 원래 네 편의 글이었지만 하나의 흐름이라 한 편에 **전문 그대로** 묶습니다. 관통하는 태도도 같습니다. 못 하는 걸 하는 척하지 않고, 아는 만큼만 정직하게 말하되, 그 아는 것을 라이브로 확인한다.
@@ -34,7 +34,7 @@ seriesOrder: 12
 
 ### 0. 들어가며: 반쪽짜리로 남겨둔 기능
 
-[11편](/blog/project/dbtower/dbtower-11-deepening)에서 실행계획 변경(plan flip) 감지를 만들었습니다. "쿼리도 데이터도 그대로인데 갑자기 느려짐 = 옵티마이저가 계획을 갈아탐"을 잡는 기능인데, 그때 정직하게 적어둔 한계가 있었습니다. 바로 **PostgreSQL만 완전하다**는 것이었습니다.
+[10편](/blog/project/dbtower/dbtower-10-deepening)에서 실행계획 변경(plan flip) 감지를 만들었습니다. "쿼리도 데이터도 그대로인데 갑자기 느려짐 = 옵티마이저가 계획을 갈아탐"을 잡는 기능인데, 그때 정직하게 적어둔 한계가 있었습니다. 바로 **PostgreSQL만 완전하다**는 것이었습니다.
 
 이유는 그 편에서 밟은 벽 그대로입니다. 통계 소스의 쿼리 텍스트는 리터럴이 지워진 정규화 형태($1·?)라 그대로 EXPLAIN이 안 되는데, PostgreSQL 16의 `EXPLAIN (GENERIC_PLAN)`이 그걸 정확히 풀어주는 유일한 기능이었습니다. 나머지 네 기종은 "플레이스홀더 텍스트는 스킵"하고 넘어갔습니다.
 
@@ -42,7 +42,7 @@ seriesOrder: 12
 
 ### 1. 설계: 획득은 기종이, 판정은 공통이
 
-11편의 트래커는 `explainNormalized(text)`를 직접 부르고 그 결과를 shape로 정규화했습니다. PG 전용 구조였습니다. 다섯 기종으로 넓히면서 경계를 다시 그었습니다.
+10편의 트래커는 `explainNormalized(text)`를 직접 부르고 그 결과를 shape로 정규화했습니다. PG 전용 구조였습니다. 다섯 기종으로 넓히면서 경계를 다시 그었습니다.
 
 `DbmsOperator`에 메서드 하나를 추가했습니다:
 
@@ -64,7 +64,7 @@ shape 정규화는 `PlanShapes`라는 유틸 한 곳에 기종별 메서드로 �
 
 | 기종 | 획득 경로 | 특이점 |
 |---|---|---|
-| PostgreSQL | `EXPLAIN (GENERIC_PLAN)` | 11편의 그 기능이고, 플레이스홀더 채로 제네릭 플랜 |
+| PostgreSQL | `EXPLAIN (GENERIC_PLAN)` | 10편의 그 기능이고, 플레이스홀더 채로 제네릭 플랜 |
 | MySQL | `QUERY_SAMPLE_TEXT` → `EXPLAIN FORMAT=JSON` | performance_schema가 저장한 **리터럴 샘플**을 재-explain |
 | SQL Server | `sys.query_store_plan` 이력 | Query Store가 축출 없이 보존하므로 계획을 다시 안 떠도 됨(NATIVE) |
 | Oracle | `v$sqlstats.plan_hash_value` | **plan_hash_value가 곧 계획 식별자**라 정규화조차 불필요 |
@@ -96,7 +96,7 @@ Oracle: PHV:591542025   (이미 식별자)
 
 ### 4. 라이브: 획득 체인이 진짜 도는가
 
-여기서 정직하게 범위를 나눠 씁니다. **"계획 형태를 얻어서 이전과 비교해 플립을 알린다"는 판정 로직 자체는 11편(PostgreSQL)에서 이미 완전한 before/after로 검증됐습니다.** Index Only Scan이 Seq Scan으로 갈아탄 순간을 알림으로 잡았습니다. 이번 편의 새로운 부분은 그 판정에 먹일 **계획 형태를 각 기종에서 실제로 뽑아내는 `planShapeForDigest`** 입니다. 그래서 12편의 실측 초점은 "이 획득 체인이 라이브로 도는가"입니다.
+여기서 정직하게 범위를 나눠 씁니다. **"계획 형태를 얻어서 이전과 비교해 플립을 알린다"는 판정 로직 자체는 10편(PostgreSQL)에서 이미 완전한 before/after로 검증됐습니다.** Index Only Scan이 Seq Scan으로 갈아탄 순간을 알림으로 잡았습니다. 이번 편의 새로운 부분은 그 판정에 먹일 **계획 형태를 각 기종에서 실제로 뽑아내는 `planShapeForDigest`** 입니다. 그래서 11편의 실측 초점은 "이 획득 체인이 라이브로 도는가"입니다.
 
 가장 다른 두 경로를 실제로 돌렸습니다.
 
@@ -124,7 +124,7 @@ Oracle과 MongoDB는 획득 경로를 라이브로 확인했습니다. Oracle은
 
 ### 6. 마치며: 반쪽을 온전하게
 
-이번 편으로 플랜 플립의 계획 획득 경로가 다섯 기종 모두에 생겼고, 그 앞의 플립 판정은 11편에서 PG로 이미 검증된 공통 로직을 그대로 씁니다. 획득만 채우면 다섯 기종이 같은 판정으로 흐르는 구조입니다. 돌아보면 이 작업의 배움은 "다섯 기종 지원"이라는 결과보다 **다섯 개의 서로 다른 길을 하나의 경계 뒤로 숨긴 방법**에 있었습니다. GENERIC_PLAN·리터럴 샘플·Query Store 이력·plan_hash_value·프로파일러 명령, 공통점이 하나도 없는 이 다섯 획득 경로가 `planShapeForDigest` 메서드 시그니처 하나 뒤로 들어갔고, 그 앞의 트래커는 다섯 기종을 하나처럼 다룹니다.
+이번 편으로 플랜 플립의 계획 획득 경로가 다섯 기종 모두에 생겼고, 그 앞의 플립 판정은 10편에서 PG로 이미 검증된 공통 로직을 그대로 씁니다. 획득만 채우면 다섯 기종이 같은 판정으로 흐르는 구조입니다. 돌아보면 이 작업의 배움은 "다섯 기종 지원"이라는 결과보다 **다섯 개의 서로 다른 길을 하나의 경계 뒤로 숨긴 방법**에 있었습니다. GENERIC_PLAN·리터럴 샘플·Query Store 이력·plan_hash_value·프로파일러 명령, 공통점이 하나도 없는 이 다섯 획득 경로가 `planShapeForDigest` 메서드 시그니처 하나 뒤로 들어갔고, 그 앞의 트래커는 다섯 기종을 하나처럼 다룹니다.
 
 그리고 이번에도 정직한 잔여를 남깁니다. MySQL 샘플 기반 계획은 특정 파라미터 값의 플랜이라 그 digest의 대표 플랜과 다를 수 있고, Oracle의 plan_hash_value는 shared pool에서 age-out되면 과거 계획 본문을 못 봅니다(그래서 우리 스냅샷이 이력의 단일 출처입니다). 다음에 팔 곳의 지도입니다.
 
@@ -245,7 +245,7 @@ Value '18446744073709551615' is outside of valid range for type java.lang.Long
 
 ### 2. 세 경로
 
-**SQL Server**는 `sys.fn_xe_file_target_read_file`로 `.xel` 파일에서 `xml_deadlock_report`를 읽어 DOM 파싱합니다. victim-list의 프로세스 id로 어느 쪽이 롤백됐는지 가르고, 각 프로세스의 `inputbuf`에서 SQL을, resource-list에서 경합 객체·인덱스를 뽑습니다. 외부 XML 라이브러리 없이 표준 `javax.xml`만 씁니다(11편의 showplan 파싱과 같은 도구).
+**SQL Server**는 `sys.fn_xe_file_target_read_file`로 `.xel` 파일에서 `xml_deadlock_report`를 읽어 DOM 파싱합니다. victim-list의 프로세스 id로 어느 쪽이 롤백됐는지 가르고, 각 프로세스의 `inputbuf`에서 SQL을, resource-list에서 경합 객체·인덱스를 뽑습니다. 외부 XML 라이브러리 없이 표준 `javax.xml`만 씁니다(10편의 showplan 파싱과 같은 도구).
 
 **MySQL**은 `SHOW ENGINE INNODB STATUS`의 거대한 텍스트(최대 1MB)에서 "LATEST DETECTED DEADLOCK" 블록을 잘라, 두 트랜잭션의 SQL과 `WE ROLL BACK TRANSACTION (N)`의 N번(victim), 경합 인덱스·테이블을 정규식으로 추출합니다. 최대 1건이라는 한계를 응답에 정직하게 답니다.
 
