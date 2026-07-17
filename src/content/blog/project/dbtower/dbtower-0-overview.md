@@ -1,7 +1,7 @@
 ---
-title: '5기종 DBMS를 인터페이스 하나로 묶기까지, 실측 62절로 남긴 DBTower 총정리'
+title: '5기종 DBMS를 인터페이스 하나로 묶기까지, 실측 95절로 남긴 DBTower 총정리'
 titleEn: 'How DBTower Brings Five DBMS Engines Under One Interface, Told in 62 Sections of Measured Evidence'
-description: 'MySQL·PostgreSQL·SQL Server·Oracle·MongoDB를 하나의 관제탑에서 등록·진단·백업·자율 감시하는 컨트롤 플레인 DBTower의 전체 기록을 한 편에 정리합니다. 도구 파편화와 DBA 반복 문의라는 문제 정의에서 시작해, 추상화 경계를 SQL이 아니라 ''운영 행위''에 그은 설계 결정과 그 검증(새 기종 추가는 구현체 1개, 수집·비교·회귀 감지·웹·MCP 코어 경로 수정 0줄 실측)을 다룹니다. 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms→0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 실제 실행 계획의 추정 vs 실제 괴리로 지목하는 심층 진단, ''진단이 부하 유발자가 되면 안 된다''는 보호장치의 트레이드오프, 못 하는 것을 UNSUPPORTED로 표기하는 정직성 설계, AI를 판단자가 아니라 1차 분석기로 묶는 안전 장치(read-only 도구 화이트리스트)도 담았습니다. v1.0.0 뒤에도 쓰다 보니 필요해서 다시 파고든 심화 네 아크(플랜 플립 5기종·p95 정직 등급·데드락·스케일 제어)와 내가 만든 걸 스스로 감사해 고친 하드닝까지 이어집니다. 모든 수치는 직접 측정했고 재현 기록 62절이 저장소에 있습니다.'
+description: 'MySQL·PostgreSQL·SQL Server·Oracle·MongoDB를 하나의 관제탑에서 등록·진단·백업·자율 감시하는 컨트롤 플레인 DBTower의 전체 기록을 한 편에 정리합니다. 도구 파편화와 DBA 반복 문의라는 문제 정의에서 시작해, 추상화 경계를 SQL이 아니라 ''운영 행위''에 그은 설계 결정과 그 검증(새 기종 추가는 구현체 1개, 수집·비교·회귀 감지·웹·MCP 코어 경로 수정 0줄 실측)을 다룹니다. 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms→0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 실제 실행 계획의 추정 vs 실제 괴리로 지목하는 심층 진단, ''진단이 부하 유발자가 되면 안 된다''는 보호장치의 트레이드오프, 못 하는 것을 UNSUPPORTED로 표기하는 정직성 설계, AI를 판단자가 아니라 1차 분석기로 묶는 안전 장치(read-only 도구 화이트리스트)도 담았습니다. v1.0.0 뒤에도 쓰다 보니 필요해서 다시 파고든 심화 네 아크(플랜 플립 5기종·p95 정직 등급·데드락·스케일 제어)와 내가 만든 걸 스스로 감사해 고친 하드닝까지 이어집니다. 모든 수치는 직접 측정했고 재현 기록 95절이 저장소에 있습니다.'
 descriptionEn: 'The complete story of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. It starts with the problem definition of tool fragmentation and repeated DBA inquiries, then covers the design decision to draw the abstraction boundary at ''operational actions'' rather than SQL, verified by adding new engines as single operator implementations with zero changes to the core paths of collection, comparison, regression detection, web console, and MCP. It also covers dogfooding that caught the platform''s own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from estimated-vs-actual row gaps in real execution plans, the trade-offs behind the principle that diagnosis must never become the load, honesty by design with UNSUPPORTED instead of fake passes, AI constrained to a first-pass analyst with a read-only tool whitelist, and cost awareness. The story continues into four deepening arcs that real use demanded after v1.0.0, a self-audit hardening pass, and the remaining limits. Every number was measured firsthand, and 62 sections of reproduction logs live in the repository.'
 date: 2026-07-06
 tags:
@@ -22,11 +22,15 @@ seriesOrder: 0
 
 ## 0. 이 글 하나로
 
-이 글은 DBTower 시리즈 12편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했습니다.
+이 글은 DBTower 시리즈 18편의 총정리이자 지도입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고, 깊이가 필요한 지점마다 해당 편을 링크했습니다.
+
+시리즈는 여섯 아크로 묶입니다. **설계와 추상화**([1](/blog/project/dbtower/dbtower-1-why-and-design)·[2](/blog/project/dbtower/dbtower-2-abstraction-and-regression)·[3](/blog/project/dbtower/dbtower-3-channels-web-mcp-ai)편) — 경계를 SQL이 아니라 운영 행위에 긋고, 코어 하나에 채널만 갈아끼우기. **5기종 증명과 진단 심화**([4](/blog/project/dbtower/dbtower-4-five-engines)·[6](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool)·[8](/blog/project/dbtower/dbtower-8-diagnosis)편) — "새 기종 = 구현체 1개"의 실측과, 자율 진단 8종부터 추정 vs 실제 괴리까지. **프로덕션과 셀프호스트**([5](/blog/project/dbtower/dbtower-5-production-safety)·[7](/blog/project/dbtower/dbtower-7-provisioning)·[9](/blog/project/dbtower/dbtower-9-guardrails-and-selfhost)·[13](/blog/project/dbtower/dbtower-13-productionization)·[14](/blog/project/dbtower/dbtower-14-screen-parity)편). **심화와 하드닝**([10](/blog/project/dbtower/dbtower-10-deepening)·[11](/blog/project/dbtower/dbtower-11-deepening-four-arcs)·[12](/blog/project/dbtower/dbtower-12-hardening-arc)편) — 스스로 감사하고 스스로 고치기. **백업과 스케일**([15](/blog/project/dbtower/dbtower-15-backup)·[16](/blog/project/dbtower/dbtower-16-multi)·[17](/blog/project/dbtower/dbtower-17-host-dimension)편) — 백업 대장정, 멀티유저에서 멀티노드로, 그리고 디스크의 미래. **채널과 AI 루프**([18](/blog/project/dbtower/dbtower-18-talking-tower)편) — 알림이 카드가 되고 이모지가 진단을 부르기까지.
+
+바쁘신 분께는 세 편을 권합니다: 설계 결정의 뿌리인 [1편](/blog/project/dbtower/dbtower-1-why-and-design), 진단의 끝까지 간 [8편](/blog/project/dbtower/dbtower-8-diagnosis), 그리고 백업이 진짜가 되는 [15편](/blog/project/dbtower/dbtower-15-backup)입니다.
 
 한 줄로 요약하면 이렇습니다. **서로 다른 DBMS 5기종(MySQL·PostgreSQL·SQL Server·Oracle·MongoDB)의 운영을, 인터페이스 하나(`DbmsOperator`) 뒤에서 등록부터 진단·백업·자율 감시까지 처리하는 컨트롤 플레인**입니다. Java 21 + Spring Boot 4, 코드는 [GitHub](https://github.com/dj258255/dbtower)에 공개되어 있습니다.
 
-숫자부터 놓고 시작하겠습니다. 전부 직접 측정했고, 명령·출력·환경이 담긴 재현 기록([VERIFICATION.md](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md) 62절)이 저장소에 있습니다.
+숫자부터 놓고 시작하겠습니다. 전부 직접 측정했고, 명령·출력·환경이 담긴 재현 기록([VERIFICATION.md](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md) 95절)이 저장소에 있습니다.
 
 | 항목 | 수치 |
 |---|---|
@@ -34,7 +38,7 @@ seriesOrder: 0
 | 새 기종 추가 비용 | Operator 구현체 1개, 코어 경로(수집·비교·회귀 감지·웹·MCP) 수정 0줄 (실측) |
 | 성능 개선 | 수집 4.0배 · 저장 13.8배 · 조회 343배 (전부 전후 비교 측정) |
 | 부하 상한 | k6 10 VU 30s에서 2,832 req/s, P95 5.86ms, 실패 0 |
-| 테스트 / 기록 | 356건 (CI 게이트) / VERIFICATION 62절 |
+| 테스트 / 기록 | 467건 (CI 게이트) / VERIFICATION 95절 |
 | 심화·자기검증 | v1.0.0 뒤 심화 네 아크 + 4축 자체 감사로 하드닝 (라이브에서 진짜 버그 여럿 잡음) |
 | 규모 가정 | 관제 도구 특성상 실사용은 수십 RPS면 충분하지만 상한은 그래도 실측해 뒀습니다 |
 
@@ -225,4 +229,4 @@ AI 기능은 두 가지 원칙으로 묶었습니다.
 2. **주장은 실측으로.** 확장성 주장은 기종을 실제로 추가해서, 성능 주장은 전후 측정으로, 능력 표기는 안 되는 것의 명시로 증명했습니다
 3. **관제 도구는 힘으로 완성되지 않는다. 신뢰가 완성한다.** 마지막에 추가한 기능이 "내가 부하가 되지 않는 장치"였고, 제품화의 첫 결정이 "비밀은 사용자 인프라를 떠나지 않는다"였습니다
 
-전 과정의 상세는 시리즈 [1편(설계)](/blog/project/dbtower/dbtower-1-why-and-design)부터 [12편(하드닝)](/blog/project/dbtower/dbtower-12-hardening-arc)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. 셀프호스트로 직접 띄워보실 수 있습니다.
+전 과정의 상세는 시리즈 [1편(설계)](/blog/project/dbtower/dbtower-1-why-and-design)부터 [18편(관제탑과 대화하기)](/blog/project/dbtower/dbtower-18-talking-tower)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. 셀프호스트로 직접 띄워보실 수 있습니다.
