@@ -1,8 +1,8 @@
 ---
 title: '여유 77%인데 치명 경보가 맞다 — 디스크 포화 예측과, 같은 서버라서 두 번 울리던 경보'
 titleEn: 'A Critical Alert at 77% Free Is Correct — Disk Saturation Forecasting, and Alerts That Fired Twice for the Same Server'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 18편. 지금까지의 신호는 전부 "DB"의 신호였는데, DB 장애의 큰 축은 DB 바깥(호스트)에서 옵니다. 전반부는 디스크 포화 예측 — 잔량이 아니라 속도를 봅니다. 여유가 76.8%나 남았는데 치명 경보가 뜨는 화면을 실쓰기 부하로 직접 만들었는데, 초당 17MB씩 줄고 있으면 20시간 뒤 장애라서 이 경보가 맞습니다. 그 과정에서 node-exporter가 rootfs 마운트 없이 컨테이너 자기 자신만 보고 있던 함정과, mountpoint="/" 고정이 실무(데이터 전용 마운트)와 어긋나는 설계 함정을 밟았습니다. 후반부는 서버 공유 인지 — 등록 단위는 DB인데 물리 단위는 서버라, 같은 서버에 DB 두 개를 등록하면 세션·복제·데드락 경보가 두 번 울립니다. 그룹당 1회로 줄이되 "누구에게 해당하는지"를 명시하고, 헬스 스코어(위험 귀속)는 일부러 dedup하지 않은 선 긋기를 기록했습니다.'
-descriptionEn: 'Part 18 of DBTower. Every signal so far was a "database" signal, but a large class of DB failures comes from outside the DB — the host. First half: disk saturation forecasting that watches the rate, not the remainder. I produced a screen where a CRITICAL fires at 76.8% free by writing real load — at 17MB/s of shrinkage that disk dies in 20 hours, so the alert is right. Along the way: node-exporter silently watching only its own container without a rootfs mount, and the design trap of pinning mountpoint="/" when real DB data lives on dedicated mounts. Second half: server-sharing awareness — registration units are databases but physical units are servers, so two DBs on one server meant every session/replication/deadlock alert fired twice. Deduped to once per group with an explicit "applies to all of..." note, while deliberately NOT deduping health scores: both databases really are at risk.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 17편. 지금까지의 신호는 전부 "DB"의 신호였는데, DB 장애의 큰 축은 DB 바깥(호스트)에서 옵니다. 전반부는 디스크 포화 예측 — 잔량이 아니라 속도를 봅니다. 여유가 76.8%나 남았는데 치명 경보가 뜨는 화면을 실쓰기 부하로 직접 만들었는데, 초당 17MB씩 줄고 있으면 20시간 뒤 장애라서 이 경보가 맞습니다. 그 과정에서 node-exporter가 rootfs 마운트 없이 컨테이너 자기 자신만 보고 있던 함정과, mountpoint="/" 고정이 실무(데이터 전용 마운트)와 어긋나는 설계 함정을 밟았습니다. 후반부는 서버 공유 인지 — 등록 단위는 DB인데 물리 단위는 서버라, 같은 서버에 DB 두 개를 등록하면 세션·복제·데드락 경보가 두 번 울립니다. 그룹당 1회로 줄이되 "누구에게 해당하는지"를 명시하고, 헬스 스코어(위험 귀속)는 일부러 dedup하지 않은 선 긋기를 기록했습니다.'
+descriptionEn: 'Part 17 of DBTower. Every signal so far was a "database" signal, but a large class of DB failures comes from outside the DB — the host. First half: disk saturation forecasting that watches the rate, not the remainder. I produced a screen where a CRITICAL fires at 76.8% free by writing real load — at 17MB/s of shrinkage that disk dies in 20 hours, so the alert is right. Along the way: node-exporter silently watching only its own container without a rootfs mount, and the design trap of pinning mountpoint="/" when real DB data lives on dedicated mounts. Second half: server-sharing awareness — registration units are databases but physical units are servers, so two DBs on one server meant every session/replication/deadlock alert fired twice. Deduped to once per group with an explicit "applies to all of..." note, while deliberately NOT deduping health scores: both databases really are at risk.'
 date: 2026-07-18
 tags:
   - Java
@@ -14,7 +14,7 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 18
+seriesOrder: 17
 ---
 
 ## 0. 들어가며, DB만 보던 관제탑
@@ -35,7 +35,7 @@ seriesOrder: 18
 
 ## 2. 함정 두 개 — 자기 자신만 보던 exporter, "/"라는 고정관념
 
-구현보다 배선에서 두 번 넘어졌습니다. 첫 번째: 데모 스택의 node-exporter가 **컨테이너 자기 자신만 보고 있었습니다**. 쿼리를 날려보니 `mountpoint="/"` 시계열 자체가 없었어요. node-exporter를 컨테이너로 띄울 땐 호스트 루트를 읽기 전용으로 마운트하고(`/:/host:ro`) `--path.rootfs=/host`를 줘야 호스트의 디스크가 보입니다 — 공식 가이드의 첫 줄인데, 마운트 없이도 프로세스는 멀쩡히 뜨고 메트릭도 나오니 조용히 틀린 값을 보게 됩니다. 17편의 교훈 그대로입니다. 조용한 폴백이 제일 무섭습니다.
+구현보다 배선에서 두 번 넘어졌습니다. 첫 번째: 데모 스택의 node-exporter가 **컨테이너 자기 자신만 보고 있었습니다**. 쿼리를 날려보니 `mountpoint="/"` 시계열 자체가 없었어요. node-exporter를 컨테이너로 띄울 땐 호스트 루트를 읽기 전용으로 마운트하고(`/:/host:ro`) `--path.rootfs=/host`를 줘야 호스트의 디스크가 보입니다 — 공식 가이드의 첫 줄인데, 마운트 없이도 프로세스는 멀쩡히 뜨고 메트릭도 나오니 조용히 틀린 값을 보게 됩니다. 16편의 교훈 그대로입니다. 조용한 폴백이 제일 무섭습니다.
 
 두 번째는 설계 함정이었습니다. 처음엔 볼 파일시스템을 `mountpoint="/"`로 고정했는데, 이건 실무와 어긋납니다 — DBA는 데이터를 전용 마운트(/data, /var/lib/mysql)에 두는 게 정석이라, 루트만 보면 정작 데이터 디스크를 놓칩니다. 그래서 인스턴스에 노드 매핑 필드(nodeFilter, Prometheus 라벨 셀렉터)를 달면서 규칙을 하나 넣었습니다. **nodeFilter가 mountpoint를 직접 지정하면 기본 "/"를 양보한다.** PromQL은 같은 라벨의 매처 두 개를 AND로 겹치기 때문에 기본값 위에 덮어쓸 방법이 없거든요 — 겹치는 순간 빈 결과가 됩니다. 참고로 이 필드는 쿼리에 그대로 삽입되므로 `label="value"` 나열 형식만 통과시킵니다. 셀렉터 주입으로 임의 PromQL이 실행되면 안 되니까요.
 

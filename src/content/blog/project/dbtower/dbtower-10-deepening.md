@@ -1,8 +1,8 @@
 ---
 title: '플랜 플립 감지부터 3-2-1 완성, TLS의 벽까지 v1.0.0이 남긴 숙제 세 개를 팠습니다'
 titleEn: 'From Plan Flip Detection to the 3-2-1 Rule and the TLS Wall, Digging Into the Three Assignments v1.0.0 Left Behind'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 11편. 10편에서 v1.0.0을 찍었지만, 문서에 ''정직한 잔여''로 남겨둔 것들이 있었습니다. 새 기능 축을 늘리는 대신 그중 셋을 골라 깊이 팠습니다. 첫째는 ''쿼리도 데이터도 그대로인데 갑자기 느려짐은 옵티마이저가 플랜을 갈아탄 것''이라는 현업 단골 장애를 잡는 실행계획 변경 감지입니다. 정규화 텍스트($1)는 EXPLAIN이 안 된다는 벽을 PostgreSQL 16의 GENERIC_PLAN으로 넘고, 추정치를 버린 계획 shape만 해시 비교해 가짜 변경을 막고, 회귀 감지된 쿼리만 계획을 뜨는 부하 원칙까지 지켰습니다. 이어서 로컬에만 있던 백업을 S3 호환 오프사이트로 올려 3-2-1을 완성한 이야기(업로드 실패는 백업 실패가 아니다), 그리고 TLS 강제 관리형 서비스에 붙지 못하던 벽을 제거하되 인증서 검증 우회 옵션은 일부러 안 만든 결정까지 전부 실측으로 닫습니다.'
-descriptionEn: 'Part 11 of DBTower. Part 10 declared the project complete, but the docs honestly listed leftovers. Instead of adding new feature axes, I picked three and dug deep. The first is plan-flip detection for the classic incident where the query and data are unchanged but suddenly slow because the optimizer swapped plans: crossing the wall that normalized statement texts ($1) cannot be EXPLAINed via PostgreSQL 16''s GENERIC_PLAN, hashing only the plan shape (estimates stripped) to avoid false flips, and diagnosing only already-regressed queries per the load principle. The second completes the 3-2-1 rule by shipping backups to S3-compatible offsite storage, where an upload failure is not a backup failure. The third removes the TLS wall for managed services while deliberately not offering a certificate-verification bypass.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 10편. 9편에서 v1.0.0을 찍었지만, 문서에 ''정직한 잔여''로 남겨둔 것들이 있었습니다. 새 기능 축을 늘리는 대신 그중 셋을 골라 깊이 팠습니다. 첫째는 ''쿼리도 데이터도 그대로인데 갑자기 느려짐은 옵티마이저가 플랜을 갈아탄 것''이라는 현업 단골 장애를 잡는 실행계획 변경 감지입니다. 정규화 텍스트($1)는 EXPLAIN이 안 된다는 벽을 PostgreSQL 16의 GENERIC_PLAN으로 넘고, 추정치를 버린 계획 shape만 해시 비교해 가짜 변경을 막고, 회귀 감지된 쿼리만 계획을 뜨는 부하 원칙까지 지켰습니다. 이어서 로컬에만 있던 백업을 S3 호환 오프사이트로 올려 3-2-1을 완성한 이야기(업로드 실패는 백업 실패가 아니다), 그리고 TLS 강제 관리형 서비스에 붙지 못하던 벽을 제거하되 인증서 검증 우회 옵션은 일부러 안 만든 결정까지 전부 실측으로 닫습니다.'
+descriptionEn: 'Part 10 of DBTower. Part 10 declared the project complete, but the docs honestly listed leftovers. Instead of adding new feature axes, I picked three and dug deep. The first is plan-flip detection for the classic incident where the query and data are unchanged but suddenly slow because the optimizer swapped plans: crossing the wall that normalized statement texts ($1) cannot be EXPLAINed via PostgreSQL 16''s GENERIC_PLAN, hashing only the plan shape (estimates stripped) to avoid false flips, and diagnosing only already-regressed queries per the load principle. The second completes the 3-2-1 rule by shipping backups to S3-compatible offsite storage, where an upload failure is not a backup failure. The third removes the TLS wall for managed services while deliberately not offering a certificate-verification bypass.'
 date: 2026-07-06
 tags:
   - Java
@@ -15,12 +15,12 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 11
+seriesOrder: 10
 ---
 
 ## 0. 들어가며, v1.0.0의 각주
 
-[10편](/blog/project/dbtower/dbtower-10-guardrails-and-selfhost)에서 v1.0.0을 찍었습니다. 그런데 거기엔 각주가 붙어 있었습니다. 문서 곳곳에 "정직한 잔여"로 남겨둔 것들입니다. 백업 원격 보관은 VERIFICATION 29절에, TLS는 셀프호스트 점검에서, 그리고 발행 후 리뷰에서 나온 "검증 루프" 계열의 다음 질문이 하나 더 있었습니다.
+[9편](/blog/project/dbtower/dbtower-9-guardrails-and-selfhost)에서 v1.0.0을 찍었습니다. 그런데 거기엔 각주가 붙어 있었습니다. 문서 곳곳에 "정직한 잔여"로 남겨둔 것들입니다. 백업 원격 보관은 VERIFICATION 29절에, TLS는 셀프호스트 점검에서, 그리고 발행 후 리뷰에서 나온 "검증 루프" 계열의 다음 질문이 하나 더 있었습니다.
 
 새 기능 축을 늘리는 건 이제 아니라고 판단했습니다. 축을 늘리면 정체성이 흐려지기 때문입니다. 대신 기준 하나로 셋을 골랐습니다: **기존 축의 구멍 중에서, 실사용자가 실제로 부딪히거나 현업 장애가 실제로 지나가는 자리.** 그렇게 고른 셋이 실행계획 변경 감지, 백업 오프사이트, TLS입니다.
 
@@ -36,7 +36,7 @@ DBTower의 회귀 감지(2편)는 "느려졌다"까지는 잡지만 "**계획이
 
 **비교 대상은 계획의 "형태"만.** 계획 원문을 그대로 해시하면 안 됩니다. 비용·추정 행수는 통계가 조금만 변해도 흔들려서 매번 "변경"이 되기 때문입니다. 그래서 노드 종류·인덱스·대상 테이블만 남긴 shape(`Index Scan(idx_k)` vs `Seq Scan(plan_demo)`)를 만들어 그 해시만 비교합니다. "같은 구조, 다른 추정치 = 같은 플랜"을 단위 테스트로 고정했습니다.
 
-**트리거는 회귀만.** 모든 쿼리의 계획을 매번 뜨면 진단이 부하 유발자가 됩니다(10편의 A9 원칙). 그래서 레이턴시/행수 회귀가 **이미 감지된** 쿼리만 계획을 뜹니다. 추정 explain이라 실행 부하도 없습니다. 첫 관측은 기준선으로 조용히 저장되고 두 번째부터 비교가 성립합니다.
+**트리거는 회귀만.** 모든 쿼리의 계획을 매번 뜨면 진단이 부하 유발자가 됩니다(9편의 A9 원칙). 그래서 레이턴시/행수 회귀가 **이미 감지된** 쿼리만 계획을 뜹니다. 추정 explain이라 실행 부하도 없습니다. 첫 관측은 기준선으로 조용히 저장되고 두 번째부터 비교가 성립합니다.
 
 **실측은 4막짜리 e2e였습니다.** 같은 digest의 쿼리로 시나리오를 돌렸습니다. 30만 행 테이블(k=2가 30만, k=1이 10행)에 인덱스를 걸고:
 

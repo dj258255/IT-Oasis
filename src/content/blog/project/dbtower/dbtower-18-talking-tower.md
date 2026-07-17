@@ -1,8 +1,8 @@
 ---
 title: '관제탑과 대화하기 — 알림이 카드가 되고, 이모지가 진단을 부르고, 로그인 창이 토큰을 만든다'
 titleEn: 'Talking to the Control Tower — Alerts Become Cards, an Emoji Summons a Diagnosis, and a Login Page Mints Your Token'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 21편. 알림에서 진단까지의 왕복을 완성했습니다. 첫째, 회귀·이상·운영 경보가 밋밋한 텍스트에서 구조화된 Discord embed 카드가 됐습니다 — 심각도 색, 담당 팀, AI 1차 분석, 클릭하면 질문이 미리 채워진 콘솔로 열리는 진단 딥링크까지. 둘째, 알림 메시지에 돋보기 이모지를 달면 봇이 그 인스턴스를 AI로 진단해 답글을 붙입니다. 여기의 함정 둘 — 🔍와 🔎는 다른 유니코드고, 웹훅이 쓴 메시지의 embed를 봇이 읽으려면 특권 인텐트가 필요합니다. 후자는 발사 시점에 message_id를 인스턴스에 매핑해두는 것으로 권한 0개로 풀었습니다. 대상이 하필 죽어 있던 인스턴스라 진단 도구가 전부 빈손이었는데, AI 답글이 수치를 지어내는 대신 "근본원인을 확정하지 못했습니다"라고 답한 것이 이번 편에서 제일 마음에 드는 실측입니다. 셋째, MCP 클라이언트의 정적 토큰을 OAuth 2.1 브라우저 로그인으로 바꿨습니다 — 미인증 /mcp가 401 대신 302 로그인 페이지로 덮이던 함정(전용 필터 체인, 그리고 sendError가 아니라 setStatus), 커밋 리뷰가 잡아준 redirect_uri userinfo 우회(http://localhost:8080@evil.com)까지. 덤으로 Vault 동적 자격증명 — 모니터링 계정의 유출 창이 "발각부터 수동 회전까지"에서 TTL 2분으로 줄었습니다.'
-descriptionEn: 'Part 21 of DBTower — closing the loop from alert to diagnosis. Detection alerts become structured Discord embed cards with severity colors, owning team, AI first-pass analysis, and a deep link that opens the console with the question pre-filled. React to an alert with a magnifier emoji and a Gateway bot diagnoses that instance and replies in-thread — past two traps: 🔍 and 🔎 are different codepoints, and reading webhook embeds requires a privileged intent, which we avoided entirely by mapping message_id to instance at send time. My favorite measurement: the target happened to be down, every tool came back empty, and the AI reply said "I could not determine the root cause" instead of inventing numbers. Third, MCP static tokens replaced by an OAuth 2.1 browser login — including the trap where unauthenticated /mcp got a 302 login page instead of 401 (dedicated filter chain, setStatus not sendError) and a review-caught redirect_uri userinfo bypass. Plus Vault dynamic credentials: the monitoring account leak window shrank from discovery-to-manual-rotation down to a 2-minute TTL.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 18편. 알림에서 진단까지의 왕복을 완성했습니다. 첫째, 회귀·이상·운영 경보가 밋밋한 텍스트에서 구조화된 Discord embed 카드가 됐습니다 — 심각도 색, 담당 팀, AI 1차 분석, 클릭하면 질문이 미리 채워진 콘솔로 열리는 진단 딥링크까지. 둘째, 알림 메시지에 돋보기 이모지를 달면 봇이 그 인스턴스를 AI로 진단해 답글을 붙입니다. 여기의 함정 둘 — 🔍와 🔎는 다른 유니코드고, 웹훅이 쓴 메시지의 embed를 봇이 읽으려면 특권 인텐트가 필요합니다. 후자는 발사 시점에 message_id를 인스턴스에 매핑해두는 것으로 권한 0개로 풀었습니다. 대상이 하필 죽어 있던 인스턴스라 진단 도구가 전부 빈손이었는데, AI 답글이 수치를 지어내는 대신 "근본원인을 확정하지 못했습니다"라고 답한 것이 이번 편에서 제일 마음에 드는 실측입니다. 셋째, MCP 클라이언트의 정적 토큰을 OAuth 2.1 브라우저 로그인으로 바꿨습니다 — 미인증 /mcp가 401 대신 302 로그인 페이지로 덮이던 함정(전용 필터 체인, 그리고 sendError가 아니라 setStatus), 커밋 리뷰가 잡아준 redirect_uri userinfo 우회(http://localhost:8080@evil.com)까지. 덤으로 Vault 동적 자격증명 — 모니터링 계정의 유출 창이 "발각부터 수동 회전까지"에서 TTL 2분으로 줄었습니다.'
+descriptionEn: 'Part 18 of DBTower — closing the loop from alert to diagnosis. Detection alerts become structured Discord embed cards with severity colors, owning team, AI first-pass analysis, and a deep link that opens the console with the question pre-filled. React to an alert with a magnifier emoji and a Gateway bot diagnoses that instance and replies in-thread — past two traps: 🔍 and 🔎 are different codepoints, and reading webhook embeds requires a privileged intent, which we avoided entirely by mapping message_id to instance at send time. My favorite measurement: the target happened to be down, every tool came back empty, and the AI reply said "I could not determine the root cause" instead of inventing numbers. Third, MCP static tokens replaced by an OAuth 2.1 browser login — including the trap where unauthenticated /mcp got a 302 login page instead of 401 (dedicated filter chain, setStatus not sendError) and a review-caught redirect_uri userinfo bypass. Plus Vault dynamic credentials: the monitoring account leak window shrank from discovery-to-manual-rotation down to a 2-minute TTL.'
 date: 2026-07-24
 tags:
   - Java
@@ -15,7 +15,7 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 21
+seriesOrder: 18
 ---
 
 ## 0. 들어가며, 알림은 목소리지 대화가 아니었다
@@ -70,6 +70,6 @@ MCP 채널의 인증은 지금까지 정적 Bearer 토큰이었습니다. 관리
 
 인증 이야기가 나온 김에 하나 더. 대상 DB 모니터링 계정의 비밀번호는 암호화해 저장하지만, 정적이라는 본질은 그대로입니다 — 유출되면 사람이 알아채고 돌릴 때까지 유효하죠. Vault의 database secrets engine을 붙이면 이 창이 TTL로 줄어듭니다. 인스턴스 username을 `vault:<경로>`로 등록하면 접속 시점에 수명 있는 계정을 발급받고, 리스의 80% 시점에 선제 갱신하고, 만료된 계정은 DB에서 자동 소멸합니다. 실측에서 발급 → pg_stat_activity에 발급 계정 실접속 → 96초 뒤 새 계정 발급과 풀 교체 → 옛 계정 소멸까지 전체 수명주기를 확인했습니다. 여기도 리뷰가 한 건 잡았습니다 — creds 경로가 관리자 입력에서 오니 토큰 ACL이 닿는 임의 시크릿을 읽을 수 있어, database/creds/ 마운트로 봉인했습니다.
 
-18편의 디스크 포화 예측에도 접점이 하나 늘었습니다. Prometheus에 직결돼 있던 지표 소스를 인터페이스로 갈라 CloudWatch(RDS FreeStorageSpace) 구현을 추가했는데 — RDS는 총 용량 메트릭이 없어서 여유 %를 지어내는 대신 null로 두고, 판정이 "있는 축만으로" 동작하게 확장했습니다. 라이브 검증은 에뮬레이터(LocalStack)와 SDK의 프로토콜 세대 차이로 실 AWS가 필요해 정직하게 남겨뒀습니다.
+17편의 디스크 포화 예측에도 접점이 하나 늘었습니다. Prometheus에 직결돼 있던 지표 소스를 인터페이스로 갈라 CloudWatch(RDS FreeStorageSpace) 구현을 추가했는데 — RDS는 총 용량 메트릭이 없어서 여유 %를 지어내는 대신 null로 두고, 판정이 "있는 축만으로" 동작하게 확장했습니다. 라이브 검증은 에뮬레이터(LocalStack)와 SDK의 프로토콜 세대 차이로 실 AWS가 필요해 정직하게 남겨뒀습니다.
 
 이제 관제탑은 말을 걸고, 대답을 듣고, 문을 잠글 줄 압니다. 남은 큰 조각은 저장소 바깥에 있습니다 — 쌓인 스냅샷을 레이크하우스로 흘려보내고 장기 베이스라인을 되받는, 두 저장소가 손잡는 이야기요.
