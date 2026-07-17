@@ -1,0 +1,22 @@
+{
+  "title": "화면 공유를 켜야 출석으로 치는 디스코드 스터디 봇",
+  "titleEn": "A Discord study bot that only counts you present while you're screen sharing",
+  "description": "알고리즘 스터디 출석 체크를 봇에게 넘겼다. 음성채널에서 화면 공유를 켠 시간만 구간 합산으로 기록하고, 누적 60분이면 출석, 주 3회 미달이면 경고, 경고 3회면 자동으로 자리를 정리한다. 공지는 실시간으로 하되 판정은 정산 크론에서만 하기 때문에 봇이 재시작돼도 기록이 깨지지 않는다.",
+  "descriptionEn": "Attendance for an algorithm study group, handed off to a bot. It records only the time you spend screen sharing in a voice channel (summing segments), counts a day at 60 accumulated minutes, warns below 3 days a week, and clears the seat at 3 warnings. Notices are real-time but verdicts happen only at settlement crons, so records survive bot restarts.",
+  "image": "/uploads/project/discord-bot/cover.svg",
+  "tags": [
+    "Node.js",
+    "discord.js",
+    "SQLite",
+    "node-cron",
+    "Automation",
+    "Timezone",
+    "Discord"
+  ],
+  "category": "study",
+  "date": "2026-07-17",
+  "github": "https://github.com/dj258255/miracle-study-bot",
+  "website": "",
+  "story": "/blog/project/discord-bot/attendance-bot-01-screenshare-and-24h-switch",
+  "order": 15
+}

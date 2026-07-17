@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#5865F2"/>
+      <stop offset="1" stop-color="#7983F5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- 타임라인: 화면 공유 구간이 합산되는 모습 -->
+  <g>
+    <line x1="120" y1="470" x2="1080" y2="470" stroke="#30363d" stroke-width="2"/>
+    <!-- 공유 ON 구간들 -->
+    <rect x="180" y="452" width="180" height="36" rx="8" fill="url(#accent)" opacity="0.9"/>
+    <rect x="430" y="452" width="110" height="36" rx="8" fill="url(#accent)" opacity="0.9"/>
+    <rect x="620" y="452" width="240" height="36" rx="8" fill="url(#accent)" opacity="0.9"/>
+    <!-- 공유 OFF 구간 (기록 일시정지) -->
+    <rect x="360" y="462" width="70" height="16" rx="8" fill="#30363d"/>
+    <rect x="540" y="462" width="80" height="16" rx="8" fill="#30363d"/>
+    <!-- 정산 마커 -->
+    <line x1="920" y1="430" x2="920" y2="510" stroke="#3fb950" stroke-width="3" stroke-dasharray="6 5"/>
+    <text x="940" y="445" font-family="ui-monospace, monospace" font-size="22" fill="#3fb950">정산 ✓</text>
+    <text x="180" y="530" font-family="ui-monospace, monospace" font-size="20" fill="#8b949e">화면 공유 구간 합산 → 60분 이상이면 출석</text>
+  </g>
+
+  <!-- 텍스트 -->
+  <text x="120" y="200" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="64" font-weight="800" fill="#e6edf3">디스코드 자동 출석 봇</text>
+  <text x="120" y="260" font-family="ui-monospace, monospace" font-size="30" fill="#7983F5">miracle-study-bot</text>
+  <text x="120" y="330" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="26" fill="#8b949e">Go Live 감지 · 구간 합산 기록 · 주간 점검 · 자동 자리 정리</text>
+
+  <!-- 우측 상단 뱃지 -->
+  <g>
+    <rect x="880" y="120" width="200" height="52" rx="26" fill="#161b22" stroke="#5865F2" stroke-width="2"/>
+    <text x="912" y="154" font-family="ui-monospace, monospace" font-size="24" fill="#7983F5">discord.js</text>
+  </g>
+</svg>
