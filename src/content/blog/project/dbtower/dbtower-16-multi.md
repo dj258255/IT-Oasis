@@ -1,5 +1,5 @@
 ---
-title: '여러 팀이 쓰고, 관제탑이 두 대가 될 때 — 404로 숨기는 접근 제어부터 나눠 드는 수집까지'
+title: '여러 팀이 쓰고, 관제탑이 두 대가 될 때: 404로 숨기는 접근 제어부터 나눠 드는 수집까지'
 titleEn: 'When Multiple Teams Share It and the Tower Becomes Two — From 404-Hiding Access Control to Sharded Collection'
 description: '이기종 DBMS 운영 관리 플랫폼 DBTower 16편. 멀티유저에서 멀티노드까지의 기록입니다. 전반부는 여러 팀이 한 콘솔을 쓰기 시작할 때의 이야기입니다. 팀 사용자는 자기 팀 인스턴스와 전역만 보고, 남의 팀 인스턴스는 id로 직접 찔러도 403이 아니라 404를 받습니다(존재 자체를 숨김). 강제 지점은 단 한 곳(RegistryService)이고, 세션을 메타 DB로 옮겨 재시작에도 로그인이 살아남는데 그 과정에서 Boot 자동구성이 인메모리로 조용히 폴백하는 함정을 밟았습니다. 후반부는 그렇게 준비한 노드를 실제로 늘렸더니 아무것도 안 늘더라는 이야기입니다. 분산 락 하나 때문에 두 번째 노드가 놀고 있었습니다. 샤드별 락으로 바꾸니 두 노드가 수집을 나눠 들고, 한 노드를 죽이면 남은 노드가 설정 변경 없이 전 샤드를 인수하며, 같은 쿠키로 로그인도 살아남습니다. 로그인 잠금 카운터도 메타 DB로 옮겨, 노드 A에서 두 번, B에서 한 번 틀리자 네 번째가 잠기는 것을 실측했습니다. 마지막은 최대 볼륨 테이블의 월별 파티셔닝(보존 정리 DELETE 1.9초에서 DROP 12.8ms로, 블로트는 존재 자체가 소멸)과 커넥션 온디맨드(격리 대상 유휴 커넥션 1개 영구에서 0으로)입니다.'
 descriptionEn: 'Part 16 of DBTower — from multi-user to multi-node. First half: when teams share one console, team users see only their instances plus global ones, and probing another team''s instance returns 404, not 403 — enforcement in exactly one place, with sessions moved to the meta DB so logins survive restarts (past Boot''s silent in-memory fallback trap). Second half: adding a node changed nothing, because one distributed lock meant one collector. Per-shard locks let two nodes split the work, killing one makes the survivor take over every shard with zero configuration, and the login lockout counter moved to the meta DB — two failures on node A plus one on B locking the fourth attempt, measured. Finally, monthly partitioning turned retention from a 1.9-second 2M-row DELETE into a 12.8ms partition DROP with zero bloat, and connections-on-demand brought an isolated target''s idle connections from one-forever to zero.'
@@ -30,15 +30,15 @@ seriesOrder: 16
 
 재미있는 설계 문제는 "registry가 사용자의 팀을 어떻게 아느냐"였습니다. 사용자 정보는 security 모듈 소관이라 registry가 그걸 조회하면 모듈 의존이 생깁니다. 답은 스코프를 **로그인 시점에 authority로 실어 보내는 것**입니다. 인증이 성공하면 `ROLE_VIEWER`와 함께 `TEAM_주문팀` 같은 권한이 붙고, registry는 SecurityContext만 읽으면 됩니다. Spring Security 코어 외엔 아무것도 참조하지 않습니다. 부수 효과로 팀 변경은 다음 로그인부터 적용되는데, 이건 감수할 만한 명확성입니다.
 
-## 2. 403이 아니라 404 — 존재를 숨긴다
+## 2. 403이 아니라 404, 존재를 숨긴다
 
 스코프 밖 인스턴스를 id로 직접 찌르면 어떻게 될까요. 403 Forbidden을 주면 "당신은 못 보지만, **그 id의 인스턴스는 존재한다**"는 사실이 샙니다. 공격자 입장에선 id를 순회하며 인프라 지도를 그릴 수 있죠. 그래서 스코프 밖은 미등록과 **완전히 같은 404, 완전히 같은 메시지**를 받습니다. "등록되지 않은 인스턴스: 7". 이 응답만 보고는 7번이 없는 건지, 남의 팀 것인지 구분할 수 없습니다. 단위 테스트가 이 메시지 동일성을 직접 단언합니다.
 
 라이브로 확인했습니다. local-mysql에 team-a, local-postgres에 team-b를 달고 viewer 계정을 team-a로 지정한 뒤 viewer로 로그인하니, 목록에 5개(team-a 뱃지가 붙은 mysql + 라벨 없는 전역 4개)만 남고 postgres는 사라졌습니다. admin 화면엔 7개 전부 보이고요. postgres의 id를 직접 호출하면 404, 자기 팀 mysql은 200.
 
-![VIEWER(team-a)의 인스턴스 목록 — team-a 뱃지 + 전역만 보이고 team-b는 존재하지 않는 것처럼](/uploads/project/dbtower/lbac-viewer-scope.png)
+![VIEWER(team-a)의 인스턴스 목록, team-a 뱃지 + 전역만 보이고 team-b는 존재하지 않는 것처럼](/uploads/project/dbtower/lbac-viewer-scope.png)
 
-## 3. 재시작을 견디는 로그인 — 그리고 조용한 폴백 두 번
+## 3. 재시작을 견디는 로그인, 그리고 조용한 폴백 두 번
 
 여러 팀이 쓰는 플랫폼에서 배포 한 번에 전원이 로그아웃되는 건 곤란합니다. 세션을 서버 메모리가 아니라 메타 DB에 저장하면(spring-session-jdbc) 재시작에도, 나중에 노드를 늘려도 로그인이 살아남습니다. ShedLock 때와 같은 판단입니다. 이미 있는 메타 DB를 재사용하고, Redis는 규모가 커지면 승급하면 됩니다.
 
@@ -46,9 +46,9 @@ seriesOrder: 16
 
 두 번째 함정은 그 명시 어노테이션의 대가였습니다. 이 어노테이션은 Boot의 `initialize-schema` 속성을 **우회**합니다. 운영은 Flyway가 테이블을 만들어주니 문제없지만, 테스트는 H2 인메모리에 Flyway를 끄고 도는 구조라 SPRING_SESSION 테이블이 없어 통합 테스트가 우수수 떨어졌습니다. 해법은 책임을 명확히 가르는 것입니다. 운영 스키마는 Flyway가, 테스트 스키마는 spring-session이 제공하는 H2용 스크립트를 `sql.init`으로 직접 주입해서 만듭니다.
 
-이 이야기의 교훈은 하나입니다. **"조용한 폴백"은 계약을 소리 없이 깹니다.** 재시작 생존은 기능이 아니라 계약이고, 계약은 켜졌다고 믿는 게 아니라 죽였다 살려서 확인하는 겁니다. 실제로 앱을 kill하고 다시 띄운 뒤 같은 쿠키로 `/api/me`가 200을 돌려주는 것까지가 검증이었습니다.
+이 이야기의 교훈은 하나입니다. **"조용한 폴백"은 계약을 소리 없이 깹니다.** 재시작 생존은 계약이고, 계약은 켜졌다고 믿는 게 아니라 죽였다 살려서 확인하는 겁니다. 실제로 앱을 kill하고 다시 띄운 뒤 같은 쿠키로 `/api/me`가 200을 돌려주는 것까지가 검증이었습니다.
 
-## 4. 덤 — 백업에 화면을, 스크립트에 방어를
+## 4. 덤, 백업에 화면을, 스크립트에 방어를
 
 이번 아크에 작은 조각 둘이 함께 들어갔습니다. 하나는 백업/PITR 카드입니다. 15편의 백업 기능들이 API로만 있었는데, 복원 가능 창과 복원 문안, 이력(SUCCESS 초록 / FAILED 빨강 / UNSUPPORTED 회색, "못 하는 것"을 실패로 위장하지 않는 색 구분)을 콘솔에서 보게 됐습니다. 다른 하나는 커밋 보안 리뷰가 잡아준 진짜 취약점입니다. RMAN 스크립트는 `CONNECT user/pass@...` **다음 줄부터가 곧 실행 명령**이라, 비밀번호에 개행 하나만 섞이면 `SHUTDOWN IMMEDIATE;`가 실행될 수 있었습니다. 자격증명에 개행·따옴표가 있으면 조용히 지우는 대신 명확히 거부하도록 고쳤습니다. 조용한 변조는 인증 실패의 원인만 흐립니다.
 
@@ -56,7 +56,7 @@ seriesOrder: 16
 
 세션을 메타 DB로 옮기며 "노드를 늘릴 준비"를 했다고 썼는데, 정작 노드를 늘려보면 민망한 일이 벌어집니다. 수집도, 경보도, 스윕도 전부 분산 락(ShedLock)으로 "한 시점에 한 노드만"을 보장해뒀기 때문에, 두 번째 노드는 락 획득에 실패하고 놀기만 합니다. 고가용성이지 수평 확장이 아니었던 거죠. 후반부는 그 간극을 메운 스케일 3부작입니다.
 
-## 6. 락 하나를 락 N개로 — 나눠 들기와 페일오버를 한 번에
+## 6. 락 하나를 락 N개로, 나눠 들기와 페일오버를 한 번에
 
 수집 샤딩의 설계는 락을 쪼개는 것뿐입니다. `shards=4`면 틱마다 샤드 0~3의 락(`snapshot-collect-0`...`-3`)을 각각 시도하고, 획득한 샤드의 인스턴스(`instanceId % 4`)만 수집합니다. 이 단순한 구조가 좋은 이유는 **분산과 페일오버가 같은 메커니즘**이라는 겁니다. 노드가 둘이면 락 경쟁으로 일이 자연히 갈라지고(실측: A가 샤드 1·2·3, B가 샤드 0), 한 노드를 죽이면 다음 틱에 남은 노드가 락 네 개를 다 잡습니다. 설정 변경도, 리밸런싱 프로토콜도 없이요. consistent hashing 같은 것도 필요 없습니다. 스냅샷은 누적 카운터의 차분이라 담당이 바뀌어도 데이터가 깨지지 않거든요.
 
@@ -72,7 +72,7 @@ seriesOrder: 16
 
 해법은 세션 때와 같은 논리입니다. 이미 있는 메타 DB를 공유 스토어로 씁니다. 계정별 실패 수와 잠금 해제 시각을 테이블 한 장에 두면 어느 노드로 오든 카운터는 하나입니다. 실측은 임계를 3으로 낮춰서: 노드 A에서 한 번, B에서 한 번, 다시 A에서 한 번 틀리자 네 번째 시도가 B에서 `error=locked`를 받았습니다.
 
-![노드를 오간 실패 3회 뒤 잠금 — 카운터가 메타 DB라 분산 우회가 안 된다](/uploads/project/dbtower/cross-node-lock.png)
+![노드를 오간 실패 3회 뒤 잠금, 카운터가 메타 DB라 분산 우회가 안 된다](/uploads/project/dbtower/cross-node-lock.png)
 
 동시성은 정직하게 타협했습니다. 두 노드가 같은 계정의 실패를 동시에 쓰면 카운트 하나가 유실될 수 있는데, 임계 10회 스케일에서 한두 회 유실은 잠금 시점을 미세하게 늦출 뿐입니다. 그 오차를 없애자고 비관 락을 거는 건 배보다 배꼽이라, 감수한다고 주석에 적어뒀습니다.
 
@@ -84,7 +84,7 @@ seriesOrder: 16
 
 전환에서 함정 둘. 기존 테이블은 ALTER로 파티션 테이블이 될 수 없어서 신 테이블 생성 → 복사 → 스왑을 한 트랜잭션으로 묶었고(17만 행 기준 1.6초. 스왑이 곧 재작성이라 부산물로 404MB가 55MB로 줄었습니다), PostgreSQL 16은 **파티션 테이블에 identity 컬럼을 지원하지 않습니다**(17부터). 시퀀스 DEFAULT로 바꾸고 PK에 파티션 키를 포함시켰습니다. 파티션 선생성(이번 달·다음 달)과 만료 DROP은 기존 보존 잡이 맡습니다. 이름 규약(`query_snapshot_y2026m07`)을 파싱해 "그 달 전체가 기한을 지난" 파티션만 보수적으로 떨어뜨리고, 규약 밖 자식은 건드리지 않습니다.
 
-## 9. 덤 — 안 쓰는 대상에 커넥션을 꽂아두지 않기
+## 9. 덤, 안 쓰는 대상에 커넥션을 꽂아두지 않기
 
 마지막 조각은 커넥션입니다. 인스턴스별 풀의 minimumIdle이 1이라, 격리(수집 제외)한 대상에도 유휴 커넥션 1개가 영구히 꽂혀 있었습니다. 관제 대상이 수백 대면 그만큼의 커넥션 슬롯을 관제 도구가 상시 점유하는 셈이죠. 조사하다 더 재미있는 걸 발견했습니다. 격리했는데도 processlist의 Sleep 시간이 계속 리셋되는 겁니다. 범인은 SLO 헬스 폴러였습니다. 격리 플래그를 안 보고 60초마다 핑을 날리고 있었어요. 격리의 목적이 "문제 대상을 두드리지 않기"인데 핑이 그걸 뚫고 있었던 거죠.
 

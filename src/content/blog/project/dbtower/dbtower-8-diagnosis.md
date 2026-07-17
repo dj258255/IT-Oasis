@@ -1,5 +1,5 @@
 ---
-title: '스스로 보는 관제탑 — 자율 진단 8종, 그리고 "인덱스가 있는데 왜 안 타요?"까지'
+title: '스스로 보는 관제탑: 자율 진단 8종, 그리고 "인덱스가 있는데 왜 안 타요?"까지'
 titleEn: 'A Tower That Watches by Itself — Eight Autonomous Diagnostics, Down to "The Index Is There, Why Is It Not Used?"'
 description: '이기종 DBMS 운영 관리 플랫폼 DBTower 8편. 대시보드는 사람이 봐야만 가치가 있고, 안 보는 새벽의 조용한 저하는 아무도 못 잡습니다. 그래서 플랫폼이 스스로 보게 만들었습니다. 고정 임계 없이 (요일x시간대) 베이스라인 z-score로 "평소와 다름"을 잡는 이상 감지(z=378 실측), 운영 문서의 규칙을 코드로 옮긴 Advisors, AI에게 read-only 도구 화이트리스트를 쥐여준 자연어 진단, 같은 p95인데 기종마다 NATIVE/COMPUTED/ESTIMATED/UNSUPPORTED로 라벨을 가른 레이턴시 백분위와 SLO/에러 버짓, 흩어진 신호를 0~100점으로 모으는 헬스 스코어까지가 전반부입니다. 후반부는 그렇게 지목된 쿼리에 "왜"를 답하는 마지막 층입니다. EXPLAIN은 옵티마이저의 추정이라 옵티마이저가 속은 이유는 추정 vs 실제 행수의 괴리로만 보입니다. 실제 실행 계획을 얻는 방법이 다섯 기종 전부 다르다는 것, actual rows가 루프당 평균이라 loops를 곱해야 하는 함정, 숫자 리터럴 하나로 인덱스가 무력화되는 암시적 형변환을 code=12345 실측으로 지목하고 원클릭 재진단으로 before/after까지 비교한 기록, 그리고 "실제 실행"이라는 위험을 ADMIN 경계와 타임아웃으로 다루는 안전 설계를 담았습니다.'
 descriptionEn: 'Part 8 of DBTower. A dashboard is only worth what a human looks at, so the platform learned to watch by itself: anomaly detection with (day-of-week x hour) baseline z-scores instead of fixed thresholds (z=378 measured), Advisors that turn runbook rules into code, natural-language diagnosis where an AI chains read-only whitelisted tools, latency percentiles honestly labeled NATIVE/COMPUTED/ESTIMATED/UNSUPPORTED per engine with SLO/error budgets, and a unified health score. The second half answers the question that follows: why is the flagged query slow? EXPLAIN shows the optimizer''s estimate, so you need the gap between estimated and actual rows — obtained five different ways across five engines. Includes the loops-multiplication pitfall, a measured case where one numeric literal disabled an index via implicit type conversion (code=12345) with one-click re-diagnosis comparing before/after, and the safety design (ADMIN boundary, timeouts) for the risk that is actually executing queries.'
@@ -45,7 +45,7 @@ seriesOrder: 8
 
 ## 2. 운영 문서를 코드로 옮긴 Advisors, 인터페이스 변경 0
 
-시리즈를 쓰면서 쌓인 운영 문서가 있습니다. digest 테이블이 차면 새 쿼리가 통계에서 사라진다(operations.md), 기종별 최소 권한 목록(least-privilege.md) 같은 것들입니다. 문서의 문제는 **사람이 기억해야 작동한다**는 겁니다. 그래서 이 규칙들을 Advisor 6종 코드로 옮겨 일일 스윕(HA 분산 락)으로 자동 점검하게 했습니다.
+시리즈를 쓰면서 쌓인 운영 문서가 있습니다. digest 테이블이 차면 새 쿼리가 통계에서 사라진다(operations.md), 기종별 최소 권한 목록(least-privilege.md) 같은 것들입니다. 문서의 문제는 **사람이 기억해야 작동한다**는 겁니다. 이 규칙들을 Advisor 6종 코드로 옮겨 일일 스윕(HA 분산 락)으로 자동 점검하게 했습니다.
 
 재밌는 건 구현 비용입니다. **operator 인터페이스 변경이 0이었습니다.** 기존의 `parameters()`, `describeSchema()`, `tableStats()`, `queryStats()`를 재사용해서 판정만 얹은 거라, "새 능력 = 메서드 1개"조차 필요 없던 케이스입니다. 실측(MySQL)에서 "digest 테이블 포화 위험"과 "위험 파라미터값"이 VIOLATIONS로, 중복 인덱스는 OK로, 기종에 무관한 점검은 UNSUPPORTED로 나뉘어 나옵니다.
 
@@ -102,10 +102,10 @@ SLO를 만들려면 레이턴시 백분위(p95/p99)가 필요한데, 여기서 �
 
 전반부의 마지막 조각이 D8입니다. D1~D7이 만든 신호는 흩어져 있습니다. 이상 감지 따로, Advisors 따로, SLO 따로. 운영자가 아침에 열어야 할 화면은 모든 걸 나열하기보다 **어디부터 봐야 하는지 알려주는 화면**입니다.
 
-그래서 health·이상 감지·Advisors·SLO·백업 신선도를 인스턴스별 0~100점 + 등급으로 합산하고, 감점 사유를 분해해서 나쁜 순으로 정렬했습니다. 설계 판단 세 가지:
+health·이상 감지·Advisors·SLO·백업 신선도를 인스턴스별 0~100점 + 등급으로 합산하고, 감점 사유를 분해해서 나쁜 순으로 정렬했습니다. 설계 판단 세 가지:
 
 - 신호가 없는 신규 인스턴스는 0점이 아니라 INSUFFICIENT_DATA로 둬서 **"데이터 부족"과 "나쁨"을 구분**합니다.
-- 접속 자체가 안 되면 다른 신호가 무의미합니다. 그래서 **health 프로브 예외는 down으로 수렴**시켜 치명으로 처리했습니다.
+- 접속 자체가 안 되면 다른 신호가 무의미하니, **health 프로브 예외는 down으로 수렴**시켜 치명으로 처리했습니다.
 - 신호 하나의 수집 실패가 스코어 전체를 죽이지 않도록 **신호를 격리(partial)**했습니다.
 
 ```
@@ -141,7 +141,7 @@ canary를 죽이자마자 최상단에 떠오르는 걸 보고 이 화면의 역
 
 괴리를 계산할 때 밟기 쉬운 함정이 하나 있습니다. MySQL과 PostgreSQL의 actual rows는 **루프당 평균**입니다. 중첩 루프 조인의 안쪽 노드가 `rows=3, loops=100`이면 실제로 읽은 건 300행입니다. 3행이 loops만큼 돈 값이기 때문입니다. loops를 곱하지 않으면 "추정 3, 실제 3, 괴리 없음"이라는 엉뚱한 결론이 나옵니다.
 
-그래서 괴리 판정은 이렇게 했습니다:
+괴리 판정은 이렇게 했습니다:
 
 - MySQL/PG: 실제 총량 = actual rows x loops로 환산 후 추정과 비교
 - Oracle: ALLSTATS LAST의 A-Rows는 이미 총량이라 그대로

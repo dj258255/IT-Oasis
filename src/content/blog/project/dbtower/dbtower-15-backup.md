@@ -1,7 +1,7 @@
 ---
-title: '백업이 진짜가 되기까지 — 로그 백업 5기종과 시점 복구, 그리고 정석까지의 네 걸음'
+title: '백업이 진짜가 되기까지: 로그 백업 5기종과 시점 복구, 그리고 정석까지의 네 걸음'
 titleEn: 'Until Backups Became Real — Log Backups Across Five Engines, PITR, and Four Steps to Orthodoxy'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 15편. 백업 대장정입니다. 전반부는 로그 백업이 MSSQL만 되던 것을 MySQL binlog, PostgreSQL WAL, MongoDB oplog, Oracle 아카이브 로그까지 다섯 기종 전부로 넓히며 "기종이 못 하는 것"과 "하다가 깨진 것"을 구분하는 UNSUPPORTED 상태를 만들고, 최신 파일 하나만 수집하면 체인에 조용한 구멍이 난다는 것을 "마지막 이전 전부" 보충 수집으로 고치고, 생성한 복원 안내문을 실제로 실행해 SQL Server와 PostgreSQL에서 목표 시점의 상태를 정확히 재현한 기록입니다. 후반부는 그걸 현업의 정석 쪽으로 미는 네 걸음입니다. Mongo oplog 증분($gte로 일부러 만든 겹침 한 건이 체인 무결의 증거, 산출물 28분의 1), pg_receivewal 스트리밍(복제 슬롯 덕에 수신자를 죽여도 재시작 사이 유실 0, 그리고 죽은 프로세스를 산 것처럼 보이게 하던 docker exec -i 함정), MySQL 물리 백업 XtraBackup(MYSQL_PWD를 안 읽고 /dev/stdin defaults를 조용히 무시하는 함정 두 겹, 검증은 파일 존재가 아니라 실제 prepare 실행), 그리고 AES-256-GCM 산출물 암호화(변조된 백업은 조용히 오염되는 대신 명확히 실패한다)까지입니다.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 15편. 백업 대장정입니다. 전반부는 로그 백업이 MSSQL만 되던 것을 MySQL binlog, PostgreSQL WAL, MongoDB oplog, Oracle 아카이브 로그까지 다섯 기종 전부로 넓히며 "기종이 못 하는 것"과 "하다가 깨진 것"을 구분하는 UNSUPPORTED 상태를 만들고, 최신 파일 하나만 수집하면 체인에 조용한 구멍이 난다는 것을 "마지막 이전 전부" 보충 수집으로 고치고, 생성한 복원 안내문을 실제로 실행해 SQL Server와 PostgreSQL에서 목표 시점의 상태를 정확히 재현한 기록입니다. 후반부는 그걸 현업의 정석 쪽으로 옮겨 가는 네 걸음입니다. Mongo oplog 증분($gte로 일부러 만든 겹침 한 건이 체인 무결의 증거, 산출물 28분의 1), pg_receivewal 스트리밍(복제 슬롯 덕에 수신자를 죽여도 재시작 사이 유실 0, 그리고 죽은 프로세스를 산 것처럼 보이게 하던 docker exec -i 함정), MySQL 물리 백업 XtraBackup(MYSQL_PWD를 안 읽고 /dev/stdin defaults를 조용히 무시하는 함정 두 겹, 검증은 파일 존재가 아니라 실제 prepare 실행), 그리고 AES-256-GCM 산출물 암호화(변조된 백업은 조용히 오염되는 대신 명확히 실패한다)까지입니다.'
 descriptionEn: 'Part 15 of DBTower — the backup saga. First half: log backup goes from MSSQL-only to all five engines with an UNSUPPORTED status separating "the engine cannot" from "it broke", catch-up collection fixing the silent chain gap of collecting only the newest file, and generated restore guides actually executed — SQL Server and PostgreSQL both reproduced exact point-in-time states. Second half pushes toward production orthodoxy in four steps: Mongo oplog incrementals where a deliberately overlapped entry ($gte) proves chain continuity while shrinking backups 28x, pg_receivewal streaming with replication slots (killing the receiver loses nothing — plus the docker exec -i trap that made dead processes look alive), MySQL physical backups via XtraBackup past two password traps and verified by actually running prepare, and AES-256-GCM artifact encryption where tampering fails loudly instead of corrupting quietly.'
 date: 2026-07-15
 tags:
@@ -52,7 +52,7 @@ seriesOrder: 15
 
 검증은 시나리오로 했습니다. 수동으로 로그를 두세 번 회전시켜 "주기를 놓친 상황"을 만들고 LOG 백업을 한 번 실행했습니다. MySQL은 산출물이 3개에서 13개로(과거 미수집분 전부), PostgreSQL은 1개에서 5개로 늘었는데 세그먼트 번호가 **50·51·52·53·54로 연속, 갭 제로**였습니다. 재실행하면 "전부 이미 수집됨"으로 멱등하게 거절됩니다.
 
-## 4. 시점 복구 — 생성한 안내문을 실제로 실행하다
+## 4. 시점 복구, 생성한 안내문을 실제로 실행하다
 
 로그 체인이 쌓이니 시점 복구가 가능해집니다. 범위는 처음부터 좁게 정했습니다. 완전한 PITR 오케스트레이션은 대상 서버 구성(아카이브 경로, restore_command)을 요구해 정체성과 충돌하니, DBTower는 **(1) 복원 가능 창 계산**과 **(2) 기종별 복원 명령 문안 생성**까지만 하고 실행은 사람이 합니다. gh-ost dry-run, digest TRUNCATE 안내와 같은 생성·안내 모델입니다.
 
@@ -64,11 +64,11 @@ seriesOrder: 15
 
 물리의 첫 조각도 여기서 들어왔습니다. 백업 타입에 **PHYSICAL(물리 전체)**을 신설했습니다. PostgreSQL은 pg_basebackup(replication 프로토콜이라 서버 설정 변경이 없고, tar를 stdout으로 받아 기존 수집 모델 그대로), Oracle은 RMAN 경로(BACKUP ARCHIVELOG ALL **NOT BACKED UP 1 TIMES**)입니다. 멱등과 블록 검증은 RMAN 카탈로그가 보장하는데, 데모 이미지엔 rman이 없어 파일 수집 폴백을 정직하게 씁니다. 그리고 PostgreSQL에서도 SQL Server처럼 **실제 시점 복원**을 했습니다. 물리 백업(404MB) 위에 마커 A를 넣고 WAL을 수집하고, 목표 시점을 기록하고, 마커 B를 넣고 다시 WAL을 수집했습니다. 그다음 안내문대로 tar를 해체하고 recovery_target_time을 걸어 임시 서버를 띄웠습니다. 여기서도 함정이 하나: recovery 모드는 pg_wal에 파일을 직접 넣는 게 아니라 **restore_command가 필수**입니다. 문안을 고치고 재시도하니 서버 로그가 이렇게 증언했습니다. "recovery stopping before commit ... 11:23:38.887". 마커 B가 들어가기 직전에 정확히 멈춘 겁니다. 체인의 뒷받침도 확인됐습니다. 물리 백업의 backup_label이 요구한 시작 세그먼트(58)를, 앞 절의 멱등 보충 수집이 이미 갖고 있었습니다. 정석대로 "전부"를 줍는 습관이 자기 자신을 구한 셈입니다.
 
-## 5. "돌아간다"와 "정석이다" 사이 — 네 걸음을 더
+## 5. "돌아간다"와 "정석이다" 사이, 네 걸음을 더
 
-여기까지 쓰고 3-2-1이 완성됐다고 생각했습니다. 거짓말은 아니었는데, 현업 DBA의 눈으로 다시 보면 네 군데가 걸립니다. Mongo 로그 백업은 매번 oplog 전체를 뜨고 있었고(증분이 아니라 반복 전체 수집), PG WAL은 수집 주기 사이에 세그먼트가 재활용되면 구멍이 날 수 있는 풀 방식이었고, MySQL엔 현업 표준인 물리 백업 경로가 없었고, 산출물은 전부 평문이었습니다. 후반부는 그 네 조각을 정석 쪽으로 미는 이야기입니다.
+여기까지 쓰고 3-2-1이 완성됐다고 생각했습니다. 거짓말은 아니었는데, 현업 DBA의 눈으로 다시 보면 네 군데가 걸립니다. Mongo 로그 백업은 매번 oplog 전체를 뜨고 있었고(증분이 아니라 반복 전체 수집), PG WAL은 수집 주기 사이에 세그먼트가 재활용되면 구멍이 날 수 있는 풀 방식이었고, MySQL엔 현업 표준인 물리 백업 경로가 없었고, 산출물은 전부 평문이었습니다. 후반부는 그 네 조각을 정석 쪽으로 옮겨 가는 이야기입니다.
 
-## 6. 겹침 한 건이 증거다 — Mongo oplog 증분
+## 6. 겹침 한 건이 증거다, Mongo oplog 증분
 
 증분 백업의 적은 구멍입니다. 직전 수집과 이번 수집 사이에 유실이 있어도 산출물만 봐서는 모르니까요. 그래서 설계의 본체를 "구멍이 없다는 증거"에 뒀습니다. 직전 산출물 파일명에 박아둔 ts 마커 이후를 뜨되, 조건을 `$gt`가 아니라 **`$gte`**로 걸어, 직전 덤프의 마지막 엔트리를 일부러 한 건 겹쳐 받습니다. 이번 산출물의 첫 엔트리가 직전 마커와 정확히 일치하면, 그 겹침 자체가 두 산출물 사이에 빈틈이 없다는 물증이 됩니다.
 
@@ -76,7 +76,7 @@ seriesOrder: 15
 
 반대 방향의 정직함도 하나 있습니다. oplog는 순환(capped) 컬렉션이라 수집이 뜸하면 마커보다 오래된 엔트리가 이미 밀려났을 수 있는데, 이때 조용히 전체를 다시 뜨면 안 됩니다. 그건 체인 구멍을 성공으로 위장하는 거니까요. 명확히 실패시키고 "FULL부터 다시 + 주기를 줄이라"고 말하게 했습니다.
 
-## 7. 죽어도 다시 서는 수신자 — pg_receivewal과 죽은 척하는 래퍼
+## 7. 죽어도 다시 서는 수신자, pg_receivewal과 죽은 척하는 래퍼
 
 WAL 수집의 정석은 완결된 세그먼트를 주기적으로 걷어오는 게 아니라 복제 프로토콜로 실시간 스트리밍하는 겁니다. `pg_receivewal --slot`이면 앞에서 정직하게 적어둔 그 한계가 두 가지 다 해결됩니다. 스트리밍이라 수집 주기라는 창 자체가 없어지고, 복제 슬롯 덕에 수신자가 죽어 있는 동안의 WAL도 서버가 보존해줍니다.
 
@@ -84,7 +84,7 @@ WAL 수집의 정석은 완결된 세그먼트를 주기적으로 걷어오는 �
 
 고친 뒤의 e2e는 교과서처럼 흘러갑니다. 기동 후 슬롯 active=t, .partial 수신 → 프로세스 kill → 30초 안에 "사망 감지 — 재시작 1회차"와 함께 재접속 → 수신 디렉터리에 C8, C9, CA.partial이 **연속으로** 남았습니다. kill 공백 구간에 만들어진 C9를 슬롯이 보존하고 있다가 넘겨준 겁니다. 재시작 사이 유실 0.
 
-## 8. prepare까지 해봐야 백업이다 — XtraBackup
+## 8. prepare까지 해봐야 백업이다, XtraBackup
 
 대용량 MySQL의 주 백업은 물리가 표준입니다. 논리 덤프는 복원할 때 SQL을 전부 재생하고 인덱스를 재구축해야 해서 수백 GB부터는 비현실적이고, binlog 재생의 앵커도 물리 백업+좌표가 정석이니까요. PHYSICAL 타입에 `xtrabackup --stream=xbstream`을 stdout으로 받아 단일 파일로 저장하는 경로를 추가했습니다. 이 형태라 뒤에 나올 암호화 관문·원격 보관과 그대로 조립됩니다.
 
@@ -92,11 +92,11 @@ WAL 수집의 정석은 완결된 세그먼트를 주기적으로 걷어오는 �
 
 검증도 물리답게 바꿨습니다. 물리 산출물은 "파일이 존재한다"로는 아무것도 증명 못 합니다. 격리 컨테이너에서 xbstream을 풀고 **`xtrabackup --prepare`를 실제로 실행**합니다. redo 적용과 미완 트랜잭션 롤백, 즉 크래시 복구를 진짜로 수행하는 겁니다. 이게 성공해야 "복원 가능한 물리 백업"이 사실이 됩니다. 실측: 81,269,868바이트 xbstream을 5.6초에 뜨고, 검증에서 자동 복호 → 추출 → prepare → VERIFIED.
 
-![백업/PITR 카드 — 물리(xbstream) 앵커와 복원 가능 창](/uploads/project/dbtower/xtrabackup-physical.png)
+![백업/PITR 카드, 물리(xbstream) 앵커와 복원 가능 창](/uploads/project/dbtower/xtrabackup-physical.png)
 
 시점 복구 문안도 물리 앵커에 맞게 갈립니다. 특히 binlog 재생을 **xtrabackup_binlog_info의 좌표부터** 시작하라는 경고를 문안에 박았습니다. 좌표 없이 처음부터 재생하면 백업에 이미 반영된 변경이 중복 적용되니까요.
 
-## 9. 변조는 실패가 된다 — 산출물 암호화
+## 9. 변조는 실패가 된다, 산출물 암호화
 
 백업 파일은 대상 DB 전체 데이터의 가장 농축된 유출면인데, 로컬도 원격도 평문이었습니다. 3-2-1-1-0에서 네 번째 1(암호화 사본)이 비어 있던 거죠. 산출물 쓰기의 단일 관문에서 AES-256-GCM 스트리밍 암호화를 걸었습니다. 형식은 MAGIC 헤더(DBTENC1) + IV + 암호문입니다. 파일명은 그대로라 체인 보충이나 ts 마커 규약이 암호화와 무관하게 동작합니다.
 

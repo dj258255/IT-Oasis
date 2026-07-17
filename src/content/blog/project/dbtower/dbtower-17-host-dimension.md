@@ -1,5 +1,5 @@
 ---
-title: '여유 77%인데 치명 경보가 맞다 — 디스크 포화 예측과, 같은 서버라서 두 번 울리던 경보'
+title: '여유 77%인데 치명 경보가 맞다: 디스크 포화 예측과, 같은 서버라서 두 번 울리던 경보'
 titleEn: 'A Critical Alert at 77% Free Is Correct — Disk Saturation Forecasting, and Alerts That Fired Twice for the Same Server'
 description: '이기종 DBMS 운영 관리 플랫폼 DBTower 17편. 지금까지의 신호는 전부 "DB"의 신호였는데, DB 장애의 큰 축은 DB 바깥(호스트)에서 옵니다. 전반부는 디스크 포화 예측입니다. 잔량이 아니라 속도를 봅니다. 여유가 76.8%나 남았는데 치명 경보가 뜨는 화면을 실쓰기 부하로 직접 만들었는데, 초당 17MB씩 줄고 있으면 20시간 뒤 장애라서 이 경보가 맞습니다. 그 과정에서 node-exporter가 rootfs 마운트 없이 컨테이너 자기 자신만 보고 있던 함정과, mountpoint="/" 고정이 실무(데이터 전용 마운트)와 어긋나는 설계 함정을 밟았습니다. 후반부는 서버 공유 인지입니다. 등록 단위는 DB인데 물리 단위는 서버라, 같은 서버에 DB 두 개를 등록하면 세션·복제·데드락 경보가 두 번 울립니다. 그룹당 1회로 줄이되 "누구에게 해당하는지"를 명시하고, 헬스 스코어(위험 귀속)는 일부러 dedup하지 않은 선 긋기를 기록했습니다.'
 descriptionEn: 'Part 17 of DBTower. Every signal so far was a "database" signal, but a large class of DB failures comes from outside the DB — the host. First half: disk saturation forecasting that watches the rate, not the remainder. I produced a screen where a CRITICAL fires at 76.8% free by writing real load — at 17MB/s of shrinkage that disk dies in 20 hours, so the alert is right. Along the way: node-exporter silently watching only its own container without a rootfs mount, and the design trap of pinning mountpoint="/" when real DB data lives on dedicated mounts. Second half: server-sharing awareness — registration units are databases but physical units are servers, so two DBs on one server meant every session/replication/deadlock alert fired twice. Deduped to once per group with an explicit "applies to all of..." note, while deliberately NOT deduping health scores: both databases really are at risk.'
@@ -29,11 +29,11 @@ seriesOrder: 17
 
 실제로 확인하고 싶어서 부하를 진짜로 만들었습니다. MySQL 볼륨에 15초마다 256MB씩 실제로 쓰는 루프를 돌리고 어드바이저를 호출하니 이런 화면이 나왔습니다.
 
-![Advisors 카드 — 여유 76.8%인데 치명: 약 0.7일 내 포화](/uploads/project/dbtower/disk-forecast-critical.png)
+![Advisors 카드, 여유 76.8%인데 치명: 약 0.7일 내 포화](/uploads/project/dbtower/disk-forecast-critical.png)
 
 여유 76.8%, 치명. 잔량만 보는 경보 체계라면 이 화면에서 아무 일도 일어나지 않았을 겁니다.
 
-## 2. 함정 두 개 — 자기 자신만 보던 exporter, "/"라는 고정관념
+## 2. 함정 두 개, 자기 자신만 보던 exporter와 "/"라는 고정관념
 
 구현보다 배선에서 두 번 넘어졌습니다. 첫 번째: 데모 스택의 node-exporter가 **컨테이너 자기 자신만 보고 있었습니다**. 쿼리를 날려보니 `mountpoint="/"` 시계열 자체가 없었어요. node-exporter를 컨테이너로 띄울 땐 호스트 루트를 읽기 전용으로 마운트하고(`/:/host:ro`) `--path.rootfs=/host`를 줘야 호스트의 디스크가 보입니다. 공식 가이드의 첫 줄인데, 마운트 없이도 프로세스는 멀쩡히 뜨고 메트릭도 나오니 조용히 틀린 값을 보게 됩니다. 16편의 교훈 그대로입니다. 조용한 폴백이 제일 무섭습니다.
 
@@ -45,11 +45,11 @@ seriesOrder: 17
 
 해법은 계산 키 하나였습니다. `host:port`로 서버 그룹을 파생하고(엔티티 추가도, DNS 해석도 없이), 서버 전역 신호는 그룹 대표 한 곳에서만 탐침합니다. 실제로 공유 서버에 트랜잭션을 열어둔 채 방치하니 경보가 정확히 한 건, 이렇게 왔습니다. "장기 유휴 트랜잭션 pid=45664 ... **(서버 127.0.0.1:15432 공유 — local-postgres, dbtower-self 전체에 해당)**". 마지막 줄이 중요합니다. dedup으로 경보가 대표 이름으로만 오면, 받은 팀이 "우리 DB 아니네" 하고 넘길 수 있으니까요. 줄이되, 누구에게 해당하는지는 명시합니다.
 
-![인스턴스 카드 — 같은 host:port 페어에만 "서버 공유 ×2" 배지](/uploads/project/dbtower/server-shared-badge.png)
+![인스턴스 카드, 같은 host:port 페어에만 "서버 공유 ×2" 배지](/uploads/project/dbtower/server-shared-badge.png)
 
 선을 하나 그었습니다. **dedup은 탐침과 경보에만 하고, 위험 귀속에는 하지 않습니다.** 같은 서버의 두 DB는 둘 다 실제로 위험합니다. 헬스 스코어까지 반으로 줄이면 그게 오히려 왜곡입니다. 디스크 예측 어드바이저도 같은 원리로, 일일 스윕에서는 호스트당 1회만 돌고 나머지 인스턴스에는 "서버 공유 — 누가 대신 점검했나"를 남깁니다(생략을 숨기지 않고요). 스윕 로그로는 인스턴스 7개에 호스트 점검 2회, 5회가 줄었습니다.
 
-## 4. 덤 — 테스트가 지키고 있던 암묵의 계약
+## 4. 덤, 테스트가 지키고 있던 암묵의 계약
 
 dedup을 넣다가 기존 테스트 세 개가 깨졌는데, 원인이 교훈이었습니다. 원래 코드는 감지 결과를 findings 리스트에 **하나씩 누적**했습니다. 중간 감지 하나가 예외로 죽어도 그 전까지의 신호는 알림으로 나가는 구조죠. 저는 서버 스코프 신호를 중간 리스트에 모았다가 한 번에 합치도록 바꿨고, 그 순간 "부분 실패에도 부분 결과는 살아남는다"는 계약이 깨졌습니다. 아무 문서에도 없던 계약인데 테스트가 지키고 있었습니다. 동작을 검증하는 테스트는 이럴 때 값을 합니다.
 

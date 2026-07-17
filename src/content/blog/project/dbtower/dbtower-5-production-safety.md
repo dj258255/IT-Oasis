@@ -1,7 +1,7 @@
 ---
 title: '운영 안전 8개 축을 하나씩 닫으며 포트폴리오를 프로덕션으로 끌어올렸습니다'
 titleEn: 'Closing Eight Axes of Operational Safety to Take a Portfolio Project to Production'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 5편. ''네트워크에 닿는 누구나 인스턴스를 등록·삭제·백업할 수 있는 관제탑''이라는 결격 사유에서 시작해, 운영 안전을 8개 축으로 하나씩 닫은 기록입니다. 세션+토큰 이중 인증과 역할 분리, 비밀번호 AES-256-GCM 암호화와 하위호환, ddl-auto=update가 만든 스키마 드리프트를 Flyway로 이관하다 밟은 ''Boot 4 스타터 조용한 미실행'' 함정, 권한 0에서 시작해 실측으로 확정한 최소 권한 계정(MongoDB clusterMonitor가 system.profile 읽기를 이미 갖고 있더라), 스케줄러 분산 락, 그리고 ''테스트 안 한 백업은 백업이 아니다''라는 복원 검증까지 다룹니다. 모든 개선을 ''한계 인지 → 개선 → 실측 → 남은 한계 정직 명시'' 아크로 남깁니다.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 5편. ''네트워크에 닿는 누구나 인스턴스를 등록하고 삭제하고 백업할 수 있는 관제탑''이라는 결격 사유에서 시작해, 운영 안전을 8개 축으로 하나씩 닫은 기록입니다. 세션+토큰 이중 인증과 역할 분리, 비밀번호 AES-256-GCM 암호화와 하위호환, ddl-auto=update가 만든 스키마 드리프트를 Flyway로 이관하다 밟은 ''Boot 4 스타터 조용한 미실행'' 함정, 권한 0에서 시작해 실측으로 확정한 최소 권한 계정(MongoDB clusterMonitor가 system.profile 읽기를 이미 갖고 있더라), 스케줄러 분산 락, 그리고 ''테스트 안 한 백업은 백업이 아니다''라는 복원 검증까지 다룹니다. 모든 개선을 ''한계 인지 → 개선 → 실측 → 남은 한계 정직 명시'' 아크로 남깁니다.'
 descriptionEn: 'Part 5 of DBTower. Starting from a disqualifying flaw, that anyone on the network could register, delete, or back up instances, I closed operational safety along eight axes: session+token dual auth with role separation, AES-256-GCM password encryption with backward compatibility, migrating ddl-auto=update schema drift to Flyway (and hitting Boot 4''s silent-no-run trap), a least-privilege account confirmed by measurement (MongoDB''s clusterMonitor already held system.profile read), a distributed scheduler lock, and backup restore verification. Every improvement is recorded as ''recognize the limit, improve, measure, honestly state what remains.'''
 date: 2026-07-04
 tags:
@@ -56,7 +56,7 @@ admin:   GET  .../mcp-token         -> 200      (MCP 카드가 이걸로 등록 
 
 재미있었던 건 **하위호환**입니다. JPA `AttributeConverter`에 `enc:v1:` 접두사 디스패치를 뒀습니다. 기존 평문 행은 마이그레이션 없이 그대로 읽히고 다음 저장 때 자연스럽게 재암호화됩니다. `v1`을 붙인 건 나중에 키·알고리즘을 교체할 여지입니다.
 
-그리고 키 정책은 A1과 **일부러 비대칭**으로 갔습니다. API 토큰은 미설정 시 랜덤 생성이 안전(fail-closed)이지만 암호화 키를 랜덤 생성하면 오히려 위험합니다. 재기동하면 기존 암호문을 영영 못 풀기 때문입니다. 그래서 키 미설정은 WARN+평문(과도기), 잘못된 키는 기동 거부, 키 없이 암호문을 만나면 예외. "조용히 평문으로 새는" 경로만은 없게 했습니다.
+그리고 키 정책은 A1과 **일부러 비대칭**으로 갔습니다. API 토큰은 미설정 시 랜덤 생성이 안전(fail-closed)이지만 암호화 키를 랜덤 생성하면 오히려 위험합니다. 재기동하면 기존 암호문을 영영 못 풀기 때문입니다. 키 미설정은 WARN+평문(과도기), 잘못된 키는 기동 거부, 키 없이 암호문을 만나면 예외. "조용히 평문으로 새는" 경로만은 없게 했습니다.
 
 ```
 기존 평문 행:  id 1·7·8 health 전부 up  — 하위 호환 확인
@@ -79,13 +79,13 @@ admin:   GET  .../mcp-token         -> 200      (MCP 카드가 이걸로 등록 
 
 ## 4. A4 스냅샷 보존으로 무한 적재를 닫다
 
-시점 비교의 재료인 60초 주기 스냅샷이 무한히 쌓이고 있었습니다. 이 시점 실측이 이틀에 50,960행이었는데, 방치하면 메타 DB가 플랫폼 자신의 병목이 됩니다(AWS Performance Insights도 기본 보존이 7일입니다). 그래서 1시간 주기로 cutoff(기본 7일) 이전을 JPQL 벌크 DELETE 한 문장으로 지우게 했습니다. 수십만 행을 영속성 컨텍스트에 올리지 않으려고 벌크로 갔고 `@Modifying(clearAutomatically=true)`로 1차 캐시 불일치도 막았습니다. `retention-days <= 0`이면 보존 무제한 스위치입니다.
+시점 비교의 재료인 60초 주기 스냅샷이 무한히 쌓이고 있었습니다. 이 시점 실측이 이틀에 50,960행이었는데, 방치하면 메타 DB가 플랫폼 자신의 병목이 됩니다(AWS Performance Insights도 기본 보존이 7일입니다). 1시간 주기로 cutoff(기본 7일) 이전을 JPQL 벌크 DELETE 한 문장으로 지우게 했습니다. 수십만 행을 영속성 컨텍스트에 올리지 않으려고 벌크로 갔고 `@Modifying(clearAutomatically=true)`로 1차 캐시 불일치도 막았습니다. `retention-days <= 0`이면 보존 무제한 스위치입니다.
 
 ## 5. A6 감사 로그, 누가 언제 무엇을 했나
 
 A1로 인증은 생겼는데, 인증된 사용자가 **무엇을 했는지** 기록이 없었습니다. 접근 통제만큼 사후 추적도 관리 도구의 기본 요건입니다. audit 모듈을 신설해서 `/api/**`의 POST/PUT/DELETE(상태 변경·explain·백업)와 로그인 성공/실패를 기록했습니다. GET 조회는 폴링 노이즈라 뺐습니다.
 
-설계에서 사각지대가 하나 있었습니다. 인가 거부(403)는 `DispatcherServlet` 앞에서 끝나서 인터셉터가 못 봅니다. 그래서 인터셉터(인가 통과 요청) + `AuthorizationDeniedEvent` 리스너(403 거부) 조합으로 메웠습니다.
+설계에서 사각지대가 하나 있었습니다. 인가 거부(403)는 `DispatcherServlet` 앞에서 끝나서 인터셉터가 못 봅니다. 인터셉터(인가 통과 요청) + `AuthorizationDeniedEvent` 리스너(403 거부) 조합으로 메웠습니다.
 
 ```
 POST /api/instances/8/explain 실행 후 GET /api/audit ->
@@ -156,6 +156,6 @@ FAILED 분기 증명: 없는 덤프 verify -> FAILED (러버스탬프 아님)
 
 테스트는 81건까지 늘었고 마이그레이션은 V1~V4가 됐습니다. 이 8개 중 서로 다른 모듈에 걸친 것들은 git worktree로 브랜치를 나눠 병렬로 개발했습니다(스키마 권위를 바꾸는 Flyway를 마지막에 병합).
 
-한 가지 더. "기종 분기는 팩토리 한 곳", "플랫폼 코드는 인터페이스만 안다"는 주장을 1편부터 문서에 써 왔는데, 문서 속 아키텍처는 강제력이 없습니다. 그래서 Spring Modulith를 도입해 패키지=모듈로 선언하고 순환 의존을 빌드에서 실패시키게 했더니, 첫 실행에서 바로 순환 2개(registry↔operator, insight↔alert)가 잡혔습니다. 좋은 실패였습니다. 깨끗하다고 믿었던 구조에 순환이 실재했다는 뜻이기 때문입니다. 의존 역전으로 풀고 나니 이제 누가 경계를 넘으면 CI가 빨간불이 됩니다.
+한 가지 더. "기종 분기는 팩토리 한 곳", "플랫폼 코드는 인터페이스만 안다"는 주장을 1편부터 문서에 써 왔는데, 문서 속 아키텍처는 강제력이 없습니다. Spring Modulith를 도입해 패키지=모듈로 선언하고 순환 의존을 빌드에서 실패시키게 했더니, 첫 실행에서 바로 순환 2개(registry↔operator, insight↔alert)가 잡혔습니다. 좋은 실패였습니다. 깨끗하다고 믿었던 구조에 순환이 실재했다는 뜻이기 때문입니다. 의존 역전으로 풀고 나니 이제 누가 경계를 넘으면 CI가 빨간불이 됩니다.
 
 이걸로 "포트폴리오에서 프로덕션으로" 넘어가는 축은 대부분 닫았습니다. 다음 편은 방향이 조금 다릅니다. DBA가 장애 때 매일 보는 화면(Wait Event)을 붙이고 "이 다섯 기종을 JPA와 Native Query로 통일하면 되지 않냐"는 질문에 왜 그러지 않았는지를 적재적소라는 답으로 정리합니다. 코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.

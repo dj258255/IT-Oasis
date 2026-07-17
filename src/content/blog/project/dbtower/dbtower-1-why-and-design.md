@@ -1,7 +1,7 @@
 ---
 title: 'DB를 만들어봤으니, 이번에는 DB들을 부리는 플랫폼 DBTower를 설계했습니다'
 titleEn: 'Having Built a Database, I Designed DBTower, the Platform That Manages Them'
-description: 'MySQL·PostgreSQL·SQL Server처럼 서로 다른 DBMS를 하나의 플랫폼에서 등록·모니터링·백업까지 일괄 관리하는 컨트롤 플레인 DBTower 시리즈 1편. 왜 DB 운영을 자동화하는 플랫폼을 만들기로 했는지, 기종마다 전부 다른 통계 소스(performance_schema·pg_stat_statements·DMV)를 DbmsOperator 인터페이스 하나로 어떻게 묶었는지, 그리고 ''부하 상위 쿼리가 곧 범인이 아니다''라는 문제의식에서 나온 시점 비교 기능의 원리까지, 설계 결정과 그 이유를 기록합니다.'
+description: 'MySQL·PostgreSQL·SQL Server처럼 서로 다른 DBMS를 하나의 플랫폼에서 등록부터 모니터링, 백업까지 일괄 관리하는 컨트롤 플레인 DBTower 시리즈 1편. 왜 DB 운영을 자동화하는 플랫폼을 만들기로 했는지, 기종마다 전부 다른 통계 소스(performance_schema·pg_stat_statements·DMV)를 DbmsOperator 인터페이스 하나로 어떻게 묶었는지, 그리고 ''부하 상위 쿼리가 곧 범인이 아니다''라는 문제의식에서 나온 시점 비교 기능의 원리까지, 설계 결정과 그 이유를 기록합니다.'
 descriptionEn: 'Part 1 of DBTower, a control plane that registers, monitors, and backs up heterogeneous DBMSs (MySQL, PostgreSQL, SQL Server) in one place. It explains why I decided to build a DB operations automation platform, how per-engine stat sources (performance_schema, pg_stat_statements, DMVs) are unified behind a single DbmsOperator interface, and the principle behind window comparison, born from the insight that the heaviest query is not always the culprit.'
 date: 2026-03-17
 tags:
@@ -21,7 +21,7 @@ seriesOrder: 1
 
 ## 0. 들어가며
 
-현업에서 DB를 다루는 분들 이야기를 듣다 보니, 진짜 어려움은 정작 **운영하는 쪽**에 있다는 걸 알게 됐습니다. DBMS는 MySQL·PostgreSQL·SQL Server·Oracle로 여러 종류가 섞여 있고 대수는 수십·수백 대인데, 백업·모니터링·계정 관리 같은 일은 기종마다 구문이 전부 달라서 사람 손을 계속 탄다는 겁니다.
+현업에서 DB를 다루는 분들 이야기를 듣다 보니, 진짜 어려움은 정작 **운영하는 쪽**에 있다는 걸 알게 됐습니다. DBMS는 MySQL·PostgreSQL·SQL Server·Oracle로 여러 종류가 섞여 있고 대수는 수십·수백 대인데, 백업이나 모니터링, 계정 관리 같은 일은 기종마다 구문이 전부 달라서 사람 손을 계속 탄다는 겁니다.
 
 현직 DB 엔지니어인 지인에게 조언을 구했더니 이런 얘기를 해줬습니다. "백업을 예로 들면, DBMS마다 데이터 파일과 로그 파일 구현이 다르고 구문도 다른데, 플랫폼에서 하나의 기능으로 '30분 주기로 백업하고 싶어' 하면 각 DBMS가 알아서 자기 구문으로 백업하게 만드는 것"이라고 했습니다. 추상화 수준에서 정책을 설계하고 인터페이스를 상속받아 기종별로 특화 구현하는 일인 셈입니다. 이게 SRE의 DB 버전인 **DBRE**(Database Reliability Engineering)라는 것도 그때 알았습니다. 정형화된 운영 업무를 자동화해서 서비스와 DB가 늘어나도 필요한 사람 손이 선형으로 늘지 않게 만드는 엔지니어링입니다.
 
@@ -29,7 +29,7 @@ DBTower를 개발하던 도중, 당근 SRE 밋업에서 DB팀이 발표한 KDMS�
 
 ## 1. 무엇을 만드나, 곧 관제탑(컨트롤 플레인)
 
-DBTower는 데이터를 저장하는 DB 위에 한 겹 얹혀, **여러 DB를 등록해 두고 감시·진단·운영하는 관리층**입니다. 이런 걸 컨트롤 플레인이라고 부릅니다.
+DBTower는 데이터를 저장하는 DB 위에 한 겹 얹혀, **여러 DB를 등록해 두고 감시하고 진단하고 운영하는 관리층**입니다. 이런 걸 컨트롤 플레인이라고 부릅니다.
 
 | 기능 | 설명 |
 |---|---|
