@@ -26,7 +26,7 @@ seriesOrder: 0
 
 - 기간: 2026.03 ~ 2026.07, 개인 프로젝트(기여 100%)
 - 스택: Java 21, Spring Boot, PostgreSQL(메타 저장소), Spring Modulith(모듈 14개), MCP(JSON-RPC 2.0 직접 구현), Flyway, ShedLock, Docker, k6
-- 코드와 재현 기록: [GitHub](https://github.com/dj258255/dbtower), [VERIFICATION.md 104개 절](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md), GHCR 공개 이미지(원커맨드 셀프호스트)
+- 코드와 재현 기록: [GitHub](https://github.com/dj258255/dbtower), [VERIFICATION.md 109개 절](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md), GHCR 공개 이미지(원커맨드 셀프호스트)
 - 측정 환경: 로컬 Docker(Apple Silicon) 위 대상 DB 5기종. 모든 성능 수치는 개선 전을 먼저 재고 고친 뒤 다시 잰 전후 실측입니다
 
 숫자부터 놓고 시작하겠습니다.
@@ -38,7 +38,7 @@ seriesOrder: 0
 | 성능 개선 | 수집 4.0배(47.1에서 11.8ms), 저장 13.8배(행당 1.51에서 0.11ms), 조회 343배(21.269에서 0.062ms) |
 | 부하 상한 | k6 10 VU 30초에서 2,832 req/s, P95 5.86ms, 실패 0 |
 | 보존 정리 | 월별 파티셔닝 전환으로 200만 행 DELETE 1.9초가 파티션 DROP 12.8ms로 (147배, 블로트 0) |
-| 테스트와 기록 | 486건 CI 게이트, VERIFICATION 104개 절, 자체 감사 결함 20건 이상 FIX/SKIP 분리 |
+| 테스트와 기록 | 506건 CI 게이트, VERIFICATION 109개 절, 자체 감사 결함 20건 이상 FIX/SKIP 분리 |
 | 배포 | GHCR 멀티아치 공개, compose 한 번이면 뜨는 셀프호스트 |
 
 ## 1. 문제 정의: 지금의 DB 이슈 대응은 이렇게 흘러갑니다
@@ -207,7 +207,7 @@ DBMS 운영의 전통적 직무 축에 이 도구를 대보면, "하는 것"만�
 
 ## 12. 시리즈 지도: 더 깊이 읽기
 
-이 글은 시리즈 19편의 지도이기도 합니다. 여섯 아크로 묶입니다.
+이 글은 시리즈 20편의 지도이기도 합니다. 일곱 아크로 묶입니다.
 
 - **설계와 추상화** ([1](/blog/project/dbtower/dbtower-1-why-and-design), [2](/blog/project/dbtower/dbtower-2-abstraction-and-regression), [3](/blog/project/dbtower/dbtower-3-channels-web-mcp-ai)편): 경계를 운영 행위에 긋고, 코어 하나에 채널만 갈아끼우기
 - **5기종 증명과 진단 심화** ([4](/blog/project/dbtower/dbtower-4-five-engines), [6](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool), [8](/blog/project/dbtower/dbtower-8-diagnosis)편): "새 기종 = 구현체 1개"의 실측부터 추정 대 실제 괴리까지
@@ -216,6 +216,7 @@ DBMS 운영의 전통적 직무 축에 이 도구를 대보면, "하는 것"만�
 - **백업과 스케일** ([15](/blog/project/dbtower/dbtower-15-backup), [16](/blog/project/dbtower/dbtower-16-multi), [17](/blog/project/dbtower/dbtower-17-host-dimension)편): 백업 대장정, 멀티유저에서 멀티노드로, 디스크의 미래
 - **채널과 AI 루프** ([18](/blog/project/dbtower/dbtower-18-talking-tower)편): 알림이 카드가 되고 이모지가 진단을 부르기까지
 - **두 저장소의 루프** ([19](/blog/project/dbtower/dbtower-19-lakehouse-loop)편): lakehouse가 계산한 "평소"를 받아 오탐을 줄이고, 세 공급 잡과 자연어 카드 생성까지
+- **운영 병목 다섯 곳** ([20](/blog/project/dbtower/dbtower-20-operational-bottlenecks)편): 설정 드리프트·변경 리뷰 게이트·인덱스 분기 판정·인시던트 리포트·월간 점검, 사람 손이 붙던 자리를 끊기
 
 바쁘신 분께는 세 편을 권합니다. 설계 결정의 뿌리인 [1편](/blog/project/dbtower/dbtower-1-why-and-design), 진단의 끝까지 간 [8편](/blog/project/dbtower/dbtower-8-diagnosis), 백업이 진짜가 되는 [15편](/blog/project/dbtower/dbtower-15-backup)입니다.
 
@@ -227,4 +228,4 @@ DBMS 운영의 전통적 직무 축에 이 도구를 대보면, "하는 것"만�
 2. **주장은 실측으로.** 확장성 주장은 기종을 실제로 추가해서, 성능 주장은 전후 측정으로, 능력 표기는 안 되는 것의 명시로 증명했습니다
 3. **관제 도구를 완성하는 건 신뢰입니다.** 마지막에 공들인 기능들이 "내가 부하가 되지 않는 장치"와 "못 하는 것의 정직한 표기"였고, 제품화의 첫 결정이 "비밀은 사용자 인프라를 떠나지 않는다"였습니다
 
-전 과정의 상세는 시리즈 [1편](/blog/project/dbtower/dbtower-1-why-and-design)부터 [19편](/blog/project/dbtower/dbtower-19-lakehouse-loop)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. GHCR 이미지를 받아 셀프호스트로 직접 띄워보실 수 있습니다.
+전 과정의 상세는 시리즈 [1편](/blog/project/dbtower/dbtower-1-why-and-design)부터 [20편](/blog/project/dbtower/dbtower-20-operational-bottlenecks)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. GHCR 이미지를 받아 셀프호스트로 직접 띄워보실 수 있습니다.
