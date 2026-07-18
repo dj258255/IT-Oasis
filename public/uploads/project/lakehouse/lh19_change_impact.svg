@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif">
+  <rect x="0" y="0" width="760" height="400" rx="12" fill="#ffffff" stroke="#e5e5e5"/>
+
+  <text x="32" y="42" font-size="17" font-weight="700" fill="#1a1a1a">한 축으로는 안 켜진다 — 소스와 신호를 넓힌다</text>
+  <text x="32" y="64" font-size="12.5" fill="#6b6b6b">변경 이벤트를 한 형태로 모으고, 뒤이은 회귀를 두 축(플랜·지연)으로 본다</text>
+
+  <!-- 왼쪽: 변경 소스 → int_change_events -->
+  <text x="40" y="110" font-size="12" font-weight="700" fill="#444">변경 소스</text>
+  <rect x="40" y="122" width="150" height="40" rx="6" fill="#eaf2fc" stroke="#2a78d6"/>
+  <text x="115" y="140" font-size="12.5" font-weight="600" fill="#1a1a1a" text-anchor="middle">설정 변경 (config)</text>
+  <text x="115" y="155" font-size="10.5" fill="#6b6b6b" text-anchor="middle">config_param_change</text>
+
+  <rect x="40" y="172" width="150" height="40" rx="6" fill="#f5f5f5" stroke="#c9c9c9" stroke-dasharray="4 3"/>
+  <text x="115" y="190" font-size="12.5" font-weight="600" fill="#9b9b9b" text-anchor="middle">스키마 변경 (schema)</text>
+  <text x="115" y="205" font-size="10.5" fill="#a9a9a9" text-anchor="middle">change_review — 자리만</text>
+
+  <!-- 통합 스트림 -->
+  <path d="M190,142 H230 M190,192 H230" fill="none" stroke="#9b9b9b" stroke-width="1.5"/>
+  <rect x="230" y="140" width="140" height="56" rx="8" fill="#ffffff" stroke="#2a78d6" stroke-width="1.5"/>
+  <text x="300" y="164" font-size="12.5" font-weight="700" fill="#2a78d6" text-anchor="middle">int_change_events</text>
+  <text x="300" y="182" font-size="10.5" fill="#6b6b6b" text-anchor="middle">한 형태로 통합</text>
+
+  <!-- 오른쪽: 두 신호 축 -->
+  <path d="M370,168 H420" fill="none" stroke="#8a8a8a" stroke-width="1.5" marker-end="url(#a2)"/>
+  <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8a8a8a"/></marker></defs>
+
+  <text x="430" y="110" font-size="12" font-weight="700" fill="#444">변경 뒤 N일 신호</text>
+  <rect x="430" y="122" width="290" height="34" rx="6" fill="#fdf3ec" stroke="#e8833a"/>
+  <text x="445" y="143" font-size="12" fill="#a5501a">① 플랜 뒤집힘 / 회귀 (mart_plan_regression)</text>
+  <rect x="430" y="162" width="290" height="34" rx="6" fill="#fdf3ec" stroke="#e8833a"/>
+  <text x="445" y="183" font-size="12" fill="#a5501a">② 평균 지연 상승 (fct_query_daily 전후) — 신규</text>
+
+  <!-- 판정 사다리 -->
+  <text x="40" y="252" font-size="12" font-weight="700" fill="#444">우선순위 판정 (correlation)</text>
+  <g font-size="11.5">
+    <rect x="40" y="264" width="680" height="26" rx="5" fill="#fbecea" stroke="#e0a06a"/>
+    <text x="52" y="281" fill="#a5501a" font-weight="700">followed_by_regression</text>
+    <text x="230" y="281" fill="#6b6b6b">회귀가 뒤따름 (가장 강한 신호)</text>
+
+    <rect x="40" y="296" width="680" height="26" rx="5" fill="#fdf3ec" stroke="#e8833a"/>
+    <text x="52" y="313" fill="#a5501a" font-weight="700">followed_by_plan_flip</text>
+    <text x="230" y="313" fill="#6b6b6b">플랜만 뒤집힘</text>
+
+    <rect x="40" y="328" width="680" height="26" rx="5" fill="#eaf6f0" stroke="#1baf7a"/>
+    <text x="52" y="345" fill="#137a55" font-weight="700">followed_by_latency_rise</text>
+    <text x="230" y="345" fill="#6b6b6b">플랜은 그대로인데 느려짐 (19단계 신규 축)</text>
+
+    <rect x="40" y="360" width="680" height="26" rx="5" fill="#f4f4f4" stroke="#c9c9c9"/>
+    <text x="52" y="377" fill="#7a7a7a" font-weight="700">no_signal</text>
+    <text x="230" y="377" fill="#9b9b9b">아무 신호 없음 (당일 변경은 후행 관측 미도래 — 정직)</text>
+  </g>
+</svg>
