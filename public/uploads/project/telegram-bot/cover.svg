@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2AABEE"/>
+      <stop offset="1" stop-color="#229ED9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- 메시지 왕복: 질문 -> 실행 -> 답장 -->
+  <g>
+    <rect x="120" y="430" width="300" height="60" rx="16" fill="#21262d"/>
+    <text x="145" y="468" font-family="ui-monospace, monospace" font-size="22" fill="#8b949e">버그 고쳐줘</text>
+
+    <line x1="440" y1="460" x2="560" y2="460" stroke="#30363d" stroke-width="2"/>
+    <rect x="480" y="440" width="40" height="40" rx="10" fill="url(#accent)" opacity="0.9"/>
+
+    <rect x="580" y="430" width="230" height="60" rx="16" fill="#161b22" stroke="#229ED9" stroke-width="2"/>
+    <text x="605" y="468" font-family="ui-monospace, monospace" font-size="22" fill="#2AABEE">claude -p</text>
+
+    <line x1="830" y1="460" x2="950" y2="460" stroke="#30363d" stroke-width="2"/>
+
+    <rect x="770" y="452" width="180" height="36" rx="8" fill="url(#accent)" opacity="0.9"/>
+    <text x="790" y="530" font-family="ui-monospace, monospace" font-size="20" fill="#8b949e">진행 상황을 실시간으로 보내며 파일까지 고친다</text>
+  </g>
+
+  <!-- 텍스트 -->
+  <text x="120" y="200" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="60" font-weight="800" fill="#e6edf3">텔레그램에서 돌리는 Claude 봇</text>
+  <text x="120" y="260" font-family="ui-monospace, monospace" font-size="30" fill="#2AABEE">telegram-bot</text>
+  <text x="120" y="330" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="26" fill="#8b949e">구독 CLI 그대로 · 음성 입력 · 코딩 실행 · 위험 명령 차단</text>
+
+  <g>
+    <rect x="900" y="120" width="180" height="52" rx="26" fill="#161b22" stroke="#229ED9" stroke-width="2"/>
+    <text x="930" y="154" font-family="ui-monospace, monospace" font-size="24" fill="#2AABEE">Python</text>
+  </g>
+</svg>
