@@ -125,7 +125,7 @@ found duplicate key security
 
 데모 PostgreSQL을 붙여 조인 쿼리로 확인해봤습니다. `FROM plan_demo JOIN bloat_demo`를 주니 두 테이블이 다 나옵니다. `plan_demo`는 `idx_plan_demo_k(k)`와 기본키 `plan_demo_pkey[U](id)`, `bloat_demo`는 `bloat_demo_pkey[U](id)`, 컬럼은 타입까지(`pad text?`의 `?`는 NULL 허용). 조인된 테이블을 빠뜨리지 않는다는 게 핵심이었습니다.
 
-![관련 테이블 구조, 조인 쿼리의 FROM·JOIN 테이블 모두의 컬럼·인덱스·행수를 상세 패널에 표시](/uploads/project/dbtower/inquiry-schema.png)
+![관련 테이블 구조, 조인 쿼리의 FROM·JOIN 테이블 모두의 컬럼·인덱스·행수와 크기·카디널리티를 상세 패널에 표시](/uploads/project/dbtower/inquiry-schema.png)
 
 문의를 보낼 땐 이 구조가 서버에서 자동으로 첨부되고, 보내기 전 사이트 상세 패널에서도 "관련 테이블 구조" 버튼으로 미리 볼 수 있습니다. 처음 질문의 "그 사이트에서 볼 때도 마찬가지"가 바로 이 부분입니다.
 
