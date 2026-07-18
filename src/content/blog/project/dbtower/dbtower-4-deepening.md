@@ -1,27 +1,121 @@
 ---
-title: 'v1.0.0 뒤에도 쓰다 보니 필요한 게 계속 보여서, 다섯 기종을 파고든 심화 아크 넷을 합본으로 담았습니다'
-titleEn: 'Going Deeper After v1.0.0, an Omnibus of Four Deepening Arcs Across Five Engines'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 11편. 만들 만큼 만들었다 싶었는데 쓰다 보니 필요한 게 계속 보여서, 남겨둔 숙제를 붙잡고 다시 파고든 네 개의 심화 아크를 한 편에 전문 그대로 담았습니다. 아크 1은 실행계획 변경(plan flip) 감지를 PostgreSQL만 되던 것에서 다섯 기종으로 완성한 이야기입니다. 계획 형태를 얻는 경로가 기종마다 전혀 달라(MySQL 리터럴 샘플 재EXPLAIN, SQL Server Query Store, Oracle plan_hash_value, Mongo 프로파일러 명령) shape 정규화 한 겹으로 통일했고, 덤으로 PG 복제 슬롯 감시와 블로트 신호까지 붙였습니다. 아크 2는 p95의 정직 등급 올리기입니다. 누적을 최근 구간으로(0.48→0.19), 미지원을 추정으로 올리고, 프로파일러가 꺼져도 인스턴스 p95를 살리고, 못 올리는 Oracle은 그대로 두어 라벨로 대비시켰습니다. 라이브에서 2^64 센티넬 오버플로와 최소권한 조용한 폴백 버그도 잡았습니다. 아크 3은 설정 변경 0으로 데드락을 읽는 이야기입니다. 세 기종의 관측 입도가 다르고, 조사와 정반대로 데드락이 파일이 아니라 링버퍼에만 있던 현실을 담았습니다. 아크 4는 관제가 부하가 되지 않게 하는 스케일 제어 다섯 축(병렬 수집·풀 분리·알림 폭주 제어·격리 토글·스코어 캐시)입니다.'
-descriptionEn: 'Part 11 of DBTower. I thought I had built enough, but real use kept surfacing needs, so I went back to the homework I had left and dug deeper. The result is four deepening arcs, collected here in full. Arc 1 completes plan-flip detection from PostgreSQL-only to all five engines, where the path to obtain a plan shape differs wildly per engine and a single shape-normalization layer unifies them, plus PG replication-slot and bloat signals. Arc 2 raises p95''s honesty grade: cumulative to recent-window (0.48 to 0.19), unsupported to estimated, keeping an instance p95 alive with the profiler off, and leaving Oracle unraised so the labels contrast, with real bugs caught live (a 2^64 sentinel overflow and a least-privilege silent fallback). Arc 3 reads deadlocks with zero config change across three engines of different granularity, where the deadlock lived in the ring buffer, not the file, the opposite of what the research said. Arc 4 is five axes of scale control so the watchtower never becomes the load.'
-date: 2026-07-07
+title: 'v1.0.0 이후, 다섯 기종을 더 깊이 판 심화 아크들과 내가 만든 걸 감사한 기록'
+titleEn: 'After v1.0.0: Deepening Arcs Across Five Engines and Auditing What I Built'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 심화 편. v1.0.0을 찍은 뒤 문서에 정직한 잔여로 남겨둔 것들을 붙잡고 다시 깊이 팠습니다. 먼저 세 개를 골라 닫았습니다. 쿼리도 데이터도 그대로인데 갑자기 느려지는 플랜 플립을 PostgreSQL 16의 GENERIC_PLAN으로 감지하고, 로컬 백업을 S3 호환 오프사이트로 올려 3-2-1을 완성하고, TLS 강제 관리형 서비스에 붙되 인증서 검증 우회 옵션은 일부러 안 만들었습니다. 이어 네 개의 심화 아크를 팠습니다. 플랜 플립을 다섯 기종으로 완성(기종마다 다른 획득 경로를 shape 정규화 한 겹으로 통일), p95의 정직 등급 올리기(누적을 최근 구간으로, 미지원을 추정으로, 못 올리는 Oracle은 라벨로 대비), 설정 변경 0으로 데드락 읽기(세 기종 세 입도), 관제가 부하가 되지 않게 하는 스케일 제어 다섯 축. 마지막으로 만든 것을 스스로 감사했습니다. 동시성·정확성·보안·수명주기 네 축을 병렬로 훑고 OWASP·CWE·벤더 문서와 대조해 FIX와 SKIP을 갈랐습니다.'
+descriptionEn: 'The deepening chapter of DBTower. After tagging v1.0.0, I went back to the leftovers I had honestly listed in the docs and dug deeper. First I closed three: plan-flip detection for the classic incident where the query and data are unchanged but suddenly slow (via PostgreSQL 16 GENERIC_PLAN), completing the 3-2-1 rule by shipping backups to S3-compatible offsite storage, and removing the TLS wall for managed services while deliberately not offering a certificate-verification bypass. Then four deepening arcs: completing plan-flip across all five engines (unifying wildly different acquisition paths behind one shape-normalization layer), raising p95''s honesty grade (cumulative to recent-window, unsupported to estimated, leaving Oracle unraised so the labels contrast), reading deadlocks with zero config change across three engines of different granularity, and five axes of scale control so the watchtower never becomes the load. Finally I audited what I built, sweeping four axes in parallel and cross-checking against OWASP, CWE, and vendor docs to split FIX from SKIP.'
+date: 2026-07-06
 tags:
   - Java
   - Spring Boot
   - DBRE
+  - PostgreSQL
   - Query Optimization
+  - S3
   - Observability
   - MySQL
   - SQL Server
   - Oracle
   - MongoDB
+  - Security
+  - Concurrency
+  - Code Audit
 category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 11
+seriesOrder: 4
 ---
 
-앞 편까지로 만들 만큼 만들었다 싶었지만, 정직하게 남겨둔 숙제가 있었고 쓰다 보니 필요한 게 계속 보였습니다. 그 숙제를 붙잡고 다시 파고들었습니다. 결과가 **네 개의 심화 아크**입니다. 원래 네 편이었지만 하나의 흐름이라 한 편에 **전문 그대로** 묶습니다. 관통하는 태도도 같습니다. 못 하는 걸 하는 척하지 않고, 아는 만큼만 정직하게 말하되, 그 아는 것을 라이브로 확인한다.
+## 0. 들어가며, v1.0.0의 각주
+
+[3편](/blog/project/dbtower/dbtower-3-production-safety)에서 v1.0.0을 찍었습니다. 그런데 각주가 붙어 있었습니다. 문서 곳곳에 "정직한 잔여"로 남겨둔 것들입니다. 백업 원격 보관은 VERIFICATION 29절에, TLS는 셀프호스트 점검에, 그리고 발행 후 리뷰에서 나온 "검증 루프" 계열의 다음 질문이 하나 더 있었습니다.
+
+새 기능 축을 늘리는 건 이제 아니라고 판단했습니다. 축이 늘면 정체성이 흐려집니다. 대신 기준 하나로 셋을 골랐습니다: **기존 축의 구멍 중에서, 실사용자가 실제로 부딪히거나 현업 장애가 실제로 지나가는 자리.** 그렇게 고른 셋이 실행계획 변경 감지, 백업 오프사이트, TLS입니다.
+
+## 1. 플랜 플립, "쿼리는 그대로인데 갑자기 느려요"
+
+현업 단골 장애가 있습니다. 배포도 없고 쿼리도 데이터도 그대로인데 어느 날 갑자기 느려짐. 원인은 **옵티마이저가 플랜을 갈아탄 것**(plan flip)입니다. 통계가 임계를 넘으며 인덱스 스캔이 풀스캔으로 뒤집히는 식입니다. pganalyze의 plan change alerts, PMM의 Query Analytics가 정확히 이걸 잡습니다.
+
+DBTower의 회귀 감지(1편)는 "느려졌다"까지는 잡아도 "**계획이 바뀌어서** 느려졌다"는 못 말해줬습니다. 진단 스택의 마지막 구멍이었습니다.
+
+**벽은 정규화 텍스트가 EXPLAIN이 안 된다는 점이었습니다.** 통계 소스(pg_stat_statements 등)의 쿼리 텍스트는 리터럴이 지워진 정규화 형태, `WHERE k = $1` 같은 꼴입니다. 이걸 그대로 EXPLAIN에 넣으면 "파라미터 값이 없다"고 거부됩니다. 리터럴을 임의 값으로 채우는 방법도 생각했지만 버렸습니다. 값에 따라 다른 플랜이 나와 **가짜 변경**을 만들어내기 때문입니다.
+
+답은 PostgreSQL 16에 있었습니다. `EXPLAIN (GENERIC_PLAN)`은 정확히 이 용도로 만들어진 기능이라, 파라미터 플레이스홀더를 채우지 않고 제네릭 플랜을 산출합니다. 다른 기종엔 이런 수단이 없어 플레이스홀더 없는 텍스트만 시도하고, 있으면 스킵합니다. 못 하는 걸 지어내지 않는다는 이 시리즈의 규칙 그대로입니다.
+
+**비교 대상은 계획의 "형태"만.** 계획 원문을 그대로 해시하면 안 됩니다. 비용·추정 행수는 통계가 조금만 변해도 흔들려 매번 "변경"이 되기 때문입니다. 그래서 노드 종류·인덱스·대상 테이블만 남긴 shape(`Index Scan(idx_k)` vs `Seq Scan(plan_demo)`)를 만들어 그 해시만 비교합니다. "같은 구조, 다른 추정치 = 같은 플랜"을 단위 테스트로 고정했습니다.
+
+**트리거는 회귀만.** 모든 쿼리의 계획을 매번 뜨면 진단이 부하 유발자가 됩니다(3편의 A9 원칙). 그래서 레이턴시/행수 회귀가 **이미 감지된** 쿼리만 계획을 뜹니다. 추정 explain이라 실행 부하도 없습니다. 첫 관측은 기준선으로 조용히 저장되고 두 번째부터 비교가 성립합니다.
+
+**실측은 4막짜리 e2e였습니다.** 같은 digest의 쿼리로 시나리오를 돌렸습니다. 30만 행 테이블(k=2가 30만, k=1이 10행)에 인덱스를 걸고:
+
+```
+P1  좁은 범위(101행, 인덱스)          -> 평균 0.03ms — 조용
+P2  넓은 범위(25만행, 같은 digest)    -> 레이턴시 회귀 발화
+    -> 기준선 저장: Aggregate>[Index Only Scan(idx_plan_demo_k)]
+P3  좁은 범위(회복)                   -> 조용 (개선은 회귀가 아니다)
+P4  인덱스 드랍 -> 좁은 범위          -> 60초 뒤 감지:
+    "실행계획 변경 확인: ... WHERE k BETWEEN $1 AND $2
+     — Aggregate>[Index Only Scan(idx_plan_demo_k)]
+     -> Aggregate>[Gather>[Aggregate>[Seq Scan(plan_demo)]]]"
+    (동반: 레이턴시 회귀 평균 0.03 -> 6.23ms, +23,249%)
+```
+
+![실행계획 변경 카드에 Index Only Scan에서 Seq Scan으로 갈아탄 순간이 그대로 남는다](/uploads/project/dbtower/plan-change.png)
+
+이 실측에 도달하기까지 함정을 둘 밟았습니다. 이 함정들이 이번 기능의 진짜 배움입니다.
+
+**함정 1. 모의 데이터가 시나리오를 배신한다.** 처음 만든 데모 테이블은 k 값이 2종(희소 10행 / 흔함 30만 행)인 스큐였는데, 이 구조에선 **제네릭 플랜이 인덱스가 있어도 Seq Scan을 고릅니다.** 제네릭 플랜은 특정 값 대신 평균 선택도로 판단하는데, 값이 2종이면 평균 선택도가 50%라 인덱스가 이길 수 없습니다. 드랍 전후 shape가 똑같으니 플립 자체가 성립 불가. k를 고유값 30만 개로 바꾸고 같은 digest를 유지하는 범위 쿼리(`BETWEEN $1 AND $2`)로 시나리오를 다시 설계했습니다. 감지기를 검증하려면 감지기보다 **데이터부터, 그것도 옵티마이저의 눈으로** 봐야 한다는 걸 배웠습니다.
+
+**함정 2. 수동 검증과 자동화 경로는 다른 길을 탄다.** psql에서 `EXPLAIN (GENERIC_PLAN) ... $1`이 잘 돼 구현했는데, 앱에선 조용히 실패했습니다. psql은 simple query protocol이라 `$1`이 그냥 텍스트로 넘어가지만 **pgjdbc는 extended protocol이라 서버가 `$1`을 바인드 파라미터로 파싱**해 "0개 바인드" 에러가 납니다. 이 호출만 `preferQueryMode=simple` 1회용 커넥션으로 풀었습니다. 회귀 때만 드물게 실행되니 풀 우회 비용은 수용했습니다. "터미널에서 되는 것"과 "코드에서 되는 것" 사이의 프로토콜 층을 실측으로 확인한 셈입니다.
+
+덤 하나. 텍스트 계획 폴백(숫자를 지워 구조만 비교)은 계획에 없던 곳에서 먼저 검증됐습니다. e2e 도중 Oracle 인스턴스의 회귀에 트래커가 반응해 DBMS_XPLAN 텍스트 기준선을 스스로 남긴 것입니다. PG 전용으로 설계한 기능의 폴백 경로가 실전에서 먼저 작동한 겁니다.
+
+## 2. 3-2-1의 마지막 조각을 채운 오프사이트 백업
+
+백업 축은 3편(복원 검증)과 2편(신선도 감시)을 거치며 꽤 완성됐지만 VERIFICATION 29절에 적어둔 구멍이 있었습니다. **로컬 디스크에만 있는 백업은 서버가 죽으면 같이 죽습니다.** 3-2-1 원칙(사본 3, 매체 2, 오프사이트 1)의 마지막 1이 비어 있었습니다.
+
+성공한 백업 산출물을 S3 호환 스토리지에 올리는 걸로 채웠습니다. "S3 호환"이 이 기능의 핵심 결정입니다. AWS S3는 물론 MinIO·R2도 같은 API라 **셀프호스트 사용자가 클라우드 계정 없이 MinIO 컨테이너 하나로 오프사이트를 갖출 수 있습니다.** 데모 스택에도 MinIO를 추가해 로컬에서 전 과정이 실측됩니다.
+
+설계 판단 하나: **업로드 실패는 백업 실패가 아닙니다.** 로컬 백업 성공은 이미 유효한 사실인데, 업로드 에러가 그걸 FAILED로 뒤집으면 거짓말이 됩니다. 그래서 이력은 SUCCESS로 남기고 원격 위치만 비웁니다. 신선도 카드에 "원격 보관 / 로컬만" 열을 따로 둬 두 사실을 구분해 보여줍니다.
+
+```
+POST /api/instances/2/backup  (local-postgres)
+-> SUCCESS, 32,892,191 bytes
+-> remoteLocation: s3://dbtower-backups/instance-2/postgres-local-postgres-....sql
+MinIO 컨테이너 /data에서 객체 실재 확인
+```
+
+![백업 신선도 카드에 원격 보관 열이 추가돼 로컬 성공과 오프사이트를 구분해 보여준다](/uploads/project/dbtower/freshness-remote.png)
+
+정직한 각주: 서버 사이드 백업(SQL Server의 BACKUP DATABASE, Oracle의 DBMS_DATAPUMP)은 산출물이 대상 서버 안에 생겨 플랫폼이 파일로 갖고 있지 않습니다. 이 경우는 업로드를 건너뛰고 그렇게 기록합니다.
+
+## 3. TLS, 셀프호스트 사용자가 처음 부딪히는 벽
+
+셀프호스트 점검 때 발견한 잔여입니다. 접속 문자열이 로컬/사내망 기준이었습니다. SQL Server는 `encrypt=false` 하드코딩, MongoDB는 TLS off였습니다. 그러니 **Atlas나 Azure SQL처럼 TLS를 강제하는 관리형 서비스엔 아예 붙을 수 없었습니다.**
+
+등록 옵션 `useTls` 하나로 풀되, 기종마다 반영 방식이 다른 게 또 이기종의 현실이었습니다. MySQL은 URL 파라미터(sslMode=REQUIRED), PostgreSQL도 파라미터(sslmode=require), SQL Server는 세미콜론 속성(encrypt=true), Oracle은 아예 **프로토콜 자체**(tcps), MongoDB는 드라이버 설정 객체. 같은 "TLS 켜기"가 다섯 갈래로 갈라지는 걸 옵션 하나 뒤로 숨겼습니다. 1편부터 반복된 패턴입니다.
+
+그리고 **일부러 안 만든 것**이 하나 있습니다. `trustServerCertificate=true` 같은 인증서 검증 우회 옵션입니다. 자가서명 인증서 환경에서 편하라고 넣는 순간, 사용자는 "TLS를 켰다"고 믿지만 실제로는 중간자 공격에 열린 암호화만 남습니다. 착각을 파는 옵션은 보안 구멍입니다. 사설 CA는 JVM truststore에 등록하는 게 정도라 그 길만 열어뒀습니다.
+
+실측은 양방향이라 흥미로웠습니다:
+
+```
+tls-mysql  (MySQL 8.4, useTls=true)  -> 201 등록 성공 + health up
+   등록이 fail-closed(접속 검증 통과해야 등록)라, 성공 자체가 TLS 협상 성공의 증거
+
+tls-mssql  (자가서명, useTls=true)   -> "접속 실패로 등록 거부"
+   인증서 체인 검증이 실제로 작동한다는 실측 — 실패가 곧 증거
+```
+
+성공이 증거인 만큼 **거부도 증거**입니다. 자가서명을 거부하지 않았다면 검증이 안 돌고 있다는 뜻이니까요.
+
+## 4. 세 개를 닫으며, 잔여 목록 갱신
+
+세 개를 닫고 잔여 목록을 갱신합니다. 백업 원격 보관과 TLS는 지웠고, 남은 것: 알림 쿨다운 설정 외부화, Vault 동적 계정, 백업 산출물 암호화, 히스토그램 기반 구간 p95. 이번에 새로 생긴 잔여도 정직하게 짚자면, 플랜 변경 감지는 정규화 텍스트에 대해 PostgreSQL만 완전하고(GENERIC_PLAN), 타 기종은 플레이스홀더 없는 쿼리로 한정됩니다.
+
+돌아보면 이번 세 개의 공통점은 "v1.0.0은 기준선"이라는 것입니다. 문서에 적어둔 잔여는 부채 목록 같지만 실은 **다음에 팔 곳의 지도**였습니다. 잔여를 정직하게 적는 습관이 없었다면, 뭘 해야 할지부터 다시 조사해야 했을 겁니다.
+
+여기까지로도 만들 만큼 만들었다 싶었지만, 정직하게 남겨둔 숙제가 있었고 쓰다 보니 필요한 게 계속 보였습니다. 그 숙제를 붙잡고 다시 파고들었습니다. 결과가 **네 개의 심화 아크**입니다. 관통하는 태도도 같습니다. 못 하는 걸 하는 척하지 않고, 아는 만큼만 정직하게 말하되, 그 아는 것을 라이브로 확인한다.
 
 - **아크 1**, 플랜 플립 감지를 다섯 기종으로 완성 (+ PG 슬롯·블로트)
 - **아크 2**, 다섯 p95의 정직 등급을 올리다
@@ -34,15 +128,15 @@ seriesOrder: 11
 
 ### 0. 들어가며: 반쪽짜리로 남겨둔 기능
 
-[10편](/blog/project/dbtower/dbtower-10-deepening)에서 실행계획 변경(plan flip) 감지를 만들었습니다. "쿼리도 데이터도 그대로인데 갑자기 느려짐 = 옵티마이저가 계획을 갈아탐"을 잡는 기능인데, 그때 적어둔 한계가 있었습니다. 바로 **PostgreSQL만 완전하다**는 것이었습니다.
+앞 절에서 실행계획 변경(plan flip) 감지를 만들었습니다. "쿼리도 데이터도 그대로인데 갑자기 느려짐 = 옵티마이저가 계획을 갈아탐"을 잡는 기능인데, 그때 적어둔 한계가 있었습니다. 바로 **PostgreSQL만 완전하다**는 것이었습니다.
 
-이유는 그 편에서 밟은 벽 그대로입니다. 통계 소스의 쿼리 텍스트는 리터럴이 지워진 정규화 형태($1·?)라 그대로 EXPLAIN이 안 되는데, PostgreSQL 16의 `EXPLAIN (GENERIC_PLAN)`만 그걸 정확히 풀어줬습니다. 나머지 네 기종은 "플레이스홀더 텍스트는 스킵"하고 넘어갔습니다.
+이유는 앞서 밟은 벽 그대로입니다. 통계 소스의 쿼리 텍스트는 리터럴이 지워진 정규화 형태($1·?)라 그대로 EXPLAIN이 안 되는데, PostgreSQL 16의 `EXPLAIN (GENERIC_PLAN)`만 그걸 정확히 풀어줬습니다. 나머지 네 기종은 "플레이스홀더 텍스트는 스킵"하고 넘어갔습니다.
 
-이 프로젝트를 관통한 원칙은 "새 기능 = 다섯 기종에서 동작"이었습니다. 반쪽짜리로 두면 정체성에 흠집입니다. 다섯 기종 리서치를 돌려([이전 편의 심화 조사](/blog/project/dbtower/dbtower-0-overview)) 각 기종이 "정규화 쿼리로 계획을 얻는 길"을 찾았고, 이번 편은 그 길이 **기종마다 전혀 다르다**는 걸 하나씩 잇는 이야기입니다.
+이 프로젝트를 관통한 원칙은 "새 기능 = 다섯 기종에서 동작"이었습니다. 반쪽짜리로 두면 정체성에 흠집입니다. 다섯 기종 리서치를 돌려([이전 편의 심화 조사](/blog/project/dbtower/dbtower-0-overview)) 각 기종이 "정규화 쿼리로 계획을 얻는 길"을 찾았고, 이번 아크는 그 길이 **기종마다 전혀 다르다**는 걸 하나씩 잇는 이야기입니다.
 
 ### 1. 설계: 획득은 기종이, 판정은 공통이
 
-10편의 트래커는 `explainNormalized(text)`를 직접 부르고 그 결과를 shape로 정규화했습니다. PG 전용 구조였습니다. 다섯 기종으로 넓히며 경계를 다시 그었습니다.
+앞 절의 트래커는 `explainNormalized(text)`를 직접 부르고 그 결과를 shape로 정규화했습니다. PG 전용 구조였습니다. 다섯 기종으로 넓히며 경계를 다시 그었습니다.
 
 `DbmsOperator`에 메서드 하나를 추가했습니다:
 
@@ -56,7 +150,7 @@ default Optional<String> planShapeForDigest(String queryId, String queryText) {
 
 이제 트래커는 **엔진을 모릅니다.** "이 쿼리의 shape를 다오 → 지난번과 다른가?"만 판정하고, 계획을 어떻게 얻고 정규화하는지는 전부 각 Operator가 책임집니다. 1편에서 "추상화 경계는 SQL 대신 운영 행위에 긋는다"고 했던 원칙이, 가장 기종 의존적인 이 기능에서도 그대로 작동한 것입니다.
 
-shape 정규화는 `PlanShapes`라는 유틸 한 곳에 기종별 메서드로 모았습니다. 계획 표현이 기종마다 JSON·XML·해시로 제각각이라, 그 포맷 지식을 한 파일에 가둔 것입니다. (이걸 만들다 모듈 순환을 한 번 밟았습니다. 처음엔 alert 모듈에 뒀는데, operator가 이걸 참조하며 operator↔alert 순환이 생겨 Spring Modulith 빌드가 실패했습니다. shape는 Operator가 만드는 도구이니 operator 모듈로 옮겨 해소했습니다. [3편](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool)의 "경계는 빌드가 지킨다"가 또 한 번 배당금을 준 셈입니다.)
+shape 정규화는 `PlanShapes`라는 유틸 한 곳에 기종별 메서드로 모았습니다. 계획 표현이 기종마다 JSON·XML·해시로 제각각이라, 그 포맷 지식을 한 파일에 가둔 것입니다. (이걸 만들다 모듈 순환을 한 번 밟았습니다. 처음엔 alert 모듈에 뒀는데, operator가 이걸 참조하며 operator↔alert 순환이 생겨 Spring Modulith 빌드가 실패했습니다. shape는 Operator가 만드는 도구이니 operator 모듈로 옮겨 해소했습니다. [2편](/blog/project/dbtower/dbtower-2-engines-and-diagnosis)의 "경계는 빌드가 지킨다"가 또 한 번 배당금을 준 셈입니다.)
 
 ### 2. 다섯 개의 다른 길
 
@@ -64,7 +158,7 @@ shape 정규화는 `PlanShapes`라는 유틸 한 곳에 기종별 메서드로 �
 
 | 기종 | 획득 경로 | 특이점 |
 |---|---|---|
-| PostgreSQL | `EXPLAIN (GENERIC_PLAN)` | 10편의 그 기능이고, 플레이스홀더 채로 제네릭 플랜 |
+| PostgreSQL | `EXPLAIN (GENERIC_PLAN)` | 앞 절의 그 기능이고, 플레이스홀더 채로 제네릭 플랜 |
 | MySQL | `QUERY_SAMPLE_TEXT` → `EXPLAIN FORMAT=JSON` | performance_schema가 저장한 **리터럴 샘플**을 재-explain |
 | SQL Server | `sys.query_store_plan` 이력 | Query Store가 축출 없이 보존하므로 계획을 다시 안 떠도 됨(NATIVE) |
 | Oracle | `v$sqlstats.plan_hash_value` | **plan_hash_value가 곧 계획 식별자**라 정규화조차 불필요 |
@@ -96,7 +190,7 @@ Oracle: PHV:591542025   (이미 식별자)
 
 ### 4. 라이브: 획득 체인이 진짜 도는가
 
-여기서 정직하게 범위를 나눕니다. **"계획 형태를 얻어 이전과 비교해 플립을 알린다"는 판정 로직 자체는 10편(PostgreSQL)에서 이미 완전한 before/after로 검증됐습니다.** Index Only Scan이 Seq Scan으로 갈아탄 순간을 알림으로 잡았습니다. 이번 편의 새로운 부분은 그 판정에 먹일 **계획 형태를 각 기종에서 실제로 뽑아내는 `planShapeForDigest`** 입니다. 그래서 11편의 실측 초점은 "이 획득 체인이 라이브로 도는가"입니다.
+여기서 정직하게 범위를 나눕니다. **"계획 형태를 얻어 이전과 비교해 플립을 알린다"는 판정 로직 자체는 앞 절의 PostgreSQL 실측에서 이미 완전한 before/after로 검증됐습니다.** Index Only Scan이 Seq Scan으로 갈아탄 순간을 알림으로 잡았습니다. 이번 아크의 새로운 부분은 그 판정에 먹일 **계획 형태를 각 기종에서 실제로 뽑아내는 `planShapeForDigest`** 입니다. 그래서 이 아크의 실측 초점은 "이 획득 체인이 라이브로 도는가"입니다.
 
 가장 다른 두 경로를 실제로 돌렸습니다.
 
@@ -124,7 +218,7 @@ Oracle과 MongoDB도 획득 경로를 라이브로 확인했습니다. Oracle은
 
 ### 6. 마치며: 반쪽을 온전하게
 
-이번 편으로 플랜 플립의 계획 획득 경로가 다섯 기종 모두에 생겼고, 그 앞의 플립 판정은 10편에서 PG로 이미 검증된 공통 로직을 그대로 씁니다. 획득만 채우면 다섯 기종이 같은 판정으로 흐르는 구조입니다. 돌아보면 이 작업의 배움은 "다섯 기종 지원"이라는 결과보다 **다섯 개의 서로 다른 길을 하나의 경계 뒤로 숨긴 방법**에 있었습니다. GENERIC_PLAN·리터럴 샘플·Query Store 이력·plan_hash_value·프로파일러 명령, 공통점이 없는 이 다섯 획득 경로가 `planShapeForDigest` 메서드 시그니처 하나 뒤로 들어갔고, 그 앞의 트래커는 다섯 기종을 하나처럼 다룹니다.
+이번 아크로 플랜 플립의 계획 획득 경로가 다섯 기종 모두에 생겼고, 그 앞의 플립 판정은 앞 절에서 PG로 이미 검증된 공통 로직을 그대로 씁니다. 획득만 채우면 다섯 기종이 같은 판정으로 흐르는 구조입니다. 돌아보면 이 작업의 배움은 "다섯 기종 지원"이라는 결과보다 **다섯 개의 서로 다른 길을 하나의 경계 뒤로 숨긴 방법**에 있었습니다. GENERIC_PLAN·리터럴 샘플·Query Store 이력·plan_hash_value·프로파일러 명령, 공통점이 없는 이 다섯 획득 경로가 `planShapeForDigest` 메서드 시그니처 하나 뒤로 들어갔고, 그 앞의 트래커는 다섯 기종을 하나처럼 다룹니다.
 
 이번에도 정직한 잔여를 남깁니다. MySQL 샘플 기반 계획은 특정 파라미터 값의 플랜이라 그 digest의 대표 플랜과 다를 수 있고, Oracle의 plan_hash_value는 shared pool에서 age-out되면 과거 계획 본문을 못 봅니다(그래서 우리 스냅샷이 이력의 단일 출처입니다). 다음에 팔 곳의 지도입니다.
 
@@ -140,7 +234,7 @@ Oracle과 MongoDB도 획득 경로를 라이브로 확인했습니다. Oracle은
 - SQL Server와 Oracle은 아예 **미지원**. 통계 뷰가 min/max/평균/총계만 주고 분위수도 표준편차도 안 주기 때문입니다.
 - PostgreSQL은 평균+표준편차로 근사한 **추정치**. 실제 레이턴시 분포는 꼬리가 무거워 이 근사는 대개 과소평가합니다.
 
-이번 편의 목표는 값을 더 내는 게 아닙니다. **이미 있는 값의 정직 등급을 한 칸씩 올리자**입니다. 그리고 못 올리는 자리는 못 올린 채로 정직하게 남기자.
+이번 아크의 목표는 값을 더 내는 게 아닙니다. **이미 있는 값의 정직 등급을 한 칸씩 올리자**입니다. 그리고 못 올리는 자리는 못 올린 채로 정직하게 남기자.
 
 ### 1. 라벨이 곧 계약이다
 
@@ -211,7 +305,7 @@ Value '18446744073709551615' is outside of valid range for type java.lang.Long
 
 ### 4. 마치며: 올린 것과 못 올린 것
 
-이번 편의 배움은 **"값의 정직 등급을 어떻게 표현하는가"**에 있었습니다. 같은 레이턴시 카드 안에서 이제 여섯 개의 배지가 갈립니다. 실측누적·실측구간·히스토그램·직접계산·추정·미지원. 각 배지는 그 숫자가 얼마나 믿을 만한지, 무엇을 보고 무엇을 못 보는지를 한눈에 말해줍니다.
+이번 아크의 배움은 **"값의 정직 등급을 어떻게 표현하는가"**에 있었습니다. 같은 레이턴시 카드 안에서 이제 여섯 개의 배지가 갈립니다. 실측누적·실측구간·히스토그램·직접계산·추정·미지원. 각 배지는 그 숫자가 얼마나 믿을 만한지, 무엇을 보고 무엇을 못 보는지를 한눈에 말해줍니다.
 
 그리고 정직한 잔여를 남깁니다. NATIVE_WINDOWED의 "구간"은 두 조회 사이라 조회가 뜸하면 창이 길어지고, 버킷 상한 근사라 정확한 분위수는 아닙니다. Oracle은 여전히 못 올린 자리입니다. 원자료가 생기지 않는 한 UNSUPPORTED로 남습니다. 이걸 감추지 않는 게 이 기능의 값을 지키는 유일한 길이라 생각합니다.
 
@@ -239,7 +333,7 @@ Value '18446744073709551615' is outside of valid range for type java.lang.Long
 
 ### 2. 세 경로
 
-**SQL Server**는 `sys.fn_xe_file_target_read_file`로 `.xel` 파일에서 `xml_deadlock_report`를 읽어 DOM 파싱합니다. victim-list의 프로세스 id로 어느 쪽이 롤백됐는지 가르고, 각 프로세스의 `inputbuf`에서 SQL을, resource-list에서 경합 객체·인덱스를 뽑습니다. 외부 XML 라이브러리 없이 표준 `javax.xml`만 씁니다(10편의 showplan 파싱과 같은 도구).
+**SQL Server**는 `sys.fn_xe_file_target_read_file`로 `.xel` 파일에서 `xml_deadlock_report`를 읽어 DOM 파싱합니다. victim-list의 프로세스 id로 어느 쪽이 롤백됐는지 가르고, 각 프로세스의 `inputbuf`에서 SQL을, resource-list에서 경합 객체·인덱스를 뽑습니다. 외부 XML 라이브러리 없이 표준 `javax.xml`만 씁니다(앞서 showplan 파싱에 쓴 것과 같은 도구).
 
 **MySQL**은 `SHOW ENGINE INNODB STATUS`의 거대한 텍스트(최대 1MB)에서 "LATEST DETECTED DEADLOCK" 블록을 잘라, 두 트랜잭션의 SQL과 `WE ROLL BACK TRANSACTION (N)`의 N번(victim), 경합 인덱스·테이블을 정규식으로 추출합니다. 최대 1건이라는 한계를 응답에 정직하게 답니다.
 
@@ -338,4 +432,70 @@ Spring의 `@Scheduled`는 **기본이 단일 스레드**입니다. 폴러가 7�
 
 이것으로 심화 4개 아크(플랜 플립 5기종·p95 정직 등급·데드락 축·스케일 제어)를 마칩니다. 관통하는 하나의 태도가 있었다면, 그건 **못 하는 걸 하는 척하지 않고, 아는 만큼만 정직하게 말하되, 그 아는 것을 라이브로 확인한다**는 것이었습니다.
 
-코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
+---
+
+## 5. 만든 사람이 만든 걸 감사할 때
+
+앞의 심화 아크 넷(플랜 플립 5기종·p95 정직 등급·데드락 축·스케일 제어)을 끝낸 뒤 물었습니다. "여기저기 에러사항·애로사항이 있을 텐데, 뭐가 있지?" 그래서 **내가 만든 걸 감사**했습니다.
+
+혼자 훑으면 놓칩니다. 동시성·자원누수, 기종별 정확성·버전 호환, 보안, HA·수명주기 네 축으로 **병렬 감사**를 돌렸습니다. 각 축은 코드를 정독하고 **웹서칭으로 OWASP·CWE·벤더 문서와 대조**해 "이건 진짜 깨지나"를 확인했습니다.
+
+나온 결함은 스무 개가 넘었습니다. 여기서 중요한 판단을 하나 내렸습니다. **전부 고치지 않는다.**
+
+## 6. 전부 고치지 않고 FIX와 SKIP을 가르다
+
+감사 결과를 받자마자 코드로 재검증했습니다. 어떤 건 확인됐고, 어떤 건 우리가 명시한 전제(지원 버전·데모 환경) 안에선 문제가 아니었습니다. 각 항목을 FIX / SKIP으로 갈라 **수정 계획 문서**에 근거와 함께 남겼습니다.
+
+- **SKIP** 예: MySQL 5.7·PostgreSQL 12 이하 비호환 → 우리는 8.0/13+를 명시 지원. Oracle `v$` vs `gv$`(RAC) → 데모는 단일 인스턴스 Oracle Free. ShedLock 쿨다운의 노드 로컬 한계 → 이미 코드 주석이 인정한 것이고 완전 해소는 큰 변경. 이런 건 "지원 전제"로 문서화하고 지나갑니다.
+- **FIX** 예: XXE, 삭제 시 자원 누수, 커넥션 풀 경합, 타임존 미고정, sub-second 슬로우쿼리 0ms…
+
+"확실하게 검증하고 진짜 고쳐야 하는지" 판단하는 것 자체가 감사의 절반이었습니다. 안 고쳐도 되는 걸 고치는 것도 부채니까요.
+
+실제 수정은 파일 소유권이 겹치지 않는 **세 워크스트림으로 나눠 병렬**로 했습니다(보안 / 수명주기·동시성 / 기종정확성·타임존). 서로 다른 파일만 만지니 충돌 0으로 합쳐졌고 신규 단위 28건이 붙었습니다.
+
+## 7. 세 장면
+
+수정보다, 감사가 드러낸 **세 장면**이 이 아크의 진짜 이야기였습니다.
+
+### 장면 1. 내 코드가 이미 정답을 알고 있었다
+
+가장 심각한 건 XXE(XML 외부 엔티티)였습니다. 데드락 XML과 실행계획 XML을 파싱하는 세 곳이 `load-external-dtd=false`만 걸어놨는데, OWASP가 **"불충분"**이라 명시한 조합입니다. 악성·중간자 공격된 대상 DB가 조작된 XML을 주면, DBTower 호스트가 외부로 요청을 날리는 블라인드 SSRF가 가능합니다.
+
+그런데 감사가 결정적 사실을 짚었습니다. **같은 저장소의 `DeepAnalyzer`는 이미 `disallow-doctype-decl=true`로 올바르게 막고 있었습니다.** 설계를 몰랐던 게 아니라, 나중에 만든 파서 세 곳에 그 기준을 안 옮긴 **일관성 누락**이었습니다. 고치는 건 각 파서에 한 줄씩. 하지만 스스로 못 찾았다면 "우리 XML은 서버가 주는 거니 안전하겠지"라는 방심으로 남았을 겁니다.
+
+### 장면 2. 병렬화가 되살린 함정
+
+인스턴스별 커넥션 풀이 max=2인데, 같은 인스턴스에 폴러가 8개 넘게 붙습니다(스냅샷·운영경보·SLO·백업·이상·회귀·Advisor·스코어). 3번째 동시 요청부터 대기하다 타임아웃 → SnapshotScheduler가 이걸 "죽은 대상"으로 오인해 최대 16분 백오프 + 허위 "수집 정지" 경보를 냅니다. **자원 경합이 곧 허위 장애 신호로 증폭**됩니다.
+
+아이러니하게도, 바로 앞 스케일 제어 아크에서 넣은 **수집 병렬화(워커 4개)가 이 경합을 키웠습니다.** 성능을 위한 병렬화가 풀 경합이라는 옛 함정을 되살린 셈입니다. 풀 크기를 설정값으로 올리고(2→6) 지터에 상한을 씌우고 `Future.get`의 예외 처리를 바로잡아 정리했습니다. "개선이 다른 곳에 부채를 만든다"는 걸 감사가 아니었으면 몰랐을 겁니다.
+
+### 장면 3. 실측이 감사를 다시 이겼다
+
+감사는 MySQL slowQueries가 1초 미만 쿼리를 **0ms로 보고**한다고 지적했습니다(`TIME_TO_SEC`가 정수 반환). 맞는 지적입니다. 그런데 한 걸음 더 나가 "게다가 `log_output=TABLE`은 마이크로초를 애초에 저장 안 하니 복구도 불가"라고 했습니다.
+
+수정(`+ MICROSECOND(query_time)/1000`)을 넣고 **직접 확인**해봤더니 `mysql.slow_log`의 원본이 `00:00:00.600594`였습니다. **마이크로초가 저장돼 있었습니다.** 감사의 "TABLE은 초 단위 절삭" 가정은 이 MySQL 버전에선 틀렸고 그래서 수정이 실제로 작동했습니다. 0.6초 쿼리가 이제 600.594ms로 정확히 나옵니다.
+
+![슬로우쿼리 카드. sub-second 쿼리가 실측 ms로 나온다(SLEEP 0.58=581ms, 0.75=750ms). 구코드는 전부 0. 시각은 UTC로 고정](/uploads/project/dbtower/slowquery-subsecond.png)
+
+감사 문서를 그대로 믿고 "TABLE이라 어쩔 수 없다"며 넘어갔다면 이 수정을 안 했을 겁니다. 앞의 데드락에서 "ring_buffer 쓰지 마라"는 조사를 라이브가 뒤집었던 것과 똑같은 교훈입니다. **실측이 문서를 이깁니다.** 이번엔 그 문서가 내가 시킨 감사였다는 게 다를 뿐입니다.
+
+## 8. 라이브로 확인한 것들
+
+수정은 테스트가 초록이어도 라이브로 봐야 믿습니다.
+
+- **sub-second 슬로우쿼리**(장면 3): 위 스크린샷. 구코드 0 → 실측 ms.
+- **삭제 시 정리**: 임시 인스턴스를 등록·수집시켜 query_snapshot 32행을 만든 뒤 삭제하니 **0행**으로 떨어졌습니다. V10에서 넣은 FK `ON DELETE CASCADE`가 자식 행을 함께 지웠습니다. 인메모리 맵(히스토그램 스냅샷·데드락 카운터·쿨다운·백오프)은 삭제 이벤트를 각 모듈이 구독해 evict하도록 배선했습니다. 만들어만 두고 아무도 안 부르던 데드코드 `evictInstance`가 이제 실제로 불립니다.
+- **타임존 UTC 고정**: 기동·스냅샷 로그 시각이 `...Z`(UTC)로 바뀌었습니다(이전 `+09:00`). 노드 서버 TZ가 달라도 메타 DB에 저장되는 시각이 일관됩니다.
+- **보안 수정**: XXE 페이로드가 파싱에서 거부되고(외부 fetch 없음) 스택 쿼리(`SELECT 1; DROP ...`)가 게이트에서 막히고 prod 프로필에서 암호화 키가 없으면 기동이 실패하는 것을 단위 테스트로 못박았습니다.
+
+전체 스위트는 여전히 초록이고 기존 기능(레이턴시·데드락 카드)에 회귀는 없습니다.
+
+## 9. 마치며, 만든 걸 의심하는 습관
+
+이번 아크에 새 기능은 없습니다. 대신 **만든 걸 스스로 의심하는 과정**을 남겼습니다. 감사를 병렬로 돌리고, 웹서칭으로 대조하고, 코드로 재검증하고, 전부 고치는 대신 FIX/SKIP을 근거와 함께 갈라 문서에 적고, 고친 뒤엔 라이브로 확인해 그 결정과 실측을 남기는 것.
+
+세 장면이 알려준 건 결국 같은 이야기였습니다. **정답은 종종 내 코드 어딘가에 이미 있고(DeepAnalyzer), 개선은 다른 곳에 부채를 남기며(병렬화), 문서는 실측 앞에서 틀릴 수 있다(마이크로초).** 이걸 아는 유일한 방법은 만든 걸 의심하고 직접 돌려보는 것뿐이었습니다.
+
+정직한 잔여도 남깁니다. 저장 컬럼의 `Instant` 전환, 쿨다운의 메타 DB 외부화, 대규모 보존의 배치 삭제는 이번 범위 밖이라고 적어뒀습니다. 다음에 팔 곳의 지도입니다.
+
+코드와 감사 결과·수정 계획·실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
