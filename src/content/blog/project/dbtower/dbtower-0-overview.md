@@ -1,8 +1,8 @@
 ---
-title: 'DBTower 포트폴리오 총정리: 이기종 DBMS 5기종을 인터페이스 하나로 관제하기까지, 실측 98절'
+title: 'DBTower 포트폴리오 총정리: 이기종 DBMS 5기종을 인터페이스 하나로 관제하기까지, 실측 109절'
 titleEn: 'DBTower Portfolio: Five DBMS Engines Under One Interface, Told in 98 Sections of Measured Evidence'
-description: 'MySQL, PostgreSQL, SQL Server, Oracle, MongoDB를 하나의 관제탑에서 등록하고 진단하고 백업하고 자율 감시하는 컨트롤 플레인 DBTower의 포트폴리오 총정리입니다. 도구 파편화와 DBA 반복 문의라는 문제 정의에서 출발해, 추상화 경계를 SQL 대신 "운영 행위"에 그은 설계 결정과 그 실증(새 기종 추가는 구현체 1개, 코어 경로 수정 0줄)을 발표 흐름으로 정리했습니다. 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms에서 0.062ms로), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 추정 대 실제 괴리 300배로 지목하는 심층 진단, FULL 앵커와 LOG 체인이 병행하는 정석 백업과 시점 복구 실증, 알림에 이모지를 달면 AI가 진단 답글을 붙이는 Discord 루프까지. 모든 수치는 측정 조건과 함께 적었고 재현 기록 98개 절이 저장소에 있습니다.'
-descriptionEn: 'The portfolio overview of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. It starts with the problem definition of tool fragmentation and repeated DBA inquiries, then covers the design decision to draw the abstraction boundary at operational actions rather than SQL, verified by adding new engines as single operator implementations with zero changes to core paths. It also covers dogfooding that caught the platform''s own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from a 300x estimated-vs-actual row gap, orthodox backups where FULL anchors and LOG chains run on independent schedules with point-in-time restores actually executed, and a Discord loop where reacting to an alert makes AI post a diagnosis reply. Every number carries its measurement conditions, and 98 sections of reproduction logs live in the repository.'
+description: 'MySQL, PostgreSQL, SQL Server, Oracle, MongoDB를 하나의 관제탑에서 등록하고 진단하고 백업하고 자율 감시하는 컨트롤 플레인 DBTower의 포트폴리오 총정리입니다. 도구 파편화와 DBA 반복 문의라는 문제 정의에서 출발해, 추상화 경계를 SQL 대신 "운영 행위"에 그은 설계 결정과 그 실증(새 기종 추가는 구현체 1개, 코어 경로 수정 0줄)을 발표 흐름으로 정리했습니다. 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms에서 0.062ms로), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 추정 대 실제 괴리 300배로 지목하는 심층 진단, FULL 앵커와 LOG 체인이 병행하는 정석 백업과 시점 복구 실증, 알림에 이모지를 달면 AI가 진단 답글을 붙이는 Discord 루프까지. 모든 수치는 측정 조건과 함께 적었고 재현 기록 109개 절이 저장소에 있습니다.'
+descriptionEn: 'The portfolio overview of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. It starts with the problem definition of tool fragmentation and repeated DBA inquiries, then covers the design decision to draw the abstraction boundary at operational actions rather than SQL, verified by adding new engines as single operator implementations with zero changes to core paths. It also covers dogfooding that caught the platform''s own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from a 300x estimated-vs-actual row gap, orthodox backups where FULL anchors and LOG chains run on independent schedules with point-in-time restores actually executed, and a Discord loop where reacting to an alert makes AI post a diagnosis reply. Every number carries its measurement conditions, and 109 sections of reproduction logs live in the repository.'
 date: 2026-07-06
 tags:
   - Java
@@ -25,7 +25,7 @@ seriesOrder: 0
 **DBTower는 서로 다른 DBMS 5기종(MySQL, PostgreSQL, SQL Server, Oracle, MongoDB)의 운영을 인터페이스 하나(`DbmsOperator`) 뒤에서 처리하는 컨트롤 플레인입니다.** 등록부터 진단, 백업, 자율 감시까지가 한 화면에서 끝납니다.
 
 - 기간: 2026.03 ~ 2026.07, 개인 프로젝트(기여 100%)
-- 스택: Java 21, Spring Boot, PostgreSQL(메타 저장소), Spring Modulith(모듈 14개), MCP(JSON-RPC 2.0 직접 구현), Flyway, ShedLock, Docker, k6
+- 스택: Java 21, Spring Boot, PostgreSQL(메타 저장소), Spring Modulith(모듈 15개), MCP(JSON-RPC 2.0 직접 구현), Flyway, ShedLock, Docker, k6
 - 코드와 재현 기록: [GitHub](https://github.com/dj258255/dbtower), [VERIFICATION.md 109개 절](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md), GHCR 공개 이미지(원커맨드 셀프호스트)
 - 측정 환경: 로컬 Docker(Apple Silicon) 위 대상 DB 5기종. 모든 성능 수치는 개선 전을 먼저 재고 고친 뒤 다시 잰 전후 실측입니다
 
@@ -91,7 +91,7 @@ DB에 이슈가 나면 개발자는 지표가 흩어진 도구들을 오갑니�
 
 **경계는 빌드가 지킵니다.** 패키지를 Spring Modulith 모듈로 선언하고 모듈 간 순환 의존을 테스트가 빌드에서 실패시킵니다. 도입 첫 실행에서 실제로 순환 2개가 잡혀 의존 역전으로 해소했으니, 규칙이 작동한다는 증거를 도입 당일에 얻은 셈입니다. 모듈은 이후 확장을 거쳐 현재 14개입니다.
 
-![DBTower 상세 아키텍처. 채널 3종, 모듈 14개, 관제 대상 5기종](/uploads/project/dbtower/architecture-detail.svg)
+![DBTower 상세 아키텍처. 채널 3종, 모듈 15개, 관제 대상 5기종](/uploads/project/dbtower/architecture-detail.svg)
 
 메타 DB의 단일 권위는 Flyway 마이그레이션이고, 인스턴스 한 행을 지우면 자식 표들이 FK ON DELETE CASCADE로 함께 정리됩니다. 감사 로그만 일부러 FK 없이 남습니다. 기록은 삭제와 무관하게 보존해야 하기 때문입니다.
 
@@ -187,7 +187,7 @@ DB에 이슈가 나면 개발자는 지표가 흩어진 도구들을 오갑니�
 | 진단이 하트비트를 굶김 | 분 단위 진단이 봇의 하트비트 스레드를 점유해 연결이 반복 종료 | 진단 전용 워커 분리, 수정 후 재접속 0회 실측 |
 | 콘솔 진입 회귀 | MCP 카드의 401이 로그인 리다이렉트를 유발해 로그인한 사용자가 계속 튕김 | 화면을 실제로 열어보는 검증에서 발견, API 검증만으로는 못 잡는 종류였음 |
 
-관통하는 교훈은 하나입니다. 문서와 감사와 단위 테스트가 놓치는 것을 실측과 실화면이 잡습니다. 그래서 기록 98개 절이 전부 명령과 출력이 담긴 재현 로그입니다.
+관통하는 교훈은 하나입니다. 문서와 감사와 단위 테스트가 놓치는 것을 실측과 실화면이 잡습니다. 그래서 기록 109개 절이 전부 명령과 출력이 담긴 재현 로그입니다.
 
 ## 11. DBA 직무 지도로 본 커버리지
 
