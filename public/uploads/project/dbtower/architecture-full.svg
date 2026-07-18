@@ -13,7 +13,7 @@
   <text x="195" y="122" text-anchor="middle" fill="#8b949e" font-size="11">의존성 0 정적 SPA · 드래그 시점 비교</text>
   <rect x="365" y="76" width="270" height="64" rx="10" fill="#010409" stroke="#30363d"/>
   <text x="500" y="102" text-anchor="middle" fill="#c9d1d9" font-size="12.5">MCP 서버 (AI 에이전트)</text>
-  <text x="500" y="122" text-anchor="middle" fill="#8b949e" font-size="11">JSON-RPC 2.0 직접 구현 · 도구 14종 (pull)</text>
+  <text x="500" y="122" text-anchor="middle" fill="#8b949e" font-size="11">JSON-RPC 2.0 직접 구현 · 도구 16종 (pull)</text>
   <rect x="670" y="76" width="270" height="64" rx="10" fill="#010409" stroke="#30363d"/>
   <text x="805" y="102" text-anchor="middle" fill="#c9d1d9" font-size="12.5">웹훅 (온콜)</text>
   <text x="805" y="122" text-anchor="middle" fill="#8b949e" font-size="11">경보 카드 push · 이모지 반응 → AI 진단 답글</text>
