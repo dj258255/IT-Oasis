@@ -108,7 +108,7 @@ public class PoolExhaustedException extends RuntimeException {
 }
 ```
 
-컨트롤러는 타입별로 받아 원장부터 적습니다. 풀 고갈이 드디어 문서에 그치지 않고 코드로 FAILED에 도달합니다.
+컨트롤러는 타입별로 받아 원장부터 적습니다. 문서에만 적혀 있던 FAILED 경로에 풀 고갈이 드디어 코드로 도달합니다.
 
 ```java
 } catch (PoolExhaustedException e) {

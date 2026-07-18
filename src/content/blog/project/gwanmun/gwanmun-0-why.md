@@ -70,7 +70,7 @@ seriesOrder: 0
 
 ![transaction_ledger · idempotency_key · reconciliation_run 세 테이블로 이뤄진 gwanmun 원장 DB ERD](/uploads/project/gwanmun/erd.svg)
 
-## 3. 상황이 밀어붙인 9단계 개선 아크
+## 3. 상황이 이끈 9단계 개선 아크
 
 이 프로젝트는 기능을 나열하는 대신 **"어떤 상황에서 무엇이 깨지고, 그래서 무엇을 만드는가"** 로 씁니다. 각 단계는 앞 단계가 남긴 구멍에서 출발했습니다. 전/후가 있는 건 전후로 실측했습니다.
 
