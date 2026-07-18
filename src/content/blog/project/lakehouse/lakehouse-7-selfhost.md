@@ -58,9 +58,9 @@ S3_ENDPOINT: http://dbtower-minio:9000
 고정하지 말고 임의의 Postgres를 받게 하면, 이건 범용 쿼리 분석 도구가 됩니다.
 
 이 유혹을 접었습니다. "쿼리 성능을 장기 저장해서 분석"하는 셀프호스트 도구는 이미
-성숙한 레드오션입니다. Percona PMM, pgwatch, 그리고 Parquet+S3+DataFusion으로
-이 스택과 구조가 거의 같은 OpenObserve까지. 여기 solo 프로젝트로 뛰어들면 결과물은
-"OpenObserve의 열등한 재구현"입니다. 무엇보다, 범용화하는 순간 **이 프로젝트만의
+성숙한 레드오션입니다. Percona PMM과 pgwatch가 있고, Parquet+S3+DataFusion 구조가
+이 스택과 거의 같은 OpenObserve까지 나와 있습니다. 여기 solo 프로젝트로 뛰어들면 결과물은
+"OpenObserve만 못한 재구현"입니다. 무엇보다, 범용화하는 순간 **이 프로젝트만의
 유일한 자산이 죽습니다.** 저는 원천(DBTower)도 직접 만들었습니다. 관측 플랫폼과 그
 장기 기억 레이어를 둘 다 소유한 구조는 흔치 않고, 그게 정확히 Prometheus와 Thanos의
 관계입니다. Prometheus는 짧게만 보관하고, Thanos가 그걸 객체 스토리지에 장기
@@ -69,7 +69,7 @@ S3_ENDPOINT: http://dbtower-minio:9000
 
 그래서 "실제 사용자"의 정직한 정의를 이렇게 잡았습니다. **아무나가 아니라, DBTower를
 셀프호스트하는 사람.** 그 사람이 자기 DBTower 옆에 이걸 같이 띄울 수 있게 하는
-것까지가 목표입니다. 범용화는 안 합니다. 이건 도망이 아니라 초점입니다.
+것까지가 목표입니다. 범용화는 안 합니다. 초점을 좁힌 결정입니다.
 
 그리고 형태는 **어플라이언스**로 정했습니다. 배터리가 다 들어 있는 상자. 셀프호스트
 한다는 건 원래 그 도구의 스택을 통째로 받는다는 뜻입니다. Grafana를 셀프호스트하면
@@ -107,9 +107,9 @@ catalog_port: int = int(os.getenv("DUCKLAKE_CATALOG_PORT", os.getenv("SRC_PG_POR
 `DUCKLAKE_CATALOG_*`를 새로 받되, 없으면 기존 `SRC_PG_*`로 폴백합니다. 이 폴백이
 중요합니다. 데모 스택(개발용 compose)은 이 새 변수를 안 주니까 예전 그대로 동작하고,
 standalone만 이 변수를 채워 카탈로그를 번들 PG로 보냅니다. **기존 경로를 한 톨도 안
-건드리고** 분리한 겁니다. 하위호환이 없으면 리팩터가 아니라 파괴입니다.
+건드리고** 분리한 겁니다. 리팩터는 하위호환이 지켜질 때만 성립합니다.
 
-## 3. 상자를 짓는다 — 번들과 시크릿
+## 3. 상자를 짓는다: 번들과 시크릿
 
 그 위에 `docker-compose.standalone.yml`을 새로 지었습니다. 개발용 compose는 그대로
 두고(내 데모 스택에 붙는 위성으로 여전히 쓰니까), standalone은 별도 파일입니다.
@@ -118,10 +118,10 @@ standalone만 이 변수를 채워 카탈로그를 번들 PG로 보냅니다. **
 - external 네트워크 전제를 걷어내고 자체 `default` 네트워크를 씁니다.
 - 원천 MinIO·카탈로그 PG를 재사용하지 않고 **직접 번들**합니다. `minio`,
   `minio-init`(버킷 생성 후 종료), `catalog-postgres`, `airflow-postgres`,
-  Airflow 3종, `metabase`.
+  Airflow 3종, `metabase`가 들어갑니다.
 - 유일한 외부 의존은 "사용자의 DBTower 메타 PG"뿐입니다. `SRC_PG_*`로 주입받습니다.
 
-![standalone 어플라이언스 구조 — 번들(Airflow·MinIO·카탈로그 PG·Metabase)과 외부 의존(사용자의 DBTower 메타 PG 두 테이블), demo 프로필의 샘플 원천](/uploads/project/lakehouse/lh11_appliance_box.svg)
+![standalone 어플라이언스 구조. 번들(Airflow·MinIO·카탈로그 PG·Metabase)과 외부 의존(사용자의 DBTower 메타 PG 두 테이블), demo 프로필의 샘플 원천](/uploads/project/lakehouse/lh11_appliance_box.svg)
 
 시크릿은 하드코딩을 전부 없앴습니다. 데모 스택은 `airflow/airflow`, `dbtower1234` 같은
 평문이 compose에 박혀 있었는데, 이건 로컬에선 편하지만 외부에 노출되는 순간 전부
@@ -171,7 +171,7 @@ COPY --chown=airflow:0 dbt/ /opt/airflow/dbt/
 **둘째, cryptography 없는 fernet 생성.** `.env` 예시에 fernet 키 생성 명령을
 `from cryptography.fernet import Fernet ...`로 적었는데, 정작 검증 스크립트를 돌리니
 그 모듈이 없었습니다. Airflow 안에는 있지만 컨테이너를 띄우기 *전*에 키를 만들어야
-하는데, 그 시점엔 아무것도 없습니다. 그래서 표준 라이브러리만 쓰는 명령으로 바꿨습니다.
+하는데, 그 시점엔 아무것도 없습니다. 표준 라이브러리만 쓰는 명령으로 바꿨습니다.
 `python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"`.
 fernet 키는 결국 32바이트 랜덤의 urlsafe base64라, 외부 의존 없이 만들 수 있었습니다.
 
@@ -180,7 +180,7 @@ fernet 키는 결국 32바이트 랜덤의 urlsafe base64라, 외부 의존 없�
 났습니다. 이유를 파보니, dbt는 Airflow 의존성 충돌을 피하려고 **분리된 venv
 (`/opt/dbt-venv`)**에 깔려 있는데, `run_pipeline.py`는 "호스트용"이라 기본 python으로
 dbt를 부릅니다. 컨테이너의 실제 경로는 DAG가 씁니다(`DBT_BIN = "/opt/dbt-venv/bin/dbt"`).
-그래서 DAG와 똑같이 그 바이너리로 불렀습니다. 한 번 더 걸린 게 있는데, `dbt build`로
+DAG와 똑같이 그 바이너리로 불렀습니다. 한 번 더 걸린 게 있는데, `dbt build`로
 돌리니 unit test가 하나 실패했습니다. 이건 결함이 아니라, 외부 `read_parquet` 소스는
 물리 relation이 없어 dbt-duckdb가 introspect를 못 하는 알려진 제약이고, DAG는 그래서
 unit test를 빼고 `dbt run` + `dbt test --select test_type:data`만 돌립니다. DAG의 명령을
@@ -206,7 +206,9 @@ $ docker compose -f docker-compose.standalone.yml config | grep -c 'external: tr
 그다음 `--profile demo up`. 7개 컨테이너가 전부 healthy로 떴고, 버킷이 자동 생성됐고,
 샘플 원천에 `database_instance=2`, `query_snapshot=10`이 시드됐습니다.
 
-![standalone Airflow 첫 화면 — 이미지에 구운 DAG 3개(snapshot_offload·ducklake_maintenance·deadman_watch)가 전부 Paused 상태로, 런 이력 없이 떠 있다. 남이 clone해서 처음 띄운 그 화면이다](/uploads/project/lakehouse/lh11_standalone_airflow.png) 그리고 **내
+![standalone Airflow 첫 화면. 이미지에 구운 DAG 3개(snapshot_offload·ducklake_maintenance·deadman_watch)가 전부 Paused 상태로, 런 이력 없이 떠 있다. 남이 clone해서 처음 띄운 그 화면이다](/uploads/project/lakehouse/lh11_standalone_airflow.png)
+
+**내
 DBTower 없이** 파이프라인을 돌렸습니다.
 
 ```

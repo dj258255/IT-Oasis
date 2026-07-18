@@ -1,7 +1,7 @@
 ---
 title: '가짜 리셋에 속지 않고 누적 스냅샷을 일간 델타로 접은 뒤, 조용한 오답은 품질 게이트가 막습니다'
 titleEn: 'Folding Cumulative Snapshots into Daily Deltas Without Falling for Fake Resets, While a Quality Gate Blocks Silent Wrong Answers'
-description: 'raw는 내려왔지만 calls·total_time_ms가 누적 카운터라 그냥 더하면 무의미합니다. 1부는 변환입니다. raw를 시간순으로 늘어놓으면 302→55→302→56처럼 감소가 섞여 가짜 리셋이 보이는데, 원인은 같은 지문에 둘 이상의 누적 계열이 얽힌 중복 12,743키였습니다. staging에서 SUM으로 단조 계열을 복원하고, fct에서 하루 first-vs-last 차분에 GREATEST(0,…) 리셋 클램프를 겁니다(순리셋 219그레인이 0으로 클램프, 대안인 인접 델타 합산은 22,264,704 vs 3,126,579로 과대계상해 기각). dbt test 18개가 통과하고, 마트가 마침내 ''instance 8 Oracle 쿼리가 25.9ms에서 64.5ms로 149% 느려졌다''고 답합니다. 2부는 그 답을 믿어도 되는지를 지키는 검문소입니다. reconciliation·completeness·freshness 축으로 dbt 앞을 검문하고, 한 dt라도 FAIL이면 dbt를 아예 실행하지 않습니다(fail-closed). dt=2026-07-06의 instance_id=3 파티션(20,158행)을 통째로 지우자 reconciliation(79,894 vs 59,736)과 completeness(누락 [3])가 동시에 잡아 dbt를 SKIP하고 종료코드 2로 빠졌고, Airflow에서도 transform이 upstream_failed로 실행되지 않았습니다.'
+description: 'raw는 내려왔지만 calls·total_time_ms가 누적 카운터라 그냥 더하면 무의미합니다. 1부는 변환입니다. raw를 시간순으로 늘어놓으면 302→55→302→56처럼 감소가 섞여 가짜 리셋이 보이는데, 원인은 같은 지문에 둘 이상의 누적 계열이 얽힌 중복 12,743키였습니다. staging에서 SUM으로 단조 계열을 복원하고, fct에서 하루 first-vs-last 차분에 GREATEST(0,…) 리셋 클램프를 겁니다(순리셋 219그레인은 0으로 클램프되고, 대안이던 인접 델타 합산은 22,264,704 vs 3,126,579로 과대계상해 기각했습니다). dbt test 18개가 통과하고, 마트가 마침내 ''instance 8 Oracle 쿼리가 25.9ms에서 64.5ms로 149% 느려졌다''고 답합니다. 2부는 그 답을 믿어도 되는지를 지키는 검문소입니다. reconciliation·completeness·freshness 축으로 dbt 앞을 검문하고, 한 dt라도 FAIL이면 dbt를 아예 실행하지 않습니다(fail-closed). dt=2026-07-06의 instance_id=3 파티션(20,158행)을 통째로 지우자 reconciliation(79,894 vs 59,736)과 completeness(누락 [3])가 동시에 잡아 dbt를 SKIP하고 종료코드 2로 빠졌고, Airflow에서도 transform이 upstream_failed로 실행되지 않았습니다.'
 descriptionEn: 'Raw is offloaded, but calls and total_time_ms are cumulative counters, so summing them is meaningless. Part 1 is the transform. Ordering raw by time shows drops like 302→55→302→56 that look like fake resets, caused by 12,743 duplicate keys where multiple cumulative series collide under one fingerprint. Staging restores a monotonic series by SUM, and the fact table takes a within-day first-vs-last diff with a GREATEST(0, …) reset clamp (219 net-reset grains clamp to zero; the adjacent-positive-delta alternative over-counts 22,264,704 vs 3,126,579 and was rejected). 18 dbt tests pass, and the mart finally answers that instance 8''s Oracle query slowed from 25.9ms to 64.5ms, up 149%. Part 2 guards whether that answer can be trusted. A checkpoint sits in front of dbt checking reconciliation, completeness, and freshness; if any dt FAILs, dbt never runs (fail-closed). Deleting instance_id=3''s partition (20,158 rows) for dt=2026-07-06 tripped reconciliation (79,894 vs 59,736) and completeness (missing [3]) at once, skipping dbt with exit code 2, and in Airflow the transform stayed upstream_failed, never run.'
 date: 2026-05-10
 tags:
@@ -23,7 +23,7 @@ seriesOrder: 2
 
 ### 0. 내려는 놨는데 여전히 못 답하는 상황
 
-[1편](/blog/project/lakehouse/lakehouse-1-contract-and-load)에서 어제치 스냅샷을 MinIO에 parquet로 안전하게 내렸습니다. 원천 = parquet = DuckDB 3자 일치까지 확인했습니다. 그런데 정작 이 프로젝트가 존재하는 이유였던 질문, 곧 **"지난 구간보다 느려진 쿼리 있어?"** 앞에서는 raw가 여전히 침묵합니다.
+어제치 스냅샷은 MinIO에 내렸는데, 정작 이 프로젝트가 존재하는 이유였던 질문, 곧 **"지난 구간보다 느려진 쿼리 있어?"** 앞에서는 raw가 여전히 침묵합니다. [1편](/blog/project/lakehouse/lakehouse-1-contract-and-load)에서 원천 = parquet = DuckDB 3자 일치까지 확인한 상태인데도 그렇습니다.
 
 이유는 컬럼 두 개에 있습니다.
 
@@ -34,7 +34,7 @@ total_time_ms  누적 총 실행시간 (구간값 아님)
 
 `calls`를 그냥 `SUM`하면 무슨 일이 벌어지는지 봅시다. 하루에 스냅샷이 인스턴스당 수백 번 찍힙니다(실측 256~813회). 매 스냅샷마다 "지금까지 누적 302회"가 반복 기록됩니다. 그걸 다 더하면 302를 수백 번 더한, 아무 의미 없는 수가 나옵니다. 하루의 실제 발생량은 **차분**해야 합니다. 하루 끝 누적에서 하루 시작 누적을 뺀 값입니다.
 
-이건 새로운 통찰이 아닙니다. DBTower가 이미 하던 것입니다. `ComparisonService`가 두 시점을 비교할 때:
+이건 DBTower가 이미 하던 것입니다. `ComparisonService`가 두 시점을 비교할 때:
 
 ```java
 long delta = Math.max(0, end.getCalls() - start.getCalls());
@@ -154,7 +154,7 @@ select
 from diffed
 ```
 
-그 위에 0편의 질문에 답하는 마트를 얹습니다. 인스턴스+쿼리별로 첫 활동일 대비 마지막 활동일 평균 지연을 비교해 악화 순으로 정렬합니다(`mart_query_regression`). 잡음이 큰 날은 `delta_calls >= 100` 미만이면 비교에서 뺐습니다.
+그 위에 0편의 질문에 답하는 마트를 얹습니다. 인스턴스+쿼리별로 첫 활동일 대비 마지막 활동일 평균 지연을 비교해 악화 순으로 정렬합니다(`mart_query_regression`). 잡음이 큰 지문을 거르려고 `delta_calls`가 100 미만이면 비교에서 뺐습니다.
 
 #### 누적 카운터라 delta는 음수일 수 없다는 테스트
 
@@ -196,7 +196,7 @@ $ .venv/bin/dbt test --profiles-dir .
 | 4 (메타 PG) | `select qs1_0.id,qs1_0.calls,…` | 19.52 | 38.30 | +18.78 | +96% |
 | 1 (MySQL) | ``SELECT `p`.`ID` AS `pid`,…`` | 1.05 | 2.19 | +1.14 | +109% |
 
-"instance 8의 Oracle 쿼리가 이틀 새 평균 25.9ms에서 64.5ms로, **149% 느려졌다.**" raw만으로는 절대 못 냈을 답입니다. 흥미로운 건 4번 인스턴스입니다. DBTower가 자기 메타 PG에 던지는 스냅샷 적재/조회 쿼리입니다(`qs1_0`은 하이버네이트 별칭). **파이프라인이 준 부하를 파이프라인이 관측하는 도그푸딩**이 데이터로도 드러났습니다.
+"instance 8의 Oracle 쿼리가 이틀 새 평균 25.9ms에서 64.5ms로, **149% 느려졌다.**" raw만으로는 못 냈을 답입니다. 4번 인스턴스는 따로 볼 만합니다. DBTower가 자기 메타 PG에 던지는 스냅샷 적재/조회 쿼리입니다(`qs1_0`은 하이버네이트 별칭). **파이프라인이 준 부하를 파이프라인이 관측하는 도그푸딩**이 데이터로도 드러났습니다.
 
 #### 계보(lineage)
 
@@ -208,7 +208,7 @@ $ .venv/bin/dbt test --profiles-dir .
 
 ### 5. 아직 남은 정직한 한계
 
-- **지문 충돌 근사**: SUM으로 얽힌 계열을 접은 건 서로 다른 물리 쿼리를 한 지문으로 합치는 근사입니다. `id`로 계열을 완벽히 분리하진 못합니다(스냅샷마다 새 `id`). "지문 단위 총 활동"까지가 정직하게 낼 수 있는 그레인입니다.
+- **지문 충돌 근사**: SUM으로 얽힌 계열을 접은 건 서로 다른 물리 쿼리를 한 지문으로 합치는 근사입니다. `id`로 계열을 완벽히 분리하진 못합니다(스냅샷마다 새 `id`). "지문 단위 총 활동"이 낼 수 있는 그레인의 상한입니다.
 - **first-vs-last의 손실**: 하루 중 리셋이 나면 재상승분을 일부 잃습니다(219그레인). DBTower 정식 로직과의 정합을 우선해 감수했고 잃는 양은 클램프된 그레인 수로 계량해 뒀습니다. 인접 델타 합산은 반대로 과대계상하니, 둘 다 틀린 방향이 다를 뿐 완벽하진 않습니다.
 - **품질 게이트 없음**: 어느 날 한 인스턴스 파티션이 수집 장애로 비면, 그 위 랭킹은 조용히 오답을 냅니다. 지금은 그걸 잡을 게 없습니다. freshness·빈 파티션 검증과 알림은 이어지는 2부입니다.
 - **구간이 짧다**: 아직 3일치(07-05~07)만 적재돼 사실상 이틀 비교입니다. "지난달" 규모의 추세는 적재가 쌓인 뒤에.
@@ -216,8 +216,6 @@ $ .venv/bin/dbt test --profiles-dir .
 그래도 이 편에서 raw가 처음으로 질문에 답했습니다. 다음은 이 답을 **믿어도 되는지**를 지키는 품질 게이트입니다.
 
 코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
-
-여기까지가 변환을 다룬 1부입니다. 이제 그 답을 믿어도 되는지를 지키러 갑니다.
 
 ## 2부. 실패해야 하는 파이프라인: 조용한 오답을 막는 품질 게이트
 
@@ -229,7 +227,7 @@ $ .venv/bin/dbt test --profiles-dir .
 
 이건 DBTower 시리즈 내내 지켰던 원칙, **"못 하는 것은 못 한다고"**의 데이터판입니다. 데이터가 반쪽이면, 반쪽인 채로 답을 내지 말고 **멈춰야** 합니다. 조용히 틀린 데이터는 없는 것보다 나쁩니다. 없으면 "데이터 없음"이라고 답하지만, 반쪽이면 그럴듯한 오답을 자신 있게 냅니다.
 
-그래서 이 편은 기능을 늘리지 않습니다. 오히려 **파이프라인이 실패하게 만드는** 장치를 답니다.
+그래서 이 편은 **파이프라인이 실패하게 만드는** 장치를 답니다.
 
 ### 1. 반쪽 적재는 dbt가 잡아주지 않는다는 함정
 
@@ -251,7 +249,7 @@ freshness 붕괴  수집이 낮 12시에 끊김 → 하루 절반만 담긴 파�
 
 검문은 세 축입니다. 각각 이미 아는 사실 하나씩과 대조합니다.
 
-**reconciliation(정합)**은 원천 PG의 그 dt 행수와 parquet 행수가 인스턴스별로 정확히 같은지 봅니다. 1편에서 만든 `verify_count`(원천=적재 대조)를 이 게이트로 흡수했습니다. 불일치는 유실이거나 중복이거나 부분 적재입니다. FAIL.
+**reconciliation(정합)**은 원천 PG의 그 dt 행수와 parquet 행수가 인스턴스별로 정확히 같은지 봅니다. 1편에서 만든 `verify_count`(원천=적재 대조)를 이 게이트로 흡수했습니다. 불일치가 하나라도 있으면 유실·중복·부분 적재 중 하나이므로 FAIL입니다.
 
 **completeness(완결성)**는 레지스트리(`database_instance`)에 등록된 인스턴스가 그 dt 파티션에 **전부** 존재하는지 확인합니다. 빈 파티션·수집 누락을 잡는 축입니다. 하나라도 빠지면 FAIL.
 
@@ -334,7 +332,7 @@ $ python -m extract.quality 2026-07-05 2026-07-06 2026-07-07
 GATE: PASS — 모든 dt 통과 → 다운스트림 진행 가능
 ```
 
-한 가지 정직하게 짚을 것. dt=2026-07-07은 **원천 DB의 시계 기준 아직 진행 중인 '오늘'**입니다(원천 `now()`가 07-07 23시대). 그래서 값이 계속 자랍니다(268,952 → 269,354 → 279,002). 재적재 직후 그 순간엔 PG=parquet로 맞지만 열린 창이라 다음 순간 또 벌어질 수 있습니다. 실제로 freshness가 07-07만 '경계까지 0.9h'로 뜨는 게 바로 **아직 안 닫힌 날**이라는 신호입니다. 그래서 게이트의 안정 통과 근거는 닫힌 창(07-05·07-06)에 둡니다. 149,259·79,894는 몇 번을 세도 불변이기 때문입니다.
+여기서 하나 짚고 가야 합니다. dt=2026-07-07은 **원천 DB의 시계 기준 아직 진행 중인 '오늘'**입니다(원천 `now()`가 07-07 23시대). 그래서 값이 계속 자랍니다(268,952 → 269,354 → 279,002). 재적재 직후 그 순간엔 PG=parquet로 맞지만 열린 창이라 다음 순간 또 벌어질 수 있습니다. 실제로 freshness가 07-07만 '경계까지 0.9h'로 뜨는 게 바로 **아직 안 닫힌 날**이라는 신호입니다. 그래서 게이트의 안정 통과 근거는 닫힌 창(07-05·07-06)에 둡니다. 149,259·79,894는 몇 번을 세도 불변이기 때문입니다.
 
 #### instance 3의 파티션을 지우는 장애 주입
 
@@ -365,7 +363,7 @@ quality_gate  failed            # 게이트가 raise → 태스크 실패
 transform     upstream_failed   # 게이트 실패로 실행되지 않음
 ```
 
-그래프로 보면 offload(초록 success) → quality_gate(빨강 failed) → transform(주황 upstream_failed)으로, 게이트가 변환을 실제로 막고 있는 게 한눈에 드러납니다.
+그래프로 보면 offload(초록 success) → quality_gate(빨강 failed) → transform(주황 upstream_failed)으로, 게이트가 변환을 실제로 막고 있는 게 그대로 찍혀 있습니다.
 
 ![quality_gate 실패가 transform을 upstream_failed로 막는 Airflow 그래프](/uploads/project/lakehouse/quality-gate-dag.png)
 

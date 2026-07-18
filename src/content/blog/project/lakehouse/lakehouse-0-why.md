@@ -1,7 +1,7 @@
 ---
 title: '7일이면 버려지는 스냅샷을 장기 이력으로 살려낸 dbtower-lakehouse 실측 11절 총정리'
 titleEn: 'How dbtower-lakehouse Turns Seven Days of Doomed Snapshots into Long-Term History, in 11 Measured Sections'
-description: 'DBTower가 7일 뒤 버리는 쿼리 스냅샷을 컬럼형 저장소로 내려 장기 이력을 만드는 ELT 파이프라인의 전체 기록을 한 편에 정리합니다. Airflow로 오케스트레이션하고 MinIO에 Parquet로 적재하며 dbt로 변환하고 DuckLake로 질의합니다. 문제 정의(7일 시야로는 ''지난달 대비 느려진 쿼리''에 못 답함)에서 시작해, 원천·적재·조회 3자 일치로 검증한 멱등 추출(닫힌 창 07-05=149,259·07-06=79,894), 누적 카운터를 일간 델타로 접는 변환, 조용한 오답을 막는 4축 fail-closed 게이트(장애 주입 시 dbt 미실행 차단), lake를 house로 올리는 DuckLake 타임트래블·롤백, 아카이브가 자신을 지우던 치명 결함의 시연과 차단, 1년치를 합성해 병목을 지목하고 증분 전환으로 407.62초를 4초로 줄인 규모 실측, 그리고 Kafka를 넣지 않은 근거까지 담았습니다. 모든 수치는 직접 측정했고 재현 기록이 저장소에 있습니다.'
+description: 'DBTower가 7일 뒤 버리는 쿼리 스냅샷을 컬럼형 저장소로 내려 장기 이력을 만드는 ELT 파이프라인의 전체 기록을 한 편에 정리합니다. 오케스트레이션은 Airflow, 적재는 MinIO의 Parquet입니다. 변환은 dbt가 맡고 질의는 DuckLake로 합니다. 문제 정의(7일 시야로는 ''지난달 대비 느려진 쿼리''에 못 답함)에서 시작해, 원천·적재·조회 3자 일치로 검증한 멱등 추출(닫힌 창 07-05=149,259·07-06=79,894), 누적 카운터를 일간 델타로 접는 변환, 조용한 오답을 막는 4축 fail-closed 게이트(장애 주입 시 dbt 미실행 차단), lake를 house로 올리는 DuckLake 타임트래블·롤백을 담았습니다. 아카이브가 자신을 지우던 치명 결함의 시연과 차단, 1년치를 합성해 병목을 지목하고 증분 전환으로 407.62초를 4초로 줄인 규모 실측, 그리고 Kafka를 넣지 않은 근거까지 담았습니다. 모든 수치는 직접 측정했고 재현 기록이 저장소에 있습니다.'
 descriptionEn: 'The complete story of a pipeline that offloads DBTower''s soon-to-expire query snapshots into columnar storage to build long-term history. It is orchestrated by Airflow, landed as Parquet in MinIO, transformed by dbt, and queried by DuckLake. From problem definition (a seven-day window can''t answer ''which query got slower than last month'') through idempotent extraction verified by source/load/query three-way agreement, cumulative-to-daily-delta transformation, a four-axis fail-closed quality gate that blocks dbt on injected faults, DuckLake time travel and rollback that turn a lake into a house, the reproduction and blocking of a critical fault where the archive deleted itself, a scale test on a synthesized year that pinpointed the bottleneck and cut a 407.62s rebuild to 4s, and the reasoning behind not adding Kafka. Every number was measured firsthand; the reproduction log lives in the repo.'
 date: 2026-07-10
 tags:
@@ -22,7 +22,7 @@ seriesOrder: 0
 
 이 글은 dbtower-lakehouse 시리즈 본편 여섯 편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고 깊이가 필요한 지점마다 해당 편을 링크했습니다.
 
-한 줄로 요약하면 **[DBTower](/blog/project/dbtower/dbtower-0-overview)가 7일 뒤 버리는 쿼리 스냅샷을, 버려지기 직전에 컬럼나 저장소로 내려(ELT) 장기 이력으로 만드는 데이터 파이프라인**입니다. Airflow로 오케스트레이션하고 MinIO에 Parquet로 적재하고 dbt로 변환하고 DuckLake로 질의합니다. 코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 공개되어 있습니다.
+한 줄로 요약하면 **[DBTower](/blog/project/dbtower/dbtower-0-overview)가 7일 뒤 버리는 쿼리 스냅샷을, 버려지기 직전에 컬럼형 저장소로 내려(ELT) 장기 이력으로 만드는 데이터 파이프라인**입니다. 오케스트레이션은 Airflow, 적재는 MinIO의 Parquet입니다. 변환은 dbt가 맡고 질의는 DuckLake로 합니다. 코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 공개되어 있습니다.
 
 숫자부터 놓고 시작하겠습니다. 전부 직접 측정했고, 재현 명령과 원천 대조가 담긴 기록([VERIFICATION.md](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/VERIFICATION.md))이 저장소에 있습니다.
 
@@ -50,13 +50,13 @@ seriesOrder: 0
 - "이 인스턴스의 3개월 성장 추세로 볼 때 용량 증설 시점은?"
 - "기종별로 장기 레이턴시 분포가 어떻게 다른가?"
 
-전부 **장기 이력**이 있어야 답할 수 있는 질문입니다. 판단은 실무에서 프로덕션 DB(OLTP)와 데이터 웨어하우스(분석)를 분리하는 그 원칙 그대로입니다. **관제(DBTower)는 지금에 최적화된 채로 두고 장기 분석은 별도 계층으로 뺍니다.** 방법은 버려지기 직전의 스냅샷을 컬럼나 저장소로 내리는 것, 데이터 엔지니어링에서 ELT(Extract, Load, Transform)라 부르는 흐름입니다.
+전부 **장기 이력**이 있어야 답할 수 있는 질문입니다. 판단은 실무에서 프로덕션 DB(OLTP)와 데이터 웨어하우스(분석)를 분리하는 그 원칙 그대로입니다. **관제(DBTower)는 지금에 최적화된 채로 두고 장기 분석은 별도 계층으로 뺍니다.** 방법은 버려지기 직전의 스냅샷을 컬럼형 저장소로 내리는 것, 데이터 엔지니어링에서 ELT(Extract, Load, Transform)라 부르는 흐름입니다.
 
 ![query_snapshot을 Airflow로 추출·적재하고 dbt로 집계해 DuckDB/DuckLake로 질의하며 그 사이에 데이터 품질 게이트를 둔 dbtower-lakehouse 파이프라인 구조](/uploads/project/lakehouse/architecture.svg)
 
 즉 이 프로젝트는 **버려지는 관측 데이터의 두 번째 삶**입니다. DBTower가 7일 만에 버리는 데이터를, 분석계가 받아 오래 기억하는 것입니다. 스택은 2026년 기준 소규모 팀의 정석 계보(Airflow + dbt + Parquet/객체스토리지 + DuckDB + DuckLake + Metabase)이고, 각 선택의 근거는 뒤에서 수치로 답합니다.
 
-단계 관점으로 다시 그리면 셋으로 접힙니다. 추출·적재(EL)가 원천을 다치지 않게 내리고 게이트와 dbt가 검증·변환을 맡고 DuckLake와 Metabase가 발행·서빙·감시를 맡습니다. 각 단에 그 단만의 안전장치(자기파괴 가드, fail-closed 게이트, deadman)가 붙어 있는 게 이 파이프라인의 성격입니다.
+단계 관점으로 다시 그리면 셋으로 접힙니다. 추출·적재(EL)가 원천을 다치지 않게 내립니다. 검증과 변환은 게이트와 dbt의 몫이고, 발행부터 서빙·감시까지는 DuckLake와 Metabase가 받습니다. 각 단에 그 단만의 안전장치(자기파괴 가드, fail-closed 게이트, deadman)가 붙어 있는 게 이 파이프라인의 성격입니다.
 
 ![파이프라인 흐름을 추출·적재, 검증·변환, 발행·서빙·감시 3단과 각 단의 안전장치로 나눠 그린 그림](/uploads/project/lakehouse/pipeline-flow.svg)
 
@@ -129,9 +129,9 @@ fail-closed 게이트가 반쪽 데이터를 잘 막았는데, 막았다는 사�
 
 ### 마트에 소비자를 붙이는 대시보드
 
-0편의 질문을 던진 사람은 DuckDB 셸에 SQL을 치는 사람이 아닙니다. Metabase를 붙였는데 함정이 셋이었습니다. (1) 공식 이미지가 Alpine(musl)이라 DuckDB JDBC 네이티브 라이브러리가 안 떠서 Debian 기반 커스텀 이미지로 교체했고, (2) dbt의 DuckDB 파일 직결은 읽히긴 하지만 **서빙 계층 실격**입니다. 파일은 프로세스 간 단일 쓰기라 같은 호스트에선 transform이 잠금 충돌로 죽고 컨테이너 경계(virtiofs)에선 잠금이 전파되지 않아 쓰기 도중 읽기가 무방비가 됩니다(시끄럽게 죽는 것보다 나쁨). 그래서 마트를 DuckLake로 발행하고 Metabase는 DuckLake만 읽게 해 동시성 중재를 파일 잠금에서 PG 트랜잭션으로 넘겼습니다.
+1절의 질문을 던진 사람은 DuckDB 셸에 SQL을 치는 사람이 아닙니다. Metabase를 붙였는데 함정이 셋이었습니다. (1) 공식 이미지가 Alpine(musl)이라 DuckDB JDBC 네이티브 라이브러리가 안 떠서 Debian 기반 커스텀 이미지로 교체했고, (2) dbt의 DuckDB 파일 직결은 읽히긴 하지만 **서빙 계층 실격**입니다. 파일은 프로세스 간 단일 쓰기라 같은 호스트에선 transform이 잠금 충돌로 죽고 컨테이너 경계(virtiofs)에선 잠금이 전파되지 않아 쓰기 도중 읽기가 무방비가 됩니다(시끄럽게 죽는 것보다 나쁨). 그래서 마트를 DuckLake로 발행하고 Metabase는 DuckLake만 읽게 해 동시성 중재를 파일 잠금에서 PG 트랜잭션으로 넘겼습니다.
 
-수치는 세 경로(DuckDB 파일 직독·Metabase API·대시보드 화면)에서 대조해 전부 일치했습니다. 악화 1위는 instance 8로 first→last 25.89→64.50ms, **+149.1%**였습니다. 발행(쓰기) 중 0.3초 간격 연속 41회 읽기가 전부 온전한 22행을 봤고(DuckLake 스냅샷 격리), 파일 케이스와 정반대 결과입니다.
+수치는 세 경로(DuckDB 파일 직독·Metabase API·대시보드 화면)로 대조했고 전부 일치했습니다. 악화 1위는 instance 8로 first→last 25.89→64.50ms, **+149.1%**였습니다. 발행(쓰기) 중 0.3초 간격 연속 41회 읽기가 전부 온전한 22행을 봤고(DuckLake 스냅샷 격리), 파일 케이스와 정반대 결과입니다.
 
 ![Metabase 대시보드에 뜬 악화 쿼리 랭킹과 일별 추이](/uploads/project/lakehouse/metabase-dashboard.png)
 
@@ -167,7 +167,7 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 
 ## 4. 며칠치로는 "버틴다"를 증명하지 못하는 규모 문제
 
-9단계까지 모든 실측은 닫힌 dt 3개(수십만 행)에서 돌았습니다. 그 규모에선 전부 초 단위라 "규모에서도 버틴다"고 말하고 싶어지는데, 그건 증명이 아닙니다. 희망입니다. fct 마트는 매일 O(전체 이력)을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐입니다. 그래서 감에 기대지 않고 **1년치를 실제로 만들어** 어디가 먼저 무너지는지 쟀습니다([6편](/blog/project/lakehouse/lakehouse-6-scale-and-serve)).
+9단계까지 모든 실측은 닫힌 dt 3개(수십만 행)에서 돌았습니다. 그 규모에선 전부 초 단위라 "규모에서도 버틴다"고 말하고 싶어지는데, 며칠치 수치로는 증명이 안 됩니다. 희망일 뿐입니다. fct 마트는 매일 O(전체 이력)을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐입니다. 그래서 **1년치를 실제로 만들어** 어디가 먼저 무너지는지 쟀습니다([6편](/blog/project/lakehouse/lakehouse-6-scale-and-serve)).
 
 닫힌 dt parquet를 날짜 시프트 복제해 **365dt × 6인스턴스 = 2,190파일(54,479,535행, 396.6MB)**을 격리 프리픽스에 생성했습니다(실데이터·원천 무접촉, 끝나고 2,196 오브젝트 전부 정리).
 
@@ -183,14 +183,14 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 
 병목은 명백히 **fct 전체 재빌드(407.62s) 하나**입니다. 나머지는 규모에서도 초 단위입니다. mart는 사전집계라 0.31s, 게이트는 dt별 파티션만 봐서 이력과 무관, CHECKPOINT는 1년치 366커밋이 쌓은 소파일을 1파일로 컴팩션하는 데 0.47s입니다. 파일 평균 177KB는 실무 합의 타깃(128MB~1GB)의 1/741로 소파일 폭증이 있지만, 그 고통은 글롭 리스팅과 커밋 누적으로 나타나고 후자는 CHECKPOINT가 값싸게 흡수합니다.
 
-**수치가 요구하니 전환했습니다.** 407.62s는 전체 재빌드를 매일 돌리면 이력 1년일 때 7분입니다. 그런데 fct의 grain은 dt 단위로 완전 독립(하루 발생량 = 그날 파티션 양 끝 차분)이라 새 dt만 계산해도 결과가 같습니다. `delete+insert` + `unique_key=(instance,query,dt)`로 증분화했습니다. 함정이 하나 있었습니다. `where dt >= (select max(dt) from {{ this }})` 스칼라 서브쿼리로는 DuckDB가 hive 파티션 프루닝을 못 해 2,190파일을 전부 스캔했습니다(증분인데 2분+ 타임아웃). 워터마크를 `run_query`로 **컴파일 타임 리터럴**로 구워 넣자 파티션 경로 프루닝이 걸려 최신 dt만 읽었습니다.
+**수치가 요구하니 전환했습니다.** 전체 재빌드 407.62s는 매일 돌리면 날마다 7분씩 쓰는 셈입니다. 그런데 fct의 grain은 dt 단위로 완전 독립(하루 발생량 = 그날 파티션 양 끝 차분)이라 새 dt만 계산해도 결과가 같습니다. `delete+insert` + `unique_key=(instance,query,dt)`로 증분화했습니다. 함정이 하나 있었습니다. `where dt >= (select max(dt) from {{ this }})` 스칼라 서브쿼리로는 DuckDB가 hive 파티션 프루닝을 못 해 2,190파일을 전부 스캔했습니다(증분인데 2분+ 타임아웃). 워터마크를 `run_query`로 **컴파일 타임 리터럴**로 구워 넣자 파티션 경로 프루닝이 걸려 최신 dt만 읽었습니다.
 
 | | fct 전체 재빌드 | fct 증분(1 dt 추가) |
 |---|---|---|
 | 소요(wall) | **407.62s** | **4s** |
 | 읽는 파일 | 2,190 | 워터마크≥ dt만(~6–12) |
 
-약 **100배+**. microbatch 전략은 event_time 필수·unique_key로 파티션 교체 불가 제약이 있어 delete+insert를 택했고(정직 표기), 반대로 mart는 규모에서도 0.31s라 증분화하지 않았습니다. 초 단위인 곳을 최적화하면 복잡도만 늘어납니다. 문제 없는 곳은 손대지 않는 것도 판단입니다.
+약 **100배+**. microbatch 전략은 event_time 필수·unique_key로 파티션 교체 불가 제약이 있어 delete+insert를 택했고, 반대로 mart는 규모에서도 0.31s라 증분화하지 않았습니다. 초 단위인 곳을 최적화하면 복잡도만 늘어납니다. 문제 없는 곳은 손대지 않는 것도 판단입니다.
 
 ## 5. 정직성과 트레이드오프
 
@@ -211,7 +211,7 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 
 같은 논리로 안 하기로 한 것들과 이유입니다.
 
-- **Spark**는 단일 노드 DuckDB로 수년치 처리가 가능해 필요 없습니다(컬럼나 + 파티션 프루닝). 메모리·로컬 디스크 한계를 실측으로 넘으면 그때 이야기입니다.
+- **Spark**는 단일 노드 DuckDB로 수년치 처리가 가능해 필요 없습니다(컬럼형 + 파티션 프루닝). 메모리·로컬 디스크 한계를 실측으로 넘으면 그때 이야기입니다.
 - **Iceberg/Delta**는 멀티엔진(Spark·Trino·Flink)이 한 테이블을 공유하는 조직 표준입니다. 단일 엔진(DuckDB) 규모엔 DuckLake가 맞고 전환은 어댑터 문제입니다.
 - **OpenLineage/Marquez**는 아직 필요 없습니다. 계보 소비자가 하나라 dbt docs의 문서 계보로 충분하기 때문입니다. 계보를 질의할 팀이 생기면 그때 가면 됩니다.
 - **Cosmos(dbt→Airflow 태스크 분해)**는 모델 3개짜리에서 태스크 그래프 분해라 오버헤드만 더합니다.
@@ -231,20 +231,20 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 
 8단계에서 pytest 35개로 로직을 고정했지만 그건 로컬 자산입니다. 내 노트북에서만 돕니다. 세 구멍을 닫았습니다([5편](/blog/project/lakehouse/lakehouse-5-audit-and-trust)).
 
-**CI 3관문**으로 GitHub Actions가 커밋마다 ruff·pytest·dbt(deps/parse/build)를 강제합니다. 이 스택의 강점이 CI에서 드러납니다. 쿼리 엔진 DuckDB가 임베디드라 MinIO·PG 없는 러너에서 tiny 픽스처 parquet 몇 장으로 staging→fct→mart를 **실제로 짓고** 데이터 테스트·계약·unit test까지 한 번에 돕니다(dbt build PASS=25→26). **dbt unit test**는 이 프로젝트의 심장(누적→일간 델타)을 정적 입력→기대 출력으로 고정했습니다. first-vs-last 차분, 순리셋 클램프, 하루 1스냅샷 델타 0, 지문 충돌 SUM, 롤링 윈도우까지 5건입니다.
+**CI 3관문**으로 GitHub Actions가 커밋마다 ruff·pytest·dbt(deps/parse/build)를 강제합니다. 이 스택의 강점이 CI에서 드러납니다. 쿼리 엔진 DuckDB가 임베디드라 MinIO·PG 없는 러너에서 tiny 픽스처 parquet 몇 장으로 staging→fct→mart를 **실제로 짓고** 데이터 테스트·계약·unit test까지 한 번에 돕니다(dbt build PASS=25→26). **dbt unit test**는 이 프로젝트의 심장(누적→일간 델타)을 정적 입력→기대 출력으로 고정했습니다. first-vs-last 차분과 순리셋 클램프, 하루 1스냅샷이면 델타 0이 되는 경계, 지문 충돌 SUM, 롤링 윈도우. 이렇게 5건입니다.
 
-**deadman heartbeat**입니다. 기존 알림은 "실패하면 운다"뿐이라 태스크가 시작조차 못 하면(스케줄러 death·DAG pause·원천 침묵) 아무도 안 웁니다. 성공 시 heartbeat를 카탈로그 PG에 남기고 "기한 내 갱신 없으면 경보"하는 역방향 감시를 넣었습니다. 30시간 침묵을 실제 경보 발화로, 한 번도 성공 기록이 없는 DAG도 경보로 잡았습니다. 정직한 한계가 있습니다. Airflow 내 감시 DAG는 자기 스케줄러의 total death는 못 잡아 외부 cron 경로를 함께 뒀고, 그 외부 러너의 생존은 결국 조직 밖 상시 모니터(PagerDuty류)의 몫으로 남깁니다.
+**deadman heartbeat**입니다. 기존 알림은 "실패하면 운다"뿐이라 태스크가 시작조차 못 하면(스케줄러 death·DAG pause·원천 침묵) 아무도 안 웁니다. 성공 시 heartbeat를 카탈로그 PG에 남기고 "기한 내 갱신 없으면 경보"하는 역방향 감시를 넣었습니다. 30시간 침묵을 실제 경보 발화로, 한 번도 성공 기록이 없는 DAG도 경보로 잡았습니다. 한계가 하나 있습니다. Airflow 내 감시 DAG는 자기 스케줄러의 total death는 못 잡아 외부 cron 경로를 함께 뒀고, 그 외부 러너의 생존은 결국 조직 밖 상시 모니터(PagerDuty류)의 몫으로 남깁니다.
 
 **dbt contracts**로 fct·mart에 `contract: enforced: true` + 컬럼 타입·CHECK 제약을 선언했습니다. dbt-duckdb가 DB 레벨로 실제 enforce하므로, 마트 컬럼 하나의 산출 타입을 바꿔 다운스트림 파괴를 시뮬레이션하면 CREATE TABLE 시점에 빌드가 막혀요(`data type mismatch`, PASS=0 ERROR=1). 대시보드가 기대는 컬럼 타입이 조용히 바뀌는 경로를 발행 전에 끊습니다.
 
 ## 8. 커버리지와 남은 한계
 
-정직하게 남겨둔 것들입니다.
+남겨둔 것들입니다.
 
 - **원천 부분 유실**입니다. F1 가드는 "원천 0행 vs 파티션 존재"까지만 봅니다. 0은 아니지만 급감하는 부분 유실은 여전히 덮어써요(게이트 reconciliation의 사후 탐지 영역). 쓰기 전 행수 급감 거부는 정당한 감소와의 오탐 트레이드오프라 미결로 뒀습니다.
 - **통계적 이상 감지**도 남습니다. 품질 게이트는 규칙 기반(정합·완결성·freshness·드리프트)까지입니다. 실패 통보는 webhook으로 닫았지만 통계적 이상 자동 감지는 범위 밖입니다.
 - **인스턴스별 freshness**도 과제입니다. 지금은 dt 파티션 전체의 최신 captured_at으로 판정해서, 일부 인스턴스만 일찍 끊겨도 다른 인스턴스가 경계까지 수집했으면 dt-level로는 OK가 될 수 있습니다.
-- **롤링 윈도우는 이력을 요구합니다.** 최신 dt 기준 최근 7일 vs 직전 30일 창이라, 실데이터 닫힌 dt가 3개뿐이라 실운영 마트는 0행입니다(규모 합성에서만 랭킹이 나옴). 이력이 쌓이면 실데이터에서도 채워집니다. 구조는 검증됐고 이력 부족을 지어내지 않고 정직하게 빈다는 게 규율입니다.
+- **롤링 윈도우는 이력을 요구합니다.** 최신 dt 기준 최근 7일 vs 직전 30일 창이라, 실데이터 닫힌 dt가 3개뿐이라 실운영 마트는 0행입니다(규모 합성에서만 랭킹이 나옴). 이력이 쌓이면 실데이터에서도 채워집니다. 구조는 검증됐고 이력이 없으면 마트를 그대로 비워 두는 게 규율입니다.
 - **과거 dt 정정**입니다. fct는 이제 증분이라 과거 dt(<max) 정정은 `--full-refresh`가 필요합니다(backfill 레시피는 RUNBOOK).
 - **합성 규모의 재현 범위**도 한계입니다. 파일 수·파티션 규모는 정확히 재현하지만 고유 쿼리 카디널리티 폭증은 하루치의 반복이라 미재현입니다(원천 다양성의 문제).
 - **계약·계보**도 마찬가지입니다. 컬럼 레벨 계보·PII 태깅은 dbt Enterprise 영역이라 문서 계보까지만 했습니다.
@@ -252,7 +252,7 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 돌아보면 이 프로젝트를 관통한 건 세 문장입니다.
 
 1. **버려지는 것에 두 번째 삶을 준다.** 관제가 7일 만에 버리는 데이터를 분석계가 받아 장기 이력으로 잇습니다.
-2. **주장은 실측으로 편다.** 멱등은 닫힌 창 재실행으로, 품질은 장애 주입으로, 규모는 1년치를 실제로 만들어서, 최적화는 병목 수치가 정당화할 때만 했습니다.
+2. **주장은 실측으로 편다.** 멱등은 닫힌 창 재실행으로, 품질은 장애 주입으로 확인했습니다. 규모는 1년치를 실제로 만들어 쟀고, 최적화는 병목 수치가 정당화한 곳만 건드렸습니다.
 3. **안 하는 것에도 이유를 붙인다.** Kafka·Spark·Iceberg를 안 넣은 근거가 넣은 것만큼 이 파이프라인의 성격을 보여줍니다.
 
 전 과정의 상세는 시리즈 [1편(계약·적재)](/blog/project/lakehouse/lakehouse-1-contract-and-load)부터 [6편(규모)](/blog/project/lakehouse/lakehouse-6-scale-and-serve)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
