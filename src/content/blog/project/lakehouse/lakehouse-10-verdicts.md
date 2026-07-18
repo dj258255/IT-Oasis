@@ -1,7 +1,7 @@
 ---
 title: '창고에 데이터만 내리고 판정은 안 하고 있었습니다 — 플랜 회귀·백업 공백·주간 보고, 그리고 "왜 느려졌나"의 첫 후보'
 titleEn: 'We Were Only Landing Data, Never Judging It — Plan Regression, Backup Gaps, a Weekly Report, and the First Candidate for "Why"'
-description: '창고에 데이터를 내리기만 하고 판정을 안 하고 있었습니다. plan_snapshot과 fct_query_daily를 둘 다 갖고도 상관시키지 않아 "새벽에 느려졌다"는 신고마다 DBA가 30분씩 플랜 이력을 뒤졌고, fct_backup_daily엔 "마지막 성공 백업이 며칠 전인가"라는 판정 컬럼이 없어 백업 공백을 복구하다 발견했습니다. 셋 다 신규 수집 없이 이미 내린 데이터를 판정 컬럼까지 밀어붙이는 일이었습니다. 플랜 회귀는 일 단위 대표 플랜의 뒤집힘을 잡아 전후 N일 지연을 비교하되 관측이 덜 차면 PENDING, 비교창이 오염되면 AMBIGUOUS로 지어내지 않고, 백업 공백은 유니버스를 query 팩트에서 잡아 기록 없는 인스턴스도 행으로 드러내며 기준일을 벽시계가 아닌 창고 최신 dt로 잡습니다. 라이브에서 4개가 no_backup_observed로 나왔는데 원천엔 백업이 있어 마트가 breach로 단정하지 않은 게 정확했습니다. 이 셋을 주간 보고 한 장으로 접었습니다. 그리고 이 판정들은 "무엇이 언제"까지만 답한다는 걸 깨달아, "왜 그렇게 됐나"의 첫 후보로 설정 드리프트를 붙였습니다. DBTower가 1시간마다 쌓고 7일 뒤 지우는 config_snapshot과 config_param_change를 장기 보관해, config_snapshot을 스파인으로 "수집됐는데 무변경"과 "수집 없음"을 구분하고, 설정 변경을 플랜 뒤집힘과 시간축으로 겹쳐 원인 후보를 지목합니다. 상관이지 인과가 아니라 조언 어휘로만 싣고, "누가" 바꿨는지는 대상 DB가 주지 않아 담지 않습니다.'
+description: '창고에 데이터를 내리기만 하고 판정을 안 하고 있었습니다. plan_snapshot과 fct_query_daily를 둘 다 갖고도 상관시키지 않아 "새벽에 느려졌다"는 신고마다 DBA가 30분씩 플랜 이력을 뒤졌고, fct_backup_daily엔 "마지막 성공 백업이 며칠 전인가"라는 판정 컬럼이 없어 백업 공백을 복구하다 발견했습니다. 셋 다 신규 수집 없이 이미 내린 데이터를 판정 컬럼까지 밀고 가는 일이었습니다. 플랜 회귀는 일 단위 대표 플랜의 뒤집힘을 잡아 전후 N일 지연을 비교하되 관측이 덜 차면 PENDING, 비교창이 오염되면 AMBIGUOUS로 지어내지 않고, 백업 공백은 유니버스를 query 팩트에서 잡아 기록 없는 인스턴스도 행으로 드러내며 기준일을 벽시계가 아닌 창고 최신 dt로 잡습니다. 라이브에서 4개가 no_backup_observed로 나왔는데 원천엔 백업이 있어 마트가 breach로 단정하지 않은 게 정확했습니다. 이 셋을 주간 보고 한 장으로 접었습니다. 그리고 이 판정들은 "무엇이 언제"까지만 답한다는 걸 깨달아, "왜 그렇게 됐나"의 첫 후보로 설정 드리프트를 붙였습니다. DBTower가 1시간마다 쌓고 7일 뒤 지우는 config_snapshot과 config_param_change를 장기 보관해, config_snapshot을 스파인으로 "수집됐는데 무변경"과 "수집 없음"을 구분하고, 설정 변경을 플랜 뒤집힘과 시간축으로 겹쳐 원인 후보를 지목합니다. 상관이지 인과가 아니라 조언 어휘로만 싣고, "누가" 바꿨는지는 대상 DB가 주지 않아 담지 않습니다.'
 descriptionEn: 'We were only landing data in the warehouse and never judging it. We held both plan_snapshot and fct_query_daily without correlating them, so every "slow last night" report cost a DBA 30 minutes of digging through plan history, and fct_backup_daily had no verdict column for "days since last successful backup," so silent gaps got found during recovery. All three needed no new collection, just pushing landed data through to a verdict. Plan regression detects day-level dominant-plan flips and compares latency across N days before and after, refusing to invent a verdict when observation is thin (PENDING) or the window is contaminated (AMBIGUOUS); backup RPO draws its universe from the query fact so instances with no backup rows still surface, and anchors "as of" to the warehouse latest dt, not the wall clock. Live, four instances read no_backup_observed while the source had backups, so the mart was right not to declare a breach. These fold into one weekly report. Then, realizing these verdicts answer only "what and when," I added config drift as the first candidate for "why": long-term storage of config_snapshot and config_param_change that DBTower stacks hourly and prunes after seven days, using config_snapshot as a spine to separate "collected but unchanged" from "not collected," and overlaying config changes with plan flips on the time axis. It ships as advisory correlation, not causation, and does not store "who," which the target DB never provides.'
 date: 2026-07-18
 tags:
@@ -41,7 +41,7 @@ seriesOrder: 10
 한 장으로 접는 계층이 없었습니다.
 
 세 가지 모두 사람의 시간이 새는 지점입니다. 그리고 세 가지 모두 **신규 수집이 필요
-없었습니다.** 이미 내린 데이터를 판정 컬럼까지 밀어붙이는 일이었습니다.
+없었습니다.** 이미 내린 데이터를 판정 컬럼까지 밀고 가는 일이었습니다.
 
 ## 1. 왜 이게 창고의 몫인가
 
