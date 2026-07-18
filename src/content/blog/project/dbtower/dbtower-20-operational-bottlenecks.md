@@ -1,8 +1,8 @@
 ---
 title: '사람 손이 붙어 있던 다섯 곳을 끊다: 설정 드리프트·변경 리뷰·인덱스 판정·인시던트 리포트·월간 점검'
 titleEn: 'Cutting the Five Places Human Hands Were Still Stuck: Config Drift, Change Review, Index Verdict, Incident Report, Monthly Check'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 20편. 현업 DBA의 병목이 어디에 남는지를 렌즈로, 사람 손이 선형으로 붙던 다섯 지점을 기능으로 끊었습니다. (1) 설정 드리프트 이력: 파라미터 diff의 공간축("A와 B가 다른가")에 시간축("언제부터 무엇이 바뀌었나")을 붙였습니다. 거울 테이블과 변경 로그로 무변경 주기엔 스냅샷 한 줄만 쌓이게 했고, work_mem 4096→8192 실변경을 감지해 카드를 쐈습니다. 검증 중 MongoDB parameters()가 $clusterTime 같은 응답 gossip 필드를 흘려 매번 오탐이 나던 기존 버그도 잡았습니다. (2) 스키마 변경 리뷰 게이트: 배포 전 DDL을 규칙으로 판정(락 위험·DEFAULT 없는 NOT NULL·DROP·WHERE 없는 대량 변경)하고 실제 행수로 락 위험을 확정한 뒤 AI 1차 소견을 붙여 ADMIN 승인·자동 감사까지. 실행은 하지 않고 gh-ost 경로만 안내합니다. (3) 인덱스 사용 통계 주기 영속: "이 인덱스 지워도 되나"는 재시작 누적 카운터의 순간값으론 못 답합니다. 5기종 스캔 통계를 6시간 주기로 영속하고(Oracle은 미지원 정직), lakehouse가 first-vs-last 델타·리셋 클램프로 분기 창 판정 마트를 짓습니다. (4) 인시던트 리포트: 장애 구간을 주면 시점 비교·설정 변경·플랜 플립·대기·가용성을 한 장으로 재구성하고 AI가 재료 내 사실만으로 요약합니다. (5) 월간 점검 리포트: 헬스·백업·Advisor·용량·낭비·설정 변경을 매월 자동 발행합니다. 다섯 개 전부 읽고 판정·기록까지가 몫이고 대상 DB는 바꾸지 않습니다. 신규 모듈 하나(review)는 이벤트로 alert에 카드를 위임하고, 공개 파사드 둘(score·finops)로 Modulith 경계를 순환 없이 유지했습니다. 테스트 506건, VERIFICATION 109개 절.'
-descriptionEn: 'Part 20 of DBTower. Using where a working DBA''s bottleneck remains as the lens, five places where human effort scaled linearly were cut into features. (1) Config drift history adds a time axis to parameter diff. (2) A schema-change review gate judges DDL by rules, confirms lock risk with real row counts, adds an AI first opinion, and routes to ADMIN approval with automatic audit, without executing. (3) Index usage snapshots persist scan stats across engines so the lakehouse can judge "safe to drop?" over a quarter with first-vs-last deltas. (4) An incident report reconstructs a window''s point comparison, config changes, plan flips, waits, and availability into one page with an AI summary bound to the assembled facts. (5) A monthly check report publishes health, backup, advisor, capacity, waste, and config changes automatically. All five read, judge, and record; none change the target DB. 506 tests, 109 verification sections.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 20편. 현업 DBA의 병목이 어디에 남는지를 렌즈로, 사람 손이 선형으로 붙던 다섯 지점을 기능으로 끊었습니다. (1) 설정 드리프트 이력: 파라미터 diff의 공간축("A와 B가 다른가")에 시간축("언제부터 무엇이 바뀌었나")을 붙였습니다. 거울 테이블과 변경 로그로 무변경 주기엔 스냅샷 한 줄만 쌓이게 했고, work_mem 4096→8192 실변경을 감지해 카드를 쐈습니다. 검증 중 MongoDB parameters()가 $clusterTime 같은 응답 gossip 필드를 흘려 매번 오탐이 나던 기존 버그도 잡았습니다. (2) 스키마 변경 리뷰 게이트: 배포 전 DDL을 규칙으로 판정(락 위험·DEFAULT 없는 NOT NULL·DROP·WHERE 없는 대량 변경)하고 실제 행수로 락 위험을 확정한 뒤 AI 1차 소견을 붙여 ADMIN 승인·자동 감사까지. 실행은 하지 않고 gh-ost 경로만 안내합니다. (3) 인덱스 사용 통계 주기 영속: "이 인덱스 지워도 되나"는 재시작 누적 카운터의 순간값으론 못 답합니다. 5기종 스캔 통계를 6시간 주기로 영속하고(Oracle은 미지원 정직), lakehouse가 first-vs-last 델타·리셋 클램프로 분기 창 판정 마트를 짓습니다. (4) 인시던트 리포트: 장애 구간을 주면 시점 비교·설정 변경·플랜 플립·대기·가용성을 한 장으로 재구성하고 AI가 재료 내 사실만으로 요약합니다. (5) 월간 점검 리포트: 헬스·백업·Advisor·용량·낭비·설정 변경을 매월 자동 발행합니다. 다섯 개 전부 읽고 판정·기록까지가 몫이고 대상 DB는 바꾸지 않습니다. 신규 모듈 하나(review)는 이벤트로 alert에 카드를 위임하고, 공개 파사드 둘(score·finops)로 Modulith 경계를 순환 없이 유지했습니다. 테스트 514건, VERIFICATION 110개 절.'
+descriptionEn: 'Part 20 of DBTower. Using where a working DBA''s bottleneck remains as the lens, five places where human effort scaled linearly were cut into features. (1) Config drift history adds a time axis to parameter diff. (2) A schema-change review gate judges DDL by rules, confirms lock risk with real row counts, adds an AI first opinion, and routes to ADMIN approval with automatic audit, without executing. (3) Index usage snapshots persist scan stats across engines so the lakehouse can judge "safe to drop?" over a quarter with first-vs-last deltas. (4) An incident report reconstructs a window''s point comparison, config changes, plan flips, waits, and availability into one page with an AI summary bound to the assembled facts. (5) A monthly check report publishes health, backup, advisor, capacity, waste, and config changes automatically. All five read, judge, and record; none change the target DB. 514 tests, 110 verification sections.'
 date: 2026-08-01
 tags:
   - Java
@@ -92,6 +92,23 @@ APPROVED로 전이되고 감사 로그에 제출과 승인 두 건이 남았습�
 모듈이 alert 내부를 직접 참조하면 순환이 생깁니다. 그래서 review가 이벤트를 발행하고 alert의
 리스너가 카드를 만들어 보냅니다. 구조적 의존은 이미 있던 한 방향뿐이라 순환이 없습니다.
 
+처음엔 SQL 판정을 정규식으로 짰습니다. 문제를 스스로 인지하고 있었습니다. 정규식은 문장을
+세미콜론으로 가르는데, 문자열 리터럴이나 PostgreSQL 달러 인용 안의 세미콜론을 문장 경계로
+오인합니다. 그래서 다중 문장은 `parseLimited`로 "이건 근사치"라고 정직하게 표기하고 있었습니다.
+이번에 판정을 JSqlParser 구문 트리로 올렸습니다. 정상 다중 문장은 이제 정확히 갈라져
+`parseLimited`가 꺼지고, 파서가 못 다루는 방언(종료 안 된 리터럴 등)만 정규식 폴백으로 내려가
+한계를 표기합니다. 구문 트리가 생기니 부수 효과로 판정 하나가 더 가능해졌습니다. ADD/DROP
+컬럼을 구조로 뽑아 실제 스키마와 대조하는 겁니다. "이미 있는 컬럼을 또 추가"하거나 "없는 컬럼을
+삭제"하는, 배포 시 에러가 날 변경을 미리 짚습니다. 다만 스냅샷에 그 테이블이 없거나
+스키마리스(MongoDB)면 존재 여부를 단정하지 않고 판정을 보류합니다. 확신 없는 지적은 규칙
+엔진의 신뢰를 깎기 때문입니다.
+
+리포트 쪽은 검증을 한 겹 더 얹었습니다. 인시던트·월간 리포트 조립기는 목 기반 유닛만 있었는데,
+스프링 컨텍스트 통합 테스트를 더해 컨트롤러부터 보안(ADMIN)·조립기·마크다운·직렬화까지
+엔드포인트 계약을 관통 검증합니다. 스냅샷 테이블은 JPA 엔티티가 없어 인메모리 H2엔 존재하지
+않으므로, 그 조회 원천만 목으로 빈 신호를 넣고 나머지는 실빈으로 태웠습니다. 스냅샷 조회는
+목 유닛으로 검증한다는 저장소 방침을 그대로 이었습니다.
+
 ## 3. 인덱스 판정: "지워도 되나"는 분기가 답한다
 
 "이 인덱스 안 쓰이니 지워도 되나"는 7일 관측으로는 절대 못 답합니다. 스캔 카운터는 통계 리셋
@@ -163,6 +180,6 @@ Modulith 경계 테스트가 순환 없음을 계속 지켜줍니다.
 
 기능을 늘리면서도 경계는 안 무너뜨렸습니다. 신규 모듈 하나는 이벤트로 카드를 위임하고, 두
 모듈은 공개 파사드로만 열렸습니다. 새 신호를 저장하는 잡들은 기존 스냅샷 잡과 같은 뼈대를
-따랐습니다. 테스트는 506건, 재현 기록은 109개 절입니다. 그리고 검증하다 발견한 버그
+따랐습니다. 테스트는 514건, 재현 기록은 110개 절입니다. 그리고 검증하다 발견한 버그
 (MongoDB 봉투 필드 누출, 리뷰 조회의 팀 스코프 누락) 두 개는 그 자리에서 고쳐 함께 기록에
 남겼습니다.
