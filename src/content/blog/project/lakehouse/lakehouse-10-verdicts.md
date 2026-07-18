@@ -1,8 +1,8 @@
 ---
-title: '느려졌다는 신고에 30분씩 플랜 이력을 뒤지고 있었는데, 답할 재료는 창고에 이미 다 있었습니다'
-titleEn: 'We Spent 30 Minutes Digging Through Plan History on Every Slowness Report, When the Warehouse Already Held the Answer'
-description: '창고에 데이터를 내리기만 하고 판정을 안 하고 있었습니다. plan_snapshot(플랜이 언제 바뀌었나)과 fct_query_daily(그 쿼리가 느려졌나)를 둘 다 갖고 있으면서 서로 상관시키지 않아, "새벽에 갑자기 느려졌다"는 신고가 오면 DBA가 플랜 이력과 지연 그래프를 눈으로 대조하며 30분을 씁니다. fct_backup_daily에는 일별 성공/실패 집계가 있는데 "이 인스턴스, 마지막 성공 백업이 며칠 전인가"라는 판정 컬럼이 없어서, 백업이 조용히 안 돌던 걸 복구하려다 발견합니다. 실패는 시끄럽지만 공백은 조용합니다. 이 세 가지는 전부 사람의 시간이 새는 지점인데, 신규 수집은 하나도 필요 없었습니다. 이미 내린 데이터를 판정 컬럼까지 밀어붙이는 일이었습니다. 플랜 회귀는 일 단위 대표 플랜의 뒤집힘을 잡아 전후 N일 지연을 비교하고, 관측이 덜 찼으면 PENDING, 비교창 안에서 또 뒤집혔으면 AMBIGUOUS로 판정을 지어내지 않습니다. 백업 공백은 인스턴스 유니버스를 query 팩트에서 잡아 백업 기록이 아예 없는 인스턴스도 행으로 드러나게 하고, 기준일을 벽시계가 아니라 창고 최신 dt로 잡아 파이프라인 중단과 백업 중단을 섞지 않습니다. 라이브에서 7인스턴스 중 4개가 no_backup_observed로 나왔는데, 원천을 확인하니 백업이 안 도는 게 아니라 창고가 아직 그 백업을 안 받은 것이었고, 마트가 breach로 단정하지 않고 사실만 실어 정확했습니다. 마지막으로 용량 D-day, top 대기, 플랜 뒤집힘, 백업 공백을 인스턴스당 한 행으로 접는 주간 보고 마트를 만들어, 월요일마다 화면 네 곳을 긁던 보고서를 대시보드 한 장으로 바꿨습니다.'
-descriptionEn: 'We were only landing data in the warehouse, never judging it. We held both plan_snapshot (when the plan changed) and fct_query_daily (whether the query slowed down) without correlating them, so a "suddenly slow last night" report meant a DBA eyeballing plan history against a latency graph for 30 minutes. fct_backup_daily had daily success/fail counts but no verdict column for "how many days since this instance last had a successful backup," so silent backup gaps got discovered during recovery. Failures are loud; gaps are silent. All three are places human time leaks, and none needed new collection: it was pushing already-landed data through to a verdict column. Plan regression detects day-level dominant-plan flips and compares latency across N days before and after, refusing to invent a verdict when observation is thin (PENDING) or another flip contaminates the window (AMBIGUOUS). Backup RPO draws its instance universe from the query fact so instances with no backup rows at all still surface, and anchors "as of" to the warehouse''s latest dt rather than the wall clock, so a stalled pipeline isn''t confused with a stalled backup. Live, 4 of 7 instances came back no_backup_observed; checking the source showed backups were running fine, the warehouse just hadn''t received them yet, and the mart was correct to state the fact rather than declare a breach. Finally a weekly report mart folds capacity D-day, top wait, plan flips, and backup gap into one row per instance, turning the Monday four-screen scavenger hunt into a single dashboard.'
+title: '창고에 데이터만 내리고 판정은 안 하고 있었습니다 — 플랜 회귀·백업 공백·주간 보고, 그리고 "왜 느려졌나"의 첫 후보'
+titleEn: 'We Were Only Landing Data, Never Judging It — Plan Regression, Backup Gaps, a Weekly Report, and the First Candidate for "Why"'
+description: '창고에 데이터를 내리기만 하고 판정을 안 하고 있었습니다. plan_snapshot과 fct_query_daily를 둘 다 갖고도 상관시키지 않아 "새벽에 느려졌다"는 신고마다 DBA가 30분씩 플랜 이력을 뒤졌고, fct_backup_daily엔 "마지막 성공 백업이 며칠 전인가"라는 판정 컬럼이 없어 백업 공백을 복구하다 발견했습니다. 셋 다 신규 수집 없이 이미 내린 데이터를 판정 컬럼까지 밀어붙이는 일이었습니다. 플랜 회귀는 일 단위 대표 플랜의 뒤집힘을 잡아 전후 N일 지연을 비교하되 관측이 덜 차면 PENDING, 비교창이 오염되면 AMBIGUOUS로 지어내지 않고, 백업 공백은 유니버스를 query 팩트에서 잡아 기록 없는 인스턴스도 행으로 드러내며 기준일을 벽시계가 아닌 창고 최신 dt로 잡습니다. 라이브에서 4개가 no_backup_observed로 나왔는데 원천엔 백업이 있어 마트가 breach로 단정하지 않은 게 정확했습니다. 이 셋을 주간 보고 한 장으로 접었습니다. 그리고 이 판정들은 "무엇이 언제"까지만 답한다는 걸 깨달아, "왜 그렇게 됐나"의 첫 후보로 설정 드리프트를 붙였습니다. DBTower가 1시간마다 쌓고 7일 뒤 지우는 config_snapshot과 config_param_change를 장기 보관해, config_snapshot을 스파인으로 "수집됐는데 무변경"과 "수집 없음"을 구분하고, 설정 변경을 플랜 뒤집힘과 시간축으로 겹쳐 원인 후보를 지목합니다. 상관이지 인과가 아니라 조언 어휘로만 싣고, "누가" 바꿨는지는 대상 DB가 주지 않아 담지 않습니다.'
+descriptionEn: 'We were only landing data in the warehouse and never judging it. We held both plan_snapshot and fct_query_daily without correlating them, so every "slow last night" report cost a DBA 30 minutes of digging through plan history, and fct_backup_daily had no verdict column for "days since last successful backup," so silent gaps got found during recovery. All three needed no new collection, just pushing landed data through to a verdict. Plan regression detects day-level dominant-plan flips and compares latency across N days before and after, refusing to invent a verdict when observation is thin (PENDING) or the window is contaminated (AMBIGUOUS); backup RPO draws its universe from the query fact so instances with no backup rows still surface, and anchors "as of" to the warehouse latest dt, not the wall clock. Live, four instances read no_backup_observed while the source had backups, so the mart was right not to declare a breach. These fold into one weekly report. Then, realizing these verdicts answer only "what and when," I added config drift as the first candidate for "why": long-term storage of config_snapshot and config_param_change that DBTower stacks hourly and prunes after seven days, using config_snapshot as a spine to separate "collected but unchanged" from "not collected," and overlaying config changes with plan flips on the time axis. It ships as advisory correlation, not causation, and does not store "who," which the target DB never provides.'
 date: 2026-07-18
 tags:
   - Data Engineering
@@ -55,7 +55,7 @@ DBTower의 라이브 시야는 7일입니다. 그 창으로는 구조적으로 �
 
 이건 이미 이 프로젝트가 서 있는 자리(용량 D-day)와 같은 계열입니다. 미래 외삽, 시점
 전후 상관, 부재 감지. 셋 다 7일 창으로는 못 보고 장기 창고라야 보이는 판정입니다.
-이번 편에서 이 셋을 마트 세 개로 채웁니다. 발화는 여전히 안 합니다. 13편에서 정한
+이번 편에서 이 셋을 마트 세 개로 채웁니다. 발화는 여전히 안 합니다. 앞서 정한
 원칙대로, 창고는 판정 컬럼까지만 계산하고 알림은 Metabase(사람이 pull) 또는
 DBTower(기계가 push)의 몫으로 둡니다. 두 번째 알림 시스템을 만들지 않습니다.
 
@@ -91,7 +91,7 @@ NULL을 자연 제외하도록 뒀습니다.
 전후가 다른 뒤집힘에 오염되므로 AMBIGUOUS로 둡니다. 억지로 REGRESSED라고 답하는 것보다
 "지금은 판단 못 함"이 정직합니다.
 
-비율 판정에는 13편 CI에서 배운 걸 그대로 적용했습니다. 후/전 비율을 소수 둘째 자리로
+비율 판정에는 앞선 CI에서 배운 걸 그대로 적용했습니다. 후/전 비율을 소수 둘째 자리로
 반올림한 값으로 판정해서, 플랫폼마다 최하위 비트가 흔들리는 부동소수 때문에 맥과 CI
 러너가 다른 답을 내는 일을 막았습니다.
 
@@ -156,25 +156,110 @@ no_backup_observed로 사실만 실은 게 정확했습니다. 판정이 조심�
 
 주간 보고 마트는 7행으로, 앞의 두 판정과 용량·대기를 한 줄씩 묶어 위 대시보드가 됐습니다.
 
-정직하게 적자면, 판정의 "실데이터 완성"은 보조 오프로드 이력이 더 쌓여야 옵니다. 지금
-마트는 정직하게 비거나(플랜) 창고가 받은 만큼만 판정합니다(백업). 그래서 로드맵의 "시간이
-해제하는 체크리스트"에 두 줄을 더했습니다. 플랜 회귀 실판정은 플랜 오프로드 이력이 이틀이
-되면 자동으로 시작되고, 백업 공백은 7기종이 다 누적되면 no_backup_observed가 진짜 미백업만
-남기고 좁혀집니다. 각각 예상 해제일을 못박아 뒀습니다.
-
-## 6. 남은 것
+## 6. 판정은 "무엇이 언제"까지였고, "왜"가 빠져 있었다
 
 이걸로 "장기 창고라야 가능한 판정" 세 개가 갖춰졌습니다. 용량 D-day는 미래를 외삽하고,
 플랜 회귀는 시점 전후를 상관시키고, 백업 공백은 부재를 감지합니다. 셋 다 라이브 7일
-창으로는 구조적으로 못 하는 판정이라, 이 창고가 존재하는 이유를 그대로 보여주는 기능들입니다.
+창으로는 구조적으로 못 하는 판정이라, 이 창고가 존재하는 이유를 그대로 보여줍니다. 그
+사이에 미사용 인덱스 판정도 하나 더 붙었습니다(그건 뒤에서 기종 축과 함께 다시 나옵니다).
 
-만든 것은 판정 컬럼까지입니다. 알림을 직접 쏘지 않는다는 원칙은 이번에도 지켰습니다.
-REGRESSED와 breach는 계산해 두고, 그걸 사람에게 알리거나 액션으로 구동하는 건 Metabase
-구독이나 DBTower의 몫입니다. 구독(이메일 발송)은 SMTP 설정이 있어야 해서, 셀프호스트
-어플라이언스에 강제하지 않고 RUNBOOK에 설정 절차만 적어 두기로 했습니다. 실측 범위는
-대시보드까지입니다.
+그런데 이 판정들을 보다가 한 가지가 걸렸습니다. 전부 **"무엇이 언제"까지만** 답합니다.
+"이 쿼리가 느려졌다", "이 인스턴스 백업이 3주째 없다" 까지는 말하는데, **"왜 그렇게
+됐나"의 첫 후보**는 아무도 안 짚어 줍니다.
 
-다음은 미사용 인덱스입니다. "이 인덱스 지워도 되나"는 7일 관측으로는 절대 못 답하고
-분기 내내 스캔 0회를 봐야 하는, 정확히 이 창고만 할 수 있는 판정입니다. 다만 그건
-DBTower 쪽에서 인덱스 사용 통계를 주기적으로 수집하는 게 먼저라, 자리만 예약해 두고
-이번 편은 여기서 닫습니다.
+DBA 장애의 흔한 숨은 원인 하나가 사람이 조용히 바꾼 파라미터입니다. `work_mem`을 줄였거나
+`max_connections`를 건드렸는데, 그게 며칠 뒤 특정 쿼리의 플랜을 뒤집습니다. DBTower는
+이 설정 변경을 1시간마다 감지해서 쌓습니다. 그런데 그 이력을 7일류로 지웁니다(자체 정리
+잡이 돕니다). "3개월 전 언제부터 이 인스턴스 설정이 달라졌나"와 "그 변경 뒤로 성능이
+나빠졌나"는 장기 이력이 있어야 답하는데, 그게 매일 사라지고 있었습니다. 그래서 이 판정
+층에 "왜"의 첫 후보로 설정 드리프트를 붙이기로 했습니다.
+
+## 7. 원천은 DBTower에 이미 있었다
+
+이번엔 착수가 가벼웠습니다. 앞선 단계들(대기 이벤트, 인덱스 통계)은 DBTower 쪽에 테이블과
+수집 잡을 새로 만들어야 했는데, 설정 드리프트는 **producer가 이미 완성**돼 있었습니다.
+DBTower가 `config_snapshot`(매 수집 1행, 무변경도 해시로 증명)과 `config_param_change`
+(바뀐 파라미터만 append)를 1시간 주기로 쌓고, 기존 파라미터 조회 기능을 5기종에서
+재사용합니다. 그래서 이 단계는 lakehouse 단독 작업이었습니다. DBTower 쪽은 읽기 권한
+한 줄만 주면 됩니다.
+
+내릴 테이블을 고를 때 하나는 뺐습니다. `config_current_param`은 "현재 전량 거울"이라
+값이 바뀔 때마다 덮어쓰고 지우는 변이 테이블입니다. 이 창고는 불변 append만 내린다는
+계약을 지켜야 해서, 시간이 지나도 안 바뀌는 두 테이블만 오프로드 대상으로 삼았습니다.
+
+## 8. 무변경도 기록한다
+
+첫 마트 `fct_config_change_daily`에서 신경 쓴 건 **"조용한 날"과 "빈 날"의 구분**입니다.
+설정이 안 바뀐 날은 정상입니다. 하지만 수집 자체가 안 돈 날은 문제입니다. 이 둘을 뭉개면
+"변경 0"이 두 가지 다른 상태를 가립니다.
+
+그래서 팩트의 스파인을 `config_snapshot`으로 잡았습니다. 이 테이블은 무변경 사이클에도
+1행을 남기니까(해시로 "그 시각 설정은 이랬다"를 증명), 이 행이 있으면 "수집됐다"는 뜻입니다.
+여기에 실제 변경 상세를 `config_param_change`에서 붙입니다. 결과적으로 한 인스턴스의 하루가
+"23사이클 수집됐고 변경은 0" 인지 "수집 자체가 없음" 인지 구분됩니다. 백업 공백 마트에서
+"기록 없음"을 행으로 드러냈던 그 정직함과 같은 결입니다.
+
+## 9. 변경 타임라인, 그리고 DuckDB가 낸 내부 오류
+
+두 번째 마트 `mart_config_change`는 최근 90일 변경을 시간순으로 서빙합니다. "언제 무엇이
+어떻게 바뀌었나"의 답입니다.
+
+여기서 예상 못한 벽을 만났습니다. 처음엔 스테이징 뷰에서 `select *`로 전체 컬럼을 가져와
+최신 dt 기준으로 창을 잘랐는데, DuckDB가 `INTERNAL Error: Attempted to access index 8
+within vector of size 8`을 냈습니다. 원인은 파티션 규약이었습니다. 원천 parquet는
+`dt=.../instance_id=.../` 로 나뉘는데, `instance_id`는 파일 안에도 컬럼으로 있고 경로에도
+있습니다. `select *`가 hive 파티션 뷰 위에서 자기 자신을 참조하는 `max(dt)` 서브쿼리와
+겹치자, 바인더가 중복 컬럼을 세다 벡터 범위를 넘었습니다. 컬럼을 명시로 나열하고 창 기준을
+별도 CTE(anchor)로 뽑아 `날짜 - 정수` 산수로 바꾸니 사라졌습니다. 롤링 회귀 마트에서 쓰던
+그 안정적인 패턴 그대로입니다.
+
+## 10. 원인 후보로 겹친다
+
+세 번째 마트가 이 설정 아크의 핵심입니다. `mart_config_impact`는 설정 변경 이벤트와 플랜
+뒤집힘을 시간축으로 겹칩니다. 어떤 파라미터가 바뀐 뒤 N일(기본 7일) 안에, 그 인스턴스에서
+플랜이 뒤집히거나 회귀(REGRESSED)가 관측됐나를 셉니다.
+
+![설정 변경 영향 상관의 개념. 위 레인의 설정 변경(work_mem 4MB→1MB)에서 아래 레인의 플랜 뒤집힘·지연 증가로 이어지는 화살표. 변경 뒤 하루 안에 회귀가 뒤따르면 correlation=followed_by_regression으로 판정한다. 상관이지 인과가 아니라는 것을 판정 박스에 명시했다](/uploads/project/lakehouse/lh18_config_correlation.svg)
+
+이건 **장기 설정 이력과 장기 성능 이력이 같은 창고에 있어야만 가능**한 판정입니다. DBTower의
+7일 창은 설정 변경도 성능 이력도 7일치뿐이라 이 상관을 못 봅니다. 용량 D-day, 플랜 회귀,
+백업 공백에 이은 "창고라야 가능한 판정"이고, 앞의 판정들에 "왜 그렇게 됐나"의 첫
+후보를 붙이는 층입니다.
+
+정직함을 두 군데 박았습니다. 첫째, **상관은 인과가 아닙니다.** "이 설정이 원인"이라고
+단정하지 않고 `followed_by_regression` / `followed_by_plan_flip` / `no_flip_observed`
+라는 관측 사실만 조언 어휘로 싣습니다. 최종 판단은 사람의 몫입니다. 미사용 인덱스 마트에서
+"삭제 지시"가 아니라 "후보"라고만 했던 그 절제와 같습니다. 둘째, **"누가" 바꿨는지는
+못 담습니다.** 파라미터를 누가 바꿨는지는 대상 DB가 주지 않는 정보라 DBTower도 저장하지
+않고, 이 창고도 "언제 무엇이 어떻게" 까지만 압니다.
+
+## 11. 라이브에서 나온 설정 드리프트
+
+dev 창고에서 돌렸더니 원천에 진짜 드리프트가 있었습니다. 인스턴스 2와 4의 `work_mem`이
+4096에서 8192로 올랐다가 다시 4096으로 내려와 있었습니다. 누군가 올렸다가 되돌린 흔적입니다.
+
+![Metabase 설정 드리프트 대시보드 실화면. 왼쪽 위는 변경 타임라인으로 인스턴스 2·4의 work_mem이 4096과 8192 사이를 오간 기록이다. 오른쪽 위는 영향 상관 표다. 아래는 일별 수집·변경 표인데, 인스턴스 2·4는 change_events가 2이고 나머지 다섯은 0이지만 cycles_collected가 모두 23이라 무변경과 미수집이 구분된다](/uploads/project/lakehouse/lh18_config_dashboard.png)
+
+`fct_config_change_daily`가 정확히 의도대로 나왔습니다. 일곱 인스턴스 전부 그날 23사이클
+수집됐고(수집됨의 증거), 그중 2와 4만 변경 이벤트 2건에 파라미터 1종이 바뀌었으며, 나머지
+다섯은 변경 0입니다. "무변경"과 "미수집"이 한 표에서 갈립니다.
+
+상관 마트는 네 변경 이벤트 모두 `no_flip_observed`로 나왔습니다. 창고의 플랜 이력이 아직
+하루뿐이라 겹칠 뒤집힘이 없기 때문입니다. 정직한 결과입니다. 그래서 로직 자체는 CI 픽스처로
+증명했습니다. 설정 변경(1월 1일)과 플랜 뒤집힘(1월 2일)을 일부러 겹쳐 두니
+`followed_by_plan_flip`이 나옵니다. 실데이터에서 이 상관이 켜지는 건 플랜 이력이 쌓인
+뒤이고, 그 조건과 예상 시점은 로드맵의 "시간이 해제하는 체크리스트"에 적어 뒀습니다.
+
+## 12. 남은 것
+
+이걸로 창고의 판정이 다섯이 됐고, 그중 하나는 앞의 판정들에 "왜"의 첫 후보를 붙입니다.
+설정 변경은 지금도 실물로 잡히고, 그 변경이 성능 회귀와 겹쳤는지는 이력이 쌓이며 켜집니다.
+
+발화 경계는 이번에도 지켰습니다. 창고는 판정 컬럼과 타임라인, 상관까지만 계산하고, "이
+설정 바뀐 뒤 회귀가 시작됐다" 같은 급변 알림은 DBTower의 reverse ETL이나 Metabase 구독이
+쏩니다. 두 번째 알림 시스템을 만들지 않습니다.
+
+한 가지 더 정직하게 적자면, 이 상관은 플랜 뒤집힘 하나만 본다는 한계가 있습니다. 볼륨
+증가로 같은 플랜이 느려지는 회귀는 롤링 랭킹 마트의 몫이라 여기서는 안 겹칩니다. 원인의
+축이 여럿이라는 뜻이고, 지금 겹친 건 그중 "설정 변경 → 플랜 변경" 한 갈래입니다. 나머지
+축을 이 상관 층에 어떻게 더할지는 다음 편의 일로 남겨 둡니다.
