@@ -123,7 +123,7 @@ dt           check           status  detail
 보조 테이블이 실패했다고 주 경로의 heartbeat가 굶으면, deadman이 "파이프라인 전체가
 침묵한다"는 오경보를 내기 때문입니다.
 
-![Phase 14 배선 후 DAG 토폴로지 — 주 체인 5태스크에 보조 브랜치(offload_aux→quality_gate_aux)와 heartbeat에 병렬인 writeback이 붙었다](/uploads/project/lakehouse/lh14_dag_topology.svg)
+![Airflow 실화면 — snapshot_offload DAG 그래프에 주 체인(offload→quality_gate→transform→publish→heartbeat)과 분리된 보조 브랜치(offload_aux→quality_gate_aux), heartbeat와 병렬인 writeback이 보인다](/uploads/project/lakehouse/lh14_dag_graph_ui.png)
 
 ## 4. 반대 방향의 일 — 장기 베이스라인 되쓰기
 

@@ -204,7 +204,9 @@ $ docker compose -f docker-compose.standalone.yml config | grep -c 'external: tr
 `external: true`가 0입니다. 위성 전제가 사라졌습니다.
 
 그다음 `--profile demo up`. 7개 컨테이너가 전부 healthy로 떴고, 버킷이 자동 생성됐고,
-샘플 원천에 `database_instance=2`, `query_snapshot=10`이 시드됐습니다. 그리고 **내
+샘플 원천에 `database_instance=2`, `query_snapshot=10`이 시드됐습니다.
+
+![standalone Airflow 첫 화면 — 이미지에 구운 DAG 3개(snapshot_offload·ducklake_maintenance·deadman_watch)가 전부 Paused 상태로, 런 이력 없이 떠 있다. 남이 clone해서 처음 띄운 그 화면이다](/uploads/project/lakehouse/lh11_standalone_airflow.png) 그리고 **내
 DBTower 없이** 파이프라인을 돌렸습니다.
 
 ```
