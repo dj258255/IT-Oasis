@@ -1,7 +1,7 @@
 ---
 title: '사람 손이 붙어 있던 다섯 곳을 끊다: 설정 드리프트·변경 리뷰·인덱스 판정·인시던트 리포트·월간 점검'
 titleEn: 'Cutting the Five Places Human Hands Were Still Stuck: Config Drift, Change Review, Index Verdict, Incident Report, Monthly Check'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 20편. 현업 DBA의 병목이 어디에 남는지를 렌즈로, 사람 손이 선형으로 붙던 다섯 지점을 기능으로 끊었습니다. (1) 설정 드리프트 이력: 파라미터 diff의 공간축("A와 B가 다른가")에 시간축("언제부터 무엇이 바뀌었나")을 붙였습니다. 거울 테이블과 변경 로그로 무변경 주기엔 스냅샷 한 줄만 쌓이게 했고, work_mem 4096→8192 실변경을 감지해 카드를 쐈습니다. 검증 중 MongoDB parameters()가 $clusterTime 같은 응답 gossip 필드를 흘려 매번 오탐이 나던 기존 버그도 잡았습니다. (2) 스키마 변경 리뷰 게이트: 배포 전 DDL을 규칙으로 판정(락 위험·DEFAULT 없는 NOT NULL·DROP·WHERE 없는 대량 변경)하고 실제 행수로 락 위험을 확정한 뒤 AI 1차 소견을 붙여 ADMIN 승인·자동 감사까지. 실행은 하지 않고 gh-ost 경로만 안내합니다. (3) 인덱스 사용 통계 주기 영속: "이 인덱스 지워도 되나"는 재시작 누적 카운터의 순간값으론 못 답합니다. 5기종 스캔 통계를 6시간 주기로 영속하고(Oracle은 미지원 정직), lakehouse가 first-vs-last 델타·리셋 클램프로 분기 창 판정 마트를 짓습니다. (4) 인시던트 리포트: 장애 구간을 주면 시점 비교·설정 변경·플랜 플립·대기·가용성을 한 장으로 재구성하고 AI가 재료 내 사실만으로 요약합니다. (5) 월간 점검 리포트: 헬스·백업·Advisor·용량·낭비·설정 변경을 매월 자동 발행합니다. 다섯 개 전부 읽고 판정·기록까지가 몫이고 대상 DB는 바꾸지 않습니다. 신규 모듈 하나(review)는 이벤트로 alert에 카드를 위임하고, 공개 파사드 둘(score·finops)로 Modulith 경계를 순환 없이 유지했습니다. 테스트 514건, VERIFICATION 110개 절.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 9편. 현업 DBA의 병목이 어디에 남는지를 렌즈로, 사람 손이 선형으로 붙던 다섯 지점을 기능으로 끊었습니다. (1) 설정 드리프트 이력: 파라미터 diff의 공간축("A와 B가 다른가")에 시간축("언제부터 무엇이 바뀌었나")을 붙였습니다. 거울 테이블과 변경 로그로 무변경 주기엔 스냅샷 한 줄만 쌓이게 했고, work_mem 4096→8192 실변경을 감지해 카드를 쐈습니다. 검증 중 MongoDB parameters()가 $clusterTime 같은 응답 gossip 필드를 흘려 매번 오탐이 나던 기존 버그도 잡았습니다. (2) 스키마 변경 리뷰 게이트: 배포 전 DDL을 규칙으로 판정(락 위험·DEFAULT 없는 NOT NULL·DROP·WHERE 없는 대량 변경)하고 실제 행수로 락 위험을 확정한 뒤 AI 1차 소견을 붙여 ADMIN 승인·자동 감사까지. 실행은 하지 않고 gh-ost 경로만 안내합니다. (3) 인덱스 사용 통계 주기 영속: "이 인덱스 지워도 되나"는 재시작 누적 카운터의 순간값으론 못 답합니다. 5기종 스캔 통계를 6시간 주기로 영속하고(Oracle은 미지원 정직), lakehouse가 first-vs-last 델타·리셋 클램프로 분기 창 판정 마트를 짓습니다. (4) 인시던트 리포트: 장애 구간을 주면 시점 비교·설정 변경·플랜 플립·대기·가용성을 한 장으로 재구성하고 AI가 재료 내 사실만으로 요약합니다. (5) 월간 점검 리포트: 헬스·백업·Advisor·용량·낭비·설정 변경을 매월 자동 발행합니다. 다섯 개 전부 읽고 판정·기록까지가 몫이고 대상 DB는 바꾸지 않습니다. 신규 모듈 하나(review)는 이벤트로 alert에 카드를 위임하고, 공개 파사드 둘(score·finops)로 Modulith 경계를 순환 없이 유지했습니다. 테스트 514건, VERIFICATION 110개 절.'
 descriptionEn: 'Part 20 of DBTower. Using where a working DBA''s bottleneck remains as the lens, five places where human effort scaled linearly were cut into features. (1) Config drift history adds a time axis to parameter diff. (2) A schema-change review gate judges DDL by rules, confirms lock risk with real row counts, adds an AI first opinion, and routes to ADMIN approval with automatic audit, without executing. (3) Index usage snapshots persist scan stats across engines so the lakehouse can judge "safe to drop?" over a quarter with first-vs-last deltas. (4) An incident report reconstructs a window''s point comparison, config changes, plan flips, waits, and availability into one page with an AI summary bound to the assembled facts. (5) A monthly check report publishes health, backup, advisor, capacity, waste, and config changes automatically. All five read, judge, and record; none change the target DB. 514 tests, 110 verification sections.'
 date: 2026-08-01
 tags:
@@ -14,7 +14,7 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 20
+seriesOrder: 9
 ---
 
 ## 0. 같은 렌즈로 다섯 곳을 봤다
@@ -65,7 +65,7 @@ DBTower는 원료를 공급합니다. 5기종 인덱스 스캔 통계를 6시간
 
 ![FinOps 미사용 인덱스 신호. 스캔 0회에 크기와 "관측 N일" 라벨, "분기 단위 장기 판정(lakehouse)과 함께 보라"는 권고](/uploads/project/dbtower/index-observation.png)
 
-lakehouse가 그 원료를 받아 판정 마트를 지었습니다. 누적 카운터를 일간 실사용으로 접는 건 2편에서 쿼리 통계에 쓴 first-vs-last 델타와 리셋 클램프를 그대로 재사용합니다. 창은 기본 90일, 판정은 네 갈래입니다. 사용 중이면 사용 중, 유니크나 PK를 뒷받침하면 미사용이라도 제약 유지에 필요하니 제외, 관측 기간이 하한 미만이면 판정 보류, 남는 것만(비유니크·충분 관측·사용 0) 삭제 후보입니다. FK 뒷받침과 레플리카 전용 사용은 이 통계로 알 수 없어, 판정문에 그 한계를 적고 사람이 확인 후 실행하라고 남깁니다. dbt 빌드는 유닛 테스트 세 개(델타, 리셋 클램프, 판정 네 갈래)를 포함해 전부 통과했습니다.
+lakehouse가 그 원료를 받아 판정 마트를 지었습니다. 누적 카운터를 일간 실사용으로 접는 건 1편에서 쿼리 통계에 쓴 first-vs-last 델타와 리셋 클램프를 그대로 재사용합니다. 창은 기본 90일, 판정은 네 갈래입니다. 사용 중이면 사용 중, 유니크나 PK를 뒷받침하면 미사용이라도 제약 유지에 필요하니 제외, 관측 기간이 하한 미만이면 판정 보류, 남는 것만(비유니크·충분 관측·사용 0) 삭제 후보입니다. FK 뒷받침과 레플리카 전용 사용은 이 통계로 알 수 없어, 판정문에 그 한계를 적고 사람이 확인 후 실행하라고 남깁니다. dbt 빌드는 유닛 테스트 세 개(델타, 리셋 클램프, 판정 네 갈래)를 포함해 전부 통과했습니다.
 
 ## 4. 인시던트 리포트: 장애 구간을 신호로 재구성
 

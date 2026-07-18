@@ -87,7 +87,7 @@ DB에 이슈가 나면 개발자는 지표가 흩어진 도구들을 오갑니�
 
 **경계는 SQL 대신 "운영 행위"에 긋습니다.** `DbmsOperator`는 `queryStats()`, `explain()`, `backup()`처럼 운영자가 하는 행위를 선언하고, 기종별 구현체가 각자의 방식으로 채웁니다. 경계를 SQL에 그었다면 SQL이 없는 MongoDB가 들어올 수 없었을 겁니다.
 
-**기술은 적재적소에 쓰고 통일하지 않습니다.** "Operator도 JPA로 통일하면 깔끔하지 않냐"는 질문을 받고 분석해 봤는데([6편](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool)), 결론은 반대였습니다. 대상은 런타임에 등록되는 N개의 동적 데이터소스라 부팅 시점에 고정되는 EntityManager와 안 맞고, 시스템 뷰에는 매핑할 엔티티도 없습니다. 그래서 플랫폼 자기 저장소는 Spring Data JPA, 대상 DB 조회는 JdbcTemplate과 Mongo 드라이버, 스냅샷 대량 쓰기는 JDBC batch입니다. 각 도구를 제일 잘하는 자리에 두는 것, 그게 이 프로젝트가 일관되게 내놓은 답입니다.
+**기술은 적재적소에 쓰고 통일하지 않습니다.** "Operator도 JPA로 통일하면 깔끔하지 않냐"는 질문을 받고 분석해 봤는데([2편](/blog/project/dbtower/dbtower-2-engines-and-diagnosis)), 결론은 반대였습니다. 대상은 런타임에 등록되는 N개의 동적 데이터소스라 부팅 시점에 고정되는 EntityManager와 안 맞고, 시스템 뷰에는 매핑할 엔티티도 없습니다. 그래서 플랫폼 자기 저장소는 Spring Data JPA, 대상 DB 조회는 JdbcTemplate과 Mongo 드라이버, 스냅샷 대량 쓰기는 JDBC batch입니다. 각 도구를 제일 잘하는 자리에 두는 것, 그게 이 프로젝트가 일관되게 내놓은 답입니다.
 
 **경계는 빌드가 지킵니다.** 패키지를 Spring Modulith 모듈로 선언하고 모듈 간 순환 의존을 테스트가 빌드에서 실패시킵니다. 도입 첫 실행에서 순환 2개가 잡혀 의존 역전으로 해소했습니다. 규칙이 작동한다는 증거를 도입 당일에 얻은 셈입니다. 모듈은 이후 확장을 거쳐 현재 15개입니다.
 
@@ -99,13 +99,13 @@ DB에 이슈가 나면 개발자는 지표가 흩어진 도구들을 오갑니�
 
 ## 4. 실증 1: "새 기종 = 구현체 1개"를 검증으로 갚다
 
-설계 문서에 계속 적어온 주장이 있었습니다. "새 기종 추가는 Operator 구현체 1개, 플랫폼 코드 수정 없음." 검증 전까지 주장은 빚이라, 성격이 정반대인 두 기종을 실제로 추가해 갚았습니다([4편](/blog/project/dbtower/dbtower-4-five-engines)). 상용 DB 대표 Oracle과, SQL도 JDBC도 없는 MongoDB입니다.
+설계 문서에 계속 적어온 주장이 있었습니다. "새 기종 추가는 Operator 구현체 1개, 플랫폼 코드 수정 없음." 검증 전까지 주장은 빚이라, 성격이 정반대인 두 기종을 실제로 추가해 갚았습니다([2편](/blog/project/dbtower/dbtower-2-engines-and-diagnosis)). 상용 DB 대표 Oracle과, SQL도 JDBC도 없는 MongoDB입니다.
 
 결과를 정직하게 세면 이렇습니다. 새로 만든 것은 Operator 구현체 2개와 Mongo 클라이언트 캐시, 기존 수정은 enum 값과 팩토리 case 몇 줄. **스냅샷 수집, 시점 비교, 회귀 감지, 웹 콘솔, MCP는 0줄 수정으로 5기종을 처리했습니다.** 이후 추가한 능력들(Wait Event, 파티션 조회, 레이턴시 백분위, 실제 실행 계획)도 전부 "인터페이스 메서드 1개 추가"의 반복이었습니다. 요행으로 한 번 맞은 결과라면 이렇게 반복될 수 없습니다.
 
 ## 5. 실증 2: 심층 진단, "인덱스가 있는데 왜 안 타요?"
 
-실제 진단 흐름 하나를 통째로 보여드리겠습니다([8편](/blog/project/dbtower/dbtower-8-diagnosis) 상세).
+실제 진단 흐름 하나를 통째로 보여드리겠습니다([2편](/blog/project/dbtower/dbtower-2-engines-and-diagnosis) 상세).
 
 `code VARCHAR(20)` 컬럼에 B-Tree 인덱스가 있는 테이블에서, `WHERE code = 12345`(따옴표 없이 숫자)를 던지면 풀스캔이 됩니다. 쿼리만 봐서는 멀쩡해 보여서 현업에서 "인덱스가 있는데 왜 안 타요?"로 접수되는 대표 사례입니다. MySQL 비교 규칙상 문자열과 숫자를 비교하면 문자열 쪽이 숫자로 캐스팅되는데, 인덱스 컬럼에 함수를 씌운 것과 같아 B-Tree 정렬을 못 씁니다. 더 무서운 건 정합성입니다. `'012345'` 같은 다른 문자열까지 같은 숫자로 매칭되니 조회면 오답이고 UPDATE나 DELETE였으면 데이터 사고입니다.
 
@@ -135,7 +135,7 @@ DB에 이슈가 나면 개발자는 지표가 흩어진 도구들을 오갑니�
 
 ## 7. 실증 4: 백업은 복원까지 해봐야 백업이다
 
-백업 축은 "기능이 있다"와 "복구가 된다"의 간극을 메우는 데 공을 들였습니다([15편](/blog/project/dbtower/dbtower-15-backup) 상세).
+백업 축은 "기능이 있다"와 "복구가 된다"의 간극을 메우는 데 공을 들였습니다([6편](/blog/project/dbtower/dbtower-6-backup) 상세).
 
 - 로그 백업을 5기종 전부로 넓혔습니다(binlog, WAL, BACKUP LOG, oplog, 아카이브 로그). "기종이 못 하는 것"과 "하다가 깨진 것"을 UNSUPPORTED와 FAILED로 구분해 기록합니다
 - 시점 복구 안내문을 생성하는 데서 멈추지 않았습니다. SQL Server에서 6행짜리 현재로부터 5행짜리 과거를 STOPAT으로 실제 복원했고, PostgreSQL도 물리 백업 위에 recovery_target_time으로 목표 시점 직전 정지를 서버 로그로 확인했습니다
@@ -145,7 +145,7 @@ DB에 이슈가 나면 개발자는 지표가 흩어진 도구들을 오갑니�
 
 ## 8. 관제탑과 대화하기: 알림에서 진단까지 채팅 안에서
 
-경보는 받는 데서 끝나지 않고 그 자리에서 진단으로 이어집니다([18편](/blog/project/dbtower/dbtower-18-talking-tower) 상세).
+경보는 받는 데서 끝나지 않고 그 자리에서 진단으로 이어집니다([8편](/blog/project/dbtower/dbtower-8-talking-and-lakehouse) 상세).
 
 ```
 회귀/이상 감지 -> Discord 리치 embed 알림 (심각도 색, 담당 팀, AI 1차 분석, 진단 딥링크)
@@ -207,18 +207,19 @@ DBMS 운영의 전통적 직무 축에 이 도구를 대보면, "하는 것"만�
 
 ## 12. 시리즈 지도: 더 깊이 읽기
 
-이 글은 시리즈 20편의 지도이기도 합니다. 일곱 아크로 묶입니다.
+이 글은 시리즈 아홉 편(1~9편)의 지도이기도 합니다.
 
-- **설계와 추상화** ([1](/blog/project/dbtower/dbtower-1-why-and-design), [2](/blog/project/dbtower/dbtower-2-abstraction-and-regression), [3](/blog/project/dbtower/dbtower-3-channels-web-mcp-ai)편): 경계를 운영 행위에 긋고, 코어 하나에 채널만 갈아끼우기
-- **5기종 증명과 진단 심화** ([4](/blog/project/dbtower/dbtower-4-five-engines), [6](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool), [8](/blog/project/dbtower/dbtower-8-diagnosis)편): "새 기종 = 구현체 1개"의 실측부터 추정 대 실제 괴리까지
-- **프로덕션과 셀프호스트** ([5](/blog/project/dbtower/dbtower-5-production-safety), [7](/blog/project/dbtower/dbtower-7-provisioning), [9](/blog/project/dbtower/dbtower-9-guardrails-and-selfhost), [13](/blog/project/dbtower/dbtower-13-productionization), [14](/blog/project/dbtower/dbtower-14-screen-parity)편)
-- **심화와 하드닝** ([10](/blog/project/dbtower/dbtower-10-deepening), [11](/blog/project/dbtower/dbtower-11-deepening-four-arcs), [12](/blog/project/dbtower/dbtower-12-hardening-arc)편): 스스로 감사하고 스스로 고치기
-- **백업과 스케일** ([15](/blog/project/dbtower/dbtower-15-backup), [16](/blog/project/dbtower/dbtower-16-multi), [17](/blog/project/dbtower/dbtower-17-host-dimension)편): 백업 대장정, 멀티유저에서 멀티노드로, 디스크의 미래
-- **채널과 AI 루프** ([18](/blog/project/dbtower/dbtower-18-talking-tower)편): 알림이 카드가 되고 이모지가 진단을 부르기까지
-- **두 저장소의 루프** ([19](/blog/project/dbtower/dbtower-19-lakehouse-loop)편): lakehouse가 계산한 "평소"를 받아 오탐을 줄이고, 세 공급 잡과 자연어 카드 생성까지
-- **운영 병목 다섯 곳** ([20](/blog/project/dbtower/dbtower-20-operational-bottlenecks)편): 설정 드리프트·변경 리뷰 게이트·인덱스 분기 판정·인시던트 리포트·월간 점검, 사람 손이 붙던 자리를 끊기
+- **[1편, 설계와 추상화](/blog/project/dbtower/dbtower-1-design)**: 경계를 운영 행위에 긋고, "30분 백업" 한 줄이 세 갈래로 갈라지는 걸 인터페이스로 받아내고, 회귀 감지를 플랫폼에 맡기기
+- **[2편, 다섯 기종과 심층 진단](/blog/project/dbtower/dbtower-2-engines-and-diagnosis)**: 채널 세 겹(웹·MCP·AI), "새 기종 = 구현체 1개" 실측, 대기 이벤트와 적재적소, 추정 대 실제 괴리까지
+- **[3편, 프로덕션과 셀프호스트](/blog/project/dbtower/dbtower-3-production-safety)**: 준비도 감사와 안전 장치, IaC 프로비저닝, 타임아웃·백오프 가드레일과 원커맨드 셀프호스트
+- **[4편, 심화와 하드닝](/blog/project/dbtower/dbtower-4-deepening)**: 플랜 플립을 다섯 기종으로, p95 정직 등급, 데드락 축, 스케일 제어, 스스로 감사하고 스스로 고치기
+- **[5편, 프로덕션화와 화면 패리티](/blog/project/dbtower/dbtower-5-productionization)**: 남이 쓸 수 있게 만드는 계단, 문의에 스키마 붙이기, 화면을 레퍼런스와 옆에 놓고 대조
+- **[6편, 정석 백업](/blog/project/dbtower/dbtower-6-backup)**: FULL 앵커와 LOG 체인이 독립 주기로 돌고, 복원까지 해봐야 백업
+- **[7편, 멀티테넌시와 호스트 차원](/blog/project/dbtower/dbtower-7-multi-tenancy)**: 멀티유저에서 멀티노드로, 상태는 어느 한 노드에 있으면 안 되고, 디스크의 미래를 속도로 읽기
+- **[8편, 관제탑 대화와 레이크하우스](/blog/project/dbtower/dbtower-8-talking-and-lakehouse)**: 알림이 카드가 되고 이모지가 진단을 부르고, lakehouse가 계산한 "평소"로 오탐을 줄이기
+- **[9편, 운영 병목 다섯 곳](/blog/project/dbtower/dbtower-9-operational-bottlenecks)**: 설정 드리프트·변경 리뷰 게이트·인덱스 분기 판정·인시던트 리포트·월간 점검
 
-바쁘신 분께는 세 편을 권합니다. 설계 결정의 뿌리인 [1편](/blog/project/dbtower/dbtower-1-why-and-design), 진단의 끝까지 간 [8편](/blog/project/dbtower/dbtower-8-diagnosis), 백업이 진짜가 되는 [15편](/blog/project/dbtower/dbtower-15-backup)입니다.
+바쁘신 분께는 세 편을 권합니다. 설계 결정의 뿌리인 [1편](/blog/project/dbtower/dbtower-1-design), 진단의 끝까지 간 [2편](/blog/project/dbtower/dbtower-2-engines-and-diagnosis), 백업이 진짜가 되는 [6편](/blog/project/dbtower/dbtower-6-backup)입니다.
 
 ## 13. 마치며
 
@@ -228,4 +229,4 @@ DBMS 운영의 전통적 직무 축에 이 도구를 대보면, "하는 것"만�
 2. **주장은 실측으로.** 확장성 주장은 기종을 실제로 추가해서, 성능 주장은 전후 측정으로, 능력 표기는 안 되는 것의 명시로 증명했습니다
 3. **관제 도구를 완성하는 건 신뢰입니다.** 마지막에 공들인 기능들이 "내가 부하가 되지 않는 장치"와 "못 하는 것의 정직한 표기"였고, 제품화의 첫 결정이 "비밀은 사용자 인프라를 떠나지 않는다"였습니다
 
-전 과정의 상세는 시리즈 [1편](/blog/project/dbtower/dbtower-1-why-and-design)부터 [20편](/blog/project/dbtower/dbtower-20-operational-bottlenecks)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. GHCR 이미지를 받아 셀프호스트로 직접 띄워보실 수 있습니다.
+전 과정의 상세는 시리즈 [1편](/blog/project/dbtower/dbtower-1-design)부터 [9편](/blog/project/dbtower/dbtower-9-operational-bottlenecks)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower)에 있습니다. GHCR 이미지를 받아 셀프호스트로 직접 띄워보실 수 있습니다.

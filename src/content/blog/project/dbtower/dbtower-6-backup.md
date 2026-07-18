@@ -1,7 +1,7 @@
 ---
 title: '백업이 진짜가 되기까지: 로그 백업 5기종과 시점 복구, 그리고 정석까지의 네 걸음'
 titleEn: 'Until Backups Became Real — Log Backups Across Five Engines, PITR, and Four Steps to Orthodoxy'
-description: '이기종 DBMS 운영 관리 플랫폼 DBTower 15편. 백업 대장정입니다. 전반부는 로그 백업이 MSSQL만 되던 것을 MySQL binlog, PostgreSQL WAL, MongoDB oplog, Oracle 아카이브 로그까지 다섯 기종 전부로 넓히며 "기종이 못 하는 것"과 "하다가 깨진 것"을 구분하는 UNSUPPORTED 상태를 만들고, 최신 파일 하나만 수집하면 체인에 조용한 구멍이 난다는 것을 "마지막 이전 전부" 보충 수집으로 고치고, 생성한 복원 안내문을 실제로 실행해 SQL Server와 PostgreSQL에서 목표 시점의 상태를 정확히 재현한 기록입니다. 후반부는 그걸 현업의 정석 쪽으로 옮겨 가는 네 걸음입니다. Mongo oplog 증분($gte로 일부러 만든 겹침 한 건이 체인 무결의 증거, 산출물 28분의 1), pg_receivewal 스트리밍(복제 슬롯 덕에 수신자를 죽여도 재시작 사이 유실 0, 그리고 죽은 프로세스를 산 것처럼 보이게 하던 docker exec -i 함정), MySQL 물리 백업 XtraBackup(MYSQL_PWD를 안 읽고 /dev/stdin defaults를 조용히 무시하는 함정 두 겹, 검증은 파일 존재가 아니라 실제 prepare 실행), 그리고 AES-256-GCM 산출물 암호화(변조된 백업은 조용히 오염되는 대신 명확히 실패한다)까지입니다.'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower 6편. 백업 대장정입니다. 전반부는 로그 백업이 MSSQL만 되던 것을 MySQL binlog, PostgreSQL WAL, MongoDB oplog, Oracle 아카이브 로그까지 다섯 기종 전부로 넓히며 "기종이 못 하는 것"과 "하다가 깨진 것"을 구분하는 UNSUPPORTED 상태를 만들고, 최신 파일 하나만 수집하면 체인에 조용한 구멍이 난다는 것을 "마지막 이전 전부" 보충 수집으로 고치고, 생성한 복원 안내문을 실제로 실행해 SQL Server와 PostgreSQL에서 목표 시점의 상태를 정확히 재현한 기록입니다. 후반부는 그걸 현업의 정석 쪽으로 옮겨 가는 네 걸음입니다. Mongo oplog 증분($gte로 일부러 만든 겹침 한 건이 체인 무결의 증거, 산출물 28분의 1), pg_receivewal 스트리밍(복제 슬롯 덕에 수신자를 죽여도 재시작 사이 유실 0, 그리고 죽은 프로세스를 산 것처럼 보이게 하던 docker exec -i 함정), MySQL 물리 백업 XtraBackup(MYSQL_PWD를 안 읽고 /dev/stdin defaults를 조용히 무시하는 함정 두 겹, 검증은 파일 존재가 아니라 실제 prepare 실행), 그리고 AES-256-GCM 산출물 암호화(변조된 백업은 조용히 오염되는 대신 명확히 실패한다)까지입니다.'
 descriptionEn: 'Part 15 of DBTower — the backup saga. First half: log backup goes from MSSQL-only to all five engines with an UNSUPPORTED status separating "the engine cannot" from "it broke", catch-up collection fixing the silent chain gap of collecting only the newest file, and generated restore guides actually executed — SQL Server and PostgreSQL both reproduced exact point-in-time states. Second half pushes toward production orthodoxy in four steps: Mongo oplog incrementals where a deliberately overlapped entry ($gte) proves chain continuity while shrinking backups 28x, pg_receivewal streaming with replication slots (killing the receiver loses nothing — plus the docker exec -i trap that made dead processes look alive), MySQL physical backups via XtraBackup past two password traps and verified by actually running prepare, and AES-256-GCM artifact encryption where tampering fails loudly instead of corrupting quietly.'
 date: 2026-07-15
 tags:
@@ -15,12 +15,12 @@ category: personal/DBTower
 coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 series: "DBTower"
-seriesOrder: 15
+seriesOrder: 6
 ---
 
 ## 0. 들어가며, Phase 2의 남은 절반
 
-[14편](/blog/project/dbtower/dbtower-14-screen-parity)에서 화면을 맞췄으니 이번엔 기능의 깊이입니다. Phase 2에 남은 건 데이터 마스킹, 로그 백업과 시점 복구(PITR). 앞의 둘은 짧게, 백업은 길게 씁니다. 배운 게 훨씬 많았거든요.
+[5편](/blog/project/dbtower/dbtower-5-productionization)에서 화면을 맞췄으니 이번엔 기능의 깊이입니다. Phase 2에 남은 건 데이터 마스킹, 로그 백업과 시점 복구(PITR). 앞의 둘은 짧게, 백업은 길게 씁니다. 배운 게 훨씬 많았거든요.
 
 **마스킹**은 설계대로 붙였습니다. 외부(웹훅·MCP 응답)로 나가는 SQL에서 리터럴만 `?`로 가리는 문자 스캐너로, `WHERE email = 'hong@x.com'`의 이메일은 가리고 컬럼·인덱스는 남깁니다. 진단력은 구조에, 민감정보는 값에 있으니까요. 정규식이 아니라 스캐너인 건 문자열 `'...'`(가림)과 따옴표 식별자 `"..."`(보존) 구분, `''` 이스케이프, `$1` 보존 같은 경계를 정규식이 못 잡아서입니다. 단위 테스트가 함정도 잡았습니다. 달러 인용 `$tag$...$tag$`의 태그에 `$`를 넣으면 닫는 `$`까지 소비해 종료를 못 만납니다.
 

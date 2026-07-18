@@ -1,0 +1,133 @@
+---
+title: '여럿이 쓰는 관제탑: 팀 경계와 멀티노드부터, 디스크 예측과 호스트 차원까지'
+titleEn: 'The Tower Many Teams Share — From Team Boundaries and Multi-Node to Disk Forecasting and the Host Dimension'
+description: '이기종 DBMS 운영 관리 플랫폼 DBTower의 멀티테넌시와 호스트 차원 기록입니다. 앞부분은 여러 팀이 한 콘솔을 쓰기 시작할 때의 이야기입니다. 팀 사용자는 자기 팀 인스턴스와 전역만 보고, 남의 팀 인스턴스는 id로 직접 찔러도 403이 아니라 404를 받습니다(존재 자체를 숨김). 강제 지점은 단 한 곳(RegistryService)이고, 세션을 메타 DB로 옮겨 재시작에도 로그인이 살아남는데 그 과정에서 Boot 자동구성이 인메모리로 조용히 폴백하는 함정을 밟았습니다. 이어서 그렇게 준비한 노드를 실제로 늘렸더니 분산 락 하나 때문에 두 번째 노드가 놀고 있던 이야기입니다. 샤드별 락으로 바꾸니 두 노드가 수집을 나눠 들고, 한 노드를 죽이면 남은 노드가 설정 변경 없이 전 샤드를 인수하며, 같은 쿠키로 로그인도 살아남습니다. 로그인 잠금 카운터도 메타 DB로 옮겨, 노드 A에서 두 번, B에서 한 번 틀리자 네 번째가 잠기는 것을 실측했습니다. 최대 볼륨 테이블의 월별 파티셔닝(보존 정리 DELETE 1.9초에서 DROP 12.8ms로, 블로트는 존재 자체가 소멸)과 커넥션 온디맨드(격리 대상 유휴 커넥션 1개 영구에서 0으로)도 함께 넣었습니다. 뒷부분은 호스트 차원입니다. 디스크 포화 예측은 잔량이 아니라 속도를 봅니다. 여유가 76.8%나 남았는데 치명 경보가 뜨는 화면을 실쓰기 부하로 직접 만들었는데, 초당 17MB씩 줄고 있으면 20시간 뒤 장애라서 이 경보가 맞습니다. 그 과정에서 node-exporter가 rootfs 마운트 없이 컨테이너 자기 자신만 보고 있던 함정과, mountpoint="/" 고정이 실무(데이터 전용 마운트)와 어긋나는 설계 함정을 밟았습니다. 마지막은 서버 공유 인지입니다. 등록 단위는 DB인데 물리 단위는 서버라, 같은 서버에 DB 두 개를 등록하면 세션·복제·데드락 경보가 두 번 울립니다. 그룹당 1회로 줄이되 "누구에게 해당하는지"를 명시하고, 헬스 스코어(위험 귀속)는 일부러 dedup하지 않은 선 긋기를 기록했습니다.'
+descriptionEn: 'Multi-tenancy and the host dimension of DBTower, a heterogeneous DBMS operations platform. First, when teams share one console: team users see only their instances plus global ones, and probing another team''s instance returns 404, not 403 — enforcement in exactly one place (RegistryService), with sessions moved to the meta DB so logins survive restarts (past Boot''s silent in-memory fallback trap). Then, adding a node changed nothing, because one distributed lock meant one collector. Per-shard locks let two nodes split the work, killing one makes the survivor take over every shard with zero configuration, and the login lockout counter moved to the meta DB — two failures on node A plus one on B locking the fourth attempt, measured. Monthly partitioning turned retention from a 1.9-second 2M-row DELETE into a 12.8ms partition DROP with zero bloat, and connections-on-demand brought an isolated target''s idle connections from one-forever to zero. Second, the host dimension: disk saturation forecasting that watches the rate, not the remainder. A CRITICAL fires at 76.8% free by writing real load — at 17MB/s of shrinkage that disk dies in 20 hours, so the alert is right. Along the way: node-exporter silently watching only its own container without a rootfs mount, and the design trap of pinning mountpoint="/" when real DB data lives on dedicated mounts. Finally, server-sharing awareness — registration units are databases but physical units are servers, so two DBs on one server meant every session/replication/deadlock alert fired twice. Deduped to once per group with an explicit "applies to all of..." note, while deliberately NOT deduping health scores: both databases really are at risk.'
+date: 2026-07-16
+tags:
+  - Java
+  - Spring Boot
+  - Security
+  - PostgreSQL
+  - HA
+  - DBRE
+  - Prometheus
+  - Monitoring
+category: personal/DBTower
+coverImage: /uploads/project/dbtower/cover.svg
+draft: false
+series: "DBTower"
+seriesOrder: 7
+---
+
+## 0. 들어가며, 혼자 쓰는 도구에서 팀들이 쓰는 플랫폼으로
+
+지금까지 DBTower는 사실상 "관리자 한 명"의 도구였습니다. ADMIN과 VIEWER 역할 구분은 있었지만, 로그인만 하면 등록된 인스턴스 전부가 보였습니다. 회사라면 다릅니다. 주문 팀 개발자가 정산 팀 DB의 슬로우 쿼리를 들여다볼 이유도 권한도 없습니다. 이 글의 앞부분은 그 경계를 긋는 일이고, 뒷부분은 사용자가 늘면 결국 도달하는 다음 질문, 관제탑 자체를 여러 대로 늘리는 일입니다.
+
+## 1. 강제 지점은 한 곳이어야 한다
+
+접근 제어에서 제일 무서운 건 "깜빡한 컨트롤러"입니다. 인스턴스를 다루는 API가 수십 개인데 컨트롤러마다 권한 검사를 뿌리면 언젠가 하나는 빠집니다. 그래서 구조부터 정했습니다. DBTower의 모든 모듈(insight, alert, backup, advisor, mcp...)은 인스턴스를 `RegistryService.findById/findAll` 두 메서드로만 얻습니다. 이 두 메서드가 곧 **단일 경계**입니다. 여기 한 곳에 스코프 필터를 넣으면 시점 비교든 백업이든 MCP든 전부 걸러집니다.
+
+규칙은 네 줄입니다. 인증이 없는 호출(백그라운드 폴러)은 전역입니다. 수집과 경보는 팀과 무관하게 전체를 지켜야 하니까요. ADMIN도 전역입니다. 관리자가 자기 눈을 가리면 관리가 안 됩니다. 팀 라벨이 있는 사용자는 자기 팀 인스턴스와 라벨 없는(전역) 인스턴스만. 라벨 없는 사용자는 기존처럼 전역(하위 호환).
+
+재미있는 설계 문제는 "registry가 사용자의 팀을 어떻게 아느냐"였습니다. 사용자 정보는 security 모듈 소관이라 registry가 조회하면 모듈 의존이 생깁니다. 답은 스코프를 **로그인 시점에 authority로 실어 보내는 것**입니다. 인증이 성공하면 `ROLE_VIEWER`와 함께 `TEAM_주문팀` 같은 권한이 붙고, registry는 SecurityContext만 읽으면 됩니다. Spring Security 코어 외엔 아무것도 참조하지 않습니다. 부수 효과로 팀 변경은 다음 로그인부터 적용되는데, 감수할 만한 명확성입니다.
+
+## 2. 403이 아니라 404, 존재를 숨긴다
+
+스코프 밖 인스턴스를 id로 직접 찌르면 어떻게 될까요. 403 Forbidden을 주면 "당신은 못 보지만, **그 id의 인스턴스는 존재한다**"는 사실이 샙니다. 공격자는 id를 순회하며 인프라 지도를 그릴 수 있죠. 그래서 스코프 밖은 미등록과 **완전히 같은 404, 완전히 같은 메시지**를 받습니다. "등록되지 않은 인스턴스: 7". 이 응답만으로는 7번이 없는 건지 남의 팀 것인지 구분할 수 없습니다. 단위 테스트가 이 메시지 동일성을 직접 단언합니다.
+
+라이브로 확인했습니다. local-mysql에 team-a, local-postgres에 team-b를 달고 viewer 계정을 team-a로 지정한 뒤 로그인하니, 목록엔 5개(team-a 뱃지가 붙은 mysql + 라벨 없는 전역 4개)만 남고 postgres는 사라졌습니다. admin 화면엔 7개 전부 보이고요. postgres id를 직접 호출하면 404, 자기 팀 mysql은 200.
+
+![VIEWER(team-a)의 인스턴스 목록, team-a 뱃지 + 전역만 보이고 team-b는 존재하지 않는 것처럼](/uploads/project/dbtower/lbac-viewer-scope.png)
+
+## 3. 재시작을 견디는 로그인, 그리고 조용한 폴백 두 번
+
+여러 팀이 쓰는 플랫폼에서 배포 한 번에 전원이 로그아웃되는 건 곤란합니다. 세션을 서버 메모리가 아니라 메타 DB에 저장하면(spring-session-jdbc) 재시작에도, 나중에 노드를 늘려도 로그인이 살아남습니다. ShedLock 때와 같은 판단입니다. 이미 있는 메타 DB를 재사용하고, Redis는 규모가 커지면 승급하면 됩니다.
+
+구현 자체는 의존성 하나와 마이그레이션 하나(표준 DDL)인데, 함정을 연달아 두 번 밟았습니다. 첫 번째: 의존성과 `store-type: jdbc` 설정만으로 됐겠지 하고 재시작 생존을 실측하니 **401**. DB의 세션 테이블도 비어 있었습니다. Boot 자동구성이 어떤 이유로든 조건이 어긋나면 **인메모리로 조용히 폴백**합니다. 로그에 경고 한 줄 없이요. 명시적으로 `@EnableJdbcHttpSession`을 붙이니 그제야 세션이 DB에 쌓이고 재시작 후에도 같은 쿠키로 200이 나왔습니다.
+
+두 번째 함정은 그 명시 어노테이션의 대가였습니다. 이 어노테이션은 Boot의 `initialize-schema` 속성을 **우회**합니다. 운영은 Flyway가 테이블을 만들어주니 문제없지만, 테스트는 H2 인메모리에 Flyway를 끄고 도는 구조라 SPRING_SESSION 테이블이 없어 통합 테스트가 우수수 떨어졌습니다. 해법은 책임을 명확히 가르는 것. 운영 스키마는 Flyway가, 테스트 스키마는 spring-session이 제공하는 H2용 스크립트를 `sql.init`으로 직접 주입해 만듭니다.
+
+교훈은 하나입니다. **"조용한 폴백"은 계약을 소리 없이 깹니다.** 재시작 생존은 계약이고, 계약은 켜졌다고 믿는 게 아니라 죽였다 살려서 확인하는 겁니다. 실제로 앱을 kill하고 다시 띄운 뒤 같은 쿠키로 `/api/me`가 200을 돌려주는 것까지가 검증이었습니다.
+
+## 4. 덤, 백업에 화면을, 스크립트에 방어를
+
+이번 아크에 작은 조각 둘이 함께 들어갔습니다. 하나는 백업/PITR 카드입니다. 백업 기능들이 API로만 있었는데, 복원 가능 창과 복원 문안, 이력(SUCCESS 초록 / FAILED 빨강 / UNSUPPORTED 회색, "못 하는 것"을 실패로 위장하지 않는 색 구분)을 콘솔에서 보게 됐습니다. 다른 하나는 커밋 보안 리뷰가 잡아준 진짜 취약점입니다. RMAN 스크립트는 `CONNECT user/pass@...` **다음 줄부터가 곧 실행 명령**이라, 비밀번호에 개행 하나만 섞이면 `SHUTDOWN IMMEDIATE;`가 실행될 수 있었습니다. 자격증명에 개행·따옴표가 있으면 조용히 지우는 대신 명확히 거부하게 고쳤습니다. 조용한 변조는 인증 실패의 원인만 흐립니다.
+
+## 5. 노드를 늘렸는데 아무것도 안 늘었다
+
+세션을 메타 DB로 옮기며 "노드를 늘릴 준비"를 했다고 썼는데, 정작 노드를 늘려보면 민망한 일이 벌어집니다. 수집도 경보도 스윕도 전부 분산 락(ShedLock)으로 "한 시점에 한 노드만"을 보장해둔 탓에, 두 번째 노드는 락 획득에 실패하고 놀기만 합니다. 고가용성이지 수평 확장이 아니었던 거죠. 여기서부터는 그 간극을 메운 스케일 3부작입니다.
+
+## 6. 락 하나를 락 N개로, 나눠 들기와 페일오버를 한 번에
+
+수집 샤딩의 설계는 락을 쪼개는 것뿐입니다. `shards=4`면 틱마다 샤드 0~3의 락(`snapshot-collect-0`...`-3`)을 각각 시도하고, 획득한 샤드의 인스턴스(`instanceId % 4`)만 수집합니다. 이 단순한 구조가 좋은 건 **분산과 페일오버가 같은 메커니즘**이라는 점입니다. 노드가 둘이면 락 경쟁으로 일이 자연히 갈라지고(실측: A가 샤드 1·2·3, B가 샤드 0), 한 노드를 죽이면 다음 틱에 남은 노드가 락 네 개를 다 잡습니다. 설정 변경도 리밸런싱 프로토콜도 없이요. consistent hashing 같은 것도 필요 없습니다. 스냅샷은 누적 카운터의 차분이라 담당이 바뀌어도 데이터가 깨지지 않거든요.
+
+실제로 A를 kill하고 지켜봤습니다. 다음 틱에 B의 로그에 `shard=0/4, 1/4, 2/4, 3/4`가 나란히 찍히고, A에서 로그인했던 쿠키는 B에서 그대로 200을 받습니다. 앞 절의 공유 세션이 여기서 제 몫을 합니다. 수집 공백도 재로그인도 없는 진짜 무중단입니다.
+
+![페일오버 후 node B가 같은 세션으로 콘솔을 서빙한다](/uploads/project/dbtower/node-b-survivor.png)
+
+디테일이 하나 있습니다. shards=1(기본)이면 락 이름을 기존 것 그대로 씁니다. 롤링 배포 중에 구버전 노드와도 같은 락을 다퉈야 하니까요. 반대로 샤드 수를 바꿀 땐 전 노드 동시 적용이 전제입니다. 노드마다 N이 다르면 `id % N` 계산이 어긋나 같은 인스턴스를 두 노드가 수집합니다.
+
+## 7. 노드를 오가며 틀려도 잠긴다
+
+두 번째는 부끄러운 종류의 구멍입니다. 로그인 브루트포스 방어(연속 실패 10회 잠금)를 예전에 만들면서 "인메모리라 노드마다 독립 — Phase 3에서 재검토"라고 정직하게 적어뒀는데, 노드가 진짜 둘이 되니 그 문장의 의미가 명확해졌습니다. **LB 뒤에서는 실패 허용치가 노드 수배가 됩니다.** 공격자가 요청을 분산시키면 노드마다 따로 세니까요. 재시작하면 잠금이 풀리는 것도 덤이었고요.
+
+해법은 세션 때와 같은 논리입니다. 이미 있는 메타 DB를 공유 스토어로 씁니다. 계정별 실패 수와 잠금 해제 시각을 테이블 한 장에 두면 어느 노드로 오든 카운터는 하나입니다. 실측은 임계를 3으로 낮춰서: 노드 A에서 한 번, B에서 한 번, 다시 A에서 한 번 틀리자 네 번째 시도가 B에서 `error=locked`를 받았습니다.
+
+![노드를 오간 실패 3회 뒤 잠금, 카운터가 메타 DB라 분산 우회가 안 된다](/uploads/project/dbtower/cross-node-lock.png)
+
+동시성은 정직하게 타협했습니다. 두 노드가 같은 계정의 실패를 동시에 쓰면 카운트 하나가 유실될 수 있는데, 임계 10회 스케일에서 한두 회 유실은 잠금 시점을 미세하게 늦출 뿐입니다. 그 오차를 없애자고 비관 락을 거는 건 배보다 배꼽이라, 감수한다고 주석에 적어뒀습니다.
+
+## 8. 지우지 말고 떨어뜨려라
+
+세 번째는 메타 DB 자신의 노화 문제입니다. 쿼리 통계 테이블은 인스턴스 5대 기준 하루 72만 행이 쌓이고, 보존 정리(7일)는 매시간 벌크 DELETE였습니다. 측정해보니 문제가 둘. 합성 200만 행을 지우는 데 **1.9초**가 걸렸습니다. 더 나쁜 건 지운 뒤에도 공간이 안 돌아온다는 겁니다. VACUUM까지 돌렸는데 생존 17만 행짜리 테이블이 **404MB**를 붙잡고 있었습니다. PostgreSQL의 DELETE는 dead tuple을 남기고, 일반 VACUUM은 파일을 줄여주지 않으니까요.
+
+월별 RANGE 파티션으로 바꾸면 달라집니다. 지난달 전체를 지우는 건 DELETE가 아니라 `DROP TABLE`입니다. 실측 **12.8ms**, 147배 빠르고 블로트가 아예 생기지 않습니다(파일 삭제니까). 기한이 걸쳐 있는 파티션 내부는 여전히 DELETE가 맡지만, 파티션 프루닝 덕에 그 파티션만 스캔하고, 남는 블로트도 그 파티션이 다음 달 떨어질 때 함께 사라집니다. 블로트의 수명이 유한해지는 거죠.
+
+전환에서 함정 둘. 기존 테이블은 ALTER로 파티션 테이블이 될 수 없어 신 테이블 생성 → 복사 → 스왑을 한 트랜잭션으로 묶었고(17만 행 기준 1.6초. 스왑이 곧 재작성이라 부산물로 404MB가 55MB로 줄었습니다), PostgreSQL 16은 **파티션 테이블에 identity 컬럼을 지원하지 않습니다**(17부터). 시퀀스 DEFAULT로 바꾸고 PK에 파티션 키를 포함시켰습니다. 파티션 선생성(이번 달·다음 달)과 만료 DROP은 기존 보존 잡이 맡습니다. 이름 규약(`query_snapshot_y2026m07`)을 파싱해 "그 달 전체가 기한을 지난" 파티션만 보수적으로 떨어뜨리고, 규약 밖 자식은 건드리지 않습니다.
+
+## 9. 덤, 안 쓰는 대상에 커넥션을 꽂아두지 않기
+
+마지막 조각은 커넥션입니다. 인스턴스별 풀의 minimumIdle이 1이라, 격리(수집 제외)한 대상에도 유휴 커넥션 1개가 영구히 꽂혀 있었습니다. 관제 대상이 수백 대면 그만큼의 커넥션 슬롯을 관제 도구가 상시 점유하는 셈이죠. 조사하다 더 재미있는 걸 발견했습니다. 격리했는데도 processlist의 Sleep 시간이 계속 리셋되는 겁니다. 범인은 SLO 헬스 폴러. 격리 플래그를 안 보고 60초마다 핑을 날리고 있었어요. 격리의 목적이 "문제 대상을 두드리지 않기"인데 핑이 그걸 뚫고 있었던 거죠.
+
+minimumIdle을 0으로, 유휴 종료와 최대 수명을 명시하고, 오래 안 쓰인 풀은 통째로 닫게 했습니다(다음 사용 시 재생성). 여기에도 하한 가드가 하나 필요했습니다. idleTimeout이 수집 주기보다 짧으면 활발한 대상조차 틱마다 물리 재연결을 하게 돼 풀의 존재 이유가 사라지니, 주기+30초를 하한으로 강제합니다. 실측: 격리 후 커넥션 0 수렴, 해제하면 다음 틱에 풀이 되살아나 수집 재개. 활발한 대상은 아무 변화 없음(커넥션이 계속 따뜻하니까).
+
+## 10. 여기까지, 여럿이 쓰는 시스템의 상태는 어디에 있어야 하나
+
+멀티유저의 경계(한 곳에서 강제하는 스코프, 존재를 숨기는 404)와 멀티노드의 공유 상태(세션·잠금 카운터·수집 담당을 전부 메타 DB로). 여기까지의 조각들은 한 문장으로 모입니다. **여럿이 쓰는 시스템의 상태는 어느 한 노드의 메모리에 있으면 안 된다.** 이제 관제탑이 "지금"만이 아니라 "며칠 뒤"를 말할 차례입니다.
+
+## 11. 들어가며, DB만 보던 관제탑
+
+지금까지 DBTower의 신호는 전부 "DB의 신호"였습니다. 쿼리가 느려졌다, 복제가 밀린다, 백업이 오래됐다. 그런데 DB 운영에서 예고가 가장 길고, 그런데도 가장 자주 터지는 장애가 있습니다. 디스크가 차는 것입니다. WAL이, binlog가, 데이터 파일이 차오르는 속도는 며칠 전부터 보이는데, 그 예고를 읽는 쪽이 없었습니다. 디스크는 DB가 아니라 호스트의 자원이라서요. 여기서부터는 그 "호스트라는 차원"을 플랫폼에 넣은 기록입니다.
+
+## 12. 잔량이 아니라 속도
+
+디스크 경보의 흔한 형태는 "여유 10% 미만"입니다. 이게 놓치는 케이스가 있습니다. 여유가 77%인데 초당 17MB씩 줄고 있으면, 그 디스크는 20시간 뒤에 죽습니다. 잔량 경보는 마지막 순간까지 침묵하다가 손쓸 시간이 없을 때 웁니다.
+
+그래서 계산을 바꿨습니다. 선형 추세 ETA. 여유 바이트를 최근 6시간의 감소 속도로 나누면 "이 속도면 며칠 뒤 0이 되는가"가 나옵니다(PromQL로는 `avail / -deriv(avail[6h])`). 3일 안이면 치명, 14일 안이면 경고, 추세가 없어도 여유가 10% 미만이면 경고. 그리고 문안에 한 줄을 반드시 넣었습니다. "선형 추세 가정, 예측이지 사실이 아님". 예측을 사실처럼 말하는 순간 이 플랫폼의 정직이 무너지니까요.
+
+실제로 확인하고 싶어 부하를 진짜로 만들었습니다. MySQL 볼륨에 15초마다 256MB씩 쓰는 루프를 돌리고 어드바이저를 호출하니 이런 화면이 나왔습니다.
+
+![Advisors 카드, 여유 76.8%인데 치명: 약 0.7일 내 포화](/uploads/project/dbtower/disk-forecast-critical.png)
+
+여유 76.8%, 치명. 잔량만 보는 경보 체계라면 이 화면에서 아무 일도 일어나지 않았을 겁니다.
+
+## 13. 함정 두 개, 자기 자신만 보던 exporter와 "/"라는 고정관념
+
+구현보다 배선에서 두 번 넘어졌습니다. 첫 번째: 데모 스택의 node-exporter가 **컨테이너 자기 자신만 보고 있었습니다**. 쿼리를 날려보니 `mountpoint="/"` 시계열 자체가 없었어요. node-exporter를 컨테이너로 띄울 땐 호스트 루트를 읽기 전용으로 마운트하고(`/:/host:ro`) `--path.rootfs=/host`를 줘야 호스트 디스크가 보입니다. 공식 가이드의 첫 줄인데, 마운트 없이도 프로세스는 멀쩡히 뜨고 메트릭도 나오니 조용히 틀린 값을 보게 됩니다. 앞서 세션에서 겪은 교훈 그대로. 조용한 폴백이 제일 무섭습니다.
+
+두 번째는 설계 함정이었습니다. 처음엔 볼 파일시스템을 `mountpoint="/"`로 고정했는데, 실무와 어긋납니다. DBA는 데이터를 전용 마운트(/data, /var/lib/mysql)에 두는 게 정석이라, 루트만 보면 정작 데이터 디스크를 놓칩니다. 그래서 인스턴스에 노드 매핑 필드(nodeFilter, Prometheus 라벨 셀렉터)를 달면서 규칙을 하나 넣었습니다. **nodeFilter가 mountpoint를 직접 지정하면 기본 "/"를 양보한다.** PromQL은 같은 라벨의 매처 두 개를 AND로 겹치기 때문에 기본값 위에 덮어쓸 방법이 없거든요. 겹치는 순간 빈 결과가 됩니다. 참고로 이 필드는 쿼리에 그대로 삽입되므로 `label="value"` 나열 형식만 통과시킵니다. 셀렉터 주입으로 임의 PromQL이 실행되면 안 되니까요.
+
+## 14. 같은 서버라서 두 번 울리던 경보
+
+이번엔 반대 방향의 어긋남입니다. DBTower의 등록 단위는 DB(host·port·dbName)인데, 물리 단위는 서버입니다. 데모 스택에도 이미 있었습니다. 한 PostgreSQL 서버에 local-postgres와 dbtower-self, 한 SQL Server에 local-mssql과 mssql-pitr. 그런데 세션, 복제 상태, 데드락은 전부 **서버 단위 관측**입니다. 같은 유휴 트랜잭션 하나가 두 인스턴스의 폴링에 각각 걸려 같은 사고 알림이 두 배로 갑니다. 탐침도 두 배고요.
+
+해법은 계산 키 하나였습니다. `host:port`로 서버 그룹을 파생하고(엔티티 추가도 DNS 해석도 없이), 서버 전역 신호는 그룹 대표 한 곳에서만 탐침합니다. 실제로 공유 서버에 트랜잭션을 열어둔 채 방치하니 경보가 정확히 한 건, 이렇게 왔습니다. "장기 유휴 트랜잭션 pid=45664 ... **(서버 127.0.0.1:15432 공유 — local-postgres, dbtower-self 전체에 해당)**". 마지막 줄이 중요합니다. dedup으로 경보가 대표 이름으로만 오면, 받은 팀이 "우리 DB 아니네" 하고 넘길 수 있으니까요. 줄이되, 누구에게 해당하는지는 명시합니다.
+
+![인스턴스 카드, 같은 host:port 페어에만 "서버 공유 ×2" 배지](/uploads/project/dbtower/server-shared-badge.png)
+
+선을 하나 그었습니다. **dedup은 탐침과 경보에만 하고, 위험 귀속에는 하지 않습니다.** 같은 서버의 두 DB는 둘 다 실제로 위험합니다. 헬스 스코어까지 반으로 줄이면 그게 오히려 왜곡이죠. 디스크 예측 어드바이저도 같은 원리로, 일일 스윕에서는 호스트당 1회만 돌고 나머지 인스턴스에는 "서버 공유 — 누가 대신 점검했나"를 남깁니다(생략을 숨기지 않고요). 스윕 로그로는 인스턴스 7개에 호스트 점검 2회, 5회가 줄었습니다.
+
+## 15. 덤, 테스트가 지키고 있던 암묵의 계약
+
+dedup을 넣다가 기존 테스트 세 개가 깨졌는데, 원인이 교훈이었습니다. 원래 코드는 감지 결과를 findings 리스트에 **하나씩 누적**했습니다. 중간 감지 하나가 예외로 죽어도 그 전까지의 신호는 알림으로 나가는 구조죠. 저는 서버 스코프 신호를 중간 리스트에 모았다 한 번에 합치도록 바꿨고, 그 순간 "부분 실패에도 부분 결과는 살아남는다"는 계약이 깨졌습니다. 아무 문서에도 없던 계약인데 테스트가 지키고 있었습니다. 동작을 검증하는 테스트는 이럴 때 값을 합니다.
