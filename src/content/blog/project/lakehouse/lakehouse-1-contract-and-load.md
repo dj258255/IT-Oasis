@@ -65,7 +65,7 @@ captured_at              | calls | total_time_ms
 
 61 → 204 → 348 → … 단조 증가하다가 실행이 없는 구간엔 값이 그대로 유지됩니다. 감소가 없습니다. **누적이 확실합니다.**
 
-중요한 건, **1단계(EL)는 이 판단이 없어도 정확하다**는 점입니다. 원본을 그대로 parquet로 내리기 때문입니다. 누적→일간 델타 변환은 2단계(dbt)의 몫입니다. 그래서 여기선 "누적이다"라는 **사실만** 계약서(`docs/CONTRACT.md`)에 적어 두고 변환은 뒤로 미룹니다. 확인 안 된 걸 단정하지 않는 게 계약의 핵심입니다.
+다만 **1단계(EL)는 이 판단이 없어도 정확합니다**. 원본을 그대로 parquet로 내리기 때문입니다. 누적→일간 델타 변환은 2단계(dbt)의 몫입니다. 그래서 여기선 "누적이다"라는 **사실만** 계약서(`docs/CONTRACT.md`)에 적어 두고 변환은 뒤로 미룹니다. 확인 안 된 걸 단정하지 않는 게 계약의 핵심입니다.
 
 계약서에 굳힌 규칙은 이렇습니다.
 
@@ -78,7 +78,7 @@ captured_at              | calls | total_time_ms
 
 Airflow 공식 docker-compose의 기본은 **CeleryExecutor**입니다. Redis 브로커 + 별도 워커 컨테이너가 붙습니다. 일 수만 행짜리 단일 노드 배치에는 과합니다.
 
-그래서 **LocalExecutor**로 갔습니다. 스케줄러 프로세스 안에서 태스크를 병렬 실행하니 Redis도, 워커도 필요 없습니다. 대신 메타DB는 SQLite로는 병렬이 안 되므로 PostgreSQL이 필요합니다. 그래서 Airflow 전용 PG 하나를 **격리**해서 띄웠습니다. DBTower 메타 PG(원천)와 물리적으로 분리해 관제 DB를 오염시키지 않게 했습니다.
+그래서 **LocalExecutor**로 갔습니다. 스케줄러 프로세스 안에서 태스크를 병렬 실행하니 Redis도, 워커도 필요 없습니다. 대신 메타DB는 SQLite로는 병렬이 안 되므로 PostgreSQL이 필요합니다. Airflow 전용 PG 하나를 **격리**해서 띄웠습니다. DBTower 메타 PG(원천)와 물리적으로 분리해 관제 DB를 오염시키지 않게 했습니다.
 
 원천 PG와 MinIO는 이미 DBTower 데모 스택에 떠 있습니다. 중복 스택을 만들지 않고 **기존 네트워크를 재사용**했습니다.
 
@@ -93,7 +93,7 @@ networks:
 
 #### start_date와 @daily 정렬이라는 함정
 
-Airflow의 data interval은 초심자가 반드시 밟는 지뢰입니다. `@daily`는 자정 경계로 도는데, `start_date`를 자정이 아닌 시각(예: 09:30)으로 두면 첫 인터벌이 어긋나 "언제 무슨 날짜가 도는지"가 헷갈려집니다. 그래서 자정으로 못박았습니다.
+Airflow의 data interval은 초심자가 한 번은 밟는 지뢰입니다. `@daily`는 자정 경계로 도는데, `start_date`를 자정이 아닌 시각(예: 09:30)으로 두면 첫 인터벌이 어긋나 "언제 무슨 날짜가 도는지"부터 헷갈립니다. 그래서 자정으로 못박았습니다.
 
 ```python
 @dag(
@@ -121,15 +121,13 @@ DAG가 임포트 에러 없이 목록에 뜹니다. MinIO health는 200, Airflow
 
 ![Airflow UI에서 snapshot_offload DAG가 임포트 에러 없이 목록에 뜬다(태그 el·extract·lakehouse, @daily)](/uploads/project/lakehouse/airflow-dag.png)
 
-DAG는 떴지만 아직 껍데기입니다. MinIO 버킷은 비어 있습니다. 실제 데이터가 흐르는 건 이어지는 2부입니다.
+DAG는 떴지만 아직 껍데기입니다.
 
 ### 4. 아직 데이터는 안 흐른다
 
 0단계는 여기까지입니다. 계약이 서고 스캐폴드가 떴지만, **아직 한 줄도 안 옮겼습니다.** DAG는 껍데기고, MinIO 버킷은 비어 있습니다.
 
-2부에서 그 껍데기에 실제 추출·적재 로직을 넣습니다. 그리고 마주칠 함정도 하나 예고돼 있습니다. DBTower의 인덱스는 `(instance_id, captured_at)` 순서라, `captured_at` 단독 조건으로 뽑으면 인덱스 선두를 못 탑니다. 관제탑을 느리게 하지 않으면서 어제치를 안전하게 내리는 방법이 이어지는 2부의 주제입니다.
-
-코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
+2부에서 그 껍데기에 실제 추출·적재 로직을 넣습니다. 마주칠 함정도 하나 예고해 둡니다. DBTower의 인덱스는 `(instance_id, captured_at)` 순서라, `captured_at` 단독 조건으로 뽑으면 인덱스 선두를 못 탑니다. 관제탑을 느리게 하지 않으면서 어제치를 안전하게 내리는 방법이 이어지는 2부의 주제입니다.
 
 여기까지가 계약과 스캐폴드를 세운 1부입니다. 이제 그 껍데기에 실제 데이터를 흘립니다.
 
@@ -175,7 +173,7 @@ ORDER BY captured_at
 부하를 더 눌렀습니다.
 
 - **읽기 전용 세션.** `conn.set_session(readonly=True)`로 세션 레벨에서 쓰기를 원천 차단합니다. "운영을 안 건드린다"를 코드에 맡기지 않고 트랜잭션이 보장하게 합니다.
-- **서버커서.** named cursor에 `itersize=50000`을 걸어 결과 전체를 클라이언트 메모리에 올리지 않고 나눠 읽습니다.
+- **서버커서**로 나눠 읽습니다. named cursor에 `itersize=50000`을 걸어 결과 전체를 클라이언트 메모리에 올리지 않습니다.
 
 ### 2. 명시 스키마와 멱등 덮어쓰기
 
@@ -204,7 +202,7 @@ s3.put_object(Bucket=bucket, Key=prefix + "part-000.parquet", Body=buf)
 
 같은 날짜를 몇 번 돌려도 인스턴스당 오브젝트는 항상 1개, 행수는 원천과 동일합니다. 부분 실패로 낡은 파일이 남아 중복되는 일이 구조적으로 없습니다.
 
-압축은 zstd, 포맷은 zstd Parquet. 경로는 Hive 스타일이라 DuckDB가 `dt`·`instance_id`를 컬럼으로 직독합니다.
+포맷은 계약대로 zstd로 압축한 Parquet입니다. 경로는 Hive 스타일이라 DuckDB가 `dt`·`instance_id`를 컬럼으로 직독합니다.
 
 ### 3. 원천 = parquet = DuckDB 대조
 
@@ -267,7 +265,7 @@ dt=2026-07-06 (닫힌 구간)
 
 #### Airflow 스케줄러 e2e
 
-DAG가 목록에 뜨는 데서 그치지 않고, 스케줄러가 부른 태스크가 실제로 흐르는지 `airflow dags test`로 점검했습니다.
+DAG가 목록에 뜨는 것까지 확인한 다음, 스케줄러가 부른 태스크가 실제로 흐르는지 `airflow dags test`로 점검했습니다.
 
 ```
 $ airflow dags test snapshot_offload 2026-07-06

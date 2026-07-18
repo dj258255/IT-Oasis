@@ -1,7 +1,7 @@
 ---
 title: '며칠치로는 규모를 증명 못 해서 1년치를 만들어 재봤고, 수치가 요구할 때만 최적화했습니다'
 titleEn: 'Three Days Can''t Prove Scale, So I Built a Year, Measured It, and Optimized Only Where the Numbers Demanded'
-description: '지금까지 제 모든 실측은 닫힌 dt 3개, 수십만 행에서 돌았습니다. 그 규모에선 전부 초 단위라 ''규모에서도 버틴다''고 말하고 싶어졌습니다. 하지만 그건 증명이 아니라 희망이었습니다. 마트(fct)는 매일 전체 이력을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐입니다. 그래서 닫힌 dt를 날짜 시프트로 복제해 365dt×6인스턴스=2,190파일(54.5M행)을 격리 프리픽스에 합성 적재하고(실데이터·원천 무접촉, 끝나고 정리) 어디가 먼저 무너지는지 쟀습니다. 병목은 하나, fct 전체 재빌드 407.62초였습니다. 나머지는 규모에서도 초 단위였습니다(mart 0.31초·게이트 8~22ms·CHECKPOINT 0.47초). 파일은 평균 177KB로 실무 타깃 128MB의 1/741이라 소파일 폭증도 계측했습니다. 그 407초가 정당화해서 fct를 증분(delete+insert)으로 전환했는데, 스칼라 서브쿼리 워터마크로는 파티션 프루닝이 안 걸려 여전히 느렸고, 컴파일 타임 리터럴로 구워 넣자 407.62초 → 4초(약 100배)가 됐습니다. mart_query_regression은 ''전체 이력 첫날 vs 마지막날''을 ''최근 7일 vs 직전 30일'' 롤링 창으로 재설계했고, 매 런 메타를 pipeline_run_log로 발행해 운영 대시보드를 분석 대시보드와 이원화했습니다. 회귀는 없었습니다. verify ALL MATCH였고, 합성 데이터는 전부 정리했습니다.'
+description: '지금까지 제 모든 실측은 닫힌 dt 3개, 수십만 행에서 돌았습니다. 그 규모에선 전부 초 단위라 ''규모에서도 버틴다''고 말하고 싶어졌습니다. 하지만 그건 아직 희망이었습니다. 마트(fct)는 매일 전체 이력을 다시 계산하는데, 이력이 3일이라 안 아팠을 뿐입니다. 그래서 닫힌 dt를 날짜 시프트로 복제해 365dt×6인스턴스=2,190파일(54.5M행)을 격리 프리픽스에 합성 적재하고(실데이터·원천 무접촉, 끝나고 정리) 어디가 먼저 무너지는지 쟀습니다. 병목은 하나, fct 전체 재빌드 407.62초였습니다. 나머지는 규모에서도 초 단위였습니다(mart 0.31초·게이트 8~22ms·CHECKPOINT 0.47초). 파일은 평균 177KB로 실무 타깃 128MB의 1/741이라 소파일 폭증도 계측했습니다. 그 407초가 정당화해서 fct를 증분(delete+insert)으로 전환했는데, 스칼라 서브쿼리 워터마크로는 파티션 프루닝이 안 걸려 여전히 느렸고, 컴파일 타임 리터럴로 구워 넣자 407.62초 → 4초(약 100배)가 됐습니다. mart_query_regression은 ''전체 이력 첫날 vs 마지막날''을 ''최근 7일 vs 직전 30일'' 롤링 창으로 재설계했고, 매 런 메타를 pipeline_run_log로 발행해 운영 대시보드를 분석 대시보드와 이원화했습니다. 회귀는 없었습니다. verify ALL MATCH였고, 합성 데이터는 전부 정리했습니다.'
 descriptionEn: 'Every measurement so far ran on three closed dt partitions, a few hundred thousand rows. At that size everything is sub-second, so it''s tempting to say it holds at scale, but that''s hope, not proof. The fct mart recomputes the whole history every day; it just didn''t hurt with three days of it. So I date-shifted a closed partition into 365 dt × 6 instances = 2,190 files (54.5M rows) in an isolated prefix (no real data or source touched, cleaned up after) and measured where it breaks first. There was one bottleneck: the fct full rebuild at 407.62s. Everything else stayed sub-second at scale (mart 0.31s, gate 8-22ms, CHECKPOINT 0.47s). Files averaged 177KB, 1/741 of the 128MB industry target, quantifying the small-file blowup. That 407s justified switching fct to incremental (delete+insert); a scalar-subquery watermark failed to prune partitions and stayed slow, but a compile-time literal turned 407.62s into 4s (~100x). I redesigned mart_query_regression from ''first vs last of all history'' to a rolling recent-7-vs-prior-30 window, and published per-run metadata to pipeline_run_log to split an operational dashboard from the analytical one. No regression: verify ALL MATCH, and the synthetic data was fully cleaned up.'
 date: 2026-07-09
 tags:
@@ -26,7 +26,7 @@ seriesOrder: 6
 끝납니다. dbt 빌드도 몇 초, 게이트도 몇 초.
 
 그러다 문득 이런 생각이 들었습니다. "이걸로 '규모에서도 버틴다'고 말할 수 있나?"
-없었습니다. 그건 증명이 아니었습니다. 그냥 희망이었습니다. 특히 마트를 다시 들여다보니 마음이
+없었습니다. 그냥 희망이었습니다. 특히 마트를 다시 들여다보니 마음이
 불편했습니다. `fct_query_daily`는 매일 **전체 이력을 다시 계산**합니다. 하루 발생량을
 그날 파티션의 양 끝 차분으로 구하는데, dbt는 그냥 전체를 table로 다시 굽기 때문입니다.
 이력이 3일이라 안 아팠을 뿐이지, 1년이 쌓이면 어떻게 될지 저는 몰랐습니다. 모르는
@@ -66,7 +66,7 @@ DBTower에서 계승한 원칙("정직한 필요에서 시작한다")에 어긋�
 
 파일 크기·개수 프로파일은 실제와 똑같습니다. dt당 6파일(인스턴스당 1개), 365dt면
 **2,190파일, 54,479,535행, 396.6MB**. 이게 핵심입니다. "작은 파일 폭증"이라는
-실무 1순위 고통을 그대로 재현해야 하기 때문입니다.
+실무의 대표적인 고통을 그대로 재현해야 하기 때문입니다.
 
 한 가지만 손댔습니다. 롤링 윈도우를 검증하려면 최근이 직전보다 나빠지는 신호가
 있어야 합니다. 그래서 **마지막 7일**의 `total_time_ms`에만 쿼리별 악화 계수를
@@ -185,13 +185,12 @@ pct 분포:  +47.5% 8건 · +138.1% 6건
 ```
 
 `recent_days_seen=7`, `prior_days_seen=30` 정확히 나오고, 제가 주입한 두 악화 계층이
-랭킹으로 분리돼 떴습니다. 그런데 정확히 +50/+150은 아니고 +47.5/+138.1입니다. 왜냐하면
-주입 경계(마지막 7일)와 롤링 창의 직전 30일 경계가 하루 겹쳐서, 직전 창 평균에
-boosted된 하루가 섞였기 때문입니다. 롤링 평균이 그걸 정직하게 반영한 결과입니다. 창을
+랭킹으로 분리돼 떴습니다. 그런데 정확히 +50/+150은 아니고 +47.5/+138.1입니다. 주입 경계(마지막 7일)와 롤링 창의 직전 30일 경계가 하루 겹쳐서, 직전 창 평균에
+계수가 곱해진 하루가 섞였기 때문입니다. 롤링 평균이 그걸 그대로 반영한 결과입니다. 창을
 제가 예쁘게 지어내지 않았다는 증거이기도 합니다.
 
 정직하게 하나 더. **실데이터 3dt에서는 이 마트가 0행입니다.** 최근 7일이 3개 dt를 다
-삼키고 직전 30일이 비어서 비교할 게 없습니다. 이력 부족을 조용히 지어내는 대신 정직하게
+삼키고 직전 30일이 비어서 비교할 게 없습니다. 이력이 부족하니 정직하게
 비웁니다. "3일치로 지난달을 논할 수 없다", 이게 맞는 답입니다. 이 랭킹은 이력이
 쌓여야 실데이터에서도 채워집니다. 그래서 dbt unit test로 로직만은 못박아 뒀습니다
 (최근>직전만, 양 창 관측 필수, 저콜 제외).
@@ -239,4 +238,4 @@ boosted된 하루가 섞였기 때문입니다. 롤링 평균이 그걸 정직�
 제 예상과 달리 딱 하나였고(fct 407초), 제가 걱정하던 다른 곳들은 규모에서도 초
 단위였습니다. 그래서 fct만 증분으로 바꿨고, 나머지는 "지금은 안 한다"를 수치로
 정당화했습니다. 문제 없는 곳을 최적화하지 않는 것도 엔지니어링입니다. 그리고 그 판단의
-근거를 감으로 채우지 않고 실측 수치로 남기는 것, 그게 이 프로젝트가 계속 지키려는 원칙입니다.
+근거를 실측 수치로 남기는 것, 그게 이 프로젝트가 계속 지키려는 원칙입니다.

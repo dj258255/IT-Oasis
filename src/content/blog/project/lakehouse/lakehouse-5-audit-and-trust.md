@@ -1,7 +1,7 @@
 ---
 title: '아카이브가 자기 자신을 지우던 치명 경로를 막고, CI와 deadman과 dbt contracts로 신뢰를 마저 묶은 이야기'
 titleEn: 'Blocking the Path Where the Archive Deleted Itself, Then Tying Trust Together with CI, a Deadman, and dbt Contracts'
-description: '코드 감사에서 받은 결함 목록의 1번이 치명이었습니다. offload의 멱등 재적재는 ''파티션을 통째로 지우고 다시 쓴다''인데 삭제가 원천 0행 체크보다 먼저라, 원천 보존(7일) 밖의 dt를 backfill이나 Clear로 재실행하면 아카이브 유일본 parquet를 지운 뒤 아무것도 안 쓰고 exit 0으로 ''성공''합니다. 1부에서 이 경로를 실제로 재현하고 fail-closed 가드(ArchiveSelfDestructError, exit 1 → 재시도·webhook 경로 탑승)로 막았으며, 같은 감사에서 나온 세 가지인 게이트의 원천 Seq Scan(332ms/31k버퍼 → 인스턴스별 인덱스 루프 20ms/76버퍼), publish 혼합 버전(개별 커밋 → 단일 트랜잭션), 유지보수 DAG의 데모 테이블 하드 참조도 소탕하고 pytest 35개로 고정했습니다. 2부는 그 신뢰를 커밋·침묵·계약 세 축으로 마저 묶습니다. CI(GitHub Actions 3관문: ruff·pytest·dbt)가 임베디드 DuckDB 덕에 MinIO도 PG도 없는 러너에서 tiny 픽스처 parquet로 dbt build를 e2e로 돌리고(PASS=25), dbt unit test로 델타 로직 엣지 4개를 정적 입력→기대 출력으로 못박고, deadman heartbeat가 30h 침묵을 실제 경보 발화로 잡고(기한 26h), dbt contracts가 마트 컬럼 타입을 DB 레벨로 강제해 latency_increase_ms를 VARCHAR로 바꾸자 빌드가 ''data type mismatch''로 막혔습니다. 회귀는 없었습니다. verify ALL MATCH(149,259/79,894), pytest 53입니다.'
+description: '코드 감사에서 받은 결함 목록의 1번이 치명이었습니다. offload의 멱등 재적재는 ''파티션을 통째로 지우고 다시 쓴다''인데 삭제가 원천 0행 체크보다 먼저라, 원천 보존(7일) 밖의 dt를 backfill이나 Clear로 재실행하면 아카이브 유일본 parquet를 지운 뒤 아무것도 안 쓰고 exit 0으로 ''성공''합니다. 1부에서 이 경로를 실제로 재현하고 fail-closed 가드(ArchiveSelfDestructError, exit 1 → 재시도·webhook 경로 탑승)로 막았습니다. 같은 감사에서 나온 나머지 셋, 곧 게이트의 원천 Seq Scan(332ms/31k버퍼 → 인스턴스별 인덱스 루프 20ms/76버퍼), publish 혼합 버전(개별 커밋 → 단일 트랜잭션), 유지보수 DAG의 데모 테이블 하드 참조도 걷어내고 pytest 35개로 고정했습니다. 2부는 그 신뢰를 커밋·침묵·계약 세 축으로 마저 묶습니다. CI(GitHub Actions 3관문: ruff·pytest·dbt)가 임베디드 DuckDB 덕에 MinIO도 PG도 없는 러너에서 tiny 픽스처 parquet로 dbt build를 e2e로 돌리고(PASS=25), dbt unit test로 델타 로직 엣지 4개를 정적 입력→기대 출력으로 못박고, deadman heartbeat가 30h 침묵을 실제 경보 발화로 잡고(기한 26h), dbt contracts가 마트 컬럼 타입을 DB 레벨로 강제해 latency_increase_ms를 VARCHAR로 바꾸자 빌드가 ''data type mismatch''로 막혔습니다. 회귀는 없었습니다. verify는 ALL MATCH(149,259/79,894행), pytest는 53개 통과입니다.'
 descriptionEn: 'Item one on the audit''s defect list was fatal: offload''s idempotent reload is delete-partition-then-rewrite, but the delete runs before the zero-rows check, so re-running a dt outside the source''s 7-day retention via backfill or Clear deletes the archive''s only parquet copy, writes nothing, and exits 0 as a ''success''. Part 1 reproduces that path and blocks it with a fail-closed guard (ArchiveSelfDestructError, exit 1, riding the retry and webhook path), then sweeps three more findings, namely the gate full-scanning the source (332ms/31k buffers to 20ms/76 buffers via per-instance index loops), publish exposing a mixed version (separate commits to a single transaction), and the maintenance DAG hard-referencing a demo table, all pinned by 35 pytest cases. Part 2 ties that trust across commits, silence, and contracts: CI (GitHub Actions, three gates: ruff, pytest, dbt) builds the whole dbt DAG e2e on a runner with no MinIO or PG thanks to embedded DuckDB and tiny fixture parquet (PASS=25), dbt unit tests pin four delta-logic edges as static input-to-output, a deadman heartbeat catches a planted 30h silence against a 26h deadline with a real alert, and dbt contracts enforce mart column types at the DB level, so changing latency_increase_ms to VARCHAR blocked the build with ''data type mismatch''. No regression: verify ALL MATCH (149,259/79,894), pytest 53.'
 date: 2026-07-04
 tags:
@@ -24,7 +24,7 @@ seriesOrder: 5
 
 ### 0. 8일 뒤에 재적재 버튼을 누른 상황
 
-이런 시나리오를 상상해 보십시오. 지난주 화요일 새벽, 게이트가 FAIL을 냈고 webhook 알림이 왔습니다. 그런데 그 주가 바빴습니다. 알림은 읽었고 "주말에 재적재하지"라고 생각만 하고 넘어갑니다. 8일이 지난 오늘에서야 [RUNBOOK](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/RUNBOOK.md) 절차대로 backfill을 겁니다.
+지난주 화요일 새벽, 게이트가 FAIL을 냈고 webhook 알림이 왔습니다. 그런데 그 주가 바빴습니다. 알림은 읽었고 "주말에 재적재하지"라고 생각만 하고 넘어갑니다. 8일이 지난 오늘에서야 [RUNBOOK](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/RUNBOOK.md) 절차대로 backfill을 겁니다.
 
 ```bash
 airflow dags backfill snapshot_offload -s 2026-07-01 -e 2026-07-01 --reset-dagruns -y
@@ -34,7 +34,7 @@ offload는 초록불로 끝납니다. 로그도 평화롭습니다. "적재 완�
 
 원천 DBTower는 스냅샷을 7일만 보존합니다. 이 시리즈의 존재 이유가 그것이었습니다. 원천이 지우기 전에 내려서, lakehouse가 유일본이 되게 하는 것입니다. 그런데 8일 전 dt를 재실행하면 원천엔 이미 그 날짜가 없습니다. 그리고 1편에서 만든 멱등 재적재는 **"파티션을 통째로 지우고 다시 쓴다"** 입니다. 원천이 0행이면? 지우고 아무것도 안 씁니다.
 
-이번 편은 코드 감사에서 이 경로가 확정 결함으로 잡힌 뒤, 그것까지 포함해 결함 넷을 소탕한 기록입니다. 넷 다 "잘 만들었다고 믿었던 장치의 뒷면"이라는 공통점이 있습니다.
+이번 편은 코드 감사에서 이 경로가 확정 결함으로 잡힌 뒤, 그것까지 포함해 결함 넷을 전부 잡은 기록입니다. 넷 다 "잘 만들었다고 믿었던 장치의 뒷면"이라는 공통점이 있습니다.
 
 ### 1. 멱등의 뒷면이라는 함정
 
@@ -138,7 +138,7 @@ Buffers: shared hit=5 read=71
 Execution Time: 20.213 ms
 ```
 
-332ms/31,077버퍼 → 인스턴스당 20ms/76버퍼. 게이트 전체(2일치 4검문)가 0.5초에 끝납니다.
+332ms/31,077버퍼가 인스턴스당 20ms/76버퍼로 줄었습니다. 게이트 전체(2일치 4검문)가 0.5초에 끝납니다.
 
 #### 3-2. publish의 원자성이 테이블 하나짜리였다 (F3)
 
@@ -171,7 +171,7 @@ Execution Time: 20.213 ms
 CatalogException: Table with name query_snapshot does not exist!
 ```
 
-주간 DAG가 첫 실행에서 즉사합니다. 유지보수는 "있는 것"을 정리하는 작업이지 특정 테이블의 존재를 요구할 일이 아닙니다. information_schema에서 지금 존재하는 테이블 목록을 읽어 그 전체(마트 포함)를 계측하도록 바꿨고 테이블이 하나도 없으면 스냅샷·고아 파일 정리만 하고 지나갑니다. 행수 불변식도 덤으로 좋아졌습니다. 전엔 데모 테이블 하나만 지켰는데 이제 테이블별로 전부 대조합니다.
+주간 DAG가 첫 실행에서 즉사합니다. 유지보수는 "있는 것"을 정리하는 작업입니다. 특정 테이블이 있어야만 돌 이유가 없습니다. information_schema에서 지금 존재하는 테이블 목록을 읽어 그 전체(마트 포함)를 계측하도록 바꿨고 테이블이 하나도 없으면 스냅샷·고아 파일 정리만 하고 지나갑니다. 행수 불변식도 덤으로 좋아졌습니다. 전엔 데모 테이블 하나만 지켰는데 이제 테이블별로 전부 대조합니다.
 
 같은 김에 run_demo의 파괴성도 막았습니다. 데모는 재실행 대비로 `DROP TABLE IF EXISTS query_snapshot`을 치는데, 그 테이블에 운영 데이터가 쌓여 있어도 말없이 지웁니다. 이제 기존 테이블이 있으면 확인(`--force` / `DUCKLAKE_DEMO_FORCE=1` / 대화형 y) 없이는 중단합니다:
 
@@ -231,7 +231,7 @@ GATE: PASS — 모든 dt 통과 → 다운스트림 진행 가능
 
 ### 6. 지키는 쪽을 지키며 끝맺기
 
-이 시리즈 내내 "원천을 지킨다"는 원칙은 잘 지켰습니다. 읽기 전용 세션, 서버커서, 인덱스 선두, 시간창. 그런데 감사가 보여준 건, 정작 **지키는 쪽, 곧 아카이브 자신을 지키는 코드가 없었다**는 사실입니다. 멱등 덮어쓰기는 보존 창 안에서만 멱등이었고, 게이트는 원천에 부하를 줬고, 원자성은 테이블 하나짜리였고, 유지보수는 데모에 기대 있었습니다.
+이 시리즈 내내 "원천을 지킨다"는 원칙은 잘 지켰습니다. 읽기 전용 세션부터 서버커서, 인덱스 선두, 시간창까지 빠짐없이 지켰습니다. 그런데 감사가 보여준 건, 정작 **지키는 쪽, 곧 아카이브 자신을 지키는 코드가 없었다**는 사실입니다. 멱등 덮어쓰기는 보존 창 안에서만 멱등이었습니다. 게이트는 원천에 부하를 줬고 원자성은 테이블 하나짜리였습니다. 유지보수는 데모에 기대 있었고요.
 
 넷 다 처음 만들 때 틀린 코드가 아니었습니다. 전제가 바뀌는 지점에서 뒷면이 드러났을 뿐입니다. 보존 창 밖, 동시 실패, 새 환경 같은 곳 말입니다. 그 지점을 코드가 스스로 인지하고 시끄럽게 멈추게 만드는 것, 그게 이번 편의 전부였습니다. 유일본을 지운 뒤의 알림은 부고고, 지우기 전의 실패는 방어입니다.
 
@@ -317,7 +317,7 @@ external_location: >-
 
 ### 2. 심장의 엣지를 정적으로 못박는 dbt unit test
 
-이 프로젝트의 심장은 2편에서 만든 델타 로직입니다. 누적 카운터를 하루 양 끝 차분으로
+그 25개 중 제일 공들인 게 unit test 4개입니다. 이 프로젝트의 심장은 2편에서 만든 델타 로직입니다. 누적 카운터를 하루 양 끝 차분으로
 바꾸고(first-vs-last), 리셋이면 `GREATEST(0, ...)`로 클램프하고, 지문 충돌은 staging에서
 SUM으로 접는 것. 데이터 테스트(not_null 등)는 "실데이터에 규칙이 성립하나"를 보지만,
 **로직 자체가 이 입력에 이 출력을 내나**는 안 봅니다. 그건 dbt unit test의 몫입니다
@@ -411,7 +411,7 @@ INFO heartbeat 건강 — snapshot_offload: 0.0h 전 성공(기한 26.0h)      e
 30시간 침묵이 26시간 기한을 넘겨 경보가 실제로 수신기에 도착했습니다. 처음의 그 21시간
 침묵이 이제는 잡힙니다.
 
-그런데 여기서 정직해야 할 게 있습니다. 이 감시를 어디서 돌리냐가 문제입니다. Airflow 안에
+그런데 여기엔 숨기면 안 되는 약점이 있습니다. 이 감시를 어디서 돌리냐가 문제입니다. Airflow 안에
 `deadman_watch` DAG(@hourly)를 뒀는데, **이 감시 DAG도 같은 스케줄러 위에서 돕니다.**
 스케줄러가 통째로 죽으면 감시 DAG도 같이 죽습니다. 자기 죽음은 자기가 못 봅니다.
 
@@ -428,8 +428,7 @@ INFO heartbeat 건강 — snapshot_offload: 0.0h 전 성공(기한 26.0h)      e
 ### 4. 발행 전 마지막 방어선인 dbt contracts
 
 세 번째 구멍, 계약 없는 스키마. `fct_query_daily`와 `mart_query_regression`에
-`contract: enforced: true`를 걸고 컬럼 이름·타입·제약을 선언했습니다. 타입은 상상이
-아니라 실측한 DuckDB 산출 타입 그대로입니다. 누적값을 SUM하면 `BIGINT`가 `HUGEINT`로
+`contract: enforced: true`를 걸고 컬럼 이름·타입·제약을 선언했습니다. 타입은 실측한 DuckDB 산출 타입 그대로입니다. 누적값을 SUM하면 `BIGINT`가 `HUGEINT`로
 승격되는 것까지 `DESCRIBE`로 확인하고 박았습니다.
 
 ```yaml
@@ -442,12 +441,11 @@ INFO heartbeat 건강 — snapshot_offload: 0.0h 전 성공(기한 26.0h)      e
       expression: "delta_calls >= 0"    # 클램프 불변식을 DB가 강제
 ```
 
-dbt-duckdb에서 이 constraint는 문서로 그치지 않습니다. **DB 레벨로 실제 enforce**합니다.
+dbt-duckdb에서 이 constraint는 **DB 레벨로 실제 enforce**됩니다.
 2편에서 코드로 지키던 "델타는 음수가 될 수 없다"는 클램프 불변식을, 이제 데이터베이스가
 CHECK 제약으로 강제합니다.
 
-계약이 진짜 방어선인지는 어기게 해봐야 압니다. 마트 컬럼 하나의 산출 타입을 일부러
-바꿨습니다. 다운스트림(Metabase 카드)이 숫자로 읽는 `latency_increase_ms`를 문자열로 바꿨습니다.
+계약이 진짜 방어선인지는 어기게 해봐야 압니다. 다운스트림(Metabase 카드)이 숫자로 읽는 `latency_increase_ms`의 산출 타입을 일부러 문자열로 바꿨습니다.
 
 ```
 # mart_query_regression.sql: latency_increase_ms 를 CAST(... AS VARCHAR)로 변경
@@ -501,10 +499,10 @@ DBTower 메타 DB(dbtower) 안 같은 이름 테이블 수는 **0**입니다. �
 - **unit test는 fct만 완전히 CI 네이티브입니다.** stg의 소스-입력 테스트는 외부
   read_parquet를 introspect 못 해 픽스처 뷰 등록으로 우회했습니다. dbt-duckdb의 제약이고,
   깔끔하진 않습니다.
-- **deadman은 heartbeat 신선도까지입니다.** Airflow 내 감시 DAG는 자기 스케줄러의
+- **deadman이 보는 건 heartbeat 신선도가 전부입니다.** Airflow 내 감시 DAG는 자기 스케줄러의
   total death를 못 잡아 외부 cron을 뒀지만, 그 외부 러너의 생존은 또 조직 밖 모니터의
   몫입니다. 감시의 사슬은 어딘가에서 스택 밖으로 나갑니다.
-- **계약은 마트 2개까지입니다.** 컬럼 레벨 계보·PII 태깅은 dbt Enterprise 영역이라
+- **계약을 건 건 마트 2개뿐입니다.** 컬럼 레벨 계보·PII 태깅은 dbt Enterprise 영역이라
   문서 계보까지만 합니다.
 - 운영 대시보드화(게이트 FAIL·마지막 성공 dt·발행 지연을 Metabase 상태 카드로)는
   다음입니다. heartbeat 테이블이 이제 있으니 "마지막 성공 dt" 카드는 바로 얹을 수 있습니다.
@@ -516,5 +514,4 @@ DBTower 메타 DB(dbtower) 안 같은 이름 테이블 수는 **0**입니다. �
 파이프라인은 이제 제 노트북 밖에서도 커밋마다 스스로를 검증하고, 아무도 안 볼 때
 멈추면 역방향으로 울고, 계약을 어기는 변경은 발행 전에 막습니다. 실무자 서베이가
 말하는 데이터 엔지니어링의 고통 1~2위(조용한 실패·스키마 파괴)와 그대로 겹치는
-방향이고, 스트리밍을 새로 얹는 것보다 이쪽이 이 규모가 실제로 향해야 할 곳이라고
-생각합니다.
+방향이고, 이 규모에서 실제로 향해야 할 곳은 스트리밍을 새로 얹는 쪽보다 이쪽이라고 생각합니다.
