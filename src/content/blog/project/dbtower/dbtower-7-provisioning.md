@@ -22,13 +22,13 @@ seriesOrder: 7
 
 [6편](/blog/project/dbtower/dbtower-6-wait-events-and-right-tool)까지의 DBTower에는 한 가지 전제가 숨어 있었습니다. **"관리할 DB가 이미 존재한다"**는 전제입니다. 인스턴스는 사람이 API로 등록했고, 그 DB가 어디서 왔는지는 플랫폼의 관심 밖이었습니다.
 
-그런데 현업에서 DB는 그렇게 오지 않습니다. Kubernetes에서는 Operator가 만들고, VM에서는 Ansible이 깔고, 클라우드에서는 Terraform이 RDS를 띄웁니다. DB가 IaC로 태어나는데 관제 등록은 사람이 수동으로 한다면, 생성과 관제 사이가 끊겨 있는 것입니다. 이 끊김을 이으려고 이번 축을 만들었습니다. 설계 노트에 적어둔 문장 그대로입니다. **"생성과 관제가 이어져야 플랫폼이고, 끊어져 있으면 도구 모음이다."**
+그런데 현업에서 DB는 그렇게 오지 않습니다. Kubernetes에서는 Operator가 만들고, VM에서는 Ansible이 깔고, 클라우드에서는 Terraform이 RDS를 띄웁니다. DB가 IaC로 태어나는데 관제 등록만 사람이 수동으로 한다면 생성과 관제 사이가 끊긴 것입니다. 이 끊김을 이으려고 이번 축을 만들었습니다. 설계 노트에 적어둔 문장 그대로입니다. **"생성과 관제가 이어져야 플랫폼이고, 끊어져 있으면 도구 모음이다."**
 
 ![세 층의 프로비저닝이 멱등 PUT 하나로 관제탑에 모이는 Phase C 구조](/uploads/project/dbtower/provisioning-flow.svg)
 
 ## 1. 첫 전제, 등록은 멱등이어야 한다
 
-프로비저닝 도구를 붙이기 전에 먼저 고쳐야 할 게 있었습니다. 기존 등록은 `POST /api/instances`인데, IaC는 **재실행되는 물건**입니다. Ansible 플레이북을 두 번 돌리고, Terraform을 다시 apply하고, K8s Job이 재시도됩니다. 그때마다 POST가 인스턴스를 하나씩 더 만든다면 관제탑에 같은 DB가 세 개 등록되는 것입니다.
+프로비저닝 도구를 붙이기 전에 먼저 고칠 게 있었습니다. 기존 등록은 `POST /api/instances`인데, IaC는 **재실행되는 물건**입니다. Ansible 플레이북을 두 번 돌리고, Terraform을 다시 apply하고, K8s Job이 재시도됩니다. 그때마다 POST가 인스턴스를 하나씩 더 만들면 관제탑에 같은 DB가 세 개 등록됩니다.
 
 그래서 멱등 등록 `PUT /api/instances`를 먼저 만들었습니다.
 
@@ -37,13 +37,13 @@ seriesOrder: 7
 - **이름이 논리 식별자**: id가 아니라 이름이 IaC 쪽의 불변 키가 됩니다. `createdAt`은 유지해서 "언제부터 관제했나"가 안 깨지게 했습니다
 - 등록/삭제와 같은 **ADMIN 경계**
 
-실측으로 같은 이름을 재차 PUT해도 id가 유지되고 중복이 0인 걸 확인했습니다(신규/갱신/접속 실패 거부 단위 테스트 3건). 이 PUT 하나가 이후 세 도구 모두의 **종점**이 됩니다.
+실측으로 같은 이름을 재차 PUT해도 id가 유지되고 중복이 0인 걸 확인했습니다(신규/갱신/접속 실패 거부 단위 테스트 3건). 이 PUT 하나가 이후 세 도구 모두의 **종점**입니다.
 
 ## 2. Kubernetes에서 CloudNativePG로 e2e 완주
 
-첫 번째 층은 K8s입니다. 요즘 DB의 Day-1(생성)과 Day-2(페일오버·백업)는 Operator가 맡는 흐름이라, 직접 StatefulSet을 짜는 대신 CNCF의 CloudNativePG를 썼습니다. DBTower가 할 일은 그렇게 만들어진 DB를 **관제탑에 잇는 것**입니다.
+첫 번째 층은 K8s입니다. 요즘 DB의 Day-1(생성)과 Day-2(페일오버·백업)는 Operator가 맡는 흐름이라, 직접 StatefulSet을 짜는 대신 CNCF의 CloudNativePG를 썼습니다. DBTower가 할 일은 그렇게 만들어진 DB를 **관제탑에 잇는 것**뿐입니다.
 
-kind 로컬 클러스터에서 실제로 끝까지 완주했습니다:
+kind 로컬 클러스터에서 끝까지 완주했습니다:
 
 ```
 kind create cluster (v0.32)            -> Docker 노드 기동
@@ -56,11 +56,11 @@ DBTower가 그 DB에 실제 접속            -> health up, "PostgreSQL 16.4" (p
 kind delete cluster                    -> 정리
 ```
 
-여기서 설계 포인트는 등록 훅이 **CloudNativePG의 규약을 그대로 읽는다**는 것입니다. CloudNativePG는 클러스터를 만들면 `<cluster>-app`이라는 이름의 접속 Secret을 자동으로 만들어 줍니다. register-job은 그 Secret을 마운트해서 PUT을 쏘는 게 전부입니다. DBTower에 K8s 전용 코드를 새로 넣진 않았습니다. K8s 쪽 규약과 DBTower의 멱등 PUT이 자연스럽게 만나는 지점을 찾았을 뿐입니다.
+설계 포인트는 등록 훅이 **CloudNativePG의 규약을 그대로 읽는다**는 것입니다. CloudNativePG는 클러스터를 만들면 `<cluster>-app`이라는 접속 Secret을 자동으로 만들어 줍니다. register-job은 그 Secret을 마운트해 PUT을 쏘는 게 전부입니다. K8s 전용 코드를 새로 넣지 않았습니다. K8s 규약과 DBTower의 멱등 PUT이 자연스럽게 만나는 지점을 찾았을 뿐입니다.
 
 ## 3. Ansible로 최소 권한 계정까지, 멱등 changed=0
 
-두 번째 층은 온프레미스/VM입니다. 여기서는 등록에 더해 한 가지를 더 얹었습니다. [5편](/blog/project/dbtower/dbtower-5-production-safety)에서 실측으로 확정한 **최소 권한 모니터링 계정**을 플레이북이 만들어 줍니다. 사람이 root 계정을 등록하는 실수를 구조적으로 막습니다.
+두 번째 층은 온프레미스/VM입니다. 등록에 한 가지를 더 얹었습니다. [5편](/blog/project/dbtower/dbtower-5-production-safety)에서 실측으로 확정한 **최소 권한 모니터링 계정**을 플레이북이 만들어, 사람이 root 계정을 등록하는 실수를 구조적으로 막습니다.
 
 ```
 대상 dbtower-postgres에 register-db.yml 실행:
@@ -71,11 +71,11 @@ DBTower에서 확인: prod-postgres-01 등록(개수 1),
   최소 권한 계정으로 health up "PostgreSQL 16.14"
 ```
 
-계정 생성은 `community.postgresql` 모듈(psycopg2), 등록은 `uri` 모듈의 PUT입니다. Ansible의 멱등성 모델과 DBTower의 멱등 PUT이 맞물려서 2차 실행이 `changed=0`으로 끝납니다. "몇 번을 돌려도 상태는 하나"라는 IaC의 약속이 등록까지 이어집니다. 비밀값은 `secrets.yml`로 분리해서 gitignore에 뒀습니다.
+계정 생성은 `community.postgresql` 모듈(psycopg2), 등록은 `uri` 모듈의 PUT입니다. Ansible의 멱등성 모델과 DBTower의 멱등 PUT이 맞물려 2차 실행이 `changed=0`으로 끝납니다. "몇 번을 돌려도 상태는 하나"라는 IaC의 약속이 등록까지 이어집니다. 비밀값은 `secrets.yml`로 분리해 gitignore에 뒀습니다.
 
 ## 4. Terraform은 validate까지만, 그리고 그렇게 적었다
 
-세 번째 층은 클라우드(RDS)입니다. `aws_db_instance`로 RDS를 만들고 생성 후 `local-exec`로 같은 PUT을 쏘는 모듈을 만들었습니다.
+세 번째 층은 클라우드(RDS)입니다. `aws_db_instance`로 RDS를 만들고, 생성 후 `local-exec`로 같은 PUT을 쏘는 모듈을 만들었습니다.
 
 그런데 이 층은 검증 수준이 다릅니다:
 
@@ -86,9 +86,9 @@ OpenTofu v1.12.3, aws provider v5.100:
   tofu validate  -> "configuration is valid"
 ```
 
-**apply는 실행하지 않았습니다.** 실제 RDS를 띄우려면 AWS 자격증명과 과금이 필요하기 때문입니다. 여기서 선택지는 두 개였습니다. "Terraform 연동 완료"라고 뭉뚱그려 적거나, 검증 수준의 차이를 그대로 드러내거나. 시리즈 내내 지켜온 원칙대로 후자를 택했습니다. 문서에는 "validate 통과, apply는 자격증명 필요라 미실행"이라고 적고, 같은 등록 흐름이 실제로 완주되는 건 K8s와 Ansible에서 확인했다고 근거를 연결했습니다. 백업 검증의 UNSUPPORTED, 레이턴시 백분위의 ESTIMATED와 같은 계열의 정직성입니다. **못 본 것을 본 척하지 않기.**
+**apply는 실행하지 않았습니다.** 실제 RDS를 띄우려면 AWS 자격증명과 과금이 필요하기 때문입니다. 선택지는 둘이었습니다. "Terraform 연동 완료"라고 뭉뚱그리거나, 검증 수준의 차이를 그대로 드러내거나. 시리즈 내내 지켜온 원칙대로 후자를 택했습니다. 문서에는 "validate 통과, apply는 자격증명 필요라 미실행"이라 적고, 같은 등록 흐름이 실제로 완주되는 건 K8s와 Ansible에서 확인했다고 근거를 연결했습니다. 백업 검증의 UNSUPPORTED, 레이턴시 백분위의 ESTIMATED와 같은 계열의 정직성입니다. **못 본 것을 본 척하지 않기.**
 
-덤으로 하나. 도구는 Terraform이 아니라 OpenTofu를 썼는데, brew에서 terraform 공식 포뮬러가 라이선스 변경(BUSL) 이후 내려가 별도 tap 신뢰가 필요했기 때문입니다. 오픈소스 포크인 OpenTofu가 문법 호환이라 검증 목적에는 차이가 없었습니다.
+덤으로 하나. 도구는 Terraform이 아니라 OpenTofu를 썼습니다. brew에서 terraform 공식 포뮬러가 라이선스 변경(BUSL) 이후 내려가 별도 tap 신뢰가 필요했기 때문입니다. 오픈소스 포크인 OpenTofu가 문법 호환이라 검증 목적에는 차이가 없었습니다.
 
 ## 5. 마치며, 세 층이 하나의 종점으로
 
@@ -100,8 +100,8 @@ Phase C를 표로 정리하면 이렇게 됩니다.
 | 온프레미스/VM | Ansible 플레이북 | e2e 완주 (계정 생성 -> 등록, 멱등 changed=0) |
 | 클라우드 | Terraform(OpenTofu) RDS 모듈 | validate 통과 (apply는 자격증명 필요라 정직하게 미실행) |
 
-셋은 서로 완전히 다른 도구지만 전부 DBTower의 멱등 PUT 하나를 종점으로 씁니다. 4편에서 기종 차이를 `DbmsOperator` 뒤로 숨겼듯, 이번엔 프로비저닝 도구의 차이가 등록 API 하나 뒤로 숨은 것입니다. 플랫폼에 K8s용·Ansible용·Terraform용 코드가 따로 생기는 대신, **잘 정의된 멱등 API 하나가 세 생태계의 접점**이 됐다는 게 이 Phase의 결론입니다.
+셋은 완전히 다른 도구지만 전부 DBTower의 멱등 PUT 하나를 종점으로 씁니다. 4편에서 기종 차이를 `DbmsOperator` 뒤로 숨겼듯, 이번엔 프로비저닝 도구의 차이가 등록 API 하나 뒤로 숨었습니다. 플랫폼에 K8s용·Ansible용·Terraform용 코드가 따로 생기는 대신 **잘 정의된 멱등 API 하나가 세 생태계의 접점**이 됐다는 게 이 Phase의 결론입니다.
 
-다음 편은 방향이 바뀝니다. 지금까지는 사람이 화면을 보고 판단하는 도구를 만들었다면, 이제 플랫폼이 스스로 보고 판단하는 축으로 넘어갑니다. 이상 자동 감지부터 통합 헬스 스코어까지, 자율 진단(Phase D)입니다.
+다음 편은 방향이 바뀝니다. 지금까지 사람이 화면을 보고 판단하는 도구를 만들었다면, 이제 플랫폼이 스스로 보고 판단하는 축으로 넘어갑니다. 이상 자동 감지부터 통합 헬스 스코어까지, 자율 진단(Phase D)입니다.
 
 코드와 실측 기록 전체는 [GitHub](https://github.com/dj258255/dbtower)에 있습니다.
