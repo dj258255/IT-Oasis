@@ -1,9 +1,9 @@
 ---
 title: '7일이면 버려지는 스냅샷을 장기 이력으로 살려낸 dbtower-lakehouse 실측 총정리'
 titleEn: 'How dbtower-lakehouse Turns Seven Days of Doomed Snapshots into Long-Term History, Measured End to End'
-description: 'DBTower가 7일 뒤 버리는 쿼리 스냅샷을 컬럼형 저장소로 내려 장기 이력을 만드는 ELT 파이프라인의 전체 기록을 한 편에 정리합니다. 오케스트레이션은 Airflow, 적재는 MinIO의 Parquet입니다. 변환은 dbt가 맡고 질의는 DuckLake로 합니다. 문제 정의(7일 시야로는 ''지난달 대비 느려진 쿼리''에 못 답함)에서 시작해, 원천·적재·조회 3자 일치로 검증한 멱등 추출(닫힌 창 07-05=149,259·07-06=79,894), 누적 카운터를 일간 델타로 접는 변환, 조용한 오답을 막는 4축 fail-closed 게이트(장애 주입 시 dbt 미실행 차단), lake를 house로 올리는 DuckLake 타임트래블·롤백을 담았습니다. 아카이브가 자신을 지우던 치명 결함의 시연과 차단, 1년치를 합성해 병목을 지목하고 증분 전환으로 407.62초를 4초로 줄인 규모 실측, 그리고 Kafka를 넣지 않은 근거까지 담았습니다. 모든 수치는 직접 측정했고 재현 기록이 저장소에 있습니다.'
-descriptionEn: 'The complete story of a pipeline that offloads DBTower''s soon-to-expire query snapshots into columnar storage to build long-term history. It is orchestrated by Airflow, landed as Parquet in MinIO, transformed by dbt, and queried by DuckLake. From problem definition (a seven-day window can''t answer ''which query got slower than last month'') through idempotent extraction verified by source/load/query three-way agreement, cumulative-to-daily-delta transformation, a four-axis fail-closed quality gate that blocks dbt on injected faults, DuckLake time travel and rollback that turn a lake into a house, the reproduction and blocking of a critical fault where the archive deleted itself, a scale test on a synthesized year that pinpointed the bottleneck and cut a 407.62s rebuild to 4s, and the reasoning behind not adding Kafka. Every number was measured firsthand; the reproduction log lives in the repo.'
-date: 2026-07-10
+description: 'DBTower가 7일 뒤 버리는 쿼리 스냅샷을 컬럼형 저장소로 내려 장기 이력을 만드는 ELT 파이프라인의 전체 기록을 한 편에 정리합니다. 오케스트레이션은 Airflow, 적재는 MinIO의 Parquet입니다. 변환은 dbt가 맡고 질의는 DuckLake로 합니다. 문제 정의(7일 시야로는 ''지난달 대비 느려진 쿼리''에 못 답함)에서 시작해, 원천·적재·조회 3자 일치로 검증한 멱등 추출(닫힌 창 07-05=149,259·07-06=79,894), 누적 카운터를 일간 델타로 접는 변환, 조용한 오답을 막는 4축 fail-closed 게이트, lake를 house로 올리는 DuckLake 타임트래블, 아카이브가 자신을 지우던 치명 결함의 차단, 1년치를 합성해 407.62초 재빌드를 4초로 줄인 규모 실측, Kafka를 넣지 않은 근거를 담았습니다. 여기에 남이 그대로 띄우는 셀프호스트 어플라이언스, 두 저장소가 손잡는 되쓰기, 그리고 이 창고만 할 수 있는 여섯 가지 판정(용량 D-day·플랜 회귀·백업 공백·미사용 인덱스·설정 변경 상관·가용성 SLO)까지, 파이프라인이 답을 만드는 공정에서 판정을 내리는 창고로 자란 과정을 이었습니다. 라이브에서 MSSQL 두 인스턴스가 63퍼센트대 가용성에 평균 ping 2에서 7초로 목표 미달, 나머지는 99.9퍼센트로 목표를 지킵니다. 모든 수치는 직접 측정했고 재현 기록이 저장소에 있습니다.'
+descriptionEn: 'The complete story of a pipeline that offloads DBTower''s soon-to-expire query snapshots into columnar storage to build long-term history. It is orchestrated by Airflow, landed as Parquet in MinIO, transformed by dbt, and queried by DuckLake. From problem definition (a seven-day window can''t answer ''which query got slower than last month'') through idempotent extraction verified by three-way agreement, cumulative-to-daily-delta transformation, a four-axis fail-closed quality gate, DuckLake time travel, blocking a critical fault where the archive deleted itself, a scale test that cut a 407.62s rebuild to 4s, and the reasoning behind not adding Kafka. It then extends to a self-host appliance others can run as-is, a writeback where two repos join hands, and the six verdicts only this warehouse can make (capacity D-day, plan regression, backup gap, unused index, config-change correlation, availability SLO), tracing how a pipeline that produced answers grew into a warehouse that renders judgments. Live, two MSSQL instances read 63-percent availability at two to seven seconds ping (below target) while the rest hold 99.9 percent. Every number was measured firsthand; the reproduction log lives in the repo.'
+date: 2026-07-19
 tags:
   - Airflow
   - dbt
@@ -20,9 +20,11 @@ seriesOrder: 0
 
 ## 0. 이 글 하나로
 
-이 글은 dbtower-lakehouse 시리즈 본편 여섯 편의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고 깊이가 필요한 지점마다 해당 편을 링크했습니다.
+이 글은 dbtower-lakehouse 시리즈 열한 편(1~11편)의 총정리입니다. 시리즈를 안 읽어도 이 한 편으로 전체가 파악되게 썼고 깊이가 필요한 지점마다 해당 편을 링크했습니다.
 
 한 줄로 요약하면 **[DBTower](/blog/project/dbtower/dbtower-0-overview)가 7일 뒤 버리는 쿼리 스냅샷을, 버려지기 직전에 컬럼형 저장소로 내려(ELT) 장기 이력으로 만드는 데이터 파이프라인**입니다. 오케스트레이션은 Airflow, 적재는 MinIO의 Parquet입니다. 변환은 dbt가 맡고 질의는 DuckLake로 합니다. 코드는 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 공개되어 있습니다.
+
+시작은 파이프라인을 짓는 이야기(1~6편)였습니다. 원천을 다치지 않게 내리고, 누적 스냅샷을 일간 델타로 접고, 조용한 오답을 게이트로 막고, DuckLake로 lake를 house로 올린 과정입니다. 그다음 이 물건을 남이 그대로 띄우게 만들었고(7편 셀프호스트 어플라이언스), 규모의 두 축(시간·인스턴스)으로 버티는지 쟀고(8편), 두 저장소가 되쓰기로 손잡게 했습니다(9편). 그리고 최근 두 편(10~11편)에서 창고가 데이터를 내리기만 하던 데서 나아가 **판정을 내리기 시작했습니다.** 용량이 언제 차는지, 플랜이 뒤집혀 느려졌는지, 백업이 며칠째 없는지, 인덱스를 지워도 되는지, 어떤 설정 변경 뒤 성능이 나빠졌는지, 그리고 그 DB가 얼마나 떠 있었는지. 라이브 7일 창으로는 구조적으로 못 하고 장기 창고라야 가능한 판정 여섯입니다.
 
 숫자부터 놓고 시작하겠습니다. 전부 직접 측정했고, 재현 명령과 원천 대조가 담긴 기록([VERIFICATION.md](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/VERIFICATION.md))이 저장소에 있습니다.
 
@@ -34,7 +36,10 @@ seriesOrder: 0
 | lake→house | DuckLake 타임트래블·롤백·PG 카탈로그 격리 (과거 버전 행수·행 값 복원) |
 | 규모 병목 | 1년치(2,190파일·54.5M행) 합성 실측 → fct 전체 재빌드 **407.62s**가 유일 병목 |
 | 증분 전환 | 그 수치가 정당화 → 407.62s → **4s (~100배)** |
-| 테스트 / CI | pytest 57 + dbt build PASS=26(unit test 5·계약·데이터 테스트), GitHub Actions 3관문 |
+| 셀프호스트 | `--profile demo`로 DBTower 없이 offload→게이트→dbt→발행 e2e, 번들 스택 외부 의존 **0** |
+| 판정층 | 창고만 할 수 있는 판정 **6종**(용량 D-day·플랜 회귀·백업 공백·미사용 인덱스·설정 변경 상관·가용성 SLO), 발행 21테이블 |
+| 가용성 실측 | 최근 창 MSSQL 2대 **63~64% breach**(ping 2~7초) / PG·Mongo·Oracle **99.9% meets** |
+| 테스트 / CI | pytest 57 + dbt build **PASS=129**(unit test 다수·계약·데이터 테스트), GitHub Actions 3관문 |
 
 측정 환경은 macOS + Docker 위의 로컬 스택입니다. 원천(DBTower)이 라이브로 수집 중이라, 검증은 값이 더 자라지 않는 **닫힌 UTC 구간**으로만 했습니다. 이 규율은 뒤에서 다시 설명합니다.
 
@@ -70,7 +75,7 @@ seriesOrder: 0
 
 ## 2. 단계별로 본 개선 아크 요약 (상황 → 만든 것 → 핵심 실측)
 
-시리즈는 "어떤 상황에서 무엇이 깨지고, 그래서 무엇을 만드는가"의 개선 아크로 씁니다. 전/후가 있는 건 전/후로 실측했습니다. 표의 단계 번호는 저장소 [ROADMAP](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/ROADMAP.md)의 아크 번호라서 블로그 편 번호와 다릅니다. 열 단계를 본편 여섯 편(1~6편)으로 묶었고 각 행에 해당 편을 링크했습니다. 4단계(Serve)는 반쪽 데이터 위 서빙을 피하려 7단계(대시보드)에서 함께 구현해 표에선 7단계 행에 합쳤습니다.
+시리즈는 "어떤 상황에서 무엇이 깨지고, 그래서 무엇을 만드는가"의 개선 아크로 씁니다. 전/후가 있는 건 전/후로 실측했습니다. 표의 단계 번호는 저장소 [ROADMAP](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/ROADMAP.md)의 아크 번호라서 블로그 편 번호와 다릅니다. 스물한 단계를 본편 열한 편(1~11편)으로 묶었고 각 행에 해당 편을 링크했습니다. 4단계(Serve)는 반쪽 데이터 위 서빙을 피하려 7단계(대시보드)에서 함께 구현해 표에선 그 행에 합쳤습니다. 아래 표는 파이프라인을 짓는 단계(1~10)까지고, 그 뒤 셀프호스트와 판정층(11~21)은 표 아래에서 이어서 짚습니다.
 
 | 단계 | 상황 | 만든 것 | 핵심 실측 |
 |---|---|---|---|
@@ -134,6 +139,35 @@ fail-closed 게이트가 반쪽 데이터를 잘 막았는데, 막았다는 사�
 수치는 세 경로(DuckDB 파일 직독·Metabase API·대시보드 화면)로 대조했고 전부 일치했습니다. 악화 1위는 instance 8로 first→last 25.89→64.50ms, **+149.1%**였습니다. 발행(쓰기) 중 0.3초 간격 연속 41회 읽기가 전부 온전한 22행을 봤고(DuckLake 스냅샷 격리), 파일 케이스와 정반대 결과입니다.
 
 ![Metabase 대시보드에 뜬 악화 쿼리 랭킹과 일별 추이](/uploads/project/lakehouse/metabase-dashboard.png)
+
+### 남이 그대로 띄우는 셀프호스트 (7편)
+
+여기까지는 "로컬에서 재현된다"고 써 왔는데, 남이 clone하면 아무것도 안 떴습니다. 원천이 없어 인스턴스 0개로 조용히 빈 결과가 나기 때문입니다. 그래서 데모 위성을 떼어내 [셀프호스트 어플라이언스](/blog/project/lakehouse/lakehouse-7-selfhost)로 만들었습니다. `docker-compose.standalone.yml`과 `--profile demo`로 DBTower 없이도 offload부터 게이트(4축), dbt run, 발행까지 e2e가 돌고, 격리 실측에서 외부 의존은 0이었습니다. 범용 도구로 벌리지는 않았습니다. DBTower를 셀프호스트하는 사람이 자기 관제 옆에 이 창고를 같이 띄우는 것까지가 목표라, 초점을 좁힌 결정입니다.
+
+### 규모의 두 번째 축과 두 저장소의 되쓰기 (8·9편)
+
+규모는 시간축 하나로는 반쪽입니다. 몇백 대를 관제하는 쪽에서 늘어나는 건 dt가 아니라 인스턴스 수라, 총량을 고정하고 축만 돌려 [다시 쟀습니다](/blog/project/lakehouse/lakehouse-8-instance-axis). 증분 fct는 8.03초로 건재했고, 급소는 소파일이 아니라 full-refresh(769초)라는 게 드러났습니다. 제 외삽이 틀린 지점을 수치가 바로잡았습니다.
+
+그다음 두 저장소가 [손을 잡았습니다](/blog/project/lakehouse/lakehouse-9-registry-and-writeback). 원천을 `query_snapshot` 하나만 내리던 걸 테이블 스펙 레지스트리로 일반화해 백업·플랜·대기 이력까지 편입하고, 방향이 반대인 일도 하나 더 했습니다. 장기 dow×hour 베이스라인을 계산해 DBTower의 이상 감지 쪽으로 되쓰는(writeback) 경로입니다. 원천 readonly 봉인을 깨지 않으려 별도 역할에 해당 테이블만 권한을 주고 단일 트랜잭션으로 32,498행 왕복을 실측했습니다. 분석계가 운영계를 오염시키지 않는다는 이 프로젝트의 안전 논거를 지키면서 두 계층을 이은 것입니다.
+
+### 창고만 할 수 있는 여섯 가지 판정 (10·11편)
+
+여기서 성격이 한 번 바뀝니다. 창고가 데이터를 내리기만 하던 데서, 판정을 내리기 시작했습니다. 재료는 이미 다 있는데 판정 컬럼까지 이어 붙이지 않았을 뿐이었습니다. 라이브 7일 창으로는 구조적으로 못 하고 장기 창고라야 가능한 판정 여섯을 [두 편](/blog/project/lakehouse/lakehouse-10-verdicts)에 [걸쳐](/blog/project/lakehouse/lakehouse-11-refine) 채웠습니다.
+
+- **용량 D-day**는 크기 시계열의 선형 추세로 임계까지 잔여일을 냅니다.
+- **플랜 회귀**는 일 단위 대표 플랜의 뒤집힘을 잡아 전후 지연을 비교하되, 관측이 덜 차면 PENDING, 비교창이 오염되면 AMBIGUOUS로 지어내지 않습니다.
+- **백업 공백**은 유니버스를 query 팩트에서 잡아 기록 없는 인스턴스도 행으로 드러내고, 기준일을 벽시계가 아니라 창고 최신 dt로 잡아 파이프라인 중단과 백업 중단을 섞지 않습니다.
+- **미사용 인덱스**는 90일 창의 실사용으로 "지워도 되나"를 판정하되, 삭제 지시가 아니라 후보까지만 냅니다.
+- **설정 변경 상관**은 파라미터가 바뀐 뒤 성능이 뒤따라 나빠졌는지를 겹쳐 원인 후보를 지목합니다. 상관이지 인과가 아니라 조언 어휘로만 싣습니다.
+- **가용성 SLO**는 1분 핑을 하루로 접어 최근 30일 uptime을 목표와 견주고 SRE 에러버짓을 냅니다.
+
+이 판정들이 한 화면에서 읽히도록 인스턴스 차원(`dim_instance`)을 붙여, 그동안 여러 마트가 "기종은 저쪽에서 보세요"라고 달던 각주를 회수했습니다. `instance_id 1`이 `local-mysql (MYSQL)`로 읽히고, 대기 이벤트가 기종과 나란히 섭니다. 그리고 판정은 여전히 발화하지 않습니다. 창고는 판정 컬럼까지만 계산하고, 알림은 Metabase나 DBTower의 몫으로 둡니다. 두 번째 알림 시스템을 만들지 않는다는 원칙을 판정층에서도 지켰습니다.
+
+가용성 판정이 특히 곧바로 켜졌습니다. 상관 마트들은 후행 관측이 쌓여야 의미가 차는데, 가용성은 연속 측정이라 실데이터가 바로 말을 합니다.
+
+![Metabase 가용성 SLO 대시보드 실화면. instance_name과 engine이 붙어 local-mssql은 최근 창 63.45퍼센트에 평균 ping 2132밀리초, mssql-pitr는 64.28퍼센트에 6897밀리초로 목표 99.9에 못 미치고, PostgreSQL과 Mongo와 Oracle은 99.9퍼센트대로 목표를 지킨다](/uploads/project/lakehouse/lh21_slo_dashboard.png)
+
+MSSQL 두 인스턴스가 최근 창에서 63퍼센트대 가용성에 평균 ping 2초에서 7초로 목표에 한참 못 미쳤고, 나머지는 99.9퍼센트로 목표를 지켰습니다. 어느 기종이 지금 문제인지가 숫자로 바로 보입니다. 이걸로 관리 대상 DB에 관해 창고가 답할 판정이 한 바퀴 찼습니다.
 
 ## 3. 아카이브가 자신을 지우는 경로를 다룬 심층 사례
 
@@ -249,10 +283,11 @@ ArchiveSelfDestructError: 원천 0행인데 기존 파티션 오브젝트가 존
 - **합성 규모의 재현 범위**도 한계입니다. 파일 수·파티션 규모는 정확히 재현하지만 고유 쿼리 카디널리티 폭증은 하루치의 반복이라 미재현입니다(원천 다양성의 문제).
 - **계약·계보**도 마찬가지입니다. 컬럼 레벨 계보·PII 태깅은 dbt Enterprise 영역이라 문서 계보까지만 했습니다.
 
-돌아보면 이 프로젝트를 관통한 건 세 문장입니다.
+돌아보면 이 프로젝트를 관통한 건 네 문장입니다.
 
 1. **버려지는 것에 두 번째 삶을 준다.** 관제가 7일 만에 버리는 데이터를 분석계가 받아 장기 이력으로 잇습니다.
 2. **주장은 실측으로 편다.** 멱등은 닫힌 창 재실행으로, 품질은 장애 주입으로 확인했습니다. 규모는 1년치를 실제로 만들어 쟀고, 최적화는 병목 수치가 정당화한 곳만 건드렸습니다.
-3. **안 하는 것에도 이유를 붙인다.** Kafka·Spark·Iceberg를 안 넣은 근거가 넣은 것만큼 이 파이프라인의 성격을 보여줍니다.
+3. **안 하는 것에도 이유를 붙인다.** Kafka·Spark·Iceberg를 안 넣은 근거가 넣은 것만큼 이 파이프라인의 성격을 보여줍니다. 저빈도 감사 데이터라 change_review를 안 내린 것도, 가용성을 가져오기 전에 원천 29개를 전부 대조한 것도 같은 규율입니다.
+4. **데이터를 내리는 데서 판정을 내리는 데까지.** 재료를 장기 보관하는 창고가, 라이브 7일 창이 구조적으로 못 하는 여섯 가지 판정을 내리는 창고로 자랐습니다. 발화는 여전히 남에게 맡기고, 판정 컬럼까지만 정직하게 계산합니다.
 
-전 과정의 상세는 시리즈 [1편(계약·적재)](/blog/project/lakehouse/lakehouse-1-contract-and-load)부터 [6편(규모)](/blog/project/lakehouse/lakehouse-6-scale-and-serve)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
+전 과정의 상세는 시리즈 [1편(계약·적재)](/blog/project/lakehouse/lakehouse-1-contract-and-load)부터 [11편(판정층)](/blog/project/lakehouse/lakehouse-11-refine)까지에, 재현 가능한 기록은 [GitHub](https://github.com/dj258255/dbtower-lakehouse)에 있습니다.
