@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif">
+  <rect x="0" y="0" width="760" height="340" rx="12" fill="#ffffff" stroke="#e5e5e5"/>
+  <text x="32" y="40" font-size="16" font-weight="700" fill="#1a1a1a">snapshot_offload DAG — Phase 14 배선 (8태스크, 파싱 실측)</text>
+
+  <!-- 주 체인 -->
+  <text x="32" y="78" font-size="12" font-weight="600" fill="#2a78d6">주 체인 (query_snapshot · 4축 게이트)</text>
+  <g font-size="12" font-weight="600">
+    <rect x="32"  y="92" width="92"  height="40" rx="8" fill="#eef4fc" stroke="#2a78d6"/>
+    <text x="78"  y="116" text-anchor="middle" fill="#1a1a1a">offload</text>
+    <rect x="152" y="92" width="102" height="40" rx="8" fill="#eef4fc" stroke="#2a78d6"/>
+    <text x="203" y="116" text-anchor="middle" fill="#1a1a1a">quality_gate</text>
+    <rect x="282" y="92" width="96"  height="40" rx="8" fill="#eef4fc" stroke="#2a78d6"/>
+    <text x="330" y="116" text-anchor="middle" fill="#1a1a1a">transform</text>
+    <rect x="406" y="92" width="86"  height="40" rx="8" fill="#eef4fc" stroke="#2a78d6"/>
+    <text x="449" y="116" text-anchor="middle" fill="#1a1a1a">publish</text>
+    <rect x="560" y="66"  width="100" height="40" rx="8" fill="#eef4fc" stroke="#2a78d6"/>
+    <text x="610" y="90"  text-anchor="middle" fill="#1a1a1a">heartbeat</text>
+    <rect x="560" y="120" width="100" height="40" rx="8" fill="#f1eefb" stroke="#4a3aa7"/>
+    <text x="610" y="144" text-anchor="middle" fill="#1a1a1a">writeback</text>
+  </g>
+  <g stroke="#444444" stroke-width="1.6">
+    <line x1="124" y1="112" x2="148" y2="112"/>
+    <line x1="254" y1="112" x2="278" y2="112"/>
+    <line x1="378" y1="112" x2="402" y2="112"/>
+    <line x1="492" y1="106" x2="556" y2="88"/>
+    <line x1="492" y1="118" x2="556" y2="138"/>
+  </g>
+  <g fill="#444444">
+    <path d="M148 112 l-8 -4 0 8 z"/>
+    <path d="M278 112 l-8 -4 0 8 z"/>
+    <path d="M402 112 l-8 -4 0 8 z"/>
+    <path d="M556 88 l-8.8 -1.5 2.5 8 z"/>
+    <path d="M556 138 l-6.3 -6.5 -2.5 8 z"/>
+  </g>
+  <text x="500" y="190" font-size="10.5" fill="#6b6b6b">병렬 — 되쓰기 실패가</text>
+  <text x="500" y="204" font-size="10.5" fill="#6b6b6b">생존 신호를 굶기지 않는다</text>
+  <text x="560" y="52" font-size="10.5" fill="#6b6b6b">deadman이 감시하는 생존 신호</text>
+
+  <!-- 보조 브랜치 -->
+  <text x="32" y="238" font-size="12" font-weight="600" fill="#0b7a4b">보조 브랜치 (backup_run · plan_snapshot — 프로필 게이트)</text>
+  <g font-size="12" font-weight="600">
+    <rect x="32"  y="252" width="112" height="40" rx="8" fill="#eefaf4" stroke="#1baf7a"/>
+    <text x="88"  y="276" text-anchor="middle" fill="#1a1a1a">offload_aux</text>
+    <rect x="172" y="252" width="140" height="40" rx="8" fill="#eefaf4" stroke="#1baf7a"/>
+    <text x="242" y="276" text-anchor="middle" fill="#1a1a1a">quality_gate_aux</text>
+  </g>
+  <line x1="144" y1="272" x2="168" y2="272" stroke="#444444" stroke-width="1.6"/>
+  <path d="M168 272 l-8 -4 0 8 z" fill="#444444"/>
+  <text x="330" y="268" font-size="11" fill="#6b6b6b">주 체인과 분리 — 보조 실패가 heartbeat를 굶겨</text>
+  <text x="330" y="283" font-size="11" fill="#6b6b6b">deadman 오경보를 내면 안 된다 · 정합/드리프트만 강제, 나머지 SKIP 명시</text>
+
+  <text x="32" y="322" font-size="10.5" fill="#9b9b9b">wait_event_snapshot은 원천 영속 테이블 부재(D1, DBTower 몫) — 레지스트리 available=False로 시끄럽게 거부</text>
+</svg>

@@ -121,6 +121,8 @@ standalone만 이 변수를 채워 카탈로그를 번들 PG로 보냅니다. **
   Airflow 3종, `metabase`.
 - 유일한 외부 의존은 "사용자의 DBTower 메타 PG"뿐입니다. `SRC_PG_*`로 주입받습니다.
 
+![standalone 어플라이언스 구조 — 번들(Airflow·MinIO·카탈로그 PG·Metabase)과 외부 의존(사용자의 DBTower 메타 PG 두 테이블), demo 프로필의 샘플 원천](/uploads/project/lakehouse/lh11_appliance_box.svg)
+
 시크릿은 하드코딩을 전부 없앴습니다. 데모 스택은 `airflow/airflow`, `dbtower1234` 같은
 평문이 compose에 박혀 있었는데, 이건 로컬에선 편하지만 외부에 노출되는 순간 전부
 취약점입니다. 특히 Airflow는 기본 웹서버에 인증이 없고, 과거 CVE는 로그와 UI로
