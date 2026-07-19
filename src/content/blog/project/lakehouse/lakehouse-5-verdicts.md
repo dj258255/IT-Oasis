@@ -1,7 +1,7 @@
 ---
-title: '창고가 데이터를 내리는 데서 판정을 내리는 데까지 — 여섯 가지 판정을 채우다'
+title: '창고가 데이터를 내리는 데서 판정을 내리는 데까지, 여섯 가지 판정을 채우다'
 titleEn: 'From Landing Data to Rendering Judgment — Filling In Six Verdicts'
-description: '창고에 데이터를 내리기만 하고 판정을 안 하고 있었습니다. plan_snapshot과 fct_query_daily를 둘 다 갖고도 상관시키지 않아 신고마다 30분씩 플랜 이력을 뒤졌고, 백업 공백은 판정 컬럼이 없어 복구하다 발견했습니다. 셋 다 신규 수집 없이 이미 내린 데이터를 판정 컬럼까지 잇는 일이었습니다. 플랜 회귀는 일 단위 대표 플랜의 뒤집힘을 전후 N일 지연과 겹치되 관측이 덜 차면 PENDING, 창이 오염되면 AMBIGUOUS로 지어내지 않고, 백업 공백은 유니버스를 query 팩트에서 잡아 기록 없는 인스턴스도 행으로 드러내며 기준일을 벽시계가 아닌 창고 최신 dt로 잡습니다. 이 셋을 주간 보고 한 장으로 접었습니다. 그리고 판정에 "왜"가 빠졌음을 깨달아 설정 드리프트를 원인 후보로 붙이고, 상관을 플랜 뒤집힘 한 축에서 지연·볼륨까지 넓히고, change_review는 저빈도라 자리만 열어 두었습니다. 여러 마트가 달던 "기종 축이 없다"는 각주는 이미 읽던 database_instance의 name·type로 회수해 instance_id 1이 local-mysql (MYSQL)로 읽히게 했고, 마지막으로 DBTower가 35일 뒤 지우는 up 여부를 장기 가용성 SLO로 만들었습니다. 라이브에서 MSSQL 두 인스턴스가 63퍼센트대 가용성에 평균 ping 2에서 7초로 목표 미달, 는 99.9퍼센트로 목표를 지킵니다. 이걸로 관리 대상 DB에 관해 창고가 답할 판정 여섯이 한 바퀴 찼습니다. 발화는 여전히 남에게 맡기고 판정 컬럼까지만 정직하게 계산합니다.'
+description: '창고에 데이터를 내리기만 하고 판정을 안 하고 있었습니다. plan_snapshot과 fct_query_daily를 둘 다 갖고도 상관시키지 않아 신고마다 30분씩 플랜 이력을 뒤졌고, 백업 공백은 판정 컬럼이 없어 복구하다 발견했습니다. 셋 다 신규 수집 없이 이미 내린 데이터를 판정 컬럼까지 잇는 일이었습니다. 플랜 회귀는 일 단위 대표 플랜의 뒤집힘을 전후 N일 지연과 겹치되 관측이 덜 차면 PENDING, 창이 오염되면 AMBIGUOUS로 지어내지 않고, 백업 공백은 유니버스를 query 팩트에서 잡아 기록 없는 인스턴스도 행으로 드러내며 기준일을 벽시계가 아닌 창고 최신 dt로 잡습니다. 이 셋을 주간 보고 한 장으로 접었습니다. 그리고 판정에 "왜"가 빠졌음을 깨달아 설정 드리프트를 원인 후보로 붙이고, 상관을 플랜 뒤집힘 한 축에서 지연·볼륨까지 넓히고, change_review는 저빈도라 자리만 열어 두었습니다. 여러 마트가 달던 "기종 축이 없다"는 각주는 이미 읽던 database_instance의 name·type로 회수해 instance_id 1이 local-mysql (MYSQL)로 읽히게 했고, 마지막으로 DBTower가 35일 뒤 지우는 up 여부를 장기 가용성 SLO로 만들었습니다. 라이브에서 MSSQL 두 인스턴스가 63퍼센트대 가용성에 평균 ping 2에서 7초로 목표 미달, 나머지는 99.9퍼센트로 목표를 지킵니다. 이걸로 관리 대상 DB에 관해 창고가 답할 판정 여섯이 한 바퀴 찼습니다. 발화는 여전히 남에게 맡기고 판정 컬럼까지만 정직하게 계산합니다.'
 descriptionEn: 'The warehouse was only landing data, never judging it, so every slowness report cost 30 minutes of digging through plan history and silent backup gaps surfaced only during recovery. None needed new collection, just wiring landed data through to a verdict. Plan regression overlays day-level dominant-plan flips with before/after latency, refusing to invent a verdict when observation is thin (PENDING) or the window is contaminated (AMBIGUOUS); backup RPO draws its universe from the query fact and anchors to the warehouse latest dt. These fold into one weekly report. Then, seeing the verdicts answer only what and when, I added config drift as the candidate for why, widened the correlation from plan flips to latency and volume, and left change_review as an open seat since it is low-frequency audit data. The scattered "no engine axis" caveat was reclaimed from database_instance so instance_id 1 reads as local-mysql (MYSQL), and finally the up-status DBTower prunes after 35 days became a long-term availability SLO. Live, two MSSQL instances read 63-percent availability at two to seven seconds ping while the rest hold 99.9 percent. This completes the six verdicts the warehouse can render, still leaving alerting to others and computing only to the verdict column.'
 date: 2026-07-19
 tags:
@@ -238,10 +238,10 @@ within vector of size 8`을 냈습니다. 원인은 파티션 규약이었습니
 dev 창고에서 돌렸더니 원천에 진짜 드리프트가 있었습니다. 인스턴스 2와 4의 `work_mem`이
 4096에서 8192로 올랐다가 다시 4096으로 내려와 있었습니다. 누군가 올렸다가 되돌린 흔적입니다.
 
-![Metabase 설정 드리프트 대시보드 실화면. 왼쪽 위는 변경 타임라인으로 인스턴스 2·4의 work_mem이 4096과 8192 사이를 오간 기록이다. 오른쪽 위는 영향 상관 표다. 아래는 일별 수집·변경 표인데, 인스턴스 2·4는 change_events가 2이고  다섯은 0이지만 cycles_collected가 모두 23이라 무변경과 미수집이 구분된다](/uploads/project/lakehouse/lh18_config_dashboard.png)
+![Metabase 설정 드리프트 대시보드 실화면. 왼쪽 위는 변경 타임라인으로 인스턴스 2·4의 work_mem이 4096과 8192 사이를 오간 기록이다. 오른쪽 위는 영향 상관 표다. 아래는 일별 수집·변경 표인데, 인스턴스 2·4는 change_events가 2이고 나머지 다섯은 0이지만 cycles_collected가 모두 23이라 무변경과 미수집이 구분된다](/uploads/project/lakehouse/lh18_config_dashboard.png)
 
 `fct_config_change_daily`가 정확히 의도대로 나왔습니다. 일곱 인스턴스 전부 그날 23사이클
-수집됐고(수집됨의 증거), 그중 2와 4만 변경 이벤트 2건에 파라미터 1종이 바뀌었으며, 다섯은 변경 0입니다. "무변경"과 "미수집"이 한 표에서 갈립니다.
+수집됐고(수집됨의 증거), 그중 2와 4만 변경 이벤트 2건에 파라미터 1종이 바뀌었으며, 나머지 다섯은 변경 0입니다. "무변경"과 "미수집"이 한 표에서 갈립니다.
 
 상관 마트는 네 변경 이벤트 모두 `no_flip_observed`로 나왔습니다. 창고의 플랜 이력이 아직
 하루뿐이라 겹칠 뒤집힘이 없기 때문입니다. 정직한 결과입니다. 그래서 로직 자체는 CI 픽스처로
@@ -260,7 +260,7 @@ dev 창고에서 돌렸더니 원천에 진짜 드리프트가 있었습니다. 
 
 한 가지 더 정직하게 적자면, 이 상관은 플랜 뒤집힘 하나만 본다는 한계가 있습니다. 볼륨
 증가로 같은 플랜이 느려지는 회귀는 롤링 랭킹 마트의 몫이라 여기서는 안 겹칩니다. 원인의
-축이 여럿이라는 뜻이고, 지금 겹친 건 그중 "설정 변경 → 플랜 변경" 한 갈래입니다. 축을 이 상관 층에 어떻게 더할지가 다음 이야기입니다. 바로 이어서 넓혔습니다.
+축이 여럿이라는 뜻이고, 지금 겹친 건 그중 "설정 변경 → 플랜 변경" 한 갈래입니다. 나머지 축을 이 상관 층에 어떻게 더할지가 다음 이야기입니다. 바로 이어서 넓혔습니다.
 
 
 ## 13. 상관이 계속 안 켜졌다
@@ -421,8 +421,8 @@ Prometheus로 가는데, 이 가용성 샘플은 DBTower의 PG 테이블에만 �
 
 ![가용성 SLO 파이프라인. health_sample(1분 폴링, 35일 보존)에서 fct_uptime_daily(up 샘플 나누기 전체가 uptime 퍼센트)로, 다시 mart_uptime_slo(최근 30일 대 목표로 에러버짓)로 흐른다. 아래는 에러버짓 개념과 라이브 막대로, local-postgres는 99.9퍼센트로 meets, local-mysql은 98.9퍼센트로 breach, local-mssql은 63.4퍼센트로 breach다](/uploads/project/lakehouse/lh21_slo.svg)
 
- 테이블은 안 가져오는 게 맞았습니다. `audit_event`나 `login_attempt`는 DBTower 콘솔
-자체의 감사 로그라 관리 대상 DB 이야기가 아니고, 는 인프라나 설정 테이블입니다.
+나머지 테이블은 안 가져오는 게 맞았습니다. `audit_event`나 `login_attempt`는 DBTower 콘솔
+자체의 감사 로그라 관리 대상 DB 이야기가 아니고, 나머지는 인프라나 설정 테이블입니다.
 
 ## 25. 1분 샘플을 하루로 접는다
 
@@ -466,6 +466,6 @@ Oracle은 99.9퍼센트로 목표를 지키고, DBTower 자기 자신(dbtower-se
 것도 있었습니다.
 
 여기서 남은 건 정말로 시간이 해제하는 것들뿐입니다. 플랜 이력이 쌓이면 플랜 회귀와 설정 상관이
-실데이터로 켜지고, 그건 코드가 아니라 날짜가 하는 일입니다. DBTower의  테이블은 콘솔
+실데이터로 켜지고, 그건 코드가 아니라 날짜가 하는 일입니다. DBTower의 나머지 테이블은 콘솔
 감사거나 인프라거나 이미 다른 집(Prometheus)이 있어서, 창고가 더 가져올 게 없습니다. 관리 대상
 DB에 관해 창고가 답할 수 있는 판정은 여기서 한 바퀴가 찼습니다.

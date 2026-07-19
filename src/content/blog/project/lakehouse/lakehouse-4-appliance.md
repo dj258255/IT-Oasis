@@ -142,7 +142,7 @@ Metabase 공식 문서가 프로덕션에서 쓰지 말라고 명시한 것입�
 번들하니, 거기에 `metabase_app`이라는 별도 DB를 하나 더 만들어 Metabase 앱 DB로
 흡수했습니다. 서비스는 하나도 안 늘고 프로덕션 위생만 챙긴 셈입니다.
 
-![standalone Metabase 첫 화면 — 번들 PG 앱 DB 위에서 갓 부팅한 셋업 위저드. 사용자가 처음 만나는 화면이 이것이다](/uploads/project/lakehouse/lh11_standalone_metabase.png)
+![standalone Metabase 첫 화면. 번들 PG 앱 DB 위에서 갓 부팅한 셋업 위저드다. 사용자가 처음 만나는 화면이 이것이다](/uploads/project/lakehouse/lh11_standalone_metabase.png)
 
 마지막으로 코드입니다. 개발용 compose는 `./dags`, `./extract`, `./dbt`를 bind-mount로
 컨테이너에 얹습니다. 편집이 바로 반영돼 개발엔 좋지만, 프로덕션에선 호스트 코드를
