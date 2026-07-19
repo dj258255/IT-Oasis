@@ -13,7 +13,7 @@ tags:
   - Reverse ETL
   - DBRE
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/bot-diagnosis-reply.png
 draft: false
 series: "DBTower"
 seriesOrder: 8

@@ -18,7 +18,7 @@ tags:
   - Query Optimization
   - Observability
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/health-score.png
 draft: false
 series: "DBTower"
 seriesOrder: 2

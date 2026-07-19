@@ -14,7 +14,7 @@ tags:
   - Prometheus
   - Monitoring
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/lbac-viewer-scope.png
 draft: false
 series: "DBTower"
 seriesOrder: 7
