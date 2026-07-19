@@ -17,7 +17,7 @@ tags:
   - GitHub Actions
   - Self-hosted
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/selfhost-architecture.svg
 draft: false
 series: "DBTower"
 seriesOrder: 3

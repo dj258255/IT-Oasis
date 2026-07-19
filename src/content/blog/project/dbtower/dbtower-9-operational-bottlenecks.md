@@ -11,7 +11,7 @@ tags:
   - Spring Modulith
   - dbt
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/review-gate.png
 draft: false
 series: "DBTower"
 seriesOrder: 9

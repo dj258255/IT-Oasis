@@ -14,7 +14,7 @@ tags:
   - MongoDB
   - MCP
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/dashboard.png
 draft: false
 series: "DBTower"
 seriesOrder: 0

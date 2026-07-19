@@ -12,7 +12,7 @@ tags:
   - PITR
   - DBRE
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/xtrabackup-physical.png
 draft: false
 series: "DBTower"
 seriesOrder: 6

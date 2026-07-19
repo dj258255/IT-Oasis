@@ -16,7 +16,7 @@ tags:
   - Prometheus
   - Discord
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/compare.png
 draft: false
 series: "DBTower"
 seriesOrder: 1

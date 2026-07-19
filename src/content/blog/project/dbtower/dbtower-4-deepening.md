@@ -20,7 +20,7 @@ tags:
   - Concurrency
   - Code Audit
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/plan-change.png
 draft: false
 series: "DBTower"
 seriesOrder: 4

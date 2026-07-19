@@ -13,7 +13,7 @@ tags:
   - Frontend
   - DBRE
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/cover.svg
+coverImage: /uploads/project/dbtower/inquiry-discord.png
 draft: false
 series: "DBTower"
 seriesOrder: 5
