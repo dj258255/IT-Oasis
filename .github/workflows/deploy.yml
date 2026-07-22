@@ -33,10 +33,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Astro glob 콘텐츠 로더의 content sync가 CI에서 비결정적으로 일부 글을
-      # 조용히 누락시킨다(같은 커밋이 빌드마다 585·249·107·51·4편 등으로 출렁,
-      # OS 무관). 매 시도 콘텐츠 스토어를 비운 독립 빌드를 반복해, 기대 글 수
-      # (초안·unlisted 제외)를 채운 빌드가 나올 때까지 재시도한다. 끝내 미달이면
+      # Astro glob 콘텐츠 로더가 CI 콜드 빌드에서 일부 글을 비결정적으로 조용히
+      # 누락시킨다. 다만 콘텐츠 데이터 스토어(node_modules/.astro)는 빌드 간
+      # '누적'되므로, 스토어를 유지한 채 재빌드하면 빠진 글이 채워져 전량에 도달한다.
+      # (예전 버전은 매 시도 스토어를 비워 매번 독립 콜드 빌드가 되는 바람에 완성으로
+      # 수렴하지 못하고 20연속 미달로 배포가 실패했다 — 그게 실제 실패 원인이었다.)
+      # 기대 글 수(초안·unlisted 제외)를 채울 때까지 재시도하고, 끝내 미달이면
       # 배포를 막아(fail-closed) 잘린 사이트가 라이브로 나가지 않게 한다.
       - name: Build until content-complete
         run: |
@@ -48,9 +50,12 @@ jobs:
           echo "expected published posts: $EXPECTED (total=$TOTAL draft=$DRAFT unlisted=$UNLISTED)"
           RENDERED=0
           for i in $(seq 1 20); do
-            # clean BOTH the root .astro (types/settings) and node_modules/.astro
-            # (content data store) so each attempt is a truly independent cold build
-            rm -rf .astro node_modules/.astro dist
+            # 콘텐츠 데이터 스토어(node_modules/.astro)는 '유지'하고 dist만 정리한다.
+            # Astro glob 로더가 콜드 빌드에서 글을 비결정적으로 랜덤 누락하지만, 스토어는
+            # 빌드 간 누적되므로 유지한 채 재빌드하면 빠진 글이 채워져 전량(EXPECTED)에
+            # 도달·안정된다. (예전처럼 매 시도 스토어를 비우면 매번 독립 콜드 도박이 되어
+            # 20연속 미달=배포 실패가 난다 — 그게 실제 실패 원인이었다.)
+            rm -rf dist
             pnpm run build
             RENDERED=$(grep -oE 'data-en="All">[^<]*</span>[[:space:]]*<span class="sidebar-count">[0-9]+' dist/index.html 2>/dev/null | grep -oE '[0-9]+$' | head -1)
             RENDERED=${RENDERED:-0}
@@ -59,8 +64,7 @@ jobs:
               echo "content complete on attempt $i"
               exit 0
             fi
-            echo "incomplete ($RENDERED/$EXPECTED), retrying..."
-            sleep 3
+            echo "incomplete ($RENDERED/$EXPECTED) — 스토어 유지한 채 재빌드로 누적..."
           done
           echo "::error::content sync incomplete after 20 attempts ($RENDERED/$EXPECTED) — aborting deploy to keep last good site live"
           exit 1
