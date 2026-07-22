@@ -553,6 +553,7 @@ DBTower의 관측 데이터는 7일 뒤 버려지고, 이상 감지의 14일 창
    - DuckDB 파일은 단일 쓰기 모델이라, 같은 호스트에서는 읽기 커넥션의 잠금에 dbt 쓰기가 죽습니다(매일 새벽 transform이 Conflicting lock으로 죽습니다).
    - 컨테이너 경계에서는 잠금이 전파되지 않아 열린 리더 밑에서 파일이 소리 없이 재작성됩니다. 시끄럽게 죽는 쪽보다 나쁜 실패입니다.
 2. **마트를 DuckLake로 발행하고 Metabase는 read-only로만 읽습니다.**
+   - Metabase가 DuckDB를 읽으려면 이미지부터 손봐야 했습니다. 공식 Metabase는 Alpine(musl) 기반이라 DuckDB JDBC 네이티브 라이브러리(glibc 링크)가 `UnsatisfiedLinkError: libduckdb_java...so`로 안 뜹니다. 드라이버 저장소(MotherDuck)도 README에서 "기본 Alpine 컨테이너에선 안 된다"며 Debian 기반을 권장하기에, `eclipse-temurin:21-jre-jammy` 위에 metabase.jar와 드라이버 jar를 얹은 20줄짜리 이미지를 직접 구웠습니다. 드라이버는 Metabase 메이저·DuckDB 버전에 짝 고정했습니다(1.5.3.0 = Metabase 59 + DuckDB 1.5.3, dbt의 1.5.4와 같은 계열로 포맷 호환).
    - 동시성 중재를 파일 잠금에서 PG 트랜잭션(스냅샷 격리)으로 넘겼습니다. 카탈로그는 이미 있는 PostgreSQL을 재사용해 서비스 추가 0, 데이터는 MinIO(S3)입니다.
    - 발행(쓰기) 도중 0.3초 간격 연속 질의 **41회 전부 온전**했고, 수치는 3경로(파일 직독·API·화면) 대조로 전부 일치했습니다. 타임트래블도 `AT (VERSION => n)`으로 과거 상태를 재현해 실증했습니다.
 3. **화면이 깨운 동시성 버그와 발행 원자성까지 잡았습니다.**
