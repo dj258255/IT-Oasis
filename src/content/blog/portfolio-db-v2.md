@@ -29,6 +29,14 @@ unlisted: true
 
 모든 수치는 로컬 Docker 위 전/후 실측이며(대규모는 합성 데이터로 검증), 재현 절차는 각 저장소 VERIFICATION에 남겼습니다.
 
+## AI를 쓰는 방식
+
+- **안전 설계**: MCP 서버를 직접 구현하되 AI에는 read-only 도구 화이트리스트만 열어 대상 DB 변경 0을 구조로 보장
+- **Plan-First 협업**: 변경 범위·영향·테스트 계획을 먼저 세우고 사람이 승인한 뒤에만 구현
+- **컨텍스트 엔지니어링**: 프로젝트 규칙·과거 결정을 CLAUDE.md와 메모리 파일로 관리
+- **역할 분리**: 작업한 에이전트가 자기 결과를 채점하지 않도록 탐지·수정·검증을 별도 에이전트로 분리
+- **검증이 기본값**: AI가 만든 코드도 같은 관문(테스트 CI·전/후 실측)을 통과해야 채택
+
 ## 오픈소스 기여: Spring Boot · Apache Lucene
 
 - **Spring Boot** [PR #49063](https://github.com/spring-projects/spring-boot/pull/49063): Kotlin 테스트에서 `find(Foo::class.java, id)`처럼 Java class reference를 넘겨야 하던 것을 reified 확장(`find<Foo>(id)`)으로 개선. 메인테이너 커밋으로 반영되어 **Spring Boot 4.1.0-M2 New Features에 기록**
