@@ -181,6 +181,10 @@ Airflow DAG 한 줄이 offload → quality_gate → transform → publish → he
 
 ![파이프라인 흐름: 추출·적재 → 검증·변환 → 발행·서빙·감시](/uploads/project/lakehouse/pipeline-flow.svg)
 
+![데이터 모델, 원천 2테이블에서 raw parquet·staging·marts(contract 강제)와 운영 테이블까지의 컬럼 계보, 누적 카운터가 일간 델타로 접히는 변환 지점 표기](/uploads/project/lakehouse/erd.svg)
+
+원천 2테이블이 raw parquet에서 staging을 거쳐 marts로 흐르고, marts는 contract로 컬럼 타입을 강제합니다. 이 계보의 심장은 서버 기동 이후 누적 카운터를 하루 양 끝 차분으로 접어 일간 델타로 바꾸는 변환 지점입니다.
+
 ### 판단 1. 조용히 틀린 데이터는 없는 것보다 나쁩니다
 
 반쪽 파티션 위의 "조용히 틀린 랭킹"을 막으려고 4축 fail-closed 게이트(정합·완결성·신선도·스키마)를 dbt 앞에 세웠습니다. dbt test는 이미 로드된 데이터만 봐서 없는 행을 못 잡기 때문입니다. 파티션 20,158행을 지워 주입하자 게이트가 FAIL을 내고 dbt가 실행되지 않았습니다(exit 2). 마트 컬럼 타입은 dbt contracts가 CREATE TABLE 시점에 막고, 수집기가 21시간 조용히 멈췄는데 알림이 0통이었던 경험은 deadman(30h 침묵 시 경보 실수신 확인)으로 이어졌습니다.
