@@ -19,13 +19,8 @@ unlisted: true
 
 같이 일하는 사람과 사용하는 사람 모두에게 도움이 되고 싶습니다.
 
-세 가지만 기억해 주세요.
-
-1. 이기종 DBMS 5기종(MySQL·PostgreSQL·Oracle·SQL Server·MongoDB)을 인터페이스 하나 뒤에서 관제·진단·백업하는 플랫폼을 만들었습니다. 새 기종을 추가해도 코어 파이프라인은 **0줄 수정**입니다. → [DBTower](#dbtower-이기종-dbms-5종-관제진단-플랫폼)
-2. "인덱스가 있는데 왜 안 타요"에 옵티마이저가 속은 이유까지 답합니다. 추정 vs 실제 실행계획 **괴리 300배**로 원인을 지목하고, 자기 쿼리를 자기 진단으로 **343배**(21.269→0.062ms) 개선했습니다.
-3. 7일 뒤 버려지는 관측 데이터를 장기 창고로 내려, DBA가 손으로 하던 **판정 6종을 컬럼으로 자동화**했습니다. → [DBTower-lakehouse](#dbtower-lakehouse-버려지는-관측-데이터의-장기-분석판정-파이프라인)
-
-그 밖에 쓰는 프레임워크의 문제를 직접 고쳐 Spring Boot(4.1.0-M2)와 Apache Lucene(main merge)에 기여가 반영됐고, 코딩테스트를 힘들어하는 친구를 위해 만든 CodingTestKit은 다운로드 750+입니다.
+- 오픈소스의 문제를 직접 해결해 Spring Boot(4.1.0-M2)·Apache Lucene(main merge)에 기여가 반영됐습니다
+- 코딩테스트를 힘들어하는 친구를 위해 CodingTestKit(다운로드 750+)을 만들어 운영합니다
 
 **Database** MySQL, PostgreSQL, Oracle, SQL Server, MongoDB
 **Backend** Java 21, Spring Boot, JPA / JdbcTemplate
