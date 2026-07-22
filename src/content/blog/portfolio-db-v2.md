@@ -27,7 +27,7 @@ unlisted: true
 **Data Pipeline** Python, Airflow, dbt, DuckDB / DuckLake, MinIO(S3), Parquet, Metabase
 **Infra / 검증** Docker, Kubernetes(CloudNativePG), Ansible, GitHub Actions CI, k6, Prometheus, JUnit / pytest
 
-모든 수치는 로컬 Docker 위 전/후 실측이고(대규모는 합성 데이터로 검증), 재현 절차는 각 저장소 VERIFICATION에 남겼다. AI는 안전장치를 먼저 설계하고 쓴다. MCP 서버에 read-only 도구 화이트리스트만 열어 대상 DB 변경 0을 구조로 보장하고, 계획을 사람이 승인한 뒤에만 구현하며, AI가 만든 코드도 같은 관문(테스트 CI·전/후 실측)을 통과해야 채택한다.
+모든 수치는 로컬 Docker 위 전/후 실측이며(대규모는 합성 데이터로 검증), 재현 절차는 각 저장소 VERIFICATION에 남겼습니다.
 
 ## 오픈소스 기여: Spring Boot · Apache Lucene
 
