@@ -39,8 +39,34 @@ unlisted: true
 
 ## 오픈소스 기여: Spring Boot · Apache Lucene
 
-- **Spring Boot** [PR #49063](https://github.com/spring-projects/spring-boot/pull/49063): Kotlin 테스트에서 `find(Foo::class.java, id)`처럼 Java class reference를 넘겨야 하던 것을 reified 확장(`find<Foo>(id)`)으로 개선. 메인테이너 커밋으로 반영되어 **Spring Boot 4.1.0-M2 New Features에 기록**
-- **Apache Lucene** [PR #15675](https://github.com/apache/lucene/pull/15675): `IndexWriter` 생성자 실패 시 `MergeScheduler`가 닫히지 않아 스레드 풀이 새는 문제를 수정하고 회귀 테스트 추가. **main branch merge, CHANGES.txt에 bug fix로 기록**
+### Spring Boot: Kotlin 테스트 API 사용성 개선 · [PR #49063](https://github.com/spring-projects/spring-boot/pull/49063)
+
+**reified 확장**으로 `TestEntityManager`의 Kotlin 사용성을 개선, 메인테이너 커밋으로 반영되어 **Spring Boot 4.1.0-M2 New Features에 기록**
+
+- **문제**: Kotlin 테스트에서 `find(Foo::class.java, id)`처럼 Java class reference를 직접 전달해야 했음
+- **해결**: reified 확장 함수(`find<Foo>(id)`, `persistAndGetId<Long>(entity)` 등)를 추가해 간결하고 타입 안전하게
+- **검증**: 각 확장이 기존 API로 올바르게 위임되는지 Mockito 단위 테스트로 증명해 제출
+
+```kotlin
+// before — Java class reference 직접 전달
+val foo = testEntityManager.find(Foo::class.java, id)
+// after — reified 확장 함수
+val foo = testEntityManager.find<Foo>(id)
+```
+
+### Apache Lucene: IndexWriter 초기화 실패 시 리소스 누수 수정 · [PR #15675](https://github.com/apache/lucene/pull/15675)
+
+**실패 경로의 스레드 풀 누수**를 잡아 **Apache Lucene main branch에 merge, CHANGES.txt에 bug fix로 기록**
+
+- **문제**: `IndexWriter` 생성자 실패 시 writeLock만 닫고 `MergeScheduler`를 닫지 않아 `ThreadPoolExecutor`가 종료되지 않음
+- **해결**: 실패 경로에서 `MergeScheduler`까지 함께 정리하도록 수정
+- **검증**: `OpenMode.APPEND`+빈 디렉터리로 초기화 실패를 재현하고, `close()` 호출을 `AtomicBoolean`으로 확인하는 회귀 테스트 추가
+
+```java
+// 회귀 테스트 요지 — 초기화 실패 재현 후 close 호출 검증
+expectThrows(IndexNotFoundException.class, () -> new IndexWriter(emptyDir, cfg));
+assertTrue(schedulerClosed.get());
+```
 
 ## DBTower: 이기종 DBMS 5종 관제·진단 플랫폼
 
