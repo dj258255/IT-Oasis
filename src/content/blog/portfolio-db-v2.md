@@ -668,9 +668,6 @@ DBTower의 관측 데이터는 7일 뒤 버려지고, 이상 감지의 14일 창
 - **멱등은 공짜가 아닙니다.** delete-first 재적재의 경계 조건을 감사하지 않았다면, 편의 장치가 데이터를 지우는 장치가 됐습니다.
 - **판정은 계산까지, 발화는 남에게 맡깁니다.** 창고가 PENDING·AMBIGUOUS를 지어내지 않고 남기는 것, 삭제 후보까지만 내고 멈추는 것이 자동화의 신뢰를 만듭니다.
 
-- 저장소: [github.com/dj258255/dbtower-lakehouse](https://github.com/dj258255/dbtower-lakehouse) (실측 기록 docs/VERIFICATION.md)
-- 깊이가 필요하면: [블로그 총정리 0편](/blog/project/lakehouse/lakehouse-0-why) (시리즈 0~5편)
-
 ## 링크 모음
 
 **DBTower**
