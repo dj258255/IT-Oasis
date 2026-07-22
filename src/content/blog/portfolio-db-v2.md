@@ -90,8 +90,6 @@ assertTrue(schedulerClosed.get());
 
 ### 아키텍처
 
-![DBTower 전체 구조, 소비자 차이는 채널 뒤로, 기종 차이는 DbmsOperator 뒤로](/uploads/project/dbtower/architecture-full.svg)
-
 소비자 3채널(웹 콘솔·MCP·웹훅)이 같은 코어(수집 폴러·시점비교·회귀감지·헬스스코어)를 부르고, 코어는 `DbmsOperator` 인터페이스 뒤의 기종별 구현체 5개만 봅니다. 바깥 경계는 소비자를 숨기고 안쪽 경계는 기종을 숨깁니다. 채널을 추가하는 동안 코어는 한 줄도 바뀌지 않았습니다.
 
 ![상세 아키텍처, 컨테이너 경계·포트, 폴러와 채널의 실제 배선, 메타 DB와 대상 DB 5기종](/uploads/project/dbtower/architecture-detail.svg)
