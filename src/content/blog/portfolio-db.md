@@ -45,8 +45,6 @@ unlisted: true
 
 ## 오픈소스 기여: Spring Boot · Apache Lucene
 
-**쓰는 프레임워크의 문제를 직접 고쳐 반영된 기여 2건. 남의 코드를 읽고 직접 재현해 검증하는 눈을 여기서 배웠다.**
-
 ### Spring Boot: Kotlin 테스트 API 사용성 개선 · [PR #49063](https://github.com/spring-projects/spring-boot/pull/49063)
 
 **reified 확장**으로 `TestEntityManager`의 Kotlin 사용성을 개선, 메인테이너 커밋으로 반영되어 **Spring Boot 4.1.0-M2 New Features에 기록**
@@ -542,12 +540,7 @@ Airflow DAG 한 줄이 이 셋을 순서대로 지난다: offload → quality_ga
 <a class="linkcard" href="https://dj258255.github.io/IT-Oasis/blog/project/lakehouse/lakehouse-0-why">
 <div class="lc-title">블로그 총정리 (0편)</div>
 <div class="lc-sub">왜 만들었는지부터 판정층까지<br>시리즈 0~5편</div>
-</a>
-<a class="linkcard" href="https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/RUNBOOK.md">
-<div class="lc-title">운영 절차 (RUNBOOK)</div>
-<div class="lc-sub">backfill·장애 대응·CHECKPOINT<br>docs/RUNBOOK.md</div>
-</a>
-</div>
+</a></div>
 
 ## 링크 모음
 
