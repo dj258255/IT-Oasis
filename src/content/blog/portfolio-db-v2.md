@@ -70,11 +70,13 @@ assertTrue(schedulerClosed.get());
 
 ## DBTower: 이기종 DBMS 5종 관제·진단 플랫폼
 
-MySQL부터 MongoDB까지, 이기종 DBMS 5종의 등록·진단·백업·감시를 인터페이스 하나 뒤에서 처리합니다.
+**MySQL부터 MongoDB까지, 이기종 DBMS 5종의 등록·진단·백업·감시를 인터페이스 하나 뒤에서 처리합니다.**
 
-- 2026.03 ~ 2026.07 · 개인(100%) · [GitHub](https://github.com/dj258255/dbtower) · [블로그 0편(설계와 실측 전체)](/blog/project/dbtower/dbtower-0-overview)
-- Java 21, Spring Boot, PostgreSQL(메타), MCP(JSON-RPC 2.0 직접 구현), Flyway, ShedLock, Docker, k6
-- 규모 가정: 관제 도구라 수십 RPS·단일 노드 셀프호스트를 전제하되, 배포 전 k6로 검증했습니다(10 VU 30s: **2,832 req/s**, P95 5.86ms, 실패 0)
+- **기간**: 2026.03 ~ 2026.07 · 개인(100%) · [GitHub](https://github.com/dj258255/dbtower) · [블로그 시리즈 0~9편](/blog/project/dbtower/dbtower-0-overview)
+- **스택**: Java 21, Spring Boot, PostgreSQL(메타), JdbcTemplate·Mongo Driver·JDBC batch(적재적소), MCP(JSON-RPC 2.0 직접 구현), Flyway, ShedLock, Docker, k6
+- **규모 가정**: 관제 도구라 실사용 트래픽은 수십 RPS를 예상하고 단일 노드 셀프호스트 운용을 전제했습니다. 그래도 배포 전 k6로 부하를 걸어 안정성을 확인했습니다(10 VU 30s: **2,832 req/s**, P95 5.86ms, 실패 0)
+- **측정 환경**: 로컬 Docker(Apple Silicon) 위 대상 DB 5기종. 모든 수치는 개선 전을 먼저 재고 고친 뒤 다시 잰 전/후 실측이며, 재현 절차는 [VERIFICATION.md](https://github.com/dj258255/dbtower/blob/main/docs/VERIFICATION.md) 117개 절에 보존했습니다
+- **자기 저장소를 PostgreSQL로 고른 이유**: pg_stat_statements, RANGE 파티션 DROP, 풍부한 시스템 뷰를 도그푸딩 대상으로도 쓰기 위해서입니다
 
 DB에 이슈가 나면 개발자는 흩어진 도구를 오가다 결국 DBA에게 묻고, DBA는 같은 질문에 반복해서 답합니다. 관리 대상 DB가 늘수록 사람 손이 선형으로 늘어나는 이 구조를 인터페이스 하나로 끊고 싶었습니다. 이미 검증된 메트릭 스택(Prometheus·Grafana)은 다시 만들지 않고, 그 위에서 "그 시각에 어떤 쿼리가 원인이고, 실행계획이 왜 나쁘고, 무엇을 해야 하나"에 답하는 층만 맡았습니다.
 
