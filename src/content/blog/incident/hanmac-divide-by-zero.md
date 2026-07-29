@@ -1,0 +1,122 @@
+---
+title: '한맥에서 0으로 나눈 값이 주문 검증을 통과했다'
+titleEn: "Hanmac: A Divide-by-Zero That Slipped Through Order Validation"
+description: '2013년 한맥투자증권은 옵션 이론가를 계산할 때 잔존 만기가 0이 되며 만들어진 비정상 값이 주문 검증을 통과해 143초 만에 약 463억 원의 손실을 냈습니다. 재현한 건 0으로 나눈 값이 상하한 검증을 통과하는 지점까지입니다. 실제 거래소와 옵션 모델은 다루지 않았습니다. 코드는 Java 21과 Spring Boot로 짰습니다. 주문 120건 중 Infinity를 유발한 10건은 상한 검증에 걸려 거부됐습니다. NaN을 유발한 10건은 크기 비교가 모두 false라 그대로 접수됐습니다. 특수값을 나열해 막는 대신 유한성 화이트리스트와 킬스위치를 붙이자 비정상 접수가 0건이 됐습니다.'
+descriptionEn: "In 2013, Hanmac Securities lost about 46.3 billion won in 143 seconds after an option pricing formula divided by a time-to-expiry that had reached zero, and the resulting non-finite price passed order validation. This session does not rebuild an exchange or an option model. It shrinks the problem down to a single mechanism in Java 21 and Spring Boot, namely how a divide-by-zero result gets through an upper and lower bound check. Of 120 orders, the 10 that produced Infinity were rejected by the upper bound, but the 10 that produced NaN slipped through because every magnitude comparison against NaN is false. Swapping the blacklist for a finiteness whitelist plus a kill switch brought bad acceptances down to zero."
+date: 2026-05-08
+tags:
+  - Java
+  - Java 21
+  - Spring Boot
+  - Docker
+  - IEEE 754
+  - BigDecimal
+  - Validation
+  - REST API
+category: incident
+series: '증권 IT 장애 재현'
+seriesOrder: 1
+coverImage: /uploads/incident/hanmac-divide-by-zero/01-buggy-run.png
+---
+
+## 1. 유명한 이유
+
+2013년 12월 12일 한맥투자증권은 코스피200 옵션 주문에서 143초 만에 37,900여 건이 체결되며 약 463억 원의 손실을 냈고, 그 손실을 감당하지 못해 이듬해 파산했습니다. 근거 등급은 E1입니다. 대법원은 거래 상대방들에게 나간 체결의 취소를 허가하지 않았고, 그 판결과 금융당국 조치가 공개 기록으로 남아 있습니다.
+
+원인의 핵심은 옵션 이론가를 계산할 때 잔존 만기를 분모로 쓰다가 만기 당일 그 값이 0이 되면서 계산 결과가 비정상이 된 것입니다. 그 비정상 값이 호가의 상한과 하한 검증을 통과해 그대로 시장에 나갔습니다. 이 세션은 실제 거래소와 옵션 모델을 재현하지 않습니다. 0으로 나눈 값이 검증을 어떻게 통과하는가라는 메커니즘만 자바로 축소 재현했습니다.
+
+## 2. 재현
+
+주문 120건을 코드로 만들었습니다. 정상 100건, 잔존일수를 0으로 두어 Infinity를 유발하는 10건, 잔존일수와 분자를 모두 0으로 두어 NaN을 유발하는 10건입니다. 주문가는 `base * (1 + numerator/days)`이고, 접수 로직은 "상한을 넘거나 하한에 못 미치면 거부, 아니면 접수"입니다. 환경은 Docker 위 eclipse-temurin:21-jdk-alpine, JDK 21입니다.
+
+`docker compose up` 한 번으로 다음이 관측됐습니다. 상·하한은 [90, 130]입니다.
+
+```
+Infinity 주문가 = Infinity | (px>upper)=true (px<lower)=false -> 거부됨
+NaN      주문가 = NaN | (px>upper)=false (px<lower)=false -> 둘 다 false라 안 걸림
+
+버그 검증 결과 (총 120건)
+  접수: 정상 100건, 비정상(NaN/Inf) 10건
+```
+
+![F01 버그 검증 실행 화면](/uploads/incident/hanmac-divide-by-zero/01-buggy-run.png)
+
+*그림 1. 버그 검증 실행 화면입니다. Infinity 10건은 상한 검증에 걸려 거부되고, NaN 10건이 그대로 접수됩니다.*
+
+Infinity를 유발한 10건은 거부됐고, NaN을 유발한 10건이 접수됐습니다. 명령과 출력 원문은 [reproduce.md](https://github.com/dj258255/incident-lab/blob/main/sessions/F01-hanmac-divide-by-zero/reproduce.md)에 그대로 남겼습니다.
+
+### 실제 스택에서도 뚫리는가 (Spring Boot)
+
+같은 검증 로직을 Spring Boot 3.3 주문접수 REST API로 옮겨, 증권 백엔드가 쓰는 환경에서도 통과하는지 확인했습니다. 내장 Tomcat이 뜬 뒤 주문 120건을 실제 HTTP로 쐈습니다. 클라이언트가 보내는 값(base, numerator, days)은 전부 유한한 정상 숫자이고, 비정상 값은 서버가 `base * (1 + numerator/days)`를 계산하는 순간 잔존일수 0에서 만들어집니다. 한맥에서도 나쁜 값은 외부 입력이 아니라 내부 계산에서 나왔습니다.
+
+![F01 Spring 주문접수 API 재현 화면](/uploads/incident/hanmac-divide-by-zero/04-spring-run.png)
+
+*그림 4. 같은 버그를 Spring Boot 주문접수 API로 재현한 화면입니다. 내장 Tomcat이 뜨고, 버그 엔드포인트에서 NaN 10건이 201 Created로 접수됩니다. BigDecimal 강화 시도는 500 서버오류 20건을 냅니다.*
+
+버그 엔드포인트 `/orders/buggy`는 정상 100건과 NaN 10건을 201 Created로 접수했습니다. NaN 10건이 실제 REST 검증을 그대로 통과한 것입니다. Infinity 10건만 상한 초과로 422를 받았습니다. 입력 `@Valid` 검증은 120건 모두 통과했습니다. `@Valid`가 보는 것은 클라이언트가 보낸 입력이고, 정작 위험한 값은 서버가 그 뒤에 계산한 파생값이라 검증 범위 밖이기 때문입니다. 코드는 [spring/](https://github.com/dj258255/incident-lab/tree/main/sessions/F01-hanmac-divide-by-zero/spring/)에 있고, 최소 재현과 수치가 정확히 맞물립니다.
+
+![엔드포인트별 잘못된 응답 수](/uploads/incident/hanmac-divide-by-zero/05-spring-endpoints.png)
+
+*그림 5. 엔드포인트별로 비정상 주문이 만든 잘못된 응답 수입니다. 버그는 NaN 10건을 조용히 접수하고, BigDecimal 시도는 500 오류 20건을 내며, 해소는 0건입니다.*
+
+## 3. 내부 원리
+
+자바를 포함한 IEEE 754 부동소수점에서 0으로 나누는 연산은 예외를 던지지 않습니다. 분자가 0이 아니면 `5.0 / 0.0`은 Infinity가 되고, 분자도 0이면 `0.0 / 0.0`은 NaN이 됩니다. 정수 나눗셈이라면 `ArithmeticException`이 났겠지만, 가격 계산은 실수라 조용히 특수값이 만들어집니다.
+
+여기서 갈립니다. Infinity는 순서가 있는 값이라 `Infinity > 130`이 true가 되어 상한 검증에 걸립니다. NaN은 다릅니다. IEEE 754에서 NaN은 자기 자신과도 같지 않고, 크기 비교의 결과가 항상 false입니다. 그래서 `NaN > 130`도 false, `NaN < 90`도 false입니다. 접수 로직이 "상한을 넘거나 하한에 못 미치면 거부"라면 NaN은 두 조건 어디에도 걸리지 않아 거부를 빠져나가 접수됩니다. 0으로 나눈 것 자체보다 NaN의 비교 규칙이 검증을 무력화한 지점이 원인입니다.
+
+## 4. 해소
+
+거부 조건에 `|| Double.isNaN(px)`를 덧붙이는 방법이 먼저 떠오릅니다. 그런데 이 방식은 막아야 할 특수값을 하나씩 나열하는 구조라, Infinity나 부호 있는 0 같은 다른 경계값을 빠뜨릴 여지가 남습니다. 그래서 접수 조건을 뒤집어 화이트리스트로 두었습니다. 값이 유한하고 범위 안일 때만 접수하고, 나머지는 전부 거부합니다.
+
+```java
+static boolean acceptFixed(double px, double lower, double upper) {
+    if (!Double.isFinite(px)) return false; // NaN과 Infinity를 한 번에 거부
+    if (px > upper || px < lower) return false;
+    return true;
+}
+```
+
+`Double.isFinite`는 NaN과 양음의 Infinity를 모두 걸러냅니다. 여기에 두 번째 방어선으로 킬스위치를 붙였습니다. 비정상 주문이 짧은 시간에 반복되면 개별 거부만으로는 부족하다는 것이 한맥 사고의 교훈이라, 비정상 값이 일정 건수를 넘으면 접수 자체를 멈추게 했습니다. 이 세션에서는 임계값을 3건으로 두었습니다. 근본 방어는 애초에 잔존일수가 0이 될 수 없도록 입력 도메인을 검증하는 것이고, 유한성 가드와 킬스위치는 그 검증이 뚫렸을 때를 위한 뒷단입니다.
+
+해소 로직도 같은 Spring API의 `/orders/fixed`로 검증했습니다. 정상 100건은 201로 접수되고, 비정상 3건은 422로 거부되며, 킬스위치가 발동한 뒤 나머지 17건은 503을 받았습니다. 최소 재현의 킬스위치 발동 지점(3건째)과 그대로 맞물립니다.
+
+## 5. 재계측
+
+같은 120건을 해소 버전으로 다시 돌렸습니다.
+
+```
+[킬스위치] 비정상 주문 3건 감지 -> 103/120건 처리 지점에서 접수 중단
+해소 검증(유한성 가드 + 킬스위치) 결과
+  접수: 정상 100건, 비정상 0건 | 비정상 거부 3건, 킬스위치 발동=true
+```
+
+![F01 해소 검증 실행 화면](/uploads/incident/hanmac-divide-by-zero/02-fixed-run.png)
+
+*그림 2. 해소 검증 실행 화면입니다. 비정상 접수가 0건이 되고, 3건째에서 킬스위치가 접수를 멈춥니다.*
+
+버그 버전에서 10건이던 비정상 접수가 0건이 됐습니다. 정상 100건은 그대로 접수됐고, 비정상 값이 3건 쌓인 103번째 처리 지점에서 접수가 멈췄습니다.
+
+![검증별 비정상 주문 접수 건수](/uploads/incident/hanmac-divide-by-zero/03-bad-orders.png)
+
+*그림 3. 검증 전후 비정상 주문 접수 건수입니다. 버그 검증 10건이 해소 검증에서 0건이 됩니다. 정상 100건은 양쪽 모두 접수됩니다.*
+
+## 6. 예상과 달랐던 점
+
+세 가지가 처음 생각과 달랐습니다.
+
+첫째, "0으로 나누면 위험하다"고 뭉뚱그렸는데 실제로 검증을 뚫은 값은 Infinity가 아니라 NaN뿐이었습니다. Infinity는 `> 상한`에 걸려 거부됐습니다. 방어 코드를 "비정상 값을 거른다"고 막연히 적으면 Infinity만 막고 NaN을 놓칠 수 있다는 뜻입니다. 특수값을 나열해 막는 대신 유한성 화이트리스트로 뒤집은 이유가 여기 있습니다.
+
+둘째, 처음에는 상한을 110으로 두고 정상가가 `100 * (1 + 3/30) = 100 * 1.1 = 110`이라 상한 경계에 걸치도록 설계했는데, 정상 주문이 한 건도 접수되지 않았습니다. IEEE 754 double에서 `100 * 1.1`은 정확히 110이 아니라 110.00000000000001이라 `> 110`이 참이 되어 전량 거부됐기 때문입니다. F01의 주제와 별개로 F17 부동소수점 함정을 먼저 만난 셈이고, 가격 비교를 double 경계값으로 하면 안 된다는 예고였습니다. 그래서 상한을 130으로 넓혀 정상 케이스를 경계에서 떼어 놓고 측정했습니다.
+
+셋째, 실제 스택 재현에서 정밀도를 높이려 검증을 BigDecimal로 바꿔 보니, 그 시도 자체가 500 서버오류 20건을 냈습니다. `BigDecimal`은 NaN과 Infinity를 표현하지 못하고, `BigDecimal.valueOf(double)`은 내부에서 `Double.toString`의 결과를 파싱하므로 "Infinity"의 첫 글자 `I`에서 `NumberFormatException`이 납니다. 조용한 접수를 막으려던 강화가 오히려 500 응답으로 드러난 것입니다. 유한성 가드를 BigDecimal 변환보다 앞에 두어야 하는 이유이고, 검증 순서 자체가 방어의 일부라는 뜻입니다.
+
+## 한계
+
+실제 거래소, 옵션 이론가 모델, 초당 수백 건 규모의 체결 엔진은 재현하지 않았습니다. 분모가 0이 되어 특수값이 만들어지고 그것이 상하한 검증을 통과하는 메커니즘만 축소했습니다. 킬스위치 임계값 3건은 시연을 위한 값이라, 실제 운영에서는 초당 주문 수와 거부율을 함께 봐야 합니다.
+
+Spring 재현도 단일 인스턴스에서 인프로세스 드라이버로 순차 호출한 것이라, 동시성이나 초당 처리량은 측정하지 않았습니다. 장 시작 트래픽 급증에서의 커넥션풀과 스레드 고갈은 F03에서 부하 테스트로 다룹니다.
+
+---
+
+재현에 쓴 compose 파일과 실행 출력 원문은 [incident-lab 저장소의 F01 세션](https://github.com/dj258255/incident-lab/tree/main/sessions/F01-hanmac-divide-by-zero)에 있습니다.
