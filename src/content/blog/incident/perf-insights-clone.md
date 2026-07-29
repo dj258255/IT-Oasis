@@ -1,8 +1,8 @@
 ---
 title: 'Performance Insights를 직접 만들어 검증하기'
 titleEn: 'Building a Performance Insights Clone to Verify What It Measures'
-description: 'AWS가 2026년 7월 31일 RDS Performance Insights 콘솔을 종료합니다. DB Load(평균 활성 세션, AAS)를 구하는 수식은 그대로입니다. 매초 활성 세션을 세고 대기 이벤트로 쪼개는 40줄짜리 샘플러를 직접 만들었습니다. 병목을 알고 설계한 3구간 워크로드(CPU, 행 락, 콜드 IO)로 검증했습니다. 구간별 합계 AAS는 0.5, 7.5, 2.1로 갈렸습니다. 행 락 구간의 대기는 lock이 아니라 wait/io/table/sql/handler로 잡혔습니다. 실제 PI 화면에서도 똑같이 생기는 오진 지점입니다.'
-descriptionEn: "AWS is retiring the RDS Performance Insights console on July 31, 2026, but the formula behind DB Load (average active sessions) stays the same. I wrote a 40-line sampler that counts active sessions every second and splits them by wait event, then checked it against a three-phase workload whose bottleneck I designed in advance: CPU, row locks, and cold IO. Total AAS came out at 0.5, 7.5, and 2.1 across the phases, and the row-lock phase surfaced not as a lock wait but as wait/io/table/sql/handler, the same misreading trap that real Performance Insights screens produce."
+description: 'AWS가 2026년 7월 31일 RDS Performance Insights 콘솔을 종료하고 CloudWatch Database Insights로 넘깁니다. DB Load(평균 활성 세션, AAS)를 구하는 수식은 그대로입니다. 매초 활성 세션을 세고 대기 이벤트로 쪼개는 40줄짜리 샘플러를 직접 만들어, 병목을 알고 설계한 3구간 워크로드에 대 봤습니다. 가장 값어치 있는 결과는 InnoDB 행 락 대기가 lock이 아니라 wait/io/table/sql/handler로 표면화된다는 것입니다. 실제 PI 화면에서도 똑같이 생기는 오진 지점이고, performance_schema.data_lock_waits를 함께 세면 갈라집니다. 다만 CPU 구간은 부하 생성기가 DB를 채우지 못해 검증하지 못했고, 구간 1에서는 활성 세션의 21%를 분류하지 못했습니다.'
+descriptionEn: "AWS retires the RDS Performance Insights console on July 31, 2026 and moves it to CloudWatch Database Insights, but the formula behind DB Load (average active sessions) stays the same. I wrote a 40-line sampler that counts active sessions every second and splits them by wait event, then ran it against a three-phase workload whose bottleneck I designed in advance. The finding worth keeping is that InnoDB row lock waits surface not as a lock wait but as wait/io/table/sql/handler, the same misreading trap real Performance Insights screens produce, and that counting performance_schema.data_lock_waits alongside separates the two. The CPU phase was not verified because the Python load generator could not keep the database busy, and 21% of active sessions in that phase went unclassified."
 date: 2026-07-29
 tags:
   - MySQL
@@ -20,23 +20,40 @@ coverImage: /uploads/incident/perf-insights-clone/chart-pi-100ms.png
 ---
 
 > 근거 등급: `E2`
-> 출처: [AWS, Database load (Average Active Sessions)](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.ActiveSessions.html) · [MySQL 8.4, Wait Event Summary Tables](https://dev.mysql.com/doc/refman/8.0/en/performance-schema-wait-summary-tables.html)
+> 출처: [AWS, Database load (Average Active Sessions)](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.ActiveSessions.html) · [AWS, Pricing and data retention for Performance Insights](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.cost.html) · [MySQL 8.4, Wait Event Summary Tables](https://dev.mysql.com/doc/refman/8.4/en/performance-schema-wait-summary-tables.html) · [MySQL 8.4, Pre-Filtering by Consumer](https://dev.mysql.com/doc/refman/8.4/en/performance-schema-consumer-filtering.html) · [Oracle 19c, V$ACTIVE_SESSION_HISTORY](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-ACTIVE_SESSION_HISTORY.html)
 
 ## 1. 유명한 이유
 
-RDS의 Performance Insights는 관리형 DB 관측의 표준 화면이었습니다. AWS가 콘솔을 2026년 7월 31일 자로 종료하고 CloudWatch Database Insights로 넘기지만(API는 유지), 화면이 어디로 가든 그 핵심 수식은 그대로입니다. AWS 문서가 서술하는 동작은 단순합니다. **매초, 쿼리를 실행 중인 세션을 샘플링해서 그 세션들이 무엇을 기다리는지(wait event)로 쪼갠다.** 그 평균이 DB Load(평균 활성 세션, AAS)입니다.
+RDS의 Performance Insights는 관리형 DB 관측의 표준 화면이었습니다. AWS는 콘솔을 2026년 7월 31일 자로 종료하고 CloudWatch Database Insights로 넘긴다고 공지했습니다. API는 그대로 유지되고, 7일 무료 보존과 1~24개월 유료 보존은 Database Insights의 Standard 모드로 같은 가격에 이어집니다. 화면이 어디로 가든 그 핵심 수식은 그대로입니다. AWS 문서가 서술하는 동작은 단순합니다. **매초, 쿼리를 실행 중인 세션을 샘플링해서 그 세션들이 무엇을 기다리는지(wait event)로 쪼갠다.** 그 평균이 DB Load(평균 활성 세션, AAS)입니다.
 
-관리형 환경에서는 호스트에 들어가 perf를 돌릴 수 없으므로 이 화면이 사실상 유일한 병목 분해 도구입니다. 도구가 뭘 하는지 모르고 쓰면 화면을 오독합니다. 그래서 같은 루프를 직접 구현하고, **병목을 우리가 알고 만든 워크로드**로 검증합니다. 샘플러가 CPU 구간에서 CPU라고, 락 구간에서 락이라고 답하는지를요.
+관리형 환경에서는 호스트에 들어가 perf를 돌릴 수 없으므로 이 화면이 사실상 유일한 병목 분해 도구입니다. 도구가 뭘 하는지 모르고 쓰면 화면을 오독합니다. 그래서 같은 루프를 직접 구현하고, 병목을 미리 정해 만든 워크로드에 대 봤습니다.
+
+먼저 결론부터 적습니다. **이 세션에서 건진 것은 "샘플러가 정확했다"가 아니라 "화면에 뜬 이름을 그대로 믿으면 안 된다"입니다.** 행 락에 막힌 세션이 화면에는 IO로 나옵니다. 아래 3절과 4절이 그 이야기입니다. 반대로 CPU 구간의 검증은 성립하지 않았습니다. 그 실패도 6절에 그대로 적었습니다.
 
 ## 2. 재현
 
+### 환경
+
+| 항목 | 값 |
+|---|---|
+| 호스트 | **기록하지 않았습니다.** `uname -srm`·`nproc`·`free -g`를 남기지 않아 CPU 수, 메모리, 저장 장치 종류를 확인할 수 없습니다 |
+| 컨테이너 | MySQL 8.4.3, `cpus: 4`, `mem_limit: 2g`, 버퍼 풀 256MB, `max_connections=200` |
+| 데이터 | `small` 10만 행(버퍼 풀에 다 들어감), `hotrow` 1행, `big` 400만 행 약 1.1GB |
+| 부하 생성기 | Python(CPython) + PyMySQL, 스레드 8개, 동기 드라이버 |
+| 샘플러 | Python, 1초·0.1초 두 간격을 동시에 병행 |
+| 일시 | 2026-07-29 |
+
+`cpus: 4`는 컨테이너에 준 CPU 할당량이지 호스트의 코어 수가 아닙니다. 이 저장소는 호스트가 두 종류라 절대 시간을 세션 사이에 비교하면 안 되는데, 이 세션은 어느 쪽이었는지 확인되지 않습니다.
+
 ### 만든 것
 
-`scripts/sampler.py`, 40줄짜리 미니 PI입니다. 매초 `performance_schema.threads`에서 활성 포그라운드 세션을 세고, `events_waits_current`의 진행 중 대기 이벤트로 분류합니다. 대기가 없는 활성 세션은 CPU로 칩니다(PI와 같은 해석). 이 세션의 재현 대상은 애플리케이션이 아니라 관측 도구 자체라서, 운영 도구의 관례대로 Python으로 만들었습니다.
+`scripts/sampler.py`, 40줄짜리 미니 PI입니다. 매초 `performance_schema.threads`에서 활성 포그라운드 세션을 세고, `events_waits_current`의 진행 중 대기 이벤트(`END_EVENT_ID IS NULL`)로 분류합니다. 대기가 없는 활성 세션은 CPU로 칩니다(PI와 같은 해석). 이 세션의 재현 대상은 애플리케이션이 아니라 관측 도구 자체라서, 운영 도구의 관례대로 Python으로 만들었습니다.
+
+분류는 이벤트 이름 접두어로 여섯 갈래입니다. `cpu`(대기 없음), `io_file`, `io_table`, `lock`, `synch`, 그리고 **어디에도 안 맞은 것을 담는 `other`**입니다. 이 `other` 열이 뒤에서 중요해집니다.
 
 ### 검증용 워크로드
 
-병목을 알고 만든 3구간, 각 60초입니다.
+병목을 미리 정해 만든 3구간, 각 60초입니다. 같은 스레드 8개가 구간만 바꿔 가며 돕니다.
 
 | 구간 | 부하 | 설계된 병목 |
 |---|---|---|
@@ -44,61 +61,191 @@ RDS의 Performance Insights는 관리형 DB 관측의 표준 화면이었습니�
 | 2 | 스레드 8개가 같은 행 1개 UPDATE | 행 락 |
 | 3 | 버퍼 풀(256MB)보다 큰 1.1GB 테이블 무작위 점조회 | 디스크 IO |
 
-### 먼저 만나는 함정: 계측이 꺼져 있다
+### 먼저 만나는 함정: 소비자가 꺼져 있다
 
-MySQL 8.4에서 wait 계측은 기본으로 대부분 꺼져 있습니다. 그 상태에서 락에 막힌 세션 2개를 샘플링하면 이렇게 보입니다.
+락에 막힌 세션 2개를 만들어 놓고 샘플러를 8초 돌리면, 기본 상태에서는 이렇게 보입니다.
 
 ```
-계측 활성화 전:  활성 2  cpu=2  lock=0  io=0     ← 전부 CPU처럼 보인다
-계측 활성화 후:  활성 2  io_table=1  synch=1     ← 대기가 드러난다
+소비자 활성화 전:  활성 2  cpu=2  io_table=0  synch=0   ← 전부 CPU처럼 보인다
+소비자 활성화 후:  활성 2  cpu=0  io_table=1  synch=1   ← 대기가 드러난다
 ```
 
-`setup_instruments`와 `setup_consumers`에서 `wait/%`를 켜기 전에는, 무엇을 기다리든 전부 "CPU 사용 중"으로 집계됩니다. 관측 도구를 붙이기 전에 계측 스위치부터 확인해야 하는 이유입니다. (RDS의 PI는 이 활성화를 서비스가 대신 해 줍니다. 직접 만들면 직접 켜야 합니다.)
+여기서 원인을 정확히 짚어야 합니다. `results/01-default-instruments.txt`의 출력을 보면 **계측(instrument) 쪽은 켜져 있었습니다.**
 
-## 3. 재계측: 샘플러는 병목을 맞혔는가
+```
+| wait/io/file/innodb/innodb_data_file | YES |
+| wait/lock/table/sql/handler          | YES |
+
+| events_waits_current      | NO |
+| events_waits_history      | NO |
+| events_waits_history_long | NO |
+```
+
+꺼져 있던 것은 **소비자(consumer)** 셋입니다. MySQL 문서는 "이벤트가 어느 목적지에도 전달되지 않는다면 Performance Schema는 그 이벤트를 아예 만들지 않는다"고 적고 있습니다. 소비자가 `NO`면 `events_waits_current`에 행이 남지 않고, 샘플러의 LEFT JOIN은 전부 NULL을 받고, NULL은 CPU로 분류됩니다. 계측을 켰는지만 확인하고 소비자를 안 보면 화면이 통째로 거짓말을 합니다.
+
+실험 스크립트는 `setup_instruments`의 `wait/%`와 `setup_consumers`의 `%waits%`를 함께 켭니다. `wait/synch/%`나 `wait/io/socket/%`처럼 기본이 꺼진 계측도 있으므로 둘 다 손대는 편이 안전합니다. (RDS의 PI는 이 활성화를 서비스가 대신 해 줍니다. 직접 만들면 직접 켜야 합니다.)
+
+## 3. 내부 원리: 행 락은 왜 락으로 안 보이는가
+
+이 글에서 가장 값어치 있는 지점입니다.
+
+구간 2는 스레드 8개가 같은 행 하나를 UPDATE하는, 교과서적인 행 락 경합입니다. 그런데 분해 결과의 `lock` 열은 60초 내내 0입니다. 대기는 전부 `wait/io/table/sql/handler`, 즉 화면상 **IO(테이블)**로 잡힙니다.
+
+이유는 performance_schema의 계측 지점이 어디에 박혀 있느냐입니다.
+
+- `wait/lock/%`는 **서버 계층**의 락 자리입니다. 테이블 락과 메타데이터 락이 여기 잡힙니다. InnoDB의 행 락은 여기 없습니다.
+- `wait/io/table/sql/handler`는 SQL 계층이 **핸들러 인터페이스를 통해 스토리지 엔진에 행 접근을 요청한 구간 전체**를 하나의 이벤트로 감쌉니다.
+- InnoDB 행 락 대기는 그 핸들러 호출 **안에서** 일어납니다. 바깥에서 보면 "핸들러를 부른 채 아직 안 돌아온 세션"이고, 그 이름이 `wait/io/table/sql/handler`입니다.
+
+그래서 이름이 IO라고 해서 디스크를 기다린 것이 아닙니다. **핸들러 안에서 무엇을 기다렸든 같은 이름으로 나옵니다.** 버퍼 풀 미스로 페이지를 읽는 중이어도 이 이름이고, 다른 트랜잭션의 락이 풀리기를 기다려도 이 이름입니다.
+
+이건 이 클론의 버그가 아니라 **실제 RDS MySQL의 PI 화면에서도 똑같이 보이는 혼란**입니다. 락 경합 장애인데 화면 최상단 대기 이벤트가 `wait/io/table/sql/handler`라서 IO 문제로 오진하기 좋습니다. 스토리지 IOPS를 올리거나 인스턴스를 키우는 쪽으로 손이 가는데, 실제로 필요한 것은 트랜잭션을 짧게 자르거나 핫 로우를 쪼개는 일입니다.
+
+## 4. 해소: data_lock_waits를 함께 센다
+
+같은 이벤트 이름이 진짜 IO(구간 3)에서도 나오므로 이름만으로는 못 가릅니다. 그래서 판별용 프로브를 따로 만들었습니다(`scripts/lock-probe.py`).
+
+같은 8스레드를 30초씩 두 구간(핫 로우 UPDATE, 콜드 IO 조회)으로 돌리면서, 매초 두 값을 함께 셉니다.
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM performance_schema.events_waits_current w
+     JOIN performance_schema.threads t ON t.THREAD_ID = w.THREAD_ID
+    WHERE w.EVENT_NAME = 'wait/io/table/sql/handler'
+      AND w.END_EVENT_ID IS NULL
+      AND t.PROCESSLIST_ID IS NOT NULL),
+  (SELECT COUNT(*) FROM performance_schema.data_lock_waits)
+```
+
+`data_lock_waits`는 진행 중인 행 락 대기를 "기다리는 쪽과 막고 있는 쪽"의 짝으로 보여 주는 테이블입니다. 같은 시각의 두 값을 나란히 보면 갈라집니다. 결과는 5절에 있습니다.
+
+**바꾼 것은 샘플러가 아니라 판독 절차입니다.** 대기 이벤트 이름만 보는 대신 `data_lock_waits`를 같은 주기로 함께 뽑고, `wait/io/table/sql/handler`가 치솟는데 `data_lock_waits`도 같이 올라가 있으면 IO가 아니라 락으로 읽습니다. 실제 RDS에서도 이 테이블은 그대로 읽을 수 있으므로 PI 화면 옆에 두면 같은 판별이 됩니다.
+
+대안으로 `SHOW ENGINE INNODB STATUS`의 트랜잭션 목록이나 `sys.innodb_lock_waits` 뷰를 쓰는 길도 있습니다. **다만 이 세션에서는 그 둘을 재지 않았으므로 어느 쪽이 더 나은지 말하지 않겠습니다.**
+
+## 5. 재계측
 
 ![미니 PI 대시보드](/uploads/incident/perf-insights-clone/chart-pi-1s.png)
 
-구간별 AAS 분해(1초 샘플링, 각 60초 평균)입니다.
+구간별 AAS 분해입니다. 1초 샘플링, 각 구간 60샘플의 평균입니다.
 
-| 구간 (설계된 병목) | CPU | IO(파일) | IO(테이블) | 락 | 합계 AAS |
-|---|---|---|---|---|---|
-| 1: 점조회 (CPU) | **0.33** | 0.00 | 0.08 | 0.00 | 0.5 |
-| 2: 핫 로우 (행 락) | 0.30 | 0.72 | **6.50** | 0.00 | 7.5 |
-| 3: 콜드 조회 (IO) | 0.35 | 0.02 | **1.53** | 0.00 | 2.1 |
+| 구간 (설계된 병목) | CPU | IO(파일) | IO(테이블) | 락 | 내부 동기화 | 기타(미분류) | 6열 합 | 활성 세션 |
+|---|---|---|---|---|---|---|---|---|
+| 1: 점조회 (CPU) | 0.33 | 0.00 | 0.08 | 0.00 | 0.00 | **0.12** | 0.53 | 0.55 |
+| 2: 핫 로우 (행 락) | 0.30 | 0.72 | **6.50** | 0.00 | 0.00 | 0.00 | 7.52 | 7.52 |
+| 3: 콜드 조회 (IO) | 0.35 | 0.02 | **1.53** | 0.00 | 0.00 | 0.18 | 2.08 | 2.08 |
 
-구간 전환이 화면에 정확히 나타납니다. 구간 2에서 AAS가 vCPU 선(4)을 훌쩍 넘는 7.5까지 치솟고, 구간 3은 2.1로 IO 대기가 주가 됩니다. 0.1초 샘플링과 1초 샘플링의 분해 결과도 소수점 수준에서 같았습니다(표는 `reproduce.md`). 이 워크로드처럼 초 단위로 지속되는 병목에는 PI의 1초 샘플링으로 충분하다는 뜻입니다.
+표에 열이 여덟 개인 이유가 있습니다. **`기타`는 샘플러의 여섯 갈래 어디에도 안 맞은 이벤트, 즉 분류기가 못 알아본 것입니다.** 분류기의 정확도를 검증하는 글이므로 이 열을 빼면 검증이 아니라 자기 확인이 됩니다. 6절에서 다시 다룹니다.
 
-## 4. 예상과 달랐던 점
+구간 1의 `6열 합`(0.53)과 `활성 세션`(0.55)이 어긋나는 것도 구현 탓입니다. 샘플러는 `idle` 대기 이벤트를 만나면 `idle`로 분류하는데, 이 값은 활성 세션 수에는 들어가고 여섯 열 어디에도 안 들어갑니다. 60샘플 중 1건이 그랬습니다. 고쳐야 할 자리입니다.
 
-### 행 락이 "락"으로 안 나옵니다
+그림의 점선은 컨테이너에 준 CPU 할당량 4입니다. 구간 2에서 AAS가 이 선을 훌쩍 넘어 7.5까지 갑니다. **다만 선을 넘었다고 CPU 경합인 것은 아닙니다.** 같은 구간의 CPU 열은 0.30입니다. 세션이 코어 수보다 많다는 뜻일 뿐이고, 무엇 때문에 많은지는 분해 결과의 색깔로 읽어야 합니다. 여기서는 락이었습니다.
 
-구간 2의 설계된 병목은 행 락인데, 분해 결과의 `lock` 열은 0입니다. 대기는 전부 `wait/io/table/sql/handler`, 즉 **IO(테이블)로 잡혔습니다.** performance_schema의 `wait/lock/%`는 테이블 락과 메타데이터 락의 자리이고, InnoDB 행 락 대기는 핸들러 호출 안에서 일어나 `wait/io/table/sql/handler`로 표면화되기 때문입니다.
+### 0.1초 샘플링과 1초 샘플링
 
-이건 이 클론의 버그가 아니라 **실제 RDS MySQL의 PI에서도 똑같이 보이는 유명한 혼란**입니다. 락 경합 장애인데 화면 최상단 대기 이벤트가 `wait/io/table/sql/handler`라서 IO 문제로 오진하기 좋습니다.
+이 비교를 저장소로 미루면 본문 주장에 근거가 없어지므로 표를 여기 싣습니다. 두 샘플러를 **같은 실행에서 동시에** 돌렸습니다.
 
-같은 이벤트 이름이 진짜 IO(구간 3)에서도 나오므로 이름만으로는 못 가릅니다. 보강 실험으로 구분법을 확정했습니다. `performance_schema.data_lock_waits`(진행 중 행 락 대기)를 같이 세면 갈라집니다.
+| 구간 | 간격 | 샘플 수 | CPU | IO(파일) | IO(테이블) | 락 | 내부 동기화 | 기타 | 활성 세션 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1초 | 60 | 0.33 | 0.00 | 0.08 | 0.00 | 0.00 | 0.12 | 0.55 |
+| 1 | 0.1초 | 594 | 0.32 | 0.00 | 0.04 | **0.01** | 0.00 | 0.12 | 0.50 |
+| 2 | 1초 | 60 | 0.30 | 0.72 | 6.50 | 0.00 | 0.00 | 0.00 | 7.52 |
+| 2 | 0.1초 | 588 | 0.28 | 0.69 | 6.47 | 0.00 | 0.00 | 0.02 | 7.46 |
+| 3 | 1초 | 60 | 0.35 | 0.02 | 1.53 | 0.00 | 0.00 | 0.18 | 2.08 |
+| 3 | 0.1초 | 594 | 0.39 | 0.03 | 1.59 | 0.00 | 0.01 | 0.14 | 2.16 |
+
+큰 그림은 같습니다. 구간별 활성 세션이 0.5, 7.5, 2.1로 갈리는 구조가 두 간격에서 동일하고, 열별 차이도 0.06 이내입니다. **이 워크로드처럼 초 단위로 지속되는 병목에는 1초 샘플링으로 충분하다**는 뜻입니다.
+
+다만 짧은 대기는 빠집니다. 구간 1의 `락` 열이 1초에서는 0인데 0.1초에서는 0.01로 잡혔습니다. 594샘플 중 몇 건이라 평균에는 안 보이지만, 존재 자체는 0.1초 쪽에서만 드러났습니다. 드물고 짧은 대기를 찾는 것이 목적이라면 1초로는 못 봅니다.
+
+### io/table이 락인지 IO인지
+
+`scripts/lock-probe.py`의 결과입니다. 각 구간 30초, 1초 간격입니다.
 
 | 구간 | io/table 대기 세션 | data_lock_waits |
 |---|---|---|
-| 핫 로우 UPDATE | 평균 6.5 | **평균 25.2** |
-| 콜드 IO 조회 | 평균 1.1 | 평균 0.9 |
+| 핫 로우 UPDATE (29샘플) | 평균 6.7 (범위 6~7) | **평균 26.1 (범위 21~28)** |
+| 콜드 IO 조회 (29샘플) | 평균 0.9 (범위 0~4) | **0 (29샘플 전부)** |
 
-PI 화면에서 `wait/io/table/sql/handler`가 치솟으면, IO 대시보드로 가기 전에 락 대기부터 확인해야 합니다.
+같은 이름의 대기가 한쪽은 락이고 한쪽은 IO라는 것이 두 번째 열에서 갈립니다. 콜드 IO 구간에서는 행 락 대기가 단 한 건도 없었습니다.
+
+각 구간에서 1샘플씩 뺀 이유를 적어 둡니다. 핫 로우 구간의 첫 샘플(t=0.0)은 스레드가 아직 붙기 전이라 0/0이고, 콜드 구간의 첫 샘플(t=30.1)은 구간을 바꾼 직후라 앞 구간의 락 대기 28건이 아직 남아 있었습니다. **30샘플 전부로 계산하면 6.5/25.2와 1.1/0.9가 되는데, 콜드 쪽의 0.9는 전적으로 그 전환 샘플 하나 때문입니다.** 구간이 안정된 뒤로는 정확히 0입니다.
+
+**PI 화면에서 `wait/io/table/sql/handler`가 치솟으면, IO 대시보드로 가기 전에 락 대기부터 확인해야 합니다.**
+
+## 6. 예상과 달랐던 점
+
+### 구간 1의 CPU 검증이 성립하지 않았습니다
+
+이 세션이 하려던 것은 "샘플러가 CPU 구간에서 CPU라고 답하는지" 확인하는 일이었습니다. 그런데 구간 1의 활성 세션이 **0.55**입니다.
+
+부하 생성기는 스레드 **8개**가 60초 내내 쉬지 않고 PK 점조회를 도는 구조입니다. 그 8스레드가 만든 평균 활성 세션이 0.55라는 것은, 어느 순간을 찍어도 DB 안에 들어가 있던 세션이 한 개도 안 됐다는 뜻입니다. 스레드 하나가 쿼리 안에 있던 시간 비율로 환산하면 약 7%입니다. **DB가 사실상 논 상태를 60초 동안 관측한 것입니다.**
+
+원인으로 가장 유력한 것은 부하 생성기입니다. CPython의 GIL과 PyMySQL 동기 드라이버 조합이라 스레드 8개가 실제로는 파이썬 쪽에서 줄을 서고, 왕복 사이의 대부분을 클라이언트에서 보냈을 가능성이 큽니다. **다만 클라이언트를 프로파일링하지 않았으므로 이것을 확정하지는 못했습니다.**
+
+같은 8스레드가 구간 2에서는 7.52, 구간 3에서는 2.08을 만들었다는 점이 방증입니다. 구간 2에서는 락이 세션을 DB 안에 붙잡아 두므로 클라이언트 속도와 무관하게 활성 세션이 쌓입니다. 즉 부하 생성기는 **세션을 DB 안에 오래 붙잡아 두는 구간에서만** 제 역할을 했습니다.
+
+결론은 이렇습니다. **CPU 구간의 검증은 하지 못했습니다.** 표에 0.33이라는 CPU 값이 있지만 표본이 얇아 분류기가 맞았다는 증거로 쓸 수 없습니다. 이 검증을 제대로 하려면 부하 생성기를 다른 언어로 다시 쓰거나(sysbench, k6 같은 도구), 쿼리를 무겁게 만들어 세션이 DB 안에 머무르게 해야 합니다. 남은 과제입니다.
+
+### 구간 1에서 다섯 중 하나를 분류하지 못했습니다
+
+구간 1의 `기타` 열이 0.12입니다. 같은 구간 활성 세션 0.55의 **21%**입니다. 0.1초 샘플러에서도 0.12로 같고, 비율로는 25%입니다.
+
+분류기의 정확도를 검증하겠다고 만든 세션에서, 가장 조용했던 구간의 활성 세션 다섯 중 하나를 분류기가 못 알아봤습니다. 구간 3에서도 0.18로 8.8% 있습니다. 구간 2만 0에 가깝습니다.
+
+무엇이었는지는 **말할 수 없습니다.** 샘플러가 분류 결과의 개수만 CSV에 적고 이벤트 이름은 안 남겼기 때문입니다. 접두어를 보면 `wait/io/socket/%`(클라이언트로 결과를 돌려주는 구간) 같은 것이 후보지만, 확인하지 않은 추측입니다. 다음 회차에서 고칠 것은 명확합니다. **미분류 이벤트의 이름을 그대로 기록해야 합니다.**
+
+이건 실제 PI 화면에도 있는 문제입니다. PI도 이벤트를 대분류로 접어서 보여 주므로, 접힌 뒤의 이름만 보면 "왜 저기 들어갔는지"를 알 수 없습니다.
 
 ### 콜드 IO 구간의 AAS가 낮았습니다
 
-버퍼 풀의 4배 넘는 테이블을 무작위로 읽는데도 AAS가 2.1에 그쳤습니다. NVMe에서는 미스 한 번이 수백 마이크로초라 세션이 대기 상태로 붙잡혀 있는 시간 자체가 짧기 때문입니다. R16에서 본 것과 같은 결론이 관측 도구 쪽에서도 확인됩니다. 회전 디스크나 IOPS 상한 환경이라면 이 구간의 AAS가 훨씬 높게 쌓였을 것입니다.
+버퍼 풀의 4배 넘는 테이블을 무작위로 읽는데도 활성 세션이 2.08에 그쳤습니다. 스레드 8개 중 평균 2개만 DB 안에 있었다는 뜻입니다.
+
+**이 세션은 그 이유를 설명할 근거를 남기지 않았습니다.** 저장 장치가 무엇이었는지 기록하지 않았고, 버퍼 풀 미스 한 번의 지연도 재지 않았습니다. 그리고 위에서 본 부하 생성기 문제가 이 구간에도 그대로 걸려 있습니다. 저장 장치가 빨라서인지, 클라이언트가 못 따라와서인지, 둘 다인지 가릅니다.
+
+같은 저장소의 R16(배치 캐시 오염)은 호스트를 macOS·NVMe로 기록했고 미스가 싸서 지연이 안 나온다는 결론을 냈습니다. 다만 **이 세션은 호스트를 기록하지 않아 같은 장비였는지 확인할 수 없습니다.** 회전 디스크나 IOPS 상한 환경에서 이 구간의 AAS가 어떻게 되는지도 재지 않았습니다.
 
 ### 구간 2에 IO(파일) 대기가 섞여 있습니다
 
-핫 로우 구간에 `wait/io/file`이 평균 0.72 있습니다. UPDATE 커밋마다 나가는 리두 로그 동기화(fsync)입니다. 쓰기 워크로드의 화면에는 락과 로그 동기화가 함께 보인다는 것도 실제 PI 화면을 읽을 때 필요한 감각입니다.
+핫 로우 구간에 `wait/io/file`이 평균 0.72 있습니다. UPDATE 커밋마다 나가는 리두 로그 동기화(fsync)로 보입니다. 쓰기 워크로드의 화면에는 락과 로그 동기화가 함께 보인다는 것도 실제 PI 화면을 읽을 때 필요한 감각입니다. 다만 `wait/io/file/innodb/innodb_log_file` 같은 이벤트 이름 단위로 확인하지는 않았으므로, 리두 로그라는 것은 워크로드 구조에서 나온 해석입니다.
+
+## 관리형과 온프렘에서 달라지는 것
+
+이 세션이 R 트랙에 있는 이유는 "관리형이라는 조건이 문제를 바꾸기" 때문입니다. 그런데 발상 자체는 AWS의 것이 아닙니다.
+
+### 같은 발상이 Oracle에 20년 먼저 있습니다
+
+"활성 세션을 매초 샘플링해서 대기 이벤트로 쪼갠다"는 Oracle의 ASH(Active Session History)와 같은 아이디어입니다. Oracle 문서는 `V$ACTIVE_SESSION_HISTORY`를 이렇게 설명합니다. "활성 데이터베이스 세션의 스냅숏을 **초당 한 번** 담는다." 활성의 정의도 같습니다. "세션이 CPU 위에 있었거나, Idle 대기 클래스에 속하지 않는 이벤트를 기다리고 있었으면 활성으로 본다."
+
+PI의 AAS도, 이 세션의 40줄짜리 샘플러도 같은 정의를 씁니다. 대기가 없으면 CPU로 친다는 해석까지 같습니다. AWR 보고서의 Top Wait Events를 읽어 본 사람이라면 PI 화면은 그 그림의 시간축 버전입니다.
+
+증권사처럼 폐쇄망과 온프렘 비중이 큰 곳에서 이 대비가 실무적으로 의미가 있습니다.
+
+- **온프렘 Oracle**: AWR과 ASH가 이미 있습니다. 다만 Oracle 문서는 "이 장에서 설명하는 AWR 기능을 쓰려면 Oracle Diagnostic Pack 라이선스가 필요하다"고 명시합니다. 공짜가 아닙니다.
+- **온프렘 MySQL·PostgreSQL**: 벤더가 주는 화면이 없습니다. 대신 **이 세션의 샘플러가 그대로 돕니다.** `performance_schema`(MySQL)나 `pg_stat_activity`의 `wait_event_type`(PostgreSQL)에 SQL을 던지는 40줄이라, 폐쇄망이든 컨테이너든 노트북이든 같은 코드가 같은 답을 냅니다. 외부로 나가는 통신이 없습니다.
+- **관리형 RDS·Aurora**: 호스트에 못 들어가는 것이 제약이지만, 이 샘플러가 쓰는 것은 전부 **SQL로 읽는 시스템 테이블**입니다. 그래서 관리형에서도 그대로 돕니다. PI를 대체하려는 것이 아니라, PI가 접어서 보여 주는 것을 펴서 확인하는 용도로 쓸 수 있습니다.
+
+관리형이 진짜로 바꾸는 것은 "관측 도구를 살지 만들지"의 선택지가 아니라, **호스트 계층의 관측을 아예 포기해야 한다**는 쪽입니다. 이 샘플러도 DB 안에서 보이는 것까지만 봅니다. 디스크 큐 깊이나 페이지 캐시 상태는 어느 쪽에서도 안 보입니다.
+
+### 비용
+
+무료 도구를 다루는 글이 아니므로 값을 적어 둡니다. 모두 AWS 공식 문서와 요금 페이지 기준입니다.
+
+- **PI 무료 범위**: 성능 데이터 7일 롤링 보존, 월 API 호출 100만 건까지 무료입니다.
+- **PI 유료 범위**: 1개월 이상 보존은 **프로비저닝 인스턴스의 vCPU당 월 과금**, Aurora Serverless v2는 **ACU당 월 과금**입니다. API는 100만 건을 넘으면 1,000건당 0.01달러입니다.
+- **2026년 7월 31일 이후**: 7일 무료는 Database Insights **Standard 모드에서 그대로 무료**로, 1~24개월 유료 보존도 Standard 모드의 유연 보존으로 **같은 가격**에 이어집니다. 바뀌는 것은 그 위입니다. 실행 계획 캡처와 온디맨드 분석은 **Advanced 모드 전용**이 되고, Advanced는 **프로비저닝 인스턴스 vCPU시간당 0.0125달러, Aurora Serverless v2 ACU시간당 0.003125달러**입니다. 보존 기간 단위 과금에서 시간 단위 과금으로 축이 바뀌므로, 인스턴스가 크고 상시 켜 두는 환경일수록 계산을 다시 해야 합니다.
+- **직접 만들면 드는 것**: 이 세션의 샘플러는 코드가 공짜일 뿐 운영은 공짜가 아닙니다. (1) 샘플러를 상시 돌릴 컴퓨트, (2) 초당 한 행씩 쌓이는 시계열을 담을 저장소와 그 보존 정책, (3) 화면과 알림. 이 세션은 CSV 파일에 쓰고 끝냈으므로 **셋 중 어느 것의 비용도 재지 않았습니다.** PI의 유료 보존과 직접 만든 스택 중 어느 쪽이 싼지는 이 글이 답할 수 없습니다.
 
 ## 못 한 것
 
+- **CPU 구간의 검증을 못 했습니다.** 위 6절에 적은 대로 부하 생성기가 DB를 채우지 못해 구간 1의 활성 세션이 0.55였습니다. 이 세션이 원래 하려던 검증 셋 중 하나가 통째로 비었습니다.
+- **미분류 이벤트의 정체를 모릅니다.** 구간 1에서 활성 세션의 21%가 `기타`인데, 샘플러가 이벤트 이름을 안 남겨 무엇이었는지 확인할 수 없습니다.
+- **호스트를 기록하지 않았습니다.** `uname -srm`, `nproc`, `free -g`, 저장 장치 종류가 전부 없습니다. 그래서 콜드 IO 구간의 결과를 저장 장치로 설명하지 못하고, 이 세션의 시간 수치를 다른 세션과 비교할 수도 없습니다.
 - **실제 PI 화면과의 나란한 대조는 못 했습니다.** RDS 인스턴스 없이 로컬 재현만으로 검증했습니다. 분해 로직은 AWS 문서의 서술을 따랐지만 화면 단위 비교는 남은 과제입니다.
 - **SQL 차원 분해(top SQL)는 구현하지 않았습니다.** PI의 두 번째 축인 쿼리별 분해는 `events_statements_current` 조인이 더 필요합니다.
-- **샘플링 오버헤드를 정밀 측정하지 않았습니다.** 0.1초 샘플러를 병행해도 워크로드에 유의미한 차이가 없었다는 관찰까지만입니다.
+- **샘플링 오버헤드를 정밀 측정하지 않았습니다.** 0.1초 샘플러를 병행해도 워크로드에 유의미한 차이가 없었다는 관찰까지만입니다. 다만 그 관찰 자체가 부하 생성기가 DB를 채우지 못한 상태에서 나온 것이라 신뢰도가 낮습니다.
+- **락 판별의 대안을 재지 않았습니다.** `SHOW ENGINE INNODB STATUS`나 `sys.innodb_lock_waits`가 `data_lock_waits`보다 나은지 비교하지 않았습니다.
+- **비용을 재지 않았습니다.** 위에 적은 AWS 요금은 공식 문서 인용이고, 직접 만든 스택의 실제 운영 비용은 계산하지 않았습니다.
 
 ---
 
