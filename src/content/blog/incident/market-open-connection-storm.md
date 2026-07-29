@@ -1,8 +1,8 @@
 ---
 title: '오전 9시 접속 폭주에 커넥션 10개짜리 풀이 무너진다'
 titleEn: 'The 9 AM Market Open Traffic Storm'
-description: '한국 증권사 MTS는 장이 열리는 오전 9시에 트래픽이 몰립니다. 국회 정무위원회 이양수 의원실이 증권사 12곳에서 받은 자료로 2022년 1월부터 2026년 3월까지 MTS 전산 장애가 190건 있었습니다. 각 사의 내부 원인 분석은 공개되지 않았습니다. 원인 가설 가운데 커넥션 풀 고갈만 떼어 Spring Boot와 HikariCP로 규모를 줄여 축소 재현했습니다. 풀 10에 초당 400건을 겨냥한 스파이크를 부으니 응답 중앙값이 3.38초로 밀리고 커넥션 획득 타임아웃이 났습니다. 부하 차단을 한 겹 넣자 받은 요청의 중앙값이 51ms, 커넥션 타임아웃이 0건이 됐습니다. 다만 두 실행이 앱에 넣은 요청 수가 6,598건과 9,959건으로 달라 처리량 비교는 하지 않습니다.'
-descriptionEn: "Korean brokerage MTS apps take their heaviest traffic the moment the market opens at 9 AM. A National Assembly office collected 190 MTS outages across 12 brokerages between January 2022 and March 2026, but no firm published its internal root cause, so this session reproduces one representative mechanism at reduced scale instead: connection pool exhaustion on Spring Boot and HikariCP. A pool of 10 under a spike targeting 400 requests per second pushed median latency to 3.38s and produced connection acquisition timeouts; one layer of load shedding brought the median for admitted requests back to 51ms with zero timeouts. The two runs did not deliver the same load to the app (6,598 vs 9,959 requests), so this post does not compare throughput."
+description: '한국 증권사 MTS는 장이 열리는 오전 9시에 트래픽이 몰립니다. 국회 정무위원회 이양수 의원실이 증권사 12곳에서 받은 자료로 2022년 1월부터 2026년 3월까지 MTS 전산 장애가 190건 있었습니다. 각 사의 내부 원인 분석은 공개되지 않았습니다. 원인 가설 가운데 커넥션 풀 고갈만 떼어 Spring Boot와 HikariCP로 규모를 줄여 축소 재현했습니다. 풀 10에 초당 400건을 겨냥한 스파이크를 부으니 응답 중앙값이 3.38초로 밀리고 커넥션 획득 타임아웃이 났습니다. k6가 받은 6,598건 가운데 541건이 500이었습니다. 부하 차단을 한 겹 넣자 받은 요청의 중앙값이 51ms, 500이 0건이 됐습니다. 다만 두 실행이 앱에 넣은 요청 수가 6,598건과 9,959건으로 달라 처리량 비교는 하지 않습니다.'
+descriptionEn: "Korean brokerage MTS apps take their heaviest traffic the moment the market opens at 9 AM. A National Assembly office collected 190 MTS outages across 12 brokerages between January 2022 and March 2026, but no firm published its internal root cause, so this session reproduces one representative mechanism at reduced scale instead: connection pool exhaustion on Spring Boot and HikariCP. A pool of 10 under a spike targeting 400 requests per second pushed median latency to 3.38s and produced connection acquisition timeouts, with 541 of the 6,598 responses k6 received coming back as HTTP 500; one layer of load shedding brought the median for admitted requests back to 51ms with zero 500s. The two runs did not deliver the same load to the app (6,598 vs 9,959 requests), so this post does not compare throughput."
 date: 2026-07-28
 tags:
   - Spring Boot
@@ -35,11 +35,13 @@ coverImage: /uploads/incident/market-open-connection-storm/01-buggy-storm.png
 
 ![F03 버그 경로 부하 화면](/uploads/incident/market-open-connection-storm/01-buggy-storm.png)
 
-*그림 1. 부하 차단이 없는 버그 경로의 부하 화면입니다. 풀 열 개가 모두 사용 중이고 획득 대기 큐가 쌓여 응답 중앙값이 3.38초로 밀립니다. 화면에 찍힌 대기 큐 188은 로그 원문의 `waiting=189`를 옮기는 과정에서 어긋난 값이고, 500 건수 541은 아래에서 따로 다룹니다.*
+*그림 1. 부하 차단이 없는 버그 경로의 부하 화면입니다. 풀 열 개가 모두 사용 중이고 획득 대기 큐에 189건이 쌓여 응답 중앙값이 3.38초로 밀립니다. 아래 줄의 응답 상태 분포가 541이라는 수치의 근거입니다.*
 
 부하 차단이 없는 `/quote/buggy`는 초당 약 200건까지만 처리하고 나머지는 커넥션을 기다렸습니다. 응답 시간 중앙값이 평상시 약 50ms에서 3.38초로, p95는 5.36초로 밀렸습니다. 이때 풀은 열 개가 모두 사용 중이었고 획득 대기 큐에 189건이 쌓여 있었습니다. 로그 원문은 `total=10, active=10, idle=0, waiting=189`입니다.
 
-2초 안에 커넥션을 받지 못한 요청은 500으로 떨어졌습니다. 그런데 그 건수를 확정하지 못했습니다. k6 요약과 재현 기록의 로그 집계는 둘 다 541건인데, 같은 실행의 앱 로그를 발췌한 [results/hikari-timeout.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/hikari-timeout.txt)에는 "이 실행에서 위 예외로 처리된 500이 27건"이라고 적혀 있습니다. 두 수치가 스무 배 차이 나고, 어느 쪽이 그 실행의 참값인지 남은 기록만으로는 가릴 수 없습니다. 그래서 이 글은 확정될 때까지 500 건수를 성과 지표로 쓰지 않습니다. 말할 수 있는 것은 버그 경로에서 커넥션 획득 타임아웃이 났고 부하 차단을 넣은 경로에서는 0건이었다는 사실까지입니다. k6 요약은 [results/buggy-k6.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/buggy-k6.txt)에 있습니다.
+2초 안에 커넥션을 받지 못한 요청은 500으로 떨어졌습니다. 그 건수가 541건입니다. 이 값은 k6가 클라이언트 쪽에서 받은 응답을 센 것입니다. [results/buggy-k6.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/buggy-k6.txt)의 상태 분포가 200이 6,057건, 500이 541건, 503이 0건이고, 이 셋을 더하면 `http_reqs` 6,598건과 정확히 맞습니다. 요약의 `http_req_failed 8.19% 541 out of 6598`도 같은 값이라, 실패로 잡힌 541건에 503이나 응답을 아예 받지 못한 요청은 섞여 있지 않습니다. 즉 541은 버그 경로가 돌려준 HTTP 500의 개수입니다.
+
+다만 그 541건이 전부 커넥션 획득 타임아웃 때문이었는지는 확정하지 못했습니다. 앱 로그 쪽 집계가 저장소 안에서 두 값으로 갈리기 때문입니다. 재현 기록은 `docker logs lab-f03-app | grep -c "Connection is not available"`의 결과를 541로 적었는데, 같은 실행의 로그를 발췌한 [results/hikari-timeout.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/hikari-timeout.txt)는 "이 실행에서 위 예외로 처리된 500이 27건"이라고 적었습니다. 27이 무엇을 센 값인지는 갈라내지 못했습니다. 그 파일은 스택트레이스를 줄여 놓은 발췌라 `docker logs`의 원문 출력이 아니고, 그 안의 `waiting=189`도 재현 기록에는 한동안 188로 옮겨 적혀 있었습니다. 다른 시도의 기록일 수도 있고 발췌가 잘렸을 수도 있는데, 남은 파일로는 가릴 수 없습니다. 그래서 이 글은 541을 "k6가 받은 500 응답 수"로만 쓰고, 그 가운데 몇 건이 HikariCP 예외였는지는 재지 못한 것으로 둡니다.
 
 ## 3. 내부 원리
 
@@ -83,7 +85,7 @@ k6 설정은 양쪽 다 초당 400건을 겨냥한 도착률 모델입니다. �
 
 ![F03 해소 경로 부하 화면](/uploads/incident/market-open-connection-storm/02-fixed-shed.png)
 
-*그림 2. 부하 차단을 넣은 해소 경로입니다. 응답 중앙값이 51ms로 돌아오고, 풀 여력을 넘은 4,876건은 503으로 흘려보내며, 커넥션 타임아웃은 0건입니다. 이 화면에 나오지 않는 실패 1,324건은 바로 아래에서 다룹니다.*
+*그림 2. 부하 차단을 넣은 해소 경로입니다. 응답 중앙값이 51ms로 돌아오고, 풀 여력을 넘은 4,876건은 503으로 흘려보내며, 500은 0건입니다. 맨 아래 줄의 1,324건은 200도 503도 아닌 실패로, 바로 아래에서 다룹니다.*
 
 응답 시간 중앙값이 3.38초에서 51ms로 돌아왔고, p95는 5.36초에서 519ms가 됐습니다. 정상 응답 3,759건은 중앙값 52ms로 처리됐고, 풀 여력을 넘은 4,876건은 대기 없이 503으로 흘려보냈습니다. 2초 커넥션 타임아웃으로 인한 500은 0건입니다. 풀이 마르지 않았기 때문입니다.
 
@@ -93,9 +95,9 @@ k6 설정은 양쪽 다 초당 400건을 겨냥한 도착률 모델입니다. �
 
 *그림 3. 응답 시간 중앙값입니다. 3,380ms에서 51ms로 돌아옵니다. 두 실행이 실제로 받은 요청 수는 앞에서 적은 대로 다르고, 해소 쪽 51ms에는 0ms 실패가 섞여 있습니다.*
 
-![커넥션 타임아웃 건수 전후](/uploads/incident/market-open-connection-storm/04-timeouts.png)
+![HTTP 500 응답 건수 전후](/uploads/incident/market-open-connection-storm/04-timeouts.png)
 
-*그림 4. 커넥션 타임아웃(500) 건수입니다. 그림의 541은 k6 요약 기준이고, 앱 로그 발췌 파일의 27건과 어긋납니다(2절). 확정된 쪽은 해소 경로의 0건입니다.*
+*그림 4. HTTP 500 응답 건수입니다. 양쪽 다 k6가 받은 응답을 센 값입니다. 버그 경로 541건의 원인별 내역은 2절에 적은 대로 확정하지 못했습니다.*
 
 부하 차단은 처리량을 늘리지 않습니다. 모형이 정한 초당 약 200건이라는 상한은 그대로입니다. 부하 차단이 지킨 것은 받은 요청의 응답 시간입니다. 넘치는 요청을 2초씩 매달아 두는 대신 대기 없이 돌려보내고, 받은 요청은 정상 속도로 처리했습니다. 503 응답이 실제로 얼마나 빨리 나갔는지는 따로 태깅해 재지 않았습니다.
 
@@ -103,7 +105,7 @@ k6 설정은 양쪽 다 초당 400건을 겨냥한 도착률 모델입니다. �
 
 세 가지가 처음 생각과 달랐습니다.
 
-첫째, 풀 고갈의 첫 증상은 에러가 아니라 지연이었습니다. 풀이 마르면 500이 쏟아질 것이라 생각했는데, 커넥션 획득 제한 시간이 2초로 넉넉하다 보니 대부분의 요청은 실패하지 않고 몇 초씩 기다렸습니다. 500 건수는 2절에 적은 대로 기록끼리 어긋나 확정하지 못했지만, 541건을 잡든 27건을 잡든 전체 6,598건에 견주면 작은 몫입니다. 그런데 중앙값 지연은 3.38초였습니다. 제한 시간을 짧게 잡으면 실패가 빨리 드러나고, 길게 잡으면 지연으로 숨습니다. 모니터링을 500 에러율만 보면 이 장애를 놓치고, p95 지연을 함께 봐야 잡힌다는 뜻입니다.
+첫째, 풀 고갈의 첫 증상은 에러가 아니라 지연이었습니다. 풀이 마르면 500이 쏟아질 것이라 생각했는데, 커넥션 획득 제한 시간이 2초로 넉넉하다 보니 대부분의 요청은 실패하지 않고 몇 초씩 기다렸습니다. 500은 전체 6,598건 가운데 541건, 8.19%에 그쳤습니다. 그런데 중앙값 지연은 3.38초였습니다. 제한 시간을 짧게 잡으면 실패가 빨리 드러나고, 길게 잡으면 지연으로 숨습니다. 모니터링을 500 에러율만 보면 이 장애를 놓치고, p95 지연을 함께 봐야 잡힌다는 뜻입니다.
 
 둘째, 부하 시험의 부하 모델이 결과를 바꿨습니다. 처음에는 고정 사용자 수를 반복시키는 닫힌 모델로 200명이 요청하게 했는데, 해소 경로에서 503이 즉시 떨어지자 그 사용자들이 곧바로 재요청을 퍼부어 초당 수천 건이 됐고, 재현하려던 커넥션 풀 고갈이 아니라 Tomcat의 연결 수락 큐 고갈이 재현됐습니다. connection refused가 2만 건 넘게 찍혔습니다. 그래서 도착률을 고정하는 열린 모델로 바꿨습니다. 다만 그 전환이 의도대로 끝나지는 않았습니다. 5절에 적은 대로 버그 경로에서는 응답이 느려 VU가 모자랐고 목표 도착률의 3,401회분이 발사되지 못했으니, 열린 모델을 설정하고도 열린 모델을 유지하지는 못한 셈입니다. 풀이 마른 것 자체는 획득 대기 큐 189와 커넥션 타임아웃 예외로 확인되지만, 3절에서 본 대로 지연의 일부는 풀 앞단에서 쌓였으므로 병목이 풀 계층 하나에 고정됐다고는 말할 수 없습니다. 빠른 거부가 오히려 재시도 폭풍을 부른다는 것은, 실제 대기열 설계에서 클라이언트 백오프가 필요한 이유이기도 합니다.
 
@@ -115,7 +117,7 @@ k6 설정은 양쪽 다 초당 400건을 겨냥한 도착률 모델입니다. �
 
 수치는 2 vCPU 한 대에서 30초 단일 실행으로 잰 것입니다. Postgres와 앱과 k6가 코어 두 개를 나눠 썼고 컨테이너 CPU 제한도 걸지 않아, 과부하 구간의 지연에는 부하 생성기가 만든 경합이 섞여 있습니다. 과부하 구간의 정확한 처리량과 p95는 실행마다 흔들립니다.
 
-버그 경로의 500 건수는 확정하지 못했습니다. k6 요약과 재현 기록의 로그 집계는 541건, 앱 로그 발췌 파일의 주석은 27건입니다. 그리고 두 실행이 앱에 실제로 넣은 요청 수가 6,598건과 9,959건으로 달라 처리량 비교는 성립하지 않습니다. 해소 경로에는 200도 503도 아닌 실패가 1,324건 있었고 그 0ms 응답이 중앙값에 섞여 있습니다. 허용 수를 바꾼 조건과 풀 크기를 바꾼 조건, 503 응답 자체의 지연은 재지 않았습니다.
+버그 경로의 500 541건은 k6가 받은 응답을 센 값이고, 그 가운데 몇 건이 HikariCP 커넥션 획득 타임아웃이었는지는 확정하지 못했습니다. 같은 실행의 앱 로그 집계가 재현 기록에서는 541건, 발췌 파일에서는 27건으로 갈립니다. 그리고 두 실행이 앱에 실제로 넣은 요청 수가 6,598건과 9,959건으로 달라 처리량 비교는 성립하지 않습니다. 해소 경로에는 200도 503도 아닌 실패가 1,324건 있었고 그 0ms 응답이 중앙값에 섞여 있습니다. 허용 수를 바꾼 조건과 풀 크기를 바꾼 조건, 503 응답 자체의 지연은 재지 않았습니다.
 
 이 기록으로 말할 수 있는 것은 버그 경로에서 풀이 마르고 커넥션 획득 타임아웃이 났다는 점, 부하 차단을 넣은 경로에서는 그것이 0건이었다는 점, 그리고 받은 요청의 중앙값 지연이 초 단위에서 수십 ms로 돌아왔다는 점까지입니다. CATALOG가 제시한 가상 대기열과 조회·주문 경로 분리는 부하 차단 한 겹으로 축소했습니다.
 
