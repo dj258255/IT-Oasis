@@ -3,7 +3,7 @@ title: 'Performance Insights를 직접 만들어 검증하기'
 titleEn: 'Building a Performance Insights Clone to Verify What It Measures'
 description: 'AWS가 2026년 7월 31일 RDS Performance Insights 콘솔을 종료합니다. DB Load(평균 활성 세션, AAS)를 구하는 수식은 그대로입니다. 매초 활성 세션을 세고 대기 이벤트로 쪼개는 40줄짜리 샘플러를 직접 만들었습니다. 병목을 알고 설계한 3구간 워크로드(CPU, 행 락, 콜드 IO)로 검증했습니다. 구간별 합계 AAS는 0.5, 7.5, 2.1로 갈렸습니다. 행 락 구간의 대기는 lock이 아니라 wait/io/table/sql/handler로 잡혔습니다. 실제 PI 화면에서도 똑같이 생기는 오진 지점입니다.'
 descriptionEn: "AWS is retiring the RDS Performance Insights console on July 31, 2026, but the formula behind DB Load (average active sessions) stays the same. I wrote a 40-line sampler that counts active sessions every second and splits them by wait event, then checked it against a three-phase workload whose bottleneck I designed in advance: CPU, row locks, and cold IO. Total AAS came out at 0.5, 7.5, and 2.1 across the phases, and the row-lock phase surfaced not as a lock wait but as wait/io/table/sql/handler, the same misreading trap that real Performance Insights screens produce."
-date: 2026-05-22
+date: 2026-07-29
 tags:
   - MySQL
   - Performance Schema

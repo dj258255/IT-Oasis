@@ -3,7 +3,7 @@ title: '플래너가 300행 표본만 보고 1,200만 행을 100% NULL이라고 
 titleEn: 'A 300-Row Sample Declared 12 Million Rows 100% NULL'
 description: '같은 데이터에 같은 쿼리인데 실행 시간이 7,734.195 ms와 164.090 ms로 갈렸습니다. 앞은 중첩 루프로 돈 값, 뒤는 해시 조인으로 돌아온 값입니다. 닿은 버퍼도 449,402개에서 16,675개로 줄었습니다. PostgreSQL 플래너가 300행 표본만 보고 1,200만 행 테이블의 컬럼을 100% NULL이라고 단정하면서 플랜이 뒤집히는 장면을 재현했습니다. 2026년 2월 19일 Clerk 장애와 GoCardless의 n_distinct 오추정이 같은 자리에서 나온다는 것을 statistics target을 바꿔 가며 확인했습니다.'
 descriptionEn: PostgreSQL's planner looked at a 300-row sample, concluded a column in a 12-million-row table was 100% NULL, and flipped the plan. This session reproduces the mechanism behind Clerk's February 19, 2026 outage and GoCardless's n_distinct misestimate by varying the statistics target. Same data, same query, yet the nested loop took 7,734.195 ms and the restored hash join took 164.090 ms, with buffers touched dropping from 449,402 to 16,675.
-date: 2026-05-24
+date: 2026-07-28
 tags:
   - PostgreSQL
   - Query Optimizer

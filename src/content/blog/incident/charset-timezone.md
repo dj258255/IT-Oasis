@@ -3,7 +3,7 @@ title: 'utf8은 UTF-8이 아니고 CONVERT_TZ는 조용히 NULL을 준다'
 titleEn: "Charset and Timezone Minefields in a Global Service"
 description: 'MySQL의 utf8은 3바이트만 쓰는 부분집합, 즉 utf8mb3입니다. 그래서 이모지가 들어오면 strict에서는 ERROR 1366으로 거부되고 non-strict에서는 경고만 남긴 채 물음표로 치환됩니다. 타임존 테이블이 비어 있으면 CONVERT_TZ()는 에러 없이 NULL을 돌려줍니다. 날짜별로 나뉘어야 할 54,000원이 NULL 그룹 하나에 뭉칩니다. MySQL 8.4.3에서 utf8mb3 치환, 인덱스 키 767바이트 한계, CONVERT_TZ의 조용한 NULL, TIMESTAMP의 2038년 상한, latin1 접속이 만드는 이중 인코딩 착시까지 지뢰 6개를 하나씩 재현했습니다.'
 descriptionEn: "MySQL's utf8 is not real UTF-8 but an alias for utf8mb3, a three-byte subset, so an emoji is rejected with ERROR 1366 under strict mode and silently swapped for a question mark under non-strict. When the timezone tables are empty, CONVERT_TZ() returns NULL without raising an error, collapsing 54,000 won that should have been split by date into a single NULL group. I reproduced six of these mines on MySQL 8.4.3, from utf8mb3 substitution and the 767-byte index key limit to the silent CONVERT_TZ NULL, the 2038 ceiling on TIMESTAMP, and the double-encoding illusion a latin1 connection creates."
-date: 2026-06-05
+date: 2026-07-29
 tags:
   - MySQL
   - Charset

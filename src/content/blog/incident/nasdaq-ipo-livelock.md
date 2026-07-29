@@ -3,7 +3,7 @@ title: 'IPO 크로스가 확정되지 않는다, 데드락이 아니라 라이�
 titleEn: "The IPO Cross That Would Not Commit: A Livelock, Not a Deadlock"
 description: '2012년 페이스북 상장일에 나스닥의 IPO 크로스가 25분간 확정되지 않았습니다. SEC 행정 명령서에 규칙 하나가 적혀 있습니다. 기록 직전에 계산 근거가 바뀌었으면 처음부터 다시 계산한다는 규칙입니다. 이것만 떼어내 Java 21로 돌렸습니다. 취소 유입 간격 8개 구간을 3회씩, 전체를 3회 돌린 72회 시도 중 24회가 크로스를 확정하지 못했습니다. 스냅샷 동결과 접수 컷오프 두 해소는 각각 0/72회였습니다. 임계점은 밀리초 단위 상수가 아니라 취소 유입 간격 대 라운드 1회 시간의 비율이었습니다. 그 문턱은 대략 1이었습니다.'
 descriptionEn: "On Facebook's IPO day in 2012, Nasdaq's IPO cross failed to commit for 25 minutes. Working only from the SEC administrative order, I reproduced one rule at reduced scale in Java 21: if the inputs changed while the cross was being computed, throw the result away and start over. Across 72 attempts, eight cancellation-arrival rates run three times each in three full passes, 24 never committed a cross, while snapshot freezing and an acceptance cutoff each scored 0/72. The threshold turned out to be a ratio, arrival interval over round time and roughly 1, rather than a constant in milliseconds."
-date: 2026-06-09
+date: 2026-07-29
 tags:
   - Livelock
   - Deadlock

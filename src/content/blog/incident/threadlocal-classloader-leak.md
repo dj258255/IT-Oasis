@@ -3,7 +3,7 @@ title: '지우지 않은 ThreadLocal 하나가 클래스로더를 통째로 붙�
 titleEn: 'One Unremoved ThreadLocal Pins an Entire ClassLoader'
 description: "Tomcat이 웹앱 정지 시 전용 경고까지 만들어 둔 ThreadLocal 클래스로더 누수를 재현했습니다. ThreadLocal 객체가 웹앱 클래스로더 안 static 필드에 있고 remove()를 부르지 않으면 재배포 300회에서 폐기했어야 할 클래스로더가 300개 전부 살아남았습니다. try/finally로 remove() 한 줄을 넣자 0개가 됐습니다. MaxMetaspaceSize=24m으로 조이자 3,773 사이클에서 OutOfMemoryError: Metaspace로 죽었습니다. Spring Boot 3.3.5 WAR를 Tomcat 10.1.57에 올린 실제 스택에서는 헤더 없는 요청이 직전 사용자의 컨텍스트를 그대로 받았습니다. 누수를 막고 있던 쪽은 JVM이 아니었습니다. WAS였습니다."
 descriptionEn: "A reproduction of the ThreadLocal classloader leak that Tomcat cares about enough to ship a dedicated warning for. When the ThreadLocal object itself lives in a static field inside the web app classloader and remove() is never called, all 300 of 300 discarded classloaders survived 300 redeployments; adding a single remove() in a try/finally brought that to 0. Capped at MaxMetaspaceSize=24m the leaking path died at cycle 3,773 with OutOfMemoryError: Metaspace, and on the real stack, a Spring Boot 3.3.5 WAR on Tomcat 10.1.57, a request with no auth header came back carrying the previous user's context. What had been covering for this was not the JVM but the servlet container."
-date: 2026-05-16
+date: 2026-07-28
 tags:
   - Java
   - JVM
