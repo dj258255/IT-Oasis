@@ -41,8 +41,8 @@ const defaultGradient = 'from-cyan/15 to-emerald/15';
                 {node.count}<span data-ko="개의 글" data-en=" posts">개의 글</span>
               </span>
             </div>
-            <h2 class="text-[18px] font-bold group-hover:text-primary transition-colors duration-300 mb-1" data-ko={parent} data-en={catI18n.get(parent) || parent}>
-              {parent}
+            <h2 class="text-[18px] font-bold group-hover:text-primary transition-colors duration-300 mb-1" data-ko={catDisplayKo.get(parent) || parent} data-en={catI18n.get(parent) || parent}>
+              {catDisplayKo.get(parent) || parent}
             </h2>
             {node.children.size > 0 && (
               <div class="flex flex-wrap gap-1.5 mt-3">

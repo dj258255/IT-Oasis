@@ -1,0 +1,8 @@
+{
+  "name": "incident",
+  "nameEn": "Incident Lab",
+  "nameKo": "실제 장애 재현",
+  "icon": "alert",
+  "order": 0,
+  "subcategories": []
+}
