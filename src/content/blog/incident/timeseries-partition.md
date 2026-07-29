@@ -3,7 +3,7 @@ title: '시계열 로그를 지울 때 DELETE와 DROP PARTITION은 얼마나 다
 titleEn: 'Purging Expired Time-Series Logs: DELETE vs DROP PARTITION, Measured'
 description: '보존 기한이 지난 시계열 로그를 DELETE 한 문장으로 지우면 InnoDB는 행을 지우는 대신 삭제 표시만 남깁니다. 파일 크기도 돌아오지 않습니다. MySQL 8.4.3 컨테이너에 14일치 700만 행을 넣고 같은 7일치(약 350만 행)를 DELETE와 DROP PARTITION으로 각각 지웠습니다. 실시간 INSERT 8스레드가 받는 피해는 건별로 계측했습니다. DELETE는 20.5초가 걸렸습니다. INSERT p95가 평상시 5.2ms의 2.1배인 10.8ms까지 올랐고 파일은 0.70GB 그대로였습니다. DROP PARTITION은 0.12초에 p95 5.7ms로 흔들리지 않으면서 0.77GB를 0.42GB로 줄였습니다. 다만 열린 트랜잭션 하나가 있으면 그 0.12초짜리 DDL이 메타데이터 락 큐에서 23.7초를 기다렸습니다. 뒤에 선 평범한 SELECT까지 20.7초를 멈춰 세웠습니다.'
 descriptionEn: Deleting expired time-series logs with a single DELETE does not remove rows in InnoDB, it only marks them, and the data file never gives the space back. This session loads 7 million rows spanning 14 days into a MySQL 8.4.3 container and purges the same 7 days (about 3.5 million rows) twice, once with DELETE and once with DROP PARTITION, recording per-request latency from eight live INSERT threads throughout. DELETE took 20.5 seconds, pushed INSERT p95 to 10.8ms against a 5.2ms baseline, and left the file sitting at 0.70GB, while DROP PARTITION finished in 0.12 seconds with p95 untouched at 5.7ms and shrank the file from 0.77GB to 0.42GB. With one idle open transaction on the table, though, that 0.12-second DDL waited 23.7 seconds on a metadata lock and held an ordinary SELECT behind it for 20.7 seconds.
-date: 2026-06-17
+date: 2026-07-29
 tags:
   - MySQL
   - InnoDB

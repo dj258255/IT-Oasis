@@ -3,7 +3,7 @@ title: '빠른 DDL과 안전한 DDL은 다르다'
 titleEn: 'Fast DDL Is Not Safe DDL'
 description: "PostgreSQL 11부터 상수 기본값 컬럼 추가는 테이블을 재작성하지 않아 300만 행에서도 3 ms에 끝납니다. 그런데 같은 문장이 12초짜리 트랜잭션 뒤에 줄을 서니 락이 충돌하지도 않는 평범한 SELECT 세 건이 각각 7초에서 9초씩 밀렸습니다. postgres:16-alpine 하나로 volatile 기본값의 테이블 재작성(11,316.601 ms)과 그 뒤의 락 큐잉을 만들어 봤습니다. lock_timeout과 3단계 expand-contract를 붙이자 최대 ACCESS EXCLUSIVE 보유 시간이 3.436 ms까지 줄었습니다."
 descriptionEn: 'Since PostgreSQL 11, adding a column with a constant default no longer rewrites the table, so it finishes in 3 ms even on 3 million rows. Yet the same statement, once it queues behind a 12-second transaction, stalls three ordinary SELECTs for 7 to 9 seconds each even though their locks never conflict. Using a single postgres:16-alpine container, this session reproduces the table rewrite caused by a volatile default (11,316.601 ms) and the lock queueing behind it, then cuts the longest ACCESS EXCLUSIVE hold to 3.436 ms with lock_timeout and a three-step expand-contract migration.'
-date: 2026-05-30
+date: 2026-07-28
 tags:
   - PostgreSQL
   - DDL

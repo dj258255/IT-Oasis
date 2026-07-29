@@ -3,7 +3,7 @@ title: '라이브 후원 카운터의 핫 로우를 슬롯 카운터로 풀었�
 titleEn: 'A Hot Row in a Live Donation Counter, Solved with Slotted Counters'
 description: '라이브 방송 후원 총액처럼 한 행에 갱신이 몰리는 카운터를 아홉 가지로 구현했습니다. MySQL 8.4.3과 Spring Boot 3.4.1 위에서 같은 조건으로 쟀습니다. JPA로 읽어 더하고 저장하는 구현은 실패율 0%에 전 요청 HTTP 200을 반환했습니다. 그러면서 27,501건, 6,030만 원어치 후원을 소리 없이 잃었습니다. 후원이 방송 하나로 전부 몰리면 유실률은 98.4%까지 올라갔습니다. 정확한 구현 중 가장 빠른 원자적 UPDATE는 zipf 시나리오에서 1,338 req/s였고 슬롯 64는 4,051 req/s로 3.0배, 전량이 한 방송으로 몰린 hotspot에서는 740 req/s 대 3,981 req/s로 5.4배였습니다. 슬롯의 대가로 본 SUM 조회는 64슬롯 p95 4.16ms로 단일 행 3.68ms와 큰 차이가 없었습니다.'
 descriptionEn: "A running total for a live broadcast puts every update on one row, so this session implements nine ways to update that counter and measures them under identical conditions on MySQL 8.4.3 and Spring Boot 3.4.1. The obvious JPA version, which loads the entity, adds to it, and saves, reported a 0% failure rate with HTTP 200 on every request while silently losing 27,501 donations worth 60.3 million won, and the loss rate climbed to 98.4% once all traffic landed on a single broadcast. The fastest correct database option, a single atomic UPDATE, reached 1,338 req/s against 4,051 req/s for 64 slots under a Zipf distribution, and 740 against 3,981 in the hotspot run. Reading the total back cost far less than expected, with a 64 slot SUM at 4.16ms p95 versus 3.68ms for a single row."
-date: 2026-05-28
+date: 2026-07-28
 tags:
   - MySQL
   - Spring Boot

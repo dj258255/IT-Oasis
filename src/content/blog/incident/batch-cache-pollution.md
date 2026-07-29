@@ -3,7 +3,7 @@ title: '정산 배치가 풀 스캔을 돌리면 실시간 조회가 버퍼 풀�
 titleEn: 'When a Settlement Batch Full Scan Evicts Live Queries from the Buffer Pool'
 description: '정산 배치나 백업이 풀 스캔을 돌리면 InnoDB 버퍼 풀에 올라와 있던 실시간 트래픽의 워킹셋이 밀려납니다. 버퍼 풀 오염이라고 부르는 현상입니다. MySQL 8.4에서 핫 테이블 약 0.4GB와 콜드 테이블 약 2.2GB를 버퍼 풀 1GB 위에 올려놓고 innodb_old_blocks_time을 0과 1000ms로 나눠 풀 스캔 배치를 걸었습니다. Percona가 2011년에 본 330에서 2 req/s로의 붕괴는 NVMe 환경에서 재현되지 않았습니다. 점조회 p95는 2.6ms에서 2.9ms 사이에 머물렀습니다. 그래도 스캔 구간의 전역 히트율은 7%까지 떨어졌습니다. 갈린 건 회복 시간이었습니다. 스캔이 끝나고 히트율이 99%로 돌아오는 데 방어를 끄면 13.7~15.2초, 기본값이면 0.7~1.6초가 걸렸습니다.'
 descriptionEn: Settlement batches, statistics jobs, and backups all read a large table end to end, and that full scan can evict the live working set from the InnoDB buffer pool. This session places a 0.4GB hot table and a 2.2GB cold table behind a 1GB buffer pool on MySQL 8.4 and runs the batch with innodb_old_blocks_time set to 0 and to the 1000ms default. The 330-to-2 req/s collapse Percona measured in 2011 did not reappear on NVMe, where point-query p95 stayed between 2.6ms and 2.9ms even though the global hit rate fell to 7% during the scan. What the defense actually protected was recovery time, since the hit rate climbed back to 99% in 0.7 to 1.6 seconds with the default and took 13.7 to 15.2 seconds with the defense turned off.
-date: 2026-06-11
+date: 2026-07-29
 tags:
   - MySQL
   - InnoDB

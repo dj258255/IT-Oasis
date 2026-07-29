@@ -3,7 +3,7 @@ title: '복제 지연 중 승격, 성공 응답을 받은 커밋이 사라진다
 titleEn: "Promoting a Lagging Replica: Commits That Already Returned Success Disappear"
 description: '2018년 10월 GitHub에서 광 링크가 43초 끊긴 뒤 페일오버로 954건의 쓰기가 사라졌습니다. 같은 상황을 MySQL 8.4 소스·레플리카 2노드와 복제망 분단으로 좁혔습니다. 비동기 복제에서는 고객이 성공 응답을 받은 커밋 927건 중 555건(59.9%, 5,032,000원)이 승격된 레플리카에 없었습니다. 그 사이 Seconds_Behind_Source는 19초 동안 0을 가리켰습니다. 반동기 AFTER_SYNC에서는 유실이 0이었습니다. 다만 타임아웃으로 비동기 강등된 뒤에는 334건(47.2%)이 다시 사라졌습니다.'
 descriptionEn: "In October 2018, a 43-second fiber link failure at GitHub triggered a failover that lost 954 writes. This session shrinks the same mechanism down to a two-node MySQL 8.4 source and replica with a partitioned replication network. Under asynchronous replication, 555 of the 927 commits that had already returned success to the client were missing from the promoted replica (59.9%, 5,032,000 KRW), and Seconds_Behind_Source reported 0 for 19 seconds of that window. Semisynchronous AFTER_SYNC lost nothing, but once it timed out and silently downgraded to async, 334 commits (47.2%) disappeared again."
-date: 2026-05-14
+date: 2026-07-29
 tags:
   - MySQL
   - Replication
