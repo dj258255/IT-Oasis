@@ -19,6 +19,9 @@ seriesOrder: 2
 coverImage: /uploads/incident/expand-contract/01-volatile-alter.png
 ---
 
+> 근거 등급: `E2`
+> 출처: [PostgreSQL, ALTER TABLE](https://www.postgresql.org/docs/current/sql-altertable.html) · [Explicit Locking](https://www.postgresql.org/docs/current/explicit-locking.html) · [PostgreSQL 11 릴리스 노트](https://www.postgresql.org/docs/release/11.0/) · [Client Connection Defaults](https://www.postgresql.org/docs/current/runtime-config-client.html) · [MySQL 8.4, Online DDL Performance, Concurrency, and Space Requirements](https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-performance.html) · [MySQL 8.4, lock_wait_timeout](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout)
+
 ## 1. 유명한 이유
 
 PostgreSQL 공식 문서 [ALTER TABLE](https://www.postgresql.org/docs/current/sql-altertable.html)은 첫머리에서 이렇게 못 박습니다. "Note that the lock level required may differ for each subform. An **ACCESS EXCLUSIVE** lock is acquired unless explicitly noted." 예외로 명시된 것은 `ADD FOREIGN KEY`, `SET STATISTICS`, `VALIDATE CONSTRAINT` 같은 몇 가지뿐이고 `ADD COLUMN`은 그 목록에 없습니다.
@@ -31,7 +34,7 @@ PostgreSQL 공식 문서 [ALTER TABLE](https://www.postgresql.org/docs/current/s
 
 마지막 조각은 [Client Connection Defaults](https://www.postgresql.org/docs/current/runtime-config-client.html)에 있습니다. "`lock_timeout` ... **A value of zero (the default) disables the timeout.**" 락을 기다리는 시간에 상한이 없는 것이 기본값입니다.
 
-근거 등급은 **E2**입니다. 특정 회사의 공개 장애가 아니라 벤더 공식 문서가 조건을 명시해 경고하는 함정입니다. 이 세션은 문서가 말하는 조건을 하나씩 실행해 어디까지가 참이고 어디부터 옛날 지식인지를 가릅니다.
+벤더 공식 문서가 조건을 명시해 경고하는 함정입니다. 이 세션은 문서가 말하는 조건을 하나씩 실행해 어디까지가 참이고 어디부터 옛날 지식인지를 가릅니다.
 
 카탈로그의 나머지 절반, 그러니까 "컬럼 추가와 삭제 순서가 뒤집히면 배포 중에 없는 컬럼을 참조한다"는 주장은 이번 조사에서 아무 출처도 확보하지 못했습니다. 그래서 이 세션에서는 다루지 않았습니다.
 
