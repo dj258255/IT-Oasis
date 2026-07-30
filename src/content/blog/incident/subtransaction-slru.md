@@ -1,0 +1,274 @@
+---
+title: 'SAVEPOINT 하나가 만드는 성능 절벽, PostgreSQL 17에서 달라진 것'
+titleEn: 'The Performance Cliff a Single SAVEPOINT Can Cause, and What Changed in PostgreSQL 17'
+description: 'GitLab이 2021년에 공개한 서브트랜잭션 장애를 PostgreSQL 17.5에서 재현했습니다. GitLab은 복제본 처리량이 초당 36만에서 5만으로 떨어지는 일을 1년 넘게 겪었고, 원인은 긴 트랜잭션이 열려 있는 동안 발행된 SAVEPOINT였습니다. 갱신 대상 50만 행과 리더 부하를 고정하고 그 50만 건을 몇 개의 서브트랜잭션으로 나눌지만 바꿔 재니 경계가 둘로 갈렸습니다. 서브트랜잭션 64개까지는 pg_subtrans 조회가 정확히 0건입니다. 1만 개로 늘리면 조회가 761만 건 생기지만 XID 범위가 약 5페이지라 32페이지 캐시에 들어가 빗나감이 6건이고 처리량은 초당 101,383건에서 95,112건으로 6%만 떨어집니다. 50만 개에서 XID 범위가 약 244페이지가 되어 미스율 22.4%, 처리량 70,049건으로 31% 하락, 대기 샘플의 47%가 LWLock/SubtransSLRU였습니다. 절벽은 캐시를 넘겼는가보다 XID 범위가 SLRU 페이지 수를 넘겼는가에서 생깁니다. PostgreSQL 17에서 GUC가 된 subtransaction_buffers를 4MB로 올리자 같은 조건에서 조회 778만 건이 전부 적중하고 처리량이 97,146건으로 기준선의 96%까지 돌아왔습니다. 재현이 안 되던 이유도 남겼습니다. 긴 트랜잭션과 캐시 초과만으로는 아무 일도 일어나지 않고 XID 카운터를 미는 쓰기 트래픽이 세 번째 조건입니다. GitLab이 겪은 스탠바이 절벽은 재현하지 못해 그대로 남겼고, XLOG_XACT_ASSIGNMENT가 서브트랜잭션 64개마다만 기록된다는 것을 pg_waldump로 확인한 것까지 적었습니다.'
+descriptionEn: "This session reproduces on PostgreSQL 17.5 the subtransaction incident GitLab published in 2021. GitLab spent over a year chasing replica throughput that fell from 360,000 to 50,000 transactions per second, caused by SAVEPOINT calls issued while a long-running transaction was open. Holding the 500,000 updated rows and the reader workload fixed and varying only how those updates are grouped into subtransactions splits the problem into two distinct boundaries. Up to 64 subtransactions there are exactly zero pg_subtrans lookups. At 10,000 there are 7.6 million lookups, but the XID range spans about five pages and fits the 32 page cache, so only six miss and throughput falls just 6%, from 101,383 to 95,112 per second. At 500,000 the XID range spans about 244 pages, producing a 22.4% miss rate, throughput of 70,049 for a 31% drop, and LWLock/SubtransSLRU accounting for 47% of wait samples. The cliff comes from the XID range exceeding the SLRU page count rather than from merely exceeding the per backend cache. Raising subtransaction_buffers, which became a GUC in PostgreSQL 17, to 4MB made all 7.78 million lookups hit and restored throughput to 97,146, or 96% of baseline. The post also documents why the reproduction initially failed: a long transaction and cache overflow alone do nothing, and write traffic advancing the XID counter is the required third condition. The standby cliff GitLab actually hit was not reproduced, and pg_waldump confirmed that XLOG_XACT_ASSIGNMENT records appear only once every 64 subtransactions."
+date: 2026-07-30
+tags:
+  - PostgreSQL
+  - Transaction
+  - Database Internals
+  - Performance
+  - Replication
+  - pgbench
+  - Docker
+category: incident
+series: '데이터베이스가 무너지는 지점'
+seriesOrder: 10
+coverImage: /uploads/incident/subtransaction-slru/chart-slru.png
+---
+
+> 근거 등급: `E1·축소`
+> 출처: [GitLab, Why we spent the last month eliminating PostgreSQL subtransactions](https://about.gitlab.com/blog/why-we-spent-the-last-month-eliminating-postgresql-subtransactions/) · [postgres.ai, PostgreSQL Subtransactions Considered Harmful](https://postgres.ai/blog/20210831-postgresql-subtransactions-considered-harmful) · [PostgreSQL 17, Resource Consumption](https://www.postgresql.org/docs/17/runtime-config-resource.html) · [PostgreSQL 17 릴리스 노트](https://www.postgresql.org/docs/release/17.0/)
+
+GitLab이 겪은 것은 **복제본에서 터지는 절벽**이고, 이 세션은 그것을 재현하지 못했습니다. 재현한 것은 같은 메커니즘이 프라이머리에서 일으키는 절벽이고, 그쪽은 두 경계와 해소책까지 실측했습니다. 스탠바이 쪽은 어디까지 확인했고 무엇이 막혔는지를 4절에 그대로 적었습니다. 근거 등급의 `축소`가 이 뜻입니다.
+
+## 1. 유명한 이유
+
+GitLab이 2021년 9월에 이 사고를 공개했습니다. 2020년 6월부터 GitLab.com의 데이터베이스가 몇 분씩 멈추는 일이 반복됐습니다.
+
+> Since last June, we noticed the database on GitLab.com would mysteriously stall for minutes, which would lead to users seeing 500 errors during this time.
+
+일주일 멀쩡하다가 15분 터지고 며칠 사라지는 패턴이라 재현이 안 됐고, GitLab은 이 현상에 네스호 괴물을 따 **Nessie**라는 이름을 붙였습니다. 가장 크게 맞은 엔드포인트는 CI 러너가 작업을 받아 가는 `POST /api/v4/jobs/request`였습니다.
+
+원인은 `SAVEPOINT`였습니다. 관측된 패턴이 두 가지였습니다.
+
+> Only the replicas were affected; the primary remained unaffected.
+> There was a long-running transaction, usually relating to PostgreSQL's autovacuuming, during the time.
+
+이 구간에서 복제본의 처리량이 초당 36만에서 5만으로 떨어졌습니다. 7.2배입니다. 이 글에서 가장 많이 인용되는 계산이 나옵니다.
+
+> 8192/4 = 2048 transaction IDs can be stored in each page
+> There are 32 (`NUM_SUBTRANS_BUFFERS`) pages, which means up to 65K transaction IDs
+> it took about 18 seconds to fill up all 65K entries
+
+8KB 페이지에 4바이트 XID가 2,048개, 32페이지면 65,536개입니다. 이 65,536이 절벽의 위치입니다.
+
+가장 무서운 문장은 따로 있습니다.
+
+> To our surprise, our experiments also demonstrated that a single `SAVEPOINT` during a long-transaction could initiate this problem if many writes also occurred simultaneously. That is, it wasn't enough just to reduce the frequency of `SAVEPOINT`; we had to eliminate them completely.
+
+GitLab의 애플리케이션은 중첩이 10을 넘은 적이 없었습니다. 64개를 넘겨야 생기는 문제가 아닙니다. 빈도를 줄이는 것으로는 모자랐습니다. 결국 GitLab은 `SAVEPOINT`를 전부 없앴습니다.
+
+### 애플리케이션에 SAVEPOINT라는 단어가 없어도 생깁니다
+
+이 사례가 무서운 이유가 하나 더 있습니다. 다음은 모두 `SAVEPOINT`를 발행합니다.
+
+| 경로 | SAVEPOINT 발행 |
+|---|---|
+| PL/pgSQL의 `EXCEPTION` 블록 | 예 |
+| Rails `transaction(requires_new: true)`, `create_or_find_by` | 예 |
+| Rails `find_or_create_by` | 7.1 이상만 |
+| Spring `@Transactional(propagation = NESTED)` + `DataSourceTransactionManager` | 예 |
+| Spring `NESTED` + `JpaTransactionManager` | 아니요, 예외로 막힙니다 |
+| Django 중첩 `atomic()` | 예 |
+| SQLAlchemy `begin_nested()` | 예 |
+
+PL/pgSQL 쪽은 공식 문서가 유난히 불친절합니다. 제어 구조 문서에는 "`EXCEPTION` 절이 있는 블록은 없는 블록보다 진입과 탈출이 훨씬 비싸다"고만 적혀 있고 서브트랜잭션이라는 말이 없습니다. 서브트랜잭션을 명시한 곳은 별도 페이지입니다.
+
+> Also, a block containing an EXCEPTION clause effectively forms a subtransaction that can be rolled back without affecting the outer transaction.
+
+가장 확실한 근거는 소스입니다. `pl_exec.c`가 `EXCEPTION` 절이 있을 때만 조건부로 서브트랜잭션을 엽니다.
+
+```c
+if (block->exceptions)
+{
+    /*
+     * Execute the statements in the block's body inside a sub-transaction
+     */
+    ...
+    BeginInternalSubTransaction(NULL);
+```
+
+## 2. 재현
+
+### 환경
+
+| 항목 | 값 |
+|---|---|
+| 호스트 | Darwin 25.3.0 arm64, 12코어, 32GB |
+| PostgreSQL | 17.5 프라이머리 + 스트리밍 복제 핫 스탠바이(비동기) |
+| 컨테이너 한도 | 각 4코어 4GB, `shared_buffers=1GB`, `autovacuum=off` |
+| 데이터 | `sponsor` 50만 행 |
+| 부하 | pgbench 17.5, 동시 리더 64, 각 조건 20초 |
+
+같은 호스트에서 두 인스턴스가 각 4코어를 쓰므로 12코어를 나눠 씁니다. 조건 간 상대 비교만 유효합니다.
+
+### 왜 17로 재는가
+
+16 이하에서 subtrans SLRU 크기는 컴파일 타임 상수였습니다.
+
+```c
+/* Number of SLRU buffers to use for subtrans */
+#define NUM_SUBTRANS_BUFFERS	32
+```
+
+바꾸려면 재컴파일해야 했습니다. GitLab이 검토했다가 포기한 것이 이 값을 키우는 Andrey Borodin의 패치였습니다. 그 패치가 17에서 `subtransaction_buffers` GUC로 정식 반영됐습니다. GitLab이 2021년에 원했던 조치를 17에서는 설정 한 줄로 할 수 있습니다.
+
+17에서 이름도 바뀌었습니다. `pg_stat_slru`의 name이 `Subtrans`에서 `subtransaction`으로 바뀌었고, 대기 이벤트는 이미 13에서 `SubtransControlLock`이 `SubtransSLRU`로 바뀌어 있었습니다. 버전별로 계측 쿼리를 분기해야 합니다.
+
+참고로 `https://www.postgresql.org/docs/17/wait-events.html`은 존재하지 않는 URL입니다. 대기 이벤트 표는 `monitoring-stats.html` 안에 있습니다.
+
+17을 쓰되 16 시절의 크기(32블록, 256kB)로 고정한 조건과 키운 조건을 나란히 재면, 같은 이미지 안에서 해소책의 효과가 분리됩니다.
+
+### 두 개의 경계
+
+절벽이 한 군데가 아닙니다.
+
+**64**는 `src/include/storage/proc.h`의 값입니다.
+
+```c
+#define PGPROC_MAX_CACHED_SUBXIDS 64	/* XXX guessed-at value */
+```
+
+백엔드는 자기 트랜잭션의 서브트랜잭션 XID를 이 배열에 광고합니다. 주석이 넘칠 때 무슨 일이 생기는지 직접 말해 줍니다.
+
+> If none of the caches have overflowed, we can assume that an XID that's not listed anywhere in the PGPROC array is not a running transaction. **Else we have to look at pg_subtrans.**
+
+**65,536**은 위의 32페이지 곱하기 2,048입니다. 여기를 넘으면 `pg_subtrans` 조회마저 SLRU 캐시에서 빗나갑니다.
+
+그래서 조건을 이 두 경계 아래위로 뒀습니다. 갱신 대상 50만 행과 리더 부하를 전부 고정하고, 그 50만 건을 몇 개의 서브트랜잭션으로 나눌지만 바꿉니다.
+
+## 3. 재계측
+
+![조건별 처리량, SLRU 미스율, 원인 지표](/uploads/incident/subtransaction-slru/chart-slru.png)
+
+| 조건 | 서브트랜잭션 | SLRU 버퍼 | 초당 처리량 | 평균 지연 | pg_subtrans 조회 | 빗나감 | SubtransSLRU 대기 비중 |
+|---|---|---|---|---|---|---|---|
+| `none` | 0 | 256kB | 101,383 | 0.587ms | 0 | 0 | 0/235 |
+| `sub64` | 64 | 256kB | 98,383 | 0.599ms | 0 | 0 | 0/271 |
+| `sub10k` | 10,000 | 256kB | 95,112 | 0.625ms | 7,615,604 | 6 | 0/277 |
+| `sub500k` | 500,000 | 256kB | 70,049 | 0.875ms | 5,614,334 | 1,256,582 | 419/884 |
+| `sub500k-buf` | 500,000 | 4MB | 97,146 | 0.608ms | 7,782,136 | 0 | 0/240 |
+
+세 구간이 성격이 다릅니다.
+
+**0에서 64까지는 아무 일도 없습니다.** `pg_subtrans` 조회가 0건입니다. 정확히 0입니다. 64개는 PGPROC 배열에 그대로 들어가니 리더가 디스크 구조를 뒤질 이유가 없고, 측정 결과가 소스 주석의 "넘치지 않았으면 pg_subtrans를 볼 필요가 없다"와 그대로 맞습니다.
+
+**64를 넘으면 조회가 시작되지만 그것만으로는 안 느려집니다.** `sub10k`에서 조회가 761만 건 발생했는데 빗나간 것은 6건입니다. XID 1만 개는 약 5페이지라 32페이지 캐시에 여유롭게 들어갑니다. 처리량은 95,112건으로 기준선의 94%입니다. 캐시 초과 자체의 비용은 작습니다.
+
+**무너지는 지점은 65,536입니다.** `sub500k`에서 XID 50만 개는 약 244페이지입니다. 32페이지 캐시로는 못 덮으니 조회 561만 건 중 126만 건이 빗나갔습니다. 미스율 22.4%입니다. 처리량이 70,049건으로 기준선의 69%가 되고, 대기 샘플의 47%가 `LWLock/SubtransSLRU`입니다. 미스율과 `SubtransSLRU` 대기 비중, 처리량 하락이 같은 조건에서 같이 나타납니다.
+
+SLRU를 키우면 해소됩니다. `subtransaction_buffers`를 4MB(512블록)로 올리자 같은 50만 서브트랜잭션에서 조회 778만 건이 전부 적중하고 빗나감이 0이 됐습니다. 처리량은 97,146건으로 기준선의 96%까지 돌아옵니다. `SubtransSLRU` 대기도 사라집니다. GitLab이 100MB 캐시면 2,620만 개를 담는다고 계산했던 그 조치입니다.
+
+### 17의 기본값은 이미 완화되어 있습니다
+
+17에서 `subtransaction_buffers`의 기본값은 0이고, 이는 자동 산정을 뜻합니다.
+
+> The default value is `0`, which requests `shared_buffers`/512 up to 1024 blocks, but not fewer than 16 blocks.
+
+`shared_buffers=1GB`면 131,072블록 나누기 512, 즉 256블록입니다. 16 이하의 고정 32블록보다 8배 큽니다. 위 표의 절벽은 그 기본값을 일부러 32로 되돌려서 만들었습니다. 17을 기본값으로 쓰면 같은 부하에서 이 절벽은 훨씬 얕습니다.
+
+## 4. 스탠바이 절벽은 재현하지 못했습니다
+
+GitLab이 겪은 것은 위와 다릅니다. 원문이 "복제본만 영향을 받았고 프라이머리는 멀쩡했다"고 명시합니다. postgres.ai의 후속 분석도 프라이머리 단일 노드에서는 이 문제가 없어 보인다고 적었습니다.
+
+프라이머리에 핫 스탠바이를 붙이고 postgres.ai의 검증된 레시피를 규모만 줄여 시도했습니다. 결과는 실패입니다.
+
+| 조건 | 프라이머리 쓰기 | 롱TX | 스탠바이 처리량 | 스탠바이 pg_subtrans | WAL의 ASSIGNMENT 레코드 |
+|---|---|---|---|---|---|
+| `sb-sp3` | SAVEPOINT 3개 + 쓰기 3건 | 있음 | 60,769 | 0 | 0 |
+| `sb-plain3` | SAVEPOINT 없이 쓰기 3건 | 있음 | 51,931 | 0 | 0 |
+| `sb-sp70` | 쓰기 서브트랜잭션 70개 | 있음 | 72,983 | 0 | 0 |
+| `sb-sp70-nolong` | 같음 | 없음 | 76,225 | 0 | 0 |
+
+![스탠바이의 pg_stat_slru](/uploads/incident/subtransaction-slru/fig-standby-slru.png)
+
+스탠바이의 `pg_stat_slru`에서 `subtransaction` 행이 모든 조건에서 0입니다. 같은 시점 `transaction` 행은 2만에서 46만 건씩 잡히므로 통계 수집이 죽은 것은 아닙니다. 복제 지연도 0에서 1초였습니다. 스탠바이 스냅샷의 xmin도 긴 트랜잭션에 제대로 붙잡혀 있었습니다.
+
+### 왜 안 됐는지 알아낸 것까지
+
+스탠바이가 서브트랜잭션 오버플로를 알게 되는 경로는 WAL의 `XLOG_XACT_ASSIGNMENT` 레코드뿐입니다. 이 레코드가 언제 나오는지 `pg_waldump`로 직접 셌습니다.
+
+```console
+-- 한 트랜잭션에 쓰기 서브트랜잭션 10만 개
+1562 ASSIGNMENT
+
+-- SAVEPOINT 3개짜리 트랜잭션 1.7만 건
+16954 COMMIT          ← ASSIGNMENT 0건
+```
+
+![스탠바이가 오버플로를 통보받는 유일한 경로](/uploads/incident/subtransaction-slru/fig-assignment.png)
+
+100,000 나누기 64는 1,562.5입니다. 트랜잭션 하나 안에서 서브트랜잭션 64개마다 한 번씩 기록된다는 뜻입니다.
+
+`SAVEPOINT` 3개짜리 트랜잭션에서는 이 레코드가 한 건도 나오지 않았습니다. 64에 닿을 일이 없으니 당연합니다. 스탠바이는 오버플로가 있었다는 사실 자체를 통보받지 못하고, 통보받지 못하면 스냅샷을 `suboverflowed`로 표시하지 않고, 표시하지 않으면 `pg_subtrans`를 볼 이유가 없습니다.
+
+### 이 실패가 반박이 되지 못하는 조건 세 가지
+
+세 가지가 걸립니다.
+
+첫째, `sb-sp70` 조건은 쓰기 처리량이 초당 0.68건이었습니다. 4개 클라이언트가 한 트랜잭션에서 70개 행 락을 잡으니 서로 막고 데드락까지 났습니다. WAL에 ABORT 레코드가 남았습니다. GitLab이 요구한 "동시에 많은 쓰기"와는 거리가 멉니다. ASSIGNMENT 레코드가 나올 수 있는 조건은 이것뿐이었는데, 정작 쓰기량이 없어서 조건을 못 만들었습니다.
+
+둘째, GitLab이 관측한 버전은 12대입니다. 블로그 본문에 버전 명시는 없지만, 본문이 링크한 이슈 제목이 "Benchmark 10-30 concurrent transactions with 3 nested savepoints on PostgreSQL 12.7/12.8"입니다. 관측한 대기 이벤트 이름이 `SubtransControlLock`(13 이전 명칭)인 것과도 맞습니다. postgres.ai가 검증한 버전은 12, 13, 14입니다. 17에서 같은 경로가 그대로 남아 있는지는 확인하지 않았습니다.
+
+셋째, 제 스탠바이는 프라이머리와 같은 호스트에서 컨테이너로 돌았습니다. postgres.ai는 별도 인스턴스 2대를 썼습니다. 자원 경쟁 구조가 다릅니다.
+
+프라이머리 쪽 절벽은 두 경계와 해소책까지 재현했고, GitLab이 겪은 스탠바이 쪽 절벽은 재현하지 못했습니다. 못 한 이유의 일부는 밝혔지만 그것이 GitLab의 서술과 어긋나는 이유는 밝히지 못했습니다.
+
+## 5. 예상과 달랐던 점
+
+### 긴 트랜잭션과 캐시 초과만으로는 아무 일도 안 일어납니다
+
+조건을 다 갖췄다고 믿고 여러 번 쟀는데 `pg_subtrans` 조회가 계속 0이었습니다. 원인은 스냅샷의 xmax였습니다.
+
+긴 트랜잭션이 유일한 쓰기 주체이면 `pg_current_snapshot()`이 이렇게 나옵니다.
+
+```console
+spoon=# SELECT pg_current_snapshot();
+ 2218:2218:                       ← xmin = xmax, 진행 중 목록 비어 있음
+
+spoon=# SELECT id, xmin, xmax FROM sponsor WHERE id IN (5, 50000, 99999);
+  id   | xmin | xmax
+-------+------+------
+     5 |  847 | 2219
+ 50000 |  847 | 2318
+ 99999 |  847 | 2418
+```
+
+서브트랜잭션 XID가 2219부터인데 스냅샷의 xmax가 2218입니다. `XidInMVCCSnapshot`은 xid가 xmax 이상이면 진행 중이라고 즉시 판정하고 끝냅니다. `pg_subtrans`를 볼 이유가 없습니다.
+
+그래서 조건이 셋입니다. 긴 트랜잭션, 서브트랜잭션 캐시 초과, **XID 카운터를 서브트랜잭션 범위 너머로 밀어 올리는 다른 쓰기 트래픽**입니다. 세 번째를 넣고서야 재현됐습니다.
+
+GitLab 원문의 "if many writes also occurred simultaneously"가 이 조건입니다. 처음에는 부하를 키우라는 뜻으로 읽었는데, 부하의 양보다 XID 카운터를 미는 역할이 핵심이었습니다.
+
+### 캐시 초과의 비용이 거의 없었습니다
+
+64를 넘기면 느려질 것으로 예상했는데 `sub10k`에서 조회 761만 건이 전부 캐시에 적중하며 처리량이 6% 떨어지는 데 그쳤습니다. 절벽은 "캐시를 넘겼는가"보다 "XID 범위가 SLRU 페이지 수를 넘겼는가"에서 생깁니다.
+
+서브트랜잭션을 64개 아래로 유지하는 것만으로는 안심할 수 없고, 64를 넘겼다고 무조건 위험한 것도 아닙니다. 위험한 조건은 XID 소비 속도와 긴 트랜잭션의 길이가 함께 만듭니다.
+
+### 스탠바이가 프라이머리보다 max_connections를 크게 가져야 합니다
+
+스탠바이가 이 로그를 남기고 안 떴습니다.
+
+```
+FATAL:  recovery aborted because of insufficient parameter settings
+DETAIL:  max_connections = 100 is a lower setting than on the primary server, where its value was 300.
+```
+
+이 값이 스탠바이의 `KnownAssignedXids` 배열 크기를 정하기 때문입니다. 스탠바이는 프라이머리에서 진행 중인 XID를 이 배열로 추적하고, 바로 이 배열이 넘칠 때 `pg_subtrans`로 내려갑니다.
+
+### 서브트랜잭션은 XID도 빨리 태웁니다
+
+postgres.ai가 정리한 네 문제 중 첫 번째가 XID 증가입니다.
+
+> One may have, say, 1000 writing transactions per second, but if they all use 10 subtransactions, then XID is incremented by 10000 per second.
+
+PostgreSQL 개발자들이 XID를 최대한 빨리 태우는 수단으로 고른 것도 서브트랜잭션입니다. 17에 들어간 테스트 모듈 `xid_wraparound`의 주석이 그렇게 적혀 있습니다.
+
+> We consume XIDs by calling GetNewTransactionId(true), which marks the consumed XIDs as subtransactions of the current top-level transaction.
+
+그 XID가 바닥나면 어떻게 되는지는 같은 시리즈의 [트랜잭션 ID가 바닥나 읽기 전용이 된다](/blog/incident/xid-wraparound)에서 다룹니다.
+
+## 못 한 것
+
+- **스탠바이 절벽.** 4절에 적었습니다. 이 세션의 가장 큰 공백입니다.
+- **16과 17 비교.** 같은 워크로드를 16에서 돌려 17의 뱅크 단위 SLRU 락 개선이 얼마나 기여하는지 분리하지 못했습니다. 지금 표의 절벽은 17에서 버퍼만 32로 되돌린 것이라 16의 실제 동작과 같다고 단정할 수 없습니다.
+- **`RELEASE SAVEPOINT`의 효과.** postgres.ai는 활성 서브트랜잭션을 64 미만으로 유지하면 총 100개를 만들어도 열화가 없다고 했습니다. 활성 수와 누적 수를 나눠 재지 않았습니다.
+- **Multixact 경로.** 서브트랜잭션과 `SELECT ... FOR UPDATE`가 겹치면 multixact가 끼어들어 별도의 열화가 생깁니다. 이 세션 범위 밖입니다.
+- **애플리케이션 계층 검증.** 위 표의 Spring, Rails 항목은 문서와 소스로 확인했을 뿐 이 랩에서 실행해 확인하지 않았습니다.
+
+---
+
+재현에 쓴 compose 파일과 실행 출력 원문은 [incident-lab 저장소의 A19 세션](https://github.com/dj258255/incident-lab/tree/main/sessions/A19-subtransaction-slru)에 있습니다.
