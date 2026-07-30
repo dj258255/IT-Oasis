@@ -6,28 +6,40 @@
   "order": 0,
   "subcategories": [
     {
-      "name": "Engine",
-      "nameEn": "DB Engine",
-      "nameKo": "DB 엔진",
+      "name": "QueryIndex",
+      "nameEn": "Query & Index",
+      "nameKo": "쿼리와 인덱스",
       "order": 1
     },
     {
-      "name": "Managed",
-      "nameEn": "Managed DB",
-      "nameKo": "관리형 DB 운영",
+      "name": "LockTx",
+      "nameEn": "Locks & Transactions",
+      "nameKo": "락과 트랜잭션",
       "order": 2
     },
     {
-      "name": "AppCode",
-      "nameEn": "Application Code",
-      "nameKo": "애플리케이션 코드",
+      "name": "DbOps",
+      "nameEn": "Database Operations",
+      "nameKo": "DB 운영과 복구",
       "order": 3
+    },
+    {
+      "name": "Cloud",
+      "nameEn": "Cloud Infrastructure",
+      "nameKo": "클라우드 인프라",
+      "order": 4
+    },
+    {
+      "name": "JavaBackend",
+      "nameEn": "Java Backend",
+      "nameKo": "자바 백엔드",
+      "order": 5
     },
     {
       "name": "Finance",
       "nameEn": "Financial IT",
       "nameKo": "증권 IT",
-      "order": 4
+      "order": 6
     }
   ]
 }

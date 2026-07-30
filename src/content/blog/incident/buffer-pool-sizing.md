@@ -12,7 +12,7 @@ tags:
   - Performance
   - Database Internals
   - DBRE
-category: incident/Engine
+category: incident/QueryIndex
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 2
 coverImage: /uploads/incident/buffer-pool-sizing/02-p95-uniform.png

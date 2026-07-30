@@ -14,7 +14,7 @@ tags:
   - Amazon Aurora
   - AWS RDS
   - Docker
-category: incident/Managed
+category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 8
 coverImage: /uploads/incident/reader-endpoint-skew/chart-skew.png

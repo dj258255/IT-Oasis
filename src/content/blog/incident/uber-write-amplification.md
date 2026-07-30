@@ -13,7 +13,7 @@ tags:
   - Database Internals
   - Performance
   - EXPLAIN
-category: incident/Engine
+category: incident/QueryIndex
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 5
 coverImage: /uploads/incident/uber-write-amplification/chart-wal.png
