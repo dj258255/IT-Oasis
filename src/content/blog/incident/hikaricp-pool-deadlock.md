@@ -13,7 +13,7 @@ tags:
   - Connection Pool
   - Transaction
   - Docker
-category: incident/AppCode
+category: incident/LockTx
 series: '애플리케이션 코드가 부른 장애'
 seriesOrder: 4
 coverImage: /uploads/incident/hikaricp-pool-deadlock/chart-pool.png

@@ -12,7 +12,7 @@ tags:
   - Timestamp
   - Docker
   - Database
-category: incident/Managed
+category: incident/DbOps
 series: '관리형 DB 운영의 함정'
 seriesOrder: 4
 coverImage: /uploads/incident/charset-timezone/fig-convert-tz.png

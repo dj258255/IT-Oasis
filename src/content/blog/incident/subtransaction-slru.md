@@ -12,7 +12,7 @@ tags:
   - Replication
   - pgbench
   - Docker
-category: incident/Engine
+category: incident/LockTx
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 10
 coverImage: /uploads/incident/subtransaction-slru/chart-slru.png

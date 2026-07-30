@@ -14,7 +14,7 @@ tags:
   - Failover
   - AWS RDS
   - Docker
-category: incident/Managed
+category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 7
 coverImage: /uploads/incident/failover-dns-cache/chart-failover.png

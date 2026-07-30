@@ -14,7 +14,7 @@ tags:
   - RPO
   - AWS
   - Docker
-category: incident/Managed
+category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 1
 coverImage: /uploads/incident/replica-promotion-loss/fig-async-loss.png

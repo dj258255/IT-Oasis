@@ -10,7 +10,7 @@ tags:
   - Database Internals
   - VACUUM
   - Docker
-category: incident/Engine
+category: incident/DbOps
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 11
 coverImage: /uploads/incident/xid-wraparound/chart-wraparound.png

@@ -13,7 +13,7 @@ tags:
   - ClassLoader
   - Metaspace
   - Memory Leak
-category: incident/AppCode
+category: incident/JavaBackend
 series: '애플리케이션 코드가 부른 장애'
 seriesOrder: 1
 coverImage: /uploads/incident/threadlocal-classloader-leak/01-repro-run.png
