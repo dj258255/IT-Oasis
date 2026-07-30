@@ -226,7 +226,70 @@ C와 D의 차이가 이 절의 요점입니다. 설정은 똑같이 `recovery_ta
 
 마지막 줄에서 두 엔진이 같은 방식으로 위험합니다. PostgreSQL 문서가 `archive_command`에 대해 없는 파일 요청에는 반드시 0이 아닌 값을 반환해야 한다고 못 박는 이유이고, 이 실험의 compose에도 `test ! -f`를 앞에 둔 이유입니다.
 
-## 6. 해소: 백업을 믿지 않는 절차
+## 6. SQL Server로 한 번 더
+
+앞서 이 자리에 "공식 이미지가 없거나 라이선스가 걸려 이 랩에서 실행할 수 없었다"고 적었습니다. **틀렸습니다.** SQL Server Developer 에디션은 `mcr.microsoft.com/mssql/server`로 무료 공개돼 있고 `STOPAT` 시점 복구가 그 에디션에 들어 있습니다. 재봤습니다.
+
+SQL Server 2022 (16.0.4265.3), Developer 에디션, 같은 1,500행 규모입니다. Apple Silicon에는 ARM 이미지가 없어 에뮬레이션으로 돌고 메모리를 6GB 줘야 떴습니다.
+
+### 복구 모델이 SIMPLE이면 시점 복구가 성립하지 않습니다
+
+```console
+1> BACKUP LOG spoon TO DISK='/var/opt/mssql/backup/log_simple.trn' WITH INIT
+Msg 4208, Level 16, State 1
+The statement BACKUP LOG is not allowed while the recovery model is SIMPLE.
+Use BACKUP DATABASE or change the recovery model using ALTER DATABASE.
+```
+
+이것이 MySQL과 PostgreSQL에 없는 관문입니다. MySQL은 `log-bin`이 켜져 있으면 binlog가 나오고, PostgreSQL은 `archive_mode=on`이면 WAL이 보관됩니다. SQL Server는 **데이터베이스마다 복구 모델이 따로 있고**, `SIMPLE`이면 로그 백업 자체가 거부됩니다. 새 DB는 `model` 데이터베이스의 값을 물려받으므로, 그 값이 `SIMPLE`인 인스턴스에서는 만든 DB가 전부 시점 복구를 못 합니다. **백업 스크립트가 있어도 이 값 하나로 창이 닫힙니다.**
+
+### `NORECOVERY`를 빠뜨리면 로그를 이어 붙일 수 없습니다
+
+```console
+-- NORECOVERY 없이 전체 백업만 복원
+RESTORE DATABASE successfully processed 498 pages
+상태 ONLINE, 행 수 1000
+
+-- 그 뒤 로그를 적용해 보면
+Msg 3117, Level 16, State 1
+The log or differential backup cannot be restored because no files are ready to rollforward.
+```
+
+데이터베이스가 열려 버렸고, 그 뒤로는 로그를 적용할 수 없습니다. 다시 하려면 전체 백업부터 복원해야 합니다. **1,000행 상태로 서비스를 열고 나서 "아 500건이 없네"를 알아차리면 그때는 이미 늦습니다.**
+
+MySQL은 이 함정이 없습니다. 덤프를 복원한 뒤 아무 때나 binlog를 이어 붙일 수 있습니다. PostgreSQL도 `recovery.signal`이 있으면 복구 모드로 뜹니다. SQL Server만 **복원 명령에 상태를 명시**해야 합니다.
+
+### `STOPAT`을 넉넉하게 잡으면 열리지 않습니다
+
+| 복구 | `STOPAT` | 결과 |
+|---|---|---|
+| A | (없음, `NORECOVERY`도 없음) | ONLINE, 1,000행. 로그 이어 붙이기 불가 |
+| B | 사고 직전 `2026-07-30 12:13:22.922` | ONLINE, **1,500행** |
+| C | 사고 직후 `2026-07-30 12:13:25.390` | **RESTORING. 열리지 않음** |
+| D | 로그 백업 완료 시각 `12:13:25.000` | ONLINE, **1,500행** |
+
+C가 이 절의 요점입니다. `RECOVERY`를 함께 줬는데도 데이터베이스가 `RESTORING`에 남았습니다. `STOPAT` 시각이 이 로그 백업의 끝보다 뒤라서, SQL Server가 **아직 적용할 로그가 더 있을 수 있다고 보고 기다립니다.**
+
+5절에서 PostgreSQL이 `recovery_target_action` 기본 `pause` 때문에 "복구는 됐는데 안 열린다"를 만들었습니다. SQL Server도 같은 증상을 만드는데 **원인이 다릅니다.** PostgreSQL은 목표에 도달했는데 승격을 안 한 것이고, SQL Server는 목표에 도달하지 못했다고 판단한 것입니다. 전자는 `pg_wal_replay_resume()`으로 열리고, 후자는 `RESTORE DATABASE ... WITH RECOVERY`를 한 번 더 불러야 합니다.
+
+D도 함께 봐야 합니다. `STOPAT`을 로그 백업 완료 시각으로 주면 1,500행입니다. 사고 `DELETE`가 그 로그 안에 있는데도 제외됐습니다. `msdb.dbo.backupset`의 완료 시각이 초 단위로 기록되어 사고 커밋의 실제 타임스탬프보다 이르기 때문입니다. **PostgreSQL의 `recovery_target_inclusive`처럼 경계를 옵션으로 고를 수는 없고, `STOPAT`은 그 시각까지 포함하는 규칙이 고정입니다.**
+
+### 세 엔진을 나란히 놓으면
+
+| | MySQL 8.4 | PostgreSQL 17.5 | SQL Server 2022 |
+|---|---|---|---|
+| 복구 재료 | 풀 덤프 + binlog | 베이스 백업 + 아카이브 WAL | 전체 백업 + 로그 백업 |
+| 로그 보관의 전제 | `log-bin` | `archive_mode=on` | **DB별 복구 모델이 `FULL`** |
+| 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_*` | `STOPAT` |
+| 경계 포함 | 그 위치 직전까지 | `recovery_target_inclusive`로 선택 | 고정(그 시각까지 포함) |
+| 복구 직후 상태 | 바로 쓰기 가능 | 기본 `pause`. 승격 필요 | `NORECOVERY`를 명시해야 로그 이어 붙임 |
+| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` |
+
+**세 엔진이 같은 사고를 다른 자리에서 막습니다.** 절차서를 한 엔진에서 쓰고 다른 엔진에 옮기면 그 자리마다 다시 걸립니다.
+
+Oracle은 여전히 다루지 않았습니다. Oracle Database Free 23ai 컨테이너가 공개돼 있어 실행 자체는 가능해 보이는데, `RMAN`의 `UNTIL TIME` 실습에 아카이브 로그 모드 전환과 별도 구성이 필요해 이번에는 넣지 않았습니다. **"라이선스 때문에 불가능"이 아니라 "아직 안 했다"가 정확한 표현입니다.**
+
+## 7. 해소: 백업을 믿지 않는 절차
 
 실험에서 나온 것을 운영 체크리스트로 정리하면 이렇습니다.
 
@@ -240,7 +303,7 @@ C와 D의 차이가 이 절의 요점입니다. 설정은 똑같이 `recovery_ta
 | 복구 도구가 그 환경에 있는가 | 사고 당일에 확인하면 늦다 |
 | 복구 시간이 RTO 안인가 | 리허설에서 실측. 추정하지 않는다 |
 
-## 7. 예상과 달랐던 점
+## 8. 예상과 달랐던 점
 
 ### 함정 셋을 제가 직접 밟았습니다
 
@@ -260,10 +323,11 @@ MySQL의 PITR 문서(9.5절)에는 GTID 관련 경고가 한 줄도 없습니다
 
 ## 못 한 것
 
-- **Oracle과 SQL Server를 대조하지 않았습니다.** 두 엔진 모두 시점 복구를 제공하고 경계 포함 규칙도 다릅니다(Oracle `UNTIL TIME`, SQL Server `STOPAT`). 다만 공식 이미지가 없거나 라이선스가 걸려 이 랩에서 같은 방식으로 실행할 수 없었습니다.
+- **Oracle을 아직 다루지 않았습니다.** Oracle Database Free 23ai 컨테이너가 공개돼 있어 실행은 가능해 보이는데, `RMAN`의 `UNTIL TIME` 실습에 아카이브 로그 모드 전환과 별도 구성이 필요해 넣지 않았습니다. 라이선스 문제가 아니라 아직 안 한 것입니다.
+- **SQL Server 쪽도 조건마다 1회씩입니다.** 6절의 값에 반복 측정이 없고, ARM 에뮬레이션으로 돌았으므로 시간 관련 수치는 아예 적지 않았습니다.
 - **논리·물리 백업의 복원 시간을 비교하지 않았습니다.** 벤더 문서가 백업 속도만 명시하고 복원 속도 비교는 없어서, 직접 재면 독자적 기여가 되는 자리입니다.
 - **데이터 규모가 작습니다.** 사고 직전 1,500행, 덤프 40K, binlog 192K입니다. RTO 절대값은 이 규모에서만 성립하고, 규모를 키웠을 때 세 구간의 비율이 어떻게 변하는지는 재지 않았습니다.
-- **호스트 사양을 남기지 않았습니다.** `uname -srm`, `nproc`, `free -g`를 찍어 두지 않아 어느 장비에서 돌렸는지 확인되지 않습니다. 덤프 헤더와 도구 컨테이너 버전 문자열의 `aarch64`가 전부입니다. 지금 다시 찍어 봐야 그 실행의 장비라는 보장이 없어 채우지 않았습니다. RTO를 주제로 하는 글에서 이건 구멍이고, 그래서 위 소요 시간을 다른 세션의 절대값과 비교하면 안 됩니다.
+- **호스트 사양을 남기지 않았습니다.** `uname -srm`, `nproc`, `free -g`를 찍어 두지 않아 어느 장비에서 돌렸는지 확인되지 않습니다. 덤프 헤더와 도구 컨테이너 버전 문자열의 `aarch64`가 전부입니다. 지금 다시 찍어도 그 실행의 장비라는 보장이 없어 채우지 않았습니다. 반복 측정을 하면 그때 기록이 남으므로 이 항목은 반복 측정과 함께 해소됩니다. RTO를 주제로 하는 글에서 이건 구멍이고, 그래서 위 소요 시간을 다른 세션의 절대값과 비교하면 안 됩니다.
 - **한 번만 쟀습니다.** 세 구간 모두 1회 실행값이고 반복 측정과 분산이 없습니다.
 - **백업 검증 파이프라인을 구현하지 않았습니다.** 체크리스트로 적었을 뿐, 자동 복원 리허설을 실제로 돌리는 것은 다음 과제입니다.
 
