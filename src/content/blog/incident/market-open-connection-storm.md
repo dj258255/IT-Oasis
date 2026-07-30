@@ -1,8 +1,8 @@
 ---
 title: '오전 9시 접속 폭주에 커넥션 10개짜리 풀이 무너진다'
 titleEn: 'The 9 AM Market Open Traffic Storm'
-description: '한국 증권사 MTS는 장이 열리는 오전 9시에 트래픽이 몰립니다. 국회 정무위원회 이양수 의원실이 증권사 12곳에서 받은 자료로 2022년 1월부터 2026년 3월까지 MTS 전산 장애가 190건 있었습니다. 각 사의 내부 원인 분석은 공개되지 않았습니다. 원인 가설 가운데 커넥션 풀 고갈만 떼어 Spring Boot와 HikariCP로 규모를 줄여 축소 재현했습니다. 풀 10에 초당 400건을 겨냥한 스파이크를 부으니 응답 중앙값이 3.38초로 밀리고 커넥션 획득 타임아웃이 났습니다. k6가 받은 6,598건 가운데 541건이 500이었습니다. 부하 차단을 한 겹 넣자 받은 요청의 중앙값이 51ms, 500이 0건이 됐습니다. 다만 두 실행이 앱에 넣은 요청 수가 6,598건과 9,959건으로 달라 처리량 비교는 하지 않습니다.'
-descriptionEn: "Korean brokerage MTS apps take their heaviest traffic the moment the market opens at 9 AM. A National Assembly office collected 190 MTS outages across 12 brokerages between January 2022 and March 2026, but no firm published its internal root cause, so this session reproduces one representative mechanism at reduced scale instead: connection pool exhaustion on Spring Boot and HikariCP. A pool of 10 under a spike targeting 400 requests per second pushed median latency to 3.38s and produced connection acquisition timeouts, with 541 of the 6,598 responses k6 received coming back as HTTP 500; one layer of load shedding brought the median for admitted requests back to 51ms with zero 500s. The two runs did not deliver the same load to the app (6,598 vs 9,959 requests), so this post does not compare throughput."
+description: '한국 증권사 MTS는 장이 열리는 오전 9시에 트래픽이 몰립니다. 국회 정무위원회 이양수 의원실이 증권사 12곳에서 받은 자료로 2022년 1월부터 2026년 3월까지 MTS 전산 장애가 190건 있었습니다. 각 사의 내부 원인 분석은 공개되지 않았습니다. 원인 가설 가운데 커넥션 풀 고갈만 떼어 Spring Boot와 HikariCP로 규모를 줄여 축소 재현했습니다. 풀 10에 초당 400건 스파이크를 부으니 응답 중앙값이 11.42초로 밀리고 9,999건 가운데 761건이 커넥션 획득 타임아웃으로 500이 됐습니다. 부하 차단을 한 겹 넣자 같은 부하에서 중앙값 51ms, 500이 0건이 됐고 넘치는 요청은 중앙값 1ms에 503으로 돌아갔습니다. 계층별로 재 보니 중앙값 11.42초 가운데 커넥션 풀 대기는 0.96초뿐이고 약 10.4초는 Tomcat 작업 스레드를 기다린 시간이었습니다.'
+descriptionEn: "Korean brokerage MTS apps take their heaviest traffic the moment the market opens at 9 AM. A National Assembly office collected 190 MTS outages across 12 brokerages between January 2022 and March 2026, but no firm published its internal root cause, so this session reproduces one representative mechanism at reduced scale instead: connection pool exhaustion on Spring Boot and HikariCP. A pool of 10 under a 400 requests per second spike pushed median latency to 11.42s, and 761 of the 9,999 requests came back as HTTP 500 from connection acquisition timeouts. One layer of load shedding, under an identical load, brought the median back to 51ms with zero 500s while shedding the excess as 503 in a median of 1ms. Instrumenting each tier showed that only 0.96s of the 11.42s median was connection pool wait; roughly 10.4s was spent waiting for a Tomcat worker thread."
 date: 2026-07-28
 tags:
   - Spring Boot
@@ -29,19 +29,21 @@ coverImage: /uploads/incident/market-open-connection-storm/01-buggy-storm.png
 
 증권 MTS의 시세 조회 API를 축소했습니다. Spring Boot 3.3의 내장 Tomcat에 조회 엔드포인트 `GET /quote`를 두고, 조회 한 건이 DB 커넥션을 약 50ms 점유하도록 했습니다. 느린 조인이나 직렬화, 외부 시세 대기 같은 실제 지연을 pg_sleep으로 모델링한 것입니다. HikariCP 풀은 10, 커넥션 획득 제한 시간은 2초입니다. 조회 한 건이 커넥션을 50ms 잡으므로 풀 10으로는 초당 약 200건이 한계입니다. 이 200건이라는 상한은 실측이 아니라 `pg_sleep(0.05)`라는 모형이 정의한 값입니다. 실제 조회는 CPU와 IO를 쓰고 서로 경합하므로 상한이 이렇게 깔끔하게 떨어지지 않습니다. 이 글에서 초당 200건이라는 표현이 나오면 전부 이 모형의 산술이라고 읽어야 합니다.
 
-부하는 k6로 09:00 정각 스파이크를 흉내 냈습니다. 도착률 모델로 초당 400건을 5초에 걸쳐 올려 20초를 유지했습니다. 풀 용량의 두 배입니다. 환경은 Docker 위 Postgres 16과 eclipse-temurin:21입니다.
+부하는 k6로 09:00 정각 스파이크를 흉내 냈습니다. 도착률 모델로 초당 400건을 5초에 걸쳐 올려 20초를 유지했습니다. 풀 용량의 두 배입니다. VU는 5,000개를 미리 잡아 두었습니다. 이 숫자가 중요합니다. VU 하나는 응답을 받을 때까지 묶여 있으므로, 모자라면 도착률 모델을 걸어 두고도 목표만큼 쏘지 못합니다. 처음 측정에서 실제로 그렇게 됐고, 그 이야기는 5절에서 하겠습니다. 환경은 Docker 위 Postgres 16과 eclipse-temurin:21입니다.
 
-호스트는 2 vCPU 한 대입니다(`uname -srm`은 `Linux 5.14.0-570.33.2.el9_6.aarch64`, `nproc`는 2, 메모리 11GiB). Postgres와 앱, 그리고 부하 생성기 k6가 모두 이 한 대에서 돌았고 compose 파일에 컨테이너 CPU 제한을 걸지 않았습니다. 부하 생성기가 측정 대상과 코어 두 개를 나눠 썼다는 뜻이라, 아래 지연 수치에는 k6 자신이 만든 경합이 섞여 있습니다.
+호스트는 2 vCPU 한 대입니다(`uname -srm`은 `Linux 5.14.0-570.33.2.el9_6.aarch64`, `nproc`는 2, `free -g`의 total은 11). Postgres와 앱, 그리고 부하 생성기 k6가 모두 이 한 대에서 돌았고 compose 파일에 컨테이너 CPU 제한을 걸지 않았습니다. 게다가 이 장비에는 모니터링 스택이 상주하고, 측정 나흘 전부터 `dockerd`가 계속 논리 코어 하나를 통째로 쓰고 있었습니다. 이 조건을 바꾸지 못한 채 쟀으므로, 실행마다 `uptime`을 찍어 세션 기록에 남겼습니다. 아래 두 실행의 직전 load average는 4.87과 3.87입니다. 지연 수치에는 그만큼의 경합이 섞여 있습니다.
 
 ![F03 버그 경로 부하 화면](/uploads/incident/market-open-connection-storm/01-buggy-storm.png)
 
-*그림 1. 부하 차단이 없는 버그 경로의 부하 화면입니다. 풀 열 개가 모두 사용 중이고 획득 대기 큐에 189건이 쌓여 응답 중앙값이 3.38초로 밀립니다. 아래 줄의 응답 상태 분포가 541이라는 수치의 근거입니다.*
+*그림 1. 부하 차단이 없는 버그 경로의 부하 화면입니다. 풀 열 개가 모두 사용 중이고 획득 대기 큐가 쌓여 응답 중앙값이 11.42초로 밀립니다. 앱이 던진 예외 761건과 k6가 받은 500 응답 761건이 같습니다.*
 
-부하 차단이 없는 `/quote/buggy`는 초당 약 200건까지만 처리하고 나머지는 커넥션을 기다렸습니다. 응답 시간 중앙값이 평상시 약 50ms에서 3.38초로, p95는 5.36초로 밀렸습니다. 이때 풀은 열 개가 모두 사용 중이었고 획득 대기 큐에 189건이 쌓여 있었습니다. 로그 원문은 `total=10, active=10, idle=0, waiting=189`입니다.
+부하 차단이 없는 `/quote/buggy`는 초당 약 200건까지만 처리하고 나머지는 커넥션을 기다렸습니다. 응답 시간 중앙값이 평상시 약 50ms에서 11.42초로, p95는 20.96초로 밀렸습니다. 이때 풀은 열 개가 모두 사용 중이었고 획득 대기 큐에 최대 191건이 쌓여 있었습니다. 로그 원문의 첫 예외는 `total=10, active=10, idle=0, waiting=186`입니다.
 
-2초 안에 커넥션을 받지 못한 요청은 500으로 떨어졌습니다. 그 건수가 541건입니다. 이 값은 k6가 클라이언트 쪽에서 받은 응답을 센 것입니다. [results/buggy-k6.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/buggy-k6.txt)의 상태 분포가 200이 6,057건, 500이 541건, 503이 0건이고, 이 셋을 더하면 `http_reqs` 6,598건과 정확히 맞습니다. 요약의 `http_req_failed 8.19% 541 out of 6598`도 같은 값이라, 실패로 잡힌 541건에 503이나 응답을 아예 받지 못한 요청은 섞여 있지 않습니다. 즉 541은 버그 경로가 돌려준 HTTP 500의 개수입니다.
+2초 안에 커넥션을 받지 못한 요청은 500으로 떨어졌습니다. 목표 도착률의 10,000회 가운데 9,999회가 발사됐고 그중 761건이 500입니다. [results/buggy-k6.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/buggy-k6.txt)의 상태 분포가 200이 9,238건, 500이 761건, 503이 0건, 응답을 받지 못한 요청이 0건이고, 합이 `http_reqs` 9,999건과 정확히 맞습니다.
 
-다만 그 541건이 전부 커넥션 획득 타임아웃 때문이었는지는 확정하지 못했습니다. 앱 로그 쪽 집계가 저장소 안에서 두 값으로 갈리기 때문입니다. 재현 기록은 `docker logs lab-f03-app | grep -c "Connection is not available"`의 결과를 541로 적었는데, 같은 실행의 로그를 발췌한 [results/hikari-timeout.txt](https://github.com/dj258255/incident-lab/blob/main/sessions/F03-market-open-connection-storm/results/hikari-timeout.txt)는 "이 실행에서 위 예외로 처리된 500이 27건"이라고 적었습니다. 27이 무엇을 센 값인지는 갈라내지 못했습니다. 그 파일은 스택트레이스를 줄여 놓은 발췌라 `docker logs`의 원문 출력이 아니고, 그 안의 `waiting=189`도 재현 기록에는 한동안 188로 옮겨 적혀 있었습니다. 다른 시도의 기록일 수도 있고 발췌가 잘렸을 수도 있는데, 남은 파일로는 가릴 수 없습니다. 그래서 이 글은 541을 "k6가 받은 500 응답 수"로만 쓰고, 그 가운데 몇 건이 HikariCP 예외였는지는 재지 못한 것으로 둡니다.
+그리고 이번에는 그 761건이 무엇 때문이었는지도 갈립니다. 앱 로그를 발췌하지 않고 통째로 저장해 `grep -c "Connection is not available"`을 돌리니 정확히 761건이 나왔습니다. k6가 클라이언트 쪽에서 받은 500과 앱이 서버 쪽에서 던진 예외가 같은 수입니다. 조건을 바꿔 가며 일곱 번을 돌렸는데 전부 맞았습니다. 앱 예외와 k6의 500이 각각 761/761, 1,268/1,268, 0/0, 26/26, 3,945/3,945, 0/0, 0/0입니다.
+
+이 대조는 앞선 측정에서 걸렸던 문제를 풀려고 넣은 것입니다. 그때는 재현 기록이 같은 `grep -c`를 541건으로 적고 발췌 파일은 27건으로 적어, 앱 로그 쪽 집계가 저장소 안에서 갈렸습니다. 발췌 파일이 스택트레이스를 줄여 놓은 것이라 어느 쪽이 참인지 가릴 수 없었고, 그래서 "500 541건 가운데 몇 건이 풀 타임아웃인지는 모른다"고 적어 두어야 했습니다. 27이 무엇이었는지는 지금도 모릅니다. 다만 이 글은 더 이상 그 값에 기대지 않습니다.
 
 ## 3. 내부 원리
 
@@ -49,7 +51,32 @@ coverImage: /uploads/incident/market-open-connection-storm/01-buggy-storm.png
 
 기다림은 두 곳에서 쌓입니다. 먼저 HikariCP의 획득 대기 큐입니다. 앞 요청이 커넥션을 반환할 때까지 기다리다 2초를 넘기면 `SQLTransientConnectionException`이 나고 500으로 끝납니다. 다음은 내장 Tomcat의 처리 스레드입니다. 스레드가 커넥션을 기다리며 붙잡혀 있으면 새 요청은 그 앞 단계에서 다시 기다립니다. 그래서 증상이 500 에러보다 응답 시간 폭증으로 먼저 나타납니다. 제한 시간을 넉넉히 둘수록 요청은 실패 대신 몇 초씩 매달립니다.
 
-중앙값 3.38초를 풀 대기만으로 설명할 수는 없습니다. `connection-timeout`이 2000ms라 풀에서 기다릴 수 있는 시간의 상한이 2초이고, 여기에 쿼리 50ms를 더해도 2.05초입니다. 3.38초는 그 위입니다. 남은 1초 남짓은 풀 앞단에서 쌓인 것입니다. Tomcat의 처리 스레드는 `max-threads` 기본값 200개인데 획득 대기 큐에 189건이 잡혀 있었으니, 스레드가 거의 다 커넥션을 기다리며 묶여 있었다는 뜻입니다. 그다음 요청은 accept 큐에서 스레드가 나기를 기다립니다. 이 재현은 병목을 풀 계층에 두려고 `accept-count`를 1000으로 넓혀 두었는데, 그래서 거부되지 않고 대기 시간으로 바뀌었습니다. 즉 중앙값 3.38초는 풀 대기와 스레드 대기와 accept 큐 대기의 합이고, 각 계층의 몫이 얼마인지는 따로 재지 않았습니다.
+그러면 중앙값 11.42초 가운데 어느 계층이 얼마를 먹었을까요. 앞선 회차에서는 이 물음에 산술로만 답했습니다. `connection-timeout`이 2000ms라 풀 대기의 상한이 2초이고 쿼리 50ms를 더해도 2.05초이니 나머지는 앞단에서 쌓였을 것이라는 추론이었습니다. 이번에는 앱에 계측을 넣어 실제로 갈랐습니다.
+
+서블릿 필터를 맨 앞에 두어 진입부터 응답 완료까지를 재고, `DataSource`를 감싸 커넥션 획득에 걸린 시간만 따로 잽니다. 필터에 닿았다는 것은 이미 Tomcat 작업 스레드를 하나 잡았다는 뜻입니다. 그러니 k6가 잰 전체 시간에서 필터가 잰 시간을 빼면 스레드를 기다린 시간이 남습니다.
+
+![중앙값의 계층별 몫](/uploads/incident/market-open-connection-storm/05-latency-layers.png)
+
+*그림 2. 중앙값 11.42초의 계층별 몫입니다. 커넥션 풀 대기는 0.96초, 쿼리는 0.05초, 나머지 약 10.4초는 서블릿에 닿기도 전에 쌓인 시간입니다.*
+
+앱 안에서 쓴 시간은 중앙값 1.01초였습니다. 그 대부분인 0.96초가 커넥션 획득 대기이고 쿼리가 0.05초입니다. 나머지 약 10.4초, 그러니까 중앙값의 91%는 서블릿 필터에 닿기도 전에 쌓였습니다. 같은 시각에 찍은 큐 길이가 그림과 맞습니다. Tomcat 작업 스레드는 200개가 전부 사용 중이고, 스레드를 기다리는 요청이 최대 4,335건, 열려 있는 소켓이 4,995개였습니다.
+
+중앙값끼리 뺀 값이라 엄밀하게는 근사입니다. 근사에 기대지 않는 하한은 이렇습니다. 앱 안에서 잰 시간의 최댓값이 2.13초였으므로, 중앙값 11.42초짜리 요청은 적어도 9.3초를 앱 밖에서 기다렸습니다.
+
+`max-threads`를 바꿔 가며 확인했습니다. 이 값이 대기가 어느 계층에 고이는지를 정합니다.
+
+| max-threads | 응답 중앙값 | 앱 안 중앙값 | 풀 획득 중앙값 | 500 응답 | 획득 대기 큐 최대 |
+|---|---|---|---|---|---|
+| 10 | 13.54초 | 51.28ms | 0.00ms | 0건 | 0 |
+| 50 | 13.38초 | 59.66ms | 0.04ms | 26건 | 41 |
+| 200 (기본값) | 11.42초 | 1,014.66ms | 962.97ms | 761건 | 191 |
+| 1000 | 11.17초 | 1,701.09ms | 1,589.14ms | 3,945건 | 901 |
+
+획득 대기 큐의 최대치가 `max-threads`에서 풀 크기 10을 뺀 값과 거의 같습니다. 0, 41, 191, 901입니다. 커넥션을 기다릴 수 있는 요청 수는 작업 스레드 수가 정합니다. 스레드를 열 개로 줄이면 풀 대기가 사실상 사라지고 커넥션 타임아웃 500도 0건이 되지만, 기다림이 없어진 것이 아니라 전부 스레드 계층으로 옮겨 갔을 뿐입니다. 반대로 천 개로 늘리면 풀 대기 중앙값이 1.59초까지 올라 2초 상한을 넘긴 3,945건이 500이 됩니다. 그러면서도 처리량은 네 조건 모두 초당 180건에서 224건 사이입니다.
+
+여기서 두 가지를 갈라야 합니다. **처리량의 상한을 정하는 것은 커넥션 풀이고, 기본 설정에서 지연의 대부분을 만드는 것은 그 앞의 스레드 계층입니다.** 앞선 회차의 글은 "병목이 풀 계층에 고정됐다"고 적었다가 근거가 없어 지웠는데, 재 보니 그 문장은 처리량에 대해서만 참이었습니다. 전체 응답 시간을 놓고 보면 풀 계층의 몫은 9%입니다.
+
+`accept-count`에 대해서도 한 가지 바로잡습니다. 이 재현은 병목을 풀 계층에 두려고 `accept-count`를 1000으로 넓혔다고 적어 두었는데, 이 값은 커널 listen 백로그일 뿐 앱이 동시에 붙들 수 있는 요청 수를 정하지 않습니다. 실제로 소켓을 붙들고 있는 것은 Tomcat의 `max-connections`(기본 8192)입니다. 그래서 열린 소켓이 5,000개 가까이 올라갔습니다.
 
 ## 4. 해소
 
