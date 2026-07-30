@@ -14,7 +14,7 @@ tags:
   - Concurrency
   - Docker
   - 금융IT
-category: incident
+category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 3
 coverImage: /uploads/incident/samsung-ghost-shares/01-bug-commit.png

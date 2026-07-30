@@ -13,7 +13,7 @@ tags:
   - BigDecimal
   - Validation
   - REST API
-category: incident
+category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 1
 coverImage: /uploads/incident/hanmac-divide-by-zero/01-buggy-run.png

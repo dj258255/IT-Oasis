@@ -13,7 +13,7 @@ tags:
   - Transaction
   - Docker
   - Performance
-category: incident
+category: incident/AppCode
 series: '애플리케이션 코드가 부른 장애'
 seriesOrder: 2
 coverImage: /uploads/incident/expand-contract/01-volatile-alter.png

@@ -12,7 +12,7 @@ tags:
   - RoundingMode
   - Docker
   - 금융IT
-category: incident
+category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 5
 coverImage: /uploads/incident/bigdecimal-money/01-buggy-run.png

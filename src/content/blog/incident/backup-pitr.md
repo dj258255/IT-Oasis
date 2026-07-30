@@ -13,7 +13,7 @@ tags:
   - Replication
   - PostgreSQL
   - Docker
-category: incident
+category: incident/Engine
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 7
 coverImage: /uploads/incident/backup-pitr/fig-pitr.png

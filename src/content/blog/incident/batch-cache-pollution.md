@@ -13,7 +13,7 @@ tags:
   - AWS
   - Docker
   - Python
-category: incident
+category: incident/Managed
 series: '관리형 DB 운영의 함정'
 seriesOrder: 5
 coverImage: /uploads/incident/batch-cache-pollution/chart-hitrate.png

@@ -13,7 +13,7 @@ tags:
   - AWS RDS
   - Aurora
   - Docker
-category: incident
+category: incident/Managed
 series: '관리형 DB 운영의 함정'
 seriesOrder: 9
 coverImage: /uploads/incident/replication-slot-wal/chart-wal.png

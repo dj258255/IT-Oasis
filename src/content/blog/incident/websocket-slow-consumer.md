@@ -13,7 +13,7 @@ tags:
   - OOM
   - TCP
   - Performance
-category: incident
+category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 8
 coverImage: /uploads/incident/websocket-slow-consumer/00-oom.png

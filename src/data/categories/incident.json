@@ -4,5 +4,30 @@
   "nameKo": "실제 장애 재현",
   "icon": "alert",
   "order": 0,
-  "subcategories": []
+  "subcategories": [
+    {
+      "name": "Engine",
+      "nameEn": "DB Engine",
+      "nameKo": "DB 엔진",
+      "order": 1
+    },
+    {
+      "name": "Managed",
+      "nameEn": "Managed DB",
+      "nameKo": "관리형 DB 운영",
+      "order": 2
+    },
+    {
+      "name": "AppCode",
+      "nameEn": "Application Code",
+      "nameKo": "애플리케이션 코드",
+      "order": 3
+    },
+    {
+      "name": "Finance",
+      "nameEn": "Financial IT",
+      "nameKo": "증권 IT",
+      "order": 4
+    }
+  ]
 }

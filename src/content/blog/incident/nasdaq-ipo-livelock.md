@@ -14,7 +14,7 @@ tags:
   - JVM
   - Thread
   - Docker
-category: incident
+category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 6
 coverImage: /uploads/incident/nasdaq-ipo-livelock/01-livelock.png
