@@ -14,7 +14,7 @@ tags:
   - Concurrency
   - Transaction
   - Performance
-category: incident
+category: incident/Managed
 series: '관리형 DB 운영의 함정'
 seriesOrder: 3
 coverImage: /uploads/incident/slotted-counter/chart-data-audit.png

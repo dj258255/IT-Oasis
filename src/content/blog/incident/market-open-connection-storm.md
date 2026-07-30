@@ -13,7 +13,7 @@ tags:
   - k6
   - Tomcat
   - Docker
-category: incident
+category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 2
 coverImage: /uploads/incident/market-open-connection-storm/01-buggy-storm.png

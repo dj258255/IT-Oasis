@@ -13,7 +13,7 @@ tags:
   - Buffer Pool
   - Database Internals
   - Performance
-category: incident
+category: incident/Engine
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 4
 coverImage: /uploads/incident/uuid-page-split/01-fill.png

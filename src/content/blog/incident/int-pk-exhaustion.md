@@ -13,7 +13,7 @@ tags:
   - DDL
   - Metadata Lock
   - Schema Management
-category: incident
+category: incident/Engine
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 9
 coverImage: /uploads/incident/int-pk-exhaustion/fig-1062.png

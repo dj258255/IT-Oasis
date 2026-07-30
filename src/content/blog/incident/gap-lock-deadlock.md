@@ -13,7 +13,7 @@ tags:
   - Isolation
   - Concurrency
   - Performance Schema
-category: incident
+category: incident/Engine
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 8
 coverImage: /uploads/incident/gap-lock-deadlock/fig-locks.png

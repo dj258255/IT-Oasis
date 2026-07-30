@@ -13,7 +13,7 @@ tags:
   - Full Table Scan
   - Performance
   - Database
-category: incident
+category: incident/Engine
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 6
 coverImage: /uploads/incident/index-not-used/chart-index.png

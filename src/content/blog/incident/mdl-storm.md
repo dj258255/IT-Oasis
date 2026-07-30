@@ -13,7 +13,7 @@ tags:
   - Transaction
   - Schema Management
   - Performance
-category: incident
+category: incident/Engine
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 1
 coverImage: /uploads/incident/mdl-storm/00-timeline.png
