@@ -18,11 +18,15 @@ seriesOrder: 5
 coverImage: /uploads/incident/bigdecimal-money/01-buggy-run.png
 ---
 
+> 근거 등급: `E1·축소`
+> 출처: [영문 위키피디아 Vancouver Stock Exchange 항목](https://en.wikipedia.org/wiki/Vancouver_Stock_Exchange) · [TUM Huckle 교수의 출처 모음](https://www5.in.tum.de/~huckle/Vancouv.pdf)
+> 아래 서지사항은 전부 재인용입니다. 1982년 거래소 발표문이나 당시 보도 원문은 확인하지 못했습니다.
+
 ## 1. 유명한 이유
 
 1982년 1월 밴쿠버 증권거래소(VSE)는 자사 지수를 1000.000으로 출범시켰습니다. 지수는 체결이 있을 때마다 다시 계산됐는데, 이때 소수 넷째 자리부터를 반올림 없이 잘라 버렸습니다. 한 번에 버려지는 값은 0.001포인트 미만이지만 갱신이 하루 수천 회였고, 손실이 월 25포인트 안팎으로 쌓이면서 1983년 11월 지수는 520대까지 내려가 있었습니다. 거래소가 주말 동안 지수를 다시 계산해 1098.892로 정정하면서 원인이 절삭 한 줄이었다는 사실이 드러났습니다.
 
-근거 등급은 E1·축소입니다. 사건 자체는 실재하지만 아래 서지사항은 전부 재인용이고, 재현도 산식과 데이터 없이 메커니즘만 옮긴 축소 재현입니다.
+사건 자체는 실재하지만 재현은 산식과 22개월치 데이터 없이 메커니즘만 옮긴 축소 재현입니다.
 
 - Kevin Quinn, "Ever Had Problems Rounding Off Figures? This Stock Exchange Has", The Wall Street Journal, 1983-11-08, p.37
 - Wayne Lilley, "Vancouver stock index has right number at last", The Toronto Star, 1983-11-29, p.35

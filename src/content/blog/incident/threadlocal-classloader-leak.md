@@ -19,6 +19,10 @@ seriesOrder: 1
 coverImage: /uploads/incident/threadlocal-classloader-leak/01-repro-run.png
 ---
 
+> 근거 등급: `E2`
+> 출처: [Apache Tomcat 9 Configuration Reference, Context](https://tomcat.apache.org/tomcat-9.0-doc/config/context.html) · [Apache Tomcat 10.1 Configuration Reference, Context](https://tomcat.apache.org/tomcat-10.1-doc/config/context.html) · [Executor](https://tomcat.apache.org/tomcat-10.1-doc/config/executor.html) · [Tomcat Wiki, MemoryLeakProtection](https://cwiki.apache.org/confluence/display/TOMCAT/MemoryLeakProtection) · [Tomcat Wiki, OutOfMemory](https://cwiki.apache.org/confluence/display/TOMCAT/OutOfMemory)
+> 특정 회사의 공개 포스트모템은 두 차례 조사에서 모두 찾지 못했습니다. 그래서 어느 회사에서 터진 장애라고 쓰지 않습니다.
+
 ## 1. 유명한 이유
 
 Apache Tomcat은 웹앱을 정지할 때 워커 스레드에 남아 있는 `ThreadLocal`을 뒤져 전용 경고를 찍습니다. 메시지 원문이 Tomcat 소스의 `java/org/apache/catalina/loader/LocalStrings.properties`에 있습니다.
@@ -30,7 +34,7 @@ remove it when the web application was stopped. Threads are going to be renewed 
 to try and avoid a probable memory leak.
 ```
 
-원문은 한 줄이고 여기서는 폭에 맞춰 접었습니다. 벤더가 이 함정 하나를 위해 탐지 코드와 전용 메시지, 그리고 그 동작을 끄고 켜는 설정(`clearReferencesThreadLocals`)까지 넣어 두었다는 사실이 근거입니다. 근거 등급은 E2입니다. 특정 회사의 공개 포스트모템은 찾지 못했으므로 "어느 회사에서 터진 장애"라고 쓰지 않습니다.
+원문은 한 줄이고 여기서는 폭에 맞춰 접었습니다. 벤더가 이 함정 하나를 위해 탐지 코드와 전용 메시지, 그리고 그 동작을 끄고 켜는 설정(`clearReferencesThreadLocals`)까지 넣어 두었다는 사실이 근거입니다.
 
 - Apache Tomcat 소스 `java/org/apache/catalina/loader/LocalStrings.properties` (위 메시지 원문)
 - [Apache Tomcat 9 Configuration Reference, Context](https://tomcat.apache.org/tomcat-9.0-doc/config/context.html): `clearReferencesThreadLocals` "If `true`, Tomcat attempts to clear `java.lang.ThreadLocal` variables that have been populated with classes loaded by the web application. If not specified, the default value of `true` will be used."

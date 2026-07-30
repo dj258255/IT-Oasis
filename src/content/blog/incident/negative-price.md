@@ -19,9 +19,13 @@ seriesOrder: 7
 coverImage: /uploads/incident/negative-price/01-storage-reject.png
 ---
 
+> 근거 등급: `E1`
+> 출처: [CFTC Docket No. 21-19, In the Matter of Interactive Brokers LLC, Order Instituting Proceedings (2021-09-28)](https://www.cftc.gov/media/6421/enfinteractivebrokersorder092821/download)
+> 이 세션의 사실 관계는 그 문서에서만 가져왔습니다.
+
 ## 1. 유명한 이유
 
-2020년 4월 20일 WTI 5월물은 배럴당 마이너스 37.63달러로 마감했습니다. CFTC는 이듬해 Interactive Brokers LLC를 상대로 한 명령서에서 그날의 종가를 "settling at negative $37.63 per barrel"로 적고, 같은 날 이 브로커에게 두 가지 시스템 문제가 있었다고 밝혔습니다. 원문 표현으로는 "(1) negative prices were not displayed to customers and customers were unable to place orders with negative-priced limit orders to buy or sell; and (2) internal minimum margin requirements were not correctly enforced prior to trade execution" 입니다. 근거 등급은 E1입니다. 출처는 [CFTC Docket No. 21-19, In the Matter of Interactive Brokers LLC, Order Instituting Proceedings(2021-09-28)](https://www.cftc.gov/media/6421/enfinteractivebrokersorder092821/download) 이고, 이 세션의 사실 관계는 그 문서에서만 가져왔습니다.
+2020년 4월 20일 WTI 5월물은 배럴당 마이너스 37.63달러로 마감했습니다. CFTC는 이듬해 Interactive Brokers LLC를 상대로 한 명령서에서 그날의 종가를 "settling at negative $37.63 per barrel"로 적고, 같은 날 이 브로커에게 두 가지 시스템 문제가 있었다고 밝혔습니다. 원문 표현으로는 "(1) negative prices were not displayed to customers and customers were unable to place orders with negative-priced limit orders to buy or sell; and (2) internal minimum margin requirements were not correctly enforced prior to trade execution" 입니다.
 
 시스템이 음수를 어떻게 대했는지도 명령서에 나옵니다. 'Ticker Farm' 시스템이 해당 계약의 음수 가격을 오류로 보고 거부했고("rejected negative prices ... perceived to be erroneous"), 원유 선물의 마켓 룰 설정을 그날까지 "negative-capable"로 바꾸지 않았다고 적혀 있습니다.
 

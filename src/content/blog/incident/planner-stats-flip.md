@@ -19,6 +19,9 @@ seriesOrder: 3
 coverImage: /uploads/incident/planner-stats-flip/01-flip.png
 ---
 
+> 근거 등급: `E1`
+> 출처: [Clerk, Postmortem: Clerk System Outage (February 19, 2026)](https://clerk.com/blog/2026-02-19-system-outage-postmortem) · [GoCardless, Lawrence Jones, Debugging the Postgres query planner](https://gocardless.com/blog/debugging-the-postgres-query-planner/)
+
 ## 1. 유명한 이유
 
 Clerk이 공개한 2026년 2월 19일 장애입니다. 포스트모템은 시작 시각을 "On February 19, 2026 at 8:11 AM PST"로 적고, 복구까지를 "Service was restored approximately 90 minutes later"로 적습니다. 복구 수단은 ANALYZE를 손으로 다시 돌려 이전 플랜으로 되돌린 것이었습니다. 방아쇠는 배포가 아니라 자동 analyze였습니다. 원인 문장이 이 세션의 전부입니다.
@@ -28,8 +31,6 @@ Clerk이 공개한 2026년 2월 19일 장애입니다. 포스트모템은 시작
 문제의 컬럼은 NULL 비율이 "very high (99.9996%)"였고, 플래너는 non-null이 0건이라고 보고 플랜을 짰는데 실제로는 "in fact it returned over 17,000"이었습니다. 결과는 "over 95% of traffic returning 429 without being handled."였습니다. Clerk은 같은 달 2월 10일에 별건 DNS 장애 포스트모템도 냈으니, 이 세션이 다루는 것은 2월 19일 건입니다.
 
 같은 메커니즘의 1차 기록이 하나 더 있습니다. GoCardless의 Lawrence Jones가 쓴 "Debugging the Postgres query planner"입니다. 약 5억 행 payment_transitions에서 payout_id의 n_distinct가 25,650으로 잡혔는데 실제는 약 350만이었습니다. 그래서 플래너는 매칭 행을 2,688건으로 추정했고 실제는 보통 20건대였습니다. 원인은 PostgreSQL이 페이지를 먼저 고르고 그 안에서 행을 뽑는 2단계 표본추출을 하는데, 같은 payout의 행들이 디스크에서 붙어 있어 표본이 편향된 것이었습니다. 조치는 `ALTER TABLE payment_transitions ALTER COLUMN payout_id SET STATISTICS 1666`이었고, 그것으로 모자라 5000까지 올렸습니다.
-
-근거 등급은 E1입니다.
 
 - [Clerk, "Postmortem: Clerk System Outage (February 19, 2026)"](https://clerk.com/blog/2026-02-19-system-outage-postmortem)
 - [GoCardless, Lawrence Jones, "Debugging the Postgres query planner"](https://gocardless.com/blog/debugging-the-postgres-query-planner/)
