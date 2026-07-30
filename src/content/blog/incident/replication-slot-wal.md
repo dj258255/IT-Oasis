@@ -20,7 +20,7 @@ coverImage: /uploads/incident/replication-slot-wal/chart-wal.png
 ---
 
 > 근거 등급: `E2`
-> 출처: [PostgreSQL 17, Replication Slots](https://www.postgresql.org/docs/17/warm-standby.html#STREAMING-REPLICATION-SLOTS) · [pg_replication_slots (wal_status, safe_wal_size)](https://www.postgresql.org/docs/17/view-pg-replication-slots.html) · [max_slot_wal_keep_size](https://www.postgresql.org/docs/17/runtime-config-replication.html) · [RDS for PostgreSQL 복제 파라미터](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PostgreSQL.Replication.ReadReplicas.Mechanisms-versions.html) · [Aurora PostgreSQL 논리 복제](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Replication.Logical.html) · [Amazon Aurora storage](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.StorageReliability.html) · [Increasing DB instance storage capacity](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIOPS.ModifyingExisting.html)
+> 출처: [GitLab, Define max_slot_wal_keep_size on Patroni nodes (gprd)](https://gitlab.com/gitlab-com/gl-infra/production/-/work_items/17386) · [PostgreSQL 17, Replication Slots](https://www.postgresql.org/docs/17/warm-standby.html#STREAMING-REPLICATION-SLOTS) · [pg_replication_slots (wal_status, safe_wal_size)](https://www.postgresql.org/docs/17/view-pg-replication-slots.html) · [max_slot_wal_keep_size](https://www.postgresql.org/docs/17/runtime-config-replication.html) · [RDS for PostgreSQL 복제 파라미터](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PostgreSQL.Replication.ReadReplicas.Mechanisms-versions.html) · [Aurora PostgreSQL 논리 복제](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Replication.Logical.html) · [Amazon Aurora storage](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.StorageReliability.html) · [Increasing DB instance storage capacity](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIOPS.ModifyingExisting.html)
 
 ## 1. 유명한 이유
 
@@ -31,6 +31,12 @@ CDC(Change Data Capture)는 이제 흔한 구성입니다. Debezium이든 자체
 이 구조가 위험한 이유는 **장애의 방향이 반대**이기 때문입니다. 보통은 프로덕션이 아프면 부가 파이프라인이 영향을 받습니다. 여기서는 부가 파이프라인이 죽어서 프로덕션 DB의 디스크가 찹니다. 디스크가 차면 PostgreSQL은 쓰기를 거부하고, 그때는 이미 늦습니다.
 
 AWS도 같은 경고를 문서에 적어 둡니다. RDS for PostgreSQL 문서는 `max_slot_wal_keep_size`의 기본값이 `-1`이고 그것이 "there's no limit to how much WAL data is kept on the source DB instance"를 뜻한다고 명시합니다. Aurora PostgreSQL 문서는 논리 복제의 WAL 레코드가 Aurora 스토리지에 저장된다고 적습니다.
+
+GitLab은 이 위험을 근거로 프로덕션에 상한을 걸었고 그 과정을 공개 이슈에 남겼습니다. 2024년 1월 Patroni 노드에 `max_slot_wal_keep_size`를 정의하면서 이유를 이렇게 적습니다.
+
+> "In case a replication slot is not dropped and max_slot_wal_keep_size=-1 it might fill Primary's data disk space in just a few days, due to WAL file retention."
+
+같은 문서가 자동 정리를 믿지 않는 이유도 덧붙입니다. "In theory Patroni drops inactive replication slots when replication nodes are stopped or removed from the cluster, however it might fail." 실제로 건 값은 프로덕션에서 Main 600GB, CI 350GB, Registry 40GB, Embedding 3GB이고 스테이징은 각각 20GB, 20GB, 2GB, 2GB입니다. **이것은 장애 회고가 아니라 변경 요청입니다.** 문서에도 다운타임 없음으로 적혀 있습니다. GitLab에서 이 장애가 터졌다는 뜻이 아니라, 이 위험을 실재하는 것으로 보고 상한을 정했다는 기록입니다. 같은 문서가 관측의 한계까지 적어 두는데 "There's no way to monitor the impact of this change unless some replica goes offline and the slot is not removed by Patroni"입니다.
 
 이 세션은 그 과정을 평균 1.44초 간격으로 재고, PostgreSQL 13부터 있는 안전장치가 무엇을 지키고 무엇을 버리는지를 실측합니다.
 

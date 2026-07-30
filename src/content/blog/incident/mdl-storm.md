@@ -20,6 +20,7 @@ coverImage: /uploads/incident/mdl-storm/00-timeline.png
 ---
 
 > 근거 등급: `E2`
+> 다른 엔진의 같은 구조: [Railway, Incident Report: December 8th, 2025](https://blog.railway.com/p/incident-report-december-8-2025) · [GoCardless, Zero-downtime Postgres migrations, the hard parts](https://gocardless.com/blog/zero-downtime-postgres-migrations-the-hard-parts/)
 > 출처: [MySQL 8.4 Reference, Metadata Locking](https://dev.mysql.com/doc/refman/8.4/en/metadata-locking.html), [Online DDL Performance, Concurrency, and Space Requirements](https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-performance.html), [Online DDL Operations](https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html), [Server System Variables, `lock_wait_timeout`](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout), [InnoDB Startup Options and System Variables, `innodb_lock_wait_timeout`](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_lock_wait_timeout)
 
 ## 1. 유명한 이유
@@ -39,6 +40,24 @@ MySQL에 컬럼 하나를 붙이려다 서비스를 세운 이야기는 흔합�
 MySQL 8.4에는 반전이 하나 더 붙습니다. 매뉴얼은 `INSTANT is the default algorithm in MySQL 8.4`라고 적습니다. 컬럼 추가는 데이터 파일을 건드리지 않고 메타데이터만 고치므로 실행 자체가 순식간에 끝납니다. 그런데도 배타적 메타데이터 락은 필요합니다. 실행 시간이 0에 가까운 DDL이 장애를 만드는 구도가 여기서 나옵니다.
 
 이 세션은 롱 트랜잭션과 DDL과 일반 조회를 한 타임라인에 올려 놓고, 무엇이 무엇을 얼마나 막는지를 초 단위로 잽니다.
+
+### 같은 구조가 PostgreSQL에서 두 번 터졌습니다
+
+MySQL MDL로 이 인과 전체를 적어 둔 기업 보고서는 조사에서 찾지 못했습니다. 다만 락 이름만 다른 같은 구조가 PostgreSQL에서 두 번 공개됐습니다.
+
+**Railway, 2025년 12월 8일.** 약 10억 행짜리 테이블에 널 허용 컬럼을 추가하는 마이그레이션을 배포했는데 그 테이블을 읽던 장기 쿼리가 락을 쥐고 있었습니다. 보고서의 문장은 이렇습니다.
+
+> "A long-running query on this table held locks, stalling the migration. As connection attempts accumulated, PgBouncer exceeded the database's connection limit. Replicas failed their health checks and were removed from rotation."
+
+그리고 해소는 사람이 한 것이 아닙니다. "After the long-running query completed and released its locks, the migration applied immediately." 15시 17분에 적용을 시작해 15시 26분에 끝났고 영향은 8분입니다. 다만 Railway 자신의 문구는 락 충돌과 접속 누적까지만 가고, **대기 중인 배타 락이 뒤에 온 읽기 요청의 새치기를 막는다는 큐 규칙은 적지 않습니다.**
+
+**GoCardless.** 그 큐 규칙을 명시한 쪽은 GoCardless입니다. 외래 키를 추가하는 마이그레이션이 부모 테이블을 읽던 긴 조회와 겹쳤다고 적고("An unfortunately timed, long-running read query on the parent table collided with the migration which added the foreign key constraint"), 이어서 큐의 동작을 이렇게 씁니다.
+
+> "When a lock can't be acquired because of a lock held by another transaction, it goes into a queue. Any locks that conflict with the queued lock will queue up behind it. As `AccessExclusive` locks conflict with every other type of lock, having one sat in the queue blocks all other operations on that table."
+
+DDL 자체는 빨랐다는 것도 함께 적습니다. "The `ALTER TABLE` statement itself was fast to execute, but the effect of it waiting for an `AccessExclusive` lock on the referenced table caused the downtime." 결과는 약 15초의 API 다운타임이었고, 재발 방지로 고른 것은 `lock_timeout`입니다. "It's better to abort a deploy than take your application down."
+
+엔진이 다르고 락 이름도 다릅니다. PostgreSQL은 `AccessExclusive`, MySQL은 MDL입니다. 같은 것은 **대기 중인 DDL 하나가 뒤따르는 평범한 조회를 전부 세운다**는 인과이고, 이 세션이 MySQL에서 잰 것이 그것입니다.
 
 ## 2. 재현
 

@@ -21,6 +21,7 @@ coverImage: /uploads/incident/slotted-counter/chart-data-audit.png
 ---
 
 > 근거 등급: `E2`
+> 문제 쪽 1차 기록: [GitLab, project_daily_statistics 락 조사 이슈](https://gitlab.com/gitlab-org/gitlab/-/issues/324763) · [2021-02-16 공개 장애 이슈](https://gitlab.com/gitlab-com/gl-infra/production/-/issues/3634) · [2024년 재발 이슈](https://gitlab.com/gitlab-org/gitlab/-/issues/426270)
 > 출처: [PlanetScale, The Slotted Counter Pattern](https://planetscale.com/blog/the-slotted-counter-pattern)
 
 ## 1. 유명한 이유
@@ -35,6 +36,12 @@ coverImage: /uploads/incident/slotted-counter/chart-data-audit.png
 2. 정확하게 고치고 나면 그때 느려집니다. 락으로 막든 원자적 UPDATE로 바꾸든, 갱신이 한 행에 몰리는 구조는 그대로이기 때문입니다.
 
 그래서 카운터 갱신 방식을 아홉 가지로 구현해 같은 조건에서 재고, 처리량과 함께 **정합성**을 항상 같이 봤습니다. 처리량만 비교하면 틀린 구현이 우승합니다.
+
+### 핫 카운터 행으로 git clone이 실패한 회사가 있습니다
+
+GitLab은 2021년 2월 GitLab.com의 Git 서비스 apdex가 SLO 아래로 떨어진 장애를 공개하고, 후속 이슈에서 `project_daily_statistics` 행 갱신을 원인 후보로 지목했습니다. 인프라 엔지니어는 git fetch를 주 데이터베이스에 묶어 둔 탓에 "git operations queue up on database transaction locks"가 된다고 적었고, 락을 만드는 쪽으로 바쁜 프로젝트의 이 카운터 갱신을 꼽았습니다. 2024년에는 같은 카운터가 다시 문제를 일으켰습니다. 갱신 쿼리의 10%가 15초를 넘겨 타임아웃에 걸렸고("up to and sometimes beyond 15s"), git clone이 500으로 실패했으며, SRE 호출이 한 교대에 12건까지 올라갔습니다.
+
+**GitLab이 택한 해소는 슬롯 분할이 아닙니다.** Redis에 증분을 모아 주기적으로 플러시하는 `CounterAttribute`로 바꿨습니다. 그래서 이 사례는 한 행에 갱신이 몰려 트랜잭션이 락에 줄을 선다는 문제 쪽 근거로만 씁니다. 슬롯 분할이라는 해법의 근거는 아래에서 인용하는 PlanetScale 문서 그대로입니다.
 
 ## 2. 재현
 

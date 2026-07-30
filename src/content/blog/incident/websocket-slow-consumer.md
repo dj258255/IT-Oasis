@@ -20,6 +20,7 @@ coverImage: /uploads/incident/websocket-slow-consumer/00-oom.png
 ---
 
 > 근거 등급: `E2`
+> 절반 겹치는 1차 기록: [Discord, How Discord Scaled Elixir to 5,000,000 Concurrent Users](https://discord.com/blog/how-discord-scaled-elixir-to-5-000-000-concurrent-users)
 > 출처: [Spring Framework Reference, WebSocket/STOMP Performance](https://docs.spring.io/spring-framework/reference/web/websocket/stomp/configuration-performance.html), [Spring Javadoc, ConcurrentWebSocketSessionDecorator](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/socket/handler/ConcurrentWebSocketSessionDecorator.html), [Apache Tomcat 10.1 WebSocket How-To](https://tomcat.apache.org/tomcat-10.1-doc/web-socket-howto.html), [Netty 소스 `WriteBufferWaterMark.java`](https://github.com/netty/netty/blob/4.1/transport/src/main/java/io/netty/channel/WriteBufferWaterMark.java)
 
 ## 1. 유명한 이유
@@ -39,6 +40,14 @@ Spring 문서가 이 상황을 직접 서술합니다.
 여기서 흔히 붙는 말이 "백프레셔가 없으면 WebSocket 서버가 OOM으로 죽는다"입니다. 그 문장을 뒷받침하는 벤더 문서는 찾지 못했습니다. 그래서 이 세션은 OOM을 인용하지 않고 직접 만들어 보기로 했습니다. 한도를 걸지 않으면 어디까지 가는지, 그리고 그 앞에 무엇이 먼저 무너지는지를 잽니다.
 
 정상 구독자 5명과 느린 구독자 1명을 같은 서버에 붙이고, 팬아웃 구현 일곱 가지를 조건 열한 가지로 바꿔 가며 각각 3회씩 쟀습니다. 구현은 직접 전송, 무제한 큐, 바운디드 큐, conflation, 절단, conflation과 절단의 조합, Spring 데코레이터 일곱 가지이고, 여기에 대조군과 완전 정지 구독자와 절단 임계값 두 종류를 얹어 조건이 열한 가지가 됩니다.
+
+### 상한 없는 큐가 VM 전체를 죽인 회사가 있습니다
+
+Discord가 Elixir로 동시 접속 500만을 받아내는 과정을 공개했습니다. 길드에 무언가가 발행되면 접속한 모든 세션으로 팬아웃되는데, 동시 접속 3만 명 규모의 서버가 생기자 이 프로세스들이 자기 메시지 큐를 따라가지 못하기 시작했습니다. `send/2` 한 번의 벽시계 시간이 30에서 70마이크로초인데 피크에는 큰 길드의 이벤트 하나를 발행하는 데 900밀리초에서 2.1초가 걸렸습니다. 그리고 이 문장이 이 세션과 같은 자리입니다.
+
+> "Sessions would block on these requests until they timed out while receiving messages from other services, causing them to balloon their message queues and eventually OOM the whole Erlang VM resulting in cascading service outages."
+
+**범위를 좁혀 읽어야 합니다.** 넘친 큐는 Erlang 메일박스이고, 소비자가 멈춘 원인은 회선이 느린 클라이언트가 아니라 내부 레지스트리 호출의 타임아웃입니다. 그래서 상한 없는 소비자 큐가 힙을 먹어 OOM으로 전체가 죽는다는 절반에만 겹칩니다. 팬아웃 지연 900밀리초에서 2.1초도 느린 구독자 탓이 아니라 단일 프로세스의 전송 비용 탓이라, 느린 구독자가 발행을 붙잡는다는 쪽의 근거로 쓰면 안 됩니다.
 
 ## 2. 재현
 
