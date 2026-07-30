@@ -1,8 +1,8 @@
 ---
 title: 'SAVEPOINT 하나가 만드는 성능 절벽, PostgreSQL 17에서 달라진 것'
 titleEn: 'The Performance Cliff a Single SAVEPOINT Can Cause, and What Changed in PostgreSQL 17'
-description: 'GitLab이 2021년에 공개한 서브트랜잭션 장애를 PostgreSQL 17.5에서 재현했습니다. GitLab은 복제본 처리량이 초당 36만에서 5만으로 떨어지는 일을 1년 넘게 겪었고, 원인은 긴 트랜잭션이 열려 있는 동안 발행된 SAVEPOINT였습니다. 갱신 대상 50만 행과 리더 부하를 고정하고 그 50만 건을 몇 개의 서브트랜잭션으로 나눌지만 바꿔 재니 경계가 둘로 갈렸습니다. 서브트랜잭션 64개까지는 pg_subtrans 조회가 정확히 0건입니다. 1만 개로 늘리면 조회가 761만 건 생기지만 XID 범위가 약 5페이지라 32페이지 캐시에 들어가 빗나감이 6건이고 처리량은 초당 101,383건에서 95,112건으로 6%만 떨어집니다. 50만 개에서 XID 범위가 약 244페이지가 되어 미스율 22.4%, 처리량 70,049건으로 31% 하락, 대기 샘플의 47%가 LWLock/SubtransSLRU였습니다. 절벽은 캐시를 넘겼는가보다 XID 범위가 SLRU 페이지 수를 넘겼는가에서 생깁니다. PostgreSQL 17에서 GUC가 된 subtransaction_buffers를 4MB로 올리자 같은 조건에서 조회 778만 건이 전부 적중하고 처리량이 97,146건으로 기준선의 96%까지 돌아왔습니다. 재현이 안 되던 이유도 남겼습니다. 긴 트랜잭션과 캐시 초과만으로는 아무 일도 일어나지 않고 XID 카운터를 미는 쓰기 트래픽이 세 번째 조건입니다. GitLab이 겪은 스탠바이 절벽은 재현하지 못해 그대로 남겼고, XLOG_XACT_ASSIGNMENT가 서브트랜잭션 64개마다만 기록된다는 것을 pg_waldump로 확인한 것까지 적었습니다.'
-descriptionEn: "This session reproduces on PostgreSQL 17.5 the subtransaction incident GitLab published in 2021. GitLab spent over a year chasing replica throughput that fell from 360,000 to 50,000 transactions per second, caused by SAVEPOINT calls issued while a long-running transaction was open. Holding the 500,000 updated rows and the reader workload fixed and varying only how those updates are grouped into subtransactions splits the problem into two distinct boundaries. Up to 64 subtransactions there are exactly zero pg_subtrans lookups. At 10,000 there are 7.6 million lookups, but the XID range spans about five pages and fits the 32 page cache, so only six miss and throughput falls just 6%, from 101,383 to 95,112 per second. At 500,000 the XID range spans about 244 pages, producing a 22.4% miss rate, throughput of 70,049 for a 31% drop, and LWLock/SubtransSLRU accounting for 47% of wait samples. The cliff comes from the XID range exceeding the SLRU page count rather than from merely exceeding the per backend cache. Raising subtransaction_buffers, which became a GUC in PostgreSQL 17, to 4MB made all 7.78 million lookups hit and restored throughput to 97,146, or 96% of baseline. The post also documents why the reproduction initially failed: a long transaction and cache overflow alone do nothing, and write traffic advancing the XID counter is the required third condition. The standby cliff GitLab actually hit was not reproduced, and pg_waldump confirmed that XLOG_XACT_ASSIGNMENT records appear only once every 64 subtransactions."
+description: 'GitLab이 2021년에 공개한 서브트랜잭션 장애를 PostgreSQL 17.5에서 재현했습니다. GitLab은 복제본 처리량이 초당 36만에서 5만으로 떨어지는 일을 1년 넘게 겪었고, 원인은 긴 트랜잭션이 열려 있는 동안 발행된 SAVEPOINT였습니다. 갱신 대상 50만 행과 리더 부하를 고정하고 그 50만 건을 몇 개의 서브트랜잭션으로 나눌지만 바꿔 재니 경계가 둘로 갈렸습니다. 서브트랜잭션 64개까지는 pg_subtrans 조회가 정확히 0건입니다. 1만 개로 늘리면 조회가 700만 건 넘게 생기지만 XID 범위가 약 5페이지라 32페이지 캐시에 들어가 빗나감이 네 회차 모두 6건이고 처리량은 기준선의 93~94%에 머무릅니다. 50만 개에서 XID 범위가 약 244페이지가 되어 미스율 22.2~22.4%, 처리량은 기준선의 67~71%, 대기 샘플의 44~57%가 LWLock/SubtransSLRU였습니다. 조건마다 4회씩 반복했고 절대 처리량은 회차 간 1.08배 안쪽으로 흔들려 중앙값과 범위로만 적었습니다. 절벽은 캐시를 넘겼는가보다 XID 범위가 SLRU 페이지 수를 넘겼는가에서 생깁니다. PostgreSQL 17에서 GUC가 된 subtransaction_buffers를 4MB로 올리자 같은 조건에서 조회가 전부 적중하고 처리량이 기준선의 94~96%까지 돌아왔습니다. 재현이 안 되던 이유도 남겼습니다. 긴 트랜잭션과 캐시 초과만으로는 아무 일도 일어나지 않고 XID 카운터를 미는 쓰기 트래픽이 세 번째 조건입니다. GitLab이 겪은 스탠바이 절벽은 재현하지 못해 그대로 남겼고, XLOG_XACT_ASSIGNMENT가 서브트랜잭션 64개마다만 기록된다는 것을 pg_waldump로 확인한 것까지 적었습니다.'
+descriptionEn: "This session reproduces on PostgreSQL 17.5 the subtransaction incident GitLab published in 2021. GitLab spent over a year chasing replica throughput that fell from 360,000 to 50,000 transactions per second, caused by SAVEPOINT calls issued while a long-running transaction was open. Holding the 500,000 updated rows and the reader workload fixed and varying only how those updates are grouped into subtransactions splits the problem into two distinct boundaries. Up to 64 subtransactions there are exactly zero pg_subtrans lookups. At 10,000 there are over 7 million lookups, but the XID range spans about five pages and fits the 32 page cache, so exactly six missed in all four rounds and throughput holds at 93% to 94% of baseline. At 500,000 the XID range spans about 244 pages, producing a 22.2% to 22.4% miss rate, throughput at 67% to 71% of baseline, and LWLock/SubtransSLRU accounting for 44% to 57% of wait samples. Every condition ran four times; absolute throughput varied within 1.08x across rounds, so only medians and ranges are reported. The cliff comes from the XID range exceeding the SLRU page count rather than from merely exceeding the per backend cache. Raising subtransaction_buffers, which became a GUC in PostgreSQL 17, to 4MB made every lookup hit and restored throughput to 94% to 96% of baseline. The post also documents why the reproduction initially failed: a long transaction and cache overflow alone do nothing, and write traffic advancing the XID counter is the required third condition. The standby cliff GitLab actually hit was not reproduced, and pg_waldump confirmed that XLOG_XACT_ASSIGNMENT records appear only once every 64 subtransactions."
 date: 2026-07-30
 tags:
   - PostgreSQL
@@ -133,23 +133,25 @@ if (block->exceptions)
 
 ![조건별 처리량, SLRU 미스율, 원인 지표](/uploads/incident/subtransaction-slru/chart-slru.png)
 
-| 조건 | 서브트랜잭션 | SLRU 버퍼 | 초당 처리량 | 평균 지연 | pg_subtrans 조회 | 빗나감 | SubtransSLRU 대기 비중 |
+4회 반복의 중앙값이고 괄호는 최소에서 최대입니다. 기준선 대비는 회차마다 따로 계산했습니다.
+
+| 조건 | 서브트랜잭션 | SLRU 버퍼 | 초당 처리량 | 기준선 대비 | pg_subtrans 조회 | 빗나감 | SubtransSLRU 대기 |
 |---|---|---|---|---|---|---|---|
-| `none` | 0 | 256kB | 101,383 | 0.587ms | 0 | 0 | 0/235 |
-| `sub64` | 64 | 256kB | 98,383 | 0.599ms | 0 | 0 | 0/271 |
-| `sub10k` | 10,000 | 256kB | 95,112 | 0.625ms | 7,615,604 | 6 | 0/277 |
-| `sub500k` | 500,000 | 256kB | 70,049 | 0.875ms | 5,614,334 | 1,256,582 | 419/884 |
-| `sub500k-buf` | 500,000 | 4MB | 97,146 | 0.608ms | 7,782,136 | 0 | 0/240 |
+| `none` | 0 | 256kB | 94,741 (94,017~101,383) | 100% | 0 | 0 | 0% |
+| `sub64` | 64 | 256kB | 91,936 (90,774~98,383) | 97% | 0 | 0 | 0% |
+| `sub10k` | 10,000 | 256kB | 88,242 (87,779~95,112) | 93~94% | 705만~762만 | 6 (네 번 다) | 0% |
+| `sub500k` | 500,000 | 256kB | 66,026 (63,431~70,049) | 67~71% | 508만~561만 | 113만~126만 | 44~57% |
+| `sub500k-buf` | 500,000 | 4MB | 89,470 (89,036~97,146) | 94~96% | 712만~778만 | 0 (네 번 다) | 0% |
 
 세 구간이 성격이 다릅니다.
 
-**0에서 64까지는 아무 일도 없습니다.** `pg_subtrans` 조회가 0건입니다. 정확히 0입니다. 64개는 PGPROC 배열에 그대로 들어가니 리더가 디스크 구조를 뒤질 이유가 없고, 측정 결과가 소스 주석의 "넘치지 않았으면 pg_subtrans를 볼 필요가 없다"와 그대로 맞습니다.
+**0에서 64까지는 아무 일도 없습니다.** `pg_subtrans` 조회가 0건입니다. 네 회차 모두 정확히 0입니다. 64개는 PGPROC 배열에 그대로 들어가니 리더가 디스크 구조를 뒤질 이유가 없고, 측정 결과가 소스 주석의 "넘치지 않았으면 pg_subtrans를 볼 필요가 없다"와 그대로 맞습니다.
 
-**64를 넘으면 조회가 시작되지만 그것만으로는 안 느려집니다.** `sub10k`에서 조회가 761만 건 발생했는데 빗나간 것은 6건입니다. XID 1만 개는 약 5페이지라 32페이지 캐시에 여유롭게 들어갑니다. 처리량은 95,112건으로 기준선의 94%입니다. 캐시 초과 자체의 비용은 작습니다.
+**64를 넘으면 조회가 시작되지만 그것만으로는 안 느려집니다.** `sub10k`에서 조회가 700만 건 넘게 발생했는데 빗나간 것은 6건입니다. 네 회차에서 이 6이 한 번도 어긋나지 않았습니다. XID 1만 개는 약 5페이지라 32페이지 캐시에 여유롭게 들어갑니다. 처리량은 기준선의 93~94%입니다. 캐시 초과 자체의 비용은 작습니다.
 
-**무너지는 지점은 65,536입니다.** `sub500k`에서 XID 50만 개는 약 244페이지입니다. 32페이지 캐시로는 못 덮으니 조회 561만 건 중 126만 건이 빗나갔습니다. 미스율 22.4%입니다. 처리량이 70,049건으로 기준선의 69%가 되고, 대기 샘플의 47%가 `LWLock/SubtransSLRU`입니다. 미스율과 `SubtransSLRU` 대기 비중, 처리량 하락이 같은 조건에서 같이 나타납니다.
+**무너지는 지점은 65,536입니다.** `sub500k`에서 XID 50만 개는 약 244페이지입니다. 32페이지 캐시로는 못 덮으니 조회 500만 건 중 110만 건 넘게 빗나갔습니다. 미스율은 네 회차에서 22.2%에서 22.4%로 거의 고정입니다. 처리량이 기준선의 67~71%가 되고, 대기 샘플의 44%에서 57%가 `LWLock/SubtransSLRU`입니다. 미스율과 `SubtransSLRU` 대기 비중, 처리량 하락이 같은 조건에서 같이 나타납니다.
 
-SLRU를 키우면 해소됩니다. `subtransaction_buffers`를 4MB(512블록)로 올리자 같은 50만 서브트랜잭션에서 조회 778만 건이 전부 적중하고 빗나감이 0이 됐습니다. 처리량은 97,146건으로 기준선의 96%까지 돌아옵니다. `SubtransSLRU` 대기도 사라집니다. GitLab이 100MB 캐시면 2,620만 개를 담는다고 계산했던 그 조치입니다.
+SLRU를 키우면 해소됩니다. `subtransaction_buffers`를 4MB(512블록)로 올리자 같은 50만 서브트랜잭션에서 조회 700만 건이 전부 적중하고 빗나감이 네 회차 모두 0이 됐습니다. 처리량은 기준선의 94~96%까지 돌아옵니다. `SubtransSLRU` 대기도 사라집니다. GitLab이 100MB 캐시면 2,620만 개를 담는다고 계산했던 그 조치입니다.
 
 ### 17의 기본값은 이미 완화되어 있습니다
 
@@ -234,7 +236,7 @@ GitLab 원문의 "if many writes also occurred simultaneously"가 이 조건입�
 
 ### 캐시 초과의 비용이 거의 없었습니다
 
-64를 넘기면 느려질 것으로 예상했는데 `sub10k`에서 조회 761만 건이 전부 캐시에 적중하며 처리량이 6% 떨어지는 데 그쳤습니다. 절벽은 "캐시를 넘겼는가"보다 "XID 범위가 SLRU 페이지 수를 넘겼는가"에서 생깁니다.
+64를 넘기면 느려질 것으로 예상했는데 `sub10k`에서 조회 700만 건이 전부 캐시에 적중하며 처리량이 기준선의 93~94%에 머물렀습니다. 절벽은 "캐시를 넘겼는가"보다 "XID 범위가 SLRU 페이지 수를 넘겼는가"에서 생깁니다.
 
 서브트랜잭션을 64개 아래로 유지하는 것만으로는 안심할 수 없고, 64를 넘겼다고 무조건 위험한 것도 아닙니다. 위험한 조건은 XID 소비 속도와 긴 트랜잭션의 길이가 함께 만듭니다.
 

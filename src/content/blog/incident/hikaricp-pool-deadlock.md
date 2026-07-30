@@ -1,8 +1,8 @@
 ---
 title: 'DB는 한가한데 앱만 멈춘다, 커넥션 풀 데드락'
 titleEn: 'The Database Is Idle and Only the Application Stalls: Connection Pool Deadlock'
-description: '우아한형제들이 공개한 커넥션 풀 데드락 사례를 MySQL 8.4.3과 Spring Boot 3.4.1에서 네 조건으로 재현했습니다. 원인은 개발자가 커넥션을 두 개 잡는 코드를 쓴 것이 아니라 엔티티에 붙인 @GeneratedValue(AUTO)입니다. MySQL에는 시퀀스가 없어 Hibernate가 시퀀스 테이블을 별도 커넥션에서 FOR UPDATE로 잠그므로 save() 한 줄이 커넥션 두 개를 동시에 요구합니다. 동시 요청 16에 풀 10으로 40초를 재니 커넥션을 노골적으로 두 개 잡는 조건은 요청 32건 중 21건이 30초 타임아웃까지 가서 초당 0.3건에 그쳤습니다. 원 사례를 그대로 옮긴 JPA 조건은 전멸하지 않고 실패율 0.5%에 초당 35.8건이었는데, 풀만 24로 올리면 138.2건으로 3.9배가 됩니다. Hibernate 6의 pooled 옵티마이저가 allocationSize 50으로 ID를 미리 확보해 채번이 50건에 한 번만 일어나기 때문이고, 시퀀스 테이블의 next_val이 1에서 51, 101로 뛰는 것으로 확인했습니다. JPA 조건은 실패율 0.5%에 p95 61ms로 지표가 멀쩡한데도 1초를 넘긴 16건이 워커 시간 640초 중 482초, 89.1%를 차지했습니다. 커넥션 동시 보유를 1로 줄이면 풀 10 그대로 실패 0건에 초당 126.5건입니다. 널리 인용되는 위키 공식과 우아한형제들이 실제로 쓴 계산이 다른 식이라는 점도 구분해 적었습니다.'
-descriptionEn: "This session reproduces the connection pool deadlock that Woowa Brothers published, running four conditions on MySQL 8.4.3 and Spring Boot 3.4.1. The cause is not developer code that grabs two connections but the @GeneratedValue(AUTO) annotation on the entity, because MySQL has no sequence object and Hibernate locks a sequence table with FOR UPDATE on a separate connection, so a single save() demands two connections at once. With 16 concurrent requests against a pool of 10 over 40 seconds, the condition that explicitly holds two connections completed only 32 requests, 21 of which burned the full 30 second timeout, for 0.3 requests per second. The JPA condition that mirrors the original case did not collapse: it reported a 0.5% failure rate at 35.8 requests per second, and raising the pool to 24 lifted that to 138.2, a 3.9x gain. Hibernate 6 defaults to a pooled optimizer with an allocation size of 50, so the sequence fetch happens once every 50 inserts, confirmed by watching next_val jump from 1 to 51 to 101. Even with a 0.5% failure rate and a healthy 61ms p95, the 16 requests that exceeded one second consumed 482 of the 640 available worker seconds, or 89.1%. Reducing concurrent connection ownership to one keeps the pool at 10 with zero failures at 126.5 requests per second. The post also separates the widely quoted wiki formula from the calculation Woowa Brothers actually applied."
+description: '우아한형제들이 공개한 커넥션 풀 데드락 사례를 MySQL 8.4.3과 Spring Boot 3.4.1에서 네 조건으로 재현했습니다. 원인은 개발자가 커넥션을 두 개 잡는 코드를 쓴 것이 아니라 엔티티에 붙인 @GeneratedValue(AUTO)입니다. MySQL에는 시퀀스가 없어 Hibernate가 시퀀스 테이블을 별도 커넥션에서 FOR UPDATE로 잠그므로 save() 한 줄이 커넥션 두 개를 동시에 요구합니다. 동시 요청 16에 풀 10으로 40초를 재니 커넥션을 노골적으로 두 개 잡는 조건은 요청 32건 중 21건이 30초 타임아웃까지 가서 초당 0.3건에 그쳤습니다. 원 사례를 그대로 옮긴 JPA 조건은 전멸하지 않고 실패율 0.5%에 초당 37.2건이었는데, 풀만 24로 올리면 141.1건이 됩니다. 4회 반복에서 이 배수는 3.6배에서 4.3배였습니다. Hibernate 6의 pooled 옵티마이저가 allocationSize 50으로 ID를 미리 확보해 채번이 50건에 한 번만 일어나기 때문이고, 시퀀스 테이블의 next_val이 1에서 51, 101로 뛰는 것으로 확인했습니다. JPA 조건은 실패율 0.5%에 p95 55ms로 지표가 멀쩡한데도 1초를 넘긴 16건이 워커 시간 640초의 88.4~89.1%를 차지했고, 그 16건은 네 회차에서 한 번도 어긋나지 않았습니다. 커넥션 동시 보유를 1로 줄이면 풀 10 그대로 실패 0건에 초당 151건입니다. 널리 인용되는 위키 공식과 우아한형제들이 실제로 쓴 계산이 다른 식이라는 점도 구분해 적었습니다.'
+descriptionEn: "This session reproduces the connection pool deadlock that Woowa Brothers published, running four conditions on MySQL 8.4.3 and Spring Boot 3.4.1. The cause is not developer code that grabs two connections but the @GeneratedValue(AUTO) annotation on the entity, because MySQL has no sequence object and Hibernate locks a sequence table with FOR UPDATE on a separate connection, so a single save() demands two connections at once. With 16 concurrent requests against a pool of 10 over 40 seconds, the condition that explicitly holds two connections completed only 32 requests, 21 of which burned the full 30 second timeout, for 0.3 requests per second. The JPA condition that mirrors the original case did not collapse: it reported a 0.5% failure rate at a median 37.2 requests per second, and raising the pool to 24 lifted that to 141.1. Computed per round across four runs, that gap ranges from 3.6x to 4.3x. Hibernate 6 defaults to a pooled optimizer with an allocation size of 50, so the sequence fetch happens once every 50 inserts, confirmed by watching next_val jump from 1 to 51 to 101. Even with a 0.5% failure rate and a healthy 55ms p95, the 16 requests that exceeded one second consumed 88.4% to 89.1% of the 640 available worker seconds, and that count of 16 held in all four rounds. Reducing concurrent connection ownership to one keeps the pool at 10 with zero failures at about 151 requests per second. The post also separates the widely quoted wiki formula from the calculation Woowa Brothers actually applied."
 date: 2026-07-30
 tags:
   - MySQL
@@ -177,33 +177,35 @@ sponsor_jpa_seq
 
 ![조건별 처리량과 실패율, 그리고 느린 요청이 먹은 워커 시간](/uploads/incident/hikaricp-pool-deadlock/chart-pool.png)
 
-| 조건 | 성공 | 실패 | 실패율 | 초당 처리량 | p50 | p95 | 최대 |
-|---|---|---|---|---|---|---|---|
-| `jpa-10` | 1,433 | 7 | 0.5% | 35.8 | 39ms | 61ms | 30,141ms |
-| `jpa-24` | 5,526 | 0 | 0% | 138.2 | 42ms | 60ms | 131ms |
-| `two-10` | 11 | 21 | 65.6% | 0.3 | 30,092ms | 30,125ms | 30,125ms |
-| `one-10` | 5,058 | 0 | 0% | 126.5 | 85ms | 101ms | 224ms |
+4회 반복의 중앙값이고 괄호는 최소에서 최대입니다.
 
-`two-10`이 데드락의 순수한 모습입니다. 40초 동안 요청이 32건밖에 처리되지 않았고 그중 21건이 30초를 꽉 채우고 죽었습니다. p50이 30초라는 것은 절반 이상이 타임아웃까지 갔다는 뜻입니다.
+| 조건 | 실패 | 실패율 | 초당 처리량 | p50 | p95 |
+|---|---|---|---|---|---|
+| `jpa-10` | 7건 (네 번 다) | 0.5% | 37.2 (34.2~40.1) | 39ms | 55ms |
+| `jpa-24` | 0건 | 0% | 141.1 (136.6~164.3) | 40ms | 55ms |
+| `two-10` | 19~21건 | 64.1% | 0.3 (0.3~0.5) | 30,096ms | 30,129ms |
+| `one-10` | 0건 | 0% | 151.2 (126.5~152.8) | 78ms | 85ms |
 
-`one-10`은 같은 풀 10에서 5,058건을 실패 없이 처리했습니다. 풀 크기를 건드리지 않고 동시 보유 개수만 1로 줄여서 얻은 결과입니다. 요청당 지연은 p50 85ms로 `jpa-24`의 42ms보다 긴데, 커넥션을 두 번 나눠 빌리니 획득 비용을 두 번 내기 때문입니다. 그래도 한 번도 실패하지 않습니다.
+`two-10`이 데드락의 순수한 모습입니다. 40초 동안 요청이 32건밖에 처리되지 않았고 그중 19건에서 21건이 30초를 꽉 채우고 죽었습니다. p50이 30초라는 것은 절반 이상이 타임아웃까지 갔다는 뜻입니다.
+
+`one-10`은 같은 풀 10에서 네 회차 모두 실패 없이 처리했습니다. 초당 151건 안팎입니다. 풀 크기를 건드리지 않고 동시 보유 개수만 1로 줄여서 얻은 결과입니다. 요청당 지연은 p50 78ms로 `jpa-24`의 40ms보다 긴데, 커넥션을 두 번 나눠 빌리니 획득 비용을 두 번 내기 때문입니다. 그래도 한 번도 실패하지 않습니다.
 
 ### 실패율 0.5%가 처리량을 4분의 1로 떨어뜨렸습니다
 
-`jpa-10`과 `jpa-24`를 비교하면 실패율 차이는 0.5%포인트인데 처리량은 초당 35.8건과 138.2건으로 3.9배 벌어집니다. 요청별 소요 시간을 나눠 봤습니다.
+`jpa-10`과 `jpa-24`를 비교하면 실패율 차이는 0.5%포인트인데 처리량은 초당 37.2건과 141.1건으로 벌어집니다. 회차마다 계산하면 3.6배에서 4.3배입니다. 요청별 소요 시간을 나눠 봤습니다.
 
-| 조건 | 전체 요청 | 1초 초과 | 비율 | 1초 초과가 쓴 워커 시간 | 전체 대비 |
-|---|---|---|---|---|---|
-| `jpa-10` | 1,440 | 16 | 1.1% | 482초 | 89.1% |
-| `jpa-24` | 5,526 | 0 | 0% | 0초 | 0% |
-| `two-10` | 32 | 32 | 100% | 963초 | 100% |
-| `one-10` | 5,058 | 0 | 0% | 0초 | 0% |
+| 조건 | 1초 초과 | 1초 초과가 차지한 워커 시간 |
+|---|---|---|
+| `jpa-10` | 16건 (네 번 다) | 88.4~89.1% |
+| `jpa-24` | 0건 | 0% |
+| `two-10` | 32건 (네 번 다) | 99.9~100% |
+| `one-10` | 0건 | 0% |
 
-`jpa-10`에서 1초를 넘긴 요청은 16건, 전체의 1.1%입니다. 그 16건이 워커 시간의 89.1%를 먹었습니다. 워커 16개가 40초 동안 쓸 수 있는 시간이 640초인데 그중 482초가 이 16건에 묶여 있었습니다.
+`jpa-10`에서 1초를 넘긴 요청은 네 회차 모두 정확히 16건이고 전체의 1.1% 안팎입니다. 그 16건이 워커 시간의 88.4%에서 89.1%를 먹었습니다. 워커 16개가 40초 동안 쓸 수 있는 시간이 640초인데 그중 570초 가까이가 이 16건에 묶여 있었습니다.
 
 대시보드에서 실패율만 보면 0.5%라 정상으로 보입니다. p95도 61ms로 멀쩡합니다. 이 조건에서 이상을 알아채려면 최대값이나 요청별 소요 시간의 분포를 봐야 합니다. p95까지만 보는 대시보드는 이 장애를 놓칩니다.
 
-`two-10`의 963초가 640초를 넘는 이유는 타임아웃 30초짜리 요청이 측정 종료 시각을 넘겨 끝났기 때문입니다.
+`two-10`이 640초를 넘겨 쓰는 이유는 타임아웃 30초짜리 요청이 측정 종료 시각을 넘겨 끝났기 때문입니다.
 
 ## 6. 예상과 달랐던 점
 
