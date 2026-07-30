@@ -20,6 +20,7 @@ coverImage: /uploads/incident/timeseries-partition/chart-disk.png
 ---
 
 > 근거 등급: `E2`
+> 문제 쪽 1차 기록: [GitLab, Time-decay data 패턴 문서](https://docs.gitlab.com/development/database/scalability/patterns/time_decay/) · [PruneWebHookLogsWorker cannot keep up with the rate of inserts](https://gitlab.com/gitlab-org/gitlab/-/issues/256088)
 > 출처: [MySQL 8.4 Reference, InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html) 외 (본문에 개별 표기)
 
 ## 1. 유명한 이유
@@ -34,6 +35,12 @@ MySQL 공식 문서가 이 함정을 직접 경고합니다. InnoDB에서 지운
 2. 같은 7일치를 `DROP PARTITION`으로 지울 때: 같은 지표들
 
 특정 회사의 공개 장애 보고서 재현이 아니라서 `E2`입니다. MySQL 대량 삭제가 원인으로 명시된 공개 포스트모템은 조사에서 찾지 못했습니다. 다른 엔진에서는 실사고가 있습니다. Discord가 Cassandra에서 대량 삭제 뒤 톰스톤 수백만 개를 훑느라 10초 단위 멈춤을 겪은 사건을 공개했는데, "지운 행이 즉시 사라지지 않고 읽는 쪽이 잔해를 밟는다"는 구조는 엔진을 가리지 않습니다. InnoDB에서 같은 자리를 차지하는 것이 delete-marked 레코드와 퍼지입니다.
+
+### 삭제 워커가 삽입을 못 따라간 회사가 있습니다
+
+GitLab은 시계열 데이터의 보존 전략을 공식 문서에 정리해 두고 근거로 자사 테이블 `web_hook_logs`를 듭니다. 오래된 행을 지우던 `PruneWebHookLogsWorker`는 시간마다 최대 5만 행, 하루 120만 행을 지웠지만 하루 260만 행이 들어와 따라가지 못했습니다. 이슈 제목이 그대로 "PruneWebHookLogsWorker cannot keep up with the rate of inserts"입니다. 파티셔닝을 결정한 2021년 3월 1일 이 테이블은 약 5억 2,700만 행에 1.02 TiB였고, 2020년 7월분이 아직 지워지지 못한 채 하루 200만 행 이상씩 계속 커지고 있었습니다. 문서는 큰 테이블에서 오래된 행을 직접 지우는 일을 "a very expensive operation, due to multi-version concurrency control in PostgreSQL"이라고 적고, 파티셔닝을 쓰면 그 비용이 "a constant, for all intents and purposes zero, cost"가 된다고 적습니다.
+
+GitLab은 PostgreSQL이고 원인을 MVCC로 지목합니다. InnoDB에서 같은 자리를 차지하는 것이 delete-marked 레코드와 퍼지라는 대응까지가 이 인용의 범위입니다. 디스크 반환 여부는 이 출처에 없으므로 테이블스페이스 미반환의 근거로는 쓸 수 없습니다.
 
 ## 2. 재현
 

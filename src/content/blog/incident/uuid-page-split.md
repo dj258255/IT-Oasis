@@ -20,6 +20,7 @@ coverImage: /uploads/incident/uuid-page-split/01-fill.png
 ---
 
 > 근거 등급: `E2`
+> 메커니즘 대조: [라쿤홀딩스, MySQLでプライマリキーをUUIDにする前に知っておいて欲しいこと](https://techblog.raccoon.ne.jp/archives/1627262796.html)
 > 출처: [PlanetScale, The Problem with Using a UUID Primary Key in MySQL](https://planetscale.com/blog/the-problem-with-using-a-uuid-primary-key-in-mysql), [RFC 9562 UUID](https://www.rfc-editor.org/rfc/rfc9562.html), [Percona, UUIDs are Popular, but Bad for Performance](https://www.percona.com/blog/uuids-are-popular-but-bad-for-performance-lets-discuss/)
 
 ## 1. 유명한 이유
@@ -33,6 +34,12 @@ RFC 9562도 그 이유를 밝힙니다.
 여기까지 읽고 UUIDv7으로 바꾸면 문제가 끝난다고 생각했습니다. 실제로 재 보니 절반만 맞았습니다. 랜덤 PK가 물리는 대가는 두 가지인데 UUIDv7이 그중 하나만 해결합니다. 나머지 하나를 해결하려면 같은 RFC의 다른 절을 읽어야 합니다.
 
 이 세션은 PK 다섯 가지로 같은 행 120만 개를 넣고, 테이블 크기와 적재 속도와 적재 중 디스크 읽기를 함께 잽니다.
+
+### 페이지 분할만으로는 설명이 안 된다고 적은 기업 글
+
+일본 라쿤홀딩스의 기술 블로그도 같은 함정을 다루면서, 흔한 설명인 페이지 분할과 격납 효율은 문제의 본질이 아니라고 적습니다. 랜덤 값을 넣으면 리프 페이지가 흩어져 INSERT 다섯 번에 한 번쯤 분할이 일어나고 격납 효율이 25% 떨어지지만, 이 손실은 레코드가 늘어도 일정하다는 것입니다. 이 글이 진짜 원인으로 꼽는 것은 레코드 하나를 INSERT할 때마다 테이블 전체의 랜덤한 위치를 읽어야 한다는 대목이고, 그 리프 페이지가 버퍼 풀에서 빗나가면 그때마다 스토리지 I/O가 생긴다고 적습니다. 랜덤 PK의 대가가 페이지 분할 하나로 끝나지 않는다는 이 세션의 관찰과 같은 진단입니다.
+
+이 글에 나오는 10배에서 20배 차이는 라쿤홀딩스의 자체 측정이 아니라 외부 검증 글들을 요약한 수치이므로 기업 측정치로 읽으면 안 됩니다. 사고 보고서도 아니고 기술 해설이라 이 세션의 등급은 그대로 `E2`입니다.
 
 ## 2. 재현
 

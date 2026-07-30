@@ -19,8 +19,8 @@ seriesOrder: 8
 coverImage: /uploads/incident/gap-lock-deadlock/fig-locks.png
 ---
 
-> 근거 등급: `E2`
-> 출처: [MySQL 8.4, InnoDB Locking (gap locks, insert intention locks)](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html) · [Deadlocks in InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html)
+> 근거 등급: `E1·축소`
+> 출처: [KINTO Technologies, 本番環境で発生したAurora MySQL 3 系のデッドロックの原因を調査した話](https://blog.kinto-technologies.com/posts/2024-12-11-mysql-deadlock/) · [MySQL 8.4, InnoDB Locking (gap locks, insert intention locks)](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html) · [Deadlocks in InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html)
 
 ## 1. 유명한 이유
 
@@ -36,6 +36,12 @@ INSERT INTO settlement (...) VALUES (...);                                -- 없
 두 요청이 동시에 오면 이 코드가 데드락을 냅니다. 원인은 REPEATABLE READ의 갭 락과 insert intention 락의 조합입니다. MySQL 공식 문서가 두 락을 각각 정의해 두었지만, 둘이 만났을 때 어떻게 되는지는 직접 재봐야 감이 옵니다.
 
 이 세션은 그 조합을 재현하고, `performance_schema.data_locks`로 **락이 걸린 순간의 상태**를 포착하고, `SHOW ENGINE INNODB STATUS`의 데드락 그래프를 읽습니다. 그다음 해소 두 가지를 각각 30회씩 돌려 데드락이 실제로 사라지는지 셉니다.
+
+### 같은 코드로 결제가 실패한 회사가 있습니다
+
+토요타 계열 KINTO Technologies가 Aurora MySQL 결제 플랫폼에서 겪은 것을 공개했습니다. 인기 상품 발매로 신청이 몰린 날 카드 결제가 실패하고 로그에 `Deadlock found when trying to get lock; try restarting transaction`이 찍혔습니다. 문제가 된 쿼리는 중복 결제를 막으려고 넣은 `SELECT * FROM PAYMENTS where request_id = '' FOR UPDATE`였고, 원문은 해당 `request_id`의 데이터가 아직 삽입되기 전이라 이 쿼리가 헛돌면서 갭 락을 잡았다고 적습니다. 이어지는 INSERT가 삽입 의도 갭 락을 잡으려다 먼저 잡힌 갭 락과 충돌해 대기가 생겼고 MySQL이 데드락을 검지했다는 설명이 뒤따릅니다. 이 세션이 재현한 순서와 같습니다.
+
+세 가지는 구분해서 봐야 합니다. 첫째, 글에 실린 `SHOW ENGINE INNODB STATUS` 출력은 프로덕션에서 뜬 것이 아니라 운영 요청 값을 그대로 써서 로컬에서 재현한 것입니다. 프로덕션 쪽 증거는 에러 로그와 상품팀의 신고입니다. 둘째, 이들이 고른 해소는 아래 3절의 두 방법이 아니라 확인 후 삽입이라는 구조 자체를 버리고 요청을 받는 시점에 가등록하고 트랜잭션을 즉시 커밋하는 설계 변경이었습니다. 셋째, 부하 테스트가 이 문제를 놓친 이유를 원문이 밝히는데 인덱스 단편화를 걱정해 `request_id`에 UUID를 넣었기 때문입니다. 값이 매번 달라 같은 갭에 두 트랜잭션이 몰리지 않았습니다.
 
 ## 2. 재현
 
