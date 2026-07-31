@@ -38,7 +38,7 @@ MySQL 공식 문서가 조건을 직접 적어 둡니다. 문자열 컬럼을 �
 
 | 항목 | 값 |
 |---|---|
-| 호스트 | Linux 5.14.0-570.33.2.el9_6.aarch64 (Rocky Linux 9.6), 2코어 ARM Neoverse-N1, 메모리 11GB |
+| 호스트 | 5절까지의 재측정은 Linux 5.14.0-570.33.2.el9_6.aarch64 (Rocky Linux 9.6), 2코어 ARM Neoverse-N1, 메모리 11GB. 2026-07-31 회차는 macOS 26.3.1, Apple M2 Pro 12코어, 32GB이고 컨테이너 런타임 VM이 12코어 7.7GB입니다(`results/00-host.txt`). 첫 실행의 호스트는 기록이 없습니다 |
 | DB | MySQL 8.4.3 (컨테이너 `cpus: 2`, `mem_limit: 4g`, 버퍼 풀 2GB) |
 | 데이터 | 주문 300만 행 (적재 직후 579MB), 레거시 조인 테이블 30만 행 |
 | 측정 | 워밍업 3회 후 10회, 중앙값·p95. 실제로 읽은 행은 `Handler_read_*` 세션 카운터로 실측 |
