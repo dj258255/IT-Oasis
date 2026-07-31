@@ -278,7 +278,7 @@ Spring 데코레이터에 같은 512KB를 주면 4.3초에 끊고 p95 2ms입니�
 
 이 관찰은 조건마다 1회 실행이라 방향까지만 읽어야 합니다.
 
-## 안 한 것
+## 못 한 것
 
 - **STOMP와 메시지 브로커 경로는 다루지 않았습니다.** 원시 WebSocket 핸들러만 씁니다. Spring 문서가 말하는 `sendTimeLimit`, `sendBufferSizeLimit`은 STOMP 설정에도 있지만 여기서는 데코레이터를 직접 감쌌습니다.
 - **Netty 기반 서버는 재현하지 않았습니다.** 내장 Tomcat만 썼습니다. Netty의 `WriteBufferWaterMark`는 쓰기 버퍼가 상한을 넘으면 채널을 쓰기 불가로 표시하고 하한까지 내려가면 되돌리는 장치라, 블로킹으로 막히는 Tomcat과 동작이 다릅니다. 기본값은 하한 32KiB에 상한 64KiB이고, 근거는 Netty 소스의 `transport/src/main/java/io/netty/channel/WriteBufferWaterMark.java`입니다. Javadoc에는 이 숫자가 없습니다. 상수가 `private`이라 공개 문서에 노출되지 않기 때문에 값을 확인하려면 소스를 봐야 합니다. 이 조건으로 재현해 보지는 않았습니다.
