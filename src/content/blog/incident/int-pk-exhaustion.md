@@ -234,51 +234,59 @@ ALTER TABLE                     -- 1.6초
 
 전환 후 크기는 양쪽 다 104MB로 찍혔습니다. `BIGINT`가 행마다 4바이트를 더 쓰므로 300만 행이면 약 12MB 차이가 나야 하는데 드러나지 않았습니다. `information_schema`의 추정치를 MB로 반올림한 값이라 해상도가 부족합니다. 크기 차이는 이 측정으로 말할 수 없습니다.
 
-## 7. pt-online-schema-change 로 같은 전환
+## 7. 온라인 DDL 도구 둘과 같은 전환
 
-3절은 expand-contract를 직접 구현해 단계별 비용을 보였습니다. 실무에서는 도구가 그 일을 대신합니다. `pt-online-schema-change` 3.7.1로 같은 전환을 하고 나란히 놓았습니다. 300만 행, 같은 쓰기 부하입니다.
+3절은 expand-contract를 직접 구현해 단계별 비용을 보였습니다. 실무에서는 도구가 그 일을 대신합니다. `pt-online-schema-change` 3.7.1과 `gh-ost`로 같은 전환을 하고 나란히 놓았습니다. 300만 행, 같은 쓰기 부하입니다.
 
 | 방식 | 소요 | 그 구간 통과한 쓰기 | 초당 | 직전 기준선 | p95 | 최대 |
 |---|---|---|---|---|---|---|
 | 한 방 ALTER (COPY) | 4.6초 | 3건 | 0.6건 | 초당 47.0건 | **4,576ms** | 4,576ms |
-| `pt-online-schema-change` | 11.8초 | **500건** | **42.3건** | 초당 47.8건 | **16ms** | 74ms |
+| `pt-online-schema-change` | 11.8초 | 500건 | 42.3건 | 초당 47.8건 | 16ms | 74ms |
+| **`gh-ost`** | **27.5초** | **1,432건** | **52.1건** | 초당 54.0건 | **7ms** | 998ms |
 
-**2.6배 오래 걸리는 대신 쓰기가 기준선의 88.5% 로 흐릅니다.** p95 가 4,576ms 에서 16ms 입니다.
-3절이 직접 구현한 expand-contract와 같은 거래 조건입니다.
+**도구를 쓰면 오래 걸리는 대신 쓰기가 흐릅니다.** 한 방 ALTER 는 4.6초 동안 3건만
+통과시키고 그중 하나가 4.6초를 매달려 있었습니다. 두 도구는 기준선의 88.5% 와 96.5% 를
+유지합니다.
 
-도구가 무엇을 하는지도 그대로 찍힙니다.
+### 두 도구가 변경분을 따라가는 방식이 다릅니다
+
+`pt-online-schema-change` 는 원본에 INSERT/UPDATE/DELETE 트리거를 겁니다. 복사가 도는
+동안 들어오는 모든 쓰기가 그 트리거를 한 번씩 더 지납니다.
+
+`gh-ost` 는 트리거를 걸지 않고 **binlog 를 읽습니다.** 로그가 그 구조를 그대로 보여 줍니다.
 
 ```console
-Creating new table...
-Altering new table...
-Creating triggers...
-Copying approximately 2993877 rows...
-Copied rows OK.
-Swapping tables...
-Dropping old table...
-Dropping triggers...
-Successfully altered `spoon`.`sponsor_pt`.
+# Migrating `spoon`.`sponsor_gh`; Ghost table is `spoon`.`_sponsor_gh_gho`
+Copy: 3000583/3000583 100.0%; Applied: 1167; Backlog: 0/1000; Time: 21s(total), 21s(copy);
+  streamer: binlog.000004:252355761; Lag: 0.01s, HeartbeatLag: 0.09s, State: migrating
+# Done
 ```
 
-직접 구현한 것과 다른 점은 **트리거**입니다. 3절의 구현은 워터마크로 벌크를 묶고 그 뒤
-들어온 행을 3단계에서 따로 채웠습니다. 도구는 원본에 INSERT/UPDATE/DELETE 트리거를 걸어
-복사가 도는 동안 들어오는 변경을 실시간으로 새 테이블에 흘립니다. 그래서 잔여 단계가
-없고, 대신 복사가 도는 내내 모든 쓰기가 트리거를 한 번씩 더 지납니다.
+`Copy` 는 기존 행 복사이고 `Applied` 는 그동안 들어온 변경분입니다. **둘이 분리돼 있고
+백로그가 1,000짜리 큐로 관리됩니다.** 원본 쓰기 경로에는 아무것도 얹히지 않으므로 p95 가
+7ms 로 셋 중 가장 낮습니다.
 
-### 밟은 함정 둘
+대가는 시간입니다. 27.5초로 pt-osc 의 2.3배입니다. binlog 를 읽어 따라가는 만큼 복사를
+느리게 하고, 지연이 늘면 스스로 속도를 줄입니다.
 
-이 도구를 처음 붙일 때 실제로 두 번 걸렸습니다.
+### 셋 다 어딘가에서 한 번은 멈춥니다
 
-1. **`caching_sha2_password` 가 비암호화 인증을 거부합니다.**
-   `Authentication plugin 'caching_sha2_password' reported error: Authentication requires
-   secure connection.`
+`gh-ost` 의 최대 지연 998ms 는 마지막 컷오버 구간입니다. 새 테이블로 이름을 바꾸는 그
+순간에는 어떤 방식이든 잠깐 멈춥니다. **차이는 멈추느냐가 아니라 그 멈춤이 4,576ms 냐
+998ms 냐입니다.**
+
+### 밟은 함정 셋
+
+1. **`caching_sha2_password` 가 비암호화 인증을 거부합니다.** pt-osc 쪽에서 걸렸습니다.
+   `Authentication requires secure connection.`
 
 2. **흔한 우회인 `mysql_native_password` 가 MySQL 8.4 에는 없습니다.**
-   전용 사용자를 그 플러그인으로 만들려 하면 `Plugin 'mysql_native_password' is not loaded`
-   입니다. 8.0 에서 deprecated 였고 **8.4 에서 제거됐습니다.**
+   `Plugin 'mysql_native_password' is not loaded`. 8.0 에서 deprecated 였고 **8.4 에서
+   제거됐습니다.** 남는 길은 `--mysql_ssl 1` 입니다.
 
-남는 길은 TLS 를 켜는 것이고 `--mysql_ssl 1` 이 그 옵션입니다. **MySQL 8.4 로 올린 환경에서
-예전 절차서를 그대로 쓰면 이 자리에서 막힙니다.**
+3. **`gh-ost` 는 공개 컨테이너 이미지가 없습니다.** `ghcr.io/github/gh-ost` 는 접근이
+   거부되고 Docker Hub 에도 없습니다. 소스에서 빌드했고 `go.mod` 가 Go 1.25.12 이상을
+   요구해 1.24 로는 안 됩니다. 빌드 절차는 저장소의 `tools/gh-ost/README.md`에 적었습니다.
 
 ## 못 한 것
 
@@ -286,7 +294,7 @@ Successfully altered `spoon`.`sponsor_pt`.
 - **한 번씩만 쟀습니다.** 두 방법 모두 1회 실행이라 관측 범위가 없습니다. 12.8초와 119.4초가 재실행에서 얼마나 흔들리는지 모릅니다. 두 방법의 구조 차이는 이 정도 격차에서 뒤집히지 않지만, 소수점 자리를 그대로 인용하면 안 됩니다.
 - **실제 21억 행에서 재지 않았습니다.** 300만 행에서 COPY가 12.8초였으니 21억 행이면 산술적으로 두 시간대인데, 그 규모의 I/O 특성은 선형이 아닙니다. 절대값이 아니라 두 방법의 구조 차이를 봐야 합니다.
 - **컬럼명 교체 단계를 실행하지 않았습니다.** 애플리케이션이 두 컬럼을 함께 쓰는 배포가 전제라, DB 쪽 작업만 쟀습니다.
-- **`gh-ost`는 돌리지 않았습니다.** 공개 컨테이너 이미지를 찾지 못했습니다. 소스를 받아 빌드하면 되는데 아직 안 했습니다.
+- **`gh-ost`의 컷오버 옵션을 비교하지 않았습니다.** 기본 컷오버만 썼습니다.
 - **7절도 조건마다 1회씩입니다.** 4.6초와 11.8초에 반복 측정이 없습니다.
 - **전환 후 테이블 크기 차이를 재지 못했습니다.** 6절의 104MB는 `information_schema` 추정치를 MB로 반올림한 값이라 `BIGINT`의 4바이트 차이가 드러나지 않습니다.
 - **PostgreSQL 쪽도 1회씩만 쟀습니다.** 5절의 값에도 반복 측정과 분산이 없습니다.
