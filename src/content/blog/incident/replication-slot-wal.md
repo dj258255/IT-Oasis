@@ -151,6 +151,8 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
 
 
 
+
+
 ## 6. 해소
 
 | 항목 | 내용 |
