@@ -49,12 +49,22 @@ jobs:
           EXPECTED=$((TOTAL - DRAFT - UNLISTED))
           echo "expected published posts: $EXPECTED (total=$TOTAL draft=$DRAFT unlisted=$UNLISTED)"
           RENDERED=0
+          PREV=-1; STALL=0
           for i in $(seq 1 20); do
-            # 콘텐츠 데이터 스토어(node_modules/.astro)는 '유지'하고 dist만 정리한다.
-            # Astro glob 로더가 콜드 빌드에서 글을 비결정적으로 랜덤 누락하지만, 스토어는
-            # 빌드 간 누적되므로 유지한 채 재빌드하면 빠진 글이 채워져 전량(EXPECTED)에
-            # 도달·안정된다. (예전처럼 매 시도 스토어를 비우면 매번 독립 콜드 도박이 되어
-            # 20연속 미달=배포 실패가 난다 — 그게 실제 실패 원인이었다.)
+            # 이 자리에서 방식을 두 번 뒤집었다. 매 시도 스토어를 비우는 독립 콜드 빌드도,
+            # 스토어를 유지하는 누적 빌드도 각각 20연속 미달로 배포를 막은 적이 있다.
+            # 두 방식의 실패 모드가 다르다.
+            #   독립 콜드: 매번 새 도박이라 운이 나쁘면 20번 다 미달
+            #   누적 유지: 소스 mtime 이 안 바뀌면 증분 sync 가 스킵해 같은 수에서 멈춘다
+            # 그래서 둘을 섞는다. 기본은 누적이되 **소스 mtime 을 갱신해** 증분 sync 가
+            # 반드시 다시 훑게 하고, 진전이 없으면 스토어를 비워 독립 도박으로 전환한다.
+            if [ "$STALL" -ge 2 ]; then
+              echo "3회째 진전 없음 — 스토어를 비우고 독립 빌드로 전환"
+              rm -rf node_modules/.astro
+              STALL=0
+            else
+              find src/content -name '*.md' -exec touch {} +
+            fi
             rm -rf dist
             pnpm run build
             RENDERED=$(grep -oE 'data-en="All">[^<]*</span>[[:space:]]*<span class="sidebar-count">[0-9]+' dist/index.html 2>/dev/null | grep -oE '[0-9]+$' | head -1)
@@ -64,7 +74,9 @@ jobs:
               echo "content complete on attempt $i"
               exit 0
             fi
-            echo "incomplete ($RENDERED/$EXPECTED) — 스토어 유지한 채 재빌드로 누적..."
+            if [ "$RENDERED" -le "$PREV" ]; then STALL=$((STALL+1)); else STALL=0; fi
+            PREV=$RENDERED
+            echo "incomplete ($RENDERED/$EXPECTED) — 재시도 (정체 $STALL 회)"
           done
           echo "::error::content sync incomplete after 20 attempts ($RENDERED/$EXPECTED) — aborting deploy to keep last good site live"
 
