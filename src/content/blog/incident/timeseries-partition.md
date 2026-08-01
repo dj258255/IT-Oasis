@@ -423,6 +423,28 @@ TimescaleDB는 `SELECT add_retention_policy('conditions', INTERVAL '24 hours');`
 
 청크 크기 규칙도 참고할 만합니다. "Set `chunk_interval` so that the indexes of chunks currently being ingested into **fit within 25% of main memory** (`shared_buffers`)." 기본값은 7일이고, 하이퍼테이블이 여럿이면 각각 25%가 아니라 **합이 25%** 안에 들어가야 합니다.
 
+
+### `LOCK=NONE`을 실제로 붙여 봤습니다
+
+이 세션의 `run-experiments.sh` 주석에는 "`LOCK=NONE`을 명시해도 MDL 대기에 걸린다"고 적혀 있는데 실행문에는 `LOCK` 절이 없었습니다. 근거 없이 적은 문장이라 재 봤습니다.
+
+**주석은 두 겹으로 틀렸습니다. 붙일 수가 없습니다.**
+
+| 문법 | 결과 |
+|---|---|
+| `ALTER TABLE wl DROP PARTITION p1` | 통과 (66ms) |
+| `... DROP PARTITION p1 LOCK=NONE` | **ERROR 1064 문법 오류** |
+| `... DROP PARTITION p1 LOCK=SHARED` | **ERROR 1064 문법 오류** |
+| `... DROP PARTITION p1 ALGORITHM=INPLACE, LOCK=NONE` | **ERROR 1064 문법 오류** |
+
+MySQL 8.4.3은 `DROP PARTITION`에 `ALGORITHM`이나 `LOCK` 절을 받지 않습니다. **"명시해도 걸린다"가 아니라 "명시할 수 없다"입니다.**
+
+절 없이 실행하면 이 세션이 본 것이 그대로 나옵니다. 열린 트랜잭션 하나가 있을 때 대기 중인 MDL 종류가 `EXCLUSIVE`이고, 그 뒤에 선 평범한 `SELECT`가 **14.8초** 기다립니다.
+
+그러니 MySQL에서는 이 대기를 문법으로 피할 방법이 없습니다. **PostgreSQL 14의 `DETACH PARTITION ... CONCURRENTLY`가 대응하는 것이 정확히 이 자리입니다.**
+
+이 실험에서도 계측이 두 번 거짓말을 했습니다. 처음에는 여러 줄로 오는 에러에서 첫 줄만 읽어 비밀번호 경고를 보고 "통과"로 적었고, 그다음에는 함수를 명령 치환으로 불러서 함수 안에서 잡은 에러가 서브셸과 함께 사라졌습니다. **두 번 다 화면에는 "네 형태 모두 통과"라고 나왔습니다.**
+
 ## 못 한 것
 
 - **9절의 `OPTIMIZE TABLE`은 규모 하나에서 1회 실행입니다.** 200만 행 하나이고 회수 시간이 행 수에 어떻게 붙는지 곡선은 안 그렸습니다.
