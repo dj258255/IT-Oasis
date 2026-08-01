@@ -160,11 +160,11 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
 | 2 | 53초 | 224MB |
 | 3 | 54초 | 224MB |
 
-회차 1~3은 53~60초로 모입니다. 원본의 41.7초와 차이가 나는데, 원본은 로그에 `t=19s` 로
-찍혔지만 그 `t` 가 반복 횟수라 실제 경과가 41.7초였습니다(원자료로 확인).
+회차 1~3은 53~60초로 모입니다. 원본의 41.7초와 차이가 나는데, 원본은 로그에 `t=19s`로
+찍혔지만 그 `t`가 반복 횟수라 실제 경과가 41.7초였습니다(원자료로 확인).
 
-**무효화 시점의 `pg_wal` 이 128MB와 224MB로 갈립니다.** 다만 이 차이는 초과분이 아니라
-시작값입니다. 회차 1~3은 슬롯 지연 0MB 인 첫 관측에서 이미 `pg_wal` 이 224MB 였고
+**무효화 시점의 `pg_wal`이 128MB와 224MB로 갈립니다.** 다만 이 차이는 초과분이 아니라
+시작값입니다. 회차 1~3은 슬롯 지연 0MB 인 첫 관측에서 이미 `pg_wal`이 224MB 였고
 관측 창 안에서 한 번도 늘지 않았습니다(`run3-keepsize.csv` 24행 전부 224MB). 앞 회차가
 남긴 파일을 서버가 아직 재활용하지 않은 것입니다. 실제로 잰 초과분은 슬롯 지연 쪽입니다. 상한 64MB에 대해 무효화 직전 지연이
 원본 138MB(2.2배), 회차 3이 174MB(2.7배)였습니다. 상한을 남은 디스크 여유에 딱 맞춰 잡으면 안 된다는 앞의 서술이 반복 측정으로 더 단단해집니다. **관측된 최악은
@@ -183,7 +183,7 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
 
 ### 왜 답이 안 나왔는가
 
-**하트비트가 한 번도 돌지 않았습니다.** `heartbeat.action.query` 로 지정한 INSERT가
+**하트비트가 한 번도 돌지 않았습니다.** `heartbeat.action.query`로 지정한 INSERT가
 `dbz_heartbeat` 테이블에 한 행도 남기지 않았습니다. B1과 B2가 219.9MB와 219.8MB로
 같은 것은 하트비트가 켜지지 않았기 때문이고, 따라서 **이 표로 하트비트의 효과를
 말할 수 없습니다.** 왜 안 돌았는지는 6절에서 밝힙니다. 사실은 돌고 있었습니다.
@@ -211,9 +211,9 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
    `The config property debezium.sink.pravega.scope is required`
 2. **`http` 싱크는 포맷을 명시해야 합니다.**
    `The config property debezium.format.value is required`
-3. **설정 파일 경로가 `/debezium/config` 입니다.** `/debezium/conf` 에 넣으면 기동은
-   되고 설정만 안 읽혀 `Failed to load mandatory config value debezium.sink.type` 이 납니다.
-4. **앞 실험의 `max_slot_wal_keep_size=64MB` 가 남아 있었습니다.** 그 상태로 돌리면
+3. **설정 파일 경로가 `/debezium/config`입니다.** `/debezium/conf`에 넣으면 기동은
+   되고 설정만 안 읽혀 `Failed to load mandatory config value debezium.sink.type`이 납니다.
+4. **앞 실험의 `max_slot_wal_keep_size=64MB`가 남아 있었습니다.** 그 상태로 돌리면
    슬롯이 64MB에서 무효화돼 지연이 리셋되고, 조건 C의 지연이 39MB에서 0으로 줄어드는
    이상한 값이 나옵니다. 이 실험은 상한을 풀고 돌려야 합니다.
 
@@ -327,15 +327,70 @@ RDS에서 볼 수 있는 신호는 CloudWatch 지표입니다. `OldestReplicatio
 | 물리 슬롯, 스탠바이 없음 | -1 | **576.0MB** | **36배** |
 | 물리 슬롯 + 상한 64MB | 64MB | **0.0MB** | 0배 |
 
-**논리와 물리가 사실상 같습니다.** 35배와 36배입니다. 붙잡는 메커니즘이 같습니다. 슬롯이 `restart_lsn` 을 들고 있고 아무도 그것을 밀지 않으면, 그 종류가 무엇이든 WAL이 안 지워집니다.
+**논리와 물리가 사실상 같습니다.** 35배와 36배입니다. 붙잡는 메커니즘이 같습니다. 슬롯이 `restart_lsn`을 들고 있고 아무도 그것을 밀지 않으면, 그 종류가 무엇이든 WAL이 안 지워집니다.
 
 **차이는 누가 미느냐입니다.** 논리 슬롯은 CDC 컨슈머가 커밋을 확인해야 밀립니다. 물리 슬롯은 스탠바이가 적용한 위치까지 밀립니다. 둘 다 안 붙어 있으면 결과가 같습니다.
 
-**`max_slot_wal_keep_size` 는 물리 슬롯에도 걸립니다.** 상한을 64MB로 두니 WAL 디렉터리가 아예 안 커졌습니다.
+**`max_slot_wal_keep_size`는 물리 슬롯에도 걸립니다.** 상한을 64MB로 두니 WAL 디렉터리가 아예 안 커졌습니다.
 
 0.0MB는 "WAL을 안 썼다" 가 아니라 **"디렉터리가 안 커졌다"** 는 뜻입니다. 슬롯이 무효화되면서 예전 세그먼트를 재활용했습니다. 대조군의 16.0MB는 세그먼트가 하나 늘어난 몫입니다.
 
 **스탠바이 하나를 붙였다 떼는 것이 CDC 컨슈머를 죽이는 것과 같은 위험입니다.** 물리 복제가 논리보다 안전하다고 보기 쉬운데 이 축에서는 같습니다. 스탠바이를 정리할 때 슬롯도 함께 지워야 하고, 그것을 잊으면 원본의 디스크가 찹니다.
+
+## 표준 처방은 무엇인가
+
+PostgreSQL 문서가 이 위험을 Caution 박스로 따로 세워 둡니다.
+
+> "Beware that replication slots can cause the server to **retain so many WAL segments that they fill up the space allocated for `pg_wal`**. `max_slot_wal_keep_size` can be used to limit the size of WAL files retained by replication slots."
+
+**PostgreSQL 13 이전에는 상한이 아예 없었습니다.** 13 릴리스 노트에 이렇게 들어갔습니다. "Allow WAL storage for replication slots to be limited by `max_slot_wal_keep_size`. Replication slots that would require exceeding this value are **marked invalid**."
+
+기본값은 여전히 `-1`, 곧 무제한입니다.
+
+> "If `max_slot_wal_keep_size` is -1 (the default), replication slots may retain **an unlimited amount of WAL files**."
+
+### 이 설정은 문제를 없애는 게 아니라 맞바꿉니다
+
+상한을 걸면 디스크는 지키지만 슬롯이 무효화됩니다. 무효화되면 CDC 파이프라인은 보통 **초기 스냅샷을 다시 떠야 합니다.** 디스크 풀 장애를 재스냅샷 비용과 바꾸는 결정입니다.
+
+`pg_replication_slots.wal_status`로 그 경계를 봅니다.
+
+| 값 | 뜻 |
+|---|---|
+| `reserved` | 정상 |
+| `extended` | `wal_keep_size`를 넘어섰음 |
+| `unreserved` | 필요한 WAL이 다음 체크포인트에 지워질 예정. `reserved`로 돌아올 수 있음 |
+| `lost` | 슬롯을 더 쓸 수 없음 |
+
+문서의 정의입니다. "`unreserved` means that the slot no longer retains the required WAL files and some of them are to be removed at the next checkpoint. ... **This state can return to `reserved` or `extended`.**" 곧 `unreserved`는 아직 되돌릴 수 있는 자리이고 `lost`가 끝입니다. `safe_wal_size`로 남은 여유를 봅니다.
+
+### 소비자가 살아 있는데도 WAL이 쌓이는 경우
+
+이 세션은 소비자가 없는 슬롯을 다뤘습니다. **소비자가 정상인데도 쌓이는 조건**이 따로 있습니다. Debezium 문서가 정의합니다.
+
+> "The PostgreSQL instance contains multiple databases and one of them is a high-traffic database. Debezium captures changes in another database that is **low-traffic** in comparison... **replication slots work per-database and Debezium is not invoked**. As WAL is shared by all databases, the amount used tends to grow until an event is emitted by the database for which Debezium is capturing changes."
+
+**슬롯은 DB 단위인데 WAL은 인스턴스 공유입니다.** 조용한 DB를 보는 슬롯이 시끄러운 DB가 만든 WAL을 붙잡습니다.
+
+처방이 하트비트입니다. `heartbeat.interval.ms`의 **기본값은 `0`, 곧 꺼져 있습니다.**
+
+> "no offset updates are committed to Kafka and the connector does not have an opportunity to send the latest retrieved LSN to the database. The database retains WAL files that contain events that **have already been processed** by the connector."
+
+멀티 DB에서는 하트비트만으로 부족해서 `heartbeat.action.query`로 저트래픽 DB에 실제 쓰기를 만들어야 합니다. `INSERT INTO test_heartbeat_table (text) VALUES ('test_heartbeat')` 같은 문장입니다.
+
+**여기 조용한 함정이 있습니다.**
+
+> "you must add the table to the PostgreSQL publication specified by the `publication.name` property. If the publication is not already configured to automatically replicate changes `FOR ALL TABLES`... you must explicitly add the heartbeat table: `ALTER PUBLICATION <publicationName> ADD TABLE <heartbeatTableName>;`"
+
+**하트비트 테이블을 publication에 안 넣으면 하트비트가 돌면서도 아무 효과가 없습니다.** 설정은 켜져 있고 쿼리도 실행되는데 WAL은 계속 쌓입니다. 이 랩이 반복해 만난 유형입니다. 조건이 안 섰는데 성공처럼 보입니다.
+
+AWS RDS에는 조건 하나가 더 있습니다. "AWS RDS causes writes to its own system tables to be **invisible to clients** on a frequent basis (5 minutes)." 유휴 환경에서 같은 증상이 납니다.
+
+**PostgreSQL 14 이상이면 테이블 없이도 됩니다.** `SELECT pg_logical_emit_message(false, 'heartbeat', now()::varchar)`로 논리 디코딩 메시지를 직접 넣을 수 있습니다. publication에 뭘 추가할 필요가 없으니 위 함정도 안 생깁니다.
+
+### 슬롯 공유 금지
+
+> "If you permit multiple connectors to capture from a replication slot, you risk **data loss**, because a replication slot can emit each change **only once**."
 
 ## 못 한 것
 

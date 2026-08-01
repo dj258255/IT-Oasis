@@ -87,13 +87,13 @@ InnoDB의 LRU는 단순한 한 줄이 아닙니다. 리스트가 young(자주 �
 
 고칠 자리가 셋이고, 셋이 서로를 대신하지 못합니다. 이 세션이 실측한 것은 마지막 하나입니다.
 
-**프라이머리에서 돌려야 한다면 `innodb_old_blocks_time` 입니다.** 기본값 1000ms 가 이미 켜져 있고, 이 값이 하는 일은 스캔이 읽은 페이지를 LRU 의 젊은 쪽으로 못 올리게 막는 것입니다. 5절이 그 효과를 잽니다. 끄면 회복이 15.58초, 기본값이면 0.89초입니다.
+**프라이머리에서 돌려야 한다면 `innodb_old_blocks_time`입니다.** 기본값 1000ms가 이미 켜져 있고, 이 값이 하는 일은 스캔이 읽은 페이지를 LRU의 젊은 쪽으로 못 올리게 막는 것입니다. 5절이 그 효과를 잽니다. 끄면 회복이 15.58초, 기본값이면 0.89초입니다.
 
-**배치를 리드 리플리카로 보내면** 프라이머리의 버퍼 풀은 지켜집니다. 다만 스캔이 읽는 페이지 수는 그대로라 Aurora Standard 에서는 read I/O 과금이 리플리카 쪽으로 옮겨 갈 뿐입니다.
+**배치를 리드 리플리카로 보내면** 프라이머리의 버퍼 풀은 지켜집니다. 다만 스캔이 읽는 페이지 수는 그대로라 Aurora Standard에서는 read I/O 과금이 리플리카 쪽으로 옮겨 갈 뿐입니다.
 
-**스토리지 요금제를 Aurora I/O-Optimized 로 바꾸면** read 와 write I/O 과금이 사라지는 대신 컴퓨트와 스토리지 단가가 오릅니다. 오염 자체는 그대로입니다.
+**스토리지 요금제를 Aurora I/O-Optimized로 바꾸면** read와 write I/O 과금이 사라지는 대신 컴퓨트와 스토리지 단가가 오릅니다. 오염 자체는 그대로입니다.
 
-셋의 성격이 다릅니다. 리플리카는 오염을 옮기고, I/O-Optimized 는 청구서를 없애고, `innodb_old_blocks_time` 은 오염의 지속 시간을 줄입니다. **어느 것도 스캔이 읽는 페이지 수는 안 줄입니다.** 7절이 그 페이지 수를 셉니다.
+셋의 성격이 다릅니다. 리플리카는 오염을 옮기고, I/O-Optimized는 청구서를 없애고, `innodb_old_blocks_time`은 오염의 지속 시간을 줄입니다. **어느 것도 스캔이 읽는 페이지 수는 안 줄입니다.** 7절이 그 페이지 수를 셉니다.
 
 이 처방들의 근거는 7절과 8절에 이어집니다.
 
@@ -181,7 +181,7 @@ gp3의 기본값이 125MiB/s이므로 **이 부하는 그 상한의 다섯 배�
 
 ## 8. mysqldump로 바꾸면
 
-지속 스캔을 순수 집계로만 만들었습니다. 원 사례(Percona 2011)는 `mysqldump` 였고, 그것은 읽은 것을 밖으로 내보내는 I/O가 겹칩니다. 같은 창에서 배치를 `mysqldump` 로 바꿔 두 조건을 더 넣었습니다.
+지속 스캔을 순수 집계로만 만들었습니다. 원 사례(Percona 2011)는 `mysqldump` 였고, 그것은 읽은 것을 밖으로 내보내는 I/O가 겹칩니다. 같은 창에서 배치를 `mysqldump`로 바꿔 두 조건을 더 넣었습니다.
 
 | 배치 | `old_blocks_time` | 60초 반복 | 덤프 출력 | 평시 p95 | 배치 중 p95 | 히트율 최저 | 회복 |
 |---|---|---|---|---|---|---|---|
@@ -190,9 +190,9 @@ gp3의 기본값이 125MiB/s이므로 **이 부하는 그 상한의 다섯 배�
 | `mysqldump` | 0 (방어 끔) | **2회** | 4,681MiB | 2.82ms | 3.17ms | **54.1%** | 5.5초 |
 | `mysqldump` | 1000 (기본) | **2회** | 4,681MiB | 2.72ms | 3.08ms | **47.2%** | 0.6초 |
 
-**`mysqldump` 가 집계 스캔보다 버퍼 풀을 덜 오염시킵니다.** 히트율 최저점이 47~54% 인데 집계는 5~9%입니다. 출력 I/O가 겹쳐 더 나쁠 것으로 봤는데 반대입니다.
+**`mysqldump`가 집계 스캔보다 버퍼 풀을 덜 오염시킵니다.** 히트율 최저점이 47~54% 인데 집계는 5~9%입니다. 출력 I/O가 겹쳐 더 나쁠 것으로 봤는데 반대입니다.
 
-이유는 속도입니다. **60초 동안 집계는 22~25회 도는데 `mysqldump` 는 2회입니다.** 덤프는 행을 `INSERT` 문자열로 직렬화하고 4.57GiB(4,681MiB)를 밖으로 내보냅니다. 그 일이 읽기보다 오래 걸려서 **초당 훑는 페이지가 11배 적습니다.** 오염은 초당 몇 페이지를 밀어내느냐로 정해지므로 그만큼 덜 밀어냅니다.
+이유는 속도입니다. **60초 동안 집계는 22~25회 도는데 `mysqldump`는 2회입니다.** 덤프는 행을 `INSERT` 문자열로 직렬화하고 4.57GiB(4,681MiB)를 밖으로 내보냅니다. 그 일이 읽기보다 오래 걸려서 **초당 훑는 페이지가 11배 적습니다.** 오염은 초당 몇 페이지를 밀어내느냐로 정해지므로 그만큼 덜 밀어냅니다.
 
 **출력 I/O가 스캔 속도를 늦춰서 오히려 덜 아프게 만듭니다.** 겹치는 일이 하나 늘면 더 나쁠 것이라는 예상이 여기서는 안 맞습니다.
 
@@ -202,13 +202,57 @@ gp3의 기본값이 125MiB/s이므로 **이 부하는 그 상한의 다섯 배�
 
 원 사례와의 거리도 그대로입니다. Percona가 본 165배 붕괴는 `mysqldump` 조건에서도 안 옵니다. 그 실험의 회전 디스크와 이 호스트의 NVMe 차이이고, 배치를 원 사례와 같은 도구로 바꿔도 그 축은 안 움직입니다.
 
+## 표준 처방은 무엇인가
+
+MySQL은 이 상황에 대한 처방을 문서에 직접 적습니다.
+
+> "In mixed workloads where most of the activity is OLTP type with **periodic batch reporting queries which result in large scans**, setting the value of `innodb_old_blocks_time` during the batch runs can help keep the working set of the normal workload in the buffer pool."
+> "setting `innodb_old_blocks_pct` to a small value keeps the data that is **only read once** from consuming a significant portion of the buffer pool. For example, setting `innodb_old_blocks_pct=5` restricts data that is only read once to 5% of the buffer pool."
+
+**"배치가 도는 동안" 값을 설정하라는 것이 핵심입니다.** 상시 설정이 아니라 구간 설정입니다.
+
+기본값은 `innodb_old_blocks_pct=37`, `innodb_old_blocks_time=1000`입니다. 새로 읽은 페이지는 LRU 꼬리에서 3/8 지점에 들어가고, 처음 접근 후 1초 안의 재접근은 앞으로 안 옮겨집니다.
+
+### 벤더와 벤치마크가 정반대로 말합니다
+
+매뉴얼은 이 파라미터의 효과를 스스로 낮게 평가합니다.
+
+> "The effect of the `innodb_old_blocks_time` parameter is **harder to predict** than the `innodb_old_blocks_pct` parameter, is **relatively small**, and varies more with the workload."
+> "Always benchmark to verify the effectiveness before changing these settings."
+
+Percona가 2011년에 잰 값은 다릅니다. 512MB 버퍼 풀에 200MB OLTP와 4GB 덤프를 동시에 돌린 조건입니다.
+
+| 조건 | sysbench | mysqldump |
+|---|---|---|
+| 단독 | 330 req/s | 95초 |
+| 동시, `old_blocks_time=0` | **2 req/s** | 180초 |
+| 동시, `old_blocks_time=1000` | 325 req/s | 약 100초 |
+
+**165배입니다.** 매뉴얼은 "작다"고 하고 실측은 165배가 나옵니다.
+
+이 간극의 정체는 조건입니다. **Percona 조건은 버퍼 풀 512MB에 스캔 대상 4GB로 8배 대비입니다.** 스캔이 버퍼 풀보다 훨씬 클 때 방어가 값어치를 갖고, 비슷하면 안 갖습니다. 매뉴얼의 "workload에 따라 달라진다"가 그 말입니다.
+
+**이 세션이 방어의 값어치를 최저점이 아니라 회복 시간에서 찾은 것이 이 그림과 이어집니다.** 어느 조건에서 효과가 큰지를 정하는 것이 비율이 아니라 스캔과 버퍼 풀의 크기 비라면, 배수 하나로는 답이 안 나옵니다.
+
+한 가지는 확인하지 못했습니다. 현재 5.5부터 8.4까지 매뉴얼이 모두 `innodb_old_blocks_time` 기본값을 1000으로 적는데, **Percona 글은 2011년 당시 기본을 0이라고 썼습니다.** 언제 바뀌었는지는 릴리스 노트에서 찾지 못했습니다.
+
+### AWS가 이 문제에 대해 말하지 않는 것
+
+**"배치 쿼리가 버퍼 풀을 오염시키니 리드 리플리카로 분리하라"고 적은 AWS 공식 문서를 찾지 못했습니다.** Aurora 읽기 스케일링 문서는 외부 MySQL의 읽기를 Aurora 리플리카로 받는 이야기이고 버퍼 풀 오염을 언급하지 않습니다. Aurora I/O-Optimized는 I/O 지출이 전체의 25% 이상일 때 유리한 **요금제**이지 버퍼 풀 처방이 아닙니다.
+
+Aurora가 명시한 것은 오히려 반대 방향입니다.
+
+> "Don't adjust any memory-related configuration settings, such as `innodb_buffer_pool_size`. Aurora uses **a highly tuned set of default values** for memory buffers on T instances."
+
+Aurora MySQL 파라미터 그룹에서 `innodb_old_blocks_time`을 고칠 수 있는지도 공식 목록에서 확인하지 못했습니다. **관리형 환경에서는 이 세션의 처방을 그대로 적용할 수 있는지부터 확인해야 합니다.**
+
 ## 못 한 것
 
-- **8절의 `mysqldump` 조건은 각각 1회 실행입니다.** `--single-transaction` 을 붙였으므로 잠금 축은 안 봤습니다.
+- **8절의 `mysqldump` 조건은 각각 1회 실행입니다.** `--single-transaction`을 붙였으므로 잠금 축은 안 봤습니다.
 - **스토리지 상한 환경을 만들지 못했습니다.** macOS의 Docker Desktop은 컨테이너별 블록 I/O 스로틀링을 지원하지 않아 이 호스트에서는 gp3 기본값인 125MiB/s와 3,000 IOPS 같은 조건에서 미스 비용이 지연으로 돌아오는 것을 실측하지 못했습니다. 위의 16.5초는 데이터 크기를 상한으로 나눈 계산값이고 잰 값이 아닙니다. 이 세션의 결론 중 "관리형 DB에서는 아프다" 부분은 공식 문서 근거이지 실측이 아닙니다.
 - **read I/O 건수도 계산값입니다.** Aurora에서 돌려 CloudWatch의 `VolumeReadIOPs`로 대조한 적이 없습니다. 테이블 크기를 페이지 크기로 나눈 값이라, 프리페치나 스캔 도중의 버퍼 풀 적중이 실제 건수를 낮출 여지가 있습니다.
 - **총 read I/O는 추정입니다.** 7절의 284만에서 323만 페이지는 테이블 페이지 수 곱하기 스캔 횟수이고, 프리페치나 스캔 도중의 버퍼 재사용은 반영되지 않았습니다. 상한으로 읽어야 합니다.
-- **회전 디스크 조건이 없습니다.** 2011년 실험의 재현에는 느린 디스크가 필요합니다. macOS 호스트에서는 블록 장치 지연을 넣지 못했는데, Linux 호스트라면 loop 장치와 `dm-delay` 로 만들 수 있습니다. 장비가 바뀌면 되는 일입니다.
+- **회전 디스크 조건이 없습니다.** 2011년 실험의 재현에는 느린 디스크가 필요합니다. macOS 호스트에서는 블록 장치 지연을 넣지 못했는데, Linux 호스트라면 loop 장치와 `dm-delay`로 만들 수 있습니다. 장비가 바뀌면 되는 일입니다.
 
 ---
 

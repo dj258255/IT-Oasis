@@ -318,17 +318,17 @@ void addOk()   { ok.incrementAndGet(); }
 
 우아한형제들이 고른 것은 둘이고, 이 세션이 잰 세 번째 길은 안 갔습니다.
 
-**첫째, 풀을 키웠습니다.** 계산식이 "thread count : 16, simultaneous connection count : 2, pool size : 16 × (2 - 1) + (16 / 2) = 24" 입니다. 앞의 `Tn × (Cm - 1)` 은 위키 공식이고 뒤의 `+ (Tn / 2)` 는 위키에 없는 자체 확장입니다. 위키 공식의 하한은 17 입니다.
+**첫째, 풀을 키웠습니다.** 계산식이 "thread count : 16, simultaneous connection count : 2, pool size : 16 × (2 - 1) + (16 / 2) = 24" 입니다. 앞의 `Tn × (Cm - 1)`은 위키 공식이고 뒤의 `+ (Tn / 2)`는 위키에 없는 자체 확장입니다. 위키 공식의 하한은 17입니다.
 
-**둘째, 채번 옵티마이저를 바꿨습니다.** `@GeneratedValue(AUTO)` 가 MySQL 에서 `hibernate_sequence` 테이블을 쓰고 그 채번이 별도 커넥션을 요구하는 것이 원인이었으므로, `NoopOptimizer` 대신 `PooledLoThreadLocalOptimizer` 를 지정했습니다.
+**둘째, 채번 옵티마이저를 바꿨습니다.** `@GeneratedValue(AUTO)`가 MySQL에서 `hibernate_sequence` 테이블을 쓰고 그 채번이 별도 커넥션을 요구하는 것이 원인이었으므로, `NoopOptimizer` 대신 `PooledLoThreadLocalOptimizer`를 지정했습니다.
 
 ```
 Parameter(name = AvailableSettings.PREFERRED_POOLED_OPTIMIZER, value = "pooled-lotl")
 ```
 
-**이 세션이 잰 `IDENTITY` 전환은 원 사례에 없습니다.** 배치 INSERT 를 잃는 대가까지 실측했지만 당사자가 고른 길은 아닙니다.
+**이 세션이 잰 `IDENTITY` 전환은 원 사례에 없습니다.** 배치 INSERT를 잃는 대가까지 실측했지만 당사자가 고른 길은 아닙니다.
 
-그리고 **그 처방 2번이 지금은 기본에 가깝습니다.** 이 세션은 Hibernate 6 의 pooled 옵티마이저가 `allocationSize` 50 으로 채번을 50건에 한 번으로 줄이는 것을 실측했고(`next_val` 이 1, 51, 101 로 점프), 그래서 같은 코드가 전멸하지 않고 실패율 0.5% 로 간헐적으로만 걸립니다. 2020년에 손으로 켜야 했던 옵션이 그 사이 프레임워크 기본 동작 쪽으로 흡수됐습니다.
+그리고 **그 처방 2번이 지금은 기본에 가깝습니다.** 이 세션은 Hibernate 6의 pooled 옵티마이저가 `allocationSize` 50으로 채번을 50건에 한 번으로 줄이는 것을 실측했고(`next_val`이 1, 51, 101로 점프), 그래서 같은 코드가 전멸하지 않고 실패율 0.5%로 간헐적으로만 걸립니다. 2020년에 손으로 켜야 했던 옵션이 그 사이 프레임워크 기본 동작 쪽으로 흡수됐습니다.
 
 재발 방지로 적어 둔 것은 진단 절차 하나와 코딩 규칙 하나입니다. "HikariCP의 Maximum Pool Size을 1로 설정한 다음 1건씩 Query를 실행해 봅니다. 만약 정상적으로 실행되지 않고, connection timeout과 같은 에러가 발생한다면 Dead lock 발생 가능성이 있는 코드입니다." 그리고 "Nested Transaction을 사용하지 않는다."
 

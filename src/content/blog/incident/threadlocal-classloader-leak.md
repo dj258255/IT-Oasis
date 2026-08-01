@@ -254,7 +254,7 @@ JVM의 OutOfMemoryError = 0회
 
 ## 8. 터지기 전에 얼마나 느려지는가
 
-`OutOfMemoryError` 까지 가는 것은 봤지만 그 앞에서 GC가 늘어 응답이 느려지는 구간은 안 쟀습니다. 사이클마다 같은 양의 일을 시키고 그 시간이 어떻게 가는지 봤습니다. `MaxMetaspaceSize=48m` 입니다.
+`OutOfMemoryError`까지 가는 것은 봤지만 그 앞에서 GC가 늘어 응답이 느려지는 구간은 안 쟀습니다. 사이클마다 같은 양의 일을 시키고 그 시간이 어떻게 가는지 봤습니다. `MaxMetaspaceSize=48m`입니다.
 
 ### 누수 조건
 
@@ -266,7 +266,7 @@ JVM의 OutOfMemoryError = 0회
 | 6,000 | 30.9MB | 11 | 34ms | 2.1ms | 0.94배 |
 | 7,500 | **38.2MB** | 13 | 43ms | **2.1ms** | **0.92배** |
 
-7,855 사이클에서 `OutOfMemoryError: Metaspace` 로 멈췄고 살아 있는 클래스로더가 **7,855 / 7,855** 입니다. 하나도 회수가 안 됐습니다.
+7,855 사이클에서 `OutOfMemoryError: Metaspace`로 멈췄고 살아 있는 클래스로더가 **7,855 / 7,855** 입니다. 하나도 회수가 안 됐습니다.
 
 **응답 시간이 전혀 안 느려집니다.** 2.3ms에서 2.1ms이고 오히려 조금 빨라집니다. JIT 워밍업 몫입니다. Metaspace가 42배 늘어나 터지기 직전까지 이 값이 평평합니다.
 
@@ -280,17 +280,17 @@ GC는 8,000 사이클 동안 누적 13회, 43밀리초만 돌았습니다.
 | 5,500 | **6.5MB** | 10 | 51ms | 2.1ms |
 | 8,000 | 18.8MB | 13 | 64ms | 2.3ms |
 
-5,000에서 5,500 사이에 22.1MB가 6.5MB로 떨어집니다. **GC가 클래스로더를 회수한 것입니다.** 살아 있는 클래스로더가 3,484 / 8,000이고 `OutOfMemoryError` 는 안 났습니다.
+5,000에서 5,500 사이에 22.1MB가 6.5MB로 떨어집니다. **GC가 클래스로더를 회수한 것입니다.** 살아 있는 클래스로더가 3,484 / 8,000이고 `OutOfMemoryError`는 안 났습니다.
 
 ### 예상이 틀렸습니다
 
 "터지기 전에 GC 압박으로 느려지는 구간이 있다" 를 재려고 만든 실험인데 **그 구간이 없습니다.**
 
-이유는 Metaspace가 힙이 아니라 네이티브 메모리라는 데 있습니다. Metaspace가 차면 GC는 클래스 언로드를 시도합니다. 누수가 있으면 언로드할 것이 없으므로 그 시도가 바로 실패하고 `OutOfMemoryError` 로 갑니다. **힙이 찰 때처럼 회수를 되풀이하며 애플리케이션을 멈추는 패턴이 아닙니다.**
+이유는 Metaspace가 힙이 아니라 네이티브 메모리라는 데 있습니다. Metaspace가 차면 GC는 클래스 언로드를 시도합니다. 누수가 있으면 언로드할 것이 없으므로 그 시도가 바로 실패하고 `OutOfMemoryError`로 갑니다. **힙이 찰 때처럼 회수를 되풀이하며 애플리케이션을 멈추는 패턴이 아닙니다.**
 
 **전조가 없다는 것이 이 누수의 성질입니다.** 응답 시간 그래프만 보고 있으면 마지막 순간까지 정상으로 보입니다. 봐야 하는 것은 지연이 아니라 **Metaspace 사용량의 기울기**입니다. 안전 조건은 오르내리고 누수 조건은 단조 증가합니다.
 
-살아 있는 클래스로더 수도 같은 신호입니다. 7,855 / 7,855와 3,484 / 8,000이 갈리는 자리입니다. 운영에서는 `jcmd <pid> GC.class_stats` 나 `VM.classloader_stats` 로 같은 것을 봅니다.
+살아 있는 클래스로더 수도 같은 신호입니다. 7,855 / 7,855와 3,484 / 8,000이 갈리는 자리입니다. 운영에서는 `jcmd <pid> GC.class_stats` 나 `VM.classloader_stats`로 같은 것을 봅니다.
 
 ## 한계
 
@@ -308,31 +308,31 @@ MDC(SLF4J)나 Spring의 요청 스코프처럼 실무에서 자주 쓰는 다른
 
 ## 현업은 어떻게 해소했는가
 
-Tomcat 이 이 문제를 어떻게 다루기로 했는지는 Bugzilla 49159 에 설계 논쟁까지 남아 있습니다. **결론이 "메모리를 회수한다"가 아니라 "누수를 붙들고 있는 스레드를 버린다"입니다.**
+Tomcat이 이 문제를 어떻게 다루기로 했는지는 Bugzilla 49159에 설계 논쟁까지 남아 있습니다. **결론이 "메모리를 회수한다"가 아니라 "누수를 붙들고 있는 스레드를 버린다"입니다.**
 
 처음(6.0.24~6.0.26)에는 JDK 내부를 리플렉션으로 뜯어 `ThreadLocal` 참조를 직접 지웠습니다. 그런데 패치 제안자 Sylvain Laurent 본인이 그것을 접습니다.
 
 > "I also removed the clearReferencesThreadLocals property on WebApp[Class]Loader since my patch makes it useless and I think this feature is too unsafe."
 
-왜 지우기가 안 되는지는 최초 보고에 이미 있습니다. "Doing this in a thread-safe way means performing the clean-up in the thread where the ThreadLocal exists."(스레드 안전하게 하려면 그 `ThreadLocal` 이 존재하는 스레드 안에서 정리해야 한다) 매 요청마다 지워 봤더니 프레임워크들이 깨졌습니다.
+왜 지우기가 안 되는지는 최초 보고에 이미 있습니다. "Doing this in a thread-safe way means performing the clean-up in the thread where the ThreadLocal exists."(스레드 안전하게 하려면 그 `ThreadLocal`이 존재하는 스레드 안에서 정리해야 한다) 매 요청마다 지워 봤더니 프레임워크들이 깨졌습니다.
 
-**7.0.6 에서 채택된 것은 절충입니다.**
+**7.0.6에서 채택된 것은 절충입니다.**
 
 > "idle threads are stopped all at once, even core pool threads. ... active threads are stopped one by one with a delay. All in all, this avoids performance impacts under load."
 
 유휴 스레드는 리스너가 한꺼번에 정리하고 활성 스레드는 지연을 두고 하나씩 교체합니다. 교체 완료까지의 상한도 계산해 두었습니다. `N × max(threadKeepAliveTimeout, longestRequest + threadRenewalDelay)`.
 
-**그리고 Laurent 는 이것이 결정론적이지 않다고 못 박습니다.**
+**그리고 Laurent는 이것이 결정론적이지 않다고 못 박습니다.**
 
 > "This memory leak protection is not 100% deterministic since one could think of scenarios where the load decreases just after a leaking context is stopped."
 
 2019년에 이 점을 다시 물은 코멘트는 답을 못 받았습니다.
 
-4절이 소스로 확인한 것, 곧 `clearReferencesThreadLocals` 가 지우는 것이 아니라 검사하고 로그만 남긴다는 사실도 이 이력에서 나옵니다. 커밋 메시지가 그 전환을 적습니다. "Transformed the clearReferencesThreadLocals behavior of WebappClassLoader into a checkThreadLocalsForLeaks behavior". **이름은 그대로 두고 동작만 바꿨고, 문서도 여전히 "attempts to clear" 라고 적혀 있습니다.** 이 세션이 8절에서 예상과 어긋났다고 적은 자리가 정확히 그 잔재입니다.
+4절이 소스로 확인한 것, 곧 `clearReferencesThreadLocals`가 지우는 것이 아니라 검사하고 로그만 남긴다는 사실도 이 이력에서 나옵니다. 커밋 메시지가 그 전환을 적습니다. "Transformed the clearReferencesThreadLocals behavior of WebappClassLoader into a checkThreadLocalsForLeaks behavior". **이름은 그대로 두고 동작만 바꿨고, 문서도 여전히 "attempts to clear" 라고 적혀 있습니다.** 이 세션이 8절에서 예상과 어긋났다고 적은 자리가 정확히 그 잔재입니다.
 
 Tomcat 6 백포트는 거부됐습니다. "No. This enhancement is too intrusive to be backported."
 
-**Tomcat 은 끝까지 이것을 웹앱의 버그로 규정했습니다.** 컨테이너가 하는 일은 완충이지 수정이 아니고, 그마저 보장이 아니라고 개발자 본인이 적어 두었습니다.
+**Tomcat은 끝까지 이것을 웹앱의 버그로 규정했습니다.** 컨테이너가 하는 일은 완충이지 수정이 아니고, 그마저 보장이 아니라고 개발자 본인이 적어 두었습니다.
 
 ## 못 한 것
 
