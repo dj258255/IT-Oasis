@@ -171,7 +171,7 @@ PostgreSQL 공식 문서 [ALTER TABLE](https://www.postgresql.org/docs/current/s
 
 ### 배제만 하고 양성 증거가 없던 자리
 
-6절은 백필 중 조회가 느려지는 것을 관측하고 "락은 아니다"까지 배제했습니다. 그러면 "그럼 무엇이냐"가 남습니다. `EXPLAIN (ANALYZE, BUFFERS)`로 같은 조회의 버퍼 접근을 재고, `pg_stat_io`로 구간 I/O를 함께 봤습니다. 300만 행, 청크 10만 행, 3회 반복입니다.
+4절은 백필 중 조회가 느려지는 것을 관측하고 "락은 아니다"까지 배제했습니다. 그러면 "그럼 무엇이냐"가 남습니다. `EXPLAIN (ANALYZE, BUFFERS)`로 같은 조회의 버퍼 접근을 재고, `pg_stat_io`로 구간 I/O를 함께 봤습니다. 300만 행, 청크 10만 행, 3회 반복입니다.
 
 | 회차 | 기준선 | 백필 중 | 배수 | 기준선 read 블록 | 백필 중 read 블록 |
 |---|---|---|---|---|---|
@@ -183,7 +183,7 @@ PostgreSQL 공식 문서 [ALTER TABLE](https://www.postgresql.org/docs/current/s
 
 이것이 양성 증거입니다. **조회가 읽어야 할 블록 수는 그대로인데 디스크에서 가져오는 블록이 늘었다는 것은, 버퍼에 있던 것이 밀려났다는 뜻입니다.** 백필이 300만 행을 갱신하면서 그 페이지들을 버퍼에 올리고, 조회가 쓰던 페이지를 밀어냅니다. 락 대기가 아니라 버퍼 경쟁입니다.
 
-배수 자체는 1.2배에서 1.3배로 좁습니다. 백필 중 조회가 크게 느려지지는 않습니다. 6절이 관측한 것과 같은 방향이고, 이제 원인이 붙었습니다.
+배수 자체는 1.2배에서 1.3배로 좁습니다. 백필 중 조회가 크게 느려지지는 않습니다. 4절이 관측한 것과 같은 방향이고, 이제 원인이 붙었습니다.
 
 ### VACUUM은 시간을 아끼지 공간을 되찾지 않습니다
 
@@ -203,26 +203,6 @@ VACUUM 소요 = 2.51초
 ### 이 절이 다루지 않은 것
 
 **2절의 35배는 백필 구간이 아니라 DDL 구간입니다.** `ALTER`가 `ACCESS EXCLUSIVE`를 쥔 채 도는 동안의 `SELECT`가 10,936ms이고 기준선이 245~311ms인 비율입니다. 이 절이 잰 1.2~1.3배는 백필 구간이라 다른 값입니다. **35배 쪽은 여전히 5회차 한 실행 안의 비율이고 기준선 계산 방식을 맞춘 반복은 하지 않았습니다.**
-
-## 한계
-
-락 큐잉(head-of-line blocking)의 동작을 명시한 공식 문서 문장은 찾지 못했습니다. Explicit Locking 문서는 "충돌한다"까지만 말합니다. 이 세션의 설명은 실측한 `pg_locks` 대기 사슬, `pg_blocking_pids()` 결과, 서버가 찍은 `Wait queue` 로그로만 뒷받침합니다. 문서 근거가 있는 것처럼 읽히지 않게 3절에 따로 적었습니다.
-
-카탈로그 주장의 앞부분인 "컬럼 추가와 삭제 순서가 뒤집히면 배포 중 없는 컬럼을 참조한다"는 재현하지 않았습니다. 애플리케이션 배포와 스키마 변경의 순서 문제라 이 세션의 무대인 락 관리자와는 다른 층이고, 조사에서 출처도 확보하지 못했습니다.
-
-MySQL에서 같은 실험을 돌리지는 않았습니다. 다만 제목이 DDL 일반에 대한 명제라 질문이 나올 자리이므로, 벤더 문서로 확인되는 데까지는 적어 둡니다. MySQL 8.4에서 `ADD COLUMN`의 기본 알고리즘은 `INSTANT`이고, 이쪽도 PostgreSQL 11의 상수 기본값 최적화처럼 테이블을 다시 쓰지 않습니다. 그러나 빠른 것과 줄을 서지 않는 것이 다르다는 이 글의 논지는 MySQL에서도 그대로입니다. [Online DDL Performance, Concurrency, and Space Requirements](https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-performance.html) 문서는 배타 메타데이터 락이 짧게나마 필요하다고 적은 뒤 이렇게 잇습니다. "Due to the exclusive metadata lock requirements outlined above, an online DDL operation may have to wait for concurrent transactions that hold metadata locks on the table to commit or rollback." 그리고 바로 다음 문장이 이 글의 실험 4와 같은 말을 합니다. "Additionally, a pending exclusive metadata lock requested by an online DDL operation blocks subsequent transactions on the table." 대기 중인 배타 락이 뒤에 온 요청을 막는다는 것, 곧 head-of-line blocking입니다. 알고리즘이 INSTANT라서 문장이 즉시 끝나더라도 그 문장이 락을 얻기까지는 앞선 트랜잭션을 기다리고, 기다리는 동안 뒤에 온 요청이 함께 멈춥니다.
-
-기본값 쪽은 오히려 MySQL이 더 나쁩니다. PostgreSQL의 `lock_timeout` 기본값 0은 무제한이라 이름값을 못 하는데, MySQL에서 메타데이터 락 대기에 걸리는 [`lock_wait_timeout`](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout)은 기본값이 31,536,000초입니다. 문서 그대로 "The permissible values range from 1 to 31536000 (1 year). The default is 31536000"이고, 이 값이 1년입니다. 무제한이 아니라는 점만 다를 뿐 실무에서는 같은 이야기이고, 양쪽 다 마이그레이션 세션에서 값을 직접 낮춰야 합니다. 여기까지가 문서로 확인한 것입니다. MySQL에서 실제로 재 보지는 않았으므로 이 글에 MySQL 수치는 없습니다.
-
-이 세션의 트래픽은 sleep으로 짠 세션 몇 개입니다. 초당 수천 건이 들어오는 상황에서 락 큐가 얼마나 빨리 자라는지, 커넥션 풀이 먼저 마르는지는 재현하지 않았습니다. 실무에서 이 문제가 장애로 보이는 경로는 대개 "SELECT가 느려졌다"가 아니라 "커넥션 풀이 다 찼다"인데, 그 연결 고리까지는 다루지 못했습니다.
-
-수치는 2 vCPU 공유 서버의 값입니다. 디스크를 쓰는 항목(volatile ALTER, 백필, VALIDATE)은 실행마다 흔들렸고 다섯 회차의 값을 [reproduce.md](https://github.com/dj258255/incident-lab/blob/main/sessions/B43-expand-contract/reproduce.md)에 전부 적었습니다. 다만 전문 로그로 남긴 것은 마지막 회차와 2회차 발췌뿐이고, 앞선 회차의 값은 실행 화면에서 옮겨 적은 것입니다. 락 대기에서 나오는 항목은 sleep 타임라인이 결정하므로 다섯 회차가 거의 같았습니다. 비교해야 할 것은 절대 시간이 아니라 같은 실행 안에서의 배율입니다.
-
-"락 대기가 없었다"를 증명하지는 못했습니다. `log_lock_waits`는 `deadlock_timeout`(기본 1초)을 넘긴 대기만 기록하므로, 3단계 쪽에서 `orders_v2`에 대한 락 대기 기록이 하나도 없다는 사실이 말해 주는 것은 1초를 넘긴 대기가 없었다는 것까지입니다. 그보다 짧은 대기가 있었는지는 이 세션의 계측으로 알 수 없습니다. `pg_stat_activity`를 촘촘히 폴링하거나 `pg_wait_sampling` 같은 도구를 붙였어야 하는데 그러지 않았습니다.
-
-백필 중 SELECT가 흔들린 원인도 배제로만 좁혔습니다. `UPDATE`의 ROW EXCLUSIVE가 `SELECT`의 ACCESS SHARE와 충돌하지 않는다는 것과 1초를 넘긴 락 대기가 기록되지 않았다는 것까지는 말할 수 있지만, 디스크 경쟁이라는 양성 증거는 재지 않았습니다. `pg_stat_io`, `EXPLAIN (ANALYZE, BUFFERS)`, `iostat` 중 어느 것도 이 구간에서 수집하지 않았습니다.
-
-복제나 논리 복제 슬롯이 있는 환경은 다루지 않았습니다. 대기 중인 ACCESS EXCLUSIVE가 스탠바이의 쿼리와 어떻게 상호작용하는지, `max_standby_streaming_delay`가 어떻게 얽히는지는 이 세션 밖입니다.
 
 ## 8. autovacuum 이 백필 뒤 언제 도는가
 
@@ -254,7 +234,7 @@ MySQL에서 같은 실험을 돌리지는 않았습니다. 다만 제목이 DDL 
 
 ## 9. 5회 범위를 다시 잡고, 2절의 예고를 확인했습니다
 
-2절 표의 "5회 범위" 위쪽 끝은 원문이 없었습니다. `results/` 에 통째로 남긴 것은 마지막 회차 로그뿐이라 27,989.225ms 같은 값은 인용할 수 없는 상태였습니다. 같은 시나리오를 5회 다시 돌리고 회차마다 로그를 통째로 남겼습니다(`results/rerun1~5-full-run.txt`).
+5절 표의 "5회 범위" 위쪽 끝은 원문이 없었습니다. `results/` 에 통째로 남긴 것은 마지막 회차 로그뿐이라 27,989.225ms 같은 값은 인용할 수 없는 상태였습니다. 같은 시나리오를 5회 다시 돌리고 회차마다 로그를 통째로 남겼습니다(`results/rerun1~5-full-run.txt`).
 
 | 회차 | ACCESS EXCLUSIVE 보유 | 그동안 막힌 SELECT | 기준선 중앙 | 배수 |
 |---|---|---|---|---|
@@ -271,6 +251,26 @@ MySQL에서 같은 실험을 돌리지는 않았습니다. 다만 제목이 DDL 
 그런데 **배수는 35배에서 52.5배로 올라갔습니다.** 2절이 이것을 미리 적어 두었습니다. "이 기준선이 35배와 32배의 분모이니, 버퍼 풀이 테이블보다 큰 장비라면 분모가 줄어 같은 락 대기라도 배율이 더 커집니다." 이 호스트는 메모리가 넉넉해 195MB 힙이 OS 페이지 캐시에 통째로 들어갑니다. 분모가 5분의 1이 되는 동안 락 대기는 4분의 1까지만 줄어서, 비율로는 더 나빠졌습니다.
 
 **여기서 배수를 인용할 때 조건을 함께 적어야 하는 이유가 분명해집니다.** 같은 코드, 같은 행 수, 같은 DDL 인데 장비를 바꾸니 35배가 52.5배가 됩니다. 배수가 큰 쪽이 더 아픈 장비인 것도 아닙니다. 사용자가 실제로 기다리는 시간은 10.9초에서 2.6초로 줄었습니다. **"몇 배 느려지나"와 "몇 초 멈추나"는 장비를 바꾸면 반대로 움직일 수 있습니다.**
+
+## 한계
+
+락 큐잉(head-of-line blocking)의 동작을 명시한 공식 문서 문장은 찾지 못했습니다. Explicit Locking 문서는 "충돌한다"까지만 말합니다. 이 세션의 설명은 실측한 `pg_locks` 대기 사슬, `pg_blocking_pids()` 결과, 서버가 찍은 `Wait queue` 로그로만 뒷받침합니다. 문서 근거가 있는 것처럼 읽히지 않게 3절에 따로 적었습니다.
+
+카탈로그 주장의 앞부분인 "컬럼 추가와 삭제 순서가 뒤집히면 배포 중 없는 컬럼을 참조한다"는 재현하지 않았습니다. 애플리케이션 배포와 스키마 변경의 순서 문제라 이 세션의 무대인 락 관리자와는 다른 층이고, 조사에서 출처도 확보하지 못했습니다.
+
+MySQL에서 같은 실험을 돌리지는 않았습니다. 다만 제목이 DDL 일반에 대한 명제라 질문이 나올 자리이므로, 벤더 문서로 확인되는 데까지는 적어 둡니다. MySQL 8.4에서 `ADD COLUMN`의 기본 알고리즘은 `INSTANT`이고, 이쪽도 PostgreSQL 11의 상수 기본값 최적화처럼 테이블을 다시 쓰지 않습니다. 그러나 빠른 것과 줄을 서지 않는 것이 다르다는 이 글의 논지는 MySQL에서도 그대로입니다. [Online DDL Performance, Concurrency, and Space Requirements](https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-performance.html) 문서는 배타 메타데이터 락이 짧게나마 필요하다고 적은 뒤 이렇게 잇습니다. "Due to the exclusive metadata lock requirements outlined above, an online DDL operation may have to wait for concurrent transactions that hold metadata locks on the table to commit or rollback." 그리고 바로 다음 문장이 이 글의 실험 4와 같은 말을 합니다. "Additionally, a pending exclusive metadata lock requested by an online DDL operation blocks subsequent transactions on the table." 대기 중인 배타 락이 뒤에 온 요청을 막는다는 것, 곧 head-of-line blocking입니다. 알고리즘이 INSTANT라서 문장이 즉시 끝나더라도 그 문장이 락을 얻기까지는 앞선 트랜잭션을 기다리고, 기다리는 동안 뒤에 온 요청이 함께 멈춥니다.
+
+기본값 쪽은 오히려 MySQL이 더 나쁩니다. PostgreSQL의 `lock_timeout` 기본값 0은 무제한이라 이름값을 못 하는데, MySQL에서 메타데이터 락 대기에 걸리는 [`lock_wait_timeout`](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_lock_wait_timeout)은 기본값이 31,536,000초입니다. 문서 그대로 "The permissible values range from 1 to 31536000 (1 year). The default is 31536000"이고, 이 값이 1년입니다. 무제한이 아니라는 점만 다를 뿐 실무에서는 같은 이야기이고, 양쪽 다 마이그레이션 세션에서 값을 직접 낮춰야 합니다. 여기까지가 문서로 확인한 것입니다. MySQL에서 실제로 재 보지는 않았으므로 이 글에 MySQL 수치는 없습니다.
+
+이 세션의 트래픽은 sleep으로 짠 세션 몇 개입니다. 초당 수천 건이 들어오는 상황에서 락 큐가 얼마나 빨리 자라는지, 커넥션 풀이 먼저 마르는지는 재현하지 않았습니다. 실무에서 이 문제가 장애로 보이는 경로는 대개 "SELECT가 느려졌다"가 아니라 "커넥션 풀이 다 찼다"인데, 그 연결 고리까지는 다루지 못했습니다.
+
+수치는 2 vCPU 공유 서버의 값입니다. 디스크를 쓰는 항목(volatile ALTER, 백필, VALIDATE)은 실행마다 흔들렸고 다섯 회차의 값을 [reproduce.md](https://github.com/dj258255/incident-lab/blob/main/sessions/B43-expand-contract/reproduce.md)에 전부 적었습니다. 다만 전문 로그로 남긴 것은 마지막 회차와 2회차 발췌뿐이고, 앞선 회차의 값은 실행 화면에서 옮겨 적은 것입니다. 락 대기에서 나오는 항목은 sleep 타임라인이 결정하므로 다섯 회차가 거의 같았습니다. 비교해야 할 것은 절대 시간이 아니라 같은 실행 안에서의 배율입니다.
+
+"락 대기가 없었다"를 증명하지는 못했습니다. `log_lock_waits`는 `deadlock_timeout`(기본 1초)을 넘긴 대기만 기록하므로, 3단계 쪽에서 `orders_v2`에 대한 락 대기 기록이 하나도 없다는 사실이 말해 주는 것은 1초를 넘긴 대기가 없었다는 것까지입니다. 그보다 짧은 대기가 있었는지는 이 세션의 계측으로 알 수 없습니다. `pg_stat_activity`를 촘촘히 폴링하거나 `pg_wait_sampling` 같은 도구를 붙였어야 하는데 그러지 않았습니다.
+
+백필 중 SELECT가 흔들린 원인도 배제로만 좁혔습니다. `UPDATE`의 ROW EXCLUSIVE가 `SELECT`의 ACCESS SHARE와 충돌하지 않는다는 것과 1초를 넘긴 락 대기가 기록되지 않았다는 것까지는 말할 수 있지만, 디스크 경쟁이라는 양성 증거는 재지 않았습니다. `pg_stat_io`, `EXPLAIN (ANALYZE, BUFFERS)`, `iostat` 중 어느 것도 이 구간에서 수집하지 않았습니다.
+
+복제나 논리 복제 슬롯이 있는 환경은 다루지 않았습니다. 대기 중인 ACCESS EXCLUSIVE가 스탠바이의 쿼리와 어떻게 상호작용하는지, `max_standby_streaming_delay`가 어떻게 얽히는지는 이 세션 밖입니다.
 
 ## 못 한 것
 
