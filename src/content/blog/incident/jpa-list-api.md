@@ -203,7 +203,7 @@ PostgreSQL 17.5에서 같은 20만 행 테이블에 같은 인덱스 `(created_a
 
 3절의 삽입 비교는 출발선이 달랐습니다. `batchUpdate`는 200만 행이 든 `sponsor`에, `saveAll` 직접 ID는 빈 `sponsor_assigned`에 넣었습니다. **네 방식 모두 20,000행을 빈 테이블에 넣도록 맞춰 다시 쟀습니다.**
 
-쿼리 수는 `SHOW GLOBAL STATUS` 의 `Questions` 차분입니다. 시간만 보면 왕복이 줄었는지
+쿼리 수는 `SHOW GLOBAL STATUS`의 `Questions` 차분입니다. 시간만 보면 왕복이 줄었는지
 알 수 없습니다.
 
 ### `rewriteBatchedStatements=true`, `batch_size=500`
@@ -227,12 +227,12 @@ PostgreSQL 17.5에서 같은 20만 행 테이블에 같은 인덱스 `(created_a
 
 12.63초에서 0.53초입니다. 쿼리가 20,092개에서 **87개**로 줄었습니다.
 
-`@Id` 만 있고 `@GeneratedValue` 가 없으면 Spring Data의 `save()` 는 엔티티가 새것인지
-알 수 없어 `persist` 대신 `merge` 로 갑니다. `merge` 는 먼저 `SELECT` 를 던져 그 ID의 행이
-있는지 봅니다. 40,053이라는 쿼리 수가 그 증거입니다. 20,000 `SELECT` 에 20,000 `INSERT`
+`@Id`만 있고 `@GeneratedValue`가 없으면 Spring Data의 `save()`는 엔티티가 새것인지
+알 수 없어 `persist` 대신 `merge`로 갑니다. `merge`는 먼저 `SELECT`를 던져 그 ID의 행이
+있는지 봅니다. 40,053이라는 쿼리 수가 그 증거입니다. 20,000 `SELECT`에 20,000 `INSERT`
 입니다.
 
-`Persistable` 을 구현해 `isNew()` 로 새것임을 알려 주면 그 `SELECT` 가 사라지고, 그제야
+`Persistable`을 구현해 `isNew()`로 새것임을 알려 주면 그 `SELECT`가 사라지고, 그제야
 Hibernate의 배치가 묶입니다. 87개는 20,000행을 500씩 40번에 나눠 보낸 것에 커밋과
 메타데이터가 붙은 수입니다.
 
@@ -249,22 +249,22 @@ class SponsorPersistable implements Persistable<Long> {
 
 ### 드라이버 옵션을 끄면 배치 API도 소용없습니다
 
-`rewriteBatchedStatements=false` 에서 JDBC `batchUpdate` 가 **20,010 쿼리**입니다.
+`rewriteBatchedStatements=false`에서 JDBC `batchUpdate`가 **20,010 쿼리**입니다.
 배치 API를 썼는데 왕복이 행마다 하나씩 그대로 나갔습니다. 0.36초가 7.39초가 되어 **20.5배**
 입니다.
 
-`addBatch`/`executeBatch` 는 **클라이언트 쪽에서 모아 두는 것까지**이고, 그것을 하나의
-`INSERT ... VALUES (...),(...)` 로 합치는 일은 드라이버가 합니다. 그 옵션이 꺼져 있으면
+`addBatch`/`executeBatch`는 **클라이언트 쪽에서 모아 두는 것까지**이고, 그것을 하나의
+`INSERT ... VALUES (...),(...)`로 합치는 일은 드라이버가 합니다. 그 옵션이 꺼져 있으면
 드라이버가 모아 둔 것을 한 줄씩 풀어 보냅니다. **애플리케이션 코드만 보고 "배치를 쓰고
 있으니 괜찮다"고 판단하면 안 되는 이유입니다.**
 
-`Persistable` 쪽도 같은 조건에서 20,050 쿼리로 돌아갑니다. Hibernate의 `batch_size` 와
-드라이버의 `rewriteBatchedStatements` 는 **둘 다 있어야** 왕복이 줍니다.
+`Persistable` 쪽도 같은 조건에서 20,050 쿼리로 돌아갑니다. Hibernate의 `batch_size`와
+드라이버의 `rewriteBatchedStatements`는 **둘 다 있어야** 왕복이 줍니다.
 
 ### IDENTITY는 배치가 아예 안 묶입니다
 
-자동 ID 조건이 20,011 쿼리입니다. `batch_size=500` 을 줬는데도 행마다 나갔습니다.
-`GenerationType.IDENTITY` 는 INSERT를 보내고 생성된 키를 받아야 다음을 진행할 수 있으므로
+자동 ID 조건이 20,011 쿼리입니다. `batch_size=500`을 줬는데도 행마다 나갔습니다.
+`GenerationType.IDENTITY`는 INSERT를 보내고 생성된 키를 받아야 다음을 진행할 수 있으므로
 Hibernate가 배치를 비활성화합니다. **ID 전략이 배치 가능 여부를 정합니다.**
 
 ## 8. 대량 삽입을 네 번 재서
@@ -344,7 +344,7 @@ run0이 모든 조건에서 가장 느립니다. 나머지 세 회차는 서로 
 
 ## 10. 순증 id와 무작위 id
 
-9절은 200만 행이 든 표에 넣어도 같은 비용임을 확인했는데, 그때 `id` 가 순증했습니다. 순증이면 새 행이 항상 오른쪽 끝 페이지에 붙어 기존 페이지를 안 건드립니다. 무작위면 아무 페이지나 열게 됩니다. 같은 표에 `id` 만 바꿔 20,000행을 넣었습니다.
+9절은 200만 행이 든 표에 넣어도 같은 비용임을 확인했는데, 그때 `id`가 순증했습니다. 순증이면 새 행이 항상 오른쪽 끝 페이지에 붙어 기존 페이지를 안 건드립니다. 무작위면 아무 페이지나 열게 됩니다. 같은 표에 `id`만 바꿔 20,000행을 넣었습니다.
 
 | 방식 | 소요 | 넣은 행 | 크기 | 증가 | 행당 |
 |---|---|---|---|---|---|
@@ -359,9 +359,62 @@ run0이 모든 조건에서 가장 느립니다. 나머지 세 회차는 서로 
 
 행당 1,364B는 행 자체 크기보다 훨씬 큽니다. 순증 쪽이 52B 이므로 그것이 실제 행 크기에 가깝습니다. 나머지 1,312B는 반쯤 빈 채로 남은 페이지 공간입니다. **InnoDB 페이지가 16KB이고 분할은 절반씩 나누므로, 분할 한 번마다 8KB가 빈 채로 잡힙니다.**
 
-이 결과는 A17 세션(UUID 페이지 분할)이 다룬 것과 같은 메커니즘입니다. 여기서는 그것이 JPA 배치 삽입의 맥락에서 나타납니다. **`@GeneratedValue` 를 UUID로 바꾸면 이 비용이 붙습니다.**
+이 결과는 A17 세션(UUID 페이지 분할)이 다룬 것과 같은 메커니즘입니다. 여기서는 그것이 JPA 배치 삽입의 맥락에서 나타납니다. **`@GeneratedValue`를 UUID로 바꾸면 이 비용이 붙습니다.**
 
-`INSERT IGNORE` 를 썼으므로 무작위 쪽은 충돌한 9건이 빠졌습니다. 20,000 대 19,991 이라 비교에 영향은 없습니다.
+`INSERT IGNORE`를 썼으므로 무작위 쪽은 충돌한 9건이 빠졌습니다. 20,000 대 19,991 이라 비교에 영향은 없습니다.
+
+## 표준 처방은 무엇인가
+
+이 세션이 행값 비교를 풀어써서 10.3배를 얻은 것은 **MySQL 매뉴얼이 직접 적어 둔 처방**입니다.
+
+> "In such cases, rewriting the row constructor expression using an equivalent nonconstructor expression may result in **more complete index use**. For the given query, the row constructor and equivalent nonconstructor expressions are: `(c2,c3) > (1,1)` / `c2 > 1 OR ((c2 = 1) AND (c3 > 1))`"
+> "Thus, for better results, **avoid mixing row constructors with `AND`/`OR` expressions**. Use one or the other."
+
+매뉴얼의 `EXPLAIN` 예시가 이 세션이 본 것과 같습니다. 행값 비교는 `type: ref`, `key_len=4`로 선두 컬럼 하나만 타고, 풀어쓴 쪽은 `type: range`, `key_len=12`로 세 컬럼을 다 탑니다.
+
+### 언제 고쳐지는가
+
+**등호와 `IN()`은 최적화됩니다.** WL#7019가 MySQL 5.7에 들어갔고, 조건은 `IN()`만(`NOT IN` 제외), 좌변은 컬럼 참조만, 우변은 런타임 상수만입니다.
+
+**부등호는 아직입니다.** MySQL 9.7 매뉴얼의 해당 절 본문이 8.0과 글자 그대로 같고, 여전히 `key_len=4` 예시를 싣고 있습니다. 버그 #111952는 5.7.43, 8.0.34, 8.1.0, 8.4, 8.4.8에서 재현된다고 Verified 상태입니다.
+
+버그 #104128에 대한 Oracle의 답이 현재 상태를 정리합니다. **"Not a bug"로 닫으면서 tuple 비교 최적화는 등호와 `IN()`에만 적용된다고 답했고**, 개선용 내부 워크로그 WL#14731이 열려 있다고만 밝혔습니다. 그것이 반영된 버전은 공개 릴리스 노트에서 확인되지 않습니다.
+
+**그러니 이 세션이 잰 31ms는 특정 버전의 흠이 아니라 현재까지 유지되는 동작입니다.** 커서 페이지네이션을 쓴다면 조건을 손으로 풀어써야 합니다. 정렬 키가 셋이면 `a > ? OR (a = ? AND (b > ? OR (b = ? AND c > ?)))`가 되고 바인딩 개수도 그만큼 늘어납니다. 버그 신고자가 "행 생성자는 다중 컬럼 인덱스 페이지네이션을 쉽게 쓰게 해 주는 필수 기능"이라고 반론한 이유입니다.
+
+엔진마다 다릅니다. DB2 LUW 10.1 이상과 PostgreSQL 8.4 이상은 제대로 지원하고, SQL Server 2017은 행값 자체가 없으며, Oracle은 값은 맞게 계산하지만 범위 연산자를 못 씁니다. **MySQL은 값은 올바로 평가하되 인덱스 접근 술어로 못 씁니다.** 이 세션이 본 것이 그 칸입니다.
+
+### 깊은 OFFSET에 대한 경고는 한쪽에만 있습니다
+
+PostgreSQL 문서는 이렇게 적습니다.
+
+> "The rows skipped by an `OFFSET` clause **still have to be computed inside the server**; therefore a large `OFFSET` might be inefficient."
+
+**MySQL 공식 문서에는 이 경고가 없습니다.** LIMIT 최적화 절은 LIMIT이 어떻게 최적화를 돕는지만 설명하고 깊은 OFFSET의 비용은 언급하지 않습니다. 이 세션이 199,980 지점에서 28ms를 잰 것이 그 공백에 대응하는 숫자입니다.
+
+### 배치가 왜 안 묶였는지
+
+이 세션은 `hibernate.jdbc.batch_size=500`을 켜고도 INSERT가 1만 번 나간 것을 봤습니다. Hibernate 문서가 그 이유를 세 곳에서 적습니다.
+
+> "It is important to realize that using IDENTITY columns imposes a runtime behavior where **the entity row must be physically inserted prior to the identifier value being known**."
+> "Hibernate will **not be able to batch INSERT statements** for the entities using the IDENTITY generation."
+> "Hibernate **disables insert batching at the JDBC level transparently** if you use an identity identifier generator."
+
+**"transparently"가 이 함정의 전부입니다.** 경고도 로그도 없이 꺼지고, 설정이 무시됐다는 신호가 없습니다. 이 랩이 거듭 만난 유형이고, 이 세션이 서버가 받은 쿼리 수를 따로 센 것이 그것을 드러낸 방법입니다.
+
+Hibernate의 권고는 "SEQUENCE를 쓰라"인데 **MySQL에는 시퀀스가 없습니다.** 남는 선택지는 IDENTITY로 배치를 포기하거나 TABLE 생성기를 쓰는 것인데, TABLE에 대한 평가도 문서에 있습니다.
+
+> "Although the TABLE generator addresses the portability concern, in reality, **it performs poorly** because it requires emulating a database sequence using a separate transaction and row-level locks."
+
+### 컬렉션 fetch join이 조용히 메모리로 가는 조건
+
+이 세션이 안 다룬 함정이 하나 더 있습니다.
+
+> "When pagination is used in combination with a fetch join applied to a collection or many-valued association, **the limit must be applied in-memory instead of on the database**. This typically has terrible performance characteristics."
+
+`hibernate.query.fail_on_pagination_over_collection_fetch`의 **기본값이 `false`**입니다. 문서의 설명이 직설적입니다. "no exception is thrown and the possibility of terrible performance is left as a problem for the client to avoid." **예외를 안 던지고 클라이언트가 알아서 피하라고 남겨 둡니다.**
+
+Hibernate 자신도 `@BatchSize`를 최선으로 두지 않습니다. "most of the time, **a DTO projection or a JOIN FETCH is a much better alternative**." 이 세션이 집계 프로젝션으로 4ms에 쿼리 1개를 얻은 것이 그 방향입니다.
 
 ## 못 한 것
 

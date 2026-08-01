@@ -255,10 +255,10 @@ PI의 AAS도, 이 세션의 40줄짜리 샘플러도 같은 정의를 씁니다.
 "무엇이 DB를 붙잡고 있는가"까지이고, SQL 차원을 붙여야 **어느 질의가** 그러는지가
 나옵니다. Performance Insights 화면이 두 축을 나란히 두는 이유가 이것입니다.
 
-`DIGEST_TEXT` 는 파라미터를 `?` 로 지운 형태라 같은 모양의 질의가 한 줄로 묶입니다.
-`WHERE id = 1` 과 `WHERE id = 2` 가 따로 세어지면 top SQL이 성립하지 않습니다.
+`DIGEST_TEXT`는 파라미터를 `?`로 지운 형태라 같은 모양의 질의가 한 줄로 묶입니다.
+`WHERE id = 1`과 `WHERE id = 2`가 따로 세어지면 top SQL이 성립하지 않습니다.
 
-"(질의 없음)" 9샘플은 활성 세션인데 `events_statements_current` 가 비어 있던 경우입니다.
+"(질의 없음)" 9샘플은 활성 세션인데 `events_statements_current`가 비어 있던 경우입니다.
 문장이 시작되기 전이나 끝난 직후를 잡은 것으로 보이는데 확정하지 못했습니다.
 
 ### 미분류 이벤트는 이번 실행에서 0건이었습니다
@@ -273,13 +273,13 @@ PI의 AAS도, 이 세션의 40줄짜리 샘플러도 같은 정의를 씁니다.
 
 ### 대기 분해가 전부 `cpu`인 것은 이 글이 앞에서 밟은 함정이 다시 난 것입니다
 
-무효가 되는 것은 위 top SQL 표의 `대기 분해` 열입니다. 핫 로우 UPDATE 458 샘플이 전부 `cpu` 이고, 락 경합이 있는 워크로드인데 대기가 한 건도 안 잡힙니다. 처음에는 이것을 InnoDB 행 락이 `events_waits_current` 계층에 안 나타나기
+무효가 되는 것은 위 top SQL 표의 `대기 분해` 열입니다. 핫 로우 UPDATE 458 샘플이 전부 `cpu`이고, 락 경합이 있는 워크로드인데 대기가 한 건도 안 잡힙니다. 처음에는 이것을 InnoDB 행 락이 `events_waits_current` 계층에 안 나타나기
 때문이라고 적었는데, **틀렸습니다.** 원인은 2절이 이미 문서화한 함정입니다.
-`setup_consumers` 의 `%waits%` 셋이 그 실행에서 꺼져 있었습니다.
+`setup_consumers`의 `%waits%` 셋이 그 실행에서 꺼져 있었습니다.
 
-증거가 결과 파일에 그대로 있습니다. 이 표를 만든 `sampler-sql.csv` 는 190표본 전부
+증거가 결과 파일에 그대로 있습니다. 이 표를 만든 `sampler-sql.csv`는 190표본 전부
 `cpu` 567 / `io_file` 0 / `io_table` 0 / `lock` 0 인데, 이것은 2절이 "소비자가 꺼진
-상태"의 서명으로 남겨 둔 `blind-sample.csv` 와 같은 모양입니다. 반면 같은 워크로드를
+상태"의 서명으로 남겨 둔 `blind-sample.csv`와 같은 모양입니다. 반면 같은 워크로드를
 소비자를 켜고 잰 `pi-1s.csv` 에는 `io_table` 492와 `io_file` 44가 있습니다. 소비자를
 켜는 문장은 `run-experiments.sh` 에만 있고 `sampler-sql.py` 에는 없습니다.
 
@@ -299,7 +299,7 @@ PI의 AAS도, 이 세션의 40줄짜리 샘플러도 같은 정의를 씁니다.
 | `sys.innodb_lock_waits` | 21 | 28 | **1.77ms** |
 | `SHOW ENGINE INNODB STATUS`의 `LOCK WAIT` | 7 | 7 | 0.75ms |
 
-**앞의 둘은 요약 통계가 겹칩니다.** 중앙값 21, 최대 28로 같습니다. 다만 **표본 단위로 보면 40개 중 11개만 같은 값입니다.** `sys` 뷰가 `data_lock_waits` 를 포함한 여러 테이블을 조인하는데, 그 조인이 끝나는 사이에 대기 집합이 바뀝니다. 재실행에서는 이 어긋남이 더 벌어져 중앙값 자체가 28과 21로 갈렸고 표본 일치는 6/40 이었습니다(`run1-lock-alternatives.json`). **대시보드에 쓸 값이면 겹치지만, 같은 순간의 스냅숏으로 취급하면 안 됩니다.** 갈리는 것은 비용이고, **2.6배 비쌉니다.**
+**앞의 둘은 요약 통계가 겹칩니다.** 중앙값 21, 최대 28로 같습니다. 다만 **표본 단위로 보면 40개 중 11개만 같은 값입니다.** `sys` 뷰가 `data_lock_waits`를 포함한 여러 테이블을 조인하는데, 그 조인이 끝나는 사이에 대기 집합이 바뀝니다. 재실행에서는 이 어긋남이 더 벌어져 중앙값 자체가 28과 21로 갈렸고 표본 일치는 6/40 이었습니다(`run1-lock-alternatives.json`). **대시보드에 쓸 값이면 겹치지만, 같은 순간의 스냅숏으로 취급하면 안 됩니다.** 갈리는 것은 비용이고, **2.6배 비쌉니다.**
 
 **`ENGINE STATUS`는 다른 값을 줍니다.** 7입니다. 이것은 대기 쌍이 아니라 대기 중인 트랜잭션 수를 세기 때문입니다. 같은 트랜잭션이 여러 잠금을 기다려도 한 번만 잡힙니다. **셋은 같은 사실의 다른 단면이지 서로 대체재가 아닙니다.**
 
@@ -319,7 +319,7 @@ PI의 AAS도, 이 세션의 40줄짜리 샘플러도 같은 정의를 씁니다.
 
 **대기가 하나도 없어도 비용이 안 사라집니다.** 1.3~2.8ms입니다. 판별 비용은 대기 수에 안 붙습니다. 셋 다 "지금 잠금이 몇 개 걸려 있나" 를 알아내려고 구조를 훑어야 하고, 훑을 것이 없다는 사실을 확인하는 데도 그만큼 듭니다.
 
-**`ENGINE STATUS` 는 텍스트가 절반이 돼도 더 비쌉니다.** 10,344바이트에서 4,509바이트로 줄었는데 비용은 0.79ms에서 1.32ms로 늘었습니다. 파싱 비용이 텍스트 크기에 안 붙는다는 뜻입니다. 비용의 대부분은 그 텍스트를 **만드는** 쪽에 있습니다. 서버가 매번 엔진 전체 상태를 새로 조립합니다.
+**`ENGINE STATUS`는 텍스트가 절반이 돼도 더 비쌉니다.** 10,344바이트에서 4,509바이트로 줄었는데 비용은 0.79ms에서 1.32ms로 늘었습니다. 파싱 비용이 텍스트 크기에 안 붙는다는 뜻입니다. 비용의 대부분은 그 텍스트를 **만드는** 쪽에 있습니다. 서버가 매번 엔진 전체 상태를 새로 조립합니다.
 
 **세 값 다 부하가 없을 때 더 비쌉니다.** 방향이 예상과 반대입니다. 다만 이 실행에서는 부하 없는 구간이 부하 구간 바로 뒤에 붙어 돌았습니다. 워커를 멈춘 직후라 InnoDB 퍼지와 히스토리 정리가 아직 돌고 있었을 수 있습니다. **이 실행만으로는 갈라내지 못합니다.** 순서를 바꿔 재야 합니다.
 
@@ -330,6 +330,54 @@ PI의 AAS도, 이 세션의 40줄짜리 샘플러도 같은 정의를 씁니다.
 ### top SQL 분해는 안정적입니다
 
 같은 부하로 40초씩 3회 쟀습니다. 최상위 질의의 AAS가 회차별로 7.72, 7.53, 7.62입니다. 같은 질의가 세 회차 모두 1위이고 폭이 2.5%입니다. **분해 결과는 회차를 늘려도 흔들리지 않습니다.**
+
+## 표준 처방은 무엇인가
+
+이 세션은 소비자가 `NO`면 화면이 통째로 거짓말한다는 것을 봤습니다. **AWS도 이 문제를 알고 있고, 켜야 할 파라미터를 문서에 나열합니다.**
+
+| 파라미터 | 값 |
+|---|---|
+| `performance_schema` | `1` |
+| `performance-schema-consumer-events-waits-current` | `ON` |
+| `performance-schema-instrument` | `wait/%=ON` |
+| `performance_schema_consumer_global_instrumentation` | `1` |
+| `performance_schema_consumer_thread_instrumentation` | `1` |
+
+**이 세션이 손으로 찾아낸 목록과 같습니다.** 그리고 AWS는 손으로 관리하지 말라고 권합니다. "Performance Insights automatically manages your Performance Schema parameters. **This is the recommended configuration.**"
+
+### 자동 관리에도 조용한 함정이 둘 있습니다
+
+> "When Performance Insights turns on the Performance Schema, **it doesn't change the parameter group values.** However, the values are changed on the DB instances that are running. **The only way to see the changed values is to run the `SHOW GLOBAL VARIABLES` command.**"
+
+**파라미터 그룹만 보고 판단하면 틀립니다.** 그룹에는 옛 값이 그대로 있고 인스턴스에서만 바뀌어 있습니다.
+
+> "If the Performance Schema isn't currently turned on, and you **turn on Performance Insights without rebooting** the DB instance, **the Performance Schema won't be turned on.**"
+
+**PI를 켜도 재부팅을 안 하면 안 켜집니다.** 그 상태에서 대시보드는 에러 없이 빈약한 화면을 보여 줍니다. 이 세션이 겪은 것과 같은 모양입니다. 조건이 안 섰는데 결과가 나옵니다.
+
+`t4g.medium`에서는 자동 관리 자체가 지원되지 않습니다.
+
+### 샘플링이 놓치는 것에 대해
+
+**"1초보다 짧은 쿼리는 표본에 안 잡힐 수 있다"는 경고를 AWS와 Oracle 어느 문서에서도 찾지 못했습니다.** 대신 AWS FAQ에 이 문장이 있습니다.
+
+> "When performance insights detect **heavy load or depleted resources, it backs off** – still collecting data but only when it is safe to do so."
+
+**가장 보고 싶은 순간에 표본이 성겨집니다.** 문서로 확인되는 유일한 벤더 인정 사각지대입니다.
+
+AAS 계산 예시도 샘플링의 성질을 그대로 드러냅니다. 표본 다섯 개가 `2, 0, 4, 0, 4`로 튀는데 결과는 "2 AAS"로 평탄해집니다. **표본 사이에서 벌어진 일은 정의상 없는 것으로 처리됩니다.** 이 세션이 매초 샘플러를 직접 만들어 본 것의 값어치가 그 성질을 손으로 만져 본 데 있습니다.
+
+그 외 제약입니다.
+
+- PI는 DB 안에서 조회할 수 없습니다. "does not populate any tables in the database nor does it present data to be retrieved from within the database via SQL"
+- 실행 계획 캡처는 **5분 간격**이고, 쿼리 텍스트가 한도를 넘으면 아예 못 잡습니다
+- Oracle ASH도 매초 활성 세션을 샘플링합니다. 다만 널리 인용되는 "표본 열 개 중 하나만 AWR로 내려간다"는 숫자는 **Oracle 공식 문서에서 확인하지 못했습니다.** 히든 파라미터를 근거로 하는 2차 서술입니다
+
+### 관측을 켜는 것 자체가 위험한 조건
+
+> "**Don't enable the MySQL Performance Schema on Amazon Aurora MySQL T instances.** If the Performance Schema is enabled, the instance might run out of memory."
+
+`max_connections`를 올리면 Performance Schema 메모리가 함께 커져 작은 인스턴스에서 OOM이 납니다. **소형 인스턴스에서는 관측을 켜는 것이 장애 요인입니다.** 이 세션은 로컬 컨테이너라 그 조건을 안 만났습니다.
 
 ## 못 한 것
 

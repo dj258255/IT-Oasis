@@ -43,7 +43,7 @@ Clerk이 공개한 2026년 2월 19일 장애입니다. 포스트모템은 시작
 
 PostgreSQL 16.14(postgres:16-alpine) 하나로 만듭니다. 세션 디렉터리에서 `bash scripts/run.sh` 한 번이면 데이터 적재부터 계측까지 순서대로 돌고, 명령과 출력 원문은 [reproduce.md](https://github.com/dj258255/incident-lab/blob/main/sessions/A09-planner-stats-flip/reproduce.md)에 그대로 남겼습니다.
 
-데이터는 Clerk의 조건을 축소한 것입니다. `req_log`는 1,200만 행(507MB, 64,868페이지)이고 `blocked_until` 컬럼은 요청이 레이트리밋에 걸렸을 때만 값이 찹니다. non-null은 2,400행으로 NULL 비율이 99.98%입니다. non-null 행을 마지막에 넣어 디스크상 테이블 끝쪽에 몰리게 했습니다. 그 2,400행이 실제로 몇 페이지에 들어갔는지는 `Heap Blocks: exact=17` 로 나옵니다. 64,868페이지 중 17페이지입니다. 이 배치가 3절에서 다시 나옵니다. `ip_rule`은 조직별 IP 차단 규칙 200만 행이고 org_id에만 인덱스가 있습니다. 조직 100개에 조직마다 20,000행이 붙어 있고 그중 `rule_kind='burst'`는 조직마다 1행뿐입니다. `rule_kind`가 인덱스에 없다는 이 조건도 뒤에서 배수의 크기를 정하는 자리에 다시 나옵니다.
+데이터는 Clerk의 조건을 축소한 것입니다. `req_log`는 1,200만 행(507MB, 64,868페이지)이고 `blocked_until` 컬럼은 요청이 레이트리밋에 걸렸을 때만 값이 찹니다. non-null은 2,400행으로 NULL 비율이 99.98%입니다. non-null 행을 마지막에 넣어 디스크상 테이블 끝쪽에 몰리게 했습니다. 그 2,400행이 실제로 몇 페이지에 들어갔는지는 `Heap Blocks: exact=17`로 나옵니다. 64,868페이지 중 17페이지입니다. 이 배치가 3절에서 다시 나옵니다. `ip_rule`은 조직별 IP 차단 규칙 200만 행이고 org_id에만 인덱스가 있습니다. 조직 100개에 조직마다 20,000행이 붙어 있고 그중 `rule_kind='burst'`는 조직마다 1행뿐입니다. `rule_kind`가 인덱스에 없다는 이 조건도 뒤에서 배수의 크기를 정하는 자리에 다시 나옵니다.
 
 측정 조건은 이렇습니다. 호스트는 Rocky Linux 9(aarch64, 2코어)이고 컨테이너에 `cpus: 2`, `mem_limit: 3g`를 걸었습니다. Postgres는 `shared_buffers=512MB`, `work_mem=32MB`입니다. 2코어 공유 서버라 병렬 플랜과 JIT가 시간 비교를 흔들어서 `max_parallel_workers_per_gather=0`, `jit=off`로 고정했고, 통계 갱신 시점을 스크립트가 쥐도록 `autovacuum=off`로 두었습니다. 이 두 설정은 공짜가 아닙니다. 병렬을 끄면 해소 후 값이 실제보다 나쁘게 잡힐 수 있고, autovacuum을 끄면 사건의 방아쇠였던 자동 analyze 자체가 재현 대상에서 빠집니다. 둘 다 한계 절에 적었습니다.
 
@@ -264,7 +264,7 @@ non-null이 들어 있는 블록 = 17개
 
 ## 8. target이 플래너 시간을 얼마나 늘리는가
 
-7절은 "컬럼을 고르는 것으로 아끼는 것은 스캔이 아니라 통계의 양과 그것을 읽는 플래너의 시간" 이라고 적었습니다. 플래너 시간은 안 쟀습니다. `EXPLAIN` 의 `Planning Time` 을 target 다섯 값에서 9회씩 재고 중앙값을 잡았습니다.
+7절은 "컬럼을 고르는 것으로 아끼는 것은 스캔이 아니라 통계의 양과 그것을 읽는 플래너의 시간" 이라고 적었습니다. 플래너 시간은 안 쟀습니다. `EXPLAIN`의 `Planning Time`을 target 다섯 값에서 9회씩 재고 중앙값을 잡았습니다.
 
 | target | Planning Time 중앙 | 최소 | 최대 | 저장된 값 | `pg_statistic` |
 |---|---|---|---|---|---|
@@ -304,17 +304,17 @@ ANALYZE의 표본 추출은 시드를 고정할 수 없어서, 이 세션의 "�
 
 ## 현업은 어떻게 해소했는가
 
-Clerk 의 포스트모템에서 가장 눈에 띄는 것은 **장애를 멈춘 것이 `ANALYZE` 재실행 한 줄이고, 그 앞의 70분을 엉뚱한 곳에 썼다**는 점입니다.
+Clerk의 포스트모템에서 가장 눈에 띄는 것은 **장애를 멈춘 것이 `ANALYZE` 재실행 한 줄이고, 그 앞의 70분을 엉뚱한 곳에 썼다**는 점입니다.
 
 타임라인이 이렇습니다(UTC). 16:15 인시던트 접수, 16:32 비정상 트래픽 급증 고객 식별, 16:35 수동 트래픽 차단, 16:50 그 고객의 "overly aggressive retry mechanism" 확인, 17:08 세션 토큰 생성을 코어 API 밖으로 빼는 페일오버 활성화. 여기까지가 원인을 트래픽으로 오인하고 한 일입니다.
 
-17:25 에 진짜 원인을 확인합니다. "an automatic `ANALYZE` that resulted in an inefficient query plan flip". **17:27 에 `ANALYZE` 를 수동으로 다시 돌리자 플랜이 돌아왔습니다.** 2분입니다.
+17:25에 진짜 원인을 확인합니다. "an automatic `ANALYZE` that resulted in an inefficient query plan flip". **17:27에 `ANALYZE`를 수동으로 다시 돌리자 플랜이 돌아왔습니다.** 2분입니다.
 
-근본 해소는 둘입니다. "Immediately following the incident, we increased the statistics target on the relevant table so the query planner can track a larger, more accurate sample."(장애 직후 해당 테이블의 statistics target 을 올렸다) 그리고 "Later that evening, we refactored the query so the planner could take a deterministic approach in query planning."(그날 저녁 플래너가 결정론적으로 계획하도록 쿼리를 리팩터링했다)
+근본 해소는 둘입니다. "Immediately following the incident, we increased the statistics target on the relevant table so the query planner can track a larger, more accurate sample."(장애 직후 해당 테이블의 statistics target을 올렸다) 그리고 "Later that evening, we refactored the query so the planner could take a deterministic approach in query planning."(그날 저녁 플래너가 결정론적으로 계획하도록 쿼리를 리팩터링했다)
 
-**뒤엣것이 이 세션이 "재보지 않았다"고 적어 둔 자리입니다.** 이 세션은 target 을 1에서 1000으로 올리고 `ANALYZE` 비용까지 쟀지만, 인덱스 모양을 바꿔 플랜을 결정론적으로 만드는 쪽은 버퍼 배분으로 추론만 했습니다.
+**뒤엣것이 이 세션이 "재보지 않았다"고 적어 둔 자리입니다.** 이 세션은 target을 1에서 1000으로 올리고 `ANALYZE` 비용까지 쟀지만, 인덱스 모양을 바꿔 플랜을 결정론적으로 만드는 쪽은 버퍼 배분으로 추론만 했습니다.
 
-재발 방지 1순위가 통계 조정이 아닙니다. "We are adding dedicated alerting for database query plan flips. This class of issue can cause sudden, severe degradation, and we need to detect it immediately rather than relying on downstream symptoms."(플랜 전환 전용 알림을 넣는다. 하위 증상에 기대지 말고 즉시 탐지해야 한다) 이 세션이 "오판을 막지는 못하지만 배포가 없는 시각에 플랜이 바뀌었다는 사실을 사람이 알아채게 해 준다"고 적은 것과 같은 방향입니다.
+재발 방지 1순위가 통계 조정이 아닙니다. "We are adding dedicated alerting for database query plan flips. This class of issue can cause sudden, severe degradation, and we need to detect it immediately rather than relying on downstream symptoms."(플랜 전환 전용 알림을 넣는다. 하위 증상에 기대지 말고 즉시 탐지해야 한다)이 세션이 "오판을 막지는 못하지만 배포가 없는 시각에 플랜이 바뀌었다는 사실을 사람이 알아채게 해 준다"고 적은 것과 같은 방향입니다.
 
 그 밖에 전 쿼리 감사, 페일오버 자동 트리거 계측, 인시던트 커뮤니케이션 공식화가 들어갔습니다.
 

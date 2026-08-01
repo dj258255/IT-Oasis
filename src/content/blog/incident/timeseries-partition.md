@@ -209,18 +209,18 @@ Aurora는 구조가 달라 결과가 반대쪽으로 움직입니다. 스토리�
 ### 프루닝이 듣는 질의는 파티션 수와 무관합니다
 
 0.95ms부터 1.06ms까지, 파티션이 없을 때와 365개일 때가 사실상 같습니다.
-`created_at` 에 인덱스가 있으면 파티션이 없어도 그 하루를 바로 찾아갑니다.
+`created_at`에 인덱스가 있으면 파티션이 없어도 그 하루를 바로 찾아갑니다.
 **"파티션이 조회를 빠르게 한다"는 통념이 이 조건에서는 성립하지 않습니다.**
 
 ### 파티션 키가 없는 조회는 파티션 수에 비례해 나빠집니다
 
-단건 조회가 0.11ms에서 1.23ms로 **11.2배**입니다. `EXPLAIN` 의 `partitions` 컬럼이
+단건 조회가 0.11ms에서 1.23ms로 **11.2배**입니다. `EXPLAIN`의 `partitions` 컬럼이
 365개를 그대로 찍습니다. 파티션 키(`created_at`)가 조건에 없으므로 어느 파티션에 있는지
 모르고 전부 뒤져야 합니다.
 
-PK를 `(id, created_at)` 로 둔 것이 그 원인입니다. MySQL은 파티션 키가 모든 유니크 키에
+PK를 `(id, created_at)`로 둔 것이 그 원인입니다. MySQL은 파티션 키가 모든 유니크 키에
 포함되기를 요구하므로, 일 단위 RANGE 파티션을 쓰면 PK에 날짜가 끌려 들어옵니다.
-**그 순간 `WHERE id = ?` 는 파티션 프루닝을 못 받습니다.**
+**그 순간 `WHERE id = ?`는 파티션 프루닝을 못 받습니다.**
 
 ### 적재도 느려집니다
 
@@ -230,7 +230,7 @@ PK를 `(id, created_at)` 로 둔 것이 그 원인입니다. MySQL은 파티션 
 
 | | 파티션이 주는 것 | 파티션이 가져가는 것 |
 |---|---|---|
-| 삭제 | `DROP PARTITION` 이 사실상 0 (4절) | |
+| 삭제 | `DROP PARTITION`이 사실상 0 (4절) | |
 | 날짜 범위 조회 | 없음. 인덱스로 이미 충분 | |
 | 단건 조회 | | 파티션 수에 비례. 365개에서 11.2배 |
 | 적재 | | 2.7배 |
@@ -357,24 +357,75 @@ InnoDB는 `OPTIMIZE TABLE`을 그대로 지원하지 않고 `ALTER TABLE ... FOR
 | 100만 행 삭제 후 | **495MB** | **4MB** | 1,000,000 |
 | `OPTIMIZE TABLE` 후 | **252MB** | 3MB | 1,000,000 |
 
-`OPTIMIZE TABLE` 소요는 3,050ms이고, 그동안 들어온 일반 SELECT는 60ms입니다. 빈 표의 205ms와 나란히 놓고 싶어지는데, **그렇게 읽으면 안 됩니다.** 두 값은 표가 다릅니다. 205ms는 파티션 표 `watch_log_part` 를 비운 상태에서 잰 것이고 3,050ms는 비파티션 표 `opt_bench` 에 100만 행을 넣고 잰 것이라, 표·파티션 유무·행 수가 함께 바뀌었습니다. 게다가 8절이 바로 앞에서 그 205ms를 인용하지 말라고 적었습니다. **여기서 말할 수 있는 것은 배수가 아니라 절대값입니다.** 100만 행 표의 `OPTIMIZE TABLE` 은 3,050ms가 걸렸고 그동안 일반 SELECT가 60ms 밀렸습니다.
+`OPTIMIZE TABLE` 소요는 3,050ms이고, 그동안 들어온 일반 SELECT는 60ms입니다. 빈 표의 205ms와 나란히 놓고 싶어지는데, **그렇게 읽으면 안 됩니다.** 두 값은 표가 다릅니다. 205ms는 파티션 표 `watch_log_part`를 비운 상태에서 잰 것이고 3,050ms는 비파티션 표 `opt_bench`에 100만 행을 넣고 잰 것이라, 표·파티션 유무·행 수가 함께 바뀌었습니다. 게다가 8절이 바로 앞에서 그 205ms를 인용하지 말라고 적었습니다. **여기서 말할 수 있는 것은 배수가 아니라 절대값입니다.** 100만 행 표의 `OPTIMIZE TABLE`은 3,050ms가 걸렸고 그동안 일반 SELECT가 60ms 밀렸습니다.
 
-**절반을 지웠는데 DATA_FREE가 안 움직입니다.** 4MB 그대로입니다. 그런데 `OPTIMIZE TABLE` 은 243MB를 실제로 회수했습니다. **DATA_FREE가 60배 이상 과소 보고합니다.**
+**절반을 지웠는데 DATA_FREE가 안 움직입니다.** 4MB 그대로입니다. 그런데 `OPTIMIZE TABLE`은 243MB를 실제로 회수했습니다. **DATA_FREE가 60배 이상 과소 보고합니다.**
 
-이유는 InnoDB가 삭제한 행의 자리를 어디에 두는지에 있습니다. `DATA_FREE` 는 테이블스페이스의 **빈 익스텐트**를 셉니다. 절반씩 비워진 페이지들은 여전히 B트리에 매달려 있어 빈 익스텐트가 아닙니다. 재구축해야 그 페이지들이 합쳐지면서 익스텐트가 풀립니다.
+이유는 InnoDB가 삭제한 행의 자리를 어디에 두는지에 있습니다. `DATA_FREE`는 테이블스페이스의 **빈 익스텐트**를 셉니다. 절반씩 비워진 페이지들은 여전히 B트리에 매달려 있어 빈 익스텐트가 아닙니다. 재구축해야 그 페이지들이 합쳐지면서 익스텐트가 풀립니다.
 
-**`DATA_FREE` 를 보고 회수할 공간이 있는지 판단하면 안 됩니다.** 이 표는 `DATA_FREE` 4MB를 보여 주면서 실제로는 243MB를 들고 있었습니다. 디스크가 급할 때 이 값만 보면 "회수할 게 없다" 는 결론이 나옵니다.
+**`DATA_FREE`를 보고 회수할 공간이 있는지 판단하면 안 됩니다.** 이 표는 `DATA_FREE` 4MB를 보여 주면서 실제로는 243MB를 들고 있었습니다. 디스크가 급할 때 이 값만 보면 "회수할 게 없다" 는 결론이 나옵니다.
 
-`OPTIMIZE TABLE` 이 도는 3초 동안 일반 SELECT는 60ms로 지나갑니다. InnoDB는 이것을 `ALTER TABLE ... FORCE` 로 바꿔 실행하므로 온라인 DDL이 적용됩니다. 응답에도 그렇게 적혀 있습니다.
+`OPTIMIZE TABLE`이 도는 3초 동안 일반 SELECT는 60ms로 지나갑니다. InnoDB는 이것을 `ALTER TABLE ... FORCE`로 바꿔 실행하므로 온라인 DDL이 적용됩니다. 응답에도 그렇게 적혀 있습니다.
 
 ```
 | spoon.opt_bench | optimize | note   | Table does not support optimize, doing recreate + analyze instead |
 | spoon.opt_bench | optimize | status | OK                                                                |
 ```
 
+## 표준 처방은 무엇인가
+
+**PostgreSQL은 이 비교를 문서에 직접 적습니다.**
+
+> "Dropping an individual partition using `DROP TABLE`, or doing `ALTER TABLE DETACH PARTITION`, is **far faster** than a bulk operation. These commands also **entirely avoid the VACUUM overhead** caused by a bulk DELETE."
+
+**MySQL 공식 문서에는 이런 문장이 없습니다.** 26.3.1이 말하는 것은 보고 방식 차이뿐입니다. "The number of rows dropped from the table as a result of `ALTER TABLE ... DROP PARTITION` is **not reported** by the server as it would be by the equivalent DELETE query." 26.1도 "쉽게 제거할 수 있다"까지입니다.
+
+**속도 비교를 명시한 것은 PostgreSQL 쪽뿐입니다.** 이 세션이 MySQL에서 잰 20.5초 대 0.12초와 히스토리 리스트 29,971 대 203이 그 공백에 대응하는 숫자입니다. PostgreSQL 문서가 말하는 "VACUUM overhead"에 해당하는 것이 InnoDB에서는 언두와 퍼지이고, 이 세션의 히스토리 리스트 차이가 그것을 직접 보여 줍니다.
+
+### 이 세션이 잰 MDL 대기에는 PostgreSQL 쪽 답이 있습니다
+
+이 세션은 열린 트랜잭션 하나 때문에 0.12초짜리 DDL이 23.7초를 기다리고 뒤에 선 SELECT가 20.7초 멈춘 것을 쟀습니다. **PostgreSQL 14에 이 문제를 겨냥한 문법이 들어왔습니다.**
+
+> "The first form of the command requires an **ACCESS EXCLUSIVE** lock on the parent table. Adding the `CONCURRENTLY` qualifier as in the second form allows the detach operation to require only **SHARE UPDATE EXCLUSIVE** lock on the parent table."
+
+릴리스 노트: "Allow partitions to be detached in a **non-blocking** manner. The syntax is `ALTER TABLE ... DETACH PARTITION ... CONCURRENTLY`, and `FINALIZE`."
+
+**MySQL에는 대응하는 것이 없습니다.** `DROP PARTITION`은 여전히 배타 MDL을 요구합니다. 그러니 이 세션의 결론인 "짧은 DDL이라도 락 큐 위험은 남는다"는 MySQL에서 회피 수단이 없다는 뜻이고, PostgreSQL로 옮기면 14부터는 회피 수단이 생깁니다.
+
+### 파티션을 늘리는 것에도 상한이 있습니다
+
+이 세션은 일 단위 14개를 만들었습니다. **보존 기한이 길면 이 숫자가 커지고, 그 자체가 비용입니다.**
+
+PostgreSQL 문서의 경고입니다.
+
+> "The query planner is generally able to handle partition hierarchies with **up to a few thousand** partitions fairly well, **provided that typical queries allow the query planner to prune all but a small number**."
+> "each partition requires its metadata to be **loaded into the local memory of each session** that touches it."
+
+**세션마다 메타데이터가 로드된다는 것이 핵심입니다.** 커넥션이 많고 각자 많은 파티션을 건드리면 서버 메모리가 시간이 지나며 늘어납니다.
+
+MySQL 쪽 경고도 같은 방향입니다. "using large numbers (hundreds) of partitions may also not be advisable... **using more partitions does not automatically lead to better results**." 그리고 파일 핸들이 모자라면 `open_files_limit`을 올리라고 안내합니다. 최대 파티션 수는 서브파티션 포함 8192입니다.
+
+TimescaleDB도 같습니다. "Having too many chunks in the system has costs: **the planner must evaluate each chunk** to decide whether to include or skip it."
+
+**이 세션의 프루닝 절이 이 경고와 이어집니다.** 프루닝이 되면 파티션이 많아도 괜찮고, 안 되면 파티션 수가 그대로 비용이 됩니다.
+
+### 자동화 도구의 기본값
+
+`pg_partman`의 보존 기본 동작이 안전 쪽입니다.
+
+> `retention_keep_table`: "Default is **TRUE** to keep the table and only uninherit it. Set to FALSE to have the child tables removed from the database completely."
+
+**기본값은 분리만 하고 테이블은 남깁니다.** 실수로 지우는 것을 막는 설계입니다. 대신 켜 두는 것을 잊으면 디스크가 안 줄어드는데, 이 세션이 `DELETE`에서 본 것과 같은 결과입니다. **분리했는데 공간이 안 돌아옵니다.**
+
+TimescaleDB는 `SELECT add_retention_policy('conditions', INTERVAL '24 hours');` 한 줄이고, 근거를 이렇게 적습니다. "Retention policies drop entire chunks once their time range falls outside your window, which is **cheaper than deleting millions of rows one by one**."
+
+한계도 명시합니다. "A data retention policy **only** allows you to drop chunks based on how far they are in the past." **시간 축 말고 다른 기준으로는 못 지웁니다.**
+
+청크 크기 규칙도 참고할 만합니다. "Set `chunk_interval` so that the indexes of chunks currently being ingested into **fit within 25% of main memory** (`shared_buffers`)." 기본값은 7일이고, 하이퍼테이블이 여럿이면 각각 25%가 아니라 **합이 25%** 안에 들어가야 합니다.
+
 ## 못 한 것
 
-- **9절의 `OPTIMIZE TABLE` 은 규모 하나에서 1회 실행입니다.** 200만 행 하나이고 회수 시간이 행 수에 어떻게 붙는지 곡선은 안 그렸습니다.
+- **9절의 `OPTIMIZE TABLE`은 규모 하나에서 1회 실행입니다.** 200만 행 하나이고 회수 시간이 행 수에 어떻게 붙는지 곡선은 안 그렸습니다.
 - **퍼지 지연을 재현하지 못했습니다.** 공식 문서가 경고하는 "퍼지가 뒤처져 테이블이 커지는" 상태를 만들려면 지속 고부하와 장기 트랜잭션 조합이 더 필요합니다. 이 세션의 규모(700만 행, NVMe)에서는 도달하지 못했습니다.
 - **DROP 후 지연 상승 구간의 원인을 특정하지 못했습니다.** 관측은 있는데 계측 근거가 없어 추정으로만 남겼습니다.
 - **창을 맞춘 재측정은 1회입니다.** 6절 앞의 표에 반복 측정이 없습니다.

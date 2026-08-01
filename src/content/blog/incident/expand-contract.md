@@ -116,7 +116,7 @@ PostgreSQL 공식 문서 [ALTER TABLE](https://www.postgresql.org/docs/current/s
 
 같은 300만 행에서 잰 값입니다. 비교하는 축은 전체 소요 시간이 아니라 최대 락 보유 시간과 그동안 SELECT가 막힌 시간입니다. 다섯 번째 회차의 값이고, 회차마다 흔들린 항목은 칸 안에 다섯 회차의 관측 범위를 같이 적었습니다.
 
-**범위의 위쪽 끝은 원문이 없습니다.** `results/` 에 통째로 남긴 것이 마지막 회차 로그(`full-run.txt`)뿐이라, 표의 왼쪽 값(11,316.601 ms 등)은 그 파일에서 확인되지만 오른쪽 끝(27,989.225 ms 등)은 앞 네 회차의 콘솔 출력이고 그것을 저장하지 않았습니다. **그래서 인용할 수 있는 값은 왼쪽입니다.** 9절에서 같은 시나리오를 5회 다시 돌려 회차마다 로그를 통째로 남겼고, 거기서는 폭이 2.3%로 좁습니다.
+**범위의 위쪽 끝은 원문이 없습니다.** `results/`에 통째로 남긴 것이 마지막 회차 로그(`full-run.txt`)뿐이라, 표의 왼쪽 값(11,316.601 ms 등)은 그 파일에서 확인되지만 오른쪽 끝(27,989.225 ms 등)은 앞 네 회차의 콘솔 출력이고 그것을 저장하지 않았습니다. **그래서 인용할 수 있는 값은 왼쪽입니다.** 9절에서 같은 시나리오를 5회 다시 돌려 회차마다 로그를 통째로 남겼고, 거기서는 폭이 2.3%로 좁습니다.
 
 | 축 | 한 방 volatile ALTER | 3단계 expand-contract |
 |---|---|---|
@@ -206,7 +206,7 @@ VACUUM 소요 = 2.51초
 
 ## 8. autovacuum이 백필 뒤 언제 도는가
 
-본문 6절에 백필 직후 `ADD CONSTRAINT ... NOT VALID` 가 락 대기로 1초를 잃은 장면을 적었습니다. 그 autovacuum이 백필 종료 후 언제 붙는지는 안 쟀습니다. 그 값이 있어야 "백필 뒤 몇 초를 비우고 DDL을 걸어야 하는가" 에 답할 수 있습니다.
+본문 6절에 백필 직후 `ADD CONSTRAINT ... NOT VALID`가 락 대기로 1초를 잃은 장면을 적었습니다. 그 autovacuum이 백필 종료 후 언제 붙는지는 안 쟀습니다. 그 값이 있어야 "백필 뒤 몇 초를 비우고 DDL을 걸어야 하는가" 에 답할 수 있습니다.
 
 설정은 기본값 그대로입니다. `autovacuum_naptime` 1분, `autovacuum_vacuum_scale_factor` 0.2, `autovacuum_vacuum_threshold` 50입니다.
 
@@ -218,7 +218,7 @@ VACUUM 소요 = 2.51초
 | autovacuum이 붙은 시각 | **+60.1초** |
 | autovacuum이 끝난 시각 | **+124.4초** |
 
-**문턱을 5배로 넘겨도 60초를 기다립니다.** 죽은 튜플이 300만이고 문턱이 60만인데, autovacuum은 백필이 끝나고 60.1초 뒤에야 붙습니다. `autovacuum_naptime` 이 기본 60초이기 때문입니다. **런처는 그 주기로만 깨어나므로 문턱을 아무리 크게 넘겨도 그 주기 안에서는 안 옵니다.**
+**문턱을 5배로 넘겨도 60초를 기다립니다.** 죽은 튜플이 300만이고 문턱이 60만인데, autovacuum은 백필이 끝나고 60.1초 뒤에야 붙습니다. `autovacuum_naptime`이 기본 60초이기 때문입니다. **런처는 그 주기로만 깨어나므로 문턱을 아무리 크게 넘겨도 그 주기 안에서는 안 옵니다.**
 
 그리고 한 번 붙으면 64.3초 동안 돕니다(60.1 → 124.4).
 
@@ -230,11 +230,11 @@ VACUUM 소요 = 2.51초
 
 **"백필 뒤 잠깐 쉬었다가 DDL을 건다" 는 관행이 이 조건에서는 거꾸로입니다.** 쉬는 동안 autovacuum이 붙습니다. 백필이 끝나자마자 거는 쪽이 낫고, 놓쳤으면 autovacuum이 끝날 때까지 기다리는 쪽이 낫습니다.
 
-다만 이 값은 표 크기에 따라 달라집니다. 300만 행에 64.3초이므로 더 큰 표에서는 그만큼 길어집니다. **`autovacuum_naptime` 은 고정이고 vacuum 시간은 표에 비례하므로, 안전한 창의 위치는 고정이고 길이는 표마다 다릅니다.**
+다만 이 값은 표 크기에 따라 달라집니다. 300만 행에 64.3초이므로 더 큰 표에서는 그만큼 길어집니다. **`autovacuum_naptime`은 고정이고 vacuum 시간은 표에 비례하므로, 안전한 창의 위치는 고정이고 길이는 표마다 다릅니다.**
 
 ## 9. 5회 범위를 다시 잡고, 2절의 예고를 확인했습니다
 
-5절 표의 "5회 범위" 위쪽 끝은 원문이 없었습니다. `results/` 에 통째로 남긴 것은 마지막 회차 로그뿐이라 27,989.225ms 같은 값은 인용할 수 없는 상태였습니다. 같은 시나리오를 5회 다시 돌리고 회차마다 로그를 통째로 남겼습니다(`results/rerun1~5-full-run.txt`).
+5절 표의 "5회 범위" 위쪽 끝은 원문이 없었습니다. `results/`에 통째로 남긴 것은 마지막 회차 로그뿐이라 27,989.225ms 같은 값은 인용할 수 없는 상태였습니다. 같은 시나리오를 5회 다시 돌리고 회차마다 로그를 통째로 남겼습니다(`results/rerun1~5-full-run.txt`).
 
 | 회차 | ACCESS EXCLUSIVE 보유 | 그동안 막힌 SELECT | 기준선 중앙 | 배수 |
 |---|---|---|---|---|
@@ -271,6 +271,70 @@ MySQL에서 같은 실험을 돌리지는 않았습니다. 다만 제목이 DDL 
 백필 중 SELECT가 흔들린 원인도 배제로만 좁혔습니다. `UPDATE`의 ROW EXCLUSIVE가 `SELECT`의 ACCESS SHARE와 충돌하지 않는다는 것과 1초를 넘긴 락 대기가 기록되지 않았다는 것까지는 말할 수 있지만, 디스크 경쟁이라는 양성 증거는 재지 않았습니다. `pg_stat_io`, `EXPLAIN (ANALYZE, BUFFERS)`, `iostat` 중 어느 것도 이 구간에서 수집하지 않았습니다.
 
 복제나 논리 복제 슬롯이 있는 환경은 다루지 않았습니다. 대기 중인 ACCESS EXCLUSIVE가 스탠바이의 쿼리와 어떻게 상호작용하는지, `max_standby_streaming_delay`가 어떻게 얽히는지는 이 세션 밖입니다.
+
+## 표준 처방은 무엇인가
+
+PostgreSQL은 이 절차의 각 단계를 문서로 뒷받침합니다. 다만 **버전에 따라 무엇이 싸지는지가 갈립니다.**
+
+**PostgreSQL 11부터** 컬럼 추가가 재작성을 안 합니다.
+
+> "When a column is added with `ADD COLUMN` and **a non-volatile DEFAULT** is specified, the default value is evaluated at the time of the statement and the result stored in the table's metadata... **making the `ALTER TABLE` very fast even on large tables**."
+
+**"non-volatile"이 조건입니다.** 릴리스 노트는 "This is enabled when the default value is **a constant**"로 더 좁게 적습니다. `gen_random_uuid()` 같은 휘발성 기본값은 여전히 전체 재작성입니다. 재작성은 "temporarily require **as much as double the disk space**"를 물립니다.
+
+**PostgreSQL 12부터** `SET NOT NULL`이 스캔을 건너뜁니다. 그래서 `CHECK (col IS NOT NULL) NOT VALID` → `VALIDATE CONSTRAINT` → `SET NOT NULL` 3단계가 전체 스캔 없이 성립합니다. `VALIDATE`가 싼 이유도 문서에 있습니다.
+
+> "the validation step does not need to lock out concurrent updates ... Hence, validation acquires only a **SHARE UPDATE EXCLUSIVE** lock on the table being altered."
+
+### 락 큐가 왜 무서운지
+
+> "Conflicts with locks of **all modes**. This mode guarantees that the holder is the only transaction accessing the table in any way."
+> "**Only an ACCESS EXCLUSIVE lock blocks a SELECT** (without FOR UPDATE/SHARE) statement."
+
+Braintree가 이 결과를 한 문장으로 씁니다. "Attempting to acquire this lock causes **all subsequent queries on this table to queue** until the lock is released."
+
+**MySQL의 MDL 큐와 같은 구조입니다.** 엔진이 달라도 짧은 DDL 하나가 뒤에 줄을 세우는 모양은 같습니다.
+
+### 처방은 짧은 타임아웃과 재시도입니다
+
+`lock_timeout` 문서에 주의가 둘 붙어 있습니다.
+
+> "Setting `lock_timeout` in `postgresql.conf` is **not recommended** because it would affect all sessions."
+> "if `statement_timeout` is nonzero, it is rather **pointless** to set `lock_timeout` to the same or larger value, since the statement timeout would always trigger first."
+
+Braintree의 `pg_ha_migrations`가 구현한 절차입니다.
+
+1. 테이블을 쓰는 장기 쿼리가 없는지 `pg_locks`로 확인
+2. 있으면 `LOCK_TIMEOUT_SECONDS`만큼 자고 재확인
+3. 락 획득 실패 시 `LOCK_FAILURE_RETRY_DELAY_MULTIPLIER × LOCK_TIMEOUT_SECONDS`만큼 자고 1번부터
+
+**재시도 사이에 쉬는 것이 핵심입니다.** 큐에 쌓인 쿼리가 빠질 시간을 줍니다. 바로 다시 시도하면 큐가 안 줄어듭니다.
+
+Squawk의 기본 권고는 `lock_timeout` 1초, `statement_timeout` 5초입니다. `strong_migrations`는 `lock_timeout = 10.seconds`, `statement_timeout = 1.hour`입니다.
+
+### 삭제 단계를 릴리스로 나누는 곳
+
+GitLab은 컬럼 하나 지우는 데 **세 릴리스**를 씁니다.
+
+> "1. Ignoring the column (release M) 2. Dropping the column (release M+1) 3. Removing the ignore rule (release M+2)"
+> "Ignoring and dropping columns should **not** occur simultaneously in the same release."
+
+이 세션이 잰 축소 단계의 위험이 이 절차의 이유입니다. 옛 코드가 아직 도는 동안 컬럼이 사라지면 그 코드가 깨집니다.
+
+### 도구가 대신 해 주는 것과 대가
+
+`pgroll`과 `Reshape`는 스키마 버전마다 뷰를 두고 트리거로 양방향 쓰기를 전파합니다. 대가는 배포 통제입니다.
+
+> "they need to be configured to access it. This can be done by **setting the `search_path`** to the new schema version name."
+
+**애플리케이션이 어느 버전을 보는지를 커넥션 단위로 통제해야 합니다.** 무중단의 값이 여기 붙습니다. `pgroll` 자체 벤치마크에 `WriteAmplification/WithTrigger` 항목이 따로 있다는 것은 쓰기 증폭이 측정 대상이라는 뜻입니다.
+
+`CREATE INDEX CONCURRENTLY`도 공짜가 아닙니다.
+
+> "PostgreSQL must perform **two scans** of the table, and in addition it must wait for all existing transactions that could potentially modify or use the index to terminate. Thus this method requires **more total work** than a standard index build."
+> "the `CREATE INDEX` command will fail but **leave behind an 'invalid' index**. This index will be ignored for querying purposes because it might be incomplete; however it will **still consume update overhead**."
+
+**실패하면 쓰이지도 않으면서 갱신 비용만 먹는 인덱스가 남습니다.** 그리고 트랜잭션 블록 안에서 실행할 수 없으니 마이그레이션 도구가 이 문장만 따로 빼 줘야 합니다.
 
 ## 못 한 것
 

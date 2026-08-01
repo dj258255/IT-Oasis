@@ -149,7 +149,7 @@ MySQL 클라이언트는 락 대기를 에러로 만들지 않고 기다립니�
 
 ### 재현 도구에서 히어독 한 줄을 잘못 놓쳤습니다
 
-측정 스크립트에서 `echo $! > pid` 를 히어독 본문 안에 두는 바람에 그 줄이 파이썬 코드로 해석돼 writer 프로세스가 즉시 죽었습니다. CSV가 비어 있는데도 스크립트는 끝까지 돌았고, 집계는 "0건"을 출력했습니다. 히어독은 명령 줄 다음 줄부터 종료 표시까지가 본문이라 `&`로 백그라운드에 넣어도 마찬가지입니다. **측정값이 0으로 나올 때 "정말 0인가, 측정이 안 된 건가"를 먼저 확인해야 합니다.**
+측정 스크립트에서 `echo $! > pid`를 히어독 본문 안에 두는 바람에 그 줄이 파이썬 코드로 해석돼 writer 프로세스가 즉시 죽었습니다. CSV가 비어 있는데도 스크립트는 끝까지 돌았고, 집계는 "0건"을 출력했습니다. 히어독은 명령 줄 다음 줄부터 종료 표시까지가 본문이라 `&`로 백그라운드에 넣어도 마찬가지입니다. **측정값이 0으로 나올 때 "정말 0인가, 측정이 안 된 건가"를 먼저 확인해야 합니다.**
 
 ### 차트가 실행 로그를 반박하고 있었습니다
 
@@ -250,10 +250,10 @@ ALTER TABLE                     -- 1.6초
 
 ### 두 도구가 변경분을 따라가는 방식이 다릅니다
 
-`pt-online-schema-change` 는 원본에 INSERT/UPDATE/DELETE 트리거를 겁니다. 복사가 도는
+`pt-online-schema-change`는 원본에 INSERT/UPDATE/DELETE 트리거를 겁니다. 복사가 도는
 동안 들어오는 모든 쓰기가 그 트리거를 한 번씩 더 지납니다.
 
-`gh-ost` 는 트리거를 걸지 않고 **binlog를 읽습니다.** 로그가 그 구조를 그대로 보여 줍니다.
+`gh-ost`는 트리거를 걸지 않고 **binlog를 읽습니다.** 로그가 그 구조를 그대로 보여 줍니다.
 
 ```console
 # Migrating `spoon`.`sponsor_gh`; Ghost table is `spoon`.`_sponsor_gh_gho`
@@ -262,7 +262,7 @@ Copy: 3000583/3000583 100.0%; Applied: 1167; Backlog: 0/1000; Time: 21s(total), 
 # Done
 ```
 
-`Copy` 는 기존 행 복사이고 `Applied` 는 그동안 들어온 변경분입니다. **둘이 분리돼 있고
+`Copy`는 기존 행 복사이고 `Applied`는 그동안 들어온 변경분입니다. **둘이 분리돼 있고
 백로그가 1,000짜리 큐로 관리됩니다.** 원본 쓰기 경로에는 아무것도 얹히지 않으므로 p95가
 7ms로 셋 중 가장 낮습니다.
 
@@ -271,21 +271,21 @@ Copy: 3000583/3000583 100.0%; Applied: 1167; Backlog: 0/1000; Time: 21s(total), 
 
 ### 셋 다 어딘가에서 한 번은 멈춥니다
 
-`gh-ost` 의 최대 지연 998ms는 마지막 컷오버 구간입니다. 새 테이블로 이름을 바꾸는 그
+`gh-ost`의 최대 지연 998ms는 마지막 컷오버 구간입니다. 새 테이블로 이름을 바꾸는 그
 순간에는 어떤 방식이든 잠깐 멈춥니다. **차이는 멈추느냐가 아니라 그 멈춤이 4,576ms 냐
 998ms 냐입니다.**
 
 ### 밟은 함정 셋
 
-1. **`caching_sha2_password` 가 비암호화 인증을 거부합니다.** pt-osc 쪽에서 걸렸습니다.
+1. **`caching_sha2_password`가 비암호화 인증을 거부합니다.** pt-osc 쪽에서 걸렸습니다.
    `Authentication requires secure connection.`
 
-2. **흔한 우회인 `mysql_native_password` 가 MySQL 8.4 에는 없습니다.**
+2. **흔한 우회인 `mysql_native_password`가 MySQL 8.4 에는 없습니다.**
    `Plugin 'mysql_native_password' is not loaded`. 8.0에서 deprecated 였고 **8.4에서
-   제거됐습니다.** 남는 길은 `--mysql_ssl 1` 입니다.
+   제거됐습니다.** 남는 길은 `--mysql_ssl 1`입니다.
 
-3. **`gh-ost` 는 공개 컨테이너 이미지가 없습니다.** `ghcr.io/github/gh-ost` 는 접근이
-   거부되고 Docker Hub 에도 없습니다. 소스에서 빌드했고 `go.mod` 가 Go 1.25.12 이상을
+3. **`gh-ost`는 공개 컨테이너 이미지가 없습니다.** `ghcr.io/github/gh-ost`는 접근이
+   거부되고 Docker Hub 에도 없습니다. 소스에서 빌드했고 `go.mod`가 Go 1.25.12 이상을
    요구해 1.24 로는 안 됩니다. 빌드 절차는 저장소의 `tools/gh-ost/README.md`에 적었습니다.
 
 ## 8. 반복 측정
@@ -331,7 +331,7 @@ ERROR 1146 (42S02) at line 1: Table 'spoon.sponsor_a' doesn't exist
 
 ## 9. INT와 BIGINT의 크기 차이를 바이트로
 
-6절의 104MB는 `information_schema` 추정치를 MB로 반올림한 값이라 `BIGINT` 의 4바이트 차이가 드러나지 않았습니다. 300만 행을 같은 스키마로 만들어 바이트로 읽고, 추정치와 별개로 컨테이너 안 `.ibd` 파일의 실제 크기도 함께 남겼습니다.
+6절의 104MB는 `information_schema` 추정치를 MB로 반올림한 값이라 `BIGINT`의 4바이트 차이가 드러나지 않았습니다. 300만 행을 같은 스키마로 만들어 바이트로 읽고, 추정치와 별개로 컨테이너 안 `.ibd` 파일의 실제 크기도 함께 남겼습니다.
 
 | 조건 | 데이터 | 인덱스 | `.ibd` 파일 | 행당 |
 |---|---|---|---|---|
@@ -341,21 +341,21 @@ ERROR 1146 (42S02) at line 1: Table 'spoon.sponsor_a' doesn't exist
 | `INT` + 세컨더리 인덱스 | 121.6MB | 53.6MB | 184.0MB | 61.2B |
 | `BIGINT` + 세컨더리 인덱스 | 133.7MB | 67.6MB | 212.0MB | 70.4B |
 
-**`INT` 에서 `BIGINT` 로 가면 데이터가 12,632,064바이트 늘어납니다.** 행당 4.21바이트입니다. 컬럼 폭 차이가 4바이트이므로 거의 그대로입니다. InnoDB는 클러스터 인덱스라 PK가 모든 잎에 한 번씩만 들어가고, 나머지 0.21바이트는 레코드 헤더와 페이지 채움의 몫입니다.
+**`INT`에서 `BIGINT`로 가면 데이터가 12,632,064바이트 늘어납니다.** 행당 4.21바이트입니다. 컬럼 폭 차이가 4바이트이므로 거의 그대로입니다. InnoDB는 클러스터 인덱스라 PK가 모든 잎에 한 번씩만 들어가고, 나머지 0.21바이트는 레코드 헤더와 페이지 채움의 몫입니다.
 
 **세컨더리 인덱스가 하나 있으면 그 몫이 한 번 더 붙습니다.** 인덱스가 53.6MB에서 67.6MB로 14,729,216바이트, 행당 4.91바이트 늘어납니다. 세컨더리 인덱스의 잎에 PK 값이 통째로 들어가기 때문입니다. 데이터 쪽 4.21바이트보다 오히려 큽니다. 인덱스 레코드가 짧아서 4바이트가 차지하는 비중이 크고, 그만큼 페이지당 레코드가 빨리 줄어듭니다.
 
 **인덱스가 k 개면 이 몫이 k 배가 됩니다.** 표 전체로는 184.0MB가 212.0MB로 28MB, 15% 늘어납니다. 인덱스가 넷인 실제 테이블이라면 이 비율이 더 올라갑니다.
 
-**`INT` 와 `INT UNSIGNED` 는 완전히 같습니다.** 121.6MB로 바이트까지 같습니다. 폭이 같고 해석만 다릅니다. 21억에서 42억으로 가는 데 저장 비용이 0이라는 뜻이고, 이것이 `UNSIGNED` 전환이 시간을 버는 수단인 이유입니다.
+**`INT`와 `INT UNSIGNED`는 완전히 같습니다.** 121.6MB로 바이트까지 같습니다. 폭이 같고 해석만 다릅니다. 21억에서 42억으로 가는 데 저장 비용이 0이라는 뜻이고, 이것이 `UNSIGNED` 전환이 시간을 버는 수단인 이유입니다.
 
-추정치와 파일 크기는 8~10% 다릅니다. 다섯 조건 모두 `.ibd` 가 `DATA_LENGTH + INDEX_LENGTH` 보다 10.4~10.7MB 큽니다. 조건에 상관없이 거의 일정하므로 세그먼트와 여유 익스텐트의 몫입니다. **조건 사이의 차이를 볼 때는 어느 쪽을 써도 되고, 절대 용량을 말할 때는 파일 쪽이 맞습니다.**
+추정치와 파일 크기는 8~10% 다릅니다. 다섯 조건 모두 `.ibd`가 `DATA_LENGTH + INDEX_LENGTH`보다 10.4~10.7MB 큽니다. 조건에 상관없이 거의 일정하므로 세그먼트와 여유 익스텐트의 몫입니다. **조건 사이의 차이를 볼 때는 어느 쪽을 써도 되고, 절대 용량을 말할 때는 파일 쪽이 맞습니다.**
 
 ## 현업은 어떻게 해소했는가
 
-Basecamp 가 2018년 11월 8일에 겪은 일입니다. 이 세션이 비교한 두 방법 중 **어느 쪽도 그들이 쓴 방법이 아닙니다.**
+Basecamp가 2018년 11월 8일에 겪은 일입니다. 이 세션이 비교한 두 방법 중 **어느 쪽도 그들이 쓴 방법이 아닙니다.**
 
-그들이 쓴 것은 **복제본을 빼서 그 위에서 ALTER 를 돌리고 역할을 맞바꾸는 방법**입니다. 절차가 팟캐스트에 남아 있습니다.
+그들이 쓴 것은 **복제본을 빼서 그 위에서 ALTER를 돌리고 역할을 맞바꾸는 방법**입니다. 절차가 팟캐스트에 남아 있습니다.
 
 > "We take the replica that out of service, we make the change, which blocks access to the table, and then we put the replica back into service and then we swap roles."
 
@@ -363,7 +363,7 @@ Basecamp 가 2018년 11월 8일에 겪은 일입니다. 이 세션이 비교한 
 
 > "But when we did the database migration to allow their database table to grow larger, to remove the cap, **at first it didn't work.** ... the replica database could take all those two to three hours of updates to the primary database and apply them to the replica, but it **needed to be configured to do so. By default it wasn't**, it didn't allow it."
 
-**막힌 것은 ALTER 소요가 아니라 ALTER 뒤의 복제 재개였습니다.** 소스가 `INT` 이고 복제본이 `BIGINT` 인 상태는 행 기반 복제의 attribute promotion 에 해당하고, MySQL 문서는 이렇게 못 박습니다. "When `replica_type_conversions` ... is not set, no attribute promotion or demotion is permitted; this means that all columns in the source and target tables must be of the same types." (37signals 가 켠 설정의 이름을 밝히지는 않았습니다. 이 대응은 문서에 근거한 추정입니다.)
+**막힌 것은 ALTER 소요가 아니라 ALTER 뒤의 복제 재개였습니다.** 소스가 `INT`이고 복제본이 `BIGINT` 인 상태는 행 기반 복제의 attribute promotion에 해당하고, MySQL 문서는 이렇게 못 박습니다. "When `replica_type_conversions` ... is not set, no attribute promotion or demotion is permitted; this means that all columns in the source and target tables must be of the same types." (37signals가 켠 설정의 이름을 밝히지는 않았습니다. 이 대응은 문서에 근거한 추정입니다.)
 
 그때의 선택지가 무엇이었는지도 남아 있습니다. "Either have Basecamp 3 go completely down, even worse than read only, or lose the most recent two to three hours worth of customer data."
 
@@ -373,7 +373,7 @@ Basecamp 가 2018년 11월 8일에 겪은 일입니다. 이 세션이 비교한 
 
 그리고 **복귀 직후 캐시 서버가 무너져 다시 다운됐습니다.** 12시 33분입니다. 쓰기가 5시간 막혀 있다가 풀리는 순간의 부하가 별도의 장애를 만들었습니다.
 
-**프레임워크 기본값이 왜 안 구해 줬는지도 확인됩니다.** DHH 가 Rails 5.1 의 `BIGINT` 기본값 전환을 "the same root-cause fix that we applied to our tables" 라고 적었는데, **그 기본값은 기존 앱을 소급해 고치지 않습니다.** Rails 5.1 의 마이그레이션 호환 계층이 옛 마이그레이션의 동작을 보존합니다.
+**프레임워크 기본값이 왜 안 구해 줬는지도 확인됩니다.** DHH가 Rails 5.1의 `BIGINT` 기본값 전환을 "the same root-cause fix that we applied to our tables" 라고 적었는데, **그 기본값은 기존 앱을 소급해 고치지 않습니다.** Rails 5.1의 마이그레이션 호환 계층이 옛 마이그레이션의 동작을 보존합니다.
 
 ```ruby
 # Since 5.1 Postgres adapter uses bigserial type for primary
@@ -384,7 +384,7 @@ unless options.key?(:id)
 end
 ```
 
-`[5.0]` 이하로 선언된 마이그레이션으로 만든 테이블은 5.1 로 올려도 `INT` 로 남습니다. **버전을 올리는 것과 이미 만들어진 테이블이 고쳐지는 것은 다릅니다.**
+`[5.0]` 이하로 선언된 마이그레이션으로 만든 테이블은 5.1로 올려도 `INT`로 남습니다. **버전을 올리는 것과 이미 만들어진 테이블이 고쳐지는 것은 다릅니다.**
 
 **공개된 재발 방지는 한 문장뿐입니다.** "We changed some of our emergency notification protocols and talked about expanding crisis drills from the Support and Ops teams to the entire company." 기본키 여유분 감시나 다른 테이블 전수 감사를 넣었다는 공식 자료는 찾지 못했습니다.
 
