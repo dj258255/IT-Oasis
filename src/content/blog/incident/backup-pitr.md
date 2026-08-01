@@ -542,6 +542,30 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 
 이 실행은 1회입니다.
 
+## 현업은 어떻게 해소했는가
+
+GitLab 이 2017년에 프로덕션 DB 디렉터리를 지우고 백업 다섯 겹이 전부 안 들었던 사고입니다. **고친 것이 백업 기술이 아니었습니다.**
+
+`pg_dump` 는 정상적으로 에러를 냈습니다. 9.2 클라이언트가 9.6 서버를 덤프하려다 실패한 것이고, 그 실패는 크론 알림 메일로 나갔습니다. 죽은 것은 그 메일이었습니다.
+
+> "While notifications are enabled for any cronjobs that error, these notifications are sent by email. ... Unfortunately DMARC was not enabled for the cronjob emails, resulting in them being rejected by the receiver. This means we were never aware of the backups failing, until it was too late."
+
+크론 에러 알림은 켜져 있었지만 DMARC 미서명이라 수신 측이 거부했고, 너무 늦을 때까지 아무도 몰랐습니다. **탐지가 없던 것이 아니라 탐지 결과가 전달되지 않았습니다.**
+
+5 Whys 의 마지막 답이 조직을 지목합니다.
+
+> "Why was the backup procedure not tested on a regular basis? - Because there was no ownership, as a result nobody was responsible for testing this procedure."
+
+그래서 넣은 것이 이메일 대신 **Prometheus 백업 모니터링**, 공개 백업 대시보드, 복원 자동 테스트, 그리고 **"데이터 내구성 담당자 지정"**입니다.
+
+**그 복원 테스트가 지금도 매일 돕니다.** 2026년 현재 GitLab 핸드북에 이렇게 적혀 있습니다.
+
+> "Daily restoration testing is performed for GitLab.com application databases in CI pipelines ... This process performs a point-in-time recovery (PITR) restore into a new instance and verifies data integrity by running queries on the restored database."
+
+새 인스턴스로 PITR 복원을 하고 **복원된 DB 에 쿼리를 돌려 무결성을 확인**합니다. Gitaly 도 무작위 스냅샷을 새 디스크에 복원해 최근 커밋이 있는지 봅니다. 여기에 분기별 Game Day 로 RTO/RPO 를 실측합니다.
+
+**12절이 만든 파이프라인이 이 구조의 축소판입니다.** 복원해 보고, 행 수와 체크섬으로 대조하고, 소요가 예산 안인지 봅니다. 다만 GitLab 이 실제로 고친 것 중 이 세션이 못 만든 것이 하나 있습니다. **소유자입니다.** 파이프라인은 짜면 되지만 그것이 실패했을 때 누가 받는가는 코드 밖의 문제입니다.
+
 ## 못 한 것
 
 - **아카이브 로그 모드 전환은 3회 반복이고 1,500행 기준입니다.** 회차 폭은 좁지만 두 방향 모두 대부분이 기동 시간이라, 데이터가 큰 인스턴스에서는 `SHUTDOWN IMMEDIATE` 가 열린 트랜잭션의 롤백을 기다리므로 더 길어집니다.

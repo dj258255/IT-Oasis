@@ -304,6 +304,28 @@ Spring 데코레이터에 같은 512KB를 주면 4.3초에 끊고 p95 2ms입니�
 
 정상 구독자의 p95는 아홉 조건 전부 1ms입니다. **갈리는 것은 p95가 아니라 max와 수신 합입니다.** `direct` 의 p95 1ms만 보면 정상으로 보이는데 실제로는 초당 500건대만 받고 있습니다.
 
+## 현업은 어떻게 해소했는가
+
+Discord 가 공개한 것을 읽으면 **이 세션이 재현한 것과 초점이 다릅니다.** 이 세션은 느린 구독자 쪽을 봤는데, Discord 가 먼저 고친 것은 **발신자 쪽 팬아웃 비용**이었습니다.
+
+> "The wall clock time of a single send/2 call could range from 30μs to 70us due to Erlang de-scheduling the calling process."
+
+`send/2` 한 번이 30~70마이크로초이고, 그것을 10만 세션에 곱하니 "publishing an event from a large guild could take anywhere from 900ms to 2.1s!"(큰 길드에서 이벤트 하나 발행에 900밀리초에서 2.1초)가 됐습니다.
+
+해소가 **Manifold** 입니다. 수신 PID 개수만큼 `send/2` 를 부르지 않고, PID 를 원격 노드별로 묶어 노드당 한 번만 보낸 뒤 그 노드가 로컬에서 재분배합니다. 배포 직후 초당 패킷이 절반으로 떨어졌습니다.
+
+큐가 쌓여 죽는 경로는 **따로** 막았습니다. 그것도 느린 구독자가 아니라 **느린 발신자** 쪽입니다.
+
+> "Sessions would block on these requests until they timed out while receiving messages from other services, causing them to balloon their message queues and eventually OOM the whole Erlang VM"
+
+세션이 타임아웃까지 블로킹되는 동안 다른 서비스로부터 메시지를 계속 받아 큐가 부풀었고 VM 전체가 OOM 으로 죽었습니다. 이것을 `:ets.update_counter/4` 기반 세마포어로 동시 요청 수에 상한을 걸어 끊었습니다.
+
+**한 증상에 서로 다른 도구 둘이 붙었습니다.** 팬아웃 비용은 Manifold, 큐 폭발은 세마포어, 부하 조절은 GenStage 입니다. 이 세션은 절단 하나로 두 가지를 다 보려 했고, 그래서 "절단은 재접속에도 버틴다"까지는 맞지만 발신 비용 축이 통째로 빠져 있습니다.
+
+**주의할 것이 하나 있습니다.** Discord 가 길드 프로세스 메일박스에 **길이 상한을 걸거나 메시지를 합쳐 보낸다는 1차 자료는 찾지 못했습니다.** 이 세션이 잰 `conflate` 조건은 이 랩이 만든 대안이지 Discord 가 쓴 방식이 아닙니다.
+
+후일담이 팬아웃 배수의 성질을 다시 보여 줍니다. 2026년 트레이싱 편에서 "the guilds service would capture the fanout, and then _all_ one million sessions would capture forwarding the message to the client" 라며 **관측 계층에서 같은 배수가 재현**됐고, CPU 가 10퍼센트포인트 올랐습니다. 팬아웃 이후 메시지에는 루트 스팬 생성을 금지해 되돌렸습니다.
+
 ## 못 한 것
 
 - **8절의 아홉 조건은 각각 1회 실행입니다.** 정상 구독자는 5명으로 고정했으므로 정상 대 느린 비율을 반대쪽으로 움직여 보지는 않았습니다.
