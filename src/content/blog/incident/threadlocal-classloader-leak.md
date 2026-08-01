@@ -306,6 +306,34 @@ MDC(SLF4J)나 Spring의 요청 스코프처럼 실무에서 자주 쓰는 다른
 
 실제 스택 재현은 워커 스레드를 1개로 고정한 조건입니다. 스레드가 여럿인 실제 환경에서는 요청이 흩어지므로 컨텍스트 유출이 확률적으로 나타나고, 그래서 오히려 재현과 원인 규명이 어려워집니다. 이 세션의 `seenUser=alice`는 조건을 고정해 결정적으로 만든 결과입니다.
 
+## 현업은 어떻게 해소했는가
+
+Tomcat 이 이 문제를 어떻게 다루기로 했는지는 Bugzilla 49159 에 설계 논쟁까지 남아 있습니다. **결론이 "메모리를 회수한다"가 아니라 "누수를 붙들고 있는 스레드를 버린다"입니다.**
+
+처음(6.0.24~6.0.26)에는 JDK 내부를 리플렉션으로 뜯어 `ThreadLocal` 참조를 직접 지웠습니다. 그런데 패치 제안자 Sylvain Laurent 본인이 그것을 접습니다.
+
+> "I also removed the clearReferencesThreadLocals property on WebApp[Class]Loader since my patch makes it useless and I think this feature is too unsafe."
+
+왜 지우기가 안 되는지는 최초 보고에 이미 있습니다. "Doing this in a thread-safe way means performing the clean-up in the thread where the ThreadLocal exists."(스레드 안전하게 하려면 그 `ThreadLocal` 이 존재하는 스레드 안에서 정리해야 한다) 매 요청마다 지워 봤더니 프레임워크들이 깨졌습니다.
+
+**7.0.6 에서 채택된 것은 절충입니다.**
+
+> "idle threads are stopped all at once, even core pool threads. ... active threads are stopped one by one with a delay. All in all, this avoids performance impacts under load."
+
+유휴 스레드는 리스너가 한꺼번에 정리하고 활성 스레드는 지연을 두고 하나씩 교체합니다. 교체 완료까지의 상한도 계산해 두었습니다. `N × max(threadKeepAliveTimeout, longestRequest + threadRenewalDelay)`.
+
+**그리고 Laurent 는 이것이 결정론적이지 않다고 못 박습니다.**
+
+> "This memory leak protection is not 100% deterministic since one could think of scenarios where the load decreases just after a leaking context is stopped."
+
+2019년에 이 점을 다시 물은 코멘트는 답을 못 받았습니다.
+
+4절이 소스로 확인한 것, 곧 `clearReferencesThreadLocals` 가 지우는 것이 아니라 검사하고 로그만 남긴다는 사실도 이 이력에서 나옵니다. 커밋 메시지가 그 전환을 적습니다. "Transformed the clearReferencesThreadLocals behavior of WebappClassLoader into a checkThreadLocalsForLeaks behavior". **이름은 그대로 두고 동작만 바꿨고, 문서도 여전히 "attempts to clear" 라고 적혀 있습니다.** 이 세션이 8절에서 예상과 어긋났다고 적은 자리가 정확히 그 잔재입니다.
+
+Tomcat 6 백포트는 거부됐습니다. "No. This enhancement is too intrusive to be backported."
+
+**Tomcat 은 끝까지 이것을 웹앱의 버그로 규정했습니다.** 컨테이너가 하는 일은 완충이지 수정이 아니고, 그마저 보장이 아니라고 개발자 본인이 적어 두었습니다.
+
 ## 못 한 것
 
 - **8절의 곡선은 두 조건 1회씩입니다.** 힙이 아니라 Metaspace를 좁힌 조건이라, 힙이 먼저 차는 누수에서는 곡선이 다를 수 있습니다.

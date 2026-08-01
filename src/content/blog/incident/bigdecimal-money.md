@@ -217,6 +217,30 @@ equals가 둘을 다르다고 하는 이유는 BigDecimal이 unscaledValue와 sc
 
 최소 화폐단위 long의 오버플로 경계(0.1원 단위 long은 약 92경 원까지)는 Math.addExact로 예외화만 하고 실제로 터뜨려 보지는 않았습니다. DB numeric(19,4)과의 왕복에서 생기는 scale 변화, 통화별 소수 자릿수(JPY 0자리, BHD 3자리 등) 처리도 다루지 않았습니다. 1차 보도(WSJ, Toronto Star)의 지면 원문을 확인하지 못하고 정리 자료의 재인용에 기댄 것도 한계로 남습니다.
 
+## 현업은 어떻게 해소했는가
+
+1983년 건이라 1차 접근이 사실상 불가능합니다. 아래는 *The Wall Street Journal* 1983년 11월 8일자 기사(Kevin Quinn)의 **재수록본**에서 인용했고, 정정 후 수치는 *The Toronto Star* 1983년 11월 29일자를 위키백과 각주로 거친 **재인용**입니다.
+
+기사가 메커니즘을 이렇게 적습니다.
+
+> "If the index stood at, say, 540.32567, the computer simply dropped the last two digits, making it 540.325. Instead, it should have rounded off the last digit, making the index 540.326."
+
+그리고 한 줄이 더 있습니다.
+
+> "Other indexes, like the Standard & Poor's 500, routinely do that, but the Vancouver exchange hadn't consulted them."
+
+**해소는 코드 수정이 아니라 22개월치 전면 재계산입니다.**
+
+> "Now the exchange intends to recalculate the index for the past 22 months, and it has hired Wilshire Associates of Santa Monica, Calif., to study whether the index is useful even at the best of times."
+
+외부 컨설턴트를 고용한 이유가 눈에 띕니다. 지수를 고치는 것이 아니라 **그 지수가 애초에 쓸모가 있는지**를 검토하게 했습니다.
+
+발견 경위도 계측이 아니라 사람의 위화감이었습니다. 1983년 2월 거래량과 거래대금이 신기록인데 지수가 1,000을 못 넘는 것을 이상하게 여겨 조사가 시작됐습니다.
+
+**이 사건의 비용은 버그 수정이 아니라 소급 정정에 있었습니다.** 이 세션은 절삭이 누적되는 메커니즘을 3,000회 반복으로 보이지만, 실제로 든 비용은 이미 22개월 동안 발표해 버린 수치를 되짚는 일이었습니다. 재현으로는 그 비대칭이 안 보입니다.
+
+**못 찾은 것을 밝힙니다.** Wilshire 보고서의 결론, 그 뒤 지수 계산 규칙이 문서로 어떻게 바뀌었는지는 확인하지 못했습니다. 남아 있는 재발 방지 언급은 당시 사장의 한마디뿐입니다. "There's no question that it's an oversight; we won't do it again."
+
 ## 못 한 것
 
 - **8절의 나눗셈 쪽은 시드 하나입니다.** 곱셈은 시드 30개를 돌렸는데 나눗셈의 1,000번 왕복은 시드 하나로만 쟀습니다.
