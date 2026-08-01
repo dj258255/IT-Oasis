@@ -287,6 +287,38 @@ if (invalidated) {
 
 수치는 2 vCPU 공유 호스트에서 유입률 8개 구간을 3회씩, 전체를 3회 실행해 얻은 범위입니다. 컨테이너에 CPU와 메모리 한도를 걸지 않았고 힙 상한도 지정하지 않아, 호스트의 다른 작업이 그대로 결과에 섞입니다. 같은 계산의 1회 소요시간 중앙값이 9.4ms에서 22.8ms까지 흔들리는 환경이라 절대 시간은 참고용이고, 같은 실행 안의 비교와 실측비율이 의미 있는 값입니다. 전용 장비에서는 문턱에 해당하는 유입 간격이 달라집니다.
 
+## 현업은 어떻게 해소했는가
+
+SEC 명령서(Release 34-69655)에 그날의 결정이 분 단위로 남아 있습니다. **이 세션이 재현한 라이브락은 그 이야기의 앞부분일 뿐입니다.**
+
+근본 원인은 이 세션이 잰 것과 같은 구조입니다. 재계산이 취소를 **하나씩만** 흡수하도록 설계돼 있었습니다.
+
+> "This second calculation … incorporated only the first cancellation received during the first calculation … a repeated cycle of validation checks and re-calculations - known as a 'loop' - would occur"
+
+평소 1~2ms 걸리던 계산이 그날은 20ms 였고, 테스트 심볼의 주문 상한이 4만 건이었는데 실제 주문은 49만 6천 건이었습니다.
+
+**해소의 첫 줄도 같은 층입니다.**
+
+> "For IPO and Halt Crosses, NASDAQ will **close its order ports to new Cross orders and cancels** of orders in the security involved in the Cross **after the calculation of the Cross is triggered**."
+
+계산이 시작되면 그 종목의 신규 주문과 취소를 아예 안 받습니다. 오프닝·클로징 크로스는 다른 길로 갔습니다. "take into account bursts of changes to orders … **in one recalculation** of the Cross rather than in multiple recalculations". **입력 차단과 배치 흡수, 둘 다 이 세션이 잰 축입니다.**
+
+**여기부터가 이 세션에 없는 것입니다.**
+
+**첫째, 고치려던 행동이 2차 장애를 만들었습니다.** Code Blue 콜에서 채택한 안은 페일오버 사본에서 검증 체크 코드 몇 줄을 지우고 그쪽으로 넘기는 것이었습니다. 명령서가 그 위험을 적습니다. "it had not tested for this situation … and usually employs failovers as duplicates of its existing systems … rather than as the vehicle for launching a new, modified version" 그리고 승인 시점에 "no one on the Code Blue call knew the precise cause of the error with the validation check". 결과는 크로스가 19분 뒤처진 주문으로 계산된 것이고, 그 사이 마켓어블 주문 3만 8천여 건이 빠졌습니다.
+
+**둘째, 아무도 그 코드의 존재를 몰랐습니다.** "Prior to receiving this report on May 18, the SVP/INET was unaware of the existence of the validation check." 담당 임원이 그날 처음 알았습니다. 코드 결함이 아니라 지식이 어디에 있느냐의 문제입니다.
+
+**셋째, 규칙과 코드가 어긋나 있었습니다.** 2007년에 규칙에서 지운 랜덤화 구간이 시스템에는 5년째 남아 있었고, 그것 자체가 위반이 됐습니다.
+
+그래서 조치의 절반이 조직 처방입니다. 기술변경 프로세스에 법무와 규제 부서를 참여시키고, Change Approval Board 역할을 명문화하고, 거래시스템 통합 테스트 전담 QA 조직을 신설했습니다. CEO 가 이행을 서면 인증하고 이사회가 수리하는 절차까지 붙었습니다.
+
+제재는 censure 와 민사 제재금 **1000만 달러**입니다. 거래소 대상으로는 당시 사상 최대였습니다.
+
+**그리고 이 사건이 업계 규칙이 됐습니다.** SEC 가 2014년 채택한 Regulation SCI 의 채택 릴리스 각주 291 이 이 사건을 근거로 명시합니다. SCI 엔티티에 용량·무결성·복원력에 관한 정책 수립, 시스템 문제 발생 시 SEC 통지, BCP 테스트, 연간 검토를 의무화했습니다.
+
+회원 보상은 6200만 달러 프로그램이었는데, 같은 Reg SCI 릴리스 각주가 **UBS 단독 손실을 3억 5600만 달러**로 적고 있습니다. 자릿수가 다릅니다.
+
 ## 못 한 것
 
 - **8절의 다섯 조건은 각각 1회 실행입니다.** 유입 간격 8구간을 3회씩 시도한 값이고, 조건 전체를 반복하지는 않았습니다.
