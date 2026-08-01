@@ -1,8 +1,8 @@
 ---
 title: 'SAVEPOINT 하나가 만드는 성능 절벽, PostgreSQL 17에서 달라진 것'
 titleEn: 'The Performance Cliff a Single SAVEPOINT Can Cause, and What Changed in PostgreSQL 17'
-description: 'GitLab이 2021년에 공개한 서브트랜잭션 장애를 PostgreSQL 17.5에서 재현했습니다. GitLab은 복제본 처리량이 초당 36만에서 5만으로 떨어지는 일을 1년 넘게 겪었고, 원인은 긴 트랜잭션이 열려 있는 동안 발행된 SAVEPOINT였습니다. 갱신 대상 50만 행과 리더 부하를 고정하고 그 50만 건을 몇 개의 서브트랜잭션으로 나눌지만 바꿔 재니 경계가 둘로 갈렸습니다. 서브트랜잭션 64개까지는 pg_subtrans 조회가 정확히 0건입니다. 1만 개로 늘리면 조회가 700만 건 넘게 생기지만 XID 범위가 약 5페이지라 32페이지 캐시에 들어가 빗나감이 네 회차 모두 6건이고 처리량은 기준선의 93~94%에 머무릅니다. 50만 개에서 XID 범위가 약 244페이지가 되어 미스율 22.2~22.4%, 처리량은 기준선의 67~71%, 대기 샘플의 44~57%가 LWLock/SubtransSLRU였습니다. 조건마다 4회씩 반복했고 절대 처리량은 회차 간 1.08배 안쪽으로 흔들려 중앙값과 범위로만 적었습니다. 절벽은 캐시를 넘겼는가보다 XID 범위가 SLRU 페이지 수를 넘겼는가에서 생깁니다. PostgreSQL 17에서 GUC가 된 subtransaction_buffers를 4MB로 올리자 같은 조건에서 조회가 전부 적중하고 처리량이 기준선의 94~96%까지 돌아왔습니다. 재현이 안 되던 이유도 남겼습니다. 긴 트랜잭션과 캐시 초과만으로는 아무 일도 일어나지 않고 XID 카운터를 미는 쓰기 트래픽이 세 번째 조건입니다. GitLab이 겪은 스탠바이 절벽은 재현하지 못해 그대로 남겼고, XLOG_XACT_ASSIGNMENT가 서브트랜잭션 64개마다만 기록된다는 것을 pg_waldump로 확인한 것까지 적었습니다.'
-descriptionEn: "This session reproduces on PostgreSQL 17.5 the subtransaction incident GitLab published in 2021. GitLab spent over a year chasing replica throughput that fell from 360,000 to 50,000 transactions per second, caused by SAVEPOINT calls issued while a long-running transaction was open. Holding the 500,000 updated rows and the reader workload fixed and varying only how those updates are grouped into subtransactions splits the problem into two distinct boundaries. Up to 64 subtransactions there are exactly zero pg_subtrans lookups. At 10,000 there are over 7 million lookups, but the XID range spans about five pages and fits the 32 page cache, so exactly six missed in all four rounds and throughput holds at 93% to 94% of baseline. At 500,000 the XID range spans about 244 pages, producing a 22.2% to 22.4% miss rate, throughput at 67% to 71% of baseline, and LWLock/SubtransSLRU accounting for 44% to 57% of wait samples. Every condition ran four times; absolute throughput varied within 1.08x across rounds, so only medians and ranges are reported. The cliff comes from the XID range exceeding the SLRU page count rather than from merely exceeding the per backend cache. Raising subtransaction_buffers, which became a GUC in PostgreSQL 17, to 4MB made every lookup hit and restored throughput to 94% to 96% of baseline. The post also documents why the reproduction initially failed: a long transaction and cache overflow alone do nothing, and write traffic advancing the XID counter is the required third condition. The standby cliff GitLab actually hit was not reproduced, and pg_waldump confirmed that XLOG_XACT_ASSIGNMENT records appear only once every 64 subtransactions."
+description: 'GitLab이 2021년에 공개한 서브트랜잭션 장애를 PostgreSQL 17.5에서 재현했습니다. GitLab은 2021년 6월 24일 CI/CD 러너 서비스의 에러율 급증으로 이 문제를 발견하고 몇 주에 걸쳐 원인을 좁혔습니다. 원인은 긴 트랜잭션이 열려 있는 동안 발행된 SAVEPOINT였습니다. 흔히 인용되는 초당 36만에서 5만이라는 수치는 GitLab 프로덕션이 아니라 Nikolay Samokhvalov 가 그 조건을 재현한 벤치마크의 값입니다. 갱신 대상 50만 행과 리더 부하를 고정하고 그 50만 건을 몇 개의 서브트랜잭션으로 나눌지만 바꿔 재니 경계가 둘로 갈렸습니다. 서브트랜잭션 64개까지는 pg_subtrans 조회가 정확히 0건입니다. 1만 개로 늘리면 조회가 700만 건 넘게 생기지만 XID 범위가 약 5페이지라 32페이지 캐시에 들어가 빗나감이 네 회차 모두 6건이고 처리량은 기준선의 93~94%에 머무릅니다. 50만 개에서 XID 범위가 약 244페이지가 되어 미스율 22.2~22.4%, 처리량은 기준선의 67~71%, 대기 샘플의 44~57%가 LWLock/SubtransSLRU였습니다. 조건마다 4회씩 반복했고 절대 처리량은 회차 간 1.08배 안쪽으로 흔들려 중앙값과 범위로만 적었습니다. 절벽은 캐시를 넘겼는가보다 XID 범위가 SLRU 페이지 수를 넘겼는가에서 생깁니다. PostgreSQL 17에서 GUC가 된 subtransaction_buffers를 4MB로 올리자 같은 조건에서 조회가 전부 적중하고 처리량이 기준선의 94~96%까지 돌아왔습니다. 재현이 안 되던 이유도 남겼습니다. 긴 트랜잭션과 캐시 초과만으로는 아무 일도 일어나지 않고 XID 카운터를 미는 쓰기 트래픽이 세 번째 조건입니다. GitLab이 겪은 스탠바이 절벽은 재현하지 못해 그대로 남겼고, XLOG_XACT_ASSIGNMENT가 서브트랜잭션 64개마다만 기록된다는 것을 pg_waldump로 확인한 것까지 적었습니다.'
+descriptionEn: "This session reproduces on PostgreSQL 17.5 the subtransaction incident GitLab published in 2021. GitLab found the problem on 24 June 2021 when its CI/CD runner service started reporting a high error rate, and narrowed the cause over the following weeks. The widely quoted drop from 360,000 to 50,000 transactions per second comes from Nikolay Samokhvalov's reproduction benchmark rather than from GitLab's own production numbers, caused by SAVEPOINT calls issued while a long-running transaction was open. Holding the 500,000 updated rows and the reader workload fixed and varying only how those updates are grouped into subtransactions splits the problem into two distinct boundaries. Up to 64 subtransactions there are exactly zero pg_subtrans lookups. At 10,000 there are over 7 million lookups, but the XID range spans about five pages and fits the 32 page cache, so exactly six missed in all four rounds and throughput holds at 93% to 94% of baseline. At 500,000 the XID range spans about 244 pages, producing a 22.2% to 22.4% miss rate, throughput at 67% to 71% of baseline, and LWLock/SubtransSLRU accounting for 44% to 57% of wait samples. Every condition ran four times; absolute throughput varied within 1.08x across rounds, so only medians and ranges are reported. The cliff comes from the XID range exceeding the SLRU page count rather than from merely exceeding the per backend cache. Raising subtransaction_buffers, which became a GUC in PostgreSQL 17, to 4MB made every lookup hit and restored throughput to 94% to 96% of baseline. The post also documents why the reproduction initially failed: a long transaction and cache overflow alone do nothing, and write traffic advancing the XID counter is the required third condition. The standby cliff GitLab actually hit was not reproduced, and pg_waldump confirmed that XLOG_XACT_ASSIGNMENT records appear only once every 64 subtransactions."
 date: 2026-05-12
 tags:
   - PostgreSQL
@@ -36,7 +36,7 @@ GitLab이 2021년 9월에 이 사고를 공개했습니다. 2020년 6월부터 G
 > Only the replicas were affected; the primary remained unaffected.
 > There was a long-running transaction, usually relating to PostgreSQL's autovacuuming, during the time.
 
-이 구간에서 복제본의 처리량이 초당 36만에서 5만으로 떨어졌습니다. 7.2배입니다. 이 글에서 가장 많이 인용되는 계산이 나옵니다.
+이 구간에서 복제본의 처리량이 초당 36만에서 5만으로 떨어졌습니다. 7.2배입니다. **다만 이 두 수치는 GitLab 프로덕션의 값이 아닙니다.** GitLab 글이 인용한 것은 Nikolay Samokhvalov 가 같은 조건을 재현한 벤치마크이고, GitLab 자신의 프로덕션 처리량은 그 글에 없습니다. 아래 계산은 그 글에서 가장 많이 인용되는 대목입니다.
 
 > 8192/4 = 2048 transaction IDs can be stored in each page
 > There are 32 (`NUM_SUBTRANS_BUFFERS`) pages, which means up to 65K transaction IDs
@@ -392,6 +392,26 @@ PostgreSQL 16과 17.5를 같은 부하로 나란히 돌렸습니다. 두 버전 
 
 17로 올려도 sub500k는 여전히 none의 0.70배입니다. **락 구조 개선은 손해를
 40%에서 30%로 줄이지 그 조건을 없애지 않습니다.**
+
+## 현업은 어떻게 해소했는가
+
+이 세션이 잰 것은 `subtransaction_buffers` 를 키우는 쪽입니다. **GitLab 은 그 길을 명시적으로 거부했습니다.**
+
+Andrey Borodin 이 SLRU 를 64K 에서 100MB 로 키우는 패치를 올렸고 GitLab 도 그것을 테스트했습니다. 그런데 이렇게 적었습니다. "Although we tested Andrey's PostgreSQL patches, we did not feel comfortable deviating from the official PostgreSQL releases."(패치를 테스트했지만 공식 릴리스에서 벗어나는 것이 내키지 않았다) 커스텀 빌드를 유지할 수 없다는 판단입니다.
+
+대신 **애플리케이션 코드에서 `SAVEPOINT` 를 전부 지웠습니다.** 세 갈래로 나눠 처리했습니다. 갱신문을 서브트랜잭션 밖으로 옮기고, 중복 제약 위반은 `ON CONFLICT` 로 재작성하고("Rewrite a query to use a `INSERT` or an `UPDATE` with an `ON CONFLICT` clause to deal with duplicate constraint violations"), 원자성이 필수가 아닌 곳은 비원자적 `find_or_create_by` 를 받아들였습니다.
+
+재발 방지가 흥미롭습니다. **탐지와 금지를 둘 다 넣었습니다.**
+
+- 한 트랜잭션에서 `SAVEPOINT` 가 32개를 넘으면 백트레이스와 개수를 로그로 남깁니다
+- 그 뒤 기준을 더 좁혀 **`SAVEPOINT` 를 하나라도 쓰면 알림**을 냅니다
+- RuboCop cop 두 개로 `transaction(requires_new: true)` 와 `create_or_find_by` 계열을 코드 리뷰 단계에서 막습니다
+
+마무리 문장이 이렇습니다. "Since removing all SAVEPOINT queries, we have not seen Nessie rear her head again. If you are running PostgreSQL with read replicas, we strongly recommend that you also remove all subtransactions until further notice."
+
+**그리고 3년 뒤, GitLab 이 유지 못 한다고 포기했던 그 조치가 upstream 기본이 됐습니다.** PostgreSQL 17 에서 `subtransaction_buffers` 를 포함한 SLRU 캐시 일곱 종이 GUC 가 됐습니다. 이 세션이 잰 처방이 그것이고, 2021년에는 커스텀 패치였던 것이 지금은 설정 한 줄입니다.
+
+**층위가 다릅니다.** 이 세션은 DB 파라미터를 재고, GitLab 은 ORM 코드와 정적 분석 규칙으로 풀었습니다. 어느 쪽이 옳다기보다, **당시에 파라미터라는 선택지가 없었다는 것이 그 선택을 설명합니다.**
 
 ## 못 한 것
 

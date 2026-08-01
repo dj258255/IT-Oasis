@@ -422,6 +422,22 @@ Spring의 `@Transactional(propagation = NESTED)` 나 JPA의 재시도 루프가 
 
 행 수 확인이 `-lt` 였던 것도 함께 고쳤습니다. 기대 2,000행에 6,000행이 들어왔는데 "기대보다 적지 않으니 통과" 로 지나갔습니다. **기대값이 정확히 정해지는 자리에서는 `-ne` 로 봐야 합니다.**
 
+## 현업은 어떻게 해소했는가
+
+Sentry 의 대응은 이 세션의 결론과 **정반대**입니다. 이 세션은 "손대지 않는 것이 정답"이라고 적었고 원인 제거 뒤 40초 자가 복구를 실측했습니다. Sentry 는 기다리지 않았습니다.
+
+순서대로 이렇게 했습니다. 프라이머리를 vacuum 을 돌리던 새 하드웨어로 페일오버하고, 애플리케이션을 복제본으로 돌려 읽기 전용으로 운영하고, 큐 붕괴를 막으려 이벤트 백로그를 전량 폐기했습니다. 그러고도 3시간 뒤 autovacuum 이 안 끝나자 "Our only choice at this point was to shut down the database and restart in single-user mode."(DB 를 내리고 단일 사용자 모드로 재시작하는 것이 유일한 선택이었다)
+
+그리고 마지막에, 이벤트를 롤업에 매핑하는 거대 테이블 하나가 끝내 진척이 없자 **그것을 버렸습니다.** "we made the decision that we were willing to risk all data in the table if it meant we could recover immediately."(즉시 복구할 수 있다면 그 테이블의 데이터를 전부 잃을 위험을 감수하기로 했다) 5분 만에 서비스가 돌아왔습니다.
+
+**갈린 이유는 이 세션이 이미 짚은 자리에 있습니다.** 여기서는 하한을 붙잡은 것이 버려진 prepared transaction 이라 제거할 대상이 있었습니다. Sentry 에는 그런 것이 없었습니다. 하한을 붙잡은 것이 그냥 거대 테이블 자체였고, 그러면 제거할 원인이 없으니 기다리는 선택지도 없습니다.
+
+그 뒤 하드웨어를 256GB 로 올리고 autovacuum 을 공격적으로 조정했습니다(`autovacuum_naptime = 15s`, `autovacuum_vacuum_cost_delay = 0`, `maintenance_work_mem = 10GB`). 다만 이것을 임시 조치로 보고 이렇게 적었습니다. "Ultimately we're going to be moving away from a SQL-based architecture."
+
+**그 선언이 4년 뒤 실행됐습니다.** 2019년 ClickHouse 기반 Snuba 로 이벤트 저장소를 통째로 옮겼습니다. 이유가 wraparound 가 아니라 쓰기 자체였습니다. "the number of mutations executed exceeded our ability to replicate them on a single Postgres machine". 부수 이유 넷도 vacuum 계통입니다. 데이터가 불변인데 MVCC 비용을 냈고, 만료 데이터 삭제가 "issuing expensive queries to bulk delete rows" 였고, 힙이 커지며 "combing over dead rows to find the living" 에 I/O 를 썼습니다.
+
+**이 세션이 다루는 것은 PostgreSQL 안의 복구까지입니다.** Sentry 의 진짜 근본 해소는 PostgreSQL 밖에 있었습니다. 그리고 그 포스트모템에는 재발 방지 항목이 없습니다. 감시도 알림도 적혀 있지 않습니다.
+
 ## 못 한 것
 
 - **8절: XID 소비만 쟀습니다.** 세이브포인트가 SLRU와 스탠바이에 미치는 영향은 A19의 주제이고 여기서 잇지는 않았습니다. 그리고 조건마다 1회 실행입니다.
