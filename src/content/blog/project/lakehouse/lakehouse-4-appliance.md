@@ -179,7 +179,7 @@ fernet 키는 결국 32바이트 랜덤의 urlsafe base64라, 외부 의존 없�
 **셋째, 호스트용 러너가 컨테이너 venv를 못 본다.** standalone을 띄우고 전체 파이프라인을
 돌리려 `python -m extract.run_pipeline`을 컨테이너 안에서 쳤더니 `No module named 'dbt'`가
 났습니다. 이유를 파보니, dbt는 Airflow 의존성 충돌을 피하려고 **분리된 venv
-(`/opt/dbt-venv`)**에 깔려 있는데, `run_pipeline.py`는 "호스트용"이라 기본 python으로
+(`/opt/dbt-venv`)에** 깔려 있는데, `run_pipeline.py`는 "호스트용"이라 기본 python으로
 dbt를 부릅니다. 컨테이너의 실제 경로는 DAG가 씁니다(`DBT_BIN = "/opt/dbt-venv/bin/dbt"`).
 DAG와 똑같이 그 바이너리로 불렀습니다. 한 번 더 걸린 게 있는데, `dbt build`로
 돌리니 unit test가 하나 실패했습니다. 이건 결함이 아니라, 외부 `read_parquet` 소스는

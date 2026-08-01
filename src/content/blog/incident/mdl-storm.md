@@ -3,7 +3,7 @@ title: '0.09초짜리 DDL이 20초 동안 조회를 세웠다'
 titleEn: 'A 0.09-Second DDL Stalled Queries for 20 Seconds'
 description: 'MySQL 8.4에서 커밋하지 않은 트랜잭션 하나와 ALTER TABLE 하나가 겹치자 조회 완료 건수가 20초 동안 평시의 10% 아래로 떨어졌고, 그중 19초(26~44초)는 아예 0건이었습니다. 롱 트랜잭션만 돌 때와 DDL만 돌 때는 정지가 0초였습니다. 겹친 조건에서만 최대 지연 20,021ms가 나왔습니다. 200만 행 테이블에 PK 점조회 부하를 걸고 네 조건을 같은 일정으로 60초씩 한 번 측정했습니다. lock_wait_timeout을 2초로 줄이면 정지가 2초, 최대 지연이 2,005ms로 내려갑니다. 조건별 평시 처리량 차이는 개입 이전 구간에서 난 실행 간 편차라 설정의 효과가 아닙니다.'
 descriptionEn: In MySQL 8.4, one uncommitted transaction overlapping a single ALTER TABLE pushed query completions below 10 percent of baseline for 20 seconds, 19 of which (seconds 26 to 44) had zero completions. With only the long transaction running, or only the DDL, the stall was 0 seconds; the overlap alone produced a 20,021ms peak latency. Four conditions were measured once for 60 seconds each on the same schedule, driving primary-key point lookups against a 2-million-row table. Cutting lock_wait_timeout to 2 seconds brought the stall down to 2 seconds and the peak latency to 2,005ms. The pre-DDL throughput gap between conditions is run-to-run variance, not an effect of the setting.
-date: 2026-07-29
+date: 2026-01-03
 tags:
   - MySQL
   - InnoDB

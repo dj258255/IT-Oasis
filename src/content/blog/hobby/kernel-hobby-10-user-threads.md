@@ -89,7 +89,7 @@ struct thread *current_thread;       // 전역
 
 | 선택지 | 무엇을 하나 | 비용 | 의미 |
 |--------|------------|------|------|
-| ① 데이터 세그먼트 추가 | 유저 주소공간에 `R|W` `.data`/`.bss`를 따로 매핑 | **커널·로더를 고쳐야 함** | "정석". 하지만 이번 글의 전제(커널 무수정)를 깬다 |
+| ① 데이터 세그먼트 추가 | 유저 주소공간에 `R\|W` `.data`/`.bss`를 따로 매핑 | **커널·로더를 고쳐야 함** | "정석". 하지만 이번 글의 전제(커널 무수정)를 깬다 |
 | ② 전역을 안 쓴다 | 상태를 쓰기 가능한 힙에 둔다 | 코드 트릭 하나면 됨 | 커널을 한 줄도 안 건드리고 푼다 |
 
 저는 **②번**을 택했습니다.
@@ -217,7 +217,7 @@ if (a >= HEAPBASE && a < p->heap_top) {
 
 스레드를 갈아타는 건 [커널의 `swtch`](/blog/hobby/kernel-hobby-03-exec-and-shell)와 **완전히 똑같은 원리**입니다.
 callee-saved 레지스터와 `ra`, `sp`를 메모리에 저장하고 다른 묶음에서 복원하면, 마지막 `ret`이 **다른 실행 흐름**으로 점프합니다.
-다른 점은 단 하나입니다. 이건 커널이 아니라 **유저 공간에서 도는 `uswitch`**라는 것입니다. 특권 명령이 하나도 없어서 유저 모드에서 그대로 돌아갑니다.
+다른 점은 단 하나입니다. 이건 커널이 아니라 **유저 공간에서 도는 `uswitch`라는 것**입니다. 특권 명령이 하나도 없어서 유저 모드에서 그대로 돌아갑니다.
 
 ```asm
 uswitch:                  # uswitch(old, new)  — old=a0, new=a1
@@ -485,7 +485,7 @@ There were two ways out.
 
 | Option | What it does | Cost | Meaning |
 |--------|-------------|------|---------|
-| ① Add a data segment | Map a separate `R|W` `.data`/`.bss` into the user address space | **Have to change the kernel/loader** | "The proper way." But it breaks this post's premise (no kernel changes) |
+| ① Add a data segment | Map a separate `R\|W` `.data`/`.bss` into the user address space | **Have to change the kernel/loader** | "The proper way." But it breaks this post's premise (no kernel changes) |
 | ② Don't use globals | Put the state on the writable heap | One code trick | Solve it without touching the kernel at all |
 
 I chose **option ②**.

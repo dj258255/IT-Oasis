@@ -3,7 +3,7 @@ title: '지우지 않은 ThreadLocal 하나가 클래스로더를 통째로 붙�
 titleEn: 'One Unremoved ThreadLocal Pins an Entire ClassLoader'
 description: "Tomcat이 웹앱 정지 시 전용 경고까지 만들어 둔 ThreadLocal 클래스로더 누수를 재현했습니다. ThreadLocal 객체가 웹앱 클래스로더 안 static 필드에 있고 remove()를 부르지 않으면 재배포 300회에서 폐기했어야 할 클래스로더가 300개 전부 살아남았습니다. try/finally로 remove() 한 줄을 넣자 0개가 됐습니다. MaxMetaspaceSize를 24m으로 인위적으로 조이면 OutOfMemoryError: Metaspace까지 갑니다. Spring Boot 3.3.5 WAR를 Tomcat 10.1.57에 올린 실제 스택에서는 헤더 없는 요청이 직전 사용자의 컨텍스트를 그대로 받았습니다. GC는 참조 고리가 살아 있는 한 아무것도 하지 않았고, 회수를 만든 것은 워커 스레드의 종료였습니다. Tomcat이 실제로 언제 어떤 조건에서 스레드를 갱신하는지는 재지 않았습니다."
 descriptionEn: "A reproduction of the ThreadLocal classloader leak that Tomcat cares about enough to ship a dedicated warning for. When the ThreadLocal object itself lives in a static field inside the web app classloader and remove() is never called, all 300 of 300 discarded classloaders survived 300 redeployments; adding a single remove() in a try/finally brought that to 0. Capped at an artificially low MaxMetaspaceSize=24m the leaking path died with OutOfMemoryError: Metaspace, and on the real stack, a Spring Boot 3.3.5 WAR on Tomcat 10.1.57, a request with no auth header came back carrying the previous user's context. GC did nothing while the reference cycle stayed alive; what reclaimed the classloaders was terminating the worker thread. When and under what conditions Tomcat actually renews its threads was not measured here."
-date: 2026-07-28
+date: 2026-01-02
 tags:
   - Java
   - JVM
@@ -77,7 +77,7 @@ to try and avoid a probable memory leak.
 
 ### Metaspace를 좁게 잡으면 실제로 터집니다
 
-`-Xmx256m -XX:MaxMetaspaceSize=24m`으로 고정하고 같은 코드를 돌렸습니다. 힙을 넉넉히 준 것은 힙 OOM이 먼저 터져 원인이 흐려지는 것을 막기 위해서입니다. 누수 조건은 **3,773 사이클에서 `java.lang.OutOfMemoryError: Metaspace`**로 죽었고, 같은 설정에서 순진한 설계(ThreadLocal이 웹앱 밖)는 10,000 사이클을 완주했습니다. 이 OOM 실행은 1회분만 남아 있습니다. 지점이 반복되는지는 확인하지 않았습니다.
+`-Xmx256m -XX:MaxMetaspaceSize=24m`으로 고정하고 같은 코드를 돌렸습니다. 힙을 넉넉히 준 것은 힙 OOM이 먼저 터져 원인이 흐려지는 것을 막기 위해서입니다. 누수 조건은 **3,773 사이클에서 `java.lang.OutOfMemoryError: Metaspace`로 죽었고**, 같은 설정에서 순진한 설계(ThreadLocal이 웹앱 밖)는 10,000 사이클을 완주했습니다. 이 OOM 실행은 1회분만 남아 있습니다. 지점이 반복되는지는 확인하지 않았습니다.
 
 3,773이라는 수 자체에는 의미가 없습니다. 24m은 결과를 30초 안에 보려고 인위적으로 조인 값입니다. `MaxMetaspaceSize`의 JVM 기본값은 무제한이고(같은 이미지에서 `-XX:+PrintFlagsFinal`로 찍으면 `size_t`의 최댓값이 나옵니다), 실무에서 이 플래그를 명시적으로 거는 경우도 흔하지 않습니다. 그래서 현실의 실패는 대개 이 오류로 오지 않습니다. Metaspace가 컨테이너 메모리 한도를 밀어 올려 커널이 프로세스를 OOM-Kill로 죽이거나, 클래스 메타데이터가 쌓이면서 GC 압박이 커져 응답이 느려지는 쪽으로 나타납니다. 이 세션은 두 경로 중 어느 쪽도 재현하지 않았습니다. 위 실행이 보여 주는 것은 메타데이터가 실제로 해제되지 않고 한 방향으로만 쌓인다는 사실까지입니다.
 

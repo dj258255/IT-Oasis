@@ -3,7 +3,7 @@ title: 'CDC 컨슈머가 죽으면 프로덕션 DB의 디스크가 찬다'
 titleEn: "When the CDC Consumer Dies, the Production Database Fills Its Own Disk"
 description: "CDC 컨슈머가 죽어도 논리 복제 슬롯은 남고, 서버는 그 슬롯의 restart_lsn 이후 WAL을 지우지 못합니다. PostgreSQL 17.5 컨테이너에 초당 859.6행을 넣으면서 pg_recvlogical을 죽여 보니 슬롯이 붙잡은 WAL이 120.5초 만에 7.0MB에서 125.8MB로 늘었고, 기울기 초당 0.99MB는 시간당 3.5GB에 해당합니다. 체크포인트가 30초마다 돌았는데도 pg_wal은 80.5초 동안 80MB에 묶여 있었고, 슬롯을 지우고 체크포인트를 돌리자 128MB가 96MB로 즉시 줄었습니다. max_slot_wal_keep_size를 64MB로 걸면 41.7~60초 만에 슬롯이 lost가 되어 디스크는 지켜지고 CDC는 버려지는데, 상한이 체크포인트 시점에만 적용되는 탓에 그사이 슬롯 지연은 회차에 따라 138~174MB까지 올라갔습니다."
 descriptionEn: "A logical replication slot outlives the CDC consumer that created it, and the server cannot recycle any WAL past that slot's restart_lsn. Writing 859.6 rows per second into a PostgreSQL 17.5 container and then killing pg_recvlogical, the WAL pinned by the slot grew from 7.0MB to 125.8MB in 120.5 seconds, a slope of 0.99MB per second that works out to roughly 3.5GB per hour. Checkpoints ran every 30 seconds and still could not reclaim anything: pg_wal sat at 80MB for 80.5 seconds, and dropping the slot plus one checkpoint cut it from 128MB to 96MB immediately. Setting max_slot_wal_keep_size to 64MB invalidated the slot after 41.7 to 60 seconds, which saves the disk and throws away the CDC pipeline, and because the cap is only enforced at checkpoint time the slot had already pinned 138 to 174MB by then."
-date: 2026-07-29
+date: 2026-07-03
 tags:
   - PostgreSQL
   - CDC

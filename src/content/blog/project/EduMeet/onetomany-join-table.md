@@ -29,7 +29,7 @@ Board 엔티티에서 BoardImage에 대한 참조를 `@OneToMany`로 설정하�
 
 ![](/uploads/project/EduMeet/onetomany-join-table/onetomany-join-table-creation.png)
 
-`board`와 `board_image` 외에 **`board_image_set`이라는 중간 테이블(조인 테이블)**이 추가로 생성된 것입니다.
+`board`와 `board_image` 외에 **`board_image_set`이라는 중간 테이블(조인 테이블)이** 추가로 생성된 것입니다.
 
 ---
 

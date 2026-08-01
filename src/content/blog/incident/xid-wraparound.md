@@ -3,7 +3,7 @@ title: '트랜잭션 ID가 바닥나 데이터베이스가 읽기 전용이 된�
 titleEn: 'When Transaction IDs Run Out and the Database Turns Read Only'
 description: 'Sentry가 2015년에 겪은 트랜잭션 ID wraparound를 PostgreSQL 17.5에서 실제 정지 지점까지 도달해 재현했습니다. 가장 먼저 확인한 사실은 원인입니다. autovacuum=off로 두어도 wraparound 방지 autovacuum은 반드시 돌고 XID를 20억으로 점프시킨 직후 긴급 vacuum이 발동해 age를 12로 되돌려 놓았습니다. 사고는 청소를 안 해서 나지 않고 청소가 datfrozenxid를 전진시키지 못하게 막는 것이 있을 때 납니다. 그래서 버려진 prepared transaction을 원인으로 심었습니다. 임계값도 정정했습니다. Sentry 원문이 인용한 100만 개 남으면 정지는 PostgreSQL 13 이하 값이고 14부터 300만입니다. 경고는 랩 지점에서 4,000만 앞이고 실측 문구가 정확히 40000000을 보고했으므로 경고가 알리는 여유와 실제로 멈추는 지점이 3,700만 개 어긋납니다. 정지 상태에서 SELECT는 50,005행을 돌려주고 읽기 전용 트랜잭션과 VACUUM도 동작합니다. INSERT와 DELETE는 거부되고 txid_current()도 그 호출이 XID를 할당하기 때문에 실패합니다. 복구는 손대지 않는 것이 정답이었습니다. prepared transaction만 제거하고 40초 기다리자 긴급 autovacuum이 접속 막힌 template0까지 전부 처리했고 로그에 PostgreSQL 14의 vacuum_failsafe_age 발동 기록이 남았습니다. 단일 사용자 모드 권고가 17에서 삭제된 것과 공식 문서가 아직 구 문구를 싣고 있어 소스와 어긋나는 것까지 정리했습니다.'
 descriptionEn: "This session reproduces the transaction ID wraparound Sentry hit in 2015, reaching the actual read only stop point on PostgreSQL 17.5. The first finding concerns the cause: anti wraparound autovacuum runs even with autovacuum=off, and right after jumping the XID counter to 2 billion an emergency vacuum fired and pulled age back to 12. Incidents happen not because vacuum was skipped but because something prevents vacuum from advancing datfrozenxid, so an orphaned prepared transaction was planted as the cause. The thresholds also needed correcting. The one million remaining figure Sentry quoted holds for PostgreSQL 13 and earlier; from 14 it is three million. The warning fires 40 million transactions before the wrap point, and the observed message reported exactly 40000000, meaning the runway the warning advertises and the point where writes actually stop are 37 million apart. In the stopped state SELECT returns all 50,005 rows, read only transactions and VACUUM still work, INSERT and DELETE are refused, and txid_current() fails because that call itself assigns an XID. Recovery turned out to be a matter of not intervening: removing only the prepared transaction and waiting 40 seconds let emergency autovacuum handle even template0, which does not accept connections, and the log recorded PostgreSQL 14's vacuum_failsafe_age kicking in. The post also covers the removal of the single user mode advice in 17 and the resulting mismatch between the official docs, which still show the old wording, and the source."
-date: 2026-07-30
+date: 2026-06-09
 tags:
   - PostgreSQL
   - Transaction
@@ -219,7 +219,7 @@ Sentry가 2015년에 따랐던 그 조언이 이제 "terrible advice"로 분류�
     spoon age=0
 ```
 
-작업하던 데이터베이스는 `age=0`이 됐는데 쓰기가 여전히 막힙니다. 임계는 **클러스터 전체에서 가장 오래된 `datfrozenxid`**로 정해집니다. 그러니 한 데이터베이스를 동결해도 나머지가 남아 있으면 소용이 없습니다. 이제 `postgres`와 `template1`, `template0`이 붙잡고 있습니다.
+작업하던 데이터베이스는 `age=0`이 됐는데 쓰기가 여전히 막힙니다. 임계는 **클러스터 전체에서 가장 오래된 `datfrozenxid`로 정해집니다**. 그러니 한 데이터베이스를 동결해도 나머지가 남아 있으면 소용이 없습니다. 이제 `postgres`와 `template1`, `template0`이 붙잡고 있습니다.
 
 `template0`은 특히 까다롭습니다. `datallowconn = false`라 접속이 안 되므로 `vacuumdb`가 건너뜁니다. 손으로 열려면 `pg_database`를 UPDATE해야 하는데 그건 쓰기라서 정지 상태에서 실패합니다.
 

@@ -3,7 +3,7 @@ title: 'DB는 1분에 복구됐는데 앱만 계속 죽어 있다'
 titleEn: 'The Database Recovered in a Minute, but the Application Stayed Down'
 description: 'RDS Multi-AZ 페일오버는 인스턴스를 옮기는 것이 아니라 엔드포인트의 DNS 레코드를 스탠바이 쪽으로 바꾸는 것이라서, DB 지표가 전부 정상인데 애플리케이션만 계속 커넥션 에러를 뱉는 구간이 생깁니다. JVM이 호스트명 해석 결과를 캐시하기 때문이고, 보안 관리자가 없으면 그 기본값이 30초입니다. MySQL 8.4.3 두 대와 dnsmasq로 축소 재현해 0.5초 간격으로 프로브를 찍었더니, DNS TTL을 5초로 줄였는데도 JVM은 페일오버 16.7초 지점까지 옛 주소를 반환했고, 새 주소를 처음 본 것이 20.2초, 복구가 23.8초였습니다(3회 반복에서 23.65~23.78초). 재해석이 20초에 오는 것은 앱이 기동 때 이름을 풀고 10초 뒤에 페일오버가 났기 때문이고, 얹히는 것은 30초 전부가 아니라 그 캐시의 남은 몫입니다. sun.net.inetaddr.ttl을 0으로 두면 같은 페일오버가 5.9초에 끝나 17.9초가 빠졌고, maxLifetime과 keepaliveTime을 함께 줄인 조건은 5.9초로 같아 추가 개선이 없었습니다.'
 descriptionEn: 'An RDS Multi-AZ failover does not move the instance, it repoints the endpoint DNS record at the standby, which leaves a window where every database metric looks healthy while the application alone keeps throwing connection errors. The cause is the JVM name resolution cache, whose default is 30 seconds when no security manager is installed. This session shrinks the setup down to two MySQL 8.4.3 containers behind dnsmasq and probes every 0.5 seconds: even with the DNS TTL cut to 5 seconds, the JVM still returned the old address 16.7 seconds after the failover, first saw the new one at 20.2 seconds, and took 23.8 seconds to recover. Setting sun.net.inetaddr.ttl to 0 finished the same failover in 5.9 seconds, while shortening maxLifetime and enabling keepaliveTime on top of that stayed at 5.9 seconds with no further gain.'
-date: 2026-07-29
+date: 2026-05-18
 tags:
   - MySQL
   - Spring Boot

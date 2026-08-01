@@ -3,7 +3,7 @@ title: '병렬 매칭에서는 먼저 낸 주문이 나중에 체결된다'
 titleEn: 'How Parallel Matching Breaks the Time-Priority Rule in a Matching Engine'
 description: '한국거래소의 매매체결원칙에는 가격우선과 시간우선이 있습니다. 처리량을 올리려고 접수와 매칭을 병렬화하면 이 시간우선이 조용히 깨집니다. 초판은 해소판이 큐 구현과 원자 구간과 소비 방식 셋을 한꺼번에 바꿔서 처리량 차이를 어느 변수에도 귀속할 수 없었습니다. 그래서 2 vCPU 호스트에서 변수를 하나씩만 바꾼 조건 여덟 개를 각 51회씩 다시 쟀습니다. 순서를 지켜 준 변수는 원자 구간 하나였고, 원자 구간을 넣은 세 조건은 153회 전부 시간우선 위반 0건이었습니다. 원자 구간의 순수 비용은 다른 변수를 고정했을 때 1.06~1.78배였지만, 초판이 함께 바꾼 큐 교체가 1.4~1.8배 이득을 줘서 해소판 전체는 기준보다 오히려 빨랐습니다. 단일 시퀀서가 1.8~3.8배 느리다는 초판의 서술은 1회 실행끼리 맞댄 값이어서 철회합니다.'
 descriptionEn: "The Korea Exchange applies price priority and time priority among its order-matching rules, but parallelizing order intake and matching to raise throughput breaks the time rule silently. The first version of this post changed three things at once in its fix, namely the queue implementation, the atomic section, and the consumption method, so no throughput difference could be attributed to any one of them. This rewrite runs eight conditions that each differ by a single variable, 51 times each, on a 2 vCPU host. Only the atomic section preserved ordering: the three conditions that had it recorded zero time-priority violations across all 153 runs, while swapping the queue or the consumption method alone did not help. Holding the other variables fixed, the atomic section cost 1.06 to 1.78 times more time, but the queue swap that the first version bundled with it was worth 1.4 to 1.8 times, so the combined fix ran faster than the baseline rather than slower. The earlier claim that the single sequencer was 1.8 to 3.8 times slower came from comparing single runs and is withdrawn."
-date: 2026-07-28
+date: 2026-02-26
 tags:
   - Java
   - Java 21

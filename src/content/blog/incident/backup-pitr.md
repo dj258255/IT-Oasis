@@ -3,7 +3,7 @@ title: '백업은 있는데 복구가 안 된다, PITR을 가로막는 다섯 �
 titleEn: "You Have Backups, You Just Cannot Restore: Five Things That Block PITR"
 description: "2017년 1월 GitLab은 primary의 PostgreSQL 데이터 디렉터리를 지운 뒤에야 다섯 가지 백업·복제 수단이 전부 듣지 않는다는 것을 알았습니다. 사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없어, MySQL 8.4.3에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. mysqldump 풀백업(덤프 40K)과 binlog(192K)로 DROP TABLE 직전 시점까지 되돌리면, 백업만 복원했을 때는 1,000건이 돌아와 500건이 유실되고 binlog를 사고 직전 위치 176549까지 이어 붙이면 1,500건이 전부 돌아옵니다. 복구를 가로막는 함정은 다섯 가지인데 넷은 스크립트로 재현했고 하나는 실험을 만들다 직접 밟았습니다. 그중 셋은 에러 없이 실패합니다. 재적용이 조용히 스킵되는 것, binlog가 만료돼 PITR 창이 닫히는 것, docker exec에 -i를 빠뜨려 표준입력이 전달되지 않는 것입니다."
 descriptionEn: "In January 2017 GitLab discovered that all five of its backup and replication mechanisms were broken only after an engineer wiped the primary PostgreSQL data directory. The incident itself involved roughly 300GB of PostgreSQL data and cannot be reproduced as such, so this session reproduces only the same mechanism at reduced scale on MySQL 8.4.3 with a 1,500-row table. Restoring a mysqldump full backup (40K) and replaying the binary log (192K) up to the moment just before a DROP TABLE recovers everything: the backup alone brings back 1,000 rows and loses 500, while replaying up to position 176549 brings all 1,500 rows back. Of the five traps that block recovery, four were reproduced by script and one was hit while building the experiment. Three of them raise no error at all: a replay that is silently skipped, an expired binlog that closes the PITR window, and a missing -i on docker exec that never delivers standard input."
-date: 2026-07-29
+date: 2026-03-09
 tags:
   - MySQL
   - Backup
@@ -241,7 +241,7 @@ C와 D의 차이가 이 절의 요점입니다. 설정은 똑같이 `recovery_ta
 
 ## 6. SQL Server로 한 번 더
 
-앞서 이 자리에 "공식 이미지가 없거나 라이선스가 걸려 이 랩에서 실행할 수 없었다"고 적었습니다. **틀렸습니다.** SQL Server Developer 에디션은 `mcr.microsoft.com/mssql/server`로 무료 공개돼 있고 `STOPAT` 시점 복구가 그 에디션에 들어 있습니다. 재봤습니다.
+SQL Server Developer 에디션은 `mcr.microsoft.com/mssql/server`로 무료 공개돼 있고 `STOPAT` 시점 복구가 그 에디션에 들어 있습니다. 같은 사고를 이 엔진에서도 돌려 봤습니다.
 
 SQL Server 2022 (16.0.4265.3), Developer 에디션, 같은 1,500행 규모입니다. Apple Silicon에는 ARM 이미지가 없어 에뮬레이션으로 돌고 메모리를 6GB 줘야 떴습니다.
 
@@ -304,7 +304,7 @@ D도 함께 봐야 합니다. `STOPAT`을 로그 백업 완료 시각으로 주�
 
 ## 7. Oracle 대조
 
-마지막 하나가 Oracle입니다. 앞에서 "라이선스 때문이 아니라 아직 안 했다"고 적어 둔 자리입니다. Database Free 23ai가 무료 공개돼 있어 실행했습니다. Oracle AI Database 26ai Free (23.26.2.0.0)입니다.
+마지막 하나가 Oracle입니다. Database Free 23ai가 무료 공개돼 있어 실행했습니다. Oracle AI Database 26ai Free (23.26.2.0.0)입니다.
 
 | | 사고 전 | 사고 후 | `UNTIL TIME` 복구 후 |
 |---|---|---|---|
@@ -423,7 +423,7 @@ MySQL의 PITR 문서(9.5절)에는 GTID 관련 경고가 한 줄도 없습니다
 | 논리(`mysqldump`) | 0.13초 | **0.88초** | 7.8MB |
 | 물리(콜드 복사) | 1.66~6.58초 | **3.93~4.29초** | 237.3MB |
 
-**예상과 반대입니다.** 논리 복원이 0.88초, 물리 복원이 3.93~4.29초로 논리가 4.5배 빠릅니다. 직접 재 보기 전에는 방향조차 몰랐던 자리입니다.
+**예상과 반대입니다.** 논리 복원이 0.88초, 물리 복원이 3.93~4.29초로 논리가 4.5배 빠릅니다.
 
 이유는 물리 복원의 비용이 데이터가 아니라 **서버 재기동**에 있기 때문입니다. 컨테이너를 멈추고 tar를 풀고 다시 띄우는데, 그 기동이 4초 남짓입니다. 10만 행짜리 SQL을 다시 실행하는 0.88초보다 비쌉니다.
 

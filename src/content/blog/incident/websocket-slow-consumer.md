@@ -3,7 +3,7 @@ title: '느린 구독자 하나가 시세를 멈춘다'
 titleEn: "One Slow Subscriber Stalls the Whole Market Feed"
 description: 'WebSocket으로 시세를 뿌리는 서버에 초당 32KB만 읽는 느린 구독자 한 명을 붙였습니다. 그 상태로 팬아웃 구현 일곱 가지를 조건 열한 가지로 바꿔 가며 각각 3회씩 쟀습니다. 브로드캐스트 스레드가 직접 전송하면 발행량이 초당 2,909건에서 142건으로 떨어지고 생산자 스레드가 45초 중 44.0초를 막혀 있었습니다. 무제한 큐로 바꾸면 생산자는 살아나지만 느린 구독자 몫으로 쌓인 페이로드가 95.58MB까지 늘고 82초에서 92초 사이에 OOM이 났으며, 그동안 정상 구독자도 최대 9.3초 지연과 세션 강제 종료를 겪었습니다. 종목별 최신값으로 접고 한도를 넘으면 끊는 조합은 발행량 2,936건에 느린 구독자 몫 0.01MB였고, 대신 느린 구독자는 발행량의 2.3%만 받았습니다.'
 descriptionEn: "A WebSocket market-data server was given five healthy subscribers plus one slow subscriber that reads only 32KB per second, and seven fan-out implementations were measured across eleven conditions, three runs each. Sending directly from the broadcast thread dropped throughput from 2,909 to 142 messages per second, with the producer thread blocked for 44.0 of the 45 measured seconds. An unbounded per-subscriber queue kept the producer running but let the slow subscriber's undelivered payloads grow to 95.58MB, ending in OOM somewhere between 82 and 92 seconds, while healthy subscribers saw delays up to 9.3 seconds and one was force-closed. Conflating the queue to the latest tick per symbol and closing sessions past a limit held 2,936 messages per second with only 0.01MB queued, at the cost of the slow subscriber receiving 2.3% of what was published."
-date: 2026-07-29
+date: 2026-06-27
 tags:
   - WebSocket
   - Spring Boot
