@@ -83,7 +83,7 @@ lab-f09-app  |   P3 틱 10건 중 일치 7건, 예외 0건, 예외 없이 값이
 
 *그림 2. 파싱 계층 실행 화면입니다. P1은 음수 3건에서 예외로 멈추고, P2와 P3은 예외 없이 3건을 틀린 값으로 읽습니다.*
 
-P1은 요란하게 실패합니다. 예외 원문은 `java.lang.NumberFormatException: Illegal leading minus sign on unsigned string -3763.` 입니다. 틱을 잃지만 실패했다는 사실은 남습니다. P2와 P3은 아무 신호 없이 값을 바꿉니다. P2는 마이너스 37.63달러를 플러스 37.63달러로, P3은 42,949,635.33달러로 읽습니다.
+P1은 요란하게 실패합니다. 예외 원문은 `java.lang.NumberFormatException: Illegal leading minus sign on unsigned string -3763.`입니다. 틱을 잃지만 실패했다는 사실은 남습니다. P2와 P3은 아무 신호 없이 값을 바꿉니다. P2는 마이너스 37.63달러를 플러스 37.63달러로, P3은 42,949,635.33달러로 읽습니다.
 
 셋의 무게는 같지 않습니다. 실무에서 그대로 마주칠 만한 것은 P2 하나입니다. `replaceAll("[^0-9]", "")`로 금액 문자열을 씻는 코드는 실제로 흔하고, 부호가 함께 지워진다는 것만 눈에 안 띕니다. P1은 다릅니다. 가격 필드를 `Integer.parseUnsignedInt`로 읽는 코드를 실무에서 굳이 쓸 이유가 없고, 이 세션이 요란하게 실패하는 경로의 모양을 보이려고 일부러 고른 대조군입니다. P3도 이름은 바이너리 피드 디코더인데 이 재현의 입력은 문자열이라 실제 바이너리 필드를 읽지 않습니다. 32비트 값을 무부호로 해석했을 때 부호가 어떻게 사라지는지를 같은 틱으로 보여 주려고 만든 경로일 뿐, 바이너리 프로토콜을 재현한 것이 아닙니다. 표가 세 줄인 것은 실무 버그가 세 종류라는 뜻이 아니라 대조군 둘을 나란히 세웠기 때문이고, 이 글이 실무 버그로 주장하는 것은 P2뿐입니다.
 
@@ -223,17 +223,17 @@ static Res pFixed(String f) {
 
 **거래소와 브로커의 실패가 서로 다른 층에 있었습니다.**
 
-**CME 는 고칠 것이 거의 없었습니다.** 4월 8일 Clearing Advisory 20-152 에 이렇게 적혀 있습니다.
+**CME는 고칠 것이 거의 없었습니다.** 4월 8일 Clearing Advisory 20-152에 이렇게 적혀 있습니다.
 
 > "Please note that all existing CME Clearing message and file formats **already support, without modification, negative futures prices as well as negative strike prices**."
 
-메시지와 파일 포맷이 이미 음수를 담을 수 있었습니다. 대신 CME 가 바꾼 것은 **옵션 가격 모형**입니다. 4월 22일자로 Black-Scholes 계열에서 **Bachelier** 로 전환했습니다. 이유가 CFTC 보고서에 있습니다. "The Black-Merton-Scholes options pricing model, among others, relies on logarithms in the calculations. As a result, models of this type cannot calculate a price for the option if the underlying asset has a negative price."
+메시지와 파일 포맷이 이미 음수를 담을 수 있었습니다. 대신 CME가 바꾼 것은 **옵션 가격 모형**입니다. 4월 22일자로 Black-Scholes 계열에서 **Bachelier** 로 전환했습니다. 이유가 CFTC 보고서에 있습니다. "The Black-Merton-Scholes options pricing model, among others, relies on logarithms in the calculations. As a result, models of this type cannot calculate a price for the option if the underlying asset has a negative price."
 
 **같은 "음수를 못 받는다"라도 층이 다릅니다.** 하나는 값을 표현할 수 있느냐이고 하나는 수식의 정의역입니다. 이 세션이 잰 것은 앞쪽입니다.
 
-CME 는 2단계로 준비했습니다. 4월 3일 공지가 그 설계를 보여 줍니다. 먼저 플래그만 켜고 거래는 막아 뒀습니다. "flagged as **eligible to trade at negative prices**" 이면서 동시에 "Trading at negative prices for these outright markets **will not be supported at this time**". 4월 8일에 전환 임계값을 공개하고("$8.00/bbl" 아래면 다음 거래일부터 반드시 전환), 4월 15일에는 회원사가 자기 시스템을 시험할 수 있는 테스트 환경을 열었습니다.
+CME는 2단계로 준비했습니다. 4월 3일 공지가 그 설계를 보여 줍니다. 먼저 플래그만 켜고 거래는 막아 뒀습니다. "flagged as **eligible to trade at negative prices**" 이면서 동시에 "Trading at negative prices for these outright markets **will not be supported at this time**". 4월 8일에 전환 임계값을 공개하고("$8.00/bbl" 아래면 다음 거래일부터 반드시 전환), 4월 15일에는 회원사가 자기 시스템을 시험할 수 있는 테스트 환경을 열었습니다.
 
-**Interactive Brokers 의 실패는 코드를 못 짜서가 아니었습니다.** CFTC 명령서가 이렇게 적습니다.
+**Interactive Brokers의 실패는 코드를 못 짜서가 아니었습니다.** CFTC 명령서가 이렇게 적습니다.
 
 > "Although Interactive Brokers had taken steps to prepare for negative oil prices, it had **not changed its system's market rule configuration** for crude oil futures contracts to make them '**negative-capable**' on or before April 20, 2020."
 
@@ -258,7 +258,7 @@ CME 는 2단계로 준비했습니다. 4월 3일 공지가 그 설계를 보여 
 
 > "**The market integrity controls triggered in the May Contract did not halt trading in the active June Contract or the WTI market as a whole.**"
 
-설계상 시장 전체를 멈출 권한은 **active 종목**에만 있는데, 4월 20일의 active 는 6월물이었습니다. 5월물은 나흘 전 non-active 로 넘어간 상태였습니다. **발동한 것과 멈출 수 있는 것이 달랐습니다.** 그 설계를 바꿨다는 후속 자료는 찾지 못했습니다.
+설계상 시장 전체를 멈출 권한은 **active 종목**에만 있는데, 4월 20일의 active는 6월물이었습니다. 5월물은 나흘 전 non-active로 넘어간 상태였습니다. **발동한 것과 멈출 수 있는 것이 달랐습니다.** 그 설계를 바꿨다는 후속 자료는 찾지 못했습니다.
 
 ## 못 한 것
 

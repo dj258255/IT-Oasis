@@ -36,7 +36,7 @@ GitLab이 2021년 9월에 이 사고를 공개했습니다. 2020년 6월부터 G
 > Only the replicas were affected; the primary remained unaffected.
 > There was a long-running transaction, usually relating to PostgreSQL's autovacuuming, during the time.
 
-이 구간에서 복제본의 처리량이 초당 36만에서 5만으로 떨어졌습니다. 7.2배입니다. **다만 이 두 수치는 GitLab 프로덕션의 값이 아닙니다.** GitLab 글이 인용한 것은 Nikolay Samokhvalov 가 같은 조건을 재현한 벤치마크이고, GitLab 자신의 프로덕션 처리량은 그 글에 없습니다. 아래 계산은 그 글에서 가장 많이 인용되는 대목입니다.
+이 구간에서 복제본의 처리량이 초당 36만에서 5만으로 떨어졌습니다. 7.2배입니다. **다만 이 두 수치는 GitLab 프로덕션의 값이 아닙니다.** GitLab 글이 인용한 것은 Nikolay Samokhvalov가 같은 조건을 재현한 벤치마크이고, GitLab 자신의 프로덕션 처리량은 그 글에 없습니다. 아래 계산은 그 글에서 가장 많이 인용되는 대목입니다.
 
 > 8192/4 = 2048 transaction IDs can be stored in each page
 > There are 32 (`NUM_SUBTRANS_BUFFERS`) pages, which means up to 65K transaction IDs
@@ -192,7 +192,7 @@ PostgreSQL 17에 백엔드별 캐시 상태를 직접 보는 함수가 있어서
 
 두 갈래입니다. 둘 다 이 세션이 재고 효과를 확인했습니다.
 
-**SLRU 를 키웁니다.** `subtransaction_buffers` 를 4MB(512블록)로 올리자 같은 50만 서브트랜잭션에서 조회 700만 건이 전부 적중하고 빗나감이 네 회차 모두 0이 됐습니다. 처리량도 기준선 수준으로 돌아옵니다. 4절 표의 `sub500k-buf` 행이 그 조건입니다.
+**SLRU를 키웁니다.** `subtransaction_buffers`를 4MB(512블록)로 올리자 같은 50만 서브트랜잭션에서 조회 700만 건이 전부 적중하고 빗나감이 네 회차 모두 0이 됐습니다. 처리량도 기준선 수준으로 돌아옵니다. 4절 표의 `sub500k-buf` 행이 그 조건입니다.
 
 **애초에 17을 기본값으로 쓰면 이 절벽을 안 만납니다.** 17에서 `subtransaction_buffers` 기본값 0은 자동 산정을 뜻하고, `shared_buffers` 나누기 512로 최대 1024블록까지 잡습니다. `shared_buffers=1GB` 면 256블록이라 16 시절의 고정 32블록보다 8배 큽니다. **아래 표의 절벽은 그 기본값을 일부러 32로 되돌려 만든 것입니다.**
 
@@ -335,7 +335,7 @@ PostgreSQL 개발자들이 XID를 최대한 빨리 태우는 수단으로 고른
 ## 7. 16과 17을 나란히
 
 PostgreSQL 16과 17.5를 같은 부하로 나란히 돌렸습니다. 두 버전 다
-`subtransaction_buffers` 가 32입니다. 16 에는 그 GUC 자체가 없고 값이 32로 고정입니다.
+`subtransaction_buffers`가 32입니다. 16 에는 그 GUC 자체가 없고 값이 32로 고정입니다.
 17에서 32로 되돌려 맞췄습니다. 버퍼 수가 같으므로 남는 차이는 SLRU 락 구조입니다.
 조건마다 3회 돌렸습니다.
 
@@ -383,7 +383,7 @@ PostgreSQL 16과 17.5를 같은 부하로 나란히 돌렸습니다. 두 버전 
 **63과 64 사이에 계단이 있습니다.** 63은 none의 96~98%를 지키고 64는 93~94%로
 떨어집니다. 두 조건 다 SLRU 읽기가 0 이므로 이 계단은 디스크 접근이 아니라 PGPROC
 캐시 64칸을 넘긴 비용 자체입니다. **"활성 수를 64 미만으로 유지하면 회복된다"가
-처리량 축에서도 확인됩니다.** 2절에서 `ROLLBACK TO` 가 캐시를 비운다는 것만 봤는데,
+처리량 축에서도 확인됩니다.** 2절에서 `ROLLBACK TO`가 캐시를 비운다는 것만 봤는데,
 비운 상태의 처리량이 실제로 none에 가깝습니다.
 
 절벽은 63과 64 사이가 아니라 10,000과 500,000 사이입니다. 0.93배와 0.60배 사이가
@@ -395,23 +395,23 @@ PostgreSQL 16과 17.5를 같은 부하로 나란히 돌렸습니다. 두 버전 
 
 ## 현업은 어떻게 해소했는가
 
-이 세션이 잰 것은 `subtransaction_buffers` 를 키우는 쪽입니다. **GitLab 은 그 길을 명시적으로 거부했습니다.**
+이 세션이 잰 것은 `subtransaction_buffers`를 키우는 쪽입니다. **GitLab은 그 길을 명시적으로 거부했습니다.**
 
-Andrey Borodin 이 SLRU 를 64K 에서 100MB 로 키우는 패치를 올렸고 GitLab 도 그것을 테스트했습니다. 그런데 이렇게 적었습니다. "Although we tested Andrey's PostgreSQL patches, we did not feel comfortable deviating from the official PostgreSQL releases."(패치를 테스트했지만 공식 릴리스에서 벗어나는 것이 내키지 않았다) 커스텀 빌드를 유지할 수 없다는 판단입니다.
+Andrey Borodin이 SLRU를 64K에서 100MB로 키우는 패치를 올렸고 GitLab도 그것을 테스트했습니다. 그런데 이렇게 적었습니다. "Although we tested Andrey's PostgreSQL patches, we did not feel comfortable deviating from the official PostgreSQL releases."(패치를 테스트했지만 공식 릴리스에서 벗어나는 것이 내키지 않았다) 커스텀 빌드를 유지할 수 없다는 판단입니다.
 
-대신 **애플리케이션 코드에서 `SAVEPOINT` 를 전부 지웠습니다.** 세 갈래로 나눠 처리했습니다. 갱신문을 서브트랜잭션 밖으로 옮기고, 중복 제약 위반은 `ON CONFLICT` 로 재작성하고("Rewrite a query to use a `INSERT` or an `UPDATE` with an `ON CONFLICT` clause to deal with duplicate constraint violations"), 원자성이 필수가 아닌 곳은 비원자적 `find_or_create_by` 를 받아들였습니다.
+대신 **애플리케이션 코드에서 `SAVEPOINT`를 전부 지웠습니다.** 세 갈래로 나눠 처리했습니다. 갱신문을 서브트랜잭션 밖으로 옮기고, 중복 제약 위반은 `ON CONFLICT`로 재작성하고("Rewrite a query to use a `INSERT` or an `UPDATE` with an `ON CONFLICT` clause to deal with duplicate constraint violations"), 원자성이 필수가 아닌 곳은 비원자적 `find_or_create_by`를 받아들였습니다.
 
 재발 방지가 흥미롭습니다. **탐지와 금지를 둘 다 넣었습니다.**
 
-- 한 트랜잭션에서 `SAVEPOINT` 가 32개를 넘으면 백트레이스와 개수를 로그로 남깁니다
-- 그 뒤 기준을 더 좁혀 **`SAVEPOINT` 를 하나라도 쓰면 알림**을 냅니다
-- RuboCop cop 두 개로 `transaction(requires_new: true)` 와 `create_or_find_by` 계열을 코드 리뷰 단계에서 막습니다
+- 한 트랜잭션에서 `SAVEPOINT`가 32개를 넘으면 백트레이스와 개수를 로그로 남깁니다
+- 그 뒤 기준을 더 좁혀 **`SAVEPOINT`를 하나라도 쓰면 알림**을 냅니다
+- RuboCop cop 두 개로 `transaction(requires_new: true)`와 `create_or_find_by` 계열을 코드 리뷰 단계에서 막습니다
 
 마무리 문장이 이렇습니다. "Since removing all SAVEPOINT queries, we have not seen Nessie rear her head again. If you are running PostgreSQL with read replicas, we strongly recommend that you also remove all subtransactions until further notice."
 
-**그리고 3년 뒤, GitLab 이 유지 못 한다고 포기했던 그 조치가 upstream 기본이 됐습니다.** PostgreSQL 17 에서 `subtransaction_buffers` 를 포함한 SLRU 캐시 일곱 종이 GUC 가 됐습니다. 이 세션이 잰 처방이 그것이고, 2021년에는 커스텀 패치였던 것이 지금은 설정 한 줄입니다.
+**그리고 3년 뒤, GitLab이 유지 못 한다고 포기했던 그 조치가 upstream 기본이 됐습니다.** PostgreSQL 17에서 `subtransaction_buffers`를 포함한 SLRU 캐시 일곱 종이 GUC가 됐습니다. 이 세션이 잰 처방이 그것이고, 2021년에는 커스텀 패치였던 것이 지금은 설정 한 줄입니다.
 
-**층위가 다릅니다.** 이 세션은 DB 파라미터를 재고, GitLab 은 ORM 코드와 정적 분석 규칙으로 풀었습니다. 어느 쪽이 옳다기보다, **당시에 파라미터라는 선택지가 없었다는 것이 그 선택을 설명합니다.**
+**층위가 다릅니다.** 이 세션은 DB 파라미터를 재고, GitLab은 ORM 코드와 정적 분석 규칙으로 풀었습니다. 어느 쪽이 옳다기보다, **당시에 파라미터라는 선택지가 없었다는 것이 그 선택을 설명합니다.**
 
 ## 못 한 것
 

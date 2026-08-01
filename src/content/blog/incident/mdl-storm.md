@@ -176,7 +176,7 @@ SET SESSION lock_wait_timeout = 2;
 ALTER TABLE orders ADD COLUMN memo VARCHAR(64) NULL;
 ```
 
-2초 안에 락을 못 얻으면 DDL이 `ERROR 1205 (HY000): Lock wait timeout exceeded` 로 죽습니다. DDL이 죽으면 대기 큐가 풀리고 조회가 돌아옵니다. 장애 시간이 DDL의 인내심과 같아지므로, 그 인내심을 짧게 두는 것이 방어입니다.
+2초 안에 락을 못 얻으면 DDL이 `ERROR 1205 (HY000): Lock wait timeout exceeded`로 죽습니다. DDL이 죽으면 대기 큐가 풀리고 조회가 돌아옵니다. 장애 시간이 DDL의 인내심과 같아지므로, 그 인내심을 짧게 두는 것이 방어입니다.
 
 여기서 번호 하나를 갈라 두어야 합니다. 1205를 내는 타임아웃은 두 개이고, 서로 다른 변수가 관장합니다. 메타데이터 락 쪽은 `lock_wait_timeout` 문서가 적습니다.
 
@@ -289,9 +289,9 @@ DDL 단독 조건이 기준선을 줍니다. 롱 트랜잭션이 없을 때 같�
 | `INPLACE` (`ADD INDEX`, `LOCK=NONE`) | **22.58초** | 0.08초 | 2.29초 |
 | `COPY` (테이블 재작성) | 20.04초 | 0.03초 | 3.84초 |
 
-**전체 시간만 보면 세 알고리즘이 거의 같습니다.** 20.01, 22.58, 20.04초입니다. 200만 행을 통째로 다시 쓰는 `COPY` 가 `INSTANT` 와 같은 20초입니다. 단독으로 재면 3.84초 대 0.07초로 55배 차이인데도 그렇습니다.
+**전체 시간만 보면 세 알고리즘이 거의 같습니다.** 20.01, 22.58, 20.04초입니다. 200만 행을 통째로 다시 쓰는 `COPY`가 `INSTANT`와 같은 20초입니다. 단독으로 재면 3.84초 대 0.07초로 55배 차이인데도 그렇습니다.
 
-`performance_schema.metadata_locks` 를 1초마다 훑은 기록이 이유를 말해 줍니다.
+`performance_schema.metadata_locks`를 1초마다 훑은 기록이 이유를 말해 줍니다.
 
 | 알고리즘 | `SHARED_UPGRADABLE` 확보 | `EXCLUSIVE` 요청 | 일반 조회가 막히기 시작 | 막힌 시간 |
 |---|---|---|---|---|
@@ -299,23 +299,83 @@ DDL 단독 조건이 기준선을 줍니다. 롱 트랜잭션이 없을 때 같�
 | `INPLACE` | 25.1초 | 25.1초 | 25.1초 | **19.9초** |
 | `COPY` | 25.1초 | **29.1초** | **29.1초** | **15.9초** |
 
-**세 DDL 다 락을 안 기다리고 바로 시작합니다.** `SHARED_UPGRADABLE` 은 롱 트랜잭션이 쥔 `SHARED_READ` 와 호환됩니다. 25.1초에 셋 다 확보합니다.
+**세 DDL 다 락을 안 기다리고 바로 시작합니다.** `SHARED_UPGRADABLE`은 롱 트랜잭션이 쥔 `SHARED_READ`와 호환됩니다. 25.1초에 셋 다 확보합니다.
 
-**`COPY` 는 복사를 먼저 끝내고 나중에 배타 락을 요구합니다.** 25.1초부터 29.1초까지 4초 동안 200만 행을 새 파일로 복사합니다. 그 4초 동안 일반 조회는 멀쩡히 돕니다. 복사가 끝난 29.1초에야 교체용 `EXCLUSIVE` 를 요청하고, 그 순간부터 뒤따르는 조회가 큐에 쌓입니다.
+**`COPY`는 복사를 먼저 끝내고 나중에 배타 락을 요구합니다.** 25.1초부터 29.1초까지 4초 동안 200만 행을 새 파일로 복사합니다. 그 4초 동안 일반 조회는 멀쩡히 돕니다. 복사가 끝난 29.1초에야 교체용 `EXCLUSIVE`를 요청하고, 그 순간부터 뒤따르는 조회가 큐에 쌓입니다.
 
-**`INPLACE` 는 시작하자마자 배타 락을 요구합니다.** 25.1초에 `EXCLUSIVE:PENDING` 이 뜨고 그때부터 조회가 막힙니다. 인덱스 빌드는 락을 얻은 **뒤에** 합니다. 그래서 완료가 22.58초로 가장 늦습니다. **다만 조회가 막힌 시간은 `INSTANT` 와 같은 19.9초입니다.** 완료가 늦은 것과 장애가 긴 것은 다릅니다.
+**`INPLACE`는 시작하자마자 배타 락을 요구합니다.** 25.1초에 `EXCLUSIVE:PENDING`이 뜨고 그때부터 조회가 막힙니다. 인덱스 빌드는 락을 얻은 **뒤에** 합니다. 그래서 완료가 22.58초로 가장 늦습니다. **다만 조회가 막힌 시간은 `INSTANT`와 같은 19.9초입니다.** 완료가 늦은 것과 장애가 긴 것은 다릅니다.
 
-그래서 조회가 막힌 시간은 `COPY` 가 가장 짧습니다. 15.9초 대 19.9초입니다. 처리량이 0 인 초도 16 대 19입니다.
+그래서 조회가 막힌 시간은 `COPY`가 가장 짧습니다. 15.9초 대 19.9초입니다. 처리량이 0 인 초도 16 대 19입니다.
 
-이건 통념과 반대입니다. `ALGORITHM=COPY` 는 "테이블을 통째로 다시 쓰는 최악" 이고 `ALGORITHM=INPLACE, LOCK=NONE` 은 "온라인" 이라고 부릅니다. **앞을 막는 롱 트랜잭션이 있으면 그 이름이 뒤집힙니다.**
+이건 통념과 반대입니다. `ALGORITHM=COPY`는 "테이블을 통째로 다시 쓰는 최악" 이고 `ALGORITHM=INPLACE, LOCK=NONE`은 "온라인" 이라고 부릅니다. **앞을 막는 롱 트랜잭션이 있으면 그 이름이 뒤집힙니다.**
 
-이유는 배타 락을 언제 요구하느냐입니다. **DDL이 도는 시간이 아니라 배타 락을 요구한 시점부터 장애가 시작합니다.** `COPY` 는 일을 먼저 하고 요구하고, `INPLACE` 는 요구하고 나서 일을 합니다.
+이유는 배타 락을 언제 요구하느냐입니다. **DDL이 도는 시간이 아니라 배타 락을 요구한 시점부터 장애가 시작합니다.** `COPY`는 일을 먼저 하고 요구하고, `INPLACE`는 요구하고 나서 일을 합니다.
 
-**이 역전에는 조건이 하나 붙습니다.** `COPY` 가 유리하게 나온 것은 복사 4초가 롱 트랜잭션의 잔여 대기 20초보다 **짧았기** 때문입니다. 표가 커서 복사가 25초 걸렸다면 배타 락 요청은 50초에 나가는데 롱 트랜잭션은 45초에 이미 커밋했으므로, 그때는 `COPY` 가 훨씬 나쁩니다. **역전은 복사 시간이 롱 트랜잭션 잔여 시간보다 짧을 때만 성립합니다.** 여기서 4초는 200만 행이라는 특정 규모에서 나온 값입니다.
+**이 역전에는 조건이 하나 붙습니다.** `COPY`가 유리하게 나온 것은 복사 4초가 롱 트랜잭션의 잔여 대기 20초보다 **짧았기** 때문입니다. 표가 커서 복사가 25초 걸렸다면 배타 락 요청은 50초에 나가는데 롱 트랜잭션은 45초에 이미 커밋했으므로, 그때는 `COPY`가 훨씬 나쁩니다. **역전은 복사 시간이 롱 트랜잭션 잔여 시간보다 짧을 때만 성립합니다.** 여기서 4초는 200만 행이라는 특정 규모에서 나온 값입니다.
 
 세 알고리즘의 회차 폭이 0.00~0.08초입니다. 조건 사이 차이가 2.5초이므로 이 값을 인용할 수 있습니다.
 
-**읽는 법이 하나 더 있습니다.** 롱 트랜잭션이 없으면 이 순서가 다시 뒤집힙니다. `COPY` 는 3.84초 내내 쓰기를 막고 `INPLACE` 는 2.29초 동안 온라인으로 돕니다. **위 표는 "앞에 롱 트랜잭션이 있을 때" 의 값이고, 그것이 이 세션이 다루는 조건입니다.**
+**읽는 법이 하나 더 있습니다.** 롱 트랜잭션이 없으면 이 순서가 다시 뒤집힙니다. `COPY`는 3.84초 내내 쓰기를 막고 `INPLACE`는 2.29초 동안 온라인으로 돕니다. **위 표는 "앞에 롱 트랜잭션이 있을 때" 의 값이고, 그것이 이 세션이 다루는 조건입니다.**
+
+## 표준 처방은 무엇인가
+
+이 유형은 특정 회사의 사건으로 공개된 것을 찾지 못했습니다. 대신 벤더 문서와 도구 구현이 처방을 갖고 있습니다.
+
+**왜 락이 트랜잭션 끝까지 유지되는지**를 MySQL 매뉴얼이 직접 적습니다.
+
+> "To ensure transaction serializability, the server must not permit one session to perform a data definition language (DDL) statement on a table that is used in an uncompleted explicitly or implicitly started transaction in another session. The server achieves this by acquiring metadata locks on tables used within a transaction and **deferring release of those locks until the transaction ends**."
+
+온라인 DDL도 예외가 아닙니다.
+
+> "In the commit table definition phase, the metadata lock is upgraded to exclusive to evict the old table definition and commit the new one. **Once granted, the duration of the exclusive metadata lock is brief.**"
+> "an online DDL operation **may have to wait** for concurrent transactions that hold metadata locks on the table to commit or rollback."
+
+**쥐는 시간은 짧고 기다리는 시간이 깁니다.** 이 세션이 잰 것이 정확히 그 구조입니다.
+
+**진짜 함정은 기본값입니다.** `lock_wait_timeout`의 기본값은 `31536000`, 곧 1년입니다. 그리고 매뉴얼이 이렇게 덧붙입니다.
+
+> "The timeout value applies **separately for each metadata lock attempt**. A given statement can require more than one lock, so it is possible for the statement to block for longer than the `lock_wait_timeout` value before reporting a timeout error."
+
+**한 문장이 락을 여러 개 요구하면 설정한 값보다 오래 막힐 수 있습니다.** 30초로 줄여도 30초가 상한이 아닙니다.
+
+### 벤더 문서가 안 적은 것
+
+**MySQL 공식 문서 어디에도 "대기 중인 DDL 뒤에 평범한 SELECT가 큐에 갇힌다"는 문장이 없습니다.** 매뉴얼은 "DDL이 기다릴 수 있다"까지만 말합니다. 큐 현상을 명시한 것은 2차 자료뿐입니다.
+
+PlanetScale 문서가 그 경로를 씁니다.
+
+> "During that time more queries will pile up, leading to increased number of connections on the server. It's not unreasonable that the number of connections will surpass the configured database connections threshold, **at which time no new connections and queries are allowed**."
+
+이 세션이 잰 것은 그 서술의 실측입니다. 문서에 없는 구간을 숫자로 채운 자리입니다.
+
+### 도구를 바꿔도 안 사라집니다
+
+Percona가 못을 박습니다.
+
+> "For pt-online-schema change, there are at least **four places** where metadata locks are found. One for the creation of each of the three associated triggers, and one for the table swap."
+
+gh-ost 실측도 같습니다. "Lock & rename duration: 5.975493692s. During this time, queries on `t1` were blocked." 결론은 "Unfortunately, it's **completely unavoidable**"입니다.
+
+gh-ost가 고른 것은 없애는 것이 아니라 **실패했을 때 되돌아갈 자리를 만드는 것**입니다.
+
+> "gh-ost solves this by using an atomic, two-step blocking swap: while one connection holds the lock, another attempts the atomic RENAME."
+> 실패하면 "we are naturally returning to pre-cut-over phase, where the original table is still in place and accessible."
+
+`--cut-over-lock-timeout-seconds` 기본값이 **3초**인 것도 같은 발상입니다. 오래 기다리느니 실패하고 다시 합니다.
+
+### 정리하면
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| `lock_wait_timeout` 기본값 | 31536000초(1년) | MySQL 매뉴얼 |
+| 타임아웃 적용 단위 | 락 시도마다 따로 | MySQL 매뉴얼 |
+| gh-ost 컷오버 타임아웃 기본값 | 3초 | gh-ost 플래그 문서 |
+| pt-osc의 MDL 지점 | 최소 4곳 | Percona |
+| `wait/lock/metadata/sql/mdl` 계측 | 8.0부터 기본 활성, 5.7은 수동 | MySQL 매뉴얼 |
+
+**실무 처방은 짧은 타임아웃과 재시도 루프입니다.** Percona 댓글의 표현이 가장 짧습니다. "a short timeout (1 second) for the metadata lock. If it can't get the lock, then retry." 다만 이건 문제를 없애는 게 아니라 **폭발 반경을 시간으로 제한하는 것**입니다. 이 세션이 보인 대로 기다리는 동안 뒤에 쌓이는 것이 진짜 피해라면, 기다리는 시간을 짧게 만드는 것 말고 할 수 있는 일이 없습니다.
+
+막고 있는 트랜잭션을 죽이는 것도 공짜가 아닙니다. Percona는 언두 로그 영향을 확인한 뒤 죽이라고 씁니다. 오래 돈 쓰기 트랜잭션을 죽이면 롤백이 그만큼 걸립니다.
 
 ## 못 한 것
 

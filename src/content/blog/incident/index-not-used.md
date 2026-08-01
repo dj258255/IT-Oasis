@@ -311,9 +311,9 @@ ERROR 1253: COLLATION 'utf8mb4_0900_ai_ci' is not valid for CHARACTER SET 'latin
 
 **큰 쪽에 붙이면 109배 빨라집니다.** 예상과 반대입니다. 큰 테이블의 인덱스를 죽이면 그 테이블을 통째로 훑을 것 같은데, 실제로는 1,478.2ms가 13.5ms가 됩니다. 스키마를 제대로 고친 대조군(22.8ms)보다도 빠릅니다.
 
-계획을 보면 이유가 나옵니다. `orders` 의 `idx_order_no` 를 못 쓰게 되자 옵티마이저가 **조인 순서를 뒤집었습니다.** 원래는 `order_legacy` 를 PK 순으로 훑으며 `orders` 를 `order_no` 로 찾았습니다. 바꾸고 나서는 `orders` 를 `idx_created` 범위로 좁힌 뒤 `order_legacy` 를 PK로 한 건씩 찾습니다. 훑는 행이 299,595에서 6,000으로 50배 줄었습니다.
+계획을 보면 이유가 나옵니다. `orders`의 `idx_order_no`를 못 쓰게 되자 옵티마이저가 **조인 순서를 뒤집었습니다.** 원래는 `order_legacy`를 PK 순으로 훑으며 `orders`를 `order_no`로 찾았습니다. 바꾸고 나서는 `orders`를 `idx_created` 범위로 좁힌 뒤 `order_legacy`를 PK로 한 건씩 찾습니다. 훑는 행이 299,595에서 6,000으로 50배 줄었습니다.
 
-**`CONVERT` 를 어디에 붙이느냐가 정하는 것은 어느 인덱스가 죽느냐가 아니라 어느 조인 순서가 열리느냐입니다.** 작은 쪽에 붙이면 계획이 안 바뀌어 1,514.4ms로 그대로입니다.
+**`CONVERT`를 어디에 붙이느냐가 정하는 것은 어느 인덱스가 죽느냐가 아니라 어느 조인 순서가 열리느냐입니다.** 작은 쪽에 붙이면 계획이 안 바뀌어 1,514.4ms로 그대로입니다.
 
 이 결과를 해법으로 읽으면 안 됩니다. 여기서 빨라진 것은 `created_at` 범위 조건이 있어서입니다. 그 조건이 없으면 열릴 계획도 없습니다. 스키마를 고치는 것이 조건에 안 기대는 유일한 답입니다.
 
@@ -335,7 +335,7 @@ ERROR 1253: COLLATION 'utf8mb4_0900_ai_ci' is not valid for CHARACTER SET 'latin
 
 ### 선행 와일드카드를 다시 짭니다
 
-원 케이스의 `buyer_name` 은 서로 다른 값이 100개뿐이라 선택도가 낮았습니다. 어떤 인덱스로도 도울 수 없는 조건이라 배수가 인덱스 이야기가 아니었습니다. 값마다 다른 컬럼으로 다시 짰습니다.
+원 케이스의 `buyer_name`은 서로 다른 값이 100개뿐이라 선택도가 낮았습니다. 어떤 인덱스로도 도울 수 없는 조건이라 배수가 인덱스 이야기가 아니었습니다. 값마다 다른 컬럼으로 다시 짰습니다.
 
 | 방식 | 중앙값 | 계획 | 훑은 행 | 결과 |
 |---|---|---|---|---|
@@ -344,13 +344,13 @@ ERROR 1253: COLLATION 'utf8mb4_0900_ai_ci' is not valid for CHARACTER SET 'latin
 
 **17.2배입니다.** 두 쿼리가 같은 186,519건을 돌려줍니다. 선택도는 6.2%입니다.
 
-선행 와일드카드는 인덱스를 **쓰기는 합니다.** 계획이 `index` 이므로 인덱스를 처음부터 끝까지 훑습니다. 289만 행을 다 봅니다. 뒤집은 컬럼은 `range` 로 38만 행만 봅니다. 둘 다 인덱스를 타는데 훑는 양이 7.6배 다릅니다.
+선행 와일드카드는 인덱스를 **쓰기는 합니다.** 계획이 `index` 이므로 인덱스를 처음부터 끝까지 훑습니다. 289만 행을 다 봅니다. 뒤집은 컬럼은 `range`로 38만 행만 봅니다. 둘 다 인덱스를 타는데 훑는 양이 7.6배 다릅니다.
 
-**"인덱스를 안 탄다" 와 "인덱스를 훑는다" 는 다릅니다.** `EXPLAIN` 의 `key` 칸에 인덱스 이름이 있다고 안심하면 안 되고 `type` 칸을 봐야 합니다.
+**"인덱스를 안 탄다" 와 "인덱스를 훑는다" 는 다릅니다.** `EXPLAIN`의 `key` 칸에 인덱스 이름이 있다고 안심하면 안 되고 `type` 칸을 봐야 합니다.
 
 ## 9. OR 조건과 index merge
 
-`OR` 은 옵티마이저 버전에 따라 동작이 갈려 별도 세션이 낫다고 미뤄 뒀습니다. 그런데 이 세션의 주제가 "인덱스가 있는데 안 탄다" 이고 `OR` 이 그 대표적인 자리입니다. `created_at` 과 `buyer_name` 에 각각 인덱스가 있는 조건으로 세 방식을 나란히 놓았습니다.
+`OR`은 옵티마이저 버전에 따라 동작이 갈려 별도 세션이 낫다고 미뤄 뒀습니다. 그런데 이 세션의 주제가 "인덱스가 있는데 안 탄다" 이고 `OR`이 그 대표적인 자리입니다. `created_at`과 `buyer_name`에 각각 인덱스가 있는 조건으로 세 방식을 나란히 놓았습니다.
 
 한쪽씩 걸면 둘 다 인덱스를 탑니다. 묶었을 때가 문제입니다.
 
@@ -358,19 +358,64 @@ ERROR 1253: COLLATION 'utf8mb4_0900_ai_ci' is not valid for CHARACTER SET 'latin
 |---|---|---|---|---|
 | `OR` (index merge 켬) | 95.4ms | `index_merge` / `idx_created,idx_buyer` | 133,090 | 65,577 |
 | `OR` (index merge 끔) | **602.4ms** | `ALL` / 인덱스 없음 | 2,985,200 | 65,577 |
-| `UNION` 으로 손으로 가름 | **24.9ms** | `range` + `ref` | 표 아래 참고 | 65,577 |
+| `UNION`으로 손으로 가름 | **24.9ms** | `range` + `ref` | 표 아래 참고 | 65,577 |
 
 세 방식이 모두 65,577건을 돌려줍니다. 같은 질문입니다.
 
-**index merge를 끄면 통째로 훑습니다.** 602.4ms이고 훑는 행이 298만입니다. `OR` 로 묶는 순간 옵티마이저가 인덱스 하나로는 답을 못 내므로, index merge가 없으면 전체 스캔 말고 선택지가 없습니다.
+**index merge를 끄면 통째로 훑습니다.** 602.4ms이고 훑는 행이 298만입니다. `OR`로 묶는 순간 옵티마이저가 인덱스 하나로는 답을 못 내므로, index merge가 없으면 전체 스캔 말고 선택지가 없습니다.
 
 **index merge는 6.3배 빠릅니다.** 두 인덱스를 각각 훑고 결과를 합집합으로 합칩니다. 훑는 행이 298만에서 13만으로 줄어듭니다.
 
-**`UNION` 으로 손으로 가르면 거기서 3.8배 더 빠릅니다.** 24.9ms입니다. 옵티마이저가 두 질의를 따로 계획하므로 각각 자기 인덱스를 제대로 씁니다. `created_at` 쪽은 `range`, `buyer_name` 쪽은 `ref` 입니다.
+**`UNION`으로 손으로 가르면 거기서 3.8배 더 빠릅니다.** 24.9ms입니다. 옵티마이저가 두 질의를 따로 계획하므로 각각 자기 인덱스를 제대로 씁니다. `created_at` 쪽은 `range`, `buyer_name` 쪽은 `ref`입니다.
 
-**전체 스캔 대비 24.2배입니다.** `OR` 을 `UNION` 으로 바꾸는 것만으로 얻는 값입니다.
+**전체 스캔 대비 24.2배입니다.** `OR`을 `UNION`으로 바꾸는 것만으로 얻는 값입니다.
 
 `UNION` 조건의 `EXPLAIN rows` 곱은 584조로 찍힙니다. 파생 테이블이 끼면서 곱이 의미를 잃은 값이라 인용하면 안 됩니다. **이 세션의 다른 표에서는 rows 곱을 훑는 양의 근사로 썼는데, 파생 테이블이 있는 계획에서는 그 근사가 깨집니다.**
+
+## 표준 처방은 무엇인가
+
+이 세션이 형변환을 "느려지는 문제가 아니라 조용히 틀리는 문제"로 정리한 것에 대해, **Oracle은 이것을 버그로 인정하지 않습니다.**
+
+MySQL 버그 #83857은 "Not a Bug"로 종결됐습니다. 검증팀의 근거가 매뉴얼의 이 문장입니다.
+
+> "For comparisons of a string column with a number, MySQL **cannot** use an index on the column to look up the value quickly... The reason for this is that there are **many different strings** that may convert to the value 1, such as `'1'`, `' 1'`, or `'1a'`."
+
+**변환되는 문자열이 여럿이라 인덱스 순서를 신뢰할 수 없다는 논리입니다.** 이 세션이 132행에서 적은 오검출 시나리오와 같은 근거이고, 결론만 반대입니다. 이 세션은 그것을 사고라 부르고 Oracle은 정의된 동작이라 부릅니다. **어느 쪽이든 DB가 고쳐 주기를 기대할 수 없다는 뜻은 같습니다.**
+
+매뉴얼이 제시하는 해소는 한 줄입니다.
+
+> "This occurs **even when using strict SQL mode**. To prevent this from happening, **quote the value**: `SELECT * FROM t1 WHERE c3 = '0';`"
+
+**strict 모드도 안 막습니다.** 애플리케이션이 타입을 맞추는 것 외에 방법이 없습니다.
+
+### 방향이 대칭이 아닙니다
+
+이 세션은 `VARCHAR` 컬럼을 숫자와 비교하는 쪽만 쟀습니다. **반대 방향은 대체로 안전합니다.**
+
+Percona의 서술입니다. "It works other way around, you can refer to **integer column as a string** in most cases and MySQL will use the index."
+
+정수 컬럼에 문자열 리터럴을 넣는 것은 인덱스를 탑니다. `'1500000'`으로 변환되는 정수는 하나뿐이라 순서가 정해지기 때문입니다. **위험한 것은 문자열 컬럼 쪽 한 방향입니다.** ORM 파라미터를 점검할 때 이 비대칭을 알면 볼 곳이 절반으로 줄어듭니다.
+
+### 문자셋과 함수 적용
+
+문자셋 불일치에 대한 매뉴얼의 문장은 짧고 단정적입니다.
+
+> "For comparisons between nonbinary string columns, both columns should use the same character set. For example, comparing a `utf8mb4` column with a `latin1` column **precludes use of an index**."
+
+이 세션이 `order_legacy_fixed`를 새로 만든 것이 근본 해소 방향과 같습니다. `utf8mb3`는 폐기 예정이라 통일 목표는 `utf8mb4`입니다.
+
+쿼리 단위로 `COLLATE`를 붙여 넘기는 우회는 **한쪽에 함수를 씌우는 효과**가 되므로 그쪽 인덱스를 못 쓰게 만들 수 있습니다. 이 세션이 표에서 "`COLLATE` 명시로 대신 될지는 재지 않았음"이라고 남긴 자리인데, **이 대비를 명시한 MySQL 공식 문장도 찾지 못했습니다.** 양쪽 다 근거가 없으니 재 보기 전에는 말할 수 없습니다.
+
+함수 적용의 공식 대응은 함수형 키 파트입니다.
+
+> "Functional key parts that index expression values can also be used in place of column or column prefix values. Use of functional key parts enables **indexing of values not stored directly in the table**."
+> "In index definitions, **enclose expressions within parentheses** to distinguish them from columns or column prefixes."
+
+괄호가 문법 요구사항입니다. `INDEX ((ABS(col1)))`처럼 두 겹입니다. **접두사 길이는 지정할 수 없습니다.** MySQL 8.0.13 이전에는 생성 컬럼에 인덱스를 거는 우회가 표준이었고, 이 세션이 선행 와일드카드에 쓴 `buyer_name_rev`가 그 방식입니다.
+
+### 진단에 대해
+
+`EXPLAIN` 뒤에 `SHOW WARNINGS`로 형변환 경고를 본다는 방법이 널리 퍼져 있지만, **그 경고 문구를 MySQL 공식 문서에서 확인하지 못했습니다.** Percona 글도 `type: ALL` / `key: NULL` 대 `type: ref` / `key: PRIMARY` 차이로 진단하는 방법만 보여 줍니다. 이 세션이 실행계획의 `type`과 `key`를 축으로 잡은 것이 근거가 있는 쪽입니다.
 
 ## 못 한 것
 

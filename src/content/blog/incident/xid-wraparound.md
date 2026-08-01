@@ -139,15 +139,15 @@ DETAIL:  Could not open file "pg_xact/0773": No such file or directory.
 
 ## 3. 해소
 
-이 상황의 해소는 순서가 전부입니다. 원인을 그대로 두고 `VACUUM` 을 돌리면 시간만 씁니다.
+이 상황의 해소는 순서가 전부입니다. 원인을 그대로 두고 `VACUUM`을 돌리면 시간만 씁니다.
 
-**먼저 하한을 붙잡은 것을 찾습니다.** 공식 문서가 지목하는 용의자는 셋입니다. prepared transaction, 장기 트랜잭션, 복제 슬롯입니다. 이 재현에서는 prepared transaction 의 xid 746 이 하한이었고, 그것을 둔 채 데이터베이스 전체에 `VACUUM FREEZE` 를 돌려도 `age` 가 1도 안 내려갔습니다. 그보다 최신인 것을 동결할 수 없기 때문입니다.
+**먼저 하한을 붙잡은 것을 찾습니다.** 공식 문서가 지목하는 용의자는 셋입니다. prepared transaction, 장기 트랜잭션, 복제 슬롯입니다. 이 재현에서는 prepared transaction의 xid 746이 하한이었고, 그것을 둔 채 데이터베이스 전체에 `VACUUM FREEZE`를 돌려도 `age`가 1도 안 내려갔습니다. 그보다 최신인 것을 동결할 수 없기 때문입니다.
 
-**원인을 없애도 바로 안 풀립니다.** 작업하던 데이터베이스만 동결하면 그쪽 `age` 는 0이 되는데 쓰기는 여전히 막힙니다. **임계는 클러스터 전체에서 가장 오래된 `datfrozenxid` 로 정해지기 때문입니다.** `postgres`, `template1`, `template0` 이 남아 있으면 소용이 없습니다.
+**원인을 없애도 바로 안 풀립니다.** 작업하던 데이터베이스만 동결하면 그쪽 `age`는 0이 되는데 쓰기는 여전히 막힙니다. **임계는 클러스터 전체에서 가장 오래된 `datfrozenxid`로 정해지기 때문입니다.** `postgres`, `template1`, `template0`이 남아 있으면 소용이 없습니다.
 
-**`template0` 은 손으로 못 엽니다.** `datallowconn = false` 라 `vacuumdb` 가 건너뛰고, 열려면 `pg_database` 를 UPDATE 해야 하는데 그건 쓰기라 정지 상태에서 안 됩니다.
+**`template0`은 손으로 못 엽니다.** `datallowconn = false` 라 `vacuumdb`가 건너뛰고, 열려면 `pg_database`를 UPDATE 해야 하는데 그건 쓰기라 정지 상태에서 안 됩니다.
 
-**그래서 이 상황의 정답은 손대지 않는 것입니다.** 원인을 제거하고 기다리면 autovacuum 이 네 데이터베이스를 차례로 동결하고 40초 안에 쓰기가 재개됩니다. 아래 재계측이 그 과정입니다.
+**그래서 이 상황의 정답은 손대지 않는 것입니다.** 원인을 제거하고 기다리면 autovacuum이 네 데이터베이스를 차례로 동결하고 40초 안에 쓰기가 재개됩니다. 아래 재계측이 그 과정입니다.
 
 ## 4. 재계측
 
@@ -388,7 +388,7 @@ Sentry가 거대 테이블 하나의 VACUUM이 3시간 가까이 진척을 내�
 
 ## 8. 서브트랜잭션이 XID를 얼마나 더 쓰는가
 
-서브트랜잭션이 XID 소비를 늘려 이 위험을 키운다고 적어 놓고 그 배수는 안 쟀습니다. 이 세션의 주제(XID 소진)와 A19의 주제(서브트랜잭션이 SLRU를 압박)를 잇는 축이 하나 있습니다. **쓰기를 하는 `SAVEPOINT` 는 XID를 하나 더 씁니다.**
+서브트랜잭션이 XID 소비를 늘려 이 위험을 키운다고 적어 놓고 그 배수는 안 쟀습니다. 이 세션의 주제(XID 소진)와 A19의 주제(서브트랜잭션이 SLRU를 압박)를 잇는 축이 하나 있습니다. **쓰기를 하는 `SAVEPOINT`는 XID를 하나 더 씁니다.**
 
 트랜잭션 2,000건을 세이브포인트 수만 바꿔 돌렸습니다.
 
@@ -401,7 +401,7 @@ Sentry가 거대 테이블 하나의 VACUUM이 3시간 가까이 진척을 내�
 
 **정확히 n+1입니다.** 본문 하나에 서브트랜잭션 n 개이고, 각각이 XID를 하나씩 씁니다. 네 조건이 소수점 없이 딱 떨어집니다.
 
-XID 위치는 `pg_snapshot_xmax(pg_current_snapshot())` 로 읽었습니다. **`pg_current_xact_id()` 는 부르는 것만으로 XID를 할당하므로 그것으로 재면 측정이 결과를 바꿉니다.**
+XID 위치는 `pg_snapshot_xmax(pg_current_snapshot())`로 읽었습니다. **`pg_current_xact_id()`는 부르는 것만으로 XID를 할당하므로 그것으로 재면 측정이 결과를 바꿉니다.**
 
 초당 트랜잭션 1,000건을 가정하면 21억까지 남은 시간이 이렇게 갑니다.
 
@@ -414,29 +414,29 @@ XID 위치는 `pg_snapshot_xmax(pg_current_snapshot())` 로 읽었습니다. **`
 
 autovacuum이 정상이면 이 날짜에 도달하지 않습니다. **이 표가 말하는 것은 autovacuum이 멈춰 있을 때 남은 시간이 세이브포인트 수만큼 짧아진다는 것입니다.** 23일이 하루 반이 됩니다.
 
-Spring의 `@Transactional(propagation = NESTED)` 나 JPA의 재시도 루프가 `SAVEPOINT` 를 씁니다. **A19가 다루는 SLRU 압박과 이 세션이 다루는 XID 소진이 같은 원인에서 나옵니다.** 한쪽을 고치면 다른 쪽도 같이 나아집니다.
+Spring의 `@Transactional(propagation = NESTED)` 나 JPA의 재시도 루프가 `SAVEPOINT`를 씁니다. **A19가 다루는 SLRU 압박과 이 세션이 다루는 XID 소진이 같은 원인에서 나옵니다.** 한쪽을 고치면 다른 쪽도 같이 나아집니다.
 
 ### 만들면서 밟은 것
 
-세이브포인트 0개 조건이 처음에 트랜잭션당 3.00으로 나왔습니다. macOS의 BSD `seq` 는 `seq 1 0` 에 빈 출력이 아니라 `1` 과 `0` **두 줄**을 냅니다. GNU `seq` 는 빈 출력입니다. 그래서 "0개 조건" 에 세이브포인트가 두 개 붙었습니다.
+세이브포인트 0개 조건이 처음에 트랜잭션당 3.00으로 나왔습니다. macOS의 BSD `seq`는 `seq 1 0`에 빈 출력이 아니라 `1`과 `0` **두 줄**을 냅니다. GNU `seq`는 빈 출력입니다. 그래서 "0개 조건" 에 세이브포인트가 두 개 붙었습니다.
 
-행 수 확인이 `-lt` 였던 것도 함께 고쳤습니다. 기대 2,000행에 6,000행이 들어왔는데 "기대보다 적지 않으니 통과" 로 지나갔습니다. **기대값이 정확히 정해지는 자리에서는 `-ne` 로 봐야 합니다.**
+행 수 확인이 `-lt` 였던 것도 함께 고쳤습니다. 기대 2,000행에 6,000행이 들어왔는데 "기대보다 적지 않으니 통과" 로 지나갔습니다. **기대값이 정확히 정해지는 자리에서는 `-ne`로 봐야 합니다.**
 
 ## 현업은 어떻게 해소했는가
 
-Sentry 의 대응은 이 세션의 결론과 **정반대**입니다. 이 세션은 "손대지 않는 것이 정답"이라고 적었고 원인 제거 뒤 40초 자가 복구를 실측했습니다. Sentry 는 기다리지 않았습니다.
+Sentry의 대응은 이 세션의 결론과 **정반대**입니다. 이 세션은 "손대지 않는 것이 정답"이라고 적었고 원인 제거 뒤 40초 자가 복구를 실측했습니다. Sentry는 기다리지 않았습니다.
 
-순서대로 이렇게 했습니다. 프라이머리를 vacuum 을 돌리던 새 하드웨어로 페일오버하고, 애플리케이션을 복제본으로 돌려 읽기 전용으로 운영하고, 큐 붕괴를 막으려 이벤트 백로그를 전량 폐기했습니다. 그러고도 3시간 뒤 autovacuum 이 안 끝나자 "Our only choice at this point was to shut down the database and restart in single-user mode."(DB 를 내리고 단일 사용자 모드로 재시작하는 것이 유일한 선택이었다)
+순서대로 이렇게 했습니다. 프라이머리를 vacuum을 돌리던 새 하드웨어로 페일오버하고, 애플리케이션을 복제본으로 돌려 읽기 전용으로 운영하고, 큐 붕괴를 막으려 이벤트 백로그를 전량 폐기했습니다. 그러고도 3시간 뒤 autovacuum이 안 끝나자 "Our only choice at this point was to shut down the database and restart in single-user mode."(DB를 내리고 단일 사용자 모드로 재시작하는 것이 유일한 선택이었다)
 
 그리고 마지막에, 이벤트를 롤업에 매핑하는 거대 테이블 하나가 끝내 진척이 없자 **그것을 버렸습니다.** "we made the decision that we were willing to risk all data in the table if it meant we could recover immediately."(즉시 복구할 수 있다면 그 테이블의 데이터를 전부 잃을 위험을 감수하기로 했다) 5분 만에 서비스가 돌아왔습니다.
 
 **갈린 이유는 이 세션이 이미 짚은 자리에 있습니다.** 여기서는 하한을 붙잡은 것이 버려진 prepared transaction 이라 제거할 대상이 있었습니다. Sentry 에는 그런 것이 없었습니다. 하한을 붙잡은 것이 그냥 거대 테이블 자체였고, 그러면 제거할 원인이 없으니 기다리는 선택지도 없습니다.
 
-그 뒤 하드웨어를 256GB 로 올리고 autovacuum 을 공격적으로 조정했습니다(`autovacuum_naptime = 15s`, `autovacuum_vacuum_cost_delay = 0`, `maintenance_work_mem = 10GB`). 다만 이것을 임시 조치로 보고 이렇게 적었습니다. "Ultimately we're going to be moving away from a SQL-based architecture."
+그 뒤 하드웨어를 256GB로 올리고 autovacuum을 공격적으로 조정했습니다(`autovacuum_naptime = 15s`, `autovacuum_vacuum_cost_delay = 0`, `maintenance_work_mem = 10GB`). 다만 이것을 임시 조치로 보고 이렇게 적었습니다. "Ultimately we're going to be moving away from a SQL-based architecture."
 
-**그 선언이 4년 뒤 실행됐습니다.** 2019년 ClickHouse 기반 Snuba 로 이벤트 저장소를 통째로 옮겼습니다. 이유가 wraparound 가 아니라 쓰기 자체였습니다. "the number of mutations executed exceeded our ability to replicate them on a single Postgres machine". 부수 이유 넷도 vacuum 계통입니다. 데이터가 불변인데 MVCC 비용을 냈고, 만료 데이터 삭제가 "issuing expensive queries to bulk delete rows" 였고, 힙이 커지며 "combing over dead rows to find the living" 에 I/O 를 썼습니다.
+**그 선언이 4년 뒤 실행됐습니다.** 2019년 ClickHouse 기반 Snuba로 이벤트 저장소를 통째로 옮겼습니다. 이유가 wraparound가 아니라 쓰기 자체였습니다. "the number of mutations executed exceeded our ability to replicate them on a single Postgres machine". 부수 이유 넷도 vacuum 계통입니다. 데이터가 불변인데 MVCC 비용을 냈고, 만료 데이터 삭제가 "issuing expensive queries to bulk delete rows" 였고, 힙이 커지며 "combing over dead rows to find the living" 에 I/O를 썼습니다.
 
-**이 세션이 다루는 것은 PostgreSQL 안의 복구까지입니다.** Sentry 의 진짜 근본 해소는 PostgreSQL 밖에 있었습니다. 그리고 그 포스트모템에는 재발 방지 항목이 없습니다. 감시도 알림도 적혀 있지 않습니다.
+**이 세션이 다루는 것은 PostgreSQL 안의 복구까지입니다.** Sentry의 진짜 근본 해소는 PostgreSQL밖에 있었습니다. 그리고 그 포스트모템에는 재발 방지 항목이 없습니다. 감시도 알림도 적혀 있지 않습니다.
 
 ## 못 한 것
 

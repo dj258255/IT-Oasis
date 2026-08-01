@@ -207,16 +207,16 @@ Aurora는 아예 다른 얘기입니다. AWS 문서가 "Multi-AZ DB clusters are
 | `AFTER_SYNC` | **0건** | 0건 |
 | `AFTER_COMMIT` | **1건** | **0건** |
 
-`AFTER_SYNC` 는 복제본이 ack 할 때까지 엔진 커밋을 미룹니다. 그래서 다른 세션이 읽을 수
+`AFTER_SYNC`는 복제본이 ack 할 때까지 엔진 커밋을 미룹니다. 그래서 다른 세션이 읽을 수
 있게 된 값은 이미 복제본에 있고, **읽히지 않았으니 사라질 것도 없습니다.**
 
-`AFTER_COMMIT` 은 먼저 엔진에 커밋하고 그 뒤에 ack를 기다립니다. 그 창에서 다른 세션이
+`AFTER_COMMIT`은 먼저 엔진에 커밋하고 그 뒤에 ack를 기다립니다. 그 창에서 다른 세션이
 값을 읽었고, 소스가 죽자 **읽힌 값이 사라졌습니다.** 사용자 화면에 이미 뜬 후원이
 없어지는 것이 이 한 줄의 뜻입니다.
 
 이것이 "lossy failover가 가능한 구성"의 실체입니다. 유실량이 더 큰 것이 아니라
 **유실의 성격이 다릅니다.** 비동기의 유실은 "성공 응답을 받았는데 사라진 것"이고,
-`AFTER_COMMIT` 의 유실은 거기에 "제3자가 이미 본 것"이 더해집니다.
+`AFTER_COMMIT`의 유실은 거기에 "제3자가 이미 본 것"이 더해집니다.
 
 ### 복구: 차집합을 뽑아 병합합니다
 
@@ -234,8 +234,8 @@ Aurora는 아예 다른 얘기입니다. AWS 문서가 "Multi-AZ DB clusters are
 전부 회수했습니다. 그런데 **이 경로가 성립하는 조건이 좁습니다.**
 
 - 옛 소스가 다시 떠야 합니다. 디스크가 깨졌으면 이 경로 자체가 없습니다
-- `id` 가 겹치지 않아야 합니다. 승격 뒤 새 소스가 같은 `AUTO_INCREMENT` 구간을 쓰기
-  시작했다면 `INSERT IGNORE` 가 조용히 버립니다
+- `id`가 겹치지 않아야 합니다. 승격 뒤 새 소스가 같은 `AUTO_INCREMENT` 구간을 쓰기
+  시작했다면 `INSERT IGNORE`가 조용히 버립니다
 - 순서가 뒤섞여도 되는 데이터여야 합니다. 회수한 50건은 승격 뒤 들어온 쓰기보다
   **뒤에 붙습니다**. 후원 정산처럼 순서가 의미를 갖는 데이터에서는 이 병합이 답이 아닙니다
 
@@ -271,35 +271,35 @@ Aurora는 아예 다른 얘기입니다. AWS 문서가 "Multi-AZ DB clusters are
 | `AFTER_SYNC` | 0 | 0 | 0 | **0** |
 | `AFTER_COMMIT` | 8 | 8 | 0 | **8** |
 
-**`AFTER_SYNC` 는 소스에 들어간 행이 0입니다.** 쓰기 8개가 전부 커밋에서 매달렸고, ack를 받기 전에는 엔진에 커밋하지 않으므로 관찰자에게 아무것도 안 보입니다. 승격 후에도 0이고 유실은 0입니다. **못 본 것은 사라져도 아무도 모릅니다.**
+**`AFTER_SYNC`는 소스에 들어간 행이 0입니다.** 쓰기 8개가 전부 커밋에서 매달렸고, ack를 받기 전에는 엔진에 커밋하지 않으므로 관찰자에게 아무것도 안 보입니다. 승격 후에도 0이고 유실은 0입니다. **못 본 것은 사라져도 아무도 모릅니다.**
 
-**`AFTER_COMMIT` 은 8건이 보였다가 사라집니다.** 쓰기 8개가 각각 커밋을 마치고 ack를 기다리는 동안, 관찰자 4명이 그 8건을 읽었습니다. 승격 후 복제본에는 0 건입니다. **읽힌 값 전부가 사라졌습니다.**
+**`AFTER_COMMIT`은 8건이 보였다가 사라집니다.** 쓰기 8개가 각각 커밋을 마치고 ack를 기다리는 동안, 관찰자 4명이 그 8건을 읽었습니다. 승격 후 복제본에는 0 건입니다. **읽힌 값 전부가 사라졌습니다.**
 
 여기서 8이라는 숫자는 동시 쓰기 수입니다. 쓰기 하나가 커밋 뒤에 매달리므로, 매달린 시점에 커밋을 마친 쓰기의 수만큼 노출됩니다. 이 세션이 실제로 잰 것은 동시 쓰기 8개 1회뿐입니다. 동시 쓰기를 800개로 올리면 같은 창에 그만큼 더 노출된다는 것이 이 구조에서 따라 나오는 예상이지만, 그 곡선은 재지 않았습니다. 창의 길이는 유실 건수를 안 정합니다. 정하는 것은 그 창에 커밋을 마친 쓰기의 수입니다.
 
-`AFTER_COMMIT` 이 `AFTER_SYNC` 보다 빠른 것은 맞습니다. 커밋을 먼저 끝내고 ack를 기다리므로 다른 세션의 잠금 대기가 짧아집니다. **그 속도의 값이 위 표의 마지막 열입니다.**
+`AFTER_COMMIT`이 `AFTER_SYNC`보다 빠른 것은 맞습니다. 커밋을 먼저 끝내고 ack를 기다리므로 다른 세션의 잠금 대기가 짧아집니다. **그 속도의 값이 위 표의 마지막 열입니다.**
 
 ### 이 조건을 세우는 데 네 번 실패했습니다
 
 네 번 다 결과 파일에 "유실 0건" 이 남았습니다. **성공처럼 읽히는 값이라 결과만 봐서는 실패인 줄 모릅니다.**
 
-첫 번째는 반동기가 안 켜진 상태였습니다. 플러그인 설치를 `|| true` 로 삼키고 있었고, 매달려야 할 커밋이 하나도 안 매달려 400건이 그대로 들어갔습니다.
+첫 번째는 반동기가 안 켜진 상태였습니다. 플러그인 설치를 `|| true`로 삼키고 있었고, 매달려야 할 커밋이 하나도 안 매달려 400건이 그대로 들어갔습니다.
 
-두 번째는 반동기 상태를 켠 직후에 읽은 것이었습니다. `Rpl_semi_sync_source_status` 는 반동기 복제본이 붙어 ack를 한 번 보내야 `ON` 이 됩니다. 설정 직후에는 `OFF` 입니다. 탐침 쓰기를 하고 `ON` 이 될 때까지 기다리게 고쳤습니다.
+두 번째는 반동기 상태를 켠 직후에 읽은 것이었습니다. `Rpl_semi_sync_source_status`는 반동기 복제본이 붙어 ack를 한 번 보내야 `ON`이 됩니다. 설정 직후에는 `OFF`입니다. 탐침 쓰기를 하고 `ON`이 될 때까지 기다리게 고쳤습니다.
 
-세 번째는 조건 사이의 상태 누수였습니다. 첫 조건이 복제본을 승격하며 `RESET REPLICA ALL` 을 걸어 다음 조건의 복제가 안 붙었고, 복제본이 첫 조건의 표를 그대로 들고 있었습니다. 소스에 8행뿐인데 남은 행이 400으로 찍혔습니다.
+세 번째는 조건 사이의 상태 누수였습니다. 첫 조건이 복제본을 승격하며 `RESET REPLICA ALL`을 걸어 다음 조건의 복제가 안 붙었고, 복제본이 첫 조건의 표를 그대로 들고 있었습니다. 소스에 8행뿐인데 남은 행이 400으로 찍혔습니다.
 
-네 번째는 복제망 차단이 안 먹은 것이었습니다. 두 컨테이너가 네트워크 두 개에 붙어 있는데 이름을 읽는 템플릿이 두 이름을 한 문자열로 붙여 놓았습니다. `docker network disconnect` 가 "그런 네트워크 없음" 으로 실패했고 `2>/dev/null || true` 가 그 실패를 삼켰습니다. **복제망이 한 번도 안 끊긴 채로 돌았습니다.**
+네 번째는 복제망 차단이 안 먹은 것이었습니다. 두 컨테이너가 네트워크 두 개에 붙어 있는데 이름을 읽는 템플릿이 두 이름을 한 문자열로 붙여 놓았습니다. `docker network disconnect`가 "그런 네트워크 없음" 으로 실패했고 `2>/dev/null || true`가 그 실패를 삼켰습니다. **복제망이 한 번도 안 끊긴 채로 돌았습니다.**
 
 지금은 네 자리에 전부 확인이 들어 있고, 확인이 안 서면 실행을 멈춥니다. **아무 일도 안 일어나면 유실은 항상 0입니다.** 0을 결과로 쓰려면 조건이 섰다는 증거가 함께 있어야 합니다.
 
 ## 현업은 어떻게 해소했는가
 
-GitHub 이 2018년 10월 21일 사건에서 고른 것은 **복제를 더 안전하게 만드는 쪽이 아니라 승격을 못 하게 막는 쪽**이었습니다.
+GitHub이 2018년 10월 21일 사건에서 고른 것은 **복제를 더 안전하게 만드는 쪽이 아니라 승격을 못 하게 막는 쪽**이었습니다.
 
-**반동기는 이미 켜져 있었습니다.** 사건 넉 달 전인 2018년 6월 글에서 GitHub 은 "a primary does not acknowledge a transaction commit until the change is known to have shipped to one or more replicas" 라고 밝히고 타임아웃 500ms 에 "we observe perfect semi-sync behavior (no fallback to asynchronous replication)" 라고 적었습니다. **사후 분석 전문에 semi-sync 라는 낱말이 한 번도 안 나옵니다.**
+**반동기는 이미 켜져 있었습니다.** 사건 넉 달 전인 2018년 6월 글에서 GitHub은 "a primary does not acknowledge a transaction commit until the change is known to have shipped to one or more replicas" 라고 밝히고 타임아웃 500ms에 "we observe perfect semi-sync behavior (no fallback to asynchronous replication)" 라고 적었습니다. **사후 분석 전문에 semi-sync라는 낱말이 한 번도 안 나옵니다.**
 
-이 세션이 잰 것을 생각하면 이유가 보입니다. 반동기의 ack 는 **같은 데이터센터의 복제본**이 받으면 성립합니다. 그러니 서부로 승격되는 순간 동부의 커밋은 그대로 사라집니다. 반동기를 아무리 조여도 이 사건은 안 막힙니다. 다만 GitHub 이 이 인과를 문장으로 적지는 않았습니다.
+이 세션이 잰 것을 생각하면 이유가 보입니다. 반동기의 ack는 **같은 데이터센터의 복제본**이 받으면 성립합니다. 그러니 서부로 승격되는 순간 동부의 커밋은 그대로 사라집니다. 반동기를 아무리 조여도 이 사건은 안 막힙니다. 다만 GitHub이 이 인과를 문장으로 적지는 않았습니다.
 
 그래서 조치가 이것입니다.
 
@@ -307,7 +307,7 @@ GitHub 이 2018년 10월 21일 사건에서 고른 것은 **복제를 더 안전
 
 **오케스트레이터는 설정대로 동작했습니다.** 문제는 그 설정이 애플리케이션이 감당 못 하는 토폴로지를 만들 수 있었다는 것입니다.
 
-이 문장이 코드가 된 자리도 남아 있습니다. orchestrator PR #766 이 2019년 1월에 머지되고, 2019년 5월에 리전 개념과 `PreventCrossRegionMasterFailover` 가 들어갔습니다. 현재 문서의 정의입니다.
+이 문장이 코드가 된 자리도 남아 있습니다. orchestrator PR #766이 2019년 1월에 머지되고, 2019년 5월에 리전 개념과 `PreventCrossRegionMasterFailover`가 들어갔습니다. 현재 문서의 정의입니다.
 
 > "When `true`, `orchestrator` will only replace a failed master with a server from the same region. It will do its best to find a replacement from same region, and will **abort (fail) the failover if it cannot find one**."
 
@@ -321,7 +321,7 @@ GitHub 이 2018년 10월 21일 사건에서 고른 것은 **복제를 더 안전
 
 **갈리는 점이 셋 있습니다.**
 
-**첫째, 되돌릴 방향이 막혀 있었습니다.** 이 세션은 옛 소스에만 여분 커밋이 있어 차집합 병합이 성립합니다. GitHub 은 양방향이었습니다. 동부에 미복제 쓰기가 있었고 동시에 서부가 40분간 새 쓰기를 받아서 "we were unable to fail the primary back over to the US East Coast data center safely" 가 됐습니다. 백업 복원을 고른 이유가 백업 주기만은 아닙니다.
+**첫째, 되돌릴 방향이 막혀 있었습니다.** 이 세션은 옛 소스에만 여분 커밋이 있어 차집합 병합이 성립합니다. GitHub은 양방향이었습니다. 동부에 미복제 쓰기가 있었고 동시에 서부가 40분간 새 쓰기를 받아서 "we were unable to fail the primary back over to the US East Coast data center safely" 가 됐습니다. 백업 복원을 고른 이유가 백업 주기만은 아닙니다.
 
 **둘째, 유실 건수가 결정타가 아니었습니다.** "one of our busiest clusters had 954 writes in the affected window." 954건은 작습니다. 24시간을 만든 것은 "applications running in the East Coast that depend on writing information to a West Coast MySQL cluster are currently unable to cope with the additional latency introduced by a cross-country round trip" 였습니다. **이 세션은 유실 건수를 축으로 삼는데, 실제로 서비스를 못 쓰게 만든 것은 승격 뒤의 왕복 지연이었습니다.**
 

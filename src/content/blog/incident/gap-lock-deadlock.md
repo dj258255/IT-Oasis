@@ -225,7 +225,7 @@ SELECT @@transaction_isolation;   →  READ-COMMITTED
 | REPEATABLE READ | 30/30회 | 1213 30건 |
 | READ COMMITTED | 30/30회 | 1213 30건 |
 
-갭 락 데드락은 READ COMMITTED로 내리면 사라집니다. 3절에 적은 대로 `SELECT ... FOR UPDATE` 가 더 이상 갭을 잠그지 않기 때문입니다.
+갭 락 데드락은 READ COMMITTED로 내리면 사라집니다. 3절에 적은 대로 `SELECT ... FOR UPDATE`가 더 이상 갭을 잠그지 않기 때문입니다.
 순서 엇갈림은 30회 전부 그대로 납니다. **이미 있는 행의 잠금 순서 문제라 갭과 무관합니다.**
 에러 번호가 1213으로 같아서 로그만 보면 구분이 안 됩니다. 격리 수준을 내려 보고
 없어지는지로 갈립니다.
@@ -276,13 +276,13 @@ READ COMMITTED는 조건에 안 맞는 행의 잠금을 문장이 끝날 때 놓
 | skiplocked | 200/200 | 0.9초 | **224.4** | 51, 50, 49, 50 |
 | nowait | 200/200 | 2.7초 | 75.2 | 101, 2, 97, 0 (에러 3572 171건) |
 
-5절에서는 `SKIP LOCKED` 가 이 시나리오에 안 통한다고 적었습니다. 거기서는 두 세션이 **같은 한 행**을 원했고, 아직 없는 행이라 건너뛸 것 자체가 없었습니다.
+5절에서는 `SKIP LOCKED`가 이 시나리오에 안 통한다고 적었습니다. 거기서는 두 세션이 **같은 한 행**을 원했고, 아직 없는 행이라 건너뛸 것 자체가 없었습니다.
 
 큐는 반대입니다. 일감이 200개 있고 누가 어느 것을 가져가든 상관없습니다. 건너뛴
-일감은 다음 워커가 가져갑니다. 셋 다 200건을 다 처리했고 `SKIP LOCKED` 가 제일
+일감은 다음 워커가 가져갑니다. 셋 다 200건을 다 처리했고 `SKIP LOCKED`가 제일
 빠릅니다. 분배도 51/50/49/50으로 고릅니다.
 
-`NOWAIT` 은 처리량이 3분의 1이고 분배가 101/2/97/0입니다. 잠긴 것을 만나면 건너뛰지
+`NOWAIT`은 처리량이 3분의 1이고 분배가 101/2/97/0입니다. 잠긴 것을 만나면 건너뛰지
 않고 에러를 내므로, 총 3,572회 시도 중 171회가 에러입니다. **워커 하나는 한 건도
 못 가져갔습니다.** 재시도 경합에서 진 워커가 계속 집니다.
 
@@ -291,11 +291,11 @@ READ COMMITTED는 조건에 안 맞는 행의 잠금을 문장이 끝날 때 놓
 
 ## 현업은 어떻게 해소했는가
 
-이 유형을 겪고 공개한 사례가 있습니다. KINTO Technologies 가 2024년 Aurora MySQL 3 결제 플랫폼에서 만난 건입니다. **그들이 고른 해소가 이 글의 1순위 처방과 다릅니다.**
+이 유형을 겪고 공개한 사례가 있습니다. KINTO Technologies가 2024년 Aurora MySQL 3 결제 플랫폼에서 만난 건입니다. **그들이 고른 해소가 이 글의 1순위 처방과 다릅니다.**
 
 > "Through our investigation, we identified that the `SELECT FROM ... FOR UPDATE` query, which was used to check for duplicate payments, was causing the deadlock. To resolve this, we decided to **discontinue this query and revised the design**. Now, the data is temporarily registered when a request is received, and **the transaction is committed immediately**."
 
-`INSERT ... ON DUPLICATE KEY UPDATE` 도 아니고 `READ COMMITTED` 도 아니고 재시도도 아닙니다. **확인용 잠금 조회를 없애고 트랜잭션을 둘로 쪼갰습니다.**
+`INSERT ... ON DUPLICATE KEY UPDATE`도 아니고 `READ COMMITTED`도 아니고 재시도도 아닙니다. **확인용 잠금 조회를 없애고 트랜잭션을 둘로 쪼갰습니다.**
 
 왜 그랬는지가 데드락 출력에 있습니다. `ACTIVE 6 sec inserting`, `ACTIVE 7 sec inserting`. **결제 대행사 호출이 트랜잭션 안에 있어서 그 왕복 내내 갭 락을 쥐고 있었습니다.** 이 세션의 재현에는 외부 호출이 없어 밀리초 안에 끝나고, 그래서 "왜 그렇게 오래 잡고 있었나"라는 질문 자체가 안 생깁니다. **트랜잭션 안에 외부 호출이 있는가가 이 유형의 실제 위험을 정하는 조건입니다.**
 
@@ -303,21 +303,21 @@ READ COMMITTED는 조건에 안 맞는 행의 잠금을 문장이 끝날 때 놓
 
 > "In our load testing, we used random values (UUIDs) for the `request_id`, primarily to avoid performance degradation from index fragmentation and rebuilding. As a result, **no deadlock occurred during the tests**, and they completed successfully."
 
-부하 시험의 키 분포가 운영과 달라서 데드락이 시험을 통과했습니다. 운영의 `request_id` 는 `상품ID-YYYYMMDD-일련번호` 라 연속값이 동시에 들어왔고, 시험은 UUID 라 갭이 안 겹쳤습니다. **이 세션은 인덱스 유무를 축으로 잡았는데 실제 사건에서 결정적이었던 축은 키 분포였습니다.**
+부하 시험의 키 분포가 운영과 달라서 데드락이 시험을 통과했습니다. 운영의 `request_id`는 `상품ID-YYYYMMDD-일련번호` 라 연속값이 동시에 들어왔고, 시험은 UUID 라 갭이 안 겹쳤습니다. **이 세션은 인덱스 유무를 축으로 잡았는데 실제 사건에서 결정적이었던 축은 키 분포였습니다.**
 
 ### 벤더 권고와 이 글이 갈리는 자리
 
 MySQL 공식 문서의 1순위는 재시도입니다. "Always be prepared to re-issue a transaction if it fails due to deadlock. Deadlocks are not dangerous. Just try again." 이 세션이 5절에서 재시도만 최종 금액을 맞춘다고 잰 것과 같은 방향입니다.
 
-**그런데 `INSERT ... ON DUPLICATE KEY UPDATE` 에 대해서는 AWS 가 Aurora 에서 반대 방향을 권합니다.** MySQL 5.7.26 이상과 Aurora MySQL 2.10.3 이상에 들어간 Bug #98324 수정 때문입니다. 유니크 보조 인덱스나 외래키 제약 위반이 잦은 워크로드에서 upsert 의 내부 부분 롤백이 추가 락을 만듭니다.
+**그런데 `INSERT ... ON DUPLICATE KEY UPDATE`에 대해서는 AWS가 Aurora에서 반대 방향을 권합니다.** MySQL 5.7.26 이상과 Aurora MySQL 2.10.3 이상에 들어간 Bug #98324 수정 때문입니다. 유니크 보조 인덱스나 외래키 제약 위반이 잦은 워크로드에서 upsert의 내부 부분 롤백이 추가 락을 만듭니다.
 
 > "Instead of using `INSERT...ON DUPLICATE KEY UPDATE`, rewrite the SQL statement as a multistatement transaction such as the following: `BEGIN; SELECT {{rows that conflict on secondary indexes}}; UPDATE {{conflicting rows}}; INSERT {{new rows}}; COMMIT;`"
 
-같은 문서가 `REPLACE INTO` 와 `INSERT IGNORE` 도 같은 범주로 묶습니다.
+같은 문서가 `REPLACE INTO`와 `INSERT IGNORE`도 같은 범주로 묶습니다.
 
-**그러니 이 글이 30회 무결로 검증한 것은 로컬 MySQL 8.4.3 기준입니다.** 유니크 보조 인덱스 충돌이 잦은 워크로드를 Aurora 에서 돌린다면 같은 결과가 나오는지 따로 확인해야 합니다. 이 세션은 그 조건을 만들지 않았습니다.
+**그러니 이 글이 30회 무결로 검증한 것은 로컬 MySQL 8.4.3 기준입니다.** 유니크 보조 인덱스 충돌이 잦은 워크로드를 Aurora에서 돌린다면 같은 결과가 나오는지 따로 확인해야 합니다. 이 세션은 그 조건을 만들지 않았습니다.
 
-갭 락 자체에 대해서는 AWS 도 이 글과 같은 방향입니다. "If you encounter gap locking, you can modify the transaction isolation level to `READ COMMITTED` for the session or transaction to prevent it."
+갭 락 자체에 대해서는 AWS도 이 글과 같은 방향입니다. "If you encounter gap locking, you can modify the transaction isolation level to `READ COMMITTED` for the session or transaction to prevent it."
 
 그리고 재시도에 대해 이렇게 못 박습니다. "**deadlocks are an expected database behavior and can still occur.** Applications should have the necessary logic to handle deadlocks when they are encountered."
 

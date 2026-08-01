@@ -242,13 +242,13 @@ FPI 비중도 갈립니다. 인덱스 0개 조건은 Heap의 39.4%가 FPI인데,
 | 인덱스 10개(ff70) | 인덱스 0개(ff70) | **1.87배** | **2.16배** |
 | 인덱스 컬럼 갱신(v10) | 인덱스 0개(ff100) | 2.24배 | **2.50배** |
 
-처음 발행할 때 세 행을 전부 `인덱스 0개(ff100)` 로 나눠 ff70 행이 1.47배와 1.57배로 나왔습니다. **fillfactor와 인덱스 수를 동시에 바꾼 비교라 인덱스 효과로 귀속할 수 없는 값이었습니다.** 6절에서 `u10` 의 1.4배를 정확히 같은 이유로 철회해 놓고 같은 오류를 냈습니다. 분모를 맞춰 고쳤습니다.
+처음 발행할 때 세 행을 전부 `인덱스 0개(ff100)`로 나눠 ff70 행이 1.47배와 1.57배로 나왔습니다. **fillfactor와 인덱스 수를 동시에 바꾼 비교라 인덱스 효과로 귀속할 수 없는 값이었습니다.** 6절에서 `u10`의 1.4배를 정확히 같은 이유로 철회해 놓고 같은 오류를 냈습니다. 분모를 맞춰 고쳤습니다.
 
 **압축을 켜면 배수가 커집니다.** 인덱스가 만드는 WAL이 상대적으로 더 두드러집니다. "압축을 켜면 이 글의 배수가 달라진다"는 경고가 맞았고, 방향은 **완화가 아니라 강화**입니다. `wal_compression`을 켜 둔 운영 환경에서 이 글의 결론은 약해지지 않고 오히려 세집니다.
 
 ## 8. 압축 알고리즘 넷과 FPI 분해
 
-`wal_compression` 이 받는 네 값을 같은 워크로드로 돌렸습니다. 앞 절까지는 `on` 하나로만 봤습니다. PostgreSQL 15부터 `wal_compression` 은 `pglz`, `lz4`, `zstd` 를 받습니다. `on` 은 `pglz` 의 별칭입니다. 넷을 같은 워크로드로 돌렸습니다. 50만 행 `UPDATE`, 인덱스 0개, fillfactor 100 조건입니다.
+`wal_compression`이 받는 네 값을 같은 워크로드로 돌렸습니다. 앞 절까지는 `on` 하나로만 봤습니다. PostgreSQL 15부터 `wal_compression`은 `pglz`, `lz4`, `zstd`를 받습니다. `on`은 `pglz`의 별칭입니다. 넷을 같은 워크로드로 돌렸습니다. 50만 행 `UPDATE`, 인덱스 0개, fillfactor 100 조건입니다.
 
 | 방식 | WAL | off 대비 | 소요 | off 대비 |
 |---|---|---|---|---|
@@ -257,7 +257,7 @@ FPI 비중도 갈립니다. 인덱스 0개 조건은 Heap의 39.4%가 FPI인데,
 | `lz4` | 215.9MB | -19.0% | 1.75초 | **+2%** |
 | `zstd` | **198.6MB** | **-25.5%** | 1.99초 | +16% |
 
-**`on` 이 세 방식 중 가장 나쁜 선택입니다.** `pglz` 는 `lz4` 와 압축률이 사실상 같은데(212.2 대 215.9MB, 1.7% 차이) 시간은 훨씬 더 씁니다. `off` 1.71초 대비 `lz4` 는 +2%(1.75초)이고 `pglz` 는 +68%(2.88초)입니다. **두 축 모두에서 `lz4` 에 지배당합니다.**
+**`on`이 세 방식 중 가장 나쁜 선택입니다.** `pglz`는 `lz4`와 압축률이 사실상 같은데(212.2 대 215.9MB, 1.7% 차이) 시간은 훨씬 더 씁니다. `off` 1.71초 대비 `lz4`는 +2%(1.75초)이고 `pglz`는 +68%(2.88초)입니다. **두 축 모두에서 `lz4`에 지배당합니다.**
 
 두 증가분의 비(1.17초 대 0.04초)를 배수로 적었다가 뺐습니다. 분모가 유효숫자 한 자리인 1회 측정값이라 반올림만으로 배수가 크게 흔들립니다. **결론에 배수가 필요하지 않습니다.**
 
@@ -270,18 +270,18 @@ FPI 비중이 가장 큰 조건에서는 격차가 더 벌어집니다.
 | `lz4` | 124.8MB | -30.4% | 1.28초 | **+7%** |
 | `zstd` | **106.8MB** | **-40.4%** | 1.66초 | +38% |
 
-**고를 것은 둘입니다.** WAL 대역폭이 병목이면 `zstd`, 쓰기 지연이 병목이면 `lz4` 입니다. `pglz` 를 고를 이유가 이 측정에는 없습니다. 그런데 문서를 보고 `on` 을 켜면 그것이 걸립니다.
+**고를 것은 둘입니다.** WAL 대역폭이 병목이면 `zstd`, 쓰기 지연이 병목이면 `lz4`입니다. `pglz`를 고를 이유가 이 측정에는 없습니다. 그런데 문서를 보고 `on`을 켜면 그것이 걸립니다.
 
 ### 압축이 무엇을 줄이는지가 분해에 그대로 보입니다
 
-`pg_waldump --stats` 를 리소스 매니저별로 갈랐습니다. 같은 조건의 `off` 와 `pglz` 입니다.
+`pg_waldump --stats`를 리소스 매니저별로 갈랐습니다. 같은 조건의 `off`와 `pglz`입니다.
 
 | 방식 | Heap 레코드 | Heap FPI | Btree 레코드 | Btree FPI |
 |---|---|---|---|---|
 | `off` | 132.1MB | **86.1MB** | 36.5MB | **9.6MB** |
 | `pglz` | 132.2MB | **36.5MB** | 36.5MB | **4.9MB** |
 
-**레코드 바이트는 132.1과 132.2MB로 그대로이고 FPI만 58% 줄었습니다.** `wal_compression` 이 전체 페이지 이미지만 압축한다는 문서의 서술이 바이트로 확인됩니다. 인덱스 쪽 FPI도 9.6에서 4.9MB로 같은 비율로 줍니다.
+**레코드 바이트는 132.1과 132.2MB로 그대로이고 FPI만 58% 줄었습니다.** `wal_compression`이 전체 페이지 이미지만 압축한다는 문서의 서술이 바이트로 확인됩니다. 인덱스 쪽 FPI도 9.6에서 4.9MB로 같은 비율로 줍니다.
 
 그래서 **압축 효과는 조건마다 다릅니다.** 위 표의 `off 대비 최선` 열(네 조건 다 `zstd`)이 12.7%부터 40.4%까지 벌어지는데, FPI 비중을 보면 이유가 나옵니다.
 
@@ -303,27 +303,27 @@ FPI 비중이 가장 큰 조건에서는 격차가 더 벌어집니다.
 | 인덱스 10개(ff70) | 인덱스 0개(ff70) | **1.87배** | 2.16배 | 2.14배 | **2.26배** |
 | 2차 갱신 인덱스 10개 | 2차 갱신 인덱스 0개 | **1.57배** | 1.81배 | 1.79배 | **1.90배** |
 
-**분모를 조건마다 맞춰야 합니다.** 처음에는 네 행을 전부 `인덱스 0개(ff100)` 로 나눴고, 그래서 ff70 행이 1.47배로 나왔습니다. 그 값은 fillfactor와 인덱스 수를 **동시에** 바꾼 비교라 인덱스 효과로 귀속할 수 없습니다. 6절에서 `u10` 의 1.4배를 정확히 같은 이유로 철회해 놓고 여기서 같은 오류를 냈습니다. 분모를 맞추면 1.87배입니다.
+**분모를 조건마다 맞춰야 합니다.** 처음에는 네 행을 전부 `인덱스 0개(ff100)`로 나눴고, 그래서 ff70 행이 1.47배로 나왔습니다. 그 값은 fillfactor와 인덱스 수를 **동시에** 바꾼 비교라 인덱스 효과로 귀속할 수 없습니다. 6절에서 `u10`의 1.4배를 정확히 같은 이유로 철회해 놓고 여기서 같은 오류를 냈습니다. 분모를 맞추면 1.87배입니다.
 
-**압축 방식을 무엇으로 고르든 배수는 커집니다.** 네 행 전부에서 `off` < `pglz` ≈ `lz4` < `zstd` 입니다. 인덱스가 없는 쪽은 FPI 비중이 커서 많이 줄고, 인덱스가 많은 쪽은 압축 안 되는 Btree 레코드가 남기 때문입니다.
+**압축 방식을 무엇으로 고르든 배수는 커집니다.** 네 행 전부에서 `off` < `pglz` ≈ `lz4` < `zstd`입니다. 인덱스가 없는 쪽은 FPI 비중이 커서 많이 줄고, 인덱스가 많은 쪽은 압축 안 되는 Btree 레코드가 남기 때문입니다.
 
 이건 인덱스가 더 나빠진 것이 아니라 분모가 더 줄어든 것입니다. **압축 설정이 다른 두 서버의 배수를 나란히 놓으면 안 됩니다.** 절대 바이트로 비교해야 합니다.
 
 ## 현업은 어떻게 해소했는가
 
-Uber 가 실제로 한 것은 DB 교체가 아닙니다. "in many of the cases where we previously used Postgres, we now use Schemaless, a novel database sharding layer built on top of MySQL"(예전에 Postgres 를 쓰던 상당수 경우에 이제 MySQL 위에 올린 샤딩 계층 Schemaless 를 쓴다) **MySQL 로 갈아탄 것이 아니라 그 위에 자체 계층을 깐 것입니다.**
+Uber가 실제로 한 것은 DB 교체가 아닙니다. "in many of the cases where we previously used Postgres, we now use Schemaless, a novel database sharding layer built on top of MySQL"(예전에 Postgres를 쓰던 상당수 경우에 이제 MySQL 위에 올린 샤딩 계층 Schemaless를 쓴다) **MySQL로 갈아탄 것이 아니라 그 위에 자체 계층을 깐 것입니다.**
 
 PostgreSQL 진영의 반박에서 나온 처방을 이 세션이 잰 것과 대조하면 이렇습니다.
 
-**Christophe Pettus** 는 처방보다 비교의 공정성을 지적했습니다. 복제 항목에 대해 "This compares MySQL logical replication to PostgreSQL's binary replication."(MySQL 논리 복제와 PostgreSQL 바이너리 복제를 비교하고 있다), 복제본 MVCC 에 대해 "This is configurable. You can have a 'close' replica for failover and a 'delayed' replica for queries.", 커넥션에 대해 "pgbouncer exists to mitigate this exact problem." 그리고 마무리가 이렇습니다. "There was remarkably little quantitative information in how PostgreSQL vs MySQL performed in their environment."(그들의 환경에서 둘이 어떻게 동작했는지에 대한 정량 정보가 놀랄 만큼 적었다)
+**Christophe Pettus** 는 처방보다 비교의 공정성을 지적했습니다. 복제 항목에 대해 "This compares MySQL logical replication to PostgreSQL's binary replication."(MySQL 논리 복제와 PostgreSQL 바이너리 복제를 비교하고 있다), 복제본 MVCC에 대해 "This is configurable. You can have a 'close' replica for failover and a 'delayed' replica for queries.", 커넥션에 대해 "pgbouncer exists to mitigate this exact problem." 그리고 마무리가 이렇습니다. "There was remarkably little quantitative information in how PostgreSQL vs MySQL performed in their environment."(그들의 환경에서 둘이 어떻게 동작했는지에 대한 정량 정보가 놀랄 만큼 적었다)
 
-**Markus Winand** 이 유일하게 이 세션이 잰 축을 지목했습니다. HOT 에 대해 "HOT is useful for the special case where a tuple is repeatedly updated in ways that do not change its indexed columns" 라고 조건을 좁히고 **`fillfactor` 조정을 처방으로 제시했습니다.** 동시에 Uber 의 갱신은 인덱스 컬럼을 건드리는 것으로 보이므로 그 워크로드에는 HOT 이 안 맞는다는 점도 인정했습니다.
+**Markus Winand** 이 유일하게 이 세션이 잰 축을 지목했습니다. HOT에 대해 "HOT is useful for the special case where a tuple is repeatedly updated in ways that do not change its indexed columns" 라고 조건을 좁히고 **`fillfactor` 조정을 처방으로 제시했습니다.** 동시에 Uber의 갱신은 인덱스 컬럼을 건드리는 것으로 보이므로 그 워크로드에는 HOT이 안 맞는다는 점도 인정했습니다.
 
-**그러니까 이 세션의 처방 표는 사실상 Winand 노선의 정량화입니다.** Uber 는 수치를 안 냈고 Pettus 슬라이드에도 fillfactor 처방은 없습니다. 그리고 이 세션이 실측한 "인덱스 컬럼을 갱신하면 651MB 로 최악이고 fillfactor 가 무의미해진다"는 오히려 Uber 쪽 주장을 부분적으로 뒷받침합니다.
+**그러니까 이 세션의 처방 표는 사실상 Winand 노선의 정량화입니다.** Uber는 수치를 안 냈고 Pettus 슬라이드에도 fillfactor 처방은 없습니다. 그리고 이 세션이 실측한 "인덱스 컬럼을 갱신하면 651MB로 최악이고 fillfactor가 무의미해진다"는 오히려 Uber 쪽 주장을 부분적으로 뒷받침합니다.
 
-**후일담이 이 글의 축을 다시 봅니다.** 2022년 9월 Uber 는 InnoDB 에서 MyRocks 로 다시 옮겼습니다. "Disk usage was becoming the bottleneck resource" 이고 "InnoDB uses B+ tree index which can get fragmented leading to additional disk space usage" 였습니다. 결과는 "disk space savings of over 30% across the board", 대가는 CPU 와 디스크 I/O 증가입니다.
+**후일담이 이 글의 축을 다시 봅니다.** 2022년 9월 Uber는 InnoDB에서 MyRocks로 다시 옮겼습니다. "Disk usage was becoming the bottleneck resource" 이고 "InnoDB uses B+ tree index which can get fragmented leading to additional disk space usage" 였습니다. 결과는 "disk space savings of over 30% across the board", 대가는 CPU와 디스크 I/O 증가입니다.
 
-2016년에 B+tree 클러스터 인덱스가 낫다며 옮긴 그 InnoDB 를 6년 뒤 LSM 트리로 바꾼 셈입니다. **다만 축이 다릅니다.** 이 세션이 잰 것은 WAL 쓰기 증폭이고, Uber 가 6년 뒤 움직인 이유는 디스크 공간 증폭입니다. 같은 "증폭"이라는 낱말을 쓰지만 다른 자원입니다.
+2016년에 B+tree 클러스터 인덱스가 낫다며 옮긴 그 InnoDB를 6년 뒤 LSM 트리로 바꾼 셈입니다. **다만 축이 다릅니다.** 이 세션이 잰 것은 WAL 쓰기 증폭이고, Uber가 6년 뒤 움직인 이유는 디스크 공간 증폭입니다. 같은 "증폭"이라는 낱말을 쓰지만 다른 자원입니다.
 
 ## 못 한 것
 

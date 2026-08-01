@@ -329,7 +329,7 @@ MySQL 튜닝 문서를 열면 거의 항상 `innodb_buffer_pool_size`가 첫 줄
 
 그런데 **지연은 안 늘었습니다.** 쓰기 20% 조건의 최대 지연 27.1ms는 읽기 전용 세 회차의 4.7~49.3ms 안에 들어갑니다. 축소 시간 3.04초도 읽기 전용의 3.14~7.08초와 겹칩니다. **회차 폭이 조건 차이보다 커서 이 실험으로는 쓰기의 몫을 못 봅니다.**
 
-처음 정리할 때는 여기에 79.5ms를 적고 "1.6배에서 1.9배 커진다"고 썼는데, 그 값이 결과 파일 어디에도 없습니다. 원자료(`extra-shrink-write-0.2.json`)의 `max_ms` 는 27.125입니다. **없는 숫자로 방향까지 반대인 결론을 세워 뒀던 자리입니다.**
+처음 정리할 때는 여기에 79.5ms를 적고 "1.6배에서 1.9배 커진다"고 썼는데, 그 값이 결과 파일 어디에도 없습니다. 원자료(`extra-shrink-write-0.2.json`)의 `max_ms`는 27.125입니다. **없는 숫자로 방향까지 반대인 결론을 세워 뒀던 자리입니다.**
 
 남는 것은 이렇습니다. 플러시할 더티 페이지가 생긴다는 것은 확인했고, 그것이 축소를 얼마나 늦추는지는 이 표본 수로는 못 갈랐습니다. 읽기 전용 회차부터 최대 지연이 4.7ms와 49.3ms로 열 배 흩어지므로, 가르려면 조건마다 회차를 훨씬 늘려야 합니다.
 
@@ -384,7 +384,7 @@ MySQL 튜닝 문서를 열면 거의 항상 `innodb_buffer_pool_size`가 첫 줄
 | 0.4 | 3.04초 | 3.08초 | 2,634 | 4,825 | 1,883 |
 | 0.8 | 3.04초 | 7.07초 | 1,459 | 5,438 | 3,720 |
 
-**`0.0` 이 두 순서에서 정확히 65.10초입니다.** 정순에서 첫 번째로 돌 때도, 역순에서 다섯 번째로 돌 때도 같습니다. 실행 순서의 효과가 아닙니다.
+**`0.0`이 두 순서에서 정확히 65.10초입니다.** 정순에서 첫 번째로 돌 때도, 역순에서 다섯 번째로 돌 때도 같습니다. 실행 순서의 효과가 아닙니다.
 
 **더티 페이지가 하나도 없을 때 축소가 가장 오래 걸립니다.** 3,720개일 때 7.07초이고 0개일 때 65.10초입니다. 예상과 정반대입니다.
 
@@ -392,7 +392,7 @@ MySQL 튜닝 문서를 열면 거의 항상 `innodb_buffer_pool_size`가 첫 줄
 
 **다만 이 실험으로 그 인과를 확정하지는 못했습니다.** 쓰기 비율과 처리량이 함께 움직이므로 둘을 못 가릅니다. 가르려면 읽기만 하면서 처리량을 낮춘 조건이 필요한데 안 돌렸습니다.
 
-`0.1` 은 정순 35.05초, 역순 3.08초로 갈립니다. `0.8` 도 3.04초와 7.07초입니다. **두 조건은 회차마다 흔들리므로 그 값을 인용하면 안 됩니다.** 재현되는 것은 `0.0` 의 65.10초와 `0.2`~`0.4` 의 3초대입니다.
+`0.1`은 정순 35.05초, 역순 3.08초로 갈립니다. `0.8`도 3.04초와 7.07초입니다. **두 조건은 회차마다 흔들리므로 그 값을 인용하면 안 됩니다.** 재현되는 것은 `0.0`의 65.10초와 `0.2`~`0.4`의 3초대입니다.
 
 읽기 전용 축소의 3.5초를 더티 페이지가 없어서 나온 짧은 값으로 봤습니다. **하한이 아니었습니다.** 그 3.5초는 이 조건과 부하 세기가 달랐던 회차의 값이고, 같은 부하에서 다시 재면 읽기 전용이 가장 오래 걸립니다.
 
@@ -414,6 +414,61 @@ MySQL 튜닝 문서를 열면 거의 항상 `innodb_buffer_pool_size`가 첫 줄
 이 조건의 질의가 `MIN`/`MAX` 뿐이기 때문입니다. B트리 양 끝의 리프 페이지 두 장만 건드리므로 데울 것이 애초에 두 장입니다. **첫 요청 한 번이면 그 두 장이 올라오고, 그 뒤 30초를 더 데워도 더 올릴 것이 없습니다.**
 
 그래서 8절의 "콜드" 라는 이름이 정확하지 않았다는 것이 이 표의 결론입니다. 워밍업을 없애도 안 바뀌므로, 그 조건이 재는 것은 콜드 스타트가 아니라 **워킹셋이 두 페이지인 질의**입니다. 진짜 콜드 스타트를 재려면 질의가 넓은 범위를 건드려야 합니다.
+
+## 표준 처방은 무엇인가
+
+이 세션은 50~75%와 80%가 같은 매뉴얼 안에 같이 있다는 것을 짚었습니다. 조사해 보니 **80%라는 숫자 자체를 반박하는 쪽**이 있습니다.
+
+Percona의 규칙은 비율이 아닙니다.
+
+> "tune the `innodb_buffer_pool_size` as large as possible **without using swap when the system is running the production workload**."
+
+그리고 80%의 유래로 InnoDB 원저자 Heikki Tuuri의 회고를 인용합니다. **당시 테스트 서버의 RAM이 1GB였습니다.** 1TB 서버에 같은 비율을 적용하면 205GB를 버퍼 풀 밖에 남기게 되는데, 이는 실제 필요보다 훨씬 큽니다. **서버가 커질수록 고정 비율은 RAM을 버립니다.**
+
+이 세션이 곡선을 직접 그려 하한을 찾은 것이 이 지적과 같은 방향입니다. 이 서버에서 상한 규칙만 따랐다면 5.5GB에서 8.25GB를 잡았을 텐데 핫셋 부하의 하한은 512M이었습니다.
+
+### 벤더가 대신 계산해 주는 값
+
+MySQL 8.0의 `innodb_dedicated_server`는 감지 메모리로 자동 계산합니다.
+
+| 감지 메모리 | 버퍼 풀 |
+|---|---|
+| 1GB 미만 | 128MB (기본값) |
+| 1GB에서 4GB | 감지 메모리 × 0.5 |
+| 4GB 초과 | 감지 메모리 × 0.75 |
+
+명시적 경고가 붙어 있습니다. "using `--innodb-dedicated-server` is **not recommended** if the MySQL instance shares system resources with other applications."
+
+AWS는 `{DBInstanceClassMemory*3/4}`를 기본값으로 두고 Aurora 문서에서 그대로 두라고 권합니다. **다만 RDS MySQL 8.4부터 `innodb_dedicated_server`가 기본 활성으로 바뀌었고, 이를 끄면서 값을 안 주면 128MB로 떨어집니다.** AWS 문서의 표현이 직설적입니다. "These defaults result in **poor performance on larger instance classes**."
+
+### 리사이즈가 왜 그 값을 물리는지
+
+이 세션은 축소 3.5초에 374.9ms 정지를 쟀습니다. MySQL 공식 블로그가 그 안쪽을 설명합니다.
+
+> "All allocate/free/search calls for pages within the buffer pool are only blocked during **the critical path** in the resizing operation."
+> "The length of the time for the critical path is largely dependent on **the OS memory manager's performance**."
+
+즉 그 374.9ms의 상당 부분이 MySQL이 아니라 **OS의 메모리 할당 속도**입니다. 같은 설정도 호스트가 다르면 다른 값이 나옵니다.
+
+같은 글에 이 세션이 안 만든 조건이 둘 더 있습니다.
+
+> "If a transaction has locks on any of the pages in the chunk to be freed, then the relocation of those pages **should wait for the transaction end**. So high transaction throughput or long running transactions can potentially **block the buffer pool resize operation**."
+
+> "During the buffer pool resizing process **the adaptive hash index (AHI) is disabled**."
+
+**축소가 아예 안 끝날 수 있습니다.** 이 세션의 부하는 짧은 조회라 이 조건이 안 걸렸습니다. 열린 트랜잭션이 있는 상태에서 축소를 걸면 3.5초가 아니라 그 트랜잭션이 끝날 때까지입니다. 그리고 AHI가 꺼지는 동안의 성능 저하는 이 세션이 따로 재지 않았습니다.
+
+### 설정 제약
+
+| 제약 | 값 |
+|---|---|
+| 버퍼 풀 크기 | `chunk_size × instances`의 배수여야 함 |
+| 청크 개수 | 1000을 넘지 않을 것 (`size / chunk_size`) |
+| `innodb_buffer_pool_chunk_size` | 시작 시에만 설정 가능. 바꾸려면 재시작 |
+| 온라인 리사이즈 | MySQL 5.7.5부터 |
+| 진행률 상태 변수 | 8.0.31부터 수치로 제공 |
+
+**청크 크기가 정적이라는 것이 실무에서 걸립니다.** 온라인 리사이즈를 쓰려고 만든 기능인데 그 단위를 바꾸려면 재시작해야 합니다. 기본 128M이라 128M 단위로만 옮길 수 있습니다.
 
 ## 못 한 것
 

@@ -445,9 +445,56 @@ Redis 왕복이 두 번이라 파이프라인으로 묶으면 빨라질 것으�
 
 이유는 슬롯이 하는 일 자체입니다. 원본에서 카운터 하나를 64개 행으로 쪼개면 잠금 경합이 64분의 1로 줄어 원본이 빨라집니다. 그런데 **복제본은 그 64개 행 갱신을 전부 다시 적용해야 합니다.** 원본이 3.15배 많은 논리 갱신을 처리하고 그것이 다시 여러 배의 행 갱신이 되므로, 복제본이 받는 양은 훨씬 더 늘어납니다.
 
-`Seconds_Behind_Source` 는 회차별로 단일 행이 4/1/1, 슬롯 64가 24/24/24 였습니다. 중앙값으로는 1과 24입니다. 이 값 하나만 보면 20배 남짓으로 읽히는데, 실제 따라잡기는 회차 범위가 아예 겹치지 않는 수준입니다(0.07~2.18초 대 40.65~45.72초). 단일 행 쪽 회차 폭이 31배라 배수 하나로 요약하면 0.07초를 분모로 삼느냐 2.18초를 삼느냐에 따라 18배에서 583배까지 나옵니다. **그래서 배수 대신 범위로 적습니다. 복제 지연을 `Seconds_Behind_Source` 하나로 감시하면 이 격차를 놓칩니다.**
+`Seconds_Behind_Source`는 회차별로 단일 행이 4/1/1, 슬롯 64가 24/24/24 였습니다. 중앙값으로는 1과 24입니다. 이 값 하나만 보면 20배 남짓으로 읽히는데, 실제 따라잡기는 회차 범위가 아예 겹치지 않는 수준입니다(0.07~2.18초 대 40.65~45.72초). 단일 행 쪽 회차 폭이 31배라 배수 하나로 요약하면 0.07초를 분모로 삼느냐 2.18초를 삼느냐에 따라 18배에서 583배까지 나옵니다. **그래서 배수 대신 범위로 적습니다. 복제 지연을 `Seconds_Behind_Source` 하나로 감시하면 이 격차를 놓칩니다.**
 
 **집계값을 복제본에서 읽는 서비스라면 슬롯의 이득이 그대로 손해가 됩니다.** 원본은 3배 빨라지고 복제본이 보여 주는 숫자는 40초 뒤처집니다. 후원 합계를 복제본에서 읽어 방송 화면에 띄운다면, 슬롯을 넣기 전보다 화면이 더 틀립니다.
+
+## 표준 처방은 무엇인가
+
+이 패턴의 원전은 2008년 10월 Joe Gregorio가 쓴 Google App Engine 문서 "Sharding counters"입니다. 전제가 한 줄로 적혀 있습니다.
+
+> "you can only expect to update any single entity or entity group **about five times a second**"
+
+카운터를 N개 샤드로 쪼개고, 증가시킬 때 하나를 무작위로 골라 올리고, 읽을 때 전부 더합니다. **이 세션이 구현한 것과 같은 형태입니다.**
+
+Firestore가 이어받으면서 숫자를 뺐습니다. "you can't update a single document **at an unlimited rate**." 샤드 10개면 "roughly **10 times more writes** than a single-document counter"입니다.
+
+DynamoDB는 무작위 접미사와 계산된 접미사를 나눠 제시하고 대가를 밝힙니다.
+
+> "A randomizing strategy can greatly improve write throughput. But **it's difficult to read a specific item** because you don't know which suffix value was used when writing the item."
+
+Spanner는 진단 지표로 노출하면서 처방을 답니다.
+
+> "High load is concentrated on a single row. **Spanner cannot add split points within an individual row.**"
+> 완화책: "**shard counters across multiple rows**"
+
+**"행 안에는 분할점을 못 넣는다"가 이 문제의 물리적 정의입니다.** 엔진이 달라도 같습니다.
+
+### 세 벤더가 한목소리로 지목하는 대가는 읽기입니다
+
+App Engine 문서는 "reads become more expensive since they require aggregating data from multiple entities", DynamoDB는 접미사 200개면 Query를 200번 던져 병합해야 한다고 씁니다.
+
+**이 세션이 잰 값이 그 대가의 크기입니다.** 64슬롯 `SUM` 조회 p95가 4.16ms, 단일 행이 3.68ms입니다. 0.48ms 차이입니다. 쓰기 쪽에서 hotspot 기준 740 req/s가 3,981 req/s로 5.4배 오른 것과 견주면, **읽기 대가가 쓰기 이득보다 훨씬 작습니다.**
+
+App Engine 문서의 전제가 조건부인 것도 짚을 만합니다.
+
+> "The solution relies on the fact that **reads from the App Engine datastore are extremely fast and cheap.**"
+
+**읽기가 싸지 않은 저장소에서는 전제가 무너집니다.** 이 세션이 MySQL에서 `SUM` 비용을 따로 잰 것이 그 전제를 확인한 셈입니다. 인덱스가 슬롯 수만큼의 행만 훑으면 되므로 이 규모에서는 쌌습니다.
+
+### 관계형 벤더는 이 처방을 안 합니다
+
+**MySQL과 PostgreSQL 공식 매뉴얼 어디에도 "카운터를 여러 행으로 쪼개라"는 서술이 없습니다.** 이 패턴을 문서로 처방하는 것은 App Engine, Firestore, DynamoDB, Spanner처럼 파티션이 곧 물리 단위인 저장소들입니다.
+
+관계형 쪽에서 확인되는 1차 자료는 "한 행에 갱신이 몰리면 무슨 일이 벌어지는가"까지입니다. PostgreSQL HOT 문서가 그 층입니다.
+
+> "updates require **new versions of rows** to be added to tables. This can also require new index entries for each updated row, and removal of old versions of rows and their index entries **can be expensive**."
+
+HOT이 적용되려면 "The update does not modify any columns referenced by the table's indexes"이고 "There is **sufficient free space on the page** containing the old row"여야 합니다. **슬롯을 쪼개면 이 두 조건이 붙는 자리도 함께 흩어집니다.**
+
+Aurora MySQL 데드락 문서의 완화 지침도 방향이 같습니다. "commit transactions immediately after making a related set of changes", "breaking up large transactions into smaller ones."
+
+**복제 지연을 이 패턴의 대가로 명시한 1차 자료는 찾지 못했습니다.** 벤더 문서가 대가로 드는 것은 전부 읽기 비용입니다. 슬롯을 쓰면 쓰기 행 수가 늘어나니 바이너리 로그도 늘어난다는 추론은 가능하지만, 이 세션이 재지 않았고 문서도 말하지 않습니다.
 
 ## 못 한 것
 
