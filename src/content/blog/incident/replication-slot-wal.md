@@ -392,6 +392,25 @@ AWS RDS에는 조건 하나가 더 있습니다. "AWS RDS causes writes to its o
 
 > "If you permit multiple connectors to capture from a replication slot, you risk **data loss**, because a replication slot can emit each change **only once**."
 
+
+### publication 함정을 재 봤습니다
+
+Debezium 문서가 NOTE로 달아 둔 것을 빠뜨리면 어떻게 되는지 만들어 봤습니다. publication은 캡처 대상 테이블만 싣고 그 테이블에는 아무도 안 씁니다. WAL을 만드는 것은 publication 밖의 테이블입니다. 저트래픽 DB를 캡처하면서 고트래픽이 옆에 있는 상황입니다.
+
+| 조건 | 슬롯이 받은 변경 |
+|---|---|
+| 하트비트 테이블이 publication에 없음 | **0건** |
+| `ALTER PUBLICATION ... ADD TABLE` 뒤 | 16건 |
+| `pg_logical_emit_message` (테이블 없이) | 4건 |
+
+**하트비트 테이블에 5행이 들어갔는데 슬롯이 받은 변경은 0건입니다.** 쿼리는 성공했고 행도 들어갔고 에러도 없습니다. 커넥터 입장에서는 받을 것이 없으니 확정할 것도 없습니다. 하트비트가 도는데 아무 일도 안 합니다.
+
+**설정을 켠 것과 그 설정이 일하는 것이 다릅니다.** 이 랩이 여러 세션에서 만난 모양이고, 여기서는 `ALTER PUBLICATION` 한 줄이 그 경계입니다.
+
+`pg_logical_emit_message`는 테이블 없이도 변경을 만듭니다. publication에 뭘 추가할 필요가 없으니 이 함정 자체가 안 생깁니다. 다만 디코딩할 때 `messages` 옵션이 켜져 있어야 합니다.
+
+한 가지 밝혀 둘 것이 있습니다. 이 실험에서 슬롯의 확정 지점은 세 조건 모두 움직였습니다. PostgreSQL의 디코딩은 publication에 안 맞는 WAL도 읽고 지나가면서 위치를 올리기 때문입니다. **갈리는 것은 슬롯이 전진하느냐가 아니라 소비자가 받을 것이 있느냐이고**, Debezium은 받은 것이 있어야 오프셋을 커밋합니다. 위 표의 0건이 그 지점입니다.
+
 ## 못 한 것
 
 - **물리 슬롯 대조는 조건마다 1회 실행입니다.** 스탠바이를 실제로 붙였다 떼는 경로가 아니라 슬롯만 만들어 둔 조건입니다.

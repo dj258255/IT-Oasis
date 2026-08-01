@@ -390,6 +390,26 @@ end
 
 사후 보고의 결론이 조치 목록이 아니라 책임 인정인 것도 이 사건의 성격입니다. "As the CTO of Basecamp and the creator of Ruby on Rails, I accept full responsibility for our failures."
 
+
+### 복제본을 먼저 ALTER 하는 방법을 재 봤습니다
+
+Basecamp가 쓴 방법은 이 글이 비교한 둘 중 어느 것도 아니었고, 그들이 걸린 곳은 ALTER가 아니라 그 뒤 복제 재개였습니다. 그래서 그 조건을 만들었습니다. MySQL 8.4.3 두 대, 행 기반 복제, GTID입니다. 소스는 `INT`를 유지하고 복제본만 `BIGINT`로 올린 뒤 복제를 재개합니다.
+
+| `replica_type_conversions` | 복제본 id 타입 | 복제본 행 수 | 결과 |
+|---|---|---|---|
+| 빈 값 (기본) | `bigint` | 1행 그대로 | **에러 13146, 복제 정지** |
+| `ALL_NON_LOSSY` | `bigint` | 1행에서 4행 | 복제 이어짐 |
+
+에러 문장이 이렇습니다.
+
+> `Column 0 of table 'lab.events' cannot be converted from type 'int' to type 'bigint'`
+
+**기본 설정으로는 복제가 멈춥니다.** ALTER는 성공하고, 복제본의 컬럼은 `BIGINT`가 되고, 그다음 소스에서 오는 행 이벤트를 못 붙입니다. Basecamp의 "at first it didn't work"가 이 자리입니다.
+
+그들이 켠 설정의 이름은 밝혀지지 않았습니다. **`ALL_NON_LOSSY` 대응은 문서에 근거한 추정이었는데, 이 재현으로 그 추정이 실제로 성립한다는 것까지는 확인했습니다.** 그들이 이것을 켰다는 뜻은 아니고, 이 조건에서 복제를 다시 붙이려면 이 설정이 필요하다는 뜻입니다.
+
+이 실험에서도 한 번 미끄러졌습니다. 처음에는 복제가 아예 안 붙은 채로 끝까지 돌아서 두 조건이 다 "에러 없음, 0행"으로 나왔습니다. MySQL 8.4가 `mysql_native_password`를 기본 빌드에서 뺐는데 복제 계정 생성 실패를 버렸기 때문입니다. **복제가 안 붙은 상태와 복제가 잘 도는 상태가 같은 모양으로 보였습니다.** 지금은 ALTER 전에 복제본 행 수가 소스와 같은지 확인하고 다르면 중단합니다.
+
 ## 못 한 것
 
 - **9절의 표는 조건마다 1회 실행입니다.** 크기는 실행 간 편차가 거의 없는 값이라 반복하지 않았습니다.
