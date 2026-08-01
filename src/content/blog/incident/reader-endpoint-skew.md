@@ -246,6 +246,28 @@ R02에서 "커넥션 풀 설정을 만져도 안 나아진다"를 확인했는�
 
 **옵션 이름을 잘못 넘겨 "캐시 끔" 조건이 캐시 켠 채로 돌았습니다.** `networkaddress.cache.ttl`은 `java.security` 파일이 읽는 **보안 속성**이라 `-D`로 넘기면 조용히 무시됩니다. 시스템 속성으로 같은 일을 하는 것은 `sun.net.inetaddr.ttl`입니다. 처음 실행에서 세 회차가 전부 중앙 100%로 나와 캐시 조건과 구별되지 않았고, **에러가 안 나므로 결과만 보면 알 수 없었습니다.** 3절이 `sun.net.inetaddr.ttl=0`에서 47.9%라고 적어 둔 덕에 어긋남을 잡았습니다.
 
+## 현업은 어떻게 해소했는가
+
+이 세션의 결론이 AWS 공식 안내와 어디서 갈리는지가 중요합니다. **AWS 가 최종적으로 내놓은 답은 "TTL 을 조정하라"가 아닙니다.**
+
+TTL 은 최소 조치로 나옵니다. Aurora DNS 존은 TTL 5초를 쓰고, 백서는 "keep the TTL as low as possible, and avoid overriding the default TTLs with higher custom values" 라고 적습니다. 계층이 겹치면 더해진다는 경고도 있습니다. "Any TTL value configured at the caching layer will count in addition to the existing 5-second TTL of the Aurora zones."
+
+**그런데 쏠림은 TTL 문제가 아닙니다.** 리더 엔드포인트 문서가 원인을 설계로 지목합니다.
+
+> "The reader endpoint balances connections to available Aurora Replicas in an Aurora DB cluster. It doesn't balance individual queries. If you want to balance each query to distribute the read workload for a DB cluster, open a new connection to the reader endpoint for each query."
+
+커넥션은 분산하고 쿼리는 분산하지 않습니다. **커넥션 풀을 쓰는 순간 분산은 풀을 채운 그 시점에 고정됩니다.** 리플리카를 늘려도 기존 커넥션은 안 옮겨 갑니다. AWS 블로그가 그 결과를 인정합니다. "you can observe connection errors after removing replicas, or uneven distribution of workload after adding new replicas."
+
+그래서 AWS 의 권고가 셋입니다.
+
+**커스텀 엔드포인트**로 인스턴스 집합을 직접 골라 붙이거나, **RDS Proxy** 로 읽기 전용 엔드포인트를 추가하거나, **스마트 드라이버**를 씁니다. 마지막이 AWS 가 미는 방향입니다. AWS Advanced JDBC Wrapper 는 "maintains a real-time cache of your Aurora cluster topology ... bypassing DNS delays entirely"(클러스터 토폴로지의 실시간 캐시를 유지하며 DNS 지연을 완전히 우회)합니다.
+
+**DNS 를 고치는 것이 아니라 DNS 를 안 밟는 쪽으로 갔습니다.**
+
+이 세션이 잰 두 축이 그래서 서로 다른 문제입니다. `maxLifetime` 은 커넥션이 언제 다시 이름을 묻는가이고, DNS 캐시는 그때 무엇을 받는가입니다. 둘 다 고쳐도 **커넥션 단위 분산이라는 성질 자체는 안 바뀝니다.** 7절이 캐시를 꺼도 완전 균등이 안 나온다고 적은 것이 그 자리입니다.
+
+새 실패 모드도 생겼습니다. 클라이언트가 토폴로지를 직접 관리하니 그쪽 상태 관리 버그가 붙습니다. GitHub 이슈 #1324 "Read-Write Splitting Plugin Fails to Fallback to Writer When Reader is Unavailable" 같은 것입니다.
+
 ## 못 한 것
 
 - **`maxLifetime` 스윕은 조건마다 3회 실행입니다.** 회차 폭이 조건 사이 차이만큼 커서 개별 칸의 값은 인용하면 안 되고, "축이 아니다" 라는 방향만 읽어야 합니다.

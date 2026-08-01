@@ -404,6 +404,37 @@ Data truncation: Incorrect datetime value: '2026-03-08 02:30:00' for column 'as_
 
 **왕복 테스트로는 이 셋 중 아무것도 안 보입니다.** 다른 시간대로 붙은 두 번째 애플리케이션이나 SQL로 직접 읽는 배치가 있어야 드러납니다. 통합 테스트를 앱 한 대로만 짜면 이 구간이 통째로 빠집니다.
 
+## 현업은 어떻게 해소했는가
+
+WordPress 가 2015년 4.2 에서 기존 사이트를 utf8mb4 로 옮긴 절차가 공개돼 있습니다. **어려웠던 것이 인코딩이 아니라 767바이트 인덱스 벽이었습니다.**
+
+이 세션이 2절에서 잰 그 벽입니다. WordPress 는 이렇게 적습니다.
+
+> "Using a standard configuration, MySQL allows 767 bytes per index, which for utf8 means 767 bytes / 3 bytes = 255 characters. For utf8mb4, that means 767 bytes / 4 bytes = 191 characters."
+
+**그리고 `innodb_large_prefix` 로 우회하지 않고 인덱스를 줄이는 쪽을 골랐습니다.** 그 덕에 `innodb_file_format=Barracuda` 나 `ROW_FORMAT=DYNAMIC` 여부를 검사할 필요가 없어졌습니다. 공유 호스팅이 대부분인 생태계에서는 이것이 결정적입니다.
+
+**191 이라는 숫자가 지금도 코어 소스에 주석과 함께 박혀 있습니다.**
+
+```php
+ * As of 4.2, however, we moved to utf8mb4, which uses 4 bytes per character. This means that an index which
+ * used to have room for floor(767/3) = 255 characters, now only has room for floor(767/4) = 191 characters.
+ */
+$max_index_length = 191;
+```
+
+옮길 수 없는 사이트를 위해서는 **두 번째 저장 표현**을 유지했습니다. "If a site can't be upgraded to utf8mb4, we convert emoji to their HTML-encoded equivalent, and store that, instead."(utf8mb4 로 못 올리면 이모지를 HTML 인코딩 형태로 바꿔 대신 저장한다) 적용 대상은 글 제목, 본문, 요약, 사이트 제목, 설명으로 한정했습니다.
+
+플러그인 개발자에게 준 경고가 이 사건의 교훈을 압축합니다.
+
+> "MySQL won't always produce an error when the index is too big, so you'll need to manually check the size of each index, instead of relying on automated testing."
+
+인덱스가 너무 커도 MySQL 이 항상 에러를 내지는 않으니 자동 테스트에 기대지 말라는 것입니다. **조용한 실패를 벤더가 직접 경고한 자리입니다.**
+
+**대가는 곧 청구됐습니다.** Trac #32649 의 제목이 "Index length optimization in 4.2 made one of the core queries unable to use it" 입니다. 인덱스를 191 로 줄이자 코어 쿼리 하나가 그 인덱스를 못 쓰게 됐습니다.
+
+그리고 **10년 뒤인 6.9(2025-11)에서야 신규 설치의 기본 `DB_CHARSET` 이 utf8mb4 가 됐습니다.** 4.2 는 기존 사이트를 옮겼을 뿐 기본값은 한동안 그대로였습니다.
+
 ## 못 한 것
 
 - **9절의 JDBC 왕복은 서버가 UTC 인 조건 하나입니다.** 서버 시간대를 KST로 두고 앱을 뉴욕으로 두는 조합은 안 봤습니다.
