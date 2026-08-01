@@ -3,7 +3,7 @@ title: '복제 지연 중 승격, 성공 응답을 받은 커밋이 사라진다
 titleEn: "Promoting a Lagging Replica: Commits That Already Returned Success Disappear"
 description: 'RDS 리드 리플리카는 엔진의 비동기 복제를 그대로 쓰기 때문에, 프라이머리가 죽은 뒤 승격하면 아직 넘어가지 못한 커밋이 사라집니다. 2018년 10월 GitHub에서 광 링크가 43초 끊긴 뒤 페일오버로 954건의 쓰기가 사라진 것과 같은 구조입니다. MySQL 8.4 소스와 레플리카 2노드에 복제망 분단을 넣어 축소 재현했더니, 고객이 성공 응답을 받은 커밋 927건 중 555건(5,032,000원)이 승격된 레플리카에 없었습니다. 555는 분단 15초 동안 커밋된 건수 그대로입니다. 초당 37.09건에 15초를 곱하면 556이 나옵니다. 그 사이 Seconds_Behind_Source는 19초 동안 0을 가리켰습니다. 반동기 AFTER_SYNC에서는 유실이 0이었지만, 8초 타임아웃으로 비동기 강등된 뒤에는 334건이 다시 사라졌습니다. 동기 복제를 쓰는 Multi-AZ 인스턴스 배포는 이 실험의 대상이 아닙니다.'
 descriptionEn: "An RDS read replica uses the engine's own asynchronous replication, so promoting one after the primary dies drops whatever had not shipped yet. In October 2018, a 43-second fiber link failure at GitHub triggered a failover that lost 954 writes through the same mechanism. This session shrinks it down to a two-node MySQL 8.4 source and replica with a partitioned replication network. Under asynchronous replication, 555 of the 927 commits that had already returned success to the client were missing from the promoted replica (5,032,000 KRW). That 555 is simply the number of commits made during the 15-second partition: 37.09 commits per second times 15 seconds is 556. Seconds_Behind_Source reported 0 for 19 seconds of that window. Semisynchronous AFTER_SYNC lost nothing, but once it timed out after 8 seconds and silently downgraded to async, 334 commits disappeared again. A Multi-AZ DB instance deployment, which replicates synchronously, is not what this experiment models."
-date: 2026-07-29
+date: 2026-01-06
 tags:
   - MySQL
   - Replication

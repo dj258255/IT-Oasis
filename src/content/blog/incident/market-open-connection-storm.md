@@ -3,7 +3,7 @@ title: '오전 9시 접속 폭주에 커넥션 10개짜리 풀이 무너진다'
 titleEn: 'The 9 AM Market Open Traffic Storm'
 description: '한국 증권사 MTS는 장이 열리는 오전 9시에 트래픽이 몰립니다. 국회 정무위원회 이양수 의원실이 증권사 12곳에서 받은 자료로 2022년 1월부터 2026년 3월까지 MTS 전산 장애가 190건 있었습니다. 각 사의 내부 원인 분석은 공개되지 않았습니다. 원인 가설 가운데 커넥션 풀 고갈만 떼어 Spring Boot와 HikariCP로 규모를 줄여 축소 재현했습니다. 풀 10에 초당 400건 스파이크를 부으니 응답 중앙값이 11.42초로 밀리고 9,999건 가운데 761건이 커넥션 획득 타임아웃으로 500이 됐습니다. 부하 차단을 한 겹 넣자 같은 부하에서 중앙값 51ms, 500이 0건이 됐고 넘치는 요청은 중앙값 1ms에 503으로 돌아갔습니다. 계층별로 재 보니 중앙값 11.42초 가운데 커넥션 풀 대기는 0.96초뿐이고 약 10.4초는 Tomcat 작업 스레드를 기다린 시간이었습니다.'
 descriptionEn: "Korean brokerage MTS apps take their heaviest traffic the moment the market opens at 9 AM. A National Assembly office collected 190 MTS outages across 12 brokerages between January 2022 and March 2026, but no firm published its internal root cause, so this session reproduces one representative mechanism at reduced scale instead: connection pool exhaustion on Spring Boot and HikariCP. A pool of 10 under a 400 requests per second spike pushed median latency to 11.42s, and 761 of the 9,999 requests came back as HTTP 500 from connection acquisition timeouts. One layer of load shedding, under an identical load, brought the median back to 51ms with zero 500s while shedding the excess as 503 in a median of 1ms. Instrumenting each tier showed that only 0.96s of the 11.42s median was connection pool wait; roughly 10.4s was spent waiting for a Tomcat worker thread."
-date: 2026-07-28
+date: 2026-01-12
 tags:
   - Spring Boot
   - HikariCP

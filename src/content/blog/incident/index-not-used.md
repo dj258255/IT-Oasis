@@ -3,7 +3,7 @@ title: '인덱스는 있는데 쿼리가 못 쓴다, 다섯 가지 조건'
 titleEn: "The Index Is There, But the Query Can't Use It"
 description: '인덱스가 이미 있는데도 쿼리가 그 인덱스를 타지 못하는 다섯 가지 조건을 MySQL 8.4에서 재현했습니다. 주문 300만 행을 놓고 쿼리 재작성으로 끝나는 것과 스키마 변경이 필요한 것을 갈랐습니다. 벤치마크가 존재하지 않는 값을 조회하고 있던 것을 찾아 값을 고쳐 다시 쟀습니다. 문자셋 불일치 조인 75배, 비트 연산 22배, 선행 와일드카드 5.4배이고, 564배라고 적었던 함수 적용은 2.4배로 내려왔습니다. 형변환은 배수보다 결과가 문제입니다. 같은 행을 찾는 두 쿼리인데 한쪽은 300만 행을 훑고도 0건을 돌려주는 정합성 사고입니다.'
 descriptionEn: Reproduces five conditions that keep a query from using an index that already exists, on MySQL 8.4. Across 3 million order rows, the five are split into the ones a query rewrite fixes and the ones that need a schema change. After finding that the benchmark had been querying values absent from the seeded data, the queries were corrected and every case was measured again. The charset-mismatched join gained 75x, the bitwise condition 22x and the leading wildcard 5.4x, while the function-wrapped column fell from a claimed 564x to 2.4x. For implicit conversion the answer matters more than the multiplier. Two queries look for the same row, yet one scans 3 million rows and returns nothing. That is a correctness incident, not a slow query.
-date: 2026-07-29
+date: 2026-02-17
 tags:
   - MySQL
   - Index

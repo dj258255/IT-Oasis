@@ -162,7 +162,7 @@ static int like_match(const char *s, const char *pat) {
 
 > **실무/면접 포인트, LIKE '%x%'는 왜 느린가**: 인덱스는 값을 **정렬한** 구조라, `'kim%'`처럼 앞이 고정된 패턴만 "정렬된 구간의 시작점"으로 점프할 수 있다. 앞이 `%`로 열리면 시작점을 특정할 수 없어 풀 스캔이다. 미니 DB만이 아니라 **B-tree 인덱스의 본질적 한계**다. 중간 일치가 필요하면 인덱스 자체를 바꾼다: PostgreSQL의 트라이그램(pg_trgm, 문자열을 3글자 조각으로 쪼개 색인), 또는 검색 엔진의 역색인(Lucene/Elasticsearch).
 
-> **흔한 오해 정정**: *"접두 LIKE는 인덱스를 탄다?"* PostgreSQL에선 조건이 하나 더 붙습니다. 기본(비-C) collation으로 만든 일반 btree 인덱스는 `LIKE 'kim%'`**조차** 못 탑니다. locale의 문자열 비교 규칙이 바이트 순서와 달라서, "kim으로 시작"을 "정렬된 한 구간"으로 변환할 수 없기 때문입니다. `text_pattern_ops` 연산자 클래스로 인덱스를 만들거나 C collation을 써야 접두 LIKE가 인덱스를 탑니다(PostgreSQL 문서 Operator Classes). "앞이 고정이면 된다"는 원리 위에 collation이라는 현실이 한 겹 더 있는 겁니다.
+> **흔한 오해 정정**: *"접두 LIKE는 인덱스를 탄다?"* PostgreSQL에선 조건이 하나 더 붙습니다. 기본(비-C) collation으로 만든 일반 btree 인덱스는 `LIKE 'kim%'` **조차** 못 탑니다. locale의 문자열 비교 규칙이 바이트 순서와 달라서, "kim으로 시작"을 "정렬된 한 구간"으로 변환할 수 없기 때문입니다. `text_pattern_ops` 연산자 클래스로 인덱스를 만들거나 C collation을 써야 접두 LIKE가 인덱스를 탑니다(PostgreSQL 문서 Operator Classes). "앞이 고정이면 된다"는 원리 위에 collation이라는 현실이 한 겹 더 있는 겁니다.
 
 **타입 강제 변환: `WHERE age = '30'`은 무슨 일을 하나.** 비교의 양변 타입이 다를 때 DB가 얼마나 관대하게 변환해 주느냐는 제품마다 완전히 다릅니다:
 

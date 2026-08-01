@@ -3,7 +3,7 @@ title: 'UUIDv7로 바꿨는데 테이블이 안 줄었다'
 titleEn: 'Switching to UUIDv7 Did Not Shrink the Table'
 description: '랜덤 UUID를 PK로 쓰면 페이지가 반만 찬다는 경고는 오래됐고 처방은 UUIDv7이었습니다. MySQL 8.4.3에 PK만 다른 다섯 조건으로 각각 120만 행을 넣었습니다. 이 글의 공간 효율은 행 내용 바이트를 실제 행당 바이트로 나눈 값이고, 그 분모가 DATA_LENGTH를 행 수로 나눈 값이라 페이지 충전율과 같은 축이 아닙니다. 카운터 없는 UUIDv7은 54.7%로 UUIDv4의 56.7%보다 오히려 낮았고, 같은 밀리초 안에서 증가하는 카운터를 넣자 91.4%로 올라 순차 BIGINT의 91.9%에 붙었습니다. 반면 적재 중 디스크 읽기는 카운터 없는 UUIDv7이 115쪽, UUIDv4가 12,613쪽으로 110배 갈렸습니다.'
 descriptionEn: The warning that random UUID primary keys leave pages half full is old, and the usual prescription is UUIDv7. This session loaded 1.2M rows into MySQL 8.4.3 across five conditions that differ only in the primary key. The space efficiency reported here divides ideal row bytes by DATA_LENGTH per row, so it is not page fill factor and is not on the same axis as published fill numbers. Counterless UUIDv7 came out at 54.7%, slightly worse than UUIDv4's 56.7%. Adding an intra-millisecond counter raised it to 91.4%, close to sequential BIGINT's 91.9%. Load-time disk reads split the other way, 115 pages for counterless UUIDv7 against 12,613 for UUIDv4.
-date: 2026-07-29
+date: 2026-01-27
 tags:
   - MySQL
   - InnoDB
