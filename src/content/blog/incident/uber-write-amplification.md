@@ -309,6 +309,22 @@ FPI 비중이 가장 큰 조건에서는 격차가 더 벌어집니다.
 
 이건 인덱스가 더 나빠진 것이 아니라 분모가 더 줄어든 것입니다. **압축 설정이 다른 두 서버의 배수를 나란히 놓으면 안 됩니다.** 절대 바이트로 비교해야 합니다.
 
+## 현업은 어떻게 해소했는가
+
+Uber 가 실제로 한 것은 DB 교체가 아닙니다. "in many of the cases where we previously used Postgres, we now use Schemaless, a novel database sharding layer built on top of MySQL"(예전에 Postgres 를 쓰던 상당수 경우에 이제 MySQL 위에 올린 샤딩 계층 Schemaless 를 쓴다) **MySQL 로 갈아탄 것이 아니라 그 위에 자체 계층을 깐 것입니다.**
+
+PostgreSQL 진영의 반박에서 나온 처방을 이 세션이 잰 것과 대조하면 이렇습니다.
+
+**Christophe Pettus** 는 처방보다 비교의 공정성을 지적했습니다. 복제 항목에 대해 "This compares MySQL logical replication to PostgreSQL's binary replication."(MySQL 논리 복제와 PostgreSQL 바이너리 복제를 비교하고 있다), 복제본 MVCC 에 대해 "This is configurable. You can have a 'close' replica for failover and a 'delayed' replica for queries.", 커넥션에 대해 "pgbouncer exists to mitigate this exact problem." 그리고 마무리가 이렇습니다. "There was remarkably little quantitative information in how PostgreSQL vs MySQL performed in their environment."(그들의 환경에서 둘이 어떻게 동작했는지에 대한 정량 정보가 놀랄 만큼 적었다)
+
+**Markus Winand** 이 유일하게 이 세션이 잰 축을 지목했습니다. HOT 에 대해 "HOT is useful for the special case where a tuple is repeatedly updated in ways that do not change its indexed columns" 라고 조건을 좁히고 **`fillfactor` 조정을 처방으로 제시했습니다.** 동시에 Uber 의 갱신은 인덱스 컬럼을 건드리는 것으로 보이므로 그 워크로드에는 HOT 이 안 맞는다는 점도 인정했습니다.
+
+**그러니까 이 세션의 처방 표는 사실상 Winand 노선의 정량화입니다.** Uber 는 수치를 안 냈고 Pettus 슬라이드에도 fillfactor 처방은 없습니다. 그리고 이 세션이 실측한 "인덱스 컬럼을 갱신하면 651MB 로 최악이고 fillfactor 가 무의미해진다"는 오히려 Uber 쪽 주장을 부분적으로 뒷받침합니다.
+
+**후일담이 이 글의 축을 다시 봅니다.** 2022년 9월 Uber 는 InnoDB 에서 MyRocks 로 다시 옮겼습니다. "Disk usage was becoming the bottleneck resource" 이고 "InnoDB uses B+ tree index which can get fragmented leading to additional disk space usage" 였습니다. 결과는 "disk space savings of over 30% across the board", 대가는 CPU 와 디스크 I/O 증가입니다.
+
+2016년에 B+tree 클러스터 인덱스가 낫다며 옮긴 그 InnoDB 를 6년 뒤 LSM 트리로 바꾼 셈입니다. **다만 축이 다릅니다.** 이 세션이 잰 것은 WAL 쓰기 증폭이고, Uber 가 6년 뒤 움직인 이유는 디스크 공간 증폭입니다. 같은 "증폭"이라는 낱말을 쓰지만 다른 자원입니다.
+
 ## 못 한 것
 
 - **8절의 압축 넷은 각각 1회 실행입니다.** 소요 시간은 같은 호스트에서 이어 돌린 값이라 회차 폭이 없고, 시간 차이가 2%인 조건은 방향만 읽어야 합니다.

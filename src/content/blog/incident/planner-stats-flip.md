@@ -302,6 +302,24 @@ ANALYZE의 표본 추출은 시드를 고정할 수 없어서, 이 세션의 "�
 
 `shared_buffers` 512MB에 `ip_rule`이 130MB라 실험 내내 데이터가 메모리에 있었습니다. 이것을 두고 47배가 하한이라고 적었다가 지웠습니다. 근거가 없었기 때문입니다. 중첩 루프가 2,400번 되읽는 대상은 매번 같은 130MB이므로, 캐시가 그 130MB만 담아도 두 번째 루프부터는 대부분 히트합니다. 그 조건에서는 배수가 지금과 비슷하게 남습니다. 중첩 루프 쪽 손해가 눈에 띄게 커지는 것은 캐시가 130MB보다 작아 루프마다 디스크를 다시 때리는 경우입니다. 어느 쪽이든 캐시를 줄이거나 디스크에서 읽는 조건으로 재본 적이 없으므로, 이 세션의 47배가 하한인지는 말할 수 없습니다.
 
+## 현업은 어떻게 해소했는가
+
+Clerk 의 포스트모템에서 가장 눈에 띄는 것은 **장애를 멈춘 것이 `ANALYZE` 재실행 한 줄이고, 그 앞의 70분을 엉뚱한 곳에 썼다**는 점입니다.
+
+타임라인이 이렇습니다(UTC). 16:15 인시던트 접수, 16:32 비정상 트래픽 급증 고객 식별, 16:35 수동 트래픽 차단, 16:50 그 고객의 "overly aggressive retry mechanism" 확인, 17:08 세션 토큰 생성을 코어 API 밖으로 빼는 페일오버 활성화. 여기까지가 원인을 트래픽으로 오인하고 한 일입니다.
+
+17:25 에 진짜 원인을 확인합니다. "an automatic `ANALYZE` that resulted in an inefficient query plan flip". **17:27 에 `ANALYZE` 를 수동으로 다시 돌리자 플랜이 돌아왔습니다.** 2분입니다.
+
+근본 해소는 둘입니다. "Immediately following the incident, we increased the statistics target on the relevant table so the query planner can track a larger, more accurate sample."(장애 직후 해당 테이블의 statistics target 을 올렸다) 그리고 "Later that evening, we refactored the query so the planner could take a deterministic approach in query planning."(그날 저녁 플래너가 결정론적으로 계획하도록 쿼리를 리팩터링했다)
+
+**뒤엣것이 이 세션이 "재보지 않았다"고 적어 둔 자리입니다.** 이 세션은 target 을 1에서 1000으로 올리고 `ANALYZE` 비용까지 쟀지만, 인덱스 모양을 바꿔 플랜을 결정론적으로 만드는 쪽은 버퍼 배분으로 추론만 했습니다.
+
+재발 방지 1순위가 통계 조정이 아닙니다. "We are adding dedicated alerting for database query plan flips. This class of issue can cause sudden, severe degradation, and we need to detect it immediately rather than relying on downstream symptoms."(플랜 전환 전용 알림을 넣는다. 하위 증상에 기대지 말고 즉시 탐지해야 한다) 이 세션이 "오판을 막지는 못하지만 배포가 없는 시각에 플랜이 바뀌었다는 사실을 사람이 알아채게 해 준다"고 적은 것과 같은 방향입니다.
+
+그 밖에 전 쿼리 감사, 페일오버 자동 트리거 계측, 인시던트 커뮤니케이션 공식화가 들어갔습니다.
+
+**이 세션에 없는 축이 하나 있습니다. 오진 시간입니다.** 90분 중 70분이 트래픽 차단과 페일오버였습니다. 이 세션은 원인이 알려진 상태에서 처방 효과만 재는 구조라 그 시간을 못 잽니다.
+
 ## 못 한 것
 
 - **8절의 플래너 시간은 질의 하나로만 쟀습니다.** 조인 두 개짜리 질의 하나이고, 조인이 많은 질의에서 target이 어떻게 붙는지는 안 봤습니다.
