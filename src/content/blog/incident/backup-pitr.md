@@ -1,8 +1,8 @@
 ---
 title: '백업은 있는데 복구가 안 된다, PITR을 가로막는 다섯 가지'
 titleEn: "You Have Backups, You Just Cannot Restore: Five Things That Block PITR"
-description: "2017년 1월 GitLab은 primary의 PostgreSQL 데이터 디렉터리를 지운 뒤에야 다섯 가지 백업·복제 수단이 전부 듣지 않는다는 것을 알았습니다. 사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없어, MySQL 8.4.3에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. mysqldump 풀백업(덤프 40K)과 binlog(192K)로 DROP TABLE 직전 시점까지 되돌리면, 백업만 복원했을 때는 1,000건이 돌아와 500건이 유실되고 binlog를 사고 직전 위치 176549까지 이어 붙이면 1,500건이 전부 돌아옵니다. 복구를 가로막는 함정은 다섯 가지인데 넷은 스크립트로 재현했고 하나는 실험을 만들다 직접 밟았습니다. 그중 셋은 에러 없이 실패합니다. 재적용이 조용히 스킵되는 것, binlog가 만료돼 PITR 창이 닫히는 것, docker exec에 -i를 빠뜨려 표준입력이 전달되지 않는 것입니다."
-descriptionEn: "In January 2017 GitLab discovered that all five of its backup and replication mechanisms were broken only after an engineer wiped the primary PostgreSQL data directory. The incident itself involved roughly 300GB of PostgreSQL data and cannot be reproduced as such, so this session reproduces only the same mechanism at reduced scale on MySQL 8.4.3 with a 1,500-row table. Restoring a mysqldump full backup (40K) and replaying the binary log (192K) up to the moment just before a DROP TABLE recovers everything: the backup alone brings back 1,000 rows and loses 500, while replaying up to position 176549 brings all 1,500 rows back. Of the five traps that block recovery, four were reproduced by script and one was hit while building the experiment. Three of them raise no error at all: a replay that is silently skipped, an expired binlog that closes the PITR window, and a missing -i on docker exec that never delivers standard input."
+description: "2017년 1월 GitLab은 primary의 PostgreSQL 데이터 디렉터리를 지운 뒤에야 다섯 가지 백업·복제 수단이 전부 듣지 않는다는 것을 알았습니다. 사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없어, MySQL 8.4.3에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. mysqldump 풀백업(덤프 40K)과 binlog(192K)로 DROP TABLE 직전 시점까지 되돌리면, 백업만 복원했을 때는 1,000건이 돌아와 500건이 유실되고 binlog를 사고 직전 위치 176549까지 이어 붙이면 1,500건이 전부 돌아옵니다. 복구를 가로막는 것은 데이터베이스 쪽 함정 셋과 이 랩이 컨테이너로 축소해서 생긴 아티팩트 둘로 갈립니다. 규모를 400만 행(덤프 525MB)까지 올려 곡선도 그렸습니다. 시간은 규모를 타서 합계가 0.54초에서 21.5초가 되지만 복원 판정은 전 규모에서 같습니다. 절대 시간은 인용할 수 없고 판정과 경계 규칙은 인용할 수 있다는 뜻입니다. 재적용이 조용히 스킵되는 것, binlog가 만료돼 PITR 창이 닫히는 것, docker exec에 -i를 빠뜨려 표준입력이 전달되지 않는 것입니다."
+descriptionEn: "In January 2017 GitLab discovered that all five of its backup and replication mechanisms were broken only after an engineer wiped the primary PostgreSQL data directory. The incident itself involved roughly 300GB of PostgreSQL data and cannot be reproduced as such, so this session reproduces only the same mechanism at reduced scale on MySQL 8.4.3 with a 1,500-row table. Restoring a mysqldump full backup (40K) and replaying the binary log (192K) up to the moment just before a DROP TABLE recovers everything: the backup alone brings back 1,000 rows and loses 500, while replaying up to position 176549 brings all 1,500 rows back. The five obstacles split into three genuine database traps and two artifacts of running the lab in containers. Scaling up to 4 million rows (a 525MB dump) shows total recovery time growing from 0.54s to 21.5s while the restore verdict stays identical at every scale, which is why absolute timings from this lab cannot be quoted but verdicts and boundary rules can. Three of them raise no error at all: a replay that is silently skipped, an expired binlog that closes the PITR window, and a missing -i on docker exec that never delivers standard input."
 date: 2026-03-09
 tags:
   - MySQL
@@ -46,7 +46,25 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 
 AWS Well-Architected의 REL09-BP04 안티패턴 목록은 GitLab 사고를 그대로 문장화한 수준입니다. "백업이 존재한다고 가정하는 것", "복원해 보되 데이터를 조회하거나 꺼내 보지 않는 것", "복원 시간이 RTO 안에 들어간다고 가정하는 것".
 
-사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없습니다. 이 세션은 엔진도 규모도 다른 MySQL에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. 시점 복구(PITR)를 실제로 수행하고, 복구를 가로막는 함정 다섯 가지를 다룹니다. 넷은 문서를 보고 스크립트로 재현했고, 하나(`docker exec`의 `-i` 누락)는 재현 목록에 없다가 실험을 만들다 밟아서 추가한 것입니다. **다섯 중 셋은 재현이든 사고든 이 세션을 만들면서 제가 실제로 밟았습니다.**
+### 그들을 살린 것은 백업 정책이 아니었습니다
+
+라이브 문서에 이 문장이 있습니다.
+
+> "LVM 스냅샷은 기본적으로 24시간에 한 번만 생성됩니다. 팀원 1은 데이터베이스 로드 밸런싱 작업을 하고 있었기 때문에 장애 발생 약 6시간 전에 **수동으로** 스냅샷을 실행했습니다."
+
+**복구에 쓴 것이 그 수동 스냅숏입니다.** 백업 정책이 만든 것이 아니라, 다른 일을 하던 엔지니어가 우연히 여섯 시간 전에 손으로 찍어 둔 것입니다. 그것이 없었으면 유실은 6시간이 아니라 24시간이었습니다.
+
+300GB 중 **4.5GB만 남았습니다.** 삭제를 멈춘 것이 오후 11시 27분인데 그때는 이미 늦었습니다.
+
+그리고 같은 문서에 이 글의 주제와 정확히 겹치는 한 줄이 더 있습니다.
+
+> "`pg_basebackup`은 마스터 서버가 복제 과정을 시작할 때까지 **조용히 기다립니다.** 다른 운영 엔지니어에 따르면 이 과정은 최대 10분까지 걸릴 수 있습니다. 이로 인해 프로세스가 어떤 이유로든 멈춘 것으로 오해할 수 있습니다."
+
+**멈춘 것과 기다리는 것이 화면에서 같아 보입니다.** 이 오해가 그날 밤의 판단으로 이어졌습니다. 도구가 진행 상황을 안 알려 주면 사람이 추측하고, 새벽에 지친 사람의 추측은 틀립니다.
+
+한 가지 밝혀 둘 것이 있습니다. 사고 당일 라이브 문서는 `pg_dump` 실패를 "오류 메시지 없이 실패한다"고 적었는데, 열흘 뒤 사후 분석은 **에러는 났고 그 알림 메일이 DMARC로 반려됐다**고 정정했습니다. 이 글은 뒤쪽을 따릅니다. 사고 당일의 기록과 정리된 사후 분석이 갈릴 때는 뒤쪽이 더 정확합니다.
+
+사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없습니다. 이 세션은 엔진도 규모도 다른 MySQL에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. 시점 복구(PITR)를 실제로 수행하고, 복구를 가로막는 것들을 다룹니다. 데이터베이스 쪽 함정 셋과, 이 랩이 컨테이너로 축소해서 생긴 아티팩트 둘로 갈라 적었습니다. **다섯 중 셋은 재현이든 사고든 이 세션을 만들면서 제가 실제로 밟았습니다.** 규모가 작다는 것이 이 세션의 가장 큰 약점이라, 4절 끝에 400만 행까지 올린 곡선을 붙여 무엇이 규모를 타고 무엇이 안 타는지 갈랐습니다.
 
 ## 2. 재현
 
@@ -56,7 +74,7 @@ AWS Well-Architected의 REL09-BP04 안티패턴 목록은 GitLab 사고를 그�
 |---|---|
 | 원본 | MySQL 8.4.3, `log-bin`, `gtid-mode=ON`, `sync_binlog=1`, `innodb_flush_log_at_trx_commit=1` |
 | 복구 대상 | MySQL 8.4.3 별도 인스턴스 (사고 서버에 되돌리지 않는다) |
-| 도구 | percona-server:8.4 컨테이너 (`mysqlbinlog` 확보용, 함정 2 참고) |
+| 도구 | percona-server:8.4 컨테이너 (`mysqlbinlog` 확보용, 아티팩트 1 참고) |
 | 데이터 규모 | 사고 직전 1,500행(T0 백업 시점 1,000행 + 그 뒤 500행). 덤프 40K, 이어 붙인 binlog 192K |
 | 컨테이너 자원 한도 | 걸지 않았습니다. compose에 `cpus`도 `mem_limit`도 없습니다 |
 | 호스트 사양 | 2026-07-31 재측정 회차는 macOS 26.3.1, Apple M2 Pro 12코어, 32GB에서 돌았고 컨테이너 런타임 VM은 12코어 7.7GB입니다(`results/00-host.txt`). 그 이전 회차의 호스트는 기록이 없어 확인되지 않습니다. 초기 회차의 단서는 덤프 헤더와 도구 컨테이너 버전 문자열의 `aarch64`뿐입니다 |
@@ -100,7 +118,11 @@ DROP TABLE `sponsor` /* generated by server */
 
 **RTO 분해**: 이 실행에서 백업 0.075초, 덤프 복원 0.078초, binlog 추출·적용 0.947초입니다. 로그 원문은 각각 `.075473000` / `.077972000` / `.947246000`초입니다. 대상은 1,500행짜리 테이블 하나이고 덤프가 40K, 이어 붙인 binlog가 192K입니다. 이 규모에서는 복구 시간의 대부분이 binlog 구간을 뽑아 재적용하는 데 들어갔습니다. 백업 주기를 늘리면 그만큼 이어 붙일 binlog가 늘어나므로 RPO와 RTO는 백업 주기 하나로 맞물립니다. 다만 이 비율이 규모를 키워도 유지되는지는 재지 않았습니다. 세 구간 모두 1회 실행값이라 분산도 모릅니다.
 
-## 4. 복구를 가로막는 다섯 가지
+## 4. 복구를 가로막는 것들
+
+다섯 가지를 만났는데 성격이 둘로 갈립니다. **셋은 어느 환경에서든 나오는 데이터베이스 쪽 함정이고, 둘은 이 랩이 컨테이너로 축소했기 때문에 나온 것입니다.** 처음에는 다섯을 한 줄로 세워 적었는데, 그러면 진짜 셋이 나머지 둘에 희석됩니다. 갈라서 적습니다.
+
+### 데이터베이스 쪽 함정 셋
 
 ![복구를 막는 두 가지](/uploads/incident/backup-pitr/fig-blocked.png)
 
@@ -116,26 +138,7 @@ ERROR 3546 (HY000) at line 24: @@GLOBAL.GTID_PURGED cannot be changed: the added
 
 `mysqldump`가 GTID 환경에서 기본으로 넣는 `SET @@GLOBAL.GTID_PURGED`가 이미 실행된 GTID와 겹쳐 복원 전체가 중단됩니다. 사고 복구는 대개 원본 서버에서 하려고 하므로, PITR 문서만 읽고 따라가면 여기서 막힙니다. 해법은 새 인스턴스에 복원하거나(권장) `--set-gtid-purged=OFF`로 다시 뜨는 것입니다.
 
-### 함정 2. 공식 이미지에 `mysqlbinlog`가 없다
-
-```console
-$ docker exec a23-mysql bash -c "ls /usr/bin | grep -i '^mysql'"
-mysql
-mysql-secret-store-login-path
-mysql_config
-mysql_migrate_keyring
-mysql_tzinfo_to_sql
-mysqladmin
-mysqldump
-mysqlsh
-
-$ docker exec a23-mysql mysqlbinlog --version
-bash: line 1: mysqlbinlog: command not found
-```
-
-여덟 줄이 나오는데 그중 `mysqlbinlog`는 없습니다. `mysql:8.4` 공식 이미지에 `mysqldump`는 있는데 `mysqlbinlog`가 없습니다. 공식 문서의 PITR 절차는 전부 `mysqlbinlog`로 쓰여 있으므로, 컨테이너로 운영하면서 이 사실을 사고 당일에 알면 복구가 그 자리에서 멈춥니다. 이 세션은 클라이언트 유틸이 들어 있는 percona-server 컨테이너로 우회했습니다.
-
-### 함정 3. 재적용이 조용히 스킵된다
+### 함정 2. 재적용이 조용히 스킵된다
 
 ![조용한 스킵](/uploads/incident/backup-pitr/fig-silent-skip.png)
 
@@ -158,7 +161,7 @@ GTID 차집합(새로 실행된 트랜잭션) ''
 
 운영자가 "복구했다"고 판단하기 딱 좋은 조건입니다. 복구 후에는 반드시 행 수나 체크섬으로 결과를 확인해야 하고, GTID 차집합이 비었는지 보는 것이 가장 빠른 확인입니다.
 
-### 함정 4. binlog가 만료되면 PITR 창이 닫힌다
+### 함정 3. binlog가 만료되면 PITR 창이 닫힌다
 
 ```console
 $ SELECT @@binlog_expire_logs_seconds        # 기본값
@@ -175,9 +178,58 @@ $ SHOW BINARY LOGS
 
 만료는 시각이 되면 자동으로 일어나지 않습니다. **서버 기동 시점과 binlog flush 시점에만** 정리됩니다. 남은 파일의 첫 이벤트 시각이 곧 PITR 가능 하한이고, 최신 풀백업이 그 하한보다 오래됐다면 백업은 있는데 이어붙일 binlog가 없어 그 구간은 영구 유실입니다. **백업 보존 주기와 binlog 만료 기간은 함께 정해야 합니다.**
 
-### 함정 5. 파이프가 컨테이너에 닿지 않는다
+### 랩 아티팩트 둘
+
+아래 둘은 MySQL의 성질이 아닙니다. 하나는 컨테이너 이미지의 구성이고 하나는 제 셸 스크립트 버그입니다. 그래도 지우지 않고 남기는 이유는 **둘 다 "조용한 실패"라는 이 글의 관통 주제와 같은 모양**이기 때문입니다. 복구 도구가 없다는 것도, 파이프가 안 닿는다는 것도, 사고 당일에 알면 늦습니다.
+
+#### 아티팩트 1. 공식 이미지에 `mysqlbinlog`가 없다
+
+```console
+$ docker exec a23-mysql bash -c "ls /usr/bin | grep -i '^mysql'"
+mysql
+mysql-secret-store-login-path
+mysql_config
+mysql_migrate_keyring
+mysql_tzinfo_to_sql
+mysqladmin
+mysqldump
+mysqlsh
+
+$ docker exec a23-mysql mysqlbinlog --version
+bash: line 1: mysqlbinlog: command not found
+```
+
+여덟 줄이 나오는데 그중 `mysqlbinlog`는 없습니다. `mysql:8.4` 공식 이미지에 `mysqldump`는 있는데 `mysqlbinlog`가 없습니다. 공식 문서의 PITR 절차는 전부 `mysqlbinlog`로 쓰여 있으므로, 컨테이너로 운영하면서 이 사실을 사고 당일에 알면 복구가 그 자리에서 멈춥니다. 이 세션은 클라이언트 유틸이 들어 있는 percona-server 컨테이너로 우회했습니다.
+
+#### 아티팩트 2. 파이프가 컨테이너에 닿지 않는다
 
 `docker exec`에 `-i`를 빠뜨리면 표준입력이 전달되지 않습니다. 그런데 **에러가 나지 않습니다.** 500건을 넣는 스크립트가 조용히 0건을 넣었고, 그 뒤 측정이 전부 어긋났습니다. 복구 스크립트를 자동화할 때 "실행됐다"와 "적용됐다"를 구분해 검증해야 하는 이유입니다.
+
+### 규모를 키우면 무엇이 달라지는가
+
+이 세션의 가장 큰 약점은 규모입니다. 1,500행에 40K 덤프로 RTO를 말하면 "백업 0.075초" 한 줄에서 나머지가 통째로 할인됩니다. 그래서 규모를 400만 행까지 올려 곡선을 그렸습니다. 규모마다 새 컨테이너를 띄우고 각 2회씩입니다.
+
+| 행 수 | 덤프 크기 | 덤프 | 복원 | 합계 | 행/합계 배수 |
+|---|---|---|---|---|---|
+| 1,500 | 1MB | 0.08초 | 0.23초 | 0.54초 | 1.00 |
+| 200,000 | 27MB | 0.28초 | 1.12초 | 1.67초 | 43.4 |
+| 1,000,000 | 131MB | 0.95초 | 4.29초 | 5.57초 | 65.2 |
+| 4,000,000 | **525MB** | 3.66초 | **16.88초** | **21.48초** | 67.7 |
+
+**시간은 규모를 탑니다.** 행이 2,667배가 되면 합계가 39.8배입니다.
+
+**그런데 복원 판정은 전 규모에서 통과입니다.** 1,500행에서 400만 행까지 같습니다. 이것이 이 세션이 작은 규모에서 인용할 수 있는 것과 없는 것을 가릅니다. **절대 시간은 못 씁니다. 판정과 경계 규칙은 씁니다.** `recovery_target_inclusive`가 커밋 정각 한 건을 가르는 것, SQL Server의 복구 모델이 `SIMPLE`이면 로그 백업이 거부되는 것, Oracle의 아카이브 모드 전환에 `MOUNT` 단계가 붙는 것은 행이 1,500개든 400만 개든 같습니다.
+
+마지막 열이 그 반대쪽을 보여 줍니다. **행/합계 배수가 1에서 67.7로 올라갑니다.** 규모가 커질수록 행당 복구 비용이 싸집니다. 기동과 접속과 스키마 생성 같은 고정비가 희석되기 때문입니다. 곧 **작은 랩에서 잰 RTO는 큰 규모로 그대로 곱하면 과대평가가 됩니다.** 1,500행의 0.54초에 2,667을 곱하면 24분인데 실제 400만 행은 21.5초입니다.
+
+이 실험을 짜면서 **함정 1을 또 밟았습니다.** `RESET BINARY LOGS AND GTIDS` 다음에 `DROP DATABASE`를 실행했더니 그 `DROP`이 새 GTID를 만들어 덤프의 `SET @@GLOBAL.GTID_PURGED`가 다시 겹쳤습니다.
+
+```
+ERROR 3546 (HY000) at line 24: @@GLOBAL.GTID_PURGED cannot be changed:
+the added gtid set must not overlap with @@GLOBAL.GTID_EXECUTED
+```
+
+에러를 버리고 있었기 때문에 처음에는 "525MB 복원이 0.19초"라는 값이 남았습니다. 순서를 뒤집고, 복원 후 행 수가 원본과 정확히 같은지 확인해 아니면 그 회차를 버리도록 고쳤습니다.
 
 ## 5. 원 엔진으로 다시: PostgreSQL
 
@@ -235,7 +287,7 @@ C와 D의 차이가 이 절의 요점입니다. 설정은 똑같이 `recovery_ta
 | 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_lsn`, `_time`, `_xid`, `_name` |
 | 경계 포함 | `--stop-position`은 그 위치 직전까지 | `recovery_target_inclusive` 기본 `on`, 정각 한 건만 가름 |
 | 복구 직후 상태 | 바로 쓰기 가능 | 기본 `pause`. 승격을 사람이 부름 |
-| 조용한 실패 | GTID 겹침 시 재적용 스킵(함정 3) | `restore_command`가 성공을 가장하면 잘못된 지점에서 멈춤 |
+| 조용한 실패 | GTID 겹침 시 재적용 스킵(함정 2) | `restore_command`가 성공을 가장하면 잘못된 지점에서 멈춤 |
 
 마지막 줄에서 두 엔진이 같은 방식으로 위험합니다. PostgreSQL 문서가 `archive_command`에 대해 없는 파일 요청에는 반드시 0이 아닌 값을 반환해야 한다고 못 박는 이유이고, 이 실험의 compose에도 `test ! -f`를 앞에 둔 이유입니다.
 
@@ -415,7 +467,7 @@ exp6은 각 방향 1회였습니다. 1,500행짜리 랩이라 그 12초의 대�
 |---|---|
 | 백업이 비어 있지 않은가 | 파일 크기 임계치 + 종료 코드 확인. `set -o pipefail` 없이 파이프 쓰면 실패를 놓친다 |
 | 복원이 되는가 | 별도 인스턴스에 정기 복원. GitLab의 pg_dump 버전 불일치는 이 단계에서 즉시 잡혔을 문제다 |
-| 복원된 데이터가 맞는가 | 행 수·체크섬 대조. 복원 성공과 데이터 정합은 다르다(함정 3) |
+| 복원된 데이터가 맞는가 | 행 수·체크섬 대조. 복원 성공과 데이터 정합은 다르다(함정 2) |
 | binlog가 백업 대상인가 | 풀백업만 있으면 RPO는 백업 주기다. binlog가 있어야 그 사이를 메운다 |
 | binlog 만료가 백업 주기보다 긴가 | `binlog_expire_logs_seconds` vs 백업 보존 기간 |
 | 복구 도구가 그 환경에 있는가 | 사고 당일에 확인하면 늦다 |
@@ -425,7 +477,7 @@ exp6은 각 방향 1회였습니다. 1,500행짜리 랩이라 그 12초의 대�
 
 ### 함정 셋을 제가 직접 밟았습니다
 
-이 세션의 실험 설계는 조사에서 나왔지만, **함정 1·2·5는 스크립트를 짜다가 실제로 막혀서 발견한 것들**입니다. GTID 겹침으로 복원이 중단됐고, `mysqlbinlog`가 없어 도구 컨테이너를 추가했고, `-i` 누락으로 데이터가 조용히 안 들어갔습니다. 재현 랩을 만드는 사람도 같은 자리에서 막힌다는 뜻이고, 실전에서 처음 해보면 더할 것입니다. **복구 리허설을 해봐야 하는 이유가 이것 자체입니다.**
+이 세션의 실험 설계는 조사에서 나왔지만, **함정 1·2와 아티팩트 2는 스크립트를 짜다가 실제로 막혀서 발견한 것들**입니다. GTID 겹침으로 복원이 중단됐고, `mysqlbinlog`가 없어 도구 컨테이너를 추가했고, `-i` 누락으로 데이터가 조용히 안 들어갔습니다. 재현 랩을 만드는 사람도 같은 자리에서 막힌다는 뜻이고, 실전에서 처음 해보면 더할 것입니다. **복구 리허설을 해봐야 하는 이유가 이것 자체입니다.**
 
 ### GTID 경고가 PITR 문서에 없습니다
 
@@ -507,7 +559,7 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 1. `mysqldump`가 넣는 `SET @@GLOBAL.GTID_PURGED`가 대상의 GTID와 충돌해 복원 전체가 멈췄습니다. 첫 회차만 성공하고 2회차부터 0행이었습니다.
 2. `SHOW BINARY LOG STATUS`를 두 번 나눠 읽어 그 사이에 위치가 움직였습니다.
 3. `mysqlbinlog`에 표준입력(`-`)을 먹였습니다. 스트림은 되감을 수 없어 `--start-position`이 안 먹습니다.
-4. **`mysql:8.4` 이미지에 `mysqlbinlog`가 없습니다.** 4절 함정 2가 이미 알고 별도 컨테이너를 쓰고 있었는데 이 스크립트가 그대로 불렀고, `command not found`가 `2>&1`에 삼켜졌습니다.
+4. **`mysql:8.4` 이미지에 `mysqlbinlog`가 없습니다.** 4절 아티팩트 1이 이미 알고 별도 컨테이너를 쓰고 있었는데 이 스크립트가 그대로 불렀고, `command not found`가 `2>&1`에 삼켜졌습니다.
 
 넷 다 에러가 안 나고 "0행" 이라는 정상 모양의 숫자로 남았습니다.
 
@@ -530,7 +582,7 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 
 그래서 **데이터 대조가 마지막 방어선입니다.** 이때 행 수를 "0보다 큰가"로 보면 안 되고 원본과 정확히 같은지 봐야 합니다. 10절이 그 자리를 밟았습니다. GTID 충돌로 복원이 중간에 멈췄는데 종료 코드가 0 이라 "복원 0.06초"라는 아주 좋아 보이는 값이 남았습니다.
 
-나머지 항목도 이 랩이 실제로 걸린 자리를 그대로 검사합니다. 복원 대상 컨테이너에 `mysqlbinlog`가 있는지 보는 항목은 4절 함정 2에서 온 것이고, 이 실행에서도 **걸립니다.** `mysql:8.4` 이미지에 그 도구가 없기 때문입니다. 사고 당일에 알면 늦습니다.
+나머지 항목도 이 랩이 실제로 걸린 자리를 그대로 검사합니다. 복원 대상 컨테이너에 `mysqlbinlog`가 있는지 보는 항목은 4절 아티팩트 1에서 온 것이고, 이 실행에서도 **걸립니다.** `mysql:8.4` 이미지에 그 도구가 없기 때문입니다. 사고 당일에 알면 늦습니다.
 
 마지막 항목은 리허설 전체 소요가 RTO 예산 안인지입니다. 이 실행은 5.4초였고, **추정이 아니라 방금 실제로 되살려 본 시간입니다.**
 
