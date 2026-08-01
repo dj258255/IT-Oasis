@@ -351,6 +351,45 @@ ERROR 1146 (42S02) at line 1: Table 'spoon.sponsor_a' doesn't exist
 
 추정치와 파일 크기는 8~10% 다릅니다. 다섯 조건 모두 `.ibd` 가 `DATA_LENGTH + INDEX_LENGTH` 보다 10.4~10.7MB 큽니다. 조건에 상관없이 거의 일정하므로 세그먼트와 여유 익스텐트의 몫입니다. **조건 사이의 차이를 볼 때는 어느 쪽을 써도 되고, 절대 용량을 말할 때는 파일 쪽이 맞습니다.**
 
+## 현업은 어떻게 해소했는가
+
+Basecamp 가 2018년 11월 8일에 겪은 일입니다. 이 세션이 비교한 두 방법 중 **어느 쪽도 그들이 쓴 방법이 아닙니다.**
+
+그들이 쓴 것은 **복제본을 빼서 그 위에서 ALTER 를 돌리고 역할을 맞바꾸는 방법**입니다. 절차가 팟캐스트에 남아 있습니다.
+
+> "We take the replica that out of service, we make the change, which blocks access to the table, and then we put the replica back into service and then we swap roles."
+
+프라이머리에 락을 안 걸는 대신 전환 중 스키마가 갈라지고, **그 갈라진 상태로 복제를 따라잡을 수 있어야** 성립합니다. 그리고 그 자리에서 걸렸습니다.
+
+> "But when we did the database migration to allow their database table to grow larger, to remove the cap, **at first it didn't work.** ... the replica database could take all those two to three hours of updates to the primary database and apply them to the replica, but it **needed to be configured to do so. By default it wasn't**, it didn't allow it."
+
+**막힌 것은 ALTER 소요가 아니라 ALTER 뒤의 복제 재개였습니다.** 소스가 `INT` 이고 복제본이 `BIGINT` 인 상태는 행 기반 복제의 attribute promotion 에 해당하고, MySQL 문서는 이렇게 못 박습니다. "When `replica_type_conversions` ... is not set, no attribute promotion or demotion is permitted; this means that all columns in the source and target tables must be of the same types." (37signals 가 켠 설정의 이름을 밝히지는 않았습니다. 이 대응은 문서에 근거한 추정입니다.)
+
+그때의 선택지가 무엇이었는지도 남아 있습니다. "Either have Basecamp 3 go completely down, even worse than read only, or lose the most recent two to three hours worth of customer data."
+
+**시간 예측이 크게 빗나갔습니다.** 7시 52분에 착수하며 예상 1시간 40분이었는데 실제는 3시간 4분이었습니다. 84% 초과입니다. 이 세션은 300만 행에서 COPY 12.8초를 재고 "총 시간을 대가로 사용자 경험을 산다"고 정리했는데, 실제 사건은 **그 총 시간을 예측하는 것 자체가 빗나간다**는 항목을 더합니다.
+
+**검증 시간도 이 세션에 없는 축입니다.** 마이그레이션이 10시 56분에 끝났는데 복귀는 12시 22분입니다. 그 1시간 26분이 두 데이터센터 여덟 개 데이터베이스의 정합성 검증이었습니다. "It's looking good, but 99% sure isn't good enough. Need 100%." 전환 비용에 이 구간을 안 넣으면 실제 중단 시간을 과소평가합니다.
+
+그리고 **복귀 직후 캐시 서버가 무너져 다시 다운됐습니다.** 12시 33분입니다. 쓰기가 5시간 막혀 있다가 풀리는 순간의 부하가 별도의 장애를 만들었습니다.
+
+**프레임워크 기본값이 왜 안 구해 줬는지도 확인됩니다.** DHH 가 Rails 5.1 의 `BIGINT` 기본값 전환을 "the same root-cause fix that we applied to our tables" 라고 적었는데, **그 기본값은 기존 앱을 소급해 고치지 않습니다.** Rails 5.1 의 마이그레이션 호환 계층이 옛 마이그레이션의 동작을 보존합니다.
+
+```ruby
+# Since 5.1 Postgres adapter uses bigserial type for primary
+# keys by default and MySQL uses bigint. This compat layer makes old migrations utilize
+# serial/int type instead -- the way it used to work before 5.1.
+unless options.key?(:id)
+  options[:id] = :integer
+end
+```
+
+`[5.0]` 이하로 선언된 마이그레이션으로 만든 테이블은 5.1 로 올려도 `INT` 로 남습니다. **버전을 올리는 것과 이미 만들어진 테이블이 고쳐지는 것은 다릅니다.**
+
+**공개된 재발 방지는 한 문장뿐입니다.** "We changed some of our emergency notification protocols and talked about expanding crisis drills from the Support and Ops teams to the entire company." 기본키 여유분 감시나 다른 테이블 전수 감사를 넣었다는 공식 자료는 찾지 못했습니다.
+
+사후 보고의 결론이 조치 목록이 아니라 책임 인정인 것도 이 사건의 성격입니다. "As the CTO of Basecamp and the creator of Ruby on Rails, I accept full responsibility for our failures."
+
 ## 못 한 것
 
 - **9절의 표는 조건마다 1회 실행입니다.** 크기는 실행 간 편차가 거의 없는 값이라 반복하지 않았습니다.
