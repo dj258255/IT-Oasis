@@ -3,7 +3,7 @@ title: '버퍼 풀을 얼마로 잡을까, 그 값으로 옮길 때 드는 정�
 titleEn: 'Sizing the InnoDB Buffer Pool, and What It Costs to Get There'
 description: 'MySQL 튜닝 문서가 늘 첫 줄에 두는 innodb_buffer_pool_size를 권고 비율 대신 곡선을 직접 그려 정했습니다. 700만 행 테이블을 고정하고 버퍼 풀만 128M에서 2G까지 옮겼습니다. 균등 분포에는 무릎이 없었습니다. 핫셋 분포는 256M에서 512M으로 넘어가는 한 칸에서 조회당 디스크 읽기가 0.303페이지에서 0.033페이지로 떨어졌습니다. 히트율 77.28%는 사실 조회 열 번 중 아홉 번이 디스크로 가는 상태입니다. innodb_flush_method를 8.4 기본값 쪽인 O_DIRECT에서 8.0의 옛 기본값 fsync로 되돌리자 같은 히트율에서 처리량이 2.6배 갈렸는데, 데이터 1.4GB가 호스트 페이지 캐시에 통째로 들어가는 크기라서 나온 값이라 데이터가 캐시보다 크면 재현되지 않습니다. 부하 중 온라인 리사이즈는 조건마다 한 번씩만 쟀고, 확대가 0.4초로 끝난 반면 축소는 3.5초가 걸리고 374.9ms짜리 정지가 찍혔습니다.'
 descriptionEn: "Every MySQL tuning guide opens with innodb_buffer_pool_size, so instead of trusting the recommended percentages I pinned the data down and swept the pool from 128M to 2G to plot the curve myself. A uniform access pattern has no knee; a hot set drops disk reads per query from 0.303 to 0.033 pages in the single step from 256M to 512M. A 77.28% hit rate turned out to mean nine of every ten queries still reached disk. Reverting innodb_flush_method from O_DIRECT, which 8.4 defaults to on Unix-like systems where it is supported, back to 8.0's fsync split throughput 2.6x at an identical hit rate, but only because the 1.4GB of data fit entirely in the host page cache; the ratio does not reproduce once the data outgrows that cache. Each resize condition was measured once: growing took 0.4s, shrinking took 3.5s and produced a 374.9ms stall."
-date: 2026-07-29
+date: 2026-01-04
 tags:
   - MySQL
   - InnoDB

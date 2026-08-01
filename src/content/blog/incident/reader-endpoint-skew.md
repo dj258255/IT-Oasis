@@ -3,7 +3,7 @@ title: '리더 엔드포인트가 돌려줘도 커넥션은 한 대로 몰린다
 titleEn: "The Reader Endpoint Rotates, but Every Connection Lands on One Instance"
 description: 'Aurora 리더 엔드포인트가 나누는 단위는 커넥션이지 쿼리가 아닙니다. AWS 문서도 개별 쿼리는 나누지 않는다고 명시하고, 쿼리마다 나누고 싶으면 쿼리마다 새 커넥션을 맺으라고 안내합니다. 커넥션 풀은 바로 그것을 하지 않으려고 존재하므로, 풀이 커넥션 12개를 유지하면 분산은 그 12개를 만드는 순간에 한 번 결정됩니다. MySQL 8.4.3 세 대와 CoreDNS 라운드로빈으로 리더 엔드포인트를 흉내 내고 HikariCP 풀 12개가 어느 인스턴스에 붙어 있는지를 3초 간격으로 40회 셌더니, JVM 캐시 기본값에서는 한 인스턴스가 차지한 커넥션 비율이 평균 83.5%였고 12개 전부가 한 대에 붙은 구간이 있었습니다. sun.net.inetaddr.ttl을 0으로 두자 같은 조건에서 47.9%로 내려갔습니다. 다만 maxLifetime이 30초라 40개 표본은 사실 풀 세대 다섯 개를 반복해 찍은 것이고, 부하를 걸지 않았으므로 센 것은 커넥션 수뿐입니다.'
 descriptionEn: "The Aurora reader endpoint balances connections, not queries. The AWS documentation says so outright, and adds that if you want each query balanced you must open a new connection for every query, which is precisely what a connection pool exists to avoid. This session imitates a reader endpoint with three MySQL 8.4.3 instances behind CoreDNS round-robin and counts, every three seconds for forty samples, which instance each of the twelve HikariCP connections is attached to. With the default JVM name cache, the busiest instance held 83.5% of the pool on average and there were stretches where all twelve connections sat on a single node. Setting sun.net.inetaddr.ttl to 0 brought the same measurement down to 47.9%. Because maxLifetime was 30 seconds, those forty samples are really five pool generations sampled repeatedly, and with no load applied the only thing measured here is connection count."
-date: 2026-07-29
+date: 2026-06-30
 tags:
   - MySQL
   - Spring Boot

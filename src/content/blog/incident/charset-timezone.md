@@ -3,7 +3,7 @@ title: 'utf8은 UTF-8이 아니고 CONVERT_TZ는 조용히 NULL을 준다'
 titleEn: "Charset and Timezone Minefields in a Global Service"
 description: '장애 하나를 재현한 글이 아니라 글로벌 서비스가 반복해서 밟는 함정 여섯 개를 모은 카탈로그입니다. MySQL의 utf8은 3바이트만 쓰는 부분집합, 즉 utf8mb3라서 이모지가 들어오면 strict에서는 ERROR 1366으로 거부되고 non-strict에서는 경고만 남긴 채 물음표로 치환됩니다. 타임존 테이블을 비우면 CONVERT_TZ()는 에러 없이 NULL을 돌려주고, 날짜별로 나뉘어야 할 54,000원이 NULL 그룹 하나에 뭉칩니다. MySQL 8.4.3 도커에서 utf8mb3 치환, 인덱스 키 767 대 3072바이트, CONVERT_TZ의 조용한 NULL, TIMESTAMP의 2038년 상한, latin1 접속의 이중 인코딩 착시를 재현하고, 같은 함정이 RDS에서 어떤 모양이 되는지를 AWS 문서와 대조했습니다. 뒤이어 100만 행 테이블의 utf8mb4 전환을 실제로 돌려 ALTER 4,193ms 동안 쓰기가 통째로 밀리는 것과, 낡은 tzdata 와 새 tzdata 로 같은 CONVERT_TZ 를 돌렸을 때 한 시간이 갈리는 것을 함께 쟀습니다.'
 descriptionEn: "This is not the reproduction of one incident but a catalog of six traps a global service keeps stepping on. MySQL's utf8 is not real UTF-8 but an alias for utf8mb3, a three-byte subset, so an emoji is rejected with ERROR 1366 under strict mode and silently swapped for a question mark under non-strict. Empty the timezone tables and CONVERT_TZ() returns NULL without raising an error, collapsing 54,000 won that should have been split by date into a single NULL group. I reproduced utf8mb3 substitution, the 767 versus 3072 byte index key limit, the silent CONVERT_TZ NULL, the 2038 ceiling on TIMESTAMP, and the double-encoding illusion a latin1 connection creates on MySQL 8.4.3 in Docker, then checked against AWS documentation what each trap looks like on RDS. No latency or throughput was measured."
-date: 2026-07-29
+date: 2026-03-26
 tags:
   - MySQL
   - Charset
