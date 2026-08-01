@@ -219,6 +219,47 @@ static Res pFixed(String f) {
 
 다루지 않은 것도 적어 둡니다. 실제 주문 게이트웨이와 화면 렌더링, 거래소 마켓 룰 설정, 여러 계약과 여러 통화가 섞인 포트폴리오 마진, 장중 실시간 청산 엔진은 재현하지 않았습니다. 변동성 기반 증거금도 관측 변동폭에 상수를 곱하는 수준이고, SPAN이나 VaR 같은 실제 증거금 모형과는 다릅니다. 부하나 지연 시간도 측정하지 않았습니다. 컨테이너에 CPU와 메모리 한도를 걸지 않았고 JVM 힙도 기본값 그대로인데, 이 기록에 시간 수치가 하나도 없어 그대로 두었습니다. 뒤집어 말하면 이 세션의 결과는 자원 한도를 걸어야 비교할 수 있는 종류가 아닙니다. 이 세션은 로직 재현이라 난수도 동시성도 없습니다. 같은 명령을 두 번 실행해 출력이 한 글자도 다르지 않은 것을 확인했고, 기록에는 1회분을 그대로 씁니다.
 
+## 현업은 어떻게 해소했는가
+
+**거래소와 브로커의 실패가 서로 다른 층에 있었습니다.**
+
+**CME 는 고칠 것이 거의 없었습니다.** 4월 8일 Clearing Advisory 20-152 에 이렇게 적혀 있습니다.
+
+> "Please note that all existing CME Clearing message and file formats **already support, without modification, negative futures prices as well as negative strike prices**."
+
+메시지와 파일 포맷이 이미 음수를 담을 수 있었습니다. 대신 CME 가 바꾼 것은 **옵션 가격 모형**입니다. 4월 22일자로 Black-Scholes 계열에서 **Bachelier** 로 전환했습니다. 이유가 CFTC 보고서에 있습니다. "The Black-Merton-Scholes options pricing model, among others, relies on logarithms in the calculations. As a result, models of this type cannot calculate a price for the option if the underlying asset has a negative price."
+
+**같은 "음수를 못 받는다"라도 층이 다릅니다.** 하나는 값을 표현할 수 있느냐이고 하나는 수식의 정의역입니다. 이 세션이 잰 것은 앞쪽입니다.
+
+CME 는 2단계로 준비했습니다. 4월 3일 공지가 그 설계를 보여 줍니다. 먼저 플래그만 켜고 거래는 막아 뒀습니다. "flagged as **eligible to trade at negative prices**" 이면서 동시에 "Trading at negative prices for these outright markets **will not be supported at this time**". 4월 8일에 전환 임계값을 공개하고("$8.00/bbl" 아래면 다음 거래일부터 반드시 전환), 4월 15일에는 회원사가 자기 시스템을 시험할 수 있는 테스트 환경을 열었습니다.
+
+**Interactive Brokers 의 실패는 코드를 못 짜서가 아니었습니다.** CFTC 명령서가 이렇게 적습니다.
+
+> "Although Interactive Brokers had taken steps to prepare for negative oil prices, it had **not changed its system's market rule configuration** for crude oil futures contracts to make them '**negative-capable**' on or before April 20, 2020."
+
+작업은 하고 있었고 테스트도 시작했는데 **설정 플래그를 못 켰습니다.** 마이그레이션의 마지막 한 스텝이 남은 상태였습니다.
+
+**그리고 파급이 표시 계층에서 안 멈췄습니다.** 이 세션이 3~5절에서 계층별로 나눠 잰 그 구조가 실제로 일어났습니다.
+
+> "Interactive Brokers' 'Ticker Farm' system … **rejected negative prices** for the QM and WTI contracts that it perceived to be erroneous."
+> "Interactive Brokers' credit system did not receive negative prices and was therefore unable to properly value accounts. The credit system **overstated the value of accounts** with long positions … and did not attempt to auto-liquidate positions"
+
+시세 거부가 화면에서 끝나지 않고 증거금 평가와 자동청산까지 오염시켰습니다. 게다가 별개의 잠재 결함이 그때 처음 드러났습니다. 개시증거금을 명목가치와 하우스 증거금 중 **작은 쪽**으로 계산하고 있었는데, 가격이 떨어져 명목가치가 내려가자 요구 증거금이 같이 줄었습니다. 결과가 "customers were able to open **more than three times as many WTI contracts**" 입니다.
+
+손실은 8257만 달러이고, 최종 손실은 1억 400만 달러로 늘었다는 보도가 있습니다. CFTC 제재는 성실 감독 의무 위반으로 민사 제재금 175만 달러입니다.
+
+**해소의 마지막 항목이 코드가 아닙니다.**
+
+> "Interactive Brokers also instituted an **early close-out period for cash-settled futures** … including **preventing customers from opening new positions within five trading days before the futures' last trade date**."
+
+현금결제 선물도 만기 5거래일 전부터 신규 진입을 막았습니다. 실물인수도 선물에 이미 있던 제한을 넓힌 것입니다. **상품 정책으로 위험 구간 자체를 없앴습니다.**
+
+**그리고 서킷브레이커는 30번 넘게 발동했지만 소용이 없었습니다.** CFTC 보고서입니다.
+
+> "**The market integrity controls triggered in the May Contract did not halt trading in the active June Contract or the WTI market as a whole.**"
+
+설계상 시장 전체를 멈출 권한은 **active 종목**에만 있는데, 4월 20일의 active 는 6월물이었습니다. 5월물은 나흘 전 non-active 로 넘어간 상태였습니다. **발동한 것과 멈출 수 있는 것이 달랐습니다.** 그 설계를 바꿨다는 후속 자료는 찾지 못했습니다.
+
 ## 못 한 것
 
 - **계층 사이의 전파는 재현하지 않았습니다.** `sql` 컨테이너와 `app` 컨테이너는 서로를 모르고 자바 코드에 JDBC가 없습니다. 계층별 결함은 각각 실행해 잰 것이 맞지만 "한 계층의 고장이 다음 계층으로 흘러간다"는 부분은 서술이지 측정이 아닙니다.
