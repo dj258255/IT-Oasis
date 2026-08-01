@@ -293,6 +293,42 @@ Aurora는 아예 다른 얘기입니다. AWS 문서가 "Multi-AZ DB clusters are
 
 지금은 네 자리에 전부 확인이 들어 있고, 확인이 안 서면 실행을 멈춥니다. **아무 일도 안 일어나면 유실은 항상 0입니다.** 0을 결과로 쓰려면 조건이 섰다는 증거가 함께 있어야 합니다.
 
+## 현업은 어떻게 해소했는가
+
+GitHub 이 2018년 10월 21일 사건에서 고른 것은 **복제를 더 안전하게 만드는 쪽이 아니라 승격을 못 하게 막는 쪽**이었습니다.
+
+**반동기는 이미 켜져 있었습니다.** 사건 넉 달 전인 2018년 6월 글에서 GitHub 은 "a primary does not acknowledge a transaction commit until the change is known to have shipped to one or more replicas" 라고 밝히고 타임아웃 500ms 에 "we observe perfect semi-sync behavior (no fallback to asynchronous replication)" 라고 적었습니다. **사후 분석 전문에 semi-sync 라는 낱말이 한 번도 안 나옵니다.**
+
+이 세션이 잰 것을 생각하면 이유가 보입니다. 반동기의 ack 는 **같은 데이터센터의 복제본**이 받으면 성립합니다. 그러니 서부로 승격되는 순간 동부의 커밋은 그대로 사라집니다. 반동기를 아무리 조여도 이 사건은 안 막힙니다. 다만 GitHub 이 이 인과를 문장으로 적지는 않았습니다.
+
+그래서 조치가 이것입니다.
+
+> "Adjust the configuration of Orchestrator to prevent the promotion of database primaries across regional boundaries. Orchestrator's actions behaved as configured, despite our application tier being unable to support this topology change."
+
+**오케스트레이터는 설정대로 동작했습니다.** 문제는 그 설정이 애플리케이션이 감당 못 하는 토폴로지를 만들 수 있었다는 것입니다.
+
+이 문장이 코드가 된 자리도 남아 있습니다. orchestrator PR #766 이 2019년 1월에 머지되고, 2019년 5월에 리전 개념과 `PreventCrossRegionMasterFailover` 가 들어갔습니다. 현재 문서의 정의입니다.
+
+> "When `true`, `orchestrator` will only replace a failed master with a server from the same region. It will do its best to find a replacement from same region, and will **abort (fail) the failover if it cannot find one**."
+
+**같은 리전에서 못 찾으면 페일오버를 아예 실패시킵니다.** 자동 복구를 포기하는 쪽으로 기본값을 뒤집은 것입니다.
+
+**당일 선택도 이 세션의 축과 맞물립니다.**
+
+> "We made an explicit choice to partially degrade site usability by pausing webhook delivery and GitHub Pages builds instead of jeopardizing data we had already received from users. In other words, our strategy was to **prioritize data integrity over site usability and time to recovery**."
+
+**정합성을 사용성과 복구 시간보다 앞에 놓았습니다.** 이 세션이 6절에서 잰 반동기의 거래(쓰기 가용성을 잃는 대신 거짓 성공을 안 만든다)와 같은 방향의 선택입니다.
+
+**갈리는 점이 셋 있습니다.**
+
+**첫째, 되돌릴 방향이 막혀 있었습니다.** 이 세션은 옛 소스에만 여분 커밋이 있어 차집합 병합이 성립합니다. GitHub 은 양방향이었습니다. 동부에 미복제 쓰기가 있었고 동시에 서부가 40분간 새 쓰기를 받아서 "we were unable to fail the primary back over to the US East Coast data center safely" 가 됐습니다. 백업 복원을 고른 이유가 백업 주기만은 아닙니다.
+
+**둘째, 유실 건수가 결정타가 아니었습니다.** "one of our busiest clusters had 954 writes in the affected window." 954건은 작습니다. 24시간을 만든 것은 "applications running in the East Coast that depend on writing information to a West Coast MySQL cluster are currently unable to cope with the additional latency introduced by a cross-country round trip" 였습니다. **이 세션은 유실 건수를 축으로 삼는데, 실제로 서비스를 못 쓰게 만든 것은 승격 뒤의 왕복 지연이었습니다.**
+
+**셋째, 복구 절차는 매일 시험하고 있었습니다.** "This procedure is tested daily at minimum, so the recovery time frame was well understood, however until this incident we have never needed to fully rebuild an entire cluster from backup." 시험하고 있었지만 한 번도 쓴 적이 없는 경로였습니다.
+
+후일담으로 2021년 Vitess 수직 샤딩이 있습니다. 단일 거대 클러스터를 쪼개 호스트당 부하를 절반으로 줄였고 "The load reduction contributed significantly to reducing the number of database-related incidents" 라고 적었습니다. 2023년 MySQL 8.0 업그레이드에서도 같은 발상을 재사용했습니다. "Orchestrator was also configured to blacklist 5.7 hosts as potential failover candidates to prevent an accidental rollback." **승격 후보를 자격으로 거르는 방법이 그대로 이어졌습니다.**
+
 ## 못 한 것
 
 - **8절의 표는 조건마다 1회 실행이고 동시 쓰기 8개 하나입니다.** 동시 쓰기 수를 바꿔 가며 유실 건수의 곡선을 그리지는 않았습니다.
