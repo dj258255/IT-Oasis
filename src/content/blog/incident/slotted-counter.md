@@ -1,8 +1,8 @@
 ---
 title: '라이브 후원 카운터의 핫 로우를 슬롯 카운터로 풀었다'
 titleEn: 'A Hot Row in a Live Donation Counter, Solved with Slotted Counters'
-description: '라이브 방송 후원 총액처럼 한 행에 갱신이 몰리는 카운터를 아홉 가지로 구현해 MySQL 8.4.3과 Spring Boot 3.4.1 위에서 같은 조건으로 쟀습니다. JPA로 읽어 더하고 저장하는 구현은 실패율 0%에 전 요청 HTTP 200을 반환하면서 27,501건, 6,030만 원어치 후원을 소리 없이 잃었습니다. 후원이 방송 하나로 전부 몰리면 유실률은 98.4%까지 올라갔습니다. 정확한 구현 중 가장 빠른 원자적 UPDATE는 zipf에서 1,338 req/s였고 슬롯 64는 4,051 req/s로 3.0배, 전량이 한 방송으로 몰린 hotspot에서는 740 req/s 대 3,981 req/s로 5.4배였습니다. 처리량 차이를 걷어내고 요청당으로 나누면 행 락 대기는 원자적 UPDATE 0.315회에 41.1ms, 슬롯 16이 0.144회에 1.23ms로 대기 시간이 33분의 1입니다. 슬롯의 대가인 SUM 조회는 64슬롯 p95 4.16ms로 단일 행 3.68ms와 큰 차이가 없었습니다.'
-descriptionEn: "A running total for a live broadcast puts every update on one row, so this session implements nine ways to update that counter and measures them under identical conditions on MySQL 8.4.3 and Spring Boot 3.4.1. The obvious JPA version, which loads the entity, adds to it, and saves, reported a 0% failure rate with HTTP 200 on every request while silently losing 27,501 donations worth 60.3 million won, and the loss rate climbed to 98.4% once all traffic landed on a single broadcast. The fastest correct database option, a single atomic UPDATE, reached 1,338 req/s against 4,051 req/s for 64 slots under a Zipf distribution, and 740 against 3,981 in the hotspot run. Normalizing row lock waits per request, which the throughput gap otherwise hides, gives 0.315 waits and 41.1ms for the atomic UPDATE versus 0.144 waits and 1.23ms for 16 slots, a 33x reduction in wait time. Reading the total back cost far less than expected, with a 64 slot SUM at 4.16ms p95 versus 3.68ms for a single row."
+description: '라이브 방송 후원 총액처럼 한 행에 갱신이 몰리는 카운터를 아홉 가지로 구현해 MySQL 8.4.3과 Spring Boot 3.4.1 위에서 같은 조건으로 쟀습니다. JPA로 읽어 더하고 저장하는 구현은 실패율 0%에 전 요청 HTTP 200을 반환하면서 후원의 30.9%를 소리 없이 잃었습니다. 3회 반복에서 유실률이 30.87~30.99%로 붙었고 건수로는 21,913~27,501건입니다. 후원이 방송 하나로 전부 몰리면 유실률은 98.4%까지 올라갔습니다. 정확한 구현 중 가장 빠른 원자적 UPDATE는 zipf에서 1,338 req/s였고 슬롯 64는 4,051 req/s로 3.0배, 전량이 한 방송으로 몰린 hotspot에서는 740 req/s 대 3,981 req/s로 5.4배였습니다. 처리량 차이를 걷어내고 요청당으로 나누면 행 락 대기는 원자적 UPDATE 0.315회에 41.1ms, 슬롯 16이 0.144회에 1.23ms로 대기 시간이 33분의 1입니다. 슬롯의 대가인 SUM 조회는 64슬롯 p95 4.16ms로 단일 행 3.68ms와 큰 차이가 없었습니다.'
+descriptionEn: "A running total for a live broadcast puts every update on one row, so this session implements nine ways to update that counter and measures them under identical conditions on MySQL 8.4.3 and Spring Boot 3.4.1. The obvious JPA version, which loads the entity, adds to it, and saves, reported a 0% failure rate with HTTP 200 on every request while silently losing 30.9% of all donations, a rate that held between 30.87% and 30.99% across three runs and amounted to 21,913 to 27,501 lost donations, and the loss rate climbed to 98.4% once all traffic landed on a single broadcast. The fastest correct database option, a single atomic UPDATE, reached 1,338 req/s against 4,051 req/s for 64 slots under a Zipf distribution, and 740 against 3,981 in the hotspot run. Normalizing row lock waits per request, which the throughput gap otherwise hides, gives 0.315 waits and 41.1ms for the atomic UPDATE versus 0.144 waits and 1.23ms for 16 slots, a 33x reduction in wait time. Reading the total back cost far less than expected, with a 64 slot SUM at 4.16ms p95 versus 3.68ms for a single row."
 date: 2026-07-28
 tags:
   - MySQL
@@ -95,7 +95,7 @@ DB 컨테이너에 CPU와 메모리 상한을 건 이유는, 상한이 없으면
 
 ![실패율 0%인데 후원이 사라진다](/uploads/incident/slotted-counter/fig-lost.png)
 
-실패율 0%, 전 요청 HTTP 200. 그런데 원장에는 89,053건이 있고 카운터는 61,552건만 셌습니다. 27,501건, 6,030만 원어치 후원이 흔적 없이 사라졌습니다. 모니터링이 처리량과 에러율만 본다면 이 서버는 아주 건강해 보입니다.
+실패율 0%, 전 요청 HTTP 200. 그런데 원장에는 89,053건이 있고 카운터는 61,552건만 셌습니다. 27,501건, 6,030만 원어치 후원이 흔적 없이 사라졌습니다(회차 1 기준이고, 3회 반복에서 유실률은 30.87~30.99%로 붙습니다). 모니터링이 처리량과 에러율만 본다면 이 서버는 아주 건강해 보입니다.
 
 ## 3. 내부 원리
 
@@ -184,7 +184,7 @@ Redis는 노드가 하나 더 생깁니다. 요금만이 아니라 이중화, �
 
 ## 5. 재계측
 
-모든 수치는 같은 바이너리, 같은 환경, VU 100 / 60초 / 워밍업 20초 조건입니다. 변형당 3회 반복의 중앙값이고 범위를 함께 적습니다.
+모든 수치는 같은 바이너리, 같은 환경, VU 100 / 60초 / 워밍업 20초 조건입니다. zipf 는 변형당 3회 반복의 중앙값이고 범위를 함께 적습니다. 뒤의 hotspot 표는 2회이고 아홉 변형 중 일곱만 돌았습니다(낙관적 락과 Redis 없음).
 
 ### zipf 시나리오 (방송 1,000개, 1위 방송에 23% 쏠림)
 
@@ -192,7 +192,7 @@ Redis는 노드가 하나 더 생깁니다. 요금만이 아니라 이중화, �
 
 | 변형 | req/s (범위) | p95 | p99 | 실패율 | 유실 | 정합 |
 |---|---|---|---|---|---|---|
-| JPA 조회 후 증가 | 1,181 (1,178~1,482) | 254ms | 284ms | 0% | 27,501건 (30.9%), 6,030만원 | 깨짐 |
+| JPA 조회 후 증가 | 1,181 (1,178~1,482) | 254ms | 284ms | 0% | 21,913~27,501건 (30.9%), 4,883만~6,030만원 | 깨짐 |
 | JVM 락 + 조회 후 증가 | 758 (726~967) | 856ms | 1,061ms | 0% | 0 | 정합 |
 | 낙관적 락 + 재시도 | 140 (139~165) | 4,022ms | 4,533ms | 10.12% | 0 | 정합 |
 | 비관적 락 | 1,054 (988~1,260) | 286ms | 328ms | 0% | 0 | 정합 |
@@ -304,14 +304,14 @@ JVM 락 변형은 단일 인스턴스에서 유실 0건으로 정확합니다. �
 
 | 조건 | 원본 처리량 | 부하 직후 뒤처진 금액 | `Seconds_Behind_Source` | 따라잡기까지 |
 |---|---|---|---|---|
-| 단일 행 (원자 UPDATE) | 초당 933.1건 | 1,574,800 | 2초 | **0.53초** |
-| 슬롯 64 | 초당 2,841.9건 | 158,478,400 | 23초 | **41.83초** |
+| 단일 행 (원자 UPDATE) | 초당 1,037.6건 | 0 | 1초 | **0.07초** |
+| 슬롯 64 | 초당 3,240.0건 | 179,586,000 | 24초 | **40.65초** |
 
-**처리량은 3.0배인데 따라잡는 시간은 79배입니다.** 부하가 끝난 직후 뒤처진 금액도 100배 차이입니다.
+**처리량은 3.1배인데 따라잡는 시간은 두 자릿수 배입니다.** 이 표는 1회 실행이고 단일 행 쪽 값이 회차마다 크게 흔들리므로 여기서 배수를 못 박지 않겠습니다. 10절에서 조건마다 3회씩 다시 재고 그 범위를 적습니다.
 
 이유는 두 겹입니다. 첫째, 원본이 3배 많이 쓰면 binlog도 3배 나오고 복제본은 그것을 하나의 SQL 스레드로 적용합니다. 둘째, 슬롯은 같은 금액을 더 많은 행에 흩으므로 행 단위 이벤트 수 자체가 늘어납니다. 원본에서 이득이던 분산이 복제본에서는 그대로 부담이 됩니다.
 
-**판정을 `Seconds_Behind_Source` 하나에 걸지 않은 이유**도 여기서 드러납니다. 이 값은 초 단위이고 SQL 스레드가 방금 적용한 이벤트의 타임스탬프로 계산됩니다. 단일 행 조건에서 2초로 찍혔는데 실제 따라잡기는 0.53초였습니다. 그래서 부하 직후 뒤처진 금액과 따라잡기까지의 시간을 함께 쟀습니다.
+**판정을 `Seconds_Behind_Source` 하나에 걸지 않은 이유**도 여기서 드러납니다. 이 값은 초 단위이고 SQL 스레드가 방금 적용한 이벤트의 타임스탬프로 계산됩니다. 단일 행 조건에서 1초로 찍혔는데 실제 따라잡기는 0.07초였습니다. 그래서 부하 직후 뒤처진 금액과 따라잡기까지의 시간을 함께 쟀습니다.
 
 읽기를 복제본으로 돌린다면 이 42초가 그대로 사용자에게 보입니다. 후원 합계가 42초 전 값으로 나오는 것이고, 그 42초는 인기 방송의 후원이 몰리는 바로 그 구간입니다. **슬롯의 이득을 원본에서 재고 복제본을 보지 않으면 절반만 본 것입니다.**
 
@@ -441,11 +441,11 @@ Redis 왕복이 두 번이라 파이프라인으로 묶으면 빨라질 것으�
 
 **슬롯이 원본을 3.15배 빠르게 합니다.** 1,041/s 가 3,279/s 가 됩니다. 이 세션이 원래 보이려던 값입니다.
 
-**그 값을 복제본이 냅니다.** 따라잡기가 0.18초에서 40.85초입니다. 회차별 값이 0.07~2.18초와 40.65~45.72초로 **겹치지 않습니다.** 부하 직후 뒤처진 양은 42만 대 1억 8,282만으로 431배입니다.
+**그 값을 복제본이 냅니다.** 중앙값 따라잡기가 0.18초에서 40.85초이고, 회차별 값이 0.07~2.18초와 40.65~45.72초로 **범위가 겹치지 않습니다.** 부하 직후 뒤처진 양도 중앙값 42만 대 1억 8,282만입니다.
 
 이유는 슬롯이 하는 일 자체입니다. 원본에서 카운터 하나를 64개 행으로 쪼개면 잠금 경합이 64분의 1로 줄어 원본이 빨라집니다. 그런데 **복제본은 그 64개 행 갱신을 전부 다시 적용해야 합니다.** 원본이 3.15배 많은 논리 갱신을 처리하고 그것이 다시 여러 배의 행 갱신이 되므로, 복제본이 받는 양은 훨씬 더 늘어납니다.
 
-`Seconds_Behind_Source` 는 두 조건에서 4와 24였습니다. 이 값 하나만 보면 6배 차이로 읽히는데 실제 따라잡기는 227배입니다. **복제 지연을 그 값 하나로 감시하면 이 격차를 놓칩니다.**
+`Seconds_Behind_Source` 는 회차별로 단일 행이 4/1/1, 슬롯 64 가 24/24/24 였습니다. 중앙값으로는 1과 24 입니다. 이 값 하나만 보면 20배 남짓으로 읽히는데, 실제 따라잡기는 회차 범위가 아예 겹치지 않는 수준입니다(0.07~2.18초 대 40.65~45.72초). 단일 행 쪽 회차 폭이 31배라 배수 하나로 요약하면 0.07초를 분모로 삼느냐 2.18초를 삼느냐에 따라 18배에서 583배까지 나옵니다. **그래서 배수 대신 범위로 적습니다. 복제 지연을 `Seconds_Behind_Source` 하나로 감시하면 이 격차를 놓칩니다.**
 
 **집계값을 복제본에서 읽는 서비스라면 슬롯의 이득이 그대로 손해가 됩니다.** 원본은 3배 빨라지고 복제본이 보여 주는 숫자는 40초 뒤처집니다. 후원 합계를 복제본에서 읽어 방송 화면에 띄운다면, 슬롯을 넣기 전보다 화면이 더 틀립니다.
 

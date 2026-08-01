@@ -1,8 +1,8 @@
 ---
 title: 'CDC 컨슈머가 죽으면 프로덕션 DB의 디스크가 찬다'
 titleEn: "When the CDC Consumer Dies, the Production Database Fills Its Own Disk"
-description: "CDC 컨슈머가 죽어도 논리 복제 슬롯은 남고, 서버는 그 슬롯의 restart_lsn 이후 WAL을 지우지 못합니다. PostgreSQL 17.5 컨테이너에 초당 859.6행을 넣으면서 pg_recvlogical을 죽여 보니 슬롯이 붙잡은 WAL이 120.5초 만에 7.0MB에서 125.8MB로 늘었고, 기울기 초당 0.99MB는 시간당 3.5GB에 해당합니다. 체크포인트가 30초마다 돌았는데도 pg_wal은 80.5초 동안 80MB에 묶여 있었고, 슬롯을 지우고 체크포인트를 돌리자 128MB가 96MB로 즉시 줄었습니다. max_slot_wal_keep_size를 64MB로 걸면 41.7초 만에 슬롯이 lost가 되어 디스크는 지켜지고 CDC는 버려지는데, 상한이 체크포인트 시점에만 적용되는 탓에 그사이 슬롯 지연은 138MB까지 올라갔습니다."
-descriptionEn: "A logical replication slot outlives the CDC consumer that created it, and the server cannot recycle any WAL past that slot's restart_lsn. Writing 859.6 rows per second into a PostgreSQL 17.5 container and then killing pg_recvlogical, the WAL pinned by the slot grew from 7.0MB to 125.8MB in 120.5 seconds, a slope of 0.99MB per second that works out to roughly 3.5GB per hour. Checkpoints ran every 30 seconds and still could not reclaim anything: pg_wal sat at 80MB for 80.5 seconds, and dropping the slot plus one checkpoint cut it from 128MB to 96MB immediately. Setting max_slot_wal_keep_size to 64MB invalidated the slot after 41.7 seconds, which saves the disk and throws away the CDC pipeline, and because the cap is only enforced at checkpoint time the slot had already pinned 138MB by then."
+description: "CDC 컨슈머가 죽어도 논리 복제 슬롯은 남고, 서버는 그 슬롯의 restart_lsn 이후 WAL을 지우지 못합니다. PostgreSQL 17.5 컨테이너에 초당 859.6행을 넣으면서 pg_recvlogical을 죽여 보니 슬롯이 붙잡은 WAL이 120.5초 만에 7.0MB에서 125.8MB로 늘었고, 기울기 초당 0.99MB는 시간당 3.5GB에 해당합니다. 체크포인트가 30초마다 돌았는데도 pg_wal은 80.5초 동안 80MB에 묶여 있었고, 슬롯을 지우고 체크포인트를 돌리자 128MB가 96MB로 즉시 줄었습니다. max_slot_wal_keep_size를 64MB로 걸면 41.7~60초 만에 슬롯이 lost가 되어 디스크는 지켜지고 CDC는 버려지는데, 상한이 체크포인트 시점에만 적용되는 탓에 그사이 슬롯 지연은 회차에 따라 138~174MB까지 올라갔습니다."
+descriptionEn: "A logical replication slot outlives the CDC consumer that created it, and the server cannot recycle any WAL past that slot's restart_lsn. Writing 859.6 rows per second into a PostgreSQL 17.5 container and then killing pg_recvlogical, the WAL pinned by the slot grew from 7.0MB to 125.8MB in 120.5 seconds, a slope of 0.99MB per second that works out to roughly 3.5GB per hour. Checkpoints ran every 30 seconds and still could not reclaim anything: pg_wal sat at 80MB for 80.5 seconds, and dropping the slot plus one checkpoint cut it from 128MB to 96MB immediately. Setting max_slot_wal_keep_size to 64MB invalidated the slot after 41.7 to 60 seconds, which saves the disk and throws away the CDC pipeline, and because the cap is only enforced at checkpoint time the slot had already pinned 138 to 174MB by then."
 date: 2026-07-29
 tags:
   - PostgreSQL
@@ -102,7 +102,7 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
 
 ![슬롯 무효화](/uploads/incident/replication-slot-wal/fig-lost.png)
 
-`results/exp2.txt`에서 상태가 바뀐 세 줄입니다.
+`results/run0-exp2.txt`에서 상태가 바뀐 세 줄입니다.
 
 ```console
 [20:07:41]   t=1s  WAL 80MB  슬롯지연 0MB  상태 reserved  여유 70MB
@@ -112,13 +112,13 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
 
 이 출력은 세 군데를 그대로 읽으면 안 됩니다.
 
-- **`t=1s / t=10s / t=19s`는 경과 초가 아니라 루프 반복 횟수입니다.** 한 바퀴에 psql 왕복이 네 번 들어가 평균 2.32초가 걸렸습니다. 벽시계 타임스탬프가 `20:07:41 → 20:08:23`이니 실제 경과는 42초입니다. `results/keepsize.csv`의 타임스탬프로 다시 재면 **41.7초**입니다. 스크립트는 이후 실행에서 시작 시각과의 차이를 찍도록 고쳤고, 이미 기록된 `exp2.txt`는 원문이라 손대지 않았습니다.
+- **`t=1s / t=10s / t=19s`는 경과 초가 아니라 루프 반복 횟수입니다.** 한 바퀴에 psql 왕복이 네 번 들어가 평균 2.32초가 걸렸습니다. 벽시계 타임스탬프가 `20:07:41 → 20:08:23`이니 실제 경과는 42초입니다. `results/run0-keepsize.csv`의 타임스탬프로 다시 재면 **41.7초**입니다. 스크립트는 이후 실행에서 시작 시각과의 차이를 찍도록 고쳤고, 이미 기록된 `run0-exp2.txt`는 원문이라 손대지 않았습니다.
 - **`슬롯지연 MB`가 비어 있는 것은 값이 0이라는 뜻이 아닙니다.** 무효화된 슬롯은 `restart_lsn`이 NULL이 되므로 계산식이 NULL을 돌려줍니다.
 - **`여유 0MB`도 실제로는 NULL입니다.** 문서가 `safe_wal_size`를 "NULL for lost slots"로 정의합니다. 스크립트가 `COALESCE(...,0)`으로 감싸 0으로 찍혔습니다.
 
 ![상한 도달까지의 실제 경과](/uploads/incident/replication-slot-wal/fig-keepsize.png)
 
-`keepsize.csv`(19회 관측, 평균 2.32초 간격, 1회 실행)로 다시 정리하면 이렇습니다.
+`run0-keepsize.csv`(19회 관측, 평균 2.32초 간격, 1회 실행)로 다시 정리하면 이렇습니다. 이 원본은 뒤의 반복 회차가 `keepsize.csv`를 덮어써서 한동안 인용이 깨져 있었고, 회차별로 `run0-`과 `run3-` 접두사를 붙여 복원했습니다.
 
 | 실제 경과 | pg_wal | 슬롯 지연 | wal_status | safe_wal_size |
 |---|---|---|---|---|
@@ -167,22 +167,21 @@ PostgreSQL 13부터 `max_slot_wal_keep_size`가 있습니다. 문서는 이 값�
 회차 1~3 은 53~60초로 모입니다. 원본의 41.7초와 차이가 나는데, 원본은 로그에 `t=19s` 로
 찍혔지만 그 `t` 가 반복 횟수라 실제 경과가 41.7초였습니다(원자료로 확인).
 
-**무효화 시점의 `pg_wal` 이 128MB 와 224MB 로 갈립니다.** 상한이 64MB 인데 체크포인트
-시점에만 적용되므로 초과분이 회차마다 다릅니다. 4절이 "상한을 남은 디스크 여유에 딱 맞춰
-잡으면 안 된다"고 적은 근거가 반복 측정으로 더 강해집니다. 최악을 상한의 3.5배로 봐야
-합니다.
+**무효화 시점의 `pg_wal` 이 128MB 와 224MB 로 갈립니다.** 다만 이 차이는 초과분이 아니라
+시작값입니다. 회차 1~3 은 슬롯 지연 0MB 인 첫 관측에서 이미 `pg_wal` 이 224MB 였고
+관측 창 안에서 한 번도 늘지 않았습니다(`run3-keepsize.csv` 24행 전부 224MB). 앞 회차가
+남긴 파일을 서버가 아직 재활용하지 않은 것입니다. 실제로 잰 초과분은 슬롯 지연 쪽입니다. 상한 64MB 에 대해 무효화 직전 지연이
+원본 138MB(2.2배), 회차 3 이 174MB(2.7배)였습니다. 4절이 "상한을 남은 디스크 여유에
+딱 맞춰 잡으면 안 된다"고 적은 근거가 반복 측정으로 더 강해집니다. **관측된 최악은
+상한의 2.7배입니다.**
 
 ## 5. Debezium으로 다시: 재려던 것을 못 잰 기록
 
-4절은 `pg_recvlogical`로 컨슈머를 흉내 냈습니다. 실제 도구는 하트비트나 자동 재연결 같은 완충 장치가 있으니 그것이 무엇을 막는지 재려 했습니다. Debezium Server 3.0을 붙이는 데까지는 성공했지만 **그 질문에는 답하지 못했습니다.** 결과를 지우지 않고 왜 못 잰 것인지를 적어 둡니다.
-
-`pg_recvlogical` 대신 실제 도구를 써서 **하트비트가 무엇을 막는지** 재려 했습니다.
-Debezium Server 3.0 을 붙이는 데까지는 성공했지만 **그 질문에는 답하지 못했습니다.**
-결과를 지우지 않고 왜 못 잰 것인지를 적어 둡니다.
+2~3절은 `pg_recvlogical`로 컨슈머를 흉내 냈습니다. 실제 도구는 하트비트나 자동 재연결 같은 완충 장치가 있으니 그것이 무엇을 막는지 재려 했습니다. Debezium Server 3.0을 붙이는 데까지는 성공했지만 **그 질문에는 답하지 못했습니다.** 결과를 지우지 않고 왜 못 잰 것인지를 적어 둡니다.
 
 | 조건 | 슬롯 지연(60초) | 하트비트 테이블 행 수 |
 |---|---|---|
-| A. 살아 있고 대상 테이블에 쓰기 | 954KB → **460.8MB** | 0 |
+| A. 살아 있고 대상 테이블에 쓰기 | 932KB → **439.5MB** | 0 |
 | B1. 대상은 조용, 하트비트 없음 | 456KB → 219.9MB | 0 |
 | B2. 대상은 조용, **하트비트 5초** | 456KB → **219.8MB** | **0** |
 | C. Debezium 이 죽음 | 39.5MB → 446.0MB | 0 |
@@ -192,9 +191,9 @@ Debezium Server 3.0 을 붙이는 데까지는 성공했지만 **그 질문에�
 **하트비트가 한 번도 돌지 않았습니다.** `heartbeat.action.query` 로 지정한 INSERT 가
 `dbz_heartbeat` 테이블에 한 행도 남기지 않았습니다. B1 과 B2 가 219.9MB 와 219.8MB 로
 같은 것은 하트비트가 켜지지 않았기 때문이고, 따라서 **이 표로 하트비트의 효과를
-말할 수 없습니다.** 왜 안 돌았는지는 확인하지 못했습니다.
+말할 수 없습니다.** 왜 안 돌았는지는 6절에서 밝힙니다. 사실은 돌고 있었습니다.
 
-**싱크가 병목입니다.** 조건 A 에서 Debezium 이 살아 있는데 지연이 460MB 까지 갑니다.
+**싱크가 병목입니다.** 조건 A 에서 Debezium 이 살아 있는데 지연이 439.5MB 까지 갑니다.
 이 실험의 싱크는 변경분을 받아 버리는 단일 스레드 파이썬 HTTP 서버인데, 한 번에 400행씩
 초당 10회 들어오는 부하를 못 받습니다. **그러니까 이 지연은 하트비트나 슬롯의 성질이
 아니라 제가 만든 싱크의 처리량을 재고 있습니다.**
@@ -202,7 +201,7 @@ Debezium Server 3.0 을 붙이는 데까지는 성공했지만 **그 질문에�
 ### 그래도 건진 것
 
 **컨슈머가 "살아 있다"는 것과 슬롯이 전진하는 것은 다릅니다.** 조건 A 가 그것을
-보여 줍니다. 프로세스는 떠 있고 헬스체크도 통과하는데 슬롯 지연은 460MB 로 자랍니다.
+보여 줍니다. 프로세스는 떠 있고 헬스체크도 통과하는데 슬롯 지연은 439.5MB 로 자랍니다.
 이 글의 3절이 "컨슈머가 죽으면"이라고 쓴 자리를 **"컨슈머가 못 따라가면"으로
 넓혀야 합니다.** 죽은 컨슈머만 감시하는 알람은 이 상황을 놓칩니다.
 
@@ -231,7 +230,7 @@ Debezium Server 3.0 을 붙이는 데까지는 성공했지만 **그 질문에�
 
 같은 설정으로 유휴 데이터베이스에 60초를 돌리니 하트비트 테이블에 19행이 들어왔습니다. 3초 주기니 계산이 맞습니다. **하트비트는 돕니다.**
 
-5절의 조건 A가 90초 동안 `watch_log`에 초당 4천 행을 넣었습니다. 조건 B는 컨테이너를 새로 띄우므로 오프셋 파일이 비어 있어 **초기 스냅샷**부터 다시 시작합니다. 하트비트는 스트리밍 단계에 들어가야 발동합니다. 스냅샷이 관측 창 90초 안에 안 끝나면 하트비트는 영원히 0입니다. 싱크가 단일 스레드라 스냅샷이 더 느렸습니다. 하트비트가 안 돈 것이 아니라 **하트비트 단계에 닿지 못했습니다.**
+5절의 조건 A가 60초 동안 `watch_log`에 실측 초당 약 3,330행을 넣었습니다(목표는 4천 행). 조건 B는 컨테이너를 새로 띄우므로 오프셋 파일이 비어 있어 **초기 스냅샷**부터 다시 시작합니다. 하트비트는 스트리밍 단계에 들어가야 발동합니다. 스냅샷이 관측 창 90초 안에 안 끝나면 하트비트는 영원히 0입니다. 싱크가 단일 스레드라 스냅샷이 더 느렸습니다. 하트비트가 안 돈 것이 아니라 **하트비트 단계에 닿지 못했습니다.**
 
 `snapshot.mode=no_data`로 스냅샷을 걷어 내고 싱크를 스레드 방식으로 바꿔 다시 쟀습니다.
 
@@ -291,7 +290,7 @@ debezium.source.heartbeat.action.query=INSERT INTO dbz_heartbeat (ts) VALUES (no
 
 ### 관리형 DB에서는 이것이 스토리지 요금이다
 
-이 세션은 로컬 컨테이너에서 돌았지만 R 트랙의 전제는 관리형 DB입니다. 거기서는 슬롯이 붙잡은 WAL이 성능 이야기에서 그치지 않습니다. RDS와 Aurora가 스토리지를 다루는 방식이 달라서 같은 슬롯 하나가 두 곳에서 다른 값을 청구합니다.
+이 세션은 로컬 컨테이너에서 돌았지만 R 트랙의 전제는 관리형 DB입니다. 거기서는 슬롯이 붙잡은 WAL 이 돈으로 바뀝니다. RDS와 Aurora가 스토리지를 다루는 방식이 달라서 같은 슬롯 하나가 두 곳에서 다른 값을 청구합니다.
 
 **RDS for PostgreSQL에서는 볼륨이 한 번 커지면 돌아오지 않습니다.** AWS 문서는 스토리지 확장을 설명하면서 "You can increase the allocated space on a storage volume by a minimum of 10%. **You can't deallocate space.**"라고 적습니다. 죽은 슬롯이 WAL을 밀어 올려 자동 스토리지 확장이 한 번 발동하면, 그 뒤에 슬롯을 지우고 WAL이 전부 회수돼도 할당된 볼륨은 그 크기로 남고 그 크기로 매달 과금됩니다. 볼륨을 줄이려면 더 작은 인스턴스로 덤프하고 옮겨 심는 마이그레이션이 필요합니다. 죽은 CDC 컨슈머 하나가 영구 고정비를 만드는 경로가 여기입니다.
 
@@ -313,7 +312,7 @@ RDS에서 볼 수 있는 신호는 CloudWatch 지표입니다. `OldestReplicatio
 
 처음 정리할 때는 "상한 64MB에서 19초 만에 `lost`가 됐다"고 적었습니다. 로그에 `t=19s`로 찍혀 있었기 때문입니다. 그 `t`는 루프 반복 횟수였고, 한 바퀴에 psql 왕복이 네 번 들어가 평균 2.32초가 걸렸습니다. 실제 경과는 41.7초였고 `unreserved`에 머문 시간도 9초가 아니라 20.8초(관측 9회)였습니다. 스크립트가 자기 루프 변수를 초라고 부른 것이 원인입니다. **시간 라벨은 반복 변수가 아니라 시계에서 읽어야 합니다.**
 
-### 상한 64MB인데 슬롯은 138MB까지 붙잡았습니다
+### 상한 64MB인데 슬롯은 138~174MB까지 붙잡았습니다
 
 무효화 직전 관측에서 슬롯 지연이 138MB, `pg_wal`이 160MB였습니다. 상한의 두 배가 넘습니다. 문서를 다시 보니 이 파라미터는 "at checkpoint time"에 적용됩니다. 체크포인트와 체크포인트 사이에 들어온 쓰기는 상한을 넘어도 그 자리에서 막히지 않습니다. `checkpoint_timeout=30s`인 이 환경에서도 이만큼 넘쳤으니, 체크포인트 간격이 긴 운영 환경에서는 초과분이 더 커집니다. 상한을 남은 디스크 여유에 딱 맞춰 잡으면 안 되는 이유입니다.
 
@@ -329,11 +328,11 @@ RDS에서 볼 수 있는 신호는 CloudWatch 지표입니다. `OldestReplicatio
 | 조건 | `max_slot_wal_keep_size` | WAL 증가 | 슬롯 없음 대비 |
 |---|---|---|---|
 | 대조군: 슬롯 없음 | -1 | 16.0MB | 1.00배 |
-| 논리 슬롯, 컨슈머 없음 | -1 | 816.0MB | **51배** |
-| 물리 슬롯, 스탠바이 없음 | -1 | **832.0MB** | **52배** |
+| 논리 슬롯, 컨슈머 없음 | -1 | 560.0MB | **35배** |
+| 물리 슬롯, 스탠바이 없음 | -1 | **576.0MB** | **36배** |
 | 물리 슬롯 + 상한 64MB | 64MB | **0.0MB** | 0배 |
 
-**논리와 물리가 사실상 같습니다.** 51배와 52배입니다. 붙잡는 메커니즘이 같습니다. 슬롯이 `restart_lsn` 을 들고 있고 아무도 그것을 밀지 않으면, 그 종류가 무엇이든 WAL 이 안 지워집니다.
+**논리와 물리가 사실상 같습니다.** 35배와 36배입니다. 붙잡는 메커니즘이 같습니다. 슬롯이 `restart_lsn` 을 들고 있고 아무도 그것을 밀지 않으면, 그 종류가 무엇이든 WAL 이 안 지워집니다.
 
 **차이는 누가 미느냐입니다.** 논리 슬롯은 CDC 컨슈머가 커밋을 확인해야 밀립니다. 물리 슬롯은 스탠바이가 적용한 위치까지 밀립니다. 둘 다 안 붙어 있으면 결과가 같습니다.
 

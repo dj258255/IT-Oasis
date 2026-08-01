@@ -1,8 +1,8 @@
 ---
 title: '시계열 로그를 지울 때 DELETE와 DROP PARTITION은 얼마나 다른가'
 titleEn: 'Purging Expired Time-Series Logs: DELETE vs DROP PARTITION, Measured'
-description: '보존 기한이 지난 시계열 로그를 DELETE 한 문장으로 지우면 InnoDB는 행을 지우는 대신 삭제 표시만 남깁니다. 파일 크기도 돌아오지 않습니다. MySQL 8.4.3 컨테이너에 14일치 700만 행을 넣고 같은 7일치(약 350만 행)를 DELETE와 DROP PARTITION으로 각각 지웠습니다. 실시간 INSERT 8스레드가 받는 피해는 건별로 계측했습니다. DELETE는 20.5초가 걸렸고 그동안 INSERT p95가 기준선 5.2ms의 2.1배인 10.8ms까지 올랐습니다. 파일은 줄기는커녕 동시 INSERT 때문에 8MiB 늘었습니다. DROP PARTITION은 0.12초에 삭제 중 p95 5.7ms로 흔들리지 않으면서 0.77GB를 0.42GB로 줄였지만, 삭제가 끝난 뒤 관측 창에서는 p95가 기준선의 1.8배인 8.8ms였습니다. 기준선으로 돌아온 DELETE 쪽과 반대입니다. 열린 트랜잭션 하나가 있으면 그 0.12초짜리 DDL이 메타데이터 락 큐에서 23.7초를 기다렸고, 뒤에 선 평범한 SELECT까지 20.7초를 멈춰 세웠습니다.'
-descriptionEn: Deleting expired time-series logs with a single DELETE does not remove rows in InnoDB, it only marks them, and the data file never gives the space back. This session loads 7 million rows spanning 14 days into a MySQL 8.4.3 container and purges the same 7 days (about 3.5 million rows) twice, once with DELETE and once with DROP PARTITION, recording per-request latency from eight live INSERT threads throughout. DELETE took 20.5 seconds and pushed INSERT p95 to 10.8ms against a 5.2ms baseline, and the file did not shrink at all, it grew by 8MiB because of the concurrent inserts. DROP PARTITION finished in 0.12 seconds with p95 untouched at 5.7ms and shrank the file from 0.77GB to 0.42GB, yet in the window after the drop its p95 sat at 8.8ms, 1.8 times its own baseline, while DELETE had already returned to baseline. With one idle open transaction on the table, that 0.12-second DDL waited 23.7 seconds on a metadata lock and held an ordinary SELECT behind it for 20.7 seconds.
+description: '보존 기한이 지난 시계열 로그를 DELETE 한 문장으로 지우면 InnoDB는 행을 지우는 대신 삭제 표시만 남깁니다. 파일 크기도 돌아오지 않습니다. MySQL 8.4.3 컨테이너에 14일치 700만 행을 넣고 같은 7일치(약 350만 행)를 DELETE와 DROP PARTITION으로 각각 지웠습니다. 실시간 INSERT 8스레드가 받는 피해는 건별로 계측했습니다. DELETE는 20.5초가 걸렸고 그동안 INSERT p95가 기준선 5.2ms의 2.1배인 10.8ms까지 올랐습니다. 파일은 줄기는커녕 동시 INSERT 때문에 8MiB 늘었습니다. DROP PARTITION은 0.12초에 삭제 중 p95 5.7ms로 흔들리지 않으면서 0.77GiB를 0.42GiB로 줄였습니다. 처음에는 삭제 후 구간에서 DROP 쪽 p95가 더 높다고 적었는데, 두 실험의 관측 창이 450초 대 110초로 달라서 성립하지 않는 비교였습니다. 창을 맞춰 다시 재니 삭제 후는 5.0ms와 5.1ms로 같았고, 갈린 것은 삭제 중 폴링에서 본 히스토리 리스트 길이 29,971 대 203이었습니다. 열린 트랜잭션 하나가 있으면 그 0.12초짜리 DDL이 메타데이터 락 큐에서 23.7초를 기다렸고, 뒤에 선 평범한 SELECT까지 20.7초를 멈춰 세웠습니다.'
+descriptionEn: Deleting expired time-series logs with a single DELETE does not remove rows in InnoDB, it only marks them, and the data file never gives the space back. This session loads 7 million rows spanning 14 days into a MySQL 8.4.3 container and purges the same 7 days (about 3.5 million rows) twice, once with DELETE and once with DROP PARTITION, recording per-request latency from eight live INSERT threads throughout. DELETE took 20.5 seconds and pushed INSERT p95 to 10.8ms against a 5.2ms baseline, and the file did not shrink at all, it grew by 8MiB because of the concurrent inserts. DROP PARTITION finished in 0.12 seconds with p95 untouched at 5.7ms and shrank the file from 0.77GB to 0.42GB, An earlier reading had the post-drop window running hotter, but the two experiments observed for 450 and 110 seconds respectively, so that comparison did not hold; re-measured over matched windows both settle at 5.0ms and 5.1ms, and what actually separates them is the history list length seen while deleting, 29,971 against 203. With one idle open transaction on the table, that 0.12-second DDL waited 23.7 seconds on a metadata lock and held an ordinary SELECT behind it for 20.7 seconds.
 date: 2026-07-29
 tags:
   - MySQL
@@ -100,15 +100,15 @@ InnoDB에서 `DELETE`는 행을 지우는 문장이 아니라 **지웠다고 표
 | 삭제 중 INSERT p95 | 10.8ms (기준선의 2.1배) | 5.7ms (변화 없음) |
 | 삭제 후 INSERT p95 | 5.3ms (기준선 복귀) | **8.8ms (기준선의 1.8배)** |
 | 관측 창 | 480초 (삭제 후 450초) | 120초 (삭제 후 110초) |
-| 파일 크기 | 0.70GB → 0.70GB (8MiB 증가) | 0.77GB → 0.42GB |
+| 파일 크기 | 0.70GiB → 0.70GiB (8MiB 증가) | 0.77GiB → 0.42GiB |
 
 "삭제 후" 행을 같이 놓아야 이 비교가 정직해집니다. 삭제 구간만 보면 DROP PARTITION이 일방적으로 이기지만, 문장이 끝난 뒤로 창을 넓히면 방향이 뒤집힙니다. DELETE 쪽은 5.2ms에서 5.3ms로 기준선에 돌아왔고, DROP 쪽은 4.9ms에서 8.8ms로 올라간 채 관측이 끝났습니다.
 
-다만 두 실험의 관측 창이 다릅니다. DELETE는 480초, DROP은 120초를 켜 뒀습니다(`scripts/run-experiments.sh`). "삭제 후" 구간의 길이가 450초 대 110초라서 8.8ms와 5.3ms를 같은 조건의 평균으로 비교할 수 없습니다. DROP 쪽 창을 480초로 늘렸다면 뒤쪽 정상 구간이 더 섞여 8.8ms가 내려갔을 수 있습니다. 창을 맞춰 다시 재지 않았습니다.
+다만 두 실험의 관측 창이 다릅니다. DELETE는 480초, DROP은 120초를 켜 뒀습니다(`scripts/run-experiments.sh`). "삭제 후" 구간의 길이가 450초 대 110초라서 8.8ms와 5.3ms를 같은 조건의 평균으로 비교할 수 없습니다. DROP 쪽 창을 480초로 늘렸다면 뒤쪽 정상 구간이 더 섞여 8.8ms가 내려갔을 수 있습니다. **5절에서 창을 맞춰 다시 쟀고, 이 비교는 거기서 무너집니다.**
 
 ![디스크 회수](/uploads/incident/timeseries-partition/chart-disk.png)
 
-행 기준으로 절반을 지웠는데 DELETE 쪽 파일은 줄지 않았습니다. 정확히는 **8MiB 늘었습니다.** `results/delete-poll.csv`의 1초 시계열을 보면 `watch_log_plain`의 .ibd가 746,586,112바이트에서 754,974,720바이트가 됐고, 4MiB짜리 익스텐트 확장이 두 번 찍혀 있습니다. 삭제 중에도 8스레드가 계속 INSERT를 넣고 있었으니 당연한 결과입니다. 파일은 지운 만큼 줄어드는 게 아니라 새로 들어오는 만큼 늘어납니다. 표에 0.70GB → 0.70GB로 적힌 것은 GB 단위 반올림이 이 증가분을 삼킨 것이고, 그림도 같은 반올림을 씁니다.
+행 기준으로 절반을 지웠는데 DELETE 쪽 파일은 줄지 않았습니다. 정확히는 **8MiB 늘었습니다.** `results/delete-poll.csv`의 1초 시계열을 보면 `watch_log_plain`의 .ibd가 746,586,112바이트에서 754,974,720바이트가 됐고, 4MiB짜리 익스텐트 확장이 두 번 찍혀 있습니다. 삭제 중에도 8스레드가 계속 INSERT를 넣고 있었으니 당연한 결과입니다. 파일은 지운 만큼 줄어드는 게 아니라 새로 들어오는 만큼 늘어납니다. 표에 0.70GiB → 0.70GiB 로 적힌 것은 GiB 단위 반올림이 이 증가분을 삼킨 것이고, 그림도 같은 반올림을 씁니다. 원값은 746,586,112바이트와 754,974,720바이트입니다.
 
 전제를 하나 밝혀 둡니다. 테이블마다 .ibd 파일이 따로 있는 것은 `innodb_file_per_table`이 켜져 있기 때문입니다. MySQL 8.4 기본값이 ON이고 이 세션도 따로 끄지 않았습니다. 이 값이 꺼져 있으면 데이터가 공유 테이블스페이스에 들어가서 테이블별 파일 크기라는 지표 자체가 성립하지 않습니다.
 
@@ -136,7 +136,7 @@ B가 요청한 배타 MDL이 대기 상태로 큐에 서는 순간, 그 뒤에 �
 
 첫째, `LOCK=NONE`을 붙여도 결과가 같은지는 이 실험으로 말할 수 없습니다. `scripts/run-experiments.sh`의 주석에는 "LOCK=NONE을 명시해도 MDL 대기에 걸린다"고 적혀 있지만 바로 아래 실행문은 `ALTER TABLE watch_log_part DROP PARTITION p20260721;`이고 `LOCK` 절이 없습니다. 온라인 DDL이라도 시작과 끝에 배타 MDL이 필요하다는 결론 자체는 공식 문서가 적는 내용이고 A02 세션에서 따로 다뤘지만, 이 세션의 23.7초는 그 결론의 근거가 아닙니다.
 
-둘째, 대조군이 없습니다. B 없이 C만 넣었을 때 C가 안 막히는지를 재지 않았습니다. 시간만 놓고 보면 두 대기는 모두 홀더 A의 25초로 산술 설명됩니다. B는 A보다 2초 늦게 들어와 23.7초, C는 5초 늦게 들어와 20.7초입니다. 그래서 "C가 B 때문에 막혔다"의 근거는 대기 시간이 아니라 `performance_schema.metadata_locks` 스냅숏 쪽입니다. A가 쥔 것과 C가 요청한 것이 둘 다 `SHARED_READ`인데 A는 GRANTED이고 C는 PENDING입니다. 서로 호환되는 락 두 개의 상태가 갈리려면 사이에 PENDING인 `EXCLUSIVE`가 있어야 합니다.
+둘째, 이 절에는 대조군이 없습니다. B 없이 C만 넣었을 때 C가 안 막히는지는 8절에서 따로 잽니다. 시간만 놓고 보면 두 대기는 모두 홀더 A의 25초로 산술 설명됩니다. B는 A보다 2초 늦게 들어와 23.7초, C는 5초 늦게 들어와 20.7초입니다. 그래서 "C가 B 때문에 막혔다"의 근거는 대기 시간이 아니라 `performance_schema.metadata_locks` 스냅숏 쪽입니다. A가 쥔 것과 C가 요청한 것이 둘 다 `SHARED_READ`인데 A는 GRANTED이고 C는 PENDING입니다. 서로 호환되는 락 두 개의 상태가 갈리려면 사이에 PENDING인 `EXCLUSIVE`가 있어야 합니다.
 
 ### 프루닝이 깨지는 조건
 
@@ -159,7 +159,7 @@ WHERE DATE(created_at) = '2026-07-27'     → partitions: 남은 7개 전부
 
 ### 관리형 DB에서는 회수 못 한 공간이 계속 청구된다
 
-이 세션은 로컬 컨테이너에서 돌았지만, R 트랙의 전제는 관리형 DB입니다. 거기서는 "DELETE로 파일이 안 줄어든다"가 성능 이야기에서 그치지 않습니다.
+이 세션은 로컬 컨테이너에서 돌았지만, R 트랙의 전제는 관리형 DB입니다. 거기서는 "DELETE로 파일이 안 줄어든다"가 여기서는 돈 이야기가 됩니다.
 
 RDS의 할당 스토리지는 늘릴 수는 있어도 줄일 수 없습니다. 한 번 커진 볼륨은 그 크기로 계속 과금됩니다. 그래서 DELETE로 회수되지 않은 공간은 "언젠가 재사용될 여유"가 아니라 매달 나가는 고정 비용이 됩니다. 자동 스토리지 확장이 켜져 있으면 대량 적재가 볼륨을 한 번 밀어 올리고, 그 뒤에 아무리 지워도 청구 단가는 내려오지 않습니다. 볼륨을 줄이려면 더 작은 인스턴스로 덤프하고 옮겨 심는 마이그레이션이 필요합니다. DROP PARTITION이 파일을 실제로 지운다는 점이 여기서 성능이 아니라 비용의 문제로 바뀝니다.
 
@@ -193,7 +193,7 @@ Aurora는 구조가 달라 결과가 반대쪽으로 움직입니다. 스토리�
 
 ## 6. 파티션 수가 조회에 물리는 비용
 
-파티션 드롭이 `DELETE`보다 싸다는 것은 3절에서 보였습니다. 그러면 파티션을 많이 두는 대가는 얼마인지 재봤습니다. 같은 200만 행을 같은 365일에 담고, 그 365일을 몇 조각으로 묶을지만 바꿉니다.
+파티션 드롭이 `DELETE`보다 싸다는 것은 4절에서 보였습니다. 그러면 파티션을 많이 두는 대가는 얼마인지 재봤습니다. 같은 200만 행을 같은 365일에 담고, 그 365일을 몇 조각으로 묶을지만 바꿉니다.
 
 | 파티션 | 적재 | 크기 | 프루닝 조회 | 전체 스캔 | 단건 조회 |
 |---|---|---|---|---|---|
@@ -262,11 +262,11 @@ PK 를 `(id, created_at)` 로 둔 것이 그 원인입니다. MySQL 은 파티�
 
 ### DROP PARTITION의 피해가 문장 뒤에 왔습니다
 
-DROP 자체는 0.12초였고 그 구간의 INSERT p95는 5.7ms로 흔들리지 않았습니다. 그런데 25초쯤 지난 뒤 약 30초간 p95가 15~18ms로 오르는 구간이 나타났습니다(차트의 35~62초 구간). 이 구간이 삭제 후 p95를 8.8ms까지 끌어올린 주범입니다. 원인을 계측으로 특정하지는 못했고, 후보를 셋 적어 둡니다.
+DROP 자체는 0.12초였고 그 구간의 INSERT p95는 5.7ms로 흔들리지 않았습니다. 그런데 25초쯤 지난 뒤 약 30초간 p95가 15~18ms로 오르는 구간이 나타났습니다(차트의 35~62초 구간). 이 구간이 삭제 후 p95를 8.8ms까지 끌어올린 주범입니다. **다만 그 8.8ms 자체가 창 인공물이라는 것을 5절이 뒤에서 보입니다.** 창을 맞춰 재면 이 차이가 사라지므로, 아래 후보 셋은 "DROP 이 DELETE 보다 나쁘다"의 근거가 아니라 이 실행의 35~62초 구간에 무엇이 있었는지에 대한 기록으로 읽어야 합니다. 원인을 계측으로 특정하지는 못했고, 후보를 셋 적어 둡니다.
 
 - 파일 7개 삭제에 따른 버퍼 풀 정리
 - 그에 뒤따르는 백그라운드 플러시
-- **직전 DELETE 실험의 잔여 부하.** 실험 설계 자체에 구멍이 있었습니다. `scripts/run-experiments.sh`는 실험 1과 실험 2 사이에 안정화 대기 루프를 두는데, 이 결과를 만든 판본의 조건이 "히스토리 리스트 길이가 1000 미만이면 통과"였습니다. 그런데 이 환경의 실측 최대는 3입니다. 첫 판정에서 무조건 통과하니 실질적인 대기가 0이었습니다. 타임스탬프로 확인하면 DELETE 쪽 관측이 끝나고 3.1초 뒤에 DROP 쪽 관측이 시작됐습니다. DELETE 문장 자체는 462초 전에 끝났지만, 그 실험의 8스레드 INSERT 부하는 3초 전까지 같은 인스턴스에서 돌고 있었습니다. 직전 실험이 남긴 더티 페이지와 플러시가 DROP의 관측 창에 겹쳤을 가능성을 배제할 수 없습니다. 스크립트는 최소 대기 60초와 임계값 10으로 고쳤고, 관측 창을 맞춘 재측정은 그 고친 판본으로 돌았습니다. 위 3절 표의 값은 여전히 고치기 전 실행분입니다.
+- **직전 DELETE 실험의 잔여 부하.** 실험 설계 자체에 구멍이 있었습니다. `scripts/run-experiments.sh`는 실험 1과 실험 2 사이에 안정화 대기 루프를 두는데, 이 결과를 만든 판본의 조건이 "히스토리 리스트 길이가 1000 미만이면 통과"였습니다. 그런데 이 환경의 실측 최대는 조건에 따라 3에서 46 사이입니다(청크 삭제 46, `drop-poll-w120.csv` 31, 재측정한 `delete-poll.csv` 8). 어느 쪽이든 임계값 1000 과는 두 자릿수 차이라 첫 판정에서 무조건 통과했고, 실질적인 대기가 0이었습니다. 타임스탬프로 확인하면 DELETE 쪽 관측이 끝나고 3.1초 뒤에 DROP 쪽 관측이 시작됐습니다. DELETE 문장 자체는 462초 전에 끝났지만, 그 실험의 8스레드 INSERT 부하는 3초 전까지 같은 인스턴스에서 돌고 있었습니다. 직전 실험이 남긴 더티 페이지와 플러시가 DROP의 관측 창에 겹쳤을 가능성을 배제할 수 없습니다. 스크립트는 최소 대기 60초와 임계값 10으로 고쳤고, 관측 창을 맞춘 재측정은 그 고친 판본으로 돌았습니다. 위 4절 표의 값은 여전히 고치기 전 실행분입니다.
 
 추정과 실측을 구분해 남깁니다. 세 후보 중 어느 것도 계측으로 확인하지 않았습니다.
 
@@ -300,7 +300,7 @@ DROP 자체는 0.12초였고 그 구간의 INSERT p95는 5.7ms로 흔들리지 �
 
 ### `LOCK=NONE`은 붙일 수가 없습니다
 
-7절이 "이 실험은 LOCK 절이 없으므로 `LOCK=NONE`을 명시해도 걸린다는 근거로 쓰면 안 된다"고 적어 두었습니다. 붙여 봤습니다.
+4절이 "이 실험은 LOCK 절이 없으므로 `LOCK=NONE`을 명시해도 걸린다는 근거로 쓰면 안 된다"고 적어 두었습니다. 붙여 봤습니다.
 
 ```console
 mysql> ALTER TABLE watch_log_part DROP PARTITION p20260715, ALGORITHM=DEFAULT, LOCK=NONE;
@@ -309,7 +309,7 @@ corresponds to your MySQL server version for the right syntax to use near
 '=DEFAULT, LOCK=NONE' at line 1
 ```
 
-**문법이 거부합니다.** `DROP PARTITION`은 `ALGORITHM`과 `LOCK` 절을 받지 않습니다. 그러니까 "`LOCK=NONE`을 명시해도 걸리는가"라는 질문 자체가 성립하지 않습니다. 명시할 방법이 없습니다. 7절의 주의 문구는 **더 강한 형태로 바뀝니다.** 이 실험이 LOCK 절을 안 쓴 것이 아니라 쓸 수 없습니다.
+**문법이 거부합니다.** `DROP PARTITION`은 `ALGORITHM`과 `LOCK` 절을 받지 않습니다. 그러니까 "`LOCK=NONE`을 명시해도 걸리는가"라는 질문 자체가 성립하지 않습니다. 명시할 방법이 없습니다. 4절의 주의 문구는 **더 강한 형태로 바뀝니다.** 이 실험이 LOCK 절을 안 쓴 것이 아니라 쓸 수 없습니다.
 
 ### `OPTIMIZE TABLE`은 잰 값이 의미가 없습니다
 
@@ -357,7 +357,7 @@ InnoDB는 `OPTIMIZE TABLE`을 그대로 지원하지 않고 `ALTER TABLE ... FOR
 | 100만 행 삭제 후 | **495MB** | **4MB** | 1,000,000 |
 | `OPTIMIZE TABLE` 후 | **252MB** | 3MB | 1,000,000 |
 
-`OPTIMIZE TABLE` 소요는 3,050ms 이고, 그동안 들어온 일반 SELECT 는 60ms 입니다. 빈 표의 205ms 와 나란히 놓으면 **14.9배**입니다. 회수 비용은 행 수에 붙습니다.
+`OPTIMIZE TABLE` 소요는 3,050ms 이고, 그동안 들어온 일반 SELECT 는 60ms 입니다. 빈 표의 205ms 와 나란히 놓고 싶어지는데, **그렇게 읽으면 안 됩니다.** 두 값은 표가 다릅니다. 205ms 는 파티션 표 `watch_log_part` 를 비운 상태에서 잰 것이고 3,050ms 는 비파티션 표 `opt_bench` 에 100만 행을 넣고 잰 것이라, 표·파티션 유무·행 수가 함께 바뀌었습니다. 게다가 8절이 바로 앞에서 그 205ms 를 인용하지 말라고 적었습니다. **여기서 말할 수 있는 것은 배수가 아니라 절대값입니다.** 100만 행 표의 `OPTIMIZE TABLE` 은 3,050ms 가 걸렸고 그동안 일반 SELECT 가 60ms 밀렸습니다.
 
 **절반을 지웠는데 DATA_FREE 가 안 움직입니다.** 4MB 그대로입니다. 그런데 `OPTIMIZE TABLE` 은 243MB 를 실제로 회수했습니다. **DATA_FREE 가 60배 이상 과소 보고합니다.**
 
