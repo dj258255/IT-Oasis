@@ -1,5 +1,5 @@
 ---
-title: '백업은 있는데 복구가 안 된다, PITR을 가로막는 다섯 가지'
+title: '백업은 있는데 복구가 안 된다, 성공처럼 보이는 실패들'
 titleEn: "You Have Backups, You Just Cannot Restore: Five Things That Block PITR"
 description: "GitLab 2017년 사고는 백업 다섯 겹이 전부 안 들었고 WAL 아카이빙조차 없어 시점 복구를 할 재료가 없었습니다. MySQL·PostgreSQL·SQL Server·Oracle 네 엔진에서 PITR을 직접 재현하고, 네 엔진 모두 벽시계로 지점을 가리키면 경계에서 샌다는 것을 실측했습니다."
 descriptionEn: "In January 2017 GitLab discovered that all five of its backup and replication mechanisms were broken only after an engineer wiped the primary PostgreSQL data directory. The incident itself involved roughly 300GB of PostgreSQL data and cannot be reproduced as such, so this session reproduces only the same mechanism at reduced scale on MySQL 8.4.3 with a 1,500-row table. Restoring a mysqldump full backup (40K) and replaying the binary log (192K) up to the moment just before a DROP TABLE recovers everything: the backup alone brings back 1,000 rows and loses 500, while replaying up to position 176549 brings all 1,500 rows back. The five obstacles split into three genuine database traps and two artifacts of running the lab in containers. Scaling up to 4 million rows (a 525MB dump) shows total recovery time growing from 0.54s to 21.5s while the restore verdict stays identical at every scale, which is why absolute timings from this lab cannot be quoted but verdicts and boundary rules can. Three of them raise no error at all: a replay that is silently skipped, an expired binlog that closes the PITR window, and a missing -i on docker exec that never delivers standard input."
@@ -374,6 +374,8 @@ D도 함께 봐야 합니다. `STOPAT`을 로그 백업 완료 시각으로 주�
 
 이 컨테이너는 ARM 에뮬레이션으로 돕니다. 그래서 시간 수치를 아예 안 적었는데, 그러면 무엇을 반복해야 하는지가 남습니다. **시간이 아니라 판정을 반복했습니다.** 이 절이 말하는 셋은 원래 시간이 아니라 결과의 종류입니다.
 
+**앞 표와 행 수가 다릅니다.** 이 반복은 별도 스크립트로 새로 만든 데이터셋이고, 시나리오가 1,500행이 아니라 2,001행에서 출발합니다. 두 표의 숫자를 같은 축에 놓으면 안 됩니다. 여기서 볼 것은 절대 행 수가 아니라 **회차 사이에 판정이 흔들리는가**입니다.
+
 | 조건 | 회차 1 | 회차 2 | 회차 3 |
 |---|---|---|---|
 | 사고 직전 / 사고 후 행 수 | 2,001 / 1,501 | 2,001 / 1,501 | 2,001 / 1,501 |
@@ -477,6 +479,10 @@ exp6은 각 방향 1회였습니다. 1,500행짜리 랩이라 그 12초의 대�
 
 **네 엔진이 같은 사고를 네 자리에서 다르게 막습니다.**
 ## 8. 해소: 백업을 믿지 않는 절차
+
+이 절의 체크리스트에 앞서 짚어 둘 것이 있습니다. **GitLab 사고의 첫 항목은 "백업이 안 돌았다"가 아니라 "시점 복구를 할 재료가 없었다"였습니다.** WAL 아카이빙을 안 쓰고 있었으니 백업 다섯 겹이 전부 정상이었어도 사고 직전으로는 못 돌아갑니다. 그들이 사고 뒤에 검토 항목(#1097)으로 올린 것이 바로 그 재료입니다.
+
+그러니 체크리스트의 0번은 **"우리는 시점 복구를 할 수 있는 구성인가"**입니다. MySQL이면 `log_bin`이 켜져 있고 `binlog_expire_logs_seconds`가 백업 주기보다 긴가, PostgreSQL이면 `archive_mode`가 `on`이고 `archive_command`가 실제로 성공하는가입니다. 이것이 없으면 아래 일곱 항목은 전부 "전체 백업 시점으로 돌아가기"에 대한 검사일 뿐입니다.
 
 실험에서 나온 것을 운영 체크리스트로 정리하면 이렇습니다.
 
@@ -667,6 +673,8 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 
 ## 14. 현업은 어떻게 해소했는가
 
+> 이 절의 근거 등급은 `E3·문서 대조`입니다. **실행이 없습니다.** GitLab의 사후 분석과 핸드북을 인용한 것입니다.
+
 GitLab이 2017년에 프로덕션 DB 디렉터리를 지우고 백업 다섯 겹이 전부 안 들었던 사고입니다. **고친 것이 백업 기술이 아니었습니다.**
 
 `pg_dump`는 정상적으로 에러를 냈습니다. 9.2 클라이언트가 9.6 서버를 덤프하려다 실패한 것이고, 그 실패는 크론 알림 메일로 나갔습니다. 죽은 것은 그 메일이었습니다.
@@ -748,7 +756,9 @@ Oracle 절에서 `SET UNTIL TIME`이 초 단위이고 그 시각을 포함하지
 
 리뷰에서 "Oracle이 얇다"는 지적을 받았습니다. `UNTIL TIME`을 1회 돌린 수준인데 아카이브 모드 전환은 3회나 쟀으니 비중이 반대라는 것이고, 맞는 지적입니다.
 
-판정 넷을 반복해서 재는 실험을 짰는데 **사고 직전 시점으로 복구해도 계속 백업 시점의 500행이 나왔습니다.** 기대는 700행입니다. 여섯 번 고치는 동안 아카이브 누락, 멀티테넌트 구조, PDB 개방 순서를 차례로 의심했고 전부 아니었습니다.
+판정 넷을 반복해서 재는 실험을 짰습니다. **앞 절의 Oracle 표와 규모가 다릅니다.** 이 실험은 별도 스크립트로 백업 시점 500행에 200행을 더한 700행 시나리오를 씁니다. 인카네이션 번호도 앞 절과 다른데, 이 실험을 반복하며 `RESETLOGS`를 여러 번 해서 계보가 그만큼 늘어난 상태이기 때문입니다.
+
+그런데 **사고 직전 시점으로 복구해도 계속 백업 시점의 500행이 나왔습니다.** 기대는 700행입니다. 여섯 번 고치는 동안 아카이브 누락, 멀티테넌트 구조, PDB 개방 순서를 차례로 의심했고 전부 아니었습니다.
 
 일곱 번째에 RMAN 출력을 직접 읽었습니다. 같은 조건에서 시점 지정 방식만 바꿔 맞대 봤습니다.
 
