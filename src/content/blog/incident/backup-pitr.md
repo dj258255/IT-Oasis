@@ -22,6 +22,14 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 > 근거 등급: `E1·축소`
 > 출처: [GitLab.com Database Incident (2017-01-31)](https://about.gitlab.com/blog/2017/02/01/gitlab-dot-com-database-incident/) · [Postmortem](https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/) · [MySQL 8.4, PITR Using Event Positions](https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html) · [GTID Concepts](https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html) · [Google SRE Book, Data Integrity](https://sre.google/sre-book/data-integrity/) · [AWS, Restoring a DB instance to a specified time](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html) · [AWS Well-Architected REL09-BP04](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_backing_up_data_periodic_recovery_testing_data.html) · [GitLab Handbook, Database Backups](https://handbook.gitlab.com/handbook/engineering/infrastructure/database/)
 
+## 먼저, 세 줄
+
+**하나.** GitLab은 백업 다섯 겹이 전부 안 들었을 뿐 아니라 **WAL 아카이빙 자체를 안 쓰고 있었습니다.** 시점 복구를 할 재료가 없었고, 사고 뒤에야 도입을 검토 항목(#1097)으로 올렸습니다. 이 글이 재현한 것이 그들이 그때 갖고 있지 않던 능력입니다.
+
+**둘.** 네 엔진 모두 **벽시계로 지점을 가리키면 경계에서 샙니다.** MySQL `--stop-datetime`, PostgreSQL `recovery_target_time`, SQL Server `STOPAT`, Oracle `SET UNTIL TIME`이 전부 초 단위입니다. 같은 초에 커밋된 것이 에러 없이 빠집니다. 안전한 대안은 전부 시간이 아닌 것(위치·LSN·마크·SCN)입니다.
+
+**셋.** 복원해 보지 않은 백업은 백업이 아닙니다. **통과만 하는 검사도 검사가 아닙니다.** 12절 파이프라인이 일부러 망가뜨린 백업을 함께 넣는 이유가 그것입니다.
+
 ## 1. 유명한 이유
 
 2017년 1월 31일(UTC), GitLab 엔지니어가 복제가 밀린 상황을 수습하다 secondary인 줄 알고 primary의 PostgreSQL 데이터 디렉터리를 지웠습니다. 약 300GB가 사라졌습니다. 진짜 사건은 그다음입니다. 당시 라이브 문서에 이렇게 적혀 있습니다.
@@ -55,7 +63,7 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 
 > "No one really wants to make backups; what people really want are restores."
 
-AWS Well-Architected의 REL09-BP04 안티패턴 목록은 GitLab 사고를 그대로 문장화한 수준입니다. "백업이 존재한다고 가정하는 것", "복원해 보되 데이터를 조회하거나 꺼내 보지 않는 것", "복원 시간이 RTO 안에 들어간다고 가정하는 것".
+AWS Well-Architected의 REL09-BP04 안티패턴 목록이 이 사고를 그대로 문장화합니다. 백업이 존재한다고 가정하는 것, 복원해 보되 데이터를 꺼내 보지 않는 것, 복원 시간이 RTO 안이라고 가정하는 것입니다.
 
 ### 그들을 살린 것은 백업 정책이 아니었습니다
 
@@ -296,13 +304,7 @@ C와 D의 차이가 이 절의 요점입니다. 설정은 똑같이 `recovery_ta
 
 ### 두 엔진을 나란히 놓으면
 
-| | MySQL 8.4 | PostgreSQL 17.5 |
-|---|---|---|
-| 복구 재료 | 풀 덤프 + binlog | 베이스 백업 + 아카이브 WAL |
-| 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_lsn`, `_time`, `_xid`, `_name` |
-| 경계 포함 | `--stop-position`은 그 위치 직전까지 | `recovery_target_inclusive` 기본 `on`, 정각 한 건만 가름 |
-| 복구 직후 상태 | 바로 쓰기 가능 | 기본 `pause`. 승격을 사람이 부름 |
-| 조용한 실패 | GTID 겹침 시 재적용 스킵(함정 2) | `restore_command`가 성공을 가장하면 잘못된 지점에서 멈춤 |
+**두 엔진을 나란히 놓은 표는 뺐습니다.** 7절 끝에 네 엔진을 한 표로 모았으니 그쪽을 보시면 됩니다.
 
 마지막 줄에서 두 엔진이 같은 방식으로 위험합니다. PostgreSQL 문서가 `archive_command`에 대해 없는 파일 요청에는 반드시 0이 아닌 값을 반환해야 한다고 못 박는 이유이고, 이 실험의 compose에도 `test ! -f`를 앞에 둔 이유입니다.
 
@@ -356,15 +358,7 @@ D도 함께 봐야 합니다. `STOPAT`을 로그 백업 완료 시각으로 주�
 
 ### 세 엔진을 나란히 놓으면
 
-| | MySQL 8.4 | PostgreSQL 17.5 | SQL Server 2022 |
-|---|---|---|---|
-| 복구 재료 | 풀 덤프 + binlog | 베이스 백업 + 아카이브 WAL | 전체 백업 + 로그 백업 |
-| 로그 보관의 전제 | `log-bin` | `archive_mode=on` | **DB별 복구 모델이 `FULL`** |
-| 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_*` | `STOPAT` |
-| 경계 포함 | 그 위치 직전까지 | `recovery_target_inclusive`로 선택 | 고정(그 시각까지 포함) |
-| 복구 직후 상태 | 바로 쓰기 가능 | 기본 `pause`. 승격 필요 | `NORECOVERY`를 명시해야 로그 이어 붙임 |
-| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` |
-| 벽시계 경계 | **`--stop-datetime`도 초 단위, 같은 초 커밋은 빠짐** | `recovery_target_time`도 같은 성질 | `STOPAT` 초 단위 반올림 |
+**세 엔진 표도 뺐습니다.** 같은 이유입니다.
 
 **세 엔진이 같은 사고를 다른 자리에서 막습니다.** 절차서를 한 엔진에서 쓰고 다른 엔진에 옮기면 그 자리마다 다시 걸립니다.
 
@@ -621,244 +615,51 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 
 ## 13. 관리형 서비스에서는 무엇이 달라지는가
 
-> 이 절의 근거 등급은 `E3·문서 대조`입니다. 다른 절과 달리 **실행이 없습니다.** 계정이 없어 실물 인스턴스로 확인하지 못했고, 전부 AWS 공식 문서를 인용한 것입니다.
-
-여기까지는 전부 직접 운영하는 엔진입니다. 실무의 PITR은 상당수가 RDS나 Aurora의 버튼 쪽이고, 그쪽은 규칙이 다릅니다. **이 절은 실물 인스턴스로 검증한 것이 아니라 AWS 공식 문서와 대조한 것입니다.** 계정이 없어 실행은 못 했습니다.
-
-### 복원은 항상 새 인스턴스입니다
-
-> "You can restore a DB instance to a specific point in time, **creating a new DB instance without modifying the source DB instance**."
-
-**제자리 복구가 없습니다.** 이 세션이 한 것처럼 같은 서버에 덤프를 되돌리는 경로 자체가 없고, 그래서 4절 함정 1(GTID 겹침)도 안 생깁니다. 대신 다른 것이 생깁니다. 복원이 끝나면 엔드포인트가 다른 인스턴스가 하나 더 있고, **애플리케이션을 그쪽으로 옮기는 것이 별도 작업**입니다. RTO에 그 전환 시간이 붙습니다.
-
-### RPO 하한이 설정이 아니라 5분입니다
-
-> "RDS uploads transaction logs for DB instances to Amazon S3 **every five minutes**."
-
-이 세션은 binlog를 사고 직전 위치까지 이어 붙여 유실을 0으로 만들었습니다. RDS에서는 그 자유가 없습니다. `LatestRestorableTime`이 상한이고 그 값은 5분 주기에 매입니다. **바꿀 수 있는 손잡이가 아닙니다.**
-
-### 복원본은 기본 파라미터 그룹으로 뜹니다
-
-> "Restored DB instances are **automatically associated with the default DB parameter and option groups**."
-
-콘솔로 복원하면 복원이 끝난 뒤에 파라미터 그룹을 다시 붙여야 합니다. `innodb_buffer_pool_size`든 문자셋이든 원본과 다른 값으로 뜬다는 뜻입니다. **복원 직후의 인스턴스는 데이터만 원본이고 설정은 기본값입니다.** 사고 당일 이걸 모르면 "복구는 됐는데 느리다"가 됩니다.
-
-### 이 글의 주제와 겹치는 자리가 둘 있습니다
-
-**하나. 특정 상태가 PITR 창을 조용히 멈춥니다.**
-
-> "For a SQL Server DB instance, the `OFFLINE`, `EMERGENCY`, and `SINGLE_USER` modes aren't supported. Setting any database into one of these modes **causes the latest restorable time to stop moving ahead for the whole instance**."
-
-인스턴스 하나의 데이터베이스 하나를 그 모드로 두면 **인스턴스 전체의 복구 가능 시점이 그 자리에 멈춥니다.** 에러가 나는 것이 아니라 시계가 안 갑니다. 유지보수하느라 잠깐 `SINGLE_USER`로 돌려 두고 잊으면 그 뒤로 PITR이 없습니다.
-
-**둘. 로그 사슬이 끊겼는데 그걸 감지 못 하는 경우가 있습니다.**
-
-> "In some cases, Amazon RDS can detect this issue and the latest restorable time is prevented from moving forward. In other cases, such as when a SQL Server database uses the `BULK_LOGGED` recovery model, **the break in log sequence isn't detected.** It might not be possible to restore a SQL Server DB instance to a point in time if there is a break in the log sequence."
-
-**감지되는 경우와 안 되는 경우가 갈립니다.** 감지되면 최소한 시계가 멈춰서 이상하다는 신호라도 남습니다. `BULK_LOGGED`는 감지가 안 되니 화면상 복구 가능 시점이 계속 앞으로 가고, 정작 복원해 보면 못 갑니다. 이 글이 계속 말한 유형이 관리형 서비스 안에도 그대로 있습니다.
-
-그래서 AWS의 결론이 이렇습니다. "For these reasons, **Amazon RDS doesn't support changing the recovery model of SQL Server databases.**" 아예 못 바꾸게 막았습니다.
-
-### 관리형이라도 안 바뀌는 것
+> 이 절의 근거 등급은 `E3·문서 대조`입니다. **실행이 없습니다.** 계정이 없어 AWS 공식 문서만 인용했습니다.
 
 | 항목 | 직접 운영 | RDS |
 |---|---|---|
 | 복원 위치 | 같은 서버 가능 | **항상 새 인스턴스** |
-| RPO 하한 | 로그 주기를 내가 정함 | **5분 고정** |
+| RPO 하한 | 로그 주기를 내가 정함 | **5분 고정** (트랜잭션 로그 S3 업로드 주기) |
 | 복원본 설정 | 원본 그대로 | **기본 파라미터 그룹** |
 | SQL Server 복구 모델 | 내가 바꿈 | **변경 금지** |
 | 복원해 봐야 아는가 | 그렇다 | **그렇다** |
 
-**마지막 줄이 이 글의 요지입니다.** 관리형으로 옮기면 백업을 만드는 일과 보관하는 일은 위임됩니다. 복원해 보는 일은 위임되지 않습니다. `LatestRestorableTime`이 앞으로 가고 있다는 것과 그 시점으로 실제 복원이 된다는 것은 다른 이야기이고, 위 `BULK_LOGGED` 항목이 그 둘이 갈리는 경우를 문서로 인정합니다. 12절이 만든 파이프라인이 관리형 환경에서도 필요한 이유입니다.
+**제자리 복구가 없습니다.** 4절 함정 1(GTID 겹침)도 그래서 안 생깁니다. 대신 복원이 끝나면 엔드포인트가 다른 인스턴스가 하나 더 있고, 애플리케이션을 옮기는 시간이 RTO에 붙습니다.
+
+**이 글의 주제와 겹치는 자리가 둘 있습니다.**
+
+`OFFLINE`·`EMERGENCY`·`SINGLE_USER` 모드로 둔 데이터베이스가 하나라도 있으면 **인스턴스 전체의 복구 가능 시점이 그 자리에 멈춥니다.** 에러가 아니라 시계가 안 갑니다.
+
+그리고 `BULK_LOGGED` 복구 모델은 **로그 사슬이 끊겨도 감지가 안 됩니다.**
+
+> "In other cases, such as when a SQL Server database uses the `BULK_LOGGED` recovery model, **the break in log sequence isn't detected.**"
+
+감지되면 최소한 시계가 멈춰 이상 신호라도 남습니다. 감지가 안 되면 화면상 복구 가능 시점은 계속 앞으로 가고, 정작 복원해 보면 못 갑니다. AWS가 SQL Server 복구 모델 변경을 아예 막은 이유입니다.
+
+**마지막 줄이 이 절의 요지입니다.** 관리형으로 옮기면 백업을 만들고 보관하는 일은 위임됩니다. **복원해 보는 일은 위임되지 않습니다.**
 
 ## 14. 현업은 어떻게 해소했는가
 
-> 이 절의 근거 등급은 `E3·문서 대조`입니다. **실행이 없습니다.** GitLab의 사후 분석과 핸드북을 인용한 것입니다.
+> 이 절의 근거 등급은 `E3·문서 대조`입니다. **실행이 없습니다.**
 
-GitLab이 2017년에 프로덕션 DB 디렉터리를 지우고 백업 다섯 겹이 전부 안 들었던 사고입니다. **고친 것이 백업 기술이 아니었습니다.**
+**GitLab이 고친 것은 백업 기술이 아니었습니다.**
 
-`pg_dump`는 정상적으로 에러를 냈습니다. 9.2 클라이언트가 9.6 서버를 덤프하려다 실패한 것이고, 그 실패는 크론 알림 메일로 나갔습니다. 죽은 것은 그 메일이었습니다.
+`pg_dump`는 정상적으로 에러를 냈고 크론은 알림 메일을 보냈습니다. 죽은 것은 그 메일이었습니다. DMARC 미설정으로 수신 측이 거부했고, 그래서 실패가 몇 달간 아무에게도 닿지 않았습니다. 5 Whys의 마지막 답이 **"아무도 그 절차의 소유자가 아니었다"**입니다.
 
-> "While notifications are enabled for any cronjobs that error, these notifications are sent by email. ... Unfortunately DMARC was not enabled for the cronjob emails, resulting in them being rejected by the receiver. This means we were never aware of the backups failing, until it was too late."
+그들이 실제로 넣은 것 셋입니다.
 
-크론 에러 알림은 켜져 있었지만 DMARC 미서명이라 수신 측이 거부했고, 너무 늦을 때까지 아무도 몰랐습니다. **탐지가 없던 것이 아니라 탐지 결과가 전달되지 않았습니다.**
-
-5 Whys의 마지막 답이 조직을 지목합니다.
-
-> "Why was the backup procedure not tested on a regular basis? - Because there was no ownership, as a result nobody was responsible for testing this procedure."
-
-그래서 넣은 것이 이메일 대신 **Prometheus 백업 모니터링**, 공개 백업 대시보드, 복원 자동 테스트, 그리고 **"데이터 내구성 담당자 지정"**입니다.
-
-**그 복원 테스트가 지금도 매일 돕니다.** 2026년 현재 GitLab 핸드북에 이렇게 적혀 있습니다.
-
-> "Daily restoration testing is performed for GitLab.com application databases in CI pipelines ... This process performs a point-in-time recovery (PITR) restore into a new instance and verifies data integrity by running queries on the restored database."
-
-새 인스턴스로 PITR 복원을 하고 **복원된 DB에 쿼리를 돌려 무결성을 확인**합니다. Gitaly도 무작위 스냅샷을 새 디스크에 복원해 최근 커밋이 있는지 봅니다. 여기에 분기별 Game Day로 RTO/RPO를 실측합니다.
-
-**12절이 만든 파이프라인이 이 구조의 축소판입니다.** 복원해 보고, 행 수와 체크섬으로 대조하고, 소요가 예산 안인지 봅니다. 다만 GitLab이 실제로 고친 것 중 이 세션이 못 만든 것이 하나 있습니다. **소유자입니다.** 파이프라인은 짜면 되지만 그것이 실패했을 때 누가 받는가는 코드 밖의 문제입니다.
-
-### 파이프라인을 주기 실행과 알림까지 붙였습니다
-
-위 파이프라인은 1회 실행이고 스케줄러도 알림도 없었습니다. 그러면 시연이지 해결이 아닙니다. GitLab이 실제로 고친 것이 백업 기술이 아니라 소유자와 알림이었다는 것을 생각하면 특히 그렇습니다. 코드 안쪽 절반을 만들었습니다.
-
-`tools/verify-scheduler.sh`는 세 가지를 합니다. 주기적으로 파이프라인을 돌리고, 실패하면 알림 채널에 쓰고, **그 알림이 실제로 남았는지 되읽어 확인합니다.**
-
-마지막 항목이 이 스크립트의 이유입니다. GitLab의 `pg_dump`는 에러를 냈고 크론은 메일을 보냈는데 그 메일이 DMARC로 반려됐습니다. **알림 경로 자체를 검증하지 않으면 알림은 없는 것과 같습니다.** 그래서 지정한 회차에 일부러 백업을 손상시켜 알림이 실제로 나가는지 봅니다. 통과만 하는 감시는 감시하고 있지 않은 것과 같다는, 파이프라인에 적용한 것과 같은 논리입니다.
-
-돌려 보니 여기서도 한 번 미끄러졌습니다. 처음 실행에서 전 회차가 실패로 나왔고 스크립트는 "실패 6건에 알림 6건입니다. 알림 경로가 살아 있습니다"라고 보고했습니다. **알림은 실제로 나갔으니 그 말이 틀린 것은 아닌데, 정작 백업 검사는 한 번도 안 돌았습니다.** 다른 실험이 자원을 쓰느라 검사용 컨테이너가 안 떴을 뿐입니다.
-
-운영에서 이 둘을 같은 알림으로 묶으면 **"백업이 깨졌다"와 "검사 장비가 죽었다"를 구분할 수 없습니다.** 앞은 백업을 고쳐야 하고 뒤는 검사기를 고쳐야 하는데, 화면에는 둘 다 빨간불입니다. 그래서 실패를 두 종류로 갈라 종료 코드도 다르게 두었습니다.
-
-| 종료 코드 | 뜻 | 다음 행동 |
-|---|---|---|
-| 0 | 전 검사 통과 | 없음 |
-| 1 | 검사 실패 | 백업을 본다 |
-| 2 | 일부러 망가뜨렸는데 통과 | **검사 자체를 의심한다** |
-| 3 | 실패했는데 알림이 유실됨 | 알림 경로를 본다 |
-| 4 | 전부 환경 실패 | 검사기를 본다. **백업에 대해서는 아무것도 모른다** |
-
-2번이 가장 중요합니다. 검사가 전부 통과했는데 일부러 넣은 손상까지 통과했다면, 그 회차는 "백업이 멀쩡하다"가 아니라 "검사가 아무것도 안 보고 있다"입니다.
-
-cron이나 systemd timer에 거는 형태는 이렇습니다.
-
-```
-*/30 * * * * /opt/lab/tools/verify-scheduler.sh || /opt/lab/tools/page-oncall.sh
-```
-
-**그래도 이 세션이 못 만든 것이 남습니다. 소유자입니다.** `page-oncall.sh`가 누구를 깨우는지, 그 사람이 안 받으면 다음이 누구인지는 코드 밖의 문제입니다. GitLab의 5 Whys 마지막 답이 "아무도 책임지지 않아서"였던 것이 이 자리입니다.
-
-### 벽시계로 지점을 가리키면 어느 엔진에서든 샙니다
-
-Oracle 절에서 `SET UNTIL TIME`이 초 단위이고 그 시각을 포함하지 않는다는 것을 봤습니다. **MySQL도 같습니다.** `mysqlbinlog --stop-datetime`으로 커밋과 같은 초를 지정해 재 봤습니다.
-
-| 지정 | 결과 |
+| 조치 | 내용 |
 |---|---|
-| 백업 시점 | 3행 |
-| 백업 뒤 정상 쓰기 후 | 5행 |
-| `--stop-datetime`을 그 커밋과 같은 초로 | **3행** |
+| 소유자 지정 | 백업 절차마다 담당을 명시 |
+| WAL 아카이빙과 PITR 검토 | 개선 항목 #1097 |
+| **매일 복원 테스트** | CI 파이프라인에서 새 인스턴스로 PITR 복원 후 쿼리로 정합성 확인 |
 
-**5행이 기대인데 3행, 곧 백업 시점 그대로입니다.** 그 초에 커밋된 두 행이 재적용에서 빠졌습니다. 에러는 안 납니다.
+세 번째가 지금도 돕니다. 2026년 현재 GitLab 핸드북의 문장입니다.
 
-그래서 네 엔진이 같은 자리에서 샙니다.
+> "Daily restoration testing is performed for GitLab.com application databases in CI pipelines ... This process performs a **point-in-time recovery (PITR) restore into a new instance** and verifies data integrity by running queries on the restored database."
 
-| 엔진 | 벽시계 지정 | 안전한 대안 |
-|---|---|---|
-| MySQL | `--stop-datetime` (초) | `--stop-position` (이벤트 위치) |
-| PostgreSQL | `recovery_target_time` (초) | `recovery_target_lsn` / `_xid` / `_name` |
-| SQL Server | `STOPAT` (초 반올림) | `STOPATMARK` (트랜잭션 마크) |
-| Oracle | `SET UNTIL TIME` (초, 미포함) | `SET UNTIL SCN` |
-
-**오른쪽 열이 전부 "시간이 아닌 것"입니다.** 위치든 LSN이든 마크든 SCN이든, 공통점은 **그 지점이 로그 안의 한 항목을 정확히 가리킨다**는 것입니다. 벽시계는 그 항목들 사이의 간격보다 굵어서, 같은 초 안에 여러 커밋이 들어가면 어느 쪽까지인지를 못 정합니다.
-
-이 글이 SQL Server 절에서 `STOPAT`을 `STOPATMARK`로 바꾼 것도, Oracle 절에서 SCN을 권하는 것도 같은 이유입니다. **엔진이 달라도 벽시계로 지점을 가리키면 경계에서 샙니다.**
-
-### Oracle이 계속 백업 시점에 멈춘 이유
-
-리뷰에서 "Oracle이 얇다"는 지적을 받았습니다. `UNTIL TIME`을 1회 돌린 수준인데 아카이브 모드 전환은 3회나 쟀으니 비중이 반대라는 것이고, 맞는 지적입니다.
-
-판정 넷을 반복해서 재는 실험을 짰습니다. **앞 절의 Oracle 표와 규모가 다릅니다.** 이 실험은 별도 스크립트로 백업 시점 500행에 200행을 더한 700행 시나리오를 씁니다. 인카네이션 번호도 앞 절과 다른데, 이 실험을 반복하며 `RESETLOGS`를 여러 번 해서 계보가 그만큼 늘어난 상태이기 때문입니다.
-
-그런데 **사고 직전 시점으로 복구해도 계속 백업 시점의 500행이 나왔습니다.** 기대는 700행입니다. 여섯 번 고치는 동안 아카이브 누락, 멀티테넌트 구조, PDB 개방 순서를 차례로 의심했고 전부 아니었습니다.
-
-일곱 번째에 RMAN 출력을 직접 읽었습니다. 같은 조건에서 시점 지정 방식만 바꿔 맞대 봤습니다.
-
-| 지정 방식 | 복구 결과 |
-|---|---|
-| `SET UNTIL SCN 3028403` | **700행** |
-| `SET UNTIL TIME` (커밋과 같은 초) | **500행** |
-
-**SCN으로 주면 되고 시각으로 주면 안 됩니다.**
-
-`SET UNTIL TIME`은 초 단위이고 **그 시각을 포함하지 않습니다.** 스크립트가 200행을 넣은 직후 `SYSDATE`를 찍고 있었으니, 그 커밋이 일어난 바로 그 초를 가리키면서 그 커밋을 빼고 복구한 것입니다. 커밋과 시각 사이에 4초를 두자 700행이 돌아왔습니다.
-
-**실무에서 위험한 이유가 분명합니다.** 사고 직전 시각을 초 단위로 적어 복구하면 그 초에 커밋된 것이 조용히 빠집니다. 에러는 안 납니다. 복구는 성공했다고 나오고 행 수만 다릅니다. 이 글이 계속 말한 유형입니다.
-
-**그래서 사고 직전 지점은 시각이 아니라 SCN으로 잡는 편이 안전합니다.** SQL Server 편에서 `STOPAT` 대신 `STOPATMARK`로 바꾼 것과 같은 이유입니다. 그쪽도 초 단위 반올림 때문에 회차마다 결과가 갈렸습니다. **엔진이 달라도 벽시계로 지점을 가리키면 경계에서 샌다는 성질은 같습니다.**
-
-### RESETLOGS로 열면 그 앞으로 못 돌아갑니다
-
-같은 실험에서 확인한 것이 하나 더 있습니다. 사고 직전으로 복구해 `RESETLOGS`로 연 뒤 다시 그 시점으로 가려 하면 이렇게 막힙니다.
-
-```
-RMAN-20207: UNTIL TIME or RECOVERY WINDOW is before RESETLOGS time
-```
-
-`RESETLOGS`가 새 인카네이션을 만들고, 그 인카네이션의 시작보다 앞선 시점은 현재 계보에서 닿을 수 없기 때문입니다. `LIST INCARNATION OF DATABASE`로 보면 복구할 때마다 계보가 하나씩 늘어납니다.
-
-**되돌리는 방법은 있습니다.** `RESET DATABASE TO INCARNATION <번호>`로 계보를 옮기면 `database reset to incarnation 6` 같은 확인이 찍힙니다. 다만 그 상태에서 복구가 이어지려면 **그 인카네이션에서 뜬 백업이 있어야 합니다.** 이 실험을 디버깅하며 `RESETLOGS`를 반복했더니 인카네이션이 일곱 개까지 쌓였고, 옛 계보의 백업이 없어 복구가 안 됐습니다.
-
-그래서 실험을 회차마다 **현재 인카네이션에서 새로 백업**하도록 고쳤습니다. 실무로 옮기면 이렇습니다. **불완전 복구로 데이터베이스를 연 직후에는 전체 백업을 다시 떠야 합니다.** 안 그러면 그 시점 이후로 PITR 창이 비어 있습니다.
-
-### 불완전 복구를 반복한 데이터베이스는 이렇게 막힙니다
-
-위 실험을 돌리며 `RESETLOGS`를 여러 번 반복했더니 데이터베이스가 `MOUNTED`에서 안 열리는 상태가 됐습니다. 푸는 순서가 에러 두 개로 갈렸습니다.
-
-**첫째, 그냥 열면 안 됩니다.**
-
-```
-ORA-01589: must use RESETLOGS or NORESETLOGS option for database open
-```
-
-불완전 복구 뒤라 평범한 `ALTER DATABASE OPEN`을 안 받습니다. 어느 쪽을 고를지 정해 줘야 합니다.
-
-**둘째, `RESETLOGS`로 열어도 막힙니다.**
-
-```
-ORA-01190: control file or data file 1 is from before the last RESETLOGS
-ORA-01110: data file 1: '/opt/oracle/oradata/FREE/system01.dbf'
-```
-
-**컨트롤 파일과 데이터 파일의 계보가 어긋난 것입니다.** 여기서 데이터 파일만 다시 복원해도 안 풀립니다. 컨트롤 파일이 최신 인카네이션을 가리키는데 데이터 파일이 옛 계보의 것이라, 둘을 같은 지점으로 맞춰야 합니다.
-
-푸는 순서는 이렇습니다.
-
-```sql
-SHUTDOWN IMMEDIATE;
-STARTUP NOMOUNT;
-RESTORE CONTROLFILE FROM AUTOBACKUP;   -- 컨트롤 파일부터
-ALTER DATABASE MOUNT;
-RESTORE DATABASE;
-RECOVER DATABASE;
-ALTER DATABASE OPEN RESETLOGS;
-```
-
-**`RESTORE CONTROLFILE FROM AUTOBACKUP`이 첫 줄이라는 것이 핵심입니다.** 컨트롤 파일 자동 백업이 꺼져 있으면 이 경로 자체가 없습니다. 이 랩에서는 켜져 있어 살아났습니다.
-
-실무로 옮기면 두 가지입니다. **컨트롤 파일 자동 백업을 켜 두어야 하고**, 불완전 복구를 시험 삼아 반복하는 환경에서는 매번 전체 백업을 다시 떠야 합니다. 앞 절에서 적은 "불완전 복구로 연 직후에는 전체 백업을 다시 뜬다"가 이 상태를 예방하는 조치이기도 합니다.
-
-### 네 판정을 3회차로 돌렸습니다
-
-앞선 시도가 유효 회차 1개를 못 넘긴 이유는 설계에 있었습니다. **판정마다 들어가는 `ALTER DATABASE OPEN RESETLOGS`가 인카네이션이라는 전역 상태를 바꿉니다.** 앞 판정이 만든 계보 때문에 다음 판정의 기준점이 사라집니다.
-
-그래서 RMAN의 인카네이션 관리에 기대지 않기로 했습니다. **사고 직후 상태의 데이터 파일과 컨트롤 파일을 통째로 떠 두고 판정마다 그 스냅숏으로 되돌립니다.** 아카이브 로그는 별도 경로라 그대로 남습니다.
-
-| 회차 | 1 사고 직전 | 2 사고 이후 | 3 `RESETLOGS` 뒤 | 4 스냅숏 복귀 |
-|---|---|---|---|---|
-| 1 | 통과 | 통과 | 막힘 `RMAN-20207` | 통과 |
-| 2 | 통과 | 통과 | 막힘 `RMAN-20207` | 통과 |
-| 3 | 통과 | 통과 | 막힘 `RMAN-20207` | 통과 |
-
-**3회차 판정이 모두 같습니다.** 시간은 못 재도 이 넷은 인용할 수 있습니다.
-
-판정 순서에도 이유가 있습니다. **3번은 스냅숏으로 되돌리기 전에 재야 합니다.** 1번이 방금 `RESETLOGS`로 연 그 상태에서 바로 재야 "연 뒤에는 그 앞으로 못 간다"를 보는 것이 되기 때문입니다. 그래서 1 → 3 → 2 → 4 순으로 돌립니다.
-
-네 줄이 말하는 것을 정리하면 이렇습니다.
-
-**1번.** 사고 직전 시각으로 복구하면 그 시점의 700행이 돌아옵니다. 단 그 시각이 커밋과 다른 초여야 합니다. 앞 절에서 본 그 조건입니다.
-
-**2번.** 사고 이후 시각을 주면 사고까지 함께 복구됩니다. 500행입니다. **시점 복구는 "되돌리는" 것이 아니라 "지정한 지점까지 재생하는" 것이라서**, 지점을 잘못 잡으면 사고를 다시 재생합니다.
-
-**3번.** `RESETLOGS`로 연 뒤 그 앞 시점으로 가려 하면 `RMAN-20207`로 막힙니다. 세 회차 모두 같은 에러입니다.
-
-**4번.** 그 막힌 상태에서 `RESETLOGS` 전의 컨트롤 파일을 되돌리면 다시 갈 수 있습니다. **이것이 앞 절의 "불완전 복구로 연 직후에는 전체 백업을 다시 뜬다"가 필요한 이유입니다.** 그때의 컨트롤 파일이 없으면 4번이 안 됩니다.
-
-## 세 줄 요약
-
-**하나.** GitLab은 백업 다섯 겹이 전부 안 들었을 뿐 아니라 **WAL 아카이빙 자체를 안 쓰고 있었습니다.** 시점 복구를 할 재료가 없었고, 사고 뒤에야 도입을 검토 항목으로 올렸습니다. 이 글이 재현한 것이 그들이 그때 갖고 있지 않던 능력입니다.
-
-**둘.** 네 엔진 모두 **벽시계로 지점을 가리키면 경계에서 샙니다.** MySQL `--stop-datetime`, PostgreSQL `recovery_target_time`, SQL Server `STOPAT`, Oracle `SET UNTIL TIME`이 전부 초 단위입니다. 같은 초에 커밋된 것이 에러 없이 빠집니다. 안전한 대안은 전부 시간이 아닌 것(위치·LSN·마크·SCN)입니다.
-
-**셋.** 복원해 보지 않은 백업은 백업이 아닙니다. **통과만 하는 검사도 검사가 아닙니다.** 12절 파이프라인이 일부러 망가뜨린 백업을 함께 넣는 이유가 그것이고, 그 검사가 실제로 걸리는 것까지 봐야 그 검사를 믿을 수 있습니다.
+**12절이 만든 파이프라인이 이 구조의 축소판입니다.** 복원해 보고, 행 수와 체크섬으로 대조하고, 소요가 예산 안인지 봅니다. 다만 이 세션이 못 만든 것이 하나 있습니다. **소유자입니다.** 파이프라인은 짜면 되지만 그것이 실패했을 때 누가 받는가는 코드 밖의 문제입니다.
 
 ## 못 한 것
 
