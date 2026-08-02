@@ -363,7 +363,7 @@ D도 함께 봐야 합니다. `STOPAT`을 로그 백업 완료 시각으로 주�
 | 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_*` | `STOPAT` |
 | 경계 포함 | 그 위치 직전까지 | `recovery_target_inclusive`로 선택 | 고정(그 시각까지 포함) |
 | 복구 직후 상태 | 바로 쓰기 가능 | 기본 `pause`. 승격 필요 | `NORECOVERY`를 명시해야 로그 이어 붙임 |
-| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` | `RESETLOGS` 뒤 옛 시점은 `RMAN-20207` |
+| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` |
 | 벽시계 경계 | **`--stop-datetime`도 초 단위, 같은 초 커밋은 빠짐** | `recovery_target_time`도 같은 성질 | `STOPAT` 초 단위 반올림 |
 
 **세 엔진이 같은 사고를 다른 자리에서 막습니다.** 절차서를 한 엔진에서 쓰고 다른 엔진에 옮기면 그 자리마다 다시 걸립니다.
