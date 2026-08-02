@@ -1,7 +1,7 @@
 ---
 title: '백업은 있는데 복구가 안 된다, PITR을 가로막는 다섯 가지'
 titleEn: "You Have Backups, You Just Cannot Restore: Five Things That Block PITR"
-description: "2017년 1월 GitLab은 primary의 PostgreSQL 데이터 디렉터리를 지운 뒤에야 다섯 가지 백업·복제 수단이 전부 듣지 않는다는 것을 알았습니다. 사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없어, MySQL 8.4.3에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. mysqldump 풀백업(덤프 40K)과 binlog(192K)로 DROP TABLE 직전 시점까지 되돌리면, 백업만 복원했을 때는 1,000건이 돌아와 500건이 유실되고 binlog를 사고 직전 위치 176549까지 이어 붙이면 1,500건이 전부 돌아옵니다. 복구를 가로막는 것은 데이터베이스 쪽 함정 셋과 이 랩이 컨테이너로 축소해서 생긴 아티팩트 둘로 갈립니다. 규모를 400만 행(덤프 525MB)까지 올려 곡선도 그렸습니다. 시간은 규모를 타서 합계가 0.54초에서 21.5초가 되지만 복원 판정은 전 규모에서 같습니다. 절대 시간은 인용할 수 없고 판정과 경계 규칙은 인용할 수 있다는 뜻입니다. 재적용이 조용히 스킵되는 것, binlog가 만료돼 PITR 창이 닫히는 것, docker exec에 -i를 빠뜨려 표준입력이 전달되지 않는 것입니다."
+description: "GitLab 2017년 사고는 백업 다섯 겹이 전부 안 들었고 WAL 아카이빙조차 없어 시점 복구를 할 재료가 없었습니다. MySQL·PostgreSQL·SQL Server·Oracle 네 엔진에서 PITR을 직접 재현하고, 네 엔진 모두 벽시계로 지점을 가리키면 경계에서 샌다는 것을 실측했습니다."
 descriptionEn: "In January 2017 GitLab discovered that all five of its backup and replication mechanisms were broken only after an engineer wiped the primary PostgreSQL data directory. The incident itself involved roughly 300GB of PostgreSQL data and cannot be reproduced as such, so this session reproduces only the same mechanism at reduced scale on MySQL 8.4.3 with a 1,500-row table. Restoring a mysqldump full backup (40K) and replaying the binary log (192K) up to the moment just before a DROP TABLE recovers everything: the backup alone brings back 1,000 rows and loses 500, while replaying up to position 176549 brings all 1,500 rows back. The five obstacles split into three genuine database traps and two artifacts of running the lab in containers. Scaling up to 4 million rows (a 525MB dump) shows total recovery time growing from 0.54s to 21.5s while the restore verdict stays identical at every scale, which is why absolute timings from this lab cannot be quoted but verdicts and boundary rules can. Three of them raise no error at all: a replay that is silently skipped, an expired binlog that closes the PITR window, and a missing -i on docker exec that never delivers standard input."
 date: 2026-03-09
 tags:
@@ -20,23 +20,34 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 ---
 
 > 근거 등급: `E1·축소`
-> 출처: [GitLab.com Database Incident (2017-01-31)](https://about.gitlab.com/blog/2017/02/01/gitlab-dot-com-database-incident/) · [Postmortem](https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/) · [MySQL 8.4, PITR Using Event Positions](https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html) · [GTID Concepts](https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html) · [Google SRE Book, Data Integrity](https://sre.google/sre-book/data-integrity/)
+> 출처: [GitLab.com Database Incident (2017-01-31)](https://about.gitlab.com/blog/2017/02/01/gitlab-dot-com-database-incident/) · [Postmortem](https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/) · [MySQL 8.4, PITR Using Event Positions](https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html) · [GTID Concepts](https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html) · [Google SRE Book, Data Integrity](https://sre.google/sre-book/data-integrity/) · [AWS, Restoring a DB instance to a specified time](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html) · [AWS Well-Architected REL09-BP04](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_backing_up_data_periodic_recovery_testing_data.html) · [GitLab Handbook, Database Backups](https://handbook.gitlab.com/handbook/engineering/infrastructure/database/)
 
 ## 1. 유명한 이유
 
-2017년 1월 31일, GitLab 엔지니어가 복제가 밀린 상황을 수습하다 secondary인 줄 알고 primary의 PostgreSQL 데이터 디렉터리를 지웠습니다. 약 300GB가 사라졌습니다. 진짜 사건은 그다음입니다. 당시 라이브 문서에 이렇게 적혀 있습니다.
+2017년 1월 31일(UTC), GitLab 엔지니어가 복제가 밀린 상황을 수습하다 secondary인 줄 알고 primary의 PostgreSQL 데이터 디렉터리를 지웠습니다. 약 300GB가 사라졌습니다. 진짜 사건은 그다음입니다. 당시 라이브 문서에 이렇게 적혀 있습니다.
 
 > "out of five backup/replication techniques deployed none are working reliably or set up in the first place."
 
-다섯 가지가 각각 이렇게 실패했습니다.
+**"다섯"은 사고 당일 라이브 문서의 표현입니다.** 열흘 뒤 사후 분석이 열거한 상시 절차는 넷입니다. 넷을 적고 다섯 번째로 세어졌던 것은 그 아래에 접어 둡니다.
 
 | 수단 | 실패 이유 |
 |---|---|
-| pg_dump → S3 | 워커에 9.2 바이너리가 잡혀 9.6 서버를 덤프 시도. 에러로 중단돼 S3 버킷이 비어 있었음 |
-| cron 실패 알림 | DMARC 미설정으로 수신 측에서 거부. 실패가 몇 달간 아무에게도 도달하지 않음 |
+| `pg_dump` → S3 | 일반 애플리케이션 서버에서 돌았고 그 서버에 PostgreSQL 데이터 디렉터리가 없어 Omnibus가 9.2로 폴백. 9.6 서버를 덤프하려다 실패해 S3 버킷이 비어 있었음. **실패 알림은 발송됐으나 DMARC 미설정으로 수신 측에서 거부돼 몇 달간 아무에게도 도달하지 않음** |
 | Azure 디스크 스냅샷 | NFS 서버에만 설정, DB 서버에는 미설정 |
 | LVM 스냅샷 | 24시간 주기이고 재해 복구용이 아님 |
 | PostgreSQL 복제 | primary가 WAL 세그먼트를 secondary가 받기 전에 지워 중단 |
+
+**그리고 이 글의 주제에 직접 걸리는 것이 하나 더 있습니다.**
+
+> "As GitLab.com was **not using WAL archiving**, the secondary had to be re-synchronised manually."
+
+**GitLab.com은 WAL 아카이빙을 쓰지 않았습니다.** 곧 이 글이 다루는 시점 복구를 할 재료가 애초에 없었습니다. 백업 다섯 겹이 전부 안 들었다는 이야기의 앞에, 그 다섯 겹 중 어느 것도 "사고 직전 시점으로 되돌린다"를 할 수 없는 종류였다는 사실이 있습니다. 남은 선택지가 6시간 전 스냅숏이었던 이유입니다.
+
+사후 분석의 개선 항목 목록에 그래서 이것이 들어갑니다.
+
+> "**Investigate Point in time recovery & continuous archiving for PostgreSQL** (#1097)"
+
+**사고가 난 뒤에야 PITR 도입을 검토 항목으로 올렸습니다.** 이 글이 MySQL로 축소 재현하는 것이 바로 그들이 그때 갖고 있지 않던 능력입니다.
 
 결과는 약 6시간 유실(프로젝트 5,000개, 댓글 5,000개, 계정 700개)과 18시간 다운타임입니다.
 
@@ -54,7 +65,7 @@ AWS Well-Architected의 REL09-BP04 안티패턴 목록은 GitLab 사고를 그�
 
 **복구에 쓴 것이 그 수동 스냅숏입니다.** 백업 정책이 만든 것이 아니라, 다른 일을 하던 엔지니어가 우연히 여섯 시간 전에 손으로 찍어 둔 것입니다. 그것이 없었으면 유실은 6시간이 아니라 24시간이었습니다.
 
-300GB 중 **4.5GB만 남았습니다.** 삭제를 멈춘 것이 오후 11시 27분인데 그때는 이미 늦었습니다.
+300GB 중 **4.5GB만 남았습니다.** 삭제를 멈춘 것이 오후 11시 27분(UTC)인데 그때는 이미 늦었습니다.
 
 그리고 같은 문서에 이 글의 주제와 정확히 겹치는 한 줄이 더 있습니다.
 
@@ -62,7 +73,7 @@ AWS Well-Architected의 REL09-BP04 안티패턴 목록은 GitLab 사고를 그�
 
 **멈춘 것과 기다리는 것이 화면에서 같아 보입니다.** 이 오해가 그날 밤의 판단으로 이어졌습니다. 도구가 진행 상황을 안 알려 주면 사람이 추측하고, 새벽에 지친 사람의 추측은 틀립니다.
 
-한 가지 밝혀 둘 것이 있습니다. 사고 당일 라이브 문서는 `pg_dump` 실패를 "오류 메시지 없이 실패한다"고 적었는데, 열흘 뒤 사후 분석은 **에러는 났고 그 알림 메일이 DMARC로 반려됐다**고 정정했습니다. 이 글은 뒤쪽을 따릅니다. 사고 당일의 기록과 정리된 사후 분석이 갈릴 때는 뒤쪽이 더 정확합니다.
+한 가지 밝혀 둘 것이 있습니다. 사고 당일 라이브 문서는 `pg_dump` 실패를 "오류 메시지 없이 실패한다"고 적었고, 열흘 뒤 사후 분석은 **에러는 났고 그 알림 메일이 DMARC로 반려됐다**고 풀어 씁니다. **뒤집은 것이 아니라 구체화한 것입니다.** 사후 분석의 5 Whys도 백업 절차가 조용히 실패했다(failed silently)는 표현을 그대로 쓰고, 그다음 why에서 알림이 왜 안 닿았는지를 설명합니다. 곧 운영자 입장에서는 조용한 실패가 맞고, 그 조용함의 정체가 반려된 메일이었습니다. 이 글은 뒤쪽 서술을 따릅니다.
 
 사건 자체는 PostgreSQL 300GB 규모라 그대로 재현할 수 없습니다. 이 세션은 엔진도 규모도 다른 MySQL에서 1,500행짜리 테이블로 같은 메커니즘만 축소 재현했습니다. 시점 복구(PITR)를 실제로 수행하고, 복구를 가로막는 것들을 다룹니다. 데이터베이스 쪽 함정 셋과, 이 랩이 컨테이너로 축소해서 생긴 아티팩트 둘로 갈라 적었습니다. **다섯 중 셋은 재현이든 사고든 이 세션을 만들면서 제가 실제로 밟았습니다.** 규모가 작다는 것이 이 세션의 가장 큰 약점이라, 4절 끝에 400만 행까지 올린 곡선을 붙여 무엇이 규모를 타고 무엇이 안 타는지 갈랐습니다.
 
@@ -100,7 +111,7 @@ T1~    사고를 모른 채 다른 테이블에 쓰기가 계속된다
 | 백업만 복원 | 1,000건 | **500건** |
 | 백업 + binlog를 사고 직전까지 | **1,500건** | **0건** |
 
-사고 직전의 정답은 1,500건입니다. T0 백업 시점에 1,000행이었고 그 뒤 500건이 더 들어왔습니다. 백업만 되돌리면 그 500건이 통째로 사라집니다. **백업 주기가 곧 RPO 상한**이라는 말이 이 500건입니다. Keepthescore가 2020년에 겪은 것이 정확히 이 구조로, 일 1회 백업 덕에 30분 만에 복구했지만 7시간치는 영원히 사라졌습니다.
+사고 직전의 정답은 1,500건입니다. T0 백업 시점에 1,000행이었고 그 뒤 500건이 더 들어왔습니다. 백업만 되돌리면 그 500건이 통째로 사라집니다. **백업 주기가 곧 RPO 상한**이라는 말이 이 500건입니다. [Keepthescore](https://keepthescore.com/blog/posts/deleted_a_production_database/)가 2020년에 겪은 것이 정확히 이 구조로, 일 1회 백업 덕에 30분 만에 복구했지만 7시간치는 영원히 사라졌습니다.
 
 binlog에서 사고 직전 위치를 찾아 그 구간만 적용하면 유실이 0이 됩니다. 위치는 공식 문서가 안내하는 방식 그대로 찾습니다.
 
@@ -116,7 +127,7 @@ DROP TABLE `sponsor` /* generated by server */
 
 이 이벤트 바로 앞줄이 `# at 176549`이고, 스크립트는 그 값을 뽑아 `DROP TABLE 이벤트 시작 위치 176549`로 기록했습니다. `--stop-position=176549`로 그 직전까지만 적용합니다.
 
-**RTO 분해**: 이 실행에서 백업 0.075초, 덤프 복원 0.078초, binlog 추출·적용 0.947초입니다. 로그 원문은 각각 `.075473000` / `.077972000` / `.947246000`초입니다. 대상은 1,500행짜리 테이블 하나이고 덤프가 40K, 이어 붙인 binlog가 192K입니다. 이 규모에서는 복구 시간의 대부분이 binlog 구간을 뽑아 재적용하는 데 들어갔습니다. 백업 주기를 늘리면 그만큼 이어 붙일 binlog가 늘어나므로 RPO와 RTO는 백업 주기 하나로 맞물립니다. 다만 이 비율이 규모를 키워도 유지되는지는 재지 않았습니다. 세 구간 모두 1회 실행값이라 분산도 모릅니다.
+**RTO 분해**: 이 실행에서 백업 0.075초, 덤프 복원 0.078초, binlog 추출·적용 0.947초입니다. 로그 원문은 각각 `.075473000` / `.077972000` / `.947246000`초입니다. 대상은 1,500행짜리 테이블 하나이고 덤프가 40K, 이어 붙인 binlog가 192K입니다. 이 규모에서는 복구 시간의 대부분이 binlog 구간을 뽑아 재적용하는 데 들어갔습니다. 백업 주기를 늘리면 그만큼 이어 붙일 binlog가 늘어나므로 RPO와 RTO는 백업 주기 하나로 맞물립니다. **다만 이 비율은 규모가 커지면 뒤집힙니다.** 4절 끝의 규모 곡선에서 400만 행을 재면 복원이 79.3%, binlog 적용이 10.5%로 갈립니다. 이 절의 "대부분이 binlog"는 1,500행이라는 규모에서만 성립합니다. 세 구간 모두 1회 실행값이라 분산도 모릅니다.
 
 ## 4. 복구를 가로막는 것들
 
@@ -124,7 +135,7 @@ DROP TABLE `sponsor` /* generated by server */
 
 ### 데이터베이스 쪽 함정 셋
 
-![복구를 막는 두 가지](/uploads/incident/backup-pitr/fig-blocked.png)
+![데이터베이스 쪽 함정 셋](/uploads/incident/backup-pitr/fig-blocked.png)
 
 ### 함정 1. 사고 난 서버에 덤프를 되돌리면 첫 줄에서 막힌다
 
@@ -219,6 +230,10 @@ bash: line 1: mysqlbinlog: command not found
 **시간은 규모를 탑니다.** 행이 2,667배가 되면 합계가 39.8배입니다.
 
 **그런데 복원 판정은 전 규모에서 통과입니다.** 1,500행에서 400만 행까지 같습니다. 이것이 이 세션이 작은 규모에서 인용할 수 있는 것과 없는 것을 가릅니다. **절대 시간은 못 씁니다. 판정과 경계 규칙은 씁니다.** `recovery_target_inclusive`가 커밋 정각 한 건을 가르는 것, SQL Server의 복구 모델이 `SIMPLE`이면 로그 백업이 거부되는 것, Oracle의 아카이브 모드 전환에 `MOUNT` 단계가 붙는 것은 행이 1,500개든 400만 개든 같습니다.
+
+표를 읽을 때 두 가지를 밝혀 둡니다. **덤프와 복원을 더해도 합계가 안 됩니다.** 합계에는 컨테이너 기동, 접속 대기, 스키마 생성, 바이너리 로그 적용, 검증 조회가 함께 들어 있고 표에는 덤프와 복원 두 구간만 뽑았습니다. 1,500행에서 0.08과 0.23을 더하면 0.31인데 합계가 0.54인 것이 그 차이입니다. 그리고 **행/합계 배수는 반올림한 표 값이 아니라 원시값으로 계산한 것**이라 표의 숫자로 다시 나누면 안 맞습니다.
+
+이 표의 1,500행 복원 0.23초는 3절의 0.078초와 다릅니다. **다른 스크립트의 다른 회차**입니다. 3절은 `mysqldump` 한 벌을 복원한 값이고 이 표는 규모 곡선용으로 새로 만든 컨테이너에서 데이터베이스를 통째로 되돌린 값입니다. 두 값을 같은 축에 놓고 비교하면 안 됩니다.
 
 마지막 열이 그 반대쪽을 보여 줍니다. **행/합계 배수가 1에서 67.7로 올라갑니다.** 규모가 커질수록 행당 복구 비용이 싸집니다. 기동과 접속과 스키마 생성 같은 고정비가 희석되기 때문입니다. 곧 **작은 랩에서 잰 RTO는 큰 규모로 그대로 곱하면 과대평가가 됩니다.** 1,500행의 0.54초에 2,667을 곱하면 24분인데 실제 400만 행은 21.5초입니다.
 
@@ -348,7 +363,8 @@ D도 함께 봐야 합니다. `STOPAT`을 로그 백업 완료 시각으로 주�
 | 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_*` | `STOPAT` |
 | 경계 포함 | 그 위치 직전까지 | `recovery_target_inclusive`로 선택 | 고정(그 시각까지 포함) |
 | 복구 직후 상태 | 바로 쓰기 가능 | 기본 `pause`. 승격 필요 | `NORECOVERY`를 명시해야 로그 이어 붙임 |
-| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` |
+| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` | `RESETLOGS` 뒤 옛 시점은 `RMAN-20207` |
+| 벽시계 경계 | **`--stop-datetime`도 초 단위, 같은 초 커밋은 빠짐** | `recovery_target_time`도 같은 성질 | `STOPAT` 초 단위 반올림 |
 
 **세 엔진이 같은 사고를 다른 자리에서 막습니다.** 절차서를 한 엔진에서 쓰고 다른 엔진에 옮기면 그 자리마다 다시 걸립니다.
 
@@ -388,7 +404,7 @@ RUN {
 }
 ```
 
-### `RESETLOGS`가 인케네이션을 만듭니다
+### `RESETLOGS`가 인카네이션(incarnation)을 만듭니다
 
 복구를 마치고 `RESETLOGS`로 열면 데이터베이스의 계보가 갈립니다.
 
@@ -400,7 +416,7 @@ SQL> SELECT incarnation#, status, resetlogs_change# FROM v$database_incarnation;
     4 CURRENT    2956222
 ```
 
-네 번 열렸고 지금은 4번입니다. **그 시점 이후의 옛 아카이브 로그는 새 인케네이션에
+네 번 열렸고 지금은 4번입니다. **그 시점 이후의 옛 아카이브 로그는 새 인카네이션에
 적용할 수 없습니다.** 되돌아가려면 `RESET DATABASE TO INCARNATION`을 먼저 해야 합니다.
 
 MySQL·PostgreSQL·SQL Server 에는 이 개념이 없습니다. **복구를 여러 번 시도할 때
@@ -455,8 +471,9 @@ exp6은 각 방향 1회였습니다. 1,500행짜리 랩이라 그 12초의 대�
 | 전제를 켜는 비용 | 재기동 | 재기동 | `ALTER DATABASE` (온라인) | 재기동 + `MOUNT` 단계 |
 | 경계 지정 | `--stop-position`, `--stop-datetime` | `recovery_target_*` | `STOPAT` | `SET UNTIL TIME` |
 | 경계 포함 | 그 위치 직전까지 | `inclusive`로 선택 | 고정(그 시각까지 포함) | 그 시각 직전까지 |
-| 복구본의 계보 | 없음 | 타임라인(`.history`) | 없음 | **인케네이션** |
-| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` | 리두가 아카이브 안 됐으면 그 앞까지만 |
+| 복구본의 계보 | 없음 | 타임라인(`.history`) | 없음 | **인카네이션** |
+| 안 열리는 함정 | 없음 | 목표 도달 후 `pause` | `STOPAT`이 로그 끝보다 뒤면 `RESTORING` | `RESETLOGS` 뒤 옛 시점은 `RMAN-20207` |
+| 벽시계 경계 | **`--stop-datetime`도 초 단위, 같은 초 커밋은 빠짐** | `recovery_target_time`도 같은 성질 | `STOPAT` 초 단위 반올림 | 리두가 아카이브 안 됐으면 그 앞까지만 |
 
 **네 엔진이 같은 사고를 네 자리에서 다르게 막습니다.**
 ## 8. 해소: 백업을 믿지 않는 절차
@@ -563,7 +580,42 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 
 넷 다 에러가 안 나고 "0행" 이라는 정상 모양의 숫자로 남았습니다.
 
-## 관리형 서비스에서는 무엇이 달라지는가
+## 12. 체크리스트를 파이프라인으로 옮겼습니다
+
+8절의 체크리스트 일곱 항목을 실제로 도는 스크립트로 만들었습니다. 체크리스트는 지키는 사람이 있어야 지켜지고, 사람은 사고 당일에만 확인합니다.
+
+핵심은 하나입니다. **백업을 믿지 않고 매번 되살려 봅니다.** 그리고 **일부러 망가뜨린 백업을 같이 넣습니다.** 통과만 시키는 검사는 아무것도 안 지키고 있는 것이라서, 각 검사가 실제로 걸리는지를 봐야 그 검사를 믿을 수 있습니다.
+
+20만 행에 정상 덤프 하나와 망가뜨린 덤프 셋을 넣었습니다. 빈 파일, 중간에 잘린 것, `INSERT`만 주석 처리해 스키마만 남긴 것입니다.
+
+| 백업 | 크기 검사 | 복원 실행 | 데이터 대조 |
+|---|---|---|---|
+| 정상 | 통과 | 통과 | 통과 |
+| 빈 파일 | 걸림 | **통과** | 걸림 |
+| 중간에 잘림 | 걸림 | 걸림 | 걸림 |
+| 스키마만 | **통과** | **통과** | 걸림 |
+
+**이 파이프라인은 첫 검사에서 걸려도 멈추지 않고 세 검사를 전부 돌립니다.** 그래야 어느 검사가 무엇을 잡는지 표로 볼 수 있습니다. 운영에 걸 때는 첫 실패에서 끊는 편이 자원을 아끼지만, 검사 자체를 검증하는 이 자리에서는 전부 돌려야 합니다.
+
+**세 검사가 서로를 대신하지 못합니다.** 빈 파일과 스키마만 있는 덤프는 복원 실행을 에러 없이 통과합니다. 복원이 성공했다는 것과 데이터가 있다는 것은 다릅니다. 그리고 스키마만 남긴 덤프는 크기 검사도 통과합니다. `INSERT`를 주석으로 바꾼 것이라 바이트 수가 거의 그대로이기 때문입니다.
+
+그래서 **데이터 대조가 마지막 방어선입니다.** 이때 행 수를 "0보다 큰가"로 보면 안 되고 원본과 정확히 같은지 봐야 합니다. 10절이 그 자리를 밟았습니다. GTID 충돌로 복원이 중간에 멈췄는데 종료 코드가 0 이라 "복원 0.06초"라는 아주 좋아 보이는 값이 남았습니다.
+
+나머지 항목도 이 랩이 실제로 걸린 자리를 그대로 검사합니다. 복원 대상 컨테이너에 `mysqlbinlog`가 있는지 보는 항목은 4절 아티팩트 1에서 온 것이고, 이 실행에서도 **걸립니다.** `mysql:8.4` 이미지에 그 도구가 없기 때문입니다. 사고 당일에 알면 늦습니다.
+
+마지막 항목은 리허설 전체 소요가 RTO 예산 안인지입니다. 이 실행은 5.4초였고, **추정이 아니라 방금 실제로 되살려 본 시간입니다.**
+
+### 이 파이프라인을 짜면서 같은 함정을 밟았습니다
+
+처음 돌렸을 때 검사가 전부 "걸림"으로 나왔습니다. 파이프라인이 아주 잘 도는 것처럼 보였습니다. 그런데 원본이 0행이었습니다. 20만 행을 재귀 CTE로 넣는데 `cte_max_recursion_depth` 기본값이 1000 이라 막힌 것입니다.
+
+원본이 비었으니 복원한 것과 안 맞는 게 당연하고, 그래서 모든 대조가 걸렸습니다. **"검사가 잘 걸린다"와 "조건이 안 섰다"가 같은 모양이었습니다.** 이 세션이 다른 절에서 계속 말하던 그 유형입니다. 적재 직후에 행 수가 기대와 정확히 같은지 확인하고 아니면 그 자리에서 멈추도록 고쳤습니다.
+
+이 실행은 1회입니다.
+
+## 13. 관리형 서비스에서는 무엇이 달라지는가
+
+> 이 절의 근거 등급은 `E3·문서 대조`입니다. 다른 절과 달리 **실행이 없습니다.** 계정이 없어 실물 인스턴스로 확인하지 못했고, 전부 AWS 공식 문서를 인용한 것입니다.
 
 여기까지는 전부 직접 운영하는 엔진입니다. 실무의 PITR은 상당수가 RDS나 Aurora의 버튼 쪽이고, 그쪽은 규칙이 다릅니다. **이 절은 실물 인스턴스로 검증한 것이 아니라 AWS 공식 문서와 대조한 것입니다.** 계정이 없어 실행은 못 했습니다.
 
@@ -613,38 +665,7 @@ binlog 구간 2만 행이 0.208초입니다. 사고 시점까지 밀린 binlog�
 
 **마지막 줄이 이 글의 요지입니다.** 관리형으로 옮기면 백업을 만드는 일과 보관하는 일은 위임됩니다. 복원해 보는 일은 위임되지 않습니다. `LatestRestorableTime`이 앞으로 가고 있다는 것과 그 시점으로 실제 복원이 된다는 것은 다른 이야기이고, 위 `BULK_LOGGED` 항목이 그 둘이 갈리는 경우를 문서로 인정합니다. 12절이 만든 파이프라인이 관리형 환경에서도 필요한 이유입니다.
 
-## 12. 체크리스트를 파이프라인으로 옮겼습니다
-
-8절의 체크리스트 일곱 항목을 실제로 도는 스크립트로 만들었습니다. 체크리스트는 지키는 사람이 있어야 지켜지고, 사람은 사고 당일에만 확인합니다.
-
-핵심은 하나입니다. **백업을 믿지 않고 매번 되살려 봅니다.** 그리고 **일부러 망가뜨린 백업을 같이 넣습니다.** 통과만 시키는 검사는 아무것도 안 지키고 있는 것이라서, 각 검사가 실제로 걸리는지를 봐야 그 검사를 믿을 수 있습니다.
-
-20만 행에 정상 덤프 하나와 망가뜨린 덤프 셋을 넣었습니다. 빈 파일, 중간에 잘린 것, `INSERT`만 주석 처리해 스키마만 남긴 것입니다.
-
-| 백업 | 크기 검사 | 복원 실행 | 데이터 대조 |
-|---|---|---|---|
-| 정상 | 통과 | 통과 | 통과 |
-| 빈 파일 | 걸림 | **통과** | 걸림 |
-| 중간에 잘림 | 걸림 | 걸림 | 걸림 |
-| 스키마만 | **통과** | **통과** | 걸림 |
-
-**세 검사가 서로를 대신하지 못합니다.** 빈 파일과 스키마만 있는 덤프는 복원 실행을 에러 없이 통과합니다. 복원이 성공했다는 것과 데이터가 있다는 것은 다릅니다. 그리고 스키마만 남긴 덤프는 크기 검사도 통과합니다. `INSERT`를 주석으로 바꾼 것이라 바이트 수가 거의 그대로이기 때문입니다.
-
-그래서 **데이터 대조가 마지막 방어선입니다.** 이때 행 수를 "0보다 큰가"로 보면 안 되고 원본과 정확히 같은지 봐야 합니다. 10절이 그 자리를 밟았습니다. GTID 충돌로 복원이 중간에 멈췄는데 종료 코드가 0 이라 "복원 0.06초"라는 아주 좋아 보이는 값이 남았습니다.
-
-나머지 항목도 이 랩이 실제로 걸린 자리를 그대로 검사합니다. 복원 대상 컨테이너에 `mysqlbinlog`가 있는지 보는 항목은 4절 아티팩트 1에서 온 것이고, 이 실행에서도 **걸립니다.** `mysql:8.4` 이미지에 그 도구가 없기 때문입니다. 사고 당일에 알면 늦습니다.
-
-마지막 항목은 리허설 전체 소요가 RTO 예산 안인지입니다. 이 실행은 5.4초였고, **추정이 아니라 방금 실제로 되살려 본 시간입니다.**
-
-### 이 파이프라인을 짜면서 같은 함정을 밟았습니다
-
-처음 돌렸을 때 검사가 전부 "걸림"으로 나왔습니다. 파이프라인이 아주 잘 도는 것처럼 보였습니다. 그런데 원본이 0행이었습니다. 20만 행을 재귀 CTE로 넣는데 `cte_max_recursion_depth` 기본값이 1000 이라 막힌 것입니다.
-
-원본이 비었으니 복원한 것과 안 맞는 게 당연하고, 그래서 모든 대조가 걸렸습니다. **"검사가 잘 걸린다"와 "조건이 안 섰다"가 같은 모양이었습니다.** 이 세션이 다른 절에서 계속 말하던 그 유형입니다. 적재 직후에 행 수가 기대와 정확히 같은지 확인하고 아니면 그 자리에서 멈추도록 고쳤습니다.
-
-이 실행은 1회입니다.
-
-## 현업은 어떻게 해소했는가
+## 14. 현업은 어떻게 해소했는가
 
 GitLab이 2017년에 프로덕션 DB 디렉터리를 지우고 백업 다섯 겹이 전부 안 들었던 사고입니다. **고친 것이 백업 기술이 아니었습니다.**
 
@@ -698,6 +719,31 @@ cron이나 systemd timer에 거는 형태는 이렇습니다.
 
 **그래도 이 세션이 못 만든 것이 남습니다. 소유자입니다.** `page-oncall.sh`가 누구를 깨우는지, 그 사람이 안 받으면 다음이 누구인지는 코드 밖의 문제입니다. GitLab의 5 Whys 마지막 답이 "아무도 책임지지 않아서"였던 것이 이 자리입니다.
 
+### 벽시계로 지점을 가리키면 어느 엔진에서든 샙니다
+
+Oracle 절에서 `SET UNTIL TIME`이 초 단위이고 그 시각을 포함하지 않는다는 것을 봤습니다. **MySQL도 같습니다.** `mysqlbinlog --stop-datetime`으로 커밋과 같은 초를 지정해 재 봤습니다.
+
+| 지정 | 결과 |
+|---|---|
+| 백업 시점 | 3행 |
+| 백업 뒤 정상 쓰기 후 | 5행 |
+| `--stop-datetime`을 그 커밋과 같은 초로 | **3행** |
+
+**5행이 기대인데 3행, 곧 백업 시점 그대로입니다.** 그 초에 커밋된 두 행이 재적용에서 빠졌습니다. 에러는 안 납니다.
+
+그래서 네 엔진이 같은 자리에서 샙니다.
+
+| 엔진 | 벽시계 지정 | 안전한 대안 |
+|---|---|---|
+| MySQL | `--stop-datetime` (초) | `--stop-position` (이벤트 위치) |
+| PostgreSQL | `recovery_target_time` (초) | `recovery_target_lsn` / `_xid` / `_name` |
+| SQL Server | `STOPAT` (초 반올림) | `STOPATMARK` (트랜잭션 마크) |
+| Oracle | `SET UNTIL TIME` (초, 미포함) | `SET UNTIL SCN` |
+
+**오른쪽 열이 전부 "시간이 아닌 것"입니다.** 위치든 LSN이든 마크든 SCN이든, 공통점은 **그 지점이 로그 안의 한 항목을 정확히 가리킨다**는 것입니다. 벽시계는 그 항목들 사이의 간격보다 굵어서, 같은 초 안에 여러 커밋이 들어가면 어느 쪽까지인지를 못 정합니다.
+
+이 글이 SQL Server 절에서 `STOPAT`을 `STOPATMARK`로 바꾼 것도, Oracle 절에서 SCN을 권하는 것도 같은 이유입니다. **엔진이 달라도 벽시계로 지점을 가리키면 경계에서 샙니다.**
+
 ### Oracle이 계속 백업 시점에 멈춘 이유
 
 리뷰에서 "Oracle이 얇다"는 지적을 받았습니다. `UNTIL TIME`을 1회 돌린 수준인데 아카이브 모드 전환은 3회나 쟀으니 비중이 반대라는 것이고, 맞는 지적입니다.
@@ -727,11 +773,11 @@ cron이나 systemd timer에 거는 형태는 이렇습니다.
 RMAN-20207: UNTIL TIME or RECOVERY WINDOW is before RESETLOGS time
 ```
 
-`RESETLOGS`가 새 인케네이션을 만들고, 그 인케네이션의 시작보다 앞선 시점은 현재 계보에서 닿을 수 없기 때문입니다. `LIST INCARNATION OF DATABASE`로 보면 복구할 때마다 계보가 하나씩 늘어납니다.
+`RESETLOGS`가 새 인카네이션을 만들고, 그 인카네이션의 시작보다 앞선 시점은 현재 계보에서 닿을 수 없기 때문입니다. `LIST INCARNATION OF DATABASE`로 보면 복구할 때마다 계보가 하나씩 늘어납니다.
 
-**되돌리는 방법은 있습니다.** `RESET DATABASE TO INCARNATION <번호>`로 계보를 옮기면 `database reset to incarnation 6` 같은 확인이 찍힙니다. 다만 그 상태에서 복구가 이어지려면 **그 인케네이션에서 뜬 백업이 있어야 합니다.** 이 실험을 디버깅하며 `RESETLOGS`를 반복했더니 인케네이션이 일곱 개까지 쌓였고, 옛 계보의 백업이 없어 복구가 안 됐습니다.
+**되돌리는 방법은 있습니다.** `RESET DATABASE TO INCARNATION <번호>`로 계보를 옮기면 `database reset to incarnation 6` 같은 확인이 찍힙니다. 다만 그 상태에서 복구가 이어지려면 **그 인카네이션에서 뜬 백업이 있어야 합니다.** 이 실험을 디버깅하며 `RESETLOGS`를 반복했더니 인카네이션이 일곱 개까지 쌓였고, 옛 계보의 백업이 없어 복구가 안 됐습니다.
 
-그래서 실험을 회차마다 **현재 인케네이션에서 새로 백업**하도록 고쳤습니다. 실무로 옮기면 이렇습니다. **불완전 복구로 데이터베이스를 연 직후에는 전체 백업을 다시 떠야 합니다.** 안 그러면 그 시점 이후로 PITR 창이 비어 있습니다.
+그래서 실험을 회차마다 **현재 인카네이션에서 새로 백업**하도록 고쳤습니다. 실무로 옮기면 이렇습니다. **불완전 복구로 데이터베이스를 연 직후에는 전체 백업을 다시 떠야 합니다.** 안 그러면 그 시점 이후로 PITR 창이 비어 있습니다.
 
 ### 불완전 복구를 반복한 데이터베이스는 이렇게 막힙니다
 
@@ -752,7 +798,7 @@ ORA-01190: control file or data file 1 is from before the last RESETLOGS
 ORA-01110: data file 1: '/opt/oracle/oradata/FREE/system01.dbf'
 ```
 
-**컨트롤 파일과 데이터 파일의 계보가 어긋난 것입니다.** 여기서 데이터 파일만 다시 복원해도 안 풀립니다. 컨트롤 파일이 최신 인케네이션을 가리키는데 데이터 파일이 옛 계보의 것이라, 둘을 같은 지점으로 맞춰야 합니다.
+**컨트롤 파일과 데이터 파일의 계보가 어긋난 것입니다.** 여기서 데이터 파일만 다시 복원해도 안 풀립니다. 컨트롤 파일이 최신 인카네이션을 가리키는데 데이터 파일이 옛 계보의 것이라, 둘을 같은 지점으로 맞춰야 합니다.
 
 푸는 순서는 이렇습니다.
 
@@ -772,9 +818,9 @@ ALTER DATABASE OPEN RESETLOGS;
 
 ### 네 판정을 3회차로 돌렸습니다
 
-앞선 시도가 유효 회차 1개를 못 넘긴 이유는 설계에 있었습니다. **판정마다 들어가는 `ALTER DATABASE OPEN RESETLOGS`가 인케네이션이라는 전역 상태를 바꿉니다.** 앞 판정이 만든 계보 때문에 다음 판정의 기준점이 사라집니다.
+앞선 시도가 유효 회차 1개를 못 넘긴 이유는 설계에 있었습니다. **판정마다 들어가는 `ALTER DATABASE OPEN RESETLOGS`가 인카네이션이라는 전역 상태를 바꿉니다.** 앞 판정이 만든 계보 때문에 다음 판정의 기준점이 사라집니다.
 
-그래서 RMAN의 인케네이션 관리에 기대지 않기로 했습니다. **사고 직후 상태의 데이터 파일과 컨트롤 파일을 통째로 떠 두고 판정마다 그 스냅숏으로 되돌립니다.** 아카이브 로그는 별도 경로라 그대로 남습니다.
+그래서 RMAN의 인카네이션 관리에 기대지 않기로 했습니다. **사고 직후 상태의 데이터 파일과 컨트롤 파일을 통째로 떠 두고 판정마다 그 스냅숏으로 되돌립니다.** 아카이브 로그는 별도 경로라 그대로 남습니다.
 
 | 회차 | 1 사고 직전 | 2 사고 이후 | 3 `RESETLOGS` 뒤 | 4 스냅숏 복귀 |
 |---|---|---|---|---|
@@ -795,6 +841,14 @@ ALTER DATABASE OPEN RESETLOGS;
 **3번.** `RESETLOGS`로 연 뒤 그 앞 시점으로 가려 하면 `RMAN-20207`로 막힙니다. 세 회차 모두 같은 에러입니다.
 
 **4번.** 그 막힌 상태에서 `RESETLOGS` 전의 컨트롤 파일을 되돌리면 다시 갈 수 있습니다. **이것이 앞 절의 "불완전 복구로 연 직후에는 전체 백업을 다시 뜬다"가 필요한 이유입니다.** 그때의 컨트롤 파일이 없으면 4번이 안 됩니다.
+
+## 세 줄 요약
+
+**하나.** GitLab은 백업 다섯 겹이 전부 안 들었을 뿐 아니라 **WAL 아카이빙 자체를 안 쓰고 있었습니다.** 시점 복구를 할 재료가 없었고, 사고 뒤에야 도입을 검토 항목으로 올렸습니다. 이 글이 재현한 것이 그들이 그때 갖고 있지 않던 능력입니다.
+
+**둘.** 네 엔진 모두 **벽시계로 지점을 가리키면 경계에서 샙니다.** MySQL `--stop-datetime`, PostgreSQL `recovery_target_time`, SQL Server `STOPAT`, Oracle `SET UNTIL TIME`이 전부 초 단위입니다. 같은 초에 커밋된 것이 에러 없이 빠집니다. 안전한 대안은 전부 시간이 아닌 것(위치·LSN·마크·SCN)입니다.
+
+**셋.** 복원해 보지 않은 백업은 백업이 아닙니다. **통과만 하는 검사도 검사가 아닙니다.** 12절 파이프라인이 일부러 망가뜨린 백업을 함께 넣는 이유가 그것이고, 그 검사가 실제로 걸리는 것까지 봐야 그 검사를 믿을 수 있습니다.
 
 ## 못 한 것
 
