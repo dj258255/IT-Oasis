@@ -22,7 +22,7 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 > 근거 등급: `E1·축소`
 > 출처: [GitLab.com Database Incident (2017-01-31)](https://about.gitlab.com/blog/2017/02/01/gitlab-dot-com-database-incident/) · [Postmortem](https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/) · [MySQL 8.4, PITR Using Event Positions](https://dev.mysql.com/doc/refman/8.4/en/point-in-time-recovery-positions.html) · [GTID Concepts](https://dev.mysql.com/doc/refman/8.4/en/replication-gtids-concepts.html) · [Google SRE Book, Data Integrity](https://sre.google/sre-book/data-integrity/) · [AWS, Restoring a DB instance to a specified time](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html) · [AWS Well-Architected REL09-BP04](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_backing_up_data_periodic_recovery_testing_data.html) · [GitLab Handbook, Database Backups](https://handbook.gitlab.com/handbook/engineering/infrastructure/database/)
 
-## 5분 요약
+## 무엇을 만들었고 무엇을 확인했나
 
 **만든 것.** MySQL·PostgreSQL·SQL Server·Oracle 네 엔진에서 시점 복구를 직접 수행하는 랩과, 백업을 매번 되살려 보고 실패하면 알리는 검증 파이프라인입니다. 스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A23-backup-pitr`에 있습니다.
 
@@ -39,7 +39,7 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 
 **얻은 것.** 이 랩에서 잰 절대 시간은 인용할 수 없습니다. 규모가 작고 Oracle·SQL Server는 ARM 에뮬레이션입니다. 대신 **판정과 경계 규칙은 규모를 안 탑니다.** 400만 행까지 올려도 복원 판정이 같았고, 그것이 작은 랩에서 인용할 수 있는 것과 없는 것을 가릅니다.
 
-**시간이 없으시면** 위 표의 근거 절만 보셔도 됩니다. 아래는 그 넷을 만들면서 밟은 함정과 실패의 기록입니다.
+아래는 그 넷을 만들면서 밟은 함정과 실패의 기록입니다. 표의 근거 절로 바로 가셔도 됩니다.
 
 ## 1. 유명한 이유
 
