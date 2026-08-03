@@ -58,13 +58,13 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 
 **그리고 이 글의 주제에 직접 걸리는 것이 하나 더 있습니다.**
 
-> "As GitLab.com was **not using WAL archiving**, the secondary had to be re-synchronised manually."
+> "As GitLab.com was not using WAL archiving, the secondary had to be re-synchronised manually."
 
 **GitLab.com은 WAL 아카이빙을 쓰지 않았습니다.** 곧 이 글이 다루는 시점 복구를 할 재료가 애초에 없었습니다. 백업 다섯 겹이 전부 안 들었다는 이야기의 앞에, 그 다섯 겹 중 어느 것도 "사고 직전 시점으로 되돌린다"를 할 수 없는 종류였다는 사실이 있습니다. 남은 선택지가 6시간 전 스냅숏이었던 이유입니다.
 
 사후 분석의 개선 항목 목록에 그래서 이것이 들어갑니다.
 
-> "**Investigate Point in time recovery & continuous archiving for PostgreSQL** (#1097)"
+> "Investigate Point in time recovery & continuous archiving for PostgreSQL (#1097)"
 
 **사고가 난 뒤에야 PITR 도입을 검토 항목으로 올렸습니다.** 이 글이 MySQL로 축소 재현하는 것이 바로 그들이 그때 갖고 있지 않던 능력입니다.
 
@@ -80,7 +80,7 @@ AWS Well-Architected의 REL09-BP04 안티패턴 목록이 이 사고를 그대�
 
 라이브 문서에 이 문장이 있습니다.
 
-> "LVM 스냅샷은 기본적으로 24시간에 한 번만 생성됩니다. 팀원 1은 데이터베이스 로드 밸런싱 작업을 하고 있었기 때문에 장애 발생 약 6시간 전에 **수동으로** 스냅샷을 실행했습니다."
+> "LVM 스냅샷은 기본적으로 24시간에 한 번만 생성됩니다. 팀원 1은 데이터베이스 로드 밸런싱 작업을 하고 있었기 때문에 장애 발생 약 6시간 전에 수동으로 스냅샷을 실행했습니다."
 
 **복구에 쓴 것이 그 수동 스냅숏입니다.** 백업 정책이 만든 것이 아니라, 다른 일을 하던 엔지니어가 우연히 여섯 시간 전에 손으로 찍어 둔 것입니다. 그것이 없었으면 유실은 6시간이 아니라 24시간이었습니다.
 
@@ -88,7 +88,7 @@ AWS Well-Architected의 REL09-BP04 안티패턴 목록이 이 사고를 그대�
 
 그리고 같은 문서에 이 글의 주제와 정확히 겹치는 한 줄이 더 있습니다.
 
-> "`pg_basebackup`은 마스터 서버가 복제 과정을 시작할 때까지 **조용히 기다립니다.** 다른 운영 엔지니어에 따르면 이 과정은 최대 10분까지 걸릴 수 있습니다. 이로 인해 프로세스가 어떤 이유로든 멈춘 것으로 오해할 수 있습니다."
+> "`pg_basebackup`은 마스터 서버가 복제 과정을 시작할 때까지 조용히 기다립니다. 다른 운영 엔지니어에 따르면 이 과정은 최대 10분까지 걸릴 수 있습니다. 이로 인해 프로세스가 어떤 이유로든 멈춘 것으로 오해할 수 있습니다."
 
 **멈춘 것과 기다리는 것이 화면에서 같아 보입니다.** 이 오해가 그날 밤의 판단으로 이어졌습니다. 도구가 진행 상황을 안 알려 주면 사람이 추측하고, 새벽에 지친 사람의 추측은 틀립니다.
 
@@ -191,7 +191,7 @@ GTID 차집합(새로 실행된 트랜잭션) ''
 
 `stderr`에 남은 것은 비밀번호를 명령줄에 썼다는 경고 한 줄뿐이고(`results/reapply.err`), 그 줄을 걸러 내면 아무것도 없습니다. **명령은 성공하고 에러도 없는데 데이터는 한 건도 들어가지 않습니다.** 공식 문서가 그대로 적어 둔 동작입니다.
 
-> "any attempt to execute a subsequent transaction with the same GTID is ignored by that server. **No error is raised, and no statement in the transaction is executed.**"
+> "any attempt to execute a subsequent transaction with the same GTID is ignored by that server. No error is raised, and no statement in the transaction is executed."
 
 운영자가 "복구했다"고 판단하기 딱 좋은 조건입니다. 복구 후에는 반드시 행 수나 체크섬으로 결과를 확인해야 하고, GTID 차집합이 비었는지 보는 것이 가장 빠른 확인입니다.
 
@@ -799,27 +799,27 @@ cron이나 systemd timer에 거는 형태는 이렇습니다.
 
 RPO 하한이 설정이 아니라는 것이 이 표에서 제일 중요합니다.
 
-> "RDS uploads transaction logs for DB instances to Amazon S3 **every five minutes**."
+> "RDS uploads transaction logs for DB instances to Amazon S3 every five minutes."
 
 이 세션은 binlog를 사고 직전 위치까지 이어 붙여 유실을 0으로 만들었습니다. RDS 에는 그 자유가 없고 `LatestRestorableTime`이 상한입니다. **바꿀 수 있는 손잡이가 아닙니다.**
 
-> "You can restore a DB instance to a specific point in time, **creating a new DB instance** without modifying the source DB instance."
+> "You can restore a DB instance to a specific point in time, creating a new DB instance without modifying the source DB instance."
 
 **제자리 복구가 없습니다.** 4절 함정 1(GTID 겹침)도 그래서 안 생깁니다. 대신 복원이 끝나면 엔드포인트가 다른 인스턴스가 하나 더 있고, 애플리케이션을 옮기는 시간이 RTO에 붙습니다.
 
 **이 글의 주제와 겹치는 자리가 둘 있습니다.**
 
-> "Setting any database into one of these modes **causes the latest restorable time to stop moving ahead for the whole instance**."
+> "Setting any database into one of these modes causes the latest restorable time to stop moving ahead for the whole instance."
 
 `OFFLINE`·`EMERGENCY`·`SINGLE_USER` 모드로 둔 데이터베이스가 하나라도 있으면 **인스턴스 전체의 복구 가능 시점이 그 자리에 멈춥니다.** 에러가 아니라 시계가 안 갑니다.
 
 그리고 `BULK_LOGGED` 복구 모델은 **로그 사슬이 끊겨도 감지가 안 됩니다.**
 
-> "In other cases, such as when a SQL Server database uses the `BULK_LOGGED` recovery model, **the break in log sequence isn't detected.**"
+> "In other cases, such as when a SQL Server database uses the `BULK_LOGGED` recovery model, the break in log sequence isn't detected."
 
 감지되면 최소한 시계가 멈춰 이상 신호라도 남습니다. 감지가 안 되면 화면상 복구 가능 시점은 계속 앞으로 가고, 정작 복원해 보면 못 갑니다.
 
-> "For these reasons, **Amazon RDS doesn't support changing the recovery model of SQL Server databases.**"
+> "For these reasons, Amazon RDS doesn't support changing the recovery model of SQL Server databases."
 
 감지가 안 되는 경우가 있다는 것이 AWS가 아예 막은 이유입니다.
 
@@ -831,11 +831,11 @@ RPO 하한이 설정이 아니라는 것이 이 표에서 제일 중요합니다
 
 `pg_dump`는 정상적으로 에러를 냈고 크론은 알림 메일을 보냈습니다. 죽은 것은 그 메일이었습니다.
 
-> "these notifications are sent by email ... **DMARC was not enabled** for the cronjob emails, resulting in them being **rejected by the receiver**."
+> "these notifications are sent by email ... DMARC was not enabled for the cronjob emails, resulting in them being rejected by the receiver."
 
 그래서 실패가 아무에게도 닿지 않았습니다. 5 Whys의 마지막 답이 이것입니다.
 
-> "Why was the backup procedure not tested on a regular basis? - **Because there was no ownership**, as a result nobody was responsible for testing this procedure."
+> "Why was the backup procedure not tested on a regular basis? - Because there was no ownership, as a result nobody was responsible for testing this procedure."
 
 그들이 실제로 넣은 것 셋입니다.
 
@@ -847,7 +847,7 @@ RPO 하한이 설정이 아니라는 것이 이 표에서 제일 중요합니다
 
 세 번째가 지금도 돕니다. 2026년 현재 GitLab 핸드북의 문장입니다.
 
-> "Daily restoration testing is performed for GitLab.com application databases in CI pipelines ... This process performs a **point-in-time recovery (PITR) restore into a new instance** and verifies data integrity by running queries on the restored database."
+> "Daily restoration testing is performed for GitLab.com application databases in CI pipelines ... This process performs a point-in-time recovery (PITR) restore into a new instance and verifies data integrity by running queries on the restored database."
 
 **14절이 만든 파이프라인이 이 구조의 축소판입니다.** 복원해 보고, 행 수와 체크섬으로 대조하고, 소요가 예산 안인지 봅니다. 다만 이 세션이 못 만든 것이 하나 있습니다. **소유자입니다.** 파이프라인은 짜면 되지만 그것이 실패했을 때 누가 받는가는 코드 밖의 문제입니다.
 
