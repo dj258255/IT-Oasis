@@ -1,8 +1,6 @@
 ---
 title: '왜 JVM을 직접 만드나, 그리고 어떻게 나눌까'
-titleEn: 'Why Build a JVM — and How to Split It'
 description: Java가 안에서 바이트코드를 어떻게 실행하는지 제대로 알고 싶어서, C로 바닥부터 만들기 시작한 토이 JVM. 첫 글은 코드를 한 줄도 쓰기 전에 끝내야 했던 설계 결정들을 정리한다. JVM·컴파일러·JIT가 각각 무엇인지, 왜 C인지, 그리고 실제 OpenJDK(openjdk/jdk)를 닮아 VM·컴파일러·표준 라이브러리를 한 레포에 두기로 한 이유까지 다룬다.
-descriptionEn: "A toy JVM built from scratch in C to really understand how Java runs bytecode inside. This first post covers the design decisions that had to be settled before writing a single line of code — what the JVM, the compiler, and the JIT each are, why C, and why the layout mirrors the real OpenJDK (openjdk/jdk) by keeping the VM, compiler, and standard library in one repo."
 date: 2026-07-01T00:00:00.000Z
 tags:
   - JVM

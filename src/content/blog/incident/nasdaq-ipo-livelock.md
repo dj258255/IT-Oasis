@@ -1,8 +1,6 @@
 ---
 title: 'IPO 크로스가 확정되지 않는다, 데드락도 라이브락도 아닌 재계산 기아'
-titleEn: "The IPO Cross That Would Not Commit: Retry Starvation, Not a Livelock"
 description: '2012년 페이스북 상장일에 나스닥의 IPO 크로스가 25분간 확정되지 않았습니다. SEC 행정 명령서에 규칙 하나가 적혀 있습니다. 기록 직전에 계산 근거가 바뀌었으면 처음부터 다시 계산한다는 규칙입니다. 이것만 떼어내 Java 21로 돌렸습니다. 취소 유입 간격 8개 구간을 3회씩, 전체를 3회 돌린 72회 시도 중 24회가 1,000ms 상한 안에 크로스를 확정하지 못했습니다. 다만 이것은 라이브락이 아닙니다. 재현 코드의 취소 유입은 고정 타이머라 계산 스레드의 재계산에 전혀 반응하지 않고, 되먹임 고리가 없으니 기아 또는 수렴하지 않는 재시도 루프가 정확한 이름입니다. 겉으로 보이는 증상만 라이브락과 같습니다. 스냅샷 동결과 접수 컷오프 두 해소는 각각 0/72회였고, 둘 다 나스닥이 실제로 한 조치입니다. 임계점은 밀리초 단위 상수가 아니라 취소 유입 간격 대 라운드 1회 시간의 비율이었습니다. 그 문턱은 대략 1이었습니다.'
-descriptionEn: "On Facebook's IPO day in 2012, Nasdaq's IPO cross failed to commit for 25 minutes. Working only from the SEC administrative order, I reproduced one rule at reduced scale in Java 21: if the inputs changed while the cross was being computed, throw the result away and start over. Across 72 attempts, eight cancellation-arrival rates run three times each in three full passes, 24 never committed within the 1,000ms cap. I first called this a livelock, and the code says otherwise. The cancellation feeder is a fixed-rate timer that never reacts to the recalculating thread, so there is no feedback loop and starvation in a non-converging retry loop is the accurate name, with only the symptoms shared. Snapshot freezing and an acceptance cutoff each scored 0/72, and Nasdaq applied both in reality. The threshold turned out to be a ratio, arrival interval over round time and roughly 1, rather than a constant in milliseconds."
 date: 2026-04-05
 tags:
   - Livelock

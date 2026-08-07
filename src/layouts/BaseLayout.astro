@@ -50,10 +50,6 @@ const { title, description = '광활한 코드의 사막에서, 당신의 오아
       if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
       }
-      if (localStorage.getItem('preferred-lang') === 'en') {
-        document.documentElement.classList.add('lang-en');
-        document.documentElement.lang = 'en';
-      }
     </script>
   </head>
   <body class="min-h-screen flex flex-col relative">
@@ -77,39 +73,6 @@ const { title, description = '광활한 코드의 사막에서, 당신의 오아
       </main>
       <Footer />
     </div>
-    <script is:inline>
-      function applyGlobalLang(lang) {
-        // 1) Update html element FIRST — prevents .lang-en selector from matching <html>
-        document.documentElement.lang = lang;
-        document.documentElement.classList.toggle('lang-en', lang === 'en');
-        // 2) data-ko/data-en text swap
-        document.querySelectorAll('[data-ko][data-en]').forEach(function(el) {
-          // Skip elements with child elements (e.g. <a> with SVG icons inside)
-          if (el.children.length === 0) {
-            el.textContent = el.dataset[lang];
-          }
-        });
-        // 3) lang-ko/lang-en block toggle (html already updated, so <html> won't match)
-        document.querySelectorAll('.lang-ko').forEach(function(el) {
-          el.classList.toggle('hidden', lang !== 'ko');
-        });
-        document.querySelectorAll('.lang-en').forEach(function(el) {
-          el.classList.toggle('hidden', lang !== 'en');
-        });
-        // 4) placeholder attribute swap
-        document.querySelectorAll('[data-ko-placeholder]').forEach(function(el) {
-          el.placeholder = lang === 'ko' ? el.dataset.koPlaceholder : el.dataset.enPlaceholder;
-        });
-        // 5) save preference
-        localStorage.setItem('preferred-lang', lang);
-        // 6) dispatch event for post-level lang integration
-        window.dispatchEvent(new CustomEvent('lang-changed', { detail: { lang: lang } }));
-      }
-      window.applyGlobalLang = applyGlobalLang;
-      // Auto-apply on page load if EN is saved
-      var savedLang = localStorage.getItem('preferred-lang');
-      if (savedLang) applyGlobalLang(savedLang);
-    </script>
     <script>
       function initCarousels() {
         document.querySelectorAll<HTMLButtonElement>('.carousel-btn').forEach((btn) => {

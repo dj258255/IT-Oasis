@@ -1,8 +1,6 @@
 ---
 title: '첫 번째 포스트: Hello World'
-titleEn: 'First Post: Hello World'
 description: Astro로 만든 블로그의 첫 번째 글입니다. 블로그를 시작하게 된 이유와 앞으로의 계획을 공유합니다.
-descriptionEn: The first post on my blog built with Astro. Sharing why I started this blog and my plans ahead.
 date: 2026-02-14T00:00:00.000Z
 tags:
   - 블로그
@@ -50,43 +48,3 @@ coverImage: /uploads/banners/banner-main.png
 > 앞으로 개발하면서 배운 것들을 이곳에 기록할 예정입니다.
 
 앞으로 많은 글을 작성할 예정이니 기대해 주시기 바랍니다!
-
-<!-- EN -->
-
-## HelloWorld!
-
-Hello!
-
-I used to be active on Velog, but I've moved to a Git blog.
-
-The reason is simple — I wanted my own space!
-
-I actually have this desire to build everything myself, even things like a music player...
-
-Naver Blog and Tistory were also options, but...
-
-In this global era, I wanted to make it accessible to people from other countries too, so I went with a Git blog.
-
-The proof? There's a translation feature in the header, isn't there?!
-
-(As far as I know, Naver Blog and Tistory are quite limited in that regard!)
-
-If I were really good at writing in English, I would've written everything myself...
-
-Unfortunately, I'm not that great at it, so I'll probably use AI to translate my posts lol
-
-After I get a job, I want to attend writing and English conversation classes to study properly.
-
-This blog is built with **Astro**.
-
-I can write posts conveniently in Markdown, and the build output is static HTML, so it loads fast.
-
-### Tech Stack
-
-* **Astro** — Static site generator
-* **Tailwind CSS** — Utility-first CSS
-* **GitHub Pages** — Free hosting
-
-> I plan to document what I learn along my development journey here.
-
-I'll be writing lots of posts going forward, so stay tuned!

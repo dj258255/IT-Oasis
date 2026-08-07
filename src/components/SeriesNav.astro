@@ -31,12 +31,12 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
         <svg class="series-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 6h16M4 12h16M4 18h10" />
         </svg>
-        <strong class="series-nav-title" data-ko={`${series} 시리즈`} data-en={`${series} Series`}>{series} 시리즈</strong>
+        <strong class="series-nav-title">{series} 시리즈</strong>
       </div>
       {currentNo > 0 && (
         <span class="series-nav-count">
           <span class="series-nav-count-now">{currentNo}</span><span class="series-nav-count-sep">/</span>{total}
-          <span class="lang-ko">편</span>
+          <span class="series-nav-count-unit">편</span>
         </span>
       )}
     </div>
@@ -49,20 +49,19 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
       {seriesPosts.map((p, i) => {
         const isCurrent = p.id === currentPostId;
         const titleKo = p.data.title;
-        const titleEn = p.data.titleEn || titleKo;
         const no = i + 1;
         return (
           <li class:list={['series-item', isCurrent && 'is-current']}>
             {isCurrent ? (
               <span class="series-link" aria-current="true">
                 <span class="series-no">{no}</span>
-                <span class="series-text" data-ko={titleKo} data-en={titleEn}>{titleKo}</span>
-                <span class="series-now" data-ko="현재" data-en="now">현재</span>
+                <span class="series-text">{titleKo}</span>
+                <span class="series-now">현재</span>
               </span>
             ) : (
               <a class="series-link" href={`${base}/blog/${p.id}`}>
                 <span class="series-no">{no}</span>
-                <span class="series-text" data-ko={titleKo} data-en={titleEn}>{titleKo}</span>
+                <span class="series-text">{titleKo}</span>
               </a>
             )}
           </li>
@@ -147,7 +146,7 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
   }
   .series-nav-count-now { color: #0284c7; font-weight: 700; }
   .series-nav-count-sep { margin: 0 1px; opacity: 0.6; }
-  .series-nav-count .lang-ko { margin-left: 2px; }
+  .series-nav-count-unit { margin-left: 2px; }
   :global(.dark) .series-nav-count { color: #64748b; }
   :global(.dark) .series-nav-count-now { color: #38bdf8; }
 

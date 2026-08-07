@@ -1,8 +1,6 @@
 ---
 title: '위키 검색엔진 개요'
-titleEn: 'Wiki Search Engine Overview'
 description: 나무위키, 위키피디아 덤프 데이터를 MySQL에 적재하고, 커뮤니티 수준의 트래픽을 감당할 수 있는 검색엔진을 만드는 프로젝트의 개요와 서버 구성을 정리한다.
-descriptionEn: Overview of the project to load Namuwiki and Wikipedia dump data into MySQL and build a search engine capable of handling community-level traffic.
 date: 2026-01-27T00:00:00.000Z
 tags:
   - MySQL
@@ -78,66 +76,5 @@ series: "WikiEngine"
 프론트엔드는 Vercel에 배포합니다.
 
 ### 아키텍처
-
-![](/uploads/project/WikiEngine/wiki-search-overview/architecture.png)
-
-<!-- EN -->
-
-This is a project to load Namuwiki and Wikipedia (Korean/English) dump data into MySQL and build a search engine capable of handling community-level traffic, with plans to add more features.
-
-Rather than simply "building a search feature," this project records the entire process of **starting from the slowest state and transitioning to the next technology whenever bottlenecks emerge**.
-
-At each stage, we compare trade-offs of performance, implementation complexity, and operational cost, documenting the rationale for transitions with metrics.
-
----
-
-## Data
-
-| Source | Format | Documents | Description |
-|--------|--------|-----------|-------------|
-| Namuwiki | JSON | ~1M | Namuwiki markup content, Korean community documents |
-| Korean Wikipedia | XML | ~2.16M | MediaWiki XML dump |
-| English Wikipedia | XML | ~25.28M | MediaWiki XML dump (~7.13M excluding redirects) |
-
-Wiki documents are not used as-is but **transformed to resemble a real community bulletin board**:
-
-- Wiki namespaces (articles, discussions, users, templates) → **Categories** (board concept)
-- `[[분류:XXX]]` / `[[Category:XXX]]` → **Tags** (hashtag concept)
-- author_id → Randomly distributed among 100K dummy users
-- created_at → Randomly generated within 2020-2025 range
-- Redirect documents excluded
-
-The result is a community dataset with tens of millions of posts, hundreds of thousands of tags, and category-based boards.
-
----
-
-## Server Configuration
-
-**Starting** with 3 Oracle Cloud Free Tier instances.
-
-| Server | Specs | Role |
-|--------|-------|------|
-| App Server | ARM (Ampere A1) 2 cores / 12GB RAM | Nginx + Spring Boot + MySQL |
-| Monitoring #1 | AMD (E2.1.Micro) 1GB + 1GB Swap | Loki + Grafana + Nginx (HTTPS) |
-| Monitoring #2 | AMD (E2.1.Micro) 1GB + 1GB Swap | Prometheus |
-
-**App Server Resource Allocation (12GB breakdown):**
-
-| Service | Container Limit | Internal Config | Note |
-|---------|----------------|----------------|------|
-| Spring Boot | 2 GB | JVM Heap 1 GB (`-Xmx1g`) | API + Lucene Search |
-| MySQL 8.0 | 4 GB | InnoDB Buffer Pool 2 GB | localhost only |
-| Nginx | 256 MB | — | Reverse Proxy + SSL |
-| Promtail | 256 MB | — | Logs → Loki |
-| cAdvisor | 256 MB | — | Container metrics |
-| MySQL Exporter | 128 MB | — | MySQL metrics |
-| Node Exporter | 30 MB | — | Host metrics |
-| **Total** | **~7 GB** | | Remaining ~5GB → OS page cache (Lucene MMap) |
-
-All 3 instances are in the same VCN/subnet, using Private IPs for inter-server communication.
-
-Frontend is deployed on Vercel.
-
-### Architecture
 
 ![](/uploads/project/WikiEngine/wiki-search-overview/architecture.png)

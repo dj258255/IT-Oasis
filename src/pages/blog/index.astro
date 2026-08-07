@@ -2,14 +2,13 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
 import { getPublishedPosts } from '../../lib/posts';
-import { getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
+import { getCategoryDisplayKo } from '../../lib/config';
 
 const posts = await getPublishedPosts();
-const catI18n = getCategoryI18n();
 const catDisplayKo = getCategoryDisplayKo();
 
 // Collect all categories (full path) from posts
-const allCats = new Map<string, { ko: string; en: string; parent: string }>();
+const allCats = new Map<string, { ko: string; parent: string }>();
 for (const post of posts) {
   const cat = post.data.category;
   if (!cat) continue;
@@ -17,18 +16,14 @@ for (const post of posts) {
     const parts = cat.split('/');
     const parentKey = parts[0];
     const parentKo = catDisplayKo.get(parentKey) || parentKey;
-    const parentEn = catI18n.get(parentKey) || parentKey;
-    let ko: string, en: string;
+    let ko: string;
     if (parts.length > 1) {
       const childKo = catDisplayKo.get(parts[1]) || parts[1];
-      const childEn = catI18n.get(parts[1]) || parts[1];
       ko = `${parentKo}(${childKo})`;
-      en = `${parentEn}(${childEn})`;
     } else {
       ko = parentKo;
-      en = parentEn;
     }
-    allCats.set(cat, { ko, en, parent: parentKey });
+    allCats.set(cat, { ko, parent: parentKey });
   }
 }
 
@@ -55,9 +50,8 @@ const sortedCats = [...allCats.entries()].sort((a, b) => {
 type CatGroup = {
   parentKey: string;
   parentKo: string;
-  parentEn: string;
   selfKey: string | null; // a parent-only post (category without "/"), if any
-  children: { key: string; ko: string; en: string }[];
+  children: { key: string; ko: string }[];
 };
 const groupsMap = new Map<string, CatGroup>();
 for (const [key, val] of sortedCats) {
@@ -66,7 +60,6 @@ for (const [key, val] of sortedCats) {
     groupsMap.set(p, {
       parentKey: p,
       parentKo: catDisplayKo.get(p) || p,
-      parentEn: catI18n.get(p) || p,
       selfKey: null,
       children: [],
     });
@@ -77,7 +70,6 @@ for (const [key, val] of sortedCats) {
     g.children.push({
       key,
       ko: catDisplayKo.get(childPart) || childPart,
-      en: catI18n.get(childPart) || childPart,
     });
   } else {
     g.selfKey = key;
@@ -95,7 +87,7 @@ const groups = [...groupsMap.values()].sort((a, b) => {
     {/* Category heading + filter tabs */}
     <div class="px-1 text-center mb-5">
       <h2 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text" data-ko="카테고리" data-en="Category">카테고리</span>
+        <span class="gradient-text">카테고리</span>
       </h2>
     </div>
     {/* Top row: parent / single pills (always one tidy row) */}
@@ -103,22 +95,16 @@ const groups = [...groupsMap.values()].sort((a, b) => {
       <button
         class="cat-filter-btn active"
         data-category="all"
-        data-ko="전체"
-        data-en="All"
       >
-        <span class="lang-ko">전체</span>
-        <span class="lang-en hidden">All</span>
+        전체
       </button>
       {groups.map((g) => (
         g.children.length === 0 ? (
           <button
             class="cat-filter-btn"
             data-category={g.selfKey || g.parentKey}
-            data-ko={g.parentKo}
-            data-en={g.parentEn}
           >
-            <span class="lang-ko">{g.parentKo}</span>
-            <span class="lang-en hidden">{g.parentEn}</span>
+            {g.parentKo}
           </button>
         ) : (
           <button
@@ -126,11 +112,8 @@ const groups = [...groupsMap.values()].sort((a, b) => {
             data-category={g.parentKey}
             data-parent={g.parentKey}
             aria-expanded="false"
-            data-ko={g.parentKo}
-            data-en={g.parentEn}
           >
-            <span class="lang-ko">{g.parentKo}</span>
-            <span class="lang-en hidden">{g.parentEn}</span>
+            {g.parentKo}
             <span class="cat-caret" aria-hidden="true">&#8250;</span>
           </button>
         )
@@ -145,12 +128,9 @@ const groups = [...groupsMap.values()].sort((a, b) => {
             <button
               class="cat-filter-btn cat-child-btn"
               data-category={c.key}
-              data-ko={c.ko}
-              data-en={c.en}
               style={`--i:${i}`}
             >
-              <span class="lang-ko">{c.ko}</span>
-              <span class="lang-en hidden">{c.en}</span>
+              {c.ko}
             </button>
           ))}
         </div>
@@ -159,7 +139,7 @@ const groups = [...groupsMap.values()].sort((a, b) => {
 
     <div class="px-1 text-center">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text" data-ko="스토리" data-en="Story">스토리</span>
+        <span class="gradient-text">스토리</span>
       </h1>
     </div>
   </div>
@@ -169,9 +149,7 @@ const groups = [...groupsMap.values()].sort((a, b) => {
       <div class="post-card-wrapper" data-post-category={post.data.category || ''} data-post-parent={post.data.category?.split('/')[0] || ''}>
         <PostCard
           title={post.data.title}
-          titleEn={post.data.titleEn}
           description={post.data.description}
-          descriptionEn={post.data.descriptionEn}
           date={post.data.date}
           slug={post.id}
           tags={post.data.tags}

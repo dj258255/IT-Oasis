@@ -1,8 +1,6 @@
 ---
 title: 'JPA로 목록 API를 만들 때 밟는 세 함정'
-titleEn: 'Three Traps You Hit When Building a List API with JPA'
 description: '목록 API에서 반복되는 세 함정(N+1, 깊은 페이지네이션, 대량 삽입)을 MySQL 8.4.3과 Spring Boot 3.4.1로 재현하면서 응답 시간과 함께 서버가 받은 쿼리 수를 셌습니다. 방송 20만 건과 후원 200만 건에서 N+1 지연 로딩은 25ms에 SELECT 21개였고, 집계 프로젝션은 4ms에 1개였습니다. 커서 페이지네이션의 표준 문법으로 널리 소개되는 행값 비교는 MySQL 8.4.3에서 range 최적화를 받지 못해 199,980행 지점에서 31ms로 OFFSET의 28ms보다 오히려 느렸고, 같은 조건을 OR로 풀어써야 3ms가 됐습니다. 대량 삽입은 hibernate.jdbc.batch_size=500을 켜도 IDENTITY 전략이 배치를 막아 INSERT가 1만 번 나갔고, ID를 직접 부여하자 INSERT는 20번으로 묶였지만 merge가 행마다 SELECT를 던져 10,022번이 됐습니다.'
-descriptionEn: "Reproduces the three traps that keep showing up in JPA list APIs, on MySQL 8.4.3 and Spring Boot 3.4.1, counting the queries the server actually received alongside response time. Across 200,000 broadcasts and 2 million sponsorships, lazy loading answered in 25 ms but sent 21 SELECTs, while an aggregate projection took 4 ms and a single query. The row-value comparison usually presented as the standard cursor-pagination idiom never gets range optimization on MySQL 8.4.3. At 199,980 rows deep it ran 31 ms, slower than OFFSET at 28 ms, and only spelling the same condition out with OR brought it down to 3 ms. For bulk inserts, hibernate.jdbc.batch_size=500 changed nothing because IDENTITY blocks batching, and assigning IDs by hand collapsed the INSERTs to 20 but made merge fire 10,022 SELECTs."
 date: 2026-02-15
 tags:
   - MySQL

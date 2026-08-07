@@ -1,8 +1,6 @@
 {
   "title": "kernel-hobby — C/RISC-V 토이 커널",
-  "titleEn": "kernel-hobby — A C/RISC-V Toy Kernel",
   "description": "부팅에서 멀티코어(SMP)·TCP·copy-on-write까지, MIT 6.S081(xv6) 랩 전부를 C/RISC-V로 바닥부터 구현한 토이 커널 — OS의 골격을 손으로 다시 지었다.",
-  "descriptionEn": "A RISC-V toy kernel implementing the entire MIT 6.S081 (xv6) lab set from scratch in C — from boot to multicore (SMP), TCP, and copy-on-write, rebuilding the OS skeleton by hand.",
   "image": "/uploads/hobby/kernel-hobby-c/cover.svg",
   "tags": [
     "C",

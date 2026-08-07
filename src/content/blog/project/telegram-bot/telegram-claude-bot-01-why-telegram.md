@@ -1,8 +1,6 @@
 ---
 title: '폰에서 Claude를 돌리려고 텔레그램 봇을 만들었다'
-titleEn: 'I Built a Telegram Bot to Run Claude From My Phone'
 description: "이미 쓰던 Claude 구독을 폰에서도 쓰고 싶어서 만든 봇입니다. API 키로 따로 과금하는 대신 Claude Code 구독 인증(claude -p)을 그대로 호출하고, 메시지를 보내면 작업 과정을 실시간으로 흘려줍니다. 디스코드 봇을 이미 돌리고 있으면서도 이번엔 텔레그램을 고른 이유, 코딩 모드에서 확인 없이 파일을 고치는 대신 넣은 취소 장치, 같은 서버의 다른 서비스를 못 건드리게 막은 격리까지 정리했습니다."
-descriptionEn: "A bot I made to use my existing Claude subscription from my phone. Instead of billing separately with an API key, it calls the Claude Code subscription auth (claude -p) directly and streams the work back as it happens. I already run a Discord bot, so this covers why I still reached for Telegram this time, the cancel controls I added in place of per-action confirmation in coding mode, and how I walled the bot off from the other services on the same server."
 date: 2026-07-18T00:00:00.000Z
 tags:
   - Telegram Bot

@@ -7,13 +7,11 @@ import { projects } from '../data/projects';
 import { getPublishedPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { renderRichText } from '../lib/richtext';
-import { base, assetPath, getSiteSettings, getCategoryI18n, getCategoryDisplayKo } from '../lib/config';
+import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
 
 const siteSettings = getSiteSettings();
-const catI18n = getCategoryI18n();
 const catDisplayKo = getCategoryDisplayKo();
 const aboutHtmlKo = renderRichText(siteSettings.aboutContentKo, base);
-const aboutHtmlEn = renderRichText(siteSettings.aboutContentEn, base);
 
 const posts = (await getPublishedPosts()).slice(0, 8);
 ---
@@ -22,7 +20,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
   <div class="fade-in-up">
     <div class="mb-10 sm:mb-14 px-1 text-center">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text" data-ko="소개" data-en="About">소개</span>
+        <span class="gradient-text">소개</span>
       </h1>
     </div>
 
@@ -31,8 +29,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
       <div class="absolute -bottom-16 -left-16 w-32 h-32 rounded-full bg-gradient-to-br from-cyan/8 to-primary/8 blur-3xl pointer-events-none"></div>
 
       <div class="relative prose">
-        <div class="lang-ko" set:html={aboutHtmlKo} />
-        <div class="lang-en hidden" set:html={aboutHtmlEn} />
+        <div set:html={aboutHtmlKo} />
       </div>
     </div>
 
@@ -42,37 +39,30 @@ const posts = (await getPublishedPosts()).slice(0, 8);
     </div>
 
     <!-- Projects carousel (same as homepage) -->
-    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} large>
+    <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
       {projects.map((project) => (
         <CarouselCard
           href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
-          titleEn={project.titleEn}
           description={project.description}
-          descriptionEn={project.descriptionEn}
           image={project.image ? assetPath(project.image) : undefined}
           date={project.date}
           category={translateCategory(project.category, catDisplayKo)}
-          categoryEn={translateCategory(project.category, catI18n)}
           noOverlay
         />
       ))}
     </CarouselSection>
 
     <!-- Latest stories carousel (same as homepage) -->
-    <CarouselSection id="stories" titleKo="최신 스토리" titleEn="Latest Story" viewAllHref={`${base}/blog`} large>
+    <CarouselSection id="stories" titleKo="최신 스토리" viewAllHref={`${base}/blog`} large>
       {posts.map((post) => (
         <CarouselCard
           href={`${base}/blog/${post.id}`}
           title={post.data.title}
-          titleEn={post.data.titleEn}
           description={post.data.description}
-          descriptionEn={post.data.descriptionEn}
           image={assetPath(post.data.coverImage || '/uploads/banners/default-post-cover.png')}
           date={post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
-          dateEn={post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
           category={translateCategory(post.data.category, catDisplayKo)}
-          categoryEn={translateCategory(post.data.category, catI18n)}
         />
       ))}
     </CarouselSection>

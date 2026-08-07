@@ -1,8 +1,6 @@
 {
   "title": "위키엔진",
-  "titleEn": "WikiEngine",
   "description": "1,425만 건 위키를 자체 검색엔진(Lucene)으로 색인하고, L1 캐시로 반복 부하를 80%+ 걷어낸 뒤 Stateless·읽기/쓰기 분리로 스케일아웃한 통합 검색 플랫폼.",
-  "descriptionEn": "A unified search platform indexing 14.25M wiki entries on a self-built Lucene engine — shedding 80%+ of repeat load with an L1 cache, then scaling out via a stateless, read/write-split architecture.",
   "image": "/uploads/project/WikiEngine/wikiengine-icon.svg",
   "tags": [
     "Spring Boot",

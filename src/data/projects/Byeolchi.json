@@ -1,8 +1,6 @@
 {
   "title": "별찌",
-  "titleEn": "Byeolchi",
   "description": "지금 보고 있는 상품을 기준으로 여러 쇼핑몰의 가격과 중고 대안을 한 화면에 모아 비교해 주는 한국형 AI 패션 쇼핑 어시스턴트.",
-  "descriptionEn": "A Korean AI fashion-shopping assistant that gathers prices and secondhand alternatives across malls into one screen — anchored on the product you're already viewing.",
   "image": "/uploads/project/Byeolchi/building/cover.svg",
   "tags": [
     "Java 25",

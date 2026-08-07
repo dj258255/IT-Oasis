@@ -1,8 +1,6 @@
 ---
 title: '가격은 양수라는 가정은 음수 유가 한 틱에 계층마다 다르게 깨진다'
-titleEn: "IB and Negative Oil Prices: How the 'Price Is Positive' Assumption Breaks Differently at Each Layer"
 description: '2020년 4월 20일 WTI 5월물이 배럴당 마이너스 37.63달러로 마감했습니다. CFTC는 이듬해 Interactive Brokers에 음수 가격 미표시와 최소 증거금 미집행 두 가지 시스템 문제를 별개 항목으로 지적했습니다. 그 두 대목만 Postgres 16과 JDK 21로 작게 재현했습니다. 저장 계층은 CHECK 제약으로 틱 10건 중 4건을 거부해 최종가가 0.01에 멈췄습니다. 파싱 계층의 방어적 파서는 마이너스 37.63달러를 플러스 37.63달러로 조용히 바꿔 놓았습니다. 증거금 계층은 요구증거금을 명목가치로 덮어쓰는 캡 때문에 가격 0.10달러에서 개설 가능 계약 수를 1,000계약으로 부풀렸는데, 이 붕괴는 가격이 아직 양수인 8달러대에서 이미 시작합니다. 계좌 평가액 3,764만 달러 과대계상은 이 세션이 고른 파라미터와 계층 사이를 상수로 이어 붙인 서술이 함께 만든 값이라, 실제 피해 규모와는 무관합니다.'
-descriptionEn: "On April 20, 2020, WTI May futures settled at negative $37.63 a barrel, and the following year the CFTC cited Interactive Brokers for two separate system failures: negative prices were never shown to customers, and internal minimum margin requirements were not enforced before execution. This session is a scaled-down reproduction on Postgres 16 and JDK 21 of those two mechanisms. Storage rejected 4 of 10 ticks on a CHECK constraint and froze the last price at 0.01, a defensive parser silently turned negative $37.63 into positive $37.63, and a margin cap that lets notional value override the house requirement inflated the position openable at $0.10 to 1,000 contracts, a collapse that already begins while the price is a positive single-digit figure. The $37.64 million overstatement is a product of this session's chosen parameters and of a layer-to-layer hand-off written as a constant, so it says nothing about the actual losses."
 date: 2026-04-09
 tags:
   - PostgreSQL

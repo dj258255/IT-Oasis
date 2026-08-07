@@ -1,8 +1,6 @@
 ---
 title: 'pay 총정리: 실패가 비싼 도메인을 밑바닥부터'
-titleEn: 'pay, the Complete Story — Building a Payment System From the Ground Up'
 description: "Spring Modulith로 만든 결제 시스템 pay의 전체 기록을 한 편에 정리했다. 결제를 고른 이유(타임아웃·중복·미확정·정산 불일치가 실제로 아픈, 실패가 비싼 도메인)에서 시작해 신뢰 경계, PG 타임아웃을 UNKNOWN으로 보존하고 복구가 확정하는 실패 설계, 복식부기 원장·정산·대사, PG 콜을 트랜잭션 밖으로 뺀 체크아웃 사가, 재고 락 3종 실측, 멀티 PG·구독·선불 월렛·가상계좌·FDS·복합결제로의 결제수단 확장, 대기열·유입 제어·암호화 같은 보안 층, 회원과 분쟁·차지백, 그리고 내 코드를 스스로 감사해 잡은 자금 손실 버그까지. 시리즈를 안 읽어도 이 한 편으로 전체가 잡히게 썼고 깊이가 필요한 지점마다 해당 편을 링크했다."
-descriptionEn: "The complete story of pay, a payment system built on Spring Modulith, in one post. Why payments (a domain where timeouts, duplicates, unknown states, and settlement mismatches actually hurt — failure is expensive), where to draw the trust boundary, preserving PG timeouts as UNKNOWN and letting recovery finalize them, a double-entry ledger with settlement and reconciliation, a checkout saga that keeps the PG call outside the transaction, three locking strategies measured head-to-head, extending payment methods (multi-PG, subscription, prepaid wallet, virtual accounts, FDS, mixed payments), security layers (queueing, rate limiting, encryption), membership and disputes/chargebacks, and money-loss bugs caught by auditing my own code. Written so the series is optional; every depth is linked."
 date: 2026-02-15
 tags:
   - Payment

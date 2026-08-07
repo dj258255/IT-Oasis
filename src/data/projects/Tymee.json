@@ -1,8 +1,6 @@
 {
   "title": "타이미",
-  "titleEn": "Tymee",
   "description": "게이미피케이션으로 집중을 습관으로 만드는 타이머 — 매 아키텍처 결정을 '왜 이 선택인가'까지 15편 연재로 파고든 개인 프로젝트.",
-  "descriptionEn": "A gamified focus timer that turns concentration into a habit — every architectural decision dug into 'why this choice' across a 15-part deep-dive series.",
   "image": "/uploads/project/Tymee/retrospective/title.svg",
   "tags": [
     "Spring Boot",

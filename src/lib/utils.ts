@@ -3,13 +3,6 @@
  * Data loading lives in config.ts.
  */
 
-/** Split markdown body into Korean and English parts by <!-- EN --> delimiter (standalone line only) */
-export function splitContent(body: string): { ko: string; en: string | null } {
-  const match = body.match(/^<!-- EN -->$/m);
-  if (!match || match.index === undefined) return { ko: body, en: null };
-  return { ko: body.slice(0, match.index).trim(), en: body.slice(match.index + match[0].length).trim() };
-}
-
 export function getReadingTime(content: string): number {
   return Math.ceil(content.trim().split(/\s+/).length / 200);
 }
@@ -47,8 +40,9 @@ export function buildCategoryTree(categories: string[]): Map<string, CategoryNod
 }
 
 /** Translate "개발/Frontend" → "Development/Frontend" using i18n map */
-export function translateCategory(category: string, i18n: Map<string, string>): string {
-  return category.split('/').map(part => i18n.get(part) || part).join('/');
+/** Map each segment of a "parent/child" category path through a display-name table. */
+export function translateCategory(category: string, names: Map<string, string>): string {
+  return category.split('/').map(part => names.get(part) || part).join('/');
 }
 
 /** Map icon key (from TinaCMS) to SVG path data */

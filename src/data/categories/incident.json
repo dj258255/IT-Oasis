@@ -1,43 +1,36 @@
 {
   "name": "incident",
-  "nameEn": "Incident Lab",
   "nameKo": "실제 장애 재현",
   "icon": "alert",
   "order": 0,
   "subcategories": [
     {
       "name": "QueryIndex",
-      "nameEn": "Query & Index",
       "nameKo": "쿼리와 인덱스",
       "order": 1
     },
     {
       "name": "LockTx",
-      "nameEn": "Locks & Transactions",
       "nameKo": "락과 트랜잭션",
       "order": 2
     },
     {
       "name": "DbOps",
-      "nameEn": "Database Operations",
       "nameKo": "DB 운영과 복구",
       "order": 3
     },
     {
       "name": "Cloud",
-      "nameEn": "Cloud Infrastructure",
       "nameKo": "클라우드 인프라",
       "order": 4
     },
     {
       "name": "JavaBackend",
-      "nameEn": "Java Backend",
       "nameKo": "자바 백엔드",
       "order": 5
     },
     {
       "name": "Finance",
-      "nameEn": "Financial IT",
       "nameKo": "증권 IT",
       "order": 6
     }

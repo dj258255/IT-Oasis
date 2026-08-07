@@ -1,8 +1,6 @@
 ---
 title: '화면 공유를 켜야 출석으로 친다: 디스코드 스터디 출석봇'
-titleEn: 'Present Only While Sharing: A Discord Study Attendance Bot'
 description: "알고리즘 스터디의 출석 체크를 봇에게 넘긴 기록입니다. 음성채널에 들어와 있는 시간이 아니라 화면 공유를 켠 시간만 구간 합산으로 세고, 누적 60분이면 출석, 주 3회 미달이면 경고, 경고 3회면 자동으로 자리를 정리합니다. 공지는 실시간이지만 판정은 정산 크론에서만 하도록 갈라 둔 덕에 봇이 재시작돼도 기록이 안 깨집니다. 후반부는 '시간대 제한을 풀고 24시간 돌리자'는 설정 한 줄짜리 변경인 줄 알았던 일이 함정 세 개(24:00이라는 크론에 없는 시각, 일요일 출석을 못 보는 주간 점검, DB에 남은 옛 세션 키로 죽는 재시작 복구)로 번진 이야기입니다."
-descriptionEn: "Notes from handing a study group's attendance over to a bot. It counts only screen-sharing time (summed across segments), not voice-channel presence — 60 accumulated minutes is a day, under 3 days a week is a warning, 3 warnings clears the seat. Announcements are real-time but verdicts happen only at settlement crons, so records survive restarts. The second half is the story of how 'just run it 24 hours' — a one-line config change, supposedly — turned into three traps: 24:00 doesn't exist in cron, the weekly check couldn't see Sunday, and startup recovery crashed on legacy session keys left in the DB."
 date: 2026-07-17T00:00:00.000Z
 tags:
   - Discord Bot
