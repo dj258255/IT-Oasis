@@ -1,8 +1,6 @@
 ---
 title: 'CodingTestKit - 감사 후기를 받고 정말 뿌듯했다'
-titleEn: 'CodingTestKit - A Review That Made Me Proud'
 description: 카카오톡 메시지와 마켓플레이스 리뷰를 통해, CodingTestKit이 실제로 누군가에게 도움이 되고 있다는 걸 느끼며 개발자로서 뿌듯함을 느낀 기록입니다.
-descriptionEn: A short retrospective on receiving thankful messages and marketplace reviews for CodingTestKit, and feeling quietly proud that it is genuinely helping real users.
 date: 2026-04-02
 tags:
   - Retrospective
@@ -47,39 +45,3 @@ CodingTestKit을 만들면서 가장 많이 했던 생각은 "내가 필요해�
 
 이번 후기는 단순히 기분 좋은 메시지라기보다, 내가 왜 이 프로젝트를 계속 만들고 싶은지 다시 확인하게 해준 계기였다.
 개발자로서 꽤 오래 남을 뿌듯한 순간이었다.
-
-<!-- EN -->
-
-While building CodingTestKit, the thought I kept coming back to was simple: this started as a tool I wanted for myself.
-
-There were many small frustrations whenever I prepared for coding tests, so I kept adding features one by one to reduce them.
-I wanted the whole flow of fetching a problem, running test cases, submitting, and recording the result to happen inside the IDE.
-
-But this time, after receiving thankful KakaoTalk messages and seeing marketplace reviews, I felt something a little different.
-It no longer felt like a tool made only for myself.
-It started to feel like a tool that other people were genuinely finding useful.
-
-![](/uploads/project/CodingTestKit/review-thanks.png)
-
-I was grateful for the messages themselves, but what stayed with me most were phrases like "it is convenient," "it feels satisfying to use," and "I want to recommend it to friends."
-Those words made me feel that the things I cared about while building the plugin were reaching users in the way I hoped.
-
-When you work on a personal project, there are many moments where you just keep building on your own.
-Features increase, but sometimes you are not sure whether you are moving in a meaningful direction.
-Getting this kind of direct feedback made me feel that the direction I cared about was the right one.
-
-More than anything, it made me quietly proud as a developer.
-It meant a lot that something I built was not just "working," but actually making someone else's preparation process a little easier.
-In the end, I think that is the kind of tool I want to build:
-something real people use, and something they can genuinely say is good.
-
-This feedback also made me want to work even harder.
-There is still a lot to improve, and many parts that can be polished further.
-But reactions like this are also proof that there is a good reason to keep improving it.
-
-I want to keep developing CodingTestKit in a way that truly helps people preparing for coding tests and keeps removing unnecessary friction.
-Hopefully, it becomes the kind of plugin that people keep using once they try it.
-
-This review was more than just a nice message.
-It reminded me why I want to keep building this project in the first place.
-It was one of those moments that stay with you for a long time as a developer.

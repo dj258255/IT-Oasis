@@ -1,8 +1,6 @@
 ---
 title: 'Uber의 PostgreSQL 쓰기 증폭 주장을 인덱스 개수와 fillfactor로 실측했다'
-titleEn: "Uber's PostgreSQL Write Amplification Claim: Drawing the Line by Measurement"
 description: '2016년 Uber가 PostgreSQL에서 MySQL로 옮기며 내세운 쓰기 증폭 주장에, HOT을 한 번도 언급하지 않았다는 반론이 맞붙었습니다. 어느 쪽 편도 들지 않았습니다. PostgreSQL 17.5에서 세컨더리 인덱스 수(0·3·6·10)와 fillfactor(100·70)만 다른 테이블 6개를 50만 행씩 갱신하며 WAL 증가량과 HOT 비율을 쟀습니다. 꽉 찬 페이지의 WAL은 267MB, 364MB, 462MB, 595MB였습니다. 인덱스 수에 비례하는 것이 아니라 고정비 267MB 위에 인덱스 하나마다 33MB 안팎이 얹히는 구조였고, 10개가 0개의 2.2배지 10배가 아니었습니다. fillfactor 70의 HOT 비율 45.2%는 페이지 정원 45행과 적재 31행의 차이로 설명됩니다. 처음 헤드라인으로 뽑았던 정상 상태 1.4배는 두 조건의 갱신 이력이 달라 철회했고, full-page image를 분리하지 못한 것과 autovacuum을 끄지 않은 것도 한계로 적었습니다.'
-descriptionEn: In 2016 Uber explained its move from PostgreSQL to MySQL with a write amplification argument, and critics immediately noted that the post never mentioned HOT. Instead of taking a side, this session measures where the boundary actually sits. Six tables on PostgreSQL 17.5 differ only in secondary index count (0/3/6/10) and fillfactor (100/70), each updated across 500,000 rows while WAL growth and HOT ratio are tracked. With full pages the WAL runs 267MB, 364MB, 462MB and 595MB, which is not proportional to index count but a fixed cost plus roughly 33MB per index, so ten indexes cost 2.2x of none rather than 10x. The 45.2% HOT ratio at fillfactor 70 falls out of page geometry, 45 row slots per page against 31 rows loaded. The steady-state 1.4x that headlined the first draft is retracted because the two conditions had different update histories, and the unseparated full-page images and the left-on autovacuum are recorded as limits.
 date: 2026-02-09
 tags:
   - PostgreSQL

@@ -1,8 +1,6 @@
 ---
 title: '정수 PK가 21억에 닿는 날, 그리고 무중단으로 옮기기'
-titleEn: 'The Day an INT Primary Key Hits 2.1 Billion, and Moving It Without Downtime'
 description: 'MySQL 8.4.3에서 INT 기본키의 AUTO_INCREMENT 카운터를 상한 직전으로 밀어, 21억에 닿는 순간 나오는 에러가 "범위 초과"가 아니라 행 두 개짜리 테이블의 중복 키 에러(ERROR 1062)라는 것을 재현했습니다. 이어서 300만 행 테이블 두 벌에 초당 62~67건의 INSERT를 흘리면서 한 방 ALTER와 expand-contract를 비교했더니, 실패는 양쪽 다 0건인데 한 방 ALTER는 12.8초 중 12.6초 동안 쓰기가 한 건도 완료되지 않았고 그중 한 건은 12,602ms를 매달려 있었습니다. expand-contract는 119.4초로 9.3배 오래 걸렸지만 그 시간 내내 8,427건이 p95 3.8ms, 최대 49ms로 지나갔습니다. 실패 0건은 무중단의 증거가 아니고, 그 INSERT를 세운 메타데이터 락의 기본 대기 상한은 innodb_lock_wait_timeout의 50초가 아니라 lock_wait_timeout의 1년입니다.'
-descriptionEn: 'On MySQL 8.4.3, pushing an INT primary key AUTO_INCREMENT counter to just below its ceiling shows that the error you get at 2,147,483,647 is not "value out of range" but a duplicate key error (ERROR 1062) on a table holding two rows. Two 3-million-row tables were then migrated to BIGINT under a live write load of 62 to 67 inserts per second, one with a single ALTER and one with expand-contract. Both finished with zero failed writes, yet the single ALTER completed no writes at all for 12.6 of its 12.8 seconds and left one insert hanging for 12,602ms, while expand-contract took 9.3 times longer at 119.4 seconds and let 8,427 writes through at a p95 of 3.8ms and a max of 49ms. Zero failures is not evidence of zero downtime, and the metadata lock that held that insert is governed by lock_wait_timeout, whose default is one year rather than the 50 seconds of innodb_lock_wait_timeout.'
 date: 2026-03-18
 tags:
   - MySQL

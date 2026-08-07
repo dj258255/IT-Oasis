@@ -6,11 +6,11 @@ import { base, assetPath, getSiteSettings } from '../lib/config';
 const siteSettings = getSiteSettings();
 ---
 
-<BaseLayout title="Projects — IT Oasis">
+<BaseLayout title="프로젝트 — IT Oasis">
   <div class="fade-in-up mb-10 sm:mb-14">
     <div class="px-1 text-center">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text" data-ko="프로젝트" data-en="Projects">프로젝트</span>
+        <span class="gradient-text">프로젝트</span>
       </h1>
     </div>
   </div>
@@ -47,29 +47,29 @@ const siteSettings = getSiteSettings();
                 <div class="flex flex-col gap-2.5 w-[80%] max-w-[240px]">
                   {Array.isArray(project.website) ? project.website.map((link) => (
                     <a href={link.url} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                      <span>{link.label}</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
                   )) : project.website && (
                     <a href={project.website} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span data-ko="웹사이트 접속하기" data-en="Visit Website">웹사이트 접속하기</span>
+                      <span>웹사이트 접속하기</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
                   )}
                   {Array.isArray(project.github) ? project.github.map((link) => (
                     <a href={link.url} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                      <span>{link.label}</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
                   )) : project.github && (
                     <a href={project.github} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span data-ko="깃허브 보기" data-en="View GitHub">깃허브 보기</span>
+                      <span>깃허브 보기</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
                   )}
                   {project.story && (
                     <a href={`${base}${project.story}`} class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span data-ko="스토리 보기" data-en="View Stories">스토리 보기</span>
+                      <span>스토리 보기</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
                   )}
@@ -80,13 +80,12 @@ const siteSettings = getSiteSettings();
 
           <!-- Content -->
           <div class="flex-1 flex flex-col justify-center">
-            <h2 class="text-[22px] sm:text-[28px] font-bold tracking-tight mb-4 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300" data-ko={project.title} data-en={project.titleEn}>
+            <h2 class="text-[22px] sm:text-[28px] font-bold tracking-tight mb-4 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
               {project.title}
             </h2>
 
             <p class="text-[15px] sm:text-[17px] text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-              <span class="lang-ko">{project.description}</span>
-              <span class="lang-en hidden">{project.descriptionEn || project.description}</span>
+              {project.description}
             </p>
 
             <!-- Tags -->

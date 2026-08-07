@@ -1,8 +1,6 @@
 {
   "title": "코딩테스트 도구",
-  "titleEn": "CodingTestKit",
   "description": "IDE를 떠나지 않고 코딩테스트 문제를 가져오고·테스트하고·제출하는 올인원 플러그인.",
-  "descriptionEn": "An all-in-one plugin to fetch, test, and submit coding-test problems without ever leaving your IDE.",
   "image": "/uploads/project/CodingTestKit/title.png",
   "tags": [
     "Kotlin",
@@ -16,24 +14,20 @@
   "website": [
     {
       "label": "IntelliJ 플러그인",
-      "labelEn": "IntelliJ Plugin",
       "url": "https://plugins.jetbrains.com/plugin/30574-codingtestkit"
     },
     {
       "label": "VS Code 익스텐션",
-      "labelEn": "VS Code Extension",
       "url": "https://marketplace.visualstudio.com/items?itemName=codingtestkit.codingtestkit"
     }
   ],
   "github": [
     {
       "label": "IntelliJ 깃허브",
-      "labelEn": "IntelliJ GitHub",
       "url": "https://github.com/dj258255/codingtestkit"
     },
     {
       "label": "VS Code 깃허브",
-      "labelEn": "VS Code GitHub",
       "url": "https://github.com/dj258255/codingtestkit-vscode"
     }
   ],

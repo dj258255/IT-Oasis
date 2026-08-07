@@ -1,11 +1,9 @@
 {
   "name": "IT Oasis",
   "description": "광활한 코드의 사막에서, 당신의 오아시스를 찾으세요.\nIT 야자수 </> — 성장에 뿌리를 둔 기술 블로그.",
-  "descriptionEn": "In the vast desert of code, find your oasis. \nIT Palm Tree </> — a tech blog rooted in growth.",
   "bannerImage": "/uploads/banners/banner-main.png",
   "authorImage": "/uploads/me/author-profile-shinchan.jpeg",
   "authorBio": "오늘의 노력이 내일의 전문성을 만든다고 믿습니다.",
-  "authorBioEn": "I believe that today's effort shapes tomorrow's expertise.",
   "githubUrl": "https://github.com/dj258255",
   "email": "dj258255@naver.com",
   "socialLinks": [
@@ -13,15 +11,13 @@
     { "type": "email", "url": "dj258255@naver.com" }
   ],
   "navItems": [
-    { "label": "소개", "labelEn": "About", "path": "/about", "icon": "person" },
-    { "label": "프로젝트", "labelEn": "Projects", "path": "/projects", "icon": "grid" },
-    { "label": "스토리", "labelEn": "Story", "path": "/blog", "icon": "newspaper" },
-    { "label": "태그", "labelEn": "Tags", "path": "/tags", "icon": "tag" }
+    { "label": "소개", "path": "/about", "icon": "person" },
+    { "label": "프로젝트", "path": "/projects", "icon": "grid" },
+    { "label": "스토리", "path": "/blog", "icon": "newspaper" },
+    { "label": "태그", "path": "/tags", "icon": "tag" }
   ],
   "aboutSubtitleKo": "풍부한 상상과 호기심으로\n다양한 프로젝트를 만들어갑니다.",
-  "aboutSubtitleEn": "Creating diverse projects\nwith rich imagination and curiosity.",
   "projectsSubtitleKo": "풍부한 상상과 호기심으로 만들어 온\n다양한 프로젝트를 소개합니다.",
-  "projectsSubtitleEn": "Introducing diverse projects\ncreated with rich imagination and curiosity.",
   "aboutContentKo": {
     "type": "root",
     "children": [
@@ -72,97 +68,6 @@
       {
         "type": "h2",
         "children": [{ "type": "text", "text": "연락처" }]
-      },
-      {
-        "type": "ul",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "GitHub: " },
-                  {
-                    "type": "a",
-                    "url": "https://github.com/dj258255",
-                    "children": [{ "type": "text", "text": "github.com/dj258255" }]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "Email: " },
-                  {
-                    "type": "a",
-                    "url": "mailto:dj258255@naver.com",
-                    "children": [{ "type": "text", "text": "dj258255@naver.com" }]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "aboutContentEn": {
-    "type": "root",
-    "children": [
-      {
-        "type": "p",
-        "children": [{ "type": "text", "text": "Hello! I'm the developer running this blog." }]
-      },
-      {
-        "type": "p",
-        "children": [{ "type": "text", "text": "I started this blog to record and share what I learn while developing." }]
-      },
-      {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "Tech Stack" }]
-      },
-      {
-        "type": "ul",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "This blog is built with " },
-                  { "type": "text", "text": "Astro", "bold": true },
-                  { "type": "text", "text": " and " },
-                  { "type": "text", "text": "Tailwind CSS", "bold": true },
-                  { "type": "text", "text": "." }
-                ]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "Hosted on " },
-                  { "type": "text", "text": "GitHub Pages", "bold": true },
-                  { "type": "text", "text": "." }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "Contact" }]
       },
       {
         "type": "ul",

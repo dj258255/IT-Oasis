@@ -1,8 +1,6 @@
 ---
 title: '백업은 있는데 복구가 안 된다, 성공처럼 보이는 실패들'
-titleEn: "You Have Backups, You Just Cannot Restore: Five Things That Block PITR"
 description: "GitLab 2017년 사고는 백업 다섯 겹이 전부 안 들었고 WAL 아카이빙조차 없어 시점 복구를 할 재료가 없었습니다. MySQL·PostgreSQL·SQL Server·Oracle 네 엔진에서 PITR을 직접 재현하고, 네 엔진 모두 벽시계로 지점을 가리키면 경계에서 샌다는 것을 실측했습니다."
-descriptionEn: "In January 2017 GitLab discovered that all five of its backup and replication mechanisms were broken only after an engineer wiped the primary PostgreSQL data directory. The incident itself involved roughly 300GB of PostgreSQL data and cannot be reproduced as such, so this session reproduces only the same mechanism at reduced scale on MySQL 8.4.3 with a 1,500-row table. Restoring a mysqldump full backup (40K) and replaying the binary log (192K) up to the moment just before a DROP TABLE recovers everything: the backup alone brings back 1,000 rows and loses 500, while replaying up to position 176549 brings all 1,500 rows back. The five obstacles split into three genuine database traps and two artifacts of running the lab in containers. Scaling up to 4 million rows (a 525MB dump) shows total recovery time growing from 0.54s to 21.5s while the restore verdict stays identical at every scale, which is why absolute timings from this lab cannot be quoted but verdicts and boundary rules can. Three of them raise no error at all: a replay that is silently skipped, an expired binlog that closes the PITR window, and a missing -i on docker exec that never delivers standard input."
 date: 2026-03-09
 tags:
   - MySQL

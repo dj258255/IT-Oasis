@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { buildCategoryTree, defaultIconPath } from '../../lib/utils';
-import { base, getCategoryI18n, getCategoryMeta, getCategoryDisplayKo } from '../../lib/config';
+import { base, getCategoryMeta, getCategoryDisplayKo } from '../../lib/config';
 import { getPublishedPosts } from '../../lib/posts';
 const posts = await getPublishedPosts();
 const categoryTree = buildCategoryTree(posts.map(p => p.data.category));
@@ -9,18 +9,17 @@ const sortedParents = [...categoryTree.entries()].sort((a, b) => b[1].count - a[
 
 const catMetaRaw = getCategoryMeta();
 const catMeta = new Map([...catMetaRaw.entries()].map(([k, v]) => [k, { icon: v.icon, gradient: 'from-primary/15 to-accent/15' }]));
-const catI18n = getCategoryI18n();
 const catDisplayKo = getCategoryDisplayKo();
 const defaultGradient = 'from-cyan/15 to-emerald/15';
 ---
 
-<BaseLayout title="Categories">
+<BaseLayout title="카테고리 — IT Oasis">
   <div class="fade-in-up">
     <h1 class="text-xl sm:text-2xl font-bold tracking-tight mb-2 px-1">
       <span class="gradient-text">Categories</span>
     </h1>
     <p class="text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 mb-8 sm:mb-10 px-1">
-      {sortedParents.length}<span data-ko="개의 카테고리" data-en=" categories">개의 카테고리</span>
+      {sortedParents.length}<span>개의 카테고리</span>
     </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 stagger">
@@ -38,17 +37,17 @@ const defaultGradient = 'from-cyan/15 to-emerald/15';
                 </svg>
               </div>
               <span class="text-[12px] font-semibold px-3 py-1 rounded-full bg-primary/[0.06] text-primary/60">
-                {node.count}<span data-ko="개의 글" data-en=" posts">개의 글</span>
+                {node.count}<span>개의 글</span>
               </span>
             </div>
-            <h2 class="text-[18px] font-bold group-hover:text-primary transition-colors duration-300 mb-1" data-ko={catDisplayKo.get(parent) || parent} data-en={catI18n.get(parent) || parent}>
+            <h2 class="text-[18px] font-bold group-hover:text-primary transition-colors duration-300 mb-1">
               {catDisplayKo.get(parent) || parent}
             </h2>
             {node.children.size > 0 && (
               <div class="flex flex-wrap gap-1.5 mt-3">
                 {[...node.children.entries()].sort((a, b) => b[1].count - a[1].count).map(([child, childNode]) => (
                   <span class="text-[11px] text-gray-400 dark:text-gray-500 bg-gray-100/60 dark:bg-gray-800/40 px-2.5 py-1 rounded-lg">
-                    <span data-ko={catDisplayKo.get(child) || child} data-en={catI18n.get(child) || child}>{catDisplayKo.get(child) || child}</span> <span class="opacity-60">{childNode.count}</span>
+                    <span>{catDisplayKo.get(child) || child}</span> <span class="opacity-60">{childNode.count}</span>
                   </span>
                 ))}
               </div>

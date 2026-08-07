@@ -1,8 +1,6 @@
 ---
 title: '이기종 DBMS를 하나의 컨트롤 플레인으로: DBTower 설계와 쿼리 회귀 감지'
-titleEn: 'One Control Plane for Heterogeneous DBMSs: The Design, Abstraction, and Regression Detection of DBTower'
 description: 'MySQL·PostgreSQL·SQL Server처럼 서로 다른 DBMS를 등록부터 모니터링, 백업까지 한 곳에서 관리하는 컨트롤 플레인 DBTower의 설계편입니다. 기종마다 다른 통계 소스(performance_schema·pg_stat_statements·DMV)를 DbmsOperator 인터페이스 하나로 묶었고, 같은 ''백업''이 mysqldump·pg_dump·BACKUP DATABASE로 갈리는 차이도 그 인터페이스 뒤로 감췄습니다. ''부하 상위 쿼리가 곧 범인은 아니다''라는 문제의식에서 시점 비교가 나왔고, 플랫폼이 자기 자신을 등록해 병목을 잡은 도그푸딩에서는 Seq Scan을 21ms에서 0.06ms로 줄였습니다. 이 시점 비교를 사람이 아니라 플랫폼이 스스로 돌려 쿼리 회귀를 자동으로 감지하고 Discord로 알립니다. 이런 설계 결정과 실측 수치를 함께 기록했습니다.'
-descriptionEn: 'DBTower is a control plane that registers, monitors, and backs up heterogeneous DBMSs like MySQL, PostgreSQL, and SQL Server from one place, and this is the design chapter. It unifies per-engine stat sources such as performance_schema, pg_stat_statements, and DMVs behind a single DbmsOperator interface, and hides the differences where the same ''backup'' splits into mysqldump, pg_dump, and BACKUP DATABASE behind that same interface. Window comparison grew out of the insight that the heaviest query is not always the culprit. Dogfooding, where the platform registers itself to find its own bottleneck, cut a Seq Scan from 21ms to 0.06ms. The platform then runs that window comparison on its own to detect query regressions automatically and send Discord alerts. Design decisions and measured numbers are recorded throughout.'
 date: 2026-03-17
 tags:
   - Java

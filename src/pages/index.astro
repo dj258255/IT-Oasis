@@ -6,9 +6,8 @@ import CarouselSection from '../components/CarouselSection.astro';
 import { projects } from '../data/projects';
 import { getPublishedPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
-import { base, assetPath, getSiteSettings, getCategoryI18n, getCategoryDisplayKo } from '../lib/config';
+import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
 
-const catI18n = getCategoryI18n();
 const catDisplayKo = getCategoryDisplayKo();
 const siteSettings = getSiteSettings();
 
@@ -20,7 +19,7 @@ const posts = (await getPublishedPosts()).slice(0, 8);
   <section class="hero-banner mb-16 sm:mb-24">
     <div class="hero-banner-inner">
       {siteSettings.bannerImage ? (
-        <img src={assetPath(siteSettings.bannerImage)} alt="Banner" class="hero-banner-img" />
+        <img src={assetPath(siteSettings.bannerImage)} alt="블로그 대문 이미지" class="hero-banner-img" />
       ) : (
         <div class="hero-banner-fallback"></div>
       )}
@@ -39,37 +38,30 @@ const posts = (await getPublishedPosts()).slice(0, 8);
       </div>
 
     <!-- 프로젝트 -->
-    <CarouselSection id="projects" titleKo="프로젝트" titleEn="Projects" viewAllHref={`${base}/projects`} large>
+    <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
       {projects.map((project) => (
         <CarouselCard
           href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
-          titleEn={project.titleEn}
           description={project.description}
-          descriptionEn={project.descriptionEn}
           image={project.image ? assetPath(project.image) : undefined}
           date={project.date}
           category={translateCategory(project.category, catDisplayKo)}
-          categoryEn={translateCategory(project.category, catI18n)}
           noOverlay
         />
       ))}
     </CarouselSection>
 
     <!-- 최신 스토리 -->
-    <CarouselSection id="stories" titleKo="최신 스토리" titleEn="Latest Story" viewAllHref={`${base}/blog`} large>
+    <CarouselSection id="stories" titleKo="최신 스토리" viewAllHref={`${base}/blog`} large>
       {posts.map((post) => (
         <CarouselCard
           href={`${base}/blog/${post.id}`}
           title={post.data.title}
-          titleEn={post.data.titleEn}
           description={post.data.description}
-          descriptionEn={post.data.descriptionEn}
           image={assetPath(post.data.coverImage || '/uploads/banners/default-post-cover.png')}
           date={post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
-          dateEn={post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
           category={translateCategory(post.data.category, catDisplayKo)}
-          categoryEn={translateCategory(post.data.category, catI18n)}
         />
       ))}
     </CarouselSection>

@@ -1,8 +1,6 @@
 ---
 title: '한맥에서 0으로 나눈 값이 주문 검증을 통과했다'
-titleEn: "Hanmac: A Divide-by-Zero That Slipped Through Order Validation"
 description: '2013년 한맥투자증권 사고는 옵션 이론가를 계산할 때 잔존 만기가 0이 되어 만들어진 값이 주문 검증을 통과한 것으로 알려져 있습니다. 이 글이 재현한 것은 사건 자체가 아니라 0으로 나눈 값이 상하한 검증을 빠져나가는 일반 메커니즘이고, 실제 거래소와 옵션 모델은 다루지 않았습니다. 코드는 Java 21과 Spring Boot로 짰습니다. 주문 120건 중 Infinity 10건은 상한 비교에 걸려 거부됐고, NaN 10건은 크기 비교가 모두 false라 그대로 접수됐습니다. 해소는 네 조건으로 갈라 다시 쟀습니다. 킬스위치를 끄면 유한성 가드 단독으로 Infinity 10건과 NaN 10건을 전부 거부해 비정상 접수가 0건이고, 킬스위치를 켠 채 배치를 섞으면 19건째에 발동해 정상 주문 84건이 함께 막혔습니다. 사건의 손실액과 법원 판단은 1차 문서로 확인하지 못했습니다.'
-descriptionEn: "In 2013, Hanmac Securities is reported to have lost about 46 billion won in 143 seconds after an option pricing formula divided by a time-to-expiry that had reached zero, and the resulting non-finite price passed order validation. That figure is widely cited but this series has not verified it against primary documents. The session does not rebuild the incident, an exchange, or an option model. It shrinks the problem down to a single mechanism in Java 21 and Spring Boot, namely how a divide-by-zero result gets through an upper and lower bound check. Of 120 orders, the 10 that produced Infinity were rejected by the upper bound, but the 10 that produced NaN slipped through because every magnitude comparison against NaN is false. The fix was re-measured across four conditions. With the kill switch off, the finiteness whitelist alone rejected all 10 Infinity and all 10 NaN orders, so zero bad orders were accepted without it. With the kill switch on and the batch shuffled, it tripped on the 19th order and blocked 84 valid orders as collateral damage."
 date: 2026-01-10
 tags:
   - Java

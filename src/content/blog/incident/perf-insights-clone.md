@@ -1,8 +1,6 @@
 ---
 title: 'Performance Insights를 직접 만들어 검증하기'
-titleEn: 'Building a Performance Insights Clone to Verify What It Measures'
 description: 'AWS가 2026년 7월 31일 RDS Performance Insights 콘솔을 종료하고 CloudWatch Database Insights로 넘깁니다. DB Load(평균 활성 세션, AAS)를 구하는 수식은 그대로입니다. 매초 활성 세션을 세고 대기 이벤트로 쪼개는 40줄짜리 샘플러를 직접 만들어, 병목을 알고 설계한 3구간 워크로드에 대 봤습니다. 가장 값어치 있는 결과는 InnoDB 행 락 대기가 lock이 아니라 wait/io/table/sql/handler로 표면화된다는 것입니다. 실제 PI 화면에서도 똑같이 생기는 오진 지점이고, performance_schema.data_lock_waits를 함께 세면 갈라집니다. 다만 CPU 구간은 부하 생성기가 DB를 채우지 못해 검증하지 못했고, 구간 1에서는 활성 세션의 21%를 분류하지 못했습니다.'
-descriptionEn: "AWS retires the RDS Performance Insights console on July 31, 2026 and moves it to CloudWatch Database Insights, but the formula behind DB Load (average active sessions) stays the same. I wrote a 40-line sampler that counts active sessions every second and splits them by wait event, then ran it against a three-phase workload whose bottleneck I designed in advance. The finding worth keeping is that InnoDB row lock waits surface not as a lock wait but as wait/io/table/sql/handler, the same misreading trap real Performance Insights screens produce, and that counting performance_schema.data_lock_waits alongside separates the two. The CPU phase was not verified because the Python load generator could not keep the database busy, and 21% of active sessions in that phase went unclassified."
 date: 2026-01-16
 tags:
   - MySQL

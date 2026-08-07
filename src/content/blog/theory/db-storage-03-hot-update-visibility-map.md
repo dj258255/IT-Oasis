@@ -1,8 +1,6 @@
 ---
 title: 'DB 스토리지 내부 ③: HOT Update와 Visibility Map'
-titleEn: 'DB Storage Internals ③: HOT Update and Visibility Map'
 description: PostgreSQL UPDATE는 MVCC 구현 특성상 write amplification이 발생할 수 있습니다. HOT(Heap-Only Tuple) Update가 조건부로 인덱스 갱신을 회피하고, Visibility Map이 조건부로 Index-Only Scan을 가능하게 합니다. fillfactor와 autovacuum, 인덱스 컬럼 설계가 그 조건을 만족시키는 실무적 지렛대입니다.
-descriptionEn: PostgreSQL UPDATE can trigger write amplification by design — every cold update creates a new row version and updates every index. HOT (Heap-Only Tuple) update conditionally skips index updates, and the Visibility Map conditionally enables Index-Only Scan. Fillfactor, autovacuum, and indexed-column design are the practical levers that meet those conditions.
 date: 2026-04-21T00:00:00.000Z
 tags:
   - Database

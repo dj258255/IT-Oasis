@@ -1,8 +1,6 @@
 ---
 title: '인증부터 셀프호스트 v1.0.0까지, 운영 안전 8축으로 프로덕션에 올리다'
-titleEn: 'From Auth to Self-Hosted v1.0.0: Eight Axes of Operational Safety, IaC Provisioning, and Diagnostic Guardrails to Production'
 description: '이기종 DBMS 운영 관리 플랫폼 DBTower의 운영 안전 편입니다. 네트워크에 닿는 누구나 인스턴스를 등록·삭제·백업할 수 있던 결격 사유에서 출발해, 세션+토큰 이중 인증과 역할 분리, 비밀번호 AES-256-GCM 암호화, ddl-auto 드리프트의 Flyway 이관(Boot 4 스타터의 조용한 미실행 함정 포함), 실측으로 확정한 최소 권한 계정, 스케줄러 분산 락, 복원 검증까지 운영 안전을 8개 축으로 닫았습니다. Phase C에서는 멱등 등록 PUT을 종점 삼아 K8s(CloudNativePG e2e)·Ansible(changed=0)·Terraform(validate)을 관제탑에 이었고, 진단이 대상 DB의 부하가 되지 않도록 쿼리 타임아웃·MongoDB 소켓 상한·죽은 DB 지수 백오프 가드레일을 달았습니다. 마무리는 SaaS의 네 벽을 피해 Grafana처럼 셀프호스트 배터리 포함 이미지로 찍은 v1.0.0입니다.'
-descriptionEn: 'The operational-safety part of DBTower. Starting from a disqualifying flaw where anyone on the network could register, delete, or back up instances, I closed operational safety along eight axes: session+token dual auth with role separation, AES-256-GCM password encryption with backward compatibility, migrating ddl-auto schema drift to Flyway (hitting Boot 4''s silent-no-run trap), a least-privilege account confirmed by measurement, a distributed scheduler lock, and backup restore verification. Phase C wires creation to control with an idempotent registration PUT as the single endpoint for K8s (CloudNativePG e2e), Ansible (changed=0), and Terraform (validate). Guardrails keep diagnosis from becoming the load: a single-point query timeout, a MongoDB socket cap, and exponential backoff for dead DBs. The result is a self-hosted batteries-included image like Grafana, shipping v1.0.0.'
 date: 2026-07-04
 tags:
   - Java

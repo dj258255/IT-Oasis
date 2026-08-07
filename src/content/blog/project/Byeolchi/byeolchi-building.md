@@ -1,6 +1,5 @@
 ---
 title: '별찌 - 완벽한 설계보다 1주 POC, 빠르게 만들며 짓는 중'
-titleEn: 'Byeolchi - A One-Week POC Over a Perfect Design'
 description: >-
   이미 보고 있는 상품을 기준으로 여러 쇼핑몰의 가격과 중고 대안을 한 화면에서 비교해 주는
   AI 패션 쇼핑 어시스턴트 별찌를, 백엔드 2인으로 만들고 있는 현재진행형 기록입니다. 완벽한
@@ -12,16 +11,6 @@ description: >-
   OCI Always Free로 인프라 비용을 0원에 맞춘 선택(ADR), Gemini Flash 무료 티어 +
   모델 라우팅 + 캐싱으로 AI 비용을 통제하는 전략, 그리고 첫 POC smoke(무신사 100개 표본 비교
   매칭 89%, POC 게이트 80% 통과)까지, 결정과 막 시작된 실측을 정직하게 적었습니다.
-descriptionEn: >-
-  A work-in-progress log of Byeolchi, an AI fashion shopping assistant that compares
-  prices and second-hand alternatives across malls on the product page you are already
-  viewing, built by two backend engineers. Covers a POC-first approach — ship fast,
-  validate, then build (ADR), starting on PostgreSQL 18 + pgvector and
-  deferring Elasticsearch + Nori to Phase 2 (ADR), choosing Java 25 virtual threads
-  + Spring Boot 4 for a fan-out workload (ADR), a modular monolith with Spring
-  Modulith for a two-person team (ADR), self-hosted OAuth instead of an auth SaaS (ADR), a
-  zero-dollar infra target on OCI Always Free (ADR), and a first POC smoke
-  (89% match on a 100-product Musinsa sample, clearing the 80% gate).
 date: 2026-06-08T00:00:00.000Z
 tags:
   - Java 25

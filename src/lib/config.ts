@@ -24,26 +24,6 @@ export function getSiteSettings(): Record<string, any> {
   return _settings!;
 }
 
-// ── Category i18n (KO name → EN name) ────────────────────
-let _catI18n: Map<string, string> | null = null;
-
-export function getCategoryI18n(): Map<string, string> {
-  if (!_catI18n) {
-    _catI18n = new Map();
-    const catDir = join(process.cwd(), 'src/data/categories');
-    try {
-      for (const file of readdirSync(catDir).filter(f => f.endsWith('.json'))) {
-        const data = JSON.parse(readFileSync(join(catDir, file), 'utf-8'));
-        _catI18n.set(data.name, data.nameEn || data.name);
-        for (const sub of data.subcategories || []) {
-          _catI18n.set(sub.name, sub.nameEn || sub.name);
-        }
-      }
-    } catch {}
-  }
-  return _catI18n;
-}
-
 // ── Category display names (identifier → Korean display) ──
 let _catDisplayKo: Map<string, string> | null = null;
 
@@ -64,10 +44,9 @@ export function getCategoryDisplayKo(): Map<string, string> {
   return _catDisplayKo;
 }
 
-// ── Category Metadata (icons + translations) ─────────────
+// ── Category Metadata (icons + ordering) ─────────────────
 export interface CategoryMeta {
   icon: string;
-  nameEn: string;
   order: number;
 }
 
@@ -82,7 +61,6 @@ export function getCategoryMeta(): Map<string, CategoryMeta> {
         const data = JSON.parse(readFileSync(join(catDir, file), 'utf-8'));
         _catMeta.set(data.name, {
           icon: categoryIconPaths[data.icon] || defaultIconPath,
-          nameEn: data.nameEn || data.name,
           order: typeof data.order === 'number' ? data.order : 999,
         });
       }

@@ -1,8 +1,6 @@
 ---
 title: '5,000이라고 적힌 임계값이 6,250에서 발동했다, MSSQL 락 에스컬레이션'
-titleEn: "The Documented Threshold Says 5,000 but It Fired at 6,250: SQL Server Lock Escalation"
 description: "Microsoft Learn 은 단일 문이 최소 5,000개 락을 잡으면 테이블 락으로 승격한다고 적습니다. 그 자리에서는 승격이 일어나지 않았습니다. 이분 탐색으로 찾은 경계는 테이블 락 6,250개였고, 확장 이벤트가 적은 escalated_lock_count 도 같은 값이었습니다. 승격이 일어나면 보정 대상이 아닌 계정의 조회까지 18.5초 멈춥니다."
-descriptionEn: "Microsoft Learn states that the Database Engine escalates row locks to a table lock when a single statement acquires at least 5,000 locks on one table reference, and retries every 1,250 locks if escalation fails. Running an UPDATE TOP (n) against a 200,000 row table on SQL Server 2022 CU26, escalation does not occur at 5,000 rows, nor at 6,000, nor at 6,200. A binary search that derives the boundary rather than asserting it finds that the largest non-escalating statement holds 6,249 table-scoped locks, and the extended event sqlserver.lock_escalation independently reports escalated_lock_count as 6,249 with cause Lock threshold. The documented 5,000 is where checking begins, not where firing happens: the engine checks at multiples of 1,250, so the first check that satisfies the condition lands at 6,250. When escalation does occur, a query against an account the correction never touches blocks for 18.5 seconds on LCK_M_IS, while splitting the same work into 4,000 row batches produces zero escalations and zero blocked probes. Two findings were unexpected: at 400,000 rows and above the optimizer chooses page locks up front so escalation never happens at all, and without fresh statistics the same 6,231 rows escalates because the plan acquires more locks for identical logical work."
 date: 2026-08-07
 tags:
   - SQL Server

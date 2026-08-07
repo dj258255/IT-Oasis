@@ -1,8 +1,6 @@
 ---
 title: 'Lazy 로딩에서 발생한 No Session 오류'
-titleEn: 'No Session Error from Lazy Loading'
 description: JPA Lazy 로딩에서 발생한 LazyInitializationException의 원인과 @EntityGraph를 이용한 해결 과정을 정리한다.
-descriptionEn: Analyzes the cause of LazyInitializationException in JPA lazy loading and the solution using @EntityGraph.
 date: 2025-07-21T00:00:00.000Z
 tags:
   - JPA
@@ -96,89 +94,6 @@ Lazy 로딩은 **영속성 컨텍스트(Persistence Context)가 살아 있는 �
 ### 이 문제에서 배운 원칙
 
 `@OneToMany` 구조에서 Lazy 로딩을 유지하면서도, 필요한 시점에 `@EntityGraph`로 Eager 전환을 선언할 수 있다는 점이 핵심입니다. 이후 N+1 문제를 분석할 때도 이 경험이 바탕이 됐습니다. Lazy 로딩의 동작 원리(프록시 초기화 → 영속성 컨텍스트 필요)를 이해하고 있었기 때문에, N+1의 근본 원인을 빠르게 파악할 수 있었습니다.
-
----
-
-## Reference
-
-- [Hibernate ORM 6.0 Migration Guide - DISTINCT](https://docs.jboss.org/hibernate/orm/6.0/migration-guide/migration-guide.html#query-sqm-distinct)
-- [Vlad Mihalcea - The best way to handle the LazyInitializationException](https://vladmihalcea.com/the-best-way-to-handle-the-lazyinitializationexception/)
-
-<!-- EN -->
-
-## Normal Behavior
-
-Board (post) and BoardImage (attachment) are mapped with a `@OneToMany` relationship. The default fetch strategy for `@OneToMany` is `FetchType.LAZY`, meaning when a post is retrieved, only the Board entity is loaded first, and BoardImage triggers a separate SELECT when actually accessed.
-
-In other words, Board retrieval → BoardImage access should result in **2 SELECT queries total**.
-
----
-
-## The Problem
-
-In a unit test, after retrieving a Board and trying to access its BoardImage, a `LazyInitializationException: no session` error occurred.
-
-![](/uploads/project/EduMeet/lazy-loading-no-session/lazy-no-session-error.png)
-
-The execution output showed that Board was printed successfully, but at the point of trying to SELECT BoardImage, the DB session had already closed.
-
----
-
-## Root Cause Analysis
-
-Lazy loading **only works while the Persistence Context is alive**. Since the Persistence Context shares its lifecycle with the transaction, in a test method without a transaction, the Persistence Context closes immediately after the first SELECT (Board retrieval).
-
-When BoardImage is accessed in this state, Hibernate tries to initialize the proxy object but fails because the session no longer exists, resulting in the `no session` error.
-
-The key insight is: **Lazy loading = Proxy initialization = Persistence Context required**. Without a transaction in test code, this premise breaks.
-
----
-
-## Resolution
-
-### First Attempt: Adding @Transactional
-
-The simplest fix is adding `@Transactional` to the test method. This wraps the entire method in a single transaction, allowing multiple queries within the method.
-
-However, this approach is **only a workaround valid in the test environment**. In actual service code, the same situation of accessing Lazy entities outside the transaction scope can occur.
-
-### Second Attempt: Applying @EntityGraph
-
-For a fundamental solution, `@EntityGraph` was applied. `@EntityGraph` is a JPA annotation that declares specified related entities to be **loaded eagerly at query time**.
-
-![](/uploads/project/EduMeet/lazy-loading-no-session/solutions-entitygraph.png)
-
-By specifying `imageSet` in `@EntityGraph`'s `attributePaths`, Board retrieval now fetches BoardImage in a single query.
-
-Re-running the unit test:
-
-![](/uploads/project/EduMeet/lazy-loading-no-session/solutions-entitygraph-02.png)
-
-The query log shows that Board and BoardImage tables were **retrieved in a single LEFT JOIN**. Posts and attachments can now be processed simultaneously without additional SELECTs.
-
----
-
-## Summary
-
-| Aspect | @Transactional | @EntityGraph |
-|--------|---------------|--------------|
-| Approach | Extend transaction scope | Join in single query |
-| Query Count | 2 (Board + BoardImage) | 1 (JOIN) |
-| Applicability | Test-only workaround | Applicable in service code too |
-| Fundamental Fix | No | Yes |
-
-### Why @EntityGraph Over @Transactional
-
-Adding `@Transactional` to tests works immediately, but has two problems:
-
-1. **Doesn't verify actual service behavior**: Opening a transaction in tests creates **false positives** — making service code appear to work without transactions. In production, accessing Lazy entities outside transaction scope (Controller → Service) triggers the same `no session` error.
-2. **Hides the problem rather than solving it**: Passing tests don't mean safe code. This is the same trap as depending on Open Session in View (OSIV).
-
-`@EntityGraph` **explicitly declares** which related entities to load at query time, working identically in any environment. After this experience, I adopted the practice of explicitly specifying loading strategies for all Repository methods that access Lazy entities.
-
-### Principle Learned
-
-The key takeaway is that while maintaining Lazy loading in a `@OneToMany` structure, you can declare Eager fetching with `@EntityGraph` when needed. This experience became foundational when analyzing the N+1 problem later — understanding Lazy loading mechanics (proxy initialization → Persistence Context required) enabled quick identification of N+1's root cause.
 
 ---
 

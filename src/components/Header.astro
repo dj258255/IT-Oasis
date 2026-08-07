@@ -27,7 +27,6 @@ const siteSettings = getSiteSettings();
 
 const navItems = (siteSettings.navItems || []).map((item: any) => ({
   label: item.label,
-  labelEn: item.labelEn,
   href: `${base}${item.path}`,
   icon: iconPaths[item.icon] || iconPaths.person,
 }));
@@ -58,7 +57,7 @@ const searchData = posts.map((post) => ({
 
     <!-- Desktop nav -->
     <div class="hidden sm:flex items-center gap-1 flex-1">
-      {navItems.map(({ label, labelEn, href }) => {
+      {navItems.map(({ label, href }) => {
         const isActive = currentPath === href || (href !== '/' && currentPath.startsWith(href));
         return (
           <a
@@ -69,8 +68,6 @@ const searchData = posts.map((post) => ({
                 ? 'text-primary bg-primary/[0.08] dark:text-primary-light dark:bg-primary-light/[0.1]'
                 : 'text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/30 dark:hover:bg-white/[0.03]',
             ]}
-            data-ko={label}
-            data-en={labelEn}
           >
             {label}
           </a>
@@ -80,17 +77,6 @@ const searchData = posts.map((post) => ({
 
     <!-- Right side icons -->
     <div class="flex items-center gap-0.5 shrink-0 ml-auto">
-      <!-- Language toggle -->
-      <button
-        id="lang-global-toggle"
-        class="lang-pill-btn p-1.5 sm:p-2 rounded-xl hover:bg-primary/[0.04] transition-all duration-300"
-        aria-label="Toggle language"
-      >
-        <span class="lang-pill-ko active">KO</span>
-        <span class="lang-pill-divider">/</span>
-        <span class="lang-pill-en">EN</span>
-      </button>
-
       <!-- Theme toggle -->
       <button
         id="theme-toggle"
@@ -142,8 +128,6 @@ const searchData = posts.map((post) => ({
       id="header-search-input"
       type="text"
       placeholder="검색어를 입력하세요..."
-      data-ko-placeholder="검색어를 입력하세요..."
-      data-en-placeholder="Search..."
       class:list={["flex-1 bg-transparent text-[13px] sm:text-[14px] focus:outline-none min-w-0", transparent ? "text-white placeholder:text-white/40" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"]}
       autocomplete="off"
     />
@@ -160,10 +144,10 @@ const searchData = posts.map((post) => ({
   <div id="search-dropdown" class="search-dropdown max-w-5xl mx-auto mt-2">
     <div class:list={["rounded-2xl p-2 max-h-[70vh] overflow-y-auto overscroll-contain", transparent ? "glass-search-solid" : "glass-nav"]}>
       <div id="search-results-list"></div>
-      <p id="search-empty" class="hidden text-center text-[13px] py-8 text-gray-400 dark:text-gray-500" data-ko="검색 결과가 없습니다" data-en="No results found">
+      <p id="search-empty" class="hidden text-center text-[13px] py-8 text-gray-400 dark:text-gray-500">
         검색 결과가 없습니다
       </p>
-      <p id="search-placeholder" class="text-center text-[12px] py-6 text-gray-400 dark:text-gray-500" data-ko="제목, 태그, 카테고리로 검색" data-en="Search by title, tags, category">
+      <p id="search-placeholder" class="text-center text-[12px] py-6 text-gray-400 dark:text-gray-500">
         제목, 태그, 카테고리로 검색
       </p>
     </div>
@@ -171,7 +155,7 @@ const searchData = posts.map((post) => ({
 
   <!-- Mobile menu -->
   <div id="mobile-menu" class="hidden sm:hidden mt-2 glass-nav rounded-2xl max-w-5xl mx-auto p-2 animate-[fade-in-up_0.2s_ease]">
-    {navItems.map(({ label, labelEn, href, icon }) => {
+    {navItems.map(({ label, href, icon }) => {
       const isActive = currentPath === href || (href !== '/' && currentPath.startsWith(href));
       return (
         <a
@@ -186,7 +170,7 @@ const searchData = posts.map((post) => ({
           <svg class="w-4.5 h-4.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d={icon} />
           </svg>
-          <span data-ko={label} data-en={labelEn}>{label}</span>
+          <span>{label}</span>
         </a>
       );
     })}
@@ -232,39 +216,6 @@ const searchData = posts.map((post) => ({
     toggle?.addEventListener('click', () => {
       const isDark = document.documentElement.classList.toggle('dark');
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }, { signal: sig });
-
-    // Language toggle
-    const langToggle = document.getElementById('lang-global-toggle');
-    const langKo = langToggle?.querySelector('.lang-pill-ko');
-    const langEn = langToggle?.querySelector('.lang-pill-en');
-    function updateLangButton(lang) {
-      if (lang === 'en') {
-        langKo?.classList.remove('active');
-        langEn?.classList.add('active');
-      } else {
-        langKo?.classList.add('active');
-        langEn?.classList.remove('active');
-      }
-    }
-    // Set initial state from localStorage
-    var savedLang = localStorage.getItem('preferred-lang') || 'ko';
-    updateLangButton(savedLang);
-    // Apply initial lang on page load
-    if (typeof window.applyGlobalLang === 'function') {
-      window.applyGlobalLang(savedLang);
-    }
-    langToggle?.addEventListener('click', function() {
-      var current = document.documentElement.classList.contains('lang-en') ? 'en' : 'ko';
-      var next = current === 'ko' ? 'en' : 'ko';
-      updateLangButton(next);
-      if (typeof window.applyGlobalLang === 'function') {
-        window.applyGlobalLang(next);
-      }
-    }, { signal: sig });
-    // Listen for lang changes from other sources
-    window.addEventListener('lang-changed', function(e) {
-      updateLangButton(e.detail.lang);
     }, { signal: sig });
 
     // Mobile menu
@@ -575,41 +526,4 @@ const searchData = posts.map((post) => ({
     border-top-color: rgba(255, 255, 255, 0.03);
   }
 
-  /* Language pill toggle */
-  .lang-pill-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 13.5px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    user-select: none;
-    color: #9ca3af;
-  }
-  :global(.dark) .lang-pill-btn { color: #6b7280; }
-  .lang-pill-ko, .lang-pill-en {
-    opacity: 0.45;
-    transition: opacity 0.2s ease, color 0.2s ease;
-  }
-  .lang-pill-ko.active, .lang-pill-en.active {
-    opacity: 1;
-    color: #4a9bc0;
-  }
-  :global(.dark) .lang-pill-ko.active, :global(.dark) .lang-pill-en.active {
-    color: #8db8d0;
-  }
-  .lang-pill-divider {
-    opacity: 0.3;
-    margin: 0 1px;
-  }
-
-  /* Transparent header override */
-  header[data-transparent] .glass-nav-transparent .lang-pill-btn {
-    color: rgba(255, 255, 255, 0.7);
-  }
-  header[data-transparent] .glass-nav-transparent .lang-pill-ko.active,
-  header[data-transparent] .glass-nav-transparent .lang-pill-en.active {
-    color: white;
-  }
 </style>

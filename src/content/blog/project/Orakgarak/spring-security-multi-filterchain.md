@@ -1,8 +1,6 @@
 ---
 title: 'Spring Security 다중 FilterChain으로 경로별 인증 분리'
-titleEn: 'Separating Authentication per Route with Multiple Spring Security FilterChains'
 description: Webhook, API, Actuator가 각각 다른 인증 방식을 요구해서 3개의 SecurityFilterChain을 @Order로 분리하고, 경로별 독립적인 보안 정책을 적용한 과정을 정리한다.
-descriptionEn: Documents separating three SecurityFilterChains by @Order for Webhook (permitAll), Actuator (Basic Auth), and API (JWT Bearer Token) routes.
 date: 2025-09-09T00:00:00.000Z
 tags:
   - Spring Security
@@ -97,78 +95,6 @@ AWS 인프라 레벨의 보안이 앞단에서 걸러주는 구조입니다.
 ---
 
 ## 참고 자료
-
-- [Spring Security Multiple HttpSecurity](https://docs.spring.io/spring-security/reference/servlet/configuration/java.html#_multiple_httpsecurity)
-- [Spring Security Architecture](https://docs.spring.io/spring-security/reference/servlet/architecture.html)
-
-<!-- EN -->
-
-## Summary
-
-Webhook, API, and Actuator endpoints each required different authentication methods, so three SecurityFilterChains were separated using @Order with OAuth2 + JWT + Refresh Token Rotation.
-
----
-
-## Problem
-
-Security requirements differed by route in the Orak service.
-
-`/api/webhook/**` is an internal endpoint called by EventBridge, requiring no authentication. `/api/**` is the user API requiring JWT Bearer Token authentication. `/actuator/**` is the monitoring endpoint for Prometheus metric collection, protected with Basic Auth.
-
-Putting all three in a single SecurityFilterChain causes conflicts. Webhook needs `permitAll()` while API needs `authenticated()`, but `/api/webhook/**` is a subset of `/api/**`. Initially tried resolving with `requestMatchers` ordering in a single chain, but Actuator's `httpBasic()` and API's JWT Bearer Token require fundamentally different Filter configurations. With `httpBasic()` enabled, JWT requests received 401 from Basic Auth failure.
-
----
-
-## Three FilterChains
-
-Independent FilterChains were configured per route using @Order and securityMatcher.
-
-| Order | Path | Auth Method | Reason |
-|-------|------|-------------|--------|
-| @Order(1) | `/api/webhook/**` | None (permitAll) | EventBridge internal communication |
-| @Order(2) | `/actuator/**` | Basic Auth | Prometheus metric collection |
-| @Order(3) | `/api/**` | JWT Bearer Token | User API |
-
-![](/uploads/project/Orakgarak/spring-security-multi-filterchain/filterchain-flow.svg)
-
-Incoming requests are matched against Chains in Order sequence. The first matching Chain handles the request. Since Webhook matches first, it bypasses the API Chain's JWT filter entirely.
-
----
-
-## Why Webhook Needs No Authentication
-
-An unauthenticated endpoint might seem concerning, but this route is already protected at multiple layers:
-
-1. EventBridge Rule only triggers on specific S3 bucket ObjectCreated events.
-2. EC2's Security Group restricts inbound access. (Note: EventBridge API Destinations route through the public internet, so the protection layer is Security Group + HTTPS, not VPC-internal isolation.)
-3. The path is limited to `/api/webhook/**` with no impact on other APIs.
-4. The handler validates S3 ObjectCreated event structure, ignoring malformed requests.
-
-AWS infrastructure-level security filters requests upstream.
-
-**Why no HMAC signature verification**: Adding HMAC signatures to EventBridge → HTTP calls would require a Lambda intermediary, as EventBridge doesn't natively add signatures to HTTP headers. AWS API Destination + Connection supports OAuth/API Key auth, but with Security Group + HTTPS already restricting access (EventBridge API Destinations route through the public internet, not VPC-internal), adding Lambda was excessive for a 5-week project. In production, configuring an `Authorization` header via API Destination or validating EventBridge event `source` and `detail-type` fields would be more appropriate.
-
----
-
-## Implementation Details
-
-![](/uploads/project/Orakgarak/spring-security-multi-filterchain/security-config.svg)
-
----
-
-## Results
-
-| Path | Before (Single FilterChain) | After (3 FilterChains) |
-|------|---------------------------|----------------------|
-| `/api/webhook/**` | JWT filter blocked EventBridge calls (401) | `permitAll()` — works correctly |
-| `/actuator/**` | JWT auth required → Prometheus scraping failed | Basic Auth — Prometheus scrapes normally |
-| `/api/**` | JWT auth works (but 401 on httpBasic conflict) | JWT Bearer Token only — no conflicts |
-
-Each chain has independent filter configuration, so one path's auth method doesn't affect others. Adding new auth methods only requires a new chain without modifying existing ones.
-
----
-
-## References
 
 - [Spring Security Multiple HttpSecurity](https://docs.spring.io/spring-security/reference/servlet/configuration/java.html#_multiple_httpsecurity)
 - [Spring Security Architecture](https://docs.spring.io/spring-security/reference/servlet/architecture.html)
