@@ -1,8 +1,6 @@
 {
   "title": "pay — Spring Modulith 결제 시스템",
-  "titleEn": "pay — A Payment System on Spring Modulith",
   "description": "결제는 실패가 비싼 도메인 — 타임아웃·중복·미확정·정산 불일치가 실제로 아프게 드러난다. PG가 대신 안 해주는 그 빈 공간(실패 설계·정합성·분산 트랜잭션)을 밑바닥부터 직접 만들어보며 배운 학습 프로젝트. 복식부기 원장·정산/대사·체크아웃 사가(PG 콜을 트랜잭션 밖으로)·멀티PG·구독·선불 월렛·회원·분쟁/차지백까지, 실 MySQL 라이브 검증과 자가 감사로 다졌다.",
-  "descriptionEn": "Payments is a domain where failure is expensive — timeouts, duplicates, unknown states, and settlement mismatches actually hurt. A learning project built from scratch to master the space PG providers don't handle for you: failure design, consistency, and distributed transactions. Double-entry ledger, settlement/reconciliation, a checkout saga (PG call outside the transaction), multi-PG routing, subscriptions, prepaid wallet, membership, and disputes/chargebacks — hardened through live MySQL verification and self-audits.",
   "image": "/uploads/project/pay/demo/demo-checkout.png",
   "tags": ["Payment", "Spring Boot", "Spring Modulith", "Java 21", "MySQL", "Distributed Systems", "Learning"],
   "category": "study",

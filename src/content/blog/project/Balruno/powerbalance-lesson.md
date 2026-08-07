@@ -1,8 +1,6 @@
 ---
 title: 'PowerBalance를 만들고 나서 배운 것'
-titleEn: 'What I Learned After Building PowerBalance'
 description: 인디게임 밸런싱 도구 PowerBalance를 만들며 느꼈던 가능성과, 실제 사용자 반응이 기대와는 달랐던 경험, 그리고 그 배움이 이후 CodingTestKit에 어떻게 이어졌는지를 정리한 글입니다.
-descriptionEn: A retrospective on building PowerBalance, the gap between a promising idea and real user adoption, and how that lesson later shaped CodingTestKit.
 date: 2026-04-02
 tags:
   - Retrospective
@@ -52,47 +50,3 @@ PowerBalance에서는 내가 만든 도구의 가능성과 한계를 동시에 �
 
 아마 그때 이 경험이 없었다면, 다음 프로젝트에서도 비슷한 실수를 반복했을 것 같다.
 그래서 지금도 이 프로젝트는 나한테 꽤 중요한 의미로 남아 있다.
-
-<!-- EN -->
-
-When I first built PowerBalance, I genuinely thought it was a pretty breakthrough idea.
-
-Game balancing clearly involves a lot of repetitive calculation, and spreadsheets like Excel or Google Sheets have obvious limitations for that kind of work.
-So I believed that if I put game-specific formulas, simulations, and validation tools in one place, it would definitely help game designers.
-
-And to be fair, it did help at least one real person.
-A friend of mine who was working on indie game balancing was satisfied with it, which made me feel that the problem I was trying to solve was not wrong.
-The need itself was real.
-
-But once I tried promoting it, the reaction was much colder than I expected.
-Some people showed interest, but very few actually tried using it.
-And that made one thing very clear:
-something that "looks useful" and something that people actually adopt are two very different things.
-
-![](/uploads/project/Balruno/powerbalance-feedback.png)
-
-What stayed with me most was the feedback around usability.
-The direction and feature set seemed interesting, but people felt lost when they first opened the app and did not know what to do first.
-As a builder, it is easy to assume that more features make a product better.
-But from the user's side, if the value is not clear within the first few minutes, they are likely to leave.
-
-Looking back, most people already had their own workflow.
-Some used Excel, some used Google Sheets, and some managed things with notes and experience.
-Even if I thought those workflows looked inconvenient, they were already familiar and working well enough for them.
-Unless I could give them a very clear reason to switch, a richer feature set alone was not enough.
-
-That lesson stayed with me for a long time.
-Later, when I built CodingTestKit, I became much more careful about one question:
-why should someone use this right now?
-I paid more attention to whether the tool improved an existing workflow immediately, and whether a first-time user could feel the value without much explanation.
-
-In the end, that difference mattered.
-PowerBalance taught me both the potential and the limit of a good idea, and that lesson shaped how I approached the next project.
-CodingTestKit eventually reached 254 downloads.
-
-So when I look back now, I do not really see PowerBalance as a failed project.
-It was the project that changed the way I think about products.
-It taught me that building good features and building something people actually use are not the same thing.
-
-If I had not learned that lesson then, I probably would have repeated the same mistake in the next project.
-That is why this project still matters a lot to me.

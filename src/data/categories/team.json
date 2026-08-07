@@ -1,13 +1,12 @@
 {
   "name": "team",
-  "nameEn": "Team Projects",
   "nameKo": "팀 프로젝트",
   "icon": "rocket",
   "order": 3,
   "subcategories": [
-    { "name": "Orakgarak", "nameEn": "Orakgarak", "nameKo": "오락가락", "order": 1 },
-    { "name": "EduMeet", "nameEn": "EduMeet", "nameKo": "에듀밋", "order": 2 },
-    { "name": "Joying", "nameEn": "RentalJoying", "nameKo": "빌려조잉", "order": 3 },
-    { "name": "Byeolchi", "nameEn": "Byeolchi", "nameKo": "별찌", "order": 4 }
+    { "name": "Orakgarak", "nameKo": "오락가락", "order": 1 },
+    { "name": "EduMeet", "nameKo": "에듀밋", "order": 2 },
+    { "name": "Joying", "nameKo": "빌려조잉", "order": 3 },
+    { "name": "Byeolchi", "nameKo": "별찌", "order": 4 }
   ]
 }

@@ -5,8 +5,8 @@ import AuthorCard from '../../components/AuthorCard.astro';
 import Giscus from '../../components/Giscus.astro';
 import SeriesNav from '../../components/SeriesNav.astro';
 import { render } from 'astro:content';
-import { getReadingTime, parseCategory, splitContent, translateCategory } from '../../lib/utils';
-import { base, assetPath, getCategoryI18n, getCategoryDisplayKo } from '../../lib/config';
+import { getReadingTime, parseCategory, translateCategory } from '../../lib/utils';
+import { base, assetPath, getCategoryDisplayKo } from '../../lib/config';
 import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
 import { getBuildablePosts, getPublishedPosts } from '../../lib/posts';
 
@@ -59,10 +59,6 @@ export async function getStaticPaths() {
 const { post, prevPost, nextPost, relatedPosts, isSameCategory } = Astro.props;
 const { Content, headings } = await render(post);
 const readingTime = getReadingTime(post.body || '');
-const { en: enBody } = splitContent(post.body || '');
-const hasEn = enBody !== null;
-const titleEn = post.data.titleEn || '';
-const descriptionEn = post.data.descriptionEn || '';
 
 const formattedDate = post.data.date.toLocaleDateString('ko-KR', {
   year: 'numeric',
@@ -73,27 +69,8 @@ const formattedDate = post.data.date.toLocaleDateString('ko-KR', {
 const tocHeadings = headings.filter((h) => h.depth <= 3);
 const hasToc = tocHeadings.length > 2;
 
-let koHeadingCount = tocHeadings.length;
-if (hasEn) {
-  const delimMatch = (post.body || '').match(/^<!-- EN -->$/m);
-  if (delimMatch && delimMatch.index !== undefined) {
-    const koSection = (post.body || '').slice(0, delimMatch.index);
-    // Count headings outside code blocks (avoid false positives from # comments in code)
-    let count = 0;
-    let inCode = false;
-    for (const line of koSection.split('\n')) {
-      if (line.startsWith('```')) { inCode = !inCode; continue; }
-      if (!inCode && /^#{1,3}\s/.test(line)) count++;
-    }
-    koHeadingCount = count;
-  }
-}
-
-const catI18n = getCategoryI18n();
 const catDisplayKo = getCategoryDisplayKo();
-const categoryEn = translateCategory(post.data.category, catI18n);
 const categoryKo = translateCategory(post.data.category, catDisplayKo);
-const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || parseCategory(post.data.category).parent;
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined} noindex={post.data.unlisted}>
@@ -109,7 +86,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
         <svg class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        <span data-ko="모든 글" data-en="All Posts">모든 글</span>
+        <span>모든 글</span>
       </a>
 
       <!-- Post header -->
@@ -120,7 +97,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
           </time>
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
           <span class="text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400">
-            <span data-ko={`약 ${readingTime}분 분량`} data-en={`${readingTime} min read`}>{`약 ${readingTime}분 분량`}</span>
+            <span>{`약 ${readingTime}분 분량`}</span>
           </span>
           <span id="post-views-dot" class="hidden w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
           <span id="post-views" class="hidden items-center gap-1 text-[13px] sm:text-[14px] text-gray-500 dark:text-gray-400">
@@ -131,7 +108,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
             <span id="post-views-count">—</span>
           </span>
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-          <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']} data-ko={categoryKo} data-en={categoryEn}>
+          <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
             {categoryKo}
           </a>
         </div>
@@ -172,7 +149,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
               <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
-              <span data-ko="목차" data-en="Table of Contents">목차</span>
+              <span>목차</span>
             </div>
             <svg class="w-4 h-4 text-gray-400 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -182,11 +159,9 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
             {tocHeadings.map((heading, idx) => (
               <a
                 href={`#${heading.slug}`}
-                data-lang={hasEn ? (idx < koHeadingCount ? 'ko' : 'en') : undefined}
                 class:list={[
                   'toc-item block text-[13px] text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light transition-colors duration-300 py-1',
                   heading.depth === 3 && 'pl-4',
-                  hasEn && idx >= koHeadingCount && 'hidden',
                 ]}
               >
                 {heading.text}
@@ -198,7 +173,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
 
       <!-- Post content -->
       <div class="reading-surface rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10">
-        <div id="post-content" class="prose" data-has-en={hasEn ? 'true' : 'false'} data-title-en={titleEn}>
+        <div id="post-content" class="prose">
           <Content />
         </div>
       </div>
@@ -215,19 +190,18 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
             <p class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-5">
               {isSameCategory ? (
                 <>
-                  <span class="lang-ko text-gray-700 dark:text-gray-200">'{categoryKo}'</span>
-                  <span class="lang-en hidden text-gray-700 dark:text-gray-200">'{categoryEn}'</span>
-                  <span class="text-gray-500 dark:text-gray-400" data-ko=" 의 다른 글" data-en="'s other posts"> 의 다른 글</span>
+                  <span class="text-gray-700 dark:text-gray-200">'{categoryKo}'</span>
+                  <span class="text-gray-500 dark:text-gray-400"> 의 다른 글</span>
                 </>
               ) : (
-                <span class="text-gray-700 dark:text-gray-200" data-ko="다른 글 둘러보기" data-en="More posts to read">다른 글 둘러보기</span>
+                <span class="text-gray-700 dark:text-gray-200">다른 글 둘러보기</span>
               )}
             </p>
             <div class="h-px bg-gray-200/80 dark:bg-gray-700/50 mb-5"></div>
             <div class="flex flex-col gap-2.5">
               {relatedPosts.map((rp) => (
                 <a href={`${base}/blog/${rp.id}`} class="related-post-link group flex items-center justify-between gap-4">
-                  <p class="text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 truncate" data-ko={rp.data.title} data-en={rp.data.titleEn || rp.data.title}>
+                  <p class="text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 truncate">
                     {rp.data.title}
                   </p>
                   <span class="text-[18px] text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-primary-light group-hover:translate-x-1 transition-all duration-300 shrink-0 leading-none">&rarr;</span>
@@ -249,8 +223,8 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
                 </svg>
               </span>
               <span class="min-w-0">
-                <span class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-1" data-ko="이전 글" data-en="Previous">이전 글</span>
-                <span class="block text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-1" data-ko={prevPost.data.title} data-en={prevPost.data.titleEn || prevPost.data.title}>
+                <span class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-1">이전 글</span>
+                <span class="block text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-1">
                   {prevPost.data.title}
                 </span>
               </span>
@@ -259,8 +233,8 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
           {nextPost ? (
             <a href={`${base}/blog/${nextPost.id}`} class="glass-card rounded-2xl p-4 sm:p-5 group flex items-center gap-3.5 text-right">
               <span class="min-w-0 ml-auto">
-                <span class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-1" data-ko="다음 글" data-en="Next">다음 글</span>
-                <span class="block text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-1" data-ko={nextPost.data.title} data-en={nextPost.data.titleEn || nextPost.data.title}>
+                <span class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-1">다음 글</span>
+                <span class="block text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-1">
                   {nextPost.data.title}
                 </span>
               </span>
@@ -286,7 +260,7 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
                 <svg class="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
-                <span class="text-[13px] font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400" data-ko="목차" data-en="TOC">목차</span>
+                <span class="text-[13px] font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400">목차</span>
               </div>
 
               <!-- Progress bar -->
@@ -299,12 +273,10 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
                   <a
                     href={`#${heading.slug}`}
                     data-heading={heading.slug}
-                    data-lang={hasEn ? (idx < koHeadingCount ? 'ko' : 'en') : undefined}
                     class:list={[
                       'toc-link block text-[13px] leading-relaxed py-1.5 rounded-lg transition-all duration-300 text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary-light',
                       heading.depth === 2 && 'pl-2',
                       heading.depth === 3 && 'pl-5',
-                      hasEn && idx >= koHeadingCount && 'hidden',
                     ]}
                   >
                     {heading.text}
@@ -320,29 +292,6 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
 </BaseLayout>
 
 <style>
-  :global(.lang-content) {
-    transition: opacity 0.3s ease, transform 0.3s ease;
-  }
-
-  :global(.lang-content.lang-hidden) {
-    display: none;
-  }
-
-  :global(.lang-content.fade-in) {
-    animation: langFadeIn 0.3s ease forwards;
-  }
-
-  @keyframes langFadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   /* Each related post = a distinct, clearly separated row chip */
   .related-post-link {
     padding: 0.8rem 1rem;
@@ -544,98 +493,6 @@ const parentCatEn = catI18n.get(parseCategory(post.data.category).parent) || par
   (window as any).initTocFn = initToc;
   initToc();
   document.addEventListener('astro:page-load', initToc);
-</script>
-
-<script>
-  // Post-level language integration with global toggle
-  // Note: innerHTML usage here is safe - content comes from Astro's own
-  // server-rendered markdown (Content component), not user input.
-  function initPostLang() {
-    const contentEl = document.getElementById('post-content');
-    const titleEl = document.getElementById('post-title');
-    if (!contentEl) return;
-
-    const hasEn = contentEl.dataset.hasEn === 'true';
-    if (!hasEn) return;
-
-    const titleKo = titleEl?.textContent || '';
-    const titleEn = contentEl.dataset.titleEn || '';
-
-    // Split server-rendered Astro markdown by delimiter
-    const fullHtml = contentEl.innerHTML;
-    const delimiter = '<!-- EN -->';
-    const delimIdx = fullHtml.indexOf(delimiter);
-    if (delimIdx === -1) return;
-
-    const koHtml = fullHtml.slice(0, delimIdx).trim();
-    const enHtml = fullHtml.slice(delimIdx + delimiter.length).trim();
-
-    // Build DOM from trusted server content
-    contentEl.textContent = '';
-    const koDiv = document.createElement('div');
-    koDiv.id = 'content-ko';
-    koDiv.className = 'lang-content';
-    const koTemplate = document.createElement('template');
-    koTemplate.innerHTML = koHtml;
-    koDiv.appendChild(koTemplate.content);
-
-    const enDiv = document.createElement('div');
-    enDiv.id = 'content-en';
-    enDiv.className = 'lang-content lang-hidden';
-    const enTemplate = document.createElement('template');
-    enTemplate.innerHTML = enHtml;
-    enDiv.appendChild(enTemplate.content);
-
-    contentEl.appendChild(koDiv);
-    contentEl.appendChild(enDiv);
-
-    function setPostLang(lang: string) {
-      if (lang === 'en') {
-        koDiv.classList.add('lang-hidden');
-        koDiv.classList.remove('fade-in');
-        enDiv.classList.remove('lang-hidden');
-        enDiv.classList.add('fade-in');
-        if (titleEl && titleEn) titleEl.textContent = titleEn;
-        if (titleEn) document.title = titleEn;
-      } else {
-        enDiv.classList.add('lang-hidden');
-        enDiv.classList.remove('fade-in');
-        koDiv.classList.remove('lang-hidden');
-        koDiv.classList.add('fade-in');
-        if (titleEl) titleEl.textContent = titleKo;
-        document.title = titleKo;
-      }
-
-      // Switch TOC headings to match language
-      document.querySelectorAll<HTMLElement>('.toc-link[data-lang], .toc-item[data-lang]').forEach((el) => {
-        const linkLang = el.getAttribute('data-lang');
-        if (linkLang === lang) {
-          el.classList.remove('hidden');
-        } else {
-          el.classList.add('hidden');
-        }
-      });
-
-      // Re-init TOC observer for the new language's headings
-      if (typeof (window as any).initTocFn === 'function') {
-        (window as any).initTocFn();
-      }
-    }
-
-    // Init from current global language
-    const saved = localStorage.getItem('preferred-lang') || 'ko';
-    setPostLang(saved);
-
-    // Listen for global language changes — abort previous to prevent accumulation
-    if ((window as any).__postLangAC) (window as any).__postLangAC.abort();
-    (window as any).__postLangAC = new AbortController();
-    window.addEventListener('lang-changed', (e: any) => {
-      setPostLang(e.detail.lang);
-    }, { signal: (window as any).__postLangAC.signal });
-  }
-
-  initPostLang();
-  document.addEventListener('astro:page-load', initPostLang);
 </script>
 
 <script>

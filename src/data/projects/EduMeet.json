@@ -1,8 +1,6 @@
 {
   "title": "에듀밋",
-  "titleEn": "EduMeet",
   "description": "청각장애 학습자를 위해 실시간 음성을 자막으로 바꾸는 온라인 교육 플랫폼 — 접근성을 코어 기능으로 설계한 6인 팀 협업 프로젝트.",
-  "descriptionEn": "An online education platform that turns real-time speech into captions for deaf learners — accessibility designed as a core feature, built by a 6-person team.",
   "image": "/uploads/project/EduMeet/EduMeetTitle.png",
   "tags": [
     "Java",

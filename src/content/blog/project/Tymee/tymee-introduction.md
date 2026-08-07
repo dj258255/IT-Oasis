@@ -1,8 +1,6 @@
 ---
 title: '타이미(Tymee): 집중의 시간을 게임처럼 재밌게'
-titleEn: 'Tymee — Making Focus Time Fun Like a Game'
 description: 즉각적인 피드백과 성취 공유 욕구를 결합하여 집중을 게임처럼 만드는 앱, 타이미의 기획 의도와 프로젝트 소개.
-descriptionEn: Introduces Tymee, an app that makes focus fun like a game by combining instant feedback with the desire to share achievements.
 date: 2025-11-01T00:00:00.000Z
 tags:
   - Side Project
@@ -47,39 +45,3 @@ series: "Tymee"
 # 앞으로의 계획
 1인 개발이다 보니 속도는 느릴 수 있지만, 기획 의도를 잃지 않고 끝까지 완성해볼 생각입니다.
 일단 빠르게 만들어서 앱스토어와 구글 플레이스토어에 출시하고, 개발 과정에서 겪는 기술적인 고민들과 설계 결정들도 이 블로그에 하나씩 기록해나갈 예정입니다.
-
-<!-- EN -->
-
-# Project Introduction
-I recently started developing an app called **Tymee** as a side project. It is a solo project where I handle everything from planning to design and development on my own.
-
-# It Started with a Simple Observation
-A friend of mine had a habit of keeping a desk clock app on while studying. He would prop his phone up like a clock and focus by watching the time tick away. At first I just thought, "That's a quirky habit," and moved on. But then I remembered a news story I had seen a while back.
-
-# Why Are Games Fun but Studying Is Boring?
-The key takeaway of that story was this:
-
-"The reason teenagers get hooked on games rather than studying comes down to the difference in feedback speed."
-
-In a game, just pressing a single button makes a character move, a score go up, and a level-up sound effect play. The moment you put in input, the output appears right in front of you. Studying, on the other hand, is different. Even after investing three hours today, nothing changes immediately. It takes weeks or months to see grades improve, and motivation naturally fades in the meantime.
-
-Ultimately, the lack of instant feedback is the core reason studying feels boring.
-
-# I Added One More Ingredient
-People have an instinctive desire to show off their achievements.
-
-This is exactly why ranking systems and achievement badges work so well in games. It is not just about doing well -- motivation doubles when you can show it to others. Posting workout proof-shots on social media or sharing reading logs comes from the same impulse.
-
-# So I Built Tymee
-I wondered what would happen if I combined these two insights.
-
-## Instant Feedback
-Focus time is visualized in real time so you can feel a sense of accomplishment right away.
-
-## Desire to Share Achievements
-You can show off your focus records, compare with others, and draw motivation from it.
-More than a simple timer app, Tymee is an app that makes focus itself fun like a game. That is the core concept.
-
-# Plans Going Forward
-Since this is a solo project, progress may be slow, but I plan to stay true to the original vision and see it through to the end.
-The first goal is to build quickly and launch on the App Store and Google Play Store. I also plan to document the technical challenges and design decisions I encounter along the way on this blog, one post at a time.

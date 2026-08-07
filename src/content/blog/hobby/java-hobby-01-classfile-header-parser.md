@@ -1,8 +1,6 @@
 ---
 title: '.class 파일을 읽다: 헤더 파서 첫 코드'
-titleEn: 'Reading a .class File — The First Parser'
 description: 토이 JVM의 첫 코드. .class 파일의 맨 앞 16바이트를 직접 읽어 매직 넘버 0xCAFEBABE, 버전, constant pool 개수를 꺼낸다. 헥스 덤프로 포맷을 눈으로 확인하고, .class의 모든 정수가 빅엔디언이라는 점에서 출발해 u1/u2/u4 바이트 리더를 세운 뒤, C로 헤더 파서와 빌드 골격(Makefile)까지 만든 과정을 정리한다.
-descriptionEn: "The first code of the toy JVM. Reading the first 16 bytes of a .class file by hand to pull out the magic number 0xCAFEBABE, the version, and the constant-pool count. Inspecting the format in a hex dump, starting from the fact that every integer in a .class is big-endian to build u1/u2/u4 byte readers, then writing the header parser and a build skeleton (Makefile) in C."
 date: 2026-07-02T00:00:00.000Z
 tags:
   - JVM

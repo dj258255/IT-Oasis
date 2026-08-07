@@ -1,8 +1,6 @@
 ---
 title: '데이터베이스 인덱스 ③: Covering Index와 Index-Only Scan'
-titleEn: 'Database Index ③: Covering Index and Index-Only Scan'
 description: plan에 Index Only Scan이 잡혔다고 진짜 IOS는 아닙니다. PostgreSQL의 IOS는 covering(쿼리 컬럼이 인덱스에)과 visibility(VM all-visible) 두 단계 조건을 모두 만족해야 Heap Fetches가 0이 됩니다. INCLUDE 절은 covering을, VACUUM은 visibility를 충족시키는 도구입니다. INCLUDE의 leaf-only 저장 메커니즘과 인덱스 타입별 IOS 지원, 그리고 PG12 이전 insert-only Mandrill 함정까지 다룹니다.
-descriptionEn: An "Index Only Scan" node in the plan does not mean a real IOS. PostgreSQL requires both conditions — covering (all referenced columns in the index) and visibility (VM all-visible) — for Heap Fetches to drop to zero. INCLUDE satisfies covering; VACUUM satisfies visibility. Covers INCLUDE's leaf-only storage, IOS support per index type, and the PG12 insert-only Mandrill outage.
 date: 2026-04-24T00:00:00.000Z
 tags:
   - Database

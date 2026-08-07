@@ -3,7 +3,6 @@ import path from 'node:path';
 
 export interface LinkItem {
   label: string;
-  labelEn: string;
   url: string;
 }
 
@@ -11,9 +10,7 @@ export type LinkField = string | LinkItem[];
 
 export interface Project {
   title: string;
-  titleEn: string;
   description: string;
-  descriptionEn: string;
   image: string;
   tags: string[];
   category: string;
@@ -41,9 +38,7 @@ export const projects: Project[] = files
   })
   .map(data => ({
     title: data.title || '',
-    titleEn: data.titleEn || data.title || '',
     description: data.description || '',
-    descriptionEn: data.descriptionEn || '',
     image: data.image || '',
     tags: data.tags || [],
     category: data.category || '',

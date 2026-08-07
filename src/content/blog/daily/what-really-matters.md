@@ -1,8 +1,6 @@
 ---
 title: '기술보다 문제가 먼저다'
-titleEn: 'Problems Come Before Technology'
 description: 기술 이름이 아니라 문제를 먼저 보는 개발자가 되고 싶다는 생각을 정리한 글입니다. 왜 그 기술이 필요했는지, 어떤 trade-off를 거쳤는지를 설명할 수 있는 것이 진짜 실력이라고 느낀 과정을 기록합니다.
-descriptionEn: A note on growing as an engineer who sees problems before reaching for technology, and who can explain the why behind every technical decision.
 date: 2026-04-03T00:00:00.000Z
 tags:
   - 일상
@@ -79,60 +77,3 @@ Kafka를 붙여본 것보다, 왜 어떤 시스템에서는 Kafka가 맞고 어�
 그래도 적어도 이제는, 어려운 기술을 썼다는 사실 자체보다
 왜 그 기술을 선택했는지 설명할 수 있는 사람이 되고 싶다.
 나는 지금 그 방향으로 잘 가고 있는 것 같다.
-
-<!-- EN -->
-
-I have been thinking about a lot of things lately.
-
-I like development.
-I like building things, digging into problems, and that moment when something finally clicks.
-But lately I keep realizing that liking something and being good at it are different things.
-
-I used to think that building a lot and trying a lot would naturally make me better.
-That kind of time matters too, but looking back, I was often satisfied just making things work.
-Pushing through questions like why this structure makes sense, or why one choice is better than another — that still needs more practice.
-
-## Problems before technology
-
-Studying Redis, Kafka, and CDC is natural for a backend engineer.
-But these days I try to ask different questions first:
-
-- What problem was this technology created to solve?
-- When is it truly necessary?
-- When is not using it actually the better decision?
-
-Technology did not come first. Traffic grew, data grew, failures became frequent, latency became painful.
-Problems came first, and technology followed to solve them.
-
-Sometimes I wonder if I was drawn too easily to the names of technologies.
-Maybe I thought I had to learn them just because everyone else uses them, or because they appear in job postings.
-
-## Who is it for
-
-While working on projects, I started noticing something.
-I was often looking at development only from my own perspective.
-Whether I was growing, whether I was handling something impressive.
-
-Those questions matter too. But a service is only meaningful when there are people using it.
-I realized I need to also look at whether users became less frustrated, whether operators became less exhausted.
-
-What I felt through running my own project was that what matters more than an elegant architecture
-is whether the actual problem was reduced.
-When I changed how view counts were handled, or when I separated the event structure,
-what I was really thinking about was closer to "does this actually solve the problem" than "is this technically correct."
-
-## Going deeper
-
-These days I try to go deeper on each thing I work on.
-Not stopping at implementation, but reading logs, checking execution plans, comparing alternatives, and holding onto the problem until I can explain why I made a certain choice.
-It might be slower, but I believe that kind of understanding is what eventually becomes real skill.
-
-## In the end
-
-Knowing how to use Redis matters less than being able to explain why Redis was necessary in one place and unnecessary in another.
-Having set up Kafka matters less than being able to judge when Kafka makes sense and when it becomes an excessive choice.
-
-I still do not always have that perspective.
-But at least now, more than wanting to say I used a difficult technology,
-I want to become someone who can explain why it was chosen.
-I think I am heading in the right direction.

@@ -1,6 +1,5 @@
 ---
 title: '훔친 refresh token은 두 번째 사용에서 들킨다 - 회전·재사용 감지·family 무효화 직접 구현'
-titleEn: 'A Stolen Refresh Token Gets Caught on Its Second Use - Rotation, Reuse Detection, and Family Revocation'
 description: >-
   별찌 Identity 도메인에서 외부 인증 SaaS 없이 직접 구현한 JWT 인증의 핵심 — Access는 stateless
   15분, Refresh는 stateful 7일로 비대칭을 두고, 회전(rotation)·재사용 감지(reuse
@@ -11,17 +10,6 @@ description: >-
   때 발생하는 race condition과 family 오탐(멀쩡한 사용자 강제 로그아웃)을 PG 행 잠금 + 10초
   grace + noRollbackFor로 풀고, 20스레드 동시 갱신 오탐 0을 testcontainers 회귀 테스트로
   검증하기까지 담았습니다.
-descriptionEn: >-
-  How Byeolchi's Identity domain implements self-issued JWT auth without an auth SaaS —
-  asymmetric lifetimes (stateless 15-minute access, stateful 7-day refresh),
-  refresh token rotation, reuse detection, and token-family revocation against
-  token theft, all with real code. Covers why only the SHA-256 hash is stored,
-  the family_id/parent_token_id rotation lineage schema, the JPQL that revokes an
-  entire family when a dead token reappears, and the hardest part the standards
-  (RFC 9700, Auth0) leave unspecified: the concurrent-refresh race that triggers a
-  false-positive family compromise, solved with a PG row lock + 10s grace +
-  noRollbackFor and verified by a 20-thread testcontainers regression (zero false
-  positives).
 date: 2026-06-09T00:00:00.000Z
 tags:
   - JWT

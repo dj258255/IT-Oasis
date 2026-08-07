@@ -1,8 +1,6 @@
 ---
 title: '소수 넷째 자리부터 잘라내면 지수는 한 방향으로만 깎인다'
-titleEn: 'Truncating Below the Third Decimal Only Ever Drifts One Way'
 description: '1982년 1000.000으로 출범한 밴쿠버 증권거래소 지수는 1983년 11월 520대까지 내려갔습니다. 갱신 때마다 소수 넷째 자리부터를 반올림 없이 잘라낸 결과입니다. 재계산 뒤에는 1098.892로 정정됐습니다. 실제 산식과 22개월치 시장 데이터는 재현할 수 없어, 절삭이 한 방향으로 누적되는 메커니즘까지만 자바로 옮겼습니다. 같은 컨테이너에서 double 누적 오차와 반올림 모드 편향, BigDecimal equals의 scale 함정을 함께 계측했습니다. 갱신 60,000회에서 절삭 지수는 29.919802포인트를 잃었고 HALF_EVEN은 0.019802포인트에서 멈췄습니다. 손실은 갱신 1회당 평균 0.0005포인트로 횟수에 비례하는 값이라 지수 대비 비율로 읽으면 안 됩니다. 수수료 110.1원 100만 건 누적에서 double은 0.0017원 모자랐고, BigDecimal과 최소 화폐단위 long은 오차가 0이었습니다. 근거 등급은 E1·축소이고 1차 보도는 재인용입니다.'
-descriptionEn: The Vancouver Stock Exchange launched its index at 1000.000 in 1982 and truncated everything below the third decimal place on every recalculation. By November 1983 the index had sunk into the 520s, and a weekend recalculation restored it to 1098.892. The real cap-weighted formula and 22 months of market data are out of reach, so this session reproduces only the mechanism in Java, measuring one-directional truncation drift alongside double summation error, rounding-mode bias, and the scale trap in BigDecimal.equals. Over 60,000 updates the truncating index lost 29.919802 points while HALF_EVEN stopped at 0.019802. The loss runs about 0.0005 points per update and grows with the update count, so it is not a percentage of the index. Summing a 110.1 won fee one million times left double 0.0017 won short while BigDecimal and a long in minor units came out exact. The evidence grade is E1 with reduced reproduction, and the 1983 newspaper originals are cited secondhand.
 date: 2026-03-27
 tags:
   - Java 21

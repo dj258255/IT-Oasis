@@ -1,11 +1,10 @@
 {
   "name": "dev",
-  "nameEn": "Development",
   "nameKo": "개발",
   "icon": "code",
   "order": 7,
   "subcategories": [
-    { "name": "Frontend", "nameEn": "Frontend", "order": 1 },
-    { "name": "JavaScript", "nameEn": "JavaScript", "order": 2 }
+    { "name": "Frontend", "order": 1 },
+    { "name": "JavaScript", "order": 2 }
   ]
 }

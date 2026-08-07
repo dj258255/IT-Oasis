@@ -1,8 +1,6 @@
 ---
 title: 'IT Oasis 기술 블로그를 만들다'
-titleEn: 'Building the IT Oasis Tech Blog'
 description: Astro 기반 정적 블로그를 직접 설계하고 구축한 과정을 정리했습니다. TinaCMS 연동, i18n, 카테고리 시스템, 다크모드 등 주요 기술 결정을 다룹니다.
-descriptionEn: A summary of designing and building a static blog with Astro. Covers key technical decisions including TinaCMS integration, i18n, category system, and dark mode.
 date: 2026-02-18T00:00:00.000Z
 tags:
   - Astro
@@ -87,78 +85,3 @@ IntersectionObserver로 현재 읽고 있는 섹션을 하이라이트해주고,
 직접 만든 블로그라 이것저것 자유롭게 기능을 붙일 수 있는 게 가장 큰 장점입니다.
 앞으로도 필요한 기능이 생기면 바로 추가할 생각입니다.
 이 블로그의 코드는 GitHub에 공개되어 있으니, 궁금하신 분은 편하게 둘러보셔도 됩니다.
-
-<!-- EN -->
-
-## Why I Built It From Scratch
-
-I used to run a blog on Velog, but over time I started running into limitations.
-I wanted to organize categories exactly the way I liked, and I also wanted Korean/English toggle support — but that wasn't easy to pull off on existing platforms.
-After looking into various options, I ended up concluding that just building it myself would be the fastest route.
-
-## Choosing the Tech Stack
-
-### Astro
-
-I compared several static site generators, and Astro was a perfect fit.
-
-- **Zero JS by default** — A blog doesn't need a heavy runtime, right?
-I liked that it outputs pure HTML without worrying about JS bundles.
-- **Island Architecture** — It's flexible because you can add interactive components only where you need them.
-I can use JS just for things like search and dark mode toggle.
-- **Content Collections** — Managing markdown-based posts is really clean.
-It even type-checks frontmatter, which is great for catching typos and mistakes.
-
-### TinaCMS
-
-You could just edit markdown files directly, but having a visual editor makes it so much easier to focus on writing.
-I chose TinaCMS because it's Git-based, works without a separate database, and supports both local and cloud usage.
-The deciding factor was that it edits the markdown files themselves, so there's no lock-in concern.
-
-### Deployment
-
-I'm using Vercel for deployment.
-Just push and it automatically builds and deploys — nothing to worry about on this front.
-Since it's a static site, CDN caching works well and response times are fast.
-
-## Key Features
-
-### Category System
-
-It supports a two-level hierarchy.
-You can classify posts in a parent/child format like `Project/Balruno`, and expand them in the sidebar.
-Category icons, sort order, and Korean/English names are managed in JSON, so they're editable from TinaCMS as well.
-
-### Korean/English Toggle (i18n)
-
-A single global toggle switches the entire UI and content at once.
-Under the hood, I'm using a mix of three patterns:
-
-1. `data-ko` / `data-en` attributes — For short text like buttons and labels.
-2. `.lang-ko` / `.lang-en` CSS classes — For swapping entire blocks at once.
-3. `<!-- EN -->` separator — Splits Korean and English versions in the body content.
-
-It seemed a bit complex at first, but since each pattern serves a different role, it turned out to be a pretty reasonable setup.
-
-### Dark Mode
-
-It follows the system setting by default, but manual switching is also available.
-User preferences are saved in `localStorage`, and it applies instantly on page load without any flash (FOUC).
-
-### Glassmorphism UI
-
-I applied glassmorphism design throughout the blog.
-By combining `backdrop-filter: blur()` with semi-transparent backgrounds, I was able to achieve a light yet polished look.
-Personally, I think this style fits the blog's vibe quite well.
-
-### Table of Contents (TOC)
-
-On desktop, a floating TOC appears on the right side.
-It highlights the section you're currently reading using IntersectionObserver, and shows overall reading progress with a progress bar.
-When the TOC gets long, it scrolls independently.
-
-## Wrapping Up
-
-The biggest advantage of building my own blog is the freedom to add whatever features I want.
-I plan to keep adding new features whenever the need arises.
-The source code for this blog is public on GitHub, so feel free to take a look if you're curious.

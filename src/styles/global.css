@@ -16,10 +16,6 @@
   --color-surface-dark: #151520;
 }
 
-/* ===== Language toggle (FOUC prevention) ===== */
-html.lang-en .lang-ko { display: none !important; }
-html.lang-en .lang-en.hidden { display: revert !important; }
-
 /* ===== Base ===== */
 html {
   overflow-y: scroll;

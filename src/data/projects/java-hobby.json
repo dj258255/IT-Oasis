@@ -1,8 +1,6 @@
 {
   "title": "java-hobby — C로 만드는 토이 JVM",
-  "titleEn": "java-hobby — A Toy JVM in C",
   "description": "Java가 바이트코드를 실행하는 원리를 C로 재현한 자작 JVM — .class 파서·바이트코드 인터프리터·vtable 객체 모델·mark-sweep GC에 핫스팟 JIT까지, OpenJDK 구조를 따라 바닥부터.",
-  "descriptionEn": "A homemade JVM reproducing how Java executes bytecode, in C — a .class parser, bytecode interpreter, vtable object model, mark-sweep GC, and a hotspot-detecting JIT, structured after OpenJDK from the ground up.",
   "image": "/uploads/hobby/java-hobby/cover.svg",
   "tags": [
     "C",

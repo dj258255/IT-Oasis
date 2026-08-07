@@ -1,8 +1,6 @@
 ---
 title: '갭 락 데드락, "없으면 넣는다"가 만드는 교착'
-titleEn: 'Gap Lock Deadlock: How "Insert If Missing" Locks Two Transactions Together'
 description: 'MySQL 8.4.3 REPEATABLE READ에서 "없으면 넣는다" 패턴이 만드는 갭 락 데드락을 두 세션으로 재현하고, performance_schema.data_locks로 락이 걸린 순간을 포착했습니다. 두 트랜잭션이 같은 갭에 X 갭 락을 동시에 GRANTED로 잡은 뒤 서로의 insert intention 락을 막습니다. 해소 두 가지를 각각 30회(시도 60건) 돌린 결과, 원래 방식은 데드락 30회, INSERT ... ON DUPLICATE KEY UPDATE는 0회, READ COMMITTED는 데드락 0회에 중복키 에러 30회였습니다. READ COMMITTED는 탐색과 인덱스 스캔의 갭 락만 끄고 외래키 검사와 중복키 검사에는 갭 락을 그대로 쓰며, 행 기반 바이너리 로깅이 전제입니다. 격리 수준을 BEGIN 뒤에서 바꾸면 변수만 바뀌고 실행 중인 트랜잭션은 그대로 REPEATABLE READ로 돕니다.'
-descriptionEn: 'A gap lock deadlock from the check-then-insert pattern, reproduced on MySQL 8.4.3 under REPEATABLE READ with two sessions, with the lock state captured from performance_schema.data_locks at the moment before the insert. Both transactions hold an X gap lock on the same gap as GRANTED, and then each insert intention lock waits on the other transaction gap lock. Over 30 runs each (60 attempts), the original pattern deadlocked 30 times, INSERT ... ON DUPLICATE KEY UPDATE deadlocked zero times with no duplicate key errors, and READ COMMITTED removed the deadlocks but produced 30 duplicate key errors instead. READ COMMITTED disables gap locking only for searches and index scans, still uses it for foreign-key and duplicate-key checking, and requires row-based binary logging. Setting the isolation level after BEGIN changes the session variable while the running transaction stays on REPEATABLE READ.'
 date: 2026-03-10
 tags:
   - MySQL

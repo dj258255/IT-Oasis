@@ -1,8 +1,6 @@
 {
   "title": "텔레그램에서 구독 Claude를 그대로 돌리는 봇",
-  "titleEn": "Running my Claude subscription straight from Telegram",
   "description": "폰에서 Claude에게 일을 시키고 싶어서 만들었다. API 키로 따로 과금하는 대신 이미 쓰던 Claude Code 구독 인증(claude -p)을 그대로 호출한다. 메시지를 보내면 진행 상황을 실시간으로 흘려주고, 코딩 모드에서는 서버 안에서 파일을 만들고 명령을 실행한다. 음성으로 지시하면 텍스트로 바꿔 넘기고, rm -rf 같은 위험한 명령은 실행 직전에 막는다. 같은 서버에 이미 돌던 다른 서비스는 건드리지 못하도록 격리해 두었다.",
-  "descriptionEn": "Built so I could hand tasks to Claude from my phone. Instead of paying separately with an API key, it calls the Claude Code subscription auth (claude -p) I already had. Send a message and it streams progress as it works; in coding mode it writes files and runs commands inside the server. Voice notes are transcribed and passed through, and dangerous commands like rm -rf are blocked before they run. Other services already running on the same box are walled off so the bot can't touch them.",
   "image": "/uploads/project/telegram-bot/cover.svg",
   "tags": [
     "Python",

@@ -1,28 +1,23 @@
 ---
 interface LinkItem {
   label: string;
-  labelEn: string;
   url: string;
 }
 
 interface Props {
   href: string;
   title: string;
-  titleEn?: string;
   description?: string;
-  descriptionEn?: string;
   image?: string;
   date?: string;
-  dateEn?: string;
   category?: string;
-  categoryEn?: string;
   website?: string | LinkItem[];
   github?: string | LinkItem[];
   story?: string;
   noOverlay?: boolean;
 }
 
-const { href, title, titleEn, description, descriptionEn, image, date, dateEn, category, categoryEn, website, github, story, noOverlay = false } = Astro.props;
+const { href, title, description, image, date, category, website, github, story, noOverlay = false } = Astro.props;
 const hasWebsite = Array.isArray(website) ? website.length > 0 : !!website;
 const hasGithub = Array.isArray(github) ? github.length > 0 : !!github;
 const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
@@ -45,29 +40,29 @@ const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
           <div class="flex flex-col gap-2.5 w-[80%] max-w-[220px]">
             {Array.isArray(website) ? website.map((link) => (
               <a href={link.url} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
-                <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                <span>{link.label}</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </a>
             )) : website && (
               <a href={website} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
-                <span data-ko="웹사이트 접속하기" data-en="Visit Website">웹사이트 접속하기</span>
+                <span>웹사이트 접속하기</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </a>
             )}
             {Array.isArray(github) ? github.map((link) => (
               <a href={link.url} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
-                <span data-ko={link.label} data-en={link.labelEn}>{link.label}</span>
+                <span>{link.label}</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </a>
             )) : github && (
               <a href={github} target="_blank" rel="noopener noreferrer" class="overlay-btn relative z-30">
-                <span data-ko="깃허브 보기" data-en="View GitHub">깃허브 보기</span>
+                <span>깃허브 보기</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </a>
             )}
             {story && (
               <a href={story} class="overlay-btn relative z-30">
-                <span data-ko="스토리 보기" data-en="View Story">스토리 보기</span>
+                <span>스토리 보기</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </a>
             )}
@@ -78,18 +73,18 @@ const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
     </div>
     <div class="p-5 pt-4 sm:p-6 sm:pt-4 flex flex-col flex-1">
       <h3 class="text-[19px] sm:text-[22px] font-extrabold tracking-tight mb-3 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-2">
-        <a href={href} class="stretched-link" {...(titleEn ? { 'data-ko': title, 'data-en': titleEn } : {})}>{title}</a>
+        <a href={href} class="stretched-link">{title}</a>
       </h3>
       {description && (
-        <p class="text-[14px] sm:text-[16px] text-gray-500 dark:text-gray-400 leading-[1.7] line-clamp-3 mb-auto" data-ko={description} data-en={descriptionEn || description}>
+        <p class="text-[14px] sm:text-[16px] text-gray-500 dark:text-gray-400 leading-[1.7] line-clamp-3 mb-auto">
           {description}
         </p>
       )}
       {(date || category) && (
         <div class="flex items-center gap-2 text-[12px] sm:text-[13px] font-medium text-gray-500 dark:text-gray-400 pt-4">
-          {date && <span data-ko={date} data-en={dateEn || date}>{date}</span>}
+          {date && <span>{date}</span>}
           {date && category && <span class="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
-          {category && <span class="font-semibold text-primary/80 dark:text-primary-light/80" data-ko={category} data-en={categoryEn || category}>{category}</span>}
+          {category && <span class="font-semibold text-primary/80 dark:text-primary-light/80">{category}</span>}
         </div>
       )}
     </div>

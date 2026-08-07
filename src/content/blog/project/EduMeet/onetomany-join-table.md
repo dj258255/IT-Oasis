@@ -1,8 +1,6 @@
 ---
 title: '@OneToMany에서 의도하지 않은 중간 테이블이 생성된 문제'
-titleEn: 'Unintended Join Table Created by @OneToMany'
 description: JPA @OneToMany의 기본 동작으로 생성된 불필요한 중간 테이블을 mappedBy로 제거한 과정을 정리한다.
-descriptionEn: Documents how an unnecessary join table created by JPA @OneToMany's default behavior was eliminated using mappedBy.
 date: 2025-07-13T00:00:00.000Z
 tags:
   - JPA
@@ -88,86 +86,6 @@ Board 엔티티에서 BoardImage에 대한 참조를 `@OneToMany`로 설정하�
 이 경험 이후 JPA 엔티티 매핑 시 `ddl-auto=create`로 테이블을 생성한 뒤, 반드시 ERD와 실제 생성된 DDL을 비교 검증하는 절차를 팀 규칙으로 정했습니다.
 
 JPA 연관관계 매핑은 어노테이션 하나로 끝나지 않고, 도메인 관계의 방향성과 데이터베이스 설계 원칙을 함께 고려해야 합니다.
-
----
-
-## Reference
-
-- [Vlad Mihalcea - The best way to map a @OneToMany association](https://vladmihalcea.com/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/)
-- [Baeldung - @JoinColumn vs mappedBy](https://www.baeldung.com/jpa-joincolumn-vs-mappedby)
-- [Thorben Janssen - Best Practices for Many-To-One and One-To-Many Association Mappings](https://thorben-janssen.com/best-practices-many-one-one-many-associations-mappings/)
-
-<!-- EN -->
-
-## Normal Behavior
-
-Board (post) and BoardImage (attachment) have a 1:N relationship. Multiple BoardImages are linked to a single Board, and the database should only contain `board` and `board_image` tables, with the relationship expressed through a foreign key (`board_id`) in the `board_image` table.
-
----
-
-## The Problem
-
-After setting up the reference from Board to BoardImage with `@OneToMany` and running the project, unexpected tables were created.
-
-![](/uploads/project/EduMeet/onetomany-join-table/onetomany-join-table-creation.png)
-
-In addition to `board` and `board_image`, a **join table called `board_image_set`** was created.
-
----
-
-## Root Cause Analysis
-
-After checking the [JPA spec (JSR 338)](https://jakarta.ee/specifications/persistence/3.1/) and [Vlad Mihalcea's analysis](https://vladmihalcea.com/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/), the default behavior of `@OneToMany` turned out to be the cause.
-
-When `@OneToMany` is declared without `mappedBy` or `@JoinColumn`, JPA defaults to a strategy where **both entities have independent tables connected by a join table**. This is natural from an object-oriented perspective, but from a database perspective, it creates unnecessary tables and increases join costs.
-
-There are two ways to eliminate the join table:
-
-1. Adding `@JoinColumn` to a unidirectional `@OneToMany`
-2. Using the `mappedBy` attribute in a bidirectional mapping
-
----
-
-## Solution: Applying mappedBy
-
-Option 2 was chosen for the following reasons:
-
-- From the Board's perspective, attachments are separate entities. Using unidirectional `@OneToMany` + `@JoinColumn` means the **parent entity manages the child table's foreign key**, which generates an additional UPDATE query after INSERT.
-- From the BoardImage's perspective, referencing a single post with `@ManyToOne` is natural. Using `mappedBy` makes **BoardImage the owner of the foreign key**, so a single INSERT establishes the relationship.
-
-`mappedBy` declares "the mapping owner of this collection is this field in the other entity." [Baeldung - @JoinColumn vs mappedBy](https://www.baeldung.com/jpa-joincolumn-vs-mappedby) also recommends using `mappedBy` for bidirectional `@OneToMany`.
-
-After applying the fix and running the project, the `board_image` table was created with a `board_id` foreign key without any join table.
-
-![](/uploads/project/EduMeet/onetomany-join-table/onetomany-join-table-creation-02.png)
-
-The foreign key-based table structure, similar to a `@ManyToOne` setup, was successfully created.
-
----
-
-## Summary
-
-| Aspect | Before mappedBy | After mappedBy |
-|--------|----------------|----------------|
-| Table count | 3 (board, board_image, board_image_set) | 2 (board, board_image) |
-| Relationship | Two foreign keys in join table | board_image.board_id foreign key |
-| Join cost | 2 joins required | 1 join sufficient |
-| Data integrity | Join table management needed | Automatically guaranteed by FK constraint |
-
-1. `@OneToMany` used alone without `mappedBy` or `@JoinColumn` **creates a join table by default**. This is JPA's default strategy.
-2. Specifying the relationship owner with `mappedBy` creates a **natural foreign key-based table structure** without a join table.
-3. Eliminating the join table isn't just about reducing table count — it's about **reducing join operation complexity and data integrity management costs**.
-
-### Why Early Detection Matters
-
-When a join table exists:
-- Querying posts with images requires `board → board_image_set → board_image` — **2 joins**. Query performance degrades directly as data grows
-- Combined with N+1, query count explodes even further (resolving this structure first helped when tackling N+1 later)
-- If discovered after data has already accumulated in the join table under `ddl-auto=update`, data migration becomes necessary and fix costs grow exponentially
-
-After this experience, the team established a rule to always **compare generated DDL against the ERD** after JPA entity mapping using `ddl-auto=create`.
-
-JPA relationship mapping isn't just about a single annotation — it requires considering both the directionality of domain relationships and database design principles.
 
 ---
 

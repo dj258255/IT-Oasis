@@ -1,8 +1,6 @@
 ---
 title: 'DBTower 포트폴리오 총정리: 이기종 DBMS 5기종을 인터페이스 하나로 관제·진단하기까지, 실측 117절'
-titleEn: 'DBTower Portfolio: Operating and Diagnosing Five DBMS Engines Behind One Interface, in 117 Sections of Measured Evidence'
 description: 'MySQL, PostgreSQL, SQL Server, Oracle, MongoDB를 하나의 관제탑에서 등록하고 진단하고 백업하고 자율 감시하는 컨트롤 플레인 DBTower의 포트폴리오 총정리입니다. 도구 파편화와 DBA 반복 문의라는 문제 정의에서 출발합니다. 추상화 경계를 SQL이 아니라 운영 행위에 그은 설계 결정과, 그 결정을 성격이 정반대인 두 기종을 실제로 추가해 코어 0줄 수정으로 증명한 과정을 담았습니다. 자기 자신을 관리 대상으로 등록해 자기 풀스캔을 잡은 도그푸딩(21.269ms에서 0.062ms), 따옴표 하나로 인덱스가 죽는 암시적 형변환을 추정 대 실제 괴리 300배로 지목하고 정합성 사고까지 증명한 심층 진단, FULL 앵커와 LOG 체인이 병행하는 정석 백업과 실제 시점 복구, 결함 20건 이상을 스스로 감사해 FIX와 SKIP을 가른 하드닝까지. 모든 성능 수치는 개선 전후를 직접 잰 실측이고, 재현 절차는 저장소 VERIFICATION.md 117개 절에 있습니다.'
-descriptionEn: 'A portfolio overview of DBTower, a control plane that registers, diagnoses, backs up, and autonomously watches MySQL, PostgreSQL, SQL Server, Oracle, and MongoDB from one tower. It starts from the problem of tool fragmentation and repeated DBA inquiries. It covers the decision to draw the abstraction boundary at operational actions rather than SQL, proven by adding two opposite engines with zero changes to core paths. It also covers dogfooding that caught the platform''s own full scan (21.269ms to 0.062ms), deep diagnosis that pinpoints implicit type conversion from a 300x estimated-vs-actual row gap and proves a correctness hazard, orthodox backups where FULL anchors and LOG chains run on independent schedules with real point-in-time restores, and hardening where over twenty self-audited defects were split into FIX and SKIP. Every performance number is a measured before/after, with reproduction steps in the repository''s VERIFICATION.md across 117 sections.'
 date: 2026-07-06
 tags:
   - Java
