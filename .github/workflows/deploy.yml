@@ -67,7 +67,10 @@ jobs:
             fi
             rm -rf dist
             pnpm run build
-            RENDERED=$(grep -oE 'data-en="All">[^<]*</span>[[:space:]]*<span class="sidebar-count">[0-9]+' dist/index.html 2>/dev/null | grep -oE '[0-9]+$' | head -1)
+            # 사이드바 "전체" 뱃지의 숫자가 렌더된 글 수다. 예전엔 data-en="All" 속성으로
+            # 집었는데 한국어 전용 전환에서 data-ko/data-en 쌍을 걷어내며 매칭이 영영 실패했다.
+            # 빌드는 멀쩡한데 RENDERED=0으로 20회 재시도 후 배포가 막혔다(2026-08-08).
+            RENDERED=$(grep -oE '<span>전체</span>[[:space:]]*<span class="sidebar-count">[0-9]+' dist/index.html 2>/dev/null | grep -oE '[0-9]+$' | head -1)
             RENDERED=${RENDERED:-0}
             echo "::notice::build attempt $i — published $RENDERED / $EXPECTED"
             if [ "$RENDERED" -ge "$EXPECTED" ]; then
