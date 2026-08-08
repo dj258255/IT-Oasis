@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <marker id="bw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#9CA3AB"/>
+    </marker>
+    <marker id="br" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#F04452"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="560" fill="#000000"/>
+  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">유입 제어 3층</text>
+  <text x="56" y="106" font-size="16" fill="#8B95A1">감당 못 할 요청은 가장 바깥에서 가장 싸게 거절한다. 같은 스파이크(0→150 VU 10초 급증)를 제어 전/후 실측했다</text>
+
+  <g text-anchor="middle">
+    <rect x="60" y="176" width="210" height="120" rx="18" fill="#F2F4F6"/>
+    <text x="165" y="216" font-size="15" font-weight="700" fill="#D93843">선착순 폭주</text>
+    <text x="165" y="244" font-size="13.5" fill="#191F28">요청 15,445건</text>
+    <text x="165" y="268" font-size="12" fill="#8B95A1">전량 통과 시 p95 738ms</text>
+  </g>
+
+  <!-- 3층 게이트 컨테이너 -->
+  <rect x="330" y="150" width="730" height="172" rx="18" fill="#15181E" stroke="#2A2F38"/>
+  <text x="695" y="182" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">3층 게이트 (Redis 재사용, 추가 인프라 0)</text>
+  <g text-anchor="middle">
+    <rect x="354" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
+    <text x="464" y="230" font-size="14" font-weight="700" fill="#191F28">① rate limiter</text>
+    <text x="464" y="254" font-size="12.5" fill="#4E5968">사용자별 5/s + 전역 상한</text>
+    <text x="464" y="274" font-size="12.5" fill="#4E5968">초과분 429 + Retry-After</text>
+
+    <rect x="590" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
+    <text x="700" y="230" font-size="14" font-weight="700" fill="#191F28">② 선착순 대기열</text>
+    <text x="700" y="254" font-size="12.5" fill="#4E5968">입장권 없으면</text>
+    <text x="700" y="274" font-size="12.5" fill="#4E5968">결제 진입 불가</text>
+
+    <rect x="826" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
+    <text x="936" y="230" font-size="14" font-weight="700" fill="#191F28">③ 커넥션 풀</text>
+    <text x="936" y="254" font-size="12.5" fill="#4E5968">대기를 길게 세우지 않고</text>
+    <text x="936" y="274" font-size="12.5" fill="#4E5968">빨리 실패시킴</text>
+  </g>
+
+  <g text-anchor="middle">
+    <rect x="1120" y="176" width="220" height="120" rx="18" fill="#F2F4F6"/>
+    <text x="1230" y="220" font-size="15" font-weight="700" fill="#191F28">DB 도달</text>
+    <text x="1230" y="248" font-size="13.5" fill="#191F28">약 510건</text>
+    <text x="1230" y="272" font-size="12" fill="#8B95A1">전체의 3.3%</text>
+  </g>
+
+  <line x1="270" y1="236" x2="324" y2="236" stroke="#9CA3AB" stroke-width="2" marker-end="url(#bw)"/>
+  <line x1="1060" y1="236" x2="1114" y2="236" stroke="#9CA3AB" stroke-width="2" marker-end="url(#bw)"/>
+
+  <!-- shed -->
+  <line x1="695" y1="322" x2="695" y2="388" stroke="#F04452" stroke-width="2" marker-end="url(#br)" stroke-dasharray="6 5"/>
+  <text x="695" y="424" font-size="17" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 429로 거절 (shed)</text>
+  <text x="695" y="450" font-size="13" fill="#8B95A1" text-anchor="middle">밖에서 싸게 거절해, 통과한 요청의 속도를 지킨다</text>
+
+  <text x="700" y="512" font-size="14" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 제어 ON에서 드러난 outbox 데드락 5xx 0.55%는 재시도로 0.00%</text>
+</svg>
