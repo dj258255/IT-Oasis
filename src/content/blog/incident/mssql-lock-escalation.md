@@ -290,7 +290,7 @@ $ ./scripts/exp6-index-count.sh
   D 지터 + 우선순위 3건        6/6         2회        3/0           전부 맞음
 ```
 
-![데드락 재시도](/IT-Oasis/uploads/incident/mssql-lock-escalation/fig-deadlock-retry.png)
+![데드락 재시도](/uploads/incident/mssql-lock-escalation/fig-deadlock-retry.png)
 
 재시도가 없으면 희생자가 그대로 실패합니다. 3/6 만 끝났습니다. **보정 배치라면 여기서
 절반이 안 된 채로 멈춥니다.** 데드락은 롤백이라 어디까지 갔는지 흔적도 안 남습니다.
