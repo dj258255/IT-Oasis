@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="450" viewBox="0 0 1400 450" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="450" fill="#000000"/>
+  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">쪼개기 전에 먼저 재봤다</text>
+  <text x="56" y="106" font-size="16" fill="#8B95A1">"지금 구조는 어디서 부딪히나"를 가설 셋으로 세우고 부하 실험으로 하나씩 확인했다</text>
+
+  <g text-anchor="middle">
+    <rect x="56" y="150" width="410" height="180" rx="18" fill="#F2F4F6"/>
+    <text x="261" y="184" font-size="15" font-weight="700" fill="#0B7A4B">가설 1 · 기각</text>
+    <text x="261" y="214" font-size="13" fill="#191F28">"정산 배치가 돌면 결제가 느려진다"</text>
+    <text x="261" y="248" font-size="12.5" fill="#4E5968">배치를 7번 연달아 돌려도</text>
+    <text x="261" y="270" font-size="12.5" fill="#4E5968">결제 p95 무변화</text>
+    <text x="261" y="302" font-size="12" fill="#8B95A1">커넥션 풀 20 중 최대 15, 대기 0</text>
+
+    <rect x="495" y="150" width="410" height="180" rx="18" fill="#15181E" stroke="#2A2F38"/>
+    <text x="700" y="184" font-size="15" font-weight="700" fill="#F04452">가설 2 · 재현</text>
+    <text x="700" y="214" font-size="13" fill="#FFFFFF">"수평 확장하면 스케줄러가 겹친다"</text>
+    <text x="700" y="248" font-size="12.5" fill="#C4C9D0">인스턴스 2대에서 같은 배치가</text>
+    <text x="700" y="270" font-size="12.5" fill="#C4C9D0">동시에 돌았다</text>
+    <text x="700" y="302" font-size="12" fill="#8B95A1">유니크 제약 위반으로 드러남</text>
+
+    <rect x="934" y="150" width="410" height="180" rx="18" fill="#15181E" stroke="#2A2F38"/>
+    <text x="1139" y="184" font-size="15" font-weight="700" fill="#F04452">가설 3 · 재현</text>
+    <text x="1139" y="214" font-size="13" fill="#FFFFFF">"배포하면 결제가 멈춘다"</text>
+    <text x="1139" y="248" font-size="12.5" fill="#C4C9D0">재시작 중 결제 9초 중단</text>
+    <text x="1139" y="270" font-size="12.5" fill="#C4C9D0">단 드레이닝 덕에 5xx는 0건</text>
+    <text x="1139" y="302" font-size="12" fill="#8B95A1">이미 닿은 요청은 다 처리하고 내려감</text>
+  </g>
+
+  <rect x="56" y="352" width="1288" height="62" rx="14" fill="#F2F4F6"/>
+  <text x="80" y="380" font-size="13.5" font-weight="700" fill="#191F28">기각된 가설 덕에 근거 없는 구조 변경을 하지 않았다</text>
+  <text x="80" y="402" font-size="12.5" fill="#4E5968">재현된 둘의 해결책은 실험 코드로 검증까지 해 두었고, 본 코드는 지금 구조를 유지한다</text>
+</svg>
