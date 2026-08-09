@@ -153,7 +153,7 @@ B는 창 안 획득량이 평균에서 3시그마를 넘는 계정을 찾습니�
   FULL      ON       700MB       2621MB        못 잡음      성공
 ```
 
-![온라인 빌드의 대가](/IT-Oasis/uploads/incident/currency-anomaly-detection/fig-online-cost.png)
+![온라인 빌드의 대가](/uploads/incident/currency-anomaly-detection/fig-online-cost.png)
 
 ```
   인덱스 크기 대비 로그   SIMPLE 2% / 15%, FULL 108% / 399%
