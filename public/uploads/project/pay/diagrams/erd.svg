@@ -12,7 +12,7 @@
   <g text-anchor="middle">
     <rect x="66" y="220" width="200" height="110" rx="16" fill="#F2F4F6"/>
     <text x="166" y="266" font-size="16" font-weight="700" fill="#191F28">주문</text>
-    <text x="166" y="294" font-size="12.5" fill="#4E5968">orders</text>
+    <text x="166" y="294" font-size="12.5" fill="#4E5968">주문 내역</text>
     <text x="166" y="368" font-size="13" fill="#8B95A1">무엇을 샀는가</text>
   </g>
   <line x1="266" y1="275" x2="320" y2="275" stroke="#9CA3AB" stroke-width="2" marker-end="url(#ew)"/>
@@ -22,37 +22,37 @@
   <text x="476" y="210" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">결제</text>
   <g text-anchor="middle">
     <rect x="350" y="228" width="252" height="56" rx="12" fill="#F2F4F6"/>
-    <text x="476" y="252" font-size="13.5" font-weight="700" fill="#191F28">payments</text>
+    <text x="476" y="252" font-size="13.5" font-weight="700" fill="#191F28">결제</text>
     <text x="476" y="272" font-size="11.5" fill="#4E5968">승인·거절·미확정 3-상태</text>
     <rect x="350" y="296" width="252" height="56" rx="12" fill="#F2F4F6"/>
-    <text x="476" y="320" font-size="13.5" font-weight="700" fill="#191F28">payment_idempotency</text>
-    <text x="476" y="340" font-size="11.5" fill="#4E5968">멱등키 유니크 제약</text>
+    <text x="476" y="320" font-size="13.5" font-weight="700" fill="#191F28">결제 요청 열쇠</text>
+    <text x="476" y="340" font-size="11.5" fill="#4E5968">같은 요청 두 번 막기</text>
   </g>
-  <text x="476" y="404" font-size="13" fill="#4C9EFF" text-anchor="middle">돈이 나가는 문. 유니크 제약이 중복 결제를 막는다</text>
+  <text x="476" y="404" font-size="13" fill="#4C9EFF" text-anchor="middle">돈이 나가는 문. 같은 요청이 두 번 와도 한 번만 처리된다</text>
   <line x1="626" y1="275" x2="680" y2="275" stroke="#9CA3AB" stroke-width="2" marker-end="url(#ew)"/>
 
   <!-- 원장 -->
   <g text-anchor="middle">
     <rect x="686" y="220" width="240" height="110" rx="16" fill="#F2F4F6"/>
     <text x="806" y="262" font-size="16" font-weight="700" fill="#191F28">원장</text>
-    <text x="806" y="288" font-size="12.5" fill="#4E5968">ledger_entries</text>
-    <text x="806" y="308" font-size="11.5" fill="#8B95A1">복식부기 · 수정 없이 쌓기만</text>
-    <text x="806" y="368" font-size="13" fill="#4C9EFF">모든 돈의 이동이 여기 남는다 (차변=대변)</text>
+    <text x="806" y="288" font-size="12.5" fill="#4E5968">장부</text>
+    <text x="806" y="308" font-size="11.5" fill="#8B95A1">고치지 않고 쌓기만 한다</text>
+    <text x="806" y="368" font-size="13" fill="#4C9EFF">모든 돈의 이동이 여기 남는다 (들어온 돈 = 나간 돈)</text>
   </g>
   <line x1="926" y1="275" x2="980" y2="275" stroke="#9CA3AB" stroke-width="2" marker-end="url(#ew)"/>
 
   <!-- 후처리 -->
   <rect x="986" y="156" width="358" height="240" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="1165" y="190" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">돈의 후처리</text>
+  <text x="1165" y="190" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">결제 뒤에 일어나는 일</text>
   <g text-anchor="middle" font-size="13" fill="#191F28">
     <rect x="1010" y="208" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1085" y="237">정산</text>
     <rect x="1172" y="208" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1247" y="237">에스크로</text>
-    <rect x="1010" y="266" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1085" y="295">대사</text>
+    <rect x="1010" y="266" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1085" y="295">장부 대조</text>
     <rect x="1172" y="266" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1247" y="295">분쟁 · 역분개</text>
     <rect x="1010" y="324" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1085" y="353">포인트</text>
     <rect x="1172" y="324" width="150" height="48" rx="12" fill="#F2F4F6"/><text x="1247" y="353">월렛</text>
   </g>
   <text x="1165" y="424" font-size="13" fill="#8B95A1" text-anchor="middle">각자의 테이블에서 각자의 상태로 진행</text>
 
-  <text x="700" y="520" font-size="14" fill="#8B95A1" text-anchor="middle">각 테이블의 상태 컬럼과 유니크 제약이 중복과 유실을 막고, 잔액은 원장 합계와 대조해 검증한다</text>
+  <text x="700" y="520" font-size="14" fill="#8B95A1" text-anchor="middle">각 표의 상태값과 제약이 중복과 유실을 막고, 잔액은 장부 합계와 맞춰 확인한다</text>
 </svg>

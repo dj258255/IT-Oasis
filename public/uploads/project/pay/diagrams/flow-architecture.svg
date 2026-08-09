@@ -9,14 +9,14 @@
   </defs>
   <rect width="1400" height="626" fill="#000000"/>
   <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">pay 전체 구조</text>
-  <text x="56" y="106" font-size="16" fill="#8B95A1">모듈 간 통신은 직접 호출 없이 도메인 이벤트만 오간다. 그 경계는 CI가 강제한다(위반 시 빌드 실패)</text>
+  <text x="56" y="106" font-size="16" fill="#8B95A1">모듈끼리 직접 부르지 않고 소식만 주고받는다. 이 선을 넘는 코드를 쓰면 빌드가 깨진다</text>
 
   <!-- 유입·인증 -->
   <rect x="56" y="150" width="240" height="260" rx="18" fill="#15181E" stroke="#2A2F38"/>
   <text x="176" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">유입 · 인증</text>
   <g text-anchor="middle" font-size="13" fill="#191F28">
     <rect x="76" y="204" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="233">JWT 서명 검증</text>
-    <rect x="76" y="262" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="291">rate limit 5/s · 429</text>
+    <rect x="76" y="262" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="291">초당 요청 수 제한</text>
     <rect x="76" y="320" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="349">선착순 대기열 게이트</text>
   </g>
   <text x="176" y="440" font-size="13" fill="#8B95A1" text-anchor="middle">요청을 받아 거르는 층</text>
@@ -27,18 +27,18 @@
   <text x="490" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">결제 코어</text>
   <g text-anchor="middle" font-size="13" fill="#191F28">
     <rect x="360" y="200" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="227">체크아웃 3단계 사가</text>
-    <rect x="360" y="252" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="279">멱등키 + DB 유니크 제약</text>
-    <rect x="360" y="304" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="331">PG 어댑터 · 3-상태 승인</text>
+    <rect x="360" y="252" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="279">같은 요청 두 번 막기</text>
+    <rect x="360" y="304" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="331">카드사 연동 · 3상태 승인</text>
     <rect x="360" y="356" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="383">서킷브레이커 · 망취소 보상</text>
   </g>
-  <text x="490" y="440" font-size="13" fill="#4C9EFF" text-anchor="middle">돈과 관련된 메인 비즈니스 로직</text>
+  <text x="490" y="440" font-size="13" fill="#4C9EFF" text-anchor="middle">돈이 실제로 움직이는 곳</text>
   <line x1="640" y1="280" x2="682" y2="280" stroke="#F04452" stroke-width="2" marker-end="url(#dr)"/>
   <text x="661" y="266" font-size="12" fill="#F04452" font-weight="700" text-anchor="middle">이벤트</text>
 
   <!-- Outbox -->
   <g text-anchor="middle">
     <rect x="688" y="222" width="222" height="116" rx="16" fill="#F2F4F6"/>
-    <text x="799" y="258" font-size="14.5" font-weight="700" fill="#191F28">Transactional Outbox</text>
+    <text x="799" y="258" font-size="14.5" font-weight="700" fill="#191F28">결제와 함께 기록</text>
     <text x="799" y="286" font-size="12" fill="#4E5968">커밋되면 소식도 반드시 남음</text>
     <text x="799" y="308" font-size="12" fill="#4E5968">배달 실패는 재배달</text>
   </g>
@@ -46,29 +46,29 @@
 
   <!-- 구독 모듈 -->
   <rect x="956" y="150" width="388" height="260" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="1150" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">이벤트 구독 모듈 (멱등 컨슈머)</text>
+  <text x="1150" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">결제 소식을 받아 일하는 곳 (중복 배달에도 안전)</text>
   <g text-anchor="middle" font-size="12.5" fill="#191F28">
     <rect x="976" y="200" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="227">복식부기 원장</text>
     <rect x="1160" y="200" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="227">에스크로</text>
     <rect x="976" y="252" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="279">정산 (수수료·지급)</text>
-    <rect x="1160" y="252" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="279">대사 (4분류)</text>
+    <rect x="1160" y="252" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="279">장부 대조</text>
     <rect x="976" y="304" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="331">분쟁 · 역분개</text>
-    <rect x="1160" y="304" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="331">FDS 사후심사</text>
+    <rect x="1160" y="304" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="331">이상거래 심사</text>
     <rect x="976" y="356" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="383">알림</text>
-    <rect x="1160" y="356" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="383">DLQ 재처리</text>
+    <rect x="1160" y="356" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="383">실패 알림 재처리</text>
   </g>
   <text x="1150" y="440" font-size="13" fill="#8B95A1" text-anchor="middle">결제 소식을 받아 각자 할 일을 진행</text>
 
   <!-- 검증 3겹 -->
   <rect x="56" y="478" width="1288" height="120" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="84" y="514" font-size="15" font-weight="700" fill="#FFFFFF">검증 3겹: "복구됐다"를 수치로 증명하는 층</text>
+  <text x="84" y="514" font-size="15" font-weight="700" fill="#FFFFFF">돈이 맞는지 세 겹으로 확인한다</text>
   <g font-size="13" fill="#191F28" text-anchor="middle">
     <rect x="84" y="530" width="390" height="48" rx="12" fill="#F2F4F6"/>
-    <text x="279" y="559">① 멱등키·유니크 제약: 중복 결제 차단</text>
+    <text x="279" y="559">① 같은 요청 두 번 막기: 중복 결제 차단</text>
     <rect x="494" y="530" width="390" height="48" rx="12" fill="#F2F4F6"/>
-    <text x="689" y="559">② 복식부기 원장: 차변=대변 불변식</text>
+    <text x="689" y="559">② 장부 양쪽 맞추기: 들어온 돈 = 나간 돈</text>
     <rect x="904" y="530" width="416" height="48" rx="12" fill="#F2F4F6"/>
-    <text x="1112" y="559">③ 대사: 내부 원장 vs PG 파일, 최종 방어선</text>
+    <text x="1112" y="559">③ 카드사 기록과 대조: 마지막 방어선</text>
   </g>
 
 </svg>

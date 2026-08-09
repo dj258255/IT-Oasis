@@ -20,12 +20,12 @@
 
   <!-- 3층 게이트 컨테이너 -->
   <rect x="330" y="150" width="730" height="172" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="695" y="182" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">3층 게이트 (Redis 재사용, 추가 인프라 0)</text>
+  <text x="695" y="182" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">문 앞 세 겹 (이미 쓰던 Redis 재사용, 추가 비용 0)</text>
   <g text-anchor="middle">
     <rect x="354" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
-    <text x="464" y="230" font-size="14" font-weight="700" fill="#191F28">① rate limiter</text>
-    <text x="464" y="254" font-size="12.5" fill="#4E5968">사용자별 5/s + 전역 상한</text>
-    <text x="464" y="274" font-size="12.5" fill="#4E5968">초과분 429 + Retry-After</text>
+    <text x="464" y="230" font-size="14" font-weight="700" fill="#191F28">① 초당 요청 수 제한</text>
+    <text x="464" y="254" font-size="12.5" fill="#4E5968">한 사람 5건/초 · 전체 100건/초</text>
+    <text x="464" y="274" font-size="12.5" fill="#4E5968">넘치면 "잠시 후 다시" 응답</text>
 
     <rect x="590" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
     <text x="700" y="230" font-size="14" font-weight="700" fill="#191F28">② 선착순 대기열</text>
@@ -33,7 +33,7 @@
     <text x="700" y="274" font-size="12.5" fill="#4E5968">결제 진입 불가</text>
 
     <rect x="826" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
-    <text x="936" y="230" font-size="14" font-weight="700" fill="#191F28">③ 커넥션 풀</text>
+    <text x="936" y="230" font-size="14" font-weight="700" fill="#191F28">③ DB 연결</text>
     <text x="936" y="254" font-size="12.5" fill="#4E5968">대기를 길게 세우지 않고</text>
     <text x="936" y="274" font-size="12.5" fill="#4E5968">빨리 실패시킴</text>
   </g>
@@ -50,7 +50,7 @@
 
   <!-- shed -->
   <line x1="695" y1="322" x2="695" y2="388" stroke="#F04452" stroke-width="2" marker-end="url(#br)" stroke-dasharray="6 5"/>
-  <text x="695" y="424" font-size="17" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 429로 거절 (shed)</text>
+  <text x="695" y="424" font-size="17" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 돌려보냈다</text>
   <text x="695" y="450" font-size="13" fill="#8B95A1" text-anchor="middle">밖에서 싸게 거절해, 통과한 요청의 속도를 지킨다</text>
 
   <text x="700" y="512" font-size="14" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 제어 ON에서 드러난 outbox 데드락 5xx 0.55%는 재시도로 0.00%</text>
