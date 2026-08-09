@@ -243,7 +243,7 @@ BEGIN
   기대값                1000000        750000
 ```
 
-![상계 규칙을 어디에 둘 것인가](/IT-Oasis/uploads/incident/currency-reclaim/fig-offset-rule.png)
+![상계 규칙을 어디에 둘 것인가](/uploads/incident/currency-reclaim/fig-offset-rule.png)
 
 **A 는 경로 하나가 규칙을 빠뜨렸고 그 몫 1,250 계정이 그대로 남았습니다.** 오류가
 안 납니다. 잔액은 늘었고 빚도 그대로라 이용자는 아무 이상을 못 느낍니다.
@@ -305,7 +305,7 @@ NEGATIVE 설계를 "제약을 빼야 한다. 상계는 공짜지만 음수 잔�
   유통 중인 재화 총량    260001600          280001400          **다름**
 ```
 
-![음수 잔액이 깨뜨리는 것](/IT-Oasis/uploads/incident/currency-reclaim/fig-negative-risk.png)
+![음수 잔액이 깨뜨리는 것](/uploads/incident/currency-reclaim/fig-negative-risk.png)
 
 깨지지 않는 것부터 적습니다. 회수 대상액은 두 설계가 같고(8,000만), 보유 계정 수처럼
 0 보다 큰지만 보는 지표도 같습니다. 미회수 잔량도 평시에는 양쪽 다 셉니다.

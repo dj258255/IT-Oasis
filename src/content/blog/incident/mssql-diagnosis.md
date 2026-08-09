@@ -54,7 +54,7 @@ SQL Server 2022 (RTM-CU26) 16.0.4265, Developer, Docker(`cpus: 4`, `mem_limit: 6
     PAGELATCH_UP  38ms
 ```
 
-![대기 통계는 두 번 떠서 차분으로 본다](/IT-Oasis/uploads/incident/mssql-diagnosis/fig-wait.png)
+![대기 통계는 두 번 떠서 차분으로 본다](/uploads/incident/mssql-diagnosis/fig-wait.png)
 
 이 회차에서는 유형이 같게 나왔지만 **크기가 다릅니다.** 누적에는 앞선 실행들이 남긴
 것이 섞여 있습니다. 운영이라면 어제 사고와 지난주 배치가 거기 들어 있습니다.
@@ -96,7 +96,7 @@ SQL Server 2022 (RTM-CU26) 16.0.4265, Developer, Docker(`cpus: 4`, `mem_limit: 6
   뿌리 세션: 51
 ```
 
-![막은 세션이 아니라 뿌리를 찾는다](/IT-Oasis/uploads/incident/mssql-diagnosis/fig-chain.png)
+![막은 세션이 아니라 뿌리를 찾는다](/uploads/incident/mssql-diagnosis/fig-chain.png)
 
 **그리고 뿌리는 아무것도 안 하고 있습니다.**
 
@@ -139,7 +139,7 @@ SQL Server 2022 (RTM-CU26) 16.0.4265, Developer, Docker(`cpus: 4`, `mem_limit: 6
     실행 1      논리읽기 2546         SET NOCOUNT ON;       /*LITERAL*/
 ```
 
-![순위에 안 잡히는 범인](/IT-Oasis/uploads/incident/mssql-diagnosis/fig-plan-cache.png)
+![순위에 안 잡히는 범인](/uploads/incident/mssql-diagnosis/fig-plan-cache.png)
 
 **부하는 절반을 리터럴이 주는데 순위에는 파라미터만 보입니다.** 각 계획이 실행 1회에
 소량이라 상위 N 에 못 옵니다.
