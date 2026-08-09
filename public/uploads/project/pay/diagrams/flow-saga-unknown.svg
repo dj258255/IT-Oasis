@@ -8,28 +8,28 @@
     </marker>
   </defs>
   <rect width="1400" height="640" fill="#000000"/>
-  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">체크아웃 3단계 사가</text>
-  <text x="56" y="106" font-size="16" fill="#8B95A1">타임아웃은 실패가 아니라 UNKNOWN이다. 느린 PG가 커넥션 풀을 말리지 않도록 외부 호출은 트랜잭션 밖으로 뺐다</text>
+  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">결제를 세 단계로 나눈 이유</text>
+  <text x="56" y="106" font-size="16" fill="#8B95A1">답이 없다고 실패로 단정하지 않는다. 느린 카드사가 DB 연결을 붙잡고 서버를 멈추지 않도록, 카드사 호출만 트랜잭션 밖으로 뺐다</text>
 
   <!-- 3단계 -->
   <g text-anchor="middle">
     <rect x="60" y="160" width="360" height="140" rx="18" fill="#F2F4F6"/>
-    <text x="240" y="196" font-size="16" font-weight="700" fill="#191F28">① 예약 (트랜잭션)</text>
-    <text x="240" y="226" font-size="13" fill="#4E5968">재고 조건부 UPDATE 차감</text>
-    <text x="240" y="248" font-size="13" fill="#4E5968">주문 PAYMENT_IN_PROGRESS</text>
-    <text x="240" y="270" font-size="13" fill="#4E5968">멱등키 INSERT = 처리권 획득</text>
+    <text x="240" y="196" font-size="16" font-weight="700" fill="#191F28">① 자리 잡기 (DB 작업)</text>
+    <text x="240" y="226" font-size="13" fill="#4E5968">재고를 조건부로 깎는다</text>
+    <text x="240" y="248" font-size="13" fill="#4E5968">주문을 결제 중으로</text>
+    <text x="240" y="270" font-size="13" fill="#4E5968">이 주문은 내가 처리한다고 표시</text>
 
     <rect x="520" y="160" width="360" height="140" rx="18" fill="#F2F4F6"/>
-    <text x="700" y="196" font-size="16" font-weight="700" fill="#191F28">② PG 승인 (트랜잭션 밖)</text>
-    <text x="700" y="226" font-size="13" fill="#4E5968">DB 커넥션을 잡지 않고 외부 호출</text>
-    <text x="700" y="248" font-size="13" fill="#4E5968">장애 지속 시 서킷 오픈, 즉시 타임아웃 응답</text>
+    <text x="700" y="196" font-size="16" font-weight="700" fill="#191F28">② 카드사 승인 (DB 밖)</text>
+    <text x="700" y="226" font-size="13" fill="#4E5968">DB 연결을 놓고 카드사를 부른다</text>
+    <text x="700" y="248" font-size="13" fill="#4E5968">장애가 이어지면 부르지 않고 바로 미확정</text>
     <text x="700" y="270" font-size="13" fill="#4E5968">응답: 승인 · 거절 · 타임아웃</text>
 
     <rect x="980" y="160" width="360" height="140" rx="18" fill="#F2F4F6"/>
-    <text x="1160" y="196" font-size="16" font-weight="700" fill="#191F28">③ 확정 / 보상 (트랜잭션)</text>
-    <text x="1160" y="226" font-size="13" fill="#4E5968">성공: PAID 확정 + 이벤트 발행</text>
-    <text x="1160" y="248" font-size="13" fill="#4E5968">재고 부족: 망취소로 보상</text>
-    <text x="1160" y="270" font-size="13" fill="#4E5968">원장·에스크로·정산은 구독으로</text>
+    <text x="1160" y="196" font-size="16" font-weight="700" fill="#191F28">③ 확정하거나 되돌리기 (DB 작업)</text>
+    <text x="1160" y="226" font-size="13" fill="#4E5968">성공: 결제 확정하고 소식 발행</text>
+    <text x="1160" y="248" font-size="13" fill="#4E5968">재고 부족: 방금 낸 승인을 되돌린다</text>
+    <text x="1160" y="270" font-size="13" fill="#4E5968">장부·정산은 소식을 받아 처리</text>
   </g>
   <line x1="420" y1="230" x2="514" y2="230" stroke="#9CA3AB" stroke-width="2" marker-end="url(#aw)"/>
   <line x1="880" y1="230" x2="974" y2="230" stroke="#9CA3AB" stroke-width="2" marker-end="url(#aw)"/>
@@ -40,17 +40,17 @@
 
   <g text-anchor="middle">
     <rect x="520" y="372" width="360" height="110" rx="18" fill="#15181E" stroke="#2A2F38"/>
-    <text x="700" y="410" font-size="16" font-weight="700" fill="#F04452">UNKNOWN 으로 보존</text>
+    <text x="700" y="410" font-size="16" font-weight="700" fill="#F04452">"모른다"로 남긴다</text>
     <text x="700" y="438" font-size="13" fill="#C4C9D0">추측으로 성공·실패 처리하지 않는다</text>
     <text x="700" y="460" font-size="12" fill="#8B95A1">"모른다"를 상태로 남기는 것이 핵심</text>
   </g>
   <line x1="880" y1="427" x2="974" y2="427" stroke="#9CA3AB" stroke-width="2" marker-end="url(#aw)"/>
   <g text-anchor="middle">
     <rect x="980" y="372" width="360" height="110" rx="18" fill="#F2F4F6"/>
-    <text x="1160" y="410" font-size="16" font-weight="700" fill="#191F28">복구 배치가 PG 조회로 확정</text>
-    <text x="1160" y="438" font-size="13" fill="#4E5968">승인됐으면 완결 · 아니면 망취소 롤백</text>
-    <text x="1160" y="460" font-size="12" fill="#8B95A1">멈춘 사가도 같은 배치가 완결한다</text>
+    <text x="1160" y="410" font-size="16" font-weight="700" fill="#191F28">복구 작업이 카드사에 다시 물어 확정</text>
+    <text x="1160" y="438" font-size="13" fill="#4E5968">승인됐으면 완결 · 아니면 되돌린다</text>
+    <text x="1160" y="460" font-size="12" fill="#8B95A1">중간에 멈춘 결제도 같은 작업이 끝낸다</text>
   </g>
 
-  <text x="700" y="576" font-size="14" fill="#8B95A1" text-anchor="middle">실측: Toxiproxy로 DB에 5초 지연 주입. 부분 커밋 없이 종료 · 같은 멱등키 재시도에 첫 응답 재반환 → 이중 결제 0건</text>
+  <text x="700" y="576" font-size="14" fill="#8B95A1" text-anchor="middle">실측: DB에 5초 지연을 일부러 주입. 절반만 저장되는 일 없이 종료됐고, 같은 요청을 다시 보내도 첫 응답을 그대로 돌려줘 이중 결제 0건</text>
 </svg>
