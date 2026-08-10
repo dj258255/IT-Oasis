@@ -201,8 +201,7 @@ PostgreSQL 17.5에서 같은 20만 행 테이블에 같은 인덱스 `(created_a
 
 3절의 삽입 비교는 출발선이 달랐습니다. `batchUpdate`는 200만 행이 든 `sponsor`에, `saveAll` 직접 ID는 빈 `sponsor_assigned`에 넣었습니다. **네 방식 모두 20,000행을 빈 테이블에 넣도록 맞춰 다시 쟀습니다.**
 
-쿼리 수는 `SHOW GLOBAL STATUS`의 `Questions` 차분입니다. 시간만 보면 왕복이 줄었는지
-알 수 없습니다.
+쿼리 수는 `SHOW GLOBAL STATUS`의 `Questions` 차분입니다. 시간만 보면 왕복이 줄었는지 알 수 없습니다.
 
 ### `rewriteBatchedStatements=true`, `batch_size=500`
 
@@ -225,14 +224,9 @@ PostgreSQL 17.5에서 같은 20만 행 테이블에 같은 인덱스 `(created_a
 
 12.63초에서 0.53초입니다. 쿼리가 20,092개에서 **87개**로 줄었습니다.
 
-`@Id`만 있고 `@GeneratedValue`가 없으면 Spring Data의 `save()`는 엔티티가 새것인지
-알 수 없어 `persist` 대신 `merge`로 갑니다. `merge`는 먼저 `SELECT`를 던져 그 ID의 행이
-있는지 봅니다. 40,053이라는 쿼리 수가 그 증거입니다. 20,000 `SELECT`에 20,000 `INSERT`
-입니다.
+`@Id`만 있고 `@GeneratedValue`가 없으면 Spring Data의 `save()`는 엔티티가 새것인지 알 수 없어 `persist` 대신 `merge`로 갑니다. `merge`는 먼저 `SELECT`를 던져 그 ID의 행이 있는지 봅니다. 40,053이라는 쿼리 수가 그 증거입니다. 20,000 `SELECT`에 20,000 `INSERT` 입니다.
 
-`Persistable`을 구현해 `isNew()`로 새것임을 알려 주면 그 `SELECT`가 사라지고, 그제야
-Hibernate의 배치가 묶입니다. 87개는 20,000행을 500씩 40번에 나눠 보낸 것에 커밋과
-메타데이터가 붙은 수입니다.
+`Persistable`을 구현해 `isNew()`로 새것임을 알려 주면 그 `SELECT`가 사라지고, 그제야 Hibernate의 배치가 묶입니다. 87개는 20,000행을 500씩 40번에 나눠 보낸 것에 커밋과 메타데이터가 붙은 수입니다.
 
 ```java
 @Entity @Table(name = "sponsor_persistable")
@@ -247,23 +241,15 @@ class SponsorPersistable implements Persistable<Long> {
 
 ### 드라이버 옵션을 끄면 배치 API도 소용없습니다
 
-`rewriteBatchedStatements=false`에서 JDBC `batchUpdate`가 **20,010 쿼리**입니다.
-배치 API를 썼는데 왕복이 행마다 하나씩 그대로 나갔습니다. 0.36초가 7.39초가 되어 **20.5배**
-입니다.
+`rewriteBatchedStatements=false`에서 JDBC `batchUpdate`가 **20,010 쿼리**입니다. 배치 API를 썼는데 왕복이 행마다 하나씩 그대로 나갔습니다. 0.36초가 7.39초가 되어 **20.5배** 입니다.
 
-`addBatch`/`executeBatch`는 **클라이언트 쪽에서 모아 두는 것까지**이고, 그것을 하나의
-`INSERT ... VALUES (...),(...)`로 합치는 일은 드라이버가 합니다. 그 옵션이 꺼져 있으면
-드라이버가 모아 둔 것을 한 줄씩 풀어 보냅니다. **애플리케이션 코드만 보고 "배치를 쓰고
-있으니 괜찮다"고 판단하면 안 되는 이유입니다.**
+`addBatch`/`executeBatch`는 **클라이언트 쪽에서 모아 두는 것까지**이고, 그것을 하나의 `INSERT ... VALUES (...),(...)`로 합치는 일은 드라이버가 합니다. 그 옵션이 꺼져 있으면 드라이버가 모아 둔 것을 한 줄씩 풀어 보냅니다. **애플리케이션 코드만 보고 "배치를 쓰고 있으니 괜찮다"고 판단하면 안 되는 이유입니다.**
 
-`Persistable` 쪽도 같은 조건에서 20,050 쿼리로 돌아갑니다. Hibernate의 `batch_size`와
-드라이버의 `rewriteBatchedStatements`는 **둘 다 있어야** 왕복이 줍니다.
+`Persistable` 쪽도 같은 조건에서 20,050 쿼리로 돌아갑니다. Hibernate의 `batch_size`와 드라이버의 `rewriteBatchedStatements`는 **둘 다 있어야** 왕복이 줍니다.
 
 ### IDENTITY는 배치가 아예 안 묶입니다
 
-자동 ID 조건이 20,011 쿼리입니다. `batch_size=500`을 줬는데도 행마다 나갔습니다.
-`GenerationType.IDENTITY`는 INSERT를 보내고 생성된 키를 받아야 다음을 진행할 수 있으므로
-Hibernate가 배치를 비활성화합니다. **ID 전략이 배치 가능 여부를 정합니다.**
+자동 ID 조건이 20,011 쿼리입니다. `batch_size=500`을 줬는데도 행마다 나갔습니다. `GenerationType.IDENTITY`는 INSERT를 보내고 생성된 키를 받아야 다음을 진행할 수 있으므로 Hibernate가 배치를 비활성화합니다. **ID 전략이 배치 가능 여부를 정합니다.**
 
 ## 8. 대량 삽입을 네 번 재서
 
