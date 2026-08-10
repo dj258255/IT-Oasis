@@ -104,6 +104,11 @@ export default defineConfig({
   site: isProd ? 'https://dj258255.github.io' : 'http://localhost:4321',
   base: base || '/',
   output: 'static',
+  // 탐지 편(1편)을 회수 편에 합치면서 사라진 URL. 정적 빌드에서는
+  // meta refresh 페이지가 생성돼 기존 링크가 안 깨진다.
+  redirects: {
+    '/blog/incident/currency-anomaly-detection': `${base || ''}/blog/incident/currency-reclaim`,
+  },
   build: {
     concurrency: 1,
   },
