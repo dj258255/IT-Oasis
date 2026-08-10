@@ -1,35 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="470" viewBox="0 0 1400 470" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="330" viewBox="0 0 1400 330" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
   <defs>
-    <marker id="sa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="#9CA3AB"/></marker>
     <marker id="sar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="#F04452"/></marker>
   </defs>
-  <rect width="1400" height="470" fill="#000000"/>
-  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">테스트가 다 통과해도 돈은 샌다</text>
-  <text x="56" y="106" font-size="16" fill="#8B95A1">테스트는 작성자의 가정 안에서만 늘어난다. 가정 자체가 틀린 자리는 테스트를 아무리 보태도 비어 있다</text>
+  <rect width="1400" height="330" fill="#000000"/>
+  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">감사 기준: 새 결제수단이 기존 수단과 같은 약속을 지키는가</text>
+  <text x="56" y="106" font-size="16" fill="#8B95A1">네 자리를 나란히 놓고 보니 한 칸이 비어 있었다. 테스트를 아무리 보태도 이 빈칸은 채워지지 않는다</text>
 
-  <text x="56" y="152" font-size="14" font-weight="700" fill="#C4C9D0">감사 기준: 새 결제수단이 기존 수단의 계약에 대칭인가</text>
-  <g text-anchor="middle" font-size="13" fill="#191F28">
-    <rect x="56" y="168" width="300" height="46" rx="12" fill="#F2F4F6"/><text x="206" y="197">예약</text>
-    <rect x="386" y="168" width="300" height="46" rx="12" fill="#F2F4F6"/><text x="536" y="197">보상</text>
-    <rect x="716" y="168" width="300" height="46" rx="12" fill="#FDEBEC"/><text x="866" y="197" fill="#C0392B">취소 ← 여기가 비어 있었다</text>
-    <rect x="1046" y="168" width="298" height="46" rx="12" fill="#F2F4F6"/><text x="1195" y="197">멱등</text>
+  <g text-anchor="middle" font-size="14" fill="#191F28">
+    <rect x="56" y="150" width="300" height="58" rx="14" fill="#F2F4F6"/><text x="206" y="185">예약</text>
+    <rect x="386" y="150" width="300" height="58" rx="14" fill="#F2F4F6"/><text x="536" y="185">보상</text>
+    <rect x="716" y="150" width="300" height="58" rx="14" fill="#FDEBEC" stroke="#F04452" stroke-width="2"/>
+    <text x="866" y="185" font-weight="700" fill="#C0392B">취소 ← 월렛을 몰랐다</text>
+    <rect x="1046" y="150" width="298" height="58" rx="14" fill="#F2F4F6"/><text x="1195" y="185">중복 방지</text>
   </g>
 
-  <line x1="866" y1="214" x2="866" y2="256" stroke="#F04452" stroke-width="2" marker-end="url(#sar)" stroke-dasharray="6 5"/>
-
-  <rect x="56" y="264" width="1288" height="96" rx="16" fill="#15181E" stroke="#2A2F38"/>
-  <text x="80" y="296" font-size="14.5" font-weight="700" fill="#F04452">실 MySQL 라이브 재현으로 잡은 것</text>
-  <g font-size="12.5" fill="#C4C9D0">
-    <text x="80" y="322">취소 경로가 월렛을 몰라 환불이 증발했다 (재현: 6,000원 증발) · 거절 후 재시도에 멱등 장치가 첫 응답을 재반환해 공짜 결제를 만들었다</text>
-    <text x="80" y="346">재감사 2회차에선 부분취소의 델타 차감이 재배달 시 이중 차감되는 구멍을 잡아 "취소 후 잔액 절대값 세팅"으로 멱등화했다</text>
-  </g>
-
-  <g text-anchor="middle">
-    <rect x="56" y="380" width="410" height="54" rx="14" fill="#F2F4F6"/>
-    <text x="261" y="413" font-size="14" font-weight="700" fill="#C0392B">돈이 사라지는 버그 2</text>
-    <rect x="495" y="380" width="410" height="54" rx="14" fill="#F2F4F6"/>
-    <text x="700" y="413" font-size="14" font-weight="700" fill="#191F28">장부가 틀어지는 버그 3</text>
-    <rect x="934" y="380" width="410" height="54" rx="14" fill="#F2F4F6"/>
-    <text x="1139" y="413" font-size="14" font-weight="700" fill="#191F28">인증이 비어 있던 곳 3 · 전부 재발 방지 테스트로 고정</text>
-  </g>
+  <line x1="866" y1="208" x2="866" y2="248" stroke="#F04452" stroke-width="2" marker-end="url(#sar)" stroke-dasharray="6 5"/>
+  <text x="700" y="288" font-size="15" font-weight="700" fill="#F04452" text-anchor="middle">환불이 증발했다 (실제 재현: 6,000원)</text>
 </svg>
