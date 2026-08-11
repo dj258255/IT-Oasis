@@ -8,13 +8,13 @@
     </marker>
   </defs>
   <rect width="1400" height="600" fill="#000000"/>
-  <text x="56" y="76" font-size="38" font-weight="800" fill="#FFFFFF">모듈끼리 직접 부르지 않는다</text>
-  <text x="56" y="114" font-size="18" fill="#8B95A1">주문·결제·원장·정산·대사를 한 서버에서 돌리되, 연결은 소식으로만 한다. 이 선을 넘는 코드를 쓰면 빌드가 깨진다</text>
+  <text x="56" y="76" font-size="44" font-weight="800" fill="#FFFFFF">모듈끼리 직접 부르지 않는다</text>
+  <text x="56" y="114" font-size="24.84" fill="#8B95A1">주문·결제·원장·정산·대사를 한 서버에서 돌리되, 연결은 소식으로만 한다. 이 선을 넘는 코드를 쓰면 빌드가 깨진다</text>
 
   <!-- 유입 -->
   <rect x="56" y="170" width="290" height="180" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="201" y="208" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="middle">요청이 들어오는 길</text>
-  <g text-anchor="middle" font-size="16" fill="#C4C9D0">
+  <text x="201" y="208" font-size="27.6" font-weight="700" fill="#FFFFFF" text-anchor="middle">요청이 들어오는 길</text>
+  <g text-anchor="middle" font-size="22.08" fill="#C4C9D0">
     <text x="201" y="250">로그인 확인</text>
     <text x="201" y="282">초당 요청 수 제한</text>
     <text x="201" y="314">선착순 대기열</text>
@@ -23,8 +23,8 @@
 
   <!-- 결제 코어 -->
   <rect x="410" y="170" width="300" height="180" rx="18" fill="#F2F4F6"/>
-  <text x="560" y="208" font-size="20" font-weight="700" fill="#191F28" text-anchor="middle">결제 코어</text>
-  <g text-anchor="middle" font-size="16" fill="#4E5968">
+  <text x="560" y="208" font-size="27.6" font-weight="700" fill="#191F28" text-anchor="middle">결제 코어</text>
+  <g text-anchor="middle" font-size="22.08" fill="#4E5968">
     <text x="560" y="250">승인·거절·미확정</text>
     <text x="560" y="282">같은 요청 두 번 막기</text>
     <text x="560" y="314">망취소 보상</text>
@@ -36,12 +36,12 @@
     <line x1="856" y1="240" x2="896" y2="280" stroke="#F04452" stroke-width="5"/>
     <line x1="896" y1="240" x2="856" y2="280" stroke="#F04452" stroke-width="5"/>
   </g>
-  <text x="876" y="222" font-size="17" font-weight="700" fill="#F04452" text-anchor="middle">직접 호출은 빌드가 막는다</text>
+  <text x="876" y="222" font-size="23.46" font-weight="700" fill="#F04452" text-anchor="middle">직접 호출은 빌드가 막는다</text>
 
   <!-- 구독 모듈 -->
   <rect x="1036" y="170" width="308" height="180" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="1190" y="208" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="middle">소식을 받아 일하는 곳</text>
-  <g text-anchor="middle" font-size="16" fill="#C4C9D0">
+  <text x="1190" y="208" font-size="27.6" font-weight="700" fill="#FFFFFF" text-anchor="middle">소식을 받아 일하는 곳</text>
+  <g text-anchor="middle" font-size="22.08" fill="#C4C9D0">
     <text x="1190" y="250">원장 · 정산 · 에스크로</text>
     <text x="1190" y="282">대사 · 분쟁 · 이상거래</text>
     <text x="1190" y="314">알림 · 포인트</text>
@@ -50,9 +50,9 @@
   <!-- 소식 경로 -->
   <line x1="560" y1="350" x2="560" y2="418" stroke="#0B7A4B" stroke-width="2.5" marker-end="url(#ag2)"/>
   <rect x="410" y="424" width="580" height="96" rx="18" fill="#F2F4F6"/>
-  <text x="700" y="462" font-size="19" font-weight="700" fill="#0B7A4B" text-anchor="middle">결제와 같은 트랜잭션으로 소식도 DB에 적는다</text>
-  <text x="700" y="494" font-size="16" fill="#4E5968" text-anchor="middle">커밋되면 소식은 반드시 남고, 배달에 실패하면 다시 배달한다</text>
+  <text x="700" y="462" font-size="26.22" font-weight="700" fill="#0B7A4B" text-anchor="middle">결제와 같은 트랜잭션으로 소식도 DB에 적는다</text>
+  <text x="700" y="494" font-size="22.08" fill="#4E5968" text-anchor="middle">커밋되면 소식은 반드시 남고, 배달에 실패하면 다시 배달한다</text>
   <path d="M 990 472 L 1190 472 L 1190 356" fill="none" stroke="#0B7A4B" stroke-width="2.5" marker-end="url(#ag2)"/>
 
-  <text x="700" y="566" font-size="17" fill="#8B95A1" text-anchor="middle">직접 부르는 길은 막혀 있고, 소식이 지나는 길만 열려 있다. 그래서 나중에 오른쪽을 떼어 내도 결제 코어를 고치지 않는다</text>
+  <text x="700" y="566" font-size="23.46" fill="#8B95A1" text-anchor="middle">직접 부르는 길은 막혀 있고, 소식이 지나는 길만 열려 있다. 그래서 나중에 오른쪽을 떼어 내도 결제 코어를 고치지 않는다</text>
 </svg>

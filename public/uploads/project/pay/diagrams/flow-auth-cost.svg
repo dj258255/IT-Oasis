@@ -4,29 +4,29 @@
     <marker id="aur" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="#F04452"/></marker>
   </defs>
   <rect width="1400" height="500" fill="#000000"/>
-  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">모든 요청이 똑같이 치르던 고정 비용</text>
-  <text x="56" y="106" font-size="16" fill="#8B95A1">오류율 0%인데 최소 응답이 110ms. 가장 단순한 요청조차 그 아래로 못 내려간다면 범인은 앱 로직이 아니다</text>
+  <text x="56" y="72" font-size="44" font-weight="800" fill="#FFFFFF">모든 요청이 똑같이 치르던 고정 비용</text>
+  <text x="56" y="106" font-size="22.08" fill="#8B95A1">오류율 0%인데 최소 응답이 110ms. 가장 단순한 요청조차 그 아래로 못 내려간다면 범인은 앱 로직이 아니다</text>
 
   <rect x="56" y="146" width="1288" height="140" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="80" y="180" font-size="15" font-weight="700" fill="#F04452">개선 전 · 요청마다 비밀번호를 다시 검증</text>
-  <g text-anchor="middle" font-size="13" fill="#191F28">
+  <text x="80" y="180" font-size="20.7" font-weight="700" fill="#F04452">개선 전 · 요청마다 비밀번호를 다시 검증</text>
+  <g text-anchor="middle" font-size="17.94" fill="#191F28">
     <rect x="86" y="196" width="180" height="52" rx="12" fill="#F2F4F6"/><text x="176" y="227">요청 1</text>
-    <rect x="296" y="196" width="300" height="52" rx="12" fill="#FDEBEC"/><text x="446" y="220" font-size="12.5" fill="#C0392B">BCrypt 대조</text><text x="446" y="240" font-size="11" fill="#C0392B">유출 대비로 일부러 느린 함수</text>
+    <rect x="296" y="196" width="300" height="52" rx="12" fill="#FDEBEC"/><text x="446" y="220" font-size="17.25" fill="#C0392B">BCrypt 대조</text><text x="446" y="240" font-size="15.18" fill="#C0392B">유출 대비로 일부러 느린 함수</text>
     <rect x="626" y="196" width="180" height="52" rx="12" fill="#F2F4F6"/><text x="716" y="227">요청 2</text>
-    <rect x="836" y="196" width="300" height="52" rx="12" fill="#FDEBEC"/><text x="986" y="220" font-size="12.5" fill="#C0392B">BCrypt 대조</text><text x="986" y="240" font-size="11" fill="#C0392B">체크아웃 1회 = 인증 2회</text>
+    <rect x="836" y="196" width="300" height="52" rx="12" fill="#FDEBEC"/><text x="986" y="220" font-size="17.25" fill="#C0392B">BCrypt 대조</text><text x="986" y="240" font-size="15.18" fill="#C0392B">체크아웃 1회 = 인증 2회</text>
   </g>
-  <text x="1230" y="230" font-size="19" font-weight="800" fill="#F04452" text-anchor="middle">min 110ms</text>
+  <text x="1230" y="230" font-size="26.22" font-weight="800" fill="#F04452" text-anchor="middle">min 110ms</text>
 
   <rect x="56" y="306" width="1288" height="140" rx="18" fill="#F2F4F6"/>
-  <text x="80" y="340" font-size="15" font-weight="700" fill="#1B64DA">개선 후 · 로그인에서 한 번만 검증하고, 이후엔 서명만 확인</text>
-  <g text-anchor="middle" font-size="13" fill="#191F28">
-    <rect x="86" y="356" width="230" height="52" rx="12" fill="#FFFFFF" stroke="#D0D7E2"/><text x="201" y="380">로그인 1회</text><text x="201" y="398" font-size="11" fill="#4E5968">여기서만 BCrypt</text>
+  <text x="80" y="340" font-size="20.7" font-weight="700" fill="#1B64DA">개선 후 · 로그인에서 한 번만 검증하고, 이후엔 서명만 확인</text>
+  <g text-anchor="middle" font-size="17.94" fill="#191F28">
+    <rect x="86" y="356" width="230" height="52" rx="12" fill="#FFFFFF" stroke="#D0D7E2"/><text x="201" y="380">로그인 1회</text><text x="201" y="398" font-size="15.18" fill="#4E5968">여기서만 BCrypt</text>
     <rect x="346" y="356" width="200" height="52" rx="12" fill="#FFFFFF" stroke="#D0D7E2"/><text x="446" y="387">서명 토큰 발급</text>
     <rect x="576" y="356" width="180" height="52" rx="12" fill="#FFFFFF" stroke="#D0D7E2"/><text x="666" y="387">요청 1</text>
     <rect x="786" y="356" width="180" height="52" rx="12" fill="#FFFFFF" stroke="#D0D7E2"/><text x="876" y="387">요청 2</text>
     <rect x="996" y="356" width="130" height="52" rx="12" fill="#FFFFFF" stroke="#D0D7E2"/><text x="1061" y="387">서명 확인</text>
   </g>
-  <text x="1230" y="390" font-size="19" font-weight="800" fill="#0B7A4B" text-anchor="middle">min 4.17ms</text>
+  <text x="1230" y="390" font-size="26.22" font-weight="800" fill="#0B7A4B" text-anchor="middle">min 4.17ms</text>
 
-  <text x="700" y="478" font-size="14" fill="#8B95A1" text-anchor="middle">같은 머신·같은 부하(50 VU): p95 567.84 → 37.09ms(약 15배), 오류율 0% 유지</text>
+  <text x="700" y="478" font-size="19.32" fill="#8B95A1" text-anchor="middle">같은 머신·같은 부하(50 VU): p95 567.84 → 37.09ms(약 15배), 오류율 0% 유지</text>
 </svg>
