@@ -8,7 +8,7 @@
     </marker>
   </defs>
   <rect width="1400" height="640" fill="#000000"/>
-  <text x="56" y="74" font-size="44" font-weight="800" fill="#FFFFFF">결제를 세 단계로 나눈 이유</text>
+  <text x="56" y="74" font-size="44" font-weight="800" fill="#FFFFFF">타임아웃은 성공도 실패도 아니다</text>
   <text x="56" y="116" font-size="24" fill="#8B95A1">답이 없다고 실패로 단정하지 않는다. 카드사 호출은 승인도 취소도 트랜잭션 밖에서 한다</text>
 
   <!-- 3단계 -->

@@ -8,7 +8,7 @@
     </marker>
   </defs>
   <rect width="1400" height="560" fill="#000000"/>
-  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">유입 제어 3층</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">전부를 느리게 하느니 일부를 거절한다</text>
   <text x="56" y="106" font-size="28.7" fill="#8B95A1">감당 못 할 요청은 가장 바깥에서 싸게 거절한다. 같은 스파이크를 제어 전후로 쟀다</text>
 
   <g text-anchor="middle">
@@ -42,7 +42,7 @@
     <rect x="1120" y="176" width="220" height="120" rx="18" fill="#F2F4F6"/>
     <text x="1230" y="220" font-size="26.91" font-weight="700" fill="#191F28">DB 도달</text>
     <text x="1230" y="248" font-size="24.22" fill="#191F28">약 510건</text>
-    <text x="1230" y="272" font-size="21.53" fill="#8B95A1">전체의 3.3%</text>
+    <text x="1230" y="272" font-size="21.53" fill="#8B95A1">전체의 2.5%</text>
   </g>
 
   <line x1="270" y1="236" x2="324" y2="236" stroke="#9CA3AB" stroke-width="2" marker-end="url(#bw)"/>

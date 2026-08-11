@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
   <rect width="1400" height="560" fill="#000000"/>
-  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">정산 집계 키 버그</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">날짜 하나가 지급을 통째로 빠뜨렸다</text>
   <text x="56" y="106" font-size="28.7" fill="#8B95A1">주문 하나의 시간선으로 보면</text>
 
   <!-- 타임라인 -->

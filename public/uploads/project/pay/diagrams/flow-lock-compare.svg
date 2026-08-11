@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
   <rect width="1400" height="560" fill="#000000"/>
-  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">재고 락 3종을 실제 MySQL에서 재서 골랐다</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">인메모리에서 잰 순위가 실 DB에서 뒤집혔다</text>
   <text x="56" y="106" font-size="28.7" fill="#8B95A1">스레드 30개가 재고 20에 동시 차감. 셋 다 초과판매 0으로 완판했고 소요만 갈렸다 (실 MySQL 8.4 InnoDB)</text>
 
   <g text-anchor="middle">

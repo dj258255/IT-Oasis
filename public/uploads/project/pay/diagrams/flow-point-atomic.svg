@@ -8,7 +8,7 @@
     </marker>
   </defs>
   <rect width="1400" height="620" fill="#000000"/>
-  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">포인트 적립 경합</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">읽지 않으면 충돌하지 않는다</text>
   <text x="56" y="106" font-size="28.7" fill="#8B95A1">같은 계정 동시 결제에서 적립 충돌이 승인까지 무너뜨렸다</text>
 
   <!-- 개선 전 -->
