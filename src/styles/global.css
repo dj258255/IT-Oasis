@@ -669,6 +669,40 @@ button, input, select, textarea {
     line-height: 1.85;
   }
 }
+/* 본문 안 접기 블록 — 긴 글에서 곁가지 절을 접어 둔다 */
+.prose details {
+  margin: 1.75rem 0;
+  border: 1px solid rgba(100, 160, 200, 0.28);
+  border-radius: 0.75rem;
+  background: rgba(100, 160, 200, 0.05);
+  overflow: hidden;
+}
+.prose details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.9rem 1.1rem 0.9rem 2.4rem;
+  position: relative;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  user-select: none;
+}
+.prose details > summary::-webkit-details-marker { display: none; }
+.prose details > summary::before {
+  content: '▶';
+  position: absolute;
+  left: 1.05rem;
+  font-size: 0.7rem;
+  opacity: 0.65;
+  transition: transform 0.15s ease;
+}
+.prose details[open] > summary::before { transform: rotate(90deg); }
+.prose details > summary:hover { background: rgba(100, 160, 200, 0.09); }
+.prose details[open] > summary { border-bottom: 1px solid rgba(100, 160, 200, 0.2); }
+.prose details > summary strong { font-weight: 600; }
+.prose details > *:not(summary) { padding-inline: 1.1rem; }
+.prose details > h2:first-of-type { margin-top: 1.2rem; }
+.prose details > *:last-child { margin-bottom: 1.2rem; }
+
 .prose h1, .prose h2, .prose h3 {
   @apply font-bold mt-10 mb-4;
   color: #1a1a2e;
