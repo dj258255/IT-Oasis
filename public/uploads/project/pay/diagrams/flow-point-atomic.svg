@@ -9,7 +9,7 @@
   </defs>
   <rect width="1400" height="620" fill="#000000"/>
   <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">포인트 적립 경합</text>
-  <text x="56" y="106" font-size="28.7" fill="#8B95A1">같은 계정의 동시 결제에서 적립의 충돌이 결제 승인까지 무너뜨렸다. 답은 DB가 직접 더하게 하는 것</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">같은 계정 동시 결제에서 적립 충돌이 승인까지 무너뜨렸다</text>
 
   <!-- 개선 전 -->
   <rect x="56" y="150" width="630" height="330" rx="18" fill="#15181E" stroke="#2A2F38"/>
@@ -30,7 +30,7 @@
   <line x1="480" y1="285" x2="534" y2="285" stroke="#F04452" stroke-width="2" marker-end="url(#cr)"/>
   <text x="590" y="278" font-size="25.12" font-weight="700" fill="#F04452" text-anchor="middle">낙관적 락</text>
   <text x="590" y="298" font-size="25.12" font-weight="700" fill="#F04452" text-anchor="middle">충돌</text>
-  <text x="371" y="404" font-size="26.91" font-weight="700" fill="#F04452" text-anchor="middle">충돌이 결제 트랜잭션 안이라 승인까지 500: 성공률 39.6%</text>
+  <text x="371" y="404" font-size="26.91" font-weight="700" fill="#F04452" text-anchor="middle">승인까지 500으로 번졌다: 성공률 39.6%</text>
   <text x="371" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">운영에선 rate limit이 가려 안 드러났다</text>
 
   <!-- 개선 후 -->

@@ -3,8 +3,8 @@
     <marker id="sar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="#F04452"/></marker>
   </defs>
   <rect width="1400" height="330" fill="#000000"/>
-  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">감사 기준: 새 결제수단이 기존 수단과 같은 약속을 지키는가</text>
-  <text x="56" y="106" font-size="28.7" fill="#8B95A1">네 자리를 나란히 놓고 보니 한 칸이 비어 있었다. 테스트를 아무리 보태도 이 빈칸은 채워지지 않는다</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">새 결제수단이 같은 약속을 지키는가</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">네 자리를 나란히 놓으니 한 칸이 비어 있었다. 테스트로는 안 채워진다</text>
 
   <g text-anchor="middle" font-size="25.12" fill="#191F28">
     <rect x="56" y="150" width="300" height="58" rx="14" fill="#F2F4F6"/><text x="206" y="185">예약</text>
