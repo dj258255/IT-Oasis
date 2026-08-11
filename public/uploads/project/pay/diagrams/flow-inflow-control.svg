@@ -9,7 +9,7 @@
   </defs>
   <rect width="1400" height="560" fill="#000000"/>
   <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">유입 제어 3층</text>
-  <text x="56" y="106" font-size="28.7" fill="#8B95A1">감당 못 할 요청은 가장 바깥에서 가장 싸게 거절한다. 같은 스파이크(0→150 VU 10초 급증)를 제어 전/후 실측했다</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">감당 못 할 요청은 가장 바깥에서 싸게 거절한다. 같은 스파이크를 제어 전후로 쟀다</text>
 
   <g text-anchor="middle">
     <rect x="60" y="176" width="210" height="120" rx="18" fill="#F2F4F6"/>
@@ -20,7 +20,7 @@
 
   <!-- 3층 게이트 컨테이너 -->
   <rect x="330" y="150" width="730" height="172" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="695" y="182" font-size="25.12" font-weight="700" fill="#FFFFFF" text-anchor="middle">문 앞 세 겹 (이미 쓰던 Redis 재사용, 추가 비용 0)</text>
+  <text x="695" y="182" font-size="25.12" font-weight="700" fill="#FFFFFF" text-anchor="middle">문 앞 세 겹 (Redis 재사용, 추가 비용 0)</text>
   <g text-anchor="middle">
     <rect x="354" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
     <text x="464" y="230" font-size="25.12" font-weight="700" fill="#191F28">① 초당 요청 수 제한</text>
@@ -51,7 +51,7 @@
   <!-- shed -->
   <line x1="695" y1="322" x2="695" y2="388" stroke="#F04452" stroke-width="2" marker-end="url(#br)" stroke-dasharray="6 5"/>
   <text x="695" y="424" font-size="30.5" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 돌려보냈다</text>
-  <text x="695" y="450" font-size="23.32" fill="#8B95A1" text-anchor="middle">밖에서 싸게 거절해, 통과한 요청의 속도를 지킨다</text>
+  <text x="695" y="450" font-size="23.32" fill="#8B95A1" text-anchor="middle">통과한 요청의 속도를 지킨다</text>
 
   <text x="700" y="512" font-size="25.12" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 제어 ON에서 드러난 outbox 데드락 5xx 0.55%는 재시도로 0.00%</text>
 </svg>
