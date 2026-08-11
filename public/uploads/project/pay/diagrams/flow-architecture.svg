@@ -1,74 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="626" viewBox="0 0 1400 626" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
   <defs>
-    <marker id="dw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <marker id="aw2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 1 L 9 5 L 0 9 z" fill="#9CA3AB"/>
     </marker>
-    <marker id="dr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 1 L 9 5 L 0 9 z" fill="#F04452"/>
+    <marker id="ag2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#0B7A4B"/>
     </marker>
   </defs>
-  <rect width="1400" height="626" fill="#000000"/>
-  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">pay 전체 구조</text>
-  <text x="56" y="106" font-size="16" fill="#8B95A1">모듈끼리 직접 부르지 않고 소식만 주고받는다. 이 선을 넘는 코드를 쓰면 빌드가 깨진다</text>
+  <rect width="1400" height="600" fill="#000000"/>
+  <text x="56" y="76" font-size="38" font-weight="800" fill="#FFFFFF">모듈끼리 직접 부르지 않는다</text>
+  <text x="56" y="114" font-size="18" fill="#8B95A1">주문·결제·원장·정산·대사를 한 서버에서 돌리되, 연결은 소식으로만 한다. 이 선을 넘는 코드를 쓰면 빌드가 깨진다</text>
 
-  <!-- 유입·인증 -->
-  <rect x="56" y="150" width="240" height="260" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="176" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">유입 · 인증</text>
-  <g text-anchor="middle" font-size="13" fill="#191F28">
-    <rect x="76" y="204" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="233">JWT 서명 검증</text>
-    <rect x="76" y="262" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="291">초당 요청 수 제한</text>
-    <rect x="76" y="320" width="200" height="48" rx="12" fill="#F2F4F6"/><text x="176" y="349">선착순 대기열 게이트</text>
+  <!-- 유입 -->
+  <rect x="56" y="170" width="290" height="180" rx="18" fill="#15181E" stroke="#2A2F38"/>
+  <text x="201" y="208" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="middle">요청이 들어오는 길</text>
+  <g text-anchor="middle" font-size="16" fill="#C4C9D0">
+    <text x="201" y="250">로그인 확인</text>
+    <text x="201" y="282">초당 요청 수 제한</text>
+    <text x="201" y="314">선착순 대기열</text>
   </g>
-  <text x="176" y="440" font-size="13" fill="#8B95A1" text-anchor="middle">요청을 받아 거르는 층</text>
-  <line x1="296" y1="280" x2="334" y2="280" stroke="#9CA3AB" stroke-width="2" marker-end="url(#dw)"/>
+  <line x1="346" y1="260" x2="404" y2="260" stroke="#9CA3AB" stroke-width="2.5" marker-end="url(#aw2)"/>
 
   <!-- 결제 코어 -->
-  <rect x="340" y="150" width="300" height="260" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="490" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">결제 코어</text>
-  <g text-anchor="middle" font-size="13" fill="#191F28">
-    <rect x="360" y="200" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="227">체크아웃 3단계 사가</text>
-    <rect x="360" y="252" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="279">같은 요청 두 번 막기</text>
-    <rect x="360" y="304" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="331">카드사 연동 · 3상태 승인</text>
-    <rect x="360" y="356" width="260" height="44" rx="12" fill="#F2F4F6"/><text x="490" y="383">서킷브레이커 · 망취소 보상</text>
+  <rect x="410" y="170" width="300" height="180" rx="18" fill="#F2F4F6"/>
+  <text x="560" y="208" font-size="20" font-weight="700" fill="#191F28" text-anchor="middle">결제 코어</text>
+  <g text-anchor="middle" font-size="16" fill="#4E5968">
+    <text x="560" y="250">승인·거절·미확정</text>
+    <text x="560" y="282">같은 요청 두 번 막기</text>
+    <text x="560" y="314">망취소 보상</text>
   </g>
-  <text x="490" y="440" font-size="13" fill="#4C9EFF" text-anchor="middle">돈이 실제로 움직이는 곳</text>
-  <line x1="640" y1="280" x2="682" y2="280" stroke="#F04452" stroke-width="2" marker-end="url(#dr)"/>
-  <text x="661" y="266" font-size="12" fill="#F04452" font-weight="700" text-anchor="middle">이벤트</text>
 
-  <!-- Outbox -->
-  <g text-anchor="middle">
-    <rect x="688" y="222" width="222" height="116" rx="16" fill="#F2F4F6"/>
-    <text x="799" y="258" font-size="14.5" font-weight="700" fill="#191F28">결제와 함께 기록</text>
-    <text x="799" y="286" font-size="12" fill="#4E5968">커밋되면 소식도 반드시 남음</text>
-    <text x="799" y="308" font-size="12" fill="#4E5968">배달 실패는 재배달</text>
+  <!-- 직접 호출 금지 -->
+  <line x1="716" y1="260" x2="1030" y2="260" stroke="#F04452" stroke-width="2.5" stroke-dasharray="9 7"/>
+  <g>
+    <line x1="856" y1="240" x2="896" y2="280" stroke="#F04452" stroke-width="5"/>
+    <line x1="896" y1="240" x2="856" y2="280" stroke="#F04452" stroke-width="5"/>
   </g>
-  <line x1="910" y1="280" x2="950" y2="280" stroke="#9CA3AB" stroke-width="2" marker-end="url(#dw)"/>
+  <text x="876" y="222" font-size="17" font-weight="700" fill="#F04452" text-anchor="middle">직접 호출은 빌드가 막는다</text>
 
   <!-- 구독 모듈 -->
-  <rect x="956" y="150" width="388" height="260" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="1150" y="186" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">결제 소식을 받아 일하는 곳 (중복 배달에도 안전)</text>
-  <g text-anchor="middle" font-size="12.5" fill="#191F28">
-    <rect x="976" y="200" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="227">복식부기 원장</text>
-    <rect x="1160" y="200" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="227">에스크로</text>
-    <rect x="976" y="252" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="279">정산 (수수료·지급)</text>
-    <rect x="1160" y="252" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="279">장부 대조</text>
-    <rect x="976" y="304" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="331">분쟁 · 역분개</text>
-    <rect x="1160" y="304" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="331">이상거래 심사</text>
-    <rect x="976" y="356" width="176" height="44" rx="12" fill="#F2F4F6"/><text x="1064" y="383">알림</text>
-    <rect x="1160" y="356" width="164" height="44" rx="12" fill="#F2F4F6"/><text x="1242" y="383">실패 알림 재처리</text>
-  </g>
-  <text x="1150" y="440" font-size="13" fill="#8B95A1" text-anchor="middle">결제 소식을 받아 각자 할 일을 진행</text>
-
-  <!-- 검증 3겹 -->
-  <rect x="56" y="478" width="1288" height="120" rx="18" fill="#15181E" stroke="#2A2F38"/>
-  <text x="84" y="514" font-size="15" font-weight="700" fill="#FFFFFF">돈이 맞는지 세 겹으로 확인한다</text>
-  <g font-size="13" fill="#191F28" text-anchor="middle">
-    <rect x="84" y="530" width="390" height="48" rx="12" fill="#F2F4F6"/>
-    <text x="279" y="559">① 같은 요청 두 번 막기: 중복 결제 차단</text>
-    <rect x="494" y="530" width="390" height="48" rx="12" fill="#F2F4F6"/>
-    <text x="689" y="559">② 장부 양쪽 맞추기: 들어온 돈 = 나간 돈</text>
-    <rect x="904" y="530" width="416" height="48" rx="12" fill="#F2F4F6"/>
-    <text x="1112" y="559">③ 카드사 기록과 대조: 마지막 방어선</text>
+  <rect x="1036" y="170" width="308" height="180" rx="18" fill="#15181E" stroke="#2A2F38"/>
+  <text x="1190" y="208" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="middle">소식을 받아 일하는 곳</text>
+  <g text-anchor="middle" font-size="16" fill="#C4C9D0">
+    <text x="1190" y="250">원장 · 정산 · 에스크로</text>
+    <text x="1190" y="282">대사 · 분쟁 · 이상거래</text>
+    <text x="1190" y="314">알림 · 포인트</text>
   </g>
 
+  <!-- 소식 경로 -->
+  <line x1="560" y1="350" x2="560" y2="418" stroke="#0B7A4B" stroke-width="2.5" marker-end="url(#ag2)"/>
+  <rect x="410" y="424" width="580" height="96" rx="18" fill="#F2F4F6"/>
+  <text x="700" y="462" font-size="19" font-weight="700" fill="#0B7A4B" text-anchor="middle">결제와 같은 트랜잭션으로 소식도 DB에 적는다</text>
+  <text x="700" y="494" font-size="16" fill="#4E5968" text-anchor="middle">커밋되면 소식은 반드시 남고, 배달에 실패하면 다시 배달한다</text>
+  <path d="M 990 472 L 1190 472 L 1190 356" fill="none" stroke="#0B7A4B" stroke-width="2.5" marker-end="url(#ag2)"/>
+
+  <text x="700" y="566" font-size="17" fill="#8B95A1" text-anchor="middle">직접 부르는 길은 막혀 있고, 소식이 지나는 길만 열려 있다. 그래서 나중에 오른쪽을 떼어 내도 결제 코어를 고치지 않는다</text>
 </svg>
