@@ -57,7 +57,7 @@ coverImage: /uploads/incident/mssql-diagnosis/fig-chain.png
 | `blocking_session_id` 로 막은 세션을 찾는다 | 그 세션도 피해자다. 뿌리는 `sleeping` 이라 `dm_exec_requests` 에 **없다** |
 | `total_logical_reads` 로 정렬해 범인을 찾는다 | 리터럴 쿼리가 60개로 흩어져 순위에 못 온다. 부하의 **절반이 안 보인다** |
 
-스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A26-mssql-diagnosis` 에 있습니다.
+스크립트와 실행 결과 원문은 [저장소에 그대로](https://github.com/dj258255/incident-lab/tree/main/sessions/A26-mssql-diagnosis) 있습니다.
 
 SQL Server 2022 (RTM-CU26) 16.0.4265, Developer, Docker(`cpus: 4`, `mem_limit: 6g`).
 시간 수치는 인용하지 않습니다. ARM 에뮬레이션이라 이 호스트의 값이 아닙니다.
