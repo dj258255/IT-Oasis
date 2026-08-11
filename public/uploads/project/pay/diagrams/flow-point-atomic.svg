@@ -31,7 +31,7 @@
   <text x="590" y="278" font-size="25.12" font-weight="700" fill="#F04452" text-anchor="middle">낙관적 락</text>
   <text x="590" y="298" font-size="25.12" font-weight="700" fill="#F04452" text-anchor="middle">충돌</text>
   <text x="371" y="404" font-size="26.91" font-weight="700" fill="#F04452" text-anchor="middle">충돌이 결제 트랜잭션 안이라 승인까지 500: 성공률 39.6%</text>
-  <text x="371" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">운영에선 사용자별 rate limit(5/s)이 동시성을 차단해 결함이 숨어 있었다</text>
+  <text x="371" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">운영에선 rate limit이 가려 안 드러났다</text>
 
   <!-- 개선 후 -->
   <rect x="714" y="150" width="630" height="330" rx="18" fill="#15181E" stroke="#2A2F38"/>
@@ -51,7 +51,7 @@
   <line x1="922" y1="245" x2="982" y2="272" stroke="#9CA3AB" stroke-width="2" marker-end="url(#cw)"/>
   <line x1="922" y1="325" x2="982" y2="298" stroke="#9CA3AB" stroke-width="2" marker-end="url(#cw)"/>
   <text x="1029" y="404" font-size="26.91" font-weight="700" fill="#FFFFFF" text-anchor="middle">같은 부하 재실험: 성공률 100.00% (6,761/6,761)</text>
-  <text x="1029" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">version도 함께 올려, 사용·환불 경로의 낡은 잔액 덮어쓰기까지 충돌로 잡히게 했다</text>
+  <text x="1029" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">version도 함께 올려 낡은 잔액 덮어쓰기를 막았다</text>
 
   <text x="700" y="556" font-size="25.12" fill="#8B95A1" text-anchor="middle">검증: 잔액 합계와 포인트 원장 합계를 별도 경로로 대조, 불일치 0 (978,400 = 978,400)</text>
 </svg>
