@@ -3,10 +3,10 @@
     <marker id="sar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="#F04452"/></marker>
   </defs>
   <rect width="1400" height="330" fill="#000000"/>
-  <text x="56" y="72" font-size="34" font-weight="800" fill="#FFFFFF">감사 기준: 새 결제수단이 기존 수단과 같은 약속을 지키는가</text>
-  <text x="56" y="106" font-size="16" fill="#8B95A1">네 자리를 나란히 놓고 보니 한 칸이 비어 있었다. 테스트를 아무리 보태도 이 빈칸은 채워지지 않는다</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">감사 기준: 새 결제수단이 기존 수단과 같은 약속을 지키는가</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">네 자리를 나란히 놓고 보니 한 칸이 비어 있었다. 테스트를 아무리 보태도 이 빈칸은 채워지지 않는다</text>
 
-  <g text-anchor="middle" font-size="14" fill="#191F28">
+  <g text-anchor="middle" font-size="25.12" fill="#191F28">
     <rect x="56" y="150" width="300" height="58" rx="14" fill="#F2F4F6"/><text x="206" y="185">예약</text>
     <rect x="386" y="150" width="300" height="58" rx="14" fill="#F2F4F6"/><text x="536" y="185">보상</text>
     <rect x="716" y="150" width="300" height="58" rx="14" fill="#FDEBEC" stroke="#F04452" stroke-width="2"/>
@@ -15,5 +15,5 @@
   </g>
 
   <line x1="866" y1="208" x2="866" y2="248" stroke="#F04452" stroke-width="2" marker-end="url(#sar)" stroke-dasharray="6 5"/>
-  <text x="700" y="288" font-size="15" font-weight="700" fill="#F04452" text-anchor="middle">환불이 증발했다 (실제 재현: 6,000원)</text>
+  <text x="700" y="288" font-size="26.91" font-weight="700" fill="#F04452" text-anchor="middle">환불이 증발했다 (실제 재현: 6,000원)</text>
 </svg>
