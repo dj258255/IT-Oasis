@@ -36,6 +36,9 @@ coverImage: /uploads/incident/mssql-diagnosis/fig-chain.png
 
 처방 전체(6개)는 [맨 아래](#표준-처방)에 있고, 아래는 그 판단들을 어떻게 확인했는지입니다.
 
+<details>
+<summary><strong>이 글이 답하는 질문들 — 목차 대신 훑어볼 것</strong></summary>
+
 ## 무엇을 만들었고 무엇을 확인했나
 
 
@@ -57,6 +60,8 @@ coverImage: /uploads/incident/mssql-diagnosis/fig-chain.png
 SQL Server 2022 (RTM-CU26) 16.0.4265, Developer, Docker(`cpus: 4`, `mem_limit: 6g`).
 **시간 수치는 인용하지 않습니다.** ARM 에뮬레이션이라 이 호스트의 값이 아닙니다.
 재는 것은 대기 유형, 사슬의 모양, 세션이 DMV 에 보이는지 여부입니다.
+
+</details>
 
 ## 대기 통계는 누적이라 지금을 못 본다
 
