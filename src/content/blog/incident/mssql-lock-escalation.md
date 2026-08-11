@@ -47,7 +47,7 @@ coverImage: /uploads/incident/mssql-lock-escalation/fig-threshold.png
 ## 무엇을 만들었고 무엇을 확인했나
 
 
-**만든 것.** SQL Server 락 에스컬레이션이 실제로 어디서 발동하고 무엇을 막는지를 재는 랩입니다. 스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A04-mssql-lock-escalation` 에 있습니다.
+**만든 것.** SQL Server 락 에스컬레이션이 실제로 어디서 발동하고 무엇을 막는지를 재는 랩입니다. 스크립트와 실행 결과 원문은 [저장소에 그대로](https://github.com/dj258255/incident-lab/tree/main/sessions/A04-mssql-lock-escalation) 있습니다.
 
 **왜 했나.** [앞 편](/blog/incident/currency-reclaim)에서 뽑은 회수 대상을 실제로 되돌리려면 수만 행을 갱신해야 합니다. 그 한 문장이 테이블 락을 잡으면 보정 대상이 아닌 이용자의 조회까지 멈춥니다. 배치를 얼마로 쪼개야 하는지 그 근거를 확인하려고 했습니다.
 

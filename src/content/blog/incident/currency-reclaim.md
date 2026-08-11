@@ -51,7 +51,7 @@ coverImage: /uploads/incident/currency-anomaly-detection/fig-detect.png
 ## 무엇을 만들었고 무엇을 확인했나
 
 
-**만든 것.** 게임 재화 복사 사고를 **찾는 것부터 되돌리는 것까지** 한 줄기로 밟은 랩입니다. 스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A24-currency-anomaly-detection` 과 `sessions/A25-currency-reclaim-procedure` 에 있습니다.
+**만든 것.** 게임 재화 복사 사고를 **찾는 것부터 되돌리는 것까지** 한 줄기로 밟은 랩입니다. 스크립트와 실행 결과 원문은 저장소에 그대로 있습니다. [1부 탐지](https://github.com/dj258255/incident-lab/tree/main/sessions/A24-currency-anomaly-detection), [2부 회수](https://github.com/dj258255/incident-lab/tree/main/sessions/A25-currency-reclaim-procedure).
 
 **왜 했나.** 같은 성격의 재화 복사 사고에 어떤 회사는 서버를 6일 되돌리고 어떤 회사는 선별 회수를 합니다. 그 차이가 어디서 갈리는지 직접 밟아 보려고 했습니다.
 

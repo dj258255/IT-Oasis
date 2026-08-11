@@ -18,7 +18,7 @@ coverImage: /uploads/incident/backup-pitr/fig-pitr.png
 ---
 
 ## 무엇을 만들었고 무엇을 확인했나
-**만든 것.** MySQL·PostgreSQL·SQL Server·Oracle 네 엔진에서 시점 복구를 직접 수행하는 랩과, 백업을 매번 되살려 보고 실패하면 알리는 검증 파이프라인입니다. 스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A23-backup-pitr`에 있습니다.
+**만든 것.** MySQL·PostgreSQL·SQL Server·Oracle 네 엔진에서 시점 복구를 직접 수행하는 랩과, 백업을 매번 되살려 보고 실패하면 알리는 검증 파이프라인입니다. 스크립트와 실행 결과 원문은 [저장소에 그대로](https://github.com/dj258255/incident-lab/tree/main/sessions/A23-backup-pitr) 있습니다.
 
 **왜 했나.** GitLab이 2017년에 데이터 디렉터리를 지우고 백업 다섯 겹이 전부 안 들었던 사고를 보고, 왜 복구가 그렇게 어려웠는지 직접 밟아 보려고 했습니다.
 
