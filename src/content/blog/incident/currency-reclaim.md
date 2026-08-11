@@ -43,14 +43,15 @@ coverImage: /uploads/incident/currency-anomaly-detection/fig-detect.png
 
 처방 전체(14개)는 [맨 아래](#표준-처방)에 있고, 아래는 그 숫자들을 어떻게 쟀는지입니다. 앞쪽 열다섯 절이 **찾는 일**, 뒤쪽 열여덟 절이 **되돌리는 일**입니다.
 
+<details>
+<summary><strong>이 글이 답하는 질문 34개 — 목차 대신 훑어볼 것</strong></summary>
+
 ## 무엇을 만들었고 무엇을 확인했나
 
 
 **만든 것.** 게임 재화 복사 사고를 **찾는 것부터 되돌리는 것까지** 한 줄기로 밟은 랩입니다. 스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A24-currency-anomaly-detection` 과 `sessions/A25-currency-reclaim-procedure` 에 있습니다.
 
 **왜 했나.** 같은 성격의 재화 복사 사고에 어떤 회사는 서버를 6일 되돌리고 어떤 회사는 선별 회수를 합니다. 그 차이가 어디서 갈리는지 직접 밟아 보려고 했습니다.
-
-**한 줄 요약.** 벽이 둘입니다. **통계로 뽑은 목록으로는 회수할 수 없고**, 목록을 정확히 확정해도 **이미 써 버린 재화는 뺄 잔액이 없습니다.**
 
 이 글은 그 두 벽을 순서대로 다룹니다. 앞쪽 열다섯 절이 **누가 얼마나 가져갔는지 세는 일**, 뒤쪽 열여덟 절이 **그것을 실제로 되돌리는 일**입니다. 앞쪽이 낸 회수 대상 표가 뒤쪽의 입력으로 그대로 들어갑니다.
 
@@ -104,6 +105,8 @@ coverImage: /uploads/incident/currency-anomaly-detection/fig-detect.png
 | 승인을 우회할 수 있나 | 이력 조작·정족수 채우기·오래된 승인·되돌리기 우회 넷 다 막았다 |
 
 > 보정 배치를 몇 행으로 쪼개야 하는지는 이 글에서 근거만 인용합니다. 그 값을 실제로 잰 것은 [락 에스컬레이션 편](/blog/incident/mssql-lock-escalation)입니다.
+
+</details>
 
 ## 왜 이 문제가 갈리는가
 

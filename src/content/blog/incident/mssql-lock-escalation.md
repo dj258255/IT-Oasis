@@ -39,14 +39,15 @@ coverImage: /uploads/incident/mssql-lock-escalation/fig-threshold.png
 
 처방 전체(8개)는 [맨 아래](#표준-처방)에 있고, 아래는 그 숫자들을 어떻게 쟀는지입니다.
 
+<details>
+<summary><strong>이 글이 답하는 질문들 — 목차 대신 훑어볼 것</strong></summary>
+
 ## 무엇을 만들었고 무엇을 확인했나
 
 
 **만든 것.** SQL Server 락 에스컬레이션이 실제로 어디서 발동하고 무엇을 막는지를 재는 랩입니다. 스크립트와 결과는 [incident-lab](https://github.com/dj258255/incident-lab) 의 `sessions/A04-mssql-lock-escalation` 에 있습니다.
 
 **왜 했나.** [앞 편](/blog/incident/currency-reclaim)에서 뽑은 회수 대상을 실제로 되돌리려면 수만 행을 갱신해야 합니다. 그 한 문장이 테이블 락을 잡으면 보정 대상이 아닌 이용자의 조회까지 멈춥니다. 배치를 얼마로 쪼개야 하는지 그 근거를 확인하려고 했습니다.
-
-**한 줄 요약.** 문서의 5,000은 발동 지점이 아니라 하한이고, 승격은 **트랜잭션이 아니라 문장 단위**로 판정됩니다. 그래서 배치 분할이 듣습니다.
 
 ### 임계값이 실제로 어디인가
 
@@ -70,6 +71,8 @@ coverImage: /uploads/incident/mssql-lock-escalation/fig-threshold.png
 | 파티션 테이블의 AUTO 는 | 파티션 밖을 안 막는 대신 데드락 3/3 |
 | 데드락 재시도를 넣으면 | 3/6 이 6/6 으로. 결과 정합은 네 조건 모두 일치 |
 | 누가 죽는가 | 우선순위를 안 주면 엔진이 **9회 모두 게임 트래픽 쪽**을 죽였다 |
+
+</details>
 
 ## 문서가 말하는 것
 
