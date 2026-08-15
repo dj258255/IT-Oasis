@@ -71,7 +71,7 @@
     <text class="cs" x="916" y="228">쿼리·플랜·규칙·AI 분석·테이블 구조를</text>
     <text class="cs" x="916" y="248">카드 한 장으로 묶어 첨부</text>
     <rect class="card" x="896" y="278" width="280" height="74" rx="10"/>
-    <text class="ct" x="916" y="308">침묵 실패 방지</text>
-    <text class="cs" x="916" y="332">웹훅 미설정 시 sent:false + 원인 반환</text>
+    <text class="ct" x="916" y="308">조용한 실패 없음</text>
+    <text class="cs" x="916" y="332">웹훅이 설정 안 돼 있으면 sent:false + 원인 반환</text>
   </g>
 </svg>
