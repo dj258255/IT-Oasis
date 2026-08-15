@@ -9,7 +9,7 @@
   </defs>
   <rect width="1400" height="620" fill="#000000"/>
   <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">읽지 않으면 충돌하지 않는다</text>
-  <text x="56" y="106" font-size="28.7" fill="#8B95A1">같은 계정 동시 결제에서 적립 충돌이 승인까지 무너뜨렸다</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">낙관적 락을 걸어 뒀는데도 무너졌다. 문 앞 rate limit이 이 결함을 가리고 있었다</text>
 
   <!-- 개선 전 -->
   <rect x="56" y="150" width="630" height="330" rx="18" fill="#15181E" stroke="#2A2F38"/>
@@ -31,7 +31,7 @@
   <text x="590" y="278" font-size="25.12" font-weight="700" fill="#F04452" text-anchor="middle">낙관적 락</text>
   <text x="590" y="298" font-size="25.12" font-weight="700" fill="#F04452" text-anchor="middle">충돌</text>
   <text x="371" y="404" font-size="26.91" font-weight="700" fill="#F04452" text-anchor="middle">승인까지 500으로 번졌다: 성공률 39.6%</text>
-  <text x="371" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">운영에선 rate limit이 가려 안 드러났다</text>
+  <text x="371" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">이 결함을 보려고 rate limit을 껐다</text>
 
   <!-- 개선 후 -->
   <rect x="714" y="150" width="630" height="330" rx="18" fill="#15181E" stroke="#2A2F38"/>
@@ -46,12 +46,12 @@
     <rect x="988" y="232" width="330" height="106" rx="14" fill="#0C0E12" stroke="#3A414C"/>
     <text x="1153" y="272" font-size="24.22" font-family="ui-monospace, Menlo, monospace" fill="#FFFFFF">UPDATE balance = balance + n,</text>
     <text x="1153" y="296" font-size="24.22" font-family="ui-monospace, Menlo, monospace" fill="#FFFFFF">       version = version + 1</text>
-    <text x="1153" y="322" font-size="20.63" fill="#8B95A1">더하기는 순서 무관 · 락 대기도 재시도도 없음</text>
+    <text x="1153" y="322" font-size="20.63" fill="#8B95A1">더하기는 순서 무관 · 락 대기 없음</text>
   </g>
   <line x1="922" y1="245" x2="982" y2="272" stroke="#9CA3AB" stroke-width="2" marker-end="url(#cw)"/>
   <line x1="922" y1="325" x2="982" y2="298" stroke="#9CA3AB" stroke-width="2" marker-end="url(#cw)"/>
-  <text x="1029" y="404" font-size="26.91" font-weight="700" fill="#FFFFFF" text-anchor="middle">같은 부하 재실험: 성공률 100.00% (6,761/6,761)</text>
+  <text x="1029" y="404" font-size="26.91" font-weight="700" fill="#FFFFFF" text-anchor="middle">같은 부하 재실험: 성공률 100% (6,761/6,761)</text>
   <text x="1029" y="432" font-size="22.43" fill="#8B95A1" text-anchor="middle">version도 함께 올려 낡은 잔액 덮어쓰기를 막았다</text>
 
-  <text x="700" y="556" font-size="25.12" fill="#8B95A1" text-anchor="middle">검증: 잔액 합계와 포인트 원장 합계를 별도 경로로 대조, 불일치 0 (978,400 = 978,400)</text>
+  <text x="700" y="556" font-size="25.12" fill="#8B95A1" text-anchor="middle">검증: 잔액과 포인트 원장을 별도 경로로 대조, 불일치 0 (978,400 = 978,400)</text>
 </svg>
