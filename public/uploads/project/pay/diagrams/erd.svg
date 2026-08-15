@@ -29,7 +29,7 @@
   <!-- 결제 -->
   <rect x="490" y="318" width="390" height="132" rx="16" fill="#F2F4F6"/>
   <text x="516" y="360" font-size="28" font-weight="700" fill="#191F28">payments</text>
-  <text x="516" y="396" font-size="22" fill="#C0392B">status: 승인 · 거절 · 미확정</text>
+  <text x="516" y="396" font-size="22" fill="#C0392B">status: READY·IN_PROGRESS·DONE·UNKNOWN…</text>
   <text x="516" y="428" font-size="21" fill="#4E5968">payment_key · amount</text>
 
   <!-- 소식 분기 -->
@@ -40,7 +40,7 @@
   <!-- 원장 -->
   <rect x="916" y="160" width="428" height="106" rx="16" fill="#15181E" stroke="#F5A524" stroke-width="2"/>
   <text x="942" y="202" font-size="28" font-weight="700" fill="#FFFFFF">ledger_transactions</text>
-  <text x="942" y="238" font-size="23" fill="#F5A524">UNIQUE (거래·원천·원천ID)</text>
+  <text x="942" y="238" font-size="23" fill="#F5A524">UNIQUE (거래·원천·원천ID·순번)</text>
   <line x1="1130" y1="266" x2="1130" y2="288" stroke="#9CA3AB" stroke-width="2.5" marker-end="url(#ew4)"/>
   <text x="1160" y="284" font-size="21" fill="#8B95A1">1:N</text>
   <rect x="916" y="294" width="428" height="96" rx="16" fill="#15181E" stroke="#2A2F38"/>
@@ -50,7 +50,7 @@
   <!-- 정산 -->
   <rect x="916" y="418" width="428" height="106" rx="16" fill="#15181E" stroke="#F5A524" stroke-width="2"/>
   <text x="942" y="460" font-size="28" font-weight="700" fill="#FFFFFF">settlements</text>
-  <text x="942" y="496" font-size="23" fill="#F5A524">UNIQUE (정산일) · (payment_id)</text>
+  <text x="942" y="496" font-size="23" fill="#F5A524">UNIQUE (정산일)</text>
 
   <text x="700" y="588" font-size="23" fill="#8B95A1" text-anchor="middle">노란 줄이 전부 유니크 제약이다. 중복 결제·중복 분개·이중 정산을 코드가 아니라 DB가 막는다</text>
 </svg>

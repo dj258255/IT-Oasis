@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
   <rect width="1400" height="560" fill="#000000"/>
   <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">인메모리에서 잰 순위가 실 DB에서 뒤집혔다</text>
-  <text x="56" y="106" font-size="28.7" fill="#8B95A1">스레드 30개가 재고 20에 동시 차감. 셋 다 초과판매 0으로 완판했고 소요만 갈렸다 (실 MySQL 8.4 InnoDB)</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">스레드 30개가 재고 20에 동시 차감. 셋 다 초과판매 0, 소요만 갈렸다 (실 MySQL 8.4 InnoDB)</text>
 
   <g text-anchor="middle">
     <rect x="56" y="150" width="410" height="150" rx="18" fill="#15181E" stroke="#2A2F38"/>
@@ -25,11 +25,11 @@
 
   <rect x="56" y="330" width="1288" height="72" rx="14" fill="#15181E" stroke="#2A2F38"/>
   <text x="80" y="360" font-size="24.22" font-weight="700" fill="#F04452">인메모리에서 잰 순서가 실 DB에서 뒤집혔다</text>
-  <text x="80" y="384" font-size="22.43" fill="#C4C9D0">H2에서는 낙관 17ms &lt; 비관 32ms였다. 인메모리에는 왕복도 디스크도 없어 재시도가 공짜였기 때문이다. 실 InnoDB에서는 낙관 151ms &gt; 비관 75ms</text>
+  <text x="80" y="384" font-size="22.43" fill="#C4C9D0">H2에서는 낙관 17ms &lt; 비관 32ms. 인메모리는 재시도가 공짜라 그렇다. 실 InnoDB에서는 낙관 151ms &gt; 비관 75ms</text>
 
   <rect x="56" y="416" width="1288" height="72" rx="14" fill="#15181E" stroke="#2A2F38"/>
   <text x="80" y="446" font-size="24.22" font-weight="700" fill="#FFFFFF">고경합에서 격차가 벌어진다 (스레드 150개)</text>
-  <text x="80" y="470" font-size="22.43" fill="#C4C9D0">조건부 79ms 대 낙관적 429ms, 5.4배. 재시도 상한 50회 안에서 완판은 지켰지만 그 상한을 지키느라 지연이 늘었다. 한 행에 쓰기가 몰리는 자리에는 맞지 않는다</text>
+  <text x="80" y="470" font-size="22.43" fill="#C4C9D0">조건부 79ms 대 낙관적 429ms, 5.4배. 재시도 상한 50회로 완판은 지켰지만 지연이 그만큼 늘었다</text>
 
-  <text x="700" y="530" font-size="25.12" fill="#8B95A1" text-anchor="middle">조건부 UPDATE는 읽고 비교하고 쓰는 왕복이 없어 락 대기도 재시도도 없다 · 데드락 0건, 락 대기 타임아웃 0건</text>
+  <text x="700" y="530" font-size="25.12" fill="#8B95A1" text-anchor="middle">조건부 UPDATE는 읽고 비교하고 쓰는 왕복이 없어 락 대기도 재시도도 없다</text>
 </svg>
