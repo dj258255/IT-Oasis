@@ -53,7 +53,7 @@ coverImage: /uploads/incident/mssql-diagnosis/fig-chain.png
 스크립트와 실행 결과 원문은 [저장소에 그대로](https://github.com/dj258255/incident-lab/tree/main/sessions/A26-mssql-diagnosis) 있습니다.
 
 SQL Server 2022 (RTM-CU26) 16.0.4265, Developer, Docker(`cpus: 4`, `mem_limit: 6g`).
-시간 수치는 인용하지 않습니다. ARM 에뮬레이션이라 이 호스트의 값이 아닙니다.
+**절대 시간은 인용하지 않습니다.** ARM 에뮬레이션이라 이 호스트의 값이 아닙니다. 다만 같은 회차 안에서 잰 **비율**은 씁니다. 누적 430,521ms 대 사고 몫 107,453ms 처럼, 같은 조건에서 나란히 뜬 두 값의 관계는 하드웨어가 바뀌어도 남습니다.
 재는 것은 대기 유형, 사슬의 모양, 세션이 DMV 에 보이는지입니다.
 
 **절 목록.** 누르면 그 자리로 갑니다.
