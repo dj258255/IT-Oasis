@@ -13,9 +13,10 @@
 
   <g text-anchor="middle">
     <rect x="60" y="176" width="210" height="120" rx="18" fill="#F2F4F6"/>
-    <text x="165" y="216" font-size="26.91" font-weight="700" fill="#D93843">선착순 폭주</text>
-    <text x="165" y="244" font-size="24.22" fill="#191F28">요청 15,445건</text>
-    <text x="165" y="268" font-size="21.53" fill="#8B95A1">전량 통과 시 p95 738ms</text>
+    <text x="165" y="212" font-size="26.91" font-weight="700" fill="#D93843">선착순 폭주</text>
+    <text x="165" y="240" font-size="22.5" fill="#191F28">제어 없음: 15,445건</text>
+    <text x="165" y="264" font-size="21.53" fill="#8B95A1">전량 DB 도달</text>
+    <text x="165" y="286" font-size="21.53" fill="#8B95A1">p95 738ms</text>
   </g>
 
   <!-- 3층 게이트 컨테이너 -->
@@ -23,9 +24,9 @@
   <text x="695" y="182" font-size="25.12" font-weight="700" fill="#FFFFFF" text-anchor="middle">문 앞 세 겹 (Redis 재사용, 추가 비용 0)</text>
   <g text-anchor="middle">
     <rect x="354" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
-    <text x="464" y="230" font-size="25.12" font-weight="700" fill="#191F28">① 초당 요청 수 제한</text>
-    <text x="464" y="254" font-size="22.43" fill="#4E5968">한 사람 5건/초 · 전체 100건/초</text>
-    <text x="464" y="274" font-size="22.43" fill="#4E5968">넘치면 "잠시 후 다시" 응답</text>
+    <text x="464" y="228" font-size="25.12" font-weight="700" fill="#191F28">① 초당 요청 제한</text>
+    <text x="464" y="256" font-size="22.43" fill="#4E5968">한 사람 5건/초</text>
+    <text x="464" y="280" font-size="22.43" fill="#4E5968">전체 100건/초</text>
 
     <rect x="590" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
     <text x="700" y="230" font-size="25.12" font-weight="700" fill="#191F28">② 선착순 대기열</text>
@@ -34,15 +35,15 @@
 
     <rect x="826" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
     <text x="936" y="230" font-size="25.12" font-weight="700" fill="#191F28">③ DB 연결</text>
-    <text x="936" y="254" font-size="22.43" fill="#4E5968">대기를 길게 세우지 않고</text>
+    <text x="936" y="254" font-size="22.43" fill="#4E5968">길게 기다리지 않고</text>
     <text x="936" y="274" font-size="22.43" fill="#4E5968">빨리 실패시킴</text>
   </g>
 
   <g text-anchor="middle">
     <rect x="1120" y="176" width="220" height="120" rx="18" fill="#F2F4F6"/>
     <text x="1230" y="220" font-size="26.91" font-weight="700" fill="#191F28">DB 도달</text>
-    <text x="1230" y="248" font-size="24.22" fill="#191F28">약 510건</text>
-    <text x="1230" y="272" font-size="21.53" fill="#8B95A1">전체의 2.5%</text>
+    <text x="1230" y="248" font-size="24.22" fill="#191F28">제어 켬: 약 510건</text>
+    <text x="1230" y="272" font-size="21.53" fill="#8B95A1">들어온 요청의 2.5%</text>
   </g>
 
   <line x1="270" y1="236" x2="324" y2="236" stroke="#9CA3AB" stroke-width="2" marker-end="url(#bw)"/>
@@ -53,5 +54,5 @@
   <text x="695" y="424" font-size="30.5" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 돌려보냈다</text>
   <text x="695" y="450" font-size="23.32" fill="#8B95A1" text-anchor="middle">통과한 요청의 속도를 지킨다</text>
 
-  <text x="700" y="512" font-size="25.12" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 제어 ON에서 드러난 outbox 데드락 5xx 0.55%는 재시도로 0.00%</text>
+  <text x="700" y="512" font-size="25.12" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 이 런에서 실제로 쳐낸 것은 ① 한 층 · outbox 데드락 5xx 0.55%</text>
 </svg>
