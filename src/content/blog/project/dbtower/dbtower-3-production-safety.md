@@ -136,9 +136,16 @@ POST /api/instances/8/explain 실행 후 GET /api/audit ->
 | SQL Server | VERIFIED(VERIFYONLY) | 서버 측 .bak라 파일 접근 불가 → RESTORE VERIFYONLY로 무결성만 |
 | Oracle | UNSUPPORTED | Data Pump 서버 측 산출물이라 자동 검증 범위 밖, 통과 위장 안 함 |
 
+> **덧붙임(2026-08-16).** 이 표의 아래 두 줄은 그 뒤에 바뀌었습니다. **파일에 손이 닿지 않는다는 것과 복원을 못 한다는 것이 다른 문제**였기 때문입니다. 복원은 서버가 하는 일이라, 임시 이름과 새 경로만 주면 원본을 안 건드리고도 전체 복원까지 갈 수 있었습니다.
+>
+> - **SQL Server**: FULL 백업이면 `RESTORE FILELISTONLY` 로 논리 파일을 읽어 `MOVE` 절을 만들고 임시 DB로 **실제 `RESTORE`** 한 뒤 사용자 테이블 수를 셉니다. `VERIFYONLY` 는 백업셋을 읽을 수 있다는 것까지지 복원의 증명이 아니어서, **단독 복원이 성립하지 않는 로그·차등 백업에만** 남겼습니다(그때는 개체 수를 비워 검증 수준의 차이를 값에 남깁니다).
+> - **Oracle**: `DBMS_DATAPUMP` 임포트에 `METADATA_REMAP('REMAP_SCHEMA', …)` 를 걸어 **임시 스키마로 실제 복원**합니다. `UNSUPPORTED` 는 없애지 않고 뜻을 좁혔습니다. 기종의 한계가 아니라 **계정에 `CREATE USER`·`DATAPUMP_IMP_FULL_DATABASE` 가 없을 때**로, 없는 권한 이름을 적어서 냅니다.
+>
+> 실측 둘도 같이 남깁니다. **롤로 받은 권한은 익명 PL/SQL 블록에서만 살아** 정의자 권한 프로시저로 감싸면 조용히 깨지고, **세그먼트 쿼터는 소유자 기준**이라 임포트를 실행하는 계정이 `CREATE ANY TABLE` 을 가져도 임시 스키마 쪽에 쿼터가 있어야 합니다.
+
 ```
 PostgreSQL: VERIFIED — 임시 DB 복원 성공, 복원 테이블 3개, 임시 DB 정리 확인
-Oracle:     UNSUPPORTED — "IMPDP 필요, 범위 밖" (정직 표기)
+Oracle:     UNSUPPORTED — "IMPDP 필요, 범위 밖" (정직 표기. 위 덧붙임 참고)
 FAILED 분기 증명: 없는 덤프 verify -> FAILED (러버스탬프 아님)
 임시 검증 DB 잔여물: 0, 원본 sample DB 불변
 ```
