@@ -29,7 +29,7 @@
   <!-- 결제 -->
   <rect x="490" y="318" width="390" height="132" rx="16" fill="#F2F4F6"/>
   <text x="516" y="360" font-size="28" font-weight="700" fill="#191F28">payments</text>
-  <text x="516" y="396" font-size="22" fill="#C0392B">status: READY·IN_PROGRESS·DONE·UNKNOWN…</text>
+  <text x="516" y="396" font-size="22" fill="#C0392B">status: DONE·UNKNOWN 등 6종</text>
   <text x="516" y="428" font-size="21" fill="#4E5968">payment_key · amount</text>
 
   <!-- 소식 분기 -->
