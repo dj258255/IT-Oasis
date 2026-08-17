@@ -31,5 +31,5 @@
   <text x="80" y="446" font-size="24.22" font-weight="700" fill="#FFFFFF">고경합에서 격차가 벌어진다 (스레드 150개)</text>
   <text x="80" y="470" font-size="22.43" fill="#C4C9D0">조건부 79ms 대 낙관적 429ms, 5.4배. 재시도 상한 50회로 완판은 지켰지만 지연이 그만큼 늘었다</text>
 
-  <text x="700" y="530" font-size="25.12" fill="#8B95A1" text-anchor="middle">조건부 UPDATE는 읽고 비교하고 쓰는 왕복이 없어 락 대기도 재시도도 없다</text>
+  <text x="700" y="530" font-size="25.12" fill="#8B95A1" text-anchor="middle">조건부 UPDATE는 앱이 읽고 비교하고 쓰는 왕복과 충돌 재시도를 없앤다. 행 락 대기는 남는다</text>
 </svg>
