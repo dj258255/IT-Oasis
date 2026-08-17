@@ -56,7 +56,7 @@
   <text x="1197" y="244" font-size="22.5" fill="#F04452" text-anchor="middle">실패로 기록한다</text>
   <text x="1197" y="284" font-size="21.5" fill="#C4C9D0" text-anchor="middle">고객 돈은 나가고</text>
   <text x="1197" y="306" font-size="21.5" fill="#C4C9D0" text-anchor="middle">우리 장부만 실패</text>
-  <text x="1197" y="346" font-size="20" fill="#8B95A1" text-anchor="middle">상황 1이 막으려던 사고가</text>
+  <text x="1197" y="346" font-size="20" fill="#8B95A1" text-anchor="middle">응답을 못 받았을 때 막으려던 사고가</text>
   <text x="1197" y="366" font-size="20" fill="#8B95A1" text-anchor="middle">실 PG 경계에서 재현된다</text>
 
   <text x="700" y="500" font-size="25.12" fill="#8B95A1" text-anchor="middle">분류 6종·진행 중 보존·금액 대조를 테스트로 고정, 전체 532개 통과</text>
