@@ -129,6 +129,7 @@ export default defineConfig({
     '/blog/project/balruno/balruno-mvp-release': `${base || ''}/blog/project/balruno/balruno-retrospective`,
     '/blog/project/balruno/table-input-ux': `${base || ''}/blog/project/balruno/balruno-retrospective`,
     '/blog/project/balruno/user-feedback': `${base || ''}/blog/project/balruno/balruno-retrospective`,
+    '/blog/project/balruno/powerbalance-lesson': `${base || ''}/blog/project/balruno/balruno-retrospective`,
   },
   build: {
     concurrency: 1,
