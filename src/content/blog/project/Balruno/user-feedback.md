@@ -22,16 +22,15 @@ series: "Balruno"
 
 ---
 
-## 1. 입력값 손실 버그
+## 깊이 판 것 셋
 
-### 문제 상황
-**환경**: React 스프레드시트 컴포넌트에서 셀 편집 중
-**현상**: 사용자가 "12345"를 입력한 뒤 다른 셀을 클릭하면 "12"만 저장됩니다
-**문제점**: 사용자 입력 데이터가 유실되어 작업 신뢰성이 무너집니다
+24개 중 원인까지 파고든 건 셋이었습니다. 나머지는 원인이 분명해서 고치는 데 오래 걸리지 않았습니다.
 
-### 원인 분석
-**정상 동작**: input의 onBlur 이벤트에서 현재 입력값을 읽어 저장해야 합니다
-**실제 동작**: onBlur 핸들러가 클로저에 캡처된 과거 상태값을 참조하고 있었습니다
+### 입력값이 잘려서 저장되던 버그
+
+React 스프레드시트에서 "12345"를 입력하고 다른 셀을 클릭하면 "12"만 저장됐습니다. 입력 데이터가 유실되니 작업 자체를 믿을 수 없게 되는 문제였습니다.
+
+원인은 stale closure였습니다. `onBlur` 핸들러가 이전 렌더링 시점에 캡처된 상태를 참조하고 있었습니다.
 
 ```javascript
 // 문제 코드: localValue가 stale closure
@@ -40,9 +39,8 @@ const handleBlur = () => {
 };
 ```
 
-**근본 원인**: React의 함수형 컴포넌트에서 useCallback 내부의 상태 참조는 의존성 배열이 업데이트될 때만 갱신됩니다. 빠른 타이핑 중에는 상태 업데이트보다 blur 이벤트가 먼저 발생해서 과거 값을 참조하게 됩니다.
+`useCallback` 안의 상태 참조는 의존성 배열이 갱신될 때만 새로 잡힙니다. 빠르게 타이핑하면 상태 업데이트보다 blur 이벤트가 먼저 도착해서 과거 값을 읽습니다.
 
-### 해결
 ```javascript
 const localValueRef = useRef(localValue);
 localValueRef.current = localValue; // 매 렌더링마다 동기화
@@ -52,39 +50,17 @@ const handleBlur = useCallback(() => {
 }, []);
 ```
 
-입력값이 100% 정확하게 저장됩니다. 동일 패턴을 수식 바, 메모 입력 등 5개 컴포넌트에 적용했습니다.
+ref는 렌더링과 무관하게 항상 최신값을 들고 있어서 이 문제가 사라집니다. 같은 패턴을 수식 바와 메모 입력 등 5개 컴포넌트에 적용했습니다.
 
----
+### 드래그 선택이 버벅이던 문제
 
-## 2. 드래그 선택 성능 저하
+100행 20열에서 마우스로 드래그하면 0.5초쯤 UI가 밀리면서 선택 박스가 커서를 못 따라왔습니다. mousemove가 초당 60~120회 발생하는데 매번 setState를 호출해 2000개 셀이 전부 리렌더링되고 있었습니다.
 
-### 문제 상황
-**환경**: 100행 x 20열 테이블에서 마우스 드래그로 다중 셀 선택 시
-**현상**: 드래그 중 0.5초 정도 UI가 버벅이면서 선택 박스가 마우스를 따라가지 못했습니다
+requestAnimationFrame throttle과 DOM 직접 조작, 좌표 캐싱으로 프레임 처리 시간을 45ms에서 3ms로 줄였습니다. 원인 분석과 O(N)에서 O(1)로 바꾼 자료구조 변경까지는 [테이블 입력 UX 기술 디테일](/blog/project/balruno/table-input-ux)에 따로 적었습니다.
 
-### 원인 분석
-```
-mousemove 이벤트 → setState(selectedCells) → React 재렌더링 → 2000개 셀 DOM 비교
-```
+### 모달마다 ESC 동작이 달랐던 문제
 
-mousemove는 초당 60~120회 발생하는데, 매번 setState를 호출해서 전체 테이블이 리렌더링됐습니다. 2000개 셀의 선택 상태를 매 프레임 React가 비교/업데이트하고 있었습니다.
-
-### 해결
-1. **requestAnimationFrame 기반 throttle**: 마지막 마우스 위치만 처리
-2. **DOM 직접 조작**: 드래그 중에는 React 상태 우회
-3. **범위 캐싱**: 드래그 시작 시 열/행 좌표를 한 번만 계산
-
-프레임 처리 시간이 45ms에서 3ms로 93% 감소했습니다. 1000행 테이블에서도 버벅임이 없습니다.
-
----
-
-## 3. 모달 ESC 닫기 불일치
-
-### 문제 상황
-15개 모달/다이얼로그 컴포넌트 중 일부만 ESC로 닫히고 나머지는 안 먹히는 불일치가 있었습니다.
-
-### 해결
-재사용 가능한 커스텀 훅으로 추출:
+15개 모달 중 일부만 ESC로 닫히고 나머지는 안 먹혔습니다. 재사용 가능한 훅으로 뽑아 통일했습니다.
 
 ```javascript
 export function useEscapeKey(onClose: () => void, enabled = true) {
@@ -99,117 +75,25 @@ export function useEscapeKey(onClose: () => void, enabled = true) {
 }
 ```
 
-15개 모달 모두 ESC 동작이 통일됐습니다.
-
 ---
 
-## 4. 셀 경계 클릭 불가
+## 나머지 21개
 
-### 문제
-셀과 셀 사이 1px 경계선을 클릭하면 아무 셀도 선택되지 않았습니다.
+### 테이블 조작
 
-### 해결
-```css
-td {
-  box-sizing: border-box; /* border를 요소 크기에 포함 */
-  border: 1px solid #e5e7eb;
-}
-```
+셀과 셀 사이 1px 경계선을 클릭하면 아무것도 선택되지 않던 문제는 `box-sizing: border-box`로 잡고, 그 경계에 열 너비 리사이즈 핸들도 같이 붙였습니다. 헤더 경계를 드래그하면 크기가 바뀌고 더블클릭하면 내용에 맞게 자동 조절됩니다.
 
-추가로 경계 영역에 열 너비 리사이즈 핸들도 추가했습니다.
+테이블 바깥에서 드래그를 시작해도 선택이 되도록 컨테이너 전체에 mousedown을 걸었고, 반대로 테이블 밖을 클릭하면 선택이 풀리도록 document mousedown으로 처리했습니다. 행 번호를 클릭하면 행 전체가, Ctrl이나 Shift와 함께 열 헤더를 클릭하면 열 전체가 선택됩니다. 선택 영역은 TSV로 복사해서 Excel이나 Google Sheets와 양방향으로 오갑니다.
 
----
+`<label>` 안에 `<button>`이 있어서 클릭이 두 번 발생하던 체크박스는 div 단일 요소로 바꿔서 해결했습니다.
 
-## 5. macOS Dock 스타일 애니메이션
+### 편집 경험
 
-### 문제
-도구를 드래그해서 옮길 때 목록 아이템들의 위치가 갑자기 바뀌었습니다.
+Zustand 기반 히스토리 스토어로 Ctrl+Z와 Ctrl+Y를 최대 50단계까지 지원합니다. 키보드 네비게이션은 편집 모드 여부로 분기해서, 편집 중에는 Enter가 저장이고 Escape가 취소이며 선택 모드에서는 화살표로 셀을 옮깁니다. 수식을 입력하면 파싱해서 참조 셀을 색상별로 하이라이트합니다. 저장은 Zustand persist로 자동 처리하고 헤더에 상태를 띄웁니다.
 
-### 해결
-macOS Dock처럼 드래그 중 주변 아이템들이 자연스럽게 밀려나는 애니메이션을 구현했습니다:
+### 보기와 일관성
 
-```javascript
-const getItemTransform = (index, draggedIndex, dropTargetIndex) => {
-  if (draggedIndex < dropTargetIndex) {
-    if (index > draggedIndex && index < dropTargetIndex) return -52;
-  } else if (draggedIndex > dropTargetIndex) {
-    if (index < draggedIndex && index >= dropTargetIndex) return 52;
-  }
-  return 0;
-};
-```
-
-```css
-.dock-item {
-  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-```
-
----
-
-## 6. 브라우저 기본 팝업 → 커스텀 디자인
-
-`window.confirm()` 12개소를 앱 디자인 시스템과 일관된 ConfirmDialog 컴포넌트로 교체했습니다. `role="alertdialog"`, `aria-modal="true"` 등 접근성도 고려했습니다.
-
----
-
-## 7. 체크박스 토글 버그
-
-### 원인
-`<label>` 안에 `<button>`이 있어서 클릭 이벤트가 두 번 발생했습니다 → 토글이 두 번 실행 → 원래 상태로 복귀되는 문제였습니다.
-
-### 해결
-label+button 구조를 div 단일 요소로 변경했습니다.
-
----
-
-## 8. 외부에서 드래그 선택
-
-테이블 바깥에서 드래그를 시작해도 선택 영역이 형성되도록 컨테이너 전체에 mousedown 이벤트를 등록했습니다. 커서 위치의 셀을 즉시 선택하고, 드래그하면 박스 선택으로 확장됩니다.
-
----
-
-## 9. 도움말 버튼과 패널 연동
-
-각 도구에 `helpUrl` 속성을 추가했습니다. 도움말 버튼 클릭 시 해당 도구의 가이드 섹션으로 바로 이동합니다.
-
----
-
-## 10. 스크롤 트랙 클릭 위치 이동
-
-스크롤바 트랙 클릭 시 클릭한 위치로 즉시 점프하도록 개선했습니다:
-
-```javascript
-scrollbar.addEventListener('click', (e) => {
-  const clickRatio = e.offsetX / scrollbar.offsetWidth;
-  const scrollPosition = clickRatio * (container.scrollWidth - container.clientWidth);
-  container.scrollLeft = scrollPosition;
-});
-```
-
----
-
-## 11. 도구 드래그로 삭제 (휴지통)
-
-드래그 중 휴지통 영역을 표시하고, 드롭하면 도구가 숨겨집니다. macOS Dock 스타일입니다.
-
----
-
-## 12. 열 너비 / 행 높이 리사이즈
-
-헤더 경계에 리사이즈 핸들을 추가했습니다. 드래그로 크기를 조절하고, 더블클릭으로 내용에 맞게 자동 조절됩니다.
-
----
-
-## 13. 폰트 크기 가독성
-
-기본 폰트 크기를 12px에서 14px로, 행 높이를 36px로 조정했습니다. 숫자 가독성이 향상됐습니다.
-
----
-
-## 14. 선택 색상 대비
-
-CSS 변수로 테마별 선택 색상 정의:
+기본 폰트를 12px에서 14px로, 행 높이를 36px로 올려 숫자 가독성을 높였습니다. 선택 색상은 테마별로 CSS 변수를 나눠 대비를 맞췄습니다.
 
 ```css
 :root {
@@ -223,70 +107,29 @@ CSS 변수로 테마별 선택 색상 정의:
 }
 ```
 
----
-
-## 15. 레이아웃 정렬 불일치
-
-공통 패널 레이아웃 컴포넌트를 도입해서 모든 도구 패널이 일관된 헤더 높이, 패딩, 버튼 위치를 갖게 됐습니다.
-
----
-
-## 16. 행 번호 클릭으로 전체 행 선택
-
-행 번호 클릭 시 해당 행 전체가 선택되고, Shift+클릭으로 범위 선택도 지원합니다.
-
----
-
-## 17. 열 헤더 클릭으로 전체 열 선택
-
-Ctrl/Shift+클릭으로 열 전체를 선택하고, 일반 클릭은 정렬을 유지합니다.
-
----
-
-## 18. 선택 영역 복사 시 형식 유지
-
-클립보드에 TSV 형식으로 복사해서 Excel, Google Sheets와 양방향 호환이 가능합니다.
-
----
-
-## 19. Undo/Redo 히스토리 관리
-
-Zustand 기반 히스토리 스토어를 구현했습니다. Ctrl+Z로 되돌리기, Ctrl+Y로 다시 실행이 가능하고, 최대 50단계까지 지원합니다.
-
----
-
-## 20. 키보드 네비게이션
-
-편집 모드 여부에 따라 분기합니다. 편집 중에는 Enter로 저장하고 Escape로 취소하며, 선택 모드에서는 화살표로 셀을 이동합니다.
-
----
-
-## 21. 수식 입력 시 셀 참조 하이라이트
-
-수식을 파싱해서 참조 셀을 추출하고, 색상별로 하이라이트를 표시합니다.
-
----
-
-## 22. 자동 저장 표시기
-
-Zustand persist로 자동 저장하고, 헤더에 실시간 저장 상태를 표시합니다.
-
----
-
-## 23. 다크모드 파비콘
-
-시스템 테마를 감지해서 라이트/다크 파비콘이 자동으로 전환됩니다:
+공통 패널 레이아웃 컴포넌트를 도입해 모든 도구 패널의 헤더 높이와 패딩, 버튼 위치를 맞췄습니다. `window.confirm()` 12개소는 디자인 시스템과 일관된 ConfirmDialog로 교체하면서 `role="alertdialog"`와 `aria-modal="true"`도 넣었습니다. 파비콘은 시스템 테마를 따라 자동으로 바뀝니다.
 
 ```html
 <link rel="icon" href="/favicon-light.svg" media="(prefers-color-scheme: light)">
 <link rel="icon" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)">
 ```
 
----
+### 도구 목록과 스크롤
 
-## 24. 셀 선택 해제 버그
+도구를 드래그해 옮길 때 주변 아이템이 갑자기 튀지 않고 macOS Dock처럼 밀려나게 했습니다.
 
-테이블 외부 클릭 시 선택이 해제되도록 document mousedown 이벤트로 처리했습니다.
+```javascript
+const getItemTransform = (index, draggedIndex, dropTargetIndex) => {
+  if (draggedIndex < dropTargetIndex) {
+    if (index > draggedIndex && index < dropTargetIndex) return -52;
+  } else if (draggedIndex > dropTargetIndex) {
+    if (index < draggedIndex && index >= dropTargetIndex) return 52;
+  }
+  return 0;
+};
+```
+
+드래그 중 휴지통 영역이 나타나고 거기 떨구면 도구가 숨겨집니다. 각 도구에는 `helpUrl`을 붙여 도움말 버튼이 해당 가이드 섹션으로 바로 가게 했고, 스크롤바 트랙을 클릭하면 그 위치로 즉시 점프합니다.
 
 ---
 

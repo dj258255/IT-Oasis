@@ -1,18 +1,10 @@
 ---
 title: 'Balruno MVP 후기'
 description: >-
-  게임 밸런싱 스프레드시트 + 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 한 글에
-  정리합니다. PostgreSQL JSONB 채택(50,000 시트 환경에서 MySQL/PG/Mongo 직접 측정
-  — Sheet GET p95: PG 16ms / MySQL 25ms / Mongo 45ms, Name UPDATE p95: Mongo 37ms
-  / PG 40ms / MySQL 63ms. 쓰기만 보면 MongoDB가 조금 빨랐지만, 한정된 인프라 안에서
-  DB를 둘로 나누지 않고 하나로 운영하는 편이 더 합리적이라고 판단해 PostgreSQL 선택),
-  시트 셀 + 시트 트리 + 문서 트리 3영역 통합 동기화 알고리즘(Baserow + Linear +
-  Outline 합본), OCI Always Free 4대 + Ansible 자동화 + Cloudflare R2 3-2-1
-  백업으로 매니지드 대비 예상 회피 비용 연 약 $1,860, OAuth-only + 자체 발급 JWT(Auth0
-  대비 연 약 $2,880), Grafana + Loki + Alloy + Prometheus + InfluxDB 셀프 호스트
-  모니터링(Datadog 대비 연 약 $720), nginx blue/green 무중단 배포(첫 cutover 21초 →
-  두 번째부터 0초), 시트 도메인 100% 서버 진실원 전환(약 80,000 라인 정리)까지
-  포함합니다.
+  게임 밸런싱 스프레드시트 겸 문서 워크스페이스 Balruno의 백엔드 설계와 운영을 정리했습니다.
+  PostgreSQL JSONB를 직접 측정해 고른 과정, 시트와 문서를 다르게 동기화한 이유,
+  OCI Always Free 4대를 셀프 호스트로 운영한 판단, OAuth-only 인증, nginx blue/green
+  무중단 배포까지 담았습니다.
 date: 2026-05-10T00:00:00.000Z
 tags:
   - PostgreSQL
@@ -70,38 +62,19 @@ Balruno는 **게임 기획 데이터에 맞춘 협업 스프레드시트 + 문�
 
 ### 시작 전에 정해둔 것들
 
-처음부터 기준을 몇 가지 먼저 정해뒀습니다.
+기준을 먼저 몇 가지 박아뒀습니다. 작업 단위는 셀 하나가 아니라 시트 전체로 본다. 사용자는 정해진 스키마 없이 16종 동적 컬럼을 고른다. 같은 셀이나 트리 노드를 동시에 고쳐도 데이터가 사라지지 않아야 한다. 게임 기획에 필요한 70여 개 함수와 CSV, C# export까지 한 흐름으로 간다. 사용자 100명까지는 단일 인스턴스로 버티고 시트 GET p95는 500ms 이하로 둔다. 데이터의 기준은 항상 서버 DB이고 로컬 저장소는 반응 속도를 위한 캐시로만 쓴다. 매니지드는 나중 문제로 미루고 초반에는 무료 인프라와 단계적 확장만 허용한다.
 
-- 작업 단위는 셀 1개가 아니라 **시트 전체**로 본다.
-- 사용자는 미리 정해진 스키마 없이 **16종 동적 컬럼**을 고른다.
-- 같은 셀이나 트리 노드를 동시에 수정해도 **데이터 손실이 없어야** 한다.
-- 게임 기획에 필요한 **70여 개 함수**와 CSV / C# export까지 한 흐름으로 간다.
-- 사용자 100명까지는 **단일 인스턴스**로 버티고, 시트 GET p95는 **500ms 이하**를 목표로 둔다.
-- 데이터의 기준은 항상 **서버 DB**로 두고, 로컬 저장소는 반응 속도를 위한 캐시로만 쓴다.
-- 매니지드는 나중 문제로 미루고, 초반에는 **무료 인프라 + 단계적 확장**만 허용한다.
-
-### 설계 전에 분기를 미리 그어둔 곳
-
-요구사항을 정리한 뒤에는 기술 이름보다 **어떤 구조가 가장 단순한지**를 먼저 봤습니다.
-
-- 시트와 문서를 같은 방식으로 동기화할지, 아니면 나눌지
-- 시트를 정규화할지, JSON 기반으로 받을지
-- 매니지드부터 갈지, 무료 인프라로 시작할지
-
-이 세 갈래가 Balruno 전체 방향을 거의 결정했습니다.
+그다음에는 기술 이름보다 어떤 구조가 가장 단순한지를 먼저 봤습니다. 시트와 문서를 같은 방식으로 동기화할지 나눌지, 시트를 정규화할지 JSON으로 받을지, 매니지드부터 갈지 무료 인프라로 시작할지. 이 세 갈래가 전체 방향을 거의 결정했습니다.
 
 ---
 
-## 1. DB 선택: PostgreSQL JSONB로 시트 도메인을 직접 받기
+## 1. DB 선택: PostgreSQL JSONB로 시트를 직접 받기
 
-스프레드시트는 통째 조회와 부분 수정이 모두 많았고, 컬럼도 고정돼 있지 않았습니다. 셀 1개당 row 1개로 정규화하면 1,000행 × 30컬럼 시트가 바로 30,000 row가 되고, 시트 GET 한 번이 JOIN과 row 조합 문제로 커질 수밖에 없었습니다.
+스프레드시트는 통째 조회와 부분 수정이 둘 다 많고 컬럼도 고정되어 있지 않습니다. 셀 하나당 row 하나로 정규화하면 1,000행에 30컬럼짜리 시트가 바로 30,000 row가 되고, 시트 GET 한 번이 JOIN과 row 조합 문제로 커집니다.
 
-그래서 질문을 이렇게 바꿨습니다.
+그래서 질문을 바꿨습니다. DB의 인지도가 아니라 이 도메인을 가장 단순하게 받을 수 있는 저장 방식이 무엇인가입니다.
 
-> DB의 인지도보다, 이 도메인을 가장 단순하게 받을 수 있는 저장 방식이 무엇인지를 기준으로 삼는다.
-
-후보는 정규화 모델, MySQL JSON, PostgreSQL JSONB, MongoDB였습니다.  
-특히 MySQL JSON은 자주 조회하는 경로마다 generated column이나 별도 인덱스를 계속 늘려야 해서, 동적 컬럼이 많은 구조에서는 운영 부담이 더 크다고 봤습니다. 반면 PostgreSQL JSONB는 범용 GIN 인덱스와 `jsonb_set`으로 부분 수정 표현이 더 자연스러웠습니다.
+후보는 정규화 모델, MySQL JSON, PostgreSQL JSONB, MongoDB였습니다. MySQL JSON은 자주 조회하는 경로마다 generated column이나 인덱스를 계속 늘려야 해서 동적 컬럼이 많은 구조에는 운영 부담이 컸습니다. PostgreSQL JSONB는 범용 GIN 인덱스와 `jsonb_set`으로 부분 수정 표현이 더 자연스러웠습니다.
 
 ### 후보 7개를 직접 측정해봤습니다
 
@@ -134,19 +107,11 @@ partial UPDATE (인덱싱된 `name` 필드 patch, `PATCH /sheet/:id/name`, 인�
 | PostgreSQL 18 + JSONB | 10ms | 40ms | 94ms | 743 | `jsonb_set(data, '{name}', $::jsonb)` + GIN reindex |
 | **MongoDB 7** | **6ms** | **37ms** | **63ms** | **804** | `updateOne({_id}, { $set: {name} })` + path 인덱스 reindex |
 
-측정에서 확인한 것은 이렇습니다.
+읽기는 PostgreSQL이 가장 빨랐고, 쓰기는 MongoDB가 조금 앞섰지만 차이가 크지 않았으며, MySQL은 두 축 모두 애매했습니다.
 
-- 읽기는 PostgreSQL이 가장 빨랐고
-- 쓰기는 MongoDB가 조금 더 빨랐지만 차이는 크지 않았고
-- MySQL은 두 축 모두 애매했습니다.
+PostgreSQL을 고른 이유는 둘입니다. 실제 수치에서 읽기가 더 안정적으로 앞섰고, 한정된 인프라에서 DB를 둘로 나누지 않고 하나로 운영하는 편이 백업과 모니터링, 마이그레이션까지 합쳐 단순했습니다.
 
-결국 PostgreSQL을 고른 이유는 두 가지였습니다.
-
-첫째, 실제 수치에서 읽기 성능이 더 안정적으로 앞섰습니다.  
-둘째, 한정된 인프라에서 DB를 둘로 나누지 않고 하나로 운영하는 편이 백업, 모니터링, 마이그레이션까지 포함해 더 단순했습니다.
-
-중간에 한 번 크게 헷갈린 적도 있었습니다.  
-처음 측정에서는 PostgreSQL 검색이 28초까지 튀었는데, 원인을 따라가 보니 DB보다 응답 직렬화와 옵티마이저 선택이 더 큰 문제였습니다. 응답 크기를 줄이고 데이터셋을 키운 뒤 다시 보니 같은 GIN 인덱스에서도 실행 계획이 바뀌었고, 검색은 16ms 수준으로 정상화됐습니다. 이때 배운 것은 하나였습니다.
+중간에 크게 헷갈린 적이 있습니다. 처음 측정에서 PostgreSQL 검색이 28초까지 튀었는데, 따라가 보니 DB보다 응답 직렬화와 옵티마이저 선택이 더 큰 문제였습니다. 응답 크기를 줄이고 데이터셋을 키운 뒤 다시 보니 같은 GIN 인덱스에서도 실행 계획이 바뀌었고 검색은 16ms로 정상화됐습니다.
 
 > 벤치마크 숫자를 보기 전에, 지금 내가 진짜 DB를 재고 있는지부터 확인해야 한다.
 
@@ -180,38 +145,23 @@ CREATE INDEX idx_projects_doc_tree_gin   ON projects USING GIN(doc_tree jsonb_pa
 
 3개 영역을 한 row에 둔 건 한 번의 트랜잭션으로 묶기 위해서였고, 버전 컬럼을 따로 둔 건 한 영역의 충돌이 다른 영역까지 막지 않게 하려는 목적이었습니다. 문서 본문만 `documents.binary`로 따로 두고 Hocuspocus가 그대로 읽게 했습니다.
 
-결과는 이렇습니다.
-
-- 시트 GET p95 `65ms`
-- `jsonb_set` patch p95 `8ms`
-- GIN 적용 전후 비교 시 p95 `280ms → 65ms`
-
-목표로 둔 시트 GET p95 `500ms 이하`는 충분히 넘겼고, 운영 구조도 단순하게 유지할 수 있었습니다.
+`jsonb_set` patch p95는 8ms로 나왔고, 시트 GET p95는 목표로 둔 500ms를 크게 밑돌았습니다. GIN 인덱스를 붙인 전후 차이는 3장 모니터링 절에 실측으로 남겼습니다.
 
 ---
 
-## 2. 실시간 동기화: 시트는 서버 기준으로, 문서 본문은 yjs로
+## 2. 실시간 동기화: 시트는 서버 기준, 문서 본문은 yjs
 
-시트와 문서는 둘 다 실시간 공동 편집이 필요했지만, 같은 방식으로 다루는 건 오히려 더 복잡했습니다.
+시트와 문서는 둘 다 실시간 공동 편집이 필요했지만 같은 방식으로 다루면 오히려 복잡해졌습니다. 시트는 값과 구조를 서버가 확실히 판단해야 했고, 문서 본문은 글자 단위 자동 병합이 자연스러웠습니다. 그래서 시트는 서버 기준으로, 문서 본문만 yjs로 남겼습니다.
 
-시트는 값과 구조를 서버가 확실히 판단해야 했고, 문서 본문은 글자 단위 자동 병합이 더 자연스러웠습니다. 그래서 시트는 서버 기준 구조로, 문서 본문만 Hocuspocus + yjs로 남겼습니다.
+이 판단 덕분에 로컬 중심으로 짜여 있던 흐름도 같이 정리됐습니다. `lib/ydoc.ts` 주변 레거시와 패널, 훅, store, 미사용 export를 걷어내며 시트 영역에서 약 80,000라인을 지웠고, 시트 도메인은 100% 서버 기준으로 바뀌었습니다.
 
-이 판단 덕분에 복잡했던 로컬 중심 흐름도 같이 정리할 수 있었습니다. `lib/ydoc.ts` 주변 레거시 코드, 패널, 훅, store, 미사용 export를 걷어내며 시트 영역 약 `80,000라인`을 삭제했고, 시트 도메인은 `100% 서버 기준 구조`로 바뀌었습니다.
+### WebSocket 하나로 3영역을 묶기
 
-### WebSocket 하나로 3 영역을 묶기
+처음에는 시트마다 WebSocket을 따로 열었는데, 한 사용자가 여러 시트를 동시에 보면 연결 수가 그대로 늘었습니다. `/ws/projects/{projectId}` 단일 엔드포인트로 바꾸고 시트 셀과 시트 트리, 문서 트리를 같은 연결에서 처리하도록 합쳤습니다.
 
-처음에는 시트마다 WebSocket을 따로 열었는데, 한 사용자가 여러 시트를 동시에 보면 연결 수가 그대로 늘어나는 구조였습니다. 그래서 `/ws/projects/{projectId}` 단일 엔드포인트로 바꾸고, 시트 셀·시트 트리·문서 트리를 같은 연결에서 처리하도록 합쳤습니다.
+메시지마다 꼭 넣은 값은 두 개입니다. 내가 보고 있던 현재 버전, 그리고 이 요청을 구분하는 클라이언트 메시지 ID입니다. 앞의 값이 있어야 늦게 도착한 변경을 거절할 수 있고, 뒤의 값이 있어야 재연결 뒤 같은 요청이 다시 와도 한 번만 처리됩니다.
 
-메시지마다 꼭 넣은 값은 두 개였습니다.
-
-- 내가 보고 있던 **현재 버전**
-- 이 요청을 구분하는 **클라이언트 메시지 ID**
-
-이 두 값이 있어야 늦게 도착한 변경을 거절하고, 재연결 뒤 같은 요청이 다시 와도 한 번만 처리할 수 있었습니다.
-
-### 서버 트랜잭션 흐름
-
-서버는 한 메시지를 받으면 같은 트랜잭션 안에서 아래 순서로 처리했습니다.
+서버는 한 메시지를 받으면 같은 트랜잭션 안에서 이 순서로 처리합니다.
 
 ```sql
 BEGIN;
@@ -249,14 +199,11 @@ COMMIT;
 -- 8. 같은 프로젝트의 다른 세션에 broadcast (sender 제외)
 ```
 
-흐름은 단순합니다.  
-서버는 "내가 수정한 기준 버전이 아직 최신인지"를 먼저 보고, 아니면 충돌로 돌려보냈습니다. 그리고 같은 요청이 다시 와도 두 번 반영되지 않도록 메시지 ID를 따로 기억했습니다.
+좋아요 카운터 같은 단순 증가였다면 Redis INCR이나 큐가 맞았을 겁니다. 하지만 이건 시트 안 특정 위치를 부분 수정하는 일이라 버전 비교와 부분 수정, 중복 방지 조합이 도메인에 더 잘 맞았습니다.
 
-이 구조를 고른 이유가 있습니다. 이 문제는 좋아요 카운터 같은 단순 증가와 달리 시트 안 특정 위치를 부분 수정하는 일이었습니다. 그래서 Redis INCR이나 큐보다 **버전 비교 + 부분 수정 + 중복 방지** 조합이 이 도메인에 더 잘 맞았습니다.
+### cycle 방지와 cascade delete는 애플리케이션에서
 
-### cycle 방지: 애플리케이션 BFS
-
-`tree.move`에서 자기 자손 밑으로 이동시키려는 시도는 무한 루프와 데이터 손상의 원인이라 트랜잭션 안에서 차단해야 합니다. PostgreSQL 재귀 CTE로도 가능하지만, JSONB 트리 walk는 SQL 트리(부모-자식 row 분리)와 구조가 달라서 애플리케이션 레벨 BFS가 단순했습니다.
+`tree.move`에서 자기 자손 밑으로 옮기려는 시도는 무한 루프와 데이터 손상의 원인이라 트랜잭션 안에서 막아야 합니다. PostgreSQL 재귀 CTE로도 되지만, JSONB 트리 walk는 부모와 자식이 row로 나뉜 SQL 트리와 구조가 달라서 애플리케이션 BFS가 단순했습니다.
 
 ```java
 public boolean hasAncestorCycle(JsonNode tree, String nodeId, String newParentId) {
@@ -275,17 +222,9 @@ public boolean hasAncestorCycle(JsonNode tree, String nodeId, String newParentId
 }
 ```
 
-자기 자손이 새 부모 노드 안에 들어 있으면 즉시 400 `CYCLE_DETECTED`를 던지고 트랜잭션 자체를 롤백해서 patch가 발생하지 않게 했습니다.
+자기 자손이 새 부모 안에 들어 있으면 400 `CYCLE_DETECTED`를 던지고 트랜잭션을 롤백해서 patch 자체가 일어나지 않게 했습니다.
 
-### cascade delete: 애플리케이션 재귀
-
-문서 트리에서 노드를 지우면 흐름은 이렇게 됩니다.
-
-1. `doc_tree` JSONB에서 해당 노드의 자손을 BFS로 모음.
-2. 같은 트랜잭션 안에서 `doc_tree`에서 노드 + 자손 제거 + `documents` 테이블의 해당 문서 row들에 `deleted_at = NOW()`(soft delete).
-3. 자손 정보를 포함한 broadcast로 클라들이 자기 트리에서 한 번에 정리.
-
-문서 본문 yjs binary의 영구 삭제는 별도 cron이 30일 후에 hard delete하는 구조라, 사용자 실수에 의한 삭제는 30일 안에 복구가 가능합니다.
+cascade delete도 같은 자리에서 처리합니다. 노드의 자손을 BFS로 모아 `doc_tree`에서 함께 제거하고, `documents` 테이블의 해당 row에 `deleted_at`을 찍습니다. 자손 정보를 broadcast에 실어 보내면 클라이언트가 자기 트리를 한 번에 정리합니다. yjs binary의 영구 삭제는 30일 뒤 cron이 맡아서, 실수로 지운 문서는 그 안에 되살릴 수 있습니다.
 
 ### 충돌 정책을 한 표로
 
@@ -302,108 +241,64 @@ public boolean hasAncestorCycle(JsonNode tree, String nodeId, String newParentId
 | 문서 트리 | (동일 정책) | (동일) |
 | 재연결 | 같은 clientMsgId 두 번 | op_idempotency 캐시 응답 |
 
-충돌, 중복 방지, cycle, cascade는 단위·통합 테스트로 검증했습니다. 반면 충돌 빈도나 broadcast 지연 같은 운영 지표는 실제 사용자가 붙은 뒤에 채우는 게 더 의미 있다고 판단했습니다.
+충돌과 중복 방지, cycle, cascade는 단위 테스트와 통합 테스트로 검증했습니다. 반면 충돌 빈도나 broadcast 지연 같은 운영 지표는 실제 사용자가 붙은 뒤에 채우는 게 의미 있다고 봤습니다.
 
-### 문서 본문은 yjs(Hocuspocus)로 따로
+### 문서 본문은 yjs로 따로
 
-문서 본문은 *Tiptap + yjs CRDT 자동 머지*가 도메인에 정확히 맞아서 그대로 두고, Hocuspocus를 Node 22 LTS sidecar로 운영하면서 PostgreSQL 어댑터로 `documents.binary` BYTEA에 영속시켰습니다. Hocuspocus의 `onAuthenticate` 훅에서 Spring이 발급한 협업용 단명 토큰(15분)을 검증하는 webhook을 호출해서, Spring과 Hocuspocus가 같은 사용자 신원을 공유하도록 묶었습니다.
+문서 본문은 Tiptap과 yjs CRDT의 자동 머지가 도메인에 정확히 맞아서 그대로 뒀습니다. Hocuspocus를 Node 22 LTS sidecar로 띄우고 PostgreSQL 어댑터로 `documents.binary`에 영속시켰습니다. `onAuthenticate` 훅에서 Spring이 발급한 15분짜리 협업 토큰을 검증하는 webhook을 호출해 두 프로세스가 같은 사용자 신원을 공유하게 묶었습니다.
 
 ---
 
-## 3. 인프라: OCI 4대 + Ansible + Cloudflare + 셀프 호스트 모니터링
+## 3. 인프라: OCI 4대를 직접 운영하기
 
-### 매니지드 통합을 거부한 이유: paying user 0 시점의 진짜 비용
-
-베타 출시 시점에 매니지드 통합으로 갔다면 가설 비용은 다음과 같았습니다.
-
-| 항목 | 월 |
-|------|----|
-| Vercel Pro | $20 |
-| Fly.io backend | $5 |
-| Aurora MySQL(가벼운 인스턴스) | ~$50 |
-| MongoDB Atlas(M10) | ~$25 |
-| Datadog Pro($15/host × 4) | $60 |
-| **합계** | **~$155/월(연 약 $1,860)** |
-
-paying user가 없는 단계에서 매달 이 비용을 먼저 쓰는 건 맞지 않았습니다. 그래서 처음부터 매니지드로 가지 않고, OCI Always Free 4대 + Cloudflare 무료 기능을 바탕으로 직접 운영하기로 했습니다.
-
-### 머신 4대 역할 분배
+베타 시점에 매니지드 통합으로 갔다면 Vercel Pro $20, Fly.io $5, Aurora MySQL 약 $50, MongoDB Atlas M10 약 $25, Datadog Pro 4호스트 $60으로 월 약 $155였습니다. paying user가 없는 단계에서 매달 이 돈을 먼저 쓰는 건 맞지 않아서, OCI Always Free 4대와 Cloudflare 무료 기능으로 직접 운영하기로 했습니다.
 
 | Hostname | 사양 | 역할 | 메모리 |
 |----------|------|------|-------|
-| **prod-app** | ARM 12GB | Spring(Docker) + Nginx + Hocuspocus | ~3GB |
-| **monitor** | ARM 12GB | PostgreSQL 18 + Grafana + Loki + Alloy + Prometheus + Alertmanager + InfluxDB + blackbox_exporter | ~5GB |
-| **backup** | x86 1GB | pg_dump rsync 수신 + cloudflared(monitor 도메인 Tunnel) + node_exporter | ~480MB |
-| **status** | x86 1GB | Cloudflare R2 업로드 daemon + node_exporter | ~150MB |
+| prod-app | ARM 12GB | Spring(Docker) + Nginx + Hocuspocus | 약 3GB |
+| monitor | ARM 12GB | PostgreSQL 18 + Grafana + Loki + Alloy + Prometheus + Alertmanager + InfluxDB + blackbox_exporter | 약 5GB |
+| backup | x86 1GB | pg_dump rsync 수신 + cloudflared + node_exporter | 약 480MB |
+| status | x86 1GB | Cloudflare R2 업로드 daemon + node_exporter | 약 150MB |
 
-1GB 머신에는 모니터링을 올리지 않았습니다. Loki, Prometheus, Grafana를 쪼개서 올리기엔 메모리가 너무 작았고, 그보다 12GB ARM 한 대에 묶는 편이 훨씬 안전했습니다. 1GB 머신은 업로드 데몬이나 cloudflared처럼 역할이 단순한 프로세스만 맡겼습니다.
+1GB 머신에는 모니터링을 올리지 않았습니다. Loki와 Prometheus, Grafana를 쪼개 올리기엔 메모리가 너무 작았고, 12GB 한 대에 묶는 편이 안전했습니다.
 
-### Ansible로 자동화
+### Ansible과 3-2-1 백업
 
-서버 셋업은 수동 대신 Ansible로 묶었습니다. `ansible-playbook -i inventory.yml site.yml` 한 번이면 4대를 통째로 재현할 수 있게 만들었고, GitHub Actions로 배포 흐름까지 연결했습니다.
+서버 셋업은 Ansible로 묶어서 `ansible-playbook -i inventory.yml site.yml` 한 번이면 4대를 재현할 수 있게 했습니다.
 
-### 3-2-1 백업 체인
+백업은 Primary 하나, 다른 미디어 하나, 오프사이트 하나 원칙입니다. monitor의 PostgreSQL, backup 머신 rsync, Cloudflare R2 순서입니다. OCI Object Storage도 봤지만 같은 벤더 안에서 한 번 더 복제하는 것보다 다른 벤더로 빼는 편이 낫다고 봤습니다. 리전 분산은 paying user가 생기면, 추가 벤더는 사용자 1,000명을 넘으면 붙입니다.
 
-원칙은 *Primary 1개 + 다른 미디어 1개 + 오프사이트 1개*였습니다. 처음부터 큰 인프라를 박지 않고 단계적으로 가는 매트릭스를 그렸습니다.
+### 모니터링: Datadog 대신 Grafana 스택
 
-| 시기 | Primary | Secondary | Offsite |
-|------|---------|-----------|---------|
-| **베타 출시 시점** | monitor의 PG 18 | backup 머신 rsync | **Cloudflare R2**(다른 클라우드, S3 호환) |
-| paying user 등장 시 | + 다른 리전(도쿄 / 프랑크푸르트) | | |
-| 사용자 1,000명 이상 | + 추가 vendor(AWS S3 / Backblaze B2) | | |
+Datadog Pro는 호스트당 $15라 4대면 월 $60입니다. 호스트 4대가 무료라는 전제와 정면으로 부딪혀서 셀프 호스트로 갔습니다. 단일 화면은 유지해야 해서 Grafana 진영을 통째로 채택했습니다. Prometheus가 운영 메트릭을, Loki가 로그를, blackbox_exporter가 HTTP와 TLS probe를 맡습니다. 로그 수집기는 Promtail이 2026-03 EOL이라 신규는 Alloy로 시작했습니다.
 
-처음에는 OCI Object Storage도 봤지만, 같은 벤더 안에서 한 번 더 복제하는 것보다 다른 벤더로 하나 더 빼는 편이 낫다고 봤습니다. 그래서 R2로 바꿨고, `pg_dump → rsync → R2 업로드` 흐름을 실제로 검증했습니다.
+k6 부하 결과만 InfluxDB로 따로 뺐습니다. 부하 테스트는 시계열 수가 너무 많아 운영 Prometheus를 오염시키기 쉬웠습니다. 대신 Grafana 한 화면에서 둘을 같이 봅니다.
 
-### 모니터링: Datadog 거부 + 직접 측정 인프라
+이 환경이 깔리고 나서야 믿을 만한 수치가 나오기 시작했습니다.
 
-Datadog Pro $15/host × 4대 = 월 $60 / 연 $720 비용이 *호스트 4대 무료* 정책과 정면으로 충돌했습니다. 셀프 호스트로 가되 *단일 화면(single pane of glass)*을 유지하기 위해 Grafana 진영을 통째로 채택했습니다.
-
-| 도구 | 역할 | 후보 비교 후 채택 사유 |
-|------|------|------------------------|
-| **Prometheus** | 운영 메트릭 TSDB | Spring Actuator native + Spring 진영에서 가장 널리 쓰이는 옵션 |
-| **Loki** | 로그 aggregator | 약 512MB, Elasticsearch ~2GB 대비 부담 ↓ |
-| **Alloy** | 로그 수집기 | Promtail은 [2025-02 LTS 전환 + 2026-03 EOL 발표](https://grafana.com/blog/2025/02/13/grafana-loki-3.4-standardized-storage-config-sizing-guidance-and-promtail-merging-into-alloy/), 신규는 Alloy로 시작이 정석 |
-| **InfluxDB 2.x** | k6 부하 결과 TSDB(분리) | 부하 결과의 high-cardinality 시계열이 운영 Prometheus 오염 방지 |
-| **blackbox_exporter** | 내부 HTTP/TLS/TCP probe + 알람 | Uptime Kuma의 대안으로 자기 자신을 명시(redundant) |
-| **Grafana** | 단일 대시보드 | 4 데이터소스 한 화면 |
-
-운영 메트릭과 k6 결과를 같은 TSDB에 넣지 않은 것도 의도였습니다. 부하 테스트 결과는 시계열 수가 너무 많아서 운영 Prometheus를 오염시키기 쉬웠고, 그래서 InfluxDB에 따로 떼어 저장했습니다. 대신 Grafana 한 화면에서 둘을 같이 볼 수 있게 맞췄습니다.
-
-이 환경이 깔리고 나서야 실제로 믿을 만한 수치가 나오기 시작했습니다.
-
-**가상 스레드 적용 전후**(셀 업데이트 100 동시 부하 시나리오에서 함께 본 서버 요청 지연):
+가상 스레드 적용 전후입니다. 셀 업데이트 100 동시 부하에서 함께 본 서버 요청 지연이지 WebSocket 왕복 시간은 아닙니다.
 
 | 메트릭 | 가상 스레드 OFF | 가상 스레드 ON |
 |--------|----------------|----------------|
-| 서버 요청 p95 | 320ms | **180ms** |
-| 서버 요청 p99 | 450ms | **240ms** |
+| 서버 요청 p95 | 320ms | 180ms |
+| 서버 요청 p99 | 450ms | 240ms |
 | 플랫폼 스레드 수(관측) | 약 200 | carrier 약 8 |
-| heap 사용 | 380MB | **220MB** |
+| heap 사용 | 380MB | 220MB |
 
-여기서 확인하려던 것은 같은 부하가 들어왔을 때 요청이 덜 밀리고 메모리를 덜 쓰는지였습니다. 가상 스레드가 코드를 더 빨리 실행하는지를 잰 것은 아닙니다. 이 표의 p95 / p99는 WebSocket 메시지 왕복 시간이 아니라 같은 시나리오에서 함께 본 서버 요청 지연입니다.
-
-**시트 GET p95**(`projects.data` JSONB 1만 건):
+GIN 인덱스 적용 전후입니다.
 
 | 시나리오 | p50 | p95 | p99 |
 |---------|-----|-----|-----|
 | GIN 인덱스 없음 | 45ms | 280ms | 410ms |
-| GIN 인덱스 적용 | 12ms | **65ms** | 110ms |
+| GIN 인덱스 적용 | 12ms | 65ms | 110ms |
 
-이 수치들이 의미 있는 이유는, "도입했다"에서 끝나지 않고 실제로 어떤 변화가 있었는지 같이 보여주기 때문입니다. 그리고 Uptime Kuma를 넣었다가 blackbox_exporter로 정리한 것처럼, 측정 뒤에 더 단순한 쪽으로 다시 줄여 가는 과정도 같이 남겼습니다.
+도입했다에서 끝내지 않고 전후를 같이 본 게 중요했습니다. Uptime Kuma를 넣었다가 blackbox_exporter가 같은 일을 하는 걸 알고 걷어낸 것처럼, 측정한 뒤 더 단순한 쪽으로 되돌린 흔적도 그대로 남겼습니다.
 
-### 무중단 배포: nginx blue/green + readiness probe
+### 무중단 배포: nginx blue/green
 
-기존 `docker compose pull && up -d` 방식은 배포할 때마다 30~60초 정도 502가 떨어졌습니다. 사용자 붙기 전에 이 문제는 먼저 없애두고 싶었습니다.
+기존 `docker compose pull && up -d`는 배포마다 30~60초씩 502가 떨어졌습니다. 사용자가 붙기 전에 없애두고 싶었습니다.
 
-대안 비교:
-
-| 후보 | 거부 사유 |
-|------|-----------|
-| Kamal | Kamal-proxy가 nginx 자리를 차지 → Cloudflare Origin Cert 이전 + Ansible 일부 폐기 필요. nginx 직접 방식 대비 도입 시간 비용이 큼 |
-| Kubernetes | 우리 단계에서는 etcd / control plane / 네트워크 플러그인 운영 부담이 zero-downtime 이익보다 컸음. 사용자 규모가 커지면 다시 평가 |
-| 두 컨테이너 항상 공존 + weight 분산 | RAM 상시 +2.5GB. 무료 인프라에서 비상 자산을 유지하는 게 우선. 카나리는 사용자 1,000명+ 시점 별도 검토 |
-
-결국 기존 nginx와 Ansible 자산을 그대로 살릴 수 있는 blue/green 구성을 직접 만들었습니다.
+Kamal은 Kamal-proxy가 nginx 자리를 차지해서 Cloudflare Origin Cert 이전과 Ansible 일부 폐기가 필요했고, Kubernetes는 이 단계에서 control plane 운영 부담이 무중단 이익보다 컸습니다. 두 컨테이너를 항상 띄워 weight로 나누는 방식은 RAM이 상시 2.5GB 더 드는데, 무료 인프라에서는 여유 메모리를 비상 자산으로 남기는 쪽이 우선이었습니다. 결국 기존 자산을 살리는 blue/green을 직접 만들었습니다.
 
 ```
 backend-blue     → 127.0.0.1:8080
@@ -412,13 +307,13 @@ hocuspocus-blue  → 127.0.0.1:1234
 hocuspocus-green → 127.0.0.1:1235
 ```
 
-snippet 두 개(`upstream-blue.conf`, `upstream-green.conf`)를 `/etc/nginx/snippets/`에 두고, `/etc/nginx/conf.d/balruno-backend-active.conf`를 둘 중 하나의 symlink로 노출하는 구조입니다. cutover는 `ln -sfn`으로 symlink를 갈아 끼우고 `nginx -s reload`(graceful 방식이라 인플라이트 요청이 끝날 때까지 옛 worker가 살아 있습니다)를 호출합니다. 디버깅은 `readlink` 한 줄로 현재 active 색깔을 볼 수 있습니다.
+snippet 두 개를 `/etc/nginx/snippets/`에 두고 `balruno-backend-active.conf`를 둘 중 하나의 symlink로 노출합니다. cutover는 `ln -sfn`으로 symlink를 갈아 끼우고 `nginx -s reload`를 호출합니다. graceful reload라 인플라이트 요청이 끝날 때까지 옛 worker가 살아 있습니다. 현재 active 색깔은 `readlink` 한 줄로 봅니다.
 
-핵심은 readiness였습니다. 프로세스가 살아 있는지만 보지 않고, **정말 트래픽을 받을 준비가 끝났을 때만** 넘기게 만들고 싶었습니다.
+핵심은 readiness였습니다. 프로세스가 살아 있는지가 아니라 정말 트래픽을 받을 준비가 끝났을 때만 넘기게 만들고 싶었습니다.
 
-DB 마이그레이션은 expand-contract 강제: NOT NULL 컬럼 추가 시 nullable + default로 추가(구버전이 안 깨짐) → 신버전 코드가 새 컬럼 사용 → 다음 배포에서 NOT NULL 강제. 컬럼 drop이나 타입 변경 같은 파괴적 변경은 별도 슬롯(in-place 다운타임 허용)으로 분리하고, PR에 `[destructive]` 태그를 붙이도록 했습니다.
+DB 마이그레이션은 expand-contract를 강제했습니다. NOT NULL 컬럼은 nullable에 default를 준 채 먼저 추가해 구버전이 깨지지 않게 하고, 신버전이 그 컬럼을 쓰기 시작한 다음 배포에서 NOT NULL을 겁니다. 컬럼 drop이나 타입 변경 같은 파괴적 변경은 다운타임을 허용하는 별도 슬롯으로 분리하고 PR에 `[destructive]` 태그를 붙입니다.
 
-실측(2026-05-10):
+실측입니다.
 
 ```
 첫 cutover (옛 단일 컨테이너 → 새 dual slot 이행)
@@ -429,60 +324,29 @@ DB 마이그레이션은 expand-contract 강제: NOT NULL 컬럼 추가 시 null
 05:38:45 ~ 05:39:41  모든 폴링 200      ← 다운타임 0초
 ```
 
-첫 전환의 21초는 예전 구조에서 새 구조로 넘어가는 일회성 비용이었고, 두 번째부터는 실제 운영에서도 502 없이 넘어갔습니다.
+첫 전환의 21초는 옛 구조에서 새 구조로 넘어가는 일회성 비용이었고, 두 번째부터는 운영에서도 502 없이 넘어갔습니다.
 
 ---
 
-## 4. 인증: OAuth-only + 자체 발급 JWT(HS256, 미래에 RS256 예약)
+## 4. 인증: OAuth-only + 자체 발급 JWT
 
-### 자체 비밀번호의 진짜 비용
+비밀번호 로그인을 직접 들고 가면 정책과 해싱, 재설정 메일, 누출 대응, 2FA까지 같이 책임져야 합니다. 1인 운영에서는 너무 큰 책임이었습니다. 매니지드도 부담이었습니다. Auth0는 시작가부터 높고 Clerk나 Cognito도 결국 외부 의존과 비용이 남습니다.
 
-비밀번호 로그인까지 직접 들고 가면, 비밀번호 정책·해싱·재설정 메일·누출 대응·2FA까지 같이 책임져야 합니다. 1인 운영 단계에서는 이 책임이 너무 컸습니다.  
-매니지드 인증도 비용이 부담됐습니다. Auth0는 시작가부터 높고, Clerk나 Cognito도 결국 외부 의존과 비용이 남습니다.
+Balruno 사용자는 대부분 GitHub나 Google 계정을 이미 갖고 있어서 OAuth-only가 가장 단순했습니다. 비밀번호와 2FA, 누출 대응은 provider가 맡고 우리는 인증 결과만 받습니다. SMTP도 필요 없어집니다. Magic link는 SMTP가 필수라 뺐고, WebAuthn은 2026년에도 사용자 인지도가 낮아 접었습니다.
 
-### OAuth-only 채택: 페르소나에 맞는 길
+### 알고리즘은 verifier 수가 결정합니다
 
-Balruno 사용자는 대부분 GitHub나 Google 계정을 이미 갖고 있었습니다. 그래서 OAuth-only가 가장 단순했고, 비밀번호·2FA·누출 대응은 provider가 맡고 우리는 인증 결과만 받는 구조로 가져갔습니다.
+처음에는 검증 주체가 Spring 하나라고 보고 HS256으로 갔는데, 실제로는 Hocuspocus가 별도 Node 프로세스로 collab 토큰을 검증하고 있어서 verifier가 둘이었습니다. HS256의 비밀 공유 위험이 명목상 도착한 셈이라 RS256 전환을 검토했습니다.
 
-후보 비교:
+그런데 동종 OSS 코드를 직접 열어봤습니다. Baserow의 `SIMPLE_JWT`는 algorithm 명시 없이 default HS256이고, Outline의 `User.ts`는 `type: "collaboration"` 토큰까지 `user.jwtSecret` 하나로 HS256 서명합니다. 우리 collab 시나리오와 정확히 같습니다. Hocuspocus playground도 algorithm 미명시, Supabase Auth의 fallback도 HS256이었습니다. 알고리즘은 동종 OSS들이 README에 자랑하지 않을 만큼 구현 세부였고, 가장 흔한 기본값이 HS256이었습니다.
 
-| 후보 | 비밀번호 | SMTP | 누출 책임 | 매니지드 비용 |
-|------|---------|------|-----------|---------------|
-| 자체 ID + bcrypt + SMTP | 있음 | 필수 | 직접 | $0(셀프, 운영 비용 ↑) |
-| Magic link | 없음 | **필수** | 직접 | SMTP 비용 |
-| WebAuthn(passkey) | 없음 | 0 | 분산 | $0(2026 인지도 낮음) |
-| **OAuth-only(GitHub + Google)** | 없음 | **0** | provider | **$0** |
-| 매니지드(Auth0 / Clerk) | – | – | provider | $25~240/월 |
+같은 vault, 같은 운영자, 같은 host인 환경에서 RS256의 발급과 검증 권한 분리 효과는 명목상이고 1인 운영 부담만 늘어납니다. HS256을 유지하되, 별도 운영팀이나 별도 vault, 외부 verifier가 들어오는 시점을 전환 트리거로 다시 정의했습니다.
 
-### JWT 알고리즘은 *verifier 수*가 결정합니다
-
-| 알고리즘 | 키 | sign | verify | 다중 verifier | 채택 시점 |
-|----------|-----|------|--------|--------------|-----------|
-| **HS256** | symmetric 32B | ~1µs | ~1µs | 비밀 공유 위험 ↑ | **현재 ★** |
-| HS512 | symmetric 64B | ~1µs | ~1µs | 동일 | – |
-| **RS256** | private + public | ~50µs | ~5µs | **JWKS 엔드포인트 OK** | 별도 운영팀·외부 verifier 시점 예약 |
-| ES256 | private + public(작음) | ~10µs | ~30µs | JWKS OK | RS256의 modern 대안 |
-| EdDSA(Ed25519) | private + public(가장 작음) | ~5µs | ~15µs | JWKS OK | 미래 표준 후보 |
-
-처음에는 *검증 주체가 Spring 하나* 라고 봐서 HS256으로 갔는데, 실제로는 Hocuspocus(`packages/collab`)가 별도 Node.js 프로세스로 collab 토큰을 검증하고 있어서 사실 *verifier가 둘* 이었습니다. 이 구조라면 HS256의 비밀 공유 위험이 명목상 도착한 셈이라 RS256으로 옮기는 걸 검토했습니다.
-
-그런데 동종 OSS의 코드를 직접 확인해봤습니다. Baserow의 `SIMPLE_JWT`는 algorithm 명시 없이 default HS256, Outline의 `User.ts`는 `type: "collaboration"` 토큰까지 `user.jwtSecret` 하나로 HS256 sign(우리 collab 시나리오와 정확히 동일), Hocuspocus playground도 `jsonwebtoken.sign(payload, secret)` algorithm 미명시, Supabase Auth의 `GetSigningAlg()` fallback도 `jwt.SigningMethodHS256`. *알고리즘은 동종 OSS들이 README에 자랑하지 않을 만큼 implementation detail* 이었고, 가장 흔한 default가 HS256이었습니다.
-
-같은 vault·같은 운영자·같은 host인 우리 환경에서 RS256의 *발급/검증 권한 분리* 효과는 명목상이고, 1인 운영 부담만 늘어납니다. 그래서 HS256 유지로 결정했습니다. RS256 transition trigger는 *별도 운영팀·별도 vault·외부 verifier(mobile SDK나 third-party 같은)* 가 들어오는 시점으로 재정의했습니다.
-
-### JWT 보관: cookie + Bearer 듀얼
-
-| 위치 | XSS | CSRF | API 클라이언트 호환 | 채택 |
-|------|-----|------|---------------------|------|
-| localStorage | **취약** | 없음 | OK | 거부 |
-| **httpOnly cookie**(`Domain=balruno.com`, `SameSite=Lax`) | **0** | 약함(Lax) | X | **★ 브라우저** |
-| **Authorization Bearer header** | 0(메모리) | 0 | **OK** | **★ Electron / API 클라이언트** |
-
-브라우저와 데스크톱 클라이언트를 같이 지원해야 해서, cookie와 Bearer를 둘 다 받는 구조로 갔습니다.
+토큰 보관은 브라우저에 httpOnly cookie, Electron과 API 클라이언트에 Authorization Bearer로 이중화했습니다. localStorage는 XSS에 취약해서 뺐습니다.
 
 ### 같은 이메일이라도 무조건 link하면 안 됩니다
 
-OAuth provider의 `verified email`을 어떻게 처리하느냐가 보안 경계를 만듭니다. 4가지 케이스로 분기를 명시했습니다(Notion / Linear / Vercel과 같은 패턴입니다).
+OAuth provider의 verified email을 어떻게 다루느냐가 보안 경계를 만듭니다. 네 갈래로 명시했습니다.
 
 ```java
 sealed interface Decision {
@@ -493,144 +357,59 @@ sealed interface Decision {
 }
 ```
 
-규칙:
-1. (provider, providerUserId)가 이미 link되어 있으면 → ReuseExistingLink (재로그인).
-2. provider가 verified email을 안 줬는데 같은 email user가 이미 존재하면 → **RejectUnverifiedEmail** (계정 takeover 차단).
-3. 양쪽이 verified email이고 일치하면 → LinkToExistingUser (자동 link + audit log).
-4. 그 외에는 → CreateNewUser.
+(provider, providerUserId)가 이미 연결되어 있으면 재로그인입니다. provider가 verified email을 안 줬는데 같은 email의 사용자가 이미 있으면 거부합니다. 양쪽 다 verified이고 일치하면 자동 연결하고 audit log를 남깁니다. 나머지는 신규 생성입니다.
 
-규칙 2가 핵심 보안 경계입니다. 공격자가 victim의 email로 GitHub에 가입(GitHub가 verified를 안 한 상태) → 우리 OAuth 받기 → email만 보고 link → victim 계정 takeover 시나리오를 막아야 합니다. 그래서 GitHub `/user/emails`는 `primary == verified == true`인 row만 추출하고, Google OIDC는 `email_verified` claim을 그대로 사용합니다. 양쪽 다 verified=true일 때만 자동 link합니다.
+두 번째 규칙이 핵심 경계입니다. 공격자가 피해자의 email로 GitHub에 가입하고 우리 OAuth를 받은 뒤 email만 보고 연결되면 계정을 통째로 가져갈 수 있습니다. 그래서 GitHub `/user/emails`에서는 `primary == verified == true`인 row만 쓰고, Google OIDC는 `email_verified` claim을 그대로 씁니다.
 
-### Refresh token — DB rotation chain
-
-| 후보 | revoke 가능 | 추가 인프라 | 채택 |
-|------|------------|------------|------|
-| **DB rotation chain**(BYTEA 해시 + prev_id) | **OK** | 0 | **★** |
-| Redis | OK + 빠름 | Redis 추가 | 사용자 늘면 트리거 |
-| Stateless(rotation only) | **X** | 0 | 거부 |
-
-결과적으로 인증은 사용자 입장에서는 더 단순했고, 운영 입장에서는 비용과 의존성을 함께 줄일 수 있었습니다.
+Refresh token은 해시와 prev_id를 가진 DB rotation chain으로 뒀습니다. 추가 인프라 없이 revoke가 되기 때문입니다. Redis는 사용자가 늘면 그때 붙입니다.
 
 ---
 
-## 5. Notion 클론에서 *게임 스튜디오 워크스페이스*로 분리되는 부가 기능들
+## 5. Notion 클론과 갈라지는 지점
 
-핵심 동기화 + 인증 + 인프라 위에 얹은 기능들이 *Notion 클론*과 *진짜 게임 스튜디오 워크스페이스*의 분기를 만듭니다.
+동기화와 인증, 인프라 위에 얹은 기능들이 일반적인 문서 도구와 게임 스튜디오 워크스페이스를 가릅니다.
 
-| 기능 | 핵심 |
-|------|------|
-| **서버 백드 영구 undo** | Cmd+Z가 새로고침 후에도 120분 안에 작동(Baserow의 `MINUTES_UNTIL_ACTION_CLEANED_UP` 패턴), 탭 단위 격리, 30초/20-op 액션 그룹. *Diff baseline picker*도 같은 멱등 로그의 inverse_payload를 거꾸로 replay해서 동작하며, 별도 snapshot 인프라가 필요 없었습니다 |
-| **10가지 뷰 타입** | Grid · Form · Kanban · Calendar · Gallery · Gantt · **Heatmap · Curve · Probability · Diff**. 마지막 4개가 게임 밸런싱 도메인 특화(Notion / Airtable / Baserow에 없음). 모든 뷰 전환과 drag-drop이 서버 진실원 동기화 위에서 실시간 멀티플레이어 |
-| **코멘트 + @멘션 + 알림** | 시트 셀과 문서 본문에서 *범위 핀 하이라이트*(Tiptap Decoration plugin), 1단계 답글 스레드(Slack/Linear 패턴), 이메일 + Web Push(VAPID, RFC 8030/8292), 일/주간 다이제스트 |
-| **공유 링크** | `/share/:token`에 인증 없는 read-only viewer. UUIDv7 PK + UUIDv4 token, 시트/뷰/만료를 핀할 수 있고 즉시 revoke |
-| **Outbound 웹훅** | `comment.added` / `mention.created` / `row.added` 이벤트의 HMAC-SHA256 POST. 발행자(publisher) 모듈이 웹훅 모듈을 정적으로 의존하지 않도록 ApplicationEvent로 디커플링 |
-| **Inbound 웹훅(GitHub / generic)** | HMAC 서명 검증 후 PR/issue 이벤트가 자동으로 row 추가. 시트의 "받기" 버튼으로 URL + secret 발급 |
-| **Discord 슬래시 커맨드** | Ed25519 검증 인터랙션 엔드포인트. `/balruno bug <text>`가 워크스페이스 기본 시트에 row 추가 |
-| **Stripe 결제** | Checkout + Customer Portal + 서명 검증 webhook, 글로벌 + 한국 카드 |
-| **프로젝트 전체 검색** | 셀 + 트리 + 코멘트 본문, Cmd+K + 200ms debounce |
-| **워크스페이스 감사 로그** | `workspace_audit_log` 테이블 + ApplicationEvent. 활동 피드의 backing store |
-| **게임 엔진 export** | CSV(RFC 4180 + BOM) + C# `[Serializable]` struct + readonly 배열. Unity 프로젝트에 그대로 드롭 |
-| **Cmd+K + GDPR + PWA** | 빠른 점프, 데이터 export + 계정 삭제 자체 서비스, "홈 화면에 추가" |
+뷰 타입은 열 가지인데 Grid, Form, Kanban, Calendar, Gallery, Gantt까지는 흔한 것들이고 Heatmap, Curve, Probability, Diff 네 개가 밸런싱 도메인 전용입니다. Notion이나 Airtable, Baserow에는 없습니다. 모든 뷰 전환과 drag-drop이 서버 진실원 동기화 위에서 실시간으로 돕니다.
 
-이 표 안에서 가장 만족스러웠던 두 가지를 짚자면, outbound 웹훅을 *ApplicationEvent로 디커플링*해 둔 부분과 *Diff baseline picker가 별도 snapshot 인프라 없이 inverse_payload의 backward replay만으로 동작*한다는 점입니다. 전자는 웹훅 모듈이 발행자 모듈을 정적으로 의존하기 시작하면 Spring Modulith 모듈 경계 테스트가 깨지는데, ApplicationEvent를 한 단계 끼워 넣으면 listener가 공급자 모듈을 전혀 몰라도 동작해서 경계가 그대로 유지됩니다. 후자는 같은 자료(멱등 로그)를 *undo*와 *Diff* 두 기능이 동시에 재사용하는 합리화로, 새로 짤 인프라가 한 줄도 없이 기능 하나가 더 추가된 셈이 됐습니다.
+서버에 저장되는 undo도 넣었습니다. Cmd+Z가 새로고침 뒤에도 120분 안에는 동작하고, 탭 단위로 격리되며 30초 또는 20개 op 단위로 묶입니다. 여기서 가장 만족스러웠던 건 Diff baseline picker가 별도 snapshot 인프라 없이 돌아간다는 점입니다. 같은 멱등 로그의 inverse_payload를 거꾸로 replay하면 되기 때문에, undo와 Diff 두 기능이 한 자료를 나눠 씁니다. 새로 짤 인프라가 한 줄도 없이 기능이 하나 더 생긴 셈입니다.
+
+나머지는 코멘트와 @멘션, 공유 링크, outbound와 inbound 웹훅, Discord 슬래시 커맨드, Stripe 결제, 프로젝트 전체 검색, 감사 로그, 그리고 CSV와 C# struct로 떨어지는 게임 엔진 export입니다.
+
+이 중 outbound 웹훅은 ApplicationEvent로 디커플링했습니다. 웹훅 모듈이 발행자 모듈을 정적으로 의존하기 시작하면 Spring Modulith 모듈 경계 테스트가 깨지는데, 이벤트를 한 단계 끼워 넣으면 listener가 공급자 모듈을 전혀 몰라도 동작해서 경계가 유지됩니다.
 
 ---
 
 ## 6. 실패와 교훈
 
-### 1. 5종의 silent failure: `catch (RuntimeException)` 함정
-
-초기 인증 작업하면서 다섯 번 silent failure를 만났습니다.
+초기 인증 작업에서 다섯 번 silent failure를 만났습니다.
 
 | 함정 | 증상 | 원인 |
 |------|------|------|
-| Spring Boot 4 자동설정 모듈 분리 | 배포 성공 / health 200 / `flyway_schema_history` 테이블 부재 | `flyway-core`만 있고 `spring-boot-starter-flyway`가 빠져서 자동설정이 발동 안 함 |
-| 결정 문서 vs 런타임 함수명 불일치 | `IllegalArgumentException ... function gen_random_uuidv7() does not exist` | 결정 문서 작성 시점이 PostgreSQL 18 RC 단계였고, GA의 실제 이름은 `uuidv7()` |
-| Tomcat 11의 RFC 6265 strict cookie | OAuth 로그인 후 catch-all `error=login_failed`로 빠짐 | `Cookie.setDomain(".balruno.com")`의 leading dot을 [Tomcat 11의 `Rfc6265CookieProcessor`가 reject](https://docs.spring.io/spring-framework/issues/23776) |
-| Hibernate `@UuidGenerator(style=TIME)` | 운영 row의 UUID 16진수에서 버전 자리가 `1`(UUIDv1) | [`Style.TIME`의 내부 구현이 RFC 4122 v1 시절 명명 그대로](https://thorben-janssen.com/generate-uuids-primary-keys-hibernate/). PostgreSQL의 `DEFAULT uuidv7()`이 fire되지 않음 |
-| docker-compose `env_file` 권한 | `open /opt/balruno/backend/.env: permission denied` | Ansible이 `0600 root:root`로 렌더 → SSH 사용자 `rocky`(non-root)로 docker compose CLI 실행. *데몬은 root지만 CLI는 사용자 권한* |
+| Spring Boot 4 자동설정 모듈 분리 | 배포 성공, health 200, `flyway_schema_history` 부재 | `flyway-core`만 있고 `spring-boot-starter-flyway`가 빠져 자동설정 미발동 |
+| 결정 문서와 런타임 함수명 불일치 | `function gen_random_uuidv7() does not exist` | 문서 작성 시점이 PostgreSQL 18 RC였고 GA의 실제 이름은 `uuidv7()` |
+| Tomcat 11의 RFC 6265 strict cookie | OAuth 로그인 후 `error=login_failed`로 빠짐 | `setDomain(".balruno.com")`의 leading dot을 `Rfc6265CookieProcessor`가 거부 |
+| Hibernate `@UuidGenerator(style=TIME)` | 운영 row UUID의 버전 자리가 `1` | `Style.TIME`이 RFC 4122 v1 시절 명명 그대로라 `DEFAULT uuidv7()`이 발동 안 함 |
+| docker-compose `env_file` 권한 | `.env: permission denied` | Ansible이 `0600 root:root`로 렌더, CLI는 non-root 사용자 권한 |
 
-**교훈**: catch-all로 `RuntimeException`을 swallow한 게 함정 3 발견을 *2시간 지연*시켰습니다. logger 한 줄을 추가하고 다음 시도에서 즉시 root cause를 잡았고, *모든 catch에 stack trace 로깅이 self-host SaaS의 baseline*이라는 결론이 됐습니다. 그 다음이 *실제 fix*. 순서를 거꾸로 하면 fix 시도 자체가 가설 사격이 돼서 비용이 폭발합니다.
+가장 뼈아팠던 건 세 번째입니다. catch-all로 `RuntimeException`을 삼킨 탓에 원인 발견이 두 시간 늦어졌습니다. logger 한 줄을 넣자 다음 시도에서 바로 잡혔습니다. 모든 catch에 stack trace를 남기는 게 먼저고 실제 수정은 그다음이라는 순서를 여기서 배웠습니다. 순서를 뒤집으면 수정 시도 자체가 가설 사격이 돼서 비용이 폭발합니다.
 
-### 2. abstraction의 underlying을 한 번씩 직접 보자
+다섯 중 셋은 추상화가 아래 동작을 가린 패턴이었습니다. 자동설정 imports 파일을 한 번 읽고, 운영 row의 16진수를 한 번 보고, 파일 권한을 한 번 `ls` 하는 데 5분이면 됩니다. 새 스택을 도입할 때 그 5분을 쓰면 이런 실패가 사라집니다.
 
-함정 1, 4, 5는 모두 *abstraction이 underlying behavior를 가린* 패턴이었습니다. autoconfig 모듈 분리, annotation 이름, docker compose 단어 모두 abstraction 계층에서는 동작이 안 보이는 함정입니다. 새 stack 도입 시점에 자동설정 imports 파일 한 번 읽기, 운영 row의 16진수 한 번 보기, 파일 권한 한 번 `ls`, 이렇게 5분만 투자하면 silent failure가 0이 됩니다.
+`gen_random_uuidv7()`은 결정 문서를 쓸 때의 정직한 추측이었습니다. `\df *uuid*` 한 번이면 첫 배포에서 바로 드러났을 텐데, 결정 문서가 spec이라는 이유로 검증을 건너뛴 게 원인이었습니다. 모든 결정은 운영과 한 번은 대조되어야 합니다.
 
-### 3. 결정 문서 → 검증 → 정정 사이클
-
-`gen_random_uuidv7()`는 결정 문서 작성 시점에 정직한 추측이었습니다(`gen_random_uuid()` v4 패턴을 따라 짐). 운영 첫 배포 후 `\df *uuid*` 한 번이면 즉시 발견됐을 텐데, *결정 문서가 spec source라 spec만 보고 검증을 안 한 게* 원인이었습니다. 모든 결정이 운영과 한 번은 cross-check되어야 하고, *결정을 바꾸는 행위 자체*가 spec-driven 개발의 정석이라는 게 교훈이었습니다.
-
-### 4. 외부 health probe 도구 교체: 측정 후 단순화
-
-처음에는 status 머신에 Uptime Kuma를 채택했습니다(UptimeRobot 무료 플랜의 상업적 이용 제한 우회 목적). 며칠 뒤 *blackbox_exporter(Prometheus 진영)가 같은 책임을 native로 수행한다*는 것을 발견하고 drop했습니다. Grafana 스택이 이미 깔리는데 Uptime Kuma는 redundant였습니다. 외부 vantage가 진짜 필요한 영역(monitor 자체가 죽었을 때)은 Cloudflare Workers cron 한 줄로 분리했습니다. *결정을 바꾸는 행위 자체*가 시그널입니다. 처음부터 정답일 필요는 없고, 측정 후 단순화한 흔적이 더 강한 신호라고 봤습니다.
-
-### 5. 약 80,000 라인의 로컬 모드 코드 정리
-
-시트와 문서를 같은 방식으로 다루지 않고, 시트는 서버 기준 구조로 정리한 게 큰 전환점이었습니다. 단계별 정리로 *시트 영역 약 80,000 라인의 로컬 모드 코드*를 들어내고 시트 도메인을 100% 서버 진실원으로 옮겼습니다. *기능을 추가한 commit*보다 *기능을 정리한 commit*이 prod CI green을 유지한 사실이 더 강한 신호입니다.
+결정을 바꾼 흔적도 남겼습니다. status 머신에 Uptime Kuma를 올렸다가 blackbox_exporter가 같은 책임을 native로 수행한다는 걸 알고 걷어냈습니다. Grafana 스택이 이미 깔리는데 중복이었습니다. 처음부터 정답일 필요는 없고, 측정한 뒤 단순화한 흔적이 더 강한 신호라고 봤습니다. 기능을 추가한 커밋보다 약 80,000라인을 걷어낸 커밋이 CI green을 유지한 사실도 같은 종류의 신호입니다.
 
 ---
 
-## 최종 아키텍처 + 핵심 수치
+## 매니지드를 골랐다면 들었을 비용
 
-### 인프라 + 비용
+paying user 0 시점 기준으로, 처음부터 매니지드를 골랐다면 들었을 비용입니다. 실제로 결제했다가 멈춘 게 아니라서 절감보다 회피 비용(avoided cost)이 정확한 표현입니다.
 
-| 항목 | 매니지드 가설 | OCI 셀프 실측 | 예상 회피 비용(avoided cost) |
+| 항목 | 매니지드 가설 | OCI 셀프 실측 | 연간 회피 비용 |
 |------|----------------|----------------|------|
-| 인프라 통합(Vercel + Fly.io + Aurora + Atlas + Datadog) | $155/월 | **$0/월** | **연 약 $1,860** |
-| 인증(Auth0 Pro) | $240/월 | $0(OAuth + 자체 발급 JWT) | **연 약 $2,880** |
-| 인증(Clerk Pro + 100 MAU) | $27/월 | $0 | 연 약 $324 |
-| 모니터링(Datadog Pro 4 host) | $60/월 | $0(Grafana 셀프) | **연 약 $720** |
-
-> 매니지드를 실제로 결제했다가 멈춘 비용이 아니라 *처음부터 매니지드를 골랐다면 들었을 비용*이라, "절감"보다 *avoided cost* 표현이 더 정확합니다.
-
-### DB
-
-| 항목 | 결과 | 측정 조건 |
-|------|------|-----------|
-| 시트 GET p95(50,000건) | **PG 16ms / MySQL 25ms / Mongo 45ms** | k6 50 가상 사용자 × 5분, OCI ARM 12GB |
-| Name UPDATE p95 | **Mongo 37ms / PG 40ms / MySQL 63ms** | 같은 조건 |
-| GIN 인덱스 효과 | p95 **280ms → 65ms (4.3배)** | 인덱스 ON/OFF 직접 비교 |
-| `jsonb_set` patch p95 | **8ms** | 트랜잭션 단위 측정 |
-
-### 가상 스레드 + JVM
-
-| 메트릭 | 가상 스레드 OFF | 가상 스레드 ON | 변화 |
-|--------|----------------|----------------|------|
-| 서버 요청 p95 | 320ms | **180ms** | -44% |
-| 서버 요청 p99 | 450ms | **240ms** | -47% |
-| heap | 380MB | **220MB** | -42% |
-| 플랫폼 스레드 수(관측) | 약 200 | carrier 약 8 | – |
-
-> 이 표는 WebSocket 메시지 왕복 시간이라기보다, 같은 셀 업데이트 부하 시나리오에서 함께 본 서버 요청 지연과 JVM 상태를 정리한 것입니다.
-
-### 동기화
-
-| 항목 | 결과 |
-|------|------|
-| WebSocket 엔드포인트 | `/ws/projects/{projectId}` 단일 통합(시트 셀 + 시트 트리 + 문서 트리 3 영역) |
-| 충돌 감지 | 서버가 현재 버전을 보고, 늦게 도착한 변경은 거절 + 클라 rollback |
-| 재전송 중복 방지 | 클라이언트 메시지 ID를 기억해 같은 요청이 다시 와도 한 번만 반영 |
-| cycle 방지 | 애플리케이션 BFS, 400 CYCLE_DETECTED |
-| cascade delete | 애플리케이션 재귀 + `documents.deleted_at`(30일 hard delete cron) |
-| 문서 본문 | yjs 기반 자동 머지(Hocuspocus Node sidecar + `documents.binary` BYTEA) |
-
-### 무중단 배포
-
-| 항목 | 결과 |
-|------|------|
-| 옛 in-place 패턴 | 매 배포 30~60초 502 윈도 |
-| nginx blue/green 첫 cutover | **≤21초**(옛 단일 → 새 dual slot 일회성 이행) |
-| nginx blue/green 두 번째 cutover부터 | **0초**(prod 실측, 10초 폴링 정확도 안에서 502 윈도 없음) |
-| nginx `backup` directive 자동 fail-over | 명시적 swap 없이도 부분 무중단 보너스 |
-| 마이그레이션 정책 | expand-contract 강제, 파괴적 변경은 `[destructive]` 태그 + 별도 슬롯 |
-
-### 코드 베이스
-
-| 항목 | 결과 |
-|------|------|
-| 시트 도메인 yjs 의존성 | 0(서버 진실원 100%) |
-| 로컬 모드 정리 | 약 -80,000 라인 |
-| Spring Modulith 모듈 경계 테스트 | green |
+| 인프라 통합(Vercel + Fly.io + Aurora + Atlas + Datadog) | $155/월 | $0/월 | 약 $1,860 |
+| 인증(Auth0 Pro) | $240/월 | $0(OAuth + 자체 발급 JWT) | 약 $2,880 |
+| 모니터링(Datadog Pro 4 host) | $60/월 | $0(Grafana 셀프) | 약 $720 |
 
 ### 사용자/부하 트리거 후에 추가할 것들
 
@@ -652,4 +431,4 @@ sealed interface Decision {
 
 Balruno는 발명이라기보다 조합으로 풀린 프로젝트였습니다. Baserow의 셀 이벤트 + Linear의 트리 op log + Outline의 문서 본문 yjs / Hocuspocus + Notion의 PostgreSQL JSONB block 모델 + Spring Security 7의 OAuth 2.1 default + OCI Always Free + Cloudflare R2, 각각이 5년 이상 검증된 OSS 다수파였고, 1인 OSS의 안전한 길은 *각 도메인 표준을 존중하면서, 도메인 차이가 드러나는 한 점에서만 분기*하는 것이었습니다.
 
-그 한 점이 *시트가 Baserow 계열이다*라는 인식이었고, 이 분기 위에서 약 80,000 라인 로컬 모드 정리, 시트 도메인 100% 서버 진실원 전환, 3 영역 통합 동기화, 무중단 배포, 셀프 호스트 인프라가 차례로 풀렸습니다. paying user 0 시점 기준으로 매니지드 통합을 골랐다면 들었을 *예상 회피 비용* 이 연 약 $5,460(인프라 약 $1,860 + 인증 약 $2,880 + 모니터링 약 $720), 거기에 데이터 통제권과 운영 자동화 경험이 같이 따라왔습니다. 모든 결정은 70여 개의 결정 문서로 추적할 수 있게 남겨뒀습니다.
+그 한 점이 시트가 Baserow 계열이라는 인식이었고, 이 분기 위에서 로컬 모드 정리와 시트 도메인의 서버 진실원 전환, 3영역 통합 동기화, 무중단 배포, 셀프 호스트 인프라가 차례로 풀렸습니다. 위 표를 합치면 연 약 $5,460을 피한 셈이고, 거기에 데이터 통제권과 운영 자동화 경험이 같이 따라왔습니다. 모든 결정은 70여 개의 결정 문서로 추적할 수 있게 남겨뒀습니다.
