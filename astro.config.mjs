@@ -123,6 +123,12 @@ export default defineConfig({
     '/blog/project/tymee/orphan-file-cleanup': `${base || ''}/blog/project/tymee/tymee-retrospective`,
     '/blog/project/tymee/spring-boot4-api-versioning': `${base || ''}/blog/project/tymee/tymee-retrospective`,
     '/blog/project/tymee/spring-boot4-swagger-conflict': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    // 발루노 6편 -> balruno-retrospective 단일 개발기로 병합
+    '/blog/project/balruno/indie-balance-tool-market-research': `${base || ''}/blog/project/balruno/balruno-retrospective`,
+    '/blog/project/balruno/game-design-tool-intro': `${base || ''}/blog/project/balruno/balruno-retrospective`,
+    '/blog/project/balruno/balruno-mvp-release': `${base || ''}/blog/project/balruno/balruno-retrospective`,
+    '/blog/project/balruno/table-input-ux': `${base || ''}/blog/project/balruno/balruno-retrospective`,
+    '/blog/project/balruno/user-feedback': `${base || ''}/blog/project/balruno/balruno-retrospective`,
   },
   build: {
     concurrency: 1,
