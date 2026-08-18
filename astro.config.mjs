@@ -104,10 +104,25 @@ export default defineConfig({
   site: isProd ? 'https://dj258255.github.io' : 'http://localhost:4321',
   base: base || '/',
   output: 'static',
-  // 탐지 편(1편)을 회수 편에 합치면서 사라진 URL. 정적 빌드에서는
+  // 여러 편을 한 편으로 합치면서 사라진 URL. 정적 빌드에서는
   // meta refresh 페이지가 생성돼 기존 링크가 안 깨진다.
   redirects: {
     '/blog/incident/currency-anomaly-detection': `${base || ''}/blog/incident/currency-reclaim`,
+    // 타이미 15편 -> tymee-retrospective 단일 개발기로 병합
+    '/blog/project/tymee/tymee-introduction': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/tymee-architecture-selection': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/gradle-multimodule-dependency': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/spring-boot-config': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/exception-handling-design': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/snowflake-id': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/flyway-db-migration': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/code-quality-management': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/current-user-annotation': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/mapstruct-usage': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/mobile-jwt-auth': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/orphan-file-cleanup': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/spring-boot4-api-versioning': `${base || ''}/blog/project/tymee/tymee-retrospective`,
+    '/blog/project/tymee/spring-boot4-swagger-conflict': `${base || ''}/blog/project/tymee/tymee-retrospective`,
   },
   build: {
     concurrency: 1,
