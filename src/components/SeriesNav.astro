@@ -24,7 +24,9 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
 const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
 ---
 
-{seriesPosts.length > 0 && (
+{/* `series` guards posts with no series at all (undefined would match every seriesless post).
+    `> 1` hides the nav on a series that has been merged down to a single post. */}
+{series && seriesPosts.length > 1 && (
   <aside class="series-nav">
     <div class="series-nav-head">
       <div class="series-nav-titlewrap">

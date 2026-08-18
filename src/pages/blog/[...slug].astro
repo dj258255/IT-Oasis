@@ -141,9 +141,10 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
         <SeriesNav currentPostId={post.id} series={post.data.series} />
       )}
 
-      <!-- Inline TOC (mobile only when sidebar exists) -->
+      <!-- Inline TOC (mobile only when sidebar exists).
+           Collapsed by default on long posts, which would otherwise open with a wall of 100+ links. -->
       {hasToc && (
-        <details class="xl:hidden glass-card rounded-2xl p-6 mb-8 group" open>
+        <details class="xl:hidden glass-card rounded-2xl p-6 mb-8 group" open={tocHeadings.length <= 20}>
           <summary class="flex items-center justify-between cursor-pointer text-[14px] font-semibold select-none">
             <div class="flex items-center gap-2">
               <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
