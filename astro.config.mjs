@@ -143,6 +143,15 @@ export default defineConfig({
     '/blog/project/joying/websocket-message-loss': `${base || ''}/blog/project/joying/joying-retrospective`,
     '/blog/project/joying/server-scaling-troubleshooting': `${base || ''}/blog/project/joying/joying-retrospective`,
     '/blog/project/joying/redis-security-issue': `${base || ''}/blog/project/joying/joying-retrospective`,
+    // 오락가락 9편 -> orakgarak-retrospective 단일 개발기로 병합
+    '/blog/project/orakgarak/prometheus-grafana-loki-monitoring': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/spring-security-multi-filterchain': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/presigned-url-eventbridge-upload': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/kafka-event-driven-pipeline': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/ts-gpu-oom-concurrent-requests': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/ts-kafka-partition-imbalance': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/ts-loki-stacktrace-parsing': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    '/blog/project/orakgarak/ts-prometheus-alert-noise': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
   },
   build: {
     concurrency: 1,
