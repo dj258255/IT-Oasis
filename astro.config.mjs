@@ -152,6 +152,15 @@ export default defineConfig({
     '/blog/project/orakgarak/ts-kafka-partition-imbalance': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
     '/blog/project/orakgarak/ts-loki-stacktrace-parsing': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
     '/blog/project/orakgarak/ts-prometheus-alert-noise': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    // EduMeet 9편 -> edumeet-retrospective 단일 개발기로 병합
+    '/blog/project/edumeet/architecture-evolution': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/onetomany-join-table': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/lazy-loading-no-session': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/n-plus-1-issue': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/file-move-error': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/s3-upload-optimization': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/unit-test-db-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/edge-case-issues': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
   },
   build: {
     concurrency: 1,
