@@ -161,6 +161,12 @@ export default defineConfig({
     '/blog/project/edumeet/s3-upload-optimization': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/unit-test-db-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/edge-case-issues': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
+    '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
+    '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
+    '/blog/project/gwanmun/gwanmun-3-ledger-and-resilience': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
+    '/blog/project/gwanmun/gwanmun-4-audit-and-load': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
+    '/blog/project/gwanmun/gwanmun-5-idempotency-reconciliation': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
   },
   build: {
     concurrency: 1,
