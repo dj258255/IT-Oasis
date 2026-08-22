@@ -1,6 +1,6 @@
 {
   "title": "에듀밋",
-  "description": "청각장애 학습자를 위해 실시간 음성을 자막으로 바꾸는 온라인 교육 플랫폼 — 접근성을 코어 기능으로 설계한 6인 팀 협업 프로젝트.",
+  "description": "청각장애 학습자를 위해 실시간 음성을 자막으로 바꾸는 온라인 교육 플랫폼 — 6인 팀 협업으로 만들고, 이후 개인 리팩토링으로 성능·장애·운영 기반을 측정 기반으로 다시 세웠습니다.",
   "image": "/uploads/project/EduMeet/EduMeetTitle.png",
   "tags": [
     "Java",
@@ -9,7 +9,17 @@
     "QueryDSL",
     "MySQL",
     "AWS S3",
-    "Docker"
+    "Docker",
+    "Redis",
+    "LiveKit",
+    "Flyway",
+    "GitHub Actions",
+    "Prometheus",
+    "Grafana",
+    "k6",
+    "Testcontainers",
+    "Toxiproxy",
+    "OCI"
   ],
   "category": "team",
   "date": "2025-07-05",
