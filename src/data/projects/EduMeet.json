@@ -8,7 +8,7 @@
     "JPA",
     "QueryDSL",
     "MySQL",
-    "AWS S3",
+    "S3 / R2",
     "Docker",
     "Redis",
     "LiveKit",
@@ -19,7 +19,11 @@
     "k6",
     "Testcontainers",
     "Toxiproxy",
-    "OCI"
+    "OCI",
+    "HLS",
+    "WebRTC",
+    "Cloudflare R2",
+    "STOMP"
   ],
   "category": "team",
   "date": "2025-07-05",
