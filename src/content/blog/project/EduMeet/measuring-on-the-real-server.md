@@ -225,6 +225,40 @@ unconfined_u:object_r:var_t:s0              /var/www/edumeet      ← 막힘
 system_u:object_r:httpd_sys_content_t:s0    /usr/share/nginx/html ← 정상
 ```
 
+### 그리고 문서에 오류를 하나 남겼습니다
+
+인증서 갱신 절에 이렇게 적었습니다.
+
+> 90일 뒤 **브라우저에서는 만료인데** 서버에는 유효한 파일이 있는 상태가 된다.
+
+**틀렸습니다.** 나중에 발급자를 확인해 보고 알았습니다.
+
+```
+$ echo | openssl s_client -connect studywithtymee.com:443 \
+        -servername studywithtymee.com | openssl x509 -noout -issuer
+issuer= /C=US/O=Google Trust Services/CN=WE1
+```
+
+Let's Encrypt가 아닙니다. 프록시를 켜면 **TLS가 두 구간으로 끊깁니다.**
+
+```
+브라우저 ──TLS①──▶ Cloudflare ──TLS②──▶ 원본 nginx
+          CF 엣지 인증서          Let's Encrypt
+```
+
+브라우저는 **원본 인증서를 볼 일이 없습니다.** 그러니 원본 인증서가 만료돼도
+브라우저 경고는 안 뜹니다. `전체(엄격)`에서 CF가 원본 검증에 실패해
+**526 Invalid SSL Certificate**가 뜹니다.
+
+이게 왜 나쁜 오류냐면, **문서를 믿고 브라우저 인증서 창부터 열면 멀쩡해 보입니다.**
+증상과 원인 사이가 멀어져서 진단이 늦어집니다.
+
+같은 이유로 하나를 더 적었습니다 — **`유연`·`전체`·`전체(엄격)` 셋은 브라우저에서
+구분되지 않습니다.** 자물쇠가 똑같이 보이는데 원본 구간은 각각
+평문·무검증·검증됨입니다.
+
+> 눈으로 구분할 수 없다는 것이, 이 설정이 잘못된 채로 오래 남는 이유입니다.
+
 ---
 
 ## 배운 것
