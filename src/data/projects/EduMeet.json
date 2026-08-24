@@ -29,7 +29,8 @@
     "Monorepo",
     "nginx",
     "Cloudflare",
-    "Contract Testing"
+    "Contract Testing",
+    "Vitest"
   ],
   "category": "team",
   "date": "2025-07-05",
