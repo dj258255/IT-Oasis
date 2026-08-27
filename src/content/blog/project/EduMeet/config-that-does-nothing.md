@@ -1,5 +1,5 @@
 ---
-title: '설정은 있는데 동작하지 않습니다 — 그리고 실행할 수 없는 코드를 테스트하는 법'
+title: '설정은 있는데 동작하지 않습니다'
 description: >-
   permitAll 목록, @Transactional, actuator exposure.include. 전부 있었지만
   전부 동작하지 않았습니다. 리팩토링 중 찾은 "있는데 무력한 설정" 여섯 가지와,
@@ -31,12 +31,12 @@ seriesOrder: 3
 
 - **문제**: 리팩토링 중 같은 모양을 여섯 번 만났습니다. **설정이 없어서가 아니라, 있는데 아무 일도 하지 않아서** 생긴 문제입니다. 읽으면 맞는 코드로 보여 코드 리뷰로는 잘 안 잡힙니다.
 - **여섯 건**
-    - `permitAll` 15줄 — 마지막 `/api/v1/**` 한 줄이 전부 무효화. **API 전체가 인증 없이 열려 있었음**
-    - 컨트롤러 400 분기 — 서비스가 모든 예외를 `RuntimeException` 으로 재포장 → **도달 불가능**
-    - `@Transactional` — 같은 빈 안 `this.method()` 호출 → 프록시를 안 거쳐 **무시**
-    - `exposure.include: prometheus` — 레지스트리 의존성 없음 → **404**
-    - `anyRequest().authenticated()` — `/error` 까지 걸려 **404·500이 전부 401로 둔갑**
-    - `HEALTHCHECK :8080` — 관리 포트 분리로 경로가 옮겨감 → **영영 unhealthy**
+    - `permitAll` 15줄: 마지막 `/api/v1/**` 한 줄이 전부 무효화. **API 전체가 인증 없이 열려 있었음**
+    - 컨트롤러 400 분기: 서비스가 모든 예외를 `RuntimeException` 으로 재포장 → **도달 불가능**
+    - `@Transactional`: 같은 빈 안 `this.method()` 호출 → 프록시를 안 거쳐 **무시**
+    - `exposure.include: prometheus`: 레지스트리 의존성 없음 → **404**
+    - `anyRequest().authenticated()`: `/error` 까지 걸려 **404·500이 전부 401로 둔갑**
+    - `HEALTHCHECK :8080`: 관리 포트 분리로 경로가 옮겨감 → **영영 unhealthy**
 - **테스트가 왜 못 잡았나**: `webAppContextSetup` 으로 만든 MockMvc 는 **시큐리티 필터 체인을 타지 않습니다.** `@AutoConfigureMockMvc` 로 필터를 실제로 태우는 테스트를 따로 만들어 고정했습니다.
 - **반성**: 4·5번을 찾는 동안 **그럴듯한 추측을 세 번 연속 틀렸습니다.** 두 번째 실패에서 멈추고 로그를 봤어야 했습니다.
 - **같은 모양이 기능 단위로도 나왔습니다**: `SessionType.isAudioOnly()` 의 참조가 **테스트뿐**이었고, 방송 세션을 만들 경로 자체가 없어 **기능 네 개가 통째로 도달 불가**였습니다.
@@ -156,11 +156,11 @@ management.endpoints.web.exposure.include: health, info, metrics, prometheus
 
 원인을 찾는 과정이 이 글에서 제일 배운 부분입니다.
 
-**첫 번째 추측** — "관리 포트를 분리했으니 `ManagementWebSecurityAutoConfiguration`이 자기 필터 체인으로 막는 거다." 그럴듯했습니다. health만 통과하고 나머지가 401인 건 딱 그 동작이거든요. 해당 자동 구성을 제외해봤습니다. **변화 없음.**
+**첫 번째 추측.** "관리 포트를 분리했으니 `ManagementWebSecurityAutoConfiguration`이 자기 필터 체인으로 막는 거다." 그럴듯했습니다. health만 통과하고 나머지가 401인 건 딱 그 동작이거든요. 해당 자동 구성을 제외해봤습니다. **변화 없음.**
 
-**두 번째 추측** — "`EndpointRequest.toAnyEndpoint()`가 자식 컨텍스트라 매칭에 실패한다." 경로 매칭으로 바꿨습니다. **변화 없음.**
+**두 번째 추측.** "`EndpointRequest.toAnyEndpoint()`가 자식 컨텍스트라 매칭에 실패한다." 경로 매칭으로 바꿨습니다. **변화 없음.**
 
-**세 번째 추측** — "`requestMatchers(String)`이 MVC 핸들러 매핑에 의존해서 그렇다." URI로 직접 판단하는 매처로 바꿨습니다. **변화 없음.**
+**세 번째 추측.** "`requestMatchers(String)`이 MVC 핸들러 매핑에 의존해서 그렇다." URI로 직접 판단하는 매처로 바꿨습니다. **변화 없음.**
 
 세 번 틀리고 나서 추측을 멈추고 로그를 켰습니다.
 
@@ -192,7 +192,7 @@ Securing GET /error                  ← 그 다음 /error 로 갔다
 
 `management.prometheus.metrics.export.enabled: true`를 **명시해야** 레지스트리가 생성됐습니다.
 
-찾기 어려웠던 결정적 이유는 이겁니다 — **`/actuator/metrics`는 200이었습니다.** "액추에이터는 되는데 prometheus만 안 된다"로 보이니 보안 설정만 계속 뒤졌습니다.
+찾기 어려웠던 결정적 이유는 따로 있습니다. **`/actuator/metrics`는 200이었습니다.** "액추에이터는 되는데 prometheus만 안 된다"로 보이니 보안 설정만 계속 뒤졌습니다.
 
 ## 7. 덤: 관리 포트를 분리하면 헬스체크가 깨집니다
 
@@ -230,7 +230,7 @@ boolean separated = managementPort != serverPort;    // ← 틀림
 if (ManagementPortType.get(environment) == ManagementPortType.DIFFERENT) { ... }
 ```
 
-## 배운 것
+## 여섯 건에서 배운 것
 
 **여섯 개 전부 "설정이 없어서"가 아니라 "설정이 있는데 무력해서" 생긴 문제였습니다.**
 
@@ -245,12 +245,7 @@ if (ManagementPortType.get(environment) == ManagementPortType.DIFFERENT) { ... }
 
 그래서 전부 테스트로 고정했습니다. **"고쳤다"는 주장이 아니라 "회귀하면 깨진다"는 장치로요.** 설정 파일을 읽어서 확인할 수 있는 문제가 아니었으니까요.
 
-그리고 디버깅에 대해 하나 — **세 번 연속 틀린 추측을 하고 나서야 로그를 켰습니다.** 각 추측은 그럴듯했고, 코드를 고치는 데 시간이 들었고, 전부 헛수고였습니다. 두 번째 실패에서 멈췄어야 했습니다.
-
----
-
-- PR: [#31 AI 연동 재설계](https://github.com/dj258255/edumeet/pull/31) · [#32 관측 기반](https://github.com/dj258255/edumeet/pull/32)
-- 관측 설계 기록: [`docs/ops/04-observability.md`](https://github.com/dj258255/edumeet/blob/master/docs/ops/04-observability.md)
+디버깅에 대해서도 하나 남습니다. **세 번 연속 틀린 추측을 하고 나서야 로그를 켰습니다.** 각 추측은 그럴듯했고, 코드를 고치는 데 시간이 들었고, 전부 헛수고였습니다. 두 번째 실패에서 멈췄어야 했습니다.
 
 ---
 
@@ -284,7 +279,7 @@ assertThat(sources).containsExactly("microphone");
 
 서비스가 무엇을 **의도했는지**가 아니라 **SFU에게 실제로 무엇을 말했는지**를 봐야 한다고 생각했습니다. `canPublish` 필드만 확인하는 테스트였다면 이 버그는 그대로 통과했을 겁니다.
 
-**비디오 세션에는 일부러 넣지 않았습니다.** `INTERACTIVE`에도 소스 목록을 명시할 수 있었지만 하지 않았습니다 — **표현되는 정책이 없기 때문입니다.** 오늘의 소스 목록을 얼려서, LiveKit이 나중에 소스를 추가하면 화상 세션이 조용히 막히게 만들 뿐입니다. 그래서 테스트는 이렇게 씁니다.
+**비디오 세션에는 일부러 넣지 않았습니다.** `INTERACTIVE`에도 소스 목록을 명시할 수 있었지만 하지 않았습니다. **표현되는 정책이 없기 때문입니다.** 오늘의 소스 목록을 얼려서, LiveKit이 나중에 소스를 추가하면 화상 세션이 조용히 막히게 만들 뿐입니다. 그래서 테스트는 이렇게 씁니다.
 
 ```java
 assertThat(video.has("canPublishSources")).isFalse();
@@ -321,7 +316,7 @@ HLS는 특히 고약합니다. `INTERACTIVE`를 **명시적으로 거부하도�
 > 테스트가 부품을 검증했지, 부품이 연결되어 있는지는 검증하지 않았습니다.
 > 테스트가 픽스처를 직접 만들면, 그 픽스처가 **실제로 만들어질 수 있는지는 영원히 안 물어보게 됩니다.**
 
-고치면서 하나 정했습니다. **방송은 클래스 생성자만 엽니다.** 권한 문제이기 이전에 자원 문제입니다 — 방송은 egress 인스턴스를 점유하고(인스턴스 하나가 방 하나), 클래스를 대표해 외부로 나갑니다. 참가자가 열 수 있으면 한 명이 인스턴스를 통째로 점유해 다른 방송을 전부 막을 수 있습니다. **화상강의는 참가자도 엽니다.** 스터디 모임을 막을 이유가 없습니다.
+고치면서 하나 정했습니다. **방송은 클래스 생성자만 엽니다.** 권한 문제이기 이전에 자원 문제입니다. 방송은 egress 인스턴스를 점유하고(인스턴스 하나가 방 하나), 클래스를 대표해 외부로 나갑니다. 참가자가 열 수 있으면 한 명이 인스턴스를 통째로 점유해 다른 방송을 전부 막을 수 있습니다. **화상강의는 참가자도 엽니다.** 스터디 모임을 막을 이유가 없습니다.
 
 ## 실행할 수 없는 코드를 테스트하는 법
 
@@ -334,3 +329,8 @@ HLS 송출은 LiveKit Egress로 합니다. 그런데 egress 인스턴스를 띄�
 다만 한계는 한계대로 적어 둡니다. **실제로 재생되는지, 지연이 몇 초인지는 재지 않았습니다.** egress 인스턴스를 붙여야 잽니다.
 
 그리고 배운 것은 방법보다 순서 쪽이었습니다. 실행할 수 없는 코드도 테스트할 수 있지만, **그게 실행된 적 있는지는 별개의 질문**이고 이번엔 그 질문을 늦게 했습니다. 기능을 다 만들고 나서 *"그럼 이걸 어떻게 쓰지?"* 를 물어본 게 아니라 **만들기 전에 물었어야 했습니다.**
+
+---
+
+- PR: [#31 AI 연동 재설계](https://github.com/dj258255/edumeet/pull/31) · [#32 관측 기반](https://github.com/dj258255/edumeet/pull/32)
+- 관측 설계 기록: [`docs/ops/04-observability.md`](https://github.com/dj258255/edumeet/blob/master/docs/ops/04-observability.md)
