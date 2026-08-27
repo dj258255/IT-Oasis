@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="620" fill="#000000"/>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">같은 실시간인데 요구가 달라 프로토콜을 갈랐다</text>
+  <text x="56" y="114" font-size="28.7" fill="#8B95A1">세 갈래가 한 서버에 얹혀 있다. OCI Ampere A1 단일 노드 (aarch64, 2 OCPU / 12GB)</text>
+
+  <g text-anchor="middle">
+    <rect x="56" y="164" width="410" height="250" rx="20" fill="#15181E" stroke="#2A2F38"/>
+    <text x="261" y="216" font-size="34" font-weight="700" fill="#FFFFFF">화상채팅</text>
+    <text x="261" y="262" font-size="26" fill="#8B95A1">먼저 지키는 것</text>
+    <text x="261" y="298" font-size="30" font-weight="700" fill="#F5A524">양방향 지연</text>
+    <rect x="96" y="326" width="330" height="46" rx="10" fill="#1F2530"/>
+    <text x="261" y="357" font-size="26" fill="#C4C9D0">WebRTC SFU (LiveKit)</text>
+
+    <rect x="495" y="164" width="410" height="250" rx="20" fill="#F2F4F6"/>
+    <text x="700" y="216" font-size="34" font-weight="700" fill="#191F28">라이브 · 오디오 방송</text>
+    <text x="700" y="262" font-size="26" fill="#4E5968">먼저 지키는 것</text>
+    <text x="700" y="298" font-size="30" font-weight="700" fill="#0B7A4B">다수 배포</text>
+    <rect x="535" y="326" width="330" height="46" rx="10" fill="#E4E8EC"/>
+    <text x="700" y="357" font-size="26" fill="#191F28">직접 만든 HLS</text>
+
+    <rect x="934" y="164" width="410" height="250" rx="20" fill="#15181E" stroke="#2A2F38"/>
+    <text x="1139" y="216" font-size="34" font-weight="700" fill="#FFFFFF">채팅</text>
+    <text x="1139" y="262" font-size="26" fill="#8B95A1">먼저 지키는 것</text>
+    <text x="1139" y="298" font-size="30" font-weight="700" fill="#3182F6">순서</text>
+    <rect x="974" y="326" width="330" height="46" rx="10" fill="#1F2530"/>
+    <text x="1139" y="357" font-size="26" fill="#C4C9D0">STOMP / WebSocket</text>
+  </g>
+
+  <rect x="56" y="446" width="1288" height="90" rx="16" fill="#15181E" stroke="#2A2F38"/>
+  <text x="84" y="484" font-size="28" font-weight="700" fill="#0B7A4B">AI 경계는 파일 하나다 · contracts/internal-api.json</text>
+  <text x="84" y="518" font-size="25" fill="#C4C9D0">STT 는 오디오 시간 과금, LLM 은 토큰 과금이라 갈랐다. Java · Python · MCP 세 소비자의 테스트가 그 파일을 함께 읽는다</text>
+
+  <text x="700" y="586" font-size="26" fill="#8B95A1" text-anchor="middle">미디어를 WebSocket 에 태우면 방송이 밀릴 때 채팅도 같이 밀린다. 나누면 한쪽이 막혀도 다른 쪽은 산다</text>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="620" fill="#000000"/>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">검색이 "없다" 고 답했는데, 사실은 있었다</text>
+  <text x="56" y="114" font-size="28.7" fill="#8B95A1">정규화를 쓰는 쪽에만 걸어 둔 비대칭이, 읽는 쪽을 만들면서 드러났다</text>
+
+  <rect x="56" y="164" width="628" height="220" rx="20" fill="#15181E" stroke="#2A2F38"/>
+  <text x="84" y="208" font-size="28" font-weight="700" fill="#FFFFFF">쓰는 쪽 · 정규화가 걸려 있다</text>
+  <text x="84" y="258" font-size="26" fill="#C4C9D0">STT    "python 을 배웠습니다"</text>
+  <text x="84" y="298" font-size="26" fill="#8B95A1">           ↓  hot path 용어 사전</text>
+  <text x="84" y="340" font-size="26" fill="#C4C9D0">저장    "파이썬 을 배웠습니다"</text>
+
+  <rect x="716" y="164" width="628" height="220" rx="20" fill="#15181E" stroke="#F04452"/>
+  <text x="744" y="208" font-size="28" font-weight="700" fill="#FFFFFF">읽는 쪽 · 안 걸려 있었다</text>
+  <text x="744" y="258" font-size="26" fill="#C4C9D0">질의    "python"</text>
+  <text x="744" y="298" font-size="26" fill="#8B95A1">           ↓  사전을 안 지난다</text>
+  <text x="744" y="344" font-size="34" font-weight="800" fill="#F04452">결과    0건 · 오류 아님</text>
+
+  <rect x="56" y="416" width="1288" height="90" rx="16" fill="#F2F4F6"/>
+  <text x="84" y="454" font-size="28" font-weight="700" fill="#191F28">빈 결과는 "이 회의에서 파이썬 얘기를 안 했나 보다" 로 읽힌다</text>
+  <text x="84" y="488" font-size="25" fill="#4E5968">도구가 틀렸다는 신호가 어디에도 없다. 이 프로젝트에서 두 번째로 만난 침묵 실패다</text>
+
+  <text x="700" y="562" font-size="26" fill="#8B95A1" text-anchor="middle">사전을 어디에 둘 것인가는 배포 형태가 정했다. 복사하면 두 벌이 되고, 파이썬은 빌드 컨텍스트가 ./ai 다</text>
+  <text x="700" y="598" font-size="26" fill="#0B7A4B" text-anchor="middle">MCP stdio 서버는 컨테이너가 아니라 저장소 체크아웃 위에서 돌아서, 원본 모듈을 그대로 import 했다</text>
+</svg>
