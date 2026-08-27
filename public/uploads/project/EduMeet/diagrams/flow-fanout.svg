@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="620" fill="#000000"/>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">무너진 것은 연결이 아니라 지연이다</text>
+  <text x="56" y="114" font-size="28.7" fill="#8B95A1">발행자 4명 × 20 msg/s = 80 msg/s 로 고정하고 구독자만 늘렸다. 각 60초 · 부하 생성기는 서버 밖</text>
+
+  <text x="56" y="196" font-size="28" font-weight="700" fill="#C4C9D0">구독자 200명</text>
+  <rect x="330" y="170" width="62" height="40" rx="8" fill="#0B7A4B"/>
+  <text x="412" y="201" font-size="34" font-weight="800" fill="#0B7A4B">e2e p95 45ms</text>
+  <text x="760" y="201" font-size="25" fill="#8B95A1">수신 792,458건 · 연결오류 0</text>
+
+  <text x="56" y="278" font-size="28" font-weight="700" fill="#C4C9D0">구독자 500명</text>
+  <rect x="330" y="252" width="800" height="40" rx="8" fill="#F04452"/>
+  <text x="1150" y="283" font-size="34" font-weight="800" fill="#F04452">1,313ms</text>
+  <text x="330" y="326" font-size="25" fill="#8B95A1">수신 1,755,866건 · max 7,648ms · 연결오류 0 — 인원 2.5배에 지연 29배</text>
+
+  <rect x="56" y="364" width="1288" height="90" rx="16" fill="#F2F4F6"/>
+  <text x="84" y="402" font-size="28" font-weight="700" fill="#191F28">상한은 "몇 명이 붙나" 가 아니라 "몇 명까지 채팅답나" 로 결정된다</text>
+  <text x="84" y="436" font-size="25" fill="#4E5968">연결 수만 세면 500명도 "된다" 고 말하게 된다. p95 가 1.3초면 max 는 7.6초다</text>
+
+  <rect x="56" y="478" width="628" height="94" rx="16" fill="#15181E" stroke="#2A2F38"/>
+  <text x="84" y="514" font-size="27" font-weight="700" fill="#FFFFFF">fan-out · 아웃바운드가 N 에 비례</text>
+  <text x="84" y="548" font-size="25" fill="#C4C9D0">e2e 지연이 먼저 무너진다 (라이브 · 오디오 방송)</text>
+
+  <rect x="716" y="478" width="628" height="94" rx="16" fill="#15181E" stroke="#2A2F38"/>
+  <text x="744" y="514" font-size="27" font-weight="700" fill="#FFFFFF">대칭 · 아웃바운드가 N² 에 비례</text>
+  <text x="744" y="548" font-size="25" fill="#C4C9D0">연결 수립이 먼저 무너진다 (화상 수업)</text>
+</svg>

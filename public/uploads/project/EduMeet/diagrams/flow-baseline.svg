@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="620" fill="#000000"/>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">모델을 넣기 전에 비교 대상이 정당한지 봤다</text>
+  <text x="56" y="114" font-size="28.7" fill="#8B95A1">자막 조각 60 · 질의 30개(용어형 15 / 질문형 15) · k=5. 아래는 질문형 재현율</text>
+
+  <text x="56" y="192" font-size="26" font-weight="700" fill="#C4C9D0">문자열 전체 (기존)</text>
+  <rect x="400" y="166" width="8" height="36" rx="4" fill="#F04452"/>
+  <text x="428" y="194" font-size="32" font-weight="800" fill="#F04452">0%</text>
+  <text x="530" y="194" font-size="24" fill="#8B95A1">질문 형태는 무조건 0건이었다</text>
+
+  <text x="56" y="256" font-size="26" font-weight="700" fill="#C4C9D0">토큰 매칭</text>
+  <rect x="400" y="230" width="344" height="36" rx="6" fill="#F5A524"/>
+  <text x="764" y="258" font-size="32" font-weight="800" fill="#F5A524">43%</text>
+  <text x="860" y="258" font-size="24" fill="#8B95A1">모델 없음</text>
+
+  <text x="56" y="320" font-size="26" font-weight="700" fill="#FFFFFF">문자 2-gram</text>
+  <rect x="400" y="294" width="432" height="36" rx="6" fill="#0B7A4B"/>
+  <text x="852" y="322" font-size="32" font-weight="800" fill="#0B7A4B">54%</text>
+  <text x="948" y="322" font-size="24" fill="#8B95A1">모델 없음</text>
+
+  <text x="56" y="384" font-size="26" font-weight="700" fill="#C4C9D0">임베딩 단독</text>
+  <rect x="400" y="358" width="480" height="36" rx="6" fill="#3182F6"/>
+  <text x="900" y="386" font-size="32" font-weight="800" fill="#3182F6">60%</text>
+  <text x="996" y="386" font-size="24" fill="#8B95A1">venv 857MB</text>
+
+  <text x="56" y="448" font-size="26" font-weight="700" fill="#FFFFFF">하이브리드 (RRF)</text>
+  <rect x="400" y="422" width="560" height="36" rx="6" fill="#3182F6"/>
+  <text x="980" y="450" font-size="32" font-weight="800" fill="#3182F6">70%</text>
+  <text x="1076" y="450" font-size="24" fill="#8B95A1">venv 857MB</text>
+
+  <rect x="56" y="486" width="1288" height="90" rx="16" fill="#F2F4F6"/>
+  <text x="84" y="524" font-size="28" font-weight="700" fill="#191F28">54%p 를 공짜로 얻고, 그다음 16%p 에 venv 857MB 를 낸다</text>
+  <text x="84" y="558" font-size="25" fill="#4E5968">가장 큰 개선은 임베딩이 아니라 문자열 매칭 방식을 바꾼 것이었다. 그래서 임베딩은 선택적 의존성으로 뒀다</text>
+</svg>

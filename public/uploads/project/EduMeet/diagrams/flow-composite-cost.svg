@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="620" fill="#000000"/>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">4코어는 인코딩이 아니라 합성 때문이었다</text>
+  <text x="56" y="114" font-size="28.7" fill="#8B95A1">LiveKit Egress 가 minimumCpu 4 를 요구하는데 서버는 2 OCPU. "못 한다" 로 끝낼 수 있었다</text>
+
+  <rect x="56" y="164" width="628" height="188" rx="20" fill="#15181E" stroke="#2A2F38"/>
+  <text x="84" y="208" font-size="28" font-weight="700" fill="#FFFFFF">RoomComposite 가 CPU 4 를 쓰는 이유</text>
+  <text x="84" y="252" font-size="26" fill="#C4C9D0">여러 참가자 화면을 헤드리스 Chrome 으로</text>
+  <text x="84" y="286" font-size="26" fill="#C4C9D0">렌더링해 합성한다</text>
+  <text x="84" y="330" font-size="28" font-weight="800" fill="#F5A524">그런데 방송은 발표자 한 명만 나간다</text>
+
+  <rect x="716" y="164" width="628" height="188" rx="20" fill="#F2F4F6"/>
+  <text x="744" y="208" font-size="28" font-weight="700" fill="#191F28">그래서 방송 경로에서만 Egress 를 뺐다</text>
+  <text x="744" y="252" font-size="24" fill="#4E5968">MediaRecorder(2초) → HTTP → 유계 큐</text>
+  <text x="744" y="286" font-size="24" fill="#4E5968">→ ffmpeg → .ts + m3u8 → nginx → hls.js</text>
+  <text x="744" y="330" font-size="28" font-weight="800" fill="#0B7A4B">화상채팅은 SFU 가 맞아 LiveKit 은 유지</text>
+
+  <text x="56" y="406" font-size="28" font-weight="700" fill="#C4C9D0">H264 리먹싱</text>
+  <rect x="380" y="380" width="18" height="38" rx="7" fill="#0B7A4B"/>
+  <text x="418" y="410" font-size="34" font-weight="800" fill="#0B7A4B">0.084초</text>
+
+  <text x="56" y="480" font-size="28" font-weight="700" fill="#C4C9D0">VP8 → H264 재인코딩</text>
+  <rect x="380" y="454" width="800" height="38" rx="7" fill="#F04452"/>
+  <text x="1200" y="484" font-size="34" font-weight="800" fill="#F04452">5.456초</text>
+  <text x="380" y="522" font-size="25" fill="#8B95A1">OCI aarch64 2 OCPU · 20초 분량 · 2초 세그먼트 10개 — 약 65배</text>
+
+  <text x="700" y="580" font-size="26" fill="#F5A524" text-anchor="middle">리먹싱은 공짜가 아니다. 프레임을 그대로 옮기므로 키프레임을 새로 못 만든다</text>
+  <text x="700" y="610" font-size="25" fill="#8B95A1" text-anchor="middle">CPU 를 아끼는 대신 지연 통제권을 브라우저 GOP 에 넘긴다</text>
+</svg>
