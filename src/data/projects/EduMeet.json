@@ -34,7 +34,10 @@
     "MCP",
     "Python",
     "OpenAI",
-    "pytest"
+    "pytest",
+    "PyTorch",
+    "Alertmanager",
+    "sentence-transformers"
   ],
   "category": "team",
   "date": "2025-07-05",
