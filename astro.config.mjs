@@ -161,6 +161,13 @@ export default defineConfig({
     '/blog/project/edumeet/s3-upload-optimization': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/unit-test-db-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/edge-case-issues': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    // EduMeet 재작업 15편 -> 주제별 9편으로 병합 (2026-08-28)
+    '/blog/project/edumeet/egress-cost-model': `${base || ''}/blog/project/edumeet/own-hls`,
+    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/measure-before-the-model`,
+    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/config-that-does-nothing`,
+    '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/deploy-and-migration`,
+    '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/measuring-on-the-real-server`,
+    '/blog/project/edumeet/chicken-and-egg': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
