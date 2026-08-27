@@ -11,16 +11,16 @@
     <text x="370" y="360" font-size="26" fill="#C4C9D0">4분 생존 · 큐 최대 525</text>
 
     <rect x="716" y="164" width="628" height="230" rx="20" fill="#15181E" stroke="#F04452"/>
-    <text x="1030" y="214" font-size="30" font-weight="700" fill="#FFFFFF">뒤집은 가설: 소비만 5KB/s 로</text>
-    <text x="1030" y="256" font-size="26" fill="#8B95A1">같은 부하 · 같은 힙. 소비자만 조였다</text>
+    <text x="1030" y="214" font-size="30" font-weight="700" fill="#FFFFFF">뒤집은 가설: 받는 속도만 5KB/s 로</text>
+    <text x="1030" y="256" font-size="26" fill="#8B95A1">같은 부하 · 같은 힙. 연결 150개를 전부 조였다</text>
     <text x="1030" y="318" font-size="42" font-weight="800" fill="#F04452">84초에 OOM</text>
     <text x="1030" y="360" font-size="26" fill="#C4C9D0">큐 1,077,906 · 2,053배</text>
   </g>
 
   <rect x="56" y="426" width="1288" height="90" rx="16" fill="#F2F4F6"/>
-  <text x="84" y="464" font-size="28" font-weight="700" fill="#0B7A4B">상한 2만 + CallerRunsPolicy → 84초 OOM 에서 444초 무중단으로</text>
-  <text x="84" y="498" font-size="25" fill="#4E5968">Kafka·NATS 는 기각했다. 병목이 브로커가 아니라 아웃바운드 큐라 넣어도 그 큐가 그대로 남는다</text>
+  <text x="84" y="464" font-size="28" font-weight="700" fill="#0B7A4B">상한 2만 + CallerRunsPolicy → 84초 OOM 에서 444초 생존으로</text>
+  <text x="84" y="498" font-size="25" fill="#4E5968">다만 공짜가 아니다. 강제 종료된 세션이 32개에서 150개로 늘었다. 느린 쪽을 버려서 살아남았다</text>
 
-  <text x="700" y="570" font-size="26" fill="#F5A524" text-anchor="middle">그 역압이 착지하는 곳은 나중에야 확인했다. brokerChannel 에 실행기가 없어 호출 스레드가 전송을 떠안는다</text>
-  <text x="700" y="602" font-size="26" fill="#8B95A1" text-anchor="middle">자막은 http-nio 라, 자막이 채팅을 막는 게 아니라 REST API 전체를 막는다</text>
+  <text x="700" y="570" font-size="26" fill="#F5A524" text-anchor="middle">장애가 사라진 게 아니라 형태가 바뀌었다. 메모리 압박을 없앤 대신 역압을 호출 스레드로 옮겼다</text>
+  <text x="700" y="602" font-size="26" fill="#8B95A1" text-anchor="middle">그 스레드는 자막 경로에서 Tomcat 요청 스레드다. 자막이 채팅이 아니라 REST API 전체를 막는다</text>
 </svg>
