@@ -21,19 +21,22 @@ series: "EduMeet"
 seriesOrder: 6
 ---
 
-EduMeet은 저장소가 셋이었습니다.
+저장소를 합치는 것은 정리 작업이라고 생각했습니다. 백엔드·프론트·AI 가 GitLab 에 흩어져 있었고, 한 곳에서 보면 편할 것 같았습니다.
+
+합치고 나서 **AI 연동이 한 번도 동작한 적이 없다는 것**을 알았습니다.
 
 ```
-github.com/dj258255/edumeet            Spring 백엔드 (개인 리팩토링 중)
-lab.ssafy.com/simsim/edumeet_frontend  Vue 프론트
-lab.ssafy.com/simsim/edumeet_ai        FastAPI
+[upload:url]  .../meetings/{meetingId}/summary   ← 치환조차 안 됨
+headers       {"Accept": "application/json"}     ← X-Internal-Token 없음
 ```
 
-SSAFY GitLab은 외부에 공개할 수 없어서, 포트폴리오로 보면 **절반이 안 보였습니다.**
+Java 는 400 을 냅니다. 경로가 맞았어도 `hasRole("INTERNAL")` 에서 403 입니다.
 
-합치기로 했습니다. 그런데 합치고 나서야 보인 것들이 있었습니다.
+**그리고 문서는 이미 알고 있었습니다.** "파이썬이 바꿔야 하는 것" 이라는 표가 있었고 마지막 줄이 이랬습니다.
 
----
+> *"파이썬 저장소가 이 리포에 없어서 클라이언트 쪽 변경은 미반영이다."*
+
+몰라서 안 고친 게 아니라 **고칠 수 없는 위치에 있었던 것**입니다. 저장소가 나뉘어 있는 동안에는 이 결함을 볼 수 있는 사람이 없었습니다.
 
 ## 1. 이력을 잃지 않고 합치기
 
