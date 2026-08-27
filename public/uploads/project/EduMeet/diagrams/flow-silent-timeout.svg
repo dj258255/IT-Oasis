@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
+  <rect width="1400" height="620" fill="#000000"/>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">부하를 걸면 사라지는 버그</text>
+  <text x="56" y="114" font-size="28.7" fill="#8B95A1">nginx 를 붙인 뒤 WebSocket 이 60초쯤에 끊기는데 에러 로그가 한 줄도 안 남았다</text>
+
+  <g text-anchor="middle">
+    <rect x="56" y="164" width="628" height="200" rx="20" fill="#15181E" stroke="#F04452"/>
+    <text x="370" y="216" font-size="30" font-weight="700" fill="#FFFFFF">proxy_read_timeout 60s (기본값)</text>
+    <text x="370" y="258" font-size="26" fill="#8B95A1">일부러 아무것도 주고받지 않는 연결을 만들었다</text>
+    <text x="370" y="324" font-size="40" font-weight="800" fill="#F04452">60.9초에 3 / 3 종료</text>
+
+    <rect x="716" y="164" width="628" height="200" rx="20" fill="#F2F4F6"/>
+    <text x="1030" y="216" font-size="30" font-weight="700" fill="#191F28">proxy_read_timeout 3600s</text>
+    <text x="1030" y="258" font-size="26" fill="#4E5968">같은 코드, 같은 시험. 바뀐 것은 설정 한 줄</text>
+    <text x="1030" y="324" font-size="40" font-weight="800" fill="#0B7A4B">90.1초까지 0 / 3</text>
+  </g>
+
+  <rect x="56" y="396" width="1288" height="90" rx="16" fill="#15181E" stroke="#2A2F38"/>
+  <text x="84" y="434" font-size="28" font-weight="700" fill="#F5A524">프록시는 읽을 것이 없는 연결을 끊는다</text>
+  <text x="84" y="468" font-size="25" fill="#C4C9D0">채팅이 오가면 타이머가 계속 초기화되므로, 트래픽이 있으면 이 버그는 존재하지 않는 것처럼 보인다</text>
+
+  <text x="700" y="540" font-size="26" fill="#8B95A1" text-anchor="middle">에러를 세는 경보로는 안 잡힌다. 그래서 "세션이 규칙적으로 깎이는데 그동안 발행이 거의 없다" 를 본다</text>
+  <text x="700" y="580" font-size="26" fill="#0B7A4B" text-anchor="middle">프록시 타임아웃은 인프라가 바뀌면 되돌아가므로, STOMP 하트비트를 앱에도 두어 두 겹으로 뒀다</text>
+</svg>
