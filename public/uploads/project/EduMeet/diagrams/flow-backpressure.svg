@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Pretendard, 'Apple SD Gothic Neo', sans-serif">
   <rect width="1400" height="620" fill="#000000"/>
-  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">무한 큐가 위험해지는 조건은 발행이 아니라 소비였다</text>
+  <text x="56" y="76" font-size="46" font-weight="800" fill="#FFFFFF">발행률만으로는 안 죽었고, 소비를 늦추자 죽었다</text>
   <text x="56" y="114" font-size="28.7" fill="#8B95A1">구독자 150명 · 발행 4×60/s · 힙 512MB · 4분. 발행률은 그대로 두고 소비 속도만 바꿨다</text>
 
   <g text-anchor="middle">
