@@ -5,7 +5,7 @@
 
   <text x="56" y="196" font-size="28" font-weight="700" fill="#C4C9D0">구독자 200명</text>
   <rect x="330" y="170" width="62" height="40" rx="8" fill="#0B7A4B"/>
-  <text x="412" y="201" font-size="34" font-weight="800" fill="#0B7A4B">e2e p95 45ms</text>
+  <text x="412" y="201" font-size="34" font-weight="800" fill="#0B7A4B">뜨기까지 p95 45ms</text>
   <text x="760" y="201" font-size="25" fill="#8B95A1">내보낼 양 초당 16,000건 · 연결오류 0</text>
 
   <text x="56" y="278" font-size="28" font-weight="700" fill="#C4C9D0">구독자 500명</text>
@@ -18,10 +18,10 @@
   <text x="84" y="436" font-size="25" fill="#4E5968">연결 수만 세면 500명도 "된다" 고 말하게 된다. p95 가 1.3초면 max 는 7.6초다</text>
 
   <rect x="56" y="478" width="628" height="94" rx="16" fill="#15181E" stroke="#2A2F38"/>
-  <text x="84" y="514" font-size="27" font-weight="700" fill="#FFFFFF">fan-out · 아웃바운드가 N 에 비례</text>
-  <text x="84" y="548" font-size="25" fill="#C4C9D0">e2e 지연이 먼저 무너진다 (라이브 · 오디오 방송)</text>
+  <text x="84" y="514" font-size="27" font-weight="700" fill="#FFFFFF">한 명이 말하고 다수가 듣는 방</text>
+  <text x="84" y="548" font-size="25" fill="#C4C9D0">내보낼 양이 인원에 비례. 화면에 뜨는 속도가 먼저 무너진다</text>
 
   <rect x="716" y="478" width="628" height="94" rx="16" fill="#15181E" stroke="#2A2F38"/>
-  <text x="744" y="514" font-size="27" font-weight="700" fill="#FFFFFF">대칭 · 아웃바운드가 N² 에 비례</text>
-  <text x="744" y="548" font-size="25" fill="#C4C9D0">연결 수립이 먼저 무너진다 (화상 수업)</text>
+  <text x="744" y="514" font-size="27" font-weight="700" fill="#FFFFFF">전원이 주고받는 방</text>
+  <text x="744" y="548" font-size="25" fill="#C4C9D0">내보낼 양이 인원의 제곱에 비례. 접속되는 속도가 먼저 무너진다</text>
 </svg>

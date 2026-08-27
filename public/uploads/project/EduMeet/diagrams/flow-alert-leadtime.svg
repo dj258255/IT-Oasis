@@ -15,7 +15,7 @@
     <text x="700" y="330" font-size="52" font-weight="800" fill="#F5A524">1.56초</text>
 
     <rect x="934" y="212" width="410" height="170" rx="20" fill="#15181E" stroke="#2A2F38"/>
-    <text x="1139" y="260" font-size="30" font-weight="700" fill="#FFFFFF">scrape 15s · for 1m</text>
+    <text x="1139" y="260" font-size="30" font-weight="700" fill="#FFFFFF">수집 15s · 유지 1m</text>
     <text x="1139" y="330" font-size="32" font-weight="800" fill="#F04452">평가 전에 큐가 찬다</text>
   </g>
 
