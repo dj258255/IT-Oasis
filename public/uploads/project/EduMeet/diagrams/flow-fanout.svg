@@ -6,12 +6,12 @@
   <text x="56" y="196" font-size="28" font-weight="700" fill="#C4C9D0">구독자 200명</text>
   <rect x="330" y="170" width="62" height="40" rx="8" fill="#0B7A4B"/>
   <text x="412" y="201" font-size="34" font-weight="800" fill="#0B7A4B">e2e p95 45ms</text>
-  <text x="760" y="201" font-size="25" fill="#8B95A1">수신 792,458건 · 연결오류 0</text>
+  <text x="760" y="201" font-size="25" fill="#8B95A1">내보낼 양 초당 16,000건 · 연결오류 0</text>
 
   <text x="56" y="278" font-size="28" font-weight="700" fill="#C4C9D0">구독자 500명</text>
   <rect x="330" y="252" width="800" height="40" rx="8" fill="#F04452"/>
   <text x="1150" y="283" font-size="34" font-weight="800" fill="#F04452">1,313ms</text>
-  <text x="330" y="326" font-size="25" fill="#8B95A1">수신 1,755,866건 · max 7,648ms · 연결오류 0 — 인원 2.5배에 지연 29배</text>
+  <text x="330" y="326" font-size="25" fill="#8B95A1">내보낼 양 초당 40,000건 · 연결오류 0. 발행률은 같은데 인원이 2.5배라 아웃바운드도 2.5배</text>
 
   <rect x="56" y="364" width="1288" height="90" rx="16" fill="#F2F4F6"/>
   <text x="84" y="402" font-size="28" font-weight="700" fill="#191F28">상한은 "몇 명이 붙나" 가 아니라 "몇 명까지 채팅답나" 로 결정된다</text>
