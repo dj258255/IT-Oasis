@@ -17,7 +17,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 8
+seriesOrder: 5
 ---
 
 EduMeet의 존재 이유는 **실시간 자막**입니다. 청각장애 학습자가 수업을 따라갈 수 있게 하는 것.
