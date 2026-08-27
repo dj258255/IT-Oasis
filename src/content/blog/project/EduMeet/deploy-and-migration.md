@@ -1,7 +1,8 @@
 ---
-title: '자동 배포를 만들었는데 스키마를 바꿀 수가 없었습니다'
+title: '저장소를 합치고 배포를 자동화했더니, 스키마를 바꿀 수가 없었습니다'
 description: >-
-  GitLab CI를 GitHub Actions로 옮기고 OCI ARM64 서버에 자동 배포를 붙였습니다.
+  GitLab에 있던 파이썬 서버를 이력을 잃지 않고 합치고, GitLab CI를 GitHub Actions로 옮겨
+  OCI ARM64 서버에 자동 배포를 붙였습니다. 합치는 과정에서 한 번도 동작한 적 없던 연동이 드러났습니다.
   그리고 다음 작업에서 컬럼 하나를 추가하려다 막혔습니다. ddl-auto는 테스트 프로필에만
   있었고 마이그레이션 도구는 없었습니다. Flyway를 baseline-on-migrate로 도입하고
   Testcontainers로 실제 MySQL에서 검증한 과정입니다.
@@ -14,11 +15,13 @@ tags:
   - Flyway
   - Testcontainers
   - DevOps
+  - FastAPI
+  - Git
 category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 3
+seriesOrder: 2
 ---
 
 자동 배포를 다 만들고 나서, **다음 작업에서 컬럼을 하나 추가하려다 막혔습니다.**
@@ -40,6 +43,9 @@ push  →  새 이미지가 뜬다  →  엔티티에는 있는 컬럼이 DB에�
 - **판단**: Flyway 를 `baseline-on-migrate` 로 넣되, **V1 baseline 을 손으로 쓰지 않고 엔티티에서 DDL 을 생성**했습니다(18테이블 · FK 16 · UNIQUE 4). 손으로 쓰면 코드와 어긋나는 순간부터 아무도 모릅니다.
 - **검증**: **진짜 MySQL 8.0(Testcontainers)** 에서 합니다. baseline 에 `engine=InnoDB`, `enum(...)` 같은 MySQL 전용 문법이 있어 **H2 로는 확인할 수 없습니다.**
 - **곁가지**: ARM64 를 QEMU 크로스빌드 대신 **네이티브 러너**로 빌드해 배포 시간을 줄였습니다.
+- **합치면서 드러난 것**: `git subtree add` 는 `git blame` 은 되는데 `git log -- frontend/` 가 **0건**이었습니다. 병합 이전 커밋의 경로가 루트라 필터가 안 걸립니다.
+    - `filter-repo --to-subdirectory-filter` 로 경로를 재작성해 **3건 → 218건**. **백엔드는 SHA 를 바꾸지 않았습니다** — 같은 필터를 걸면 머지된 PR 90여 개의 참조가 깨집니다
+    - 합치고 나니 **AI 연동이 한 번도 동작한 적 없었고**, `async` 를 붙인 것이 오히려 상황을 악화시키고 있었습니다
 
 ## ARM64를 QEMU로 빌드하지 않습니다
 
@@ -185,3 +191,91 @@ assertThat(columnsOf("meeting"))
 
 - CI/CD 구조: [`docs/ops/01-cicd-and-deploy.md`](https://github.com/dj258255/edumeet/blob/master/docs/ops/01-cicd-and-deploy.md)
 - PR: [#26 CI/CD](https://github.com/dj258255/edumeet/pull/26) · [#30 Flyway](https://github.com/dj258255/edumeet/pull/30)
+
+---
+
+## 그 전에: 저장소를 합치니 끊겨 있던 것이 보였습니다
+
+파이썬 AI 서버가 GitLab에 따로 있었습니다. 합치기로 한 이유는 단순합니다 — **경계를 넘는 계약을 한 저장소 안에서 시험할 수 없으면, 양쪽 시험이 다 통과해도 연동이 죽어 있을 수 있습니다.**
+
+### 이력을 잃지 않고 합치기
+
+**커밋 이력이 자산입니다.** 팀 6주의 기록이고 작성자별 기여가 남아야 합니다. 처음엔 `git subtree add`로 붙였는데, 잘 붙는 것처럼 보였습니다.
+
+```bash
+git blame frontend/src/App.vue       # ✅ 2025-07-22 까지 추적된다
+git log -- frontend/src/App.vue      # ❌ 0 커밋
+```
+
+**blame은 되는데 log는 안 됐습니다.** 병합 이전 커밋들의 **경로가 `frontend/`가 아니라 루트**였기 때문입니다. 경로 필터가 안 걸립니다.
+
+```bash
+git filter-repo --path EduMeet/ --path-rename EduMeet/:      # EduMeet/ 를 루트로
+git filter-repo --to-subdirectory-filter frontend            # 전부 frontend/ 아래로
+git merge --allow-unrelated-histories
+```
+
+| | subtree add | to-subdirectory-filter |
+|---|---:|---:|
+| `git log -- frontend` | 3 | **218** |
+| `git log -- frontend/src/App.vue` | 0 | **18** |
+
+**"이력이 기술적으로 존재한다"와 "이력을 쓸 수 있다"는 다른 얘기입니다.**
+
+**백엔드는 이력을 다시 쓰지 않았습니다.** `backend/`로 옮겼지만 SHA는 그대로입니다. 같은 필터를 걸면 모든 SHA가 바뀌고 **머지된 PR 90여 개의 커밋 참조가 전부 깨집니다.** `git mv`의 rename 추적으로 충분했습니다.
+
+### AI 연동이 한 번도 동작한 적 없었습니다
+
+합치고 나서 자바 → 파이썬 호출 경로를 열어 보니 URL의 `{meetingId}`가 **치환조차 안 됐고** `X-Internal-Token`이 없었습니다. 자바는 400을 받고, 경로가 맞아도 403입니다.
+
+**문서는 알고 있었습니다** — *"파이썬 저장소가 이 리포에 없어서 클라이언트 쪽 변경은 미반영"* 이라고 적혀 있었습니다. 저장소가 갈라져 있으면 이런 문장이 **버그가 아니라 상태 설명**으로 남습니다.
+
+계약을 기계가 읽는 파일(`contracts/internal-api.json`)로 옮겨 **양쪽 시험이 같은 것을 읽게** 했습니다. 이 구조에도 구멍이 있었습니다 — 계약 파일만 바꾸면 Gradle이 테스트를 `UP-TO-DATE`로 건너뜁니다. `inputs.file`로 막고 되돌려 확인했습니다.
+
+### `async`를 붙인 것이 상황을 악화시키고 있었습니다
+
+```python
+@app.post("/STT/{class_id}")
+async def merge_audio(...):
+    Start_STT(...)    # 동기 requests.post(timeout=600)  ← 최대 10분
+```
+
+FastAPI는 `async def` 핸들러를 **이벤트 루프에서 직접** 돌립니다. 그 안에서 블로킹하면 그동안 워커가 다른 요청을 **하나도** 못 받습니다.
+
+| | 동시 2요청 | 동시 4요청 |
+|---|---:|---:|
+| 고치기 전 | **1.02초** (직렬 1.0초 기대) | — |
+| 고친 뒤 | **0.52초** | **0.52초** (직렬이면 2.0초) |
+
+**`async`를 뗐습니다.** `def`로 두면 FastAPI가 스레드풀에서 돌립니다. 역설적입니다 — **`async`를 안 붙였으면 처음부터 괜찮았습니다.**
+
+그리고 **실패가 전부 HTTP 200**이었습니다. STT 실패도 요약 실패도 `{"status": "stt_failed"}` + 200입니다. 재시도 정책을 상태 코드로 못 짜고(200은 재시도 대상이 아닙니다), 프록시·모니터링이 전부 성공으로 세서 **실패율 지표가 0**이 됩니다. 외부 의존 실패는 502로 나눴습니다.
+
+### CI/CD가 절반만 자동화돼 있었습니다
+
+| | CI | Deploy |
+|---|---|---|
+| backend | ✅ | ✅ |
+| ai | ✅ | ❌ |
+| **frontend** | **❌ 빌드조차 안 함** | **❌ 손으로 올림** |
+
+프론트를 손으로 올리고 있었습니다. master에 push해도 서버는 그대로라 *"머지했는데 왜 안 바뀌지"* 가 됩니다. 붙이면서 세 가지를 정했습니다.
+
+**경로 필터를 `on:`이 아니라 잡 단위로.** 워크플로의 `on:`에 걸면 **"돌지 않은 잡"이 pending으로 남습니다.** 필수 체크로 지정했다면 PR이 영원히 머지되지 않습니다. 잡 단위로 나누면 해당 없는 잡은 skip되고 체크는 초록으로 끝납니다.
+
+**빌드 산출물을 검증합니다.** Vite는 빌드 시점에 `.env.production` 값을 코드에 박습니다. 값이 안 들어가도 **빌드도 배포도 성공하고, 화면에서 API 호출만 전부 실패합니다.**
+
+```bash
+grep -q "api.studywithtymee.com" dist/assets/*.js || exit 1
+```
+
+**첫 자동 배포는 실패했습니다.** `tar: empty archive` — `scp-action`은 `source`를 러너 작업 디렉터리 기준으로 찾는데 절대경로를 주면 상대경로로 해석해 아무것도 담지 못합니다. **빌드도 압축도 성공한 채로 전송만 빈 파일이 갑니다.** 그래서 서버 쪽에 방어를 넣었습니다.
+
+```bash
+test -s /tmp/fe-dist.tgz                    # 빈 아카이브면 멈춘다
+test -f /var/www/edumeet.new/index.html     # 교체 전에 확인한다
+```
+
+이게 없으면 **빈 아카이브가 그대로 배포되어 사이트가 빈 화면이 되고, 배포는 성공으로 끝납니다.**
+
+> ai는 지금도 수동(`workflow_dispatch`)입니다. 트리거 경로도 자막 소스도 없어서 자동으로 띄워도 아무 일이 없기 때문입니다. **자동화하지 않은 이유를 적어 두는 것도 자동화의 일부라고 봤습니다.**
