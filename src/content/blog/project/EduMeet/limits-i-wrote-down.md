@@ -16,7 +16,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 9
+seriesOrder: 7
 ---
 
 WebSocket 채팅 서버에 부하를 걸어 재면서, **숫자가 나왔는데 그 숫자를 못 믿게 되는 경우**를 네 번 만났습니다. 서버가 아니라 **재는 방식**이 원인이었습니다.
