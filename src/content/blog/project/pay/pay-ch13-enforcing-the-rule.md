@@ -1,0 +1,166 @@
+---
+title: '규칙을 검사하는 코드가 같은 버그였다'
+description: '같은 실수를 세 번 하고 나서 개별 테스트 대신 규칙 자체를 검사하기로 했다. 그렇게 만든 검사기가 0개를 찾고도 통과할 뻔했다. 그리고 켜본 적 없던 배치 여섯 개를 마저 켰다.'
+date: 2026-08-29T00:00:00.000Z
+tags:
+  - Payment
+  - 테스트
+  - Spring Boot
+  - 배치
+  - 결제 시스템
+category: study/pay
+coverImage: "/uploads/project/pay/thumbs/pay-ch13.svg"
+draft: false
+series: "결제 시스템 만들기"
+seriesOrder: 13
+---
+
+*결제 시스템 시리즈 13편. 12편의 마지막 문단에서 이어진다.*
+
+## 세 번이면 규칙으로 만들어야 한다
+
+12편은 이렇게 끝났다. 감사 로그 서비스에 호출부가 없었고, 비밀번호 이관 서비스는 배선 확인 없이 단위 테스트만 있었고, 결제사 라우팅도 켰을 때 실제로 꽂히는지 아무도 검증하지 않았다. 전부 **있는지**만 보고 **불리는지**를 안 본 것이었다.
+
+셋 다 개별 테스트를 붙여서 막았다. 그런데 남은 게 있었다.
+
+배치가 열 개다. 전부 기본 off인데, 켜려면 두 가지가 **같은 프로퍼티로** 함께 켜져야 한다.
+
+```java
+@Component
+@ConditionalOnProperty(name = "app.settlement.enabled", havingValue = "true")
+class SettlementScheduler {
+    @Scheduled(fixedDelayString = "...")
+    public void run() { ... }
+}
+
+@Configuration
+@EnableScheduling
+@ConditionalOnProperty(name = "app.settlement.enabled", havingValue = "true")
+class SettlementSchedulingConfig { }
+```
+
+둘 중 하나만 켜지면 어떻게 되냐면, **아무 일도 안 일어난다.** 빈은 정상 등록되고, 기동 로그도 깨끗하고, `@Scheduled` 메서드만 영원히 안 불린다. 예외도 경고도 없다.
+
+정산 배치를 켠 줄 알았는데 정산이 안 되고 있는 상태를, 며칠 뒤 대사에서야 알게 된다.
+
+지금은 열 쌍이 전부 맞게 짝지어져 있다. 확인했다. 문제는 **그걸 지켜주는 게 각 클래스의 javadoc뿐**이라는 것이었다. 스케줄러를 하나 더 추가하거나 프로퍼티 이름을 바꾸는 순간 조용히 어긋난다.
+
+열 개를 개별 테스트로 막기엔 수가 많다. 그래서 인스턴스 대신 **규칙 자체**를 검사하기로 했다. `@Scheduled`를 가진 모든 클래스에 대해, 같은 게이트를 쓰는 `@EnableScheduling` 설정이 존재하는가.
+
+## 그 검사기가 0개를 찾고 통과할 뻔했다
+
+Spring이 클래스패스 스캐너를 제공한다. 이걸 쓰면 되겠다 싶었다.
+
+```java
+var provider = new ClassPathScanningCandidateComponentProvider(false);
+provider.addIncludeFilter((TypeFilter) (reader, factory) -> true);
+provider.findCandidateComponents("com.beomsu.pay");
+```
+
+테스트가 실패했다. 스케줄러를 **0개** 찾았다.
+
+원인은 이랬다. `ClassPathScanningCandidateComponentProvider`는 후보를 모으면서 `@Conditional`을 **평가한다.** 그리고 이 프로젝트의 배치는 전부 기본 off다. 즉 검사하려는 대상이 정확히 "지금 조건을 만족하지 않는 클래스들"인데, 스캐너가 바로 그것들을 걸러낸 것이다.
+
+여기서 중요한 건 원인이 아니라, **왜 알아챘느냐**다.
+
+```java
+assertThat(schedulerGates)
+        .as("@Scheduled 스케줄러를 찾지 못했다면 이 테스트는 아무것도 검증하지 못한다")
+        .hasSizeGreaterThanOrEqualTo(10);
+
+assertThat(schedulerGates).allSatisfy((scheduler, gate) -> ...);
+```
+
+두 번째 줄만 있었으면 이 테스트는 **통과했을 것이다.** 빈 컬렉션에 대해 `allSatisfy`는 참이다. 검사 대상이 0개인 검사는 언제나 성공한다.
+
+그러니까 이건 이렇게 될 뻔했다. 이름은 `SchedulerGatePairingTest`이고, CI에서 초록불이고, 아무것도 검증하지 않는다. **"있는데 안 불리는" 버그를 막으려고 만든 테스트가, "있는데 아무것도 안 보는" 같은 종류의 물건이 될 뻔한 것이다.**
+
+12편에서 k6 스크립트에 `shed_global > 0`을 임계치로 걸어둔 것과 정확히 같은 장치였다. 그때는 "실험이 성립했는지를 실험이 스스로 말하게 하자"였고, 여기서는 "검사가 대상을 찾았는지를 검사가 스스로 말하게 하자"였다. 우연히도 하루 만에 두 번 같은 도구가 필요했다.
+
+## 고친 방법
+
+조건을 평가하지 않고, 클래스를 로드하지도 않고, 바이트코드의 애너테이션 메타데이터만 읽는다.
+
+```java
+var resolver = new PathMatchingResourcePatternResolver();
+var factory = new CachingMetadataReaderFactory(resolver);
+for (var resource : resolver.getResources("classpath*:com/beomsu/pay/**/*.class")) {
+    AnnotationMetadata metadata = factory.getMetadataReader(resource).getAnnotationMetadata();
+    if (metadata.hasAnnotatedMethods(Scheduled.class.getName())) { ... }
+}
+```
+
+열 개를 다 찾았고 열 쌍 다 맞았다.
+
+그리고 **일부러 깨뜨려봤다.** 짝이 되는 설정의 게이트 이름 하나를 오타로 바꿨다.
+
+```java
+- @ConditionalOnProperty(name = "app.outbox.cleanup.enabled", ...)
++ @ConditionalOnProperty(name = "app.outbox.cleanup.TYPO", ...)
+```
+
+실패했다. 원복하니 다시 통과했다. 이 확인을 안 하면 결국 "통과하는 걸 봤다"까지밖에 모른다. 초록불이 무엇을 뜻하는지는 **빨간불을 한 번 봐야** 알 수 있다.
+
+## 남은 여섯 개를 마저 켰다
+
+배선은 이제 구조로 보장된다. 그런데 아직 **켜고 실제로 도는 걸 본 적은 없는** 배치가 여섯 개였다. 주문 만료, 체크아웃 복구, 가상계좌 만료, 에스크로 자동 릴리스, 멱등키 정리, 아웃박스 정리.
+
+여기서 함정이 하나 더 있었다. 여섯 중 다섯이 이렇게 생겼다.
+
+```java
+if (deleted > 0) {
+    log.info("멱등키 정리 완료 deleted={}", deleted);
+}
+```
+
+처리할 게 없으면 로그를 안 남긴다. 그러니 **"로그가 없다"가 "안 돌았다"를 뜻하지 않는다.** 켜놓고 로그를 지켜보는 걸로는 아무것도 증명 못 한다.
+
+그래서 각 배치의 대상 조건에 맞는 데이터를 심었다. 만료 시각이 지난 미결제 주문, `PAYMENT_IN_PROGRESS`로 두 시간 멈춰 있는 사가, 기한 지난 가상계좌, 보류 기간이 끝난 에스크로 홀드 같은 것들이다.
+
+10초 주기로 돌려놓고 기다렸다.
+
+```
+Outbox 완료 이벤트 정리 completed deleted=6 retentionDays=0
+에스크로 자동 릴리스 완료 count=1
+멈춘 체크아웃 복구 완료 recovered=1
+주문 만료 배치 완료 count=1
+멱등키 정리 완료 deleted=1
+가상계좌 만료 배치 완료 count=1
+```
+
+DB에서도 확인했다. 주문 하나가 `EXPIRED`, 멈춰 있던 사가가 `PAID`로 완결, 에스크로가 `RELEASED`, 계좌가 `EXPIRED`, 멱등키 0건, 아카이브 0건.
+
+이제 기본 off인 플래그 열한 개가 **전부 실제로 도는 걸 본 상태**가 됐다.
+
+### 덤으로 12편의 주장 하나가 검증됐다
+
+12편에서 아웃박스를 고치면서 "아카이브 모드는 기존 정리 스케줄러를 대체하는 게 아니라 짝을 이룬다"고 적었다. 아카이브가 핫 테이블을 미처리분만 남기고, 스케줄러가 아카이브를 보존기간 뒤에 비운다고.
+
+**그때는 그렇게 될 거라고 적기만 했지 확인하지 않았다.** 이번에 정리 배치가 `deleted=6`을 찍었고, 그 6건은 아카이브 테이블에서 나왔다. 적어둔 대로였다.
+
+문서에 적은 걸 나중에 확인해보는 건 생각보다 자주 필요하다. 적을 때는 맞는 줄 알고 적으니까.
+
+## 안 돌리던 테스트 두 개
+
+컨테이너가 필요해서 기본 스위트에서 빼놓은 태스크가 둘 있었다. 오늘 둘 다 돌렸다.
+
+- `integrationTest`: 실 MySQL(Testcontainers)에서 승인·취소가 **DB에 확정되는지**. 응답이 아니라 상태를 본다. 13개 통과.
+- `chaosTest`: Toxiproxy로 MySQL 연결을 실제로 끊고 깨끗하게 실패하는지 + 멱등 생존. 1개 통과.
+
+합쳐서 581개다. 기본 567 + 통합 13 + 카오스 1. README에는 567만 적혀 있었는데, 그건 "돌리기 쉬운 것만 센 숫자"였다. 정확히 고쳤다.
+
+## 그리고 문서에 없던 표
+
+배치와 선택 기능 열한 개가 전부 기본 off인데, **그 목록이 어느 문서에도 없었다.**
+
+배포하는 사람이 제일 먼저 필요한 게 이건데. 무엇을 켜야 시스템이 온전히 도는지 알려면 코드를 뒤져 `@ConditionalOnProperty`를 전부 찾는 수밖에 없었다. README에 환경변수, 하는 일, 주기를 표로 넣었다.
+
+이런 게 자꾸 나온다. 기능은 다 만들어놨는데 **그걸 켜는 방법이 적혀 있지 않은 것.** 만든 사람은 알고 있으니 안 적게 된다.
+
+---
+
+이틀에 걸쳐 잡은 걸 돌아보면 전부 한 종류였다. 감사 로그, 비밀번호 이관, 결제사 라우팅, 배치 여섯 개, 유입 제어의 전역 층, 그리고 검사기 자신까지.
+
+**만들어놓고 켜본 적 없는 것들.**
+
+코드가 있다는 건 아무것도 보장하지 않는다. 테스트가 있다는 것도, 그 테스트가 대상을 하나라도 찾았다는 걸 확인하기 전까지는 마찬가지다.
