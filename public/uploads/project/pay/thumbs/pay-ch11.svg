@@ -1,0 +1,26 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+  <rect x="820" y="120" width="370" height="400" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <text x="1005" y="172" text-anchor="middle" font-size="14" font-weight="700" fill="#64748b" letter-spacing="0.04em">해시 1회 소요</text>
+
+  <text x="850" y="222" font-size="15" font-weight="700" fill="#94a3b8">BCrypt</text>
+  <rect x="850" y="234" width="280" height="34" rx="6" fill="#cbd5e1"/>
+  <text x="1118" y="257" text-anchor="end" font-size="16" font-weight="800" fill="#475569">87ms</text>
+
+  <text x="850" y="312" font-size="15" font-weight="700" fill="#4a8db8">Argon2id</text>
+  <rect x="850" y="324" width="103" height="34" rx="6" fill="#4a8db8"/>
+  <text x="967" y="347" font-size="16" font-weight="800" fill="#4a8db8">32ms</text>
+
+  <line x1="850" y1="400" x2="1160" y2="400" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="850" y="436" font-size="14" font-weight="700" fill="#64748b">대신 치른 값 · 메모리</text>
+  <text x="850" y="472" font-size="22" font-weight="800" fill="#1e293b">4KB <tspan fill="#94a3b8">→</tspan> 19MiB</text>
+  <text x="1160" y="472" text-anchor="end" font-size="15" font-weight="800" fill="#4a8db8">×4,800</text>
+
+  <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">11</text>
+  <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">더 강한 해시가</text><text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">더 빨랐다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">Argon2id 이관 · 로그인 시점 자동 재해싱 · 끝을 지표로 판정</text>
+  <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Security · DelegatingPasswordEncoder · 실패 설계와 정합성 학습기</text>
+</svg>
