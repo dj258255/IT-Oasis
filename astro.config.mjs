@@ -168,6 +168,11 @@ export default defineConfig({
     // 모노레포 합치기·CI 이관·Flyway 가 한 글에 묶여 있어 어느 것도 검색어가 안 됐다.
     // 살릴 사실(git subtree 이력 끊김)은 저장소 docs/ 에 남기고 글은 접었다.
     '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    // 셋 다 프로젝트 진행 기록에 가까웠다. 각각에 한 조각씩 쓸 만한 게 있어
+    // 지우지 않고 한 편으로 합쳤다(하트비트 · 과금 단위 · 베이스라인).
+    '/blog/project/edumeet/reaching-the-screen': `${base || ''}/blog/project/edumeet/realtime-caption-decisions`,
+    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/realtime-caption-decisions`,
+    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/realtime-caption-decisions`,
     '/blog/project/edumeet/deploy-and-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/measuring-on-the-real-server`,
     '/blog/project/edumeet/chicken-and-egg': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
