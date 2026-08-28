@@ -17,7 +17,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 4
+seriesOrder: 3
 ---
 
 지금까지의 부하 측정은 **전부 노트북에서** 돌았습니다. 문서에도 그렇게 적어 뒀습니다.

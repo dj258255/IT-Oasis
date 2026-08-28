@@ -16,7 +16,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 9
+seriesOrder: 8
 ---
 
 자막이 DB에 쌓이는데 꺼내 쓰는 경로가 요약 파이프라인 하나뿐이었습니다. 에디터에서 *"지난주 강의에서 WebSocket 얘기 어디서 했지"* 를 물을 수 있게 MCP stdio 서버를 붙였습니다.
