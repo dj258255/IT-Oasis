@@ -15,7 +15,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 7
+seriesOrder: 6
 ---
 
 이 서비스의 존재 이유는 **청각장애 학습자를 위한 실시간 자막**입니다.

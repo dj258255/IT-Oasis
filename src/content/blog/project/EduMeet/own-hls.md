@@ -19,7 +19,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 6
+seriesOrder: 4
 ---
 
 라이브 방송을 붙이기 전에 두 가지를 확인했습니다. **대역폭 요금을 내가 내야 하나**, 그리고 **2코어 서버로 되나**입니다.

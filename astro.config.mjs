@@ -165,7 +165,10 @@ export default defineConfig({
     '/blog/project/edumeet/egress-cost-model': `${base || ''}/blog/project/edumeet/own-hls`,
     '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/measure-before-the-model`,
     '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/config-that-does-nothing`,
-    '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/deploy-and-migration`,
+    // 모노레포 합치기·CI 이관·Flyway 가 한 글에 묶여 있어 어느 것도 검색어가 안 됐다.
+    // 살릴 사실(git subtree 이력 끊김)은 저장소 docs/ 에 남기고 글은 접었다.
+    '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/deploy-and-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/measuring-on-the-real-server`,
     '/blog/project/edumeet/chicken-and-egg': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
