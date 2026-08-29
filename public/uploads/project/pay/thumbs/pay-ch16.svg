@@ -1,0 +1,32 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+  <rect x="820" y="120" width="370" height="400" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <text x="1005" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#64748b" letter-spacing="0.04em">잣대가 잣대인지 검증했다</text>
+
+  <rect x="852" y="192" width="306" height="58" rx="9" fill="#4a8db810" stroke="#4a8db8" stroke-width="2.5"/>
+  <text x="868" y="216" font-size="13" font-weight="700" fill="#64748b">template</text>
+  <text x="1142" y="216" text-anchor="end" font-size="20" font-weight="900" fill="#4a8db8">100%</text>
+  <text x="868" y="238" font-size="11" fill="#94a3b8">사실만 옮긴다</text>
+
+  <rect x="852" y="262" width="306" height="58" rx="9" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+  <text x="868" y="286" font-size="13" font-weight="700" fill="#64748b">invents-amount</text>
+  <text x="1142" y="286" text-anchor="end" font-size="20" font-weight="900" fill="#b91c1c">0%</text>
+  <text x="868" y="308" font-size="11" fill="#b91c1c">출처에 없는 금액: 270원</text>
+
+  <rect x="852" y="332" width="306" height="58" rx="9" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+  <text x="868" y="356" font-size="13" font-weight="700" fill="#64748b">invents-date</text>
+  <text x="1142" y="356" text-anchor="end" font-size="20" font-weight="900" fill="#b91c1c">0%</text>
+  <text x="868" y="378" font-size="11" fill="#b91c1c">출처에 없는 날짜: 2026-01-01</text>
+
+  <line x1="852" y1="418" x2="1158" y2="418" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="852" y="450" font-size="13" font-weight="700" fill="#64748b">전부 통과시키는 하네스는</text>
+  <text x="852" y="482" font-size="24" font-weight="900" fill="#1e293b"><tspan fill="#4a8db8">잣대가 아니다</tspan></text>
+
+  <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">16</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">AI를 붙이려다</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">포트만 만들었다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">망분리 규제 · 숫자 검증기 · 모델보다 먼저 만든 잣대</text>
+  <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
+</svg>
