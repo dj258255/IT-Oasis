@@ -37,7 +37,11 @@
     "pytest",
     "PyTorch",
     "Alertmanager",
-    "sentence-transformers"
+    "sentence-transformers",
+    "Loki",
+    "Grafana Alloy",
+    "node-exporter",
+    "systemd"
   ],
   "category": "team",
   "date": "2025-07-05",
