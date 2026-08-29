@@ -43,10 +43,10 @@
     <rect x="742" y="292" width="180" height="66" rx="14" fill="#F2F4F6"/>
     <text x="832" y="320" font-size="23.32" font-weight="700" fill="#191F28">결제 B의 적립</text>
     <text x="832" y="342" font-size="22.43" fill="#4E5968">읽지 않음</text>
-    <rect x="988" y="232" width="330" height="106" rx="14" fill="#0C0E12" stroke="#3A414C"/>
-    <text x="1153" y="272" font-size="22" font-family="ui-monospace, Menlo, monospace" fill="#FFFFFF">UPDATE balance = balance + n,</text>
-    <text x="1153" y="296" font-size="24.22" font-family="ui-monospace, Menlo, monospace" fill="#FFFFFF">       version = version + 1</text>
-    <text x="1153" y="322" font-size="20.63" fill="#8B95A1">순서 무관 · 앱 재시도 없음</text>
+    <rect x="988" y="232" width="352" height="106" rx="14" fill="#0C0E12" stroke="#3A414C"/>
+    <text x="1164" y="270" font-size="20" font-family="ui-monospace, Menlo, monospace" fill="#FFFFFF">UPDATE balance = balance + n,</text>
+    <text x="1164" y="294" font-size="20" font-family="ui-monospace, Menlo, monospace" fill="#FFFFFF">       version = version + 1</text>
+    <text x="1164" y="322" font-size="19" fill="#8B95A1">순서 무관 · 앱 재시도 없음</text>
   </g>
   <line x1="922" y1="245" x2="982" y2="272" stroke="#9CA3AB" stroke-width="2" marker-end="url(#cw)"/>
   <line x1="922" y1="325" x2="982" y2="298" stroke="#9CA3AB" stroke-width="2" marker-end="url(#cw)"/>
