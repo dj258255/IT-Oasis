@@ -8,7 +8,7 @@
     </marker>
   </defs>
   <rect width="1400" height="600" fill="#000000"/>
-  <text x="56" y="76" font-size="44" font-weight="800" fill="#FFFFFF">모듈끼리 직접 부르지 않는다</text>
+  <text x="56" y="76" font-size="44" font-weight="800" fill="#FFFFFF">내부 구현은 못 부르고 공개한 것만 부른다</text>
   <text x="56" y="114" font-size="24.84" fill="#8B95A1">주문·결제·원장·정산·대사를 한 서버에서 돌리되, 연결은 소식으로만 한다. 이 선을 넘는 코드를 쓰면 빌드가 깨진다</text>
 
   <!-- 유입 -->

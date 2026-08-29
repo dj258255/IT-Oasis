@@ -8,8 +8,8 @@
     </marker>
   </defs>
   <rect width="1400" height="560" fill="#000000"/>
-  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">전부를 느리게 하느니 일부를 거절한다</text>
-  <text x="56" y="106" font-size="28.7" fill="#8B95A1">감당 못 할 요청은 가장 바깥에서 싸게 거절한다. 같은 스파이크를 제어 전후로 쟀다</text>
+  <text x="56" y="72" font-size="46" font-weight="800" fill="#FFFFFF">전부를 느리게 하느니 일부는 잠시 뒤로 미룬다</text>
+  <text x="56" y="106" font-size="28.7" fill="#8B95A1">감당 못 할 요청은 가장 바깥에서 싸게 걸러 낸다. 같은 스파이크를 제어 전후로 쟀다</text>
 
   <g text-anchor="middle">
     <rect x="60" y="176" width="210" height="120" rx="18" fill="#F2F4F6"/>
@@ -24,9 +24,10 @@
   <text x="695" y="182" font-size="25.12" font-weight="700" fill="#FFFFFF" text-anchor="middle">문 앞 세 겹 (Redis 재사용, 추가 비용 0)</text>
   <g text-anchor="middle">
     <rect x="354" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
-    <text x="464" y="228" font-size="25.12" font-weight="700" fill="#191F28">① 초당 요청 제한</text>
-    <text x="464" y="256" font-size="22.43" fill="#4E5968">한 사람 5건/초</text>
-    <text x="464" y="280" font-size="22.43" fill="#4E5968">전체 100건/초</text>
+    <text x="464" y="228" font-size="24" font-weight="700" fill="#191F28">① 초당 요청 제한</text>
+    <text x="464" y="252" font-size="19" fill="#4E5968">한 사람 5건/초</text>
+    <text x="464" y="271" font-size="19" fill="#4E5968">전체 100건/초</text>
+    <text x="464" y="290" font-size="19" fill="#4E5968">429 + 다시 올 시각</text>
 
     <rect x="590" y="198" width="220" height="100" rx="14" fill="#F2F4F6"/>
     <text x="700" y="230" font-size="25.12" font-weight="700" fill="#191F28">② 선착순 대기열</text>
@@ -51,7 +52,7 @@
 
   <!-- shed -->
   <line x1="695" y1="322" x2="695" y2="388" stroke="#F04452" stroke-width="2" marker-end="url(#br)" stroke-dasharray="6 5"/>
-  <text x="695" y="424" font-size="30.5" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 돌려보냈다</text>
+  <text x="695" y="424" font-size="30.5" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 걸렀다</text>
   <text x="695" y="450" font-size="23.32" fill="#8B95A1" text-anchor="middle">통과한 요청의 속도를 지킨다</text>
 
   <text x="700" y="512" font-size="25.12" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 이 런에서 실제로 쳐낸 것은 ① 한 층 · outbox 데드락 5xx 0.55%</text>
