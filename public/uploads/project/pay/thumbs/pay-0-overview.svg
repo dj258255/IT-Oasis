@@ -30,7 +30,7 @@
   <line x1="900" y1="254" x2="900" y2="384" stroke="#1e5f8a" stroke-width="2.5" marker-end="url(#am)"/>
   <text x="72" y="120" font-size="19" font-weight="700" fill="#1e5f8a" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="44" font-weight="900" fill="#1e5f8a" opacity="0.92">총정리</text>
-  <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">실패가 비싼 도메인을</text><text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">밑바닥부터</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">결제 전체 수명주기 한 편 정리 · 열 편 링크</text>
+  <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">결제 시스템을</text><text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">밑바닥부터 만들었다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">결제 전체 수명주기를 한 편에 · 열 편 링크</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · Java 21 · MySQL · 실패 설계와 정합성 학습기</text>
 </svg>
