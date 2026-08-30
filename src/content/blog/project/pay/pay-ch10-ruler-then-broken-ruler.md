@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch16.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 10
+seriesOrder: 9
 tags:
   - Payment
   - LLM
@@ -14,7 +14,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 10편. 모델을 붙이기 전에 잣대를 먼저 만들었고, 붙이고 나서 그 잣대가 틀린 걸 알았다. 두 이야기를 한 편에 담았다.*
+*결제 시스템 시리즈 9편. 모델을 붙이기 전에 잣대를 먼저 만들었고, 붙이고 나서 그 잣대가 틀린 걸 알았다. 두 이야기를 한 편에 담았다.*
 
 ## 순서를 정해놨었다
 
