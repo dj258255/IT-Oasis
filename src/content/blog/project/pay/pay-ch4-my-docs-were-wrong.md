@@ -23,7 +23,7 @@ tags:
 
 가상계좌는 "계좌번호를 발급하고 입금을 기다리는" 결제다. 카드처럼 즉시 승인이 떨어지지 않고, 사용자가 나중에 그 계좌로 돈을 넣어야 완료된다. 상태 흐름은 `발급 → 입금대기 → 입금완료`.
 
-기본은 [웹훅 처리](/blog/project/pay/pay-0-overview)으로 처리한다. 입금되면 PG가 웹훅을 보내고, 우리는 "믿지 말고 조회로 재검증"해서 완료 처리한다. 여기까진 쉽다. 토스페이먼츠 문서를 파고들면 함정 둘이 나온다.
+기본은 웹훅 처리으로 처리한다. 입금되면 PG가 웹훅을 보내고, 우리는 "믿지 말고 조회로 재검증"해서 완료 처리한다. 여기까진 쉽다. 토스페이먼츠 문서를 파고들면 함정 둘이 나온다.
 
 ### 1. 함정 ①: 만료엔 웹훅이 안 온다
 
@@ -82,11 +82,11 @@ DONE → { WAITING_FOR_DEPOSIT, CANCELED }   // 은행 지연 통보로 인한 �
 | 만료-입금 레이스 | 만료 직전 조회로 재확인 |
 | DONE→입금대기 역전이 | 상태머신에 역전이 허용 + 후속 처리 보상 |
 
-> 세 가지 모두 문서 구석에서 건진 것들이다. "가상계좌 붙였어요"와 "EXPIRED 웹훅 부재와 DONE 역전이까지 처리했어요"는 깊이가 다르다. [이 시리즈의 원칙](/blog/project/pay/pay-ch1-what-to-trust), "웹훅을 믿지 말고 조회로 확정한다"·"실패/역전이를 상태머신에 새긴다"가 그대로 재사용됐다.
+> 세 가지 모두 문서 구석에서 건진 것들이다. "가상계좌 붙였어요"에서 멈추면 이 셋은 만나지 않는다. [이 시리즈의 원칙](/blog/project/pay/pay-ch1-what-to-trust), "웹훅을 믿지 말고 조회로 확정한다"·"실패/역전이를 상태머신에 새긴다"가 그대로 재사용됐다.
 
 ---
 
-## 재감사 2회차: 부분취소만 멱등이 아니었고, 내가 2년 전에 쓴 설명이 틀렸다
+## 재감사 2회차: 부분취소만 멱등이 아니었고, 내가 예전에 쓴 설명이 틀렸다
 
 ### 0. 한 번 더 봤더니 또 있었다
 
@@ -136,18 +136,15 @@ public void applySettleableBalance(long settleableBalance) {
 
 > **일반적인 read-write 트랜잭션 안에선, OSIV를 켜든 끄든 managed 엔티티의 변경은 커밋 때 dirty-check로 flush된다.** 증거가 같은 코드베이스에 있었다. `settle()`은 `items.forEach(SettlementItem::markSettled)`를 **save 없이** 부르는데 정상 SETTLED된다. "OSIV off면 자동 flush가 안 된다"면 이게 동작하면 안 된다. 내 설명은 이렇게 반증됐다.
 
-그럼 [pay-26의 진짜 원인](/blog/project/pay/pay-ch2-runtime-truths)은 뭐였을까?
+그럼 [그 버그의 진짜 원인](/blog/project/pay/pay-ch2-runtime-truths)은 뭐였을까?
 
 > 커밋되는데 managed 엔티티가 flush 안 되는 상황의 원인은 **세션 FlushMode가 AUTO가 아니었던 것**이다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꾸고, 이후 dirty 변경이 커밋 때 flush되지 않는다. 거기에 detached 엔티티(merge 필요)가 겹쳤다. OSIV off는 detached를 만드는 배경 조건에 그친다. flush를 직접 막은 건 FlushMode 쪽이다. 재밌는 건 정작 `CheckoutService`의 다른 주석은 "readOnly 조회로 세션 flush가 MANUAL"이라고 **정확히** 적혀 있었다는 점. 같은 코드베이스 안에서 주석끼리 설명이 엇갈리고 있었던 셈이다.
 
-그래서 정정했다. 부정확한 주석 12곳을 "readOnly/detached라 자동 flush를 신뢰할 수 없어 명시 영속한다(pay-26 교훈)"로 고치고, pay-26 글에도 **정정 노트**를 달았다. `saveAndFlush`를 쓰는 정책 자체는 유효하다. 틀린 건 이유였다.
+그래서 정정했다. 부정확한 주석 12곳을 "readOnly/detached라 자동 flush를 신뢰할 수 없어 명시 영속한다(3편 교훈)"로 고치고, 3편 글에도 **정정 노트**를 달았다. `saveAndFlush`를 쓰는 정책 자체는 유효하다. 틀린 건 이유였다.
 
 > 지울 수도 있었다. 어차피 draft고, 아무도 안 봤을 수도 있다. 안 지웠다. "예전엔 이렇게 이해했는데 다시 보니 틀렸고, 진짜는 이거다"를 남기는 쪽이 처음부터 다 맞은 척하는 것보다 정직하다. 틀린 걸 고친 흔적도 기록이다.
 
 ---
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 부분취소 멱등(잔액 세팅)은 실 MySQL로, OSIV 정정은 `settle()`의 save-less 동작으로 검증했다.*
-
 ---
 
 ## "이거 진짜 고치는 게 맞아?" 내 하드닝 추천을 웹서칭으로 검증하니, 하나는 수치가 틀렸고 하나는 방향이 틀렸다
@@ -190,7 +187,7 @@ int deleteByExpiresAtBefore(Instant threshold);   // 한 건씩 아니라 벌크
 
 > "안티패턴이긴 한데, 정합성은 이미 [UNKNOWN 복구](/blog/project/pay/pay-ch1-what-to-trust)로 해결됐고, 커넥션 점유는 fast-fail로 완화되니 **득이 별로 없다. 그냥 문서화하자.**"
 
-그런데 [읽는 분이](/blog) 되물었다. "득이 진짜 없어? 현업은 어떤데?" 웹서칭해 보니 이번에도 내가 틀렸다.
+그런데 읽는 분이 되물었다. "득이 진짜 없어? 현업은 어떤데?" 웹서칭해 보니 이번에도 내가 틀렸다.
 
 > 외부 API 콜 중 DB 커넥션을 붙잡는 건 "**classic leak pattern, silent killer**"로 불린다. 실제 장애 사례가 수두룩하다. 다운스트림 지연으로 인한 연쇄 결제 실패, 느린 쿼리가 커넥션을 소진시킨 수 시간 outage, 트래픽 2배에 커넥션 풀 고갈. 심지어 "**서킷브레이커도 기다리는 동안 풀이 찬다**"고 명시돼 있었다. 내가 "완화됐다"던 그 서킷브레이커가 완전히 막지 못한다는 뜻이다. 득은 실재했다.
 
@@ -205,9 +202,6 @@ int deleteByExpiresAtBefore(Instant threshold);   // 한 건씩 아니라 벌크
 > ADR-007에 이렇게 적었다. 안티패턴을 **인지**하고(실사고 인용), 이 모놀리스에선 ACID 원자성을 위해 **의도적으로** 단일 트랜잭션을 유지하며, fast-fail·서킷·UNKNOWN 복구로 완화하고, 스케일이 요구하면 **3단계 사가로 이행**하는 경로(멈춘 사가 복구 포함)를 명시했다. "규칙과 예외를 알고 이 규모에선 원자성을 택한 것"을 기록으로 남긴 셈이다. 규칙을 몰라서 지나친 것으로 읽히지 않게 하는 장치이기도 하다.
 
 ---
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 멱등 purge는 실 MySQL로, 체크아웃 트랜잭션 경계는 ADR-007로 트레이드오프를 남겼다.*
-
 ---
 
 ## 테스트에서만 살아 있던 failover: 만들어둔 멀티 PG 라우팅을 배선하다, 그리고 TIMEOUT엔 절대 failover하지 않는 이유

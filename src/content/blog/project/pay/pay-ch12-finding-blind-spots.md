@@ -61,7 +61,7 @@ private static Long parseAmount(String raw) {
 public record ExternalRecord(String orderNo, long amount, String transactionId)
 ```
 
-그리고 **바로 전 편에서 내가 고친 것**은 이랬다.
+그리고 **8편에서 내가 고친 것**은 이랬다.
 
 ```java
 /** 취소를 <b>별도 행</b>으로 만든다 (ADR-013). 금액은 음수다. */
@@ -313,4 +313,4 @@ API 스펙은 내가 썼고 내가 읽었는데, **문서와 코드를 나란히
 
 혼자 만들면 시야가 만든 만큼이다. 그래서 **밖에서 잣대를 가져오는 게 가장 싼 검사**인 것 같다. 데이터셋도 사람도 없이 웹서칭 한 번으로 목록 하나를 얻었고, 그게 구멍을 짚었다.
 
-테스트 691개 통과.
+이 작업 시점의 스위트 691개 통과.
