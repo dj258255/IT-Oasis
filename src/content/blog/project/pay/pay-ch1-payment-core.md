@@ -904,7 +904,7 @@ meterRegistry.counter("payment.confirm", "outcome", result.outcome().name().toLo
 
 이 한 줄로 `payment_confirm_total{outcome="success|failed|timeout"}` 메트릭이 쌓인다. Grafana에서 결제 성공률은 이렇게 계산한다.
 
-```promql
+```
 sum(rate(payment_confirm_total{outcome="success"}[5m]))
   / sum(rate(payment_confirm_total[5m]))
 ```
