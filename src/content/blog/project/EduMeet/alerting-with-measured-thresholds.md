@@ -14,7 +14,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 6
+seriesOrder: 5
 ---
 
 Prometheus가 돌고 Grafana에 대시보드가 두 개 있고 커스텀 지표도 냅니다. 그런데 **경보가 0건**이었습니다.

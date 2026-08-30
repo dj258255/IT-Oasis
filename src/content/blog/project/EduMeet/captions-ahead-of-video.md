@@ -15,7 +15,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 10
+seriesOrder: 8
 ---
 
 실시간 자막 서비스를 만들면서, 정작 그 자막이 **화면보다 먼저** 나가고 있었습니다.
