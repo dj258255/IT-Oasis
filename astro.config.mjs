@@ -219,6 +219,16 @@ export default defineConfig({
     //   그 글 주제가 "숫자를 못 믿게 만드는 것" 이라 정확히 맞는다.
     '/blog/project/edumeet/baseline-before-model': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     '/blog/project/edumeet/alerting-with-measured-thresholds': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    // zero-downtime-deploy 를 접었다 (2026-08-31)
+    //
+    // ★ 기준 - "해결한 문제가 실재했는가".
+    //   사용자가 없는 서비스에서 배포 중단 20.5초는 아무 피해가 아니다.
+    //   0으로 만든 것은 "할 수 있다" 의 증명이지 "필요했다" 가 아니다.
+    //
+    //   다만 그 작업이 실제로 값을 한 순간은 있었다 - Origin 을 고치는 동안
+    //   배포가 네 번 실패했는데 서비스가 한 번도 안 끊겼다. 그 한 문단만
+    //   captions-ahead-of-video 로 옮겼다.
+    '/blog/project/edumeet/zero-downtime-deploy': `${base || ''}/blog/project/edumeet/captions-ahead-of-video`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
