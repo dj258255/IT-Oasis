@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch16.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 16
+seriesOrder: 10
 tags:
   - Payment
   - LLM
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 16편. 14편에서 "AI를 안 쓴 이유"를 적었는데, 이번엔 쓰기로 한 자리 이야기다.*
+*결제 시스템 시리즈 10편. 14편에서 "AI를 안 쓴 이유"를 적었는데, 이번엔 쓰기로 한 자리 이야기다.*
 
 ## 순서를 정해놨었다
 
