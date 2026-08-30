@@ -1,5 +1,5 @@
 ---
-title: '무엇을 신뢰할지 먼저 정했다'
+title: '결제 코어: 무엇을 신뢰할지 먼저 정했다'
 description: '결제 코어를 만들며 정한 것들. 검증보다 신뢰 경계가 먼저였고, 타임아웃은 실패가 아니었고, 락은 셋을 재보고 골랐다. 되돌아봐도 이 판단들이 뒤의 전부를 지탱했다.'
 date: 2026-08-31T00:00:00.000Z
 category: study/pay
@@ -109,7 +109,7 @@ order.totalAmount = Σ (unitPrice × quantity);
 order.verifyAmount(requestedAmount);  // requestedAmount == totalAmount 인지 확인
 ```
 
-`totalAmount` 자체가 클라이언트가 보낸 가격으로 계산된다. 사용자가 "이 상품 1원"이라고 주문을 만들면 `totalAmount`도 1원이 되고, 승인 때 1원을 보내면 검증을 완벽하게 통과한다. 10만 원짜리를 1원에 결제하는 것이다.
+`totalAmount` 자체가 클라이언트가 보낸 가격으로 계산된다. 사용자가 "이 상품 1원"이라고 주문을 만들면 `totalAmount`도 1원이 되고, 승인 때 1원을 보내면 검증을 그대로 통과한다. 10만 원짜리를 1원에 결제하는 것이다.
 
 내 `verifyAmount`는 열심히 검증하고 있었다. 오염된 기준값에 대고서.
 

@@ -1,5 +1,5 @@
 ---
-title: '규칙을 검사하는 코드가 같은 버그였다'
+title: '아키텍처 규칙: 규칙을 검사하는 코드가 같은 버그였다'
 description: '같은 실수를 세 번 하고 나서 개별 테스트 대신 규칙 자체를 검사하기로 했다. 그렇게 만든 검사기가 하루에 두 번 통과했다. 한 번은 대상을 0개 찾고, 한 번은 아예 실행되지 않고.'
 date: 2026-08-29T00:00:00.000Z
 tags:
@@ -61,7 +61,7 @@ provider.findCandidateComponents("com.beomsu.pay");
 
 원인은 이랬다. `ClassPathScanningCandidateComponentProvider`는 후보를 모으면서 `@Conditional`을 **평가한다.** 그리고 이 프로젝트의 배치는 전부 기본 off다. 즉 검사하려는 대상이 정확히 "지금 조건을 만족하지 않는 클래스들"인데, 스캐너가 바로 그것들을 걸러낸 것이다.
 
-여기서 중요한 건 원인이 아니라, **왜 알아챘느냐**다.
+여기서 중요한 건 **왜 알아챘느냐**다.
 
 ```java
 assertThat(schedulerGates)
