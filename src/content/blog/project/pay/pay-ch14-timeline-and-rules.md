@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch14.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 8
+seriesOrder: 7
 tags:
   - Payment
   - Spring Modulith
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 8편. 앞 편에서 만든 규칙 검사기 이야기가 끝나고, 이번엔 실제 기능을 만들었다.*
+*결제 시스템 시리즈 7편. 앞 편에서 만든 규칙 검사기 이야기가 끝나고, 이번엔 실제 기능을 만들었다.*
 
 ## 내가 만든 화면이 이상했다
 
