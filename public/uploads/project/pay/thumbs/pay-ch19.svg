@@ -23,7 +23,7 @@
   <text x="868" y="506" font-size="19" font-weight="900" fill="#b91c1c">예외 큐에 쌓인다</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
-  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">13</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">12</text>
   <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">내가 고친 것의</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">반쪽이 남아 있었다</text>
   <text x="72" y="446" font-size="19" fill="#64748b">PG 환불 음수 행 · 조용히 건너뛴 50만원</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
