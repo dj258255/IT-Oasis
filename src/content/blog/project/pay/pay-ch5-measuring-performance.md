@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch11.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 5
+seriesOrder: 6
 tags:
   - Payment
   - 측정
@@ -14,7 +14,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 5편. 성능을 재면서 예상이 두 번 뒤집힌 이야기다.*
+*결제 시스템 시리즈 6편. 성능을 재면서 예상이 두 번 뒤집힌 이야기다.*
 
 면접 준비를 하다가 내 답변을 스스로 검증하는 중이었다. "BCrypt를 씁니다"라고 적어 두고, 그게 지금도 맞는 말인지 확인하러 갔다. 확인해 보니 반은 틀렸다.
 

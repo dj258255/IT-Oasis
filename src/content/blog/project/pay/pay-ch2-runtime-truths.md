@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch2.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 2
+seriesOrder: 3
 tags:
   - Payment
   - 실기동
@@ -14,7 +14,7 @@ tags:
   - 운영
 ---
 
-*결제 시스템 시리즈 2편. 만든 걸 실제로 돌려봤을 때 나온 것들이다.*
+*결제 시스템 시리즈 3편. 만든 걸 실제로 돌려봤을 때 나온 것들이다.*
 
 ## 승인됐습니다"라고 답했지만 DB엔 없었다: 실기동이 드러낸 결제 확정 버그
 
