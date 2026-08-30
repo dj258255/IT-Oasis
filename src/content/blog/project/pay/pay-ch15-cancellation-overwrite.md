@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch15.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 9
+seriesOrder: 8
 tags:
   - Payment
   - 대사
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 9편. 앞 편에서 대사 화면과 원인 분류기를 만들었다. 이번엔 그 대사 자체에 있던 결함 이야기다.*
+*결제 시스템 시리즈 8편. 앞 편에서 대사 화면과 원인 분류기를 만들었다. 이번엔 그 대사 자체에 있던 결함 이야기다.*
 
 ## 남의 사례를 읽다가 우리 걸 봤다
 
