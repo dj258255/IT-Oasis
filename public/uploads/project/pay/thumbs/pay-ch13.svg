@@ -22,7 +22,7 @@
   <text x="852" y="482" font-size="17" font-weight="800" fill="#1e293b" font-family="ui-monospace, monospace">hasSizeGreaterThan(10)</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#e74c3c" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
-  <text x="72" y="205" font-size="60" font-weight="900" fill="#e74c3c" opacity="0.92">6</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#e74c3c" opacity="0.92">7</text>
   <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">규칙을 검사하는</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">코드가 같은 버그였다</text>
   <text x="72" y="446" font-size="19" fill="#64748b">배치 게이트 강제 · 여섯 개를 마저 켜다 · 빨간불을 봐야 안다</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Boot · JUnit5 · Testcontainers · 실패 설계와 정합성 학습기</text>
