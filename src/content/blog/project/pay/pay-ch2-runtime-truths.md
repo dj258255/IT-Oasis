@@ -16,13 +16,13 @@ tags:
 
 *결제 시스템 시리즈 3편. 만든 걸 실제로 돌려봤을 때 나온 것들이다.*
 
-## 승인됐습니다"라고 답했지만 DB엔 없었다: 실기동이 드러낸 결제 확정 버그
+## "승인됐습니다"라고 답했지만 DB엔 없었다: 실기동이 드러낸 결제 확정 버그
 
 응답은 `PAID`인데 DB엔 `PENDING_PAYMENT`가 남아 있었다. 결제 승인이 실제로는 DB에 확정되지 않는 버그가, 200개 넘는 테스트가 전부 초록불인 채로 실기동에서 드러났다.
 
 ### 0. 구매확정이 자꾸 막혔다
 
-[에스크로](/blog/project/pay/pay-0-overview)를 붙이고 실기동으로 흐름을 눌러봤다. 주문 생성 → 결제 승인 → 구매확정. 그런데 구매확정이 자꾸 막혔다.
+에스크로를 붙이고 실기동으로 흐름을 눌러봤다. 주문 생성 → 결제 승인 → 구매확정. 그런데 구매확정이 자꾸 막혔다.
 
 ```
 POST /api/v1/orders/{orderNo}/confirm-purchase
@@ -77,7 +77,7 @@ INSERT는 나가는데 상태를 바꾸는 UPDATE만 안 나간다. 트랜잭션
 
 문제는 이 트랜잭션의 영속성 컨텍스트가 커밋 때 변경분을 flush하지 않는다는 것이었다. IDENTITY 즉시 INSERT가 이 문제를 가려서, 주문 행은 있으니 저장은 되는 줄 착각하게 만들었다.
 
-> **정정(나중에 더 정확히 알게 된 것)**: 처음엔 이걸 "[OSIV를 꺼서](/blog/project/pay/pay-0-overview)(`open-in-view: false`) 그렇다"고 이해했는데, 부정확했다. 일반적인 read-write 트랜잭션 안에선 OSIV 여부와 무관하게 커밋 때 dirty-check가 flush된다(managed 엔티티라면). 진짜 원인은 이 경로의 세션 FlushMode가 AUTO가 아니었다는 데 있다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꿔서, 이후 dirty 변경이 커밋 때 flush되지 않는다. 거기에 "불러온 엔티티가 detached라 merge가 필요한" 경우까지 겹치면서, `order.markPaid()`·`payment.approve()` 같은 변경이 메모리에만 남고 사라졌다. OSIV off는 detached를 만드는 배경일 뿐, flush를 막는 직접 원인은 아니다.
+> **정정(나중에 더 정확히 알게 된 것)**: 처음엔 이걸 "OSIV를 꺼서(`open-in-view: false`) 그렇다"고 이해했는데, 부정확했다. 일반적인 read-write 트랜잭션 안에선 OSIV 여부와 무관하게 커밋 때 dirty-check가 flush된다(managed 엔티티라면). 진짜 원인은 이 경로의 세션 FlushMode가 AUTO가 아니었다는 데 있다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꿔서, 이후 dirty 변경이 커밋 때 flush되지 않는다. 거기에 "불러온 엔티티가 detached라 merge가 필요한" 경우까지 겹치면서, `order.markPaid()`·`payment.approve()` 같은 변경이 메모리에만 남고 사라졌다. OSIV off는 detached를 만드는 배경일 뿐, flush를 막는 직접 원인은 아니다.
 
 ### 3. 고치기: 애그리거트를 명시적으로 영속
 
@@ -121,25 +121,22 @@ assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);  // 통과!
 
 이 테스트는 "서비스 로직이 order를 PAID로 바꿨는가"를 검증한다. 그건 맞았다. 하지만 그게 실제 DB에 반영됐는지는 목이라서 검증할 수가 없다. dirty-checking flush 같은 영속성 계층의 동작은 진짜 DB를 써야만 드러난다.
 
-그래서 이 버그는 단위 테스트의 사각지대에 정확히 숨어 있었다. [부하테스트(k6)](/blog/project/pay/pay-0-overview)도 HTTP 200만 봤지 DB 상태는 안 봤다. 에스크로가 "주문이 PAID여야 한다"는 조건을 실제로 요구하면서, 실기동에서 처음 터진 것이다.
+그래서 이 버그는 단위 테스트의 사각지대에 정확히 숨어 있었다. [부하테스트(k6)](/blog/project/pay/pay-ch2-concurrency-and-load)도 HTTP 200만 봤지 DB 상태는 안 봤다. 에스크로가 "주문이 PAID여야 한다"는 조건을 실제로 요구하면서, 실기동에서 처음 터진 것이다.
 
 목 기반 단위 테스트는 로직을 검증할 뿐 영속까지 검증하지 못한다. 상태 전이가 DB에 남는지는 실 DB 통합 테스트로만 확인된다. 그래서 재발 방지로 각 수정 지점에 `verify(repo).saveAndFlush(...)` 단언을 넣어, 최소한 "명시 저장을 호출한다"는 계약을 고정했다. 그리고 기능은 끝까지 눌러봐야 한다. "API가 200을 준다"와 "DB에 올바르게 남는다"는 다른 얘기다. E2E 실기동으로 실제 상태를 확인하지 않았다면, 이 버그는 운영에서 "결제됐다는데 주문이 없어요" 문의로 터졌을 것이다.
 
 ---
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 수정 후 승인/취소/부분취소/구매확정을 실 MySQL로 전수 검증했다.*
-
 ---
 
-## 프로세스 밖 소비자"라는 약속을 실제로 지키기: 붙여보니 드러난 이중 인코딩
+## "프로세스 밖 소비자"라는 약속을 실제로 지키기: 붙여보니 드러난 이중 인코딩
 
 외부화해둔 Kafka 이벤트를 구독하는 소비자를 드디어 만들었다. 그리고 붙이자마자 알았다. JSON이어야 할 와이어에 base64가 흐르고 있었다.
 
 ### 0. 구독자 없는 외부화는 약속일 뿐
 
-[Kafka 외부화 편](/blog/project/pay/pay-0-overview)에서 결제 이벤트에 `@Externalized`를 달아 Kafka로 내보냈다. 목적은 분명했다. 프로세스 밖 소비자(분석, 별도 서비스, 다른 팀)가 이벤트 모델을 고치지 않고 구독할 수 있게 하는 것.
+Kafka 외부화 편에서 결제 이벤트에 `@Externalized`를 달아 Kafka로 내보냈다. 목적은 분명했다. 프로세스 밖 소비자(분석, 별도 서비스, 다른 팀)가 이벤트 모델을 고치지 않고 구독할 수 있게 하는 것.
 
-그런데 돌아보니 정작 구독하는 프로세스 밖 소비자가 하나도 없었다. 토픽에 이벤트가 실리는 것까진 확인했지만, "다른 프로세스가 실제로 받아서 쓸 수 있다"는 건 여전히 약속이었지 실증이 아니었다. FDS 엔진도 [대사 엔진](/blog/project/pay/pay-0-overview)도 만들어두고 안 연결된 상태였다가 연결하면서 완성됐다. 외부화도 소비자가 있어야 완성이다.
+그런데 돌아보니 정작 구독하는 프로세스 밖 소비자가 하나도 없었다. 토픽에 이벤트가 실리는 것까진 확인했지만, "다른 프로세스가 실제로 받아서 쓸 수 있다"는 건 여전히 약속이었지 실증이 아니었다. FDS 엔진도 대사 엔진도 만들어두고 안 연결된 상태였다가 연결하면서 완성됐다. 외부화도 소비자가 있어야 완성이다.
 
 그래서 만들었다. 이번에도 실제로 붙여보니 몰랐던 게 드러났다.
 
@@ -151,7 +148,7 @@ assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);  // 통과!
 
 **(2) 타입도 분리.** 소비자는 메인 앱의 이벤트 클래스를 import하지 않는다. 값을 String으로 받아 Jackson `readTree`로 파싱한다. producer가 붙이는 타입 헤더(`__TypeId__: com.beomsu.pay...PaymentConfirmedEvent`)에 기대면 소비자가 발행자의 내부 클래스명에 결합되고, 그 순간 "프로세스 밖"의 의미가 사라진다. 계약으로 삼을 것은 JSON 스키마다.
 
-**(3) 실패도 분리.** 파싱 안 되는 메시지(포이즌)는 warn 찍고 건너뛴다. 이상한 메시지 하나가 파티션 소비 전체를 멈추면 안 된다. [outbox 재발행](/blog/project/pay/pay-0-overview)은 at-least-once라 중복 수신이 가능하다는 것, 그래서 실소비자는 orderNo/paymentId 기반 멱등 처리가 필수라는 것도 코드에 명시했다.
+**(3) 실패도 분리.** 파싱 안 되는 메시지(포이즌)는 warn 찍고 건너뛴다. 이상한 메시지 하나가 파티션 소비 전체를 멈추면 안 된다. outbox 재발행은 at-least-once라 중복 수신이 가능하다는 것, 그래서 실소비자는 orderNo/paymentId 기반 멱등 처리가 필수라는 것도 코드에 명시했다.
 
 ### 2. 붙여보니: 와이어에 base64가 흐르고 있었다
 
@@ -184,18 +181,15 @@ assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);  // 통과!
 
 ### 3. 왜 이 버그는 지금까지 숨어 있었나
 
-곱씹어볼 지점이다. 이 이중 인코딩은 [외부화를 만든 시점](/blog/project/pay/pay-0-overview)부터 있었다. 그런데 아무 테스트도 못 잡았다. 발행 측 설정 테스트는 "토픽으로 나간다"까지만 봤고, 와이어 포맷을 읽는 쪽이 없으니 포맷이 틀렸는지 알 길이 없었다.
+곱씹어볼 지점이다. 이 이중 인코딩은 외부화를 만든 시점부터 있었다. 그런데 아무 테스트도 못 잡았다. 발행 측 설정 테스트는 "토픽으로 나간다"까지만 봤고, 와이어 포맷을 읽는 쪽이 없으니 포맷이 틀렸는지 알 길이 없었다.
 
 이 시리즈에서 반복된 패턴이 또 나왔다.
 
-> 결제 확정 버그는 실기동 E2E가, [outbox 데드락](/blog/project/pay/pay-0-overview)은 스파이크 실측이, 이번 이중 인코딩은 실제 소비자를 붙이는 것이 드러냈다. 소비하는 쪽이 생기기 전까지 만드는 쪽은 자기가 옳다고 믿는다. 계약의 검증은 언제나 반대편 끝에서 온다.
+> 결제 확정 버그는 실기동 E2E가, [outbox 데드락](/blog/project/pay/pay-ch2-concurrency-and-load)은 스파이크 실측이, 이번 이중 인코딩은 실제 소비자를 붙이는 것이 드러냈다. 소비하는 쪽이 생기기 전까지 만드는 쪽은 자기가 옳다고 믿는다. 계약의 검증은 언제나 반대편 끝에서 온다.
 
 Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 더미라도 좋으니 진짜로 읽는 소비자를 하나 두는 게 좋다. 그게 와이어 계약의 테스트다.
 
 ---
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 소비자 앱은 [consumer-app/](https://github.com/dj258255/payment-system/tree/main/consumer-app)에서 별도 프로세스로 실행된다.*
-
 ---
 
 ## 아무도 부르지 않는 배치들: javadoc은 스케줄러가 있다고 믿었다
@@ -235,7 +229,7 @@ Kafka를 붙일 계획이 없더라도, 이벤트를 외부화한다면 더미�
 
 ### 2. 스케줄러를 다는 것도 그냥 붙이면 안 된다
 
-배치 4개에 스케줄러를 달았다. 이 프로젝트엔 스케줄러를 켜고 끄는 원칙이 이미 있다. [보상 태스크·에스크로 자동 릴리스](/blog/project/pay/pay-0-overview)처럼 프로퍼티 게이트(기본 off)다.
+배치 4개에 스케줄러를 달았다. 이 프로젝트엔 스케줄러를 켜고 끄는 원칙이 이미 있다. 보상 태스크·에스크로 자동 릴리스처럼 프로퍼티 게이트(기본 off)다.
 
 ```java
 @Configuration @EnableScheduling
@@ -256,7 +250,7 @@ public int expireOverdue(Instant now) {
 }
 ```
 
-예의 saveAndFlush와 [한 건 실패 격리](/blog/project/pay/pay-0-overview)는 이제 반사적으로 들어간다.
+예의 saveAndFlush와 한 건 실패 격리는 이제 반사적으로 들어간다.
 
 실기동으로 확인했다. 주문을 만들고 만료시각을 과거로 backdate한 뒤 스케줄러를 켜니,
 
@@ -282,9 +276,6 @@ Modulith가 이걸 위한 API를 준다. `CompletedEventPublications.deletePubli
 > 참고로 Modulith 1.3엔 `completion-mode`로 `DELETE`(완료 즉시 삭제)나 `ARCHIVE`(별도 테이블로 이동) 모드도 있다. 감사 이력을 잠깐이라도 남기고 싶어서 "완료 유지 + 주기 purge"를 택했다. outbox의 목적은 유실 방지지 영구 보관이 아니다.
 
 ---
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 주문 만료 배치를 실 MySQL로 검증했다(backdate→EXPIRED).*
-
 ---
 
 ## 금고를 만들어놓고 아무것도 안 넣었다: 암호화를 실제 컬럼에, 그리고 조회의 딜레마
@@ -293,13 +284,13 @@ Modulith가 이걸 위한 API를 준다. `CompletedEventPublications.deletePubli
 
 ### 0. 금고는 있는데 비어 있었다
 
-[필드 암호화](/blog/project/pay/pay-0-overview)를 만들고, [envelope로 키 로테이션까지](/blog/project/pay/pay-0-overview) 정성껏 확장했다. AES-256-GCM, DEK/KEK, 블라인드 인덱스, JPA 컨버터까지 민감 데이터를 잠글 준비는 다 돼 있었다.
+필드 암호화를 만들고, envelope로 키 로테이션까지 정성껏 확장했다. AES-256-GCM, DEK/KEK, 블라인드 인덱스, JPA 컨버터까지 민감 데이터를 잠글 준비는 다 돼 있었다.
 
 그런데 감사가 이렇게 짚었다.
 
 > **[4] 필드 암호화 인프라 전부 미사용**: `@Convert`가 **어느 엔티티 컬럼에도 적용 안 됨**. 가상계좌 계좌번호·빌링키가 평문.
 
-인프라만 완비하고 채우진 않은 셈이다. 계좌번호도, 카드 토큰인 빌링키도 평문 그대로였다. FDS 엔진처럼, [대사 엔진처럼](/blog/project/pay/pay-0-overview), 만들고 안 연결한 또 하나였다.
+인프라만 완비하고 채우진 않은 셈이다. 계좌번호도, 카드 토큰인 빌링키도 평문 그대로였다. FDS 엔진처럼, 대사 엔진처럼, 만들고 안 연결한 또 하나였다.
 
 ### 1. 그냥 붙이면 되는 게 아니었다
 
@@ -323,7 +314,7 @@ private String billingKey;
 
 빌링키는 유니크이고, 값으로 조회된다. 여기에 암호화를 붙이면 문제가 생긴다.
 
-> envelope 암호화는 매번 새 DEK와 IV를 쓴다([그래서 안전하다](/blog/project/pay/pay-0-overview). 같은 값도 매번 다른 암호문이 나온다). 그런데 그게 바로 문제다. 같은 빌링키가 저장할 때마다 다른 암호문이 되니, (1) `WHERE billing_key = '암호화된값'` 조회가 절대 안 맞고, (2) 유니크 제약이 무의미해진다(다른 암호문이라 절대 충돌하지 않는다). 보안을 위한 암호화가 조회와 유니크를 깨뜨린다.
+> envelope 암호화는 매번 새 DEK와 IV를 쓴다(그래서 안전하다. 같은 값도 매번 다른 암호문이 나온다). 그런데 그게 바로 문제다. 같은 빌링키가 저장할 때마다 다른 암호문이 되니, (1) `WHERE billing_key = '암호화된값'` 조회가 절대 안 맞고, (2) 유니크 제약이 무의미해진다(다른 암호문이라 절대 충돌하지 않는다). 보안을 위한 암호화가 조회와 유니크를 깨뜨린다.
 
 암호화하면 못 찾고, 못 찾으면 결제를 못 한다. 결제 시스템에서 민감 필드를 다룰 때 항상 나오는 벽이다.
 
@@ -347,7 +338,7 @@ public Optional<BillingKey> findByBillingKey(String raw) {
 }
 ```
 
-빌링키 자체는 여전히 암호문으로 잠겨 있고(유출돼도 못 읽는다), 조회·유니크는 인덱스가 대신한다. HMAC은 일방향이라 인덱스만 봐선 빌링키를 역산 못 하고, secret이 없으면 인덱스를 만들 수도 없다. [블라인드 인덱스 클래스](/blog/project/pay/pay-0-overview)를 애초에 만든 이유가 이것이었는데, 실제로 써보고서야 왜 필요한지 체감했다.
+빌링키 자체는 여전히 암호문으로 잠겨 있고(유출돼도 못 읽는다), 조회·유니크는 인덱스가 대신한다. HMAC은 일방향이라 인덱스만 봐선 빌링키를 역산 못 하고, secret이 없으면 인덱스를 만들 수도 없다. 블라인드 인덱스 클래스를 애초에 만든 이유가 이것이었는데, 실제로 써보고서야 왜 필요한지 체감했다.
 
 그래서 필드마다 전략이 다르다.
 
@@ -373,9 +364,6 @@ public String decrypt(String ciphertext) {
 `env:`로 시작하지 않으면 마이그레이션 전 평문으로 보고 그대로 돌려준다. 새로 저장되는 값은 항상 암호화되고, 옛 평문은 읽기만 된다. 한 번에 다 재암호화하지 않고 읽을 때·쓸 때 자연스럽게 넘어가는 점진적 마이그레이션이다.
 
 ---
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, V10 마이그레이션(컬럼 확장·유니크 이전)은 실 MySQL validate로 검증했다.*
-
 ---
 
 ## 재시작하면 블랙리스트가 사라진다: 보안 상태의 수명, 그리고 README의 거짓말
@@ -396,7 +384,7 @@ public String decrypt(String ciphertext) {
 
 `test-webhook-secret`이라는 약한 기본값을 조용히 쓰고 있었다. 운영에서 환경변수를 깜빡 안 넣으면? 앱은 아무 경고 없이 뜨고, 공개된 문자열로 서명을 검증한다. 공격자가 그 문자열로 서명을 위조해 가짜 웹훅을 보낼 수 있다.
 
-이상한 건 [JWT 키는 이미 fail-fast](/blog/project/pay/pay-0-overview)였다는 점이다(미설정이면 기동 실패). 웹훅만 빠져 있었다. 일관성을 맞췄다.
+이상한 건 JWT 키는 이미 fail-fast였다는 점이다(미설정이면 기동 실패). 웹훅만 빠져 있었다. 일관성을 맞췄다.
 
 ```java
 public WebhookSignatureVerifier(@Value("${payment.webhook.secret}") String secret) {
@@ -440,11 +428,11 @@ void reload() {
 
 ### 3. 한 프로세스만 세는 velocity
 
-[FDS velocity 룰](/blog/project/pay/pay-0-overview)은 "1분에 카드로 몇 번 시도했나"를 세서 이상 패턴을 잡는다. 그런데 그 카운터가 인메모리였다.
+FDS velocity 룰은 "1분에 카드로 몇 번 시도했나"를 세서 이상 패턴을 잡는다. 그런데 그 카운터가 인메모리였다.
 
 > 서버가 여러 대면(실서비스는 당연히 그렇다) 각 인스턴스가 자기가 받은 요청만 센다. 공격자가 1분에 100번을 쳐도 10대에 분산되면 각각 10번밖에 못 봐서 velocity 룰이 안 걸린다. 인메모리 카운터는 다중 인스턴스에서 사실상 무력하다.
 
-[rate limiter](/blog/project/pay/pay-0-overview)나 [토큰 저장소](/blog/project/pay/pay-0-overview)와 같은 문제였고, 해법도 같다. Redis 공유 카운터.
+[rate limiter](/blog/project/pay/pay-ch2-concurrency-and-load)나 토큰 저장소와 같은 문제였고, 해법도 같다. Redis 공유 카운터.
 
 ```java
 // velocity:{cardKey}:{분} 을 모든 인스턴스가 공유해 INCR
