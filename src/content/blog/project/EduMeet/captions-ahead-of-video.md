@@ -204,6 +204,53 @@ AWS 키를 넣는 순간 S3 도, LiveKit 자격증명을 넣는 순간 화상강
 
 **빈 값을 조심하려고 넣은 그 조건문이 줄바꿈을 먹는 장치였습니다.**
 
+### 곁가지 — `allow_origins=["*"]` 와 `allow_credentials=True` 를 같이 쓰면 `*` 가 안 나갑니다
+
+파이썬 서비스에 이 설정이 있었습니다.
+
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], allow_credentials=True,
+    allow_methods=["*"], allow_headers=["*"],
+)
+```
+
+`*` 를 쓰면 자격증명이 안 실린다고 알기 쉽습니다.
+그건 브라우저가 `Access-Control-Allow-Origin: *` 를 **받았을 때**의 이야기입니다.
+
+Starlette 은 이 조합에서 `*` 를 보내지 않습니다.
+
+```python
+# starlette/middleware/cors.py
+if self.allow_all_origins and has_cookie:
+    self.allow_explicit_origin(headers, origin)
+```
+
+쿠키가 붙은 요청에 대해 **요청이 보낸 origin 을 그대로 되돌려 줍니다.**
+브라우저에게는 "이 사이트는 허용됨" 이 됩니다 — 아무 사이트나 이 API 를 인증된 채로 부를 수 있습니다.
+
+### 고치지 않고 지웠습니다
+
+고치려면 허용할 origin 을 적으면 됩니다. **적을 origin 이 없었습니다.**
+
+| | |
+|---|---|
+| 프론트 코드 | 이 서비스를 부르는 곳이 없습니다 |
+| nginx | 이 서비스로 보내는 `location` 이 없습니다 |
+| compose | `expose` 만 합니다. 호스트 포트를 안 엽니다 |
+
+부르는 것은 백엔드뿐이고 **서버 간 호출에는 CORS 가 관여하지 않습니다.**
+브라우저가 보내는 `Origin` 을 보고 브라우저에게 답하는 규칙이기 때문입니다.
+
+이 설정은 **존재하지 않는 사용자를 위한 것**이었습니다.
+
+지우고 나서 문을 잠갔습니다. 나중에 브라우저가 필요해지면 누군가 다시 넣을 텐데,
+**가장 먼저 붙여 보는 값이 `*`** 입니다 — 그게 제일 빨리 동작하기 때문입니다.
+시험은 CORS 를 못 쓰게 하는 게 아니라 **와일드카드와 자격증명을 같이 쓰는 것**만 막습니다.
+
+---
+
 ### 세 겹으로 막았습니다
 
 | | |
