@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch3.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 3
+seriesOrder: 4
 tags:
   - Payment
   - 정산
@@ -14,7 +14,7 @@ tags:
   - 취소
 ---
 
-*결제 시스템 시리즈 3편. 자금이 걸린 버그만 모았다. 전부 예외 하나 안 나고 조용히 틀리고 있었다.*
+*결제 시스템 시리즈 4편. 자금이 걸린 버그만 모았다. 전부 예외 하나 안 나고 조용히 틀리고 있었다.*
 
 ## 정산이 "총액의 3%"만 떼고 있었다: 수수료 부가세·지급예정일, 그리고 또 하나의 죽은 배치
 
