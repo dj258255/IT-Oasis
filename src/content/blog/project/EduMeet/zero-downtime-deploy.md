@@ -17,7 +17,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 7
+seriesOrder: 4
 ---
 
 원래 재려던 것은 다른 것이었습니다.

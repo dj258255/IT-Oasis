@@ -163,16 +163,16 @@ export default defineConfig({
     '/blog/project/edumeet/edge-case-issues': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // EduMeet 재작업 15편 -> 주제별 9편으로 병합 (2026-08-28)
     '/blog/project/edumeet/egress-cost-model': `${base || ''}/blog/project/edumeet/own-hls`,
-    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/baseline-before-model`,
-    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/ops-that-look-installed`,
+    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     // 모노레포 합치기·CI 이관·Flyway 가 한 글에 묶여 있어 어느 것도 검색어가 안 됐다.
     // 살릴 사실(git subtree 이력 끊김)은 저장소 docs/ 에 남기고 글은 접었다.
     '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // 셋 다 프로젝트 진행 기록에 가까웠다. 각각에 한 조각씩 쓸 만한 게 있어
     // 지우지 않고 한 편으로 합쳤다(하트비트 · 과금 단위 · 베이스라인).
     '/blog/project/edumeet/reaching-the-screen': `${base || ''}/blog/project/edumeet/captions-ahead-of-video`,
-    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/baseline-before-model`,
-    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/baseline-before-model`,
+    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     '/blog/project/edumeet/deploy-and-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     '/blog/project/edumeet/chicken-and-egg': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
@@ -188,9 +188,37 @@ export default defineConfig({
     //                             (dockerd CPU · nginx 60초)을 각각 옮기고 접었다
     //   realtime-caption-decisions  세 항목이 서로 무관했다. 가장 강한 하나를
     //                             baseline-before-model 로 다시 세웠다
-    '/blog/project/edumeet/config-that-does-nothing': `${base || ''}/blog/project/edumeet/ops-that-look-installed`,
+    '/blog/project/edumeet/config-that-does-nothing': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     '/blog/project/edumeet/measuring-on-the-real-server': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
-    '/blog/project/edumeet/realtime-caption-decisions': `${base || ''}/blog/project/edumeet/baseline-before-model`,
+    '/blog/project/edumeet/realtime-caption-decisions': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    // ops-that-look-installed 를 접었다 (2026-08-31)
+    //
+    // ★ 기준이 한 겹 더 내려갔다 - "정보가 쓸모 있는가" 도 아니고
+    //   "이걸 굳이 글로 적어야 하나" 다.
+    //
+    //   그 글의 여섯 항목(백업 복구 확인 · SELinux · 하트비트 스케줄러 ·
+    //   nginx proxy_read_timeout · permitAll 목록 · /error)은 전부
+    //   검색하면 나오는 것이고, 포폴에서는 "기본 설정을 몰랐구나" 로 읽힌다.
+    //
+    //   같은 발견도 "왜 아무도 못 봤는가" 를 답하면 통찰이 되고
+    //   "내가 몰랐다" 로 끝나면 함정 목록이 된다. 그 질문에 답하는 항목이
+    //   하나뿐이어서(부하를 걸면 사라지는 버그) 그것만 limits-i-wrote-down 으로 옮겼다.
+    '/blog/project/edumeet/ops-that-look-installed': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    // baseline-before-model · alerting-with-measured-thresholds 를 접었다 (2026-08-31)
+    //
+    // ★ 기준 - "결과물이 있는가".
+    //   baseline 글은 임베딩을 선택 의존성으로 빼고 기본값을 끄기로 한 이야기라
+    //   글 전체가 "안 한 것" 이다. 이 시리즈에 "재보고 안 썼다" 는 이미 여럿 있는데
+    //   그것들은 본체 작업 안의 판단이고 이건 글 자체에 결과물이 없다.
+    //
+    //   alerting 글은 자기정정 한 단락이 강했지만 그것만으로 한 편을 못 지탱했고,
+    //   관측·경보 비중이 이미 컸다.
+    //
+    //   둘의 알맹이(비교 대상이 약하면 개선폭이 부풀려진다 · 근거를 적은 것과
+    //   근거가 맞는 것은 다르다)는 limits-i-wrote-down 으로 옮겼다.
+    //   그 글 주제가 "숫자를 못 믿게 만드는 것" 이라 정확히 맞는다.
+    '/blog/project/edumeet/baseline-before-model': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/alerting-with-measured-thresholds': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
