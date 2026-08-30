@@ -41,7 +41,10 @@
     "Loki",
     "Grafana Alloy",
     "node-exporter",
-    "systemd"
+    "systemd",
+    "hls.js",
+    "Ansible",
+    "접근성"
   ],
   "category": "team",
   "date": "2025-07-05",
