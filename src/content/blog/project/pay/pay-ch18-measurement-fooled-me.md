@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch18.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 18
+seriesOrder: 12
 tags:
   - Payment
   - LLM
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 18편. 17편에서 로컬 모델을 붙였는데, 이번엔 그게 쓸 만한지를 재려다 벌어진 일이다.*
+*결제 시스템 시리즈 12편. 17편에서 로컬 모델을 붙였는데, 이번엔 그게 쓸 만한지를 재려다 벌어진 일이다.*
 
 ## 재는 것부터 막혔다
 

@@ -12,10 +12,10 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch13.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 13
+seriesOrder: 7
 ---
 
-*결제 시스템 시리즈 13편. 12편의 마지막 문단에서 이어진다.*
+*결제 시스템 시리즈 7편. 12편의 마지막 문단에서 이어진다.*
 
 ## 세 번이면 규칙으로 만들어야 한다
 

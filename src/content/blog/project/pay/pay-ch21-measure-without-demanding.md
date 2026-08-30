@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch21.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 21
+seriesOrder: 15
 tags:
   - Payment
   - LLM
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 21편. 18편에서 만든 잣대가 천장에 닿았고, 그걸 뚫은 이야기다.*
+*결제 시스템 시리즈 15편. 18편에서 만든 잣대가 천장에 닿았고, 그걸 뚫은 이야기다.*
 
 ## "구독으로 쓰면 안 되나"
 

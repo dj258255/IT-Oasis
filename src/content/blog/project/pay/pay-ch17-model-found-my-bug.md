@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch17.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 17
+seriesOrder: 11
 tags:
   - Payment
   - LLM
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 17편. 16편에서 포트만 만들고 모델은 안 붙였는데, 이번엔 붙였다.*
+*결제 시스템 시리즈 11편. 16편에서 포트만 만들고 모델은 안 붙였는데, 이번엔 붙였다.*
 
 ## 붙이기 전에 실데이터부터
 
