@@ -17,7 +17,7 @@ category: team/EduMeet
 coverImage: /uploads/project/EduMeet/EduMeetTitle.png
 draft: false
 series: "EduMeet"
-seriesOrder: 9
+seriesOrder: 7
 ---
 
 다른 것을 재다가 나온 숫자였습니다.

@@ -163,19 +163,34 @@ export default defineConfig({
     '/blog/project/edumeet/edge-case-issues': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // EduMeet 재작업 15편 -> 주제별 9편으로 병합 (2026-08-28)
     '/blog/project/edumeet/egress-cost-model': `${base || ''}/blog/project/edumeet/own-hls`,
-    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/measure-before-the-model`,
-    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/config-that-does-nothing`,
+    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/baseline-before-model`,
+    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/ops-that-look-installed`,
     // 모노레포 합치기·CI 이관·Flyway 가 한 글에 묶여 있어 어느 것도 검색어가 안 됐다.
     // 살릴 사실(git subtree 이력 끊김)은 저장소 docs/ 에 남기고 글은 접었다.
     '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // 셋 다 프로젝트 진행 기록에 가까웠다. 각각에 한 조각씩 쓸 만한 게 있어
     // 지우지 않고 한 편으로 합쳤다(하트비트 · 과금 단위 · 베이스라인).
-    '/blog/project/edumeet/reaching-the-screen': `${base || ''}/blog/project/edumeet/realtime-caption-decisions`,
-    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/realtime-caption-decisions`,
-    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/realtime-caption-decisions`,
+    '/blog/project/edumeet/reaching-the-screen': `${base || ''}/blog/project/edumeet/captions-ahead-of-video`,
+    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/baseline-before-model`,
+    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/baseline-before-model`,
     '/blog/project/edumeet/deploy-and-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
-    '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/measuring-on-the-real-server`,
+    '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
     '/blog/project/edumeet/chicken-and-egg': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    // EduMeet 9편 -> 8편 (2026-08-31)
+    //
+    // ★ 기준을 "정보가 쓸모 있는가" 에서 "포폴로서 값이 있는가" 로 옮겼다.
+    //   쓸모 있는 정보인데 글의 논지가 약하면, 그 정보만 다른 글로 옮기고 글은 접는다.
+    //
+    //   config-that-does-nothing  내 설정 버그 6개 목록으로 읽혔다. 재사용되는 둘
+    //                             (목록 마지막 줄이 위를 삼킨다 · /error 가 404를 401로)만
+    //                             ops-that-look-installed 로 옮겼다
+    //   measuring-on-the-real-server  5개 중 3개가 다른 글과 겹쳤다. 고유한 둘
+    //                             (dockerd CPU · nginx 60초)을 각각 옮기고 접었다
+    //   realtime-caption-decisions  세 항목이 서로 무관했다. 가장 강한 하나를
+    //                             baseline-before-model 로 다시 세웠다
+    '/blog/project/edumeet/config-that-does-nothing': `${base || ''}/blog/project/edumeet/ops-that-look-installed`,
+    '/blog/project/edumeet/measuring-on-the-real-server': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/realtime-caption-decisions': `${base || ''}/blog/project/edumeet/baseline-before-model`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
