@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch19.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 19
+seriesOrder: 13
 tags:
   - Payment
   - 대사
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 19편. 18편의 실험 중에 "모르겠다"고 넘긴 것 하나를 확인하러 갔다가 나온 이야기다.*
+*결제 시스템 시리즈 13편. 18편의 실험 중에 "모르겠다"고 넘긴 것 하나를 확인하러 갔다가 나온 이야기다.*
 
 ## 넘겼던 것 하나
 

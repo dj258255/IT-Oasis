@@ -12,10 +12,10 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch11.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 11
+seriesOrder: 5
 ---
 
-*결제 시스템 시리즈 11편. 비밀번호 해시를 BCrypt에서 Argon2id로 옮긴 기록이다.*
+*결제 시스템 시리즈 5편. 비밀번호 해시를 BCrypt에서 Argon2id로 옮긴 기록이다.*
 
 면접 준비를 하다가 내 답변을 스스로 검증하는 중이었다. "BCrypt를 씁니다"라고 적어 두고, 그게 지금도 맞는 말인지 확인하러 갔다. 확인해 보니 반은 틀렸다.
 

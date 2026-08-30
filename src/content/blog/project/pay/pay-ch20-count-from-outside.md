@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch20.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 20
+seriesOrder: 14
 tags:
   - Payment
   - 대사
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 20편. 19편에서 "모르겠다"고 적어둔 목록을 마저 보다가, 이번엔 아예 밖에서 잣대를 가져왔다.*
+*결제 시스템 시리즈 14편. 19편에서 "모르겠다"고 적어둔 목록을 마저 보다가, 이번엔 아예 밖에서 잣대를 가져왔다.*
 
 ## 스스로는 못 세는 것이 있다
 

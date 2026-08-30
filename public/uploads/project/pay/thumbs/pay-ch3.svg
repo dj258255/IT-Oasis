@@ -1,20 +1,25 @@
 <svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
-  <defs>
-    <marker id="am" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#e67e22"/></marker>
-    <marker id="amg" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#94a3b8"/></marker>
-    <marker id="amr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#e74c3c"/></marker>
-  </defs>
   <rect width="1200" height="630" fill="#f8fafb"/>
-  <rect width="1200" height="8" fill="#e67e22"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
   <rect x="820" y="120" width="370" height="400" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
-  <path d="M 870 400 A 130 130 0 0 1 1130 400" fill="none" stroke="#e2e8f0" stroke-width="22" stroke-linecap="round"/>
-  <path d="M 870 400 A 130 130 0 0 1 1000 270" fill="none" stroke="#e67e22" stroke-width="22" stroke-linecap="round"/>
-  <line x1="1000" y1="400" x2="920" y2="330" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
-  <circle cx="1000" cy="400" r="12" fill="#1e293b"/>
-  <text x="1000" y="450" text-anchor="middle" font-size="22" font-weight="800" fill="#e67e22">p95 3.08s → 52ms</text>
-  <text x="72" y="120" font-size="19" font-weight="700" fill="#e67e22" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
-  <text x="72" y="205" font-size="60" font-weight="900" fill="#e67e22" opacity="0.92">03</text>
-  <text x="72" y="330" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">성능·취소·보상</text>
-  <text x="72" y="410" font-size="19" fill="#64748b">부하테스트가 짚은 병목 · 포인트 우선 환불 · 망취소</text>
-  <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · Java 21 · MySQL · 실패 설계와 정합성 학습기</text>
+
+  <text x="1005" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#64748b" letter-spacing="0.04em">예외 하나 안 났다</text>
+  <rect x="852" y="192" width="306" height="58" rx="9" fill="#dc262610" stroke="#dc2626" stroke-width="2"/>
+  <text x="868" y="215" font-size="12.5" font-weight="700" fill="#1e293b">수수료</text>
+  <text x="868" y="236" font-size="11.5" fill="#64748b">총액의 3%만 떼고 있었다</text>
+  <rect x="852" y="260" width="306" height="58" rx="9" fill="#dc262610" stroke="#dc2626" stroke-width="2"/>
+  <text x="868" y="283" font-size="12.5" font-weight="700" fill="#1e293b">집계 키</text>
+  <text x="868" y="304" font-size="11.5" fill="#64748b">승인일이라 정산이 안 나갔다</text>
+  <rect x="852" y="328" width="306" height="58" rx="9" fill="#dc262610" stroke="#dc2626" stroke-width="2"/>
+  <text x="868" y="351" font-size="12.5" font-weight="700" fill="#1e293b">정산 시점</text>
+  <text x="868" y="372" font-size="11.5" fill="#64748b">구매확정 전에 나가고 있었다</text>
+  <rect x="852" y="396" width="306" height="58" rx="9" fill="#dc262610" stroke="#dc2626" stroke-width="2"/>
+  <text x="868" y="419" font-size="12.5" font-weight="700" fill="#1e293b">취소</text>
+  <text x="868" y="440" font-size="11.5" fill="#64748b">월렛을 몰랐다</text>
+
+  <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">3</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">돈이 조용히</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">새던 곳</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">정산·취소에서 잡은 자금 버그 다섯</text>
+  <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
 </svg>

@@ -26,7 +26,7 @@
   <text x="1005" y="470" text-anchor="middle" font-size="13" font-weight="700" fill="#64748b">계정 1개로는 바깥 층이 깨지 않는다</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#9b59b6" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
-  <text x="72" y="205" font-size="60" font-weight="900" fill="#9b59b6" opacity="0.92">12</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#9b59b6" opacity="0.92">6</text>
   <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">측정을 잘못하고</text><text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">있었다</text>
   <text x="72" y="446" font-size="19" fill="#64748b">다계정 재실측 · 아웃박스 풀스캔 · 있는지와 불리는지</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">k6 · Spring Modulith · MySQL · 실패 설계와 정합성 학습기</text>

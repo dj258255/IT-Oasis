@@ -12,10 +12,10 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch12.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 12
+seriesOrder: 6
 ---
 
-*결제 시스템 시리즈 12편. 실험 설계가 틀렸다는 걸 알아채고 다시 잰 기록이다.*
+*결제 시스템 시리즈 6편. 실험 설계가 틀렸다는 걸 알아채고 다시 잰 기록이다.*
 
 ## 산수가 안 맞았다
 
