@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch4.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 4
+seriesOrder: 5
 tags:
   - Payment
   - 문서
@@ -14,7 +14,7 @@ tags:
   - 검증
 ---
 
-*결제 시스템 시리즈 4편. 문서를 믿었다가 틀린 기록들이다. 남의 문서도, 내 문서도.*
+*결제 시스템 시리즈 5편. 문서를 믿었다가 틀린 기록들이다. 남의 문서도, 내 문서도.*
 
 ## 가상계좌: 문서를 깊게 읽어야만 보이는 두 함정
 
