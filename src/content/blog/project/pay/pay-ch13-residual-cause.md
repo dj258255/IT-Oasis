@@ -236,10 +236,10 @@ assist           allowedDependencies = { shared, timeline, reconciliation }
 
 ## 참고
 
-- Ramp 거래 재분류 에이전트 — [ZenML LLMOps Database](https://www.zenml.io/llmops-database/ai-agent-for-automated-merchant-classification-and-transaction-matching)
-- Modern Treasury 대사에 AI 붙이기 — [Modern Treasury Journal](https://www.moderntreasury.com/journal/adding-ai-to-modern-treasury-reconciliation)
-- 토스 Flowise + LLM 에러 분석 자동화 — [토스 테크](https://toss.tech/article/flowise-llm-error-analysis-automation)
-- LINE 평가 하네스 자동화 — [LY Corporation 기술블로그](https://techblog.lycorp.co.jp/ko/automating-llm-application-evaluation-with-harness)
-- 말로 표현한 신뢰도의 보정 문제 — [Overconfidence is Key (arXiv 2405.02917)](https://arxiv.org/html/2405.02917), [On Verbalized Confidence Scores (arXiv 2412.14737)](https://arxiv.org/pdf/2412.14737)
-- 라벨 설명이 분류 정확도에 미치는 영향 — [PoliPrompt (arXiv 2409.01466)](https://arxiv.org/html/2409.01466v1)
-- 기권과 선택적 예측 — [Uncertainty-Aware Abstention (arXiv 2607.04430)](https://arxiv.org/pdf/2607.04430)
+- Ramp 거래 재분류 에이전트: [ZenML LLMOps Database](https://www.zenml.io/llmops-database/ai-agent-for-automated-merchant-classification-and-transaction-matching)
+- Modern Treasury 대사에 AI 붙이기: [Modern Treasury Journal](https://www.moderntreasury.com/journal/adding-ai-to-modern-treasury-reconciliation)
+- 토스 Flowise + LLM 에러 분석 자동화: [토스 테크](https://toss.tech/article/flowise-llm-error-analysis-automation)
+- LINE 평가 하네스 자동화: [LY Corporation 기술블로그](https://techblog.lycorp.co.jp/ko/automating-llm-application-evaluation-with-harness)
+- 말로 표현한 신뢰도의 보정 문제: [Overconfidence is Key (arXiv 2405.02917)](https://arxiv.org/html/2405.02917), [On Verbalized Confidence Scores (arXiv 2412.14737)](https://arxiv.org/pdf/2412.14737)
+- 라벨 설명이 분류 정확도에 미치는 영향: [PoliPrompt (arXiv 2409.01466)](https://arxiv.org/html/2409.01466v1)
+- 기권과 선택적 예측: [Uncertainty-Aware Abstention (arXiv 2607.04430)](https://arxiv.org/pdf/2607.04430)
