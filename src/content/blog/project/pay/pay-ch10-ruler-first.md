@@ -73,7 +73,7 @@ OrderTimeline + CauseSuggestion   ← 결정적으로 조립 (9편에서 만든 
         ↓
    DraftPort                      ← 템플릿이든 모델이든 여기서 갈린다
         ↓
-   NumberGuard                    ← 초안의 금액·날짜를 FactPack과 대조
+   NumericProvenanceGuard                    ← 초안의 금액·날짜를 FactPack과 대조
         ↓
    상담원이 검토·수정 후 발송
 ```
@@ -88,7 +88,12 @@ OrderTimeline + CauseSuggestion   ← 결정적으로 조립 (9편에서 만든 
 
 알아보니 Spring AI가 이미 같은 형태를 표준으로 제공하고 있었다. `ChatModel` 뒤에서 OpenAI·Anthropic·로컬 Ollama가 **의존성과 설정만 바꿔** 교체되고 비즈니스 로직은 그대로다. 내가 만든 `DraftPort`는 그보다 좁은(초안 생성 한 가지) 포트라, 어댑터가 Spring AI를 쓰든 직접 호출하든 상관없다.
 
-### NumberGuard가 요점이다
+### NumericProvenanceGuard가 요점이다
+
+**이름을 나중에 바꿨다.** 처음엔 `NumberGuard`였는데, 이 장치가 보장하는 건 **출처뿐**이다.
+초안에 나온 숫자가 코드가 낸 값인지만 본다. 그 숫자가 **맞는 주장에 쓰였는지**는 못 본다.
+외부 기록에 100,000원이 있으면 "청구 금액은 그대로 유지됩니다"도 숫자 검증은 통과한다.
+그 층은 루브릭과 심판이 맡는다. `NumberGuard`는 "숫자를 지킨다"로 읽혀 실제 보장보다 넓었다.
 
 모델이 지어낸 숫자는 근거 있는 숫자와 **문장에서 구별되지 않는다.**
 
