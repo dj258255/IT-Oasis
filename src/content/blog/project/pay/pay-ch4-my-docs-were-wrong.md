@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch4.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 5
+seriesOrder: 6
 tags:
   - Payment
   - 문서
@@ -14,7 +14,7 @@ tags:
   - 검증
 ---
 
-*결제 시스템 시리즈 5편. 문서를 믿었다가 틀린 기록들이다. 남의 문서도, 내 문서도.*
+*결제 시스템 시리즈 6편. 문서를 믿었다가 틀린 기록들이다. 남의 문서도, 내 문서도.*
 
 ## 가상계좌: 문서를 깊게 읽어야만 보이는 두 함정
 
@@ -106,7 +106,7 @@ DONE → { WAITING_FOR_DEPOSIT, CANCELED }   // 은행 지연 통보로 인한 �
 
 > 커밋되는데 managed 엔티티가 flush 안 되는 상황의 원인은 **세션 FlushMode가 AUTO가 아니었던 것**이다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꾸고, 이후 dirty 변경이 커밋 때 flush되지 않는다. 거기에 detached 엔티티(merge 필요)가 겹쳤다. OSIV off는 detached를 만드는 배경 조건에 그친다. flush를 직접 막은 건 FlushMode 쪽이다. 재밌는 건 정작 `CheckoutService`의 다른 주석은 "readOnly 조회로 세션 flush가 MANUAL"이라고 **정확히** 적혀 있었다는 점. 같은 코드베이스 안에서 주석끼리 설명이 엇갈리고 있었던 셈이다.
 
-그래서 정정했다. 부정확한 주석 12곳을 "readOnly/detached라 자동 flush를 신뢰할 수 없어 명시 영속한다(3편 교훈)"로 고치고, 3편 글에도 **정정 노트**를 달았다. `saveAndFlush`를 쓰는 정책 자체는 유효하다. 틀린 건 이유였다.
+그래서 정정했다. 부정확한 주석 12곳을 "readOnly/detached라 자동 flush를 신뢰할 수 없어 명시 영속한다(4편 교훈)"로 고치고, 4편 글에도 **정정 노트**를 달았다. `saveAndFlush`를 쓰는 정책 자체는 유효하다. 틀린 건 이유였다.
 
 > 지울 수도 있었다. 어차피 draft고, 아무도 안 봤을 수도 있다. 안 지웠다. "예전엔 이렇게 이해했는데 다시 보니 틀렸고, 진짜는 이거다"를 남기는 쪽이 처음부터 다 맞은 척하는 것보다 정직하다. 틀린 걸 고친 흔적도 기록이다.
 

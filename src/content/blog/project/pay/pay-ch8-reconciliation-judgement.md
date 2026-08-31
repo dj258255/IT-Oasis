@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch14.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 8
+seriesOrder: 9
 tags:
   - Payment
   - Spring Modulith
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 8편. 대사 불일치는 결국 사람이 판정한다. 그 판정을 사람에게 맡기면서 세 번 놓쳤다. 근거를 안 줬고, 내려둔 판정이 뒤집힌 걸 몰랐고, 고친 전제를 반대편에 알리지 않았다.*
+*결제 시스템 시리즈 9편. 대사 불일치는 결국 사람이 판정한다. 그 판정을 사람에게 맡기면서 세 번 놓쳤다. 근거를 안 줬고, 내려둔 판정이 뒤집힌 걸 몰랐고, 고친 전제를 반대편에 알리지 않았다.*
 
 ## 상황 1. 원인을 고르라면서 근거를 안 줬다
 
