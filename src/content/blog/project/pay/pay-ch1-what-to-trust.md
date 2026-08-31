@@ -1,6 +1,6 @@
 ---
 title: '결제 코어: 무엇을 신뢰할지 먼저 정했다'
-description: '결제 코어를 만들며 정한 것들. 검증보다 신뢰 경계가 먼저였고, 타임아웃은 실패가 아니었고, 락은 셋을 재보고 골랐다. 되돌아봐도 이 판단들이 뒤의 전부를 지탱했다.'
+description: '결제 코어를 만들며 정한 것들. 검증보다 신뢰 경계가 먼저였고, 타임아웃은 실패가 아니었고, 멀티 PG failover는 넘기면 안 되는 경우부터 정했다. 그 라우터가 한참 뒤 어디에도 배선돼 있지 않은 것도 여기서 같이 다룬다.'
 date: 2026-08-31T00:00:00.000Z
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch1.svg"
@@ -322,7 +322,7 @@ void approveIsNotRetried() {
 
 ---
 
-## 멀티 PG 라우팅: 아무 때나 failover하면 안 된다
+## 멀티 PG 라우팅: 규칙을 정하고, 한참 뒤에 배선했다
 
 
 ### 0. PG 하나에 매출을 걸지 않는다
@@ -389,7 +389,80 @@ void noFailoverOnTimeout() {
 - 모든 PG 장애 → UNKNOWN
 - 주 PG **서킷 오픈** → 건너뛰고 보조 PG
 
-### 3. 개선의 교훈
+### 3. 그런데 이 라우터가 테스트에서만 살아 있었다
+
+여기까지가 설계다. 한참 뒤 전수 감사에서, 이 라우터가 **어디에도 배선되지 않았다**는 게 나왔다. 금고를 만들고 안 채우고 배치를 만들고 안 부르던 그 패턴이([3편](/blog/project/pay/pay-ch2-runtime-truths)) PG에도 있었다.
+
+`RoutingPgClient`. 여러 PG를 가중치 순으로 시도하고 장애 시 다음 PG로 넘기는(failover) 라우터를 꽤 정성껏 만들어놨다. 서킷브레이커도 PG별로 붙였고 단위 테스트도 촘촘했다. 그런데.
+
+> `grep`해보니 이 라우터를 참조하는 건 **자기 테스트뿐**이었다. 어느 `@Configuration`에서도 빈으로 등록되지 않았고, 실제 결제는 여전히 단일 PG(`ResilientPgClient`가 감싼 하나)로만 흘렀다. failover가 실제 결제 경로엔 없고 **테스트 안에서만 돌고** 있었다.
+
+이번에 배선했다. 다만 "빈으로 등록만 하면 되겠지"로 끝나는 일이 아니었다.
+
+### 4. 진짜 문제는 @Primary였다
+
+결제는 `PgClient` 인터페이스로 PG를 부르고, 그 구현으로 `ResilientPgClient`가 `@Primary`로 주입된다(서킷브레이커·재시도를 입힌 데코레이터). 여기에 라우터를 넣으려니 문제가 걸렸다.
+
+> `RoutingPgClient`를 또 `@Primary`로 두면 **`@Primary`가 둘**이 되어 스프링이 어느 걸 주입할지 못 정한다. 그렇다고 `ResilientPgClient`의 `@Primary`를 떼면 그게 주던 재시도·외곽 서킷을 잃는다.
+
+답은 이미 있던 **seam**에 있었다. `ResilientPgClient`는 자기가 감쌀 대상을 이렇게 주입받고 있었다.
+
+```java
+public ResilientPgClient(@Qualifier("pgDelegate") PgClient delegate) { ... }
+```
+
+`pgDelegate`라는 이름표(qualifier)가 붙은 PG를 감싼다. 원래는 `FakePgClient`(개발)나 `TossPgClient`(운영)가 프로파일로 그 자리에 들어갔다. 그렇다면 라우터를 바로 그 `pgDelegate` 자리에 끼우면 된다.
+
+```java
+@Configuration
+@ConditionalOnProperty(name = "app.pg.routing.enabled", havingValue = "true")
+class PgRoutingConfig {
+    @Bean @Qualifier("pgDelegate")
+    PgClient routingPgDelegate() {
+        return new RoutingPgClient(List.of(
+            PgRoute.of("primary-fake",   new FakePgClient(), 10),
+            PgRoute.of("secondary-fake", new FakePgClient(), 5)));
+    }
+}
+```
+
+그러면 계층이 자연스럽게 합성된다.
+
+```
+PaymentService → ResilientPgClient(@Primary, 외곽 서킷·query 재시도)
+              → RoutingPgClient(pgDelegate, PG별 서킷·failover)
+              → [primary PG, secondary PG]
+```
+
+`@Primary`는 `ResilientPgClient` 하나로 그대로 두고, 그 아래 `pgDelegate`만 단일 PG에서 라우터로 바뀐다. 데코레이터 패턴의 힘이 여기서 나온다. 바깥 껍질은 안쪽이 하나든 라우터든 모른다.
+
+### 5. qualifier가 둘이 되는 함정
+
+한 가지가 더 걸렸다. `FakePgClient`는 **항상** `@Qualifier("pgDelegate")`였다. 라우터도 `pgDelegate`로 등록하면 **같은 이름표가 둘**이 되어 다시 주입이 모호해진다.
+
+> 그래서 `FakePgClient`의 `pgDelegate` 역할을 **라우팅이 꺼졌을 때만**으로 조건화했다. `@ConditionalOnProperty(name="app.pg.routing.enabled", havingValue="false", matchIfMissing=true)`. 라우팅을 켜면 이 빈은 아예 등록되지 않고 라우터가 유일한 `pgDelegate`가 된다. 라우터 내부 경로는 자체 `new FakePgClient()`로 만든다.
+
+토글 하나로 `FakePgClient`의 등록과 `PgRoutingConfig`의 등록이 **함께** 뒤집힌다. 언제나 하나만 `pgDelegate`가 되는 구조다.
+
+실기동으로 확인했다.
+
+```
+APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
+→ PgRoutingConfig : 멀티 PG 라우팅 활성화 — 경로 2개 (가중치 순 시도, 장애 시 failover)
+→ 결제 승인 → order PAID / payment DONE   (라우터의 primary 경로로 승인)
+```
+
+### 6. 남겨둔 한계: 원 PG 라우팅
+
+하나는 남겨뒀다. 취소·조회는 원래 결제를 처리한 **그 PG**로 가야 맞다(A PG로 승인했으면 A PG로 취소). `Payment.pgProvider`에 어느 PG였는지 기록은 돼 있는데, 정작 `PgClient.cancel(paymentKey, ...)` 인터페이스가 provider를 안 받는다. 그래서 지금은 "가용한 첫 PG"로 시도한다.
+
+> 제대로 하려면 인터페이스에 provider 힌트를 넣어 라우터가 원 PG로 보내야 한다. 인터페이스를 건드리는 일이라 [후속 과제로 명시](/blog/project/pay/pay-ch2-runtime-truths)했다. "여기까진 했고 여기부턴 안 했다"를 적는 쪽이 안 한 걸 숨기는 것보다 낫다.
+
+---
+
+*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있다. `app.pg.routing.enabled=true`로 라우터가 pgDelegate로 배선되어 결제가 라우팅 경로로 승인되는 것을 실기동으로 확인했다.*
+
+### 7. 개선의 교훈
 
 포트원 같은 결제 대행사도 멀티 PG를 세일즈 포인트로 삼는데("장애 대응 1시간 → 10초"), 보통은 **콘솔 수동 전환**이다. 여기서는 **자동** failover를 만들었고, "언제 failover하면 안 되는지"를 분명히 했다.
 
@@ -399,6 +472,6 @@ void noFailoverOnTimeout() {
 
 ## 남는 생각
 
-이 셋이 뒤에 나오는 모든 것을 지탱했다. **신뢰 경계**는 매 API 마다 다시 물었고, **타임아웃을 실패로 안 본 것**은 복구 배치·대사·미확정 나이 지표로 이어졌고, **failover 조건을 좁힌 것**은 "재시도해도 되는 실패"를 가르는 기준이 됐다(2편).
+이 셋이 뒤에 나오는 모든 것을 지탱했다. **신뢰 경계**는 매 API 마다 다시 물었고, **타임아웃을 실패로 안 본 것**은 복구 배치·대사·미확정 나이 지표로 이어졌고, **failover 조건을 좁힌 것**은 "재시도해도 되는 실패"를 가르는 기준이 됐다(2편). 다만 그 라우터를 실제로 꽂는 데는 한참이 걸렸다.
 
 만들 때는 몰랐는데, 되돌아보니 **초반에 정한 것만큼만 뒤에서 할 수 있었다.**

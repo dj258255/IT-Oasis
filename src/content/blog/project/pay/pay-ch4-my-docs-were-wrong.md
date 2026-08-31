@@ -1,6 +1,6 @@
 ---
 title: '문서 검증: 남의 문서도 내 문서도 틀렸다'
-description: 'PG 문서는 깊게 읽어야만 함정이 보였고, 내 javadoc과 README는 아예 거짓이었고, 내가 낸 하드닝 추천은 웹서칭해보니 수치가 틀렸다.'
+description: 'PG 문서는 깊게 읽어야만 함정이 보였고, 내가 낸 하드닝 추천은 웹서칭해보니 수치가 틀렸고, 내 README와 package-info는 쓰지도 않는 기술을 쓴다고 적고 있었다.'
 date: 2026-08-31T00:00:00.000Z
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch4.svg"
@@ -86,47 +86,13 @@ DONE → { WAITING_FOR_DEPOSIT, CANCELED }   // 은행 지연 통보로 인한 �
 
 ---
 
-## 재감사 2회차: 부분취소만 멱등이 아니었고, 내가 예전에 쓴 설명이 틀렸다
+## 재감사가 짚은 것: 내가 예전에 쓴 설명이 틀렸다
 
 ### 0. 한 번 더 봤더니 또 있었다
 
-[재감사에서 정산 날짜 키 버그를 잡고](/blog/project/pay/pay-ch3-money-leaks) "이제 됐나?" 하며 같은 눈으로 한 번 더 훑었더니 둘이 더 나왔다. 하나는 부분취소의 멱등성 구멍, 다른 하나는 **내가 예전에 써둔 설명이 틀렸다는 사실**이다.
+[재감사에서 정산 버그들을 잡고](/blog/project/pay/pay-ch3-money-leaks) "이제 됐나?" 하며 같은 눈으로 한 번 더 훑었더니 코드 밖에서 하나가 더 나왔다. **내가 예전에 써둔 설명이 틀렸다는 사실**이다.
 
-### 1. 전액취소는 멱등인데, 부분취소는 아니었다
-
-취소를 정산에 반영하는 코드가 이렇게 갈려 있었다.
-
-```java
-if (event.fullyCanceled()) {
-    item.cancel();                       // 전액: status==CANCELED 가드로 재배달에도 멱등
-} else {
-    item.reduce(event.cancelAmount());   // 부분: 델타를 뺀다 → 재배달 시 또 뺀다 (버그)
-}
-```
-
-전액취소는 "이미 CANCELED면 무시" 가드가 있어서 [at-least-once 재배달](/blog/project/pay/pay-ch1-what-to-trust)에 안전하다. 부분취소는 다르다. `reduce`로 델타(취소분)를 빼기만 한다.
-
-> 이벤트는 아웃박스로 최소 한 번 이상 배달된다. 리스너가 성공했는데 완료 표시 전에 크래시가 나면 재기동 때 같은 취소 이벤트가 다시 온다. 그럼 `reduce(3000)`가 두 번 호출되어 **6000이 깎인다.** 실제론 3000만 취소했는데도. 가맹점이 취소분의 두 배를 덜 받는다. 멱등 가드가 부분취소 경로에만 빠져 있었고, 그 비대칭이 문제였다.
-
-해법은 관점을 바꾸는 것이었다. 빼지 말고, 되어야 할 값으로 세팅하자. 결제 엔티티는 이미 `balanceAmount`(취소 후 잔액)를 들고 있었다. 그걸 이벤트에 실었다.
-
-```java
-// 이벤트가 델타(cancelAmount)만이 아니라 "취소 후 잔액(절대값)"을 함께 나른다
-new PaymentCanceledEvent(orderNo, paymentId, cancelAmount, settleableBalance, fullyCanceled);
-```
-
-```java
-// 정산은 델타를 빼는 대신, 잔액으로 세팅한다 → 몇 번 와도 같은 값
-public void applySettleableBalance(long settleableBalance) {
-    this.amount = Math.max(0L, settleableBalance);
-}
-```
-
-이제 같은 취소가 세 번 와도 `amount`는 잔액 그대로다. **절대값 세팅은 본질적으로 멱등**이다. 델타(`cancelAmount`)는 원장 역분개와 에스크로 환불이 여전히 쓰기 때문에 같이 실어 보내고, 정산만 절대 잔액을 본다.
-
-> 멱등성을 "중복을 감지해서 막는다"로 풀 수도 있다(취소 ID를 저장해 두고 비교). 더 단순한 건 **연산 자체를 멱등하게** 만드는 것. "빼기"를 "세팅"으로 바꾸니 감지 로직 없이 멱등이 됐다. 라이브로 부분취소 10,000을 걸어보니 정산액이 잔액 20,000으로 맞았다.
-
-### 2. 그리고, 내가 틀렸던 설명
+### 1. 내가 틀렸던 설명
 
 두 번째는 코드 밖에서 나왔다. **내 과거 글**이다. 재감사가 이렇게 짚었다.
 
@@ -204,97 +170,31 @@ int deleteByExpiresAtBefore(Instant threshold);   // 한 건씩 아니라 벌크
 ---
 ---
 
-## 테스트에서만 살아 있던 failover: 만들어둔 멀티 PG 라우팅을 배선하다, 그리고 TIMEOUT엔 절대 failover하지 않는 이유
+## 내가 쓴 문서가 거짓말을 하고 있었다
 
-### 0. 또 하나의 "만들고 안 쓴 것"
+남의 문서를 깊게 읽는 건 노력의 문제다. 더 어려운 건 내가 쓴 문서다. 전수 감사가 두 군데를 짚었고, 둘은 같은 거짓말의 앞뒤였다.
 
-부르는 사람 없는 코드는 정산 배치로 끝나지 않았다. [전수 감사](/blog/project/pay/pay-ch2-runtime-truths)가 짚은 패턴, [금고를 만들고 안 채우고](/blog/project/pay/pay-ch2-runtime-truths) [배치를 만들고 안 부르던](/blog/project/pay/pay-ch2-runtime-truths) 그 패턴이 PG에도 있었다.
+### README가 쓰지도 않는 기술을 쓴다고 적고 있었다
 
-`RoutingPgClient`. 여러 PG를 가중치 순으로 시도하고 장애 시 다음 PG로 넘기는(failover) 라우터를 꽤 정성껏 만들어놨다. 서킷브레이커도 PG별로 붙였고 단위 테스트도 촘촘했다. 그런데.
+감사가 이걸 짚었다.
 
-> `grep`해보니 이 라우터를 참조하는 건 **자기 테스트뿐**이었다. 어느 `@Configuration`에서도 빈으로 등록되지 않았고, 실제 결제는 여전히 단일 PG(`ResilientPgClient`가 감싼 하나)로만 흘렀다. failover가 실제 결제 경로엔 없고 **테스트 안에서만 돌고** 있었다.
+> README는 "MySQL + JPA + **QueryDSL**", "settlement: **Spring Batch** 정산"이라 명시하나, `build.gradle`에 둘 다 **의존조차 없다.**
 
-이번에 배선했다. 다만 "빈으로 등록만 하면 되겠지"로 끝나는 일이 아니었다.
+쓰지도 않는 기술을 쓴다고 적어놨던 것이다. 초기 계획엔 있었는데 실제론 안 쓰게 됐고, 문서만 안 고친 듯하다. 사소해 보여도 정직성 문제다. 코드를 읽는 사람이 문서를 믿을 수 없게 된다.
 
-### 1. 진짜 문제는 @Primary였다
+그래서 고쳤다. QueryDSL은 삭제하고, 정산은 "일 단위 배치 집계(서비스 루프; 대용량은 Spring Batch로 확장 여지)"로 사실화했다. README에 "가정과 한계" 절도 새로 뒀다. 데모 사용자(인메모리), 단일 통화(KRW), 로컬 기본 시크릿(운영은 env 필수), 멀티 PG 미배선 같은 걸 숨기지 않고 적었다.
 
-결제는 `PgClient` 인터페이스로 PG를 부르고, 그 구현으로 `ResilientPgClient`가 `@Primary`로 주입된다(서킷브레이커·재시도를 입힌 데코레이터). 여기에 라우터를 넣으려니 문제가 걸렸다.
+> "이건 이렇게 가정했고 여기까진 안 했다"를 적는 쪽이 "다 완벽하다"고 적는 것보다 믿음직하다. 결제처럼 신뢰가 생명인 도메인에선 특히 그렇다.
 
-> `RoutingPgClient`를 또 `@Primary`로 두면 **`@Primary`가 둘**이 되어 스프링이 어느 걸 주입할지 못 정한다. 그렇다고 `ResilientPgClient`의 `@Primary`를 떼면 그게 주던 재시도·외곽 서킷을 잃는다.
+### 그런데 한 군데가 아니었다
 
-답은 이미 있던 **seam**에 있었다. `ResilientPgClient`는 자기가 감쌀 대상을 이렇게 주입받고 있었다.
-
-```java
-public ResilientPgClient(@Qualifier("pgDelegate") PgClient delegate) { ... }
-```
-
-`pgDelegate`라는 이름표(qualifier)가 붙은 PG를 감싼다. 원래는 `FakePgClient`(개발)나 `TossPgClient`(운영)가 프로파일로 그 자리에 들어갔다. 그렇다면 라우터를 바로 그 `pgDelegate` 자리에 끼우면 된다.
+위를 고치고 한참 뒤, 정산을 손보다 그 잔당을 봤다. 정산 모듈 `package-info`가 이렇게 적혀 있었다.
 
 ```java
-@Configuration
-@ConditionalOnProperty(name = "app.pg.routing.enabled", havingValue = "true")
-class PgRoutingConfig {
-    @Bean @Qualifier("pgDelegate")
-    PgClient routingPgDelegate() {
-        return new RoutingPgClient(List.of(
-            PgRoute.of("primary-fake",   new FakePgClient(), 10),
-            PgRoute.of("secondary-fake", new FakePgClient(), 5)));
-    }
-}
+/** <p>Spring Batch 기반 일 단위 거래 집계 → 수수료 계산 → ... */
 ```
 
-그러면 계층이 자연스럽게 합성된다.
-
-```
-PaymentService → ResilientPgClient(@Primary, 외곽 서킷·query 재시도)
-              → RoutingPgClient(pgDelegate, PG별 서킷·failover)
-              → [primary PG, secondary PG]
-```
-
-`@Primary`는 `ResilientPgClient` 하나로 그대로 두고, 그 아래 `pgDelegate`만 단일 PG에서 라우터로 바뀐다. 데코레이터 패턴의 힘이 여기서 나온다. 바깥 껍질은 안쪽이 하나든 라우터든 모른다.
-
-### 2. qualifier가 둘이 되는 함정
-
-한 가지가 더 걸렸다. `FakePgClient`는 **항상** `@Qualifier("pgDelegate")`였다. 라우터도 `pgDelegate`로 등록하면 **같은 이름표가 둘**이 되어 다시 주입이 모호해진다.
-
-> 그래서 `FakePgClient`의 `pgDelegate` 역할을 **라우팅이 꺼졌을 때만**으로 조건화했다. `@ConditionalOnProperty(name="app.pg.routing.enabled", havingValue="false", matchIfMissing=true)`. 라우팅을 켜면 이 빈은 아예 등록되지 않고 라우터가 유일한 `pgDelegate`가 된다. 라우터 내부 경로는 자체 `new FakePgClient()`로 만든다.
-
-토글 하나로 `FakePgClient`의 등록과 `PgRoutingConfig`의 등록이 **함께** 뒤집힌다. 언제나 하나만 `pgDelegate`가 되는 구조다.
-
-실기동으로 확인했다.
-
-```
-APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
-→ PgRoutingConfig : 멀티 PG 라우팅 활성화 — 경로 2개 (가중치 순 시도, 장애 시 failover)
-→ 결제 승인 → order PAID / payment DONE   (라우터의 primary 경로로 승인)
-```
-
-### 3. 이 라우터의 진짜 값어치: 아무 때나 failover하지 않는다
-
-failover의 어려운 부분은 **"언제 넘기면 안 되나"**다. "언제 넘길까"는 상대적으로 쉬운 질문이다. `RoutingPgClient`는 결과를 이렇게 나눈다.
-
-| PG 응답 | failover | 이유 |
-|---|---|---|
-| SUCCESS | 안 함 | 성공, 끝 |
-| FAILED(카드 거절) | 안 함 | 다른 PG도 거절할 것 |
-| **TIMEOUT(미확정)** | **절대 안 함** | **다른 PG로 재시도 = 이중결제 위험** |
-| 예외·서킷 오픈 | 함 | PG가 요청을 못 받음 → 다음 PG |
-
-핵심은 세 번째 줄이다.
-
-> [PG 타임아웃은 "결과를 모른다"는 뜻](/blog/project/pay/pay-ch1-what-to-trust)이다. 원 PG에서 이미 승인됐을 수 있다. 이때 "실패했나 보다" 하고 다른 PG로 넘겨 재승인하면 **두 PG에서 이중으로 결제**된다. 그래서 TIMEOUT은 failover하지 않고 그대로 UNKNOWN으로 돌려, [복구 배치가 나중에 조회로 확정](/blog/project/pay/pay-ch2-runtime-truths)하게 맡긴다. failover는 "PG가 요청을 **못 받았을 때**"(연결 실패·서킷 오픈)만 한다.
-
-failover를 "실패하면 다음으로"라고 단순하게 짜면 이 이중결제 함정에 바로 빠진다. 결제에서 재시도·failover는 항상 멱등성과 이중청구를 먼저 물어야 한다.
-
-### 4. 남겨둔 한계: 원 PG 라우팅
-
-하나는 남겨뒀다. 취소·조회는 원래 결제를 처리한 **그 PG**로 가야 맞다(A PG로 승인했으면 A PG로 취소). `Payment.pgProvider`에 어느 PG였는지 기록은 돼 있는데, 정작 `PgClient.cancel(paymentKey, ...)` 인터페이스가 provider를 안 받는다. 그래서 지금은 "가용한 첫 PG"로 시도한다.
-
-> 제대로 하려면 인터페이스에 provider 힌트를 넣어 라우터가 원 PG로 보내야 한다. 인터페이스를 건드리는 일이라 [후속 과제로 명시](/blog/project/pay/pay-ch2-runtime-truths)했다. "여기까진 했고 여기부턴 안 했다"를 적는 쪽이 안 한 걸 숨기는 것보다 낫다.
-
----
-
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있다. `app.pg.routing.enabled=true`로 라우터가 pgDelegate로 배선되어 결제가 라우팅 경로로 승인되는 것을 실기동으로 확인했다.*
+**Spring Batch를 안 쓰는데** 쓴다고 적혀 있었다(실제론 서비스 루프). README는 앞서 고쳤는데 package-info엔 같은 주장이 남아 있던 것. "서비스 루프 집계, 대용량은 Spring Batch로 확장 여지"로 사실화했다. 문서의 거짓말은 한 군데에서 끝나지 않는다. 같은 주장을 여러 곳에 복붙해뒀다면 전부 찾아 고쳐야 한다.
 
 ---
 

@@ -66,7 +66,7 @@ pay는 주문 → 승인 → 취소 → 정산 → 대사까지 결제의 전체
 
 재고 차감 락은 세 가지를 같은 부하로 돌려 골랐다. 비관적 락, 낙관적 락, 조건부 UPDATE를 비교해 이중 차감과 마이너스 재고가 0건인지, 처리량이 어떤지 쟀고 조건부 UPDATE가 이겼다. 실측 수치는 [결제 코어 편](/blog/project/pay/pay-ch1-what-to-trust)에 있다.
 
-시스템 전체를 처음 부하테스트에 올렸을 때는 p95가 3초를 넘겼다. 병목을 추적하니 요청당 BCrypt 해싱이었고, JWT 인증으로 걷어낸 전후 수치(p95 567.84 → 37.09ms)를 [측정과 검사 편](/blog/project/pay/pay-ch5-measuring-performance)에 남겼다. 폭주에는 두 겹으로 대비했다. 한정판 오픈처럼 유입 자체가 몰리는 상황은 Redis Sorted Set 선착순 대기열로 줄 세우고, 그걸 뚫고 오는 초과 요청은 429로 쳐내 성공한 요청의 속도를 지킨다. 둘 다 [동시성과 부하 편](/blog/project/pay/pay-ch2-concurrency-and-load)에 있다.
+시스템 전체를 처음 부하테스트에 올렸을 때는 p95가 3초를 넘겼다. 병목을 추적하니 요청당 BCrypt 해싱이었고, JWT 인증으로 걷어낸 전후 수치(p95 567.84 → 37.09ms)를 [인증 비용 편](/blog/project/pay/pay-ch6-auth-cost)에 남겼다. 폭주에는 두 겹으로 대비했다. 한정판 오픈처럼 유입 자체가 몰리는 상황은 Redis Sorted Set 선착순 대기열로 줄 세우고, 그걸 뚫고 오는 초과 요청은 429로 쳐내 성공한 요청의 속도를 지킨다. 둘 다 [동시성과 부하 편](/blog/project/pay/pay-ch2-concurrency-and-load)에 있다.
 
 ![폭주 제어 데모: rate limit 429로 초과 유입을 쳐내고 대기열 게이트로 줄을 세우는 화면](/uploads/project/pay/demo/demo-overload.png)
 
