@@ -245,8 +245,8 @@ export default defineConfig({
     '/blog/project/pay/pay-ch15-cancellation-overwrite': `${base || ''}/blog/project/pay/pay-ch8-reconciliation-judgement`,
     '/blog/project/pay/pay-ch19-half-a-fix': `${base || ''}/blog/project/pay/pay-ch8-reconciliation-judgement`,
     '/blog/project/pay/pay-ch20-count-from-outside': `${base || ''}/blog/project/pay/pay-ch8-reconciliation-judgement`,
-    '/blog/project/pay/pay-ch11-password-hashing': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
-    '/blog/project/pay/pay-ch12-measuring-wrong': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
+    '/blog/project/pay/pay-ch11-password-hashing': `${base || ''}/blog/project/pay/pay-ch6-auth-cost`,
+    '/blog/project/pay/pay-ch12-measuring-wrong': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
     '/blog/project/pay/pay-ch1-payment-core': `${base || ''}/blog/project/pay/pay-ch1-what-to-trust`,
     '/blog/project/pay/pay-ch2-payment-methods': `${base || ''}/blog/project/pay/pay-ch1-what-to-trust`,
     '/blog/project/pay/pay-ch3-perf-cancel': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
@@ -274,10 +274,10 @@ export default defineConfig({
     '/blog/project/pay/pay-14-fraud-detection': `${base || ''}/blog/project/pay/pay-ch2-runtime-truths`,
     '/blog/project/pay/pay-15-field-encryption': `${base || ''}/blog/project/pay/pay-ch2-runtime-truths`,
     '/blog/project/pay/pay-16-cash-receipt': `${base || ''}/blog/project/pay/pay-0-overview`,
-    '/blog/project/pay/pay-17-load-test-finds-bottleneck': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
+    '/blog/project/pay/pay-17-load-test-finds-bottleneck': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
     '/blog/project/pay/pay-18-order-cancel': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
     '/blog/project/pay/pay-19-compensation-network-cancel': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
-    '/blog/project/pay/pay-20-jwt-removes-bottleneck': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
+    '/blog/project/pay/pay-20-jwt-removes-bottleneck': `${base || ''}/blog/project/pay/pay-ch6-auth-cost`,
     '/blog/project/pay/pay-22-kafka-event-externalization': `${base || ''}/blog/project/pay/pay-ch2-runtime-truths`,
     '/blog/project/pay/pay-23-ops-admin': `${base || ''}/blog/project/pay/pay-ch2-runtime-truths`,
     '/blog/project/pay/pay-24-chaos-testing': `${base || ''}/blog/project/pay/pay-ch1-what-to-trust`,
@@ -320,8 +320,10 @@ export default defineConfig({
     //   배치 여섯 개 켜보기·안 돌리던 테스트 둘·문서에 없던 표는 "내가 안 켰다"로 끝나
     //   함정 목록이 된다. 검사기가 두 번 헛통과한 것(대상 0개 · 태스크 스킵)만
     //   일반화되는 통찰이라 6편 상황 3으로 옮겼다.
-    '/blog/project/pay/pay-ch13-enforcing-the-rule': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
-    '/blog/project/pay/pay-21-ci-guards-boundaries': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
+    '/blog/project/pay/pay-ch13-enforcing-the-rule': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
+    '/blog/project/pay/pay-21-ci-guards-boundaries': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
+    // 6편에서 인증/해시(상황 1)를 떼어 별도 편으로 세웠다 (2026-08-31)
+    '/blog/project/pay/pay-ch5-measuring-performance': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
