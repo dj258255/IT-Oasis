@@ -29,8 +29,8 @@
   <text x="1142" y="484" text-anchor="end" font-size="16" font-weight="900" fill="#4a8db8">30</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
-  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">11</text>
-  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">AI 운영 자동화:</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">12</text>
+  <text x="72" y="300" font-size="44" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">상담 초안 자동화:</text>
   <text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">96점을 줬다</text>
   <text x="72" y="446" font-size="19" fill="#64748b">보낼 수 없는 초안에</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">LLM 평가 루브릭 · 필수와 가점 분리 · 실패 설계와 정합성 학습기</text>
