@@ -108,7 +108,7 @@ if (result.isApproved()) {
 }
 ```
 
-이 선택을 [ADR-004](/blog/project/pay)로 남겼습니다. "왜 조건부 UPDATE인가"를 수치와 함께. 셋을 다 만들어 실 DB에서 비교했고, 단일 행 차감에는 조건부 UPDATE가 최속이라 그걸 골랐다는 것까지. 
+이 선택을 **설계 결정 기록**으로 남겼습니다. 나중에 "왜 이렇게 했더라"를 다시 묻지 않으려고, 고른 것과 함께 **버린 것과 그 이유**를 적는 문서입니다. 여기에는 셋을 다 만들어 실 DB에서 비교했다는 것, 단일 행 차감에는 조건부 UPDATE가 가장 빨랐다는 것, 그래서 그걸 골랐다는 것을 수치와 함께 적었습니다. 
 > **처음엔 "멀티 인스턴스면 Redis 분산락이 필요하다"고 적었는데 틀렸습니다.** 모든 인스턴스가 같은 MySQL을 보면 이 UPDATE는 **멀티 인스턴스에서도 안전합니다.** 동시성 제어를 공유 DB가 하기 때문입니다. Redis 락을 얹는다고 DB 부하가 분산되지도 않고, 장애 지점과 정합성 문제만 하나 늘어납니다.
 >
 > 규모가 커지면 검토할 것은 분산락이 아니라 **상품별 대기열, 재고 예약 모델, hot 상품 분리, 파티셔닝** 쪽입니다.
@@ -378,7 +378,7 @@ server_errors: 0.00%   (이전 0.55%)
 
 ---
 
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 재시도 전후 스파이크 수치는 [docs/performance §7](https://github.com/dj258255/payment-system/blob/main/docs/performance/README.md)에 있습니다.*
+*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 재시도 전후 스파이크 수치는 위에 그대로 적었습니다(5xx 0.55% → 0.00%).*
 
 ---
 
