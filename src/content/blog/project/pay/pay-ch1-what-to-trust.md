@@ -1,5 +1,5 @@
 ---
-title: '신뢰 경계: 검증보다 무엇을 신뢰하는지가 먼저다'
+title: '금액 검증은 맞았는데, 기준값이 클라이언트에서 왔다'
 description: '금액 검증을 열심히 짜놓고도 기준값이 클라이언트에서 왔다. 10만 원짜리를 1원에 결제할 수 있었다. 검증 로직보다 무엇을 신뢰할지가 먼저였다.'
 date: 2026-08-31T00:00:00.000Z
 category: study/pay
@@ -35,7 +35,7 @@ tags:
 
 ## 1. 상태머신: `UNKNOWN`을 1급 시민으로
 
-결제 상태를 enum 하나로 관리하면 안 되는 이유는, **아무 상태로나 마구 넘어갈 수 있기 때문**이다. 취소된 결제가 다시 승인되면 안 된다. 그래서 허용된 전이만 선언하고, 위반하면 예외를 던지게 했다.
+결제 상태를 enum 값으로만 두고 전이 규칙을 서비스 곳곳에 흩어두면 **허용되지 않은 상태 변경을 막기 어렵다.** 취소된 결제가 다시 승인되면 안 된다. 그래서 허용된 전이만 선언하고, 위반하면 예외를 던지게 했다.
 
 ```java
 public enum PaymentStatus {
@@ -63,7 +63,9 @@ public enum PaymentStatus {
 
 토스페이먼츠 결제는 요청 → 인증 → 승인 3단계고, 승인의 최종 방아쇠는 우리 서버가 당긴다. 프론트에서 인증이 끝나면 `paymentKey`를 들고 우리 서버로 돌아오고, 그때 서버가 승인 API를 호출한다.
 
-왜 나눌까. 토스페이먼츠 공식 답은 "데이터 정합성"인데, 실전에서 체감되는 이유는 따로 있다. 서버가 재고를 확인하고 금액을 검증한 뒤에만 돈이 움직이게 하려는 것이다.
+왜 나눌까. 토스페이먼츠 공식 답은 "데이터 정합성"인데, 실전에서 체감되는 이유는 따로 있다. **서버가 주문 상태와 금액을 검증한 뒤에만** 최종 승인을 요청하려는 것이다.
+
+*재고는 이 자리에 없다. 이 구현은 PG 승인 뒤에 차감하고, 그래서 "승인은 났는데 재고가 없는" 틈이 생긴다. 그 틈과 망취소는 [실패 설계 편](/blog/project/pay/pay-ch2-failure-design)에서 다룬다.*
 
 승인 흐름은 이렇게 짰다.
 
@@ -74,6 +76,8 @@ public CheckoutResult confirm(String orderNo, String paymentKey, Money requested
     order.verifyAmount(requestedAmount);   // ① 금액 위변조 검증
     order.startPayment();                  // ② 이중 지불 차단(상태 전이)
     ConfirmResult result = paymentService.confirm(orderNo, paymentKey, requestedAmount);  // ③ PG 승인
+
+*`startPayment()`의 상태 전이만으로는 동시 요청을 못 막는다 — 둘 다 `PENDING`을 읽고 각자 전이시킬 수 있다. 실제로 막는 건 `Order`의 **`@Version` 낙관적 락**이고, 그 위에 멱등키가 한 겹 더 있다. 상태 전이는 "허용되지 않은 순서"를 막고, 동시성은 버전이 막는다.*
 
     if (result.isApproved()) {
         deductStock(order);                // ④ 승인 성공 시에만 재고 차감 (ADR-003)
@@ -87,7 +91,7 @@ public CheckoutResult confirm(String orderNo, String paymentKey, Money requested
 }
 ```
 
-`verifyAmount`는 successUrl로 돌아온 금액이 주문 금액과 같은지 확인한다. 클라이언트를 거쳐 온 값은 조작될 수 있으니까. 대부분의 결제 토이프로젝트가 이걸 빼먹는데, 나는 넣었으니 안전하다고 생각했다.
+`verifyAmount`는 successUrl로 돌아온 금액이 주문 금액과 같은지 확인한다. 클라이언트를 거쳐 온 값은 조작될 수 있으니까. 넣었으니 안전하다고 생각했다.
 
 착각이었다.
 
@@ -115,6 +119,25 @@ order.verifyAmount(requestedAmount);  // requestedAmount == totalAmount 인지 �
 
 내 `verifyAmount`는 열심히 검증하고 있었다. 오염된 기준값에 대고서.
 
+#### "검증한 값을 다시 PG에 넘기지 않나"
+
+외부 리뷰에서 이 질문을 받았다. 검증을 통과한 금액이라도 출처는 여전히 클라이언트인데,
+그걸 그대로 승인에 쓰면 결론과 어긋나지 않느냐는 것이다. 확인해 보니 **이 구조에서는 성립하지 않았다.**
+
+승인 요청은 카드·포인트·월렛 세 몫으로 나뉘어 온다. 서버가 검증하는 건 **그 합계**다.
+
+```java
+requestedTotal = cardAmount + pointAmount + walletAmount;
+order.verifyAmount(Money.of(requestedTotal));   // 서버가 계산한 totalAmount 와 대조
+```
+
+합계가 서버 금액과 같아야 통과하고, 카드 몫이 그보다 크면 합계가 넘어 걸린다.
+작으면 나머지를 포인트·월렛이 실제로 채워야 하는데 그건 **선점으로 확인**된다.
+그래서 **총액은 서버가 정하고, 분해만 클라이언트가 고른다.**
+
+분해까지 서버가 정할 수는 없다. "얼마를 포인트로 낼지"는 본질적으로 사용자의 선택이다.
+여기서 지켜야 할 건 **총액이 서버 값이라는 것**이고, 그건 지켜지고 있었다.
+
 > 방어 코드가 있는데도 무력했다. 보안 극장(security theater)이다. 검증하는 시늉은 나는데 실제로는 아무것도 못 막는다. 문제는 검증 로직 밖에 있었다. 무엇을 신뢰할 것인가(trust boundary)를 잘못 그은 것이다.
 
 ## 4. 고친 방법: 신뢰 경계를 다시 긋다
@@ -131,7 +154,7 @@ Product product = productRepository.findById(line.productId())
 OrderItem.of(product.getProductId(), product.getName(), product.getPrice(), line.quantity());
 ```
 
-이제 `OrderLine`에는 가격 필드 자체가 없다. 클라이언트가 조작할 방법이 컴파일 타임에 사라졌다. `totalAmount`도 서버 가격으로만 계산되니, `verifyAmount`가 비로소 진짜 방어가 된다.
+이제 `OrderLine`에는 가격 필드 자체가 없다. 클라이언트는 JSON에 `unitPrice`를 넣을 수야 있지만 **바인딩될 자리가 없어 처리 경로에 들어오지 못한다.** "보낼 방법"이 아니라 "쓰일 방법"이 사라진 것이다. `totalAmount`도 서버 가격으로만 계산되니, `verifyAmount`가 비로소 진짜 방어가 된다.
 
 덤으로 몇 개 더 막았다.
 
@@ -169,7 +192,7 @@ order는 payment를 호출하지만(승인 위임), 반대로 payment는 order�
 package com.beomsu.pay.order;
 ```
 
-payment가 실수로 order를 참조하거나, 둘이 순환 의존을 만들면 `ModularityTests.verify()`가 빌드를 깨뜨린다. 결제 완료 같은 사건은 payment가 이벤트로 발행하고(뒤에서 원장·정산이 구독), 이 발행은 앞서 말한 Modulith의 이벤트 레지스트리(=Outbox)가 신뢰성을 보장한다.
+payment가 실수로 order를 참조하거나, 둘이 순환 의존을 만들면 `ModularityTests.verify()`가 빌드를 깨뜨린다. 결제 완료 같은 사건은 payment가 이벤트로 발행하고(뒤에서 원장·정산이 구독), 이 발행은 Spring Modulith의 **Event Publication Registry**가 원 트랜잭션에 함께 기록하고, 완료되지 않은 리스너 처리를 추적·재시도할 수 있게 한다. (Modulith 문서는 이 레지스트리와 실제 outbox 외부화 모드를 구분한다. 같은 것으로 뭉뚱그리면 안 된다.)
 
 ---
 
