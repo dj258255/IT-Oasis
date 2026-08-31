@@ -55,5 +55,5 @@
   <text x="695" y="424" font-size="30.5" font-weight="800" fill="#F04452" text-anchor="middle">폭주의 97.5%를 문 앞에서 걸렀다</text>
   <text x="695" y="450" font-size="23.32" fill="#8B95A1" text-anchor="middle">통과한 요청의 속도를 지킨다</text>
 
-  <text x="700" y="512" font-size="25.12" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms(14배) · 이 런에서 실제로 쳐낸 것은 ① 한 층 · outbox 데드락 5xx 0.55%</text>
+  <text x="700" y="512" font-size="25.12" fill="#8B95A1" text-anchor="middle">실측: 성공 요청 p95 737.81 → 52.01ms · 이 런에서 쳐낸 것은 ① 한 층 · 40계정 재측정에서 ② 최초 발동</text>
 </svg>
