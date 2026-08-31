@@ -19,7 +19,7 @@
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">6</text>
-  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">자기 정정:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">내 추천이 틀렸다</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">추천 둘을 철회하고 설명 하나를 반증했다</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">내 코드를 검증하려면</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">코드 밖도 봐야 했다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">같은 코드의 반례와 코드 밖의 기준으로 재감사</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
 </svg>
