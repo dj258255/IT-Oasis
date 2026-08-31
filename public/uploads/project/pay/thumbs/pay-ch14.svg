@@ -23,7 +23,7 @@
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">9</text>
-  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">대사 판정:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">근거를 안 줬다</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">타임라인 조립 · 규칙 기반 원인 분류 · 확정 무효화</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">정산 대사:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">근거를 안 줬다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">원인을 고르라면서 근거는 11곳에 흩어져 있었다</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
 </svg>
