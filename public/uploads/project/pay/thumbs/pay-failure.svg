@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+  <rect x="820" y="120" width="370" height="400" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="1005" y="164" text-anchor="middle" font-size="14" font-weight="700" fill="#64748b" letter-spacing="0.04em">무엇이 확정됐고 무엇이 미상인가</text>
+
+  <rect x="852" y="186" width="306" height="86" rx="9" fill="#f8fafb" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="868" y="210" font-size="13" font-weight="800" fill="#1e293b">타임아웃</text>
+  <text x="868" y="232" font-size="12" fill="#64748b">결과를 모른다</text>
+  <text x="868" y="256" font-size="12.5" font-weight="700" fill="#4a8db8">UNKNOWN 보존 → 조회가 확정</text>
+
+  <rect x="852" y="282" width="306" height="86" rx="9" fill="#f8fafb" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="868" y="306" font-size="13" font-weight="800" fill="#1e293b">승인 후 재고 부족</text>
+  <text x="868" y="328" font-size="12" fill="#64748b">확정됐는데 롤백이 안 된다</text>
+  <text x="868" y="352" font-size="12.5" font-weight="700" fill="#4a8db8">보상(망취소)으로 되돌린다</text>
+
+  <rect x="852" y="378" width="306" height="86" rx="9" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+  <text x="868" y="402" font-size="13" font-weight="800" fill="#1e293b">failover</text>
+  <text x="868" y="424" font-size="12" fill="#64748b">타임아웃엔 절대 넘기지 않는다</text>
+  <text x="868" y="448" font-size="12.5" font-weight="700" fill="#b91c1c">넘기면 이중결제</text>
+
+  <text x="868" y="492" font-size="12" fill="#94a3b8">"재시도 가능/불가" 이분법으로는 못 가른다</text>
+
+  <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">2</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">실패 설계:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">되돌리는 법이 달랐다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">실패의 종류마다 처방이 다르다</text>
+  <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
+</svg>
