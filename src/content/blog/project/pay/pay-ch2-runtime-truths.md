@@ -82,7 +82,18 @@ INSERT는 나가는데 상태를 바꾸는 UPDATE만 안 나간다. 트랜잭션
 
 문제는 이 트랜잭션의 영속성 컨텍스트가 커밋 때 변경분을 flush하지 않는다는 것이었다. IDENTITY 즉시 INSERT가 이 문제를 가려서, 주문 행은 있으니 저장은 되는 줄 착각하게 만들었다.
 
-> **정정(나중에 더 정확히 알게 된 것)**: 처음엔 이걸 "OSIV를 꺼서(`open-in-view: false`) 그렇다"고 이해했는데, 부정확했다. 일반적인 read-write 트랜잭션 안에선 OSIV 여부와 무관하게 커밋 때 dirty-check가 flush된다(managed 엔티티라면). 진짜 원인은 이 경로의 세션 FlushMode가 AUTO가 아니었다는 데 있다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꿔서, 이후 dirty 변경이 커밋 때 flush되지 않는다. 거기에 "불러온 엔티티가 detached라 merge가 필요한" 경우까지 겹치면서, `order.markPaid()`·`payment.approve()` 같은 변경이 메모리에만 남고 사라졌다. OSIV off는 detached를 만드는 배경일 뿐, flush를 막는 직접 원인은 아니다.
+> **정정(두 번 고쳤다)**: 처음엔 "OSIV를 꺼서 그렇다"고 이해했는데 부정확했다. 그래서 "readOnly 조회가 FlushMode를 MANUAL로 바꿔서"라고 고쳤는데, **그것도 틀렸다.**
+>
+> 나중에 네 경우를 실제로 재현해 확정했다(`ReadOnlyFlushSemanticsTest`).
+>
+> | 경우 | 결과 |
+> |---|---|
+> | read-write + managed | 커밋 때 flush된다 |
+> | 안에 `readOnly=true` 조회를 껴도 | **여전히 flush된다** — 참여하면 readOnly는 무시된다 |
+> | 독립 `readOnly` 트랜잭션 | `MANUAL`이고 그 안의 변경은 안 남는다 |
+> | **detached 엔티티** | **dirty check 대상이 아니다** |
+>
+> 즉 `saveAndFlush`가 실제로 막는 건 마지막 하나다. 조회와 변경 사이에 트랜잭션 경계가 있어 엔티티가 detached면 dirty check가 아예 동작하지 않는다. **"readOnly 조회 탓"은 재현으로 반증됐다.**
 
 ### 3. 고치기: 애그리거트를 명시적으로 영속
 

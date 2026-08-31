@@ -43,7 +43,11 @@ tags:
 
 그럼 [그 버그의 진짜 원인](/blog/project/pay/pay-ch2-runtime-truths)은 뭐였을까?
 
-> 커밋되는데 managed 엔티티가 flush 안 되는 상황의 원인은 **세션 FlushMode가 AUTO가 아니었던 것**이다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 **MANUAL**로 바꾸고, 이후 dirty 변경이 커밋 때 flush되지 않는다. 거기에 detached 엔티티(merge 필요)가 겹쳤다. OSIV off는 detached를 만드는 배경 조건에 그친다. flush를 직접 막은 건 FlushMode 쪽이다. 재밌는 건 정작 `CheckoutService`의 다른 주석은 "readOnly 조회로 세션 flush가 MANUAL"이라고 **정확히** 적혀 있었다는 점. 같은 코드베이스 안에서 주석끼리 설명이 엇갈리고 있었던 셈이다.
+> 그때는 **세션 FlushMode가 MANUAL이었기 때문**이라고 고쳐 적었다. `@Transactional(readOnly = true)` 조회가 끼면 Hibernate가 FlushMode를 바꾼다는 게 근거였다.
+>
+> **그 정정도 틀렸다.** 나중에 네 경우를 재현해 보니, **바깥이 read-write면 참여한 안쪽 `readOnly`는 무시된다.** FlushMode는 `AUTO`로 남고 변경은 정상 flush된다. 실제로 dirty check를 막는 건 **엔티티가 detached인 경우**뿐이었다.
+>
+> 반례 하나로 옛 설명을 반증한 것까지는 맞았는데, **그 자리에 넣은 새 설명을 다시 검증하지 않았다.** 틀린 설명을 조금 덜 틀린 설명으로 바꾼 셈이다. 세 번째에야 재현으로 닫았다. 재밌는 건 정작 `CheckoutService`의 다른 주석은 "readOnly 조회로 세션 flush가 MANUAL"이라고 **정확히** 적혀 있었다는 점. 같은 코드베이스 안에서 주석끼리 설명이 엇갈리고 있었던 셈이다.
 
 그래서 정정했다. 부정확한 주석 12곳을 "readOnly/detached라 자동 flush를 신뢰할 수 없어 명시 영속한다(4편 교훈)"로 고치고, 4편 글에도 **정정 노트**를 달았다. `saveAndFlush`를 쓰는 정책 자체는 유효하다. 틀린 건 이유였다.
 
