@@ -20,6 +20,6 @@
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">4</text>
   <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">정산과 취소:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">돈이 조용히 샜다</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">예외 하나 없이 틀리던 자금 버그 여섯</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">예외 하나 없이 틀리던 자금 버그 다섯</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
 </svg>
