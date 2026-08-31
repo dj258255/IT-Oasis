@@ -19,7 +19,8 @@
   <text x="868" y="424" font-size="12" fill="#64748b">타임아웃엔 절대 넘기지 않는다</text>
   <text x="868" y="448" font-size="12.5" font-weight="700" fill="#b91c1c">넘기면 이중결제</text>
 
-  <text x="868" y="492" font-size="12" fill="#94a3b8">"재시도 가능/불가" 이분법으로는 못 가른다</text>
+  <text x="868" y="486" font-size="13" font-weight="800" fill="#1e293b">가상계좌</text>
+  <text x="868" y="506" font-size="12" fill="#64748b">완료가 최종 상태가 아니다</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">2</text>
