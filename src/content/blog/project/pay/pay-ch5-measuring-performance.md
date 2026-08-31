@@ -111,6 +111,17 @@ delegating.setDefaultPasswordEncoderForMatches(bcrypt);
 
 파라미터는 OWASP 최소 권고인 19MiB, iterations 2, parallelism 1로 잡았다. Spring이 제공하는 `defaultsForSpringSecurity_v5_8()`은 메모리가 16MiB라 권고에 못 미쳐서 직접 구성했다.
 
+같은 전환을 정리한 국내 글도 찾아 대조했다. [토이토 님의 「아직도 Bcrypt만 쓰시나요? 이제는
+Argon2id로 전환해야 할 때」](https://jsm77.tistory.com/45)는 `new Argon2PasswordEncoder(16, 32, 1, 65536, 3)`,
+그러니까 **메모리 64MiB에 iterations 3**을 쓴다. OWASP 최소 권고의 세 배가 넘는다.
+
+어느 쪽이 맞는지는 **한 대에서 동시에 몇 명이 로그인하느냐**에 달렸다. 이 메모리는 해시 1건당
+잡히는 값이라 동시 요청 수만큼 곱해진다. 19MiB 설정에서 동시 100건이면 Argon2 몫만 2GB인 걸
+뒤에서 실측했는데(상황 2), 같은 비례라면 64MiB 설정은 같은 조건에서 6GB를 넘긴다.
+
+그래서 **최소 권고에서 시작하고, 힙이 얼마나 남는지 재고 나서 올리기로** 했다. 파라미터를 높게
+잡는 건 언제든 할 수 있지만, 그 대가는 재 보기 전에는 모른다.
+
 이제 세 세대의 해시를 모두 받는다.
 
 | 저장된 형태 | 누가 검증하나 |
@@ -133,6 +144,8 @@ delegating.setDefaultPasswordEncoderForMatches(bcrypt);
 | **Argon2id (19MiB, t=2, p=1)** | **32ms** | **19MiB** |
 
 **더 강한 쪽이 더 빨랐다.** 처음엔 파라미터를 잘못 넣은 줄 알았다.
+
+![해시 비용 비교: BCrypt는 87ms에 4KB, Argon2id(19MiB·t=2)는 32ms에 19MiB. 메모리는 해시 1건당이라 동시 요청 수만큼 곱해진다](/uploads/project/pay/diagrams/hash-cost.svg)
 
 이유는 비용을 어디서 가져오느냐가 다르기 때문이다. BCrypt는 비용이 **반복 횟수**에서 나온다. work factor를 올리면 시간이 그만큼 늘어난다. Argon2id는 상당 부분을 **메모리**에서 가져온다. 그래서 같은 방어력을 시간을 덜 쓰고 얻을 수 있다.
 
