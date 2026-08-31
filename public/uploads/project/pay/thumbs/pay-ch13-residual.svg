@@ -20,10 +20,10 @@
 
   <line x1="852" y1="392" x2="1158" y2="392" stroke="#e2e8f0" stroke-width="1.5"/>
   <text x="868" y="422" font-size="12.5" font-weight="700" fill="#64748b">원인에 뜻을 안 줬을 때</text>
-  <text x="1142" y="422" text-anchor="end" font-size="17" font-weight="900" fill="#94a3b8">2 / 6</text>
-  <text x="868" y="462" font-size="12.5" font-weight="700" fill="#64748b">정의 일곱 줄을 붙이니</text>
-  <text x="1142" y="462" text-anchor="end" font-size="17" font-weight="900" fill="#4a8db8">5 / 6</text>
-  <text x="868" y="494" font-size="11.5" fill="#94a3b8">같은 모델 · 같은 6건 · qwen3:8b</text>
+  <text x="1142" y="422" text-anchor="end" font-size="17" font-weight="900" fill="#94a3b8">6 / 12</text>
+  <text x="868" y="462" font-size="12.5" font-weight="700" fill="#64748b">정의 아홉 줄을 붙이니</text>
+  <text x="1142" y="462" text-anchor="end" font-size="17" font-weight="900" fill="#4a8db8">9 / 12</text>
+  <text x="868" y="494" font-size="11.5" fill="#94a3b8">같은 모델 · 같은 12건 · qwen3:8b</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">13</text>
