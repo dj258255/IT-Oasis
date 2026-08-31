@@ -234,12 +234,12 @@ export default defineConfig({
     // 세 세대에 걸쳐 합쳤는데 리다이렉트를 한 번도 안 남겨서
     // 이미 공유한 링크가 전부 죽어 있었다. 지금까지의 슬러그를 전부 잇는다.
     // 한 글이 여러 편으로 흩어진 경우는 알맹이가 가장 많이 간 곳으로 보낸다.
-    '/blog/project/pay/pay-ch10-ruler-then-broken-ruler': `${base || ''}/blog/project/pay/pay-ch9-ai-in-operations`,
-    '/blog/project/pay/pay-ch11-measurement-fooled-me': `${base || ''}/blog/project/pay/pay-ch9-ai-in-operations`,
-    '/blog/project/pay/pay-ch16-draft-port-number-guard': `${base || ''}/blog/project/pay/pay-ch9-ai-in-operations`,
-    '/blog/project/pay/pay-ch17-model-found-my-bug': `${base || ''}/blog/project/pay/pay-ch9-ai-in-operations`,
-    '/blog/project/pay/pay-ch18-measurement-fooled-me': `${base || ''}/blog/project/pay/pay-ch9-ai-in-operations`,
-    '/blog/project/pay/pay-ch21-measure-without-demanding': `${base || ''}/blog/project/pay/pay-ch9-ai-in-operations`,
+    '/blog/project/pay/pay-ch10-ruler-then-broken-ruler': `${base || ''}/blog/project/pay/pay-ch10-ruler-first`,
+    '/blog/project/pay/pay-ch11-measurement-fooled-me': `${base || ''}/blog/project/pay/pay-ch11-ruler-fooled-me`,
+    '/blog/project/pay/pay-ch16-draft-port-number-guard': `${base || ''}/blog/project/pay/pay-ch10-ruler-first`,
+    '/blog/project/pay/pay-ch17-model-found-my-bug': `${base || ''}/blog/project/pay/pay-ch10-ruler-first`,
+    '/blog/project/pay/pay-ch18-measurement-fooled-me': `${base || ''}/blog/project/pay/pay-ch11-ruler-fooled-me`,
+    '/blog/project/pay/pay-ch21-measure-without-demanding': `${base || ''}/blog/project/pay/pay-ch11-ruler-fooled-me`,
     '/blog/project/pay/pay-ch12-finding-blind-spots': `${base || ''}/blog/project/pay/pay-ch8-reconciliation-judgement`,
     '/blog/project/pay/pay-ch14-timeline-and-rules': `${base || ''}/blog/project/pay/pay-ch8-reconciliation-judgement`,
     '/blog/project/pay/pay-ch15-cancellation-overwrite': `${base || ''}/blog/project/pay/pay-ch8-reconciliation-judgement`,
@@ -324,6 +324,8 @@ export default defineConfig({
     '/blog/project/pay/pay-21-ci-guards-boundaries': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
     // 6편에서 인증/해시(상황 1)를 떼어 별도 편으로 세웠다 (2026-08-31)
     '/blog/project/pay/pay-ch5-measuring-performance': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
+    // 10편(AI 운영 자동화)을 둘로 나눴다 (2026-08-31)
+    '/blog/project/pay/pay-ch9-ai-in-operations': `${base || ''}/blog/project/pay/pay-ch10-ruler-first`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
