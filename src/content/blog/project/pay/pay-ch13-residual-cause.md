@@ -231,7 +231,7 @@ assist           allowedDependencies = { shared, timeline, reconciliation }
 
 표본이 열두 건입니다. 손으로 만든 것이라 분포가 실제와 다릅니다. **이 수치는 탐색 실행이지 평가가 아닙니다.**
 
-조사와 실측 전문은 저장소의 `docs/14-백오피스-AI-잔여후보-사례조사.md`에 있습니다.
+위 수치는 전부 이 글 안에 적었습니다. 12건의 케이스 정의와 프롬프트 전문, 모델별 응답 원문은 [저장소](https://github.com/dj258255/payment-system)에 조사 문서로 남겨 뒀습니다.
 
 ## 참고
 
