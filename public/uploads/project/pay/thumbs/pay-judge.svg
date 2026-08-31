@@ -33,8 +33,8 @@
   <text x="1142" y="494" text-anchor="end" font-size="17" font-weight="900" fill="#4a8db8">0 / 12</text>
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
-  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">10</text>
-  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">AI를 붙이기 전에</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">잣대부터 만들었다</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">붙였더니 그 잣대의 계약이 틀려 있었다</text>
+  <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">11</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">그 잣대가</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">나를 네 번 속였다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">무르면 통과하고 요구하면 변형된다</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Modulith · 모듈 경계 · 실패 설계와 정합성 학습기</text>
 </svg>
