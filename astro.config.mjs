@@ -278,7 +278,6 @@ export default defineConfig({
     '/blog/project/pay/pay-18-order-cancel': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
     '/blog/project/pay/pay-19-compensation-network-cancel': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
     '/blog/project/pay/pay-20-jwt-removes-bottleneck': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
-    '/blog/project/pay/pay-21-ci-guards-boundaries': `${base || ''}/blog/project/pay/pay-ch13-enforcing-the-rule`,
     '/blog/project/pay/pay-22-kafka-event-externalization': `${base || ''}/blog/project/pay/pay-ch2-runtime-truths`,
     '/blog/project/pay/pay-23-ops-admin': `${base || ''}/blog/project/pay/pay-ch2-runtime-truths`,
     '/blog/project/pay/pay-24-chaos-testing': `${base || ''}/blog/project/pay/pay-ch1-what-to-trust`,
@@ -315,6 +314,14 @@ export default defineConfig({
     '/blog/project/pay/pay-55-member-domain': `${base || ''}/blog/project/pay/pay-0-overview`,
     '/blog/project/pay/pay-56-dispute-chargeback': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
     '/blog/project/pay/pay-57-audit-found-money-bugs': `${base || ''}/blog/project/pay/pay-ch3-money-leaks`,
+    // 7편(초록불 점검)을 접었다 (2026-08-31)
+    //
+    // ★ 기준 - "'왜 아무도 못 봤는가'를 답하는가".
+    //   배치 여섯 개 켜보기·안 돌리던 테스트 둘·문서에 없던 표는 "내가 안 켰다"로 끝나
+    //   함정 목록이 된다. 검사기가 두 번 헛통과한 것(대상 0개 · 태스크 스킵)만
+    //   일반화되는 통찰이라 6편 상황 3으로 옮겼다.
+    '/blog/project/pay/pay-ch13-enforcing-the-rule': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
+    '/blog/project/pay/pay-21-ci-guards-boundaries': `${base || ''}/blog/project/pay/pay-ch5-measuring-performance`,
     // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
     '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
     '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,

@@ -20,7 +20,7 @@
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">6</text>
-  <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">성능 측정:</text><text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">예상과 반대였다</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">더 강한 해시가 더 빨랐고, 부하 측정은 틀렸다</text>
+  <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">측정과 검사:</text><text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">예상과 반대였다</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">해시 · 부하 측정 · 검사기 자신까지 세 번</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Security · DelegatingPasswordEncoder · 실패 설계와 정합성 학습기</text>
 </svg>
