@@ -23,7 +23,7 @@
 
   <text x="72" y="120" font-size="19" font-weight="700" fill="#e74c3c" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#e74c3c" opacity="0.92">7</text>
-  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">아키텍처 규칙:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">검사기가 같은 버그</text>
-  <text x="72" y="446" font-size="19" fill="#64748b">규칙을 코드로 강제하다 두 번 헛통과</text>
+  <text x="72" y="300" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">초록불 점검:</text><text x="72" y="362" font-size="48" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">켜본 적 없는 것들</text>
+  <text x="72" y="446" font-size="19" fill="#64748b">초록불인데 아무것도 검증되지 않았다</text>
   <text x="72" y="566" font-size="16" fill="#94a3b8">Spring Boot · JUnit5 · Testcontainers · 실패 설계와 정합성 학습기</text>
 </svg>
