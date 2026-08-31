@@ -426,6 +426,8 @@ PaymentService → ResilientPgClient(@Primary, 외곽 서킷·query 재시도)
 
 토글 하나로 `FakePgClient`의 등록과 `PgRoutingConfig`의 등록이 **함께** 뒤집힌다. 언제나 하나만 `pgDelegate`가 되는 구조다.
 
+*이 배선은 `FakePgClient` 둘로 정책을 검증한 것이다. **실제 PG 이중화가 아니다** — 결제창에서 발급된 `paymentKey`는 PG마다 다르고, 실제 이중화는 사용자가 인증을 시작하기 전에 PG를 골라야 한다. 여기서 검증한 건 **라우팅 정책과 failover 금지 조건**이다.*
+
 실기동으로 확인했다.
 
 ```
@@ -438,7 +440,11 @@ APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
 
 하나는 남겨뒀다. 취소·조회는 원래 결제를 처리한 **그 PG**로 가야 맞다(A PG로 승인했으면 A PG로 취소). `Payment.pgProvider`에 어느 PG였는지 기록은 돼 있는데, 정작 `PgClient.cancel(paymentKey, ...)` 인터페이스가 provider를 안 받는다. 그래서 지금은 "가용한 첫 PG"로 시도한다.
 
-> 제대로 하려면 인터페이스에 provider 힌트를 넣어 라우터가 원 PG로 보내야 한다. 인터페이스를 건드리는 일이라 [후속 과제로 명시](/blog/project/pay/pay-ch2-runtime-truths)했다. "여기까진 했고 여기부턴 안 했다"를 적는 쪽이 안 한 걸 숨기는 것보다 낫다.
+> 처음엔 "인터페이스를 건드리는 일이라 후속 과제"로 적었다. **그건 후속 과제로 둘 수 있는 게 아니었다.**
+>
+> Toss로 승인된 결제를 다른 PG에 조회하면 없다고 나온다. 그러면 복구 배치가 살아 있는 결제를 실패로 확정하고, 망취소는 하지도 않은 취소를 완료로 끝낸다. **앞에서 만든 UNKNOWN 복구와 보상을 통째로 깨는 자리**다. 기능 개선이 아니라 정합성의 전제였다.
+>
+> 고쳤다. 취소·조회는 `Payment.pgProvider`로 **원 PG를 찾아 보낸다.** provider가 있는데 경로에 없으면 아무 데도 안 보내고 예외를 던진다. provider를 모르는 옛 결제만 순회하는데, 그때도 조회는 `NOT_FOUND`가 아니라 **`IN_PROGRESS`를 반환**한다. 모르는 것을 확정하지 않는다.
 
 ---
 
