@@ -6,7 +6,7 @@ category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch11.svg"
 draft: false
 series: "결제 시스템 만들기"
-seriesOrder: 7
+seriesOrder: 8
 tags:
   - Payment
   - 부하 테스트
@@ -15,7 +15,7 @@ tags:
   - 결제 시스템
 ---
 
-*결제 시스템 시리즈 7편. 재 보고 골랐다고 적어둔 것을 다시 재 봤다. 재는 쪽이 틀렸고, 그걸 잡으라고 만든 검사기도 틀렸다.*
+*결제 시스템 시리즈 8편. 재 보고 골랐다고 적어둔 것을 다시 재 봤다. 재는 쪽이 틀렸고, 그걸 잡으라고 만든 검사기도 틀렸다.*
 
 ## 상황 1. 부하 실험이 계정 하나로 돌아가고 있었다
 
