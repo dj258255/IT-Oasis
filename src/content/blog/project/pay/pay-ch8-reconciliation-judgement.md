@@ -427,7 +427,7 @@ public record ExternalRecord(String orderNo, long amount, String transactionId)
 그리고 **상황 2에서 내가 고친 것**은 이랬습니다.
 
 ```java
-/** 취소를 <b>별도 행</b>으로 만든다 (ADR-013). 금액은 음수입니다. */
+/** 취소를 <b>별도 행</b>으로 만든다. 금액은 음수다. */
 ```
 
 **한 저장소 안에서 세 문장이 서로 어긋나 있었습니다.**
@@ -440,7 +440,7 @@ public record ExternalRecord(String orderNo, long amount, String transactionId)
 
 ### 무슨 일이 벌어지나
 
-상황 2(ADR-013)의 전제가 이거였습니다.
+상황 2에서 바꾼 전제가 이거였습니다.
 
 > 이 프로젝트가 모델링한 PG 정산 파일 계약에서는, 환불이 원 거래 행 수정이 아니라 **취소일 파일의 음수 행으로** 들어옵니다.
 
@@ -449,7 +449,7 @@ public record ExternalRecord(String orderNo, long amount, String transactionId)
 환불이 있는 날의 대사는 이렇게 됩니다.
 
 ```
-내부:  -3,000   (ADR-013이 만든 취소 행)
+내부:  -3,000   (상황 2에서 만든 취소 행)
 외부:   없음    (파서가 버림)
 결과:  INTERNAL_ONLY  ← 정상 환불이 예외 큐로
 ```
@@ -472,7 +472,7 @@ public record ExternalRecord(String orderNo, long amount, String transactionId)
 
 외부 파서는 **"내가 바꾸지 않은 코드"** 로 분류돼 있었습니다. 바꿀 일이 없으니 읽을 일도 없었습니다.
 
-그런데 ADR-013이 바꾼 건 **한쪽의 구현이 아니라 양쪽이 공유하는 모델**이었습니다. "취소는 음수 행이다"는 내부에만 해당하는 규칙이 아닙니다.
+그런데 그때 바꾼 건 **한쪽의 구현이 아니라 양쪽이 공유하는 모델**이었습니다. "취소는 음수 행이다"는 내부에만 해당하는 규칙이 아닙니다.
 
 > **한쪽 모델을 바꾸면 반대쪽 계약도 같이 봐야 합니다.**
 

@@ -80,7 +80,7 @@ public CheckoutResult confirm(String orderNo, String paymentKey, Money requested
 *`startPayment()`의 상태 전이만으로는 동시 요청을 못 막는다 — 둘 다 `PENDING`을 읽고 각자 전이시킬 수 있습니다. 실제로 막는 건 `Order`의 **`@Version` 낙관적 락**이고, 그 위에 멱등키가 한 겹 더 있습니다. 상태 전이는 "허용되지 않은 순서"를 막고, 동시성은 버전이 막습니다.*
 
     if (result.isApproved()) {
-        deductStock(order);                // ④ 승인 성공 시에만 재고 차감 (ADR-003)
+        deductStock(order);                // ④ 승인 성공 시에만 재고 차감
         order.markPaid();
     } else if (result.isUnknown()) {
         // 미확정 — 주문은 그대로 두고 복구 배치에 맡깁니다

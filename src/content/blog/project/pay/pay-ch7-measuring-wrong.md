@@ -381,7 +381,7 @@ ERD에서 다섯 개가 나오고 나니 질문이 남았습니다. **문서가 
 |---|---|
 | 외부 라이브러리 | `ChatModel`(Spring AI), `DefaultErrorHandler`(Spring Kafka) |
 | 외부 시스템 스펙 | `PAYMENT_STATUS_CHANGED`: 토스 **웹훅** 이벤트명 |
-| 채택 안 한 대안 | `OrderTimelineContributor`: ADR-011의 "안 2" |
+| 채택 안 한 대안 | `OrderTimelineContributor`: 조립 방식을 정할 때 검토했다 버린 안 |
 | "없다"는 서술 | `CAPTURED`: *"pay에 CAPTURED 같은 상태는 없다"* |
 | Prometheus 알람 | `GlobalRateLimitBinding`: Java가 아니라 `alert-rules.yml`에 실재 |
 
