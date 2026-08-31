@@ -55,7 +55,7 @@ tags:
 
 OWASP Password Storage Cheat Sheet의 순서는 이렇다.
 
-| | |
+| 순위 | 알고리즘 |
 |---|---|
 | 1순위 | **Argon2id** (메모리 19MiB, iterations 2, parallelism 1 이상) |
 | 2순위 | scrypt |
@@ -141,7 +141,7 @@ Argon2id로 전환해야 할 때」](https://jsm77.tistory.com/45)는 `new Argon
 
 **로컬(Apple Silicon), 워밍업 후 7회 중앙값.**
 
-| | 소요 | 메모리 |
+| 알고리즘 | 소요 | 메모리 |
 |---|---|---|
 | BCrypt (strength 10) | 87ms | ~4KB |
 | **Argon2id (19MiB, t=2, p=1)** | **32ms** | **19MiB** |
@@ -295,7 +295,7 @@ password_hash_legacy_count
 
 네 걸음이었고, 각각이 다음을 가능하게 했다.
 
-| | 무엇 | 왜 필요했나 |
+| 걸음 | 무엇 | 왜 필요했나 |
 |---|---|---|
 | 1 | 접두사 붙이기 | 없으면 전수 재설정 말고 이관 방법이 없다 |
 | 2 | Argon2id 교체 | OWASP 1순위. 72바이트 절단과 약한 메모리 하드를 벗어난다 |
