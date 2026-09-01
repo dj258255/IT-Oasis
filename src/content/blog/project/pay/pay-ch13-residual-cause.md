@@ -534,6 +534,44 @@ if (s.isEmpty() || !shown) {
 
 위 수치는 전부 이 글 안에 적었습니다. 12건의 케이스 정의와 프롬프트 전문, 모델별 응답 원문은 [저장소](https://github.com/dj258255/payment-system)에 조사 문서로 남겨 뒀습니다.
 
+## 돈을 움직이는 선은 넘지 않았다
+
+승인 절차를 만들지 않았습니다. 슬랙으로 승인 요청을 보내는 것도 안 했습니다. **이 기능이 하는 일은 화면에 후보 하나를 얹는 것**이고, 되돌릴 게 없기 때문입니다.
+
+찾아보니 기준이 그렇게 서 있었습니다.
+
+> **되돌릴 수 있는 단계**(초안 작성, 요약)는 끝까지 자동화해도 되고, **되돌릴 수 없는 단계**(발행, 고객에게 이메일, **돈 옮기기**)는 명시적 승인으로 막아야 한다.
+
+결제에서 "되돌릴 수 있나"는 곧 **"돈이 움직였나"**입니다. 이 프로젝트가 원인을 등급으로 나눌 때 쓴 기준도 그거였습니다.
+
+| 등급 | 원인 | 이유 |
+|---|---|---|
+| 자동 확정 후보 | 수수료 계산 차이, 거래일 경계 | 산수로 결정되고 **돈이 안 움직인다** |
+| 제안만 | 부분취소 미반영, 파일 지연, 망취소 시점, 기록 유실 | 결정 가능하나 **자금 이동 동반** |
+| 항상 사람 | 위변조 의심 | 유형으로 배제 |
+
+### 만들지 않은 더 큰 이유
+
+조사에서 제일 아팠던 문장입니다.
+
+> 사람이 **모든** 행동을 승인해야 한다면 **아무것도 자동화하지 않은 것**이고, 검토자는 곧 읽지 않고 승인을 누르는 법을 배운다. **거수기는 게이트가 없는 것보다 나쁘다.** 감독의 실체 없이 겉모습만 만들기 때문이다.
+
+**이 프로젝트에 그 위험이 이미 있습니다.** [앞 편에 적어둔 그대로](/blog/project/pay/pay-ch8-reconciliation-judgement)입니다. 화면은 경고를 띄우지만 확정 버튼은 그대로 눌립니다. 여기에 승인 절차를 더 얹으면 **누르는 횟수만 늘고 읽는 양은 안 늡니다.**
+
+### 넘으려면 무엇이 있어야 하는지는 정해뒀다
+
+문서에 조건 셋을 적어뒀습니다.
+
+```
+증거가 결정적일 것
+  + 금액이 중요성 임계 미만일 것
+  + 그 유형의 실측 오류율이 선언한 한도 안일 것
+```
+
+**마지막 조건 때문에 자동 확정은 사람이 그 유형을 충분히 확정해 통계를 만든 뒤에야 켤 수 있습니다.** 지금은 그 통계가 없습니다.
+
+그리고 그 선을 넘는 순간 승인 게이트가 같이 필요해지는데, **배치가 밤에 도는 건이라면 화면이 아니라 채널로 나가야 합니다.** 사람이 화면 앞에 없을 때는 띄워봐야 아무도 안 봅니다. 그래서 경보는 미리 채널을 붙여 뒀습니다. 알림 규칙만 있고 받는 데가 없으면 그래프에 빨간 줄만 그어집니다.
+
 ## 참고
 
 - Ramp 거래 재분류 에이전트: [ZenML LLMOps Database](https://www.zenml.io/llmops-database/ai-agent-for-automated-merchant-classification-and-transaction-matching)
@@ -547,4 +585,7 @@ if (s.isEmpty() || !shown) {
 - 심판의 앵커링: [Understanding the Anchoring Effect of LLM (arXiv 2505.15392)](https://arxiv.org/pdf/2505.15392)
 - 대사에 AI 붙이기: [AI reconciliation 사례 정리 (Ledge)](https://www.ledge.co/content/ai-reconciliation)
 - 프롬프트로 시키는 기권이 실패하는 이유: [Prompt-Based Abstention Fails Under Misleading Context (arXiv 2608.22228)](https://arxiv.org/html/2608.22228)
+- 승인 게이트를 어디에 둘 것인가: [Building a Human-in-the-Loop Approval Gate for Autonomous Agents](https://machinelearningmastery.com/building-a-human-in-the-loop-approval-gate-for-autonomous-agents/)
+- 대역 외 승인(Slack·이메일): [Human approval for async AI agent actions (WorkOS)](https://workos.com/blog/ciba-human-approval-ai-agents)
+- Klarna 가 되돌린 기록: [Klarna Reverses Course on AI Customer Support](https://www.fintechweekly.com/magazine/articles/klarna-hires-customer-service-after-ai-pivot)
 - 결정적 가드레일: [Designing Deterministic Guardrails for LLM Systems](https://bh3r1th.medium.com/from-harness-to-enforcement-designing-deterministic-guardrails-for-llm-systems-6a9912ba7eba), [Pre-LLM & Post-LLM Best Practices (Arthur)](https://www.arthur.ai/blog/best-practices-for-building-agents-guardrails)
