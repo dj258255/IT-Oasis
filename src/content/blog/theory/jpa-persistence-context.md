@@ -14,8 +14,9 @@ draft: false
 coverImage: "/uploads/theory/jpa-persistence-context/transaction-basics.svg"
 ---
 
-사이드 프로젝트를 진행하면서 Spring 트랜잭션에 대해 배운 것들을 정리했습니다.
-배우면서 헷갈렸던 것들을 다시 재정립해서 내 지식으로 만들고 싶었습니다.
+같은 클래스 안에서 메서드를 호출하면 `@Transactional`이 붙어 있어도 트랜잭션이 시작되지 않습니다. 프록시를 거치지 않고 바로 호출되기 때문입니다. `readOnly = true`는 더티 체킹을 생략해 주지만, 낙관적 락(`@Version`)과 함께 쓰면 그 락이 무력화될 수 있습니다.
+
+이 글은 Spring 트랜잭션에서 헷갈렸던 것들을 프록시 동작, `readOnly` 최적화, 전파 속성 순서로 정리한 기록입니다.
 
 ---
 
