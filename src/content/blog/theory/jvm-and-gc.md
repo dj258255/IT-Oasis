@@ -18,9 +18,7 @@ seriesOrder: 0
 
 ## 0. 이 글의 위치
 
-이 시리즈는 **JVM 메모리**를 1차 소스(Oracle JDK docs, OpenJDK JEP, Linux kernel docs) 기준으로 정리한 6편입니다. 지금 읽는 **0편은 JVM 자체가 어떻게 생겼는지**를 훑는 아키텍처 개론입니다. Heap 내부 구조(Young/Old/Eden), GC 알고리즘(G1/ZGC/Shenandoah), Off-heap, OS Page Cache 같은 주제는 **①~⑤편으로 각각 독립 편성**했으니 여기서는 반복하지 않고 링크로만 연결하겠습니다.
-
-따라서 이 글의 목표는 딱 이것입니다:
+이 글은 JVM이 어떻게 생겼는지를 한 그림으로 잡습니다. 목표는 딱 이것입니다:
 
 - JVM이 `.class` 파일을 메모리에 어떻게 얹고(Class Loader)
 - 프로그램 실행 중 어떤 메모리 영역을 쓰고(Runtime Data Areas)
