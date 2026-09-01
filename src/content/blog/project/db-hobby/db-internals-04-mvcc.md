@@ -205,11 +205,11 @@ SESSION 1> SELECT * FROM t WHERE id = 1;
 ## 참고 (1차 자료 우선)
 
 - [PostgreSQL Documentation: MVCC — Concurrency Control](https://www.postgresql.org/docs/current/mvcc.html)
-- [PostgreSQL Documentation: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) — REPEATABLE READ의 스냅샷 시점과 동시 UPDATE 동작의 1차 근거
+- [PostgreSQL Documentation: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html): REPEATABLE READ의 스냅샷 시점과 동시 UPDATE 동작의 1차 근거
 - [PostgreSQL Documentation: Routine Vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html)
 - [PostgreSQL Documentation: Heap-Only Tuples (HOT)](https://www.postgresql.org/docs/current/storage-hot.html)
 - [MySQL 8.0 Reference: InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html)
 - [MySQL 8.0 Reference: Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.0/en/innodb-consistent-read.html)
-- Hal Berenson et al., *A Critique of ANSI SQL Isolation Levels* (SIGMOD 1995) — 스냅샷 격리의 고전
+- Hal Berenson et al., *A Critique of ANSI SQL Isolation Levels* (SIGMOD 1995): 스냅샷 격리의 고전
 - 본 블로그: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [②: Isolation](/blog/theory/transaction-acid-02-isolation) · [락 메커니즘 총정리](/blog/theory/lock-mechanisms-all)
-- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `mvcc.c` · `lock.c` · `db.c`
+- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby): `mvcc.c` · `lock.c` · `db.c`

@@ -108,7 +108,7 @@ region은 다음 중 하나의 역할을 합니다:
 
 #### 수거 방식
 
-> "G1 reclaims space mostly by using evacuation: live objects found within selected memory areas to collect are copied into new memory areas, compacting them in the process." — 같은 출처
+> "G1 reclaims space mostly by using evacuation: live objects found within selected memory areas to collect are copied into new memory areas, compacting them in the process.", 같은 출처
 
 - **evacuation(대피)**: 회수 대상 region에서 살아있는 객체만 다른 region으로 복사. 이 과정에서 자연스럽게 **compaction**이 이뤄집니다.
 - **Collection Set(CSet)**: 이번 GC에서 회수할 region들의 집합. 이 개념 덕분에 **"비용 대비 수거량이 많은 region부터 고를 수 있다"** → 이게 G1 이름의 유래(Garbage-First)입니다.
@@ -124,13 +124,13 @@ region은 다음 중 하나의 역할을 합니다:
 
 #### Pause time 목표
 
-> "G1 tries to meet set pause-time targets with high probability over a longer time, but not always with absolute certainty for a given pause." — 같은 출처
+> "G1 tries to meet set pause-time targets with high probability over a longer time, but not always with absolute certainty for a given pause.", 같은 출처
 
 default 목표: `-XX:MaxGCPauseMillis=200` (200ms).
 
 #### 마킹 알고리즘
 
-> "It takes a virtual snapshot of the heap at the time of the Initial Mark pause, when all objects that were live at the start of marking are considered live for the remainder of marking." — 같은 출처
+> "It takes a virtual snapshot of the heap at the time of the Initial Mark pause, when all objects that were live at the start of marking are considered live for the remainder of marking.", 같은 출처
 
 이걸 **SATB(Snapshot-At-The-Beginning)** 이라고 합니다.
 

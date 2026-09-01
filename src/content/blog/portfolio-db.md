@@ -677,7 +677,7 @@ DBTower의 관측 데이터는 7일 뒤 버려지고, 이상 감지의 14일 창
 **DBTower-lakehouse**
 - GitHub 저장소: [github.com/dj258255/dbtower-lakehouse](https://github.com/dj258255/dbtower-lakehouse)
 - 블로그 총정리(0~5편): [lakehouse-0-why](/blog/project/lakehouse/lakehouse-0-why)
-- 직접 실행(GHCR): 멀티아치 공개 이미지 2종(`dbtower-lakehouse-airflow`·`-metabase`) — `docker compose -f docker-compose.standalone.yml pull && up`으로 빌드 없이 기동
+- 직접 실행(GHCR): 멀티아치 공개 이미지 2종(`dbtower-lakehouse-airflow`·`-metabase`): `docker compose -f docker-compose.standalone.yml pull && up`으로 빌드 없이 기동
 - 운영 절차(RUNBOOK): [docs/RUNBOOK.md](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/RUNBOOK.md)
 
 **오픈소스**

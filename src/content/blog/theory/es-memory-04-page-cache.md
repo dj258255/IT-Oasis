@@ -24,7 +24,7 @@ Elasticsearch가 "힙을 50% 이하로 두라"고 하는 진짜 이유는 **"나
 
 > "Elasticsearch ... relies on the operating system's filesystem cache for efficient access to files." — [Elastic — Advanced configuration](https://www.elastic.co/guide/en/elasticsearch/reference/current/advanced-configuration.html)
 
-> "The heap size should be based on the available RAM ... The smaller that you can set the heap ... the more physical memory that will be available for the filesystem cache." — 같은 출처
+> "The heap size should be based on the available RAM ... The smaller that you can set the heap ... the more physical memory that will be available for the filesystem cache.", 같은 출처
 
 즉 ES 성능의 핵심 중 하나가 **filesystem cache = Page Cache** 입니다. 이게 뭔지 OS 수준에서 정리합니다.
 
@@ -58,7 +58,7 @@ Linux 커널은 물리 페이지를 크게 두 종류로 분류합니다.
 
 ### 3-3. Reclaim (재확보)
 
-> "Pages that can be freed at any time, either because they cache the data available elsewhere like on a hard disk, or because they can be swapped out to the hard disk, are called reclaimable, and the most notable categories of the reclaimable pages are page cache and anonymous memory." — 같은 출처
+> "Pages that can be freed at any time, either because they cache the data available elsewhere like on a hard disk, or because they can be swapped out to the hard disk, are called reclaimable, and the most notable categories of the reclaimable pages are page cache and anonymous memory.", 같은 출처
 
 핵심 포인트:
 

@@ -407,7 +407,7 @@ uthread: all threads finished
 
 ## 참고 (1차 자료 우선)
 
-- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html) — 이 글의 직접 출발점인 **uthread 랩**(유저 공간 스레드 전환의 표준 교보재)
-- [RISC-V Calling Convention / ABI (psABI)](https://github.com/riscv-non-isa/riscv-elf-psabi-doc) — callee-saved(`s0`~`s11`) vs caller-saved, `sp` 16바이트 정렬 규칙의 1차 정의 (`uswitch`가 왜 14개만 저장하는지의 근거)
-- [RISC-V Privileged Specification](https://riscv.org/technical/specifications/) — `scause`/`sepc`/`stval` 트랩 CSR의 정의 (크래시 추적에 읽은 그 값들)
+- [xv6: a simple, Unix-like teaching operating system (MIT 6.S081)](https://pdos.csail.mit.edu/6.828/2023/xv6.html), 이 글의 직접 출발점인 **uthread 랩**(유저 공간 스레드 전환의 표준 교보재)
+- [RISC-V Calling Convention / ABI (psABI)](https://github.com/riscv-non-isa/riscv-elf-psabi-doc): callee-saved(`s0`~`s11`) vs caller-saved, `sp` 16바이트 정렬 규칙의 1차 정의 (`uswitch`가 왜 14개만 저장하는지의 근거)
+- [RISC-V Privileged Specification](https://riscv.org/technical/specifications/): `scause`/`sepc`/`stval` 트랩 CSR의 정의 (크래시 추적에 읽은 그 값들)
 - 관련 글: [부팅부터 페이징까지](/blog/hobby/kernel-hobby-00-boot-to-paging) · [선점형 스케줄러](/blog/hobby/kernel-hobby-03-exec-and-shell) · [demand paging·mmap](/blog/hobby/kernel-hobby-04-paging-mmap-writable-fs) · [멀티코어와 락](/blog/hobby/kernel-hobby-05-smp-multicore-locks)

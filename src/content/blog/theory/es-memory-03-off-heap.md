@@ -43,7 +43,7 @@ Elasticsearch는 **Heap 외부 메모리를 매우 적극적으로 사용**합�
 
 ### 3-1. 핵심 성격
 
-> "The contents of direct buffers may reside outside of the normal garbage-collected heap, and so their impact upon the memory footprint of an application might not be obvious." — 같은 출처
+> "The contents of direct buffers may reside outside of the normal garbage-collected heap, and so their impact upon the memory footprint of an application might not be obvious.", 같은 출처
 
 중요한 포인트:
 
@@ -53,11 +53,11 @@ Elasticsearch는 **Heap 외부 메모리를 매우 적극적으로 사용**합�
 
 ### 3-2. allocation 비용
 
-> "The buffers returned by this method typically have somewhat higher allocation and deallocation costs than non-direct buffers." — 같은 출처
+> "The buffers returned by this method typically have somewhat higher allocation and deallocation costs than non-direct buffers.", 같은 출처
 
 따라서 공식 문서도:
 
-> "It is therefore recommended that direct buffers be allocated primarily for large, long-lived buffers that are subject to the underlying system's native I/O operations." — 같은 출처
+> "It is therefore recommended that direct buffers be allocated primarily for large, long-lived buffers that are subject to the underlying system's native I/O operations.", 같은 출처
 
 즉 **짧은 수명의 작은 버퍼**에는 direct buffer를 쓰지 마십시오. 네트워크 I/O 큰 버퍼, 파일 I/O용 큰 버퍼가 정당한 용도입니다.
 
