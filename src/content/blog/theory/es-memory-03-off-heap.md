@@ -16,7 +16,9 @@ series: "JVM 메모리"
 seriesOrder: 3
 ---
 
-> 본 문서는 **Oracle JDK 17 / 21 ByteBuffer API 공식 문서**와 **HotSpot VM 커맨드라인 레퍼런스** 를 1차 소스로 합니다. 1·2편이 `Xmx` **안쪽**의 메모리(Heap과 GC)를 다뤘다면, 이 글은 `Xmx` **바깥**의 메모리를 다룹니다.
+`-Xmx`로 힙 크기를 제한해도 JVM이 쓰는 메모리는 거기서 끝나지 않습니다. Direct ByteBuffer, 네이티브 스택, 코드 캐시가 힙 바깥에 따로 잡히고, Elasticsearch는 그 바깥 메모리를 아주 적극적으로 씁니다. 이 글은 `Xmx` **바깥**의 메모리를 다룹니다.
+
+> 본 문서는 **Oracle JDK 17 / 21 ByteBuffer API 공식 문서**와 **HotSpot VM 커맨드라인 레퍼런스** 를 1차 소스로 합니다. 힙과 GC 등 `Xmx` 안쪽은 이 시리즈의 1·2편에서 다뤘습니다.
 
 ## 1. 왜 이 이론을 알아야 하는가
 
