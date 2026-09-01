@@ -114,7 +114,7 @@ int deleteByExpiresAtBefore(Instant threshold);   // 한 건씩 아니라 벌크
 
 두 번째는 반대 방향으로 틀렸습니다. 체크아웃이 **PG 승인(외부 HTTP)을 DB 트랜잭션 안에서** 호출하고 있었습니다. 처음 내 결론은 이랬습니다.
 
-> "안티패턴이긴 한데, 정합성은 이미 [UNKNOWN 복구](/blog/project/pay/pay-ch1-what-to-trust)로 해결됐고, 커넥션 점유는 fast-fail로 완화되니 **득이 별로 없다. 그냥 문서화하자.**"
+> "안티패턴이긴 한데, 정합성은 이미 [UNKNOWN 복구](/blog/project/pay/pay-ch2-failure-design)로 해결됐고, 커넥션 점유는 fast-fail로 완화되니 **득이 별로 없다. 그냥 문서화하자.**"
 
 그런데 읽는 분이 되물었습니다. "득이 진짜 없어? 현업은 어떤데?" 웹서칭해 보니 이번에도 내가 틀렸습니다.
 
