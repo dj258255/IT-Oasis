@@ -358,7 +358,7 @@ llama는 85를 걸면 **14건 중 1건만 통과합니다.** 오답이 사라지
 | 기권 | 코드가 막을 수 있는 유형은 **됐다**(불완전한 사실). 사실이 완전한데 틀리는 건 **안 됐다** |
 | 신뢰도로 거르기 | 임계가 모델마다 다르게 듦. **근거 없이 박아둔 값이었다** |
 | 오답이 가드를 통과 | 출처가 맞는 숫자로 틀린 주장 가능. **못 막는다** |
-| 실제 업무 개선 | **안 쟀다** |
+| 실제 업무 개선 | 재는 장치는 **배선했다**(채택률·소요 시간·blind). 표본은 **아직 없다** |
 
 ### 현업 기준으로는 무엇이 더 있어야 하나
 
@@ -368,7 +368,44 @@ llama는 85를 걸면 **14건 중 1건만 통과합니다.** 오답이 사라지
 - **채택률.** Shopify는 상품 분류를 하루 3천만 건 예측하면서 **판매자 채택률 85%** 를 지표로 둡니다. 분류 정확도가 "모델이 맞았나"라면 채택률은 **"사람이 쓸 만하다고 봤나"** 입니다. 다른 질문이고, 업무 개선을 말하려면 뒤가 필요합니다
 - **승인 워크플로.** 출력을 채널로 보내 **승인·거절·타임아웃** 세 결과로 처리합니다
 
-이 프로젝트에 없는 건 **채택률**입니다. 사람이 확정할 때 제안을 실제로 받아들였는지를 기록해야 "제안이 일을 줄였나 늘렸나"를 말할 수 있습니다. 지금은 **모델이 맞았는지까지만** 압니다.
+이 중 **채택률**을 배선했습니다. 다만 그것 하나만 재지는 않았습니다.
+
+### 채택률만 재면 같은 실수를 반복한다
+
+사람이 제안을 **보고** 확정하므로 앵커링이 섞입니다. 제안에 끌려간 확정이 채택으로 집계되면, 숫자는 예뻐지는데 답하는 게 없습니다. **이 프로젝트가 앞 편에서 이미 지적한 것**입니다. 그때 정확도라고 부르지 않고 일치율이라고 부른 이유가 그거였는데, 채택률은 그 일치율의 다른 이름입니다.
+
+업계도 같은 한계를 말합니다.
+
+> 채택률은 **작업이 깨끗하게 끝났는지, 뒤에 비용이 생겼는지를 답하지 못한다.** 채택률이 높은데 재작업률과 검토 시간도 높다면, 낮은 품질을 받아들이고 있다는 뜻이다.
+
+앵커링은 문헌으로도 확인됩니다. LLM 심판이 첫 제안에 끌려가는 계수가 GPT-4에서 **0.255**로 사람 위원회의 **0.193**보다 높게 관측됐고, 이를 푸는 표준이 **blind 평가**입니다.
+
+그래서 셋을 짝으로 남겼습니다.
+
+| 지표 | 무엇을 답하나 | 앵커링에 오염되나 |
+|---|---|---|
+| `assist.residual.accepted` | 제안한 원인을 그대로 확정했나 | **예** |
+| `assist.residual.resolve.latency` | 확정까지 걸린 시간. 일이 줄었나 늘었나 | 아니오 |
+| `blind` 태그 | 제안을 안 봤어도 같았을까 | 아니오 |
+
+**blind가 요점입니다.** 후보를 만들되 **일부(기본 20%)는 화면에 주지 않고 기록만** 합니다.
+
+```java
+boolean shown = ThreadLocalRandom.current().nextInt(100) >= blindPercent;
+suggestions.record(reconResultId, cause, shown);
+
+if (s.isEmpty() || !shown) {
+    return new ResidualView(false, null, null, 0);   // 만들었지만 안 준다
+}
+```
+
+보여준 건만 모으면 「제안 덕분에 빨라졌다」와 「원래 그 정도였다」를 가를 수 없습니다. 전부 감추면 기능이 죽고, 전부 보여주면 비교군이 없습니다.
+
+저장소는 두지 않았습니다. **표본이 쌓이기 전에 스키마를 정하면 무엇을 재야 하는지 모르는 채 모양부터 굳습니다.** 상담 초안 섀도 기록도 같은 이유로 로그와 지표만 남깁니다.
+
+### 국내 사례는 못 찾았다
+
+찾아본 범위에서는 **대사 예외 분류에 LLM을 쓴 국내 공개 사례가 없었습니다.** FDS에 머신러닝을 쓰는 사례는 나오는데(카카오뱅크 등), 대사 쪽은 금융위 가이드라인과 망분리 논의에 머물러 있습니다. 해외는 Modern Treasury가 감사 가능한 에이전트로 대사·원장 워크플로를 자동화한 사례가 있고, **LLM이 자유 서술을 읽어 분류하는 것이 매칭에 빠져 있던 연결고리**라는 서술이 반복됩니다.
 
 그래서 지금 상태를 정확히 적으면 이렇습니다. **장치는 다 만들었고, 화면 창구도 있고, 안 본 케이스로 재봤습니다.** 기본값은 `template`이라 아무 일도 하지 않고, `ollama`로 바꾸면 즉시 삽니다. 켜도 하는 일은 **후보 하나를 더 얹는 것**이고 확정은 사람이 합니다.
 
@@ -385,5 +422,8 @@ llama는 85를 걸면 **14건 중 1건만 통과합니다.** 오답이 사라지
 - 말로 표현한 신뢰도의 보정 문제: [Overconfidence is Key (arXiv 2405.02917)](https://arxiv.org/html/2405.02917), [On Verbalized Confidence Scores (arXiv 2412.14737)](https://arxiv.org/pdf/2412.14737)
 - 라벨 설명이 분류 정확도에 미치는 영향: [PoliPrompt (arXiv 2409.01466)](https://arxiv.org/html/2409.01466v1)
 - 기권과 선택적 예측: [Uncertainty-Aware Abstention (arXiv 2607.04430)](https://arxiv.org/pdf/2607.04430)
+- 채택률의 한계: [The rise and looming fall of acceptance rate (LeadDev)](https://leaddev.com/reporting/the-rise-and-looming-fall-of-acceptance-rate)
+- 심판의 앵커링: [Understanding the Anchoring Effect of LLM (arXiv 2505.15392)](https://arxiv.org/pdf/2505.15392)
+- 대사에 AI 붙이기: [AI reconciliation 사례 정리 (Ledge)](https://www.ledge.co/content/ai-reconciliation)
 - 프롬프트로 시키는 기권이 실패하는 이유: [Prompt-Based Abstention Fails Under Misleading Context (arXiv 2608.22228)](https://arxiv.org/html/2608.22228)
 - 결정적 가드레일: [Designing Deterministic Guardrails for LLM Systems](https://bh3r1th.medium.com/from-harness-to-enforcement-designing-deterministic-guardrails-for-llm-systems-6a9912ba7eba), [Pre-LLM & Post-LLM Best Practices (Arthur)](https://www.arthur.ai/blog/best-practices-for-building-agents-guardrails)
