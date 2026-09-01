@@ -81,7 +81,7 @@ Java 8부터 PermGen이 사라지고 **Metaspace** 로 대체됐습니다. Metas
 
 > "Setting `-XX:NewRatio=3` means that the ratio between the young and old generation is 1:3. In other words, the combined size of the eden and survivor spaces will be one-fourth of the total heap size." — [Oracle JDK 17 GC Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/factors-affecting-garbage-collection-performance.html)
 
-> "Setting `-XX:SurvivorRatio=6` sets the ratio between eden and a survivor space to 1:6. In other words, each survivor space will be one-sixth of the size of eden, and thus one-eighth of the size of the young generation (not one-seventh, because there are two survivor spaces)." — 같은 출처
+> "Setting `-XX:SurvivorRatio=6` sets the ratio between eden and a survivor space to 1:6. In other words, each survivor space will be one-sixth of the size of eden, and thus one-eighth of the size of the young generation (not one-seventh, because there are two survivor spaces).", 같은 출처
 
 ### 4-1. 트레이드오프
 
@@ -118,7 +118,7 @@ Oracle JDK 17 G1 Tuning Guide의 명시적 경고:
 
 ### 5-1. Survivor가 너무 작으면?
 
-> "If survivor spaces are too small, then the copying collection overflows directly into the old generation." — 같은 출처
+> "If survivor spaces are too small, then the copying collection overflows directly into the old generation.", 같은 출처
 
 즉 Survivor가 작으면 원래 Young에서 수명을 다 채워야 할 객체가 **조기 승격(premature promotion)** 돼서 Old Generation이 빨리 차고, Major GC가 빨라집니다. 이것이 Full GC 빈도가 비정상적으로 높은 애플리케이션의 전형적 원인 중 하나입니다.
 

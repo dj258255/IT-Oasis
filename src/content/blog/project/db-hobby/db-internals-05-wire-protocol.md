@@ -146,8 +146,8 @@ db-hobby=> SELECT * FROM t WHERE id = 1;
 ## 참고 (1차 자료 우선)
 
 - [PostgreSQL Documentation: Frontend/Backend Protocol](https://www.postgresql.org/docs/current/protocol.html)
-- [PostgreSQL Documentation: Message Flow](https://www.postgresql.org/docs/current/protocol-flow.html) — extended query·CancelRequest 절차의 1차 근거
+- [PostgreSQL Documentation: Message Flow](https://www.postgresql.org/docs/current/protocol-flow.html): extended query·CancelRequest 절차의 1차 근거
 - [PostgreSQL Documentation: Message Formats](https://www.postgresql.org/docs/current/protocol-message-formats.html)
-- [PgBouncer Documentation: Features](https://www.pgbouncer.org/features.html) — pooling 모드별 세션 상태 제약
+- [PgBouncer Documentation: Features](https://www.pgbouncer.org/features.html): pooling 모드별 세션 상태 제약
 - 본 블로그: [DB 커넥션 풀](/blog/theory/db-connection-pool) · [Tomcat NIO 요청 처리](/blog/theory/tomcat-nio-request-handling)
-- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `server.c`
+- [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby): `server.c`

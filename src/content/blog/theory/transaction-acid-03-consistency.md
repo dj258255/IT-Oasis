@@ -216,7 +216,7 @@ PostgreSQL의 `synchronous_commit` 설정을 보면 두 극단 사이의 단계�
 
 ![일관성 모델: 두 차원과 그 교집합](/uploads/theory/transaction-acid/consistency-models.svg)
 
-일관성 모델들은 단순한 일직선이 아니라 두 차원으로 나뉩니다 (Bailis, Jepsen.io 분류):
+일관성 모델들은 두 차원으로 나뉩니다 (Bailis, Jepsen.io 분류):
 
 - **단일 객체(single-object) 차원**: linearizability → sequential consistency → causal consistency → eventual consistency. 강한 → 약한 순서.
 - **다중 객체/트랜잭션 차원**: serializability, 즉 트랜잭션이 어떤 직렬 순서와 동등하다는 보장. linearizability와는 직접 비교 불가능한 다른 축.

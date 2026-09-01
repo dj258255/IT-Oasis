@@ -1320,7 +1320,7 @@ App 1 재사용:     /auth/me          → 401 (차단)
 | Spring Event → Outbox → Debezium+Kafka (예정) | **CDC + 이벤트 기반 동기화**: dual-write 제거, Read Model 독립 갱신 |
 | Redis Consistent Hashing (예정) | **샤딩 + 동적 복제**: 핫스팟 해결, 수평 확장 |
 
-> 단순히 기술을 나열한 것이 아니라, 성능 병목을 측정 → 원인 분석 → 대안 비교 → 실측 검증하는 과정을 반복했고, 그 결과가 업계 표준 시스템 설계 패턴과 자연스럽게 대응된다. 특히 Trie → flat KV 전환은 자동완성 시스템 설계에서 "naive Trie의 서브트리 순회 한계를 인지하고 prefix→top-K flat KV로 물화(materialize)한다"는 패턴을 직접 구현한 것이다. Bing, Google, Elasticsearch 모두 Trie 변형(FST, PruningRadixTrie) + flat KV 서빙의 2단계 구조를 사용한다.
+> 성능 병목을 측정 → 원인 분석 → 대안 비교 → 실측 검증하는 과정을 반복했고, 그 결과가 업계 표준 시스템 설계 패턴과 자연스럽게 대응된다. 특히 Trie → flat KV 전환은 자동완성 시스템 설계에서 "naive Trie의 서브트리 순회 한계를 인지하고 prefix→top-K flat KV로 물화(materialize)한다"는 패턴을 직접 구현한 것이다. Bing, Google, Elasticsearch 모두 Trie 변형(FST, PruningRadixTrie) + flat KV 서빙의 2단계 구조를 사용한다.
 
 ---
 

@@ -1210,7 +1210,7 @@ byte[] cancelRes = client.exchange(cancelReqFrame, TransactionKind.MUTATION);
 
 Prometheus에도 같은 사건이 찍힙니다: `gwanmun_circuit_state{circuit="core-banking"} 1.0`(OPEN), `gwanmun_circuit_opened_total 2.0`, `gwanmun_circuit_rejected_total 5.0`, `gwanmun_core_retries_total 2.0`.
 
-데드라인도 숫자로 확인됩니다. 지연 계좌(응답 5초 지연, read 타임아웃 3초) 호출의 총 소요가 **5.02초**로 찍혔습니다. 1차 타임아웃 3초 + 백오프 0.2초 + 2차 시도의 read 타임아웃이 남은 1.8초로 깎인 합입니다. 로그에는 "거래 데드라인(5000ms) 소진 — 재시도를 접습니다"가 남습니다.
+데드라인도 숫자로 확인됩니다. 지연 계좌(응답 5초 지연, read 타임아웃 3초) 호출의 총 소요가 **5.02초**로 찍혔습니다. 1차 타임아웃 3초 + 백오프 0.2초 + 2차 시도의 read 타임아웃이 남은 1.8초로 깎인 합입니다. 로그에는 "거래 데드라인(5000ms) 소진, 재시도를 접습니다"가 남습니다.
 
 ##### UNKNOWN 두 건, 서로 다른 운명으로 갈린 해소
 

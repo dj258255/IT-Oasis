@@ -274,7 +274,7 @@ ACID 네 글자를 모두 다뤘습니다.
 - [③ Consistency](/blog/theory/transaction-acid-03-consistency): 트랜잭션이 무결성 제약을 유지. 사실상 애플리케이션 책임 + DB의 제약 강제.
 - **④ Durability**: 커밋된 변경은 영속. WAL + fsync + group commit + doublewrite buffer.
 
-ACID는 단순한 4글자가 아니라 수십 년의 DB 엔지니어링이 응축된 약속입니다. 각 글자 뒤에는 trade-off가 있고, 그 trade-off를 안다는 게 백엔드 개발자의 깊이를 만듭니다.
+ACID 네 글자에는 수십 년의 DB 엔지니어링이 응축돼 있습니다. 각 글자 뒤에는 trade-off가 있고, 그 trade-off를 안다는 게 백엔드 개발자의 깊이를 만듭니다.
 
 ## 참고 (1차 자료 우선)
 

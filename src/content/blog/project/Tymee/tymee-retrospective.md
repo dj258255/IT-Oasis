@@ -121,7 +121,7 @@ DDD도 필요한 것만 가져왔습니다. 엔티티와 값 객체를 구분하
 
 Spring BOM만 쓰면 Spring 생태계 안의 호환성은 BOM이 보장해주고 버전 명시 없이 깔끔하게 선언됩니다. 다만 Flyway나 jjwt처럼 BOM 밖의 라이브러리는 따로 관리해야 합니다.
 
-Gradle Version Catalog만 쓰면 IDE 자동완성이 완벽하고 오타가 컴파일 에러로 잡히며 Dependabot 같은 도구도 붙습니다. 대신 `spring-boot-starter-web`이 의존하는 `spring-core` 버전 같은 Spring 내부 호환성을 직접 맞춰야 합니다.
+Gradle Version Catalog만 쓰면 IDE 자동완성이 다 되고 오타가 컴파일 에러로 잡히며 Dependabot 같은 도구도 붙습니다. 대신 `spring-boot-starter-web`이 의존하는 `spring-core` 버전 같은 Spring 내부 호환성을 직접 맞춰야 합니다.
 
 그래서 둘을 같이 씁니다. Spring 호환성은 BOM이 보장하고, Flyway나 jjwt 같은 외부 라이브러리는 Version Catalog로 중앙 관리합니다. 두 시스템을 모두 알아야 하고 어떤 라이브러리가 어디서 관리되는지 구분해야 하지만, Spring 기반 멀티모듈에서는 이 조합이 가장 실용적이었습니다.
 
