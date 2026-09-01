@@ -158,7 +158,7 @@ OrderTimeline + CauseSuggestion   ← 결정적으로 조립 (10편에서 만든
 
 **"알아서 다 해준다"는 사례가 어디에도 없었습니다.** 절반쯤 맞는 게 정상이고, 이 전제로 설계해야 합니다. 그래서 초안이지 답변이 아니고, 검증에 걸리면 버립니다.
 
-국내에도 프로덕션 사례가 있습니다. 토스뱅크 상담 어시스턴트가 상담원에게 **실시간 요약과 응답 초안**을 제공하는 형태입니다. ③과 정확히 같은 모양입니다. AI가 고객에게 직접 보내지 않습니다.
+국내 사례도 보도 기준으로는 있습니다. 토스뱅크 상담 어시스턴트가 상담원에게 **실시간 요약과 응답 초안**을 제공하는 형태로 알려져 있습니다. 기술 블로그로 공개된 1차 자료는 찾지 못해 보도된 내용까지만 적습니다. ③과 정확히 같은 모양입니다. AI가 고객에게 직접 보내지 않습니다.
 
 ### 상황 1이 남긴 것
 
@@ -381,3 +381,11 @@ few-shot을 넣으면 출력이 예시를 닮는 게 당연합니다. 그래서 
 
 여기까지는 "숫자가 맞는가"입니다. **그다음 질문은 "그래서 그 초안은 보낼 만한가"이고,
 그걸 재려다 잣대가 네 번 나를 속였습니다**(12편). 무르면 나쁜 게 통과하고, 빡빡하면 좋은 게 떨어지고, 요구하면 대상이 요구에 맞춰 변형되고, 맞아도 검사 밖은 못 봅니다.
+
+## 참고
+
+- Klarna AI 상담 초기 발표: [klarna.com/press](https://www.klarna.com/international/press/klarna-ai-assistant-handles-two-thirds-of-customer-service-chats-in-its-first-month/)
+- Klarna CEO의 품질 저하 인정: [Bloomberg](https://www.bloomberg.com/news/articles/2025-05-08/klarna-turns-from-ai-to-real-person-customer-service), [TechCrunch](https://techcrunch.com/2025/06/04/klarna-ceo-says-company-will-use-humans-to-offer-vip-customer-service/)
+- Uber Genie 온콜 코파일럿(도움률 48.9%): [Uber 엔지니어링](https://www.uber.com/en-IN/blog/genie-ubers-gen-ai-on-call-copilot/)
+- Meta 인시던트 대응(근본원인 상위 5개 안에 42%): [engineering.fb.com](https://engineering.fb.com/2024/06/24/data-infrastructure/leveraging-ai-for-efficient-incident-response/)
+- Zalando 사후분석 파이프라인(표면적 귀인오류): [Zalando 엔지니어링](https://engineering.zalando.com/posts/2025/09/dead-ends-or-data-goldmines-ai-powered-postmortem-analysis.html)
