@@ -760,7 +760,7 @@ ID, 이름, 레벨 컬럼을 매핑합니다.
 
 React DevTools Profiler + 코드 정적 분석으로 세 지점이 병목으로 드러났습니다.
 
-**문제 1 — O(N) 시간복잡도의 셀 상태 조회**
+**문제 1: O(N) 시간복잡도의 셀 상태 조회**
 
 ```typescript
 // 매 셀 렌더링마다 O(N) 조회
@@ -774,7 +774,7 @@ const isCellSelected = useCallback(
 - 100개 셀이 선택된 상태에서 500개 셀 렌더링 → `500 × 100 = 50,000`번 비교
 - 드래그 중 매 프레임마다 반복
 
-**문제 2 — 과도한 useMemo 의존성 (28개)**
+**문제 2: 과도한 useMemo 의존성 (28개)**
 
 ```typescript
 const columns = useMemo(() => {
@@ -789,7 +789,7 @@ const columns = useMemo(() => {
 
 - `fillPreviewCells`/`moveTargetCell`이 의존성에 포함 → 마우스 이동마다 컬럼 재생성 → 테이블 전체 재렌더 cascade
 
-**문제 3 — Throttle 미적용**
+**문제 3: Throttle 미적용**
 
 - `mousemove`는 마우스 폴링 레이트에 따라 초당 60–120+회 발생
 - 매 이벤트마다 `setSelectedCells` → 리렌더 → 브라우저 렌더 사이클(16.67ms)보다 빈번한 상태 업데이트
@@ -848,7 +848,7 @@ function throttle<T extends (...args: Parameters<T>) => void>(fn: T, delay: numb
 
 오픈소스 스프레드시트(Handsontable, AG Grid, Google Sheets) 분석 후 추가 기법 도입.
 
-**기법 1 — `requestAnimationFrame` 기반 throttle:**
+**기법 1: `requestAnimationFrame` 기반 throttle:**
 
 ```typescript
 function rafThrottle<T extends (...args: any[]) => void>(fn: T): T {
@@ -868,7 +868,7 @@ function rafThrottle<T extends (...args: any[]) => void>(fn: T): T {
 
 브라우저 V-Sync와 동기화되어 프레임 드랍 최소화 + 백그라운드 탭에서 자동 일시중지.
 
-**기법 2 — DOM 직접 조작 (드래그 중 React 우회):**
+**기법 2: DOM 직접 조작 (드래그 중 React 우회):**
 
 ```typescript
 const handleCellMouseEnterThrottled = useMemo(
@@ -903,7 +903,7 @@ const handleCellMouseEnterThrottled = useMemo(
 - mouseup 시점에만 React state 동기화
 - 셀에 `data-cell-id` 속성 추가 (단, data-attribute selector는 class selector 대비 ~3배 느림. 대규모 테이블에서는 JS Map으로 셀 요소를 직접 추적하는 편이 더 효율적)
 
-**기법 3 — CSS `will-change` 힌트:**
+**기법 3: CSS `will-change` 힌트:**
 
 ```typescript
 style={{ willChange: 'background, outline' }}
@@ -1669,10 +1669,10 @@ Balruno는 발명이라기보다 조합으로 풀린 프로젝트였습니다. B
 
 ### 테이블과 입력 UX 기술 디테일
 
-- [Fortune-Sheet](https://github.com/ruilisi/fortune-sheet) — `packages/core/src/modules/formula.ts`
-- [Univer](https://github.com/dream-num/univer) — `packages/sheets-ui/src/views/formula-bar/FormulaBar.tsx`
-- [Luckysheet](https://github.com/dream-num/Luckysheet) — `src/controllers/menuButton.js`
-- [Handsontable](https://github.com/handsontable/handsontable) — `imeFastEdit` 옵션
-- [React Issue #8683](https://github.com/facebook/react/issues/8683) — Composition Events
+- [Fortune-Sheet](https://github.com/ruilisi/fortune-sheet): `packages/core/src/modules/formula.ts`
+- [Univer](https://github.com/dream-num/univer): `packages/sheets-ui/src/views/formula-bar/FormulaBar.tsx`
+- [Luckysheet](https://github.com/dream-num/Luckysheet): `src/controllers/menuButton.js`
+- [Handsontable](https://github.com/handsontable/handsontable): `imeFastEdit` 옵션
+- [React Issue #8683](https://github.com/facebook/react/issues/8683): Composition Events
 - [AG Grid IME Support](https://www.ag-grid.com/)
-- [Wijmo FlexGrid](https://developer.mescius.com/wijmo) — `imeEnabled`
+- [Wijmo FlexGrid](https://developer.mescius.com/wijmo): `imeEnabled`

@@ -175,13 +175,13 @@ FK와 CHECK가 있는 데모 테이블을 만들어 확인하니 `CONSTRAINT dem
 
 까다로운 건 상위 SQL 표의 **Call/sec** 하나였습니다. 평균 Latency와 평균 Row Examined는 누적값을 호출수로 나누면 그만이지만, "초당 호출"은 다릅니다. `performance_schema`의 calls는 서버 기동 이후 누적 카운터라서, 단일 시점 조회로는 초당 얼마인지 알 수가 없습니다. 시간 창이 필요합니다.
 
-마침 이상 감지가 이미 하고 있던 일이었습니다. 1분마다 쌓는 스냅샷에서 최근 창의 양 끝 배치를 차분해 쿼리별 QPS를 계산하는 로직이요. 그걸 재사용해 Call/sec를 채우되, **스냅샷 이력이 없으면 0으로 지어내지 않고 "—"로 표기**합니다. 수집이 방금 시작된 인스턴스에서 Call/sec가 0으로 보이는 것과 "아직 모름"으로 보이는 것은 운영자에게 완전히 다른 정보입니다.
+마침 이상 감지가 이미 하고 있던 일이었습니다. 1분마다 쌓는 스냅샷에서 최근 창의 양 끝 배치를 차분해 쿼리별 QPS를 계산하는 로직이요. 그걸 재사용해 Call/sec를 채우되, **스냅샷 이력이 없으면 0으로 지어내지 않고 ", "로 표기**합니다. 수집이 방금 시작된 인스턴스에서 Call/sec가 0으로 보이는 것과 "아직 모름"으로 보이는 것은 운영자에게 완전히 다른 정보입니다.
 
 ## 11. 모니터링 지표 통합, 위임을 접고 내장하다
 
 Monitoring 탭의 CPU·Connections 그래프는 처음에 "의도된 차이"로 분류했습니다. 레퍼런스는 관리형 DB 환경이라 CloudWatch·Performance Insights가 있고, 우리는 exporter·Prometheus·Grafana 스택이니 링크로 위임하면 된다고요. 그런데 다시 보니 레퍼런스도 결국 수집기의 패널을 화면에 임베드한 것이었습니다. 우리 스택도 똑같이, Prometheus HTTP API(`query_range`)를 앱이 직접 조회하면 됩니다. exporter는 이미 데모 스택에서 돌고 있었고, 없는 건 호스트 CPU를 줄 node_exporter뿐이었습니다.
 
-그래서 내장했습니다. Monitoring 탭 맨 위에 CPU(%)와 Connections 라인 차트, 그리고 "전체 화면으로 보기"는 Grafana로. 원칙 하나를 지켰습니다. **Prometheus는 선택 인프라입니다.** 미설정이든 연결 불가든 그래프는 사유를 그대로 표기하고("node_exporter 미수집 — ..."), 콘솔의 나머지는 아무 영향이 없습니다. 그래프 한 장 때문에 콘솔이 죽으면 안 되니까요. MSSQL처럼 표준 exporter가 없는 기종은 미지원을 미지원이라고 적습니다.
+그래서 내장했습니다. Monitoring 탭 맨 위에 CPU(%)와 Connections 라인 차트, 그리고 "전체 화면으로 보기"는 Grafana로. 원칙 하나를 지켰습니다. **Prometheus는 선택 인프라입니다.** 미설정이든 연결 불가든 그래프는 사유를 그대로 표기하고("node_exporter 미수집, ..."), 콘솔의 나머지는 아무 영향이 없습니다. 그래프 한 장 때문에 콘솔이 죽으면 안 되니까요. MSSQL처럼 표준 exporter가 없는 기종은 미지원을 미지원이라고 적습니다.
 
 ![Monitoring 탭 Metric 카드, CPU%·Connections를 콘솔이 직접 그린다](/uploads/project/dbtower/metric-card.png)
 

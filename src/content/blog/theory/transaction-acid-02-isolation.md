@@ -187,7 +187,7 @@ PostgreSQL 공식 문서: *"PostgreSQL's Repeatable Read implementation does not
 
 > **왜 비싼가?** *"직렬화"* 는 트랜잭션을 차례대로 줄 세워서 하나씩 처리하는 것과 같은 효과를 보장한다는 뜻입니다. 동시 실행이 결과적으로 어떤 순차 실행과 동등해야 하므로, DB는 실제로 그렇게 동작하거나(2PL이 잠금으로 강제) 그 결과를 보장할 수 있을 때만 커밋을 허용해야 합니다(SSI가 충돌 감지로 강제). 단, 항상 *"가장 느린"* 은 아닙니다. SSI 같은 낙관적 구현은 충돌이 적은 워크로드에서는 SI 비용에 가깝게 동작하지만, 충돌이 많은 워크로드에서는 abort/retry로 처리량이 급락할 수 있습니다.
 
-> **SSI가 작동하는 모습 — PostgreSQL의 실제 에러 메시지**: PostgreSQL은 read/write 의존성 사이클을 감지하면 한 트랜잭션을 abort하고 다음 메시지로 알려줍니다:
+> **SSI가 작동하는 모습, PostgreSQL의 실제 에러 메시지**: PostgreSQL은 read/write 의존성 사이클을 감지하면 한 트랜잭션을 abort하고 다음 메시지로 알려줍니다:
 >
 > ```
 > ERROR:  could not serialize access due to

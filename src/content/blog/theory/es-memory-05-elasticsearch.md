@@ -91,7 +91,7 @@ Heap이 주소 0부터 시작하면 압축 포인터 계산이 **3-bit shift 하
 
 하지만 OS 메모리 할당 상황에 따라 JVM이 **0번지에서 시작 못 하는 경우**가 있고, 그러면:
 
-> "a null check" and additional arithmetic operations, causing "a significant drop in performance." — 같은 출처
+> "a null check" and additional arithmetic operations, causing "a significant drop in performance.", 같은 출처
 
 그래서 Elastic은 보수적으로 **"26GB는 어디서든 안전, 30GB까지 가능"** 이라고 권고합니다:
 
@@ -120,7 +120,7 @@ Elastic 공식 문서:
 
 > "The default file system implementation ... is currently `hybridfs` on all supported systems." — [Elastic — Index store settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-store.html)
 
-> "The `hybridfs` type is a hybrid of `niofs` and `mmapfs`, which chooses the best file system type for each type of file based on the read access pattern. Currently only the Lucene term dictionary, norms and doc values files are memory mapped." — 같은 출처
+> "The `hybridfs` type is a hybrid of `niofs` and `mmapfs`, which chooses the best file system type for each type of file based on the read access pattern. Currently only the Lucene term dictionary, norms and doc values files are memory mapped.", 같은 출처
 
 즉 Elasticsearch의 default는 **Lucene의 일부 파일만 mmap** 하고 나머지는 NIO로 읽는 하이브리드 전략입니다.
 

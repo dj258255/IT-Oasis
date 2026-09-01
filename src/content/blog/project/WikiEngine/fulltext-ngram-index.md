@@ -580,7 +580,7 @@ Posts 테이블(1,477만 건, 122GB)에 인덱스를 생성했을 때는 **300GB
 
 ### 6-5. Row-Oriented 저장 구조가 FULLTEXT 인덱스 비용을 증폭시키는 이유
 
-300GB+ 디스크 초과는 단순히 "데이터가 많아서"가 아니라, **MySQL의 Row-Oriented 저장 구조**에서 비롯되는 구조적 문제입니다.
+300GB+ 디스크 초과는 **MySQL의 Row-Oriented 저장 구조**에서 비롯되는 구조적 문제입니다. 데이터 양만의 문제가 아닙니다.
 
 MySQL(InnoDB)은 Row-Oriented 스토리지입니다. 하나의 행을 구성하는 모든 컬럼(`id`, `title`, `content`, `created_at`, ...)이 디스크의 같은 페이지에 연속으로 저장됩니다.
 
