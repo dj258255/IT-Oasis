@@ -1,7 +1,7 @@
 ---
 title: '상담 초안 자동화: 모델이 지어낸 숫자는 버리게 만들었다'
 description: '망분리를 설계 조건으로 걸고 모델 대신 포트와 숫자 검증기를 먼저 만들었습니다. 나중에 실제로 붙였더니 그 검증기의 계약이 틀려 멀쩡한 초안을 반려하고 있었습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-08-17
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ai.svg"
 draft: false

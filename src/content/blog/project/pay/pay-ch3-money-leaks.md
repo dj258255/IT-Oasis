@@ -1,7 +1,7 @@
 ---
 title: '정산과 취소: 가맹점에 돈이 안 나가고 있었다'
 description: '정산이 총액의 3%만 떼고, 집계 키가 승인일이라 가맹점에 돈을 안 주고, 구매확정 전에 정산되고, 취소가 월렛을 몰랐고, 부분취소는 재배달되면 두 배로 깎였습니다. 다섯 다 아무도 에러를 안 냈습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-04-21
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch3.svg"
 draft: false

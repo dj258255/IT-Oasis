@@ -1,7 +1,7 @@
 ---
 title: '결제 실패: 카드에서는 빠졌는데 우리는 실패로 알았다'
 description: '타임아웃은 실패가 아니라 미확정이라 보존하고 복구가 확정합니다. 이미 나간 승인은 롤백이 안 되니 보상으로 되돌립니다. failover는 PG가 요청을 못 받은 경우에만 하고, 고르는 시점은 결제창 앞으로 옮겼습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-03-02
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-failure.svg"
 draft: false

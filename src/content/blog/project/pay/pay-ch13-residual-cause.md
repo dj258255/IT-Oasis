@@ -1,7 +1,7 @@
 ---
 title: '대사 AI 자동화: PG엔 있는데 우리 장부에 없는 결제를 잡아내게 했다'
 description: '규칙이 못 가른 대사 예외에 모델을 붙였습니다. 일곱 원인을 다 맡기니 25~40%였는데, 유형별로 재보니 하나는 세 모델 모두 100%였습니다. 그 하나만 켰습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-08-31
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch13-residual.svg"
 draft: false

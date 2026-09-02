@@ -1,7 +1,7 @@
 ---
 title: '백오피스: 사람이 확정하게 만들면 끝인 줄 알았다'
 description: '원인을 필수로 고르게 만들어놓고 근거는 11곳에 흩어둔 채였습니다. 근거를 모으고 나니 이미 내린 판정이 부분취소로 무효가 되고 있었고, 그걸 고치고 나니 파서가 정상 환불을 버리고 있었습니다.'
-date: 2026-08-30T00:00:00.000Z
+date: 2026-08-03
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch14.svg"
 draft: false
