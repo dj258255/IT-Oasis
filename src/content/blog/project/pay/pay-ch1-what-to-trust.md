@@ -115,6 +115,8 @@ public CheckoutResult confirm(String orderNo, String paymentKey, Money requested
 
 > `OrderLine`이 가격(`unitPrice`)을 클라이언트에서 받고 있습니다.
 
+`OrderLine`은 **주문 생성 요청에 실려 오는 항목 한 줄**입니다. 테이블이 아니라 클라이언트가 보낸 JSON이 바인딩되는 자리입니다.
+
 처음엔 대수롭지 않게 봤습니다. "주문 만들 때 상품 가격 받는 거 당연하지." 그런데 흐름을 따라가 보니 등골이 서늘했습니다.
 
 ```java
@@ -167,6 +169,16 @@ Product product = productRepository.findById(line.productId())
         .orElseThrow(() -> OrderException.productNotFound(line.productId()));
 OrderItem.of(product.getProductId(), product.getName(), product.getPrice(), line.quantity());
 ```
+
+이 흐름에서 이름이 비슷한 셋이 각각 다른 일을 합니다.
+
+| | 무엇인가 | 가격 |
+|---|---|---|
+| `OrderLine` | 클라이언트가 보내는 요청 한 줄 | **없습니다** |
+| `products` | 서버의 가격 원본 테이블 | 여기가 기준입니다 |
+| `order_items` | 주문에 확정돼 저장되는 테이블 | 조회한 값을 스냅샷으로 박습니다 |
+
+주문 시점 가격을 `order_items`에 박아두는 이유는, 나중에 상품 가격이 바뀌어도 이미 만들어진 주문의 금액이 흔들리면 안 되기 때문입니다.
 
 이제 `OrderLine`에는 가격 필드 자체가 없습니다. 클라이언트는 JSON에 `unitPrice`를 넣을 수야 있지만 **바인딩될 자리가 없어 처리 경로에 들어오지 못합니다.** "보낼 방법"이 아니라 "쓰일 방법"이 사라진 것입니다. `totalAmount`도 서버 가격으로만 계산되니, `verifyAmount`가 비로소 진짜 방어가 됩니다.
 
