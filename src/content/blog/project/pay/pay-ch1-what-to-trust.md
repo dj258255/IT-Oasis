@@ -1,7 +1,7 @@
 ---
 title: '금액 검증: 10만 원짜리를 1원에 결제할 수 있었다'
 description: '금액 검증을 열심히 짜놓고도 기준값이 클라이언트에서 왔습니다. 10만 원짜리를 1원에 결제할 수 있었습니다. 검증 로직보다 무엇을 신뢰할지가 먼저였습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-02-16
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch1.svg"
 draft: false

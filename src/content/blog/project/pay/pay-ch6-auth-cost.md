@@ -1,7 +1,7 @@
 ---
 title: '비밀번호 암호화: 더 강한 해시가 더 빨랐고, 서버는 위태로워졌다'
 description: '요청마다 하던 BCrypt를 JWT로 걷어내 p95를 567.84ms에서 37.09ms로 줄였습니다. 남은 로그인 1회의 해싱을 Argon2id로 옮기니 이 환경에서는 더 빨랐는데, 해시 1건당 19MiB라 동시 100건이면 힙 2GB가 필요했습니다. 유입 제어로는 그 순간을 못 막습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-06-11
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-auth.svg"
 draft: false
