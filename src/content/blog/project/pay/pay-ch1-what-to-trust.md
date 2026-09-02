@@ -144,7 +144,7 @@ order.verifyAmount(requestedAmount);  // requestedAmount == totalAmount 인지 �
 
 ```java
 requestedTotal = cardAmount + pointAmount + walletAmount;
-order.verifyAmount(Money.of(requestedTotal));   // 서버가 계산한 totalAmount 와 대조
+order.verifyAmount(Money.krw(requestedTotal));  // 서버가 계산한 totalAmount 와 대조
 ```
 
 합계가 서버 금액과 같아야 통과하고, 카드 몫이 그보다 크면 합계가 넘어 걸립니다.
