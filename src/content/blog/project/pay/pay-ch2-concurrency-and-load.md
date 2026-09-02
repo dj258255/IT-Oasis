@@ -1,7 +1,7 @@
 ---
 title: '동시성: 재고 20개에 30명이 동시에 오면'
 description: '같은 자원에 몰린 요청을 어디서 기다리게 할 것인가. 재고·폭주·데드락·포인트 경합 네 자리에서 그 답을 실측으로 골랐고, 한 번은 재는 방법이 틀려 결론을 되돌렸습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-03-19
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-concurrency.svg"
 draft: false

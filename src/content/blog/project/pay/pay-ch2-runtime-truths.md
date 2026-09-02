@@ -1,7 +1,7 @@
 ---
 title: '실기동: 승인됐다고 답했는데 DB에는 결제가 없었다'
 description: '테스트가 다 통과하는데 실제로 띄우니 결제가 DB에 없었습니다. 이벤트는 두 번 인코딩되고, 배치는 아무도 부르지 않고, 금고는 비어 있었고, 만들어둔 이스케이프 함수는 안 통하는 자리에 쓰여 있었습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-04-06
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch2.svg"
 draft: false

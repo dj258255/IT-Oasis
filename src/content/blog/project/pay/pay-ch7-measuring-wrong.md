@@ -1,7 +1,7 @@
 ---
 title: '부하 측정: 제어는 3층인데 부하는 1층에서 다 막혔다'
 description: '"제어를 켜니 p95가 14배 좋아졌다"고 적어둔 실험은 계정 하나로 돌린 것이라 전역 층이 부하를 받은 적이 없었습니다. 그래서 검사가 스스로 성립을 말하게 만들었는데, 그렇게 만든 검사기가 하루에 두 번 헛통과했습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-06-22
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch11.svg"
 draft: false

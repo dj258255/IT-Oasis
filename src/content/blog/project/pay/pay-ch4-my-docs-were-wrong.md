@@ -1,7 +1,7 @@
 ---
 title: '업계 표준: 멱등키를 15일에서 24시간으로 줄일 뻔했다'
 description: '"Stripe는 24시간이니 우리도 줄이자"고 했다가 철회했습니다. 이 시스템이 모델링한 토스는 15일이었습니다. "외부 콜을 트랜잭션 밖으로"도 고규모 규칙이라 이 모놀리스에서는 오히려 손해였습니다. 업계 표준보다 우리가 따르는 계약이 먼저였습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-05-07
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch4.svg"
 draft: false

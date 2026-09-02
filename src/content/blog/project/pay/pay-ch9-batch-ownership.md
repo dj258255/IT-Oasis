@@ -1,7 +1,7 @@
 ---
 title: '운영 자동화: 인스턴스를 둘로 늘리니 같은 정산을 두 번 집계했다'
 description: '매일 사람이 하던 일을 배치 열 개로 옮겼습니다. 어려운 건 배치를 만드는 게 아니라 두 번 돌아도 돈이 두 번 움직이지 않게 하는 쪽이었고, 애플리케이션 가드는 인스턴스 두 대의 동시 진입에 무력했습니다.'
-date: 2026-08-31T00:00:00.000Z
+date: 2026-07-14
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch9-batch.svg"
 draft: false
