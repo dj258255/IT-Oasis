@@ -789,9 +789,68 @@ SchedulerGatePairingTest > 스케줄러는 모두 프로퍼티 게이트를 가�
 
 다른 배치와 같게 프로퍼티 게이트와 짝이 되는 스케줄링 설정을 붙였습니다. 기본은 꺼둡니다.
 
+### 실 MySQL로 재현했더니 버그가 셋 나왔다
+
+처음에는 `PaymentRecoveryService`를 목으로 두고 `PAYMENT_NOT_FOUND`를 던지게 만들어 **경로만** 고정했습니다. 그런데 실제로 문제가 되는 건 "결제 행이 아직 커밋되지 않아 다른 트랜잭션에서 안 보이는" 상태인데, **그건 목으로 만들 수 없습니다.**
+
+실 MySQL 컨테이너에 붙여 결제 행이 정말 없는 상태로 웹훅을 넣었습니다. 셋이 나왔습니다.
+
+#### 1. 로그는 "보류"인데 DB는 그대로였다
+
+```
+INFO  웹훅이 결제보다 먼저 도착 — 보류 paymentKey=pk-race…
+ERROR Unexpected exception occurred invoking async method
+      UnexpectedRollbackException: Transaction silently rolled back
+      because it has been marked as rollback-only
+```
+
+`resolveByPaymentKey`가 `@Transactional`입니다. 거기서 난 예외가 **이미 그 트랜잭션을 rollback-only로** 만듭니다. 제가 그 예외를 잡아 `PENDING_PAYMENT`를 저장해도 **커밋 자체가 거부됩니다.**
+
+그런데 이 함정은 **기존 코드 주석이 정확히 경고하고 있었습니다.**
+
+> 예외를 catch해 같은 트랜잭션에 FAILED를 쓰려 하면, PG 조회 예외가 이미 그 트랜잭션을 **rollback-only로 오염**시켜 그 write마저 커밋되지 않는다
+
+읽고도 그대로 밟았습니다. **예외를 받지 않고 먼저 물어보는** 쪽으로 고쳤습니다.
+
+```java
+if (!paymentRecoveryService.exists(paymentKey)) {
+    event.markPendingPayment(...);
+    return;
+}
+```
+
+#### 2. 이번엔 저장이 flush되지 않았다
+
+고치려고 `exists()`를 `@Transactional(readOnly = true)`로 뒀습니다. 그랬더니 상태가 여전히 `RECEIVED`였습니다.
+
+**readOnly로 바깥 트랜잭션에 합류하면 Hibernate FlushMode가 MANUAL이 됩니다.** 그래서 이어지는 `save`가 flush되지 않고 사라집니다.
+
+[실기동 편](/blog/project/pay/pay-ch2-runtime-truths)에서 `saveAndFlush`가 필요했던 이유와 **같은 함정**입니다. 같은 교훈이 새 자리에서 또 나왔습니다.
+
+#### 3. 상태 컬럼이 ENUM이었다
+
+```
+JpaSystemException: Data truncated for column 'status' at row 1
+```
+
+`webhook_events.status`가 `VARCHAR`가 아니라 `ENUM('FAILED','PROCESSED','RECEIVED','SKIPPED')`였습니다. 새 값이 잘려 들어갔습니다.
+
+**H2는 이걸 문자열로 받아 통과시킵니다.** 마이그레이션에 `ENUM` 값 목록 갱신을 더했습니다.
+
+#### 셋 다 목으로는 안 나온다
+
+목이 **트랜잭션 경계도, FlushMode도, 컬럼 타입도** 흉내내지 못합니다. "경로만 고정했다"가 정확히 그 한계였습니다.
+
+고친 뒤 로그는 이렇게 나옵니다.
+
+```
+[task-1]       웹훅이 결제보다 먼저 도착 — 보류    ← 수신 스레드
+[scheduling-1] 웹훅이 결제보다 먼저 도착 — 보류    ← 재시도 스케줄러가 다시 집었다
+```
+
 ### 남는 것
 
-**이 순서 역전을 실제로 재현해보지는 못했습니다.** 실 PG가 원하는 순간에 웹훅을 먼저 보내주지 않아서, 테스트에서 `PAYMENT_NOT_FOUND`를 던지게 만들어 경로만 고정했습니다.
+**발신자는 여전히 우리입니다.** 토스가 웹훅을 우리 서버로 쏘게 하려면 공개 URL을 상점 관리자에 등록해야 하고, 그래도 **언제 쏠지는 우리가 정하지 못합니다.** 서명·수신 경로·트랜잭션 경계는 실제 그대로 태웠습니다.
 
 ## 남는 생각
 
