@@ -3,7 +3,7 @@ title: 'AI를 세 자리에 붙여 재고, 둘은 껐고 하나는 켰다'
 description: '규칙 대비 개선을 재는 하네스를 만들어 두고 두 기능을 껐습니다. 세 번째 자리에서 처음으로 켜라는 답이 나왔는데, 그 과정에서 제가 만든 평가 장치가 세 번 저를 속이려 했습니다.'
 date: 2026-09-05
 category: study/pay
-coverImage: "/uploads/project/pay/thumbs/pay-ch14.svg"
+coverImage: "/uploads/project/pay/thumbs/pay-ch14-ruler.svg"
 draft: false
 series: "결제 시스템 만들기"
 seriesOrder: 14

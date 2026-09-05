@@ -1,0 +1,31 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+
+  <text x="72" y="150" font-size="42" font-weight="800" fill="#1e293b">AI를 세 자리에 붙여 재고</text>
+  <text x="72" y="206" font-size="42" font-weight="800" fill="#1e293b">둘은 껐고 하나는 켰다</text>
+  <text x="72" y="256" font-size="17" fill="#64748b">켜고 끄는 기준은 절대 정확도가 아니라 규칙 대비 개선</text>
+
+  <rect x="72" y="312" width="330" height="86" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="94" y="344" font-size="13" font-weight="700" fill="#94a3b8">대사 원인 분류</text>
+  <text x="94" y="374" font-size="19" font-weight="800" fill="#94a3b8">껐다</text>
+  <text x="176" y="374" font-size="13" fill="#94a3b8">규칙 대비 개선 0</text>
+
+  <rect x="426" y="312" width="330" height="86" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="448" y="344" font-size="13" font-weight="700" fill="#94a3b8">운영자용 요약</text>
+  <text x="448" y="374" font-size="19" font-weight="800" fill="#94a3b8">껐다</text>
+  <text x="530" y="374" font-size="13" fill="#94a3b8">사람 표본 0건</text>
+
+  <rect x="780" y="312" width="348" height="86" rx="10" fill="#eff6ff" stroke="#4a8db8" stroke-width="2.5"/>
+  <text x="804" y="344" font-size="13" font-weight="700" fill="#4a8db8">장애 로그 원인 분석</text>
+  <text x="804" y="374" font-size="19" font-weight="800" fill="#1e293b">켰다</text>
+  <text x="874" y="374" font-size="13" fill="#475569">규칙 기권 자리에만</text>
+
+  <rect x="72" y="438" width="1056" height="112" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="96" y="472" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.03em">실제 로그 12건 · 4회 반복 전부 동일</text>
+  <text x="96" y="506" font-size="15" fill="#475569">규칙</text>
+  <text x="164" y="506" font-size="15" font-weight="700" fill="#1e293b">맞음 7 · 기권 5 · 틀림 0</text>
+  <text x="96" y="534" font-size="15" fill="#475569">모델</text>
+  <text x="164" y="534" font-size="15" font-weight="700" fill="#1e293b">맞음 11 · 기권 0 · 틀림 1</text>
+  <text x="560" y="520" font-size="14" fill="#64748b">정확도보다 틀리는 방식이 갈렸다</text>
+</svg>
