@@ -1,0 +1,26 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+
+  <text x="72" y="150" font-size="42" font-weight="800" fill="#1e293b">실제 PG를 붙이자</text>
+  <text x="72" y="206" font-size="42" font-weight="800" fill="#1e293b">웹훅이 결제보다 먼저 왔다</text>
+  <text x="72" y="256" font-size="17" fill="#64748b">목 PG로는 한 번도 뒤집히지 않던 순서</text>
+
+  <rect x="72" y="308" width="1056" height="104" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="96" y="340" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="0.03em">목 PG</text>
+  <text x="96" y="378" font-size="16" fill="#475569">승인 응답</text>
+  <text x="216" y="378" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="252" y="378" font-size="16" fill="#475569">결제 행 저장</text>
+  <text x="396" y="378" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="432" y="378" font-size="16" fill="#475569">웹훅 도착</text>
+  <text x="600" y="378" font-size="14" fill="#94a3b8">순서가 늘 지켜진다</text>
+
+  <rect x="72" y="430" width="1056" height="120" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="2.5"/>
+  <text x="96" y="462" font-size="13" font-weight="700" fill="#dc2626" letter-spacing="0.03em">토스페이먼츠 가상계좌</text>
+  <text x="96" y="500" font-size="16" font-weight="700" fill="#1e293b">웹훅 도착</text>
+  <text x="228" y="500" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="264" y="500" font-size="16" fill="#475569">결제 행 없음</text>
+  <text x="408" y="500" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="444" y="500" font-size="16" fill="#475569">승인 응답</text>
+  <text x="96" y="532" font-size="14" fill="#64748b">예외로 처리하니 보류 상태까지 같이 롤백되어 웹훅이 통째로 사라졌다</text>
+</svg>
