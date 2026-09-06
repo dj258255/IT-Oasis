@@ -1,0 +1,6 @@
+{
+  "name": "pay-diagrams",
+  "private": true,
+  "type": "module",
+  "dependencies": { "jsdom": "^25.0.1", "roughjs": "^4.6.6" }
+}
