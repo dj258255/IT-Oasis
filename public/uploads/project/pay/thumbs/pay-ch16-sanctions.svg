@@ -1,0 +1,26 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+
+  <text x="72" y="150" font-size="42" font-weight="800" fill="#1e293b">제재 명단에 한글이</text>
+  <text x="72" y="206" font-size="42" font-weight="800" fill="#1e293b">한 건도 없었다</text>
+  <text x="72" y="256" font-size="17" fill="#64748b">한글로 그대로 맞대면 통과율 100%가 안전해 보인다</text>
+
+  <rect x="72" y="308" width="1056" height="104" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="96" y="340" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="0.03em">UN 통합 명단 실측</text>
+  <text x="96" y="378" font-size="16" fill="#475569">전체 1,011건</text>
+  <text x="264" y="378" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="300" y="378" font-size="16" fill="#475569">한국 관련 79건</text>
+  <text x="480" y="378" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="516" y="378" font-size="16" font-weight="700" fill="#dc2626">한글 0건</text>
+  <text x="660" y="378" font-size="14" fill="#94a3b8">전부 RI JE-SON 같은 북한식 로마자</text>
+
+  <rect x="72" y="430" width="1056" height="120" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="2.5"/>
+  <text x="96" y="462" font-size="13" font-weight="700" fill="#16a34a" letter-spacing="0.03em">로마자 후보로 펼쳐 정확 일치만 본다</text>
+  <text x="96" y="500" font-size="16" font-weight="700" fill="#1e293b">백창호</text>
+  <text x="192" y="500" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="228" y="500" font-size="16" fill="#475569">PAEK CHANG HO</text>
+  <text x="432" y="500" font-size="16" fill="#cbd5e1">▶</text>
+  <text x="468" y="500" font-size="16" font-weight="700" fill="#16a34a">명단의 이름으로 8/8</text>
+  <text x="96" y="532" font-size="14" fill="#64748b">점수로 올리면 김철수와 함께 김철순도 92점이 되므로, 딱 맞을 때만 100을 준다</text>
+</svg>
