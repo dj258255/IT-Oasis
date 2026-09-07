@@ -36,6 +36,6 @@ steps.forEach(([r, ms], i) => {
   text(k, x + 105, 580, `${r}  ${ms}`, { size: 16, weight: i === 3 ? 700 : 500 });
 });
 text(k, 945, 542, '← 무릎', { size: 14, weight: 700, fill: C.green.s });
-text(k, 700, 640, '평탄 p95 5ms 에 무릎 1,800 req/s — 병목이 쿼리 비용이 아니라 줄서기라, 읽기 캐시는 안 넣기로 정했다',
+text(k, 700, 640, '평탄 p95 5ms 에 무릎 1,800 req/s — 조회 한 건이 이미 5ms 라 읽기 캐시는 안 넣었다(무릎 위 병목은 안 쟀다)',
   { size: 15, fill: '#868e96' });
 writeFileSync(process.argv[2], render(k));
