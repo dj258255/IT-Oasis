@@ -3,8 +3,8 @@ import { writeFileSync } from 'fs';
 const k = canvas(1400, 620);
 
 marker(k, 700, 46, 400);
-text(k, 700, 46, '읽지 않으면 충돌하지 않는다', { size: 27, weight: 700 });
-text(k, 700, 78, '낙관적 락을 걸어 뒀는데도 무너졌다. 문 앞 rate limit 이 이 결함을 가리고 있었다', { size: 15, fill: '#868e96' });
+text(k, 700, 46, '경합을 없앤 것이 아니라 실패해도 되는 쪽으로 옮겼다', { size: 27, weight: 700 });
+text(k, 700, 78, '낙관적 락을 걸어 뒀는데도 같은 계좌 행에서 무너졌다', { size: 15, fill: '#868e96' });
 
 frame(k, 40, 112, 640, 250, { color: C.red });
 text(k, 360, 142, '개선 전 — 읽고 고치고 쓰기 (+ @Version)', { size: 18, weight: 700, fill: C.red.s });
@@ -30,6 +30,5 @@ box(k, 40, 396, 1320, 60, { color: C.yellow, r: 14 });
 text(k, 700, 432, 'version 도 함께 올려 낡은 잔액 덮어쓰기를 막았다 — 사용·환불이 낙관적 락 감시를 벗어나지 않게', { size: 16, weight: 700 });
 box(k, 40, 476, 1320, 60, { color: C.blue, r: 14 });
 text(k, 700, 512, '검증: 잔액과 포인트 원장을 별도 경로로 대조, 불일치 0 (978,400 = 978,400)', { size: 16, weight: 700 });
-text(k, 700, 578, '이 결함을 보려면 rate limit 을 꺼야 했다. 유입 제어가 동시성을 눌러 안 보이게 하고 있었다.', { size: 15, fill: '#868e96' });
 
 writeFileSync(process.argv[2], render(k));

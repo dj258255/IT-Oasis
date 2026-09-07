@@ -1,6 +1,6 @@
 import { canvas, box, frame, text, lines, arrow, elbow, marker, render, C } from './draw.mjs';
 import { writeFileSync } from 'fs';
-const k = canvas(1400, 560);
+const k = canvas(1400, 604);
 
 marker(k, 700, 46, 380);
 text(k, 700, 46, '400이라고 다 실패가 아니다', { size: 27, weight: 700 });
@@ -24,7 +24,6 @@ kinds.forEach((kd, i) => {
   arrow(k, 755, y + 50, 825, y + 50, { color: kd.c.s });
 });
 
-box(k, 40, 450, 1320, 66, { color: C.yellow, r: 14 });
-text(k, 700, 480, '이걸 안 가르면 이미 승인된 결제를 실패로 기록한다 — 고객 돈은 나가고 우리 장부만 실패다', { size: 17, weight: 700 });
-text(k, 700, 504, '분류 6종 · 진행 중 보존 · 금액 대조를 회귀 테스트 13개로 고정', { size: 14, fill: '#495057' });
+box(k, 40, 514, 1320, 56, { color: C.yellow, r: 14 });
+text(k, 700, 548, '이걸 안 가르면 이미 승인된 결제를 실패로 기록한다. 고객 돈은 나가고 우리 장부만 실패다', { size: 17, weight: 700 });
 writeFileSync(process.argv[2], render(k));
