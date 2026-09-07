@@ -25,7 +25,7 @@ text(k, 1040, 293, '(user_id, id) 인덱스 → 0.6ms · 조회 조건 22개 중
 
 box(k, 40, 392, 1320, 82, { color: C.yellow, r: 14 });
 text(k, 700, 424, 'EXPLAIN 만 봤으면 못 잡았다', { size: 19, weight: 700 });
-text(k, 700, 452, '옵티마이저 추정 rows=50 · EXPLAIN ANALYZE 실제 300,000행 — 6,000배 틀렸고 계획만 보면 멀쩡했다', { size: 15 });
+text(k, 700, 452, '같은 노드에서 옵티마이저 추정 rows=50 · 실제 300,030행. 계획만 보면 멀쩡했다', { size: 15 });
 
 frame(k, 40, 500, 1320, 120, { color: C.purple });
 text(k, 700, 530, '한 건이 싸다고 동시에도 싼 건 아니라서 부하를 걸었다', { size: 17, weight: 700, fill: C.purple.s });
