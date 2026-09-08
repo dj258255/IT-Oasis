@@ -15,6 +15,7 @@ category: incident/JavaBackend
 series: '애플리케이션 코드가 부른 장애'
 seriesOrder: 3
 coverImage: /uploads/incident/jpa-list-api/chart-jpa.png
+draft: true
 ---
 
 > 근거 등급: `E2`

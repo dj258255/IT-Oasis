@@ -15,6 +15,7 @@ category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 7
 coverImage: /uploads/incident/negative-price/01-storage-reject.png
+draft: true
 ---
 
 > 근거 등급: `E1`

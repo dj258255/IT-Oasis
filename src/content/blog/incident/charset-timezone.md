@@ -14,6 +14,7 @@ category: incident/DbOps
 series: '관리형 DB 운영의 함정'
 seriesOrder: 4
 coverImage: /uploads/incident/charset-timezone/fig-convert-tz.png
+draft: true
 ---
 
 > 근거 등급: `E2` (문자셋 절단은 WordPress 4.1.2 보안 릴리스라는 실제 사고가 있으나 운영 장애 포스트모템이 아니라 E2로 유지)

@@ -16,6 +16,7 @@ category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 3
 coverImage: /uploads/incident/samsung-ghost-shares/01-bug-commit.png
+draft: true
 ---
 
 > 근거 등급: `E1·축소`

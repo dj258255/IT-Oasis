@@ -20,6 +20,7 @@ category: incident/DbOps
 series: '게임 재화 사고, 탐지에서 보정까지'
 seriesOrder: 1
 coverImage: /uploads/incident/currency-anomaly-detection/fig-detect.png
+draft: true
 ---
 
 

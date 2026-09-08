@@ -15,6 +15,7 @@ category: incident/DbOps
 series: '관리형 DB 운영의 함정'
 seriesOrder: 5
 coverImage: /uploads/incident/batch-cache-pollution/chart-hitrate.png
+draft: true
 ---
 
 > 근거 등급: `E2`

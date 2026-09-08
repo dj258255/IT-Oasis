@@ -15,6 +15,7 @@ category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 2
 coverImage: /uploads/incident/perf-insights-clone/chart-pi-100ms.png
+draft: true
 ---
 
 > 근거 등급: `E2`

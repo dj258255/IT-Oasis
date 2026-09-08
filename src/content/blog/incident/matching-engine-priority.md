@@ -15,6 +15,7 @@ category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 4
 coverImage: /uploads/incident/matching-engine-priority/01-buggy-run.png
+draft: true
 ---
 
 > 근거 등급: `E2`

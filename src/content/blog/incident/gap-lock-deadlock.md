@@ -15,6 +15,7 @@ category: incident/LockTx
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 8
 coverImage: /uploads/incident/gap-lock-deadlock/fig-locks.png
+draft: true
 ---
 
 > 근거 등급: `E1·축소`
