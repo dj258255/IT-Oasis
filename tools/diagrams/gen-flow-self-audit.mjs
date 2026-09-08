@@ -18,5 +18,5 @@ cols.forEach((c, i) => {
 });
 
 box(k, 40, 282, 1320, 62, { color: C.red, r: 14 });
-text(k, 700, 320, '실제 재현 — 월렛 6,000원이 사라졌다. 유닛테스트는 전부 초록불이었다', { size: 18, weight: 700 });
+text(k, 700, 320, '실제 재현: 월렛 6,000원이 사라졌다. 유닛테스트는 전부 초록불이었다', { size: 18, weight: 700 });
 writeFileSync(process.argv[2], render(k));
