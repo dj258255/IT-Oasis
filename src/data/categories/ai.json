@@ -1,0 +1,13 @@
+{
+  "name": "ai",
+  "nameKo": "AI 개발",
+  "icon": "lightbulb",
+  "order": 1,
+  "subcategories": [
+    { "name": "Workflow", "nameKo": "개발 워크플로우", "order": 1 },
+    { "name": "Collaboration", "nameKo": "사람과 AI의 협업", "order": 2 },
+    { "name": "Verification", "nameKo": "산출물 검증", "order": 3 },
+    { "name": "Tooling", "nameKo": "도구와 에이전트", "order": 4 },
+    { "name": "Applied", "nameKo": "서비스에 AI 넣기", "order": 5 }
+  ]
+}
