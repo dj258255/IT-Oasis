@@ -2,7 +2,7 @@
   "name": "dev",
   "nameKo": "개발",
   "icon": "code",
-  "order": 7,
+  "order": 8,
   "subcategories": [
     { "name": "Frontend", "order": 1 },
     { "name": "JavaScript", "order": 2 }

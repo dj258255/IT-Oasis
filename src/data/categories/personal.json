@@ -2,13 +2,16 @@
   "name": "personal",
   "nameKo": "개인 프로젝트",
   "icon": "terminal",
-  "order": 4,
+  "order": 5,
   "subcategories": [
     { "name": "WikiEngine", "nameKo": "위키엔진", "order": 1 },
-    { "name": "Tymee", "nameKo": "타이미", "order": 2 },
-    { "name": "Balruno", "nameKo": "발루노", "order": 3 },
-    { "name": "IT Oasis", "nameKo": "IT Oasis", "order": 4 },
-    { "name": "CodingTestKit", "nameKo": "CodingTestKit", "order": 5 },
-    { "name": "EEDGate", "nameKo": "EEDGate", "order": 6 }
+    { "name": "DBTower", "nameKo": "DBTower", "order": 2 },
+    { "name": "lakehouse", "nameKo": "레이크하우스", "order": 3 },
+    { "name": "CodingTestKit", "nameKo": "CodingTestKit", "order": 4 },
+    { "name": "Tymee", "nameKo": "타이미", "order": 5 },
+    { "name": "Balruno", "nameKo": "발루노", "order": 6 },
+    { "name": "IT Oasis", "nameKo": "IT Oasis", "order": 7 },
+    { "name": "EEDGate", "nameKo": "EEDGate", "order": 8 },
+    { "name": "gwanmun", "nameKo": "관문", "order": 9 }
   ]
 }

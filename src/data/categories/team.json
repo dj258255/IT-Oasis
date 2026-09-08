@@ -2,7 +2,7 @@
   "name": "team",
   "nameKo": "팀 프로젝트",
   "icon": "rocket",
-  "order": 3,
+  "order": 4,
   "subcategories": [
     { "name": "Orakgarak", "nameKo": "오락가락", "order": 1 },
     { "name": "EduMeet", "nameKo": "에듀밋", "order": 2 },
