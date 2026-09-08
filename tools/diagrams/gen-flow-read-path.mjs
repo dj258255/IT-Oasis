@@ -8,15 +8,15 @@ text(k, 700, 46, '읽는 쪽을 전수로 봤다', { size: 27, weight: 700 });
 text(k, 700, 78, '배치는 다 읽고 있었고, 서빙은 건수만 묶여 있었다', { size: 15, fill: '#868e96' });
 
 frame(k, 40, 112, 640, 250, { color: C.orange });
-text(k, 360, 144, '배치 — 상한이 없었다', { size: 19, weight: 700, fill: C.orange.s });
+text(k, 360, 144, '배치: 상한이 없었다', { size: 19, weight: 700, fill: C.orange.s });
 box(k, 80, 172, 250, 66, { color: C.gray }); lines(k, 205, 205, ['상한 없는 조회', '15곳'], { size: 16, weight: 700 });
 box(k, 390, 172, 250, 66, { color: C.orange }); lines(k, 515, 205, ['500건 쌓이면', '500건을 한 번에'], { size: 15, weight: 600 });
 arrow(k, 335, 205, 385, 205, { color: C.orange.s });
 box(k, 80, 262, 560, 66, { color: C.green });
-text(k, 360, 293, '상한 100건으로 묶었다 — 커서는 안 넣었다(항상 offset 0)', { size: 16, weight: 700 });
+text(k, 360, 293, '상한 100건으로 묶었다. 커서는 안 넣었다(항상 offset 0)', { size: 16, weight: 700 });
 
 frame(k, 720, 112, 640, 250, { color: C.blue });
-text(k, 1040, 144, '서빙 — 건수는 묶여 있었다', { size: 19, weight: 700, fill: C.blue.s });
+text(k, 1040, 144, '서빙: 건수는 묶여 있었다', { size: 19, weight: 700, fill: C.blue.s });
 box(k, 760, 172, 250, 66, { color: C.gray }); lines(k, 885, 205, ['findTop50', '건수는 이미 50건'], { size: 15, weight: 600 });
 box(k, 1070, 172, 250, 66, { color: C.red }); lines(k, 1195, 205, ['그런데 65.6ms', '30만 행을 훑었다'], { size: 15, weight: 700 });
 arrow(k, 1015, 205, 1065, 205, { color: C.red.s });
