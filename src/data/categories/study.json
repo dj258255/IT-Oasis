@@ -2,14 +2,15 @@
   "name": "study",
   "nameKo": "학습 프로젝트",
   "icon": "cpu",
-  "order": 5,
+  "order": 6,
   "subcategories": [
-    { "name": "db-hobby", "nameKo": "토이 DB", "order": 1 },
-    { "name": "kernel-hobby", "nameKo": "토이 커널", "order": 2 },
-    { "name": "java-hobby", "nameKo": "토이 JVM", "order": 3 },
-    { "name": "kafka-hobby", "nameKo": "토이 Kafka", "order": 4 },
-    { "name": "distributed-systems", "nameKo": "분산 시스템", "order": 5 },
-    { "name": "discord-bot", "nameKo": "디스코드 봇", "order": 6 },
-    { "name": "telegram-bot", "nameKo": "텔레그램 봇", "order": 7 }
+    { "name": "pay", "nameKo": "결제 시스템", "order": 1 },
+    { "name": "db-hobby", "nameKo": "토이 DB", "order": 2 },
+    { "name": "kernel-hobby", "nameKo": "토이 커널", "order": 3 },
+    { "name": "java-hobby", "nameKo": "토이 JVM", "order": 4 },
+    { "name": "kafka-hobby", "nameKo": "토이 Kafka", "order": 5 },
+    { "name": "distributed-systems", "nameKo": "분산 시스템", "order": 6 },
+    { "name": "discord-bot", "nameKo": "디스코드 봇", "order": 7 },
+    { "name": "telegram-bot", "nameKo": "텔레그램 봇", "order": 8 }
   ]
 }

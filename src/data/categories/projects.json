@@ -2,7 +2,7 @@
   "name": "project",
   "nameKo": "프로젝트",
   "icon": "rocket",
-  "order": 3,
+  "order": 4,
   "subcategories": [
     { "name": "Byeolchi", "nameKo": "별찌", "order": 1 },
     { "name": "WikiEngine", "nameKo": "위키엔진", "order": 2 },
