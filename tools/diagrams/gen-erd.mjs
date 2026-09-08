@@ -19,8 +19,8 @@ import { writeFileSync } from 'fs';
 //
 // <캔버스 폭을 1200 으로 잡은 이유> A4 본문 폭이 180mm 다. 1400 으로 그리면 글자가
 // 3~4pt 로 줄어 PDF 에서 안 읽힌다. 폭을 줄이고 글자를 키워야 실제 크기가 커진다.
-// 세로도 함부로 못 늘린다. CSS 가 높이를 250mm 로 막고 있어서 세로/가로 비가 1.25 를
-// 넘으면 높이가 먼저 걸리고 가로가 따라 줄어든다. 지금 비는 1492/1200 = 1.243 이다.
+// 세로도 함부로 못 늘린다. CSS 높이 상한에 걸리면 가로가 따라 줄어든다.
+// 지금 비는 1464/1200 = 1.22 다.
 const W = 1200;
 
 const ROW = 33, BW = 280;
@@ -31,16 +31,15 @@ const H = (n) => 60 + n * ROW + 34;
 
 // 띠의 y 는 앞 띠 바닥에서 간격을 더해 잡는다. 컬럼을 하나 늘려도 아래가 알아서 밀린다.
 const BAND = [];
+let BOTTOM = 110;
 {
-  let y = 110;
-  for (const [rows, gap] of [[6, 64], [6, 61], [5, 64], [6, 61]]) {
-    BAND.push(y);
-    y += H(rows) + gap;
+  const plan = [[6, 64], [6, 61], [5, 64], [6, 0]];
+  for (const [rows, gap] of plan) {
+    BAND.push(BOTTOM);
+    BOTTOM += H(rows) + gap;
   }
-  BAND.push(y); // 각주 자리
 }
-const FOOT = BAND[4];
-const k = canvas(W, FOOT + 30);
+const k = canvas(W, BOTTOM + 30);
 
 marker(k, W / 2, 46, 340);
 text(k, W / 2, 46, 'pay 핵심 ERD', { size: 27, weight: 700 });
@@ -128,8 +127,5 @@ text(k, 408, set.y - 20, 'N:1', { size: 16, fill: '#868e96' });
 arrow(k, ltx.cx, ltx.b, led.cx, led.y);
 text(k, 730, set.y - 20, '1:N', { size: 16, fill: '#868e96' });
 arrow(k, fr.cx, fr.b, rec.cx, rec.y, { color: '#ced4da' });
-
-text(k, W / 2, FOOT, '포트폴리오 다섯 절이 다루는 테이블에 주문 구성만 더했다. 전체는 39개이고 회원·상품·재고·월렛·에스크로·감사 로그는 뺐다.',
-     { size: 17, fill: '#868e96' });
 
 writeFileSync(process.argv[2] || 'erd.svg', render(k));
