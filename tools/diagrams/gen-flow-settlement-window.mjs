@@ -22,11 +22,8 @@ text(k, 340, 375, '지급 누락 — 에러 0건, 테스트도 초록불', { siz
 frame(k, 720, 218, 640, 200, { color: C.green });
 text(k, 1040, 250, '개선 후 — 집계 키가 구매확정일(D+5)', { size: 18, weight: 700, fill: C.green.s });
 lines(k, 1040, 305, ['구매확정 시각으로 집계', 'D+5 자 정산에 포함'], { size: 15, gap: 27 });
-box(k, 770, 340, 500, 56, { color: C.green });
-text(k, 1020, 375, '2영업일 뒤 지급확정', { size: 17, weight: 700 });
 arrow(k, 686, 318, 714, 318, { color: C.purple.s });
 
-box(k, 40, 448, 1320, 62, { color: C.yellow, r: 14 });
-text(k, 700, 478, '테스트가 승인일과 확정일이 같은 조건에서만 돌아 버그를 가렸다 — 간격이 있는 테스트를 추가해 재발 차단', { size: 16, weight: 700 });
-text(k, 700, 500, '수수료 검산: 매출 100,000원 중 지급 97,030원을 테스트로 고정', { size: 13.5, fill: '#495057' });
+box(k, 40, 448, 1320, 56, { color: C.yellow, r: 14 });
+text(k, 700, 482, '집계 키가 무엇이냐로 같은 주문이 정산에 들어가고 빠진다', { size: 17, weight: 700 });
 writeFileSync(process.argv[2], render(k));
