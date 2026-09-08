@@ -1,6 +1,6 @@
 ---
-title: '토스 프론트엔드 플랫폼의 AI 워크플로우를 백엔드로 옮겨보기'
-description: 'AI 시대 어드민, 모노레포 카탈로그, E2E 검증. 세 발표의 구조를 Spring Boot 백엔드 관점으로 다시 설계해봤다.'
+title: 'AI가 실수해도 사고가 안 나는 백엔드를 먼저 만든다'
+description: '정책 계층과 생성 계층을 가르고, JAR 바이트코드 diff로 근거를 만들고, 테스트 실패를 통째로 덤프해 에이전트에 넘기는 설계를 Spring Boot로 짜봤습니다.'
 date: 2026-09-08
 category: ai
 draft: false
