@@ -14,6 +14,7 @@ category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 5
 coverImage: /uploads/incident/bigdecimal-money/01-buggy-run.png
+draft: true
 ---
 
 > 근거 등급: `E1·축소`

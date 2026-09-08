@@ -15,6 +15,7 @@ category: incident/JavaBackend
 series: '애플리케이션 코드가 부른 장애'
 seriesOrder: 1
 coverImage: /uploads/incident/threadlocal-classloader-leak/01-repro-run.png
+draft: true
 ---
 
 > 근거 등급: `E2`

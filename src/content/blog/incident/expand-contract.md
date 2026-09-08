@@ -15,6 +15,7 @@ category: incident/DbOps
 series: '애플리케이션 코드가 부른 장애'
 seriesOrder: 2
 coverImage: /uploads/incident/expand-contract/01-volatile-alter.png
+draft: true
 ---
 
 > 근거 등급: `E2`

@@ -15,6 +15,7 @@ category: incident/QueryIndex
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 5
 coverImage: /uploads/incident/uber-write-amplification/chart-wal.png
+draft: true
 ---
 
 > 근거 등급: `E1` (원문과 반론 전부 공개 문서로 실재)

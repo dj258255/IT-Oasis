@@ -15,6 +15,7 @@ category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 2
 coverImage: /uploads/incident/market-open-connection-storm/01-buggy-storm.png
+draft: true
 ---
 
 > 근거 등급을 둘로 갈라 적습니다.

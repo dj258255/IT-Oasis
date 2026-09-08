@@ -15,6 +15,7 @@ category: incident/DbOps
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 7
 coverImage: /uploads/incident/backup-pitr/fig-pitr.png
+draft: true
 ---
 
 ## 무엇을 만들었고 무엇을 확인했나

@@ -15,6 +15,7 @@ category: incident/Finance
 series: '증권 IT 장애 재현'
 seriesOrder: 1
 coverImage: /uploads/incident/hanmac-divide-by-zero/01-buggy-run.png
+draft: true
 ---
 
 > 근거 등급은 주장마다 다릅니다.
