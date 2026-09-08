@@ -50,7 +50,7 @@ arrow(k, 686, 318, 714, 318, { color: C.purple.s });
 
 // 아래 — 고경합
 box(k, 40, 552, 1320, 62, { color: C.yellow, r: 16 });
-text(k, 700, 590, '고경합 150스레드에서는 격차가 더 벌어진다 — 조건부 79ms 대 낙관적 429ms (5.4배)',
+text(k, 700, 590, '고경합 150스레드에서는 격차가 더 벌어진다. 조건부 79ms 대 낙관적 429ms (5.4배)',
   { size: 17, weight: 700 });
 
 writeFileSync(process.argv[2], render(k));
