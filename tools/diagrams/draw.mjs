@@ -95,6 +95,12 @@ export function elbow(k, x1, y1, x2, y2, opts = {}) {
   arrow(k, midX, y2, x2, y2, opts);
 }
 
+/** 표 머리와 컬럼을 가르는 실선. ERD 상자에서 이름과 컬럼을 나눈다. */
+export function divider(k, x1, x2, y, { color = '#adb5bd' } = {}) {
+  const seed = Math.abs(Math.round(x1 * 13 + y * 7)) % 9999 + 1;
+  add(k, k.rc.line(x1, y, x2, y, { stroke: color, strokeWidth: 1.1, roughness: 0.8, seed }));
+}
+
 /** 제목 뒤 형광펜 자국. 글자 위에 겹치지 않게 <b>먼저</b> 그린다. */
 export function marker(k, cx, y, w, { color = C.purple } = {}) {
   add(k, k.rc.path(roundedPath(cx - w / 2, y - 22, w, 30, 6), {
