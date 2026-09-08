@@ -107,7 +107,8 @@ export default defineConfig({
   // 여러 편을 한 편으로 합치면서 사라진 URL. 정적 빌드에서는
   // meta refresh 페이지가 생성돼 기존 링크가 안 깨진다.
   redirects: {
-    // AI 1편 제목 변경에 따른 슬러그 교체
+    // AI 글 2편을 1편으로 통합. 옛 슬러그 둘을 통합본으로 보낸다
+    '/blog/ai/review-surface-not-review-speed': `${base || ''}/blog/ai/ai-guardrails-before-codegen`,
     '/blog/ai/toss-frontend-ai-workflow-to-backend': `${base || ''}/blog/ai/ai-guardrails-before-codegen`,
     '/blog/incident/currency-anomaly-detection': `${base || ''}/blog/incident/currency-reclaim`,
     // 타이미 15편 -> tymee-retrospective 단일 개발기로 병합
