@@ -15,6 +15,7 @@ category: incident/LockTx
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 1
 coverImage: /uploads/incident/mdl-storm/00-timeline.png
+draft: true
 ---
 
 > 근거 등급: `E2`

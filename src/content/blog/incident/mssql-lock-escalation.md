@@ -15,6 +15,7 @@ category: incident/LockTx
 series: '게임 재화 사고, 탐지에서 보정까지'
 seriesOrder: 2
 coverImage: /uploads/incident/mssql-lock-escalation/fig-threshold.png
+draft: true
 ---
 
 

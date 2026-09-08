@@ -16,6 +16,7 @@ category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 8
 coverImage: /uploads/incident/reader-endpoint-skew/chart-skew.png
+draft: true
 ---
 
 > 근거 등급: `E2`

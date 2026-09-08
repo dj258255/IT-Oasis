@@ -15,6 +15,7 @@ category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 9
 coverImage: /uploads/incident/replication-slot-wal/chart-wal.png
+draft: true
 ---
 
 > 근거 등급: `E2`

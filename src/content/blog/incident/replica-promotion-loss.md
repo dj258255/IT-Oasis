@@ -16,6 +16,7 @@ category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 1
 coverImage: /uploads/incident/replica-promotion-loss/fig-async-loss.png
+draft: true
 ---
 
 > 근거 등급: `E1·축소`

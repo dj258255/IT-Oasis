@@ -16,6 +16,7 @@ category: incident/Cloud
 series: '관리형 DB 운영의 함정'
 seriesOrder: 7
 coverImage: /uploads/incident/failover-dns-cache/chart-failover.png
+draft: true
 ---
 
 > 근거 등급: `E2`

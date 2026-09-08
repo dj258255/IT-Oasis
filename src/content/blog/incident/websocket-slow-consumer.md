@@ -15,6 +15,7 @@ category: incident/JavaBackend
 series: '증권 IT 장애 재현'
 seriesOrder: 8
 coverImage: /uploads/incident/websocket-slow-consumer/00-oom.png
+draft: true
 ---
 
 > 근거 등급: `E2`

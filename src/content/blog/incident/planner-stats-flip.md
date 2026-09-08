@@ -15,6 +15,7 @@ category: incident/QueryIndex
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 3
 coverImage: /uploads/incident/planner-stats-flip/01-flip.png
+draft: true
 ---
 
 > 근거 등급: `E1`
