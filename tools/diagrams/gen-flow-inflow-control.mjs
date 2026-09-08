@@ -10,7 +10,7 @@ box(k, 40, 190, 190, 130, { color: C.red });
 lines(k, 135, 255, ['선착순 폭주', '15,445건'], { size: 17, weight: 700 });
 
 frame(k, 280, 120, 700, 270, { color: C.purple });
-text(k, 630, 150, '문 앞 세 겹 — Redis 재사용이라 추가 비용 0', { size: 16, weight: 700, fill: C.purple.s });
+text(k, 630, 150, '문 앞 세 겹. Redis 재사용이라 추가 비용 0', { size: 16, weight: 700, fill: C.purple.s });
 const layers = [
   { t: '① 초당 요청 제한', d: ['한 사람 5건/초 · 전체 100건/초', '429 + 다시 올 시각'], c: C.blue },
   { t: '② 선착순 대기열', d: ['입장권 없으면 결제 진입 불가'], c: C.green },
