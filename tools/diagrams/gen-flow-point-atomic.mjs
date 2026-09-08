@@ -3,7 +3,7 @@ import { writeFileSync } from 'fs';
 const k = canvas(1400, 620);
 
 marker(k, 700, 46, 400);
-text(k, 700, 46, '경합을 없앤 것이 아니라 실패해도 되는 쪽으로 옮겼다', { size: 27, weight: 700 });
+text(k, 700, 46, '적립의 락 충돌을 없애고, 오래된 값으로 덮어쓰는 갱신은 version 으로 잡는다', { size: 27, weight: 700 });
 text(k, 700, 78, '낙관적 락을 걸어 뒀는데도 같은 계좌 행에서 무너졌다', { size: 15, fill: '#868e96' });
 
 frame(k, 40, 112, 640, 250, { color: C.red });
