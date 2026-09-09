@@ -113,8 +113,8 @@ arrow(k, out.cx, out.b, ltx.cx, ltx.y, { color: C.yellow.s });
 arrow(k, out.cx + 40, out.b, fr.cx, fr.y, { color: C.yellow.s });
 
 const set = T(1, 3, 'settlements', '일별 정산',
-  [['PK', 'id'], ['', 'settlement_date'], ['', 'currency'], ['', 'seller_id (null 가능)'], ['', 'seller_key (생성 컬럼)'], ['', 'net_amount']],
-  'UK date+currency+seller_key', C.red, '상황 3');
+  [['PK', 'id'], ['', 'settlement_date'], ['', 'currency'], ['', 'seller_id'], ['', 'net_amount']],
+  'UK date+currency+seller_id', C.red, '상황 3');
 const led = T(2, 3, 'ledger_entries', '원장 분개',
   [['PK', 'id'], ['FK', 'transaction_id'], ['', 'amount']],
   '차변 합 = 대변 합', C.green);
