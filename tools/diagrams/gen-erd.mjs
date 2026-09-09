@@ -104,7 +104,7 @@ const ltx = T(2, 2, 'ledger_transactions', '원장 거래',
   'UK 넷을 묶어 = 같은 원인 한 번', C.green);
 const fr = T(3, 2, 'fraud_reviews', '이상거래 심사',
   [['PK', 'id'], ['', 'payment_id'], ['', 'score · reasons'], ['', 'status'], ['', 'reviewed_by']],
-  '승인·거부가 곧 오탐 라벨', C.gray, '상황 6');
+  '규칙별 정상 판정 비율에 쓴다', C.gray, '상황 6');
 
 arrow(k, pay.cx - 60, pay.b, pt.cx, pt.y);
 text(k, 200, pt.y - 42, '적립도 같은 트랜잭션', { size: 15, fill: '#868e96' });
