@@ -26,7 +26,7 @@ arrow(k, 845, 223, 1053, 223, { color: C.red.s });
 text(k, 949, 208, '직접 호출  ✕', { size: 15, weight: 700, fill: C.red.s });
 
 frame(k, 40, 350, 1320, 240, { color: C.purple });
-text(k, 70, 378, '지나간다. 이벤트만', { size: 15, weight: 700, fill: C.green.s, anchor: 'start' });
+text(k, 70, 378, '지나간다. 상태 변경은 이벤트로', { size: 15, weight: 700, fill: C.green.s, anchor: 'start' });
 
 box(k, 90, 408, 250, 110, { color: C.blue });
 lines(k, 215, 463, ['결제 코어', '승인이 끝났다'], { size: 18, weight: 700 });

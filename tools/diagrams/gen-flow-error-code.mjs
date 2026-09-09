@@ -4,7 +4,7 @@ const k = canvas(1400, 604);
 
 marker(k, 700, 46, 380);
 text(k, 700, 46, '400이라고 다 실패가 아니다', { size: 27, weight: 700 });
-text(k, 700, 78, '같은 400 안에 성격이 완전히 다른 셋이 섞여 있었다', { size: 15, fill: '#868e96' });
+text(k, 700, 78, '같은 400번대 응답도 처리 방식이 다르다', { size: 15, fill: '#868e96' });
 
 box(k, 40, 230, 220, 100, { color: C.gray });
 lines(k, 150, 280, ['PG 에러 응답', '{ code, message }'], { size: 16, weight: 600 });
