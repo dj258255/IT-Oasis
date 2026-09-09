@@ -95,16 +95,16 @@ text(k, 605, MID1 - 12, '승인', { size: 15, fill: '#495057' });
 
 const pt = T(0, 2, 'point_accounts', '포인트 잔액',
   [['PK', 'user_id'], ['', 'balance'], ['', 'version']],
-  'DB 원자 증가 + version', C.blue, '상황 4.1');
+  'DB 원자 증가 + version', C.blue, '상황 2');
 const si = T(1, 2, 'settlement_items', '정산 항목',
   [['PK', 'id'], ['FK', 'payment_id'], ['', 'order_no'], ['', 'confirmed_date'], ['', 'seller_id']],
-  'UK payment_id', C.purple, '상황 2');
+  'UK payment_id', C.purple, '상황 3');
 const ltx = T(2, 2, 'ledger_transactions', '원장 거래',
   [['PK', 'id'], ['', 'tx_type'], ['', 'source_type'], ['', 'source_id'], ['', 'source_seq']],
   'UK 넷을 묶어 = 같은 원인 한 번', C.green);
 const fr = T(3, 2, 'fraud_reviews', '이상거래 심사',
   [['PK', 'id'], ['', 'payment_id'], ['', 'score · reasons'], ['', 'status'], ['', 'reviewed_by']],
-  '승인·거부가 곧 오탐 라벨', C.gray, '상황 5');
+  '승인·거부가 곧 오탐 라벨', C.gray, '상황 6');
 
 arrow(k, pay.cx - 60, pay.b, pt.cx, pt.y);
 text(k, 200, pt.y - 42, '적립도 같은 트랜잭션', { size: 15, fill: '#868e96' });
@@ -114,13 +114,13 @@ arrow(k, out.cx + 40, out.b, fr.cx, fr.y, { color: C.yellow.s });
 
 const set = T(1, 3, 'settlements', '일별 정산',
   [['PK', 'id'], ['', 'settlement_date'], ['', 'currency'], ['', 'seller_id (null 가능)'], ['', 'seller_key (생성 컬럼)'], ['', 'net_amount']],
-  'UK date+currency+seller_key', C.red, '상황 2');
+  'UK date+currency+seller_key', C.red, '상황 3');
 const led = T(2, 3, 'ledger_entries', '원장 분개',
   [['PK', 'id'], ['FK', 'transaction_id'], ['', 'amount']],
   '차변 합 = 대변 합', C.green);
 const rec = T(3, 3, 'reconciliation_results', '대사 결과',
   [['PK', 'id'], ['', 'trade_date'], ['', 'order_no'], ['', 'internal_amount'], ['', 'external_amount'], ['', 'resolve_cause']],
-  'UK trade_date + order_no', C.purple, '상황 3.3 · 5');
+  'UK trade_date + order_no', C.purple, '상황 4 · 5');
 
 arrow(k, si.cx, si.b, set.cx, set.y);
 text(k, 408, set.y - 20, 'N:1', { size: 16, fill: '#868e96' });
