@@ -727,6 +727,22 @@ button, input, select, textarea {
 .dark .prose h2 { border-bottom-color: rgba(100, 160, 200, 0.1); }
 .prose h3 { font-size: 1.125rem; }
 @media (min-width: 640px) { .prose h3 { font-size: 1.25rem; } }
+
+/* h4 규칙이 없어 본문과 같은 크기로 떨어지고 있었다. 포트폴리오 글은 `#### 4.2 …` 처럼
+   h4 를 소제목으로 쓰는데, 굵기만으로는 훑을 때 안 걸린다. PDF 와 같은 시각 언어로
+   왼쪽 강조선을 둔다 — 선은 줄 높이를 안 먹으면서 눈에 바로 걸린다. */
+.prose h4 {
+  @apply font-bold mt-8 mb-3;
+  color: #1a1a2e;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+  scroll-margin-top: 5rem;
+  font-size: 1rem;
+  border-left: 3px solid rgba(74, 155, 192, 0.75);
+  padding-left: 0.7rem;
+}
+@media (min-width: 640px) { .prose h4 { font-size: 1.075rem; @apply mt-10; } }
+.dark .prose h4 { color: #e4e4f0; border-left-color: rgba(100, 160, 200, 0.6); }
 .prose p {
   @apply mb-6;
   color: #3d3d4e;
