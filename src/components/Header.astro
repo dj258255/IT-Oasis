@@ -1,6 +1,6 @@
 ---
 import { base, getSiteSettings } from '../lib/config';
-import { getPublishedPosts } from '../lib/posts';
+import { getStoryPosts } from '../lib/posts';
 
 interface Props {
   transparent?: boolean;
@@ -33,7 +33,7 @@ const navItems = (siteSettings.navItems || []).map((item: any) => ({
 
 const currentPath = Astro.url.pathname;
 
-const posts = await getPublishedPosts();
+const posts = await getStoryPosts();
 
 const searchData = posts.map((post) => ({
   title: post.data.title,

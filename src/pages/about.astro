@@ -4,7 +4,7 @@ import AuthorCard from '../components/AuthorCard.astro';
 import CarouselCard from '../components/CarouselCard.astro';
 import CarouselSection from '../components/CarouselSection.astro';
 import { projects } from '../data/projects';
-import { getPublishedPosts } from '../lib/posts';
+import { getStoryPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { renderRichText } from '../lib/richtext';
 import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
@@ -13,7 +13,7 @@ const siteSettings = getSiteSettings();
 const catDisplayKo = getCategoryDisplayKo();
 const aboutHtmlKo = renderRichText(siteSettings.aboutContentKo, base);
 
-const posts = (await getPublishedPosts()).slice(0, 8);
+const posts = (await getStoryPosts()).slice(0, 8);
 ---
 
 <BaseLayout title="소개 — IT Oasis">
@@ -68,4 +68,3 @@ const posts = (await getPublishedPosts()).slice(0, 8);
     </CarouselSection>
   </div>
 </BaseLayout>
-

@@ -22,16 +22,18 @@
     "type": "root",
     "children": [
       {
-        "type": "p",
-        "children": [{ "type": "text", "text": "안녕하세요! 이 블로그를 운영하고 있는 개발자입니다." }]
-      },
-      {
-        "type": "p",
-        "children": [{ "type": "text", "text": "개발하면서 배운 것들을 기록하고 공유하기 위해 이 블로그를 시작했습니다." }]
-      },
-      {
         "type": "h2",
-        "children": [{ "type": "text", "text": "기술 스택" }]
+        "children": [{ "type": "text", "text": "삼성청년SW·AI아카데미 자율 프로젝트" }]
+      },
+      {
+        "type": "p",
+        "children": [
+          { "type": "text", "text": "C2C 대여 플랫폼 · 6인 팀", "bold": true }
+        ]
+      },
+      {
+        "type": "h3",
+        "children": [{ "type": "text", "text": "역할" }]
       },
       {
         "type": "ul",
@@ -42,11 +44,8 @@
               {
                 "type": "lic",
                 "children": [
-                  { "type": "text", "text": "이 블로그는 " },
-                  { "type": "text", "text": "Astro", "bold": true },
-                  { "type": "text", "text": "와 " },
-                  { "type": "text", "text": "Tailwind CSS", "bold": true },
-                  { "type": "text", "text": "로 만들어졌습니다." }
+                  { "type": "text", "text": "팀장", "bold": true },
+                  { "type": "text", "text": ": 일정과 우선순위 관리, 개발 기준 수립" }
                 ]
               }
             ]
@@ -57,8 +56,8 @@
               {
                 "type": "lic",
                 "children": [
-                  { "type": "text", "text": "GitHub Pages", "bold": true },
-                  { "type": "text", "text": "에서 호스팅됩니다." }
+                  { "type": "text", "text": "백엔드", "bold": true },
+                  { "type": "text", "text": ": 채팅, 실시간 알림, 인증, 거래 흐름 구현" }
                 ]
               }
             ]
@@ -66,11 +65,11 @@
         ]
       },
       {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "연락처" }]
+        "type": "h3",
+        "children": [{ "type": "text", "text": "문제와 대응" }]
       },
       {
-        "type": "ul",
+        "type": "ol",
         "children": [
           {
             "type": "li",
@@ -78,11 +77,29 @@
               {
                 "type": "lic",
                 "children": [
-                  { "type": "text", "text": "GitHub: " },
+                  { "type": "text", "text": "팀원 간 AI 활용 편차로 결과가 제각각이던 문제", "bold": true }
+                ]
+              },
+              {
+                "type": "ul",
+                "children": [
                   {
-                    "type": "a",
-                    "url": "https://github.com/dj258255",
-                    "children": [{ "type": "text", "text": "github.com/dj258255" }]
+                    "type": "li",
+                    "children": [
+                      {
+                        "type": "lic",
+                        "children": [{ "type": "text", "text": "코딩 스타일, 금지 사항, 테스트 범위를 규칙 파일로 작성해 저장소에 배치" }]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "li",
+                    "children": [
+                      {
+                        "type": "lic",
+                        "children": [{ "type": "text", "text": "결과가 어긋난 사례를 받아 규칙을 갱신하고, 생성 코드는 테스트와 검토 후 반영" }]
+                      }
+                    ]
                   }
                 ]
               }
@@ -94,13 +111,288 @@
               {
                 "type": "lic",
                 "children": [
-                  { "type": "text", "text": "Email: " },
+                  { "type": "text", "text": "결제·에스크로 담당자의 마감 5일 전 이탈", "bold": true }
+                ]
+              },
+              {
+                "type": "ul",
+                "children": [
                   {
-                    "type": "a",
-                    "url": "mailto:dj258255@naver.com",
-                    "children": [{ "type": "text", "text": "dj258255@naver.com" }]
+                    "type": "li",
+                    "children": [
+                      {
+                        "type": "lic",
+                        "children": [{ "type": "text", "text": "거래 생성부터 반납까지 점검해 중단 지점을 목록화하고, 남은 일을 금전 단계에 우선 배정" }]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "li",
+                    "children": [
+                      {
+                        "type": "lic",
+                        "children": [{ "type": "text", "text": "결제 완료된 거래에 거래 재시작 버튼이 노출되던 조건을 단독 상태 판단에서 결제 완료 기록 병행 확인으로 수정" }]
+                      }
+                    ]
                   }
                 ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "h3",
+        "children": [{ "type": "text", "text": "결과" }]
+      },
+      {
+        "type": "ul",
+        "children": [
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "마감 내 핵심 거래 흐름 전량 완성, 삼성전자 주식회사 프로젝트 우수상 수상" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "AI 사용 경험이 없던 팀원도 동일한 기준으로 작업할 수 있는 환경 마련" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "담당 공백이 생겼을 때 남은 범위를 파악하고 우선순위를 재배치해 완주" }]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "h2",
+        "children": [{ "type": "text", "text": "학부 기업연계프로젝트 1·2" }]
+      },
+      {
+        "type": "p",
+        "children": [{ "type": "text", "text": "2학기 연속 · 팀 프로젝트", "bold": true }]
+      },
+      {
+        "type": "ul",
+        "children": [
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "기업 과제의 요구사항을 분석해 팀 단위로 시스템을 설계하고 구현" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "두 학기 모두 최고 학점으로 완수" }]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "h2",
+        "children": [{ "type": "text", "text": "개인 프로젝트 · 결제 시스템" }]
+      },
+      {
+        "type": "p",
+        "children": [{ "type": "text", "text": "설계·구현·검증 단독 수행", "bold": true }]
+      },
+      {
+        "type": "h3",
+        "children": [{ "type": "text", "text": "데이터 정합성" }]
+      },
+      {
+        "type": "ul",
+        "children": [
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "판매자 지급이 집계에서 누락되던 결함을 발견해 기준 수정 후 회귀 테스트로 고정" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "평가용 설정과 운영 설정의 불일치를 맞추고 대조 검사 추가" }]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "h3",
+        "children": [{ "type": "text", "text": "AI 적용 판단" }]
+      },
+      {
+        "type": "ul",
+        "children": [
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "적용 전 정답 기준을 정하고 기존 방식과 동일한 조건에서 비교" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "장애 로그 원인 분석에는 규칙이 답하지 못한 건만 모델에 전달해 적용" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "대사 원인 분류는 신규 표본 45건에서 개선 구간을 확인하지 못해 중단" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "모델이 생성한 금액과 날짜를 코드가 만든 사실 목록과 대조해 오류를 차단" }]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          { "type": "text", "text": "결과: ", "bold": true },
+          { "type": "text", "text": "적용·중단 근거를 문서와 테스트로 남겨 다시 측정할 수 있도록 구성했습니다." }
+        ]
+      },
+      {
+        "type": "h2",
+        "children": [{ "type": "text", "text": "개인 프로젝트 · 사내용 AI 도구 2종" }]
+      },
+      {
+        "type": "h3",
+        "children": [{ "type": "text", "text": "데이터베이스 운영 플랫폼" }]
+      },
+      {
+        "type": "ul",
+        "children": [
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "판단 기준 문서를 시스템 프롬프트로 넣어 같은 쿼리에 같은 판정이 나오도록 구성" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "규칙이 먼저 비효율을 지적하고 모델은 1차 소견만 추가하며, 최종 확정은 사람이 수행" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "MCP 서버를 통해 AI 에이전트가 조회 전용 도구만 연쇄 호출해 자연어 질문에 답변" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "장애 구간 요약은 수집한 사실 안에서만 작성하고 근거가 부족하면 부족하다고 표시" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "외부와 모델 프롬프트로 나가는 SQL은 값만 가리고 구조는 보존" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "승인자와 운영자 계정을 분리해 한 사람이 승인과 실행을 겸하지 못하도록 구성" }]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "h3",
+        "children": [{ "type": "text", "text": "AI 앱 빌더" }]
+      },
+      {
+        "type": "ul",
+        "children": [
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "계획·구현·실행·검증 단계를 반복하는 에이전트 루프 구현" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "에이전트가 완료를 선언해도 플랫폼이 재시작 후 기동 상태와 API 계약을 확인해야 완료로 인정" }]
+              }
+            ]
+          },
+          {
+            "type": "li",
+            "children": [
+              {
+                "type": "lic",
+                "children": [{ "type": "text", "text": "검증을 통과한 변경만 남기고 이전 상태로 되돌릴 수 있도록 구성" }]
               }
             ]
           }

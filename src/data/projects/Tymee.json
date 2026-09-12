@@ -1,6 +1,6 @@
 {
   "title": "타이미",
-  "description": "게이미피케이션으로 집중을 습관으로 만드는 타이머 — 매 아키텍처 결정을 '왜 이 선택인가'까지 15편 연재로 파고든 개인 프로젝트.",
+  "description": "집중 시간을 기록하고 보상과 성장 요소를 제공해 꾸준한 몰입 습관을 돕는 게이미피케이션 타이머입니다.",
   "image": "/uploads/project/Tymee/retrospective/title.svg",
   "tags": [
     "Spring Boot",

@@ -1,6 +1,6 @@
 {
   "title": "코딩테스트 도구",
-  "description": "IDE를 떠나지 않고 코딩테스트 문제를 가져오고·테스트하고·제출하는 올인원 플러그인.",
+  "description": "IntelliJ와 VS Code 안에서 코딩테스트 문제를 가져오고, 실행·채점·제출까지 처리하는 IDE 확장 도구입니다.",
   "image": "/uploads/project/CodingTestKit/title.png",
   "tags": [
     "Kotlin",

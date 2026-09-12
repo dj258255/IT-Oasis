@@ -1,6 +1,6 @@
 {
   "title": "오락가락",
-  "description": "내 목소리를 분석해 부를 노래를 추천하는 플랫폼 — 5~30초 걸리던 동기 음성 처리를 Kafka 비동기 파이프라인으로 200ms 응답 + DLQ 실패 복구까지 재설계한 팀 프로젝트.",
+  "description": "사용자의 음성에서 음역대를 분석하고, 부르기 알맞은 노래를 추천하는 음성 기반 음악 추천 플랫폼입니다.",
   "image": "/uploads/project/Orakgarak/retrospective/title.png",
   "tags": [
     "Java",
