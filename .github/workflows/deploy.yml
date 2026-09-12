@@ -38,18 +38,13 @@ jobs:
       # '누적'되므로, 스토어를 유지한 채 재빌드하면 빠진 글이 채워져 전량에 도달한다.
       # (예전 버전은 매 시도 스토어를 비워 매번 독립 콜드 빌드가 되는 바람에 완성으로
       # 수렴하지 못하고 20연속 미달로 배포가 실패했다 — 그게 실제 실패 원인이었다.)
-      # 기대 글 수(초안·unlisted 제외)를 채울 때까지 재시도하고, 끝내 미달이면
-      # 배포를 막아(fail-closed) 잘린 사이트가 라이브로 나가지 않게 한다.
+      # 전량에 도달할 때까지 재시도하고, 끝내 미달이면 배포를 막아(fail-closed)
+      # 잘린 사이트가 라이브로 나가지 않게 한다.
       - name: Build until content-complete
         run: |
           set +e
-          TOTAL=$(find src/content/blog -name '*.md' | wc -l | tr -d ' ')
-          DRAFT=$(grep -rlE '^draft:[[:space:]]*true' src/content/blog --include='*.md' | wc -l | tr -d ' ')
-          UNLISTED=$(grep -rlE '^unlisted:[[:space:]]*true' src/content/blog --include='*.md' | wc -l | tr -d ' ')
-          EXPECTED=$((TOTAL - DRAFT - UNLISTED))
-          echo "expected published posts: $EXPECTED (total=$TOTAL draft=$DRAFT unlisted=$UNLISTED)"
-          RENDERED=0
-          PREV=-1; STALL=0
+          PREV_MISSING=999999; STALL=0
+          MISSING=999999
           for i in $(seq 1 20); do
             # 이 자리에서 방식을 두 번 뒤집었다. 매 시도 스토어를 비우는 독립 콜드 빌드도,
             # 스토어를 유지하는 누적 빌드도 각각 20연속 미달로 배포를 막은 적이 있다.
@@ -67,51 +62,30 @@ jobs:
             fi
             rm -rf dist
             pnpm run build
-            # 사이드바 "전체" 뱃지의 숫자가 렌더된 글 수다. 예전엔 data-en="All" 속성으로
-            # 집었는데 한국어 전용 전환에서 data-ko/data-en 쌍을 걷어내며 매칭이 영영 실패했다.
-            # 빌드는 멀쩡한데 RENDERED=0으로 20회 재시도 후 배포가 막혔다(2026-08-08).
-            RENDERED=$(grep -oE '<span>전체</span>[[:space:]]*<span class="sidebar-count">[0-9]+' dist/index.html 2>/dev/null | grep -oE '[0-9]+$' | head -1)
-            RENDERED=${RENDERED:-0}
-            echo "::notice::build attempt $i — published $RENDERED / $EXPECTED"
-            if [ "$RENDERED" -ge "$EXPECTED" ]; then
+
+            # 완성 판정은 화면 마크업이 아니라 생성된 파일로 한다. 예전에는 사이드바 "전체"
+            # 뱃지 숫자를 dist/index.html 에서 긁었는데, 그 마크업이 바뀌거나 페이지에서
+            # 사라지면 빌드가 멀쩡해도 0으로 읽혀 배포가 영구히 막혔다(2026-08-08, 2026-09-12).
+            # 같은 계산을 로컬에서도 그대로 돌릴 수 있게 스크립트 하나로 두고, 판정과 진단이
+            # 같은 코드를 쓰게 한다: node scripts/content-gate.mjs
+            node scripts/content-gate.mjs > gate-missing.txt 2> gate-log.txt
+            cat gate-log.txt
+            MISSING=$(tail -1 gate-missing.txt 2>/dev/null)
+            case "$MISSING" in
+              ''|*[!0-9]*) MISSING=999999 ;;
+            esac
+            echo "::notice::build attempt $i — missing $MISSING"
+            if [ "$MISSING" -eq 0 ]; then
               echo "content complete on attempt $i"
               exit 0
             fi
-            if [ "$RENDERED" -le "$PREV" ]; then STALL=$((STALL+1)); else STALL=0; fi
-            PREV=$RENDERED
-            echo "incomplete ($RENDERED/$EXPECTED) — 재시도 (정체 $STALL 회)"
+            if [ "$MISSING" -ge "$PREV_MISSING" ]; then STALL=$((STALL+1)); else STALL=0; fi
+            PREV_MISSING=$MISSING
+            echo "incomplete (누락 $MISSING편) — 재시도 (정체 $STALL 회)"
           done
-          echo "::error::content sync incomplete after 20 attempts ($RENDERED/$EXPECTED) — aborting deploy to keep last good site live"
-
-          # 어느 글이 빠졌는지 찍는다. 로컬에서는 재현되지 않아 러너에서만 확인할 수 있다.
-          # 기대 슬러그(초안·unlisted 제외)와 dist에 실제로 생성된 페이지를 대조한다.
-          echo "--- 누락 진단 ---"
-          node -e '
-            const fs = require("fs"), path = require("path");
-            const slugify = s => s.toLowerCase().replace(/[^\p{L}\p{N}\-_]+/gu, "-").replace(/^-+|-+$/g, "");
-            const walk = d => fs.readdirSync(d, {withFileTypes: true}).flatMap(e => {
-              const p = path.join(d, e.name);
-              return e.isDirectory() ? walk(p) : (e.name.endsWith(".md") ? [p] : []);
-            });
-            const expected = new Set();
-            for (const f of walk("src/content/blog")) {
-              const head = fs.readFileSync(f, "utf8").split("\n---")[0];
-              if (/^draft:\s*true/m.test(head) || /^unlisted:\s*true/m.test(head)) continue;
-              expected.add(f.replace(/^src\/content\/blog\//, "").replace(/\.md$/, "").split("/").map(slugify).join("/"));
-            }
-            const built = new Set();
-            const distBlog = "dist/blog";
-            const walkDist = (d, base) => { for (const e of fs.readdirSync(d, {withFileTypes: true})) {
-              if (!e.isDirectory()) continue;
-              const p = path.join(d, e.name), rel = base ? base + "/" + e.name : e.name;
-              if (fs.existsSync(path.join(p, "index.html"))) built.add(rel);
-              walkDist(p, rel);
-            }};
-            if (fs.existsSync(distBlog)) walkDist(distBlog, "");
-            const missing = [...expected].filter(s => !built.has(s)).sort();
-            console.log("기대 " + expected.size + "편, 생성 " + built.size + "편, 누락 " + missing.length + "편");
-            for (const m of missing) console.log("  누락: " + m);
-          ' || echo "진단 스크립트 실패"
+          echo "::error::content sync incomplete after 20 attempts (누락 $MISSING편) — aborting deploy to keep last good site live"
+          echo "--- 마지막 시도의 누락 진단 ---"
+          cat gate-log.txt
           exit 1
 
       - name: Upload Pages artifact
