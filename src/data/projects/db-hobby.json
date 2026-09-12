@@ -1,6 +1,6 @@
 {
   "title": "db-hobby — C로 만든 미니 RDBMS",
-  "description": "진짜 psql이 그대로 접속하는 자작 RDBMS — 페이지 한 장에서 MVCC·WAL·비용 기반 옵티마이저·Raft 합의까지, PostgreSQL·MySQL 내부를 C로 바닥부터 재현하고 694개 테스트로 검증했다.",
+  "description": "psql로 접속해 SQL을 실행할 수 있고, 저장·인덱스·트랜잭션·복구·복제를 직접 구현한 C 기반 학습용 RDBMS입니다.",
   "image": "/uploads/project/db-hobby/cover.svg",
   "tags": [
     "C",

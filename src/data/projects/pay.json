@@ -1,8 +1,20 @@
 {
   "title": "pay — Spring Modulith 결제 시스템",
-  "description": "결제는 실패가 비싼 도메인 — 타임아웃·중복·미확정·정산 불일치가 실제로 아프게 드러난다. PG가 대신 안 해주는 그 빈 공간(실패 설계·정합성·분산 트랜잭션)을 밑바닥부터 직접 만들어보며 배운 학습 프로젝트. 복식부기 원장·정산/대사·체크아웃 사가(PG 콜을 트랜잭션 밖으로)·멀티PG·구독·선불 월렛·회원·분쟁/차지백까지, 실 MySQL 라이브 검증과 자가 감사로 다졌다.",
+  "description": "결제 승인·취소부터 원장·정산·대사·구독·분쟁까지 처리하고, FDS와 배치·AI 기반 운영 자동화로 이상 거래와 운영 예외를 탐지·분류하는 결제 시스템입니다.",
   "image": "/uploads/project/pay/demo/demo-checkout.png",
-  "tags": ["Payment", "Spring Boot", "Spring Modulith", "Java 21", "MySQL", "Distributed Systems", "Learning"],
+  "tags": [
+    "Payment",
+    "Spring Boot",
+    "Spring Modulith",
+    "Java 21",
+    "MySQL",
+    "Kafka",
+    "Redis",
+    "FDS",
+    "AI 운영 자동화",
+    "정산·대사",
+    "Distributed Systems"
+  ],
   "category": "study",
   "date": "2026-02-15",
   "github": "https://github.com/dj258255/payment-system",

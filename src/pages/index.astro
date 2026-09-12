@@ -1,17 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import BlogSidebar from '../components/BlogSidebar.astro';
 import CarouselCard from '../components/CarouselCard.astro';
 import CarouselSection from '../components/CarouselSection.astro';
 import { projects } from '../data/projects';
-import { getPublishedPosts } from '../lib/posts';
+import { getStoryPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
 
 const catDisplayKo = getCategoryDisplayKo();
 const siteSettings = getSiteSettings();
 
-const posts = (await getPublishedPosts()).slice(0, 8);
+const posts = (await getStoryPosts()).slice(0, 8);
 ---
 
 <BaseLayout title={siteSettings.name} fullBanner={true}>
@@ -31,12 +30,6 @@ const posts = (await getPublishedPosts()).slice(0, 8);
   </section>
 
   <div class="fade-in-up">
-    <!-- Layout: sidebar floats outside, content fills header width -->
-    <div class="relative">
-      <div class="floating-sidebar hidden xl:block">
-        <BlogSidebar />
-      </div>
-
     <!-- 프로젝트 -->
     <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
       {projects.map((project) => (
@@ -66,7 +59,6 @@ const posts = (await getPublishedPosts()).slice(0, 8);
       ))}
     </CarouselSection>
 
-    </div>
   </div>
 </BaseLayout>
 
@@ -189,22 +181,5 @@ const posts = (await getPublishedPosts()).slice(0, 8);
   @media (min-width: 768px) {
     .hero-banner-content { padding-bottom: 3rem; }
   }
-
-  /* Floating sidebar (outside content area) */
-  .floating-sidebar {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 100%;
-    margin-right: 3.5rem;
-    width: 13rem;
-  }
-
-  @media (min-width: 1536px) {
-    .floating-sidebar {
-      margin-right: 4.5rem;
-    }
-  }
-
 
 </style>

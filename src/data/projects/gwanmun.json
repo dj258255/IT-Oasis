@@ -1,6 +1,6 @@
 {
   "title": "관문(gwanmun) — 레거시 전문 ↔ 현대 REST 연계 게이트웨이",
-  "description": "20년 된 계정계는 고정길이 전문(電文)+TCP로, 모바일은 JSON+REST로 말한다. 둘 다 못 고치니 중간에 통역기를 세운다 — 전문↔JSON 매핑·TCP↔HTTP 변환(연계)에 인증·라우팅·유량제어(API 게이트웨이)를 한 흐름으로 얹은 미들웨어.",
+  "description": "레거시 고정길이 전문·TCP 요청과 현대 JSON·REST API를 상호 변환하고, 인증·라우팅·유량 제어까지 처리하는 연계 게이트웨이입니다.",
   "image": "/uploads/project/gwanmun/cover-icon.svg",
   "tags": [
     "Java",

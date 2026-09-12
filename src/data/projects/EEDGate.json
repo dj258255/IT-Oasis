@@ -1,6 +1,6 @@
 {
   "title": "EEDGate",
-  "description": "LLM 워크플로우의 실패를 유형으로 자동 분석해 규칙을 스스로 만들어내는 자기 개선 평가 루프 — 검증 게이트·회귀 테스트를 하나의 TUI/CLI로.",
+  "description": "LLM 작업의 실패 유형을 분석해 규칙과 회귀 테스트로 축적하고, 다음 실행 결과를 자동 검증하는 CLI·TUI 도구입니다.",
   "image": "/uploads/project/EEDGate/logo.svg",
   "tags": [
     "TypeScript",

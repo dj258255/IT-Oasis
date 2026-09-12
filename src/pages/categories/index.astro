@@ -2,8 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { buildCategoryTree, defaultIconPath } from '../../lib/utils';
 import { base, getCategoryMeta, getCategoryDisplayKo } from '../../lib/config';
-import { getPublishedPosts } from '../../lib/posts';
-const posts = await getPublishedPosts();
+import { getStoryPosts } from '../../lib/posts';
+const posts = await getStoryPosts();
 const categoryTree = buildCategoryTree(posts.map(p => p.data.category));
 const sortedParents = [...categoryTree.entries()].sort((a, b) => b[1].count - a[1].count);
 
