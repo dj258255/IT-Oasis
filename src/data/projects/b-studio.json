@@ -1,0 +1,23 @@
+{
+  "title": "b-studio — 사내 도구를 만드는 AI 앱 빌더",
+  "description": "요청을 말하면 에이전트가 코드를 쓰고, 그 코드를 격리된 샌드박스에서 실제로 실행합니다. 체크포인트마다 파일과 DB 상태를 함께 남기고, 샌드박스의 출입구를 edge 컨테이너 하나로 모아 허용 규칙과 감사 기록을 강제합니다.",
+  "image": "/uploads/project/b-studio/policy-proxy.png",
+  "tags": [
+    "TypeScript",
+    "Next.js",
+    "Node.js",
+    "Docker",
+    "Kubernetes",
+    "gVisor",
+    "PostgreSQL",
+    "Agent",
+    "Sandbox",
+    "Security"
+  ],
+  "category": "personal",
+  "date": "2026-09-12",
+  "github": "https://github.com/dj258255/b-studio",
+  "website": "",
+  "story": "/blog/project/b-studio/b-studio-1-dump-streaming-and-path-rules",
+  "order": 1
+}

@@ -12,6 +12,7 @@
     { "name": "Balruno", "nameKo": "발루노", "order": 6 },
     { "name": "IT Oasis", "nameKo": "IT Oasis", "order": 7 },
     { "name": "EEDGate", "nameKo": "EEDGate", "order": 8 },
-    { "name": "gwanmun", "nameKo": "관문", "order": 9 }
+    { "name": "gwanmun", "nameKo": "관문", "order": 9 },
+    { "name": "b-studio", "nameKo": "b-studio", "order": 10 }
   ]
 }
