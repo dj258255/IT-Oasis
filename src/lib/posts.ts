@@ -23,8 +23,19 @@ function getProjectCategories(posts: BlogPost[]): Set<string> {
   );
 }
 
+/**
+ * 학습 프로젝트는 카테고리 최상위 이름으로 알아본다. 프로젝트 카드가 있는 학습 프로젝트는
+ * 카드의 story 카테고리로도 걸러지지만, 카드가 없는 것(토이 Kafka, 분산 시스템)은 그렇지 않아
+ * 스토리 피드와 카테고리 목록에 "학습 프로젝트"가 남았다. 카드 유무와 무관하게 묶는다.
+ */
+const STUDY_NAMESPACE = 'study';
+
+function isStudyPost(post: BlogPost): boolean {
+  return (post.data.category || '').split('/')[0] === STUDY_NAMESPACE;
+}
+
 function isProjectPost(post: BlogPost, projectCategories: Set<string>): boolean {
-  return post.id.startsWith('project/') || projectCategories.has(post.data.category);
+  return post.id.startsWith('project/') || isStudyPost(post) || projectCategories.has(post.data.category);
 }
 
 /**
@@ -46,8 +57,8 @@ export async function getPublishedPosts() {
 }
 
 /**
- * Project write-ups stay reachable from the Projects page, but do not appear in
- * the general Story feed, site search, category/tag listings, or RSS.
+ * Project write-ups and study projects stay reachable from the Projects page, but do not
+ * appear in the general Story feed, site search, category/tag listings, or RSS.
  */
 export async function getStoryPosts() {
   const posts = await getPublishedPosts();
