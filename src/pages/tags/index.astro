@@ -2,8 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { base } from '../../lib/config';
 import { TAG_COLORS } from '../../lib/constants';
-import { getPublishedPosts } from '../../lib/posts';
-const posts = await getPublishedPosts();
+import { getStoryPosts } from '../../lib/posts';
+const posts = await getStoryPosts();
 const tagMap = new Map<string, number>();
 
 posts.forEach((post) => {

@@ -1,6 +1,6 @@
 {
   "title": "IT Oasis",
-  "description": "이 블로그 자체 — Astro 5.x로 만든 다국어(KO/EN) 기술 블로그로, View Transitions·다크모드·카테고리/태그 검색까지 직접 구현했다.",
+  "description": "프로젝트와 개발 기록을 카테고리·태그로 분류하고 검색할 수 있는 Astro 기반 기술 블로그입니다.",
   "image": "/uploads/banners/banner-main.png",
   "tags": [
     "Astro",
@@ -13,6 +13,6 @@
   "date": "2026-01-15",
   "github": "https://github.com/dj258255/IT-Oasis",
   "website": "https://studywithtymee.com",
-  "story": "",
+  "story": "/blog/project/it-oasis/it-oasis-blog-intro",
   "order": 8
 }

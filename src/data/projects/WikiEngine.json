@@ -1,6 +1,6 @@
 {
   "title": "위키엔진",
-  "description": "1,425만 건 위키를 자체 검색엔진(Lucene)으로 색인하고, L1 캐시로 반복 부하를 80%+ 걷어낸 뒤 Stateless·읽기/쓰기 분리로 스케일아웃한 통합 검색 플랫폼.",
+  "description": "1,425만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리하는 통합 검색 플랫폼입니다.",
   "image": "/uploads/project/WikiEngine/wikiengine-icon.svg",
   "tags": [
     "Spring Boot",

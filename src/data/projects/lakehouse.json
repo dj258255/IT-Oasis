@@ -1,6 +1,6 @@
 {
   "title": "dbtower-lakehouse — 버려지는 관측 데이터의 장기 분석 파이프라인",
-  "description": "DBTower가 5기종에서 수집한 쿼리 스냅샷은 7일 뒤 삭제된다(메타 DB 포화 방지). '지난달보다 느려진 쿼리?'에 답하려고, 만료 직전 스냅샷을 컬럼나 저장소로 내려(ELT) 장기 이력을 만드는 데이터 파이프라인 — Airflow·dbt·DuckDB/DuckLake·MinIO.",
+  "description": "DBTower의 단기 관측 데이터를 장기 보관하고, 기간별 쿼리 성능 변화를 조회·분석하는 데이터 파이프라인입니다.",
   "image": "/uploads/project/lakehouse/cover-icon.svg",
   "tags": [
     "Airflow",

@@ -1,6 +1,6 @@
 {
   "title": "빌려조잉",
-  "description": "삼성전자 우수상을 받은 C2C 대여 플랫폼 — 실시간 채팅 병목을 코루틴 전환으로 150ms에서 1ms 미만까지 줄인 6인 팀 프로젝트.",
+  "description": "개인 간 물품 등록·검색부터 실시간 채팅, 결제, 대여와 반납까지 연결하는 C2C 대여 플랫폼입니다.",
   "image": "/uploads/project/Joying/retrospective/title.gif",
   "tags": [
     "Java",

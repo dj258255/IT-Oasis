@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import BlogSidebar from '../../components/BlogSidebar.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
 import Giscus from '../../components/Giscus.astro';
 import SeriesNav from '../../components/SeriesNav.astro';
@@ -8,17 +7,21 @@ import { render } from 'astro:content';
 import { getReadingTime, parseCategory, translateCategory } from '../../lib/utils';
 import { base, assetPath, getCategoryDisplayKo } from '../../lib/config';
 import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
-import { getBuildablePosts, getPublishedPosts } from '../../lib/posts';
+import { getBuildablePosts, getProjectPosts, getStoryPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
-  // Build a page for every non-draft post (unlisted included, so direct links work)...
   const buildable = await getBuildablePosts();
-  // ...but only ever surface publicly-listed posts as prev/next/related.
-  const posts = await getPublishedPosts();
+  const storyPosts = await getStoryPosts();
+  const projectPosts = await getProjectPosts();
+  const projectPostIds = new Set(projectPosts.map((post) => post.id));
 
   return buildable.map((post) => {
     const fullCat = post.data.category;
     const parentCat = parseCategory(fullCat).parent;
+    // Normal stories only link to other normal stories. Once a visitor enters
+    // through a project card, project write-ups can link to one another.
+    const projectOnly = projectPostIds.has(post.id);
+    const posts = projectOnly ? projectPosts : storyPosts;
 
     // Same subcategory only — these are the posts shown under the "'<category>' 의 다른 글" header.
     // Don't pad with parent-category siblings here, or the header mislabels other categories
@@ -38,7 +41,7 @@ export async function getStaticPaths() {
       }
     }
 
-    // Unlisted posts sit outside the public sequence, so they get no prev/next.
+    // Unlisted posts sit outside both sequences, so they get no prev/next.
     const pubIndex = posts.findIndex((p) => p.id === post.id);
     const prevPost = pubIndex >= 0 ? posts[pubIndex + 1] || null : null;
     const nextPost = pubIndex >= 0 ? posts[pubIndex - 1] || null : null;
@@ -51,12 +54,13 @@ export async function getStaticPaths() {
         nextPost,
         relatedPosts,
         isSameCategory,
+        projectOnly,
       },
     };
   });
 }
 
-const { post, prevPost, nextPost, relatedPosts, isSameCategory } = Astro.props;
+const { post, prevPost, nextPost, relatedPosts, isSameCategory, projectOnly } = Astro.props;
 const { Content, headings } = await render(post);
 const readingTime = getReadingTime(post.body || '');
 
@@ -77,16 +81,12 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
   <div class="fade-in-up">
       <!-- Main content -->
       <article class="post-article relative">
-      <!-- Floating left sidebar (outside content area, like TOC on right) -->
-      <div class="floating-sidebar hidden xl:block">
-        <BlogSidebar activeCategory={post.data.category} />
-      </div>
       <!-- Back link -->
-      <a href={`${base}/blog`} class="group inline-flex items-center gap-1.5 text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8 sm:mb-10">
+      <a href={`${base}${projectOnly ? '/projects' : '/blog'}`} class="group inline-flex items-center gap-1.5 text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8 sm:mb-10">
         <svg class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        <span>모든 글</span>
+        <span>{projectOnly ? '프로젝트' : '모든 글'}</span>
       </a>
 
       <!-- Post header -->
@@ -108,9 +108,15 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
             <span id="post-views-count">—</span>
           </span>
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-          <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
-            {categoryKo}
-          </a>
+          {projectOnly ? (
+            <a href={`${base}/projects`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
+              {categoryKo}
+            </a>
+          ) : (
+            <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
+              {categoryKo}
+            </a>
+          )}
         </div>
         <h1 id="post-title" class="text-xl sm:text-2xl md:text-3xl font-bold tracking-[-0.02em] leading-tight mb-4 sm:mb-5">
           {post.data.title}
@@ -118,9 +124,13 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
         <div class="flex flex-wrap items-center gap-1.5">
           {post.data.tags.length > 0 && (
             post.data.tags.map((tag: string, i: number) => (
-              <a href={`${base}/tags/${encodeURIComponent(tag)}`} class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>
-                {tag}
-              </a>
+              projectOnly ? (
+                <span class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>{tag}</span>
+              ) : (
+                <a href={`${base}/tags/${encodeURIComponent(tag)}`} class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>
+                  {tag}
+                </a>
+              )
             ))
           )}
         </div>
@@ -366,21 +376,6 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
       inset 0 1px 1px rgba(255, 255, 255, 0.1);
   }
 
-  .floating-sidebar {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 100%;
-    margin-right: 3.5rem;
-    width: 15rem;
-  }
-
-  @media (min-width: 1536px) {
-    .floating-sidebar {
-      margin-right: 4.5rem;
-    }
-  }
-
   .floating-toc {
     position: absolute;
     top: 0;
@@ -524,4 +519,3 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
   loadPostViews();
   document.addEventListener('astro:page-load', loadPostViews);
 </script>
-
