@@ -1,17 +1,25 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { projects } from '../data/projects';
+import { projects, projectTypeLabels } from '../data/projects';
 import { base, assetPath } from '../lib/config';
 const visibleTagCount = 6;
 ---
 
-<BaseLayout title="프로젝트 — IT Oasis">
+<BaseLayout title="프로젝트 — IT Oasis" wide>
   <div class="fade-in-up mb-10 sm:mb-14">
     <div class="px-1 text-center">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
         <span class="gradient-text">프로젝트</span>
       </h1>
     </div>
+  </div>
+
+  <div class="project-filters" role="group" aria-label="프로젝트 분류">
+    <button type="button" class="project-filter-button is-active" data-project-filter="featured" aria-pressed="true">팀·사이드 프로젝트</button>
+    <button type="button" class="project-filter-button" data-project-filter="team" aria-pressed="false">팀 프로젝트</button>
+    <button type="button" class="project-filter-button" data-project-filter="side" aria-pressed="false">사이드 프로젝트</button>
+    <button type="button" class="project-filter-button" data-project-filter="toy" aria-pressed="false">토이 프로젝트</button>
+    <button type="button" class="project-filter-button" data-project-filter="all" aria-pressed="false">전체</button>
   </div>
 
   <!-- Project cards -->
@@ -24,6 +32,8 @@ const visibleTagCount = 6;
         data-story-url={project.story ? `${base}${project.story}` : undefined}
         onclick={project.story ? "const link = event.target.closest('a'); if (link) return; const url = this.dataset.storyUrl; if (url) window.location.href = url;" : undefined}
         onkeydown={project.story ? "if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); const url = this.dataset.storyUrl; if (url) window.location.href = url; }" : undefined}
+        data-project-type={project.projectType}
+        hidden={project.projectType === 'toy'}
       >
         <div class="flex flex-col sm:flex-row gap-6 sm:gap-10">
           <!-- Image -->
@@ -83,6 +93,8 @@ const visibleTagCount = 6;
               {project.title}
             </h2>
 
+            <span class="project-type-label">{projectTypeLabels[project.projectType]}</span>
+
             <p class="text-[15px] sm:text-[17px] text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
               {project.description}
             </p>
@@ -124,7 +136,88 @@ const visibleTagCount = 6;
 
 </BaseLayout>
 
+<script>
+  const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-project-filter]'));
+  const projectCards = Array.from(document.querySelectorAll<HTMLElement>('[data-project-type]'));
+
+  function applyProjectFilter(filter: string) {
+    projectCards.forEach((card) => {
+      const type = card.dataset.projectType;
+      card.hidden = filter === 'all'
+        ? false
+        : filter === 'featured'
+          ? type === 'toy'
+          : type !== filter;
+    });
+
+    filterButtons.forEach((button) => {
+      const active = button.dataset.projectFilter === filter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', () => applyProjectFilter(button.dataset.projectFilter || 'featured'));
+  });
+</script>
+
 <style>
+  .project-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin: 0 0 2.25rem;
+  }
+
+  .project-filter-button {
+    border: 1px solid rgba(15, 40, 80, 0.1);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.7);
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0.6rem 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .project-filter-button:hover,
+  .project-filter-button.is-active {
+    background: rgba(100, 160, 200, 0.14);
+    border-color: rgba(74, 141, 184, 0.28);
+    color: #4a8db8;
+  }
+
+  :global(.dark) .project-filter-button {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #b7c0cd;
+  }
+
+  :global(.dark) .project-filter-button:hover,
+  :global(.dark) .project-filter-button.is-active {
+    background: rgba(120, 170, 210, 0.16);
+    border-color: rgba(150, 200, 235, 0.32);
+    color: #b9dbf2;
+  }
+
+  .project-type-label {
+    display: inline-block;
+    margin: -0.6rem 0 1rem;
+    color: #4a8db8;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  :global(.dark) .project-type-label {
+    color: #9dc7e3;
+  }
+
+  .project-card[hidden] {
+    display: none;
+  }
+
   .project-card {
     padding: 0 !important;
     background: none !important;
