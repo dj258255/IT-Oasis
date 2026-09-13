@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CarouselCard from '../components/CarouselCard.astro';
 import CarouselSection from '../components/CarouselSection.astro';
-import { projects } from '../data/projects';
+import { projects, projectTypeLabels } from '../data/projects';
 import { getStoryPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
@@ -11,9 +11,10 @@ const catDisplayKo = getCategoryDisplayKo();
 const siteSettings = getSiteSettings();
 
 const posts = (await getStoryPosts()).slice(0, 8);
+const featuredProjects = projects.filter((project) => project.projectType !== 'toy');
 ---
 
-<BaseLayout title={siteSettings.name} fullBanner={true}>
+<BaseLayout title={siteSettings.name} fullBanner={true} wide>
   <!-- Hero Banner (full width, no animation) -->
   <section class="hero-banner mb-16 sm:mb-24">
     <div class="hero-banner-inner">
@@ -32,14 +33,14 @@ const posts = (await getStoryPosts()).slice(0, 8);
   <div class="fade-in-up">
     <!-- 프로젝트 -->
     <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
-      {projects.map((project) => (
+      {featuredProjects.map((project) => (
         <CarouselCard
           href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
           description={project.description}
           image={project.image ? assetPath(project.image) : undefined}
           date={project.date}
-          category={translateCategory(project.category, catDisplayKo)}
+          category={projectTypeLabels[project.projectType]}
           noOverlay
         />
       ))}

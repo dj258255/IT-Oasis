@@ -77,7 +77,7 @@ const catDisplayKo = getCategoryDisplayKo();
 const categoryKo = translateCategory(post.data.category, catDisplayKo);
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined} noindex={post.data.unlisted}>
+<BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined} noindex={post.data.unlisted} wide>
   <div class="fade-in-up">
       <!-- Main content -->
       <article class="post-article relative">

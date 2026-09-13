@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import AuthorCard from '../components/AuthorCard.astro';
 import CarouselCard from '../components/CarouselCard.astro';
 import CarouselSection from '../components/CarouselSection.astro';
-import { projects } from '../data/projects';
+import { projects, projectTypeLabels } from '../data/projects';
 import { getStoryPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { renderRichText } from '../lib/richtext';
@@ -14,9 +14,10 @@ const catDisplayKo = getCategoryDisplayKo();
 const aboutHtmlKo = renderRichText(siteSettings.aboutContentKo, base);
 
 const posts = (await getStoryPosts()).slice(0, 8);
+const featuredProjects = projects.filter((project) => project.projectType !== 'toy');
 ---
 
-<BaseLayout title="소개 — IT Oasis">
+<BaseLayout title="소개 — IT Oasis" wide>
   <div class="fade-in-up">
     <div class="mb-10 sm:mb-14 px-1 text-center">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
@@ -40,14 +41,14 @@ const posts = (await getStoryPosts()).slice(0, 8);
 
     <!-- Projects carousel (same as homepage) -->
     <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
-      {projects.map((project) => (
+      {featuredProjects.map((project) => (
         <CarouselCard
           href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
           description={project.description}
           image={project.image ? assetPath(project.image) : undefined}
           date={project.date}
-          category={translateCategory(project.category, catDisplayKo)}
+          category={projectTypeLabels[project.projectType]}
           noOverlay
         />
       ))}
