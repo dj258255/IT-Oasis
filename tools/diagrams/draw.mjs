@@ -95,6 +95,17 @@ export function elbow(k, x1, y1, x2, y2, opts = {}) {
   arrow(k, midX, y2, x2, y2, opts);
 }
 
+/** 여러 점을 잇고 마지막 구간에만 화살표 머리를 단다. 되돌아가는 흐름을 그릴 때 쓴다. */
+export function route(k, pts, { color = '#343a40', roughness = 0.9 } = {}) {
+  for (let i = 0; i < pts.length - 2; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    const seed = Math.abs(Math.round(x1 * 5 + y2 * 3)) % 9999 + 1;
+    add(k, k.rc.line(x1, y1, x2, y2, { stroke: color, strokeWidth: 1.6, roughness, seed }));
+  }
+  const [xa, ya] = pts[pts.length - 2], [xb, yb] = pts[pts.length - 1];
+  arrow(k, xa, ya, xb, yb, { color, roughness });
+}
+
 /** 표 머리와 컬럼을 가르는 실선. ERD 상자에서 이름과 컬럼을 나눈다. */
 export function divider(k, x1, x2, y, { color = '#adb5bd' } = {}) {
   const seed = Math.abs(Math.round(x1 * 13 + y * 7)) % 9999 + 1;
