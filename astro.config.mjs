@@ -329,12 +329,6 @@ export default defineConfig({
     '/blog/project/pay/pay-ch5-measuring-performance': `${base || ''}/blog/project/pay/pay-ch7-measuring-wrong`,
     // 10편(AI 운영 자동화)을 둘로 나눴다 (2026-08-31)
     '/blog/project/pay/pay-ch9-ai-in-operations': `${base || ''}/blog/project/pay/pay-ch10-ruler-first`,
-    // gwanmun 6편 -> gwanmun-0-why 단일 개발기로 병합
-    '/blog/project/gwanmun/gwanmun-1-parser-and-framing': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
-    '/blog/project/gwanmun/gwanmun-2-gateway-skeleton': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
-    '/blog/project/gwanmun/gwanmun-3-ledger-and-resilience': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
-    '/blog/project/gwanmun/gwanmun-4-audit-and-load': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
-    '/blog/project/gwanmun/gwanmun-5-idempotency-reconciliation': `${base || ''}/blog/project/gwanmun/gwanmun-0-why`,
   },
   build: {
     concurrency: 1,
