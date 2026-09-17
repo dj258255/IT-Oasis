@@ -634,6 +634,7 @@
         {
           "title": "위키엔진",
           "meta": "통합 검색 플랫폼",
+          "period": "2026.02 ~ 2026.05",
           "href": "/blog/project/wikiengine/wiki-engine-retrospective",
           "details": [
             "1,425만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리합니다."
@@ -642,6 +643,7 @@
         {
           "title": "pay",
           "meta": "Spring Modulith 결제 시스템",
+          "period": "2025.10 ~ 진행 중",
           "href": "/blog/project/pay/pay-0-overview",
           "details": [
             "결제 승인·취소부터 원장·정산·대사·구독·분쟁까지 처리합니다."
