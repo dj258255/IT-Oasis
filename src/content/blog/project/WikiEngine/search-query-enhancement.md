@@ -147,7 +147,7 @@ BM25 변형(BM25+, BM25L, BM25F) 검토 결과, [뉴스 코퍼스 3개 실험](h
 | Part별 재색인 | 3회 | ~수십 시간 (수 시간 × 3) | 서비스 영향 3배 | **탈락** |
 | **한번에 모아서** | **1회** | **~수 시간** | **최소** | **선택** |
 
-현업에서도 인덱스 변경사항을 모아서 한 번에 재색인하는 것이 표준입니다. Elasticsearch의 Blue-Green 재색인 패턴([Elastic 공식](https://www.elastic.co/blog/changing-mapping-with-zero-downtime))에서도 "새 인덱스를 새 매핑으로 한 번에 구축 → alias swap"을 권장합니다. 변경마다 재색인하면 1,425만 건 × 여러 번 = 불필요한 시간과 I/O 낭비입니다.
+현업에서도 인덱스 변경사항을 모아서 한 번에 재색인하는 것이 표준입니다. Elasticsearch의 Blue-Green 재색인 패턴([Elastic 공식](https://www.elastic.co/blog/changing-mapping-with-zero-downtime))에서도 "새 인덱스를 새 매핑으로 한 번에 구축 → alias swap"을 권장합니다. 변경마다 재색인하면 1,215만 건 × 여러 번 = 불필요한 시간과 I/O 낭비입니다.
 
 재색인 전까지의 동작:
 - **snippetSource 없음** → UnifiedHighlighter가 null 반환 → `PostSearchResponse.from(post)` fallback (앞 150자)
@@ -261,7 +261,7 @@ doc.add(new StoredField("snippetSource", snippetSource));
 // content는 Store.NO 유지 (검색용만)
 ```
 
-**방안 B 선택 근거**: content 전체를 Store.YES로 하면 1,425만 건 × 평균 6,586자 = 인덱스 크기 100GB+ 폭증. 앞 500자만 저장하면 ~7GB 추가로 인덱스 27GB 수준. 검색어가 문서 앞부분 500자 안에 있을 확률이 높고(제목, 서론, Infobox), 500자 밖의 검색어는 현재 방식(DB 조회 후 자르기)으로 fallback.
+**방안 B 선택 근거**: content 전체를 Store.YES로 하면 1,215만 건 × 평균 6,586자 = 인덱스 크기 100GB+ 폭증. 앞 500자만 저장하면 ~7GB 추가로 인덱스 27GB 수준. 검색어가 문서 앞부분 500자 안에 있을 확률이 높고(제목, 서론, Infobox), 500자 밖의 검색어는 현재 방식(DB 조회 후 자르기)으로 fallback.
 
 **검색 시 Highlighter 적용:**
 
