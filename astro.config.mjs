@@ -155,6 +155,34 @@ export default defineConfig({
     '/blog/project/orakgarak/ts-kafka-partition-imbalance': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
     '/blog/project/orakgarak/ts-loki-stacktrace-parsing': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
     '/blog/project/orakgarak/ts-prometheus-alert-noise': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    // 2026-09-18 위키엔진 표준 적용 글 11편을 비공개로 돌렸다. 옛 주소는 위키엔진 소개 글로 보낸다.
+    '/blog/project/wikiengine/replication': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/scaleout': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/trie-autocomplete': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/caching-strategy': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/search-category-facet': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/search-content-filter': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/search-query-enhancement': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/search-system-crash': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/distributed-stability': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/autocomplete-btree-index': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/nori-stop-filter-fix': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/codingtestkit/codingtestkit-thankful-review': `${base || ''}/blog/project/codingtestkit/codingtestkit-introduction`,
+    '/blog/daily/hello-world': `${base || ''}/about`,
+    // 2026-09-18 프로젝트 소개 한 편만 남기고 나머지 글을 지웠다. 옛 주소는 소개 글로 보낸다.
+    '/blog/project/edumeet/own-hls': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/captions-ahead-of-video': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/limits-i-wrote-down': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/dbtower/dbtower-1-design': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-2-engines-and-diagnosis': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-3-production-safety': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-4-deepening': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-5-productionization': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-6-backup': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-7-multi-tenancy': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-8-talking-and-lakehouse': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-9-operational-bottlenecks': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    '/blog/project/dbtower/dbtower-10-ai-cost-audit': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     // EduMeet 9편 -> edumeet-retrospective 단일 개발기로 병합
     '/blog/project/edumeet/architecture-evolution': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/onetomany-join-table': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
@@ -165,19 +193,19 @@ export default defineConfig({
     '/blog/project/edumeet/unit-test-db-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/edge-case-issues': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // EduMeet 재작업 15편 -> 주제별 9편으로 병합 (2026-08-28)
-    '/blog/project/edumeet/egress-cost-model': `${base || ''}/blog/project/edumeet/own-hls`,
-    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
-    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/egress-cost-model': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/mcp-transcript-server': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/unrunnable-code': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // 모노레포 합치기·CI 이관·Flyway 가 한 글에 묶여 있어 어느 것도 검색어가 안 됐다.
     // 살릴 사실(git subtree 이력 끊김)은 저장소 docs/ 에 남기고 글은 접었다.
     '/blog/project/edumeet/monorepo-revealed': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // 셋 다 프로젝트 진행 기록에 가까웠다. 각각에 한 조각씩 쓸 만한 게 있어
     // 지우지 않고 한 편으로 합쳤다(하트비트 · 과금 단위 · 베이스라인).
-    '/blog/project/edumeet/reaching-the-screen': `${base || ''}/blog/project/edumeet/captions-ahead-of-video`,
-    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
-    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/reaching-the-screen': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/caption-to-summary': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/measure-before-the-model': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/deploy-and-migration': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
-    '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/three-questions-measured': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/chicken-and-egg': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // EduMeet 9편 -> 8편 (2026-08-31)
     //
@@ -191,9 +219,9 @@ export default defineConfig({
     //                             (dockerd CPU · nginx 60초)을 각각 옮기고 접었다
     //   realtime-caption-decisions  세 항목이 서로 무관했다. 가장 강한 하나를
     //                             baseline-before-model 로 다시 세웠다
-    '/blog/project/edumeet/config-that-does-nothing': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
-    '/blog/project/edumeet/measuring-on-the-real-server': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
-    '/blog/project/edumeet/realtime-caption-decisions': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/config-that-does-nothing': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/measuring-on-the-real-server': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/realtime-caption-decisions': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // ops-that-look-installed 를 접었다 (2026-08-31)
     //
     // ★ 기준이 한 겹 더 내려갔다 - "정보가 쓸모 있는가" 도 아니고
@@ -206,7 +234,7 @@ export default defineConfig({
     //   같은 발견도 "왜 아무도 못 봤는가" 를 답하면 통찰이 되고
     //   "내가 몰랐다" 로 끝나면 함정 목록이 된다. 그 질문에 답하는 항목이
     //   하나뿐이어서(부하를 걸면 사라지는 버그) 그것만 limits-i-wrote-down 으로 옮겼다.
-    '/blog/project/edumeet/ops-that-look-installed': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/ops-that-look-installed': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // baseline-before-model · alerting-with-measured-thresholds 를 접었다 (2026-08-31)
     //
     // ★ 기준 - "결과물이 있는가".
@@ -220,8 +248,8 @@ export default defineConfig({
     //   둘의 알맹이(비교 대상이 약하면 개선폭이 부풀려진다 · 근거를 적은 것과
     //   근거가 맞는 것은 다르다)는 limits-i-wrote-down 으로 옮겼다.
     //   그 글 주제가 "숫자를 못 믿게 만드는 것" 이라 정확히 맞는다.
-    '/blog/project/edumeet/baseline-before-model': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
-    '/blog/project/edumeet/alerting-with-measured-thresholds': `${base || ''}/blog/project/edumeet/limits-i-wrote-down`,
+    '/blog/project/edumeet/baseline-before-model': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
+    '/blog/project/edumeet/alerting-with-measured-thresholds': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // zero-downtime-deploy 를 접었다 (2026-08-31)
     //
     // ★ 기준 - "해결한 문제가 실재했는가".
@@ -231,7 +259,7 @@ export default defineConfig({
     //   다만 그 작업이 실제로 값을 한 순간은 있었다 - Origin 을 고치는 동안
     //   배포가 네 번 실패했는데 서비스가 한 번도 안 끊겼다. 그 한 문단만
     //   captions-ahead-of-video 로 옮겼다.
-    '/blog/project/edumeet/zero-downtime-deploy': `${base || ''}/blog/project/edumeet/captions-ahead-of-video`,
+    '/blog/project/edumeet/zero-downtime-deploy': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     // pay 58편 -> 주제별 10편 (2026-08-31)
     //
     // 세 세대에 걸쳐 합쳤는데 리다이렉트를 한 번도 안 남겨서

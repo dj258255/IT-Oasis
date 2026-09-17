@@ -13,7 +13,7 @@ tags:
   - Monitoring
 category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/caching-strategy/C-2-spring-boot-cache.png
-draft: false
+draft: true
 series: "WikiEngine"
 ---
 
