@@ -1,6 +1,6 @@
 ---
 title: '카테고리 검색 필터링 + Facet 집계: Lucene FILTER 절 설계'
-description: 1,425만 건 Lucene 검색 엔진에 카테고리 필터링을 추가합니다. categoryId가 이미 LongField로 인덱싱되어 있지만 검색 쿼리(buildQuery)에서 사용하지 않고 있던 구조적 비대칭을 발견하고, Occur.FILTER 절로 해결합니다. DB Post-filter 방식이 pagination을 깨뜨리는 이유, FILTER가 MUST와 달리 스코어에 기여하지 않으면서 bitset 캐싱 대상이 되는 원리, DB GROUP BY 간이 Facet의 한계와 Lucene 네이티브 Facet 전환 계획까지 정리합니다.
+description: 1,215만 건 Lucene 검색 엔진에 카테고리 필터링을 추가합니다. categoryId가 이미 LongField로 인덱싱되어 있지만 검색 쿼리(buildQuery)에서 사용하지 않고 있던 구조적 비대칭을 발견하고, Occur.FILTER 절로 해결합니다. DB Post-filter 방식이 pagination을 깨뜨리는 이유, FILTER가 MUST와 달리 스코어에 기여하지 않으면서 bitset 캐싱 대상이 되는 원리, DB GROUP BY 간이 Facet의 한계와 Lucene 네이티브 Facet 전환 계획까지 정리합니다.
 date: 2026-03-25T00:00:00.000Z
 tags:
   - Lucene
@@ -124,7 +124,7 @@ public Slice<PostSearchResponse> search(
 }
 ```
 
-`categoryId` 파라미터가 없다. 사용자가 "프로그래밍"을 검색하면 1,425만 건 전체에서 결과를 반환하며, 특정 카테고리로 좁히는 방법이 없다.
+`categoryId` 파라미터가 없다. 사용자가 "프로그래밍"을 검색하면 1,215만 건 전체에서 결과를 반환하며, 특정 카테고리로 좁히는 방법이 없다.
 
 검색 결과를 보고 "이 중에서 Java 관련만 보고 싶다"는 요구를 충족할 수 없다. 목록 조회(`GET /posts`)에서는 카테고리 필터가 되지만, **검색**에서는 안 됩니다. 기능의 비대칭입니다.
 
