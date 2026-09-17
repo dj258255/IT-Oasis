@@ -12,6 +12,9 @@ import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/c
 const siteSettings = getSiteSettings();
 const catDisplayKo = getCategoryDisplayKo();
 const aboutHtmlKo = renderRichText(siteSettings.aboutContentKo, base);
+interface CareerItem { title: string; meta?: string; period?: string; details?: string[]; href?: string }
+const career: { label: string; items: CareerItem[] }[] = siteSettings.careerKo || [];
+const resolveHref = (href: string) => (href.startsWith('/') ? `${base}${href}` : href);
 
 const posts = (await getStoryPosts()).slice(0, 8);
 const featuredProjects = projects.filter((project) => project.projectType !== 'toy');
@@ -33,6 +36,40 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
         <div set:html={aboutHtmlKo} />
       </div>
     </div>
+
+    <!-- Career -->
+    {career.length > 0 && (
+      <section class="mb-14 sm:mb-20">
+        <h2 class="text-2xl sm:text-3xl font-bold tracking-tight mb-6 sm:mb-8 px-1">{siteSettings.careerTitleKo || '이력'}</h2>
+        <div class="glass rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10">
+          {career.map((group) => (
+            <div class="career-group">
+              <h3 class="career-label">{group.label}</h3>
+              <ul class="career-items">
+                {group.items.map((item) => (
+                  <li class="career-item">
+                    <div class="career-head">
+                      <p class="career-title">
+                        {item.href ? (
+                          <a href={resolveHref(item.href)} target={item.href.startsWith('/') ? undefined : '_blank'} rel={item.href.startsWith('/') ? undefined : 'noopener'}>{item.title}</a>
+                        ) : item.title}
+                      </p>
+                      {item.period && <span class="career-period">{item.period}</span>}
+                    </div>
+                    {item.meta && <p class="career-meta">{item.meta}</p>}
+                    {item.details && item.details.length > 0 && (
+                      <ul class="career-details">
+                        {item.details.map((line) => <li>{line}</li>)}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
 
     <!-- Author profile -->
     <div class="mb-14 sm:mb-20">
@@ -69,3 +106,93 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
     </CarouselSection>
   </div>
 </BaseLayout>
+
+<style>
+  .career-group {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid rgb(148 163 184 / 0.2);
+  }
+
+  .career-group:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .career-group:last-child {
+    padding-bottom: 0;
+  }
+
+  @media (min-width: 640px) {
+    .career-group {
+      grid-template-columns: 8rem 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  .career-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    padding-top: 0.125rem;
+  }
+
+  .career-items {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .career-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    column-gap: 1rem;
+    row-gap: 0.125rem;
+  }
+
+  .career-title {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .career-title a {
+    text-decoration: underline;
+    text-decoration-color: rgb(148 163 184 / 0.5);
+    text-underline-offset: 0.2em;
+  }
+
+  .career-title a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .career-period {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: rgb(100 116 139);
+    white-space: nowrap;
+  }
+
+  .career-meta {
+    margin-top: 0.125rem;
+    font-size: 0.875rem;
+    color: rgb(100 116 139);
+  }
+
+  .career-details {
+    margin-top: 0.5rem;
+    padding-left: 1.1rem;
+    list-style: disc;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: rgb(75 85 99);
+  }
+
+  :global(.dark) .career-period,
+  :global(.dark) .career-meta { color: rgb(148 163 184); }
+  :global(.dark) .career-details { color: rgb(209 213 219); }
+</style>
