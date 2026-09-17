@@ -155,6 +155,10 @@ export default defineConfig({
     '/blog/project/orakgarak/ts-kafka-partition-imbalance': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
     '/blog/project/orakgarak/ts-loki-stacktrace-parsing': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
     '/blog/project/orakgarak/ts-prometheus-alert-noise': `${base || ''}/blog/project/orakgarak/orakgarak-retrospective`,
+    // 2026-09-18 판단이 얕은 세 편을 비공개로 돌렸다. 옛 주소는 관련 글로 보낸다.
+    '/blog/daily/what-really-matters': `${base || ''}/about`,
+    '/blog/project/wikiengine/search-quality': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
+    '/blog/project/wikiengine/view-count-redis': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
     // 2026-09-18 위키엔진 표준 적용 글 11편을 비공개로 돌렸다. 옛 주소는 위키엔진 소개 글로 보낸다.
     '/blog/project/wikiengine/replication': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
     '/blog/project/wikiengine/scaleout': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
