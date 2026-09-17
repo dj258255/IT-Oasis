@@ -15,7 +15,7 @@ tags:
   - GTID
 category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/replication/phase12-mysql-primary-replica.png
-draft: false
+draft: true
 series: "WikiEngine"
 ---
 
