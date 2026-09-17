@@ -9,7 +9,7 @@ tags:
   - 성장
 category: daily
 coverImage: /uploads/banners/banner-main.png
-draft: false
+draft: true
 ---
 
 한동안 이런저런 생각을 많이 했다.

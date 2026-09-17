@@ -13,7 +13,7 @@ tags:
   - Performance
 category: personal/WikiEngine
 coverImage: /uploads/project/WikiEngine/search-quality/phase7-ranking-search-stop4.png
-draft: false
+draft: true
 series: "WikiEngine"
 ---
 
