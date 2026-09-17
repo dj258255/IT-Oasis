@@ -623,6 +623,15 @@
       "label": "개인 프로젝트",
       "items": [
         {
+          "title": "b-studio",
+          "meta": "사내 도구를 만드는 AI 앱 빌더",
+          "period": "2026.09 ~ 진행 중",
+          "href": "/blog/project/b-studio/b-studio-1-dump-streaming-and-path-rules",
+          "details": [
+            "요청을 말하면 에이전트가 코드를 쓰고 격리된 샌드박스에서 실제로 실행합니다. 체크포인트마다 파일과 DB 상태를 함께 남깁니다."
+          ]
+        },
+        {
           "title": "DBTower",
           "meta": "이기종 DBMS 운영 관리 플랫폼",
           "period": "2026.03 ~ 2026.07",
@@ -652,7 +661,7 @@
         {
           "title": "발루노",
           "meta": "게임 밸런싱 플랫폼 · balruno.com",
-          "period": "2026.01 ~ 진행 중",
+          "period": "2026.01 ~ 2026.08",
           "href": "/blog/project/balruno/balruno-retrospective",
           "details": [
             "게임 데이터를 스프레드시트처럼 편집하고 버전별 수치와 변경 이력을 관리합니다."
@@ -675,7 +684,7 @@
         {
           "title": "별찌",
           "meta": "2인 팀 · Identity 도메인, 인프라, 검색",
-          "period": "2026.05 ~ 진행 중",
+          "period": "2026.05 ~ 2026.07",
           "details": [
             "지금 보고 있는 상품을 기준으로 여러 쇼핑몰의 가격과 중고 대안을 한 화면에 모아 비교해 주는 AI 패션 쇼핑 어시스턴트입니다."
           ]
@@ -724,12 +733,13 @@
         {
           "title": "AWS JAM 3위",
           "meta": "AWS 모던 애플리케이션 교육",
-          "period": "2023.12"
+          "period": "2023.12",
+          "href": "/blog/activity/aws-modern-app-training"
         }
       ]
     },
     {
-      "label": "자격",
+      "label": "자격증",
       "items": [
         {
           "title": "정보처리기사",
