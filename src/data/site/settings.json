@@ -626,7 +626,7 @@
           "title": "b-studio",
           "meta": "사내 도구를 만드는 AI 앱 빌더",
           "period": "2026.09 ~ 진행 중",
-          "href": "/blog/project/b-studio/b-studio-1-dump-streaming-and-path-rules",
+          "href": "/blog/project/b-studio/b-studio-0-intro",
           "details": [
             "요청을 말하면 에이전트가 코드를 쓰고 격리된 샌드박스에서 실제로 실행합니다. 체크포인트마다 파일과 DB 상태를 함께 남깁니다."
           ]
@@ -634,7 +634,7 @@
         {
           "title": "DBTower",
           "meta": "이기종 DBMS 운영 관리 플랫폼",
-          "period": "2026.03 ~ 2026.07",
+          "period": "2026.03 ~ 진행 중",
           "href": "/blog/project/dbtower/dbtower-0-overview",
           "details": [
             "MySQL·PostgreSQL·Oracle·SQL Server·MongoDB를 한곳에서 모니터링하고 쿼리 이상과 성능 회귀를 찾습니다."
@@ -644,9 +644,9 @@
           "title": "위키엔진",
           "meta": "통합 검색 플랫폼",
           "period": "2026.02 ~ 2026.05",
-          "href": "/blog/project/wikiengine/wiki-engine-retrospective",
+          "href": "/blog/project/wikiengine/wiki-search-overview",
           "details": [
-            "1,425만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리합니다."
+            "1,215만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리합니다."
           ]
         },
         {

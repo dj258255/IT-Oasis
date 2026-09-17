@@ -10,7 +10,7 @@ tags:
   - EXPLAIN
   - Leftmost Prefix
 category: personal/WikiEngine
-draft: false
+draft: true
 coverImage: "/uploads/project/WikiEngine/autocomplete-btree-index/autocomplete-expected.png"
 series: "WikiEngine"
 ---

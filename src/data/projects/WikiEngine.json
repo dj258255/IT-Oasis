@@ -1,6 +1,6 @@
 {
   "title": "위키엔진",
-  "description": "1,425만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리하는 통합 검색 플랫폼입니다.",
+  "description": "1,215만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리하는 통합 검색 플랫폼입니다.",
   "image": "/uploads/project/WikiEngine/wikiengine-icon.svg",
   "tags": [
     "Spring Boot",
@@ -17,6 +17,6 @@
   "category": "personal",
   "date": "2026-01-27",
   "github": "https://github.com/dj258255/wikiEngine",
-  "story": "/blog/project/wikiengine/wiki-engine-retrospective",
+  "story": "/blog/project/wikiengine/wiki-search-overview",
   "order": 7
 }
