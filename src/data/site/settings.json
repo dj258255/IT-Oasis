@@ -7,14 +7,36 @@
   "githubUrl": "https://github.com/dj258255",
   "email": "dj258255@naver.com",
   "socialLinks": [
-    { "type": "github", "url": "https://github.com/dj258255" },
-    { "type": "email", "url": "dj258255@naver.com" }
+    {
+      "type": "github",
+      "url": "https://github.com/dj258255"
+    },
+    {
+      "type": "email",
+      "url": "dj258255@naver.com"
+    }
   ],
   "navItems": [
-    { "label": "소개", "path": "/about", "icon": "person" },
-    { "label": "프로젝트", "path": "/projects", "icon": "grid" },
-    { "label": "스토리", "path": "/blog", "icon": "newspaper" },
-    { "label": "태그", "path": "/tags", "icon": "tag" }
+    {
+      "label": "소개",
+      "path": "/about",
+      "icon": "person"
+    },
+    {
+      "label": "프로젝트",
+      "path": "/projects",
+      "icon": "grid"
+    },
+    {
+      "label": "스토리",
+      "path": "/blog",
+      "icon": "newspaper"
+    },
+    {
+      "label": "태그",
+      "path": "/tags",
+      "icon": "tag"
+    }
   ],
   "aboutSubtitleKo": "풍부한 상상과 호기심으로\n다양한 프로젝트를 만들어갑니다.",
   "projectsSubtitleKo": "풍부한 상상과 호기심으로 만들어 온\n다양한 프로젝트를 소개합니다.",
@@ -22,382 +44,729 @@
     "type": "root",
     "children": [
       {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "삼성청년SW·AI아카데미 자율 프로젝트" }]
-      },
-      {
         "type": "p",
         "children": [
-          { "type": "text", "text": "C2C 대여 플랫폼 · 6인 팀", "bold": true }
-        ]
-      },
-      {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "역할" }]
-      },
-      {
-        "type": "ul",
-        "children": [
           {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "팀장", "bold": true },
-                  { "type": "text", "text": ": 일정과 우선순위 관리, 개발 기준 수립" }
-                ]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "백엔드", "bold": true },
-                  { "type": "text", "text": ": 채팅, 실시간 알림, 인증, 거래 흐름 구현" }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "문제와 대응" }]
-      },
-      {
-        "type": "ol",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "팀원 간 AI 활용 편차로 결과가 제각각이던 문제", "bold": true }
-                ]
-              },
-              {
-                "type": "ul",
-                "children": [
-                  {
-                    "type": "li",
-                    "children": [
-                      {
-                        "type": "lic",
-                        "children": [{ "type": "text", "text": "코딩 스타일, 금지 사항, 테스트 범위를 규칙 파일로 작성해 저장소에 배치" }]
-                      }
-                    ]
-                  },
-                  {
-                    "type": "li",
-                    "children": [
-                      {
-                        "type": "lic",
-                        "children": [{ "type": "text", "text": "결과가 어긋난 사례를 받아 규칙을 갱신하고, 생성 코드는 테스트와 검토 후 반영" }]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [
-                  { "type": "text", "text": "결제·에스크로 담당자의 마감 5일 전 이탈", "bold": true }
-                ]
-              },
-              {
-                "type": "ul",
-                "children": [
-                  {
-                    "type": "li",
-                    "children": [
-                      {
-                        "type": "lic",
-                        "children": [{ "type": "text", "text": "거래 생성부터 반납까지 점검해 중단 지점을 목록화하고, 남은 일을 금전 단계에 우선 배정" }]
-                      }
-                    ]
-                  },
-                  {
-                    "type": "li",
-                    "children": [
-                      {
-                        "type": "lic",
-                        "children": [{ "type": "text", "text": "결제 완료된 거래에 거래 재시작 버튼이 노출되던 조건을 단독 상태 판단에서 결제 완료 기록 병행 확인으로 수정" }]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "결과" }]
-      },
-      {
-        "type": "ul",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "마감 내 핵심 거래 흐름 전량 완성, 삼성전자 주식회사 프로젝트 우수상 수상" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "AI 사용 경험이 없던 팀원도 동일한 기준으로 작업할 수 있는 환경 마련" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "담당 공백이 생겼을 때 남은 범위를 파악하고 우선순위를 재배치해 완주" }]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "학부 기업연계프로젝트 1·2" }]
-      },
-      {
-        "type": "p",
-        "children": [{ "type": "text", "text": "2학기 연속 · 팀 프로젝트", "bold": true }]
-      },
-      {
-        "type": "ul",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "기업 과제의 요구사항을 분석해 팀 단위로 시스템을 설계하고 구현" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "두 학기 모두 최고 학점으로 완수" }]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "개인 프로젝트 · 결제 시스템" }]
-      },
-      {
-        "type": "p",
-        "children": [{ "type": "text", "text": "설계·구현·검증 단독 수행", "bold": true }]
-      },
-      {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "데이터 정합성" }]
-      },
-      {
-        "type": "ul",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "판매자 지급이 집계에서 누락되던 결함을 발견해 기준 수정 후 회귀 테스트로 고정" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "평가용 설정과 운영 설정의 불일치를 맞추고 대조 검사 추가" }]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "AI 적용 판단" }]
-      },
-      {
-        "type": "ul",
-        "children": [
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "적용 전 정답 기준을 정하고 기존 방식과 동일한 조건에서 비교" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "장애 로그 원인 분석에는 규칙이 답하지 못한 건만 모델에 전달해 적용" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "대사 원인 분류는 신규 표본 45건에서 개선 구간을 확인하지 못해 중단" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "모델이 생성한 금액과 날짜를 코드가 만든 사실 목록과 대조해 오류를 차단" }]
-              }
-            ]
+            "type": "text",
+            "text": "안녕하세요. 범수입니다."
           }
         ]
       },
       {
         "type": "p",
         "children": [
-          { "type": "text", "text": "결과: ", "bold": true },
-          { "type": "text", "text": "적용·중단 근거를 문서와 테스트로 남겨 다시 측정할 수 있도록 구성했습니다." }
-        ]
-      },
-      {
-        "type": "h2",
-        "children": [{ "type": "text", "text": "개인 프로젝트 · 사내용 AI 도구 2종" }]
-      },
-      {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "데이터베이스 운영 플랫폼" }]
-      },
-      {
-        "type": "ul",
-        "children": [
           {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "판단 기준 문서를 시스템 프롬프트로 넣어 같은 쿼리에 같은 판정이 나오도록 구성" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "규칙이 먼저 비효율을 지적하고 모델은 1차 소견만 추가하며, 최종 확정은 사람이 수행" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "MCP 서버를 통해 AI 에이전트가 조회 전용 도구만 연쇄 호출해 자연어 질문에 답변" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "장애 구간 요약은 수집한 사실 안에서만 작성하고 근거가 부족하면 부족하다고 표시" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "외부와 모델 프롬프트로 나가는 SQL은 값만 가리고 구조는 보존" }]
-              }
-            ]
-          },
-          {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "승인자와 운영자 계정을 분리해 한 사람이 승인과 실행을 겸하지 못하도록 구성" }]
-              }
-            ]
+            "type": "text",
+            "text": "개발을 잘하고 싶고, 제가 만든 프로그램이나 코드가 누군가에게 도움이 되었으면 좋겠습니다."
           }
         ]
       },
       {
-        "type": "h3",
-        "children": [{ "type": "text", "text": "AI 앱 빌더" }]
-      },
-      {
-        "type": "ul",
+        "type": "p",
         "children": [
           {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "계획·구현·실행·검증 단계를 반복하는 에이전트 루프 구현" }]
-              }
-            ]
+            "type": "text",
+            "text": "언젠가는 제가 배운 것들을 블로그나 유튜브로 다른 사람들과 나누고 싶고, 계속 재미있는 프로젝트도 만들고 싶습니다. 누군가가 저를 보면서 \"나도 저렇게 되고 싶다\"고 생각해 준다면 정말 좋을 것 같습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그리고 개발을 떠나서는 좋은 사람들과 행복하게 살고 싶습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "사랑하는 사람과 결혼도 하고 싶고, 멋진 사회인도 되고 싶고, 먼 훗날 돌아봤을 때 "
           },
           {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "에이전트가 완료를 선언해도 플랫폼이 재시작 후 기동 상태와 API 계약을 확인해야 완료로 인정" }]
-              }
-            ]
+            "type": "text",
+            "text": "\"그래도 인생 잘 살았다\"",
+            "bold": true
           },
           {
-            "type": "li",
-            "children": [
-              {
-                "type": "lic",
-                "children": [{ "type": "text", "text": "검증을 통과한 변경만 남기고 이전 상태로 되돌릴 수 있도록 구성" }]
-              }
-            ]
+            "type": "text",
+            "text": "라는 자부심을 가지고 싶습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그게 제 꿈입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "아직은 취업을 준비하며 이것저것 공부하고 있습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그런데 요즘 공부를 하면서 한 가지 고민이 생겼습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "AI가 이렇게 빠르게 발전하는 시대에 나는 무엇을 공부해야 할까?",
+            "bold": true
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "예전에는 직접 구현할 수 있다는 것 자체가 중요했습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "조회가 많으면 캐시를 붙이고, 요청을 바로 처리하기 어렵다면 큐를 두는 것처럼 많은 문제에는 이미 잘 알려진 해결 방법이 있습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "예전에는 이런 걸 알고 직접 구현하는 능력 자체가 중요했습니다. 결국 사람이 키보드로 하나하나 만들어야 했으니까요."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그런데 요즘은 조금 다릅니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "문제를 잘 설명하고 필요한 맥락을 충분히 주면 AI가 이런 코드들을 굉장히 빠르게 만들어냅니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "제가 며칠 동안 만든 것도 개발을 잘 아는 사람이 AI 에이전트 여러 개를 잘 활용하면 비슷하게 만들어낼 수 있습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "이미 그런 시대가 된 것 같습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그래서 프로젝트를 하다가 문득 이런 생각이 들었습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "\"기능을 구현하고, 써보고, 개선하는 것만 반복하면 앞으로도 나를 필요로 할까?\"",
+            "bold": true
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "조금 무서운 질문이었습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그래서 요즘은 AI가 쉽게 답을 만들어주는 문제보다 "
+          },
+          {
+            "type": "text",
+            "text": "정답이 쉽게 나오지 않는 문제",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "에 더 관심을 가지려고 합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "캐시를 구현하는 방법보다 "
+          },
+          {
+            "type": "text",
+            "text": "여기서 정말 캐시를 쓰는 게 맞는지",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": ", 메시지 큐를 붙이는 방법보다 "
+          },
+          {
+            "type": "text",
+            "text": "굳이 지금 큐가 필요한지",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": ", 성능과 안정성이 충돌한다면 "
+          },
+          {
+            "type": "text",
+            "text": "어디까지 포기할 수 있는지",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": " 같은 질문들입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "결국 이런 판단을 하려면 기본기가 필요하다고 생각했습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "운영체제, 네트워크, 데이터베이스 같은 CS를 공부하는 이유도 여기에 있습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "AI가 답을 알려줘도 그 답이 맞는지 판단하는 건 결국 사람의 몫이니까요."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그래서 요즘 제가 중요하게 생각하는 건 크게 몇 가지입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "첫 번째는 "
+          },
+          {
+            "type": "text",
+            "text": "기반 지식",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "유행하는 기술을 하나 더 아는 것보다 컴퓨터가 왜 이렇게 동작하는지를 이해하고 싶습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "두 번째는 "
+          },
+          {
+            "type": "text",
+            "text": "트레이드오프를 판단하는 능력",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "무엇을 사용했는지보다 왜 그것을 선택했고, 그 선택 때문에 무엇을 얻고 무엇을 포기했는지를 고민하려고 합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "세 번째는 "
+          },
+          {
+            "type": "text",
+            "text": "사람들과 이야기하는 능력",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "개발은 결국 혼자 하는 일이 아니니까요. 내가 무엇을 하고 있는지, 왜 이렇게 생각했는지, 어디에서 막혔는지를 다른 사람에게 잘 전달하는 것도 개발만큼 중요하다고 생각합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그리고 네 번째는 조금 역설적이지만 "
+          },
+          {
+            "type": "text",
+            "text": "AI를 잘 사용하는 능력",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "입니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "AI가 잘하는 일을 굳이 제가 더 느리게 할 필요는 없다고 생각합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "반복적인 구현은 AI에게 맡길 수 있습니다. 대신 무엇을 만들어야 하는지 정하고, 결과가 맞는지 검증하고, 잘못된 방향으로 가고 있다면 멈추게 하는 능력이 더 중요해질 것 같습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "일하는 방식도 연습하고 있습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "개인 프로젝트니까 생각나는 대로 만들어도 되지만, 일부러 일을 나눠보고 예상 시간도 잡아보고 완료 조건도 정해봅니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "전체 작업 → 큰 작업 → 세부 작업 → 예상 시간 → 완료 조건 → 실제 결과",
+            "code": true
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "예상은 자주 틀립니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그래도 예상하고, 실제로 해보고, 왜 달랐는지 다시 보는 일을 반복하다 보면 언젠가는 일을 좀 더 잘하는 사람이 되지 않을까 생각합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그래서 이 블로그에는 "
+          },
+          {
+            "type": "text",
+            "text": "제가 공부하고 삽질하고 고민한 것들",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "을 기록하려고 합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "CS를 공부하다가 이제야 이해한 것, 프로젝트를 만들다가 터뜨린 것, 성능을 재봤더니 예상과 전혀 달랐던 것, AI를 개발에 써보다가 발견한 것, 취업을 준비하면서 느낀 것까지 딱히 한 분야만 정해두지는 않으려고 합니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "지금은 아직 취업도 준비하고 있고, 모르는 것도 정말 많습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그래서 오히려 지금부터 기록해두고 싶습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "몇 년 뒤 이 블로그의 첫 글들을 다시 봤을 때"
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "\"와, 이때는 이런 것도 몰랐네.\"",
+            "bold": true
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "하면서 웃을 수 있었으면 좋겠습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그리고 그때쯤에는 지금 제가 꿈꾸는 모습에 조금은 가까워져 있었으면 좋겠습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그 과정에서 제가 남긴 글 하나가 누군가의 문제를 해결하는 데 도움이 된다면 더 좋고요."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "그렇게 하나씩 기록해보겠습니다."
+          }
+        ]
+      },
+      {
+        "type": "p",
+        "children": [
+          {
+            "type": "text",
+            "text": "잘 부탁드립니다."
           }
         ]
       }
     ]
-  }
+  },
+  "careerTitleKo": "이력",
+  "careerKo": [
+    {
+      "label": "학력",
+      "items": [
+        {
+          "title": "원광대학교 컴퓨터소프트웨어공학과",
+          "meta": "학점 3.89 / 4.50 · 졸업",
+          "period": "2019.03 ~ 2025.02",
+          "details": [
+            "기업연계프로젝트 1·2를 두 학기 연속 팀으로 수행하고 모두 최고 학점으로 마쳤습니다."
+          ]
+        }
+      ]
+    },
+    {
+      "label": "교육",
+      "items": [
+        {
+          "title": "삼성청년SW아카데미(SSAFY) 13기",
+          "meta": "1년 과정 수료",
+          "period": "2025.01 ~ 2025.12"
+        },
+        {
+          "title": "AWS 모던 애플리케이션 교육",
+          "meta": "Blue/Green·Canary 배포 전략·IaC 실습",
+          "period": "2023.12"
+        }
+      ]
+    },
+    {
+      "label": "개인 프로젝트",
+      "items": [
+        {
+          "title": "DBTower",
+          "meta": "이기종 DBMS 운영 관리 플랫폼",
+          "period": "2026.03 ~ 2026.07",
+          "href": "/blog/project/dbtower/dbtower-0-overview",
+          "details": [
+            "MySQL·PostgreSQL·Oracle·SQL Server·MongoDB를 한곳에서 모니터링하고 쿼리 이상과 성능 회귀를 찾습니다."
+          ]
+        },
+        {
+          "title": "위키엔진",
+          "meta": "통합 검색 플랫폼",
+          "href": "/blog/project/wikiengine/wiki-engine-retrospective",
+          "details": [
+            "1,425만 건의 위키 문서를 Lucene으로 색인·검색하고, 캐시와 읽기·쓰기 분리로 트래픽을 처리합니다."
+          ]
+        },
+        {
+          "title": "pay",
+          "meta": "Spring Modulith 결제 시스템",
+          "href": "/blog/project/pay/pay-0-overview",
+          "details": [
+            "결제 승인·취소부터 원장·정산·대사·구독·분쟁까지 처리합니다."
+          ]
+        },
+        {
+          "title": "발루노",
+          "meta": "게임 밸런싱 플랫폼 · balruno.com",
+          "period": "2026.01 ~ 진행 중",
+          "href": "/blog/project/balruno/balruno-retrospective",
+          "details": [
+            "게임 데이터를 스프레드시트처럼 편집하고 버전별 수치와 변경 이력을 관리합니다."
+          ]
+        },
+        {
+          "title": "코딩테스트 도구",
+          "meta": "IntelliJ·VS Code 확장",
+          "period": "2026.03 ~ 진행 중",
+          "href": "/blog/project/codingtestkit/codingtestkit-introduction",
+          "details": [
+            "IDE 안에서 코딩테스트 문제를 가져오고 실행·채점·제출까지 처리합니다. JetBrains Marketplace에 출시했습니다."
+          ]
+        }
+      ]
+    },
+    {
+      "label": "팀 프로젝트",
+      "items": [
+        {
+          "title": "별찌",
+          "meta": "2인 팀 · Identity 도메인, 인프라, 검색",
+          "period": "2026.05 ~ 진행 중",
+          "details": [
+            "지금 보고 있는 상품을 기준으로 여러 쇼핑몰의 가격과 중고 대안을 한 화면에 모아 비교해 주는 AI 패션 쇼핑 어시스턴트입니다."
+          ]
+        },
+        {
+          "title": "빌려조잉",
+          "meta": "6인 팀 · 팀장, 백엔드 · 삼성전자 프로젝트 우수상",
+          "period": "2025.10 ~ 2025.11",
+          "href": "/blog/project/joying/joying-retrospective",
+          "details": [
+            "C2C 대여 플랫폼에서 회원 시스템과 실시간 채팅 전체를 설계·구현했고, 담당자 이탈 후 결제 에스크로를 이어받았습니다."
+          ]
+        },
+        {
+          "title": "오락가락",
+          "meta": "6인 팀 · 백엔드, 인프라",
+          "period": "2025.08 ~ 2025.09",
+          "href": "/blog/project/orakgarak/orakgarak-retrospective",
+          "details": [
+            "음성 기반 노래 추천 플랫폼에서 파일 업로드, 앨범과 녹음 관리, 모니터링 인프라 전체를 맡았습니다."
+          ]
+        },
+        {
+          "title": "에듀밋",
+          "meta": "6인 팀 · 백엔드",
+          "period": "2025.07 ~ 2025.08",
+          "href": "/blog/project/edumeet/edumeet-retrospective",
+          "details": [
+            "청각장애 학습자용 실시간 자막 교육 플랫폼에서 게시판 API, S3 업로드 파이프라인, 단위 테스트 127개를 맡았습니다."
+          ]
+        }
+      ]
+    },
+    {
+      "label": "수상",
+      "items": [
+        {
+          "title": "삼성청년SW·AI아카데미 프로젝트 우수상",
+          "meta": "삼성전자 주식회사",
+          "period": "2025.11",
+          "details": [
+            "C2C 대여 플랫폼 빌려조잉을 6인 팀으로 6주 동안 만들었고, 팀장과 백엔드를 맡았습니다."
+          ],
+          "href": "/blog/project/joying/joying-retrospective"
+        },
+        {
+          "title": "AWS JAM 3위",
+          "meta": "AWS 모던 애플리케이션 교육",
+          "period": "2023.12"
+        }
+      ]
+    },
+    {
+      "label": "자격",
+      "items": [
+        {
+          "title": "정보처리기사",
+          "period": "2025.12"
+        },
+        {
+          "title": "데이터분석준전문가(ADsP)",
+          "period": "2024.11"
+        },
+        {
+          "title": "SQL개발자(SQLD)",
+          "period": "2024.08"
+        }
+      ]
+    },
+    {
+      "label": "오픈소스 기여",
+      "items": [
+        {
+          "title": "spring-projects/spring-boot",
+          "meta": "PR #49063",
+          "period": "2026.02",
+          "href": "https://github.com/spring-projects/spring-boot/pull/49063",
+          "details": [
+            "TestEntityManager에 타입을 인자로 넘기지 않아도 되는 Kotlin 확장 함수를 추가했습니다(find<Foo>(id) 등).",
+            "메인테이너 커밋으로 반영되어 4.1.0-M2 새 기능 목록에 기록되었습니다."
+          ]
+        },
+        {
+          "title": "apache/lucene",
+          "meta": "PR #15675",
+          "period": "2026.02",
+          "href": "https://github.com/apache/lucene/pull/15675",
+          "details": [
+            "IndexWriter 초기화 실패 시 스레드 풀이 누수되던 문제를 실패 경로 정리로 수정했습니다.",
+            "메인 브랜치에 반영되고 CHANGES.txt에 버그 수정으로 기록되었습니다."
+          ]
+        }
+      ]
+    }
+  ]
 }
