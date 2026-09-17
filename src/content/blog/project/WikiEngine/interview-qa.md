@@ -400,7 +400,7 @@ SIGIR 2024(Thomas et al.) 연구에서 GPT-4의 relevance 판정이 crowdsource 
 
 **Q: "Facet을 DB GROUP BY로 한 이유는? Lucene에 네이티브 Facet API가 있지 않나?"**
 
-Lucene의 SortedSetDocValuesFacetCounts는 SortedSetDocValuesFacetField 필드가 인덱스에 있어야 합니다. 현재 인덱스에는 LongField("categoryId")만 있고 SortedSetDocValuesField는 없습니다. 이 필드를 추가하려면 1,425만 건 전체 재색인이 필요한데, 재색인 인프라가 아직 없었습니다. DB GROUP BY로 간이 Facet을 먼저 제공하고, 재색인 인프라 구축 후 네이티브 Facet으로 전환했습니다.
+Lucene의 SortedSetDocValuesFacetCounts는 SortedSetDocValuesFacetField 필드가 인덱스에 있어야 합니다. 현재 인덱스에는 LongField("categoryId")만 있고 SortedSetDocValuesField는 없습니다. 이 필드를 추가하려면 1,215만 건 전체 재색인이 필요한데, 재색인 인프라가 아직 없었습니다. DB GROUP BY로 간이 Facet을 먼저 제공하고, 재색인 인프라 구축 후 네이티브 Facet으로 전환했습니다.
 
 **Q: "DB GROUP BY로 Facet을 하면 상위 1,000건만 집계하는 거 아닌가? 정확하지 않잖아?"**
 
@@ -426,7 +426,7 @@ BM25 변형(BM25+, BM25L, BM25F) 간 비교 연구를 검토했습니다. 뉴스
 
 **Q: "UnifiedHighlighter에서 content를 Store.YES로 하지 않고 snippetSource 500자만 저장한 이유는?"**
 
-content 전체를 Store.YES로 하면 1,425만 건 곱하기 평균 6,586자 = 인덱스 크기 100GB 이상으로 폭증합니다. 앞 500자만 별도 StoredField로 저장하면 약 7GB 추가로 인덱스 42GB 수준입니다. 검색어가 문서 앞부분 500자 안에 있을 확률이 높고(제목, 서론, Infobox), 500자 밖의 검색어는 DB 조회 후 자르는 기존 방식으로 fallback합니다. 인덱스 크기와 snippet 품질 사이의 트레이드오프를 선택한 것입니다.
+content 전체를 Store.YES로 하면 1,215만 건 곱하기 평균 6,586자 = 인덱스 크기 100GB 이상으로 폭증합니다. 앞 500자만 별도 StoredField로 저장하면 약 7GB 추가로 인덱스 42GB 수준입니다. 검색어가 문서 앞부분 500자 안에 있을 확률이 높고(제목, 서론, Infobox), 500자 밖의 검색어는 DB 조회 후 자르는 기존 방식으로 fallback합니다. 인덱스 크기와 snippet 품질 사이의 트레이드오프를 선택한 것입니다.
 
 **Q: "무중단 재색인을 어떻게 구현했나요?"**
 
