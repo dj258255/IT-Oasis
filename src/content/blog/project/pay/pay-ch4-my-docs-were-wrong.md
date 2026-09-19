@@ -4,7 +4,7 @@ description: '"Stripe는 24시간이니 우리도 줄이자"고 했다가 철회
 date: 2026-05-07
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch4.svg"
-draft: false
+draft: true
 series: "결제 시스템 만들기"
 seriesOrder: 6
 tags:
