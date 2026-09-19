@@ -1,6 +1,6 @@
 ---
 title: 'CDC (Change Data Capture): 이벤트 기반 동기화'
-description: PostService의 dual-write 구조(MySQL + Lucene 직접 호출)가 데이터 불일치, 강결합, 불완전한 캐시 무효화를 유발하는 문제를 점진적으로 해결합니다. Spring ApplicationEvent로 디커플링 → @ApplicationModuleListener 비동기 전환(쓰기 5,315ms→33ms) → Debezium + Kafka CDC로 binlog 기반 모든 변경 캡처까지. 100 VU 부하 테스트로 각 전환을 검증하고, dual-write를 원천 차단하여 검색 인덱스 정확성을 보장합니다.
+description: PostService의 dual-write 구조(MySQL + Lucene 직접 호출)가 데이터 불일치, 강결합, 불완전한 캐시 무효화를 유발하는 문제를 점진적으로 해결한다. Spring ApplicationEvent로 디커플링 → @ApplicationModuleListener 비동기 전환(쓰기 5,315ms→33ms) → Debezium + Kafka CDC로 binlog 기반 모든 변경 캡처까지. 100 VU 부하 테스트로 각 전환을 검증하고, dual-write를 원천 차단하여 검색 인덱스 정확성을 보장한다.
 date: 2026-03-22T00:00:00.000Z
 tags:
   - CDC

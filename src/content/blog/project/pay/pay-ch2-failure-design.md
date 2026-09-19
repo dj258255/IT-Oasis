@@ -1,6 +1,6 @@
 ---
 title: '타임아웃을 실패로 확정하지 않고 미확정으로 남기기'
-description: '타임아웃은 실패가 아니라 미확정이라 보존하고 복구가 확정합니다. 이미 나간 승인은 롤백이 안 되니 보상으로 되돌립니다. failover는 PG가 요청을 못 받은 경우에만 하고, 고르는 시점은 결제창 앞으로 옮겼습니다.'
+description: '타임아웃은 실패가 아니라 미확정으로 보존하고 복구가 확정한다. 나간 승인은 롤백 대신 보상으로 되돌리고, failover는 PG가 요청을 못 받은 경우로 한정한다.'
 date: 2026-03-02
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-failure.svg"
@@ -21,7 +21,7 @@ tags:
 
 ## 상황 1 — 응답이 안 온 승인은 실패가 아니라 미확정이다
 
-타임아웃을 실패로 단정할 것인가, 미확정으로 남길 것인가. 미확정으로 남기고 복구가 확정하게 했다([1편](/blog/project/pay/pay-ch1-what-to-trust)). "타임아웃 = 실패"면 카드에서는 돈이 빠졌는데 우리는 주문을 취소한다. 카카오페이의 3-상태 모델을 따라 명시적 거절만 `FAILED`, 타임아웃은 `UNKNOWN`으로 남긴다.
+미확정으로 남기고 복구가 확정하게 했다([1편](/blog/project/pay/pay-ch1-what-to-trust)). 카카오페이의 3-상태 모델을 따라 명시적 거절만 `FAILED`, 타임아웃은 `UNKNOWN`으로 남긴다.
 
 ```java
 case SUCCESS -> payment.approve(...);
@@ -40,7 +40,9 @@ catch (DataIntegrityViolationException race) { return handleExisting(reload(key)
 
 ### 2. 복구 배치가 UNKNOWN을 확정한다
 
-복구 배치가 `UNKNOWN`을 60초마다 스캔해 PG 조회로 실제 상태를 묻는다. 승인돼 있으면 취소하지 않고 **전진 복구(DONE)**, `NOT_FOUND`면 `ABORTED`, PG가 이미 취소했으면 상태 동기화(망취소 아님)다. 반대 정책(무조건 망취소)도 `networkCancel`로 넣어 둘 다 허용 전이로 뒀다.
+복구 배치가 `UNKNOWN`을 60초마다 스캔해 PG 조회로 상태를 묻는다. 반대 정책(무조건 망취소)도 `networkCancel`로 넣어 둘 다 허용 전이로 뒀다.
+
+![타임아웃을 실패로 확정하지 않고 UNKNOWN으로 보존한 뒤 복구 배치가 60초마다 PG에 조회해 APPROVED면 전진 복구(DONE), NOT_FOUND면 ABORTED, CANCELED면 상태 동기화로 확정하는 흐름](/uploads/project/pay/diagrams/flow-unknown-recovery.svg)
 
 ```java
 case APPROVED  -> payment.confirmByRecovery(pg.method());   // 전진 복구(DONE)
@@ -60,15 +62,15 @@ PG가 죽으면 모든 요청이 10초씩 걸려 스레드가 고갈된다. Resi
 
 ### 4. 후처리 여섯 중 셋을 뺐다
 
-[카카오페이의 MSA 결제 트랜잭션 관리 글](https://tech.kakaopay.com/post/msa-transaction/)이 나열한 후처리 여섯 중 승인을 한 번 더 보내는 둘과 확인 없이 성공으로 넘기는 하나를 뺐다 — 다시 보내면 두 번 결제된다. 재시도는 조회 하나뿐이다(승인을 왜 안 켰는지는 [§3](#3-서킷브레이커-승인은-재시도하면-안-된다)). 이 기준은 뒤의 데드락에서도 썼다([동시성 편](/blog/project/pay/pay-ch2-concurrency-and-load)). 응답은 `200`·`400`·`202`로 나눈다.
+[카카오페이의 MSA 결제 트랜잭션 관리 글](https://tech.kakaopay.com/post/msa-transaction/)이 나열한 후처리 여섯 중 승인을 한 번 더 보내는 둘과 확인 없이 성공으로 넘기는 하나를 뺐다. 재시도는 조회 하나뿐이다(승인을 왜 안 켰는지는 [§3](#3-서킷브레이커-승인은-재시도하면-안-된다)). 이 기준은 뒤의 데드락에서도 썼다([동시성 편](/blog/project/pay/pay-ch2-concurrency-and-load)). 응답은 `200`·`400`·`202`로 나눈다.
 
-`PaymentRecoveryScheduler`가 60초마다 미확정 건을 다시 묻고, 10분을 넘기면 알림이 울려 사람이 닫는다. 보상도 소진하면 `FAILED`로 두고 `compensation.exhausted`를 올린다([운영 자동화 편](/blog/project/pay/pay-ch9-batch-ownership)의 연장선).
+`PaymentRecoveryScheduler`가 60초마다 미확정 건을 다시 묻고, 10분을 넘기면 알림이 울려 사람이 닫는다.
 
 ### 5. 고객이 다른 카드로 다시 누르면
 
-고객은 완료 알림을 못 받았으니 카드를 바꿔 다시 누른다. 미확정일 때 주문은 `PAYMENT_IN_PROGRESS`에 머물고 전이표에 자기 자신으로 가는 길이 없어 **불법 전이로 막힌다** — 막는 자리가 멱등키가 아니라 상태머신이다(카드 A와 B는 새 멱등키를 받는다). 대가는 컸다. **고객은 배치가 돌 때까지 아무 수단으로도 결제를 못 하고**, 「허용되지 않은 상태 전이입니다」라는 문장만 받았다.
+미확정일 때 주문은 `PAYMENT_IN_PROGRESS`에 머물고 전이표에 자기 자신으로 가는 길이 없어 **불법 전이로 막힌다** — 막는 자리가 멱등키가 아니라 상태머신이다(카드 A와 B는 새 멱등키를 받는다). **고객은 배치가 돌 때까지 아무 수단으로도 결제를 못 하고**, 「허용되지 않은 상태 전이입니다」라는 문장만 받았다.
 
-[Stripe의 PaymentIntent](https://docs.stripe.com/payments/payment-intents)는 **주문 하나에 의도 하나, 그 아래 시도 여럿**이라 멱등 범위도 주문 번호다. 그래서 **고객의 재시도를 미확정 해소 트리거로** 썼다 — 앞 결제가 승인됐으면 `409 ORDER_ALREADY_PAID`, 아직 모르면 `409 PAYMENT_RESULT_PENDING`, 승인 아님은 카드 B로 결제된다. 60초가 사라졌다. 남는 창(조회가 「없다」고 답한 결제가 PG에선 진행 중이던 경우)은 대사가 잡는다.
+[Stripe의 PaymentIntent](https://docs.stripe.com/payments/payment-intents)는 **주문 하나에 의도 하나, 그 아래 시도 여럿**이라 멱등 범위도 주문 번호다. 그래서 **고객의 재시도를 미확정 해소 트리거로** 썼다 — 앞 결제가 승인됐으면 `409 ORDER_ALREADY_PAID`, 아직 모르면 `409 PAYMENT_RESULT_PENDING`, 승인 아님은 카드 B로 결제된다.
 
 ## 상황 2 — 승인은 났는데 재고가 없다: 롤백 대신 보상
 
@@ -78,7 +80,7 @@ PG가 죽으면 모든 요청이 10초씩 걸려 스레드가 고갈된다. Resi
 
 ### 2. 망취소를 적재하고 재시도한다
 
-망취소도 PG 호출이라 실패할 수 있어서, 한 번 시도하고 끝내는 대신 durable하게 적재해두고 성공할 때까지 재시도한다(`compensation_tasks`, outbox의 사촌). **내부적·확실한 것과 외부적·불확실한 것을 나눠** 재고 원복·포인트 복원은 즉시, PG 망취소만 큐로 뺐다. 승인 + 차감 실패면 태스크를 적재하고 주문을 `FAILED`로 둔 채 커밋한다. 스케줄러가 `PENDING` 태스크로 망취소를 호출한다.
+한 번 시도하고 끝내는 대신 durable하게 적재해두고 성공할 때까지 재시도한다(`compensation_tasks`, outbox의 사촌). **내부적·확실한 것과 외부적·불확실한 것을 나눠** 재고 원복·포인트 복원은 즉시, PG 망취소만 큐로 뺐다. 승인 + 차감 실패면 태스크를 적재하고 주문을 `FAILED`로 둔 채 커밋한다. 스케줄러가 `PENDING` 태스크로 망취소를 호출한다.
 
 ### 3. 진짜 함정: 잡은 예외가 트랜잭션을 오염시킨다
 
@@ -102,7 +104,9 @@ public boolean tryDeduct(long productId, int qty) {
 
 ## 멀티 PG 라우팅: 규칙을 정하고, 한참 뒤에 배선했다
 
-국내 상위 PG사도 한 시간씩 장애가 난다. PG를 여럿 두고 하나가 죽으면 넘기되 **요청이 그 PG에 닿지도 못한 게 확실할 때만** 넘긴다 — 아무 때나 넘기면 이중결제다.
+국내 상위 PG사도 한 시간씩 장애가 난다. PG를 여럿 두고 하나가 죽으면 넘기되 **요청이 그 PG에 닿지도 못한 게 확실할 때만** 넘긴다.
+
+![PaymentService → ResilientPgClient(@Primary) → RoutingPgClient(pgDelegate) → TOSS·NICE로 이어지는 계층과, 요청이 미도달일 때만 다음 PG로 넘기는 failover 분기](/uploads/project/pay/diagrams/flow-pg-routing.svg)
 
 | PG 응답 | failover | 왜 |
 |---|---|---|
@@ -114,7 +118,7 @@ public boolean tryDeduct(long productId, int qty) {
 
 ### 그런데 이 라우터가 테스트에서만 살아 있었다
 
-전수 감사에서 이 라우터가 **어디에도 배선되지 않았고**, `grep`으로 세어보니 참조가 **자기 테스트뿐**이었다. 금고를 만들고 안 채우던 그 패턴이([4편: 실기동](/blog/project/pay/pay-ch2-runtime-truths)) PG에도 있었다. 배선은 있던 seam에 끼웠다 — `ResilientPgClient`가 감싸는 대상(`pgDelegate`) 자리에 라우터를 넣고 `@Primary`는 하나로 뒀다(둘이면 스프링이 못 정하고, 떼면 서킷을 잃는다).
+전수 감사에서 이 라우터가 **어디에도 배선되지 않았고**, `grep`으로 세어보니 참조가 **자기 테스트뿐**이었다. 배선은 있던 seam에 끼웠다 — `ResilientPgClient`가 감싸는 대상(`pgDelegate`) 자리에 라우터를 넣고 `@Primary`는 하나로 뒀다(둘이면 스프링이 못 정하고, 떼면 서킷을 잃는다).
 
 ```
 APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
@@ -124,7 +128,7 @@ APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
 
 ### 취소·조회는 원 PG로 되돌렸다
 
-`PgClient.cancel(paymentKey, ...)`가 provider를 안 받아 취소·조회가 "가용한 첫 PG"로 나갔다. 후속 과제로 미뤘지만, Toss로 승인된 결제를 다른 PG에 조회하면 없다고 나오고 복구 배치가 살아 있는 결제를 실패로 확정한다 — **앞의 UNKNOWN 복구와 보상을 통째로 깨는 자리**였다. 그래서 `Payment.pgProvider`로 원 PG를 찾아 보낸다. provider가 있는데 경로에 없으면 안 보내고 예외를 던진다. provider를 모르는 옛 결제는 순회하되 조회는 `IN_PROGRESS`를 반환한다.
+`PgClient.cancel(paymentKey, ...)`가 provider를 안 받아 취소·조회가 "가용한 첫 PG"로 나갔다. Toss로 승인된 결제를 다른 PG에 조회하면 없다고 나오고 복구 배치가 살아 있는 결제를 실패로 확정한다 — **앞의 UNKNOWN 복구와 보상을 통째로 깨는 자리**였다. 그래서 `Payment.pgProvider`로 원 PG를 찾아 보낸다. provider가 있는데 경로에 없으면 안 보내고 예외를 던진다. provider를 모르는 옛 결제는 순회하되 조회는 `IN_PROGRESS`를 반환한다.
 
 ### 고르는 시점을 결제창 앞으로 옮겼다
 
@@ -134,9 +138,7 @@ APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
 
 > 캐스케이딩(한 거래를 여러 PG에 차례로 재시도)은 기술적으로 가능하지만 **소비자 체크아웃에서는 거의 쓰이지 않습니다.** 책임과 네트워크 컴플라이언스 리스크가 승인률 이득보다 큽니다.
 
-프론트가 결제창을 띄우기 전에 `POST /api/v1/payments/init`을 부르고, 서버는 차단기가 열린 PG를 빼고 남은 것 중 가중치 비례로 하나를 골라 돌려준다 — 아픈 PG로 고객을 **애초에 안 보내는** 장치다. 전부 아파도 하나는 골라 준다.
-
-> "PG 장애 나면요?"에 "다른 PG로 넘겨요"는 절반의 답입니다. 나머지 절반이 **"단, 타임아웃과 카드 거절엔 안 넘긴다. 이중결제와 무의미한 재시도니까"**입니다. 이 구분이 빠지면 failover 자체가 이중결제 경로가 됩니다.
+프론트가 결제창을 띄우기 전에 `POST /api/v1/payments/init`을 부르고, 서버는 차단기가 열린 PG를 빼고 남은 것 중 가중치 비례로 하나를 골라 돌려준다. 전부 아파도 하나는 골라 준다.
 
 ## 가상계좌: 완료가 최종 상태가 아니었다
 
@@ -144,14 +146,12 @@ APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
 
 > **EXPIRED 상태로 바뀔 때는 웹훅이 전송되지 않습니다.** (토스페이먼츠 문서에 명시돼 있습니다.)
 
-이걸 모르고 웹훅만 기다리면 만료 건이 영원히 "입금대기"로 남아 재고나 쿠폰을 물고 있다. 그래서 **자체 만료 배치**가 `dueDate` 지난 `WAITING_FOR_DEPOSIT`을 스캔하되, 만료시키기 전에 PG에 조회해서 늦게 도착한 입금(APPROVED)이면 완료 처리한다. 만료 배치가 도는 그 순간 입금이 도착하는 레이스도 같다 — dueDate만 보고 만료시키면 방금 입금한 돈이 붕 뜬다.
+이걸 모르고 웹훅만 기다리면 만료 건이 영원히 "입금대기"로 남아 재고나 쿠폰을 물고 있다. 그래서 **자체 만료 배치**가 `dueDate` 지난 `WAITING_FOR_DEPOSIT`을 스캔하되, 만료시키기 전에 PG에 조회해서 늦게 도착한 입금(APPROVED)이면 완료 처리한다.
 
 ```java
 if (pgClient.query(va.getPaymentKey()).isApproved()) va.confirmDeposit(); // 늦은 입금 → 완료
 else va.expire();
 ```
-
-> "가상계좌 만료 어떻게 처리하세요?"에 대한 답이 이것입니다. "EXPIRED 웹훅이 없어서 배치로 감지하고, 만료 직전에 조회로 재확인해서 늦은 입금과의 레이스를 해소합니다."
 
 > 일부 은행(신한 등)은 **입금 실패인데 DONE을 먼저 보낸 뒤, 최대 2분 후 되돌리는** 통보를 합니다.
 
@@ -171,7 +171,7 @@ else va.expire();
 
 ### 실 MySQL로 재현했더니 버그가 셋 나왔다
 
-목으로 `PAYMENT_NOT_FOUND`를 던지게 만들어 **경로만** 고정했는데, 실제 문제인 "결제 행이 아직 커밋되지 않아 다른 트랜잭션에서 안 보이는" 상태는 목으로 만들 수 없다. 실 MySQL에 붙여 넣었더니 셋이 나왔다.
+목으로 `PAYMENT_NOT_FOUND`를 던지게 만들어 **경로만** 고정했는데, "결제 행이 아직 커밋되지 않아 다른 트랜잭션에서 안 보이는" 상태는 목으로 만들 수 없다. 실 MySQL에 붙여 넣었더니 셋이 나왔다.
 
 1. `resolveByPaymentKey`가 `@Transactional`이라 [§3의 rollback-only 함정](#3-진짜-함정-잡은-예외가-트랜잭션을-오염시킨다)이 재현됐다. 기존 코드 주석이 정확히 경고하고 있었다 — 예외를 catch해 같은 트랜잭션에 FAILED를 쓰려 하면 그 트랜잭션이 이미 **rollback-only로 오염**돼 write마저 커밋되지 않는다. 예외를 받지 않고 먼저 물어보는 쪽으로 고쳤다.
 
@@ -179,9 +179,9 @@ else va.expire();
 
 3. `webhook_events.status`가 `VARCHAR`가 아니라 `ENUM('FAILED','PROCESSED','RECEIVED','SKIPPED')`라 새 값이 잘려 들어갔다. **H2는 이걸 문자열로 받아 통과시킨다.** 마이그레이션에 ENUM 값 목록을 더했다.
 
-목은 트랜잭션 경계도, FlushMode도, 컬럼 타입도 흉내내지 못한다. 고친 뒤 로그는 `[task-1]` 보류(수신) → `[scheduling-1]` 보류(재시도 스케줄러)로 나온다.
+고친 뒤 로그는 `[task-1]` 보류(수신) → `[scheduling-1]` 보류(재시도 스케줄러)로 나온다.
 
-토스에 실 PG로 쏴 보니 **웹훅이 한 건도 안 들어왔다**(헤더·멱등 키 사정) — 그 과정은 [15편](/blog/project/pay/pay-ch15-webhook-arrived-first)에 있다. 고친 뒤 입금처리 로그는 `08:29:15` 보류 `retry=1` → `retry=2` → `retry=3` → `08:30:19 소진 webhookEventId=3`(상한 12회)였고, 토스 전송 기록은 성공 2건·실패 0이었다.
+토스에 실 PG로 쏴 보니 **웹훅이 한 건도 안 들어왔다**(헤더·멱등 키 사정). 고친 뒤 입금처리 로그는 `08:29:15` 보류 `retry=1` → `retry=2` → `retry=3` → `08:30:19 소진 webhookEventId=3`(상한 12회)였고, 토스 전송 기록은 성공 2건·실패 0이었다.
 
 ## 남은 구멍
 
