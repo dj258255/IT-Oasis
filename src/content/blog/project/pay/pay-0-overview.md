@@ -21,6 +21,8 @@ pay는 **주문, 승인, 취소부터 원장, 정산, 대사, 구독, 분쟁까�
 
 ![pay 아키텍처. 모듈형 모놀리스 17모듈, 모듈 간 통신은 도메인 이벤트(Outbox), 경계는 ModularityTests가 CI에서 강제](/uploads/project/pay/diagrams/architecture.svg)
 
+개인 프로젝트로 만든 결제 시스템 pay의 개발 기록입니다. 실무 운영 경험이 아닙니다.
+
 ## 한눈에 보기
 
 | 항목 | 내용 |
