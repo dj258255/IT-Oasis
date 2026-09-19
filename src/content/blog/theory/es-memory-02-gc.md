@@ -11,7 +11,7 @@ tags:
   - Elasticsearch
   - Stop-the-World
 category: theory/JVM-Memory
-draft: true
+draft: false
 coverImage: "/uploads/theory/es-memory/cover-2.svg"
 series: "JVM 메모리"
 seriesOrder: 2
