@@ -1,7 +1,7 @@
 ---
 title: 'DBTower 프로젝트 소개: 다섯 종류의 DB를 한곳에서 관제하고 안전하게 바꾸는 운영 플랫폼'
 description: 'DBTower는 MySQL, PostgreSQL, SQL Server, Oracle, MongoDB를 한 화면에서 관제하고, 문제 쿼리를 진단하고, 승인된 변경만 되돌릴 사본과 함께 실행하는 셀프호스트 DB 운영 플랫폼입니다. 누구를 위해 만들었는지, 어떤 기능이 있는지, 어떻게 안전을 지키는지, 직접 실행하는 방법까지 처음 보는 분이 한 번에 이해할 수 있게 정리했습니다.'
-date: 2026-09-18
+date: 2026-07-03
 tags:
   - Java
   - Spring Boot
