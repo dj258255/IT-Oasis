@@ -3,16 +3,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import CarouselCard from '../components/CarouselCard.astro';
 import CarouselSection from '../components/CarouselSection.astro';
 import { projects, projectTypeLabels } from '../data/projects';
-import { getPublishedPosts } from '../lib/posts';
+import { getFeedPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
 
 const catDisplayKo = getCategoryDisplayKo();
 const siteSettings = getSiteSettings();
 
-// 최신 스토리는 프로젝트 개발기도 포함한 "사이트의 최신 글"로 보여준다.
-// (프로젝트 글이 검색·태그·RSS·카테고리에서 빠지는 규칙은 그대로다 — 홈 피드만 넓힌다.)
-const posts = (await getPublishedPosts()).slice(0, 8);
+// 최신 스토리 = 프로젝트 개발기·사례·일반 글. 프로젝트 카드로 이미 뜨는 소개/회고 글은 뺀다.
+const posts = (await getFeedPosts()).slice(0, 8);
 const featuredProjects = projects.filter((project) => project.projectType !== 'toy');
 ---
 

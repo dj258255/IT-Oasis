@@ -72,3 +72,16 @@ export async function getProjectPosts() {
   const projectCategories = getProjectCategories(posts);
   return posts.filter((post) => isProjectPost(post, projectCategories));
 }
+
+/**
+ * 홈 "최신 스토리" 피드 — 사이트의 최신 글을 모으되, 프로젝트 카드로 이미 노출되는
+ * 소개/회고 글(story)은 뺀다. 그것까지 넣으면 피드가 프로젝트 행과 같은 카드로 채워진다.
+ * 개발기·사례·일반 글이 여기로 흐른다. 검색·태그·RSS 규칙은 그대로 둔다.
+ */
+export async function getFeedPosts() {
+  const posts = await getPublishedPosts();
+  const storyIds = new Set(
+    projects.map((project) => project.story).filter(Boolean).map((s) => projectStoryId(s as string)),
+  );
+  return posts.filter((post) => !storyIds.has(post.id));
+}
