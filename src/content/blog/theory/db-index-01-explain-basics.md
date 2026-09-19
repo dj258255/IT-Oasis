@@ -11,7 +11,7 @@ tags:
   - B-tree
   - Performance
 category: theory/Database
-draft: false
+draft: true
 coverImage: "/uploads/theory/db-index/cover-1.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 1
