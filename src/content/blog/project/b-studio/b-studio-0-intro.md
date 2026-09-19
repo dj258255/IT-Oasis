@@ -141,7 +141,7 @@ b-studio는 이 조건들을 플랫폼이 자동으로 적용하게 만드는 �
 |---|---|
 | 일부러 컴파일 오류를 낸 시나리오 | 게이트가 실패를 돌려보내고, 에이전트가 고친 뒤 통과 |
 | 프로세스를 강제로 종료한 뒤 재시작 | 남은 샌드박스를 정리하고 마지막 체크포인트로 복원 |
-| 288.3MiB DB 덤프 체크포인트 | 저장과 되돌리기 모두 성공 ([기록](/blog/project/b-studio/b-studio-1-dump-streaming-and-path-rules)) |
+| 288.3MiB DB 덤프 체크포인트 | 저장과 되돌리기 모두 성공 |
 | 작업 분해, 실제 Docker 세션 3개 | 두 작업을 동시에 실행하고, 범위 밖 쓰기를 막고, 합친 결과가 검증 단계 5개를 다시 통과 (98.1초) |
 | 검증 기록 없는 체크포인트 배포 | 409로 거부 |
 | Kubernetes | 로컬 kind 클러스터에서 gVisor 샌드박스 기동과 준비 판정 확인 |
@@ -180,4 +180,3 @@ pnpm studio:demo
 - 코드와 문서: [GitHub 저장소](https://github.com/dj258255/b-studio)
 - 설계 결정 기록: [decisions.md](https://github.com/dj258255/b-studio/blob/main/docs/decisions.md)
 - 검증 기록과 한계: [verification.md](https://github.com/dj258255/b-studio/blob/main/docs/verification.md)
-- 체크포인트 덤프와 정책 프록시 문제를 고친 기록: [덤프를 문자열로 들고 있었다](/blog/project/b-studio/b-studio-1-dump-streaming-and-path-rules)
