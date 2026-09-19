@@ -10,7 +10,7 @@ tags:
   - Elasticsearch
   - Kernel
 category: theory/JVM-Memory
-draft: false
+draft: true
 coverImage: "/uploads/theory/es-memory/cover-4.svg"
 series: "JVM 메모리"
 seriesOrder: 4

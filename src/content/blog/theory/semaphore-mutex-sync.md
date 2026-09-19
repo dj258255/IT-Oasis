@@ -10,7 +10,7 @@ tags:
   - Concurrency
   - Java
 category: theory/Concurrency
-draft: false
+draft: true
 coverImage: "/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.svg"
 series: "동시성과 락"
 seriesOrder: 1

@@ -12,7 +12,7 @@ tags:
   - Oracle
   - Clustered Index
 category: theory/Database
-draft: false
+draft: true
 coverImage: "/uploads/theory/db-index/cover-5.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 5
