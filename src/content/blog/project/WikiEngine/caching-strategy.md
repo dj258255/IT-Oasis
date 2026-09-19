@@ -1,6 +1,6 @@
 ---
 title: '캐싱 전략: Caffeine L1 로컬 캐시로 검색 응답 14배 개선'
-description: Caffeine 로컬 캐시(L1)를 도입하여 검색/자동완성/상세 조회를 캐싱하고, @CacheEvict 무효화, Cache-Control 브라우저 캐싱, Actuator 모니터링까지 구현한 뒤 k6 부하 테스트로 Before/After를 비교한 과정을 정리합니다.
+description: Caffeine 로컬 캐시(L1)를 도입하여 검색/자동완성/상세 조회를 캐싱하고, @CacheEvict 무효화, Cache-Control 브라우저 캐싱, Actuator 모니터링까지 구현한 뒤 k6 부하 테스트로 Before/After를 비교한 과정을 정리한다.
 date: 2026-03-14T00:00:00.000Z
 tags:
   - Caffeine

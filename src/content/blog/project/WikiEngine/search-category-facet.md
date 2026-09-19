@@ -1,6 +1,6 @@
 ---
 title: '카테고리 검색 필터링 + Facet 집계: Lucene FILTER 절 설계'
-description: 1,215만 건 Lucene 검색 엔진에 카테고리 필터링을 추가합니다. categoryId가 이미 LongField로 인덱싱되어 있지만 검색 쿼리(buildQuery)에서 사용하지 않고 있던 구조적 비대칭을 발견하고, Occur.FILTER 절로 해결합니다. DB Post-filter 방식이 pagination을 깨뜨리는 이유, FILTER가 MUST와 달리 스코어에 기여하지 않으면서 bitset 캐싱 대상이 되는 원리, DB GROUP BY 간이 Facet의 한계와 Lucene 네이티브 Facet 전환 계획까지 정리합니다.
+description: 1,215만 건 Lucene 검색 엔진에 카테고리 필터링을 추가한다. categoryId가 이미 LongField로 인덱싱되어 있지만 검색 쿼리(buildQuery)에서 사용하지 않고 있던 구조적 비대칭을 발견하고, Occur.FILTER 절로 해결한다. DB Post-filter 방식이 pagination을 깨뜨리는 이유, FILTER가 MUST와 달리 스코어에 기여하지 않으면서 bitset 캐싱 대상이 되는 원리, DB GROUP BY 간이 Facet의 한계와 Lucene 네이티브 Facet 전환 계획까지 정리한다.
 date: 2026-03-25T00:00:00.000Z
 tags:
   - Lucene

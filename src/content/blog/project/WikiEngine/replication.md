@@ -1,6 +1,6 @@
 ---
 title: 'MySQL Replication: R/W 분리와 DataSource 라우팅'
-description: MySQL Replication으로 읽기/쓰기를 분리하고, Spring AbstractRoutingDataSource + LazyConnectionDataSourceProxy로 @Transactional(readOnly=true) 기반 자동 라우팅을 구현합니다. CLONE PLUGIN으로 133.5GB 초기 동기화, HikariCP 풀 분리(Primary 5 + Replica 15), k6 100 VU load 테스트로 R/W 분리 실측까지 정리합니다.
+description: MySQL Replication으로 읽기/쓰기를 분리하고, Spring AbstractRoutingDataSource + LazyConnectionDataSourceProxy로 @Transactional(readOnly=true) 기반 자동 라우팅을 구현한다. CLONE PLUGIN으로 133.5GB 초기 동기화, HikariCP 풀 분리(Primary 5 + Replica 15), k6 100 VU load 테스트로 R/W 분리 실측까지 정리한다.
 date: 2026-03-20T00:00:00.000Z
 tags:
   - MySQL
