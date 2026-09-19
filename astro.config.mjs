@@ -119,6 +119,8 @@ export default defineConfig({
     '/blog/project/pay/pay-ch4-my-docs-were-wrong': `${base || ''}/blog/project/pay/pay-0-overview`,
     '/blog/project/pay/pay-ch7-measuring-wrong': `${base || ''}/blog/project/pay/pay-0-overview`,
     '/blog/project/pay/pay-ch15-webhook-arrived-first': `${base || ''}/blog/project/pay/pay-0-overview`,
+    // 동시성 편: 락 3종·적립 4안 실측 비교는 "재면 답이 나오는" 유형이라 내린다.
+    '/blog/project/pay/pay-ch2-concurrency-and-load': `${base || ''}/blog/project/pay/pay-0-overview`,
     // 타이미 15편 -> tymee-retrospective 단일 개발기로 병합
     '/blog/project/tymee/tymee-introduction': `${base || ''}/blog/project/tymee/tymee-retrospective`,
     '/blog/project/tymee/tymee-architecture-selection': `${base || ''}/blog/project/tymee/tymee-retrospective`,
