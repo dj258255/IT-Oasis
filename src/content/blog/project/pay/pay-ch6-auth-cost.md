@@ -1,6 +1,6 @@
 ---
 title: '해싱 비용을 서버 메모리로 옮긴 Argon2id 전환'
-description: '요청마다 하던 BCrypt를 JWT로 걷어내 p95를 567.84ms에서 37.09ms로 줄였습니다. 남은 로그인 1회의 해싱을 Argon2id로 옮기니 이 환경에서는 더 빨랐는데, 해시 1건당 19MiB라 동시 100건이면 힙 2GB가 필요했습니다. 유입 제어로는 그 순간을 못 막습니다.'
+description: '요청마다 돌던 BCrypt를 JWT로 걷어내 p95가 567.84ms에서 37.09ms로 줄었다. 남은 로그인 해싱을 Argon2id로 옮기니 더 빨랐지만, 해시 1건당 19MiB라 동시 100건이면 힙 2GB가 필요하다.'
 date: 2026-06-11
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-auth.svg"

@@ -1,6 +1,6 @@
 ---
 title: '제재 명단 이름 대조에서 놓침과 오탐 사이 고르기'
-description: '정산금을 내보내기 전 제재 명단과 대조하는 장치를 실제 지급 경로에 이었습니다. 실제 UN 명단을 받아 보니 제 파서가 세 군데 틀렸고, 명단에 한글은 한 건도 없었습니다.'
+description: '정산금을 내보내기 전 제재 명단과 대조하는 장치를 지급 경로에 이었다. 실제 UN 명단을 받아 보니 파서가 세 군데 틀렸고, 한글 이름은 한 건도 없었다.'
 date: 2026-09-07
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch16-sanctions.svg"

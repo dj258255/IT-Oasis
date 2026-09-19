@@ -1,6 +1,6 @@
 ---
 title: '규칙이 못 가른 대사 원인에 모델 붙이기'
-description: '규칙이 못 가른 대사 예외에 모델을 붙였습니다. 일곱 원인을 다 맡기니 25~40%였는데, 유형별로는 하나가 qwen 100%·llama 91%였습니다. 그 하나를 켰다가 규칙 대비 개선이 0이라 홀드아웃 재측정 뒤 껐습니다. 기본값은 template입니다.'
+description: '규칙이 못 가른 대사 예외에 모델을 붙였다. 일곱 원인을 다 맡기면 25~40%, 유형별로 최고 qwen 100%·llama 91%. 개선이 0이라 홀드아웃 재측정 뒤 껐다.'
 date: 2026-08-31
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch13-residual.svg"

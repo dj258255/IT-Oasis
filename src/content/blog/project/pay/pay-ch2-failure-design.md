@@ -1,6 +1,6 @@
 ---
 title: '타임아웃을 실패로 확정하지 않고 미확정으로 남기기'
-description: '타임아웃은 실패가 아니라 미확정이라 보존하고 복구가 확정합니다. 이미 나간 승인은 롤백이 안 되니 보상으로 되돌립니다. failover는 PG가 요청을 못 받은 경우에만 하고, 고르는 시점은 결제창 앞으로 옮겼습니다.'
+description: '타임아웃은 실패가 아니라 미확정으로 보존하고 복구가 확정한다. 나간 승인은 롤백 대신 보상으로 되돌리고, failover는 PG가 요청을 못 받은 경우로 한정한다.'
 date: 2026-03-02
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-failure.svg"
