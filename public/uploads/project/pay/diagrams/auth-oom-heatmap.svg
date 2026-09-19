@@ -1,0 +1,74 @@
+<svg viewBox="0 0 900 650" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="900" height="650" rx="12" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="450" y="44" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">강화가 새 공격 표면을 열었다 — 힙 상한 × 동시 로그인별 OOM 실패 건수</text>
+  <text x="450" y="70" text-anchor="middle" font-size="12" fill="#64748b">메모리 축이 동시성에 곱해진다 — 해시 1건당 19MiB × 동시 로그인 수</text>
+
+  <!-- Axis captions -->
+  <text x="44" y="124" font-size="12" font-weight="700" fill="#64748b">힙 상한</text>
+  <text x="494" y="124" text-anchor="middle" font-size="12" font-weight="700" fill="#64748b">동시 로그인 수</text>
+
+  <!-- Column headers -->
+  <text x="300" y="168" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">25</text>
+  <text x="494" y="168" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">50</text>
+  <text x="688" y="168" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">100</text>
+
+  <!-- Row labels -->
+  <text x="196" y="244" text-anchor="end" font-size="17" font-weight="700" fill="#1e293b">512MB</text>
+  <text x="196" y="366" text-anchor="end" font-size="17" font-weight="700" fill="#1e293b">1GB</text>
+  <text x="196" y="488" text-anchor="end" font-size="17" font-weight="700" fill="#1e293b">2GB</text>
+
+  <!-- Row 1: 512MB -->
+  <rect x="210" y="184" width="180" height="108" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="300" y="248" text-anchor="middle" font-size="30" font-weight="700" fill="#1e5f8a">0건</text>
+  <text x="300" y="272" text-anchor="middle" font-size="11" fill="#64748b">성공 696ms</text>
+
+  <rect x="404" y="184" width="180" height="108" rx="10" fill="#e67e22" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="494" y="248" text-anchor="middle" font-size="30" font-weight="700" fill="#ffffff">50건</text>
+  <text x="494" y="272" text-anchor="middle" font-size="11" fill="#ffffff">전부 OOM</text>
+
+  <rect x="598" y="184" width="180" height="108" rx="10" fill="#e74c3c" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="688" y="248" text-anchor="middle" font-size="30" font-weight="700" fill="#ffffff">75건</text>
+  <text x="688" y="272" text-anchor="middle" font-size="11" fill="#ffffff">OOM</text>
+
+  <!-- Row 2: 1GB -->
+  <rect x="210" y="306" width="180" height="108" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="300" y="370" text-anchor="middle" font-size="30" font-weight="700" fill="#1e5f8a">0건</text>
+  <text x="300" y="394" text-anchor="middle" font-size="11" fill="#64748b">성공</text>
+
+  <rect x="404" y="306" width="180" height="108" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="494" y="370" text-anchor="middle" font-size="30" font-weight="700" fill="#1e5f8a">0건</text>
+  <text x="494" y="394" text-anchor="middle" font-size="11" fill="#64748b">성공</text>
+
+  <rect x="598" y="306" width="180" height="108" rx="10" fill="#fef7ec" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="688" y="370" text-anchor="middle" font-size="30" font-weight="700" fill="#b45309">12건</text>
+  <text x="688" y="394" text-anchor="middle" font-size="11" fill="#b45309">OOM</text>
+
+  <!-- Row 3: 2GB -->
+  <rect x="210" y="428" width="180" height="108" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="300" y="492" text-anchor="middle" font-size="30" font-weight="700" fill="#1e5f8a">0건</text>
+  <text x="300" y="516" text-anchor="middle" font-size="11" fill="#64748b">성공</text>
+
+  <rect x="404" y="428" width="180" height="108" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="494" y="492" text-anchor="middle" font-size="30" font-weight="700" fill="#1e5f8a">0건</text>
+  <text x="494" y="516" text-anchor="middle" font-size="11" fill="#64748b">성공</text>
+
+  <rect x="598" y="428" width="180" height="108" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5"/>
+  <text x="688" y="492" text-anchor="middle" font-size="30" font-weight="700" fill="#1e5f8a">0건</text>
+  <text x="688" y="516" text-anchor="middle" font-size="11" fill="#64748b">성공 1,984MB</text>
+
+  <!-- Legend -->
+  <text x="210" y="574" font-size="11" font-weight="700" fill="#64748b">음영 = OOM 실패 건수</text>
+  <rect x="210" y="584" width="24" height="16" rx="4" fill="#eef6fb" stroke="#4a8db8" stroke-width="1"/>
+  <text x="242" y="597" font-size="11" fill="#64748b">0건</text>
+  <rect x="300" y="584" width="24" height="16" rx="4" fill="#fef7ec" stroke="#e67e22" stroke-width="1"/>
+  <text x="332" y="597" font-size="11" fill="#64748b">12건</text>
+  <rect x="390" y="584" width="24" height="16" rx="4" fill="#e67e22" stroke="#e67e22" stroke-width="1"/>
+  <text x="422" y="597" font-size="11" fill="#64748b">50건</text>
+  <rect x="480" y="584" width="24" height="16" rx="4" fill="#e74c3c" stroke="#e74c3c" stroke-width="1"/>
+  <text x="512" y="597" font-size="11" fill="#64748b">75건</text>
+
+  <!-- Footer -->
+  <text x="450" y="628" text-anchor="middle" font-size="10" fill="#94a3b8">각 조건 1회 실행이고 동시 시작을 배리어로 맞췄습니다. 실패는 JVM이 죽은 게 아니라 해당 요청이 OutOfMemoryError로 끝난 건수입니다.</text>
+</svg>

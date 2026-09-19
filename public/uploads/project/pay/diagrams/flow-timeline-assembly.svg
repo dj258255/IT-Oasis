@@ -1,0 +1,114 @@
+<svg viewBox="0 0 1200 740" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#4a8db8"/></marker>
+    <marker id="arG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#27ae60"/></marker>
+  </defs>
+
+  <rect width="1200" height="740" fill="#ffffff"/>
+
+  <!-- 제목 -->
+  <text x="600" y="36" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">조회 모듈 하나를 밖에 뒀다</text>
+  <text x="600" y="58" text-anchor="middle" font-size="11" fill="#94a3b8">11곳이 각자 조각을 내주고 timeline이 그것들만 의존해 1개 응답으로 조립 · 의존은 한 방향</text>
+
+  <!-- 조각을 내주는 11곳 -->
+  <text x="60" y="100" font-size="11" font-weight="700" fill="#64748b">조각을 내주는 11곳</text>
+
+  <rect x="60" y="116" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="116" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">order · 주문</text>
+
+  <rect x="60" y="162" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="162" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="186" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">payment · 결제</text>
+
+  <rect x="60" y="208" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="208" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="232" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">ledger · 원장</text>
+
+  <rect x="60" y="254" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="254" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="278" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">escrow · 에스크로</text>
+
+  <rect x="60" y="300" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="300" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="324" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">settlement · 정산</text>
+
+  <rect x="60" y="346" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="346" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="370" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">point · 포인트</text>
+
+  <rect x="60" y="392" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="392" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="416" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">wallet · 월렛</text>
+
+  <rect x="60" y="438" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="438" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="462" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">dispute · 분쟁</text>
+
+  <rect x="60" y="484" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="484" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="508" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">reconciliation · 대사</text>
+
+  <rect x="60" y="530" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="530" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="554" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">audit · 감사로그</text>
+
+  <rect x="60" y="576" width="210" height="40" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="1.5"/>
+  <rect x="60" y="576" width="210" height="4" rx="10" fill="#4a8db8"/>
+  <text x="165" y="600" text-anchor="middle" font-size="12" font-weight="600" fill="#1e293b">shared · 공유 커널</text>
+
+  <!-- timeline 조회 모듈 -->
+  <rect x="380" y="110" width="360" height="510" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="2"/>
+  <rect x="380" y="110" width="360" height="4" rx="10" fill="#4a8db8"/>
+  <text x="560" y="152" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">timeline 조회 모듈</text>
+  <text x="560" y="174" text-anchor="middle" font-size="10" fill="#4a8db8">읽기 전용 · 여러 모듈의 조각을 모으는 조회</text>
+  <line x1="404" y1="196" x2="716" y2="196" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="404" y="228" font-size="11" fill="#64748b">· 각 도메인이 자기 조각을 낸다</text>
+  <text x="404" y="256" font-size="11" fill="#64748b">· 조립기는 모아서 정렬만 한다</text>
+  <text x="404" y="284" font-size="11" fill="#64748b">· 상태를 바꾸지 않는다</text>
+  <text x="404" y="312" font-size="11" fill="#64748b">· 한 곳이 실패해도 빠진 출처를 싣는다</text>
+  <line x1="404" y1="340" x2="716" y2="340" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="560" y="368" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e5f8a">의존 방향은 한쪽</text>
+  <text x="560" y="392" text-anchor="middle" font-size="10.5" fill="#64748b">timeline → 11곳 · 역방향 없음</text>
+  <line x1="404" y1="416" x2="716" y2="416" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="560" y="444" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e5f8a">키는 3단계로 해석</text>
+  <text x="404" y="470" font-size="10" fill="#64748b">orderNo — 주문 · 에스크로 · 정산 · 월렛 · 포인트 · 대사</text>
+  <text x="404" y="492" font-size="10" fill="#64748b">paymentId — 결제 이력 · 원장</text>
+  <text x="404" y="514" font-size="10" fill="#64748b">(targetType, targetId) — 감사로그</text>
+  <line x1="404" y1="548" x2="716" y2="548" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="560" y="576" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e5f8a">API Composition (Aggregator)</text>
+  <text x="560" y="598" text-anchor="middle" font-size="10" fill="#64748b">각 도메인이 조각을 내주고 위에서 조립하는 형태</text>
+
+  <!-- 1개 응답 -->
+  <rect x="820" y="270" width="320" height="190" rx="10" fill="#fff" stroke="#27ae60" stroke-width="2"/>
+  <rect x="820" y="270" width="320" height="4" rx="10" fill="#27ae60"/>
+  <text x="980" y="300" text-anchor="middle" font-size="16" font-weight="700" fill="#1e293b">1개 응답</text>
+  <text x="980" y="320" text-anchor="middle" font-size="10" fill="#94a3b8">OrderTimeline · 조립 결과</text>
+  <line x1="845" y1="338" x2="1115" y2="338" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="980" y="366" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">API 호출 7회 → 1회</text>
+  <text x="980" y="392" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">화면 이동 6개 탭 → 1개</text>
+  <text x="980" y="418" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">조회 불가 정보 4종 → 0종</text>
+  <text x="980" y="444" text-anchor="middle" font-size="10" fill="#94a3b8">응답 중앙값 14.0ms · p95 16.7ms</text>
+
+  <!-- 푸터 -->
+  <rect x="60" y="650" width="1080" height="64" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1"/>
+  <text x="600" y="678" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e5f8a">대사 모듈의 허용 의존은 shared · payment · audit 셋뿐 · 읽어야 할 11곳 중 나머지 8곳은 경계 밖</text>
+  <text x="600" y="702" text-anchor="middle" font-size="10.5" fill="#334155">경계를 뚫지 않고 여러 도메인을 한 화면에 모은 것이 값이 난 자리</text>
+
+  <!-- 화살표: 11곳 → timeline -->
+  <line x1="272" y1="136" x2="376" y2="136" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="182" x2="376" y2="182" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="228" x2="376" y2="228" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="274" x2="376" y2="274" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="320" x2="376" y2="320" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="366" x2="376" y2="366" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="412" x2="376" y2="412" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="458" x2="376" y2="458" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="504" x2="376" y2="504" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="550" x2="376" y2="550" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="272" y1="596" x2="376" y2="596" stroke="#4a8db8" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- 화살표: timeline → 1개 응답 -->
+  <line x1="742" y1="365" x2="814" y2="365" stroke="#27ae60" stroke-width="2" marker-end="url(#arG)"/>
+  <text x="778" y="356" text-anchor="middle" font-size="10" fill="#64748b">조립</text>
+</svg>
