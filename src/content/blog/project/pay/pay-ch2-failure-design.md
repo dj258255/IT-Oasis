@@ -42,6 +42,8 @@ catch (DataIntegrityViolationException race) { return handleExisting(reload(key)
 
 복구 배치가 `UNKNOWN`을 60초마다 스캔해 PG 조회로 실제 상태를 묻는다. 승인돼 있으면 취소하지 않고 **전진 복구(DONE)**, `NOT_FOUND`면 `ABORTED`, PG가 이미 취소했으면 상태 동기화(망취소 아님)다. 반대 정책(무조건 망취소)도 `networkCancel`로 넣어 둘 다 허용 전이로 뒀다.
 
+![타임아웃을 실패로 확정하지 않고 UNKNOWN으로 보존한 뒤 복구 배치가 60초마다 PG에 조회해 APPROVED면 전진 복구(DONE), NOT_FOUND면 ABORTED, CANCELED면 상태 동기화로 확정하는 흐름](/uploads/project/pay/diagrams/flow-unknown-recovery.svg)
+
 ```java
 case APPROVED  -> payment.confirmByRecovery(pg.method());   // 전진 복구(DONE)
 case NOT_FOUND -> payment.abortByRecovery("PG에 결제 없음");
@@ -103,6 +105,8 @@ public boolean tryDeduct(long productId, int qty) {
 ## 멀티 PG 라우팅: 규칙을 정하고, 한참 뒤에 배선했다
 
 국내 상위 PG사도 한 시간씩 장애가 난다. PG를 여럿 두고 하나가 죽으면 넘기되 **요청이 그 PG에 닿지도 못한 게 확실할 때만** 넘긴다 — 아무 때나 넘기면 이중결제다.
+
+![PaymentService → ResilientPgClient(@Primary) → RoutingPgClient(pgDelegate) → TOSS·NICE로 이어지는 계층과, 요청이 미도달일 때만 다음 PG로 넘기는 failover 분기](/uploads/project/pay/diagrams/flow-pg-routing.svg)
 
 | PG 응답 | failover | 왜 |
 |---|---|---|
