@@ -1,6 +1,6 @@
 ---
 title: '실제 PG를 붙이자 웹훅이 결제보다 먼저 도착했습니다'
-description: '자체 목 PG로는 승인 응답을 저장한 뒤에 웹훅이 왔습니다. 토스페이먼츠에 실제로 붙였더니 순서가 뒤집혔고, 없는 결제를 예외로 던지던 코드가 자기가 남기려던 보류 상태까지 같이 날리고 있었습니다.'
+description: '자체 목 PG에서는 승인 응답 저장 뒤에 웹훅이 왔다. 토스페이먼츠에 붙이니 순서가 뒤집혔고, 없는 결제에 예외를 던지던 코드가 보류 상태까지 지우고 있었다.'
 date: 2026-09-05
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch15-webhook.svg"
