@@ -11,7 +11,7 @@ tags:
   - Performance
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-connection-pool/cost.svg"
+coverImage: /uploads/covers/theory/db-connection-pool.svg
 ---
 
 
