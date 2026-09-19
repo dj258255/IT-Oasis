@@ -1,6 +1,6 @@
 ---
 title: 'COUNT(*) 제거와 페이지 제한으로 19,424ms → 8ms'
-description: 1,215만 건 테이블에서 COUNT(*) 제거(Page→Slice), 30페이지 제한, Deferred Join을 조합하여 최신 게시글 목록 조회를 19,424ms에서 8.33ms로 개선하고, k6 load 테스트(100 VU, 20분)에서 에러율 32.53%→0%를 달성한 과정을 정리합니다.
+description: 1,215만 건 테이블에서 COUNT(*) 제거(Page→Slice), 30페이지 제한, Deferred Join을 조합하여 최신 게시글 목록 조회를 19,424ms에서 8.33ms로 개선하고, k6 load 테스트(100 VU, 20분)에서 에러율 32.53%→0%를 달성한 과정을 정리한다.
 date: 2026-03-05T00:00:00.000Z
 tags:
   - MySQL

@@ -1,6 +1,6 @@
 ---
 title: 'Nori 형태소 분석기 Stop Filter 문제: "안녕" 0건과 "안녕하세" 노이즈 해결'
-description: Lucene Nori 분석기에서 "안녕" 검색이 0건이 되는 IC 필터링 문제와, "안녕하세" 검색 시 "하세" 관련 문서만 나오는 형태소 분석 한계를 분석합니다. IC 제거 + title_ngram dis_max + PrefixQuery 폴백 3단계 해결을 적용하고, 자동완성 title_raw fallback까지 포함합니다.
+description: Lucene Nori 분석기에서 "안녕" 검색이 0건이 되는 IC 필터링 문제와, "안녕하세" 검색 시 "하세" 관련 문서만 나오는 형태소 분석 한계를 분석한다. IC 제거 + title_ngram dis_max + PrefixQuery 폴백 3단계 해결을 적용하고, 자동완성 title_raw fallback까지 포함한다.
 date: 2026-04-04T00:00:00.000Z
 tags:
   - Lucene
