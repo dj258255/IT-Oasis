@@ -4,7 +4,7 @@ import AuthorCard from '../components/AuthorCard.astro';
 import CarouselCard from '../components/CarouselCard.astro';
 import CarouselSection from '../components/CarouselSection.astro';
 import { projects, projectTypeLabels } from '../data/projects';
-import { getStoryPosts } from '../lib/posts';
+import { getPublishedPosts } from '../lib/posts';
 import { translateCategory } from '../lib/utils';
 import { renderRichText } from '../lib/richtext';
 import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
@@ -16,7 +16,7 @@ interface CareerItem { title: string; meta?: string; period?: string; details?: 
 const career: { label: string; items: CareerItem[] }[] = siteSettings.careerKo || [];
 const resolveHref = (href: string) => (href.startsWith('/') ? `${base}${href}` : href);
 
-const posts = (await getStoryPosts()).slice(0, 8);
+const posts = (await getPublishedPosts()).slice(0, 8);
 const featuredProjects = projects.filter((project) => project.projectType !== 'toy');
 ---
 

@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getStoryPosts } from '../lib/posts';
+import { getPublishedPosts } from '../lib/posts';
 
-const posts = await getStoryPosts();
+const posts = await getPublishedPosts();
 
 const searchData = posts.map((post) => ({
   title: post.data.title,
