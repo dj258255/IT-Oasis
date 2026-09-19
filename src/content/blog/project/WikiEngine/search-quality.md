@@ -1,6 +1,6 @@
 ---
 title: '검색 품질 고도화: 구절 검색, 커뮤니티 랭킹, P@10/MAP 평가'
-description: PhraseQuery(slop=2)로 구절 검색을 구현하고, FeatureField 기반 BM25 + 인기도 + 최신성 커뮤니티 랭킹을 적용한 뒤, P@10/MAP 지표로 검색 품질을 정량 평가한 과정을 정리합니다.
+description: PhraseQuery(slop=2)로 구절 검색을 구현하고, FeatureField 기반 BM25 + 인기도 + 최신성 커뮤니티 랭킹을 적용한 뒤, P@10/MAP 지표로 검색 품질을 정량 평가한 과정을 정리한다.
 date: 2026-03-13T00:00:00.000Z
 tags:
   - Lucene

@@ -1,6 +1,6 @@
 ---
 title: 'DB 내부 ③: WAL과 크래시 복구, redo-only에서 steal + no-force까지'
-description: "쓰다가 전원이 꺼지면 어떻게 되는가. WAL 프로토콜의 본질(데이터보다 로그 먼저, fsync 한 번이 내구성의 분기점)에서 시작해, 복구 규칙이 'redo 아니면 discard' 하나로 끝나는 가장 단순한 형태를 짓고, 그 단순함의 대가(버퍼 풀보다 큰 트랜잭션이 죽는다)에 부딪혀 steal을 켜고(before-image·undo의 필연), 마지막으로 no-force(커밋 = 로그 fsync 하나)로 옮겨 로그가 진실의 원천이 되기까지. STEAL/FORCE 사분면이 어떤 복구 로직을 필수로 만드는지, 진짜 ARIES(physiological 로깅·pageLSN·CLR·3-패스)와의 거리는 어디인지, fsync의 가격(같은 5천 행 적재가 23배 차이)은 얼마인지, 크래시를 실제로 주입한 테스트와 실측으로 확인하며 정리합니다."
+description: "쓰다가 전원이 꺼지면 어떻게 되는가. WAL 프로토콜의 본질(데이터보다 로그 먼저, fsync 한 번이 내구성의 분기점)에서 시작해, 복구 규칙이 'redo 아니면 discard' 하나로 끝나는 가장 단순한 형태를 짓고, 그 단순함의 대가(버퍼 풀보다 큰 트랜잭션이 죽는다)에 부딪혀 steal을 켜고(before-image·undo의 필연), 마지막으로 no-force(커밋 = 로그 fsync 하나)로 옮겨 로그가 진실의 원천이 되기까지. STEAL/FORCE 사분면이 어떤 복구 로직을 필수로 만드는지, 진짜 ARIES(physiological 로깅·pageLSN·CLR·3-패스)와의 거리는 어디인지, fsync의 가격(같은 5천 행 적재가 23배 차이)은 얼마인지, 크래시를 실제로 주입한 테스트와 실측으로 확인하며 정리한다."
 date: 2026-03-05T00:00:00.000Z
 tags:
   - Database Internals

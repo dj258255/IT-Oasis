@@ -1,6 +1,6 @@
 ---
 title: '조회수 Redis INCR + Write-Behind 배치 flush 전환'
-description: GET 요청에 포함된 DB UPDATE가 R/W 분리와 충돌하여 500 에러가 발생한 문제를 Redis INCR + 30초 배치 flush로 해결합니다. REQUIRES_NEW, 비관적/낙관적 락, @Async, Caffeine 로컬 카운터 등 5개 대안을 비교 분석하고, Write-Behind 패턴으로 GET에서 DB 쓰기를 완전히 제거하여 에러율 11.10% → 0.00%, 상세 조회 응답시간 36% 개선을 달성합니다. Sentry·YouTube 등 현업 사례와 비용 분석, 면접 Q&A까지 포함합니다.
+description: GET 요청에 포함된 DB UPDATE가 R/W 분리와 충돌하여 500 에러가 발생한 문제를 Redis INCR + 30초 배치 flush로 해결한다. REQUIRES_NEW, 비관적/낙관적 락, @Async, Caffeine 로컬 카운터 등 5개 대안을 비교 분석하고, Write-Behind 패턴으로 GET에서 DB 쓰기를 완전히 제거하여 에러율 11.10% → 0.00%, 상세 조회 응답시간 36% 개선을 달성한다. Sentry·YouTube 등 현업 사례와 비용 분석, 면접 Q&A까지 포함한다.
 date: 2026-03-21T00:00:00.000Z
 tags:
   - Redis

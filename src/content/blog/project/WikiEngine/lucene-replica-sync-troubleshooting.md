@@ -1,6 +1,6 @@
 ---
 title: 'Lucene Replica 인덱스 동기화: rsync 경로 오류에서 atomic swap까지'
-description: 2대 서버 환경에서 Lucene 인덱스를 rsync로 동기화하는 과정에서 발생한 문제들을 추적합니다. sync-index.sh의 glob 삭제 버그, Docker 볼륨 경로 불일치(named volume vs bind mount), Redis 배치 version 충돌, 자동완성 Lucene fallback 실패를 하나씩 디버깅하며, 최종적으로 temp directory + atomic swap 패턴과 경로 수정으로 해결합니다.
+description: 2대 서버 환경에서 Lucene 인덱스를 rsync로 동기화하는 과정에서 발생한 문제들을 추적한다. sync-index.sh의 glob 삭제 버그, Docker 볼륨 경로 불일치(named volume vs bind mount), Redis 배치 version 충돌, 자동완성 Lucene fallback 실패를 하나씩 디버깅하며, 최종적으로 temp directory + atomic swap 패턴과 경로 수정으로 해결한다.
 date: 2026-04-05T00:00:00.000Z
 tags:
   - Lucene

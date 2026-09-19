@@ -1,6 +1,6 @@
 ---
 title: '분산 안정성 검증: stress 테스트 + 한계점 분석'
-description: 단일 서버에서 100-150 VU가 한계였던 시스템을 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC)로 전환한 후, stress 테스트(200 VU, 25분)로 한계점을 재탐색합니다. 100 VU에서 P95 200ms(SLA 충족), 200 VU에서 에러율 0.09%(단일 서버 13.25% → 0.09%), 처리량 109 req/s(3.6배↑). App CPU가 여전히 근본 병목임을 소거법으로 확인하고, MySQL/Redis/Kafka/Nginx 모두 여유임을 실측합니다.
+description: 단일 서버에서 100-150 VU가 한계였던 시스템을 분산 아키텍처(2 App + MySQL Replication + Redis 3샤드 + Kafka CDC)로 전환한 후, stress 테스트(200 VU, 25분)로 한계점을 재탐색한다. 100 VU에서 P95 200ms(SLA 충족), 200 VU에서 에러율 0.09%(단일 서버 13.25% → 0.09%), 처리량 109 req/s(3.6배↑). App CPU가 여전히 근본 병목임을 소거법으로 확인하고, MySQL/Redis/Kafka/Nginx 모두 여유임을 실측한다.
 date: 2026-03-24T00:00:00.000Z
 tags:
   - k6
