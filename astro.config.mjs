@@ -197,6 +197,15 @@ export default defineConfig({
     '/blog/project/dbtower/dbtower-8-talking-and-lakehouse': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-9-operational-bottlenecks': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-10-ai-cost-audit': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    // 2026-09-20 lakehouse 연재를 접었다. DBTower 는 그대로 두고, lakehouse 옛 주소만
+    // 프로젝트 목록으로 보낸다. (dbtower-8 슬러그에 lakehouse 이름이 들어 있지만 DBTower 편이다.)
+    '/blog/project/lakehouse/lakehouse-0-why': `${base || ''}/projects`,
+    '/blog/project/lakehouse/lakehouse-1-build': `${base || ''}/projects`,
+    '/blog/project/lakehouse/lakehouse-2-trust': `${base || ''}/projects`,
+    '/blog/project/lakehouse/lakehouse-3-scale': `${base || ''}/projects`,
+    '/blog/project/lakehouse/lakehouse-4-appliance': `${base || ''}/projects`,
+    '/blog/project/lakehouse/lakehouse-5-verdicts': `${base || ''}/projects`,
+    '/blog/project/lakehouse/lakehouse-6-ash': `${base || ''}/projects`,
     // EduMeet 9편 -> edumeet-retrospective 단일 개발기로 병합
     '/blog/project/edumeet/architecture-evolution': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/onetomany-join-table': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
