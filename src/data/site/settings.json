@@ -632,15 +632,6 @@
           ]
         },
         {
-          "title": "DBTower",
-          "meta": "이기종 DBMS 운영 관리 플랫폼",
-          "period": "2026.03 ~ 진행 중",
-          "href": "/blog/project/dbtower/dbtower-0-overview",
-          "details": [
-            "MySQL·PostgreSQL·Oracle·SQL Server·MongoDB를 한곳에서 모니터링하고 쿼리 이상과 성능 회귀를 찾습니다."
-          ]
-        },
-        {
           "title": "위키엔진",
           "meta": "통합 검색 플랫폼",
           "period": "2026.02 ~ 2026.05",
