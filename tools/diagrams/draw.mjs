@@ -77,12 +77,12 @@ export function lines(k, cx, cy, arr, { size = 16, gap = 22, weight = 500, fill 
 }
 
 /** 화살표. 머리는 두 획으로 그려 손그림 느낌을 맞춘다. */
-export function arrow(k, x1, y1, x2, y2, { color = '#343a40', roughness = 0.9, head = 9 } = {}) {
+export function arrow(k, x1, y1, x2, y2, { color = '#343a40', roughness = 0.9, head = 9, width = 1.6 } = {}) {
   const seed = Math.abs(Math.round(x1 * 7 + y2 * 11)) % 9999 + 1;
-  add(k, k.rc.line(x1, y1, x2, y2, { stroke: color, strokeWidth: 1.6, roughness, seed }));
+  add(k, k.rc.line(x1, y1, x2, y2, { stroke: color, strokeWidth: width, roughness, seed }));
   const a = Math.atan2(y2 - y1, x2 - x1), s = 0.42;
-  add(k, k.rc.line(x2, y2, x2 - head * Math.cos(a - s), y2 - head * Math.sin(a - s), { stroke: color, strokeWidth: 1.6, roughness, seed }));
-  add(k, k.rc.line(x2, y2, x2 - head * Math.cos(a + s), y2 - head * Math.sin(a + s), { stroke: color, strokeWidth: 1.6, roughness, seed }));
+  add(k, k.rc.line(x2, y2, x2 - head * Math.cos(a - s), y2 - head * Math.sin(a - s), { stroke: color, strokeWidth: width, roughness, seed }));
+  add(k, k.rc.line(x2, y2, x2 - head * Math.cos(a + s), y2 - head * Math.sin(a + s), { stroke: color, strokeWidth: width, roughness, seed }));
 }
 
 /** ㄱ자 화살표 — 세로로 내려갔다 가로로 가는 연결. */
@@ -117,6 +117,37 @@ export function marker(k, cx, y, w, { color = C.purple } = {}) {
   add(k, k.rc.path(roundedPath(cx - w / 2, y - 22, w, 30, 6), {
     stroke: 'none', fill: color.f, fillStyle: 'solid', roughness: 2.6, seed: 42,
   }));
+}
+
+/** 수평/수직을 가리지 않는 실선. 생명선이나 축처럼 divider 로는 안 되는 자리에 쓴다. */
+export function line(k, x1, y1, x2, y2, { color = '#adb5bd', width = 1.4, roughness = 0.8 } = {}) {
+  const seed = Math.abs(Math.round(x1 * 11 + y2 * 17)) % 9999 + 1;
+  add(k, k.rc.line(x1, y1, x2, y2, { stroke: color, strokeWidth: width, roughness, seed }));
+}
+
+/** 타원·원. cx, cy 는 중심. 상자로는 안 읽히는 노드(디스크·커넥션 같은)에 쓴다. */
+export function ellipse(k, cx, cy, w, h, { color = C.gray, fill = true, roughness = 1.25 } = {}) {
+  add(k, k.rc.ellipse(cx, cy, w, h, {
+    stroke: color.s, strokeWidth: 1.7, roughness,
+    fill: fill ? color.f : undefined, fillStyle: 'hachure', hachureGap: 5.5, fillWeight: 1.1,
+    seed: seedOf(cx, cy),
+  }));
+}
+
+/** 작은 채운 점. 노드나 연결 지점을 찍는다. */
+export function dot(k, cx, cy, r = 4, { color = C.gray } = {}) {
+  const c = doc.createElementNS(SVGNS, 'circle');
+  c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+  c.setAttribute('fill', color.s);
+  add(k, c);
+}
+
+/** 알약 모양 라벨. 짧은 태그나 상태값에 쓴다. */
+export function pill(k, x, y, w, h, { color = C.gray, label = '', size = 13, weight = 600 } = {}) {
+  add(k, k.rc.path(roundedPath(x, y, w, h, h / 2), {
+    stroke: color.s, strokeWidth: 1.4, roughness: 0.8, fill: '#ffffff', seed: seedOf(x, y),
+  }));
+  if (label) text(k, x + w / 2, y + h / 2 + size * 0.35, label, { size, weight, fill: color.s });
 }
 
 export function render(k) {
