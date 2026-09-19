@@ -1,6 +1,6 @@
 ---
 title: '쿼리 확장 + Query Understanding: 동의어·오타 교정·snippet 고도화'
-description: Lucene 기반 검색 엔진의 Recall과 Precision을 동시에 개선합니다. 동의어 확장(DB 기반 쿼리 타임)으로 "AI" 검색 시 "인공지능" 문서를 포함시키고, DirectSpellChecker로 "프로그래링" → "프로그래밍" 오타 교정을 구현합니다. UnifiedHighlighter + snippetSource 500자 StoredField로 검색어 주변 맥락 snippet을 제공하고, 무중단 전체 재색인 인프라(Directory Swap + SearcherManager 재생성)를 구축하여 12,156,589건(42GB)을 ~2시간 만에 재색인합니다. 인덱스 타임 동의어가 IDF를 왜곡하는 원리, Nori 사용자 사전 158,539개 적용, BM25 변형(BM25+/L/F) 불필요 판단 근거까지 정리합니다.
+description: Lucene 기반 검색 엔진의 Recall과 Precision을 동시에 개선한다. 동의어 확장(DB 기반 쿼리 타임)으로 "AI" 검색 시 "인공지능" 문서를 포함시키고, DirectSpellChecker로 "프로그래링" → "프로그래밍" 오타 교정을 구현한다. UnifiedHighlighter + snippetSource 500자 StoredField로 검색어 주변 맥락 snippet을 제공하고, 무중단 전체 재색인 인프라(Directory Swap + SearcherManager 재생성)를 구축하여 12,156,589건(42GB)을 ~2시간 만에 재색인한다. 인덱스 타임 동의어가 IDF를 왜곡하는 원리, Nori 사용자 사전 158,539개 적용, BM25 변형(BM25+/L/F) 불필요 판단 근거까지 정리한다.
 date: 2026-03-26T00:00:00.000Z
 tags:
   - Lucene

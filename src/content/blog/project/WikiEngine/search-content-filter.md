@@ -1,6 +1,6 @@
 ---
 title: '콘텐츠 필터링: Aho-Corasick 금칙어 탐지와 운영 안전장치'
-description: 커뮤니티 검색 서비스의 운영 안전장치를 구축합니다. 16,090개 금칙어를 Aho-Corasick O(N+Z) 알고리즘으로 탐지하여 자동완성 결과에서 유해 검색어를 필터링하고, 블라인드 게시글을 Lucene Occur.MUST_NOT으로 검색에서 제외합니다. 영어 금칙어의 Scunthorpe 문제(단어 경계 매칭), Negative Caching(빈 결과 30초 TTL)으로 cache penetration 방지, title_raw StringField로 자동완성 Lucene fallback 품질을 개선합니다.
+description: 커뮤니티 검색 서비스의 운영 안전장치를 구축한다. 16,090개 금칙어를 Aho-Corasick O(N+Z) 알고리즘으로 탐지하여 자동완성 결과에서 유해 검색어를 필터링하고, 블라인드 게시글을 Lucene Occur.MUST_NOT으로 검색에서 제외한다. 영어 금칙어의 Scunthorpe 문제(단어 경계 매칭), Negative Caching(빈 결과 30초 TTL)으로 cache penetration 방지, title_raw StringField로 자동완성 Lucene fallback 품질을 개선한다.
 date: 2026-03-28T00:00:00.000Z
 tags:
   - Lucene

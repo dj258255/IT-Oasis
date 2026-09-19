@@ -1,6 +1,6 @@
 ---
 title: 'WikiEngine 면접 예상 질문 모음'
-description: WikiEngine 프로젝트 전체에서 나올 수 있는 면접 예상 질문과 답변을 정리합니다.
+description: WikiEngine 프로젝트 전체에서 나올 수 있는 면접 예상 질문과 답변을 정리한다.
 date: 2026-03-20T00:00:00.000Z
 tags:
   - Interview

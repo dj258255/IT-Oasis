@@ -1,6 +1,6 @@
 ---
 title: '해싱 비용을 서버 메모리로 옮긴 Argon2id 전환'
-description: '요청마다 하던 BCrypt를 JWT로 걷어내 p95를 567.84ms에서 37.09ms로 줄였습니다. 남은 로그인 1회의 해싱을 Argon2id로 옮기니 이 환경에서는 더 빨랐는데, 해시 1건당 19MiB라 동시 100건이면 힙 2GB가 필요했습니다. 유입 제어로는 그 순간을 못 막습니다.'
+description: '요청마다 돌던 BCrypt를 JWT로 걷어내 p95가 567.84ms에서 37.09ms로 줄었다. 남은 로그인 해싱을 Argon2id로 옮기니 더 빨랐지만, 해시 1건당 19MiB라 동시 100건이면 힙 2GB가 필요하다.'
 date: 2026-06-11
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-auth.svg"
@@ -89,6 +89,8 @@ delegating.setDefaultPasswordEncoderForMatches(bcrypt);
 ## 3. 강화가 새 공격 표면을 열었다
 
 시간은 줄었는데 공짜가 아니었습니다. 메모리라는 축이 새로 생겼고, 그게 인증 없이 누구나 부를 수 있는 경로에 얹혔습니다. 여기가 이 교체의 진짜 대가입니다. 메모리 하드는 공격자만 메모리를 쓰게 하는 게 아닙니다.
+
+![힙 상한(512MB·1GB·2GB) × 동시 로그인(25·50·100) 격자에 OOM 실패 건수를 음영으로 표시한 히트맵. 512MB·동시 50에서 50건 전부, 512MB·동시 100에서 75건, 1GB·동시 100에서 12건이 OOM으로 끝나고 2GB는 모두 성공했다](/uploads/project/pay/diagrams/auth-oom-heatmap.svg)
 
 ```
 로그인 1건        19MiB

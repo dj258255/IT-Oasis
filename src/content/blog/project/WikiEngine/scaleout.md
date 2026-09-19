@@ -1,6 +1,6 @@
 ---
 title: 'App 스케일아웃: Nginx L7 로드밸런싱 + Lucene Replica'
-description: App CPU 100% 병목을 해소하기 위해 App 인스턴스를 2대로 확장합니다. Nginx map 기반 HTTP 메서드 라우팅(least_conn), Lucene Primary/Replica 모드 분리(SnapshotDeletionPolicy + Refresh Pause + rsync), TokenBlacklist Redis 전환, 조회수 Redis INCR 배치 flush 전환까지 적용해 100 VU 기준 에러율 13.25%→0.00%, P95 2,300ms→158ms, 평균 482ms→37ms로 개선합니다.
+description: App CPU 100% 병목을 해소하기 위해 App 인스턴스를 2대로 확장한다. Nginx map 기반 HTTP 메서드 라우팅(least_conn), Lucene Primary/Replica 모드 분리(SnapshotDeletionPolicy + Refresh Pause + rsync), TokenBlacklist Redis 전환, 조회수 Redis INCR 배치 flush 전환까지 적용해 100 VU 기준 에러율 13.25%→0.00%, P95 2,300ms→158ms, 평균 482ms→37ms로 개선한다.
 date: 2026-03-21T00:00:00.000Z
 tags:
   - Scale-Out

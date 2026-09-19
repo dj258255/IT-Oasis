@@ -1,6 +1,6 @@
 ---
 title: 'Deferred Join 적용기: 기대한 40배 vs 현실 13%'
-description: 1,475만 건 OFFSET 페이지네이션에 Deferred Join을 적용하고, EXPLAIN으로 기대만큼 빠르지 않은 이유를 분석합니다. Slack·Twitter 등 실서비스의 Keyset Pagination 사례와 비교하며 다음 단계를 도출합니다.
+description: 1,475만 건 OFFSET 페이지네이션에 Deferred Join을 적용하고, EXPLAIN으로 기대만큼 빠르지 않은 이유를 분석한다. Slack·Twitter 등 실서비스의 Keyset Pagination 사례와 비교하며 다음 단계를 도출한다.
 date: 2026-03-03T00:00:00.000Z
 tags:
   - MySQL
