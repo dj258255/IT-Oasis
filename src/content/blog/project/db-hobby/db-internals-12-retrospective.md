@@ -133,6 +133,5 @@ seriesOrder: 12
 | [⑧](/blog/project/db-hobby/db-internals-08-parallel) | 병렬 실행: latch를 걷어내고, 재고, 병목을 고치기 |
 | [⑨](/blog/project/db-hobby/db-internals-09-replication) | 복제: 복구의 redo를 스트림으로 |
 | [⑩](/blog/project/db-hobby/db-internals-10-raft) | Raft: 합의에서 HA DB까지 |
-| [⑪](/blog/project/db-hobby/db-internals-11-sql-executor) | SQL 실행기: 텍스트에서 행까지 |
 
 코드와 테스트 전부: [github.com/dj258255/db-hobby](https://github.com/dj258255/db-hobby)
