@@ -1,6 +1,6 @@
 ---
 title: 'CodingTestKit: IDE 안에서 코딩테스트를 완결하는 도구'
-description: 코딩테스트 준비의 불편함을 해결하기 위해 IntelliJ와 VS Code에서 문제 가져오기, 로컬 테스트, 제출까지 한 번에 할 수 있는 플러그인을 만들었습니다.
+description: 'IntelliJ와 VS Code에서 문제 가져오기, 로컬 테스트, 제출까지 한 번에 하는 코딩테스트 플러그인.'
 date: 2026-03-01
 tags:
   - Retrospective
