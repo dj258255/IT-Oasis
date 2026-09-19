@@ -10,7 +10,7 @@ tags:
   - InnoDB
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
+coverImage: /uploads/covers/project/db-hobby/db-internals-02-btree-index.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 2
