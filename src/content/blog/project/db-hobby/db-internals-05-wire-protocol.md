@@ -129,7 +129,7 @@ db-hobby=> SELECT * FROM t WHERE id = 1;
 
 단, 정직하게 말하면 실행 자체는 **전역 엔진 latch 하나로 직렬화**했습니다. 실행기 전 계층이 아직 단일 스레드 가정이라, 우선 굵은 latch 하나로 정확성을 샀습니다. [1편](/blog/project/db-hobby/db-internals-01-storage)에서 스레드 안전하게 만든 버퍼 풀이 "이 굵은 latch를 계층별로 걷어낼 첫 발판"이고, 그 걷어내는 여정(병렬 스캔부터 실측까지)이 [8편](/blog/project/db-hobby/db-internals-08-parallel)입니다.
 
-> **실무/면접 포인트**: 커넥션당 스레드/프로세스는 단순하지만 커넥션 수만큼 자원을 먹는다. 그래서 실무 PostgreSQL 앞엔 거의 항상 PgBouncer 같은 **커넥션 풀러**가 선다. 이 구도의 이론은 [Tomcat NIO 요청 처리](/blog/theory/tomcat-nio-request-handling)에서.
+> **실무/면접 포인트**: 커넥션당 스레드/프로세스는 단순하지만 커넥션 수만큼 자원을 먹는다. 그래서 실무 PostgreSQL 앞엔 거의 항상 PgBouncer 같은 **커넥션 풀러**가 선다. 이 구도의 이론은 [DB 커넥션 풀](/blog/theory/db-connection-pool)과 [Tomcat NIO 요청 처리](/blog/theory/tomcat-nio-request-handling)에서.
 
 > **실무 안티패턴**: PgBouncer를 transaction 모드로 두고 prepared statement·`SET`·temp table을 쓰는 것. 이 글의 서버가 보여주듯 wire 세계에서 **세션 상태는 특정 백엔드(커넥션)에 귀속**되는데, transaction 모드는 트랜잭션마다 백엔드를 갈아끼우니 "아까 준비한 문장"이 없는 백엔드에 `Execute`가 도착합니다. 간헐적으로만 터지는 `prepared statement "S_1" does not exist`의 정체입니다.
 
@@ -149,5 +149,5 @@ db-hobby=> SELECT * FROM t WHERE id = 1;
 - [PostgreSQL Documentation: Message Flow](https://www.postgresql.org/docs/current/protocol-flow.html): extended query·CancelRequest 절차의 1차 근거
 - [PostgreSQL Documentation: Message Formats](https://www.postgresql.org/docs/current/protocol-message-formats.html)
 - [PgBouncer Documentation: Features](https://www.pgbouncer.org/features.html): pooling 모드별 세션 상태 제약
-- 본 블로그: [Tomcat NIO 요청 처리](/blog/theory/tomcat-nio-request-handling)
+- 본 블로그: [DB 커넥션 풀](/blog/theory/db-connection-pool) · [Tomcat NIO 요청 처리](/blog/theory/tomcat-nio-request-handling)
 - [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby): `server.c`
