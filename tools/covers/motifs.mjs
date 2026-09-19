@@ -1,4 +1,4 @@
-import { box, text, arrow, pill, line, dot, C } from '../diagrams/draw.mjs';
+import { box, text, arrow, pill, line, dot, route, C } from '../diagrams/draw.mjs';
 import { fit, INK, MUTED, SOFT } from './compose.mjs';
 
 /**
@@ -158,6 +158,27 @@ export function tcpHandshake(k, a, spec, accent) {
   });
 }
 
+/** 상태가 앞으로만 가지 않는다. 완료 뒤에 앞 단계로 돌아오는 전이를 그린다. */
+export function stateReversal(k, a, spec, accent) {
+  const L = spec.labels;
+  const bw = 300, bh = 62, x = a.x + (a.w - bw) / 2;
+  const ys = [a.y + 26, a.y + 138, a.y + 250];
+  const cols = [C.gray, C.blue, C.green];
+
+  ys.forEach((y, i) => {
+    box(k, x, y, bw, bh, { color: cols[i] });
+    fit(k, x + bw / 2, y + 40, L.states[i], 18, bw - 24, { weight: 700, fill: cols[i].s });
+    if (i < 2) arrow(k, x + bw / 2, y + bh + 4, x + bw / 2, ys[i + 1] - 4, { color: LINK, width: 1.8, head: 10 });
+  });
+
+  // 완료에서 입금 대기로 되돌아오는 전이
+  const rx = x + bw;
+  route(k, [[rx, ys[2] + bh / 2], [rx + 40, ys[2] + bh / 2], [rx + 40, ys[1] + bh / 2], [rx, ys[1] + bh / 2]], { color: C.red.s });
+  fit(k, x + bw - 20, ys[1] + bh + 32, L.back, 14, 120, { weight: 700, fill: C.red.s, anchor: 'end' });
+
+  if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
+}
+
 export const MOTIFS = {
   'schema-mismatch': schemaMismatch,
   'cdc-pipeline': cdcPipeline,
@@ -165,4 +186,5 @@ export const MOTIFS = {
   btree,
   'pool-saturation': poolSaturation,
   'tcp-handshake': tcpHandshake,
+  'state-reversal': stateReversal,
 };
