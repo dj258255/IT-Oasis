@@ -3,7 +3,7 @@ title: '결제 완료는 최종 상태가 아니었다: 가상계좌에서 만�
 description: '가상계좌는 입금이 나중에 오는 결제라 완료가 최종 상태가 아니다. 만료는 웹훅으로 오지 않고 일부 은행은 입금 실패인데 완료를 먼저 보냈다가 되돌린다. 만료 배치와 역전이 허용 전이로 그 두 자리를 정리한 기록이다.'
 date: 2026-09-20
 category: study/pay
-coverImage: "/uploads/project/pay/thumbs/pay-failure.svg"
+coverImage: /uploads/covers/project/pay/pay-ch19-virtual-account-reversal.svg
 draft: false
 series: "결제 시스템 만들기"
 seriesOrder: 19
