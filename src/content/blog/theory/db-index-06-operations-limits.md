@@ -12,7 +12,7 @@ tags:
   - Bloom Filter
   - Operations
 category: theory/Database
-draft: false
+draft: true
 coverImage: "/uploads/theory/db-index/cover-6.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 6

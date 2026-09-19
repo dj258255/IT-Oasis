@@ -13,7 +13,7 @@ tags:
   - Index-Only Scan
   - autovacuum
 category: theory/Database
-draft: false
+draft: true
 coverImage: "/uploads/theory/db-storage/cover-3.svg"
 series: "DB 스토리지 내부"
 seriesOrder: 3

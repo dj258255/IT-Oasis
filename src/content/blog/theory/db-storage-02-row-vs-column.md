@@ -13,7 +13,7 @@ tags:
   - ClickHouse
   - Parquet
 category: theory/Database
-draft: false
+draft: true
 coverImage: "/uploads/theory/db-storage/cover-2.svg"
 series: "DB 스토리지 내부"
 seriesOrder: 2
