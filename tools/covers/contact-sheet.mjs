@@ -1,5 +1,8 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import { pilot } from './specs/pilot.mjs';
+import { posts } from './specs/posts.mjs';
+
+const specs = [...pilot, ...posts];
 
 // 이전 커버와 새 커버를 카드 크기로 나란히 놓는다.
 // 1200px 원본으로 보면 다 좋아 보이므로, 실제 목록 카드와 같은 폭(380px)에서 판단한다.
@@ -12,7 +15,7 @@ const figure = (src, label) => `
         <figcaption>${label}</figcaption>
       </figure>`;
 
-const sections = pilot
+const sections = specs
   .map(
     (spec) => `
     <section>
