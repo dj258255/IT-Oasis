@@ -10,7 +10,7 @@ tags:
   - Hibernate
   - Dirty Checking
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/jpa-persistence-context/transaction-basics.svg"
 ---
 

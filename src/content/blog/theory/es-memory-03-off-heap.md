@@ -10,7 +10,7 @@ tags:
   - Elasticsearch
   - NIO
 category: theory/JVM-Memory
-draft: true
+draft: false
 coverImage: "/uploads/theory/es-memory/cover-3.svg"
 series: "JVM 메모리"
 seriesOrder: 3

@@ -12,7 +12,7 @@ tags:
   - Visibility Map
   - VACUUM
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/db-index/cover-3.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 3

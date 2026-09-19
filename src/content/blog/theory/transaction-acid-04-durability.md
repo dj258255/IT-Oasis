@@ -14,7 +14,7 @@ tags:
   - InnoDB
   - Database
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/transaction-acid/cover-4.svg"
 series: "트랜잭션 ACID"
 seriesOrder: 4

@@ -10,7 +10,7 @@ tags:
   - Multi-Cloud
 category: activity
 coverImage: /uploads/activity/aws-modern-app-training/group-photo-1.jpeg
-draft: true
+draft: false
 ---
 
 **작성일**: 2023년 12월 11일 (제 개인 노션에 있는걸 옮겨왔습니다)

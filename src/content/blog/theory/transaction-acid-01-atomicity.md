@@ -12,7 +12,7 @@ tags:
   - WAL
   - Database
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/transaction-acid/cover-1.svg"
 series: "트랜잭션 ACID"
 seriesOrder: 1

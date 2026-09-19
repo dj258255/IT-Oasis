@@ -12,7 +12,7 @@ tags:
   - Selectivity
   - Performance
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/db-index/cover-2.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 2

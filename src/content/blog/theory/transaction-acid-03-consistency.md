@@ -12,7 +12,7 @@ tags:
   - PACELC
   - Database
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/transaction-acid/cover-3.svg"
 series: "트랜잭션 ACID"
 seriesOrder: 3

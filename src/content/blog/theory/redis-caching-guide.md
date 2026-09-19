@@ -9,7 +9,7 @@ tags:
   - Performance
   - Architecture
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.svg"
 ---
 
