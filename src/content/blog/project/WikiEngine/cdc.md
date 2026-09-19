@@ -15,7 +15,7 @@ tags:
   - Lucene
   - Grafana
 category: personal/WikiEngine
-coverImage: /uploads/project/WikiEngine/cdc/phase14-cdc-k6-overview.png
+coverImage: /uploads/covers/project/WikiEngine/cdc.svg
 draft: false
 series: "WikiEngine"
 ---

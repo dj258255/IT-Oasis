@@ -12,7 +12,7 @@ tags:
   - Network
   - TCP
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
+coverImage: /uploads/covers/hobby/kernel-hobby-09-tcp.svg
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 10
