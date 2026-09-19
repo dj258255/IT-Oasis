@@ -197,6 +197,8 @@ export default defineConfig({
     '/blog/project/dbtower/dbtower-8-talking-and-lakehouse': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-9-operational-bottlenecks': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-10-ai-cost-audit': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    // 2026-09-20 b-studio 1편을 접었다. 남은 소개 글로 보낸다.
+    '/blog/project/b-studio/b-studio-1-dump-streaming-and-path-rules': `${base || ''}/blog/project/b-studio/b-studio-0-intro`,
     // EduMeet 9편 -> edumeet-retrospective 단일 개발기로 병합
     '/blog/project/edumeet/architecture-evolution': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/onetomany-join-table': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
