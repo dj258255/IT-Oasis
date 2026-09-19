@@ -19,4 +19,23 @@ export const posts = [
       caption: '완료를 최종이라고 가정하면 안 된다',
     },
   },
+  {
+    id: 'project/pay/pay-ch20-fds-block-ignored',
+    kicker: '결제 시스템 만들기 · 이상거래 탐지',
+    title: ['BLOCK을 반환했는데', '결제가 계속 승인되고 있었다'],
+    thesis: '지연이 이유가 아니라는 것을 재고도 켜지 않았다',
+    layout: 'right-diagram',
+    motif: 'block-ignored',
+    accent: 'red',
+    note: '판정 p99 1.92ms · 승인 종단의 1.8%',
+    previous: '/uploads/banners/default-post-cover.png',
+    labels: {
+      request: '결제 요청',
+      approve: '승인',
+      path: '승인 경로',
+      judge: '판정 엔진 · BLOCK',
+      note: '이 선이 없다',
+      caption: '판정이 나와도 결제를 세우지 않는다',
+    },
+  },
 ];

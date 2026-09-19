@@ -179,6 +179,30 @@ export function stateReversal(k, a, spec, accent) {
   if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
 }
 
+/** 판정은 나오는데 그 판정이 경로에 붙어 있지 않다. 승인 경로 옆에 판정 상자를 두고 연결이 끊긴 자리를 표시한다. */
+export function blockIgnored(k, a, spec, accent) {
+  const L = spec.labels;
+  const cw = 200, ch = 58, x1 = a.x + 4, x2 = a.x + 262;
+
+  box(k, x1, a.y + 44, cw, ch, { color: C.blue });
+  fit(k, x1 + cw / 2, a.y + 80, L.request, 17, cw - 24, { weight: 700, fill: C.blue.s });
+  box(k, x1, a.y + 236, cw, ch, { color: C.green });
+  fit(k, x1 + cw / 2, a.y + 272, L.approve, 17, cw - 24, { weight: 700, fill: C.green.s });
+
+  arrow(k, x1 + cw / 2, a.y + 106, x1 + cw / 2, a.y + 232, { color: LINK, width: 1.8, head: 10 });
+  fit(k, x1 + cw / 2 - 10, a.y + 176, L.path, 14, 120, { weight: 700, fill: MUTED, anchor: 'end' });
+
+  box(k, x2, a.y + 140, 204, ch, { color: C.red });
+  fit(k, x2 + 102, a.y + 176, L.judge, 16, 184, { weight: 700, fill: C.red.s });
+
+  // 끊긴 연결: 판정 상자에서 승인 경로로 가려다 만 선
+  line(k, x1 + cw + 4, a.y + 169, x1 + cw + 22, a.y + 169, { color: C.red.s, width: 1.6 });
+  fit(k, x1 + cw + 26, a.y + 176, '×', 20, 32, { weight: 700, fill: C.red.s, anchor: 'start' });
+  fit(k, x2 + 102, a.y + 226, L.note, 13, 204, { weight: 500, fill: MUTED });
+
+  if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
+}
+
 export const MOTIFS = {
   'schema-mismatch': schemaMismatch,
   'cdc-pipeline': cdcPipeline,
@@ -187,4 +211,5 @@ export const MOTIFS = {
   'pool-saturation': poolSaturation,
   'tcp-handshake': tcpHandshake,
   'state-reversal': stateReversal,
+  'block-ignored': blockIgnored,
 };
