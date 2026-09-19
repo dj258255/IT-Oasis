@@ -1,6 +1,6 @@
 ---
 title: 'LTR 재랭킹 + 카테고리 자동 분류: XGBoost4J + LLM-as-a-Judge'
-description: BM25 수동 가중치(title:3, content:1)의 한계를 Learning to Rank(LTR)로 극복합니다. 카테고리 28개 자동 분류(키워드 기반, 정확도 83%) → SortedSetDocValuesFacetCounts 네이티브 Facet 전환 → 태그 216만 건 인덱싱을 1회 재색인으로 통합 반영합니다. LLM-as-a-Judge(Gemini)로 학습 데이터 900쌍을 생성하고(1차 실패 98% → 5초 딜레이+지수 백오프로 해결), XGBoost LambdaMART 14개 피처로 학습하여 NDCG@10을 0.6910 → 0.7387(+4.8%p) 개선합니다. XGBoost4J ARM64 네이티브 추론, Rescorer Top-200 재랭킹, RefreshListener 기반 FacetState 캐싱, MultiCollectorManager 단일 패스 수집까지 구현하지만, 2코어 ARM Free Tier에서 LTR ON 시 CPU 포화(72배 악화)를 k6로 실측하여 LTR_ENABLED=false로 비활성화합니다.
+description: BM25 수동 가중치(title:3, content:1)의 한계를 Learning to Rank(LTR)로 극복한다. 카테고리 28개 자동 분류(키워드 기반, 정확도 83%) → SortedSetDocValuesFacetCounts 네이티브 Facet 전환 → 태그 216만 건 인덱싱을 1회 재색인으로 통합 반영한다. LLM-as-a-Judge(Gemini)로 학습 데이터 900쌍을 생성하고(1차 실패 98% → 5초 딜레이+지수 백오프로 해결), XGBoost LambdaMART 14개 피처로 학습하여 NDCG@10을 0.6910 → 0.7387(+4.8%p) 개선한다. XGBoost4J ARM64 네이티브 추론, Rescorer Top-200 재랭킹, RefreshListener 기반 FacetState 캐싱, MultiCollectorManager 단일 패스 수집까지 구현하지만, 2코어 ARM Free Tier에서 LTR ON 시 CPU 포화(72배 악화)를 k6로 실측하여 LTR_ENABLED=false로 비활성화한다.
 date: 2026-03-27T00:00:00.000Z
 tags:
   - Lucene

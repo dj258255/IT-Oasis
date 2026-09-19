@@ -1,6 +1,6 @@
 ---
 title: 'Redis 샤딩: Consistent Hashing으로 워크로드 격리'
-description: 단일 Redis 인스턴스에서 KEYS 블로킹(34.6ms), 배치↔실시간 워크로드 간섭(GET 최악 15.5ms), volatile-lru 보안 위험을 실측하고, KEYS→SCAN 전환 + 3노드 Consistent Hashing + 블랙리스트 전용 인스턴스 격리로 해결합니다. 가상 노드 150개 ConcurrentSkipListMap 라우팅, 노드 장애 시 Lucene fallback, 100 VU 부하 테스트로 검증한 과정을 정리합니다.
+description: 단일 Redis 인스턴스에서 KEYS 블로킹(34.6ms), 배치↔실시간 워크로드 간섭(GET 최악 15.5ms), volatile-lru 보안 위험을 실측하고, KEYS→SCAN 전환 + 3노드 Consistent Hashing + 블랙리스트 전용 인스턴스 격리로 해결한다. 가상 노드 150개 ConcurrentSkipListMap 라우팅, 노드 장애 시 Lucene fallback, 100 VU 부하 테스트로 검증한 과정을 정리한다.
 date: 2026-03-23T00:00:00.000Z
 tags:
   - Redis

@@ -1,6 +1,6 @@
 ---
 title: 'MySQL 검색을 버리고 Lucene을 선택한 이유'
-description: MySQL FULLTEXT ngram의 구조적 한계(고빈도 토큰 타임아웃, 300GB+ 인덱스, false positive)를 분석하고, Lucene·Elasticsearch·벡터DB를 비용 관점에서 비교하여 임베디드 Lucene + Nori 형태소 분석기를 선택한 기술 결정 과정을 정리합니다.
+description: MySQL FULLTEXT ngram의 구조적 한계(고빈도 토큰 타임아웃, 300GB+ 인덱스, false positive)를 분석하고, Lucene·Elasticsearch·벡터DB를 비용 관점에서 비교하여 임베디드 Lucene + Nori 형태소 분석기를 선택한 기술 결정 과정을 정리한다.
 date: 2026-02-28T00:00:00.000Z
 tags:
   - Lucene
