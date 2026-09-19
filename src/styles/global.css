@@ -476,7 +476,15 @@ button, input, select, textarea {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
 }
 
-/* Comfortable reading measure inside the wide article column */
+/* 글 기둥은 읽기 폭(960px)에 카드 좌우 패딩(40px)을 더한 값에서 멈춘다.
+   960px는 이미 한 줄 길이의 상한이라 더 넓히지 않고, 대신 기둥을 좁혀
+   본문 양옆에 아무것도 없는 여백이 남지 않게 한다. */
+.post-article {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+/* Comfortable reading measure inside the article column */
 #post-content {
   max-width: 960px;
   margin-inline: auto;
