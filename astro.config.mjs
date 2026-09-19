@@ -111,6 +111,14 @@ export default defineConfig({
     '/blog/ai/review-surface-not-review-speed': `${base || ''}/blog/ai/ai-guardrails-before-codegen`,
     '/blog/ai/toss-frontend-ai-workflow-to-backend': `${base || ''}/blog/ai/ai-guardrails-before-codegen`,
     '/blog/incident/currency-anomaly-detection': `${base || ''}/blog/incident/currency-reclaim`,
+    // pay 정답이 있는 문제(버그·표준 적용·측정 교정) 6편을 비공개로 내린다.
+    // 남기는 것은 "정답이 없어 골라야 했던" 글뿐이고, 옛 주소는 pay 소개 글로 보낸다.
+    '/blog/project/pay/pay-ch1-what-to-trust': `${base || ''}/blog/project/pay/pay-0-overview`,
+    '/blog/project/pay/pay-ch2-runtime-truths': `${base || ''}/blog/project/pay/pay-0-overview`,
+    '/blog/project/pay/pay-ch3-money-leaks': `${base || ''}/blog/project/pay/pay-0-overview`,
+    '/blog/project/pay/pay-ch4-my-docs-were-wrong': `${base || ''}/blog/project/pay/pay-0-overview`,
+    '/blog/project/pay/pay-ch7-measuring-wrong': `${base || ''}/blog/project/pay/pay-0-overview`,
+    '/blog/project/pay/pay-ch15-webhook-arrived-first': `${base || ''}/blog/project/pay/pay-0-overview`,
     // 타이미 15편 -> tymee-retrospective 단일 개발기로 병합
     '/blog/project/tymee/tymee-introduction': `${base || ''}/blog/project/tymee/tymee-retrospective`,
     '/blog/project/tymee/tymee-architecture-selection': `${base || ''}/blog/project/tymee/tymee-retrospective`,

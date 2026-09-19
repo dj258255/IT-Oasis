@@ -4,7 +4,7 @@ description: '테스트가 다 통과하는데 실제로 띄우니 결제가 DB�
 date: 2026-04-06
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch2.svg"
-draft: false
+draft: true
 series: "결제 시스템 만들기"
 seriesOrder: 4
 tags:

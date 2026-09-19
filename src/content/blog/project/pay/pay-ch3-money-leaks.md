@@ -4,7 +4,7 @@ description: '정산이 총액의 3%만 떼고, 집계 키가 승인일이라 �
 date: 2026-04-21
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch3.svg"
-draft: false
+draft: true
 series: "결제 시스템 만들기"
 seriesOrder: 5
 tags:

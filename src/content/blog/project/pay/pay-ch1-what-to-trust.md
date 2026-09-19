@@ -4,7 +4,7 @@ description: '금액 검증을 열심히 짜놓고도 기준값이 클라이언�
 date: 2026-02-16
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch1.svg"
-draft: false
+draft: true
 series: "결제 시스템 만들기"
 seriesOrder: 1
 tags:
