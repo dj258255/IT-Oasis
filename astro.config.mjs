@@ -181,7 +181,7 @@ export default defineConfig({
     '/blog/project/wikiengine/distributed-stability': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
     '/blog/project/wikiengine/autocomplete-btree-index': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
     '/blog/project/wikiengine/nori-stop-filter-fix': `${base || ''}/blog/project/wikiengine/wiki-search-overview`,
-    '/blog/project/codingtestkit/codingtestkit-thankful-review': `${base || ''}/blog/project/codingtestkit/codingtestkit-introduction`,
+    '/blog/project/codingtestkit/codingtestkit-thankful-review': `${base || ''}/projects`,
     '/blog/daily/hello-world': `${base || ''}/about`,
     // 2026-09-18 프로젝트 소개 한 편만 남기고 나머지 글을 지웠다. 옛 주소는 소개 글로 보낸다.
     '/blog/project/edumeet/own-hls': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
@@ -197,6 +197,13 @@ export default defineConfig({
     '/blog/project/dbtower/dbtower-8-talking-and-lakehouse': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-9-operational-bottlenecks': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-10-ai-cost-audit': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
+    // 2026-09-20 소개·정리 성격이라 판단이 없던 다섯 편을 접었다. 소개 글 셋은 프로젝트
+    // 목록으로, db-hobby ⑪은 남은 연재 총정리로 보낸다. 커넥션 풀 글은 이론 정리라 스토리 목록으로.
+    '/blog/project/codingtestkit/codingtestkit-introduction': `${base || ''}/projects`,
+    '/blog/project/eedgate/eedgate-introduction': `${base || ''}/projects`,
+    '/blog/project/it-oasis/it-oasis-blog-intro': `${base || ''}/projects`,
+    '/blog/theory/db-connection-pool': `${base || ''}/blog`,
+    '/blog/project/db-hobby/db-internals-11-sql-executor': `${base || ''}/blog/project/db-hobby/db-internals-12-retrospective`,
     // EduMeet 9편 -> edumeet-retrospective 단일 개발기로 병합
     '/blog/project/edumeet/architecture-evolution': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/onetomany-join-table': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
