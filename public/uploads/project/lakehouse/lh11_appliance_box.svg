@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif">
+  <rect x="0" y="0" width="760" height="420" rx="12" fill="#ffffff" stroke="#e5e5e5"/>
+  <text x="32" y="40" font-size="16" font-weight="700" fill="#1a1a1a">standalone 어플라이언스 — 배터리 포함 상자</text>
+  <text x="32" y="60" font-size="12" fill="#6b6b6b">docker-compose.standalone.yml · external 네트워크 0 · 유일한 외부 의존 = 사용자의 DBTower</text>
+
+  <!-- 상자: 번들 -->
+  <rect x="230" y="84" width="500" height="296" rx="10" fill="#f4f8fd" stroke="#2a78d6" stroke-width="1.5"/>
+  <text x="250" y="110" font-size="13" font-weight="700" fill="#2a78d6">번들 (사용자는 안을 안 본다)</text>
+  <text x="560" y="110" font-size="11" fill="#6b6b6b">network: lakehouse-standalone</text>
+
+  <!-- Airflow -->
+  <rect x="250" y="128" width="215" height="66" rx="8" fill="#ffffff" stroke="#c9c9c9"/>
+  <text x="264" y="152" font-size="12.5" font-weight="600" fill="#1a1a1a">Airflow (init·scheduler·webserver)</text>
+  <text x="264" y="170" font-size="11" fill="#6b6b6b">코드는 이미지에 구움 · 시크릿 ${VAR:?}</text>
+  <text x="264" y="185" font-size="11" fill="#6b6b6b">offload → 게이트 → dbt → publish</text>
+
+  <!-- MinIO -->
+  <rect x="250" y="210" width="215" height="52" rx="8" fill="#ffffff" stroke="#c9c9c9"/>
+  <text x="264" y="233" font-size="12.5" font-weight="600" fill="#1a1a1a">MinIO (S3)</text>
+  <text x="264" y="250" font-size="11" fill="#6b6b6b">raw parquet + DuckLake 데이터 · 버킷 자동 생성</text>
+
+  <!-- catalog PG -->
+  <rect x="250" y="278" width="215" height="52" rx="8" fill="#ffffff" stroke="#c9c9c9"/>
+  <text x="264" y="301" font-size="12.5" font-weight="600" fill="#1a1a1a">카탈로그 PG</text>
+  <text x="264" y="318" font-size="11" fill="#6b6b6b">ducklake_catalog + metabase_app (서비스 추가 0)</text>
+
+  <!-- Metabase -->
+  <rect x="490" y="128" width="215" height="66" rx="8" fill="#ffffff" stroke="#c9c9c9"/>
+  <text x="504" y="152" font-size="12.5" font-weight="600" fill="#1a1a1a">Metabase</text>
+  <text x="504" y="170" font-size="11" fill="#6b6b6b">앱 DB = 번들 PG (H2 아님, 151테이블 실측)</text>
+  <text x="504" y="185" font-size="11" fill="#6b6b6b">사용자가 보는 유일한 화면</text>
+
+  <!-- demo 프로필 -->
+  <rect x="490" y="210" width="215" height="52" rx="8" fill="#ffffff" stroke="#1baf7a" stroke-dasharray="5 4"/>
+  <text x="504" y="233" font-size="12.5" font-weight="600" fill="#0b7a4b">샘플 원천 PG (--profile demo)</text>
+  <text x="504" y="250" font-size="11" fill="#6b6b6b">DBTower 없이 전체 e2e 체험 · 시드 2테이블</text>
+
+  <!-- DuckLake 흐름 표시 -->
+  <text x="490" y="300" font-size="11.5" fill="#444444">Metabase ← DuckLake(카탈로그=PG, 데이터=S3) ← publish</text>
+  <text x="490" y="318" font-size="11.5" fill="#444444">DuckDB/DuckLake라는 단어를 사용자는 한 번도 안 본다</text>
+
+  <!-- 외부: 사용자의 DBTower -->
+  <rect x="32" y="150" width="160" height="86" rx="8" fill="#fdf6ee" stroke="#eb6834" stroke-width="1.5"/>
+  <text x="48" y="176" font-size="12.5" font-weight="700" fill="#b34a1a">사용자의 DBTower</text>
+  <text x="48" y="194" font-size="11" fill="#6b6b6b">메타 PG (외부)</text>
+  <text x="48" y="211" font-size="11" fill="#6b6b6b">query_snapshot</text>
+  <text x="48" y="226" font-size="11" fill="#6b6b6b">database_instance</text>
+
+  <!-- 화살표: 외부 → 번들 -->
+  <line x1="192" y1="182" x2="246" y2="164" stroke="#444444" stroke-width="1.6"/>
+  <path d="M246 164 l-9 0.5 4.5 7 z" fill="#444444"/>
+  <text x="150" y="146" font-size="10.5" fill="#444444">SRC_PG_* (.env)</text>
+  <text x="150" y="160" font-size="10.5" fill="#444444">read-only 두 테이블</text>
+
+  <text x="32" y="268" font-size="10.5" fill="#9b9b9b">권한 함정: database_instance</text>
+  <text x="32" y="282" font-size="10.5" fill="#9b9b9b">SELECT 빠지면 조용히 빈 결과</text>
+
+  <text x="32" y="404" font-size="10.5" fill="#9b9b9b">실측 2026-07-15: --profile demo up → 7컨테이너 healthy → DBTower 없이 offload→게이트(4축 OK)→dbt run PASS=3→test PASS=18</text>
+</svg>
