@@ -1,0 +1,18 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="630" fill="#f8fafb"/>
+  <rect width="1200" height="8" fill="#4a8db8"/>
+
+  <text x="72" y="150" font-size="42" font-weight="800" fill="#1e293b">테스트는 초록불이었는데</text>
+  <text x="72" y="206" font-size="42" font-weight="800" fill="#1e293b">DB가 그 값을 거부했다</text>
+  <text x="72" y="256" font-size="17" fill="#64748b">코드와 스키마가 조용히 어긋나 있던 두 자리</text>
+
+  <rect x="72" y="308" width="1056" height="104" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="96" y="340" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="0.03em">드러나지 않은 이유</text>
+  <text x="96" y="378" font-size="16" fill="#475569">H2 단위 테스트는 enum 을 강제하지 않는다</text>
+  <text x="96" y="404" font-size="16" fill="#475569">해당 경로가 아직 한 번도 실행되지 않았다</text>
+
+  <rect x="72" y="440" width="1056" height="120" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="96" y="474" font-size="13" font-weight="700" fill="#94a3b8" letter-spacing="0.03em">실측으로 닫은 아홉 건 중</text>
+  <text x="96" y="512" font-size="20" font-weight="700" fill="#b91c1c">배포 중단 270건 → 0건</text>
+  <text x="96" y="542" font-size="16" fill="#475569">이관 중 델타 3건도 스냅샷 대조로는 안 잡혔다</text>
+</svg>
