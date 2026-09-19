@@ -1,0 +1,72 @@
+<svg viewBox="0 0 1200 792" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <defs>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.12"/></filter>
+    <filter id="shSm" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+    <marker id="arB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#4a8db8"/></marker>
+    <marker id="arP" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#9b59b6"/></marker>
+  </defs>
+
+  <rect width="1200" height="792" fill="#ffffff"/>
+
+  <!-- 제목 -->
+  <text x="600" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">같은 사실 묶음, 받는 사람이 다르면 가드가 다르게 걸린다</text>
+  <text x="600" y="66" text-anchor="middle" font-size="12" fill="#94a3b8">대사 화면의 사실 묶음 하나를 두 창구가 나눠 쓴다 · 어댑터와 창구만 새로 만들었다</text>
+
+  <!-- 재사용한 잣대 -->
+  <rect x="420" y="96" width="360" height="86" rx="12" fill="#eef6fb" stroke="#4a8db8" stroke-width="1.5" filter="url(#sh)"/>
+  <rect x="420" y="96" width="360" height="4" rx="2" fill="#4a8db8"/>
+  <text x="600" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#1e5f8a">같은 사실 묶음 (FactPack)</text>
+  <text x="600" y="147" text-anchor="middle" font-size="10" fill="#64748b">①에서 만든 사실 문장·검증기·포트를 그대로 재사용</text>
+  <text x="600" y="165" text-anchor="middle" font-size="10" fill="#64748b">새로 만든 건 어댑터와 창구뿐</text>
+
+  <!-- 두 창구로 갈라지는 화살표 -->
+  <line x1="470" y1="184" x2="300" y2="206" stroke="#4a8db8" stroke-width="1.8" marker-end="url(#arB)"/>
+  <line x1="730" y1="184" x2="900" y2="206" stroke="#9b59b6" stroke-width="1.8" marker-end="url(#arP)"/>
+
+  <!-- 고객용 초안 -->
+  <rect x="120" y="208" width="400" height="58" rx="12" fill="#4a8db8"/>
+  <text x="320" y="234" text-anchor="middle" font-size="14.5" font-weight="700" fill="#ffffff">고객용 초안</text>
+  <text x="320" y="253" text-anchor="middle" font-size="10" fill="#dbe9f3">받는 사람 — 상담원이 검토한 뒤 고객에게 발송</text>
+
+  <rect x="120" y="286" width="400" height="112" rx="12" fill="#ffffff" stroke="#4a8db8" stroke-width="1.5" filter="url(#shSm)"/>
+  <text x="148" y="318" font-size="10.5" fill="#94a3b8">내부 용어</text>
+  <text x="148" y="350" font-size="15" font-weight="700" fill="#1e293b">막아야 한다</text>
+
+  <rect x="120" y="408" width="400" height="112" rx="12" fill="#ffffff" stroke="#4a8db8" stroke-width="1.5" filter="url(#shSm)"/>
+  <text x="148" y="440" font-size="10.5" fill="#94a3b8">말투</text>
+  <text x="148" y="472" font-size="15" font-weight="700" fill="#1e293b">다듬어야 한다</text>
+
+  <rect x="120" y="530" width="400" height="112" rx="12" fill="#fef7ec" stroke="#e67e22" stroke-width="1.5" filter="url(#shSm)"/>
+  <text x="148" y="562" font-size="10.5" fill="#94a3b8">없는 숫자</text>
+  <text x="148" y="594" font-size="15" font-weight="700" fill="#1e293b">버린다</text>
+
+  <!-- 운영자용 서술 -->
+  <rect x="680" y="208" width="400" height="58" rx="12" fill="#9b59b6"/>
+  <text x="880" y="234" text-anchor="middle" font-size="14.5" font-weight="700" fill="#ffffff">운영자용 서술</text>
+  <text x="880" y="253" text-anchor="middle" font-size="10" fill="#eadcf5">받는 사람 — 대사 화면에서 운영자가 읽음</text>
+
+  <rect x="680" y="286" width="400" height="112" rx="12" fill="#ffffff" stroke="#9b59b6" stroke-width="1.5" filter="url(#shSm)"/>
+  <text x="708" y="318" font-size="10.5" fill="#94a3b8">내부 용어</text>
+  <text x="708" y="350" font-size="15" font-weight="700" fill="#1e293b">그대로 나와야 한다</text>
+  <text x="708" y="374" font-size="10.5" fill="#64748b">화면과 대조해야 하니까</text>
+
+  <rect x="680" y="408" width="400" height="112" rx="12" fill="#ffffff" stroke="#9b59b6" stroke-width="1.5" filter="url(#shSm)"/>
+  <text x="708" y="440" font-size="10.5" fill="#94a3b8">말투</text>
+  <text x="708" y="472" font-size="15" font-weight="700" fill="#1e293b">상관없다</text>
+
+  <rect x="680" y="530" width="400" height="112" rx="12" fill="#fef7ec" stroke="#e67e22" stroke-width="1.5" filter="url(#shSm)"/>
+  <text x="708" y="562" font-size="10.5" fill="#94a3b8">없는 숫자</text>
+  <text x="708" y="594" font-size="15" font-weight="700" fill="#1e293b">버린다</text>
+  <text x="708" y="618" font-size="10.5" font-weight="700" fill="#b45309">유일하게 남는 위험</text>
+
+  <!-- 둘 다 막는 자리 -->
+  <line x1="520" y1="586" x2="546" y2="586" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <line x1="654" y1="586" x2="680" y2="586" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect x="546" y="572" width="108" height="28" rx="14" fill="#e67e22"/>
+  <text x="600" y="591" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ffffff">공통 가드</text>
+
+  <!-- 결론 -->
+  <rect x="120" y="668" width="960" height="84" rx="12" fill="#eef6fb" stroke="#4a8db8" stroke-width="1"/>
+  <text x="600" y="700" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e5f8a">무엇을 막고 무엇을 안 막을지는 받는 사람이 정한다</text>
+  <text x="600" y="727" text-anchor="middle" font-size="10.5" fill="#334155">가드를 필요 없는 곳에 늘리면 무엇이 왜 있는지 흐려진다 — 남는 위험 하나만 막았고, 줄인 자리의 결함은 내가 다시 못 본다</text>
+</svg>

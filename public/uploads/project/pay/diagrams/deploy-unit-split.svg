@@ -1,0 +1,79 @@
+<svg viewBox="0 0 1200 720" width="1200" height="720" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1200" height="720" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="600" y="40" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b">같은 jar 하나, 프로파일 하나로 배포 단위만 나눈다</text>
+  <text x="600" y="62" text-anchor="middle" font-size="11" fill="#94a3b8">저장소도 브로커도 그대로 — 트랜잭션과 조인은 남고, 바뀌는 것은 배치 실행 주체뿐이다</text>
+
+  <!-- 하나의 jar -->
+  <rect x="390" y="86" width="420" height="64" rx="10" fill="#fff" stroke="#64748b" stroke-width="2"/>
+  <rect x="390" y="86" width="420" height="4" rx="10" fill="#64748b"/>
+  <text x="600" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">payment.jar — 하나의 jar</text>
+  <text x="600" y="136" text-anchor="middle" font-size="11" fill="#64748b">같은 저장소 · 같은 브로커 · 같은 코드</text>
+
+  <!-- 분기 -->
+  <line x1="600" y1="150" x2="600" y2="174" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="340" y1="174" x2="860" y2="174" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="340" y1="174" x2="340" y2="188" stroke="#4a8db8" stroke-width="2"/>
+  <polygon points="340,202 332,188 348,188" fill="#4a8db8"/>
+  <line x1="860" y1="174" x2="860" y2="188" stroke="#e67e22" stroke-width="2"/>
+  <polygon points="860,202 852,188 868,188" fill="#e67e22"/>
+
+  <!-- API 인스턴스 -->
+  <rect x="140" y="204" width="400" height="118" rx="10" fill="#fff" stroke="#4a8db8" stroke-width="2"/>
+  <rect x="140" y="204" width="400" height="4" rx="10" fill="#4a8db8"/>
+  <text x="340" y="236" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1e293b">API 인스턴스</text>
+  <text x="340" y="258" text-anchor="middle" font-size="11.5" fill="#64748b">아무 프로파일 없이 뜬다</text>
+  <text x="340" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#4a8db8">스케줄러 OFF</text>
+  <text x="340" y="308" text-anchor="middle" font-size="10.5" fill="#94a3b8">결제 API 담당</text>
+
+  <!-- 워커 -->
+  <rect x="660" y="204" width="400" height="118" rx="10" fill="#fff" stroke="#e67e22" stroke-width="2"/>
+  <rect x="660" y="204" width="400" height="4" rx="10" fill="#e67e22"/>
+  <text x="860" y="236" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1e293b">워커</text>
+  <text x="860" y="258" text-anchor="middle" font-size="11.5" fill="#64748b">배치 실행 주체 프로파일로 뜬다</text>
+  <text x="860" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#e67e22">스케줄러 ON</text>
+  <text x="860" y="308" text-anchor="middle" font-size="10.5" fill="#94a3b8">정산 배치 담당</text>
+
+  <!-- 표 머리 -->
+  <text x="48" y="362" font-size="12" font-weight="700" fill="#64748b">결합</text>
+  <text x="272" y="362" font-size="12" font-weight="700" fill="#64748b">같은 jar 하나 (모놀리스)</text>
+  <text x="692" y="362" font-size="12" font-weight="700" fill="#64748b">배포 단위만 분리</text>
+
+  <!-- 행 1 -->
+  <rect x="48" y="372" width="200" height="100" rx="10" fill="#fef7ec" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="148" y="398" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">① 스케줄러 중복</text>
+  <text x="148" y="422" text-anchor="middle" font-size="11" fill="#b45309">수평 확장하면</text>
+  <text x="148" y="446" text-anchor="middle" font-size="11" fill="#b45309">스케줄러도 함께 복제</text>
+
+  <rect x="272" y="372" width="396" height="100" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="470" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">인스턴스 2대 → 정산 스케줄러 2대</text>
+  <text x="470" y="434" text-anchor="middle" font-size="11.5" fill="#64748b">같은 배치가 동시에 돌아 중복이 터진다</text>
+
+  <polygon points="690,422 676,414 676,430" fill="#27ae60"/>
+
+  <rect x="692" y="372" width="460" height="100" rx="10" fill="#fff" stroke="#27ae60" stroke-width="2"/>
+  <text x="922" y="410" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">API 2 + 워커 1로 확장해도 정산 중복 0건</text>
+  <text x="922" y="434" text-anchor="middle" font-size="11.5" fill="#64748b">워커에서만 스케줄러가 켜진다</text>
+
+  <!-- 행 2 -->
+  <rect x="48" y="492" width="200" height="100" rx="10" fill="#fef7ec" stroke="#e67e22" stroke-width="1.5"/>
+  <text x="148" y="518" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">② 배포 중단</text>
+  <text x="148" y="542" text-anchor="middle" font-size="11" fill="#b45309">무관한 모듈의 배포가</text>
+  <text x="148" y="566" text-anchor="middle" font-size="11" fill="#b45309">결제를 멈춘다</text>
+
+  <rect x="272" y="492" width="396" height="100" rx="10" fill="#fff" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="470" y="530" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">워커 재배포 중 결제 실패 270/9,870 (2.7%)</text>
+  <text x="470" y="554" text-anchor="middle" font-size="11.5" fill="#64748b">9초 중단</text>
+
+  <polygon points="690,542 676,534 676,550" fill="#27ae60"/>
+
+  <rect x="692" y="492" width="460" height="100" rx="10" fill="#fff" stroke="#27ae60" stroke-width="2"/>
+  <text x="922" y="530" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">워커만 재배포 — 결제 API 실패 0/10,174 (0.00%)</text>
+  <text x="922" y="554" text-anchor="middle" font-size="11.5" fill="#64748b">결제 API는 멈추지 않는다</text>
+
+  <!-- 푸터 -->
+  <rect x="48" y="616" width="1104" height="76" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1"/>
+  <text x="600" y="646" text-anchor="middle" font-size="13" font-weight="700" fill="#1e5f8a">두 결합 0 — 같은 실험을 다시 돌린 결과</text>
+  <text x="600" y="670" text-anchor="middle" font-size="10.5" fill="#334155">저장소까지 나누면 트랜잭션 없는 완전 독립을 얻지만, 메시지 중복·순서·poison·스키마 진화·이관이라는 실패 모드가 새로 생긴다</text>
+</svg>

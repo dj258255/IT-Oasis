@@ -1,0 +1,66 @@
+<svg viewBox="0 0 1200 570" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+
+  <rect width="1200" height="570" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="600" y="38" text-anchor="middle" font-size="19" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">필수 대신 가점으로 갈랐다 — 24 / 24 동점을 가점이 가른다</text>
+  <text x="600" y="60" text-anchor="middle" font-size="11" fill="#94a3b8">같은 케이스 4건 · qwen3:8b 초안 vs 프런티어 초안 · 루브릭 항목 6개(케이스당 만점 6) · 둘 다 6 / 6</text>
+
+  <!-- Legend -->
+  <rect x="940" y="74" width="13" height="13" rx="3" fill="#4a8db8"/>
+  <text x="959" y="85" font-size="10.5" fill="#64748b">qwen3:8b</text>
+  <rect x="1040" y="74" width="13" height="13" rx="3" fill="#27ae60"/>
+  <text x="1059" y="85" font-size="10.5" fill="#64748b">프런티어</text>
+
+  <!-- Section label -->
+  <text x="48" y="112" font-size="11" font-weight="700" fill="#64748b">① 필수는 동점, 가점과 안심 문구에서 갈린다</text>
+
+  <!-- ── 그룹 1 : 필수 ── -->
+  <text x="40" y="152" font-size="13" font-weight="700" fill="#1e293b">필수</text>
+  <text x="40" y="170" font-size="9.5" fill="#94a3b8">4건 × 6항목 = 24</text>
+
+  <rect x="280" y="130" width="860" height="26" rx="6" fill="#f1f5f9"/>
+  <rect x="280" y="130" width="860" height="26" rx="6" fill="#4a8db8"/>
+  <text x="1124" y="147" text-anchor="end" font-size="11" font-weight="700" fill="#ffffff">24 / 24</text>
+
+  <rect x="280" y="164" width="860" height="26" rx="6" fill="#f1f5f9"/>
+  <rect x="280" y="164" width="860" height="26" rx="6" fill="#27ae60"/>
+  <text x="1124" y="181" text-anchor="end" font-size="11" font-weight="700" fill="#ffffff">24 / 24</text>
+
+  <text x="280" y="206" font-size="10" font-weight="700" fill="#64748b">동점 — 필수로는 갈리지 않는다</text>
+
+  <!-- ── 그룹 2 : 가점 ── -->
+  <text x="40" y="236" font-size="13" font-weight="700" fill="#1e293b">가점</text>
+  <text x="40" y="254" font-size="9.5" fill="#94a3b8">비교용 점수 · 만점 6</text>
+
+  <rect x="280" y="214" width="860" height="26" rx="6" fill="#f1f5f9"/>
+  <rect x="280" y="214" width="573" height="26" rx="6" fill="#4a8db8"/>
+  <text x="841" y="231" text-anchor="end" font-size="11" font-weight="700" fill="#ffffff">4 / 6</text>
+
+  <rect x="280" y="248" width="860" height="26" rx="6" fill="#f1f5f9"/>
+  <rect x="280" y="248" width="860" height="26" rx="6" fill="#27ae60"/>
+  <text x="1124" y="265" text-anchor="end" font-size="11" font-weight="700" fill="#ffffff">6 / 6</text>
+
+  <text x="280" y="290" font-size="10" font-weight="700" fill="#64748b">가점 4 vs 6 — 원인 불명 2건에서 갈렸다</text>
+
+  <!-- ── 그룹 3 : 안심 문구 ── -->
+  <text x="40" y="320" font-size="13" font-weight="700" fill="#1e293b">안심 문구</text>
+  <text x="40" y="338" font-size="9.5" fill="#94a3b8">“추가로 청구되지 않는다”</text>
+
+  <rect x="280" y="298" width="860" height="26" rx="6" fill="#f1f5f9"/>
+  <text x="292" y="315" font-size="11" font-weight="700" fill="#e74c3c">0 / 4</text>
+
+  <rect x="280" y="332" width="860" height="26" rx="6" fill="#f1f5f9"/>
+  <rect x="280" y="332" width="645" height="26" rx="6" fill="#27ae60"/>
+  <text x="913" y="349" text-anchor="end" font-size="11" font-weight="700" fill="#ffffff">3 / 4</text>
+
+  <text x="280" y="380" font-size="10" font-weight="700" fill="#64748b">0 / 4 vs 3 / 4 — 8B는 추가 청구 여부를 말하지 않는다</text>
+
+  <!-- 결론 -->
+  <rect x="40" y="402" width="1120" height="130" rx="10" fill="#eef6fb" stroke="#4a8db8" stroke-width="1"/>
+  <text x="600" y="432" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e5f8a">필수로는 못 가르고, 가점으로만 가른다 — 합계 28 vs 30</text>
+  <text x="600" y="458" text-anchor="middle" font-size="10.5" fill="#334155">가점은 통과 여부를 바꾸지 않고(가점이 없어도 6 / 6), 프롬프트에도 넣지 않는다 — 비교할 때만 필수 + 가점을 쓴다</text>
+  <text x="600" y="482" text-anchor="middle" font-size="10.5" fill="#334155">두 축: “이미 청구된 것이 멀쩡하다”(확인되지 않은 주장) · “앞으로 추가로 청구하지 않겠다”(우리가 지킬 수 있는 약속)</text>
+  <text x="600" y="506" text-anchor="middle" font-size="10.5" fill="#334155">프롬프트에 안 넣었으니 8B가 못 받은 가점은 진짜 차이다</text>
+
+</svg>
