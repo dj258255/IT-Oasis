@@ -1,5 +1,5 @@
 ---
-title: '아카이브가 자기 자신을 지우던 치명 경로를 막고, CI와 deadman과 dbt contracts로 신뢰를 마저 묶은 이야기'
+title: '아카이브가 자기 자신을 지우던 경로를 막고 신뢰를 묶기'
 description: '코드 감사에서 받은 결함 목록의 1번이 치명이었습니다. offload의 멱등 재적재는 ''파티션을 통째로 지우고 다시 쓴다''인데 삭제가 원천 0행 체크보다 먼저라, 원천 보존(7일) 밖의 dt를 backfill이나 Clear로 재실행하면 아카이브 유일본 parquet를 지운 뒤 아무것도 안 쓰고 exit 0으로 ''성공''합니다. 1부에서 이 경로를 실제로 재현하고 fail-closed 가드(ArchiveSelfDestructError, exit 1 → 재시도·webhook 경로 탑승)로 막았습니다. 같은 감사에서 나온 나머지 셋, 곧 게이트의 원천 Seq Scan(332ms/31k버퍼 → 인스턴스별 인덱스 루프 20ms/76버퍼), publish 혼합 버전(개별 커밋 → 단일 트랜잭션), 유지보수 DAG의 데모 테이블 하드 참조도 걷어내고 pytest 35개로 고정했습니다. 2부는 그 신뢰를 커밋·침묵·계약 세 축으로 마저 묶습니다. CI(GitHub Actions 3관문: ruff·pytest·dbt)가 임베디드 DuckDB 덕에 MinIO도 PG도 없는 러너에서 tiny 픽스처 parquet로 dbt build를 e2e로 돌리고(PASS=25), dbt unit test로 델타 로직 엣지 4개를 정적 입력→기대 출력으로 못박고, deadman heartbeat가 30h 침묵을 실제 경보 발화로 잡고(기한 26h), dbt contracts가 마트 컬럼 타입을 DB 레벨로 강제해 latency_increase_ms를 VARCHAR로 바꾸자 빌드가 ''data type mismatch''로 막혔습니다. 회귀는 없었습니다. verify는 ALL MATCH(149,259/79,894행), pytest는 53개 통과입니다.'
 date: 2026-07-04
 tags:
