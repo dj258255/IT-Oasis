@@ -197,13 +197,11 @@ export default defineConfig({
     '/blog/project/dbtower/dbtower-8-talking-and-lakehouse': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-9-operational-bottlenecks': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
     '/blog/project/dbtower/dbtower-10-ai-cost-audit': `${base || ''}/blog/project/dbtower/dbtower-0-overview`,
-    // 2026-09-20 소개·정리 성격이라 판단이 없던 다섯 편을 접었다. 소개 글 셋은 프로젝트
-    // 목록으로, db-hobby ⑪은 남은 연재 총정리로 보낸다. 커넥션 풀 글은 이론 정리라 스토리 목록으로.
+    // 2026-09-20 판단이 없던 소개 글 셋을 접었다. 옛 주소는 프로젝트 목록으로 보낸다.
+    // 이론·강의 성격의 글(theory/*, db-hobby 연재)은 그대로 둔다.
     '/blog/project/codingtestkit/codingtestkit-introduction': `${base || ''}/projects`,
     '/blog/project/eedgate/eedgate-introduction': `${base || ''}/projects`,
     '/blog/project/it-oasis/it-oasis-blog-intro': `${base || ''}/projects`,
-    '/blog/theory/db-connection-pool': `${base || ''}/blog`,
-    '/blog/project/db-hobby/db-internals-11-sql-executor': `${base || ''}/blog/project/db-hobby/db-internals-12-retrospective`,
     // EduMeet 9편 -> edumeet-retrospective 단일 개발기로 병합
     '/blog/project/edumeet/architecture-evolution': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
     '/blog/project/edumeet/onetomany-join-table': `${base || ''}/blog/project/edumeet/edumeet-retrospective`,
