@@ -4,7 +4,7 @@ description: '"제어를 켜니 p95가 14배 좋아졌다"고 적어둔 실험�
 date: 2026-06-22
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch11.svg"
-draft: false
+draft: true
 series: "결제 시스템 만들기"
 seriesOrder: 8
 tags:

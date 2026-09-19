@@ -4,7 +4,7 @@ description: '자체 목 PG로는 승인 응답을 저장한 뒤에 웹훅이 �
 date: 2026-09-05
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch15-webhook.svg"
-draft: false
+draft: true
 series: "결제 시스템 만들기"
 seriesOrder: 15
 tags:
