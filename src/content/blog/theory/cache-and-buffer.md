@@ -9,7 +9,7 @@ tags:
   - CS Fundamentals
   - Performance
 category: theory/Systems
-draft: true
+draft: false
 coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.svg"
 ---
 

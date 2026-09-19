@@ -13,7 +13,7 @@ tags:
   - Serializable
   - Database
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/transaction-acid/cover-2.svg"
 series: "트랜잭션 ACID"
 seriesOrder: 2

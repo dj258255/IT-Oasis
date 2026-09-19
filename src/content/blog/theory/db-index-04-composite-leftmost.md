@@ -12,7 +12,7 @@ tags:
   - ESR Rule
   - Performance
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/db-index/cover-4.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 4

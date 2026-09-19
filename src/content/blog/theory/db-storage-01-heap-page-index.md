@@ -12,7 +12,7 @@ tags:
   - PostgreSQL
   - InnoDB
 category: theory/Database
-draft: true
+draft: false
 coverImage: "/uploads/theory/db-storage/cover-1.svg"
 series: "DB 스토리지 내부"
 seriesOrder: 1
