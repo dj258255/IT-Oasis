@@ -1,6 +1,6 @@
 ---
 title: 'LLM 검사는 어디서 버리고 어디서 보여줄지 정하기'
-description: '무른 루브릭이 발송 불가 초안에 평균 4.97/5점을 줬고, 요구를 넣자 모델이 점수를 채우려고 알 수 없는 것까지 단언했습니다. 고쳤더니 이번엔 프런티어 모델과 8B를 똑같이 만점 줬습니다.'
+description: '무른 루브릭은 발송 불가 초안에 평균 4.97/5점을 줬다. 요구를 넣자 모델이 모르는 것까지 단언했고, 고친 뒤에는 프런티어 모델과 8B가 똑같이 만점을 받았다.'
 date: 2026-08-25
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-judge.svg"

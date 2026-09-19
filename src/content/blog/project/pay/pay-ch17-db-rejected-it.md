@@ -1,6 +1,6 @@
 ---
 title: '트레이드오프 아홉 건을 실측으로 닫기'
-description: '밖에서 받은 지적과 미뤄 둔 후보 아홉 건을 하나씩 닫았습니다. 그 과정에서 코드와 스키마가 조용히 어긋나 있던 자리를 둘 찾았습니다. 테스트는 통과했고, 그 경로는 아직 한 번도 실행된 적이 없었습니다.'
+description: '밖에서 받은 지적과 미뤄 둔 후보 아홉 건을 닫았다. 코드와 스키마가 조용히 어긋난 자리를 둘 찾았다. 테스트는 통과했고 그 경로는 한 번도 실행된 적이 없었다.'
 date: 2026-09-19
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch17-db-rejected-it.svg"

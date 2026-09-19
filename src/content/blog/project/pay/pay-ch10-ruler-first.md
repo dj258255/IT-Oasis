@@ -1,6 +1,6 @@
 ---
 title: '모델보다 먼저 만든 채점 잣대와 그 계약'
-description: '망분리를 설계 조건으로 걸고 모델 대신 포트와 숫자 검증기를 먼저 만들었습니다. 나중에 실제로 붙였더니 그 검증기의 계약이 틀려 멀쩡한 초안을 반려하고 있었습니다.'
+description: '모델을 붙이기 전에 포트와 숫자 검증기부터 만들었다. 붙여 보니 검증기의 계약이 틀려 멀쩡한 초안을 반려하고 있었다.'
 date: 2026-08-17
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ai.svg"

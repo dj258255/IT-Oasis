@@ -1,6 +1,6 @@
 ---
 title: '정산 배치에 판매자 공정성 정책 넣기'
-description: '정산 배치는 틱마다 읽을 수 있는 양이 정해져 있고 읽는 순서가 id 오름차순입니다. 큰 가맹점 하나가 그 틱을 다 채우면 뒤 가맹점은 다음 틱으로 밀립니다. 처리량과 공정성 중 무엇을 포기할지 정해야 했고, 정책을 만들어 실측한 뒤 기본값은 꺼 두었습니다.'
+description: '정산 배치는 틱마다 읽는 양과 순서(id 오름차순)가 정해져 있다. 큰 가맹점 하나가 틱을 다 채우면 뒤 가맹점은 다음 틱으로 밀린다. 정책을 만들어 실측하고 기본값은 꺼 두었다.'
 date: 2026-09-19
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch18-settlement-fairness.svg"
