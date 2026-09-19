@@ -90,6 +90,8 @@ delegating.setDefaultPasswordEncoderForMatches(bcrypt);
 
 시간은 줄었는데 공짜가 아니었습니다. 메모리라는 축이 새로 생겼고, 그게 인증 없이 누구나 부를 수 있는 경로에 얹혔습니다. 여기가 이 교체의 진짜 대가입니다. 메모리 하드는 공격자만 메모리를 쓰게 하는 게 아닙니다.
 
+![힙 상한(512MB·1GB·2GB) × 동시 로그인(25·50·100) 격자에 OOM 실패 건수를 음영으로 표시한 히트맵. 512MB·동시 50에서 50건 전부, 512MB·동시 100에서 75건, 1GB·동시 100에서 12건이 OOM으로 끝나고 2GB는 모두 성공했다](/uploads/project/pay/diagrams/auth-oom-heatmap.svg)
+
 ```
 로그인 1건        19MiB
 동시 로그인 100건  약 2GB
