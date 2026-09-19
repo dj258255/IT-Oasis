@@ -3,6 +3,7 @@ title: 'AI가 짜준 코드를 어디까지 기계한테 검증시킬 수 있을
 description: '처음에는 검증 충분성을 기계가 결정적으로 판정하게 만들려 했다. 그런데 사람이 하던 그 판단은 원래 확률적이었다. 그래서 갈라야 할 것은 무엇을 고정하고 무엇을 맡길 것인가였다. 고정할 자리에는 경계와 검사를 두고, 맡길 자리에는 판단할 재료를 준다. 다만 자기를 심판하는 자리 하나는 기계가 붙잡아야 한다.'
 date: 2026-09-08
 category: ai
+coverImage: /uploads/covers/ai/ai-guardrails-before-codegen.svg
 draft: false
 tags:
   - AI
