@@ -167,6 +167,7 @@ docker compose up -d
 
 ## 더 보기
 
-- [결제 실패: 카드에서는 빠졌는데 우리는 실패로 알았다](/blog/project/pay/pay-ch2-failure-design)
+- [결제 실패: 타임아웃인데 카드 승인은 이미 됐다면](/blog/project/pay/pay-ch2-failure-design)
 - [동시성: 재고 20개에 30명이 동시에 오면](/blog/project/pay/pay-ch2-concurrency-and-load)
+- [가상계좌: 완료가 최종 상태가 아니었다](/blog/project/pay/pay-ch19-virtual-account-reversal)
 - [AI를 세 자리에 붙여 재고, 둘은 켰고 하나는 규칙에 넘겼다](/blog/project/pay/pay-ch14-when-the-ruler-says-yes)
