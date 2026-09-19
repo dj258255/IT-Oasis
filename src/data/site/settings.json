@@ -671,7 +671,7 @@
           "title": "코딩테스트 도구",
           "meta": "IntelliJ·VS Code 확장",
           "period": "2026.03 ~ 진행 중",
-          "href": "/blog/project/codingtestkit/codingtestkit-introduction",
+          "href": "/projects",
           "details": [
             "IDE 안에서 코딩테스트 문제를 가져오고 실행·채점·제출까지 처리합니다. JetBrains Marketplace에 출시했습니다."
           ]
