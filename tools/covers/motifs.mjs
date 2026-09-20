@@ -203,6 +203,47 @@ export function blockIgnored(k, a, spec, accent) {
   if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
 }
 
+/** 같은 사건을 두 방식으로 기록한다. 왼쪽은 덮어쓰기, 오른쪽은 따로 쌓기. */
+export function overwriteAppend(k, a, spec, accent) {
+  const L = spec.labels;
+  const gap = 60;
+  const cw = (a.w - gap) / 2;
+  const cols = [C.red, C.green];
+  const sides = [L.before, L.after];
+
+  sides.forEach((side, i) => {
+    const x = a.x + i * (cw + gap);
+    box(k, x, a.y, cw, a.h, { color: cols[i] });
+    fit(k, x + 24, a.y + 46, side.title, 16, cw - 48, { weight: 700, fill: cols[i].s, anchor: 'start' });
+    side.rows.forEach((row, j) => {
+      fit(k, x + 24, a.y + 92 + j * 34, row, 15, cw - 48, { weight: 500, fill: SOFT, anchor: 'start' });
+    });
+  });
+  fit(k, a.x + cw + gap / 2, a.y + a.h / 2 + 10, '≠', { size: 30, weight: 700, fill: C.red.s });
+}
+
+/** 파서가 행을 하나씩 버린다. 들어온 행 중 하나가 빠져나가는 자리를 표시한다. */
+export function droppedRow(k, a, spec, accent) {
+  const L = spec.labels;
+  const rw = 200, rh = 48, gap = 16;
+  const x = a.x + 6;
+  const ys = [a.y + 26, a.y + 26 + rh + gap, a.y + 26 + (rh + gap) * 2];
+
+  ys.forEach((y, i) => {
+    const dropped = i === 1;
+    box(k, x, y, rw, rh, { color: dropped ? C.red : C.blue });
+    fit(k, x + rw / 2, y + 31, L.rows[i], 15, rw - 24, { weight: 700, fill: (dropped ? C.red : C.blue).s });
+    if (dropped) {
+      const cx = x + rw + 56;
+      fit(k, cx, y + 31, '버림', 14, 90, { weight: 700, fill: C.red.s });
+      line(k, x + rw + 8, y + rh / 2, cx - 10, y + rh / 2, { color: C.red.s, width: 1.6 });
+    }
+  });
+
+  fit(k, x + rw / 2, ys[2] + rh + 44, L.note, 14, a.w - 12, { weight: 500, fill: MUTED });
+  if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
+}
+
 export const MOTIFS = {
   'schema-mismatch': schemaMismatch,
   'cdc-pipeline': cdcPipeline,
@@ -212,4 +253,6 @@ export const MOTIFS = {
   'tcp-handshake': tcpHandshake,
   'state-reversal': stateReversal,
   'block-ignored': blockIgnored,
+  'overwrite-append': overwriteAppend,
+  'dropped-row': droppedRow,
 };
