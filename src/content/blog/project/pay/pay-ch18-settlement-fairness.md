@@ -5,6 +5,7 @@ date: 2026-09-19
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-ch18-settlement-fairness.svg"
 draft: false
+unlisted: true
 series: "결제 시스템 만들기"
 seriesOrder: 18
 tags:
