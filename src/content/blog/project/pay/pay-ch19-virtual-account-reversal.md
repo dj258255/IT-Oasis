@@ -5,6 +5,7 @@ date: 2026-09-20
 category: study/pay
 coverImage: /uploads/covers/project/pay/pay-ch19-virtual-account-reversal.svg
 draft: false
+unlisted: true
 series: "결제 시스템 만들기"
 seriesOrder: 19
 tags:
