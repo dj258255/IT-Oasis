@@ -38,4 +38,41 @@ export const posts = [
       caption: '판정이 나와도 결제를 세우지 않는다',
     },
   },
+  {
+    id: 'project/pay/pay-ch21-cancel-row-overwrite',
+    kicker: '결제 시스템 만들기 · 대사',
+    title: ['부분취소가 오자', '이미 끝난 판정의 근거가 바뀌었다'],
+    thesis: '현재 상태를 담는 자리에 사건 이력을 덮어썼다',
+    layout: 'two-cards',
+    motif: 'overwrite-append',
+    accent: 'red',
+    note: '승인 10,000 → 7,000 덮어씀 · 확정 판정과 갈라짐',
+    previous: '/uploads/banners/default-post-cover.png',
+    labels: {
+      before: {
+        title: '덮어쓰면',
+        rows: ['승인 행 10,000 → 7,000', '취소 기록 없음', '확정 판정과 갈라진다'],
+      },
+      after: {
+        title: '따로 쌓으면',
+        rows: ['승인 10,000 (seq 0)', '취소 −3,000 (seq 1)', '판정과 일치가 유지된다'],
+      },
+    },
+  },
+  {
+    id: 'project/pay/pay-ch22-parser-drops-refund',
+    kicker: '결제 시스템 만들기 · 정산 파서',
+    title: ['환불을 음수 행으로 바꿨는데', '파서는 음수를 버리고 있었다'],
+    thesis: '공유하는 계약을 바꿨으면 한쪽만 검증하면 안 된다',
+    layout: 'right-diagram',
+    motif: 'dropped-row',
+    accent: 'red',
+    note: '정상 환불이 매번 불일치로 쌓였다',
+    previous: '/uploads/banners/default-post-cover.png',
+    labels: {
+      rows: ['승인 +10,000', '환불 −3,000', '다음 거래일 행'],
+      note: '파싱된 행 1 · 건너뛴 행 1',
+      caption: '버린 행이 아니라 음수 행이었다',
+    },
+  },
 ];
