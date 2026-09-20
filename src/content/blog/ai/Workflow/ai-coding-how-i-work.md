@@ -1,6 +1,6 @@
 ---
 title: 'AI 코딩, 저는 이렇게 개발하고 있습니다'
-description: '설계는 메인 세션이, 구현은 싼 코더가, 검토는 다른 모델이 맡습니다. 이 구조를 직접 자동화하면서 가장 오래 붙잡은 문제는 AI가 정말 일을 끝냈는지 믿는 방법이었습니다. 완료 표식이 두 번 거짓으로 통과한 뒤 판정 방식을 다시 세웠습니다.'
+description: '설계는 메인 세션이, 구현은 싼 코더가, 검토는 다른 모델이 맡습니다. 이 구조를 직접 자동화하면서 가장 오래 붙잡은 문제는 AI가 정말 일을 끝냈는지 믿는 방법이었습니다. 완료 표식이 두 번 거짓으로 통과한 뒤 판정 방식을 다시 세웠고, 지켜야 할 조건은 프롬프트 대신 스크립트가 강제하게 했습니다.'
 date: 2026-09-16
 category: ai
 draft: false
@@ -98,6 +98,37 @@ done
 
 코더를 고르는 기준도 같은 흐름에서 정했습니다. 같은 기능을 고치는 도중에 코더를 바꾸면 새 코더는 관련 코드를 처음부터 다시 읽느라 토큰을 더 씁니다. 그래서 작업 묶음 하나가 끝날 때까지 코더와 세션을 바꾸지 않습니다.
 
+## 부탁과 강제는 다릅니다
+
+처음에는 프롬프트를 잘 쓰면 된다고 생각했습니다. "꼭 테스트하고 끝내", "마지막에 완료라고 알려줘" 같은 문장을 넣었는데, 그건 규칙을 만든 것이 아니라 **AI에게 규칙을 지켜달라고 부탁한 것**이었습니다. 지시를 잘 따를 거라고 믿는 방식입니다.
+
+그래서 지켜져야 하는 조건은 프롬프트에서 빼내 **스크립트의 실행 조건**으로 옮겼습니다. 결과 파일이 없으면 다음 단계로 넘어가지 않고, 검토 단계가 실패하면 성공으로 처리하지 않으며, 테스트는 별도로 다시 돌려 실패하면 거기서 멈춥니다.
+
+```
+Before
+  AI  ├─ 구현
+      ├─ 테스트
+      ├─ 완료 판단
+      └─ "끝났습니다"  ──▶ 다음 작업
+
+After
+  AI  └─ 구현
+           ↓
+      [스크립트]    결과 파일이 있는가?
+           ↓
+      [검토 모델]   diff를 검토했는가?
+           ↓
+      [스크립트]    테스트를 다시 돌렸는가?
+           ↓
+      통과 → 다음 작업   /   실패 → 되돌림·수정
+```
+
+**AI에게 지켜달라고 부탁하는 것과, 지키지 않으면 진행할 수 없게 만드는 것은 다릅니다.** 한 줄로 줄이면 이렇습니다. **프롬프트는 행동을 요청하고, 코드는 경계를 강제합니다.**
+
+다만 AI 자체를 통제하는 것은 아닙니다. 코더가 이상한 코드를 쓰는 것까지 막지는 않습니다. 막는 것은 **그 결과가 검증 절차를 거치지 않고 다음 단계로 넘어가는 것**입니다. 이 구분이 없으면 "AI를 코드로 통제한다"는 말이 실제보다 커집니다.
+
+같은 생각을 다른 자리에도 씁니다. 결제 시스템에서는 권한·데이터·비용 같은 안전 조건을 서버가 강제하고, 여기서는 완료·검증 조건을 스크립트가 강제합니다. 모델의 판단을 믿더라도 **시스템의 불변조건까지 모델에게 맡기지는 않습니다.**
+
 ## 마치며
 
 처음에는 좋은 모델을 쓰면 AI 코딩이 잘될 줄 알았습니다. 직접 자동화해 보니 모델보다 먼저 정해야 할 규칙이 있었습니다. 누가 설계하고 누가 구현할지, 무엇을 완료로 보고 누가 그걸 검증할지, 실패하면 어디까지 되돌릴지 같은 것들입니다.
@@ -107,3 +138,16 @@ done
 완료 문자열 하나를 믿었다가 코더가 아무것도 하지 않았는데도 두 번이나 성공으로 판정됐습니다. 그 뒤로는 화면 대신 파일을 보고, 파일도 그대로 믿지 않고 다른 모델에게 보이고, 마지막에는 테스트를 다시 돌립니다. 자동화를 더 늘려도 이 기준 하나는 지키려고 합니다.
 
 **코딩은 맡겨도, 잘 끝났다는 판단까지 맡기지는 않습니다.**
+
+## 참고
+
+같은 방향의 해외 기록들입니다. 도구가 달라도 "어디까지 맡기고 무엇을 시스템이 강제할 것인가"를 다룹니다.
+
+- OpenAI가 Codex로 손으로 쓰지 않은 코드베이스를 운영하며 환경·가드레일·저장소 구조를 어떻게 잡았는지: [Harness engineering](https://openai.com/index/harness-engineering/)
+- 여러 coding agent를 이슈 트래커에 연결해 돌리는 구조: [Symphony](https://openai.com/index/open-source-codex-orchestration-symphony/)
+- 16개 agent를 병렬로 돌려 C 컴파일러를 만든 기록: [Building a C compiler with a team of parallel Claudes](https://www.anthropic.com/engineering/building-c-compiler)
+- agent에게 권한을 주면서 파일시스템·네트워크 경계를 시스템에 두는 방식: [Claude Code sandboxing](https://www.anthropic.com/engineering/claude-code-sandboxing)
+- 매번 승인받는 것과 전부 허용하는 것 사이에서 제약을 어디에 둘지: [Claude Code auto mode](https://www.anthropic.com/engineering/claude-code-auto-mode)
+- agentic coding 워크플로 패턴 모음: [Claude Code best practices](https://code.claude.com/docs/en/best-practices)
+- reviewer가 읽는 지침을 head 브랜치에서 가져오게 바꾼 변경: [Copilot code review customization](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)
+- reviewer의 분석 깊이와 비용을 다시 손본 변경: [Copilot code review analysis depth and efficiency](https://github.blog/changelog/2026-06-25-copilot-code-review-analysis-depth-and-efficiency-updates/)
