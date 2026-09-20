@@ -5,6 +5,7 @@ date: 2026-09-20
 category: study/pay
 coverImage: "/uploads/covers/project/pay/pay-ch20-fds-block-ignored.svg"
 draft: false
+unlisted: true
 series: "결제 시스템 만들기"
 seriesOrder: 20
 tags:
