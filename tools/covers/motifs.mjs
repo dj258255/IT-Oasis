@@ -244,6 +244,46 @@ export function droppedRow(k, a, spec, accent) {
   if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
 }
 
+/** 같은 것을 두 곳에 내보낸다. 왼쪽과 오른쪽의 규칙이 다르다. */
+export function pairCards(k, a, spec, accent) {
+  const L = spec.labels;
+  const gap = 60;
+  const cw = (a.w - gap) / 2;
+  const cols = [C.blue, C.green];
+
+  L.sides.forEach((side, i) => {
+    const x = a.x + i * (cw + gap);
+    box(k, x, a.y, cw, a.h, { color: cols[i] });
+    fit(k, x + 24, a.y + 46, side.title, 16, cw - 48, { weight: 700, fill: cols[i].s, anchor: 'start' });
+    side.rows.forEach((row, j) => {
+      fit(k, x + 24, a.y + 92 + j * 34, row, 15, cw - 48, { weight: 500, fill: SOFT, anchor: 'start' });
+    });
+  });
+}
+
+/** 두 답을 순서를 바꿔 두 번 묻는다. 심판이 고른 것이 질인지 자리인지 가리는 자리. */
+export function orderFlip(k, a, spec, accent) {
+  const L = spec.labels;
+  const bw = 172, bh = 62;
+  const y = a.y + 56;
+  const x1 = a.x + 4, x2 = a.x + a.w - bw - 4;
+
+  box(k, x1, y, bw, bh, { color: C.gray });
+  fit(k, x1 + bw / 2, y + 38, L.left, 17, bw - 20, { weight: 700, fill: C.gray.s });
+  box(k, x2, y, bw, bh, { color: C.blue });
+  fit(k, x2 + bw / 2, y + 38, L.right, 17, bw - 20, { weight: 700, fill: C.blue.s });
+
+  arrow(k, x1 + bw + 8, y + bh / 2, x2 - 8, y + bh / 2, { color: LINK, width: 1.8, head: 9 });
+  fit(k, a.x + a.w / 2, y - 20, L.ask, 14, a.w, { weight: 600, fill: MUTED });
+
+  const ry = y + bh + 56;
+  box(k, a.x + 4, ry, a.w - 8, 78, { color: C.red });
+  fit(k, a.x + a.w / 2, ry + 32, L.result, 19, a.w - 40, { weight: 700, fill: C.red.s });
+  fit(k, a.x + a.w / 2, ry + 58, L.detail, 13, a.w - 40, { weight: 500, fill: MUTED });
+
+  if (L.caption) fit(k, a.x + a.w / 2, a.y + a.h - 6, L.caption, 14, a.w, { weight: 700, fill: accent.s });
+}
+
 export const MOTIFS = {
   'schema-mismatch': schemaMismatch,
   'cdc-pipeline': cdcPipeline,
@@ -255,4 +295,6 @@ export const MOTIFS = {
   'block-ignored': blockIgnored,
   'overwrite-append': overwriteAppend,
   'dropped-row': droppedRow,
+  'pair-cards': pairCards,
+  'order-flip': orderFlip,
 };
