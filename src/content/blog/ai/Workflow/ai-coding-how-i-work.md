@@ -138,3 +138,16 @@ After
 완료 문자열 하나를 믿었다가 코더가 아무것도 하지 않았는데도 두 번이나 성공으로 판정됐습니다. 그 뒤로는 화면 대신 파일을 보고, 파일도 그대로 믿지 않고 다른 모델에게 보이고, 마지막에는 테스트를 다시 돌립니다. 자동화를 더 늘려도 이 기준 하나는 지키려고 합니다.
 
 **코딩은 맡겨도, 잘 끝났다는 판단까지 맡기지는 않습니다.**
+
+## 참고
+
+같은 방향의 해외 기록들입니다. 도구가 달라도 "어디까지 맡기고 무엇을 시스템이 강제할 것인가"를 다룹니다.
+
+- OpenAI가 Codex로 손으로 쓰지 않은 코드베이스를 운영하며 환경·가드레일·저장소 구조를 어떻게 잡았는지: [Harness engineering](https://openai.com/index/harness-engineering/)
+- 여러 coding agent를 이슈 트래커에 연결해 돌리는 구조: [Symphony](https://openai.com/index/open-source-codex-orchestration-symphony/)
+- 16개 agent를 병렬로 돌려 C 컴파일러를 만든 기록: [Building a C compiler with a team of parallel Claudes](https://www.anthropic.com/engineering/building-c-compiler)
+- agent에게 권한을 주면서 파일시스템·네트워크 경계를 시스템에 두는 방식: [Claude Code sandboxing](https://www.anthropic.com/engineering/claude-code-sandboxing)
+- 매번 승인받는 것과 전부 허용하는 것 사이에서 제약을 어디에 둘지: [Claude Code auto mode](https://www.anthropic.com/engineering/claude-code-auto-mode)
+- agentic coding 워크플로 패턴 모음: [Claude Code best practices](https://code.claude.com/docs/en/best-practices)
+- reviewer가 읽는 지침을 head 브랜치에서 가져오게 바꾼 변경: [Copilot code review customization](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)
+- reviewer의 분석 깊이와 비용을 다시 손본 변경: [Copilot code review analysis depth and efficiency](https://github.blog/changelog/2026-06-25-copilot-code-review-analysis-depth-and-efficiency-updates/)
