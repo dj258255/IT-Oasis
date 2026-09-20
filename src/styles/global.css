@@ -476,17 +476,20 @@ button, input, select, textarea {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
 }
 
-/* 글 기둥은 읽기 폭(960px)에 카드 좌우 패딩(40px)을 더한 값에서 멈춘다.
-   960px는 이미 한 줄 길이의 상한이라 더 넓히지 않고, 대신 기둥을 좁혀
-   본문 양옆에 아무것도 없는 여백이 남지 않게 한다. */
+/* 읽기 폭은 고정값이 아니라 화면 폭을 따라간다.
+   좁은 화면에서는 960px 로 두고, 창이 넓어지면 1100px 까지 같이 넓어진다.
+   분기점을 두지 않아 1536~1786px 구간에서 폭이 계단 없이 이어진다.
+   기둥은 읽기 폭에 카드 좌우 패딩(40px×2)을 더한 값에서 멈추므로
+   본문 양옆에 아무것도 없는 여백이 남지 않는다. */
 .post-article {
-  max-width: 1040px;
+  --measure: clamp(960px, 56vw + 100px, 1100px);
+  max-width: calc(var(--measure) + 5rem);
   margin-inline: auto;
 }
 
 /* Comfortable reading measure inside the article column */
 #post-content {
-  max-width: 960px;
+  max-width: var(--measure);
   margin-inline: auto;
 }
 
