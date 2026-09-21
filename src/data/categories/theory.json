@@ -8,6 +8,7 @@
     { "name": "Concurrency", "nameKo": "동시성", "order": 2 },
     { "name": "Database", "nameKo": "데이터베이스", "order": 3 },
     { "name": "Web-Server", "nameKo": "웹 서버", "order": 4 },
-    { "name": "Systems", "nameKo": "시스템", "order": 5 }
+    { "name": "Systems", "nameKo": "시스템", "order": 5 },
+    { "name": "Performance", "nameKo": "성능", "order": 6 }
   ]
 }

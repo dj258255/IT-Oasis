@@ -5,6 +5,7 @@ date: 2026-03-02
 category: study/pay
 coverImage: "/uploads/project/pay/thumbs/pay-failure.svg"
 draft: false
+unlisted: true
 series: "결제 시스템 만들기"
 seriesOrder: 2
 tags:
