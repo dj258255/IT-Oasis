@@ -194,15 +194,12 @@ HikariCP의 maximum pool size가 10이라고 해보자.
 
 이런 상태라면
 
-```text
-HTTP p95 latency = 1,200ms
-
-그중
-
-Connection Wait = 850ms
-SQL Execution   = 200ms
-Others          = 150ms
-```
+| 구간 | 시간 |
+|---|---|
+| Connection Wait | 850ms |
+| SQL Execution | 200ms |
+| Others | 150ms |
+| **HTTP p95 latency** | **1,200ms** |
 
 Controller 코드를 아무리 최적화해도 큰 효과가 없다. 요청이 CPU를 쓰는 자리가 아니라 **DB connection을 기다리는 자리**에 걸려 있기 때문이다. 커넥션 풀 자체를 더 깊이 보려면 [DB 커넥션 풀](/blog/theory/db-connection-pool) 편을 참고하면 된다.
 
@@ -252,42 +249,20 @@ DB I/O
 
 그중 Redis에서 90번 찾았다면 `Cache Hit Rate = 90%`다. 캐시를 붙인 이유가 DB 부하를 줄이기 위한 것이었다면 중요한 지표다.
 
-```text
-Cache Hit Rate
-95% → 70%
+| 지표 | 전 | 후 |
+|---|---|---|
+| Cache Hit Rate | 95% | 70% |
+| DB QPS | 500 | 2,000 |
+| DB CPU | 40% | 85% |
+| SQL p95 | 30ms | 180ms |
 
-DB QPS
-500 → 2,000
-
-DB CPU
-40% → 85%
-
-SQL p95
-30ms → 180ms
-```
-
-처럼 연결될 수 있다. 그래서 장애 상황에서 "DB가 갑자기 느려졌습니다"라고 할 때 DB 자체가 원인이 아닐 수 있다. 캐시 hit rate가 먼저 떨어졌고 그 결과 DB traffic이 늘었을 수도 있다. 캐시 계층을 더 보려면 [Redis 캐싱](/blog/theory/redis-caching-guide) 편을 참고하면 된다.
+이렇게 연결될 수 있다. 그래서 장애 상황에서 "DB가 갑자기 느려졌습니다"라고 할 때 DB 자체가 원인이 아닐 수 있다. 캐시 hit rate가 먼저 떨어졌고 그 결과 DB traffic이 늘었을 수도 있다. 캐시 계층을 더 보려면 [Redis 캐싱](/blog/theory/redis-caching-guide) 편을 참고하면 된다.
 
 ## 9. Hit Rate가 높으면 무조건 좋은가
 
 이것도 아니다. `Hit Rate 99%`라도 캐시 value 하나가 매우 크면
 
-```text
-Redis
-  │
-  │ GET
-  ▼
-Network Transfer
-  │
-  ▼
-Decompression
-  │
-  ▼
-Deserialization
-  │
-  ▼
-Java Object
-```
+![Redis에서 꺼낸 값이 네트워크 전송, 압축 해제, 역직렬화를 거쳐 자바 객체가 되기까지의 비용](/uploads/theory/reading-performance-metrics/perf-cache-value-pipeline.svg)
 
 비용이 상당할 수 있다. TTL을 길게 잡아 hit rate를 높이면
 
@@ -351,25 +326,11 @@ Application Latency
 
 **Availability** 는 사용자가 서비스를 **사용할 수 있는가**에 초점을 둔다.
 
-```text
-Request → Server → 200 OK
-```
-
-처럼 서비스가 정상적으로 요청을 받을 수 있는 상태다.
+서비스가 정상적으로 요청을 받을 수 있는 상태다.
 
 **Reliability** 는 서비스가 일정 기간 동안 **의도한 동작을 올바르게 수행하는가**에 가깝다. 결제 서버를 생각해보자.
 
-```text
-POST /payments
-
-       ↓
-
-HTTP 200 OK
-
-       ↓
-
-그런데 실제 승인 기록 누락
-```
+![두 경우 모두 200 OK다. 정상적으로 처리된 경우에는 승인 기록이 남지만, 결제 처리가 실제로 수행되지 않은 경우에도 응답은 200이다](/uploads/theory/reading-performance-metrics/perf-ok-vs-record.svg)
 
 HTTP 서버 자체는 살아 있다. 그런데 사용자가 기대한 결제 처리는 올바르게 수행되지 않았다. 그래서 운영에서는 단순 uptime 외에도
 
@@ -468,23 +429,17 @@ CPU를 기다리는가? DB connection을 기다리는가? DB lock을 기다리�
 
 그래서 같은 workload에서 비교한다.
 
-```text
-                    Before       After
-
-RPS                  1,000       1,000
-
-p50                    35ms        24ms
-p95                   180ms        90ms
-p99                   600ms       210ms
-
-CPU Utilization         78%         41%
-CPU Queue               3.2         0.4
-
-DB Active Conn        28/30       14/30
-Conn Wait p95           85ms         2ms
-
-Cache Hit Rate           70%         94%
-```
+| 지표 | Before | After |
+|---|---|---|
+| RPS | 1,000 | 1,000 |
+| p50 | 35ms | 24ms |
+| p95 | 180ms | 90ms |
+| p99 | 600ms | 210ms |
+| CPU Utilization | 78% | 41% |
+| CPU Queue | 3.2 | 0.4 |
+| DB Active Conn | 28/30 | 14/30 |
+| Conn Wait p95 | 85ms | 2ms |
+| Cache Hit Rate | 70% | 94% |
 
 같은 1,000 RPS를 처리하면서 CPU 사용량, CPU 대기, DB connection 대기, tail latency가 동시에 내려간 것을 확인하고 나서야 설명이 강해진다.
 
@@ -492,36 +447,7 @@ Cache Hit Rate           70%         94%
 
 성능 용어를 공부하면서 크게 느낀 점은 **좋은 숫자 하나를 만드는 것이 목적이 아니라는 것**이다. 거의 모든 결정에 반대쪽 비용이 있다.
 
-```text
-Concurrency ↑
-→ Throughput ↑
-→ Contention / Queueing ↑ 가능
-
-
-Connection Pool ↑
-→ Application Connection Wait ↓
-→ DB Concurrency / DB Load ↑
-
-
-Cache TTL ↑
-→ Hit Rate ↑
-→ Stale Data ↑
-
-
-Batch Size ↑
-→ Throughput ↑
-→ 개별 작업 Latency ↑
-
-
-Sampling Frequency ↑
-→ 관측 정밀도 ↑
-→ 관측 Overhead ↑
-
-
-Compression ↑
-→ Network / Memory ↓
-→ CPU Cost ↑
-```
+![값을 올리면 무엇을 얻고 무엇을 내는지 여섯 쌍. 초록이 얻는 쪽이고 빨강이 대가다](/uploads/theory/reading-performance-metrics/perf-tradeoff-chains.svg)
 
 그래서 성능 테스트에서 물어야 할 질문은 "빨라졌는가?" 하나가 아니다.
 
