@@ -418,17 +418,7 @@ Connection Wait p95
 
 이다. 그렇다면 요청 흐름을 다시 쪼개본다.
 
-```text
-API Latency 1,800ms
-
-┌────────────────────────────┐
-│ Connection Wait     900ms  │
-├────────────────────────────┤
-│ SQL                 600ms  │
-├────────────────────────────┤
-│ Application         300ms  │
-└────────────────────────────┘
-```
+![API latency 1,800ms를 커넥션 대기 900ms, SQL 600ms, 애플리케이션 300ms로 쪼갠 비율](/uploads/theory/reading-performance-metrics/perf-latency-split.svg)
 
 여기서 "Connection Pool이 부족하네. 30에서 100으로 올리자"라고 바로 결론 내리면 안 된다. DB를 확인해보니
 
@@ -462,35 +452,7 @@ Spring API라면 자연스럽게 `RPS`, `HTTP 5xx`, `p50 / p95 / p99`로 연결�
 
 ## 15. 내가 장애를 볼 때 쓰는 순서
 
-```text
-                  사용자
-                    │
-                    ▼
-              API가 느리다
-                    │
-          ┌─────────┴─────────┐
-          ▼                   ▼
-       Traffic              Errors
-        RPS                  5xx
-          │
-          ▼
-        Latency
-    p50 / p95 / p99
-          │
-          ▼
-    어디서 기다리는가?
-          │
-   ┌──────┼────────┐
-   ▼      ▼        ▼
-  CPU     DB      Cache
-   │      │         │
- util   query     hit rate
- sat.   conn wait  latency
-   │      │         │
-   └──────┼─────────┘
-          ▼
-      Network / Disk
-```
+![장애를 볼 때 따라가는 순서. API가 느리다에서 Traffic과 Errors를 보고, Latency로 내려가 어디서 기다리는지 CPU·DB·Cache를 확인한 뒤 Network·Disk로 내려간다](/uploads/theory/reading-performance-metrics/perf-debug-order.svg)
 
 여기서 가장 중요한 질문은 하나다.
 
