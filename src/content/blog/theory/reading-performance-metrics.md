@@ -450,7 +450,7 @@ API latency는 **결과**였고 connection pool saturation은 **중간 증상**�
 
 Spring API라면 자연스럽게 `RPS`, `HTTP 5xx`, `p50 / p95 / p99`로 연결된다. 문제가 아래 계층으로 내려갔다면 CPU, Memory, Disk, Network, Connection Pool, Thread Pool 같은 자원에서 `Utilization`, `Saturation`, `Errors`를 확인한다. Brendan Gregg도 RED를 서비스 관점에서 Request Rate, Errors, Duration으로, USE를 자원 관점에서 Utilization, Saturation, Errors로 정리한다.
 
-## 15. 내가 장애를 볼 때 쓰는 순서
+## 15. 장애를 볼 때 쓰는 순서
 
 ![장애를 볼 때 따라가는 순서. API가 느리다에서 Traffic과 Errors를 보고, Latency로 내려가 어디서 기다리는지 CPU·DB·Cache를 확인한 뒤 Network·Disk로 내려간다](/uploads/theory/reading-performance-metrics/perf-debug-order.svg)
 
