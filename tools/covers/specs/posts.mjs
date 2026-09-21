@@ -131,4 +131,21 @@ export const posts = [
       ],
     },
   },
+  {
+    id: 'project/pay/pay-ch6-auth-cost',
+    kicker: '트레이드오프 · 인증',
+    title: ['해시를 강하게 만들수록', '로그인 경로 비용이 오른다'],
+    thesis: 'Argon2id는 해시 1건당 19MiB를 쓴다. 동시 로그인 수만큼 곱해진다',
+    layout: 'two-cards',
+    motif: 'pair-cards',
+    accent: 'orange',
+    note: 'BCrypt 4KB · Argon2id 19MiB · 동시 100건이면 약 2GB',
+    previous: '/uploads/project/pay/thumbs/pay-auth.svg',
+    labels: {
+      sides: [
+        { title: 'BCrypt', rows: ['해시 1건 4KB', '강도는 반복 횟수로', 'GPU 병렬화에 약하다'] },
+        { title: 'Argon2id', rows: ['해시 1건 19MiB', '동시 100건이면 약 2GB', '로그인 경로가 OOM 위험'] },
+      ],
+    },
+  },
 ];

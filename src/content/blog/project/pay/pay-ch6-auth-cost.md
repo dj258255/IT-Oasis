@@ -3,10 +3,10 @@ title: 'BCrypt와 Argon2id, 강도와 비용을 함께 고르는 법'
 description: 'BCrypt를 Argon2id로 바꿨더니 해시 1건당 19MiB를 잡아 동시 로그인 100건에 약 2GB가 필요했다. 512MB 힙에서 동시 50건이 전부 OOM으로 끝났고, 테스트 553개가 통과한 상태에서 해시가 varchar(100)에 들어가지 않는 것도 뒤늦게 찾았다.'
 date: 2026-06-11
 category: web/Tradeoffs
-coverImage: "/uploads/project/pay/thumbs/pay-auth.svg"
+coverImage: "/uploads/covers/project/pay/pay-ch6-auth-cost.svg"
 draft: false
-series: "결제 시스템 만들기"
-seriesOrder: 7
+series: "웹 개발 트레이드오프"
+seriesOrder: 1
 tags:
   - Payment
   - 보안
@@ -33,7 +33,7 @@ tags:
 
 무상태 HTTP Basic은 요청마다 비밀번호를 BCrypt로 재검증합니다. 확장 모듈을 다 얹고 k6(부하 테스트 도구)로 가상 사용자(VU) 50명이 동시에 두드리게 했더니, 느린 쪽 5%가 걸린 시간(p95)이 567.84ms였습니다. 요청 경로의 최소 지연은 110ms, 그중 해시 자체가 87ms였습니다. 원인은 앱 로직이 아니라 인증 방식이었습니다.
 
-그래서 JWT로 바꿨습니다. 로그인 때 한 번만 해싱하고 이후엔 서명만 검증합니다. 모놀리스라면 로그아웃·강제 만료가 오히려 단순하지만, 무상태를 유지해 나중에 인스턴스를 늘릴 때 세션 저장소를 따로 두지 않으려고 짧은 수명의 JWT를 골랐습니다. 대신 탈취·폐기 문제가 새로 생겨 denylist를 따로 만들어야 했습니다(4편).
+그래서 JWT로 바꿨습니다. 로그인 때 한 번만 해싱하고 이후엔 서명만 검증합니다. 모놀리스라면 로그아웃·강제 만료가 오히려 단순하지만, 무상태를 유지해 나중에 인스턴스를 늘릴 때 세션 저장소를 따로 두지 않으려고 짧은 수명의 JWT를 골랐습니다. 대신 탈취·폐기 문제가 새로 생겨 denylist를 따로 만들어야 했습니다.
 
 | 지표 | Basic + 요청당 BCrypt | **JWT** |
 |---|---|---|
