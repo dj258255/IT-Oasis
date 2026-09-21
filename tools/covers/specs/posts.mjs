@@ -111,4 +111,24 @@ export const posts = [
       caption: '심판이 질을 고른 게 아니다',
     },
   },
+  {
+    id: 'theory/reading-performance-metrics',
+    kicker: 'Performance · 지표 읽기',
+    title: ['p95가 튀었을 때', '어디부터 봐야 하는가'],
+    thesis: '지표는 하나의 요청 위에서 이어진다. 앞에서 먼저 움직인 것을 찾는다',
+    layout: 'bottom-band',
+    motif: 'cdc-pipeline',
+    accent: 'blue',
+    note: 'RED · USE · 어디서 기다리는가',
+    previous: '/uploads/banners/default-post-cover.png',
+    labels: {
+      stages: [
+        { t: '캐시 hit ↓', s: 'DB QPS ↑', c: 'blue' },
+        { t: '쿼리 지연 ↑', s: 'SQL p95', c: 'orange' },
+        { t: '커넥션 점유 ↑', s: 'pool pending', c: 'orange' },
+        { t: '풀 대기 ↑', s: 'conn wait', c: 'red' },
+        { t: 'API p95 ↑', s: '결과', c: 'red' },
+      ],
+    },
+  },
 ];
