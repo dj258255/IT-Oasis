@@ -1,0 +1,9 @@
+{
+  "name": "web",
+  "nameKo": "웹 개발",
+  "icon": "code",
+  "order": 9,
+  "subcategories": [
+    { "name": "Tradeoffs", "nameKo": "트레이드오프", "order": 1 }
+  ]
+}
