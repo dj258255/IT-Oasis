@@ -1,8 +1,8 @@
 ---
-title: 'Argon2id로 비밀번호를 강화했더니 로그인 서버의 메모리가 부족해졌다'
+title: 'BCrypt와 Argon2id, 강도와 비용을 함께 고르는 법'
 description: 'BCrypt를 Argon2id로 바꿨더니 해시 1건당 19MiB를 잡아 동시 로그인 100건에 약 2GB가 필요했다. 512MB 힙에서 동시 50건이 전부 OOM으로 끝났고, 테스트 553개가 통과한 상태에서 해시가 varchar(100)에 들어가지 않는 것도 뒤늦게 찾았다.'
 date: 2026-06-11
-category: study/pay
+category: web/Tradeoffs
 coverImage: "/uploads/project/pay/thumbs/pay-auth.svg"
 draft: false
 series: "결제 시스템 만들기"
@@ -14,8 +14,6 @@ tags:
   - 성능
   - 결제 시스템
 ---
-
-개인 프로젝트로 만든 결제 시스템 pay의 개발 기록입니다. 실무 운영 경험이 아닙니다.
 
 비밀번호 해싱을 BCrypt에서 Argon2id로 바꿨습니다. OWASP가 신규 시스템에 Argon2id를 우선 권고하고 있고, 이 프로젝트에서도 BCrypt를 계속 유지할 이유가 크지 않다고 판단했습니다. 요청마다 돌던 해싱은 그 전에 JWT로 걷어낸 상태라 남은 것은 로그인 1회의 해싱이었습니다.
 
