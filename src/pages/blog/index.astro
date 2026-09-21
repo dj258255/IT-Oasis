@@ -29,8 +29,8 @@ for (const post of posts) {
   }
 }
 
-// Fixed order: 일상 → 활동 → 이론 → 팀 프로젝트 → 개인 프로젝트 → 학습 프로젝트
-const parentDisplayOrder = ['daily', 'activity', 'theory', 'team', 'personal', 'study'];
+// Fixed order: 일상 → 활동 → 이론 → 웹 개발 → 팀 프로젝트 → 개인 프로젝트 → 학습 프로젝트
+const parentDisplayOrder = ['daily', 'activity', 'theory', 'web', 'team', 'personal', 'study'];
 const sortedCats = [...allCats.entries()].sort((a, b) => {
   const idxA = parentDisplayOrder.indexOf(a[1].parent);
   const idxB = parentDisplayOrder.indexOf(b[1].parent);
