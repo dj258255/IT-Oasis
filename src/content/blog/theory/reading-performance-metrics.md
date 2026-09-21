@@ -37,33 +37,9 @@ draft: false
 
 ## 1. Latency: 요청 하나가 얼마나 걸렸는가
 
-**발음: 레이턴시**
-
 Latency는 어떤 작업을 시작한 뒤 결과를 얻기까지 걸린 시간이다. Spring MVC API라면 가장 익숙한 형태는 이렇다.
 
-```text
-Client
-  │
-  │ GET /products/123
-  ▼
-┌───────────────────┐
-│ Spring Controller │
-└─────────┬─────────┘
-          │
-          ▼
-       Service
-          │
-          ▼
-     Repository
-          │
-          ▼
-         DB
-          │
-          ▼
-       Response
-
-<--------- 120ms --------->
-```
+![Client에서 Spring Controller, Service, Repository, DB를 거쳐 Response로 돌아오는 요청 경로와 그 전체 구간을 가리키는 latency](/uploads/theory/reading-performance-metrics/perf-request-path.svg)
 
 이 요청의 latency는 120ms다.
 
@@ -112,8 +88,6 @@ p99   느린 쪽 1%는 어디까지 느려지는가?
 
 ## 2. Throughput: 얼마나 많이 처리할 수 있는가
 
-**발음: 쓰루풋**
-
 Latency가 요청 하나의 시간이라면 throughput은 일정 시간 동안 처리한 양이다. 웹 서버에서는 흔히 RPS(Requests Per Second)를 쓴다.
 
 ```text
@@ -148,26 +122,9 @@ Error Rate    0.1%
 
 여기서부터 트레이드오프가 시작된다. 대표적인 예가 batching이다.
 
-```text
-[즉시 처리]
+![즉시 처리와 묶어서 처리 비교. 즉시 처리는 요청마다 DB를 호출하고, 묶어서 처리하면 여러 요청을 Batch 하나로 모아 DB를 한 번만 호출한다](/uploads/theory/reading-performance-metrics/perf-batching.svg)
 
-요청 → DB
-요청 → DB
-요청 → DB
-요청 → DB
-```
-
-각 요청을 바로 처리하면 기다리는 시간은 줄일 수 있다. 반대로 여러 작업을 모으면
-
-```text
-요청 ─┐
-요청 ─┤
-요청 ─┼→ Batch → DB
-요청 ─┤
-요청 ─┘
-```
-
-DB round trip과 작업 비용을 줄여 전체 throughput을 높일 수 있다. 대신 첫 번째 요청은 batch가 만들어질 때까지 기다릴 수도 있다.
+각 요청을 바로 처리하면 기다리는 시간은 줄일 수 있다. 반대로 여러 작업을 모으면 DB round trip과 작업 비용을 줄여 전체 throughput을 높일 수 있다. 대신 첫 번째 요청은 batch가 만들어질 때까지 기다릴 수도 있다.
 
 ```text
 Batch Size ↑
@@ -186,28 +143,13 @@ Memory Usage     ↑ 가능
 
 ## 4. Concurrency와 Parallelism은 다르다
 
-**Concurrency(발음: 컨커런시)** 는 여러 작업이 같은 시간 구간에 **진행 중인 상태**다. **Parallelism(발음: 패럴렐리즘)** 은 여러 작업이 실제 같은 순간에 **동시에 실행되는 것**이다.
+**Concurrency** 는 여러 작업이 같은 시간 구간에 **진행 중인 상태**다. **Parallelism** 은 여러 작업이 실제 같은 순간에 **동시에 실행되는 것**이다.
 
 4 Core CPU를 생각해보자.
 
-```text
-CPU Core 1  █████ Task A
-CPU Core 2  █████ Task B
-CPU Core 3  █████ Task C
-CPU Core 4  █████ Task D
-```
+![왼쪽은 Core 네 개가 서로 다른 작업을 같은 순간에 실행하는 parallelism이고, 오른쪽은 한 순간에 하나만 실행되지만 여러 작업이 번갈아 진행되는 concurrency다](/uploads/theory/reading-performance-metrics/perf-parallelism-concurrency.svg)
 
-이것은 parallelism이다. 반면 하나의 CPU에서도 여러 작업을 번갈아 처리할 수 있다.
-
-```text
-시간 ───────────────────────────→
-
-Task A  ███        ███
-Task B     ███        ██
-Task C        ███
-```
-
-한 순간에 하나만 실행되더라도 여러 작업이 진행 중이다. 이것이 concurrency다.
+왼쪽은 parallelism이다. 오른쪽은 하나의 CPU에서도 여러 작업을 번갈아 처리하는 concurrency다.
 
 Spring에서는 이 개념이 아주 자주 등장한다.
 
@@ -246,18 +188,7 @@ Spring + JPA/JDBC 개발자가 정말 자주 만나는 사례다. Spring Boot는
 
 HikariCP의 maximum pool size가 10이라고 해보자.
 
-```text
-Spring Application
-
-Request 01 ──→ [Connection 01] ──→ DB
-Request 02 ──→ [Connection 02] ──→ DB
-...
-Request 10 ──→ [Connection 10] ──→ DB
-
-Request 11 ──→ WAIT
-Request 12 ──→ WAIT
-Request 13 ──→ WAIT
-```
+![풀의 커넥션 10개가 모두 사용 중이고 요청 11부터는 커넥션이 반환될 때까지 기다리는 상태](/uploads/theory/reading-performance-metrics/perf-connection-wait.svg)
 
 여기서 **connection wait**가 등장한다. pool이 maximum size에 도달하고 idle connection이 없으면 `getConnection()` 호출은 connection이 반환될 때까지 기다린다. `connectionTimeout`을 넘기면 timeout된다.
 
@@ -315,15 +246,9 @@ DB I/O
 
 ## 8. Cache Hit Rate: DB까지 가지 않은 요청은 얼마나 되는가
 
-**발음: 캐시 힛 레이트**
-
 상품 조회가 100번 들어왔다고 해보자.
 
-```text
-                  ┌── HIT ──────→ Response
-Request → Redis ──┤
-                  └── MISS ─────→ DB
-```
+![요청이 Redis에서 HIT이면 바로 응답하고, MISS일 때만 DB를 거쳐 응답하는 흐름](/uploads/theory/reading-performance-metrics/perf-cache-hit-miss.svg)
 
 그중 Redis에서 90번 찾았다면 `Cache Hit Rate = 90%`다. 캐시를 붙인 이유가 DB 부하를 줄이기 위한 것이었다면 중요한 지표다.
 
@@ -395,28 +320,11 @@ Eviction
 
 두 단어는 반드시 구분해서 알아야 한다.
 
-**Utilization(발음: 유틸라이제이션)** 은 CPU가 얼마나 사용되고 있는지를 나타낸다. `CPU Utilization = 70%`처럼 본다.
+**Utilization** 은 CPU가 얼마나 사용되고 있는지를 나타낸다. `CPU Utilization = 70%`처럼 본다.
 
-**Saturation(발음: 새츄레이션)** 은 CPU를 쓰고 싶은 작업이 있는데 CPU가 부족해 **기다리는 상태**를 말한다.
+**Saturation** 은 CPU를 쓰고 싶은 작업이 있는데 CPU가 부족해 **기다리는 상태**를 말한다.
 
-```text
-┌──────────── CPU ────────────┐
-
-Core 1    Task A
-Core 2    Task B
-Core 3    Task C
-Core 4    Task D
-
-└─────────────────────────────┘
-
-          WAIT
-
-          Task E
-          Task F
-          Task G
-          Task H
-          Task I
-```
+![Core 네 개가 작업을 실행 중이고, 그 아래에 CPU를 받지 못한 작업 다섯 개가 대기하는 상태](/uploads/theory/reading-performance-metrics/perf-cpu-util-saturation.svg)
 
 CPU는 열심히 일하고 있다. 중요한 것은 아래쪽이다. **CPU를 원하는 작업이 줄을 서기 시작했다.** Brendan Gregg의 USE Method도 자원을 볼 때 `Utilization`, `Saturation`, `Errors`를 함께 확인하라고 정리한다. Saturation은 처리할 수 없는 추가 작업이 queue에 쌓인 정도로 설명된다.
 
@@ -424,18 +332,7 @@ CPU는 열심히 일하고 있다. 중요한 것은 아래쪽이다. **CPU를 �
 
 이렇게 판단하면 위험하다. 모니터링 시스템이 5분 평균을 보여준다고 해보자.
 
-```text
-CPU
-
-100 ┤      █
-    │      █
-    │      █
- 70 ┤──────█──────── 평균 70%
-    │      █
-    │      █
-  0 └────────────────────────
-              time
-```
+![5분 평균 CPU 사용률 70% 그래프. 짧은 구간에서만 100%까지 올라가고 나머지는 낮게 유지되어 평균이 burst를 가린다](/uploads/theory/reading-performance-metrics/perf-cpu-average.svg)
 
 몇 초 동안 CPU가 100%에 도달하며 queue가 만들어졌어도 평균값에서는 70%로 보일 수 있다. Brendan Gregg도 낮아 보이는 평균 utilization이 짧은 burst의 saturation을 숨길 수 있다고 말한다.
 
@@ -452,7 +349,7 @@ Application Latency
 
 ## 12. Availability와 Reliability
 
-**Availability(발음: 어베일러빌리티)** 는 사용자가 서비스를 **사용할 수 있는가**에 초점을 둔다.
+**Availability** 는 사용자가 서비스를 **사용할 수 있는가**에 초점을 둔다.
 
 ```text
 Request → Server → 200 OK
@@ -460,7 +357,7 @@ Request → Server → 200 OK
 
 처럼 서비스가 정상적으로 요청을 받을 수 있는 상태다.
 
-**Reliability(발음: 릴라이어빌리티)** 는 서비스가 일정 기간 동안 **의도한 동작을 올바르게 수행하는가**에 가깝다. 결제 서버를 생각해보자.
+**Reliability** 는 서비스가 일정 기간 동안 **의도한 동작을 올바르게 수행하는가**에 가깝다. 결제 서버를 생각해보자.
 
 ```text
 POST /payments
