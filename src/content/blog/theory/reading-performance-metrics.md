@@ -49,16 +49,7 @@ Spring Boot Actuator를 붙이면 Spring MVC와 WebFlux 요청에 대해 `http.s
 
 요청 시간이 이렇게 나왔다고 해봅시다.
 
-```text
-20ms
-21ms
-22ms
-20ms
-23ms
-24ms
-21ms
-900ms
-```
+![요청 8건의 응답 시간. 일곱 건은 20ms대이고 한 건만 900ms로 튄다. 평균은 낮은 쪽으로 끌려간다](/uploads/theory/reading-performance-metrics/perf-latency-spread.svg)
 
 평균을 내면 대부분의 사용자가 실제로 겪은 시간과 꽤 다른 숫자가 됩니다. 그래서 서버에서는 percentile을 씁니다.
 
@@ -90,19 +81,7 @@ p99   느린 쪽 1%는 어디까지 느려지는가?
 
 Latency가 요청 하나의 시간이라면 throughput은 일정 시간 동안 처리한 양입니다. 웹 서버에서는 흔히 RPS(Requests Per Second)를 씁니다.
 
-```text
-1초
-
-→ Request
-→ Request
-→ Request
-→ Request
-→ Request
-
-1초에 5개 처리
-
-Throughput = 5 RPS
-```
+![1초 구간에 요청 다섯 건이 지나가 처리량이 5 RPS가 되는 모습](/uploads/theory/reading-performance-metrics/perf-throughput-rps.svg)
 
 DB에서는 TPS(Transaction Per Second), QPS(Query Per Second) 같은 표현도 봅니다.
 
@@ -126,18 +105,7 @@ DB에서는 TPS(Transaction Per Second), QPS(Query Per Second) 같은 표현도 
 
 각 요청을 바로 처리하면 기다리는 시간은 줄일 수 있습니다. 반대로 여러 작업을 모으면 DB round trip과 작업 비용을 줄여 전체 throughput을 높일 수 있습니다. 대신 첫 번째 요청은 batch가 만들어질 때까지 기다릴 수도 있습니다.
 
-```text
-Batch Size ↑
-
-Throughput       ↑
-Efficiency       ↑
-
-하지만
-
-Waiting Time     ↑ 가능
-Latency          ↑ 가능
-Memory Usage     ↑ 가능
-```
+![Batch Size를 올리면 Throughput과 Efficiency를 얻고 Waiting Time, Latency, Memory Usage를 대가로 낸다](/uploads/theory/reading-performance-metrics/perf-batch-tradeoff.svg)
 
 하나를 얻으면서 다른 비용을 지불하는 구조입니다.
 
@@ -205,24 +173,11 @@ Controller 코드를 아무리 최적화해도 큰 효과가 없습니다. 요�
 
 ## 7. 그러면 Connection Pool을 키우면 되지 않을까요?
 
-여기가 성능 튜닝에서 재미있는 부분입니다. `maximumPoolSize`를 10에서 50으로 올리면 애플리케이션에서 connection을 기다리는 요청은 줄어들 수 있습니다. 대신 DB 입장에서는
+여기가 성능 튜닝에서 재미있는 부분입니다. `maximumPoolSize`를 10에서 50으로 올리면 애플리케이션에서 connection을 기다리는 요청은 줄어들 수 있습니다. 대신 DB 입장에서는 동시에 도는 쿼리 수가 늘어납니다.
 
-```text
-기존
+![풀을 10에서 50으로 키우면 동시 쿼리 수도 10에서 50으로 늘어난다](/uploads/theory/reading-performance-metrics/perf-db-load.svg)
 
-10 Queries
-    ↓
-   DB
-
-
-변경
-
-50 Queries
-    ↓
-   DB
-```
-
-가 됩니다. 그러면 DB CPU, Disk I/O, Lock Contention, Context Switching이 함께 올라가고 Query Latency가 늘어날 수 있습니다.
+그러면 DB CPU, Disk I/O, Lock Contention, Context Switching이 함께 올라가고 Query Latency가 늘어날 수 있습니다.
 
 ![풀을 10에서 50으로 키우면 애플리케이션에서 기다리던 요청이 DB에서 기다리게 되는 모습](/uploads/theory/reading-performance-metrics/perf-pool-queue-shift.svg)
 
@@ -266,18 +221,7 @@ DB I/O
 
 비용이 상당할 수 있습니다. TTL을 길게 잡아 hit rate를 높이면
 
-```text
-TTL ↑
-
-Cache Hit Rate ↑
-DB Load ↓
-
-하지만
-
-Stale Data ↑
-Memory Usage ↑
-Invalidation Complexity ↑
-```
+![Cache TTL을 늘리면 Hit Rate는 오르고 DB Load는 줄지만 Stale Data, Memory Usage, Invalidation Complexity를 대가로 낸다](/uploads/theory/reading-performance-metrics/perf-ttl-tradeoff.svg)
 
 같은 비용이 생깁니다. 그래서 cache를 분석할 때도 hit rate 하나만 보지 않습니다.
 
