@@ -1,5 +1,5 @@
 ---
-title: '정산과 취소: 가맹점에 돈이 안 나가고 있었다'
+title: '정산일은 승인일인가 구매확정일인가: 돈의 기준시각 고르기'
 description: '정산이 총액의 3%만 떼고, 집계 키가 승인일이라 가맹점에 돈이 안 가고, 구매확정 전에 정산되고, 취소가 월렛을 모르고, 부분취소가 재배달에 두 배로 깎였다. 다섯 다 에러가 없었다.'
 date: 2026-04-21
 category: study/pay
@@ -92,7 +92,7 @@ src/test/.../SettlementServiceTest.java:  service.settle(DATE)   ← 테스트�
 
 [스케줄러 없던 배치들](/blog/project/pay/pay-ch2-runtime-truths)과 같은 패턴입니다. 정산 로직은 완성돼 있는데, 운영에서 그걸 주기적으로 부르는 스케줄러도 수동으로 돌릴 어드민도 없었습니다. 정산이 영원히 안 만들어지니 "지급 확정"할 대상도 없습니다.
 
-그래서 배선했습니다. 기존 [스케줄러 게이트 패턴](/blog/project/pay/pay-ch2-runtime-truths)(기본 off) 그대로 일 단위 스케줄러를 달고, 어드민에 조회·수동실행·지급확정을 뒀습니다. 정산 상태에는 `PAID_OUT`을 추가했습니다.
+그래서 당시에는 배선했습니다. 기존 [스케줄러 게이트 패턴](/blog/project/pay/pay-ch2-runtime-truths)(기본 off) 그대로 일 단위 스케줄러를 달고, 어드민에 조회·수동실행·지급확정을 뒀습니다. 정산 상태에는 `PAID_OUT`을 추가했습니다. 아래 코드는 그 시점의 초기 구현입니다.
 
 ```java
 public void markPaidOut() {
@@ -103,11 +103,28 @@ public void markPaidOut() {
 }
 ```
 
-데모 콘솔에도 정산 패널을 붙여, 승인→구매확정→정산 집계→지급 확정까지 눌러볼 수 있게 했습니다.
+데모 콘솔에도 정산 패널을 붙여, 승인→구매확정→정산 집계→지급 report 대사→지급 확정까지 눌러볼 수 있게 했습니다. 현재 지급 확정은 exact `MATCHED` report가 있어야만 진행됩니다.
 
 ![정산 데모: 총액 30,000 → 수수료 810 + VAT 81 → 지급액 29,109, 지급예정일 2영업일 뒤](/uploads/project/pay/demo/demo-settlement.png)
 
-총액 30,000이 수수료 810 + VAT 81을 떼고 **29,109**로, 지급예정일은 2영업일 뒤로 찍힙니다. `CREATED`를 "지급 확정"하면 `PAID_OUT`이 됩니다. 실 MySQL로 이 흐름 전체를 검증했습니다(3건 구매확정 → 집계 → 지급확정 → 항목 SETTLED).
+총액 30,000이 수수료 810 + VAT 81을 떼고 **29,109**로, 지급예정일은 2영업일 뒤로 찍힙니다. 이 초기 버전에서는 `CREATED`를 "지급 확정"하면 `PAID_OUT`이 됐고, 실 MySQL로 3건 구매확정 → 집계 → 지급확정 → 항목 `SETTLED` 흐름을 검증했습니다.
+
+### 지급 확정은 이후 다시 닫았다
+
+초기 구현의 `markPaidOut()`은 내부 정산 행만 보고 상태를 바꿨습니다. 외부 지급 report의 reference와 실제 게시 여부를 확인하지 않은 채 `PAID_OUT`을 만들 수 있다는 뜻입니다. 그래서 최신 구현에서는 지급 버튼을 단순 상태 변경으로 두지 않았습니다.
+
+```text
+report = reconcile(expectedReference, currency, netAmount,
+                   payoutReference, reportCurrency, reportAmount, posted)
+settlement.record(report)
+
+if (report.status == MATCHED) {
+    settlement.markPaidOut()
+    publish(SettlementPaidOutEvent)
+}
+```
+
+`PENDING`, reference 누락·중복, 금액·통화 불일치 결과는 대사 증거로 남기되 `PAID_OUT`으로 전이하지 않습니다. `SettlementPaidOutEvent`도 `MATCHED`에서만 발행합니다. 합성 report와 MySQL 마이그레이션·영속성은 테스트했지만, 실제 PG payout report와 은행 reference 계약은 테스트 계정과 외부 데이터가 없어 아직 검증하지 않았습니다. 과거의 데모 흐름은 이 현재 게이트를 반영해 읽어야 합니다.
 
 
 ---
