@@ -36,7 +36,7 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
     <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
       {featuredProjects.map((project) => (
         <CarouselCard
-          href={project.story ? `${base}${project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
+          href={project.story ? `${base}${project.hub ?? project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
           title={project.title}
           description={project.description}
           image={project.image ? assetPath(project.image) : undefined}

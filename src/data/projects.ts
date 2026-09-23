@@ -21,6 +21,8 @@ export interface Project {
   github: LinkField;
   website: LinkField;
   story: string;
+  /** 프로젝트 카드를 눌렀을 때 story 대신 여는 허브 페이지. story는 개요 글로 남는다. */
+  hub?: string;
   order?: number;
   /** true면 프로젝트 카드를 목록에서 숨긴다 (포스트의 draft와 같은 개념). */
   draft?: boolean;
@@ -59,6 +61,7 @@ export const projects: Project[] = files
     github: Array.isArray(data.github) ? data.github : (data.github || ''),
     website: Array.isArray(data.website) ? data.website : (data.website || ''),
     story: data.story || '',
+    hub: data.hub || undefined,
     order: data.order ?? 999,
     draft: data.draft ?? false,
   }));
