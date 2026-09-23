@@ -35,7 +35,7 @@ BE-commerce는 **주문, 승인, 취소부터 원장, 정산, 대사, 구독, �
 | 기간 | 2025.10 ~ 진행 중 (개인 프로젝트) |
 | 형태 | 1인 개인 프로젝트. 설계·구현·검증 전부 직접 진행 |
 | 기술 | Java 21, Spring Boot 3.4, Spring Modulith, MySQL 8.4, Redis, Kafka, Resilience4j |
-| 코드 | [github.com/dj258255/payment-system](https://github.com/dj258255/payment-system) |
+| 코드 | [github.com/dj258255/BE-commerce](https://github.com/dj258255/BE-commerce) |
 
 ## 왜 만들었나
 
@@ -164,10 +164,10 @@ PG 타임아웃은 실패로 단정하지 않고 `UNKNOWN`으로 남긴 뒤 복�
 Docker와 Docker Compose, JDK 21이 필요합니다.
 
 ```bash
-git clone https://github.com/dj258255/payment-system.git
-cd payment-system
+git clone https://github.com/dj258255/BE-commerce.git
+cd BE-commerce
 docker compose up -d
-./gradlew bootRun
+./gradlew -p commerce bootRun
 ```
 
 로컬 데모 계정은 사용자 `1`, `2`(비밀번호 `user-local-only`)와 운영자 `admin`, `admin2`(비밀번호 `admin-local-only`)입니다. 이 값은 로컬 전용 기본값이며 운영 환경에서는 환경변수나 시크릿 매니저로 반드시 교체해야 합니다. 스토어는 `http://localhost:8080/`, 운영 백오피스는 `http://localhost:8080/admin.html`에서 열립니다.

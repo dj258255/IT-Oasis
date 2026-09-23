@@ -56,7 +56,7 @@ doubling 방식으로 실제 행 수는 12,474·98,490·196,794행이 됐습니�
 
 이후 동일 hot account에 동시 분개를 몰아넣어 lock wait·commit throughput을 측정하고, 그 결과를
 스냅샷 도입 기준과 비교했습니다. 재현 명령과 중단 시 정리 규칙은 [hot entity 판단
-문서](https://github.com/dj258255/payment-system/blob/main/docs/37-%EA%B2%B0%EC%A0%9C-%EC%9B%90%EC%9E%A5%EC%9D%98-hot-entity%EC%99%80-처리량.md)에 남겼습니다.
+문서](https://github.com/dj258255/BE-commerce/blob/main/docs/37-%EA%B2%B0%EC%A0%9C-%EC%9B%90%EC%9E%A5%EC%9D%98-hot-entity%EC%99%80-처리량.md)에 남겼습니다.
 
 ## hot account 동시 쓰기 실험 결과
 
@@ -73,10 +73,10 @@ doubling 방식으로 실제 행 수는 12,474·98,490·196,794행이 됐습니�
 만들기 때문입니다. hotness가 실제 트래픽에서도 반복되는지 확인한 뒤, 재생성 검증을 포함한 별도
 결정으로 남겨야 합니다.
 
-재현 명령과 원장 SUM 측정 결과는 [hot entity 판단 문서](https://github.com/dj258255/payment-system/blob/main/docs/37-%EA%B2%B0%EC%A0%9C-%EC%9B%90%EC%9E%A5%EC%9D%98-hot-entity%EC%99%80-%EC%B2%98%EB%9F%89.md)에 남겼습니다.
+재현 명령과 원장 SUM 측정 결과는 [hot entity 판단 문서](https://github.com/dj258255/BE-commerce/blob/main/docs/37-%EA%B2%B0%EC%A0%9C-%EC%9B%90%EC%9E%A5%EC%9D%98-hot-entity%EC%99%80-%EC%B2%98%EB%A6%AC%EB%9F%89.md)에 남겼습니다.
 
 ## 참고
 
 - [Uber - Zero-Sum by Design: 10 Years of Uber’s Payments Platform](https://www.uber.com/bl/en/blog/ubers-payments-platform/)
 - [Modern Treasury - Enforcing Immutability](https://www.moderntreasury.com/journal/enforcing-immutability-in-your-double-entry-ledger)
-- [Hot Entity 판단 문서](https://github.com/dj258255/payment-system/blob/main/docs/37-%EA%B2%B0%EC%A0%9C-%EC%9B%90%EC%9E%A5%EC%9D%98-hot-entity%EC%99%80-%EC%B2%98%EB%A6%AC%EB%9F%89.md)
+- [Hot Entity 판단 문서](https://github.com/dj258255/BE-commerce/blob/main/docs/37-%EA%B2%B0%EC%A0%9C-%EC%9B%90%EC%9E%A5%EC%9D%98-hot-entity%EC%99%80-%EC%B2%98%EB%A6%AC%EB%9F%89.md)

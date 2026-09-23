@@ -168,7 +168,7 @@ Kafka 외부화 편에서 결제 이벤트에 `@Externalized`를 달아 Kafka로
 
 소비자는 "정산 알림" 데모 워커입니다. `payment.confirmed`/`payment.canceled`를 구독해 구조화 로그를 남기는 경량 앱. 설계에서 지킨 분리 원칙은 세 가지입니다.
 
-**(1) 빌드부터 분리.** `consumer-app/`은 자체 `settings.gradle`을 가진 독립 Gradle 프로젝트입니다. 루트 멀티모듈에 include하지 않아서 메인의 빌드·테스트·CI가 이 앱의 존재조차 모릅니다. 실행만 wrapper를 공유합니다(`./gradlew -p consumer-app bootRun`). "별도 서비스"라면 빌드 생명주기부터 별도여야 합니다.
+**(1) 빌드부터 분리.** `consumer-app/`은 자체 `settings.gradle`을 가진 독립 Gradle 프로젝트입니다. 루트 멀티모듈에 include하지 않아서 메인의 빌드·테스트·CI가 이 앱의 존재조차 모릅니다. 실행만 wrapper를 공유합니다(`./gradlew -p commerce/consumer-app bootRun`). "별도 서비스"라면 빌드 생명주기부터 별도여야 합니다.
 
 **(2) 타입도 분리.** 소비자는 메인 앱의 이벤트 클래스를 import하지 않습니다. 값을 String으로 받아 Jackson `readTree`로 파싱합니다. producer가 붙이는 타입 헤더(`__TypeId__: com.beomsu.pay...PaymentConfirmedEvent`)에 기대면 소비자가 발행자의 내부 클래스명에 결합되고, 그 순간 "프로세스 밖"의 의미가 사라집니다. 계약으로 삼을 것은 JSON 스키마입니다.
 
@@ -517,7 +517,7 @@ return n
 
 ---
 
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 웹훅 fail-fast·블랙리스트 재적재·Redis velocity를 실기동으로 검증했습니다.*
+*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/BE-commerce)에 있고, 웹훅 fail-fast·블랙리스트 재적재·Redis velocity를 실기동으로 검증했습니다.*
 
 ---
 

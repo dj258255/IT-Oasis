@@ -194,7 +194,7 @@ public boolean tryDeduct(long productId, int qty) {
 배선은 있던 seam에 끼웠다. `ResilientPgClient`가 감싸는 대상(`pgDelegate`) 자리에 라우터를 넣고 `@Primary`는 하나로 뒀다. 둘이면 스프링이 못 정한다. 떼면 차단기를 잃는다.
 
 ```
-APP_PG_ROUTING_ENABLED=true ./gradlew bootRun
+APP_PG_ROUTING_ENABLED=true ./gradlew -p commerce bootRun
 → PgRoutingConfig : 멀티 PG 라우팅 활성화 — 경로 2개 (가중치 순 시도, 장애 시 failover)
 → 결제 승인 → order PAID / payment DONE   (라우터의 primary 경로로 승인)
 ```
@@ -277,7 +277,7 @@ commit
 
 ---
 
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있습니다. 보상 흐름은 14개의 단위 테스트로 검증했고 `app.pg.routing.enabled=true`로 라우터가 `pgDelegate`로 배선되어 결제가 라우팅 경로로 승인되는 것을 실기동으로 확인했습니다.*
+*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/BE-commerce)에 있습니다. 보상 흐름은 14개의 단위 테스트로 검증했고 `app.pg.routing.enabled=true`로 라우터가 `pgDelegate`로 배선되어 결제가 라우팅 경로로 승인되는 것을 실기동으로 확인했습니다.*
 
 ## 참고
 
