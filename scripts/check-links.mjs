@@ -15,8 +15,14 @@
  * macOS 에서는 파일 시스템이 대소문자를 구분하지 않아 `/tags/B-Tree` 와 `/tags/B-tree` 가
  * 같은 디렉터리로 보인다. CI(리눅스)에서는 갈린다. 그래서 이 검사는 CI 에서 돌아야 의미가 있다.
  *
- * 사용: node scripts/check-links.mjs [dist]
- * 깨진 링크가 하나라도 있으면 종료 코드 1.
+ * 사용
+ * ----
+ *     CI=true pnpm run build && node scripts/check-links.mjs dist
+ *
+ * **`CI=true` 를 빼면 이 검사는 운영과 다른 것을 본다.** 운영 빌드에만 base(`/IT-Oasis`)가
+ * 붙는데, 처음에 그걸 안 맞춰서 로컬 0건 / CI 440건이 나왔다.
+ *
+ * 깨진 링크나 base 누락이 하나라도 있으면 종료 코드 1.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, dirname, basename } from 'node:path';
@@ -35,17 +41,33 @@ function walk(dir, out = []) {
 const files = walk(DIST);
 
 // 페이지 하나 = index.html 하나. 그 부모 경로가 곧 URL 이다.
-const pages = new Set(['/']);
+const rawPages = new Set(['/']);
 for (const f of files) {
   if (basename(f) === 'index.html') {
     const url = '/' + relative(DIST, dirname(f)).split('\\').join('/');
-    pages.add(url === '/.' ? '/' : url.replace(/\/$/, ''));
+    rawPages.add(url === '/.' ? '/' : url.replace(/\/$/, ''));
   }
 }
 
-// base 가 붙어 나간다(예: /IT-Oasis). 링크에서 떼고 본다.
-const sample = [...pages].find((p) => p !== '/') || '';
-const base = sample.startsWith('/IT-Oasis') ? '/IT-Oasis' : '';
+// base 를 빌드 결과에서 알아낸다.
+//
+// **이걸 틀리면 검사 전체가 거짓말을 한다.** Astro 는 `base` 를 줘도 dist 를 그 이름으로 감싸지
+// 않는다 — 디스크는 `dist/tags/…` 인데 링크는 `/IT-Oasis/tags/…` 로 나간다. 처음엔 dist 경로에서
+// base 를 추측했다가, 로컬(base 없음)에서는 0건이고 CI(base 있음)에서는 440건이 나왔다.
+//
+// 앵커는 `_astro` 다. Astro 가 항상 그 이름으로 자산을 내보내므로, 자산 링크에서 `/_astro/` 앞이
+// 곧 base 다.
+function detectBase() {
+  for (const f of files) {
+    const m = readFileSync(f, 'utf8').match(/(?:href|src)="(\/[^"]*?)\/_astro\//);
+    if (m) return m[1];
+  }
+  return '';
+}
+const base = detectBase();
+
+// 링크에는 base 가 붙어 있으므로 페이지 쪽에도 붙여 같은 축으로 비교한다.
+const pages = new Set([...rawPages].map((p) => (p === '/' ? base || '/' : `${base}${p}`)));
 
 // 대소문자만 다른 페이지를 찾기 위한 색인. macOS 는 파일 시스템이 대소문자를 안 가려
 // 두 페이지가 한 디렉터리로 합쳐진다 — 리눅스에서는 둘 다 생기므로 실패로 볼 수 없다.
