@@ -8,7 +8,7 @@ tags:
   - PostgreSQL
   - EXPLAIN
   - Query Optimizer
-  - B-tree
+  - B-Tree
   - Performance
 category: theory/Database
 draft: false
