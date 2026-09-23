@@ -44,7 +44,12 @@
     "systemd",
     "hls.js",
     "Ansible",
-    "접근성"
+    "접근성",
+    "Redis Streams",
+    "Playwright",
+    "VMAF",
+    "ffmpeg",
+    "SLO"
   ],
   "category": "team",
   "date": "2025-08-18",
