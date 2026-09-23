@@ -62,7 +62,7 @@ Uber는 장애의 원인 서비스와 단순히 장애를 전달한 서비스를
 호출 32회, retry event 32회, exhausted 0회, 45ms가 측정됐습니다. 공유 서킷이 먼저 열려 200×3회의
 호출로 증폭되지 않았습니다. 반대로 단일 조회의 retry 예산은 별도 테스트에서 최대 3회로 제한됩니다.
 
-재현 기록은 [retry storm 실험 문서](https://github.com/dj258255/payment-system/blob/main/docs/34-%EA%B2%B0%EC%A0%9C-%EC%9E%AC%EC%8B%9C%EB%8F%84%EC%99%80-retry-storm-%EC%8B%A4%ED%97%98.md)에 남겼습니다.
+재현 기록은 [retry storm 실험 문서](https://github.com/dj258255/BE-commerce/blob/main/docs/34-%EA%B2%B0%EC%A0%9C-%EC%9E%AC%EC%8B%9C%EB%8F%84%EC%99%80-retry-storm-%EC%8B%A4%ED%97%98.md)에 남겼습니다.
 
 ## 아직 외부 검증이 필요한 것
 
@@ -72,4 +72,4 @@ Uber는 장애의 원인 서비스와 단순히 장애를 전달한 서비스를
 
 - [Uber - How Uber Protects Against Retry Storms](https://www.uber.com/us/en/blog/protecting-against-retry-storms/)
 - [Stripe - Idempotency](https://stripe.com/blog/idempotency)
-- [retry storm 실험 설계](https://github.com/dj258255/payment-system/blob/main/docs/34-%EA%B2%B0%EC%A0%9C-%EC%9E%AC%EC%8B%9C%EB%8F%84%EC%99%80-retry-storm-%EC%8B%A4%ED%97%98.md)
+- [retry storm 실험 설계](https://github.com/dj258255/BE-commerce/blob/main/docs/34-%EA%B2%B0%EC%A0%9C-%EC%9E%AC%EC%8B%9C%EB%8F%84%EC%99%80-retry-storm-%EC%8B%A4%ED%97%98.md)

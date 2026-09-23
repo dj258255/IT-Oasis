@@ -66,5 +66,5 @@ Testcontainers 기동도 확인했다. 다만 실제 PG·은행 report를 검증
 
 - [Modern Treasury - Tentative Reconciliation](https://www.moderntreasury.com/journal/tentative-reconciliation)
 - [Adyen - Financial Reconciliation](https://www.adyen.com/knowledge-hub/financial-reconciliation)
-- [대사의 pending과 posted 경계 문서](https://github.com/dj258255/payment-system/blob/main/docs/35-%EB%8C%80%EC%82%AC%EC%9D%98-pending%EA%B3%BC-posted-%EA%B2%BD%EA%B3%84.md)
-- [지급 대사 엔진과 외부 reference](https://github.com/dj258255/payment-system/blob/main/docs/38-%EC%A7%80%EA%B8%89-%EB%8C%80%EC%82%AC-%EC%97%94%EC%A7%84%EA%B3%BC-%EC%99%B8%EB%B6%80-reference.md)
+- [대사의 pending과 posted 경계 문서](https://github.com/dj258255/BE-commerce/blob/main/docs/35-%EB%8C%80%EC%82%AC%EC%9D%98-pending%EA%B3%BC-posted-%EA%B2%BD%EA%B3%84.md)
+- [지급 대사 엔진과 외부 reference](https://github.com/dj258255/BE-commerce/blob/main/docs/38-%EC%A7%80%EA%B8%89-%EB%8C%80%EC%82%AC-%EC%97%94%EC%A7%84%EA%B3%BC-%EC%99%B8%EB%B6%80-reference.md)
