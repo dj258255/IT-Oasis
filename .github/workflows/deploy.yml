@@ -92,6 +92,8 @@ jobs:
       # 실제로 태그 19개, 카테고리 하나, 리다이렉트 하나가 죽어 있었고, 검색 결과 링크는
       # base(/IT-Oasis)가 빠져 <전부> 404 였다. 그래서 배포 전에 막는다.
       # macOS 는 파일 시스템이 대소문자를 안 가려 이 검사를 로컬에서만 믿으면 안 된다.
+      # 로컬에서 같은 것을 보려면 `CI=true pnpm run build` 로 굽고 돌린다 — base 가 붙어야
+      # 운영과 같은 링크가 나온다.
       - name: Check internal links
         run: node scripts/check-links.mjs dist
 
