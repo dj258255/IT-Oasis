@@ -16,8 +16,6 @@ tags:
   - 결제 시스템
 ---
 
-개인 프로젝트로 만든 이커머스 백엔드 BE-commerce의 결제 개발 기록입니다. 실무 운영 경험이 아닙니다.
-
 [2편](/blog/project/be-commerce/be-commerce-ch2-failure-design)에서 카드 결제의 미확정(`UNKNOWN`)을 다뤘다. 가상계좌는 방향이 반대다. 승인과 응답이 한 호출 안에서 끝나는 카드와 달리 계좌를 먼저 발급하고 입금을 기다린다.
 
 ```
