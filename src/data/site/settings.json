@@ -650,10 +650,10 @@
           ]
         },
         {
-          "title": "pay",
+          "title": "BE-commerce",
           "meta": "Spring Modulith 결제 시스템",
           "period": "2025.10 ~ 진행 중",
-          "href": "/blog/project/pay/pay-0-overview",
+          "href": "/blog/project/be-commerce/be-commerce-0-overview",
           "details": [
             "결제 승인·취소부터 원장·정산·대사·구독·분쟁까지 처리합니다."
           ]

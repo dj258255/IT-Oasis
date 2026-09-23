@@ -88,7 +88,7 @@ PostgreSQL은 `UPDATE`를 받아도 기존 행을 수정하지 않습니다. 같
 
 PostgreSQL 코어 개발자 Tom Lane이 메일링 리스트에서 직접 한 말:
 
-> "Commit and abort are both O(1). Where we pay the piper is in having to run VACUUM to clean up no-longer-needed row versions."
+> "Commit and abort are both O(1). Where we BE-commerce the piper is in having to run VACUUM to clean up no-longer-needed row versions."
 
 즉 **롤백 연산 자체는 O(1)** 에 가깝습니다. 하지만 주의할 점이 있습니다. 이게 *"공짜"* 라는 뜻은 아닙니다:
 
