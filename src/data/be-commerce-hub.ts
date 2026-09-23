@@ -124,5 +124,5 @@ export const hubEdges: { from: string; to: string; label: string }[] = [
   { from: 'payment', to: 'settlement', label: 'Outbox 이벤트' },
   { from: 'storefront', to: 'personalization', label: '행동 로그' },
   { from: 'payment', to: 'risk', label: '승인 전 점수' },
-  { from: 'settlement', to: 'ai', label: '대사 예외' },
+  { from: 'payment', to: 'ai', label: '운영 타임라인' },
 ];
