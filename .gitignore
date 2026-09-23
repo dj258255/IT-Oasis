@@ -5,6 +5,9 @@ dist/
 
 # dependencies
 node_modules/
+# 심볼릭 링크로 둘 때가 있다 — 슬래시 붙은 규칙은 링크를 못 막는다.
+# 실제로 링크가 커밋돼 CI 가 ENOTDIR 로 죽었다.
+node_modules
 
 # logs
 npm-debug.log*
