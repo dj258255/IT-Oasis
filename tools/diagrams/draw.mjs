@@ -153,6 +153,8 @@ export function pill(k, x, y, w, h, { color = C.gray, label = '', size = 13, wei
 export function render(k) {
   // rough.js 는 경로 좌표를 소수점 열몇 자리로 뽑는다. 그림에는 아무 차이가 없는데
   // 파일이 두 배가 된다 — SVG 한 장이 200KB 면 열 장에 2MB 다. 한 자리로 줄인다.
-  const body = k.svg.outerHTML.replace(/(\d+\.\d{2,})/g, (m) => (+m).toFixed(1));
+  // 속성값 안에서만 줄인다. 본문 글자까지 줄이면 '737.81ms' 가 '737.8ms' 로 찍힌다.
+  const body = k.svg.outerHTML.replace(/="[^"]*"/g,
+    (attr) => attr.replace(/\d+\.\d{2,}/g, (m) => (+m).toFixed(1)));
   return '<?xml version="1.0" encoding="UTF-8"?>\n' + body;
 }
