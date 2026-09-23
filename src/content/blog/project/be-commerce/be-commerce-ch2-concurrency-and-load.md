@@ -401,7 +401,7 @@ server_errors: 0.00%   (이전 0.55%)
 
 ---
 
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있고, 재시도 전후 스파이크 수치는 위에 그대로 적었습니다(5xx 0.55% → 0.00%).*
+*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/BE-commerce)에 있고, 재시도 전후 스파이크 수치는 위에 그대로 적었습니다(5xx 0.55% → 0.00%).*
 
 ### 버린 것
 

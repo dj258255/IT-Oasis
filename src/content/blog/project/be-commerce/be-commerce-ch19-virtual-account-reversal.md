@@ -57,7 +57,7 @@ else va.expire();
 
 ---
 
-*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/payment-system)에 있습니다.*
+*전체 코드는 [Spring Modulith 기반 결제 시스템](https://github.com/dj258255/BE-commerce)에 있습니다.*
 
 ## 참고
 

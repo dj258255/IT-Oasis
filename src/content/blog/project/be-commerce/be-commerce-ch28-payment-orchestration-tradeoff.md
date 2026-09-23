@@ -42,4 +42,4 @@ Adyen도 orchestration이 장애를 없애는 기능이 아니라 복잡성을 �
 
 - [Adyen - Payment Orchestration](https://www.adyen.com/knowledge-hub/payment-orchestration)
 - [Adyen - Design to Duty](https://www.adyen.com/knowledge-hub/design-to-duty-adyen-architecture)
-- [결제 오케스트레이션 판단 문서](https://github.com/dj258255/payment-system/blob/main/docs/36-%EA%B2%B0%EC%A0%9C-%EC%98%A4%EC%BC%80%EC%8A%A4%ED%8A%B8%EB%A0%88%EC%9D%B4%EC%85%98%EC%9D%98-%EB%B3%B5%EC%9E%A1%EC%84%B1-%EC%9D%B4%EB%8F%99-%ED%8C%90%EB%8B%A8.md)
+- [결제 오케스트레이션 판단 문서](https://github.com/dj258255/BE-commerce/blob/main/docs/36-%EA%B2%B0%EC%A0%9C-%EC%98%A4%EC%BC%80%EC%8A%A4%ED%8A%B8%EB%A0%88%EC%9D%B4%EC%85%98%EC%9D%98-%EB%B3%B5%EC%9E%A1%EC%84%B1-%EC%9D%B4%EB%8F%99-%ED%8C%90%EB%8B%A8.md)

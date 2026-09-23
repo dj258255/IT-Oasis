@@ -150,7 +150,7 @@ Issue·PR 템플릿을 둬서 작업마다 목적, 완료 조건, 예상 시간,
 
 예를 들어 실 PG 계약이 없으면 두 PG failover를 `Done`으로 표시하지 않고 `Blocked by external state`로
 남깁니다. 이것은 일을 덜 했다는 표시가 아니라, 현재 권한과 증거로는 결론을 낼 수 없다는 상태를 다른 사람이
-계획에 사용할 수 있게 만드는 기록입니다. [프로젝트 작업 보드](https://github.com/dj258255/payment-system/blob/main/docs/PROJECT-BOARD.md)에서 현재 카드·예상 범위·산출물·위험을 확인할 수 있습니다.
+계획에 사용할 수 있게 만드는 기록입니다. [프로젝트 작업 보드](https://github.com/dj258255/BE-commerce/blob/main/docs/PROJECT-BOARD.md)에서 현재 카드·예상 범위·산출물·위험을 확인할 수 있습니다.
 
 ## 참고
 
