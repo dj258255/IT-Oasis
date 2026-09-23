@@ -7,13 +7,28 @@ import { render } from 'astro:content';
 import { getReadingTime, parseCategory, translateCategory } from '../../lib/utils';
 import { base, assetPath, getCategoryDisplayKo } from '../../lib/config';
 import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
-import { getBuildablePosts, getProjectPosts, getStoryPosts } from '../../lib/posts';
+import { getBuildablePosts, getProjectPosts, getPublishedPosts, getStoryPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
   const buildable = await getBuildablePosts();
   const storyPosts = await getStoryPosts();
   const projectPosts = await getProjectPosts();
   const projectPostIds = new Set(projectPosts.map((post) => post.id));
+
+  // 태그·카테고리 목록 페이지는 <공개된> 글로만 만들어진다(getPublishedPosts).
+  // 그런데 이 페이지는 unlisted 글도 만든다 — 링크로 들어올 수 있어야 하니까.
+  // 그래서 unlisted 글에만 달린 태그·카테고리를 그냥 링크로 그리면 404로 간다.
+  // 실제로 태그 19개와 카테고리 portfolio 가 그렇게 죽어 있었다.
+  // 여기서 <페이지가 실제로 생기는> 태그·카테고리를 미리 모아 두고, 없는 것은 링크로 안 그린다.
+  const published = await getPublishedPosts();
+  const linkableTags = new Set(published.flatMap((p) => p.data.tags));
+  const linkableCategories = new Set<string>();
+  for (const p of published) {
+    const full = p.data.category;
+    if (!full) continue;
+    linkableCategories.add(full);
+    linkableCategories.add(parseCategory(full).parent);
+  }
 
   return buildable.map((post) => {
     const fullCat = post.data.category;
@@ -55,12 +70,14 @@ export async function getStaticPaths() {
         relatedPosts,
         isSameCategory,
         projectOnly,
+        categoryHasPage: linkableCategories.has(fullCat),
+        linkableTags: post.data.tags.filter((tag: string) => linkableTags.has(tag)),
       },
     };
   });
 }
 
-const { post, prevPost, nextPost, relatedPosts, isSameCategory, projectOnly } = Astro.props;
+const { post, prevPost, nextPost, relatedPosts, isSameCategory, projectOnly, categoryHasPage, linkableTags } = Astro.props;
 const { Content, headings } = await render(post);
 const readingTime = getReadingTime(post.body || '');
 
@@ -112,10 +129,12 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
             <a href={`${base}/projects`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
               {categoryKo}
             </a>
-          ) : (
+          ) : categoryHasPage ? (
             <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
               {categoryKo}
             </a>
+          ) : (
+            <span class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>{categoryKo}</span>
           )}
         </div>
         <h1 id="post-title" class="text-xl sm:text-2xl md:text-3xl font-bold tracking-[-0.02em] leading-tight mb-4 sm:mb-5">
@@ -124,7 +143,7 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
         <div class="flex flex-wrap items-center gap-1.5">
           {post.data.tags.length > 0 && (
             post.data.tags.map((tag: string, i: number) => (
-              projectOnly ? (
+              projectOnly || !linkableTags.includes(tag) ? (
                 <span class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>{tag}</span>
               ) : (
                 <a href={`${base}/tags/${encodeURIComponent(tag)}`} class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>
