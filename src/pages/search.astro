@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { base } from '../lib/config';
 import { getPublishedPosts } from '../lib/posts';
 
 const posts = await getPublishedPosts();
@@ -47,7 +48,7 @@ const searchData = posts.map((post) => ({
   </div>
 </BaseLayout>
 
-<script define:vars={{ searchData }}>
+<script define:vars={{ searchData, base }}>
   const input = document.getElementById('search-input');
   const resultsContainer = document.getElementById('search-results');
   const noResults = document.getElementById('no-results');
@@ -57,7 +58,7 @@ const searchData = posts.map((post) => ({
     if (!resultsContainer) return;
     resultsContainer.innerHTML = posts.map((post) => `
       <article class="group">
-        <a href="/blog/${post.slug}" class="block glass-card rounded-2xl p-6 sm:p-7">
+        <a href="${base}/blog/${post.slug}" class="block glass-card rounded-2xl p-6 sm:p-7">
           <div class="flex items-center gap-2 mb-3">
             <time class="text-[11px] font-medium text-gray-400 tracking-widest uppercase">${post.date}</time>
             <span class="category-pill cat-default">${post.category}</span>
