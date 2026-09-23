@@ -144,7 +144,7 @@ const edgeData = JSON.stringify(hubEdges);
     payment: ['entry', 'storefront', 'payment'],
     settlement: ['entry', 'storefront', 'payment', 'settlement'],
     risk: ['entry', 'storefront', 'payment', 'risk'],
-    ai: ['entry', 'storefront', 'payment', 'settlement', 'ai'],
+    ai: ['entry', 'storefront', 'payment', 'ai'],
   };
 
   let controller: AbortController | null = null;
@@ -194,7 +194,8 @@ const edgeData = JSON.stringify(hubEdges);
       svg.innerHTML = edges
         .map((e) => {
           const pts = segment(e.from, e.to);
-          // 라벨은 가장 긴 구간의 가운데에 둔다.
+          // 라벨은 가장 긴 구간의 가운데에 둔다. 세로 선 라벨은 선 왼쪽에 둬서
+          // 같은 타일에서 오른쪽으로 꺾여 나가는 선과 겹치지 않게 한다.
           let best = 0, lx = 0, ly = 0;
           for (let i = 1; i < pts.length; i++) {
             const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
@@ -207,7 +208,7 @@ const edgeData = JSON.stringify(hubEdges);
           const vertical = pts.length === 2 && pts[0][0] === pts[1][0];
           return `<g class="edge" data-edge="${e.from}>${e.to}">
             <path d="${toPath(pts)}" />
-            <text x="${vertical ? lx + 8 : lx}" y="${vertical ? ly + 4 : ly - 8}" text-anchor="${vertical ? 'start' : 'middle'}">${e.label}</text>
+            <text x="${vertical ? lx - 8 : lx}" y="${vertical ? ly + 4 : ly - 8}" text-anchor="${vertical ? 'end' : 'middle'}">${e.label}</text>
           </g>`;
         })
         .join('');
