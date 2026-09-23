@@ -88,6 +88,13 @@ jobs:
           cat gate-log.txt
           exit 1
 
+      # 링크는 조용히 깨진다. 빌드도 타입체크도 안 본다 — 읽는 사람만 404 를 만난다.
+      # 실제로 태그 19개, 카테고리 하나, 리다이렉트 하나가 죽어 있었고, 검색 결과 링크는
+      # base(/IT-Oasis)가 빠져 <전부> 404 였다. 그래서 배포 전에 막는다.
+      # macOS 는 파일 시스템이 대소문자를 안 가려 이 검사를 로컬에서만 믿으면 안 된다.
+      - name: Check internal links
+        run: node scripts/check-links.mjs dist
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
