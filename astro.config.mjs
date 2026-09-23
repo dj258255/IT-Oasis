@@ -146,7 +146,10 @@ export default defineConfig({
     // AI 글 2편을 1편으로 통합. 옛 슬러그 둘을 통합본으로 보낸다
     '/blog/ai/review-surface-not-review-speed': `${base || ''}/blog/ai/ai-guardrails-before-codegen`,
     '/blog/ai/toss-frontend-ai-workflow-to-backend': `${base || ''}/blog/ai/ai-guardrails-before-codegen`,
-    '/blog/incident/currency-anomaly-detection': `${base || ''}/blog/incident/currency-reclaim`,
+    // currency-anomaly-detection -> currency-reclaim 으로 이름을 바꿨는데, 그 뒤 incident/DbOps 8편이
+    // 전부 draft 로 내려가 목적지 페이지가 사라졌다. 리다이렉트가 404 로 보내고 있었다.
+    // 글을 다시 공개하면 목적지를 `/blog/incident/currency-reclaim` 으로 되돌린다.
+    '/blog/incident/currency-anomaly-detection': `${base || ''}/blog`,
     // pay 정답이 있는 문제(버그·표준 적용·측정 교정) 6편을 비공개로 내린다.
     // 남기는 것은 "정답이 없어 골라야 했던" 글뿐이고, 옛 주소는 pay 소개 글로 보낸다.
     '/blog/project/pay/pay-ch1-what-to-trust': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
