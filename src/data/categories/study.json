@@ -4,7 +4,7 @@
   "icon": "cpu",
   "order": 6,
   "subcategories": [
-    { "name": "pay", "nameKo": "결제 시스템", "order": 1 },
+    { "name": "be-commerce", "nameKo": "이커머스 백엔드", "order": 1 },
     { "name": "db-hobby", "nameKo": "토이 DB", "order": 2 },
     { "name": "kernel-hobby", "nameKo": "토이 커널", "order": 3 },
     { "name": "java-hobby", "nameKo": "토이 JVM", "order": 4 },
