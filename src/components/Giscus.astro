@@ -17,7 +17,7 @@
     const container = document.querySelector('.giscus');
     if (!container || container.querySelector('iframe')) return;
 
-    const theme = document.documentElement.classList.contains('dark') ? 'dark_dimmed' : 'light';
+    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
     const script = document.createElement('script');
     script.src = 'https://giscus.app/client.js';
@@ -43,7 +43,7 @@
   function updateGiscusTheme() {
     const iframe = document.querySelector<HTMLIFrameElement>('.giscus iframe');
     if (!iframe) return;
-    const theme = document.documentElement.classList.contains('dark') ? 'dark_dimmed' : 'light';
+    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     iframe.contentWindow?.postMessage(
       { giscus: { setConfig: { theme } } },
       'https://giscus.app'
