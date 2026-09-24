@@ -46,8 +46,8 @@ const defaultGradient = 'from-cyan/15 to-emerald/15';
             {node.children.size > 0 && (
               <div class="flex flex-wrap gap-1.5 mt-3">
                 {[...node.children.entries()].sort((a, b) => b[1].count - a[1].count).map(([child, childNode]) => (
-                  <span class="text-[11px] text-gray-400 dark:text-gray-500 bg-gray-100/60 dark:bg-gray-800/40 px-2.5 py-1 rounded-lg">
-                    <span>{catDisplayKo.get(child) || child}</span> <span class="opacity-60">{childNode.count}</span>
+                  <span class="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800/60 px-2.5 py-1 rounded-lg">
+                    <span>{catDisplayKo.get(child) || child}</span> <span class="text-gray-500 dark:text-gray-400">{childNode.count}</span>
                   </span>
                 ))}
               </div>
