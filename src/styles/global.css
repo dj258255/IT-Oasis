@@ -5,15 +5,19 @@
 @theme {
   --font-sans: 'Pretendard', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
-  --color-primary: #4a8db8;
+  /* 글자에도 쓰이므로 흰 바탕 5.8:1 을 넘는 진한 파랑으로 둔다 */
+  --color-primary: #1a6aa0;
   --color-primary-light: #8db8d0;
   --color-accent: #0d9488;
   --color-rose: #f9a8d4;
   --color-cyan: #67e8f9;
   --color-emerald: #6ee7b7;
   --color-amber: #fcd34d;
-  --color-surface: #fafaf9;
-  --color-surface-dark: #151520;
+  --color-surface: #f6f8fa;
+  --color-surface-dark: #151b23;
+  /* Tailwind 회색 글자를 흰 바탕에서 4.5:1 이상으로 올린다. 다크 값은 아래 .dark 에서 다시 준다 */
+  --color-gray-400: #6e7781;
+  --color-gray-500: #59636e;
 }
 
 /* ===== Base ===== */
@@ -80,34 +84,33 @@ html {
 
 ::selection {
   background: rgba(56, 189, 248, 0.2);
-  color: #1a1a2e;
+  color: #1f2328;
 }
 
 .dark ::selection {
   background: rgba(125, 211, 252, 0.2);
-  color: #e4e4f0;
+  color: #e6edf3;
 }
 
 body {
   @apply font-sans antialiased;
   overflow-x: clip;
-  /* Cool sky-blue ambient base — a subtle hint, not a wash */
-  background:
-    radial-gradient(1100px 620px at 80% -10%, rgba(56, 189, 248, 0.12), transparent 58%),
-    radial-gradient(1000px 700px at 4% 110%, rgba(34, 211, 238, 0.09), transparent 56%),
-    linear-gradient(180deg, #eef5fb 0%, #f5f8fc 55%, #f1f6fc 100%);
-  background-attachment: fixed;
-  color: #2d2d2d;
+  /* 글에 집중하도록 단색 바탕. 반투명 면을 색 바탕 위에 겹치면 글자 대비가 무너진다 */
+  background: #ffffff;
+  color: #1f2328;
   transition: color 0.5s ease;
 }
 
 .dark body {
-  background:
-    radial-gradient(1100px 620px at 80% -10%, rgba(56, 189, 248, 0.08), transparent 58%),
-    radial-gradient(1000px 700px at 4% 110%, rgba(34, 211, 238, 0.05), transparent 56%),
-    #11131c;
-  background-attachment: fixed;
-  color: #d8d8e8;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+.dark {
+  /* 다크에서는 브랜드 글자를 밝은 파랑으로. bg-primary 는 모두 옅은 색조라 함께 바뀌어도 된다 */
+  --color-primary: #8db8d0;
+  --color-gray-400: #9198a1;
+  --color-gray-500: #8b949e;
 }
 
 button, input, select, textarea {
@@ -115,7 +118,9 @@ button, input, select, textarea {
 }
 
 /* ===== Aurora Animated Background ===== */
+/* 배경 오로라는 글 뒤에서 색을 흔들어 끈다 */
 .aurora-bg {
+  display: none;
   position: fixed;
   inset: 0;
   z-index: -1;
@@ -499,7 +504,7 @@ button, input, select, textarea {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(to bottom, rgba(233, 243, 252, 0.92) 55%, rgba(233, 243, 252, 0));
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.92) 55%, rgba(255, 255, 255, 0));
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   -webkit-mask: linear-gradient(to bottom, #000 62%, transparent);
@@ -507,126 +512,102 @@ button, input, select, textarea {
   pointer-events: none;
 }
 .dark .nav-shell:not([data-transparent])::before {
-  background: linear-gradient(to bottom, rgba(17, 19, 28, 0.92) 55%, rgba(17, 19, 28, 0));
+  background: linear-gradient(to bottom, rgba(13, 17, 23, 0.92) 55%, rgba(13, 17, 23, 0));
 }
 
 /* ===== Gradient Text ===== */
 .gradient-text {
-  color: #4a8db8;
+  color: #1a6aa0;
 }
 .dark .gradient-text {
   color: #8db8d0;
 }
 
 .gradient-text-subtle {
-  background: linear-gradient(135deg, #3a6a8a 0%, #4a8db8 50%, #3d6e8a 100%);
+  background: linear-gradient(135deg, #3a6a8a 0%, #1a6aa0 50%, #1a6aa0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ===== Category Colors ===== */
-.cat-dev {
-  --cat-color: #4a8db8;
-  --cat-bg: rgba(74, 141, 184, 0.07);
-  --cat-border: rgba(74, 141, 184, 0.12);
+/* ===== Category · Tag · Meta badges ===== */
+/* 색으로 구분하던 파스텔 알약은 작은 글자 대비가 3~4:1 에 그쳤다. 무채색 면에
+   진한 글자로 두고, 카테고리만 브랜드 파랑 글자로 구분한다. */
+.cat-dev, .cat-life, .cat-default {
+  --cat-color: #1a6aa0;
+  --cat-bg: #f6f8fa;
+  --cat-border: #d1d9e0;
 }
-.cat-life {
-  --cat-color: #c08098;
-  --cat-bg: rgba(192, 128, 152, 0.07);
-  --cat-border: rgba(192, 128, 152, 0.12);
-}
-.cat-default {
-  --cat-color: #4a90b0;
-  --cat-bg: rgba(74, 144, 176, 0.07);
-  --cat-border: rgba(74, 144, 176, 0.12);
+.dark .cat-dev, .dark .cat-life, .dark .cat-default {
+  --cat-color: #8db8d0;
+  --cat-bg: #151b23;
+  --cat-border: #3d444d;
 }
 
 .category-pill {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 100px;
   background: var(--cat-bg);
   color: var(--cat-color);
   border: 1px solid var(--cat-border);
-  letter-spacing: 0.02em;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease;
 }
 
 .category-pill:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
+  border-color: var(--cat-color);
 }
 
-/* ===== Tag pills ===== */
+.tag-pill,
+.tag-violet, .tag-rose, .tag-cyan, .tag-emerald, .tag-amber {
+  background: #f6f8fa;
+  color: #3b434b;
+  border: 1px solid #d1d9e0;
+}
+
 .tag-pill {
   @apply text-xs px-3 py-1 rounded-full font-medium;
-  background: rgba(100, 160, 210, 0.06);
-  color: #5a8faa;
-  border: 1px solid rgba(100, 160, 210, 0.1);
-  transition: all 0.3s ease;
-  letter-spacing: 0.01em;
+  transition: border-color 0.2s ease, color 0.2s ease;
 }
 
-.dark .tag-pill {
-  background: rgba(120, 170, 210, 0.08);
-  color: #8db8d0;
-  border: 1px solid rgba(120, 170, 210, 0.1);
+.dark .tag-pill,
+.dark .tag-violet, .dark .tag-rose, .dark .tag-cyan, .dark .tag-emerald, .dark .tag-amber {
+  background: #151b23;
+  color: #c9d1d9;
+  border-color: #3d444d;
 }
 
 .tag-pill:hover {
-  background: rgba(100, 160, 210, 0.1);
-  border-color: rgba(100, 160, 210, 0.18);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(100, 160, 210, 0.08);
+  border-color: #1a6aa0;
+  color: #1a6aa0;
 }
 
-/* Colorful tag variants — muted, eye-friendly */
-.tag-violet { background: rgba(100, 160, 210, 0.08); color: #4a8db8; border-color: rgba(100, 160, 210, 0.14); }
-.tag-rose { background: rgba(200, 120, 140, 0.07); color: #b06878; border-color: rgba(200, 120, 140, 0.14); }
-.tag-cyan { background: rgba(80, 175, 195, 0.07); color: #3d8a9a; border-color: rgba(80, 175, 195, 0.14); }
-.tag-emerald { background: rgba(80, 175, 140, 0.07); color: #3d8a6e; border-color: rgba(80, 175, 140, 0.14); }
-.tag-amber { background: rgba(190, 165, 80, 0.07); color: #8a7530; border-color: rgba(190, 165, 80, 0.14); }
+.dark .tag-pill:hover {
+  border-color: #8db8d0;
+  color: #8db8d0;
+}
 
-.dark .tag-violet { background: rgba(120, 170, 210, 0.1); color: #8db8d0; border-color: rgba(120, 170, 210, 0.15); }
-.dark .tag-rose { background: rgba(200, 140, 150, 0.1); color: #c8a0a0; border-color: rgba(200, 140, 150, 0.15); }
-.dark .tag-cyan { background: rgba(100, 180, 200, 0.1); color: #7cb8c8; border-color: rgba(100, 180, 200, 0.15); }
-.dark .tag-emerald { background: rgba(100, 180, 150, 0.1); color: #80b8a0; border-color: rgba(100, 180, 150, 0.15); }
-.dark .tag-amber { background: rgba(200, 175, 90, 0.1); color: #c0a860; border-color: rgba(200, 175, 90, 0.15); }
-
-/* ===== Post Card Meta Badges ===== */
 .post-meta-badge {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   padding: 2px 10px;
   border-radius: 100px;
-  letter-spacing: 0.02em;
   line-height: 1.6;
   white-space: nowrap;
+  background: #f6f8fa;
+  color: #59636e;
+  border: 1px solid #d1d9e0;
 }
 
-.date-badge {
-  background: rgba(100, 160, 210, 0.08);
-  color: #4a8db8;
-  border: 1px solid rgba(100, 160, 210, 0.14);
-}
-.dark .date-badge {
-  background: rgba(120, 170, 210, 0.1);
-  color: #8db8d0;
-  border-color: rgba(120, 170, 210, 0.15);
+.dark .post-meta-badge {
+  background: #151b23;
+  color: #9198a1;
+  border-color: #3d444d;
 }
 
-.category-badge {
-  background: rgba(180, 120, 200, 0.08);
-  color: #9060a8;
-  border: 1px solid rgba(180, 120, 200, 0.14);
-}
-.dark .category-badge {
-  background: rgba(180, 140, 210, 0.1);
-  color: #b898d0;
-  border-color: rgba(180, 140, 210, 0.15);
-}
+.category-badge { color: #1a6aa0; }
+.dark .category-badge { color: #8db8d0; }
 
 /* ===== Divider ===== */
 .divider {
@@ -663,21 +644,18 @@ button, input, select, textarea {
 }
 
 /* ===== Prose (blog content) ===== */
+/* 본문은 16~17px, 줄 간격 1.8. 한국어는 단어 중간에서 끊지 않는다 */
 .prose {
   @apply max-w-none;
-  line-height: 1.75;
-  font-size: 14px;
-}
-@media (min-width: 640px) {
-  .prose {
-    font-size: 15px;
-    line-height: 1.8;
-  }
+  line-height: 1.8;
+  font-size: 16px;
+  letter-spacing: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 @media (min-width: 1024px) {
   .prose {
-    font-size: 15.5px;
-    line-height: 1.85;
+    font-size: 17px;
   }
 }
 /* 본문 안 접기 블록 — 긴 글에서 곁가지 절을 접어 둔다 */
@@ -716,8 +694,8 @@ button, input, select, textarea {
 
 .prose h1, .prose h2, .prose h3 {
   @apply font-bold mt-10 mb-4;
-  color: #1a1a2e;
-  letter-spacing: -0.025em;
+  color: #1f2328;
+  letter-spacing: -0.02em;
   line-height: 1.3;
   scroll-margin-top: 5rem;
 }
@@ -726,16 +704,16 @@ button, input, select, textarea {
     @apply mt-12 mb-5;
   }
 }
-.dark .prose h1, .dark .prose h2, .dark .prose h3 { color: #e4e4f0; }
+.dark .prose h1, .dark .prose h2, .dark .prose h3 { color: #f0f6fc; }
 .prose h1 { font-size: 1.5rem; }
 @media (min-width: 640px) { .prose h1 { font-size: 1.875rem; } }
 .prose h2 {
   font-size: 1.25rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid rgba(100, 160, 200, 0.15);
+  border-bottom: 1px solid #d1d9e0;
 }
 @media (min-width: 640px) { .prose h2 { font-size: 1.5rem; } }
-.dark .prose h2 { border-bottom-color: rgba(100, 160, 200, 0.1); }
+.dark .prose h2 { border-bottom-color: #3d444d; }
 .prose h3 { font-size: 1.125rem; }
 @media (min-width: 640px) { .prose h3 { font-size: 1.25rem; } }
 
@@ -744,49 +722,51 @@ button, input, select, textarea {
    왼쪽 강조선을 둔다 — 선은 줄 높이를 안 먹으면서 눈에 바로 걸린다. */
 .prose h4 {
   @apply font-bold mt-8 mb-3;
-  color: #1a1a2e;
-  letter-spacing: -0.02em;
+  color: #1f2328;
+  letter-spacing: -0.01em;
   line-height: 1.4;
   scroll-margin-top: 5rem;
   font-size: 1rem;
-  border-left: 3px solid rgba(74, 155, 192, 0.75);
+  border-left: 3px solid #1a6aa0;
   padding-left: 0.7rem;
 }
 @media (min-width: 640px) { .prose h4 { font-size: 1.075rem; @apply mt-10; } }
-.dark .prose h4 { color: #e4e4f0; border-left-color: rgba(100, 160, 200, 0.6); }
+.dark .prose h4 { color: #f0f6fc; border-left-color: #8db8d0; }
 .prose p {
   @apply mb-6;
-  color: #3d3d4e;
+  color: #1f2328;
 }
-.dark .prose p { color: #b0b0c8; }
+.dark .prose p { color: #d1d7e0; }
+/* 본문 링크는 밑줄로 드러낸다. 색만으로 링크를 구분하지 않는다 */
 .prose a {
-  color: #4a9bc0;
-  text-decoration: none;
-  background-image: linear-gradient(rgba(74, 155, 192, 0.15), rgba(74, 155, 192, 0.15));
-  background-size: 100% 1px;
-  background-position: 0 100%;
-  background-repeat: no-repeat;
-  transition: all 0.3s ease;
+  color: #1a6aa0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(26, 106, 160, 0.4);
+  transition: text-decoration-color 0.15s ease;
 }
 .prose a:hover {
-  background-size: 100% 100%;
-  color: #3a88aa;
+  text-decoration-color: currentColor;
 }
 .dark .prose a {
-  color: #9ec5d8;
-  background-image: linear-gradient(rgba(158, 197, 216, 0.15), rgba(158, 197, 216, 0.15));
+  color: #8db8d0;
+  text-decoration-color: rgba(141, 184, 208, 0.45);
+}
+.dark .prose a:hover {
+  text-decoration-color: currentColor;
 }
 /* Inline code only (not inside Expressive Code blocks) */
 .prose :not(pre) > code {
   @apply px-2 py-0.5 rounded-lg text-sm font-mono;
-  background: rgba(100, 160, 200, 0.07);
-  color: #3d7fa0;
-  border: 1px solid rgba(100, 160, 200, 0.1);
+  font-size: 0.875em;
+  background: rgba(129, 139, 152, 0.15);
+  color: #1f2328;
+  border: 0;
 }
 .dark .prose :not(pre) > code {
-  background: rgba(130, 175, 210, 0.08);
-  color: #8db8d0;
-  border-color: rgba(130, 175, 210, 0.1);
+  background: rgba(101, 108, 118, 0.3);
+  color: #e6edf3;
 }
 /* Expressive Code wrapper spacing */
 .prose .expressive-code {
@@ -794,19 +774,17 @@ button, input, select, textarea {
 }
 .prose blockquote {
   @apply pl-5 sm:pl-6 pr-5 sm:pr-6 my-6 sm:my-8 py-4 sm:py-5 rounded-xl sm:rounded-2xl;
-  background: rgba(106, 173, 202, 0.05);
-  border: 1px solid rgba(106, 173, 202, 0.1);
-  border-left: 3px solid #6aadca;
-  color: #4a4a60;
+  background: #f6f8fa;
+  border: 1px solid #d1d9e0;
+  border-left: 3px solid #1a6aa0;
+  color: #3b434b;
   font-style: normal;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
 }
 .dark .prose blockquote {
-  color: #a0a0be;
-  background: rgba(106, 173, 202, 0.05);
-  border-color: rgba(106, 173, 202, 0.08);
-  border-left-color: #6aadca;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  color: #c9d1d9;
+  background: #151b23;
+  border-color: #3d444d;
+  border-left-color: #8db8d0;
 }
 .prose blockquote p:first-child { margin-top: 0; }
 .prose blockquote p:last-child { margin-bottom: 0; }
@@ -883,12 +861,12 @@ button, input, select, textarea {
 .prose ol { @apply list-decimal; }
 .prose li {
   @apply mb-2;
-  color: #3d3d4e;
+  color: #1f2328;
   line-height: 1.85;
 }
-.dark .prose li { color: #b0b0c8; }
-.prose li::marker { color: #6aadca; }
-.dark .prose li::marker { color: #8db8d0; }
+.dark .prose li { color: #d1d7e0; }
+.prose li::marker { color: #59636e; }
+.dark .prose li::marker { color: #9198a1; }
 .prose img {
   @apply rounded-2xl my-8;
   max-width: 100%;
@@ -898,13 +876,13 @@ button, input, select, textarea {
 .prose hr {
   @apply my-12 border-0;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(56, 189, 248, 0.15), rgba(6, 182, 212, 0.15), transparent);
+  background: #d1d9e0;
 }
 .prose strong {
-  color: #1a1a2e;
+  color: #1f2328;
   font-weight: 650;
 }
-.dark .prose strong { color: #dcdce8; }
+.dark .prose strong { color: #f0f6fc; }
 
 /* Prose tables — responsive wrapper */
 .prose .table-wrapper {
@@ -948,7 +926,7 @@ button, input, select, textarea {
   @apply px-5 py-3 text-left;
   font-size: 13px;
   font-weight: 650;
-  color: #3d6e8a;
+  color: #1a6aa0;
   letter-spacing: 0.02em;
   border-bottom: 2px solid rgba(100, 160, 200, 0.25);
 }
@@ -960,12 +938,12 @@ button, input, select, textarea {
 
 .prose td {
   @apply px-5 py-3.5;
-  color: #3d3d4e;
+  color: #1f2328;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark .prose td {
-  color: #b0b0c8;
+  color: #c9d1d9;
   border-bottom-color: rgba(255, 255, 255, 0.04);
 }
 
@@ -1093,23 +1071,23 @@ button, input, select, textarea {
   border-radius: 14px;
   font-size: 14px;
   font-weight: 500;
-  color: #3d3d50;
+  color: #1f2328;
   transition: all 0.3s ease;
 }
 
 .sidebar-link:hover {
-  color: #1d1d1f;
+  color: #1f2328;
   background: rgba(100, 160, 200, 0.05);
 }
 
-.dark .sidebar-link { color: #b0b0c8; }
+.dark .sidebar-link { color: #c9d1d9; }
 .dark .sidebar-link:hover {
-  color: #dcdce8;
+  color: #e6edf3;
   background: rgba(100, 160, 200, 0.06);
 }
 
 .sidebar-link.active {
-  color: #4a9bc0;
+  color: #1a6aa0;
   background: rgba(74, 155, 192, 0.08);
   font-weight: 600;
 }
@@ -1130,12 +1108,12 @@ button, input, select, textarea {
 }
 
 .dark .sidebar-link .sidebar-count {
-  color: #9090a8;
+  color: #9198a1;
   background: rgba(56, 189, 248, 0.1);
 }
 
 .sidebar-link.active .sidebar-count {
-  color: #4a9bc0;
+  color: #1a6aa0;
   background: rgba(74, 155, 192, 0.1);
 }
 
@@ -1171,17 +1149,17 @@ button, input, select, textarea {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 450;
-  color: #555570;
+  color: #59636e;
   transition: all 0.3s ease;
 }
 
 .sidebar-child-link:hover {
-  color: #4a9bc0;
+  color: #1a6aa0;
   background: rgba(100, 160, 200, 0.04);
 }
 
 .dark .sidebar-child-link {
-  color: #9595ad;
+  color: #9198a1;
 }
 
 .dark .sidebar-child-link:hover {
@@ -1209,19 +1187,19 @@ button, input, select, textarea {
   margin-left: auto;
   font-size: 11px;
   font-weight: 600;
-  color: #7b7b90;
+  color: #59636e;
   background: rgba(56, 189, 248, 0.06);
   padding: 1px 8px;
   border-radius: 100px;
 }
 
 .dark .sidebar-child-link .sidebar-count {
-  color: #8080a0;
+  color: #9198a1;
   background: rgba(56, 189, 248, 0.08);
 }
 
 .sidebar-child-link.active {
-  color: #4a9bc0;
+  color: #1a6aa0;
   font-weight: 600;
   background: rgba(74, 155, 192, 0.06);
   border-radius: 8px;
@@ -1233,7 +1211,7 @@ button, input, select, textarea {
 }
 
 .sidebar-child-link.active .sidebar-child-dot {
-  background: #4a9bc0;
+  background: #1a6aa0;
 }
 
 .dark .sidebar-child-link.active .sidebar-child-dot {
@@ -1241,7 +1219,7 @@ button, input, select, textarea {
 }
 
 .sidebar-child-link.active .sidebar-count {
-  color: #4a9bc0;
+  color: #1a6aa0;
   background: rgba(74, 155, 192, 0.1);
 }
 
@@ -1319,7 +1297,7 @@ button, input, select, textarea {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  color: #64748b;
+  color: #59636e;
   box-shadow:
     0 4px 16px rgba(15, 40, 80, 0.08),
     inset 0 1px 1px rgba(255, 255, 255, 0.95),
@@ -1329,7 +1307,7 @@ button, input, select, textarea {
 }
 
 .carousel-btn:hover {
-  color: #4a8db8;
+  color: #1a6aa0;
   border-color: rgba(74, 141, 184, 0.35);
   box-shadow:
     0 6px 22px rgba(74, 141, 184, 0.16),
