@@ -18,7 +18,7 @@ const siteSettings = getSiteSettings();
     </div>
     <div class="text-center sm:text-left max-w-md">
       <div class="flex items-center justify-center sm:justify-start gap-2.5 mb-2.5">
-        <span class="text-[11px] sm:text-[12px] text-gray-400 dark:text-gray-500 tracking-[0.15em] uppercase font-semibold">작성자</span>
+        <span class="text-[13px] text-gray-500 dark:text-gray-400">작성자</span>
         <a href={`${base}/about`} class="text-[13px] sm:text-[14px] font-bold px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:bg-primary-light/10 dark:text-primary-light hover:bg-primary/20 dark:hover:bg-primary-light/20 transition-colors duration-200">@범수</a>
       </div>
       <p class="text-[14px] sm:text-[15px] text-gray-600 dark:text-gray-300 leading-relaxed">
@@ -69,41 +69,14 @@ const siteSettings = getSiteSettings();
   .author-card {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
-    border: 1px solid rgba(15, 40, 80, 0.08);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    border-radius: 1.25rem;
-    box-shadow:
-      0 8px 28px rgba(15, 40, 80, 0.06),
-      0 1px 3px rgba(15, 40, 80, 0.05),
-      inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  }
-
-  /* Soft ambient glow filling the open space */
-  .author-card::before {
-    content: '';
-    position: absolute;
-    top: -55%;
-    right: -6%;
-    width: 360px;
-    height: 360px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.13), transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  :global(.dark) .author-card::before {
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.1), transparent 70%);
+    background: #ffffff;
+    border: 1px solid #d1d9e0;
+    border-radius: 16px;
   }
 
   :global(.dark) .author-card {
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.28),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    background: #0d1117;
+    border-color: #3d444d;
   }
 
   .author-social-btn {
