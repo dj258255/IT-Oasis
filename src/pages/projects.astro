@@ -171,36 +171,45 @@ const visibleTagCount = 6;
   }
 
   .project-filter-button {
-    border: 1px solid rgba(15, 40, 80, 0.1);
+    border: 1px solid #d1d9e0;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.7);
-    color: #6b7280;
+    background: #ffffff;
+    color: #59636e;
     cursor: pointer;
     font-size: 13px;
-    font-weight: 700;
-    padding: 0.6rem 1rem;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    padding: 0.55rem 1rem;
+    transition: border-color 0.2s ease, color 0.2s ease;
   }
 
-  .project-filter-button:hover,
+  .project-filter-button:hover {
+    border-color: #9aa5b1;
+    color: #1f2328;
+  }
+
   .project-filter-button.is-active {
-    background: rgba(100, 160, 200, 0.14);
-    border-color: rgba(74, 141, 184, 0.28);
-    color: #1a6aa0;
+    background: #1f2328;
+    border-color: #1f2328;
+    color: #ffffff;
   }
 
   :global(.dark) .project-filter-button {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #b7c0cd;
+    background: #0d1117;
+    border-color: #3d444d;
+    color: #9198a1;
   }
 
-  :global(.dark) .project-filter-button:hover,
-  :global(.dark) .project-filter-button.is-active {
-    background: rgba(120, 170, 210, 0.16);
-    border-color: rgba(150, 200, 235, 0.32);
-    color: #b9dbf2;
+  :global(.dark) .project-filter-button:hover {
+    border-color: #656c76;
+    color: #e6edf3;
   }
+
+  :global(.dark) .project-filter-button.is-active {
+    background: #e6edf3;
+    border-color: #e6edf3;
+    color: #0d1117;
+  }
+
 
   .project-type-label {
     display: inline-block;
@@ -225,7 +234,6 @@ const visibleTagCount = 6;
     box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .project-card--clickable {
@@ -233,7 +241,6 @@ const visibleTagCount = 6;
   }
 
   .project-card:hover {
-    transform: translateY(-4px);
     background: none !important;
     border: none !important;
     box-shadow: none !important;
