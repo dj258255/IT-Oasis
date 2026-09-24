@@ -123,7 +123,7 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
   .series-nav-icon {
     width: 15px;
     height: 15px;
-    color: #0ea5e9;
+    color: #1a6aa0;
     flex: none;
   }
   :global(.dark) .series-nav-icon { color: #38bdf8; }
@@ -141,14 +141,14 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
     flex: none;
     font-size: 12px;
     font-weight: 600;
-    color: #94a3b8;
+    color: #59636e;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .series-nav-count-now { color: #0284c7; font-weight: 700; }
-  .series-nav-count-sep { margin: 0 1px; opacity: 0.6; }
+  .series-nav-count-now { color: #1a6aa0; font-weight: 700; }
+  .series-nav-count-sep { margin: 0 1px; }
   .series-nav-count-unit { margin-left: 2px; }
-  :global(.dark) .series-nav-count { color: #64748b; }
+  :global(.dark) .series-nav-count { color: #9198a1; }
   :global(.dark) .series-nav-count-now { color: #38bdf8; }
 
   /* Numbered list — two columns to fill the width, column-wise fill */
@@ -185,25 +185,25 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
     font-size: 0.78em;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: #94a3b8;
+    color: #59636e;
   }
-  :global(.dark) .series-no { color: #64748b; }
+  :global(.dark) .series-no { color: #9198a1; }
 
   .series-text {
     font-size: 13.5px;
     line-height: 1.55;
-    color: #475569;
+    color: #1f2328;
   }
   @media (min-width: 640px) { .series-text { font-size: 14px; } }
   :global(.dark) .series-text { color: #cbd5e1; }
 
-  a.series-link:hover .series-text { color: #0284c7; }
-  a.series-link:hover .series-no { color: #0ea5e9; }
+  a.series-link:hover .series-text { color: #1a6aa0; }
+  a.series-link:hover .series-no { color: #1a6aa0; }
   :global(.dark) a.series-link:hover .series-text { color: #7dd3fc; }
 
   /* Current post — 굵게만 표시한다 */
   .is-current .series-link { cursor: default; }
-  .is-current .series-no { color: #0284c7; font-weight: 700; }
+  .is-current .series-no { color: #1a6aa0; font-weight: 700; }
   .is-current .series-text { color: #0f172a; font-weight: 700; }
   :global(.dark) .is-current .series-no { color: #38bdf8; }
   :global(.dark) .is-current .series-text { color: #f1f5f9; }
