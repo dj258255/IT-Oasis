@@ -63,23 +63,23 @@ const { tiles, edges, label, compact = false, selected = null, home = null, cont
 <style>
   .flow-wrap {
     container-type: inline-size;
-    --ink: #1f2a37;
-    --muted: #6b7280;
-    --line: #c7d3de;
-    --lit: #4a8db8;
-    --panel: #f5f8fb;
+    --ink: #1f2328;
+    --muted: #59636e;
+    --line: #b5c0cc;
+    --lit: #1a6aa0;
+    --panel: #f6f8fa;
     --tile: #ffffff;
-    --tile-border: #dbe4ec;
+    --tile-border: #d1d9e0;
   }
 
   :global(.dark) .flow-wrap {
-    --ink: #e5e9f0;
-    --muted: #9aa5b4;
-    --line: #3a4658;
+    --ink: #e6edf3;
+    --muted: #9198a1;
+    --line: #3d444d;
     --lit: #8db8d0;
-    --panel: #171b26;
-    --tile: #1e2331;
-    --tile-border: #2e3749;
+    --panel: #151b23;
+    --tile: #0d1117;
+    --tile-border: #3d444d;
   }
 
   .flow-map {
@@ -233,6 +233,11 @@ const { tiles, edges, label, compact = false, selected = null, home = null, cont
     color: #fff;
   }
 
+  :global(.dark) .node.is-active {
+    background: #1a6aa0;
+    border-color: #1a6aa0;
+  }
+
   .node-name {
     font-size: 1.125rem;
     font-weight: 800;
@@ -250,8 +255,7 @@ const { tiles, edges, label, compact = false, selected = null, home = null, cont
     gap: 0.25rem;
     margin-top: 0.35rem;
     /* 자리는 늘 잡아 둔다. 펼치면 같은 줄 타일 높이가 바뀌어 지도가 출렁인다. */
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
+    color: var(--muted);
   }
 
   .node-modules code {
@@ -262,11 +266,7 @@ const { tiles, edges, label, compact = false, selected = null, home = null, cont
     background: rgba(74, 141, 184, 0.1);
   }
 
-  .node:hover .node-modules,
-  .node:focus-visible .node-modules,
-  .node.is-active .node-modules {
-    opacity: 1;
-  }
+  .node.is-active .node-modules { color: #fff; }
 
   .node-count {
     display: flex;
@@ -297,10 +297,11 @@ const { tiles, edges, label, compact = false, selected = null, home = null, cont
     color: rgba(255, 255, 255, 0.85);
   }
 
+  /* 파란 면 위 작은 글자는 면을 밝게 하면 대비가 무너진다. 어둡게 눌러 둔다 */
   .node.is-active .node-modules code,
   .node.is-active .node-here {
     color: #fff;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.22);
   }
 
   /* ── compact: 글 상단 시리즈 목록 ─────────────── */
