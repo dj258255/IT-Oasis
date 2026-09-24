@@ -21,7 +21,7 @@
   <text x="850" y="474" font-size="22" font-weight="800" fill="#1e293b">DB 도달 10.2 req/s</text>
   <text x="850" y="502" font-size="15" font-weight="700" fill="#64748b">정확히 5/s × 2경로</text>
 
-  <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">결제 시스템 만들기 · pay</text>
+  <text x="72" y="120" font-size="19" font-weight="700" fill="#4a8db8" letter-spacing="0.06em">BE-commerce</text>
   <text x="72" y="205" font-size="60" font-weight="900" fill="#4a8db8" opacity="0.92">8</text>
   <text x="72" y="300" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">부하 측정:</text>
   <text x="72" y="366" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-0.03em">3층인데 1층에서 막혔다</text>

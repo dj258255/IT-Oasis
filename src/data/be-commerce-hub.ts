@@ -31,7 +31,7 @@ const post = (slug: string) => `project/be-commerce/be-commerce-${slug}`;
 export const OVERVIEW_ID = post('0-overview');
 
 /** 이 시리즈의 글 상단 목록은 번호순 목록 대신 영역 지도로 그린다(src/components/HubSeriesNav.astro). */
-export const HUB_SERIES = '결제 시스템 만들기';
+export const HUB_SERIES = 'BE-commerce';
 export const HUB_PATH = '/projects/be-commerce';
 
 export const hubDomains: HubDomain[] = [

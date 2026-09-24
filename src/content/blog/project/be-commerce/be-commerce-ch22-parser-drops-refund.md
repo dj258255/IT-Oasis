@@ -5,7 +5,7 @@ date: 2026-09-20
 category: study/be-commerce
 coverImage: "/uploads/covers/project/be-commerce/be-commerce-ch22-parser-drops-refund.svg"
 draft: false
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 22
 tags:
   - Payment

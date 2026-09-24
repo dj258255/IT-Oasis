@@ -6,7 +6,7 @@ category: study/be-commerce
 coverImage: /uploads/covers/project/be-commerce/be-commerce-ch19-virtual-account-reversal.svg
 draft: false
 unlisted: true
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 19
 tags:
   - Payment

@@ -5,7 +5,7 @@ date: 2026-09-07
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch16-sanctions.svg"
 draft: false
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 16
 tags:
   - Payment

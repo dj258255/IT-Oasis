@@ -10,7 +10,7 @@
 export const pilot = [
   {
     id: 'project/pay/pay-ch17-db-rejected-it',
-    kicker: '결제 시스템 만들기 · 17',
+    kicker: 'BE-commerce · 17',
     title: ['테스트는 초록불이었는데', 'DB가 그 값을 거부했다'],
     thesis: '코드와 스키마가 조용히 어긋나 있던 두 자리',
     layout: 'two-cards',

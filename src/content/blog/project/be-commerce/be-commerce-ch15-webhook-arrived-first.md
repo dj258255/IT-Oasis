@@ -5,7 +5,7 @@ date: 2026-09-05
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch15-webhook.svg"
 draft: true
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 15
 tags:
   - Payment
