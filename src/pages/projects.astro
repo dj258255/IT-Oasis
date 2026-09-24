@@ -77,7 +77,7 @@ const visibleTagCount = 6;
                     </a>
                   )}
                   {project.story && (
-                    <a href={`${base}${project.story}`} class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
+                    <a href={`${base}${project.hub ?? project.story}`} class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1d1d1f] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
                       <span>스토리 보기</span>
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </a>
