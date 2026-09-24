@@ -81,10 +81,10 @@ const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
         </p>
       )}
       {(date || category) && (
-        <div class="flex items-center gap-2 text-[12px] sm:text-[13px] font-medium text-gray-500 dark:text-gray-400 pt-4">
-          {date && <span>{date}</span>}
-          {date && category && <span class="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
-          {category && <span class="font-semibold text-primary dark:text-primary-light">{category}</span>}
+        <div class="flex items-center gap-2 min-w-0 text-[13px] text-gray-500 dark:text-gray-400 pt-4">
+          {date && <span class="shrink-0 whitespace-nowrap">{date}</span>}
+          {date && category && <span class="shrink-0 w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+          {category && <span class="min-w-0 truncate font-medium text-primary dark:text-primary-light">{category}</span>}
         </div>
       )}
     </div>
@@ -94,44 +94,27 @@ const hasOverlay = !noOverlay && !!(hasWebsite || hasGithub || story);
 <style>
   .carousel-card {
     position: relative;
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.64) 100%);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    border: 1px solid rgba(15, 40, 80, 0.08);
-    box-shadow:
-      0 8px 28px rgba(15, 40, 80, 0.07),
-      0 1px 3px rgba(15, 40, 80, 0.05),
-      inset 0 1px 1px rgba(255, 255, 255, 0.9);
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #ffffff;
+    border: 1px solid #d1d9e0;
+    box-shadow: 0 1px 2px rgba(31, 35, 40, 0.04);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
   }
 
   :global(.dark) .carousel-card {
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 100%);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      0 8px 30px rgba(0, 0, 0, 0.3),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.12);
+    background: #0d1117;
+    border-color: #3d444d;
+    box-shadow: none;
   }
 
   .carousel-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(100, 160, 200, 0.4);
-    box-shadow:
-      0 18px 50px rgba(15, 40, 80, 0.12),
-      0 4px 14px rgba(15, 40, 80, 0.05),
-      inset 0 1px 1px rgba(255, 255, 255, 1),
-      inset 0 -1px 2px rgba(255, 255, 255, 0.4);
+    border-color: #9aa5b1;
+    box-shadow: 0 4px 12px rgba(31, 35, 40, 0.08);
   }
 
   :global(.dark) .carousel-card:hover {
-    box-shadow:
-      0 18px 50px rgba(0, 0, 0, 0.4),
-      inset 0 1px 1px rgba(255, 255, 255, 0.14),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.12);
-    border-color: rgba(120, 170, 210, 0.3);
+    border-color: #656c76;
   }
 
   .overlay-btn {
