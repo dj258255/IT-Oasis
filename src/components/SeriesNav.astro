@@ -23,7 +23,6 @@ const seriesPosts = allPosts
 const total = seriesPosts.length;
 const currentIndex = seriesPosts.findIndex((p) => p.id === currentPostId);
 const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
-const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
 ---
 
 {/* `series` guards posts with no series at all (undefined would match every seriesless post).
@@ -48,10 +47,6 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
       )}
     </div>
 
-    <div class="series-nav-bar" role="presentation">
-      <div class="series-nav-bar-fill" style={`width:${progressPct}%`}></div>
-    </div>
-
     <ol class="series-nav-list">
       {seriesPosts.map((p, i) => {
         const isCurrent = p.id === currentPostId;
@@ -63,7 +58,6 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
               <span class="series-link" aria-current="true">
                 <span class="series-no">{no}</span>
                 <span class="series-text">{titleKo}</span>
-                <span class="series-now">현재</span>
               </span>
             ) : (
               <a class="series-link" href={`${base}/blog/${p.id}`}>
@@ -157,23 +151,6 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
   :global(.dark) .series-nav-count { color: #64748b; }
   :global(.dark) .series-nav-count-now { color: #38bdf8; }
 
-  /* Progress bar */
-  .series-nav-bar {
-    height: 3px;
-    border-radius: 100px;
-    background: rgba(15, 40, 80, 0.08);
-    overflow: hidden;
-    margin-bottom: 0.9rem;
-  }
-  :global(.dark) .series-nav-bar { background: rgba(255, 255, 255, 0.1); }
-
-  .series-nav-bar-fill {
-    height: 100%;
-    border-radius: 100px;
-    background: linear-gradient(90deg, #38bdf8, #06b6d4);
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
   /* Numbered list — two columns to fill the width, column-wise fill */
   .series-nav-list {
     margin: 0;
@@ -220,37 +197,14 @@ const progressPct = total > 0 ? Math.round((currentNo / total) * 100) : 0;
   @media (min-width: 640px) { .series-text { font-size: 14px; } }
   :global(.dark) .series-text { color: #cbd5e1; }
 
-  a.series-link:hover {
-    background: rgba(56, 189, 248, 0.08);
-  }
   a.series-link:hover .series-text { color: #0284c7; }
   a.series-link:hover .series-no { color: #0ea5e9; }
-  :global(.dark) a.series-link:hover { background: rgba(56, 189, 248, 0.12); }
   :global(.dark) a.series-link:hover .series-text { color: #7dd3fc; }
 
-  /* Current post — accent pill */
-  .is-current .series-link {
-    background: rgba(56, 189, 248, 0.12);
-    cursor: default;
-  }
+  /* Current post — 굵게만 표시한다 */
+  .is-current .series-link { cursor: default; }
   .is-current .series-no { color: #0284c7; font-weight: 700; }
   .is-current .series-text { color: #0f172a; font-weight: 700; }
-  :global(.dark) .is-current .series-link { background: rgba(56, 189, 248, 0.16); }
   :global(.dark) .is-current .series-no { color: #38bdf8; }
   :global(.dark) .is-current .series-text { color: #f1f5f9; }
-
-  .series-now {
-    margin-left: auto;
-    flex: none;
-    align-self: center;
-    font-size: 10.5px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 0.2rem 0.45rem;
-    border-radius: 100px;
-    color: #0369a1;
-    background: rgba(56, 189, 248, 0.18);
-    letter-spacing: 0.02em;
-  }
-  :global(.dark) .series-now { color: #bae6fd; background: rgba(56, 189, 248, 0.2); }
 </style>
