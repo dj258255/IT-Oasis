@@ -13,7 +13,7 @@ tags:
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/diagrams/architecture.svg"
 draft: false
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 0
 ---
 

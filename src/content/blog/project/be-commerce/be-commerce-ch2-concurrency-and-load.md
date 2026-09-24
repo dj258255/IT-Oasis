@@ -5,7 +5,7 @@ date: 2026-03-19
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-concurrency.svg"
 draft: true
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 3
 tags:
   - Payment
