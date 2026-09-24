@@ -231,7 +231,7 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
             <div class="flex flex-col gap-2.5">
               {relatedPosts.map((rp) => (
                 <a href={`${base}/blog/${rp.id}`} class="related-post-link group flex items-center justify-between gap-4">
-                  <p class="text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 truncate">
+                  <p class="text-[15px] font-medium leading-snug text-gray-900 dark:text-gray-100 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-200 line-clamp-2">
                     {rp.data.title}
                   </p>
                   <span class="text-[18px] text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-primary-light group-hover:translate-x-1 transition-all duration-300 shrink-0 leading-none">&rarr;</span>
@@ -253,8 +253,8 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
                 </svg>
               </span>
               <span class="min-w-0">
-                <span class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-1">이전 글</span>
-                <span class="block text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-1">
+                <span class="block text-[13px] text-gray-500 dark:text-gray-400 mb-1">이전 글</span>
+                <span class="block text-[15px] font-medium leading-snug text-gray-900 dark:text-gray-100 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-200 line-clamp-2">
                   {prevPost.data.title}
                 </span>
               </span>
@@ -263,8 +263,8 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
           {nextPost ? (
             <a href={`${base}/blog/${nextPost.id}`} class="glass-card rounded-2xl p-4 sm:p-5 group flex items-center gap-3.5 text-right">
               <span class="min-w-0 ml-auto">
-                <span class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-1">다음 글</span>
-                <span class="block text-[14px] sm:text-[15px] font-semibold text-gray-700 dark:text-gray-200 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300 line-clamp-1">
+                <span class="block text-[13px] text-gray-500 dark:text-gray-400 mb-1">다음 글</span>
+                <span class="block text-[15px] font-medium leading-snug text-gray-900 dark:text-gray-100 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-200 line-clamp-2">
                   {nextPost.data.title}
                 </span>
               </span>
@@ -290,13 +290,9 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
                 <svg class="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
-                <span class="text-[13px] font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400">목차</span>
+                <span class="text-[14px] font-semibold text-gray-900 dark:text-gray-100">목차</span>
               </div>
 
-              <!-- Progress bar -->
-              <div class="h-px w-full bg-gray-200/50 dark:bg-gray-700/30 mb-4 rounded-full overflow-hidden">
-                <div id="toc-progress" class="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-300" style="width: 0%"></div>
-              </div>
 
               <nav id="sidebar-toc" class="space-y-0.5 toc-scroll">
                 {tocHeadings.map((heading, idx) => (
@@ -324,75 +320,61 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
 <style>
   /* Each related post = a distinct, clearly separated row chip */
   .related-post-link {
-    padding: 0.8rem 1rem;
-    border-radius: 13px;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(15, 40, 80, 0.07);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7);
-    transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    border: 1px solid #d1d9e0;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
   }
 
   .related-post-link:hover {
-    background: rgba(56, 189, 248, 0.1);
-    border-color: rgba(56, 189, 248, 0.3);
-    transform: translateX(2px);
+    border-color: #1a6aa0;
+    background: #f6f8fa;
   }
 
   :global(.dark) .related-post-link {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+    border-color: #3d444d;
   }
 
   :global(.dark) .related-post-link:hover {
-    background: rgba(56, 189, 248, 0.14);
-    border-color: rgba(56, 189, 248, 0.3);
+    border-color: #8db8d0;
+    background: #151b23;
   }
 
-  /* Prev / Next circular arrow */
+  /* Prev / Next arrow */
   .prevnext-arrow {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     color: #1a6aa0;
-    background: rgba(56, 189, 248, 0.12);
-    transition: background 0.3s ease;
+    border: 1px solid #d1d9e0;
+    transition: border-color 0.2s ease;
   }
 
   .group:hover .prevnext-arrow {
-    background: rgba(56, 189, 248, 0.22);
+    border-color: #1a6aa0;
   }
 
   :global(.dark) .prevnext-arrow {
-    color: #7dd3fc;
-    background: rgba(56, 189, 248, 0.14);
+    color: #8db8d0;
+    border-color: #3d444d;
   }
 
   :global(.dark) .group:hover .prevnext-arrow {
-    background: rgba(56, 189, 248, 0.24);
+    border-color: #8db8d0;
   }
 
   .related-card {
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
-    border: 1px solid rgba(15, 40, 80, 0.08);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    border-radius: 1.25rem;
-    box-shadow:
-      0 8px 28px rgba(15, 40, 80, 0.06),
-      0 1px 3px rgba(15, 40, 80, 0.05),
-      inset 0 1px 1px rgba(255, 255, 255, 0.9);
+    background: #ffffff;
+    border: 1px solid #d1d9e0;
+    border-radius: 16px;
   }
 
   :global(.dark) .related-card {
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.28),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    background: #0d1117;
+    border-color: #3d444d;
   }
 
   .floating-toc {

@@ -429,20 +429,26 @@ export default defineConfig({
   integrations: [
     expressiveCode({
       plugins: [pluginLineNumbers()],
-      themes: ['catppuccin-mocha', 'catppuccin-latte'],
+      // 사이트 바탕(#ffffff / #0d1117)과 같은 팔레트의 테마를 쓴다
+      themes: ['github-dark', 'github-light'],
       themeCssSelector: (theme) =>
         theme.type === 'dark' ? '.dark' : ':root:not(.dark)',
       styleOverrides: {
         borderRadius: '0.75rem',
-        borderColor: 'rgba(100, 160, 200, 0.2)',
+        borderColor: ({ theme }) => (theme.type === 'dark' ? '#3d444d' : '#d1d9e0'),
+        // 본문 바탕과 구분되도록 코드 면만 옅게 깐다(GitHub 과 같은 값)
+        codeBackground: ({ theme }) => (theme.type === 'dark' ? '#151b23' : '#f6f8fa'),
         codePaddingBlock: '1.25rem',
         codePaddingInline: '1.5rem',
         codeFontFamily: "'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
         codeFontSize: '0.85rem',
         codeLineHeight: '1.75',
         frames: {
-          frameBoxShadowCssValue:
-            '0 4px 16px rgba(0,0,0,0.08), 0 12px 40px rgba(0,0,0,0.06)',
+          frameBoxShadowCssValue: 'none',
+        },
+        // 테마 기본 줄 번호는 3.3~3.6:1 이라 보조 글자색으로 올린다
+        lineNumbers: {
+          foreground: ({ theme }) => (theme.type === 'dark' ? '#9198a1' : '#59636e'),
         },
       },
       defaultProps: {
