@@ -1,6 +1,6 @@
 {
-  "title": "DBTower — 이기종 DBMS 운영 관리 플랫폼",
-  "description": "MySQL·PostgreSQL·Oracle·SQL Server·MongoDB를 한곳에서 모니터링하고, 쿼리 이상과 성능 회귀를 비교·진단하는 데이터베이스 운영 플랫폼입니다.",
+  "title": "DBTower",
+  "description": "반복되는 DB 운영 업무를 AI와 자동화로 전환한 AX 플랫폼입니다. AI 진단부터 변경 승인, 안전한 실행과 결과 검증까지 한곳에서 처리합니다.",
   "image": "/uploads/project/dbtower/cover-icon.svg",
   "tags": [
     "Java",
