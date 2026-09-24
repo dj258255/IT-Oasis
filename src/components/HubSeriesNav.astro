@@ -32,11 +32,6 @@ const position = home ? home.entries.findIndex((p) => p.id === currentPostId) + 
 const total = domains.reduce((n, d) => n + d.entries.length, 0);
 const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
 
-// "질문: 답" 형태의 제목을 두 줄로 나눠 앞부분만 훑어도 목록이 읽히게 한다.
-function splitTitle(title: string): [string, string] {
-  const i = title.indexOf(': ');
-  return i > 0 ? [title.slice(0, i), title.slice(i + 2)] : [title, ''];
-}
 ---
 
 <aside class="hsn" data-hsn aria-label={`${HUB_SERIES} 시리즈 영역별 목록`}>
@@ -61,27 +56,14 @@ function splitTitle(title: string): [string, string] {
         <p class="hsn-list-summary">{d.summary}</p>
         {d.entries.length > 0 ? (
           <ol>
-            {d.entries.map((p, i) => {
-              const [head, sub] = splitTitle(p.data.title);
-              const current = p.id === currentPostId;
-              const inner = (
-                <>
-                  <span class="hsn-no">{i + 1}</span>
-                  <span class="hsn-text">
-                    <span class="hsn-text-head">{head}</span>
-                    {sub && <span class="hsn-text-sub">{sub}</span>}
-                  </span>
-                  {current && <span class="hsn-now">지금 읽는 글</span>}
-                </>
-              );
-              return (
-                <li class:list={[current && 'is-current']}>
-                  {current
-                    ? <span class="hsn-link" aria-current="page">{inner}</span>
-                    : <a class="hsn-link" href={`${base}/blog/${p.id}`}>{inner}</a>}
-                </li>
-              );
-            })}
+            {d.entries.map((p, i) => (
+              <li class:list={[p.id === currentPostId && 'is-current']}>
+                <span class="hsn-no">{i + 1}.</span>
+                {p.id === currentPostId
+                  ? <span class="hsn-title-text" aria-current="page">{p.data.title}</span>
+                  : <a class="hsn-title-text" href={`${base}/blog/${p.id}`}>{p.data.title}</a>}
+              </li>
+            ))}
           </ol>
         ) : (
           <p class="hsn-empty">
@@ -123,7 +105,6 @@ function splitTitle(title: string): [string, string] {
     --ink: #1f2a37;
     --muted: #6b7280;
     --lit: #4a8db8;
-    --rule: rgba(15, 40, 80, 0.08);
     margin: 1.5rem 0 2rem;
     padding: 1.25rem;
     border-radius: 1.25rem;
@@ -138,7 +119,6 @@ function splitTitle(title: string): [string, string] {
     --ink: #e5e9f0;
     --muted: #9aa5b4;
     --lit: #8db8d0;
-    --rule: rgba(255, 255, 255, 0.08);
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
@@ -210,8 +190,7 @@ function splitTitle(title: string): [string, string] {
   }
 
   .hsn-list-summary {
-    margin: 0 0 0.9rem;
-    max-width: 44rem;
+    margin: 0 0 0.75rem;
     font-size: 14px;
     line-height: 1.7;
     color: var(--muted);
@@ -221,88 +200,38 @@ function splitTitle(title: string): [string, string] {
     list-style: none;
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--rule);
   }
 
-  .hsn-list li { border-bottom: 1px solid var(--rule); }
-
-  .hsn-link {
-    position: relative;
+  .hsn-list li {
     display: flex;
-    align-items: flex-start;
-    gap: 0.9rem;
-    padding: 0.85rem 0.75rem;
-    color: var(--ink);
-    text-decoration: none;
-    transition: background-color 0.15s ease;
-  }
-
-  a.hsn-link:hover { background: rgba(74, 141, 184, 0.07); }
-  a.hsn-link:hover .hsn-text-head { color: var(--lit); }
-
-  a.hsn-link:focus-visible {
-    outline: 3px solid var(--lit);
-    outline-offset: -3px;
-    border-radius: 0.5rem;
-  }
-
-  .is-current .hsn-link { background: rgba(74, 141, 184, 0.1); }
-
-  .is-current .hsn-link::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.6rem;
-    bottom: 0.6rem;
-    width: 3px;
-    border-radius: 3px;
-    background: var(--lit);
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
   .hsn-no {
     flex: none;
-    width: 1.6rem;
-    padding-top: 0.1rem;
+    min-width: 1.6rem;
     text-align: right;
-    font-size: 14px;
-    font-weight: 700;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
 
-  .is-current .hsn-no { color: var(--lit); }
-
-  .hsn-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-width: 0;
+  .hsn-title-text {
+    color: var(--ink);
+    text-decoration: none;
   }
 
-  .hsn-text-head {
-    font-size: 15.5px;
-    font-weight: 700;
-    line-height: 1.5;
-    letter-spacing: -0.01em;
-    transition: color 0.15s ease;
-  }
-
-  .hsn-text-sub {
-    font-size: 13.5px;
-    line-height: 1.55;
-    color: var(--muted);
-  }
-
-  .hsn-now {
-    flex: none;
-    margin-left: auto;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 700;
-    white-space: nowrap;
+  a.hsn-title-text:hover {
     color: var(--lit);
-    background: rgba(74, 141, 184, 0.14);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .is-current .hsn-title-text {
+    font-weight: 700;
   }
 
   .hsn-empty {
@@ -316,9 +245,4 @@ function splitTitle(title: string): [string, string] {
 
   .hsn-empty a { color: var(--lit); font-weight: 600; }
 
-  @media (max-width: 560px) {
-    .hsn-link { gap: 0.6rem; padding: 0.75rem 0.4rem; }
-    .hsn-no { width: 1.2rem; }
-    .hsn-now { display: none; }
-  }
 </style>
