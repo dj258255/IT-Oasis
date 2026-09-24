@@ -5,7 +5,7 @@ date: 2026-09-24
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/diagrams/flow-compress-threshold.svg"
 draft: false
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 39
 tags:
   - Redis

@@ -1,12 +1,13 @@
 ---
 /**
  * 허브가 있는 시리즈(BE-commerce)의 글 상단 목록.
- * 번호순 목록 대신 허브 지도와 같은 배치의 영역 타일을 두고, 고른 영역의 글만 아래에 보여 준다.
+ * 번호순 목록 대신 허브와 같은 흐름 지도를 작게 두고, 고른 영역의 글만 아래에 보여 준다.
  * 처음에는 지금 읽는 글이 속한 영역이 열린다. 개요 글처럼 영역이 없으면 코어(결제)가 열린다.
  */
+import FlowMap from './FlowMap.astro';
 import { getPublishedPosts } from '../lib/posts';
 import { base } from '../lib/config';
-import { hubDomains, HUB_PATH, HUB_SERIES } from '../data/be-commerce-hub';
+import { hubDomains, hubEdges, HUB_PATH, HUB_SERIES } from '../data/be-commerce-hub';
 
 interface Props {
   currentPostId: string;
@@ -29,93 +30,87 @@ const home = domains.find((d) => d.entries.some((p) => p.id === currentPostId));
 const openId = home?.id ?? domains.find((d) => d.core)?.id ?? domains[0].id;
 const position = home ? home.entries.findIndex((p) => p.id === currentPostId) + 1 : 0;
 const total = domains.reduce((n, d) => n + d.entries.length, 0);
+const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
+
+// "질문: 답" 형태의 제목을 두 줄로 나눠 앞부분만 훑어도 목록이 읽히게 한다.
+function splitTitle(title: string): [string, string] {
+  const i = title.indexOf(': ');
+  return i > 0 ? [title.slice(0, i), title.slice(i + 2)] : [title, ''];
+}
 ---
 
 <aside class="hsn" data-hsn aria-label={`${HUB_SERIES} 시리즈 영역별 목록`}>
   <div class="hsn-head">
     <strong class="hsn-title">{HUB_SERIES} 시리즈</strong>
-    <a class="hsn-map-link" href={`${base}${HUB_PATH}`}>영역 지도로 보기</a>
+    <a class="hsn-home" href={`${base}${HUB_PATH}`}>프로젝트 홈</a>
   </div>
 
-  <div class="hsn-grid">
-    <p class="hsn-where">
-      {home
-        ? <>지금 <b>{home.name}</b> 영역의 {position}번째 글을 읽고 있습니다. 전체 {total}편입니다.</>
-        : <>영역을 고르면 그 영역의 글이 아래에 나옵니다. 전체 {total}편입니다.</>}
-    </p>
+  <FlowMap tiles={tiles} edges={hubEdges} label="BE-commerce 영역 지도" compact selected={openId} home={home?.id ?? null} controls="hsn-lists">
+    {home
+      ? <>지금 <b>{home.name}</b> 영역의 {position}번째 글을 읽고 있습니다. 전체 {total}편입니다.</>
+      : <>영역을 고르면 그 영역의 글이 아래에 나옵니다. 전체 {total}편입니다.</>}
+  </FlowMap>
 
+  <div id="hsn-lists" class="hsn-lists">
     {domains.map((d) => (
-      <button
-        type="button"
-        class:list={['hsn-tile', d.core && 'hsn-tile--core', d.id === home?.id && 'is-home', d.id === openId && 'is-open']}
-        style={`--col:${d.col};--row:${d.row}`}
-        data-hsn-tile={d.id}
-        aria-pressed={d.id === openId ? 'true' : 'false'}
-        aria-controls={`hsn-list-${d.id}`}
-      >
-        <span class="hsn-tile-name">{d.name}</span>
-        <span class="hsn-tile-count">
-          {d.entries.length > 0 ? `${d.entries.length}편` : '준비 중'}
-          {d.id === home?.id && <span class="hsn-here">읽는 중</span>}
-        </span>
-      </button>
+      <section class="hsn-list" data-hsn-list={d.id} hidden={d.id !== openId} aria-label={`${d.name} 영역의 글`}>
+        <div class="hsn-list-head">
+          <h2 class="hsn-list-name">{d.name}</h2>
+          <span class="hsn-list-count">{d.entries.length > 0 ? `${d.entries.length}편` : '준비 중'}</span>
+        </div>
+        <p class="hsn-list-summary">{d.summary}</p>
+        {d.entries.length > 0 ? (
+          <ol>
+            {d.entries.map((p, i) => {
+              const [head, sub] = splitTitle(p.data.title);
+              const current = p.id === currentPostId;
+              const inner = (
+                <>
+                  <span class="hsn-no">{i + 1}</span>
+                  <span class="hsn-text">
+                    <span class="hsn-text-head">{head}</span>
+                    {sub && <span class="hsn-text-sub">{sub}</span>}
+                  </span>
+                  {current && <span class="hsn-now">지금 읽는 글</span>}
+                </>
+              );
+              return (
+                <li class:list={[current && 'is-current']}>
+                  {current
+                    ? <span class="hsn-link" aria-current="page">{inner}</span>
+                    : <a class="hsn-link" href={`${base}/blog/${p.id}`}>{inner}</a>}
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p class="hsn-empty">
+            이 영역의 글은 아직 없습니다. <a href={d.doc.url} target="_blank" rel="noopener noreferrer">{d.doc.label}</a> 문서에서 먼저 볼 수 있습니다.
+          </p>
+        )}
+      </section>
     ))}
   </div>
-
-  {domains.map((d) => (
-    <div class="hsn-list" id={`hsn-list-${d.id}`} data-hsn-list={d.id} hidden={d.id !== openId}>
-      <p class="hsn-list-summary">{d.summary}</p>
-      {d.entries.length > 0 ? (
-        <ol>
-          {d.entries.map((p, i) => (
-            <li class:list={[p.id === currentPostId && 'is-current']}>
-              {p.id === currentPostId ? (
-                <span class="hsn-link" aria-current="page">
-                  <span class="hsn-no">{i + 1}</span>
-                  <span class="hsn-text">{p.data.title}</span>
-                  <span class="hsn-now">현재</span>
-                </span>
-              ) : (
-                <a class="hsn-link" href={`${base}/blog/${p.id}`}>
-                  <span class="hsn-no">{i + 1}</span>
-                  <span class="hsn-text">{p.data.title}</span>
-                </a>
-              )}
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p class="hsn-empty">
-          이 영역의 글은 아직 없습니다. <a href={d.doc.url} target="_blank" rel="noopener noreferrer">{d.doc.label}</a> 문서에서 먼저 볼 수 있습니다.
-        </p>
-      )}
-    </div>
-  ))}
 </aside>
 
 <script>
+  import { initFlowMap } from '../lib/flow-map';
+
   let hsnController: AbortController | null = null;
 
   function initHubSeriesNav() {
     const root = document.querySelector<HTMLElement>('[data-hsn]');
-    if (!root) return;
+    const map = root?.querySelector<HTMLElement>('[data-flow-map]');
+    if (!root || !map) return;
     hsnController?.abort();
     hsnController = new AbortController();
-    const { signal } = hsnController;
 
-    const tiles = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-hsn-tile]'));
     const lists = Array.from(root.querySelectorAll<HTMLElement>('[data-hsn-list]'));
-
-    tiles.forEach((tile) => {
-      tile.addEventListener('click', () => {
-        const id = tile.dataset.hsnTile;
-        tiles.forEach((t) => {
-          const on = t === tile;
-          t.classList.toggle('is-open', on);
-          t.setAttribute('aria-pressed', String(on));
-        });
+    initFlowMap(map, {
+      signal: hsnController.signal,
+      onSelect: (id) => {
         lists.forEach((l) => { l.hidden = l.dataset.hsnList !== id; });
-      }, { signal });
+      },
     });
   }
 
@@ -128,10 +123,9 @@ const total = domains.reduce((n, d) => n + d.entries.length, 0);
     --ink: #1f2a37;
     --muted: #6b7280;
     --lit: #4a8db8;
-    --tile: rgba(255, 255, 255, 0.92);
-    --tile-border: #dbe4ec;
+    --rule: rgba(15, 40, 80, 0.08);
     margin: 1.5rem 0 2rem;
-    padding: 1.25rem 1.25rem 1.1rem;
+    padding: 1.25rem;
     border-radius: 1.25rem;
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
     backdrop-filter: blur(22px) saturate(170%);
@@ -144,217 +138,187 @@ const total = domains.reduce((n, d) => n + d.entries.length, 0);
     --ink: #e5e9f0;
     --muted: #9aa5b4;
     --lit: #8db8d0;
-    --tile: rgba(255, 255, 255, 0.05);
-    --tile-border: rgba(255, 255, 255, 0.12);
+    --rule: rgba(255, 255, 255, 0.08);
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
   }
 
   @media (min-width: 640px) {
-    .hsn { padding: 1.4rem 1.6rem 1.3rem; }
+    .hsn { padding: 1.4rem 1.6rem 1.5rem; }
   }
 
   .hsn-head {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
   }
 
   .hsn-title {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
     color: var(--ink);
   }
 
-  .hsn-map-link {
+  .hsn-home {
     flex: none;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid rgba(74, 141, 184, 0.3);
+    border-radius: 999px;
     font-size: 13px;
     font-weight: 700;
     color: var(--lit);
-    text-decoration: underline;
-    text-decoration-color: rgba(74, 141, 184, 0.35);
-    text-underline-offset: 4px;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
   }
 
-  .hsn-map-link:hover { text-decoration-color: currentColor; }
+  .hsn-home:hover { background: rgba(74, 141, 184, 0.1); }
 
-  /* 허브 지도와 같은 자리: 4열 × 2행, 빈 칸에는 지금 위치를 적는다 */
-  .hsn-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.6rem;
-    margin-bottom: 1.1rem;
-  }
-
-  .hsn-where {
-    grid-column: 1;
-    grid-row: 2;
-    align-self: center;
-    margin: 0;
-    font-size: 12.5px;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-
-  .hsn-where b {
-    color: var(--ink);
-    font-weight: 700;
-  }
-
-  .hsn-tile {
-    grid-column: var(--col);
-    grid-row: var(--row);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.2rem;
-    padding: 0.75rem 0.9rem;
-    text-align: left;
-    color: var(--ink);
-    background: var(--tile);
-    border: 1px solid var(--tile-border);
-    border-radius: 0.8rem;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease, background-color 0.2s ease;
-  }
-
-  .hsn-tile--core { border-width: 2px; border-color: var(--lit); }
-
-  .hsn-tile:hover,
-  .hsn-tile:focus-visible {
-    transform: scale(1.04);
-    border-color: var(--lit);
-  }
-
-  .hsn-tile:focus-visible {
+  .hsn-home:focus-visible {
     outline: 3px solid var(--lit);
     outline-offset: 2px;
   }
 
-  .hsn-tile.is-open {
-    background: var(--lit);
-    border-color: var(--lit);
-    color: #fff;
-  }
+  /* ── 고른 영역의 글 ─────────────────────── */
 
-  .hsn-tile-name {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-
-  .hsn-tile-count {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-  }
-
-  .hsn-tile.is-open .hsn-tile-count { color: rgba(255, 255, 255, 0.85); }
-
-  .hsn-here {
-    padding: 0.05rem 0.4rem;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--lit);
-    background: rgba(74, 141, 184, 0.14);
-  }
-
-  .hsn-tile.is-open .hsn-here {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.22);
-  }
+  .hsn-lists { margin-top: 1.5rem; }
 
   .hsn-list[hidden] { display: none; }
 
+  .hsn-list-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .hsn-list-name {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .hsn-list-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--lit);
+  }
+
   .hsn-list-summary {
-    margin: 0 0 0.6rem;
-    font-size: 13.5px;
+    margin: 0 0 0.9rem;
+    max-width: 44rem;
+    font-size: 14px;
     line-height: 1.7;
     color: var(--muted);
-    max-width: 44rem;
   }
 
   .hsn-list ol {
     list-style: none;
     margin: 0;
     padding: 0;
+    border-top: 1px solid var(--rule);
   }
 
-  @media (min-width: 900px) {
-    .hsn-list ol { column-count: 2; column-gap: 1.5rem; }
-  }
-
-  .hsn-list li { break-inside: avoid; }
+  .hsn-list li { border-bottom: 1px solid var(--rule); }
 
   .hsn-link {
+    position: relative;
     display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: 0.6rem;
-    font-size: 14px;
-    line-height: 1.55;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 0.85rem 0.75rem;
     color: var(--ink);
     text-decoration: none;
+    transition: background-color 0.15s ease;
   }
 
-  a.hsn-link:hover { background: rgba(74, 141, 184, 0.08); color: var(--lit); }
+  a.hsn-link:hover { background: rgba(74, 141, 184, 0.07); }
+  a.hsn-link:hover .hsn-text-head { color: var(--lit); }
 
-  .is-current .hsn-link {
-    background: rgba(74, 141, 184, 0.12);
-    font-weight: 700;
+  a.hsn-link:focus-visible {
+    outline: 3px solid var(--lit);
+    outline-offset: -3px;
+    border-radius: 0.5rem;
+  }
+
+  .is-current .hsn-link { background: rgba(74, 141, 184, 0.1); }
+
+  .is-current .hsn-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6rem;
+    bottom: 0.6rem;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--lit);
   }
 
   .hsn-no {
     flex: none;
-    min-width: 1.2rem;
+    width: 1.6rem;
+    padding-top: 0.1rem;
     text-align: right;
-    font-size: 12.5px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
 
   .is-current .hsn-no { color: var(--lit); }
 
+  .hsn-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .hsn-text-head {
+    font-size: 15.5px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    transition: color 0.15s ease;
+  }
+
+  .hsn-text-sub {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
   .hsn-now {
     flex: none;
     margin-left: auto;
-    padding: 0.05rem 0.45rem;
+    padding: 0.15rem 0.55rem;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
+    white-space: nowrap;
     color: var(--lit);
     background: rgba(74, 141, 184, 0.14);
   }
 
   .hsn-empty {
     margin: 0;
-    font-size: 13.5px;
+    padding: 1rem 1.1rem;
+    border: 1px dashed rgba(74, 141, 184, 0.35);
+    border-radius: 0.75rem;
+    font-size: 14px;
     color: var(--muted);
   }
 
   .hsn-empty a { color: var(--lit); font-weight: 600; }
 
-  /* 좁은 화면: 지도 배치를 풀고 결제를 맨 앞에 둔 3열 타일 */
-  @media (max-width: 700px) {
-    .hsn-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .hsn-tile { grid-column: auto; grid-row: auto; padding: 0.6rem 0.7rem; }
-    .hsn-tile--core { order: -1; }
-    .hsn-tile-name { font-size: 13.5px; }
-    .hsn-where { grid-column: 1 / -1; grid-row: auto; order: 10; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hsn-tile { transition: none; }
-    .hsn-tile:hover, .hsn-tile:focus-visible { transform: none; }
+  @media (max-width: 560px) {
+    .hsn-link { gap: 0.6rem; padding: 0.75rem 0.4rem; }
+    .hsn-no { width: 1.2rem; }
+    .hsn-now { display: none; }
   }
 </style>

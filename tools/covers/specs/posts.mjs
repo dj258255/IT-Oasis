@@ -5,7 +5,7 @@
 export const posts = [
   {
     id: 'project/pay/pay-ch19-virtual-account-reversal',
-    kicker: '결제 시스템 만들기 · 가상계좌',
+    kicker: 'BE-commerce · 가상계좌',
     title: ['결제 완료는', '최종 상태가 아니었다'],
     thesis: '만료는 웹훅으로 오지 않는다. 완료는 되돌아온다.',
     layout: 'right-diagram',
@@ -21,7 +21,7 @@ export const posts = [
   },
   {
     id: 'project/pay/pay-ch20-fds-block-ignored',
-    kicker: '결제 시스템 만들기 · 이상거래 탐지',
+    kicker: 'BE-commerce · 이상거래 탐지',
     title: ['BLOCK을 반환했는데', '결제가 계속 승인되고 있었다'],
     thesis: '지연이 이유가 아니라는 것을 재고도 켜지 않았다',
     layout: 'right-diagram',
@@ -40,7 +40,7 @@ export const posts = [
   },
   {
     id: 'project/pay/pay-ch21-cancel-row-overwrite',
-    kicker: '결제 시스템 만들기 · 대사',
+    kicker: 'BE-commerce · 대사',
     title: ['부분취소가 오자', '이미 끝난 판정의 근거가 바뀌었다'],
     thesis: '현재 상태를 담는 자리에 사건 이력을 덮어썼다',
     layout: 'two-cards',
@@ -61,7 +61,7 @@ export const posts = [
   },
   {
     id: 'project/pay/pay-ch22-parser-drops-refund',
-    kicker: '결제 시스템 만들기 · 정산 파서',
+    kicker: 'BE-commerce · 정산 파서',
     title: ['환불을 음수 행으로 바꿨는데', '파서는 음수를 버리고 있었다'],
     thesis: '공유하는 계약을 바꿨으면 한쪽만 검증하면 안 된다',
     layout: 'right-diagram',
@@ -77,7 +77,7 @@ export const posts = [
   },
   {
     id: 'project/pay/pay-ch23-receiver-decides-guards',
-    kicker: '결제 시스템 만들기 · 수신자별 가드',
+    kicker: 'BE-commerce · 수신자별 가드',
     title: ['같은 AI 출력인데', '고객에게는 막고 운영자에게는 허용했다'],
     thesis: '무엇을 막을지는 받는 사람이 정한다',
     layout: 'two-cards',
@@ -94,7 +94,7 @@ export const posts = [
   },
   {
     id: 'project/pay/pay-ch24-judge-order-flip',
-    kicker: '결제 시스템 만들기 · 평가',
+    kicker: 'BE-commerce · 평가',
     title: ['AI 심판에게 순서를 바꿔', '물었더니 8번 다 뒤집혔다'],
     thesis: '심판이 고른 것은 질이 아니라 앞에 놓인 쪽',
     layout: 'right-diagram',

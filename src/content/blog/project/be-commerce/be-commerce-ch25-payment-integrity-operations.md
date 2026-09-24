@@ -6,7 +6,7 @@ category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/diagrams/erd.svg"
 draft: false
 unlisted: true
-series: "결제 시스템 만들기"
+series: "BE-commerce"
 seriesOrder: 25
 tags:
   - Payment
