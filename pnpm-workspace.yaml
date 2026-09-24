@@ -2,5 +2,3 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   sharp: true
-  # 설치 스크립트는 함께 쓰면 안 되는 패키지(particles.js 등)가 있는지 알리기만 한다
-  "@tsparticles/engine": false

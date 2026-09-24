@@ -47,12 +47,6 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
   </FlowMap>
 
   <div id="hsn-lists" class="hsn-lists">
-    <div class="tank-fx" aria-hidden="true">
-      <span class="caustics"></span>
-      <svg class="fish fish--a" viewBox="0 0 64 32"><path d="M3 16 C 12 5, 34 5, 44 16 C 34 27, 12 27, 3 16 Z M42 16 L60 6 L55 16 L60 26 Z" /></svg>
-      <svg class="fish fish--b" viewBox="0 0 64 32"><path d="M3 16 C 12 5, 34 5, 44 16 C 34 27, 12 27, 3 16 Z M42 16 L60 6 L55 16 L60 26 Z" /></svg>
-      <div class="bubbles" data-bubbles></div>
-    </div>
     {domains.map((d) => (
       <section class="hsn-list" data-hsn-list={d.id} hidden={d.id !== openId} aria-label={`${d.name} 영역의 글`}>
         <div class="hsn-list-head">
@@ -64,7 +58,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
           <ol>
             {d.entries.map((p, i) => (
               <li class:list={[p.id === currentPostId && 'is-current']}>
-                <span class="hsn-no">{i + 1}.</span>
+                <span class="hsn-no">{i + 1}</span>
                 {p.id === currentPostId
                   ? <span class="hsn-title-text" aria-current="page">{p.data.title}</span>
                   : <a class="hsn-title-text" href={`${base}/blog/${p.id}`}>{p.data.title}</a>}
@@ -83,7 +77,6 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
 
 <script>
   import { initFlowMap } from '../lib/flow-map';
-  import { startBubbles } from '../lib/aquarium';
 
   let hsnController: AbortController | null = null;
 
@@ -95,9 +88,6 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     hsnController = new AbortController();
 
     const lists = Array.from(root.querySelectorAll<HTMLElement>('[data-hsn-list]'));
-    const bubbles = root.querySelector<HTMLElement>('[data-bubbles]');
-    if (bubbles) startBubbles(bubbles, hsnController.signal);
-
     initFlowMap(map, {
       signal: hsnController.signal,
       onSelect: (id) => {
@@ -115,6 +105,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     --ink: #1f2a37;
     --muted: #6b7280;
     --lit: #4a8db8;
+    --rule: rgba(15, 40, 80, 0.1);
     margin: 1.5rem 0 2rem;
     padding: 1.25rem;
     border-radius: 1.25rem;
@@ -129,6 +120,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     --ink: #e5e9f0;
     --muted: #9aa5b4;
     --lit: #8db8d0;
+    --rule: rgba(255, 255, 255, 0.1);
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
@@ -174,128 +166,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
 
   /* ── 고른 영역의 글 ─────────────────────── */
 
-  /* 수조: 아래로 갈수록 물빛이 짙어지고, 물결빛·물고기·기포는 글 뒤에 깔린다 */
-  .hsn-lists {
-    --water-top: #eef8fd;
-    --water-mid: #d8eef8;
-    --water-deep: #c3e3f2;
-    --glass: rgba(74, 141, 184, 0.2);
-    --rule: rgba(40, 110, 150, 0.16);
-    --fish: #2f7fae;
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    margin-top: 1.5rem;
-    padding: 1.4rem 1.4rem 1.6rem;
-    border-radius: 1rem;
-    border: 1px solid var(--glass);
-    background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 55%, var(--water-deep) 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      inset 0 -24px 48px rgba(30, 110, 160, 0.08);
-  }
-
-  :global(.dark) .hsn-lists {
-    --water-top: #12314a;
-    --water-mid: #0d2638;
-    --water-deep: #081a29;
-    --glass: rgba(141, 184, 208, 0.18);
-    --rule: rgba(141, 200, 230, 0.14);
-    --fish: #8fd0f5;
-    --muted: #a9bccb;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      inset 0 -24px 48px rgba(0, 0, 0, 0.25);
-  }
-
-  .hsn-lists > :not(.tank-fx) {
-    position: relative;
-    z-index: 2;
-  }
-
-  .tank-fx {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  /* 수면에서 내려오는 물결빛. 두 겹의 무늬가 서로 다른 속도로 흘러 일렁인다. */
-  .caustics {
-    position: absolute;
-    inset: -40% -10% 30%;
-    background:
-      radial-gradient(ellipse 60px 24px at 20% 30%, rgba(255, 255, 255, 0.55), transparent 70%),
-      radial-gradient(ellipse 80px 30px at 70% 20%, rgba(255, 255, 255, 0.45), transparent 70%),
-      radial-gradient(ellipse 50px 20px at 45% 60%, rgba(255, 255, 255, 0.4), transparent 70%);
-    background-size: 260px 140px, 340px 170px, 220px 120px;
-    mix-blend-mode: soft-light;
-    opacity: 0.9;
-    animation: shimmer 18s linear infinite;
-    mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
-  }
-
-  :global(.dark) .caustics {
-    mix-blend-mode: screen;
-    opacity: 0.18;
-  }
-
-  @keyframes shimmer {
-    from { background-position: 0 0, 0 0, 0 0; }
-    to { background-position: 260px 40px, -340px 30px, 220px -20px; }
-  }
-
-  .fish {
-    position: absolute;
-    left: 0;
-    width: 46px;
-    height: 23px;
-    fill: var(--fish);
-    opacity: 0.14;
-  }
-
-  :global(.dark) .fish { opacity: 0.2; }
-
-  .fish--a {
-    top: 38%;
-    animation: swim-right 46s linear infinite, bob 5s ease-in-out infinite;
-  }
-
-  .fish--b {
-    top: 72%;
-    width: 32px;
-    height: 16px;
-    animation: swim-left 62s linear infinite -20s, bob 6.5s ease-in-out infinite;
-  }
-
-  @keyframes swim-right {
-    from { translate: -60px 0; scale: 1 1; }
-    to { translate: calc(100cqw + 60px) 0; scale: 1 1; }
-  }
-
-  @keyframes swim-left {
-    from { translate: calc(100cqw + 60px) 0; scale: -1 1; }
-    to { translate: -60px 0; scale: -1 1; }
-  }
-
-  @keyframes bob {
-    0%, 100% { margin-top: 0; }
-    50% { margin-top: -6px; }
-  }
-
-  .tank-fx { container-type: inline-size; }
-
-  .bubbles {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .caustics, .fish { animation: none; }
-    .fish--a { translate: 30cqw 0; }
-    .fish--b { translate: 70cqw 0; scale: -1 1; }
-  }
+  .hsn-lists { margin-top: 1.5rem; }
 
   .hsn-list[hidden] { display: none; }
 
@@ -303,70 +174,83 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     display: flex;
     align-items: baseline;
     gap: 0.6rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
   }
 
   .hsn-list-name {
     margin: 0;
-    font-size: 19px;
-    font-weight: 800;
+    font-size: 20px;
+    font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--ink);
   }
 
   .hsn-list-count {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--lit);
-  }
-
-  .hsn-list-summary {
-    margin: 0 0 0.75rem;
     font-size: 14px;
-    line-height: 1.7;
+    font-weight: 500;
     color: var(--muted);
   }
 
+  /* 한국어는 기본값에서 단어 중간에서도 줄이 바뀐다. 단어 단위로 끊고 마지막 줄에
+     한두 글자만 남지 않게 한다. */
+  .hsn-list-summary,
+  .hsn-title-text {
+    word-break: keep-all;
+    text-wrap: pretty;
+  }
+
+  .hsn-list-summary {
+    margin: 0 0 1.1rem;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  /* 기술 블로그 시리즈 목차: 글마다 가는 선, 옅은 번호, 넉넉한 행 간격 */
   .hsn-list ol {
     list-style: none;
     margin: 0;
     padding: 0;
+    border-bottom: 1px solid var(--rule);
   }
 
   .hsn-list li {
-    display: flex;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
     align-items: baseline;
-    gap: 0.5rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid var(--rule);
-    font-size: 15px;
-    line-height: 1.6;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--rule);
   }
 
-  .hsn-list li:first-child { border-top: 1px solid var(--rule); }
-
   .hsn-no {
-    flex: none;
-    min-width: 1.6rem;
-    text-align: right;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
 
   .hsn-title-text {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
     color: var(--ink);
     text-decoration: none;
   }
 
   a.hsn-title-text:hover {
-    color: var(--lit);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
   }
 
-  .is-current .hsn-title-text {
-    font-weight: 700;
+  a.hsn-title-text:focus-visible {
+    outline: 2px solid var(--lit);
+    outline-offset: 3px;
+    border-radius: 2px;
   }
+
+  .is-current .hsn-no { color: var(--lit); font-weight: 700; }
+  .is-current .hsn-title-text { font-weight: 700; }
 
   .hsn-empty {
     margin: 0;
