@@ -58,7 +58,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
           <ol>
             {d.entries.map((p, i) => (
               <li class:list={[p.id === currentPostId && 'is-current']}>
-                <span class="hsn-no">{i + 1}.</span>
+                <span class="hsn-no">{i + 1}</span>
                 {p.id === currentPostId
                   ? <span class="hsn-title-text" aria-current="page">{p.data.title}</span>
                   : <a class="hsn-title-text" href={`${base}/blog/${p.id}`}>{p.data.title}</a>}
@@ -105,6 +105,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     --ink: #1f2a37;
     --muted: #6b7280;
     --lit: #4a8db8;
+    --rule: rgba(15, 40, 80, 0.1);
     margin: 1.5rem 0 2rem;
     padding: 1.25rem;
     border-radius: 1.25rem;
@@ -119,6 +120,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     --ink: #e5e9f0;
     --muted: #9aa5b4;
     --lit: #8db8d0;
+    --rule: rgba(255, 255, 255, 0.1);
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
@@ -172,67 +174,83 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     display: flex;
     align-items: baseline;
     gap: 0.6rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
   }
 
   .hsn-list-name {
     margin: 0;
-    font-size: 19px;
-    font-weight: 800;
+    font-size: 20px;
+    font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--ink);
   }
 
   .hsn-list-count {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--lit);
-  }
-
-  .hsn-list-summary {
-    margin: 0 0 0.75rem;
     font-size: 14px;
-    line-height: 1.7;
+    font-weight: 500;
     color: var(--muted);
   }
 
+  /* 한국어는 기본값에서 단어 중간에서도 줄이 바뀐다. 단어 단위로 끊고 마지막 줄에
+     한두 글자만 남지 않게 한다. */
+  .hsn-list-summary,
+  .hsn-title-text {
+    word-break: keep-all;
+    text-wrap: pretty;
+  }
+
+  .hsn-list-summary {
+    margin: 0 0 1.1rem;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  /* 기술 블로그 시리즈 목차: 글마다 가는 선, 옅은 번호, 넉넉한 행 간격 */
   .hsn-list ol {
     list-style: none;
     margin: 0;
     padding: 0;
+    border-bottom: 1px solid var(--rule);
   }
 
   .hsn-list li {
-    display: flex;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
     align-items: baseline;
-    gap: 0.5rem;
-    padding: 0.3rem 0;
-    font-size: 15px;
-    line-height: 1.6;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--rule);
   }
 
   .hsn-no {
-    flex: none;
-    min-width: 1.6rem;
-    text-align: right;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
 
   .hsn-title-text {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
     color: var(--ink);
     text-decoration: none;
   }
 
   a.hsn-title-text:hover {
-    color: var(--lit);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
   }
 
-  .is-current .hsn-title-text {
-    font-weight: 700;
+  a.hsn-title-text:focus-visible {
+    outline: 2px solid var(--lit);
+    outline-offset: 3px;
+    border-radius: 2px;
   }
+
+  .is-current .hsn-no { color: var(--lit); font-weight: 700; }
+  .is-current .hsn-title-text { font-weight: 700; }
 
   .hsn-empty {
     margin: 0;
