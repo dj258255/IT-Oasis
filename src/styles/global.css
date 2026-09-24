@@ -99,6 +99,9 @@ body {
   background: #ffffff;
   color: #1f2328;
   transition: color 0.5s ease;
+  /* 한국어를 단어 중간에서 끊지 않는다. 끊을 곳이 없는 긴 문자열(URL 등)만 칸 끝에서 끊는다 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .dark body {
@@ -239,6 +242,8 @@ button, input, select, textarea {
 
 /* ===== Grain Texture ===== */
 .grain-overlay {
+  /* 글자 뒤에서 계속 움직이는 노이즈는 읽기를 방해하고, 화면 높이에서 끊겨 띠로 보였다 */
+  display: none;
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -465,10 +470,10 @@ button, input, select, textarea {
 
 /* ===== Gradient Text ===== */
 .gradient-text {
-  color: #1a6aa0;
+  color: #1f2328;
 }
 .dark .gradient-text {
-  color: #8db8d0;
+  color: #f0f6fc;
 }
 
 .gradient-text-subtle {
