@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif">
 <rect width="1200" height="640" fill="#ffffff"/>
-<text x="600" y="48" text-anchor="middle" font-size="24" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">떠난 고객의 결제를 빼도 PG 호출은 8.3%만 줄었습니다</text>
-<text x="600" y="78" text-anchor="middle" font-size="14" fill="#64748b">PG 5초 지연 · 상한 40 · 초당 30건 · 요청의 30%에 이미 지난 데드라인</text>
+<text x="600" y="48" text-anchor="middle" font-size="24" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">떠난 고객의 결제를 빼도 PG 호출은 8.4%만 줄었습니다</text>
+<text x="600" y="78" text-anchor="middle" font-size="14" fill="#64748b">PG 5초 지연 · 상한 40 · 초당 30건 · 요청의 30%에 남은 시간 0</text>
 <rect x="470" y="111" width="14" height="14" rx="3" fill="#2a78d6"/>
 <text x="492" y="123" font-size="15" fill="#52514e">데드라인 확인 끔</text>
 <rect x="635" y="111" width="14" height="14" rx="3" fill="#eb6834"/>
@@ -14,10 +14,10 @@
 <line x1="90" y1="190.0" x2="380" y2="190.0" stroke="#e2e8f0" stroke-width="1"/>
 <text x="80" y="194.0" text-anchor="end" font-size="12" fill="#64748b">2,000</text>
 <line x1="90" y1="520" x2="380" y2="520" stroke="#64748b" stroke-width="1"/>
-<path d="M150,520 L150,273.7 Q150,269.7 154,269.7 L246,269.7 Q250,269.7 250,273.7 L250,520 Z" fill="#2a78d6"/>
-<text x="200" y="261.7" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,517</text>
-<path d="M252,520 L252,294.5 Q252,290.5 256,290.5 L348,290.5 Q352,290.5 352,294.5 L352,520 Z" fill="#eb6834"/>
-<text x="302" y="282.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,391</text>
+<path d="M150,520 L150,275.5 Q150,271.5 154,271.5 L246,271.5 Q250,271.5 250,275.5 L250,520 Z" fill="#2a78d6"/>
+<text x="200" y="263.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,506</text>
+<path d="M252,520 L252,296.5 Q252,292.5 256,292.5 L348,292.5 Q352,292.5 352,296.5 L352,520 Z" fill="#eb6834"/>
+<text x="302" y="284.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,379</text>
 <text x="235" y="556" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">PG로 나간 승인 호출</text>
 <line x1="465" y1="520.0" x2="755" y2="520.0" stroke="#e2e8f0" stroke-width="1"/>
 <text x="455" y="524.0" text-anchor="end" font-size="12" fill="#64748b">0</text>
@@ -26,10 +26,10 @@
 <line x1="465" y1="190.0" x2="755" y2="190.0" stroke="#e2e8f0" stroke-width="1"/>
 <text x="455" y="194.0" text-anchor="end" font-size="12" fill="#64748b">2,000</text>
 <line x1="465" y1="520" x2="755" y2="520" stroke="#64748b" stroke-width="1"/>
-<path d="M525,520 L525,343.5 Q525,339.5 529,339.5 L621,339.5 Q625,339.5 625,343.5 L625,520 Z" fill="#2a78d6"/>
-<text x="575" y="331.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,094</text>
-<path d="M627,520 L627,431.1 Q627,427.1 631,427.1 L723,427.1 Q727,427.1 727,431.1 L727,520 Z" fill="#eb6834"/>
-<text x="677" y="419.1" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">563</text>
+<path d="M525,520 L525,423.5 Q525,419.5 529,419.5 L621,419.5 Q625,419.5 625,423.5 L625,520 Z" fill="#2a78d6"/>
+<text x="575" y="411.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">609</text>
+<path d="M627,520 L627,496.1 Q627,492.1 631,492.1 L723,492.1 Q727,492.1 727,496.1 L727,520 Z" fill="#eb6834"/>
+<text x="677" y="484.1" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">169</text>
 <text x="610" y="556" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">상한 거절</text>
 <line x1="840" y1="520.0" x2="1130" y2="520.0" stroke="#e2e8f0" stroke-width="1"/>
 <text x="830" y="524.0" text-anchor="end" font-size="12" fill="#64748b">0%</text>
@@ -38,10 +38,10 @@
 <line x1="840" y1="190.0" x2="1130" y2="190.0" stroke="#e2e8f0" stroke-width="1"/>
 <text x="830" y="194.0" text-anchor="end" font-size="12" fill="#64748b">100%</text>
 <line x1="840" y1="520" x2="1130" y2="520" stroke="#64748b" stroke-width="1"/>
-<path d="M900,520 L900,379.8 Q900,375.8 904,375.8 L996,375.8 Q1000,375.8 1000,379.8 L1000,520 Z" fill="#2a78d6"/>
-<text x="950" y="367.8" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">43.7%</text>
-<path d="M1002,520 L1002,330.9 Q1002,326.9 1006,326.9 L1098,326.9 Q1102,326.9 1102,330.9 L1102,520 Z" fill="#eb6834"/>
-<text x="1052" y="318.9" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">58.5%</text>
+<path d="M900,520 L900,298.6 Q900,294.6 904,294.6 L996,294.6 Q1000,294.6 1000,298.6 L1000,520 Z" fill="#2a78d6"/>
+<text x="950" y="286.6" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">68.3%</text>
+<path d="M1002,520 L1002,235.60000000000002 Q1002,231.60000000000002 1006,231.60000000000002 L1098,231.60000000000002 Q1102,231.60000000000002 1102,235.60000000000002 L1102,520 Z" fill="#eb6834"/>
+<text x="1052" y="223.6" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">87.4%</text>
 <text x="985" y="556" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">남은 고객 결제 중 PG에 닿은 비율</text>
-<text x="600" y="612" text-anchor="middle" font-size="14" fill="#64748b">PG를 부르지 않은 594건은 떠난 결제 수와 같음 · 비운 자리를 남은 결제가 바로 채움</text>
+<text x="600" y="612" text-anchor="middle" font-size="14" fill="#64748b">PG를 부르지 않은 615건은 떠난 결제 수와 같음 · 비운 자리를 남은 결제가 바로 채움</text>
 </svg>
