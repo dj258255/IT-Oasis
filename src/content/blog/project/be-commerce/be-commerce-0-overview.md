@@ -171,6 +171,9 @@ PG 타임아웃은 실패로 단정하지 않고 `UNKNOWN`으로 남긴 뒤 복�
 - 실제 GenPage 모델로 과부하를 다시 재자 추천 행에서는 모델(초당 약 1,000건)보다 앱이 먼저 포화했고 게이트 밖의 2쪽 호출이 모델 서버를 무너뜨렸습니다. 2쪽도 추천 행과 같은 동시 호출 자리를 쓰게 했습니다. [게이트 밖의 2쪽 호출이 문제였다](/blog/project/be-commerce/be-commerce-ch57-overload-real-genpage)
 - 홈 2쪽이 요청마다 돌던 count 쿼리를 없애 2쪽 앱 용량이 초당 30건에서 120건으로 올랐고 그 부하에서 모델 자리를 공유하면 추천 행 모델 실패가 0이었습니다. [쓰지도 않는 상품 수를 세고 있었다](/blog/project/be-commerce/be-commerce-ch58-page2-count-queries)
 - PR마다 18~35분 걸리던 실 DB 통합 테스트를 측정 테스트 분리, 공용 컨테이너, Spring Modulith의 변경 모듈 선택으로 줄여 전부 돌아도 3.2분, 골라 돌면 1.7분이 됐습니다. [통합 테스트를 3분으로](/blog/project/be-commerce/be-commerce-ch59-ci-integration-time)
+- PG 응답이 끊긴 승인을 한 번 더 보내자 응답 일부를 잃는 PG에서는 확정 실패가 14.29%에서 1.90%로 줄었지만 상한이 찬 느린 PG에서는 31.56%에서 55.23%로 늘었습니다. 상한에 빈 자리가 4개 이상일 때만 보내게 해 31.40%로 되돌렸습니다. [재전송을 켰더니 느린 PG에서 결제 실패가 늘었다](/blog/project/be-commerce/be-commerce-ch60-resend-budget)
+- 데드라인이 지난 결제는 PG를 부르지 않게 했더니 PG 호출은 예상한 30%에 못 미친 8.3%만 줄었고 상한 거절이 1,094건에서 563건으로 줄었습니다. 비운 자리를 남은 결제가 채웠습니다. [떠난 고객의 결제를 빼도 PG 호출은 8.3%만 줄었다](/blog/project/be-commerce/be-commerce-ch61-deadline-propagation)
+- 매진이면 대기열을 닫게 했지만 매진 판정 300번 중 닫힌 것은 0번이었고 헛걸음은 140건 그대로였습니다. 151번은 결과를 기다리는 예약이 남아 닫지 못했습니다. [매진이면 대기열을 닫게 했는데 한 번도 닫히지 않았다](/blog/project/be-commerce/be-commerce-ch62-soldout-queue-never-closed)
 
 ## 아직 못 한 것
 
