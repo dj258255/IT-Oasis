@@ -173,6 +173,7 @@ PG 타임아웃은 실패로 단정하지 않고 `UNKNOWN`으로 남긴 뒤 복�
 - PR마다 18~35분 걸리던 실 DB 통합 테스트를 측정 테스트 분리, 공용 컨테이너, Spring Modulith의 변경 모듈 선택으로 줄여 전부 돌아도 3.2분, 골라 돌면 1.7분이 됐습니다. [통합 테스트를 3분으로](/blog/project/be-commerce/be-commerce-ch59-ci-integration-time)
 - PG 응답이 끊긴 승인을 한 번 더 보내자 응답 일부를 잃는 PG에서는 확정 실패가 14.29%에서 1.90%로 줄었지만 상한이 찬 느린 PG에서는 31.56%에서 55.23%로 늘었습니다. 상한에 빈 자리가 4개 이상일 때만 보내게 해 31.40%로 되돌렸습니다. [재전송을 켰더니 느린 PG에서 결제 실패가 늘었다](/blog/project/be-commerce/be-commerce-ch60-resend-budget)
 - 남은 시간이 다 된 결제는 PG를 부르지 않게 했더니 PG 호출은 예상한 30%에 못 미친 8.4%만 줄었고 상한 거절이 609건에서 169건으로 줄었습니다. 비운 자리를 남은 결제가 채웠습니다. 실제 결제 화면과 똑같이 움직이는 고객으로 다시 재자 뺀 결제는 0건이었습니다. [떠난 고객의 결제를 빼도 PG 호출은 8.4%만 줄었다](/blog/project/be-commerce/be-commerce-ch61-deadline-propagation)
+- PG 읽기 타임아웃 5초를 토스 권장 60초와 나란히 재자 평소에는 5초가 결제의 10.2%를 결과 모름으로 만들었습니다. PG가 전부 느릴 때는 1.5배 더 팔았지만 PG 승인 호출이 16배였습니다. 우리가 끊어도 PG는 끝까지 처리해서입니다. 60초로 바꿨습니다. [짧은 PG 타임아웃은 우리 쪽 대기만 줄였다](/blog/project/be-commerce/be-commerce-ch63-pg-read-timeout)
 - 매진이면 대기열을 닫게 했지만 매진 판정 300번 중 닫힌 것은 0번이었고 헛걸음은 140건 그대로였습니다. 151번은 결과를 기다리는 예약이 남아 닫지 못했습니다. [매진이면 대기열을 닫게 했는데 한 번도 닫히지 않았다](/blog/project/be-commerce/be-commerce-ch62-soldout-queue-never-closed)
 
 ## 아직 못 한 것
