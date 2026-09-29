@@ -83,6 +83,7 @@ export const hubDomains: HubDomain[] = [
       post('ch48-shed-browse-for-webhook'),
       post('ch60-resend-budget'),
       post('ch61-deadline-propagation'),
+      post('ch63-pg-read-timeout'),
     ],
     col: 3,
     row: 1,
