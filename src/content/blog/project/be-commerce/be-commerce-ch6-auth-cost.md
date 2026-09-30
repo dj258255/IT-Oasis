@@ -98,7 +98,7 @@ delegating.setDefaultPasswordEncoderForMatches(bcrypt);
 
 파라미터는 OWASP 최소 권고인 19MiB, iterations 2, parallelism 1로 설정했습니다. Spring의 `defaultsForSpringSecurity_v5_8()`은 메모리가 16MiB로 권고에 미달해 직접 구성했습니다. 동일한 전환을 다룬 [토이토 님의 「아직도 Bcrypt만 쓰시나요? 이제는 Argon2id로 전환해야 할 때」](https://jsm77.tistory.com/45)는 `new Argon2PasswordEncoder(16, 32, 1, 65536, 3)`, 즉 메모리 64MiB에 iterations 3을 사용합니다. OWASP 최소 권고의 세 배가 넘습니다.
 
-적절한 설정은 한 대에서 동시에 몇 명이 로그인하는지에 따라 달라집니다. 이 메모리는 해시 1건당 값이므로 동시 요청 수만큼 곱해집니다. 19MiB 설정에서 동시 100건이면 Argon2 몫만 약 2GB임을 실측했습니다(§2). 같은 비례라면 64MiB 설정은 같은 조건에서 6GB를 넘습니다. 최소 권고에서 시작하고 힙 여유를 측정한 뒤 상향하는 절차를 택했습니다.
+적절한 설정은 한 대에서 동시에 몇 명이 로그인하는지에 따라 달라집니다. 이 메모리는 해시 1건당 값이므로 동시 요청 수만큼 곱해집니다. 19MiB 설정에서 동시 100건이면 Argon2 몫만 약 2GB임을 실측했습니다. 같은 비례라면 64MiB 설정은 같은 조건에서 6GB를 넘습니다. 최소 권고에서 시작하고 힙 여유를 측정한 뒤 상향하는 절차를 택했습니다.
 
 이제 세 세대의 해시를 모두 검증합니다.
 
@@ -233,8 +233,6 @@ password_hash varchar(100) not null
 
 저장할 수 없습니다. 여기서 `password_hash`는 사용자의 비밀번호가 아니라, 비밀번호를 검증하기 위해 저장하는 해시 문자열을 담는 데이터베이스 컬럼입니다. 실제 가입에서는 `Data too long`으로 실패했을 것입니다. 인코더 단위 테스트가 데이터베이스까지 거치지 않아 이 문제를 찾지 못했습니다. 인코딩과 검증만 확인하므로 컬럼 길이는 검증 대상이 아니었습니다. 알고리즘 교체에는 애플리케이션 코드뿐 아니라 스키마 변경도 필요했습니다. 컬럼은 255로 확장했습니다. 이후 파라미터를 상향하면 문자열이 더 길어질 수 있으므로, 매번 마이그레이션을 추가하지 않도록 여유를 둔 것입니다.
 
-비슷한 일은 전에도 있었습니다. 취소 경로가 신규 결제수단을 인식하지 못해 환불이 누락됐을 때도, 정산 집계 기준일이 잘못되어 지급이 전체 누락됐을 때도 테스트는 통과했습니다. 테스트가 검증한 범위는 구성한 조건 안이었습니다.
-
 ## 4. 점진 이관의 종료 조건
 
 신규 가입은 Argon2id로 처리됩니다. 기존 BCrypt 해시를 가진 회원은 그대로 남으며 저장된 값이 해시뿐이라 배치로 이관할 수 없습니다. 원문 비밀번호는 로그인 요청을 처리하는 순간에만 서버에 들어옵니다. 로그인에 성공한 순간 새 알고리즘으로 다시 해싱합니다. Spring Security는 이 흐름을 위한 확장 지점을 제공합니다.
@@ -287,8 +285,8 @@ Argon2id가 더 현대적인 선택이라는 사실만으로 전환을 끝낼 �
 
 ## 참고
 
-- OWASP Password Storage Cheat Sheet: 알고리즘 순위와 최소 파라미터(Argon2id 19MiB·t=2·p=1, bcrypt work factor 10), 그리고 work factor를 "해당 서버에서 실험해 정하라"는 지침과 DoS 경고.
-- BCrypt의 72바이트 절단은 문서로 확인하고 재현했습니다.
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html): 알고리즘 순위와 최소 파라미터(Argon2id 19MiB·t=2·p=1, bcrypt work factor 10), 그리고 work factor를 "해당 서버에서 실험해 정하라"는 지침과 DoS 경고.
+- [OWASP의 bcrypt 입력 길이 제한 설명](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#input-limits-of-bcrypt): BCrypt의 72바이트 절단을 확인하고 재현했습니다.
 
 ```java
 String base = "a".repeat(72);
