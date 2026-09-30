@@ -73,6 +73,10 @@ Testcontainers로 MySQL 8.4를 띄워 같은 조건을 워밍업 후 5회 돌리
 - 로컬 Testcontainers 값입니다. 네트워크 거리가 있는 운영 DB에서는 왕복 비용이 더 커지므로 낙관적 락이 더 불리해질 것으로 보지만 재지는 않았습니다.
 - 비관적 락의 150스레드 값은 재지 않았습니다.
 
+## 이어서 읽기
+
+- [재고 동시성은 조건부 UPDATE를 고른 뒤에도 끝나지 않았다](/blog/project/be-commerce/be-commerce-ch2-concurrency-and-load): 재고를 잡는 시점, 한 행이 버티는 처리량, 느슨한 카운터와의 비교
+
 ## 참고
 
 - [ADR-004: 재고 차감은 조건부 UPDATE 전략을 쓴다](https://github.com/dj258255/BE-commerce/blob/main/docs/adr/ADR-004-stock-deduction-locking.md)

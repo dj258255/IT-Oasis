@@ -1,10 +1,10 @@
 ---
 title: '서명이 없는 결제 웹훅을 어떻게 신뢰할 것인가'
 description: '자체 목 PG는 승인 응답 뒤에만 웹훅을 보낸다고 가정해 선행 웹훅 경로를 놓쳤습니다. 토스 형식 이벤트를 먼저 보내 보니 없는 결제에 예외를 던지던 코드가 자신이 남기려던 보류 상태까지 같이 지우고 있었습니다.'
-date: 2026-09-05
+date: 2026-10-01
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch15-webhook.svg"
-draft: true
+draft: false
 series: "BE-commerce"
 seriesOrder: 15
 tags:
