@@ -112,6 +112,13 @@ GenPage는 사용자 이력과 요청 맥락을 프롬프트로 두고 홈 전�
 - 이력이 없는 신규 고객(홀드아웃의 8.1%)은 점수를 내지 못합니다. 콘텐츠 임베딩은 넣지 않았습니다.
 - 서빙 실측의 이력은 합성이고 학습(구매)과 서빙(조회·클릭)의 입력이 다릅니다. 최종 판정은 온라인 A/B인데 실사용자가 없어 하지 않았습니다.
 
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [GenPage 모델이 모든 사용자를 이력 없는 사용자로 생성하고 있었다](/blog/project/be-commerce/be-commerce-ch50-genpage-empty-body)
+- [A/B 실험 기반을 만들고 합성 사용자 1,000명으로 끝에서 끝까지 돌렸다](/blog/project/be-commerce/be-commerce-ch51-ab-synthetic-users)
+
 ## 참고
 
 - [ADR-053: 작은 GenPage 모델을 기본값으로 켜지 않는다](https://github.com/dj258255/BE-commerce/blob/main/docs/adr/ADR-053-genpage-mini-not-default.md)

@@ -5,6 +5,7 @@ date: 2026-09-20
 category: study/be-commerce
 coverImage: "/uploads/covers/project/be-commerce/be-commerce-ch23-receiver-decides-guards.svg"
 draft: false
+unlisted: true
 series: "BE-commerce"
 seriesOrder: 23
 tags:

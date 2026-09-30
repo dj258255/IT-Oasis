@@ -75,6 +75,12 @@ p95는 부하가 두 배, 네 배가 되어도 거의 같았습니다. 지연을
 - 모델이 같은 프로세스의 스텁이라 실제 모델이 서빙과 CPU를 다투는 상호작용은 재지 않았습니다.
 - 대기 예산 100ms, 상한 24, 대기 상한 400ms는 각각 하나의 선택이고 바꿔 가며 재지 않았습니다.
 
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [과부하 게이트가 모델 지연을 절반으로 잘못 알면 대기 예산이 세 배로 샜다](/blog/project/be-commerce/be-commerce-ch54-admission-observed-throughput)
+
 ## 참고
 
 - [ADR-037: 과부하에서 무엇을 포기하는가](https://github.com/dj258255/BE-commerce/blob/main/docs/adr/ADR-037-overload-admission-policy.md)
