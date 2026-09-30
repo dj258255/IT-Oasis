@@ -103,6 +103,12 @@ if (internalRecords.findByOrderNo(event.orderNo()).isEmpty()) {
 
 화면에 보이는 값 하나를 고치는 일로 시작했는데, 고칠 것은 값이 아니라 **그 테이블이 무엇을 표현하는가**였습니다. 현재 상태를 담는 자리에 사건 이력을 덮어쓰면 판정이 나간 뒤에도 근거가 계속 바뀌고, 바뀐 것을 아무도 모릅니다.
 
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [환불을 음수 거래로 표현할 때 지켜야 할 계약](/blog/project/be-commerce/be-commerce-ch22-parser-drops-refund)
+
 ## 참고
 
 - 결제 대사의 조회 화면과 원인 제안: [대사 원인을 고르라면서 근거는 11곳에 흩어져 있었다](/blog/project/be-commerce/be-commerce-ch8-reconciliation-judgement)
