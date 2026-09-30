@@ -111,11 +111,8 @@ export default defineConfig({
     // 내려간 글 7편은 새 슬러그로도 들어올 수 있다 — 본문 곳곳이 아직 그 편을 가리킨다.
     // 이름이 바뀌기 전에도 같은 식으로 개요로 보내고 있었다.
     '/blog/project/be-commerce/be-commerce-ch1-what-to-trust': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
-    '/blog/project/be-commerce/be-commerce-ch15-webhook-arrived-first': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
-    '/blog/project/be-commerce/be-commerce-ch2-concurrency-and-load': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
     '/blog/project/be-commerce/be-commerce-ch2-runtime-truths': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
     '/blog/project/be-commerce/be-commerce-ch3-money-leaks': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
-    '/blog/project/be-commerce/be-commerce-ch4-my-docs-were-wrong': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
     '/blog/project/be-commerce/be-commerce-ch7-measuring-wrong': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
     // 프로젝트 이름이 pay 에서 BE-commerce 로 바뀌면서 슬러그가 통째로 바뀌었다.
     // 위 목적지들은 새 주소로 옮겼고, 여기서는 아직 매핑이 없던 옛 주소를 새 주소로 보낸다.
@@ -156,11 +153,11 @@ export default defineConfig({
     '/blog/project/pay/pay-ch1-what-to-trust': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
     '/blog/project/pay/pay-ch2-runtime-truths': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
     '/blog/project/pay/pay-ch3-money-leaks': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
-    '/blog/project/pay/pay-ch4-my-docs-were-wrong': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
+    '/blog/project/pay/pay-ch4-my-docs-were-wrong': `${base || ''}/blog/project/be-commerce/be-commerce-ch4-my-docs-were-wrong`,
     '/blog/project/pay/pay-ch7-measuring-wrong': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
-    '/blog/project/pay/pay-ch15-webhook-arrived-first': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
+    '/blog/project/pay/pay-ch15-webhook-arrived-first': `${base || ''}/blog/project/be-commerce/be-commerce-ch15-webhook-arrived-first`,
     // 동시성 편: 락 3종·적립 4안 실측 비교는 "재면 답이 나오는" 유형이라 내린다.
-    '/blog/project/pay/pay-ch2-concurrency-and-load': `${base || ''}/blog/project/be-commerce/be-commerce-0-overview`,
+    '/blog/project/pay/pay-ch2-concurrency-and-load': `${base || ''}/blog/project/be-commerce/be-commerce-ch2-concurrency-and-load`,
     // 타이미 15편 -> tymee-retrospective 단일 개발기로 병합
     '/blog/project/tymee/tymee-introduction': `${base || ''}/blog/project/tymee/tymee-retrospective`,
     '/blog/project/tymee/tymee-architecture-selection': `${base || ''}/blog/project/tymee/tymee-retrospective`,

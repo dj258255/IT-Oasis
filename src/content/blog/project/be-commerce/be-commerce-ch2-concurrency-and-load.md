@@ -1,12 +1,12 @@
 ---
 title: '재고 동시성은 조건부 UPDATE를 고른 뒤에도 끝나지 않았다'
 description: '재고 20개에 스레드 30개를 동시에 앞세워 세 가지 차감 전략을 실 MySQL에서 쟀습니다. 인메모리에서 앞섰던 낙관적 락의 순위가 실 DB에서 뒤집혀 조건부 UPDATE를 골랐습니다. 그 뒤 재고를 잡는 시점이 다시 바뀌었고 한 행이 버티는 처리량 상한과 느슨한 카운터와의 교환도 다시 쟀습니다.'
-date: 2026-03-19
+date: 2026-10-01
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-concurrency.svg"
-draft: true
+draft: false
 series: "BE-commerce"
-seriesOrder: 3
+seriesOrder: 38.5
 tags:
   - Payment
   - 동시성

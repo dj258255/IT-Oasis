@@ -1,10 +1,10 @@
 ---
 title: '외부 문서와 우리 시스템의 계약이 다를 때 무엇을 믿을 것인가'
 description: '"Stripe가 24시간이니 우리도 줄이자"는 철회합니다. 이 시스템이 모델링한 토스는 15일입니다. "PG 호출을 트랜잭션 밖으로"도 이 모놀리스에서는 손해라고 판단했지만 실사고 사례 앞에서 뒤집고 실제로 3단계 사가로 옮겼습니다.'
-date: 2026-05-07
+date: 2026-10-01
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch4.svg"
-draft: true
+draft: false
 series: "BE-commerce"
 seriesOrder: 6
 tags:
