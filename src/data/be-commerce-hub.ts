@@ -57,6 +57,7 @@ export const hubDomains: HubDomain[] = [
     posts: [
       post('ch36-search-engine-two-axes'),
       post('ch38-stock-lock-real-db'),
+      post('ch2-concurrency-and-load'),
       post('ch42-search-quality-engines'),
       post('ch45-search-filters-scale'),
       post('ch46-search-freshness-cdc'),
@@ -76,6 +77,8 @@ export const hubDomains: HubDomain[] = [
     doc: { label: '결제 도메인 핵심 개념', url: `${REPO}/docs/02-결제도메인-핵심개념.md` },
     posts: [
       post('ch2-failure-design'),
+      post('ch4-my-docs-were-wrong'),
+      post('ch15-webhook-arrived-first'),
       post('ch29-ledger-hot-entity'),
       post('ch31-pg-brownout-cap-cost'),
       post('ch32-unknown-drain-time'),
