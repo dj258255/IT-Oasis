@@ -1,0 +1,23 @@
+---
+/**
+ * BE-commerce 개요 글 상단의 영역 지도. 타일을 누르면 본문 아래 영역별 글(HubDomainList)이
+ * 그 영역만 남는다. 동작은 HubDomainList 의 스크립트(src/lib/hub-page.ts)가 붙인다.
+ */
+import FlowMap from './FlowMap.astro';
+import { hubEdges } from '../data/be-commerce-hub';
+import { getHubDomains } from '../lib/hub';
+
+const { tiles } = await getHubDomains();
+---
+
+<section class="hub-map" data-hub-map aria-label="BE-commerce 영역 지도">
+  <FlowMap tiles={tiles} edges={hubEdges} label="BE-commerce 영역 지도" controls="hub-list">
+    타일을 누르면 글 아래 영역별 글에서 그 영역만 보입니다. 선을 따라 움직이는 점은 주문 한 건이 그 영역에 닿기까지 지나는 길입니다.
+  </FlowMap>
+</section>
+
+<style>
+  .hub-map {
+    margin: 1.5rem 0 2.5rem;
+  }
+</style>
