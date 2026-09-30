@@ -5,6 +5,7 @@ date: 2026-09-25
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/diagrams/flow-next-page-history.svg"
 draft: false
+unlisted: true
 series: "BE-commerce"
 seriesOrder: 56
 tags:
