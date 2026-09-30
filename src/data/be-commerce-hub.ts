@@ -32,7 +32,8 @@ export const OVERVIEW_ID = post('0-overview');
 
 /** 이 시리즈의 글 상단 목록은 번호순 목록 대신 영역 지도로 그린다(src/components/HubSeriesNav.astro). */
 export const HUB_SERIES = 'BE-commerce';
-export const HUB_PATH = '/projects/be-commerce';
+/** 프로젝트 첫 화면. 영역 지도와 영역별 글을 품은 개요 글이다(옛 /projects/be-commerce 는 여기로 넘긴다). */
+export const HUB_PATH = `/blog/${OVERVIEW_ID}`;
 
 export const hubDomains: HubDomain[] = [
   {

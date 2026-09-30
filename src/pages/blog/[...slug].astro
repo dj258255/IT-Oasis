@@ -3,6 +3,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
 import Giscus from '../../components/Giscus.astro';
 import SeriesNav from '../../components/SeriesNav.astro';
+import HubMap from '../../components/HubMap.astro';
+import HubDomainList from '../../components/HubDomainList.astro';
+import { OVERVIEW_ID } from '../../data/be-commerce-hub';
 import { render } from 'astro:content';
 import { getReadingTime, parseCategory, translateCategory } from '../../lib/utils';
 import { base, assetPath, getCategoryDisplayKo } from '../../lib/config';
@@ -165,8 +168,11 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
       <!-- Divider -->
       <div class="divider mb-8 sm:mb-10"></div>
 
-      <!-- Series navigation (auto-rendered when frontmatter has `series`) -->
-      {post.data.series && (
+      <!-- Series navigation (auto-rendered when frontmatter has `series`).
+           BE-commerce 개요 글은 프로젝트 첫 화면이라 작은 시리즈 목록 대신 영역 지도를 둔다. -->
+      {post.id === OVERVIEW_ID ? (
+        <HubMap />
+      ) : post.data.series && (
         <SeriesNav currentPostId={post.id} series={post.data.series} />
       )}
 
@@ -207,6 +213,8 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
           <Content />
         </div>
       </div>
+
+      {post.id === OVERVIEW_ID && <HubDomainList />}
 
       <!-- Author profile -->
       <div class="mt-10 sm:mt-14">

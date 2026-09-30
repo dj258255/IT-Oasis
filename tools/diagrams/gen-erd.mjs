@@ -31,7 +31,7 @@ const H = (n) => 60 + n * ROW + 34;
 
 // 띠의 y 는 앞 띠 바닥에서 간격을 더해 잡는다. 컬럼을 하나 늘려도 아래가 알아서 밀린다.
 const BAND = [];
-let BOTTOM = 110;
+let BOTTOM = 30;
 {
   const plan = [[6, 64], [6, 61], [5, 64], [6, 0]];
   for (const [rows, gap] of plan) {
@@ -41,10 +41,7 @@ let BOTTOM = 110;
 }
 const k = canvas(W, BOTTOM + 30);
 
-marker(k, W / 2, 46, 340);
-text(k, W / 2, 46, 'pay 핵심 ERD', { size: 27, weight: 700 });
-text(k, W / 2, 78, '포트폴리오가 다루는 자리만 골랐다. UK 는 같은 것이 두 번 처리되는 것을 막는 자리다',
-     { size: 15, fill: '#868e96' });
+// 제목과 설명은 그림 안에 넣지 않는다. 글(개요 글의 핵심 ERD 토글)이 설명한다.
 
 const T = (col, band, name, ko, cols, uk, color, tag) => {
   const x = X[col], y = BAND[band], w = BW, h = H(cols.length);
@@ -95,16 +92,16 @@ text(k, 605, MID1 - 12, '승인', { size: 15, fill: '#495057' });
 
 const pt = T(0, 2, 'point_accounts', '포인트 잔액',
   [['PK', 'user_id'], ['', 'balance'], ['', 'version']],
-  'DB 원자 증가 + version', C.blue, '상황 2');
+  'DB 원자 증가 + version', C.blue);
 const si = T(1, 2, 'settlement_items', '정산 항목',
   [['PK', 'id'], ['FK', 'payment_id'], ['', 'order_no'], ['', 'confirmed_date'], ['', 'seller_id']],
-  'UK payment_id', C.purple, '상황 3');
+  'UK payment_id', C.purple);
 const ltx = T(2, 2, 'ledger_transactions', '원장 거래',
   [['PK', 'id'], ['', 'tx_type'], ['', 'source_type'], ['', 'source_id'], ['', 'source_seq']],
   'UK 넷을 묶어 = 같은 원인 한 번', C.green);
 const fr = T(3, 2, 'fraud_reviews', '이상거래 심사',
   [['PK', 'id'], ['', 'payment_id'], ['', 'score · reasons'], ['', 'status'], ['', 'reviewed_by']],
-  '규칙별 정상 판정 비율에 쓴다', C.gray, '상황 6');
+  '규칙별 정상 판정 비율에 쓴다', C.gray);
 
 arrow(k, pay.cx - 60, pay.b, pt.cx, pt.y);
 text(k, 200, pt.y - 42, '적립도 같은 트랜잭션', { size: 15, fill: '#868e96' });
@@ -114,13 +111,13 @@ arrow(k, out.cx + 40, out.b, fr.cx, fr.y, { color: C.yellow.s });
 
 const set = T(1, 3, 'settlements', '일별 정산',
   [['PK', 'id'], ['', 'settlement_date'], ['', 'currency'], ['', 'seller_id'], ['', 'net_amount']],
-  'UK date+currency+seller_id', C.red, '상황 3');
+  'UK date+currency+seller_id', C.red);
 const led = T(2, 3, 'ledger_entries', '원장 분개',
   [['PK', 'id'], ['FK', 'transaction_id'], ['', 'amount']],
   '차변 합 = 대변 합', C.green);
 const rec = T(3, 3, 'reconciliation_results', '대사 결과',
   [['PK', 'id'], ['', 'trade_date'], ['', 'order_no'], ['', 'internal_amount'], ['', 'external_amount'], ['', 'resolve_cause']],
-  'UK trade_date + order_no', C.purple, '상황 4 · 5');
+  'UK trade_date + order_no', C.purple);
 
 arrow(k, si.cx, si.b, set.cx, set.y);
 text(k, 408, set.y - 20, 'N:1', { size: 16, fill: '#868e96' });
