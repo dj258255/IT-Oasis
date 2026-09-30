@@ -70,3 +70,11 @@ tags:
 - 옮길 곳이 단일 노드 Elasticsearch는 아닙니다. 옮긴다면 샤드를 나눈 클러스터이고 그 구성은 옮길 때 잽니다
 
 검색 색인이 상품 변경을 얼마나 늦게 반영하는지는 이 글에서 재지 않았습니다. 그 지연 때문에 품절 상품이 "재고 있음" 결과에 남는 문제는 다음 글에서 다룹니다.
+
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [검색 색인이 상품 변경을 반영하는 데 10분 걸리던 것을 1.1초로 줄였다](/blog/project/be-commerce/be-commerce-ch46-search-freshness-cdc)
+- [점수가 같은 상품의 순서가 검색의 쪽 넘김과 두 엔진의 차이를 흔들고 있었다](/blog/project/be-commerce/be-commerce-ch52-search-tie-order)
+- [상품 텍스트에 한글이 3건뿐이라 한국어 검색은 사전으로 풀어야 했다](/blog/project/be-commerce/be-commerce-ch53-korean-query-dictionary)

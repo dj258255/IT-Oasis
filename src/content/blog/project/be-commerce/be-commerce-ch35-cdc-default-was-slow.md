@@ -84,6 +84,12 @@ lag p95가 1,944ms에서 13ms로, 반영률이 19.5%에서 98.5%로 바뀌었습
 - **`poll.interval.ms=100`의 비용은 아직 재지 않았습니다.** 더 자주 폴링하면 DB와 커넥터 부하가 늘어납니다. 지금 값은 신선도만 보고 골랐습니다.
 - **커넥터가 죽는 것을 감시하는 수단이 아직 없습니다.** CDC는 발행 보장의 근거를 아웃박스 테이블에서 binlog와 커넥터의 건강으로 옮깁니다. 이 측정은 커넥터가 살아 있을 때의 값입니다.
 
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [CDC 커넥터가 RUNNING인 채 5분 동안 아무것도 보내지 않았다](/blog/project/be-commerce/be-commerce-ch49-cdc-running-not-flowing)
+
 ## 참고
 
 - [ADR-047: CDC는 활동 로그에 쓰고 아웃박스 릴레이는 폴링으로 둔다](https://github.com/dj258255/BE-commerce/blob/main/docs/adr/ADR-047-cdc-for-activity-not-outbox.md)

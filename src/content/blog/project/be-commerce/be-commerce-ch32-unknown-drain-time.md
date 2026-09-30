@@ -106,6 +106,12 @@ for: 5m
 - 복구 조회에는 `ORDER BY`가 없습니다. `(status, requested_at)` 인덱스를 타면 오래된 순으로 읽힐 가능성이 높지만 보장된 순서는 아닙니다. 청크를 넘는 적체에서 어느 결제가 먼저 풀리는지는 이 측정이 따로 보지 않았습니다.
 - 대사 적체 나이의 기준은 대사가 수행된 시각(`reconciledAt`)입니다. 같은 거래일 파일을 다시 올리면 기존 행을 지우고 다시 쓰므로 나이가 0부터 다시 시작하고 그만큼 알림이 늦어질 수 있습니다. 알림 규칙 주석에 적어 두고 이번에는 고치지 않았습니다.
 
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [결과를 모르는 결제의 복구가 확정 못 한 건에 막혀 뒤를 5분 동안 한 건도 풀지 못했다](/blog/project/be-commerce/be-commerce-ch47-unknown-recovery-backoff)
+
 ## 참고
 
 - [성능 실측 기록 14.5절: 미확정은 언제 풀리는가](https://github.com/dj258255/BE-commerce/blob/main/docs/performance/README.md)
