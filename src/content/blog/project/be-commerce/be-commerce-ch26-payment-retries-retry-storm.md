@@ -5,7 +5,6 @@ date: 2026-09-22
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/diagrams/erd.svg"
 draft: false
-unlisted: true
 series: "BE-commerce"
 seriesOrder: 26
 tags:
@@ -44,7 +43,7 @@ Uber는 장애의 원인 서비스와 단순히 장애를 전달한 서비스를
 
 ## 로컬 brownout에서 확인한 것
 
-실제 PG 대신 fake PG에 지연과 timeout을 주입하고, 임시 MySQL 스키마에서 도착률 2 req/s·읽기
+실제 PG 대신 fake PG에 지연과 timeout을 주입하고 임시 MySQL 스키마에서 도착률 2 req/s·읽기
 2 req/s·10초의 open-loop 부하를 돌렸습니다.
 
 | 조건 | confirm 결과 | confirm p95 | 읽기 p95 |
