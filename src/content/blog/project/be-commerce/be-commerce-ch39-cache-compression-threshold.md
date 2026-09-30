@@ -5,6 +5,7 @@ date: 2026-09-24
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/diagrams/flow-compress-threshold.svg"
 draft: false
+unlisted: true
 series: "BE-commerce"
 seriesOrder: 39
 tags:

@@ -242,6 +242,12 @@ if (internal > 0 && diff < 0 && (-diff) % internal == 0) {
 
 LLM을 켜는 기준을 정확도 하나로 잡지 않았습니다. 규칙이 확실히 답할 수 있는 곳에서는 규칙을 남겼고, 모델이 실패해도 기존 방식으로 돌아갈 수 있는 곳에서는 모델을 켰으며, 규칙으로 설명할 수 있는 문제가 남아 있는 곳에서는 모델을 켜지 않았습니다.
 
+## 이어서 읽기
+
+이 글에서 이어진 작업은 따로 적었습니다.
+
+- [AI 출력의 안전 기준은 수신자에 따라 달라져야 하는가](/blog/project/be-commerce/be-commerce-ch23-receiver-decides-guards)
+
 ## 참고
 
 - 심판 모델의 위치 편향: [Judging the Judges (arXiv 2406.07791)](https://arxiv.org/abs/2406.07791)
