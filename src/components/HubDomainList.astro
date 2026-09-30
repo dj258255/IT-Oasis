@@ -1,0 +1,293 @@
+---
+/**
+ * BE-commerce 개요 글 본문 아래의 영역별 글. 핵심 ERD 토글, 영역·글 수, 영역마다 카드 목록.
+ * 위쪽 영역 지도(HubMap)에서 영역을 고르면 그 영역만 남는다.
+ */
+import PostCard from './PostCard.astro';
+import { base } from '../lib/config';
+import { getHubDomains } from '../lib/hub';
+
+const { domains, totalPosts } = await getHubDomains();
+const ERD = '/uploads/project/be-commerce/diagrams/erd.svg';
+---
+
+<section id="hub-list" class="hub-list" aria-labelledby="hub-list-title">
+  <h2 id="hub-list-title" class="hub-list-title">영역별 글</h2>
+
+  <details id="hub-erd" class="hub-erd">
+    <summary>
+      <span class="hub-erd-closed">핵심 ERD 펼치기</span>
+      <span class="hub-erd-open">핵심 ERD 접기</span>
+    </summary>
+    <div class="hub-erd-body">
+      <p class="hub-erd-note">
+        주문·결제·원장·정산에서 글이 다루는 테이블만 골랐습니다. UK는 같은 요청이나 이벤트가 두 번 처리되는 것을 막는 유니크 제약입니다.
+      </p>
+      <a href={`${base}${ERD}`} target="_blank" rel="noopener noreferrer" class="hub-erd-image">
+        <img src={`${base}${ERD}`} alt="BE-commerce 핵심 ERD. 주문, 주문 항목, 멱등 키, 웹훅 수신, 결제, 발행 대기 이벤트, 포인트 잔액, 정산 항목 테이블과 관계, 두 번 처리되면 안 되는 자리의 유니크 제약" loading="lazy" />
+      </a>
+      <p class="hub-erd-caption">그림을 누르면 원본 크기로 열립니다.</p>
+    </div>
+  </details>
+
+  <div class="hub-list-bar">
+    <p class="hub-list-status" data-hub-status aria-live="polite">
+      영역 {domains.length}곳, 공개 글 {totalPosts}편
+    </p>
+    <button type="button" class="hub-reset" data-hub-reset hidden>모든 영역 보기</button>
+  </div>
+
+  {domains.map((d) => (
+    <section class="domain" data-domain-section={d.id} aria-labelledby={`domain-${d.id}`}>
+      <div class="domain-head">
+        <h3 id={`domain-${d.id}`} class="domain-name">
+          <a href={`#${d.id}`} data-domain-link={d.id}>{d.name}</a>
+        </h3>
+        <p class="domain-summary">{d.summary}</p>
+        <p class="domain-doc">
+          저장소 문서: <a href={d.doc.url} target="_blank" rel="noopener noreferrer">{d.doc.label}</a>
+        </p>
+      </div>
+
+      {d.entries.length > 0 ? (
+        <div class="domain-posts">
+          {d.entries.map((post, i) => (
+            <PostCard
+              title={post.data.title}
+              description={post.data.description}
+              date={post.data.date}
+              slug={post.id}
+              tags={post.data.tags}
+              category={post.data.category}
+              coverImage={post.data.coverImage}
+              index={i}
+            />
+          ))}
+        </div>
+      ) : (
+        <p class="domain-empty">
+          이 영역의 글은 아직 없습니다. 설계와 실측 기록은 위 저장소 문서에서 먼저 볼 수 있습니다.
+        </p>
+      )}
+    </section>
+  ))}
+</section>
+
+<script>
+  import { initHubPage } from '../lib/hub-page';
+
+  initHubPage();
+  document.addEventListener('astro:page-load', initHubPage);
+</script>
+
+<style>
+  .hub-list {
+    --ink: #1f2328;
+    --muted: #59636e;
+    --rule: #d1d9e0;
+    --surface: #f6f8fa;
+    margin-top: 3.5rem;
+    scroll-margin-top: 5rem;
+  }
+
+  :global(.dark) .hub-list {
+    --ink: #e6edf3;
+    --muted: #9198a1;
+    --rule: #3d444d;
+    --surface: #151b23;
+  }
+
+  .hub-list-title {
+    margin: 0 0 1.25rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+
+  /* ── 핵심 ERD 토글 ─────────────────── */
+
+  .hub-erd {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    scroll-margin-top: 5rem;
+  }
+
+  .hub-erd > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 1.1rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .hub-erd > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .hub-erd > summary::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s ease;
+  }
+
+  .hub-erd[open] > summary::before {
+    transform: rotate(45deg);
+  }
+
+  .hub-erd > summary:hover {
+    background: var(--surface);
+    border-radius: 12px;
+  }
+
+  .hub-erd > summary:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 12px;
+  }
+
+  .hub-erd-open,
+  .hub-erd[open] .hub-erd-closed {
+    display: none;
+  }
+
+  .hub-erd[open] .hub-erd-open {
+    display: inline;
+  }
+
+  .hub-erd-body {
+    padding: 0 1.1rem 1.1rem;
+  }
+
+  .hub-erd-note {
+    margin: 0 0 1rem;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .hub-erd-image {
+    display: block;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .hub-erd-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .hub-erd-caption {
+    margin: 0.5rem 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ── 영역·글 수와 영역별 목록 ─────────────────── */
+
+  .hub-list-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hub-list-status {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .hub-reset {
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.45rem 0.95rem;
+    cursor: pointer;
+  }
+
+  .hub-reset:hover {
+    background: var(--surface);
+  }
+
+  .domain {
+    margin-bottom: 3rem;
+  }
+
+  .domain[hidden] {
+    display: none;
+  }
+
+  .domain-head {
+    margin-bottom: 1.25rem;
+  }
+
+  .domain-name {
+    margin: 0 0 0.5rem;
+    font-size: 1.375rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    scroll-margin-top: 5rem;
+  }
+
+  .domain-name a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .domain-name a:hover {
+    color: var(--color-primary);
+  }
+
+  .domain-summary {
+    margin: 0 0 0.5rem;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--muted);
+  }
+
+  .domain-doc {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .domain-doc a {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .domain-posts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .domain-empty {
+    margin: 0;
+    padding: 1.1rem 1.25rem;
+    border: 1px dashed var(--rule);
+    border-radius: 12px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+</style>
