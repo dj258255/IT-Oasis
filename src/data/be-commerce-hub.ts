@@ -81,6 +81,7 @@ export const hubDomains: HubDomain[] = [
       post('ch32-unknown-drain-time'),
       post('ch47-unknown-recovery-backoff'),
       post('ch48-shed-browse-for-webhook'),
+      post('ch26-payment-retries-retry-storm'),
       post('ch60-resend-budget'),
       post('ch61-deadline-propagation'),
       post('ch63-pg-read-timeout'),
