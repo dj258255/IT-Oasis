@@ -197,7 +197,7 @@ void infinite() {
 }
 ```
 
-> 출처: [The Java Virtual Machine Specification — §2.5 Run-Time Data Areas](https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html#jvms-2.5)
+> 출처: [The Java Virtual Machine Specification — 2.5절 Run-Time Data Areas](https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-2.html#jvms-2.5)
 
 ### 3.4 PC Register & Native Method Stack
 

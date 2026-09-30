@@ -57,7 +57,7 @@ apply 루프의 정확성 규칙은 둘뿐입니다:
 ERROR: requested WAL segment 0000000100000000000000XX has already been removed
 ```
 
-§3에서 볼 landmine 1("체크포인트가 WAL을 자른다")이 실제 시스템에서 갖는 얼굴입니다. PG의 해법이 **physical replication slot**입니다. replica가 어디까지 받았는지를 primary가 기억하고, 그보다 뒤의 WAL 세그먼트를 지우지 않게 보존합니다. 반대급부도 정확히 그 보존입니다: replica가 죽었는데 슬롯이 남아 있으면 WAL이 **무한히 쌓여 primary 디스크가 찹니다.** 그래서 `max_slot_wal_keep_size`로 보존량에 상한을 둡니다.
+3절에서 볼 landmine 1("체크포인트가 WAL을 자른다")이 실제 시스템에서 갖는 얼굴입니다. PG의 해법이 **physical replication slot**입니다. replica가 어디까지 받았는지를 primary가 기억하고, 그보다 뒤의 WAL 세그먼트를 지우지 않게 보존합니다. 반대급부도 정확히 그 보존입니다: replica가 죽었는데 슬롯이 남아 있으면 WAL이 **무한히 쌓여 primary 디스크가 찹니다.** 그래서 `max_slot_wal_keep_size`로 보존량에 상한을 둡니다.
 
 **함정 2: 읽기 fd에 쓸 순 없다.** 여기서 실제로 **교착**에 빠졌습니다. replica는 로그를 읽기만 하니 `O_RDONLY`로 열었는데, 수신자가 받은 바이트를 그 fd에 쓰려니 실패했습니다. sender는 ack를, receiver는 다음 프레임을 영원히 기다리는 교착입니다. 교훈은 실제 시스템 구조 그대로입니다. **수신(쓰기)과 적용(읽기)은 다른 역할이니 fd도 다르다.** PostgreSQL의 walreceiver(쓰는 자)와 startup process(재생하는 자)가 분리돼 있는 것과 같은 이유입니다.
 

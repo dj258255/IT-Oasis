@@ -362,7 +362,7 @@ int proc_wait(void) {
 // user/init.c — 유저공간 셸(요지)
 for (;;) {
     puts("$ ");
-    long n = sys_read(line, sizeof(line) - 1);   // 블로킹 read(없으면 sleep)  ← §2
+    long n = sys_read(line, sizeof(line) - 1);   // 블로킹 read(없으면 sleep)  ← 2절
     if (n <= 0) continue;
     if (line[n - 1] == '\n') line[n - 1] = 0;    // 개행 제거
 
@@ -372,22 +372,22 @@ for (;;) {
 
     long pid = sys_fork();                        // 외부 명령
     if (pid == 0) {                               // 자식
-        sys_exec(line);                           // 디스크 프로그램으로 변신  ← §1
+        sys_exec(line);                           // 디스크 프로그램으로 변신  ← 1절
         puts(line);
         puts(": command not found\n");            // exec 실패 시에만 여기 도달
         sys_exit();
     }
-    sys_wait();                                   // 부모: 자식이 끝날 때까지 대기  ← §3
+    sys_wait();                                   // 부모: 자식이 끝날 때까지 대기  ← 3절
 }
 ```
 
 세 절이 한 루프에 모입니다.
-`sys_read`는 §2의 블로킹 read, `sys_exec`는 §1의 주소공간 교체, `sys_wait`는 §3의 좀비 회수입니다.
+`sys_read`는 2절의 블로킹 read, `sys_exec`는 1절의 주소공간 교체, `sys_wait`는 3절의 좀비 회수입니다.
 
 자식 분기를 잘 보세요.
 `sys_exec(line)`이 성공하면 그 자식은 이미 다른 프로그램이 돼버려서 **다음 줄로 돌아오지 않습니다**.
 `command not found`가 찍히는 건 오직 `exec`가 실패해서 돌아왔을 때뿐입니다.
-이게 §1에서 본 "exec 실패는 프로세스를 죽이지 말고 -1을 반환한다"가 셸에서 어떻게 쓰이는지 보여줍니다.
+이게 1절에서 본 "exec 실패는 프로세스를 죽이지 말고 -1을 반환한다"가 셸에서 어떻게 쓰이는지 보여줍니다.
 
 부팅하면 커널이 이 셸을 첫 유저 프로세스로 띄웁니다.
 
