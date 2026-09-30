@@ -224,6 +224,6 @@ int wal_commit(Wal *w) {
 - [MySQL 8.0 Reference: `innodb_flush_log_at_trx_commit`](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit)
 - [MySQL 8.0 Reference: The Binary Log](https://dev.mysql.com/doc/refman/8.0/en/binary-log.html)
 - [LWN: PostgreSQL's fsync() surprise](https://lwn.net/Articles/752063/) — fsyncgate (2018)
-- Hellerstein, Stonebraker & Hamilton, *Architecture of a Database System* (2007) — §6 (Transactions: Concurrency Control and Recovery)
+- Hellerstein, Stonebraker & Hamilton, *Architecture of a Database System* (2007) — 6절 (Transactions: Concurrency Control and Recovery)
 - 본 블로그: [트랜잭션 ACID ①: Atomicity](/blog/theory/transaction-acid-01-atomicity) · [④: Durability](/blog/theory/transaction-acid-04-durability)
 - [db-hobby 코드 (GitHub)](https://github.com/dj258255/db-hobby) — `wal.c` · `bufpool.c`

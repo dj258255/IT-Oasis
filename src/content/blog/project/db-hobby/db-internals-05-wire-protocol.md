@@ -84,7 +84,7 @@ send_ready(fd, 'I');            /* ReadyForQuery — "쿼리 받을 준비 됨" 
 - **② EXPLAIN**: 진짜 PostgreSQL처럼 `QUERY PLAN` 단일 컬럼의 여러 행으로. 플랜 트리가 psql 안에서 예쁘게 나옵니다.
 - **③ 그 외**(INSERT/COMMIT/…): 첫 줄을 `CommandComplete` 태그로. `"ERROR"`로 시작하면 `ErrorResponse`로 감싸 psql이 빨간 `ERROR:`로 그리게 합니다.
 
-> **정직한 한계**: SELECT 응답을 실행기의 **텍스트 출력을 파싱**해 만드는 건 지름길이다. `TEXT` 값 안에 `" | "`가 들어가면 컬럼이 갈린다. 제대로 하려면 실행기가 구조화된 로우(진짜 DB의 tuple descriptor)를 직접 내보내야 하는데, 그건 실행기 전체를 건드리는 일이다. 그리고 extended query protocol도 없다. psql의 기본 대화는 simple query라 붙는 데 충분하지만, §0에서 말한 "JDBC 생태계를 통째로 빌린다"엔 이 부재가 선을 긋는다. **pgJDBC는 extended query protocol이 기본이라 이 서버엔 붙지 못한다.** "동작하는 psql"을 최소 변경으로 얻는 게 목표였다.
+> **정직한 한계**: SELECT 응답을 실행기의 **텍스트 출력을 파싱**해 만드는 건 지름길이다. `TEXT` 값 안에 `" | "`가 들어가면 컬럼이 갈린다. 제대로 하려면 실행기가 구조화된 로우(진짜 DB의 tuple descriptor)를 직접 내보내야 하는데, 그건 실행기 전체를 건드리는 일이다. 그리고 extended query protocol도 없다. psql의 기본 대화는 simple query라 붙는 데 충분하지만, 0절에서 말한 "JDBC 생태계를 통째로 빌린다"엔 이 부재가 선을 긋는다. **pgJDBC는 extended query protocol이 기본이라 이 서버엔 붙지 못한다.** "동작하는 psql"을 최소 변경으로 얻는 게 목표였다.
 
 ### 못 지킨 계약의 나머지 절반: extended query protocol
 

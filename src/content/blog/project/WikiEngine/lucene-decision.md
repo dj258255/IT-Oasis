@@ -74,7 +74,7 @@ ngram이 "한국"과 "국어"를 각각 독립 토큰으로 만들어서, "한�
 
 ## 3. 문제 분석: MySQL에서는 해결할 수 없는 이유
 
-> 이 절의 기술 분석(InnoDB FTS 내부 아키텍처, `fts0que.cc` 소스코드 분석, 쿼리 모드별 비교, 완화책 검토)은 [이전 글(FULLTEXT ngram 인덱스) §6](/blog/project/wikiengine/fulltext-ngram-index)에서 상세히 다뤘습니다. 
+> 이 절의 기술 분석(InnoDB FTS 내부 아키텍처, `fts0que.cc` 소스코드 분석, 쿼리 모드별 비교, 완화책 검토)은 [이전 글(FULLTEXT ngram 인덱스) 6절](/blog/project/wikiengine/fulltext-ngram-index)에서 상세히 다뤘습니다.
 > 여기서는 **Lucene 전환 결정에 필요한 핵심**만 요약합니다.
 
 ### 3-1. 고빈도 토큰 타임아웃은 MySQL 내부 알고리즘의 한계다
@@ -94,12 +94,12 @@ ngram의 문제는 단순히 "토큰이 많다"가 아닙니다.
 Nori는 "대한민국"이라는 의미 단위 하나로 처리하므로 이 문제 자체가 존재하지 않습니다.
 
 [MySQL Bug #85880](https://bugs.mysql.com/bug.php?id=85880)에서 보고자가 75만 배 개선되는 패치를 제안했으나, Oracle은 2017년부터 9년간 merge하지 않았습니다. 
-파라미터 튜닝(`innodb_ft_result_cache_limit`, `ngram_token_size`, 커스텀 스톱워드)도 전부 검토했으나, "해당 키워드로 검색 자체가 불가능해진다"는 트레이드오프뿐이었습니다. (상세 분석: [이전 글 §6-3](/blog/project/wikiengine/fulltext-ngram-index#6-3-고빈도-토큰-성능-저하-mysql-bug-85880))
+파라미터 튜닝(`innodb_ft_result_cache_limit`, `ngram_token_size`, 커스텀 스톱워드)도 전부 검토했으나, "해당 키워드로 검색 자체가 불가능해진다"는 트레이드오프뿐이었습니다. (상세 분석: [이전 글 6-3절](/blog/project/wikiengine/fulltext-ngram-index#6-3-고빈도-토큰-성능-저하-mysql-bug-85880))
 
 ### 3-2. 인덱스 크기 폭발은 Row-Oriented 저장 구조의 본질이다
 
 MySQL(InnoDB)은 Row-Oriented 스토리지이므로, `content` 컬럼만 필요한 FULLTEXT 인덱스 생성에도 행 전체(122GB)를 디스크에서 읽어야 합니다. 
-여기에 임시 정렬 파일(~122GB)까지 합쳐 300GB+가 필요했습니다. (상세 분석: [이전 글 §6-5](/blog/project/wikiengine/fulltext-ngram-index#6-5-row-oriented-저장-구조가-fulltext-인덱스-비용을-증폭시키는-이유))
+여기에 임시 정렬 파일(~122GB)까지 합쳐 300GB+가 필요했습니다. (상세 분석: [이전 글 6-5절](/blog/project/wikiengine/fulltext-ngram-index#6-5-row-oriented-저장-구조가-fulltext-인덱스-비용을-증폭시키는-이유))
 
 ### 3-3. 형태소 분석은 MySQL이 지원하지 않는다
 
@@ -751,7 +751,7 @@ Analyzer analyzer = new KoreanAnalyzer();   // Nori 형태소 분석기
 IndexWriterConfig config = new IndexWriterConfig(analyzer);
 ```
 
-MMapDirectory는 OS 페이지 캐시를 활용하여 인덱스 파일을 메모리에 매핑합니다. JVM 힙이 아닌 OS 영역을 쓰므로, §4-1에서 설명한 "전체 RAM의 3/4을 페이지 캐시에 남겨두라"는 Uwe Schindler의 권고가 여기서 적용됩니다.
+MMapDirectory는 OS 페이지 캐시를 활용하여 인덱스 파일을 메모리에 매핑합니다. JVM 힙이 아닌 OS 영역을 쓰므로, 4-1절에서 설명한 "전체 RAM의 3/4을 페이지 캐시에 남겨두라"는 Uwe Schindler의 권고가 여기서 적용됩니다.
 
 ![build.gradle Lucene 의존성 추가 diff](/uploads/project/WikiEngine/lucene-decision/step1-gradle-diff.png)
 
@@ -1074,7 +1074,7 @@ public List<String> autocomplete(String prefix, int limit) throws Exception {
 
 이 글의 구현을 모두 마친 뒤, [이전 글(FULLTEXT ngram 인덱스)](/blog/project/wikiengine/fulltext-ngram-index)의 Before 측정과 동일한 조건으로 After를 측정합니다. Before와 After가 같은 조건이어야 비교가 의미 있습니다.
 
-### 검색 성능 (이전 글 §5~§6과 동일 검색어)
+### 검색 성능 (이전 글 5~6절과 동일 검색어)
 
 | 검색어                    | Before (ngram) | After (Lucene Nori) | 개선율               |
 | ---------------------- | -------------- | ------------------- | ----------------- |
