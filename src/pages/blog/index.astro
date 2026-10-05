@@ -163,10 +163,9 @@ const groups = [...groupsMap.values()].sort((a, b) => {
     ))}
   </div>
 
-  {/* Pagination controls */}
-  <div class="flex justify-center mt-10" id="pagination-wrap">
-    <div id="pagination"></div>
-  </div>
+  {/* 무한 스크롤: 이 표식이 화면 가까이 오면 다음 묶음을 보여 준다 */}
+  <div id="posts-sentinel" aria-hidden="true"></div>
+  <p id="posts-end" class="posts-end" aria-live="polite" hidden></p>
 
   <style>
     /* Category filter area - fixed height to prevent layout shift */
@@ -291,120 +290,18 @@ const groups = [...groupsMap.values()].sort((a, b) => {
       }
     }
 
-    /* ── Pagination (global because JS creates these elements dynamically) ── */
-    :global(#pagination) {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Nav arrows (« ‹ › ») */
-    :global(.page-btn.nav-btn) {
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 12px;
-      border: 1px solid rgba(74, 141, 184, 0.15);
-      font-size: 20px;
-      font-weight: 400;
-      background: rgba(74, 141, 184, 0.06);
-      color: #1a6aa0;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    }
-    :global(.dark .page-btn.nav-btn) {
-      background: rgba(141, 184, 208, 0.08);
-      border-color: rgba(141, 184, 208, 0.15);
-      color: #8db8d0;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    }
-    :global(.page-btn.nav-btn:hover:not(:disabled)) {
-      background: rgba(74, 141, 184, 0.12);
-      border-color: rgba(74, 141, 184, 0.25);
-      color: #3a7da8;
-      transform: translateY(-1px);
-      box-shadow: 0 3px 8px rgba(74, 141, 184, 0.12);
-    }
-    :global(.dark .page-btn.nav-btn:hover:not(:disabled)) {
-      background: rgba(141, 184, 208, 0.15);
-      border-color: rgba(141, 184, 208, 0.25);
-      color: #a0cce0;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-    }
-    :global(.page-btn.nav-btn:disabled) {
-      opacity: 0.65;
-      cursor: not-allowed;
-      color: #aaa;
-    }
-    :global(.dark .page-btn.nav-btn:disabled) {
-      color: #666;
-    }
-
-    /* Page number buttons */
-    :global(.page-btn.num-btn) {
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 12px;
-      border: 1px solid transparent;
-      font-size: 16px;
-      font-weight: 500;
-      background: transparent;
-      color: #666;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    :global(.dark .page-btn.num-btn) {
-      color: #9198a1;
-    }
-    :global(.page-btn.num-btn:hover:not(.active)) {
-      background: rgba(74, 141, 184, 0.06);
-      border-color: rgba(74, 141, 184, 0.12);
-      color: #1a6aa0;
-    }
-    :global(.dark .page-btn.num-btn:hover:not(.active)) {
-      background: rgba(141, 184, 208, 0.08);
-      border-color: rgba(141, 184, 208, 0.12);
-      color: #8db8d0;
-    }
-    :global(.page-btn.num-btn.active) {
-      background: rgba(74, 141, 184, 0.12);
-      border-color: rgba(74, 141, 184, 0.2);
-      color: #1a6aa0;
-      font-weight: 700;
-      box-shadow: 0 1px 3px rgba(74, 141, 184, 0.1);
-    }
-    :global(.dark .page-btn.num-btn.active) {
-      background: rgba(141, 184, 208, 0.15);
-      border-color: rgba(141, 184, 208, 0.2);
-      color: #a0cce0;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Spacer between nav groups and numbers */
-    :global(.page-nav-gap) {
-      width: 16px;
-    }
-
-    /* Ellipsis dots */
-    :global(.page-dots) {
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* 목록 끝 안내 */
+    .posts-end {
+      margin: 3rem 0 0;
+      text-align: center;
+      font-size: 14px;
       color: #59636e;
-      font-size: 18px;
-      letter-spacing: 3px;
-      user-select: none;
     }
-    :global(.dark .page-dots) {
+    :global(.dark) .posts-end {
       color: #9198a1;
+    }
+    #posts-sentinel {
+      height: 1px;
     }
 
     /* Smooth hide/show for cards */
@@ -417,201 +314,159 @@ const groups = [...groupsMap.values()].sort((a, b) => {
   </style>
 
   <script>
-    function initBlogFilter() {
-      const ROWS = 4;
-      const grid = document.getElementById('posts-grid');
-      const pagination = document.getElementById('pagination');
-      const filterBtns = document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn');
-      if (!grid || !pagination) return;
+    const BATCH = 12; // 1·2·3열 어느 쪽에서도 줄이 꽉 찬 채로 붙는다
+    const STATE_KEY = 'blog-list-state';
 
-      const allCards = Array.from(grid.querySelectorAll<HTMLElement>('.post-card-wrapper'));
-      let activeCategory = 'all';
-      let currentPage = 1;
+    type ListState = { filterIdx: number; shown: number; y: number };
 
-      function getColCount() {
-        const w = window.innerWidth;
-        if (w >= 1024) return 3;
-        if (w >= 640) return 2;
-        return 1;
+    let controller: AbortController | null = null;
+    let observer: IntersectionObserver | null = null;
+
+    function readState(): ListState | null {
+      try {
+        const raw = sessionStorage.getItem(STATE_KEY);
+        return raw ? (JSON.parse(raw) as ListState) : null;
+      } catch {
+        return null;
       }
+    }
+
+    function writeState(state: ListState | null) {
+      try {
+        if (state) sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
+        else sessionStorage.removeItem(STATE_KEY);
+      } catch {
+        /* 저장소를 못 쓰면 복원만 빠진다 */
+      }
+    }
+
+    function isBackForward() {
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      return nav?.type === 'back_forward';
+    }
+
+    function initBlogFilter() {
+      const grid = document.getElementById('posts-grid');
+      const sentinel = document.getElementById('posts-sentinel');
+      const endNote = document.getElementById('posts-end');
+      if (!grid || !sentinel || !endNote) return;
+
+      controller?.abort();
+      observer?.disconnect();
+      controller = new AbortController();
+      const { signal } = controller;
+
+      const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn'));
+      const allCards = Array.from(grid.querySelectorAll<HTMLElement>('.post-card-wrapper'));
+      const subpanels = Array.from(document.querySelectorAll<HTMLElement>('.cat-subpanel'));
+      const parentBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-parent-btn'));
+
+      let activeCategory = 'all';
+      let activeIdx = Math.max(0, filterBtns.findIndex((b) => b.classList.contains('active')));
+      let shown = BATCH;
 
       function getFilteredCards() {
         if (activeCategory === 'all') return allCards;
-        return allCards.filter(c => {
+        return allCards.filter((c) => {
           const full = c.dataset.postCategory || '';
-          // Exact match for subcategory (e.g. "personal/WikiEngine")
-          // or parent match for parent-only categories (e.g. "theory")
+          // 하위 카테고리는 정확히 같을 때, 상위만 있는 카테고리는 상위가 같을 때
           return full === activeCategory || c.dataset.postParent === activeCategory;
         });
       }
 
-      const NAV_SYMBOLS: Record<string, string> = { first: '\u00AB', prev: '\u2039', next: '\u203A', last: '\u00BB' };
-
-      function createPageBtn(page: number | string, isActive: boolean, disabled: boolean): HTMLButtonElement {
-        const btn = document.createElement('button');
-        btn.className = 'page-btn';
-        if (typeof page === 'number') {
-          btn.classList.add('num-btn');
-          btn.textContent = String(page);
-          btn.dataset.page = String(page);
-          if (isActive) btn.classList.add('active');
-        } else {
-          btn.classList.add('nav-btn');
-          btn.dataset.page = page;
-          btn.textContent = NAV_SYMBOLS[page] || page;
-        }
-        if (disabled) btn.disabled = true;
-        btn.addEventListener('click', () => handlePageClick(btn.dataset.page!));
-        return btn;
-      }
-
-      function createGap(): HTMLSpanElement {
-        const gap = document.createElement('span');
-        gap.className = 'page-nav-gap';
-        return gap;
-      }
-
-      function handlePageClick(val: string) {
+      function render() {
         const filtered = getFilteredCards();
-        const cols = getColCount();
-        const perPage = ROWS * cols;
-        const totalPages = Math.ceil(filtered.length / perPage);
+        allCards.forEach((c) => c.classList.add('hidden-card'));
+        filtered.slice(0, shown).forEach((c) => c.classList.remove('hidden-card'));
 
-        if (val === 'first') { currentPage = 1; }
-        else if (val === 'prev') { if (currentPage > 1) currentPage--; }
-        else if (val === 'next') { if (currentPage < totalPages) currentPage++; }
-        else if (val === 'last') { currentPage = totalPages; }
-        else { currentPage = parseInt(val); }
-        renderPage();
-        grid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const done = shown >= filtered.length;
+        sentinel!.hidden = done;
+        endNote!.hidden = !done || filtered.length === 0;
+        endNote!.textContent = done ? `모든 글을 봤습니다 (${filtered.length}편)` : '';
+        return done;
       }
 
-      function renderPage() {
-        const filtered = getFilteredCards();
-        const cols = getColCount();
-        const perPage = ROWS * cols;
-        const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-        if (currentPage > totalPages) currentPage = totalPages;
-
-        const start = (currentPage - 1) * perPage;
-        const end = start + perPage;
-
-        // Hide all, show only current page items
-        allCards.forEach(c => c.classList.add('hidden-card'));
-        filtered.forEach((c, i) => {
-          if (i >= start && i < end) {
-            c.classList.remove('hidden-card');
-          }
-        });
-
-        renderPagination(totalPages);
-      }
-
-      function renderPagination(totalPages: number) {
-        if (!pagination) return;
-        // Clear existing children
-        while (pagination.firstChild) pagination.removeChild(pagination.firstChild);
-
-        if (totalPages <= 1) return;
-
-        // Left nav: « ‹
-        pagination.appendChild(createPageBtn('first', false, currentPage === 1));
-        pagination.appendChild(createPageBtn('prev', false, currentPage === 1));
-
-        pagination.appendChild(createGap());
-
-        // Page numbers
-        const pages = getPaginationRange(currentPage, totalPages);
-        for (const p of pages) {
-          if (p === '...') {
-            const dots = document.createElement('span');
-            dots.className = 'page-dots';
-            dots.textContent = '...';
-            pagination.appendChild(dots);
-          } else {
-            pagination.appendChild(createPageBtn(p as number, p === currentPage, false));
-          }
+      function loadMore() {
+        shown += BATCH;
+        const done = render();
+        // 화면이 커서 표식이 여전히 보이면 관찰을 다시 걸어 한 번 더 받는다
+        if (!done && observer) {
+          observer.unobserve(sentinel!);
+          observer.observe(sentinel!);
         }
-
-        // Right nav: › »
-        pagination.appendChild(createGap());
-        pagination.appendChild(createPageBtn('next', false, currentPage === totalPages));
-        pagination.appendChild(createPageBtn('last', false, currentPage === totalPages));
       }
 
-      function getPaginationRange(current: number, total: number): (number | string)[] {
-        if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-        const pages: (number | string)[] = [];
-        if (current <= 4) {
-          for (let i = 1; i <= 5; i++) pages.push(i);
-          pages.push('...');
-          pages.push(total);
-        } else if (current >= total - 3) {
-          pages.push(1);
-          pages.push('...');
-          for (let i = total - 4; i <= total; i++) pages.push(i);
-        } else {
-          pages.push(1);
-          pages.push('...');
-          for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-          pages.push('...');
-          pages.push(total);
-        }
-        return pages;
-      }
-
-      // Category filter click (parent toggles a sub-row of children below)
-      const subpanels = Array.from(document.querySelectorAll<HTMLElement>('.cat-subpanel'));
-      const parentBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-parent-btn'));
-
-      // Accordion: open the panel for `key` (or close everything when null).
+      // 아코디언: key 패널만 열고 나머지는 닫는다 (null이면 모두 닫음)
       function openOnly(key: string | null) {
-        subpanels.forEach(p => p.classList.toggle('open', p.dataset.group === key));
-        parentBtns.forEach(b => b.setAttribute('aria-expanded', String(b.dataset.parent === key)));
+        subpanels.forEach((p) => p.classList.toggle('open', p.dataset.group === key));
+        parentBtns.forEach((b) => b.setAttribute('aria-expanded', String(b.dataset.parent === key)));
       }
 
-      filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const isParent = !!btn.dataset.parent;
-          const ownerKey = btn.closest<HTMLElement>('.cat-subpanel')?.dataset.group || null;
+      function selectFilter(btn: HTMLButtonElement, { toggleParent }: { toggleParent: boolean }) {
+        const isParent = !!btn.dataset.parent;
+        const ownerKey = btn.closest<HTMLElement>('.cat-subpanel')?.dataset.group || null;
 
-          if (isParent) {
-            const key = btn.dataset.parent!;
-            const panel = subpanels.find(p => p.dataset.group === key);
-            const isOpen = panel?.classList.contains('open');
-            // toggle: clicking the open parent again collapses it (filter stays)
-            openOnly(isOpen ? null : key);
-          } else {
-            // child keeps its parent open; single/all (ownerKey null) closes all
-            openOnly(ownerKey);
-          }
+        if (isParent) {
+          const key = btn.dataset.parent!;
+          const isOpen = subpanels.find((p) => p.dataset.group === key)?.classList.contains('open');
+          // 열린 상위를 다시 누르면 접는다 (필터는 그대로)
+          openOnly(toggleParent && isOpen ? null : key);
+        } else {
+          // 하위는 자기 상위를 연 채로 두고, 단일·전체는 모두 닫는다
+          openOnly(ownerKey);
+        }
 
-          // highlight the owning parent when one of its children is active
-          parentBtns.forEach(b => b.classList.remove('has-active'));
-          if (ownerKey) {
-            parentBtns.find(b => b.dataset.parent === ownerKey)?.classList.add('has-active');
-          }
+        parentBtns.forEach((b) => b.classList.remove('has-active'));
+        if (ownerKey) parentBtns.find((b) => b.dataset.parent === ownerKey)?.classList.add('has-active');
 
-          filterBtns.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          activeCategory = btn.dataset.category || 'all';
-          currentPage = 1;
-          renderPage();
-        });
+        filterBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeCategory = btn.dataset.category || 'all';
+        activeIdx = filterBtns.indexOf(btn);
+      }
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener(
+          'click',
+          () => {
+            selectFilter(btn, { toggleParent: true });
+            shown = BATCH;
+            render();
+          },
+          { signal },
+        );
       });
 
-      // Re-render on resize (column count may change)
-      let resizeTimer: ReturnType<typeof setTimeout>;
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(renderPage, 150);
-      });
+      // 뒤로 가기로 돌아왔을 때만 필터·펼친 개수·위치를 되살린다
+      const saved = isBackForward() ? readState() : null;
+      if (!saved) writeState(null);
+      if (saved && filterBtns[saved.filterIdx]) {
+        selectFilter(filterBtns[saved.filterIdx], { toggleParent: false });
+        shown = Math.max(BATCH, saved.shown);
+      }
+      render();
+      if (saved) {
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        requestAnimationFrame(() => window.scrollTo(0, saved.y));
+      }
 
-      // Initial render
-      renderPage();
+      window.addEventListener(
+        'pagehide',
+        () => writeState({ filterIdx: activeIdx, shown, y: window.scrollY }),
+        { signal },
+      );
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) loadMore();
+        },
+        { rootMargin: '0px 0px 600px 0px' },
+      );
+      observer.observe(sentinel);
+      signal.addEventListener('abort', () => observer?.disconnect());
     }
 
-    // Run on load and page transitions
+    // 첫 로드와 페이지 전환 모두에서 실행한다 (리스너는 AbortController로 한 벌만 남긴다)
     initBlogFilter();
     document.addEventListener('astro:page-load', initBlogFilter);
   </script>
