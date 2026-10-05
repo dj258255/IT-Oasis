@@ -119,7 +119,7 @@ export const hubDomains: HubDomain[] = [
     id: 'personalization',
     name: '개인화',
     tagline: '행동 로그로 홈 추천',
-    summary: '클릭과 조회, 구매 로그를 모아 홈 추천을 구성합니다. 추론이 늦으면 인기 상품으로 물러서고, 학습한 모델은 기준선을 넘지 못해 넣지 않았습니다.',
+    summary: '클릭과 조회, 구매 로그를 모아 홈 추천을 구성합니다. 추론이 늦으면 인기 상품으로 물러섭니다. 생성 모델 GenPage는 혼자서는 순위 모델에 졌습니다. 순위 모델 점수와 합친 줄 구성은 오프라인과 가상 사용자 짝 A/B에서 규칙을 넘었고 홈 2쪽 줄 구성의 기본값이 됐습니다.',
     modules: ['personalization', 'recommendation', 'pipeline (Python)'],
     doc: { label: '개인화 아키텍처', url: `${REPO}/personalization/docs/01-architecture.md` },
     posts: [
@@ -137,6 +137,7 @@ export const hubDomains: HubDomain[] = [
       post('ch55-compression-under-concurrency'),
       post('ch56-next-page-purchase-history'),
       post('ch57-overload-real-genpage'),
+      post('ch64-genpage-lost-then-combined'),
     ],
     col: 2,
     row: 2,
