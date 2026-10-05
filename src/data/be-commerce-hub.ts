@@ -138,6 +138,7 @@ export const hubDomains: HubDomain[] = [
       post('ch56-next-page-purchase-history'),
       post('ch57-overload-real-genpage'),
       post('ch64-genpage-lost-then-combined'),
+      post('ch65-capacity-model-demand-first'),
     ],
     col: 2,
     row: 2,
