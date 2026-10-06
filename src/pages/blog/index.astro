@@ -4,295 +4,248 @@ import PostCard from '../../components/PostCard.astro';
 import { getPublishedPosts } from '../../lib/posts';
 import { getCategoryDisplayKo } from '../../lib/config';
 
-// 스토리 목록은 프로젝트 소개·회고까지 포함한 공개 글 전부를 보여준다.
-// (프로젝트 글을 잠시 숨겼던 것은 품질 관리가 안 되던 시기의 임시 조치였다.)
+// 스토리는 세 줄로 나눈다. 왼쪽은 모든 글의 최신순, 가운데는 프로젝트, 오른쪽은 이론과 기타.
+// 가운데·오른쪽 줄은 위의 선택 상자로 하위 분류를 고르면 그 줄만 바뀐다.
 const posts = await getPublishedPosts();
 const catDisplayKo = getCategoryDisplayKo();
+const ko = (key: string) => catDisplayKo.get(key) || key;
+const parentOf = (p: (typeof posts)[number]) => p.data.category?.split('/')[0] || '';
 
-// Collect all categories (full path) from posts
-const allCats = new Map<string, { ko: string; parent: string }>();
-for (const post of posts) {
-  const cat = post.data.category;
-  if (!cat) continue;
-  if (!allCats.has(cat)) {
-    const parts = cat.split('/');
-    const parentKey = parts[0];
-    const parentKo = catDisplayKo.get(parentKey) || parentKey;
-    let ko: string;
-    if (parts.length > 1) {
-      const childKo = catDisplayKo.get(parts[1]) || parts[1];
-      ko = `${parentKo}(${childKo})`;
-    } else {
-      ko = parentKo;
-    }
-    allCats.set(cat, { ko, parent: parentKey });
-  }
+const PROJECT_PARENTS = ['study', 'personal', 'team'];
+const projectPosts = posts.filter((p) => PROJECT_PARENTS.includes(parentOf(p)));
+const otherPosts = posts.filter((p) => !PROJECT_PARENTS.includes(parentOf(p)));
+
+type Option = { key: string; label: string; count: number };
+function countBy(list: typeof posts, keyOf: (p: (typeof posts)[number]) => string): Option[] {
+  const m = new Map<string, number>();
+  for (const p of list) m.set(keyOf(p), (m.get(keyOf(p)) || 0) + 1);
+  return [...m.entries()]
+    .map(([key, count]) => ({ key, label: ko(key.split('/').pop() || key), count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko'));
 }
+// 프로젝트는 프로젝트(하위 분류) 단위로, 이론은 주제 단위로, 기타는 상위 분류 단위로 고른다
+const projectOptions = countBy(projectPosts, (p) => p.data.category || '');
+const theoryPosts = otherPosts.filter((p) => parentOf(p) === 'theory');
+const theoryOptions = countBy(theoryPosts, (p) => p.data.category || '');
+const etcOptions = countBy(otherPosts.filter((p) => parentOf(p) !== 'theory'), (p) => parentOf(p));
 
-// Fixed order: 일상 → 활동 → 이론 → 웹 개발 → 팀 프로젝트 → 개인 프로젝트 → 학습 프로젝트
-const parentDisplayOrder = ['daily', 'activity', 'theory', 'web', 'team', 'personal', 'study'];
-const sortedCats = [...allCats.entries()].sort((a, b) => {
-  const idxA = parentDisplayOrder.indexOf(a[1].parent);
-  const idxB = parentDisplayOrder.indexOf(b[1].parent);
-  const oA = idxA === -1 ? 999 : idxA;
-  const oB = idxB === -1 ? 999 : idxB;
-  if (oA !== oB) return oA - oB;
-  // Same parent: non-sub first, then subs alphabetically
-  const aIsSub = a[0].includes('/');
-  const bIsSub = b[0].includes('/');
-  if (!aIsSub && bIsSub) return -1;
-  if (aIsSub && !bIsSub) return 1;
-  return a[1].ko.localeCompare(b[1].ko);
-});
-
-// Group into parents (+ optional children) for the toggle UI.
-// Parents with children render as an expandable group; parents without
-// children render as a plain pill. sortedCats is already ordered, so
-// insertion order + children push order are preserved.
-type CatGroup = {
-  parentKey: string;
-  parentKo: string;
-  selfKey: string | null; // a parent-only post (category without "/"), if any
-  children: { key: string; ko: string }[];
-};
-const groupsMap = new Map<string, CatGroup>();
-for (const [key, val] of sortedCats) {
-  const p = val.parent;
-  if (!groupsMap.has(p)) {
-    groupsMap.set(p, {
-      parentKey: p,
-      parentKo: catDisplayKo.get(p) || p,
-      selfKey: null,
-      children: [],
-    });
-  }
-  const g = groupsMap.get(p)!;
-  if (key.includes('/')) {
-    const childPart = key.split('/')[1];
-    g.children.push({
-      key,
-      ko: catDisplayKo.get(childPart) || childPart,
-    });
-  } else {
-    g.selfKey = key;
-  }
-}
-const groups = [...groupsMap.values()].sort((a, b) => {
-  const ia = parentDisplayOrder.indexOf(a.parentKey);
-  const ib = parentDisplayOrder.indexOf(b.parentKey);
-  return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-});
+const columns = [
+  { id: 'latest', title: '최신 스토리', list: posts },
+  { id: 'project', title: '프로젝트', list: projectPosts },
+  { id: 'other', title: '이론 및 기타', list: otherPosts },
+];
 ---
 
-<BaseLayout title="스토리 — IT Oasis">
-  <div class="fade-in-up mb-8 sm:mb-10">
-    {/* Category heading + filter tabs */}
-    <div class="px-1 text-center mb-5">
-      <h2 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text">카테고리</span>
-      </h2>
-    </div>
-    {/* Top row: parent / single pills (always one tidy row) */}
-    <div class="cat-filter-area flex flex-wrap items-center gap-2 px-1 justify-center mb-3" id="category-filters">
-      <button
-        class="cat-filter-btn active"
-        data-category="all"
-      >
-        전체
+<BaseLayout title="스토리 — IT Oasis" wide>
+  <h1 class="sr-only">스토리</h1>
+
+  {/* 모바일·태블릿: 세 줄을 나란히 둘 수 없어 한 줄씩 고른다 */}
+  <div class="story-switch" role="tablist" aria-label="스토리 줄 고르기">
+    {columns.map((c, i) => (
+      <button type="button" class:list={['story-switch-btn', { active: i === 0 }]} data-col={c.id} role="tab" aria-selected={i === 0 ? 'true' : 'false'}>
+        {c.title}
       </button>
-      {groups.map((g) => (
-        g.children.length === 0 ? (
-          <button
-            class="cat-filter-btn"
-            data-category={g.selfKey || g.parentKey}
-          >
-            {g.parentKo}
-          </button>
-        ) : (
-          <button
-            class="cat-filter-btn cat-parent-btn"
-            data-category={g.parentKey}
-            data-parent={g.parentKey}
-            aria-expanded="false"
-          >
-            {g.parentKo}
-            <span class="cat-caret" aria-hidden="true">&#8250;</span>
-          </button>
-        )
-      ))}
-    </div>
-
-    {/* Sub row: children of the expanded parent appear on the next line */}
-    <div class="cat-subrow mb-10" id="category-subrow">
-      {groups.filter((g) => g.children.length > 0).map((g) => (
-        <div class="cat-subpanel" data-group={g.parentKey}>
-          {g.children.map((c, i) => (
-            <button
-              class="cat-filter-btn cat-child-btn"
-              data-category={c.key}
-              style={`--i:${i}`}
-            >
-              {c.ko}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-
-    <div class="px-1 text-center">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text">스토리</span>
-      </h1>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 stagger" id="posts-grid">
-    {posts.map((post, i) => (
-      <div class="post-card-wrapper" data-post-category={post.data.category || ''} data-post-parent={post.data.category?.split('/')[0] || ''}>
-        <PostCard
-          title={post.data.title}
-          description={post.data.description}
-          date={post.data.date}
-          slug={post.id}
-          tags={post.data.tags}
-          category={post.data.category}
-          coverImage={post.data.coverImage}
-          index={i}
-        />
-      </div>
     ))}
   </div>
 
-  {/* 무한 스크롤: 이 표식이 화면 가까이 오면 다음 묶음을 보여 준다 */}
+  <div class="story-cols fade-in-up" id="story-cols">
+    {columns.map((c, i) => (
+      <section class:list={['story-col', { active: i === 0 }]} data-col={c.id} aria-labelledby={`col-${c.id}`}>
+        <header class="story-col-head">
+          <h2 id={`col-${c.id}`} class="story-col-title">{c.title}</h2>
+          <span class="story-col-count" data-count>{c.list.length}편</span>
+        </header>
+
+        {c.id === 'project' && (
+          <select class="story-select" data-filter aria-label="프로젝트 고르기">
+            <option value="">전체 프로젝트 ({c.list.length})</option>
+            {projectOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
+          </select>
+        )}
+        {c.id === 'other' && (
+          <select class="story-select" data-filter aria-label="이론·기타 분류 고르기">
+            <option value="">전체 ({c.list.length})</option>
+            <optgroup label="이론">
+              <option value="theory">이론 전체 ({theoryPosts.length})</option>
+              {theoryOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
+            </optgroup>
+            {etcOptions.length > 0 && (
+              <optgroup label="기타">
+                {etcOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
+              </optgroup>
+            )}
+          </select>
+        )}
+
+        <div class="story-col-list">
+          {c.list.map((post, i) => (
+            <div class="post-card-wrapper" data-post-category={post.data.category || ''} data-post-parent={post.data.category?.split('/')[0] || ''}>
+              <PostCard
+                    title={post.data.title}
+                    description={post.data.description}
+                    date={post.data.date}
+                    slug={post.id}
+                    tags={post.data.tags}
+                    category={post.data.category}
+                    coverImage={post.data.coverImage}
+                    index={i}
+                  />
+            </div>
+          ))}
+        </div>
+        <p class="posts-end" data-end aria-live="polite" hidden></p>
+      </section>
+    ))}
+  </div>
+
+  {/* 무한 스크롤: 이 표식이 화면 가까이 오면 세 줄 모두 다음 묶음을 보여 준다 */}
   <div id="posts-sentinel" aria-hidden="true"></div>
-  <p id="posts-end" class="posts-end" aria-live="polite" hidden></p>
 
   <style>
-    /* Category filter area - fixed height to prevent layout shift */
-    .cat-filter-area {
-      min-height: 44px;
-      align-content: flex-start;
+    /* ── 모바일·태블릿 줄 고르기 ── */
+    .story-switch {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #d1d9e0;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
-
-    /* Category filter buttons */
-    .cat-filter-btn {
-      padding: 8px 18px;
-      border-radius: 100px;
-      font-size: 14px;
-      font-weight: 500;
-      border: 1.5px solid rgba(0, 0, 0, 0.12);
+    .story-switch::-webkit-scrollbar {
+      display: none;
+    }
+    :global(.dark) .story-switch {
+      border-color: #3d444d;
+    }
+    .story-switch-btn {
+      flex: none;
+      padding: 0.65rem 0.8rem;
+      margin-bottom: -1px;
+      border: 0;
+      border-bottom: 2px solid transparent;
       background: transparent;
+      font-size: 15px;
+      font-weight: 500;
       color: #59636e;
       cursor: pointer;
-      transition: all 0.25s ease;
       white-space: nowrap;
     }
-    :global(.dark) .cat-filter-btn {
-      border-color: rgba(255, 255, 255, 0.15);
-      background: transparent;
+    :global(.dark) .story-switch-btn {
       color: #9198a1;
     }
-    .cat-filter-btn:hover {
-      border-color: rgba(0, 0, 0, 0.25);
+    .story-switch-btn.active {
       color: #1f2328;
-      background: rgba(0, 0, 0, 0.03);
+      font-weight: 700;
+      border-bottom-color: #1f2328;
     }
-    :global(.dark) .cat-filter-btn:hover {
-      border-color: rgba(255, 255, 255, 0.3);
+    :global(.dark) .story-switch-btn.active {
       color: #e6edf3;
-      background: rgba(255, 255, 255, 0.05);
-    }
-    .cat-filter-btn.active {
-      background: #1f2328;
-      border-color: #1f2328;
-      color: #fff;
-      font-weight: 500;
-    }
-    :global(.dark) .cat-filter-btn.active {
-      background: #e6edf3;
-      border-color: #e6edf3;
-      color: #0d1117;
-    }
-    /* prevent layout shift on active toggle */
-    .cat-filter-btn {
-      box-sizing: border-box;
+      border-bottom-color: #e6edf3;
     }
 
-    /* ── Toggle parents (이론 / 프로젝트) ── */
-    .cat-parent-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    /* ── 세 줄 ── */
+    .story-cols {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2rem;
+      align-items: start;
     }
-    .cat-caret {
-      display: inline-block;
-      font-size: 16px;
-      line-height: 1;
-      transition: transform 0.3s ease;
+    .story-col {
+      display: none;
     }
-    .cat-parent-btn[aria-expanded='true'] .cat-caret {
-      transform: rotate(90deg);
+    .story-col.active {
+      display: block;
     }
-    /* subtle highlight on the parent when one of its children is active */
-    .cat-parent-btn.has-active {
-      border-color: rgba(0, 0, 0, 0.4);
-      color: #222;
-    }
-    :global(.dark) .cat-parent-btn.has-active {
-      border-color: rgba(255, 255, 255, 0.45);
-      color: #eee;
-    }
-
-    /* ── Sub row: children appear on the next line when the parent is open ── */
-    .cat-subrow {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .cat-subpanel {
-      display: none; /* only the open panel participates in layout */
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      max-width: 760px;
-      max-height: 0;
-      opacity: 0;
-      overflow: hidden;
-      transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
-    }
-    .cat-subpanel.open {
-      display: flex;
-      max-height: 400px;
-      opacity: 1;
-      padding: 6px 0 2px;
-    }
-    /* staggered drop-in for that "쫙" feel */
-    .cat-child-btn {
-      transform: translateY(-6px);
-      opacity: 0;
-      transition: transform 0.3s ease, opacity 0.3s ease, background 0.25s ease,
-        border-color 0.25s ease, color 0.25s ease;
-    }
-    .cat-subpanel.open .cat-child-btn {
-      transform: translateY(0);
-      opacity: 1;
-      transition-delay: calc(var(--i, 0) * 0.035s);
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .cat-subpanel,
-      .cat-child-btn,
-      .cat-caret {
-        transition: none;
+    @media (min-width: 1024px) {
+      .story-switch {
+        display: none;
       }
-      .cat-child-btn {
-        transform: none;
+      .story-cols {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+      }
+      .story-col,
+      .story-col.active {
+        display: block;
       }
     }
 
-    /* 목록 끝 안내 */
+    .story-col-head {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .story-col-title {
+      margin: 0;
+      font-size: 1.375rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #1f2328;
+    }
+    :global(.dark) .story-col-title {
+      color: #e6edf3;
+    }
+    .story-col-count {
+      font-size: 14px;
+      color: #59636e;
+      font-variant-numeric: tabular-nums;
+    }
+    :global(.dark) .story-col-count {
+      color: #9198a1;
+    }
+    /* 선택 상자가 없는 줄도 카드 시작 높이를 맞춘다 */
+    .story-col-head {
+      min-height: 2.25rem;
+    }
+    .story-col[data-col='latest'] .story-col-head {
+      margin-bottom: calc(0.75rem + 2.5rem + 1rem);
+    }
+    @media (max-width: 1023px) {
+      .story-col[data-col='latest'] .story-col-head {
+        margin-bottom: 1rem;
+      }
+    }
+
+    .story-select {
+      display: block;
+      width: 100%;
+      height: 2.5rem;
+      margin-bottom: 1rem;
+      padding: 0 2.25rem 0 0.75rem;
+      border: 1px solid #d1d9e0;
+      border-radius: 8px;
+      background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2359636e' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+      appearance: none;
+      font-size: 15px;
+      color: #1f2328;
+      cursor: pointer;
+    }
+    :global(.dark) .story-select {
+      border-color: #3d444d;
+      background-color: #0d1117;
+      color: #e6edf3;
+    }
+    .story-select:focus-visible,
+    .story-switch-btn:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .story-col-list {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+    }
+    @media (min-width: 640px) and (max-width: 1023px) {
+      .story-col-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* 줄 끝 안내 */
     .posts-end {
-      margin: 3rem 0 0;
+      margin: 2rem 0 0;
       text-align: center;
       font-size: 14px;
       color: #59636e;
@@ -304,20 +257,17 @@ const groups = [...groupsMap.values()].sort((a, b) => {
       height: 1px;
     }
 
-    /* Smooth hide/show for cards */
-    .post-card-wrapper {
-      transition: opacity 0.3s ease, transform 0.3s ease;
-    }
     .post-card-wrapper.hidden-card {
       display: none;
     }
   </style>
 
   <script>
-    const BATCH = 12; // 1·2·3열 어느 쪽에서도 줄이 꽉 찬 채로 붙는다
+    const BATCH = 6; // 한 번에 줄마다 붙이는 글 수 (태블릿 2열에서도 줄이 꽉 찬다)
     const STATE_KEY = 'blog-list-state';
+    const DESKTOP = '(min-width: 1024px)';
 
-    type ListState = { filterIdx: number; shown: number; y: number };
+    type ListState = { col: string; filters: Record<string, string>; shown: number; y: number };
 
     let controller: AbortController | null = null;
     let observer: IntersectionObserver | null = null;
@@ -325,7 +275,8 @@ const groups = [...groupsMap.values()].sort((a, b) => {
     function readState(): ListState | null {
       try {
         const raw = sessionStorage.getItem(STATE_KEY);
-        return raw ? (JSON.parse(raw) as ListState) : null;
+        const v = raw ? JSON.parse(raw) : null;
+        return v && typeof v.col === 'string' ? (v as ListState) : null;
       } catch {
         return null;
       }
@@ -345,45 +296,52 @@ const groups = [...groupsMap.values()].sort((a, b) => {
       return nav?.type === 'back_forward';
     }
 
-    function initBlogFilter() {
-      const grid = document.getElementById('posts-grid');
+    function initStory() {
       const sentinel = document.getElementById('posts-sentinel');
-      const endNote = document.getElementById('posts-end');
-      if (!grid || !sentinel || !endNote) return;
+      const cols = Array.from(document.querySelectorAll<HTMLElement>('.story-col'));
+      const switchBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.story-switch-btn'));
+      if (!sentinel || cols.length === 0) return;
 
       controller?.abort();
       observer?.disconnect();
       controller = new AbortController();
       const { signal } = controller;
+      const desktop = window.matchMedia(DESKTOP);
 
-      const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn'));
-      const allCards = Array.from(grid.querySelectorAll<HTMLElement>('.post-card-wrapper'));
-      const subpanels = Array.from(document.querySelectorAll<HTMLElement>('.cat-subpanel'));
-      const parentBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-parent-btn'));
+      const columns = cols.map((el) => ({
+        el,
+        id: el.dataset.col || '',
+        cards: Array.from(el.querySelectorAll<HTMLElement>('.post-card-wrapper')),
+        select: el.querySelector<HTMLSelectElement>('[data-filter]'),
+        count: el.querySelector<HTMLElement>('[data-count]')!,
+        end: el.querySelector<HTMLElement>('[data-end]')!,
+      }));
 
-      let activeCategory = 'all';
-      let activeIdx = Math.max(0, filterBtns.findIndex((b) => b.classList.contains('active')));
+      let activeCol = 'latest';
       let shown = BATCH;
 
-      function getFilteredCards() {
-        if (activeCategory === 'all') return allCards;
-        return allCards.filter((c) => {
-          const full = c.dataset.postCategory || '';
-          // 하위 카테고리는 정확히 같을 때, 상위만 있는 카테고리는 상위가 같을 때
-          return full === activeCategory || c.dataset.postParent === activeCategory;
-        });
+      function filtered(col: (typeof columns)[number]) {
+        const key = col.select?.value || '';
+        if (!key) return col.cards;
+        return col.cards.filter((c) => c.dataset.postCategory === key || c.dataset.postParent === key);
       }
 
+      // 한 줄이라도 더 보여 줄 글이 남았으면 false
       function render() {
-        const filtered = getFilteredCards();
-        allCards.forEach((c) => c.classList.add('hidden-card'));
-        filtered.slice(0, shown).forEach((c) => c.classList.remove('hidden-card'));
-
-        const done = shown >= filtered.length;
-        sentinel!.hidden = done;
-        endNote!.hidden = !done || filtered.length === 0;
-        endNote!.textContent = done ? `모든 글을 봤습니다 (${filtered.length}편)` : '';
-        return done;
+        let allDone = true;
+        for (const col of columns) {
+          const list = filtered(col);
+          col.cards.forEach((c) => c.classList.add('hidden-card'));
+          list.slice(0, shown).forEach((c) => c.classList.remove('hidden-card'));
+          col.count.textContent = `${list.length}편`;
+          const done = shown >= list.length;
+          col.end.hidden = !done || list.length === 0;
+          col.end.textContent = done ? `모든 글을 봤습니다 (${list.length}편)` : '';
+          const visible = desktop.matches || col.id === activeCol;
+          if (visible && !done) allDone = false;
+        }
+        sentinel!.hidden = allDone;
+        return allDone;
       }
 
       function loadMore() {
@@ -396,52 +354,34 @@ const groups = [...groupsMap.values()].sort((a, b) => {
         }
       }
 
-      // 아코디언: key 패널만 열고 나머지는 닫는다 (null이면 모두 닫음)
-      function openOnly(key: string | null) {
-        subpanels.forEach((p) => p.classList.toggle('open', p.dataset.group === key));
-        parentBtns.forEach((b) => b.setAttribute('aria-expanded', String(b.dataset.parent === key)));
+      function selectCol(id: string) {
+        activeCol = id;
+        switchBtns.forEach((b) => {
+          const on = b.dataset.col === id;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-selected', String(on));
+        });
+        cols.forEach((c) => c.classList.toggle('active', c.dataset.col === id));
       }
 
-      function selectFilter(btn: HTMLButtonElement, { toggleParent }: { toggleParent: boolean }) {
-        const isParent = !!btn.dataset.parent;
-        const ownerKey = btn.closest<HTMLElement>('.cat-subpanel')?.dataset.group || null;
-
-        if (isParent) {
-          const key = btn.dataset.parent!;
-          const isOpen = subpanels.find((p) => p.dataset.group === key)?.classList.contains('open');
-          // 열린 상위를 다시 누르면 접는다 (필터는 그대로)
-          openOnly(toggleParent && isOpen ? null : key);
-        } else {
-          // 하위는 자기 상위를 연 채로 두고, 단일·전체는 모두 닫는다
-          openOnly(ownerKey);
-        }
-
-        parentBtns.forEach((b) => b.classList.remove('has-active'));
-        if (ownerKey) parentBtns.find((b) => b.dataset.parent === ownerKey)?.classList.add('has-active');
-
-        filterBtns.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeCategory = btn.dataset.category || 'all';
-        activeIdx = filterBtns.indexOf(btn);
-      }
-
-      filterBtns.forEach((btn) => {
-        btn.addEventListener(
-          'click',
-          () => {
-            selectFilter(btn, { toggleParent: true });
-            shown = BATCH;
-            render();
-          },
-          { signal },
-        );
+      switchBtns.forEach((b) => {
+        b.addEventListener('click', () => { selectCol(b.dataset.col || 'latest'); shown = BATCH; render(); }, { signal });
       });
+      // 선택 상자를 바꾸면 그 줄만 바뀐다. 다른 줄이 이미 펼친 만큼은 그대로 둔다
+      columns.forEach((col) => {
+        col.select?.addEventListener('change', () => render(), { signal });
+      });
+      desktop.addEventListener('change', () => render(), { signal });
 
-      // 뒤로 가기로 돌아왔을 때만 필터·펼친 개수·위치를 되살린다
+      // 뒤로 가기로 돌아왔을 때만 줄·선택·펼친 개수·위치를 되살린다
       const saved = isBackForward() ? readState() : null;
       if (!saved) writeState(null);
-      if (saved && filterBtns[saved.filterIdx]) {
-        selectFilter(filterBtns[saved.filterIdx], { toggleParent: false });
+      if (saved) {
+        selectCol(saved.col);
+        for (const col of columns) {
+          const v = saved.filters?.[col.id];
+          if (col.select && v !== undefined && [...col.select.options].some((o) => o.value === v)) col.select.value = v;
+        }
         shown = Math.max(BATCH, saved.shown);
       }
       render();
@@ -452,7 +392,11 @@ const groups = [...groupsMap.values()].sort((a, b) => {
 
       window.addEventListener(
         'pagehide',
-        () => writeState({ filterIdx: activeIdx, shown, y: window.scrollY }),
+        () => {
+          const filters: Record<string, string> = {};
+          for (const col of columns) if (col.select) filters[col.id] = col.select.value;
+          writeState({ col: activeCol, filters, shown, y: window.scrollY });
+        },
         { signal },
       );
 
@@ -467,7 +411,7 @@ const groups = [...groupsMap.values()].sort((a, b) => {
     }
 
     // 첫 로드와 페이지 전환 모두에서 실행한다 (리스너는 AbortController로 한 벌만 남긴다)
-    initBlogFilter();
-    document.addEventListener('astro:page-load', initBlogFilter);
+    initStory();
+    document.addEventListener('astro:page-load', initStory);
   </script>
 </BaseLayout>
