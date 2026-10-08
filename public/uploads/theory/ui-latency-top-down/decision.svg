@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#868e96"/></marker>
+  </defs>
+  <rect width="1200" height="700" fill="#ffffff"/>
+
+  <rect x="360" y="30" width="480" height="70" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="600" y="60" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">필드에서 느린 상호작용 하나 고르기</text>
+  <text x="600" y="84" font-size="14" fill="#59636e" text-anchor="middle">CrUX, web-vitals attribution (INP와 세 구간)</text>
+
+  <line x1="600" y1="100" x2="600" y2="138" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="600" y="168" font-size="17" font-weight="700" fill="#1f2328" text-anchor="middle">사용자가 느낀 것은 어느 쪽인지</text>
+
+  <line x1="520" y1="180" x2="300" y2="228" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="680" y1="180" x2="900" y2="228" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- left branch -->
+  <rect x="60" y="232" width="480" height="70" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="300" y="262" font-size="17" font-weight="800" fill="#1f2328" text-anchor="middle">"눌렀는데 화면이 굳는다"</text>
+  <text x="300" y="286" font-size="14" fill="#59636e" text-anchor="middle">DevTools 성능 패널 Interactions 트랙에서 세 구간</text>
+
+  <line x1="300" y1="302" x2="300" y2="340" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="300" y="362" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">가장 긴 구간 하나만 연다</text>
+
+  <rect x="60" y="384" width="150" height="58" rx="6" fill="#ffffff" stroke="#a5c4de"/>
+  <text x="135" y="418" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">입력 지연</text>
+  <rect x="225" y="384" width="150" height="58" rx="6" fill="#ffffff" stroke="#74a7d1"/>
+  <text x="300" y="418" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">처리 시간</text>
+  <rect x="390" y="384" width="150" height="58" rx="6" fill="#ffffff" stroke="#b39ddb"/>
+  <text x="465" y="418" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">표시 지연</text>
+
+  <line x1="135" y1="442" x2="135" y2="480" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="300" y1="442" x2="300" y2="480" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="465" y1="442" x2="465" y2="480" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <rect x="60" y="484" width="150" height="96" rx="6" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="135" y="514" font-size="14" font-weight="700" fill="#1f2328" text-anchor="middle">LoAF</text>
+  <text x="135" y="538" font-size="13" fill="#59636e" text-anchor="middle">그 순간 메인 스레드를</text>
+  <text x="135" y="558" font-size="13" fill="#59636e" text-anchor="middle">잡은 스크립트</text>
+  <rect x="225" y="484" width="150" height="96" rx="6" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="300" y="514" font-size="14" font-weight="700" fill="#1f2328" text-anchor="middle">프레임워크</text>
+  <text x="300" y="538" font-size="13" fill="#59636e" text-anchor="middle">React Performance</text>
+  <text x="300" y="558" font-size="13" fill="#59636e" text-anchor="middle">Tracks, Profiler</text>
+  <rect x="390" y="484" width="150" height="96" rx="6" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="465" y="514" font-size="14" font-weight="700" fill="#1f2328" text-anchor="middle">렌더링 블록</text>
+  <text x="465" y="538" font-size="13" fill="#59636e" text-anchor="middle">스타일 · 레이아웃</text>
+  <text x="465" y="558" font-size="13" fill="#59636e" text-anchor="middle">페인트 · 합성</text>
+
+  <!-- right branch -->
+  <rect x="660" y="232" width="480" height="70" rx="8" fill="#fff4e6" stroke="#f0a35e"/>
+  <text x="900" y="262" font-size="17" font-weight="800" fill="#1f2328" text-anchor="middle">"반응은 했는데 결과가 늦게 뜬다"</text>
+  <text x="900" y="286" font-size="14" fill="#59636e" text-anchor="middle">INP 밖. 클릭부터 결과까지를 따로 잰다</text>
+
+  <line x1="900" y1="302" x2="900" y2="336" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="700" y="340" width="400" height="58" rx="6" fill="#ffffff" stroke="#f0a35e"/>
+  <text x="900" y="366" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">Resource Timing으로 요청 구간 나누기</text>
+  <text x="900" y="387" font-size="13" fill="#59636e" text-anchor="middle">병렬이면 페이지 전체를 붙잡는 요청을 찾는다</text>
+  <line x1="900" y1="398" x2="900" y2="432" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="700" y="436" width="400" height="58" rx="6" fill="#ffffff" stroke="#f0a35e"/>
+  <text x="900" y="462" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">Server-Timing으로 서버 내부 나누기</text>
+  <text x="900" y="483" font-size="13" fill="#59636e" text-anchor="middle">db;dur=53, app;dur=47.2</text>
+  <line x1="900" y1="494" x2="900" y2="528" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="700" y="532" width="400" height="58" rx="6" fill="#ffffff" stroke="#f0a35e"/>
+  <text x="900" y="558" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">traceparent로 클릭과 백엔드 스팬 잇기</text>
+  <text x="900" y="579" font-size="13" fill="#59636e" text-anchor="middle">그다음은 서버의 p95 읽는 순서</text>
+
+  <text x="600" y="660" font-size="14" fill="#868e96" text-anchor="middle">한 구간을 열어도 풀리지 않으면 그 구간 안에서 한 단계 더 나눈다 (드릴다운 4번)</text>
+</svg>
