@@ -1,7 +1,7 @@
 ---
 title: '승인 응답보다 웹훅이 먼저 오면 결제 상태를 어떻게 보존할까'
 description: '자체 목 PG가 승인 응답 뒤에만 웹훅을 보내도록 만들어 선행 웹훅 경로를 놓쳤다. 결제 행이 아직 없을 때 예외를 던지면 보류 상태까지 롤백되는 문제를 재현하고, 먼저 온 웹훅을 보류 후 재처리하는 구조로 바꾼 과정을 정리한다.'
-date: 2026-10-01
+date: 2026-09-05
 category: study/be-commerce
 coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch15-webhook.svg"
 draft: false
