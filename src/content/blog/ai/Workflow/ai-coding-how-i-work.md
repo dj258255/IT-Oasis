@@ -171,6 +171,7 @@ b-studio의 기록입니다.
 
 - [b-studio 저장소](https://github.com/dj258255/b-studio)와 [실험 기록 E1~E13](https://github.com/dj258255/b-studio/blob/main/docs/experiments/README.md). 위 수치는 E1, E2, E6, E7, E8, E9, E12, E13에서 가져왔습니다
 - [b-studio 소개 글](/blog/project/b-studio/b-studio-0-intro)
+- 요구사항을 테스트로 건넬 때를 잰 실험은 [AI 코딩에서 단위 테스트가 맡는 세 가지 일](/blog/ai/verification/unit-tests-in-ai-coding)에 따로 적었습니다
 
 같은 방향의 해외 기록들입니다. 도구가 달라도 어디까지 맡기고 무엇을 시스템이 강제할지를 다룹니다.
 
