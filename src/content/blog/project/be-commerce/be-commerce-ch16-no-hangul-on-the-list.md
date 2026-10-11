@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch16-no-hangul-on-the-list.png
 title: '제재 명단과 이름이 비슷하면 지급을 막아야 할까: 누락과 오탐 사이의 기준'
 description: '정산금을 판매자 계좌로 보내기 전 제재 명단과 대조하는 장치를 실제 지급 경로에 연결했다. UN 명단을 넣어 보니 파서가 세 군데 틀렸고 한글 이름은 한 건도 없었다. 이름만으로 자동 통과하지 않고, 무엇을 놓치고 무엇을 사람에게 넘길지 정한 과정을 정리한다.'
 date: 2026-09-07
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch16-sanctions.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 16

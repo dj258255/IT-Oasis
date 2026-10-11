@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/lock-mechanisms-all.png
 title: '락 메커니즘의 모든 것 - 하드웨어부터 분산 시스템까지'
 description: CPU의 원자 명령어(CAS, TAS)부터 OS 레벨 락, 애플리케이션 락, DB 락, 분산 락까지 락 메커니즘의 전체 스펙트럼을 정리한다.
 date: 2025-06-20T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Redis
 category: theory/Concurrency
 draft: false
-coverImage: "/uploads/theory/lock-mechanisms-all/11-why-hardware-help-needed.svg"
 series: "동시성과 락"
 seriesOrder: 3
 ---

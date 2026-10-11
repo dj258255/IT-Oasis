@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch60-resend-budget.png
 title: '재전송을 켰더니 느린 PG에서 결제 실패가 늘었다'
 description: 'PG 응답이 끊긴 승인을 같은 멱등키로 한 번 더 보내게 했다. 응답 일부를 잃는 PG에서는 확정 실패가 14.29%에서 1.90%로 줄었지만 동시 호출 상한이 찬 느린 PG에서는 31.56%에서 55.23%로 늘었다. 상한에 빈 자리가 4개 이상일 때만 다시 보내게 하자 느린 PG에서는 31.40%로 돌아왔고 손실에서는 2.82%로 이득이 남았다. 그 결정이 운영 기본값에 빠져 있던 것은 뒤늦게 찾아 고쳤다.'
 date: 2026-09-29
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-resend-budget.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 60

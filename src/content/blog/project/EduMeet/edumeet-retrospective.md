@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/EduMeet/edumeet-retrospective.png
 title: '에듀밋: 청각장애 학습자를 위한 실시간 자막 온라인 교육 플랫폼'
 description: '에듀밋은 온라인 강의 음성을 실시간 자막으로 바꿔 청각장애 학습자가 수업을 따라가게 돕는 교육 플랫폼이다. SSAFY 6인 팀으로 6주 동안 만들었고, 이후 혼자 이어받아 측정을 기준으로 성능과 운영 기반을 다시 세웠다.'
 date: 2025-08-18
@@ -12,7 +13,6 @@ tags:
   - HLS
   - WebSocket
 category: team/EduMeet
-coverImage: /uploads/project/EduMeet/retrospective/title.png
 draft: false
 ---
 

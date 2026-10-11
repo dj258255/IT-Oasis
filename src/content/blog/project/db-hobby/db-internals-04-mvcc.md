@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-04-mvcc.png
 title: 'DB 내부 ④: 격리, 2PL에서 MVCC 스냅샷 격리까지, reader가 writer를 안 막기까지'
 description: "동시에 여럿이 읽고 쓸 때 DB는 어떻게 안전한가. 두 철학이 있다. 충돌을 미리 막는 2PL(잠금)과 버전을 갈라 충돌을 피하는 MVCC다. MVCC의 두뇌는 가시성 규칙 한 줄(xmin 커밋 AND xmax 미커밋이면 보인다)이고, 그 규칙이 성립하려면 DELETE조차 지우면 안 된다(xmax 도장). 그 순간 힙을 읽는 아홉 갈래 전부에 가시성 게이트가 필요해지고, '인덱스는 MVCC를 모른다'는 원칙이 선다. 일부러 만든 쓰레기(dead tuple)는 VACUUM이 치우는데, PostgreSQL nbtree처럼 병합 없는 lazy 삭제로 충분한 이유, VACUUM해도 파일이 안 줄어드는 이유까지 코드로 확인한다. 마지막으로 reader의 락을 제거하고 BEGIN 시점 스냅샷(PG의 xmax/xip 축소판)을 고정하면, 한 트랜잭션이 미커밋 UPDATE를 쥐고 있어도 다른 쪽이 옛 버전을 막힘 없이 읽는 진짜 스냅샷 격리가 선다. 그 여파로 PK 인덱스가 다중 버전 멀티맵이 되어야 했던 것까지, C 구현으로 확인하며 정리한다."
 date: 2026-03-28T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - InnoDB
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 4

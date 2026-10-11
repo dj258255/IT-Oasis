@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch31-pg-brownout-cap-cost.png
 title: 'PG가 느려지면 웹훅까지 줄을 선다: 동시 호출 상한의 비용은 식으로 나온다'
 description: 'PG 응답이 5초로 느려지자 PG를 부르지도 않는 웹훅 수신 API의 p95가 13초가 됐고 26.1%가 토스의 10초 규약을 넘겼다. PG 동시 호출 상한 40은 이것을 9ms로 되돌리는 대신 결제의 84%를 거절한다. 그 84%는 실험 전에 리틀의 법칙으로 계산되는 값이었다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-worker-sharing.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 31

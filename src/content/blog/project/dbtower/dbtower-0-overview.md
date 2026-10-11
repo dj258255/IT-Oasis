@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/dbtower/dbtower-0-overview.png
 title: 'DBTower: 다섯 종류의 DB를 한곳에서 관제하고 안전하게 바꾸는 운영 플랫폼'
 description: 'DBTower는 MySQL, PostgreSQL, SQL Server, Oracle, MongoDB를 한 화면에서 관제하고, 문제 쿼리를 진단하고, 승인된 변경만 되돌릴 사본과 함께 실행하는 셀프호스트 DB 운영 플랫폼이다. 안전을 지키는 방식과 직접 실행하는 방법을 다룬다.'
 date: 2026-07-03
@@ -12,7 +13,6 @@ tags:
   - MongoDB
   - MCP
 category: personal/DBTower
-coverImage: /uploads/project/dbtower/console-first-screen.jpg
 draft: false
 ---
 

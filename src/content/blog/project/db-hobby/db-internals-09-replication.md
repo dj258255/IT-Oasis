@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-09-replication.png
 title: 'DB 내부 ⑨: 복제, 복구의 redo를 스트림으로, base backup + WAL 스트리밍까지'
 description: "복제의 첫 통찰은 '복제가 거의 공짜'라는 것이다. no-force WAL이 이미 커밋의 순차 스트림이라, replica가 할 일은 크래시 복구의 redo를 '파괴적 일회성'이 아니라 '증분·연속'으로 돌리는 것뿐이다. PostgreSQL에서 walreceiver가 WAL을 받아 쓰고 startup process가 replay하는 그 구조. 이를 소켓에 올리면 walsender/walreceiver가 되는데, 스트림엔 경계가 없어 길이 프레이밍이 필요하고, 수신자는 읽기 전용 fd에 쓸 수 없어 실제로 교착을 밟았다. 마지막은 캡스톤, 곧 진짜 엔진의 커밋이 복제본에서 SELECT되기까지다. 코드보다 어려웠던 건 조용히 깨지는 landmine 셋: 재오픈이 WAL을 truncate하고 LSN을 리셋해 replica가 신규 커밋을 조용히 스킵하는 것, base 스냅샷에 steal된 미커밋 페이지가 딸려오는 것, 카탈로그의 낡은 next_txn이 복제된 행을 미커밋으로 보이게 하는 것. 셋을 정리하면 필연적으로 실제 시스템과 같은 모델, 곧 pg_basebackup + streaming replication에 도달한다. 구조가 그렇게 강제한다."
 date: 2026-06-18T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - Distributed Systems
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 9

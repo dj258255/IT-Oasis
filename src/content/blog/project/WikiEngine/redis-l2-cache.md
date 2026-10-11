@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/WikiEngine/redis-l2-cache.png
 title: 'Redis L2 캐시 + 자동완성 flat KV: Trie 퇴역과 Stateless 전환'
 description: Caffeine(L1) + Redis(L2) 2계층 캐시를 구현하고, Trie 자동완성을 Redis flat KV O(1) GET으로 전환하여 Stateless 앱을 만든 뒤 k6 부하 테스트로 Before/After를 비교한 과정을 정리한다. 분산 전환 순서(Redis → Replication → 스케일아웃)의 의존 관계와 비용 분석을 포함한다.
 date: 2026-03-19T00:00:00.000Z
@@ -14,7 +15,6 @@ tags:
   - Docker
   - Ansible
 category: personal/WikiEngine
-coverImage: /uploads/project/WikiEngine/redis-l2-cache/after-03-spring-boot-system-tiered.png
 draft: false
 series: "WikiEngine"
 ---

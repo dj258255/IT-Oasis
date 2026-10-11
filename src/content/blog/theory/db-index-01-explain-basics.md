@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-index-01-explain-basics.png
 title: '데이터베이스 인덱스 ①: 인덱스 기초와 EXPLAIN 읽기'
 description: 인덱스는 검색용 보조 자료구조이고, 그 인덱스를 쓸지 말지를 결정하는 것은 옵티마이저입니다. 옵티마이저의 결정을 검증하는 도구가 EXPLAIN이고, 실측까지 더하는 것이 EXPLAIN ANALYZE입니다. cost가 임의 단위라는 점, 추정과 실측의 격차가 진단의 핵심 신호라는 점, 인덱스가 있어도 안 쓰이는 4가지 패턴까지 1차 자료 기준으로 정리합니다.
 date: 2026-04-22T00:00:00.000Z
@@ -12,7 +13,6 @@ tags:
   - Performance
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-index/cover-1.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 1
 ---

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/portfolio-2026.png
 title: '범수: Backend Engineer 포트폴리오'
 description: 오픈소스 기여(Spring Boot, Apache Lucene), 1,215만 건 데이터로 자체 구축한 임베디드 검색 엔진 WikiEngine, 실시간 협업 워크스페이스 Balruno를 정리한 백엔드 엔지니어 포트폴리오입니다.
 date: 2026-05-21T00:00:00.000Z
@@ -12,7 +13,6 @@ tags:
   - Redis
   - Architecture
 category: portfolio
-coverImage: /uploads/project/WikiEngine/wiki-engine-retrospective/wikiengine-architecture.svg
 draft: false
 unlisted: true
 ---

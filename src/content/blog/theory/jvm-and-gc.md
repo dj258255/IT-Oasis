@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/jvm-and-gc.png
 title: 'JVM과 Garbage Collection 이해하기'
 description: JVM 메모리 시리즈의 출발점. Class Loader, Runtime Data Areas, Execution Engine, JIT 컴파일러까지 JVM 아키텍처 전반을 정리하고, Heap 구조·GC 알고리즘 같은 메모리 세부 주제는 ①~⑤편으로 이어갑니다.
 date: 2026-01-09T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Memory Management
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/es-memory/cover-0.svg"
 series: "JVM 메모리"
 seriesOrder: 0
 ---

@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch51-ab-synthetic-users.png
 title: 'A/B 실험 기반을 만들고 합성 사용자 1,000명으로 끝에서 끝까지 돌렸다'
 description: '사용자를 해시로 변형에 고정 배정하고 홈 노출 기록에 변형을 남기고 노출된 상품에 한해 클릭과 구매를 귀속하는 분석을 만들었다. 합성 사용자로 확인한 것은 셋이다. A/A에서는 차이가 없었다. 일부러 넣은 차이는 95% 구간 안으로 복원됐다. 노출되지 않은 상품의 클릭·구매는 한 건도 세지 않았다. 숫자는 합성 행동이라 추천 품질에 대한 주장이 아니다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-ab-synthetic.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

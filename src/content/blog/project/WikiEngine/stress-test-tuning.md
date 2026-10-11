@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/WikiEngine/stress-test-tuning.png
 title: 'stress 테스트로 단일 서버 한계 확인: 튜닝 실패에서 배운 것'
 description: k6 stress 테스트(200 VU, 25분)로 단일 서버(ARM 2코어, 12GB)의 한계점(~100-150 VU)을 수치로 확인하고, JVM/Tomcat 튜닝이 CPU-bound 병목에서 역효과를 낸 과정과 배포 미반영 사고를 기록한다.
 date: 2026-03-16T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Grafana
   - Tomcat
 category: personal/WikiEngine
-coverImage: /uploads/project/WikiEngine/stress-test-tuning/A-2-k6-grafana-overview.png
 draft: false
 series: "WikiEngine"
 ---

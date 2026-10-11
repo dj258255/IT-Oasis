@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch58-page2-count-queries.png
 title: '홈 2쪽이 쓰지도 않는 상품 수를 요청마다 세고 있었다'
 description: '홈 2쪽 앱 경로가 초당 30건에서 무너지던 원인은 결과에 쓰이지 않는 count 쿼리였다. 행 제목 다섯 개를 붙이려고 대분류마다 상품 수를 셌고 신상품 24개를 받으려고 대분류 전체 개수를 셌다. 두 곳을 개수 없는 조회로 바꾸자 2쪽 용량이 초당 120건으로 올랐다.'
 date: 2026-09-25
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-page2-count-queries.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

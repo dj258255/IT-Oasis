@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/es-memory-01-jvm-heap.png
 title: 'JVM 메모리 ①: Heap 세대 구조'
 description: JVM Heap이 Young/Old Generation, Eden/Survivor로 나뉘는 이유와 NewRatio·SurvivorRatio 같은 튜닝 파라미터를 Oracle JDK 17 공식 문서 기준으로 뜯어봤습니다. G1에서 이 파라미터들을 왜 건드리면 안 되는지까지 짚습니다.
 date: 2026-04-10T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Memory Management
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/es-memory/cover-1.svg"
 series: "JVM 메모리"
 seriesOrder: 1
 ---

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/portfolio-db.png
 title: '범수 포트폴리오'
 description: 'DBMS 운영 관리 플랫폼 직무를 위해 정리한 포트폴리오입니다. 이기종 5기종 관제 플랫폼 DBTower, 관측 데이터 장기 분석 파이프라인 DBTower-lakehouse, 오픈소스 기여(Spring Boot, Apache Lucene)를 아키텍처와 실측 수치, 재현 기록과 함께 담았습니다.'
 date: 2026-07-22T00:00:00.000Z
@@ -9,7 +10,6 @@ tags:
   - DBMS
   - Platform Engineering
 category: portfolio
-coverImage: /uploads/project/dbtower/cover.svg
 draft: false
 unlisted: true
 ---

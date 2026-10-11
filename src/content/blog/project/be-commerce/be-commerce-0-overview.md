@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-0-overview.png
 title: 'BE-commerce: 결제 실패를 정합하게 되돌리는 모듈형 모놀리스'
 description: 'BE-commerce는 주문·결제·정산·대사·추천을 하나의 Spring Modulith 애플리케이션으로 구현한 이커머스 백엔드입니다. 기능 소개보다 실패를 재현하고 측정해 경계를 정한 글을 영역별로 모았습니다.'
 date: 2026-07-08
@@ -11,7 +12,6 @@ tags:
   - Redis
   - Kafka
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/architecture.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 0

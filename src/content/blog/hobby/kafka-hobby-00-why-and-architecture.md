@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kafka-hobby-00-why-and-architecture.png
 title: '왜 Kafka를 직접 만드나: 내 첫 분산 시스템'
 description: 미니 RDBMS(db-hobby)를 만들며 남긴 WAL을 보다가 생각이 하나로 모였다. 이 로그를 주인공으로 승격시켜 여러 노드에 복제하면 그게 Kafka다. Java로 바닥부터 만드는 토이 Kafka 연재의 1편. 코드를 쓰기 전에 끝낸 설계 결정들(분산 로그가 뭔지, 왜 Java인지, 단일 브로커 먼저 왜 그런지)과, 이번엔 단위 테스트 대신 "상황 시뮬레이션"으로 검증하기로 한 이유를 정리한다.
 date: 2026-07-02T00:00:00.000Z

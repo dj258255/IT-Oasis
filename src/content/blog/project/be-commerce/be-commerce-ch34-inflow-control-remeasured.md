@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch34-inflow-control-remeasured.png
 title: '초당 100건은 서버 용량이 아니다: 결제 API 요청 제한을 다시 측정한 이유'
 description: '결제 API 앞 Redis 필터에 사용자별 5건/초, 전역 100건/초 제한을 두었다. 하지만 단일 계정과 닫힌 루프 부하는 전역 용량을 측정하지 못했다. 개방 루프에서 100~120건/초의 성능 꺾임을 확인하고, 요청률 제한과 과부하 보호를 구분한 과정을 정리한다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-inflow-three-runs.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 34

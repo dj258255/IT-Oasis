@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch50-genpage-empty-body.png
 title: 'GenPage 모델이 모든 사용자를 이력 없는 사용자로 생성하고 있었다'
 description: 'GenPage 서빙에 구매 이력을 넣고 서빙 경로로 채점하자 모델 단독 점수가 오프라인의 2%로 나왔다. 앱이 요청 본문을 길이 없이(chunked) 보냈고 파이썬 모델 서버는 Content-Length만 읽어 빈 본문으로 처리하고 있었다. 고치자 서빙 점수가 오프라인과 같아졌고 재구매 우선 혼합은 재구매 규칙의 1.023배로 A/B 후보가 됐다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-genpage-empty-body.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

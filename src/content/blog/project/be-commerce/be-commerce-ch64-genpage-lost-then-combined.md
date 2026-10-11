@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch64-genpage-lost-then-combined.png
 title: 'GenPage는 순위 모델에 다섯 번 지고 비교 규칙을 맞춘 뒤 순위 점수와 합쳐 이기고 기본값이 됐다'
 description: 'Netflix GenPage 구성을 H&M 구매 데이터로 옮겨 업계 표준(후보 생성 + LightGBM 순위 모델)과 겨뤘다. 상품 고르기, 줄 구성, Taobao 노출 데이터, 통계 곁채널, 행 점수 결합까지 다섯 번 모두 졌다. 비교 규칙을 두 쪽에 같게 걸고 순위 모델 점수 위에서 GenPage가 줄만 고르게 하자 홀드아웃 68,984명에서 규칙 줄 구성을 페이지 nDCG +2.0%로 이겼다. 그 방식을 모델 서버와 앱 홈 2쪽 기능 플래그로 붙였고 지연은 지금 방식보다 짧았다. 표본이 작아 판정을 내리지 못한 가상 사용자 A/B를 같은 사용자 68,984명 짝 설계로 다시 재자 구간이 16분의 1로 줄며 이겼다. 앱이 실제로 보여 주는 구성으로 재도 이겨서 홈 2쪽 줄 구성의 기본값을 결합 방식으로 켰다.'
 date: 2026-10-04

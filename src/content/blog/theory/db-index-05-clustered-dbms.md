@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-index-05-clustered-dbms.png
 title: '데이터베이스 인덱스 ⑤: 클러스터형 인덱스와 DBMS별 차이'
 description: PostgreSQL의 heap-organized 모델과 MySQL InnoDB의 clustered index 모델은 근본적으로 다른 세계관입니다. 같은 SQL이라도 저장 구조에 따라 plan과 비용이 전혀 달라지고, secondary index 동작·PK 선택 전략·DBMS 이전 시 함정이 모두 달라집니다. PG/MySQL/SQL Server/Oracle 비교를 1차 자료 기준으로 정리.
 date: 2026-04-26T00:00:00.000Z
@@ -13,7 +14,6 @@ tags:
   - Clustered Index
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-index/cover-5.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 5
 ---

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/b-studio/b-studio-0-intro.png
 title: 'b-studio: 사내 도구를 만들고 바로 실행해 보는 AI 앱 빌더'
 description: 'b-studio는 요청을 말하면 코딩 에이전트가 프론트엔드와 백엔드 코드를 쓰고, 그 코드를 격리된 샌드박스에서 실제 서버로 띄워 검증까지 하는 AI 앱 빌더다. 에이전트가 만든 코드를 어떻게 믿게 했는지와 직접 실행하는 방법을 다룬다.'
 date: 2026-09-10
@@ -11,7 +12,6 @@ tags:
   - Agent
   - Sandbox
 category: personal/b-studio
-coverImage: /uploads/project/b-studio/gate-retry.png
 draft: false
 series: "b-studio"
 seriesOrder: 0

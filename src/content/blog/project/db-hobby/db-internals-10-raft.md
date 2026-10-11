@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-10-raft.png
 title: 'DB 내부 ⑩: Raft, primary가 죽으면 누가 결정하는가, 합의에서 HA DB까지'
 description: "복제의 최대 약점은 'primary가 죽으면?'이다. replica 승격을 사람이 하면 밤에 전화가 오고, 자동으로 하면 split-brain이 온다. 이건 결국 합의(consensus) 문제고, 답이 Raft다. 리더 선출(임기·과반·무작위 타임아웃), 로그 복제(prevLogIndex 정합 검사), 그리고 '과반에 있어도 현재 임기여야만 커밋'이라는 5.4.2절의 미묘함까지, 다섯 안전성 성질을 결정적 시뮬레이션 네트워크(분단·크래시·재정렬을 재현 가능하게 주입) 위에서 확인한다. 이어서 프로덕션의 조각들: 재시작 후 이중 투표를 막는 지속성(currentTerm/votedFor fsync, 5.1절), 무한히 크는 로그를 자르는 스냅샷(7절, 그리고 오프셋 0이 no-op이라 기존 테스트가 버그를 못 잡는 함정), 돌아가는 중에 노드를 넣고 빼는 멤버십 변경(6절, 겹치는 과반), 상태기계 복제(SMR)로 진짜 SQL 엔진을 복제해 리더가 죽어도 살아남는 HA DB, 마지막으로 파티션된 옛 리더가 낡은 값을 주지 않게 하는 선형화 읽기(ReadIndex, 8절)까지. 적대적 리뷰가 잡아낸 실제 버그들(스냅샷 미설치 발산, apply 에러 무시, read barrier의 epoch 부재)이 각 절의 정직한 경계다."
 date: 2026-06-26T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - High Availability
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 10

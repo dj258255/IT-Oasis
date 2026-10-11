@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/distributed-systems/distsys-00-why-and-plan.png
 title: '분산 시스템, 먼저 제대로 배우고 Kafka를 만든다: MIT 6.5840'
 description: 자작 스택(커널·DB·JVM)이 다 단일 노드라, 다음 축은 분산이다. 분산을 배우려면 그냥 분산 시스템 하나를 밑바닥부터 만들면 될 것 같지만 거기엔 치명적 구멍이 있다. 네트워크 분단·크래시 같은 실패를 스스로 테스트할 수가 없다. 그래서 MIT 6.5840로 fundamentals를 먼저 정면돌파하고, 그 토대 위에 Kafka를 짓기로 했다. 학습 플랜, Go를 고른 이유, 첫날 MapReduce 셋업까지.
 date: 2026-07-02T00:00:00.000Z

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/es-memory-05-elasticsearch.png
 title: 'JVM 메모리 ⑤: Elasticsearch 메모리 모델'
 description: 앞선 0~4편의 JVM/OS 메모리 이론을 Elasticsearch 운영 맥락 하나로 묶는 캡스톤 편. 왜 Heap이 26~30GB에서 끊기는지(compressed oops), hybridfs가 어떤 파일만 mmap하는지, circuit breaker가 heap 40/60/95%에 왜 걸려있는지 공식 문서로 정리했습니다.
 date: 2026-04-14T00:00:00.000Z
@@ -12,7 +13,6 @@ tags:
   - Memory Management
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/es-memory/cover-5.svg"
 series: "JVM 메모리"
 seriesOrder: 5
 ---

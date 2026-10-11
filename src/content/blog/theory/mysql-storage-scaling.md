@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/mysql-storage-scaling.png
 title: 'MySQL 용량이 부족할 때: 콘텐츠 저장 아키텍처 탐구'
 description: 'FULLTEXT 인덱스가 디스크를 287GB까지 먹은 경험에서 출발해, 현업 7개 플랫폼의 콘텐츠 저장 방식, InnoDB 압축의 동작 원리, Object Storage 이동의 함정, Vertical Partitioning까지 정리합니다.'
 date: 2025-11-29T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Database Scaling
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/mysql-storage-scaling/innodb-compression.svg"
 ---
 
 ## 1. 들어가며: 디스크가 꽉 찰 뻔한 이야기

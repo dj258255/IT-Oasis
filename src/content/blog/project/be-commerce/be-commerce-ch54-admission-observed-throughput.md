@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch54-admission-observed-throughput.png
 title: '과부하 게이트가 모델 지연을 절반으로 잘못 알면 대기 예산이 세 배로 샜다'
 description: '대기 예산으로 추천 요청을 거절하는 게이트는 모델 용량을 안다고 가정한다. 모델이 실제로 두 배 느리면 예산 100ms에서 p95가 315ms가 됐다. 설정값 대신 최근 2초에 끝난 호출 수로 대기를 추정하자 193ms로 돌아왔다. 설계 문서가 기본으로 정한 정책이 설정에 들어간 적이 없었다는 것도 이때 알았다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-admission-observed.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

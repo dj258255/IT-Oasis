@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch56-next-page-purchase-history.png
 title: '홈 2쪽에 구매 이력을 넣자 홀드아웃 구매를 19배 더 맞혔고 방금 본 것은 따르지 않게 됐다'
 description: '구매 시퀀스로 학습한 GenPage 모델에 홈 2쪽만 조회·클릭을 넣고 있었다. 구매 이력을 넣자 2쪽이 다음 주에 산 상품을 19배 더 맞혔지만 1쪽 이후 본 대분류가 2쪽 첫 행이 되는 비율은 75%에서 0%가 됐다. 둘을 섞는 절충은 두 기준을 모두 못 넘었다. 측정 도중 세션을 제대로 지우지 못한 실행 두 번을 버렸다.'
 date: 2026-09-25
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-next-page-history.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

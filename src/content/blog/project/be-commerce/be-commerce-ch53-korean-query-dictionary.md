@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch53-korean-query-dictionary.png
 title: '상품 텍스트에 한글이 3건뿐이라 한국어 검색은 사전으로 풀어야 했다'
 description: '한국어 형태소 분석기를 붙이기 전에 확인하니 상품 텍스트에 한글이 있는 상품은 105,545개 중 3개였다. 앱의 한·영 라벨을 사전으로 써서 한국어 검색어를 고치자 0건 비율이 90%대에서 10~12%로 줄었지만, 측정 전에 정한 기준(5%)을 넘지 못해 기본으로 켜지 않았다. 기존 쿼리 545개는 한 쿼리도 바뀌지 않았다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-korean-query.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

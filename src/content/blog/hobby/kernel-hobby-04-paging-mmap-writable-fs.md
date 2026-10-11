@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-04-paging-mmap-writable-fs.png
 title: 'demand paging, mmap, 그리고 쓰기 가능 파일시스템'
 description: 작은 유닉스 위에 메모리 관리를 깊이 올린다. 예외 핸들러를 "출력만 하던 것"에서 "실제로 페이지를 만드는 것"으로 키워, sbrk 기반 지연 할당(demand paging)과 파일을 메모리처럼 읽는 mmap을 구현한다. 그리고 읽기 전용이던 파일시스템을 블록 할당과 디스크 쓰기로 쓰기 가능하게 만들어, 파일이 재부팅에도 살아남게 한다. 페이지 폴트가 RISC-V에서 어떻게 S-mode로 전달되는지(medeleg)부터 차근히.
 date: 2026-06-06T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - xv6
   - QEMU
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 5

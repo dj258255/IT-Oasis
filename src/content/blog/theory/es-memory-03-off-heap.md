@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/es-memory-03-off-heap.png
 title: 'JVM 메모리 ③: Off-heap과 Direct Memory'
 description: JVM이 Heap 바깥에서 쓰는 메모리, 곧 DirectByteBuffer, MaxDirectMemorySize, mmap, Foreign Memory API를 Oracle 공식 문서와 OpenJDK 버그 트래커 기준으로 정리했습니다. 왜 Xmx만으로는 프로세스 메모리를 통제할 수 없는지.
 date: 2026-04-12T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - NIO
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/es-memory/cover-3.svg"
 series: "JVM 메모리"
 seriesOrder: 3
 ---

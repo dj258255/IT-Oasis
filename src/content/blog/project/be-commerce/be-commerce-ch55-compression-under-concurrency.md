@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch55-compression-under-concurrency.png
 title: '캐시 압축은 동시 요청이 몰릴수록 이득이 커졌다'
 description: '한 스레드로 정한 캐시 압축 임계값(1KB)과 코덱(Snappy)을 스레드 8개, 32개로 다시 쟀다. 압축은 CPU를 쓰니 동시 요청에서 불리할 것으로 봤는데 50KB 값에서 32스레드 p95가 압축 없이 5.89ms, Snappy로 2.24ms였다. 앱이 Redis 연결 하나를 나눠 써서 바이트 수가 줄을 세우기 때문이다. 두 결정은 그대로 둔다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-compression-concurrency.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 55

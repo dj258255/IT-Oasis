@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-09-tcp.png
 title: 'TCP: 신뢰성은 번호 매기기에서 온다'
 description: UDP는 패킷을 던지고 잊는다. TCP는 "내가 어디까지 보냈고 어디까지 받았나"를 시퀀스 번호로 추적해, 순서와 도착을 보장한다. net 스택 위에 TCP 세그먼트와 3-way 핸드셰이크를 올려, 수동 개방 서버를 만든다. 호스트가 접속해 보낸 데이터를 게스트 커널이 받아 에코하고, 그 왕복으로 핸드셰이크부터 종료까지를 검증한다. 그리고 우리가 일부러 빼놓은 재전송, 혼잡 제어, 윈도우의 트레이드오프까지 다룬다.
 date: 2026-06-18T00:00:00.000Z
@@ -12,7 +13,6 @@ tags:
   - Network
   - TCP
 category: study/kernel-hobby
-coverImage: /uploads/covers/hobby/kernel-hobby-09-tcp.svg
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 10

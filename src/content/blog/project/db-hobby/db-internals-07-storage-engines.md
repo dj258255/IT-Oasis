@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-07-storage-engines.png
 title: 'DB 내부 ⑦: 저장 엔진의 세 철학: 힙 vs 클러스터드 vs LSM, 그리고 USING lsm'
 description: "같은 행들을 저장하는 세 가지 철학이 있다. PostgreSQL의 힙(순서 없이 쌓고 인덱스가 RID로 가리킴), InnoDB의 클러스터드(데이터 자체를 PK 순서로, 보조 인덱스는 PK를 들고 이중 조회), RocksDB의 LSM(제자리에서 절대 안 고침: memtable→SSTable→compaction). 한 코드베이스에 셋을 세워 실측하면 교과서의 문장들이 숫자가 된다: PK 점 조회 1.2배·범위 3.8배 클러스터드 우세(지역성), 보조 점 조회는 2배 열세(이중 조회), LSM은 쓰기가 순차화되는 대신 읽기가 여러 SSTable을 뒤진다(read amplification). 마지막은 이 시리즈의 캡스톤이다. LSM을 진짜 엔진의 PK 인덱스로 배선하며(CREATE TABLE ... USING lsm) 부딪힌 벽: MVCC 다중버전 때문에 인덱스는 비유니크 멀티맵이어야 하고, unique LSM으로는 담을 수 없어 dedup 단위를 (key,val)로 바꾼 멀티값 모드가 필요했다. 자체 WAL이 없어 트랜잭션 롤백에 못 끼는 이 LSM 인덱스를 'heap에서 재구축되는 파생 가속기'로 다루는 설계까지. MyRocks가 테이블 단위로 저장 엔진을 고르게 하듯, pluggable 엔진 API의 축소판이다."
 date: 2026-05-24T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - RocksDB
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 7

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/WikiEngine/wiki-search-overview.png
 title: '위키엔진: 1천만 건 위키 문서를 검색하는 통합 검색 플랫폼'
 description: '위키엔진은 나무위키·위키백과·뉴스·웹텍스트 등 1,215만 건의 문서를 Lucene으로 색인하고 검색하는 개인 프로젝트다. 어떤 트레이드오프를 거쳐 지금 구조에 도달했는지와 실제 작업 일정을 다룬다.'
 date: 2026-02-04
@@ -11,7 +12,6 @@ tags:
   - Search Engine
   - Architecture
 category: personal/WikiEngine
-coverImage: /uploads/project/WikiEngine/search-rag/ai-summary-full-with-results.png
 series: "WikiEngine"
 seriesOrder: 0
 draft: false

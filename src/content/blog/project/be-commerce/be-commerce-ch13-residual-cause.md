@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch13-residual-cause.png
 title: '대사 원인 분류에 AI를 붙였지만 다시 껐다: 규칙이 이미 같은 답을 내고 있었다'
 description: '규칙이 설명하지 못한 대사 예외에 모델을 붙였지만, 실제 잔여 분포에서 규칙 분류기와 같은 답을 냈다. 개발 표본의 91~100%만 보고 자동화를 켜지 않고, 홀드아웃에서 개선이 0임을 확인한 뒤 기본값을 규칙으로 유지한 이유를 정리한다.'
 date: 2026-08-31
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch13-residual.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 13

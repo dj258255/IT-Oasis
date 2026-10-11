@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/transaction-acid-01-atomicity.png
 title: '트랜잭션 ACID ①: Atomicity는 어떻게 구현되는가'
 description: PostgreSQL과 InnoDB가 같은 Atomicity 보장을 어떻게 다른 비용 구조로 구현하는지, STEAL/NO-FORCE 정책, append-only vs in-place + Undo Log, ARIES 복구 vs 가시성 규칙까지 1차 자료 기준으로 정리합니다.
 date: 2026-04-15T00:00:00.000Z
@@ -13,7 +14,6 @@ tags:
   - Database
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/transaction-acid/cover-1.svg"
 series: "트랜잭션 ACID"
 seriesOrder: 1
 ---

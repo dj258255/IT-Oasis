@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-11-sql-executor.png
 title: 'DB 내부 ⑪: SQL 실행기, 텍스트에서 행까지, 조인 3형제와 3값 논리'
 description: "SQL은 '무엇을'만 말하는 선언형 언어다. 그 텍스트가 실제 행이 되기까지의 파이프라인을 해부한다. 렉서(maximal munch, 예약어는 왜 생기나), 재귀 하강 파서(문법 규칙 하나 = 함수 하나, 서브쿼리에서 파서가 자기 자신을 부른다, 손 파서 vs bison/Lemon의 갈림), 그리고 실행기에서 스트리밍과 materialize가 갈리는 이유. 본론은 조인 3형제로, 모든 조인의 출발점인 중첩 루프(이중 루프), 안쪽을 점 조회로 바꾸는 인덱스 NLJ, O(N+M)의 해시 조인, 그리고 안 만든 정렬 병합까지 선택 기준을 표로. GROUP BY가 왜 정렬(또는 해시)을 요구하는지(GroupAggregate vs HashAggregate), HAVING은 왜 그룹의 WHERE인지. 마지막으로 BETWEEN이 실행기 0줄로 끝난 이유(문법 설탕), LIKE의 백트래킹 two-pointer 매칭과 LIKE '%x%'가 B-tree를 못 타는 이유(트라이그램·역색인으로의 탈출구), uncorrelated 서브쿼리의 1회 실행 캐시, 그리고 NULL의 3값 논리(UNKNOWN, NOT IN + NULL 함정)까지, 시리즈의 실행기 축을 완결한다."
 date: 2026-07-01T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - PostgreSQL
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 11

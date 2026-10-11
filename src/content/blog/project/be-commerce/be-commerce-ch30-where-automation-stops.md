@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch30-where-automation-stops.png
 title: '자동화를 어디서 멈출 것인가: 규칙·권한·자금이 갈리는 자리'
 description: '대사 확정, 분쟁 판정, 이상거래 심사는 규칙으로 끝낼 수 있는 것과 끝내면 안 되는 것이 섞여 있다. 남긴 셋의 이유가 각각 다르고, 남긴 자리는 2인 승인으로 잠갔다.'
 date: 2026-09-23
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/erd.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

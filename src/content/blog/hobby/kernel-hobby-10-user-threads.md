@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-10-user-threads.png
 title: '유저 스레드: 커널 없이 갈아타기'
 description: 스레드는 꼭 커널이 만들어줘야 할까. 한 프로세스 안에서, 커널의 도움 없이 유저 공간만으로 실행 흐름을 갈아타는 협조적 유저 스레드를 만든다. 이건 이 시리즈에서 한 번 실패했다 되돌렸던 주제다. 진짜 원인인 단일 페이지 모델의 전역 변수 제약, 그리고 힙 스택 위에 트랩 프레임을 저장하다 나는 커널 페이지 폴트를 찾아내고, 커널을 전혀 바꾸지 않고 두 가지 우회로 해결한다.
 date: 2026-06-20T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - QEMU
   - Thread
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 11

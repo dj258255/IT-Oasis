@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/Joying/joying-retrospective.png
 title: '빌려조잉: 6인 팀이 6주 만에 만든 C2C 대여 플랫폼'
 description: '빌려조잉은 캠핑 텐트나 빔프로젝터처럼 한두 번 쓰고 방치되는 물건을 이웃끼리 빌리고 빌려주는 C2C 대여 플랫폼이다. SSAFY 6인 팀이 6주 동안 만들어 삼성전자 주식회사 프로젝트 우수상을 받았다. 6주를 어떻게 나눠 썼고 무엇을 맡았는지를 다룬다.'
 date: 2025-11-26
@@ -13,7 +14,6 @@ tags:
   - MongoDB
   - MySQL
 category: team/Joying
-coverImage: /uploads/project/Joying/retrospective/title.gif
 draft: false
 ---
 

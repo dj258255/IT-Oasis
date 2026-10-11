@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/reading-performance-metrics.png
 title: 'Spring 백엔드 개발자가 성능 지표를 읽는 법'
 description: 'Latency, throughput, concurrency, connection pool, cache, CPU 지표가 요청 하나 위에서 어떻게 이어지는지 정리했습니다. RED와 USE로 볼 곳을 나누고 장애에서 요청이 기다리는 자리를 따라가는 순서와 대기 건수, 처리량, 대기 시간을 서로 맞춰 보는 계산을 담았습니다.'
 date: 2026-09-20
@@ -14,7 +15,6 @@ tags:
   - Observability
   - Spring Boot
 category: theory/Performance
-coverImage: /uploads/covers/theory/reading-performance-metrics.svg
 draft: false
 ---
 

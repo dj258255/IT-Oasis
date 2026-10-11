@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/spring-mvc-thread-pool.png
 title: '스프링 MVC는 왜 스레드를 최대 200개까지 사용할까'
 description: CGI 시절부터 서블릿, 스레드 풀까지의 역사를 따라가며 톰캣의 기본 스레드 수 200의 의미와 스레드 풀 튜닝 전략을 정리한다.
 date: 2025-08-07T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Concurrency
 category: theory/Web-Server
 draft: false
-coverImage: "/uploads/theory/spring-mvc-thread-pool/cgi-process-hell-start.svg"
 series: "요청 처리"
 ---
 

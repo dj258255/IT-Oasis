@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-02-fork-elf-filesystem.png
 title: 'fork, ELF 로더, 그리고 파일시스템'
 description: 프로세스 모델을 완성하고 저장장치를 붙인다. 주소공간을 복사하는 fork(), 따로 컴파일한 진짜 ELF 프로그램을 파싱해 적재하는 로더, 그리고 virtio-blk 디스크 위에 올린 읽기 전용 파일시스템(ls/cat)까지. 디버깅에서 만난 volatile과 virtio 기능 협상 이야기를 곁들인다.
 date: 2026-05-29T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - xv6
   - QEMU
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 3

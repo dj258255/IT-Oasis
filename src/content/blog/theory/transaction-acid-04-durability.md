@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/transaction-acid-04-durability.png
 title: '트랜잭션 ACID ④: Durability는 어떻게 디스크까지 살아남는가'
 description: WAL · fsync · group commit · doublewrite buffer · 체크포인트까지, 커밋된 변경이 디스크에 영속적으로 남기 위한 메커니즘 전반을 1차 자료 기준으로 정리합니다. PostgreSQL synchronous_commit과 MySQL innodb_flush_log_at_trx_commit으로 trade-off 다이얼을 어떻게 돌리는지까지.
 date: 2026-04-18T00:00:00.000Z
@@ -15,7 +16,6 @@ tags:
   - Database
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/transaction-acid/cover-4.svg"
 series: "트랜잭션 ACID"
 seriesOrder: 4
 ---

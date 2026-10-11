@@ -14,7 +14,7 @@ tags:
 category: incident/QueryIndex
 series: '데이터베이스가 무너지는 지점'
 seriesOrder: 4
-coverImage: /uploads/incident/uuid-page-split/01-fill.png
+coverImage: /uploads/covers/ai-generated/uuid-page-split.png
 draft: true
 ---
 

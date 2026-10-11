@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/telegram-bot/telegram-claude-bot-01-why-telegram.png
 title: '폰에서 Claude를 돌리려고 텔레그램 봇을 만들었다'
 description: "이미 쓰던 Claude 구독을 폰에서도 쓰고 싶어서 만든 봇이다. API 키로 따로 과금하는 대신 Claude Code 구독 인증(claude -p)을 그대로 호출하고, 메시지를 보내면 작업 과정을 실시간으로 흘려줍니다. 디스코드 봇을 이미 돌리고 있으면서도 이번엔 텔레그램을 고른 이유, 코딩 모드에서 확인 없이 파일을 고치는 대신 넣은 취소 장치, 같은 서버의 다른 서비스를 못 건드리게 막은 격리까지 정리했다."
 date: 2026-07-18T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - GitHub Actions
   - Automation
 category: study/telegram-bot
-coverImage: /uploads/project/telegram-bot/cover.svg
 draft: false
 series: "텔레그램 Claude 봇"
 seriesOrder: 1

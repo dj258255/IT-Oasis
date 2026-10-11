@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-06-optimizer.png
 title: 'DB 내부 ⑥: 비용 기반 옵티마이저, 플래너가 멍청해지는 순간을 통계로 고치기'
 description: "'인덱스가 있으면 무조건 쓴다'는 규칙은 id > 100 앞에서 무너진다. 행마다 한 번씩 901번의 힙 페치가 7페이지 순차 스캔보다 백 배 비싸게 과금되기 때문이다. 비용 기반 최적화(CBO)의 세 재료를 순서대로 짓는다: ANALYZE(행 수·페이지 수·PK min/max를 재는 통계), 선택도(균등분포 가정으로 매칭 행 수 추정, 히스토그램이 필요한 이유까지), 비용 모델(순차 = 페이지 수, 인덱스 = 1 + 매칭 행수만큼의 힙 페치). 그러면 같은 PK 범위 조건이 매칭 양에 따라 점 조회/인덱스/순차로 갈리는 크로스오버가 실제로 나타난다. '인덱스를 걸었는데 왜 안 타요?'의 정답이다. 후반부는 다중 테이블의 진짜 고민, 조인 순서다: 순서 하나가 2.8배를 가르고, n!을 2ⁿ으로 줄이는 Selinger의 부분집합 DP(1979), 교차곱을 피하는 연결성 규칙, 조인 방법(인덱스 NLJ vs 해시)까지 한 번에 고르는 계획기를 짓는다. EXPLAIN이 실행기와 같은 결정 함수를 공유해 '플랜이 거짓말하지 않는' 원칙도 함께."
 date: 2026-05-08T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - PostgreSQL
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 6

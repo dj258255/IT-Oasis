@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-12-retrospective.png
 title: 'DB 내부 ⑫ (회고): 나는 왜 DB를 밑바닥부터 만들었나, 만들어서 증명한 것들'
 description: "이 글은 db-hobby의 회고이자, 이 시리즈 전체의 포트폴리오다. 출발점은 하나의 자각이었다. '인덱스는 B+Tree라 빠르다'고 말할 수는 있는데, 왜 이진 트리가 아니라 B+Tree인지, 커밋의 fsync가 정확히 무엇을 보장하는지 설명하지 못했다. 설명할 수 없으면 모르는 것이다. 그래서 페이지 한 장부터 Raft 합의까지 C로 직접 만들었고, 모든 주장을 직접 측정한 수치로 바꿨다: 인덱스는 10만 행에서 풀 스캔보다 416배 빨랐고, 같은 5천 행 적재가 fsync 횟수에 따라 23배 갈렸고, 12코어 병렬화는 2.16배가 천장이었는데 그 천장의 정체(버퍼 풀 latch의 I/O 직렬화)를 A/B 실험으로 확증하고 고치자 콜드 스캔이 4워커 기준 1.08배에서 2.39배가 됐다(8워커는 0.62배에서 1.36배). 성능 작업 중 조용히 틀린 답을 내던 집계 버그를 발굴했고, 구현과 검증을 분리한 적대적 리뷰가 '테스트는 초록인데 원리상 틀린' 합의 버그 일곱을 잡았다. 694개 테스트, ThreadSanitizer/ASan 계측, 크래시 주입, 결정적 시뮬레이션. 무엇을 만들었는지가 아니라 어떻게 검증했고 왜 그 선택을 했는지의 기록이다. 무엇을 안 했는지(정직한 경계)까지 포함해서."
 date: 2026-07-06T00:00:00.000Z
@@ -9,7 +10,6 @@ tags:
   - Testing
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 12

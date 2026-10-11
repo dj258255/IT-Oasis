@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch21-cancel-row-overwrite.png
 title: '현재 잔액과 거래 사건을 분리해야 하는 이유'
 description: '1만 원 승인으로 대사를 MATCHED로 확정한 뒤 3천 원 부분취소가 왔다. 내부 스냅샷은 7,000원이 됐는데 확정된 판정은 10,000원 그대로였다. 승인 행을 덮어쓰던 것을 사건별 행으로 쌓게 바꾼 기록이다.'
 date: 2026-09-20
 category: study/be-commerce
-coverImage: "/uploads/covers/project/be-commerce/be-commerce-ch21-cancel-row-overwrite.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 21

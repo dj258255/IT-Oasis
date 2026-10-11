@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/cache-and-buffer.png
 title: '캐시와 버퍼: 속도 차이를 극복하는 두 가지 방법'
 description: 캐시와 버퍼의 개념을 CPU 캐시부터 웹 브라우저 캐시, 커널 버퍼까지 전 계층에 걸쳐 정리하고, 두 메커니즘의 근본적인 차이를 분석한다.
 date: 2025-05-03T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - Performance
 category: theory/Systems
 draft: false
-coverImage: "/uploads/theory/cache-and-buffer/memory-hierarchy.svg"
 ---
 
 

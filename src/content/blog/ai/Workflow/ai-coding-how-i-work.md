@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/ai/Workflow/ai-coding-how-i-work.png
 title: 'AI 코딩, 저는 이렇게 개발하고 있습니다'
 description: '코드는 대부분 AI가 쓰고 저는 설계를 승인하고 결과를 확인합니다. 이렇게 일하면서 굳어진 방식 여섯 가지를 적었습니다. 역할을 먼저 나눈 이유와 한 묶음을 한 코더에게 끝까지 맡기는 이유, 끝났다와 맞았다를 따로 확인하는 방법을 다룹니다. b-studio에서 반복 실행으로 재 본 결과로 어디에 쓰면 이득인지도 함께 적었습니다.'
 date: 2026-09-16

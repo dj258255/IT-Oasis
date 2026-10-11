@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-storage-02-row-vs-column.png
 title: 'DB 스토리지 내부 ②: Row Store vs Column Store'
 description: 같은 데이터를 디스크에 어떻게 배치할 것인가. row store는 같이 읽는 데이터를 같이, column store는 같이 계산하는 데이터를 같이 배치합니다. PostgreSQL/MySQL이 row인 이유, ClickHouse/Parquet/Snowflake가 column인 이유, 그리고 hybrid/HTAP까지 정리합니다.
 date: 2026-04-20T00:00:00.000Z
@@ -14,7 +15,6 @@ tags:
   - Parquet
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-storage/cover-2.svg"
 series: "DB 스토리지 내부"
 seriesOrder: 2
 ---

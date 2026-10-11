@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/EEDGate/eedgate-introduction.png
 title: 'EEDGate: LLM 워크플로우의 자기 개선 평가 루프'
 description: 'LLM 워크플로우를 실행하고, 실패를 분석하고, 규칙을 자동 생성하고, 회귀 테스트까지 하나의 루프로 연결하는 평가 엔진.'
 date: 2026-03-28
@@ -11,7 +12,6 @@ tags:
   - Evaluation
   - Workflow
 category: personal/EEDGate
-coverImage: /uploads/project/EEDGate/logo.svg
 draft: false
 ---
 
