@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <text x="72" y="92" font-size="14" font-weight="700" fill="#1971c2">Concurrency · 동시성과 락</text>
+  <line x1="72" y1="108" x2="262" y2="108" stroke="#1971c2" stroke-width="1.2"/>
+  <text x="72" y="176" font-size="46" font-weight="800" fill="#212529">멀티스레드와 동기화를 한 줄기로</text>
+  <text x="72" y="231" font-size="46" font-weight="800" fill="#212529">스레드에서 거짓 공유까지</text>
+  <text x="72" y="282" font-size="17" font-weight="500" fill="#59636e">공유하는 순간부터 치르는 값을 순서대로 따라가고 Java로 직접 쟀다</text>
+
+  <g font-size="15" font-weight="700" text-anchor="middle">
+    <rect x="72" y="340" width="150" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="147" y="374" fill="#1f2328">스레드</text>
+    <rect x="252" y="340" width="150" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="327" y="374" fill="#1f2328">공유 데이터</text>
+    <rect x="432" y="340" width="150" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="507" y="374" fill="#1f2328">락 · 조건 변수</text>
+    <rect x="612" y="340" width="150" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="687" y="374" fill="#1f2328">락프리 · CAS</text>
+    <rect x="792" y="340" width="150" height="56" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="867" y="374" fill="#1f2328">메모리 순서</text>
+    <rect x="972" y="340" width="156" height="56" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="1050" y="374" fill="#1f2328">거짓 공유</text>
+  </g>
+  <g stroke="#868e96" stroke-width="1.5">
+    <line x1="222" y1="368" x2="250" y2="368"/><line x1="402" y1="368" x2="430" y2="368"/><line x1="582" y1="368" x2="610" y2="368"/><line x1="762" y1="368" x2="790" y2="368"/><line x1="942" y1="368" x2="970" y2="368"/>
+  </g>
+
+  <text x="72" y="468" font-size="15" font-weight="700" fill="#1f2328">이 기계에서 잰 값 (Apple M2 Pro, OpenJDK 21)</text>
+  <text x="72" y="500" font-size="15" fill="#59636e">같은 64바이트 안의 두 카운터 약 730ms, 떨어뜨리면 약 97ms</text>
+  <text x="72" y="528" font-size="15" fill="#59636e">일반 필드에서 둘 다 옛 값을 읽은 경우 3,600만 회 중 787만 회, volatile은 0회</text>
+  <text x="72" y="556" font-size="15" fill="#59636e">스레드 4개의 카운터: AtomicLong 2,386ms, LongAdder 126ms</text>
+  <text x="1128" y="592" font-size="14" font-weight="700" fill="#868e96" text-anchor="end">IT Oasis</text>
+</svg>
