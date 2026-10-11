@@ -14,6 +14,8 @@ tags:
   - MySQL
   - Distributed Systems
 category: theory/Database
+series: "데이터 복제"
+seriesOrder: 1
 coverImage: /uploads/covers/theory/replication-five-decisions.svg
 draft: false
 ---

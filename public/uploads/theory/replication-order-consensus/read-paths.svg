@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#868e96"/></marker></defs>
+  <rect width="1200" height="520" fill="#ffffff"/>
+  <text x="600" y="40" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">etcd 세 대에서 읽기 하나가 지나는 길 (노드 사이 왕복은 평균 12.7ms)</text>
+
+  <text x="60" y="92" font-size="16" font-weight="800" fill="#1f2328">직렬 읽기: 물어본 노드가 가진 값을 바로 돌려준다</text>
+  <rect x="60" y="108" width="220" height="64" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="170" y="146" font-size="15" fill="#1f2328" text-anchor="middle">클라이언트</text>
+  <line x1="280" y1="140" x2="396" y2="140" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <rect x="400" y="108" width="220" height="64" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="510" y="146" font-size="15" fill="#1f2328" text-anchor="middle">아무 노드</text>
+  <text x="660" y="136" font-size="15" font-weight="700" fill="#1f2328">0.2~0.3ms</text>
+  <text x="660" y="160" font-size="14" fill="#59636e">과반과 끊긴 노드는 끊기기 전 값을 계속 돌려준다</text>
+
+  <text x="60" y="236" font-size="16" font-weight="800" fill="#1f2328">선형 읽기: 리더가 과반에게 아직 리더인지 확인한 뒤에 답한다</text>
+  <rect x="60" y="252" width="220" height="64" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="170" y="290" font-size="15" fill="#1f2328" text-anchor="middle">클라이언트</text>
+  <line x1="280" y1="284" x2="396" y2="284" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <rect x="400" y="252" width="220" height="64" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="510" y="290" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">리더</text>
+  <line x1="620" y1="284" x2="736" y2="284" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <rect x="740" y="252" width="220" height="64" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="850" y="290" font-size="15" fill="#1f2328" text-anchor="middle">팔로워 (과반 확인)</text>
+  <text x="1000" y="280" font-size="15" font-weight="700" fill="#1f2328">11.7~12.6ms</text>
+  <text x="1000" y="304" font-size="14" fill="#59636e">왕복 한 번</text>
+
+  <rect x="60" y="364" width="220" height="64" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="170" y="402" font-size="15" fill="#1f2328" text-anchor="middle">클라이언트</text>
+  <line x1="280" y1="396" x2="396" y2="396" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <rect x="400" y="364" width="220" height="64" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="510" y="402" font-size="15" fill="#1f2328" text-anchor="middle">팔로워</text>
+  <line x1="620" y1="396" x2="736" y2="396" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <rect x="740" y="364" width="220" height="64" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="850" y="402" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">리더 (과반 확인)</text>
+  <text x="1000" y="392" font-size="15" font-weight="700" fill="#1f2328">24.2~26.3ms</text>
+  <text x="1000" y="416" font-size="14" fill="#59636e">왕복 두 번</text>
+
+  <text x="600" y="484" font-size="14" fill="#59636e" text-anchor="middle">쓰기는 리더에서 11.5~12.0ms, 팔로워에서 24.0~25.7ms였다. 선형 읽기는 쓰기와 겹치는 범위다 (etcd 3.5.17, 세 차례의 중앙값)</text>
+</svg>
