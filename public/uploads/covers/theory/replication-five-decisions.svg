@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <text x="72" y="92" font-size="14" font-weight="700" fill="#1971c2">Database · 복제</text>
+  <line x1="72" y1="108" x2="212" y2="108" stroke="#1971c2" stroke-width="1.2"/>
+  <text x="72" y="176" font-size="46" font-weight="800" fill="#212529">데이터 복제에서 정하는 다섯 가지</text>
+  <text x="72" y="231" font-size="30" font-weight="700" fill="#212529">기다리는 지점, 읽는 곳, 승격, 쿼럼, 쓰기를 받는 곳</text>
+  <text x="72" y="282" font-size="17" font-weight="500" fill="#59636e">메이퇀의 정리에 회사들의 선택과 직접 잰 값을 더했다</text>
+
+  <g font-size="15" font-weight="700" text-anchor="middle">
+    <rect x="72" y="336" width="196" height="60" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="170" y="372" fill="#1f2328">1 기다리는 지점</text>
+    <rect x="288" y="336" width="196" height="60" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="386" y="372" fill="#1f2328">2 읽는 곳</text>
+    <rect x="504" y="336" width="196" height="60" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="602" y="372" fill="#1f2328">3 승격</text>
+    <rect x="720" y="336" width="196" height="60" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="818" y="372" fill="#1f2328">4 쿼럼</text>
+    <rect x="936" y="336" width="196" height="60" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="1034" y="372" fill="#1f2328">5 쓰기를 받는 곳</text>
+  </g>
+
+  <text x="72" y="462" font-size="15" font-weight="700" fill="#1f2328">PostgreSQL 16으로 잰 값 (복제 링크에 편도 5ms 지연)</text>
+  <text x="72" y="494" font-size="15" fill="#59636e">비동기 커밋 0.26ms, 복제본을 기다리는 커밋 12.7ms</text>
+  <text x="72" y="522" font-size="15" fill="#59636e">쓴 직후 복제본에서 읽기: 비동기는 6,000회 중 6,000회 실패</text>
+  <text x="72" y="550" font-size="15" fill="#59636e">복제본의 적용이 20ms 밀리면 적용까지 기다리는 수준만 실패 0회</text>
+  <text x="1128" y="592" font-size="14" font-weight="700" fill="#868e96" text-anchor="end">IT Oasis</text>
+</svg>
