@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1200" height="470" fill="#ffffff"/>
+  <text x="600" y="40" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">열린 트랜잭션이 있는 파티션에서 두 소비자가 읽는 범위</text>
+
+  <text x="60" y="96" font-size="15" font-weight="700" fill="#1f2328">파티션의 로그 (왼쪽이 먼저 쓰인 것)</text>
+  <g font-size="15" text-anchor="middle">
+    <rect x="60" y="112" width="180" height="60" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="150" y="148" fill="#1f2328">앞서 커밋된 메시지</text>
+    <rect x="250" y="112" width="180" height="60" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="340" y="148" font-weight="700" fill="#1f2328">T1-a (트랜잭션)</text>
+    <rect x="440" y="112" width="180" height="60" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="530" y="148" font-weight="700" fill="#1f2328">T1-b (트랜잭션)</text>
+    <rect x="630" y="112" width="180" height="60" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="720" y="148" fill="#1f2328">N1 (일반 메시지)</text>
+    <rect x="820" y="112" width="180" height="60" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-dasharray="6 4"/><text x="910" y="148" fill="#868e96">커밋 표시는 아직 없음</text>
+  </g>
+
+  <line x1="245" y1="186" x2="245" y2="300" stroke="#c92a2a" stroke-width="2"/>
+  <text x="245" y="322" font-size="14" font-weight="700" fill="#c92a2a" text-anchor="middle">LSO</text>
+  <text x="245" y="342" font-size="13" fill="#59636e" text-anchor="middle">열린 트랜잭션의 첫 메시지 앞</text>
+  <line x1="815" y1="186" x2="815" y2="300" stroke="#1971c2" stroke-width="2"/>
+  <text x="815" y="322" font-size="14" font-weight="700" fill="#1971c2" text-anchor="middle">하이 워터마크</text>
+  <text x="815" y="342" font-size="13" fill="#59636e" text-anchor="middle">복제가 끝난 곳</text>
+
+  <rect x="60" y="208" width="180" height="34" rx="6" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="150" y="231" font-size="14" fill="#1f2328" text-anchor="middle">read_committed</text>
+  <text x="262" y="231" font-size="14" fill="#59636e">여기까지만 읽는다. N1도 트랜잭션이 끝날 때까지 받지 못한다</text>
+  <rect x="60" y="252" width="750" height="34" rx="6" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="435" y="275" font-size="14" fill="#1f2328" text-anchor="middle">read_uncommitted (기본값): 하이 워터마크까지 읽는다. 중단될 메시지도 받는다</text>
+
+  <text x="60" y="396" font-size="14" fill="#59636e">트랜잭션을 5초 열어 두자 read_committed 소비자는 T1-a, T1-b, N1을 모두 5초 뒤에 받았다.</text>
+  <text x="60" y="422" font-size="14" fill="#59636e">프로듀서가 커밋 없이 죽자 타임아웃(10초로 설정)이 지난 10.7초 뒤에야 뒤따른 일반 메시지를 받았다.</text>
+  <text x="600" y="452" font-size="13" fill="#868e96" text-anchor="middle">Kafka 3.9.0 한 대, 파티션 하나에서 실행한 결과</text>
+</svg>

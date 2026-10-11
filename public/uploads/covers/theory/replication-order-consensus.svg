@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <text x="72" y="92" font-size="14" font-weight="700" fill="#1971c2">Database · 복제</text>
+  <line x1="72" y1="108" x2="212" y2="108" stroke="#1971c2" stroke-width="1.2"/>
+  <text x="72" y="176" font-size="44" font-weight="800" fill="#212529">복제본 여러 개를 하나처럼 쓰려면 무엇이 필요할까?</text>
+  <text x="72" y="231" font-size="30" font-weight="700" fill="#212529">순서, 합의, 트랜잭션이 치르는 값</text>
+  <text x="72" y="282" font-size="17" font-weight="500" fill="#59636e">메이퇀의 정리에 회사들의 선택과 직접 실행한 결과를 더했다</text>
+
+  <g font-size="15" font-weight="700" text-anchor="middle">
+    <rect x="72" y="336" width="196" height="60" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="170" y="372" fill="#1f2328">1 선형 읽기</text>
+    <rect x="288" y="336" width="196" height="60" rx="8" fill="#e7f0f8" stroke="#a5c4de"/><text x="386" y="372" fill="#1f2328">2 순서와 번호</text>
+    <rect x="504" y="336" width="196" height="60" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="602" y="372" fill="#1f2328">3 합의</text>
+    <rect x="720" y="336" width="196" height="60" rx="8" fill="#fff4e6" stroke="#f0c98a"/><text x="818" y="372" fill="#1f2328">4 2PC</text>
+    <rect x="936" y="336" width="196" height="60" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="1034" y="372" fill="#1f2328">5 Kafka 트랜잭션</text>
+  </g>
+
+  <text x="72" y="462" font-size="15" font-weight="700" fill="#1f2328">etcd 3.5, PostgreSQL 16, Kafka 3.9로 실행한 값</text>
+  <text x="72" y="494" font-size="15" fill="#59636e">etcd의 선형 읽기는 직렬 읽기 0.3ms의 40배 가까운 11.3ms로 쓰기와 같은 값을 치른다</text>
+  <text x="72" y="522" font-size="15" fill="#59636e">2PC의 조정자가 10초 자리를 비우면 같은 행을 고치려던 쓰기도 10초 막힌다</text>
+  <text x="72" y="550" font-size="15" fill="#59636e">열린 트랜잭션 하나가 그 파티션의 read_committed 소비자를 트랜잭션이 끝날 때까지 붙잡는다</text>
+  <text x="1128" y="592" font-size="14" font-weight="700" fill="#868e96" text-anchor="end">IT Oasis</text>
+</svg>
