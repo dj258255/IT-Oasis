@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#868e96"/></marker></defs>
+  <rect width="1200" height="500" fill="#ffffff"/>
+  <text x="600" y="40" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">서울 시간대 서버가 쓴 순간을 UTC 서버가 읽을 때 (MySQL, 서버 세션은 UTC)</text>
+
+  <text x="60" y="92" font-size="16" font-weight="800" fill="#1f2328">연결 설정을 주지 않았을 때</text>
+  <rect x="60" y="108" width="290" height="84" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="205" y="142" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">쓰는 JVM (Asia/Seoul)</text>
+  <text x="205" y="168" font-size="14" fill="#1f2328" text-anchor="middle">순간 2024-10-07T16:00Z</text>
+  <line x1="350" y1="150" x2="451" y2="150" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="455" y="108" width="290" height="84" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="600" y="142" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">MySQL에 남은 글자</text>
+  <text x="600" y="168" font-size="14" fill="#1f2328" text-anchor="middle">2024-10-08 01:00:00</text>
+  <line x1="745" y1="150" x2="846" y2="150" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="850" y="108" width="290" height="84" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="995" y="142" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">읽는 JVM (UTC)</text>
+  <text x="995" y="168" font-size="14" font-weight="700" fill="#c92a2a" text-anchor="middle">2024-10-08T01:00Z (9시간 늦음)</text>
+  <text x="60" y="218" font-size="14" fill="#59636e">드라이버가 서버 세션도 서울 시간대라고 보고 서울 시각의 글자를 보낸다. 서버는 그 글자를 UTC로 받는다.</text>
+
+  <text x="60" y="282" font-size="16" font-weight="800" fill="#1f2328">connectionTimeZone=UTC를 줬을 때</text>
+  <rect x="60" y="298" width="290" height="84" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="205" y="332" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">쓰는 JVM (Asia/Seoul)</text>
+  <text x="205" y="358" font-size="14" fill="#1f2328" text-anchor="middle">순간 2024-10-07T16:00Z</text>
+  <line x1="350" y1="340" x2="451" y2="340" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="455" y="298" width="290" height="84" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="600" y="332" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">MySQL에 남은 글자</text>
+  <text x="600" y="358" font-size="14" fill="#1f2328" text-anchor="middle">2024-10-07 16:00:00</text>
+  <line x1="745" y1="340" x2="846" y2="340" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="850" y="298" width="290" height="84" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="995" y="332" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">읽는 JVM (UTC)</text>
+  <text x="995" y="358" font-size="14" fill="#1f2328" text-anchor="middle">2024-10-07T16:00Z (같은 순간)</text>
+  <text x="60" y="408" font-size="14" fill="#59636e">드라이버가 순간을 UTC 시각의 글자로 바꿔 보낸다. 읽는 쪽의 시간대가 달라도 같은 순간으로 돌아온다.</text>
+
+  <text x="600" y="462" font-size="14" fill="#59636e" text-anchor="middle">DATETIME과 TIMESTAMP 컬럼 모두 같은 결과였다 (MySQL 8.4.11, Connector/J 9.1.0)</text>
+</svg>
