@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1200" height="520" fill="#ffffff"/>
+  <text x="600" y="40" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">1988년 서울의 시계: 없는 한 시간과 두 번 지나는 한 시간</text>
+
+  <text x="60" y="92" font-size="16" font-weight="800" fill="#1f2328">5월 8일, 02:00에 시계를 03:00으로 돌렸다</text>
+  <rect x="60" y="110" width="360" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="240" y="144" font-size="15" fill="#1f2328" text-anchor="middle">01:00 ~ 02:00 (+09:00)</text>
+  <rect x="420" y="110" width="360" height="56" rx="8" fill="#fff4e6" stroke="#f0c98a" stroke-dasharray="6 4"/>
+  <text x="600" y="144" font-size="15" font-weight="700" fill="#c92a2a" text-anchor="middle">02:00 ~ 03:00 은 없는 시각</text>
+  <rect x="780" y="110" width="360" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="960" y="144" font-size="15" fill="#1f2328" text-anchor="middle">03:00 ~ 04:00 (+10:00)</text>
+  <text x="60" y="196" font-size="14" fill="#59636e">LocalDateTime 02:30을 atZone(Asia/Seoul)에 넣으면 예외 없이 03:30+10:00이 나온다. 없는 구간의 길이만큼 늦춘다.</text>
+
+  <text x="60" y="270" font-size="16" font-weight="800" fill="#1f2328">10월 9일, 03:00에 시계를 02:00으로 돌렸다</text>
+  <rect x="60" y="288" width="360" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="240" y="322" font-size="15" fill="#1f2328" text-anchor="middle">01:00 ~ 02:00 (+10:00)</text>
+  <rect x="420" y="288" width="360" height="56" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="600" y="322" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">02:00 ~ 03:00 (+10:00), 첫 번째</text>
+  <rect x="420" y="352" width="360" height="56" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="600" y="386" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">02:00 ~ 03:00 (+09:00), 두 번째</text>
+  <rect x="780" y="352" width="360" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="960" y="386" font-size="15" fill="#1f2328" text-anchor="middle">03:00 ~ 04:00 (+09:00)</text>
+  <text x="60" y="440" font-size="14" fill="#59636e">LocalDateTime 02:30은 두 순간을 가리킨다. atZone은 앞의 것(+10:00)을 고르고 withLaterOffsetAtOverlap()이 뒤의 것을 고른다.</text>
+  <text x="60" y="466" font-size="14" fill="#59636e">두 순간의 차는 1시간이다.</text>
+  <text x="600" y="500" font-size="13" fill="#868e96" text-anchor="middle">JDK 21.0.9, tzdata 2025b의 Asia/Seoul 규칙으로 실행한 결과</text>
+</svg>
