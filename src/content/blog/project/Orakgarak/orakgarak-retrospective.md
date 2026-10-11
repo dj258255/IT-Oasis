@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/Orakgarak/orakgarak-retrospective.png
 title: '오락가락: 목소리로 부를 노래를 추천하는 음성 분석 플랫폼'
 description: '오락가락은 사용자의 음성을 분석해 음역대와 음색에 맞는 노래를 추천하고, 녹음을 모아 앨범도 만드는 음성 기반 음악 플랫폼이다. SSAFY 6인 팀이 5주 동안 만든 과정과 역할 분담을 다룬다.'
 date: 2025-10-01
@@ -14,7 +15,6 @@ tags:
   - Prometheus
   - Grafana
 category: team/Orakgarak
-coverImage: /uploads/project/Orakgarak/retrospective/title.png
 draft: false
 ---
 

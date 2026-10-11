@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-index-06-operations-limits.png
 title: '데이터베이스 인덱스 ⑥: 운영과 한계'
 description: 인덱스 시리즈 마무리. 운영 환경의 인덱스 작업은 DDL이 DB를 멈출 수 있다는 사실에서 출발합니다. CREATE INDEX CONCURRENTLY의 4단계 phase와 제약, 장기 트랜잭션이 클러스터 전반의 VACUUM/IOS에 미치는 영향, 인덱스 bloat과 REINDEX, 수십억 행을 위한 파티셔닝/샤딩, Bloom Filter, 그리고 6가지 안티패턴까지 1차 자료 기준으로 정리합니다.
 date: 2026-04-27T00:00:00.000Z
@@ -13,7 +14,6 @@ tags:
   - Operations
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-index/cover-6.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 6
 ---

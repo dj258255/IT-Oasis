@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/replication-five-decisions.png
 title: '데이터 복제에서 정하는 다섯 가지: 기다리는 지점, 읽는 곳, 승격, 쿼럼, 쓰기를 받는 곳'
 description: '메이퇀 기술 블로그의 복제 정리를 뼈대로 복제를 설계할 때 정하는 다섯 가지와 각각의 비용을 적었습니다. GitHub, Meta, Shopify, Cloudflare, Amazon, 텐센트, PingCAP의 선택을 원문으로 확인해 붙였고 PostgreSQL로 동기 수준별 커밋 지연과 쓴 직후 복제본 읽기의 실패 횟수를 직접 쟀습니다.'
 date: 2026-10-11
@@ -16,7 +17,6 @@ tags:
 category: theory/Database
 series: "데이터 복제"
 seriesOrder: 1
-coverImage: /uploads/covers/theory/replication-five-decisions.svg
 draft: false
 ---
 

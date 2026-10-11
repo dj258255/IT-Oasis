@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/es-memory-04-page-cache.png
 title: 'JVM 메모리 ④: OS Page Cache'
 description: JVM 프로세스 바깥, OS 커널이 관리하는 Page Cache가 무엇이고 애플리케이션 성능에 어떤 영향을 주는지 Linux 커널 공식 문서 기반으로 정리했습니다. mmap, reclaim, OOM killer, 그리고 ES가 "Heap을 RAM 50% 이하로 두라"고 하는 진짜 이유까지.
 date: 2026-04-13T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Kernel
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/es-memory/cover-4.svg"
 series: "JVM 메모리"
 seriesOrder: 4
 ---

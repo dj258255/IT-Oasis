@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/portfolio-be-commerce.png
 title: 'BE-commerce: 결제·정산 백엔드와 AI 운영 지원'
 description: 결제·정산 백엔드와 운영자용 백오피스를 구현하고, 장애 분석·상담 초안·이상거래 심사에 AI를 제한적으로 적용해 적용 범위를 수치로 정한 개인 프로젝트 포트폴리오입니다. Spring Boot와 Apache Lucene 오픈소스 기여도 함께 담았습니다.
 date: 2026-09-09T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Redis
   - FDS
 category: portfolio
-coverImage: /uploads/project/be-commerce/diagrams/erd.svg
 draft: false
 unlisted: true
 ---

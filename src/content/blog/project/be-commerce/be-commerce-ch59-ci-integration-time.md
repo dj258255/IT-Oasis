@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch59-ci-integration-time.png
 title: 'PR마다 18~35분 걸리던 통합 테스트를 전부 돌아도 3분으로 줄였다'
 description: '실 DB 통합 테스트 잡을 로그로 쪼개 가며 줄였다. 측정용 테스트를 매일 도는 워크플로로 옮기고 MySQL을 한 번만 띄우고 Spring Modulith로 바뀐 모듈의 테스트만 골랐다. 그 과정에서 내가 넣은 종료 훅이 60초를 쓰는 것과 리포트에 안 잡히던 데이터 적재 2.5분을 찾았다. 전부 돌아도 3.2분, 골라 돌면 1.7분이다. 효과가 편차보다 작았던 개선 하나는 닫았다.'
 date: 2026-09-25
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-ci-integration-time.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 59

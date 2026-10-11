@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/Tymee/tymee-retrospective.png
 title: '타이미: 집중 시간을 게임처럼 만드는 타이머'
 description: '타이미는 집중한 시간을 기록하고 그만큼 보상과 성장 요소를 주는 게이미피케이션 타이머다. 1인 개발자가 커밋과 이슈 기록으로 일정을 관리한 과정을 다룬다.'
 date: 2025-11-28
@@ -14,7 +15,6 @@ tags:
   - Linear
   - Gamification
 category: personal/Tymee
-coverImage: /uploads/project/Tymee/retrospective/title.svg
 draft: false
 ---
 

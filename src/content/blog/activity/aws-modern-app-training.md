@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/activity/aws-modern-app-training.png
 title: AWS 모던 애플리케이션 교육 일지
 description: '원광대학교에서 진행된 AWS 모던 애플리케이션 교육에 참가하여 AWS JAM 실습으로 3등을 하고, IaC, 배포 전략, 멀티 클라우드 트렌드를 배운 이틀간의 교육 일지를 정리했습니다.'
 date: 2023-12-11T00:00:00.000Z
@@ -9,7 +10,6 @@ tags:
   - Packer
   - Multi-Cloud
 category: activity
-coverImage: /uploads/activity/aws-modern-app-training/group-photo-1.jpeg
 draft: false
 ---
 

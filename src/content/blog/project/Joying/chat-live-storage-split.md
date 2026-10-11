@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/Joying/chat-live-storage-split.png
 title: '채팅이 흐르는 동안 DB를 옮긴다: 이중 쓰기부터 정본 교대까지 실측 기록'
 description: '메시지 테이블을 전용 DB로 분리하면서 채팅을 한 번도 멈추지 않았다. 이중 쓰기, 백필, 검증, 읽기 전환, 쓰기 컷오버로 이어지는 플레이북을 310만 행에서 실측했다. 백필 속도의 균형점, 섀도 리드가 공짜로 잡아 준 결함 둘, 473ms 배리어 아래의 정본 교대와 되돌림까지. 업계 글이 수치로 보여 주지 않는 구간을 직접 쟀다.'
 date: 2026-10-10

@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch33-reco-measured-not-adopted.png
 title: '추천 모델을 학습해 보고 넣지 않았다: 넘을 선을 먼저 정했고 생성 중 차단도 재 보고 껐다'
 description: '학습한 ALS 모델의 최고 점수(MAP@12 0.0076)는 측정 전에 정한 선(마지막 구매 재추천 0.0234)의 3분의 1이었고 인기 상품보다도 낮았다. 품절 상품을 생성 중에 막는 방식은 막으려던 문제가 실제 카탈로그에 없었고 서빙 중앙값을 62ms에서 369ms로 늘려 개인화를 못 받는 요청을 만들었다. 둘 다 코드는 남기고 켜지 않았다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-reco-not-adopted.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 33

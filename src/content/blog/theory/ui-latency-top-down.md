@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/ui-latency-top-down.png
 title: '느린 UI는 어디서 느린가: 상호작용 하나를 골라 구간으로 나누는 순서'
 description: 'UI가 느릴 때는 사용자가 느낀 상호작용 하나를 고르고 구간으로 나눈 뒤 가장 큰 구간 하나만 엽니다. Google web.dev의 INP 세 구간과 Brendan Gregg의 드릴다운 분석, Slack·LinkedIn·Notion·Trendyol·Taboola 사례로 그 순서와 구간마다 여는 도구를 정리했습니다.'
 date: 2026-10-08
@@ -11,7 +12,6 @@ tags:
   - Observability
   - Distributed Tracing
 category: theory/Performance
-coverImage: /uploads/covers/theory/ui-latency-top-down.svg
 draft: false
 ---
 

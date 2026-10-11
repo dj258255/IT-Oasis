@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-05-wire-protocol.png
 title: 'DB 내부 ⑤: 진짜 psql이 붙는 서버, PostgreSQL wire protocol 해부'
 description: "DB 서버와 클라이언트 사이엔 '프로토콜이라는 계약'이 있다. 그 계약만 지키면 상대는 내가 진짜 PostgreSQL인지 구분하지 못한다. PostgreSQL wire protocol v3를 바이트로 뜯는다: 유일한 변칙인 startup 핸드셰이크와 SSLRequest 거절, [타입 1B][길이 4B][페이로드] 프레임, RowDescription/DataRow/CommandComplete의 세 가지 응답 모양, 그리고 psql 프롬프트(=> / =*> / =!>)를 바꾸는 ReadyForQuery 상태 바이트 한 개까지. 400줄 서버로 실제 psql 14가 접속했고, 좋은 계층 분리 덕에 SQL 실행기는 한 줄도 안 바꿨다. 클라이맥스는 두 psql 터미널이다. 한쪽이 미커밋 UPDATE를 쥔 채로 다른 쪽이 옛 버전을 막힘 없이 읽는, MVCC의 존재 이유가 네트워크 너머에서 증명되는 장면이다. 커넥션당 스레드와 그 뒤에 숨은 굵은 latch의 한계까지 정리한다."
 date: 2026-04-20T00:00:00.000Z
@@ -9,7 +10,6 @@ tags:
   - Network
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 5

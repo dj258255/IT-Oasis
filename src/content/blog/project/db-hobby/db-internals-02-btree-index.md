@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-02-btree-index.png
 title: 'DB 내부 ②: B+Tree 인덱스와 O(log n), 그리고 인덱스는 왜 단순 key→value가 아닌가'
 description: "인덱스는 왜 이진 트리가 아니라 B+Tree인가. 답은 디스크다(노드=페이지, fan-out이 높이를 무너뜨린다). 가장 어려운 노드 분할(리프는 copy-up, 내부는 push-up), 범위 스캔을 공짜로 만드는 리프 사슬, 그리고 유일성을 내려놓는 순간 부딪히는 문제들, 곧 중복 키의 하한 탐색(>= 한 글자가 조용히 틀린 결과를 만든다)과 '인덱스는 후보일 뿐, 진실은 힙에 있다'는 재검사(recheck)까지. 인덱스 vs 풀 스캔을 실측하면 1천 행에서 11배, 10만 행에서 416배로 벌어진다. O(log n)과 O(n)의 모양 그 자체다. 해시·LSM과의 갈림길, PostgreSQL·InnoDB 대조를 C 구현으로 확인하며 정리한다."
 date: 2026-02-10T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - InnoDB
   - C
 category: study/db-hobby
-coverImage: /uploads/covers/project/db-hobby/db-internals-02-btree-index.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 2

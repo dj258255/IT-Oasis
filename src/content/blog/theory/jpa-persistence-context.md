@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/jpa-persistence-context.png
 title: 'JPA 영속성 컨텍스트와 트랜잭션 이해하기'
 description: '@Transactional의 프록시 동작 원리, 영속성 컨텍스트의 1차 캐시와 더티 체킹, 전파 속성, 그리고 실무에서 자주 발생하는 함정까지 정리했습니다.'
 date: 2025-09-24T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Dirty Checking
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/jpa-persistence-context/transaction-basics.svg"
 ---
 
 같은 클래스 안에서 메서드를 호출하면 `@Transactional`이 붙어 있어도 트랜잭션이 시작되지 않습니다. 프록시를 거치지 않고 바로 호출되기 때문입니다. `readOnly = true`는 더티 체킹을 생략해 주지만, 낙관적 락(`@Version`)과 함께 쓰면 그 락이 무력화될 수 있습니다.

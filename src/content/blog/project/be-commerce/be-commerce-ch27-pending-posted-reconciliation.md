@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch27-pending-posted-reconciliation.png
 title: '대사 결과가 맞아도 확정하면 안 되는 경우: Pending과 Posted의 경계'
 description: 'Modern Treasury는 ACH 입금을 pending 단계에서 잠정 대사해 하루를 앞당기고 posted가 오면 다시 대사합니다. BE-commerce 지급 대사는 금액이 맞아도 posted가 아니면 MATCHED로 올리지 않고, 그 결과가 지급 확정의 유일한 입구입니다. 코드로 강제한 것과 합성 report로만 확인한 것을 나눠 적었습니다.'
 date: 2026-09-22
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/erd.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 27

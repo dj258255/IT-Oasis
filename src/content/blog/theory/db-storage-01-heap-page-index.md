@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-storage-01-heap-page-index.png
 title: 'DB 스토리지 내부 ①: Heap, Page, Index, B-Tree'
 description: DB는 행 단위로 일하지 않고 페이지 단위로 일합니다. PostgreSQL 8KB / InnoDB 16KB 페이지 안에 행이 어떻게 살고, 인덱스가 어떻게 페이지 집합을 줄이고, 왜 InnoDB의 UUID PK가 위험한지를 1차 자료 기준으로 정리합니다.
 date: 2026-04-19T00:00:00.000Z
@@ -13,7 +14,6 @@ tags:
   - InnoDB
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-storage/cover-1.svg"
 series: "DB 스토리지 내부"
 seriesOrder: 1
 ---

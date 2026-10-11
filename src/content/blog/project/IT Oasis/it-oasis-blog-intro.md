@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/IT Oasis/it-oasis-blog-intro.png
 title: 'IT Oasis: 이 블로그를 직접 만든 과정'
 description: 'Astro 기반 정적 블로그를 직접 설계하고 구축한 과정. 직접 만든 이유와 기술 스택을 고른 기준을 다룬다.'
 date: 2026-02-18T00:00:00.000Z
@@ -7,7 +8,6 @@ tags:
   - Static Site
   - Blog
 category: personal/IT Oasis
-coverImage: /uploads/project/IT-Oasis/it-oasis-blog-intro/blog-homepage.png
 draft: false
 ---
 

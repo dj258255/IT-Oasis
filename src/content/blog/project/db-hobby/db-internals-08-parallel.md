@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/db-hobby/db-internals-08-parallel.png
 title: 'DB 내부 ⑧: 병렬 실행: latch를 계층별로 걷어내고, 자로 재고, 병목을 고치기'
 description: "커넥션마다 스레드를 줘도 실행이 굵은 latch 하나로 직렬화돼 있으면 멀티코어는 한 코어처럼 돈다. 그 latch를 계층별로 걷어내는 여정: B+Tree latch crabbing(노드별 rwlock, 자식이 안전하면 조상 해제), 병렬 풀 스캔(워커가 disjoint 페이지 범위를 스레드 안전 버퍼 풀 위에서 동시에, 락 없는 워커별 지역 결과), 실제 SELECT 배선(워커는 가시성+WHERE 판정, 출력은 leader, 직렬과 바이트 동일), 병렬 집계(하다가 조용히 틀리던 materialize cap 절단 버그를 발견해 고침), 그리고 진짜 부분 집계(행을 안 모으고 누적만, PostgreSQL의 Partial→Finalize Aggregate, 메모리 O(1)). 그다음 자로 쟀다. 워밍 최고 2.16배(4워커, 이상 4배 대비), 2~4워커 정점 후 하락. 콜드의 천장은 CPU가 아니라 공유 latch였다: 콜드 캐시에서 풀 latch가 디스크 I/O를 직렬화해 8워커가 0.62배(직렬보다 느림). read-in-progress로 I/O를 latch 밖으로 빼자 같은 조건이 2.39배로 올랐다. 측정→수정→재측정의 A/B로 인과를 확증했다. 모든 단계는 ThreadSanitizer로 data race 0을 계측하며."
 date: 2026-06-10T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - Latch
   - C
 category: study/db-hobby
-coverImage: /uploads/project/db-hobby/cover.svg
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 8

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/redis-caching-guide.png
 title: 'Redis와 캐싱, 왜 필요하고 어떻게 써야 할까'
 description: Redis의 내부 구조부터 캐시 전략(Cache-Aside, Write-Through 등), Spring Boot 통합, 실무 주의사항까지 캐싱의 모든 것을 정리한다.
 date: 2025-05-19T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - Architecture
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/redis-caching-guide/13-cpu-cache-learn-lesson.svg"
 ---
 
 

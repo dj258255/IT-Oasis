@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch42-search-quality-engines.png
 title: '검색 품질을 쟀더니 MySQL 이 따라오지 못했다: Lucene, Elasticsearch, OpenSearch 중 앱 안 Lucene 을 고른 이유'
 description: '오타와 어형 변화가 섞인 검색어에서 nDCG@10이 지금 검색(LIKE) 0.071, MySQL FULLTEXT 0.324, Lucene 0.808, Elasticsearch 0.814, OpenSearch 0.798이었다. 측정 전에 정한 기준대로 엔진을 넣었고 세 엔진의 품질 차이가 0.02 안이라 운영 비용으로 앱 안 Lucene을 골랐다. 1차에서는 오타 허용이 blazer를 lazer에 밀리게 했다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-search-quality.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 42

@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch44-genpage-mini.png
 title: 'GenPage를 실제 홈에 붙여 보니 모델보다 입력과 과부하 계약이 먼저 흔들렸다'
 description: '사용자 이력으로 홈 2쪽을 생성하는 작은 GenPage 모델을 만들고 실제 서빙 경로까지 연결했다. 모델 품질은 MAP@12 0.0209로 기준선 0.0234를 넘지 못했지만, 더 큰 문제는 빈 HTTP 본문·학습과 다른 입력·게이트 밖 2쪽 호출이었다. 네 실험을 한 흐름으로 묶어 무엇을 확인하고 기본값을 켜지 않았는지 정리한다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-genpage-mini.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 44

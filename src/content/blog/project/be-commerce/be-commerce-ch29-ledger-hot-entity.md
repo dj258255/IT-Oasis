@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch29-ledger-hot-entity.png
 title: '결제 원장의 Hot Entity: 정합성을 지키면서 처리량을 얻는 법'
 description: '원장에 강한 일관성을 적용해도 특정 계정과 판매자에 쓰기가 몰리면 처리량이 떨어진다. append-only 원장, 잔액 스냅샷, 직렬화 배치 사이에서 무엇을 측정하고 언제 선택해야 하는지 정리했다.'
 date: 2026-09-22
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/erd.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 29

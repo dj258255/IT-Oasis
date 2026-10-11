@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch45-search-filters-scale.png
 title: '검색어와 필터를 함께 걸고 앱 안 Lucene이 몇 건까지 버티는지 쟀다'
 description: '검색어가 있으면 카테고리·가격·재고 필터가 모두 무시되던 검색에 필터와 패싯을 붙였다. 엔진 안에서 걸면 결과 수가 정답과 171개 쿼리 모두 같았고 상위 500개를 받아 DB에서 거르면 95.5%를 잃었다. 복제 카탈로그로 규모를 늘리자 앱 안 Lucene은 300만 건에서 p95 232ms로 지연 예산을 넘었다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-search-filters-scale.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 45

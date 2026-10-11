@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-08-journaling-filesystem.png
 title: '저널링 파일시스템: 절반만 쓰이지 않게'
 description: 쓰기 도중 전원이 나가면 파일시스템은 어떻게 될까. 데이터는 썼는데 디렉터리는 못 썼다면 디스크가 깨진다. 저널링(write-ahead log)은 이걸 막는다. 변경을 제자리에 바로 쓰지 않고 먼저 로그에 모은 뒤, 커밋 표시를 찍고, 그제서야 설치한다. 크래시가 나도 "전부 반영" 또는 "전혀 반영 안 됨" 둘 중 하나라 디스크는 항상 일관적이다. 여기에 삭제(rm)와 빈 블록 재사용까지 더해 읽기 전용이던 FS를 진짜 읽기-쓰기로 키운다.
 date: 2026-06-16T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - QEMU
   - Filesystem
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 9

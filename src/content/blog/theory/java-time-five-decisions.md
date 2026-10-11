@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/java-time-five-decisions.png
 title: '자바에서 시간을 스마트하게 다루는 방법이란?'
 description: '알리바바 클라우드의 Java 시간 API 정리를 예제째 실행해 보고 그 글에 없는 다섯 가지 결정을 채웠습니다. JDK 17, 21, 25와 MySQL 8.4, PostgreSQL 16으로 서머타임, 월말 더하기, 시계 눈금, 포맷 문자, 컬럼 타입별 저장 결과를 직접 확인했고 Cloudflare, Microsoft, GOV.UK의 사고와 알리바바 개발 수첩의 규약을 원문으로 붙였습니다.'
 date: 2026-10-12
@@ -14,7 +15,6 @@ tags:
   - PostgreSQL
   - JDBC
 category: theory/Systems
-coverImage: /uploads/covers/theory/java-time-five-decisions.svg
 draft: false
 ---
 

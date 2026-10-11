@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-05-smp-multicore-locks.png
 title: '멀티코어로 가다: SMP와 락'
 description: 단일 코어 커널을 여러 코어가 함께 도는 SMP 커널로 키운다. SBI HSM으로 보조 코어를 깨워 부팅하고, 스핀락으로 공유 자료구조를 보호하고, 컨텍스트 스위치를 가로지르며 락을 넘기는 baton 방식으로 멀티코어 스케줄러를 만든다. 그 과정에서 만난 가장 고약한 버그, 곧 유저가 tp 레지스터를 덮어 코어 번호가 틀어지던 문제와 그 해결까지 다룬다.
 date: 2026-06-08T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - xv6
   - QEMU
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 6

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-index-04-composite-leftmost.png
 title: '데이터베이스 인덱스 ④: 복합 인덱스와 좌측 컬럼 규칙'
 description: 복합 인덱스는 컬럼들의 정렬 순서를 그대로 B-tree에 반영한 자료구조입니다. 같은 세 컬럼이라도 순서를 바꾸면 전혀 다른 인덱스가 되고, leftmost prefix rule이 활용 방식을 결정합니다. ESR Rule(Equality·Sort·Range) 가이드라인, PG18 skip scan, AND vs OR, INCLUDE와의 차이까지 1차 자료 기준으로 정리.
 date: 2026-04-25T00:00:00.000Z
@@ -13,7 +14,6 @@ tags:
   - Performance
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-index/cover-4.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 4
 ---

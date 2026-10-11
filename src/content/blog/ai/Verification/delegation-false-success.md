@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/ai/Verification/delegation-false-success.png
 title: '코더는 아무것도 하지 않았는데 완료 판정이 두 번 통과했습니다'
 description: 'AI 코더에게 구현을 맡기고 끝났다는 신호를 화면의 완료 문자열로 받았더니 두 번 연속 거짓으로 통과했습니다. 한 번은 자기 명령어를, 한 번은 지난 실행의 흔적을 읽었습니다. 표식을 고치다가 완료 신호를 화면에서 파일로 옮긴 과정입니다.'
 date: 2026-09-16

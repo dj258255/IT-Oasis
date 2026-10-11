@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-03-exec-and-shell.png
 title: 'exec와 유저공간 셸'
 description: 작은 유닉스의 마지막 조각. 실행 중인 프로세스를 디스크의 다른 프로그램으로 바꾸는 런타임 exec(), 그리고 sleep/wakeup·read·wait로 커널 밖에서 도는 유저공간 셸까지. 셸이 fork+exec로 디스크 프로그램을 띄우는 유닉스의 핵심 루프를 완성한다.
 date: 2026-06-04T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - xv6
   - QEMU
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 4

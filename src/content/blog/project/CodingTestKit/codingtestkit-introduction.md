@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/CodingTestKit/codingtestkit-introduction.png
 title: 'CodingTestKit: IDE 안에서 코딩테스트를 완결하는 도구'
 description: 'IntelliJ와 VS Code에서 문제 가져오기, 로컬 테스트, 제출까지 한 번에 하는 코딩테스트 플러그인.'
 date: 2026-03-01
@@ -9,7 +10,6 @@ tags:
   - IntelliJ Plugin
   - VS Code Extension
 category: personal/CodingTestKit
-coverImage: /uploads/project/CodingTestKit/title.png
 draft: false
 series: "CodingTestKit"
 ---

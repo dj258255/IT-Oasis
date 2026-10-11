@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-06-networking.png
 title: '네트워킹: virtio-net과 미니 TCP/IP 스택'
 description: 토이 커널에 네트워크를 붙인다. virtio-net 드라이버로 프레임을 주고받고, 이더넷·ARP·IP·UDP·ICMP를 직접 구현해, QEMU user 네트워킹(SLIRP)을 상대로 게이트웨이 MAC을 ARP로 알아내고, ICMP로 ping을 왕복하고, DNS로 도메인을 해석한다. 패킷 하나가 바이트로 어떻게 조립되는지를 손으로 만져 이해하는 마지막 단계.
 date: 2026-06-12T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - QEMU
   - Network
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 7

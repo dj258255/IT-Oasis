@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch18-settlement-fairness.png
 title: '정산 배치에서 처리량과 가맹점 공정성 중 무엇을 우선할 것인가'
 description: '정산 배치는 틱마다 읽는 양과 순서(id 오름차순)가 정해져 있다. 큰 가맹점 하나가 틱을 다 채우면 뒤 가맹점은 다음 틱으로 밀린다. 정책을 만들어 실측하고 기본값은 꺼 두었다.'
 date: 2026-09-19
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch18-settlement-fairness.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 18

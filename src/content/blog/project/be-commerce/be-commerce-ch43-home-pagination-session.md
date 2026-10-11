@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch43-home-pagination-session.png
 title: '홈을 여러 쪽으로 나눠 만들었다: 커서가 보여 준 것을 들고 다니고, 다음 쪽 순서는 방금 본 상품이 정한다'
 description: 'GenPage처럼 홈을 몇 행씩 나눠 만들고 다음 쪽이 앞 쪽과 그 사이의 세션 활동을 입력으로 받게 했다. 쪽 상태는 서버에 두지 않고 커서에 실었다. 사용자 30명 실측에서 쪽 사이 중복은 0(커서가 없으면 2쪽 평균 8.6개)이었고 세션 반영은 96.7~100%였다. 1차에서는 인기 표에 아동복이 0개라 세션 신호가 조용히 버려지고 있었다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-home-pagination.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 43

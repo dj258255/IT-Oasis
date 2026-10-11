@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch19-virtual-account-reversal.png
 title: '가상계좌에서 결제 완료를 최종 상태로 믿으면 안 되는 이유'
 description: '토스 문서에 따르면 가상계좌는 입금 기한이 지나도 웹훅이 오지 않고 일부 은행은 입금 완료를 보낸 뒤 최대 2분 뒤에 되돌립니다. BE-commerce는 그 두 자리를 상태머신과 만료 배치로 막았지만 입금 웹훅을 그 상태머신에 잇는 연결은 아직 없습니다. 만든 것과 이어지지 않은 것을 코드 기준으로 나눴습니다.'
 date: 2026-09-20
 category: study/be-commerce
-coverImage: /uploads/covers/project/be-commerce/be-commerce-ch19-virtual-account-reversal.svg
 draft: false
 series: "BE-commerce"
 seriesOrder: 19

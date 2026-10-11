@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/replication-order-consensus.png
 title: '복제본 여러 개를 하나처럼 쓰려면 무엇이 필요할까?'
 description: '메이퇀 기술 블로그의 복제 정리 하편을 뼈대로 선형 읽기, 순서를 정하는 번호, 합의, 2PC, Kafka 트랜잭션에 각각 어떤 비용이 드는지 정리했습니다. etcd 세 대, PostgreSQL 두 대, Kafka 한 대로 읽기 지연과 끊긴 노드의 동작, 리더 교체 중의 쓰기, 조정자가 멈춘 2PC의 잠금, 열린 트랜잭션에 붙잡히는 컨슈머를 직접 실행했고 Google, Roblox, Amazon, PingCAP, OceanBase, 메이퇀이 공개한 글과 논문에서 각자의 선택을 옮겼습니다.'
 date: 2026-10-12
@@ -15,7 +16,6 @@ tags:
 category: theory/Database
 series: "데이터 복제"
 seriesOrder: 2
-coverImage: /uploads/covers/theory/replication-order-consensus.svg
 draft: false
 ---
 

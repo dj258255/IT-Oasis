@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/Balruno/balruno-retrospective.png
 title: '발루노: 게임 밸런스 수치를 스프레드시트로 관리하는 워크스페이스'
 description: '발루노는 캐릭터 스탯, 무기 수치, 성장 곡선처럼 표에 쌓이는 게임 기획 데이터를 스프레드시트로 편집하고, 버전별 변경 이력과 몬테카를로 시뮬레이션까지 한곳에서 관리하는 1인 프로젝트다. 구조와 트레이드오프, 8개월 작업 기록을 다룬다.'
 date: 2026-01-17
@@ -13,7 +14,6 @@ tags:
   - Side Project
   - Game Balance
 category: personal/Balruno
-coverImage: /uploads/project/Balruno/intro/data-sheet.png
 draft: false
 ---
 

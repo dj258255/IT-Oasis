@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch38-stock-lock-real-db.png
 title: '재고 차감 락을 인메모리 DB로 고르면 틀린다: 실 MySQL에서 낙관적 락이 가장 느렸다'
 description: '재고 20개에 스레드 30개가 동시에 차감하는 실험에서 세 락 전략 모두 초과판매는 0이었고 소요 시간만 갈렸다. H2 인메모리에서는 낙관적 락이 비관적 락보다 빨랐는데 실 MySQL 8.4에서는 조건부 UPDATE 40ms, 비관적 락 75ms, 낙관적 락 151ms로 순서가 뒤집혔다. 고경합 150스레드에서는 조건부 대 낙관적이 79ms 대 429ms였다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-lock-compare.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 38

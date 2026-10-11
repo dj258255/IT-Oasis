@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch8-reconciliation-judgement.png
 title: '대사 담당자가 결제 한 건의 진실을 찾는 데 13번 확인해야 했다: 근거를 한 화면에 모은 이유'
 description: '결제 대사 담당자가 한 주문의 원인을 판단하려면 API 7회와 목록 검색 6회를 거쳐야 했다. 여러 도메인의 근거를 읽기 전용 타임라인으로 모으고, 확정 가능한 원인만 근거와 함께 제안하도록 바꾼 과정을 정리한다.'
 date: 2026-08-03
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/thumbs/be-commerce-ch14.svg"
 draft: false
 series: "BE-commerce"
 seriesOrder: 10

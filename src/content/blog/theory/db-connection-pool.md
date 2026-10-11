@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-connection-pool.png
 title: 'DB 커넥션 풀, 왜 필요하고 어떻게 설정해야 할까'
 description: JDBC의 매번 커넥션 생성 문제부터 HikariCP의 동작 원리, 적정 커넥션 수 공식, 데드락 방지 전략까지 DB 커넥션 풀을 깊이 있게 정리했습니다.
 date: 2025-08-23T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Performance
 category: theory/Database
 draft: false
-coverImage: /uploads/covers/theory/db-connection-pool.svg
 ---
 
 

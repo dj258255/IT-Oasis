@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/java-concurrency-collections.png
 title: 'Java 동시성 컬렉션과 유틸리티'
 description: ConcurrentHashMap, CopyOnWriteArrayList, BlockingQueue 등 java.util.concurrent 패키지의 고성능 동시성 자료구조와 동작 원리를 정리한다.
 date: 2025-07-06T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - Thread Safety
 category: theory/Concurrency
 draft: false
-coverImage: "/uploads/theory/java-concurrency-collections/segment-lock-diagram.svg"
 series: "동시성과 락"
 seriesOrder: 2
 ---

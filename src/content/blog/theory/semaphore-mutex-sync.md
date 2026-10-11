@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/semaphore-mutex-sync.png
 title: '세마포어와 뮤텍스 - 동기화 메커니즘의 이해'
 description: 임계영역, 세마포어, 뮤텍스의 개념과 차이를 OS 레벨부터 Java 구현까지 정리하고, 실무에서 흔히 혼동하는 부분을 명확히 해봤습니다.
 date: 2025-06-04T00:00:00.000Z
@@ -11,7 +12,6 @@ tags:
   - Java
 category: theory/Concurrency
 draft: false
-coverImage: "/uploads/theory/semaphore-mutex-sync/critical-section-critical-section.svg"
 series: "동시성과 락"
 seriesOrder: 1
 ---

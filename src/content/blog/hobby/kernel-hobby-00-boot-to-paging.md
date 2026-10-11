@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/hobby/kernel-hobby-00-boot-to-paging.png
 title: '부팅부터 페이징까지'
 description: OS를 깊이 이해하려고 C로 바닥부터 만든 RISC-V 토이 커널. QEMU virt에서 S-mode 부팅, UART 출력, 트랩/타이머 인터럽트, PLIC 기반 키보드 입력과 커널 셸, 물리 페이지 할당기, 그리고 Sv39 페이징까지 직접 구현한 과정을 정리한다. xv6(MIT 6.S081)를 참고서로 진행.
 date: 2026-05-16T00:00:00.000Z
@@ -10,7 +11,6 @@ tags:
   - xv6
   - QEMU
 category: study/kernel-hobby
-coverImage: "/uploads/hobby/kernel-hobby-c/cover.svg"
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 1

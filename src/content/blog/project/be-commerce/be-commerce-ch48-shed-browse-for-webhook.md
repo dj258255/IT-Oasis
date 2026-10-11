@@ -1,9 +1,9 @@
 ---
+coverImage: /uploads/covers/ai-generated/project/be-commerce/be-commerce-ch48-shed-browse-for-webhook.png
 title: '조회가 몰리면 웹훅이 10초를 넘겨서 조회를 먼저 돌려보냈다'
 description: 'PG 동시 호출 상한은 PG를 부르는 워커만 묶는다. PG가 5초 늦는 동안 상품 조회가 초당 200건 더해지자 웹훅의 15.6%가 토스 규약(10초 안에 2xx)을 넘겼다. 진행 중인 조회를 16개로 묶고 넘치는 조회를 바로 503으로 돌려보내자 같은 부하에서 웹훅 p95가 152~186ms, 10초 초과가 0%가 됐다.'
 date: 2026-09-24
 category: study/be-commerce
-coverImage: "/uploads/project/be-commerce/diagrams/flow-shed-browse-webhook.svg"
 draft: false
 unlisted: true
 series: "BE-commerce"

@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/multithreading-and-synchronization.png
 title: '멀티스레드와 동기화를 한 줄기로: 스레드, 락, 락프리, 메모리 순서, 거짓 공유'
 description: '스레드가 무엇인지부터 락, 조건 변수, 락프리, 메모리 순서, 거짓 공유까지를 한 줄기로 잇고 Java로 직접 쟀습니다. 같은 64바이트 안의 두 카운터는 떨어뜨렸을 때의 7.5배가 걸렸고 일반 필드에서는 3,600만 회 중 787만 회에서 두 스레드가 둘 다 상대의 옛 값을 읽었습니다. 깊은 내용은 시리즈의 다른 글로 이었습니다.'
 date: 2026-10-11
@@ -15,7 +16,6 @@ tags:
   - LongAdder
 category: theory/Concurrency
 draft: false
-coverImage: /uploads/covers/theory/multithreading-and-synchronization.svg
 series: "동시성과 락"
 seriesOrder: 0
 ---

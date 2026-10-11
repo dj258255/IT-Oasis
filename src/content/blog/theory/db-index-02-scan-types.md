@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/db-index-02-scan-types.png
 title: '데이터베이스 인덱스 ②: 스캔의 종류와 옵티마이저의 선택'
 description: 인덱스가 있다고 모든 쿼리가 같은 방식으로 그 인덱스를 쓰는 것은 아닙니다. PostgreSQL의 Sequential / Index / Index-Only / Bitmap Scan 4가지 전략과, 옵티마이저가 통계 기반 셀렉티비티 추정으로 그 중 하나를 고르는 메커니즘을 1차 자료 기준으로 정리합니다. correlation, work_mem, BitmapAnd, Index Cond vs Filter까지.
 date: 2026-04-23T00:00:00.000Z
@@ -13,7 +14,6 @@ tags:
   - Performance
 category: theory/Database
 draft: false
-coverImage: "/uploads/theory/db-index/cover-2.svg"
 series: "데이터베이스 인덱스"
 seriesOrder: 2
 ---

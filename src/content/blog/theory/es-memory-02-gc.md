@@ -1,4 +1,5 @@
 ---
+coverImage: /uploads/covers/ai-generated/theory/es-memory-02-gc.png
 title: 'JVM 메모리 ②: GC 알고리즘과 Stop-the-World'
 description: Serial/Parallel/G1/ZGC/Shenandoah 각각이 언제 STW로 멈추고 언제 concurrent로 돌아가는지 OpenJDK JEP와 Oracle JDK 17 공식 문서 기준으로 정리했습니다. Shenandoah가 Oracle JDK 빌드에 빠져있다는 사실까지.
 date: 2026-04-11T00:00:00.000Z
@@ -12,7 +13,6 @@ tags:
   - Stop-the-World
 category: theory/JVM-Memory
 draft: false
-coverImage: "/uploads/theory/es-memory/cover-2.svg"
 series: "JVM 메모리"
 seriesOrder: 2
 ---
