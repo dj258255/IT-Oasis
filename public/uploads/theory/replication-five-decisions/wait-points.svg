@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#868e96"/></marker></defs>
+  <rect width="1200" height="520" fill="#ffffff"/>
+  <text x="600" y="40" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">쓰기 하나가 지나가는 길과 "성공"이라고 답할 수 있는 네 지점</text>
+
+  <rect x="60" y="80" width="210" height="150" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="165" y="108" font-size="16" font-weight="800" fill="#1f2328" text-anchor="middle">주 서버</text>
+  <text x="165" y="140" font-size="14" fill="#59636e" text-anchor="middle">로그를 자기 디스크에 씀</text>
+
+  <rect x="930" y="80" width="210" height="150" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="1035" y="108" font-size="16" font-weight="800" fill="#1f2328" text-anchor="middle">복제본</text>
+
+  <line x1="270" y1="150" x2="926" y2="150" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="598" y="140" font-size="14" fill="#59636e" text-anchor="middle">로그 전송 (네트워크)</text>
+
+  <g font-size="14" font-weight="700" text-anchor="middle">
+    <circle cx="165" cy="190" r="16" fill="#a5c4de"/><text x="165" y="195" fill="#1f2328">1</text>
+    <circle cx="975" cy="150" r="16" fill="#f0c98a"/><text x="975" y="155" fill="#1f2328">2</text>
+    <circle cx="1035" cy="150" r="16" fill="#f0c98a"/><text x="1035" y="155" fill="#1f2328">3</text>
+    <circle cx="1095" cy="150" r="16" fill="#f0c98a"/><text x="1095" y="155" fill="#1f2328">4</text>
+  </g>
+  <text x="975" y="196" font-size="13" fill="#59636e" text-anchor="middle">받음</text>
+  <text x="1035" y="196" font-size="13" fill="#59636e" text-anchor="middle">디스크</text>
+  <text x="1095" y="196" font-size="13" fill="#59636e" text-anchor="middle">적용</text>
+
+  <g font-size="15">
+    <rect x="60" y="270" width="1080" height="46" rx="6" fill="#e7f0f8" stroke="#a5c4de"/>
+    <text x="80" y="299" font-weight="800" fill="#1f2328">1 주 서버의 디스크까지</text>
+    <text x="330" y="299" fill="#1f2328">비동기. 가장 빠르고 주 서버가 죽으면 그 쓰기가 사라질 수 있다</text>
+    <rect x="60" y="324" width="1080" height="46" rx="6" fill="#fff4e6" stroke="#f0c98a"/>
+    <text x="80" y="353" font-weight="800" fill="#1f2328">2 복제본이 받을 때까지</text>
+    <text x="330" y="353" fill="#1f2328">복제본의 프로세스가 죽어도 남는다. 복제본의 운영체제가 죽으면 사라질 수 있다</text>
+    <rect x="60" y="378" width="1080" height="46" rx="6" fill="#fff4e6" stroke="#f0c98a"/>
+    <text x="80" y="407" font-weight="800" fill="#1f2328">3 복제본의 디스크까지</text>
+    <text x="330" y="407" fill="#1f2328">두 서버의 저장소가 함께 망가져야 사라진다. 복제본에서 읽으면 아직 안 보일 수 있다</text>
+    <rect x="60" y="432" width="1080" height="46" rx="6" fill="#fff4e6" stroke="#f0c98a"/>
+    <text x="80" y="461" font-weight="800" fill="#1f2328">4 복제본이 적용할 때까지</text>
+    <text x="330" y="461" fill="#1f2328">복제본에서 읽어도 보인다. 복제본의 적용이 늦는 만큼 커밋이 늦어진다</text>
+  </g>
+  <text x="60" y="504" font-size="13" fill="#868e96">PostgreSQL의 synchronous_commit 값으로는 차례로 local, remote_write, on, remote_apply</text>
+</svg>
