@@ -16,7 +16,7 @@
   </g>
 
   <text x="72" y="462" font-size="15" font-weight="700" fill="#1f2328">etcd 3.5, PostgreSQL 16, Kafka 3.9로 실행한 값</text>
-  <text x="72" y="494" font-size="15" fill="#59636e">etcd의 선형 읽기는 12ms 안팎으로 0.3ms인 직렬 읽기의 40배가 넘고 쓰기와 겹치는 범위다</text>
+  <text x="72" y="494" font-size="15" fill="#59636e">etcd의 선형 읽기는 리더에서 12ms 안팎으로 0.3ms인 직렬 읽기의 40배가 넘고 쓰기와 겹치는 범위다</text>
   <text x="72" y="522" font-size="15" fill="#59636e">2PC의 조정자가 10초 자리를 비우면 같은 행을 고치려던 쓰기도 10초 막힌다</text>
   <text x="72" y="550" font-size="15" fill="#59636e">열린 트랜잭션 하나가 그 파티션의 read_committed 컨슈머를 트랜잭션이 끝날 때까지 붙잡는다</text>
   <text x="1128" y="592" font-size="14" font-weight="700" fill="#868e96" text-anchor="end">IT Oasis</text>
