@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#868e96"/></marker></defs>
+  <rect width="1200" height="470" fill="#ffffff"/>
+  <text x="600" y="40" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">자동 승격 뒤 두 데이터센터에 서로 없는 쓰기가 남는 과정</text>
+
+  <text x="300" y="84" font-size="16" font-weight="800" fill="#1f2328" text-anchor="middle">동부 (원래 주 서버)</text>
+  <text x="900" y="84" font-size="16" font-weight="800" fill="#1f2328" text-anchor="middle">서부 (복제본)</text>
+
+  <rect x="120" y="104" width="360" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="300" y="138" font-size="15" fill="#1f2328" text-anchor="middle">쓰기 A, B, C를 받고 성공이라고 답함</text>
+  <rect x="720" y="104" width="360" height="56" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <text x="900" y="138" font-size="15" fill="#1f2328" text-anchor="middle">A, B까지만 복제됨</text>
+  <line x1="480" y1="132" x2="716" y2="132" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="598" y="122" font-size="13" fill="#59636e" text-anchor="middle">복제</text>
+
+  <rect x="120" y="196" width="960" height="44" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <text x="600" y="224" font-size="15" font-weight="800" fill="#1f2328" text-anchor="middle">두 곳 사이의 연결이 끊김. 승격 도구가 서부를 새 주 서버로 올림</text>
+
+  <rect x="120" y="276" width="360" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="300" y="310" font-size="15" fill="#1f2328" text-anchor="middle">C가 남아 있음 (서부에 없음)</text>
+  <rect x="720" y="276" width="360" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/>
+  <text x="900" y="310" font-size="15" fill="#1f2328" text-anchor="middle">새 쓰기 D, E를 받음 (동부에 없음)</text>
+
+  <rect x="120" y="368" width="960" height="70" rx="8" fill="#ffffff" stroke="#d1d9e0"/>
+  <text x="600" y="398" font-size="16" font-weight="800" fill="#c92a2a" text-anchor="middle">어느 쪽을 주 서버로 정해도 다른 쪽의 쓰기가 빠진다</text>
+  <text x="600" y="424" font-size="14" fill="#59636e" text-anchor="middle">연결이 돌아와도 한쪽으로 되돌릴 수 없고 빠진 쓰기를 사람이 맞춰야 한다</text>
+</svg>
