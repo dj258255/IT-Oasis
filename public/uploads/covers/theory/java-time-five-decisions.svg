@@ -3,8 +3,8 @@
   <rect width="1200" height="630" fill="#ffffff"/>
   <text x="72" y="92" font-size="14" font-weight="700" fill="#1971c2">Java · 시간</text>
   <line x1="72" y1="108" x2="212" y2="108" stroke="#1971c2" stroke-width="1.2"/>
-  <text x="72" y="176" font-size="46" font-weight="800" fill="#212529">Java에서 시간을 다룰 때 정하는 다섯 가지</text>
-  <text x="72" y="231" font-size="30" font-weight="700" fill="#212529">타입, 더하기, 재기, 문자열, 저장</text>
+  <text x="72" y="176" font-size="46" font-weight="800" fill="#212529">자바에서 시간을 스마트하게 다루는 방법이란?</text>
+  <text x="72" y="231" font-size="30" font-weight="700" fill="#212529">정할 것 다섯 가지: 타입, 더하기, 재기, 문자열, 저장</text>
   <text x="72" y="282" font-size="17" font-weight="500" fill="#59636e">알리바바 클라우드의 정리를 실행해 보고 빠진 결정을 채웠다</text>
 
   <g font-size="15" font-weight="700" text-anchor="middle">
