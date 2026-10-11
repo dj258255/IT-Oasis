@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#868e96"/></marker></defs>
+  <rect width="1200" height="600" fill="#ffffff"/>
+
+  <text x="300" y="42" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">같은 64바이트 블록에 둔 경우</text>
+  <text x="900" y="42" font-size="18" font-weight="800" fill="#1f2328" text-anchor="middle">다른 블록으로 떨어뜨린 경우</text>
+
+  <!-- left -->
+  <rect x="80" y="70" width="180" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="170" y="104" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">코어 0: A를 증가</text>
+  <rect x="340" y="70" width="180" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="430" y="104" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">코어 1: B를 증가</text>
+  <rect x="80" y="190" width="440" height="64" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
+  <rect x="100" y="204" width="90" height="36" rx="4" fill="#ffffff" stroke="#f0c98a"/><text x="145" y="228" font-size="15" font-weight="800" fill="#1f2328" text-anchor="middle">A</text>
+  <rect x="200" y="204" width="90" height="36" rx="4" fill="#ffffff" stroke="#f0c98a"/><text x="245" y="228" font-size="15" font-weight="800" fill="#1f2328" text-anchor="middle">B</text>
+  <text x="400" y="228" font-size="14" fill="#59636e" text-anchor="middle">캐시 라인 하나</text>
+  <line x1="170" y1="126" x2="170" y2="186" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="430" y1="126" x2="430" y2="186" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="300" y="286" font-size="15" fill="#1f2328" text-anchor="middle">쓰려면 라인을 혼자 가져야 한다.</text>
+  <text x="300" y="310" font-size="15" fill="#1f2328" text-anchor="middle">두 코어가 쓸 때마다 라인을 서로 빼앗는다.</text>
+
+  <!-- right -->
+  <rect x="680" y="70" width="180" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="770" y="104" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">코어 0: A를 증가</text>
+  <rect x="940" y="70" width="180" height="56" rx="8" fill="#f6f8fa" stroke="#d1d9e0"/><text x="1030" y="104" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">코어 1: B를 증가</text>
+  <rect x="680" y="190" width="200" height="64" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <rect x="700" y="204" width="90" height="36" rx="4" fill="#ffffff" stroke="#a5c4de"/><text x="745" y="228" font-size="15" font-weight="800" fill="#1f2328" text-anchor="middle">A</text>
+  <rect x="920" y="190" width="200" height="64" rx="8" fill="#e7f0f8" stroke="#a5c4de"/>
+  <rect x="940" y="204" width="90" height="36" rx="4" fill="#ffffff" stroke="#a5c4de"/><text x="985" y="228" font-size="15" font-weight="800" fill="#1f2328" text-anchor="middle">B</text>
+  <line x1="770" y1="126" x2="770" y2="186" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="1030" y1="126" x2="1030" y2="186" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="900" y="286" font-size="15" fill="#1f2328" text-anchor="middle">코어마다 자기 라인을 계속 갖고 있다.</text>
+  <text x="900" y="310" font-size="15" fill="#1f2328" text-anchor="middle">빼앗을 일이 없다.</text>
+
+  <!-- bars -->
+  <text x="80" y="372" font-size="16" font-weight="800" fill="#1f2328">칸마다 2천만 번 증가하는 데 걸린 시간 (중앙값, Apple M2 Pro, OpenJDK 21)</text>
+  <text x="80" y="418" font-size="15" fill="#1f2328">같은 64바이트 블록 (0과 8바이트)</text>
+  <rect x="420" y="400" width="700" height="26" rx="4" fill="#f0c98a"/><text x="1110" y="419" font-size="14" font-weight="800" fill="#1f2328" text-anchor="end">749ms</text>
+  <text x="80" y="462" font-size="15" fill="#1f2328">같은 64바이트 블록 (0과 56바이트)</text>
+  <rect x="420" y="444" width="701" height="26" rx="4" fill="#f0c98a"/><text x="1110" y="463" font-size="14" font-weight="800" fill="#1f2328" text-anchor="end">750.5ms</text>
+  <text x="80" y="506" font-size="15" fill="#1f2328">옆 블록 (0과 64바이트)</text>
+  <rect x="420" y="488" width="91" height="26" rx="4" fill="#a5c4de"/><text x="521" y="507" font-size="14" font-weight="800" fill="#1f2328">97.4ms</text>
+  <text x="80" y="550" font-size="15" fill="#1f2328">멀리 (0과 1024바이트)</text>
+  <rect x="420" y="532" width="91" height="26" rx="4" fill="#a5c4de"/><text x="521" y="551" font-size="14" font-weight="800" fill="#1f2328">97.5ms</text>
+</svg>
