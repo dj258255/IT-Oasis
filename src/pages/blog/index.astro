@@ -2,44 +2,28 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
 import { getPublishedPosts } from '../../lib/posts';
-import { getCategoryDisplayKo } from '../../lib/config';
+import { TOPICS } from '../../data/topics';
 
-// 스토리는 세 줄로 나눈다. 왼쪽은 모든 글의 최신순, 가운데는 프로젝트, 오른쪽은 이론과 기타.
-// 가운데·오른쪽 줄은 위의 선택 상자로 하위 분류를 고르면 그 줄만 바뀐다.
+// 스토리는 두 줄로 나눈다. 왼쪽은 모든 글의 최신순, 오른쪽은 주제 하나의 글.
+// 오른쪽 줄은 위의 선택 상자로 주제를 고르면 그 줄만 바뀐다. 글 하나가 주제 둘에 걸릴 수 있다.
 const posts = await getPublishedPosts();
-const catDisplayKo = getCategoryDisplayKo();
-const ko = (key: string) => catDisplayKo.get(key) || key;
-const parentOf = (p: (typeof posts)[number]) => p.data.category?.split('/')[0] || '';
 
-const PROJECT_PARENTS = ['study', 'personal', 'team'];
-const projectPosts = posts.filter((p) => PROJECT_PARENTS.includes(parentOf(p)));
-const otherPosts = posts.filter((p) => !PROJECT_PARENTS.includes(parentOf(p)));
-
-type Option = { key: string; label: string; count: number };
-function countBy(list: typeof posts, keyOf: (p: (typeof posts)[number]) => string): Option[] {
-  const m = new Map<string, number>();
-  for (const p of list) m.set(keyOf(p), (m.get(keyOf(p)) || 0) + 1);
-  return [...m.entries()]
-    .map(([key, count]) => ({ key, label: ko(key.split('/').pop() || key), count }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ko'));
-}
-// 프로젝트는 프로젝트(하위 분류) 단위로, 이론은 주제 단위로, 기타는 상위 분류 단위로 고른다
-const projectOptions = countBy(projectPosts, (p) => p.data.category || '');
-const theoryPosts = otherPosts.filter((p) => parentOf(p) === 'theory');
-const theoryOptions = countBy(theoryPosts, (p) => p.data.category || '');
-const etcOptions = countBy(otherPosts.filter((p) => parentOf(p) !== 'theory'), (p) => parentOf(p));
+const topicOptions = TOPICS.map((t) => ({
+  key: t.id as string,
+  label: t.name,
+  count: posts.filter((p) => (p.data.topics as string[]).includes(t.id)).length,
+})).filter((o) => o.count > 0);
 
 const columns = [
   { id: 'latest', title: '최신 스토리', list: posts },
-  { id: 'project', title: '프로젝트', list: projectPosts },
-  { id: 'other', title: '이론 및 기타', list: otherPosts },
+  { id: 'topic', title: '주제', list: posts },
 ];
 ---
 
 <BaseLayout title="스토리 — IT Oasis" wide>
   <h1 class="sr-only">스토리</h1>
 
-  {/* 모바일·태블릿: 세 줄을 나란히 둘 수 없어 한 줄씩 고른다 */}
+  {/* 모바일·태블릿: 두 줄을 나란히 둘 수 없어 한 줄씩 고른다 */}
   <div class="story-switch" role="tablist" aria-label="스토리 줄 고르기">
     {columns.map((c, i) => (
       <button type="button" class:list={['story-switch-btn', { active: i === 0 }]} data-col={c.id} role="tab" aria-selected={i === 0 ? 'true' : 'false'}>
@@ -56,37 +40,22 @@ const columns = [
           <span class="story-col-count" data-count>{c.list.length}편</span>
         </header>
 
-        {c.id === 'project' && (
-          <select class="story-select" data-filter aria-label="프로젝트 고르기">
-            <option value="">전체 프로젝트 ({c.list.length})</option>
-            {projectOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
-          </select>
-        )}
-        {c.id === 'other' && (
-          <select class="story-select" data-filter aria-label="이론·기타 분류 고르기">
-            <option value="">전체 ({c.list.length})</option>
-            <optgroup label="이론">
-              <option value="theory">이론 전체 ({theoryPosts.length})</option>
-              {theoryOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
-            </optgroup>
-            {etcOptions.length > 0 && (
-              <optgroup label="기타">
-                {etcOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
-              </optgroup>
-            )}
+        {c.id === 'topic' && (
+          <select class="story-select" data-filter aria-label="주제 고르기">
+            {topicOptions.map((o) => <option value={o.key}>{o.label} ({o.count})</option>)}
           </select>
         )}
 
         <div class="story-col-list">
           {c.list.map((post, i) => (
-            <div class="post-card-wrapper" data-post-category={post.data.category || ''} data-post-parent={post.data.category?.split('/')[0] || ''}>
+            <div class="post-card-wrapper" data-post-topics={post.data.topics.join(' ')}>
               <PostCard
                     title={post.data.title}
                     description={post.data.description}
                     date={post.data.date}
                     slug={post.id}
                     tags={post.data.tags}
-                    category={post.data.category}
+                    topics={post.data.topics}
                     coverImage={post.data.coverImage}
                     index={i}
                   />
@@ -98,7 +67,7 @@ const columns = [
     ))}
   </div>
 
-  {/* 무한 스크롤: 이 표식이 화면 가까이 오면 세 줄 모두 다음 묶음을 보여 준다 */}
+  {/* 무한 스크롤: 이 표식이 화면 가까이 오면 두 줄 모두 다음 묶음을 보여 준다 */}
   <div id="posts-sentinel" aria-hidden="true"></div>
 
   <style>
@@ -143,7 +112,7 @@ const columns = [
       border-bottom-color: #e6edf3;
     }
 
-    /* ── 세 줄 ── */
+    /* ── 두 줄 ── */
     .story-cols {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -161,8 +130,12 @@ const columns = [
         display: none;
       }
       .story-cols {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1.5rem;
+        /* 최신 한 줄, 주제 한 줄. 줄마다 카드를 한 장씩 세로로 쌓는다.
+           화면 폭을 다 쓰면 카드 한 장이 화면 반을 차지하므로 폭을 묶어 가운데에 둔다 */
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2rem;
+        max-width: 58rem;
+        margin-inline: auto;
       }
       .story-col,
       .story-col.active {
@@ -323,7 +296,7 @@ const columns = [
       function filtered(col: (typeof columns)[number]) {
         const key = col.select?.value || '';
         if (!key) return col.cards;
-        return col.cards.filter((c) => c.dataset.postCategory === key || c.dataset.postParent === key);
+        return col.cards.filter((c) => (c.dataset.postTopics || '').split(' ').includes(key));
       }
 
       // 한 줄이라도 더 보여 줄 글이 남았으면 false

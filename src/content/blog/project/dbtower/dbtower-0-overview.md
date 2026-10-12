@@ -13,6 +13,9 @@ tags:
   - MongoDB
   - MCP
 category: personal/DBTower
+topics:
+  - projects
+  - database
 draft: false
 ---
 

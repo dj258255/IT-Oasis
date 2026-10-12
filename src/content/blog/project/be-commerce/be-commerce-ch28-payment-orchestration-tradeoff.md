@@ -4,6 +4,8 @@ title: '결제 오케스트레이션은 장애를 줄이는가, 복잡성을 옮
 description: '배민은 카드 결제에 PG 세 곳을 붙이고 Adyen은 오케스트레이션이 복잡성을 없애지 않는다고 씁니다. BE-commerce에는 failover 라우팅 코드와 규칙 테스트가 있지만 기본값은 꺼져 있고 경로는 가짜 PG 둘입니다. 무엇을 코드로 강제했고 무엇을 검증하지 못했는지 나눠 적었습니다.'
 date: 2026-09-22
 category: study/be-commerce
+topics:
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 28

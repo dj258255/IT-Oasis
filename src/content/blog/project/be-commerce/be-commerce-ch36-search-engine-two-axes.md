@@ -4,6 +4,8 @@ title: '검색 엔진을 넣을지 지연으로 먼저 재 봤다: 지연 축은
 description: '상품 목록 페이지 지연의 82.5%가 패싯 집계였다. 검색 엔진 도입 기준을 측정 전에 정해 두고 쟀더니 300ms를 넘긴 원인은 집계가 아니라 포화였고 패싯을 60초 캐시하자 패싯 p95가 90.9ms에서 5.7ms로 줄어 엔진을 검토할 조건이 사라졌다. 그런데 이커머스가 검색 엔진을 들이는 큰 이유는 지연이 아니라 품질이고 그 축은 아직 재지 않았다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - search
 draft: false
 series: "BE-commerce"
 seriesOrder: 36

@@ -4,6 +4,8 @@ title: '캐시 값을 몇 바이트부터 압축할까: 교차점은 쟀고, 임
 description: 'Redis 캐시 값을 압축하면 187B에서는 오히려 7% 커지고 1KB에서는 66% 줄었다. 손익이 갈리는 교차점은 187~279B였지만 임계값은 1KB로 정했다. 코덱은 통념과 달리 SNAPPY가 LZ4보다 CPU를 덜 썼고 이유는 확인하지 못했다. 그리고 값은 정했지만 켜지 않았다. 적용할 캐시가 없었다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - performance
 draft: false
 series: "BE-commerce"
 seriesOrder: 39

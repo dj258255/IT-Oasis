@@ -4,6 +4,8 @@ title: '결제 API는 타임아웃됐는데, 카드 승인은 이미 됐다면?'
 description: '결제의 실패와 모름을 구분하고 조회·보상·웹훅으로 정합성을 복구한 과정. 타임아웃은 UNKNOWN으로 남겨 복구 배치가 확정한다. 승인 뒤 내부 실패는 보상으로 되돌리고, failover는 요청이 PG에 닿지 못한 경우로 한정한다.'
 date: 2026-03-02
 category: study/be-commerce
+topics:
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 2

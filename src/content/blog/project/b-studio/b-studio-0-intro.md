@@ -12,6 +12,9 @@ tags:
   - Agent
   - Sandbox
 category: personal/b-studio
+topics:
+  - projects
+  - ai
 draft: false
 series: "b-studio"
 seriesOrder: 0

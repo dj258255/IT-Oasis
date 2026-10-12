@@ -4,6 +4,8 @@ title: '결과를 모르는 결제의 복구가 확정 못 한 건에 막혀 뒤
 description: 'PG가 "진행 중"이라고 답한 미확정 결제가 매 주기 복구 쿼리의 앞자리를 다시 차지했다. 그런 건 100개 뒤의 500건은 5분 동안 0건 풀렸고 오래된 순 정렬을 명시해도 같았다. 확정하지 못한 건의 다음 시도를 1·2·4·8분 뒤로 미루자 500건이 60초에 풀렸다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - payments
 draft: false
 unlisted: true
 series: "BE-commerce"

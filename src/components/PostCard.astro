@@ -1,6 +1,7 @@
 ---
 import { translateCategory } from '../lib/utils';
 import { base, assetPath, getCategoryDisplayKo } from '../lib/config';
+import { topicName } from '../data/topics';
 
 interface Props {
   title: string;
@@ -9,12 +10,14 @@ interface Props {
   slug: string;
   tags?: string[];
   category?: string;
+  /** 주제 id. 있으면 분류 자리에 대표 주제를 보여 준다 */
+  topics?: string[];
   coverImage?: string;
   index?: number;
   compact?: boolean;
 }
 
-const { title, description, date, slug, tags = [], category, coverImage: rawCoverImage, index = 0, compact = false } = Astro.props;
+const { title, description, date, slug, tags = [], category, topics = [], coverImage: rawCoverImage, index = 0, compact = false } = Astro.props;
 const coverImage = rawCoverImage || '/uploads/banners/default-post-cover.png';
 
 const formattedDate = date.toLocaleDateString('ko-KR', {
@@ -24,7 +27,7 @@ const formattedDate = date.toLocaleDateString('ko-KR', {
 });
 
 const catDisplayKo = getCategoryDisplayKo();
-const categoryKo = category ? translateCategory(category, catDisplayKo) : '';
+const categoryKo = topics.length > 0 ? topicName(topics[0]) : category ? translateCategory(category, catDisplayKo) : '';
 ---
 
 <article class="group">
@@ -59,7 +62,7 @@ const categoryKo = category ? translateCategory(category, catDisplayKo) : '';
       </p>
       <div class="flex items-center gap-2 mt-auto flex-wrap">
         <time class="post-meta-badge date-badge">{formattedDate}</time>
-        {category && (
+        {categoryKo && (
           <span class="post-meta-badge category-badge">{categoryKo}</span>
         )}
       </div>

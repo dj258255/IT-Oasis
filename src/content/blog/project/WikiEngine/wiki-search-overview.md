@@ -12,6 +12,9 @@ tags:
   - Search Engine
   - Architecture
 category: personal/WikiEngine
+topics:
+  - projects
+  - search
 series: "WikiEngine"
 seriesOrder: 0
 draft: false

@@ -4,6 +4,9 @@ title: '정산을 떼어 낼 근거 하나를 기각했다: 그 실험이 대신
 description: '"정산 배치가 결제를 느리게 한다"는 가설은 배치를 7번 연달아 돌려도 결제 p95가 변하지 않아 기각했다. 커넥션 풀 20개 중 최대 15개를 썼고 대기는 0이었다. 대신 그 실험의 1차 실행에서 결제 승인 70%가 500으로 무너졌고 원인은 포인트 적립의 낙관적 락 충돌이었다. 적립을 DB 원자 증가로 바꿔 같은 최악 조건의 승인 성공률을 39.6%에서 100%로 올렸다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - distributed
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 37

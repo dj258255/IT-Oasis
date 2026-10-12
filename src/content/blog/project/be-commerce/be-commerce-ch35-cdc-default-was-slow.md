@@ -4,6 +4,9 @@ title: 'CDC가 139배 느리게 나왔다: 느렸던 것은 적지 않은 기본
 description: '사용자 활동 로그를 Debezium CDC로 나르게 바꾸고 재 보니 lag p95가 아웃박스의 139배(1,944ms 대 14ms)였다. 그대로 적었으면 CDC를 기각했을 것이다. 커넥터의 지연 설정 셋을 명시하자 13ms로 같아졌다. 그 전에 반영률 0%·오류 로그 0건인 측정이 있었고 원인은 컨슈머 빈이 아예 없던 것이었다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - messaging
+  - performance
 draft: false
 series: "BE-commerce"
 seriesOrder: 35

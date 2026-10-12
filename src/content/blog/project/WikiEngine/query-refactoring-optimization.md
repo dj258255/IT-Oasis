@@ -12,6 +12,9 @@ tags:
   - Performance
   - Grafana
 category: personal/WikiEngine
+topics:
+  - database
+  - performance
 draft: false
 series: "WikiEngine"
 ---

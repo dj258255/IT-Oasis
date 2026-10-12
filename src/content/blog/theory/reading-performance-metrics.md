@@ -15,6 +15,8 @@ tags:
   - Observability
   - Spring Boot
 category: theory/Performance
+topics:
+  - performance
 draft: false
 ---
 

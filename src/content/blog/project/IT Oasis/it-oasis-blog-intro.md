@@ -8,6 +8,8 @@ tags:
   - Static Site
   - Blog
 category: personal/IT Oasis
+topics:
+  - projects
 draft: false
 ---
 

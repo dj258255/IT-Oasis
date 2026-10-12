@@ -15,6 +15,8 @@ tags:
   - InnoDB
   - Database
 category: theory/Database
+topics:
+  - database
 draft: false
 series: "트랜잭션 ACID"
 seriesOrder: 4

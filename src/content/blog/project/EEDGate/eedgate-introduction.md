@@ -12,6 +12,9 @@ tags:
   - Evaluation
   - Workflow
 category: personal/EEDGate
+topics:
+  - projects
+  - ai
 draft: false
 ---
 

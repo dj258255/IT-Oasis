@@ -11,6 +11,9 @@ tags:
   - Information Retrieval
   - BOOLEAN MODE
 category: personal/WikiEngine
+topics:
+  - search
+  - database
 draft: false
 series: "WikiEngine"
 ---
