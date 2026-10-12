@@ -11,6 +11,8 @@ tags:
   - Elasticsearch
   - Kernel
 category: theory/JVM-Memory
+topics:
+  - systems
 draft: false
 series: "JVM 메모리"
 seriesOrder: 4

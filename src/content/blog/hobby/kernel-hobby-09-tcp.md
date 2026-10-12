@@ -13,6 +13,8 @@ tags:
   - Network
   - TCP
 category: study/kernel-hobby
+topics:
+  - systems
 draft: false
 series: "C로 만드는 토이 커널"
 seriesOrder: 10

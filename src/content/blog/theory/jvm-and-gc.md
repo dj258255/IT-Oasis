@@ -11,6 +11,8 @@ tags:
   - ZGC
   - Memory Management
 category: theory/JVM-Memory
+topics:
+  - systems
 draft: false
 series: "JVM 메모리"
 seriesOrder: 0

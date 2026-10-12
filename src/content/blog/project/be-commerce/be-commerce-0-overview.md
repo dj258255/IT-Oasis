@@ -12,6 +12,9 @@ tags:
   - Redis
   - Kafka
 category: study/be-commerce
+topics:
+  - projects
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 0

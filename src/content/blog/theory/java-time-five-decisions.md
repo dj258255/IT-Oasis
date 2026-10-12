@@ -15,6 +15,9 @@ tags:
   - PostgreSQL
   - JDBC
 category: theory/Systems
+topics:
+  - systems
+  - database
 draft: false
 ---
 

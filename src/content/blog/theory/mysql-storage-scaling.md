@@ -11,6 +11,8 @@ tags:
   - Vertical Partitioning
   - Database Scaling
 category: theory/Database
+topics:
+  - database
 draft: false
 ---
 

@@ -4,6 +4,9 @@ title: '쌓인 미확정 결제는 언제 풀리는가: 복구 시간의 하한�
 description: 'PG 타임아웃으로 쌓인 미확정 결제 887건이 전부 확정되기까지의 시간은 복구 배치의 속도가 아니라 코드 상수 1분이 정했다. 청크를 줄이자 그때부터는 청크 ÷ 주기가 정했다. 두 식으로 기본 설정에서 1,351건은 약 3.7분, 1만 건은 약 20분이 걸린다고 미리 계산된다. 같은 이유로 적체 알림은 건수가 아니라 가장 오래된 건의 나이에 건다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - payments
+  - performance
 draft: false
 series: "BE-commerce"
 seriesOrder: 32

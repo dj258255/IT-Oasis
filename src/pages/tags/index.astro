@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { base } from '../../lib/config';
 import { TAG_COLORS } from '../../lib/constants';
 import { getPublishedPosts } from '../../lib/posts';
+import { TOPICS } from '../../data/topics';
 const posts = await getPublishedPosts();
 const tagMap = new Map<string, number>();
 
@@ -13,30 +14,46 @@ posts.forEach((post) => {
 });
 
 const tags = [...tagMap.entries()].sort((a, b) => b[1] - a[1]);
+
+// 주제는 정해 둔 열 개, 태그는 글마다 자유롭게 붙인 말이다. 주제를 위에 둔다.
+const topics = TOPICS.map((t) => ({
+  ...t,
+  count: posts.filter((p) => (p.data.topics as string[]).includes(t.id)).length,
+}));
+const chip = 'group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl glass-card text-[12px] sm:text-[13px] font-medium transition-all duration-300 hover:text-primary';
+const chipCount = 'text-[11px] px-1.5 py-0.5 rounded-full bg-primary/[0.06] text-gray-500 dark:bg-primary-light/[0.08] dark:text-gray-400 group-hover:bg-primary/[0.12]';
 ---
 
-<BaseLayout title="태그 — IT Oasis">
+<BaseLayout title="주제와 태그 — IT Oasis">
   <div class="fade-in-up">
     <div class="mb-8 sm:mb-10 px-1 text-center">
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text">태그</span>
+        <span class="gradient-text">주제와 태그</span>
       </h1>
     </div>
 
     <div class="glass-gradient rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10">
+      <h2 class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-4">주제</h2>
+      <div class="flex flex-wrap gap-2 sm:gap-2.5">
+        {topics.map((topic) => (
+          <a href={`${base}/topics/${topic.id}`} class={chip}>
+            <span>{topic.name}</span>
+            <span class={chipCount}>{topic.count}</span>
+          </a>
+        ))}
+      </div>
+
+      <div class="h-px bg-gray-200/80 dark:bg-gray-700/50 my-6 sm:my-8"></div>
+
+      <h2 class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-4">태그</h2>
       <div class="flex flex-wrap gap-2 sm:gap-2.5">
         {tags.map(([tag, count], i) => (
           <a
             href={`${base}/tags/${encodeURIComponent(tag)}`}
-            class:list={[
-              'group inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl glass-card text-[12px] sm:text-[13px] font-medium transition-all duration-300 hover:text-primary',
-              TAG_COLORS[i % TAG_COLORS.length]
-            ]}
+            class:list={[chip, TAG_COLORS[i % TAG_COLORS.length]]}
           >
             <span>{tag}</span>
-            <span class="text-[11px] px-1.5 py-0.5 rounded-full bg-primary/[0.06] text-gray-500 dark:bg-primary-light/[0.08] dark:text-gray-400 group-hover:bg-primary/[0.12]">
-              {count}
-            </span>
+            <span class={chipCount}>{count}</span>
           </a>
         ))}
       </div>

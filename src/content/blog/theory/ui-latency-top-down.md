@@ -12,6 +12,8 @@ tags:
   - Observability
   - Distributed Tracing
 category: theory/Performance
+topics:
+  - performance
 draft: false
 ---
 

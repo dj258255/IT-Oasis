@@ -20,6 +20,9 @@ tags:
   - Spring Boot
   - Wiki
 category: personal/WikiEngine
+topics:
+  - search
+  - ai
 draft: false
 series: "WikiEngine"
 ---

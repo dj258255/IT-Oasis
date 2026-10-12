@@ -4,6 +4,8 @@ title: 'CDC 커넥터가 RUNNING인 채 5분 동안 아무것도 보내지 않�
 description: 'DB 연결을 5분 막아도 Kafka Connect는 커넥터 상태를 내내 RUNNING으로 답했다. 상태만 보는 감시는 이 5분을 놓친다. 커넥터 하트비트의 나이를 함께 보자 막은 지 39초 만에 60초를 넘겨 잡았다. 변경 반영 지연을 줄이려 줄인 poll.interval.ms 100은 500 대비 Connect CPU를 한 코어의 1.0~2.5%p 더 썼고 MySQL CPU는 같았다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - messaging
 draft: false
 unlisted: true
 series: "BE-commerce"

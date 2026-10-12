@@ -11,6 +11,9 @@ tags:
   - Spring Boot
   - Performance
 category: theory/Database
+topics:
+  - database
+  - performance
 draft: false
 ---
 

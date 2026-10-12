@@ -11,6 +11,8 @@ tags:
   - node-cron
   - Automation
 category: study/discord-bot
+topics:
+  - projects
 draft: false
 series: "디스코드 출석봇"
 seriesOrder: 1

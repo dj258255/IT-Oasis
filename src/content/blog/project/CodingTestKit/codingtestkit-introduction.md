@@ -10,6 +10,8 @@ tags:
   - IntelliJ Plugin
   - VS Code Extension
 category: personal/CodingTestKit
+topics:
+  - projects
 draft: false
 series: "CodingTestKit"
 ---

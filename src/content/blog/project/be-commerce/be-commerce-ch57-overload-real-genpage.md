@@ -4,6 +4,9 @@ title: '실제 GenPage 모델로 과부하를 다시 재 보니 모델보다 게
 description: '스텁 모델로 정한 과부하 게이트를 실제 GenPage 모델 서버로 다시 쟀다. 추천 행에서는 모델(초당 약 1,000건)보다 앱이 먼저 포화했다. 게이트를 거치지 않던 홈 2쪽 호출은 모델 서버를 무너뜨려 추천 행까지 전부 실패시켰다. 그런데 모델 없이 규칙 행만 만들어도 같은 부하에서 앱이 무너졌다. 설계를 두 번 고쳐 가며 잰 기록이다.'
 date: 2026-09-25
 category: study/be-commerce
+topics:
+  - performance
+  - search
 draft: false
 unlisted: true
 series: "BE-commerce"

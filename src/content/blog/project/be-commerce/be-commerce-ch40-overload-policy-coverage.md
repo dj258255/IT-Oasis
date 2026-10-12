@@ -4,6 +4,9 @@ title: '과부하에서 무엇을 포기하나: 정책은 지연을 정하고 �
 description: '추천 모델이 감당하는 양보다 요청이 많을 때 넘친 요청을 어떻게 포기할지 세 정책을 비교했다. 개인화를 받은 요청 비율(coverage)은 세 정책이 ±0.3%p 안에서 같았고 갈린 것은 p95(160ms·320ms·454ms)였다. 아무것도 거절하지 않는 정책은 4배 부하에서 coverage가 31.4%로 더 좋아 보였는데 요청을 받지도 못해 분모에서 빠진 생존자 편향이었다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - performance
+  - search
 draft: false
 series: "BE-commerce"
 seriesOrder: 40

@@ -4,6 +4,9 @@ title: '문서와 테스트가 맞아도 배포를 믿을 수 없었다: 실행�
 description: '배포 단위 분리, 원장 잔액 조회, 아웃박스 복구, 데이터 이관처럼 문서와 테스트만으로 통과시킨 경로를 실제로 실행했다. 설계가 있어도 실행권·잔액 조회·커밋 후 발행·이관 중 변경에서 무엇이 빠지는지 확인한 과정을 정리한다.'
 date: 2026-09-19
 category: study/be-commerce
+topics:
+  - testing
+  - database
 draft: false
 series: "BE-commerce"
 seriesOrder: 17

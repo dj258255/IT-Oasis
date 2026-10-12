@@ -11,6 +11,8 @@ tags:
   - Hibernate
   - Dirty Checking
 category: theory/Database
+topics:
+  - database
 draft: false
 ---
 

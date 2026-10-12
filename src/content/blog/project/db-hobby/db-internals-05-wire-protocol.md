@@ -10,6 +10,8 @@ tags:
   - Network
   - C
 category: study/db-hobby
+topics:
+  - database
 draft: false
 series: "미니 DB로 이해하는 DB 내부"
 seriesOrder: 5

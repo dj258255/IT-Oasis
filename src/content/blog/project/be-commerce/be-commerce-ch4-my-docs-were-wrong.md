@@ -4,6 +4,9 @@ title: '멱등키 15일을 24시간으로 줄이려다 멈춘 이유: 외부 문
 description: 'Stripe 문서만 보고 결제 멱등키 보관 기간을 15일에서 24시간으로 줄이려다, 실제로 사용하는 토스페이먼츠의 계약이 15일이라는 사실을 확인했다. 반대로 PG 호출을 트랜잭션 밖으로 빼는 판단은 장애 사례와 커넥션 점유를 다시 확인한 뒤 사가로 전환했다.'
 date: 2026-05-07
 category: study/be-commerce
+topics:
+  - testing
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 6

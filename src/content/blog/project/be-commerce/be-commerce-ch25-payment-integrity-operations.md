@@ -4,6 +4,8 @@ title: '결제 시스템의 정합성을 어떻게 운영 지표로 증명할 �
 description: 'Stripe는 원장 품질을 clearing·timeliness·completeness 세 축으로 재고 Adyen은 경로마다 우선순위를 나눕니다. 그 틀을 BE-commerce 규모의 질문 넷으로 줄이고 지금 지표로 있는 것과 목록에만 있는 것을 코드 기준으로 나눴습니다.'
 date: 2026-09-22
 category: study/be-commerce
+topics:
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 25

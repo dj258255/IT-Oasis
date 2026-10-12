@@ -11,6 +11,9 @@ tags:
   - Concurrency
   - Java
 category: theory/Concurrency
+topics:
+  - distributed
+  - systems
 draft: false
 series: "동시성과 락"
 seriesOrder: 1

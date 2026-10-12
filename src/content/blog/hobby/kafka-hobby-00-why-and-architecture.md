@@ -11,6 +11,9 @@ tags:
   - Replication
   - Raft
 category: study/kafka-hobby
+topics:
+  - distributed
+  - messaging
 draft: false
 series: "Java로 만드는 토이 Kafka"
 seriesOrder: 1

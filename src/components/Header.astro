@@ -1,6 +1,7 @@
 ---
 import { base, getSiteSettings } from '../lib/config';
 import { getPublishedPosts } from '../lib/posts';
+import { topicName } from '../data/topics';
 
 interface Props {
   transparent?: boolean;
@@ -40,6 +41,7 @@ const searchData = posts.map((post) => ({
   description: post.data.description,
   tags: post.data.tags,
   category: post.data.category,
+  topic: post.data.topics.map(topicName).join(' · '),
   slug: post.id,
   date: post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }),
 }));
@@ -282,7 +284,8 @@ const searchData = posts.map((post) => ({
         post.title.toLowerCase().includes(q) ||
         post.description.toLowerCase().includes(q) ||
         post.tags.some((t) => t.toLowerCase().includes(q)) ||
-        post.category.toLowerCase().includes(q)
+        post.category.toLowerCase().includes(q) ||
+        post.topic.toLowerCase().includes(q)
       );
 
       if (filtered.length === 0) {
@@ -306,7 +309,7 @@ const searchData = posts.map((post) => ({
           dateSpan.textContent = post.date;
           var catSpan = document.createElement('span');
           catSpan.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-primary/[0.06] text-gray-500 font-medium';
-          catSpan.textContent = post.category;
+          catSpan.textContent = post.topic;
           meta.appendChild(dateSpan);
           meta.appendChild(catSpan);
           var titleDiv = document.createElement('div');
