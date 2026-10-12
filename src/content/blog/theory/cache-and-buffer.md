@@ -10,6 +10,9 @@ tags:
   - CS Fundamentals
   - Performance
 category: theory/Systems
+topics:
+  - systems
+  - performance
 draft: false
 ---
 

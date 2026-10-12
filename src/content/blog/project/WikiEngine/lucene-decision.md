@@ -11,6 +11,8 @@ tags:
   - Cost Analysis
   - BM25
 category: personal/WikiEngine
+topics:
+  - search
 draft: false
 series: "WikiEngine"
 ---

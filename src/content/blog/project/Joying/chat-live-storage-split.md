@@ -11,6 +11,9 @@ tags:
   - Spring Boot
   - Migration
 category: team/Joying
+topics:
+  - database
+  - messaging
 draft: false
 ---
 

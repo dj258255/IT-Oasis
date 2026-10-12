@@ -4,6 +4,9 @@ title: '결제 재시도는 가용성을 높이는가, 장애를 증폭하는가
 description: '승인 재시도는 이중 결제를 만들 수 있고, 조회 재시도는 retry storm을 만들 수 있다. BE-commerce에서 결과 확정 여부를 기준으로 재시도 경계를 나누고, 재시도 횟수보다 장애 중 호출량과 정상 API 영향을 측정하는 이유를 정리했다.'
 date: 2026-09-22
 category: study/be-commerce
+topics:
+  - payments
+  - performance
 draft: false
 series: "BE-commerce"
 seriesOrder: 26

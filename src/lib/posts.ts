@@ -23,6 +23,36 @@ function getProjectCategories(posts: BlogPost[]): Set<string> {
   );
 }
 
+export interface PostProject {
+  title: string;
+  /** 프로젝트 첫 화면. 허브가 있으면 허브, 없으면 소개 글 */
+  href: string;
+  /** 소개 글의 id */
+  storyId: string;
+}
+
+/**
+ * 글이 어느 프로젝트에서 나왔는지 찾는 표. 프로젝트 소개 글과 카테고리가 같은 글을 그 프로젝트의 글로 본다.
+ * 주제로 분류한 뒤에도 글 페이지에서 출처 프로젝트로 돌아갈 길을 남기려고 쓴다.
+ */
+export function buildProjectLookup(posts: BlogPost[]): Map<string, PostProject> {
+  const byId = new Map(posts.map((post) => [post.id, post]));
+  const lookup = new Map<string, PostProject>();
+  for (const project of projects) {
+    if (!project.story) continue;
+    const storyId = projectStoryId(project.story);
+    const story = byId.get(storyId);
+    if (!story) continue;
+    lookup.set(story.data.category, {
+      // 카드 제목의 부제("이름 — 설명")는 떼고 이름만 쓴다
+      title: project.title.split(' — ')[0],
+      href: project.hub || project.story,
+      storyId,
+    });
+  }
+  return lookup;
+}
+
 /**
  * 학습 프로젝트는 카테고리 최상위 이름으로 알아본다. 프로젝트 카드가 있는 학습 프로젝트는
  * 카드의 story 카테고리로도 걸러지지만, 카드가 없는 것(토이 Kafka, 분산 시스템)은 그렇지 않아
@@ -53,7 +83,13 @@ export async function getBuildablePosts() {
  * Use this for every listing, search index, RSS feed, and related-post computation.
  */
 export async function getPublishedPosts() {
-  return (await getBuildablePosts()).filter((p) => !p.data.unlisted);
+  const posts = (await getBuildablePosts()).filter((p) => !p.data.unlisted);
+  // 목록에 나오는 글은 주제가 있어야 스토리의 주제 줄과 주제 목록에 걸린다. 빠진 글이 있으면 빌드를 세운다.
+  const missing = posts.filter((p) => p.data.topics.length === 0).map((p) => p.id);
+  if (missing.length > 0) {
+    throw new Error(`주제(topics)가 없는 공개 글: ${missing.join(', ')}. src/data/topics.ts 의 id 를 frontmatter 에 넣는다.`);
+  }
+  return posts;
 }
 
 /**

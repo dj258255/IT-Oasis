@@ -15,6 +15,8 @@ tags:
   - Prometheus
   - Grafana
 category: team/Orakgarak
+topics:
+  - projects
 draft: false
 ---
 

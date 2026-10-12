@@ -10,13 +10,11 @@ import { render } from 'astro:content';
 import { getReadingTime, parseCategory, translateCategory } from '../../lib/utils';
 import { base, assetPath, getCategoryDisplayKo } from '../../lib/config';
 import { TAG_COLORS, CAT_COLOR_MAP } from '../../lib/constants';
-import { getBuildablePosts, getProjectPosts, getPublishedPosts, getStoryPosts } from '../../lib/posts';
+import { buildProjectLookup, getBuildablePosts, getPublishedPosts } from '../../lib/posts';
+import { topicName } from '../../data/topics';
 
 export async function getStaticPaths() {
   const buildable = await getBuildablePosts();
-  const storyPosts = await getStoryPosts();
-  const projectPosts = await getProjectPosts();
-  const projectPostIds = new Set(projectPosts.map((post) => post.id));
 
   // 태그·카테고리 목록 페이지는 <공개된> 글로만 만들어진다(getPublishedPosts).
   // 그런데 이 페이지는 unlisted 글도 만든다 — 링크로 들어올 수 있어야 하니까.
@@ -24,6 +22,7 @@ export async function getStaticPaths() {
   // 실제로 태그 19개와 카테고리 portfolio 가 그렇게 죽어 있었다.
   // 여기서 <페이지가 실제로 생기는> 태그·카테고리를 미리 모아 두고, 없는 것은 링크로 안 그린다.
   const published = await getPublishedPosts();
+  const projectLookup = buildProjectLookup(published);
   const linkableTags = new Set(published.flatMap((p) => p.data.tags));
   const linkableCategories = new Set<string>();
   for (const p of published) {
@@ -35,34 +34,40 @@ export async function getStaticPaths() {
 
   return buildable.map((post) => {
     const fullCat = post.data.category;
-    const parentCat = parseCategory(fullCat).parent;
-    // Normal stories only link to other normal stories. Once a visitor enters
-    // through a project card, project write-ups can link to one another.
-    const projectOnly = projectPostIds.has(post.id);
-    const posts = projectOnly ? projectPosts : storyPosts;
+    // 관련 글과 이전·다음 글은 프로젝트가 아니라 대표 주제(topics 의 첫 항목)로 묶는다.
+    // 주제가 없는 글(목록에 안 나오는 포트폴리오 글)은 묶을 무리가 없어 둘 다 비운다.
+    const topic: string | undefined = post.data.topics[0];
+    const sameTopic = topic ? published.filter((p) => (p.data.topics as string[]).includes(topic)) : [];
 
-    // Same subcategory only — these are the posts shown under the "'<category>' 의 다른 글" header.
-    // Don't pad with parent-category siblings here, or the header mislabels other categories
-    // (e.g. a Byeolchi post showing Balruno posts under "'프로젝트/별찌' 의 다른 글").
-    let relatedPosts = posts
-      .filter((p) => p.id !== post.id && p.data.category === fullCat)
-      .slice(0, 4);
-    const isSameCategory = relatedPosts.length > 0;
+    // 한 주제에 수십 편이 걸려서 최신순으로 자르면 어느 글에서나 같은 네 편이 나온다.
+    // 겹치는 태그가 많은 글을 먼저, 같으면 작성일이 가까운 글을 먼저 고른다.
+    // 같은 시리즈의 글은 본문 위 시리즈 목록에 이미 있으므로 맨 뒤로 보낸다. 다른 프로젝트의 같은 주제 글이 먼저 보인다.
+    const ownTags = new Set(post.data.tags);
+    const ownDate = post.data.date.valueOf();
+    const relatedPosts = sameTopic
+      .filter((p) => p.id !== post.id)
+      .map((p) => ({
+        p,
+        sameSeries: post.data.series && p.data.series === post.data.series ? 1 : 0,
+        shared: p.data.tags.filter((t: string) => ownTags.has(t)).length,
+        gap: Math.abs(p.data.date.valueOf() - ownDate),
+      }))
+      .sort((x, y) => x.sameSeries - y.sameSeries || y.shared - x.shared || x.gap - y.gap)
+      .slice(0, 4)
+      .map((x) => x.p);
 
-    // Fallbacks (rendered under the generic "다른 글 둘러보기" header): same parent category, then recent.
-    if (!isSameCategory) {
-      relatedPosts = posts
-        .filter((p) => p.id !== post.id && parseCategory(p.data.category).parent === parentCat)
-        .slice(0, 4);
-      if (relatedPosts.length === 0) {
-        relatedPosts = posts.filter((p) => p.id !== post.id).slice(0, 4);
-      }
-    }
+    // Unlisted posts sit outside the sequence, so they get no prev/next.
+    const pubIndex = sameTopic.findIndex((p) => p.id === post.id);
+    const prevPost = pubIndex >= 0 ? sameTopic[pubIndex + 1] || null : null;
+    const nextPost = pubIndex >= 0 ? sameTopic[pubIndex - 1] || null : null;
 
-    // Unlisted posts sit outside both sequences, so they get no prev/next.
-    const pubIndex = posts.findIndex((p) => p.id === post.id);
-    const prevPost = pubIndex >= 0 ? posts[pubIndex + 1] || null : null;
-    const nextPost = pubIndex >= 0 ? posts[pubIndex - 1] || null : null;
+    // 프로젝트에서 나온 글은 위쪽 돌아가기 링크가 그 프로젝트로 간다. 소개 글 자신은 프로젝트 목록으로 간다.
+    const project = projectLookup.get(fullCat) || null;
+    const backLink = !project
+      ? { href: '/blog', label: '모든 글' }
+      : project.storyId === post.id && project.href === `/blog/${post.id}`
+        ? { href: '/projects', label: '프로젝트' }
+        : { href: project.href, label: `${project.title} 프로젝트` };
 
     return {
       params: { slug: post.id },
@@ -71,8 +76,7 @@ export async function getStaticPaths() {
         prevPost,
         nextPost,
         relatedPosts,
-        isSameCategory,
-        projectOnly,
+        backLink,
         categoryHasPage: linkableCategories.has(fullCat),
         linkableTags: post.data.tags.filter((tag: string) => linkableTags.has(tag)),
       },
@@ -80,7 +84,7 @@ export async function getStaticPaths() {
   });
 }
 
-const { post, prevPost, nextPost, relatedPosts, isSameCategory, projectOnly, categoryHasPage, linkableTags } = Astro.props;
+const { post, prevPost, nextPost, relatedPosts, backLink, categoryHasPage, linkableTags } = Astro.props;
 const { Content, headings } = await render(post);
 const readingTime = getReadingTime(post.body || '');
 
@@ -95,6 +99,7 @@ const hasToc = tocHeadings.length > 2;
 
 const catDisplayKo = getCategoryDisplayKo();
 const categoryKo = translateCategory(post.data.category, catDisplayKo);
+const topics: string[] = post.data.topics;
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description} ogImage={post.data.coverImage ? assetPath(post.data.coverImage) : undefined} noindex={post.data.unlisted} wide>
@@ -102,11 +107,11 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
       <!-- Main content -->
       <article class="post-article relative">
       <!-- Back link -->
-      <a href={`${base}${projectOnly ? '/projects' : '/blog'}`} class="group inline-flex items-center gap-1.5 text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8 sm:mb-10">
+      <a href={`${base}${backLink.href}`} class="group inline-flex items-center gap-1.5 text-[12px] sm:text-[13px] text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-light transition-all duration-300 mb-8 sm:mb-10">
         <svg class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        <span>{projectOnly ? '프로젝트' : '모든 글'}</span>
+        <span>{backLink.label}</span>
       </a>
 
       <!-- Post header -->
@@ -132,10 +137,10 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
             <span id="post-views-count">—</span>
           </span>
           <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-          {projectOnly ? (
-            <a href={`${base}/projects`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
-              {categoryKo}
-            </a>
+          {topics.length > 0 ? (
+            topics.map((id) => (
+              <a href={`${base}/topics/${id}`} class="category-pill cat-default">{topicName(id)}</a>
+            ))
           ) : categoryHasPage ? (
             <a href={`${base}/categories/${post.data.category.split('/').map(s => encodeURIComponent(s)).join('/')}`} class:list={['category-pill', CAT_COLOR_MAP[parseCategory(post.data.category).parent] || 'cat-default']}>
               {categoryKo}
@@ -150,7 +155,7 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
         <div class="flex flex-wrap items-center gap-1.5">
           {post.data.tags.length > 0 && (
             post.data.tags.map((tag: string, i: number) => (
-              projectOnly || !linkableTags.includes(tag) ? (
+              !linkableTags.includes(tag) ? (
                 <span class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>{tag}</span>
               ) : (
                 <a href={`${base}/tags/${encodeURIComponent(tag)}`} class:list={['tag-pill text-[10px] sm:text-[11px]', TAG_COLORS[i % TAG_COLORS.length]]}>
@@ -230,14 +235,8 @@ const categoryKo = translateCategory(post.data.category, catDisplayKo);
         <div class="related-card mt-6 sm:mt-8">
           <div class="p-6 sm:p-8 md:p-10">
             <p class="text-[15px] sm:text-[16px] font-bold tracking-tight mb-5">
-              {isSameCategory ? (
-                <>
-                  <span class="text-gray-700 dark:text-gray-200">'{categoryKo}'</span>
-                  <span class="text-gray-500 dark:text-gray-400"> 의 다른 글</span>
-                </>
-              ) : (
-                <span class="text-gray-700 dark:text-gray-200">다른 글 둘러보기</span>
-              )}
+              <span class="text-gray-700 dark:text-gray-200">'{topicName(topics[0])}'</span>
+              <span class="text-gray-500 dark:text-gray-400"> 의 다른 글</span>
             </p>
             <div class="h-px bg-gray-200/80 dark:bg-gray-700/50 mb-5"></div>
             <div class="flex flex-col gap-2.5">

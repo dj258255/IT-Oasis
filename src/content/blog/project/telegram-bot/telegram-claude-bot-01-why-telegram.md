@@ -11,6 +11,9 @@ tags:
   - GitHub Actions
   - Automation
 category: study/telegram-bot
+topics:
+  - projects
+  - ai
 draft: false
 series: "텔레그램 Claude 봇"
 seriesOrder: 1

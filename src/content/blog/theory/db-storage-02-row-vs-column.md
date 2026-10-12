@@ -14,6 +14,8 @@ tags:
   - ClickHouse
   - Parquet
 category: theory/Database
+topics:
+  - database
 draft: false
 series: "DB 스토리지 내부"
 seriesOrder: 2

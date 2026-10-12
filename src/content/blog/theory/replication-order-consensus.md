@@ -14,6 +14,9 @@ tags:
   - PostgreSQL
   - Distributed Systems
 category: theory/Database
+topics:
+  - distributed
+  - database
 series: "데이터 복제"
 seriesOrder: 2
 draft: false

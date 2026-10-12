@@ -4,6 +4,8 @@ title: '비밀번호 해시를 Argon2id로 바꿨더니 로그인 메모리가 �
 description: 'Argon2id는 BCrypt보다 메모리를 많이 써 동시 로그인 100건에 약 2GB를 요구했다. 512MB 힙에서는 OOM이 발생했고, 인코더 테스트를 통과한 뒤 해시 컬럼 길이 문제도 발견했다. 비밀번호 해시 교체에는 보안 강도뿐 아니라 동시성 예산과 이관 종료 조건이 필요했다.'
 date: 2026-06-11
 category: web/Tradeoffs
+topics:
+  - performance
 draft: false
 series: "웹 개발 트레이드오프"
 seriesOrder: 1

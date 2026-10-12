@@ -4,6 +4,8 @@ title: 'FDS 차단을 승인 경로에 바로 연결하지 않은 이유'
 description: 'Stripe Radar는 결제마다 100ms 안에 판정합니다. BE-commerce는 FDS 판정을 결제가 끝난 뒤에만 돌리며 그 이유를 지연이라고 적어 두었지만 재 보니 판정은 p99 3~5ms였습니다. 지연을 지운 뒤에도 켜지 못한 세 가지와 그중 하나를 잘못 짚었던 이야기입니다.'
 date: 2026-09-20
 category: study/be-commerce
+topics:
+  - payments
 draft: false
 series: "BE-commerce"
 seriesOrder: 20

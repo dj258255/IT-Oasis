@@ -4,6 +4,9 @@ title: '재고가 0인데도 대기열을 닫지 못했다: 매진 판정의 조
 description: '재고 100개 상품에 300명이 몰린 부하에서 대기열은 판매 성공률을 높였지만, 매진 뒤 결제까지 갔다가 거절되는 헛걸음은 140건으로 줄지 않았다. 재고 0과 결제 결과 미확정 예약을 나눠 측정한 결과를 정리한다.'
 date: 2026-09-29
 category: study/be-commerce
+topics:
+  - performance
+  - distributed
 draft: false
 series: "BE-commerce"
 seriesOrder: 62

@@ -4,6 +4,9 @@ title: '늦게 도착한 이벤트를 버리고 있었다: 순서를 사는 대�
 description: '같은 활동 로그로 만든 온라인 컨텍스트와 오프라인 재계산이 순서가 뒤집힌 조건에서 20명 전원 갈라졌다(일치율 0%). 병합 규칙이 늦게 온 이벤트를 버리고 있었다. 사용자별 순서 보장을 사는 대신 병합을 순서에 무관하게 바꿔 100%로 맞췄다. 목록 길이로 세던 창 집계는 60%만 맞았고 재는 도구도 같은 잘림을 물려받고 있었다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - messaging
+  - distributed
 draft: false
 series: "BE-commerce"
 seriesOrder: 41

@@ -4,6 +4,9 @@ title: '짧은 PG 타임아웃은 우리 쪽 대기만 줄였다'
 description: 'PG 읽기 타임아웃 5초는 토스 공식 권장 60초보다 12배 짧았다. 가짜 PG가 끊긴 호출도 끝까지 처리하게 고친 뒤 두 값을 쟀다. 평소 느린 꼬리에서 5초는 결제의 10.2%를 결과 모름으로 만들었고 확정까지 p95 92.7초가 걸렸다. PG가 전부 느린 브라운아웃에서 5초는 1.5배 더 팔았지만 모두 결과 모름을 거쳤고 PG 승인 호출은 16배였다. 측정 전에 적은 기준을 넘어 60초로 바꾸고 결제 화면이 그 시간까지 결과를 기다리게 했다.'
 date: 2026-09-30
 category: study/be-commerce
+topics:
+  - payments
+  - performance
 draft: false
 series: "BE-commerce"
 seriesOrder: 63

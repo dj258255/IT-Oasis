@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { base } from '../lib/config';
 import { getPublishedPosts } from '../lib/posts';
+import { topicName } from '../data/topics';
 
 const posts = await getPublishedPosts();
 
@@ -10,6 +11,7 @@ const searchData = posts.map((post) => ({
   description: post.data.description,
   tags: post.data.tags,
   category: post.data.category,
+  topic: post.data.topics.map(topicName).join(' · '),
   slug: post.id,
   date: post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }),
 }));
@@ -61,7 +63,7 @@ const searchData = posts.map((post) => ({
         <a href="${base}/blog/${post.slug}" class="block glass-card rounded-2xl p-6 sm:p-7">
           <div class="flex items-center gap-2 mb-3">
             <time class="text-[11px] font-medium text-gray-400 tracking-widest uppercase">${post.date}</time>
-            <span class="category-pill cat-default">${post.category}</span>
+            <span class="category-pill cat-default">${post.topic}</span>
           </div>
           <h3 class="text-[17px] font-semibold leading-snug mb-2.5 group-hover:text-primary transition-colors duration-500">${post.title}</h3>
           <p class="text-[13px] text-gray-500 leading-relaxed line-clamp-2">${post.description}</p>
@@ -90,7 +92,8 @@ const searchData = posts.map((post) => ({
       post.title.toLowerCase().includes(query) ||
       post.description.toLowerCase().includes(query) ||
       post.tags.some(t => t.toLowerCase().includes(query)) ||
-      post.category.toLowerCase().includes(query)
+      post.category.toLowerCase().includes(query) ||
+      post.topic.toLowerCase().includes(query)
     );
 
     if (filtered.length === 0) {

@@ -14,6 +14,8 @@ tags:
   - Side Project
   - Game Balance
 category: personal/Balruno
+topics:
+  - projects
 draft: false
 ---
 

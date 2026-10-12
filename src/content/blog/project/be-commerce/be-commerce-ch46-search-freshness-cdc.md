@@ -4,6 +4,9 @@ title: '검색 색인이 상품 변경을 반영하는 데 10분 걸리던 것�
 description: '10분마다 전체를 다시 만들던 앱 안 Lucene 색인에 CDC 변경 반영을 붙였다. 새 상품, 가격 인하, 품절 600건이 p95 1.12초에 모든 인스턴스의 검색 결과에 반영됐고 놓친 변경은 없었다. Elasticsearch도 1.20초로 같은 수준이라 Lucene을 유지했다. 측정하면서 결함 셋을 머지 전에 잡았다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - search
+  - messaging
 draft: false
 unlisted: true
 series: "BE-commerce"

@@ -4,6 +4,8 @@ title: '점수가 같은 상품의 순서가 검색의 쪽 넘김과 두 엔진�
 description: '검색 결과 상품의 가격이 바뀌는 동안 쪽을 넘기면 스냅숏의 30%가 끝내 안 나왔다. 점수가 같은 상품을 엔진 내부 문서 순서로 줄 세웠기 때문이다. Elasticsearch와 OpenSearch의 상위 10개가 25% 다르던 것도 같은 원인이었다. 동점을 상품 id로 끊자 누락이 888건에서 9건으로 줄었고 두 엔진의 결과가 545개 쿼리 모두 같아졌다.'
 date: 2026-09-24
 category: study/be-commerce
+topics:
+  - search
 draft: false
 unlisted: true
 series: "BE-commerce"

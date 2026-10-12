@@ -10,6 +10,8 @@ tags:
   - Packer
   - Multi-Cloud
 category: activity
+topics:
+  - projects
 draft: false
 ---
 

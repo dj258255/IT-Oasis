@@ -4,6 +4,9 @@ title: 'API 서버를 늘렸더니 정산 배치가 두 번 돌았다: 실행권
 description: 'API 인스턴스를 둘로 늘리자 같은 정산 배치가 중복 실행됐고, 한 대로 유지하자 배포 중 결제 요청이 실패했다. 유니크 제약만으로는 실행권을 정할 수 없어서, MSA 분리 대신 API와 워커의 실행·배포 단위를 나눈 과정을 정리한다.'
 date: 2026-07-14
 category: study/be-commerce
+topics:
+  - payments
+  - distributed
 draft: false
 series: "BE-commerce"
 seriesOrder: 9

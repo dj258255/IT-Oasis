@@ -10,6 +10,9 @@ tags:
   - Performance
   - Architecture
 category: theory/Database
+topics:
+  - performance
+  - database
 draft: false
 ---
 

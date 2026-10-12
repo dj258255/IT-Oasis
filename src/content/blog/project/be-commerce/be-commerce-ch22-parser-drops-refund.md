@@ -4,6 +4,8 @@ title: '환불을 음수 거래로 표현할 때 지켜야 할 계약'
 description: '취소를 취소일 파일의 음수 행으로 기록하도록 내부 모델을 바꿨는데, 그 음수 행을 읽어야 할 파서는 그대로여서 정상 환불이 매번 사람이 확인할 불일치로 쌓였다. 한 저장소 안에서 세 문장이 서로 어긋나 있었다.'
 date: 2026-09-20
 category: study/be-commerce
+topics:
+  - payments
 draft: false
 unlisted: true
 series: "BE-commerce"
