@@ -40,7 +40,7 @@ draft: false
 
 한국 표준시에는 지금 서머타임(여름에 시계를 한 시간 앞당기는 제도)이 없습니다. JDK 21의 `Asia/Seoul` 규칙에 2024년 10월 이후 오프셋이 다시 바뀌는 때를 물으면 없다는 답(`null`)이 돌아옵니다. 과거에는 오프셋이 여러 번 바뀌었고 그 영향은 4장에서 다룹니다.
 
-원문은 프로그램을 짤 때 GMT와 UTC의 차이를 무시해도 된다고 적었고 이 글도 둘을 구분하지 않습니다.
+원문은 세계 표준시의 기준이 1972년에 GMT(그리니치 평균시)에서 UTC(협정 세계시)로 바뀌었다고 적습니다. 컴퓨터의 시계는 인터넷에 연결되면 시간 서버와 맞춰지므로 프로그램을 짤 때는 둘의 차이를 무시해도 된다는 것이 원문의 설명이고 이 글도 둘을 구분하지 않습니다.
 
 ## 2. JDK에는 날짜 API가 두 벌 있습니다
 
@@ -55,6 +55,7 @@ draft: false
 | 시간대 | 없음. 찍을 때 JVM의 시간대를 씀 | `TimeZone` | `ZoneId`, `ZoneOffset` |
 | 포매터 | `SimpleDateFormat` | `SimpleDateFormat` | `DateTimeFormatter` |
 | 포매터를 여러 스레드가 함께 써도 되는지 | 안 됨 | 안 됨 | 됨 |
+| 포매터가 받는 타입 | `Date` | `getTime()`으로 꺼낸 `Date` | `LocalDateTime` 같은 `java.time`의 타입 |
 
 원문의 표에는 `Date`의 출력 예가 `Tue Oct 08 00:11:16 CST 2024`로 실려 있습니다. 1장의 정수 `1728300119000`으로 만든 `Date`를 서울 시간대의 JVM에서 찍으면 `Mon Oct 07 20:21:59 KST 2024`처럼 `KST`가 붙고 UTC로 띄운 JVM에서 찍으면 `Mon Oct 07 11:21:59 UTC 2024`가 됩니다. `Date`가 담는 것은 정수 하나이고 시간대는 찍을 때 JVM의 기본 시간대에서 가져옵니다.
 
@@ -64,7 +65,19 @@ draft: false
 
 ### `Date`는 밀리초 정수 하나이고 연도에는 1900을, 월에는 1을 더해야 읽힙니다
 
-`Date`가 담는 것은 밀리초 단위의 `long` 하나이고 `new Date()`는 `System.currentTimeMillis()`의 값을 넣습니다. 연, 월, 일을 꺼내는 메서드는 돌려주는 기준이 서로 다릅니다. 서울 시간대의 JVM에서 실행한 결과입니다.
+`Date`가 담는 것은 밀리초 단위의 `long` 하나이고 `new Date()`는 `System.currentTimeMillis()`의 값을 넣습니다. 원문은 `Date`를 아래처럼 줄여 보여 줍니다.
+
+```java
+public class Date {
+    long fastTime;
+
+    public Date(long date) { fastTime = date; }
+
+    public long getTime() { return fastTime; }
+}
+```
+
+연, 월, 일을 꺼내는 메서드는 돌려주는 기준이 서로 다릅니다. 서울 시간대의 JVM에서 실행한 결과입니다.
 
 ```java
 Date d = new Date(1728300119000L);   // 서울 2024-10-07 20:21:59, 월요일
@@ -76,14 +89,20 @@ d.getDay();     // 1. 요일이고 0이 일요일
 
 ### `Calendar`는 날짜를 더하고 뺄 수 있고 월은 여전히 0부터 셉니다
 
-`Calendar`에는 `Date`에 없는 날짜 더하기와 빼기가 있습니다. 연도는 그대로 나옵니다.
+`Calendar`는 연, 월, 일, 시, 분, 초를 필드로 꺼내고 넣을 수 있고 `Date`에 없는 날짜 더하기와 빼기가 있습니다. 연도는 그대로 나옵니다. 원문은 `Calendar`의 코드가 거칠고 API가 쓰기 불편하며 성능도 좋지 않다고 평가합니다. 성능은 이 글에서 재지 않았습니다.
 
 ```java
 Calendar c = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"));
 c.setTimeInMillis(1728300119000L);
 c.get(Calendar.YEAR);          // 2024
 c.get(Calendar.MONTH);         // 9. 10월
+c.get(Calendar.DAY_OF_MONTH);  // 7
 c.get(Calendar.DAY_OF_WEEK);   // 2. 1이 일요일이어서 월요일은 2
+c.get(Calendar.HOUR_OF_DAY);   // 20
+c.get(Calendar.MINUTE);        // 21
+c.get(Calendar.SECOND);        // 59
+c.get(Calendar.MILLISECOND);   // 0
+c.getTime();                   // Date로 꺼냄. Mon Oct 07 20:21:59 KST 2024
 
 c.clear();
 c.set(2019, 10, 20, 8, 15, 0);            // 10은 11월
@@ -107,11 +126,12 @@ sdf.setTimeZone(TimeZone.getTimeZone("America/New_York"));
 sdf.format(c.getTime());                             // 2024-10-09 19:15:00
 ```
 
-시간대는 `Asia/Seoul` 같은 지역 ID로 가리킵니다. 이름을 조금 틀리게 넣거나 KST 같은 약어를 넣으면 옛 API와 새 API가 다르게 반응합니다. 아래는 이름을 바꿔 가며 호출한 결과입니다.
+시간대는 문자열 ID로 가리키고 `Asia/Seoul` 같은 지역 ID와 `GMT+09:00` 같은 오프셋 꼴을 둘 다 받습니다. 쓸 수 있는 ID 전체는 `TimeZone.getAvailableIDs()`가 돌려주고 JDK 21.0.9에서는 632개였습니다. 이름을 조금 틀리게 넣거나 KST 같은 약어를 넣으면 옛 API와 새 API가 다르게 반응합니다. 아래는 이름을 바꿔 가며 호출한 결과입니다.
 
 | 호출 | 결과 |
 |---|---|
 | `TimeZone.getTimeZone("Asia/Seoul")` | Asia/Seoul |
+| `TimeZone.getTimeZone("GMT+09:00")` | GMT+09:00. 원문이 든 오프셋 꼴의 ID |
 | `TimeZone.getTimeZone("Asia/seoul")` | GMT |
 | `TimeZone.getTimeZone("KST")` | GMT |
 | `TimeZone.getTimeZone("JST")` | JST(+09:00). JDK 25는 세 글자 ID가 없어질 예정이라는 경고를 함께 찍음 |
@@ -121,6 +141,15 @@ sdf.format(c.getTime());                             // 2024-10-09 19:15:00
 `TimeZone.getTimeZone`의 Javadoc에는 받은 ID를 이해하지 못하면 GMT를 돌려준다고 적혀 있습니다. 예외가 없으므로 `KST`를 넣은 코드는 한국 시각보다 9시간 느린 GMT 시각을 찍으면서 그대로 돌아갑니다. `Date`를 찍으면 `KST`라는 글자가 나오지만 이 글자는 ID로 받아 주지 않습니다. `ZoneId.of`에 함께 넘겨 쓰는 약어 표 `ZoneId.SHORT_IDS`에도 `JST`는 있고 `KST`는 없습니다.
 
 ### `SimpleDateFormat`은 스레드마다 따로 둡니다
+
+`Date`를 문자열로 찍고 문자열을 `Date`로 읽는 일은 `SimpleDateFormat`이 합니다. 시간대를 정해 주지 않으면 JVM의 시간대로 읽고 찍습니다.
+
+```java
+SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+format.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
+Date date = format.parse("2024-10-07 16:10:22");   // getTime()은 1728285022000
+String str = format.format(date);                  // 2024-10-07 16:10:22
+```
 
 원문은 `SimpleDateFormat`이 스레드 안전하지 않으므로 쓸 때마다 새로 만들거나 `ThreadLocal`에 넣으라고 적었습니다.
 
@@ -158,13 +187,21 @@ format은 절반 안팎이 틀렸는데 예외는 천 번에 한 번도 나지 �
 
 ### `LocalDate`, `LocalTime`, `LocalDateTime`은 달력과 시계의 글자입니다
 
-세 타입은 ISO 8601 형식으로 찍힙니다. 날짜는 `yyyy-MM-dd`, 시각은 `HH:mm:ss`이고 둘 사이에 `T`가 들어갑니다. 만들 때는 `of`나 `parse`를 쓰고 더하고 뺄 때는 `plusXxx`와 `minusXxx`를 이어 부릅니다.
+세 타입은 ISO 8601 형식으로 찍힙니다. 날짜는 `yyyy-MM-dd`, 시각은 `HH:mm:ss`이고 둘 사이에 `T`가 들어갑니다. 만들 때는 `of`나 `parse`를 쓰고 더하고 뺄 때는 `plusXxx`와 `minusXxx`를 이어 부릅니다. 한 필드만 바꿀 때는 `withXxx`를 쓰고 앞뒤 비교는 `isBefore`와 `isAfter`로 합니다.
 
 ```java
+LocalDate date = LocalDate.of(2024, 10, 7);                    // 2024-10-07
+LocalTime time = LocalTime.parse("08:15:07");                  // 08:15:07
+LocalDateTime.parse("2024-10-07T08:15:07");                    // 2024-10-07T08:15:07
+
 LocalDateTime dt  = LocalDateTime.of(2024, 10, 10, 20, 30, 59);
 LocalDateTime dt2 = dt.plusDays(5).minusHours(3);   // 2024-10-15T17:30:59
 LocalDateTime dt3 = dt2.minusMonths(1);             // 2024-09-15T17:30:59
 dt.withMonth(9);                                    // 2024-09-10T20:30:59
+
+date.isBefore(LocalDate.of(2024, 10, 8));           // true
+date.isAfter(LocalDate.of(2024, 10, 8));            // false
+date.isEqual(LocalDate.of(2024, 10, 7));            // true
 ```
 
 원문의 같은 예제에는 `dt3`를 찍는 줄의 주석이 `2019-09-30T17:30:59`로 남아 있는데 실제 출력은 위와 같습니다. 원문도 바로 윗줄의 주석에는 맞는 결과를 적어 두었습니다. 원문의 `LocalDateTime.of(2024, 10, 07, 8, 15, 0)`은 실행됩니다. 다만 `07`은 8진수 리터럴이어서 날짜를 `08`이나 `09`로 바꾸면 컴파일 오류가 나므로 숫자 앞의 0은 뺍니다.
@@ -176,6 +213,10 @@ LocalDateTime now = LocalDateTime.of(2024, 10, 7, 20, 21, 59);
 now.toLocalDate().withDayOfMonth(1).atStartOfDay();                 // 2024-10-01T00:00
 now.with(TemporalAdjusters.firstDayOfMonth());                      // 2024-10-01T20:21:59
 now.with(TemporalAdjusters.lastDayOfMonth());                       // 2024-10-31T20:21:59
+now.with(TemporalAdjusters.firstDayOfNextMonth());                  // 2024-11-01T20:21:59
+now.with(TemporalAdjusters.firstDayOfYear());                       // 2024-01-01T20:21:59
+now.with(TemporalAdjusters.lastDayOfYear());                        // 2024-12-31T20:21:59
+now.with(TemporalAdjusters.firstDayOfNextYear());                   // 2025-01-01T20:21:59
 now.with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.FRIDAY));  // 2024-10-18T20:21:59
 now.with(TemporalAdjusters.previous(DayOfWeek.MONDAY));             // 2024-09-30T20:21:59
 now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));       // 2024-10-07T20:21:59
@@ -218,11 +259,28 @@ now.with(TemporalAdjusters.next(DayOfWeek.SUNDAY));                 // 2024-10-1
 `Duration`은 초와 나노초로 센 시간이고 `Period`는 연, 월, 일로 센 간격입니다. 둘 다 `between`으로 두 시점의 차를 구하고 ISO 8601 형식의 문자열을 읽어 만들 수 있습니다.
 
 ```java
-Duration d = Duration.parse("P1DT1H10M10.5S");   // PT25H10M10.5S
-d.toMinutes();                                   // 1510
-Period p = Period.parse("P2Y3M5D");              // 2년 3개월 5일
-p.getYears(); p.getMonths(); p.getDays();        // 2, 3, 5
+Duration d = Duration.between(LocalDateTime.of(2024, 10, 7, 9, 0),
+                              LocalDateTime.of(2024, 10, 8, 10, 30, 15));   // PT25H30M15S
+d.getSeconds();                        // 91815
+d.toDays(); d.toHours(); d.toMinutes(); // 1, 25, 1530
+d.toMillis();                          // 91815000
+d.plusHours(2).minusMinutes(30);       // PT27H15S
+Duration.ofHours(25);                  // PT25H
+Duration.ofMinutes(90);                // PT1H30M
+Duration.ofSeconds(3661);              // PT1H1M1S
+Duration.ofMillis(1500);               // PT1.5S
+Duration.ofNanos(1_500_000);           // PT0.0015S
+Duration.parse("P1DT1H10M10.5S");      // PT25H10M10.5S
+
+Period p = Period.between(LocalDate.of(2022, 7, 2), LocalDate.of(2024, 10, 7));   // P2Y3M5D
+p.getYears(); p.getMonths(); p.getDays();   // 2, 3, 5
+p.plusDays(30);                        // P2Y3M35D
+p.minusMonths(4);                      // P2Y-1M5D
+p.minusMonths(4).normalized();         // P1Y11M5D
+Period.parse("P2Y3M5D");               // P2Y3M5D
 ```
+
+`Duration`의 `toXxx`는 전체를 그 단위로 바꾼 수를 돌려줍니다. `Period`에 더하고 빼면 연, 월, 일을 따로 계산해서 35일이나 -1개월이 그대로 남고 `normalized()`를 부르면 연과 월만 정리되고 날은 그대로 남습니다.
 
 두 날짜 사이의 날 수는 `ChronoUnit.DAYS.between`으로 셉니다. `Period.between(2024-01-31, 2024-03-01)`은 `P1M1D`이고 `getDays()`는 1입니다. `Period`는 달과 날을 따로 들고 있어서 `getDays()`가 돌려주는 것은 달을 떼고 남은 날입니다. 같은 두 날짜에 `ChronoUnit.DAYS.between`을 부르면 30이 나옵니다.
 
@@ -246,6 +304,15 @@ seoul.withZoneSameLocal(ZoneId.of("America/New_York"));     // 2024-10-10T08:15-
 ```
 
 `withZoneSameInstant`는 순간을 지키고 글자를 바꾸며 `withZoneSameLocal`은 그 반대입니다.
+
+원문이 꼽은 자주 쓰는 메서드는 `now()`, `now(ZoneId)`, 필드를 꺼내는 `getXxx`, 필드를 바꾸는 `withXxx`, 더하고 빼는 `plusXxx`와 `minusXxx`입니다.
+
+```java
+seoul.getYear(); seoul.getMonthValue(); seoul.getDayOfMonth(); seoul.getHour();   // 2024, 10, 10, 8
+seoul.withHour(23);     // 2024-10-10T23:15+09:00[Asia/Seoul]
+seoul.plusDays(30);     // 2024-11-09T08:15+09:00[Asia/Seoul]
+seoul.minusHours(9);    // 2024-10-09T23:15+09:00[Asia/Seoul]
+```
 
 시간대 규칙이 붙으면 달력에 없는 시각과 두 번 오는 시각이 생깁니다. 서머타임이 시작할 때 시계를 한 시간 앞으로 돌리면 그 한 시간은 건너뛰고 끝날 때 뒤로 돌리면 같은 한 시간이 두 번 지나갑니다. 한국 시간대에도 이런 시각이 있습니다. JDK 21에 든 `Asia/Seoul` 규칙에는 오프셋이 바뀐 때가 28번 있고 가장 최근의 것이 1987년과 1988년의 서머타임입니다. 생년월일처럼 과거의 날짜와 시각을 다루면 이 구간을 지나게 됩니다. 1988년의 두 시각을 `atZone`에 넣었습니다.
 
@@ -278,18 +345,23 @@ Skeet은 사람이 말한 달력의 시각과 지역 ID를 그대로 보존하�
 
 ### `ZoneId`는 지역 ID와 오프셋을 받습니다
 
-`ZoneId`는 옛 API의 `TimeZone`에 해당합니다. 원문의 형식 표를 한국 기준으로 바꿔 실행했습니다.
+`ZoneId`는 옛 API의 `TimeZone`에 해당합니다. 추상 클래스이고 오프셋 꼴은 `ZoneOffset`이, 지역 꼴은 `ZoneRegion`이 맡습니다. 현재 JVM의 시간대는 `ZoneId.systemDefault()`로, 특정 시간대는 `ZoneId.of`로 얻습니다. 원문의 형식 표를 한국 기준으로 바꿔 실행했습니다.
 
-| 입력 | 결과 |
-|---|---|
-| `ZoneId.of("Z")` | Z. UTC이고 한국보다 9시간 느림 |
-| `ZoneId.of("+9")` | +09:00 |
-| `ZoneId.of("UTC+9")` | UTC+09:00 |
-| `ZoneId.of("GMT+9")` | GMT+09:00 |
-| `ZoneId.of("Asia/Seoul")` | Asia/Seoul |
-| `ZoneId.of("Asia/seoul")` | `ZoneRulesException` |
+| 입력 | 결과 | 구현 클래스 |
+|---|---|---|
+| `ZoneId.of("Z")` | Z. UTC이고 한국보다 9시간 느림 | `ZoneOffset` |
+| `ZoneId.of("UTC")`, `"GMT"`, `"UT"` | UTC, GMT, UT. 오프셋은 모두 0 | `ZoneRegion` |
+| `ZoneId.of("+9")`, `"+09:00"`, `"+0900"`, `"+09:00:00"` | +09:00 | `ZoneOffset` |
+| `ZoneId.of("UTC+9")` | UTC+09:00 | `ZoneRegion` |
+| `ZoneId.of("GMT+9")` | GMT+09:00 | `ZoneRegion` |
+| `ZoneId.of("Asia/Seoul")` | Asia/Seoul | `ZoneRegion` |
+| `ZoneId.of("Etc/GMT-9")` | Etc/GMT-9. 오프셋은 +09:00 | `ZoneRegion` |
+| `ZoneId.of("Etc/GMT+9")` | Etc/GMT+9. 오프셋은 -09:00 | `ZoneRegion` |
+| `ZoneId.of("Asia/seoul")` | `ZoneRulesException` | |
 
-지역 ID는 대소문자를 가립니다. 원문의 예제 `ZoneId.of("Asia/shanghai")`도 소문자 s 때문에 같은 예외가 납니다. 쓸 수 있는 ID 전체는 `ZoneId.getAvailableZoneIds()`가 돌려줍니다.
+원문의 표에는 지역 ID의 예로 `Etc/GMT+9`와 `Etc/GMT+8`이 실려 있습니다. `Etc/GMT` 계열은 부호가 반대여서 한국과 같은 오프셋은 `Etc/GMT-9`입니다.
+
+지역 ID는 대소문자를 가립니다. 원문의 예제 `ZoneId.of("Asia/shanghai")`도 소문자 s 때문에 같은 예외가 납니다. 쓸 수 있는 ID 전체는 `ZoneId.getAvailableZoneIds()`가 돌려주고 JDK 21.0.9에서는 604개였습니다.
 
 `+09:00`과 `Asia/Seoul`은 지금은 같은 시각을 가리키지만 담는 것이 다릅니다. 오프셋은 9시간이라는 차만 담고 지역 ID는 그 지역의 규칙 전체를 담습니다. 위의 1988년 예제는 `Asia/Seoul`이어서 `+10:00`이 나왔고 `+09:00`을 넣으면 언제나 9시간으로 계산됩니다. 과거나 미래의 달력의 시각을 다룰 때는 지역 ID를 씁니다.
 
@@ -302,6 +374,8 @@ Instant i = Instant.parse("2024-10-07T11:21:59.123456789Z");
 i.getEpochSecond();   // 1728300119
 i.getNano();          // 123456789
 i.toEpochMilli();     // 1728300119123
+i.plusNanos(111);     // 2024-10-07T11:21:59.123456900Z
+i.plusSeconds(60);    // 2024-10-07T11:22:59.123456789Z
 ```
 
 원문은 `Date` 대신 `Instant`를 쓰라고 권합니다. `Date`가 담던 것도 순간이므로 두 타입은 같은 것을 담습니다. 개발 수첩도 JDK 8 이상이면 `Date`는 `Instant`로, `Calendar`는 `LocalDateTime`으로 바꿔 쓸 수 있다고 나눠 적었습니다.
@@ -412,17 +486,47 @@ LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateT
 
 셋째 줄의 UTC JVM 결과는 9시간 뒤의 순간입니다. 한국 시각으로 다루는 데이터라면 `ZoneId.of("Asia/Seoul")`을 코드에 적어 두어야 서버를 UTC로 옮겨도 결과가 같습니다.
 
-순간끼리의 변환에는 시간대가 필요 없습니다. `Date.toInstant()`와 `Date.from(instant)`, `Timestamp.toInstant()`가 그렇습니다. `Calendar`와 `TimeZone`은 `GregorianCalendar.toZonedDateTime()`과 `TimeZone.toZoneId()`로 새 타입이 됩니다.
+순간끼리의 변환에는 시간대가 필요 없습니다. `Date.toInstant()`와 `Date.from(instant)`, `Timestamp.toInstant()`가 그렇습니다. `Calendar`와 `TimeZone`은 `GregorianCalendar.toZonedDateTime()`과 `TimeZone.toZoneId()`로 새 타입이 됩니다. 원문은 그 밖의 변환을 CSDN의 글 하나로 안내하고 그 링크는 참고에 옮겨 두었습니다.
 
 ## 6. DB에 저장한 순간이 같은 순간으로 읽히는지는 컬럼 타입과 연결 설정에 달려 있습니다
 
 원문은 MyBatis 매핑에서 Java 타입을 `java.util.Date`에서 `java.time.LocalDateTime`으로 바꾸는 한 줄을 보여 줍니다.
 
 ```xml
+<!-- 바꾸기 전 -->
+<arg column="gmt_create" jdbcType="TIMESTAMP" javaType="java.util.Date"/>
+<!-- 바꾼 뒤 -->
 <arg column="gmt_create" jdbcType="TIMESTAMP" javaType="java.time.LocalDateTime"/>
 ```
 
-컬럼 이름 `gmt_create`는 개발 수첩의 옛 판이 모든 테이블에 두라고 한 이름이고 지금 판은 `create_time`으로 바꿨습니다. 원문은 MyBatis 3.5.0부터 `java.time` 타입 핸들러가 기본으로 들어 있다고 적었는데 MyBatis 문서의 문장은 "Since version 3.4.5, MyBatis supports JSR-310 (Date and Time API) by default"입니다. 그보다 옛 판에는 원문이 적은 대로 `mybatis-typehandlers-jsr310` 의존성을 더합니다.
+컬럼 이름 `gmt_create`는 개발 수첩의 옛 판이 모든 테이블에 두라고 한 이름이고 지금 판은 `create_time`으로 바꿨습니다. 원문은 MyBatis 3.5.0부터 `java.time` 타입 핸들러가 기본으로 들어 있다고 적었는데 MyBatis 문서의 문장은 "Since version 3.4.5, MyBatis supports JSR-310 (Date and Time API) by default"입니다. 그보다 옛 판에는 원문이 적은 대로 아래 의존성을 더합니다.
+
+```xml
+<dependency>
+    <groupId>org.mybatis</groupId>
+    <artifactId>mybatis-typehandlers-jsr310</artifactId>
+    <version>1.0.2</version>
+</dependency>
+```
+
+원문은 시간 타입의 타입 핸들러, Java 타입, JDBC 타입이 어떻게 짝지어지는지를 표로 실었습니다. MyBatis 문서의 표와 대조했고 같은 내용입니다. 문서에는 여기에 `java.sql.Timestamp`, `java.sql.Date`, `java.sql.Time`의 핸들러 셋이 더 있습니다.
+
+| 타입 핸들러 | Java 타입 | JDBC 타입 |
+|---|---|---|
+| `DateTypeHandler` | `java.util.Date` | TIMESTAMP |
+| `DateOnlyTypeHandler` | `java.util.Date` | DATE |
+| `TimeOnlyTypeHandler` | `java.util.Date` | TIME |
+| `InstantTypeHandler` | `java.time.Instant` | TIMESTAMP |
+| `LocalDateTimeTypeHandler` | `java.time.LocalDateTime` | TIMESTAMP |
+| `LocalDateTypeHandler` | `java.time.LocalDate` | DATE |
+| `LocalTimeTypeHandler` | `java.time.LocalTime` | TIME |
+| `OffsetDateTimeTypeHandler` | `java.time.OffsetDateTime` | TIMESTAMP |
+| `OffsetTimeTypeHandler` | `java.time.OffsetTime` | TIME |
+| `ZonedDateTimeTypeHandler` | `java.time.ZonedDateTime` | TIMESTAMP |
+| `YearTypeHandler` | `java.time.Year` | INTEGER |
+| `MonthTypeHandler` | `java.time.Month` | INTEGER |
+| `YearMonthTypeHandler` | `java.time.YearMonth` | VARCHAR 또는 LONGVARCHAR |
+| `JapaneseDateTypeHandler` | `java.time.chrono.JapaneseDate` | DATE |
 
 5장에서 본 대로 `Date`는 순간을 담고 `LocalDateTime`은 달력의 시각을 담습니다. 컬럼에 든 것이 순간이라면 Java 타입을 바꾼 뒤에 같은 순간으로 읽히는지는 컬럼 타입과 연결 설정이 정합니다.
 
@@ -475,16 +579,25 @@ BE-commerce는 MySQL 8.4를 씁니다. 2026년 10월 7일 커밋 기준으로 �
 
 원문은 `java.util.Date` 위에 만든 도구로 앤트 파이낸셜의 `DateUtil`과 Apache Commons Lang의 `org.apache.commons.lang3.time`을 들고 `java.time` 위에 만든 공개 도구는 찾지 못했다고 적었습니다. 공개된 것으로는 ThreeTen-Extra와 Hutool의 `LocalDateTimeUtil`(소스의 `@since` 표기로 5.3.9부터)이 있습니다.
 
-원문은 이어서 `java.time`으로 만든 `DateUtils`를 예로 싣습니다. `LocalDate`를 받아 형식을 바꾸고 날을 더하고 월초와 분기 말을 구하는 메서드 모음입니다. 방향은 그대로 따르면 되고 그 가운데 여섯 곳은 같은 식을 옮겨 실행해 보고 고쳤습니다.
+원문은 이어서 `java.time`으로 만든 `DateUtils`를 예로 싣습니다. 메서드는 40개이고 `LocalDate`와 `LocalDateTime`을 받아 `java.time`의 메서드를 한 번씩 감싼 것이 대부분입니다. 원문의 클래스를 그대로 컴파일해 실행했습니다. 아래는 40개를 하는 일로 묶어 실행 결과와 한국에서 쓸 때 고칠 곳을 적은 표입니다.
 
-| 원문의 메서드 | 실행한 결과 | 바꾼 것 |
-|---|---|---|
-| `getCurrentDate()`처럼 인자 없는 `now()`를 부르는 메서드(`now()` 호출 열 번) | UTC JVM에서는 한국과 다른 날짜(4장의 `now()` 표) | `Clock`과 `ZoneId`를 받음 |
-| `parseLocalDate(dateStr, pattern)` | `2024-02-30`을 2월 29일로 받아들임 | `uuuu` 패턴과 STRICT |
-| `formatLocalDate(date, pattern)` | 호출마다 `ofPattern`을 부름(4장의 속도 표) | 포매터를 상수로 둠 |
-| `isDateInRange(date, startDate, endDate)` | 시작일이나 끝일을 넣으면 false | 양 끝을 포함하고 이름에 드러냄 |
-| `getNextWorkingDay(date)` | 2025-10-02를 넣으면 공휴일인 10-03 | 공휴일 목록을 받음 |
-| `getFirstDayOfWeek(date)` | 월요일 시작이어서 일요일인 2024-10-06을 넣으면 9월 30일 | 일요일 시작이 필요하면 `WeekFields`를 씀 |
+| 묶음 | 원문의 메서드 | 그대로 실행한 결과 | 고칠 곳 |
+|---|---|---|---|
+| 현재 날짜와 시각 | `getCurrentDate`, `getCurrentTime`, `getCurrentDateTime` | JVM 시간대의 현재 | `Clock`과 `ZoneId`를 받음 |
+| 형식 바꾸기 | `formatLocalDate`, `parseLocalDate` | `2024-02-30`을 2월 29일로 받아들임. 호출마다 `ofPattern`을 부름(4장의 속도 표) | `uuuu` 패턴과 STRICT, 포매터는 상수 |
+| 날 더하기와 세기 | `addDays`, `minusDays`, `getDaysBetween` | 1월 31일부터 3월 1일까지 30 | 없음 |
+| 필드 꺼내기 | `getYear`, `getMonth`, `getDayOfMonth`, `getHour`, `getMinute`, `getSecond`, `getDayOfWeek` | `java.time`의 `getXxx` 그대로 | 없음 |
+| 달과 해의 처음과 끝 | `getFirstDayOfMonth`, `getLastDayOfMonth`, `getFirstDayOfYear`, `getLastDayOfYear` | 2024-10-07에 10-01, 10-31, 01-01, 12-31 | 없음 |
+| 분기 | `getQuarter`, `getFirstDayOfQuarter`, `getLastDayOfQuarter` | 2024-10-07에 4, 10-01, 12-31 | 없음 |
+| 윤년과 달의 날 수 | `isLeapYear`, `getDaysInMonth` | 2024년 true, 2100년 false, 2024년 2월 29 | 없음 |
+| 비교 | `isSameDate`, `isDateInRange`, `isBefore`, `isAfter`, `isBeforeOrEqual`, `isAfterOrEqual` | `isDateInRange`는 시작일이나 끝일을 넣으면 false. 뒤의 넷은 안에서 `now()`를 부름 | 양 끝을 포함할지 이름에 드러냄. 기준일을 인자로 받음 |
+| 나이 | `getAge` | 안에서 `now()`를 부름 | 기준일을 인자로 받음 |
+| 주의 처음과 끝 | `getFirstDayOfWeek`, `getLastDayOfWeek` | 월요일 시작이어서 일요일인 2024-10-06에 09-30, 10-06 | 일요일 시작이 필요하면 `WeekFields`를 씀 |
+| 평일과 주말 | `isWeekday`, `isWeekend` | 개천절인 2025-10-03(금)이 평일 | 공휴일 목록을 받음 |
+| 영업일 | `getNextWorkingDay`, `getPreviousWorkingDay` | 2025-10-02의 다음은 10-03, 2025-10-10의 이전은 10-09. 둘 다 공휴일 | 공휴일 목록을 받음 |
+| 평일과 주말 세기 | `getWeekdayCountOfMonth`, `getWeekendCountOfMonth`, `getWeekdayCountOfYear` | 2025년 10월은 평일 23, 주말 8. 2025년 평일 261 | 공휴일 목록을 받음 |
+
+방향은 그대로 따르면 되고 고칠 곳은 여섯 가지로 모입니다. 안에서 `now()`를 부르는 메서드(호출이 모두 열 번), `parseLocalDate`, `formatLocalDate`, `isDateInRange`, 주의 처음과 끝, 평일과 영업일 계산입니다. 2025년 10월은 평일에 든 공휴일 다섯을 빼면 영업일이 23일에서 18일로 줄어듭니다.
 
 `isDateInRange`는 `isAfter(startDate) && isBefore(endDate)`로 계산해서 양 끝이 빠집니다. 10월 1일부터 31일까지의 기간에 10월 1일을 넣으면 false입니다. 양 끝을 넣을지는 쓰는 쪽이 정하면 되고 어느 쪽인지를 이름과 주석에 적어 둡니다.
 
@@ -536,7 +649,7 @@ date.with(week.dayOfWeek(), 7);                  // 그 주의 토요일
 
 ### 바꾼 것 다섯과 만 나이를 모으면 메서드 여섯 개짜리 클래스가 됩니다
 
-7장 첫 표에서 바꾼 여섯 가운데 한 주의 첫날을 뺀 다섯과 만 나이 계산을 넣은 작은 클래스입니다. 주석의 결과는 실행해서 확인했습니다.
+위에서 꼽은 고칠 곳 여섯 가운데 한 주의 첫날을 뺀 다섯과 만 나이 계산을 넣은 작은 클래스입니다. 주석의 결과는 실행해서 확인했습니다.
 
 ```java
 public final class TimeKit {
@@ -609,8 +722,9 @@ public final class TimeKit {
 
 ## 실행한 조건과 한계
 
-- JDK는 17.0.7(tzdata 2022g), 21.0.9(2025b), 25.0.1(2025b)이고 Apple Silicon 맥(12코어)의 macOS에서 실행했습니다. 기본 시간대는 Asia/Seoul, 기본 로캘은 ko_KR입니다. tzdata 비교, 포매터 공유, JMH, DB 실험을 뺀 나머지는 세 JDK에서 돌렸습니다. JDK에 따라 달라진 것은 넷입니다. `Instant.now()`가 직전과 같았던 횟수, 예외 메시지의 필드 순서, `WeekFields.of(Locale.CHINA)`의 첫 요일, JDK 25의 세 글자 ID 경고입니다. 포매터 공유, JMH, DB 실험은 JDK 21에서만 돌렸습니다.
+- JDK는 17.0.7(tzdata 2022g), 21.0.9(2025b), 25.0.1(2025b)이고 Apple Silicon 맥(12코어)의 macOS에서 실행했습니다. 기본 시간대는 Asia/Seoul, 기본 로캘은 ko_KR입니다. tzdata 비교, 포매터 공유, JMH, DB 실험을 뺀 나머지는 세 JDK에서 돌렸습니다. JDK에 따라 달라진 것은 다섯입니다. `Instant.now()`가 직전과 같았던 횟수, 예외 메시지의 필드 순서, `WeekFields.of(Locale.CHINA)`의 첫 요일, JDK 25의 세 글자 ID 경고, 쓸 수 있는 시간대 ID의 수(17.0.7은 631개와 603개, 21.0.9와 25.0.1은 632개와 604개)입니다. 포매터 공유, JMH, DB 실험은 JDK 21에서만 돌렸습니다.
 - 서울 시간대와 한국어 로캘로 바꾼 예제, 시간대 이름, 변환, 만 나이, 영업일, 한 주의 첫날은 기본 시간대를 서울과 UTC로 바꿔 가며 돌렸습니다.
+- 원문의 `DateUtils`는 원문에서 복사한 코드를 고치지 않고 컴파일해 세 JDK에서 실행했습니다.
 - 2025년 10월의 공휴일은 우주항공청의 2025년도 월력요항을 다룬 보도에서 가져왔습니다. 보도에 있는 것은 3일부터 9일까지 이레 연휴라는 것과 추석 연휴 첫날인 5일이 일요일이라는 것이고 8일이 대체공휴일이라는 것은 거기서 계산했습니다. 특일 정보 API는 제공 항목을 문서로 확인했고 직접 호출하지는 않았습니다.
 - 시계의 최소 간격은 이 맥에서 쟀습니다. 다른 운영체제에서는 다를 수 있습니다. 200만 번 가운데 시각이 거꾸로 간 적은 없었는데 이 결과로 알 수 있는 것은 측정하는 동안 시계 보정이 없었다는 데까지입니다.
 - `SimpleDateFormat`의 틀린 결과 수는 실행마다 달라서 세 차례의 범위로 적었습니다. 이 글의 실험을 돌린 동안 같은 맥의 1분 부하 평균은 7.5~11.8이었고 이 실험만의 부하는 따로 남기지 않았습니다.
@@ -624,6 +738,7 @@ public final class TimeKit {
 
 - [Alibaba Cloud Community, How Can We Manipulate Time Gracefully in Java?](https://www.alibabacloud.com/blog/how-can-we-manipulate-time-gracefully-in-java_602187)
 - [阿里云开发者社区, 如何才能在Java中优雅的操纵时间？](https://developer.aliyun.com/article/1637802)
+- [원문이 변환 방법의 참고로 든 CSDN 글](https://blog.csdn.net/qq_31635851/article/details/120150588)
 
 규약과 사례
 
