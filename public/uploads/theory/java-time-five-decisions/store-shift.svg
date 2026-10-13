@@ -15,7 +15,7 @@
   <line x1="745" y1="150" x2="846" y2="150" stroke="#868e96" stroke-width="1.5" marker-end="url(#a)"/>
   <rect x="850" y="108" width="290" height="84" rx="8" fill="#fff4e6" stroke="#f0c98a"/>
   <text x="995" y="142" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">읽는 JVM (UTC)</text>
-  <text x="995" y="168" font-size="14" font-weight="700" fill="#c92a2a" text-anchor="middle">2024-10-08T01:00Z (9시간 늦음)</text>
+  <text x="995" y="168" font-size="14" font-weight="700" fill="#c92a2a" text-anchor="middle">2024-10-08T01:00Z (9시간 뒤)</text>
   <text x="60" y="218" font-size="14" fill="#59636e">드라이버가 서버 세션도 서울 시간대라고 보고 서울 시각의 글자를 보낸다. 서버는 그 글자를 UTC로 받는다.</text>
 
   <text x="60" y="282" font-size="16" font-weight="800" fill="#1f2328">connectionTimeZone=UTC를 줬을 때</text>
