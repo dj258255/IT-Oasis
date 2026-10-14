@@ -17,9 +17,7 @@ category: theory/Systems
 topics:
   - systems
   - database
-draft: false
-series: "자바 시간"
-seriesOrder: 2
+draft: true
 ---
 
 [앞 글](/blog/theory/java-time-five-decisions)에서는 알리바바 클라우드 개발자 커뮤니티의 "如何才能在Java中优雅的操纵时间？"를 따라 `java.util`과 `java.time`의 API를 차례로 봤습니다. 아래에서는 알리바바의 그 글을 원문이라고 부릅니다. 원문은 API를 소개하고 `java.time`으로 옮기라고 권합니다. 이 글은 그 API로 코드를 짤 때 정하게 되는 여섯 가지를 실행 결과와 공개된 사고 사례로 적습니다. 값을 어떤 타입에 담을지, 어떻게 더할지, 걸린 시간을 무엇으로 잴지, 문자열로 어떻게 바꿀지, 어디에 어떻게 저장할지, 나이와 영업일 같은 계산에 한국 기준을 어떻게 넣을지입니다. 실행은 JDK 17, 21, 25와 MySQL 8.4, PostgreSQL 16에서 했습니다.
