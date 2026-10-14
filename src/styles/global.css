@@ -726,18 +726,18 @@ button, input, select, textarea {
   @apply my-6 sm:my-8;
 }
 .prose blockquote {
-  @apply pl-5 sm:pl-6 pr-5 sm:pr-6 my-6 sm:my-8 py-4 sm:py-5 rounded-xl sm:rounded-2xl;
-  background: #f6f8fa;
-  border: 1px solid #d1d9e0;
-  border-left: 3px solid #1a6aa0;
-  color: #3b434b;
+  @apply pl-5 sm:pl-7 pr-0 my-8 sm:my-10 py-1;
+  max-width: 72ch;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid #7b8794;
+  color: #59636e;
   font-style: normal;
+  line-height: 1.8;
 }
 .dark .prose blockquote {
   color: #c9d1d9;
-  background: #151b23;
-  border-color: #3d444d;
-  border-left-color: #8db8d0;
+  border-left-color: #768390;
 }
 .prose blockquote p:first-child { margin-top: 0; }
 .prose blockquote p:last-child { margin-bottom: 0; }
