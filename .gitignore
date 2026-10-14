@@ -53,3 +53,13 @@ _workspace/
 
 # python artifacts
 __pycache__/
+
+# 지원·면접·포트폴리오 자료는 _workspace/ 에만 둔다. 루트에 다시 생겨도 올라가지 않게 막는다
+/*.pptx
+/*.ppt
+/*.docx
+/*.pdf
+/*interview*
+/*portfolio*
+/*Portfolio*
+/blog-page.png
