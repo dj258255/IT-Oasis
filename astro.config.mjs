@@ -107,6 +107,8 @@ export default defineConfig({
   // 여러 편을 한 편으로 합치면서 사라진 URL. 정적 빌드에서는
   // meta refresh 페이지가 생성돼 기존 링크가 안 깨진다.
   redirects: {
+    // 자바 시간 글을 둘로 나눴다가 다시 한 편으로 합쳤다. 하루 동안 공개됐던 둘째 편 주소를 합친 글로 보낸다.
+    '/blog/theory/java-time-in-practice': `${base || ''}/blog/theory/java-time-five-decisions`,
     '/tags/B-tree': `${base || ''}/tags/B-Tree`,
     // 내려간 글 7편은 새 슬러그로도 들어올 수 있다 — 본문 곳곳이 아직 그 편을 가리킨다.
     // 이름이 바뀌기 전에도 같은 식으로 개요로 보내고 있었다.
