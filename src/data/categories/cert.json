@@ -1,0 +1,9 @@
+{
+  "name": "cert",
+  "nameKo": "자격증 공부",
+  "icon": "pencil",
+  "order": 9,
+  "subcategories": [
+    { "name": "CKA", "nameKo": "CKA", "order": 1 }
+  ]
+}
