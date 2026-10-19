@@ -1,0 +1,4 @@
+# 실습을 돌리면 생기는 파일
+warehouse/
+bronze.jsonl
+__pycache__/
