@@ -1,0 +1,12 @@
+{
+  "name": "data",
+  "nameKo": "데이터 엔지니어링",
+  "icon": "database",
+  "order": 9,
+  "subcategories": [
+    { "name": "Foundations", "nameKo": "기초", "order": 1 },
+    { "name": "Orchestration", "nameKo": "오케스트레이션", "order": 2 },
+    { "name": "Streaming", "nameKo": "스트리밍", "order": 3 },
+    { "name": "Lakehouse", "nameKo": "레이크하우스", "order": 4 }
+  ]
+}
