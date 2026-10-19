@@ -4,6 +4,8 @@
   "icon": "pencil",
   "order": 10,
   "subcategories": [
-    { "name": "CKA", "nameKo": "CKA", "order": 1 }
+    { "name": "CKA", "nameKo": "CKA", "order": 1 },
+    { "name": "SAA", "nameKo": "AWS SAA", "order": 2 },
+    { "name": "Spark", "nameKo": "Databricks Spark", "order": 3 }
   ]
 }
