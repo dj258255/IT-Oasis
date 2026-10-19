@@ -1,0 +1,618 @@
+---
+title: '[SAA Ch-04] 비용 최적화 아키텍처 설계: 무엇에 요금이 붙는지부터 센다'
+description: SAA-C03 영역 4(비용 최적화 아키텍처, 채점 문항의 20%)를 시험 안내서의 과제 4.1~4.4 순서로 정리합니다. S3 수명 주기와 Intelligent-Tiering, EBS 스냅샷 아카이브, 구매 옵션과 Savings Plans, Aurora Serverless와 DynamoDB 용량 모드, NAT 게이트웨이와 VPC 엔드포인트의 요금 구조를 공식 문서와 요금 페이지 기준으로 비교합니다. 비용 관리 도구를 먼저 정리하고 직접 만든 확인 문제를 끝에 붙였습니다.
+date: 2026-10-19T00:00:00.000Z
+tags:
+  - AWS
+  - SAA
+  - Certification
+  - Cost Optimization
+  - Savings Plans
+  - S3 Lifecycle
+  - NAT Gateway
+category: cert/SAA
+topics:
+  - systems
+draft: false
+series: "SAA 공부"
+seriesOrder: 4
+---
+
+## 결론부터
+
+1. 비용 문제는 요금이 붙는 단위를 세면 풀립니다. S3는 저장량, 요청 수, 꺼내는 양, 최소 보관 기간에 요금이 붙고 NAT 게이트웨이는 시간과 처리한 GB에, Transit Gateway는 연결 시간과 처리량에 붙습니다. 보기 중 이 단위를 줄이는 쪽이 정답입니다.
+2. 스토리지는 접근 패턴을 아는지가 갈림길입니다. 패턴을 알면 수명 주기 규칙으로 클래스를 내리고 모르면 Intelligent-Tiering입니다. 128KB보다 작은 객체는 기본적으로 수명 주기 전환 대상이 아니고 Intelligent-Tiering에서도 자동 계층 이동을 하지 않습니다.
+3. 컴퓨팅은 꾸준한 기준 부하에 약정(Savings Plans 최대 72%), 중단해도 되는 작업에 Spot(최대 90%), 나머지에 On-Demand를 섞습니다. AWS는 Reserved Instances보다 Savings Plans를 권합니다. 크기는 Compute Optimizer의 권고(기본 14일 지표)로 맞춥니다.
+4. 데이터베이스는 부하 모양으로 고릅니다. 한가한 시간이 긴 관계형은 Aurora Serverless v2(0 ACU까지 축소 가능), 예측 어려운 키-값은 DynamoDB 온디맨드, 꾸준하면 프로비저닝입니다. Aurora는 I/O 지출이 전체의 25% 이상이면 I/O-Optimized가 낫다고 문서가 적습니다.
+5. 네트워크 비용은 트래픽 경로로 줄입니다. 사설 서브넷에서 S3, DynamoDB로 가는 트래픽은 추가 요금이 없는 게이트웨이 엔드포인트로 돌리고 NAT 게이트웨이는 같은 AZ에 둡니다. AWS 오리진에서 CloudFront로 가는 전송은 무료입니다.
+
+---
+
+## 1. 영역 4를 읽는 법
+
+시험 안내서의 영역 4는 과제 네 개(4.1 스토리지, 4.2 컴퓨팅, 4.3 데이터베이스, 4.4 네트워크)로 나뉩니다(2026년 10월 19일 확인). 눈에 띄는 점은 네 과제 모두 지식 항목 첫머리에 같은 두 줄이 반복된다는 것입니다.
+
+- 비용 관리 서비스 기능(예: 비용 할당 태그, 다중 계정 결제)
+- 비용 관리 도구와 용도(예: Cost Explorer, Budgets, Cost and Usage Report)
+
+그래서 이 글은 도구를 2절에서 먼저 정리하고 3~6절에서 과제별로 들어갑니다. 영역 3(Ch-03)이 같은 네 축을 "빠르게"의 관점으로 봤다면 여기서는 "같은 요구를 더 싸게"의 관점으로 다시 봅니다.
+
+## 2. 비용 관리 도구와 기능
+
+### 2-1. Cost Explorer, Budgets, Cost and Usage Report
+
+| | Cost Explorer | Budgets | Cost and Usage Report(CUR) |
+|---|---|---|---|
+| 하는 일 | 비용과 사용량을 그래프로 보고 분석 | 한도를 정하고 알림이나 조치 | 가장 상세한 비용과 사용량 데이터를 S3로 |
+| 기간 | 최근 13개월과 이번 달, 앞으로 18개월 예측 | 월, 분기, 연, 사용자 지정 기간 | 청구 기간 단위로 누적 |
+| 갱신 | 최소 24시간에 한 번 | 하루 최대 세 번 | 하루 최소 한 번, 최대 세 번 |
+| 요금 | 콘솔은 무료, API는 페이지 요청당 0.01달러 | 문서에서 확인 못 함 | 문서에서 확인 못 함 |
+| 시험 문구 | "어떤 서비스가 비용을 늘렸는지 분석", "RI 구매 권장" | "한도의 80%에 도달하면 알림", "초과 시 IAM 정책으로 생성 차단" | "Athena로 시간 단위 비용을 쿼리", "리소스별 상세 청구 데이터" |
+
+Budgets 문서는 예산 유형을 여섯 가지로 나눕니다. 비용 예산, 사용량 예산, RI 사용률과 RI 적용률(coverage) 예산, Savings Plans 사용률과 적용률 예산입니다. 실제 지출과 예측 지출 둘 다로 알림을 걸 수 있고 알림은 이메일이나 SNS로 갑니다. 문서는 사용과 청구 사이에 지연이 있어서 알림이 오기 전에 한도를 넘을 수 있다고도 적습니다. 예산 조치(budget action)로 사용자 지정 IAM 정책을 붙여 추가 리소스 생성을 막는 예가 문서에 있습니다.
+
+CUR은 시간, 일, 월 단위로 서비스, 리소스, 태그별 비용을 CSV로 S3 버킷에 보냅니다. Athena, Redshift, Amazon Quick과 연동하도록 설정할 수 있습니다.
+
+### 2-2. 비용 할당 태그
+
+"Organizing and tracking costs using AWS cost allocation tags" 문서 기준입니다.
+
+- AWS 생성 태그(`aws:` 접두사, 예: `aws:createdBy`)와 사용자 정의 태그(`user:` 접두사) 두 종류가 있습니다.
+- 두 종류 모두 결제 콘솔에서 따로 활성화해야 Cost Explorer와 비용 할당 보고서에 나타납니다. 활성화한 뒤 콘솔에 보이기까지 최대 24시간이 걸립니다.
+- 조직에서는 관리 계정(과 조직에 속하지 않은 단일 계정)만 비용 할당 태그 관리자에 접근합니다.
+
+"리소스에 `Project` 태그를 달았는데 Cost Explorer에서 태그별로 나눠 보이지 않는다"는 문제의 답은 태그 활성화입니다.
+
+### 2-3. 다중 계정 결제(통합 결제)
+
+"Consolidating billing for AWS Organizations" 문서는 통합 결제의 이점을 네 가지로 적습니다. 청구서 하나, 계정 간 비용 추적, 사용량 합산으로 볼륨 할인과 RI 할인과 Savings Plans를 공유, 추가 요금 없음입니다. 관리 계정이 모든 멤버 계정의 요금을 냅니다. 개발, 운영, 분석 계정을 나눠 쓰는 회사에서 S3 단계별 요금이나 RI를 합산해 쓰고 싶다는 조건이면 Organizations 통합 결제입니다.
+
+## 3. 과제 4.1 비용 최적화 스토리지
+
+### 3-1. 저장 클래스를 고르는 순서
+
+S3 클래스별 가용성, AZ 수, 최소 보관 기간은 Ch-00 4-2절 표에 있습니다. 여기서는 고르는 순서를 정리합니다.
+
+| 질문 | 답이 예이면 |
+|---|---|
+| 접근 패턴을 모르거나 자주 바뀌는지 | Intelligent-Tiering |
+| 한 달에 한 번 정도 읽고 즉시 읽어야 하는지 | Standard-IA. 다시 만들 수 있는 데이터면 One Zone-IA |
+| 분기에 한 번 정도 읽고 밀리초로 읽어야 하는지 | Glacier Instant Retrieval |
+| 몇 분~몇 시간 기다려도 되는 아카이브인지 | Glacier Flexible Retrieval |
+| 1년에 한두 번, 12시간 안팎 기다려도 되는 장기 보관인지 | Glacier Deep Archive |
+
+"다시 만들 수 있다"는 조건은 One Zone-IA를 고르는 근거입니다. 원본은 다른 곳에 있고 썸네일처럼 재생성 가능한 사본이면 AZ 하나를 잃어도 다시 만들면 됩니다.
+
+### 3-2. 수명 주기 규칙의 제약
+
+"Transitioning objects using Amazon S3 Lifecycle" 문서의 제약은 보기를 지우는 데 바로 쓰입니다.
+
+- 전환은 폭포(waterfall) 방향으로만 갑니다. Standard에서 아래 모든 클래스로, Standard-IA에서 Intelligent-Tiering, One Zone-IA, Glacier 계열로, Glacier Flexible Retrieval에서는 Deep Archive로만 갑니다. Deep Archive에서는 수명 주기로 다른 클래스로 갈 수 없고 복원 후 복사해야 합니다.
+- 128KB보다 작은 객체는 기본적으로 어떤 클래스로도 전환하지 않습니다(2024년 9월 변경). 객체마다 전환 요청 요금이 붙어 작은 객체는 전환 비용이 절감액보다 클 수 있기 때문입니다. 객체 크기 필터로 바꿀 수 있습니다.
+- 최소 보관 기간 전에 클래스를 옮기면 남은 기간 요금을 냅니다. 한 규칙 안에서 최소 기간이 지나기 전 다음 전환을 걸 수 없습니다. 문서 예시로 Glacier Instant Retrieval(최소 90일)로 4일째 옮겼다면 Deep Archive 전환은 최소 94일째 이후여야 합니다.
+- Glacier Flexible Retrieval과 Deep Archive로 보낸 객체에는 객체마다 40KB가 더 붙습니다. 8KB는 Standard 요금, 32KB는 해당 Glacier 요금입니다. 작은 객체를 많이 보관하면 묶어서 큰 객체로 만드는 편이 싸다고 문서가 적습니다.
+
+수명 주기의 만료(expiration) 동작으로 객체를 지울 수도 있습니다. 쇼핑몰 주문 영수증 PDF를 "30일 Standard, 이후 Glacier Instant Retrieval, 5년 뒤 삭제"로 관리하는 규칙이 데이터 수명 주기 항목의 전형입니다.
+
+### 3-3. Intelligent-Tiering 계층
+
+"How S3 Intelligent-Tiering works" 문서 기준입니다.
+
+| 계층 | 들어가는 조건 | 접근 |
+|---|---|---|
+| Frequent Access(자동) | 생성되거나 전환된 직후, 접근이 계속될 때 | 밀리초 |
+| Infrequent Access(자동) | 30일 연속 접근 없음 | 밀리초 |
+| Archive Instant Access(자동) | 90일 연속 접근 없음 | 밀리초 |
+| Archive Access(선택) | 활성화하면 최소 90일 접근 없음(최대 730일까지 설정) | 표준 복원 3~5시간 |
+| Deep Archive Access(선택) | 활성화하면 최소 180일 접근 없음(최대 730일까지 설정) | 표준 복원 12시간 이내 |
+
+객체당 소액의 모니터링과 자동화 요금이 붙고 Ch-00에서 정리했듯 꺼낼 때 요금은 없습니다. 128KB보다 작은 객체는 모니터링하지 않고 항상 Frequent Access 계층 요금으로 저장합니다. 자동 계층에 있는 객체를 다시 읽으면 Frequent Access로 돌아갑니다. 선택 계층 두 개는 비동기로 읽어도 되는 애플리케이션일 때만 켜라고 문서가 적습니다.
+
+### 3-4. 접근 옵션: 요청자 지불(Requester Pays)
+
+안내서 4.1의 첫 지식 항목이 "요청자 지불 버킷"입니다. 문서("Using Requester Pays general purpose buckets") 기준입니다.
+
+- 요청자가 요청 비용과 다운로드 전송 비용을 내고 버킷 소유자는 저장 비용만 냅니다.
+- 익명 접근이 허용되지 않습니다. 모든 요청은 인증되어야 하고 요청자는 `x-amz-request-payer` 헤더(또는 CLI의 `--request-payer`)로 비용 부담에 동의해야 합니다.
+- 큰 공개 데이터셋(우편번호, 지리 정보, 웹 크롤링 데이터)을 공유하면서 남이 내려받는 비용을 지고 싶지 않을 때 씁니다.
+
+"연구 기관 여러 곳에 대용량 데이터셋을 제공하는데 전송 비용은 받는 쪽이 내야 한다"가 요청자 지불입니다.
+
+### 3-5. EBS 비용: 볼륨 유형, 크기, 스냅샷
+
+블록 스토리지 옵션(HDD와 SSD 볼륨 유형)은 Ch-03 2-3절의 표를 비용 관점으로 다시 읽으면 됩니다.
+
+- gp3는 gp2보다 GiB당 가격이 20% 낮고 성능을 크기와 따로 정합니다. gp2에서 IOPS를 얻으려고 볼륨을 크게 잡았다면 gp3로 바꾸고 크기를 줄일 수 있습니다. Elastic Volumes로 인스턴스를 멈추지 않고 유형을 바꿉니다.
+- 큰 순차 I/O면 st1, 접근이 드물고 저장 비용이 가장 중요하면 sc1입니다. 둘 다 부트 볼륨은 안 됩니다.
+- Compute Optimizer가 EBS 볼륨 권고도 냅니다(4-3절).
+
+스냅샷은 기본 Standard 계층에서 증분(바뀐 블록만)으로 저장됩니다. "Archive Amazon EBS snapshots" 문서의 아카이브 계층은 다르게 동작합니다.
+
+| | 스냅샷 Standard 계층 | 스냅샷 Archive 계층 |
+|---|---|---|
+| 저장 방식 | 증분 | 전체 스냅샷으로 변환 |
+| 비용 | 기준 | 90일 이상 보관하고 드물게 쓰는 스냅샷이면 최대 75% 낮음 |
+| 최소 보관 | 없음 | 90일. 먼저 지우거나 복원하면 남은 기간 요금 |
+| 사용 | 바로 볼륨 생성 | Standard로 복원 후 사용. 복원에 최대 72시간 |
+| 권장 대상 | 일상 백업 | 월, 분기, 연 단위 스냅샷, 프로젝트 종료 스냅샷 |
+
+문서는 한 볼륨의 일일 증분 스냅샷을 아카이브하면 Standard에 두는 것보다 비쌀 수 있다고 경고합니다. 증분이 전체로 바뀌기 때문입니다. "규정상 7년 보관, 거의 복원하지 않음"은 아카이브 계층이고 "매일 백업, 빠른 복원"은 Standard입니다.
+
+### 3-6. 파일 스토리지 비용
+
+| 서비스 | 비용을 줄이는 기능(문서 기준) |
+|---|---|
+| EFS | Standard 외에 Infrequent Access와 Archive 저장 클래스. 첫 바이트 지연은 수십 밀리초 |
+| FSx for NetApp ONTAP | 콜드 데이터용 저비용 계층 |
+| FSx for OpenZFS | 저비용용 HDD 저장 옵션 |
+| FSx for Lustre | S3 데이터셋 자동 가져오기와 내보내기로 고속 계층에 필요한 기간만 데이터를 둔다 |
+
+EFS 문서는 Elastic 처리량에서 읽거나 쓴 메타데이터와 데이터 양에만 요금을 낸다고 적습니다. 부하가 가끔 튀는 공유 디렉터리는 처리량을 미리 사 두는 Provisioned보다 Elastic이 맞는 경우가 많습니다. EFS 수명 주기 정책으로 IA나 Archive로 옮기는 일수 같은 세부값은 이번에 확인하지 않았습니다.
+
+### 3-7. AWS로 데이터를 옮기는 가장 싼 방법
+
+안내서 기술 항목에 "워크로드의 데이터를 AWS 스토리지로 옮기는 가장 저렴한 방법"과 "배치 업로드와 개별 업로드 비교"가 있습니다.
+
+| 상황 | 경로 |
+|---|---|
+| 온프레미스 NFS, SMB 파일을 온라인으로 대량 이관 | DataSync |
+| 협력사가 SFTP로 보내고 클라이언트를 바꿀 수 없음 | Transfer Family |
+| 이관 후에도 온프레미스 앱이 파일 공유로 계속 접근 | Storage Gateway(S3 File Gateway) |
+| 네트워크로는 너무 오래 걸리는 수백 TB | Snowball. 상용 리전 지원이 2026년 12월 31일에 끝난다는 공지가 있다 |
+| 작은 파일 수백만 개 | 묶어서(tar, 큰 객체) 올린다. 요청 수와 Glacier 객체당 40KB 부담이 줄어든다 |
+
+배치 업로드가 유리한 이유는 S3 요금이 요청 수에도 붙기 때문입니다. 3-2절의 128KB 기준과 40KB 오버헤드도 같은 방향을 가리킵니다.
+
+### 3-8. 시험에서 갈리는 조건(스토리지)
+
+| 시나리오 문구 | 고를 것 |
+|---|---|
+| 접근 패턴을 예측할 수 없는 사용자 업로드 | S3 Intelligent-Tiering |
+| 30일 뒤 거의 안 읽음, 1년 뒤 삭제 | 수명 주기: 30일 Standard-IA, 365일 만료 |
+| 규정상 10년 보관, 복원은 12시간 기다려도 됨 | Glacier Deep Archive |
+| 다시 만들 수 있는 썸네일, 가끔 읽음 | One Zone-IA |
+| 공개 데이터셋 다운로드 비용을 받는 쪽이 부담 | Requester Pays |
+| gp2를 크게 잡아 IOPS 확보 중 | gp3로 바꾸고 IOPS를 따로 프로비저닝 |
+| 분기마다 찍는 스냅샷을 몇 년 보관 | EBS Snapshots Archive |
+| 1KB짜리 로그 파일 수천만 개를 Glacier로 | 큰 객체로 묶은 뒤 전환 |
+
+## 4. 과제 4.2 비용 최적화 컴퓨팅
+
+### 4-1. 구매 옵션
+
+EC2 요금 페이지와 Savings Plans, Reserved Instances 문서 기준입니다(2026년 10월).
+
+| 옵션 | 할인(On-Demand 대비 최대) | 약정 | 맞는 워크로드 |
+|---|---|---|---|
+| On-Demand | 없음 | 없음. 시간 또는 초 단위 | 짧거나 예측 불가, 중단 불가 |
+| Compute Savings Plans | 66% | 1년 또는 3년, 시간당 사용 금액 | EC2 패밀리, 크기, 리전, OS가 바뀔 수 있음. Fargate와 Lambda에도 적용 |
+| EC2 Instance Savings Plans | 72% | 1년 또는 3년, 리전과 패밀리 고정 | 한 리전의 같은 패밀리를 꾸준히 사용 |
+| Standard RI | 문서는 "가장 큰 할인"으로 표현 | 1년 또는 3년, 인스턴스 속성 | 속성이 고정된 꾸준한 부하. 수정만 가능, 교환 불가 |
+| Convertible RI | Standard보다 낮음 | 1년 또는 3년 | 다른 속성의 Convertible RI로 교환 가능 |
+| Spot | 90% | 없음. 회수될 수 있음 | 중단해도 되는 배치, CI, 상태 없는 작업자 |
+| Dedicated Host | 할인 아님 | | 소켓, 코어 단위 라이선스, 물리 서버 전용 |
+
+몇 가지 조건을 같이 기억합니다.
+
+- Reserved Instances 문서 첫머리에 "Reserved Instances보다 Savings Plans를 권한다"는 문장이 있습니다. RI는 특정 인스턴스 구성에 약정하고 Savings Plans는 시간당 사용 금액에 약정합니다.
+- RI는 실제 인스턴스가 아니고 조건이 맞는 On-Demand 사용에 붙는 청구 할인입니다. 자동으로 갱신되지 않아 만료되면 On-Demand 요금으로 돌아갑니다. 구매는 취소할 수 없고 수정, 교환, RI Marketplace 판매만 가능합니다.
+- 결제 방식은 전액 선결제, 부분 선결제, 선결제 없음 세 가지이고 선결제가 클수록 대체로 더 쌉니다.
+- Spot은 회수 2분 전에 중단 알림이 EventBridge 이벤트와 인스턴스 메타데이터로 옵니다. 중단 동작을 최대 절전으로 정하면 알림은 오지만 2분 유예 없이 바로 시작합니다.
+- Savings Plans에는 Database Savings Plans와 SageMaker AI Savings Plans도 있습니다(5-6절).
+
+### 4-2. 워크로드 등급별 가용성과 구매 옵션
+
+안내서 기술 항목 "워크로드 등급별 필요한 가용성(운영과 비운영)"은 같은 서비스라도 등급마다 다른 옵션을 고르라는 뜻으로 읽힙니다.
+
+| 등급 | 예시 | 구성 |
+|---|---|---|
+| 운영, 꾸준한 기준 부하 | 결제 API의 최소 서버 6대 | Savings Plans로 기준을 덮고 Multi-AZ |
+| 운영, 피크 부하 | 주말 특가 때 추가되는 웹 서버 | Auto Scaling으로 On-Demand(일부 Spot 혼합 가능) |
+| 비운영 | 개발, 테스트 환경 | 업무 시간에만 켜기(예약 조정), 작은 크기, 단일 AZ |
+| 중단 가능한 배치 | 야간 이미지 변환 | Spot, 체크포인트로 재시작 |
+
+Ch-00에서 본 공식 샘플 문항처럼 "중단할 수 없음"이 붙으면 Spot은 가장 싸도 오답입니다.
+
+### 4-3. 인스턴스 패밀리와 크기 맞추기(rightsizing)
+
+Compute Optimizer 문서는 리소스의 설정과 사용률 지표를 분석해 적정 크기 권고와 유휴 리소스를 알려 준다고 설명합니다.
+
+- 지원 리소스: EC2 인스턴스, Auto Scaling 그룹, EBS 볼륨, Lambda 함수, Fargate 위 ECS 서비스, 상용 소프트웨어 라이선스, Aurora와 RDS, NAT 게이트웨이, DynamoDB, ElastiCache 등입니다.
+- 옵트인이 필요하고 기본적으로 CloudWatch의 최근 14일 지표를 분석합니다. 유료 기능인 향상된 인프라 지표를 켜면 93일로 늘어납니다.
+- 조직 관리 계정에서 옵트인하면 여러 계정의 권고를 한 곳에서 봅니다.
+
+패밀리 선택 기준은 Ch-03 3-1절의 이름 읽기와 같습니다. 메모리 사용률은 높고 CPU는 한가하면 C에서 R로, 반대면 R에서 C로 옮기는 식입니다. Lambda 메모리 권고도 Compute Optimizer가 내는데 Lambda 문서는 x86_64 함수만 지원한다고 적습니다.
+
+### 4-4. Graviton
+
+AWS Graviton 제품 페이지(2026년 10월)는 Graviton 기반 인스턴스가 비교 가능한 x86 기반 EC2 인스턴스보다 최대 20% 저렴하고 같은 성능에 최대 60% 적은 에너지를 쓴다고 적습니다. 인스턴스 이름의 `g` 옵션(예: m7g, c7gn)이 Graviton입니다. 시험에서 "애플리케이션이 Arm에서 동작한다", "가격 대비 성능 개선"이 조건이면 Graviton 패밀리로 옮기는 보기가 맞습니다. 강의 자료에 자주 나오는 "가격 대비 성능 최대 40% 향상"은 이번에 연 페이지에서 찾지 못했습니다.
+
+### 4-5. 확장 방식: 수평, 수직, 최대 절전
+
+| 방식 | 비용 관점 |
+|---|---|
+| 수평 확장(Auto Scaling) | 부하에 맞춰 대수를 늘리고 줄여 남는 용량을 줄인다 |
+| 수직 확장(크기 변경) | 단순하지만 바꾸는 동안 재시작이 필요하고 가장 큰 크기에서 막힌다 |
+| 최대 절전(hibernation) | 메모리 내용을 EBS 루트 볼륨에 저장하고 중지. 중지 상태 인스턴스 사용 요금은 없고 EBS 저장 요금만 낸다 |
+
+EC2 최대 절전 문서는 부팅과 메모리 적재에 오래 걸리는 애플리케이션을 미리 데워 두는 용도를 듭니다. 원하는 상태까지 올린 뒤 최대 절전으로 두었다가 필요할 때 재개합니다. "개발 서버가 퇴근 후 꺼져야 하는데 켤 때마다 캐시를 다시 채우느라 20분 걸린다"면 최대 절전입니다.
+
+### 4-6. Lambda, Fargate, EC2 중 무엇이 싼지
+
+안내서는 이 셋을 예로 들어 "비용 효율적인 컴퓨팅 서비스와 용도"를 묻습니다. 요금 단위가 다르다는 점에서 출발합니다.
+
+| | 요금 단위 | 싸지는 조건 |
+|---|---|---|
+| Lambda | 요청 수와 메모리 × 실행 시간 | 호출이 드문드문하고 짧음. 놀고 있을 때 요금이 없다 |
+| Fargate | 작업의 vCPU와 메모리 × 실행 시간 | 컨테이너를 쓰고 서버 관리 비용까지 줄이고 싶음. Fargate Spot 가능 |
+| EC2 | 인스턴스 시간(구매 옵션 할인 가능) | 사용률이 꾸준히 높음, 약정이나 Spot 적용 |
+
+Compute Savings Plans가 EC2, Fargate, Lambda 모두에 적용된다는 점도 비교에 넣습니다. 세 서비스의 단가는 리전과 시점마다 달라 이 글에서는 적지 않았습니다.
+
+### 4-7. 로드 밸런서와 하이브리드 컴퓨팅
+
+안내서 4.2 기술 항목에 ALB(L7), NLB(L4), GWLB 비교가 있습니다. 비용 관점에서는 하나의 ALB가 호스트와 경로 규칙으로 여러 서비스를 나눌 수 있다는 점이 중요합니다. 서비스마다 로드 밸런서를 따로 만들 필요가 줄어듭니다. 로드 밸런서 요금 구조(LCU 등)는 이번에 요금 페이지에서 확인하지 않았습니다.
+
+지식 항목의 하이브리드 컴퓨팅 예시는 AWS Outposts, 분산 컴퓨팅 예시는 엣지 처리입니다. 지연이나 데이터 상주 요건 때문에 온프레미스에서 AWS 인프라를 써야 하는 경우가 Outposts의 문구인데 Outposts 문서는 이번에 열어 보지 않았습니다.
+
+### 4-8. 시험에서 갈리는 조건(컴퓨팅)
+
+| 시나리오 문구 | 고를 것 |
+|---|---|
+| 3년 동안 꾸준히 돌고 패밀리와 리전이 바뀔 수 있음 | Compute Savings Plans |
+| 한 리전의 m 패밀리를 3년 고정 사용, 최대 할인 | EC2 Instance Savings Plans |
+| 언제든 중단돼도 되는 야간 렌더링 | Spot(Spot 플릿, 여러 인스턴스 유형) |
+| 중단 불가, 기간 짧고 일회성 | On-Demand |
+| CPU 사용률이 늘 10% 아래 | Compute Optimizer 권고로 크기 축소 |
+| 개발 서버 재시작이 느림, 밤에는 비용 0에 가깝게 | 최대 절전 |
+| 하루 몇 번 호출되는 짧은 작업 | Lambda |
+
+## 5. 과제 4.3 비용 최적화 데이터베이스
+
+### 5-1. 부하 모양으로 서비스 고르기
+
+안내서 기술 항목은 "DynamoDB와 RDS 비교, 서버리스"를 예로 듭니다.
+
+| 부하 모양 | 비용 효율적인 선택 |
+|---|---|
+| 관계형, 꾸준함 | RDS 또는 Aurora 프로비저닝 + 약정 |
+| 관계형, 긴 유휴와 짧은 급증 | Aurora Serverless v2 |
+| 키-값, 예측 불가 | DynamoDB 온디맨드 |
+| 키-값, 꾸준하고 예측 가능 | DynamoDB 프로비저닝(+ 자동 조정) |
+| 키-값, 저장이 비용 대부분이고 읽기가 드묾 | DynamoDB Standard-IA 테이블 클래스 |
+
+### 5-2. Aurora Serverless v2와 저장 구성
+
+"How Aurora serverless works" 문서 기준입니다.
+
+- 단위는 ACU이고 1 ACU는 약 2GiB 메모리와 그에 맞는 CPU, 네트워크입니다.
+- 범위는 0~256 ACU입니다. 최소값 0은 자동 일시 정지(auto-pause)를 지원하는 엔진 버전(예: Aurora MySQL 3.08.0 이상, Aurora PostgreSQL 16.3 이상 등)에서만 고를 수 있습니다. 부하가 없으면 0까지 내려갑니다.
+- 0.5 ACU 단위까지 잘게 늘고 줄며 용량은 초 단위로 측정하고 ACU-시간으로 과금합니다.
+- 소매, 게임, 스포츠 사이트의 주기적 프로모션, 필요할 때만 보고서를 만드는 DB, 개발과 테스트 환경이 문서가 드는 예시입니다. 꾸준한 부하에는 프로비저닝 클러스터가 맞다고 적습니다.
+
+같은 Aurora라도 저장 구성으로 요금이 달라집니다. Aurora Standard는 I/O 요청 100만 건당 요금을 따로 내고 I/O-Optimized는 I/O 요금이 없는 대신 인스턴스와 저장 단가가 다릅니다. 문서 기준은 I/O 지출이 Aurora 전체 지출의 25% 이상이면 I/O-Optimized입니다. Standard에서 I/O-Optimized로는 30일에 한 번 바꿀 수 있습니다.
+
+### 5-3. DynamoDB 용량 모드와 테이블 클래스
+
+Ch-03 4-5절에서 본 대로 온디맨드는 요청당 요금, 프로비저닝은 프로비저닝한 시간당 용량에 요금을 냅니다. 비용 관점의 판단은 사용률입니다. 프로비저닝한 용량을 꾸준히 많이 쓰면 프로비저닝이 싸고 트래픽이 들쭉날쭉해 평소에 놀면 온디맨드가 쌉니다. 이 손익 분기점을 숫자로 계산하는 공식 예시는 이번에 찾지 않았습니다.
+
+"DynamoDB table classes" 문서는 Standard-IA 테이블 클래스를 저장이 비용의 대부분인 테이블에 맞춘 클래스로 소개합니다. 예시는 애플리케이션 로그, 오래된 게시글, 전자상거래 주문 이력, 지난 게임 업적입니다. 테이블 클래스는 나중에 바꿀 수 있습니다.
+
+### 5-4. 캐싱, 복제, 연결로 비용 줄이기
+
+| 방법 | 비용이 줄어드는 이유 |
+|---|---|
+| DAX | 반복 읽기를 캐시가 받아 DynamoDB RCU 과다 프로비저닝을 피한다(DAX 문서) |
+| ElastiCache | 같은 조회를 DB 대신 캐시가 받아 DB 인스턴스를 키우지 않아도 된다 |
+| 읽기 복제본 | 라이터를 키우는 대신 읽기를 나눈다. 같은 리전 복제 전송은 무료, 복제본은 인스턴스 요금을 낸다 |
+| RDS Proxy | 연결 수 때문에 인스턴스 클래스를 올리는 일을 줄인다 |
+
+캐시 자체도 노드 요금이 드니 적중률이 낮으면 손해입니다. DAX 문서는 적중률 90% 이상에서 가장 잘 동작한다고 적습니다.
+
+### 5-5. 백업과 보존 정책
+
+안내서 기술 항목은 "스냅샷 빈도 같은 백업과 보존 정책 설계"를 듭니다. 이번에 RDS 자동 백업 보존 기간 최대값이나 백업 저장 요금 규칙은 문서로 확인하지 않아 원칙만 적습니다. 복구 시점 목표(RPO)가 짧을수록 스냅샷 빈도와 저장량이 늘고 보존 기간이 길수록 저장 비용이 늡니다. EBS 스냅샷 문서는 AWS Backup으로 만든 스냅샷도 아카이브 계층으로 보낼 수 있다고 적으니 장기 보존분은 3-5절의 아카이브 계층으로 내리는 설계가 가능합니다.
+
+### 5-6. Database Savings Plans
+
+Savings Plans 문서(2026년 10월)는 Database Savings Plans를 Aurora, RDS, DynamoDB, ElastiCache, DocumentDB, Timestream, Neptune, Keyspaces, DMS, OpenSearch Service에 최대 35% 할인을 주는 약정으로 설명합니다. 엔진, 인스턴스 패밀리, 크기, AZ, 리전과 관계없이 최신 프로비저닝 인스턴스 세대에 적용되고 서버리스 사용에도 적용됩니다. RDS for Oracle에서 Aurora PostgreSQL로 옮기거나 RDS에서 DynamoDB로 옮겨도 할인이 유지된다는 예가 있습니다. 비교적 새로운 옵션이라 시험 문항에 반영됐는지는 모릅니다. 기존 강의에서는 RDS Reserved Instances가 DB 약정 할인의 답으로 나왔을 가능성이 큽니다.
+
+### 5-7. 목적에 맞는 DB 유형과 이관
+
+안내서 기술 항목은 "비용 효율적인 DB 유형(시계열 형식, 컬럼 형식)"과 "스키마와 데이터를 다른 위치나 다른 엔진으로 이관"을 듭니다.
+
+| 데이터 | 유형 | 서비스 예 |
+|---|---|---|
+| 집계와 분석 쿼리가 주, 대량 스캔 | 컬럼 형식 | Redshift, S3 위 Parquet + Athena |
+| 시간 순서 측정값, 최근 데이터 위주 조회 | 시계열 | Timestream |
+| 관계 탐색(추천, 소셜 그래프) | 그래프 | Neptune |
+
+범용 관계형 DB에 분석 쿼리까지 몰아넣으면 인스턴스를 키우게 됩니다. 분석은 컬럼 형식으로 빼는 편이 같은 요구를 더 싸게 처리합니다. 서비스별 상세 특성은 이번에 각 문서를 열어 확인하지 않았고 Database Savings Plans 적용 대상 목록에서 이름만 확인했습니다.
+
+이관 도구는 Ch-03 4-7절의 DMS와 DMS Schema Conversion(SCT)입니다. DMS 문서는 사용한 만큼만 내는 요금 모델이라고 적고 상용 엔진에서 RDS, Aurora, DynamoDB, S3 같은 관리형 서비스로 옮겨 비용을 줄이는 경우를 예로 듭니다.
+
+### 5-8. 시험에서 갈리는 조건(데이터베이스)
+
+| 시나리오 문구 | 고를 것 |
+|---|---|
+| 사내 보고서 DB, 하루 대부분 유휴 | Aurora Serverless v2(최소 ACU를 낮게, 지원 버전이면 0) |
+| Aurora 청구서에서 I/O가 40% | Aurora I/O-Optimized |
+| 신규 서비스, 트래픽 예측 불가, 키-값 | DynamoDB 온디맨드 |
+| 꾸준한 트래픽, 용량 계획 가능 | DynamoDB 프로비저닝 + 자동 조정 |
+| 몇 년 치 주문 이력 테이블, 거의 안 읽음 | DynamoDB Standard-IA 테이블 클래스 |
+| 반복 조회 때문에 RCU를 크게 잡음 | DAX |
+| 운영 DB에 분석 쿼리를 돌리느라 인스턴스를 키움 | 분석을 Redshift 또는 S3 + Athena로 분리 |
+| 상용 DB 라이선스 비용을 줄이려 오픈 소스 엔진으로 | DMS Schema Conversion(SCT) + DMS로 Aurora PostgreSQL |
+
+## 6. 과제 4.4 비용 최적화 네트워크
+
+### 6-1. 데이터 전송 요금의 방향
+
+안내서 기술 항목은 "리전 간, AZ 간, 사설에서 공용으로" 가는 경로를 비용으로 비교하라고 합니다. 이번에 열어 본 문서에서 확인한 사실만 모으면 이렇습니다.
+
+| 경로 | 확인한 내용 | 출처 |
+|---|---|---|
+| 같은 리전 EC2에서 S3 | VPC 요금 페이지 예시에서 전송 요금 없음 | Amazon VPC Pricing |
+| 같은 AZ의 NAT 게이트웨이와 EC2 | 전송 요금 없음(처리 요금은 별도) | Amazon VPC Pricing |
+| 다른 AZ의 NAT 게이트웨이와 EC2 | 전송 요금 발생 | Amazon VPC Pricing |
+| 같은 리전 RDS 원본과 읽기 복제본 | 복제 전송 요금 없음 | RDS 읽기 복제본 문서 |
+| AWS 오리진(S3, ELB, API Gateway)에서 CloudFront | 항상 무료, CloudFront에서 사용자로 나가는 전송만 과금 | CloudFront 개발자 가이드 |
+| 인터넷으로 나가는 전송 | 모든 서비스와 리전 합산 월 100GB 무료(중국, GovCloud 제외) | EC2 On-Demand 요금 페이지 |
+
+AZ 간 전송의 GB당 단가와 리전 간 단가는 이번에 요금 페이지에서 수치를 찾지 못했습니다. 원칙은 "같은 AZ, 같은 리전, 사설 경로일수록 싸다"로 정리하고 수치는 시험 전에 다시 확인합니다.
+
+### 6-2. NAT 게이트웨이 요금 구조
+
+"Pricing for NAT gateways" 문서는 NAT 게이트웨이가 사용 가능한 시간마다, 그리고 처리한 GB마다 요금을 낸다고 적습니다. Amazon VPC 요금 페이지의 미국 동부(오하이오) 예시는 시간당 0.045달러, 처리한 GB당 0.045달러입니다(2026년 10월 19일 확인). 처리 요금은 출발지와 목적지와 관계없이 붙고 일반 데이터 전송 요금도 따로 붙습니다. 서울 리전 단가는 이번에 확인하지 않았습니다.
+
+같은 문서가 권하는 절감 방법은 두 가지입니다.
+
+1. AZ를 건너는 트래픽이 많으면 리소스와 NAT 게이트웨이를 같은 AZ에 두거나 AZ마다 NAT 게이트웨이를 만듭니다.
+2. NAT를 지나는 트래픽 대부분이 게이트웨이 엔드포인트나 인터페이스 엔드포인트를 지원하는 AWS 서비스로 간다면 엔드포인트를 만듭니다.
+
+안내서 기술 항목 "공유 NAT 게이트웨이 하나와 AZ별 NAT 게이트웨이 비교"는 이 트레이드오프입니다.
+
+| | 공유 NAT 게이트웨이 1개 | AZ별 NAT 게이트웨이 |
+|---|---|---|
+| 시간 요금 | 1개분 | AZ 수만큼 |
+| AZ 간 전송 | 다른 AZ 리소스의 트래픽에 발생 | 같은 AZ로 보내면 발생하지 않음 |
+| 가용성 | NAT가 있는 AZ가 실패하면 다른 AZ의 아웃바운드도 끊김 | AZ 독립 |
+| 맞는 경우 | 개발 환경, 트래픽 적음 | 운영 환경, AZ 간 트래픽 많음 |
+
+2026년 10월 VPC 문서에는 리전 NAT 게이트웨이(regional NAT gateway)도 있습니다. 워크로드가 있는 AZ로 자동으로 확장하고 줄어들며 공용 서브넷이 필요 없습니다. 요금 페이지 예시는 시간 요금이 활성 AZ마다 붙어 AZ 3개면 시간당 0.135달러(오하이오)라고 적습니다. 사설 NAT는 지원하지 않습니다. 새 기능이라 시험에 반영됐는지는 모릅니다.
+
+NAT 인스턴스와 비교한 "Compare NAT gateways and NAT instances" 문서의 핵심입니다.
+
+| | NAT 게이트웨이 | NAT 인스턴스 |
+|---|---|---|
+| 가용성 | AZ 안에서 이중화. AZ마다 만들어 AZ 독립 구성 | 장애 조치를 스크립트로 직접 |
+| 대역폭 | 최대 100Gbps | 인스턴스 유형에 따라 |
+| 관리 | AWS 관리 | 패치와 업데이트를 직접 |
+| 요금 | 개수, 시간, 처리한 데이터 양 | 개수, 시간, 인스턴스 유형과 크기 |
+| 보안 그룹 | 붙일 수 없음 | 붙일 수 있음 |
+| 포트 포워딩, 배스천 | 불가 | 가능 |
+
+AWS는 NAT 게이트웨이를 권합니다. 시험에서 NAT 인스턴스가 정답이 되는 경우는 "트래픽이 아주 적은 개발 환경에서 비용이 최우선이고 관리 부담을 감수"처럼 조건이 분명할 때로 보입니다. 이 판단은 문서에 직접 적힌 문장이 아니고 요금 구조에서 끌어낸 추론입니다.
+
+### 6-3. VPC 엔드포인트: 게이트웨이와 인터페이스
+
+| | 게이트웨이 엔드포인트 | 인터페이스 엔드포인트(PrivateLink) |
+|---|---|---|
+| 대상 | S3, DynamoDB만 | 대부분의 AWS 서비스, 다른 계정 서비스 |
+| 방식 | 라우팅 테이블에 접두사 목록 경로 추가 | 서브넷에 ENI 생성 |
+| 요금 | 추가 요금 없음 | PrivateLink 요금(시간, 처리량). 단가는 이번에 확인하지 않음 |
+| 범위 | 같은 리전만. 다른 리전 S3로 가는 트래픽은 인터넷 게이트웨이로 간다 | |
+
+사설 서브넷의 EC2가 NAT 게이트웨이를 통해 같은 리전 S3로 매일 수 TB를 올린다면 NAT 처리 요금이 GB마다 붙습니다. 게이트웨이 엔드포인트를 만들면 같은 트래픽이 추가 요금 없이 엔드포인트로 갑니다. 영역 4에서 가장 자주 나오는 조합으로 보입니다.
+
+### 6-4. 연결 방식: 인터넷, VPN, Direct Connect
+
+안내서는 "Direct Connect와 VPN과 인터넷 비교"와 "단일 VPN과 여러 VPN, Direct Connect 속도 같은 대역폭 할당"을 듭니다.
+
+| | 인터넷 | Site-to-Site VPN | Direct Connect |
+|---|---|---|---|
+| 비용 구조 | 전송 요금만 | VPN 연결 시간 요금 + 전송 | 포트 시간 요금 + 전송 |
+| 대역폭 | 가변 | 터널당 최대 1.25Gbps, 큰 터널 5Gbps, ECMP로 합산 | 1, 10, 100, 400Gbps 전용, 파트너의 호스티드 연결 |
+| 시작 | 즉시 | 빠름 | 검토 최대 72영업시간 + 회선 작업 |
+
+Direct Connect 문서는 포트가 활성화되거나 LOA 발급 후 90일 중 먼저 오는 시점부터 과금이 시작된다고 적습니다. 전용 연결의 포트 속도는 만든 뒤 바꿀 수 없어서 속도를 바꾸려면 새 연결을 만듭니다. 대역폭 할당 문제에서 "필요한 대역폭이 2Gbps"면 VPN 터널 하나로는 부족하고 ECMP로 여러 터널을 묶거나 Direct Connect 속도를 고르는 판단이 됩니다. VPN과 Direct Connect의 시간 단가는 이번에 요금 페이지에서 확인하지 않았습니다.
+
+### 6-5. 토폴로지: 피어링과 Transit Gateway
+
+Transit Gateway 문서는 연결(attachment)마다 시간 요금, 처리한 트래픽 양에 요금을 낸다고 적습니다. VPC 피어링은 Ch-03 5-4절에서 본 대로 전이 라우팅을 지원하지 않습니다.
+
+| | VPC 피어링 | Transit Gateway |
+|---|---|---|
+| 요금 | 피어링 연결 자체 요금은 이번에 확인하지 않음. 전송 요금은 붙는다 | 연결 시간 + 처리량 |
+| 확장 | VPC가 늘면 연결 수가 제곱으로 늘어남 | 허브 하나에 연결 추가 |
+| 맞는 경우 | VPC 몇 개, 대량 트래픽 | VPC 많음, 온프레미스 공유, 라우팅 분리 |
+
+VPC 둘 사이에 트래픽이 아주 많고 전이 라우팅이 필요 없다면 처리 요금이 없는 피어링이 쌀 수 있습니다. 이 비교도 Transit Gateway의 처리 요금 구조에서 끌어낸 추론이고 피어링 쪽 요금은 문서로 확인하지 못했습니다.
+
+### 6-6. CDN과 엣지 캐싱
+
+CloudFront 문서는 요금이 엣지에서 나가는 데이터 전송과 HTTP/HTTPS 요청에 붙는다고 적습니다. AWS 오리진에서 CloudFront로 가는 전송은 항상 무료입니다. 오리진(S3, ALB)에서 사용자에게 직접 나가던 전송을 CloudFront로 돌리면 오리진 쪽 전송 비용과 오리진 부하가 같이 줄어듭니다. 캐시 적중률이 높을수록 효과가 큽니다. 기본 캐시 기간은 24시간이고 오리진 헤더로 조정합니다.
+
+Global Accelerator도 안내서 4.4에 예시로 나오지만 캐시를 하지 않으니 비용 절감 수단이 되기는 어렵습니다. 성능과 고정 IP가 조건일 때의 서비스입니다(Ch-03 5-2절).
+
+### 6-7. 조절(throttling) 전략과 기존 워크로드 검토
+
+안내서 기술 항목 "적절한 조절 전략 선택"에 관해 이번 문서에서 확인한 것은 두 가지입니다. Lambda 할당량 문서는 API Gateway 기본 조절 한도가 초당 10,000건이고 Lambda 기본 동시 실행이 1,000이라 둘이 어긋날 수 있다고 적습니다. RDS Proxy는 한도를 넘는 연결을 대기시키거나 거부합니다. 뒤 단계가 감당할 만큼만 앞에서 받아 주면 뒤 단계를 최대 부하에 맞춰 키우지 않아도 됩니다. SQS로 요청을 쌓고 소비자가 정해진 속도로 처리하는 구성도 같은 효과를 냅니다.
+
+"기존 워크로드의 네트워크 최적화 검토"는 VPC Flow Logs, Cost Explorer의 데이터 전송 항목, Compute Optimizer의 NAT 게이트웨이 권고(유휴 탐지)로 시작할 수 있습니다. Compute Optimizer가 NAT 게이트웨이를 지원 리소스로 적은 것은 확인했지만 어떤 권고를 내는지는 열어 보지 않았습니다.
+
+### 6-8. 시험에서 갈리는 조건(네트워크)
+
+| 시나리오 문구 | 고를 것 |
+|---|---|
+| 사설 서브넷에서 S3로 대량 업로드, NAT 비용 급증 | S3 게이트웨이 엔드포인트 |
+| AZ마다 서버가 있는데 NAT 하나로 모음, AZ 간 전송비 큼 | AZ별 NAT 게이트웨이 |
+| 정적 파일을 S3에서 직접 전 세계로 배포, 전송비 큼 | CloudFront |
+| 온프레미스와 월 수백 TB, 일관된 대역폭 | Direct Connect |
+| 임시 연결 몇 주, 낮은 대역폭 | Site-to-Site VPN |
+| VPC 2개 사이 대용량, 전이 라우팅 불필요 | VPC 피어링 |
+| 비용 태그별로 네트워크 비용을 보고 싶음 | 비용 할당 태그 활성화 후 Cost Explorer |
+
+## 7. 확인 문제
+
+아래 문제는 공식 문서의 조건을 바탕으로 직접 만든 연습 문제입니다. 실제 시험 문항이나 문제 은행에서 가져오지 않았습니다.
+
+**문제 1.** 쇼핑몰이 주문 영수증 PDF(평균 300KB)를 S3에 저장합니다. 첫 30일은 고객이 자주 내려받고 이후에는 거의 보지 않지만 요청이 오면 즉시 보여 줘야 합니다. 5년이 지나면 지워도 됩니다. 가장 비용 효율적인 구성은?
+
+A. 처음부터 Glacier Deep Archive에 저장한다
+B. Standard에 저장하고 수명 주기로 30일 후 Glacier Instant Retrieval, 5년 후 만료
+C. Standard에 저장하고 수명 주기로 30일 후 Glacier Flexible Retrieval, 5년 후 만료
+D. 모든 객체를 One Zone-IA에 저장한다
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. 30일 뒤에는 접근이 드물지만 즉시(밀리초) 보여 줘야 하니 Glacier Instant Retrieval이 맞고 만료 동작으로 5년 뒤 지웁니다. 객체가 128KB보다 커서 기본 전환 대상입니다. A와 C는 복원 대기 시간이 있어 "즉시" 조건을 만족하지 못합니다. D는 영수증이 다시 만들 수 없는 원본이라 AZ 하나를 잃으면 데이터를 잃습니다.
+</details>
+
+**문제 2.** 사진 공유 앱의 사용자 업로드는 어떤 사진이 언제 다시 읽힐지 예측할 수 없습니다. 객체 대부분은 2MB 이상입니다. 꺼낼 때 요금 없이 자동으로 비용을 줄이려면?
+
+A. Standard-IA
+B. S3 Intelligent-Tiering
+C. 수명 주기로 90일 후 Glacier Flexible Retrieval
+D. Requester Pays
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. Intelligent-Tiering은 30일 접근이 없으면 Infrequent Access, 90일이면 Archive Instant Access로 자동 이동하고 꺼낼 때 요금이 없습니다. 다시 읽으면 Frequent Access로 돌아옵니다. A는 꺼낼 때 요금이 있고 자주 읽히는 사진에는 오히려 비쌉니다. C는 예측할 수 없는 접근에 복원 대기가 생깁니다. D는 요금을 누가 내는지만 바꿉니다.
+</details>
+
+**문제 3.** 결제 서비스의 API 서버는 1년 내내 최소 8대가 돌고 연말에는 30대까지 늘어납니다. 내년에는 인스턴스 패밀리를 새 세대로, 일부는 Fargate로 옮길 계획입니다. 비용을 가장 줄이는 조합은?
+
+A. 30대 모두 3년 Standard Reserved Instances
+B. 8대분을 Compute Savings Plans로 약정하고 나머지는 Auto Scaling으로 On-Demand
+C. 30대 모두 Spot
+D. 8대분을 EC2 Instance Savings Plans로 약정
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. 꾸준한 기준 부하(8대)만 약정하고 피크는 On-Demand로 탄력 있게 씁니다. Compute Savings Plans는 패밀리가 바뀌어도, Fargate로 옮겨도 적용됩니다. A는 연중 대부분 놀 22대분까지 약정합니다. C는 결제 API처럼 중단하면 안 되는 운영 워크로드에 맞지 않습니다. D는 패밀리를 고정하는 약정이라 세대 변경과 Fargate 이전 계획과 맞지 않습니다.
+</details>
+
+**문제 4.** 사내 정산 보고서용 Aurora MySQL 클러스터는 매달 마지막 날 몇 시간만 무거운 쿼리를 돌리고 나머지는 거의 유휴입니다. 엔진 버전은 3.08입니다. 비용을 가장 줄이는 방법은?
+
+A. 가장 큰 프로비저닝 인스턴스를 1년 예약한다
+B. Aurora Serverless v2로 바꾸고 최소 용량을 0 ACU로 설정한다
+C. 읽기 복제본 15개를 추가한다
+D. 같은 데이터를 DynamoDB 온디맨드로 옮긴다
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. Aurora Serverless v2는 0.5 ACU 단위로 늘고 줄며 Aurora MySQL 3.08.0 이상은 최소 0 ACU로 자동 일시 정지를 쓸 수 있습니다. 문서가 드는 예시에도 필요할 때만 보고서를 만드는 DB가 있습니다. A는 대부분 유휴인 시간까지 큰 인스턴스 비용을 냅니다. C는 비용을 늘립니다. D는 관계형 보고서 쿼리를 키-값 모델로 다시 설계해야 해서 요구와 맞지 않습니다.
+</details>
+
+**문제 5.** 사설 서브넷의 EC2 수십 대가 같은 리전 S3 버킷으로 하루 3TB를 올립니다. 청구서에서 NAT 게이트웨이 처리 요금이 크게 나옵니다. 보안 요구는 그대로 지키면서 비용을 줄이려면?
+
+A. EC2를 공용 서브넷으로 옮기고 공용 IP를 붙인다
+B. S3 게이트웨이 VPC 엔드포인트를 만들고 사설 서브넷 라우팅 테이블에 연결한다
+C. NAT 게이트웨이를 NAT 인스턴스로 바꾼다
+D. S3 Transfer Acceleration을 켠다
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. 게이트웨이 엔드포인트는 추가 요금이 없고 같은 리전 S3 트래픽을 NAT 대신 엔드포인트로 보냅니다. NAT 문서도 NAT를 지나는 트래픽이 엔드포인트를 지원하는 서비스로 간다면 엔드포인트를 만들라고 권합니다. A는 보안 요구를 약하게 만듭니다. C는 처리 요금은 없어지지만 대역폭과 관리 부담이 생기고 B보다 낫지 않습니다. D는 먼 거리 전송 가속용이고 요금이 추가됩니다.
+</details>
+
+**문제 6.** 개발팀이 리소스에 `Team` 태그를 꼼꼼히 달았는데 Cost Explorer에서 팀별로 비용을 나눠 볼 수 없습니다. 무엇을 해야 하나요?
+
+A. 리소스를 팀별 계정으로 옮긴다
+B. 결제 콘솔에서 `Team`을 비용 할당 태그로 활성화한다
+C. CUR을 만들어야만 태그가 보인다
+D. AWS Budgets를 만든다
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. 사용자 정의 태그도 결제 콘솔에서 비용 할당 태그로 활성화해야 Cost Explorer와 비용 할당 보고서에 나타나고 반영까지 최대 24시간이 걸립니다. A는 가능하지만 이 문제의 원인을 고치지 않습니다. C는 사실이 아닙니다. 활성화하면 Cost Explorer에서도 태그로 거를 수 있습니다. D는 알림 도구라서 원인과 관계가 없습니다.
+</details>
+
+**문제 7.** 게시판 서비스의 EBS 볼륨이 gp2 4,000GiB입니다. 데이터는 600GiB뿐이고 12,000 IOPS를 얻으려고 크게 잡았습니다. 성능은 유지하고 비용을 줄이려면?
+
+A. io2 Block Express로 바꾼다
+B. 새 gp3 볼륨(약 700GiB, 12,000 IOPS 프로비저닝)으로 데이터를 옮긴다
+C. st1으로 바꾼다
+D. 볼륨을 그대로 두고 스냅샷을 아카이브 계층으로 보낸다
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. gp2는 GiB당 3 IOPS라 12,000 IOPS를 얻으려면 4,000GiB가 필요하지만 gp3는 기본 3,000 IOPS에 GiB당 500까지 IOPS를 따로 추가합니다. GiB당 가격도 20% 낮습니다. Elastic Volumes는 유형 변경은 되지만 크기 축소는 별도로 확인이 필요해서 새 볼륨으로 옮기는 보기를 골랐습니다. EBS 볼륨 크기를 줄일 수 없다는 문장은 이번에 문서로 확인하지 못했습니다. A는 성능은 넘치지만 더 비쌉니다. C는 HDD라 작은 랜덤 I/O의 IOPS를 내지 못합니다. D는 볼륨 비용과 관계가 없습니다.
+</details>
+
+**문제 8.** 동영상 강의 플랫폼이 강의 영상을 S3에서 전 세계 수강생에게 직접 내려보냅니다. 같은 영상이 여러 번 재생되고 데이터 전송 비용이 가장 큰 항목입니다. 가장 효과적인 조치는?
+
+A. S3 Transfer Acceleration을 켠다
+B. S3 버킷을 오리진으로 CloudFront 배포를 만든다
+C. AWS Global Accelerator를 S3 앞에 둔다
+D. 영상을 One Zone-IA로 옮긴다
+
+<details>
+<summary>정답과 해설</summary>
+
+B입니다. AWS 오리진에서 CloudFront로 가는 전송은 무료이고 같은 영상을 엣지 캐시가 반복해서 전달하니 오리진 전송과 요청이 같이 줄어듭니다. A는 업로드나 먼 거리 전송을 빠르게 할 뿐 요금이 추가됩니다. C는 캐시가 없습니다. D는 저장 비용만 바꾸고 자주 읽히는 영상이면 꺼낼 때 요금이 붙습니다.
+</details>
+
+## 8. 범위와 한계
+
+- 요금 수치는 2026년 10월 19일에 연 AWS 요금 페이지와 문서 기준입니다. NAT 게이트웨이 단가는 미국 동부(오하이오) 예시이고 서울 리전 단가는 확인하지 않았습니다. 요금은 바뀌니 이 글의 금액을 계산 근거로 쓰지 않습니다.
+- 서비스를 직접 만들어 청구서를 확인하지 않았습니다. 비용 비교는 모두 문서가 밝힌 요금 구조에서 읽은 것이고 실제 청구 금액으로 검증한 것이 없습니다. 프리 티어 실습 뒤 Cost Explorer로 본 결과를 따로 쓰겠습니다.
+- 확인하지 못한 것: AZ 간, 리전 간 데이터 전송 단가, VPN과 Direct Connect와 PrivateLink와 VPC 피어링 단가, 로드 밸런서 요금 구조, Budgets와 CUR 요금, RDS 자동 백업 보존 규칙, EFS 수명 주기 일수, EBS 볼륨 크기 축소 가능 여부, Outposts, Timestream, Neptune의 상세 특성, Graviton "가격 대비 성능 40%" 문구의 출처.
+- 6-2절의 NAT 인스턴스 판단과 6-5절의 피어링 비교는 문서 문장이 아니고 요금 구조에서 끌어낸 추론입니다.
+- 리전 NAT 게이트웨이와 Database Savings Plans처럼 최근 문서에 있는 기능이 시험에 반영됐는지는 모릅니다.
+- 확인 문제는 직접 만든 것이라 실제 시험의 난이도나 문구와 다를 수 있습니다.
+
+## 참고 자료
+
+시험 안내서
+- AWS, [Content Domain 4: Design Cost-Optimized Architectures](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain4.html)
+- AWS, [AWS Certified Solutions Architect - Associate (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03.html)
+
+비용 관리 도구
+- [Analyzing your costs and usage with AWS Cost Explorer](https://docs.aws.amazon.com/cost-management/latest/userguide/ce-what-is.html)
+- [Managing your costs with AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+- [What are AWS Cost and Usage Reports?](https://docs.aws.amazon.com/cur/latest/userguide/what-is-cur.html)
+- [Organizing and tracking costs using AWS cost allocation tags](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html)
+- [Consolidating billing for AWS Organizations](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/consolidated-billing.html)
+
+스토리지
+- [Transitioning objects using Amazon S3 Lifecycle](https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html)
+- [How S3 Intelligent-Tiering works](https://docs.aws.amazon.com/AmazonS3/latest/userguide/intelligent-tiering-overview.html)
+- [Using Requester Pays general purpose buckets for storage transfers and usage](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html)
+- [Amazon EBS General Purpose SSD volumes](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html), [Amazon EBS volume types](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html)
+- [Archive Amazon EBS snapshots](https://docs.aws.amazon.com/ebs/latest/userguide/snapshot-archive.html), [Considerations and limitations for archiving Amazon EBS snapshots](https://docs.aws.amazon.com/ebs/latest/userguide/snapshot-archive-considerations.html)
+- [Amazon EFS performance specifications](https://docs.aws.amazon.com/efs/latest/ug/performance.html), [Help Me Choose An Amazon FSx File System](https://aws.amazon.com/fsx/when-to-choose-fsx/)
+- [What is AWS DataSync?](https://docs.aws.amazon.com/datasync/latest/userguide/what-is-datasync.html), [What is AWS Transfer Family?](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html), [AWS Snowball](https://aws.amazon.com/snowball/)
+
+컴퓨팅
+- [Amazon EC2 pricing](https://aws.amazon.com/ec2/pricing/), [Amazon EC2 On-Demand Pricing](https://aws.amazon.com/ec2/pricing/on-demand/)
+- [What are Savings Plans?](https://docs.aws.amazon.com/savingsplans/latest/userguide/what-is-savings-plans.html), [Savings Plans types](https://docs.aws.amazon.com/savingsplans/latest/userguide/plan-types.html)
+- [Reserved Instances for Amazon EC2 overview](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-reserved-instances.html)
+- [Spot Instance interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html), [Spot Instance interruption notices](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-instance-termination-notices.html)
+- [What is AWS Compute Optimizer?](https://docs.aws.amazon.com/compute-optimizer/latest/ug/what-is-compute-optimizer.html)
+- [AWS Graviton](https://aws.amazon.com/ec2/graviton/)
+- [Hibernate your Amazon EC2 instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Hibernate.html)
+- [Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [Configure Lambda Event Function memory](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)
+
+데이터베이스
+- [How Aurora serverless works](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.how-it-works.html), [Amazon Aurora storage](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.StorageReliability.html)
+- [DynamoDB throughput capacity](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/capacity-mode.html), [DynamoDB table classes](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.TableClasses.html)
+- [In-memory acceleration with DynamoDB Accelerator (DAX)](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.html)
+- [Working with DB instance read replicas](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.html), [Amazon RDS Proxy](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-proxy.html)
+- [What is AWS Database Migration Service?](https://docs.aws.amazon.com/dms/latest/userguide/Welcome.html)
+
+네트워크
+- [Pricing for NAT gateways](https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-pricing.html), [Amazon VPC Pricing](https://aws.amazon.com/vpc/pricing/)
+- [NAT gateways](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html), [Regional NAT gateways for automatic multi-AZ expansion](https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html), [Compare NAT gateways and NAT instances](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-comparison.html)
+- [Gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html), [What is AWS PrivateLink?](https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html)
+- [What is AWS Transit Gateway for Amazon VPC?](https://docs.aws.amazon.com/vpc/latest/tgw/what-is-transit-gateway.html), [How VPC peering connections work](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html)
+- [AWS Site-to-Site VPN quotas](https://docs.aws.amazon.com/vpn/latest/s2svpn/vpn-limits.html), [Dedicated Direct Connect connections](https://docs.aws.amazon.com/directconnect/latest/UserGuide/dedicated_connection.html)
+- [What is Amazon CloudFront?](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html)
