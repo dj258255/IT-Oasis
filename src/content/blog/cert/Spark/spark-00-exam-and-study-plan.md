@@ -130,7 +130,7 @@ pyspark --remote "sc://localhost"
 
 | 글 | 시험 | 내용 |
 |---|---|---|
-| Sarah Chua, Medium(2025-09) | 새 시험 | 당시 새 시험용 영상 강의가 없어서 안내서의 항목마다 문서를 찾아 읽었다. 메모리, 쏠림, 파티션을 다룬 영상을 봤고 시험 직전 주말에 Udemy 모의고사 5회를 풀었는데 실제와 관련이 많았지만 일부 답과 해설은 미심쩍었다. 지금은 Python 전용 |
+| [Sarah Chua, Medium(2025-09)](https://sarahchua-sg.medium.com/databricks-certified-associate-developer-for-apache-spark-2025-a1d39fd9808d) | 새 시험 | 당시 새 시험용 영상 강의가 없어서 안내서의 항목마다 문서를 찾아 읽었다. 메모리, 쏠림, 파티션을 다룬 영상을 봤고 시험 직전 주말에 Udemy 모의고사 5회를 풀었는데 실제와 관련이 많았지만 일부 답과 해설은 미심쩍었다. 지금은 Python 전용 |
 | Databricks 커뮤니티 "Seeking Guidance for Spark Certification"(2025-07~08) | 새 시험 | 한 응시자는 생각보다 어렵고 범위가 넓다고 했다. 다른 사람은 시나리오형 문항이 늘었다고 적었다. Free Edition에서는 Spark UI를 볼 수 없다는 답이 달렸다 |
 | NewNewDaddy, velog(2023-09) | 예전 시험, 합격 | 60문항, 120분. 시험 중 문서는 있었지만 검색이 안 됐다. 실제 코드 문제가 약 70% |
 
@@ -147,16 +147,18 @@ pyspark --remote "sc://localhost"
 | 3. 아키텍처와 DataFrame API(50%) | 3절 표의 동작을 하나씩 코드로 재현하고 Spark UI에서 Job, Stage, 셔플을 확인한다. 쇼핑몰 주문과 회원 데이터 같은 작은 예제로 조인, 집계, 날짜 처리를 연습한다 | 기본값과 시그니처를 문서 없이 쓴다 |
 | 4. Spark SQL(20%) | 파일에 직접 SQL, 저장 모드, `partitionBy`와 `bucketBy`, 임시 뷰를 재현한다 | 각 저장 모드가 기존 데이터에 무엇을 하는지 설명한다 |
 | 5. 튜닝, Streaming, Connect, pandas API(30%) | 쏠린 데이터로 AQE 전후 계획을 비교하고, 파일 소스 스트리밍으로 출력 모드와 워터마크 중복 제거를 확인한다. 로컬 Connect 서버로 RDD가 막히는 것을 본다 | 각 영역에서 안 되는 것을 이유와 함께 말한다 |
-| 6. 모의고사 | 공식 Academy 과정과 정식 모의고사로 시간을 재고 푼다 | 90분 안에 다 풀고 꾸준히 여유 있게 넘는다 |
+| 6. 모의고사 | 공식 Academy 과정을 마치고 안내서 샘플 문항과 새 범위가 반영된 모의고사로 시간을 재고 푼다. Databricks는 공식 모의고사를 제공하지 않는다 | 90분 안에 다 풀고 꾸준히 여유 있게 넘는다 |
 
 합격선이 공개되지 않아 모의고사 목표치를 정할 근거가 약합니다. 커뮤니티에서는 80% 정도를 목표로 하라는 개인 의견이 있었습니다.
 
+6단계를 시험 30일 전부터 어떻게 나눌지, 연습 자료가 새 시험을 반영했는지, Java 없이 Docker와 Colab으로 실습하는 방법, 시험 전날 외울 기본값과 당일 시간 배분은 [Ch-07](/blog/cert/spark/spark-07-resources-and-exam-day)에 정리했습니다.
+
 ## 7. 범위와 한계
 
-- 시험 정보는 2026년 10월 19일 Databricks 공식 페이지, FAQ, 2025년 10월판 안내서로 확인했습니다. 2026년판 안내서는 찾지 못했습니다.
+- 시험 정보는 2026년 10월 19일 Databricks 공식 페이지, FAQ, 2025년 10월판 안내서로 확인했습니다. 2026년 10월 20일에 2026년 10월 8일판 안내서를 찾았고 출제 영역과 비중은 같았습니다. 바뀐 점은 [Ch-07](/blog/cert/spark/spark-07-resources-and-exam-day) 1-1절에 적었습니다.
 - 3절의 동작은 Spark 4.2.0 문서 기준입니다. 시험의 기준 버전이 공개되지 않아 버전에 따라 다를 수 있습니다.
 - 4절의 명령과 6절의 재현은 아직 실행하지 않았습니다. 실행한 뒤 결과를 이 시리즈에 남기겠습니다.
-- 새 시험 후기는 세 건 정도만 확인했고 그중 Medium 글은 원문 주소를 확인하지 못해 제목과 작성자만 적었습니다.
+- 새 시험 후기는 두 건만 확인했습니다. Medium 글은 2026년 10월 20일에 작성자 RSS로 원문 주소와 본문을 확인해 링크를 붙였습니다.
 
 ## 참고 자료
 
@@ -169,7 +171,7 @@ pyspark --remote "sc://localhost"
 - Apache Spark: [PySpark 설치](https://spark.apache.org/docs/latest/api/python/getting_started/install.html), [RDD Programming Guide](https://spark.apache.org/docs/latest/rdd-programming-guide.html), [Cluster Mode Overview](https://spark.apache.org/docs/latest/cluster-overview.html), [Performance Tuning](https://spark.apache.org/docs/latest/sql-performance-tuning.html), [Structured Streaming](https://spark.apache.org/docs/latest/streaming/index.html), [Spark Connect Overview](https://spark.apache.org/docs/latest/spark-connect-overview.html), [Arrow와 pandas UDF](https://spark.apache.org/docs/latest/api/python/tutorial/sql/arrow_pandas.html)
 
 후기와 커뮤니티
-- Sarah Chua, "Databricks Certified Associate Developer for Apache Spark — 2025", Medium, 2025
+- Sarah Chua, [Databricks Certified Associate Developer for Apache Spark — 2025](https://sarahchua-sg.medium.com/databricks-certified-associate-developer-for-apache-spark-2025-a1d39fd9808d), Medium, 2025-09-03
 - Databricks Community, [Seeking Guidance for Spark Certification](https://community.databricks.com/t5/certifications/seeking-guidance-for-spark-certification/td-p/125639), 2025
 - Databricks Community, [Databricks workspace issue (Community Edition 종료 안내)](https://community.databricks.com/t5/databricks-free-edition-help/databricks-workspace-issue/m-p/144991), 2026
 - NewNewDaddy, [Apache Spark 자격증 취득기](https://velog.io/@newnew_daddy/spark02), 2023

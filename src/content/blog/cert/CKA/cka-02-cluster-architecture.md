@@ -234,7 +234,7 @@ kubectl delete node <노드>
 
 ## 4. 클러스터 수명주기: 업그레이드, 인증서, etcd
 
-커리큘럼 문구는 "Manage the lifecycle of Kubernetes clusters"입니다. 개정 전 커리큘럼에 따로 있던 kubeadm 업그레이드와 etcd 백업이 이 한 줄에 포함되는지는 공식 문서에 적혀 있지 않습니다. 응시 후기도 갈립니다. 정정일(2025)은 시험 범위 정리에 "ETCD 백업/복구"를 넣었고 Domenic Cassisi(2026)는 etcd 관리 과제가 최근 범위에서 빠졌다고 적었습니다. 저는 둘 다 한 번씩 손으로 해 보는 쪽을 골랐습니다.
+커리큘럼 문구는 "Manage the lifecycle of Kubernetes clusters"입니다. 개정 전 커리큘럼에 따로 있던 kubeadm 업그레이드와 etcd 백업이 이 한 줄에 포함되는지는 공식 문서에 적혀 있지 않습니다. 응시 후기에서는 Domenic Cassisi(2026)가 etcd 관리 과제가 최근 범위에서 빠졌다고 적었습니다. 반대 근거도 확인되지 않아 나오는지 여부는 열어 둡니다. 저는 둘 다 한 번씩 손으로 해 보는 쪽을 골랐습니다.
 
 ### 4-1. 버전 차이 규칙
 
@@ -715,5 +715,4 @@ kubectl get bj -A
 - Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [Quickstart Guide](https://helm.sh/docs/intro/quickstart/), [helm install](https://helm.sh/docs/helm/helm_install/), [helm template](https://helm.sh/docs/helm/helm_template/), [helm rollback](https://helm.sh/docs/helm/helm_rollback/)
 
 후기
-- 정정일, [Certified Kubernetes Administrator (CKA) 합격 및 취득 후기](https://jeongil.dev/ko/blog/reflection/certified-kubernetes-administrator/), 2025
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026

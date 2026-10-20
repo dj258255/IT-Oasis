@@ -70,7 +70,7 @@ Linux Foundation은 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했�
 | | 워크로드 자동 확장, Pod 승인 |
 | | 고가용성 컨트롤 플레인 구성, 동적 볼륨 프로비저닝 |
 
-업그레이드가 "클러스터 수명주기 관리"에 포함되는지, etcd가 여전히 나오는지는 공식 문서에 적혀 있지 않습니다. 개정 뒤 응시한 후기(정정일 2025)에서는 etcd 백업과 static Pod를 몰라 당황했다는 내용이 있어, 저는 둘 다 손으로 한 번씩은 해 보기로 했습니다. 공식 문서도 바뀌었는데, etcd 문서는 `etcdctl snapshot status`와 `restore`가 etcd 3.5부터 사용 중단 예정이고 `etcdutl`로 하라고 적습니다. 옛 강의의 명령을 그대로 외우면 안 되는 이유입니다.
+업그레이드가 "클러스터 수명주기 관리"에 포함되는지, etcd가 여전히 나오는지는 공식 문서에 적혀 있지 않습니다. 후기에서도 컨트롤 플레인과 static Pod를 직접 만져 본 적이 없어 막혔다는 이야기가 나와서 저는 etcd 백업과 static Pod를 둘 다 손으로 한 번씩은 해 보기로 했습니다. 공식 문서도 바뀌었는데, etcd 문서는 `etcdctl snapshot status`와 `restore`가 etcd 3.5부터 사용 중단 예정이고 `etcdutl`로 하라고 적습니다. 옛 강의의 명령을 그대로 외우면 안 되는 이유입니다.
 
 Domenic Cassisi(2026)도 일부 강의에 아직 etcd 내용이 남아 커리큘럼보다 뒤처져 있다고 지적했고, Atsushi Suzuki(2026)는 글 제목부터 "옛 가이드에 기대지 말라"였습니다.
 
@@ -114,20 +114,23 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 
 ## 4. 응시자들의 후기에서 공통으로 나온 것
 
-개정 뒤에 응시한 후기를 위주로 읽었습니다.
+개정 뒤에 응시한 후기를 위주로 읽었습니다. 실제 문항을 옮겨 적었거나 기출 모음을 권하는 후기는 뺐습니다.
 
 | 글 | 결과 | 준비 | 남긴 말 |
 |---|---|---|---|
-| 주수연, velog(2025-10) | 1차 46점, 재시험 71점 | Udemy 모의고사, killer.sh 3~4회 | 문제를 끝까지 읽지 않아 "하지 말라"는 지시를 놓쳤다. 1차 때 인터넷이 끊겼다 |
-| 정정일(2025-12) | 76점, 약 1개월 | Udemy(Mumshad) 강의와 모의고사, killer.sh 2회 | 관리형 쿠버네티스(EKS, GKE) 실무만 해서 etcd 백업, static Pod, 컨트롤 플레인 트러블슈팅을 몰랐다. 시험 환경이 모의고사보다 훨씬 불편하다 |
 | 최민석(2025-07) | 합격 | Udemy, killer.sh, Killercoda, 책 3권, 직접 만든 kubeadm HA 클러스터 | 2시간이 절대 넉넉하지 않다. 30분 남았을 때 마지막 문제를 버리고 전체를 다시 봤다. 원격 화면이 느려 실수 한 번에 몇 분을 잃는다 |
 | Domenic Cassisi(2026-06) | 95% | KodeKloud 강의, Killercoda 커뮤니티 시나리오, Kubernetes The Hard Way, killer.sh를 시험 2주 전과 1주 전 | 어려운 문제는 표시하고 넘어간 뒤 마지막에 요구사항을 전부 다시 확인했다. `kubectl explain`을 썼다 |
 | Atsushi Suzuki(2026-01) | 72%, 평일 1~2시간씩 약 2개월, 실무 경험 없음 | KodeKloud 모의고사 3회, 유료 모의고사 5회, killer.sh | 시간 안에 다 풀지 못했고 표시해 둔 트러블슈팅 문제로 돌아가지 못했다. 복사·붙여넣기가 승패를 가른다 |
-| JN, 資工小廢物(2025-08) | 94점, 약 1개월 | Killercoda(무료), killer.sh 2회, GitHub의 CKA 가이드 | 시뮬레이터에서는 4분의 1을 못 풀었다. 실제 시험에서 트러블슈팅 한 문제에 30분 가까이 썼다 |
+| 109x79m, Qiita(2026-07) | 69%, 약 4개월(평일 1~2시간) | Udemy(Mumshad), killer.sh, 『Kubernetes完全ガイド』 | 16문항 중 5~6개가 어려웠고 1개는 못 풀었다. 난이도를 넷으로 나눠 쉬운 것부터 풀었다. 일본어판(CKA-JP)도 문서는 영어 |
+| yu-min, Zenn(2025-10) | 1차 58%, 약 3주 반 뒤 2차 69%, 약 80시간 | KodeKloud 강의·랩·모의고사, killer.sh | 체크인이 여러 번 실패해 시작이 크게 늦었다. 조작마다 2~3초 지연이 있었다 |
+| cnative_tkb, Zenn(2026-05) | 점수 비공개, 약 30시간(실무 3년) | kubernetes.io, Killercoda, killer.sh, Udemy(Mumshad) | 시스템 점검 도구를 지운 뒤 시험 소프트웨어를 설치하라. 외장 키보드면 입력기 전환을 미리 확인하라 |
+| Aditya Nakadi, Medium(2025-09) | 개정 후 첫 응시 62점, 다음 응시 합격 | Udemy(Mumshad)와 KodeKloud 랩, EC2에 직접 만든 kubeadm 클러스터, Killercoda, killer.sh | 감독관 쪽 영상이 계속 멈춰 시험이 중단됐고 지원팀이 응시 기회를 돌려줬다. 개정 뒤 Helm, Kustomize, Gateway API를 새로 공부했다 |
+| techwithmohamed, GitHub README(2026-03) | 89%(자기 보고) | 직접 만든 연습 31개와 모의고사 2회, killer.sh | 저장소에 "actual CKA exam questions"를 싣지 않는다고 밝혔다. Gateway와 HTTPRoute를 만들 줄 알아야 한다 |
+| Christophe, KodeKloud 커뮤니티(2026-08) | 61%, 44%로 두 번 불합격, 약 6개월 | KodeKloud 전 과정과 모의고사(90% 안팎), killer.sh | 모의고사 점수가 실제로 이어지지 않았다. CNI 설치와 Gateway API 리소스 관계에서 막혔다 |
 
-여섯 편에서 겹치는 것을 추리면 다섯 가지입니다.
+표의 후기에서 겹치는 것을 추리면 다섯 가지입니다. 주제별 경향과 함정은 [CKA Ch-07 5절](/blog/cert/cka/cka-07-resources-and-exam-day)에 모았습니다.
 
-- **killer.sh 점수가 낮아도 실제 시험과는 다를 수 있습니다.** JN은 시뮬레이터에서 4분의 1을 못 풀었지만 실제 시험은 94점이었습니다. 그래서 점수보다 풀이를 보고 배우는 용도로 쓰고 Suzuki는 답안 페이지를 PDF로 저장해 두라고 권했습니다. 활성화 후 36시간이라 시험 2주 전과 1주 전처럼 날짜를 나눠 쓰는 경우가 많았습니다.
+- **killer.sh 점수가 낮아도 실제 시험과는 다를 수 있습니다.** killer.sh가 실제 시험보다 어렵다는 평가가 여러 후기와 KodeKloud 커뮤니티에서 나왔으니(공식 비교는 없음) 점수보다 풀이를 보고 배우는 용도로 쓰고 Suzuki는 답안 페이지를 PDF로 저장해 두라고 권했습니다. 활성화 후 36시간이라 시험 2주 전과 1주 전처럼 날짜를 나눠 쓰는 경우가 많았습니다.
 - **트러블슈팅에서 시간을 잃습니다.** 비중이 30%로 가장 크고, 정답이 하나로 정해지지 않아 오래 붙들게 됩니다.
 - **문제는 끝까지 읽습니다.** 하지 말라는 조건이나 지정한 네임스페이스를 놓치면 결과가 틀립니다.
 - **어려운 문제는 넘기고 마지막에 검증합니다.** 공식 기준 2시간에 15~20문항이면 문항당 6~8분입니다.
@@ -145,6 +148,8 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 | 4. 반복 | Killercoda 무료 시나리오, 강의의 모의고사 | 모의고사에서 시간이 남는다 |
 | 5. 시뮬레이터 | killer.sh 1회차(시험 2주 전), 틀린 문제 풀이 정리, 2회차(1주 전) | 2회차에서 표시하고 넘긴 문제까지 돌아가서 확인한다 |
 | 6. 당일 준비 | 시스템 점검 실행, 유선 네트워크, 단일 모니터, 신분증 이름 확인 | 3절 체크리스트 통과 |
+
+연습 자료 비교, 할인 이력, 홈 랩 구성, 시험 당일 순서와 D-30 마무리 계획은 [CKA Ch-07](/blog/cert/cka/cka-07-resources-and-exam-day)에 따로 정리했습니다.
 
 ### 5-2. 손에 익힐 것
 
@@ -177,10 +182,13 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 - [killer.sh CKA](https://killer.sh/cka), [FAQ](https://killer.sh/faq)
 
 후기
-- 주수연, [개같았던 CKA 합격 후기 및 기출문제](https://velog.io/@new_blank/CKA-%ED%95%A9%EA%B2%A9-%ED%9B%84%EA%B8%B0-%EB%B0%8F-%EA%B8%B0%EC%B6%9C%EB%AC%B8%EC%A0%9C), 2025
-- 정정일, [Certified Kubernetes Administrator (CKA) 합격 및 취득 후기](https://jeongil.dev/ko/blog/reflection/certified-kubernetes-administrator/), 2025
 - 최민석, [CKA 합격 후기](https://minseoky.me/devops/kubernetes/cka_journey), 2025
 - kt ds CoE팀, [CKA 자격증 취득을 위한 여정](https://inblog.ai/ktds-ict-tech4u/cka-%EC%9E%90%EA%B2%A9%EC%A6%9D-%EC%B7%A8%EB%93%9D%EC%9D%84-%EC%9C%84%ED%95%9C-%EC%97%AC%EC%A0%95-27329), 2024
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026
 - Atsushi Suzuki, [CKA (Certified Kubernetes Administrator) Exam Report 2026: Don't Rely on Old Guides](https://dev.to/suzuki0430/cka-certified-kubernetes-administrator-exam-report-2026-dont-rely-on-old-guides-mastering-the-534m), 2026
-- JN, [我考過 CKA 了（2025）](https://blog.giveanornot.com/cka/), 2025
+- 109x79m, [【2025年2月改訂版】CKA受験体験記](https://qiita.com/109x79m/items/c7057af1d073c43b6575), 2026
+- yu-min, [業務未経験から半年でKubestronaut達成（KCNA/KCSA/CKA/CKAD/CKS全冠）勉強法まとめ](https://zenn.dev/yuu7751/articles/24f509769b97b5), 2025
+- cnative_tkb, [CKA-JP 更新試験 受験記 — 2026年版](https://zenn.dev/cnative_tkb/articles/2d1447e98a7aed), 2026
+- Aditya Nakadi, [How I passed CKA 2025: My Experience and Strategy](https://medium.com/@adityanakadi3/how-i-passed-cka-2025-my-experience-and-strategy-ad453ba1c513), 2025
+- techwithmohamed, [CKA-Certified-Kubernetes-Administrator](https://github.com/techwithmohamed/CKA-Certified-Kubernetes-Administrator), 2026
+- KodeKloud 커뮤니티, [CKA real exam 2026 vs Mock ultimate mock and killer sh](https://kodekloud.com/community/t/cka-real-exam-2026-vs-mock-ultimate-mock-and-killer-sh/501584), 2026
