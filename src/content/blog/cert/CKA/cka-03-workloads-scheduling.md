@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-03] 워크로드와 스케줄링: Pod가 어디에 얼마만큼 뜨는지 정하는 값들'
-description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. 롤링 업데이트와 롤백, ConfigMap과 Secret, HPA(kubectl autoscale --cpu, tolerance)와 VPA, in-place resize, 자가 치유를 만드는 restartPolicy와 프로브, 네이티브 사이드카, 그리고 requests와 limits, LimitRange, ResourceQuota, 노드 어피니티, 테인트, static Pod, PriorityClass, DaemonSet, Binding 수동 스케줄링, 다중 스케줄러와 프로파일, 어드미션 웹훅, command와 args, Secret 저장 시 암호화, imagePullSecrets, securityContext를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
+description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. 롤링 업데이트와 롤백, ConfigMap과 Secret, HPA(kubectl autoscale --cpu, tolerance, 1.37 scale-to-zero)와 VPA, in-place resize, 자가 치유를 만드는 restartPolicy와 컨테이너 단위 재시작 규칙, 프로브, 네이티브 사이드카, StatefulSet, Job과 CronJob, PodDisruptionBudget, 그리고 requests와 limits, LimitRange, ResourceQuota, 노드 어피니티, Pod 어피니티와 topologySpreadConstraints, 테인트, static Pod, PriorityClass, DaemonSet, Binding 수동 스케줄링, 다중 스케줄러와 프로파일, 어드미션 웹훅과 ValidatingAdmissionPolicy, command와 args, Secret 저장 시 암호화, imagePullSecrets, securityContext를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -308,6 +308,15 @@ spec:
 
 문서 기준 조건은 둘입니다. `imagePullSecrets`의 Secret은 Pod와 같은 네임스페이스에 있어야 하고 타입은 `kubernetes.io/dockercfg`나 `kubernetes.io/dockerconfigjson`이어야 합니다. `kubectl create secret docker-registry`는 뒤쪽 타입을 만듭니다. 자격 증명이 틀리면 Pod가 `ErrImagePull`을 거쳐 `ImagePullBackOff`로 남고 `kubectl describe pod`의 Events에 인증 실패가 찍힙니다.
 
+Pod마다 `imagePullSecrets`를 적기 번거로우면 ServiceAccount에 붙입니다. "Configure Service Accounts for Pods" 문서의 방법은 패치 한 줄입니다.
+
+```bash
+kubectl patch serviceaccount default -n shop \
+  -p '{"imagePullSecrets": [{"name": "shop-registry"}]}'
+```
+
+이후 `shop` 네임스페이스에서 이 ServiceAccount로 새로 만드는 Pod에는 `spec.imagePullSecrets`가 자동으로 채워집니다. 채우는 쪽은 기본 활성 승인 컨트롤러인 `ServiceAccount`(5-1절)입니다. "Managing Service Accounts" 문서 기준으로 Pod에 `imagePullSecrets`가 하나도 없을 때만 ServiceAccount의 값을 복사하고 승인 단계에서 일어나는 일이라 이미 떠 있는 Pod에는 들어가지 않습니다. 확인은 새 Pod를 하나 띄운 뒤 `kubectl get pod <pod> -n shop -o jsonpath='{.spec.imagePullSecrets[0].name}'`로 합니다.
+
 ### 2-8. securityContext의 runAsUser와 capabilities
 
 컨테이너 프로세스를 어떤 사용자와 커널 권한으로 돌릴지는 `securityContext`로 정합니다. 두 자리에 쓸 수 있습니다. Pod 수준(`spec.securityContext`)은 Pod 안 모든 컨테이너에 적용되고 컨테이너 수준(`spec.containers[*].securityContext`)은 그 컨테이너에만 적용됩니다. "Configure a Security Context for a Pod or Container" 문서는 두 곳에 같은 필드가 있으면 컨테이너 수준 값이 Pod 수준 값을 덮어쓴다고 적습니다.
@@ -406,6 +415,8 @@ spec:
       tolerance: 0.05   # 목표보다 5% 넘게 높을 때만 확장
 ```
 
+`minReplicas`의 하한도 1.37에서 달라졌습니다. 기능 게이트 `HPAScaleToZero`가 1.37에서 beta로 올라가며 기본으로 켜졌고 같은 문서는 custom(Object) 메트릭이나 External 메트릭으로 확장하는 HPA에 한해 `minReplicas: 0`을 허용한다고 적습니다. CPU와 메모리 같은 Resource 메트릭은 떠 있는 Pod에서만 잴 수 있어 대상이 아닙니다. Object나 External 메트릭이 하나도 없는 HPA에 0을 적으면 API 서버가 거절합니다. 그래서 위 CPU 예시와 `kubectl autoscale`로 만드는 HPA의 `--min`은 여전히 1 이상입니다. 0으로 줄어든 동안에는 HPA 상태에 `ScaledToZero` 조건이 `True`로 붙습니다.
+
 ### 3-3. VPA
 
 VerticalPodAutoscaler는 실제 사용량에 맞춰 requests와 limits를 조정합니다. "Vertical Pod Autoscaling" 문서에 따르면 VPA는 CRD로 정의되어 있어 HPA와 달리 클러스터에 따로 설치해야 하고 현재 안정 API 버전은 `autoscaling.k8s.io/v1`입니다. 시험 환경에 VPA가 설치되어 있는지는 확인하지 못했습니다. 저는 개념과 HPA와의 차이만 정리해 두었습니다.
@@ -466,6 +477,23 @@ Pod의 `restartPolicy`는 `Always`(기본), `OnFailure`, `Never`입니다. Deplo
 | 0이 아님(실패) | 재시작 | 재시작 | 재시작 안 함 |
 
 재시작 사이에는 지수 백오프가 붙습니다. "Pod Lifecycle" 문서 기준으로 10초, 20초, 40초처럼 늘고 300초(5분)에서 멈춥니다. 컨테이너가 10분 동안 문제없이 돌면 백오프가 초기화됩니다. `CrashLoopBackOff`는 이 백오프가 걸려 있다는 표시입니다. 원인을 보려면 `kubectl logs <pod> --previous`로 직전 컨테이너의 로그를 봅니다.
+
+1.35부터는 컨테이너마다 재시작 정책을 따로 줄 수 있습니다. 기능 게이트 `ContainerRestartRules`가 1.35에서 beta로 기본 활성이 됐고 "Pod Lifecycle" 문서의 "Individual container restart policy and rules" 절이 이를 설명합니다. 앱 컨테이너와 일반 init 컨테이너에 `restartPolicy`를 적으면 Pod의 값을 덮어쓰고 `restartPolicyRules`로 특정 종료 코드(`exitCodes`)일 때만 `Restart`하게 할 수 있습니다. `restartPolicyRules`를 쓰면 컨테이너의 `restartPolicy`도 반드시 적어야 합니다.
+
+```yaml
+spec:
+  restartPolicy: Never
+  containers:
+    - name: settle-batch          # 결제 정산 배치: 종료 코드 42만 재시도
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep 60 && exit 0"]
+      restartPolicy: Never
+      restartPolicyRules:
+        - action: Restart
+          exitCodes:
+            operator: In
+            values: [42]
+```
 
 ### 4-2. 프로브 셋
 
@@ -558,9 +586,185 @@ kubectl -n board get pod board -o jsonpath='{.status.initContainerStatuses[*].st
 
 `kubectl get pod`의 READY 열은 앱 컨테이너와 사이드카를 함께 셉니다. 위 Pod가 정상이면 `2/2`로 보인다고 알고 있지만 이번에 문서 출력으로 확인하지는 않았습니다. 자원 계산에서는 사이드카가 앱 컨테이너 쪽 합계에 더해진다고 같은 문서의 "Resource sharing within containers" 절이 적습니다.
 
-### 4-5. 직접 해 보기
+### 4-5. StatefulSet: 고정 이름, headless Service, volumeClaimTemplates
+
+Deployment의 Pod는 서로 바꿔 끼울 수 있는 복제본입니다. 대체 Pod는 임의의 새 이름을 받고 Pod마다 따로 붙는 PVC도 없습니다. 주문 DB처럼 복제본마다 자기 데이터와 주소가 있어야 하는 워크로드는 StatefulSet으로 띄웁니다. "StatefulSets" 문서가 약속하는 것은 고정된 고유 네트워크 식별자, 고정된 영구 저장소, 순서 있는 배포와 축소입니다. 여기서 고정은 Pod가 다시 스케줄되어도 유지된다는 뜻입니다.
+
+| 항목 | 문서 기준 동작 |
+|---|---|
+| Pod 이름 | `<StatefulSet 이름>-<순번>`. 순번은 기본 0부터 N-1 |
+| DNS 이름 | `<Pod 이름>.<Service 이름>.<네임스페이스>.svc.cluster.local`. `serviceName`이 가리키는 headless Service가 이 도메인을 맡음 |
+| headless Service | 직접 만들어야 함. StatefulSet이 만들어 주지 않음 |
+| 저장소 | `volumeClaimTemplates` 항목 하나당 Pod마다 PVC 하나. 튜토리얼 출력 기준 이름은 `<템플릿 이름>-<Pod 이름>`(예: `www-web-0`) |
+| 삭제와 축소 | Pod나 StatefulSet을 지우거나 줄여도 PVC와 PV는 남음(`persistentVolumeClaimRetentionPolicy` 기본 `Retain`) |
+| 기본 배포 순서 | `podManagementPolicy: OrderedReady`. 0번이 Running이고 Ready여야 1번을 만들고 축소는 큰 순번부터 |
+
+쇼핑몰 주문 DB를 두 개 띄우는 뼈대입니다. 문서의 `web` 예제를 이름만 바꿔 줄였습니다.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-db
+  namespace: shop
+spec:
+  clusterIP: None            # headless
+  selector:
+    app: order-db
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: order-db
+  namespace: shop
+spec:
+  serviceName: order-db      # 위 headless Service 이름
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-db
+  template:
+    metadata:
+      labels:
+        app: order-db
+    spec:
+      containers:
+        - name: db
+          image: <이미지>
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+```
+
+이 매니페스트라면 Pod는 `order-db-0`, `order-db-1`이고 PVC는 `data-order-db-0`, `data-order-db-1`이 생긴다고 예상합니다. 이름 규칙은 튜토리얼 출력에서 옮긴 것이고 이 매니페스트로 돌려 보지는 않았습니다. `order-db-0`을 지우면 같은 이름의 Pod가 다시 생기고 같은 PVC를 다시 붙입니다. StorageClass를 적지 않았으니 기본 StorageClass가 쓰입니다. 동적 프로비저닝은 [CKA Ch-05](/blog/cert/cka/cka-05-storage)에서 다룹니다.
+
+`kubectl create` 하위 명령은 StatefulSet에도 없습니다. DaemonSet(5-10절)처럼 Deployment 뼈대를 받아 `kind`를 바꾸고 `serviceName`과 `volumeClaimTemplates`를 더합니다. 롤링 업데이트는 큰 순번부터 하나씩 진행합니다. `updateStrategy.rollingUpdate.maxUnavailable`로 동시에 내려가는 수를 늘릴 수 있는데 문서는 이 필드를 beta이고 기본 활성이라고 적습니다.
+
+### 4-6. Job과 CronJob
+
+Job은 끝나는 작업을 위한 컨트롤러입니다. 지정한 수만큼 Pod가 성공으로 끝나면 Job이 완료됩니다. Deployment와 달리 Pod 템플릿의 `restartPolicy`는 `Never`나 `OnFailure`만 허용됩니다("Jobs" 문서).
+
+| 필드 | 문서 기준 의미 | 기본값 |
+|---|---|---|
+| `completions` | 성공해야 하는 Pod 수 | 비우면 1(병렬이 아닌 Job) |
+| `parallelism` | 동시에 돌릴 Pod 수. 0이면 사실상 일시 정지 | 1 |
+| `backoffLimit` | Job을 실패로 판정하기 전 재시도 횟수 | 6 |
+| `activeDeadlineSeconds` | Job 전체 실행 시간 상한. 넘으면 돌던 Pod를 끝내고 `reason: DeadlineExceeded`로 실패 | 없음 |
+| `ttlSecondsAfterFinished` | 끝난 Job을 이 시간 뒤 자동 삭제 | 없음 |
+
+`activeDeadlineSeconds`는 `backoffLimit`보다 우선합니다. 재시도가 남아 있어도 시간이 다 되면 새 Pod를 만들지 않습니다. 실패한 Pod를 다시 만들 때는 10초, 20초, 40초처럼 늘어나는 지연이 붙고 상한은 10분입니다.
+
+```bash
+# 게시판 통계 집계를 한 번 실행
+kubectl create job board-stats -n board --image=busybox:1.36 -- sh -c 'echo done'
+
+# 필드를 더해야 하면 YAML로 뽑아 고친다
+kubectl create job board-stats -n board --image=busybox:1.36 \
+  --dry-run=client -o yaml -- sh -c 'echo done' > job.yaml
+kubectl get jobs -n board
+kubectl logs -n board job/board-stats
+```
+
+```yaml
+# job.yaml의 spec에 더하는 부분: 5번 성공, 동시 2개, 재시도 3회, 최대 2분
+spec:
+  completions: 5
+  parallelism: 2
+  backoffLimit: 3
+  activeDeadlineSeconds: 120
+```
+
+CronJob은 일정에 따라 Job을 만듭니다. `schedule`은 분, 시, 일, 월, 요일 다섯 칸의 cron 형식이고 시간대를 적지 않으면 kube-controller-manager의 로컬 시간대로 해석합니다. `.spec.timeZone`(1.27 stable)으로 `Etc/UTC` 같은 이름을 줄 수 있습니다.
+
+```bash
+# 결제 대사 작업을 매일 새벽 3시에
+kubectl create cronjob payment-reconcile -n payment --image=busybox:1.36 \
+  --schedule="0 3 * * *" -- sh -c 'date'
+
+# 일정을 기다리지 않고 지금 한 번 돌려 보기
+kubectl create job reconcile-now -n payment --from=cronjob/payment-reconcile
+```
+
+`kubectl create cronjob`의 `--restart`는 `OnFailure`와 `Never`만 받습니다. 겹쳐 실행되는 경우는 `concurrencyPolicy`가 정합니다.
+
+| `concurrencyPolicy` | 이전 Job이 아직 돌고 있을 때 |
+|---|---|
+| `Allow`(기본) | 새 Job도 함께 실행 |
+| `Forbid` | 이번 실행을 건너뜀(놓친 실행으로 셈) |
+| `Replace` | 돌던 Job을 새 Job으로 교체 |
+
+YAML에서는 Job 설정이 `spec.jobTemplate.spec` 아래로 한 단계 들어갑니다. `backoffLimit`을 CronJob의 `spec` 바로 아래에 적으면 CronJob에 없는 필드라서 unknown field 오류가 나거나 무시되니 위치를 확인합니다. 끝난 Job 기록은 성공 3개, 실패 1개를 기본으로 남깁니다(`successfulJobsHistoryLimit`, `failedJobsHistoryLimit`).
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: payment-reconcile
+  namespace: payment
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: reconcile
+              image: busybox:1.36
+              command: ["sh", "-c", "date"]
+```
+
+### 4-7. PodDisruptionBudget와 drain
+
+PodDisruptionBudget(PDB)는 자발적 중단(voluntary disruption) 중에도 남아 있어야 할 Pod 수를 정합니다. 자발적 중단은 노드 drain처럼 사람이나 도구가 일으키는 중단이고 노드 장애 같은 비자발적 중단은 PDB가 막지 못합니다. "Disruptions" 문서 기준으로 PDB를 지키는 쪽은 Eviction API입니다. `kubectl drain`은 노드의 Pod를 Eviction API로 내보내고 PDB 때문에 거절되면 모든 Pod가 끝나거나 시간 제한에 닿을 때까지 주기적으로 다시 시도합니다. Deployment나 Pod를 직접 지우는 것은 PDB를 거치지 않습니다.
+
+```bash
+# 주문 API는 drain 중에도 최소 2개 유지
+kubectl create pdb order-api-pdb -n shop --selector=app=order-api --min-available=2
+kubectl get pdb -n shop        # ALLOWED DISRUPTIONS 열이 지금 내보낼 수 있는 수
+```
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-api-pdb
+  namespace: shop
+spec:
+  minAvailable: 2          # 또는 maxUnavailable: 1. 한 PDB에 둘 중 하나만
+  selector:
+    matchLabels:
+      app: order-api
+```
+
+"Specifying a Disruption Budget for your Application" 문서에서 시험에 걸리는 성질입니다.
+
+- `minAvailable`과 `maxUnavailable`은 한 PDB에 하나만 적습니다. 둘 다 정수나 `"50%"` 같은 백분율을 받습니다.
+- 백분율은 올림합니다. Pod 7개에 `minAvailable: "50%"`면 4개가 남아야 합니다.
+- `maxUnavailable: 0`이나 `minAvailable`을 레플리카 수와 같게 두면 자발적 축출이 0이 됩니다. 이 Pod가 있는 노드의 drain은 끝나지 않고 문서는 이것이 PDB 의미상 허용된 동작이라고 적습니다.
+- `kubectl get pdb`에서 `ALLOWED DISRUPTIONS`가 0이면 그 상태에서 drain이 멈춥니다. 레플리카를 늘리거나 PDB 값을 고쳐야 진행합니다.
+
+drain 명령 자체와 `--ignore-daemonsets` 같은 옵션은 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 4-7절에 정리했습니다.
+
+### 4-8. 직접 해 보기
 
 게시판 Pod에 `exec` 방식 liveness 프로브(`cat /tmp/healthy`)를 걸고 30초 뒤 파일을 지우는 명령으로 띄웁니다. 문서 "Configure Liveness, Readiness and Startup Probes"의 첫 예제와 같은 구조입니다. `kubectl describe pod`의 Events에서 프로브 실패와 재시작이 언제 찍히는지, `RESTARTS` 값이 몇 초 간격으로 오르는지 적습니다.
+
+4-5절의 `order-db`를 띄운 뒤 `kubectl delete pod order-db-0 -n shop`을 하고 같은 이름과 같은 PVC로 돌아오는지 `kubectl get pod,pvc -n shop`으로 봅니다. `kubectl run tmp --rm -it --image=busybox:1.36 -n shop -- nslookup order-db-0.order-db`로 Pod별 DNS 이름도 확인합니다.
+
+노드 두 대에 `order-api` 레플리카 3개와 `minAvailable: 2` PDB를 둔 뒤 Pod가 둘 있는 노드를 `kubectl drain --ignore-daemonsets`로 비웁니다. 다른 노드에 대체 Pod가 Ready가 될 때까지 두 번째 Pod 축출이 거절되고 재시도 메시지가 찍히는지, 그동안 `ALLOWED DISRUPTIONS`가 어떻게 바뀌는지 기록합니다.
 
 ## 5. Pod 승인과 스케줄링
 
@@ -606,6 +810,53 @@ webhooks:
 ```
 
 두 Configuration 객체는 클러스터 범위입니다. API 서버는 HTTPS로만 웹훅을 부르므로 `caBundle`로 웹훅 서버 인증서를 검증합니다. `failurePolicy`는 웹훅 호출이 실패했을 때 요청을 거절할지(`Fail`) 통과시킬지(`Ignore`)를 정합니다. 웹훅 서버가 죽었는데 `Fail`이면 해당 리소스 생성이 전부 막히니 Pod가 안 만들어질 때 확인할 자리입니다.
+
+거절 규칙이 필드 값 비교 정도라면 웹훅 서버 없이 API 서버 안에서 끝낼 수 있습니다. ValidatingAdmissionPolicy는 규칙을 CEL(Common Expression Language) 식으로 적는 객체이고 1.30에서 stable이 됐습니다. "Validating Admission Policy" 문서 기준으로 최소 구성은 둘입니다. 규칙을 담은 `ValidatingAdmissionPolicy`와 그 규칙을 어디에 어떻게 적용할지 정하는 `ValidatingAdmissionPolicyBinding`이고 둘 다 있어야 정책이 효력을 냅니다. 쇼핑몰 네임스페이스의 Deployment 레플리카를 5개 이하로 묶는 예입니다. 문서의 `replicas <= 5` 예제에서 이름과 대상 네임스페이스만 바꿨습니다.
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: shop-replica-limit
+spec:
+  failurePolicy: Fail                  # 식 평가 오류나 설정 오류일 때 거절
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["deployments"]
+  validations:
+    - expression: "object.spec.replicas <= 5"
+      message: "shop 네임스페이스의 Deployment는 레플리카 5개까지"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: shop-replica-limit-binding
+spec:
+  policyName: shop-replica-limit
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: shop
+```
+
+식이 `false`면 바인딩의 `validationActions`대로 처리합니다. `Deny`는 요청을 거절하고 `Warn`은 클라이언트에 경고만 보내고 `Audit`은 감사 이벤트에 기록합니다. `Deny`와 `Warn`은 함께 쓸 수 없습니다. `failurePolicy`가 다루는 것은 식이 `false`로 나온 경우와 다릅니다. 식 평가 자체가 오류이거나 정책 설정이 잘못됐을 때 거절할지(`Fail`) 통과시킬지(`Ignore`)를 정합니다. 문서 예제가 보여 주는 거절 메시지는 `ValidatingAdmissionPolicy 'demo-policy.example.com' with binding 'demo-binding-test.example.com' denied request: failed expression: object.spec.replicas <= 5` 같은 모양입니다. 두 객체 모두 클러스터 범위이고 `kubectl create` 하위 명령이 없어 YAML로 씁니다.
+
+값을 고치는 쪽의 짝은 MutatingAdmissionPolicy입니다. 문서는 1.36에서 stable이 됐고 기본 활성이라고 적습니다. API 그룹은 같은 `admissionregistration.k8s.io/v1`입니다.
+
+이름을 알아 두면 좋은 기본 활성 플러그인도 정리합니다. "Admission Control in Kubernetes" 문서의 v1.37 기본 목록은 `CertificateApproval`, `CertificateSigning`, `CertificateSubjectRestriction`, `DefaultIngressClass`, `DefaultStorageClass`, `DefaultTolerationSeconds`, `LimitRanger`, `MutatingAdmissionPolicy`, `MutatingAdmissionWebhook`, `NamespaceLifecycle`, `PersistentVolumeClaimResize`, `PodSecurity`, `Priority`, `ResourceQuota`, `RuntimeClass`, `ServiceAccount`, `StorageObjectInUseProtection`, `TaintNodesByCondition`, `ValidatingAdmissionPolicy`, `ValidatingAdmissionWebhook`입니다. 몇 개만 뜻을 붙이면 이렇습니다.
+
+| 플러그인 | 종류 | 하는 일 |
+|---|---|---|
+| `NamespaceLifecycle` | validating | 없는 네임스페이스나 종료 중인 네임스페이스에 객체를 만드는 요청을 거절. `default`, `kube-system`, `kube-public` 삭제를 막음 |
+| `ServiceAccount` | mutating, validating | Pod에 ServiceAccount와 토큰, ServiceAccount의 `imagePullSecrets`(2-7절)를 채움 |
+| `DefaultStorageClass` | mutating | StorageClass를 적지 않은 PVC에 기본 StorageClass를 넣음 |
+| `NodeRestriction` | validating | kubelet이 자기 노드와 그 노드의 Pod만 고치게 제한 |
+
+`NodeRestriction`은 기본 목록에 없습니다. kubeadm 소스(`cmd/kubeadm/app/phases/controlplane/manifests.go`)는 kube-apiserver 매니페스트에 `--enable-admission-plugins=NodeRestriction`을 넣으므로 kubeadm 클러스터의 매니페스트에서 처음 보이는 값이 대개 이것입니다. 요청 수를 제한하는 `EventRateLimit`은 alpha이고 기본으로 꺼져 있습니다.
 
 ### 5-2. requests와 limits
 
@@ -743,7 +994,7 @@ spec:
 
 문서의 결합 규칙은 꼭 외웁니다. `nodeSelectorTerms` 안의 여러 항목은 OR이고 한 항목의 `matchExpressions` 안 여러 식은 AND입니다. nodeSelector와 nodeAffinity를 함께 쓰면 둘 다 만족해야 합니다.
 
-Pod 어피니티와 안티 어피니티는 노드 라벨 대신 이미 떠 있는 다른 Pod의 라벨을 기준으로 삼습니다. 범위는 `topologyKey`(예: `kubernetes.io/hostname`이면 노드 단위)로 정하고 모든 노드에 그 라벨이 있어야 의도대로 동작합니다.
+Pod 어피니티와 안티 어피니티는 노드 라벨 대신 이미 떠 있는 다른 Pod의 라벨을 기준으로 삼습니다. 범위는 `topologyKey`(예: `kubernetes.io/hostname`이면 노드 단위)로 정하고 모든 노드에 그 라벨이 있어야 의도대로 동작합니다. YAML 예시와 `topologySpreadConstraints`는 5-12절에 따로 정리했습니다.
 
 ### 5-7. 테인트와 톨러레이션
 
@@ -890,7 +1141,103 @@ kubectl get events -n board -o wide | grep Scheduled     # SOURCE 열에 my-sche
 kubectl logs -n kube-system deploy/my-scheduler          # Pending이면 권한, 설정 경로 오류 확인
 ```
 
-### 5-12. 직접 해 보기
+### 5-12. Pod 어피니티, 안티 어피니티, topologySpreadConstraints
+
+노드 어피니티(5-6절)가 노드 라벨을 보는 데 비해 Pod 어피니티와 안티 어피니티는 이미 떠 있는 Pod의 라벨을 봅니다. "Assigning Pods to Nodes" 문서의 표현을 풀면 "`topologyKey`로 묶은 영역 X에 규칙 Y에 맞는 Pod가 이미 있으면 이 Pod를 X에 둔다(안티면 두지 않는다)"입니다. 영역 X는 노드 라벨 키로 정합니다. `kubernetes.io/hostname`이면 노드 하나가 한 영역이고 `topology.kubernetes.io/zone`이면 존 하나가 한 영역입니다.
+
+| 필드 | 동작 |
+|---|---|
+| `podAffinity` | 조건에 맞는 Pod가 있는 영역으로 끌어당김 |
+| `podAntiAffinity` | 조건에 맞는 Pod가 있는 영역을 피함 |
+| `requiredDuringScheduling...` | 필터 단계. 만족하는 노드가 없으면 `Pending` |
+| `preferredDuringScheduling...` | 점수 단계. `weight`(1~100)와 `podAffinityTerm`으로 감싸서 적음 |
+
+문서의 캐시 예제를 쇼핑몰로 옮기면 이렇습니다. 장바구니 캐시 레플리카 3개를 노드마다 하나씩 흩고 장바구니 API는 캐시가 있는 노드에 붙이되 API끼리는 같은 노드를 피하게 합니다.
+
+```yaml
+# cart-cache Deployment의 Pod 템플릿 일부: 같은 노드에 cart-cache 둘을 두지 않음
+      labels:
+        app: cart-cache
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: cart-cache
+              topologyKey: kubernetes.io/hostname
+```
+
+```yaml
+# cart-api Deployment의 Pod 템플릿 일부
+      labels:
+        app: cart-api
+    spec:
+      affinity:
+        podAffinity:                       # cart-cache가 있는 노드에만
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: cart-cache
+              topologyKey: kubernetes.io/hostname
+        podAntiAffinity:                   # cart-api끼리는 가능하면 다른 노드
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: cart-api
+                topologyKey: kubernetes.io/hostname
+```
+
+문서 예제는 두 Deployment 모두 required 안티 어피니티를 써서 노드 세 대에 캐시 하나, API 하나씩 놓이는 배치를 보여 줍니다. 위 예시는 API 쪽을 preferred로 바꿔 노드가 모자라도 `Pending`이 되지 않게 했습니다. 문서가 붙인 규칙은 이렇습니다.
+
+- `topologyKey`는 비울 수 없습니다. required와 preferred 모두 그렇습니다.
+- `labelSelector`가 찾는 Pod의 범위는 `namespaces`나 `namespaceSelector`를 적지 않으면 이 Pod의 네임스페이스입니다.
+- 연산자는 `In`, `NotIn`, `Exists`, `DoesNotExist`만 씁니다. 노드 어피니티에 있는 `Gt`, `Lt`는 없습니다.
+- Pod 어피니티 계산은 무거워서 문서는 노드 수백 대를 넘는 클러스터에는 권하지 않습니다.
+
+안티 어피니티는 "같은 영역에 하나도 두지 마라" 수준의 거친 도구입니다. 레플리카가 노드 수보다 많아지면 required 안티 어피니티로는 남는 Pod가 `Pending`이 됩니다. 영역마다 개수 차이를 허용치 안에서 고르게 맞추고 싶으면 `topologySpreadConstraints`를 씁니다. "Pod Topology Spread Constraints" 문서의 필드입니다.
+
+| 필드 | 의미 |
+|---|---|
+| `maxSkew` | 영역 사이 Pod 수 차이의 허용치. 필수이고 0보다 커야 함 |
+| `topologyKey` | 영역을 가르는 노드 라벨 키 |
+| `whenUnsatisfiable` | `DoNotSchedule`(기본, 어기면 배치 안 함) 또는 `ScheduleAnyway`(배치하되 차이를 줄이는 노드에 높은 점수) |
+| `labelSelector` | 개수를 셀 Pod를 고르는 셀렉터. 보통 자기 Pod 템플릿 라벨과 같게 둠 |
+
+```yaml
+# 주문 API 6개를 존 사이에 1개 차이 안으로, 노드 사이에는 가능하면 고르게
+spec:
+  template:
+    metadata:
+      labels:
+        app: order-api
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: order-api
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: order-api
+```
+
+`DoNotSchedule`에서 `maxSkew`는 대상 영역의 Pod 수와 전체 최솟값의 차이 상한입니다. 존 세 개에 2, 2, 1개가 있고 `maxSkew: 1`이면 새 Pod는 1개인 존에만 갈 수 있습니다. 2개인 존에 가면 3과 1이 되어 차이가 2가 되기 때문입니다. 문서가 짚는 함정은 셋입니다.
+
+- 여러 제약의 `topologyKey`를 모두 가진 노드만 계산에 들어갑니다. 라벨이 없거나 오타가 난 노드는 건너뛰어 그 노드에는 이 Pod가 가지 않습니다.
+- Pod 라벨이 자기 `labelSelector`와 맞지 않으면 배치 뒤에도 그 Pod가 개수에 들어가지 않아 쏠림이 그대로 남습니다.
+- 조건은 스케줄링 시점에만 봅니다. Pod가 지워져 쏠림이 생겨도 다시 맞추지 않습니다.
+
+아무것도 적지 않아도 스케줄러에는 기본 분산 제약이 있습니다. 클러스터 수준 기본값을 설정하지 않으면 kube-scheduler는 노드 단위 `maxSkew: 3`, 존 단위 `maxSkew: 5`를 모두 `ScheduleAnyway`로 둔 것처럼 동작한다고 문서는 적습니다.
+
+### 5-13. 직접 해 보기
 
 노드 두 대 클러스터에서 아래 순서로 해 봅니다.
 
@@ -899,6 +1246,9 @@ kubectl logs -n kube-system deploy/my-scheduler          # Pending이면 권한,
 3. `shop` 네임스페이스에 ResourceQuota(`pods=3`)를 걸고 레플리카 5개 Deployment를 만든 뒤, 무엇이 실패했고 어디에 이유가 찍히는지 찾습니다.
 4. 컨트롤 플레인 노드에서 `/etc/kubernetes/manifests/kube-scheduler.yaml`을 디렉터리 밖으로 옮겨 스케줄러를 멈춥니다. 새 Pod가 `Pending`에 머무는 것을 본 뒤 5-5절의 Binding 요청으로 `node02`에 놓고 매니페스트를 되돌립니다.
 5. 같은 상태에서 DaemonSet을 하나 만들어 Pod가 뜨는지 봅니다. 5-10절대로라면 DaemonSet Pod도 기본 스케줄러를 거치니 스케줄러가 멈춘 동안 어떻게 되는지가 확인할 지점입니다. `node02`를 `kubectl cordon`한 뒤 DaemonSet Pod가 그 노드에 남아 있는지도 봅니다.
+6. 5-12절의 `cart-cache`를 레플리카 3개로 만들고 노드가 두 대일 때 세 번째 Pod가 `Pending`에 남는지, `kubectl describe pod`의 Events에 어떤 이유가 찍히는지 적습니다. 같은 규칙을 preferred로 바꾸면 어떻게 배치되는지 비교합니다.
+7. `order-api` 레플리카 4개에 노드 단위 `maxSkew: 1`, `DoNotSchedule` 제약을 걸고 `kubectl get pods -o wide`로 노드별 개수를 셉니다. 한 노드에 `kubectl cordon`을 걸고 레플리카를 6개로 늘렸을 때 늘어난 Pod가 어떻게 되는지 봅니다.
+8. 5-1절의 ValidatingAdmissionPolicy와 바인딩을 만든 뒤 `kubectl create deployment big -n shop --image=nginx --replicas=6`이 거절되는지, 다른 네임스페이스에서는 통과하는지 확인합니다. 바인딩의 `validationActions`를 `[Warn]`으로 바꾸면 응답이 어떻게 달라지는지도 봅니다.
 
 ## 6. 확인 문제
 
@@ -916,6 +1266,8 @@ kubectl logs -n kube-system deploy/my-scheduler          # Pending이면 권한,
 10. 클러스터의 Secret을 `aescbc`로 저장 시 암호화하도록 설정하고 기존 Secret까지 암호화하세요. `EncryptionConfiguration`의 공급자 순서는 어떻게 두어야 하나요?
 11. Pod `payment-api`의 모든 컨테이너를 UID 1000으로 돌리고 그중 컨테이너 `api`에만 `NET_ADMIN` 권한을 더하세요.
 12. 이름이 `my-scheduler`인 스케줄러가 클러스터에 떠 있습니다. Pod `board-check`를 이 스케줄러로 배치하고 실제로 이 스케줄러가 배치했는지 확인하세요.
+13. `payment` 네임스페이스에 매일 새벽 3시에 도는 CronJob `payment-reconcile`(이미지 busybox, `date`)을 만드세요. 이전 실행이 끝나지 않았으면 이번 실행은 건너뛰고 Job은 두 번까지만 재시도해야 합니다. 일정을 기다리지 않고 한 번 실행해 결과도 확인하세요.
+14. `shop` 네임스페이스의 Deployment `order-api`(레플리카 3, 라벨 `app=order-api`)가 노드 drain 중에도 최소 2개 유지되게 하고 레플리카가 같은 노드에 둘 이상 놓이지 않게 하세요.
 
 <details>
 <summary>풀이 보기</summary>
@@ -1014,18 +1366,46 @@ kubectl logs -n kube-system deploy/my-scheduler          # Pending이면 권한,
     kubectl apply -f bc.yaml
     kubectl get events -o wide | grep board-check     # Scheduled 이벤트의 SOURCE가 my-scheduler
     ```
+13. 뼈대를 명령으로 뽑고 `concurrencyPolicy`와 `backoffLimit`을 더합니다. `backoffLimit`은 `spec.jobTemplate.spec` 아래입니다.
+    ```bash
+    kubectl create cronjob payment-reconcile -n payment --image=busybox \
+      --schedule="0 3 * * *" --dry-run=client -o yaml -- date > cj.yaml
+    # spec 아래에 concurrencyPolicy: Forbid, spec.jobTemplate.spec 아래에 backoffLimit: 2 추가
+    kubectl apply -f cj.yaml
+    kubectl create job reconcile-now -n payment --from=cronjob/payment-reconcile
+    kubectl logs -n payment job/reconcile-now
+    ```
+14. PDB와 안티 어피니티 두 가지가 필요합니다.
+    ```bash
+    kubectl create pdb order-api-pdb -n shop --selector=app=order-api --min-available=2
+    kubectl edit deployment order-api -n shop
+    ```
+    ```yaml
+    # spec.template.spec 아래
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: order-api
+            topologyKey: kubernetes.io/hostname
+    ```
+    Pod 템플릿이 바뀌니 롤아웃이 일어납니다. 여기서 막힐 수 있습니다. 레플리카 3개의 기본 전략은 1-1절 계산대로 `maxUnavailable` 0, `maxSurge` 1이라 새 Pod가 먼저 떠야 하는데 워커 노드가 세 대뿐이고 모두 옛 `app=order-api` Pod가 있으면 새 Pod가 갈 노드가 없습니다. 문서 규칙에서 끌어낸 판단이고 돌려 보지는 않았습니다. 이때는 `strategy.rollingUpdate.maxUnavailable`을 1로 두거나 preferred 규칙을 씁니다. 노드가 세 대보다 적으면 required 규칙으로는 남는 Pod가 `Pending`입니다.
 
 </details>
 
 ## 범위와 한계
 
-- 이 글의 명령과 YAML은 공식 문서에서 옮기거나 문서 예시를 바탕으로 고친 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양만 옮겼습니다. 클러스터를 만든 뒤 1-5, 2-9, 3-4, 4-5, 5-12절의 결과를 덧붙이겠습니다.
+- 이 글의 명령과 YAML은 공식 문서에서 옮기거나 문서 예시를 바탕으로 고친 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양만 옮겼습니다. 클러스터를 만든 뒤 1-5, 2-9, 3-4, 4-8, 5-13절의 결과를 덧붙이겠습니다.
 - `command`만 적었을 때 이미지 CMD가 버려지는 동작은 containerd CRI 소스(main 브랜치)로 확인했습니다. CRI-O 같은 다른 런타임 코드는 보지 않았습니다.
 - 수정 가능한 Pod 필드 목록은 kubernetes/kubernetes master 브랜치의 `validation.go`에서 옮겼습니다. 스케줄링 게이트 관련 항목은 버전에 따라 달라질 수 있습니다.
 - VPA의 updateMode 목록은 kubernetes.io의 "Vertical Pod Autoscaling" 문서 기준이고 설치하는 VPA 버전에 따라 `InPlace` 계열 모드가 없을 수 있습니다. Secrets Store CSI Driver의 자동 순환 상태는 드라이버 문서 기준입니다.
 - 공식 문서는 2026년 10월 19일 기준 kubernetes.io(v1.37)에서 확인했습니다.
 - 시험 환경에 Metrics Server와 VPA가 설치되어 있는지, 노드 사이 `scp`가 되는지는 확인하지 못했습니다.
 - `kubectl autoscale --cpu-percent`의 동작은 kubernetes/kubernetes 저장소 master 브랜치의 `autoscale.go`로 확인했고 v1.37 kubectl 바이너리로 실행해 보지는 않았습니다.
+- 2026년 10월 20일 보강분(5-1절 ValidatingAdmissionPolicy와 기본 플러그인 목록, 5-12절, 4-5~4-7절, 4-1절 컨테이너 단위 재시작 규칙, 3-2절 scale-to-zero, 2-7절 ServiceAccount의 `imagePullSecrets`)은 kubernetes/website 저장소 main 브랜치의 문서 원문으로 확인했습니다. main 브랜치를 v1.37 문서로 보았고 기능 게이트 단계(`ContainerRestartRules` 1.35 beta, `HPAScaleToZero` 1.37 beta)는 같은 저장소의 기능 게이트 파일에서 읽었습니다.
+- MutatingAdmissionPolicy는 문서의 상태 표시(1.36 stable, 기본 활성)만 옮겼고 예시 YAML은 싣지 않았습니다. kubeadm이 넣는 `NodeRestriction` 플래그는 kubernetes/kubernetes master 브랜치의 kubeadm 소스로 확인했고 설치한 클러스터의 매니페스트로 보지는 않았습니다.
+- StatefulSet PVC 이름 규칙(`<템플릿 이름>-<Pod 이름>`)은 "StatefulSet Basics" 튜토리얼의 출력에서 옮긴 것이고 4-5절 매니페스트의 Pod 이름과 PVC 이름은 그 규칙에서 예상한 값입니다. 문제 14 풀이의 롤아웃 정지도 문서 규칙에서 끌어낸 판단입니다.
 - 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다. 풀이도 클러스터에서 돌려 보지 않았습니다.
 
 ## 참고 자료
@@ -1047,4 +1427,9 @@ kubectl logs -n kube-system deploy/my-scheduler          # Pending이면 권한,
 - Kubernetes, [Dynamic Admission Control](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [Encrypting Confidential Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/), [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
 - Kubernetes, [Define a Command and Arguments for a Container](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/), [Pod API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/), [Images](https://kubernetes.io/docs/concepts/containers/images/), [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 - kubernetes/kubernetes, [pkg/apis/core/validation/validation.go](https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go); containerd, [internal/cri/opts/spec_opts.go](https://github.com/containerd/containerd/blob/main/internal/cri/opts/spec_opts.go)
+- Kubernetes, [Validating Admission Policy](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/), [Mutating Admission Policy](https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/), [kubeadm Implementation details](https://kubernetes.io/docs/reference/setup-tools/kubeadm/implementation-details/), [Managing Service Accounts](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/), [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)
+- Kubernetes, [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
+- Kubernetes, [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/), [StatefulSet Basics](https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/), [Jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/), [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/), [kubectl create job](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_job/), [kubectl create cronjob](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_cronjob/)
+- Kubernetes, [Disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/), [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/), [kubectl create poddisruptionbudget](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_poddisruptionbudget/)
+- kubernetes/kubernetes, [cmd/kubeadm/app/phases/controlplane/manifests.go](https://github.com/kubernetes/kubernetes/blob/master/cmd/kubeadm/app/phases/controlplane/manifests.go); kubernetes/website, 기능 게이트 [ContainerRestartRules](https://github.com/kubernetes/website/blob/main/content/en/docs/reference/command-line-tools-reference/feature-gates/ContainerRestartRules.md), [HPAScaleToZero](https://github.com/kubernetes/website/blob/main/content/en/docs/reference/command-line-tools-reference/feature-gates/HPAScaleToZero.md)
 - Secrets Store CSI Driver, [Secret Auto Rotation](https://secrets-store-csi-driver.sigs.k8s.io/topics/secret-auto-rotation.html)

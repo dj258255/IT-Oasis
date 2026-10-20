@@ -112,6 +112,38 @@ kubelet은 CRI로 런타임에 Pod 샌드박스를 만들어 달라고 요청할
 
 containerd의 `max_conf_num` 기본값은 1입니다. 설정 디렉터리에서 파일 이름 순으로 맨 앞 파일 하나만 읽는다는 뜻이라서 `00-old.conflist` 같은 남은 파일이 실제 플러그인 설정보다 앞에 있으면 엉뚱한 설정이 적용됩니다. 설정 파일의 `"type"` 값은 `/opt/cni/bin` 안의 실행 파일 이름과 같아야 합니다.
 
+Pod IP를 어디서 받는지는 설정 파일의 `ipam` 블록이 정합니다. 아래는 CNI 프로젝트(cni.dev)의 bridge, host-local 문서 예시를 줄여 하나의 `.conflist`로 묶은 것입니다. 값은 연습용이고 직접 만들어 확인해 볼 형태입니다.
+
+```json
+{
+  "cniVersion": "1.0.0",
+  "name": "mynet",
+  "plugins": [
+    {
+      "type": "bridge",
+      "bridge": "cni0",
+      "isGateway": true,
+      "ipMasq": true,
+      "ipam": {
+        "type": "host-local",
+        "ranges": [[{ "subnet": "10.244.1.0/24" }]],
+        "routes": [{ "dst": "0.0.0.0/0" }]
+      }
+    },
+    { "type": "loopback" }
+  ]
+}
+```
+
+| 키 | 뜻(host-local 문서 기준) |
+|---|---|
+| `ipam.type` | IP를 나눠 줄 IPAM 플러그인. `host-local`은 노드 파일시스템에 할당 상태를 저장해 그 노드 안에서만 중복을 막는다 |
+| `ranges` | 주소 풀 목록의 목록. 바깥 배열 길이만큼 IP를 받는다(IPv4 하나, IPv6 하나면 두 개) |
+| `subnet` | 필수. 이 CIDR에서 할당한다. `rangeStart`를 생략하면 `.2`부터, `gateway`를 생략하면 `.1` |
+| 할당 기록 | `/var/lib/cni/networks/<네트워크 이름>`에 IP별 파일로 남는다(`dataDir`로 변경 가능) |
+
+`ranges` 없이 `subnet`을 `ipam` 바로 아래에 두는 옛 형식도 문서상 아직 동작하지만 사용 중단입니다. 노드마다 `subnet`이 그 노드의 `spec.podCIDR`(1-5절)과 맞아야 Pod IP가 노드 대역 안에서 나옵니다. Flannel이나 Calico 같은 플러그인은 설치될 때 자기 설정 파일을 직접 써 넣습니다. 그래서 이 블록은 손으로 쓰기보다 Pod IP가 엉뚱한 대역에서 나올 때 읽어 보는 용도에 가깝습니다.
+
 CNI 문제는 증상이 둘로 나타납니다.
 
 | 증상 | 어디서 보나 |
@@ -1275,6 +1307,7 @@ kubernetes.io
 
 컨테이너 런타임과 CNI
 - containerd, [docs/cri/config.md](https://github.com/containerd/containerd/blob/main/docs/cri/config.md)
+- CNI, [host-local IP address management plugin](https://www.cni.dev/plugins/current/ipam/host-local/), [bridge plugin](https://www.cni.dev/plugins/current/main/bridge/)
 - [weaveworks/weave](https://github.com/weaveworks/weave) (보관된 저장소)
 
 Ingress 컨트롤러
