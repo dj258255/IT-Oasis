@@ -196,6 +196,11 @@ kubectl -n shop run tmp --rm -it --restart=Never --image=busybox -- wget -qO- -T
 | 같은 노드 Pod끼리만 되는지 | 다른 노드에 있는 두 Pod로 각각 시험 |
 | CNI 플러그인 Pod 상태 | `kubectl -n kube-system get pod -o wide` (플러그인 DaemonSet이 모든 노드에서 Running인지) |
 | 노드 조건 | `kubectl describe node <노드>`의 `NetworkUnavailable` 조건 |
+| 노드의 인터페이스와 주소 | 노드에서 `ip addr` (어느 인터페이스가 노드 IP를 가졌는지, CNI가 만든 브리지나 터널 장치가 있는지) |
+| 노드의 라우트 표 | 노드에서 `ip route` (`default via`가 기본 게이트웨이, 다른 노드의 Pod 대역이 어느 장치나 게이트웨이로 가는지) |
+| IP 포워딩 | 노드에서 `sysctl net.ipv4.ip_forward`가 1인지 |
+
+노드 사이 Pod 통신이 끊기면 라우트 표를 먼저 읽습니다. `ip route` 한 줄은 "이 대역으로 가는 패킷은 이 게이트웨이(`via`)나 이 장치(`dev`)로 보낸다"는 뜻입니다. 패킷은 가장 구체적으로 맞는 대역의 줄을 따르고 맞는 줄이 없으면 `default` 줄로 갑니다. 다른 노드의 Pod 대역으로 가는 줄은 보통 CNI 플러그인이 넣어 두며 플러그인과 모드(오버레이 터널, 직접 라우팅)에 따라 모양이 다릅니다. 손으로 경로를 더할 때는 `ip route add 10.244.2.0/24 via 192.168.10.12`처럼 씁니다. 이렇게 넣은 경로는 재부팅하면 사라지고 CNI가 관리하는 경로와 겹치면 장애를 더 키울 수 있으므로 원인을 확인하는 용도로만 씁니다. 위 주소는 설명용 예시입니다.
 
 ### 1-7. 자주 틀리는 지점
 
