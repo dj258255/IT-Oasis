@@ -443,17 +443,17 @@ sysctl net.ipv4.ip_forward   # 1이면 적용됨
 
 systemd를 init으로 쓰면서 kubelet과 런타임은 `cgroupfs`를 쓰면 cgroup 관리자가 둘이 됩니다. 문서는 이 상태에서 자원 압박이 오면 노드가 불안정해질 수 있다고 설명합니다. containerd는 `/etc/containerd/config.toml`의 runc 옵션에 `SystemdCgroup = true`를 넣고 kubelet은 `KubeletConfiguration`에 `cgroupDriver: systemd`를 넣습니다. containerd 1.x와 2.x는 설정 섹션 이름이 다르니 문서에서 버전에 맞는 블록을 봅니다.
 
-최근 버전에서는 kubelet이 드라이버를 런타임에 묻습니다. "Container Runtimes" 문서에 따르면 `KubeletCgroupDriverFromCRI` 기능(1.34부터 stable)이 켜져 있고 런타임이 `RuntimeConfig` CRI 호출을 지원하면 kubelet은 런타임에서 드라이버를 알아내고 자기 설정의 `cgroupDriver`를 무시합니다. containerd 1.x 이하는 이 호출을 지원하지 않아 kubelet이 자기 설정값으로 돌아가고 문서는 1.38에서 이 대비 동작을 없애 옛 containerd가 새 kubelet과 함께 실패하게 된다고 적습니다. 이 설명대로라면 containerd 2.x 노드에서는 kubelet이 런타임 값을 따르므로 드라이버 문제는 containerd 설정의 `SystemdCgroup` 값에서 먼저 찾습니다. 이 순서는 문서 내용에서 끌어낸 제 판단입니다.
+최근 버전에서는 kubelet이 드라이버를 런타임에 묻습니다. "Container Runtimes" 문서에 따르면 `KubeletCgroupDriverFromCRI` 기능(1.34부터 stable)이 켜져 있고 런타임이 `RuntimeConfig` CRI 호출을 지원하면 kubelet은 런타임에서 드라이버를 알아내고 자기 설정의 `cgroupDriver`를 무시합니다. containerd 1.x 이하는 이 호출을 지원하지 않아 kubelet이 자기 설정값으로 돌아가고 문서는 1.38에서 이 대비 동작을 없애 옛 containerd가 새 kubelet과 함께 실패하게 된다고 적습니다. Lima VM(kubeadm 1.36.5, containerd 2.4.2)의 kubelet 로그에는 `"Using cgroup driver setting received from the CRI runtime" cgroupDriver="systemd"`가 찍혔습니다. 워커의 containerd만 `SystemdCgroup = false`로 바꾸고 재시작하자 `/var/lib/kubelet/config.yaml`의 `cgroupDriver: systemd`는 그대로인데 kubelet은 `cgroupDriver="cgroupfs"`를 받아 썼습니다. 그래서 containerd 2.x 노드의 드라이버 문제는 containerd 설정의 `SystemdCgroup` 값에서 먼저 찾습니다.
 
 업그레이드 문서에는 v1.37 기준으로 리눅스 kubelet이 기본적으로 cgroup v2만 지원하고 `FailCgroupV1`이 기본 `true`라는 메모가 있습니다. 오래된 cgroup v1 배포판 위에서 연습하면 kubelet이 뜨지 않을 수 있습니다.
 
-containerd 버전에도 하한이 생겼습니다. 1.35 릴리스 글은 1.35가 containerd 1.x 계열을 지원하는 마지막 버전이고 다음 버전으로 올리기 전에 containerd 2.0 이상으로 바꿔야 한다고 적습니다. 시험 기준인 1.37 노드라면 containerd 2.x를 전제로 하고 설정도 2.x 형식으로 씁니다. 1.35 클러스터에서는 kubelet의 `kubelet_cri_losing_support` 지표로 아직 1.x를 쓰는 노드를 찾을 수 있다고 같은 글이 적습니다.
+containerd 버전에도 하한이 생겼습니다. 1.35 릴리스 글은 1.35가 containerd 1.x 계열을 지원하는 마지막 버전이고 다음 버전으로 올리기 전에 containerd 2.0 이상으로 바꿔야 한다고 적습니다. 시험 기준인 1.37 노드라면 containerd 2.x를 전제로 하고 설정도 2.x 형식으로 씁니다. 같은 글은 kubelet의 `kubelet_cri_losing_support` 지표로 아직 1.x를 쓰는 노드를 찾을 수 있다고 적습니다. 지원 종료와 실제 실패 시점은 다릅니다. Lima VM 워커의 containerd를 1.7.36으로 바꾸자 kubelet 1.37.1은 `"CRI implementation should be updated to support RuntimeConfig. Falling back to using cgroupDriver from kubelet config."`를 남기고 그대로 돌았고 노드는 Ready였습니다. 지표는 `kubelet_cri_losing_support{version="1.38.0"} 1`이었습니다.
 
 ### 2-4b. 런타임 패키지 설치: containerd 2.x와 cri-dockerd
 
 노드에 런타임이 없거나 과제가 패키지 파일을 주고 설치하라고 하는 경우의 흐름입니다. 런타임마다 명령은 조금씩 다르지만 순서는 같습니다. 패키지 설치, 설정 파일 확인, systemd 서비스 등록과 시작, 소켓 확인, kubeadm과 crictl에 소켓 경로 알려 주기입니다.
 
-containerd는 "Container Runtimes" 문서와 containerd의 getting-started 문서를 따릅니다. `.deb`/`.rpm` 패키지(`containerd.io`)는 Docker가 배포합니다. 바이너리 tar 묶음으로 설치하면 `containerd.service` 유닛을 직접 넣어야 합니다.
+containerd는 "Container Runtimes" 문서와 containerd의 getting-started 문서를 따릅니다. `.deb`/`.rpm` 패키지(`containerd.io`)는 Docker가 배포합니다. Ubuntu 24.04 저장소의 `containerd` 패키지는 2026년 10월 20일 기준 2.2.1이었습니다. 바이너리 tar 묶음으로 설치하면 `containerd.service` 유닛을 직접 넣어야 합니다. Lima VM에서는 GitHub 릴리스의 2.4.2 tar 묶음과 저장소의 `containerd.service`를 `/usr/local/lib/systemd/system/`에 넣고 runc, CNI 플러그인 바이너리를 따로 받았습니다.
 
 ```bash
 # 과제가 .deb 파일을 줬다면
@@ -475,12 +475,12 @@ ls -l /run/containerd/containerd.sock
 
 | 항목 | 확인할 값 | 출처 |
 |---|---|---|
-| 첫 줄의 `version` | containerd 2.0에서 도입된 `version = 3`. 1.x의 `version = 2` 파일도 읽고 내부에서 변환함. containerd `RELEASES.md`는 2.3에서 `version = 4`가 생겼다고 적음 | containerd `docs/cri/config.md`, `RELEASES.md` |
-| `SystemdCgroup` | 2.x(`version = 3`)는 `[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]` 아래 `SystemdCgroup = true`. 1.x는 `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]` | "Container Runtimes", containerd `docs/cri/config.md` |
+| 첫 줄의 `version` | `containerd config default` 실측: 1.7.36은 `version = 2`(9번째 줄), 2.0.14는 `version = 3`, 2.3.7과 2.4.2는 `version = 4`. 옛 버전 파일도 읽고 내부에서 변환함 | containerd `docs/cri/config.md`, `RELEASES.md`, 실측 |
+| `SystemdCgroup` | 2.x는 `version = 3`과 `4` 모두 `[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]` 아래 `SystemdCgroup = true`. 1.x는 `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]`. 네 버전 모두 기본값은 `false` | "Container Runtimes", containerd `docs/cri/config.md`, 실측 |
 | `disabled_plugins` | 목록에 `cri`가 없어야 함. 고쳤으면 `systemctl restart containerd` | "Container Runtimes"의 패키지 설치 메모 |
 
 ```toml
-version = 3
+version = 4    # containerd 2.3.7, 2.4.2 기본값. 2.0.14는 3
 [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
   SystemdCgroup = true
 ```
@@ -491,7 +491,7 @@ cri-dockerd는 Docker Engine을 CRI로 감싸는 어댑터입니다. Docker Engi
 
 ```bash
 sudo dpkg -i ./cri-dockerd_<버전>.<배포판>_amd64.deb   # 또는 sudo apt-get install ./<파일>.deb
-systemctl status cri-docker                            # 문서 기준: active (running), enabled
+systemctl status cri-docker                            # Ubuntu 24.04용 .deb는 설치 직후 active, enabled(실측)
 
 # enabled가 아니거나 유닛 파일을 손으로 넣었다면
 sudo systemctl daemon-reload
@@ -499,9 +499,9 @@ sudo systemctl enable --now cri-docker.socket      # 수동 설치 절의 명령
 ls -l /run/cri-dockerd.sock
 ```
 
-패키지는 `cri-docker.service`와 `cri-docker.socket` 두 유닛을 씁니다. 저장소의 소켓 유닛은 `ListenStream=%t/cri-dockerd.sock`이라 루트 기준 `/run/cri-dockerd.sock`에 소켓이 생깁니다. `.rpm` 설치 절은 `systemctl enable cri-docker && systemctl start cri-docker`를 적고 수동 설치 절은 `daemon-reload` 뒤 `enable --now cri-docker.socket`을 적습니다. `enable --now`는 부팅 시 자동 시작 등록과 지금 시작을 한 번에 합니다. `start`만 하면 재부팅 뒤 서비스가 자동으로 올라오지 않아 kubelet이 런타임 소켓을 찾지 못합니다.
+패키지는 `cri-docker.service`와 `cri-docker.socket` 두 유닛을 씁니다. 저장소의 소켓 유닛은 `ListenStream=%t/cri-dockerd.sock`이라 루트 기준 `/run/cri-dockerd.sock`에 소켓이 생깁니다. `.rpm` 설치 절은 `systemctl enable cri-docker && systemctl start cri-docker`를 적고 수동 설치 절은 `daemon-reload` 뒤 `enable --now cri-docker.socket`을 적습니다. `enable --now`는 부팅 시 자동 시작 등록과 지금 시작을 한 번에 합니다. `start`만 하면 재부팅 뒤 서비스가 자동으로 올라오지 않아 kubelet이 런타임 소켓을 찾지 못합니다. Lima VM의 Ubuntu 24.04에 Ubuntu 저장소의 `docker.io`(Docker 29.1.3)를 깔고 `cri-dockerd_0.4.9.3-0.ubuntu-noble_arm64.deb`를 `dpkg -i`로 넣자 두 유닛의 링크가 바로 만들어졌고 enabled, active였습니다. 유닛 파일은 `/lib/systemd/system/`에 들어갔습니다. 이 패키지라면 `enable --now`는 확인 단계에 가깝지만 과제가 준 패키지가 다를 수 있으니 `is-enabled`는 꼭 봅니다.
 
-런타임이 둘 이상 깔린 노드(예: Docker를 설치하면 containerd도 함께 깔림)에서는 kubeadm이 소켓을 자동으로 고르지 못하고 오류를 냅니다. "Installing kubeadm" 문서의 소켓 표를 그대로 `--cri-socket`에 넣습니다.
+런타임이 둘 이상 깔린 노드(예: Docker를 설치하면 containerd도 함께 깔림)에서는 kubeadm이 소켓을 자동으로 고르지 못하고 오류를 냅니다. 위 VM에서 `--cri-socket` 없이 `kubeadm init --dry-run`과 `kubeadm reset`을 실행하자 둘 다 `found multiple CRI endpoints on the host. Please define which one do you wish to use by setting the 'criSocket' field in the kubeadm configuration file: unix:///var/run/containerd/containerd.sock, unix:///var/run/cri-dockerd.sock`에서 멈췄습니다. "Installing kubeadm" 문서의 소켓 표를 그대로 `--cri-socket`에 넣습니다.
 
 | 런타임 | `--cri-socket` 값 |
 |---|---|
@@ -516,6 +516,8 @@ sudo kubeadm join <주소>:6443 --token <토큰> --discovery-token-ca-cert-hash 
 sudo crictl --runtime-endpoint unix:///var/run/cri-dockerd.sock ps
 ```
 
+같은 워커를 `kubeadm reset --cri-socket unix:///var/run/containerd/containerd.sock`으로 비우고 위 join 명령으로 다시 붙이자 `kubectl get nodes -o wide`의 CONTAINER-RUNTIME이 `docker://29.1.3`이 됐고 Calico와 nginx Pod가 Docker 위에서 Running이었습니다.
+
 표의 `/var/run`과 7-1절의 `/run`은 대부분의 배포판에서 `/var/run`이 `/run`을 가리키는 링크라 같은 파일입니다. 2-3절의 sysctl 설정도 런타임 설치와 같은 과제로 묶여 나오기 쉬우니 `/etc/sysctl.d/`에 파일을 쓰고 `sysctl --system`으로 적용하는 순서를 함께 손에 익힙니다.
 
 ### 2-5. kubeadm, kubelet, kubectl 패키지
@@ -527,13 +529,17 @@ sudo apt-mark hold kubelet kubeadm kubectl
 sudo systemctl enable --now kubelet
 ```
 
-이 시점의 kubelet은 몇 초마다 재시작합니다. 문서 표현으로는 kubeadm이 할 일을 알려 줄 때까지 crashloop로 기다리는 상태이고 정상입니다.
+이 시점의 kubelet은 10초마다 재시작합니다(패키지의 `kubelet.service`가 `RestartSec=10`). 문서 표현으로는 kubeadm이 할 일을 알려 줄 때까지 crashloop로 기다리는 상태이고 정상입니다.
+
+pkgs.k8s.io의 1.36, 1.37 kubeadm 패키지는 `cri-tools`에 의존하지 않습니다. Lima VM에서 세 패키지만 깔았을 때 `crictl`이 없었고 같은 저장소의 `cri-tools`(1.37.0)를 따로 설치했습니다. 설정 파일 없이 쓰면 기본 엔드포인트가 사용 중단이라는 경고가 나오니 `/etc/crictl.yaml`에 `runtime-endpoint: unix:///run/containerd/containerd.sock`를 적어 둡니다.
 
 ### 2-6. 직접 해 보기
 
 새 VM 두 대에서 체크리스트를 위에서부터 확인합니다. 스왑 상태(`swapon --show`), `net.ipv4.ip_forward` 값, containerd의 `SystemdCgroup` 값, `product_uuid`를 적어 두고 하나라도 다르면 고친 뒤 다음 절로 갑니다.
 
 런타임 설치도 한 번은 손으로 해 봅니다. 한 VM에는 containerd 2.x를 패키지로 넣고 `containerd config default`로 만든 파일의 첫 줄 `version` 값과 `SystemdCgroup` 줄 위치를 적습니다. 다른 VM에는 Docker Engine과 cri-dockerd `.deb`를 넣고 `systemctl is-enabled cri-docker.socket`, `ls -l /run/cri-dockerd.sock`을 확인한 뒤 `kubeadm init`을 `--cri-socket` 없이 실행해 런타임이 둘이라는 오류가 나는지 봅니다. 재부팅한 뒤 두 런타임이 스스로 다시 올라오는지도 확인합니다.
+
+Lima VM 두 대(Ubuntu 24.04.5, arm64, 커널 6.8)에서 해 봤습니다. 스왑은 처음부터 없었고 `ip_forward`는 파일을 쓴 뒤 1, cgroup은 v2(`stat -fc %T /sys/fs/cgroup`이 `cgroup2fs`), `product_uuid`는 두 VM이 서로 달랐습니다. containerd 결과는 2-4b절 표에, cri-dockerd 결과는 2-4b절 본문에 적었습니다. containerd와 cri-dockerd를 함께 둔 워커를 재부팅하자 containerd, docker, cri-docker, kubelet이 모두 active로 올라왔고 노드는 Ready였습니다.
 
 ## 3. kubeadm으로 클러스터 생성과 관리
 
@@ -568,7 +574,7 @@ To start using your cluster, you need to run the following as a regular user:
 
 ### 3-2. CoreDNS는 CNI 설치 뒤에 시작
 
-문서는 CNI 기반 Pod 네트워크 애드온을 설치해야 Pod끼리 통신하고 네트워크가 설치되기 전에는 CoreDNS가 시작되지 않는다고 적습니다. `init` 직후 CoreDNS가 `Pending`이고 노드가 `NotReady`인 것은 CNI 설치를 기다리는 정상 상태입니다.
+문서는 CNI 기반 Pod 네트워크 애드온을 설치해야 Pod끼리 통신하고 네트워크가 설치되기 전에는 CoreDNS가 시작되지 않는다고 적습니다. `init` 직후 CoreDNS가 `Pending`이고 노드가 `NotReady`인 것은 CNI 설치를 기다리는 정상 상태입니다. Lima VM의 kubeadm 1.36.5에서 이 시점 노드 조건 메시지는 `container runtime network not ready: NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized`였습니다. Calico v3.33.0 매니페스트를 적용하고 30초 안에 두 노드가 Ready가 됐고 CoreDNS는 약 1분 30초 뒤 Running이었습니다.
 
 ### 3-3. 노드 조인과 토큰
 
@@ -628,7 +634,7 @@ sudo systemctl restart kubelet
 - ConfigMap만 고치면 노드의 구성요소는 바뀌지 않습니다. `extraArgs`는 매니페스트의 플래그 목록, `extraVolumes`는 볼륨 마운트, `certSANs`는 인증서 재발급(`kubeadm init phase certs <구성요소> --config <파일>`)으로 따로 반영합니다. 시작 전에 `/etc/kubernetes/`를 백업하라고 문서가 적습니다.
 - `kubeadm upgrade`는 `kubelet-config` ConfigMap 내용으로 `/var/lib/kubelet/config.yaml`을 덮어씁니다. 노드 한 대에만 준 설정은 업그레이드 뒤 다시 넣거나 `/var/lib/kubelet/kubeadm-flags.env`의 플래그로 둡니다. CoreDNS를 고친 내용도 `kubeadm upgrade apply`에서 사라집니다.
 
-시험처럼 "API 서버에 플래그 하나를 더하라"는 과제는 매니페스트를 직접 고치는 쪽이 빠릅니다. 이 경우에도 다음 업그레이드 때 kubeadm이 `ClusterConfiguration`으로 매니페스트를 다시 만들므로 `kubeadm-config`의 `extraArgs`에도 같은 값을 넣어 두어야 바뀐 설정이 유지됩니다. 마지막 문장은 문서의 "Persisting the reconfiguration" 절을 제가 과제 상황에 적용한 것입니다.
+시험처럼 "API 서버에 플래그 하나를 더하라"는 과제는 매니페스트를 직접 고치는 쪽이 빠릅니다. 이 경우에도 다음 업그레이드 때 kubeadm이 `ClusterConfiguration`으로 매니페스트를 다시 만들므로 `kubeadm-config`의 `extraArgs`에도 같은 값을 넣어 두어야 바뀐 설정이 유지됩니다. Lima VM(1.37.1)에서 매니페스트에만 `--event-ttl=2h`를 넣고 `kubeadm-config`에만 `extraArgs`로 `profiling: "false"`를 넣은 뒤 `kubeadm upgrade apply v1.37.1`을 다시 실행하자 kube-apiserver 프로세스 인자에는 `--profiling=false`만 남고 `--event-ttl=2h`는 사라졌습니다. v1beta4의 `extraArgs`는 `- name: profiling` / `value: "false"` 꼴의 목록입니다.
 
 ### 3-5. 직접 해 보기
 
@@ -636,7 +642,7 @@ sudo systemctl restart kubelet
 
 이어서 `kubelet-config` ConfigMap의 `data.kubelet`에 값 하나(예: `maxPods`)를 바꾸고 워커에서 `kubeadm upgrade node phase kubelet-config`와 kubelet 재시작을 한 뒤 `/var/lib/kubelet/config.yaml`과 `kubectl describe node`의 Capacity에서 바뀐 값을 확인합니다. 같은 값을 노드 파일에만 넣었을 때 업그레이드 뒤 되돌아가는지도 기록합니다.
 
-kind로는 kubeadm init과 join을 할 수 없어 첫 문단은 돌리지 못했습니다. 둘째 문단은 kind v1.37.0에서 했습니다. `kubelet-config`의 `data.kubelet`에 `maxPods: 50`을 넣고 워커에서 `kubeadm upgrade node phase kubelet-config`를 실행하자 `/var/lib/kubelet/config.yaml`이 새 값으로 바뀌었고 kubelet을 재시작한 뒤 `kubectl get node -o jsonpath='{.status.capacity.pods}'`가 50이 됐습니다. kind가 넣어 둔 kubelet 설정 패치도 이때 함께 적용됐습니다.
+첫 문단은 Lima VM 두 대에서 했습니다. Lima의 `user-v2` 네트워크(192.168.104.0/24)가 Calico 매니페스트 주석의 기본 대역 192.168.0.0/16과 겹쳐 `kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.104.1`로 만들었습니다. init 출력의 join 명령을 버리고 `kubeadm token create --print-join-command`로 만든 명령으로 워커를 붙였습니다. `kubeadm token list`에는 init 토큰과 새 토큰이 TTL `23h`로 함께 보였습니다. CNI 설치 전후 차이는 3-2절에 적었습니다. 둘째 문단은 kind v1.37.0에서 처음 했고 Lima VM에서 다시 했습니다. `kubelet-config`의 `data.kubelet`에 `maxPods: 50`을 넣고 워커에서 `kubeadm upgrade node phase kubelet-config`를 실행하자 `/var/lib/kubelet/config.yaml`이 새 값으로 바뀌었고 kubelet을 재시작한 뒤 `kubectl get node -o jsonpath='{.status.capacity.pods}'`가 50이 됐습니다. kind가 넣어 둔 kubelet 설정 패치도 이때 함께 적용됐습니다. Lima VM에서도 같은 순서로 워커 capacity가 50이 됐습니다. 이어서 워커의 `config.yaml`만 `maxPods: 70`으로 고치고 재시작하자 70이 됐고 그 노드에서 `kubeadm upgrade node`를 실행하자 파일이 ConfigMap 값 50으로 돌아갔습니다.
 
 ## 4. 클러스터 수명주기: 업그레이드, 인증서, etcd
 
@@ -697,12 +703,14 @@ sudo kubeadm upgrade plan
 sudo kubeadm upgrade apply v1.37.x
 ```
 
-문서에 실린 성공 출력은 아래 모양입니다.
+Lima VM에서 1.36.5를 1.37.1로 올릴 때 나온 성공 출력입니다. 문서에 실린 옛 문구(`[upgrade/successful] SUCCESS! Your cluster was upgraded to ... Enjoy!`)와 다릅니다.
 
 ```text
-[upgrade/successful] SUCCESS! Your cluster was upgraded to "v1.37.x". Enjoy!
-[upgrade/kubelet] Now that your control plane is upgraded, please proceed with upgrading your kubelets if you haven't already done so.
+[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".
+[upgrade] Now please proceed with upgrading the rest of the nodes by following the right order.
 ```
+
+저장소를 바꾸기 전 `apt-cache madison kubeadm`에는 1.36.x만 보였고 `/etc/apt/sources.list.d/kubernetes.list`의 `v1.36`을 `v1.37`로 고치고 `apt-get update`를 하자 `1.37.1-1.1`이 나왔습니다. `upgrade plan`은 etcd `3.6.8-0`에서 `3.7.0-0`으로, CoreDNS `v1.14.2`에서 `v1.14.6`으로 올린다고 표시했고 `upgrade apply`는 3분쯤 걸렸습니다.
 
 그 다음 노드마다 같은 네 단계를 반복합니다.
 
@@ -725,6 +733,8 @@ kubectl uncordon <노드>
 | 나머지 컨트롤 플레인 | `kubeadm upgrade node` | plan과 CNI 업그레이드는 필요 없음 |
 | 워커 | `kubeadm upgrade node` | 워커에서는 kubelet 설정만 갱신 |
 
+Lima VM에서 이 순서대로 컨트롤 플레인과 워커를 올려 두 노드가 `v1.37.1`, Ready가 됐습니다. 컨트롤 플레인 drain은 `--ignore-daemonsets`만으로는 `cannot delete Pods that declare no controller (use --force to override): shop/cli`로 멈췄습니다. 테스트용 단독 Pod 때문이라 `--force`를 더했습니다(4-7절).
+
 `drain`과 `uncordon`은 kubectl이 있는 곳에서 실행합니다. 시험에서는 과제마다 ssh로 노드를 옮기니 kubeadm과 apt 명령은 해당 노드에서, drain은 컨트롤 플레인에서 실행하는 식으로 위치가 바뀝니다.
 
 ### 4-3. 업그레이드 실패 시 재실행과 백업 디렉터리
@@ -734,7 +744,7 @@ kubectl uncordon <노드>
 - `kubeadm-backup-etcd-<날짜>-<시각>`: 이 노드의 로컬 etcd 데이터. 자동 롤백이 안 되면 `/var/lib/etcd`로 수동 복원
 - `kubeadm-backup-manifests-<날짜>-<시각>`: 이 노드의 static Pod 매니페스트. 자동 롤백이 안 되면 `/etc/kubernetes/manifests`로 수동 복원
 
-이 디렉터리는 업그레이드가 끝나도 남으니 직접 지웁니다.
+Lima VM의 1.37.1 업그레이드 뒤 `/etc/kubernetes/tmp`에는 이 둘과 함께 `kubeadm-kubelet-config-<날짜>-<시각>`(업그레이드 전 `/var/lib/kubelet/config.yaml` 사본)도 있었습니다. 워커의 `kubeadm upgrade node`도 이 kubelet 설정 백업을 남깁니다. 이 디렉터리는 업그레이드가 끝나도 남으니 직접 지웁니다.
 
 ### 4-4. 인증서 만료
 
@@ -751,9 +761,9 @@ sudo kubeadm certs renew all
 sudo openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
 ```
 
-kind v1.37.0 컨트롤 플레인 노드에서 `kubeadm certs check-expiration`을 실행하자 `admin.conf`, `apiserver`, `apiserver-etcd-client` 같은 항목이 `RESIDUAL TIME` 364d로, CA 세 개가 9y로 나왔고 목록에 `kubelet.conf`는 없었습니다. `renew`는 돌리지 않았습니다.
+kind v1.37.0 컨트롤 플레인 노드에서 `kubeadm certs check-expiration`을 실행하자 `admin.conf`, `apiserver`, `apiserver-etcd-client` 같은 항목이 `RESIDUAL TIME` 364d로, CA 세 개가 9y로 나왔고 목록에 `kubelet.conf`는 없었습니다. Lima VM의 kubeadm 1.36.5 클러스터도 같은 모양이었고 `upgrade apply` 뒤에는 CA를 뺀 열한 항목의 만료 시각이 업그레이드 시각 기준으로 바뀌어 있었습니다.
 
-컨트롤 플레인이 여러 대면 `renew`를 모든 컨트롤 플레인 노드에서 실행합니다. 갱신한 뒤에는 컨트롤 플레인 Pod를 재시작해야 합니다. 모든 구성요소가 인증서를 동적으로 다시 읽지는 못하기 때문입니다. static Pod는 노드의 kubelet이 관리해서 kubectl로 지우고 다시 띄울 수 없습니다. 그래서 문서는 매니페스트를 `/etc/kubernetes/manifests/` 밖으로 잠시 옮기고 20초(kubelet의 `fileCheckFrequency`)쯤 기다렸다가 되돌리라고 적습니다.
+컨트롤 플레인이 여러 대면 `renew`를 모든 컨트롤 플레인 노드에서 실행합니다. 갱신한 뒤에는 컨트롤 플레인 Pod를 재시작해야 합니다. 모든 구성요소가 인증서를 동적으로 다시 읽지는 못하기 때문입니다. Lima VM(1.37.1)에서 `kubeadm certs renew all`은 마지막에 `Done renewing certificates. You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.`를 찍었습니다. 재시작 전에 `openssl s_client`로 6443과 2379 포트가 내놓는 인증서의 serial을 보니 kube-apiserver와 etcd의 서빙 인증서는 이미 새 파일 것으로 바뀌어 있었습니다. kubeconfig에 든 컨트롤러 매니저와 스케줄러의 클라이언트 인증서는 밖에서 확인할 방법이 없으니 출력대로 네 구성요소를 모두 재시작합니다. static Pod는 노드의 kubelet이 관리해서 kubectl로 지우고 다시 띄울 수 없습니다. 그래서 문서는 매니페스트를 `/etc/kubernetes/manifests/` 밖으로 잠시 옮기고 20초(kubelet의 `fileCheckFrequency`)쯤 기다렸다가 되돌리라고 적습니다.
 
 ### 4-5. etcd 백업
 
@@ -809,6 +819,10 @@ kind v1.37.0에서 스냅샷을 뜬 뒤 Deployment 하나를 지우고 이 절�
 
 1. `hostPath`를 바꾼 뒤 새 etcd 컨테이너가 뜨고 `kubectl`이 다시 응답하기까지 1분이 넘게 걸렸습니다. 그동안 `kubectl`은 연결 오류를 냅니다. 매니페스트를 또 고치지 말고 `crictl ps | grep etcd`로 새 컨테이너가 떴는지 봅니다.
 2. etcd가 복구된 데이터로 떴는데도 `kubectl get deploy`에 지운 Deployment가 보이지 않았습니다. 떠 있던 kube-apiserver가 예전 상태를 캐시로 들고 있었기 때문으로 보입니다. kube-apiserver, kube-controller-manager, kube-scheduler 매니페스트를 `/etc/kubernetes/manifests` 밖으로 옮겼다가 20초 뒤 되돌려 다시 띄우자 지운 Deployment가 돌아왔습니다.
+
+Lima VM의 kubeadm 1.37.1 노드(etcd 3.7.0)에서 같은 절차를 다시 돌려도 결과가 같았습니다. etcd 컨테이너가 `/var/lib/etcd-restore`를 마운트하고 떴는데도 지운 Deployment가 없었고 세 매니페스트를 옮겼다 되돌리자 나타났습니다. 같은 VM에서 하나를 더 봤습니다. 복구 뒤 `kubeadm upgrade apply`를 다시 실행하자 kubeadm이 `kubeadm-config`의 `etcd.local.dataDir`(`/var/lib/etcd`)로 `etcd.yaml`을 다시 만들어 `hostPath`가 옛 디렉터리로 돌아갔고 복구한 Deployment가 다시 사라졌습니다. 다시 복구하고 `kubeadm-config`의 `dataDir`도 새 경로로 고친 뒤 `upgrade apply`를 돌리자 `hostPath`와 Deployment가 그대로 남았습니다. 새 디렉터리로 복구했다면 `dataDir`도 같이 고칩니다.
+
+복구 뒤 세 static Pod만 재시작하면 남는 문제도 있었습니다. 워커 kubelet이 `node: no relationship found between node 'lima-cka-w1' and this object` 오류를 내며 새로 배치된 Pod를 `Pending`으로 두었고 이 때문에 `upgrade apply`가 `[ERROR CreateJob]: Job "upgrade-health-check-..." ... did not complete in 1m0s`로 멈췄습니다. 노드마다 `systemctl restart kubelet`을 하자 풀렸습니다. Service IP 접속도 kube-proxy Pod를 지워 다시 띄운 뒤에야 됐습니다. 그래서 복구 뒤에는 kubelet과 kube-proxy까지 재시작합니다.
 
 그래서 시험장에서는 복구 뒤 컨트롤 플레인 static Pod 재시작까지를 한 절차로 외웁니다. 아래 문서 주의 사항의 첫 줄이 같은 이야기입니다.
 
@@ -1289,12 +1303,14 @@ kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.pod
 kubectl apply -f <과제가 준 CNI 매니페스트>
 kubectl get pods -n kube-system -o wide -w     # 플러그인 DaemonSet Pod가 노드마다 Running
 kubectl get nodes                               # NotReady -> Ready
-ls /etc/cni/net.d/                              # 노드에 설정 파일이 생겼는지
+sudo ls /etc/cni/net.d/                         # 노드에 설정 파일이 생겼는지. Calico 노드는 sudo 없이 Permission denied
 ```
 
 Helm 차트로 주어지면 6절의 `helm show values`로 Pod 대역 값의 키 이름부터 찾습니다.
 
-kind v1.37.0에서는 CNI 설치를 돌리지 못했습니다(kind가 kindnet을 미리 넣음). 확인용 명령만 실행했고 kube-controller-manager 매니페스트에 `--allocate-node-cidrs=true`, `--cluster-cidr=10.244.0.0/16`이 있었고 노드마다 `10.244.x.0/24` 대역이 `podCIDR`로 잡혀 있었습니다. 노드의 `/etc/cni/net.d/`에는 `10-kindnet.conflist`가 있었습니다.
+CNI 설치는 Lima VM의 kubeadm 1.36.5 클러스터에서 Calico v3.33.0 공식 매니페스트(`manifests/calico.yaml`)로 했습니다. VM 네트워크가 192.168.104.0/24라 Pod 대역을 10.244.0.0/16으로 정했고 매니페스트의 `CALICO_IPV4POOL_CIDR`는 주석 그대로 두었습니다. 그래도 Calico가 만든 `default-ipv4-ippool`은 `10.244.0.0/16`(IPIP `Always`)이었고 노드의 `/etc/cni/net.d/`에는 `10-calico.conflist`와 `calico-kubeconfig`가 생겼습니다. 노드 조건에는 `NetworkUnavailable False ... CalicoIsUp`이 더해졌습니다. 워커의 `spec.podCIDR`는 `10.244.1.0/24`였는데 그 노드 Pod IP는 `10.244.140.x`였습니다. Calico는 자체 IPAM 블록에서 IP를 주기 때문입니다.
+
+kind v1.37.0(kindnet)에서는 확인용 명령만 실행했고 kube-controller-manager 매니페스트에 `--allocate-node-cidrs=true`, `--cluster-cidr=10.244.0.0/16`이 있었고 노드마다 `10.244.x.0/24` 대역이 `podCIDR`로 잡혀 있었습니다. 노드의 `/etc/cni/net.d/`에는 `10-kindnet.conflist`가 있었습니다.
 
 ### 7-3. CSI
 
@@ -1391,6 +1407,67 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 ```
 
 과제가 "CRD 목록을 파일로 저장하라"처럼 출력을 요구하면 `-o custom-columns`나 `-o jsonpath`로 필요한 열만 뽑습니다. 출력 형식은 [Ch-06 3-5절](/blog/cert/cka/cka-06-troubleshooting)에 모았습니다.
+
+### 8-2b. OLM으로 오퍼레이터 설치하기
+
+CKA v1.37 커리큘럼(CNCF 공개 PDF)의 해당 항목은 "Understand CRDs, install and configure operators" 한 줄이고 OLM이라는 이름은 없습니다. 시험 중 열 수 있는 문서도 kubernetes.io, Helm, Gateway API 문서로 정해져 있습니다(LF "Resources Allowed" 기준). 그래서 8-2절의 매니페스트와 Helm 설치를 먼저 익히고 OLM은 객체 이름과 상태 확인 명령을 알아 두는 정도로 준비하는 편이 낫다고 판단했습니다.
+
+OLM(Operator Lifecycle Manager)은 카탈로그에서 오퍼레이터 번들을 골라 CRD, Deployment, RBAC를 대신 깔아 주는 컨트롤러입니다. 2026년 10월 기준 두 세대가 있습니다.
+
+| 구분 | OLM v0 | OLM v1 |
+|---|---|---|
+| 저장소, 최신 릴리스 | operator-lifecycle-manager v0.46.0 (유지보수 모드) | operator-controller v1.12.0 |
+| API 그룹 | `operators.coreos.com` | `olm.operatorframework.io` |
+| 카탈로그 | CatalogSource | ClusterCatalog |
+| 설치 요청 | Subscription + OperatorGroup | ClusterExtension |
+| 설치 기록 | InstallPlan, CSV | ClusterExtension의 status |
+
+아래는 kind v0.33, 노드 v1.37.0(colima, arm64)에서 2026-10-20에 돌린 결과입니다. 두 방식 모두 argocd-operator를 설치했습니다.
+
+**OLM v1.** 릴리스의 `install.sh`가 cert-manager v1.18.2, `olmv1-system` 네임스페이스, 기본 카탈로그 `operatorhubio`를 차례로 깝니다. 이 환경에서 2분 10초쯤 걸렸습니다. 대상 네임스페이스를 먼저 만들고 ClusterExtension을 적용합니다.
+
+```yaml
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: argocd
+spec:
+  namespace: argocd          # 이미 있어야 함
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: argocd-operator
+      channels: [alpha]
+      version: "0.9.x"       # 범위 지정 가능
+```
+
+```text
+$ kubectl get clustercatalog
+NAME            LASTUNPACKED   SERVING   AGE
+operatorhubio   21s            True      46s
+$ kubectl get clusterextension
+NAME     INSTALLED BUNDLE         VERSION   INSTALLED   PROGRESSING   AGE
+argocd   argocd-operator.v0.9.2   0.9.2     True        True          8s
+```
+
+`argocd` 네임스페이스에 컨트롤러 Pod 하나가 `Running`이 됐고 `argoproj.io` 그룹 CRD 5개가 생겼습니다. v1.12.0의 `kubectl explain clusterextension.spec`은 예전 튜토리얼에 나오는 `spec.serviceAccount`를 "deprecated field and is completely ignored"라고 설명합니다. ClusterExtension을 지우자 30초 안에 Deployment와 CRD 5개가 함께 사라졌습니다. 6-1c절의 Helm과 반대 동작입니다.
+
+**OLM v0.** `install.sh v0.46.0`이 `olm`, `operators` 네임스페이스와 CatalogSource `operatorhubio-catalog`를 만듭니다. `installPlanApproval: Manual`로 Subscription을 만들면 승인 대기 InstallPlan이 생깁니다.
+
+```text
+$ kubectl get installplan -n operators
+NAME            CSV                       APPROVAL   APPROVED
+install-c2npq   argocd-operator.v0.19.0   Manual     false
+$ kubectl patch installplan install-c2npq -n operators \
+    --type merge -p '{"spec":{"approved":true}}'
+$ kubectl get csv -n operators
+NAME                      DISPLAY   VERSION   RELEASE   REPLACES                  PHASE
+argocd-operator.v0.19.0   Argo CD   0.19.0              argocd-operator.v0.18.0   Succeeded
+```
+
+`operators` 네임스페이스의 기본 OperatorGroup `global-operators`가 모든 네임스페이스를 대상으로 하므로 CSV 사본이 다른 네임스페이스에도 보입니다(`kubectl get csv -A`). Subscription과 CSV를 지운 뒤에도 CRD 8개는 남았습니다.
+
+**직접 해 보기.** kind에 OLM v1을 설치하고 위 ClusterExtension을 적용한 뒤 `kubectl get crd | grep argoproj`, `kubectl get pods -n argocd`로 결과를 봅니다. 이어서 `kind: ArgoCD` 객체를 하나 만들어 컨트롤러가 하위 Pod를 만드는지 확인합니다. OLM v0 쪽은 Subscription을 지운 뒤 CRD가 남는지 세어 봅니다.
 
 ### 8-3. 헷갈리는 지점
 
@@ -1531,22 +1608,24 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 ## 범위와 한계
 
 - 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(컨트롤 플레인 1대, 워커 2대, colima, arm64), kubectl v1.37.1, Helm v4.3.1, kubectl 내장 Kustomize v5.8.1에서 1-11, 4-9, 6-7, 8-4절의 직접 해 보기와 3-5절의 `kubelet-config` 반영, 확인 문제 1, 3, 5, 7~11, 13의 명령을 돌렸습니다. etcd 도구는 노드 이미지에 없어 etcd v3.7.0 arm64 릴리스의 `etcdctl`, `etcdutl`을 컨트롤 플레인 노드에 넣었습니다. 본문에 "kind에서"로 적은 출력과 오류 문구가 그 결과입니다.
-- kind로 할 수 없어 돌리지 않은 것은 이렇습니다. `kubeadm init`, `join`, `upgrade`(4-2절과 확인 문제 4, 6), 노드 사전 준비와 containerd, cri-dockerd, kubeadm 패키지 설치(2장과 확인 문제 12), HA 컨트롤 플레인(5장), `kubeadm certs renew`, CNI 설치(7-2절은 확인 명령만), 실제 공개 차트 저장소(로컬 차트로 대신)입니다.
+- kind로 할 수 없던 kubeadm 계열은 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5 LTS, arm64, 커널 6.8.0-142, 컨트롤 플레인 2 CPU와 2.5GiB, 워커 2 CPU와 2GiB)에서 돌렸습니다. 두 VM은 Lima의 `user-v2` 네트워크(192.168.104.0/24)로 서로 통신했고 호스트 네트워크 설정은 바꾸지 않았습니다. 패키지는 pkgs.k8s.io(kubeadm, kubelet, kubectl 1.36.5와 1.37.1, cri-tools 1.37.0), containerd 2.4.2와 cri-dockerd 0.4.9와 etcd v3.7.0의 GitHub 릴리스, runc 1.5.2와 CNI 플러그인 1.9.1의 GitHub 릴리스, Ubuntu 저장소의 `docker.io`, Calico v3.33.0 공식 매니페스트에서 받았습니다. 2장 노드 준비와 2-6절, 3-1~3-5절, 4-2~4-6절, 7-2절의 CNI 설치, 확인 문제 4, 6, 12의 흐름이 이 환경의 결과이고 본문에 "Lima VM에서"로 적었습니다.
+- 아직 돌리지 않은 것은 HA 컨트롤 플레인(5장), 실제 공개 차트 저장소(로컬 차트로 대신), 인증서를 실제로 만료시키는 시험입니다.
 - kind 특유의 조건이 결과에 들어간 곳이 있습니다. kubeconfig의 클러스터 이름이 `kind-<이름>`이고 server가 `https://127.0.0.1:<포트>`이며 `apiserver.crt`의 SAN에 `localhost`와 `127.0.0.1`이 더 들어 있습니다. 노드가 컨테이너라 `ssh` 대신 `docker exec`를 썼습니다.
-- 4-6절의 etcd 복구는 컨트롤 플레인 1대에서 돌렸습니다. 복구 뒤 컨트롤 플레인 static Pod 재시작이 필요했던 이유를 API 서버 캐시로 본 것은 관찰에서 끌어낸 판단입니다.
+- 4-6절의 etcd 복구는 컨트롤 플레인 1대에서 돌렸습니다. 복구 뒤 컨트롤 플레인 static Pod 재시작이 필요했던 이유를 API 서버 캐시로 본 것은 관찰에서 끌어낸 판단입니다. Lima VM에서 본 kubelet과 kube-proxy 문제는 복구를 두 번 하고 그 사이 워커를 cri-dockerd로 다시 붙인 클러스터에서 나왔습니다. 어느 단계가 원인인지 따로 떼어 보지는 않았습니다.
 - 공식 문서는 2026년 10월 19일 기준 kubernetes.io(v1.37)와 helm.sh(4.3.1)에서 확인했습니다.
 - etcd 백업과 업그레이드가 현재 시험에 나오는지는 공식 문서로 확인하지 못했습니다. 후기도 엇갈립니다(4절 첫 문단).
 - 확인 문제는 위 문서 내용을 바탕으로 제가 만든 것이고 실제 시험 문항과 관계없습니다.
-- containerd 설정 블록은 containerd 버전마다 달라 문서의 1.x, 2.x 예시를 그대로 따라야 합니다. containerd `RELEASES.md`는 2.3부터 설정 파일 `version = 4`가 있다고 적는데 version 4 파일에서 `SystemdCgroup` 키 위치가 version 3과 같은지는 확인하지 못했습니다. 2-4b절에서 `containerd config default` 출력에서 찾으라고 적은 이유입니다.
-- containerd 2.0 이상 요구는 1.35 릴리스 글의 "1.35가 1.x를 지원하는 마지막 버전" 문장에 근거합니다. 1.36 이상 kubelet이 containerd 1.x에서 바로 실패하는지, 경고만 내는지는 확인하지 못했습니다. "Container Runtimes" 문서는 cgroup 드라이버 대비 동작이 1.38에서 없어진다고만 적습니다.
-- cri-dockerd `.deb` 패키지가 설치 직후 서비스를 enabled 상태로 만드는지는 Mirantis 문서의 "active (running), enabled여야 한다"는 확인 문구로만 알고 있어 2-4b절에 `enable --now`를 함께 적었습니다. 시험에서 주는 패키지 이름과 경로는 알 수 없습니다.
-- 3-4b절 끝의 "매니페스트를 직접 고쳐도 `kubeadm-config`에 같은 값을 넣어 둔다"는 문서의 재설정 유지 절을 과제 상황에 옮긴 제 판단입니다.
+- containerd 설정의 `version` 값과 `SystemdCgroup` 위치는 1.7.36, 2.0.14, 2.3.7, 2.4.2 arm64 릴리스의 `containerd config default` 출력으로 확인했습니다. 2.1과 2.2는 보지 않았으니 그 버전에서는 2-4b절처럼 기본 설정 출력에서 찾습니다.
+- containerd 2.0 이상 요구는 1.35 릴리스 글의 "1.35가 1.x를 지원하는 마지막 버전" 문장에 근거합니다. kubelet 1.37.1이 containerd 1.7.36에서 경고와 지표만 내고 도는 것은 워커 하나의 바이너리만 바꿔 확인했습니다. 1.38에서 실제로 실패하는지는 1.38이 아직 나오지 않아 확인하지 못했습니다.
+- cri-dockerd `.deb`가 설치 직후 enabled, active인 것은 Ubuntu noble arm64용 0.4.9 패키지 하나에서 본 결과입니다. 시험에서 주는 패키지 이름과 경로는 알 수 없어 2-4b절에 `enable --now`를 남겼습니다.
+- 3-4b절 끝의 매니페스트와 `kubeadm-config` 차이, 4-6절의 `dataDir` 되돌림은 같은 버전(1.37.1)으로 `upgrade apply`를 다시 실행해 확인했습니다. 마이너를 올리는 업그레이드에서 다시 보지는 않았습니다.
 - 6-1c절의 값으로 CRD 설치를 끄는 방식은 차트마다 정하는 관행이라 cert-manager 한 사례만 확인했습니다.
 - 1-8b절의 TLS 설명은 TLS 1.3(RFC 8446) 기준입니다. TLS 1.2 이하의 RSA 키 전송 방식은 다루지 않았습니다.
 - etcd 기본 버전은 kubernetes/kubernetes release-1.37 브랜치의 `constants.go`(`DefaultEtcdVersion = "3.7.0-0"`)를 2026년 10월 20일에 읽은 값이고 kind v1.37.0 노드의 etcd도 3.7.0이었습니다. 패치 릴리스에서 바뀔 수 있습니다.
 - `kubectl create token`의 기본 수명 3600초는 kind v1.37.0의 API 서버 기본 설정에서 본 값입니다. 레퍼런스는 "서버가 정한다"고만 적으니 시험 클러스터에서는 다를 수 있습니다.
 - `--pod-eviction-timeout`이 어느 버전에서 제거됐는지는 확인하지 못했습니다. 1.37 kube-controller-manager 플래그 목록에 없다는 것만 확인했습니다.
 - Kustomize component(`v1alpha1`)와 kubectl 내장 Kustomize 버전 차이는 kubectl 버전마다 다르니 시험 노드에서 `kubectl version --client`로 확인해야 합니다.
+- 8-2b의 OLM 실측은 kind v0.33, 노드 v1.37.0(colima, arm64)에서 2026-10-20에 OLM v0.46.0과 operator-controller v1.12.0으로 돌린 결과입니다. `operator-sdk olm install`, 승인 자동 경로, 채널 업그레이드는 돌리지 않았고 CKA 시험 환경에 OLM이 깔려 있는지는 공개 자료로 확인할 수 없었습니다.
 
 ## 참고 자료
 
@@ -1572,6 +1651,9 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 - Kubernetes, [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/), [Network Plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/), [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
 - Kubernetes, [Extend the Kubernetes API with CustomResourceDefinitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/), [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
 - Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [Quickstart Guide](https://helm.sh/docs/intro/quickstart/), [helm install](https://helm.sh/docs/helm/helm_install/), [helm template](https://helm.sh/docs/helm/helm_template/), [helm rollback](https://helm.sh/docs/helm/helm_rollback/), [helm get values](https://helm.sh/docs/helm/helm_get_values/), [Helm 4 Overview](https://helm.sh/docs/overview/), [Changes since Helm 2](https://helm.sh/docs/v3/faq/changes_since_helm2), [Helm 2 and the Charts Project Are Now Unsupported](https://helm.sh/blog/helm-2-becomes-unsupported/), [Charts](https://helm.sh/docs/topics/charts/), [Custom Resource Definitions (Best Practices)](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/), [helm pull](https://helm.sh/docs/helm/helm_pull/); cert-manager, [Helm installation](https://cert-manager.io/docs/installation/helm/); Kustomize, [resources](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/resource/)
+- Linux Foundation, [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
+- operator-framework, [operator-lifecycle-manager](https://github.com/operator-framework/operator-lifecycle-manager), [v0.46.0](https://github.com/operator-framework/operator-lifecycle-manager/releases/tag/v0.46.0), [OLM v0 Getting Started](https://olm.operatorframework.io/docs/getting-started/)
+- operator-framework, [operator-controller 문서](https://operator-framework.github.io/operator-controller/), [Install an extension](https://operator-framework.github.io/operator-controller/tutorials/install-extension/), [OLM v1 limitations](https://operator-framework.github.io/operator-controller/project/olmv1_limitations/), [v1.12.0](https://github.com/operator-framework/operator-controller/releases/tag/v1.12.0)
 
 후기
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026

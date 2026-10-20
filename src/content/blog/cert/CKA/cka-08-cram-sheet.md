@@ -338,7 +338,7 @@ k get hpa -n shop     # <unknown>이면 metrics-server, CPU request 확인
 kubeadm 패키지 교체 -> kubeadm upgrade node -> 4~6 반복
 ```
 
-컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. kubelet은 kube-apiserver보다 새로울 수 없기 때문입니다. `drain`은 kubectl이 있는 호스트에서, apt와 kubeadm은 해당 노드에서 실행합니다([Ch-02 4-2, 4-3절](/blog/cert/cka/cka-02-cluster-architecture)).
+컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. kubelet은 kube-apiserver보다 새로울 수 없기 때문입니다. `drain`은 kubectl이 있는 호스트에서, apt와 kubeadm은 해당 노드에서 실행합니다([Ch-02 4-2, 4-3절](/blog/cert/cka/cka-02-cluster-architecture)). Lima VM 두 대에서 1.36.5를 1.37.1로 이 순서대로 올렸고 3번의 성공 문구는 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".`였습니다.
 
 ### 4-2. etcd 백업과 복구
 
@@ -369,9 +369,13 @@ sudo crictl ps | grep etcd
 sudo mkdir -p /tmp/cp && sudo mv /etc/kubernetes/manifests/kube-{apiserver,controller-manager,scheduler}.yaml /tmp/cp/
 sleep 20 && sudo mv /tmp/cp/*.yaml /etc/kubernetes/manifests/
 kubectl get deploy -A          # 복구한 시점의 객체가 보이는지
+
+# 7) 노드마다 kubelet, 그리고 kube-proxy 재시작
+sudo systemctl restart kubelet
+kubectl -n kube-system delete pod -l k8s-app=kube-proxy
 ```
 
-`ETCDCTL_API=3`은 etcd 3.4부터 기본값이라 빼도 됩니다. etcdctl 3.7.0은 이 변수를 붙이면 `unrecognized environment variable` 경고를 찍습니다. 문서는 API 서버가 도는 중에 복구하지 말라고 적습니다. kind v1.37.0에서 6번을 빼자 etcd는 복구됐는데도 지운 Deployment가 `kubectl`에 보이지 않았고 6번 뒤에 돌아왔습니다([Ch-02 4-5, 4-6절](/blog/cert/cka/cka-02-cluster-architecture)).
+`ETCDCTL_API=3`은 etcd 3.4부터 기본값이라 빼도 됩니다. etcdctl 3.7.0은 이 변수를 붙이면 `unrecognized environment variable` 경고를 찍습니다. 문서는 API 서버가 도는 중에 복구하지 말라고 적습니다. kind v1.37.0과 Lima VM의 kubeadm 1.37.1 노드 모두 6번을 빼자 etcd는 복구됐는데도 지운 Deployment가 `kubectl`에 보이지 않았고 6번 뒤에 돌아왔습니다. 복구 뒤 `kubeadm upgrade apply`를 돌리면 `kubeadm-config`의 `etcd.local.dataDir`로 `etcd.yaml`이 다시 만들어지니 그 값도 새 경로로 고칩니다. 7번은 Lima VM에서 복구 뒤 워커의 새 Pod가 `Pending`에 머물고 Service IP 접속이 안 되다가 kubelet과 kube-proxy를 재시작하고서야 풀려서 넣었습니다([Ch-02 4-5, 4-6절](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ### 4-3. 노드 drain
 
@@ -395,9 +399,9 @@ uncordon해도 내보낸 Pod는 돌아오지 않습니다([Ch-02 4-7절](/blog/c
 ```bash
 sudo kubeadm certs check-expiration
 sudo kubeadm certs renew all
-# 갱신 뒤 컨트롤 플레인 static Pod 재시작: 매니페스트를 잠시 밖으로
-sudo mv /etc/kubernetes/manifests/kube-apiserver.yaml /tmp/ && sleep 20 \
-  && sudo mv /tmp/kube-apiserver.yaml /etc/kubernetes/manifests/
+# 갱신 뒤 renew 출력이 지목하는 네 구성요소 재시작: 매니페스트를 잠시 밖으로
+sudo mkdir -p /tmp/cp && sudo mv /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-controller-manager,kube-scheduler}.yaml /tmp/cp/
+sleep 20 && sudo mv /tmp/cp/*.yaml /etc/kubernetes/manifests/
 
 sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -subject -issuer -enddate
 # kubelet 클라이언트 인증서는 check-expiration 목록에 없다
@@ -450,7 +454,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 5. kubeadm init/join --cri-socket unix:///run/cri-dockerd.sock
 ```
 
-1.36부터는 containerd 2.0 이상이 필요합니다(v1.35 릴리스 글). sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([Ch-02 2절](/blog/cert/cka/cka-02-cluster-architecture)).
+v1.35 릴리스 글은 1.35를 containerd 1.x를 지원하는 마지막 버전으로 적었습니다. Lima VM에서 kubelet 1.37.1은 containerd 1.7.36 위에서도 경고와 `kubelet_cri_losing_support{version="1.38.0"}` 지표만 내고 돌았지만 지원 범위 밖이니 2.x로 맞춥니다. Ubuntu 24.04용 cri-dockerd 0.4.9 `.deb`는 설치 직후 이미 enabled, active였습니다. sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([Ch-02 2절](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ---
 
@@ -503,7 +507,8 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 
 - 이 글은 Ch-00~Ch-07과 Ch-01.5의 요약이고 근거와 출처는 링크한 글에 있습니다. 요약에서 조건이 빠졌다면 원래 글이 기준입니다.
 - 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(colima, arm64), kubectl v1.37.1, Helm v4.3.1, etcd 3.7.0 도구로 2-1, 2-2, 2-4 표의 명령, 3-4~3-6절, 4-2, 4-3, 4-5, 4-6절을 돌렸습니다. 결과와 kind 특유의 조건은 Ch-02, Ch-03, Ch-06 본문에 적었습니다. `k get endpoints`가 `v1 Endpoints is deprecated in v1.33+` 경고를 찍는 것(5절 4번)도 확인했습니다.
-- 실행하지 못한 것은 4-1절 kubeadm 업그레이드, 4-4절의 `kubeadm certs renew`, 4-7절 런타임 패키지 설치, 3-1~3-3절의 NetworkPolicy, 스토리지, Gateway와 2-3, 2-5 표 대부분입니다. 이 부분은 문서 예시를 쇼핑몰, 게시판, 결제 이름으로 옮긴 것이니 연습 클러스터에서 확인한 뒤 씁니다.
+- 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5, arm64, kubeadm 1.36.5에서 1.37.1, containerd 2.4.2, Calico v3.33.0)에서 4-1, 4-2, 4-4, 4-7절과 3-1절을 돌렸습니다. 4-4절은 원래 kube-apiserver 하나만 재시작하는 명령이었는데 `kubeadm certs renew all` 출력이 etcd까지 네 구성요소의 재시작을 요구해 고쳤습니다.
+- 실행하지 못한 것은 3-2, 3-3절의 스토리지와 Gateway, 2-3, 2-5 표 대부분입니다. 이 부분은 문서 예시를 쇼핑몰, 게시판, 결제 이름으로 옮긴 것이니 연습 클러스터에서 확인한 뒤 씁니다.
 - 기준은 Kubernetes v1.37, etcd 3.7.0(kubeadm 1.37 기본값), Helm 4.3(2026년 10월)입니다. 시험 환경의 etcd와 Helm 버전은 공식 문서에 없어서 당일 `etcdutl version`, `helm version`으로 확인합니다.
 - etcd 백업 복구와 kubeadm 업그레이드는 2025년 개정에서 명시 항목이 아닙니다. "클러스터 수명주기 관리"에 드는지 확인하지 못해 남겼습니다.
 - `.vimrc`, `export do=...`, 시간 배분은 관행과 후기에서 온 것입니다. 시험 환경의 Gateway 구현체와 Ingress 컨트롤러 종류도 공식 문서에서 확인하지 못했습니다.

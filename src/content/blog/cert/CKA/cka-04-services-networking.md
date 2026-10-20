@@ -180,7 +180,7 @@ Weave Net은 옛 강의와 블로그에 자주 나오지만 GitHub의 `weavework
 몇 가지 조건이 붙습니다.
 
 - kubeadm은 `kubeadm init --pod-network-cidr`로 받은 값을 kube-controller-manager의 `--cluster-cidr`에 넣고 이때 `--allocate-node-cidrs=true`도 같이 켭니다(kubeadm 소스). 노드마다 이 대역에서 `/24`(IPv4 기본값, `--node-cidr-mask-size`)를 잘라 `spec.podCIDR`에 적습니다.
-- Calico처럼 자체 IPAM을 쓰는 플러그인은 `spec.podCIDR`와 다른 대역에서 IP를 줄 수 있습니다. 그럴 때 실제 Pod 대역은 플러그인 설정(예: Calico의 IPPool)을 봅니다. `kubectl get pod -A -o wide`로 실제 Pod IP를 같이 보면 헷갈리지 않습니다.
+- Calico처럼 자체 IPAM을 쓰는 플러그인은 `spec.podCIDR`와 다른 대역에서 IP를 줄 수 있습니다. 그럴 때 실제 Pod 대역은 플러그인 설정(예: Calico의 IPPool)을 봅니다. `kubectl get pod -A -o wide`로 실제 Pod IP를 같이 보면 헷갈리지 않습니다. Lima VM의 kubeadm 클러스터(Calico v3.33.0, Pod 대역 10.244.0.0/16)에서 워커의 `spec.podCIDR`는 `10.244.1.0/24`였고 그 노드 Pod IP는 `10.244.140.x`였습니다.
 - ConfigMap의 `mode`가 빈 문자열이면 기본값(1.37 기준 `iptables`)이 쓰입니다. kube-proxy 레퍼런스의 `--metrics-bind-address` 기본값이 `127.0.0.1:10249`라서 `/proxyMode`는 그 노드 안에서만 부를 수 있습니다. 이 경로는 문서 본문이 아니라 kube-proxy 소스(`cmd/kube-proxy/app/server.go`의 `serveMetrics`)에서 확인했습니다.
 - kubeadm이 아닌 클러스터라면 `ps -ef | grep kube-apiserver`로 프로세스 인자를 보거나 `kubectl -n kube-system get pod <apiserver Pod> -o yaml`의 `command`를 봅니다.
 
@@ -1291,7 +1291,8 @@ kubectl create ingress a --rule="shop.example.com/cart=cart:80" --rule="shop.exa
 ## 8. 범위와 한계
 
 - 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, CNI kindnet, kube-proxy iptables 모드, Service CIDR 10.96.0.0/16)에서 1-4의 CNI 고장 재현, 1-8, 2장 정책과 2-7, 확인 문제 풀이, 3장 Service 타입과 3-9, selector 없는 Service와 EndpointSlice, 4장 Gateway API(v1.6.1 CRD, Envoy Gateway v1.9.2), 5장 Ingress(ingress-nginx v1.15.1 kind용 매니페스트), 6장 CoreDNS 과제를 돌렸습니다. 결과는 각 "직접 해 보기" 아래에 적었습니다. 출력 예시 가운데 "문서 예시"로 표시한 것은 kubernetes.io 문서의 것입니다.
-- 돌리지 못한 것: 클라우드 LB가 실제로 주소를 채우는 동작, Flannel이나 Calico 설치, Weave Net, CoreDNS `loop` 오류 재현. kind는 노드가 컨테이너라 노드 IP가 Mac에서 바로 닿지 않고 Gateway에 주소가 할당되지 않습니다.
+- Calico 설치는 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5, arm64, kubeadm 1.36.5, containerd 2.4.2)에서 v3.33.0 공식 매니페스트로 했습니다. 서로 다른 노드의 Pod 사이에서 `podSelector: {}` Ingress 기본 거부를 넣자 `wget`이 시간 초과로 실패했고 `app: cli`를 허용하는 정책을 더하자 다시 응답했습니다. 1-5의 Pod IP 대역 차이도 이 환경에서 본 것입니다.
+- 돌리지 못한 것: 클라우드 LB가 실제로 주소를 채우는 동작, Flannel 설치, Weave Net, CoreDNS `loop` 오류 재현. kind는 노드가 컨테이너라 노드 IP가 Mac에서 바로 닿지 않고 Gateway에 주소가 할당되지 않습니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 사이트에 게시된 현재 버전과 같은 내용이지만 시험 기준 버전(v1.37)과 문서 버전이 어긋나는 항목이 있을 수 있습니다.
 - `kubectl create ingress`에서 `*` 유무에 따른 `pathType`은 kind에서 `Prefix`와 `Exact`로 확인했습니다.
 - LoadBalancer Service의 `<pending>` 표시는 kind에서 확인했습니다. CoreDNS `loop` 오류가 생기는 구체적인 노드 설정은 확인하지 못했습니다.

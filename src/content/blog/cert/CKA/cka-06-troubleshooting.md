@@ -181,16 +181,16 @@ kubeadm이 kubelet에 넘기는 파일 위치는 Configuring each kubelet in you
 | `/var/lib/kubelet/config.yaml` | kubelet ComponentConfig(설정 파일) |
 | `/etc/kubernetes/kubelet.conf` | kubelet 고유 신원이 담긴 kubeconfig |
 | `/etc/kubernetes/bootstrap-kubelet.conf` | TLS 부트스트랩용. `kubelet.conf`가 없을 때만 사용 |
-| `/var/lib/kubelet/kubeadm-flags.env` | `kubeadm init`, `join`이 생성하는 `KUBELET_KUBEADM_ARGS` |
+| `/var/lib/kubelet/kubeadm-flags.env` | `kubeadm init`, `join`이 생성하는 `KUBELET_KUBEADM_ARGS`. Lima VM의 kubeadm 1.36.5와 1.37.1에서는 값이 빈 문자열이었고 런타임 소켓은 같은 디렉터리의 `instance-config.yaml`(`containerRuntimeEndpoint`)에 있었음 |
 | `/etc/default/kubelet`(DEB), `/etc/sysconfig/kubelet`(RPM) | 사용자 재정의 `KUBELET_EXTRA_ARGS`. 충돌 시 가장 높은 우선순위 |
 
-drop-in 파일 자체의 경로는 설치 방법마다 다르고 문서도 예시라고 밝힙니다. 실제 위치는 `systemctl cat kubelet`으로 확인합니다. 이 명령은 systemd의 일반 기능이며 쿠버네티스 문서에서 본 것은 아닙니다. kind 노드에서는 `/etc/systemd/system/kubelet.service.d/` 아래 `10-kubeadm.conf`와 kind가 더한 `11-kind.conf` 두 파일이 보였습니다.
+drop-in 파일 자체의 경로는 설치 방법마다 다르고 문서도 예시라고 밝힙니다. 실제 위치는 `systemctl cat kubelet`으로 확인합니다. 이 명령은 systemd의 일반 기능이며 쿠버네티스 문서에서 본 것은 아닙니다. kind 노드에서는 `/etc/systemd/system/kubelet.service.d/` 아래 `10-kubeadm.conf`와 kind가 더한 `11-kind.conf` 두 파일이 보였습니다. pkgs.k8s.io 패키지로 설치한 Lima VM(Ubuntu 24.04)에서는 `/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf` 하나였습니다.
 
 kubelet 로그에서 원인을 찾았다면 고치는 대상은 대개 위 파일 중 하나입니다. 예를 들어 설정 파일의 경로를 잘못 바꿨거나, kubeconfig가 가리키는 인증서가 없거나, 컨테이너 런타임 소켓 주소가 틀린 경우입니다. 고친 뒤에는 `systemctl daemon-reload`(drop-in을 고쳤을 때)와 `systemctl restart kubelet`을 하고 `kubectl get nodes`로 Ready를 확인합니다.
 
 ### 1-4. kubelet 설정 파일 오류와 인증서 만료
 
-`systemctl status kubelet`이 `activating (auto-restart)`나 `failed`를 반복하면 kubelet이 시작 단계에서 죽고 있는 것입니다. kind 워커에서 `config.yaml`의 들여쓰기를 망가뜨리자 상태가 `activating (auto-restart)`로 바뀌었고 `journalctl -u kubelet`에는 `"command failed" err="failed to load kubelet config file, path: /var/lib/kubelet/config.yaml, error: ... failed to decode: yaml: line 36: mapping values are not allowed in this context"` 줄이 2초 간격으로 반복됐습니다. 노드 안에서 볼 순서를 표로 정리했습니다. 명령은 노드에서 `sudo`로 실행합니다.
+`systemctl status kubelet`이 `activating (auto-restart)`나 `failed`를 반복하면 kubelet이 시작 단계에서 죽고 있는 것입니다. kind 워커에서 `config.yaml`의 들여쓰기를 망가뜨리자 상태가 `activating (auto-restart)`로 바뀌었고 `journalctl -u kubelet`에는 `"command failed" err="failed to load kubelet config file, path: /var/lib/kubelet/config.yaml, error: ... failed to decode: yaml: line 36: mapping values are not allowed in this context"` 줄이 2초 간격으로 반복됐습니다. pkgs.k8s.io 패키지로 설치한 Lima VM 워커(1.37.1)에서 같은 고장을 내자 상태와 문구는 같았고(`yaml: line 4: did not find expected key`) 간격은 패키지 `kubelet.service`의 `RestartSec=10`대로 10초였습니다. 백업한 파일을 되돌리고 재시작하자 바로 active가 됐습니다. 노드 안에서 볼 순서를 표로 정리했습니다. 명령은 노드에서 `sudo`로 실행합니다.
 
 | 순서 | 확인 | 명령 | 이상하면 |
 |---|---|---|---|
@@ -918,7 +918,8 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $로 보인다
 - 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(컨트롤 플레인 1대, 워커 2대, colima, arm64), kubectl v1.37.1, containerd 2.3.4에서 1-8, 2-7, 3-7, 4-7, 5-6절의 직접 해 보기와 확인 문제 1~9의 명령을 돌렸습니다. kubelet과 컨트롤 플레인 고장은 `docker exec`로 노드 컨테이너에 들어가 연습 클러스터에서만 냈고 끝난 뒤 되돌렸습니다. 본문에 "kind에서"로 적은 출력과 오류 문구가 그 결과입니다.
 - kind의 노드는 컨테이너라서 `ssh` 대신 `docker exec`를 썼고 `kubectl debug node`의 `/host`도 노드 컨테이너의 파일시스템입니다. 노드 조건에 `NetworkUnavailable`이 없는 것, Metrics Server를 직접 설치하고 `--kubelet-insecure-tls`를 줘야 하는 것, arm64에서 `busybox:1.28`의 `wget`이 죽는 것은 이 환경의 조건입니다.
 - 1-4절의 kubelet 클라이언트 인증서 복구 절차는 인증서를 만료시키지 않고 인증서와 `kubelet.conf`를 지운 상태에서 돌렸습니다. 만료 시 kube-apiserver에 찍히는 `x509` 문구는 재현하지 못했습니다.
-- 실행하지 못한 것은 이렇습니다. 실제 노드 재부팅, cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway, NetworkPolicy 차단(kindnet 기본 구성), `PodLogsQuerySplitStreams` 알파 기능입니다.
+- kind로 못 하던 것 일부는 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5, arm64, kubeadm 1.36.5에서 1.37.1로 업그레이드, containerd 2.4.2, Calico v3.33.0)에서 돌렸습니다. 1-3절 파일 위치, 1-4절 kubelet 설정 고장과 복구, 워커 재부팅 뒤 kubelet과 런타임 자동 기동, 5-1 표 2번의 NetworkPolicy 차단(Calico에서 `podSelector: {}` Ingress 기본 거부를 넣자 다른 노드 Pod의 `wget`이 시간 초과로 실패하고 허용 정책을 더하자 다시 응답)이 그 결과이고 본문에 "Lima VM"으로 적었습니다.
+- 실행하지 못한 것은 이렇습니다. cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway, `PodLogsQuerySplitStreams` 알파 기능입니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 문서는 Metrics API를 1.37 stable과 `metrics.k8s.io/v1` 경로로 적지만 kind에 넣은 metrics-server v0.9.0은 `v1beta1`만 제공했습니다. 시험 클러스터의 metrics-server가 어느 버전을 제공하는지는 확인하지 못했습니다.
 - 4-2절의 기본 컨테이너 선택 순서와 안내 문구는 kubectl 저장소 master 브랜치 소스와 kubectl v1.37.1 실행 결과로 확인했습니다.
 - 0-2 표의 "흔한 원인" 열과 2-5 표의 매니페스트 점검 위치는 문서 내용에 제 판단을 더한 것입니다. 실제 시험에 어떤 고장이 나오는지는 공개되지 않았고 후기의 출제 문항은 옮기지 않았습니다.
