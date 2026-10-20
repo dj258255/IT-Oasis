@@ -85,7 +85,7 @@ Spark는 입력 테이블 전체를 메모리에 만들지 않습니다. 문서�
 
 Continuous 모드는 소스 파티션 수만큼 Task를 계속 띄워 두므로 Kafka 토픽 파티션이 10개면 코어가 10개 이상 있어야 진행합니다. 실패한 Task를 자동으로 재시도하지 않아서 실패하면 쿼리가 멈추고 체크포인트에서 수동으로 다시 시작해야 합니다.
 
-PySpark 4.2.0의 `DataStreamWriter.trigger`에는 `realTime` 인자가 있고 설명은 "real time mode 쿼리를 주어진 배치 기간으로 실행"입니다. 3.5.6 API 문서의 같은 함수에는 이 인자가 없습니다. 2차 자료에서는 4.1에서 들어온 Real-time Mode라고 하고 처음에는 상태 없는 쿼리만 지원한다고 적지만 Apache 4.2.0 문서에서 이 모드의 설명 페이지를 찾지 못했습니다. 시험 기준 버전이 이보다 이전일 가능성이 커서 이름만 적어 둡니다.
+PySpark 4.2.0의 `DataStreamWriter.trigger`에는 `realTime` 인자가 있고 설명은 "real time mode 쿼리를 주어진 배치 기간으로 실행"입니다. 같은 함수의 PySpark 3.5.6, 4.0.0, 4.1.0 API 문서에는 이 인자가 없습니다. 엔진 쪽 설정은 더 먼저 들어왔습니다. 4.2.0 설정 문서에 `spark.sql.streaming.realTimeMode.minBatchDuration`(기본 5000ms)과 `spark.sql.streaming.realTimeMode.allowlistCheck`(기본 true)가 있고 둘 다 도입 버전이 4.1.0입니다. 이 모드를 설명하는 프로그래밍 가이드 페이지는 4.2.0 문서에서 찾지 못했습니다. 시험 기준 버전이 이보다 이전일 가능성이 커서 이름만 적어 둡니다.
 
 ## 3. exactly-once와 장애 복구
 
@@ -116,7 +116,9 @@ query = (clicks_agg.writeStream
          .start())
 ```
 
-체크포인트 위치에는 트리거마다 처리한 오프셋 범위와 누적 집계 같은 상태가 저장됩니다. 문서는 HDFS 호환 파일 시스템 경로여야 한다고 적습니다. 같은 경로로 쿼리를 다시 시작하면 마지막에 끝난 위치부터 이어서 처리합니다. 세션 전체의 기본 경로는 `spark.sql.streaming.checkpointLocation`(기본 없음)으로 줄 수 있습니다.
+체크포인트 위치에는 트리거마다 처리한 오프셋 범위와 누적 집계 같은 상태가 저장됩니다. 문서는 HDFS 호환 파일 시스템 경로여야 한다고 적습니다. 같은 경로로 쿼리를 다시 시작하면 마지막에 끝난 위치부터 이어서 처리합니다. 세션 전체의 기본 경로는 `spark.sql.streaming.checkpointLocation`(기본 없음)으로 줄 수 있고 이때 실제 위치는 그 아래 쿼리 이름(없으면 무작위 UUID) 디렉터리입니다.
+
+체크포인트 위치를 아무 데도 주지 않았을 때 동작은 싱크마다 다릅니다. 4.2.0 소스(`DataStreamWriter`, `ResolveWriteToStream`) 기준으로 memory, console, foreach, foreachBatch, noop 싱크는 임시 디렉터리를 만들어 쓰고 쿼리가 정상 종료되면 지웁니다. 파일, Kafka, 테이블 같은 나머지 싱크는 `start()`에서 체크포인트 위치를 지정하라는 오류가 납니다. 임시 체크포인트는 재시작하면 사라지니 디버깅용 싱크에서도 장애 복구는 기대할 수 없습니다.
 
 `StreamingQuery.id`는 체크포인트를 따라 재시작해도 유지되는 식별자이고 `runId`는 시작할 때마다 새로 생깁니다. PySpark에서 `id`는 속성(property)입니다(PySpark API 문서는 `property StreamingQuery.id`). 프로그래밍 가이드의 Python 예제는 `query.id()`로 적혀 있어서 문서끼리 표기가 어긋납니다.
 
@@ -189,7 +191,8 @@ spark.streams.active   # 이 세션에서 도는 쿼리 목록
 헷갈리는 지점입니다.
 
 - 스트리밍 DataFrame에 `count()`, `show()`, `foreach()` 같은 즉시 실행 액션을 부르면 `AnalysisException`이 납니다. 개수는 `groupBy().count()`로 스트리밍 결과를 만들고 화면 출력은 console 싱크로 합니다.
-- `limit`, `take`, `distinct`는 스트리밍에서 지원하지 않습니다. 정렬은 집계 뒤 Complete 모드에서만 됩니다.
+- `limit`, `take`, `distinct`는 스트리밍에서 지원하지 않습니다. 정렬은 집계 뒤 Complete 모드에서만 됩니다. 중복 제거가 필요하면 `distinct` 자리에 11절의 `dropDuplicates`를 씁니다.
+- `spark.sql.adaptive.enabled`가 켜져 있어도 스트리밍 쿼리에는 AQE를 적용하지 않습니다. 4.2.0 소스(`ResolveWriteToStream`)는 이 경우 "스트리밍에서 지원하지 않아 끈다"는 경고만 남깁니다. [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)의 AQE 설명은 배치 쿼리 기준입니다.
 - 스트리밍 DataFrame에도 `createOrReplaceTempView`를 걸고 SQL을 쓸 수 있고 결과는 또 하나의 스트리밍 DataFrame입니다.
 
 ## 5. 출력 모드
@@ -217,6 +220,8 @@ DataStreamWriter.outputMode(outputMode)   # "append" | "complete" | "update"
 | 조인 | Append | Update와 Complete는 아직 미지원 |
 | 그 밖(선택, 필터, map 등) | Append, Update | 집계 안 된 데이터를 전부 결과 테이블에 들 수 없어서 Complete 불가 |
 
+`mapGroupsWithState`와 `flatMapGroupsWithState`는 Scala와 Java API입니다. PySpark에서 같은 자리에 쓰는 것은 `GroupedData.applyInPandasWithState`(3.4.0부터)와 `GroupedData.transformWithStateInPandas`(4.0.0부터)입니다. 문서의 호환 표는 Scala 이름으로 적혀 있으니 보기에서 Python 이름이 나오면 이 대응으로 읽습니다.
+
 시험 보기에서 가장 자주 섞이는 조합은 이렇습니다.
 
 ```python
@@ -227,7 +232,7 @@ clicks.groupBy("post_id").count().writeStream.outputMode("append")
 clicks.filter("post_id > 0").writeStream.outputMode("complete")
 ```
 
-예외가 나는 시점은 문서로 확인하지 못했습니다. 쿼리를 분석하는 `start()` 단계로 알고 있고 실행해 보고 고치겠습니다.
+예외는 `start()`를 부를 때 납니다. `writeStream`과 `outputMode()`까지는 오류 없이 지나갑니다. 4.2.0 소스에서 `start()`가 `StreamingQueryManager.createQuery`로 쓰기 계획을 분석하고 그 분석 규칙(`ResolveWriteToStream`)이 `UnsupportedOperationChecker.checkForStreaming(쿼리, 출력 모드)`를 부르는 것을 확인했습니다. 반면 스트리밍 DataFrame에 `count()`나 `show()`를 부르면 그 줄에서 바로 예외가 납니다. 실행해서 확인한 결과는 아닙니다.
 
 ## 6. 싱크와 보장
 
@@ -328,7 +333,7 @@ per_post = valid.groupBy("post_id").agg(F.count("*").alias("clicks"),
 
 선택과 투영만 있는 쿼리는 상태를 만들지 않습니다. 문서는 SQL로 쓴 스트리밍 쿼리에도 Spark가 상태 연산을 끼워 넣을 수 있으니 계획을 확인하라고 적습니다. 상태 연산이 들어가면 출력 모드, 워터마크, 상태 크기를 함께 고려해야 합니다.
 
-스트림과 정적 DataFrame 조인도 됩니다. 문서는 이 조인이 상태를 쓰지 않는다고 적습니다. 정적 쪽은 매 배치에 다시 읽힙니다.
+스트림과 정적 DataFrame 조인도 됩니다(2.0부터). 문서는 이 조인이 상태를 쓰지 않는다고 적습니다.
 
 ```python
 posts = spark.read.parquet("/data/posts")   # post_id, board, title
@@ -336,9 +341,17 @@ clicks_with_board = valid.join(posts, "post_id")              # inner
 clicks_left = valid.join(posts, "post_id", "left_outer")      # 스트림 쪽 left outer
 ```
 
-정적 쪽을 매 배치에 다시 읽는다는 부분은 문서 문장으로 확인하지 못했고 동작에서 추론한 것입니다.
-
 스트림과 스트림의 조인은 2.3부터 됩니다. 양쪽 과거 입력을 상태로 버퍼링하므로 상태를 줄이려면 양쪽에 워터마크를 걸고 시간 범위 조건(`leftTime BETWEEN rightTime AND rightTime + INTERVAL 1 HOUR` 같은 형태)이나 같은 윈도 조건을 넣어야 합니다.
+
+조인 유형마다 되는 조합은 문서의 지원 표에 있습니다. 왼쪽이 스트림이면 오른쪽(정적)을 보존하는 조인이 막힌다고 기억하면 표가 거의 재현됩니다.
+
+| 왼쪽 + 오른쪽 | inner | left outer | right outer | full outer | left semi |
+|---|---|---|---|---|---|
+| 스트림 + 정적 | 됨(상태 없음) | 됨(상태 없음) | 안 됨 | 안 됨 | 됨(상태 없음) |
+| 정적 + 스트림 | 됨(상태 없음) | 안 됨 | 됨(상태 없음) | 안 됨 | 안 됨 |
+| 스트림 + 스트림 | 됨. 워터마크와 시간 조건은 상태 정리용 선택 | 오른쪽 워터마크와 시간 조건 필수 | 왼쪽 워터마크와 시간 조건 필수 | 한쪽 워터마크와 시간 조건 필수 | 오른쪽 워터마크와 시간 조건 필수 |
+
+조인이 들어간 쿼리는 Append 모드에서만 됩니다(문서 문장은 "As of Spark 2.4"). 조인 앞뒤에 `mapGroupsWithState`와 `flatMapGroupsWithState`를 둘 수 없고 조인을 여러 번 이어 붙이는 것은 됩니다.
 
 ## 9. 이벤트 시간 윈도
 
@@ -378,16 +391,21 @@ sessions = (clicks
 - Update 출력 모드를 지원하지 않습니다.
 - 그룹 키에 `session_window` 말고 컬럼이 하나 이상 더 있어야 합니다. 배치 쿼리는 `session_window`만으로 묶는 전역 윈도도 됩니다.
 
-간격은 행마다 다르게 줄 수도 있습니다. `session_window("event_time", F.when(F.col("board") == "notice", "5 minutes").otherwise("30 minutes"))`처럼 식을 주면 되고 0이나 음수 간격인 행은 집계에서 빠집니다.
+간격은 행마다 다르게 줄 수도 있습니다. 8절의 `clicks_with_board`처럼 `board` 컬럼이 붙은 스트림이라면 `F.session_window("event_time", F.when(F.col("board") == "notice", "5 minutes").otherwise("30 minutes"))`처럼 식을 주면 되고 0이나 음수 간격인 행은 집계에서 빠집니다.
 
 ### 9-3. 윈도 위에 다시 윈도
 
 5분 윈도 결과를 1시간 텀블링 윈도로 다시 묶으려면 윈도의 대표 시각이 필요합니다. `window_time(window_col)`이 그 타임스탬프를 만들고 `window()`에 윈도 컬럼을 그대로 넣어도 됩니다.
 
 ```python
-five_min = clicks.groupBy(F.window("event_time", "5 minutes"), "post_id").count()
+five_min = (clicks
+            .withWatermark("event_time", "10 minutes")
+            .groupBy(F.window("event_time", "5 minutes"), "post_id")
+            .count())
 hourly = five_min.groupBy(F.window(F.window_time("window"), "1 hour"), "post_id").agg(F.sum("count"))
 ```
+
+`window_time`은 3.4.0에 들어왔고 윈도 끝에서 1마이크로초를 뺀 시각(`[12:00, 12:05)`이면 12:04:59.999999)을 돌려줍니다. 스트리밍에서 이렇게 집계를 두 번 잇는 쿼리는 상태 연산 두 개를 체인으로 이은 것이라 Append 모드에서만 돌고(12-1) Append 집계에는 워터마크가 필요해서 위 예제에 워터마크를 걸었습니다.
 
 ## 10. 워터마크와 늦은 데이터
 
@@ -494,7 +512,7 @@ dedup_within = (clicks
 
 스트리밍 집계, 스트리밍 중복 제거, 스트림 간 조인, `mapGroupsWithState`와 `flatMapGroupsWithState`가 상태를 씁니다. 문서는 4.0부터 복잡한 상태 처리에 `transformWithState` 연산자를 쓰라고 권하고 앞의 두 연산은 legacy로 부릅니다. 선택, 필터, 상태 없는 UDF는 상태를 만들지 않습니다(안내서 샘플 문항 9번의 정답 방향).
 
-체인 제한도 있습니다. 상태 연산 여러 개를 이어 붙이는 것은 Update와 Complete 모드에서 지원하지 않습니다. 문서가 제시하는 우회는 상태 연산 하나씩 들어간 쿼리 여러 개로 나누는 것입니다.
+체인 제한도 있습니다. 상태 연산 여러 개를 이어 붙이는 것은 Update와 Complete 모드에서 지원하지 않습니다. Append 모드의 체인은 버전에 따라 답이 갈립니다. 3.3.0 문서는 "Multiple streaming aggregations (i.e. a chain of aggregations on a streaming DF) are not yet supported"라고 적었고 3.4.0 문서부터 지금 문장(Update와 Complete에서만 불가)으로 바뀌었습니다. 그래서 3.4.0 이상에서는 Append 모드로 윈도 집계 위에 윈도 집계를 다시 거는 쿼리(9-3)가 됩니다. `mapGroupsWithState`나 `flatMapGroupsWithState` 뒤에 다른 상태 연산을 두는 것은 Append에서도 안 됩니다. 문서가 제시하는 우회는 상태 연산 하나씩 들어간 쿼리 여러 개로 나누는 것입니다.
 
 ### 12-2. 상태 저장소 구현
 
@@ -546,7 +564,7 @@ clicks.groupBy("post_id").count().writeStream.outputMode("append").format("conso
 <details>
 <summary>정답과 근거</summary>
 
-B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱크는 exactly-once이며 체크포인트가 처리 범위를 기록합니다. A의 socket은 재실행할 수 없고 C의 console은 장애 내성이 없습니다. D는 체크포인트가 없고 Kafka 싱크 자체도 at-least-once입니다.
+B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱크는 exactly-once이며 체크포인트가 처리 범위를 기록합니다. A의 socket은 재실행할 수 없고 C의 console은 장애 내성이 없습니다. D는 Kafka 싱크 자체가 at-least-once입니다. 게다가 Kafka 싱크는 체크포인트 위치가 없으면 세션 기본값(`spark.sql.streaming.checkpointLocation`)을 주지 않은 한 `start()`에서 오류가 납니다(3-2).
 
 </details>
 
@@ -555,7 +573,7 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 <details>
 <summary>정답과 근거</summary>
 
-워터마크는 09:20입니다. 09:25 클릭은 워터마크보다 뒤라서 반드시 집계됩니다. 09:15 클릭은 워터마크보다 늦은데 해당 윈도의 상태가 이미 지워졌다면 버려집니다. 다만 늦은 데이터를 반드시 버린다는 보장은 없어서 상태가 남아 있으면 집계될 수도 있습니다.
+워터마크는 09:20입니다(최대 이벤트 시간 09:30을 본 트리거가 끝난 뒤 다음 트리거부터 적용). 09:25 클릭은 워터마크보다 뒤라서 반드시 집계됩니다. 09:15 클릭은 워터마크보다 늦은데 해당 윈도의 상태가 이미 지워졌다면 버려집니다. 다만 늦은 데이터를 반드시 버린다는 보장은 없어서 상태가 남아 있으면 집계될 수도 있습니다.
 
 </details>
 
@@ -595,20 +613,22 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 
 </details>
 
-**문제 8.** 워터마크를 걸었는데 상태가 계속 커집니다. 쿼리는 `clicks.groupBy("post_id").count().withWatermark("event_time", "10 minutes")`이고 Update 모드입니다. 무엇이 문제입니까?
+**문제 8.** 워터마크를 걸었는데 상태가 계속 커집니다. 쿼리는 `clicks.withWatermark("event_time", "10 minutes").groupBy("post_id").count()`이고 Update 모드입니다. 무엇이 문제입니까?
 
 <details>
 <summary>정답과 근거</summary>
 
-두 가지입니다. `withWatermark`를 집계 뒤에 불렀고 집계 키에 이벤트 시간 컬럼이나 그 윈도가 없습니다. 워터마크로 상태를 정리하려면 집계 전에 같은 이벤트 시간 컬럼에 워터마크를 걸고 `window("event_time", ...)`를 그룹 키에 넣어야 합니다.
+집계 키에 이벤트 시간 컬럼이나 그 윈도가 없습니다. 10-3의 두 번째 조건입니다. 워터마크가 진행해도 `post_id`별 개수 상태에는 시간이 없어서 어느 키를 버려도 되는지 정할 근거가 없습니다. `F.window("event_time", "10 minutes")`를 그룹 키에 함께 넣으면 워터마크가 윈도 끝을 넘은 상태부터 정리됩니다.
+
+순서를 뒤집어 `clicks.groupBy("post_id").count().withWatermark("event_time", "10 minutes")`라고 쓰면 집계 결과에 `event_time` 컬럼이 남지 않아 워터마크를 걸 컬럼부터 찾지 못합니다. 문서가 집계보다 먼저 `withWatermark`를 부르라고 하는 조건(10-3의 네 번째)과 같은 이야기입니다.
 
 </details>
 
 ## 14. 범위와 한계
 
-- 동작과 기본값은 2026년 10월 19일에 연 Spark 4.2.0 Structured Streaming Programming Guide와 PySpark 4.2.0 API 문서를 기준으로 했습니다. `trigger`의 `realTime` 인자처럼 3.5.6 API 문서와 다른 부분은 본문에 표시했습니다.
-- 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark를 띄우지 못했습니다. 예외가 나는 시점(5-2), 스트림과 정적 조인에서 정적 쪽을 다시 읽는 동작(8절), 이벤트 시간을 판정 컬럼에서 뺀 중복 제거의 상태 정리(11-2), Spark에서 조용한 입력이 워터마크를 붙잡는지(10-5)는 문서 문장으로 확인하지 못한 추론입니다.
-- Real-time Mode(4.1 이후)는 2차 자료로만 확인했습니다. Kafka 연동 옵션, 스트림 간 outer 조인 지원 표, `transformWithState`의 API는 범위가 커서 다루지 않았습니다.
+- 동작과 기본값은 Spark 4.2.0 Structured Streaming Programming Guide와 PySpark 4.2.0 API 문서를 기준으로 했습니다(2026년 10월 19일 작성, 10월 20일 재확인). 출력 모드 호환 표, 지원하지 않는 연산 목록, 조인 지원 표는 3.5.6 가이드와 대조했고 내용이 같았습니다. `trigger`의 `realTime` 인자와 상태 연산 체인(12-1)처럼 버전에 따라 다른 부분은 본문에 표시했습니다.
+- 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark를 띄우지 못했습니다. Python 코드 블록은 문법 검사(`ast.parse`)만 통과시켰습니다. 예외가 나는 시점(5-2)과 체크포인트를 생략했을 때의 동작(3-2)은 4.2.0 소스를 읽고 적었습니다. 이벤트 시간을 판정 컬럼에서 뺀 중복 제거의 상태 정리(11-2), Spark에서 조용한 입력이 워터마크를 붙잡는지(10-5)는 문서 문장으로 확인하지 못한 추론입니다.
+- Real-time Mode는 PySpark API와 설정 문서의 항목으로만 확인했고 동작 설명 페이지는 찾지 못했습니다. Kafka 연동 옵션과 `transformWithState`의 API는 범위가 커서 다루지 않았습니다.
 - 출력 모드와 싱크 표는 문서 표를 옮긴 것이고 console 싱크의 지원 모드는 문서 안에서 서술이 엇갈립니다.
 
 ## 참고 자료
@@ -622,11 +642,15 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 - Apache Spark 4.2.0, [Web UI: Structured Streaming Tab](https://spark.apache.org/docs/latest/web-ui.html)
 - Apache Spark 4.2.0, [Spark Configuration](https://spark.apache.org/docs/latest/configuration.html) (`spark.sql.streaming.*`)
 - PySpark 4.2.0 API: [DataStreamWriter.trigger](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.trigger.html), [DataStreamWriter.outputMode](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.outputMode.html), [DataStreamWriter.foreachBatch](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.foreachBatch.html), [DataFrame.withWatermark](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withWatermark.html), [DataFrame.dropDuplicates](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.dropDuplicates.html), [DataFrame.dropDuplicatesWithinWatermark](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.dropDuplicatesWithinWatermark.html), [functions.window](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.window.html), [functions.session_window](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.session_window.html), [StreamingQuery.id](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.StreamingQuery.id.html)
-- PySpark 3.5.6 API: [DataStreamWriter.trigger](https://spark.apache.org/docs/3.5.6/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.trigger.html) (`realTime` 인자 없음 확인용)
+- PySpark 4.2.0 API: [DataStreamWriter.foreach](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.foreach.html), [DataStreamWriter.toTable](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.toTable.html), [StreamingQuery.lastProgress](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.StreamingQuery.lastProgress.html), [StreamingQuery.awaitTermination](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.StreamingQuery.awaitTermination.html), [functions.window_time](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.window_time.html), [GroupedData.applyInPandasWithState](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.applyInPandasWithState.html), [GroupedData.transformWithStateInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.transformWithStateInPandas.html)
+- PySpark 버전별 `DataStreamWriter.trigger`(`realTime` 인자 유무 확인용): [3.5.6](https://spark.apache.org/docs/3.5.6/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.trigger.html), [4.0.0](https://spark.apache.org/docs/4.0.0/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.trigger.html), [4.1.0](https://spark.apache.org/docs/4.1.0/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.trigger.html)
+- Apache Spark 3.5.6, [Structured Streaming Programming Guide](https://spark.apache.org/docs/3.5.6/structured-streaming-programming-guide.html) (4.2.0과 대조용)
+- Apache Spark 3.3.0과 3.4.0, [Structured Streaming Programming Guide 3.3.0](https://archive.apache.org/dist/spark/docs/3.3.0/structured-streaming-programming-guide.html), [Structured Streaming Programming Guide 3.4.0](https://archive.apache.org/dist/spark/docs/3.4.0/structured-streaming-programming-guide.html) (Unsupported Operations의 상태 연산 체인 문장 비교)
 
-2차 자료(Real-time Mode 버전 확인용, 내용 검증 안 함)
-- Apache Spark 소스 저장소, [docs/streaming/real-time-mode.md](https://apache.googlesource.com/spark/+/master/docs/streaming/real-time-mode.md) (master 브랜치 문서. 검색 결과로만 확인했고 직접 열지 않았습니다)
-- Apache Spark 커밋, [SPARK-53737 Add Real-time Mode trigger](https://apache.googlesource.com/spark/+/848e47a5d766b22ac28cd9e926fce2fe4f11de05%5E%21) (검색 결과로만 확인)
+소스 코드(4.2.0 태그)
+- Apache Spark, [sql/classic/DataStreamWriter.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/DataStreamWriter.scala) (임시 체크포인트를 허용하는 싱크 목록)
+- Apache Spark, [sql/classic/StreamingQueryManager.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/StreamingQueryManager.scala) (`start()`에서 쓰기 계획 분석)
+- Apache Spark, [ResolveWriteToStream.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/runtime/ResolveWriteToStream.scala) (출력 모드 검사, 체크포인트 위치 결정, AQE 비활성 경고)
 
 이 시리즈와 비교 글
 - [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning)

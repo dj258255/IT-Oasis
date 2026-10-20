@@ -17,7 +17,7 @@ seriesOrder: 0
 
 ## 결론부터
 
-1. CKA는 2시간 동안 15~20개의 실기 과제를 푸는 시험입니다. 답을 고르는 문제가 없고 터미널에서 클러스터를 직접 고칩니다. 66% 이상이면 합격이고, 결과만 맞으면 푸는 방법은 상관없습니다.
+1. CKA는 2시간 동안 15~20개의 실기 과제를 푸는 시험입니다. 답을 고르는 문제가 없고 터미널에서 클러스터를 직접 고칩니다. 66% 이상이면 합격이고 결과만 맞으면 푸는 방법은 상관없습니다.
 2. 2025년 2월 18일부터 범위가 바뀌었습니다. 공식 커리큘럼을 개정 전(v1.31)과 대조하면 etcd 백업과 복구, kubeadm 버전 업그레이드가 명시 항목에서 빠지고 Helm, Kustomize, Gateway API, CRD와 오퍼레이터, 확장 인터페이스(CNI, CSI, CRI)가 들어왔습니다. 개정 전 강의와 후기는 걸러서 봐야 합니다.
 3. 비중이 가장 큰 영역은 트러블슈팅(30%)입니다. 후기들이 공통으로 꼽는 실패 원인도 트러블슈팅 문제에서 시간을 잃은 것입니다.
 4. 공부는 개념 강의, 직접 만든 클러스터에서 손으로 해 보기, 무료 시나리오 반복, 공식 시뮬레이터(killer.sh) 2회 순서로 잡습니다. 시험장에서는 공식 문서만 볼 수 있으니 문서 위치를 익히는 것도 공부에 넣습니다.
@@ -58,7 +58,7 @@ cncf/curriculum 저장소의 v1.37 커리큘럼 원문입니다.
 
 ### 2-2. 2025년 2월 개정에서 바뀐 것
 
-Linux Foundation은 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했고, 기준은 응시일입니다. 개정 전 커리큘럼(v1.31)과 문구를 대조한 결과입니다.
+Linux Foundation은 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했고 기준은 응시일입니다. 개정 전 커리큘럼(v1.31)과 문구를 대조한 결과입니다.
 
 | 빠진 명시 항목 | 새로 들어온 항목 |
 |---|---|
@@ -70,9 +70,9 @@ Linux Foundation은 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했�
 | | 워크로드 자동 확장, Pod 승인 |
 | | 고가용성 컨트롤 플레인 구성, 동적 볼륨 프로비저닝 |
 
-업그레이드가 "클러스터 수명주기 관리"에 포함되는지, etcd가 여전히 나오는지는 공식 문서에 적혀 있지 않습니다. 후기에서도 컨트롤 플레인과 static Pod를 직접 만져 본 적이 없어 막혔다는 이야기가 나와서 저는 etcd 백업과 static Pod를 둘 다 손으로 한 번씩은 해 보기로 했습니다. 공식 문서도 바뀌었는데, etcd 문서는 `etcdctl snapshot status`와 `restore`가 etcd 3.5부터 사용 중단 예정이고 `etcdutl`로 하라고 적습니다. 옛 강의의 명령을 그대로 외우면 안 되는 이유입니다.
+업그레이드가 "클러스터 수명주기 관리"에 포함되는지, etcd가 여전히 나오는지는 공식 문서에 적혀 있지 않습니다. 후기에서도 컨트롤 플레인과 static Pod를 직접 만져 본 적이 없어 막혔다는 이야기가 나와서 저는 etcd 백업과 static Pod를 둘 다 손으로 한 번씩은 해 보기로 했습니다. 도구도 바뀌었습니다. 쿠버네티스 문서는 `etcdctl snapshot status`와 `restore`가 etcd 3.5부터 사용 중단이라며 `etcdutl`을 쓰라고 적습니다. etcd 3.6 변경 기록에는 두 하위 명령이 제거됐다고 나옵니다. kubeadm 1.36이 기본으로 쓰는 etcd는 3.6.8입니다. 옛 강의의 `etcdctl snapshot restore`를 그대로 외우면 시험 노드에서 동작하지 않을 수 있습니다.
 
-Domenic Cassisi(2026)도 일부 강의에 아직 etcd 내용이 남아 커리큘럼보다 뒤처져 있다고 지적했고, Atsushi Suzuki(2026)는 글 제목부터 "옛 가이드에 기대지 말라"였습니다.
+Domenic Cassisi(2026)도 일부 강의에 아직 etcd 내용이 남아 커리큘럼보다 뒤처져 있다고 지적했고 Atsushi Suzuki(2026)는 글 제목부터 "옛 가이드에 기대지 말라"였습니다.
 
 ## 3. 시험 환경과 규칙
 
@@ -90,9 +90,9 @@ Domenic Cassisi(2026)도 일부 강의에 아직 etcd 내용이 남아 커리큘
 
 ### 3-2. 과제마다 다른 호스트
 
-공식 안내는 각 과제를 지정된 호스트에서 풀라고 적습니다. `ssh <노드 이름>`으로 들어가고, ssh 안에서 다시 ssh는 할 수 없으며, 끝나면 `exit`로 돌아옵니다. 권한이 필요하면 `sudo -i`나 `sudo`를 씁니다. 호스트에는 `kubectl`(alias `k`와 자동완성 포함), `yq`, `curl`, `wget`, `man`이 깔려 있습니다.
+공식 안내는 각 과제를 지정된 호스트에서 풀라고 적습니다. `ssh <노드 이름>`으로 들어가고 ssh 안에서 다시 ssh는 할 수 없으며 끝나면 `exit`로 돌아옵니다. 권한이 필요하면 `sudo -i`나 `sudo`를 씁니다. 호스트에는 `kubectl`(alias `k`와 자동완성 포함), `yq`, `curl`, `wget`, `man`이 깔려 있습니다.
 
-후기 두 편(Cassisi 2026, Suzuki 2026)이 같은 점을 짚었습니다. 노드를 옮기면 직접 만든 alias가 사라지고, 네임스페이스 전환용 alias 같은 옛 팁은 더 이상 필요 없다는 것입니다. `k`는 이미 있으니 다른 설정을 외우는 데 시간을 쓰지 않아도 됩니다.
+후기 두 편(Cassisi 2026, Suzuki 2026)이 같은 점을 짚었습니다. 노드를 옮기면 직접 만든 alias가 사라지고 네임스페이스 전환용 alias 같은 옛 팁은 더 이상 필요 없다는 것입니다. `k`는 이미 있으니 다른 설정을 외우는 데 시간을 쓰지 않아도 됩니다.
 
 ### 3-3. 볼 수 있는 문서
 
@@ -109,7 +109,7 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 ### 3-4. 신분증과 당일
 
 - 유효기간이 남은 정부 발급 원본 실물 신분증이어야 하고 사본, 전자, 임시 신분증은 안 됩니다. 신분증의 이름과 등록한 이름이 정확히 같아야 합니다. 신분증 이름이 현지어면 현지어로 적으라는 안내에 한국어 예가 있습니다.
-- 시작 30분 전부터 체크인할 수 있고, 예정 시각에서 30분이 지나도록 시작하지 않으면 결시 처리됩니다. 결시는 환불도 재응시도 없습니다.
+- 시작 30분 전부터 체크인할 수 있고 예정 시각에서 30분이 지나도록 시작하지 않으면 결시 처리됩니다. 결시는 환불도 재응시도 없습니다.
 - 메모, 문제를 소리 내어 읽기, 얼굴과 입을 가리는 것, 음식은 금지입니다. 투명한 용기에 담은 투명한 음료만 됩니다. Suzuki는 턱을 만졌다가 감독관에게 경고를 받았다고 적었습니다.
 
 ## 4. 응시자들의 후기에서 공통으로 나온 것
@@ -131,7 +131,7 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 표의 후기에서 겹치는 것을 추리면 다섯 가지입니다. 주제별 경향과 함정은 [CKA Ch-07 5절](/blog/cert/cka/cka-07-resources-and-exam-day)에 모았습니다.
 
 - **killer.sh 점수가 낮아도 실제 시험과는 다를 수 있습니다.** killer.sh가 실제 시험보다 어렵다는 평가가 여러 후기와 KodeKloud 커뮤니티에서 나왔으니(공식 비교는 없음) 점수보다 풀이를 보고 배우는 용도로 쓰고 Suzuki는 답안 페이지를 PDF로 저장해 두라고 권했습니다. 활성화 후 36시간이라 시험 2주 전과 1주 전처럼 날짜를 나눠 쓰는 경우가 많았습니다.
-- **트러블슈팅에서 시간을 잃습니다.** 비중이 30%로 가장 크고, 정답이 하나로 정해지지 않아 오래 붙들게 됩니다.
+- **트러블슈팅에서 시간을 잃습니다.** 비중이 30%로 가장 크고 정답이 하나로 정해지지 않아 오래 붙들게 됩니다.
 - **문제는 끝까지 읽습니다.** 하지 말라는 조건이나 지정한 네임스페이스를 놓치면 결과가 틀립니다.
 - **어려운 문제는 넘기고 마지막에 검증합니다.** 공식 기준 2시간에 15~20문항이면 문항당 6~8분입니다.
 - **관리형 쿠버네티스 경험만으로는 부족합니다.** 컨트롤 플레인과 kubelet, static Pod는 EKS나 GKE에서 직접 만질 일이 없습니다.
@@ -161,7 +161,7 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 | `journalctl -u kubelet`, `crictl ps`, `/etc/kubernetes/manifests` | 컨트롤 플레인과 노드 트러블슈팅. [CKA Ch-01의 "컨트롤러가 죽으면"](/blog/cert/cka/cka-01-why-kubernetes)에서 다룬 경로 |
 | kubernetes.io 문서의 위치 | Gateway API, NetworkPolicy, PV/PVC, Kustomize, kubeadm 페이지를 검색 없이 찾아간다 |
 
-이 블로그의 데이터 엔지니어링 시리즈와 겹치는 부분도 있습니다. [DE Ch-07](/blog/data/orchestration/de-07-task-per-pod-cost)에서 Pod가 시작되기까지의 구간과 condition을 정리했고, 트러블슈팅에서 Pod가 왜 안 뜨는지 볼 때 그대로 씁니다.
+이 블로그의 데이터 엔지니어링 시리즈와 겹치는 부분도 있습니다. [DE Ch-07](/blog/data/orchestration/de-07-task-per-pod-cost)에서 Pod가 시작되기까지의 구간과 condition을 정리했고 트러블슈팅에서 Pod가 왜 안 뜨는지 볼 때 그대로 씁니다.
 
 ## 6. 범위와 한계
 
@@ -179,6 +179,7 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 - Linux Foundation, [CKA Upcoming Program Changes](https://training.linuxfoundation.org/certified-kubernetes-administrator-cka-program-changes/)
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf)
 - Kubernetes, [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/), [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/)
+- etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md), kubernetes/kubernetes [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
 - [killer.sh CKA](https://killer.sh/cka), [FAQ](https://killer.sh/faq)
 
 후기

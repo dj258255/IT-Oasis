@@ -270,7 +270,14 @@ PVC를 지운 뒤 PV를 어떻게 할지 정하는 것이 회수 정책(`persist
 2. 저장 자산의 데이터를 필요에 맞게 정리합니다.
 3. 저장 자산을 수동으로 삭제합니다.
 
-같은 저장 자산을 다시 쓰고 싶다면 같은 정의로 PV를 새로 만들라고 문서는 적습니다. 이미 있는 `Released` PV에서 `claimRef`만 지워 `Available`로 되돌리는 방법도 실무에서 쓰인다고 알려져 있지만 이번에 읽은 문서에는 나오지 않았습니다.
+같은 저장 자산을 다시 쓰고 싶다면 같은 정의로 PV를 새로 만들라고 문서는 적습니다. `Released` PV를 지우지 않고 다시 묶는 방법도 같은 문서에 있습니다. "Recovering from Failure when Expanding Volumes" 절의 관리자 절차가 PV의 `claimRef` 항목을 지워 PV를 `Available`로 만든 뒤 `volumeName`으로 그 PV를 지정한 PVC를 새로 만드는 순서입니다. 확장 실패 복구용으로 실린 절차지만 `claimRef`를 지우면 새 PVC가 묶일 수 있다는 동작은 같습니다.
+
+```bash
+kubectl patch pv <PV 이름> --type=json -p '[{"op":"remove","path":"/spec/claimRef"}]'
+kubectl get pv <PV 이름>     # STATUS가 Available로 바뀌는지
+```
+
+이전 데이터는 그대로 남아 있으니 새 PVC가 그 데이터를 봐도 되는 경우에만 씁니다.
 
 이미 만든 PV의 정책은 Change the Reclaim Policy of a PersistentVolume 문서의 명령으로 바꿉니다.
 
@@ -441,7 +448,7 @@ kubectl -n shop describe pvc board-files    # Status: Terminating, Finalizers �
 kubectl -n shop delete pod board            # Pod를 지우면 PVC 삭제가 진행된다
 ```
 
-`delete pvc`가 멈춘 것처럼 보일 때 Finalizer를 강제로 지우는 대신 그 PVC를 쓰는 Pod부터 찾습니다.
+`delete pvc`가 멈춘 것처럼 보이면 그 PVC를 쓰는 Pod부터 찾습니다. Pod가 모두 사라지면 보호 Finalizer가 풀리고 삭제가 끝납니다.
 
 ### 3-5. 볼륨 확장
 
@@ -453,6 +460,7 @@ kubectl -n shop delete pod board            # Pod를 지우면 PVC 삭제가 진
 | 파일시스템 | XFS, Ext3, Ext4일 때만 크기 조정. Pod가 PVC를 읽기 쓰기로 쓸 때 파일시스템이 늘어난다 |
 | 사용 중인 PVC | v1.24 stable. Pod를 다시 만들 필요 없음. 쓰는 Pod가 없으면 확장이 끝나지 않는다 |
 | 주의 | PV의 크기를 직접 고친 뒤 PVC를 맞추면 실제 크기 조정은 일어나지 않는다 |
+| 확장 실패 | 저장소가 들어줄 수 없는 크기를 요청하면 계속 재시도한다. 1.34부터 stable인 `RecoverVolumeExpansionFailure`로 앞서 요청한 값보다 작은 값으로 다시 요청할 수 있다. 단 `.status.capacity`보다는 커야 한다 |
 
 ```bash
 kubectl -n shop patch pvc order-db-data -p '{"spec":{"resources":{"requests":{"storage":"30Gi"}}}}'
@@ -588,7 +596,6 @@ PVC가 쓰는 StorageClass의 `allowVolumeExpansion`이 `true`인지 봅니다(`
 
 - 이 글의 명령과 YAML은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서와 튜토리얼에 실린 것이고 그렇게 표시했습니다. 연습 클러스터에서 1-7, 2-5, 3-8 과제를 해 본 뒤 결과를 덧붙이겠습니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다.
-- `Released` PV의 `claimRef`를 지워 재사용하는 방법은 이번에 읽은 문서에서 확인하지 못했습니다.
 - 시험 환경에 어떤 동적 프로비저너와 StorageClass가 준비되어 있는지는 공식 문서에 없습니다.
 - 볼륨 스냅샷, 복제, 볼륨 populator, 원시 블록 볼륨은 커리큘럼 문구에 직접 나오지 않아 다루지 않았습니다.
 
@@ -606,3 +613,4 @@ kubernetes.io
 - [Change the Reclaim Policy of a PersistentVolume](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/)
 - [Change the default StorageClass](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/)
 - [kubectl create](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/) (하위 명령 목록)
+- [Feature Gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) (`RecoverVolumeExpansionFailure`)

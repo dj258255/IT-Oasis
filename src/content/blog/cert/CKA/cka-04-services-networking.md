@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-04] 서비스와 네트워킹: Pod IP에서 Gateway API까지 한 줄로 잇기'
-description: CKA 커리큘럼 v1.37의 Services and Networking 영역(20%)을 목차 순서대로 정리합니다. Pod 간 연결 모델, NetworkPolicy, Service 타입과 EndpointSlice, Gateway API, Ingress, CoreDNS를 kubernetes.io와 gateway-api.sigs.k8s.io 문서로 확인하고 시험에서 쓸 명령과 YAML, 자주 틀리는 지점, 연습 과제를 붙였습니다.
+description: CKA 커리큘럼 v1.37의 Services and Networking 영역(20%)을 목차 순서대로 정리합니다. Pod 간 연결 모델, NetworkPolicy, Service 타입과 EndpointSlice, Gateway API(헤더 매칭, 필터, ReferenceGrant 포함), Ingress와 Ingress NGINX 은퇴, CoreDNS를 kubernetes.io와 gateway-api.sigs.k8s.io 문서로 확인하고 시험에서 쓸 명령과 YAML, 자주 틀리는 지점, 연습 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -315,7 +315,7 @@ kubectl -n shop expose deployment board --name=board-np --type=NodePort --port=8
 kubectl apply -f board-np.yaml
 ```
 
-`kubectl create service nodeport <이름> --tcp=80:8080 --node-port=30080`도 있습니다. 다만 레퍼런스의 옵션 표에 selector를 지정하는 옵션이 없으니 만든 뒤 `kubectl get svc <이름> -o yaml`로 selector가 실제 Pod 라벨과 맞는지 꼭 확인합니다. `kubectl expose`에는 `--selector`, `--session-affinity`, `--cluster-ip` 옵션이 있습니다.
+`kubectl create service nodeport <이름> --tcp=80:8080 --node-port=30080`도 있습니다. 다만 레퍼런스의 옵션 표에 selector를 지정하는 옵션이 없고 kubectl 소스(`create_service.go`)를 보면 selector를 `app: <Service 이름>`으로 고정해 넣습니다. Pod 라벨이 `app=<같은 이름>`이 아니면 엔드포인트가 비니 만든 뒤 `kubectl get svc <이름> -o yaml`로 selector를 확인하고 필요하면 `kubectl set selector`나 `edit`으로 고칩니다. `kubectl expose`에는 `--selector`, `--session-affinity`, `--cluster-ip` 옵션이 있습니다.
 
 ### 3-5. EndpointSlice
 
@@ -541,10 +541,116 @@ listeners:
 
 다른 네임스페이스를 넘나드는 참조에는 두 장치가 있습니다.
 
-- Gateway에 다른 네임스페이스의 Route를 붙이려면 리스너의 `allowedRoutes.namespaces.from`을 `All` 또는 `Selector`로 바꿉니다. 값은 `All`, `Selector`, `Same`, `None`이고 기본은 `Same`입니다.
+- Gateway에 다른 네임스페이스의 Route를 붙이려면 리스너의 `allowedRoutes.namespaces.from`을 `All` 또는 `Selector`로 바꿉니다. Route에 쓰는 `RouteNamespaces.from`의 값은 `All`, `Selector`, `Same` 셋이고 기본은 `Same`입니다. 타입 정의에 `None`도 있지만 그 값은 ListenerSet을 거르는 `allowedListeners` 쪽 필드(기본 `None`)에만 허용됩니다.
 - HTTPRoute의 `backendRefs`가 다른 네임스페이스의 Service를 가리키려면 대상 네임스페이스에 ReferenceGrant가 있어야 한다고 HTTPRoute 타입 정의의 주석이 적습니다.
 
-### 4-6. Ingress에서 옮기기
+### 4-6. 헤더 매칭, 필터, ReferenceGrant
+
+HTTPRoute 과제가 경로 나누기보다 한 단계 더 들어가면 매칭 조건과 필터가 나옵니다. HTTPRoute 타입 정의(`httproute_types.go`)에서 확인한 이름과 지원 수준입니다.
+
+| 항목 | 필드 | 지원 수준 |
+|---|---|---|
+| 헤더 매칭 | `matches[].headers[]`의 `name`, `value`. `type` 기본 `Exact` | Core(Exact) |
+| 쿼리 매칭 | `matches[].queryParams[]` | Extended |
+| 메서드 매칭 | `matches[].method` | Extended |
+| 요청 헤더 바꾸기 | `filters[].type: RequestHeaderModifier`와 `requestHeaderModifier`의 `set`, `add`, `remove` | Core |
+| 리다이렉트 | `RequestRedirect`. `scheme`, `hostname`, `path`, `port`, `statusCode`(기본 302, 301·302·303·307·308만) | Core |
+| 경로 재작성 | `URLRewrite`. `path.type`은 `ReplaceFullPath` 또는 `ReplacePrefixMatch` | Extended |
+| 응답 헤더 바꾸기, 미러링 | `ResponseHeaderModifier`, `RequestMirror` | Extended |
+
+한 규칙 안에 `matches` 항목이 여럿이면 그중 하나만 맞아도 되고 한 항목 안의 경로, 헤더, 쿼리 조건은 모두 맞아야 합니다. NetworkPolicy의 `from`과 같은 대시 규칙이라 같이 외웁니다. `ReplacePrefixMatch`를 쓰는 규칙은 `PathPrefix` 매칭이 정확히 하나여야 한다는 검증 규칙(CEL)이 타입 정의에 있습니다.
+
+결제 API의 새 버전을 `x-canary: "true"` 헤더가 붙은 요청에만 보내고 HTTP 요청은 HTTPS로 돌려보내는 예입니다. 리다이렉트용 Route는 HTTP 리스너에만 붙여야 하니 `parentRefs`의 `sectionName`으로 리스너를 고릅니다.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: payment-header
+  namespace: shop
+spec:
+  parentRefs:
+  - name: shop-gw
+    sectionName: https          # 4-5의 HTTPS 리스너 이름
+  hostnames:
+  - "shop.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /pay
+      headers:
+      - name: x-canary
+        value: "true"
+    backendRefs:
+    - name: payment-v2
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /pay
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: x-route
+          value: stable
+    backendRefs:
+    - name: payment-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-to-https
+  namespace: shop
+spec:
+  parentRefs:
+  - name: shop-gw
+    sectionName: http
+  hostnames:
+  - "shop.example.com"
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+```
+
+다른 네임스페이스의 Service로 보내려면 HTTPRoute 쪽 `backendRefs`에 `namespace`를 적고 대상 네임스페이스에 ReferenceGrant를 만듭니다. gateway-api.sigs.k8s.io의 ReferenceGrant 문서는 ReferenceGrant가 자기와 같은 네임스페이스의 리소스에 대한 참조만 허용한다고 적습니다. 쇼핑몰 Route가 `billing` 네임스페이스의 결제 Service를 부르는 예입니다.
+
+```yaml
+# shop 네임스페이스의 HTTPRoute 규칙 일부
+    backendRefs:
+    - name: payment
+      namespace: billing
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: allow-shop-routes
+  namespace: billing              # 참조되는 쪽
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: shop
+  to:
+  - group: ""
+    kind: Service
+```
+
+v1.6.1 표준 설치 매니페스트에서 ReferenceGrant는 `v1`과 `v1beta1`이 모두 제공되고 저장 버전은 `v1beta1`입니다. 문서 예시는 `v1`을 씁니다. ReferenceGrant가 없으면 Route의 `ResolvedRefs` 조건이 `False`가 되고 사유는 `RefNotPermitted`입니다(공통 타입 정의의 `RouteReasonRefNotPermitted`). 리스너 쪽에서 막히면 `Accepted` 조건에 `NotAllowedByListeners`나 `NoMatchingListenerHostname`이 보입니다.
+
+```bash
+kubectl -n shop describe httproute payment-header     # Conditions의 Accepted, ResolvedRefs
+kubectl -n shop get httproute payment-header -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} {.reason}{"\n"}{end}'
+kubectl get referencegrant -A
+```
+
+### 4-7. Ingress에서 옮기기
 
 | Ingress | Gateway API |
 |---|---|
@@ -557,18 +663,19 @@ listeners:
 
 가이드는 Ingress를 HTTPRoute로 바꿔 주는 ingress2gateway 프로젝트도 소개하면서 변환 결과는 항상 시험하고 검증하라고 적습니다. `Exact`를 `Exact`로 옮기는 매핑은 가이드에 표로 나오지 않았습니다. HTTPRoute 타입 정의에 `Exact`가 있어서 그대로 쓰면 된다고 보지만 가이드 문구로 확인한 것은 아닙니다.
 
-### 4-7. 자주 틀리는 지점
+### 4-8. 자주 틀리는 지점
 
-- Gateway API는 CRD라서 설치되어 있지 않으면 `kubectl get gateway`가 "리소스 타입을 모른다"는 오류를 냅니다. Getting started 가이드의 설치 명령은 `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml`입니다(2026년 10월 확인한 버전). CRD만 있고 구현체가 없으면 Gateway가 Programmed 상태가 되지 않습니다.
+- Gateway API는 CRD라서 설치되어 있지 않으면 `kubectl get gateway`가 "리소스 타입을 모른다"는 오류를 냅니다. Getting started 가이드의 설치 명령은 `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml`입니다(2026년 10월 20일 가이드 기준). 같은 날 GitHub 릴리스 목록의 최신 안정 패치는 v1.6.3(2026-10-06)이었습니다. v1.6 표준 설치에는 GatewayClass, Gateway, HTTPRoute, GRPCRoute 외에 ListenerSet, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy, ReferenceGrant CRD가 들어 있습니다. CRD만 있고 구현체가 없으면 Gateway가 Programmed 상태가 되지 않습니다.
 - HTTPRoute의 `parentRefs`에 Gateway 이름을 틀리게 적으면 Route가 붙지 않습니다. `kubectl describe httproute`의 상태 조건 `Accepted`와 `ResolvedRefs`를 봅니다.
 - `hostnames`가 Gateway 리스너의 `hostname`과 겹치지 않으면 요청이 이 Route로 오지 않습니다.
 - Route가 다른 네임스페이스에 있는데 `allowedRoutes`가 기본값 `Same`이면 붙지 않습니다.
 
-### 4-8. 직접 해 보기
+### 4-9. 직접 해 보기
 
 1. 연습 클러스터에 Gateway API CRD와 구현체 하나를 설치하고 `kubectl get gatewayclass`로 클래스 이름을 확인합니다.
 2. 4-3의 Gateway와 HTTPRoute를 적용하고 `curl -H "Host: shop.example.com" http://<Gateway 주소>/orders`로 주문 API까지 가는지 봅니다.
 3. 4-4의 가중치 Route를 만들고 같은 요청을 100번 보내 v2 응답 비율을 셉니다.
+4. 4-6의 헤더 매칭 Route를 적용하고 `curl -H "x-canary: true"` 유무로 응답이 갈리는지, ReferenceGrant를 지웠을 때 `ResolvedRefs`가 어떻게 바뀌는지 봅니다.
 
 ## 5. Ingress 컨트롤러와 Ingress 리소스
 
@@ -579,7 +686,13 @@ Ingress 문서와 Ingress Controllers 문서는 첫머리에 같은 안내를 �
 - Ingress는 GA이고 GA API의 안정성 보장을 받으며 제거 계획이 없습니다.
 - 더 이상 개발하지 않고 변경도 없습니다.
 
-컨트롤러 쪽 소식도 있습니다. Kubernetes 블로그의 "Ingress NGINX Retirement: What You Need to Know"(2025년 11월 11일, SIG Network와 Security Response Committee)는 Ingress NGINX 프로젝트의 best-effort 유지보수가 2026년 3월까지이고 그 뒤로는 릴리스, 버그 수정, 보안 취약점 수정이 없다고 발표했습니다. 이 블로그 글은 첫 부분만 열어 확인했고 기존 설치의 동작이나 대안 안내가 담긴 뒷부분은 읽지 못했습니다. 시험 환경에 어떤 Ingress 컨트롤러가 깔려 있는지는 공식 문서에 나오지 않습니다.
+컨트롤러 쪽 소식도 있습니다. Kubernetes 블로그의 "Ingress NGINX Retirement: What You Need to Know"(2025년 11월 11일, SIG Network와 Security Response Committee)는 Ingress NGINX 프로젝트의 best-effort 유지보수가 2026년 3월까지이고 그 뒤로는 릴리스, 버그 수정, 보안 취약점 수정이 없다고 발표했습니다. 같은 글이 정리한 나머지 내용은 세 가지입니다.
+
+- 기존 Ingress NGINX 설치는 계속 동작하고 Helm 차트와 컨테이너 이미지도 계속 받을 수 있습니다. GitHub 저장소는 읽기 전용으로 남습니다.
+- 대안으로 Gateway API로 옮기기를 먼저 권하고 Ingress를 계속 써야 하면 쿠버네티스 문서에 나열된 다른 Ingress 컨트롤러를 보라고 적습니다.
+- 클러스터가 Ingress NGINX를 쓰는지는 관리자 권한으로 `kubectl get pods --all-namespaces --selector app.kubernetes.io/name=ingress-nginx`를 실행해 확인할 수 있다고 안내합니다.
+
+은퇴 대상은 컨트롤러 프로젝트이고 Ingress API 자체는 위에서 본 대로 동결된 GA API로 남습니다. 2026년 10월은 유지보수 종료 뒤라 새 연습 환경을 만들 때 Ingress 컨트롤러를 무엇으로 깔지 따로 골라야 합니다. 시험 환경에 어떤 Ingress 컨트롤러가 깔려 있는지는 공식 문서에 나오지 않습니다.
 
 ### 5-2. 컨트롤러와 리소스는 별개
 
@@ -977,7 +1090,7 @@ kubectl create ingress a --rule="shop.example.com/cart=cart:80" --rule="shop.exa
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 사이트에 게시된 현재 버전과 같은 내용이지만 시험 기준 버전(v1.37)과 문서 버전이 어긋나는 항목이 있을 수 있습니다.
 - `kubectl create ingress`에서 `*` 유무에 따른 `pathType`은 레퍼런스 예시 주석으로만 확인했습니다.
 - LoadBalancer Service의 `<pending>` 표시, CoreDNS `loop` 오류가 생기는 구체적인 노드 설정은 문서 본문으로 확인하지 못한 항목입니다.
-- Ingress NGINX 은퇴 공지는 블로그 글의 앞부분만 확인했습니다. 시험 환경에 깔린 Ingress 컨트롤러와 Gateway API 구현체 종류는 공식 문서에 없습니다.
+- 시험 환경에 깔린 Ingress 컨트롤러와 Gateway API 구현체 종류는 공식 문서에 없습니다.
 - Gateway API는 v1.6.1 설치 명령 기준이고 HTTPRoute 규칙은 저장소 main 브랜치의 타입 정의 주석으로 확인했습니다. 구현체마다 지원 범위(Extended 기능)가 다릅니다.
 
 ## 참고 자료
@@ -1001,6 +1114,7 @@ kubernetes.io
 - [Debug Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)
 - [Troubleshooting kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/)
 - [Configuring each kubelet in your cluster using kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/kubelet-integration/)
+- kubernetes/kubernetes, [staging/src/k8s.io/kubectl/pkg/cmd/create/create_service.go](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/kubectl/pkg/cmd/create/create_service.go)
 - kubectl 레퍼런스: [kubectl expose](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_expose/), [kubectl create service nodeport](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_service_nodeport/), [kubectl create ingress](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_ingress/), [kubectl create secret tls](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_secret_tls/)
 - Kubernetes Blog, [Ingress NGINX Retirement: What You Need to Know](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), 2025-11-11
 
@@ -1008,6 +1122,8 @@ Gateway API
 - [Getting started with Gateway API](https://gateway-api.sigs.k8s.io/guides/)
 - [Migrating from Ingress](https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/)
 - [HTTP traffic splitting](https://gateway-api.sigs.k8s.io/guides/traffic-splitting/)
+- [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/)
+- kubernetes-sigs/gateway-api, [v1.6.1 standard-install.yaml](https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml), [Releases](https://github.com/kubernetes-sigs/gateway-api/releases), [apis/v1/shared_types.go](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/shared_types.go)
 - kubernetes-sigs/gateway-api, [apis/v1/httproute_types.go](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go), [apis/v1/gateway_types.go](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/gateway_types.go)
 
 CoreDNS

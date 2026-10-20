@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-02] 클러스터 아키텍처, 설치, 구성: kubeadm 한 벌로 만들고 올리고 되살리기'
-description: CKA 비중 25%인 클러스터 아키텍처 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. RBAC, 설치 전 노드 준비, kubeadm 생성과 업그레이드, etcd 백업과 복구, 고가용성 컨트롤 플레인, Helm과 Kustomize, CNI·CSI·CRI, CRD와 오퍼레이터를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
+description: CKA 비중 25%인 클러스터 아키텍처 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. RBAC과 kubeconfig 컨텍스트, 설치 전 노드 준비, kubeadm 생성과 업그레이드, 인증서 만료 확인, etcd 백업과 복구(etcdutl), 고가용성 컨트롤 플레인, Helm(4 포함)과 Kustomize, CNI 설치를 포함한 CNI·CSI·CRI, CRD와 오퍼레이터를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -95,7 +95,27 @@ YAML이 필요하면 `--dry-run=client -o yaml`을 붙여 뼈대를 받습니다
 - API 그룹이 있는 리소스는 그룹까지 맞아야 합니다. `kubectl create role`에서는 `--resource=deployments.apps`처럼 점 뒤에 그룹을 붙입니다.
 - `roleRef`를 바꾸는 과제라면 바인딩을 지우고 다시 만듭니다. `kubectl edit`으로 저장하면 검증 오류가 납니다.
 
-### 1-5. 직접 해 보기
+### 1-5. kubeconfig 컨텍스트와 권한 목록
+
+RBAC 과제는 "이 사용자로 무엇을 할 수 있는지"를 확인하는 데서 끝납니다. kubectl Quick Reference와 `kubectl auth` 레퍼런스에 있는 명령을 모았습니다.
+
+```bash
+# kubeconfig 안의 컨텍스트
+kubectl config get-contexts
+kubectl config current-context
+kubectl config use-context <컨텍스트>
+kubectl config set-context --current --namespace=shop   # 현재 컨텍스트의 기본 네임스페이스
+
+# 지금 나는 누구인지, 무엇을 할 수 있는지
+kubectl auth whoami
+kubectl auth can-i --list -n shop
+kubectl auth can-i --list -n shop --as=system:serviceaccount:shop:order-api
+kubectl auth can-i get pods --subresource=log -n shop
+```
+
+`--as`는 사칭(impersonation) 권한이 있어야 쓸 수 있다고 레퍼런스 예시 주석이 적습니다. `cluster-admin`은 모든 리소스에 모든 동작을 허용하므로 사칭도 됩니다. 현재 시험 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적어서 컨텍스트 전환이 지문에 나오는지는 확인하지 못했습니다([Ch-00 6절](/blog/cert/cka/cka-00-exam-and-study-plan)). 그래도 "이 kubeconfig로 접속해 확인하라"는 형태에 대비해 `--kubeconfig <파일>` 옵션과 위 명령은 손에 익혀 둡니다.
+
+### 1-6. 직접 해 보기
 
 게시판 서비스용 네임스페이스 `board`에 ServiceAccount `board-reader`를 만들고 기본 ClusterRole `view`를 그 네임스페이스에서만 쓰도록 RoleBinding으로 연결합니다. 그 다음 `kubectl auth can-i`로 `board`에서는 Pod 목록이 되고 `default`에서는 안 되는지, `board`에서도 Secret 조회는 안 되는지 확인합니다.
 
@@ -144,6 +164,8 @@ sysctl net.ipv4.ip_forward   # 1이면 적용됨
 | `systemd` | systemd가 init이면 권장. cgroup 관리자가 하나로 유지됨 |
 
 systemd를 init으로 쓰면서 kubelet과 런타임은 `cgroupfs`를 쓰면 cgroup 관리자가 둘이 됩니다. 문서는 이 상태에서 자원 압박이 오면 노드가 불안정해질 수 있다고 설명합니다. containerd는 `/etc/containerd/config.toml`의 runc 옵션에 `SystemdCgroup = true`를 넣고 kubelet은 `KubeletConfiguration`에 `cgroupDriver: systemd`를 넣습니다. containerd 1.x와 2.x는 설정 섹션 이름이 다르니 문서에서 버전에 맞는 블록을 봅니다.
+
+최근 버전에서는 kubelet이 드라이버를 런타임에 묻습니다. "Container Runtimes" 문서에 따르면 `KubeletCgroupDriverFromCRI` 기능(1.34부터 stable)이 켜져 있고 런타임이 `RuntimeConfig` CRI 호출을 지원하면 kubelet은 런타임에서 드라이버를 알아내고 자기 설정의 `cgroupDriver`를 무시합니다. containerd 1.x 이하는 이 호출을 지원하지 않아 kubelet이 자기 설정값으로 돌아가고 문서는 1.38에서 이 대비 동작을 없애 옛 containerd가 새 kubelet과 함께 실패하게 된다고 적습니다. 이 설명대로라면 containerd 2.x 노드에서는 kubelet이 런타임 값을 따르므로 드라이버 문제는 containerd 설정의 `SystemdCgroup` 값에서 먼저 찾습니다. 이 순서는 문서 내용에서 끌어낸 제 판단입니다.
 
 업그레이드 문서에는 v1.37 기준으로 리눅스 kubelet이 기본적으로 cgroup v2만 지원하고 `FailCgroupV1`이 기본 `true`라는 메모가 있습니다. 오래된 cgroup v1 배포판 위에서 연습하면 kubelet이 뜨지 않을 수 있습니다.
 
@@ -310,6 +332,12 @@ sudo kubeadm certs check-expiration
 sudo kubeadm certs renew all
 ```
 
+기간은 kubeadm 설정의 `certificateValidityPeriod`(기본 8760h)와 `caCertificateValidityPeriod`(기본 87600h)로 바꿀 수 있습니다. `check-expiration` 목록에 `kubelet.conf`는 없습니다. 문서 설명으로는 kubeadm이 kubelet 클라이언트 인증서를 `/var/lib/kubelet/pki` 아래의 회전 가능한 인증서로 자동 갱신하도록 구성하기 때문입니다. 인증서 파일 하나의 만료일만 볼 때는 일반 도구인 openssl로도 됩니다.
+
+```bash
+sudo openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
+```
+
 컨트롤 플레인이 여러 대면 `renew`를 모든 컨트롤 플레인 노드에서 실행합니다. 갱신한 뒤에는 컨트롤 플레인 Pod를 재시작해야 합니다. 모든 구성요소가 인증서를 동적으로 다시 읽지는 못하기 때문입니다. static Pod는 노드의 kubelet이 관리해서 kubectl로 지우고 다시 띄울 수 없습니다. 그래서 문서는 매니페스트를 `/etc/kubernetes/manifests/` 밖으로 잠시 옮기고 20초(kubelet의 `fileCheckFrequency`)쯤 기다렸다가 되돌리라고 적습니다.
 
 ### 4-5. etcd 백업
@@ -332,7 +360,7 @@ kubectl -n kube-system describe pod etcd-<노드 이름> | grep -E 'cert|key|tru
 sudo cat /etc/kubernetes/manifests/etcd.yaml
 ```
 
-스냅샷 확인은 `etcdutl`로 합니다. 문서는 `etcdctl snapshot status`가 etcd v3.5부터 사용 중단이고 v3.6에서 제거 예정이라고 적습니다.
+스냅샷 확인은 `etcdutl`로 합니다. 쿠버네티스 문서는 `etcdctl snapshot status`가 etcd v3.5부터 사용 중단이고 v3.6에서 제거 예정이라고 적는데 etcd의 CHANGELOG-3.6에는 `etcdctl snapshot status`와 `snapshot restore`가 이미 제거됐다고 나옵니다. kubeadm 1.36의 기본 etcd가 3.6.8이니(kubeadm `constants.go`) 노드에 3.6 이상의 `etcdctl`이 있으면 두 명령은 동작하지 않는다고 보고 `etcdutl`로 손에 익힙니다. 스냅샷 저장(`etcdctl snapshot save`)은 실행 중인 멤버에 접속해야 하므로 여전히 `etcdctl`입니다.
 
 ```bash
 etcdutl --write-out=table snapshot status /opt/backup/etcd-snapshot.db
@@ -455,6 +483,18 @@ helm uninstall shop-cache -n shop
 
 Quickstart 문서처럼 저장소 추가 없이 OCI 주소(`oci://...`)로 바로 설치하는 방식도 있습니다.
 
+설치된 릴리스를 살피는 명령도 같이 둡니다. `helm get values`는 사용자가 넣은 값만, `--all`을 붙이면 계산된 전체 값을 보여 줍니다. 릴리스가 없으면 설치하고 있으면 올리는 `helm upgrade --install`도 자주 씁니다.
+
+```bash
+helm list -A                                   # 모든 네임스페이스의 릴리스
+helm status shop-cache -n shop
+helm get values shop-cache -n shop
+helm get manifest shop-cache -n shop           # 실제로 적용된 매니페스트
+helm upgrade --install shop-cache <저장소>/<차트> -n shop --create-namespace --set replicaCount=3
+```
+
+Helm 4(2025년 11월 정식)에서 바뀐 점 중 명령에 영향을 주는 것은 두 가지입니다. "Helm 4 Overview" 문서에 따르면 `--atomic`은 `--rollback-on-failure`로, `--force`는 `--force-replace`로 이름이 바뀌었고 옛 이름은 경고를 내며 계속 동작합니다. 새 릴리스는 기본으로 server-side apply로 설치되고 업그레이드와 롤백은 그 릴리스가 쓰던 방식을 따릅니다. 시험 노드의 Helm이 3인지 4인지는 `helm version`으로 먼저 봅니다. 2026년 10월에도 helm.sh 문서 사이트는 3.22와 4.3 문서를 함께 제공합니다.
+
 ### 6-2. Kustomize
 
 Kustomize는 원본 YAML을 고치지 않고 `kustomization.yaml`에 적은 변형(네임스페이스, 이름 접두사, 패치, 이미지 교체)을 덧입혀 결과 매니페스트를 만듭니다. kubectl에는 1.14부터 들어 있어 따로 설치할 필요가 없습니다.
@@ -515,6 +555,24 @@ dockershim은 1.24에서 빠졌습니다. 그래서 지금 노드에는 containe
 ### 7-2. CNI
 
 kubelet이 CNI를 직접 다루던 `cni-bin-dir`, `network-plugin` 플래그는 1.24에서 사라졌습니다. 지금은 런타임이 CNI 플러그인을 불러옵니다. 그래서 Pod IP가 안 잡히면 `/etc/cni/net.d`의 설정과 플러그인 Pod 상태부터 봅니다. 문서에 적힌 플러그인 바이너리 기본 위치는 `/opt/cni/bin`입니다. NetworkPolicy는 CNI 플러그인이 지원해야 동작하며 이 부분은 Services and Networking 영역에서 다룹니다.
+
+CNI 설치 과제는 응시 후기에서 여러 번 나온 주제입니다([Ch-07 5-1절](/blog/cert/cka/cka-07-resources-and-exam-day)). 시험장에서 열 수 있는 문서 목록에 CNI 업체 사이트는 없으니 과제가 주는 매니페스트 파일이나 URL을 쓴다고 보고 순서를 정리했습니다. 이 가정은 허용 문서 목록에서 끌어낸 것입니다.
+
+1. 클러스터의 Pod CIDR을 확인합니다. "Implementation details" 문서에 따르면 kubeadm은 `--pod-network-cidr`가 주어지면 kube-controller-manager에 `--allocate-node-cidrs=true`와 `--cluster-cidr`를 넣습니다.
+2. 매니페스트 안의 Pod 대역 기본값이 1의 값과 같은지 봅니다. "Creating a cluster with kubeadm" 문서는 플러그인이 선호하는 대역이 호스트 네트워크와 겹치면 다른 대역을 골라 `--pod-network-cidr`와 플러그인 YAML 양쪽에 같은 값을 넣으라고 적습니다. 과제가 지정하지 않았다면 이미 정해진 클러스터 값에 플러그인 쪽을 맞춥니다.
+3. 적용한 뒤 노드가 `Ready`가 되고 CoreDNS가 `Running`이 되는지 봅니다.
+
+```bash
+sudo grep -E 'cluster-cidr|allocate-node-cidrs' /etc/kubernetes/manifests/kube-controller-manager.yaml
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.podCIDR}{"\n"}{end}'
+
+kubectl apply -f <과제가 준 CNI 매니페스트>
+kubectl get pods -n kube-system -o wide -w     # 플러그인 DaemonSet Pod가 노드마다 Running
+kubectl get nodes                               # NotReady -> Ready
+ls /etc/cni/net.d/                              # 노드에 설정 파일이 생겼는지
+```
+
+Helm 차트로 주어지면 6절의 `helm show values`로 Pod 대역 값의 키 이름부터 찾습니다.
 
 ### 7-3. CSI
 
@@ -596,6 +654,21 @@ kubectl get bj -A
 3. 컨트롤러가 API를 읽고 쓰기 위한 권한(ServiceAccount와 RBAC)
 
 그래서 "오퍼레이터를 설치하라"는 과제는 대개 Helm 차트나 매니페스트로 위 세 가지를 한꺼번에 넣는 일이고 "구성하라"는 그 오퍼레이터의 커스텀 리소스를 만드는 일입니다. 설치 뒤에는 `kubectl get crd`로 새 CRD가 생겼는지, 컨트롤러 Pod가 `Running`인지, 커스텀 객체를 만들었을 때 컨트롤러가 하위 리소스를 만드는지 차례로 봅니다.
+
+이미 설치된 오퍼레이터를 살피는 과제라면 아래 순서로 정보를 모읍니다. 모두 kubectl 기본 명령이고 CRD 이름은 예시입니다.
+
+```bash
+kubectl get crd | grep example.com                       # 이 그룹의 CRD
+kubectl get crd boardjobs.example.com \
+  -o jsonpath='{.spec.scope}{"\t"}{.spec.versions[*].name}{"\n"}'
+kubectl api-resources --api-group=example.com -o wide    # 축약 이름, 지원 동사
+kubectl explain boardjob.spec --recursive | head -30     # 필드 트리
+kubectl get boardjobs -A                                 # 만들어진 커스텀 객체
+kubectl get deploy -A | grep -i operator                 # 컨트롤러 Deployment 찾기
+kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가 다루는 리소스
+```
+
+과제가 "CRD 목록을 파일로 저장하라"처럼 출력을 요구하면 `-o custom-columns`나 `-o jsonpath`로 필요한 열만 뽑습니다. 출력 형식은 [Ch-06 3-5절](/blog/cert/cka/cka-06-troubleshooting)에 모았습니다.
 
 ### 8-3. 헷갈리는 지점
 
@@ -703,16 +776,17 @@ kubectl get bj -A
 
 공식 문서
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf)
-- Kubernetes, [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Authorization](https://kubernetes.io/docs/reference/access-authn-authz/authorization/)
+- Kubernetes, [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Authorization](https://kubernetes.io/docs/reference/access-authn-authz/authorization/), [kubectl auth can-i](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_auth/kubectl_auth_can-i/), [kubectl auth whoami](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_auth/kubectl_auth_whoami/), [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/)
 - Kubernetes, [Installing kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/), [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
-- Kubernetes, [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/), [kubeadm token](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-token/)
+- Kubernetes, [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/), [kubeadm token](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-token/), [Implementation details](https://kubernetes.io/docs/reference/setup-tools/kubeadm/implementation-details/)
 - Kubernetes, [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/), [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/), [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/)
 - Kubernetes, [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)
+- etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md), kubernetes/kubernetes [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
 - Kubernetes, [Options for Highly Available Topology](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/), [Creating Highly Available Clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)
 - Kubernetes, [Declarative Management of Kubernetes Objects Using Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
 - Kubernetes, [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/), [Network Plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/), [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
 - Kubernetes, [Extend the Kubernetes API with CustomResourceDefinitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/), [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
-- Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [Quickstart Guide](https://helm.sh/docs/intro/quickstart/), [helm install](https://helm.sh/docs/helm/helm_install/), [helm template](https://helm.sh/docs/helm/helm_template/), [helm rollback](https://helm.sh/docs/helm/helm_rollback/)
+- Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [Quickstart Guide](https://helm.sh/docs/intro/quickstart/), [helm install](https://helm.sh/docs/helm/helm_install/), [helm template](https://helm.sh/docs/helm/helm_template/), [helm rollback](https://helm.sh/docs/helm/helm_rollback/), [helm get values](https://helm.sh/docs/helm/helm_get_values/), [Helm 4 Overview](https://helm.sh/docs/overview/)
 
 후기
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026

@@ -26,7 +26,7 @@ seriesOrder: 3
 
 ---
 
-시험 안내서(2025년 10월판) 3영역의 항목은 열 개입니다. 비슷한 것끼리 묶어 목차로 씁니다.
+시험 안내서(2025년 10월판) 3영역의 항목은 열 개입니다. 비슷한 것끼리 묶어 목차로 씁니다. 11절과 12절은 목록에 없지만 중복 제거, 집계, 배열 처리 문항의 보기에 섞이기 쉬워 덧붙였습니다.
 
 | 안내서 항목 | 이 글 |
 |---|---|
@@ -40,6 +40,8 @@ seriesOrder: 3
 | 정렬, 반복, 스키마 출력, DataFrame과 리스트 변환 | 8절 |
 | UDF 만들고 호출하기(stateful 연산자와 StateStore 포함) | 9절 |
 | broadcast 변수와 accumulator | 10절 |
+| (안내서 목록 밖) 윈도 함수 | 11절 |
+| (안내서 목록 밖) 배열 고차 함수, pivot, 샘플링 | 12절 |
 
 예제 데이터입니다. 주문에 상품 배열과 null을 일부러 넣었습니다.
 
@@ -176,7 +178,7 @@ orders.dropDuplicates(["user_id"]).count()      # 회원 101, 102, 103 하나씩
 orders.select("user_id").distinct().count()     # 3, 다만 결과 컬럼은 user_id 하나
 ```
 
-`dropDuplicates(subset)`이 같은 키의 여러 행 중 어느 행을 남기는지는 API 문서에 적혀 있지 않습니다. 특정 행(예: 가장 최근 주문)을 남겨야 하면 윈도 함수 `row_number()`로 직접 고릅니다. 스트리밍 DataFrame의 `dropDuplicates`는 트리거를 넘어 모든 데이터를 상태로 들고 있고 `withWatermark()`로 범위를 줄인다고 문서가 적습니다(5영역에서 다룹니다).
+`dropDuplicates(subset)`이 같은 키의 여러 행 중 어느 행을 남기는지는 API 문서에 적혀 있지 않습니다. 특정 행(예: 가장 최근 주문)을 남겨야 하면 윈도 함수 `row_number()`로 직접 고릅니다(11절). 스트리밍 DataFrame의 `dropDuplicates`는 트리거를 넘어 모든 데이터를 상태로 들고 있고 `withWatermark()`로 범위를 줄인다고 문서가 적습니다(5영역에서 다룹니다).
 
 ### 2-2. null 처리
 
@@ -219,13 +221,20 @@ checked = orders.withColumn(
 checked.filter(~F.col("is_valid"))
 ```
 
-마지막 예에서 `items`가 null이면 `size`의 결과가 무엇인지가 판정을 바꿉니다. 4.2.0 ANSI Compliance 문서는 `size`가 null 입력에 null을 돌려준다고 적습니다. 그러면 `is_valid`가 null이 되어 `~is_valid`도 null이 되고 그 행은 두 필터 어디에도 잡히지 않습니다. 검증 컬럼은 `F.coalesce(조건, F.lit(False))`로 null을 거짓으로 바꿔 두는 편이 안전합니다.
+마지막 예에서 `items`가 null이면 `size`의 결과가 무엇인지가 판정을 바꾸고 이 값은 버전마다 다릅니다. SQL 함수 문서 기준으로 `size`는 `spark.sql.ansi.enabled`가 false이고 `spark.sql.legacy.sizeOfNull`이 true일 때만 null 입력에 -1을 돌려주고 그 밖에는 null을 돌려줍니다.
+
+| 버전(기본 설정) | `size(null)` | 주문 4(`items` null)의 `is_valid` | `filter(~is_valid)`에 잡히는지 |
+|---|---|---|---|
+| 3.5(ANSI 꺼짐) | -1 | false | 잡힌다 |
+| 4.x(ANSI 켜짐) | null | null | 잡히지 않는다 |
+
+4.x에서는 `is_valid`가 null이라 `~is_valid`도 null이고 그 행은 두 필터 어디에도 잡히지 않습니다. 검증 컬럼은 `F.coalesce(조건, F.lit(False))`로 null을 거짓으로 바꿔 두면 두 버전에서 결과가 같습니다.
 
 ### 헷갈리는 지점
 
 - `col == None`으로 null을 찾으면 결과가 null이라 아무 행도 통과하지 못합니다. `isNull()`을 씁니다.
 - `distinct()`와 `GROUP BY`는 null을 같은 값으로 묶습니다. 비교 연산(`=`)에서는 null과 null이 같지 않습니다. NULL Semantics 문서에 둘 다 나옵니다.
-- `na.drop()`은 NaN도 null처럼 지웁니다(문서 문장 "null or NaN values").
+- `na.drop()`은 NaN도 null처럼 지웁니다(문서 문장 "null or NaN values"). `thresh`도 null과 NaN이 아닌 값의 개수로 셉니다(문서 예제 3).
 
 ## 3. 집계
 
@@ -248,6 +257,8 @@ orders.select(
 )
 # 문서 기준 예상 결과(근사값 제외): 6, 4, 3
 ```
+
+`approx_count_distinct`도 셔플을 합니다. 차이는 셔플하는 양입니다. Spark 4.2.0 소스(`AggUtils.planAggregateWithOneDistinct`)를 보면 `count_distinct`는 그룹 키에 DISTINCT 대상 컬럼을 더한 조합으로 먼저 묶습니다. 그래서 그룹마다 고유값이 모두 셔플됩니다. `approx_count_distinct`는 일반 집계처럼 파티션 안에서 부분 집계를 해 그룹마다 HyperLogLog++ 스케치 하나를 만들고 그 스케치만 셔플합니다. 고유값이 많을수록 셔플 데이터가 크게 줄어듭니다. 이 설명은 소스를 읽고 정리한 것이고 같은 내용의 문서 문장은 찾지 못했습니다.
 
 `approx_count_distinct` 문서는 `rsd`를 0.01보다 작게 잡을 거면 `count_distinct()`를 쓰는 편이 효율적이라고 적습니다. `countDistinct`는 3.5.9 문서에 `count_distinct`의 별칭으로 나오고 `count_distinct`를 직접 쓰라고 권합니다. 4.2.0 함수 목록에서는 `countDistinct` 페이지를 찾지 못했습니다.
 
@@ -342,7 +353,9 @@ parts = dated.select(
 |---|---|---|
 | `to_date("2026-13-45")` | null | 오류 |
 | `CAST('a' AS INT)` | null | `CAST_INVALID_INPUT` 오류 |
-| null로 받고 싶을 때 | 그대로 | `try_to_date`(4.0.0~), `try_to_timestamp`, `try_cast` |
+| `F.col("amount") / 0` | null(문서 문장으로는 확인하지 못함) | 0으로 나누기 오류(`try_divide` 설명 기준) |
+| `size(null)` | -1 | null(2-3절) |
+| null로 받고 싶을 때 | 그대로 | `try_to_date`(4.0.0~), `try_to_timestamp`(3.5.0~), `Column.try_cast`(4.0.0~), `try_divide`(3.2.0~) |
 
 `unix_timestamp`의 API 문서는 3.5.9와 4.2.0 모두 "실패하면 null을 돌려준다"고 적습니다. ANSI 문서와 엇갈리는 부분인데 4.x 기본 설정에서는 ANSI 문서 쪽 동작을 기준으로 보는 편이 안전합니다. 실제 동작은 실행해서 확인하겠습니다.
 
@@ -490,7 +503,8 @@ oct_orders.unionByName(with_note, allowMissingColumns=True)
 ### 헷갈리는 지점
 
 - `union`이 중복을 없앤다는 보기는 틀립니다. SQL의 `UNION`과 이름이 같아서 생기는 함정입니다. 예전 자료 중에도 union이 이름으로 맞춘다고 잘못 적은 글이 있습니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 5절).
-- 위치가 바뀐 두 DataFrame의 컬럼 타입이 같으면 `union`은 오류 없이 값을 섞습니다. 타입이 다를 때의 동작(자동 형 변환 또는 오류)은 이번에 문서로 확인하지 못했습니다.
+- 위치가 바뀐 두 DataFrame의 컬럼 타입이 같으면 `union`은 오류 없이 값을 섞습니다. 4.2.0 `union` 문서 예제 2는 `id LONG, money INT`와 `money INT, id LONG`을 union해도 오류 없이 위치대로 붙는 모습을 보여 줍니다. 숫자 타입끼리는 넓은 타입으로 맞춰지는 것으로 보이고 문자열과 숫자처럼 계열이 다른 타입끼리의 동작은 이번에 확인하지 못했습니다.
+- 결과 컬럼 이름은 첫 번째 DataFrame을 따릅니다. 문서 예제 3에서 `A, B`와 `C, D`를 union한 결과 컬럼은 `A, B`입니다.
 - 집합 연산(`intersect`, `subtract`)은 null끼리 같은 값으로 봅니다(NULL Semantics 문서).
 
 ## 7. 스키마를 지정한 읽기와 쓰기
@@ -616,7 +630,30 @@ pdf = orders.limit(100).toPandas()    # 작게 줄인 뒤 변환
 
 ### 8-3. 반복
 
-`foreach(f)`와 `foreachPartition(f)`는 익스큐터에서 함수를 실행하는 액션입니다. 드라이버의 리스트에 값을 모으는 용도로는 쓸 수 없고(각 익스큐터가 복사본을 씁니다) 외부 시스템에 쓰거나 accumulator를 더할 때 씁니다.
+안내서의 "iterating"은 행을 하나씩 도는 방법을 묻습니다. 어디서 도는지가 핵심이라 실행 위치로 나눕니다.
+
+| 방법 | 함수가 도는 곳 | 쓰임 |
+|---|---|---|
+| `for r in df.collect():` | 드라이버 | 작은 결과. 전체를 한 번에 드라이버로 모은다 |
+| `for r in df.toLocalIterator():` | 드라이버 | 큰 결과를 파티션 단위로 받아 돈다. 메모리는 가장 큰 파티션 하나만큼 |
+| `df.foreach(f)` | 익스큐터 | 행마다 `f(row)`. 반환값이 없는 액션 |
+| `df.foreachPartition(f)` | 익스큐터 | 파티션마다 `f(iterator)`. 외부 연결을 파티션당 한 번 연다 |
+
+`foreach`와 `foreachPartition`은 드라이버의 리스트에 값을 모으는 용도로 쓸 수 없습니다. 함수가 익스큐터에서 돌고 각 익스큐터는 드라이버 변수의 복사본을 고칩니다. 외부 시스템에 쓰거나 accumulator를 더할 때 씁니다. 4.2.0 문서 기준으로 두 메서드는 4.0.0부터 Spark Connect에서도 쓸 수 있습니다.
+
+DataFrame과 리스트 사이 변환은 다음 정도를 외워 둡니다.
+
+```python
+orders.columns                                            # ['order_id', 'user_id', ...] 컬럼 이름 리스트
+[r.asDict() for r in orders.collect()]                    # dict 리스트
+[r["order_id"] for r in orders.select("order_id").collect()]   # 한 컬럼 값 리스트
+[r[0] for r in orders.select("order_id").collect()]            # 위치로 꺼내도 같다
+orders.select("order_id").rdd.flatMap(lambda r: r).collect()   # RDD 경유. Spark Connect에서는 .rdd를 쓸 수 없다
+
+# 리스트 → DataFrame
+spark.createDataFrame([(1, "PAID"), (2, "CANCELED")], ["order_id", "status"])
+spark.createDataFrame([Row(order_id=1, status="PAID")])
+```
 
 ### 헷갈리는 지점
 
@@ -639,8 +676,9 @@ spark.udf.register(name, f, returnType=None)
 | 반환 타입 지정 | `DataType` 객체나 DDL 타입 문자열(`"int"`) |
 | 결정성 | 기본으로 결정적 함수로 본다. 아니면 `asNondeterministic()` |
 | 조건 평가 | 조건식이나 불리언 단락 평가를 지원하지 않는다. 특정 행에서 실패할 수 있으면 조건을 함수 안에 넣는다 |
-| 호출 쪽 키워드 인자 | 받지 않는다 |
-| Arrow | 4.2.0부터 기본으로 Arrow 직렬화. `useArrow=None`이면 `spark.sql.execution.pythonUDF.arrow.enabled`(4.2.0 기본 true)를 따른다 |
+| 호출 쪽 키워드 인자 | 4.0.0부터 받는다(`calc(b=..., a=...)` 예제). 같은 페이지 Notes에는 받지 않는다는 예전 문장이 남아 있다 |
+| Arrow | 4.2.0부터 기본으로 Arrow 직렬화. `useArrow=None`이면 `spark.sql.execution.pythonUDF.arrow.enabled`(4.2.0 기본 true, 그 전 false)를 따른다 |
+| 타입 힌트 | 4.1.0부터 pandas UDF 형태의 타입 힌트(`pd.Series -> pd.Series`)를 붙이면 `udf`로 만들어도 벡터화된 pandas UDF가 된다 |
 
 ```python
 @F.udf(returnType="int")
@@ -685,7 +723,15 @@ orders.select("order_id", with_vat("amount").alias("amount_vat"))
 
 ### 9-3. stateful 연산자와 StateStore
 
-안내서 문구는 "Create and invoke user-defined functions with or without stateful operators, including StateStores"입니다. 배치 DataFrame의 UDF는 행마다 독립적으로 계산하고 상태를 들고 있지 않습니다. 상태가 생기는 곳은 Structured Streaming입니다.
+안내서 문구는 "Create and invoke user-defined functions with or without stateful operators, including StateStores"입니다. 배치 DataFrame의 UDF는 행마다 독립적으로 계산하고 상태를 들고 있지 않습니다. 상태가 생기는 곳은 Structured Streaming입니다. 둘을 이렇게 나눕니다.
+
+| 구분 | 예 | 상태 |
+|---|---|---|
+| 상태 없는 함수 | `udf`, `pandas_udf`, 내장 함수 | 행이나 배치마다 독립 계산. 앞 트리거의 값을 기억하지 않는다 |
+| 내장 stateful 연산자 | 스트리밍 `groupBy().agg()`, 윈도 집계, `dropDuplicates`, 스트림-스트림 조인 | Spark가 State Store에 그룹별 중간 결과를 저장한다 |
+| 사용자 정의 상태 함수 | `applyInPandasWithState`(3.4.0~), `transformWithStateInPandas`(4.0.0~) | 사용자가 그룹별 상태를 읽고 쓴다. 저장은 State Store가 맡는다 |
+
+시험 보기에서 "UDF가 이전 배치의 값을 기억한다"는 설명은 상태 없는 UDF에는 맞지 않습니다. 이전 값을 기억해야 하면 위 표 세 번째 줄의 API를 씁니다. 각 연산자의 출력 모드와 워터마크는 [Ch-05](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
 
 | 개념 | 4.2.0 Structured Streaming 문서 |
 |---|---|
@@ -760,7 +806,134 @@ print(bad_rows.value)      # 문서 기준 예상 결과: 2 (status가 null인 �
 - `map` 같은 트랜스포메이션 안에서 accumulator를 더하고 액션을 부르지 않으면 값은 0 그대로입니다. RDD 가이드 예제가 이 경우입니다.
 - `spark.sparkContext`가 필요하므로 Spark Connect(Databricks 서버리스 포함)에서는 이 절의 코드를 쓸 수 없습니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 3절).
 
-## 11. 확인 문제
+## 11. 윈도 함수
+
+안내서 3영역 목록에 윈도 함수가 따로 적혀 있지는 않습니다. 다만 2-1절처럼 "같은 키에서 특정 행 하나 남기기"를 풀려면 필요하고 정렬, 집계 문항의 보기에 자주 섞입니다. `groupBy`는 그룹마다 한 행으로 줄이고 윈도 함수는 행 수를 그대로 둔 채 같은 그룹의 값을 옆에 붙입니다.
+
+### 11-1. Window 스펙과 기본 프레임
+
+```python
+from pyspark.sql import Window
+
+Window.partitionBy(*cols)            # 그룹. 없으면 전체가 한 그룹
+Window.orderBy(*cols)                # 그룹 안 순서
+WindowSpec.rowsBetween(start, end)   # 행 개수 기준 프레임, 양 끝 포함
+WindowSpec.rangeBetween(start, end)  # 정렬 키 값 기준 프레임, 양 끝 포함
+Window.unboundedPreceding, Window.unboundedFollowing, Window.currentRow
+```
+
+`Window` 문서의 기본 프레임 규칙이 집계 결과를 가릅니다.
+
+| 스펙 | 기본 프레임 | 집계 함수(`sum`, `avg`)의 결과 |
+|---|---|---|
+| `orderBy` 없음 | ROWS, 처음부터 끝까지 | 그룹 전체 값. 모든 행이 같은 값 |
+| `orderBy` 있음 | RANGE, 처음부터 현재 행까지 | 누적값(running total) |
+
+RANGE 프레임은 정렬 키가 같은 행을 한 덩어리로 봅니다. 같은 시각의 주문이 둘이면 두 행의 누적값이 같게 나옵니다. 행 단위 누적이 필요하면 `rowsBetween(Window.unboundedPreceding, Window.currentRow)`를 명시합니다.
+
+`partitionBy` 없이 `orderBy`만 주면 모든 데이터가 파티션 하나로 모입니다. Spark 4.2.0 소스(`WindowExecBase.scala`)에 "No Partition Defined for Window operation! Moving all data to a single partition" 경고가 있습니다.
+
+### 11-2. 순위와 앞뒤 행
+
+| 함수 | 같은 값(동점)이 있을 때 | 예: 54000, 32000, 15000, 15000, 8000 |
+|---|---|---|
+| `row_number()` | 동점에도 다른 번호 | 1, 2, 3, 4, 5 |
+| `rank()` | 같은 번호, 다음 번호를 건너뛴다 | 1, 2, 3, 3, 5 |
+| `dense_rank()` | 같은 번호, 건너뛰지 않는다 | 1, 2, 3, 3, 4 |
+| `lag(col, offset=1, default=None)` | offset만큼 앞 행 값. 없으면 default | |
+| `lead(col, offset=1, default=None)` | offset만큼 뒤 행 값 | |
+
+순위 함수와 `lag`, `lead`는 `orderBy`가 있는 윈도에서 씁니다.
+
+```python
+o = orders.dropDuplicates()
+by_user_time = Window.partitionBy("user_id").orderBy(F.col("ordered_at").desc())
+
+# 회원마다 가장 최근 주문 하나(2-1절의 dropDuplicates로는 고를 수 없던 것)
+latest = (o.withColumn("rn", F.row_number().over(by_user_time))
+           .filter(F.col("rn") == 1)
+           .drop("rn"))
+# 문서 기준 예상 결과: 101 → 주문 3, 102 → 주문 5, 103 → 주문 4
+
+running = Window.partitionBy("user_id").orderBy("ordered_at")
+o.select(
+    "user_id", "order_id", "amount",
+    F.sum("amount").over(running).alias("running_total"),      # 기본 프레임이라 누적
+    F.sum("amount").over(Window.partitionBy("user_id")).alias("user_total"),   # orderBy 없음 → 그룹 합계
+    F.lag("amount").over(running).alias("prev_amount"),       # 첫 주문은 null
+)
+# 회원 102: 주문 2(15000) → 누적 15000, 주문 5(15000) → 누적 30000. user_total은 둘 다 30000
+```
+
+`row_number()`는 동점일 때 어느 행이 1번이 될지 정해지지 않습니다. 결과를 고정하려면 `orderBy`에 `order_id` 같은 고유 컬럼을 하나 더 넣습니다.
+
+## 12. 배열 고차 함수, pivot, 샘플링
+
+### 12-1. 배열 고차 함수
+
+배열 컬럼을 펼치지 않고 원소마다 식을 적용하는 함수들입니다. 모두 3.1.0에 Python API가 생겼고 Python lambda는 Column을 받아 Column을 돌려줘야 합니다. 문서는 lambda 안에서 Python UDF를 쓸 수 없다고 적습니다(SPARK-27052).
+
+| 함수 | 시그니처 | 반환 |
+|---|---|---|
+| `transform` | `transform(col, f)`. `f`는 `x` 하나 또는 `(x, i)`(i는 0부터 시작하는 인덱스) | 배열 |
+| `filter` | `filter(col, f)`. 형태는 `transform`과 같다 | 조건을 만족하는 원소의 배열 |
+| `exists` | `exists(col, f)` | 하나라도 참이면 true |
+| `forall` | `forall(col, f)` | 모두 참이면 true |
+| `aggregate` | `aggregate(col, initialValue, merge, finish=None)` | `merge(acc, x)`로 접은 값 하나 |
+
+```python
+orders.select(
+    "order_id",
+    F.transform("items", lambda x: F.upper(x)).alias("items_upper"),
+    F.filter("items", lambda x: x != "pen").alias("without_pen"),
+    F.exists("items", lambda x: x == "book").alias("has_book"),
+    F.forall("items", lambda x: F.length(x) <= 4).alias("short_names"),
+    F.aggregate("items", F.lit(0), lambda acc, x: acc + F.length(x)).alias("chars"),
+)
+# 문서 정의로 예상한 주문 1(["book", "pen"])의 결과: ["BOOK", "PEN"], ["book"], true, true, 7
+```
+
+`F.filter`는 배열 함수이고 `DataFrame.filter`는 행을 거르는 메서드입니다. 이름이 같아서 보기에서 섞이기 쉽습니다.
+
+### 12-2. pivot
+
+```python
+GroupedData.pivot(pivot_col, values=None)
+```
+
+`groupBy` 뒤에 `pivot`을 붙이고 `agg`로 값을 채웁니다. `pivot_col`의 값마다 결과 컬럼이 하나씩 생깁니다.
+
+```python
+o.groupBy("user_id").pivot("status", ["PAID", "CANCELED"]).agg(F.sum("amount"))
+# 문서 기준 예상 결과
+# user_id | PAID  | CANCELED
+# 101     | 32000 | 8000
+# 102     | 15000 | null
+# 103     | 54000 | null
+```
+
+`values`를 생략하면 결과 스키마를 정하려고 `pivot_col`의 고유값을 먼저 계산한다고 문서가 적습니다(eager computation). 트랜스포메이션을 정의하는 시점에 Job이 하나 더 돕니다. 값 목록을 알고 있으면 `values`로 넘겨 그 계산을 없앱니다. 목록에 없는 값(위 예제에서 status가 null인 주문 5)은 결과 컬럼에 들어가지 않습니다.
+
+`pivot`은 `GroupedData`의 메서드라서 `groupBy` 없이 DataFrame에서 바로 부를 수 없습니다. 반대로 넓은 표를 긴 표로 되돌리는 메서드는 `DataFrame.unpivot(ids, values, variableColumnName, valueColumnName)`(3.4.0~, 별칭 `melt`)입니다. 문서는 집계까지 되돌리지는 못한다고 적습니다.
+
+### 12-3. 샘플링
+
+| 메서드 | 시그니처 | 주의 |
+|---|---|---|
+| `sample` | `sample(withReplacement=None, fraction=None, seed=None)` | `fraction`은 0.0~1.0의 비율이다. 정확히 그 비율만큼 나온다는 보장이 없다 |
+| `sampleBy` | `sampleBy(col, fractions, seed=None)` | 층(stratum)별 비율을 dict로. dict에 없는 층은 비율 0으로 본다. 비복원 추출 |
+| `randomSplit` | `randomSplit(weights, seed=None)` | DataFrame 리스트를 돌려준다. 가중치 합이 1이 아니면 정규화한다 |
+
+```python
+orders.sample(fraction=0.5, seed=42)        # 약 절반. 시드를 빼면 실행마다 행 수가 달라진다
+orders.sample(0.5, 42)                      # 첫 위치 인자가 float면 fraction으로 받는다(문서 예제)
+orders.sampleBy("status", fractions={"PAID": 0.5, "CANCELED": 1.0}, seed=7)
+train, test = orders.randomSplit([8.0, 2.0], seed=7)   # [0.8, 0.2]로 정규화
+```
+
+샘플 행 수를 정확히 n개로 맞춰야 하면 `orderBy(F.rand(seed)).limit(n)`처럼 무작위로 정렬한 뒤 자릅니다. 이때는 전체 정렬 비용이 듭니다.
+
+## 13. 확인 문제
 
 직접 만든 문제입니다. 시험 문항이나 문제 은행에서 가져오지 않았습니다.
 
@@ -868,11 +1041,36 @@ A. `spark.sql.autoBroadcastJoinThreshold` 기본은 10MB입니다. broadcast 조
 
 </details>
 
+**문제 8.** `w = Window.partitionBy("user_id").orderBy("ordered_at")`일 때 `F.sum("amount").over(w)`가 회원 102의 두 주문(15000, 15000, 시각이 다름)에 주는 값은?
+
+A. 30000, 30000 B. 15000, 30000 C. 15000, 15000 D. `rowsBetween`이 없어서 오류
+
+<details>
+<summary>정답과 풀이</summary>
+
+B. `orderBy`가 있는 윈도의 기본 프레임은 처음부터 현재 행까지(RANGE)라서 누적합이 나옵니다. A는 `orderBy`가 없을 때(그룹 전체 합)의 결과입니다. 프레임을 생략해도 오류가 나지 않으므로 D는 틀립니다.
+
+</details>
+
+**문제 9.** 다음 중 `status` 값 목록을 미리 계산하는 Job 없이 pivot하는 코드는?
+
+A. `o.groupBy("user_id").pivot("status").agg(F.sum("amount"))`
+B. `o.groupBy("user_id").pivot("status", ["PAID", "CANCELED"]).agg(F.sum("amount"))`
+C. `o.pivot("status").groupBy("user_id").sum("amount")`
+D. `o.groupBy("user_id").agg(F.pivot("status"))`
+
+<details>
+<summary>정답과 풀이</summary>
+
+B. `values`를 주면 결과 스키마를 바로 정할 수 있어 고유값 계산을 건너뜁니다. A는 동작하지만 고유값을 먼저 계산합니다. `pivot`은 `GroupedData`의 메서드라서 C처럼 DataFrame에서 바로 부를 수 없습니다. 4.2.0 함수 목록에 `pivot`이라는 함수는 없으므로 D도 틀립니다.
+
+</details>
+
 ## 범위와 한계
 
-- 시그니처와 기본값은 2026년 10월 19일에 연 PySpark 4.2.0 API 문서와 Spark 4.2.0 문서 기준입니다. 3.x와 다른 부분은 문서에 버전이 적힌 것만 표시했습니다(ANSI 기본 켜짐 4.0, `try_to_date` 4.0.0, `StructType.fromDDL` 4.0.0, 컬럼 위치 정렬 4.0.0, Arrow 기본 4.2, Python UDF Arrow 기본 4.2, `countDistinct`는 3.5.9 문서와 비교). 시험의 기준 Spark 버전은 공개되지 않았습니다.
+- 시그니처와 기본값은 2026년 10월 19일에 연 PySpark 4.2.0 API 문서와 Spark 4.2.0 문서 기준입니다. 3.x와 다른 부분은 문서에 버전이 적힌 것만 표시했습니다(ANSI 기본 켜짐 4.0, `size(null)`의 -1과 null, `try_to_date` 4.0.0, `try_to_timestamp` 3.5.0, `Column.try_cast` 4.0.0, `StructType.fromDDL` 4.0.0, 컬럼 위치 정렬 4.0.0, UDF 호출 쪽 키워드 인자 4.0.0, 타입 힌트 `udf`의 벡터화 4.1.0, Arrow 기본 4.2, Python UDF Arrow 기본 4.2, `countDistinct`는 3.5.9 문서와 비교). 2026년 10월 20일에 2-3절, 4-2절, 6절, 8-3절, 9절을 다시 확인해 고쳤고 11절과 12절을 더했습니다. 시험의 기준 Spark 버전은 공개되지 않았습니다.
 - 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어 PySpark를 띄울 수 없었습니다. "문서 기준 예상 결과"는 API 문서의 정의와 예제로 예상한 값이고 epoch 값은 Python `datetime`으로 계산했습니다.
-- 문서로 확인하지 못해 추론이나 미확인으로 표시한 내용은 다음과 같습니다. `union`에서 같은 위치 컬럼의 타입이 다를 때의 동작, `left_semi`의 중복 처리, UDF 반환 타입 불일치의 결과, 파일 소스의 nullable 처리, 내장 함수가 UDF보다 낫다는 권고, `eqNullSafe` API, `unix_timestamp` API 문서와 ANSI 문서의 엇갈림입니다.
+- 문서로 확인하지 못해 추론이나 미확인으로 표시한 내용은 다음과 같습니다. `union`에서 문자열과 숫자처럼 계열이 다른 타입이 같은 위치에 올 때의 동작, ANSI가 꺼진 3.5에서 0으로 나눈 결과(null), `approx_count_distinct`와 `count_distinct`의 셔플 비교(소스 기준), 12-1절 고차 함수의 결과값, `left_semi`의 중복 처리, UDF 반환 타입 불일치의 결과, 파일 소스의 nullable 처리, 내장 함수가 UDF보다 낫다는 권고, `eqNullSafe` API, `unix_timestamp` API 문서와 ANSI 문서의 엇갈림입니다.
 - `summary()`의 Parameters 설명은 4.2.0 문서에서 본문과 어긋나 보여 본문과 예제를 따랐습니다.
 
 ## 참고 자료
@@ -884,10 +1082,17 @@ PySpark 4.2.0 API
 - DataFrame: [withColumn](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumn.html), [withColumns](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumns.html), [drop](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.drop.html), [withColumnRenamed](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumnRenamed.html), [withColumnsRenamed](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumnsRenamed.html), [filter](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.filter.html), [distinct](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.distinct.html), [dropDuplicates](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.dropDuplicates.html), [dropna](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.dropna.html), [fillna](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.fillna.html), [describe](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.describe.html), [summary](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.summary.html), [groupBy](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.groupBy.html), [join](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.join.html), [crossJoin](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.crossJoin.html), [union](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.union.html), [unionAll](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.unionAll.html), [unionByName](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.unionByName.html), [sort](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.sort.html), [collect](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.collect.html), [head](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.head.html), [tail](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.tail.html), [toLocalIterator](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toLocalIterator.html), [toPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toPandas.html), [printSchema](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.printSchema.html), [hint](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.hint.html)
 - functions: [split](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.split.html), [explode](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.explode.html), [explode_outer](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.explode_outer.html), [count](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.count.html), [count_distinct](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.count_distinct.html), [approx_count_distinct](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.approx_count_distinct.html), [mean](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.mean.html), [from_unixtime](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.from_unixtime.html), [unix_timestamp](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.unix_timestamp.html), [to_date](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.to_date.html), [try_to_date](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.try_to_date.html), [date_format](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.date_format.html), [dayofweek](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.dayofweek.html), [timestamp_seconds](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.timestamp_seconds.html), [broadcast](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.broadcast.html), [udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.udf.html), [pandas_udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.pandas_udf.html)
 - 그 밖: [GroupedData.agg](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.agg.html), [DataFrameNaFunctions.fill](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameNaFunctions.fill.html), [StructType](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.types.StructType.html), [StructField](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.types.StructField.html), [DataFrameReader.schema](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.schema.html), [SparkSession.createDataFrame](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.createDataFrame.html), [UDFRegistration.register](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.UDFRegistration.register.html), [SparkContext.broadcast](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.SparkContext.broadcast.html), [SparkContext.accumulator](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.SparkContext.accumulator.html), [Broadcast](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.Broadcast.html), [Accumulator](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.Accumulator.html)
+- 2026-10-20 추가 확인: [functions.size](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.size.html), [functions.try_to_timestamp](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.try_to_timestamp.html), [Column.try_cast](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Column.try_cast.html), [DataFrame.foreach](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.foreach.html), [DataFrame.foreachPartition](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.foreachPartition.html), [GroupedData.applyInPandasWithState](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.applyInPandasWithState.html), [GroupedData.transformWithStateInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.transformWithStateInPandas.html), [Window](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Window.html), [functions.row_number](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.row_number.html), [functions.rank](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.rank.html), [functions.dense_rank](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.dense_rank.html), [functions.lag](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.lag.html), [functions.transform](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.transform.html), [functions.filter](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.filter.html), [functions.exists](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.exists.html), [functions.forall](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.forall.html), [functions.aggregate](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.aggregate.html), [GroupedData.pivot](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.pivot.html), [DataFrame.unpivot](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.unpivot.html), [DataFrame.sample](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.sample.html), [DataFrame.sampleBy](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.sampleBy.html), [DataFrame.randomSplit](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.randomSplit.html)
 - 3.5.9 비교: [functions.countDistinct (3.5.9)](https://spark.apache.org/docs/3.5.9/api/python/reference/pyspark.sql/api/pyspark.sql.functions.countDistinct.html), [functions.unix_timestamp (3.5.9)](https://spark.apache.org/docs/3.5.9/api/python/reference/pyspark.sql/api/pyspark.sql.functions.unix_timestamp.html)
 
 Apache Spark 4.2.0 문서
 - [NULL Semantics](https://spark.apache.org/docs/latest/sql-ref-null-semantics.html), [JOIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-join.html), [ORDER BY](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-orderby.html)
 - [ANSI Compliance](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html), [SQL Migration Guide](https://spark.apache.org/docs/latest/sql-migration-guide.html), [PySpark Migration Guide](https://spark.apache.org/docs/latest/api/python/migration_guide/pyspark_upgrade.html)
 - [Performance Tuning](https://spark.apache.org/docs/latest/sql-performance-tuning.html), [RDD Programming Guide](https://spark.apache.org/docs/latest/rdd-programming-guide.html)
+- [Spark SQL, Built-in Functions: Collection Functions](https://spark.apache.org/docs/latest/api/sql/collection-functions/) (`size`, `cardinality`), [Aggregate Functions](https://spark.apache.org/docs/latest/api/sql/agg-functions/) (`approx_count_distinct`)
+- Spark 3.5.9 비교: [Spark SQL, Built-in Functions (3.5.9)](https://spark.apache.org/docs/3.5.9/api/sql/index.html) (`size`, `try_divide`)
 - [Structured Streaming: APIs on DataFrames and Datasets](https://spark.apache.org/docs/latest/streaming/apis-on-dataframes-and-datasets.html) (State Store 절)
+
+Apache Spark 4.2.0 소스
+- [sql/core/.../aggregate/AggUtils.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/aggregate/AggUtils.scala) (`planAggregateWithOneDistinct`)
+- [sql/core/.../window/WindowExecBase.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/window/WindowExecBase.scala) (파티션 없는 윈도 경고)

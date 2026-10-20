@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-06] 트러블슈팅: 증상에서 출발해 kubelet과 로그까지 내려가는 순서'
-description: CKA 커리큘럼 v1.37에서 비중이 가장 큰 Troubleshooting 영역(30%)을 목차 순서대로 정리합니다. 노드와 클러스터 구성요소(static Pod, kubelet, journalctl, crictl), 리소스 사용량(metrics-server, kubectl top), 컨테이너 출력(kubectl logs, --previous), 서비스와 네트워킹 문제를 kubernetes.io 문서로 확인하고 증상별 판단 표와 연습 과제를 붙였습니다.
+description: CKA 커리큘럼 v1.37에서 비중이 가장 큰 Troubleshooting 영역(30%)을 목차 순서대로 정리합니다. 노드와 클러스터 구성요소(static Pod, kubelet, journalctl, crictl), 리소스 사용량(metrics-server, kubectl top, jsonpath와 custom-columns로 값 뽑기), 컨테이너 출력(kubectl logs, --previous), 서비스와 네트워킹 문제를 kubernetes.io 문서로 확인하고 증상별 판단 표와 연습 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -99,7 +99,7 @@ kubectl -n shop set image deployment/order-api order-api=nginx:1.27   # 이미�
 sudo crictl pull nginx:1.27
 ```
 
-`crictl pull`은 Debugging Kubernetes nodes with crictl 문서의 예시 목록에는 없고 crictl 저장소 문서에 있는 하위 명령입니다. 이번에 저장소 문서는 열어 보지 않았습니다.
+`crictl pull`은 Debugging Kubernetes nodes with crictl 문서의 예시 목록에는 없고 cri-tools 저장소의 `docs/crictl.md` 하위 명령 목록에 "Pull an image from a registry"로 나옵니다.
 
 ### 0-5. Terminating에 멈춤
 
@@ -387,7 +387,38 @@ kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는
 
 Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포하므로 metrics-server가 TLS로 kubelet에 붙으면 `x509: certificate signed by unknown authority` 같은 오류가 납니다. 문서는 `--kubelet-insecure-tls`로 우회할 수 있지만 운영 클러스터에는 권하지 않고 서명된 kubelet 서빙 인증서를 쓰는 방법을 안내합니다. 연습 클러스터에서는 이 옵션으로 띄우고 시험장에서는 과제의 지시를 따릅니다.
 
-### 3-5. 직접 해 보기
+### 3-5. 출력 형식으로 값 뽑기
+
+"가장 많이 쓰는 Pod 이름을 파일에 적으라"처럼 모니터링 과제는 대개 출력의 일부를 파일로 옮기는 데서 끝납니다. kubectl Quick Reference와 JSONPath Support 문서의 예시를 과제 형태로 묶었습니다.
+
+| 형식 | 쓰는 자리 | 예 |
+|---|---|---|
+| `--sort-by=<JSONPath>` | 표를 필드 값으로 정렬 | `kubectl get pods --sort-by='.status.containerStatuses[0].restartCount'` |
+| `-o jsonpath='{...}'` | 값만 뽑기. `range`와 `end`로 목록 반복 | `kubectl get nodes -o jsonpath='{.items[*].metadata.name}'` |
+| `-o custom-columns=<머리>:<경로>,...` | 원하는 열만 표로 | `kubectl get pods -A -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name'` |
+| `-o name` | `종류/이름` 한 줄씩 | `kubectl get pods -n shop -o name` |
+| `--no-headers` | 머리줄 빼기. `head`, `awk`와 함께 | `kubectl top pod -A --no-headers` |
+
+```bash
+# 노드마다 이름과 Ready 상태
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}'
+
+# 재시작이 가장 많은 Pod (오름차순이라 마지막 줄)
+kubectl get pods -A --sort-by='.status.containerStatuses[0].restartCount' --no-headers | tail -1
+
+# 쇼핑몰 Pod의 이미지 목록
+kubectl get pods -n shop -o custom-columns='NAME:.metadata.name,IMAGE:.spec.containers[*].image'
+
+# 테인트가 걸린 노드 확인 (Quick Reference 예시)
+kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINT:.spec.taints[*].key,EFFECT:.spec.taints[*].effect'
+
+# 라벨 이름에 점이 있으면 역슬래시로 이스케이프
+kubectl get nodes -o jsonpath='{.items[0].metadata.labels.kubernetes\.io/hostname}'
+```
+
+JSONPath Support 문서는 kubectl의 JSONPath가 정규 표현식을 지원하지 않으니 그런 처리가 필요하면 `jq`를 쓰라고 적습니다. 공식 안내가 시험 호스트에 깔려 있다고 적는 도구 목록에는 `yq`가 있고 `jq`는 없습니다([Ch-00 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan)). 그래서 복잡한 가공은 `-o yaml | yq`나 `grep`, `awk`로 합니다. 파일로 옮긴 뒤에는 `cat`으로 과제가 요구한 형식(이름만인지, 네임스페이스를 포함하는지)과 맞는지 다시 봅니다.
+
+### 3-6. 직접 해 보기
 
 1. 연습 클러스터에 metrics-server를 설치하고 `kubectl top node`가 나오기까지 걸리는 시간을 봅니다.
 2. 결제 Deployment에 CPU를 쓰는 루프 컨테이너를 넣고 `kubectl top pod --containers --sort-by=cpu`로 맨 위에 오는지 확인합니다.
@@ -433,7 +464,7 @@ kubectl logs deployment/order-api -n shop --all-pods=true
 | 옵션 | 레퍼런스 기준 |
 |---|---|
 | `-p`, `--previous` | 이전에 종료된 컨테이너의 로그 |
-| `--tail` | 기본 -1(전부). 셀렉터를 쓰면 기본값이 달라지는 것으로 알려져 있지만 이번에 확인하지 못했다 |
+| `--tail` | 셀렉터가 없으면 기본 -1(전부), `-l` 셀렉터를 쓰면 기본 10줄 |
 | `--prefix` | 각 줄 앞에 Pod와 컨테이너 이름 |
 | `--max-log-requests` | 셀렉터로 여러 Pod를 볼 때 동시 요청 수. 기본 5 |
 | `--all-pods` | `deployment/<이름>`처럼 리소스를 줄 때 모든 Pod |
@@ -507,7 +538,7 @@ spec:
 kubectl -n shop logs board -c access-log
 ```
 
-문서의 예는 같은 구조를 Pod의 일반 컨테이너 두 개로 보여 줍니다. 네이티브 사이드카(`initContainers`에 `restartPolicy: Always`)로 만드는 방식은 이번 글의 범위 밖으로 둡니다.
+문서의 예는 같은 구조를 Pod의 일반 컨테이너 두 개로 보여 줍니다. 1.33에서 stable이 된 네이티브 사이드카(`initContainers`에 `restartPolicy: Always`)로 같은 일을 하는 예와 시작, 종료 순서는 [Ch-03 4-4절](/blog/cert/cka/cka-03-workloads-scheduling)에 정리했습니다. 네이티브 사이드카도 로그는 `kubectl logs <pod> -c <사이드카 이름>`으로 봅니다.
 
 stdout과 stderr를 따로 받는 기능(`PodLogsQuerySplitStreams` 기능 게이트, `?stream=Stderr` 쿼리)도 문서에 있지만 알파 기능이라 시험 클러스터에서 켜져 있다고 기대하지 않습니다.
 
@@ -590,7 +621,7 @@ kubectl -n kube-system logs <kube-proxy Pod>
 kubectl -n kube-system get configmap kube-proxy -o yaml | grep mode
 ```
 
-kube-proxy의 DaemonSet 이름, Pod 라벨 `k8s-app=kube-proxy`, ConfigMap 이름 `kube-proxy`는 kubeadm 기본값으로 알려진 값이며 이번에 문서로 확인하지 않았습니다. 시험장에서는 `kubectl -n kube-system get ds,cm`으로 이름부터 확인합니다.
+kubeadm Implementation details 문서는 kube-proxy를 DaemonSet으로 배포하고 API 서버 주소를 ConfigMap에서 읽게 한다고 적고 Troubleshooting kubeadm 문서의 예시 명령은 `kubectl -n kube-system patch ds kube-proxy`입니다. Pod 라벨 `k8s-app=kube-proxy`와 ConfigMap 이름 `kube-proxy`는 kubeadm 기본값으로 알려진 값이며 문서로 확인하지 않았습니다. 시험장에서는 `kubectl -n kube-system get ds,cm`으로 이름부터 확인합니다.
 
 문서의 로그 예시에서 `Using iptables Proxier`가 보이면 iptables 모드입니다. iptables 모드라면 노드에서 `iptables-save | grep <svc 이름>`으로 Service용 규칙이 생겼는지 봅니다(Debug Services 문서의 iptables 절).
 
@@ -711,9 +742,9 @@ Pod 객체가 생기지 않으면 ReplicaSet 컨트롤러가 일하지 않는 �
 
 - 이 글의 명령은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서에 실린 것이고 그렇게 표시했습니다. 각 절의 "직접 해 보기"는 연습 클러스터를 만든 뒤 할 목록이며 결과는 나중에 덧붙입니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. Metrics API의 1.37 stable 표시와 `metrics.k8s.io/v1` 경로는 이 원문 기준이며 시험 클러스터의 metrics-server가 어느 버전을 제공하는지는 확인하지 못했습니다.
-- kube-proxy의 DaemonSet과 ConfigMap 이름, metrics-server의 Deployment 이름, `/var/log/pods`의 하위 경로 규칙, `crictl pull`, `systemctl cat`, `kubectl logs`에서 셀렉터를 쓸 때의 `--tail` 기본값은 이번에 문서로 확인하지 못했습니다.
+- kube-proxy의 Pod 라벨과 ConfigMap 이름, metrics-server의 Deployment 이름, `/var/log/pods`의 하위 경로 규칙, `systemctl cat`은 이번에 문서로 확인하지 못했습니다.
 - 0-2 표의 "흔한 원인" 열과 2-5 표의 매니페스트 점검 위치는 문서 내용에 제 판단을 더한 것입니다. 실제 시험에 어떤 고장이 나오는지는 공개되지 않았고 후기의 출제 문항은 옮기지 않았습니다.
-- etcd 백업과 복구, kubeadm 업그레이드는 [Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에서 정리한 대로 커리큘럼 명시 항목에서 빠져 이 글에서는 다루지 않았습니다.
+- etcd 백업과 복구, kubeadm 업그레이드는 [Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에서 정리한 대로 커리큘럼 명시 항목에서 빠져 이 글에서는 다루지 않았습니다. 절차는 [Ch-02 4절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 
 ## 참고 자료
 
@@ -729,6 +760,7 @@ kubernetes.io
 - [Debugging Kubernetes nodes with crictl](https://kubernetes.io/docs/tasks/debug/debug-cluster/crictl/)
 - [Resource metrics pipeline](https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/)
 - [Logging Architecture](https://kubernetes.io/docs/concepts/cluster-administration/logging/)
+- [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/), [JSONPath Support](https://kubernetes.io/docs/reference/kubectl/jsonpath/)
 - [Pod Lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/)
 - [Images](https://kubernetes.io/docs/concepts/containers/images/)
 - [Node Status](https://kubernetes.io/docs/reference/node/node-status/)
@@ -739,6 +771,7 @@ kubernetes.io
 - [Implementation details](https://kubernetes.io/docs/reference/setup-tools/kubeadm/implementation-details/) (kubeadm)
 - [Configuring each kubelet in your cluster using kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/kubelet-integration/)
 - [Troubleshooting kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/)
+- kubernetes-sigs/cri-tools, [docs/crictl.md](https://github.com/kubernetes-sigs/cri-tools/blob/master/docs/crictl.md)
 - [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/)
 - kubectl 레퍼런스: [kubectl logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/), [kubectl top pod](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_pod/), [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/), [kubectl debug](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_debug/)
 
