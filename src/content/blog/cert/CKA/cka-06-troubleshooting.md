@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-06] 트러블슈팅: 증상에서 출발해 kubelet과 로그까지 내려가는 순서'
-description: CKA 커리큘럼 v1.37에서 비중이 가장 큰 Troubleshooting 영역(30%)을 목차 순서대로 정리합니다. 노드와 클러스터 구성요소(static Pod, kubelet, journalctl, crictl), 리소스 사용량(metrics-server, kubectl top, jsonpath와 custom-columns로 값 뽑기), 컨테이너 출력(kubectl logs, --previous), 서비스와 네트워킹 문제를 kubernetes.io 문서로 확인하고 증상별 판단 표와 연습 과제를 붙였습니다.
+description: CKA 커리큘럼 v1.37에서 비중이 가장 큰 Troubleshooting 영역(30%)을 목차 순서대로 정리합니다. 노드와 클러스터 구성요소(static Pod, kubelet, journalctl, crictl), kubelet 설정 파일 오류와 클라이언트 인증서 만료, 리소스 사용량(metrics-server, kubectl top), JSONPath 필터와 range, custom-columns, --sort-by를 jq 없이 쓰는 법, 컨테이너 출력(kubectl logs, -c와 기본 컨테이너, --previous), 서비스와 네트워킹 문제를 kubernetes.io 문서로 확인하고 증상별 판단 표와 연습 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -152,6 +152,14 @@ Taints:             node.kubernetes.io/unreachable:NoExecute
 
 `Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽입니다. 그 노드로 들어갑니다.
 
+노드가 언제 끊겼는지 알고 싶을 때 조건 표의 `LastHeartbeatTime`만 보면 시각이 부정확합니다. 이 값은 `.status` 갱신 때 바뀌고 `.status`는 변화가 없으면 기본 5분마다 갱신되기 때문입니다. 10초마다 갱신되는 Lease의 `renewTime`이 더 촘촘합니다.
+
+```bash
+kubectl -n kube-node-lease get lease <노드> -o jsonpath='{.spec.renewTime}{"\n"}'
+```
+
+Node Status 문서의 조건 목록은 위 표의 다섯 가지입니다. 오래된 자료에 나오는 `OutOfDisk` 조건은 지금 목록에 없고 디스크 부족은 `DiskPressure`로 봅니다.
+
 ### 1-3. 노드 안에서 볼 것
 
 시험 환경은 과제마다 지정된 호스트에 `ssh`로 들어가고 권한이 필요하면 `sudo`를 씁니다([Ch-00 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan)).
@@ -180,7 +188,51 @@ drop-in 파일 자체의 경로는 설치 방법마다 다르고 문서도 예�
 
 kubelet 로그에서 원인을 찾았다면 고치는 대상은 대개 위 파일 중 하나입니다. 예를 들어 설정 파일의 경로를 잘못 바꿨거나, kubeconfig가 가리키는 인증서가 없거나, 컨테이너 런타임 소켓 주소가 틀린 경우입니다. 고친 뒤에는 `systemctl daemon-reload`(drop-in을 고쳤을 때)와 `systemctl restart kubelet`을 하고 `kubectl get nodes`로 Ready를 확인합니다.
 
-### 1-4. kubectl debug로 노드 들여다보기
+### 1-4. kubelet 설정 파일 오류와 인증서 만료
+
+`systemctl status kubelet`이 `activating (auto-restart)`나 `failed`를 반복하면 kubelet이 시작 단계에서 죽고 있는 것입니다. 노드 안에서 볼 순서를 표로 정리했습니다. 명령은 노드에서 `sudo`로 실행합니다.
+
+| 순서 | 확인 | 명령 | 이상하면 |
+|---|---|---|---|
+| 1 | 노드 자원 | `df -h`, `free -m` | 디스크나 메모리가 바닥이면 노드 조건의 `DiskPressure`, `MemoryPressure`와 맞춰 보고 공간부터 확보 |
+| 2 | 런타임 | `systemctl status containerd`, `crictl info` | 런타임이 죽어 있으면 kubelet도 Pod를 만들지 못한다 |
+| 3 | kubelet 로그의 첫 오류 | `journalctl -u kubelet -n 50 --no-pager` | 재시작 루프라면 같은 오류가 반복된다. 맨 처음 나오는 오류 줄을 읽는다 |
+| 4 | 설정 파일 경로와 내용 | `systemctl cat kubelet`, `cat /var/lib/kubelet/kubeadm-flags.env`, `/var/lib/kubelet/config.yaml` | drop-in의 `--config`, `--kubeconfig` 경로가 실제 파일과 맞는지, YAML 문법과 필드 이름 |
+| 5 | kubeconfig의 API 서버 주소 | `grep server /etc/kubernetes/kubelet.conf` | 주소나 포트(kubeadm 기본 6443)가 틀리면 연결 거부가 로그에 남는다 |
+| 6 | 클라이언트 인증서 | `openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -subject -issuer -dates` | 만료(`notAfter`)됐거나 subject와 issuer가 아래 설명과 다르면 인증서 복구 |
+
+설정 쪽 원인은 kubeadm 기준 파일 다섯 개(1-3절 표) 중 하나를 잘못 고친 경우가 대부분입니다. 버전에 따라 생긴 원인도 있습니다. 1.35부터 kubelet의 `failCgroupV1` 기본값이 `true`라서 cgroup v1 노드에서는 kubelet이 기본으로 시작하지 않습니다(cgroups 문서). 스왑이 켜진 노드에서 kubelet이 시작하지 않는 기본 동작도 그대로입니다. 두 경우 모두 로그에 원인이 문장으로 남습니다.
+
+인증서 쪽은 Certificate Management with kubeadm 문서와 Troubleshooting kubeadm 문서의 설명을 따릅니다.
+
+- kubeadm은 kubelet 클라이언트 인증서를 자동으로 교체(rotation)하게 설정합니다. `/etc/kubernetes/kubelet.conf`가 심볼릭 링크 `/var/lib/kubelet/pki/kubelet-client-current.pem`을 가리키고 kubelet이 만료 전에 새 인증서를 받아 링크를 바꿉니다.
+- 그래서 `kubeadm certs check-expiration` 목록에는 `kubelet.conf`가 없습니다. 이 명령으로는 kubelet 인증서 만료를 알 수 없으니 위 표 6번의 `openssl`로 직접 봅니다.
+- 정상이면 subject는 `O = system:nodes, CN = system:node:<노드 이름>` 꼴이고 issuer는 클러스터 CA입니다. Node 인가자와 RBAC가 이 그룹과 이름으로 kubelet을 알아보기 때문에 그룹이나 이름이 다르면 인증은 돼도 권한 오류가 납니다.
+- 자동 교체가 실패하면 kube-apiserver 로그에 `x509: certificate has expired or is not yet valid` 같은 오류가 보인다고 문서는 적습니다. "not yet valid"는 인증서 시작 시각보다 노드 시계가 이른 경우에도 나오므로 `date`로 노드 시계도 함께 봅니다.
+
+만료된 kubelet 클라이언트 인증서를 되살리는 문서의 절차를 줄이면 다음과 같습니다.
+
+1. 고장 난 노드에서 `/etc/kubernetes/kubelet.conf`와 `/var/lib/kubelet/pki/kubelet-client*`를 백업하고 지웁니다.
+2. `/etc/kubernetes/pki/ca.key`가 있는 정상 컨트롤 플레인 노드에서 새 kubeconfig를 만듭니다. 클러스터 이름과 서버 주소는 만든 파일에서 손으로 맞추거나 `--config`로 넘깁니다.
+3. 만든 파일을 고장 난 노드의 `/etc/kubernetes/kubelet.conf`로 복사합니다.
+4. kubelet을 재시작하고 `/var/lib/kubelet/pki/kubelet-client-current.pem`이 다시 생기기를 기다립니다.
+5. `kubelet.conf`의 `client-certificate-data`, `client-key-data`를 아래 두 줄로 바꿔 교체되는 인증서를 가리키게 합니다.
+6. kubelet을 다시 재시작하고 노드가 `Ready`인지 봅니다.
+
+```bash
+# 2번: 정상 컨트롤 플레인 노드에서 (NODE는 고장 난 노드 이름)
+sudo kubeadm kubeconfig user --org system:nodes --client-name system:node:$NODE > kubelet.conf
+```
+
+```yaml
+# 5번: kubelet.conf의 users 항목
+    client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem
+    client-key: /var/lib/kubelet/pki/kubelet-client-current.pem
+```
+
+kubelet 서빙 인증서는 별개입니다. kubeadm이 배포하는 서빙 인증서는 기본이 자체 서명이고 이것이 3-4절의 metrics-server `x509` 오류 원인입니다. `serverTLSBootstrap: true`로 클러스터 CA 서명 인증서를 받게 하면 그 CSR은 kube-controller-manager가 자동 승인하지 않아 `kubectl certificate approve`로 승인해야 한다고 같은 문서는 적습니다.
+
+### 1-5. kubectl debug로 노드 들여다보기
 
 ssh를 쓸 수 없는 환경이라면 Debug Running Pods 문서의 노드 디버그를 씁니다.
 
@@ -190,7 +242,7 @@ kubectl debug node/<노드> -it --image=ubuntu
 
 문서가 적은 동작은 다음과 같습니다. 노드 이름으로 Pod 이름이 자동으로 정해지고 노드의 루트 파일시스템이 `/host`에 마운트되고 호스트의 IPC, 네트워크, PID 네임스페이스에서 돕니다. Pod가 특권(privileged)이 아니어서 일부 프로세스 정보 읽기나 `chroot /host`가 실패할 수 있고 필요하면 `--profile=sysadmin`을 씁니다. 끝나면 만든 디버그 Pod를 지웁니다.
 
-### 1-5. 노드를 서비스에서 빼고 넣기
+### 1-6. 노드를 서비스에서 빼고 넣기
 
 트러블슈팅 과제가 "노드를 점검하기 위해 비우라"를 포함하면 cordon과 drain을 씁니다. Nodes 문서와 Safely Drain a Node 문서 기준입니다.
 
@@ -202,18 +254,19 @@ kubectl uncordon <노드>                       # 다시 배치 허용
 
 문서는 DaemonSet이 관리하는 Pod가 있으면 `--ignore-daemonsets`를 줘야 drain이 성공한다고 설명합니다. DaemonSet 컨트롤러가 사라진 Pod를 같은 노드에 바로 다시 만들기 때문입니다. cordon된 노드는 출력에서 `SchedulingDisabled`로 보이는데 Node Status 문서는 이것이 API의 조건 목록에 없는 출력용 표시라고 적습니다.
 
-### 1-6. 자주 틀리는 지점
+### 1-7. 자주 틀리는 지점
 
 - 노드에서 `systemctl restart kubelet`만 하고 `enable`을 빠뜨립니다. 과제가 "재부팅 뒤에도 유지"를 요구하면 enable 상태까지 확인합니다.
 - 다른 노드에서 고치는 실수. 과제마다 지정된 호스트가 있고 ssh 안에서 다시 ssh할 수 없습니다.
 - 워커 노드 NotReady를 컨트롤 플레인에서 해결하려는 것. kubelet은 각 노드에서 따로 돕니다.
 - 노드 조건이 `NetworkUnavailable`이거나 kubelet 로그에 CNI 관련 오류가 있는데 kubelet만 재시작하는 것. 네트워크 플러그인 Pod 상태를 함께 봅니다.
 
-### 1-7. 직접 해 보기
+### 1-8. 직접 해 보기
 
 1. 워커 노드에서 `sudo systemctl stop kubelet`을 하고 컨트롤 플레인에서 `kubectl get nodes -w`로 상태가 바뀌는 데 걸리는 시간을 잽니다. 문서의 기본값 50초와 비교합니다.
 2. `/var/lib/kubelet/config.yaml`을 백업한 뒤 일부러 YAML 들여쓰기를 망가뜨리고 `journalctl -u kubelet`에서 오류 줄을 찾아 되돌립니다.
 3. 노드를 drain해서 쇼핑몰 Deployment의 Pod가 다른 노드로 옮겨지는지 보고 uncordon합니다.
+4. 워커 노드에서 1-4절 표 6번의 `openssl` 명령으로 kubelet 클라이언트 인증서의 subject, issuer, 만료일을 읽고 `ls -l /var/lib/kubelet/pki/`로 `kubelet-client-current.pem`이 어느 파일을 가리키는 링크인지 확인합니다. 컨트롤 플레인에서 `kubeadm certs check-expiration` 결과에 이 인증서가 없는 것도 함께 봅니다.
 
 ## 2. 클러스터 구성요소
 
@@ -226,6 +279,8 @@ Logging Architecture 문서는 시스템 구성요소를 둘로 나눕니다.
 | 컨테이너로 돌지 않음 | kubelet, 컨테이너 런타임 | `systemctl status`, `journalctl -u <서비스>` |
 | Pod로 돎(대개 static Pod) | kube-apiserver, kube-controller-manager, kube-scheduler, etcd | `kubectl -n kube-system get pod`, `kubectl logs`. API 서버가 죽었으면 `crictl` |
 | DaemonSet | kube-proxy(쓰는 경우) | `kubectl -n kube-system logs` |
+
+kubeadm을 쓰지 않고 바이너리를 systemd 서비스로 설치한 클러스터라면 컨트롤 플레인 구성요소와 kube-proxy도 표의 첫 줄처럼 `systemctl status kube-apiserver`, `journalctl -u kube-apiserver`로 봅니다. 어느 방식인지는 `ls /etc/kubernetes/manifests`와 `kubectl -n kube-system get pod`로 먼저 가립니다.
 
 kubeadm Implementation details 문서 기준으로 kubeadm은 컨트롤 플레인 구성요소의 static Pod 매니페스트를 `/etc/kubernetes/manifests`에 씁니다. 이 Pod들은 모두 `kube-system`에 생기고 `tier: control-plane`, `component: <구성요소 이름>` 라벨을 받으며 `hostNetwork: true`로 돕니다.
 
@@ -352,6 +407,8 @@ Resource metrics pipeline 문서의 구성은 오른쪽에서 왼쪽으로 흐�
 
 이 파이프라인이 제공하는 것은 자동 확장에 필요한 최소한의 CPU와 메모리뿐입니다. 더 많은 메트릭이 필요하면 Custom Metrics API를 쓰는 별도 파이프라인을 두라고 문서는 적습니다.
 
+metrics-server README도 용도를 좁혀 둡니다. 수집 간격은 15초이고 자동 확장(HPA, VPA) 전용이라 모니터링 시스템의 데이터 원천이나 정확한 사용량 출처로 쓰지 말라고 적습니다. 그런 용도에는 Prometheus 같은 모니터링 솔루션을 권하고 kubelet의 `/metrics/resource`를 직접 수집하라고 안내합니다. `kubectl top`이 보여 주는 것도 가장 최근에 수집한 값이라 과거 시점의 사용량은 따로 모니터링 시스템에서 봅니다. 고가용성이 필요하면 복제본 수를 1보다 크게 둔 HA 매니페스트로 설치할 수 있습니다.
+
 ### 3-2. kubectl top
 
 ```bash
@@ -418,11 +475,71 @@ kubectl get nodes -o jsonpath='{.items[0].metadata.labels.kubernetes\.io/hostnam
 
 JSONPath Support 문서는 kubectl의 JSONPath가 정규 표현식을 지원하지 않으니 그런 처리가 필요하면 `jq`를 쓰라고 적습니다. 공식 안내가 시험 호스트에 깔려 있다고 적는 도구 목록에는 `yq`가 있고 `jq`는 없습니다([Ch-00 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan)). 그래서 복잡한 가공은 `-o yaml | yq`나 `grep`, `awk`로 합니다. 파일로 옮긴 뒤에는 `cat`으로 과제가 요구한 형식(이름만인지, 네임스페이스를 포함하는지)과 맞는지 다시 봅니다.
 
-### 3-6. 직접 해 보기
+### 3-6. JSONPath를 jq 없이 쓰기
+
+3-5절의 표가 형식의 목록이라면 이 절은 식을 세우는 방법입니다. 순서는 세 단계입니다. 먼저 `kubectl get <리소스> -o json`(또는 `-o yaml`)으로 구조를 봅니다. 필드 이름이 헷갈리면 `kubectl explain pod.status.containerStatuses`처럼 스키마를 확인합니다. 찾은 경로를 `-o jsonpath='{...}'`에 넣으면 끝입니다. 목록을 조회하면 결과가 `items` 배열로 감싸이고 이름을 준 단일 객체 조회에는 `items`가 없다는 점이 첫 함정입니다.
+
+JSONPath Support 문서의 연산자 중 시험에 쓰는 것만 추렸습니다.
+
+| 연산자 | 뜻 | 예 |
+|---|---|---|
+| `.필드`, `['필드']` | 자식 | `{.metadata.name}` |
+| `[n]`, `[*]` | 배열 원소 하나, 전부 | `{.items[*].metadata.name}` |
+| `[,]` | 여러 필드를 한 번에 | `{.items[*]['metadata.name', 'status.capacity']}` |
+| `?()` | 조건 필터. `@`는 지금 보는 원소 | `{.status.conditions[?(@.type=="Ready")].status}` |
+| `range`, `end` | 목록을 돌며 원소마다 같은 서식 출력 | `{range .items[*]}{.metadata.name}{"\n"}{end}` |
+| `"\t"`, `"\n"` | 따옴표 안의 글자는 그대로 출력 | `{.metadata.name}{"\t"}{.status.phase}` |
+| `\.` | 필드 이름 안의 점 이스케이프 | `{.metadata.labels.kubernetes\.io/hostname}` |
+| `..` | 깊이에 상관없이 그 이름의 필드 전부 | `{..image}` |
+
+필터는 배열 안에서 조건에 맞는 원소만 남깁니다. Quick Reference에 실린 예가 노드 주소에서 한 종류만 고르는 것입니다. 조건에는 `==`와 `!=`를 씁니다.
+
+```bash
+# 노드마다 이름과 내부 IP (Quick Reference의 ExternalIP 예를 InternalIP로 바꿈)
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.addresses[?(@.type=="InternalIP")].address}{"\n"}{end}'
+
+# 컨테이너가 여럿인 Pod에서 app 컨테이너의 이미지만
+kubectl -n shop get pod board -o jsonpath='{.spec.containers[?(@.name=="app")].image}{"\n"}'
+
+# range 안에 range: 노드마다 모든 조건을 type=status로 (Quick Reference 예시에 줄바꿈을 더함)
+kubectl get nodes -o jsonpath='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{"\n"}{end}'
+```
+
+custom-columns의 경로는 목록의 원소 하나를 기준으로 씁니다. kubectl이 원소마다 행을 만들기 때문에 `.items[*]`를 붙이지 않습니다. 필터도 그대로 쓸 수 있습니다.
+
+```bash
+kubectl get node -o custom-columns='NODE:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status'
+kubectl get pods -A -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,NODE:.spec.nodeName' --sort-by=.spec.nodeName
+```
+
+`--sort-by`도 JSONPath를 받고 오름차순으로만 정렬합니다. 가장 큰 값이 필요하면 3-5절처럼 `--no-headers`와 `tail -1`을 붙입니다. 배열 필드로 정렬할 때는 `[0]`처럼 원소 하나를 집습니다(`--sort-by='.status.containerStatuses[0].restartCount'`). 용량처럼 단위가 붙은 값도 Quick Reference가 `kubectl get pv --sort-by=.spec.capacity.storage`를 예로 듭니다.
+
+jq가 없을 때 대신 쓰는 방법입니다.
+
+| jq로 하던 일 | 대신 |
+|---|---|
+| 정규 표현식으로 거르기 | JSONPath는 정규식을 지원하지 않는다(문서). `range`로 한 줄에 하나씩 뽑고 `grep`으로 거른다 |
+| 한 줄에 하나씩 이름 뽑기 | `{range .items[*]}{.metadata.name}{"\n"}{end}` 또는 `-o name` |
+| 개수 세기, 중복 제거 | 한 줄에 하나씩 뽑은 뒤 `wc -l`, `sort \| uniq -c` |
+| Secret 값 base64 디코딩 | `-o jsonpath='{.data.password}' \| base64 -d`, 또는 Quick Reference의 `go-template`과 `base64decode` |
+| 복잡한 변환 | `-o yaml \| yq` (시험 호스트 도구 목록에 있음, 3-5절) |
+
+```bash
+# 이름이 order로 시작하는 Pod만
+kubectl -n shop get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep '^order'
+
+# 노드별 Pod 수
+kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort | uniq -c
+```
+
+자주 하는 실수는 네 가지입니다. 식 전체를 작은따옴표로 감싸지 않아 셸이 `[*]`나 `"`를 먼저 해석하는 것, 중괄호를 빼먹는 것, custom-columns에 `.items[*]`를 붙이는 것, 마지막에 `{"\n"}`이 없어 파일 끝 줄바꿈이 빠지는 것입니다. 결과를 파일로 옮겼다면 `cat -A`로 탭과 줄 끝까지 확인합니다.
+
+### 3-7. 직접 해 보기
 
 1. 연습 클러스터에 metrics-server를 설치하고 `kubectl top node`가 나오기까지 걸리는 시간을 봅니다.
 2. 결제 Deployment에 CPU를 쓰는 루프 컨테이너를 넣고 `kubectl top pod --containers --sort-by=cpu`로 맨 위에 오는지 확인합니다.
 3. `kubectl get --raw "/apis/metrics.k8s.io/v1/nodes/<노드>"` 결과의 `window`와 `usage`를 읽어 `kubectl top node` 출력과 맞춰 봅니다. 클러스터가 v1beta1만 제공하면 경로를 바꿉니다.
+4. 3-6절의 노드 이름과 InternalIP 명령을 실행해 `kubectl get nodes -o wide`의 INTERNAL-IP 열과 같은지 봅니다. 같은 내용을 custom-columns로 다시 만들어 두 방식의 출력 차이(머리줄 유무, 구분자)를 비교합니다.
 
 ## 4. 컨테이너 출력 스트림
 
@@ -469,6 +586,17 @@ kubectl logs deployment/order-api -n shop --all-pods=true
 | `--max-log-requests` | 셀렉터로 여러 Pod를 볼 때 동시 요청 수. 기본 5 |
 | `--all-pods` | `deployment/<이름>`처럼 리소스를 줄 때 모든 Pod |
 | `--limit-bytes` | 출력 바이트 제한 |
+
+멀티 컨테이너 Pod에서 `-c`를 빼면 kubectl은 오류를 내지 않고 컨테이너 하나를 골라 로그를 보여 줍니다. kubectl 소스(`pkg/polymorphichelpers/logsforobject.go`) 기준으로 고르는 순서는 이렇습니다.
+
+1. Pod에 `kubectl.kubernetes.io/default-container` 어노테이션이 있으면 그 이름의 컨테이너
+2. 없으면 `spec.containers`의 첫 번째 컨테이너. 이때 표준 오류에 `Defaulted container "app" out of: app, access-log` 꼴의 안내를 한 줄 찍습니다
+
+사이드카 로그를 보려다 앱 로그를 읽는 실수가 여기서 생깁니다. 어노테이션이 가리키는 이름의 컨테이너가 없으면 그 사실을 알리고 첫 번째 컨테이너로 넘어갑니다. 컨테이너 이름은 안내 문구나 아래 명령으로 확인합니다. init 컨테이너와 네이티브 사이드카(`initContainers`에 있음)의 로그도 `-c <이름>`으로 봅니다.
+
+```bash
+kubectl -n shop get pod board -o jsonpath='{.spec.containers[*].name}{"\n"}{.spec.initContainers[*].name}{"\n"}'
+```
 
 ### 4-3. CrashLoopBackOff를 로그로 읽기
 
@@ -544,7 +672,7 @@ stdout과 stderr를 따로 받는 기능(`PodLogsQuerySplitStreams` 기능 게�
 
 ### 4-6. 자주 틀리는 지점
 
-- 멀티 컨테이너 Pod에서 `-c` 없이 `kubectl logs`를 쳐서 엉뚱한 컨테이너 로그를 읽거나 오류를 받는 것.
+- 멀티 컨테이너 Pod에서 `-c` 없이 `kubectl logs`를 쳐서 기본으로 골라진 컨테이너(어노테이션이 없으면 첫 번째)의 로그를 원하는 로그로 착각하는 것. `Defaulted container` 안내가 보이면 `-c`를 붙입니다.
 - 재시작된 Pod에서 `--previous`를 빼먹는 것.
 - 로그를 파일로 저장하라는 과제에서 다른 노드의 경로에 저장하는 것. 과제가 지정한 호스트에서 리다이렉트합니다.
 - 컨트롤 플레인 구성요소 로그를 `journalctl -u kube-apiserver`로 찾는 것. kubeadm 클러스터에서 API 서버는 static Pod로 돌기 때문에 `kubectl logs`나 `crictl logs`로 봅니다.
@@ -738,10 +866,42 @@ Pod 객체가 생기지 않으면 ReplicaSet 컨트롤러가 일하지 않는 �
 
 </details>
 
+**문제 8.** 워커 노드 `node03`이 `NotReady`이고 그 노드의 kubelet은 `active (running)`입니다. 컨트롤 플레인의 kube-apiserver 로그에 `x509: certificate has expired or is not yet valid`가 반복됩니다. 무엇을 확인하고 어떻게 복구하나요?
+
+<details>
+<summary>답 보기</summary>
+
+`node03`에서 kubelet 클라이언트 인증서를 봅니다.
+
+```bash
+sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -subject -issuer -dates
+date
+```
+
+`notAfter`가 지났으면 자동 교체가 실패한 것입니다. Troubleshooting kubeadm 문서의 절차(1-4절)대로 `kubelet.conf`와 `kubelet-client*`를 백업 후 지웁니다. 그다음 정상 컨트롤 플레인 노드에서 `kubeadm kubeconfig user --org system:nodes --client-name system:node:node03`으로 새 kubeconfig를 만들어 복사한 뒤 kubelet을 재시작합니다. `kubelet-client-current.pem`이 다시 생기면 `kubelet.conf`가 그 파일을 가리키게 고치고 한 번 더 재시작합니다. 날짜는 유효한데 시작 시각보다 노드 시계가 이르면 인증서가 아니라 시계를 맞춥니다. `kubeadm certs check-expiration`에는 kubelet 인증서가 나오지 않으므로 이 명령으로 판단하지 않습니다.
+
+</details>
+
+**문제 9.** 모든 노드의 이름과 InternalIP를 탭으로 구분해 한 줄에 하나씩 `/opt/node-ips.txt`에 저장하세요. jq는 쓸 수 없습니다.
+
+<details>
+<summary>답 보기</summary>
+
+```bash
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.addresses[?(@.type=="InternalIP")].address}{"\n"}{end}' > /opt/node-ips.txt
+cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $로 보인다
+```
+
+`range`와 `end`로 노드마다 한 줄을 만들고 `?(@.type=="InternalIP")` 필터로 주소 배열에서 한 종류만 고릅니다. `{.items[*].metadata.name}`처럼 range 없이 쓰면 모든 이름이 한 줄에 공백으로 붙어 나옵니다.
+
+</details>
+
 ## 7. 범위와 한계
 
 - 이 글의 명령은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서에 실린 것이고 그렇게 표시했습니다. 각 절의 "직접 해 보기"는 연습 클러스터를 만든 뒤 할 목록이며 결과는 나중에 덧붙입니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. Metrics API의 1.37 stable 표시와 `metrics.k8s.io/v1` 경로는 이 원문 기준이며 시험 클러스터의 metrics-server가 어느 버전을 제공하는지는 확인하지 못했습니다.
+- 1-4절의 kubelet 인증서 복구 절차는 Troubleshooting kubeadm 문서의 "Kubelet client certificate rotation fails" 절을 줄인 것이고 실행해 보지 않았습니다. kubelet 로그에 남는 오류 문장은 버전마다 달라 옮기지 않았습니다.
+- 4-2절의 기본 컨테이너 선택 순서와 안내 문구는 kubectl 저장소 master 브랜치 소스(2026년 10월 20일)로 확인했습니다. 시험의 kubectl 버전에서 문구가 조금 다를 수 있습니다.
 - kube-proxy의 Pod 라벨과 ConfigMap 이름, metrics-server의 Deployment 이름, `/var/log/pods`의 하위 경로 규칙, `systemctl cat`은 이번에 문서로 확인하지 못했습니다.
 - 0-2 표의 "흔한 원인" 열과 2-5 표의 매니페스트 점검 위치는 문서 내용에 제 판단을 더한 것입니다. 실제 시험에 어떤 고장이 나오는지는 공개되지 않았고 후기의 출제 문항은 옮기지 않았습니다.
 - etcd 백업과 복구, kubeadm 업그레이드는 [Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에서 정리한 대로 커리큘럼 명시 항목에서 빠져 이 글에서는 다루지 않았습니다. 절차는 [Ch-02 4절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
@@ -773,6 +933,11 @@ kubernetes.io
 - [Troubleshooting kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/)
 - kubernetes-sigs/cri-tools, [docs/crictl.md](https://github.com/kubernetes-sigs/cri-tools/blob/master/docs/crictl.md)
 - [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/)
+- [kubectl reference overview](https://kubernetes.io/docs/reference/kubectl/) (custom columns, sorting list objects)
+- [Leases](https://kubernetes.io/docs/concepts/architecture/leases/)
+- [About cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/) (`failCgroupV1`)
+- kubernetes-sigs, [metrics-server README](https://github.com/kubernetes-sigs/metrics-server)
+- kubernetes/kubectl, [pkg/polymorphichelpers/logsforobject.go](https://github.com/kubernetes/kubectl/blob/master/pkg/polymorphichelpers/logsforobject.go), [pkg/cmd/util/podcmd/podcmd.go](https://github.com/kubernetes/kubectl/blob/master/pkg/cmd/util/podcmd/podcmd.go) (기본 컨테이너 선택)
 - kubectl 레퍼런스: [kubectl logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/), [kubectl top pod](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_pod/), [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/), [kubectl debug](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_debug/)
 
 이 블로그의 관련 글
