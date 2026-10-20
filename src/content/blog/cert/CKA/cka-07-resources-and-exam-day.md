@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-07] 준비 자료와 시험 당일 전략: 공식 규칙, 할인, 연습 환경, 후기 경향 정리'
-description: CKA(커리큘럼 v1.37, 2025년 2월 개정 범위)를 준비할 때 쓸 수 있는 정당한 자료를 2026년 10월 기준으로 모았습니다. Linux Foundation 공식 규칙과 점검표, 날짜가 확인된 할인 이력, killer.sh와 Killercoda와 KodeKloud와 GitHub 연습 저장소 비교, 홈 랩 구성, 2025~2026년 후기에서 겹친 출제 경향과 함정, 시험 당일 순서와 D-30 계획, 덤프를 쓰지 않는 이유를 약관 원문으로 정리합니다.
+description: CKA(커리큘럼 v1.37, 2025년 2월 개정 범위)를 준비할 때 쓸 수 있는 정당한 자료를 2026년 10월 기준으로 모았습니다. Linux Foundation 공식 규칙과 점검표, 날짜가 확인된 할인 이력, killer.sh와 Killercoda와 KodeKloud와 GitHub 연습 저장소 비교, 홈 랩 구성, 2025~2026년 후기에서 겹친 출제 경향과 함정, 1.33~1.37 변경 중 시험 답에 영향을 주는 것, 시험 당일 순서와 D-30 계획, 덤프를 쓰지 않는 이유를 약관 원문으로 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
   - CKA
@@ -161,7 +161,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | VM에 kubeadm | 머신마다 2GB 이상 RAM, 컨트롤 플레인 2 CPU 이상, 스왑 처리. 맥은 Multipass | kubeadm init과 join, 업그레이드, etcd 백업과 복구, static Pod와 kubelet 트러블슈팅 | 메모리를 많이 씀 |
 | Killercoda 플레이그라운드 | 브라우저에서 바로 | 설치 없이 짧게 반복 | 세션 시간이 제한됨 |
 
-애플 실리콘 맥이면 KodeKloud가 공개한 [certified-kubernetes-administrator-course 저장소](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)의 `kubeadm/kubeadm-clusters/apple-silicon` 스크립트가 Multipass로 VM을 만들고 `/etc/hosts`까지 맞춰 줍니다. KodeKloud 안내는 최소 8GB(이때는 컨트롤 플레인 1대와 워커 1대), 3노드는 16GB 이상을 권합니다. KodeKloud 커뮤니티에는 ARM 맥에서 VirtualBox가 동작하지 않는다는 답변이 있고, LF 포럼(LFS258)에는 Multipass 노드를 껐다 켜면 `/etc/hosts`가 되돌아가 워커 조인이 깨졌다는 보고가 있습니다.
+애플 실리콘 맥이면 KodeKloud가 공개한 [certified-kubernetes-administrator-course 저장소](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)의 `kubeadm/kubeadm-clusters/apple-silicon` 스크립트가 Multipass로 VM을 만들고 `/etc/hosts`까지 맞춰 줍니다. KodeKloud 안내는 최소 8GB(이때는 컨트롤 플레인 1대와 워커 1대), 3노드는 16GB 이상을 권합니다. KodeKloud 커뮤니티에는 ARM 맥에서 VirtualBox가 동작하지 않는다는 답변이 있고 LF 포럼(LFS258)에는 Multipass 노드를 껐다 켜면 `/etc/hosts`가 되돌아가 워커 조인이 깨졌다는 보고가 있습니다.
 
 kind로 CNI 설치까지 연습하는 설정은 공식 문서의 옵션 둘을 합치면 됩니다.
 
@@ -204,8 +204,8 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 ### 5-1. 주제 수준의 경향
 
 - 트러블슈팅: 노드가 NotReady일 때 kubelet과 컨테이너 런타임 확인, 망가진 컨트롤 플레인 구성요소 복구가 여러 글에 나옵니다. 비중 30% 영역이라 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)의 판단 순서를 손에 익히는 것이 가장 큽니다.
-- 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다. 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다. 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다.
-- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 적었고 2026년 3월 합격 후기(techwithmohamed)도 Gateway와 HTTPRoute를 알아 두라고 적었습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [Ch-04 4절](/blog/cert/cka/cka-04-services-networking)에 있습니다.
+- 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다. 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다. 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다. 확인 명령과 순서는 [Ch-02 7-2절](/blog/cert/cka/cka-02-cluster-architecture)에 정리했습니다.
+- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 적었고 2026년 3월 합격 후기(techwithmohamed)도 Gateway와 HTTPRoute를 알아 두라고 적었습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [Ch-04 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
 - Helm과 Kustomize: 커리큘럼 문구는 "Helm과 Kustomize로 클러스터 구성요소 설치"입니다. 개정 직후 응시자들이 Helm 과제를 언급했고 2026년 8월 후기 작성자는 모의고사에서 Helm 문제를 건너뛰었다고 적었습니다. Kustomize는 yltw가 시험 전에 익힌 명령으로 꼽았습니다. 정리는 [Ch-02 6절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 - etcd와 kubeadm 업그레이드: 개정 커리큘럼에서 명시 항목이 빠졌고 Cassisi는 일부 강의에 아직 etcd 내용이 남아 있다고 지적했습니다. "클러스터 수명주기 관리"에 들어가는지는 공식 문서로 확인되지 않아 한 번씩은 손으로 해 보는 쪽이 안전합니다.
 
@@ -216,6 +216,26 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 - 플랫폼과 장비: 체크인 실패 반복, 감독관 쪽 영상 끊김으로 인한 중단, 원격 화면 지연이 여러 글에 나옵니다. Nakadi는 플랫폼 문제로 중단된 뒤 LF 지원에 상황을 설명해 응시 기회를 돌려받았습니다.
 - 호스트 이동: 공식 안내상 ssh 안에서 다시 ssh는 안 되고 과제가 끝나면 `exit`로 돌아와야 합니다. 이전 과제의 노드에 남은 채 다음 과제를 시작하면 엉뚱한 클러스터를 고치게 됩니다.
 - 화면 크기: 노트북 화면에서는 문서와 터미널을 오가며 시간이 샌다는 후기가 많았습니다. 단일 외장 모니터를 쓸 수 있으면 씁니다(노트북 화면은 꺼야 함).
+
+### 5-3. 1.33~1.37 변경 중 답이 달라지는 것
+
+시험 환경은 v1.37입니다. 2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
+
+| 버전 | 바뀐 것 | 시험 답에 주는 영향 | 근거 | 이 시리즈 |
+|---|---|---|---|---|
+| 1.33 | 네이티브 사이드카(`SidecarContainers`) stable | 사이드카 과제는 `initContainers`에 `restartPolicy: Always` | Sidecar Containers, Feature Gates | Ch-03 4-4 |
+| 1.33 | Endpoints API 사용 중단 | Service 점검은 `kubectl get endpointslices -l kubernetes.io/service-name=<이름>` | Service, EndpointSlices | Ch-04 3-5 |
+| 1.34(kubectl) | `kubectl autoscale --cpu`, `--memory` 추가, `--cpu-percent` 사용 중단 시작 | 사용률이면 `--cpu=60%`처럼 `%`를 붙인다 | CHANGELOG-1.34, kubectl autoscale 레퍼런스 | Ch-03 3-2 |
+| 1.34 | `KubeletCgroupDriverFromCRI` stable, 스왑(`NodeSwap`) stable | kubelet이 런타임에서 cgroup 드라이버를 받는다. 스왑 기본 동작(kubelet 시작 실패)은 그대로 | Container Runtimes, Installing kubeadm | Ch-02 2-2, 2-4 |
+| 1.34 | `RecoverVolumeExpansionFailure` stable | 확장에 실패한 PVC를 더 작은 값으로 다시 요청 가능 | Persistent Volumes | Ch-05 3-5 |
+| 1.35 | in-place Pod resize stable | `kubectl patch pod ... --subresource resize` | Resize CPU and Memory Resources assigned to Containers | Ch-03 3-3 |
+| 1.35 | kube-proxy `ipvs` 모드 사용 중단, cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true` | Virtual IPs and Service Proxies, cgroups | Ch-04 1-2, Ch-02 2-4 |
+| 1.37 | HPA `behavior.scaleUp/scaleDown.tolerance` stable | 허용 범위를 HPA마다 지정 | Horizontal Pod Autoscaling | Ch-03 3-2 |
+| etcd 3.6(kubeadm 1.36 기본 3.6.8) | `etcdctl snapshot status`, `snapshot restore` 제거 | 확인과 복구는 `etcdutl` | etcd CHANGELOG-3.6, kubeadm constants | Ch-02 4-5, 4-6 |
+| Helm 4(2025-11) | `--atomic`이 `--rollback-on-failure`, `--force`가 `--force-replace`로 이름 변경. 새 릴리스는 server-side apply | 옛 이름은 경고와 함께 동작 | Helm 4 Overview | Ch-02 6-1 |
+| 2026-03 | Ingress NGINX 유지보수 종료 | Ingress API는 동결된 GA로 남음. 새 기능은 Gateway API | Kubernetes 블로그 | Ch-04 5-1 |
+
+Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페이스 라벨)은 v1.37 CKA 커리큘럼 문구에 없고 CKS 쪽 주제라 이 시리즈에서는 다루지 않았습니다. 커리큘럼의 "Pod 승인" 항목은 [Ch-03 5-1절](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota, PriorityClass로 정리했습니다.
 
 ## 6. 시험 당일 전략과 체크리스트
 
@@ -266,7 +286,7 @@ exit
 
 ### 6-3. 컨텍스트 전환
 
-현재 LF 공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다. `kubectl config use-context`를 문항마다 실행했다는 글은 2024년 이전 후기들이고 2025~2026년 후기들은 ssh 방식을 적었습니다. 과제 상자에 실행할 명령이 적혀 있으면 그것을 그대로 먼저 실행합니다.
+현재 LF 공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다. `kubectl config use-context`를 문항마다 실행했다는 글은 2024년 이전 후기들이고 2025~2026년 후기들은 ssh 방식을 적었습니다. 과제 상자에 실행할 명령이 적혀 있으면 그것을 그대로 먼저 실행합니다. 컨텍스트 확인과 전환 명령(`kubectl config get-contexts`, `use-context`, `--kubeconfig`)은 [Ch-02 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 모았습니다.
 
 ### 6-4. vim과 YAML
 
@@ -368,6 +388,13 @@ set expandtab tabstop=2 shiftwidth=2
 - minikube, [Using Multi-Node Clusters](https://minikube.sigs.k8s.io/docs/tutorials/multi_node/)
 - Kubernetes, [Installing kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/), [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/), [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/), [kubectl explain](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_explain/)
 - Linux Foundation 포럼, [LFS258 Lab 3.1 - Something overwriting edits to /etc/hosts file](https://forum.linuxfoundation.org/discussion/comment/37706/)
+
+버전 변경 근거
+- Kubernetes, [Feature Gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/), [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/), [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/), [Virtual IPs and Service Proxies](https://kubernetes.io/docs/reference/networking/virtual-ips/), [About cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/), [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/), [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/), [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+- kubernetes/kubernetes, [CHANGELOG-1.34](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md), [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
+- etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md)
+- Helm, [Helm 4 Overview](https://helm.sh/docs/overview/)
+- Kubernetes Blog, [Ingress NGINX Retirement: What You Need to Know](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), 2025-11-11
 
 후기와 커뮤니티
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026

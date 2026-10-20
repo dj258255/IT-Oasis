@@ -67,7 +67,7 @@ S3 사용자 가이드의 "Best practices design patterns: optimizing Amazon S3 
 - 확장은 점진적으로 일어나고 그 사이 503(Slow Down) 응답이 나올 수 있습니다.
 - 지연에 민감한 작은 객체는 대략 100~200밀리초 수준이고 한 자리 밀리초가 필요하면 CloudFront나 ElastiCache를 함께 쓰라고 적습니다.
 
-같은 문서의 "Performance guidelines for Amazon S3"는 성능을 올리는 방법을 다섯 가지로 정리합니다.
+S3 사용자 가이드의 다른 페이지 "Performance guidelines for Amazon S3"는 성능을 올리는 방법을 다섯 가지로 정리합니다.
 
 | 방법 | 언제 쓰는지 |
 |---|---|
@@ -75,9 +75,22 @@ S3 사용자 가이드의 "Best practices design patterns: optimizing Amazon S3 
 | 바이트 범위 GET | 큰 객체를 여러 범위로 나눠 동시에 받는다. 멀티파트로 올린 객체는 같은 파트 크기로 받는 게 좋다 |
 | 지연 민감 요청의 재시도 | 첫 요청이 느리면 다른 경로로 가는 재시도가 빨리 끝날 가능성이 높다 |
 | 같은 리전에서 접근 | EC2와 버킷을 같은 리전에 두면 지연과 전송 비용이 줄어든다 |
-| S3 Transfer Acceleration | 대륙을 건너는 업로드. CloudFront 엣지 로케이션으로 들어와 최적화된 경로로 S3에 간다 |
+| S3 Transfer Acceleration | 대륙을 건너는 업로드. CloudFront 엣지 로케이션으로 들어와 최적화된 경로로 S3에 간다(아래 표) |
 
-지연이 한 자리 밀리초로 일정해야 하는 경우를 위해 S3 Express One Zone도 있습니다. 문서는 S3 Standard보다 접근 속도가 최대 10배 빠르고 요청 비용이 80% 낮다고 적습니다. 단일 AZ의 디렉터리 버킷에 저장되고 설계 가용성은 99.95%입니다. AZ를 하나만 쓰니 내구성이나 가용성을 조건으로 건 문제에서는 오답이 됩니다.
+Transfer Acceleration은 조건이 몇 가지 붙습니다. "Configuring fast, secure file transfers using Amazon S3 Transfer Acceleration" 문서(2026년 10월 20일 확인) 기준입니다.
+
+| 항목 | 문서 내용 |
+|---|---|
+| 쓰는 경우 | 전 세계 고객이 중앙 버킷 하나로 업로드, 대륙을 건너 GB~TB를 정기 전송, 인터넷 대역폭을 다 쓰지 못함 |
+| 버킷 이름 | DNS 호환이어야 하고 마침표(.)를 넣을 수 없다 |
+| 엔드포인트 | `버킷이름.s3-accelerate.amazonaws.com`. 가상 호스팅 방식 요청만 지원 |
+| 적용 시간 | 켠 뒤 속도가 오르기까지 최대 20분 |
+| 요금 | 데이터 전송 요금이 추가될 수 있다 |
+| 리전 | 서울(ap-northeast-2)을 포함한 15개 리전의 버킷 |
+
+멀티파트 업로드는 큰 객체를 나눠 병렬로 올리는 방법이고 Transfer Acceleration은 먼 거리 경로를 줄이는 방법이라 둘을 함께 쓸 수 있습니다. 같은 리전 안 업로드가 느리다면 Transfer Acceleration은 답이 아닙니다.
+
+지연이 한 자리 밀리초로 일정해야 하는 경우를 위해 S3 Express One Zone도 있습니다. 고성능 워크로드 페이지는 S3 Standard보다 접근 속도가 최대 10배 빠르고 요청 비용이 80% 낮다고 적고 스토리지 클래스 소개 페이지는 같은 비교를 50%로 적습니다(둘 다 2026년 10월 20일 확인). 문서끼리 숫자가 달라 "요청 비용이 Standard보다 낮다"까지만 기억해 둡니다. 단일 AZ의 디렉터리 버킷에 저장되고 설계 가용성은 99.95%입니다. AZ를 하나만 쓰니 내구성이나 가용성을 조건으로 건 문제에서는 오답이 됩니다.
 
 ### 2-3. EBS 볼륨 유형
 
@@ -309,7 +322,7 @@ Aurora 문서("Amazon Aurora storage", "Replication with Amazon Aurora", "How Au
 - 클러스터당 Aurora 복제본은 최대 15개이고 리더 엔드포인트로 읽기 연결을 분산합니다.
 - 복제본이 같은 볼륨을 보기 때문에 복제 지연은 보통 100밀리초보다 훨씬 작습니다. 쓰기가 몰리면 늘어날 수 있습니다.
 - 라이터가 실패하면 복제본 하나를 승격합니다. 복제본이 없으면 인스턴스가 복구될 때까지 클러스터를 쓸 수 없습니다.
-- 리전 간 확장은 Aurora Global Database입니다. Aurora PostgreSQL은 다른 리전에 읽기 전용 보조 클러스터를 최대 10개 둘 수 있습니다.
+- 리전 간 확장은 Aurora Global Database입니다. 2026년 10월 사용자 가이드는 엔진을 가리지 않고 다른 리전에 읽기 전용 보조 클러스터를 최대 10개 둘 수 있다고 적습니다(2021년판 DR 백서는 5개, Ch-02 3-8절).
 
 Aurora 저장 구성에는 Standard와 I/O-Optimized 두 가지가 있습니다. 문서는 I/O 지출이 Aurora 전체 지출의 25% 이상이면 I/O-Optimized, 25% 미만이면 Standard가 낫다고 적습니다. 이 기준은 비용 영역(Ch-04)에서 다시 씁니다.
 
@@ -355,7 +368,7 @@ ElastiCache 문서("Comparing node-based Valkey, Memcached, and Redis OSS cluste
 
 2026년 10월 문서 이름은 Valkey가 앞에 오고 Redis OSS가 뒤에 옵니다. 시험 문구가 "Redis"라고 써도 같은 엔진 계열입니다. 게임 순위표(정렬 집합), 장애 시 캐시 데이터 보존, 다중 AZ 복제가 조건이면 Valkey/Redis OSS이고 "단순 객체 캐시, 멀티스레드"면 Memcached입니다.
 
-캐싱 전략은 두 가지를 구분해 둡니다. 지연 로딩(lazy loading)은 캐시에 없을 때만 DB에서 읽어 넣고 라이트 스루(write-through)는 DB에 쓸 때 캐시도 같이 갱신합니다. 이 두 용어의 정의는 이번에 ElastiCache 문서에서 직접 다시 확인하지 못했습니다.
+캐싱 전략은 두 가지를 구분해 둡니다. 지연 로딩(lazy loading)은 캐시에 없을 때만 DB에서 읽어 넣고 라이트 스루(write-through)는 DB에 쓸 때 캐시도 같이 갱신합니다. ElastiCache 문서의 "Caching strategies" 페이지 기준 장단점은 Ch-02 2-11절 표에 정리했습니다.
 
 ### 4-7. 엔진 선택과 이관
 
@@ -397,7 +410,7 @@ ElastiCache 문서("Comparing node-based Valkey, Memcached, and Redis OSS cluste
 | 하는 일 | 엣지에서 콘텐츠를 캐시해 전달 | 엣지에서 받은 TCP/UDP를 AWS 백본으로 엔드포인트까지 |
 | 프로토콜 | HTTP, HTTPS | TCP, UDP |
 | 진입 주소 | 배포 도메인 이름 | 고정 애니캐스트 IPv4 주소 2개 |
-| 장애 조치 | 오리진 그룹 | 비정상 엔드포인트를 1분 안에 제외(FAQ) |
+| 장애 조치 | 오리진 그룹 | 비정상 엔드포인트를 1분 안에 제외하고 설정 변경은 몇 초 안에 전파(FAQ) |
 | 맞는 경우 | 정적과 동적 웹 콘텐츠, 이미지, 동영상 | 게임(UDP), IoT(MQTT), VoIP, 고정 IP 허용 목록이 필요한 API |
 
 CloudFront 문서는 요청을 지연이 가장 낮은 엣지로 보내고 캐시에 없으면 오리진에서 가져온다고 설명합니다. 기본 캐시 기간은 24시간이고 헤더로 바꿀 수 있습니다. Global Accelerator FAQ는 HTTP가 아닌 경우(게임, IoT, VoIP)에 잘 맞는다고 적습니다. "고정 IP", "UDP", "여러 리전 엔드포인트 사이 빠른 장애 조치"가 보이면 Global Accelerator입니다.
@@ -477,7 +490,14 @@ ALB, NLB, GWLB의 계층과 고정 IP 차이는 Ch-00 4-2절에 있습니다. �
 | 보존 기간 | 최소 24시간, 최대 8,760시간(365일) | 같음 |
 | 레코드 크기 | base64 인코딩 전 최대 10MiB | 같음 |
 
-향상된 팬아웃(enhanced fan-out) 소비자는 온디맨드 Standard와 프로비저닝 모드에서 스트림당 20개까지 등록합니다. 소비자가 많아 샤드당 읽기 2MB/s를 나눠 쓰느라 느려지면 향상된 팬아웃이 답입니다. 향상된 팬아웃이 소비자마다 샤드당 2MB/s를 따로 준다는 수치는 이번에 이 문서에서 직접 확인하지 못했습니다.
+향상된 팬아웃(enhanced fan-out) 소비자는 온디맨드 Standard와 프로비저닝 모드에서 스트림당 20개까지 등록하고 2026년 10월 문서의 On-demand Advantage 모드에서는 50개까지 등록합니다. 소비자가 많아 샤드당 읽기 2MB/s를 나눠 쓰느라 느려지면 향상된 팬아웃이 답입니다. "Develop enhanced fan-out consumers with dedicated throughput" 문서(2026년 10월 20일 확인)의 비교는 이렇습니다.
+
+| | 공유 처리량 소비자 | 향상된 팬아웃 소비자 |
+|---|---|---|
+| 읽기 처리량 | 샤드당 합계 2MB/s를 모든 소비자가 나눠 쓴다 | 소비자마다 샤드당 2MB/s를 따로 받는다 |
+| 전파 지연 | 소비자 1개면 평균 약 200ms, 5개면 약 1,000ms | 소비자 수와 관계없이 평균 약 70ms |
+| 전달 방식 | `GetRecords`로 당겨 온다(pull) | `SubscribeToShard`로 HTTP/2 푸시 |
+| 요금 | 해당 없음 | 데이터 조회 요금과 소비자·샤드 시간 요금 |
 
 파티션 키가 같은 레코드는 같은 샤드로 가서 순서가 지켜집니다. 특정 키에 쓰기가 몰려 `ProvisionedThroughputExceededException`이 나면 파티션 키를 더 고르게 나누거나 샤드를 늘립니다.
 
@@ -672,8 +692,9 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 
 - 수치와 제약은 2026년 10월 19일에 연 AWS 공식 문서 기준입니다. gp3 최대값처럼 최근에 바뀐 값이 있어서 강의 자료와 다를 수 있고 시험 문항이 언제 기준인지는 알 수 없습니다.
 - 이 글의 서비스들을 직접 만들어 측정하지 않았습니다. 성능 수치는 모두 문서가 밝힌 설계 값이거나 최대값이고 제가 잰 값이 없습니다. Ch-00 계획의 실습 단계를 마친 뒤 측정한 내용을 따로 쓰겠습니다.
-- 확인하지 못한 것: 향상된 팬아웃의 소비자당 샤드 처리량 수치, ElastiCache 문서의 지연 로딩과 라이트 스루 정의, Firehose 버퍼링 페이지 본문(검색 요약으로만 확인), Amazon Quick과 QuickSight의 관계, MySQL과 PostgreSQL을 비교한 공식 표.
-- FSx File Gateway 신규 제공 중단과 Snowball 지원 종료 공지는 확인했지만 시험 출제 범위에 반영됐는지는 모릅니다.
+- 확인하지 못한 것: Firehose 버퍼링 페이지 본문(검색 요약으로만 확인), Amazon Quick과 QuickSight의 관계, MySQL과 PostgreSQL을 비교한 공식 표. ElastiCache의 지연 로딩과 라이트 스루 정의는 Ch-02 2-11절에서 ElastiCache 문서로 정리했습니다.
+- 2026년 10월 20일 보강: 향상된 팬아웃의 소비자당 샤드 2MB/s와 평균 약 70ms 전파 지연, Transfer Acceleration 조건, Aurora Global Database 보조 리전 수(엔진 공통 10개), S3 Express One Zone 요청 비용 문구가 페이지마다 다른 점을 확인해 넣었습니다.
+- FSx File Gateway 신규 제공 중단과 Snowball 지원 종료(2026년 12월 31일) 공지는 확인했지만 시험 출제 범위에 반영됐는지는 모릅니다. Kinesis On-demand Advantage 모드도 시험 안내서 이후에 생긴 것으로 보입니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난이도나 문구와 다를 수 있습니다.
 
 ## 참고 자료
@@ -683,7 +704,8 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 - AWS, [AWS Certified Solutions Architect - Associate (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03.html)
 
 스토리지
-- [Best practices design patterns: optimizing Amazon S3 performance](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html), [Performance guidelines for Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance-guidelines.html), [High performance workloads (S3 Express One Zone)](https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-bucket-high-performance.html)
+- [Best practices design patterns: optimizing Amazon S3 performance](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html), [Performance guidelines for Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance-guidelines.html), [High performance workloads (S3 Express One Zone)](https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-bucket-high-performance.html), [Understanding and managing Amazon S3 storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html), [Configuring fast, secure file transfers using Amazon S3 Transfer Acceleration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html)
+- [Using Amazon Aurora Global Database](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html)
 - [Amazon EBS volume types](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html), [Amazon EBS General Purpose SSD volumes](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html)
 - [Instance store temporary block storage for EC2 instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html), [Data persistence for Amazon EC2 instance store volumes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-lifetime.html)
 - [Amazon EFS performance specifications](https://docs.aws.amazon.com/efs/latest/ug/performance.html)
@@ -711,7 +733,7 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 - [How VPC peering connections work](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html), [What is AWS Transit Gateway for Amazon VPC?](https://docs.aws.amazon.com/vpc/latest/tgw/what-is-transit-gateway.html), [What is AWS PrivateLink?](https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html)
 
 데이터 수집과 변환
-- [Quotas and limits (Kinesis Data Streams)](https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html)
+- [Quotas and limits (Kinesis Data Streams)](https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html), [Develop enhanced fan-out consumers with dedicated throughput](https://docs.aws.amazon.com/streams/latest/dev/enhanced-consumers.html)
 - [What is Amazon Data Firehose?](https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html), [Convert input data format in Amazon Data Firehose](https://docs.aws.amazon.com/firehose/latest/dev/record-format-conversion.html), [BufferingHints](https://docs.aws.amazon.com/firehose/latest/APIReference/API_BufferingHints.html)
 - [Welcome to the Amazon MSK Developer Guide](https://docs.aws.amazon.com/msk/latest/developerguide/what-is-msk.html)
 - [What is AWS DataSync?](https://docs.aws.amazon.com/datasync/latest/userguide/what-is-datasync.html), [What is AWS Transfer Family?](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html), [AWS Snowball](https://aws.amazon.com/snowball/)

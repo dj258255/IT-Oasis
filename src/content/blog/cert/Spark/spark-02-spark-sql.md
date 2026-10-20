@@ -101,12 +101,16 @@ orders.write.format("parquet").mode("overwrite").save("/out/orders")
 |---|---|---|
 | CSV | `sep`(`delimiter`) | `,` |
 | CSV | `header` | `false` |
-| CSV | `inferSchema` | `false` |
+| CSV | `inferSchema` | `false`. 켜면 데이터를 한 번 더 읽는다 |
+| CSV, JSON | `samplingRatio` | `1.0`(스키마 추론에 쓰는 행 비율) |
 | CSV | `quote` / `escape` | `"` / `\` |
+| CSV | `nullValue` | 없음(null로 볼 문자열) |
 | CSV, JSON | `mode` | `PERMISSIVE` (그 밖에 `DROPMALFORMED`, `FAILFAST`) |
+| CSV, JSON | `columnNameOfCorruptRecord` | `spark.sql.columnNameOfCorruptRecord` 값, 기본 `_corrupt_record` |
 | CSV, JSON | `dateFormat` | `yyyy-MM-dd` |
 | CSV, JSON | `multiLine` | `false` |
 | CSV | `enforceSchema` | `true` |
+| CSV | `encoding` | `UTF-8` |
 | JSON | `primitivesAsString` | `false` |
 | Text | `wholetext` | `false` |
 | Text | `lineSep` | 읽기는 `\r`, `\r\n`, `\n` 모두, 쓰기는 `\n` |
@@ -131,6 +135,31 @@ events = spark.read.option("multiLine", True).json("/data/events.json")   # 파�
 lines = spark.read.text("/data/logs")   # 스키마: value STRING 한 컬럼
 ```
 
+`PERMISSIVE`에서 깨진 줄을 버리지 않고 보려면 사용자 스키마에 문자열 컬럼 `_corrupt_record`를 직접 넣어야 합니다. CSV와 JSON 문서 모두 스키마에 그 컬럼이 없으면 깨진 레코드를 파싱 중에 버린다고 적습니다.
+
+```python
+raw = (spark.read
+       .schema("order_id INT, user_id INT, status STRING, amount INT, _corrupt_record STRING")
+       .option("header", True)
+       .option("mode", "PERMISSIVE")
+       .csv("/data/orders.csv"))
+bad = raw.filter(F.col("_corrupt_record").isNotNull())
+```
+
+스키마는 `StructType`과 DDL 문자열 둘 다 받습니다(`DataFrameReader.schema` 문서). 스키마를 주면 추론 단계를 건너뛰어 읽기가 빨라진다고 같은 문서가 적습니다.
+
+```python
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+
+schema_ddl = "order_id INT, status STRING"
+schema_st = StructType([
+    StructField("order_id", IntegerType(), True),
+    StructField("status", StringType(), True),
+])
+spark.read.schema(schema_ddl).csv("/data/orders.csv")   # 둘은 같은 스키마
+spark.read.schema(schema_st).csv("/data/orders.csv")
+```
+
 Text 형식은 쓸 때 제약이 있습니다. `DataFrameWriter.text` 문서는 DataFrame에 문자열 컬럼이 하나만 있어야 한다고 적습니다. 컬럼이 여럿이면 `concat_ws` 같은 함수로 한 컬럼으로 만든 뒤 씁니다.
 
 ### 1-3. JDBC 읽기와 쓰기
@@ -147,9 +176,9 @@ JDBC 드라이버 JAR는 Spark 클래스패스에 직접 넣어야 합니다. �
 |---|---|---|---|
 | `url` | 없음 | 읽기/쓰기 | `jdbc:subprotocol:subname` |
 | `dbtable` | 없음 | 읽기/쓰기 | 테이블. 읽기에서는 `FROM`에 올 수 있는 것(서브쿼리 포함) |
-| `query` | 없음 | 읽기 | `FROM`의 서브쿼리로 쓰일 쿼리. `dbtable`과 같이 쓸 수 없다 |
+| `query` | 없음 | 읽기 | `FROM`의 서브쿼리로 쓰일 쿼리. `dbtable`과도, `partitionColumn`과도 같이 쓸 수 없다 |
 | `partitionColumn`, `lowerBound`, `upperBound` | 없음 | 읽기 | 병렬 읽기. 하나를 주면 셋 다와 `numPartitions`까지 줘야 한다 |
-| `numPartitions` | 없음 | 읽기/쓰기 | 최대 파티션 수이자 최대 동시 JDBC 연결 수 |
+| `numPartitions` | 없음 | 읽기/쓰기 | 최대 파티션 수이자 최대 동시 JDBC 연결 수. 쓰기에서 파티션이 이보다 많으면 `coalesce(numPartitions)`로 줄인다 |
 | `fetchsize` | `0` | 읽기 | 왕복 한 번에 가져올 행 수 |
 | `batchsize` | `1000` | 쓰기 | 왕복 한 번에 넣을 행 수 |
 | `truncate` | `false` | 쓰기 | `overwrite`일 때 테이블을 지우고 다시 만드는 대신 TRUNCATE |
@@ -275,10 +304,10 @@ OPTIONS (path "/data/orders.csv", header "true", inferSchema "true", mode "FAILF
 SELECT status, count(*) FROM orders_csv GROUP BY status;
 ```
 
-Delta를 로컬에서 쓰려면 Delta Lake Quick Start가 적은 설정이 필요합니다.
+Delta를 로컬에서 쓰려면 Delta Lake Quick Start가 적은 설정이 필요합니다. Delta 릴리스 호환표(2026년 10월 20일 열람)는 최신 Delta 4.3.x가 Spark 4.0.x와 4.1.x를 지원한다고 적고 Spark 4.2는 아직 표에 없습니다. Spark 3.5.x는 Delta 3.1~3.3.x와 짝입니다. Spark 4.2.0 이미지에서 Delta를 쓰기 전에 이 표를 먼저 봅니다.
 
 ```python
-# pip install delta-spark   (Spark 버전과 맞는 delta-spark 버전은 Delta 릴리스 표에서 확인)
+# pip install delta-spark   (Spark 버전과 맞는 delta-spark 버전은 Delta 릴리스 호환표에서 확인)
 from delta import configure_spark_with_delta_pip
 
 builder = (SparkSession.builder
@@ -291,10 +320,23 @@ orders.write.format("delta").mode("overwrite").save("/out/orders_delta")
 spark.sql("SELECT count(*) FROM delta.`/out/orders_delta`").show()
 ```
 
+Delta 읽기와 쓰기도 `format("delta")`만 바꾸면 1절의 Reader/Writer 모양 그대로입니다. Delta Lake의 Table batch reads and writes 문서에서 시험 범위와 닿는 옵션만 골랐습니다.
+
+| 하고 싶은 일 | 코드 | 문서 설명 |
+|---|---|---|
+| 경로로 쓰기 | `df.write.format("delta").save(path)` | 저장 모드는 1절과 같다 |
+| 테이블로 쓰기 | `df.write.format("delta").saveAsTable("shop.orders_d")` | DataFrame 스키마로 메타스토어에 테이블을 만들고 쓴다 |
+| 스키마까지 바꿔 덮어쓰기 | `.mode("overwrite").option("overwriteSchema", "true")` | 이 옵션 없이 overwrite하면 기존 스키마를 유지한다 |
+| 새 컬럼을 붙여 추가 | `.mode("append").option("mergeSchema", "true")` | 쓰기 한 번에만 적용. 세션 전체 설정보다 이쪽을 권한다 |
+| 조건에 맞는 행만 교체 | `.mode("overwrite").option("replaceWhere", "order_date = '2026-10-03'")` | 조건에 맞는 행만 원자적으로 덮어쓴다 |
+| 이전 버전 읽기 | `spark.read.format("delta").option("versionAsOf", 0).load(path)` | `timestampAsOf`는 날짜나 타임스탬프 문자열만 받는다 |
+
+Delta 테이블에서 임의 조건에 맞는 행만 골라 바꿀 때는 `replaceWhere`를 씁니다.
+
 ### 헷갈리는 지점
 
 - 경로를 감싸는 기호는 백틱(`` ` ``)입니다. 작은따옴표로 감싸면 문자열 리터럴이 됩니다.
-- CSV 직접 SQL에서 컬럼 이름이 `_c0`, `_c1`처럼 나온다는 설명을 자주 보지만 이번에 연 문서에서 그 이름 규칙을 적은 문장은 찾지 못했습니다. `header`가 기본 `false`라 첫 줄이 데이터로 읽힌다는 데까지만 문서로 확인했습니다.
+- 헤더 없이 읽은 CSV의 컬럼 이름은 `_c0`, `_c1`, `_c2` 순서로 붙습니다. CSV 문서의 예제가 `spark.read.csv(path)` 결과를 `_c0` 컬럼으로 보여 주고 첫 줄 `name;age;job`이 데이터 행으로 나옵니다. 직접 SQL도 `header` 기본값이 같으니 같은 이름이 붙을 것으로 보지만 직접 SQL 예제로 확인한 것은 아닙니다.
 - Delta에 overwrite하면 Delta는 트랜잭션 로그로 이전 버전을 남깁니다. Delta Lake 문서는 지금 테이블에 없는 데이터를 트랜잭션 로그로 읽는 기능을 time travel이라고 적습니다. Parquet 경로 overwrite는 기존 파일을 지우고 씁니다.
 
 ## 3. 저장 모드
@@ -330,7 +372,7 @@ orders.write.save("/out/orders", format="parquet", mode="append")
 | 메서드 | 컬럼 맞추기 | 기존 테이블이 있을 때 |
 |---|---|---|
 | `saveAsTable(name, mode=...)` | 이름으로 | 모드를 따른다(기본 예외). `append`면 기존 테이블의 형식과 옵션을 쓰고 컬럼 순서가 달라도 된다. `overwrite`면 스키마가 기존과 같지 않아도 된다 |
-| `insertInto(tableName, overwrite=None)` | 위치로(이름 무시) | 스키마가 테이블과 같아야 한다. `overwrite` 기본은 꺼짐 |
+| `insertInto(tableName, overwrite=None)` | 위치로(이름 무시) | 테이블이 이미 있어야 하고 스키마가 같아야 한다. `overwrite` 기본은 꺼짐. `partitionBy`, `bucketBy`와 같이 쓰면 오류 |
 
 ```python
 orders.write.mode("overwrite").saveAsTable("shop.orders")
@@ -382,11 +424,14 @@ DataFrameWriter.saveAsTable(name, format=None, mode=None, partitionBy=None, **op
        .sortBy("amount")
        .saveAsTable("shop.orders_bucketed"))
 
-# save()에 bucketBy를 쓰면 지원하지 않는다는 분석 오류가 난다(문서의 "영구 테이블에만" 규칙)
+# 경로 저장(save, parquet 등)에 bucketBy를 쓰면 오류: 'save' does not support bucketBy right now.
 # orders.write.bucketBy(8, "user_id").parquet("/out/x")
+
+# bucketBy 없이 sortBy만 쓰면 오류: sortBy must be used together with bucketBy.
+# orders.write.sortBy("amount").saveAsTable("shop.x")
 ```
 
-마지막 주석의 오류는 문서 규칙에서 예상한 것이고 정확한 오류 메시지는 실행해서 확인하지 않았습니다. `bucketBy` 없이 `sortBy`만 쓸 때도 오류가 날 것으로 보지만 이것도 문서 문장으로는 확인하지 못했습니다.
+두 오류 문장은 실행 결과가 아닙니다. Spark 4.2.0 소스의 `DataFrameWriter`와 오류 정의 파일(`error-conditions.json`)에서 확인했습니다. `save`와 `insertInto`는 쓰기 전에 버킷 지정 여부를 검사해서 `bucketBy`만 있으면 `_LEGACY_ERROR_TEMP_1312`, `sortBy`까지 있으면 "does not support bucketBy and sortBy right now"(`_LEGACY_ERROR_TEMP_1313`)를 냅니다. 버킷 수 없이 정렬 컬럼만 있으면 `SORT_BY_WITHOUT_BUCKETING` 오류입니다. 쓰기 메서드는 액션이라 이 오류는 그 줄을 실행하는 순간 납니다.
 
 ### 4-2. partitionBy와 bucketBy 고르기
 
@@ -484,6 +529,17 @@ Databricks 문서의 관리형 테이블과 외부 테이블 설명입니다.
 | `DROP TABLE` | 기본 7일 보관 후 비동기로 파일 삭제. 그 안에는 `UNDROP TABLE`로 복구 | 메타데이터만 삭제. 파일은 직접 지워야 한다 |
 | 권장 | Databricks가 기본으로 권하는 테이블 유형 | |
 
+테이블 이름을 부르는 방식도 다릅니다.
+
+| | 로컬 Apache Spark(기본 설정) | Databricks Unity Catalog | Databricks 레거시 Hive 메타스토어 |
+|---|---|---|---|
+| 이름 | `database.table`(예: `shop.orders`) | `catalog.schema.table` 세 단계 | `hive_metastore.schema.table` |
+| 메타데이터 | Derby 로컬 메타스토어 | Unity Catalog | 워크스페이스 Hive 메타스토어 |
+| 관리형 데이터 위치 | `spark.sql.warehouse.dir`(기본 `$PWD/spark-warehouse`) | Unity Catalog가 관리하는 저장소 | 워크스페이스 설정을 따른다(이번에 확인하지 않음) |
+| 형식 생략 시 | `spark.sql.sources.default`(기본 `parquet`) | Delta | Delta |
+
+Databricks 문서는 "Delta Lake is the default format for all operations on Databricks"라고 적어서 Databricks에서는 `format`을 생략한 `saveAsTable`도 Delta 테이블을 만듭니다. Unity Catalog 관리형 테이블 문서는 관리형 테이블을 세 단계 이름으로만 읽고 써야 하고 경로 접근은 접근 제어를 우회하므로 지원하지 않는다고 적습니다(Compatibility Mode는 예외). Hive 메타스토어는 Unity Catalog 워크스페이스에서 `hive_metastore` 카탈로그 아래에 보이고 Databricks는 Hive 메타스토어를 쓴 데이터 거버넌스를 지원 중단(deprecated) 상태로 둡니다. 시험 보기에 세 단계 이름이 나오면 Databricks와 Unity Catalog를 전제로 한 것입니다.
+
 ### 헷갈리는 지점
 
 - "외부 테이블을 DROP하면 데이터도 지워진다"는 보기는 Spark와 Databricks 모두에서 틀립니다.
@@ -537,7 +593,7 @@ CREATE OR REPLACE GLOBAL TEMPORARY VIEW city_users AS
 SELECT city, count(*) AS cnt FROM global_temp.users_g GROUP BY city;
 ```
 
-4.2.0 문서는 `IF NOT EXISTS`를 임시 뷰에는 아직 지원하지 않는다고 적습니다. 같은 문서는 임시 뷰가 세션별 `system.session` 네임스페이스에 산다고 설명합니다. 이 네임스페이스 이름은 4.2.0 문서에서 본 표현이고 3.5 문서와 비교하지 않았습니다.
+4.2.0 문서는 `IF NOT EXISTS`를 임시 뷰에는 아직 지원하지 않는다고 적습니다. 같은 문서는 임시 뷰가 세션별 `system.session` 네임스페이스에 산다고 설명하고 `session.v`나 `system.session.v`처럼 이름 앞에 붙이는 것을 허용합니다. 이 한정자는 4.2에서 생겼습니다. SQL Migration Guide가 "Since Spark 4.2"로 적고 3.5.7의 CREATE VIEW 문서에는 `system.session`이라는 말이 없습니다. 그 밖의 한정자(`mydb.v` 등)는 `INVALID_TEMP_OBJ_QUALIFIER` 오류입니다.
 
 ### 6-3. 뷰와 테이블과 캐시
 
@@ -586,7 +642,7 @@ D. orders.write.sortBy("user_id").saveAsTable("shop.o")
 <details>
 <summary>정답과 풀이</summary>
 
-B. 고유값이 많은 컬럼은 `partitionBy`보다 `bucketBy`가 맞다고 문서가 적습니다(A 탈락). 버킷은 `saveAsTable`과 함께 쓰는 영구 테이블 전용이라 C는 안 됩니다. D의 `sortBy`는 버킷 안을 정렬하는 기능이라 버킷 없이 쓰는 것은 의도와 맞지 않습니다.
+B. 고유값이 많은 컬럼은 `partitionBy`보다 `bucketBy`가 맞다고 문서가 적습니다(A 탈락). 버킷은 `saveAsTable`과 함께 쓰는 영구 테이블 전용이라 C는 `'save' does not support bucketBy` 오류가 납니다. D의 `sortBy`는 버킷 안을 정렬하는 기능이라 `bucketBy` 없이 쓰면 `sortBy must be used together with bucketBy` 오류가 납니다(4-1절, Spark 소스 기준).
 
 </details>
 
@@ -639,7 +695,7 @@ D. `query` 옵션이 없어서 오류가 난다.
 <details>
 <summary>정답과 풀이</summary>
 
-B. `lowerBound`와 `upperBound`는 파티션 보폭만 정하고 행을 거르지 않습니다. 범위 밖 행은 첫 구간과 마지막 구간에 들어갑니다(이 배치 방식은 문서 문장 "모든 행이 파티션되어 반환된다"에서 추론한 것입니다). `dbtable`과 `query`는 둘 중 하나만 쓰므로 D는 틀립니다.
+B. `lowerBound`와 `upperBound`는 파티션 보폭만 정하고 행을 거르지 않습니다. 범위 밖 행은 첫 구간과 마지막 구간에 들어갑니다. Spark 4.2.0 소스의 `JDBCRelation`은 첫 파티션 조건을 `order_id < 첫 경계 or order_id is null`로, 마지막 파티션 조건을 `order_id >= 마지막 경계`로 만들어 아래위가 열려 있습니다. null도 첫 파티션으로 갑니다. `dbtable`과 `query`는 둘 중 하나만 쓰므로 D는 틀립니다.
 
 </details>
 
@@ -657,12 +713,27 @@ C. 기본값 `STATIC`에서는 덮어쓰기 전에 조건에 맞는 파티션을
 
 </details>
 
+**문제 7.** 결제 로그 CSV에 형식이 깨진 줄이 섞여 있습니다. 깨진 줄을 버리지 않고 따로 모아 보려면?
+
+A. `spark.read.option("mode", "DROPMALFORMED").csv(path)`
+B. `spark.read.option("mode", "FAILFAST").csv(path)`
+C. `spark.read.schema("pay_id INT, amount INT, _corrupt_record STRING").csv(path)`
+D. `spark.read.schema("pay_id INT, amount INT").option("mode", "PERMISSIVE").csv(path)`
+
+<details>
+<summary>정답과 풀이</summary>
+
+C. 기본 `mode`가 `PERMISSIVE`이고 깨진 문자열은 `columnNameOfCorruptRecord`(기본 `_corrupt_record`) 컬럼에 들어갑니다. 그 컬럼을 사용자 스키마에 넣어야 남습니다. D는 같은 모드지만 스키마에 그 컬럼이 없어 깨진 레코드를 버립니다. A는 깨진 줄을 버리고 B는 예외를 냅니다.
+
+</details>
+
 ## 범위와 한계
 
-- 기본값과 시그니처는 2026년 10월 19일에 연 Spark 4.2.0 문서, PySpark 4.2.0 API 문서, Databricks 문서, Delta Lake 문서 기준입니다. 3.x와 다른 부분은 SQL Migration Guide에 적힌 것만 표시했습니다(`CREATE TABLE` 기본 형식, ORC 압축 기본값). 시험의 기준 Spark 버전은 공개되지 않았습니다.
-- 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어 PySpark를 띄울 수 없었습니다. JDBC 예제의 주소와 계정은 형식을 보이려는 예시이고 실제로 연결한 적이 없습니다.
-- 다음은 문서에서 직접 확인하지 못해 추론이나 미확인으로 표시한 내용입니다. CSV 직접 SQL의 컬럼 이름 규칙(`_c0`), `sortBy`만 쓸 때의 오류, `bucketBy`와 `save()`를 함께 쓸 때의 정확한 오류 메시지, JDBC 범위 밖 행이 들어가는 파티션, 스키마 없이 기존 경로에 `CREATE TABLE ... LOCATION`을 붙이는 동작입니다.
-- Delta의 저장 모드별 세부 동작(`replaceWhere`, `overwriteSchema`)은 이번 범위에서 이름만 확인했습니다.
+- 기본값과 시그니처는 2026년 10월 19일과 20일에 연 Spark 4.2.0 문서, PySpark 4.2.0 API 문서, Databricks 문서, Delta Lake 문서 기준입니다. 3.x와 다른 부분은 SQL Migration Guide에 적힌 것(`CREATE TABLE` 기본 형식, ORC 압축 기본값, 임시 뷰 한정자)과 3.5.7 문서로 대조한 것만 표시했습니다. 시험의 기준 Spark 버전은 공개되지 않았습니다.
+- 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어 PySpark를 띄울 수 없었습니다. 코드 블록은 Python 문법 검사만 했습니다. JDBC 예제의 주소와 계정은 형식을 보이려는 예시이고 실제로 연결한 적이 없습니다.
+- `bucketBy`와 `sortBy` 오류 문장, JDBC 범위 밖 행이 들어가는 파티션은 실행 대신 Spark 4.2.0 소스로 확인했습니다. Spark Connect 클라이언트에서는 오류가 서버에서 돌아오므로 표시 형식이 다를 수 있습니다.
+- 아직 확인하지 못한 것은 CSV 직접 SQL에서 붙는 컬럼 이름(`_c0`은 `spark.read.csv` 예제로만 확인)과 스키마 없이 기존 경로에 `CREATE TABLE ... LOCATION`을 붙이는 동작입니다.
+- Delta는 `overwriteSchema`, `mergeSchema`, `replaceWhere`, `versionAsOf`의 문서 설명만 옮겼습니다. Delta의 동적 파티션 덮어쓰기 같은 세부 동작은 다루지 않았습니다.
 
 ## 참고 자료
 
@@ -677,14 +748,20 @@ Apache Spark 4.2.0 문서
 - [File (SQL 레퍼런스)](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-file.html), [CREATE TABLE USING](https://spark.apache.org/docs/latest/sql-ref-syntax-ddl-create-table-datasource.html), [DROP TABLE](https://spark.apache.org/docs/latest/sql-ref-syntax-ddl-drop-table.html), [CREATE VIEW](https://spark.apache.org/docs/latest/sql-ref-syntax-ddl-create-view.html)
 - [Configuration](https://spark.apache.org/docs/latest/configuration.html) (`spark.sql.sources.partitionOverwriteMode`, `spark.sql.warehouse.dir`, 버킷 설정)
 - [SQL Migration Guide](https://spark.apache.org/docs/latest/sql-migration-guide.html)
+- 3.5.7 비교: [CREATE VIEW](https://spark.apache.org/docs/3.5.7/sql-ref-syntax-ddl-create-view.html), [Generic Load/Save Functions](https://spark.apache.org/docs/3.5.7/sql-data-sources-load-save-functions.html)
+
+Apache Spark 4.2.0 소스
+- [sql/api DataFrameWriter.scala](https://github.com/apache/spark/blob/v4.2.0/sql/api/src/main/scala/org/apache/spark/sql/DataFrameWriter.scala), [sql/core classic DataFrameWriter.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/DataFrameWriter.scala), [error-conditions.json](https://github.com/apache/spark/blob/v4.2.0/common/utils/src/main/resources/error/error-conditions.json), [JDBCRelation.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/jdbc/JDBCRelation.scala)
 
 PySpark 4.2.0 API
 - [DataFrameWriter.mode](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.mode.html), [partitionBy](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.partitionBy.html), [bucketBy](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.bucketBy.html), [sortBy](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.sortBy.html), [saveAsTable](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.saveAsTable.html), [insertInto](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.insertInto.html), [save](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.save.html), [jdbc](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.jdbc.html), [text](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.text.html)
-- [DataFrameReader.load](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.load.html), [csv](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.csv.html), [json](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.json.html), [jdbc](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.jdbc.html)
+- [DataFrameReader.load](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.load.html), [schema](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.schema.html), [csv](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.csv.html), [json](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.json.html), [jdbc](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameReader.jdbc.html)
 - [DataFrame.createTempView](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.createTempView.html), [createGlobalTempView](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.createGlobalTempView.html), [Catalog.dropTempView](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Catalog.dropTempView.html), [DataFrameWriterV2](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriterV2.html)
 
 Databricks와 Delta Lake
 - Databricks, [Unity Catalog managed tables for Delta Lake and Apache Iceberg](https://docs.databricks.com/aws/en/tables/managed)
 - Databricks, [Work with external tables](https://docs.databricks.com/aws/en/tables/external)
 - Databricks, [Read and write CSV files](https://docs.databricks.com/aws/en/query/formats/csv)
-- Delta Lake, [Table batch reads and writes](https://docs.delta.io/latest/delta-batch.html), [Quick Start](https://docs.delta.io/latest/quick-start.html)
+- Databricks, [What is Delta Lake in Databricks?](https://docs.databricks.com/aws/en/delta/)
+- Databricks, [Database objects in the legacy Hive metastore](https://docs.databricks.com/aws/en/database-objects/hive-metastore)
+- Delta Lake, [Table batch reads and writes](https://docs.delta.io/latest/delta-batch.html), [Quick Start](https://docs.delta.io/latest/quick-start.html), [Releases(Compatibility with Apache Spark)](https://docs.delta.io/latest/releases.html)

@@ -166,7 +166,19 @@ SCP는 조직의 IAM 사용자와 역할이 쓸 수 있는 최대 권한을 정�
 | 기본 정책 | `FullAWSAccess`. 대체 정책 없이 떼면 멤버 계정의 모든 작업이 실패한다 |
 | 사용 조건 | 모든 기능(all features)을 켠 조직에서만 쓸 수 있다. 통합 결제만 켠 조직에서는 안 된다 |
 
-RCP(리소스 제어 정책)는 SCP와 짝을 이루는 조직 정책으로, SCP가 주체 쪽 상한이면 RCP는 리소스 쪽 상한입니다. IAM 모범 사례 문서는 둘 다 권한을 주지 않는다고 명시합니다. KMS 문서에는 RCP가 AWS 관리형 키에는 적용되지 않는다는 문장이 있습니다.
+RCP(리소스 제어 정책)는 SCP와 짝을 이루는 조직 정책입니다. SCP가 주체 쪽 상한이면 RCP는 리소스 쪽 상한입니다. Organizations 문서는 SCP를 조직 멤버 계정의 IAM 주체를 제한할 때, RCP를 조직 밖 주체가 조직 안 리소스에 접근하는 것을 제한할 때 쓰라고 구분합니다(2026년 10월 20일 확인).
+
+| 항목 | SCP | RCP |
+|---|---|---|
+| 상한을 거는 대상 | 멤버 계정의 IAM 사용자와 역할(루트 포함) | 멤버 계정의 리소스. 요청자가 조직 밖 계정이어도 적용 |
+| 권한 부여 | 하지 않는다 | 하지 않는다 |
+| 관리 계정 | 적용되지 않는다 | 관리 계정의 리소스에는 적용되지 않는다 |
+| 서비스 연결 역할 | 영향 없음 | 영향 없음 |
+| 대상 서비스 | 모든 서비스 | 일부 서비스(S3, SQS, KMS, Secrets Manager, STS, DynamoDB, CloudWatch Logs 등 문서 목록) |
+| 예외 | | AWS 관리형 KMS 키에는 적용되지 않는다 |
+| 사용 조건 | 모든 기능을 켠 조직 | 모든 기능을 켠 조직 |
+
+"버킷 정책을 누가 잘못 써도 조직 밖 계정은 우리 S3 데이터에 접근할 수 없게"가 RCP 문구이고 "개발 계정 사용자가 특정 서비스를 못 쓰게"가 SCP 문구입니다. RCP가 SAA-C03 문항에 들어갔는지는 알 수 없어서 SCP와의 구분 정도만 알아 두었습니다.
 
 Control Tower는 Organizations, Service Catalog, IAM Identity Center를 조합해 랜딩 존을 한 시간 안에 만든다고 문서가 설명하는 서비스입니다.
 
@@ -256,7 +268,16 @@ NAT 게이트웨이는 사설 서브넷의 인스턴스가 밖으로 연결을 �
 | 접근 통제 | 엔드포인트 정책, 버킷 정책의 `aws:SourceVpce` | 엔드포인트 정책, 보안 그룹 |
 | 범위 | 같은 리전의 서비스만. 다른 리전의 S3로 가는 트래픽은 인터넷 게이트웨이로 간다 | |
 
-S3와 DynamoDB는 두 방식을 모두 지원합니다. 게이트웨이 엔드포인트는 라우팅 테이블 기반이라 온프레미스에서 VPN이나 Direct Connect로 들어온 트래픽이 쓰기 어렵고 이 경우는 인터페이스 엔드포인트를 씁니다. 이 부분은 S3 문서의 엔드포인트 유형 비교를 아직 열어 보지 않아 조건을 정확히 확인하지 못했습니다.
+S3와 DynamoDB는 두 방식을 모두 지원합니다. S3 사용자 가이드의 "AWS PrivateLink for Amazon S3" 비교표(2026년 10월 20일 확인)가 둘의 차이를 정리합니다.
+
+| S3 게이트웨이 엔드포인트 | S3 인터페이스 엔드포인트 |
+|---|---|
+| S3 공용 IP와 기존 S3 DNS 이름을 그대로 쓴다 | VPC의 사설 IP와 엔드포인트 전용 DNS 이름을 쓴다 |
+| 온프레미스에서 접근할 수 없다 | Direct Connect나 Site-to-Site VPN으로 온프레미스에서 접근할 수 있다 |
+| 다른 리전에서 접근할 수 없다 | 다른 리전의 VPC에서 VPC 피어링이나 Transit Gateway로 접근할 수 있다 |
+| 요금 없음 | 요금 있음 |
+
+두 엔드포인트는 한 VPC에 함께 둘 수 있습니다. 문서는 VPC 안 트래픽은 요금이 없는 게이트웨이 엔드포인트로, 온프레미스 트래픽만 인터페이스 엔드포인트로 보내는 구성을 예로 듭니다. "온프레미스 서버가 Direct Connect로 S3에 사설 접근"이 나오면 인터페이스 엔드포인트, "VPC 안 EC2가 S3로, 비용 최소"면 게이트웨이 엔드포인트입니다.
 
 결제 서비스의 사설 서브넷 서버가 영수증 PDF를 S3에 올린다면 게이트웨이 엔드포인트를 만들고 버킷 정책에 `aws:SourceVpce` 조건을 걸어 그 엔드포인트에서 오는 요청만 받게 합니다. 트래픽이 NAT를 거치지 않으니 NAT 처리 요금도 줄어듭니다.
 
@@ -407,7 +428,7 @@ CloudHSM은 단일 테넌트 HSM이고 FIPS 모드 클러스터는 FIPS 140-2 �
 | SSE-S3 | S3 관리 키 | 2023년 1월 5일부터 모든 새 객체에 기본 적용. 추가 비용 없음. 객체마다 고유 키, AES-256 |
 | SSE-KMS | KMS 키(AWS 관리형 또는 고객 관리형) | 키 정책 통제, CloudTrail로 키 사용 추적 |
 | DSSE-KMS | KMS 키 + S3 관리 키, 두 겹 | 다층 암호화 규정 요구용. S3 Bucket Key 미지원 |
-| SSE-C | 고객이 요청마다 키를 보냄 | 2026년 4월부터 새 범용 버킷에서 기본 비활성. 쓰려면 `PutBucketEncryption`으로 켜야 한다 |
+| SSE-C | 고객이 요청마다 키를 보냄 | 2026년 4월부터 새 범용 버킷과 SSE-C 객체가 하나도 없던 계정의 기존 버킷에서 기본 차단. 쓰려면 `PutBucketEncryption`으로 `BlockedEncryptionTypes`를 `NONE`으로 바꿔야 하고 차단 상태에서 SSE-C 쓰기 요청은 403 |
 
 기본 암호화를 SSE-KMS로 바꿔도 이미 있는 객체의 암호화 방식은 바뀌지 않습니다. 기존 객체를 바꾸려면 S3 Batch Operations의 복사 작업으로 다시 씁니다.
 
@@ -426,8 +447,9 @@ ACM은 공용·사설 SSL/TLS 인증서의 발급, 저장, 갱신을 맡습니�
 | 자동 갱신 | DNS 검증이면 자동 갱신, 이메일 검증이면 만료 전 알림. ELB나 CloudFront에 연결된 인증서는 대상 |
 | 갱신 대상 아님 | 가져온(import) 인증서, 이미 만료된 인증서, ACME로 발급한 인증서 |
 | EC2에서 직접 TLS | 공개 인증서를 EC2 같은 자체 서버에 쓰려면 ACME 프로토콜로 발급·갱신을 자동화하라고 안내 |
+| 내보낼 수 있는 공개 인증서 | 2026년 10월 문서에는 EC2, 컨테이너, 온프레미스 서버에 내보내 쓰는 공개 인증서가 있다. 유효 기간 198일, 만료 45일 전에 ACM이 갱신하고 알리지만 새 인증서를 서버에 배포하는 일은 고객이 한다. 추가 요금이 있다 |
 
-"인증서 만료로 장애가 났다, 재발 방지"는 ACM 발급 인증서 + DNS 검증 + ELB나 CloudFront 연결입니다. 가져온 인증서는 자동 갱신이 없으니 만료 이벤트를 모니터링해야 합니다.
+"인증서 만료로 장애가 났다, 재발 방지"는 ACM 발급 인증서 + DNS 검증 + ELB나 CloudFront 연결입니다. 가져온 인증서는 자동 갱신이 없으니 만료 이벤트를 모니터링해야 합니다. 내보낼 수 있는 공개 인증서는 시험 안내서보다 나중에 생긴 기능이라 문항에 반영됐는지는 알 수 없고 기존 문항은 "ACM 인증서는 통합 서비스(ELB, CloudFront 등)에서만 쓴다"를 전제로 했을 가능성이 높습니다.
 
 S3로 가는 요청에 HTTPS를 강제하려면 버킷 정책에 `aws:SecureTransport`가 `false`인 요청을 거부하는 문장을 넣습니다. S3 보안 모범 사례 문서가 권하는 방법이고 AWS Config 관리형 규칙 `s3-bucket-ssl-requests-only`로 지속 점검할 수 있습니다. 같은 문서는 S3 인증서를 고정(pinning)하지 말라고 합니다. S3가 인증서를 만료 전 아무 때나 갱신하고 갱신할 때 키 쌍이 바뀌기 때문입니다.
 
@@ -442,9 +464,35 @@ S3 Block Public Access 설정은 네 개이고 액세스 포인트, 버킷, 계�
 | `BlockPublicPolicy` | 공개 접근을 허용하는 버킷 정책 설정을 거부한다. 계정 수준에 거는 것을 권장 |
 | `RestrictPublicBuckets` | 공개 정책이 있는 버킷을 AWS 서비스 주체와 버킷 소유 계정의 권한 있는 사용자만 접근하게 제한한다 |
 
-Object Ownership의 기본값은 "버킷 소유자 적용(bucket owner enforced)"이고 ACL이 꺼진 상태입니다. 문서는 객체마다 따로 접근을 통제해야 하는 경우가 아니면 ACL을 끄라고 권합니다. 정적 웹사이트처럼 공개가 필요한 경우는 CloudFront 앞단에 두고 원본 접근 통제로 S3를 비공개로 유지하는 구성이 흔하지만 이 절에서는 CloudFront OAC 문서를 따로 확인하지 않았습니다.
+Object Ownership의 기본값은 "버킷 소유자 적용(bucket owner enforced)"이고 ACL이 꺼진 상태입니다. 문서는 객체마다 따로 접근을 통제해야 하는 경우가 아니면 ACL을 끄라고 권합니다.
 
-### 4-8. 보존과 삭제 방지: 버전 관리, Object Lock, MFA Delete
+### 4-8. 버킷을 비공개로 둔 채 내보내기: CloudFront OAC와 미리 서명된 URL
+
+버킷을 공개하지 않고 콘텐츠를 내보내는 방법은 두 가지가 자주 나옵니다.
+
+CloudFront 앞단에 두는 경우는 원본 접근 통제(OAC)로 S3를 비공개로 유지합니다. CloudFront 개발자 가이드(2026년 10월 20일 확인)는 OAC와 원본 접근 ID(OAI) 두 방식이 있고 OAC를 권하며 OAI는 레거시라고 적습니다.
+
+| 항목 | OAC(권장) | OAI(레거시) |
+|---|---|---|
+| 모든 리전의 버킷(2022년 12월 이후 옵트인 리전 포함) | 지원 | 지원하지 않거나 우회 필요 |
+| SSE-KMS로 암호화한 객체 | 지원. KMS 키 정책에 CloudFront 서비스 주체를 허용해야 한다 | 지원하지 않음 |
+| `PUT`, `DELETE` 같은 동적 요청 | 지원 | 지원하지 않음 |
+| 버킷 정책의 주체 | `cloudfront.amazonaws.com` 서비스 주체 + `AWS:SourceArn`에 배포 ARN | OAI 사용자 ARN |
+
+정적 웹사이트 엔드포인트로 설정한 버킷은 사용자 지정 원본으로 붙여야 해서 OAC와 OAI 모두 쓸 수 없다고 문서가 적습니다. 그래서 "S3 정적 웹사이트를 CloudFront로만 접근하게, 버킷은 비공개"의 답은 웹사이트 엔드포인트를 끄고 일반 버킷 원본 + OAC로 바꾸는 구성입니다. 시험 자료가 오래됐으면 OAI가 정답으로 나올 수 있는데 지금 문서 기준 권장은 OAC입니다.
+
+미리 서명된 URL(presigned URL)은 버킷 정책을 바꾸지 않고 객체 하나에 기한이 있는 접근을 줍니다. S3 사용자 가이드 기준입니다.
+
+| 항목 | 내용 |
+|---|---|
+| 권한 | URL을 만든 IAM 주체의 권한으로 동작한다. 만든 사람에게 `s3:GetObject` 권한이 없으면 URL도 403 |
+| 업로드 | `PUT`으로 만들면 AWS 자격 증명이 없는 쪽도 정해진 키로 업로드할 수 있다 |
+| 최대 유효 기간 | 콘솔에서 1분~12시간, CLI·SDK에서 최대 7일(IAM 사용자, SigV4) |
+| 임시 자격 증명으로 만든 경우 | 자격 증명이 먼저 만료되면 URL도 그때 만료된다. 역할 세션 기본 1시간이면 URL도 1시간 |
+
+게시판의 첨부 파일을 로그인한 사용자에게만 10분 동안 내려받게 하려면 앱 서버가 미리 서명된 URL을 만들어 돌려줍니다. "URL이 설정보다 일찍 만료된다"는 시나리오의 원인은 EC2 인스턴스 프로필이나 역할 세션 같은 임시 자격 증명으로 서명한 경우입니다.
+
+### 4-9. 보존과 삭제 방지: 버전 관리, Object Lock, MFA Delete
 
 | 기능 | 막는 것 | 조건 |
 |---|---|---|
@@ -458,7 +506,7 @@ Object Lock은 버전 관리가 켜진 버킷에서만 동작하고 객체 버�
 
 결제 내역을 7년 동안 누구도 지울 수 없게 보관하라는 요구가 나오면 규정 준수 모드 Object Lock입니다. 감사 전까지 기간을 모른 채 묶어 둬야 하면 법적 보존입니다.
 
-### 4-9. 백업과 복제
+### 4-10. 백업과 복제
 
 AWS Backup은 백업 계획(backup plan)으로 여러 서비스의 백업을 중앙에서 일정에 맞춰 만들고 리전 간과 계정 간 복사를 지원합니다. Organizations와 연동하면 백업 정책을 조직 계정 전체에 적용합니다.
 
@@ -473,7 +521,7 @@ Vault Lock 자체는 추가 요금이 없지만 잠긴 백업은 기간이 끝�
 
 S3 교차 리전 복제는 원본과 대상 버킷 모두 버전 관리가 켜져 있어야 합니다. 복제와 복구 전략은 Ch-02(복원력)에서 RPO, RTO와 함께 다시 다룹니다.
 
-### 4-10. 규정 준수와 데이터 거버넌스
+### 4-11. 규정 준수와 데이터 거버넌스
 
 안내서의 "규정 준수 요구에 맞는 기술 정렬"과 "데이터 보존과 분류" 항목에 걸리는 서비스를 S3 보안 모범 사례 문서 기준으로 묶었습니다.
 
@@ -486,7 +534,30 @@ S3 교차 리전 복제는 원본과 대상 버킷 모두 버전 관리가 켜�
 | 보안 사건의 원인 조사 | Detective |
 | 백업이 정책대로 되는지 감사 | AWS Backup Audit Manager |
 
-### 4-11. 과제 1.3에서 갈리는 조건
+CloudTrail과 Config는 보기에 함께 나와서 헷갈리기 쉽습니다. 2026년 10월 20일에 연 두 서비스 문서로 차이를 정리했습니다.
+
+| 항목 | CloudTrail | Config |
+|---|---|---|
+| 기록하는 것 | 누가, 언제, 어떤 API를 불렀는지(이벤트) | 리소스 설정이 어떻게 바뀌어 왔는지(설정 항목과 이력), 리소스 사이의 관계 |
+| 기본 상태 | 계정에 기본으로 켜져 있다. 이벤트 기록(event history)은 리전별 최근 90일 관리 이벤트만, 추가 요금 없음 | 기록할 리소스 유형과 S3 버킷, IAM 역할을 정해 켠다 |
+| 오래 보관하거나 더 보려면 | 추적(trail)이나 CloudTrail Lake 이벤트 데이터 저장소를 만든다. 데이터 이벤트(S3 객체 수준 등)는 이벤트 기록에 나오지 않는다 | |
+| 규정 준수 | | 규칙으로 설정을 계속 평가해 비준수를 표시하고 알림. 규칙 묶음(conformance pack), 비준수 리소스 자동 수정(remediation) |
+| 여러 계정 | 조직 추적, 조직 이벤트 데이터 저장소 | 집계기(aggregator)로 여러 계정과 리전을 한 곳에서 |
+
+"지난주 누가 보안 그룹을 열었는지"는 CloudTrail, "지난주 그 보안 그룹의 규칙이 어땠는지, 지금 열린 포트가 정책에 맞는지"는 Config입니다. 90일보다 오래된 API 기록이 필요하면 추적을 만들어 S3로 보내야 한다는 점이 보기를 가릅니다.
+
+범위 안 서비스 목록에는 이 글 본문에서 다루지 않은 보안 서비스가 몇 개 더 있습니다. 각 서비스 문서 첫 페이지로 용도만 확인했습니다.
+
+| 서비스 | 하는 일(문서 기준) | 떠올릴 문구 |
+|---|---|---|
+| Amazon Inspector | EC2 인스턴스, ECR 컨테이너 이미지, Lambda 함수를 자동으로 찾아 소프트웨어 취약점과 의도하지 않은 네트워크 노출을 계속 검사 | "CVE 취약점을 지속 스캔" |
+| AWS Network Firewall | VPC 경계의 상태 저장 관리형 방화벽과 침입 방지(Suricata 호환 규칙, 도메인 목록 필터링). 서브넷에 방화벽 엔드포인트를 두고 라우팅으로 트래픽을 보낸다 | "VPC 단위 IPS", "나가는 트래픽을 허용된 도메인으로만" |
+| AWS Firewall Manager | WAF, Shield Advanced, 보안 그룹과 네트워크 ACL, Network Firewall, Route 53 Resolver DNS Firewall 정책을 조직의 여러 계정에 한 번에 적용하고 새 계정과 리소스에도 자동 적용 | "수십 개 계정의 WAF 규칙을 중앙에서" |
+| AWS RAM | 서브넷, Transit Gateway 같은 리소스를 다른 계정, 조직, OU와 공유. 추가 요금 없음 | "한 계정의 서브넷을 여러 계정이 같이 씀" |
+
+Trusted Advisor도 범위 안입니다. 지원 문서(2026년 10월 20일 확인)는 Basic Support 플랜에서는 Service Limits 범주의 모든 검사와 Security, Fault tolerance 범주의 일부 검사만 쓸 수 있고 전체 검사와 API는 Business Support+, Enterprise Support, Unified Operations 플랜에서 쓴다고 적습니다. 같은 문서는 Developer Support와 Business Support, Enterprise On-Ramp가 2027년 1월 1일에 종료된다고 공지합니다. 기존 자료의 "Business 이상에서 전체 검사"라는 표현은 플랜 이름이 바뀌는 중이라 시험 문항이 어느 이름을 쓰는지는 알 수 없습니다.
+
+### 4-12. 과제 1.3에서 갈리는 조건
 
 | 시나리오의 단어 | 가리키는 답 |
 |---|---|
@@ -503,6 +574,11 @@ S3 교차 리전 복제는 원본과 대상 버킷 모두 버전 관리가 켜�
 | 누구도 지울 수 없는 보존 | Object Lock 규정 준수 모드, Backup Vault Lock 규정 준수 모드 |
 | 실수로 지운 객체 복구 | 버전 관리 |
 | 백업을 다른 리전과 다른 계정에 | AWS Backup 리전 간·계정 간 복사 |
+| CloudFront로만 S3 콘텐츠 제공, 버킷은 비공개 | CloudFront OAC + 버킷 정책 |
+| 로그인한 사용자에게 객체 하나를 잠시 내려받게 | S3 미리 서명된 URL |
+| 90일보다 오래된 API 호출 기록 | CloudTrail 추적(S3로 전달) |
+| 리소스 설정 이력, 설정 규칙 준수 평가 | AWS Config |
+| EC2, 컨테이너 이미지의 CVE 취약점 | Amazon Inspector |
 
 ## 5. 확인 문제
 
@@ -610,15 +686,16 @@ D. ACM 인증서를 EC2로 내보내 웹 서버에 직접 설치하는 것이 �
 <details>
 <summary>정답과 이유</summary>
 
-B입니다. ACM 인증서는 리전 리소스라 리전 사이에 복사할 수 없고 CloudFront는 us-east-1의 인증서를 써야 합니다. DNS 검증을 쓰고 ELB나 CloudFront에 연결하면 자동 갱신 대상입니다. C는 가져온 인증서가 관리형 갱신 대상에서 빠지므로 틀립니다. D는 문서가 EC2 같은 자체 서버의 공개 인증서에는 ACME 자동화를 안내하고 있어 갱신 부담이 남습니다.
+B입니다. ACM 인증서는 리전 리소스라 리전 사이에 복사할 수 없고 CloudFront는 us-east-1의 인증서를 써야 합니다. DNS 검증을 쓰고 ELB나 CloudFront에 연결하면 자동 갱신 대상입니다. C는 가져온 인증서가 관리형 갱신 대상에서 빠지므로 틀립니다. D는 2026년 10월 문서 기준으로 내보낼 수 있는 공개 인증서가 생겨 가능은 하지만 추가 요금이 있고 갱신된 인증서를 서버에 다시 배포하는 일이 고객에게 남습니다. ALB와 CloudFront에 붙이는 B보다 단순하지 않습니다.
 </details>
 
 ## 6. 범위와 한계
 
 - 이 글은 2026년 10월 19일에 열어 본 AWS 공식 문서와 SAA-C03 시험 안내서로 정리했습니다. 한도와 요금은 바뀌므로 응시 전에 다시 확인합니다.
 - 실습은 아직 하지 않았습니다. 정책 평가 순서, 네트워크 ACL의 임시 포트 문제, 엔드포인트 정책 동작은 문서로만 확인했고 Ch-00의 3단계(손으로 해 보기)에서 직접 만들어 볼 계획입니다.
-- 확인하지 못한 것: 인터페이스 엔드포인트와 Direct Connect의 요금·개통 기간, 온프레미스에서 S3 게이트웨이 엔드포인트를 쓸 수 없는 정확한 조건, CloudFront 원본 접근 통제(OAC) 세부, Amazon Inspector와 AWS Artifact·Audit Manager의 세부 기능. 본문에서 해당 문장에 "확인하지 않음"을 붙였습니다.
-- 리전 NAT 게이트웨이, S3 SSE-C 기본 비활성화, Object Lock 가변 보존, WAF의 Bedrock AgentCore Gateway 연결은 시험 안내서 이후에 생긴 것으로 보이며 시험 문항에 반영되었는지는 알 수 없습니다.
+- 확인하지 못한 것: 인터페이스 엔드포인트와 Direct Connect의 요금·개통 기간, AWS Artifact·Audit Manager·Directory Service의 세부 기능, CloudFront 서명된 URL과 서명된 쿠키의 차이. 요금과 개통 기간은 본문 해당 문장에 "확인하지 않음"을 붙였고 나머지는 본문에서 다루지 않았습니다.
+- 2026년 10월 20일 보강: S3 게이트웨이와 인터페이스 엔드포인트의 차이(온프레미스·다른 리전 접근), CloudFront OAC와 OAI, 미리 서명된 URL 유효 기간, SCP와 RCP 비교, CloudTrail과 Config, Inspector·Network Firewall·Firewall Manager·RAM·Trusted Advisor를 각 서비스 문서로 확인해 추가했습니다.
+- 리전 NAT 게이트웨이, S3 SSE-C 기본 비활성화(2026년 4월), Object Lock 가변 보존, WAF의 Bedrock AgentCore Gateway 연결, ACM 내보낼 수 있는 공개 인증서, RCP, AWS Support 플랜 개편(2027년 1월 1일)은 시험 안내서 이후에 생긴 것으로 보이며 시험 문항에 반영되었는지는 알 수 없습니다.
 - "시험에서 갈리는 조건" 표는 공식 문서의 서비스 설명을 시나리오 단어와 짝지은 제 정리이고 AWS가 만든 표가 아닙니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난도나 문체와 다를 수 있습니다.
 
@@ -651,3 +728,13 @@ IAM과 여러 계정
 - Amazon S3 User Guide: [Protecting data with server-side encryption](https://docs.aws.amazon.com/AmazonS3/latest/userguide/serv-side-encryption.html), [Reducing the cost of SSE-KMS with Amazon S3 Bucket Keys](https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html), [Blocking public access to your Amazon S3 storage](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html), [Locking objects with Object Lock](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html), [Security best practices for Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html)
 - AWS Certificate Manager User Guide: [What is AWS Certificate Manager?](https://docs.aws.amazon.com/acm/latest/userguide/acm-overview.html), [Managed certificate renewal in AWS Certificate Manager](https://docs.aws.amazon.com/acm/latest/userguide/managed-renewal.html)
 - AWS Backup Developer Guide: [What is AWS Backup?](https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html), [AWS Backup Vault Lock](https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html)
+- Amazon S3 User Guide: [Using server-side encryption with customer-provided keys (SSE-C)](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys.html), [AWS PrivateLink for Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html), [Download and upload objects with presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
+- Amazon CloudFront Developer Guide, [Restrict access to an Amazon S3 origin](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html)
+- AWS Certificate Manager User Guide, [AWS Certificate Manager exportable public certificates](https://docs.aws.amazon.com/acm/latest/userguide/acm-exportable-certificates.html)
+
+2026년 10월 20일 보강 때 연 문서
+- AWS Organizations User Guide, [Resource control policies (RCPs)](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html)
+- AWS CloudTrail User Guide, [Working with CloudTrail event history](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events.html)
+- AWS Config Developer Guide, [What Is AWS Config?](https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html)
+- [What is Amazon Inspector?](https://docs.aws.amazon.com/inspector/latest/user/what-is-inspector.html), [What is AWS Network Firewall?](https://docs.aws.amazon.com/network-firewall/latest/developerguide/what-is-aws-network-firewall.html), [AWS Firewall Manager](https://docs.aws.amazon.com/waf/latest/developerguide/fms-chapter.html), [What is AWS Resource Access Manager?](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)
+- AWS Support User Guide, [AWS Trusted Advisor](https://docs.aws.amazon.com/awssupport/latest/user/trusted-advisor.html)

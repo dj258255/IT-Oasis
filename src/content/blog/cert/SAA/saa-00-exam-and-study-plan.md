@@ -18,7 +18,7 @@ seriesOrder: 0
 
 ## 결론부터
 
-1. SAA-C03은 65문항(채점 50, 비채점 15)을 130분에 푸는 객관식 시험이고, 100~1,000점 척도에서 720점이면 합격입니다. 영역별 기준은 없고 전체 점수만 봅니다. 한국어로 응시할 수 있습니다.
+1. SAA-C03은 65문항(채점 50, 비채점 15)을 130분에 푸는 객관식 시험이고 100~1,000점 척도에서 720점이면 합격입니다. 영역별 기준은 없고 전체 점수만 봅니다. 한국어로 응시할 수 있습니다.
 2. 문제는 대부분 "가장 비용 효율적인", "운영 부담이 가장 적은" 같은 조건이 붙은 시나리오입니다. 공식 샘플 문항에서도 가장 싼 선택지(Spot 인스턴스)가 조건(중단 불가) 때문에 오답이었습니다. 서비스 이름을 외우는 것보다 비슷한 서비스끼리의 차이를 아는 것이 점수를 가릅니다.
 3. 영역은 보안 30%, 복원력 26%, 성능 24%, 비용 20%입니다. 영역 이름이 Well-Architected Framework의 기둥 이름과 겹치니 그 문서가 시험의 관점을 정리해 줍니다.
 4. 데이터 엔지니어링 서비스(S3, Kinesis, Firehose, Glue, Athena, EMR, Lake Formation, MSK)는 범위 안이고 과제 하나가 데이터 수집과 변환입니다. Airflow 관리형(MWAA)은 범위 밖입니다.
@@ -62,7 +62,7 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 
 ### 2-2. 범위 안과 밖의 서비스
 
-시험 안내서 부록에는 범위 안 서비스가 16개 범주로 나와 있고, AWS는 이 목록이 완전하지 않으며 바뀔 수 있다고 적습니다.
+시험 안내서 부록에는 범위 안 서비스가 16개 범주로 나와 있고 AWS는 이 목록이 완전하지 않으며 바뀔 수 있다고 적습니다.
 
 | 범주(일부) | 범위 안 서비스 |
 |---|---|
@@ -70,10 +70,14 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 | Application Integration | SQS, SNS, EventBridge, Step Functions |
 | Database | Aurora, Aurora Serverless, DynamoDB, ElastiCache, RDS |
 | Networking | CloudFront, Direct Connect, ELB, Global Accelerator, PrivateLink, Route 53, Transit Gateway, VPC |
-| Security | KMS, CloudHSM, WAF, Shield, GuardDuty, Macie, IAM Identity Center |
+| Security | KMS, CloudHSM, WAF, Shield, GuardDuty, Macie, IAM Identity Center, Inspector, Network Firewall, Firewall Manager, RAM, Artifact 등 |
 | Storage | S3, S3 Glacier, EBS, EFS, FSx, Storage Gateway, Backup |
+| Management and Governance | CloudTrail, CloudWatch, Config, Control Tower, Organizations, Compute Optimizer, Trusted Advisor, Well-Architected Tool 등 |
+| Migration and Transfer | Application Migration Service, DataSync, DMS, Snow Family, Transfer Family |
 
-범위 밖 예시로는 MWAA(관리형 Airflow), Lightsail, CDK, CodeBuild, CodeDeploy, IoT 전체 등이 나옵니다. 시험에서는 짧은 공식 이름(예: Amazon SNS)으로 표기하고, 시험 중 도움말에서 정식 명칭과의 대응표를 볼 수 있습니다.
+2026년 10월 20일에 다시 연 목록에는 AWS Elastic Disaster Recovery가 없고 Application Migration Service는 있습니다. 둘 다 블록 수준 복제를 쓰는 서비스라 보기에 함께 나올 수 있어 [Ch-02](/blog/cert/saa/saa-02-resilient-architectures) 3-12절에 짧게 정리했습니다.
+
+범위 밖 예시로는 MWAA(관리형 Airflow), Lightsail, CDK, CodeBuild, CodeDeploy, IoT 전체 등이 나옵니다. 시험에서는 짧은 공식 이름(예: Amazon SNS)으로 표기하고 시험 중 도움말에서 정식 명칭과의 대응표를 볼 수 있습니다.
 
 ## 3. Well-Architected Framework와의 관계
 
@@ -89,6 +93,8 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 | 지속 가능성 | 에너지 소비를 줄여 영향을 개선하는 능력 | 독립 영역 없음 |
 
 오른쪽 열의 대응은 AWS가 적은 것이 아니고 이름을 나란히 놓고 짝지은 것입니다. 프레임워크 문서에는 시험의 정답을 고를 때 도움이 되는 문장이 있습니다. 기둥 사이에는 맞바꾸는 관계가 있지만 보안과 운영 우수성은 대체로 다른 기둥과 맞바꾸지 않는다는 것입니다. 보기 중 비용은 싸지만 보안을 약하게 만드는 선택지는 대체로 오답이라고 읽을 수 있습니다.
+
+프레임워크로 실제 워크로드를 점검하는 도구가 Well-Architected Tool이고 범위 안 서비스입니다. 제품 페이지는 콘솔에서 워크로드를 프레임워크 기준으로 평가하고 렌즈(lens)로 분야별 질문을 더하며 마일스톤으로 시점별 상태를 저장하고 개선 계획을 준다고 설명합니다. "아키텍처를 모범 사례에 비춰 검토하고 위험 항목을 추적"이 이 도구의 문구입니다. 요금은 이번에 연 제품 페이지에 적혀 있지 않았습니다.
 
 ## 4. 문제는 조건으로 갈린다
 
@@ -107,14 +113,14 @@ Ryan Pothecary의 글(2023)도 "가장 비용 효율적인", "운영 부담이 �
 
 ### 4-2. 자주 비교되는 서비스(공식 문서 기준)
 
-공부하면서 표로 계속 늘려 갈 목록이고, 처음 몇 개만 공식 문서로 정리했습니다.
+공부하면서 표로 계속 늘려 갈 목록이고 처음 몇 개만 공식 문서로 정리했습니다.
 
 **SNS와 SQS, Kinesis, MSK**
 
 | | SNS | SQS | Kinesis Data Streams | MSK |
 |---|---|---|---|---|
 | 방식 | 구독자에게 밀어 넣기(push) | 소비자가 가져가기(poll) | 샤드에서 읽기 | Kafka |
-| 순서 | | 표준 큐는 보장하지 않음 | 레코드 순서 보장 | 파티션 안 순서(DE Ch-11) |
+| 순서 | | 표준 큐는 보장하지 않음 | 샤드 안 순서(같은 파티션 키는 같은 샤드) | 파티션 안 순서(DE Ch-11) |
 | 다시 읽기 | 안 됨 | 처리 후 삭제 | 여러 앱이 같은 스트림을 읽고 재처리 가능. 보존 기본 24시간, 최대 365일 | 보존 기간 동안 가능 |
 | 확장 | | 프로비저닝 없이 확장 | 샤드를 미리 정한다 | 브로커를 정한다 |
 
@@ -126,22 +132,23 @@ SNS 문서는 SNS와 SQS를 함께 쓰는 팬아웃을 설명합니다. 즉시 �
 |---|---|---|---|---|
 | Standard | 99.99% | 3개 이상 | 없음 | |
 | Standard-IA | 99.9% | 3개 이상 | 30일 | 꺼낼 때 요금, 최소 과금 크기 128KB |
-| One Zone-IA | 99.5% | 1개 | 30일 | AZ를 잃으면 데이터도 잃는다 |
-| Intelligent-Tiering | 99.9% | 3개 이상 | 없음 | 객체당 모니터링 요금, 꺼낼 때 요금 없음 |
-| Glacier Instant Retrieval | | | 90일 | 밀리초 접근 |
-| Glacier Flexible Retrieval | | | 90일 | 분~시간, 복원 필요 |
-| Glacier Deep Archive | | | 180일 | 시간 단위, 복원 필요 |
+| One Zone-IA | 99.5% | 1개 | 30일 | 꺼낼 때 요금, 최소 과금 크기 128KB. AZ를 잃으면 데이터도 잃는다 |
+| Intelligent-Tiering | 99.9% | 3개 이상 | 없음 | 객체당 모니터링 요금, 꺼낼 때 요금 없음. 128KB 미만 객체는 모니터링하지 않음 |
+| Express One Zone | 99.95% | 1개(직접 고름) | 없음 | 디렉터리 버킷, 한 자리 밀리초 지연 |
+| Glacier Instant Retrieval | 99.9% | 3개 이상 | 90일 | 밀리초 접근, 꺼낼 때 요금, 최소 과금 크기 128KB |
+| Glacier Flexible Retrieval | 99.99%(복원 후) | 3개 이상 | 90일 | 분~시간, 복원 필요. 객체마다 메타데이터 40KB 추가 과금 |
+| Glacier Deep Archive | 99.99%(복원 후) | 3개 이상 | 180일 | 시간 단위, 복원 필요. 객체마다 메타데이터 40KB 추가 과금 |
 
-내구성은 모두 99.999999999%로 같습니다. 클래스 사이의 차이는 가용성, 꺼내는 시간과 요금, 최소 보관 기간입니다.
+S3 사용자 가이드의 스토리지 클래스 비교표(2026년 10월 20일 확인) 기준입니다. 내구성은 모두 99.999999999%로 같습니다. 클래스 사이의 차이는 가용성, AZ 수, 꺼내는 시간과 요금, 최소 보관 기간입니다. 문서는 One Zone-IA와 Express One Zone을 뺀 모든 클래스가 AZ 하나의 물리적 손실을 견디도록 설계됐다고 적습니다.
 
 **RDS Multi-AZ와 읽기 복제본, Aurora**
 
 | | 목적 | 복제 | 읽기 |
 |---|---|---|---|
-| RDS Multi-AZ(인스턴스) | 장애 조치 | 대기 인스턴스와 동기 | 대기 인스턴스는 읽기를 처리하지 않는다. 장애 조치는 빠르면 60초 |
+| RDS Multi-AZ(인스턴스) | 장애 조치 | 대기 인스턴스와 동기 | 대기 인스턴스는 읽기를 처리하지 않는다. 장애 조치는 보통 60~120초(사용자 가이드) |
 | RDS Multi-AZ(DB 클러스터, MySQL·PostgreSQL) | 장애 조치 + 읽기 | 읽을 수 있는 대기 2개 | 장애 조치는 보통 35초 미만 |
-| RDS 읽기 복제본 | 읽기 확장, 다른 리전 DR | 비동기 | 읽기 전용. 독립 인스턴스로 승격할 수 있다 |
-| Aurora 복제본 | 읽기 확장 + 장애 조치 | 같은 저장소를 공유 | 최대 15개, 장애 조치 대상 |
+| RDS 읽기 복제본 | 읽기 확장, 다른 리전 DR | 비동기 | 읽기 전용. 원본당 기본 할당량 15개. 독립 인스턴스로 승격할 수 있다 |
+| Aurora 복제본 | 읽기 확장 + 장애 조치 | 같은 클러스터 볼륨을 공유(AZ 여러 곳의 저장 노드 6개) | 최대 15개, 장애 조치 대상. 복제본이 있으면 장애 조치는 보통 60초 미만 |
 
 샘플 Q10의 오답 "Multi-AZ 대기 인스턴스에서 읽기"가 이 표의 첫 줄에서 나옵니다.
 
@@ -155,13 +162,13 @@ SNS 문서는 SNS와 SQS를 함께 쓰는 팬아웃을 설명합니다. 즉시 �
 
 AWS는 아주 높은 성능과 고정 IP가 필요하면 NLB를 권합니다.
 
-**VPC 게이트웨이 엔드포인트**: S3와 DynamoDB만 지원하고 추가 요금이 없습니다. 라우팅 테이블에 경로를 추가하는 방식이고, 다른 리전의 S3로 가는 트래픽은 이 엔드포인트를 타지 않습니다. 다른 서비스는 PrivateLink 기반 인터페이스 엔드포인트를 씁니다.
+**VPC 게이트웨이 엔드포인트**: S3와 DynamoDB만 지원하고 추가 요금이 없습니다. 라우팅 테이블에 경로를 추가하는 방식이고 다른 리전의 S3로 가는 트래픽은 이 엔드포인트를 타지 않습니다. 다른 서비스는 PrivateLink 기반 인터페이스 엔드포인트를 씁니다.
 
 **KMS 키**: 고객 관리형 키는 월 요금과 사용 요금이 있고 회전과 키 정책을 직접 정합니다. AWS 관리형 키는 월 요금이 없고 매년 자동 회전되며 다른 계정과 공유할 수 없습니다.
 
 ## 5. 데이터 엔지니어 관점
 
-시험 안내서의 과제 3.5(고성능 데이터 수집과 변환)가 데이터 엔지니어링 영역입니다. 지식 예시로 Athena, Lake Formation, DataSync, Storage Gateway, Glue, Kinesis를 들고, 기술로 데이터 레이크 구축과 보안, 스트리밍 아키텍처 설계, 처리용 컴퓨팅 선택(EMR), 형식 변환(CSV를 Parquet으로)을 듭니다. 과제 4.3에는 컬럼 형식과 시계열 형식 같은 비용 효율적인 DB 유형이 나옵니다.
+시험 안내서의 과제 3.5(고성능 데이터 수집과 변환)가 데이터 엔지니어링 영역입니다. 지식 예시로 Athena, Lake Formation, DataSync, Storage Gateway, Glue, Kinesis를 들고 기술로 데이터 레이크 구축과 보안, 스트리밍 아키텍처 설계, 처리용 컴퓨팅 선택(EMR), 형식 변환(CSV를 Parquet으로)을 듭니다. 과제 4.3에는 컬럼 형식과 시계열 형식 같은 비용 효율적인 DB 유형이 나옵니다.
 
 | 서비스 | 공식 문서에서 확인한 것 | 이 블로그에서 이어지는 글 |
 |---|---|---|
@@ -173,7 +180,7 @@ AWS는 아주 높은 성능과 고정 IP가 필요하면 NLB를 권합니다.
 
 ## 6. 응시자들의 후기에서 공통으로 나온 것
 
-유출 문항을 썼다고 밝힌 후기는 빼고, 공식 자료와 정식 강의, 모의고사로 준비한 후기만 모았습니다.
+유출 문항을 썼다고 밝힌 후기는 빼고 공식 자료와 정식 강의, 모의고사로 준비한 후기만 모았습니다.
 
 | 글 | 결과 | 준비 | 남긴 말 |
 |---|---|---|---|
@@ -192,13 +199,13 @@ AWS 공식 준비 경로는 Skill Builder의 4단계입니다. 공식 연습 문
 
 ### 6-1. 덤프에 대한 AWS의 공지
 
-AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value through security measures"에서 실제 시험 문항이 담긴 덤프를 의도치 않게 접근한 것도 AWS 자격 프로그램 약관 위반이라고 적었습니다. 제재는 경고부터 프로그램 정지까지 있고, 데이터 분석으로 이상 패턴이 확인되면 자격증을 발급한 뒤에도 결과를 무효화할 수 있다고 합니다. 국내와 중국 후기 여럿이 "덤프 몇백 문항을 반복했다", "실제 시험과 대부분 같았다"고 적는데, 같은 방법을 따르면 이 위험을 지게 됩니다.
+AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value through security measures"에서 실제 시험 문항이 담긴 덤프를 의도치 않게 접근한 것도 AWS 자격 프로그램 약관 위반이라고 적었습니다. 제재는 경고부터 프로그램 정지까지 있고 데이터 분석으로 이상 패턴이 확인되면 자격증을 발급한 뒤에도 결과를 무효화할 수 있다고 합니다. 국내와 중국 후기 여럿이 "덤프 몇백 문항을 반복했다", "실제 시험과 대부분 같았다"고 적습니다. 같은 방법을 따르면 이 위험을 지게 됩니다.
 
 ## 7. 내 공부 계획
 
 | 단계 | 할 일 | 끝났다고 보는 기준 |
 |---|---|---|
-| 1. 기준 잡기 | 공식 시험 안내서의 과제 목록(2-1절)과 범위 안 서비스를 읽고, 공식 샘플 문항 10개를 풀어 지금 수준을 본다 | 틀린 문항마다 어느 과제에 해당하는지 적는다 |
+| 1. 기준 잡기 | 공식 시험 안내서의 과제 목록(2-1절)과 범위 안 서비스를 읽고 공식 샘플 문항 10개를 풀어 지금 수준을 본다 | 틀린 문항마다 어느 과제에 해당하는지 적는다 |
 | 2. 강의 | 강의 하나를 골라 끝까지 듣는다. 서비스마다 "무엇을 위해, 무엇과 비교해서" 노트를 이 시리즈에 올린다 | 4-2절 같은 비교표가 영역마다 있다 |
 | 3. 손으로 해 보기 | 프리 티어로 VPC(공용·사설 서브넷, NAT, 게이트웨이 엔드포인트), S3 수명주기 규칙, SQS와 SNS 팬아웃, Firehose로 Parquet 쓰기와 Athena 쿼리를 만들어 본다. 끝나면 지운다 | 각각을 그림 없이 설명한다 |
 | 4. 공식 연습 문항 | Skill Builder의 공식 연습 문항을 풀고 틀린 이유를 영역별로 분류한다 | 약한 영역이 정해진다 |
@@ -212,7 +219,7 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 ## 8. 범위와 한계
 
 - 시험 정보는 2026년 10월 19일 AWS 공식 페이지와 시험 안내서로 확인했습니다. 등록 전에 다시 확인합니다.
-- 4-2절의 서비스 비교는 공식 문서 기준이지만 요금과 기본값은 바뀝니다. 읽기 복제본의 최대 개수와 Aurora가 데이터 사본을 몇 개 두는지는 이번에 확인하지 못했습니다.
+- 4-2절의 서비스 비교는 공식 문서 기준이지만 요금과 기본값은 바뀝니다. 처음 쓸 때 확인하지 못했던 읽기 복제본 개수와 Aurora 사본 수는 2026년 10월 20일 RDS 할당량 문서(원본당 읽기 복제본 15개, Oracle은 15개까지 되지만 5개 이하 권장)와 Aurora 고가용성 문서(저장 노드 6개)로 확인해 표에 넣었습니다.
 - 3절의 기둥과 영역 대응은 AWS가 적은 것이 아닙니다.
 - 이 글은 응시 전에 쓴 계획입니다. 응시한 뒤 결과와 바뀐 판단을 덧붙이겠습니다.
 
@@ -224,8 +231,9 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 - AWS, [SAA-C03 Sample Exam Questions](https://d1.awsstatic.com/training-and-certification/docs-sa-assoc/AWS-Certified-Solutions-Architect-Associate_Sample-Questions.pdf)
 - AWS, [Before testing: 응시 편의(ESL +30분)](https://aws.amazon.com/certification/policies/before-testing/), [Coming soon](https://aws.amazon.com/certification/coming-soon/)
 - AWS Training and Certification Blog, [Protecting AWS Certification value through security measures](https://aws.amazon.com/blogs/training-and-certification/protecting-aws-certification-value-through-security-measures/), 2025
-- AWS, [Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)
+- AWS, [Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html), [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/)
 - AWS 문서: [SNS 팬아웃](https://docs.aws.amazon.com/sns/latest/dg/sns-sqs-as-subscriber.html), [Kinesis Data Streams FAQ](https://aws.amazon.com/kinesis/data-streams/faqs/), [S3 storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html), [RDS Multi-AZ](https://aws.amazon.com/rds/features/multi-az/), [ELB features](https://aws.amazon.com/elasticloadbalancing/features/), [Gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html), [Athena pricing](https://aws.amazon.com/athena/pricing/)
+- AWS 문서: [Quotas and constraints for Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html), [High availability for Amazon Aurora](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.AuroraHighAvailability.html), [In-Scope AWS Services (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/saa-03-in-scope-services.html)
 
 후기
 - Ryan Pothecary, [Sitting the AWS Solution Architect Associate SAA-C03 exam 60 times](https://dev.to/ryanpothecary/sitting-the-aws-solution-architect-associate-saa-c03-exam-60-times-2e7p), 2023

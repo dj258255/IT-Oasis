@@ -23,7 +23,7 @@ seriesOrder: 6
 2. 클라이언트가 드라이버 프로세스 밖에 있어서 `SparkContext`, RDD API, 정적 설정, `df._jdf` 같은 JVM 내부 접근을 쓸 수 없습니다. 접속 주소는 `sc://host:port` 형식이고 기본 포트는 15002입니다.
 3. 배포 모드는 드라이버가 어디서 뜨는지로 나눕니다. client(기본)는 제출한 쪽, cluster는 클러스터 안, local은 드라이버와 익스큐터가 한 JVM에서 돕니다. `local[*]`는 논리 코어 수만큼 스레드를 씁니다.
 4. pandas API on Spark(`import pyspark.pandas as ps`)는 pandas 문법으로 Spark에서 분산 실행합니다. Spark DataFrame에서 바꾸면 기본 인덱스가 새로 붙고 기본 종류는 `distributed-sequence`입니다. `to_pandas()`는 모든 데이터를 드라이버로 모으니 작은 결과에만 씁니다.
-5. pandas UDF는 `pandas_udf`와 타입 힌트로 종류를 정합니다. Series에서 Series, Series 반복자에서 Series 반복자, Series에서 스칼라(집계)가 있습니다. DataFrame 단위로 함수를 적용할 때는 `mapInPandas`와 `groupBy().applyInPandas()`를 씁니다. Arrow 변환(`spark.sql.execution.arrow.pyspark.enabled`)은 4.2에서 기본 true가 됐고 3.5까지는 기본 false였습니다.
+5. pandas UDF는 `pandas_udf`와 타입 힌트로 종류를 정합니다. Series에서 Series, Series 반복자에서 Series 반복자, Series에서 스칼라(집계)가 있습니다. DataFrame 단위로 함수를 적용할 때는 `mapInPandas`와 `groupBy().applyInPandas()`를 씁니다. Arrow 변환(`spark.sql.execution.arrow.pyspark.enabled`)은 4.2에서 기본 true가 됐고 3.5, 4.0, 4.1에서는 기본 false였습니다.
 
 ---
 
@@ -155,9 +155,9 @@ orders.groupBy("status").count().show()
 
 PySpark Quickstart: Spark Connect 노트북은 원격 세션을 만들기 전에 기존 일반 세션을 멈춥니다. 같은 프로세스에서 일반 세션과 원격 세션이 함께 있을 수 없다고 적습니다.
 
-독립 애플리케이션용으로는 클라이언트만 담은 패키지가 있습니다. 4.2.0 문서는 `pip install pyspark-client==4.2.0`을 안내합니다. 이 패키지가 처음 나온 버전은 확인하지 못했습니다.
+독립 애플리케이션용으로는 클라이언트만 담은 패키지가 있습니다. 4.2.0 문서는 `pip install pyspark-client==4.2.0`을 안내합니다. PyPI의 릴리스 목록에서 가장 이른 버전은 4.0.0(2025년 5월 23일 업로드)이라 3.5에는 이 패키지가 없습니다.
 
-4.0.0에서 생긴 `spark.api.mode`(기본 `classic`)를 `connect`로 두면 Spark Classic 애플리케이션이 로컬 Spark Connect 서버를 자동으로 띄워 붙습니다. 시험 기준 버전이 3.5라면 범위 밖입니다.
+4.0.0에서 생긴 `spark.api.mode`(기본 `classic`)를 `connect`로 두면 Spark Classic 애플리케이션이 로컬 Spark Connect 서버를 자동으로 띄워 붙습니다(Configuration 문서의 설명). 같은 4.0.0에서 서버 바인딩 주소 설정 `spark.connect.grpc.binding.address`(기본 없음)도 생겼습니다. 시험 기준 버전이 3.5라면 둘 다 범위 밖입니다.
 
 ### 4-3. 접속 문자열
 
@@ -204,6 +204,7 @@ local 모드는 엄밀히 말하면 `--deploy-mode` 값이 아니고 master URL�
 | `local[*,F]` | 논리 코어 수만큼 스레드, 최대 실패 F회 |
 | `local-cluster[N,C,M]` | 단위 테스트 전용. 한 JVM 안에서 워커 N개, 워커당 코어 C개, 메모리 M MiB를 흉내 |
 | `spark://HOST:PORT` | Standalone 마스터. 기본 포트 7077 |
+| `spark://HOST1:PORT1,HOST2:PORT2` | ZooKeeper로 대기 마스터를 둔 Standalone 고가용성 구성. 마스터 호스트를 모두 적는다 |
 | `yarn` | YARN. client와 cluster는 `--deploy-mode`로. 위치는 `HADOOP_CONF_DIR`이나 `YARN_CONF_DIR`로 찾는다 |
 | `k8s://HOST:PORT` | Kubernetes API 서버. 기본 TLS |
 
@@ -219,6 +220,7 @@ local 모드는 엄밀히 말하면 `--deploy-mode` 값이 아니고 master URL�
 헷갈리는 지점입니다.
 
 - 로컬 모드에서 `spark.default.parallelism`은 머신의 코어 수입니다. `local[2]`로 띄우면 스레드가 둘이라 Task도 동시에 둘만 돕니다.
+- `sc://host:port`는 master URL 표에 없습니다. Submitting Applications 문서의 master URL은 클러스터 매니저를 고르는 값이고 `sc://`는 `--remote`나 `builder.remote()`에 주는 Spark Connect 서버 주소입니다. 보기에 `--master sc://...`가 나오면 섞어 놓은 오답으로 봅니다.
 - Spark Connect 서버도 하나의 Spark 드라이버 애플리케이션입니다. `start-connect-server.sh`에 `--master`를 주면 그 서버가 어느 클러스터에서 돌지 정합니다. 이 스크립트가 `spark-submit` 옵션을 받는다는 점은 문서 문장으로 확인하지 못했습니다.
 - client 모드에서 드라이버가 죽으면 애플리케이션 전체가 끝납니다. cluster 모드의 Standalone에는 `--supervise`(`spark.driver.supervise`, 기본 false)로 0이 아닌 종료 코드일 때 드라이버를 자동 재시작하는 옵션이 있습니다.
 
@@ -277,11 +279,11 @@ ps.get_option("compute.default_index_type")   # 'distributed'
 ps.reset_option("compute.default_index_type")
 ```
 
-`distributed` 예제의 인덱스 값은 `[25769803776, 60129542144, 94489280512]`처럼 큰 수로 나옵니다(문서의 `ps.range(3)` 예제). 순번이 필요 없으면 이 종류를 쓰라고 문서가 권합니다.
+`distributed` 예제의 인덱스 값은 `[25769803776, 60129542144, 94489280512]`처럼 큰 수로 나옵니다(문서의 `ps.range(3)` 예제). 순번이 필요 없으면 이 종류를 쓰라고 문서가 권합니다. 기본값 `distributed-sequence`는 3.5.6 문서와 4.2.0 문서가 같아서 버전에 따라 답이 갈리지 않습니다.
 
 ### 7-2. distributed-sequence의 주의점
 
-문서 4.2.0판에는 경고가 하나 있습니다. `distributed-sequence`는 인덱스 자체는 전역 순번이지만 각 인덱스에 대응하는 행은 데이터를 읽을 때마다 달라질 수 있습니다. `apply()`, `groupby()`, `transform()` 중에 인덱스를 새로 만들면 원래 행과 계산 값이 어긋날 수 있다고 적습니다. 문서가 제시하는 예방법은 셋입니다.
+4.2.0 Options and settings 문서에는 경고가 하나 있습니다. `distributed-sequence`는 인덱스 자체는 전역 순번이지만 각 인덱스에 대응하는 행은 데이터를 읽을 때마다 달라질 수 있습니다. `apply()`, `groupby()`, `transform()` 중에 인덱스를 새로 만들면 원래 행과 계산 값이 어긋날 수 있다고 적습니다. 경고가 연결하는 Best Practices 문서의 "Handling index misalignment with distributed-sequence" 절이 예방법 셋을 제시합니다.
 
 1. 함수를 적용하기 전에 `set_index("order_id")`로 인덱스를 명시합니다.
 2. `psdf.spark.persist()`로 행 순서를 고정합니다.
@@ -346,14 +348,16 @@ psdf2 = sdf.pandas_api(index_col="order_id")       # order_id를 다시 인덱�
 
 ## 9. Arrow 설정
 
-Arrow는 JVM과 Python 사이에서 데이터를 컬럼 형식으로 주고받는 데 씁니다. pandas UDF는 설정과 관계없이 항상 Arrow로 데이터를 옮기고 `toPandas()`와 pandas DataFrame으로 `createDataFrame()`을 할 때는 설정을 따릅니다.
+Arrow는 JVM과 Python 사이에서 데이터를 컬럼 형식으로 주고받는 데 씁니다. pandas UDF는 추가 설정 없이 Arrow로 데이터를 옮긴다고 문서가 적습니다. `toPandas()`와 pandas DataFrame으로 `createDataFrame()`을 할 때는 아래 설정을 따릅니다.
 
-| 설정 | 4.2.0 기본값 | 3.5 기본값 | 뜻 |
-|---|---|---|---|
-| `spark.sql.execution.arrow.pyspark.enabled` | true | false(`spark.sql.execution.arrow.enabled` 값을 따르고 그 값이 false) | `toPandas()`, pandas나 NumPy 입력의 `createDataFrame()`에 Arrow 사용 |
-| `spark.sql.execution.arrow.pyspark.fallback.enabled` | (`spark.sql.execution.arrow.fallback.enabled` 값) | 같음 | Arrow 경로에서 오류가 나면 Arrow 없는 경로로 자동 전환 |
-| `spark.sql.execution.arrow.maxRecordsPerBatch` | 10000 | 10000 | Arrow 레코드 배치 하나의 최대 행 수. 0 이하면 제한 없음 |
-| `spark.sql.execution.pythonUDF.arrow.enabled` | true | false | 일반 Python UDF에 Arrow 최적화(3.4.0에 생김) |
+| 설정 | 4.2.0 | 4.0.0, 4.1.0 | 3.5.6 | 뜻 |
+|---|---|---|---|---|
+| `spark.sql.execution.arrow.pyspark.enabled` | `spark.sql.execution.arrow.enabled` 값을 따르고 그 값이 true | 같은 방식, 그 값이 false | 같은 방식, 그 값이 false | `toPandas()`, pandas나 NumPy 입력의 `createDataFrame()`에 Arrow 사용 |
+| `spark.sql.execution.arrow.pyspark.fallback.enabled` | `spark.sql.execution.arrow.fallback.enabled` 값(true) | 같음 | 같음 | Arrow 경로에서 오류가 나면 Arrow 없는 경로로 자동 전환 |
+| `spark.sql.execution.arrow.maxRecordsPerBatch` | 10000 | 10000 | 10000 | Arrow 레코드 배치 하나의 최대 행 수. 0 이하면 제한 없음 |
+| `spark.sql.execution.pythonUDF.arrow.enabled` | true | false | false | 일반 Python UDF에 Arrow 최적화(3.4.0에 생김). 인자가 하나 이상인 함수에만 적용 |
+
+값은 각 버전 Configuration 문서의 표에서 옮겼습니다. 두 기본값이 true로 바뀐 버전은 4.2이고 4.0과 4.1은 3.5와 같이 false입니다.
 
 4.2 마이그레이션 가이드가 두 기본값 변경을 적습니다. PySpark와 JVM 사이 컬럼 데이터 교환이 기본으로 Arrow를 쓰게 됐고 일반 Python UDF도 기본으로 Arrow 최적화가 됐습니다. 예전 동작이 필요하면 각각 false로 돌립니다. 같은 4.2에서 PyArrow 최소 버전이 18.0.0으로 올랐습니다.
 
@@ -437,18 +441,19 @@ payments.groupBy("method").agg(trimmed_mean("amount").alias("amount_tm"))
 
 - pandas UDF 안에서는 조건식이나 불리언 단축 평가가 지원되지 않아 모든 행에서 함수가 실행됩니다. 특정 행에서 실패할 수 있으면 조건을 함수 안에 넣으라고 API 문서가 적습니다.
 - 호출하는 쪽에서 키워드 인자를 쓸 수 없다고 적혀 있습니다. 4.0.0에서 SCALAR와 GROUPED_AGG 종류는 키워드 인자를 지원하게 바뀌었다는 표시도 같은 문서에 있어서 버전에 따라 다릅니다.
-- 4.2.0에서 GROUPED_AGG 종류가 반복자 API를 지원하게 됐다는 변경 표시가 있습니다. 시험 기준 버전이 이전이면 범위 밖입니다.
+- 같은 API 문서에 4.1.0에서 GROUPED_MAP 종류가, 4.2.0에서 GROUPED_AGG 종류가 반복자 API를 지원하게 됐다는 변경 표시가 있습니다. 시험 기준 버전이 이전이면 범위 밖입니다.
+- `ArrayType`의 `TimestampType`과 중첩 `StructType`은 출력 타입으로 지원하지 않는다고 API 문서가 적습니다.
 - 반환한 Series의 타입이 `returnType`과 다르면 Spark가 변환을 시도하고 그 변환이 맞다는 보장이 없습니다. 4.1부터 `spark.sql.execution.pandas.convertToArrowArraySafely`가 기본으로 켜져서 정수 넘침 같은 안전하지 않은 변환에 오류를 냅니다.
 
 ## 11. pandas Function API
 
-pandas UDF가 컬럼(Column) 단위라면 pandas Function API는 DataFrame 단위로 Python 함수를 적용합니다. 내부적으로 Arrow와 pandas를 쓰는 점은 같습니다. 타입 힌트는 선택이고 지금은 동작에 영향을 주지 않습니다.
+pandas UDF가 컬럼(Column) 단위라면 pandas Function API는 DataFrame 단위로 Python 함수를 적용합니다. 내부적으로 Arrow와 pandas를 쓰는 점은 같습니다. Arrow 문서는 Function API의 타입 힌트가 선택이고 지금은 동작에 영향을 주지 않는다고 적습니다. 다만 4.2.0 `applyInPandas` API 문서는 4.1.0에 추가된 반복자 형태를 타입 힌트(`Iterator[pd.DataFrame]`)로 받는 예제를 보여서 4.1 이후에는 힌트가 형태를 가를 수 있습니다.
 
 | API | 함수 형태 | 출력 길이 | 시그니처 |
 |---|---|---|---|
 | `DataFrame.mapInPandas` | `Iterator[pd.DataFrame] -> Iterator[pd.DataFrame]` | 자유 | `mapInPandas(func, schema, barrier=False, profile=None)`(3.0.0) |
 | `GroupedData.applyInPandas` | `pd.DataFrame -> pd.DataFrame`(그룹마다), 키 튜플을 첫 인자로 받을 수도 | 자유 | `applyInPandas(func, schema)`(3.0.0) |
-| `groupBy().cogroup().applyInPandas` | 두 `pd.DataFrame` -> `pd.DataFrame` | 자유 | 두 DataFrame을 같은 키로 묶어서 |
+| `PandasCogroupedOps.applyInPandas` | 두 `pd.DataFrame` -> `pd.DataFrame`, 키 튜플을 첫 인자로 받을 수도 | 자유 | `df1.groupBy(k).cogroup(df2.groupBy(k)).applyInPandas(func, schema)`(3.0.0) |
 
 ```python
 # 고객별 주문 금액에서 고객 평균을 빼기(split-apply-combine)
@@ -470,7 +475,7 @@ large = orders.mapInPandas(big_orders, schema=orders.schema)
 
 헷갈리는 지점입니다.
 
-- `applyInPandas`는 함수를 적용하기 전에 그룹 하나의 데이터를 전부 메모리에 올립니다. 그룹 크기가 쏠리면 OOM이 날 수 있고 `maxRecordsPerBatch`는 그룹에 적용되지 않는다고 문서가 적습니다. Ch-04 10절의 익스큐터 OOM 원인 표에 이 API를 넣은 이유입니다. 4.1.0부터는 pandas DataFrame 반복자를 받는 형태도 지원합니다.
+- `applyInPandas`는 함수를 적용하기 전에 그룹 하나의 데이터를 전부 메모리에 올립니다. 그룹 크기가 쏠리면 OOM이 날 수 있고 `maxRecordsPerBatch`는 그룹에 적용되지 않는다고 문서가 적습니다. Ch-04 10절의 익스큐터 OOM 원인 표에 이 API를 넣은 이유입니다. 4.1.0부터는 pandas DataFrame 반복자를 받는 형태도 지원하고 API 문서는 이 형태로 OOM 위험을 줄일 수 있다고 적습니다. cogroup 쪽은 코그룹 하나의 데이터를 전부 메모리에 올린다는 같은 주의가 있습니다.
 - 반환 DataFrame의 컬럼 라벨은 `schema`를 문자열로 주면 필드 이름과 맞아야 하고 정수 인덱스처럼 문자열이 아니면 위치로 맞춥니다.
 - `mapInPandas`의 각 pandas DataFrame 크기는 `maxRecordsPerBatch`로 조절됩니다.
 - 3.0 이전의 grouped map pandas UDF(`PandasUDFType.GROUPED_MAP`과 `groupby().apply()`)는 `applyInPandas`로 옮기라고 문서가 권합니다.
@@ -483,9 +488,11 @@ large = orders.mapInPandas(big_orders, schema=orders.schema)
 | 직렬화 | pickle(4.2부터 기본 Arrow) | Arrow | Arrow |
 | 기본 반환 타입 | `StringType` | `StringType` | 지정 필수 |
 | 켜는 방법 | 기본 | `useArrow=True` 또는 `spark.sql.execution.pythonUDF.arrow.enabled=true`(설정은 `useArrow`가 None일 때만 적용) | 기본 |
-| 벡터화 연산 | 안 됨 | 안 됨 | 된다 |
+| 벡터화 연산 | 안 됨(4.1부터 예외 있음, 아래) | 안 됨 | 된다 |
 
-Arrow Python UDF의 기본 반환 타입은 일반 UDF와 같다고 보고 적었습니다. 문서 예제는 둘 다 `returnType='int'`를 명시해서 기본값을 직접 확인하지는 못했습니다. 4.2부터 일반 Python UDF가 기본으로 Arrow 최적화를 쓰면서 타입 변환(coercion) 동작이 달라졌습니다. 반환 값이 지정 타입과 맞지 않을 때 결과가 3.5와 다를 수 있다는 뜻입니다.
+Arrow Python UDF는 따로 있는 함수가 아니고 `udf()`에 `useArrow`를 준 것입니다. 시그니처가 `udf(f=None, returnType=StringType(), *, useArrow=None)`이라 기본 반환 타입은 둘 다 `StringType`입니다. 4.2부터 일반 Python UDF가 기본으로 Arrow 최적화를 쓰면서 타입 변환(coercion) 동작이 달라졌습니다. 반환 값이 지정 타입과 맞지 않을 때 결과가 3.5와 다를 수 있다는 뜻입니다.
+
+4.2.0 `udf` API 문서에는 4.1.0 변경 표시가 하나 더 있습니다. 함수에 pandas UDF의 타입 힌트 패턴(예: `pd.Series -> pd.Series`)을 달고 `useArrow`를 따로 주지 않으면 `udf`로 만들어도 pandas UDF로 처리됩니다. 3.5 기준 보기에서는 `@udf`가 행 단위라는 판단이 맞지만 4.1 이후 문서로 공부했다면 이 차이를 같이 기억합니다.
 
 ## 13. 확인 문제
 
@@ -550,13 +557,13 @@ B입니다. Spark Connect 프로토콜은 RDD 같은 실행 API를 지원하지 
 
 - A. `@pandas_udf("double")` + `def f(s: pd.Series) -> float`
 - B. `@pandas_udf("double")` + `def f(s: pd.Series) -> pd.Series`
-- C. `@udf("double")` + `def f(s: pd.Series) -> pd.Series`
+- C. `udf(lambda a: a * 1.1, "double")`
 - D. `orders.mapInPandas(f, "double")`
 
 <details>
 <summary>정답과 근거</summary>
 
-B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 pandas UDF입니다. A는 Series에서 스칼라라 집계 UDF가 됩니다. C의 `udf`는 행 단위 함수라 pandas Series를 받지 않습니다. D의 `mapInPandas`는 DataFrame 반복자를 받는 API이고 스키마도 DataFrame 스키마여야 합니다.
+B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 pandas UDF입니다. A는 Series에서 스칼라라 집계 UDF가 됩니다. C는 타입 힌트가 없는 일반 Python UDF라 행 하나씩 처리합니다. 결과 길이는 같지만 벡터화 함수는 아닙니다. D의 `mapInPandas`는 DataFrame 반복자를 받는 API이고 스키마도 DataFrame 스키마여야 합니다. 4.1부터는 `@udf`에 B와 같은 타입 힌트를 달아도 pandas UDF가 되지만(12절) 보기 C처럼 힌트가 없으면 해당하지 않습니다.
 
 </details>
 
@@ -565,7 +572,7 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 <details>
 <summary>정답과 근거</summary>
 
-해결되지 않습니다. `applyInPandas`는 그룹 하나를 통째로 메모리에 올리고 `maxRecordsPerBatch`는 그룹에 적용되지 않습니다. 쏠린 그룹을 쪼개거나(Ch-04 salting) 그룹 단위 로직을 다시 짜야 합니다.
+해결되지 않습니다. `applyInPandas`는 그룹 하나를 통째로 메모리에 올리고 `maxRecordsPerBatch`는 그룹에 적용되지 않습니다. 쏠린 그룹을 쪼개거나(Ch-04 salting) 그룹 단위 로직을 다시 짜야 합니다. 4.1 이상이면 함수를 `Iterator[pd.DataFrame]`을 받는 형태로 바꾸는 방법도 API 문서가 제시합니다.
 
 </details>
 
@@ -574,15 +581,15 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 <details>
 <summary>정답과 근거</summary>
 
-3.5에서는 `spark.sql.execution.arrow.pyspark.enabled`를 true로 켭니다. 기본값이 `spark.sql.execution.arrow.enabled`(false)를 따르기 때문입니다. 4.2에서는 기본이 true라서 따로 켤 필요가 없습니다. 어느 쪽이든 `toPandas()`는 모든 데이터를 드라이버로 모읍니다.
+3.5에서는 `spark.sql.execution.arrow.pyspark.enabled`를 true로 켭니다. 기본값이 `spark.sql.execution.arrow.enabled`(false)를 따르기 때문입니다. 4.0과 4.1도 같습니다. 4.2에서는 기본이 true라서 따로 켤 필요가 없습니다. 어느 쪽이든 `toPandas()`는 모든 데이터를 드라이버로 모읍니다.
 
 </details>
 
 ## 14. 범위와 한계
 
-- 동작과 기본값은 2026년 10월 19일에 연 Spark 4.2.0 문서(Spark Connect Overview, Cluster Mode Overview, Submitting Applications, Configuration)와 PySpark 4.2.0 문서(Apache Arrow in PySpark, pandas API on Spark의 Options and settings, From/to pandas and PySpark DataFrames, Best Practices, Upgrading PySpark, API 참조)를 기준으로 했습니다. 3.5 기본값은 3.5.6 Configuration 문서로 확인했습니다.
-- 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark와 로컬 Connect 서버를 띄우지 못했습니다. `load_coupon_alias_table()`은 설명용으로 가정한 함수입니다.
-- 확인하지 못한 것을 따로 적습니다. Connect에서 존재하지 않는 컬럼 오류가 나는 시점, accumulator와 broadcast 변수가 막히는지, `start-connect-server.sh`가 `spark-submit` 옵션을 받는지, `pyspark-client` 패키지가 처음 나온 버전, Arrow Python UDF의 기본 반환 타입은 문서 문장으로 확인하지 못했습니다. 1절의 영역별 문항 수 짐작은 비중으로 계산한 값입니다.
+- 동작과 기본값은 2026년 10월 19일에 연 Spark 4.2.0 문서(Spark Connect Overview, Cluster Mode Overview, Submitting Applications, Configuration)와 PySpark 4.2.0 문서(Apache Arrow in PySpark, pandas API on Spark의 Options and settings, From/to pandas and PySpark DataFrames, Best Practices, Upgrading PySpark, API 참조)를 기준으로 했습니다. 3.5 기본값은 3.5.6 Configuration 문서로, 4.0과 4.1의 Arrow 기본값은 4.0.0과 4.1.0 Configuration 문서로 2026년 10월 20일에 다시 확인했습니다. `pyspark-client`의 첫 버전은 PyPI 릴리스 목록으로 확인했습니다.
+- 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark와 로컬 Connect 서버를 띄우지 못했습니다. Python 문법 검사(`ast.parse`)만 했습니다. `load_coupon_alias_table()`은 설명용으로 가정한 함수입니다.
+- 확인하지 못한 것을 따로 적습니다. Connect에서 존재하지 않는 컬럼 오류가 나는 시점, accumulator와 broadcast 변수가 막히는지, `start-connect-server.sh`가 `spark-submit` 옵션을 받는지는 문서 문장으로 확인하지 못했습니다. 1절의 영역별 문항 수 짐작은 비중으로 계산한 값입니다.
 - Spark Connect 위에서 pandas API on Spark가 어디까지 되는지는 다루지 않았습니다. 이번에 연 문서에서 지원 범위 표를 찾지 못했습니다.
 
 ## 참고 자료
@@ -593,12 +600,14 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 - PySpark 4.2.0, [Quickstart: Spark Connect](https://spark.apache.org/docs/latest/api/python/getting_started/quickstart_connect.html)
 - Apache Spark 저장소, [client-connection-string.md](https://github.com/apache/spark/blob/master/sql/connect/docs/client-connection-string.md) (master 브랜치)
 - Apache Spark 4.2.0, [Cluster Mode Overview](https://spark.apache.org/docs/latest/cluster-overview.html), [Submitting Applications](https://spark.apache.org/docs/latest/submitting-applications.html)
-- Apache Spark 4.2.0, [Spark Configuration](https://spark.apache.org/docs/latest/configuration.html), 3.5.6 [Spark Configuration](https://spark.apache.org/docs/3.5.6/configuration.html)
+- Apache Spark 4.2.0, [Spark Configuration](https://spark.apache.org/docs/latest/configuration.html), 4.1.0 [Spark Configuration](https://spark.apache.org/docs/4.1.0/configuration.html), 4.0.0 [Spark Configuration](https://spark.apache.org/docs/4.0.0/configuration.html), 3.5.6 [Spark Configuration](https://spark.apache.org/docs/3.5.6/configuration.html)
+- PySpark 3.5.6, [Options and settings](https://spark.apache.org/docs/3.5.6/api/python/user_guide/pandas_on_spark/options.html)
+- PyPI, [pyspark-client](https://pypi.org/project/pyspark-client/) (릴리스 목록)
 - PySpark 4.2.0, [PySpark Overview](https://spark.apache.org/docs/latest/api/python/index.html) (pandas API on Spark 소개)
 - PySpark 4.2.0, [Options and settings](https://spark.apache.org/docs/latest/api/python/tutorial/pandas_on_spark/options.html), [From/to pandas and PySpark DataFrames](https://spark.apache.org/docs/latest/api/python/tutorial/pandas_on_spark/pandas_pyspark.html), [Best Practices](https://spark.apache.org/docs/latest/api/python/tutorial/pandas_on_spark/best_practices.html)
 - PySpark 4.2.0, [Apache Arrow in PySpark](https://spark.apache.org/docs/latest/api/python/tutorial/sql/arrow_pandas.html)
 - PySpark 4.2.0, [Upgrading PySpark](https://spark.apache.org/docs/latest/api/python/migration_guide/pyspark_upgrade.html)
-- PySpark 4.2.0 API: [functions.pandas_udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.pandas_udf.html), [DataFrame.mapInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.mapInPandas.html), [GroupedData.applyInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.applyInPandas.html), [DataFrame.pandas_api](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.pandas_api.html), [pyspark.pandas.DataFrame.to_spark](https://spark.apache.org/docs/latest/api/python/reference/pyspark.pandas/api/pyspark.pandas.DataFrame.to_spark.html), [pyspark.pandas.DataFrame.to_pandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.pandas/api/pyspark.pandas.DataFrame.to_pandas.html), [SparkSession.builder.remote](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.remote.html)
+- PySpark 4.2.0 API: [functions.pandas_udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.pandas_udf.html), [DataFrame.mapInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.mapInPandas.html), [GroupedData.applyInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.applyInPandas.html), [PandasCogroupedOps.applyInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.PandasCogroupedOps.applyInPandas.html), [functions.udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.udf.html), [DataStreamWriter.foreachBatch](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.foreachBatch.html), [DataFrame.pandas_api](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.pandas_api.html), [pyspark.pandas.DataFrame.to_spark](https://spark.apache.org/docs/latest/api/python/reference/pyspark.pandas/api/pyspark.pandas.DataFrame.to_spark.html), [pyspark.pandas.DataFrame.to_pandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.pandas/api/pyspark.pandas.DataFrame.to_pandas.html), [SparkSession.builder.remote](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.remote.html)
 
 이 시리즈
 - [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning), [Spark Ch-05: Structured Streaming](/blog/cert/spark/spark-05-structured-streaming)

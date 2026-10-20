@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-03] 워크로드와 스케줄링: Pod가 어디에 얼마만큼 뜨는지 정하는 값들'
-description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. 롤링 업데이트와 롤백, ConfigMap과 Secret, HPA와 VPA, 자가 치유를 만드는 restartPolicy와 프로브, 그리고 requests와 limits, LimitRange, ResourceQuota, 노드 어피니티, 테인트, static Pod, PriorityClass를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
+description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. 롤링 업데이트와 롤백, ConfigMap과 Secret, HPA(kubectl autoscale --cpu, tolerance)와 VPA, in-place resize, 자가 치유를 만드는 restartPolicy와 프로브, 네이티브 사이드카, 그리고 requests와 limits, LimitRange, ResourceQuota, 노드 어피니티, 테인트, static Pod, PriorityClass를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -191,7 +191,7 @@ kubectl get hpa -n shop
 kubectl describe hpa order-api -n shop
 ```
 
-현재 `kubectl autoscale` 레퍼런스의 옵션은 `--cpu`와 `--memory`입니다. 값에 `%`를 붙이면 평균 사용률, `500m`처럼 양으로 주면 평균 값이 목표가 됩니다. 옛 강의와 "Deployments" 문서 예시에는 `--cpu-percent`가 남아 있습니다.
+현재 `kubectl autoscale` 레퍼런스의 옵션은 `--cpu`와 `--memory`입니다. 값에 `%`를 붙이면 평균 사용률, `500m`처럼 양으로 주면 평균 값이 목표가 됩니다. 단위 없이 `500`만 쓰면 CPU는 `500m`, 메모리는 `500Mi`로 읽으니 사용률을 원하면 `%`를 꼭 붙입니다. 두 옵션은 1.34 변경 기록(CHANGELOG-1.34)에 추가됐고 같은 항목에서 `--cpu-percent`의 사용 중단이 시작됐습니다. 옛 강의와 "Deployments" 문서 예시에는 `--cpu-percent`가 남아 있습니다. kubectl 소스(`autoscale.go`)를 보면 이 옵션은 사용 중단(deprecated)으로 표시되어 도움말과 레퍼런스에서 숨겨졌을 뿐 아직 동작하고 경고를 냅니다. `--cpu`와 함께 쓰면 "mutually exclusive" 오류가 납니다.
 
 축소 안정화 구간처럼 명령으로 줄 수 없는 값은 `autoscaling/v2` YAML로 씁니다.
 
@@ -220,6 +220,14 @@ spec:
       stabilizationWindowSeconds: 300
 ```
 
+허용 범위도 HPA마다 정할 수 있습니다. "Horizontal Pod Autoscaling" 문서의 Tolerance 절은 `behavior.scaleUp.tolerance`, `behavior.scaleDown.tolerance` 필드를 소개하고 기능 게이트 `HPAConfigurableTolerance`는 1.37에서 stable이 됐습니다. 이 필드가 없으면 kube-controller-manager의 `--horizontal-pod-autoscaler-tolerance`(기본 0.1)가 쓰입니다.
+
+```yaml
+  behavior:
+    scaleUp:
+      tolerance: 0.05   # 목표보다 5% 넘게 높을 때만 확장
+```
+
 ### 3-3. VPA
 
 VerticalPodAutoscaler는 실제 사용량에 맞춰 requests와 limits를 조정합니다. "Vertical Pod Autoscaling" 문서에 따르면 VPA는 CRD로 정의되어 있어 HPA와 달리 클러스터에 따로 설치해야 하고 현재 안정 API 버전은 `autoscaling.k8s.io/v1`입니다. 시험 환경에 VPA가 설치되어 있는지는 확인하지 못했습니다. 저는 개념과 HPA와의 차이만 정리해 두었습니다.
@@ -229,6 +237,16 @@ VerticalPodAutoscaler는 실제 사용량에 맞춰 requests와 limits를 조정
 | 바꾸는 것 | 레플리카 수 | Pod의 requests와 limits |
 | 위치 | 코어 API(`autoscaling/v2`) | CRD, 별도 설치(`autoscaling.k8s.io/v1`) |
 | 대상 | Deployment, StatefulSet 같은 scale 하위 리소스가 있는 객체. DaemonSet은 대상이 아님 | Deployment, StatefulSet 같은 워크로드 리소스 |
+
+수직 확장과 관련해 바뀐 점이 하나 있습니다. Pod를 다시 만들지 않고 실행 중인 컨테이너의 CPU와 메모리를 바꾸는 in-place resize(`InPlacePodVerticalScaling`)가 1.35에서 stable이 됐습니다. "Resize CPU and Memory Resources assigned to Containers" 문서의 방법은 Pod의 `resize` 하위 리소스에 패치하는 것이고 kubectl 1.32 이상이 필요합니다.
+
+```bash
+kubectl patch pod order-api-xxxx -n shop --subresource resize --patch \
+  '{"spec":{"containers":[{"name":"nginx","resources":{"requests":{"cpu":"200m"},"limits":{"cpu":"200m"}}}]}}'
+kubectl get pod order-api-xxxx -n shop -o jsonpath='{.status.containerStatuses[0].resources}'
+```
+
+컨테이너의 `resizePolicy`는 자원마다 `NotRequired`(기본, 재시작 없이 적용)와 `RestartContainer` 중 하나입니다. 노드가 바로 들어주지 못하면 Pod에 `PodResizePending` condition이, 적용 중이면 `PodResizeInProgress`가 붙습니다. Deployment가 관리하는 Pod를 이렇게 바꾸면 Pod 템플릿과 어긋나고 다음 롤아웃에서 템플릿 값으로 돌아간다는 점은 Deployment 동작에서 끌어낸 판단입니다.
 
 ### 3-4. 직접 해 보기
 
@@ -288,7 +306,55 @@ containers:
 - liveness 프로브는 readiness 프로브가 성공하기를 기다리지 않습니다. 시작이 느린 앱에 liveness만 걸면 뜨기도 전에 재시작이 반복됩니다. 이때 startupProbe나 `initialDelaySeconds`를 씁니다.
 - readiness 실패는 재시작을 일으키지 않습니다. Pod가 `Running`인데 Service로 트래픽이 안 가면 `READY` 열과 EndpointSlice를 봅니다.
 
-### 4-4. 직접 해 보기
+### 4-4. 네이티브 사이드카
+
+로그 수집기나 프록시처럼 앱 컨테이너와 함께 계속 돌아야 하는 보조 컨테이너는 이제 `initContainers`에 `restartPolicy: Always`를 붙여 만듭니다. 기능 게이트 `SidecarContainers`는 1.29부터 기본으로 켜졌고 1.33에서 stable이 됐습니다. "Sidecar Containers" 문서가 적은 동작은 이렇습니다.
+
+| 항목 | 동작 |
+|---|---|
+| 시작 순서 | init 컨테이너 목록 순서대로. 사이드카가 시작됨(`started`) 상태가 되어야 다음 init 컨테이너가 뜬다. startupProbe가 있으면 그 성공이 기준 |
+| 실행 중 | Pod가 사는 동안 계속 돈다. 종료되면 다시 시작된다 |
+| readinessProbe | 사이드카에 걸면 그 결과가 Pod의 Ready 판단에 들어간다 |
+| 종료 순서 | 앱 컨테이너가 완전히 멈춘 뒤 사이드카를 정의 역순으로 종료 |
+| 이미지 변경 | Pod를 다시 만들지 않고 그 컨테이너만 재시작 |
+
+일반 init 컨테이너는 앱 컨테이너보다 먼저 끝나서 앱과 메시지를 주고받을 수 없고 사이드카는 앱과 동시에 돌며 네트워크와(선택하면) 볼륨을 공유합니다. 게시판 앱의 접근 로그 파일을 사이드카가 읽어 stdout으로 내보내는 예입니다.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: board
+  namespace: board
+spec:
+  initContainers:
+  - name: log-shipper
+    image: busybox:1.36
+    restartPolicy: Always          # 이 한 줄이 사이드카를 만든다
+    command: ["sh", "-c", "tail -n+1 -F /var/log/board/access.log"]
+    volumeMounts:
+    - name: logs
+      mountPath: /var/log/board
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "while true; do echo \"$(date) GET /board\" >> /var/log/board/access.log; sleep 1; done"]
+    volumeMounts:
+    - name: logs
+      mountPath: /var/log/board
+  volumes:
+  - name: logs
+    emptyDir: {}
+```
+
+```bash
+kubectl -n board logs board -c log-shipper
+kubectl -n board get pod board -o jsonpath='{.status.initContainerStatuses[*].started}'
+```
+
+`kubectl get pod`의 READY 열은 앱 컨테이너와 사이드카를 함께 셉니다. 위 Pod가 정상이면 `2/2`로 보인다고 알고 있지만 이번에 문서 출력으로 확인하지는 않았습니다. 자원 계산에서는 사이드카가 앱 컨테이너 쪽 합계에 더해진다고 같은 문서의 "Resource sharing within containers" 절이 적습니다.
+
+### 4-5. 직접 해 보기
 
 게시판 Pod에 `exec` 방식 liveness 프로브(`cat /tmp/healthy`)를 걸고 30초 뒤 파일을 지우는 명령으로 띄웁니다. 문서 "Configure Liveness, Readiness and Startup Probes"의 첫 예제와 같은 구조입니다. `kubectl describe pod`의 Events에서 프로브 실패와 재시작이 언제 찍히는지, `RESTARTS` 값이 몇 초 간격으로 오르는지 적습니다.
 
@@ -528,7 +594,7 @@ spec:
    kubectl autoscale deployment order-api -n shop --cpu=70% --min=2 --max=6
    kubectl get hpa order-api -n shop
    ```
-   `<unknown>`이면 컨테이너의 CPU request 유무(`kubectl get deploy order-api -o yaml | grep -A3 requests`)와 `kubectl top pods`가 동작하는지(Metrics Server)를 봅니다.
+   `<unknown>`이면 컨테이너의 CPU request 유무(`kubectl get deploy order-api -n shop -o yaml | grep -A3 requests`)와 `kubectl top pods`가 동작하는지(Metrics Server)를 봅니다.
 5. LimitRange를 YAML로 만듭니다.
    ```yaml
    apiVersion: v1
@@ -580,10 +646,10 @@ spec:
 
 ## 범위와 한계
 
-- 이 글의 명령과 YAML은 공식 문서에서 옮기거나 문서 예시를 바탕으로 고친 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양만 옮겼습니다. 클러스터를 만든 뒤 2-5, 3-4, 4-4, 5-10절의 결과를 덧붙이겠습니다.
+- 이 글의 명령과 YAML은 공식 문서에서 옮기거나 문서 예시를 바탕으로 고친 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양만 옮겼습니다. 클러스터를 만든 뒤 2-5, 3-4, 4-5, 5-10절의 결과를 덧붙이겠습니다.
 - 공식 문서는 2026년 10월 19일 기준 kubernetes.io(v1.37)에서 확인했습니다.
 - 시험 환경에 Metrics Server와 VPA가 설치되어 있는지, 노드 사이 `scp`가 되는지는 확인하지 못했습니다.
-- `kubectl autoscale --cpu-percent`가 v1.37 kubectl에서 아직 동작하는지는 확인하지 못했습니다. 현재 레퍼런스의 옵션 목록에서는 보이지 않습니다.
+- `kubectl autoscale --cpu-percent`의 동작은 kubernetes/kubernetes 저장소 master 브랜치의 `autoscale.go`로 확인했고 v1.37 kubectl 바이너리로 실행해 보지는 않았습니다.
 - 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다. 풀이도 클러스터에서 돌려 보지 않았습니다.
 
 ## 참고 자료
@@ -593,6 +659,8 @@ spec:
 - Kubernetes, [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/)
 - Kubernetes, [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/), [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
 - Kubernetes, [Autoscaling Workloads](https://kubernetes.io/docs/concepts/workloads/autoscaling/), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/), [HorizontalPodAutoscaler Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/), [Vertical Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/vertical-pod-autoscale/), [kubectl autoscale](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_autoscale/)
+- Kubernetes, [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/), [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/), [Feature Gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/)
+- kubernetes/kubernetes, [CHANGELOG-1.34](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md), [staging/src/k8s.io/kubectl/pkg/cmd/autoscale/autoscale.go](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/kubectl/pkg/cmd/autoscale/autoscale.go)
 - Kubernetes, [Kubernetes Self-Healing](https://kubernetes.io/docs/concepts/architecture/self-healing/), [Pod Lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/), [Liveness, Readiness, and Startup Probes](https://kubernetes.io/docs/concepts/workloads/pods/probes/), [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/), [Configure a Pod to Use a ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
 - Kubernetes, [Admission Control in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/), [Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/), [Pod Quality of Service Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
 - Kubernetes, [Limit Ranges](https://kubernetes.io/docs/concepts/policy/limit-range/), [Resource Quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/)

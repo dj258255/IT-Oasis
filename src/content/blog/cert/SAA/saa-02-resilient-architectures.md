@@ -23,7 +23,7 @@ seriesOrder: 2
 1. 영역 2는 과제 두 개입니다. 2.1은 부하가 늘어도 버티도록 구성 요소를 나누고 늘리는 설계(큐, 이벤트, 서버리스, 컨테이너, Auto Scaling, 캐시), 2.2는 한 AZ나 한 리전이 멈춰도 서비스가 이어지는 설계(Multi-AZ, Route 53, DR 전략, DB 장애 조치, 복제)입니다.
 2. "느슨한 결합"이 나오면 먼저 SQS를 떠올립니다. 순서와 중복 제거가 필요하면 FIFO 큐, 한 이벤트를 여러 곳에 동시에 보내야 하면 SNS 팬아웃, 규칙으로 여러 대상에 라우팅하면 EventBridge, 여러 단계를 순서와 재시도로 묶으면 Step Functions입니다.
 3. 재해 복구는 백업과 복원, 파일럿 라이트, 웜 스탠바이, 다중 사이트 액티브/액티브 네 가지이고 오른쪽으로 갈수록 RPO와 RTO가 짧아지고 비용과 복잡도가 커집니다. 파일럿 라이트와 웜 스탠바이의 차이는 DR 리전이 지금 바로 요청을 처리할 수 있는지입니다. DR 백서는 이 둘을 가르는 기준을 그렇게 적습니다.
-4. DB 장애 조치 시간은 서비스마다 다릅니다. RDS Multi-AZ DB 인스턴스는 보통 60~120초이고 대기 인스턴스는 읽기를 처리하지 않습니다. Aurora는 복제본이 있으면 보통 60초 안, 자주 30초 안에 복구됩니다. Aurora Global Database는 리전 간 복제 지연이 보통 1초 미만이고 2026년 10월 문서 기준 보조 리전을 최대 10개 둡니다.
+4. DB 장애 조치 시간은 서비스마다 다릅니다. RDS Multi-AZ DB 인스턴스는 보통 60~120초이고 대기 인스턴스는 읽기를 처리하지 않습니다. Aurora는 복제본이 있으면 보통 60초 안, 자주 30초 안에 복구됩니다. Aurora Global Database는 리전 간 복제 지연이 보통 1초 미만이고 2026년 10월 사용자 가이드 기준 보조 리전을 최대 10개 둡니다(2021년판 DR 백서는 5개).
 5. DR 백서는 장애 조치에 데이터 플레인 작업만 쓰라고 권합니다. Route 53 상태 확인 기반 장애 조치와 ARC 라우팅 제어는 데이터 플레인이고 가중치 변경이나 Auto Scaling 확장은 컨트롤 플레인입니다. 그래서 DR 리전의 서비스 할당량을 미리 올려 두라는 문장이 안내서의 "대기 환경의 서비스 할당량" 항목과 이어집니다.
 
 ---
@@ -50,6 +50,16 @@ seriesOrder: 2
 
 웹 계층(ALB), 애플리케이션 계층(Auto Scaling 그룹이나 컨테이너), 데이터 계층(RDS, DynamoDB)을 나누고 각 계층을 AZ 두 개 이상에 걸칩니다. 계층마다 따로 늘릴 수 있고 한 계층의 장애가 다른 계층으로 번지는 범위가 줄어듭니다. 로드 밸런서 종류(ALB, NLB, GWLB)의 차이는 Ch-00의 4-2절 표에 정리해 두었습니다.
 
+로드 밸런서 설정 중 시험에 자주 걸리는 세 가지를 ELB 사용자 가이드와 ALB 대상 그룹 속성 문서(2026년 10월 20일 확인)로 정리했습니다.
+
+| 설정 | 문서 내용 | 시험 문구 |
+|---|---|---|
+| 교차 영역 로드 밸런싱 | 켜면 각 노드가 모든 AZ의 대상에 나눠 보낸다. ALB는 로드 밸런서 수준에서 항상 켜져 있고 대상 그룹 수준에서만 끌 수 있다. NLB와 GWLB는 기본으로 꺼져 있고 언제든 켤 수 있다 | "AZ마다 인스턴스 수가 달라 일부 인스턴스에만 부하가 몰림" |
+| 고정 세션(sticky session) | 대상 그룹 단위. 로드 밸런서가 만드는 `AWSALB` 쿠키(기간 1초~7일)나 애플리케이션 쿠키 기반. 교차 영역을 끈 대상 그룹에서는 쓸 수 없다 | "세션을 서버 메모리에 두는 레거시 앱이 로그인이 풀림" |
+| 등록 취소 지연(deregistration delay) | 기본 300초 동안 진행 중 요청을 마치게 기다린 뒤 대상을 뺀다 | "축소할 때 처리 중이던 요청이 끊김" |
+
+예제로 보면 AZ A에 대상 2개, AZ B에 8개가 있고 교차 영역이 꺼져 있으면 A의 대상은 각각 25%, B의 대상은 각각 6.25%를 받는다고 문서가 설명합니다. 켜면 10개가 10%씩 받습니다. 고정 세션은 상태를 서버에 두는 앱을 수정 없이 살리는 방법이지만 부하가 고르게 퍼지지 않으니 2-1절처럼 세션을 외부 저장소로 옮기는 것이 근본 해결입니다.
+
 ### 2-3. 큐: SQS
 
 SQS 큐 유형 문서의 비교를 옮겼습니다.
@@ -61,7 +71,17 @@ SQS 큐 유형 문서의 비교를 옮겼습니다.
 | 순서 | 최선 노력. 순서 보장 없음 | 메시지 그룹 안에서 보낸 순서대로 |
 | 예시 | 업로드 후 썸네일 생성 같은 백그라운드 작업 분리 | 가격 변경을 순서대로 반영, 계정 등록 뒤 수강 신청 |
 
-높은 처리량 모드의 한도는 리전마다 다릅니다. 메시지 할당량 문서 기준(2026년 10월) 미국 동부(버지니아 북부), 미국 서부(오리건), 유럽(아일랜드)은 배치 없는 호출 초당 70,000건이고 아시아 태평양(도쿄), 싱가포르, 시드니, 뭄바이는 9,000건, 목록에 없는 리전은 2,400건입니다. 서울 리전이 어디에 속하는지는 이 문서에서 따로 확인하지 못했습니다.
+높은 처리량 모드의 한도는 리전마다 다릅니다. 메시지 할당량 문서(2026년 10월 20일 확인)의 배치 없는 호출 기준은 다음과 같고 배치(10개)를 쓰면 메시지 수로 열 배입니다.
+
+| 리전 | 초당 API 호출(배치 없음) |
+|---|---|
+| 미국 동부(버지니아 북부), 미국 서부(오리건), 유럽(아일랜드) | 70,000 |
+| 미국 동부(오하이오), 유럽(프랑크푸르트) | 19,000 |
+| 아시아 태평양(뭄바이, 싱가포르, 시드니, 도쿄), 유럽(스페인) | 9,000 |
+| 유럽(런던), 남아메리카(상파울루) | 4,500 |
+| 그 밖의 리전 | 2,400 |
+
+서울 리전은 이름이 따로 나오지 않아 "그 밖의 리전"인 초당 2,400건(배치로 24,000메시지)에 해당합니다. 더 필요하면 Service Quotas로 증가를 요청합니다.
 
 | 메시지 할당량 | 값 |
 |---|---|
@@ -143,6 +163,8 @@ Lambda 문서에는 API Gateway의 기본 스로틀(초당 10,000)과 Lambda의 
 | 호출 페이로드 | 동기 요청·응답 각 6MB, 비동기 1MB |
 | 배포 패키지 | zip 업로드 50MB, 압축 해제 250MB. 컨테이너 이미지 10GB |
 
+2026년 10월 할당량 문서에는 Lambda Managed Instances라는 실행 방식이 있고 이 방식의 비동기 호출과 일부 이벤트 소스 매핑은 최대 90분까지 돈다고 적혀 있습니다. 시험 안내서보다 나중에 생긴 것이라 문항은 "Lambda 최대 15분"을 전제로 한다고 보는 편이 안전합니다.
+
 15분을 넘는 작업, 계속 떠 있어야 하는 프로세스, 큰 로컬 상태가 필요한 작업은 Lambda 대신 Fargate나 EC2가 맞습니다. Fargate는 ECS 문서에서 서버 관리, 용량 계획, 워크로드 격리를 직접 하지 않는 서버리스 사용량 기반 컴퓨팅 엔진으로 설명됩니다.
 
 ### 2-9. 컨테이너: ECS, EKS, Fargate
@@ -167,6 +189,15 @@ Lambda 문서에는 API Gateway의 기본 스로틀(초당 10,000)과 Lambda의 
 문서는 대상 추적을 강하게 권하고 용량에 반비례하는 지표(평균 CPU 사용률, 대상당 요청 수)를 고르라고 합니다. 용량을 두 배로 늘리면 지표가 절반으로 줄어드는 지표여야 비례 조정이 맞게 일어난다는 이유입니다. 정책이 여러 개 동시에 발동하면 가장 큰 용량을 주는 정책을 따릅니다.
 
 SQS 소비자를 늘릴 때는 큐 길이 대신 인스턴스당 처리할 메시지 수(backlog per instance)를 지표로 쓰는 문서가 따로 있습니다(이번에는 목차에서 제목만 확인). 예약 조정과 예측 조정도 있는데 이번에는 문서를 열지 않았습니다. 매일 같은 시각에 몰리는 부하는 예약 조정, 과거 패턴으로 미리 늘리는 것은 예측 조정이라는 일반적인 구분만 적어 둡니다.
+
+조정 정책 말고도 인스턴스가 들어오고 나가는 순간을 다루는 기능 두 가지가 문제에 나옵니다. EC2 Auto Scaling 사용자 가이드(2026년 10월 20일 확인) 기준입니다.
+
+| 기능 | 하는 일 | 값과 제약 |
+|---|---|---|
+| 수명 주기 후크(lifecycle hook) | 시작 중이거나 종료 중인 인스턴스를 대기 상태로 잡아 두고 사용자 작업(소프트웨어 설치, 로그 내려받기)을 마친 뒤 다음 상태로 보낸다 | 기본 하트비트 제한 시간 1시간. 대기 최대는 48시간과 하트비트의 100배 중 작은 값. 종료 후크는 최선 노력(best effort)이고 Spot 회수는 막지 못한다 |
+| 웜 풀(warm pool) | 부팅이 아주 오래 걸리는 앱을 위해 미리 초기화한 인스턴스를 그룹 옆에 두었다가 확장할 때 꺼내 쓴다 | 상태는 Stopped, Hibernated, Running 중 선택. Stopped나 Hibernated면 인스턴스 요금 없이 EBS와 탄력적 IP 요금만 낸다. Running은 권하지 않는다 |
+
+"새 인스턴스가 설정 스크립트를 끝내기 전에 ALB가 트래픽을 보내 오류" 또는 "축소 전에 로그를 S3로 옮겨야 함"은 수명 주기 후크입니다. "부팅에 10분 넘게 걸려 급증에 늦게 대응, 상시 과다 프로비저닝은 싫음"은 웜 풀입니다.
 
 ### 2-11. 캐싱 전략
 
@@ -194,7 +225,7 @@ RDS 읽기 복제본은 원본 DB의 엔진 기능으로 비동기 복제되는 
 | 항목 | 내용 |
 |---|---|
 | 복제 | 비동기. 복제본 데이터는 원본보다 늦을 수 있다 |
-| 개수 | MySQL, MariaDB, PostgreSQL은 원본당 최대 15개(2022년 10월 AWS 발표와 PostgreSQL 문서 기준. MySQL·MariaDB 사용자 가이드 페이지는 이번에 직접 확인하지 못함) |
+| 개수 | 원본 DB 인스턴스당 기본 할당량 15개(RDS 할당량 문서, 2026년 10월 20일 확인). MySQL, MariaDB, PostgreSQL은 2022년 10월 발표로 5개에서 15개가 됐다. Oracle은 15개까지 되지만 복제 지연 때문에 5개 이하를 권한다 |
 | 자동 확장 | RDS는 읽기 복제본의 자동 추가·삭제를 지원하지 않는다. 직접 만든다 |
 | 요금 | 같은 리전 안 복제 데이터 전송은 무료. 복제본은 일반 DB 인스턴스 요금 |
 | 승격 | 독립 DB 인스턴스로 승격 가능. 원본을 지우면 같은 리전 복제본은 독립 인스턴스로 승격된다 |
@@ -228,6 +259,10 @@ EFS 문서는 리전 파일 시스템이 여러 AZ에 데이터를 중복 저장
 | 15분 넘는 작업, 서버 관리 없음 | Fargate |
 | 쿠버네티스 매니페스트 그대로 | EKS |
 | 세션을 인스턴스 밖에 | ElastiCache나 DynamoDB |
+| 앱을 못 고치는데 세션이 서버 메모리에 있음 | ALB 고정 세션(대상 그룹) |
+| 새 인스턴스가 준비되기 전 트래픽을 받음, 종료 전 로그 수집 | Auto Scaling 수명 주기 후크 |
+| 부팅이 매우 느려 확장이 늦음 | Auto Scaling 웜 풀(Stopped 상태) |
+| NLB 뒤 AZ별 대상 수가 달라 부하 불균형 | NLB 교차 영역 로드 밸런싱 켜기 |
 | 읽기 부하만 큼, 쓰기는 그대로 | 읽기 복제본이나 캐시 |
 | 여러 인스턴스가 공유하는 파일 | EFS |
 | SFTP 거래처 연동 | Transfer Family |
@@ -282,7 +317,7 @@ IP 기반을 뺀 나머지는 프라이빗 호스팅 영역에서도 쓸 수 있
 | 문자열 일치 | 응답 본문 첫 5,120바이트 안에 검색 문자열이 있는지(추가 요금) |
 | 상태 확인 리전 | 직접 고르면 최소 3개 |
 
-Route 53은 사설·로컬·라우팅 불가 IP 범위의 엔드포인트는 직접 확인할 수 없습니다. VPC 안의 사설 리소스 상태로 장애 조치하려면 그 리소스의 지표에 CloudWatch 경보를 만들고 경보 기반 상태 확인을 씁니다. 실패 임계값의 기본값(3으로 알려져 있음)은 이번에 연 페이지에 숫자가 없어 확인하지 못했습니다.
+Route 53은 사설·로컬·라우팅 불가 IP 범위의 엔드포인트는 직접 확인할 수 없습니다. VPC 안의 사설 리소스 상태로 장애 조치하려면 그 리소스의 지표에 CloudWatch 경보를 만들고 경보 기반 상태 확인을 씁니다. 실패 임계값은 Route 53 API 참조의 `HealthCheckConfig` 기준 1~10 범위이고 지정하지 않으면 3입니다. 요청 간격도 지정하지 않으면 30초입니다.
 
 ### 3-5. Global Accelerator와 CloudFront 원본 장애 조치
 
@@ -350,7 +385,7 @@ RDS Proxy는 DB 연결 풀을 만들어 재사용하고 장애 조치 때 애플
 | 장애 조치 | 기본 리전 장애 시 다른 리전으로 |
 | 쓰기 전달 | 보조 클러스터가 쓰기 SQL을 기본 클러스터로 전달 |
 
-DR 백서는 보조 리전을 "최대 5개"로 적고 있어 서비스 문서(최대 10개)와 다릅니다. 백서가 이전 기준으로 쓰여 있다고 보고 서비스 문서 숫자를 따랐습니다. 백서는 보조 리전을 1분 안에 읽기·쓰기로 승격할 수 있다고 적습니다.
+DR 백서는 보조 리전을 "최대 5개"로 적고 있어 서비스 문서와 다릅니다. 2026년 10월 20일에 Aurora 사용자 가이드의 "Using Amazon Aurora Global Database" 페이지를 다시 열어 "up to 10 secondary DB clusters in different Regions"라는 문장을 확인했고 엔진(MySQL, PostgreSQL)을 가리지 않는 서술입니다. 백서는 2021년판이라 이전 한도로 보고 사용자 가이드의 10개를 따랐습니다. 시험 문항이 숫자 자체를 묻는다면 출제 시점에 따라 5가 정답일 수도 있어서 "리전 여러 개에 읽기 전용 사본, 1초 미만 복제"라는 성격으로 기억해 둡니다. 백서는 보조 리전을 1분 안에 읽기·쓰기로 승격할 수 있다고 적습니다.
 
 ### 3-9. DynamoDB 글로벌 테이블
 
@@ -389,6 +424,17 @@ S3 복제 문서의 표 한 줄에는 RTC가 "99.9%"로 적혀 있어 본문(99.
 
 DR 백서가 시점 복구를 지원한다고 든 서비스는 EBS 스냅샷, DynamoDB 백업, RDS 스냅샷, Aurora 스냅샷, EFS 백업(AWS Backup 사용 시), Redshift 스냅샷, Neptune, DocumentDB, FSx입니다. AWS Backup은 이들을 중앙에서 계획하고 리전 간·계정 간 복사를 합니다. 계정 간 백업은 내부자 위협이나 계정 탈취까지 대비합니다.
 
+AWS Backup 개발자 가이드의 리전 간 복사 페이지(2026년 10월 20일 확인)에서 문제에 쓸 만한 동작을 모았습니다.
+
+| 항목 | 문서 내용 |
+|---|---|
+| 방법 | 백업 계획의 규칙에 복사 대상 리전과 저장소를 넣어 자동으로, 또는 복구 지점을 골라 수동(온디맨드)으로 |
+| 첫 복사 | 전체 복사. 이후 증분을 지원하는 서비스는 같은 리전으로 가는 다음 복사부터 증분 |
+| 암호화 | 대상 저장소의 고객 관리형 키로 다시 암호화. EBS는 다른 KMS 키를 쓰는 저장소로 복사하면 전체 복사가 된다 |
+| 제약 | 콜드 스토리지 계층의 백업은 리전 간 복사를 지원하지 않는다. RDS는 사용자 지정 옵션 그룹을 함께 복사하지 않아 대상 리전에 같은 옵션 그룹을 미리 만들어야 한다 |
+
+"규정상 백업을 운영 리전과 떨어진 곳에 자동으로 보관"은 백업 계획의 복사 규칙이 답이고 Lambda로 스냅샷을 복사하는 보기는 운영 부담이 큰 쪽입니다.
+
 백서는 백업 복원이 컨트롤 플레인 작업이라서 재해 때 쓸 수 없을 수도 있으니 주기적으로 DR 리전에 미리 복원해 두는 방법을 권합니다. AWS Backup에는 예약 복원 기능이 없어 SDK로 직접 자동화한다고 적혀 있습니다. 백업은 복원 테스트까지 해야 백업이라는 것이 백서의 주의 사항입니다.
 
 ### 3-12. 앱 수정 없이 레거시 애플리케이션의 신뢰성 높이기
@@ -403,7 +449,9 @@ DR 백서가 시점 복구를 지원한다고 든 서비스는 EBS 스냅샷, Dy
 | Transfer Family | 기존 SFTP 클라이언트 설정을 유지한 채 S3로 |
 | SQS | 동기 호출을 큐로 분리(일부 수정 필요) |
 
-Elastic Disaster Recovery 문서는 RPO와 RTO 숫자를 명시하지 않고 "몇 분 안에 복구 인스턴스를 띄운다"고만 적습니다. 흔히 보이는 "RPO 초 단위, RTO 분 단위"라는 표현은 이번에 연 페이지에서 확인하지 못했습니다.
+Elastic Disaster Recovery 사용자 가이드는 RPO와 RTO 숫자를 명시하지 않고 "몇 분 안에 복구 인스턴스를 띄운다"고만 적습니다. 같은 서비스의 FAQ는 "RPOs of seconds", "RTOs of minutes"라고 적어 흔히 보이는 "RPO 초 단위, RTO 분 단위"의 출처가 FAQ임을 확인했습니다(2026년 10월 20일). 복제 원본으로는 물리 서버, VMware vSphere, Microsoft Hyper-V, 다른 클라우드를 듭니다.
+
+다만 2026년 10월 20일에 연 SAA-C03 범위 안 서비스 목록에는 Elastic Disaster Recovery가 없고 Migration and Transfer 범주에 AWS Application Migration Service가 있습니다. 이관(한 번 옮기기)이 목적이면 Application Migration Service, 계속 복제하다가 장애 때 띄우는 DR이 목적이면 Elastic Disaster Recovery라고 구분해 두었습니다. Application Migration Service 문서는 이번에 열지 않았습니다.
 
 ### 3-13. 불변 인프라와 자동화
 
@@ -564,9 +612,10 @@ A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RT
 
 - 2026년 10월 19일에 열어 본 AWS 공식 문서, SAA-C03 시험 안내서, DR 백서(Disaster Recovery of Workloads on AWS)로 정리했습니다. 한도와 요금은 바뀌므로 응시 전에 다시 확인합니다.
 - 실습은 아직 하지 않았습니다. SQS 표시 제한 시간과 DLQ 동작, Route 53 장애 조치 전환 시간, RDS 장애 조치 시간은 문서 수치를 옮긴 것이고 직접 잰 값이 아닙니다. Ch-00의 3단계에서 SQS와 SNS 팬아웃부터 만들어 볼 계획입니다.
-- 확인하지 못한 것: MySQL·MariaDB 읽기 복제본 15개 한도의 사용자 가이드 원문(발표문과 PostgreSQL 문서로만 확인), Route 53 실패 임계값 기본값, DynamoDB MRSC의 리전 수와 지연 특성, Elastic Disaster Recovery의 RPO·RTO 수치, Auto Scaling 예약·예측 조정 세부, DAX, EKS, Comprehend, Polly 문서. 서울 리전의 SQS FIFO 높은 처리량 한도.
-- 문서끼리 숫자가 다른 곳이 두 군데 있었습니다. Aurora Global Database 보조 리전 수(서비스 문서 10개, DR 백서 5개)와 S3 RTC 비율(본문 99.99%, 표 한 줄 99.9%)입니다. 본문에 어느 쪽을 따랐는지 적었습니다.
-- SQS 메시지 최대 크기(1MiB), EventBridge의 새 Custom Event Bus, ECS Managed Instances, 리전 NAT 게이트웨이는 시험 안내서 이후 바뀌거나 생긴 것으로 보이며 문항 반영 여부는 알 수 없습니다.
+- 확인하지 못한 것: DynamoDB MRSC의 리전 수와 지연 특성, Auto Scaling 예약·예측 조정 세부, Application Migration Service, DAX, EKS, Comprehend, Polly 문서.
+- 2026년 10월 20일 보강: 읽기 복제본 15개는 RDS 할당량 문서의 "Read replicas per primary" 기본값 15로, Route 53 실패 임계값 기본값 3은 API 참조로, Elastic Disaster Recovery의 RPO 초·RTO 분은 FAQ로, 서울 리전의 SQS FIFO 높은 처리량 한도(그 밖의 리전 2,400)는 메시지 할당량 문서로 확인했습니다. ELB 교차 영역·고정 세션·등록 취소 지연, Auto Scaling 수명 주기 후크·웜 풀, AWS Backup 리전 간 복사를 새로 넣었습니다.
+- 문서끼리 숫자가 다른 곳이 두 군데 있었습니다. Aurora Global Database 보조 리전 수(사용자 가이드 10개, 2021년판 DR 백서 5개)와 S3 RTC 비율(본문 99.99%, 표 한 줄 99.9%)입니다. 본문에 어느 쪽을 따랐는지 적었습니다.
+- SQS 메시지 최대 크기(1MiB), Lambda 비동기 페이로드 1MB와 Managed Instances 90분, EventBridge의 새 Custom Event Bus, ECS Managed Instances, 리전 NAT 게이트웨이는 시험 안내서 이후 바뀌거나 생긴 것으로 보이며 문항 반영 여부는 알 수 없습니다. Elastic Disaster Recovery는 2026년 10월 범위 안 서비스 목록에 없습니다.
 - "시험에서 갈리는 조건" 표와 SNS·EventBridge 구분은 문서 설명을 시나리오 단어와 짝지은 제 정리입니다. 확인 문제는 직접 만든 것입니다.
 
 ## 참고 자료
@@ -601,3 +650,13 @@ A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RT
 - AWS Backup Developer Guide, [What is AWS Backup?](https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html)
 - AWS Elastic Disaster Recovery User Guide, [What is Elastic Disaster Recovery?](https://docs.aws.amazon.com/drs/latest/userguide/what-is-drs.html)
 - AWS X-Ray Developer Guide, [What is AWS X-Ray?](https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html)
+
+2026년 10월 20일 보강 때 연 문서
+- Elastic Load Balancing User Guide, [How Elastic Load Balancing works](https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html)
+- User Guide for Application Load Balancers, [Edit target group attributes for your Application Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html)
+- Amazon EC2 Auto Scaling User Guide: [Amazon EC2 Auto Scaling lifecycle hooks](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html), [Decrease latency for applications with long boot times using warm pools](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html)
+- Amazon Route 53 API Reference, [HealthCheckConfig](https://docs.aws.amazon.com/Route53/latest/APIReference/API_HealthCheckConfig.html)
+- AWS, [AWS Elastic Disaster Recovery FAQs](https://aws.amazon.com/disaster-recovery/faqs/)
+- AWS Backup Developer Guide, [Creating backup copies across AWS Regions](https://docs.aws.amazon.com/aws-backup/latest/devguide/cross-region-backup.html)
+- Amazon RDS User Guide, [Quotas and constraints for Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html)
+- AWS, [In-Scope AWS Services (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/saa-03-in-scope-services.html)

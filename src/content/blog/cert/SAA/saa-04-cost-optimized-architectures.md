@@ -46,7 +46,7 @@ seriesOrder: 4
 | 하는 일 | 비용과 사용량을 그래프로 보고 분석 | 한도를 정하고 알림이나 조치 | 가장 상세한 비용과 사용량 데이터를 S3로 |
 | 기간 | 최근 13개월과 이번 달, 앞으로 18개월 예측 | 월, 분기, 연, 사용자 지정 기간 | 청구 기간 단위로 누적 |
 | 갱신 | 최소 24시간에 한 번 | 하루 최대 세 번 | 하루 최소 한 번, 최대 세 번 |
-| 요금 | 콘솔은 무료, API는 페이지 요청당 0.01달러 | 문서에서 확인 못 함 | 문서에서 확인 못 함 |
+| 요금 | 콘솔은 무료, API는 페이지 요청당 0.01달러 | 예산 모니터링과 알림은 무료. 조치(action)를 단 예산은 매월 2개까지 무료, 그 뒤 예산당 하루 0.10달러. 예산 보고서는 1건 전달에 0.01달러(Budgets 요금 페이지, 2026년 10월 20일) | 이번에 확인 못 함 |
 | 시험 문구 | "어떤 서비스가 비용을 늘렸는지 분석", "RI 구매 권장" | "한도의 80%에 도달하면 알림", "초과 시 IAM 정책으로 생성 차단" | "Athena로 시간 단위 비용을 쿼리", "리소스별 상세 청구 데이터" |
 
 Budgets 문서는 예산 유형을 여섯 가지로 나눕니다. 비용 예산, 사용량 예산, RI 사용률과 RI 적용률(coverage) 예산, Savings Plans 사용률과 적용률 예산입니다. 실제 지출과 예측 지출 둘 다로 알림을 걸 수 있고 알림은 이메일이나 SNS로 갑니다. 문서는 사용과 청구 사이에 지연이 있어서 알림이 오기 전에 한도를 넘을 수 있다고도 적습니다. 예산 조치(budget action)로 사용자 지정 IAM 정책을 붙여 추가 리소스 생성을 막는 예가 문서에 있습니다.
@@ -66,6 +66,12 @@ CUR은 시간, 일, 월 단위로 서비스, 리소스, 태그별 비용을 CSV�
 ### 2-3. 다중 계정 결제(통합 결제)
 
 "Consolidating billing for AWS Organizations" 문서는 통합 결제의 이점을 네 가지로 적습니다. 청구서 하나, 계정 간 비용 추적, 사용량 합산으로 볼륨 할인과 RI 할인과 Savings Plans를 공유, 추가 요금 없음입니다. 관리 계정이 모든 멤버 계정의 요금을 냅니다. 개발, 운영, 분석 계정을 나눠 쓰는 회사에서 S3 단계별 요금이나 RI를 합산해 쓰고 싶다는 조건이면 Organizations 통합 결제입니다.
+
+### 2-4. Trusted Advisor와 Support 플랜
+
+Trusted Advisor도 범위 안 서비스이고 비용 절감 권고를 냅니다. 지원 문서(2026년 10월 20일 확인)는 Basic Support 플랜에서는 Service Limits 범주 전체와 Security, Fault tolerance 범주 일부 검사만 쓸 수 있고 전체 검사(비용 최적화 포함)와 API는 Business Support+, Enterprise Support, Unified Operations 플랜에서 쓴다고 적습니다. 같은 문서는 Developer Support, Business Support, Enterprise On-Ramp가 2027년 1월 1일에 종료되고 Business Support+로 옮기라고 공지합니다.
+
+기존 강의 자료의 "Business 이상이면 Trusted Advisor 전체 검사"라는 문장은 플랜 이름만 바뀌는 중이라 의미는 같습니다. 시험 문항이 새 플랜 이름을 쓰는지는 알 수 없습니다. "유휴 리소스와 적정 크기 권고"가 단독으로 나오면 Compute Optimizer(4-3절), "여러 범주의 모범 사례 점검과 서비스 한도 확인"이면 Trusted Advisor로 구분했습니다.
 
 ## 3. 과제 4.1 비용 최적화 스토리지
 
@@ -122,7 +128,7 @@ S3 클래스별 가용성, AZ 수, 최소 보관 기간은 Ch-00 4-2절 표에 �
 
 블록 스토리지 옵션(HDD와 SSD 볼륨 유형)은 Ch-03 2-3절의 표를 비용 관점으로 다시 읽으면 됩니다.
 
-- gp3는 gp2보다 GiB당 가격이 20% 낮고 성능을 크기와 따로 정합니다. gp2에서 IOPS를 얻으려고 볼륨을 크게 잡았다면 gp3로 바꾸고 크기를 줄일 수 있습니다. Elastic Volumes로 인스턴스를 멈추지 않고 유형을 바꿉니다.
+- gp3는 gp2보다 GiB당 가격이 20% 낮고 성능을 크기와 따로 정합니다. Elastic Volumes로 인스턴스를 멈추지 않고 유형을 바꿉니다. Elastic Volumes 문서(2026년 10월 20일 확인)는 크기는 늘릴 수만 있고 줄일 수 없으며 줄이려면 작은 볼륨을 새로 만들어 rsync 같은 도구로 옮기라고 적습니다. 한 볼륨은 24시간 동안 최대 4번 수정할 수 있습니다. gp2를 gp3로 바꾸며 IOPS를 지정하지 않으면 원래 gp2 성능과 gp3 기준 성능 중 높은 쪽으로 자동 설정됩니다.
 - 큰 순차 I/O면 st1, 접근이 드물고 저장 비용이 가장 중요하면 sc1입니다. 둘 다 부트 볼륨은 안 됩니다.
 - Compute Optimizer가 EBS 볼륨 권고도 냅니다(4-3절).
 
@@ -190,7 +196,9 @@ EC2 요금 페이지와 Savings Plans, Reserved Instances 문서 기준입니다
 | Standard RI | 문서는 "가장 큰 할인"으로 표현 | 1년 또는 3년, 인스턴스 속성 | 속성이 고정된 꾸준한 부하. 수정만 가능, 교환 불가 |
 | Convertible RI | Standard보다 낮음 | 1년 또는 3년 | 다른 속성의 Convertible RI로 교환 가능 |
 | Spot | 90% | 없음. 회수될 수 있음 | 중단해도 되는 배치, CI, 상태 없는 작업자 |
-| Dedicated Host | 할인 아님 | | 소켓, 코어 단위 라이선스, 물리 서버 전용 |
+| Dedicated Host | 할인 아님 | | 물리 호스트 하나를 통째로 받는다. 소켓, 코어, VM 단위 기존 라이선스(BYOL) |
+| Dedicated Instance | 할인 아님 | | 단일 테넌트 하드웨어에서 실행되는 인스턴스. 시간 단위 과금 |
+| On-Demand Capacity Reservation | 할인 아님(On-Demand 요금) | 기간 약정 없음 | 특정 AZ에 용량을 확보. 행사 당일처럼 용량 부족이 걱정될 때 |
 
 몇 가지 조건을 같이 기억합니다.
 
@@ -198,7 +206,9 @@ EC2 요금 페이지와 Savings Plans, Reserved Instances 문서 기준입니다
 - RI는 실제 인스턴스가 아니고 조건이 맞는 On-Demand 사용에 붙는 청구 할인입니다. 자동으로 갱신되지 않아 만료되면 On-Demand 요금으로 돌아갑니다. 구매는 취소할 수 없고 수정, 교환, RI Marketplace 판매만 가능합니다.
 - 결제 방식은 전액 선결제, 부분 선결제, 선결제 없음 세 가지이고 선결제가 클수록 대체로 더 쌉니다.
 - Spot은 회수 2분 전에 중단 알림이 EventBridge 이벤트와 인스턴스 메타데이터로 옵니다. 중단 동작을 최대 절전으로 정하면 알림은 오지만 2분 유예 없이 바로 시작합니다.
-- Savings Plans에는 Database Savings Plans와 SageMaker AI Savings Plans도 있습니다(5-6절).
+- Savings Plans에는 Database Savings Plans(최대 35%, 5-6절)와 SageMaker AI Savings Plans(최대 64%)도 있습니다. Savings Plans 유형 문서(2026년 10월 20일 확인)는 Compute Savings Plans가 테넌시(Dedicated, Dedicated Host)와 관계없이 적용되지만 Dedicated Instance가 하나라도 도는 리전마다 붙는 시간당 2달러 전용 요금은 Savings Plans로 할인되지 않는다고 적습니다.
+- 용량 확보와 할인은 다른 문제입니다. EC2 구매 옵션 문서는 용량 예약이 필요하면 특정 AZ에 대한 RI나 Capacity Reservation을 사라고 적고 Savings Plans는 이 자리에 넣지 않습니다. "블랙프라이데이 당일 특정 AZ에 인스턴스 200대를 반드시 띄워야 함"은 On-Demand Capacity Reservation이고 할인까지 원하면 Savings Plans를 함께 겁니다.
+- Dedicated Host와 Dedicated Instance는 둘 다 단일 테넌트지만 Dedicated Host는 물리 호스트 단위로 받아 소켓·코어 단위 기존 라이선스를 쓸 수 있습니다. "서버 단위 라이선스를 그대로 가져옴"은 Dedicated Host입니다.
 
 ### 4-2. 워크로드 등급별 가용성과 구매 옵션
 
@@ -266,6 +276,8 @@ Compute Savings Plans가 EC2, Fargate, Lambda 모두에 적용된다는 점도 �
 | CPU 사용률이 늘 10% 아래 | Compute Optimizer 권고로 크기 축소 |
 | 개발 서버 재시작이 느림, 밤에는 비용 0에 가깝게 | 최대 절전 |
 | 하루 몇 번 호출되는 짧은 작업 | Lambda |
+| 특정 AZ에 정해진 날 용량을 반드시 확보 | On-Demand Capacity Reservation |
+| 소켓·코어 단위 기존 서버 라이선스 | Dedicated Host |
 
 ## 5. 과제 4.3 비용 최적화 데이터베이스
 
@@ -545,7 +557,7 @@ D. 볼륨을 그대로 두고 스냅샷을 아카이브 계층으로 보낸다
 <details>
 <summary>정답과 해설</summary>
 
-B입니다. gp2는 GiB당 3 IOPS라 12,000 IOPS를 얻으려면 4,000GiB가 필요하지만 gp3는 기본 3,000 IOPS에 GiB당 500까지 IOPS를 따로 추가합니다. GiB당 가격도 20% 낮습니다. Elastic Volumes는 유형 변경은 되지만 크기 축소는 별도로 확인이 필요해서 새 볼륨으로 옮기는 보기를 골랐습니다. EBS 볼륨 크기를 줄일 수 없다는 문장은 이번에 문서로 확인하지 못했습니다. A는 성능은 넘치지만 더 비쌉니다. C는 HDD라 작은 랜덤 I/O의 IOPS를 내지 못합니다. D는 볼륨 비용과 관계가 없습니다.
+B입니다. gp2는 GiB당 3 IOPS라 12,000 IOPS를 얻으려면 4,000GiB가 필요하지만 gp3는 기본 3,000 IOPS에 GiB당 500까지 IOPS를 따로 추가합니다. GiB당 가격도 20% 낮습니다. Elastic Volumes 문서는 볼륨 크기를 줄일 수 없고 작은 볼륨을 새로 만들어 데이터를 옮기라고 적으므로 새 gp3 볼륨으로 옮기는 B가 맞습니다. 유형만 gp3로 바꾸고 4,000GiB를 유지하면 성능은 맞지만 저장 요금이 남습니다. A는 성능은 넘치지만 더 비쌉니다. C는 HDD라 작은 랜덤 I/O의 IOPS를 내지 못합니다. D는 볼륨 비용과 관계가 없습니다.
 </details>
 
 **문제 8.** 동영상 강의 플랫폼이 강의 영상을 S3에서 전 세계 수강생에게 직접 내려보냅니다. 같은 영상이 여러 번 재생되고 데이터 전송 비용이 가장 큰 항목입니다. 가장 효과적인 조치는?
@@ -565,9 +577,10 @@ B입니다. AWS 오리진에서 CloudFront로 가는 전송은 무료이고 같�
 
 - 요금 수치는 2026년 10월 19일에 연 AWS 요금 페이지와 문서 기준입니다. NAT 게이트웨이 단가는 미국 동부(오하이오) 예시이고 서울 리전 단가는 확인하지 않았습니다. 요금은 바뀌니 이 글의 금액을 계산 근거로 쓰지 않습니다.
 - 서비스를 직접 만들어 청구서를 확인하지 않았습니다. 비용 비교는 모두 문서가 밝힌 요금 구조에서 읽은 것이고 실제 청구 금액으로 검증한 것이 없습니다. 프리 티어 실습 뒤 Cost Explorer로 본 결과를 따로 쓰겠습니다.
-- 확인하지 못한 것: AZ 간, 리전 간 데이터 전송 단가, VPN과 Direct Connect와 PrivateLink와 VPC 피어링 단가, 로드 밸런서 요금 구조, Budgets와 CUR 요금, RDS 자동 백업 보존 규칙, EFS 수명 주기 일수, EBS 볼륨 크기 축소 가능 여부, Outposts, Timestream, Neptune의 상세 특성, Graviton "가격 대비 성능 40%" 문구의 출처.
+- 확인하지 못한 것: AZ 간, 리전 간 데이터 전송 단가(EC2 On-Demand 요금 페이지를 다시 열었지만 수치가 표시되지 않음), VPN과 Direct Connect와 PrivateLink와 VPC 피어링 단가, 로드 밸런서 요금 구조, CUR 요금, RDS 자동 백업 보존 규칙, EFS 수명 주기 일수, Outposts, Timestream, Neptune의 상세 특성, Graviton "가격 대비 성능 40%" 문구의 출처, RI 범위(리전·영역) 세부.
+- 2026년 10월 20일 보강: Budgets 요금, EBS 볼륨 크기 축소 불가와 24시간 4회 수정 한도, Savings Plans 네 유형의 최대 할인, Dedicated Host·Dedicated Instance·Capacity Reservation, Trusted Advisor와 Support 플랜 개편(2027년 1월 1일)을 문서로 확인해 넣었습니다.
 - 6-2절의 NAT 인스턴스 판단과 6-5절의 피어링 비교는 문서 문장이 아니고 요금 구조에서 끌어낸 추론입니다.
-- 리전 NAT 게이트웨이와 Database Savings Plans처럼 최근 문서에 있는 기능이 시험에 반영됐는지는 모릅니다.
+- 리전 NAT 게이트웨이, Database Savings Plans, Support 플랜 이름 변경처럼 최근 문서에 있는 내용이 시험에 반영됐는지는 모릅니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난이도나 문구와 다를 수 있습니다.
 
 ## 참고 자료
@@ -598,6 +611,9 @@ B입니다. AWS 오리진에서 CloudFront로 가는 전송은 무료이고 같�
 - [Reserved Instances for Amazon EC2 overview](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-reserved-instances.html)
 - [Spot Instance interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html), [Spot Instance interruption notices](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-instance-termination-notices.html)
 - [What is AWS Compute Optimizer?](https://docs.aws.amazon.com/compute-optimizer/latest/ug/what-is-compute-optimizer.html)
+- [Amazon EC2 billing and purchasing options](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-purchasing-options.html)
+- [Modify an Amazon EBS volume using Elastic Volumes operations](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modify-volume.html)
+- [AWS Budgets pricing](https://aws.amazon.com/aws-cost-management/aws-budgets/pricing/), [AWS Trusted Advisor](https://docs.aws.amazon.com/awssupport/latest/user/trusted-advisor.html)
 - [AWS Graviton](https://aws.amazon.com/ec2/graviton/)
 - [Hibernate your Amazon EC2 instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Hibernate.html)
 - [Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [Configure Lambda Event Function memory](https://docs.aws.amazon.com/lambda/latest/dg/configuration-memory.html)

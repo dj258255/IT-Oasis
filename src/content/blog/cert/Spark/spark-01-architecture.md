@@ -63,7 +63,7 @@ orders = spark.createDataFrame(
 
 ## 1. Spark의 장점과 어려운 점
 
-Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analytics"라고 소개합니다. 문서 첫 페이지는 Java, Scala, Python, R로 쓰는 고수준 API와 일반적인 실행 그래프를 돌리는 최적화 엔진을 제공한다고 적습니다. 시험에서 장점을 고르라고 하면 아래 네 가지가 문서 근거가 있는 답입니다.
+Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analytics"라고 소개합니다. 문서 첫 페이지는 Java, Scala, Python, R로 쓰는 고수준 API와 일반적인 실행 그래프를 돌리는 최적화 엔진을 제공한다고 적습니다. 시험에서 장점을 고르라고 하면 아래 여섯 가지가 문서 근거가 있는 답입니다.
 
 | 장점 | 문서 근거 |
 |---|---|
@@ -71,6 +71,8 @@ Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analy
 | 여러 언어와 SQL을 같은 엔진에서 실행 | SQL 가이드: 어떤 API와 언어로 표현하든 같은 실행 엔진을 쓴다 |
 | 노트북에서 쓴 코드를 수천 대 클러스터로 확장 | 홈페이지 "Machine learning" 항목 |
 | 장애 시 재계산으로 복구 | RDD 가이드: 모든 저장 레벨은 잃어버린 데이터를 다시 계산해 장애를 견딘다 |
+| 반복해서 쓰는 데이터를 메모리에 캐시 | RDD 가이드: 캐시는 반복 알고리즘과 대화형 분석의 핵심 도구이고 이후 액션이 종종 10배 넘게 빨라진다 |
+| 지연 평가로 계획 전체를 최적화 | RDD 가이드: 트랜스포메이션은 액션이 결과를 요구할 때 계산해서 더 효율적으로 돌 수 있다(9절) |
 
 어려운 점은 공식 문서의 튜닝 가이드와 RDD 가이드가 경고하는 내용에서 뽑을 수 있습니다.
 
@@ -80,6 +82,9 @@ Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analy
 | 메모리 관리 | 셔플용 자료구조가 힙을 많이 쓴다. 메모리에 안 들어가면 디스크로 흘려 쓰고(spill) 디스크 I/O와 GC가 늘어난다 |
 | 설정할 값이 많음 | 병렬도를 충분히 높이지 않으면 클러스터를 다 쓰지 못한다. 문서는 CPU 코어당 Task 2~3개를 권한다 |
 | 드라이버 병목 | `collect()`처럼 결과를 드라이버로 모으는 연산은 드라이버 메모리에 다 올라간다 |
+| 데이터 쏠림 | Performance Tuning 문서는 쏠림이 조인 성능을 크게 떨어뜨릴 수 있다고 적고 AQE가 sort-merge 조인의 쏠린 Task를 비슷한 크기로 쪼갠다고 설명한다([Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)) |
+| 작은 파일이 많음 | 파일을 여는 비용을 `spark.sql.files.openCostInBytes`(기본 4MB)만큼 읽는 시간으로 쳐서 작은 파일 여러 개를 한 파티션에 묶는다(8-1절) |
+| GC | 튜닝 가이드: 저장한 RDD가 자주 바뀔수록(churn) GC가 문제가 되고 GC 비용은 Java 객체 수에 비례한다(6절) |
 
 ### 헷갈리는 지점
 
@@ -124,6 +129,8 @@ local 모드의 마스터 URL은 의미가 조금씩 다릅니다.
 | `local[K]` | 워커 스레드 K개 |
 | `local[*]` | 논리 코어 수만큼 워커 스레드 |
 | `local[K,F]` | 스레드 K개, Task 최대 실패 횟수 F |
+
+Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Connect의 배포 방식은 [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api)에서 6영역 범위로 묶어 다룹니다.
 
 ### 2-3. 코어와 동시에 도는 Task 수
 
@@ -204,7 +211,28 @@ first["amount"]     # 32000
 
 ## 4. SparkSession 수명 주기
 
-SparkSession은 Spark SQL의 모든 기능으로 들어가는 진입점입니다. 수명 주기에서 시험에 나올 만한 메서드는 넷입니다.
+SparkSession은 Spark SQL의 모든 기능으로 들어가는 진입점입니다. 세션은 `SparkSession.builder`에 설정을 이어 붙이고 마지막에 `getOrCreate()`를 불러 얻습니다. builder 메서드는 모두 builder를 돌려주므로 순서는 자유이고 세션을 돌려주는 것은 `getOrCreate()` 하나입니다.
+
+| builder 메서드 | 문서의 동작 |
+|---|---|
+| `appName(name)` | Spark UI에 보일 애플리케이션 이름. 지정하지 않으면 무작위로 만든 이름을 쓴다 |
+| `master(master)` | 붙을 마스터 URL. `"local"`, `"local[4]"`, `"spark://master:7077"` 같은 값 |
+| `config(key=None, value=None, conf=None, *, map=None)` | 설정 하나(키와 값), `SparkConf` 객체, 딕셔너리(`map`, 3.4.0부터) 중 하나로 준다. SparkConf와 세션 설정 양쪽에 전달된다 |
+| `enableHiveSupport()` | Hive 메타스토어 연결과 Hive SerDe, Hive UDF 지원을 켠다 |
+
+```python
+# 새 애플리케이션에서 세션을 처음 만들 때의 형태
+spark = (SparkSession.builder
+         .appName("shop-orders")
+         .master("local[*]")
+         .config("spark.sql.shuffle.partitions", "8")
+         .config(map={"spark.sql.session.timeZone": "Asia/Seoul"})
+         .getOrCreate())
+```
+
+`getOrCreate()`가 이미 있는 세션을 돌려줄 때는 주의할 점이 있습니다. 문서는 builder에 준 설정을 기존 세션에 적용한다고 적지만 PySpark 4.2.0 소스는 이때 `applyModifiableSettings`로 실행 중에 바꿀 수 있는 설정만 넣고 SparkContext는 공유하므로 `SparkConf`를 갱신하지 않는다고 주석을 답니다. 그래서 `spark.executor.memory`처럼 SparkContext가 뜰 때 정해지는 값은 두 번째 `getOrCreate()`로 바꿀 수 없고 `spark.sql.shuffle.partitions` 같은 런타임 SQL 설정은 바뀝니다.
+
+수명 주기에서 시험에 나올 만한 메서드는 넷입니다.
 
 | 메서드 | 문서의 동작 |
 |---|---|
@@ -223,7 +251,10 @@ orders.createOrReplaceTempView("orders_v")
 s3.catalog.tableExists("orders_v")   # 임시 뷰는 세션별이라 s3에서는 보이지 않는다
 
 spark.stop()      # SparkContext까지 멈춘다. 이후 같은 세션으로는 작업할 수 없다
+new_spark = SparkSession.builder.getOrCreate()   # stop()이 기본 세션을 지웠으므로 새 세션이 생긴다
 ```
+
+PySpark 소스의 `stop()`은 SparkContext를 멈춘 뒤 전역 기본 세션과 활성 세션 기록을 지웁니다. 그래서 `stop()` 다음의 `getOrCreate()`는 새 SparkContext와 새 세션을 만듭니다. `with SparkSession.builder.getOrCreate() as session:` 형태로 쓰면 블록을 나갈 때 `stop()`이 불립니다(`__enter__`와 `__exit__` 구현).
 
 세션과 애플리케이션의 수명은 이렇게 겹칩니다.
 
@@ -236,7 +267,8 @@ spark.stop()      # SparkContext까지 멈춘다. 이후 같은 세션으로는 
 
 ### 헷갈리는 지점
 
-- `getOrCreate()`를 두 번 불러도 세션이 둘 생기지 않습니다. 두 번째 호출에 준 설정이 기존 세션에 덮어써지는 것도 문서 예제에 나옵니다.
+- `getOrCreate()`를 두 번 불러도 세션이 둘 생기지 않습니다. 두 번째 호출에 준 설정이 기존 세션에 덮어써지는 것도 문서 예제에 나옵니다. 덮어써지는 것은 실행 중에 바꿀 수 있는 설정뿐입니다.
+- `appName`, `master`, `config`는 builder를 돌려줍니다. 보기에서 `SparkSession.builder.appName("x").master("local")`로 끝나는 코드가 돌려주는 것은 builder이고 세션은 `getOrCreate()`를 불러야 생깁니다.
 - `newSession()`은 SparkContext를 새로 만들지 않습니다. 캐시도 공유합니다.
 - Spark SQL의 `spark.sql()`은 4.2.0 문서에 Spark Classic과 Spark Connect의 차이가 적혀 있습니다. Classic은 참조한 임시 뷰를 즉시 해석하고 Connect는 늦게 분석합니다. 그래서 Connect에서 뷰를 바꾼 뒤 실행하면 결과가 달라질 수 있습니다.
 
@@ -252,6 +284,7 @@ spark.stop()      # SparkContext까지 멈춘다. 이후 같은 세션으로는 
 | `DataFrame.persist()` | `MEMORY_AND_DISK_DESER` | 이미 저장 레벨이 있으면 새 레벨을 줄 수 없다 |
 | `RDD.cache()` | `MEMORY_ONLY` | RDD Programming Guide |
 | `spark.catalog.cacheTable(name)` | `MEMORY_AND_DISK` | 3.5.0부터 `storageLevel` 인자를 받는다 |
+| SQL `CACHE [LAZY] TABLE` | `MEMORY_AND_DISK` | `OPTIONS ('storageLevel' 'DISK_ONLY')`로 바꾼다. `LAZY`가 없으면 즉시 캐시한다 |
 
 시그니처는 이렇습니다.
 
@@ -302,9 +335,33 @@ paid.persist(StorageLevel.DISK_ONLY) # 해제한 뒤에는 다른 레벨로 다�
 
 `explain()`으로 확인하면 캐시된 DataFrame의 물리 계획에 `InMemoryTableScan`이 나옵니다(`cache` 문서 예제).
 
+### 5-4. 체크포인트와 캐시의 차이
+
+캐시는 계보(논리 계획)를 그대로 둔 채 결과를 저장해 둡니다. 캐시를 잃으면 계보를 따라 다시 계산합니다. 체크포인트는 결과를 저장하면서 논리 계획을 잘라 냅니다. 문서는 반복 알고리즘처럼 계획이 기하급수로 커질 때 쓸모가 있다고 적습니다.
+
+| | `cache()` / `persist()` | `checkpoint(eager=True)` | `localCheckpoint(eager=True, storageLevel=None)` |
+|---|---|---|---|
+| 저장 위치 | 익스큐터 메모리와 디스크(저장 레벨) | 체크포인트 디렉터리의 파일 | 익스큐터의 캐시 저장소 |
+| 계보 | 유지 | 잘라 낸다 | 잘라 낸다 |
+| 실행 시점 | 첫 액션 때(지연) | 기본 `eager=True`라 호출 즉시 | 기본 `eager=True`라 호출 즉시 |
+| 신뢰성 | 잃으면 재계산 | 파일로 남는다(클러스터에서는 HDFS 같은 공유 경로) | 문서가 "not reliable"이라고 적는다. 익스큐터를 잃으면 함께 사라진다 |
+| 준비 | 없음 | `spark.sparkContext.setCheckpointDir(경로)`나 `spark.checkpoint.dir`(4.0.0부터) | 없음 |
+| Spark Connect | 3.4.0부터 | 4.0.0부터 | 4.0.0부터. `storageLevel` 인자도 4.0.0에 추가 |
+
+```python
+spark.sparkContext.setCheckpointDir("/tmp/shop-ckpt")   # Spark Classic. 클러스터에서는 HDFS 경로
+base = orders.groupBy("user_id").agg(F.sum("amount").alias("total"))
+cut = base.checkpoint()          # 즉시 파일로 쓰고 계보를 끊은 새 DataFrame을 돌려준다
+cut.explain()                    # groupBy가 계획에서 빠진다(계획을 잘라 낸다는 문서 설명으로 예상한 결과)
+
+local_cut = base.localCheckpoint(eager=False)   # 첫 액션 때 익스큐터 캐시에 저장
+```
+
+두 메서드 모두 원본을 바꾸지 않고 새 DataFrame을 돌려줍니다. 이후 계산에서 체크포인트를 쓰려면 돌려받은 DataFrame(`cut`)으로 이어 가야 합니다. 두 API 문서 모두 "This API is experimental"이라고 적습니다. Structured Streaming의 `checkpointLocation`은 쿼리의 진행 상황과 상태를 남기는 다른 기능입니다([Ch-05](/blog/cert/spark/spark-05-structured-streaming)).
+
 ### 헷갈리는 지점
 
-- "`cache()`는 즉시 데이터를 메모리에 올린다"는 틀린 보기입니다. 액션이 있어야 올라갑니다.
+- "`cache()`는 즉시 데이터를 메모리에 올린다"는 틀린 보기입니다. 액션이 있어야 올라갑니다. SQL 문 `CACHE TABLE`은 반대로 기본이 즉시 캐시이고 `CACHE LAZY TABLE`이라고 써야 처음 쓸 때 캐시합니다(SQL 레퍼런스).
 - `cache()`와 `persist()`의 차이는 인자 유무뿐입니다. DataFrame에서는 둘 다 기본 `MEMORY_AND_DISK_DESER`입니다.
 - `unpersist()`의 `blocking` 기본값은 `False`입니다. 2.0에서 Scala와 맞추려고 바뀌었다고 문서가 적습니다.
 - Spark는 캐시를 노드마다 LRU 방식으로 비웁니다. 직접 지우지 않아도 오래된 파티션은 빠질 수 있습니다.
@@ -321,7 +378,9 @@ Spark는 JVM 위에서 돌기 때문에 익스큐터 힙의 객체는 GC가 치�
 | full GC | Old가 거의 차면 일어난다 |
 | 목표 | 오래 쓰는 캐시 데이터만 Old에 두고 Young은 짧게 쓰는 객체를 담을 만큼 크게 둔다 |
 
-GC가 문제인지 보는 방법은 둘입니다. Web UI의 Stages 탭과 Executors 탭에 Task별 GC time이 나옵니다. 더 자세히 보려면 Java 옵션에 `-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps`를 넣습니다. 이 로그는 워커 노드의 `stdout`(작업 디렉터리 안)에 찍힌다고 문서가 따로 강조합니다. 익스큐터 GC 옵션은 `spark.executor.extraJavaOptions`나 `spark.executor.defaultJavaOptions`로 줍니다.
+GC가 문제인지 보는 방법은 둘입니다. Web UI의 Stage 상세 화면은 Task 요약 지표에 GC time(JVM GC에 쓴 총시간)을 보여 주고 Executors 탭은 익스큐터(드라이버 포함)마다 한 줄씩 GC time을 보여 줍니다. 탭 읽는 법은 [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)에 모았습니다. 더 자세히 보려면 Java 옵션에 `-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps`를 넣습니다. 이 로그는 워커 노드의 `stdout`(작업 디렉터리 안)에 찍힌다고 문서가 따로 강조합니다. 익스큐터 GC 옵션은 `spark.executor.extraJavaOptions`나 `spark.executor.defaultJavaOptions`로 줍니다.
+
+이 옵션 문구는 3.5.7과 4.2.0 튜닝 가이드에 똑같이 남아 있지만 JDK 8 시절 옵션입니다. JDK 9부터 GC 로그가 통합 로깅(`-Xlog:gc*`)으로 바뀌었고 JDK 11과 17에서는 `-XX:+PrintGCTimeStamps` 같은 옵션을 인식하지 못해 JVM이 뜨지 않는다는 벤더 문서(Atlassian)가 있습니다. Spark 4.x 기본인 JDK 17에서 실제로 GC 로그를 켤 때는 `-Xlog:gc*`를 쓰는 편이 안전합니다. 이 조합은 이번에 실행해 보지 않았습니다. 시험에서는 튜닝 가이드의 문구 그대로 나올 수 있으니 "Java 옵션으로 GC 로그를 켜고 워커의 stdout에서 본다"는 흐름을 기억합니다.
 
 문서가 권하는 대응을 상황별로 묶었습니다.
 
@@ -333,7 +392,7 @@ GC가 문제인지 보는 방법은 둘입니다. Web UI의 Stages 탭과 Execut
 | Old가 거의 참 | `spark.memory.fraction`을 낮춰 캐시를 줄인다. 캐시를 덜 하는 편이 Task를 느리게 하는 것보다 낫다 |
 | 큰 익스큐터 힙 | G1 region 크기(`-XX:G1HeapRegionSize`)를 키운다 |
 
-버전 차이가 하나 있습니다. 4.2.0 튜닝 가이드는 Spark 4.0.0부터 JDK 17이 기본이고 그래서 G1GC가 기본 수집기라고 적습니다. 기본 수집기는 JDK가 정하므로 3.x 시절 자료의 GC 설명은 그때 쓰던 JDK 기준으로 읽어야 합니다.
+버전 차이가 하나 있습니다. 4.2.0 튜닝 가이드는 Spark 4.0.0부터 JDK 17이 기본이고 그래서 G1GC가 기본 수집기라고 적습니다. 3.5.7 튜닝 가이드의 같은 자리는 "`-XX:+UseG1GC`로 G1GC를 써 보라"는 권고입니다. 기본 수집기는 JDK가 정하므로 3.x 시절 자료의 GC 설명은 그때 쓰던 JDK 기준으로 읽어야 합니다.
 
 ### 헷갈리는 지점
 
@@ -487,11 +546,11 @@ step2.show()                                  # 또 액션. 캐시가 없으므�
 
 ## 10. Spark 모듈
 
-4.2.0 문서 첫 페이지는 Spark 위의 고수준 도구로 다섯 가지를 듭니다. 시험 안내서가 나열한 모듈과 맞춰 봅니다.
+4.2.0 문서 첫 페이지는 Spark 위의 고수준 도구로 다섯 가지(Spark SQL, pandas API on Spark, MLlib, GraphX, Structured Streaming)를 듭니다. 시험 안내서는 Core, Spark SQL, DataFrames, pandas API on Spark, Structured Streaming, MLlib 여섯을 적습니다. 둘을 맞춰 봅니다.
 
 | 모듈 | 문서의 용도 | 이 시리즈 |
 |---|---|---|
-| Spark Core | 작업 스케줄링, 메모리 관리, 장애 복구, RDD API(안내서가 "Core"로 적는 부분) | 이 글 |
+| Spark Core | RDD Programming Guide가 다루는 기반 API. 문서는 RDD를 "core but old API"라고 적고 accumulator와 broadcast 변수를 함께 설명한다 | 이 글, [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
 | Spark SQL, DataFrames | SQL과 구조화 데이터 처리 | Ch-02, Ch-03 |
 | pandas API on Spark | pandas 작업 | 7영역 |
 | Structured Streaming | 증분 계산과 스트림 처리. DataFrame 기반 | 5영역 |
@@ -596,6 +655,20 @@ B. 임시 뷰는 만든 세션에 묶입니다. 전역 임시 뷰와 SparkContex
 
 </details>
 
+**문제 7.** 반복 계산으로 논리 계획이 계속 길어지는 쇼핑몰 추천 점수 DataFrame `scores`가 있습니다. 계획을 끊어 내면서 결과를 파일로 남기는 코드는? (Spark Classic)
+
+A. `scores.cache()`
+B. `scores.persist(StorageLevel.DISK_ONLY)`
+C. `spark.sparkContext.setCheckpointDir("/tmp/ckpt")` 다음 `scores = scores.checkpoint()`
+D. `scores = scores.localCheckpoint()`
+
+<details>
+<summary>정답과 풀이</summary>
+
+C. `checkpoint()`는 체크포인트 디렉터리에 파일로 쓰고 논리 계획을 잘라 냅니다. 기본 `eager=True`라 호출할 때 바로 씁니다. A와 B는 계보를 그대로 둡니다. D도 계획을 자르지만 익스큐터 캐시 저장소에 두므로 문서가 신뢰할 수 없다고 적고 파일로 남지 않습니다.
+
+</details>
+
 ## 범위와 한계
 
 - 기본값과 시그니처는 2026년 10월 19일에 연 Spark 4.2.0 문서와 PySpark 4.2.0 API 문서 기준입니다. 3.x와 다른 부분은 문서에 버전이 적힌 것만 표시했습니다(G1GC 기본, `cacheTable`의 `storageLevel` 인자 3.5.0, AQE 기본 켜짐 3.2.0). 시험의 기준 Spark 버전은 공개되지 않았습니다.
@@ -603,6 +676,9 @@ B. 임시 뷰는 만든 세션에 묶입니다. 전역 임시 뷰와 SparkContex
 - 2-4절과 문제 5의 메모리 계산은 문서 공식을 적용한 값이고 측정값이 아닙니다.
 - 9-2절의 넓은 변환 목록은 RDD 가이드의 셔플 연산 목록을 DataFrame 연산에 대응시킨 것입니다. DataFrame 연산마다 셔플 여부를 적은 공식 표는 찾지 못했습니다.
 - 10절의 MLlib과 Spark Core 설명은 이번에 문서를 깊이 읽지 않았습니다.
+- 2026년 10월 20일에 4.2.0과 3.5.7 문서, PySpark 4.2.0 API 문서를 다시 열어 기본값을 대조했습니다. 이때 추가한 버전 표시는 `checkpoint`와 `localCheckpoint`의 Spark Connect 지원(4.0.0), `spark.checkpoint.dir`(4.0.0), `localCheckpoint`의 `storageLevel` 인자(4.0.0), 3.5.7 튜닝 가이드의 G1GC 권고입니다.
+- 4절의 `getOrCreate()`가 기존 세션에 런타임 설정만 적용한다는 내용과 `stop()`이 기본 세션 기록을 지운다는 내용은 API 문서에 없어서 PySpark 4.2.0 소스(`python/pyspark/sql/session.py`)를 읽고 적었습니다.
+- 6절의 JDK 17 GC 로그 옵션은 Atlassian 지원 문서 기준이고 Spark에서 실행해 보지 않았습니다.
 
 ## 참고 자료
 
@@ -624,5 +700,13 @@ PySpark 4.2.0 API
 - [DataFrame.cache](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.cache.html), [DataFrame.persist](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.persist.html), [DataFrame.unpersist](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.unpersist.html), [DataFrame.storageLevel](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.storageLevel.html)
 - [StorageLevel](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.StorageLevel.html), [Catalog.cacheTable](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Catalog.cacheTable.html)
 - [DataFrame.repartition](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.repartition.html), [DataFrame.coalesce](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.coalesce.html), [DataFrame.explain](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.explain.html)
+- [DataFrame.checkpoint](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.checkpoint.html), [DataFrame.localCheckpoint](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.localCheckpoint.html), [SparkContext.setCheckpointDir](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.SparkContext.setCheckpointDir.html)
+- [SparkSession.builder.appName](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.appName.html), [SparkSession.builder.master](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.master.html), [SparkSession.builder.config](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.config.html), [SparkSession.builder.enableHiveSupport](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.enableHiveSupport.html)
 - [SparkSession.builder.getOrCreate](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.getOrCreate.html), [SparkSession.newSession](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.newSession.html), [SparkSession.stop](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.stop.html), [SparkSession.sql](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.sql.html)
 - [DataFrame.collect](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.collect.html), [DataFrame.show](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.show.html)
+
+그 밖의 문서와 소스
+- Apache Spark, [CACHE TABLE (SQL Reference)](https://spark.apache.org/docs/latest/sql-ref-syntax-aux-cache-cache-table.html)
+- Apache Spark 3.5.7, [Tuning Spark](https://spark.apache.org/docs/3.5.7/tuning.html)
+- Apache Spark, [python/pyspark/sql/session.py (v4.2.0)](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/sql/session.py)
+- Atlassian, [Unrecognized JVM GC options when using JDK 11/17](https://support.atlassian.com/confluence/kb/unrecognized-jvm-gc-options-when-using-jdk-11-17/)
