@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-02] 클러스터 아키텍처, 설치, 구성: kubeadm 한 벌로 만들고 올리고 되살리기'
-description: CKA 비중 25%인 클러스터 아키텍처 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. RBAC과 kubeconfig 컨텍스트, 설치 전 노드 준비, kubeadm 생성과 업그레이드, 인증서 만료 확인, etcd 백업과 복구(etcdutl), 고가용성 컨트롤 플레인, Helm(4 포함)과 Kustomize, CNI 설치를 포함한 CNI·CSI·CRI, CRD와 오퍼레이터를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
+description: CKA 비중 25%인 클러스터 아키텍처 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. RBAC과 인가 모드, CSR로 사용자 인증서 발급, ServiceAccount 토큰, kubeconfig 구조, 설치 전 노드 준비, kubeadm 생성과 업그레이드, 인증서 만료 확인, etcd 백업과 복구(etcdutl), 고가용성 컨트롤 플레인, Helm(4 포함)과 Kustomize, CNI 설치를 포함한 CNI·CSI·CRI, CRD와 오퍼레이터를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -115,9 +115,193 @@ kubectl auth can-i get pods --subresource=log -n shop
 
 `--as`는 사칭(impersonation) 권한이 있어야 쓸 수 있다고 레퍼런스 예시 주석이 적습니다. `cluster-admin`은 모든 리소스에 모든 동작을 허용하므로 사칭도 됩니다. 현재 시험 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적어서 컨텍스트 전환이 지문에 나오는지는 확인하지 못했습니다([Ch-00 6절](/blog/cert/cka/cka-00-exam-and-study-plan)). 그래도 "이 kubeconfig로 접속해 확인하라"는 형태에 대비해 `--kubeconfig <파일>` 옵션과 위 명령은 손에 익혀 둡니다.
 
-### 1-6. 직접 해 보기
+### 1-6. RBAC 앞 단계: 인증 방식과 인가 모드 체인
+
+API 요청은 인증(누구인지), 인가(해도 되는지), 어드미션(객체 내용이 정책에 맞는지) 순서로 통과합니다. RBAC은 이 중 인가 단계의 한 모듈입니다.
+
+쿠버네티스에는 사람 사용자를 저장하는 User 객체가 없습니다. API 서버는 요청에 붙은 자격 증명에서 사용자 이름과 그룹을 읽어 낼 뿐입니다. CKA에서 만나는 방식은 둘입니다.
+
+| 방식 | 사용자 이름과 그룹이 나오는 곳 | 주로 쓰는 주체 |
+|---|---|---|
+| X.509 클라이언트 인증서 | 인증서 Subject의 CN이 사용자 이름, O가 그룹 | 관리자 kubeconfig, kubelet, 컨트롤 플레인 구성요소 |
+| ServiceAccount 토큰(Bearer) | `system:serviceaccount:<네임스페이스>:<이름>`, 그룹 `system:serviceaccounts`와 `system:serviceaccounts:<네임스페이스>` | Pod 안의 프로그램 |
+
+1-2절의 `admin.conf`가 `kubeadm:cluster-admins` 그룹으로 통하는 이유도 여기 있습니다. "PKI certificates and requirements" 문서에 따르면 그 인증서의 Subject가 `O = kubeadm:cluster-admins, CN = kubernetes-admin`입니다. 그 밖에 OIDC 토큰과 웹훅 토큰 인증도 있지만 kubeadm 기본 구성에는 들어 있지 않습니다.
+
+인가 단계는 kube-apiserver의 `--authorization-mode`에 적은 모듈을 순서대로 묻습니다. "Authorization" 문서가 적은 판정 규칙은 이렇습니다. 어떤 모듈이 허용하거나 거부하면 그 결정이 바로 돌아가고 뒤 모듈은 묻지 않습니다. 의견 없음(no opinion)을 내면 다음 모듈로 넘어갑니다. 모든 모듈이 의견이 없으면 요청은 거부되고 HTTP 403이 돌아갑니다.
+
+| 모드 | 문서 설명 요약 |
+|---|---|
+| `Node` | kubelet에게 그 노드에 스케줄된 Pod 기준으로 권한을 주는 전용 모드 |
+| `RBAC` | `rbac.authorization.k8s.io` 그룹의 Role과 바인딩으로 판단 |
+| `Webhook` | 외부 HTTP 서비스에 동기 호출로 판단을 맡김 |
+| `ABAC` | 속성 조합 정책 파일로 판단 |
+| `AlwaysAllow`, `AlwaysDeny` | 모두 허용, 모두 거부. 문서는 테스트 용도로만 쓰라고 적음 |
+
+kubeadm은 `Node,RBAC`를 설정합니다. 노드에서 바로 확인할 수 있습니다.
+
+```bash
+sudo grep authorization-mode /etc/kubernetes/manifests/kube-apiserver.yaml
+```
+
+문서의 경고 하나가 시험 지문과 연결됩니다. RBAC은 거부 규칙이 없어 의견 없음만 내므로 `--authorization-mode=AlwaysAllow,RBAC`는 `AlwaysAllow`와 같은 효과가 됩니다. `system:masters` 그룹은 RBAC과 Webhook의 제한을 모두 건너뛰는 내장 그룹이라 문서는 사용자를 넣지 말라고 적습니다. 플래그 대신 `--authorization-config` 파일로 체인을 적는 구조화 인가 설정은 1.32에서 stable이 되었고 둘을 함께 쓰면 API 서버가 시작하지 못합니다.
+
+### 1-7. API 그룹과 리소스 이름 찾기
+
+Role의 `rules`에 적는 `apiGroups`는 리소스가 속한 API 그룹입니다. "API Overview" 문서 기준으로 core(legacy) 그룹은 REST 경로 `/api/v1`에 있고 `apiVersion`에 그룹 이름이 없습니다(`apiVersion: v1`). 나머지 named 그룹은 `/apis/<그룹>/<버전>`에 있습니다(`apps/v1`, `rbac.authorization.k8s.io/v1`).
+
+| 리소스 | 그룹 | Role에 적는 값 |
+|---|---|---|
+| pods, services, configmaps, secrets, nodes | core | `apiGroups: [""]` |
+| deployments, replicasets, statefulsets, daemonsets | `apps` | `apiGroups: ["apps"]` |
+| jobs, cronjobs | `batch` | `apiGroups: ["batch"]` |
+| roles, rolebindings | `rbac.authorization.k8s.io` | 같은 값 |
+
+이름과 그룹이 헷갈리면 외우지 말고 클러스터에 묻습니다.
+
+```bash
+kubectl api-resources                        # NAME, SHORTNAMES, APIVERSION, NAMESPACED, KIND
+kubectl api-resources --namespaced=false     # 클러스터 범위 리소스만 (ClusterRole이 필요한 것들)
+kubectl api-resources --api-group=apps -o wide   # 그룹별, 지원 동사(VERBS) 포함
+kubectl api-versions                         # 서버가 제공하는 group/version 목록
+kubectl explain deployment | head -5         # GROUP, KIND, VERSION 확인
+```
+
+REST 경로를 직접 보고 싶으면 `kubectl proxy`를 씁니다. kubeconfig의 자격 증명으로 API 서버에 붙는 로컬 프록시를 띄우므로 curl에 인증서를 따로 줄 필요가 없습니다. kubectl 레퍼런스의 예시처럼 기본 포트는 8001입니다. 이름이 비슷한 kube-proxy는 노드에서 Service 규칙을 만드는 구성요소로 서로 관계가 없습니다.
+
+```bash
+kubectl proxy &                               # 127.0.0.1:8001
+curl -s localhost:8001/api/v1/namespaces/shop/pods | head
+curl -s localhost:8001/apis/apps/v1 | grep '"name"'
+```
+
+### 1-8. ServiceAccount 토큰: TokenRequest와 1.24 이후 변화
+
+ServiceAccount는 Pod 안 프로그램이 쓰는 계정이고 네임스페이스마다 `default`가 자동으로 생깁니다. 토큰을 다루는 방식은 버전에 따라 크게 바뀌었습니다. "Service Accounts" 개념 문서와 "Managing Service Accounts" 문서 기준입니다.
+
+| 시점 | 바뀐 것 |
+|---|---|
+| 1.22 이후 | Pod에는 TokenRequest API로 받은 짧은 수명의 자동 회전 토큰이 projected 볼륨으로 들어감 |
+| 1.24 이후 | ServiceAccount를 만들어도 Secret 기반 장기 토큰이 자동 생성되지 않음(1.27에 기능 게이트 GA로 제거) |
+| 1.29 이후 | 예전에 자동 생성된 레거시 토큰을 기본 1년 동안 쓰지 않으면 무효로 표시하고 그 뒤 정리 |
+
+Pod에 들어가는 볼륨 이름은 `kube-api-access-<임의 문자>`입니다. 리눅스 컨테이너에서는 `/var/run/secrets/kubernetes.io/serviceaccount` 아래에 `token`, `ca.crt`, `namespace` 세 파일이 생깁니다. 토큰이 필요 없는 Pod는 `automountServiceAccountToken: false`로 끕니다.
+
+```bash
+kubectl create serviceaccount order-api -n shop
+kubectl create token order-api -n shop                  # 수명은 서버가 정함
+kubectl create token order-api -n shop --duration=10m   # 요청 수명. 서버가 더 짧거나 길게 줄 수 있음
+
+# 이미 있는 Deployment가 이 계정을 쓰게 (Pod 템플릿의 serviceAccountName이 바뀌어 롤아웃)
+kubectl set serviceaccount deployment order-web order-api -n shop
+```
+
+옛 강의 자료처럼 `kubectl describe sa`에서 `Tokens:` 아래 Secret을 찾으면 지금 클러스터에는 없습니다. 만료 없는 토큰이 꼭 필요하면 Secret을 직접 만듭니다. 문서는 보안상 TokenRequest를 우선 쓰라고 적습니다.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: order-api-token
+  namespace: shop
+  annotations:
+    kubernetes.io/service-account.name: order-api
+type: kubernetes.io/service-account-token
+```
+
+컨트롤 플레인이 이 Secret의 `data.token`을 채웁니다. 토큰의 권한은 1-3절처럼 RoleBinding의 `--serviceaccount=shop:order-api`로 줍니다.
+
+### 1-9. 사용자 인증서 발급: CSR 승인 흐름
+
+새 사용자에게 클라이언트 인증서를 주는 표준 경로는 CertificateSigningRequest(CSR) 객체입니다. CA 개인 키를 직접 꺼내 서명하지 않고 API로 요청하고 승인합니다. "Issue a Certificate for a Kubernetes API Client Using A CertificateSigningRequest" 문서의 절차를 쇼핑몰 정산 담당자 `settle-user` 이름으로 옮겼습니다.
+
+```bash
+# 1) 키와 CSR 파일 (CN이 사용자 이름, O를 넣으면 그룹)
+openssl genrsa -out settle-user.key 3072
+openssl req -new -key settle-user.key -out settle-user.csr -subj "/CN=settle-user/O=finance"
+
+# 2) CSR 객체에 넣을 base64 한 줄
+cat settle-user.csr | base64 | tr -d "\n"
+```
+
+```yaml
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: settle-user
+spec:
+  request: <위 base64 한 줄>
+  signerName: kubernetes.io/kube-apiserver-client
+  expirationSeconds: 86400   # 하루
+  usages:
+    - client auth
+```
+
+```bash
+# 3) 제출, 승인, 발급된 인증서 꺼내기
+kubectl apply -f settle-user-csr.yaml
+kubectl get csr                                   # CONDITION: Pending
+kubectl certificate approve settle-user           # 거절은 kubectl certificate deny
+kubectl get csr settle-user -o jsonpath='{.status.certificate}' | base64 -d > settle-user.crt
+
+# 4) kubeconfig에 등록
+kubectl config set-credentials settle-user \
+  --client-key=settle-user.key --client-certificate=settle-user.crt --embed-certs=true
+kubectl config set-context settle-user --cluster=kubernetes --user=settle-user
+```
+
+필드에서 틀리기 쉬운 곳을 "Certificates and Certificate Signing Requests" 문서로 확인했습니다.
+
+- `certificates.k8s.io/v1`에서는 `signerName`이 필수입니다. 사용자용은 `kubernetes.io/kube-apiserver-client`이고 이 서명자는 `usages`에 `client auth`가 있어야 합니다.
+- `expirationSeconds`는 1.22부터 있고 최솟값은 600입니다. 실제 수명은 이 값과 kube-controller-manager `--cluster-signing-duration`(기본 8760h) 중 짧은 쪽입니다.
+- 승인 전 `status.certificate`는 비어 있습니다. 승인 뒤 서명은 kube-controller-manager가 `--cluster-signing-cert-file`, `--cluster-signing-key-file`에 지정된 CA로 합니다. kubeadm에서는 `/etc/kubernetes/pki/ca.crt`와 `ca.key`입니다.
+- 내장 서명자 가운데 kube-controller-manager가 자동 승인할 수 있는 것은 kubelet 클라이언트 인증서용 `kubernetes.io/kube-apiserver-client-kubelet`뿐입니다. 사람용 `kube-apiserver-client`와 `kubelet-serving`은 자동 승인하지 않습니다.
+- 승인되거나 거절된 CSR 객체는 1시간 뒤, Pending은 24시간 뒤 자동으로 지워집니다. 인증서는 승인 직후 바로 꺼내 둡니다.
+
+인증서가 생겨도 권한은 없습니다. 1-3절처럼 `--user=settle-user`나 `--group=finance`로 바인딩을 만들고 `kubectl auth can-i ... --as=settle-user`로 확인합니다.
+
+### 1-10. kubeconfig 파일 구조
+
+1-5절의 컨텍스트 명령이 고치는 대상이 kubeconfig 파일입니다. 세 목록과 현재 선택값 하나로 이루어집니다.
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:                 # 어디에 접속할지
+  - name: kubernetes
+    cluster:
+      server: https://cluster-endpoint:6443
+      certificate-authority-data: <CA 인증서 base64>
+users:                    # 어떤 자격 증명으로
+  - name: settle-user
+    user:
+      client-certificate-data: <인증서 base64>
+      client-key-data: <개인 키 base64>
+contexts:                 # cluster + user (+ 기본 namespace) 조합에 붙인 이름
+  - name: settle-user@kubernetes
+    context:
+      cluster: kubernetes
+      user: settle-user
+      namespace: payment
+current-context: settle-user@kubernetes
+```
+
+- `*-data` 필드는 파일 내용을 base64로 넣은 것이고 `-data` 없는 `certificate-authority`, `client-certificate`는 파일 경로입니다. `--embed-certs=true`가 앞쪽을 만듭니다.
+- 파일을 고르는 순서는 `--kubeconfig` 플래그, `KUBECONFIG` 환경 변수, `$HOME/.kube/config`입니다. "Organizing Cluster Access Using kubeconfig Files" 문서에 따르면 `KUBECONFIG`에 여러 파일을 적으면(리눅스는 콜론 구분) kubectl은 병합한 결과를 씁니다.
+- 키가 인라인으로 들어간 kubeconfig는 그 자체가 자격 증명입니다. 문서는 신뢰할 수 있는 출처의 kubeconfig만 쓰라고도 적습니다. 파일 안에 명령 실행(exec 플러그인)을 넣을 수 있기 때문입니다.
+
+```bash
+kubectl config view                  # 병합 결과, 키와 인증서는 가려서 표시
+kubectl config view --minify         # 현재 컨텍스트에 쓰이는 항목만
+kubectl config view --raw            # 가리지 않은 원본
+kubectl config get-users; kubectl config get-clusters
+```
+
+### 1-11. 직접 해 보기
 
 게시판 서비스용 네임스페이스 `board`에 ServiceAccount `board-reader`를 만들고 기본 ClusterRole `view`를 그 네임스페이스에서만 쓰도록 RoleBinding으로 연결합니다. 그 다음 `kubectl auth can-i`로 `board`에서는 Pod 목록이 되고 `default`에서는 안 되는지, `board`에서도 Secret 조회는 안 되는지 확인합니다.
+
+이어서 1-9절 순서로 사용자 `board-editor`의 CSR을 만들어 승인하고 kubeconfig에 컨텍스트를 추가합니다. 바인딩을 만들기 전과 후에 그 컨텍스트로 `kubectl get pods -n board`를 실행해 403 응답이 사라지는지 봅니다. 마지막으로 `kubectl create token board-reader -n board`로 받은 토큰을 `kubectl --token=<토큰> --server=<주소> --certificate-authority=<CA 파일> get pods -n board`에 넣어 ServiceAccount 권한으로도 같은 결과가 나오는지 비교합니다.
 
 ## 2. 설치 전 노드 준비
 
@@ -266,6 +450,19 @@ kubectl delete node <노드>
 - kubelet은 kube-apiserver보다 새로우면 안 되고 최대 세 마이너 버전까지 오래될 수 있습니다.
 - 그래서 순서가 컨트롤 플레인 먼저, kubelet 나중입니다.
 
+구성요소별 허용 범위를 kube-apiserver가 1.37일 때로 풀면 이렇습니다.
+
+| 구성요소 | 허용 버전 | 문서 규칙 |
+|---|---|---|
+| 다른 kube-apiserver(HA) | 1.37, 1.36 | 가장 새것과 가장 옛것이 한 마이너 이내 |
+| kube-controller-manager, kube-scheduler | 1.37, 1.36 | apiserver보다 새로우면 안 되고 한 마이너까지 오래될 수 있음 |
+| kubelet, kube-proxy | 1.37 ~ 1.34 | apiserver보다 새로우면 안 되고 세 마이너까지(1.25 미만은 두 마이너까지) |
+| kubectl | 1.38, 1.37, 1.36 | apiserver 기준 위아래 한 마이너 |
+
+HA 클러스터에서 apiserver가 1.37과 1.36으로 섞여 있으면 기준은 낮은 쪽 1.36이 됩니다. kubelet 1.37은 그 순간 허용 범위 밖입니다. 노드 업그레이드를 모든 컨트롤 플레인이 끝난 뒤로 미루는 근거가 이것입니다.
+
+같은 문서에 지원 기간도 있습니다. 프로젝트는 최근 세 마이너 버전의 릴리스 브랜치를 유지하고 1.19 이후 버전은 약 1년 동안 패치를 받습니다. 1년에 한 번 이상 마이너를 올려야 보안 패치를 계속 받는다는 뜻이고 4-4절의 인증서 1년 만료와도 주기가 맞습니다.
+
 ### 4-2. 업그레이드 순서
 
 "Upgrading kubeadm clusters" 문서는 현재 1.36.x에서 1.37.x로 올리는 절차를 다룹니다. 시작 전에 패키지 저장소를 목표 마이너 버전(`pkgs.k8s.io`의 해당 경로)으로 바꿔야 새 버전이 보입니다.
@@ -392,9 +589,77 @@ sudo etcdutl --data-dir /var/lib/etcd-restore snapshot restore /opt/backup/etcd-
 - 같은 major.minor 버전의 etcd에서 뜬 스냅샷으로 복구할 수 있고 패치 버전 차이는 괜찮습니다.
 - etcd 멤버 과반이 영구히 죽으면 클러스터는 상태를 바꿀 수 없습니다. 이미 떠 있는 Pod는 돌 수 있어도 새 Pod는 스케줄되지 않습니다.
 
-### 4-7. 직접 해 보기
+### 4-7. 노드 유지보수: cordon, drain, uncordon과 자동 축출
+
+4-2절에서 노드마다 반복한 drain은 커널 패치나 OS 업그레이드 때도 같은 순서로 씁니다. 세 명령이 하는 일은 kubectl 레퍼런스 기준으로 이렇습니다.
+
+| 명령 | 하는 일 | 이미 떠 있는 Pod |
+|---|---|---|
+| `kubectl cordon <노드>` | 노드를 스케줄 불가(`spec.unschedulable: true`)로 표시 | 그대로 실행 |
+| `kubectl drain <노드>` | cordon한 뒤 Pod를 Eviction API로 내보내고 정상 종료를 기다림 | 축출됨 |
+| `kubectl uncordon <노드>` | 다시 스케줄 가능으로 표시 | 축출된 Pod가 자동으로 돌아오지 않음 |
+
+drain이 멈추거나 실패하는 경우와 해당 옵션입니다.
+
+- DaemonSet Pod가 있으면 `--ignore-daemonsets` 없이는 진행하지 않습니다. 어느 쪽이든 DaemonSet Pod는 지우지 않습니다. 지워도 DaemonSet 컨트롤러가 unschedulable 표시를 무시하고 같은 노드에 다시 만들기 때문입니다.
+- ReplicaSet, StatefulSet, Job, DaemonSet 같은 관리자가 없는 단독 Pod가 있으면 `--force` 없이는 아무것도 지우지 않습니다. `--force`로 지운 단독 Pod는 다른 노드에 다시 생기지 않고 그대로 사라집니다.
+- emptyDir를 쓰는 Pod는 `--delete-emptydir-data`가 있어야 지웁니다. 그 데이터는 함께 없어집니다.
+- Eviction API는 PodDisruptionBudget을 지킵니다. PDB가 허용하는 중단 수가 0이면 drain은 그 자리에서 재시도하며 기다립니다. `--disable-eviction`은 PDB 검사를 건너뛰는 일반 삭제라 레퍼런스가 주의해서 쓰라고 적습니다.
+
+drain 없이 노드가 갑자기 죽은 경우는 컨트롤 플레인이 처리합니다. 옛 자료에 나오는 kube-controller-manager의 `--pod-eviction-timeout`(5분)은 1.37 플래그 목록에 없습니다. 현재 흐름은 이렇습니다.
+
+```text
+노드 하트비트 중단
+  -> --node-monitor-grace-period(기본 50s) 경과: 노드 Ready=Unknown
+  -> node.kubernetes.io/unreachable:NoExecute 테인트 부착 (응답은 오는데 NotReady면 not-ready 테인트)
+  -> Pod마다 DefaultTolerationSeconds 어드미션이 넣어 둔 tolerationSeconds: 300 경과
+  -> 축출. ReplicaSet 같은 컨트롤러가 다른 노드에 새 Pod 생성
+```
+
+결과적으로 약 5분 50초 뒤에 축출되니 옛 설명의 "5분"과 체감 시간은 비슷합니다. 차이는 그 시간을 Pod의 toleration으로 조정한다는 점입니다. Pod 스펙에서 이 테인트의 `tolerationSeconds`를 줄이면 그 Pod만 더 빨리 옮겨집니다. 같은 흐름에서 단독 Pod는 다시 만들어 줄 컨트롤러가 없으니 노드와 함께 사라집니다.
+
+### 4-8. 인증서 내용 읽기: openssl x509
+
+4-4절의 `-enddate`는 만료일 하나만 봅니다. 인증서 관련 장애(이름 불일치, 잘못된 CA, 틀린 그룹)는 전체 필드를 읽어야 보입니다.
+
+```bash
+sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -text -noout
+```
+
+출력에서 볼 필드는 넷입니다. 아래는 "PKI certificates and requirements" 문서의 SAN 목록과 kubeadm 소스(`certlist.go`, CA의 CN이 `kubernetes`)로 예상한 모양이고 직접 출력한 것은 아닙니다. 실제 값은 클러스터마다 다릅니다.
+
+```text
+        Issuer: CN = kubernetes                         <- 서명한 CA
+        Validity
+            Not Before: ...
+            Not After : ...                             <- 만료일
+        Subject: CN = kube-apiserver                    <- 이 인증서의 주인
+            X509v3 Subject Alternative Name:
+                DNS:<노드 이름>, DNS:kubernetes, DNS:kubernetes.default, DNS:kubernetes.default.svc,
+                DNS:kubernetes.default.svc.cluster.local, IP Address:10.96.0.1, IP Address:<광고 IP>
+```
+
+| 필드 | 확인할 것 |
+|---|---|
+| Subject CN, O | 클라이언트 인증서라면 CN이 사용자 이름, O가 그룹. RBAC 바인딩의 주체와 맞는지 |
+| Issuer | 서버가 신뢰하는 CA가 맞는지. etcd 인증서는 `etcd-ca`가 따로 있음 |
+| Validity | `Not After`가 지났는지 |
+| Subject Alternative Name | 서버 인증서라면 클라이언트가 접속하는 이름과 IP가 들어 있는지. 로드 밸런서 주소로 접속하는데 SAN에 없으면 TLS 검증 실패 |
+
+kubeadm 기준으로 kube-apiserver 서버 인증서의 SAN에는 노드 이름과 IP, `kubernetes`부터 `kubernetes.default.svc.cluster.local`까지의 이름, Service 대역 첫 IP(기본 대역이면 `10.96.0.1`)가 들어갑니다. kubeadm이 만드는 kubeconfig 파일들은 인증서를 별도 `.crt` 파일 대신 kubeconfig 안의 `client-certificate-data`로 품고 있습니다. 이 인증서를 보려면 꺼내서 디코딩합니다.
+
+```bash
+sudo grep client-certificate-data /etc/kubernetes/admin.conf | awk '{print $2}' | base64 -d \
+  | openssl x509 -noout -subject -issuer -enddate
+```
+
+컨트롤 플레인 Pod 자체가 인증서 문제로 죽어 kubectl이 안 되면 노드에서 `crictl ps -a`와 `crictl logs <컨테이너 ID>`로 kube-apiserver나 etcd 로그를 봅니다. 트러블슈팅 순서는 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+
+### 4-9. 직접 해 보기
 
 결제 서비스 네임스페이스 `payment`에 Deployment 하나를 만들고 스냅샷을 뜹니다. 그 다음 Deployment를 지우고 스냅샷을 `/var/lib/etcd-restore`에 복구해 매니페스트를 바꾼 뒤 Deployment가 돌아오는지 확인합니다. 복구 전후에 `etcdutl snapshot status`의 REVISION 값을 적어 둡니다.
+
+워커 두 대 클러스터에서 `minAvailable: 2`인 PDB와 레플리카 2개 Deployment를 만들고 한 노드를 drain해 drain이 기다리는 모습을 봅니다. 이어서 다른 노드의 kubelet을 멈추고 `kubectl describe node`의 Taints와 Pod가 다른 노드로 옮겨지는 시각을 기록해 50초와 300초가 맞는지 확인합니다. `openssl x509 -text`로 `apiserver.crt`의 SAN을 읽어 `kubectl config view --minify`의 server 주소가 그 안에 있는지도 봅니다.
 
 ## 5. 고가용성 컨트롤 플레인
 
@@ -414,6 +679,22 @@ sudo etcdutl --data-dir /var/lib/etcd-restore snapshot restore /opt/backup/etcd-
 두 구조 모두 각 컨트롤 플레인 노드가 kube-apiserver, kube-scheduler, kube-controller-manager를 하나씩 돌리고 kube-apiserver는 로드 밸런서 뒤에서 워커에 노출됩니다.
 
 최소가 3대인 이유는 etcd의 과반 규칙입니다. 멤버 3개의 과반은 2개라 1대가 죽어도 쓰기가 됩니다. 2대로는 1대만 죽어도 과반이 깨집니다. "Operating etcd clusters for Kubernetes" 문서는 멤버 수를 홀수로 두고 운영 환경에서는 다섯 멤버를 권합니다.
+
+과반(쿼럼)은 멤버 수 n에 대해 floor(n/2)+1입니다. 쓰기는 리더가 받아 쿼럼만큼의 멤버에 복제되면 커밋됩니다. 모든 멤버의 응답을 기다리지 않습니다.
+
+| 멤버 수 | 쿼럼 | 견디는 장애 수 |
+|---|---|---|
+| 1 | 1 | 0 |
+| 2 | 2 | 0 |
+| 3 | 2 | 1 |
+| 4 | 3 | 1 |
+| 5 | 3 | 2 |
+| 6 | 4 | 2 |
+| 7 | 4 | 3 |
+
+짝수를 피하는 이유가 표에 보입니다. 하나를 더해도 견디는 장애 수는 그대로이고 쿼럼만 커집니다. 네트워크가 반으로 갈라졌을 때도 짝수 구성은 양쪽 모두 과반이 안 되어 쓰기가 멈출 수 있습니다.
+
+apiserver와 달리 kube-controller-manager와 kube-scheduler는 여러 대가 떠 있어도 한 대만 일합니다. 리더 선출을 하고 리더 정보는 `kube-system`의 Lease 객체에 남습니다. `kubectl get lease -n kube-system`의 HOLDER 열에서 지금 어느 노드가 리더인지 볼 수 있습니다.
 
 ### 5-2. 만드는 순서
 
@@ -529,14 +810,119 @@ configMapGenerator:
 - base는 overlay를 모릅니다. 같은 base를 여러 overlay가 가져다 접두사나 네임스페이스만 바꿔 씁니다.
 - `configMapGenerator`와 `secretGenerator`가 만든 객체 이름 뒤에는 내용 해시가 붙습니다. 내용이 바뀌면 이름이 바뀌고 그 이름을 참조하는 Deployment의 Pod 템플릿도 바뀌어 롤아웃이 일어납니다. 끄려면 `generatorOptions.disableNameSuffixHash: true`를 씁니다.
 
-### 6-3. 헷갈리는 지점
+### 6-3. Helm 3에서 바뀐 구조: Tiller 제거와 릴리스 저장 위치
+
+옛 자료에 나오는 Tiller는 Helm 2가 클러스터 안에 두던 서버 구성요소입니다. Helm 문서 "Changes since Helm 2"에 따르면 Helm 3는 Tiller를 완전히 없앴습니다. 지금은 helm 클라이언트가 kubeconfig의 자격 증명으로 API 서버에 직접 요청하므로 helm으로 할 수 있는 일은 그 사용자의 RBAC 권한과 같습니다. Helm 2는 2020년 11월 13일에 지원이 끝났습니다.
+
+같은 문서의 변화 중 시험에서 쓰이는 것이 둘 더 있습니다.
+
+| 항목 | Helm 3 동작 | 확인 방법 |
+|---|---|---|
+| 릴리스 기록 | 릴리스 네임스페이스의 Secret에 저장(기본 저장 드라이버). 릴리스 이름도 네임스페이스 단위 | `kubectl get secret -n shop -l owner=helm` |
+| 업그레이드와 롤백 | 3-way strategic merge patch. 이전 매니페스트, 라이브 상태, 새 매니페스트를 함께 비교 | 누가 `kubectl edit`으로 바꾼 값도 롤백 때 차트 값으로 돌아옴 |
+
+`helm rollback`은 과거 리비전으로 되감지 않고 그 내용으로 새 리비전을 하나 더 만듭니다. 리비전 3에서 1로 롤백하면 `helm history`에 리비전 4가 생기고 설명에 롤백 대상이 적힙니다. 롤백이 되돌리는 것은 쿠버네티스 객체이고 PV 안의 데이터는 되돌리지 않습니다.
+
+Helm 4(6-1절)는 새 릴리스에 server-side apply를 기본으로 씁니다. 3-way 병합 설명은 Helm 3 릴리스와 Helm 3에서 올라온 릴리스에 해당한다고 보면 됩니다.
+
+### 6-4. Kustomize 변형 필드와 패치 두 종류
+
+6-2절 예시의 `namespace`, `namePrefix`, `images`는 모든 리소스에 같은 변형을 거는 필드입니다. Kustomize 문서는 이런 것을 transformer라고 부릅니다.
+
+| 필드 | 하는 일 | 현재 상태(kustomize v5) |
+|---|---|---|
+| `namespace` | 모든 리소스의 네임스페이스 지정 | 사용 |
+| `namePrefix`, `nameSuffix` | 이름 앞뒤에 문자열 추가. 같은 빌드 안에서 그 이름을 참조하는 필드(Deployment의 ConfigMap 참조 등)도 함께 바뀜 | 사용 |
+| `labels` | 레이블 추가. `includeSelectors: true`면 셀렉터에도 넣음 | 사용 |
+| `commonLabels` | 레이블을 셀렉터까지 무조건 추가 | v5.0.0에서 사용 중단, `labels`로 대체 |
+| `commonAnnotations` | 어노테이션 추가 | 사용 |
+| `images` | `name`이 일치하는 컨테이너 이미지의 `newName`, `newTag`, `digest` 교체 | 사용 |
+
+셀렉터에 레이블을 넣으면 이미 배포된 Deployment의 `spec.selector`가 바뀌는데 이 필드는 만든 뒤 바꿀 수 없어 apply가 실패합니다. `commonLabels`가 사용 중단된 사정과 연결되는 지점이라 운영 중인 리소스에는 `includeSelectors`를 끈 `labels`를 씁니다.
+
+변형 필드로 안 되는 개별 수정은 `patches`로 합니다. "Declarative Management of Kubernetes Objects Using Kustomize" 문서는 두 형식을 같은 `patches` 필드에서 받는다고 적습니다.
+
+```yaml
+# overlays/prod/kustomization.yaml (쇼핑몰 주문 API)
+resources:
+  - ../../base
+patches:
+  # 1) strategic merge: 바꿀 부분만 담은 매니페스트 조각. 대상은 파일 안의 kind와 name으로 찾음
+  - path: replica-patch.yaml
+  # 2) JSON 6902: 연산 목록. target이 필수
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: order-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 5
+      - op: add
+        path: /spec/template/spec/containers/0/env/-   # env 목록이 base에 이미 있어야 함
+        value: {name: PAYMENT_MODE, value: live}
+```
+
+```yaml
+# overlays/prod/replica-patch.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: order-api        # 컨테이너 목록은 name을 키로 병합
+          resources:
+            limits:
+              memory: 512Mi
+```
+
+| 형식 | 쓰기 좋은 경우 | 주의 |
+|---|---|---|
+| strategic merge | 필드 몇 개를 덮어쓸 때. 결과 YAML과 모양이 같아 읽기 쉬움 | 목록 병합 키(`containers`의 `name` 등)는 내장 타입의 정의를 따름. 목록 항목을 지우려면 `$patch: delete` |
+| JSON 6902(RFC 6902) | 목록의 특정 인덱스를 바꾸거나 지울 때, 병합 키가 없는 리소스 | 경로의 인덱스는 0부터. 끝에 붙일 때는 `/-` |
+
+옛 강의 자료의 `patchesStrategicMerge`, `patchesJson6902` 필드는 v5.0.0에서, base를 적던 `bases` 필드는 v2.1.0에서 사용 중단되었습니다. 지금은 위처럼 `patches`와 `resources`에 적습니다.
+
+### 6-5. components와 kustomize build
+
+overlay 몇 개에만 같은 기능(예: 결제 모의 서버 사이드카, 외부 DB 연결)을 넣고 싶을 때 base에 넣으면 모든 환경에 들어가고 overlay마다 복사하면 중복이 생깁니다. component는 이 경우를 위한 재사용 단위입니다. Kustomize 가이드의 components 문서 기준으로 component 디렉터리의 `kustomization.yaml`은 종류가 다릅니다.
+
+```yaml
+# components/payment-mock/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - path: add-mock-sidecar.yaml
+```
+
+```yaml
+# overlays/dev/kustomization.yaml
+resources:
+  - ../../base
+components:
+  - ../../components/payment-mock
+```
+
+`v1alpha1`이라는 버전에서 보이듯 component는 아직 알파 API입니다.
+
+결과 확인 명령은 둘입니다. 독립 실행형 `kustomize build <디렉터리>`와 kubectl에 내장된 `kubectl kustomize <디렉터리>`는 둘 다 렌더링 결과를 표준 출력으로만 냅니다. 적용은 `kubectl apply -k <디렉터리>`이거나 `kustomize build <디렉터리> | kubectl apply -f -`입니다. kubectl 내장 Kustomize는 독립 실행형보다 버전이 늦을 수 있어 같은 디렉터리라도 결과가 다를 수 있습니다. `kubectl version --client`에 내장 Kustomize 버전이 함께 나옵니다.
+
+### 6-6. 헷갈리는 지점
 
 - `helm install`의 인자 순서는 `[NAME] [CHART]`입니다. 릴리스 이름을 빼면 오류가 나고 자동 이름을 원하면 `--generate-name`을 씁니다.
+- `helm install`과 `helm upgrade`에 `-f`와 `--set`을 함께 주면 `--set` 값이 우선합니다.
 - `kubectl kustomize`는 출력만 하고 적용하지 않습니다. 적용은 `-k`입니다.
+- Kustomize `images`의 `name`은 컨테이너 이름과 무관하고 매니페스트의 이미지 이름과 맞춰집니다.
 
-### 6-4. 직접 해 보기
+### 6-7. 직접 해 보기
 
 게시판 서비스용 base(Deployment와 Service)를 만들고 `dev`, `prod` 두 overlay에서 네임스페이스와 레플리카 수만 다르게 적용합니다. 다음으로 아무 공개 차트 하나를 `helm show values`로 열어 값 하나를 `--set`으로 바꿔 설치하고 `helm upgrade`와 `helm rollback`으로 리비전이 1, 2, 3으로 오르는 것을 `helm history`로 확인합니다.
+
+prod overlay에는 6-4절의 두 패치 형식을 하나씩 넣고 `kubectl kustomize`로 결과를 비교합니다. 같은 overlay에서 `commonLabels`를 `labels`(`includeSelectors: false`)로 바꿔 Deployment 셀렉터가 그대로인지 확인합니다. 롤백한 뒤 `kubectl get secret -n <네임스페이스> -l owner=helm`으로 리비전 수만큼 Secret이 있는지 봅니다.
 
 ## 7. 확장 인터페이스: CNI, CSI, CRI
 
@@ -691,6 +1077,9 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 6. 1시간 전에 받은 join 명령이 동작하지 않습니다. 워커를 붙일 새 명령을 만드세요.
 7. Helm 릴리스 `shop-cache`를 바로 전 리비전으로 되돌리세요.
 8. Kustomize 디렉터리 `./board/overlays/dev`의 결과를 적용 전에 확인하고 적용하세요.
+9. 사용자 `refund-user`가 제출한 CSR `refund-user`가 Pending 상태입니다. 서명자가 `kubernetes.io/kube-apiserver-client`인지 확인한 뒤 승인하고 인증서를 `/opt/refund-user.crt`에 저장하세요.
+10. 네임스페이스 `shop`의 ServiceAccount `order-api`로 API를 호출할 30분짜리 토큰이 필요합니다. 만드는 명령을 적고 `kubectl describe sa`에 토큰 Secret이 보이지 않는 이유를 설명하세요.
+11. 노드 `node01`에 단독 Pod 하나와 emptyDir를 쓰는 Deployment Pod가 있습니다. drain이 거부됩니다. 필요한 옵션과 각 옵션의 결과를 적으세요.
 
 <details>
 <summary>풀이 보기</summary>
@@ -761,6 +1150,18 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
    kubectl kustomize ./board/overlays/dev
    kubectl apply -k ./board/overlays/dev
    ```
+9. 서명자와 요청 내용을 먼저 보고 승인합니다. 승인된 CSR 객체는 1시간 뒤 지워지니 인증서는 바로 꺼냅니다.
+   ```bash
+   kubectl get csr refund-user -o jsonpath='{.spec.signerName}{"\n"}{.spec.usages}{"\n"}'
+   kubectl get csr refund-user -o jsonpath='{.spec.request}' | base64 -d | openssl req -noout -subject
+   kubectl certificate approve refund-user
+   kubectl get csr refund-user -o jsonpath='{.status.certificate}' | base64 -d > /opt/refund-user.crt
+   ```
+10. `kubectl create token order-api -n shop --duration=30m`입니다. 1.24부터 ServiceAccount를 만들어도 Secret 기반 장기 토큰이 자동 생성되지 않습니다. 토큰은 TokenRequest API로 그때그때 발급받고 Pod에는 projected 볼륨으로 들어갑니다. 요청한 수명은 서버가 조정할 수 있습니다.
+11. 단독 Pod 때문에 `--force`, emptyDir 때문에 `--delete-emptydir-data`, DaemonSet Pod가 있다면 `--ignore-daemonsets`가 필요합니다. 단독 Pod는 다시 만들어 줄 컨트롤러가 없어 사라지고 emptyDir 데이터도 함께 지워집니다. Deployment Pod는 ReplicaSet이 다른 노드에 다시 만듭니다.
+   ```bash
+   kubectl drain node01 --ignore-daemonsets --delete-emptydir-data --force
+   ```
 
 </details>
 
@@ -771,6 +1172,10 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 - etcd 백업과 업그레이드가 현재 시험에 나오는지는 공식 문서로 확인하지 못했습니다. 후기도 엇갈립니다(4절 첫 문단).
 - 확인 문제는 위 문서 내용을 바탕으로 제가 만든 것이고 실제 시험 문항과 관계없습니다. 풀이도 클러스터에서 돌려 보지 않았습니다.
 - containerd 설정 블록은 containerd 버전마다 달라 문서의 1.x, 2.x 예시를 그대로 따라야 합니다.
+- 4-8절의 `openssl x509` 출력 모양은 문서의 SAN 목록과 kubeadm 소스로 예상한 것입니다. 문서 표는 일반 CA의 기본 CN을 `kubernetes-ca`로 적지만 kubeadm 1.36 소스(`certlist.go`)는 `kubernetes`로 만듭니다. 실제 클러스터에서 확인하지 못했습니다.
+- `kubectl create token`에 `--duration`을 주지 않았을 때의 수명은 레퍼런스가 "서버가 정한다"고만 적어 기본값을 숫자로 적지 않았습니다.
+- `--pod-eviction-timeout`이 어느 버전에서 제거됐는지는 확인하지 못했습니다. 1.37 kube-controller-manager 플래그 목록에 없다는 것만 확인했습니다.
+- Kustomize component(`v1alpha1`)와 kubectl 내장 Kustomize 버전 차이는 kubectl 버전마다 다르니 시험 노드에서 `kubectl version --client`로 확인해야 합니다.
 
 ## 참고 자료
 
@@ -784,9 +1189,15 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 - etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md), kubernetes/kubernetes [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
 - Kubernetes, [Options for Highly Available Topology](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/), [Creating Highly Available Clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)
 - Kubernetes, [Declarative Management of Kubernetes Objects Using Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
+- Kustomize, [Components](https://kubectl.docs.kubernetes.io/guides/config_management/components/), [commonLabels](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/commonlabels/), [patchesStrategicMerge](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patchesstrategicmerge/), [patchesJson6902](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patchesjson6902/), [bases](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/bases/)
+- Kubernetes, [Authenticating](https://kubernetes.io/docs/reference/access-authn-authz/authentication/), [PKI certificates and requirements](https://kubernetes.io/docs/setup/best-practices/certificates/), [Certificates and Certificate Signing Requests](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/), [Issue a Certificate for a Kubernetes API Client Using A CertificateSigningRequest](https://kubernetes.io/docs/tasks/tls/certificate-issue-client-csr/), [kube-controller-manager](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/)
+- Kubernetes, [Service Accounts](https://kubernetes.io/docs/concepts/security/service-accounts/), [Managing Service Accounts](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/), [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/), [kubectl create token](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_token/)
+- Kubernetes, [Organizing Cluster Access Using kubeconfig Files](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/), [API Overview](https://kubernetes.io/docs/reference/using-api/), [Accessing Clusters](https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/), [kubectl proxy](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_proxy/)
+- Kubernetes, [Safely Drain a Node](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/), [kubectl drain](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_drain/), [Taint based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions)
+- kubernetes/kubernetes [release-1.36 kubeadm certlist.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/phases/certs/certlist.go), etcd [FAQ](https://etcd.io/docs/v3.6/faq/)
 - Kubernetes, [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/), [Network Plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/), [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
 - Kubernetes, [Extend the Kubernetes API with CustomResourceDefinitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/), [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
-- Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [Quickstart Guide](https://helm.sh/docs/intro/quickstart/), [helm install](https://helm.sh/docs/helm/helm_install/), [helm template](https://helm.sh/docs/helm/helm_template/), [helm rollback](https://helm.sh/docs/helm/helm_rollback/), [helm get values](https://helm.sh/docs/helm/helm_get_values/), [Helm 4 Overview](https://helm.sh/docs/overview/)
+- Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [Quickstart Guide](https://helm.sh/docs/intro/quickstart/), [helm install](https://helm.sh/docs/helm/helm_install/), [helm template](https://helm.sh/docs/helm/helm_template/), [helm rollback](https://helm.sh/docs/helm/helm_rollback/), [helm get values](https://helm.sh/docs/helm/helm_get_values/), [Helm 4 Overview](https://helm.sh/docs/overview/), [Changes since Helm 2](https://helm.sh/docs/v3/faq/changes_since_helm2), [Helm 2 and the Charts Project Are Now Unsupported](https://helm.sh/blog/helm-2-becomes-unsupported/)
 
 후기
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026

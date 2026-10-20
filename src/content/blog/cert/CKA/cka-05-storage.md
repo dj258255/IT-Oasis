@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-05] 스토리지: PVC가 Pending에 머무는 이유를 바인딩 규칙으로 읽기'
-description: CKA 커리큘럼 v1.37의 Storage 영역(10%)을 목차 순서대로 정리합니다. StorageClass와 동적 프로비저닝, 볼륨 타입과 접근 모드(ReadWriteOncePod 포함), 회수 정책, PV와 PVC의 바인딩 규칙을 kubernetes.io 문서로 확인하고 시험에서 쓸 YAML과 명령, 자주 틀리는 지점, 연습 과제를 붙였습니다.
+description: CKA 커리큘럼 v1.37의 Storage 영역(10%)을 목차 순서대로 정리합니다. StorageClass와 동적 프로비저닝, 볼륨 타입과 접근 모드(ReadWriteOncePod 포함), generic ephemeral volume, 회수 정책, CSI 드라이버가 볼륨을 만들고 붙이는 순서, PV와 PVC의 바인딩 규칙을 kubernetes.io 문서로 확인하고 시험에서 쓸 YAML과 명령, 자주 틀리는 지점, 연습 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -56,6 +56,8 @@ seriesOrder: 5
 ```
 
 PV는 Pod와 무관한 수명을 가집니다. 반면 `emptyDir` 같은 임시 볼륨은 Pod가 사라질 때 함께 사라집니다. Volumes 문서는 어떤 볼륨 타입이든 컨테이너가 재시작될 때는 데이터가 보존된다고 적습니다.
+
+볼륨이 따로 필요한 이유는 컨테이너 자체의 파일시스템에 있습니다. Volumes 문서는 컨테이너 안 디스크의 파일이 임시라고 적습니다. 컨테이너가 크래시하면 kubelet은 깨끗한 상태로 컨테이너를 다시 시작하고 그동안 만들거나 고친 파일은 모두 사라집니다. 이 파일들이 놓이는 곳은 읽기 전용 이미지 레이어 위에 컨테이너마다 하나씩 붙는 쓰기 레이어입니다. 레이어가 OverlayFS로 겹쳐 컨테이너 루트가 되는 과정과 이미지에 있던 파일을 고칠 때 생기는 copy-up 비용은 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에서 커널 문서로 정리했습니다. 이 글은 그 쓰기 레이어 바깥에 데이터를 두는 볼륨부터 다룹니다.
 
 ## 1. StorageClass와 동적 프로비저닝
 
@@ -178,6 +180,7 @@ Volumes 문서는 볼륨을 "Pod의 컨테이너가 접근할 수 있는 디렉�
 | `hostPath` | 노드 | 노드의 파일이나 디렉터리를 마운트. 보안 위험이 크고 문서는 가능하면 `local` PV를 쓰라고 경고 |
 | `configMap`, `secret` | API 객체 | 설정과 민감 정보를 파일로. `secret`은 tmpfs이고 항상 읽기 전용으로 마운트 |
 | `downwardAPI`, `projected` | Pod | Pod 정보를 파일로, 여러 소스를 한 디렉터리로 |
+| `ephemeral` (generic ephemeral volume) | Pod | Pod 스펙 안의 `volumeClaimTemplate`으로 PVC를 만든다. Pod가 지워지면 PVC도 지워진다. v1.23 stable |
 | `persistentVolumeClaim` | PV | PVC를 Pod에 연결하는 다리 |
 | `local` | 노드 디스크 | 정적 PV로만 사용. 동적 프로비저닝 없음. PV의 `nodeAffinity`로 노드를 안다 |
 | `nfs` | 외부 | 여러 노드에서 읽기 쓰기 가능 |
@@ -218,6 +221,43 @@ spec:
 ```
 
 `sizeLimit`이 있어도 노드의 임시 저장소가 다른 원인(로그, 이미지)으로 먼저 차면 이 한도에 이르기 전에 공간이 부족할 수 있다고 문서는 적습니다.
+
+`emptyDir`은 노드 디스크나 메모리만 씁니다. 임시 데이터라도 정해진 크기의 네트워크 디스크나 StorageClass의 기능(스냅샷, 확장)이 필요하면 generic ephemeral volume을 씁니다. Ephemeral Volumes 문서의 설명을 정리하면 이렇습니다.
+
+- Pod를 만들면 ephemeral volume 컨트롤러가 Pod와 같은 네임스페이스에 실제 PVC를 만듭니다. PVC 이름은 `<Pod 이름>-<볼륨 이름>`으로 정해집니다.
+- Pod가 이 PVC의 소유자(owner)라서 Pod를 지우면 가비지 컬렉터가 PVC를 지웁니다. StorageClass의 기본 회수 정책이 `Delete`이므로 보통 볼륨도 함께 지워집니다.
+- 문서는 이 용도에 `WaitForFirstConsumer` 클래스를 권합니다. 그래야 스케줄러가 Pod에 맞는 노드를 자유롭게 고릅니다.
+- 이름 규칙 때문에 같은 네임스페이스에서 이름이 겹칠 수 있습니다(Pod `pod-a`의 볼륨 `scratch`와 Pod `pod`의 볼륨 `a-scratch`). 그 Pod를 위해 만든 PVC가 아니면 쓰지 않으므로 Pod가 시작하지 못합니다.
+
+게시판의 리포트 작업 Pod가 1Gi 임시 작업 공간을 받는 예입니다. 문서 예제의 구조를 그대로 따랐고 클래스 이름은 1-1의 `order-fast`로 바꿨습니다.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: report
+  namespace: shop
+spec:
+  containers:
+  - name: app
+    image: busybox:1.28
+    command: ["sleep", "1000000"]
+    volumeMounts:
+    - name: scratch
+      mountPath: /scratch
+  volumes:
+  - name: scratch
+    ephemeral:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          storageClassName: order-fast
+          resources:
+            requests:
+              storage: 1Gi
+```
+
+이 Pod가 만들어지면 `kubectl -n shop get pvc`에 `report-scratch`가 보여야 합니다.
 
 ### 2-2. 접근 모드
 
@@ -294,18 +334,82 @@ NAME                                       CAPACITY   ACCESSMODES   RECLAIMPOLIC
 pvc-bb3ca71d-b7b5-11e6-9d58-0ed433a7dd94   4Gi        RWO           Retain          Bound     default/claim3    manual                     33s
 ```
 
-### 2-4. 자주 틀리는 지점
+### 2-4. CSI 드라이버가 볼륨을 만들고 붙이는 순서
+
+Volumes 문서의 Out-of-tree volume plugins 절은 예전 볼륨 플러그인이 모두 in-tree였다고 설명합니다. 쿠버네티스 핵심 바이너리와 함께 빌드되고 배포되었기 때문에 새 저장 시스템을 지원하려면 쿠버네티스 코드 저장소에 코드를 넣어야 했습니다. CSI(Container Storage Interface)는 컨테이너 오케스트레이터가 임의의 저장 시스템을 워크로드에 노출하는 표준 인터페이스입니다. 저장소 벤더는 드라이버를 쿠버네티스 코드 밖에서 개발하고 클러스터에 확장으로 설치합니다.
+
+kubernetes-csi 프로젝트의 배포 문서(Deploying a CSI Driver on Kubernetes)는 드라이버를 두 부분으로 나눠 설치한다고 적습니다.
+
+| 부분 | 배포 형태 | 들어 있는 것 |
+|---|---|---|
+| 컨트롤러 플러그인 | Deployment나 StatefulSet. 여러 개를 띄울 때는 리더 선출로 하나만 활성 | 드라이버의 CSI Controller 서비스와 사이드카(external-provisioner, external-attacher, external-resizer, external-snapshotter 중 필요한 것) |
+| 노드 플러그인 | 모든 노드에 DaemonSet | 드라이버의 CSI Node 서비스와 node-driver-registrar. kubelet이 호스트에 공유된 유닉스 소켓으로 호출 |
+
+동적 프로비저닝 PVC 하나가 Pod 안 디렉터리가 되기까지를 사이드카 문서 기준으로 이으면 다음과 같습니다.
+
+```
+PVC 생성 (storageClassName: order-fast)
+  -> external-provisioner: PVC를 감시하다 CreateVolume 호출
+     (StorageClass의 parameters를 요청에 실어 보냄)
+  -> PV 생성, PVC와 바인딩
+Pod가 노드에 배정됨
+  -> 컨트롤 플레인이 VolumeAttachment 객체 생성 (attach가 필요한 드라이버만)
+  -> external-attacher: VolumeAttachment를 감시하다 ControllerPublishVolume 호출
+     (디스크를 그 노드에 연결)
+  -> 그 노드의 kubelet: NodeStageVolume, NodePublishVolume 호출 (포맷과 마운트)
+  -> 컨테이너의 volumeMounts 경로에 보임
+```
+
+볼륨 생성을 시작하는 것은 PVC입니다. CreateVolume이 불리는 시점은 `volumeBindingMode`가 정합니다(1-4절). `Immediate`는 PVC를 만든 직후이고 `WaitForFirstConsumer`는 Pod가 노드에 배정된 뒤입니다. attach 단계가 필요 없는 드라이버(NFS 계열 등)는 CSIDriver 객체의 `attachRequired: false`로 VolumeAttachment를 건너뜁니다.
+
+이미 있는 디스크를 정적 PV로 등록할 때는 PV의 `csi` 필드를 씁니다. Volumes 문서의 csi 절이 설명하는 필드 중 자주 쓰는 것만 넣었습니다.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: order-db-csi-pv
+spec:
+  storageClassName: order-fast
+  capacity:
+    storage: 20Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: csi-driver.example-vendor.example   # 드라이버가 GetPluginInfo로 알려 주는 이름
+    volumeHandle: <저장소의 볼륨 ID>             # CreateVolume 응답의 volume.id에 해당
+    fsType: ext4                                # Filesystem 모드에서 쓸 파일시스템
+```
+
+CSI 쪽에서 막혔을 때 볼 객체는 다음과 같습니다.
+
+```bash
+kubectl get csidriver                       # 설치된 드라이버 이름
+kubectl get sc order-fast -o jsonpath='{.provisioner}{"\n"}'   # 위 이름과 같아야 함
+kubectl get csinode <노드> -o yaml          # 그 노드의 kubelet에 등록된 드라이버
+kubectl get volumeattachment                # 어떤 PV가 어느 노드에 붙었는지, ATTACHED 열
+kubectl get pod -A | grep -i csi            # 컨트롤러, 노드 플러그인 Pod
+```
+
+in-tree 플러그인에서 CSI로 넘어가는 마이그레이션(`CSIMigration`)은 v1.25부터 stable입니다. Volumes 문서는 in-tree 플러그인을 가리키는 기존 StorageClass, PV, PVC에 대한 작업을 대응하는 CSI 드라이버로 넘기므로 설정을 바꿀 필요가 없다고 설명합니다. 단 그 CSI 드라이버는 관리자가 설치하고 구성해야 하며 쿠버네티스 코어가 대신 설치하지 않는다고 굵게 적어 둡니다. Persistent Volumes 문서 기준으로 `awsElasticBlockStore`, `azureDisk`, `gcePersistentDisk`는 v1.23부터 마이그레이션이 기본으로 켜진 사용 중단 타입이고 `cephfs`와 `rbd`는 v1.31부터 쓸 수 없습니다. Volumes 문서는 `gcePersistentDisk` in-tree 드라이버가 v1.28에서 완전히 제거됐다고 적고 FlexVolume은 v1.23부터 사용 중단입니다. 오래된 자료의 `provisioner: kubernetes.io/gce-pd` 같은 예시는 해당 CSI 드라이버가 설치된 클러스터에서만 동작하니 연습과 시험에서는 `kubectl get sc`로 실제 프로비저너 이름부터 확인합니다.
+
+### 2-5. 자주 틀리는 지점
 
 - RWO를 "Pod 하나"로 읽는 실수. RWO는 노드 하나 기준이라 같은 노드의 여러 Pod가 함께 마운트할 수 있습니다.
 - 동적 PV의 회수 정책을 PVC나 Pod에서 바꾸려는 실수. 정책은 PV(`spec.persistentVolumeReclaimPolicy`)나 StorageClass(`reclaimPolicy`)에 있습니다. 필드 이름도 두 곳이 다릅니다.
 - `Retain` PV가 `Released`가 되면 새 PVC가 자동으로 묶이지 않습니다. "데이터는 남기고 다시 쓰게 하라"는 과제에서는 이 상태를 먼저 확인합니다.
 - `hostPath` `FileOrCreate`는 상위 디렉터리를 만들지 않아 Pod가 시작하지 못할 수 있습니다.
+- StorageClass의 `provisioner` 이름이 `kubectl get csidriver` 목록과 다른데 PVC만 고치는 것. 프로비저너 이름이 틀리면 PVC를 처리할 external-provisioner가 없어 PVC가 계속 `Pending`입니다.
+- generic ephemeral volume의 PVC를 직접 지우거나 이름이 같은 PVC를 미리 만드는 것. 그 PVC는 Pod가 소유하고 Pod를 위해 만든 것만 쓰입니다.
 
-### 2-5. 직접 해 보기
+### 2-6. 직접 해 보기
 
 1. 같은 노드에 고정한 Pod 두 개(`nodeSelector`)가 RWO PVC 하나를 함께 마운트하는지 보고 한 Pod를 다른 노드로 옮겼을 때 어떻게 되는지 `kubectl describe pod`의 Events로 확인합니다.
 2. 동적 PVC를 만들고 생성된 PV의 회수 정책을 `Retain`으로 바꾼 뒤 PVC를 지워 PV가 `Released`로 남는 것을 봅니다.
 3. `emptyDir`에 파일을 쓰고 컨테이너만 죽였을 때(`kubectl exec ... -- kill 1`)와 Pod를 지웠을 때 파일이 남는지 비교합니다.
+4. 2-1의 `report` Pod를 동적 프로비저너가 있는 클러스터에 만들고 `report-scratch` PVC가 생기는지, Pod를 지운 뒤 PVC와 PV가 함께 사라지는지 `kubectl get pvc,pv -w`로 봅니다.
+5. CSI 드라이버가 설치된 클러스터(kind라면 csi-driver-host-path 같은 예제 드라이버)에서 `kubectl get csidriver`, `kubectl get csinode`, `kubectl get volumeattachment`를 차례로 보고 Pod를 만들기 전후로 VolumeAttachment가 생기는지 확인합니다. 드라이버가 attach를 쓰지 않으면 생기지 않습니다.
 
 ## 3. PV와 PVC 관리
 
@@ -480,6 +584,7 @@ kubectl -n shop get pvc order-db-data -w
 | 5 | 접근 모드와 volumeMode가 맞는지 | `kubectl get pv <이름> -o yaml` |
 | 6 | PVC selector와 PV 라벨이 맞는지 | `kubectl get pv --show-labels` |
 | 7 | `volumeName`으로 지정한 PV가 이미 다른 PVC에 묶였는지 | `kubectl get pv`의 CLAIM 열 |
+| 8 | 동적 프로비저닝이면 클래스의 프로비저너가 설치돼 있고 컨트롤러 Pod가 도는지 | `kubectl get csidriver`, `kubectl get pod -A \| grep -i csi`, 컨트롤러 Pod의 `csi-provisioner` 컨테이너 로그 |
 
 ### 3-7. 자주 틀리는 지점
 
@@ -592,11 +697,37 @@ PVC가 쓰는 StorageClass의 `allowVolumeExpansion`이 `true`인지 봅니다(`
 
 </details>
 
+**문제 7.** 네임스페이스 `shop`의 PVC `board-files`가 `Pending`이고 Events에는 외부 프로비저너가 볼륨을 만들기를 기다린다는 메시지만 반복됩니다. 클래스는 `Immediate` 모드이고 `provisioner`는 `csi-driver.example-vendor.example`입니다. 어디를 확인하나요?
+
+<details>
+<summary>답 보기</summary>
+
+```bash
+kubectl get csidriver
+kubectl get sc <클래스> -o jsonpath='{.provisioner}{"\n"}'
+kubectl get pod -A | grep -i csi
+kubectl -n <드라이버 네임스페이스> logs <컨트롤러 Pod> -c csi-provisioner
+```
+
+PVC를 처리하는 것은 그 드라이버의 컨트롤러 Pod에 있는 external-provisioner입니다. 드라이버 이름이 클래스의 `provisioner`와 다르거나 컨트롤러 Pod가 없거나 죽어 있으면 아무도 CreateVolume을 부르지 않아 PVC가 계속 기다립니다. 컨테이너 이름(`csi-provisioner`)은 드라이버 배포 매니페스트마다 다를 수 있으니 `kubectl describe pod`로 먼저 확인합니다.
+
+</details>
+
+**문제 8.** 네임스페이스 `shop`의 Pod `report`에 이름이 `scratch`인 generic ephemeral volume이 있습니다. 만들어지는 PVC의 이름과 Pod를 지웠을 때 PVC가 어떻게 되는지 답하세요.
+
+<details>
+<summary>답 보기</summary>
+
+PVC 이름은 `report-scratch`입니다. Pod가 이 PVC의 소유자이므로 Pod를 지우면 가비지 컬렉터가 PVC를 지웁니다. 클래스의 회수 정책이 `Delete`(기본값)이면 PV와 실제 볼륨도 지워지고 `Retain`이면 볼륨이 남아 따로 정리해야 합니다.
+
+</details>
+
 ## 5. 범위와 한계
 
-- 이 글의 명령과 YAML은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서와 튜토리얼에 실린 것이고 그렇게 표시했습니다. 연습 클러스터에서 1-7, 2-5, 3-8 과제를 해 본 뒤 결과를 덧붙이겠습니다.
+- 이 글의 명령과 YAML은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서와 튜토리얼에 실린 것이고 그렇게 표시했습니다. 연습 클러스터에서 1-7, 2-6, 3-8 과제를 해 본 뒤 결과를 덧붙이겠습니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다.
 - 시험 환경에 어떤 동적 프로비저너와 StorageClass가 준비되어 있는지는 공식 문서에 없습니다.
+- 2-4절의 CSI 컨트롤러와 노드 플러그인 구조, 사이드카가 부르는 RPC는 kubernetes-csi 프로젝트 문서(배포 문서와 external-provisioner, external-attacher 페이지)를 읽고 정리했습니다. 실제 드라이버마다 배포 Namespace, 컨테이너 이름, attach 사용 여부가 다르고 이번에 특정 드라이버로 확인하지 않았습니다.
 - 볼륨 스냅샷, 복제, 볼륨 populator, 원시 블록 볼륨은 커리큘럼 문구에 직접 나오지 않아 다루지 않았습니다.
 
 ## 참고 자료
@@ -608,9 +739,17 @@ kubernetes.io
 - [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
 - [Storage Classes](https://kubernetes.io/docs/concepts/storage/storage-classes/)
 - [Dynamic Volume Provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/)
-- [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
+- [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/) (csi 절, Migrating to CSI drivers from in-tree plugins 절)
+- [Ephemeral Volumes](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/)
 - [Configure a Pod to Use a PersistentVolume for Storage](https://kubernetes.io/docs/tutorials/configuration/configure-persistent-volume-storage/)
 - [Change the Reclaim Policy of a PersistentVolume](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/)
 - [Change the default StorageClass](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/)
 - [kubectl create](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/) (하위 명령 목록)
 - [Feature Gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) (`RecoverVolumeExpansionFailure`)
+
+CSI
+- Container Storage Interface, [CSI spec](https://github.com/container-storage-interface/spec/blob/master/spec.md)
+- Kubernetes CSI Developer Documentation, [Deploying a CSI Driver on Kubernetes](https://kubernetes-csi.github.io/docs/deploying.html), [external-provisioner](https://kubernetes-csi.github.io/docs/external-provisioner.html), [external-attacher](https://kubernetes-csi.github.io/docs/external-attacher.html)
+
+이 블로그의 관련 글
+- [쿠버네티스 아래의 리눅스 4편: OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs)

@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-03] 워크로드와 스케줄링: Pod가 어디에 얼마만큼 뜨는지 정하는 값들'
-description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. 롤링 업데이트와 롤백, ConfigMap과 Secret, HPA(kubectl autoscale --cpu, tolerance)와 VPA, in-place resize, 자가 치유를 만드는 restartPolicy와 프로브, 네이티브 사이드카, 그리고 requests와 limits, LimitRange, ResourceQuota, 노드 어피니티, 테인트, static Pod, PriorityClass를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
+description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 목차 순서대로 정리합니다. 롤링 업데이트와 롤백, ConfigMap과 Secret, HPA(kubectl autoscale --cpu, tolerance)와 VPA, in-place resize, 자가 치유를 만드는 restartPolicy와 프로브, 네이티브 사이드카, 그리고 requests와 limits, LimitRange, ResourceQuota, 노드 어피니티, 테인트, static Pod, PriorityClass, DaemonSet, Binding 수동 스케줄링, 다중 스케줄러와 프로파일, 어드미션 웹훅, command와 args, Secret 저장 시 암호화, imagePullSecrets, securityContext를 공식 문서 기준으로 묶고 항목마다 직접 해 볼 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -86,8 +86,38 @@ kubectl rollout restart deployment/order-api -n shop
 - `rollout status`는 롤아웃이 끝나면 종료 코드 0을 돌려줍니다. 진행 기한을 넘기면 0이 아닌 코드로 끝납니다. 스크립트로 확인할 때 쓰는 성질입니다.
 - 없는 이미지 태그로 바꾸면 롤아웃이 멈춥니다. 문서 설명대로 `maxUnavailable` 덕분에 옛 Pod가 전부 내려가지는 않으니 `rollout undo`로 되돌리면 됩니다.
 - `kubectl scale`로 레플리카를 바꾸면 리비전이 늘지 않습니다. 1-1절 표의 첫 줄과 같은 이야기입니다.
+- `kubectl set image`나 `kubectl edit`으로 바꾼 값은 손에 든 매니페스트 파일에 남지 않습니다. 나중에 옛 파일로 `kubectl apply`를 하면 옛 이미지로 롤아웃이 다시 일어나니 파일도 함께 고쳐 둡니다.
 
-### 1-4. 직접 해 보기
+### 1-4. Pod에서 바꿀 수 있는 필드와 `kubectl edit` 우회
+
+실행 중인 Pod의 spec은 거의 바꿀 수 없습니다. API 서버의 Pod 검증 코드(kubernetes/kubernetes `pkg/apis/core/validation/validation.go`의 `updatablePodSpecFields`)가 허용하는 변경은 이 목록뿐입니다.
+
+| 바꿀 수 있는 필드 | 조건 |
+|---|---|
+| `spec.containers[*].image`, `spec.initContainers[*].image` | 없음 |
+| `spec.activeDeadlineSeconds` | 비어 있던 값을 양수로 넣거나 기존 값보다 줄일 때 |
+| `spec.tolerations` | 기존 항목에 더하는 것만 |
+| `spec.terminationGracePeriodSeconds` | 음수였던 값을 1로 바꿀 때만 |
+| `spec.schedulingGates` | 기존 게이트를 지우는 것만 |
+| `spec.nodeSelector`, `spec.affinity.nodeAffinity` | Pod에 스케줄링 게이트가 남아 있는 동안만 |
+
+라벨과 어노테이션 같은 메타데이터는 따로 바꿀 수 있고 CPU와 메모리는 3-3절의 `resize` 하위 리소스로 바꿉니다. 환경 변수, 볼륨, `command`, ServiceAccount 같은 나머지 필드를 고치면 API 서버가 "pod updates may not change fields other than ..."로 시작하는 메시지와 함께 거절합니다.
+
+시험에서는 그래서 Pod를 지우고 다시 만드는 절차를 손에 익혀 둡니다. `kubectl edit`은 저장이 거절되면 수정본을 `/tmp/kubectl-edit-*.yaml`에 남기고 그 경로를 알려 줍니다.
+
+```bash
+kubectl edit pod board-web -n board
+# 거절되면 안내된 임시 파일로 지우고 다시 만들기
+kubectl replace --force -f /tmp/kubectl-edit-<번호>.yaml
+
+# 처음부터 파일로 뽑아 고치는 방법
+kubectl get pod board-web -n board -o yaml > board-web.yaml
+kubectl replace --force -f board-web.yaml
+```
+
+`replace --force`는 기존 객체를 지운 뒤 새로 만듭니다. 그 사이에는 Pod가 없습니다. Deployment가 관리하는 Pod라면 Pod를 건드릴 일이 없습니다. `kubectl edit deployment`로 Pod 템플릿을 고치면 1-1절의 롤아웃이 일어나 새 Pod로 교체됩니다. Deployment가 만든 Pod를 직접 고쳐 다시 만들어도 그 Pod가 다음에 교체될 때 ReplicaSet이 템플릿 값으로 새로 만듭니다. 고친 값을 남기려면 템플릿을 고쳐야 합니다.
+
+### 1-5. 직접 해 보기
 
 `order-api`를 레플리카 4개로 만들고 `maxSurge: 1`, `maxUnavailable: 0`으로 바꿉니다. 존재하지 않는 태그로 `set image`를 실행해 롤아웃이 멈추는 모습을 `rollout status`와 `get rs`로 보고 `rollout undo`로 되돌린 뒤 `rollout history`의 리비전 번호가 어떻게 바뀌는지 적습니다.
 
@@ -110,6 +140,8 @@ Secret도 같습니다. 볼륨으로 넣은 Secret은 갱신이 결국 반영되
 ### 2-2. Secret의 기본 저장 방식과 보호 조치
 
 "Secrets" 문서의 주의 문구를 그대로 옮기면, Secret은 기본적으로 API 서버의 저장소(etcd)에 암호화되지 않은 채 저장됩니다. `data` 필드의 base64는 인코딩일 뿐입니다. 문서가 권하는 최소 조치는 저장 시 암호화 켜기, Secret 접근을 최소 권한 RBAC으로 묶기, Secret을 필요한 컨테이너에만 노출하기, 외부 Secret 저장소 검토입니다. 네임스페이스에서 Pod를 만들 수 있는 사람은 그 네임스페이스의 Secret을 읽을 수 있다는 점도 문서에 있습니다. Pod에 Secret을 마운트하면 되기 때문입니다.
+
+저장 시 암호화를 켜는 방법은 2-6절에 정리했습니다. 외부 저장소 쪽 선택지로는 Secrets Store CSI Driver가 있습니다. Vault나 클라우드 비밀 관리 서비스의 값을 CSI 볼륨으로 Pod에 파일로 넣는 방식이라 기본 설정에서는 쿠버네티스 Secret 객체를 만들지 않습니다(선택하면 Secret으로 동기화할 수도 있습니다). 외부 값이 바뀔 때 다시 가져오는 자동 순환은 드라이버 문서 기준 alpha 기능이고 `--enable-secret-rotation=true`를 줘야 켜집니다.
 
 ### 2-3. 시험에서 쓰는 명령
 
@@ -161,9 +193,155 @@ spec:
 - `immutable: true`로 표시한 ConfigMap은 표시를 되돌릴 수도, `data`를 바꿀 수도 없습니다. 지우고 다시 만든 뒤 기존 Pod도 다시 만들라고 문서는 권합니다.
 - Secret YAML을 손으로 쓸 때 base64 인코딩이 귀찮으면 `stringData` 필드를 씁니다.
 
-### 2-5. 직접 해 보기
+### 2-5. command와 args, 이미지의 ENTRYPOINT와 CMD
+
+설정값을 넘기는 또 하나의 길이 컨테이너 실행 명령입니다. Pod API 레퍼런스는 `command`를 "Entrypoint array"로, `args`를 entrypoint에 넘기는 인자로 설명합니다. "Define a Command and Arguments for a Container" 문서도 `command`는 이미지의 ENTRYPOINT에, `args`는 CMD에 대응한다고 적습니다. 이름만 보면 `command`가 CMD와 짝일 것 같아서 자주 틀리는 자리입니다.
+
+| Pod에 적은 것 | 실제로 실행되는 것 |
+|---|---|
+| 둘 다 없음 | 이미지의 ENTRYPOINT + CMD |
+| `args`만 | 이미지의 ENTRYPOINT + `args` |
+| `command`만 | `command`만. 이미지의 CMD도 버려짐 |
+| 둘 다 | `command` + `args` |
+
+`command`만 적었을 때 CMD까지 버려지는 동작은 containerd CRI 코드(`internal/cri/opts/spec_opts.go`의 `WithProcessArgs`)에서 확인했습니다. `command`가 비어 있을 때만 이미지의 ENTRYPOINT와 CMD를 채우고 `command`가 있으면 `args`만 뒤에 붙입니다.
+
+```yaml
+# 이미지가 ENTRYPOINT ["sleep"], CMD ["5"]일 때
+containers:
+  - name: sleeper
+    image: <이미지>
+    args: ["10"]                   # sleep 10
+#   command: ["sleep", "3600"]     # 이렇게 쓰면 이미지의 ENTRYPOINT와 CMD를 모두 무시
+```
+
+`kubectl run`에서는 `--` 뒤의 값이 기본으로 `args`가 되고 `--command`를 붙이면 `command`가 됩니다. 두 필드 모두 Pod를 만든 뒤에는 바꿀 수 없으니(1-4절) 고치려면 Pod를 다시 만듭니다.
+
+```bash
+kubectl run sleeper --image=busybox --dry-run=client -o yaml -- sleep 3600            # args
+kubectl run sleeper --image=busybox --dry-run=client -o yaml --command -- sleep 3600  # command
+```
+
+### 2-6. Secret 저장 시 암호화(EncryptionConfiguration)
+
+2-2절에서 본 것처럼 Secret은 기본적으로 etcd에 평문으로 들어갑니다. 이를 바꾸는 설정이 kube-apiserver의 `--encryption-provider-config`와 그 파일 안의 `EncryptionConfiguration`입니다. "Encrypting Confidential Data at Rest" 문서의 공급자 표를 옮깁니다.
+
+| 공급자 | 강도 | 키 길이 | 문서의 평가 |
+|---|---|---|---|
+| `identity` | 암호화 없음 | 없음 | 아무것도 지정하지 않을 때의 기본값 |
+| `aescbc` | Weak | 16, 24, 32바이트 | CBC 패딩 오라클 공격 때문에 권하지 않음 |
+| `aesgcm` | 200,000번 쓰기마다 키 교체 필요 | 16, 24, 32바이트 | 자동 키 교체가 없으면 권하지 않음 |
+| `secretbox` | Strong | 32바이트 | 비교적 새 기술이라 엄격한 심사 환경에서는 받아들여지지 않을 수 있음 |
+| `kms` v2 | Strongest | 32바이트 | 외부 KMS가 키를 쥠. v1.29부터 stable. `kms` v1은 v1.28부터 deprecated |
+
+`aescbc`, `aesgcm`, `secretbox`는 키가 컨트롤 플레인 호스트의 파일에 있다는 한계를 문서가 함께 적습니다. 시험 문제와 문서 예제는 `aescbc`를 자주 쓰지만 운영에서 고를 때는 이 표를 봅니다.
+
+순서 규칙이 핵심입니다. 목록의 첫 공급자가 쓰기에 쓰이고 읽을 때는 저장된 데이터에 맞는 공급자를 목록 순서대로 시도합니다. 그래서 `identity`를 맨 위에 두면 새로 쓰는 값도 평문으로 저장되고 암호화 공급자를 맨 위에 두고 `identity`를 뒤에 두면 아직 평문인 옛 데이터를 계속 읽을 수 있습니다.
+
+```yaml
+# /etc/kubernetes/enc/enc.yaml (문서 예제를 줄인 것)
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: <head -c 32 /dev/urandom | base64 결과>
+      - identity: {}      # 암호화 전에 저장된 평문 Secret을 읽기 위한 자리
+```
+
+kubeadm 클러스터에서는 파일을 컨트롤 플레인 노드에 두고 static Pod인 kube-apiserver 매니페스트에 플래그와 hostPath 마운트를 더합니다. 컨테이너 안에서 파일이 보여야 하기 때문입니다.
+
+```yaml
+# /etc/kubernetes/manifests/kube-apiserver.yaml 에 더하는 부분
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --encryption-provider-config=/etc/kubernetes/enc/enc.yaml
+    volumeMounts:
+    - name: enc
+      mountPath: /etc/kubernetes/enc
+      readOnly: true
+  volumes:
+  - name: enc
+    hostPath:
+      path: /etc/kubernetes/enc
+      type: DirectoryOrCreate
+```
+
+암호화는 쓸 때만 일어납니다. 설정 전에 저장된 Secret은 다음에 쓰일 때까지 평문으로 남으니 문서대로 모든 Secret을 한 번씩 다시 씁니다. 확인은 etcd에서 값을 직접 읽어 앞부분이 `k8s:enc:aescbc:v1:`로 시작하는지 봅니다.
+
+```bash
+kubectl get secrets --all-namespaces -o json | kubectl replace -f -
+
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets/board/board-db | hexdump -C | head
+```
+
+컨트롤 플레인 노드가 여럿이면 모든 노드의 설정 파일이 같아야 합니다. 다르면 어떤 API 서버는 다른 서버가 쓴 데이터를 복호화하지 못한다고 문서는 경고합니다.
+
+### 2-7. 비공개 레지스트리와 imagePullSecrets
+
+이미지 이름에 레지스트리 호스트를 적지 않으면 쿠버네티스는 Docker 공개 레지스트리로 간주합니다("Images" 문서). `nginx`는 Docker Hub의 공식 이미지를 가리킵니다. 쇼핑몰 팀의 비공개 레지스트리에서 이미지를 받으려면 호스트를 이미지 이름에 적고 kubelet이 쓸 자격 증명을 `docker-registry` 타입 Secret으로 만듭니다.
+
+```bash
+kubectl create secret docker-registry shop-registry -n shop \
+  --docker-server=registry.shop.example \
+  --docker-username=<사용자> --docker-password=<비밀번호>
+```
+
+```yaml
+spec:
+  containers:
+    - name: order-api
+      image: registry.shop.example/shop/order-api:1.0
+  imagePullSecrets:          # containers와 같은 높이, Pod spec 바로 아래
+    - name: shop-registry
+```
+
+문서 기준 조건은 둘입니다. `imagePullSecrets`의 Secret은 Pod와 같은 네임스페이스에 있어야 하고 타입은 `kubernetes.io/dockercfg`나 `kubernetes.io/dockerconfigjson`이어야 합니다. `kubectl create secret docker-registry`는 뒤쪽 타입을 만듭니다. 자격 증명이 틀리면 Pod가 `ErrImagePull`을 거쳐 `ImagePullBackOff`로 남고 `kubectl describe pod`의 Events에 인증 실패가 찍힙니다.
+
+### 2-8. securityContext의 runAsUser와 capabilities
+
+컨테이너 프로세스를 어떤 사용자와 커널 권한으로 돌릴지는 `securityContext`로 정합니다. 두 자리에 쓸 수 있습니다. Pod 수준(`spec.securityContext`)은 Pod 안 모든 컨테이너에 적용되고 컨테이너 수준(`spec.containers[*].securityContext`)은 그 컨테이너에만 적용됩니다. "Configure a Security Context for a Pod or Container" 문서는 두 곳에 같은 필드가 있으면 컨테이너 수준 값이 Pod 수준 값을 덮어쓴다고 적습니다.
+
+```yaml
+# 결제 API: Pod 전체는 UID 1000, 한 컨테이너만 UID 2000에 NET_ADMIN 추가
+apiVersion: v1
+kind: Pod
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  securityContext:
+    runAsUser: 1000
+  containers:
+    - name: api
+      image: busybox:1.36
+      command: ["sleep", "3600"]
+      securityContext:
+        runAsUser: 2000            # Pod 수준 1000을 덮어씀
+        capabilities:
+          add: ["NET_ADMIN"]
+    - name: metrics
+      image: busybox:1.36
+      command: ["sleep", "3600"]   # Pod 수준 값을 받아 UID 1000
+```
+
+`capabilities`는 컨테이너 수준 `securityContext`에만 있는 필드입니다. API 레퍼런스의 PodSecurityContext에는 `capabilities`가 없습니다. Pod 수준에 적으면 kubectl의 `--validate` 설정에 따라 unknown field 오류가 나거나 그 줄이 무시됩니다. 어느 쪽이든 권한은 더해지지 않습니다. `runAsUser`, `runAsGroup`, `runAsNonRoot`는 두 수준 모두에 있습니다. 확인은 `kubectl exec payment-api -c api -- id`로 UID를 보고 `kubectl exec payment-api -c api -- grep Cap /proc/1/status`로 권한 비트를 봅니다.
+
+### 2-9. 직접 해 보기
 
 `board-config`를 환경 변수와 볼륨 두 방식으로 같은 Pod에 넣습니다. `kubectl edit configmap`으로 `PAGE_SIZE`를 바꾼 뒤 1분 간격으로 `kubectl exec`해서 `env`와 `cat /etc/board/PAGE_SIZE`를 비교하고 어느 쪽이 언제 바뀌는지 기록합니다.
+
+kubeadm 클러스터에서는 2-6절 순서대로 암호화를 켜 봅니다. 켜기 전에 만든 `board-db`와 켠 뒤에 만든 Secret을 `etcdctl get`으로 읽어 앞부분을 비교하고 `kubectl replace`로 다시 쓴 뒤 옛 Secret의 앞부분이 `k8s:enc:aescbc:v1:`로 바뀌는지 확인합니다. 설정 파일에서 `identity`를 맨 위로 옮기면 새 Secret이 어떻게 저장되는지도 봅니다.
 
 ## 3. 워크로드 자동 확장
 
@@ -238,6 +416,19 @@ VerticalPodAutoscaler는 실제 사용량에 맞춰 requests와 limits를 조정
 | 위치 | 코어 API(`autoscaling/v2`) | CRD, 별도 설치(`autoscaling.k8s.io/v1`) |
 | 대상 | Deployment, StatefulSet 같은 scale 하위 리소스가 있는 객체. DaemonSet은 대상이 아님 | Deployment, StatefulSet 같은 워크로드 리소스 |
 
+VPA는 세 부품으로 돕니다. Recommender가 사용량 이력으로 권장값(Target, Lower bound, Upper bound)을 계산해 VPA 객체의 `.status`에 적고 Updater가 권장값과 많이 다른 Pod를 내보내거나 제자리에서 고칩니다. 새로 만들어지는 Pod에는 mutating 웹훅인 VPA admission controller가 권장값을 넣습니다. 적용 방식은 `updatePolicy.updateMode`로 고릅니다.
+
+| updateMode | 동작 |
+|---|---|
+| `Off` | 권장값만 계산해 `.status`에 둠 |
+| `Initial` | Pod가 새로 만들어질 때만 적용. 떠 있는 Pod는 그대로 |
+| `Recreate` | 권장값과 다르면 Pod를 내보내고 새 Pod에 적용 |
+| `InPlaceOrRecreate` | 제자리 resize를 먼저 시도하고 안 되면 내보냄 |
+| `InPlace` | 제자리 resize만 시도. 내보내지 않음 |
+| `Auto` | VPA 1.4.0부터 deprecated. 지금은 `Recreate`의 별칭 |
+
+`kubectl describe vpa <이름>`으로 권장값을 봅니다. 옛 강의 자료에는 `Auto`가 기본 예시로 나오니 새로 쓸 때는 `Recreate`나 `InPlaceOrRecreate`를 적습니다.
+
 수직 확장과 관련해 바뀐 점이 하나 있습니다. Pod를 다시 만들지 않고 실행 중인 컨테이너의 CPU와 메모리를 바꾸는 in-place resize(`InPlacePodVerticalScaling`)가 1.35에서 stable이 됐습니다. "Resize CPU and Memory Resources assigned to Containers" 문서의 방법은 Pod의 `resize` 하위 리소스에 패치하는 것이고 kubectl 1.32 이상이 필요합니다.
 
 ```bash
@@ -246,7 +437,7 @@ kubectl patch pod order-api-xxxx -n shop --subresource resize --patch \
 kubectl get pod order-api-xxxx -n shop -o jsonpath='{.status.containerStatuses[0].resources}'
 ```
 
-컨테이너의 `resizePolicy`는 자원마다 `NotRequired`(기본, 재시작 없이 적용)와 `RestartContainer` 중 하나입니다. 노드가 바로 들어주지 못하면 Pod에 `PodResizePending` condition이, 적용 중이면 `PodResizeInProgress`가 붙습니다. Deployment가 관리하는 Pod를 이렇게 바꾸면 Pod 템플릿과 어긋나고 다음 롤아웃에서 템플릿 값으로 돌아간다는 점은 Deployment 동작에서 끌어낸 판단입니다.
+컨테이너의 `resizePolicy`는 자원마다 `NotRequired`(기본, 재시작 없이 적용)와 `RestartContainer` 중 하나입니다. 노드가 바로 들어주지 못하면 Pod에 `PodResizePending` condition이, 적용 중이면 `PodResizeInProgress`가 붙습니다. 문서의 1.37 기준 제약은 이렇습니다. 바꿀 수 있는 자원은 CPU와 메모리뿐이고 Pod의 QoS 클래스(5-2절)가 바뀌는 변경은 거절됩니다. 예를 들어 Guaranteed Pod는 resize 뒤에도 request와 limit이 같아야 합니다. 일반 init 컨테이너는 바꿀 수 없고 사이드카는 바꿀 수 있습니다. 메모리 limit을 줄일 때 kubelet은 현재 사용량이 새 limit을 넘으면 resize를 건너뛰지만 확인 직후 사용량이 튀는 경우까지 막지는 못한다고 문서가 적습니다. Deployment가 관리하는 Pod를 이렇게 바꾸면 Pod 템플릿과 어긋나고 다음 롤아웃에서 템플릿 값으로 돌아간다는 점은 Deployment 동작에서 끌어낸 판단입니다.
 
 ### 3-4. 직접 해 보기
 
@@ -318,6 +509,19 @@ containers:
 | 종료 순서 | 앱 컨테이너가 완전히 멈춘 뒤 사이드카를 정의 역순으로 종료 |
 | 이미지 변경 | Pod를 다시 만들지 않고 그 컨테이너만 재시작 |
 
+비교 대상인 일반 init 컨테이너(`restartPolicy`를 적지 않은 것)의 규칙도 "Init Containers" 문서로 정리해 둡니다. 목록 순서대로 하나씩 돌고 앞 컨테이너가 성공으로 끝나야 다음 것이 시작됩니다. 모두 끝나야 앱 컨테이너가 뜹니다. 실패하면 kubelet이 그 init 컨테이너를 성공할 때까지 다시 실행하고 Pod의 `restartPolicy`가 `Never`면 Pod 전체를 실패로 처리합니다. 주문 API가 DB 서비스 이름이 DNS에 잡힐 때까지 기다리는 예입니다.
+
+```yaml
+spec:
+  initContainers:
+    - name: wait-db
+      image: busybox:1.36
+      command: ["sh", "-c", "until nslookup order-db; do echo waiting; sleep 2; done"]
+  containers:
+    - name: order-api
+      image: <이미지>
+```
+
 일반 init 컨테이너는 앱 컨테이너보다 먼저 끝나서 앱과 메시지를 주고받을 수 없고 사이드카는 앱과 동시에 돌며 네트워크와(선택하면) 볼륨을 공유합니다. 게시판 앱의 접근 로그 파일을 사이드카가 읽어 stdout으로 내보내는 예입니다.
 
 ```yaml
@@ -365,6 +569,43 @@ kubectl -n board get pod board -o jsonpath='{.status.initContainerStatuses[*].st
 ### 5-1. 승인 단계
 
 승인 컨트롤러(admission controller)는 인증과 인가를 통과한 요청을 저장하기 전에 가로채는 API 서버 안의 코드입니다. 값을 고치는 mutating과 거절만 하는 validating이 있고 읽기 요청(get, list, watch)은 거치지 않습니다. "Admission Control in Kubernetes" 문서에 실린 v1.37 기본 활성 목록에는 이 영역과 관련된 `LimitRanger`, `ResourceQuota`, `Priority`, `DefaultTolerationSeconds`가 들어 있습니다. 활성 목록은 `kube-apiserver -h | grep enable-admission-plugins`로 볼 수 있고 kubeadm 클러스터에서는 `/etc/kubernetes/manifests/kube-apiserver.yaml`의 `--enable-admission-plugins`로 더하고 `--disable-admission-plugins`로 뺍니다.
+
+```yaml
+# kube-apiserver.yaml의 command 일부
+    - --enable-admission-plugins=NodeRestriction,AlwaysPullImages
+    - --disable-admission-plugins=DefaultStorageClass
+```
+
+static Pod 매니페스트라 저장하면 kubelet이 kube-apiserver를 다시 띄웁니다. 그동안 `kubectl`이 잠시 응답하지 않습니다. `--enable-admission-plugins`에 적은 이름은 기본 활성 목록에 더해지는 것이고 기본 목록을 대체하지 않습니다. 순서도 따로 신경 쓸 필요가 없다고 문서에 적혀 있습니다. 예로 든 `AlwaysPullImages`는 모든 Pod의 `imagePullPolicy`를 `Always`로 바꾸는 mutating 컨트롤러이고 다른 네임스페이스의 Pod가 노드에 이미 받아 둔 비공개 이미지를 자격 증명 없이 쓰는 일을 막습니다.
+
+내장 컨트롤러로 표현하지 못하는 규칙은 웹훅으로 붙입니다. 기본 활성 목록에 들어 있는 `MutatingAdmissionWebhook`과 `ValidatingAdmissionWebhook`이 그 통로입니다. API 서버는 요청을 `MutatingWebhookConfiguration`에 등록된 웹훅 서버로 먼저 보내 값을 고치게 하고 스키마 검증을 거친 뒤 `ValidatingWebhookConfiguration`의 웹훅으로 보내 허용 여부를 묻습니다. "Dynamic Admission Control" 문서가 적은 순서입니다. 고친 결과를 마지막에 검사해야 하니 mutating이 먼저 돕니다. 게시판 네임스페이스의 Pod 생성을 검사하는 설정은 이런 모양입니다.
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration      # 값을 고치려면 MutatingWebhookConfiguration
+metadata:
+  name: board-pod-policy
+webhooks:
+  - name: pod-policy.board.example
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        namespace: board
+        name: pod-policy-webhook
+        path: /validate
+      caBundle: <웹훅 서버 인증서를 검증할 CA, base64>
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+    failurePolicy: Fail
+```
+
+두 Configuration 객체는 클러스터 범위입니다. API 서버는 HTTPS로만 웹훅을 부르므로 `caBundle`로 웹훅 서버 인증서를 검증합니다. `failurePolicy`는 웹훅 호출이 실패했을 때 요청을 거절할지(`Fail`) 통과시킬지(`Ignore`)를 정합니다. 웹훅 서버가 죽었는데 `Fail`이면 해당 리소스 생성이 전부 막히니 Pod가 안 만들어질 때 확인할 자리입니다.
 
 ### 5-2. requests와 limits
 
@@ -451,7 +692,30 @@ spec:
     disktype: ssd
 ```
 
-nodeSelector는 적은 라벨을 모두 가진 노드에만 Pod를 놓습니다. `nodeName`은 더 직접적입니다. 값이 있으면 스케줄러가 그 Pod를 건너뛰고 지정한 노드의 kubelet이 바로 Pod를 띄웁니다. nodeSelector와 어피니티보다 우선하고 노드가 없거나 자원이 모자라면 실패합니다.
+nodeSelector는 적은 라벨을 모두 가진 노드에만 Pod를 놓습니다. `nodeName`은 더 직접적입니다. 값이 있으면 스케줄러가 그 Pod를 건너뛰고 지정한 노드의 kubelet이 바로 Pod를 띄웁니다. nodeSelector와 어피니티보다 우선하고 노드가 없거나 자원이 모자라면 실패합니다. 스케줄러를 건너뛸 뿐 승인 단계(5-1절)는 그대로 거칩니다. 자원이 모자라면 kubelet이 `OutOfcpu` 같은 이유로 거부해 Pod가 `Pending`에 머물지 않고 `Failed`가 됩니다.
+
+스케줄러가 하는 일도 결국 이 칸을 채우는 것입니다. 기본 플러그인 `DefaultBinder`가 Pod의 `binding` 하위 리소스에 Binding 객체를 POST하면 API 서버가 `spec.nodeName`을 채웁니다. 스케줄러가 없거나 멈춘 클러스터에서 이미 `Pending`인 Pod를 노드에 놓는 방법은 둘입니다.
+
+1. Pod를 지우고 `nodeName`을 넣어 다시 만듭니다. 이미 만든 Pod에 `nodeName`을 `kubectl edit`으로 넣는 변경은 1-4절 목록에 없어 거절됩니다. `kubectl replace --force -f`가 빠릅니다.
+2. 스케줄러가 하는 일을 손으로 합니다. Binding 객체를 `binding` 하위 리소스에 보냅니다.
+
+```json
+{
+  "apiVersion": "v1",
+  "kind": "Binding",
+  "metadata": { "name": "board-web" },
+  "target": { "apiVersion": "v1", "kind": "Node", "name": "node02" }
+}
+```
+
+```bash
+# 위 내용을 binding.json으로 저장한 뒤 kubectl proxy를 거쳐 POST
+kubectl proxy --port=8001 &
+curl -X POST -H "Content-Type: application/json" --data-binary @binding.json \
+  http://127.0.0.1:8001/api/v1/namespaces/board/pods/board-web/binding
+```
+
+`metadata.name`은 바인딩할 Pod 이름이고 `target`이 보낼 노드입니다. 성공하면 `kubectl get pod board-web -n board -o wide`의 NODE 열에 `node02`가 보입니다. 이미 노드가 정해진 Pod에 다시 보내면 거절됩니다.
 
 ### 5-6. 노드 어피니티
 
@@ -548,13 +812,93 @@ spec:
 - 스케줄러가 Pod를 놓을 노드를 못 찾으면 선점 로직이 돕니다. 우선순위가 낮은 Pod를 몇 개 내보내면 들어갈 수 있는 노드를 찾고 찾으면 그 Pod들을 축출합니다.
 - `preemptionPolicy: Never`인 Pod는 대기열에서 낮은 우선순위 Pod보다 앞에 서지만 다른 Pod를 선점하지 않습니다. 기본값은 `PreemptLowerPriority`입니다.
 
-### 5-10. 직접 해 보기
+### 5-10. DaemonSet
+
+DaemonSet은 조건에 맞는 노드마다 Pod를 하나씩 띄우는 컨트롤러입니다. 노드가 클러스터에 들어오면 그 노드에 Pod가 생기고 노드가 빠지면 Pod도 정리됩니다. 로그 수집 에이전트, 노드 메트릭 수집기, CNI 플러그인, kubeadm의 kube-proxy가 이 방식으로 돕니다. 매니페스트는 Deployment와 거의 같고 `replicas`와 `strategy` 대신 `updateStrategy`(기본 `RollingUpdate`)를 씁니다. `kubectl create` 하위 명령이 없어 Deployment 뼈대를 받아 고칩니다.
+
+```bash
+kubectl create deployment log-agent -n kube-system --image=fluent/fluent-bit:3.0 \
+  --dry-run=client -o yaml > log-agent.yaml
+# kind를 DaemonSet으로 바꾸고 replicas, strategy, status 줄을 지운 뒤
+kubectl apply -f log-agent.yaml
+kubectl get ds -n kube-system
+```
+
+"DaemonSet" 문서가 설명하는 배치 방식이 시험에 걸립니다.
+
+- DaemonSet 컨트롤러가 노드마다 Pod를 만들면서 `spec.affinity.nodeAffinity`에 `matchFields`(`metadata.name In <노드 이름>`)를 넣습니다. 그다음은 기본 스케줄러가 맡아 `nodeName`을 채웁니다. 자리가 없으면 스케줄러가 우선순위에 따라 다른 Pod를 선점할 수 있습니다.
+- 컨트롤러가 톨러레이션을 자동으로 붙입니다. `node.kubernetes.io/not-ready`와 `unreachable`(NoExecute, 시간 제한 없음), `disk-pressure`, `memory-pressure`, `pid-pressure`, `unschedulable`(NoSchedule) 등입니다. 그래서 cordon한 노드에도 DaemonSet Pod는 뜹니다.
+- 컨트롤 플레인 노드의 `node-role.kubernetes.io/control-plane:NoSchedule` 테인트는 자동 톨러레이션에 들어 있지 않습니다. 컨트롤 플레인 노드에도 띄우려면 Pod 템플릿에 직접 톨러레이션을 적습니다.
+- 일부 노드에만 띄우려면 템플릿에 `nodeSelector`나 노드 어피니티를 적습니다. 컨트롤러는 이 조건으로 대상 노드를 고릅니다.
+
+static Pod(5-8절)와 비교하면 차이가 분명합니다. static Pod는 kubelet이 로컬 파일을 보고 띄우고 API 서버에는 mirror Pod로만 보입니다. DaemonSet은 API 서버의 객체이고 컨트롤러와 스케줄러를 거칩니다.
+
+### 5-11. 다중 스케줄러와 스케줄러 프로파일
+
+Pod의 `spec.schedulerName`이 어느 스케줄러가 그 Pod를 맡을지 정합니다. 적지 않으면 API 서버가 `default-scheduler`를 넣습니다. 다른 이름을 적었는데 그 이름의 스케줄러가 없으면 Pod는 `Pending`에 남습니다.
+
+스케줄러 동작은 `KubeSchedulerConfiguration` 파일로 바꿉니다. "Scheduler Configuration" 문서(v1 API, 1.25부터 stable)가 나열하는 확장 포인트는 스케줄링 순서와 같습니다.
+
+```text
+queueSort → preFilter → filter → postFilter(맞는 노드가 없을 때. 선점이 여기) → preScore → score
+→ reserve → permit → preBind → bind → postBind
+```
+
+플러그인은 이 확장 포인트 하나 이상에 붙습니다. 몇 개만 보면 `PrioritySort`(queueSort), `NodeResourcesFit`, `NodeName`, `NodeUnschedulable`, `TaintToleration`(filter), `ImageLocality`(score, 이미지가 이미 있는 노드에 점수), `DefaultBinder`(bind)입니다. 문서에는 PodGroup 스케줄링용 확장 포인트도 있지만 기본 동작과는 따로입니다.
+
+프로파일은 한 kube-scheduler 프로세스 안에 이름이 다른 스케줄러 설정을 여러 개 두는 방식입니다. Pod는 `schedulerName`으로 프로파일을 고릅니다. 프로세스를 따로 띄우지 않아 같은 노드 자원을 두 스케줄러가 동시에 계산하는 경합이 없습니다.
+
+```yaml
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+profiles:
+  - schedulerName: default-scheduler
+  - schedulerName: no-scoring-scheduler   # 점수 단계를 끈 프로파일
+    plugins:
+      preScore:
+        disabled:
+          - name: '*'
+      score:
+        disabled:
+          - name: '*'
+```
+
+문서의 규칙은 셋입니다. 프로파일 이름은 서로 달라야 하고 `default-scheduler` 프로파일이 있어야 `schedulerName`을 적지 않은 Pod가 스케줄됩니다. 모든 프로파일은 queueSort에 같은 플러그인을 써야 합니다. 대기열이 하나이기 때문입니다.
+
+별도 스케줄러를 하나 더 띄우는 방법도 "Configure Multiple Schedulers" 문서에 있습니다. 설정 파일을 ConfigMap으로 만들고 kube-scheduler 이미지를 `--config`로 그 파일을 읽게 해서 `kube-system`에 Deployment로 띄웁니다. 문서 예제는 ServiceAccount를 만들고 ClusterRole `system:kube-scheduler`를 묶습니다. 레플리카가 하나면 `leaderElection.leaderElect: false`로 둡니다.
+
+```yaml
+# ConfigMap my-scheduler-config의 데이터
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+profiles:
+  - schedulerName: my-scheduler
+leaderElection:
+  leaderElect: false
+```
+
+```yaml
+# 이 스케줄러를 쓰는 Pod
+spec:
+  schedulerName: my-scheduler
+```
+
+어느 스케줄러가 배치했는지는 이벤트로 봅니다. 스케줄링 이벤트의 보고 주체가 Pod의 `schedulerName`입니다.
+
+```bash
+kubectl get events -n board -o wide | grep Scheduled     # SOURCE 열에 my-scheduler
+kubectl logs -n kube-system deploy/my-scheduler          # Pending이면 권한, 설정 경로 오류 확인
+```
+
+### 5-12. 직접 해 보기
 
 노드 두 대 클러스터에서 아래 순서로 해 봅니다.
 
 1. `node02`에 `dedicated=payment:NoSchedule` 테인트를 걸고 톨러레이션 없는 Deployment 레플리카 4개가 모두 `node01`로 가는지 봅니다.
 2. 결제 Deployment에 톨러레이션과 노드 어피니티를 넣어 `node02`에만 가는지 확인합니다.
 3. `shop` 네임스페이스에 ResourceQuota(`pods=3`)를 걸고 레플리카 5개 Deployment를 만든 뒤, 무엇이 실패했고 어디에 이유가 찍히는지 찾습니다.
+4. 컨트롤 플레인 노드에서 `/etc/kubernetes/manifests/kube-scheduler.yaml`을 디렉터리 밖으로 옮겨 스케줄러를 멈춥니다. 새 Pod가 `Pending`에 머무는 것을 본 뒤 5-5절의 Binding 요청으로 `node02`에 놓고 매니페스트를 되돌립니다.
+5. 같은 상태에서 DaemonSet을 하나 만들어 Pod가 뜨는지 봅니다. 5-10절대로라면 DaemonSet Pod도 기본 스케줄러를 거치니 스케줄러가 멈춘 동안 어떻게 되는지가 확인할 지점입니다. `node02`를 `kubectl cordon`한 뒤 DaemonSet Pod가 그 노드에 남아 있는지도 봅니다.
 
 ## 6. 확인 문제
 
@@ -568,6 +912,10 @@ spec:
 6. `node02`에서 `app=payment` 라벨이 있는 Pod만 돌게 하세요. 다른 Pod는 `node02`에 새로 놓이지 않아야 합니다.
 7. `node01`에 static Pod `board-check`(이미지 busybox, `sleep 3600`)를 만들고 mirror Pod 이름을 확인하세요.
 8. 우선순위 50000인 PriorityClass `payment-high`를 만들고 Deployment `payment-api`에 적용하세요.
+9. 이미지가 `ENTRYPOINT ["sleep"]`, `CMD ["5"]`일 때 Pod에 `command: ["sleep", "100"]`만 적으면 무엇이 실행되나요? `args: ["100"]`만 적으면요?
+10. 클러스터의 Secret을 `aescbc`로 저장 시 암호화하도록 설정하고 기존 Secret까지 암호화하세요. `EncryptionConfiguration`의 공급자 순서는 어떻게 두어야 하나요?
+11. Pod `payment-api`의 모든 컨테이너를 UID 1000으로 돌리고 그중 컨테이너 `api`에만 `NET_ADMIN` 권한을 더하세요.
+12. 이름이 `my-scheduler`인 스케줄러가 클러스터에 떠 있습니다. Pod `board-check`를 이 스케줄러로 배치하고 실제로 이 스케줄러가 배치했는지 확인하세요.
 
 <details>
 <summary>풀이 보기</summary>
@@ -641,12 +989,40 @@ spec:
      '{"spec":{"template":{"spec":{"priorityClassName":"payment-high"}}}}'
    kubectl get pods -l app=payment-api -o jsonpath='{.items[*].spec.priority}'
    ```
+9. `command`는 ENTRYPOINT 자리를, `args`는 CMD 자리를 채웁니다. `command`만 적으면 이미지의 CMD도 버려져 `sleep 100`이 실행됩니다. `args: ["100"]`만 적으면 이미지의 ENTRYPOINT에 붙어 역시 `sleep 100`입니다. 차이는 `command: ["sleep"]`만 적었을 때 드러납니다. CMD의 `5`가 붙지 않아 인자 없는 `sleep`이 실행되고 바로 오류로 끝납니다.
+10. 2-6절 순서대로 합니다. 키를 만들고(`head -c 32 /dev/urandom | base64`) 설정 파일을 `/etc/kubernetes/enc/enc.yaml`에 둔 뒤 kube-apiserver 매니페스트에 `--encryption-provider-config`와 hostPath 마운트를 더합니다. 공급자는 `aescbc`를 맨 위에, `identity: {}`를 그 아래에 둡니다. 첫 공급자로 쓰고 `identity`로 옛 평문을 읽기 위해서입니다. API 서버가 다시 뜨면 기존 Secret을 다시 씁니다.
+    ```bash
+    kubectl get secrets --all-namespaces -o json | kubectl replace -f -
+    ```
+11. `runAsUser`는 Pod 수준에, `capabilities`는 컨테이너 수준에만 둘 수 있습니다.
+    ```yaml
+    spec:
+      securityContext:
+        runAsUser: 1000
+      containers:
+        - name: api
+          image: <이미지>
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+    ```
+    이미 떠 있는 Pod라면 1-4절 목록에 없는 변경이니 `kubectl replace --force -f`로 다시 만듭니다.
+12. `schedulerName`도 만든 뒤 바꿀 수 없으니 새로 만듭니다.
+    ```bash
+    kubectl run board-check --image=busybox --dry-run=client -o yaml -- sleep 3600 > bc.yaml
+    # spec 아래에 schedulerName: my-scheduler 추가
+    kubectl apply -f bc.yaml
+    kubectl get events -o wide | grep board-check     # Scheduled 이벤트의 SOURCE가 my-scheduler
+    ```
 
 </details>
 
 ## 범위와 한계
 
-- 이 글의 명령과 YAML은 공식 문서에서 옮기거나 문서 예시를 바탕으로 고친 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양만 옮겼습니다. 클러스터를 만든 뒤 2-5, 3-4, 4-5, 5-10절의 결과를 덧붙이겠습니다.
+- 이 글의 명령과 YAML은 공식 문서에서 옮기거나 문서 예시를 바탕으로 고친 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양만 옮겼습니다. 클러스터를 만든 뒤 1-5, 2-9, 3-4, 4-5, 5-12절의 결과를 덧붙이겠습니다.
+- `command`만 적었을 때 이미지 CMD가 버려지는 동작은 containerd CRI 소스(main 브랜치)로 확인했습니다. CRI-O 같은 다른 런타임 코드는 보지 않았습니다.
+- 수정 가능한 Pod 필드 목록은 kubernetes/kubernetes master 브랜치의 `validation.go`에서 옮겼습니다. 스케줄링 게이트 관련 항목은 버전에 따라 달라질 수 있습니다.
+- VPA의 updateMode 목록은 kubernetes.io의 "Vertical Pod Autoscaling" 문서 기준이고 설치하는 VPA 버전에 따라 `InPlace` 계열 모드가 없을 수 있습니다. Secrets Store CSI Driver의 자동 순환 상태는 드라이버 문서 기준입니다.
 - 공식 문서는 2026년 10월 19일 기준 kubernetes.io(v1.37)에서 확인했습니다.
 - 시험 환경에 Metrics Server와 VPA가 설치되어 있는지, 노드 사이 `scp`가 되는지는 확인하지 못했습니다.
 - `kubectl autoscale --cpu-percent`의 동작은 kubernetes/kubernetes 저장소 master 브랜치의 `autoscale.go`로 확인했고 v1.37 kubectl 바이너리로 실행해 보지는 않았습니다.
@@ -667,3 +1043,8 @@ spec:
 - Kubernetes, [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/), [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
 - Kubernetes, [Static Pods](https://kubernetes.io/docs/concepts/workloads/pods/static-pods/), [Create static Pods](https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/)
 - Kubernetes, [Pod Priority and Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)
+- Kubernetes, [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/), [Scheduler Configuration](https://kubernetes.io/docs/reference/scheduling/config/), [Scheduling Framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/), [Configure Multiple Schedulers](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/)
+- Kubernetes, [Dynamic Admission Control](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/), [Encrypting Confidential Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/), [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
+- Kubernetes, [Define a Command and Arguments for a Container](https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/), [Pod API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/), [Images](https://kubernetes.io/docs/concepts/containers/images/), [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+- kubernetes/kubernetes, [pkg/apis/core/validation/validation.go](https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go); containerd, [internal/cri/opts/spec_opts.go](https://github.com/containerd/containerd/blob/main/internal/cri/opts/spec_opts.go)
+- Secrets Store CSI Driver, [Secret Auto Rotation](https://secrets-store-csi-driver.sigs.k8s.io/topics/secret-auto-rotation.html)

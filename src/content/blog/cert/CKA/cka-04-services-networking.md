@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-04] 서비스와 네트워킹: Pod IP에서 Gateway API까지 한 줄로 잇기'
-description: CKA 커리큘럼 v1.37의 Services and Networking 영역(20%)을 목차 순서대로 정리합니다. Pod 간 연결 모델, NetworkPolicy, Service 타입과 EndpointSlice, Gateway API(헤더 매칭, 필터, ReferenceGrant 포함), Ingress와 Ingress NGINX 은퇴, CoreDNS를 kubernetes.io와 gateway-api.sigs.k8s.io 문서로 확인하고 시험에서 쓸 명령과 YAML, 자주 틀리는 지점, 연습 과제를 붙였습니다.
+description: CKA 커리큘럼 v1.37의 Services and Networking 영역(20%)을 목차 순서대로 정리합니다. Pod 간 연결 모델과 노드 포트, CNI 설정 위치, Pod와 Service 대역 확인법, NetworkPolicy, Service 타입과 EndpointSlice, Gateway API(헤더 매칭, 필터, ReferenceGrant 포함), Ingress와 rewrite-target, Ingress NGINX 은퇴, CoreDNS와 Pod DNS 레코드를 kubernetes.io와 gateway-api.sigs.k8s.io 문서로 확인하고 시험에서 쓸 명령과 YAML, 자주 틀리는 지점, 연습 과제를 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -75,7 +75,75 @@ IP 대역도 셋으로 나뉩니다. Pod IP는 네트워크 플러그인이, Ser
 
 kube-proxy는 리눅스에서 `iptables`, `ipvs`, `nftables` 모드를 지원합니다. Virtual IPs and Service Proxies 문서는 모드를 지정하지 않으면 현재 기본값이 `iptables`이고 앞으로 `nftables`로 바뀔 예정이라고 적습니다. `ipvs` 모드는 v1.35부터 사용 중단(deprecated) 상태이고 v1.40에서 기본 비활성화, v1.43에서 제거될 예정입니다. 옛 강의에서 ipvs를 기본처럼 다루면 걸러서 듣습니다.
 
-### 1-3. 시험에서 연결을 확인하는 방법
+패킷이 Service IP를 만나 iptables 규칙과 conntrack을 거쳐 Pod로 가는 커널 쪽 경로는 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 따로 다룹니다. 이 글은 시험에서 쓰는 확인 명령까지만 봅니다.
+
+### 1-3. 노드가 여는 포트 표
+
+노드끼리 통신이 안 되는 과제는 방화벽이나 보안 그룹이 필요한 포트를 막은 경우가 많습니다. Ports and Protocols 문서의 표를 옮깁니다. 모두 기본값이고 바꿀 수 있습니다.
+
+| 노드 | 포트(프로토콜) | 쓰는 구성요소 | 누가 접속하나 |
+|---|---|---|---|
+| 컨트롤 플레인 | 6443/TCP | kube-apiserver | 전부 |
+| 컨트롤 플레인 | 2379-2380/TCP | etcd 클라이언트 API와 피어 | kube-apiserver, etcd |
+| 컨트롤 플레인 | 10250/TCP | kubelet API | 자기 자신, 컨트롤 플레인 |
+| 컨트롤 플레인 | 10259/TCP | kube-scheduler | 자기 자신 |
+| 컨트롤 플레인 | 10257/TCP | kube-controller-manager | 자기 자신 |
+| 워커 | 10250/TCP | kubelet API | 자기 자신, 컨트롤 플레인 |
+| 워커 | 10256/TCP | kube-proxy 헬스체크 | 자기 자신, 로드밸런서 |
+| 워커 | 30000-32767/TCP, UDP | NodePort Service 기본 범위 | 전부 |
+
+표를 외울 때 같이 기억할 사실이 셋 있습니다.
+
+- 10257과 10259의 "누가 접속하나" 열은 자기 자신뿐입니다. kubeadm 소스(`cmd/kubeadm/app/phases/controlplane/manifests.go`)도 kube-controller-manager와 kube-scheduler에 `--bind-address=127.0.0.1`을 넣습니다. kubeadm 클러스터에서는 이 두 포트를 노드 밖에 열 필요가 없습니다.
+- kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으로 접속해서 처리합니다. 컨트롤 플레인에서 워커의 10250이 막히면 Pod는 잘 도는데 `kubectl logs`만 실패합니다.
+- etcd를 외부에 두거나 API 서버를 443 뒤에 두는 구성도 문서가 언급합니다. 시험 노드에서는 정적 Pod 매니페스트(`/etc/kubernetes/manifests/`)의 `--secure-port`, `--listen-client-urls` 값을 보고 실제 포트를 확인합니다.
+
+CNI 플러그인이 쓰는 포트(VXLAN, BGP 같은 것)는 이 표에 없고 플러그인 문서에 있습니다.
+
+### 1-4. CNI 설정은 컨테이너 런타임이 읽는다
+
+kubelet은 CRI로 런타임에 Pod 샌드박스를 만들어 달라고 요청할 뿐이고 CNI 플러그인을 부르는 쪽은 containerd나 CRI-O입니다. Network Plugins 문서는 런타임이 쿠버네티스 네트워크 모델을 구현하는 데 필요한 CNI 플러그인을 읽도록 설정돼야 한다고 적습니다. 1.24 전에는 kubelet이 `--network-plugin`, `--cni-bin-dir` 같은 옵션으로 CNI를 관리했지만 1.24에서 이 옵션들이 제거됐습니다. 옛 강의에서 "kubelet 옵션에서 CNI 디렉터리를 찾아라"라고 하면 지금은 런타임 설정을 봅니다.
+
+| 위치 | 내용 | 근거 |
+|---|---|---|
+| `/etc/cni/net.d` | CNI 설정 파일(`.conf`, `.conflist`) | Network Plugins 문서의 기본값, containerd CRI 설정 `conf_dir` 기본값 |
+| `/opt/cni/bin` | 플러그인 실행 파일(`bridge`, `host-local`, `loopback`, 서드파티 바이너리) | 같은 문서, containerd `bin_dirs` 기본값 |
+| `/etc/containerd/config.toml` | 위 두 경로를 바꾸는 곳 | containerd `docs/cri/config.md` |
+
+containerd의 `max_conf_num` 기본값은 1입니다. 설정 디렉터리에서 파일 이름 순으로 맨 앞 파일 하나만 읽는다는 뜻이라서 `00-old.conflist` 같은 남은 파일이 실제 플러그인 설정보다 앞에 있으면 엉뚱한 설정이 적용됩니다. 설정 파일의 `"type"` 값은 `/opt/cni/bin` 안의 실행 파일 이름과 같아야 합니다.
+
+CNI 문제는 증상이 둘로 나타납니다.
+
+| 증상 | 어디서 보나 |
+|---|---|
+| 노드가 `NotReady` | `kubectl describe node`의 Ready 조건 메시지에 `container runtime network not ready`가 들어간다(kubelet 소스의 문구) |
+| Pod가 `ContainerCreating`에서 멈춤 | `kubectl describe pod`의 이벤트 사유 `FailedCreatePodSandBox` |
+
+두 경우 모두 노드에 들어가 `ls /etc/cni/net.d /opt/cni/bin`으로 파일을 보고 `journalctl -u containerd`(CRI-O면 `-u crio`)와 `journalctl -u kubelet`을 같이 읽습니다. CNI를 직접 실행하는 런타임 쪽 로그가 원인을 더 구체적으로 적는 경우가 많습니다. "cni failed to set up pod"로 시작하는 옛 이벤트 문구는 dockershim 시절 것이라 지금 런타임에서는 모양이 다릅니다.
+
+Weave Net은 옛 강의와 블로그에 자주 나오지만 GitHub의 `weaveworks/weave` 저장소는 보관(archived) 상태이고 마지막 릴리스는 v2.8.1(2021-01-25)입니다(2026년 10월 20일 GitHub API 기준). 운영사 Weaveworks는 2024년 2월에 영업을 접었습니다. 지금 연습 클러스터에는 Calico, Cilium, Flannel처럼 유지되는 플러그인을 씁니다. Flannel 단독 구성은 NetworkPolicy를 집행하지 않는 것으로 알려져 있으니 2절을 연습하려면 Calico나 Cilium을 고릅니다. CKA 시험 환경이 어떤 CNI를 쓰는지는 커리큘럼과 공식 안내에 나오지 않습니다.
+
+### 1-5. Pod 대역, Service 대역, kube-proxy 모드 확인
+
+"이 클러스터의 Pod IP 대역과 Service IP 대역을 적어라" 같은 과제는 어느 구성요소의 옵션에 값이 있는지만 알면 됩니다.
+
+| 알고 싶은 것 | 어디에 있나 | 확인 명령(kubeadm 기준) |
+|---|---|---|
+| Service IP 대역 | kube-apiserver `--service-cluster-ip-range` | `grep service-cluster-ip-range /etc/kubernetes/manifests/kube-apiserver.yaml` |
+| Service IP 대역(API 객체) | 부팅 때 위 값으로 만든 ServiceCIDR `kubernetes` | `kubectl get servicecidrs` |
+| 클러스터 전체 Pod 대역 | kube-controller-manager `--cluster-cidr` (`--allocate-node-cidrs=true`일 때만 쓰임) | `grep cluster-cidr /etc/kubernetes/manifests/kube-controller-manager.yaml` |
+| 노드별 Pod 대역 | Node의 `spec.podCIDR` | `kubectl get node -o jsonpath='{range .items[*]}{.metadata.name} {.spec.podCIDR}{"\n"}{end}'` |
+| kube-proxy 모드 | ConfigMap `kube-proxy`의 `mode` | `kubectl -n kube-system get cm kube-proxy -o yaml \| grep mode` |
+| 실제로 돌고 있는 모드 | kube-proxy 메트릭 서버의 `/proxyMode` | 노드에서 `curl -s http://127.0.0.1:10249/proxyMode` |
+
+몇 가지 조건이 붙습니다.
+
+- kubeadm은 `kubeadm init --pod-network-cidr`로 받은 값을 kube-controller-manager의 `--cluster-cidr`에 넣고 이때 `--allocate-node-cidrs=true`도 같이 켭니다(kubeadm 소스). 노드마다 이 대역에서 `/24`(IPv4 기본값, `--node-cidr-mask-size`)를 잘라 `spec.podCIDR`에 적습니다.
+- Calico처럼 자체 IPAM을 쓰는 플러그인은 `spec.podCIDR`와 다른 대역에서 IP를 줄 수 있습니다. 그럴 때 실제 Pod 대역은 플러그인 설정(예: Calico의 IPPool)을 봅니다. `kubectl get pod -A -o wide`로 실제 Pod IP를 같이 보면 헷갈리지 않습니다.
+- ConfigMap의 `mode`가 빈 문자열이면 기본값(1.37 기준 `iptables`)이 쓰입니다. kube-proxy 레퍼런스의 `--metrics-bind-address` 기본값이 `127.0.0.1:10249`라서 `/proxyMode`는 그 노드 안에서만 부를 수 있습니다. 이 경로는 문서 본문이 아니라 kube-proxy 소스(`cmd/kube-proxy/app/server.go`의 `serveMetrics`)에서 확인했습니다.
+- kubeadm이 아닌 클러스터라면 `ps -ef | grep kube-apiserver`로 프로세스 인자를 보거나 `kubectl -n kube-system get pod <apiserver Pod> -o yaml`의 `command`를 봅니다.
+
+### 1-6. 시험에서 연결을 확인하는 방법
 
 Pod 간 연결 문제는 "실제로 패킷이 가는지"를 클러스터 안에서 확인해야 풀립니다. Debug Services 문서가 쓰는 방법은 임시 busybox Pod입니다.
 
@@ -97,17 +165,19 @@ kubectl -n shop run tmp --rm -it --restart=Never --image=busybox -- wget -qO- -T
 | CNI 플러그인 Pod 상태 | `kubectl -n kube-system get pod -o wide` (플러그인 DaemonSet이 모든 노드에서 Running인지) |
 | 노드 조건 | `kubectl describe node <노드>`의 `NetworkUnavailable` 조건 |
 
-### 1-4. 자주 틀리는 지점
+### 1-7. 자주 틀리는 지점
 
 - Pod IP는 바뀝니다. 과제에서 "Pod에 연결되는지 확인하라"고 하면 IP로 시험하되 정책이나 설정에 Pod IP를 박아 넣지 않습니다. NetworkPolicy 문서도 `ipBlock`에는 Pod IP처럼 예측할 수 없는 주소 대신 클러스터 밖 IP를 쓰라고 적습니다.
 - kubeadm으로 막 만든 클러스터에서 CoreDNS가 `Pending`이면 정상입니다. Troubleshooting kubeadm 문서는 Pod 네트워크 애드온을 설치하기 전까지 CoreDNS가 `Pending`에 머무는 것이 설계라고 적습니다.
 - 한 Pod가 자기 Service IP로 자기 자신에게 접속하지 못하는 경우가 있습니다. 같은 문서는 많은 네트워크 애드온이 hairpin 모드를 켜지 않는다고 적습니다. 트러블슈팅 과제에서 "자기 자신 호출만 실패"면 이 경우를 떠올립니다.
 
-### 1-5. 직접 해 보기
+### 1-8. 직접 해 보기
 
 1. `shop` 네임스페이스에 `order-api` Deployment(이미지 `nginx`, replicas 2)를 만들고 두 Pod가 서로 다른 노드에 있는지 `-o wide`로 확인합니다.
 2. 임시 Pod에서 두 Pod IP의 80번 포트로 각각 `wget`을 보내 둘 다 응답하는지 봅니다.
 3. 컨트롤 플레인 노드에서 `ip route`로 Pod 대역 라우트가 어떻게 잡혔는지 보고 사용하는 CNI 플러그인 이름을 `kube-system` Pod 목록에서 찾습니다.
+4. 1-5의 표대로 Service 대역, `--cluster-cidr`, 노드별 `spec.podCIDR`, kube-proxy 모드를 적어 보고 실제 Pod IP와 Service IP가 각 대역 안에 있는지 맞춰 봅니다.
+5. 워커 노드에서 `/etc/cni/net.d`의 파일을 다른 디렉터리로 잠시 옮기고 새 Pod를 그 노드에 띄워 이벤트와 노드 조건이 어떻게 바뀌는지 본 뒤 되돌립니다. 연습 클러스터에서만 합니다.
 
 ## 2. NetworkPolicy 정의와 적용
 
@@ -692,6 +762,8 @@ Ingress 문서와 Ingress Controllers 문서는 첫머리에 같은 안내를 �
 - 대안으로 Gateway API로 옮기기를 먼저 권하고 Ingress를 계속 써야 하면 쿠버네티스 문서에 나열된 다른 Ingress 컨트롤러를 보라고 적습니다.
 - 클러스터가 Ingress NGINX를 쓰는지는 관리자 권한으로 `kubectl get pods --all-namespaces --selector app.kubernetes.io/name=ingress-nginx`를 실행해 확인할 수 있다고 안내합니다.
 
+2026년 10월 20일에 GitHub API로 본 `kubernetes/ingress-nginx` 저장소는 보관(archived) 상태였고 마지막 푸시는 2026년 3월 23일이었습니다. 발표대로 유지보수가 끝난 상태입니다.
+
 은퇴 대상은 컨트롤러 프로젝트이고 Ingress API 자체는 위에서 본 대로 동결된 GA API로 남습니다. 2026년 10월은 유지보수 종료 뒤라 새 연습 환경을 만들 때 Ingress 컨트롤러를 무엇으로 깔지 따로 골라야 합니다. 시험 환경에 어떤 Ingress 컨트롤러가 깔려 있는지는 공식 문서에 나오지 않습니다.
 
 ### 5-2. 컨트롤러와 리소스는 별개
@@ -787,14 +859,64 @@ Ingress 문서 기준 TLS 규칙입니다.
 - `tls` 절의 `hosts`는 `rules`의 `host`와 명시적으로 맞아야 합니다. 기본 규칙(호스트 없는 규칙)에는 TLS가 동작하지 않습니다.
 - 컨트롤러마다 TLS 지원 범위가 다릅니다.
 
-### 5-6. 자주 틀리는 지점
+### 5-6. 경로 재작성 어노테이션 rewrite-target
+
+Ingress 스펙에는 경로를 바꿔 전달하는 필드가 없습니다. 요청은 `/orders/123`으로 들어오는데 주문 API는 `/123`만 알아듣는 경우 컨트롤러 어노테이션으로 해결합니다. 옛 강의와 연습 문제에 자주 나오는 것은 ingress-nginx의 `nginx.ingress.kubernetes.io/rewrite-target`입니다. ingress-nginx 문서의 Rewrite 예제는 정규식 캡처 그룹을 씁니다.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: orders-rewrite
+  namespace: shop
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: shop.example.com
+    http:
+      paths:
+      - path: /orders(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: order-api
+            port:
+              number: 80
+```
+
+`(.*)`가 잡은 부분이 `$2`로 들어가서 `/orders/123`은 `/123`으로, `/orders`는 `/`로 바뀌어 전달됩니다. 정규식 경로라 `pathType`은 `ImplementationSpecific`입니다. 같은 문서는 0.22.0부터 이 어노테이션의 동작이 바뀌어 옮겨 갈 부분을 캡처 그룹으로 지정해야 한다고 적습니다. 옛 자료에 나오는 `rewrite-target: /` 한 줄짜리 예는 그 이전 동작을 전제로 한 것일 수 있으니 결과를 꼭 `curl`로 확인합니다.
+
+이 어노테이션은 ingress-nginx 전용이고 5-1에서 본 대로 그 프로젝트는 유지보수가 끝났습니다. 다른 컨트롤러에는 다른 이름의 어노테이션이 있습니다. Gateway API에서는 HTTPRoute의 `URLRewrite` 필터(`path.type: ReplacePrefixMatch`, 4-6)가 같은 일을 표준 필드로 합니다.
+
+```yaml
+# 같은 재작성을 HTTPRoute로 (Extended 기능이라 구현체 지원 여부 확인)
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /orders
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
+    backendRefs:
+    - name: order-api
+      port: 80
+```
+
+### 5-7. 자주 틀리는 지점
 
 - `ingressClassName`을 빼먹었는데 기본 IngressClass가 없으면 어느 컨트롤러도 이 Ingress를 처리하지 않습니다. `kubectl describe ingress`의 Address가 비어 있으면 먼저 의심합니다.
 - 백엔드 Service는 Ingress와 같은 네임스페이스에 있어야 합니다. Ingress의 backend에는 네임스페이스 필드가 없습니다.
 - 백엔드 포트를 Service의 `port` 대신 Pod의 `targetPort`로 적는 실수가 잦습니다. Ingress 백엔드는 Service 포트를 가리킵니다.
 - 컨트롤러별 어노테이션(경로 재작성 등)은 컨트롤러 전용 설정이라 다른 컨트롤러로 옮기면 동작하지 않습니다.
 
-### 5-7. 직접 해 보기
+### 5-8. 직접 해 보기
 
 1. `kubectl get ingressclass`로 기본 클래스가 있는지 보고 없으면 하나에 기본 어노테이션을 붙입니다.
 2. 5-4의 첫 명령으로 Ingress를 만들고 `curl -H "Host: shop.example.com" http://<컨트롤러 주소>/orders/123`이 주문 API로 가는지 확인합니다.
@@ -828,6 +950,11 @@ DNS for Services and Pods 문서 기준입니다.
 | 이름 붙은 포트 | `_<port-name>._<protocol>.<svc>.<ns>.svc.<cluster-domain>` | SRV |
 | ExternalName Service | `<svc>.<ns>.svc.<cluster-domain>` | CNAME |
 | Pod(hostname과 subdomain 지정, 같은 이름의 headless Service 존재) | `<hostname>.<subdomain>.<ns>.svc.<cluster-domain>` | A/AAAA |
+| Pod IP 기반 이름 | `<a-b-c-d>.<ns>.pod.<cluster-domain>` (IP의 점을 대시로) | A |
+
+마지막 줄은 IP가 `172.17.0.3`인 `default` 네임스페이스 Pod라면 `172-17-0-3.default.pod.cluster.local`이 됩니다. 문서는 이 형식을 DNS 명세가 생기기 전 kube-dns의 해석 방식으로 소개합니다. CoreDNS에서는 `kubernetes` 플러그인의 `pods` 설정이 이 레코드를 정합니다. coredns.io 문서 기준 `pods`의 기본값은 `disabled`라서 이 이름에 응답하지 않습니다. 6-4의 기본 Corefile처럼 `pods insecure`가 들어 있으면 Pod가 실제로 있는지 확인하지 않고 이름의 IP를 그대로 A 레코드로 돌려줍니다. 그래서 "Pod 레코드는 기본으로 안 생긴다"와 "기본으로 풀린다"는 설명이 둘 다 돌아다닙니다. 시험에서는 `coredns` ConfigMap의 `pods` 줄을 보고 판단합니다. Pod 이름 자체로 부르는 레코드는 없고 이름으로 부르려면 위 표의 hostname, subdomain, headless Service 조합이 필요합니다.
+
+`<cluster-domain>`은 kubelet의 `--cluster-domain`(설정 파일의 `clusterDomain`) 값이고 `cluster.local`은 흔히 쓰는 값일 뿐입니다. kubelet이 Pod에 넣는 DNS 서버 주소도 kubelet 설정의 `clusterDNS` 값을 그대로 옮겨 적은 것입니다. 이 값과 `kube-dns` Service의 클러스터 IP가 어긋나면 Pod의 DNS가 엉뚱한 IP를 봅니다.
 
 kubelet이 Pod에 써 주는 `/etc/resolv.conf`의 모양은 문서 예시로 이렇습니다.
 
@@ -838,6 +965,8 @@ options ndots:5
 ```
 
 `search` 덕분에 같은 네임스페이스에서는 `payment`만으로, 다른 네임스페이스에서는 `payment.billing`처럼 짧게 부를 수 있습니다. 네임스페이스를 빼고 부르면 자기 네임스페이스에서만 찾습니다. `shop`의 Pod가 `billing` 네임스페이스의 `payment`를 `payment`로 부르면 응답이 없습니다.
+
+`options ndots:5`는 resolv.conf 매뉴얼(resolv.conf(5)) 기준으로 점이 5개보다 적은 이름은 `search` 목록을 먼저 붙여 보고 그다음에 이름 그대로 질의한다는 뜻입니다. `api.example.com`(점 2개)처럼 외부 도메인을 부르면 `api.example.com.shop.svc.cluster.local` 같은 질의가 먼저 나가고 실패한 뒤에 원래 이름을 묻습니다. 외부 호출이 많은 Pod에서 DNS 질의가 몇 배로 늘어나는 이유가 이것입니다. 이름 끝에 점을 붙인 FQDN(`api.example.com.`)을 쓰거나 Pod의 `dnsConfig.options`에서 `ndots`를 낮춰 줄일 수 있습니다. 질의 하나가 실제로 어떻게 퍼지는지는 [커널 시리즈 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
 
 Pod는 대개 Ready여야 DNS 레코드를 받습니다. Service에 `publishNotReadyAddresses: true`를 주면 예외입니다.
 
@@ -936,6 +1065,7 @@ Debugging DNS Resolution 문서의 순서를 그대로 따릅니다.
 1. `dnsutils` Pod에서 `nslookup order-api.shop`, `nslookup order-api.shop.svc.cluster.local`, `nslookup order-api`를 각각 실행하고 어느 것이 왜 실패하는지 설명해 봅니다.
 2. `coredns` ConfigMap에 `log`를 추가하고 같은 질의가 로그에 찍히는지 확인한 뒤 되돌립니다.
 3. `order-api`를 headless Service(`clusterIP: None`)로 하나 더 만들고 `nslookup` 결과가 Pod IP 여러 개로 나오는지 봅니다.
+4. `coredns` ConfigMap에서 `pods` 줄을 확인하고 `dnsutils` Pod에서 `nslookup <a-b-c-d>.shop.pod.cluster.local`(존재하는 Pod IP와 존재하지 않는 IP 각각)이 어떻게 응답하는지 봅니다.
 
 ## 7. 확인 문제
 
@@ -1084,13 +1214,34 @@ kubectl create ingress a --rule="shop.example.com/cart=cart:80" --rule="shop.exa
 
 </details>
 
+**문제 8.** kubeadm 클러스터에서 새 워커 노드가 `NotReady`이고 그 노드에 배치된 Pod는 `ContainerCreating`에 머뭅니다. 노드에 들어가서 먼저 볼 디렉터리 두 개와 로그 두 개를 적고 이 클러스터의 Service IP 대역은 어디서 확인하는지 답하세요.
+
+<details>
+<summary>답 보기</summary>
+
+디렉터리는 CNI 설정이 있는 `/etc/cni/net.d`와 플러그인 실행 파일이 있는 `/opt/cni/bin`입니다. 설정 파일이 없거나 `"type"`에 적힌 이름의 실행 파일이 없으면 런타임이 네트워크를 만들지 못합니다. CNI를 부르는 쪽은 컨테이너 런타임이므로 로그는 `journalctl -u containerd`와 `journalctl -u kubelet`을 봅니다. Service IP 대역은 컨트롤 플레인 노드의 `/etc/kubernetes/manifests/kube-apiserver.yaml`에 있는 `--service-cluster-ip-range`에 있고 `kubectl get servicecidrs`로도 볼 수 있습니다.
+
+</details>
+
+**문제 9.** `pods insecure`가 설정된 CoreDNS에서 `shop` 네임스페이스의 IP `10.244.1.23` Pod를 IP 기반 이름으로 부르면 이름은 무엇인가요? 클러스터 도메인은 `cluster.local`입니다.
+
+<details>
+<summary>답 보기</summary>
+
+`10-244-1-23.shop.pod.cluster.local`입니다. 점을 대시로 바꾸고 Service 이름의 `svc` 자리에 `pod`가 들어갑니다. `pods`가 기본값 `disabled`이면 이 이름은 풀리지 않습니다.
+
+</details>
+
 ## 8. 범위와 한계
 
 - 이 글의 명령과 YAML은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 모두 kubernetes.io 문서에 실린 것이고 그렇게 표시했습니다. 연습 클러스터를 만든 뒤 2-7, 3-9 같은 과제를 실제로 해 보고 결과를 덧붙이겠습니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 사이트에 게시된 현재 버전과 같은 내용이지만 시험 기준 버전(v1.37)과 문서 버전이 어긋나는 항목이 있을 수 있습니다.
 - `kubectl create ingress`에서 `*` 유무에 따른 `pathType`은 레퍼런스 예시 주석으로만 확인했습니다.
 - LoadBalancer Service의 `<pending>` 표시, CoreDNS `loop` 오류가 생기는 구체적인 노드 설정은 문서 본문으로 확인하지 못한 항목입니다.
-- 시험 환경에 깔린 Ingress 컨트롤러와 Gateway API 구현체 종류는 공식 문서에 없습니다.
+- 시험 환경에 깔린 Ingress 컨트롤러와 Gateway API 구현체, CNI 플러그인 종류는 공식 문서에 없습니다. Weave Net이 시험 환경에서 다른 플러그인으로 바뀌었는지도 공식 자료로 확인하지 못했습니다.
+- Flannel 단독 구성이 NetworkPolicy를 집행하지 않는다는 것은 널리 알려진 내용으로만 적었고 Flannel 문서로 확인하지 않았습니다.
+- kube-proxy의 `/proxyMode` 경로는 kubernetes.io 문서에 없어서 kube-proxy 소스로 확인했습니다. containerd가 `/etc/cni/net.d`의 파일을 이름 순으로 정렬해 읽는다는 부분은 containerd 설정 문서의 `max_conf_num` 설명과 libcni 동작을 근거로 했고 실행해 보지 않았습니다. `ContainerCreating` 때 런타임 로그에 찍히는 정확한 문구는 확인하지 못했습니다.
+- ingress-nginx 저장소의 보관 상태와 Weave Net의 마지막 릴리스는 2026년 10월 20일 GitHub API 응답 기준입니다.
 - Gateway API는 v1.6.1 설치 명령 기준이고 HTTPRoute 규칙은 저장소 main 브랜치의 타입 정의 주석으로 확인했습니다. 구현체마다 지원 범위(Extended 기능)가 다릅니다.
 
 ## 참고 자료
@@ -1117,6 +1268,20 @@ kubernetes.io
 - kubernetes/kubernetes, [staging/src/k8s.io/kubectl/pkg/cmd/create/create_service.go](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/kubectl/pkg/cmd/create/create_service.go)
 - kubectl 레퍼런스: [kubectl expose](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_expose/), [kubectl create service nodeport](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_service_nodeport/), [kubectl create ingress](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_ingress/), [kubectl create secret tls](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_create/kubectl_create_secret_tls/)
 - Kubernetes Blog, [Ingress NGINX Retirement: What You Need to Know](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), 2025-11-11
+- [Ports and Protocols](https://kubernetes.io/docs/reference/networking/ports-and-protocols/)
+- [Network Plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/)
+- 명령행 레퍼런스: [kube-proxy](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-proxy/), [kube-controller-manager](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/)
+- kubernetes/kubernetes, [cmd/kubeadm/app/phases/controlplane/manifests.go](https://github.com/kubernetes/kubernetes/blob/master/cmd/kubeadm/app/phases/controlplane/manifests.go), [cmd/kube-proxy/app/server.go](https://github.com/kubernetes/kubernetes/blob/master/cmd/kube-proxy/app/server.go), [pkg/kubelet/events/event.go](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/events/event.go)
+
+컨테이너 런타임과 CNI
+- containerd, [docs/cri/config.md](https://github.com/containerd/containerd/blob/main/docs/cri/config.md)
+- [weaveworks/weave](https://github.com/weaveworks/weave) (보관된 저장소)
+
+Ingress 컨트롤러
+- ingress-nginx, [Rewrite](https://kubernetes.github.io/ingress-nginx/examples/rewrite/), [kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx) (보관된 저장소)
+
+이 시리즈의 관련 글
+- [쿠버네티스 아래의 리눅스 5편: Service의 실체는 커널 규칙](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)
 
 Gateway API
 - [Getting started with Gateway API](https://gateway-api.sigs.k8s.io/guides/)
