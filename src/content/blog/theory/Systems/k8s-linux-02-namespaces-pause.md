@@ -27,7 +27,7 @@ seriesOrder: 2
 
 1편 [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 시스템 콜로 커널에 일을 시킨다는 흐름을 봤습니다. 이번 글은 그 시스템 콜 중 격리를 만드는 쪽, 즉 `clone`, `unshare`, `setns`를 다룹니다. 자원 제한을 만드는 cgroup은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
-이 글의 명령과 출력은 제가 실행한 결과가 아닙니다. 글을 쓴 환경(macOS)에는 리눅스 노드가 없어서 man 페이지와 소스, 공식 문서에 나온 형태를 옮겼고 각 장 끝에 리눅스 VM이나 kind에서 직접 해 볼 과제로 남겼습니다.
+2026-10-20에 kind v0.33 클러스터(노드 v1.37.0, containerd 2.3.4, runc 1.4.3)를 colima VM(Ubuntu 24.04.4, 커널 6.8.0-117-generic, arm64) 위에 띄워 각 장의 "직접 해 보기"를 돌렸습니다. unshare 실습은 kind 노드 컨테이너 안에서 했고 커널은 colima VM의 것입니다. 실측 결과는 과제 아래에 붙였고 본문의 나머지 출력은 man 페이지와 소스, 공식 문서에 나온 형태를 옮긴 것입니다.
 
 ---
 
@@ -118,6 +118,8 @@ lrwxrwxrwx 1 root root 0 ... uts -> 'uts:[4026531838]'
 
 kind 노드 안에서(`docker exec -it kind-control-plane bash`) 같은 명령을 실행하면 pid 번호가 4026531836과 다르게 나옵니다. kind 노드 자체가 컨테이너라서 호스트의 초기 PID 네임스페이스 밖에 있기 때문입니다. 실습 환경이 어느 층에 있는지 이 번호로 알 수 있습니다.
 
+실측(colima VM, 커널 6.8.0-117-generic)에서 VM의 net 번호는 4026531840, mnt 번호는 4026531841이었습니다. 6.16 이하 커널이라 고정 번호와 다른 값이 나왔습니다. kind 노드 안에서는 pid, net, mnt, uts, ipc, cgroup, time이 모두 VM과 다른 번호였고 user만 VM과 같은 4026531837이었습니다. kind 노드는 user 네임스페이스를 따로 만들지 않는 컨테이너입니다.
+
 ## 2. PID 네임스페이스: 번호를 두 개 가진 프로세스
 
 ### 2-1. unshare --pid --fork --mount-proc로 PID 1 만들기
@@ -198,6 +200,8 @@ kubectl delete pod → kubelet → CRI StopContainer
 3. 안쪽에서 `sleep 1000 &`을 띄우고 바깥에서 안쪽 bash(PID 1)에 `sudo kill -KILL <호스트PID>`를 보냅니다. 바깥에서 `pgrep -f "sleep 1000"`이 비어 있는지 확인합니다. `zap_pid_ns_processes()`가 sleep까지 정리했는지 보는 과제입니다.
 4. `sudo unshare --pid --fork --mount-proc sleep 1000`으로 핸들러 없는 프로그램을 PID 1로 띄우고 바깥에서 `kill -TERM <호스트PID>`를 보냈을 때 살아 있는지 확인합니다.
 
+kind 노드 안 실측입니다. 1번에서 `echo $$`는 1이었습니다. `--fork`를 빼고 `unshare --pid --mount-proc bash`로 들어가면 첫 명령부터 `bash: fork: Cannot allocate memory`가 났습니다. 첫 자식이 PID 1이 된 뒤 bash가 끝나 네임스페이스에 새 프로세스를 만들 수 없게 된 것입니다. 2번의 `NSpid`는 `10528 1`처럼 두 숫자였습니다. 3번에서 PID 1 bash를 KILL로 죽이자 안쪽 sleep도 함께 사라졌습니다. 4번의 sleep은 TERM을 무시하고 살아 있었고 KILL로만 끝났습니다.
+
 ## 3. UTS, mount, network 네임스페이스 재현
 
 ### 3-1. UTS: 호스트 이름 분리
@@ -271,6 +275,8 @@ veth는 한쪽에 들어간 패킷이 반대쪽에서 나오는 가상 케이블
 2. 3-2의 mount 실습을 `--propagation shared`를 붙여 다시 해 보고 바깥에서 tmpfs가 보이는지 적습니다.
 3. 3-4 뒤에 `ls -l /var/run/netns`, `sudo lsns -t net`을 보고 `shop` 네임스페이스의 inode 번호를 `sudo ip netns exec shop readlink /proc/self/ns/net`과 맞춰 봅니다. 끝나면 `sudo ip netns del shop`으로 지웁니다.
 
+kind 노드 안 실측에서 1번은 uts 번호만 바뀌고 net 번호는 같았습니다. 2번은 `--propagation shared`를 붙이자 안쪽 tmpfs가 바깥에서도 보였습니다. kind 노드의 `/`가 shared 마운트라서입니다. `unshare --net` 직후에는 `lo`만 `DOWN` 상태로 있었고 3-4의 `ip netns`와 veth 연결도 그대로 동작했습니다. `lsns -t net`에는 파드마다 `/run/netns/cni-*`가 보였고 그 네임스페이스를 쥔 프로세스는 USER 65535로 도는 pause였습니다.
+
 ## 4. runc가 네임스페이스를 만드는 순서
 
 ### 4-1. kubelet에서 runc까지
@@ -332,15 +338,15 @@ OCI 런타임 스펙(`config.json`)의 `linux.namespaces` 항목은 종류마다
 ```json
 "namespaces": [
   { "type": "pid" },
-  { "type": "mount" },
-  { "type": "cgroup" },
-  { "type": "network", "path": "/var/run/netns/cni-1a2b..." },
   { "type": "ipc",     "path": "/proc/48100/ns/ipc" },
-  { "type": "uts",     "path": "/proc/48100/ns/uts" }
+  { "type": "uts",     "path": "/proc/48100/ns/uts" },
+  { "type": "mount" },
+  { "type": "network", "path": "/proc/48100/ns/net" },
+  { "type": "cgroup" }
 ]
 ```
 
-위 JSON은 파드 안 일반 컨테이너의 스펙이 어떤 모양인지 보이려고 만든 예시이고 PID 48100은 pause 프로세스를 가정한 값입니다. stage-1의 `join_namespaces()`가 `path`가 있는 항목마다 파일을 열어 `setns(fd, type)`을 호출합니다. `path`가 없는 pid, mount, cgroup은 `cloneflags`에 들어가 `unshare`로 새로 만들어집니다. 파드 안 컨테이너들이 net, ipc, uts를 나눠 쓰고 나머지는 따로 갖는 구조가 이 JSON 한 덩어리로 결정됩니다.
+위 JSON은 kind(containerd 2.3.4)에서 `crictl inspect`로 본 일반 컨테이너의 `runtimeSpec.linux.namespaces`와 같은 순서와 모양이고 PID 48100은 pause 프로세스 자리에 넣은 값입니다. 일반 컨테이너의 network `path`는 pause의 `/proc/<pid>/ns/net`입니다. `/var/run/netns/cni-...` 경로는 pause 컨테이너 자신의 스펙에 나옵니다. 실측한 pause 스펙은 `[pid, ipc, uts, mount, network(path=/var/run/netns/cni-...)]`로 cgroup 항목이 없었습니다. stage-1의 `join_namespaces()`가 `path`가 있는 항목마다 파일을 열어 `setns(fd, type)`을 호출합니다. `path`가 없는 pid, mount, cgroup은 `cloneflags`에 들어가 `unshare`로 새로 만들어집니다. 파드 안 컨테이너들이 net, ipc, uts를 나눠 쓰고 나머지는 따로 갖는 구조가 이 JSON 한 덩어리로 결정됩니다.
 
 ### 4-4. 직접 해 보기
 
@@ -349,6 +355,8 @@ kind 노드 안에서 다음을 확인합니다.
 1. 아무 파드나 띄우고 `crictl ps`로 컨테이너 ID를 찾습니다. `crictl inspect <ID>`의 출력에서 `runtimeSpec.linux.namespaces`를 찾아 어느 항목에 `path`가 있는지 적습니다.
 2. 같은 출력에서 `info.pid`를 찾고 `ls -l /proc/<pid>/ns`로 inode 번호를 봅니다. `crictl inspectp <파드ID>`의 pid(pause)와 비교해 net, ipc, uts가 같고 pid, mnt가 다른지 확인합니다.
 3. `strace -f -e trace=clone,clone3,unshare,setns runc run ...`처럼 runc를 직접 추적할 수 있는 리눅스 VM이 있다면 stage-0, stage-1, stage-2의 호출 순서를 출력에서 찾아봅니다.
+
+1번과 2번의 kind 실측은 4-3에 반영했습니다. 3번은 runc를 직접 실행하지 않고 kind 워커의 containerd에 `strace -f`를 걸어 대신 봤습니다. 앱 컨테이너 쪽에서 `setns`가 IPC, UTS, NET 순으로 세 번 불린 뒤 `unshare(CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWPID)`가 나왔습니다. 자세한 줄은 [1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)의 2장 실측에 적었습니다.
 
 ## 5. 파드 단위 공유와 컨테이너 단위 격리
 
@@ -418,6 +426,8 @@ Pod Security Standards의 baseline 정책은 "Host Namespaces" 항목에서 세 
 1. kind 클러스터에서 `kubectl label ns default pod-security.kubernetes.io/enforce=baseline`을 걸고 `hostPID: true` 파드를 만들어 거절 메시지를 확인합니다. 메시지에 어느 필드가 걸렸는지 나오는지 봅니다.
 2. 아무 파드에 `kubectl exec ... -- cat /proc/self/cgroup`을 실행하고 kind 노드 안에서 그 컨테이너의 호스트 PID로 `cat /proc/<pid>/cgroup`을 실행해 두 값을 비교합니다.
 3. 클러스터 버전과 노드 커널이 요건을 만족하면 5-4의 `board-api` 파드를 띄우고 kind 노드 안에서 `cat /proc/<nginx PID>/uid_map`을 봅니다. 컨테이너 안 UID 0이 노드의 어느 UID 범위로 매핑되는지 적습니다.
+
+kind 실측입니다. 1번의 거절 메시지는 `violates PodSecurity "baseline:latest": host namespaces (hostPID=true)`로 걸린 필드까지 나왔습니다. 2번은 컨테이너 안에서 `0::/`, 노드에서 `0::/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-besteffort.slice/kubelet-kubepods-besteffort-pod<uid>.slice/cri-containerd-<id>.scope`였습니다. colima VM에서 같은 프로세스를 보면 앞에 `/docker/<노드 컨테이너 id>/`가 더 붙습니다. 3번은 kind에서 실패했습니다. `hostUsers: false` 파드가 `FailedCreatePodSandBox`와 `error mounting "sysfs" to rootfs at "/sys": ... operation not permitted`로 뜨지 못했습니다. 노드가 컨테이너인 kind 구조에서 생기는 제약으로 보이고 일반 VM 노드에서는 확인하지 못했습니다.
 
 ## 6. pause 컨테이너와 RunPodSandbox
 
@@ -559,6 +569,8 @@ kubectl exec shop -c log-agent -- nc -l -p 80
 
 마지막으로 kind 노드 안에서 `crictl pods --name shop`으로 샌드박스 ID를 찾고 `crictl inspectp <ID>`의 네트워크 네임스페이스 경로(`/var/run/netns/cni-...`)가 6-3절의 설명과 맞는지, `ps -ef --forest`에서 두 컨테이너와 pause의 부모가 shim인지 확인합니다.
 
+kind v1.37.0 실측 결과는 모두 기대값과 같았습니다. 사이드카 로그에 `ok`가 쌓였고 두 컨테이너의 `hostname`은 `shop`이었습니다. PID 1 명령줄은 nginx master와 `sh -c while true; ...`로 달랐습니다. 네임스페이스 번호는 ipc, net, uts가 같고 pid, mnt, cgroup이 달랐으며 time은 kind 노드의 것이었습니다. 5번은 `nc: bind: Address already in use`였습니다. `shareProcessNamespace: true`로 다시 만들자 두 컨테이너의 PID 1이 모두 `/pause`였고 `ps`에 nginx가 보였으며 pid 번호도 같아졌습니다. 파드 IP는 다시 만들 때 `.39`에서 `.40`으로 바뀌었고 컨테이너만 재시작했을 때는 그대로였습니다.
+
 ## 확인 문제
 
 **문제 1.** `sudo unshare --pid bash`(`--fork` 없음)로 들어간 뒤 `echo $$`를 하면 1이 나오지 않습니다. 이유는 무엇인가요?
@@ -611,8 +623,9 @@ containerd가 `RunPodSandbox` 처리 중에 네트워크 네임스페이스를 �
 
 ## 범위와 한계
 
-- 이 글의 명령과 출력은 실행한 결과가 아닙니다. 글을 쓴 macOS에는 리눅스 노드와 클러스터가 없어서 man 페이지, 소스 코드, 공식 문서의 형태를 옮겼습니다. 리눅스 VM과 kind로 각 장의 "직접 해 보기"를 해 본 뒤 결과를 덧붙이겠습니다.
-- 4-3절의 `config.json` 조각과 6-4절의 프로세스 트리는 구조를 보이려고 만든 예시입니다. 항목 순서, 경로, shim 그룹 방식은 containerd 버전과 설정에 따라 다를 수 있습니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, Ubuntu 24.04.4, containerd 2.3.4, runc 1.4.3)에서 1-5, 2-6, 3-5, 4-4(1, 2번과 containerd strace), 5-6(1, 2번), 6-6을 돌렸습니다. unshare 실습은 kind 노드 컨테이너 안에서 했으므로 "호스트"는 kind 노드를 뜻합니다.
+- 돌리지 못한 것: 5-6의 3번(`hostUsers: false`)은 kind에서 sysfs 마운트 오류로 실패해 uid_map을 보지 못했습니다. 6.17 이상 커널의 고정 net, mnt 번호는 VM이 6.8이라 확인하지 못했습니다. runc를 직접 실행한 stage별 추적은 하지 않았습니다.
+- 6-4절의 프로세스 트리는 구조를 보이려고 만든 예시입니다. shim 그룹 방식은 containerd 버전과 설정에 따라 다를 수 있습니다. 4-3절의 JSON은 kind 실측 순서로 고쳤습니다.
 - 초기 net, mnt 네임스페이스의 고정 inode 번호는 6.17 커널부터라서 6.16 이하에서는 다른 값이 나옵니다.
 - containerd의 샌드박스 생성 순서(네트워크 네임스페이스 생성 → CNI 호출 → pause 시작)와 컨테이너별 cgroup 네임스페이스는 2026년 10월 containerd main 브랜치 소스를 읽고 정리했습니다. containerd 1.x 릴리스에서는 순서가 다를 수 있고 CRI-O의 동작은 확인하지 않았습니다.
 - user 네임스페이스는 1.36 GA 기준으로 적었습니다. 노드 커널과 런타임 버전 요건은 버전마다 바뀌므로 "User Namespaces" 문서를 다시 확인해야 합니다.

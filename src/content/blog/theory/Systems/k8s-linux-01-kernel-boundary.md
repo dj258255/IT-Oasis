@@ -38,7 +38,7 @@ seriesOrder: 1
 | [4. OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs) | overlay 마운트, copy-up, whiteout | 이미지 레이어, 컨테이너 쓰기 계층 |
 | [5. Service와 iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) | netfilter, NAT, conntrack | ClusterIP, NodePort, kube-proxy |
 
-이 글을 쓴 환경에는 리눅스 노드도 클러스터도 없습니다. 명령 출력은 공식 문서나 소스에서 확인한 형태를 예시로 보인 것입니다. 각 장 끝의 "직접 해 보기"는 리눅스 VM이나 kind 클러스터에서 확인할 과제입니다.
+2026-10-20에 colima VM(Ubuntu 24.04.4, 커널 6.8.0-117-generic, arm64)과 그 위의 kind v0.33 클러스터(노드 v1.37.0, Debian 13 arm64)에서 이 글의 과제 대부분을 돌렸습니다. kind 노드는 컨테이너라서 커널 관련 값은 모두 colima VM 커널의 값입니다. 실측한 값은 "실측"으로 표시했고 나머지 출력은 공식 문서나 소스에서 확인한 형태의 예시입니다. arm64라서 x86_64 전용 내용(시스템 콜 테이블, `cpuinfo`의 x86 필드)은 확인하지 못했습니다.
 
 ## 1. 유저 공간, 커널 공간, 그리고 386개의 입구
 
@@ -88,12 +88,25 @@ close(3) = 0
 - `fstat`이 돌려준 `st_size`가 0입니다. 그런데 `read`는 수천 바이트를 돌려줍니다. 파일 크기가 0인데 내용이 있는 이유는 4장에서 설명합니다.
 - 파일 디스크립터 3은 커널이 `openat`의 결과로 준 번호입니다. 이후 `read(3, ...)`는 "아까 연 그 파일"을 커널에 가리키는 방법입니다. 1번은 표준 출력입니다.
 
-`strace -c`를 붙이면 호출별 횟수와 시간 합계를 표로 보여 줍니다. `ptrace`는 대상 프로세스를 크게 느리게 하므로 운영 노드에서는 짧게만 씁니다.
+kind 워커 노드(arm64, coreutils 9.7, strace 6.13을 apt로 설치)에서 같은 명령을 돌린 실측입니다.
+
+```text
+openat(AT_FDCWD, "/proc/cpuinfo", O_RDONLY) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(3, "processor\t: 0\nBogoMIPS\t: 48.00\nF"..., 262144) = 2094
+write(1, "processor\t: 0\nBogoMIPS\t: 48.00\nF"..., 2094) = 2094
+read(3, "", 262144)                     = 0
+close(3)                                = 0
+```
+
+버퍼가 262144바이트로 커졌고 arm64의 `cpuinfo`는 첫 줄 다음에 `BogoMIPS`가 옵니다. `st_size=0`과 `read`가 0을 돌려줄 때까지 읽는 흐름은 같습니다. arm64에는 `open` 시스템 콜 자체가 없어 `openat`만 쓰입니다.
+
+`strace -c`를 붙이면 호출별 횟수와 시간 합계를 표로 보여 줍니다. 같은 노드에서 `strace -c cat /proc/meminfo`는 `openat` 3회, `read` 3회, `fstat` 4회, `mmap` 9회, `mprotect` 5회, `close` 5회와 `execve`, `fadvise64`, `getrandom`, `rseq` 등 17종을 보여 줬습니다. `ptrace`는 대상 프로세스를 크게 느리게 하므로 운영 노드에서는 짧게만 씁니다.
 
 **직접 해 보기**
 
 - 리눅스 VM에서 `strace -c ls /` 와 `strace -c cat /proc/meminfo`의 호출 목록을 비교합니다. 어떤 호출이 공통이고 어떤 것이 다른지 적어 봅니다.
-- `uname -r`로 커널 버전을 확인하고 그 버전 태그의 `syscall_64.tbl`에서 항목 수를 직접 세어 봅니다.
+- `uname -r`로 커널 버전을 확인하고 그 버전 태그의 `syscall_64.tbl`에서 항목 수를 직접 세어 봅니다. arm64 노드의 번호는 `include/uapi/asm-generic/unistd.h` 계열에 정의되어 있습니다.
 
 ## 2. kubelet에서 커널까지: 컴포넌트는 전부 프로세스
 
@@ -149,6 +162,8 @@ kube-proxy의 iptables, ipvs, nftables 모드에서 kube-proxy는 패킷을 직�
 
 - kubeadm 노드에서 `ps -eo pid,ppid,comm | grep -E 'kubelet|containerd|shim'`으로 부모 관계를 봅니다. 앱 컨테이너 프로세스의 PPID가 shim인지 확인합니다.
 - `sudo strace -f -e trace=clone,clone3,unshare,setns,pivot_root,mount -p $(pidof containerd) -o /tmp/trace.txt`를 걸어 둔 상태에서 파드 하나를 만들고 `trace.txt`에서 runc가 부른 호출 순서를 찾아봅니다. 추적이 끝나면 바로 끕니다.
+
+kind 워커(containerd 2.3.4, runc 1.4.3)에서 두 과제를 돌린 실측입니다. 노드 컨테이너 안에서 kubelet과 containerd의 PPID는 1(systemd)이었고 shim의 부모도 1이었습니다. shim은 띄운 쪽에서 떨어져 나와 init에 입양되므로 containerd가 재시작돼도 남습니다. 추적 파일에서는 containerd가 `unshare(CLONE_NEWNET)`으로 파드 네트워크 네임스페이스를 먼저 만들었습니다. pause 컨테이너용 runc는 `setns(..., CLONE_NEWNET)` 뒤에 `unshare(CLONE_NEWNS|CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWPID)`와 `pivot_root(".", ".")`를 불렀습니다. 앱 컨테이너는 `setns`로 IPC, UTS, NET을 pause 것에 합류한 뒤 `unshare(CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWPID)`를 불렀습니다. overlay `mount`의 대상은 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/<id>/rootfs`였습니다. `systemctl restart containerd` 과제는 돌리지 않았습니다.
 - `sudo systemctl restart containerd` 뒤에도 기존 파드의 컨테이너 프로세스 PID가 그대로인지 확인합니다. 컨테이너의 부모가 shim이고 네임스페이스와 cgroup은 커널 객체라서 containerd가 재시작해도 남습니다.
 
 ## 3. 커널 빌트인과 모듈: overlay와 br_netfilter
@@ -176,6 +191,8 @@ bridge                 421888  1 br_netfilter
 overlay                212992  12
 ```
 
+colima VM(커널 6.8.0-117-generic)의 실측은 `bridge 405504 0`, `overlay 204800 234`였고 `br_netfilter` 줄은 없었습니다. kind 노드 세 개와 다른 컨테이너의 rootfs가 모두 overlay라서 참조 카운트가 234까지 올라갔습니다.
+
 세 번째 숫자 열("Used by")은 그 모듈을 쓰고 있는 사용자 수, 즉 참조 카운트입니다. 다른 모듈이 의존하거나 커널 객체가 모듈을 붙잡고 있으면 늘어납니다. `bridge` 줄의 `1 br_netfilter`는 `br_netfilter`가 `bridge`에 의존한다는 뜻입니다. overlay의 숫자가 마운트 수와 함께 움직이는 것처럼 보이는 것은 overlay 마운트 하나하나가 모듈 참조를 잡기 때문입니다. 숫자의 정의는 어디까지나 참조 카운트이고 0이 아니면 `rmmod`로 내릴 수 없습니다.
 
 ### 3-3. overlay는 마운트할 때 적재되고 br_netfilter는 따로 적재해야 한다
@@ -188,6 +205,8 @@ br_netfilter는 이런 자동 경로가 없습니다. 적재되기 전에는 `/p
 
 - `lsmod | grep -E 'overlay|br_netfilter|bridge'`, `grep overlay /proc/filesystems`, `grep -E 'overlay|br_netfilter' /lib/modules/$(uname -r)/modules.builtin`을 차례로 실행해 내 커널에서 두 기능이 모듈인지 빌트인인지 판단합니다.
 - 파드를 몇 개 더 띄운 뒤 `lsmod | grep overlay`의 숫자가 바뀌는지 확인합니다.
+
+colima VM 실측에서 `/proc/filesystems`에는 `nodev overlay`가 있었고 `modules.builtin`에는 overlay도 br_netfilter도 없었습니다. 두 기능 모두 모듈이고 br_netfilter는 적재되지 않은 상태였습니다. 그래서 `/proc/sys/net/bridge` 디렉터리도 없었습니다. 그 상태에서도 kind의 kindnet(ptp 플러그인, 라우팅형)으로 Service와 NetworkPolicy가 정상 동작했습니다.
 
 ## 4. VFS와 디스크에 없는 파일들
 
@@ -258,6 +277,8 @@ memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 - `mount | grep -E ' type (proc|sysfs|cgroup2) '`로 세 가상 파일시스템의 마운트 지점과 타입을 확인합니다.
 - `stat /proc/meminfo`의 Size와 `wc -c /proc/meminfo`를 비교합니다. `ls -l /proc/kcore`의 크기도 봅니다.
 - `grep -E 'physical id|siblings|cpu cores' /proc/cpuinfo | sort -u`로 SMT가 켜졌는지 판단하고 `grep -c hypervisor /proc/cpuinfo`로 VM인지 확인합니다. `lscpu`의 "Thread(s) per core"와 결과가 같은지 맞춰 봅니다.
+
+colima VM(arm64) 실측입니다. 세 마운트는 `proc`, `sysfs`, `cgroup2`(`stat -fc %T`로 `cgroup2fs`)였습니다. `/proc/meminfo`는 `stat` 크기 0, `wc -c` 1504바이트였습니다. `/proc/kcore`는 278240543391744바이트(약 253TiB)로 4-2의 x86_64 값과 달랐습니다. arm64의 가상 주소 배치가 x86_64와 다르기 때문입니다. arm64 `cpuinfo`에는 `physical id`, `siblings`, `cpu cores`, `flags`, `hypervisor` 필드가 없고 `Features` 줄만 있어 이 과제의 SMT와 VM 판단은 할 수 없었습니다. `lscpu`는 `Thread(s) per core: 1`이었습니다.
 - `grep -E 'MemTotal|MemFree|MemAvailable' /proc/meminfo`를 기록합니다. 같은 시각에 `kubectl get --raw "/api/v1/nodes/<노드>/proxy/stats/summary"`의 `node.memory.workingSetBytes`로 `memory.available`을 직접 계산해 둘을 비교합니다.
 
 ## 5. 노드를 준비할 때 만지는 커널 설정
@@ -349,6 +370,8 @@ cgroup v2에서는 Container Runtimes 문서가 kubelet과 런타임 모두 `sys
 - `sysctl vm.overcommit_memory kernel.panic kernel.panic_on_oops`가 5-4절 표와 같은지 확인합니다. 같다면 kubelet이 바꿔 놓았을 가능성이 큽니다.
 - `swapon --show`, `stat -fc %T /sys/fs/cgroup/`, `grep -E 'failSwapOn|swapBehavior|failCgroupV1|cgroupDriver' /var/lib/kubelet/config.yaml`로 노드의 스왑과 cgroup 상태를 한 번에 기록합니다.
 
+kind 워커 실측입니다. `net.ipv4.ip_forward = 1`이었고 `net.bridge.bridge-nf-call-iptables`는 `cannot stat ... No such file or directory`로 실패했습니다(br_netfilter 미적재). 브리지는 없었고 `ip route`에는 `10.244.1.6 dev veth43c5c942 scope host`처럼 파드별 경로가 있어 kindnet이 라우팅형임을 보여 줬습니다. `vm.overcommit_memory = 1`, `kernel.panic = 10`, `kernel.panic_on_oops = 1`로 5-4절 표와 같았습니다. 노드 컨테이너가 VM 커널을 함께 쓰므로 이 값은 VM 전체에 걸린 값입니다. 스왑은 없었고 cgroup은 `cgroup2fs`, kubelet 설정은 `cgroupDriver: systemd`, `failSwapOn: false`였습니다. `failSwapOn: false`는 kind가 넣은 값입니다.
+
 ## 6. 보안 경계: seccomp와 LSM
 
 ### 6-1. seccomp는 시스템 콜 입구의 필터
@@ -394,6 +417,8 @@ LSM(Linux Security Modules)은 커널 안의 여러 지점(파일 열기, 실행
 - `RuntimeDefault` 파드 안에서 `unshare --user --map-root-user true`처럼 기본 프로필이 제한하는 호출을 시도하고 결과를 봅니다(실습 클러스터에서만).
 - 노드에서 `cat /sys/kernel/security/lsm`으로 활성화된 LSM 목록을 확인합니다. AppArmor라면 `aa-status`로 `cri-containerd.apparmor.d` 프로필이 적재되어 있는지 봅니다.
 
+kind 실측입니다. `RuntimeDefault` 파드는 `Seccomp: 2`였고 `unshare --user --map-root-user true`가 `unshare failed: Operation not permitted`로 막혔습니다. seccomp를 지정하지 않은 파드는 `Seccomp: 0`이었는데 같은 명령이 `cannot open /proc/self/setgroups: Permission denied`로 실패했습니다. 시스템 콜은 통과했고 뒤 단계에서 막힌 것이니 오류 문구까지 비교해야 차이가 보입니다. colima VM의 LSM 목록은 `lockdown,capability,landlock,yama,apparmor`였습니다. kind 노드 이미지에는 `aa-status`가 없어 프로필 확인은 하지 못했습니다.
+
 ## 7. 노드가 죽었을 때: 커널 패닉에서 파드 축출까지
 
 ### 7-1. 패닉 후 약 5분 50초의 시간표
@@ -424,6 +449,8 @@ kubelet이 살아 있는데 노드가 준비되지 않은 경우(예: 런타임 
 - kind 클러스터에서 `docker stop <클러스터이름>-worker`로 워커 노드 컨테이너를 멈춥니다. `kubectl get node -w`로 NotReady가 되기까지 걸리는 시간을 잽니다. `kubectl describe node`에서 Conditions가 `Unknown`인지와 taint 키를 확인합니다.
 - 파드 spec에 `node.kubernetes.io/unreachable`에 대한 `tolerationSeconds: 30`을 넣은 Deployment를 같이 띄워 두고 축출 시점을 비교합니다.
 - `kubectl get pod <pod> -o jsonpath='{.spec.tolerations}'`로 어드미션이 넣은 기본 toleration 두 개를 확인합니다.
+
+kind v1.37.0 실측입니다. `docker stop`을 시작하고 약 47초 뒤 Ready 조건이 `Unknown`(Reason `NodeStatusUnknown`, Message `Kubelet stopped posting node status.`)으로 바뀌었습니다. 기본값 50초와 맞는 범위입니다. taint는 `node.kubernetes.io/unreachable:NoExecute`와 `node.kubernetes.io/unreachable:NoSchedule` 두 개가 붙었습니다. Deployment 파드의 tolerations에는 `not-ready`와 `unreachable` 두 키가 `tolerationSeconds: 300`으로 들어 있었습니다. 300초 축출과 `tolerationSeconds: 30` 비교는 기다리지 않고 노드를 다시 켰습니다.
 
 ## 8. CPU 스케줄러: EEVDF와 cpu.max
 
@@ -514,13 +541,14 @@ seccomp는 시스템 콜 진입 시점에 번호와 레지스터 값만 봅니�
 
 ## 범위와 한계
 
-- 이 글을 쓴 환경(macOS)에는 리눅스 노드와 클러스터가 없어서 명령을 실행하지 않았습니다. strace 출력, lsmod 출력은 형태를 보이기 위한 예시이고 바이트 수와 버퍼 크기는 환경마다 다릅니다.
+- 2026-10-20에 colima VM(Ubuntu 24.04.4, 커널 6.8.0-117-generic, arm64, 6 CPU, MemTotal 10161128 kB)과 그 위의 kind v0.33 + 노드 v1.37.0에서 돌린 것: 1장 strace(arm64), 2장 프로세스 부모 관계와 containerd strace, 3장 lsmod와 builtin 판단, 4장 procfs 크기와 kcore, 5장 sysctl과 kubelet 설정, 6장 seccomp 모드와 LSM 목록, 7장 노드 컨테이너 정지 후 NotReady 시간과 taint. 실측은 각 과제 아래에 적었습니다. 1-3과 3-2의 앞쪽 블록은 x86_64 기준 형태 예시입니다.
+- 돌리지 못한 것: x86_64 `syscall_64.tbl` 개수 검증과 `cpuinfo`의 SMT, hypervisor 판단(arm64라 해당 필드 없음), `/proc/kcore` 128TiB(arm64는 약 253TiB), 브리지형 CNI에서 br_netfilter 없을 때의 실패 재현, `systemctl restart containerd`, 실제 커널 패닉과 노드 재부팅, 300초 축출 대기, `aa-status`. colima VM에는 strace, ping, conntrack이 없어서 strace는 kind 노드에 설치해 썼습니다.
 - 시스템 콜 개수 386, 최대 번호 472, 빈 구간 337~423은 2026년 10월 20일에 torvalds/linux master의 `syscall_64.tbl`을 받아 센 값입니다. 안정 커널 버전별 개수는 따로 세지 않았습니다.
 - 쿠버네티스 동작은 2026년 10월 기준 kubernetes.io 문서(1.35~1.37 시점)를 기준으로 했습니다. NodeSwap GA(1.34), cgroup v1 deprecated와 `failCgroupV1` 기본값 변경(1.35), taint-eviction-controller 분리(1.34)처럼 버전에 따라 달라지는 항목은 본문에 버전을 적었습니다.
 - containerd 기본 seccomp 프로필의 정확한 차단 목록은 containerd 소스로 대조하지 않았습니다. 본문의 차단 예시(`kexec_load`, `reboot`)는 Docker 문서 기준입니다.
-- `/proc/kcore`의 크기 약 128TiB는 4단계 페이징 x86_64에서 흔한 값이고 커널 설정과 5단계 페이징 여부에 따라 다릅니다.
+- `/proc/kcore`의 크기 약 128TiB는 4단계 페이징 x86_64에서 흔한 값이고 커널 설정과 5단계 페이징 여부에 따라 다릅니다. arm64 colima VM에서는 약 253TiB였습니다.
 - 6-1의 Pod Security Standards 세부 조항은 이번에 원문으로 다시 확인하지 않았습니다.
-- 브리지형 CNI에서 br_netfilter가 없을 때의 실패 양상은 원리로 설명한 것이고 실험으로 재현하지 않았습니다.
+- 브리지형 CNI에서 br_netfilter가 없을 때의 실패 양상은 원리로 설명한 것이고 실험으로 재현하지 않았습니다. 라우팅형인 kindnet에서 br_netfilter 없이 정상 동작하는 것만 확인했습니다.
 
 ## 참고 자료
 

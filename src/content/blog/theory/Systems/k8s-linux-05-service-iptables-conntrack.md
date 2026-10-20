@@ -86,6 +86,8 @@ kubectl -n kube-system get cm kubeadm-config -o yaml | grep -i subnet
 
 확인할 것은 두 가지입니다. `ip -br addr` 출력에 `10.96.` 대역 주소가 하나도 없는지, kubeadm-config에 `serviceSubnet`과 `podSubnet`이 어떻게 적혀 있는지입니다.
 
+kind v0.33(노드 v1.37.0) 실측 결과입니다. 워커 노드의 `ip -br addr`에는 `lo`, `eth0`(172.18.0.10/16)과 파드마다 생긴 `veth*` 인터페이스만 있었고 10.96 대역 주소는 없었습니다. kindnet의 ptp 플러그인은 노드 쪽 veth마다 같은 게이트웨이 주소 `10.244.1.1/32`를 붙였습니다. kubeadm-config는 `serviceSubnet: 10.96.0.0/16`, `podSubnet: 10.244.0.0/16`이었습니다. kind가 kubeadm 기본값 `/12` 대신 `/16`을 넘기기 때문입니다. `kube-dns` ClusterIP는 그대로 `10.96.0.10`이었습니다.
+
 ## 2. Service 타입과 포트 사슬
 
 ### 2-1. 타입별로 생기는 규칙
@@ -138,7 +140,7 @@ containers:
 kubectl -n shop get endpointslice -l kubernetes.io/service-name=order-api -o yaml
 ```
 
-EndpointSlice의 `ports`에 `8080`이 들어 있는지 봅니다. kube-proxy가 DNAT 목적지로 쓰는 값이 바로 이 EndpointSlice의 주소와 포트입니다.
+EndpointSlice의 `ports`에 `8080`이 들어 있는지 봅니다. kube-proxy가 DNAT 목적지로 쓰는 값이 바로 이 EndpointSlice의 주소와 포트입니다. kind에서 nginx 컨테이너에 `name: http, containerPort: 80`을 주고 같은 Service(`targetPort: http`)를 만들었더니 EndpointSlice의 `ports`가 `[{"name":"http","port":80,"protocol":"TCP"}]`로 채워졌습니다. 이름이 숫자로 풀린 것입니다.
 
 ## 3. 패킷이 ClusterIP를 만나는 곳: netfilter와 kube-proxy 규칙
 
@@ -243,11 +245,11 @@ kube-proxy가 쓰는 값은 `0.3333333333`입니다. `iptables-save`로 읽으�
 ```text
 # proxier.go가 쓰는 KUBE-POSTROUTING (형태 예시)
 -A KUBE-POSTROUTING -m mark ! --mark 0x4000/0x4000 -j RETURN
--A KUBE-POSTROUTING -j MARK --xor-mark 0x4000
+-A KUBE-POSTROUTING -j MARK --set-xmark 0x4000/0x0
 -A KUBE-POSTROUTING -m comment --comment "kubernetes service traffic requiring SNAT" -j MASQUERADE --random-fully
 ```
 
-표시가 없으면 그냥 돌려보냅니다. 있으면 표시를 지운 뒤 MASQUERADE합니다. 표시를 지우는 이유는 소스 주석에 있습니다. 패킷이 네트워크 스택을 다시 지날 때 두 번 마스커레이드되는 일을 막기 위해서입니다. DNAT 판단 시점(PREROUTING)에는 아직 나갈 인터페이스를 모르므로 결정과 실행을 이렇게 나눠 둡니다.
+kube-proxy 소스는 두 번째 줄을 `--xor-mark 0x4000`으로 쓰지만 `iptables -S`로 읽으면 같은 뜻의 `--set-xmark 0x4000/0x0`으로 보입니다. 위 세 줄은 kind 워커(iptables v1.8.11, nf_tables 백엔드)에서 읽은 실측 그대로입니다. 표시가 없으면 그냥 돌려보냅니다. 있으면 표시를 지운 뒤 MASQUERADE합니다. 표시를 지우는 이유는 소스 주석에 있습니다. 패킷이 네트워크 스택을 다시 지날 때 두 번 마스커레이드되는 일을 막기 위해서입니다. DNAT 판단 시점(PREROUTING)에는 아직 나갈 인터페이스를 모르므로 결정과 실행을 이렇게 나눠 둡니다.
 
 ### 3-6. kube-proxy 모드와 eBPF
 
@@ -273,6 +275,20 @@ iptables -t nat -S KUBE-POSTROUTING
 ```
 
 `order-api`를 `kubectl scale --replicas=3`과 `--replicas=4`로 바꿔 가며 `KUBE-SVC` 체인의 확률 값이 어떻게 달라지는지 봅니다. 4개라면 0.25, 0.333..., 0.5, 확률 없음 순서가 나와야 합니다. kube-proxy가 nftables 모드라면 `iptables` 대신 `nft list table ip kube-proxy`로 봅니다.
+
+kind 워커에서 읽은 실측 출력입니다(nginx 파드 3개, `targetPort: http` → 80).
+
+```text
+-A KUBE-SERVICES -d 10.96.53.219/32 -p tcp -m comment --comment "shop/order-api:http cluster IP" -m tcp --dport 80 -j KUBE-SVC-2IW3JN2M6PSPKT5G
+-A KUBE-SVC-2IW3JN2M6PSPKT5G ! -s 10.244.0.0/16 -d 10.96.53.219/32 -p tcp -m comment --comment "shop/order-api:http cluster IP" -m tcp --dport 80 -j KUBE-MARK-MASQ
+-A KUBE-SVC-2IW3JN2M6PSPKT5G -m comment --comment "shop/order-api:http -> 10.244.1.57:80" -m statistic --mode random --probability 0.33333333349 -j KUBE-SEP-MZPCKG4VX24Q3GSJ
+-A KUBE-SVC-2IW3JN2M6PSPKT5G -m comment --comment "shop/order-api:http -> 10.244.1.58:80" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-TKVPKHP5GZB5SUTP
+-A KUBE-SVC-2IW3JN2M6PSPKT5G -m comment --comment "shop/order-api:http -> 10.244.2.53:80" -j KUBE-SEP-UDSVEVMTRFQ4ZM2P
+-A KUBE-SEP-MZPCKG4VX24Q3GSJ -s 10.244.1.57/32 -m comment --comment "shop/order-api:http" -j KUBE-MARK-MASQ
+-A KUBE-SEP-MZPCKG4VX24Q3GSJ -p tcp -m comment --comment "shop/order-api:http" -m tcp -j DNAT --to-destination 10.244.1.57:80
+```
+
+3-3과 3-4의 형태 예시와 구조는 같고 실제 규칙에는 엔드포인트 주소를 적은 `--comment`가 붙어 있습니다. 4개로 늘리자 확률이 `0.25000000000`, `0.33333333349`, `0.50000000000`, 확률 없음 순서로 바뀌었습니다. nat PREROUTING과 OUTPUT에는 `KUBE-SERVICES` 점프 말고도 kind가 넣은 `DOCKER_OUTPUT` 규칙이, POSTROUTING에는 `KIND-MASQ-AGENT` 규칙이 함께 있었습니다.
 
 ## 4. 연결을 기억하는 장치: conntrack
 
@@ -324,6 +340,8 @@ udp      17 27 src=10.244.2.9 dst=10.96.0.10 sport=51877 dport=53 [UNREPLIED] sr
 | 두 번째 `src= dst= ...` | 역방향 튜플. 여기 `src`가 DNAT된 엔드포인트 |
 | `[ASSURED]` | 양방향 트래픽을 확인한 항목 |
 
+kind 실측에서 `nslookup`을 몇 번 돌린 뒤의 항목은 `udp 17 29 src=10.244.1.59 dst=10.96.0.10 sport=51849 dport=53 src=10.244.0.3 dst=10.244.1.59 sport=53 dport=51849 mark=0 use=1`처럼 `[UNREPLIED]`도 `[ASSURED]`도 없었습니다. 질의 하나와 응답 하나로 끝난 UDP 흐름은 ASSURED가 되지 않고 30초 타임아웃을 받습니다. 7-6처럼 같은 포트로 질의를 반복하자 `[ASSURED]`가 붙고 남은 시간이 120초 안쪽으로 올라갔습니다.
+
 두 번째 줄처럼 `[UNREPLIED]` 항목이 같은 엔드포인트로 몰려 있으면 그 엔드포인트가 응답하지 않는다는 신호입니다. 남은 초가 계속 다시 차오르는 항목이 있다면 4-3에서 말한 갱신이 일어나고 있는 것입니다.
 
 ### 4-5. 직접 해 보기
@@ -335,7 +353,7 @@ watch -n 1 'conntrack -L -p udp --dport 53 2>/dev/null | head -5'   # 남은 초
 conntrack -S                                                          # CPU별 통계(insert_failed, drop 등)
 ```
 
-파드 하나에서 `nslookup order-api.shop`을 몇 번 실행한 뒤 위 명령을 다시 봅니다. 역방향 튜플의 `src`가 CoreDNS 파드 IP 중 하나인지 `kubectl -n kube-system get pod -l k8s-app=kube-dns -o wide`와 비교합니다.
+파드 하나에서 `nslookup order-api.shop`을 몇 번 실행한 뒤 위 명령을 다시 봅니다. 역방향 튜플의 `src`가 CoreDNS 파드 IP 중 하나인지 `kubectl -n kube-system get pod -l k8s-app=kube-dns -o wide`와 비교합니다. kind 실측에서 sysctl 값은 30과 120이었고 역방향 `src`는 CoreDNS 파드 IP 10.244.0.3과 10.244.0.4로 나뉘었습니다. `conntrack -S`는 모든 CPU에서 `insert_failed=0 drop=0`이었습니다. 질의용 파드는 5-4의 이유로 busybox 대신 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3`을 썼습니다.
 
 ## 5. 파드가 이름을 IP로 바꾸는 길
 
@@ -390,6 +408,8 @@ kubectl -n kube-system get svc kube-dns -o yaml | grep -A3 ports
 
 busybox 이미지는 libc 빌드에 따라 동작이 다를 수 있으니 glibc 기반 이미지(예: `debian`)에서도 같은 질의를 해 보고 비교합니다.
 
+kind v1.37.0 실측에서 `busybox:1.36`의 `nslookup payment.shop`은 Service가 있는데도 `** server can't find payment.shop: NXDOMAIN`을 내고 종료 코드 1로 끝났습니다. 같은 질의를 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3` 파드에서 하면 `Name: payment.shop.svc.cluster.local`로 풀렸습니다. busybox `nslookup`으로는 search 목록 동작을 확인할 수 없으니 FQDN으로 묻거나 dnsutils 이미지를 씁니다. 마지막 명령의 `grep -A3`은 첫 포트만 보여 주므로 `kubectl -n kube-system get svc kube-dns -o jsonpath='{range .spec.ports[*]}{.name} {.port}/{.protocol}{"\n"}{end}'`가 낫습니다. 실측 결과는 `dns 53/UDP`, `dns-tcp 53/TCP`, `metrics 9153/TCP`였습니다.
+
 ## 6. 파드 사이 통신: 같은 노드와 다른 노드
 
 ### 6-1. Calico를 예로 든 경로
@@ -420,7 +440,20 @@ kubectl -n shop exec dnsprobe -- ping -c 1 <다른 노드 파드 IP>
 tcpdump -ni any 'tcp port 8080 and host <파드 IP>' -c 10
 ```
 
-tcpdump 매뉴얼의 표기로 `[S]`는 SYN, `[S.]`는 SYN+ACK, `[.]`는 ACK, `[P.]`는 PSH+ACK입니다. Service를 거쳐 보낸 요청이라면 노드의 `cali*`나 `veth*` 인터페이스에서 잡은 SYN의 목적지가 이미 파드 IP로 바뀌어 있는지 봅니다. 파드 안에서 잡으면 목적지가 ClusterIP로 보이므로 둘을 비교하면 DNAT 지점을 눈으로 확인할 수 있습니다.
+tcpdump 매뉴얼의 표기로 `[S]`는 SYN, `[S.]`는 SYN+ACK, `[.]`는 ACK, `[P.]`는 PSH+ACK입니다. Service를 거쳐 보낸 요청이라면 보낸 파드의 노드 쪽 veth와 노드가 패킷을 내보내는 인터페이스에서 목적지를 비교합니다.
+
+kind 워커에서 `tcpdump -ni any`로 잡은 실측입니다(tcpdump 4.99.5는 `apt-get install tcpdump`로 설치).
+
+```text
+veth239ed463 In  IP 10.244.1.60.58130 > 10.96.53.219.80: Flags [S], ...
+eth0  Out IP 10.244.1.60.58130 > 10.244.2.53.80: Flags [S], ...
+eth0  In  IP 10.244.2.53.80 > 10.244.1.60.58130: Flags [S.], ...
+veth239ed463 Out IP 10.96.53.219.80 > 10.244.1.60.58130: Flags [S.], ...
+```
+
+보낸 파드의 veth로 들어온 SYN은 아직 ClusterIP를 향합니다. 패킷 캡처 지점이 nat PREROUTING보다 앞이기 때문입니다. 노드 밖으로 나가는 `eth0`에서는 목적지가 파드 IP로 바뀌어 있고 응답은 반대로 veth에 나갈 때 출발지가 ClusterIP로 되돌아가 있습니다. 같은 노드 안의 파드가 뽑혔다면 받는 파드의 veth에서 바뀐 목적지를 봅니다.
+
+kind의 kindnet(ptp 플러그인)도 브리지 없이 라우팅합니다. 파드의 `ip route`는 `default via 10.244.1.1 dev eth0`였고 `ping` TTL은 같은 노드 파드가 63, 다른 노드 파드가 62였습니다. 6-2의 Calico 설명과 같은 모양입니다. colima 위 kind에서는 ClusterIP에 `ping`을 보내도 응답이 왔습니다. 존재하지 않는 `10.123.45.67`도 TTL 62로 응답했으니 VM 바깥 네트워크 계층이 대신 답한 것입니다. 이 환경에서는 1-3의 "ClusterIP에 ping이 안 된다"를 ping으로 확인할 수 없습니다.
 
 ## 7. 사례: 낡은 UDP conntrack 항목이 DNS를 막은 날
 
@@ -493,6 +526,8 @@ conntrack -L -p udp --sport 40000 2>/dev/null
 
 kube-proxy v1.32 이상이라면 3)에서 해당 항목이 지워지고 다음 질의가 다른 CoreDNS로 가는지 봅니다. 구버전 kind 노드 이미지를 구할 수 있다면 같은 실험을 비교합니다.
 
+kind v1.37.0(kube-proxy v1.37.0)에서 이 실험을 그대로 돌렸습니다. `dig -b 0.0.0.0#40000`은 의도대로 출발지 포트 40000을 고정했고 항목은 `[ASSURED]`, 남은 시간 111~118초로 유지됐습니다. 역방향 `src`가 10.244.0.4인 CoreDNS 파드를 지우자 5초와 10초 시점에는 항목이 그대로였고 15초 시점에는 역방향 `src`가 10.244.0.3인 새 항목(남은 30초 이하, ASSURED 없음)으로 바뀌어 있었습니다. 다음 질의부터 다시 `[ASSURED]`가 붙었고 그동안 `dig` 출력에 실패는 없었습니다. CoreDNS는 종료 신호를 받은 뒤 잠시 응답을 계속하므로 이 실험은 "응답 없는 엔드포인트로 가는" 구버전 증상까지 재현하지는 못합니다. 구버전 이미지 비교는 하지 않았습니다.
+
 ## 확인 문제
 
 1. iptables 모드 kube-proxy를 쓰는 노드에서 `ip addr`로 ClusterIP를 찾을 수 없는 이유는 무엇인가요?
@@ -561,14 +596,15 @@ kubelet이 써 준 resolv.conf에 `options ndots:5`가 있어서 점이 5개 미
 
 ## 범위와 한계
 
-- 이 글을 쓴 환경(macOS)에는 쿠버네티스 클러스터도 리눅스 노드도 없어 명령을 하나도 실행하지 않았습니다. iptables 규칙, `conntrack -L`, resolv.conf 출력은 kube-proxy 소스와 공식 문서를 바탕으로 만든 형태 예시이며 해시와 IP는 지어낸 값입니다. 각 장의 "직접 해 보기"는 kind나 리눅스 VM에서 할 과제로 남깁니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, Ubuntu 24.04.4, kube-proxy iptables 모드, CNI kindnet)에서 1-4, 2-3, 3-7, 4-5, 5-4, 6-3, 7-6의 과제를 돌렸습니다. 실측 출력은 각 과제 아래에 붙였습니다. 3-2~3-5의 앞쪽 블록과 4-4의 표 예시는 kube-proxy 소스와 공식 문서로 만든 형태 예시이고 해시와 IP는 지어낸 값입니다.
+- 돌리지 못한 것: nftables 모드와 IPVS 모드 비교, Calico 설치(169.254.1.1 게이트웨이와 proxy ARP), 구버전 kube-proxy로 7-6 비교, `conntrack -D` 실행. colima 네트워크가 모든 주소의 ICMP에 대신 응답해서 ClusterIP ping 불가는 이 환경에서 확인하지 못했습니다.
 - kube-proxy 모드 상태는 2026년 10월(v1.37) 기준입니다. 리눅스 기본값이 nftables로 바뀌는 시점은 문서가 예고만 하고 버전을 정하지 않았습니다. IPVS의 v1.40 기본 비활성과 v1.43 제거는 KEP-5495의 계획입니다.
 - `KUBE-SVC` 첫 줄의 `! -s <파드 CIDR> ... -j KUBE-MARK-MASQ` 형태는 kube-proxy에 클러스터 CIDR 정보가 있을 때 기준이며 `masqueradeAll`이나 로컬 트래픽 판별 방식에 따라 달라집니다. 버전별 차이는 확인하지 않았습니다.
 - 사례는 SREcon26 Americas 슬라이드의 텍스트만 근거로 썼습니다. 슬라이드의 그림(타임라인, 경로 도식)은 텍스트로 추출되지 않아 확인하지 못했습니다. 그래서 OOMKilled 뒤 CoreDNS 파드가 같은 IP로 다시 떴는지, 장애가 얼마나 이어졌는지, 어떻게 복구했는지는 쓰지 않았습니다. 7-3의 단계 설명은 슬라이드의 세 원인을 4장의 conntrack 동작에 맞춰 제가 이은 것입니다.
 - #127318 이후 후속 수정은 #130484 하나만 직접 확인했습니다. 성능 회귀 보고와 다른 후속 PR, 이전 버전 체리픽(#127780)의 세부와 각 패치 버전 번호는 확인하지 않았습니다.
 - UDP 흐름이 `_stream` 타임아웃으로 넘어가는 정확한 조건은 커널 버전마다 다르며 이 글에서는 커널 문서의 설명("UDP stream이 감지되면")까지만 적었습니다.
 - Calico의 TTL 동작과 169.254.1.1 게이트웨이는 Calico FAQ 기준입니다. 다른 CNI(Flannel, Cilium 등)에서는 경로와 TTL 변화가 다릅니다.
-- 7-6의 재현 실험은 설계만 했습니다. `nicolaka/netshoot` 이미지와 `dig -b`의 고정 포트 옵션으로 의도한 대로 같은 5-튜플이 유지되는지도 확인하지 못했습니다.
+- 7-6의 재현 실험은 v1.37에서만 돌렸습니다. 고정 포트와 5-튜플 유지는 확인했고 reconciler가 없는 구버전의 블랙홀 증상은 재현하지 않았습니다.
 
 ## 참고 자료
 

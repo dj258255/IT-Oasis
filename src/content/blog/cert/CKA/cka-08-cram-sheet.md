@@ -108,22 +108,22 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 |---|---|---|---|---|
 | 첫 3분 | `k get pod -o wide`, `k describe pod`(Events), `k get events --sort-by=.metadata.creationTimestamp` | 없음 | 이벤트는 네임스페이스 단위 | [Ch-06 0절](/blog/cert/cka/cka-06-troubleshooting) |
 | 노드 NotReady | 노드에서 `systemctl status kubelet`, `journalctl -u kubelet -n 50`, `systemctl status containerd`, `crictl info` | `/var/lib/kubelet/config.yaml`, `/etc/kubernetes/kubelet.conf`, `kubeadm-flags.env` | `restart`만 하고 `enable`을 빠뜨림. 1.35부터 cgroup v1 노드는 kubelet이 기본으로 시작 안 함 | [Ch-06 1-3, 1-4절](/blog/cert/cka/cka-06-troubleshooting) |
-| 컨트롤 플레인 구성요소 | `crictl ps -a`, `crictl logs <ID>`, `ls /var/log/pods` | `/etc/kubernetes/manifests/*.yaml` | 매니페스트 백업을 같은 디렉터리에 두면 kubelet이 그것도 읽음. mirror Pod를 `delete`해도 다시 생김 | [Ch-06 2절](/blog/cert/cka/cka-06-troubleshooting) |
-| 리소스 사용량 | `k top pod -A --sort-by=cpu --no-headers`, `k top pod --containers` | 없음 | `--sort-by`는 `cpu`, `memory`만. metrics-server가 없으면 동작 안 함 | [Ch-06 3-2, 3-4절](/blog/cert/cka/cka-06-troubleshooting) |
+| 컨트롤 플레인 구성요소 | `crictl ps -a`, `crictl logs <ID>`, `ls /var/log/pods` | `/etc/kubernetes/manifests/*.yaml` | 매니페스트 백업을 같은 디렉터리에 두면 kubelet이 그것도 읽음. mirror Pod를 `delete`해도 다시 생김. 이미지 태그 오류면 `crictl ps -a`에 컨테이너가 없으니 `describe pod`나 kubelet 로그를 봄 | [Ch-06 2절](/blog/cert/cka/cka-06-troubleshooting) |
+| 리소스 사용량 | `k top pod -A --sort-by=cpu --no-headers`, `k top pod --containers` | 없음 | `--sort-by`는 `cpu`, `memory`만. metrics-server가 없으면 동작 안 함. metrics-server v0.9.0은 `metrics.k8s.io/v1beta1`만 제공 | [Ch-06 3-2, 3-4절](/blog/cert/cka/cka-06-troubleshooting) |
 | 값 뽑기 | `-o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'`, `-o custom-columns=NAME:.metadata.name`, `--sort-by=` | 없음 | custom-columns에는 `.items[*]`를 붙이지 않음. JSONPath는 정규식 없음. 식은 작은따옴표로 | [Ch-06 3-5, 3-6절](/blog/cert/cka/cka-06-troubleshooting) |
 | 컨테이너 로그 | `k logs <pod> -c <컨테이너> --previous`, `k logs -l app=x --all-containers --prefix` | 없음 | `-c` 없이 치면 기본 컨테이너(어노테이션, 없으면 첫 번째) 로그가 나옴. `Defaulted container` 안내를 본다 | [Ch-06 4절](/blog/cert/cka/cka-06-troubleshooting) |
-| Service 응답 없음 | `k get endpointslices -l kubernetes.io/service-name=<svc>`, `k get pod --show-labels`, 임시 Pod에서 `wget -qO- -T 2` | 없음 | ENDPOINTS가 비면 selector와 라벨, 아니면 readiness. `nslookup` 성공은 엔드포인트 존재를 뜻하지 않음 | [Ch-06 5절](/blog/cert/cka/cka-06-troubleshooting) |
+| Service 응답 없음 | `k get endpointslices -l kubernetes.io/service-name=<svc>`, `k get pod --show-labels`, 임시 Pod에서 `wget -qO- -T 2` | 없음 | ENDPOINTS가 비면 selector와 라벨, 아니면 readiness. `nslookup` 성공은 엔드포인트 존재를 뜻하지 않음. 엔드포인트가 있어도 포트가 틀릴 수 있음 | [Ch-06 5절](/blog/cert/cka/cka-06-troubleshooting) |
 
 ### 2-2. 클러스터 아키텍처, 설치, 구성 25%
 
 | 항목 | 외울 명령 | YAML 뼈대 | 함정 | 자세히 |
 |---|---|---|---|---|
 | RBAC | `k create role/rolebinding/clusterrole/clusterrolebinding`, `k auth can-i <동사> <리소스> -n <ns> --as=system:serviceaccount:<ns>:<sa>` | 명령형으로 만들고 `$do`로 확인 | 클러스터 범위 리소스는 ClusterRole. 그룹 있는 리소스는 `deployments.apps`. `roleRef`는 수정 불가라 지우고 다시 만듦 | [Ch-02 1절](/blog/cert/cka/cka-02-cluster-architecture) |
-| 사용자 인증서 | `openssl req ... -subj "/CN=user/O=group"`, `k certificate approve`, `k get csr <이름> -o jsonpath='{.status.certificate}'` | CSR(`signerName: kubernetes.io/kube-apiserver-client`, `usages: [client auth]`) | 승인된 CSR은 1시간 뒤 자동 삭제. 인증서만으로는 권한 없음 | [Ch-02 1-9절](/blog/cert/cka/cka-02-cluster-architecture) |
+| 사용자 인증서 | `openssl req ... -subj "/CN=user/O=group"`, `k certificate approve`, `k get csr <이름> -o jsonpath='{.status.certificate}'` | CSR(`signerName: kubernetes.io/kube-apiserver-client`, `usages: [client auth]`) | 승인된 CSR은 1시간 뒤 자동 삭제. 인증서만으로는 권한 없음. `set-context --cluster`에는 `k config get-clusters`의 실제 이름 | [Ch-02 1-9절](/blog/cert/cka/cka-02-cluster-architecture) |
 | kubeadm 업그레이드 | `kubeadm upgrade plan`, `upgrade apply v1.37.x`, `upgrade node`, `drain`, `uncordon` | 없음 | 마이너 버전 건너뛰기 불가. 패키지 저장소를 목표 마이너로 먼저 바꿈 | [Ch-02 4-1, 4-2절](/blog/cert/cka/cka-02-cluster-architecture) |
-| etcd | `etcdctl snapshot save`, `etcdutl snapshot status`, `etcdutl --data-dir <새 경로> snapshot restore` | etcd.yaml의 `etcd-data` 볼륨 `hostPath.path` | 인증서 경로는 etcd.yaml에서 확인. etcd 3.6은 `etcdctl snapshot status/restore` 제거 | [Ch-02 4-5, 4-6절](/blog/cert/cka/cka-02-cluster-architecture) |
+| etcd | `etcdctl snapshot save`, `etcdutl snapshot status`, `etcdutl --data-dir <새 경로> snapshot restore` | etcd.yaml의 `etcd-data` 볼륨 `hostPath.path` | 인증서 경로는 etcd.yaml에서 확인. etcd 3.6은 `etcdctl snapshot status/restore` 제거. 복구 뒤 API 서버, 컨트롤러 매니저, 스케줄러 static Pod도 재시작 | [Ch-02 4-5, 4-6절](/blog/cert/cka/cka-02-cluster-architecture) |
 | 인증서 | `kubeadm certs check-expiration`, `kubeadm certs renew all`, `openssl x509 -noout -enddate -in <crt>` | 없음 | renew 뒤 컨트롤 플레인 static Pod 재시작 필요. `kubelet.conf`는 목록에 없음 | [Ch-02 4-4, 4-8절](/blog/cert/cka/cka-02-cluster-architecture) |
-| Helm | `helm show values`, `helm install <이름> <차트> -n <ns> --create-namespace --set k=v`, `helm upgrade --install`, `helm rollback <이름> <리비전>` | values 파일(`-f`) | 인자 순서는 `[NAME] [CHART]`. `--set`이 `-f`보다 우선. Helm 4는 `--atomic`이 `--rollback-on-failure` | [Ch-02 6-1, 6-6절](/blog/cert/cka/cka-02-cluster-architecture) |
+| Helm | `helm show values`, `helm install <이름> <차트> -n <ns> --create-namespace --set k=v`, `helm upgrade --install`, `helm rollback <이름> <리비전>` | values 파일(`-f`) | 인자 순서는 `[NAME] [CHART]`. `--set`이 `-f`보다 우선. Helm 4는 `--atomic`이 `--rollback-on-failure`. `helm template`은 `--include-crds` 없이는 CRD를 빼고 `-n`을 줘도 매니페스트에 네임스페이스를 넣지 않음 | [Ch-02 6-1, 6-6절](/blog/cert/cka/cka-02-cluster-architecture) |
 | Kustomize | `k kustomize <디렉터리>`(출력만), `k apply -k <디렉터리>` | `kustomization.yaml`의 `resources`, `namespace`, `namePrefix`, `images`, `patches` | `patchesStrategicMerge`, `bases`, `commonLabels`는 사용 중단. `patches`, `resources`, `labels` 사용 | [Ch-02 6-2, 6-4절](/blog/cert/cka/cka-02-cluster-architecture) |
 | CNI 설치 | kube-controller-manager.yaml의 `--cluster-cidr`, `k get node -o jsonpath='{.items[*].spec.podCIDR}'`, `ls /etc/cni/net.d` | 과제가 준 매니페스트 | 과제가 지정하지 않았으면 클러스터의 실제 Pod CIDR에 플러그인 값을 맞춤. CNI 전에는 CoreDNS `Pending`이 정상 | [Ch-02 7-2절](/blog/cert/cka/cka-02-cluster-architecture) |
 | CRD와 오퍼레이터 | `k get crd`, `k api-resources --api-group=<그룹>`, `k explain <kind>.spec` | CRD(`metadata.name: <plural>.<group>`, `storage: true` 하나) | CRD를 지우면 커스텀 객체도 사라짐. 컨트롤러 없이는 객체만 저장됨 | [Ch-02 8절](/blog/cert/cka/cka-02-cluster-architecture) |
@@ -154,6 +154,9 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 | 노드 고르기 | `k label node <노드> k=v`, `k taint node <노드> k=v:NoSchedule[-]` | `nodeSelector`, `affinity.nodeAffinity`, `tolerations` | 톨러레이션만으로는 그 노드로 가지 않음. `nodeSelectorTerms`끼리 OR, `matchExpressions` 안은 AND | [Ch-03 5-5~5-7절](/blog/cert/cka/cka-03-workloads-scheduling) |
 | static Pod, DaemonSet | `k run ... $do > f.yaml` 후 노드의 `/etc/kubernetes/manifests`에 복사 | DaemonSet은 Deployment 뼈대에서 `replicas`, `strategy` 삭제 | 컨트롤 플레인 테인트는 DaemonSet 자동 톨러레이션에 없음 | [Ch-03 5-8, 5-10절](/blog/cert/cka/cka-03-workloads-scheduling) |
 | PriorityClass | `k create priorityclass <이름> --value=100000 [--preemption-policy=Never]` | `spec.priorityClassName` | 사용자 값은 10억 이하. 없는 이름을 적으면 Pod 거절 | [Ch-03 5-9절](/blog/cert/cka/cka-03-workloads-scheduling) |
+| 분산 배치 | `k get pod -o wide`로 노드별 개수 | `topologySpreadConstraints`(`maxSkew`, `topologyKey`, `whenUnsatisfiable`, `labelSelector`) | 기본 `nodeTaintsPolicy: Ignore`라 테인트 걸린 컨트롤 플레인도 0개 영역으로 셈. 노드 단위 `DoNotSchedule`이 `Pending`을 만들면 `nodeTaintsPolicy: Honor` | [Ch-03 5-12절](/blog/cert/cka/cka-03-workloads-scheduling) |
+| ValidatingAdmissionPolicy | `k get validatingadmissionpolicy,validatingadmissionpolicybinding` | 정책(`matchConstraints`, `validations`)과 바인딩(`validationActions`) 둘 다 | `resources: ["deployments"]`만 적으면 `k scale`(`deployments/scale`)이 통과. `Deny`와 `Warn`은 함께 못 씀 | [Ch-03 5-1절](/blog/cert/cka/cka-03-workloads-scheduling) |
+| securityContext | `k exec <pod> -c <컨테이너> -- grep Cap /proc/1/status` | `capabilities.add`는 컨테이너 수준에만 | 비root UID면 `NET_ADMIN`을 더해도 `CapBnd`에만 들어가고 `CapEff`는 0 | [Ch-03 2-8절](/blog/cert/cka/cka-03-workloads-scheduling) |
 
 ### 2-5. 스토리지 10%
 
@@ -344,7 +347,7 @@ kubeadm 패키지 교체 -> kubeadm upgrade node -> 4~6 반복
 sudo grep -E 'cert|key|trusted|data-dir' /etc/kubernetes/manifests/etcd.yaml
 
 # 1) 백업: 동작 중인 멤버에 접속하므로 etcdctl
-sudo ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+sudo etcdctl --endpoints=https://127.0.0.1:2379 \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
   --cert=/etc/kubernetes/pki/etcd/server.crt \
   --key=/etc/kubernetes/pki/etcd/server.key \
@@ -359,11 +362,16 @@ sudo etcdutl --data-dir /var/lib/etcd-restore snapshot restore /opt/backup/etcd-
 # 4) etcd.yaml에서 name: etcd-data 볼륨의 hostPath.path를 /var/lib/etcd-restore로 바꾼다
 sudo vi /etc/kubernetes/manifests/etcd.yaml
 
-# 5) kubelet이 etcd를 다시 띄우는지 확인
+# 5) kubelet이 etcd를 다시 띄우는지 확인. 1분 넘게 걸릴 수 있음
 sudo crictl ps | grep etcd
+
+# 6) API 서버, 컨트롤러 매니저, 스케줄러 재시작: 매니페스트를 잠시 밖으로
+sudo mkdir -p /tmp/cp && sudo mv /etc/kubernetes/manifests/kube-{apiserver,controller-manager,scheduler}.yaml /tmp/cp/
+sleep 20 && sudo mv /tmp/cp/*.yaml /etc/kubernetes/manifests/
+kubectl get deploy -A          # 복구한 시점의 객체가 보이는지
 ```
 
-`ETCDCTL_API=3`은 etcd 3.4부터 기본값입니다. 문서는 API 서버가 도는 중에 복구하지 말라고 적습니다([Ch-02 4-5, 4-6절](/blog/cert/cka/cka-02-cluster-architecture)).
+`ETCDCTL_API=3`은 etcd 3.4부터 기본값이라 빼도 됩니다. etcdctl 3.7.0은 이 변수를 붙이면 `unrecognized environment variable` 경고를 찍습니다. 문서는 API 서버가 도는 중에 복구하지 말라고 적습니다. kind v1.37.0에서 6번을 빼자 etcd는 복구됐는데도 지운 Deployment가 `kubectl`에 보이지 않았고 6번 뒤에 돌아왔습니다([Ch-02 4-5, 4-6절](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ### 4-3. 노드 drain
 
@@ -411,6 +419,8 @@ k certificate approve settle-user
 k get csr settle-user -o jsonpath='{.status.certificate}' | base64 -d > settle-user.crt
 k config set-credentials settle-user --client-key=settle-user.key \
   --client-certificate=settle-user.crt --embed-certs=true
+k config get-clusters                          # set-context --cluster에 넣을 실제 이름
+k config set-context settle-user --cluster=<위 이름> --user=settle-user
 ```
 
 kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.io/kube-apiserver-client-kubelet`뿐입니다. `serverTLSBootstrap: true`로 받는 kubelet 서빙 인증서 CSR도 손으로 승인합니다.
@@ -422,6 +432,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 2. sudo crictl ps -a | grep <구성요소>        종료된 컨테이너까지
 3. sudo crictl logs <컨테이너 ID>            첫 오류 줄
    (컨테이너가 아예 없으면) sudo journalctl -u kubelet -n 50   YAML 파싱 오류
+   (컨테이너가 없고 Pod가 ImagePullBackOff면) image 태그 오류
 4. sudo cp <매니페스트> /etc/kubernetes/backup/   백업은 manifests 밖에
 5. 플래그 오타, 인증서 경로와 hostPath 마운트, --etcd-servers 포트, image 태그, 들여쓰기 확인
 6. 저장 후 crictl ps로 새 컨테이너가 뜰 때까지 기다린 뒤 kubectl
@@ -491,7 +502,8 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 ## 범위와 한계
 
 - 이 글은 Ch-00~Ch-07과 Ch-01.5의 요약이고 근거와 출처는 링크한 글에 있습니다. 요약에서 조건이 빠졌다면 원래 글이 기준입니다.
-- 명령과 YAML은 클러스터가 없는 Mac에서 쓴 것이라 실행하지 않았습니다. 공식 문서 예시를 쇼핑몰, 게시판, 결제 이름으로 옮겼으니 연습 클러스터에서 확인한 뒤 씁니다.
+- 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(colima, arm64), kubectl v1.37.1, Helm v4.3.1, etcd 3.7.0 도구로 2-1, 2-2, 2-4 표의 명령, 3-4~3-6절, 4-2, 4-3, 4-5, 4-6절을 돌렸습니다. 결과와 kind 특유의 조건은 Ch-02, Ch-03, Ch-06 본문에 적었습니다. `k get endpoints`가 `v1 Endpoints is deprecated in v1.33+` 경고를 찍는 것(5절 4번)도 확인했습니다.
+- 실행하지 못한 것은 4-1절 kubeadm 업그레이드, 4-4절의 `kubeadm certs renew`, 4-7절 런타임 패키지 설치, 3-1~3-3절의 NetworkPolicy, 스토리지, Gateway와 2-3, 2-5 표 대부분입니다. 이 부분은 문서 예시를 쇼핑몰, 게시판, 결제 이름으로 옮긴 것이니 연습 클러스터에서 확인한 뒤 씁니다.
 - 기준은 Kubernetes v1.37, etcd 3.7.0(kubeadm 1.37 기본값), Helm 4.3(2026년 10월)입니다. 시험 환경의 etcd와 Helm 버전은 공식 문서에 없어서 당일 `etcdutl version`, `helm version`으로 확인합니다.
 - etcd 백업 복구와 kubeadm 업그레이드는 2025년 개정에서 명시 항목이 아닙니다. "클러스터 수명주기 관리"에 드는지 확인하지 못해 남겼습니다.
 - `.vimrc`, `export do=...`, 시간 배분은 관행과 후기에서 온 것입니다. 시험 환경의 Gateway 구현체와 Ingress 컨트롤러 종류도 공식 문서에서 확인하지 못했습니다.

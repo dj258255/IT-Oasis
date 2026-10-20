@@ -51,7 +51,7 @@ spec:
         memory: 170Mi
 ```
 
-requests와 limits가 다르니 이 파드는 Burstable입니다. 이 글에 나오는 cgroup 값은 이 스펙을 기준으로 계산합니다. 이 글을 쓴 환경에는 클러스터나 리눅스 노드가 없어서 명령을 실행하지 않았습니다. 출력 예시는 커널 문서와 쿠버네티스 문서의 형식을 따른 예이고 각 장 끝의 과제로 직접 확인할 수 있게 했습니다.
+requests와 limits가 다르니 이 파드는 Burstable입니다. 이 글에 나오는 cgroup 값은 이 스펙을 기준으로 계산합니다. 2026-10-20에 kind v0.33 클러스터(노드 이미지 v1.37.0, containerd 2.3.4, runc 1.4.3)를 colima VM(Ubuntu 24.04.4, 커널 6.8.0-117-generic, arm64) 위에 띄워 이 글의 과제 대부분을 돌렸습니다. 실제로 본 값은 해당 절에 "kind 실측"으로 적었고 나머지 출력은 커널 문서와 쿠버네티스 문서의 형식을 따른 예입니다.
 
 ## 1. CPU와 메모리의 집행 방식
 
@@ -154,6 +154,8 @@ kubelet은 shares까지만 계산하고 이를 weight로 바꾸는 일은 OCI �
 
 파드 cgroup 위의 QoS 계층에도 weight가 붙습니다. kubelet은 노드에 있는 Burstable 파드들의 CPU request를 모두 더해 `kubepods-burstable.slice`의 shares를 정하고 파드가 들어오고 나갈 때마다 다시 계산합니다. BestEffort 계층은 항상 2 shares(최솟값)입니다.
 
+kind 실측(v1.37.0, runc 1.4.3)에서는 계층마다 다른 식이 보였습니다. request 100m 컨테이너의 scope는 새 식 값 17이었고 request 50m 컨테이너의 scope는 11이었습니다. 같은 50m 파드의 파드 slice `cpu.weight`는 옛 식 값 2였고 pause 컨테이너 scope는 1이었습니다. BestEffort 계층은 1, Burstable 계층은 Burstable 파드를 하나 더 띄우자 8에서 10으로 바뀌었습니다. 컨테이너 scope는 runc가 쓰고 파드 slice와 QoS slice는 kubelet이 씁니다. kubelet 쪽 변환 경로를 소스에서 직접 추적하지는 않았으니 노드에서 계층별로 읽어 보는 편이 확실합니다.
+
 ### 2-4. limits.memory는 바이트 단위 memory.max가 된다
 
 `Mi`는 1024 기반입니다. 170Mi는 170 × 1,048,576 = 178,257,920바이트이고 `memory.max`에 이 숫자가 그대로 들어갑니다. `M`(1000 기반)으로 쓰면 170M = 170,000,000바이트라서 약 4.86% 작습니다. 한도를 넉넉하게 잡았다고 생각했는데 단위 하나 때문에 8MiB 넘게 모자랄 수 있습니다.
@@ -194,11 +196,11 @@ kubelet과 containerd가 systemd cgroup 드라이버를 쓰면 경로가 slice �
         └── kubepods-besteffort-pod<uid>.slice/
 ```
 
-파드 UID가 `1234-abcd-5678-efgh`라면 slice 이름은 `kubepods-burstable-pod1234_abcd_5678_efgh.slice`입니다. cgroupfs 드라이버를 쓰면 `/kubepods/burstable/pod<uid>/<container-id>` 모양이 됩니다. 컨테이너 한도는 `.scope` 디렉터리에, 파드 전체 한도(컨테이너 limit의 합)는 그 위 파드 slice에 걸립니다. 맨 위 `kubepods.slice`에도 노드 allocatable을 기준으로 한 한도가 걸립니다.
+kind 노드는 kubelet의 `cgroupRoot`가 `/kubelet`이라 트리 맨 위가 `kubelet.slice/kubelet-kubepods.slice/`이고 그 아래 이름에도 `kubelet-` 접두어가 붙습니다(kind 실측: `kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod<uid>.slice/cri-containerd-<id>.scope`). 파드 UID가 `1234-abcd-5678-efgh`라면 일반 kubeadm 노드에서 slice 이름은 `kubepods-burstable-pod1234_abcd_5678_efgh.slice`입니다. cgroupfs 드라이버를 쓰면 `/kubepods/burstable/pod<uid>/<container-id>` 모양이 됩니다. 컨테이너 한도는 `.scope` 디렉터리에, 파드 전체 한도(컨테이너 limit의 합)는 그 위 파드 slice에 걸립니다. 맨 위 `kubepods.slice`에도 노드 allocatable을 기준으로 한 한도가 걸립니다.
 
 **직접 해 보기**
 
-- 노드에서 `systemd-cgls --unit kubepods.slice`로 트리를 봅니다. kind는 노드 컨테이너 안에서 kubelet을 돌리므로 `docker exec -it kind-control-plane bash`로 들어가서 봅니다. kind 버전에 따라 상위 경로가 다를 수 있으니 `find /sys/fs/cgroup -name '*pod*' -maxdepth 4`로 먼저 위치를 찾습니다.
+- 노드에서 `systemd-cgls --unit kubepods.slice`로 트리를 봅니다. kind는 노드 컨테이너 안에서 kubelet을 돌리므로 `docker exec -it kind-control-plane bash`로 들어가서 봅니다. kind v0.33에서는 unit 이름이 `kubelet-kubepods.slice`라 `systemd-cgls --unit kubelet-kubepods.slice --no-pager`로 봐야 트리가 나옵니다. 경로가 다를 수 있으니 `find /sys/fs/cgroup -maxdepth 3 -name '*kubepods*' -type d`로 먼저 위치를 찾습니다.
 - 같은 파드의 `cpu.weight`를 읽고 노드의 `runc --version`과 함께 기록합니다. 4가 나오면 옛 식, 17이 나오면 새 식입니다.
 - `kubepods-burstable.slice/cpu.weight`를 읽고 Burstable 파드를 하나 더 띄운 뒤 다시 읽어 값이 바뀌는지 봅니다.
 
@@ -260,7 +262,18 @@ oom_group_kill 3
 Memory cgroup out of memory: Killed process 4123 (stress) total-vm:..., anon-rss:..., file-rss:..., shmem-rss:..., UID:0 pgtables:... oom_score_adj:...
 ```
 
-같은 메시지 앞에는 어느 cgroup에서 일어났는지(`oom-kill:constraint=CONSTRAINT_MEMCG,...,oom_memcg=/kubepods.slice/...`)와 그 cgroup의 메모리 통계가 함께 찍힙니다. `oom_memcg` 경로가 컨테이너 scope이면 컨테이너 한도, `kubepods.slice`이면 파드 전체가 allocatable을 넘은 경우입니다.
+같은 메시지 앞에는 어느 cgroup에서 일어났는지(`oom-kill:constraint=CONSTRAINT_MEMCG,...,oom_memcg=...,task_memcg=...`)와 그 cgroup의 메모리 통계가 함께 찍힙니다. `oom_memcg`는 한도에 닿은 cgroup이고 `task_memcg`는 죽은 프로세스가 속한 cgroup입니다. `oom_memcg`가 `kubepods.slice`이면 파드들의 합이 allocatable을 넘은 경우입니다.
+
+8-1의 oom-lab을 kind에서 돌린 실측 로그는 이랬습니다(경로의 해시는 줄임).
+
+```text
+stress invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=994
+oom-kill:constraint=CONSTRAINT_MEMCG,...,oom_memcg=/docker/<id>/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod91c7....slice,task_memcg=/docker/<id>/kubelet.slice/.../kubelet-kubepods-burstable-pod91c7....slice/cri-containerd-8ef9....scope,task=stress,pid=2642595,uid=0
+Memory cgroup out of memory: Killed process 2642595 (stress) total-vm:507464kB, anon-rss:129492kB, file-rss:0kB, shmem-rss:0kB, UID:0 pgtables:352kB oom_score_adj:994
+Tasks in /docker/<id>/.../cri-containerd-8ef9....scope are going to be killed due to memory.oom.group set
+```
+
+컨테이너가 하나뿐인 파드는 파드 slice의 `memory.max`도 컨테이너 limit과 같은 128Mi라서 `oom_memcg`가 파드 slice로 찍혔습니다. 그래서 `oom_memcg`만으로 컨테이너 한도인지 파드 한도인지 가르기는 어렵습니다. 경로 앞의 `/docker/<id>/`는 kind 노드 컨테이너의 cgroup이고 일반 노드에서는 없습니다. `memory.oom.group` 때문에 같은 scope의 stress 부모 프로세스도 함께 죽었습니다.
 
 ### 3-4. Exit 137과 reason OOMKilled
 
@@ -285,9 +298,11 @@ OOMKilled가 반복되면 파드는 `CrashLoopBackOff`가 됩니다. kubelet은 
 | `ReduceDefaultCrashLoopBackOffDecay` (KEP-4603) | 1.33 알파, 기본 꺼짐 | 켜면 1초에서 시작해 최대 60초 |
 | `KubeletCrashLoopBackOffMax` (KEP-5593) | 1.35 베타, 기본 켜짐 | 노드별 kubelet 설정 `crashLoopBackOff.maxContainerRestartPeriod`로 상한을 1초~300초 사이에서 지정 |
 
+kind 실측에서 oom-lab의 시작 시각은 07:11:01, 07:11:17, 07:11:48이었습니다. 간격이 10초, 20초보다 몇 초씩 긴 것은 `polinux/stress`에 태그가 없어 `imagePullPolicy`가 `Always`가 되고 재시작마다 이미지를 다시 받았기 때문입니다(이벤트에 매번 `Pulled ... in 1.7s~3.4s`가 남음).
+
 **직접 해 보기**
 
-- 실행 중인 컨테이너에서 `cat /sys/fs/cgroup/memory.stat | head -20`으로 `anon`과 `file` 비율을 보고 `dd if=/dev/zero of=/tmp/f bs=1M count=50` 뒤 `file`이 늘어나는지 확인합니다. `/tmp`가 tmpfs가 아니면 `file`이, tmpfs면 `shmem`이 늘어납니다.
+- 실행 중인 컨테이너에서 `cat /sys/fs/cgroup/memory.stat | head -20`으로 `anon`과 `file` 비율을 보고 `dd if=/dev/zero of=/tmp/f bs=1M count=50` 뒤 `file`이 늘어나는지 확인합니다. `/tmp`가 tmpfs가 아니면 `file`이, tmpfs면 `shmem`이 늘어납니다. kind의 busybox:1.36 컨테이너(`/tmp`는 overlay 쓰기 계층)에서 실측하니 `file`이 2236416에서 54874112로 약 50MiB 늘었고 `anon`과 `shmem`은 그대로였습니다.
 - `cat /sys/fs/cgroup/memory.oom.group`이 1인지 확인합니다.
 - 8장의 OOM 과제를 돌린 뒤 `memory.events`의 `oom_kill`과 `kubectl get pod`의 RESTARTS를 비교합니다.
 
@@ -330,7 +345,7 @@ BestEffort 파드는 request가 0이라 쓰는 순간 1번 조건에 걸립니�
 **직접 해 보기**
 
 - 노드에서 `cat /sys/fs/cgroup/kubepods.slice/memory.stat | grep -E '^(anon|file|inactive_file) '`를 읽고 `memory.current - inactive_file`을 직접 계산해 `kubectl top node`의 값과 비교합니다.
-- `kubectl get --raw "/api/v1/nodes/<노드>/proxy/configz" | jq .kubeletconfig.evictionHard`로 노드의 eviction 임계값을 확인합니다.
+- `kubectl get --raw "/api/v1/nodes/<노드>/proxy/configz" | jq .kubeletconfig.evictionHard`로 노드의 eviction 임계값을 확인합니다. kind 노드는 `{"imagefs.available":"0%","nodefs.available":"0%","nodefs.inodesFree":"0%"}`로 나왔습니다. kind가 디스크 eviction을 꺼 두고 메모리 항목은 지정하지 않은 설정이라 리눅스 기본값과 다릅니다. kind에서는 첫 번째 과제의 경로도 `/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/memory.stat`입니다.
 
 ## 5. CPU 스로틀링 관찰
 
@@ -475,6 +490,8 @@ QoS 클래스는 파드가 만들어질 때 정해지고 바뀌지 않습니다.
 - 같은 노드에 BestEffort, Burstable, Guaranteed 파드를 하나씩 띄우고 각 컨테이너에서 `cat /proc/1/oom_score_adj`를 읽습니다. Burstable 값은 노드 메모리 용량(`kubectl get node -o jsonpath='{.status.capacity.memory}'`)으로 직접 계산한 값과 비교합니다.
 - 노드에서 `cat /proc/$(pidof kubelet)/oom_score_adj`, `cat /proc/$(pidof containerd)/oom_score_adj`, `cat /proc/1/oom_score_adj`를 읽습니다.
 
+kind 실측(노드 메모리 용량 10161128Ki)은 이랬습니다. BestEffort 컨테이너 1000, memory request가 없는 Burstable 컨테이너 999, memory request 64Mi인 Burstable 컨테이너 994, Guaranteed 컨테이너 -997이었습니다. 64Mi는 1000 - (1000 × 67108864) / 10404995072 = 1000 - 6 = 994로 공식과 같습니다. kubelet, containerd, kube-proxy 컨테이너는 -999, pause 컨테이너는 -998, 노드 컨테이너의 PID 1(systemd)은 0이었습니다.
+
 ## 7. 사례: JVM 서비스의 OOMKilled 포스트모템
 
 ### 7-1. 무엇이 일어났나
@@ -523,7 +540,7 @@ OOMKilled를 조사할 때 힙 그래프로 시작하면 이 사례처럼 "힙�
 
 ## 8. kind로 해 보는 과제
 
-이 장의 명령은 kind 클러스터에서 실행하는 것을 전제로 적었습니다. 여기 적은 출력은 쿠버네티스 문서의 예시 형식이고 이 글을 쓰면서 실행한 결과는 아닙니다.
+이 장의 명령은 2026-10-20에 kind v0.33(노드 v1.37.0, colima VM 커널 6.8.0-117-generic, arm64)에서 그대로 돌렸습니다. 각 절 끝에 실측 결과를 붙였습니다.
 
 ### 8-1. limit 128Mi 컨테이너에 200M 할당
 
@@ -564,7 +581,9 @@ docker exec kind-control-plane dmesg | grep -i -A2 'memory cgroup out of memory'
 - 로그 끝의 `oom_score_adj` 값이 6-2 공식으로 계산한 값과 같은지
 - 컨테이너가 살아 있는 짧은 순간에 `kubectl exec`로 `memory.max`(134217728)와 `memory.events`를 읽을 수 있는지
 
-kind 노드는 호스트 커널을 함께 씁니다. macOS의 Docker Desktop이라면 그 커널은 Docker가 띄운 리눅스 VM의 것이고 `dmesg`에는 그 VM의 다른 컨테이너 기록도 섞여 나옵니다.
+kind 노드는 호스트 커널을 함께 씁니다. macOS의 Docker Desktop이나 colima라면 그 커널은 리눅스 VM의 것이고 `dmesg`에는 그 VM의 다른 컨테이너 기록도 섞여 나옵니다. colima에서는 `colima ssh -- sudo dmesg`로도 같은 로그를 봅니다.
+
+kind 실측에서 앞의 네 항목은 확인했고 다섯 번째(`kubectl exec`로 읽기)는 컨테이너가 1초 남짓 살아 있어 하지 못했습니다. 그 대신 노드에서 파드 slice의 파일을 읽었습니다. 재시작 간격은 3-5에 적은 대로 이미지 다시 받기 시간이 더해졌습니다. 46초 뒤 `RESTARTS 2`, `Last State`는 `OOMKilled`와 `exitCode 137`이었고 커널 로그는 3-3에 옮긴 그대로였습니다. `oom_memcg`는 파드 slice로 찍혔고 그 이유는 3-3에 적었습니다. 파드 slice의 `memory.events`는 `max 180`, `oom 4`, `oom_kill 12`, `oom_group_kill 4`였습니다. `oom_kill`이 재시작 수보다 큰 것은 `memory.oom.group` 때문에 한 번에 stress 프로세스 여러 개가 함께 죽어서입니다.
 
 ### 8-2. cpu limit 50m에서 cpu.stat 관찰
 
@@ -600,6 +619,18 @@ kubectl exec -n shop throttle-lab -- cat /proc/1/oom_score_adj                 #
 ```
 
 무한 루프는 모든 주기에서 5ms를 다 쓰고 95ms를 기다리므로 10초 동안 `nr_periods`와 `nr_throttled`가 거의 같은 폭(약 100)으로 늘고 `throttled_usec`는 약 9,500,000 늘어날 것으로 예상됩니다. 실제 값을 이 예상과 비교하고 차이가 나면 그 이유를 적어 봅니다. `cpu.weight`는 50m → 51 shares를 노드 런타임의 변환식에 넣은 값과 비교합니다.
+
+kind 실측 결과입니다. QoS는 `Guaranteed`, `cpu.max`는 `5000 100000`, `cpu.weight`는 11(새 식 값. 옛 식이면 2), `oom_score_adj`는 -997이었습니다. 두 번의 `cpu.stat` 사이에 `kubectl exec` 왕복 시간이 더해져 실제 간격은 약 15초였습니다.
+
+```text
+                 첫 번째      두 번째      차이
+usage_usec       2853795      3599328      745533
+nr_periods       569          720          151
+nr_throttled     541          685          144
+throttled_usec   32648605     42534916     9886311
+```
+
+주기당 사용량은 745533 / 151 ≈ 4.9ms로 quota 5ms와 맞고 151개 주기 중 144개(95%)가 스로틀됐습니다. 스로틀된 주기 하나당 `throttled_usec`는 약 68.7ms로 예상한 95ms보다 짧았습니다. 이 차이의 원인은 확인하지 못했습니다.
 
 ## 확인 문제
 
@@ -669,13 +700,14 @@ Guaranteed 컨테이너와 메모리를 다툴 때 kubelet과 컨테이너 런�
 
 ## 범위와 한계
 
-- 이 글을 쓴 Mac에는 클러스터도 리눅스 노드도 없어서 어떤 명령도 실행하지 않았습니다. 출력 예시는 커널 문서와 쿠버네티스 문서의 형식을 따른 것이고 `cpu.stat`과 스로틀 비율 계산에 쓴 숫자는 가상의 값입니다. 8장의 기대값도 계산으로 얻은 예상입니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, Ubuntu 24.04.4, containerd 2.3.4, runc 1.4.3)에서 돌린 것: 2장의 cgroup 파일 값(`cpu.max`, `cpu.weight`, `memory.max`, `memory.oom.group`)과 계층별 weight, 3장의 `memory.stat`과 `dd`, 8-1 OOM 과제 전체(커널 로그, `memory.events`, 재시작 간격), 8-2 스로틀 과제, 6장의 QoS별 `oom_score_adj`, kubelet `configz`의 `evictionHard`. 5-3의 스로틀 비율 계산에 쓴 숫자는 설명용 가상 값이고 8-2의 실측과 다릅니다.
+- 돌리지 못한 것: kind에는 metrics-server가 없어 `kubectl top`과 working set 비교(4장 과제)는 하지 않았습니다. 노드 전체 OOM과 eviction 재현, MemoryQoS, in-place resize 거부는 돌리지 않았습니다. kind 노드는 컨테이너라 cgroup 경로 앞에 `/docker/<id>/`와 `kubelet.slice`가 붙고 eviction 임계값도 일반 노드와 다릅니다.
 - 버전 기준은 쿠버네티스 1.35~1.37, 리눅스 커널 6.x, cgroup v2 노드입니다. cgroup v1 노드는 파일 이름과 동작이 다릅니다.
 - `cpu.weight` 변환은 노드의 runc나 crun 버전에 따라 다릅니다. 새 식으로 1 CPU를 계산하면 정확히 100이 나오는데 쿠버네티스 블로그 표에는 102로 적혀 있습니다. 이 차이의 이유는 확인하지 못했습니다.
 - MemoryQoS와 `memoryReservationPolicy`의 동작은 1.36 블로그와 KEP-2570 기준입니다. 알파 기능이라 이후 버전에서 이름이나 기본값이 바뀔 수 있습니다.
 - 노드 전체 OOM으로 컨테이너 프로세스가 죽었을 때도 런타임이 `OOMKilled`로 보고할 수 있다고 적은 부분은 커널이 희생자의 memcg에 `oom_kill` 이벤트를 남긴다는 점에서 추론한 것입니다. containerd 버전별 동작을 직접 확인하지는 않았습니다.
 - `kubepods.slice`에 걸리는 한도의 정확한 계산식(kube-reserved, system-reserved, eviction 임계값 중 무엇을 빼는지)은 이 글에서 다루지 않았습니다. Node Allocatable 문서를 따로 확인해야 합니다.
-- kind 노드 안의 cgroup 상위 경로는 kind 버전에 따라 달라서 2-6의 트리와 정확히 같지 않을 수 있습니다.
+- kind v0.33 노드 안의 cgroup 상위 경로는 `kubelet.slice/kubelet-kubepods.slice`라 2-6의 트리(kubeadm 노드 기준)와 이름이 다릅니다.
 - Endowus 사례는 원문의 숫자와 결론만 옮겼습니다. 원문이 쓴 JVM 버전, 노드 사양, 조치 전후의 OOMKill 횟수는 이 글에 넣지 않았습니다.
 
 ## 참고 자료

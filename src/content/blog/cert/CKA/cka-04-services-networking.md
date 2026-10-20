@@ -140,7 +140,7 @@ Pod IP를 어디서 받는지는 설정 파일의 `ipam` 블록이 정합니다.
 | `ipam.type` | IP를 나눠 줄 IPAM 플러그인. `host-local`은 노드 파일시스템에 할당 상태를 저장해 그 노드 안에서만 중복을 막는다 |
 | `ranges` | 주소 풀 목록의 목록. 바깥 배열 길이만큼 IP를 받는다(IPv4 하나, IPv6 하나면 두 개) |
 | `subnet` | 필수. 이 CIDR에서 할당한다. `rangeStart`를 생략하면 `.2`부터, `gateway`를 생략하면 `.1` |
-| 할당 기록 | `/var/lib/cni/networks/<네트워크 이름>`에 IP별 파일로 남는다(`dataDir`로 변경 가능) |
+| 할당 기록 | `/var/lib/cni/networks/<네트워크 이름>`에 IP별 파일로 남는다(`dataDir`로 변경 가능. kind의 kindnet은 `/run/cni-ipam-state`) |
 
 `ranges` 없이 `subnet`을 `ipam` 바로 아래에 두는 옛 형식도 문서상 아직 동작하지만 사용 중단입니다. 노드마다 `subnet`이 그 노드의 `spec.podCIDR`(1-5절)과 맞아야 Pod IP가 노드 대역 안에서 나옵니다. Flannel이나 Calico 같은 플러그인은 설치될 때 자기 설정 파일을 직접 써 넣습니다. 그래서 이 블록은 손으로 쓰기보다 Pod IP가 엉뚱한 대역에서 나올 때 읽어 보는 용도에 가깝습니다.
 
@@ -150,6 +150,15 @@ CNI 문제는 증상이 둘로 나타납니다.
 |---|---|
 | 노드가 `NotReady` | `kubectl describe node`의 Ready 조건 메시지에 `container runtime network not ready`가 들어간다(kubelet 소스의 문구) |
 | Pod가 `ContainerCreating`에서 멈춤 | `kubectl describe pod`의 이벤트 사유 `FailedCreatePodSandBox` |
+
+kind v1.37.0 워커에서 두 경우를 일부러 만들어 본 결과입니다(kindnet, ptp 플러그인).
+
+| 만든 상황 | 노드 | Pod |
+|---|---|---|
+| `/etc/cni/net.d`의 설정 파일을 치움 | `NotReady`. Ready 조건 메시지 `container runtime network not ready: NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized`, `node.kubernetes.io/not-ready` taint | 이벤트 사유 `NetworkNotReady` |
+| `/opt/cni/bin/ptp`만 치움 | `Ready` 유지 | `FailedCreatePodSandBox ... plugin type="ptp" failed (add): failed to find plugin "ptp" in path [/opt/cni/bin]` |
+
+설정 파일이 없으면 노드 증상으로, 바이너리가 없으면 Pod 증상으로 나타났습니다. 설정 파일을 `mv`로 되돌렸을 때는 containerd가 바로 다시 읽지 않았고 파일 내용을 다시 써야 반영됐습니다(1회 관찰). 되돌린 뒤 노드가 Ready로 안 돌아오면 파일을 다시 저장해 봅니다.
 
 두 경우 모두 노드에 들어가 `ls /etc/cni/net.d /opt/cni/bin`으로 파일을 보고 `journalctl -u containerd`(CRI-O면 `-u crio`)와 `journalctl -u kubelet`을 같이 읽습니다. CNI를 직접 실행하는 런타임 쪽 로그가 원인을 더 구체적으로 적는 경우가 많습니다. "cni failed to set up pod"로 시작하는 옛 이벤트 문구는 dockershim 시절 것이라 지금 런타임에서는 모양이 다릅니다.
 
@@ -188,14 +197,14 @@ kubectl -n shop get pod -o wide            # Pod IP와 노드 확인
 kubectl -n shop run tmp --rm -it --restart=Never --image=busybox -- wget -qO- -T 2 10.244.1.23:8080
 ```
 
-`-T 2`는 busybox `wget`의 타임아웃입니다. 막힌 연결은 응답 없이 기다리기만 할 수 있으므로 타임아웃을 주지 않으면 시험 시간을 잃습니다.
+kind v0.33(colima, arm64)에서 `registry.k8s.io/busybox:1.27.2`는 amd64 전용 이미지라 x86_64 에뮬레이션으로 돌았습니다. 동작에는 문제가 없었지만 arm64 노드에서는 `busybox:1.36`이 빠릅니다. `-T 2`는 busybox `wget`의 타임아웃입니다. 막힌 연결은 응답 없이 기다리기만 할 수 있으므로 타임아웃을 주지 않으면 시험 시간을 잃습니다.
 
 | 확인할 것 | 명령 |
 |---|---|
 | Pod IP, 올라간 노드 | `kubectl get pod -o wide` |
 | 같은 노드 Pod끼리만 되는지 | 다른 노드에 있는 두 Pod로 각각 시험 |
 | CNI 플러그인 Pod 상태 | `kubectl -n kube-system get pod -o wide` (플러그인 DaemonSet이 모든 노드에서 Running인지) |
-| 노드 조건 | `kubectl describe node <노드>`의 `NetworkUnavailable` 조건 |
+| 노드 조건 | `kubectl describe node <노드>`의 Ready 조건 메시지와 `NetworkUnavailable` 조건(이 조건은 CNI가 만들 때만 있음. kind의 kindnet은 만들지 않음) |
 | 노드의 인터페이스와 주소 | 노드에서 `ip addr` (어느 인터페이스가 노드 IP를 가졌는지, CNI가 만든 브리지나 터널 장치가 있는지) |
 | 노드의 라우트 표 | 노드에서 `ip route` (`default via`가 기본 게이트웨이, 다른 노드의 Pod 대역이 어느 장치나 게이트웨이로 가는지) |
 | IP 포워딩 | 노드에서 `sysctl net.ipv4.ip_forward`가 1인지 |
@@ -370,7 +379,9 @@ spec:
 
 1. `shop` 네임스페이스에 Default deny all ingress를 적용하고 임시 Pod에서 `order-api`로 요청해 타임아웃이 나는지 봅니다.
 2. `app=board` Pod에서는 `order-api`의 80번으로 들어올 수 있게 정책을 하나 더 만들고 같은 요청을 `board` 라벨을 붙인 임시 Pod(`kubectl run tmp --labels=app=board ...`)와 라벨 없는 임시 Pod에서 각각 보내 결과를 비교합니다.
-3. 2-4의 Egress 정책에서 DNS 항목을 지운 뒤 `order-api` Pod 안에서 `nslookup payment`가 실패하는지 확인하고 되돌립니다.
+3. 2-4의 Egress 정책에서 DNS 항목을 지운 뒤 `order-api` Pod 안에서 `getent hosts payment`가 실패하는지 확인하고 되돌립니다. nginx 이미지에는 `nslookup`이 없어 `executable file not found`가 납니다.
+
+kind v1.37.0(kindnet은 NetworkPolicy를 집행함)에서 세 과제를 돌린 결과는 기대와 같았습니다. 1번은 타임아웃, 2번은 `app=board` 임시 Pod만 응답을 받았습니다. 3번은 DNS 허용을 지우자 `getent hosts payment`가 약 40초 뒤 종료 코드 2로 실패했고 되돌리자 바로 풀렸습니다.
 
 ## 3. ClusterIP, NodePort, LoadBalancer와 엔드포인트
 
@@ -402,7 +413,7 @@ Service 문서의 정의는 "하나 이상의 Pod로 실행되는 네트워크 �
 
 `type` 필드는 앞 단계 위에 기능을 더하는 중첩 구조라고 문서는 설명합니다. NodePort는 ClusterIP를 포함하고 LoadBalancer는 보통 NodePort를 포함합니다. 예외는 `spec.allocateLoadBalancerNodePorts: false`로 노드 포트 할당을 끈 LoadBalancer입니다.
 
-LoadBalancer Service를 만들 수 있는 클라우드가 없는 클러스터(kubeadm으로 만든 연습 클러스터 같은 곳)에서는 외부 IP가 채워지지 않고 `<pending>`으로 남는 것으로 알려져 있습니다. 이 출력은 문서에서 확인하지 못했고 문서는 LB 생성이 비동기로 일어나며 결과가 `.status.loadBalancer`에 기록된다고만 적습니다.
+LoadBalancer Service를 만들 수 있는 클라우드가 없는 클러스터(kubeadm으로 만든 연습 클러스터 같은 곳)에서는 외부 IP가 채워지지 않고 `<pending>`으로 남습니다. LB 컨트롤러가 없는 kind v1.37.0에서 실제로 `EXTERNAL-IP <pending>`으로 남는 것을 확인했습니다. 문서는 LB 생성이 비동기로 일어나며 결과가 `.status.loadBalancer`에 기록된다고 적습니다.
 
 ### 3-4. 명령으로 만들기
 
@@ -439,14 +450,14 @@ EndpointSlice는 Service 뒤 엔드포인트의 일부(slice)를 담는 객체�
 kubectl -n shop get endpointslices -l kubernetes.io/service-name=order-api
 ```
 
-Debug Services 문서에 실린 출력 모양은 아래와 같습니다(문서 예시이고 이 글에서 실행한 결과는 아닙니다).
+Debug Services 문서에 실린 출력 모양은 아래와 같습니다(문서 예시).
 
 ```
 NAME              ADDRESSTYPE   PORTS   ENDPOINTS
 hostnames-ytpni   IPv4          9376    10.244.0.5,10.244.0.6,10.244.0.7
 ```
 
-ENDPOINTS가 `<none>`이면 Service의 `spec.selector`가 Pod의 `metadata.labels`를 실제로 고르는지 확인하라고 같은 문서는 적습니다. selector는 맞는데 비어 있다면 Pod가 Ready가 아닌지 봅니다. `ready` 조건은 Pod의 Ready 조건에 대응하므로 readiness probe가 실패하는 Pod는 트래픽을 받지 않습니다.
+고르는 Pod가 없으면 kubectl v1.37 기준으로 EndpointSlice의 ENDPOINTS와 PORTS 열이 `<unset>`으로 나옵니다(kind 실측). 옛 `kubectl get endpoints`는 `<none>`으로 보이고 `Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice` 경고가 함께 붙습니다. 엔드포인트가 비면 Service의 `spec.selector`가 Pod의 `metadata.labels`를 실제로 고르는지 확인하라고 같은 문서는 적습니다. selector는 맞는데 비어 있다면 Pod가 Ready가 아닌지 봅니다. `ready` 조건은 Pod의 Ready 조건에 대응하므로 readiness probe가 실패하는 Pod는 트래픽을 받지 않습니다.
 
 ### 3-6. selector 없는 Service
 
@@ -503,8 +514,10 @@ endpoints:
 ### 3-9. 직접 해 보기
 
 1. `order-api` Deployment를 ClusterIP Service로 노출하고 `kubectl get endpointslices`로 Pod 수만큼 IP가 있는지 확인합니다.
-2. Deployment의 Pod 템플릿 라벨을 `app=order-api-v2`로 바꿔 ENDPOINTS가 비는 것을 관찰하고 Service selector를 고쳐 되돌립니다.
-3. `board`를 NodePort 30080으로 노출하고 노드 IP와 30080으로 접속해 봅니다.
+2. `kubectl -n shop set selector svc order-api app=order-api-v2`로 Service selector를 아무 Pod도 고르지 않게 바꿔 ENDPOINTS가 비는 것을 관찰하고 `app=order-api`로 되돌립니다. Deployment의 Pod 템플릿 라벨만 바꾸면 Deployment 쪽 selector와 어긋나 `` `selector` does not match template `labels` ``로 거부됩니다(apps/v1의 Deployment selector는 바꿀 수 없음).
+3. `board`를 NodePort 30080으로 노출하고 노드 IP와 30080으로 접속해 봅니다. kind on Mac에서는 Mac에서 노드 IP(172.18.0.x)로 바로 닿지 않으니 `docker exec <노드 컨테이너> curl -s <노드IP>:30080`처럼 노드 컨테이너 안에서 보내거나 클러스터를 만들 때 `extraPortMappings`로 포트를 엽니다.
+
+kind 실측에서 1번과 2번은 기대대로였고 2번에서 EndpointSlice가 `<unset>`이 됐습니다. 3번은 세 노드 IP 모두에서 응답했습니다. `externalTrafficPolicy: Local`인 NodePort(예: Envoy Gateway가 만든 Service)는 Pod가 있는 노드에서만 응답하니 다른 노드에서 안 되면 이 값을 먼저 봅니다. 범위 밖 nodePort(29999)는 `provided port is not in the valid range. The range of valid ports is 30000-32767`로 거부됐습니다.
 
 ## 4. Gateway API로 Ingress 트래픽 관리
 
@@ -784,6 +797,8 @@ kubectl get referencegrant -A
 3. 4-4의 가중치 Route를 만들고 같은 요청을 100번 보내 v2 응답 비율을 셉니다.
 4. 4-6의 헤더 매칭 Route를 적용하고 `curl -H "x-canary: true"` 유무로 응답이 갈리는지, ReferenceGrant를 지웠을 때 `ResolvedRefs`가 어떻게 바뀌는지 봅니다.
 
+kind v1.37.0에 Gateway API v1.6.1 표준 CRD와 Envoy Gateway v1.9.2(GatewayClass `eg`)를 설치해 돌린 결과입니다. kind에는 LB가 없어 Gateway는 `Programmed=False`(`AddressNotAssigned`)로 남았지만 Envoy의 NodePort로 보낸 요청은 라우팅됐습니다. 4-3의 Route로 `/orders`를 그대로 nginx에 넘기면 nginx가 404를 돌려주므로 백엔드에 `/orders` 경로가 없으면 4-6의 `URLRewrite`로 경로를 바꿔야 합니다. 가중치 90:10은 201회 중 v1 182회, v2 19회였습니다. 헤더 매칭은 5회씩 보내 모두 갈렸습니다. ReferenceGrant가 없을 때 `ResolvedRefs=False`(`RefNotPermitted`), 만들자 `True`가 됐습니다. CRD가 없는 클러스터에서 `kubectl get gateway`는 `the server doesn't have a resource type "gateway"`를 냅니다.
+
 ## 5. Ingress 컨트롤러와 Ingress 리소스
 
 ### 5-1. 현재 위치
@@ -959,6 +974,8 @@ spec:
 2. 5-4의 첫 명령으로 Ingress를 만들고 `curl -H "Host: shop.example.com" http://<컨트롤러 주소>/orders/123`이 주문 API로 가는지 확인합니다.
 3. 같은 Ingress를 4절의 Gateway와 HTTPRoute로 옮겨 보고 두 YAML의 줄 수와 위치를 비교합니다.
 
+kind에 ingress-nginx v1.15.1의 kind용 매니페스트를 설치해 돌렸습니다(컨트롤러가 control-plane 노드의 hostPort 80을 씀). 기본 IngressClass 어노테이션은 Ingress를 만들 때 `ingressClassName`을 채워 줬고 Ingress의 ADDRESS는 약 20초 뒤 `localhost`로 채워졌습니다. `pathType`은 `*`가 있으면 `Prefix`, 없으면 `Exact`였고 5-6의 rewrite-target 예제에서 `/orders/123` 요청이 백엔드에 `/123`으로 도착했습니다.
+
 ## 6. CoreDNS
 
 ### 6-1. 어떻게 붙어 있나
@@ -974,7 +991,7 @@ Customizing DNS Service 문서 기준으로 정리합니다.
 | Pod가 DNS 서버를 아는 방법 | kubelet의 `--cluster-dns=<DNS Service IP>`가 각 컨테이너에 전달 |
 | 클러스터 도메인 | kubelet의 `--cluster-domain=<도메인>`. 문서 예시는 `cluster.local` |
 
-kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일(`/var/lib/kubelet/config.yaml`)에 들어갑니다(Configuring each kubelet in your cluster using kubeadm). 파일 안의 필드 이름은 이번에 확인하지 않았습니다.
+kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일(`/var/lib/kubelet/config.yaml`)에 들어갑니다(Configuring each kubelet in your cluster using kubeadm). kind v1.37.0 노드에서 본 필드 이름은 `clusterDNS`(목록, 값 `10.96.0.10`)와 `clusterDomain`(`cluster.local`)이었습니다.
 
 ### 6-2. 무엇이 어떤 이름을 받나
 
@@ -1018,7 +1035,7 @@ Pod는 대개 Ready여야 DNS 레코드를 받습니다. Service에 `publishNotR
 
 ### 6-4. 기본 Corefile 읽기
 
-Customizing DNS Service 문서에 실린 기본 Corefile입니다.
+Customizing DNS Service 문서에 실린 기본 Corefile입니다. kubeadm 1.37이 실제로 만든 Corefile(kind v1.37.0에서 확인)은 두 곳이 다릅니다. `forward . /etc/resolv.conf { max_concurrent 1000 }`처럼 동시 질의 상한이 붙고 `cache 30` 블록 안에 `disable success cluster.local`과 `disable denial cluster.local`이 들어가 클러스터 도메인 응답은 캐시하지 않습니다.
 
 ```
 .:53 {
@@ -1051,7 +1068,7 @@ Customizing DNS Service 문서에 실린 기본 Corefile입니다.
 | `forward` | 클러스터 도메인 밖의 질의를 `/etc/resolv.conf`의 리졸버로 |
 | `cache` | 프런트엔드 캐시 |
 | `loop` | 단순 전달 루프를 감지하면 CoreDNS 프로세스를 멈춘다 |
-| `reload` | Corefile이 바뀌면 자동 재적재. ConfigMap 수정 후 반영까지 2분 정도 |
+| `reload` | Corefile이 바뀌면 자동 재적재. ConfigMap 수정 후 반영까지 2분 정도(kind에서 `log` 추가 후 1회 측정 시 약 45초) |
 | `loadbalance` | A, AAAA, MX 응답 순서를 무작위로 |
 
 coredns.io의 kubernetes 플러그인 문서는 `fallthrough`를 이렇게 설명합니다. 원래 플러그인 영역의 질의가 NXDOMAIN이면 그 응답이 최종이지만 `fallthrough`가 있으면 다음 플러그인으로 넘깁니다. 같은 문서는 `pods`의 기본값이 `disabled`이고 `insecure`는 요청의 IP로 확인 없이 A 레코드를 돌려준다고 적습니다.
@@ -1103,6 +1120,8 @@ Debugging DNS Resolution 문서의 순서를 그대로 따릅니다.
 2. `coredns` ConfigMap에 `log`를 추가하고 같은 질의가 로그에 찍히는지 확인한 뒤 되돌립니다.
 3. `order-api`를 headless Service(`clusterIP: None`)로 하나 더 만들고 `nslookup` 결과가 Pod IP 여러 개로 나오는지 봅니다.
 4. `coredns` ConfigMap에서 `pods` 줄을 확인하고 `dnsutils` Pod에서 `nslookup <a-b-c-d>.shop.pod.cluster.local`(존재하는 Pod IP와 존재하지 않는 IP 각각)이 어떻게 응답하는지 봅니다.
+
+kind v1.37.0에서 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3` Pod로 돌린 결과입니다. 1번은 default 네임스페이스의 Pod에서 `order-api.shop`과 FQDN은 풀리고 `order-api`만 NXDOMAIN이었습니다. search 목록이 `default.svc.cluster.local`부터 붙기 때문입니다. 2번은 `log`를 넣은 뒤 약 45초 뒤부터 질의가 로그에 찍혔고 ndots 때문에 search 도메인을 붙인 질의가 먼저 나가는 것도 보였습니다. 3번은 Pod IP 두 개가 나왔습니다. 4번은 `pods insecure`라서 존재하지 않는 IP의 이름에도 그 IP로 A 레코드가 돌아왔습니다. `busybox:1.36`의 `nslookup`은 search 처리 탓에 `order-api.shop`도 NXDOMAIN으로 보였으니 dnsutils 이미지를 씁니다.
 
 ## 7. 확인 문제
 
@@ -1271,13 +1290,14 @@ kubectl create ingress a --rule="shop.example.com/cart=cart:80" --rule="shop.exa
 
 ## 8. 범위와 한계
 
-- 이 글의 명령과 YAML은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 모두 kubernetes.io 문서에 실린 것이고 그렇게 표시했습니다. 연습 클러스터를 만든 뒤 2-7, 3-9 같은 과제를 실제로 해 보고 결과를 덧붙이겠습니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, CNI kindnet, kube-proxy iptables 모드, Service CIDR 10.96.0.0/16)에서 1-4의 CNI 고장 재현, 1-8, 2장 정책과 2-7, 확인 문제 풀이, 3장 Service 타입과 3-9, selector 없는 Service와 EndpointSlice, 4장 Gateway API(v1.6.1 CRD, Envoy Gateway v1.9.2), 5장 Ingress(ingress-nginx v1.15.1 kind용 매니페스트), 6장 CoreDNS 과제를 돌렸습니다. 결과는 각 "직접 해 보기" 아래에 적었습니다. 출력 예시 가운데 "문서 예시"로 표시한 것은 kubernetes.io 문서의 것입니다.
+- 돌리지 못한 것: 클라우드 LB가 실제로 주소를 채우는 동작, Flannel이나 Calico 설치, Weave Net, CoreDNS `loop` 오류 재현. kind는 노드가 컨테이너라 노드 IP가 Mac에서 바로 닿지 않고 Gateway에 주소가 할당되지 않습니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 사이트에 게시된 현재 버전과 같은 내용이지만 시험 기준 버전(v1.37)과 문서 버전이 어긋나는 항목이 있을 수 있습니다.
-- `kubectl create ingress`에서 `*` 유무에 따른 `pathType`은 레퍼런스 예시 주석으로만 확인했습니다.
-- LoadBalancer Service의 `<pending>` 표시, CoreDNS `loop` 오류가 생기는 구체적인 노드 설정은 문서 본문으로 확인하지 못한 항목입니다.
+- `kubectl create ingress`에서 `*` 유무에 따른 `pathType`은 kind에서 `Prefix`와 `Exact`로 확인했습니다.
+- LoadBalancer Service의 `<pending>` 표시는 kind에서 확인했습니다. CoreDNS `loop` 오류가 생기는 구체적인 노드 설정은 확인하지 못했습니다.
 - 시험 환경에 깔린 Ingress 컨트롤러와 Gateway API 구현체, CNI 플러그인 종류는 공식 문서에 없습니다. Weave Net이 시험 환경에서 다른 플러그인으로 바뀌었는지도 공식 자료로 확인하지 못했습니다.
 - Flannel 단독 구성이 NetworkPolicy를 집행하지 않는다는 것은 널리 알려진 내용으로만 적었고 Flannel 문서로 확인하지 않았습니다.
-- kube-proxy의 `/proxyMode` 경로는 kubernetes.io 문서에 없어서 kube-proxy 소스로 확인했습니다. containerd가 `/etc/cni/net.d`의 파일을 이름 순으로 정렬해 읽는다는 부분은 containerd 설정 문서의 `max_conf_num` 설명과 libcni 동작을 근거로 했고 실행해 보지 않았습니다. `ContainerCreating` 때 런타임 로그에 찍히는 정확한 문구는 확인하지 못했습니다.
+- kube-proxy의 `/proxyMode` 경로는 kubernetes.io 문서에 없어서 kube-proxy 소스로 확인했습니다. containerd가 `/etc/cni/net.d`의 파일을 이름 순으로 정렬해 읽는다는 부분은 containerd 설정 문서의 `max_conf_num` 설명과 libcni 동작을 근거로 했고 파일을 여러 개 두는 실험은 하지 않았습니다. CNI 바이너리가 없을 때의 Pod 이벤트 문구는 1-4에 kind 실측으로 적었습니다.
 - ingress-nginx 저장소의 보관 상태와 Weave Net의 마지막 릴리스는 2026년 10월 20일 GitHub API 응답 기준입니다.
 - Gateway API는 v1.6.1 설치 명령 기준이고 HTTPRoute 규칙은 저장소 main 브랜치의 타입 정의 주석으로 확인했습니다. 구현체마다 지원 범위(Extended 기능)가 다릅니다.
 

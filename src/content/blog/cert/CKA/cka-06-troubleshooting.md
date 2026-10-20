@@ -141,7 +141,7 @@ Node Status 문서의 조건 표입니다.
 
 하트비트는 두 형태입니다. kubelet이 Node의 `.status`를 갱신하는 것과 `kube-node-lease` 네임스페이스의 Lease 객체를 갱신하는 것입니다. 문서 기준 Lease 갱신 간격은 기본 10초이고 `.status`는 변화가 없으면 기본 5분마다 갱신합니다. `Ready`가 `node-monitor-grace-period`보다 오래 `Unknown`이나 `False`이면 노드에 `node.kubernetes.io/unreachable` 또는 `node.kubernetes.io/not-ready` 테인트가 붙습니다. Troubleshooting Clusters 문서의 예시는 NotReady가 5분 지속된 뒤 Pod가 축출(evict)되는 모습을 보여 줍니다.
 
-같은 문서에 실린 kubelet이 멈춘 노드의 `describe` 출력 일부입니다(문서 예시이고 이 글에서 실행한 결과는 아닙니다).
+같은 문서에 실린 kubelet이 멈춘 노드의 `describe` 출력 일부입니다. kind v1.37.0 워커에서 kubelet을 멈췄을 때도 같은 테인트 두 줄과 `Kubelet stopped posting node status.`가 찍혔습니다.
 
 ```
 Taints:             node.kubernetes.io/unreachable:NoExecute
@@ -158,7 +158,7 @@ Taints:             node.kubernetes.io/unreachable:NoExecute
 kubectl -n kube-node-lease get lease <노드> -o jsonpath='{.spec.renewTime}{"\n"}'
 ```
 
-Node Status 문서의 조건 목록은 위 표의 다섯 가지입니다. 오래된 자료에 나오는 `OutOfDisk` 조건은 지금 목록에 없고 디스크 부족은 `DiskPressure`로 봅니다.
+Node Status 문서의 조건 목록은 위 표의 다섯 가지입니다. kind 노드(kindnet)에는 `NetworkUnavailable`이 없고 나머지 넷만 보였습니다. 이 조건은 그것을 설정하는 구성요소(클라우드 라우트 컨트롤러나 일부 CNI)가 있을 때만 보입니다. 오래된 자료에 나오는 `OutOfDisk` 조건은 지금 목록에 없고 디스크 부족은 `DiskPressure`로 봅니다.
 
 ### 1-3. 노드 안에서 볼 것
 
@@ -184,13 +184,13 @@ kubeadm이 kubelet에 넘기는 파일 위치는 Configuring each kubelet in you
 | `/var/lib/kubelet/kubeadm-flags.env` | `kubeadm init`, `join`이 생성하는 `KUBELET_KUBEADM_ARGS` |
 | `/etc/default/kubelet`(DEB), `/etc/sysconfig/kubelet`(RPM) | 사용자 재정의 `KUBELET_EXTRA_ARGS`. 충돌 시 가장 높은 우선순위 |
 
-drop-in 파일 자체의 경로는 설치 방법마다 다르고 문서도 예시라고 밝힙니다. 실제 위치는 `systemctl cat kubelet`으로 확인합니다. 이 명령은 systemd의 일반 기능이며 쿠버네티스 문서에서 본 것은 아닙니다.
+drop-in 파일 자체의 경로는 설치 방법마다 다르고 문서도 예시라고 밝힙니다. 실제 위치는 `systemctl cat kubelet`으로 확인합니다. 이 명령은 systemd의 일반 기능이며 쿠버네티스 문서에서 본 것은 아닙니다. kind 노드에서는 `/etc/systemd/system/kubelet.service.d/` 아래 `10-kubeadm.conf`와 kind가 더한 `11-kind.conf` 두 파일이 보였습니다.
 
 kubelet 로그에서 원인을 찾았다면 고치는 대상은 대개 위 파일 중 하나입니다. 예를 들어 설정 파일의 경로를 잘못 바꿨거나, kubeconfig가 가리키는 인증서가 없거나, 컨테이너 런타임 소켓 주소가 틀린 경우입니다. 고친 뒤에는 `systemctl daemon-reload`(drop-in을 고쳤을 때)와 `systemctl restart kubelet`을 하고 `kubectl get nodes`로 Ready를 확인합니다.
 
 ### 1-4. kubelet 설정 파일 오류와 인증서 만료
 
-`systemctl status kubelet`이 `activating (auto-restart)`나 `failed`를 반복하면 kubelet이 시작 단계에서 죽고 있는 것입니다. 노드 안에서 볼 순서를 표로 정리했습니다. 명령은 노드에서 `sudo`로 실행합니다.
+`systemctl status kubelet`이 `activating (auto-restart)`나 `failed`를 반복하면 kubelet이 시작 단계에서 죽고 있는 것입니다. kind 워커에서 `config.yaml`의 들여쓰기를 망가뜨리자 상태가 `activating (auto-restart)`로 바뀌었고 `journalctl -u kubelet`에는 `"command failed" err="failed to load kubelet config file, path: /var/lib/kubelet/config.yaml, error: ... failed to decode: yaml: line 36: mapping values are not allowed in this context"` 줄이 2초 간격으로 반복됐습니다. 노드 안에서 볼 순서를 표로 정리했습니다. 명령은 노드에서 `sudo`로 실행합니다.
 
 | 순서 | 확인 | 명령 | 이상하면 |
 |---|---|---|---|
@@ -230,6 +230,8 @@ sudo kubeadm kubeconfig user --org system:nodes --client-name system:node:$NODE 
     client-key: /var/lib/kubelet/pki/kubelet-client-current.pem
 ```
 
+kind v1.37.0에서 이 절차를 워커 하나에 처음부터 끝까지 해 봤습니다. 컨트롤 플레인 노드에서 `kubeadm kubeconfig user`로 만든 파일을 워커로 옮기고 kubelet을 재시작하자 새 CSR이 생겨 자동 승인됐고 `kubelet-client-current.pem`이 다시 생겼습니다. 5번처럼 두 줄을 바꾸고 재시작한 뒤 노드는 `Ready`였습니다. 만든 파일의 `server`는 컨트롤 플레인 노드 IP였습니다. kind의 정상 `kubelet.conf`도 같은 노드 IP를 쓰므로 그대로 두었지만 실제 클러스터에서는 원래 `kubelet.conf`의 `server`와 클러스터 이름에 맞춰 고칩니다.
+
 kubelet 서빙 인증서는 별개입니다. kubeadm이 배포하는 서빙 인증서는 기본이 자체 서명이고 이것이 3-4절의 metrics-server `x509` 오류 원인입니다. `serverTLSBootstrap: true`로 클러스터 CA 서명 인증서를 받게 하면 그 CSR은 kube-controller-manager가 자동 승인하지 않아 `kubectl certificate approve`로 승인해야 한다고 같은 문서는 적습니다.
 
 ### 1-5. kubectl debug로 노드 들여다보기
@@ -240,7 +242,7 @@ ssh를 쓸 수 없는 환경이라면 Debug Running Pods 문서의 노드 디버
 kubectl debug node/<노드> -it --image=ubuntu
 ```
 
-문서가 적은 동작은 다음과 같습니다. 노드 이름으로 Pod 이름이 자동으로 정해지고 노드의 루트 파일시스템이 `/host`에 마운트되고 호스트의 IPC, 네트워크, PID 네임스페이스에서 돕니다. Pod가 특권(privileged)이 아니어서 일부 프로세스 정보 읽기나 `chroot /host`가 실패할 수 있고 필요하면 `--profile=sysadmin`을 씁니다. 끝나면 만든 디버그 Pod를 지웁니다.
+문서가 적은 동작은 다음과 같습니다. 노드 이름으로 Pod 이름이 자동으로 정해지고 노드의 루트 파일시스템이 `/host`에 마운트되고 호스트의 IPC, 네트워크, PID 네임스페이스에서 돕니다. Pod가 특권(privileged)이 아니어서 일부 프로세스 정보 읽기나 `chroot /host`가 실패할 수 있고 필요하면 `--profile=sysadmin`을 씁니다. 끝나면 만든 디버그 Pod를 지웁니다. kind v1.37.0 워커에서 `kubectl debug node/<노드>`로 띄운 Pod 안에서 `/host/var/lib/kubelet/config.yaml`을 읽을 수 있었고 4-4절의 `--target`, `--copy-to`도 같은 클러스터에서 동작했습니다.
 
 ### 1-6. 노드를 서비스에서 빼고 넣기
 
@@ -263,7 +265,7 @@ kubectl uncordon <노드>                       # 다시 배치 허용
 
 ### 1-8. 직접 해 보기
 
-1. 워커 노드에서 `sudo systemctl stop kubelet`을 하고 컨트롤 플레인에서 `kubectl get nodes -w`로 상태가 바뀌는 데 걸리는 시간을 잽니다. 문서의 기본값 50초와 비교합니다.
+1. 워커 노드에서 `sudo systemctl stop kubelet`을 하고 컨트롤 플레인에서 `kubectl get nodes -w`로 상태가 바뀌는 데 걸리는 시간을 잽니다. 문서의 기본값 50초와 비교합니다. kind v1.37.0에서는 멈춘 뒤 약 55초에 `Ready`가 `Unknown`이 되고 `unreachable` 테인트 두 개가 붙었습니다. 그 노드의 Deployment Pod는 약 356초(기본 톨러레이션 300초를 더한 시점)에 `Terminating`이 되고 대체 Pod가 생겼습니다.
 2. `/var/lib/kubelet/config.yaml`을 백업한 뒤 일부러 YAML 들여쓰기를 망가뜨리고 `journalctl -u kubelet`에서 오류 줄을 찾아 되돌립니다.
 3. 노드를 drain해서 쇼핑몰 Deployment의 Pod가 다른 노드로 옮겨지는지 보고 uncordon합니다.
 4. 워커 노드에서 1-4절 표 6번의 `openssl` 명령으로 kubelet 클라이언트 인증서의 subject, issuer, 만료일을 읽고 `ls -l /var/lib/kubelet/pki/`로 `kubelet-client-current.pem`이 어느 파일을 가리키는 링크인지 확인합니다. 컨트롤 플레인에서 `kubeadm certs check-expiration` 결과에 이 인증서가 없는 것도 함께 봅니다.
@@ -357,7 +359,7 @@ sudo ls /var/log/pods/ | grep kube-apiserver
 sudo tail -50 /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/*.log
 ```
 
-`/var/log/pods` 아래의 하위 디렉터리 이름 규칙(`<ns>_<pod>_<uid>/<컨테이너>/<번호>.log`)은 이번에 문서에서 확인하지 못했습니다. `ls`로 직접 찾아 들어갑니다.
+`/var/log/pods` 아래의 하위 디렉터리 이름 규칙은 문서에서 확인하지 못했지만 kind 노드에서는 `kube-system_kube-apiserver-<노드>_<uid>/kube-apiserver/0.log`처럼 `<ns>_<pod>_<uid>/<컨테이너>/<재시작 번호>.log`였습니다. `ls`로 직접 찾아 들어갑니다.
 
 ### 2-5. 매니페스트에서 자주 망가지는 곳
 
@@ -369,10 +371,10 @@ sudo tail -50 /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/*.log
 | 인증서와 키 경로(`--tls-cert-file`, `--etcd-cafile` 등) | 파일이 실제로 있는지, `volumeMounts`와 `hostPath`가 그 디렉터리를 마운트하는지 |
 | `--etcd-servers` | etcd의 주소와 포트 |
 | `image` | 태그 오타 |
-| YAML 문법 | 들여쓰기. 문법이 깨지면 kubelet이 Pod를 만들지 않으니 `journalctl -u kubelet`에 파싱 오류가 남는다 |
+| YAML 문법 | 들여쓰기. 문법이 깨지면 kubelet이 Pod를 만들지 않으니 `journalctl -u kubelet`에 파싱 오류가 남는다. kind에서는 `couldn't parse as pod(yaml: line 60: did not find expected '-' indicator)` 꼴이었다 |
 | `env`, `envFrom`, `volumes`, `serviceAccountName` | ServiceAccount, ConfigMap, Secret 같은 API 객체를 참조하는지. static Pod는 이런 참조를 쓸 수 없다 |
 
-static Pod는 API 서버를 거쳐 만들어지지 않으므로 API 객체를 읽을 수 없습니다(2-2절 표의 "제약"). v1.37 릴리스 글은 그동안 버그로 `configMapRef`, `secretRef` 참조가 통하던 것을 고쳐 1.37부터 완전히 금지했고 이를 풀던 `PreventStaticPodAPIReferences` 기능 게이트도 제거했다고 적습니다. 매니페스트를 고칠 때 설정값은 `command` 플래그나 `hostPath`로 마운트한 파일로 넣습니다.
+static Pod는 API 서버를 거쳐 만들어지지 않으므로 API 객체를 읽을 수 없습니다(2-2절 표의 "제약"). v1.37 릴리스 글은 그동안 버그로 `configMapRef`, `secretRef` 참조가 통하던 것을 고쳐 1.37부터 완전히 금지했고 이를 풀던 `PreventStaticPodAPIReferences` 기능 게이트도 제거했다고 적습니다. kind v1.37.0 워커에 `envFrom.configMapRef`를 쓴 static Pod를 넣자 mirror Pod가 생기지 않았고 kubelet 로그에 `Could not process manifest file" err="static pods may not reference configmaps"`가 남았습니다. 매니페스트를 고칠 때 설정값은 `command` 플래그나 `hostPath`로 마운트한 파일로 넣습니다.
 
 ### 2-6. 자주 틀리는 지점
 
@@ -386,6 +388,8 @@ static Pod는 API 서버를 거쳐 만들어지지 않으므로 API 객체를 �
 1. 연습 클러스터에서 kube-scheduler 매니페스트의 이미지 태그를 존재하지 않는 값으로 바꾸고 쇼핑몰 Deployment를 스케일해 새 Pod가 `Pending`에 머무는 것을 봅니다. 원인을 `crictl`과 `kubectl -n kube-system get pod`에서 찾아 되돌립니다.
 2. kube-apiserver 매니페스트의 `--etcd-servers` 포트를 바꾸고 `crictl ps -a`, `crictl logs`로 오류 문장을 찾아 되돌립니다. 백업은 `/etc/kubernetes/backup/`에 둡니다.
 3. `/etc/kubernetes/manifests`에 정적 웹 서버 Pod를 하나 만들고 `kubectl delete`로 mirror Pod를 지워 다시 나타나는지 봅니다.
+
+kind v1.37.0 컨트롤 플레인 노드에 `docker exec`로 들어가 셋 다 해 봤습니다. 1에서는 스케줄러 Pod가 `ImagePullBackOff`였고 `crictl ps -a | grep kube-scheduler`에는 컨테이너가 하나도 없었습니다. 이미지를 받지 못해 컨테이너가 만들어진 적이 없기 때문입니다. 볼 로그가 없으니 원인은 `kubectl -n kube-system describe pod`의 이벤트나 `journalctl -u kubelet`에서 찾습니다. 새 Pod는 이벤트 없이 `Pending`이었습니다. 2에서는 `--etcd-servers`의 포트를 2380으로 바꾸자 `kubectl`이 `TLS handshake timeout`으로 실패했고 `crictl logs`에 `dial tcp 127.0.0.1:2380: connect: connection refused`가 반복됐습니다. 3은 워커 노드에서 해 봤고 2-2절 표대로 mirror Pod가 다시 생겼습니다.
 
 ## 3. 리소스 사용량 모니터링
 
@@ -406,7 +410,7 @@ Resource metrics pipeline 문서의 구성은 오른쪽에서 왼쪽으로 흐�
 | metrics-server | 각 kubelet에서 메트릭을 모아 Metrics API로 제공하는 클러스터 애드온. Metrics API의 참조 구현 |
 | Metrics API | CPU와 메모리 사용량. API aggregation 계층과 `metrics.k8s.io` APIService 등록이 필요 |
 
-문서는 metrics-server나 다른 어댑터를 배포해야 Metrics API에 접근할 수 있다고 적습니다. 현재 문서는 Metrics API를 1.37 stable로 표시하고 예시 경로를 `/apis/metrics.k8s.io/v1/...`로 적습니다. 클러스터에 설치된 metrics-server 버전이 어느 API 버전을 제공하는지는 `kubectl get apiservice | grep metrics`로 확인합니다.
+문서는 metrics-server나 다른 어댑터를 배포해야 Metrics API에 접근할 수 있다고 적습니다. 현재 문서는 Metrics API를 1.37 stable로 표시하고 예시 경로를 `/apis/metrics.k8s.io/v1/...`로 적습니다. 문서와 실제 metrics-server는 어긋날 수 있습니다. kind에 metrics-server v0.9.0을 설치하자 APIService는 `v1beta1.metrics.k8s.io` 하나뿐이었고 `kubectl get --raw /apis/metrics.k8s.io/v1/nodes`는 `NotFound`, 같은 경로의 `v1beta1`은 정상이었습니다. `kubectl top`은 알아서 맞는 버전을 쓰니 경로를 손으로 칠 때만 신경 씁니다. 클러스터에 설치된 metrics-server가 어느 API 버전을 제공하는지는 `kubectl get apiservice | grep metrics`로 확인합니다.
 
 이 파이프라인이 제공하는 것은 자동 확장에 필요한 최소한의 CPU와 메모리뿐입니다. 더 많은 메트릭이 필요하면 Custom Metrics API를 쓰는 별도 파이프라인을 두라고 문서는 적습니다.
 
@@ -424,7 +428,7 @@ kubectl top pod -n shop -l app=order-api --sum # 합계 행 추가
 kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는 Pod 하나
 ```
 
-`--sort-by`는 `cpu`나 `memory`만 받습니다(kubectl top 레퍼런스). 레퍼런스는 메트릭 파이프라인 지연 때문에 Pod 생성 후 몇 분 동안은 값이 없을 수 있다고 적습니다.
+`--sort-by`는 `cpu`나 `memory`만 받습니다(kubectl top 레퍼런스). kubectl v1.37.1에서 `--sort-by=name`을 주면 `--sort-by accepts only cpu or memory`로 실패했습니다. 레퍼런스는 메트릭 파이프라인 지연 때문에 Pod 생성 후 몇 분 동안은 값이 없을 수 있다고 적습니다. kind에서 막 만든 Pod를 바로 조회하면 `error: Metrics not available for pod ...`가 나왔고 1분쯤 뒤에는 값이 보였습니다.
 
 "CPU를 가장 많이 쓰는 Pod 이름을 파일에 적으라" 같은 과제는 위 마지막 줄 같은 방식으로 풀 수 있습니다. 결과를 파일로 옮길 때는 과제가 요구하는 형식(이름만인지, 네임스페이스를 포함하는지)을 다시 읽습니다.
 
@@ -445,7 +449,7 @@ kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는
 | APIService 상태 | `kubectl get apiservice | grep metrics` |
 | metrics-server 로그 | `kubectl -n kube-system logs deploy/metrics-server` (Deployment 이름은 설치 방법에 따라 다를 수 있다) |
 
-Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포하므로 metrics-server가 TLS로 kubelet에 붙으면 `x509: certificate signed by unknown authority` 같은 오류가 납니다. 문서는 `--kubelet-insecure-tls`로 우회할 수 있지만 운영 클러스터에는 권하지 않고 서명된 kubelet 서빙 인증서를 쓰는 방법을 안내합니다. 연습 클러스터에서는 이 옵션으로 띄우고 시험장에서는 과제의 지시를 따릅니다.
+Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포하므로 metrics-server가 TLS로 kubelet에 붙으면 `x509: certificate signed by unknown authority` 같은 오류가 납니다. 문서는 `--kubelet-insecure-tls`로 우회할 수 있지만 운영 클러스터에는 권하지 않고 서명된 kubelet 서빙 인증서를 쓰는 방법을 안내합니다. 연습 클러스터에서는 이 옵션으로 띄우고 시험장에서는 과제의 지시를 따릅니다. kind도 kubeadm으로 노드를 띄우므로 같은 이유로 metrics-server v0.9.0 매니페스트에 `--kubelet-insecure-tls`를 더해야 Pod가 Ready가 됐습니다.
 
 ### 3-5. 출력 형식으로 값 뽑기
 
@@ -541,7 +545,7 @@ kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' |
 
 1. 연습 클러스터에 metrics-server를 설치하고 `kubectl top node`가 나오기까지 걸리는 시간을 봅니다.
 2. 결제 Deployment에 CPU를 쓰는 루프 컨테이너를 넣고 `kubectl top pod --containers --sort-by=cpu`로 맨 위에 오는지 확인합니다.
-3. `kubectl get --raw "/apis/metrics.k8s.io/v1/nodes/<노드>"` 결과의 `window`와 `usage`를 읽어 `kubectl top node` 출력과 맞춰 봅니다. 클러스터가 v1beta1만 제공하면 경로를 바꿉니다.
+3. `kubectl get --raw "/apis/metrics.k8s.io/v1beta1/nodes/<노드>"` 결과의 `window`와 `usage`를 읽어 `kubectl top node` 출력과 맞춰 봅니다. metrics-server가 `v1`을 제공하는 버전이면 경로의 `v1beta1`을 `v1`로 바꿉니다. kind에 넣은 metrics-server v0.9.0은 `v1beta1`만 제공했습니다.
 4. 3-6절의 노드 이름과 InternalIP 명령을 실행해 `kubectl get nodes -o wide`의 INTERNAL-IP 열과 같은지 봅니다. 같은 내용을 custom-columns로 다시 만들어 두 방식의 출력 차이(머리줄 유무, 구분자)를 비교합니다.
 
 ## 4. 컨테이너 출력 스트림
@@ -614,13 +618,15 @@ kubectl -n shop get pod payment-xxxx -o jsonpath='{.status.containerStatuses[0].
 kubectl -n shop get deploy payment -o yaml | grep -A5 -E 'command|args|env|resources|livenessProbe'
 ```
 
-`--previous` 없이 `kubectl logs`를 치면 막 재시작된 새 컨테이너의 로그가 나오는데 대개 비어 있거나 짧습니다. 죽은 이유는 이전 인스턴스에 남아 있습니다.
+`--previous`를 붙이는 습관이 안전합니다. 다만 kind v1.37.0에서 확인한 동작은 조금 다릅니다. Pod가 `CrashLoopBackOff`로 다음 재시작을 기다리는 동안에는 실행 중인 컨테이너가 없어서 `kubectl logs`와 `kubectl logs --previous`가 같은 직전 인스턴스의 로그를 보여 줬습니다. 새 컨테이너가 떠서 도는 동안에는 `--previous`를 빼면 새 컨테이너의 로그가 나오고 그 내용은 대개 비어 있거나 짧습니다. 죽은 이유는 이전 인스턴스에 남아 있습니다. 같은 실습에서 재시작 사이 간격은 약 26초, 46초, 86초로 늘었습니다(컨테이너가 5초 돌고 끝나는 명령 기준).
 
 Determine the Reason for Pod Failure 문서는 컨테이너가 `/dev/termination-log`에 쓴 종료 메시지를 `lastState.terminated.message`에서 읽는 방법을 보여 줍니다. `terminationMessagePolicy: FallbackToLogsOnError`를 주면 종료 메시지 파일이 비었고 컨테이너가 오류로 끝났을 때 로그 마지막 부분을 종료 메시지로 쓴다고 같은 문서가 설명합니다. 이때 로그는 2048바이트와 80줄 중 작은 쪽까지만 들어갑니다.
 
 ```bash
 kubectl get pod <pod> -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
 ```
+
+`lastState`는 재시작된 컨테이너에만 채워집니다. kind에서 `restartPolicy: Never`인 Pod가 끝나면 종료 메시지는 `.state.terminated.message`에 있었고 `lastState`는 비어 있었습니다. 이때는 위 명령의 `.lastState`를 `.state`로 바꿉니다. `FallbackToLogsOnError`를 준 Pod가 종료 코드 1로 끝나자 로그 마지막 줄이 메시지로 들어간 것도 확인했습니다.
 
 ### 4-4. 셸이 없는 컨테이너
 
@@ -669,6 +675,8 @@ spec:
 kubectl -n shop logs board -c access-log
 ```
 
+kind v1.37.0에서 이 Pod를 만들고 `-c` 없이 `kubectl -n shop logs board`를 치면 표준 오류에 `Defaulted container "app" out of: app, access-log`가 찍히고 `app`의 로그가 나왔습니다. `app`은 파일에만 쓰므로 출력은 비어 있습니다. Pod에 `kubectl.kubernetes.io/default-container: access-log` 어노테이션을 달면 안내 없이 사이드카 로그가 나왔고 없는 이름을 적으면 `Default container name "nope" not found in pod board` 안내 뒤 첫 컨테이너로 넘어갔습니다.
+
 문서의 예는 같은 구조를 Pod의 일반 컨테이너 두 개로 보여 줍니다. 1.33에서 stable이 된 네이티브 사이드카(`initContainers`에 `restartPolicy: Always`)로 같은 일을 하는 예와 시작, 종료 순서는 [Ch-03 4-4절](/blog/cert/cka/cka-03-workloads-scheduling)에 정리했습니다. 네이티브 사이드카도 로그는 `kubectl logs <pod> -c <사이드카 이름>`으로 봅니다.
 
 stdout과 stderr를 따로 받는 기능(`PodLogsQuerySplitStreams` 기능 게이트, `?stream=Stderr` 쿼리)도 문서에 있지만 알파 기능이라 시험 클러스터에서 켜져 있다고 기대하지 않습니다.
@@ -685,6 +693,8 @@ stdout과 stderr를 따로 받는 기능(`PodLogsQuerySplitStreams` 기능 게�
 1. `command: ["sh","-c","echo start; exit 1"]`로 결제 Pod를 만들어 `CrashLoopBackOff`를 만들고 `kubectl logs`와 `kubectl logs --previous`의 차이를 봅니다. RESTARTS 수가 늘어나는 간격을 재서 문서의 10초, 20초, 40초와 비교합니다.
 2. 4-5의 게시판 Pod를 만들고 `kubectl logs board -c app`이 비어 있는 이유를 설명합니다.
 3. `kubectl logs -l app=order-api --all-containers=true --prefix --tail=5`로 여러 Pod의 로그를 한 번에 봅니다.
+
+kind v1.37.0에서 셋 다 해 본 결과는 4-2, 4-3, 4-5절 본문에 적었습니다. `kubectl logs deployment/<이름> --all-pods=true`도 Pod마다 접두사를 붙여 모든 Pod의 로그를 보여 줬습니다.
 
 ## 5. 서비스와 네트워킹 트러블슈팅
 
@@ -705,7 +715,7 @@ Debug Services 문서는 질문을 하나씩 확인하는 순서로 짜여 있�
 
 5번의 점검 목록은 문서 원문을 옮긴 것입니다. 접근하려는 포트가 `spec.ports[]`에 있는지, `targetPort`가 Pod가 쓰는 포트인지, 숫자 포트를 의도했는데 문자열로 쓰지 않았는지, 이름 붙은 포트를 쓰면 Pod가 같은 이름의 포트를 노출하는지, 프로토콜이 맞는지입니다.
 
-6번에서 ENDPOINTS가 `<none>`이면 Service의 `spec.selector`가 Pod의 `metadata.labels`를 실제로 고르는지 확인하라고 문서는 적습니다. 문서가 드는 흔한 실수는 Service는 `app=hostnames`를 고르는데 Deployment는 `run=hostnames`를 쓰는 경우입니다. 라벨은 맞는데 비어 있으면 readiness probe가 실패한 것입니다. Pod Lifecycle 문서는 readiness probe가 실패하면 EndpointSlice 컨트롤러가 그 Pod의 IP를 해당 Service들의 EndpointSlice에서 뺀다고 적습니다.
+6번에서 ENDPOINTS가 비어 있으면(`kubectl get endpointslices`는 `<unset>`, `kubectl get endpoints`는 `<none>`으로 표시) Service의 `spec.selector`가 Pod의 `metadata.labels`를 실제로 고르는지 확인하라고 문서는 적습니다. 문서가 드는 흔한 실수는 Service는 `app=hostnames`를 고르는데 Deployment는 `run=hostnames`를 쓰는 경우입니다. 라벨은 맞는데 비어 있으면 readiness probe가 실패한 것입니다. Pod Lifecycle 문서는 readiness probe가 실패하면 EndpointSlice 컨트롤러가 그 Pod의 IP를 해당 Service들의 EndpointSlice에서 뺀다고 적습니다.
 
 ### 5-2. 쇼핑몰 예로 따라가기
 
@@ -716,7 +726,7 @@ Debug Services 문서는 질문을 하나씩 확인하는 순서로 짜여 있�
 kubectl -n shop get svc order-api
 
 # 3, 4. 클러스터 안에서 이름과 IP로
-kubectl -n shop run tmp --rm -it --restart=Never --image=busybox:1.28 -- sh
+kubectl -n shop run tmp --rm -it --restart=Never --image=busybox:1.36 -- sh
 #   (Pod 안에서)
 #   nslookup order-api
 #   wget -qO- -T 2 order-api:80
@@ -739,6 +749,8 @@ kubectl -n shop get networkpolicy
 kubectl -n shop describe networkpolicy <이름>
 ```
 
+임시 Pod 이미지는 문서 예시의 `busybox:1.28` 대신 `busybox:1.36`을 적었습니다. kind(arm64 노드)에서 `busybox:1.28`의 `wget`은 `Segmentation fault`로 죽었고 1.36은 정상이었습니다. 반대로 1.36의 `nslookup`은 `order-db-0.order-db`처럼 점이 든 짧은 이름을 풀지 못하므로([Ch-03 4-8절](/blog/cert/cka/cka-03-workloads-scheduling)) 그럴 때는 `<svc>.<ns>.svc.cluster.local` 전체 이름을 씁니다. `order-api` 같은 한 단어 이름은 `NXDOMAIN` 줄이 몇 개 섞여 나와도 마지막에 ClusterIP가 풀렸습니다.
+
 순서를 문서와 조금 다르게 섞었습니다. 엔드포인트 확인(6번)이 selector, 라벨, readiness 문제를 한 번에 가르므로 이 글에서는 존재 확인 바로 다음에 두었습니다.
 
 ### 5-3. kube-proxy 확인
@@ -752,7 +764,7 @@ kubectl -n kube-system logs <kube-proxy Pod>
 kubectl -n kube-system get configmap kube-proxy -o yaml | grep mode
 ```
 
-kubeadm Implementation details 문서는 kube-proxy를 DaemonSet으로 배포하고 API 서버 주소를 ConfigMap에서 읽게 한다고 적고 Troubleshooting kubeadm 문서의 예시 명령은 `kubectl -n kube-system patch ds kube-proxy`입니다. Pod 라벨 `k8s-app=kube-proxy`와 ConfigMap 이름 `kube-proxy`는 kubeadm 기본값으로 알려진 값이며 문서로 확인하지 않았습니다. 시험장에서는 `kubectl -n kube-system get ds,cm`으로 이름부터 확인합니다.
+kubeadm Implementation details 문서는 kube-proxy를 DaemonSet으로 배포하고 API 서버 주소를 ConfigMap에서 읽게 한다고 적고 Troubleshooting kubeadm 문서의 예시 명령은 `kubectl -n kube-system patch ds kube-proxy`입니다. Pod 라벨 `k8s-app=kube-proxy`와 ConfigMap 이름 `kube-proxy`는 문서로 확인하지 못했지만 kubeadm으로 띄운 kind v1.37.0 클러스터에서 위 네 명령이 그대로 동작했습니다. ConfigMap의 `mode`는 `iptables`였고 kube-proxy 로그에 `Using iptables Proxier`가 찍혔습니다. 시험장에서는 `kubectl -n kube-system get ds,cm`으로 이름부터 확인합니다.
 
 문서의 로그 예시에서 `Using iptables Proxier`가 보이면 iptables 모드입니다. iptables 모드라면 노드에서 `iptables-save | grep <svc 이름>`으로 Service용 규칙이 생겼는지 봅니다(Debug Services 문서의 iptables 절).
 
@@ -780,6 +792,8 @@ kubeadm Implementation details 문서는 kube-proxy를 DaemonSet으로 배포하
 1. `order-api` Service의 selector를 일부러 `app=order`로 바꾸고 5-2의 순서로 원인을 찾습니다. 몇 번째 명령에서 원인이 드러났는지 기록합니다.
 2. `targetPort`를 존재하지 않는 포트로 바꾸고 엔드포인트는 있는데 요청이 실패하는 것을 확인합니다.
 3. 주문 API에 실패하는 readiness probe를 붙여 READY `0/1`과 빈 ENDPOINTS를 함께 관찰합니다.
+
+kind v1.37.0에서 돌린 결과입니다. 1은 6번 단계에서 드러났습니다. `kubectl get endpointslices`의 ENDPOINTS 열이 `<unset>`이었고 `kubectl get endpoints`는 `<none>`이었습니다(이 명령은 `v1 Endpoints is deprecated in v1.33+` 경고도 찍습니다). 2는 슬라이스에 Pod IP와 함께 잘못 적은 포트 8081이 그대로 들어갔습니다. 엔드포인트가 있다는 사실만으로는 정상이라고 볼 수 없는 이유입니다. 3은 Pod가 `Running`인 채로 READY `0/1`에 머물렀습니다.
 
 ## 6. 확인 문제
 
@@ -881,7 +895,7 @@ sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -su
 date
 ```
 
-`notAfter`가 지났으면 자동 교체가 실패한 것입니다. Troubleshooting kubeadm 문서의 절차(1-4절)대로 `kubelet.conf`와 `kubelet-client*`를 백업 후 지웁니다. 그다음 정상 컨트롤 플레인 노드에서 `kubeadm kubeconfig user --org system:nodes --client-name system:node:node03`으로 새 kubeconfig를 만들어 복사한 뒤 kubelet을 재시작합니다. `kubelet-client-current.pem`이 다시 생기면 `kubelet.conf`가 그 파일을 가리키게 고치고 한 번 더 재시작합니다. 날짜는 유효한데 시작 시각보다 노드 시계가 이르면 인증서가 아니라 시계를 맞춥니다. `kubeadm certs check-expiration`에는 kubelet 인증서가 나오지 않으므로 이 명령으로 판단하지 않습니다.
+`notAfter`가 지났으면 자동 교체가 실패한 것입니다. Troubleshooting kubeadm 문서의 절차(1-4절)대로 `kubelet.conf`와 `kubelet-client*`를 백업 후 지웁니다. 그다음 정상 컨트롤 플레인 노드에서 `kubeadm kubeconfig user --org system:nodes --client-name system:node:node03`으로 새 kubeconfig를 만들어 복사한 뒤 kubelet을 재시작합니다. `kubelet-client-current.pem`이 다시 생기면 `kubelet.conf`가 그 파일을 가리키게 고치고 한 번 더 재시작합니다. 날짜는 유효한데 시작 시각보다 노드 시계가 이르면 인증서는 그대로 두고 노드 시계를 맞춥니다. `kubeadm certs check-expiration`에는 kubelet 인증서가 나오지 않으므로 이 명령으로 판단하지 않습니다.
 
 </details>
 
@@ -901,11 +915,12 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $로 보인다
 
 ## 7. 범위와 한계
 
-- 이 글의 명령은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서에 실린 것이고 그렇게 표시했습니다. 각 절의 "직접 해 보기"는 연습 클러스터를 만든 뒤 할 목록이며 결과는 나중에 덧붙입니다.
-- kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. Metrics API의 1.37 stable 표시와 `metrics.k8s.io/v1` 경로는 이 원문 기준이며 시험 클러스터의 metrics-server가 어느 버전을 제공하는지는 확인하지 못했습니다.
-- 1-4절의 kubelet 인증서 복구 절차는 Troubleshooting kubeadm 문서의 "Kubelet client certificate rotation fails" 절을 줄인 것이고 실행해 보지 않았습니다. kubelet 로그에 남는 오류 문장은 버전마다 달라 옮기지 않았습니다.
-- 4-2절의 기본 컨테이너 선택 순서와 안내 문구는 kubectl 저장소 master 브랜치 소스(2026년 10월 20일)로 확인했습니다. 시험의 kubectl 버전에서 문구가 조금 다를 수 있습니다.
-- kube-proxy의 Pod 라벨과 ConfigMap 이름, metrics-server의 Deployment 이름, `/var/log/pods`의 하위 경로 규칙, `systemctl cat`은 이번에 문서로 확인하지 못했습니다.
+- 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(컨트롤 플레인 1대, 워커 2대, colima, arm64), kubectl v1.37.1, containerd 2.3.4에서 1-8, 2-7, 3-7, 4-7, 5-6절의 직접 해 보기와 확인 문제 1~9의 명령을 돌렸습니다. kubelet과 컨트롤 플레인 고장은 `docker exec`로 노드 컨테이너에 들어가 연습 클러스터에서만 냈고 끝난 뒤 되돌렸습니다. 본문에 "kind에서"로 적은 출력과 오류 문구가 그 결과입니다.
+- kind의 노드는 컨테이너라서 `ssh` 대신 `docker exec`를 썼고 `kubectl debug node`의 `/host`도 노드 컨테이너의 파일시스템입니다. 노드 조건에 `NetworkUnavailable`이 없는 것, Metrics Server를 직접 설치하고 `--kubelet-insecure-tls`를 줘야 하는 것, arm64에서 `busybox:1.28`의 `wget`이 죽는 것은 이 환경의 조건입니다.
+- 1-4절의 kubelet 클라이언트 인증서 복구 절차는 인증서를 만료시키지 않고 인증서와 `kubelet.conf`를 지운 상태에서 돌렸습니다. 만료 시 kube-apiserver에 찍히는 `x509` 문구는 재현하지 못했습니다.
+- 실행하지 못한 것은 이렇습니다. 실제 노드 재부팅, cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway, NetworkPolicy 차단(kindnet 기본 구성), `PodLogsQuerySplitStreams` 알파 기능입니다.
+- kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 문서는 Metrics API를 1.37 stable과 `metrics.k8s.io/v1` 경로로 적지만 kind에 넣은 metrics-server v0.9.0은 `v1beta1`만 제공했습니다. 시험 클러스터의 metrics-server가 어느 버전을 제공하는지는 확인하지 못했습니다.
+- 4-2절의 기본 컨테이너 선택 순서와 안내 문구는 kubectl 저장소 master 브랜치 소스와 kubectl v1.37.1 실행 결과로 확인했습니다.
 - 0-2 표의 "흔한 원인" 열과 2-5 표의 매니페스트 점검 위치는 문서 내용에 제 판단을 더한 것입니다. 실제 시험에 어떤 고장이 나오는지는 공개되지 않았고 후기의 출제 문항은 옮기지 않았습니다.
 - etcd 백업과 복구, kubeadm 업그레이드는 [Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에서 정리한 대로 커리큘럼 명시 항목에서 빠져 이 글에서는 다루지 않았습니다. 절차는 [Ch-02 4절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 

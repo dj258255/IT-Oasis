@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-01] 쿠버네티스는 왜 필요한가: 결국 Linux 커널까지 내려가야 이해된다'
-description: 쿠버네티스는 "이렇게 유지해라"라고 선언만 하고, CPU를 제한하고 메모리를 감시하고 프로세스를 죽이는 일은 전부 리눅스 커널이 한다. OOMKilled와 CPU 스로틀링을 재연해 cgroup 원천 데이터까지 내려가 보고, 물리 서버부터 컨테이너까지 인프라의 흐름을 정리한다.
+description: 쿠버네티스는 원하는 상태를 API 오브젝트로 받아 두고 컨트롤러와 kubelet이 실제 상태를 거기에 맞춥니다. 프로세스를 격리하고 메모리와 CPU를 막는 일은 리눅스 커널의 namespace와 cgroup이 합니다. kind v1.37 클러스터에서 controller-manager를 멈춰 보고 OOMKilled와 CPU 스로틀링을 노드 안의 cgroup 파일과 커널 로그로 확인합니다.
 date: 2026-10-15T00:00:00.000Z
 tags:
   - CKA
@@ -18,573 +18,778 @@ series: "CKA 공부"
 seriesOrder: 1
 ---
 
-> 핵심 한 줄: **쿠버네티스는 "지시자(지휘자)", 리눅스 커널은 "집행자(연주자)"다.**
-> K8S는 "이렇게 유지해라"라고 의도를 *선언*만 하고, 실제로 CPU를 제한하고 메모리를 감시하고 프로세스를 죽이는 *물리적 행위*는 전부 커널이 한다.
+## 결론부터
+
+1. 쿠버네티스 API에 넣는 오브젝트의 `spec`은 원하는 상태이고 `status`는 관측된 상태입니다. 컨트롤러와 kubelet이 둘의 차이를 계속 메웁니다. 노드에서 프로세스를 격리하고 메모리와 CPU를 막는 실제 동작은 리눅스 커널의 namespace와 cgroup이 맡습니다.
+2. kube-controller-manager가 멈춰도 이미 떠 있는 파드는 그대로 돕니다. 멈추는 것은 새로 맞추는 일입니다. kind v1.37에서 controller-manager 매니페스트를 빼고 `replicas`를 5로 올렸을 때 파드는 한 개도 늘지 않았고 매니페스트를 되돌리자 1분 안에 5개가 됐습니다.
+3. `limits.memory`는 컨테이너를 만들 때 runc가 cgroup의 `memory.max`에 바이트로 적습니다. 사용량이 그 값을 넘으면 커널이 그 cgroup 안에서 OOM killer를 돌립니다. `Exit Code: 137`과 `Reason: OOMKilled`는 kubelet이 끝난 결과를 받아 적은 보고입니다.
+4. `limits.cpu: 50m`은 `cpu.max`의 `5000 100000`이 됩니다. kind에서 무한 루프 컨테이너를 2분쯤 돌렸을 때 전체 주기의 91.7%가 스로틀됐습니다. 같은 시점에 kubelet이 내놓은 사용량은 약 50m이라 `kubectl top` 같은 사용량 지표만으로는 정상처럼 보입니다.
+5. CKA 비중이 가장 큰 트러블슈팅(30%)에서 쓰는 `kubectl describe`, `crictl`, `journalctl -u kubelet`, `/etc/kubernetes/manifests`는 각각 이 층 구조의 다른 층을 봅니다. 증상이 어느 층에서 생겼는지 알면 어떤 명령부터 칠지 정할 수 있습니다.
+
+이 글은 시리즈의 출발점입니다. 쿠버네티스 쪽은 다음 글 [핵심 오브젝트와 요청 흐름](/blog/cert/cka/cka-01b-core-objects-and-flow)으로 이어지고 커널 쪽은 "쿠버네티스 아래의 리눅스" 시리즈에서 한 기능씩 깊이 들어갑니다. 여기서는 두 시리즈가 만나는 자리를 한 번에 훑어봅니다.
+
+본문의 출력은 2026-10-20에 이 Mac의 colima(arm64 VM, 커널 6.8) 위에 kind v0.33으로 만든 단일 노드 클러스터 `cka-lab-c`(kindest/node:v1.37.0, containerd 2.3.4, runc 1.4.3, cgroup v2)에서 실제로 얻은 값입니다. kind는 노드가 도커 컨테이너라서 경로와 PID가 일반 kubeadm 노드와 조금 다릅니다. 다른 곳은 해당 절에 적었습니다.
 
 ---
 
-## 1. 인프라의 변천사와 변하지 않는 목적
+## 1. 원하는 상태를 적는 API와 그것을 실행하는 노드
 
-인프라의 형태는 계속 바뀌어 왔다.
+### 1-1. spec은 원하는 상태, status는 관측된 상태
 
-**물리 서버(Physical Server) → 가상 머신(VM) → 컨테이너(Container)**
+공식 문서 "Objects In Kubernetes"는 대부분의 오브젝트가 `spec`과 `status` 두 필드를 가진다고 설명합니다. `spec`은 사용자가 원하는 상태를 적는 곳이고 `status`는 쿠버네티스 시스템과 그 구성요소가 채우고 갱신하는 현재 상태입니다. 쇼핑몰의 상품 목록 API를 Deployment로 띄운다면 이렇게 적습니다.
 
-하지만 형태가 바뀌어도 인프라의 **궁극적 목적은 단 하나도 바뀌지 않았다.**
-
-- 목적 = **안정적인 서비스 제공**
-- 결국 핵심은 **"서비스가 죽지 않게 하는 것"**
-
-이 강의 전체가 "어떻게 하면 서비스를 죽지 않게 관리할 것인가"에 대한 이야기다.
-
----
-
-## 2. 왜 쿠버네티스(K8S)인가?
-
-예전에는 서버 몇 대만 사람이 직접 배포·모니터링해도 충분했다. 지금은 왜 안 될까?
-
-- **MSA(Microservice Architecture)** 도입으로 인프라 현실이 바뀌었기 때문.
-- MSA = 하나의 큰 서비스가 수백~수천 개의 작은 컨테이너로 쪼개져 복잡하게 얽혀 돌아가는 구조.
-- 이 수천 개 컨테이너를 사람이 일일이 배포·모니터링·복구하는 것은 **물리적으로 불가능**.
-
-그래서 나온 솔루션이 **쿠버네티스**다. 이 복잡한 관리 과정을 **자동화**해 준다.
-
-### K8S의 핵심 가치 2가지
-
-| 가치 | 영어 | 의미 |
-| --- | --- | --- |
-| **고가용성** | High Availability | 서버 일부가 죽어도 전체 서비스는 계속 살아 있게 만드는 힘 |
-| **자가 치유** | Self-Healing | 장애가 발생하면 시스템이 스스로 알아서 복구하는 능력 |
-
----
-
-## 3. 고가용성과 SPOF(단일 장애점)
-
-- **SPOF (Single Point of Failure, 단일 장애점)**: 장애 시 시스템 전체를 무너뜨리는 딱 하나의 지점.
-
-| 구조 | 설명 |
-| --- | --- |
-| SPOF가 **있는** 구조 | 서버 한 대만 존재 → 그 한 대가 죽으면 서비스 전체 다운 |
-| SPOF가 **없는** 구조 | 서버 A·B·C 여러 대 존재 → 한 대가 죽어도 나머지가 요청 처리 → 사용자는 장애를 못 느낌 |
-
-→ 쿠버네티스는 이 단일 장애점을 **설계 단계에서부터** 없애 버린다.
-
----
-
-## 4. 자가 치유(Self-Healing)의 원리
-
-사람 없이 시스템이 스스로 복구하는 원리는 의외로 간단하다. 쿠버네티스는 **상태(State)**를 관리하며, 3단계로 돌아간다.
-
-1. **선언(Declare)**: 엔지니어가 "이 파드는 항상 3개 유지해 줘"라고 선언.
-2. **감지(Detect)**: 파드가 1~2개 죽어도 선언된 상태를 유지하도록 컨트롤러가 차이를 감지.
-3. **조치(Action)**: 기대 상태와 현재 상태의 차이를 발견하면 즉시 파드를 하나 더 생성해 다시 3개로 맞춤.
-
-### 운영 패러다임의 변화
-
-- **예전**: 새벽에 서버가 죽으면 엔지니어가 알람에 깨서 즉시 수동 대응.
-- **지금(K8S)**: 알람이 울려도 시스템이 *먼저* 알아서 복구. 운영자는 다음 날 출근해서 **원인 분석만** 하면 됨.
-
-### Q. 그럼 차이를 감지하는 컨트롤러가 죽으면?
-
-**이미 떠 있는 파드는 그대로 돈다. 멈추는 건 "새로 맞추는 일"뿐이고, 컨트롤러 자신도 누군가 다시 살린다.**
-
-**① 컨트롤러는 어디서 도나**: ReplicaSet·Deployment·Node 컨트롤러 등은 전부 **kube-controller-manager** 프로세스 하나에 묶여 컨트롤 플레인에서 돈다. kubeadm 클러스터에서 이건 **static pod**다.
-
-```
-/etc/kubernetes/manifests/kube-controller-manager.yaml
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 3              # 원하는 상태: 파드 3개
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27
 ```
 
-static pod는 API 서버·스케줄러를 거치지 않고 **그 노드의 kubelet이 파일을 직접 읽어 띄운다.** 그래서 controller-manager가 죽으면 kubelet이 다시 살린다. 컨트롤러가 컨트롤러 없이 살아나는 구조.
-
-**② 죽어 있는 동안**
-
-| 계속 됨 | 멈춤 |
-| --- | --- |
-| 이미 떠 있는 파드 실행 (각 노드의 kubelet·containerd 담당) | 파드가 삭제됐을 때 새로 만들기 (ReplicaSet 컨트롤러) |
-| 컨테이너 크래시 시 재시작 (`restartPolicy`는 kubelet 담당 → 6번의 CrashLoopBackOff도 여기) | 노드가 죽었을 때 파드 퇴출 (node lifecycle 컨트롤러가 taint를 붙이고 v1.34부터는 taint-eviction 컨트롤러가 파드를 삭제) |
-| Service 트래픽 처리 | Deployment 롤아웃, 스케일 변경 반영 |
-
-**③ 살아나면**: 컨트롤러는 "파드가 죽었다"는 이벤트를 하나하나 기억하는 방식이 아니다. 살아나면 API 서버에서 **원하는 상태 vs 지금 상태를 다시 비교**해 차이를 메운다(level-triggered reconcile). 그래서 죽어 있던 동안의 이벤트를 놓쳐도 문제가 없다. 위의 선언 → 감지 → 조치가 처음부터 다시 돌 뿐.
-
-**④ 운영 환경은 HA**: 컨트롤 플레인을 보통 3대로 두고 controller-manager도 3개 띄운다. 단, **실제로 일하는 건 리더 하나**. `kube-system`의 Lease 오브젝트를 리더가 계속 갱신하고, 갱신이 끊기면 대기 중이던 인스턴스가 리더를 가져간다.
+이 YAML을 `kubectl apply`로 보내면 API 서버는 검증과 승인을 거쳐 etcd에 저장하고 응답합니다. 이 시점에는 파드가 하나도 없습니다. 저장된 것은 "파드 3개"라는 기록뿐이고 파드를 만드는 일은 뒤에서 다른 구성요소가 따로 합니다.
 
 ```bash
-k get lease -n kube-system kube-controller-manager -o yaml   # holderIdentity = 현재 리더
+kubectl get deploy web -o jsonpath='{.spec.replicas} {.status.readyReplicas}{"\n"}'
+# 3 3   ← 원하는 수와 관측된 준비 수
 ```
 
-**⑤ 누가 누구를 살리나**
+### 1-2. 컨트롤러는 차이를 계속 메우는 루프
+
+공식 문서 "Controllers"는 컨트롤러를 클러스터 상태를 지켜보다가 필요하면 변경을 만들거나 요청하는 제어 루프로 정의합니다. 각 컨트롤러는 현재 상태를 원하는 상태 쪽으로 옮기려고 합니다. Deployment 하나가 파드가 되기까지 여러 컨트롤러가 이어서 움직입니다.
 
 ```
-컨트롤러(ReplicaSet 등)  ← kube-controller-manager가 돌림
-kube-controller-manager ← kubelet이 살림 (static pod)
-kubelet                 ← systemd가 살림 (Restart=always)
-systemd                 ← PID 1, 리눅스 커널 위에서 돎
+kubectl apply
+   │
+   ▼
+API 서버 ── etcd (spec 저장)
+   ▲  watch            ▲ watch            ▲ watch              ▲ watch
+   │                   │                  │                    │
+Deployment 컨트롤러  ReplicaSet 컨트롤러   kube-scheduler         kubelet(노드마다)
+ReplicaSet 생성       파드 오브젝트 생성     파드에 nodeName 기록    자기 노드 파드를 실제로 실행
 ```
 
-결국 맨 아래엔 또 **커널**이 있다. 노드 자체가 죽으면 컨트롤 플레인의 node lifecycle 컨트롤러가 상태 갱신이 끊긴 노드를 `--node-monitor-grace-period`(현재 기본 50초) 뒤에 `Unknown`/`NotReady`로 바꾸고 `node.kubernetes.io/unreachable`(또는 `not-ready`) taint를 붙인다. 파드에는 `DefaultTolerationSeconds` 어드미션 플러그인이 넣은 300초 toleration이 기본으로 들어 있다. 그래서 기본 설정이면 약 50초에 5분을 더한 뒤 그 노드의 파드가 삭제된다. 파드 삭제는 v1.34부터 별도의 taint-eviction 컨트롤러(KEP-3902 GA)가 맡는다. 삭제된 파드를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러다. StatefulSet 파드는 노드가 지워지거나 상태가 확인될 때까지 재생성이 막힐 수 있다.
+모든 구성요소가 API 서버를 중심으로 watch하는 구조입니다. scheduler와 kubelet도 etcd를 직접 읽지 않습니다. 각자 API 서버에서 오브젝트를 받아 자기 몫의 차이만 메우고 결과를 다시 API 서버에 씁니다.
 
-**CKA 포인트**: 트러블슈팅 문제에서 "Deployment를 스케일했는데 파드가 안 늘어난다"면 controller-manager부터 의심.
+이 루프는 "파드가 죽었다"는 이벤트 하나하나에 반응하는 방식으로 짜여 있지 않습니다. 원하는 상태와 지금 상태를 비교해서 차이가 있으면 메웁니다. 그래서 루프가 잠시 멈췄다 다시 돌아도 그동안 놓친 이벤트를 복구할 필요가 없습니다. 2장에서 이 성질을 직접 확인합니다.
+
+### 1-3. 노드에서 상태를 바꾸는 층
+
+API 서버에 기록된 파드가 노드의 프로세스가 되기까지 네 층을 지납니다.
+
+| 층 | kind 노드에서 확인한 실체 | 이 층이 하는 일 |
+|---|---|---|
+| kubelet | `kubelet` 프로세스(v1.37.0) | API 서버에서 자기 노드 파드를 받아 CRI로 런타임을 호출하고 상태를 보고 |
+| CRI 런타임 | containerd 2.3.4 | 이미지를 받아 스냅샷을 만들고 OCI 런타임 스펙(config.json)을 작성 |
+| OCI 런타임 | runc 1.4.3 | 스펙대로 namespace를 만들고 cgroup 파일에 한도를 적은 뒤 컨테이너 프로세스를 실행 |
+| 리눅스 커널 | 6.8.0 (colima VM) | namespace로 보이는 범위를 나누고 cgroup으로 자원을 세고 막음 |
+
+kubelet과 런타임 사이의 표준이 CRI(Container Runtime Interface)입니다. 쿠버네티스는 v1.5에서 CRI를 들여왔고 Docker Engine은 그동안 kubelet 안의 dockershim을 거쳐 붙었습니다. dockershim은 v1.20에서 deprecated, v1.24에서 제거됐습니다. 지금 노드는 containerd나 CRI-O처럼 CRI를 직접 구현한 런타임을 씁니다. 바뀐 것은 kubelet이 런타임에 닿는 경로이고 컨테이너 이미지 형식과 컨테이너 자체는 그대로입니다.
 
 ```bash
-k get pods -n kube-system                                         # controller-manager 상태
-sudo crictl ps -a | grep controller                               # API 서버까지 죽어 kubectl이 안 될 때
-sudo cat /etc/kubernetes/manifests/kube-controller-manager.yaml   # 오타·잘못된 설정
-sudo journalctl -u kubelet                                        # kubelet 쪽 문제
+kubectl get nodes -o wide
+# NAME                      STATUS   ...  KERNEL-VERSION              CONTAINER-RUNTIME
+# cka-lab-c-control-plane   Ready    ...  6.8.0-117-generic (arm64)   containerd://2.3.4
 ```
 
----
+kind 노드는 컨테이너라서 `KERNEL-VERSION`에는 호스트 VM의 커널 버전이 찍힙니다. 클러스터 안의 모든 컨테이너가 이 커널 하나를 함께 씁니다.
 
-## 5. [실전 시나리오] 연쇄 장애 (Cascading Failure)
-
-> 새벽 3시, PagerDuty 알림 발생 → **503 에러(Service Unavailable) 급증**
-
-503이 뜬다는 건 컨테이너 한두 개가 죽은 수준이 아니라 **서비스 자체가 완전히 마비**됐다는 뜻이다.
-
-### 연쇄 장애가 번지는 과정 (도미노 현상)
-
-1. 트래픽 **급증(스파이크)**
-2. 파드 3개 중 **1번이 메모리 초과(OOM)로 강제 종료**
-3. 1번이 처리하던 요청이 **2번·3번으로 쏟아짐**
-4. 2번·3번도 메모리 임계점 도달 → **연쇄적으로 종료**
-5. 결국 모든 파드가 줄줄이 죽으며 **서비스 전체 다운**
-
-### 방어 장치 (Defense Mechanism)
-
-| 방어 장치 | 역할 |
-| --- | --- |
-| **Rate Limiting (속도 제한)** | 들어오는 요청 속도를 강제로 제한 → 시스템이 감당 가능한 만큼만 수용 |
-| **Circuit Breaker (서킷 브레이커)** | 특정 지점에 장애 감지 시 연결을 즉시 차단 → 다른 곳으로 장애가 번지지 않게 격리 |
-
-### 로그로 원인 확인
-
-- 메모리 과부하로 죽으면 → **OOMKilled** 발생, **Exit Code 137**
-
----
-
-## 6. [실습 1] OOMKilled 재연 및 분석
-
-### 실습 환경 구성 (Terraform / IaC)
-
-- 서버를 수동으로 하나씩 만들지 않고 **코드로 전체 환경을 한 번에 구성**.
-- 구성: **컨트롤 플레인 1대 (t3.medium)** + **워커 노드 2대 (t3.small)**, kubeadm 클러스터.
+### 1-4. 직접 해 보기
 
 ```bash
-terraform init      # 프로바이더·플러그인 자동 다운로드
-terraform plan      # 실제 생성 전, 어떤 리소스가 만들어질지 사전 확인
-terraform apply -auto-approve   # 실제 AWS 리소스 생성 (1분 이내)
+kind create cluster --name lab --image kindest/node:v1.37.0
+kubectl create deployment web --image=nginx:1.27 --replicas=3
+kubectl delete pod -l app=web --wait=false      # 세 개를 한꺼번에 삭제
+kubectl get pods -l app=web -w                  # 새 이름의 파드 세 개가 다시 뜨는지
+kubectl get rs                                  # DESIRED 3이 그대로인지
 ```
 
-- `terraform.tfvars`에서 **`my_ip`를 본인 IP로 수정** (`curl ifconfig.me` 또는 "my ip address" 검색).
-- 접속은 SSH 키가 아닌 **SSM 세션** 방식 사용.
-- Calico 오퍼레이터 설치 → `Bootstrap Complete` 확인 → 워커 노드를 `joincommand.sh`로 컨트롤 플레인에 조인.
-- `k get nodes`로 컨트롤 플레인 1 + 워커 2가 모두 `Ready` 확인.
-- (편의 alias: `k` = `kubectl`)
+확인할 것은 두 가지입니다. 파드 이름이 바뀐다는 점과 ReplicaSet의 `DESIRED`가 그대로라는 점입니다. 새 이름은 컨트롤러가 원하는 수 3과 실제 수 0의 차이를 보고 파드 3개를 새로 만들었다는 표시입니다.
 
-> ⚠️ 실제 AWS 리소스라 **비용 발생**. 실습 후 반드시 정리할 것 (9번 참고).
+---
 
-### OOM 파드 배포
+## 2. kube-controller-manager가 멈춘 동안 계속되는 일과 멈추는 일
 
-- 매니페스트: 메모리 **Limit = 128Mi**로 제한했는데, 내부 **스트레스 테스트가 200MB**를 강제 점유.
-- 제한 공간(128Mi)에 더 큰 데이터(200MB)를 밀어넣어 물리적 한계에 부딪힘.
-- 결과: 파드 상태가 **`CrashLoopBackOff` + `OOMKilled`**.
+ReplicaSet, Deployment, Node, Job 같은 내장 컨트롤러는 kube-controller-manager라는 프로세스 하나에 묶여 컨트롤 플레인에서 돕니다. 이 프로세스가 멈추면 무엇이 멈추는지 알아 두면 "스케일했는데 파드가 늘지 않는다" 같은 증상을 바로 좁힐 수 있습니다.
 
-> 핵심: 이런 상황에서 단순히 메모리 Limit을 올리는 게 아니라 **"왜 이런 문제가 발생했는지" 원인부터 찾는 것**이 중요.
+### 2-1. kubeadm 계열 클러스터에서 controller-manager는 static Pod
 
-### CrashLoopBackOff가 만들어지는 흐름
-
-1. 프로세스가 메모리 초과로 **컨테이너가 죽음** (파드 객체와 샌드박스는 그대로 남음)
-2. `restartPolicy: Always`(기본값)라서 **kubelet이 재시작 시도**
-3. 한도보다 큰 메모리를 또 쓰므로 **다시 죽음**
-4. 무의미한 재시작 낭비를 막기 위해 재시작 간격을 **지수적으로 증가** (10초 → 20초 → 40초 … **최대 5분**)
-5. 이 "다음 재시작까지 대기 중"인 상태가 **`CrashLoopBackOff`**. kubelet은 포기하지 않고 최대 5분 간격으로 **계속** 재시작을 시도한다. 컨테이너가 10분 동안 문제없이 돌면 간격은 처음 값으로 돌아간다.
-
-> 버전 보충: 10초 시작, 최대 300초는 지금도 기본값이다. v1.35부터 `KubeletCrashLoopBackOffMax`(KEP-5593)가 베타(기본 켜짐)라서 kubelet 설정 `crashLoopBackOff.maxContainerRestartPeriod`로 노드별 상한을 1초~300초 사이로 낮출 수 있다. 시작값을 1초, 상한을 60초로 줄이는 `ReduceDefaultCrashLoopBackOffDecay`(KEP-4603)는 v1.33에 알파로 들어왔고 기본으로 꺼져 있다.
-
-### 디버깅
+kubeadm으로 만든 클러스터(kind도 내부에서 kubeadm을 씁니다)는 API 서버, controller-manager, scheduler, etcd를 static Pod로 띄웁니다.
 
 ```bash
-kubectl describe pod <pod>
+docker exec cka-lab-c-control-plane ls /etc/kubernetes/manifests
+# etcd.yaml
+# kube-apiserver.yaml
+# kube-controller-manager.yaml
+# kube-scheduler.yaml
 ```
 
-- `Back-off restarting failed container` 메시지 확인
-- `Last State: Terminated`, `Reason: OOMKilled`, **`Exit Code: 137`**
-
----
-
-## 7. Exit Code 137의 의미: 진짜 범인은 커널
-
-`137`은 단순한 숫자가 아니다.
-
-```
-137 = 128 + 9
-```
-
-- **128 초과** = 셸과 컨테이너 런타임은 시그널 N으로 죽은 프로세스의 종료 코드를 128+N으로 적는 관례를 따른다. 그래서 128을 넘는 값이면 **시그널로 종료**됐을 가능성이 높다. 다만 프로세스가 직접 `exit(137)`을 호출해도 같은 값이 나오므로, OOM 여부는 쿠버네티스가 따로 적어 주는 `reason: OOMKilled`로 확인한다.
-- **+9 (SIGKILL)** = 리눅스에서 9번 시그널은 프로세스를 **즉시·강제로 죽여라**는 명령. 정리 작업도 못 하고 즉각 종료됨.
-
-### 그럼 SIGKILL을 보낸 주체는?
-
-**쿠버네티스가 아니라 리눅스 커널(Linux Kernel)이다.** ← 이 강의의 가장 중요한 포인트
-
-> 많은 사람이 "쿠버네티스가 파드를 죽인다"고 오해한다. 쿠버네티스가 하는 일은 컨테이너를 만들 때 한도값을 커널에 **미리 설정해 두는 것**과 죽은 뒤 결과를 **보고하는 것**이다. 한도를 넘는 순간의 판단과 종료는 커널이 혼자 한다.
-
-### 실제 메모리 제어 경로
-
-경로는 둘로 나뉜다. 한도를 적어 두는 **설정 경로**와 한도를 넘었을 때 실제로 죽이는 **집행 경로**다.
-
-```
-[설정 경로] 컨테이너를 만들 때 한 번
-   kubelet (limits.memory 계산)
-   → containerd (CRI)
-   → runc (OCI 런타임)
-   → cgroup 파일시스템의 memory.max에 한도 기록
-
-[집행 경로] 메모리를 할당하다 한도에 닿았을 때
-   커널이 그 cgroup의 메모리 회수(reclaim) 시도
-   → 회수로도 줄지 않으면 커널이 그 cgroup 안에서 OOM Killer 실행
-   → SIGKILL(9)로 프로세스 강제 종료
-   → containerd가 사후에 종료 이벤트를 받고, kubelet이 "OOMKilled"로 보고
-```
-
-→ 집행 경로에는 kubelet도 containerd도 끼지 않는다. 쿠버네티스는 커널이 끝낸 결과를 사용자에게 **"OOMKilled" 텍스트로 보여줄 뿐**이다. 공식 문서도 컨테이너가 한도를 넘었다고 바로 죽는 것은 아니고 커널이 메모리 압박을 감지할 때 종료된다고 적는다.
-
-cgroup v2 노드에서는 kubelet이 컨테이너 cgroup에 `memory.oom.group`을 켠다. 그래서 OOM이 나면 희생자 프로세스 하나만 죽는 대신 그 컨테이너의 프로세스 전체가 함께 종료된다. 예전처럼 프로세스 하나만 죽이려면 kubelet 설정 `singleProcessOOMKill: true`를 쓴다(기본값 false).
-
-### 커널 로그 직접 분석
+공식 문서 "Create static Pods"에 따르면 static Pod는 API 서버가 관리하지 않고 그 노드의 kubelet이 직접 관리합니다. kubelet은 이 디렉터리의 파일을 읽어 컨테이너를 띄우고 API 서버에는 보기용 미러 파드만 만듭니다. 미러 파드의 메타데이터에서 출처를 확인할 수 있습니다.
 
 ```bash
-sudo -i                      # 커널 작업은 root가 편리
-dmesg -T                     # 커널 메시지 확인
-dmesg -T | grep -i oom | tail -5
+kubectl get pod -n kube-system kube-controller-manager-cka-lab-c-control-plane \
+  -o jsonpath='{.metadata.annotations.kubernetes\.io/config\.source}{"\n"}{.metadata.ownerReferences}{"\n"}'
+# file
+# [{"apiVersion":"v1","controller":true,"kind":"Node","name":"cka-lab-c-control-plane",...}]
 ```
 
-- `Memory cgroup out of memory` 메시지 확인
-- `Killed process <PID> (oom_pod)` → 어떤 프로세스가 종료됐는지 확인
-- **`oom_score_adj`** 값도 함께 표시됨 → 종료 우선순위 점수
+`config.source`가 `file`이고 소유자는 Node입니다. 그래서 controller-manager 컨테이너가 죽으면 그 노드의 kubelet이 다시 띄웁니다. 컨트롤러를 띄우는 데 컨트롤러가 필요 없는 구조입니다.
 
-### OOM Score (종료 우선순위)
+### 2-2. 실측: 매니페스트를 빼고 스케일하기
 
-- `oom_score_adj` 범위: **-1000 ~ +1000**. -1000이면 OOM Killer 대상에서 완전히 빠진다.
-- 커널은 프로세스마다 메모리 사용량으로 0~1000의 기본 점수를 매기고 여기에 `oom_score_adj`를 더한다. 그래서 `/proc/<pid>/oom_score`의 실질 범위는 0~2000이다.
-- 노드 메모리가 부족하면 커널은 **점수가 높은 프로세스부터** 먼저 희생시켜 시스템을 보호.
-- 쿠버네티스는 **QoS Class**에 따라 컨테이너 프로세스의 `oom_score_adj`를 다르게 넣는다. (별도 챕터에서 상세히)
-    - BestEffort: 1000
-    - Guaranteed: -997
-    - Burstable: `1000 - (1000 × 메모리 request) / 노드 메모리 용량`을 계산해 하한과 999 사이로 맞춘다. 공식 문서 공식의 하한은 2이고 실제 kubelet 코드는 3으로 클램프한다.
-    - kubelet과 containerd 데몬 자신은 -999라서 사용자 컨테이너보다 늦게 희생된다.
-
-### OOM의 두 가지 경로
-
-| 경로 | 범위 | 영향 |
-| --- | --- | --- |
-| **cgroup OOM** | 해당 컨테이너 cgroup만 한도(`memory.max`) 초과 | 그 cgroup 안의 프로세스만 종료, 시스템 전체엔 영향 X |
-| **System OOM** | 노드 전체 메모리 고갈 | 노드 전체에 영향 → 훨씬 큰 문제 |
-
----
-
-## 8. [실습 2] CPU 스로틀링 (Throttling): 가장 까다로운 케이스
-
-OOM과 성격이 완전히 다르다.
-
-- 노드 CPU 자원은 충분해 보이는데 **특정 서비스 응답만 비정상적으로 느려짐**.
-- **파드가 죽지도 않고, 애플리케이션 에러 로그도 안 남음.** 단지 계속 느려질 뿐.
-- 겉으로 드러나는 신호가 거의 없어서 **실무에서 가장 까다로운 케이스 중 하나**.
-
-### 파드 설정
-
-- `args`: **CPU = 1** → 스트레스 도구에게 1코어(=1000m코어) 전부 사용하라고 지시.
-- `limits.cpu`: **50m** → 쿠버네티스가 허용한 상한선은 1코어의 단 **5%**.
-- 즉, 프로세스는 1000m을 쓰고 싶은데 **50m만 허용**됨.
-
-### 리눅스 커널의 스케줄러와 CFS Bandwidth Controller
-
-- 쿠버네티스의 밀리코어 단위는 결국 리눅스 커널의 fair 스케줄링 클래스가 담당. 오랫동안 이 자리의 기본 스케줄러는 **CFS(Completely Fair Scheduler)**였고, 커널 6.6부터는 **EEVDF**로 바뀌었다.
-- EEVDF가 바꾼 것은 실행 대기 중인 태스크 가운데 *누구를 먼저 돌릴지* 고르는 정책이다. 스케줄러 자체는 특정 워크로드의 사용량을 직접 제한하진 않음.
-- 실제 제한은 **CFS Bandwidth Controller**가 cgroup 단위로 담당. 이름에 CFS가 남아 있지만 6.6 이후 커널에서도 그대로 동작하며, cgroup v2에서는 `cpu.max` 파일로 설정한다.
-
-### 동작 방식 (Period & Quota)
-
-- 기본 **주기(Period) = 100ms** (= 0.1초)
-- Limit이 50m코어 → 100ms 중 **5%(5ms)**만 사용 가능 = **Quota**
-- 나머지 **95%는 강제 대기(Throttled)** 상태 → 연산이 필요해도 무작정 기다려야 함.
-
-```
-|■■■■■|---------------------------------------------|
- 5ms                  95ms (강제 대기 / Throttled)
- Quota                 한 주기 = 100ms
-```
-
-### `kubectl top`의 함정
-
-- `kubectl top`은 `50m`만 보여줘서 **정상처럼 보임** → 인프라엔 이상 없으니 개발팀 탓이라 오판하기 쉬움.
-- 이유: metrics-server는 kubelet에서 일정 구간(기본 수집 간격 15초)의 CPU 사용량 샘플을 받아 그 구간의 사용률로 보여준다. 100ms 주기 안에서 5ms를 쓰고 멈추는 일은 이 구간 값에 묻힌다. 스로틀링 횟수나 시간 같은 카운터는 아예 제공하지 않는다. metrics-server README도 오토스케일링용이고 모니터링 용도는 아니라고 밝힌다.
-- 비유: *천장에 머리가 이미 닿았는데, `kubectl top`은 "천장 높이"만 보여줄 뿐 "머리를 몇 번이나 부딪히는지"는 안 보여준다.*
-
-→ 정확한 상태는 **커널 레벨 데이터**를 직접 봐야 한다.
-
-### 커널 레벨 분석 절차
+static Pod를 멈추는 가장 확실한 방법은 매니페스트 파일을 디렉터리 밖으로 옮기는 것입니다. kubelet이 파일이 사라진 것을 보고 컨테이너를 내립니다. 그 상태에서 Deployment를 3개에서 5개로 늘리고 파드 하나를 지웠습니다.
 
 ```bash
-sudo -i
-crictl ps                                    # 컨테이너 상태 확인
-CONTAINER=$(crictl ps --name stress -q | head -1)   # 컨테이너 ID를 변수에 저장
+docker exec cka-lab-c-control-plane mv /etc/kubernetes/manifests/kube-controller-manager.yaml /root/
+docker exec cka-lab-c-control-plane crictl ps -a --name kube-controller-manager
+# CONTAINER      ...  STATE    NAME                      ...
+# eabfa31cc98ca  ...  Exited   kube-controller-manager   ...
+
+kubectl scale deployment web --replicas=5
+kubectl delete pod web-69c6f74b8b-bxxtm
+# 20초 기다린 뒤
+kubectl get deploy web
+# NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+# web    3/5     3            3           2m22s
+kubectl get rs
+# NAME             DESIRED   CURRENT   READY   AGE
+# web-69c6f74b8b   3         3         3       2m22s
+kubectl get pods -l app=web
+# NAME                   READY   STATUS    RESTARTS   AGE
+# web-69c6f74b8b-jdrk2   1/1     Running   0          2m22s
+# web-69c6f74b8b-vgg57   1/1     Running   0          2m22s
 ```
 
-**PID Namespace 격리**: 컨테이너 안과 호스트가 보는 PID가 다름:
+출력 세 개가 서로 맞지 않습니다. Deployment의 `spec.replicas`는 5로 바뀌었지만 Deployment 컨트롤러가 없어서 ReplicaSet의 `DESIRED`는 3에 머물렀습니다. 실제 파드는 2개인데 ReplicaSet과 Deployment의 `status`는 3을 가리킵니다. `status`를 갱신하는 주체도 컨트롤러라서 컨트롤러가 멈추면 `status`는 마지막 값으로 굳습니다. 남은 파드 2개는 계속 Running이었습니다.
+
+매니페스트를 되돌리고 40초 뒤에 다시 봤습니다.
 
 ```bash
-kubectl exec -it <throttling-pod> -- ps -ef
-# → 컨테이너 내부에서는 stress의 PID가 1번
+docker exec cka-lab-c-control-plane mv /root/kube-controller-manager.yaml /etc/kubernetes/manifests/
+kubectl get deploy web; kubectl get rs; kubectl get pods -l app=web
+# web    5/5     5            5           3m10s
+# web-69c6f74b8b   5         5         5       3m10s
+# web-69c6f74b8b-2q6sh   1/1     Running   0          16s
+# web-69c6f74b8b-jdrk2   1/1     Running   0          3m10s
+# web-69c6f74b8b-pl9gs   1/1     Running   0          18s
+# web-69c6f74b8b-vgg57   1/1     Running   0          3m10s
+# web-69c6f74b8b-x4g9n   1/1     Running   0          17s
+```
+
+되살아난 controller-manager는 꺼져 있던 동안 무슨 일이 있었는지 묻지 않았습니다. 원하는 수 5와 실제 수 2를 비교해 3개를 새로 만들었을 뿐입니다. 1-2절에서 말한 비교 방식의 루프가 이렇게 동작합니다.
+
+### 2-3. 멈춘 동안의 정리
+
+| 계속되는 일 | 멈추는 일 |
+|---|---|
+| 이미 떠 있는 파드의 실행(노드의 kubelet과 containerd 담당) | 삭제된 파드를 새로 만들기(ReplicaSet 컨트롤러) |
+| 컨테이너가 죽었을 때 같은 파드 안에서 재시작(`restartPolicy`는 kubelet 담당이라 4-6절의 CrashLoopBackOff도 계속됨) | Deployment 롤아웃과 스케일 변경 반영 |
+| Service로 들어오는 트래픽 처리(kube-proxy 규칙은 그대로) | Deployment, ReplicaSet 등의 `status` 갱신 |
+| scheduler의 배치(이미 만들어진 파드 오브젝트가 있다면) | 응답 없는 노드에 taint를 붙이고 파드를 축출하는 일(node lifecycle 컨트롤러와 taint-eviction 컨트롤러) |
+
+### 2-4. 여러 대일 때는 Lease로 리더 하나만 일함
+
+운영 클러스터는 컨트롤 플레인을 보통 여러 대 두고 controller-manager도 여러 개 띄웁니다. 실제로 루프를 돌리는 것은 리더 하나입니다. `--leader-elect=true`(kind 매니페스트 24행에서 확인)로 켜지는 리더 선출은 `kube-system`의 Lease 오브젝트로 합니다. 리더가 Lease를 계속 갱신하고 갱신이 끊기면 대기 중이던 인스턴스가 가져갑니다.
+
+```bash
+kubectl get lease -n kube-system kube-controller-manager -o jsonpath='{.spec.holderIdentity}{"\n"}'
+# 멈추기 전: cka-lab-c-control-plane_faaada92-71f1-4d8c-a1dc-f99925855c7e
+# 되돌린 뒤: cka-lab-c-control-plane_371fbbf5-7763-4a2f-9a93-0f58b2f0050f
+```
+
+단일 노드라 같은 노드 이름 뒤의 식별자만 바뀌었습니다. 새 프로세스가 리더를 새로 잡았다는 뜻입니다.
+
+### 2-5. 누가 누구를 다시 띄우는지
+
+```
+ReplicaSet 컨트롤러 등      ← kube-controller-manager 프로세스 안에서 돎
+kube-controller-manager    ← kubelet이 static Pod로 다시 띄움
+kubelet                    ← systemd 유닛(kind 노드에서 Restart=always, RestartUSec=1s 확인)
+systemd                    ← PID 1
+```
+
+맨 아래에는 결국 커널 위의 PID 1이 있습니다. 이 사슬의 어느 고리가 끊겼는지에 따라 보는 곳이 달라집니다. 컨트롤러 동작이 이상하면 `kube-system` 파드를 보고 API 서버까지 죽어 kubectl이 안 되면 노드에서 `crictl`을, kubelet 자체가 안 뜨면 `journalctl -u kubelet`을 봅니다.
+
+### 2-6. 노드 전체가 응답을 멈추면 약 50초 + 5분
+
+노드가 상태 갱신을 멈추면 node lifecycle 컨트롤러가 `--node-monitor-grace-period`(현재 기본 50초, 예전 기본 40초)가 지난 뒤 노드 조건을 `Unknown`으로 바꾸고 `node.kubernetes.io/unreachable` taint를 붙입니다. 노드가 응답은 하지만 준비되지 않았다고 보고하면 `node.kubernetes.io/not-ready`가 붙습니다. 파드에는 `DefaultTolerationSeconds` 어드미션 플러그인이 넣은 300초 toleration이 기본으로 있습니다. 그래서 기본 설정에서는 약 50초에 300초를 더한 뒤 그 노드의 파드가 삭제됩니다.
+
+```bash
+kubectl get pod <파드> -o jsonpath='{.spec.tolerations}' | jq
+# node.kubernetes.io/not-ready, node.kubernetes.io/unreachable 두 항목에
+# "effect":"NoExecute", "tolerationSeconds":300 이 들어 있는지 확인
+```
+
+파드 삭제는 v1.34부터 별도의 taint-eviction 컨트롤러(KEP-3902 GA)가 맡습니다. 지워진 파드를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러입니다. StatefulSet 파드는 같은 이름의 파드가 동시에 둘 생기면 안 되므로 노드가 지워지거나 상태가 확인될 때까지 재생성이 막힐 수 있습니다. 이 축출 과정 전체가 controller-manager 안에서 일어나므로 2-2절처럼 controller-manager가 멈춘 동안에는 일어나지 않습니다.
+
+### 2-7. 직접 해 보기
+
+```bash
+# 1) 2-2절 재현: 매니페스트를 빼고 스케일, 다시 넣고 관찰
+docker exec <클러스터>-control-plane mv /etc/kubernetes/manifests/kube-controller-manager.yaml /root/
+kubectl scale deployment web --replicas=5
+kubectl get deploy,rs,pods -l app=web
+docker exec <클러스터>-control-plane mv /root/kube-controller-manager.yaml /etc/kubernetes/manifests/
+
+# 2) API 서버까지 멈춘 상황에서 노드 쪽 도구로 컨테이너 상태 보기
+docker exec <클러스터>-control-plane crictl ps -a --name kube-apiserver
+docker exec <클러스터>-control-plane journalctl -u kubelet --since "5 min ago" | tail
+```
+
+kubeadm 노드라면 `docker exec` 대신 SSH로 들어가 `sudo`를 붙여 같은 명령을 씁니다. 매니페스트의 들여쓰기나 플래그 이름을 일부러 틀리게 고친 뒤 `crictl ps -a`에서 Exited가 반복되는 것과 `crictl logs`로 원인 메시지를 찾는 연습도 해 볼 만합니다. 시험의 컨트롤 플레인 트러블슈팅이 이 모양입니다.
+
+---
+
+## 3. 노드 안에서 보는 컨테이너: 프로세스와 namespace, cgroup
+
+커널에는 "컨테이너"라는 자료구조가 없습니다. 커널이 아는 것은 프로세스(`task_struct`)와 그 프로세스가 속한 namespace 묶음, 그리고 cgroup입니다. 런타임이 이 둘과 루트 파일시스템을 조합한 결과를 사람이 컨테이너라고 부릅니다. 이 장에서는 4장과 5장 실습에 쓸 파드 하나를 노드 안에서 끝까지 따라갑니다.
+
+### 3-1. 실습 파드와 컨테이너 PID 찾기
+
+CPU 한도 50m인 무한 루프 컨테이너입니다. requests와 limits를 CPU, 메모리 모두 같게 두어 QoS 클래스가 Guaranteed가 되게 했습니다.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-capped
+spec:
+  containers:
+  - name: spin
+    image: busybox:1.36
+    command: ["sh", "-c", "while true; do :; done"]
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "32Mi"
+```
+
+노드 안에서 `crictl`로 컨테이너 ID를 찾고 `crictl inspect`로 런타임이 기록한 PID와 cgroup 경로를 꺼냅니다. kind에서는 `docker exec -it <노드> bash`로 들어간 뒤 실행합니다.
+
+```bash
+CID=$(crictl ps --name spin -q)
+PID=$(crictl inspect $CID | jq .info.pid)
+echo $PID
+# 2920
+crictl inspect $CID | jq '.info.runtimeSpec.linux.resources.cpu'
+# {
+#   "period": 100000,
+#   "quota": 5000,
+#   "shares": 51
+# }
+```
+
+`runtimeSpec`은 containerd가 runc에 넘긴 OCI 스펙입니다. kubelet이 계산한 한도가 여기까지 내려와 있습니다. 같은 파드를 컨테이너 안에서 보면 PID가 다릅니다.
+
+```bash
+kubectl exec cpu-capped -- ps
+# PID   USER     TIME  COMMAND
+#     1 root      0:00 sh -c while true; do :; done
+#    14 root      0:00 ps
+```
+
+노드에서 2920번인 프로세스가 컨테이너 안에서는 1번입니다. PID namespace가 따로라서 그렇습니다. kind 노드는 그 자체가 도커 컨테이너라서 2920도 노드 컨테이너의 PID namespace 기준 번호입니다. 4-3절의 커널 로그에는 VM 전체 기준 PID가 찍히므로 숫자가 또 다릅니다.
+
+### 3-2. lsns로 보는 namespace 공유 범위
+
+```bash
+lsns -p $PID
+#         NS TYPE   NPROCS   PID USER  COMMAND
+# 4026531837 user       83     1 root  /sbin/init
+# 4026534612 time       83     1 root  /sbin/init
+# 4026535596 mnt         1  2920 root  sh -c while true; do :; done
+# 4026535597 pid         1  2920 root  sh -c while true; do :; done
+# 4026535598 cgroup      1  2920 root  sh -c while true; do :; done
+# 4026535931 net         2  2890 65535 /pause
+# 4026535993 uts         2  2890 65535 /pause
+# 4026535994 ipc         2  2890 65535 /pause
+```
+
+net, uts, ipc namespace의 대표 프로세스가 PID 2890인 `/pause`이고 프로세스 수가 2입니다. 파드를 만들 때 런타임이 먼저 pause 컨테이너(샌드박스)를 띄워 이 세 namespace를 잡아 두고 앱 컨테이너는 거기에 합류합니다. 같은 파드의 컨테이너끼리 `localhost`로 통신하고 호스트 이름이 같은 이유가 이것입니다. mnt, pid, cgroup은 컨테이너 전용입니다. 파드 스펙에 `shareProcessNamespace: true`를 주면 pid도 파드 단위로 묶입니다. user와 time namespace는 노드의 init과 같아서 이 컨테이너는 user namespace 격리를 쓰지 않습니다.
+
+`/proc/<PID>/ns`의 심볼릭 링크를 노드 셸 자신(`/proc/self/ns`)과 비교해도 같은 결론이 나옵니다. 번호가 같으면 같은 namespace입니다.
+
+### 3-3. /proc/PID/cgroup과 kubepods 계층
+
+```bash
+cat /proc/$PID/cgroup
+# 0::/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-podce56de95_8973_4553_954f_62393f9ba44c.slice/cri-containerd-53e9a7c9...scope
+```
+
+cgroup v2는 줄이 하나(`0::`)이고 그 뒤가 통합 계층 안의 경로입니다. 경로를 위에서부터 읽으면 kubelet이 만든 구조가 보입니다.
+
+| 경로 조각 | 의미 |
+|---|---|
+| `kubelet.slice` | kind는 kubelet 설정에 `cgroupRoot: /kubelet`을 넣습니다. kubeadm 기본값에서는 이 층이 없고 `kubepods.slice`가 맨 위에 옵니다 |
+| `kubelet-kubepods.slice` | 모든 파드의 부모. 노드 할당 가능량(allocatable) 한도가 여기에 걸림 |
+| `...-pod<UID>.slice` | 파드 하나. Guaranteed 파드는 kubepods 바로 아래, Burstable과 BestEffort는 `kubepods-burstable.slice`, `kubepods-besteffort.slice` 아래에 생김 |
+| `cri-containerd-<컨테이너ID>.scope` | 컨테이너 하나 |
+
+`.slice`와 `.scope`라는 이름은 kubelet의 `cgroupDriver: systemd` 때문입니다. kubeadm은 v1.22부터 이 드라이버를 기본으로 씁니다. 실제 파일은 `/sys/fs/cgroup` 아래 같은 경로에 있습니다.
+
+```bash
+CG=/sys/fs/cgroup$(cut -d: -f3 /proc/$PID/cgroup)
+ls $CG | head
+```
+
+4장과 5장에서 이 디렉터리의 `memory.max`, `cpu.max`, `cpu.stat`을 읽습니다.
+
+### 3-4. 루트 파일시스템과 네트워크
+
+namespace와 cgroup 말고도 컨테이너가 성립하려면 두 가지가 더 필요합니다. 이미지 레이어를 하나의 루트로 합쳐 보여 주는 파일시스템과 파드 네트워크 namespace를 노드에 잇는 가상 인터페이스입니다.
+
+```bash
+grep " / " /proc/$PID/mountinfo | cut -c1-120
+# 6113 6116 0:1331 / / rw,relatime - overlay overlay rw,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/...
+
+ip -br link | grep veth | head -1          # 노드 쪽 veth 끝
+# vethda4594cc@if2 UP  ...
+nsenter -t $PID -n ip -br addr             # 파드 쪽 끝
+# lo         UNKNOWN  127.0.0.1/8 ::1/128
+# eth0@if11  UP       10.244.0.10/24 ...
+```
+
+컨테이너의 `/`는 containerd의 overlayfs 스냅샷 디렉터리를 lower로 쓰는 overlay 마운트입니다. 파드의 `eth0`은 노드의 veth 하나와 쌍을 이룹니다. kind의 기본 CNI는 kindnet이라서 다른 CNI(Calico, Cilium 등)와 노드 쪽 구성은 다를 수 있습니다.
+
+| 커널 기능 | 쿠버네티스에서 드러나는 모습 | 이어지는 글 |
+|---|---|---|
+| 시스템 콜과 커널 경계 | 모든 런타임 동작이 결국 시스템 콜 | [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary) |
+| namespace | 파드의 IP와 호스트 이름 공유, 컨테이너 안 PID 1, pause 컨테이너 | [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause) |
+| cgroup v2 | requests와 limits, QoS, OOMKilled, CPU 스로틀링 | [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos) |
+| overlayfs | 이미지 레이어, 컨테이너 쓰기 계층, 재시작 시 사라지는 파일 | [OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs) |
+| veth, netfilter, conntrack | 파드 네트워크, Service의 가상 IP | [Service, iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) |
+
+mount namespace는 2002년 커널 2.4.19에, cgroup은 2008년 2.6.24에 들어왔습니다. Docker가 처음 공개된 2013년보다 앞섭니다. 컨테이너 도구들은 이 기능들을 조합하는 방법을 표준화했고 쿠버네티스는 그 조합을 여러 노드에 걸쳐 원하는 상태대로 유지합니다.
+
+### 3-5. 직접 해 보기
+
+```bash
+docker exec -it <클러스터>-control-plane bash
+crictl ps                                       # 컨테이너 목록
+crictl pods                                     # 파드 샌드박스 목록
+PID=$(crictl inspect $(crictl ps --name <컨테이너이름> -q) | jq .info.pid)
+lsns -p $PID                                    # net, uts, ipc가 /pause와 같은지
+ls -l /proc/$PID/ns /proc/self/ns               # 번호 비교
+cat /proc/$PID/cgroup                           # QoS 클래스별로 경로가 어떻게 다른지
+```
+
+BestEffort 파드(resources를 아예 비운 파드)를 하나 더 띄워 경로에 `besteffort`가 들어가는지 비교해 봅니다.
+
+---
+
+## 4. 메모리 한도: 한도를 적는 경로와 한도를 집행하는 경로
+
+### 4-1. 실습 파드
+
+공식 문서 "Assign Memory Resources to Containers and Pods"의 한도 초과 예제와 같은 구성입니다. 한도는 100Mi인데 컨테이너는 250M을 할당하려 합니다.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mem-over
+spec:
+  containers:
+  - name: stress
+    image: polinux/stress
+    command: ["stress"]
+    args: ["--vm", "1", "--vm-bytes", "250M", "--vm-hang", "1"]
+    resources:
+      requests:
+        memory: "50Mi"
+      limits:
+        memory: "100Mi"
 ```
 
 ```bash
-PID=$(crictl inspect $CONTAINER | jq .info.pid)   # 호스트가 보는 실제 PID (예: 13916)
-cat /proc/$PID/cgroup                              # cgroup 경로 확인
-CGROUP_PATH=...                                    # 경로만 추출해 저장
+kubectl get pod mem-over
+# NAME       READY   STATUS      RESTARTS      AGE
+# mem-over   0/1     OOMKilled   1 (24s ago)   37s
+kubectl describe pod mem-over
+#     State:          Terminated
+#       Reason:       OOMKilled
+#       Exit Code:    137
+#     Last State:     Terminated
+#       Reason:       OOMKilled
+#       Exit Code:    137
+#     Restart Count:  2
 ```
 
-### cgroup v2에서 CPU 제한값 확인
+### 4-2. 설정 경로: 컨테이너를 만들 때 한 번
+
+```
+kubelet        limits.memory 100Mi를 바이트로 계산
+  → containerd   OCI 스펙의 linux.resources.memory.limit = 104857600 기록
+  → runc         컨테이너 cgroup의 memory.max에 104857600 기록
+```
+
+종료된 컨테이너의 런타임 스펙에 이 값이 남아 있습니다.
 
 ```bash
-cat $CGROUP_PATH/cpu.max
-# 출력: 5000 100000
+C=$(crictl ps -a --name stress -q --state exited | head -1)
+crictl inspect $C | jq '.status.exitCode, .status.reason, .info.runtimeSpec.linux.resources.memory, .info.runtimeSpec.process.oomScoreAdj'
+# 137
+# "OOMKilled"
+# {
+#   "limit": 104857600,
+#   "swap": 104857600
+# }
+# 995
 ```
 
-- `5000` = **Quota** (5000μs = 5ms)
-- `100000` = **Period** (100000μs = 100ms)
-- → 100ms 중 5ms = 정확히 50m코어(5%)와 **한 치의 오차 없이 일치**.
-
-### cpu.stat: 진짜 스로틀링 통계
+`swap`이 `limit`과 같은 값이라는 것은 스왑을 추가로 허용하지 않는다는 뜻입니다. 파드 단위 cgroup에도 같은 한도가 걸립니다. 모든 컨테이너에 limits가 있으면 kubelet이 파드 slice의 `memory.max`에 그 합을 적습니다.
 
 ```bash
-cat $CGROUP_PATH/cpu.stat
+cat /sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod64fecf23_....slice/memory.max
+# 104857600
 ```
 
-핵심 지표:
+### 4-3. 집행 경로: 한도에 닿았을 때
 
-| 지표 | 의미 | 예시 값 |
-| --- | --- | --- |
-| `nr_periods` | 총 주기 횟수 | 7,359 |
-| `nr_throttled` | 스로틀링(강제 대기) 발생 횟수 | 6,449 |
-| `usage_usec` | 실제 CPU 연산한 시간 | 36.8초 |
-| `throttled_usec` | 강제 정지된 시간 | 603초 |
+```
+프로세스가 메모리를 더 요청
+  → 커널이 그 cgroup에서 회수(reclaim) 시도
+  → 회수해도 한도 안으로 못 들어오면 그 cgroup 안에서 OOM killer 실행
+  → 희생자에게 SIGKILL
+  → containerd가 종료 이벤트를 받고 kubelet이 OOMKilled로 보고
+```
 
-**계산 결과:**
+이 경로에는 kubelet도 containerd도 끼지 않습니다. 판단과 종료는 커널이 혼자 하고 런타임과 kubelet은 끝난 뒤에 결과를 받습니다. 공식 문서 "Resource Management for Pods and Containers"도 한도를 넘은 컨테이너가 즉시 종료되는 것은 아니고 커널이 메모리 압박을 감지할 때 종료된다고 적습니다.
 
-- 스로틀링 비율: 6,449 / 7,359 ≈ **87.6%** (압도적인 비율로 강제 멈춤)
-- 시간 기준: 총 경과 = 36.8s + 603s = 640.7s
-    - 실제 사용: 36.8 / 640.7 ≈ **5.7%**
-    - 강제 대기: ≈ **94.3%** → CPU 쓴 시간보다 **약 15배 이상** 길게 멈춰 있었음.
+커널 로그에 이 과정이 그대로 남습니다. kind 노드에서 `dmesg -T`로 본 내용을 줄여 옮깁니다(경로 일부는 `...`로 줄임).
 
-> 결론: 리눅스 커널은 우리가 YAML로 선언한 Limit을 **한 치의 오차도 없이 엄격하게 물리적으로 집행**하고 있었다.
-> 쿠버네티스에서는 정상으로 보였지만, **커널 계층에서 보면 명백한 비정상**이었다. (OOM 사례와 동일한 구조)
+```
+oom-kill:constraint=CONSTRAINT_MEMCG,...,oom_memcg=/docker/cae0.../kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod64fecf23_....slice,task_memcg=/docker/cae0.../...pod64fecf23_....slice/cri-containerd-8bf7c339....scope,task=stress,pid=2297318,uid=0
+Memory cgroup out of memory: Killed process 2297318 (stress) total-vm:558664kB, anon-rss:101072kB, ... oom_score_adj:995
+Tasks in /docker/cae0.../cri-containerd-8bf7c339....scope are going to be killed due to memory.oom.group set
+Memory cgroup out of memory: Killed process 2297251 (stress) total-vm:302656kB, anon-rss:512kB, ... oom_score_adj:995
+```
 
-### 실무에서는?
+읽을 곳은 네 군데입니다.
 
-- 매번 수동으로 워커노드 접속 → 컨테이너 ID → PID → cgroup 경로 → 통계 확인은 너무 번거로움.
-- 그래서 **Prometheus / Datadog** 같은 모니터링 도구가 kubelet 내장 **cAdvisor**를 통해 커널의 `cpu.stat` 값을 주기적으로 수집.
-- cAdvisor는 이 값을 `container_cpu_cfs_periods_total`, `container_cpu_cfs_throttled_periods_total`, `container_cpu_cfs_throttled_seconds_total` 메트릭으로 내보낸다. 스로틀링 비율은 throttled_periods를 periods로 나눠 본다.
-- → 우리가 대시보드에서 보는 스로틀링 값의 **실제 출처가 바로 리눅스 커널 원천 데이터**(`cpu.stat`의 `nr_periods`, `nr_throttled`, `throttled_usec`)다.
+- `constraint=CONSTRAINT_MEMCG`: 노드 전체 메모리가 아닌 cgroup 한도 때문에 일어난 OOM입니다.
+- `oom_memcg`: 한도에 닿은 cgroup입니다. 이 실행에서는 파드 slice가 찍혔습니다. 컨테이너가 하나뿐이라 파드 한도와 컨테이너 한도가 둘 다 100Mi입니다.
+- `anon-rss:101072kB`: 죽은 프로세스의 익명 메모리가 약 98.7MiB로 한도 100Mi 바로 아래입니다.
+- `oom_score_adj:995`와 `/docker/cae0...` 접두어: 4-5절에서 다룰 점수와 kind 노드가 도커 컨테이너라는 흔적입니다. PID 2297318은 VM 기준 번호입니다.
 
----
-
-## 9. 실습 환경 정리 (비용 주의)
-
-실습을 이어 하지 않으면 **반드시** 클러스터를 정리해야 AWS 비용이 청구되지 않는다.
+로그를 못 보는 환경이면 cgroup의 이벤트 카운터로도 확인할 수 있습니다.
 
 ```bash
-terraform state list      # 현재 리소스 확인
-terraform destroy         # 클러스터 삭제
+cat <파드 slice>/memory.events
+# low 0
+# high 0
+# max 139
+# oom 5
+# oom_kill 15
+# oom_group_kill 5
 ```
 
----
+`max`는 한도에 닿은 횟수, `oom`은 OOM killer가 돈 횟수, `oom_kill`은 죽은 프로세스 수입니다. 다섯 번의 OOM에서 프로세스 15개가 죽었습니다. 다음 절의 `memory.oom.group` 때문에 한 번에 여러 프로세스가 함께 죽습니다.
 
-## 10. 핵심 명제: 쿠버네티스 vs 커널
-
-> **쿠버네티스를 "편리한 배포 도구"로만 한정 지으면 절대 안 된다. 시스템 전체 아키텍처를 이해해야 한다.**
-
-| 구분 | 역할 | 비유 |
-| --- | --- | --- |
-| **쿠버네티스 (K8S)** | 실행자가 아닌 **오케스트레이션(지휘자)**. "이 상태로 유지하라"는 *의도를 선언*. | 악보를 어떻게 연주할지 지시하는 **지휘자** |
-| **리눅스 커널** | 실제 **집행자**. CPU 할당 제한, 메모리 감시, 프로세스 정리 등 물리적 행위 수행. | 실제 악기로 소리를 내는 **연주자** |
-
-→ **자원 통제의 최종 집행 권한은 항상 리눅스 커널에 있다.**
-
----
-
-## 11. 커널의 4대 핵심 기능 (Kernel Primitives)
-
-컨테이너를 가능하게 하는 리눅스 커널의 핵심 기능 4가지. 각각은 "쿠버네티스 아래의 리눅스" 시리즈에서 따로 자세히 다룬다. 시스템 콜과 커널 경계부터 보려면 [커널 경계 글](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 시작하면 된다.
-
-| # | 기능 | 역할 | 자세히 |
-| --- | --- | --- | --- |
-| 1 | **Namespace (네임스페이스)** | 프로세스의 시야를 분리해 다른 컨테이너의 파일·네트워크·프로세스를 못 보게 **격리(Isolation)** | [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause) |
-| 2 | **Cgroup (Control Group)** | CPU·메모리·블록 I/O·프로세스 수 등 자원의 **상한선 설정**. (OOMKilled·스로틀링의 실제 집행 주체) | [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos) |
-| 3 | **OverlayFS (오버레이 파일시스템)** | 여러 층의 파일시스템 **레이어**를 하나로 합쳐 보여줌. 컨테이너 이미지가 여러 레이어로 구성되는 원리 | [OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs) |
-| 4 | **veth (Virtual Ethernet Pair)** | 컨테이너↔호스트, 파드↔파드 통신을 가능하게 하는 **가상 네트워크** | [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause)(veth와 CNI), [Service, iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) |
-
-> 결국 OOMKilled = cgroup 메모리 제어 결과, 스로틀링 = cgroup CPU 대역폭 제한(`cpu.max`) 결과, 이미지 레이어 = OverlayFS, 파드 네트워크 장애 = veth 설정 문제.
-> **모든 것은 커널 기능에서 출발한다.**
-
----
-
-## 12. 장애 대응의 3단계
-
-| 단계 | 내용 | 한계/지향 |
-| --- | --- | --- |
-| 1. **증상 대응** | `kubectl describe`로 상태 확인 후 메모리·CPU Limit 수치만 올림 | 당장의 장애는 막지만 **임시방편** (근본 원인 미해결) |
-| 2. **근거 기반 분석** | 커널 로그(`dmesg` 등)를 확인해 커널이 어떤 결정을 내렸는지 **기술적 근거** 파악 | 해당 없음 |
-| 3. **구조적 해결** | cgroup 지표·cpu.stat 등 **원천 데이터를 직접 분석**해 애플리케이션/인프라 설정의 구조적 불일치를 근본 해결 | 진정한 Root Cause Analysis |
-
-> 장애는 무조건 발생한다. Limit 수치만 올리는 데서 멈추지 말고, **커널 동작 원리를 이해한 뒤 구조적 결함을 조정**하는 방향이 중요.
-
----
-
-## 13. [심화] 인프라 역사: 왜 이 기술들이 필연적으로 등장했나
-
-### (1) 물리 서버 시대 (~2000년대 초반)
-
-물리 서버에 OS를 깔고 애플리케이션을 배포하던 시절. 치명적 한계 4가지:
-
-| 문제 | 설명 |
-| --- | --- |
-| **의존성 충돌** | 서비스 A(Python 2.4)와 서비스 B(Python 2.6)가 하나의 OS에서 공존 어려움. "내 PC에선 되는데 서버에선 안 돼" 갈등 |
-| **자원 격리 부재** | 프로세스 A의 메모리 누수 → 커널이 시스템 보호하려다 같은 자원 쓰던 프로세스 B까지 연쇄 중단. A의 문제가 B로 전가 |
-| **비효율적 확장성** | DB만 트래픽 부하가 집중돼도, 특정 컴포넌트만 확장 불가 → 물리 장비를 통째로 추가해야 함 |
-| **배포의 어려움** | 바이너리 덮어쓰기·수동 설정 변경 → 즉각적 롤백 거의 불가능. "금요일 오후엔 배포하지 마라"는 불문율 |
-
-### (2) 가상 머신(VM) 시대 (~2001년부터)
-
-물리 서버 위에 **하이퍼바이저(가상화 엔진)**가 하드웨어를 추상화해 여러 VM으로 나눔.
-
-**해결된 점:**
-
-- **완벽한 격리**: VM 간 자원 간섭 차단
-- **의존성 독립**: VM마다 다른 OS·라이브러리 설치 가능
-- **유연한 확장**: 이미지 복제로 빠르게 서버 대수 증설
-
-**새로 생긴 문제:**
-
-- **무겁다**: 각 VM이 자체 커널 포함 전체 OS를 통째로 가짐
-- **느리다**: 매번 OS 부팅(부트스트래핑) → 수 분 소요
-- **오버헤드**: 서비스와 무관한 OS 유지 비용 발생
-- **★ 커널 중복(가장 큰 아킬레스건)**: VM 10대면 게스트 커널 10개가 메모리에 상주. 앱이 놀고 있어도 커널·OS 백그라운드가 자원을 상시 소모 → 자원 효율 급락
-
-### 하이퍼바이저 두 가지 유형
-
-| 유형 | 이름 | 구조 | 특징 / 용도 |
-| --- | --- | --- | --- |
-| **Type 1** | 베어 메탈 | 물리 하드웨어 **바로 위**에 하이퍼바이저 설치 | 중간 단계 없어 성능 손실 최소. 기업 데이터센터·클라우드 프로덕션. **클라우드 대부분 채택** |
-| **Type 2** | 호스티드 | 기존 OS(Windows/macOS) 위에 소프트웨어로 설치 | 호스트 OS를 한 번 더 거쳐 오버헤드↑. VirtualBox 등 개인 PC·로컬 테스트용 (2026년 기준 성능은 많이 개선됨) |
-
-→ Type 1이라도 **커널 중복** 문제는 남음. 이를 걷어내기 위해 **커널을 공유하는 컨테이너**가 등장.
-
-### (3) 컨테이너 시대
-
-VM의 무거움에 대한 의문: *"앱 하나 격리하려고 매번 기가바이트 OS를 통째로 띄워야 하나?"*
-
-**컨테이너 = 격리된 리눅스 프로세스 그룹**. 3가지 기술로 구현:
-
-1. **Namespace**: 격리 (네트워크·PID·마운트 등 가시성 분리)
-2. **Cgroup**: 자원 사용량 제한·모니터링
-3. **파일시스템 레이어 (OverlayFS)**: 베이스 이미지 + 변경분을 층층이 쌓아 하나의 파일시스템처럼
-
-> 컨테이너는 완전히 새로운 발명품이 아니다. 리눅스 커널이 **도커보다 먼저** 가지고 있던 기능(mount 네임스페이스는 2002년 2.4.19, cgroup은 2008년 2.6.24)을 조합한 것뿐. **컨테이너의 본체 = 리눅스 프로세스.**
-
-### 도커(Docker) ≠ 컨테이너
-
-- **도커는 컨테이너를 다루는 *수단(도구)***, 컨테이너는 *커널 기술로 구현된 격리 실행 환경*. 일대일 매칭 개념이 아니다.
-- Namespace·Cgroup·Union FS 등은 2013년보다 **훨씬 전부터** 존재 → 원래는 커널을 깊이 아는 고급 엔지니어의 전문가 영역.
-- **2013년, Solomon Hykes**가 발표한 도커가 이 복잡한 커널 기술을 `docker run` 같은 **간단한 명령어로 추상화·패키징** → 누구나 사용 가능하게 대중화.
-- → 도커는 새 기술을 발명한 게 아니라, **기존 커널 기술을 누구나 쓰게 포장한 혁신적 도구.** 이것이 클라우드 네이티브 생태계의 토대가 됐고, 이를 대규모로 관리하기 위해 **쿠버네티스**가 탄생.
-
-### 쿠버네티스 런타임의 변화 (도커와의 결별)
-
-> "도커와의 결별"은 컨테이너가 없어진 게 아니라 **도커라는 제품**이 분리된 것.
-
-| 시기 | 구조 |
-| --- | --- |
-| **초기 (~v1.4)** | kubelet이 **도커 API를 직접 호출** |
-| **CRI 표준화기 (v1.5 CRI 도입 이후)** | 도커가 CRI 미지원 → kubelet 내부 **dockershim**(중계기/변환기)을 거쳐 도커와 통신. v1.20에서 deprecated |
-| **현재 (v1.24+)** | **dockershim 완전 제거** → kubelet이 CRI 표준을 따르는 **containerd**(또는 CRI-O)와 직접 통신. 중간 변환기 없이 커널 기능을 더 효율적으로 제어 |
-
-> ※ CRI = Container Runtime Interface (컨테이너 런타임 표준 인터페이스)
-> 결국 쿠버네티스 = 커널의 정교한 격리 기술들을 **표준화된 인터페이스(CRI)**를 통해 수천 대의 서버에 걸쳐 자동화하는 거대한 시스템.
-
-### VM vs 컨테이너 비교
-
-| 항목 | 가상 머신(VM) | 컨테이너 |
-| --- | --- | --- |
-| 커널 | 각자 **자체 커널** 보유 (하드웨어 가상화) | **호스트 커널 공유** (OS 레벨 격리) |
-| 구조 | 앱 + 게스트OS(커널 포함) + 하이퍼바이저 + HW | 앱 + 컨테이너 런타임 + 호스트 커널 + HW |
-| 이미지 크기 | 기가바이트 단위 | 훨씬 작음 |
-| 기동 속도 | 초~분 단위 (느림) | 밀리초~초 단위 (빠름) |
-| 밀도 | 낮음 | 높음 (한 서버에 더 많이) |
-| 격리 수준 | 완전 격리 (강함) | 상대적으로 낮음 (커널 공유) |
-
----
-
-## 14. [심화] 클라우드의 현실: VM과 컨테이너의 공존
-
-컨테이너가 발전했어도 **VM이 사라진 게 아니다.** 대부분의 클라우드는 **VM 위에 컨테이너를 올리는 계층 구조**를 따른다.
-
-### AWS EC2 인프라 스택 (아래 → 위)
+### 4-4. 137은 128 + 9
 
 ```
-물리 서버 (Physical Server / 하드웨어)
-   └─ Nitro 하이퍼바이저 (AWS 자체 개발)
-        └─ EC2 (VM)
-             └─ 리눅스 커널
-                  └─ containerd
-                       └─ 컨테이너들 (앱)
+137 = 128 + 9 (SIGKILL)
 ```
 
-### 왜 효율적인 컨테이너가 있는데도 VM 레이어를 유지하나?
+셸과 컨테이너 런타임은 시그널 N으로 끝난 프로세스의 종료 코드를 128+N으로 적는 관례를 따릅니다(bash 매뉴얼의 EXIT STATUS). 그래서 128보다 큰 값이면 시그널로 끝났을 가능성이 높습니다. 다만 프로세스가 직접 `exit(137)`을 불러도 같은 값이 나오므로 137만 보고 OOM이라고 단정하면 안 됩니다. OOM 여부는 kubelet이 따로 적는 `Reason: OOMKilled`로 판단합니다. SIGKILL은 프로세스가 잡거나 무시할 수 없어서 애플리케이션의 종료 훅이 돌 기회가 없습니다.
 
-1. **보안 (Security)**
-2. **멀티테넌시 (Multi-tenancy)**: 수천~수만 명의 고객이 하나의 거대한 물리 서버를 안전하게 나눠 사용
+### 4-5. memory.oom.group과 oom_score_adj
 
-### 컨테이너 브레이크아웃 (Container Breakout)
+cgroup v2 노드에서 kubelet은 컨테이너 cgroup에 `memory.oom.group`을 1로 켭니다. 3-1절의 Guaranteed 파드 컨테이너에서 이 값을 읽으면 1이 나옵니다. 그래서 OOM이 나면 그 컨테이너의 프로세스 전체가 함께 끝납니다. 위 커널 로그의 "going to be killed due to memory.oom.group set"이 이 동작입니다. 예전처럼 프로세스 하나만 죽이려면 kubelet 설정 `singleProcessOOMKill: true`를 씁니다(기본값 false).
 
-- 컨테이너는 **호스트 커널을 공유**하므로, 고객 A의 컨테이너가 해킹당하면 커널까지 탈취당할 수 있음 → 같은 커널을 쓰는 고객 B의 데이터까지 위험.
-- 이렇게 컨테이너 밖으로 위험이 빠져나오는 것을 **브레이크아웃(컨테이너 탈출)**이라 함.
-- 그래서 고객 사이에 **VM으로 하드웨어 레벨의 벽**을 세움 → A가 해킹당해도 하드웨어 경계 덕에 B는 안전.
+`oom_score_adj`는 -1000에서 +1000 사이 값으로 OOM killer가 누구를 먼저 고를지 조정합니다. -1000이면 대상에서 빠집니다. 커널은 메모리 사용량으로 0~1000의 기본 점수를 매기고 여기에 adj를 더하므로 `/proc/<pid>/oom_score`의 실질 범위는 0~2000입니다. kubelet은 QoS 클래스에 따라 이 값을 넣습니다.
 
-> 결론: VM과 컨테이너는 **경쟁 관계가 아니라 상호 보완 관계.** VM = 안정성·보안 경계, 컨테이너 = 효율성.
+| 대상 | oom_score_adj | 이 클러스터에서 확인한 값 |
+|---|---|---|
+| Guaranteed 컨테이너 | -997 | `cpu-capped`: -997 |
+| Burstable 컨테이너 | `1000 - (1000 × 메모리 request) / 노드 메모리 용량`을 하한과 999 사이로 맞춤 | `mem-over`: 995 |
+| BestEffort 컨테이너 | 1000 | resources 없이 띄운 `be`: 1000 |
+| kubelet, containerd 데몬 | -999 | 둘 다 -999 |
 
-### AWS Nitro 시스템
+`mem-over`의 995는 계산과 맞습니다. 노드 메모리 용량은 `10161128Ki`이고 request는 50Mi(51200Ki)입니다. 1000 × 51200 / 10161128은 정수 나눗셈으로 5이고 1000에서 빼면 995입니다. Burstable의 하한은 공식 문서 공식에서 2이고 kubelet 코드는 3으로 맞춥니다. 메모리 request가 없는 Burstable 파드는 999가 됩니다.
 
-- **일반 하이퍼바이저**: 네트워크·스토리지·관리 기능을 **메인 CPU가 처리** → 그만큼 호스트 CPU를 가상화 관리에 소모(오버헤드). 업계 글에 "15~20%" 같은 수치가 돌지만 AWS 공식 문서에서는 확인하지 못한 추정치라 여기서는 쓰지 않는다.
-- **Nitro**: 전용 하드웨어(Nitro Card)가 네트워크·스토리지·관리 기능을 맡는 **하드웨어 오프로딩** 구조이고, Nitro 하이퍼바이저는 CPU와 메모리 분할만 맡는다 → AWS 표현으로는 호스트 자원을 사실상 전부 인스턴스에 제공.
-- 베어 메탈에 근접한 성능 → 업계에서 **"Near Bare Metal"**이라 부름.
+이 점수는 노드 전체 메모리가 바닥났을 때 의미가 큽니다. cgroup 한도에 걸린 OOM은 그 cgroup 안에서만 고르기 때문입니다.
+
+| 종류 | 누가 판단하는지 | 범위 | 파드에 보이는 모습 |
+|---|---|---|---|
+| cgroup OOM | 커널, 해당 cgroup의 `memory.max` 기준 | 그 cgroup 안의 프로세스 | 컨테이너 `OOMKilled`, 같은 파드에서 재시작 |
+| 노드 OOM | 커널, 노드 전체 메모리 기준 | 노드의 모든 프로세스 중 점수 높은 쪽 | 점수 높은 컨테이너부터 `OOMKilled` |
+| 노드 압박 축출(eviction) | kubelet, `memory.available`이 임계값(기본 hard 임계 `memory.available<100Mi`) 아래 | 파드 단위 | 파드가 `Failed`, `reason: Evicted` |
+
+kubelet의 `memory.available`은 `/proc/meminfo`의 MemAvailable이 아닌 cgroup의 working set(비활성 파일 캐시 제외)으로 계산합니다. 그래서 `free` 숫자와 축출 시점이 어긋날 수 있습니다. 축출은 kubelet이 결정하는 유일한 경우이고 나머지 둘은 커널이 결정합니다.
+
+### 4-6. 같은 파드 안에서의 재시작과 CrashLoopBackOff
+
+`restartPolicy`의 기본값은 `Always`라서 kubelet은 OOM으로 끝난 컨테이너를 같은 파드 안에서 다시 시작합니다. 파드 오브젝트와 샌드박스(pause, IP)는 그대로입니다. 다시 250M을 잡으면 또 죽으므로 kubelet은 재시작 사이에 간격을 둡니다. 공식 문서 "Pod Lifecycle" 기준으로 간격은 10초에서 시작해 두 배씩 늘고 300초에서 멈춥니다. 컨테이너가 10분 동안 문제없이 돌면 간격이 초기화됩니다. 기다리는 동안의 상태가 `CrashLoopBackOff`이고 이벤트에는 이렇게 남습니다.
+
+```
+Warning   BackOff   pod/mem-over   Back-off restarting failed container stress in pod mem-over_default(...)
+```
+
+버전별 변화가 둘 있습니다. v1.35부터 `KubeletCrashLoopBackOffMax`(KEP-5593)가 베타로 기본 켜져 있어서 kubelet 설정 `crashLoopBackOff.maxContainerRestartPeriod`로 노드별 상한을 1초~300초 사이로 낮출 수 있습니다. 시작값을 1초, 상한을 60초로 줄이는 `ReduceDefaultCrashLoopBackOffDecay`(KEP-4603)는 v1.33에 알파로 들어왔고 기본으로 꺼져 있습니다.
+
+### 4-7. 직접 해 보기
+
+```bash
+kubectl apply -f mem-over.yaml
+kubectl get pod mem-over -w                     # OOMKilled와 CrashLoopBackOff가 번갈아 나오는지
+kubectl get pod mem-over -o jsonpath='{.status.qosClass} {.status.containerStatuses[0].lastState}{"\n"}'
+docker exec <클러스터>-control-plane bash -c 'dmesg -T | grep -iE "oom|killed process" | tail -5'
+# 파드 slice 경로를 찾아 memory.max와 memory.events 읽기
+UIDP=$(kubectl get pod mem-over -o jsonpath='{.metadata.uid}' | tr - _)
+docker exec <클러스터>-control-plane bash -c "P=\$(find /sys/fs/cgroup -type d -name '*pod$UIDP.slice'); cat \$P/memory.max \$P/memory.events"
+```
+
+requests를 지운 버전(BestEffort가 되도록 limits도 함께 지움)과 비교해 `oomScoreAdj`가 어떻게 바뀌는지 봅니다. kind 노드는 colima나 Docker Desktop VM의 메모리를 나눠 쓰므로 노드 OOM을 일부러 일으키는 실험은 VM 전체를 불안정하게 만들 수 있습니다. 그 실험은 버려도 되는 리눅스 VM에서 합니다.
 
 ---
 
-## 15. [심화] 베어 메탈 (Bare Metal)
+## 5. CPU 한도: cpu.max와 스로틀링
 
-- 가상화 레이어를 **완전히 제거**한, 아무 소프트웨어도 깔리지 않은 **순수 하드웨어** 그 자체.
-- 가상화 계층이 더하는 지연과 오버헤드가 없고, 하드웨어를 직접 제어.
+메모리는 넘으면 죽고 CPU는 넘으면 기다립니다. CPU 한도에 걸린 컨테이너는 종료되지 않고 에러 로그도 남기지 않으면서 느려지기만 합니다. 그래서 원인을 찾는 데 오래 걸립니다.
+
+### 5-1. limits.cpu는 cpu.max, requests.cpu는 cpu.weight
+
+3-1절의 `cpu-capped` 파드 cgroup을 읽었습니다.
+
+```bash
+cat $CG/cpu.max $CG/cpu.weight $CG/memory.max $CG/memory.oom.group
+# 5000 100000
+# 11
+# 33554432
+# 1
+```
+
+`cpu.max`의 두 숫자는 quota와 period(마이크로초)입니다. 100,000μs(100ms) 주기마다 5,000μs(5ms)까지 CPU를 쓸 수 있다는 뜻이고 50m = 0.05코어 × 100ms = 5ms와 맞습니다. 한도가 없으면 이 파일은 `max 100000`입니다. `memory.max`의 33554432는 32Mi입니다.
+
+`cpu.weight`는 CPU가 부족할 때 형제 cgroup 사이에서 시간을 나누는 비율입니다. kubelet은 requests.cpu를 cgroup v1 시절 단위인 shares로 바꾸고(50m × 1024 / 1000 = 51) OCI 런타임이 그것을 v2의 weight로 바꿉니다. 이 변환식이 2026년에 바뀌었습니다. 새 식(runc 1.3.2 이상, crun 1.23 이상)에서 shares 51은 11이 되고 옛 식 `1 + (shares - 2) × 9999 / 262142`로는 2가 됩니다. 이 클러스터에서 컨테이너 scope는 11이었고 파드 slice는 2였습니다. 두 층을 서로 다른 코드가 쓰기 때문에 생긴 차이로 보입니다. 같은 파드 안에서는 형제가 컨테이너뿐이라 동작에 영향은 없지만 cgroup 파일을 직접 비교할 때 혼동하기 쉬운 부분입니다.
+
+### 5-2. 스케줄러가 바뀌어도 cpu.max는 그대로
+
+쿠버네티스의 밀리코어는 커널의 fair 스케줄링 클래스가 처리합니다. 이 자리의 기본 스케줄러는 오랫동안 CFS(Completely Fair Scheduler)였고 커널 6.6부터 EEVDF로 바뀌었습니다. EEVDF가 바꾼 것은 실행 대기 중인 태스크 가운데 누구를 먼저 돌릴지 고르는 정책입니다. cgroup 단위로 쓸 수 있는 시간을 막는 기능은 커널 문서에서 여전히 "CFS Bandwidth Control"이라는 이름으로 설명되고 6.6 이후에도 그대로 동작합니다. cgroup v2에서 그 설정 파일이 `cpu.max`입니다. 이 클러스터의 커널 6.8도 EEVDF 이후 커널입니다.
 
 ```
-물리 서버  →  호스트 OS 커널  →  컨테이너 런타임  →  컨테이너
-(VM 레이어 없음 → 단계 축소 → 더 효율적)
+한 주기 100ms, quota 5ms
+|■■■■■|---------------------------------------------------------|
+ 5ms 실행           95ms 동안 실행 가능해도 대기(throttled)
 ```
 
-### 사용처 (특수 목적)
+### 5-3. cpu.stat 실측
 
-| 용도 | 이유 |
-| --- | --- |
-| **고성능 연산 (HPC)** | 대규모 데이터 분석, AI/ML 모델 학습. GPU 자원에 직접 접근 필요 |
-| **초저지연 트레이딩** | 금융권. 마이크로초 단위 체결, Low Latency 필수 |
-| **대규모 배치 처리** | 수억 건 데이터를 최단 시간에 처리. VM의 작은 오버헤드조차 허용 불가 |
+파드를 띄우고 약 2분 뒤에 읽은 값입니다.
+
+```bash
+cat $CG/cpu.stat
+# usage_usec 5900038
+# user_usec 5767282
+# system_usec 132755
+# core_sched.force_idle_usec 0
+# nr_periods 1196
+# nr_throttled 1097
+# throttled_usec 84880525
+# nr_bursts 0
+# burst_usec 0
+```
+
+| 필드 | 뜻(커널 cgroup-v2 문서) | 값 |
+|---|---|---|
+| `usage_usec` | 사용한 CPU 시간 | 5.90초 |
+| `nr_periods` | 지나간 집행 주기 수 | 1,196 |
+| `nr_throttled` | 그중 quota를 다 써서 멈춘 주기 수 | 1,097 |
+| `throttled_usec` | 멈춰 있던 시간의 합 | 84.9초 |
+
+스로틀 비율은 1,097 / 1,196 ≈ 91.7%입니다. 주기 1,196개는 약 119.6초이고 그동안 쓴 CPU는 5.90초라서 사용률은 약 4.9%입니다. 한도 5%와 거의 같습니다. `nr_periods`, `nr_throttled`, `throttled_usec`는 cpu 컨트롤러에 한도가 걸려 있을 때만 의미 있는 값이 나옵니다.
+
+나머지 8%의 주기에서 스로틀이 없었던 이유는 이 값만으로 단정하기 어렵습니다. 주기 안에서 실행 기회 자체를 늦게 받은 경우 등이 섞일 수 있습니다. 숫자는 비율로 보고 한 자리 단위의 차이에 의미를 두지 않는 편이 안전합니다.
+
+### 5-4. kubectl top이 보는 값
+
+kind에는 metrics-server가 없어서 `kubectl top pod`는 `error: Metrics API not available`로 끝납니다. metrics-server가 kubelet에서 읽어 가는 원천은 직접 볼 수 있습니다.
+
+```bash
+kubectl get --raw /api/v1/nodes/cka-lab-c-control-plane/proxy/metrics/resource | grep cpu-capped
+# container_cpu_usage_seconds_total{container="spin",namespace="default",pod="cpu-capped"} 6.515469 ...
+# container_memory_working_set_bytes{container="spin",namespace="default",pod="cpu-capped"} 311296 ...
+# (스로틀 관련 항목 없음)
+
+kubectl get --raw /api/v1/nodes/cka-lab-c-control-plane/proxy/stats/summary \
+  | jq '.pods[] | select(.podRef.name=="cpu-capped") | .containers[0].cpu.usageNanoCores'
+# 49807187
+```
+
+kubelet이 내놓는 CPU 값은 누적 사용 시간 하나뿐입니다. metrics-server는 이것을 수집 간격(기본 15초) 사이의 변화량으로 나눠 사용률을 만듭니다. summary API의 `usageNanoCores` 49,807,187은 약 49.8m이고 metrics-server가 있었다면 `kubectl top`에 `50m` 근처로 보였을 값입니다. 한도가 50m이니 "한도 안에서 잘 돌고 있다"로 읽히기 쉽습니다. 실제로는 91.7%의 주기에서 멈추고 있었습니다. 100ms 단위로 일어나는 멈춤은 15초 구간 평균에 묻히고 스로틀 카운터는 이 경로로 아예 전달되지 않습니다. metrics-server README도 이 지표를 오토스케일링용으로 만들었고 모니터링 용도가 아니라고 밝힙니다.
+
+같은 summary 응답에는 CPU PSI(pressure stall information)도 들어 있었습니다. `some.avg10`이 68.51로 최근 10초 동안 실행할 수 있는데 CPU를 기다린 시간 비율이 약 69%였다는 뜻입니다. 스로틀링을 대기 시간 쪽에서 보여 주는 지표입니다.
+
+### 5-5. 스로틀링을 보는 메트릭
+
+kubelet에 내장된 cAdvisor는 `cpu.stat`의 값을 Prometheus 형식으로 내보냅니다.
+
+```bash
+kubectl get --raw /api/v1/nodes/cka-lab-c-control-plane/proxy/metrics/cadvisor \
+  | grep -E '^container_cpu_cfs_(periods|throttled_periods|throttled_seconds)_total' | grep 'pod="cpu-capped"'
+# container_cpu_cfs_periods_total{container="spin",...,pod="cpu-capped"} 1137
+# container_cpu_cfs_throttled_periods_total{container="spin",...,pod="cpu-capped"} 1038
+# container_cpu_cfs_throttled_seconds_total{container="spin",...,pod="cpu-capped"} 79.569924
+```
+
+1,038 / 1,137 ≈ 91.3%로 `cpu.stat`에서 직접 계산한 비율과 같은 수준입니다(읽은 시점이 몇 초 다름). Prometheus를 쓰는 환경이라면 `rate(container_cpu_cfs_throttled_periods_total[5m]) / rate(container_cpu_cfs_periods_total[5m])`로 컨테이너별 스로틀 비율을 봅니다. 대시보드의 스로틀링 그래프가 결국 커널의 `nr_periods`와 `nr_throttled`에서 나온다는 점을 알면 숫자가 이상할 때 노드에서 `cpu.stat`을 직접 읽어 대조할 수 있습니다.
+
+### 5-6. 직접 해 보기
+
+```bash
+kubectl apply -f cpu-capped.yaml
+# 1분 간격으로 두 번 읽어 증가분으로 비율 계산
+docker exec <클러스터>-control-plane bash -c '
+PID=$(crictl inspect $(crictl ps --name spin -q) | jq .info.pid)
+CG=/sys/fs/cgroup$(cut -d: -f3 /proc/$PID/cgroup)
+cat $CG/cpu.max; grep -E "nr_periods|nr_throttled|usage_usec" $CG/cpu.stat'
+```
+
+`limits.cpu`를 `500m`과 `1`로 바꿔 다시 만들고 비율이 어떻게 변하는지 봅니다. 무한 루프는 스레드 하나라서 한도가 1코어 이상이면 스로틀이 거의 사라져야 합니다. 이어서 `limits.cpu`만 지우고 `requests.cpu`만 남기면 `cpu.max`가 `max 100000`이 되는지 확인합니다.
 
 ---
 
-## 16. 챕터 정리
+## 6. CKA 공부 전에 이 층을 짚는 이유
 
-- 인프라는 **물리 서버 → VM → 컨테이너 → 클라우드 네이티브**로 진화.
-- 현재는 **VM(보안 경계) + 컨테이너(효율)**가 공존하는 구조.
-- 컨테이너는 **커널을 공유**하기 때문에 가볍고 빠르다.
-- **쿠버네티스를 제대로 이해하고 실무 에러 핸들링을 잘하려면, 그 밑단의 리눅스 커널을 이해해야 한다.**
-    - **K8S = 지시자 / 커널 = 집행자**
-    - 쿠버네티스 리소스만큼 중요한 것이 **리눅스 커널**.
-- 다음 글: 쿠버네티스 쪽은 [핵심 오브젝트와 요청 흐름](/blog/cert/cka/cka-01b-core-objects-and-flow)에서 파드, Deployment, Service가 API 서버를 거쳐 노드에 닿는 흐름을 정리한다. 커널 쪽은 "쿠버네티스 아래의 리눅스" 시리즈에서 [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary), [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause), [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos), [OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs), [Service와 iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) 순서로 OOMKilled와 스로틀링이 지나는 경로를 하나씩 따라간다.
+### 6-1. 증상이 생긴 층과 처음 칠 명령
+
+CKA의 트러블슈팅 영역은 비중이 30%로 가장 큽니다. 커리큘럼은 클러스터와 노드, 클러스터 구성요소, 리소스 사용량 모니터링, 컨테이너 출력 스트림, 서비스와 네트워킹을 트러블슈팅 대상으로 꼽습니다. 이 글에서 본 층 구조에 증상을 올려 보면 처음 칠 명령이 정해집니다.
+
+| 증상 | 문제가 있는 층 | 처음 볼 것 |
+|---|---|---|
+| `kubectl`이 아예 응답하지 않음 | API 서버(static Pod) | 노드에서 `crictl ps -a`, `crictl logs`, `/etc/kubernetes/manifests/kube-apiserver.yaml` |
+| 스케일이나 삭제 후 파드 수가 안 맞음 | controller-manager | `kubectl get pods -n kube-system`, 매니페스트, 2-2절처럼 `status`가 굳어 있는지 |
+| 파드가 `Pending`에 머묾 | scheduler 또는 자원 부족 | `kubectl describe pod`의 Events, scheduler 파드 |
+| 노드가 `NotReady` | kubelet 또는 런타임 | `systemctl status kubelet`, `journalctl -u kubelet`, `crictl info` |
+| `OOMKilled`, Exit 137 | 커널의 cgroup OOM | `describe`의 Last State, `memory.events`, `dmesg` |
+| 죽지 않는데 느림 | 커널의 CPU 대역폭 제어 | `cpu.stat`, cAdvisor의 `container_cpu_cfs_*` |
+| 파드 사이 통신 실패 | CNI, kube-proxy, 커널 netfilter | [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)와 커널 시리즈 5편 |
+
+시험장 노드에서 cgroup 파일까지 읽을 일은 드뭅니다. 그래도 `OOMKilled`가 커널이 끝낸 일을 kubelet이 적은 결과라는 것을 알면 실제 사용량과 requests, limits의 관계부터 확인하게 됩니다. 컨트롤 플레인이 static Pod라는 것을 알면 kubectl이 안 될 때 노드로 내려갈 생각을 바로 하게 됩니다.
+
+### 6-2. 이어지는 글
+
+| 다음에 볼 것 | 글 |
+|---|---|
+| 파드, Deployment, Service가 API 서버를 거쳐 노드에 닿는 흐름 | [CKA Ch-01b 핵심 오브젝트와 요청 흐름](/blog/cert/cka/cka-01b-core-objects-and-flow) |
+| 컨트롤 플레인 구성, kubeadm 설치와 업그레이드 | [CKA Ch-02 클러스터 아키텍처](/blog/cert/cka/cka-02-cluster-architecture) |
+| requests, limits, QoS를 시험 관점에서 | [CKA Ch-03 워크로드와 스케줄링](/blog/cert/cka/cka-03-workloads-scheduling) |
+| 증상별 트러블슈팅 절차 | [CKA Ch-06 트러블슈팅](/blog/cert/cka/cka-06-troubleshooting) |
+| 커널 쪽을 한 기능씩 | [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary), [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause), [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos), [OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs), [Service와 iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) |
+
+---
+
+## 확인 문제
+
+**1.** Deployment의 `spec.replicas`를 3에서 5로 바꿨는데 `kubectl get rs`의 `DESIRED`가 3에 머물러 있습니다. 가장 먼저 의심할 구성요소와 확인 명령은 무엇입니까?
+
+<details><summary>정답</summary>
+
+kube-controller-manager입니다. Deployment 컨트롤러가 ReplicaSet의 `spec.replicas`를 바꾸는데 그 컨트롤러가 controller-manager 안에서 돕니다. `kubectl get pods -n kube-system`으로 controller-manager 파드 상태를 보고 kubeadm 클러스터라면 `/etc/kubernetes/manifests/kube-controller-manager.yaml`을 확인합니다. 2-2절 실측처럼 이 상태에서는 `status` 필드도 마지막 값으로 굳어 실제 파드 수와 다르게 보입니다.
+
+</details>
+
+**2.** controller-manager가 멈춘 동안 다음 중 계속 일어나는 일을 고르십시오. (가) 지운 파드의 재생성 (나) OOM으로 끝난 컨테이너의 같은 파드 안 재시작 (다) 응답 없는 노드의 파드 축출 (라) Service로 들어온 요청의 전달
+
+<details><summary>정답</summary>
+
+(나)와 (라)입니다. 컨테이너 재시작은 노드의 kubelet이 `restartPolicy`에 따라 하고 Service 전달은 각 노드에 이미 깔린 kube-proxy 규칙과 커널이 처리합니다. (가)는 ReplicaSet 컨트롤러, (다)는 node lifecycle 컨트롤러와 taint-eviction 컨트롤러가 하므로 멈춥니다.
+
+</details>
+
+**3.** 컨테이너가 Exit Code 137로 끝났습니다. 이것만으로 메모리 부족이라고 말할 수 있습니까?
+
+<details><summary>정답</summary>
+
+말할 수 없습니다. 137은 128+9, 즉 SIGKILL로 끝났을 가능성이 높다는 관례적 표시입니다. 프로세스가 직접 `exit(137)`을 불러도 같은 값이 나오고 SIGKILL은 OOM 말고도 다른 이유로 보내질 수 있습니다. kubelet이 적는 `Reason: OOMKilled`, 노드의 `memory.events`의 `oom_kill` 증가, 커널 로그의 `Memory cgroup out of memory`로 확인합니다.
+
+</details>
+
+**4.** `limits.memory: 100Mi`인 컨테이너가 한도를 넘었을 때 SIGKILL을 보내는 주체는 누구이고 kubelet은 그 과정에서 무엇을 합니까?
+
+<details><summary>정답</summary>
+
+리눅스 커널입니다. 커널이 그 cgroup에서 메모리 회수를 시도하고 실패하면 cgroup 안에서 OOM killer를 돌려 SIGKILL을 보냅니다. kubelet은 컨테이너를 만들 때 한도를 정해 런타임을 거쳐 `memory.max`에 적게 하고(설정 경로) 끝난 뒤 런타임에게서 종료 정보를 받아 `OOMKilled`로 보고합니다. 종료 순간의 판단에는 끼지 않습니다.
+
+</details>
+
+**5.** 메모리 request가 100Mi인 Burstable 컨테이너가 메모리 용량 4GiB(4194304Ki) 노드에 있습니다. kubelet이 넣는 `oom_score_adj`는 얼마입니까?
+
+<details><summary>정답</summary>
+
+976입니다. 100Mi는 102400Ki이고 1000 × 102400 / 4194304 ≈ 24.4라서 정수로 24입니다. 1000 - 24 = 976이고 하한과 999 사이에 있으므로 그대로 씁니다.
+
+</details>
+
+**6.** `limits.cpu: 200m`인 컨테이너의 `cpu.max`에는 무엇이 적힙니까? 이 컨테이너가 스레드 4개로 CPU를 계속 쓰려 하면 한 주기 안에서 어떻게 됩니까?
+
+<details><summary>정답</summary>
+
+`20000 100000`입니다. 0.2코어 × 100ms = 20ms입니다. quota는 cgroup 전체에 걸리므로 스레드 4개가 동시에 돌면 20ms를 약 5ms 만에 함께 써 버리고 남은 약 95ms 동안 모두 멈춥니다. 스레드 수가 많을수록 주기 초반에 quota를 빨리 소진해 스로틀이 잦아집니다.
+
+</details>
+
+**7.** `kubectl top pod`가 한도와 같은 `50m`을 보여 줍니다. 스로틀링이 있는지 확인하려면 어떤 값을 봐야 합니까?
+
+<details><summary>정답</summary>
+
+컨테이너 cgroup의 `cpu.stat`에서 `nr_throttled / nr_periods`를 계산하거나 cAdvisor 메트릭 `container_cpu_cfs_throttled_periods_total`을 `container_cpu_cfs_periods_total`로 나눠 봅니다. `kubectl top`은 metrics-server가 누적 사용 시간을 15초 간격의 사용률로 바꾼 값이라 스로틀 횟수나 시간을 담지 않습니다. 이 글의 실측에서는 사용량이 약 50m일 때 스로틀 비율이 91.7%였습니다.
+
+</details>
+
+---
+
+## 범위와 한계
+
+- 2026-10-20에 kind v0.33, 노드 이미지 kindest/node:v1.37.0(colima, arm64, 커널 6.8.0, containerd 2.3.4, runc 1.4.3, cgroup v2)에서 이 글의 명령을 실행했습니다. Deployment 재생성, controller-manager를 멈춘 상태의 스케일과 복구, Lease 확인, static Pod 출처 확인, `crictl inspect`, `lsns`, `/proc/<PID>/cgroup`, mountinfo, veth, OOMKilled 재현과 `dmesg`, `memory.max`, `memory.events`, `oom_score_adj`, `cpu.max`, `cpu.weight`, `cpu.stat`, kubelet `/metrics/resource`, `/stats/summary`, `/metrics/cadvisor` 조회가 여기에 해당합니다. 출력의 노드 이름, 파드 UID, PID, 컨테이너 ID는 그 클러스터의 실제 값이고 실습 뒤 클러스터를 지웠습니다.
+- CPU 실습에는 공식 문서 "Assign CPU Resources" 예제의 `vish/stress` 대신 `busybox:1.36` 무한 루프를 썼습니다. `vish/stress`는 amd64 이미지만 있어서 arm64 colima에서는 Rosetta 에뮬레이터를 거쳐 실행됐고 프로세스 목록에 에뮬레이터 경로가 섞였기 때문입니다. requests만 둔 파드의 `cpu.max`가 `max 100000`이 되는 것과 BestEffort 파드의 경로와 `oom_score_adj`(1000)도 같은 클러스터에서 확인했습니다.
+- kind 노드는 도커 컨테이너입니다. 그래서 커널 로그의 cgroup 경로에 `/docker/<ID>/`가 붙고 PID가 노드 안과 VM 기준으로 다르며 kubelet이 `cgroupRoot: /kubelet`, `failSwapOn: false`로 설정돼 있습니다. kubeadm으로 만든 일반 노드에서는 `/sys/fs/cgroup/kubepods.slice/...`처럼 경로가 짧습니다.
+- 노드 전체 OOM, 노드 압박 축출, 노드 장애 뒤 약 50초 + 300초의 축출은 직접 재현하지 않았습니다. 앞의 둘은 VM 전체에 영향을 주고 마지막은 단일 노드 kind에서 의미 있게 재현하기 어렵습니다. 해당 수치는 공식 문서 기준입니다.
+- metrics-server를 설치하지 않아 `kubectl top` 출력 자체는 보지 못했습니다. 대신 metrics-server가 읽는 kubelet 엔드포인트와 summary API 값을 보여 줬습니다.
+- 5-1절의 컨테이너 scope(11)와 파드 slice(2)의 `cpu.weight` 차이는 두 변환식의 계산값과 맞는다는 것까지 확인했습니다. 어느 코드 경로가 각 값을 쓰는지는 소스로 따라가 확인하지 않았습니다.
+- 4-3절에서 `oom_memcg`가 컨테이너 scope가 아닌 파드 slice로 찍힌 것은 이 실행에서 관찰한 결과입니다. 컨테이너가 여럿인 파드에서 어느 cgroup이 먼저 한도에 닿는지는 각 컨테이너 한도와 사용량에 따라 달라집니다.
+- CrashLoopBackOff 관련 기능 게이트(KEP-5593, KEP-4603), taint-eviction 컨트롤러 분리(v1.34), node-monitor-grace-period 기본값 50초는 v1.35~v1.37 문서 기준이고 이후 버전에서 바뀔 수 있습니다.
+
+## 참고 자료
+
+- Objects In Kubernetes: https://kubernetes.io/docs/concepts/overview/working-with-objects/
+- Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
+- Create static Pods: https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/
+- Leases: https://kubernetes.io/docs/concepts/architecture/leases/
+- kube-controller-manager 플래그: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/
+- Taints and Tolerations: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+- Container Runtime Interface: https://kubernetes.io/docs/concepts/architecture/cri/
+- Dockershim 제거 FAQ: https://kubernetes.io/blog/2022/02/17/dockershim-faq/
+- About cgroup v2: https://kubernetes.io/docs/concepts/architecture/cgroups/
+- Resource Management for Pods and Containers: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+- Assign Memory Resources to Containers and Pods: https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/
+- Pod Quality of Service Classes: https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/
+- Node-pressure Eviction: https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/
+- Pod Lifecycle(컨테이너 재시작 백오프): https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+- KEP-4603, KEP-5593: https://www.kubernetes.dev/resources/keps/4603/ , https://www.kubernetes.dev/resources/keps/5593/
+- cgroup v1에서 v2로의 CPU 변환식 변경: https://kubernetes.io/blog/2026/01/30/new-cgroup-v1-to-v2-cpu-conversion-formula/
+- Linux cgroup v2 문서: https://docs.kernel.org/admin-guide/cgroup-v2.html
+- CFS Bandwidth Control: https://docs.kernel.org/scheduler/sched-bwc.html
+- EEVDF Scheduler: https://docs.kernel.org/scheduler/sched-eevdf.html
+- proc_pid_oom_score_adj(5): https://man7.org/linux/man-pages/man5/proc_pid_oom_score_adj.5.html
+- namespaces(7): https://man7.org/linux/man-pages/man7/namespaces.7.html
+- bash(1) EXIT STATUS: https://man7.org/linux/man-pages/man1/bash.1.html
+- cAdvisor Prometheus 메트릭: https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md
+- metrics-server: https://github.com/kubernetes-sigs/metrics-server
+- CKA 커리큘럼: https://github.com/cncf/curriculum
