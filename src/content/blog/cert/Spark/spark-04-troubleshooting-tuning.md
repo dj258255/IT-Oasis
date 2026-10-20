@@ -11,7 +11,7 @@ tags:
   - Performance Tuning
 category: cert/Spark
 topics:
-  - pipeline
+  - cert
 draft: false
 series: "Spark 공부"
 seriesOrder: 4

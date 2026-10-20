@@ -12,7 +12,7 @@ tags:
   - Route 53
 category: cert/SAA
 topics:
-  - systems
+  - cert
 draft: false
 series: "SAA 공부"
 seriesOrder: 2

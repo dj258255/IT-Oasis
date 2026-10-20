@@ -11,8 +11,7 @@ tags:
   - Watermark
 category: cert/Spark
 topics:
-  - pipeline
-  - messaging
+  - cert
 draft: false
 series: "Spark 공부"
 seriesOrder: 5

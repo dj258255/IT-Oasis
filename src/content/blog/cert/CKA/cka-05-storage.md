@@ -10,7 +10,7 @@ tags:
   - StorageClass
 category: cert/CKA
 topics:
-  - systems
+  - cert
 draft: false
 series: "CKA 공부"
 seriesOrder: 5

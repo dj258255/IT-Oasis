@@ -12,8 +12,7 @@ tags:
   - Kinesis
 category: cert/SAA
 topics:
-  - systems
-  - pipeline
+  - cert
 draft: false
 series: "SAA 공부"
 seriesOrder: 3

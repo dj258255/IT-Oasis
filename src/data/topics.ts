@@ -14,6 +14,7 @@ export const TOPICS = [
   { id: 'systems', name: '운영체제·런타임' },
   { id: 'messaging', name: '이벤트·메시징' },
   { id: 'pipeline', name: '데이터 파이프라인' },
+  { id: 'cert', name: '자격증 공부' },
   { id: 'ai', name: 'AI 개발' },
   { id: 'testing', name: '테스트·검증' },
   { id: 'projects', name: '프로젝트·회고' },

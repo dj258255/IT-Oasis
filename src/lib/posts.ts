@@ -64,6 +64,17 @@ function isStudyPost(post: BlogPost): boolean {
   return (post.data.category || '').split('/')[0] === STUDY_NAMESPACE;
 }
 
+/**
+ * 자격증 공부 시리즈 글은 시험 범위를 따라 한꺼번에 여러 편이 올라온다. 최신 스토리에 넣으면 다른 글을
+ * 밀어내니 최신 줄에서만 빼고, 주제(자격증 공부)·검색·태그·RSS에는 그대로 둔다.
+ * 시리즈에 묶지 않은 자격증 글(합격 후기 등)은 최신 스토리에 그대로 나온다.
+ */
+const CERT_NAMESPACE = 'cert';
+
+export function isCertPost(post: BlogPost): boolean {
+  return (post.data.category || '').split('/')[0] === CERT_NAMESPACE && Boolean(post.data.series);
+}
+
 function isProjectPost(post: BlogPost, projectCategories: Set<string>): boolean {
   return post.id.startsWith('project/') || isStudyPost(post) || projectCategories.has(post.data.category);
 }
@@ -119,5 +130,5 @@ export async function getFeedPosts() {
   const storyIds = new Set(
     projects.map((project) => project.story).filter(Boolean).map((s) => projectStoryId(s as string)),
   );
-  return posts.filter((post) => !storyIds.has(post.id));
+  return posts.filter((post) => !storyIds.has(post.id) && !isCertPost(post));
 }

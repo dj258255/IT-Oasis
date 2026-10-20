@@ -12,7 +12,7 @@ tags:
   - NAT Gateway
 category: cert/SAA
 topics:
-  - systems
+  - cert
 draft: false
 series: "SAA 공부"
 seriesOrder: 4
