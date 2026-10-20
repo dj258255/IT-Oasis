@@ -30,7 +30,7 @@ seriesOrder: 4
 
 [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에서 컨테이너마다 mount 네임스페이스가 따로 있다고 정리했습니다. mount 네임스페이스는 "어떤 마운트 목록을 볼지"를 나눌 뿐입니다. 그 목록의 맨 위에 놓이는 루트 디렉터리 `/`가 어디서 오는지는 이 글에서 다룹니다. 답은 OverlayFS 마운트 하나입니다. 이 마운트가 어떻게 만들어지고 언제 노드 전체를 느리게 만드는지까지 따라갑니다.
 
-예시는 가상의 쇼핑몰 주문 API(`order-api`) 이미지입니다. 이 글을 쓴 Mac에는 리눅스 노드가 없어서 명령은 실행하지 않았습니다. 출력은 커널 문서와 containerd 소스를 근거로 "이런 형태로 나온다"고 표시했고 각 장 끝의 "직접 해 보기"는 리눅스 VM에서 해 볼 과제입니다.
+예시는 가상의 쇼핑몰 주문 API(`order-api`) 이미지입니다. 2026-10-20에 kind v0.33 클러스터(노드 이미지 v1.37.0, containerd 2.3.4, util-linux 2.41.5)의 워커 노드 컨테이너 안에서 2장, 3장, 4장, 5장의 과제를 돌렸습니다. 커널은 colima VM(Ubuntu 24.04.4)의 6.8.0-117-generic(arm64, 페이지 4096바이트)입니다. 실측한 출력은 "kind 실측"으로 표시했고 나머지는 커널 문서와 containerd 소스를 근거로 "이런 형태로 나온다"고 쓴 예입니다.
 
 ## 1. 이미지 레이어는 파일시스템 변경분의 묶음입니다
 
@@ -201,15 +201,17 @@ ls -l $B/upper                  # config.txt가 문자 디바이스 0, 0으로 �
 sudo getfattr -n trusted.overlay.opaque $B/upper/logs   # "y"
 ```
 
-`ls -l $B/upper`는 이런 형태로 나옵니다(커널 문서 정의 기준 예시).
+`ls -l $B/upper`의 kind 실측 출력입니다(커널 6.8, upper는 ext4).
 
 ```
--rw-r--r-- 1 root root    10 ...  a.txt
-c--------- 1 root root  0, 0 ...  config.txt
-drwxr-xr-x 2 root root  4096 ...  logs
+-rw-r--r-- 1 root root   10 Oct 20 07:15 a.txt
+c--------- 2 root root 0, 0 Oct 20 07:15 config.txt
+drwxr-xr-x 2 root root 4096 Oct 20 07:15 logs
 ```
 
-`findmnt -t overlay`나 `grep overlay /proc/self/mountinfo`로 방금 만든 마운트의 옵션 문자열도 봐 둡니다. 4장에서 이 문자열의 길이가 문제가 됩니다. 끝나면 `sudo umount $B/merged`로 정리합니다.
+whiteout의 링크 수가 2입니다. 같은 시점 `ls -la $B/work/work`에 `#8b4cb` 같은 이름의 `0, 0` 문자 디바이스가 하나 있었습니다. 커널이 workdir에 whiteout 하나를 만들어 두고 하드링크로 재사용하기 때문입니다. `getfattr`로 읽은 `logs`의 값은 `trusted.overlay.opaque="y"`였습니다. kind 노드 이미지에는 `getfattr`가 없어 `apt-get install attr`로 설치했습니다.
+
+`findmnt -t overlay`나 `grep overlay /proc/self/mountinfo`로 방금 만든 마운트의 옵션 문자열도 봐 둡니다. kind 실측에서는 `rw,relatime,lowerdir=...,upperdir=...,workdir=...,uuid=on,nouserxattr`로 나왔습니다. 4장에서 이 문자열의 길이가 문제가 됩니다. 끝나면 `sudo umount $B/merged`로 정리합니다.
 
 ## 3. containerd가 레이어를 디렉터리로 펼치는 방식
 
@@ -269,7 +271,7 @@ lowerdir은 부모 목록 순서대로라 가장 가까운 부모가 왼쪽, 베
 
 **직접 해 보기**
 
-kind 노드는 그 자체가 컨테이너라 snapshotter 구성이 일반 노드와 다를 수 있습니다. kubeadm으로 만든 VM 노드에서 보는 편이 정확합니다.
+kind 노드는 그 자체가 컨테이너라 snapshotter 구성이 일반 노드와 다를 수 있습니다. kubeadm으로 만든 VM 노드에서 보는 편이 정확합니다. kind v0.33에서는 노드 안 containerd도 `snapshotter = "overlayfs"`를 써서 아래 명령이 그대로 동작했습니다.
 
 ```bash
 # 노드에서
@@ -279,8 +281,8 @@ findmnt -t overlay -o TARGET,OPTIONS | head     # rootfs 경로와 lowerdir 목�
 sudo crictl ps -q | head -1 | xargs -I{} sudo ctr -n k8s.io snapshots mounts /tmp/x {}
 ```
 
-- `KIND` 열에 Active와 Committed가 섞여 나오는지, Active의 KEY가 컨테이너 ID와 같은지 봅니다. 마지막 명령은 해당 컨테이너 스냅샷의 마운트 명령을 출력만 하고 실행하지는 않습니다.
-- `findmnt`의 TARGET이 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/.../rootfs`인지 확인합니다.
+- `KIND` 열에 Active와 Committed가 섞여 나오는지, Active의 KEY가 컨테이너 ID와 같은지 봅니다. 마지막 명령은 해당 컨테이너 스냅샷의 마운트 명령을 출력만 하고 실행하지는 않습니다. kind 워커 실측은 Active 28개, Committed 125개였습니다. Active의 KEY는 컨테이너 ID와 같았고 PARENT는 `sha256:` ChainID였습니다. `snapshots mounts` 출력은 `mount -t overlay overlay /tmp/x -o workdir=.../snapshots/238/work,upperdir=.../snapshots/238/fs,lowerdir=.../snapshots/65/fs:...` 모양이었고 `index=off`나 `userxattr`는 붙지 않았습니다.
+- `findmnt`의 TARGET이 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/.../rootfs`인지 확인합니다. kind 노드에서는 첫 줄이 노드 컨테이너 자신의 `/`입니다. 그 lowerdir은 colima 쪽 Docker가 쓰는 containerd 스냅샷 경로라 노드 안의 경로와 헷갈리기 쉽습니다. kind 실측에서 rootfs 마운트는 25개였습니다.
 - 파드 안에서 파일을 하나 만든 뒤 해당 Active 스냅샷의 `fs` 디렉터리에 같은 파일이 생기는지 봅니다.
 
 ## 4. 마운트 옵션 문자열의 4096바이트 제한
@@ -309,7 +311,7 @@ containerd는 경로 자체를 줄입니다. `core/mount/mount_linux.go`의 `mou
 
 ### 4-4. 새 mount API의 lowerdir+
 
-커널 문서에 따르면 6.8부터는 새 mount API의 `fsconfig()`로 `lowerdir+` 옵션을 레이어마다 따로 넘길 수 있습니다. 옵션을 한 문자열로 이어 붙이지 않으므로 전체 한 페이지 제한을 피합니다. 다만 `fs/fsopen.c`의 `fsconfig`는 값 하나를 `strndup_user(_value, 256)`로 복사합니다. 경로 하나가 256바이트를 넘으면 안 된다는 새 제약이 생깁니다. 이 글을 쓰는 시점의 containerd main의 일반 경로는 여전히 레거시 `mount(2)`와 chdir 우회를 씁니다.
+커널 문서에 따르면 6.8부터는 새 mount API의 `fsconfig()`로 `lowerdir+` 옵션을 레이어마다 따로 넘길 수 있습니다. 옵션을 한 문자열로 이어 붙이지 않으므로 전체 한 페이지 제한을 피합니다. 다만 `fs/fsopen.c`의 `fsconfig`는 값 하나를 `strndup_user(_value, 256)`로 복사합니다. 경로 하나가 256바이트를 넘으면 안 된다는 새 제약이 생깁니다. 이 글을 쓰는 시점의 containerd main의 일반 경로는 여전히 레거시 `mount(2)`와 chdir 우회를 씁니다. 사람이 치는 `mount` 명령은 다릅니다. kind 노드의 util-linux 2.41.5 `mount`는 lowerdir 전체를 `fsconfig` 값 하나로 넘겼고 그 문자열이 256바이트를 넘자 `EINVAL`로 실패했습니다(4장 직접 해 보기의 실측).
 
 | 방식 | 제한 | 쓰는 곳 |
 |---|---|---|
@@ -319,6 +321,8 @@ containerd는 경로 자체를 줄입니다. `core/mount/mount_linux.go`의 `mou
 **직접 해 보기**
 
 - 2-6의 실습에서 lower 디렉터리를 긴 이름으로 60개쯤 만들어 `mount -t overlay`를 시도해 봅니다. 옵션이 한 페이지를 넘으면 어떤 오류가 나는지, 공통 디렉터리로 `cd`한 뒤 상대 경로로 주면 성공하는지 비교합니다.
+
+kind 실측(util-linux 2.41.5, 커널 6.8)에서는 예상과 다른 결과가 나왔습니다. 최근 util-linux의 `mount` 명령은 `mount(2)` 대신 새 mount API(`fsopen`, `fsconfig`)를 씁니다. 그래서 lowerdir 문자열이 251바이트일 때는 붙고 314바이트에서는 `fsconfig(..., "lowerdir", ...) = -1 EINVAL`로 실패했습니다. 한 페이지보다 훨씬 짧은 값에서 걸리는 것입니다. `LIBMOUNT_FORCE_MOUNT2=always`를 주면 `mount(2)`로 바뀝니다. 이때는 옵션 3895바이트(절대 경로 60개)와 3027바이트(상대 경로 60개) 모두 붙었습니다. 옵션이 5175바이트(절대 경로 80개)일 때는 오류 없이 붙었는데 4096바이트 뒤가 잘려 `upperdir`와 `workdir`가 빠졌습니다. 결과는 lowerdir 64개짜리 읽기 전용 overlay였고 `touch`가 `Read-only file system`으로 실패했습니다. 한 페이지 제한은 오류 없이 옵션을 잘라 버리는 형태로도 나타날 수 있습니다. 시스템 콜 경로는 `strace -e trace=mount,fsopen,fsconfig`로 확인했습니다.
 - 레이어가 많은 이미지로 뜬 컨테이너의 `findmnt` 출력에서 lowerdir이 절대 경로인지 상대 경로인지 봅니다. 상대 경로로 보이면 compact 경로를 탄 것입니다. 마운트 정보에 경로를 어떻게 표시하는지는 커널 버전에 따라 다를 수 있으니 containerd 로그와 함께 봅니다.
 
 ## 5. 쓰기 많은 데이터는 볼륨으로 보냅니다
@@ -370,6 +374,8 @@ spec:
 
 - 같은 파드에서 `/tmp/big`(쓰기 계층)과 emptyDir 경로에 각각 `dd`로 500MB를 쓰고 노드에서 해당 Active 스냅샷의 `fs` 디렉터리와 `/var/lib/kubelet/pods/<uid>/volumes/kubernetes.io~empty-dir/` 중 어디가 커지는지 봅니다.
 - 노드에서 `crictl stop <container-id>`로 컨테이너를 멈춰 kubelet이 다시 만들게 한 뒤 `/tmp/big`과 emptyDir 파일이 남아 있는지 확인합니다.
+
+kind 실측(100MB로 줄여서 돌림)에서 쓰기 계층의 파일은 `snapshots/242/fs/tmp/big`(104857600바이트)에, emptyDir 파일은 `/var/lib/kubelet/pods/<uid>/volumes/kubernetes.io~empty-dir/s`(101M)에 생겼습니다. 같은 `fs` 디렉터리에는 루트에 만든 `hello.txt`도 보였습니다. `crictl stop` 뒤 RESTARTS가 1이 됐고 `/tmp/big`과 `/hello.txt`는 사라졌으며 emptyDir의 `/scratch/big`만 남았습니다.
 
 ## 6. 사례: 마운트가 노드 전체의 병목이 된 Netflix
 
@@ -449,7 +455,7 @@ PR 설명의 문장으로는 idmap 횟수가 레이어 수의 함수에서 overl
 **직접 해 보기**
 
 - 리눅스 VM에서 `perf top`이나 `perf record -g`를 켠 채 `for i in $(seq 1 2000); do mkdir -p /mnt/x$i; mount --bind /var/tmp/ovl/lower1 /mnt/x$i; done` 같은 마운트 폭주를 만들고 다른 터미널에서 `find /usr > /dev/null`의 시간을 비교해 봅니다. `path_init`이나 seqlock 관련 심볼이 보이는지 확인합니다. 끝나면 마운트를 모두 해제합니다.
-- containerd 노드에서 `containerd --version`을 확인하고 릴리스 노트에서 "idmap once per overlayfs" 항목을 찾아봅니다.
+- containerd 노드에서 `containerd --version`을 확인하고 릴리스 노트에서 "idmap once per overlayfs" 항목을 찾아봅니다. kind v0.33 노드 이미지 v1.37.0의 containerd는 2.3.4였습니다.
 
 ## 확인 문제
 
@@ -519,7 +525,8 @@ lowerdir만 있다면 맨 왼쪽인 `/a`의 파일입니다. 커널 문서 기�
 
 ## 범위와 한계
 
-- 이 글의 명령과 출력은 실행한 결과가 아닙니다. 커널 문서, containerd 소스(main 브랜치, 2026년 10월 확인), Docker 문서의 정의를 근거로 "이런 형태로 나온다"고 쓴 것입니다. 각 장의 "직접 해 보기"는 리눅스 VM에서 해 볼 과제입니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, Ubuntu 24.04.4)에서 돌린 것: 2-6 수동 overlay 마운트(copy-up, whiteout, opaque), 3장 스냅샷 명령(`ctr snapshots ls/info/mounts`, `content ls`, `findmnt`), 4장 긴 lowerdir 실험(새 mount API와 `mount(2)` 비교), 5장 쓰기 계층과 emptyDir 비교. 실측 출력은 본문에 "kind 실측"으로 표시했습니다.
+- 돌리지 못한 것: 1장의 `docker build`, `docker history` 과제, 6장의 `perf` 마운트 폭주 실험(노드에 perf가 없음), `hostUsers: false` 파드(kind에서 sysfs 마운트가 `operation not permitted`로 실패해 idmapped 마운트를 볼 수 없었음). 3-2의 디렉터리 구조와 3-4의 마운트 옵션 일부(`index=off`, `userxattr`)는 containerd 소스 기준이고 kind 노드에서는 그 두 옵션이 보이지 않았습니다. 그 밖의 정의는 커널 문서, containerd 소스(main 브랜치, 2026년 10월 확인), Docker 문서를 근거로 썼습니다.
 - Netflix 원문은 이 글을 쓰는 환경에서 직접 내려받지 못했습니다(접근 차단). 사례 수치와 표현은 원문을 대조해 둔 사전 검증 기록을 근거로 썼습니다. 원문에 없는 수치(수정 후 마운트 횟수, 개선 배수, 특정 커널 버전 요구)는 쓰지 않았습니다. "같은 과정을 두 번 거친다"는 부분의 정확한 주체는 원문 설명을 따랐고 containerd 소스에서 두 번의 호출 지점을 직접 추적하지는 않았습니다.
 - 버전에 따라 달라지는 항목: idmapped mount(5.12), overlayfs의 idmapped 레이어(5.19), `lowerdir+`와 `fsconfig`(6.8), containerd PR #12092 포함 버전(2.2.0, 2.0.x/2.1.x 백포트), 쿠버네티스 user namespace GA(1.36). 페이지 크기 4096바이트는 x86_64 기본값이고 64KB 페이지를 쓰는 arm64 커널에서는 제한이 다릅니다.
 - `hostUsers: false` 파드의 rootfs가 어떤 containerd 설정에서 idmapped overlay 경로를 타는지는 런타임 설정과 커널 지원 여부에 따라 갈립니다. 6-6의 조건은 판단의 출발점이고 실제 노드에서 `findmnt`로 확인해야 합니다.

@@ -62,7 +62,7 @@ RBAC은 "어떤 동사를 어떤 리소스에 쓸 수 있는지"를 적은 규�
 
 `view`가 Secret을 못 보는 이유도 문서에 있습니다. Secret을 읽으면 ServiceAccount 토큰을 얻을 수 있고 그 토큰으로 다른 ServiceAccount의 권한을 쓰는 권한 상승이 되기 때문입니다.
 
-kubeadm이 만든 `/etc/kubernetes/admin.conf`의 인증서는 `kubeadm:cluster-admins` 그룹이고 이 그룹이 `cluster-admin`에 묶여 있습니다. 같이 생기는 `super-admin.conf`는 `system:masters` 그룹이라 인가 계층(RBAC 포함)을 건너뜁니다. 문서는 둘 다 공유하지 말고 `super-admin.conf`는 안전한 곳으로 옮기라고 적습니다.
+kubeadm이 만든 `/etc/kubernetes/admin.conf`의 인증서는 `kubeadm:cluster-admins` 그룹이고 이 그룹이 `cluster-admin`에 묶여 있습니다. 같이 생기는 `super-admin.conf`는 `system:masters` 그룹이라 인가 계층(RBAC 포함)을 건너뜁니다. 문서는 둘 다 공유하지 말고 `super-admin.conf`는 안전한 곳으로 옮기라고 적습니다. kind v1.37.0(kubeadm으로 띄움)에서 확인하니 `admin.conf`로 접속한 `kubectl auth whoami`는 사용자 `kubernetes-admin`, 그룹 `[kubeadm:cluster-admins system:authenticated]`였고 `super-admin.conf`의 인증서 subject는 `O = system:masters, CN = kubernetes-super-admin`이었습니다. ClusterRoleBinding `kubeadm:cluster-admins`가 이 그룹을 `cluster-admin`에 묶고 있었습니다.
 
 ### 1-3. 시험에서 쓰는 명령
 
@@ -93,7 +93,7 @@ YAML이 필요하면 `--dry-run=client -o yaml`을 붙여 뼈대를 받습니다
 
 - 클러스터 범위 리소스(노드, PV, 네임스페이스)에 대한 권한은 ClusterRole로 정의합니다. Role은 자기 네임스페이스 안의 권한만 담습니다.
 - API 그룹이 있는 리소스는 그룹까지 맞아야 합니다. `kubectl create role`에서는 `--resource=deployments.apps`처럼 점 뒤에 그룹을 붙입니다.
-- `roleRef`를 바꾸는 과제라면 바인딩을 지우고 다시 만듭니다. `kubectl edit`으로 저장하면 검증 오류가 납니다.
+- `roleRef`를 바꾸는 과제라면 바인딩을 지우고 다시 만듭니다. `kubectl edit`으로 저장하면 검증 오류가 납니다. kind에서 패치해 보니 `The RoleBinding "order-api-config-reader" is invalid: roleRef: Invalid value: ...: field is immutable`이었습니다.
 
 ### 1-5. kubeconfig 컨텍스트와 권한 목록
 
@@ -189,14 +189,16 @@ Pod에 들어가는 볼륨 이름은 `kube-api-access-<임의 문자>`입니다.
 
 ```bash
 kubectl create serviceaccount order-api -n shop
-kubectl create token order-api -n shop                  # 수명은 서버가 정함
+kubectl create token order-api -n shop                  # 수명은 서버가 정함(kind v1.37.0에서 3600초)
 kubectl create token order-api -n shop --duration=10m   # 요청 수명. 서버가 더 짧거나 길게 줄 수 있음
 
 # 이미 있는 Deployment가 이 계정을 쓰게 (Pod 템플릿의 serviceAccountName이 바뀌어 롤아웃)
 kubectl set serviceaccount deployment order-web order-api -n shop
 ```
 
-옛 강의 자료처럼 `kubectl describe sa`에서 `Tokens:` 아래 Secret을 찾으면 지금 클러스터에는 없습니다. 만료 없는 토큰이 꼭 필요하면 Secret을 직접 만듭니다. 문서는 보안상 TokenRequest를 우선 쓰라고 적습니다.
+kind v1.37.0에서 받은 토큰을 디코드하니 기본 수명은 3600초, audience는 `https://kubernetes.default.svc.cluster.local`이었습니다. `--duration=10m`은 600초, `--duration=5m`은 `spec.expirationSeconds: Invalid value: 300: may not specify a duration less than 10 minutes`로 거절됐습니다.
+
+옛 강의 자료처럼 `kubectl describe sa`에서 `Tokens:` 아래 Secret을 찾으면 지금 클러스터에는 없습니다. kubectl v1.37.1의 `describe sa` 출력에는 `Tokens:`와 `Mountable secrets:` 줄 자체가 없었습니다. 만료 없는 토큰이 꼭 필요하면 Secret을 직접 만듭니다. 문서는 보안상 TokenRequest를 우선 쓰라고 적습니다.
 
 ```yaml
 apiVersion: v1
@@ -209,7 +211,7 @@ metadata:
 type: kubernetes.io/service-account-token
 ```
 
-컨트롤 플레인이 이 Secret의 `data.token`을 채웁니다. 토큰의 권한은 1-3절처럼 RoleBinding의 `--serviceaccount=shop:order-api`로 줍니다.
+컨트롤 플레인이 이 Secret의 `data.token`을 채웁니다. kind에서 이렇게 받은 토큰에는 `exp` 클레임이 없었습니다. 토큰의 권한은 1-3절처럼 RoleBinding의 `--serviceaccount=shop:order-api`로 줍니다.
 
 자동 마운트되는 `kube-api-access-*` 볼륨과 별도로 Pod 스펙에 토큰 볼륨을 직접 적을 수도 있습니다. 토큰을 받을 대상(audience)이나 수명을 바꿔야 할 때 씁니다. "Configure Service Accounts for Pods" 문서의 예시를 쇼핑몰 주문 API에 맞춰 옮겼습니다.
 
@@ -245,7 +247,7 @@ spec:
 | `expirationSeconds` | 토큰 유효 기간 | 기본 1시간, 최소 600초. 상한은 API 서버 `--service-account-max-token-expiration` |
 | `path` | 볼륨 마운트 지점 기준 상대 경로 | 필수 |
 
-kubelet은 토큰이 전체 수명의 80%를 넘거나 24시간보다 오래되면 새 토큰을 받아 파일을 바꿉니다. 파일을 다시 읽는 일은 애플리케이션 몫입니다. audience를 `vault`처럼 바꾼 토큰은 외부 시스템에 신원을 증명하는 용도이고 이 토큰으로 API 서버를 부르면 audience가 맞지 않아 거부됩니다. API 서버를 부를 토큰이면 audience를 생략합니다.
+kubelet은 토큰이 전체 수명의 80%를 넘거나 24시간보다 오래되면 새 토큰을 받아 파일을 바꿉니다. 파일을 다시 읽는 일은 애플리케이션 몫입니다. audience를 `vault`처럼 바꾼 토큰은 외부 시스템에 신원을 증명하는 용도이고 이 토큰으로 API 서버를 부르면 audience가 맞지 않아 거부됩니다. API 서버를 부를 토큰이면 audience를 생략합니다. kind에서 `kubectl create token order-api -n shop --audience=vault`로 받은 토큰을 API 서버에 내밀자 `error: You must be logged in to the server (Unauthorized)`였습니다.
 
 ### 1-8b. TLS와 PKI 기초: 개인 키, CSR, 인증서, CA
 
@@ -338,6 +340,8 @@ kubectl config set-credentials settle-user \
 kubectl config set-context settle-user --cluster=kubernetes --user=settle-user
 ```
 
+`--cluster`에는 kubeconfig에 실제로 있는 클러스터 이름을 넣습니다. kubeadm의 `admin.conf`에서는 `kubernetes`지만 kind가 만든 kubeconfig에서는 `kind-<클러스터 이름>`이었습니다. 없는 이름을 넣어도 `set-context`는 성공하고 나중에 그 컨텍스트로 접속할 때 엉뚱한 오류가 나므로 `kubectl config get-clusters`로 먼저 봅니다. kind v1.37.0에서 이 흐름을 돌리자 `kubectl get csr`의 `REQUESTEDDURATION`은 `24h`, 승인 뒤 `CONDITION`은 `Approved,Issued`였고 발급된 인증서의 issuer는 `CN = kubernetes`였습니다.
+
 필드에서 틀리기 쉬운 곳을 "Certificates and Certificate Signing Requests" 문서로 확인했습니다.
 
 - `certificates.k8s.io/v1`에서는 `signerName`이 필수입니다. 사용자용은 `kubernetes.io/kube-apiserver-client`이고 이 서명자는 `usages`에 `client auth`가 있어야 합니다.
@@ -390,6 +394,8 @@ kubectl config get-users; kubectl config get-clusters
 게시판 서비스용 네임스페이스 `board`에 ServiceAccount `board-reader`를 만들고 기본 ClusterRole `view`를 그 네임스페이스에서만 쓰도록 RoleBinding으로 연결합니다. 그 다음 `kubectl auth can-i`로 `board`에서는 Pod 목록이 되고 `default`에서는 안 되는지, `board`에서도 Secret 조회는 안 되는지 확인합니다.
 
 이어서 1-9절 순서로 사용자 `board-editor`의 CSR을 만들어 승인하고 kubeconfig에 컨텍스트를 추가합니다. 바인딩을 만들기 전과 후에 그 컨텍스트로 `kubectl get pods -n board`를 실행해 403 응답이 사라지는지 봅니다. 마지막으로 `kubectl create token board-reader -n board`로 받은 토큰을 `kubectl --token=<토큰> --server=<주소> --certificate-authority=<CA 파일> get pods -n board`에 넣어 ServiceAccount 권한으로도 같은 결과가 나오는지 비교합니다.
+
+kind v1.37.0에서 돌린 결과입니다. `view` 바인딩 뒤 `board`의 Pod 목록은 `yes`, `default`는 `no`, `board`의 Secret은 `no`였습니다. 마지막 `--token` 비교에는 함정이 있습니다. 클라이언트 인증서가 들어 있는 kubeconfig가 적용된 채로 `--token`을 주면 인증서 인증이 먼저 성공해 관리자로 접속합니다. 토큰만으로 접속하려면 `KUBECONFIG=/dev/null kubectl --token=... --server=... --certificate-authority=... get pods -n board`처럼 kubeconfig를 비웁니다. 이렇게 비워야 요청이 ServiceAccount 신원으로 인증됐습니다.
 
 ## 2. 설치 전 노드 준비
 
@@ -630,6 +636,8 @@ sudo systemctl restart kubelet
 
 이어서 `kubelet-config` ConfigMap의 `data.kubelet`에 값 하나(예: `maxPods`)를 바꾸고 워커에서 `kubeadm upgrade node phase kubelet-config`와 kubelet 재시작을 한 뒤 `/var/lib/kubelet/config.yaml`과 `kubectl describe node`의 Capacity에서 바뀐 값을 확인합니다. 같은 값을 노드 파일에만 넣었을 때 업그레이드 뒤 되돌아가는지도 기록합니다.
 
+kind로는 kubeadm init과 join을 할 수 없어 첫 문단은 돌리지 못했습니다. 둘째 문단은 kind v1.37.0에서 했습니다. `kubelet-config`의 `data.kubelet`에 `maxPods: 50`을 넣고 워커에서 `kubeadm upgrade node phase kubelet-config`를 실행하자 `/var/lib/kubelet/config.yaml`이 새 값으로 바뀌었고 kubelet을 재시작한 뒤 `kubectl get node -o jsonpath='{.status.capacity.pods}'`가 50이 됐습니다. kind가 넣어 둔 kubelet 설정 패치도 이때 함께 적용됐습니다.
+
 ## 4. 클러스터 수명주기: 업그레이드, 인증서, etcd
 
 커리큘럼 문구는 "Manage the lifecycle of Kubernetes clusters"입니다. 개정 전 커리큘럼에 따로 있던 kubeadm 업그레이드와 etcd 백업이 이 한 줄에 포함되는지는 공식 문서에 적혀 있지 않습니다. 응시 후기에서는 Domenic Cassisi(2026)가 etcd 관리 과제가 최근 범위에서 빠졌다고 적었습니다. 반대 근거도 확인되지 않아 나오는지 여부는 열어 둡니다. 저는 둘 다 한 번씩 손으로 해 보는 쪽을 골랐습니다.
@@ -743,6 +751,8 @@ sudo kubeadm certs renew all
 sudo openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
 ```
 
+kind v1.37.0 컨트롤 플레인 노드에서 `kubeadm certs check-expiration`을 실행하자 `admin.conf`, `apiserver`, `apiserver-etcd-client` 같은 항목이 `RESIDUAL TIME` 364d로, CA 세 개가 9y로 나왔고 목록에 `kubelet.conf`는 없었습니다. `renew`는 돌리지 않았습니다.
+
 컨트롤 플레인이 여러 대면 `renew`를 모든 컨트롤 플레인 노드에서 실행합니다. 갱신한 뒤에는 컨트롤 플레인 Pod를 재시작해야 합니다. 모든 구성요소가 인증서를 동적으로 다시 읽지는 못하기 때문입니다. static Pod는 노드의 kubelet이 관리해서 kubectl로 지우고 다시 띄울 수 없습니다. 그래서 문서는 매니페스트를 `/etc/kubernetes/manifests/` 밖으로 잠시 옮기고 20초(kubelet의 `fileCheckFrequency`)쯤 기다렸다가 되돌리라고 적습니다.
 
 ### 4-5. etcd 백업
@@ -750,12 +760,14 @@ sudo openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
 kubeadm 클러스터의 etcd는 컨트롤 플레인 노드의 static Pod이고 데이터 디렉터리는 `/var/lib/etcd`입니다. 스냅샷은 동작 중인 멤버에서 `etcdctl snapshot save`로 뜹니다. 문서는 스냅샷 생성이 그 멤버의 성능에 영향을 주지 않는다고 적습니다.
 
 ```bash
-ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+etcdctl --endpoints=https://127.0.0.1:2379 \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
   --cert=/etc/kubernetes/pki/etcd/server.crt \
   --key=/etc/kubernetes/pki/etcd/server.key \
   snapshot save /opt/backup/etcd-snapshot.db
 ```
+
+옛 자료처럼 앞에 `ETCDCTL_API=3`을 붙여도 저장은 됩니다. kind 컨트롤 플레인 노드에 etcd v3.7.0의 `etcdctl`과 `etcdutl`(arm64 릴리스 파일)을 넣고 돌리자 `"msg":"unrecognized environment variable","environment-variable":"ETCDCTL_API=3"` 경고가 한 줄 찍힌 뒤 `Snapshot saved at /opt/backup/etcd-snapshot.db`가 나왔습니다. etcd 3.4부터 v3 API가 기본이라 이 변수는 빼도 됩니다. kind 노드 이미지에는 `etcdctl`이 들어 있지 않아 따로 넣어야 했습니다. `--cert`, `--key`에 `etcd/healthcheck-client.crt`와 `.key`를 넣어도 같은 결과였습니다.
 
 인증서 경로는 문서의 보안 통신 예시에 나온 kubeadm 기본 경로입니다. 시험 환경에서는 경로가 다를 수 있으니 문서 권고대로 etcd Pod 설명에서 확인합니다.
 
@@ -765,21 +777,23 @@ kubectl -n kube-system describe pod etcd-<노드 이름> | grep -E 'cert|key|tru
 sudo cat /etc/kubernetes/manifests/etcd.yaml
 ```
 
-스냅샷 확인은 `etcdutl`로 합니다. 쿠버네티스 문서는 `etcdctl snapshot status`가 etcd v3.5부터 사용 중단이고 v3.6에서 제거 예정이라고 적는데 etcd의 CHANGELOG-3.6에는 `etcdctl snapshot status`와 `snapshot restore`가 이미 제거됐다고 나옵니다. 시험 기준인 kubeadm 1.37의 기본 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion = "3.7.0-0"`, 1.36은 3.6.8) etcd CHANGELOG-3.7에도 두 명령을 되살린다는 항목은 없습니다. 노드의 `etcdctl`이 3.6 이상이면 두 명령은 동작하지 않는다고 보고 `etcdutl`로 손에 익힙니다. 스냅샷 저장(`etcdctl snapshot save`)은 실행 중인 멤버에 접속해야 하므로 여전히 `etcdctl`입니다.
+스냅샷 확인은 `etcdutl`로 합니다. 쿠버네티스 문서는 `etcdctl snapshot status`가 etcd v3.5부터 사용 중단이고 v3.6에서 제거 예정이라고 적는데 etcd의 CHANGELOG-3.6에는 `etcdctl snapshot status`와 `snapshot restore`가 이미 제거됐다고 나옵니다. kubeadm 1.37의 기본 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion = "3.7.0-0"`, 1.36은 3.6.8) etcd CHANGELOG-3.7에도 두 명령을 되살린다는 항목은 없습니다. 노드의 `etcdctl`이 3.6 이상이면 두 명령은 동작하지 않는다고 보고 `etcdutl`로 손에 익힙니다. 스냅샷 저장(`etcdctl snapshot save`)은 실행 중인 멤버에 접속해야 하므로 여전히 `etcdctl`입니다.
 
 ```bash
 etcdutl --write-out=table snapshot status /opt/backup/etcd-snapshot.db
 ```
 
-문서에 실린 출력 모양입니다.
+문서에 실린 출력은 열이 넷이고 `+`, `-`, `|`로 그린 표입니다. etcdutl 3.7.0이 kind에서 찍은 출력은 `VERSION` 열이 더 있고 상자 그림 문자로 그려졌습니다.
 
 ```text
-+----------+----------+------------+------------+
-|   HASH   | REVISION | TOTAL KEYS | TOTAL SIZE |
-+----------+----------+------------+------------+
-| fe01cf57 |       10 |          7 | 2.1 MB     |
-+----------+----------+------------+------------+
+┌──────────┬──────────┬────────────┬────────────┬─────────┐
+│   HASH   │ REVISION │ TOTAL KEYS │ TOTAL SIZE │ VERSION │
+├──────────┼──────────┼────────────┼────────────┼─────────┤
+│ d1da5ff8 │     7906 │       1519 │     6.8 MB │   3.7.0 │
+└──────────┴──────────┴────────────┴────────────┴─────────┘
 ```
+
+같은 노드에서 `etcdctl snapshot --help`에 남은 하위 명령은 `save` 하나였고 `etcdctl snapshot restore --data-dir ...`는 `Error: unknown flag: --data-dir`로 실패했습니다. 위 CHANGELOG 내용대로입니다.
 
 ### 4-6. etcd 복구
 
@@ -790,6 +804,13 @@ sudo etcdutl --data-dir /var/lib/etcd-restore snapshot restore /opt/backup/etcd-
 ```
 
 문서 절차에 따르면 이어서 `/etc/kubernetes/manifests/etcd.yaml`에서 `name: etcd-data` 볼륨의 `hostPath.path`를 새 디렉터리로 바꾸고 etcd Pod를 지우거나 `systemctl restart kubelet`으로 다시 띄웁니다. 매니페스트를 고치면 kubelet이 static Pod를 다시 만들기 때문입니다.
+
+kind v1.37.0에서 스냅샷을 뜬 뒤 Deployment 하나를 지우고 이 절차로 복구해 봤습니다. 막힌 곳이 둘 있었습니다.
+
+1. `hostPath`를 바꾼 뒤 새 etcd 컨테이너가 뜨고 `kubectl`이 다시 응답하기까지 1분이 넘게 걸렸습니다. 그동안 `kubectl`은 연결 오류를 냅니다. 매니페스트를 또 고치지 말고 `crictl ps | grep etcd`로 새 컨테이너가 떴는지 봅니다.
+2. etcd가 복구된 데이터로 떴는데도 `kubectl get deploy`에 지운 Deployment가 보이지 않았습니다. 떠 있던 kube-apiserver가 예전 상태를 캐시로 들고 있었기 때문으로 보입니다. kube-apiserver, kube-controller-manager, kube-scheduler 매니페스트를 `/etc/kubernetes/manifests` 밖으로 옮겼다가 20초 뒤 되돌려 다시 띄우자 지운 Deployment가 돌아왔습니다.
+
+그래서 시험장에서는 복구 뒤 컨트롤 플레인 static Pod 재시작까지를 한 절차로 외웁니다. 아래 문서 주의 사항의 첫 줄이 같은 이야기입니다.
 
 문서의 주의 사항도 같이 외웁니다.
 
@@ -824,7 +845,7 @@ drain 없이 노드가 갑자기 죽은 경우는 컨트롤 플레인이 처리�
   -> 축출. ReplicaSet 같은 컨트롤러가 다른 노드에 새 Pod 생성
 ```
 
-결과적으로 약 5분 50초 뒤에 축출되니 옛 설명의 "5분"과 체감 시간은 비슷합니다. 차이는 그 시간을 Pod의 toleration으로 조정한다는 점입니다. Pod 스펙에서 이 테인트의 `tolerationSeconds`를 줄이면 그 Pod만 더 빨리 옮겨집니다. 같은 흐름에서 단독 Pod는 다시 만들어 줄 컨트롤러가 없으니 노드와 함께 사라집니다.
+결과적으로 약 5분 50초 뒤에 축출되니 옛 설명의 "5분"과 체감 시간은 비슷합니다. kind v1.37.0 워커에서 `systemctl stop kubelet`으로 재 보니 약 55초에 `Unknown`과 `unreachable` 테인트 두 개(`NoSchedule`, `NoExecute`)가 붙었고 약 356초에 그 노드의 Deployment Pod가 `Terminating`이 되며 대체 Pod가 생겼습니다. 차이는 그 시간을 Pod의 toleration으로 조정한다는 점입니다. Pod 스펙에서 이 테인트의 `tolerationSeconds`를 줄이면 그 Pod만 더 빨리 옮겨집니다. 같은 흐름에서 단독 Pod는 다시 만들어 줄 컨트롤러가 없으니 노드와 함께 사라집니다.
 
 ### 4-8. 인증서 내용 읽기: openssl x509
 
@@ -834,18 +855,18 @@ drain 없이 노드가 갑자기 죽은 경우는 컨트롤 플레인이 처리�
 sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -text -noout
 ```
 
-출력에서 볼 필드는 넷입니다. 아래는 "PKI certificates and requirements" 문서의 SAN 목록과 kubeadm 소스(`certlist.go`, CA의 CN이 `kubernetes`)로 예상한 모양이고 직접 출력한 것은 아닙니다. 실제 값은 클러스터마다 다릅니다.
+출력에서 볼 필드는 넷입니다. 아래는 kind v1.37.0 컨트롤 플레인 노드에서 실제로 뽑은 줄입니다. 실제 값은 클러스터마다 다릅니다.
 
 ```text
-        Issuer: CN = kubernetes                         <- 서명한 CA
-        Validity
-            Not Before: ...
-            Not After : ...                             <- 만료일
-        Subject: CN = kube-apiserver                    <- 이 인증서의 주인
+        Issuer: CN=kubernetes                           <- 서명한 CA
+            Not After : Oct 20 06:23:05 2027 GMT        <- 만료일
+        Subject: CN=kube-apiserver                      <- 이 인증서의 주인
             X509v3 Subject Alternative Name:
-                DNS:<노드 이름>, DNS:kubernetes, DNS:kubernetes.default, DNS:kubernetes.default.svc,
-                DNS:kubernetes.default.svc.cluster.local, IP Address:10.96.0.1, IP Address:<광고 IP>
+                DNS:cka-lab-a-control-plane, DNS:kubernetes, DNS:kubernetes.default, DNS:kubernetes.default.svc,
+                DNS:kubernetes.default.svc.cluster.local, DNS:localhost, IP Address:10.96.0.1, IP Address:172.18.0.7, IP Address:127.0.0.1
 ```
+
+`DNS:localhost`와 `IP Address:127.0.0.1`은 kind가 설정으로 더한 이름입니다. 일반 kubeadm 클러스터에는 없을 수 있습니다. 문서 표는 일반 CA의 CN을 `kubernetes-ca`로 적지만 kind에서 본 CA의 CN은 kubeadm 소스(`certlist.go`)대로 `kubernetes`였습니다.
 
 | 필드 | 확인할 것 |
 |---|---|
@@ -868,6 +889,8 @@ sudo grep client-certificate-data /etc/kubernetes/admin.conf | awk '{print $2}' 
 결제 서비스 네임스페이스 `payment`에 Deployment 하나를 만들고 스냅샷을 뜹니다. 그 다음 Deployment를 지우고 스냅샷을 `/var/lib/etcd-restore`에 복구해 매니페스트를 바꾼 뒤 Deployment가 돌아오는지 확인합니다. 복구 전후에 `etcdutl snapshot status`의 REVISION 값을 적어 둡니다.
 
 워커 두 대 클러스터에서 `minAvailable: 2`인 PDB와 레플리카 2개 Deployment를 만들고 한 노드를 drain해 drain이 기다리는 모습을 봅니다. 이어서 다른 노드의 kubelet을 멈추고 `kubectl describe node`의 Taints와 Pod가 다른 노드로 옮겨지는 시각을 기록해 50초와 300초가 맞는지 확인합니다. `openssl x509 -text`로 `apiserver.crt`의 SAN을 읽어 `kubectl config view --minify`의 server 주소가 그 안에 있는지도 봅니다.
+
+kind v1.37.0에서 세 문단을 모두 돌렸고 결과는 4-5~4-8절 본문에 적었습니다. 복구 뒤 Deployment가 돌아오게 하려면 컨트롤 플레인 static Pod 재시작이 필요했습니다(4-6절). drain은 PDB 때문에 `Cannot evict pod as it would violate the pod's disruption budget`을 찍으며 5초마다 재시도했습니다. kind에서 `kubectl config view --minify`의 server는 호스트에서 접속하는 `https://127.0.0.1:<포트>`였고 SAN의 `IP Address:127.0.0.1`이 이 주소를 받아 줍니다.
 
 ## 5. 고가용성 컨트롤 플레인
 
@@ -982,7 +1005,7 @@ helm get manifest shop-cache -n shop           # 실제로 적용된 매니페�
 helm upgrade --install shop-cache <저장소>/<차트> -n shop --create-namespace --set replicaCount=3
 ```
 
-Helm 4(2025년 11월 정식)에서 바뀐 점 중 명령에 영향을 주는 것은 두 가지입니다. "Helm 4 Overview" 문서에 따르면 `--atomic`은 `--rollback-on-failure`로, `--force`는 `--force-replace`로 이름이 바뀌었고 옛 이름은 경고를 내며 계속 동작합니다. 새 릴리스는 기본으로 server-side apply로 설치되고 업그레이드와 롤백은 그 릴리스가 쓰던 방식을 따릅니다. 시험 노드의 Helm이 3인지 4인지는 `helm version`으로 먼저 봅니다. 2026년 10월에도 helm.sh 문서 사이트는 3.22와 4.3 문서를 함께 제공합니다.
+Helm 4(2025년 11월 정식)에서 바뀐 점 중 명령에 영향을 주는 것은 두 가지입니다. "Helm 4 Overview" 문서에 따르면 `--atomic`은 `--rollback-on-failure`로, `--force`는 `--force-replace`로 이름이 바뀌었고 옛 이름은 경고를 내며 계속 동작합니다. 새 릴리스는 기본으로 server-side apply로 설치되고 업그레이드와 롤백은 그 릴리스가 쓰던 방식을 따릅니다. Helm v4.3.1에서 `--atomic`을 주자 `Flag --atomic has been deprecated, use --rollback-on-failure instead` 경고 뒤에 설치가 진행됐습니다. 시험 노드의 Helm이 3인지 4인지는 `helm version`으로 먼저 봅니다. 2026년 10월에도 helm.sh 문서 사이트는 3.22와 4.3 문서를 함께 제공합니다.
 
 ### 6-1b. 차트를 받아 고쳐서 설치: helm pull과 로컬 차트
 
@@ -1025,7 +1048,7 @@ helm upgrade shop-cache ./<차트> -n shop           # 다시 고친 뒤 같은 
 | `helm template <이름> <차트>` | 템플릿을 로컬에서 렌더링해 매니페스트를 출력. 클러스터에서 조회할 값은 가짜로 채우고 서버 쪽 검증은 하지 않음. `--output-dir`로 파일로 저장, `-s templates/<파일>`로 한 템플릿만 | 기본은 없음 |
 | `helm install/upgrade --dry-run=client` | 설치 과정을 흉내 내고 릴리스 정보와 매니페스트를 출력하지만 저장하지 않음. `--dry-run=server`는 서버에 검증까지 맡김 | `server`일 때 |
 
-Helm 3.22 레퍼런스는 값 없이 쓴 `--dry-run`을 `client`로 설명합니다. Helm 4.3 레퍼런스는 값을 `none`(기본, 실제 설치), `client`, `server` 셋으로 적고 값 없이 쓴 경우는 따로 설명하지 않습니다. 시험 노드가 어느 메이저인지 모르니 `--dry-run=client`처럼 값을 붙여 씁니다. 출력에는 Secret 내용도 그대로 나오고 두 버전 모두 `--hide-secret`으로 가릴 수 있습니다.
+Helm 3.22 레퍼런스는 값 없이 쓴 `--dry-run`을 `client`로 설명합니다. Helm 4.3 레퍼런스는 값을 `none`(기본, 실제 설치), `client`, `server` 셋으로 적고 값 없이 쓴 경우는 따로 설명하지 않습니다. Helm v4.3.1에서 값 없이 `--dry-run`을 주면 `--dry-run is deprecated and should be replaced with '--dry-run=client'` 경고를 찍고 client 모드로 동작했습니다(`STATUS: pending-install`, `DESCRIPTION: Dry run complete`). 시험 노드가 어느 메이저인지 모르니 `--dry-run=client`처럼 값을 붙여 씁니다. 출력에는 Secret 내용도 그대로 나오고 두 버전 모두 `--hide-secret`으로 가릴 수 있습니다.
 
 ### 6-1c. 차트가 CRD를 가져올 때
 
@@ -1046,8 +1069,22 @@ Helm 3.22 레퍼런스는 값 없이 쓴 `--dry-run`을 `client`로 설명합니
 ```bash
 helm template payment-op ./payment-operator -n payment --include-crds > payment-op.yaml
 grep -c 'kind: CustomResourceDefinition' payment-op.yaml
-kubectl apply -f payment-op.yaml
+kubectl apply -f payment-op.yaml -n payment
 ```
+
+CRD 하나와 커스텀 객체 하나를 담은 차트를 직접 만들어 Helm v4.3.1과 kind v1.37.0에서 돌린 결과입니다.
+
+| 시도 | 결과 |
+|---|---|
+| `helm template ... \| grep -c CustomResourceDefinition` | 0 |
+| 같은 명령에 `--include-crds` | 1 |
+| `--include-crds` 없이 렌더링한 파일을 `kubectl apply -f` | `no matches for kind "Refund" in version "pay.example.com/v1"`, `ensure CRDs are installed first` |
+| `--include-crds`로 렌더링한 파일을 바로 `kubectl apply -f` | CRD는 `created`, 같은 파일의 커스텀 객체는 같은 오류로 실패 |
+| `kubectl wait --for=condition=Established crd/refunds.pay.example.com` 뒤 다시 apply | 성공 |
+| `helm install` | CRD를 먼저 올리고 커스텀 객체까지 한 번에 성공 |
+| `helm uninstall` | 릴리스는 지워지고 CRD는 남음 |
+
+두 가지를 기억합니다. 렌더링 파일을 한 번에 넣으면 CRD가 등록되기 전에 커스텀 객체가 들어가 실패할 수 있으니 `kubectl wait` 뒤에 한 번 더 apply합니다. 그리고 `helm template -n payment`은 템플릿이 `{{ .Release.Namespace }}`를 쓰지 않는 한 매니페스트에 네임스페이스를 넣지 않습니다. 위 차트의 커스텀 객체도 `namespace` 없이 렌더링됐으므로 `kubectl apply`에 `-n payment`를 붙여야 의도한 네임스페이스에 들어갔습니다.
 
 CRD를 새 버전으로 올려야 하면 Helm에 맡기지 않고 문서 권고대로 직접 다룹니다. `helm pull --untar`로 받은 차트의 `crds/` 파일을 `kubectl apply -f`로 적용하는 식입니다.
 
@@ -1098,7 +1135,7 @@ configMapGenerator:
 | 릴리스 기록 | 릴리스 네임스페이스의 Secret에 저장(기본 저장 드라이버). 릴리스 이름도 네임스페이스 단위 | `kubectl get secret -n shop -l owner=helm` |
 | 업그레이드와 롤백 | 3-way strategic merge patch. 이전 매니페스트, 라이브 상태, 새 매니페스트를 함께 비교 | 누가 `kubectl edit`으로 바꾼 값도 롤백 때 차트 값으로 돌아옴 |
 
-`helm rollback`은 과거 리비전으로 되감지 않고 그 내용으로 새 리비전을 하나 더 만듭니다. 리비전 3에서 1로 롤백하면 `helm history`에 리비전 4가 생기고 설명에 롤백 대상이 적힙니다. 롤백이 되돌리는 것은 쿠버네티스 객체이고 PV 안의 데이터는 되돌리지 않습니다.
+`helm rollback`은 과거 리비전으로 되감지 않고 그 내용으로 새 리비전을 하나 더 만듭니다. 리비전 3에서 1로 롤백하면 `helm history`에 리비전 4가 생기고 설명에 롤백 대상이 적힙니다. Helm v4.3.1에서 확인한 설명 열은 `Rollback to 1`이었고 리비전 번호 없이 `helm rollback shop-cache`만 치면 바로 앞 리비전으로 가서 `Rollback to 3` 같은 설명이 붙었습니다. 릴리스 Secret은 `sh.helm.release.v1.shop-cache.v1`처럼 리비전마다 하나씩 생겼습니다. 롤백이 되돌리는 것은 쿠버네티스 객체이고 PV 안의 데이터는 되돌리지 않습니다.
 
 Helm 4(6-1절)는 새 릴리스에 server-side apply를 기본으로 씁니다. 3-way 병합 설명은 Helm 3 릴리스와 Helm 3에서 올라온 릴리스에 해당한다고 보면 됩니다.
 
@@ -1115,7 +1152,7 @@ Helm 4(6-1절)는 새 릴리스에 server-side apply를 기본으로 씁니다. 
 | `commonAnnotations` | 어노테이션 추가 | 사용 |
 | `images` | `name`이 일치하는 컨테이너 이미지의 `newName`, `newTag`, `digest` 교체 | 사용 |
 
-셀렉터에 레이블을 넣으면 이미 배포된 Deployment의 `spec.selector`가 바뀌는데 이 필드는 만든 뒤 바꿀 수 없어 apply가 실패합니다. `commonLabels`가 사용 중단된 사정과 연결되는 지점이라 운영 중인 리소스에는 `includeSelectors`를 끈 `labels`를 씁니다.
+셀렉터에 레이블을 넣으면 이미 배포된 Deployment의 `spec.selector`가 바뀌는데 이 필드는 만든 뒤 바꿀 수 없어 apply가 실패합니다. kubectl v1.37.1 내장 Kustomize(v5.8.1)로 배포된 overlay에 `includeSelectors: true` 레이블을 더해 다시 apply하자 `The Deployment "prod-order-api" is invalid: spec.selector: ... field is immutable`이었고 `commonLabels`를 쓰면 `# Warning: 'commonLabels' is deprecated. Please use 'labels' instead.`가 찍혔습니다. `commonLabels`가 사용 중단된 사정과 연결되는 지점이라 운영 중인 리소스에는 `includeSelectors`를 끈 `labels`를 씁니다.
 
 변형 필드로 안 되는 개별 수정은 `patches`로 합니다. "Declarative Management of Kubernetes Objects Using Kustomize" 문서는 두 형식을 같은 `patches` 필드에서 받는다고 적습니다.
 
@@ -1190,8 +1227,8 @@ components:
 
 ### 6-6. 헷갈리는 지점
 
-- `helm install`의 인자 순서는 `[NAME] [CHART]`입니다. 릴리스 이름을 빼면 오류가 나고 자동 이름을 원하면 `--generate-name`을 씁니다.
-- `helm install`과 `helm upgrade`에 `-f`와 `--set`을 함께 주면 `--set` 값이 우선합니다.
+- `helm install`의 인자 순서는 `[NAME] [CHART]`입니다. 릴리스 이름을 빼면 `Error: INSTALLATION FAILED: must either provide a name or specify --generate-name`이 나고 자동 이름을 원하면 `--generate-name`을 씁니다.
+- `helm install`과 `helm upgrade`에 `-f`와 `--set`을 함께 주면 `--set` 값이 우선합니다. Helm v4.3.1에서 같은 키를 둘 다에 넣어 확인했습니다.
 - `kubectl kustomize`는 출력만 하고 적용하지 않습니다. 적용은 `-k`입니다.
 - Kustomize `images`의 `name`은 컨테이너 이름과 무관하고 매니페스트의 이미지 이름과 맞춰집니다.
 - 변형 필드가 걸리는 범위는 그 필드를 적은 `kustomization.yaml`이 모은 리소스까지입니다. 아래처럼 하위 디렉터리마다 `kustomization.yaml`을 두고 루트가 디렉터리를 `resources`로 가져오면 루트에 적은 `namespace`, `labels`는 api와 db 리소스 모두에, `api/kustomization.yaml`에 적은 것은 api 리소스에만 걸립니다.
@@ -1218,6 +1255,8 @@ shop/
 Helm은 공개 차트 하나를 `helm pull --untar`로 받아 `values.yaml`의 기본 레플리카 수를 바꾸고 `./<차트>` 경로로 설치합니다. 같은 차트에 `crds/` 디렉터리가 있다면 `helm template ... | grep -c CustomResourceDefinition`과 `helm template ... --include-crds | grep -c CustomResourceDefinition`의 숫자를 비교합니다.
 
 prod overlay에는 6-4절의 두 패치 형식을 하나씩 넣고 `kubectl kustomize`로 결과를 비교합니다. 같은 overlay에서 `commonLabels`를 `labels`(`includeSelectors: false`)로 바꿔 Deployment 셀렉터가 그대로인지 확인합니다. 롤백한 뒤 `kubectl get secret -n <네임스페이스> -l owner=helm`으로 리비전 수만큼 Secret이 있는지 봅니다.
+
+kind v1.37.0, Helm v4.3.1, kubectl 내장 Kustomize v5.8.1에서 모두 돌렸습니다. 네트워크에서 공개 차트를 받는 대신 `helm create`로 만든 로컬 차트와 CRD를 담은 작은 차트를 썼습니다. Kustomize는 접두사, 네임스페이스, 해시가 붙은 ConfigMap 이름, 두 패치 형식, `images`, components, `kubectl diff -k`, `kubectl delete -k`가 6-2~6-5절 설명대로 동작했고 Helm 결과는 6-1~6-3절에 적었습니다.
 
 ## 7. 확장 인터페이스: CNI, CSI, CRI
 
@@ -1254,6 +1293,8 @@ ls /etc/cni/net.d/                              # 노드에 설정 파일이 생
 ```
 
 Helm 차트로 주어지면 6절의 `helm show values`로 Pod 대역 값의 키 이름부터 찾습니다.
+
+kind v1.37.0에서는 CNI 설치를 돌리지 못했습니다(kind가 kindnet을 미리 넣음). 확인용 명령만 실행했고 kube-controller-manager 매니페스트에 `--allocate-node-cidrs=true`, `--cluster-cidr=10.244.0.0/16`이 있었고 노드마다 `10.244.x.0/24` 대역이 `podCIDR`로 잡혀 있었습니다. 노드의 `/etc/cni/net.d/`에는 `10-kindnet.conflist`가 있었습니다.
 
 ### 7-3. CSI
 
@@ -1324,7 +1365,7 @@ kubectl explain boardjob.spec
 kubectl get bj -A
 ```
 
-`kubectl explain`이 CRD 스키마도 보여 주므로, 처음 보는 CRD가 시험에 나와도 필드 이름을 터미널에서 찾을 수 있습니다.
+`kubectl explain`이 CRD 스키마도 보여 주므로 처음 보는 CRD가 시험에 나와도 필드 이름을 터미널에서 찾을 수 있습니다. kind v1.37.0에서 CRD를 apply한 직후 `kubectl explain boardjob.spec`은 `error: couldn't find resource for "example.com/v1, Resource=boardjobs"`를 냈고 몇 초 뒤 다시 치자 필드가 나왔습니다. 위 목록의 "몇 초 걸릴 수 있다"가 이것입니다.
 
 ### 8-2. 오퍼레이터
 
@@ -1358,7 +1399,7 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
 
 ### 8-4. 직접 해 보기
 
-위 `BoardJob` CRD를 적용하고 커스텀 객체 하나를 만든 뒤 `kubectl get bj -o yaml`로 저장된 내용을 확인합니다. 이어서 CRD를 지우고 커스텀 객체도 사라지는지 봅니다.
+위 `BoardJob` CRD를 적용하고 커스텀 객체 하나를 만든 뒤 `kubectl get bj -o yaml`로 저장된 내용을 확인합니다. 이어서 CRD를 지우고 커스텀 객체도 사라지는지 봅니다. kind v1.37.0에서 CRD를 지운 직후 커스텀 객체 목록 조회는 `Error from server (NotFound): Unable to list "example.com/v1, Resource=boardjobs": the server could not find the requested resource`였습니다.
 
 ## 9. 확인 문제
 
@@ -1424,13 +1465,14 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
    ```
 5. 인증서 경로를 etcd 매니페스트에서 확인하고 저장, 확인합니다.
    ```bash
-   ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+   etcdctl --endpoints=https://127.0.0.1:2379 \
      --cacert=/etc/kubernetes/pki/etcd/ca.crt \
      --cert=/etc/kubernetes/pki/etcd/server.crt \
      --key=/etc/kubernetes/pki/etcd/server.key \
      snapshot save /opt/backup/shop.db
    etcdutl --write-out=table snapshot status /opt/backup/shop.db
    ```
+   노드의 `etcdctl`이 3.6 이상이면 `etcdctl snapshot status`는 없습니다(4-5절). kind 노드에서 etcd 3.7.0 도구로 돌린 결과입니다.
 6. 토큰 기본 수명은 24시간이라 1시간이면 만료 전입니다. 토큰을 지웠거나 명령을 잘못 옮긴 경우일 수 있으니 새로 만듭니다.
    ```bash
    kubeadm token list
@@ -1454,7 +1496,7 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
    kubectl certificate approve refund-user
    kubectl get csr refund-user -o jsonpath='{.status.certificate}' | base64 -d > /opt/refund-user.crt
    ```
-10. `kubectl create token order-api -n shop --duration=30m`입니다. 1.24부터 ServiceAccount를 만들어도 Secret 기반 장기 토큰이 자동 생성되지 않습니다. 토큰은 TokenRequest API로 그때그때 발급받고 Pod에는 projected 볼륨으로 들어갑니다. 요청한 수명은 서버가 조정할 수 있습니다.
+10. `kubectl create token order-api -n shop --duration=30m`입니다. 1.24부터 ServiceAccount를 만들어도 Secret 기반 장기 토큰이 자동 생성되지 않습니다. 토큰은 TokenRequest API로 그때그때 발급받고 Pod에는 projected 볼륨으로 들어갑니다. 요청한 수명은 서버가 조정할 수 있습니다. kind v1.37.0에서 `--duration=30m` 토큰의 수명은 1800초였고 `describe sa`에는 `Tokens:` 줄 자체가 없었습니다.
 11. 단독 Pod 때문에 `--force`, emptyDir 때문에 `--delete-emptydir-data`, DaemonSet Pod가 있다면 `--ignore-daemonsets`가 필요합니다. 단독 Pod는 다시 만들어 줄 컨트롤러가 없어 사라지고 emptyDir 데이터도 함께 지워집니다. Deployment Pod는 ReplicaSet이 다른 노드에 다시 만듭니다.
    ```bash
    kubectl drain node01 --ignore-daemonsets --delete-emptydir-data --force
@@ -1479,28 +1521,30 @@ kubectl describe clusterrole <컨트롤러용 ClusterRole>     # 컨트롤러가
    ```bash
    helm template payment-op ./payment-operator -n payment --include-crds > /opt/payment-op.yaml
    kubectl create namespace payment --dry-run=client -o yaml | kubectl apply -f -
-   kubectl apply -f /opt/payment-op.yaml
+   kubectl apply -f /opt/payment-op.yaml -n payment
    kubectl get crd | grep -i payment
    ```
-   CRD가 등록되기 전에 같은 파일의 커스텀 객체가 먼저 처리되면 실패할 수 있습니다. 그때는 `kubectl apply`를 한 번 더 실행하거나 CRD 부분만 먼저 적용합니다.
+   kind v1.37.0에서는 CRD가 등록되기 전에 같은 파일의 커스텀 객체가 처리되어 첫 apply에서 커스텀 객체만 실패했습니다. `kubectl wait --for=condition=Established crd/<이름>` 뒤에 `kubectl apply`를 한 번 더 실행하면 됩니다. `-n payment`는 템플릿이 네임스페이스를 적지 않은 객체를 `payment`에 넣기 위해 붙입니다(6-1c절).
 
 </details>
 
 ## 범위와 한계
 
-- 이 글의 명령은 공식 문서에서 옮긴 것이고 아직 직접 실행하지 않았습니다. 출력 예시는 문서에 실린 모양을 옮긴 것입니다. kubeadm 클러스터를 만든 뒤 실제 출력과 막힌 지점을 덧붙이겠습니다.
+- 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(컨트롤 플레인 1대, 워커 2대, colima, arm64), kubectl v1.37.1, Helm v4.3.1, kubectl 내장 Kustomize v5.8.1에서 1-11, 4-9, 6-7, 8-4절의 직접 해 보기와 3-5절의 `kubelet-config` 반영, 확인 문제 1, 3, 5, 7~11, 13의 명령을 돌렸습니다. etcd 도구는 노드 이미지에 없어 etcd v3.7.0 arm64 릴리스의 `etcdctl`, `etcdutl`을 컨트롤 플레인 노드에 넣었습니다. 본문에 "kind에서"로 적은 출력과 오류 문구가 그 결과입니다.
+- kind로 할 수 없어 돌리지 않은 것은 이렇습니다. `kubeadm init`, `join`, `upgrade`(4-2절과 확인 문제 4, 6), 노드 사전 준비와 containerd, cri-dockerd, kubeadm 패키지 설치(2장과 확인 문제 12), HA 컨트롤 플레인(5장), `kubeadm certs renew`, CNI 설치(7-2절은 확인 명령만), 실제 공개 차트 저장소(로컬 차트로 대신)입니다.
+- kind 특유의 조건이 결과에 들어간 곳이 있습니다. kubeconfig의 클러스터 이름이 `kind-<이름>`이고 server가 `https://127.0.0.1:<포트>`이며 `apiserver.crt`의 SAN에 `localhost`와 `127.0.0.1`이 더 들어 있습니다. 노드가 컨테이너라 `ssh` 대신 `docker exec`를 썼습니다.
+- 4-6절의 etcd 복구는 컨트롤 플레인 1대에서 돌렸습니다. 복구 뒤 컨트롤 플레인 static Pod 재시작이 필요했던 이유를 API 서버 캐시로 본 것은 관찰에서 끌어낸 판단입니다.
 - 공식 문서는 2026년 10월 19일 기준 kubernetes.io(v1.37)와 helm.sh(4.3.1)에서 확인했습니다.
 - etcd 백업과 업그레이드가 현재 시험에 나오는지는 공식 문서로 확인하지 못했습니다. 후기도 엇갈립니다(4절 첫 문단).
-- 확인 문제는 위 문서 내용을 바탕으로 제가 만든 것이고 실제 시험 문항과 관계없습니다. 풀이도 클러스터에서 돌려 보지 않았습니다.
+- 확인 문제는 위 문서 내용을 바탕으로 제가 만든 것이고 실제 시험 문항과 관계없습니다.
 - containerd 설정 블록은 containerd 버전마다 달라 문서의 1.x, 2.x 예시를 그대로 따라야 합니다. containerd `RELEASES.md`는 2.3부터 설정 파일 `version = 4`가 있다고 적는데 version 4 파일에서 `SystemdCgroup` 키 위치가 version 3과 같은지는 확인하지 못했습니다. 2-4b절에서 `containerd config default` 출력에서 찾으라고 적은 이유입니다.
 - containerd 2.0 이상 요구는 1.35 릴리스 글의 "1.35가 1.x를 지원하는 마지막 버전" 문장에 근거합니다. 1.36 이상 kubelet이 containerd 1.x에서 바로 실패하는지, 경고만 내는지는 확인하지 못했습니다. "Container Runtimes" 문서는 cgroup 드라이버 대비 동작이 1.38에서 없어진다고만 적습니다.
 - cri-dockerd `.deb` 패키지가 설치 직후 서비스를 enabled 상태로 만드는지는 Mirantis 문서의 "active (running), enabled여야 한다"는 확인 문구로만 알고 있어 2-4b절에 `enable --now`를 함께 적었습니다. 시험에서 주는 패키지 이름과 경로는 알 수 없습니다.
 - 3-4b절 끝의 "매니페스트를 직접 고쳐도 `kubeadm-config`에 같은 값을 넣어 둔다"는 문서의 재설정 유지 절을 과제 상황에 옮긴 제 판단입니다.
 - 6-1c절의 값으로 CRD 설치를 끄는 방식은 차트마다 정하는 관행이라 cert-manager 한 사례만 확인했습니다.
 - 1-8b절의 TLS 설명은 TLS 1.3(RFC 8446) 기준입니다. TLS 1.2 이하의 RSA 키 전송 방식은 다루지 않았습니다.
-- etcd 기본 버전은 kubernetes/kubernetes release-1.37 브랜치의 `constants.go`(`DefaultEtcdVersion = "3.7.0-0"`)를 2026년 10월 20일에 읽은 값입니다. 패치 릴리스에서 바뀔 수 있습니다.
-- 4-8절의 `openssl x509` 출력 모양은 문서의 SAN 목록과 kubeadm 소스로 예상한 것입니다. 문서 표는 일반 CA의 기본 CN을 `kubernetes-ca`로 적지만 kubeadm 1.36 소스(`certlist.go`)는 `kubernetes`로 만듭니다. 실제 클러스터에서 확인하지 못했습니다.
-- `kubectl create token`에 `--duration`을 주지 않았을 때의 수명은 레퍼런스가 "서버가 정한다"고만 적어 기본값을 숫자로 적지 않았습니다.
+- etcd 기본 버전은 kubernetes/kubernetes release-1.37 브랜치의 `constants.go`(`DefaultEtcdVersion = "3.7.0-0"`)를 2026년 10월 20일에 읽은 값이고 kind v1.37.0 노드의 etcd도 3.7.0이었습니다. 패치 릴리스에서 바뀔 수 있습니다.
+- `kubectl create token`의 기본 수명 3600초는 kind v1.37.0의 API 서버 기본 설정에서 본 값입니다. 레퍼런스는 "서버가 정한다"고만 적으니 시험 클러스터에서는 다를 수 있습니다.
 - `--pod-eviction-timeout`이 어느 버전에서 제거됐는지는 확인하지 못했습니다. 1.37 kube-controller-manager 플래그 목록에 없다는 것만 확인했습니다.
 - Kustomize component(`v1alpha1`)와 kubectl 내장 Kustomize 버전 차이는 kubectl 버전마다 다르니 시험 노드에서 `kubectl version --client`로 확인해야 합니다.
 

@@ -22,7 +22,7 @@ seriesOrder: 5
 2. 바인딩 조건은 StorageClass 이름, 접근 모드, 크기 세 가지가 핵심입니다. `storageClassName`을 생략한 PVC와 `""`로 적은 PVC는 다르게 처리됩니다. 생략하면 기본 StorageClass가 붙고 `""`이면 클래스 없는 PV에만 묶입니다.
 3. 동적 프로비저닝은 StorageClass가 있어야 일어납니다. 클래스의 `volumeBindingMode`가 `WaitForFirstConsumer`이면 그 PVC를 쓰는 Pod가 생길 때까지 PVC가 `Pending`인 것이 정상입니다.
 4. 회수 정책은 `Retain`, `Delete`, `Recycle` 세 가지이고 `Recycle`은 사용 중단(deprecated) 상태입니다. 동적으로 만든 PV는 StorageClass의 `reclaimPolicy`를 물려받고 기본값은 `Delete`입니다. 데이터가 중요하면 `kubectl patch`로 `Retain`으로 바꿉니다.
-5. 접근 모드는 볼륨을 노드 기준으로 제한합니다. `ReadWriteOnce`는 한 노드에서 여러 Pod가 쓸 수 있고 클러스터 전체에서 Pod 하나로 제한하려면 `ReadWriteOncePod`(CSI 볼륨 전용)를 씁니다.
+5. 접근 모드는 볼륨을 노드 기준으로 제한합니다. `ReadWriteOnce`는 한 노드에서 여러 Pod가 쓸 수 있고 클러스터 전체에서 Pod 하나로 제한하려면 `ReadWriteOncePod`를 씁니다. 문서는 CSI 볼륨 전용이라 적지만 kind의 local-path(hostPath PV)에서도 Pod 하나 제한이 걸렸습니다.
 
 ---
 
@@ -113,7 +113,7 @@ PVC가 `storageClassName`을 적지 않으면 기본 StorageClass가 쓰입니�
 - StorageClass 하나에 어노테이션 `storageclass.kubernetes.io/is-default-class: "true"`가 있어야 합니다.
 - API 서버에서 `DefaultStorageClass` 승인 컨트롤러가 켜져 있어야 합니다. 이 컨트롤러가 클래스를 생략한 PVC에 기본 클래스 이름을 채워 넣습니다.
 
-기본 클래스는 `kubectl get sc` 출력에서 이름 옆에 `(default)`로 표시됩니다. Change the default StorageClass 문서의 방법은 기존 기본 클래스의 어노테이션을 `"false"`로 바꾸고 새 클래스를 `"true"`로 바꾸는 것입니다.
+기본 클래스는 `kubectl get sc` 출력에서 이름 옆에 `(default)`로 표시됩니다. kubectl v1.37에서 기본 어노테이션이 붙은 클래스가 둘일 때 `(default)`는 실제로 쓰이는 하나(가장 최근에 만든 것)에만 붙었습니다(kind 실측). 기본이 몇 개인지는 어노테이션으로 확인합니다. Change the default StorageClass 문서의 방법은 기존 기본 클래스의 어노테이션을 `"false"`로 바꾸고 새 클래스를 `"true"`로 바꾸는 것입니다.
 
 ```bash
 kubectl get storageclass
@@ -165,6 +165,8 @@ volumeBindingMode: WaitForFirstConsumer
 1. 연습 클러스터에 local-path 같은 동적 프로비저너를 하나 설치하고 `kubectl get sc`에서 `(default)` 표시를 확인합니다.
 2. 기본 표시를 다른 클래스로 옮기고 클래스를 생략한 PVC를 만들어 `kubectl get pvc -o yaml`의 `storageClassName`이 무엇으로 채워졌는지 봅니다.
 3. `WaitForFirstConsumer` 클래스로 PVC를 만들어 `Pending`을 확인한 뒤 그 PVC를 쓰는 Pod를 만들어 `Bound`로 바뀌는 순간을 `kubectl get pvc -w`로 지켜봅니다.
+
+kind v0.33(노드 v1.37.0)의 기본 클래스는 `standard`(프로비저너 `rancher.io/local-path`, `Delete`, `WaitForFirstConsumer`, `allowVolumeExpansion` 없음)입니다. 세 과제 모두 기대대로였습니다. 2번에서 기본을 `order-fast`로 옮긴 뒤 만든 PVC는 `storageClassName: order-fast`로 채워졌고 기본 클래스가 없을 때 만든 PVC는 기본이 생기자 소급해서 채워졌습니다. 3번의 `Pending` 동안 Events에는 `waiting for first consumer to be created before binding`이 찍혔습니다. `nodeName`으로 노드를 직접 지정한 Pod는 스케줄러를 건너뛰므로 WFFC PVC가 계속 `Pending`이고 Pod에 `FailedMount ... PVC is not bound`가 반복됐습니다.
 
 ## 2. 볼륨 타입, 접근 모드, 회수 정책
 
@@ -225,7 +227,7 @@ spec:
 `emptyDir`은 노드 디스크나 메모리만 씁니다. 임시 데이터라도 정해진 크기의 네트워크 디스크나 StorageClass의 기능(스냅샷, 확장)이 필요하면 generic ephemeral volume을 씁니다. Ephemeral Volumes 문서의 설명을 정리하면 이렇습니다.
 
 - Pod를 만들면 ephemeral volume 컨트롤러가 Pod와 같은 네임스페이스에 실제 PVC를 만듭니다. PVC 이름은 `<Pod 이름>-<볼륨 이름>`으로 정해집니다.
-- Pod가 이 PVC의 소유자(owner)라서 Pod를 지우면 가비지 컬렉터가 PVC를 지웁니다. StorageClass의 기본 회수 정책이 `Delete`이므로 보통 볼륨도 함께 지워집니다.
+- Pod가 이 PVC의 소유자(owner)라서 Pod를 지우면 가비지 컬렉터가 PVC를 지웁니다. 볼륨이 함께 지워지는지는 StorageClass의 회수 정책을 따릅니다. 기본값 `Delete`면 지워지고 아래 예처럼 `Retain` 클래스(1-1의 `order-fast`)를 쓰면 PV가 `Released`로 남습니다.
 - 문서는 이 용도에 `WaitForFirstConsumer` 클래스를 권합니다. 그래야 스케줄러가 Pod에 맞는 노드를 자유롭게 고릅니다.
 - 이름 규칙 때문에 같은 네임스페이스에서 이름이 겹칠 수 있습니다(Pod `pod-a`의 볼륨 `scratch`와 Pod `pod`의 볼륨 `a-scratch`). 그 Pod를 위해 만든 PVC가 아니면 쓰지 않으므로 Pod가 시작하지 못합니다.
 
@@ -272,7 +274,7 @@ spec:
 
 - 접근 모드는 PVC와 PV를 맞추는 데 쓰입니다. 경우에 따라 마운트 위치도 제한하지만 마운트한 뒤의 쓰기 보호는 강제하지 않습니다. `ReadOnlyMany`로 만든 PV가 읽기 전용이라는 보장도 없습니다. 예외는 `ReadWriteOncePod`이고 이것만 실제로 Pod 하나로 제한합니다.
 - 볼륨이 여러 모드를 지원해도 한 번에 한 모드로만 마운트됩니다.
-- `ReadWriteOncePod`는 CSI 볼륨에서만 지원합니다. 문서는 CSI 사이드카 최소 버전으로 csi-provisioner v3.0.0, csi-attacher v3.3.0, csi-resizer v1.3.0을 듭니다.
+- 문서는 `ReadWriteOncePod`를 CSI 볼륨에서만 지원한다고 적고 CSI 사이드카 최소 버전으로 csi-provisioner v3.0.0, csi-attacher v3.3.0, csi-resizer v1.3.0을 듭니다. kind v1.37.0에서는 local-path가 만든 hostPath PV에도 RWOP PVC가 `Bound`됐고 정적 hostPath PV에 RWOP를 적는 것도 허용됐습니다. 같은 PVC를 쓰는 두 번째 Pod는 스케줄러가 `unavailable due to PersistentVolumeClaim with ReadWriteOncePod`로 막았습니다. 제한은 스케줄러와 kubelet이 걸기 때문에 CSI가 아니어도 동작한 것으로 보입니다. 시험 답으로는 "RWOP를 요청한다"가 핵심입니다.
 - 지원하는 모드는 볼륨 플러그인마다 다릅니다. 문서 표 기준 HostPath는 RWO만, NFS는 RWO, ROX, RWX, CSI는 드라이버에 따라 다릅니다.
 
 튜토리얼은 단순화를 위해 RWO를 쓰면서 운영 환경에서는 쿠버네티스 프로젝트가 ReadWriteOncePod를 권한다고 적습니다.
@@ -324,14 +326,14 @@ kubectl get pv <PV 이름>     # STATUS가 Available로 바뀌는지
 ```bash
 kubectl get pv
 kubectl patch pv <PV 이름> -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
-kubectl get pv            # RECLAIMPOLICY 열 확인
+kubectl get pv            # RECLAIM POLICY 열 확인
 ```
 
-같은 문서에 실린 확인 출력의 모양입니다(문서 예시이고 이 글에서 실행한 결과는 아닙니다).
+같은 문서의 확인 출력은 열 이름이 `ACCESSMODES`, `RECLAIMPOLICY`인 옛 모양입니다. kubectl v1.37에서 `standard` 클래스의 PV를 `Retain`으로 바꾼 뒤 본 실제 출력은 이렇습니다(kind 실측).
 
 ```
-NAME                                       CAPACITY   ACCESSMODES   RECLAIMPOLICY   STATUS    CLAIM             STORAGECLASS     REASON    AGE
-pvc-bb3ca71d-b7b5-11e6-9d58-0ed433a7dd94   4Gi        RWO           Retain          Bound     default/claim3    manual                     33s
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-8560aeed-4a36-48fd-8345-7970fefc501e   1Gi        RWO            Retain           Bound    shop/order-db-data   standard       <unset>                          2s
 ```
 
 ### 2-4. CSI 드라이버가 볼륨을 만들고 붙이는 순서
@@ -344,6 +346,8 @@ kubernetes-csi 프로젝트의 배포 문서(Deploying a CSI Driver on Kubernete
 |---|---|---|
 | 컨트롤러 플러그인 | Deployment나 StatefulSet. 여러 개를 띄울 때는 리더 선출로 하나만 활성 | 드라이버의 CSI Controller 서비스와 사이드카(external-provisioner, external-attacher, external-resizer, external-snapshotter 중 필요한 것) |
 | 노드 플러그인 | 모든 노드에 DaemonSet | 드라이버의 CSI Node 서비스와 node-driver-registrar. kubelet이 호스트에 공유된 유닉스 소켓으로 호출 |
+
+예제 드라이버는 이 구분을 따르지 않을 수 있습니다. kind에 설치해 본 csi-driver-host-path v1.17.1은 StatefulSet 하나(`csi-hostpathplugin`)에 드라이버와 사이드카 7개를 함께 넣은 구성이었습니다. 단일 노드 데모용이라 그렇습니다.
 
 동적 프로비저닝 PVC 하나가 Pod 안 디렉터리가 되기까지를 사이드카 문서 기준으로 이으면 다음과 같습니다.
 
@@ -407,9 +411,11 @@ in-tree 플러그인에서 CSI로 넘어가는 마이그레이션(`CSIMigration`
 
 1. 같은 노드에 고정한 Pod 두 개(`nodeSelector`)가 RWO PVC 하나를 함께 마운트하는지 보고 한 Pod를 다른 노드로 옮겼을 때 어떻게 되는지 `kubectl describe pod`의 Events로 확인합니다.
 2. 동적 PVC를 만들고 생성된 PV의 회수 정책을 `Retain`으로 바꾼 뒤 PVC를 지워 PV가 `Released`로 남는 것을 봅니다.
-3. `emptyDir`에 파일을 쓰고 컨테이너만 죽였을 때(`kubectl exec ... -- kill 1`)와 Pod를 지웠을 때 파일이 남는지 비교합니다.
-4. 2-1의 `report` Pod를 동적 프로비저너가 있는 클러스터에 만들고 `report-scratch` PVC가 생기는지, Pod를 지운 뒤 PVC와 PV가 함께 사라지는지 `kubectl get pvc,pv -w`로 봅니다.
+3. `emptyDir`에 파일을 쓰고 컨테이너만 죽였을 때(`kubectl exec ... -- sh -c 'kill 1'`)와 Pod를 지웠을 때 파일이 남는지 비교합니다. nginx 이미지에는 `kill` 실행 파일이 없어 `-- kill 1`은 실패하므로 셸 내장 명령으로 보냅니다. busybox `sleep`이 PID 1이면 SIGTERM을 무시하니 nginx처럼 시그널을 처리하는 이미지로 합니다.
+4. 2-1의 `report` Pod를 동적 프로비저너가 있는 클러스터에 만들고 `report-scratch` PVC가 생기는지, Pod를 지운 뒤 PVC가 사라지고 PV는 `order-fast`의 회수 정책(`Retain`)대로 `Released`로 남는지 `kubectl get pvc,pv -w`로 봅니다.
 5. CSI 드라이버가 설치된 클러스터(kind라면 csi-driver-host-path 같은 예제 드라이버)에서 `kubectl get csidriver`, `kubectl get csinode`, `kubectl get volumeattachment`를 차례로 보고 Pod를 만들기 전후로 VolumeAttachment가 생기는지 확인합니다. 드라이버가 attach를 쓰지 않으면 생기지 않습니다.
+
+kind v1.37.0 실측입니다. 1번에서 같은 노드의 두 Pod는 RWO PVC를 함께 마운트했습니다. 다른 노드로 고정한 Pod는 local-path PV에 붙은 nodeAffinity 때문에 `FailedScheduling ... didn't match PersistentVolume's node affinity`로 `Pending`이 됐습니다. local 계열 볼륨이라 생긴 결과이고 네트워크 스토리지라면 attach 단계에서 다른 메시지가 납니다. 2번은 `Released`로 남았습니다. 3번은 컨테이너 재시작 뒤에는 파일이 남고 Pod를 다시 만들면 비었습니다. 4번의 PVC 이름은 `report-scratch`, ownerReference는 Pod였습니다. 5번은 csi-driver-host-path v1.17.1(snapshot CRD와 controller 포함, 저장소의 deploy.sh 대신 매니페스트를 `kubectl apply`로 적용)로 했습니다. `ATTACHREQUIRED`가 `true`였고 csinode에 드라이버와 topologyKeys가 보였습니다. Pod를 만들자 VolumeAttachment가 생겼고 Pod를 지우자 사라졌습니다.
 
 ## 3. PV와 PVC 관리
 
@@ -474,6 +480,8 @@ task-pv-volume   10Gi       RWO           Retain          Bound     default/task
 NAME            STATUS    VOLUME           CAPACITY   ACCESSMODES   STORAGECLASS   AGE
 task-pv-claim   Bound     task-pv-volume   10Gi       RWO           manual         30s
 ```
+
+튜토리얼의 열 이름은 옛 kubectl 것입니다. kubectl v1.37에서 같은 YAML을 돌리면 `ACCESS MODES`, `RECLAIM POLICY`처럼 띄어 쓴 이름과 `VOLUMEATTRIBUTESCLASS` 열(값 `<unset>`)이 더해져 나오고 PVC의 CAPACITY는 똑같이 10Gi였습니다(kind 실측).
 
 이 출력에서 읽을 것은 PVC의 CAPACITY 열입니다. 요청한 3Gi 대신 묶인 PV의 크기(튜토리얼에서는 10Gi)가 보입니다.
 
@@ -596,7 +604,9 @@ kubectl -n shop get pvc order-db-data -w
 ### 3-8. 직접 해 보기
 
 1. 3-1의 PV, PVC, Pod를 만들고 노드의 `/mnt/data`에 `index.html`을 써서 Pod 안에서 보이는지 확인합니다.
-2. PVC 요청을 20Gi로 바꿔 다시 만들고 `Pending`의 이유를 `kubectl describe pvc` Events에서 읽습니다.
+2. PVC 요청을 20Gi로 바꿔 다시 만들고 `Pending`의 이유를 `kubectl describe pvc` Events에서 읽습니다. kind에서 해 보면 크기 이야기가 나오지 않고 `ProvisioningFailed  storageclass.storage.k8s.io "manual" not found`가 찍힙니다. 맞는 PV가 없으니 `manual` 클래스로 동적 프로비저닝을 시도했는데 그런 StorageClass가 없다는 뜻입니다. 3-6의 확인 순서대로 "맞는 PV가 없다"와 "프로비저너가 없다"를 함께 떠올립니다.
+
+1번과 3번은 kind에서 기대대로였습니다. 1번의 `/mnt/data`는 Pod가 뜬 kind 노드 컨테이너 안의 경로입니다. 3번에서 PVC는 `Terminating`, Finalizers `kubernetes.io/pvc-protection`, `Used By: <Pod 이름>`으로 보였고 Pod를 지우자 사라졌습니다.
 3. Pod가 쓰는 PVC를 지워 `Terminating`과 `kubernetes.io/pvc-protection`을 확인한 뒤 Pod를 지워 PVC가 사라지는 것을 봅니다.
 
 ## 4. 확인 문제
@@ -660,7 +670,7 @@ kubectl patch pv pvc-1a2b... -p '{"spec":{"persistentVolumeReclaimPolicy":"Retai
 kubectl get pv pvc-1a2b...
 ```
 
-RECLAIMPOLICY 열이 `Retain`이면 됩니다. 앞으로 만들 PV까지 바꾸려면 StorageClass의 `reclaimPolicy`를 `Retain`으로 둔 클래스를 새로 만듭니다.
+`RECLAIM POLICY` 열(kubectl v1.37 표기)이 `Retain`이면 됩니다. 앞으로 만들 PV까지 바꾸려면 StorageClass의 `reclaimPolicy`를 `Retain`으로 둔 클래스를 새로 만듭니다.
 
 </details>
 
@@ -675,7 +685,7 @@ kubectl patch storageclass order-fast -p '{"metadata": {"annotations":{"storagec
 kubectl get sc
 ```
 
-`order-fast` 옆에만 `(default)`가 보여야 합니다. 둘 다 기본으로 두면 가장 최근에 만든 기본 클래스가 쓰입니다.
+`order-fast` 옆에만 `(default)`가 보여야 합니다. 둘 다 기본으로 두면 가장 최근에 만든 기본 클래스가 쓰입니다. kubectl v1.37은 기본이 둘이어도 실제로 쓰이는 하나에만 `(default)`를 붙였으므로(kind 실측) 표시만 보고 끝내지 말고 `kubectl get sc standard -o jsonpath='{.metadata.annotations}'`로 이전 기본의 어노테이션이 `"false"`인지도 확인합니다.
 
 </details>
 
@@ -684,7 +694,7 @@ kubectl get sc
 <details>
 <summary>답 보기</summary>
 
-RWO는 노드 하나에서 읽기 쓰기로 마운트하는 모드라서 같은 노드의 여러 Pod가 함께 쓸 수 있습니다. Pod 하나로 강제하려면 접근 모드를 `ReadWriteOncePod`로 요청합니다. 이 모드는 CSI 볼륨에서만 지원되므로 `hostPath` PV로는 쓸 수 없습니다.
+RWO는 노드 하나에서 읽기 쓰기로 마운트하는 모드라서 같은 노드의 여러 Pod가 함께 쓸 수 있습니다. Pod 하나로 강제하려면 접근 모드를 `ReadWriteOncePod`로 요청합니다. 문서는 이 모드를 CSI 볼륨 전용으로 적지만 kind v1.37.0에서는 hostPath PV에서도 두 번째 Pod가 스케줄 단계에서 막혔습니다. 실제 클러스터에서는 쓰는 볼륨에서 RWOP가 받아들여지는지 먼저 확인합니다.
 
 </details>
 
@@ -724,10 +734,12 @@ PVC 이름은 `report-scratch`입니다. Pod가 이 PVC의 소유자이므로 Po
 
 ## 5. 범위와 한계
 
-- 이 글의 명령과 YAML은 문서를 읽고 정리한 것이며 이 글을 쓰는 환경에는 클러스터가 없어 직접 실행하지 않았습니다. 출력 예시는 kubernetes.io 문서와 튜토리얼에 실린 것이고 그렇게 표시했습니다. 연습 클러스터에서 1-7, 2-6, 3-8 과제를 해 본 뒤 결과를 덧붙이겠습니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, 기본 StorageClass `standard` = local-path-provisioner)에서 1-7, 2-6, 3-8 과제와 확인 문제의 YAML, 회수 정책 변경과 재바인딩(claimRef 제거 후 `volumeName`으로 다시 묶기), 확장(CSI hostpath에서 `ExternalExpanding` → `Resizing` → `FileSystemResizeRequired`, Pod 재생성 뒤 `FileSystemResizeSuccessful`), 축소 거부, 확장 불가 클래스의 거부 문구, 잘못된 프로비저너 이름을 돌렸습니다. 결과는 각 과제 아래에 적었습니다.
+- kind 조건이 결과에 영향을 준 곳: local-path PV는 노드에 묶인 hostPath라 다른 노드로 옮긴 Pod가 스케줄되지 않습니다. local-path는 확장을 지원하지 않아 `allowVolumeExpansion`을 켜도 `waiting for an external controller`에서 멈췄고 확장 실습은 csi-driver-host-path로 했습니다. RWOP 결과는 local-path에서 본 것입니다.
+- 돌리지 못한 것: 클라우드 디스크 CSI 드라이버, NFS 같은 RWX 볼륨, 여러 노드에 걸친 attach와 detach.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다.
 - 시험 환경에 어떤 동적 프로비저너와 StorageClass가 준비되어 있는지는 공식 문서에 없습니다.
-- 2-4절의 CSI 컨트롤러와 노드 플러그인 구조, 사이드카가 부르는 RPC는 kubernetes-csi 프로젝트 문서(배포 문서와 external-provisioner, external-attacher 페이지)를 읽고 정리했습니다. 실제 드라이버마다 배포 Namespace, 컨테이너 이름, attach 사용 여부가 다르고 이번에 특정 드라이버로 확인하지 않았습니다.
+- 2-4절의 CSI 컨트롤러와 노드 플러그인 구조, 사이드카가 부르는 RPC는 kubernetes-csi 프로젝트 문서(배포 문서와 external-provisioner, external-attacher 페이지)를 읽고 정리했습니다. 실제 드라이버마다 배포 Namespace, 컨테이너 이름, attach 사용 여부가 다릅니다. 예제 드라이버 csi-driver-host-path v1.17.1로만 확인했습니다.
 - 볼륨 스냅샷, 복제, 볼륨 populator, 원시 블록 볼륨은 커리큘럼 문구에 직접 나오지 않아 다루지 않았습니다.
 
 ## 참고 자료

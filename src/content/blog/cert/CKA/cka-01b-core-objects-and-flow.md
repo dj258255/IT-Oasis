@@ -23,7 +23,7 @@ seriesOrder: 1.5
 2. etcd와 직접 통신하는 구성요소는 kube-apiserver 하나뿐입니다. 스케줄러, 컨트롤러 매니저, kubelet, kube-proxy는 모두 API 서버의 클라이언트로 붙고 각자 kubeconfig의 클라이언트 인증서로 자신을 증명합니다.
 3. `kubectl get pod`의 STATUS 열에 보이는 `ContainerCreating`, `CrashLoopBackOff`는 Pod phase가 아닙니다. 컨테이너 상태 `Waiting`의 reason이고 그동안 phase는 각각 `Pending`, 대개 `Running`입니다. phase는 Pending, Running, Succeeded, Failed, Unknown 다섯 가지뿐입니다.
 4. ReplicaSet은 selector에 맞는 주인 없는 Pod를 자기 것으로 입양합니다. Deployment는 Pod 템플릿이 바뀔 때만 새 리비전을 만들고 레플리카 수 변경은 리비전을 만들지 않습니다.
-5. 실행 중인 Pod는 이미지, `activeDeadlineSeconds`, `terminationGracePeriodSeconds`, 톨러레이션 추가 정도만 고칠 수 있습니다. `kubectl edit`이 거부되면 수정본이 `/tmp/kubectl-edit-*.yaml`에 남으니 그 파일로 `kubectl replace --force -f`를 실행합니다.
+5. 실행 중인 Pod는 이미지, `activeDeadlineSeconds`, 톨러레이션 추가 정도만 고칠 수 있습니다(`terminationGracePeriodSeconds`는 이전 값이 음수였을 때 1로 바꾸는 경우만 허용). `kubectl edit`이 거부되면 수정본이 임시 디렉터리(리눅스는 `/tmp`)의 `kubectl-edit-*.yaml`에 남으니 그 파일로 `kubectl replace --force -f`를 실행합니다.
 
 이 글은 [CKA Ch-01](/blog/cert/cka/cka-01-why-kubernetes)과 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 사이에 들어가는 기초 편입니다. RBAC, kubeadm 설치와 업그레이드, 인증서 갱신 절차는 Ch-02에, 롤링 업데이트 명령과 프로브, 사이드카, 스케줄링 세부는 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에, Service 타입과 EndpointSlice, Gateway API는 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)에, static Pod와 구성요소 장애 대응은 [CKA Ch-06](/blog/cert/cka/cka-06-troubleshooting)에 자세히 적었습니다. 여기서는 그 글들이 전제로 깔고 있는 흐름과 용어를 한 번에 잡습니다.
 
@@ -470,7 +470,9 @@ LimitRange는 명령형 생성 명령이 없어서 YAML로 씁니다. 예시와 
 
 ### 6-6. 직접 해 보기
 
-`web` 네임스페이스의 임시 busybox Pod에서 `nslookup order-api`와 `nslookup order-api.shop`을 차례로 실행하고 `/etc/resolv.conf`의 search 줄을 기록합니다. `shop`에 6-5절의 쿼터를 만든 뒤 requests 없는 Pod가 거부되는지, `defaultRequest`가 있는 LimitRange를 더하면 만들어지는지, 그때 `resources`에 어떤 값이 들어갔는지 봅니다.
+`web` 네임스페이스의 임시 Pod에서 `nslookup order-api`와 `nslookup order-api.shop`을 차례로 실행하고 `/etc/resolv.conf`의 search 줄을 기록합니다. 이미지는 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3`을 씁니다. kind v1.37.0에서 `busybox:1.36`의 `nslookup`은 search 처리 탓에 `order-api.shop`도 NXDOMAIN으로 보였고 같은 Pod의 `wget`으로는 이름이 풀렸습니다. `shop`에 6-5절의 쿼터를 만든 뒤 requests 없는 Pod가 거부되는지, `defaultRequest`가 있는 LimitRange를 더하면 만들어지는지, 그때 `resources`에 어떤 값이 들어갔는지 봅니다.
+
+kind 실측에서 dnsutils Pod의 search 줄은 `web.svc.cluster.local svc.cluster.local cluster.local`이었고 `order-api`는 NXDOMAIN, `order-api.shop`은 ClusterIP로 풀렸습니다. 쿼터만 있을 때 Pod 생성은 `403 Forbidden`과 `failed quota: ... must specify requests.cpu` 계열 메시지로 거부됐습니다. LimitRange를 더하자 만들어졌고 `resources`에 LimitRange의 값이 채워졌습니다. 같은 쿼터에 걸린 Deployment는 Deployment 자체는 만들어지고 ReplicaSet 이벤트에 `FailedCreate`가 남았습니다.
 
 ---
 
@@ -504,7 +506,7 @@ last-applied에 있었는데 새 파일에서 빠진 필드 → 삭제
 
 ### 7-3. kubectl edit은 임시 파일을 편집한다
 
-`kubectl edit`은 현재 객체를 받아 임시 파일로 만들고 `KUBE_EDITOR` 또는 `EDITOR` 환경 변수의 편집기(리눅스 기본 vi)로 엽니다. 저장하고 닫으면 그 내용을 API 서버에 보냅니다. kubectl edit 레퍼런스는 반영 중 에러가 나면 적용하지 못한 수정본을 담은 임시 파일을 디스크에 남긴다고 적습니다. 경로는 `/tmp/kubectl-edit-<임의 문자열>.yaml` 형태로 출력됩니다.
+`kubectl edit`은 현재 객체를 받아 임시 파일로 만들고 `KUBE_EDITOR` 또는 `EDITOR` 환경 변수의 편집기(리눅스 기본 vi)로 엽니다. 저장하고 닫으면 그 내용을 API 서버에 보냅니다. kubectl edit 레퍼런스는 반영 중 에러가 나면 적용하지 못한 수정본을 담은 임시 파일을 디스크에 남긴다고 적습니다. 경로는 `/tmp/kubectl-edit-<임의 문자열>.yaml` 형태로 출력됩니다. 위치는 운영체제의 임시 디렉터리라서 macOS의 kubectl v1.37.1에서는 `$TMPDIR`(`/var/folders/...`) 아래에 생겼습니다. 터미널에는 `error: pods "..." is invalid`와 `A copy of your changes has been stored to "..."`가 찍히고 Forbidden의 상세 문구는 그 임시 파일 머리의 주석에 들어 있습니다.
 
 ### 7-4. 실행 중인 Pod에서 바꿀 수 있는 필드
 
@@ -512,10 +514,10 @@ Pod 스펙은 대부분 바꿀 수 없습니다. 바꿀 수 있는 것은 이 �
 
 - `spec.containers[*].image`, `spec.initContainers[*].image`
 - `spec.activeDeadlineSeconds`
-- `spec.terminationGracePeriodSeconds`
+- `spec.terminationGracePeriodSeconds`(이전 값이 음수였을 때 1로 바꾸는 경우만)
 - `spec.tolerations`(추가만)
 
-그 밖의 필드, 예를 들어 환경 변수나 포트, 볼륨을 `kubectl edit pod`로 바꾸면 `pod updates may not change fields other than ...`로 시작하는 Forbidden 에러가 납니다. 이때의 절차는 이렇습니다.
+그 밖의 필드, 예를 들어 환경 변수나 포트, 볼륨을 `kubectl edit pod`로 바꾸면 `pod updates may not change fields other than ...`로 시작하는 Forbidden 에러가 납니다. v1.37 API 서버의 실제 문구에서 이 항목은 `` `spec.terminationGracePeriodSeconds` (allow it to be set to 1 if it was previously negative) ``로 적혀 있습니다(kind 실측). 양수 값을 다른 양수로 바꾸는 것은 거부됩니다. 이때의 절차는 이렇습니다.
 
 ```bash
 kubectl edit pod order-api -n shop
@@ -525,7 +527,7 @@ kubectl replace --force -f /tmp/kubectl-edit-xxxx.yaml
 # 기존 Pod를 지우고 수정본으로 다시 만듦
 ```
 
-`replace --force`는 삭제 후 재생성이라 Pod IP가 바뀌고 잠시 서비스가 끊깁니다. Deployment에 속한 Pod라면 Deployment의 템플릿을 고칩니다. Pod만 고치면 다음 롤아웃 때 템플릿 값으로 돌아가기 때문입니다. CPU와 메모리 requests, limits는 v1.35에서 GA가 된 in-place resize로 `resize` 서브리소스를 통해 Pod를 다시 만들지 않고 바꿀 수 있습니다(`kubectl patch pod ... --subresource resize`). 자세한 사용법은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+`replace --force`는 삭제 후 재생성이라 Pod IP가 바뀌고 잠시 서비스가 끊깁니다. kind에서 단독 Pod로 해 보니 IP가 `.51`에서 `.52`로 바뀌었습니다. Deployment에 속한 Pod라면 Deployment의 템플릿을 고칩니다. kind에서 Deployment 소유 Pod에 `replace --force`를 했더니 다시 만든 Pod도 같은 라벨이라 ReplicaSet이 개수 초과로 보고 그 Pod를 지웠습니다. Pod만 고치면 다음 롤아웃 때 템플릿 값으로 돌아가기 때문입니다. CPU와 메모리 requests, limits는 v1.35에서 GA가 된 in-place resize로 `resize` 서브리소스를 통해 Pod를 다시 만들지 않고 바꿀 수 있습니다(`kubectl patch pod ... --subresource resize`). 자세한 사용법은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
 ### 7-5. -n과 파일의 namespace가 다를 때
 
@@ -634,7 +636,8 @@ kubectl explain pod.spec.containers.resources --recursive | head -30
 
 ## 범위와 한계
 
-- 클러스터가 없는 환경에서 썼기 때문에 명령과 YAML을 직접 실행하지 않았습니다. 에러 문구와 흐름은 공식 문서와 kubectl 레퍼런스에서 옮겼고 "직접 해 보기"는 kind나 kubeadm VM에서 확인할 과제입니다.
+- 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, kubectl v1.37.1 on macOS)에서 1-7부터 7-7까지의 "직접 해 보기"와 확인 문제 풀이를 돌렸습니다. watch 이벤트 순서, static Pod 매니페스트 4개와 리더 Lease, `readyz?verbose`, 인증서 경로와 SAN, phase 관찰, ReplicaSet 입양과 selector 불일치, 롤아웃 리비전, `scale --current-replicas` 오류, 쿼터와 LimitRange, 401/403/422 응답, 네임스페이스 불일치 오류, `kubectl edit` 거부와 `replace --force`를 확인했습니다. 실측과 다르던 곳(7-4의 `terminationGracePeriodSeconds`, 7-3의 임시 파일 위치, 6-6의 busybox `nslookup`)은 고쳤습니다.
+- kind 조건: kind의 kubelet 설정에는 `failSwapOn: false`, `cgroupRoot: /kubelet`, `cgroupDriver: systemd`가 들어 있어 kubeadm 기본 노드와 다릅니다. kubeadm init과 upgrade, `kubeadm certs check-expiration`, 패키지 설치, 노드 재부팅은 돌리지 않았습니다.
 - 공식 문서는 2026년 10월 20일 기준 kubernetes.io(v1.37)에서 확인했습니다. Endpoints API deprecated(v1.33), nftables GA(v1.33), 네이티브 사이드카 GA(v1.33), taint-eviction-controller 분리 GA(v1.34), IPVS deprecated(v1.35), in-place resize GA(v1.35)는 버전에 따라 달라지는 항목입니다. `--node-monitor-grace-period` 기본값 50초도 옛 자료의 40초와 다릅니다.
 - 1-2절 표의 HTTP 상태 코드 중 401과 403은 Controlling Access 문서에 있습니다. 스키마 검증 실패의 422와 어드미션 거부의 응답 코드는 API 규약과 문서 예시를 근거로 적었고 플러그인마다 다를 수 있습니다.
 - kubeadm 기본 인증서 파일 경로와 kubeconfig 경로는 kubeadm 기준이고 다른 설치 도구(k3s, 관리형 서비스)에서는 다릅니다.
