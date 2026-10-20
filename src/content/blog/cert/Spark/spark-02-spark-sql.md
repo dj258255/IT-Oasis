@@ -10,7 +10,7 @@ tags:
   - Spark SQL
 category: cert/Spark
 topics:
-  - pipeline
+  - cert
 draft: false
 series: "Spark 공부"
 seriesOrder: 2

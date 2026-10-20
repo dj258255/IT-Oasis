@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
-import { getPublishedPosts } from '../../lib/posts';
+import { getPublishedPosts, isCertPost } from '../../lib/posts';
 import { TOPICS } from '../../data/topics';
 
 // 스토리는 두 줄로 나눈다. 왼쪽은 모든 글의 최신순, 오른쪽은 주제 하나의 글.
@@ -15,7 +15,8 @@ const topicOptions = TOPICS.map((t) => ({
 })).filter((o) => o.count > 0);
 
 const columns = [
-  { id: 'latest', title: '최신 스토리', list: posts },
+  // 자격증 공부 글은 최신 줄에서 빼고 주제 줄(자격증 공부)에서만 보인다.
+  { id: 'latest', title: '최신 스토리', list: posts.filter((p) => !isCertPost(p)) },
   { id: 'topic', title: '주제', list: posts },
 ];
 ---

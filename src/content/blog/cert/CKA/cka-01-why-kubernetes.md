@@ -11,6 +11,7 @@ tags:
   - CPU Throttling
 category: cert/CKA
 topics:
+  - cert
   - systems
 draft: false
 series: "CKA 공부"
