@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-08] 시험 직전 핵심 요약: 30분에 훑는 명령, YAML 뼈대, 함정'
-description: CKA(커리큘럼 v1.37) 시험 직전 30분용 요약입니다. 시험 시작 5분에 확인할 것, 영역별 명령과 YAML 뼈대와 함정, kubeadm 업그레이드와 etcd 복구 체크리스트, 버전이 바뀌어 자주 틀리는 것 20개를 표로 정리하고 자세한 글로 연결합니다.
+description: CKA(커리큘럼 v1.37) 시험 직전 30분용 요약입니다. 시험 시작 5분에 확인할 것, 영역별 명령과 YAML 뼈대와 함정, kubeadm 업그레이드와 etcd 복구 체크리스트, 버전이 바뀌어 자주 틀리는 것 22개를 표로 정리하고 자세한 글로 연결합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
   - CKA
@@ -32,7 +32,7 @@ seriesOrder: 8
 
 ### 1-1. 호스트에 이미 있는 도구
 
-공식 안내 기준으로 각 호스트에는 `kubectl`(alias `k`와 자동완성 포함), `yq`, `curl`, `wget`, `man`이 있고 `jq`는 없습니다. 시작 호스트(`base`)에는 `kubectl`이 없고 직접 만든 alias는 ssh로 옮기면 사라집니다.
+공식 안내 기준으로 각 호스트에는 `kubectl`(alias `k`와 자동완성 포함), `yq`, `curl`, `wget`, `man`이 있습니다. `jq`는 이 목록에 없습니다. Resources Allowed가 배포판 패키지 설치를 허용하지만 저장소 접근 여부는 공식 문서에 없으니 jsonpath와 `yq`로 연습합니다. 시작 호스트(`base`)에는 `kubectl`이 없고 직접 만든 alias는 ssh로 옮기면 사라집니다.
 
 ```bash
 type k            # "k is aliased to `kubectl'"이면 준비됨
@@ -429,9 +429,21 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 
 의심할 곳은 증상마다 다릅니다. `kubectl` 전체 실패는 kube-apiserver나 etcd, Pod 미생성은 kube-controller-manager, 이벤트 없는 `Pending`은 kube-scheduler입니다. `kubectl delete pod kube-apiserver-<노드>`는 mirror Pod만 지웁니다([Ch-06 2절](/blog/cert/cka/cka-06-troubleshooting)).
 
+### 4-7. 런타임 패키지 설치
+
+```text
+1. ssh <노드>, sudo dpkg -i <과제가 준 .deb>
+2. sudo systemctl daemon-reload            새 유닛 파일 읽기
+3. sudo systemctl enable --now <서비스>     cri-dockerd는 cri-docker.service
+4. systemctl status <서비스>, ls <소켓>     cri-dockerd 기본 /run/cri-dockerd.sock
+5. kubeadm init/join --cri-socket unix:///run/cri-dockerd.sock
+```
+
+1.36부터는 containerd 2.0 이상이 필요합니다(v1.35 릴리스 글). sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([Ch-02 2절](/blog/cert/cka/cka-02-cluster-architecture)).
+
 ---
 
-## 5. 자주 틀리는 것 20개
+## 5. 자주 틀리는 것 22개
 
 왼쪽은 옛 자료나 흔한 착각, 오른쪽은 문서로 확인한 내용입니다.
 
@@ -457,6 +469,8 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 | 18 | 테인트를 견디는 톨러레이션을 주면 그 노드로 감 | 톨러레이션은 허가일 뿐. 보내려면 nodeSelector나 노드 어피니티를 함께 | Ch-03 5-7 |
 | 19 | PriorityClass 사용자 값은 2억~10억 | 10억 이하의 32비트 정수면 됨. 하한은 없음 | Ch-03 5-9 |
 | 20 | Kustomize의 `patchesStrategicMerge`, `bases`, `commonLabels` | 사용 중단. `patches`, `resources`, `labels` | Ch-02 6-4 |
+| 21 | HPA `minReplicas`는 1 이상 | 1.37 beta(기본 활성)부터 Object, External 메트릭이면 `0` 가능. CPU, 메모리 기준은 불가 | Ch-07 5-3 |
+| 22 | static Pod도 `configMapRef`, `secretRef`를 쓸 수 있음 | API 객체 참조 불가. 1.37부터 완전 금지, 우회 게이트 제거 | Ch-06 2-5 |
 
 
 ---
@@ -478,7 +492,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 
 - 이 글은 Ch-00~Ch-07과 Ch-01.5의 요약이고 근거와 출처는 링크한 글에 있습니다. 요약에서 조건이 빠졌다면 원래 글이 기준입니다.
 - 명령과 YAML은 클러스터가 없는 Mac에서 쓴 것이라 실행하지 않았습니다. 공식 문서 예시를 쇼핑몰, 게시판, 결제 이름으로 옮겼으니 연습 클러스터에서 확인한 뒤 씁니다.
-- 기준은 Kubernetes v1.37, etcd 3.6, Helm 4.3(2026년 10월)입니다. 시험 환경의 etcd와 Helm 버전은 공식 문서에 없어서 당일 `etcdutl version`, `helm version`으로 확인합니다.
+- 기준은 Kubernetes v1.37, etcd 3.7.0(kubeadm 1.37 기본값), Helm 4.3(2026년 10월)입니다. 시험 환경의 etcd와 Helm 버전은 공식 문서에 없어서 당일 `etcdutl version`, `helm version`으로 확인합니다.
 - etcd 백업 복구와 kubeadm 업그레이드는 2025년 개정에서 명시 항목이 아닙니다. "클러스터 수명주기 관리"에 드는지 확인하지 못해 남겼습니다.
 - `.vimrc`, `export do=...`, 시간 배분은 관행과 후기에서 온 것입니다. 시험 환경의 Gateway 구현체와 Ingress 컨트롤러 종류도 공식 문서에서 확인하지 못했습니다.
 
@@ -491,6 +505,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 - Kubernetes, [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Certificates and Certificate Signing Requests](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/)
 - Kubernetes, [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/), [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)
 - etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md)
+- Kubernetes, [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/), 블로그 [v1.35](https://kubernetes.io/blog/2025/12/17/kubernetes-v1-35-release/), [v1.37](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/)
 - Kubernetes, [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/), [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/), [Virtual IPs and Service Proxies](https://kubernetes.io/docs/reference/networking/virtual-ips/)
 - Kubernetes 블로그, [Ingress NGINX Retirement: What You Need to Know](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), 2025-11-11
 - Gateway API, [HTTP routing](https://gateway-api.sigs.k8s.io/guides/http-routing/)

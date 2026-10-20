@@ -36,7 +36,7 @@ Linux Foundation 공식 페이지와 응시 안내 문서로 확인한 내용입
 | 기준 버전 | Kubernetes v1.37. 새 마이너 버전이 나오면 약 4~8주 안에 시험 환경을 맞춘다 |
 | 가격 | $445, 재응시 1회 포함 |
 | 시뮬레이터 | killer.sh 2회(활성화 후 각 36시간). 단일 등록 상품에는 없다 |
-| 유효 기간 | 2년 |
+| 유효 기간 | 2년. 2026년 6월 18일부터 CKS에 합격하거나 갱신하면 CKA도 연장되고 이미 만료된 CKA는 복원된다(CARE 프로그램) |
 | 결과 | 시험 종료 후 24시간 안에 이메일 |
 | 일정 | 구매 후 12개월 안에 응시. 예약은 최소 24시간 전, 변경과 취소도 24시간 전까지 |
 
@@ -70,7 +70,7 @@ Linux Foundation은 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했�
 | | 워크로드 자동 확장, Pod 승인 |
 | | 고가용성 컨트롤 플레인 구성, 동적 볼륨 프로비저닝 |
 
-업그레이드가 "클러스터 수명주기 관리"에 포함되는지, etcd가 여전히 나오는지는 공식 문서에 적혀 있지 않습니다. 후기에서도 컨트롤 플레인과 static Pod를 직접 만져 본 적이 없어 막혔다는 이야기가 나와서 저는 etcd 백업과 static Pod를 둘 다 손으로 한 번씩은 해 보기로 했습니다. 도구도 바뀌었습니다. 쿠버네티스 문서는 `etcdctl snapshot status`와 `restore`가 etcd 3.5부터 사용 중단이라며 `etcdutl`을 쓰라고 적습니다. etcd 3.6 변경 기록에는 두 하위 명령이 제거됐다고 나옵니다. kubeadm 1.36이 기본으로 쓰는 etcd는 3.6.8입니다. 옛 강의의 `etcdctl snapshot restore`를 그대로 외우면 시험 노드에서 동작하지 않을 수 있습니다.
+업그레이드가 "클러스터 수명주기 관리"에 포함되는지, etcd가 여전히 나오는지는 공식 문서에 적혀 있지 않습니다. 후기에서도 컨트롤 플레인과 static Pod를 직접 만져 본 적이 없어 막혔다는 이야기가 나와서 저는 etcd 백업과 static Pod를 둘 다 손으로 한 번씩은 해 보기로 했습니다. 도구도 바뀌었습니다. 쿠버네티스 문서는 `etcdctl snapshot status`와 `restore`가 etcd 3.5부터 사용 중단이라며 `etcdutl`을 쓰라고 적습니다. etcd 3.6 변경 기록에는 두 하위 명령이 제거됐다고 나옵니다. 시험 기준인 kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion`, 1.36은 3.6.8) 두 버전 모두 3.6 이후라서 확인과 복구는 `etcdutl`로 합니다. 옛 강의의 `etcdctl snapshot restore`를 그대로 외우면 시험 노드에서 동작하지 않을 수 있습니다.
 
 Domenic Cassisi(2026)도 일부 강의에 아직 etcd 내용이 남아 커리큘럼보다 뒤처져 있다고 지적했고 Atsushi Suzuki(2026)는 글 제목부터 "옛 가이드에 기대지 말라"였습니다.
 
@@ -102,7 +102,8 @@ Domenic Cassisi(2026)도 일부 강의에 아직 etcd 내용이 남아 커리큘
 | helm.sh/docs | |
 | gateway-api.sigs.k8s.io | CKA만 |
 | 과제마다 표시되는 Quick Reference의 문서 | |
-| man 페이지, /usr/share의 문서 | |
+| /usr/share의 문서, 배포판 패키지 | Resources Allowed의 CKA 절. 없는 패키지는 직접 설치해도 된다 |
+| man 페이지 | Resources Allowed의 CKA 절에는 따로 적혀 있지 않다. Important Instructions가 각 ssh 호스트에 `man`과 man 페이지가 깔려 있다고 적는다 |
 
 Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL을 외워 두라고 했습니다. kt ds CoE팀의 글(2024)도 공식 문서 검색 키워드를 외워 두라고 권합니다. 문서를 어디서 찾는지가 시험 시간에 직결됩니다.
 
@@ -179,7 +180,8 @@ Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL�
 - Linux Foundation, [CKA Upcoming Program Changes](https://training.linuxfoundation.org/certified-kubernetes-administrator-cka-program-changes/)
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf)
 - Kubernetes, [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/), [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/)
-- etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md), kubernetes/kubernetes [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
+- etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md), kubernetes/kubernetes [release-1.37 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.37/cmd/kubeadm/app/constants/constants.go), [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
+- Linux Foundation, [Expanding CARE: Passing CKS Can Now Extend Your CKA Certification](https://training.linuxfoundation.org/blog/expanding-care-passing-cks-can-now-extend-your-cka-certification/), 2026-06-18
 - [killer.sh CKA](https://killer.sh/cka), [FAQ](https://killer.sh/faq)
 
 후기

@@ -370,6 +370,9 @@ sudo tail -50 /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/*.log
 | `--etcd-servers` | etcd의 주소와 포트 |
 | `image` | 태그 오타 |
 | YAML 문법 | 들여쓰기. 문법이 깨지면 kubelet이 Pod를 만들지 않으니 `journalctl -u kubelet`에 파싱 오류가 남는다 |
+| `env`, `envFrom`, `volumes`, `serviceAccountName` | ServiceAccount, ConfigMap, Secret 같은 API 객체를 참조하는지. static Pod는 이런 참조를 쓸 수 없다 |
+
+static Pod는 API 서버를 거쳐 만들어지지 않으므로 API 객체를 읽을 수 없습니다(2-2절 표의 "제약"). v1.37 릴리스 글은 그동안 버그로 `configMapRef`, `secretRef` 참조가 통하던 것을 고쳐 1.37부터 완전히 금지했고 이를 풀던 `PreventStaticPodAPIReferences` 기능 게이트도 제거했다고 적습니다. 매니페스트를 고칠 때 설정값은 `command` 플래그나 `hostPath`로 마운트한 파일로 넣습니다.
 
 ### 2-6. 자주 틀리는 지점
 
@@ -473,7 +476,7 @@ kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINT:.spec.taints[*].k
 kubectl get nodes -o jsonpath='{.items[0].metadata.labels.kubernetes\.io/hostname}'
 ```
 
-JSONPath Support 문서는 kubectl의 JSONPath가 정규 표현식을 지원하지 않으니 그런 처리가 필요하면 `jq`를 쓰라고 적습니다. 공식 안내가 시험 호스트에 깔려 있다고 적는 도구 목록에는 `yq`가 있고 `jq`는 없습니다([Ch-00 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan)). 그래서 복잡한 가공은 `-o yaml | yq`나 `grep`, `awk`로 합니다. 파일로 옮긴 뒤에는 `cat`으로 과제가 요구한 형식(이름만인지, 네임스페이스를 포함하는지)과 맞는지 다시 봅니다.
+JSONPath Support 문서는 kubectl의 JSONPath가 정규 표현식을 지원하지 않으니 그런 처리가 필요하면 `jq`를 쓰라고 적습니다. 공식 안내가 시험 호스트에 깔려 있다고 적는 도구 목록에는 `yq`가 있고 `jq`는 없습니다([Ch-00 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan)). Resources Allowed는 배포판 패키지를 응시자가 직접 설치하는 것을 허용하지만 설치에 시간이 들고 시험 노드에서 패키지 저장소에 닿는지는 공식 문서에 없습니다. 그래서 복잡한 가공은 `-o yaml | yq`나 `grep`, `awk`로 합니다. 파일로 옮긴 뒤에는 `cat`으로 과제가 요구한 형식(이름만인지, 네임스페이스를 포함하는지)과 맞는지 다시 봅니다.
 
 ### 3-6. JSONPath를 jq 없이 쓰기
 
@@ -938,6 +941,8 @@ kubernetes.io
 - [About cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/) (`failCgroupV1`)
 - kubernetes-sigs, [metrics-server README](https://github.com/kubernetes-sigs/metrics-server)
 - kubernetes/kubectl, [pkg/polymorphichelpers/logsforobject.go](https://github.com/kubernetes/kubectl/blob/master/pkg/polymorphichelpers/logsforobject.go), [pkg/cmd/util/podcmd/podcmd.go](https://github.com/kubernetes/kubectl/blob/master/pkg/cmd/util/podcmd/podcmd.go) (기본 컨테이너 선택)
+- Kubernetes Blog, [Kubernetes v1.37: Garhwal](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/)
+- Linux Foundation, [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
 - kubectl 레퍼런스: [kubectl logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/), [kubectl top pod](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_pod/), [kubectl top node](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_top/kubectl_top_node/), [kubectl debug](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_debug/)
 
 이 블로그의 관련 글

@@ -42,7 +42,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | 결과 | 자동 채점. 보통 종료 후 24시간 안에 이메일. 문항별 성적은 알려 주지 않음 | LF FAQ, 핸드북 채점 안내 |
 | 채점 방식 | 결과가 맞으면 푸는 방법은 상관없음(과제가 방법을 지정하지 않은 경우) | 핸드북 채점 안내 |
 | 유효 기간 | 2년. 만료 전에 다시 합격하면 합격일부터 2년 연장 | LF FAQ |
-| CKS 연계 | 2026년 6월 18일 이후 CKS를 따거나 갱신하면 CKA 유효 기간도 자동으로 연장 | LF FAQ |
+| CKS 연계 | CARE(Certification Advancement & Recertification Experience) 확장. 2026년 6월 18일부터 CKS에 합격하거나 갱신하면 CKA가 자동으로 연장되고 이미 만료된 CKA도 복원된다. CKA 만료일은 새 CKS 날짜에 맞춘다 | LF 공지(2026-06-18), LF FAQ |
 | 문제 언어 | 영어, 중국어 간체, 일본어. 한국어는 없음. 감독관 채팅과 터미널은 영어 | LF FAQ, ExamUI 안내 |
 
 ### 1-2. 일정과 환불 규칙
@@ -230,8 +230,11 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 | 1.34 | `RecoverVolumeExpansionFailure` stable | 확장에 실패한 PVC를 더 작은 값으로 다시 요청 가능 | Persistent Volumes | Ch-05 3-5 |
 | 1.35 | in-place Pod resize stable | `kubectl patch pod ... --subresource resize` | Resize CPU and Memory Resources assigned to Containers | Ch-03 3-3 |
 | 1.35 | kube-proxy `ipvs` 모드 사용 중단, cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true` | Virtual IPs and Service Proxies, cgroups | Ch-04 1-2, Ch-02 2-4 |
+| 1.36 | containerd 2.0 이상 필요. 1.35가 containerd 1.x를 지원하는 마지막 버전 | 런타임 설정은 2.x 경로(`plugins.'io.containerd.cri.v1.runtime'...`)로 쓴다 | v1.35 릴리스 글, Container Runtimes | Ch-02 2-4 |
 | 1.37 | HPA `behavior.scaleUp/scaleDown.tolerance` stable | 허용 범위를 HPA마다 지정 | Horizontal Pod Autoscaling | Ch-03 3-2 |
-| etcd 3.6(kubeadm 1.36 기본 3.6.8) | `etcdctl snapshot status`, `snapshot restore` 제거 | 확인과 복구는 `etcdutl` | etcd CHANGELOG-3.6, kubeadm constants | Ch-02 4-5, 4-6 |
+| 1.37 | HPA scale to zero beta, 기본 활성 | Object나 External 메트릭을 쓰는 HPA는 `spec.minReplicas: 0` 가능. CPU와 메모리 기준으로는 불가 | v1.37 릴리스 글 | Ch-03 3절 |
+| 1.37 | static Pod의 Secret, ConfigMap 참조가 완전히 금지되고 `PreventStaticPodAPIReferences` 게이트 제거 | static Pod 매니페스트에 `configMapRef`, `secretRef`를 넣으면 안 된다 | v1.37 릴리스 글 | Ch-06 2-5 |
+| etcd 3.6 이후(kubeadm 1.37 기본 3.7.0, 1.36은 3.6.8) | `etcdctl snapshot status`, `snapshot restore` 제거 | 확인과 복구는 `etcdutl` | etcd CHANGELOG-3.6, kubeadm constants | Ch-02 4-5, 4-6 |
 | Helm 4(2025-11) | `--atomic`이 `--rollback-on-failure`, `--force`가 `--force-replace`로 이름 변경. 새 릴리스는 server-side apply | 옛 이름은 경고와 함께 동작 | Helm 4 Overview | Ch-02 6-1 |
 | 2026-03 | Ingress NGINX 유지보수 종료 | Ingress API는 동결된 GA로 남음. 새 기능은 Gateway API | Kubernetes 블로그 | Ch-04 5-1 |
 
@@ -369,6 +372,7 @@ set expandtab tabstop=2 shiftwidth=2
 - Linux Foundation, [Certified Kubernetes Administrator (CKA)](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
 - Linux Foundation, [Frequently Asked Questions: CKA and CKAD & CKS](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks), [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad), [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
 - Linux Foundation 핸드북, [Candidate Requirements](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/candidate-requirements), [Exam Preparation Checklist](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-preparation-checklist), [Scheduling or Rescheduling an Exam](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/scheduling-or-rescheduling-an-exam), [Taking the Exam](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/taking-the-exam), [Candidate Identification and Authentication](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/candidate-identification-and-authentication), [Exam Refund Policy](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-refund-policy), [Repurchasing the Exam](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/repurchasing-the-exam), [Exam Scoring and Notification](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-scoring-and-notification), [ExamUI: Performance Based Exams](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-user-interface/examui-performance-based-exams), [PSI Remote Testing Tutorial](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/psi-remote-testing-tutorial-test-the-secure-browser-+-add-appointment-to-your-online-calendar), [Exam Rules and Policies](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-rules-and-policies)
+- Linux Foundation, [Expanding CARE: Passing CKS Can Now Extend Your CKA Certification](https://training.linuxfoundation.org/blog/expanding-care-passing-cks-can-now-extend-your-cka-certification/), 2026-06-18
 - Linux Foundation, [LF Global Certification & Confidentiality Agreement](https://docs.linuxfoundation.org/tc-docs/certification/lf-cert-agreement), [Zero Tolerance for Linux Foundation Exam Misconduct](https://training.linuxfoundation.org/blog/zero-tolerance-for-linux-foundation-exam-misconduct/)
 - [killer.sh CKA](https://killer.sh/cka), [killer.sh FAQ](https://killer.sh/faq), [Killercoda CKA](https://killercoda.com/cka)
 
@@ -391,7 +395,8 @@ set expandtab tabstop=2 shiftwidth=2
 
 버전 변경 근거
 - Kubernetes, [Feature Gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/), [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/), [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/), [Virtual IPs and Service Proxies](https://kubernetes.io/docs/reference/networking/virtual-ips/), [About cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/), [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/), [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/), [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
-- kubernetes/kubernetes, [CHANGELOG-1.34](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md), [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
+- kubernetes/kubernetes, [CHANGELOG-1.34](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md), [release-1.37 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.37/cmd/kubeadm/app/constants/constants.go), [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
+- Kubernetes Blog, [Kubernetes v1.35: Timbernetes](https://kubernetes.io/blog/2025/12/17/kubernetes-v1-35-release/), [Kubernetes v1.37: Garhwal](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/)
 - etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md)
 - Helm, [Helm 4 Overview](https://helm.sh/docs/overview/)
 - Kubernetes Blog, [Ingress NGINX Retirement: What You Need to Know](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), 2025-11-11
