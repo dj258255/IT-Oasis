@@ -180,6 +180,11 @@ AWS는 아주 높은 성능과 고정 IP가 필요하면 NLB를 권합니다.
 | Ryan Pothecary, DEV(2023) | 여러 번 응시한 경험 | | 비용, 운영 부담, 효율 같은 조건 문구가 정답 방향을 정한다. Lake Formation 같은 새 서비스는 가끔 나오고 용도만 알면 대부분 풀린다 |
 | Pravesh Sudha, DEV(2025-08) | 800점, 약 25일(하루 2시간) | freeCodeCamp의 50시간 강의, Tutorials Dojo 요약 자료 | 전체 모의고사는 보지 않았다 |
 | De-Wei Ye, dwye.dev(2026-01) | 823점, 약 4개월(주 10시간) | Udemy 강의와 모의고사 390문항, AWS 공식 연습 문항 20개. 모의고사 정답률 약 70~80% | 업무에서 쓰지 않는 데이터 파이프라인, 스트리밍, 분석 서비스를 따로 보충하라 |
+| 伊藤 寛晃, SoftBank 블로그(2025-10) | 정답률 74%로 합격(필자 표기), 약 1.5개월(60~70시간) | Udemy 강의와 문제집 390문항. 문제집 정답률 52~61% | S3, ECS와 EKS, Lambda가 자주 나왔다. 실제 시험 일본어 문장이 기계 번역처럼 읽혔다 |
+| Nishath J P, DEV(2025-10) | 863점, 1.5개월 이상 | Maarek 강의, Maarek, Bonso, Davis 모의고사 21회, 공식 연습 문항 | 실제 시험이 모의고사보다 쉬웠다. 문항당 1~2분, 바로 못 풀면 표시하고 넘긴다 |
+| Hadomen, Zenn(2026-03) | 824점, 약 3주(100~120시간) | AWS 경험 없음. 일본어 교재, Udemy, 일본어 웹 문제집, 공식 샘플과 연습 문항 | 문제집에서 못 본 서비스가 나왔다. 약 30문항을 표시하고 다시 봤다 |
+| Y.M, Mynavi 엔지니어 블로그(2026-04) | 773점, 약 4주 | 일본어 교재, Udemy 문제집, 노트로 만든 자체 문제 | 모의고사 41%에서 시작해 하루 전 74%. VPC 엔드포인트, 보안 그룹과 NACL, S3 클래스가 약점이었다 |
+| IwatsukaYura, Zenn(2026-08) | 786점, 약 3주(약 40시간) | 일본어 웹 문제집, Udemy 문제집, 공식 연습 문항 | S3, VPC, Lambda, RDS와 DynamoDB가 많았다. 첫 회독 약 100분, 남은 시간에 표시한 15문항 검토 |
 
 후기들이 주로 쓴 강의는 Udemy의 Stephane Maarek, Adrian Cantrill, Tutorials Dojo 모의고사였습니다. 이 셋을 비교한 공식 자료는 없으니 하나를 골라 끝까지 듣는 것이 낫다고 판단했습니다.
 
@@ -199,6 +204,8 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 | 4. 공식 연습 문항 | Skill Builder의 공식 연습 문항을 풀고 틀린 이유를 영역별로 분류한다 | 약한 영역이 정해진다 |
 | 5. 모의고사 | 정식 모의고사로 시간을 재고 푼다. 문제의 마지막 문장(조건)을 먼저 읽는다 | 130분 안에 다 풀고 정답률이 꾸준히 합격선 위 |
 | 6. 마무리 | 공식 모의고사(Official Practice Exam)로 준비 상태를 확인한다 | |
+
+무료와 구독 자료의 구분, 연습 자료 비교, 프리 티어 실습 비용 관리, 시험 당일 전략과 D-30 마무리 계획은 [SAA Ch-05](/blog/cert/saa/saa-05-resources-and-exam-day)에 정리했습니다.
 
 데이터 엔지니어링 시리즈를 이미 쓰고 있어서 과제 3.5는 상대적으로 익숙합니다. 반대로 후기에서 어렵다고 한 보안(VPC, IAM 정책, KMS)과 네트워크는 직접 만들어 보는 시간을 더 잡습니다.
 
@@ -224,3 +231,8 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 - Ryan Pothecary, [Sitting the AWS Solution Architect Associate SAA-C03 exam 60 times](https://dev.to/ryanpothecary/sitting-the-aws-solution-architect-associate-saa-c03-exam-60-times-2e7p), 2023
 - Pravesh Sudha, [My Journey to Passing the AWS Solutions Architect Associate Exam](https://dev.to/aws-builders/my-journey-to-passing-the-aws-solutions-architect-associate-exam-1588), 2025
 - De-Wei Ye, [下班四個月考過 AWS Solution Architect Associate (SAA-C03) 心得](https://dwye.dev/post/saa-c03/), 2026
+- 伊藤 寛晃, [クラウド経験半年の初心者がAWS認定ソリューションアーキテクト – アソシエイト（SAA）に挑戦してみた](https://www.softbank.jp/biz/blog/cloud-technology/articles/202510/aws-saa/), 2025
+- Nishath J P, [How I Passed the AWS Solutions Architect Associate (SAA-C03) Exam with 863 Marks](https://dev.to/nishath_jp/how-i-passed-the-aws-solutions-architect-associate-saa-c03-exam-with-863-marks-102a), 2025
+- Hadomen, [【合格体験記】AWS未経験からSAA-C03に約3週間で合格したので勉強方法などの共有](https://zenn.dev/hadomen/articles/e73abb020ccc15), 2026
+- Y.M, [【AWS】SAA-C03 試験に何とか一発合格できた](https://engineerblog.mynavi.jp/technology/aws_saa_c03_pass/), 2026
+- IwatsukaYura, [【3週間で合格】AWS SAA合格記](https://zenn.dev/iwatsukayura/articles/aws-saa-c03-passed), 2026
