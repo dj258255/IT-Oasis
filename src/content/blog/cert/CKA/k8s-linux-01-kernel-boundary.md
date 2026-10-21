@@ -1,5 +1,5 @@
 ---
-title: '[쿠버네티스 아래의 리눅스 1] 커널 경계: 쿠버네티스 컴포넌트는 프로세스이고 일은 시스템 콜이 한다'
+title: '[CKA 부록 1] 커널 경계: 쿠버네티스 컴포넌트는 프로세스이고 일은 시스템 콜이 한다'
 description: kubelet부터 runc까지 쿠버네티스 노드의 구성 요소는 모두 유저 공간 프로세스이고 격리, 제한, 네트워킹은 시스템 콜을 받은 커널이 처리합니다. x86_64 시스템 콜 테이블, procfs와 sysfs, 노드 준비용 커널 설정, seccomp와 LSM, 노드 장애 시간표, EEVDF까지 시리즈 전체의 지도를 공식 문서와 커널 소스 기준으로 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -9,12 +9,13 @@ tags:
   - System Call
   - procfs
   - kubelet
-category: theory/Systems
+category: cert/CKA
 topics:
+  - cert
   - systems
 draft: false
-series: "쿠버네티스 아래의 리눅스"
-seriesOrder: 1
+series: "CKA 공부"
+seriesOrder: 9.1
 ---
 
 ## 결론부터
@@ -28,15 +29,15 @@ seriesOrder: 1
 
 ---
 
-이 글은 시리즈 "쿠버네티스 아래의 리눅스"의 첫 글이자 지도입니다. 뒤의 네 편은 이 지도의 한 칸씩을 깊게 팝니다.
+이 글은 CKA 공부 시리즈의 부록 다섯 편 가운데 첫 글이자 지도입니다. 뒤의 부록 네 편은 이 지도의 한 칸씩을 깊게 팝니다.
 
 | 편 | 다루는 커널 기능 | 쿠버네티스에서 보이는 모습 |
 |---|---|---|
 | 1. 이 글 | 시스템 콜 경계, procfs/sysfs, 노드 커널 설정, seccomp/LSM | 노드 준비, NotReady, eviction 신호 |
-| [2. 네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause) | `clone`, `unshare`, `setns`, 네임스페이스 8종 | 파드 안 컨테이너의 localhost 공유, pause 컨테이너 |
-| [3. cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos) | cgroup v2, `cpu.max`, `memory.max`, OOM killer | requests와 limits, QoS 클래스, OOMKilled |
-| [4. OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs) | overlay 마운트, copy-up, whiteout | 이미지 레이어, 컨테이너 쓰기 계층 |
-| [5. Service와 iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) | netfilter, NAT, conntrack | ClusterIP, NodePort, kube-proxy |
+| [2. 네임스페이스와 pause](/blog/cert/cka/k8s-linux-02-namespaces-pause) | `clone`, `unshare`, `setns`, 네임스페이스 8종 | 파드 안 컨테이너의 localhost 공유, pause 컨테이너 |
+| [3. cgroup과 QoS](/blog/cert/cka/k8s-linux-03-cgroup-qos) | cgroup v2, `cpu.max`, `memory.max`, OOM killer | requests와 limits, QoS 클래스, OOMKilled |
+| [4. OverlayFS](/blog/cert/cka/k8s-linux-04-overlayfs) | overlay 마운트, copy-up, whiteout | 이미지 레이어, 컨테이너 쓰기 계층 |
+| [5. Service와 iptables, conntrack](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack) | netfilter, NAT, conntrack | ClusterIP, NodePort, kube-proxy |
 
 2026-10-20에 colima VM(Ubuntu 24.04.4, 커널 6.8.0-117-generic, arm64)과 그 위의 kind v0.33 클러스터(노드 v1.37.0, Debian 13 arm64)에서 이 글의 과제 대부분을 돌렸습니다. kind 노드는 컨테이너라서 커널 관련 값은 모두 colima VM 커널의 값입니다. 실측한 값은 "실측"으로 표시했고 나머지 출력은 공식 문서나 소스에서 확인한 형태의 예시입니다. arm64라서 x86_64 전용 내용(시스템 콜 테이블, `cpuinfo`의 x86 필드)은 확인하지 못했습니다.
 
@@ -48,7 +49,7 @@ seriesOrder: 1
 
 유저 프로그램이 파일을 열거나 메모리를 더 받거나 새 프로세스를 만들려면 커널에 부탁해야 합니다. 그 부탁의 공식 통로가 시스템 콜입니다. x86_64에서는 `syscall` 명령어로 커널에 진입하고 `rax` 레지스터에 담은 번호로 어떤 시스템 콜인지 고릅니다. 커널은 그 번호로 시스템 콜 테이블을 찾아 해당 함수를 실행한 뒤 결과를 돌려주고 유저 모드로 복귀합니다.
 
-쿠버네티스에 적용하면 이렇습니다. kubelet이 "이 컨테이너의 메모리를 170Mi로 제한한다"고 결정해도 그 결정은 kubelet 프로세스의 메모리 안에 있는 값일 뿐입니다. 실제 제한은 누군가가 `/sys/fs/cgroup/.../memory.max` 파일에 `openat`과 `write`를 호출해서 커널의 cgroup 자료구조를 바꾼 순간부터 걸립니다. 한도를 넘었을 때 프로세스를 죽이는 것도 커널입니다. 이 경로는 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 따라갑니다.
+쿠버네티스에 적용하면 이렇습니다. kubelet이 "이 컨테이너의 메모리를 170Mi로 제한한다"고 결정해도 그 결정은 kubelet 프로세스의 메모리 안에 있는 값일 뿐입니다. 실제 제한은 누군가가 `/sys/fs/cgroup/.../memory.max` 파일에 `openat`과 `write`를 호출해서 커널의 cgroup 자료구조를 바꾼 순간부터 걸립니다. 한도를 넘었을 때 프로세스를 죽이는 것도 커널입니다. 이 경로는 [3편](/blog/cert/cka/k8s-linux-03-cgroup-qos)에서 따라갑니다.
 
 ### 1-2. x86_64 시스템 콜 테이블: 386개, 번호는 0~472
 
@@ -156,7 +157,7 @@ runc
 
 ### 2-3. kube-proxy도 규칙을 쓰는 프로세스
 
-kube-proxy의 iptables, ipvs, nftables 모드에서 kube-proxy는 패킷을 직접 중계하지 않습니다. Service와 EndpointSlice를 watch하다가 바뀌면 커널의 netfilter 규칙을 다시 씁니다. 실제 패킷의 목적지 변환(DNAT)과 연결 추적(conntrack)은 커널 netfilter가 패킷마다 수행합니다. 패킷을 사용자 공간으로 끌어올려 중계하던 userspace 모드는 v1.26에서 제거되었습니다. 규칙의 구조와 conntrack 문제는 [5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
+kube-proxy의 iptables, ipvs, nftables 모드에서 kube-proxy는 패킷을 직접 중계하지 않습니다. Service와 EndpointSlice를 watch하다가 바뀌면 커널의 netfilter 규칙을 다시 씁니다. 실제 패킷의 목적지 변환(DNAT)과 연결 추적(conntrack)은 커널 netfilter가 패킷마다 수행합니다. 패킷을 사용자 공간으로 끌어올려 중계하던 userspace 모드는 v1.26에서 제거되었습니다. 규칙의 구조와 conntrack 문제는 [5편](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
 
 **직접 해 보기**
 
@@ -270,7 +271,7 @@ memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 
 문서는 이 값을 cgroupfs에서 구한다고 명시하고 `free -m` 같은 도구는 컨테이너 안에서 제대로 동작하지 않는다고 이유를 답니다. working set은 cgroup의 메모리 사용량에서 `inactive_file`(비활성 LRU 목록에 있는 파일 기반 메모리)을 뺀 값입니다. kubelet은 이 부분을 압박이 오면 회수할 수 있는 메모리로 봅니다. 리눅스 기본 hard eviction 임계값은 `memory.available<100Mi`입니다.
 
-그래서 같은 순간에도 `MemAvailable`과 kubelet의 `memory.available`은 다르게 나올 수 있습니다. 계산에 넣는 캐시의 범위가 다르고 기준값도 `MemTotal`과 노드 capacity로 다릅니다. "free로 보면 아직 여유가 있는데 파드가 축출됐다"는 상황은 대개 이 차이에서 나옵니다. eviction 시점을 예측하려면 루트 cgroup의 `memory.current`와 `memory.stat`의 `inactive_file`을 봐야 합니다. 이 계산은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 더 다룹니다.
+그래서 같은 순간에도 `MemAvailable`과 kubelet의 `memory.available`은 다르게 나올 수 있습니다. 계산에 넣는 캐시의 범위가 다르고 기준값도 `MemTotal`과 노드 capacity로 다릅니다. "free로 보면 아직 여유가 있는데 파드가 축출됐다"는 상황은 대개 이 차이에서 나옵니다. eviction 시점을 예측하려면 루트 cgroup의 `memory.current`와 `memory.stat`의 `inactive_file`을 봐야 합니다. 이 계산은 [3편](/blog/cert/cka/k8s-linux-03-cgroup-qos)에서 더 다룹니다.
 
 **직접 해 보기**
 
@@ -307,7 +308,7 @@ sysctl net.ipv4.ip_forward
 
 커널 문서(`ip-sysctl`)에 적힌 이 값의 기본값은 1입니다. 모듈을 적재하기만 하면 브리지 트래픽이 iptables를 거칩니다. 기본값이 0인 것은 `ip_forward` 쪽입니다.
 
-이 설정이 쿠버네티스에서 중요한 이유는 kube-proxy의 Service 규칙이 iptables(또는 nftables)의 nat 체인에 있기 때문입니다. 같은 노드의 파드 A가 Service IP로 보낸 패킷의 응답이 브리지 안에서 바로 파드 A로 돌아가면 그 응답은 netfilter를 거치지 않아 conntrack이 주소를 되돌리지 못합니다. 파드 A는 엔드포인트 파드의 IP를 출발지로 단 응답을 받습니다. 자신이 연결한 Service IP와 맞지 않으므로 이 응답은 버려집니다. 이 비대칭 경로 문제는 [5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 패킷 단위로 따라갑니다.
+이 설정이 쿠버네티스에서 중요한 이유는 kube-proxy의 Service 규칙이 iptables(또는 nftables)의 nat 체인에 있기 때문입니다. 같은 노드의 파드 A가 Service IP로 보낸 패킷의 응답이 브리지 안에서 바로 파드 A로 돌아가면 그 응답은 netfilter를 거치지 않아 conntrack이 주소를 되돌리지 못합니다. 파드 A는 엔드포인트 파드의 IP를 출발지로 단 응답을 받습니다. 자신이 연결한 Service IP와 맞지 않으므로 이 응답은 버려집니다. 이 비대칭 경로 문제는 [5편](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 패킷 단위로 따라갑니다.
 
 ### 5-3. 브리지형 CNI와 라우팅형 CNI
 
@@ -319,7 +320,7 @@ br_netfilter가 필요한지는 CNI가 파드를 노드에 어떻게 잇는지�
 | 라우팅형 | Calico | 브리지 없이 파드별 `/32` 라우트, 호스트 쪽 `cali*` veth에 proxy ARP | 파드 트래픽 경로에는 불필요 |
 | eBPF 대체 | Cilium의 kube-proxy 대체 모드 | tc/XDP 훅에서 eBPF 프로그램이 처리 | 해당 CNI 문서를 따름 |
 
-Calico는 파드 안의 기본 게이트웨이를 `169.254.1.1`로 잡습니다. 이 주소는 노드 어디에도 없습니다. 호스트 쪽 veth에 `proxy_arp`가 켜져 있어서 노드가 ARP에 대신 응답합니다. 그 뒤 패킷은 브리지를 거치지 않고 L3 라우팅으로 전달되므로 처음부터 netfilter를 통과합니다. 그래서 라우팅형 CNI에서는 br_netfilter가 파드 트래픽의 필수 조건에서 빠집니다. 브리지 구조는 [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)의 veth 절에서 다시 그립니다.
+Calico는 파드 안의 기본 게이트웨이를 `169.254.1.1`로 잡습니다. 이 주소는 노드 어디에도 없습니다. 호스트 쪽 veth에 `proxy_arp`가 켜져 있어서 노드가 ARP에 대신 응답합니다. 그 뒤 패킷은 브리지를 거치지 않고 L3 라우팅으로 전달되므로 처음부터 netfilter를 통과합니다. 그래서 라우팅형 CNI에서는 br_netfilter가 파드 트래픽의 필수 조건에서 빠집니다. 브리지 구조는 [2편](/blog/cert/cka/k8s-linux-02-namespaces-pause)의 veth 절에서 다시 그립니다.
 
 ### 5-4. kubelet이 스스로 맞추는 sysctl
 
@@ -467,7 +468,7 @@ limits.cpu: 200m   →   cpu.max: "20000 100000"
 (100,000µs 주기마다 20,000µs까지 실행, 다 쓰면 주기가 끝날 때까지 스로틀)
 ```
 
-`requests.cpu`는 `cpu.weight`로 바뀌어 경쟁할 때의 상대적 몫을 정합니다. 이 비중을 실제 실행 순서로 풀어내는 쪽이 6.6 이후로는 EEVDF입니다. 즉 "누가 먼저 도는가"는 EEVDF가, "이 cgroup이 한 주기에 최대 얼마나 도는가"는 대역폭 제어가 맡습니다. 스로틀링 확인 방법(`cpu.stat`의 `nr_throttled`)과 weight 변환식은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
+`requests.cpu`는 `cpu.weight`로 바뀌어 경쟁할 때의 상대적 몫을 정합니다. 이 비중을 실제 실행 순서로 풀어내는 쪽이 6.6 이후로는 EEVDF입니다. 즉 "누가 먼저 도는가"는 EEVDF가, "이 cgroup이 한 주기에 최대 얼마나 도는가"는 대역폭 제어가 맡습니다. 스로틀링 확인 방법(`cpu.stat`의 `nr_throttled`)과 weight 변환식은 [3편](/blog/cert/cka/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
 **직접 해 보기**
 

@@ -57,7 +57,7 @@ seriesOrder: 5
 
 PV는 Pod와 무관한 수명을 가집니다. 반면 `emptyDir` 같은 임시 볼륨은 Pod가 사라질 때 함께 사라집니다. Volumes 문서는 어떤 볼륨 타입이든 컨테이너가 재시작될 때는 데이터가 보존된다고 적습니다.
 
-볼륨이 따로 필요한 이유는 컨테이너 자체의 파일시스템에 있습니다. Volumes 문서는 컨테이너 안 디스크의 파일이 임시라고 적습니다. 컨테이너가 크래시하면 kubelet은 깨끗한 상태로 컨테이너를 다시 시작하고 그동안 만들거나 고친 파일은 모두 사라집니다. 이 파일들이 놓이는 곳은 읽기 전용 이미지 레이어 위에 컨테이너마다 하나씩 붙는 쓰기 레이어입니다. 레이어가 OverlayFS로 겹쳐 컨테이너 루트가 되는 과정과 이미지에 있던 파일을 고칠 때 생기는 copy-up 비용은 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에서 커널 문서로 정리했습니다. 이 글은 그 쓰기 레이어 바깥에 데이터를 두는 볼륨부터 다룹니다.
+볼륨이 따로 필요한 이유는 컨테이너 자체의 파일시스템에 있습니다. Volumes 문서는 컨테이너 안 디스크의 파일이 임시라고 적습니다. 컨테이너가 크래시하면 kubelet은 깨끗한 상태로 컨테이너를 다시 시작하고 그동안 만들거나 고친 파일은 모두 사라집니다. 이 파일들이 놓이는 곳은 읽기 전용 이미지 레이어 위에 컨테이너마다 하나씩 붙는 쓰기 레이어입니다. 레이어가 OverlayFS로 겹쳐 컨테이너 루트가 되는 과정과 이미지에 있던 파일을 고칠 때 생기는 copy-up 비용은 [쿠버네티스 아래의 리눅스 4편](/blog/cert/cka/k8s-linux-04-overlayfs)에서 커널 문서로 정리했습니다. 이 글은 그 쓰기 레이어 바깥에 데이터를 두는 볼륨부터 다룹니다.
 
 ## 1. StorageClass와 동적 프로비저닝
 
@@ -764,4 +764,4 @@ CSI
 - Kubernetes CSI Developer Documentation, [Deploying a CSI Driver on Kubernetes](https://kubernetes-csi.github.io/docs/deploying.html), [external-provisioner](https://kubernetes-csi.github.io/docs/external-provisioner.html), [external-attacher](https://kubernetes-csi.github.io/docs/external-attacher.html)
 
 이 블로그의 관련 글
-- [쿠버네티스 아래의 리눅스 4편: OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs)
+- [CKA 부록 4: OverlayFS](/blog/cert/cka/k8s-linux-04-overlayfs)

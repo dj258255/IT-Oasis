@@ -1,5 +1,5 @@
 ---
-title: '[쿠버네티스 아래의 리눅스 2] 네임스페이스와 pause: 파드 안에서 무엇을 나눠 쓰고 무엇을 따로 두는지'
+title: '[CKA 부록 2] 네임스페이스와 pause: 파드 안에서 무엇을 나눠 쓰고 무엇을 따로 두는지'
 description: 커널에는 컨테이너라는 객체가 없고 프로세스와 네임스페이스만 있습니다. 네임스페이스 8종을 unshare로 하나씩 재현해 보고 runc가 실제로 네임스페이스를 만드는 순서, 파드가 net·ipc·uts를 공유하고 pid·mnt·cgroup을 컨테이너별로 두는 방식, pause 컨테이너와 RunPodSandbox의 역할을 커널·runc·containerd·쿠버네티스 소스 기준으로 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -9,12 +9,13 @@ tags:
   - Container
   - runc
   - containerd
-category: theory/Systems
+category: cert/CKA
 topics:
+  - cert
   - systems
 draft: false
-series: "쿠버네티스 아래의 리눅스"
-seriesOrder: 2
+series: "CKA 공부"
+seriesOrder: 9.2
 ---
 
 ## 결론부터
@@ -25,7 +26,7 @@ seriesOrder: 2
 4. 한 파드의 컨테이너들은 net, ipc, uts 네임스페이스를 공유합니다. pid와 mnt는 컨테이너마다 따로이고(`shareProcessNamespace: true`이면 pid도 공유), cgroup v2와 containerd 조합에서는 cgroup 네임스페이스도 컨테이너마다 따로 생깁니다. user 네임스페이스는 기본값에서 호스트 것을 쓰고 `hostUsers: false`일 때 파드마다 새로 생깁니다(1.36 GA).
 5. pause 컨테이너는 파드의 공유 네임스페이스를 붙잡아 두는 샌드박스입니다. CRI에서는 `RunPodSandbox`로 만듭니다. containerd 경로에서는 containerd가 네트워크 네임스페이스를 만들고 CNI를 호출합니다. 그래서 컨테이너가 재시작되어도 파드 IP는 그대로이고 샌드박스가 다시 만들어지면 보통 새 IP를 받습니다.
 
-1편 [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 시스템 콜로 커널에 일을 시킨다는 흐름을 봤습니다. 이번 글은 그 시스템 콜 중 격리를 만드는 쪽, 즉 `clone`, `unshare`, `setns`를 다룹니다. 자원 제한을 만드는 cgroup은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
+1편 [커널 경계](/blog/cert/cka/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 시스템 콜로 커널에 일을 시킨다는 흐름을 봤습니다. 이번 글은 그 시스템 콜 중 격리를 만드는 쪽, 즉 `clone`, `unshare`, `setns`를 다룹니다. 자원 제한을 만드는 cgroup은 [3편](/blog/cert/cka/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
 2026-10-20에 kind v0.33 클러스터(노드 v1.37.0, containerd 2.3.4, runc 1.4.3)를 colima VM(Ubuntu 24.04.4, 커널 6.8.0-117-generic, arm64) 위에 띄워 각 장의 "직접 해 보기"를 돌렸습니다. unshare 실습은 kind 노드 컨테이너 안에서 했고 커널은 colima VM의 것입니다. 실측 결과는 과제 아래에 붙였고 본문의 나머지 출력은 man 페이지와 소스, 공식 문서에 나온 형태를 옮긴 것입니다.
 
@@ -245,7 +246,7 @@ ping -c1 8.8.8.8
 
 새 네트워크 네임스페이스에는 루프백 장치 `lo` 하나만 있고 그마저 DOWN 상태입니다. 라우팅 테이블도 비어 있고 iptables 규칙도 따로입니다. 포트 번호 공간도 네임스페이스마다 따로라서 호스트에서 80번을 쓰고 있어도 안쪽에서 80번을 다시 열 수 있습니다.
 
-이 빈 네트워크 네임스페이스에 장치를 꽂고 주소와 라우팅을 채우는 일이 CNI 플러그인의 몫입니다. 쿠버네티스의 파드 네트워크가 어떻게 구성되는지는 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)와 이 시리즈 [5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 이어서 봅니다.
+이 빈 네트워크 네임스페이스에 장치를 꽂고 주소와 라우팅을 채우는 일이 CNI 플러그인의 몫입니다. 쿠버네티스의 파드 네트워크가 어떻게 구성되는지는 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)와 이 시리즈 [5편](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 이어서 봅니다.
 
 ### 3-4. ip netns와 veth로 두 네임스페이스 잇기
 
@@ -356,7 +357,7 @@ kind 노드 안에서 다음을 확인합니다.
 2. 같은 출력에서 `info.pid`를 찾고 `ls -l /proc/<pid>/ns`로 inode 번호를 봅니다. `crictl inspectp <파드ID>`의 pid(pause)와 비교해 net, ipc, uts가 같고 pid, mnt가 다른지 확인합니다.
 3. `strace -f -e trace=clone,clone3,unshare,setns runc run ...`처럼 runc를 직접 추적할 수 있는 리눅스 VM이 있다면 stage-0, stage-1, stage-2의 호출 순서를 출력에서 찾아봅니다.
 
-1번과 2번의 kind 실측은 4-3에 반영했습니다. 3번은 runc를 직접 실행하지 않고 kind 워커의 containerd에 `strace -f`를 걸어 대신 봤습니다. 앱 컨테이너 쪽에서 `setns`가 IPC, UTS, NET 순으로 세 번 불린 뒤 `unshare(CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWPID)`가 나왔습니다. 자세한 줄은 [1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)의 2장 실측에 적었습니다.
+1번과 2번의 kind 실측은 4-3에 반영했습니다. 3번은 runc를 직접 실행하지 않고 kind 워커의 containerd에 `strace -f`를 걸어 대신 봤습니다. 앱 컨테이너 쪽에서 `setns`가 IPC, UTS, NET 순으로 세 번 불린 뒤 `unshare(CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWPID)`가 나왔습니다. 자세한 줄은 [1편](/blog/cert/cka/k8s-linux-01-kernel-boundary)의 2장 실측에 적었습니다.
 
 ## 5. 파드 단위 공유와 컨테이너 단위 격리
 
@@ -389,7 +390,7 @@ net 공유의 결과로 같은 파드의 두 컨테이너는 `localhost`로 서�
 
 containerd CRI 플러그인은 cgroup v2 노드에서 privileged가 아닌 컨테이너마다 새 cgroup 네임스페이스를 만듭니다. 소스 주석은 목적을 "컨테이너에서 /sys/fs/cgroup을 숨기기 위해"라고 적습니다. 그래서 컨테이너 안에서 `cat /proc/self/cgroup`을 보면 `0::/`처럼 루트로 나오고 `/sys/fs/cgroup`에는 자기 cgroup만 보입니다. 노드에서 같은 프로세스를 보면 `0::/kubepods.slice/kubepods-burstable.slice/...` 같은 긴 경로가 나옵니다.
 
-cgroup v1 노드이거나 privileged 컨테이너이면 노드의 cgroup 네임스페이스를 그대로 씁니다. 쿠버네티스 1.35부터 kubelet은 cgroup v1 노드에서 기본적으로 시작하지 않으니(`failCgroupV1` 기본 true) 지금 만드는 클러스터라면 컨테이너별 cgroup 네임스페이스가 보통입니다. cgroup 자체의 구조는 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
+cgroup v1 노드이거나 privileged 컨테이너이면 노드의 cgroup 네임스페이스를 그대로 씁니다. 쿠버네티스 1.35부터 kubelet은 cgroup v1 노드에서 기본적으로 시작하지 않으니(`failCgroupV1` 기본 true) 지금 만드는 클러스터라면 컨테이너별 cgroup 네임스페이스가 보통입니다. cgroup 자체의 구조는 [3편](/blog/cert/cka/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
 ### 5-4. user 네임스페이스와 hostUsers: false
 

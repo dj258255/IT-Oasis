@@ -1,5 +1,5 @@
 ---
-title: '[쿠버네티스 아래의 리눅스 4] OverlayFS: 이미지 레이어가 하나의 루트가 되기까지와 Netflix의 마운트 병목'
+title: '[CKA 부록 4] OverlayFS: 이미지 레이어가 하나의 루트가 되기까지와 Netflix의 마운트 병목'
 description: 컨테이너 이미지 레이어가 OverlayFS의 lowerdir, upperdir, workdir, merged로 쌓여 컨테이너 루트가 되는 과정을 커널 문서와 containerd 소스로 따라갑니다. copy-up, whiteout, 마운트 옵션 한 페이지 제한을 정리하고 레이어마다 만든 마운트가 노드 전체를 멈춘 Netflix 사례를 원문 기준으로 읽습니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -9,13 +9,13 @@ tags:
   - containerd
   - Container Image
   - idmapped mount
-category: theory/Systems
+category: cert/CKA
 topics:
+  - cert
   - systems
-  - performance
 draft: false
-series: "쿠버네티스 아래의 리눅스"
-seriesOrder: 4
+series: "CKA 공부"
+seriesOrder: 9.4
 ---
 
 ## 결론부터
@@ -28,7 +28,7 @@ seriesOrder: 4
 
 ---
 
-[2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에서 컨테이너마다 mount 네임스페이스가 따로 있다고 정리했습니다. mount 네임스페이스는 "어떤 마운트 목록을 볼지"를 나눌 뿐입니다. 그 목록의 맨 위에 놓이는 루트 디렉터리 `/`가 어디서 오는지는 이 글에서 다룹니다. 답은 OverlayFS 마운트 하나입니다. 이 마운트가 어떻게 만들어지고 언제 노드 전체를 느리게 만드는지까지 따라갑니다.
+[2편](/blog/cert/cka/k8s-linux-02-namespaces-pause)에서 컨테이너마다 mount 네임스페이스가 따로 있다고 정리했습니다. mount 네임스페이스는 "어떤 마운트 목록을 볼지"를 나눌 뿐입니다. 그 목록의 맨 위에 놓이는 루트 디렉터리 `/`가 어디서 오는지는 이 글에서 다룹니다. 답은 OverlayFS 마운트 하나입니다. 이 마운트가 어떻게 만들어지고 언제 노드 전체를 느리게 만드는지까지 따라갑니다.
 
 예시는 가상의 쇼핑몰 주문 API(`order-api`) 이미지입니다. 2026-10-20에 kind v0.33 클러스터(노드 이미지 v1.37.0, containerd 2.3.4, util-linux 2.41.5)의 워커 노드 컨테이너 안에서 2장, 3장, 4장, 5장의 과제를 돌렸습니다. 커널은 colima VM(Ubuntu 24.04.4)의 6.8.0-117-generic(arm64, 페이지 4096바이트)입니다. 실측한 출력은 "kind 실측"으로 표시했고 나머지는 커널 문서와 containerd 소스를 근거로 "이런 형태로 나온다"고 쓴 예입니다.
 
@@ -267,7 +267,7 @@ options: index=off, [userxattr],
 
 lowerdir은 부모 목록 순서대로라 가장 가까운 부모가 왼쪽, 베이스가 오른쪽에 옵니다. 2-1의 "왼쪽이 맨 위" 규칙과 맞습니다. 같은 함수에는 예외도 있습니다. 부모가 하나도 없는 스냅샷은 overlay가 성립하지 않으므로 `fs` 디렉터리를 bind mount로 돌려줍니다. 부모가 하나뿐인 읽기 전용 스냅샷도 bind mount입니다.
 
-이 마운트가 실제로 걸리는 자리는 runtime v2 shim의 작업 디렉터리입니다. 쿠버네티스 노드에서는 네임스페이스가 `k8s.io`이므로 경로가 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/<container-id>/rootfs`가 됩니다. runc는 컨테이너의 mount 네임스페이스 안에서 이 디렉터리를 새 루트로 삼습니다([2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)의 pivot_root 흐름).
+이 마운트가 실제로 걸리는 자리는 runtime v2 shim의 작업 디렉터리입니다. 쿠버네티스 노드에서는 네임스페이스가 `k8s.io`이므로 경로가 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/<container-id>/rootfs`가 됩니다. runc는 컨테이너의 mount 네임스페이스 안에서 이 디렉터리를 새 루트로 삼습니다([2편](/blog/cert/cka/k8s-linux-02-namespaces-pause)의 pivot_root 흐름).
 
 **직접 해 보기**
 
