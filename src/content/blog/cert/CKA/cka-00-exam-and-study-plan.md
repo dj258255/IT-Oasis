@@ -34,7 +34,7 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 | 형식 | 온라인 감독, 리눅스 명령줄에서 푸는 실기 과제 15~20개 |
 | 시간 | 2시간 |
 | 합격 | 66% 이상(LF FAQ, 2026-10-15 갱신판). 2025년 개정 때 74%로 올랐다는 글이 있지만 LF FAQ와 다르다 |
-| 기준 버전 | Kubernetes v1.37(2026-08-26 출시). LF 문서는 새 마이너 버전 출시 후 "approximately 4 to 8 weeks" 안에 시험 환경을 맞춘다고 적는다. 실제 안내문 표기는 더 늦을 때가 있었고(1.33은 10주 이상) 1.36은 표기된 적 없이 1.35에서 1.37로 넘어갔다 |
+| 기준 버전 | Kubernetes v1.37(2026-08-26 출시). LF 문서는 새 마이너 버전 출시 후 "approximately 4 to 8 weeks" 안에 시험 환경을 맞춘다고 적는다. 실제 안내문 표기는 더 늦을 때가 있었고(1.33은 10주 이상) 1.36은 표기된 적 없이 1.35에서 1.37로 넘어갔다. 1.37 표기는 2026-10-15 갱신된 안내문부터다. 다음 v1.38은 2026-12-16 출시 예정(sig-release 일정)이라 2027년 1~2월 응시자는 Important Instructions의 버전을 다시 본다 |
 | 가격 | $445(2025-02-04부터), 재응시 1회 포함(최초 구매일로부터 12개월 안). 결시하면 응시료와 재응시 자격을 모두 잃는다 |
 | 시뮬레이터 | killer.sh 2회(활성화 후 각 36시간, 세션당 17문항). 단일 등록 상품(CKA-SINGLE)에는 없다 |
 | 유효 기간 | 2년(2024-04-01 이전 취득은 3년). 2026년 6월 18일부터 CKS에 합격하거나 갱신하면 CKA도 연장되고 이미 만료된 CKA는 복원된다(CARE 확장) |
@@ -47,7 +47,7 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 
 ### 2-1. 영역별 비중과 세부 항목
 
-[cncf/curriculum 저장소의 v1.37 커리큘럼](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf) 원문입니다. v1.33부터 v1.37까지 역량 문구는 같고 버전 숫자만 바뀌었습니다. 오른쪽 열은 이 시리즈에서 그 영역을 다루는 글입니다.
+[cncf/curriculum 저장소의 v1.37 커리큘럼](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf) 원문입니다. v1.33부터 v1.37까지 역량 문구는 같고 버전 숫자만 바뀌었습니다. v1.37 PDF는 v1.35 PDF의 파일 이름만 바꾼 것입니다(cncf/curriculum 커밋 b3c8508, 2026-10-15). 오른쪽 열은 이 시리즈에서 그 영역을 다루는 글입니다.
 
 | 영역 | 비중 | 세부 항목 | 이 시리즈 |
 |---|---|---|---|
@@ -130,7 +130,7 @@ Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 
 | HPA 워크스루 | /docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/ |
 | NetworkPolicy | /docs/concepts/services-networking/network-policies/ |
 | Gateway API | /docs/concepts/services-networking/gateway/ 와 gateway-api.sigs.k8s.io의 HTTP routing, TLS 가이드 |
-| PV를 쓰는 Pod | /docs/tasks/configure-pod-container/configure-persistent-volume-storage/ |
+| PV를 쓰는 Pod | /docs/tutorials/configuration/configure-persistent-volume-storage/ (2026년 3월 Tasks에서 Tutorials > Configuration 아래로 옮겨짐) |
 | Service와 DNS 점검 | /docs/tasks/debug/debug-application/debug-service/, /docs/tasks/administer-cluster/dns-debugging-resolution/ |
 
 ### 3-4. 신분증과 당일

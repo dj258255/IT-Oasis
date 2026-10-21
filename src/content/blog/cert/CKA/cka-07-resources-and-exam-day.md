@@ -19,7 +19,7 @@ seriesOrder: 7
 ## 결론부터
 
 1. 응시권 하나($445, 2026년 10월 20일 기준)에는 재응시 1회와 killer.sh 시뮬레이터 2회가 들어 있습니다. 구매 후 12개월 안에 응시해야 하고 예약 변경은 24시간 전까지만 됩니다. 예정 시각에서 30분이 지나도록 시작하지 못하면 결시가 되고 환불도 재응시도 없습니다.
-2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했습니다(2025년은 제3자 기사 기준). 2026년 10월 현재 CKA 페이지에는 최대 40% 할인 배너가 떠 있습니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
+2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했습니다(2025년은 제3자 기사 기준). 지금 진행 중인 할인은 LF CKA 시험 페이지에서 확인합니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
 3. 연습은 강의와 랩(KodeKloud), 무료 시나리오(Killercoda), 공식 시뮬레이터(killer.sh 2회) 순서로 잡습니다. killer.sh가 실제 시험보다 어렵다는 평가는 응시자와 강의 운영진에게서 나왔고 공식 문서에는 그런 비교가 없습니다. 풀이를 보고 배우는 용도로 씁니다.
 4. 덤프를 쓰지 않은 2025~2026년 후기에서 반복해 나온 주제는 트러블슈팅(kubelet, 인증서와 kubeconfig, 컨트롤 플레인), Helm, Gateway API, CNI 설치, Kustomize, CRD입니다. 가장 흔한 실패 원인은 시간 부족이었고 모의고사 점수와 실제 점수가 크게 어긋난 사례도 여럿 있었습니다.
 5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`입니다. `jq`와 `tmux`는 2025년 3월 판부터 목록에서 빠졌고 `helm`과 `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도입니다.
@@ -112,7 +112,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | 2024-12-02 ~ 2024-12-11 | Cyber Monday. 개별 강의와 시험 50%. 실기 시험 $395 → $198. THRIVE 연간 구독과 묶으면 65% | LF 공식 블로그 |
 | 2025-01-21 ~ 2025-01-31 | 사이트 전체 35%, THRIVE 묶음 40%. 2025-02-04 가격 인상 전 행사 | LF 공식 블로그 |
 | 2025-12-01 ~ 2025-12-09 | Cyber Week. 개별 시험 50%, 번들 60%, THRIVE-ONE 묶음 최대 65%. 구매마다 $100 상품권(2026-01-01 ~ 2026-10-31 사용) | 제3자(It's FOSS, techbeatly, DevOpsCube). LF 공식 공지는 찾지 못함 |
-| 2026-10 현재 | CKA 페이지 상단에 Cybersecurity Awareness Month "Save up to 40%" 배너. 조건은 페이지에 없음 | LF CKA 페이지(2026-10-20 확인) |
+| 2026-10-16 ~ 2026-10-23 | Cybersecurity Awareness Month. 사이버보안 교육과 시험 40%, 그 밖의 교육과 시험 35%. CKA는 35% 쪽으로 추정 | [LF 공식 블로그](https://training.linuxfoundation.org/blog/stay-ahead-of-cyber-threats/) |
 | 상시 | killer.sh CKA 페이지에 CKA 시험 구매 30% 할인 코드가 적혀 있음 | killer.sh 공식 페이지(2026-10-20 확인) |
 | 상시 | 프로그래머스 CKA 바우처 690,000원 → 552,000원(20%). 구매 후 7일 안에 LF 사이트에서 등록, 등록일부터 1년 안에 응시. 환불은 7일 안 미사용 시만 | 프로그래머스 페이지(2026-10-20 확인). 페이지 제목에 "Linux Foundation ATP" 표기 |
 
@@ -135,7 +135,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | KodeKloud Ultimate CKA Mock Exam Series | 유료 | 모의고사 5회(Suzuki 후기 기준) | 2026-08 후기 1건은 이 시리즈에서 90% 안팎, 실제 시험 61% | 확인 못 함 | KodeKloud 사이트 |
 | Killercoda CKA 커뮤니티 시나리오 | 무료(Kim Wüstkamp 시나리오 강좌는 유료 멤버십) | Chad M. Crowell, Sachin H R, Alexis Carbillet 등의 시나리오 | 짧은 단위 반복용. 일부 시나리오가 개정 전 형식이라는 후기 있음 | 시나리오 목록은 페이지가 스크립트로 그려져 확인 못 함 | [killercoda.com/cka](https://killercoda.com/cka) |
 | kubernetes.io Tasks | 무료 | 시험장에서 볼 수 있는 바로 그 문서 | 해당 없음 | 최신 | [Tasks](https://kubernetes.io/docs/tasks/) |
-| techwithmohamed/CKA-Certified-Kubernetes-Administrator | 무료 | 연습 31개, YAML 뼈대 23개, 15문항 모의고사 2회 | 작성자 89%(2026-03, 자기 보고) | v1.35. Gateway API와 Helm 연습 있음, CRD는 얕음 | [GitHub](https://github.com/techwithmohamed/CKA-Certified-Kubernetes-Administrator) |
+| theplatformlab/CKA-Certified-Kubernetes-Administrator(옛 techwithmohamed) | 무료 | 연습 31개, YAML 뼈대 23개, 15문항 모의고사 2회 | 작성자 89%(2026-03, 자기 보고) | v1.35. Gateway API와 Helm 연습 있음, CRD는 얕음 | [GitHub](https://github.com/theplatformlab/CKA-Certified-Kubernetes-Administrator) |
 | techiescamp/cka-certification-guide | 무료(유료 강의 홍보 포함) | 영역별 노트, 연습 35문항, Vagrant와 kind 랩 폴더 | 해당 없음 | v1.35와 v1.37 표기가 섞여 있음. Gateway API가 가장 자세하고 Helm·Kustomize·CRD는 짧음 | [GitHub](https://github.com/techiescamp/cka-certification-guide) |
 | walidshaari/Kubernetes-Certified-Administrator | 무료 | 영역별 공식 문서 링크 모음과 학습 가이드 | 해당 없음 | v1.35 기준으로 Helm, Kustomize, CRD, Gateway API 항목 있음 | [GitHub](https://github.com/walidshaari/Kubernetes-Certified-Administrator) |
 | alijahnas/CKA-practice-exercises | 무료 | 5개 영역 연습 문제와 풀이, Terraform | 해당 없음 | v1.27 기준. 개정 항목 없음 | [GitHub](https://github.com/alijahnas/CKA-practice-exercises) |
@@ -145,7 +145,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | 『CKA Study Guide』 2판(O'Reilly, Benjamin Muschko) | 유료 | 책 | 해당 없음 | 2026-02 출간, Helm·Kustomize·Gateway API·CRD 포함(제3자 서평 기준) | 출판사 페이지 |
 | 『Acing the CKA Exam』 2판(Manning, Chad M. Crowell 외) | 유료 | 책 | 해당 없음 | 2025-11 출간, 오퍼레이터·Gateway API·Kustomize 포함(제3자 서평 기준) | 출판사 페이지 |
 
-표에 넣은 GitHub 저장소는 모두 연습 문제를 직접 만들었다고 밝히거나 공식 문서 링크를 모은 것입니다. techwithmohamed 저장소는 "All exercises are independently designed training scenarios"와 "It does not include, share, or reproduce actual CKA exam questions"라는 문구를 README에 적어 두었습니다. 제목이나 설명에 "실제 시험 문제", "기출", "real exam questions"를 내건 강의와 영상과 저장소는 출처가 응시자 기억일 가능성이 높아 표에서 뺐습니다. 8절의 약관 조항이 그 근거입니다.
+표에 넣은 GitHub 저장소는 모두 연습 문제를 직접 만들었다고 밝히거나 공식 문서 링크를 모은 것입니다. theplatformlab 저장소는 "All exercises are independently designed training scenarios"와 "It does not include, share, or reproduce actual CKA exam questions"라는 문구를 README에 적어 두었습니다. 제목이나 설명에 "실제 시험 문제", "기출", "real exam questions"를 내건 강의와 영상과 저장소는 출처가 응시자 기억일 가능성이 높아 표에서 뺐습니다. 8절의 약관 조항이 그 근거입니다.
 
 자료를 고를 때 본 기준은 세 가지입니다.
 
@@ -226,7 +226,7 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 
 ### 5-3. 1.33~1.37 변경 중 답이 달라지는 것
 
-시험 환경은 v1.37입니다. LF 안내문의 버전 표기는 1.35에서 1.36을 건너뛰고 1.37로 바뀌었습니다. 2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
+시험 환경은 v1.37입니다. LF 안내문의 버전 표기는 1.35에서 1.36을 건너뛰고 2026-10-15 갱신판에서 1.37로 바뀌었습니다(출시 후 약 7주). 2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
 
 | 버전 | 바뀐 것 | 시험 답에 주는 영향 | 근거 | 이 시리즈 |
 |---|---|---|---|---|
@@ -237,8 +237,9 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 | 1.34 | `RecoverVolumeExpansionFailure` stable | 확장에 실패한 PVC를 더 작은 값으로 다시 요청 가능 | Persistent Volumes | Ch-05 3-5 |
 | 1.35 | in-place Pod resize stable | `kubectl patch pod ... --subresource resize` | Resize CPU and Memory Resources assigned to Containers | Ch-03 3-3 |
 | 1.35 | kube-proxy `ipvs` 모드 사용 중단(1.40 기본 비활성, 1.43 제거 예정), cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true`라 cgroup v1 노드에서는 kubelet이 시작하지 않음 | Virtual IPs and Service Proxies, cgroups | Ch-04 1-2, Ch-02 2-4 |
-| 1.36 | containerd 2.0 이상 필요. 1.35가 containerd 1.x를 지원하는 마지막 버전 | 런타임 설정은 2.x 경로(`plugins.'io.containerd.cri.v1.runtime'...`)로 쓴다 | v1.35 릴리스 글, Container Runtimes | Ch-02 2-4 |
-| 1.36 | Service `externalIPs` 사용 중단 | 새로 쓰지 않는다. 외부 노출은 NodePort, LoadBalancer, Gateway | v1.36 externalIPs 공지 | Ch-04 3절 |
+| 1.36 | containerd 2.0 이상 필요. 1.35가 containerd 1.x를 지원하는 마지막 버전. containerd 호환표 기준 1.37은 2.3 이상, containerd 1.7은 2026-09-30 지원 종료 | 런타임 설정은 2.x 경로(`plugins.'io.containerd.cri.v1.runtime'...`)로 쓴다 | v1.35 릴리스 글, Container Runtimes | Ch-02 2-4 |
+| 1.36 | Service `externalIPs` 사용 중단 | 새로 쓰지 않는다. 외부 노출은 NodePort, LoadBalancer, Gateway | v1.36 externalIPs 공지 | Ch-04 3-3 |
+| 1.37 | kubeadm 설정 API `v1beta3` 제거 | 설정 파일은 `apiVersion: kubeadm.k8s.io/v1beta4`. 옛 파일은 1.35 kubeadm의 `kubeadm config migrate`로 바꾼다 | CHANGELOG-1.37 | Ch-02 3-1 |
 | 1.37 | HPA `behavior.scaleUp/scaleDown.tolerance` stable | 허용 범위를 HPA마다 지정 | Horizontal Pod Autoscaling | Ch-03 3-2 |
 | 1.37 | HPA scale to zero beta, 기본 활성 | Object나 External 메트릭을 쓰는 HPA는 `spec.minReplicas: 0` 가능. CPU와 메모리 기준으로는 불가 | v1.37 릴리스 글 | Ch-03 3절 |
 | 1.37 | static Pod의 Secret, ConfigMap 참조가 완전히 금지되고 `PreventStaticPodAPIReferences` 게이트 제거 | static Pod 매니페스트에 `configMapRef`, `secretRef`를 넣으면 안 된다 | v1.37 릴리스 글 | Ch-06 2-5 |
@@ -367,7 +368,7 @@ set expandtab tabstop=2 shiftwidth=2
 
 ## 9. 범위와 한계
 
-- 공식 규칙, 가격, 할인 배너, 프로그래머스 가격은 2026년 10월 20일에 확인했습니다. 가격과 할인은 자주 바뀝니다. 2025년 Cyber Week 할인은 LF 공식 공지를 찾지 못해 제3자 기사 세 곳이 일치하는 범위만 적었습니다.
+- 공식 규칙, 가격, 할인, 프로그래머스 가격은 2026년 10월 20일과 21일에 확인했습니다. 가격과 할인은 자주 바뀝니다. 2025년 Cyber Week 할인은 LF 공식 공지를 찾지 못해 제3자 기사 세 곳이 일치하는 범위만 적었습니다.
 - `etcdutl`과 `crictl`이 과제 호스트에 있는지, ExamUI에 문항 표시(flag) 기능이 있는지는 확인하지 못했습니다.
 - metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지는 확인하지 못했습니다.
 - 개정 후 etcd 백업·복구와 kubeadm 업그레이드가 실제로 출제되는지는 후기가 갈려 확인하지 못했습니다.
@@ -386,8 +387,8 @@ set expandtab tabstop=2 shiftwidth=2
 - [killer.sh CKA](https://killer.sh/cka), [killer.sh FAQ](https://killer.sh/faq), [Killercoda CKA](https://killercoda.com/cka)
 
 할인
-- Linux Foundation, [Cyber Monday Savings Are Here!](https://training.linuxfoundation.org/?p=36140), 2024-12-02
-- Linux Foundation, [Hurry! Grab 35% Savings Before Cert Prices Increase](https://training.linuxfoundation.org/?p=36991), 2025-01-24
+- Linux Foundation, [Cyber Monday Savings Are Here!](https://training.linuxfoundation.org/blog/cyber-monday-savings-are-here-2/), 2024-12-02
+- Linux Foundation, [Hurry! Grab 35% Savings Before Cert Prices Increase](https://training.linuxfoundation.org/blog/hurry-grab-35-savings-before-cert-prices-increase/), 2025-01-24
 - It's FOSS, [Upgrade Your DevOps Skills Cheap: Linux Foundation Cyber Week Brings 65% Off Certifications](https://itsfoss.com/news/linux-foundation-cyber-sale-2025/), 2025-12-01
 - techbeatly, [Explore the Cyber Monday Deals and Grab the Best IT and DevOps Offers](https://techbeatly.com/cyber-week/)
 - DevOpsCube 뉴스레터, [Linux Foundation Cyber Monday](https://newsletter.devopscube.com/p/linux-foundation-cyber-monday), 2025-11-30
@@ -395,7 +396,7 @@ set expandtab tabstop=2 shiftwidth=2
 
 연습 자료와 홈 랩
 - KodeKloud, [Certified Kubernetes Administrator (CKA)](https://kodekloud.com/courses/cka-certification-course-certified-kubernetes-administrator), [Demo Setting Up Virtual Machines on Mac](https://notes.kodekloud.com/docs/Kubernetes-for-the-Absolute-Beginners-Hands-on-Tutorial/Appendix/Demo-Setting-Up-Virtual-Machines-on-Mac/page), [kodekloudhub/certified-kubernetes-administrator-course](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)
-- GitHub, [techwithmohamed/CKA-Certified-Kubernetes-Administrator](https://github.com/techwithmohamed/CKA-Certified-Kubernetes-Administrator), [techiescamp/cka-certification-guide](https://github.com/techiescamp/cka-certification-guide), [walidshaari/Kubernetes-Certified-Administrator](https://github.com/walidshaari/Kubernetes-Certified-Administrator), [alijahnas/CKA-practice-exercises](https://github.com/alijahnas/CKA-practice-exercises), [chadmcrowell/CKA-Exercises](https://github.com/chadmcrowell/CKA-Exercises), [sailor-sh/CK-X](https://github.com/sailor-sh/CK-X), [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way)
+- GitHub, [theplatformlab/CKA-Certified-Kubernetes-Administrator](https://github.com/theplatformlab/CKA-Certified-Kubernetes-Administrator), [techiescamp/cka-certification-guide](https://github.com/techiescamp/cka-certification-guide), [walidshaari/Kubernetes-Certified-Administrator](https://github.com/walidshaari/Kubernetes-Certified-Administrator), [alijahnas/CKA-practice-exercises](https://github.com/alijahnas/CKA-practice-exercises), [chadmcrowell/CKA-Exercises](https://github.com/chadmcrowell/CKA-Exercises), [sailor-sh/CK-X](https://github.com/sailor-sh/CK-X), [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way)
 - computingforgeeks, [Best Kubernetes Certification Books](https://computingforgeeks.com/best-kubernetes-certification-books/), 2026-10-04 갱신
 - kind, [Quick Start](https://kind.sigs.k8s.io/docs/user/quick-start/), [Configuration](https://kind.sigs.k8s.io/docs/user/configuration/)
 - minikube, [Using Multi-Node Clusters](https://minikube.sigs.k8s.io/docs/tutorials/multi_node/)

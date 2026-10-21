@@ -19,7 +19,7 @@ seriesOrder: 5
 ## 결론부터
 
 1. PVC는 저장 공간 요청이고 PV는 그 요청을 채우는 실제 볼륨입니다. 컨트롤 플레인의 제어 루프가 PVC에 맞는 PV를 찾아 일대일로 묶고 맞는 PV가 없으면 PVC는 무기한 `Pending`으로 남습니다.
-2. 바인딩 조건의 핵심은 StorageClass 이름, 접근 모드, 크기입니다. `storageClassName`을 생략한 PVC에는 기본 StorageClass가 붙고 `""`로 적은 PVC는 클래스 없는 PV에만 묶입니다.
+2. 바인딩에서 먼저 맞춰 볼 조건은 StorageClass 이름, 접근 모드, 크기입니다. `storageClassName`을 생략한 PVC에는 기본 StorageClass가 붙고 `""`로 적은 PVC는 클래스 없는 PV에만 묶입니다.
 3. 동적 프로비저닝은 StorageClass가 있어야 일어납니다. 클래스의 `volumeBindingMode`가 `WaitForFirstConsumer`이면 그 PVC를 쓰는 Pod가 생길 때까지 `Pending`인 것이 정상입니다.
 4. 회수 정책은 `Retain`, `Delete`, `Recycle`(사용 중단)입니다. 동적으로 만든 PV는 StorageClass의 `reclaimPolicy`를 물려받고 기본값은 `Delete`입니다. 데이터가 중요하면 `kubectl patch pv`로 `Retain`으로 바꿉니다.
 5. 접근 모드는 노드 기준입니다. `ReadWriteOnce`는 한 노드의 여러 Pod가 함께 쓸 수 있고 클러스터 전체에서 Pod 하나로 제한하려면 `ReadWriteOncePod`를 씁니다.
@@ -302,6 +302,8 @@ kubectl get pv            # RECLAIM POLICY 열 확인
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
 pvc-8560aeed-4a36-48fd-8345-7970fefc501e   1Gi        RWO            Retain           Bound    shop/order-db-data   standard       <unset>                          2s
 ```
+
+`VOLUMEATTRIBUTESCLASS` 열은 1.34에 GA가 된 VolumeAttributesClass(볼륨의 IOPS 같은 속성을 바꾸는 API)를 보여 줍니다. 커리큘럼 문구 밖이라 `<unset>`이면 넘어가도 됩니다.
 
 `Retain` PV를 수동으로 회수하는 순서는 PV 삭제(외부 저장 자산은 남음), 자산의 데이터 정리, 자산 삭제입니다. 같은 자산을 다시 쓰려면 같은 정의로 PV를 새로 만듭니다.
 
@@ -665,7 +667,7 @@ kubernetes.io
 - [Dynamic Volume Provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/)
 - [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
 - [Ephemeral Volumes](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/)
-- [Configure a Pod to Use a PersistentVolume for Storage](https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/)
+- [Configure a Pod to Use a PersistentVolume for Storage](https://kubernetes.io/docs/tutorials/configuration/configure-persistent-volume-storage/)
 - [Change the Reclaim Policy of a PersistentVolume](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/)
 - [Change the default StorageClass](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/)
 

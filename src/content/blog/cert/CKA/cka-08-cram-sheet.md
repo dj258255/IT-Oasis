@@ -113,7 +113,7 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 | 첫 3분 | `k get pod -o wide`, `k describe pod`(Events), `k get events --sort-by=.metadata.creationTimestamp` | 없음 | 이벤트는 네임스페이스 단위 | [Ch-06 0절](/blog/cert/cka/cka-06-troubleshooting) |
 | 노드 NotReady | 노드에서 `systemctl status kubelet`, `journalctl -u kubelet -n 50`, `systemctl status containerd` | `/var/lib/kubelet/config.yaml`, `/etc/kubernetes/kubelet.conf` | `restart`만 하고 `enable`을 빠뜨림. 1.35부터 cgroup v1 노드는 kubelet이 기본으로 시작 안 함 | [Ch-06 1-3, 1-4절](/blog/cert/cka/cka-06-troubleshooting) |
 | 컨트롤 플레인 구성요소 | `crictl ps -a`, `crictl logs <ID>`, crictl이 없으면 `ls /var/log/pods` | `/etc/kubernetes/manifests/*.yaml` | 백업을 같은 디렉터리에 두면 kubelet이 그것도 읽음. mirror Pod를 `delete`해도 다시 생김. 이미지 태그 오류면 `crictl ps -a`에 컨테이너가 없음 | [Ch-06 2절](/blog/cert/cka/cka-06-troubleshooting) |
-| 리소스 사용량 | `k top pod -A --sort-by=cpu --no-headers`, `k top pod --containers` | 없음 | `--sort-by`는 `cpu`, `memory`만. metrics-server가 없으면 동작 안 함(시험 클러스터에 있는지는 확인되지 않으니 `k -n kube-system get deploy metrics-server`부터). Metrics API는 1.37에서 `v1` Stable이지만 metrics-server v0.9.0은 `v1beta1`만 제공(`kubectl top`은 알아서 맞춤) | [Ch-06 3-1, 3-4절](/blog/cert/cka/cka-06-troubleshooting) |
+| 리소스 사용량 | `k top pod -A --sort-by=cpu --no-headers`, `k top pod --containers` | 없음 | `--sort-by`는 `cpu`, `memory`만. metrics-server가 없으면 동작 안 함(시험 클러스터에 있는지는 확인되지 않으니 `k -n kube-system get deploy metrics-server`부터). Metrics API는 1.37에서 `v1` Stable이지만 metrics-server v0.9.0은 `v1beta1`만 제공(`kubectl top`은 알아서 맞춤). main 브랜치에는 `v1` 등록이 머지돼 다음 릴리스에서 바뀔 수 있음 | [Ch-06 3-1, 3-4절](/blog/cert/cka/cka-06-troubleshooting) |
 | 값 뽑기 | `-o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'`, `-o custom-columns=NAME:.metadata.name`, `--sort-by=` | 없음 | custom-columns에는 `.items[*]`를 붙이지 않음. JSONPath는 정규식 없음. 식은 작은따옴표로 | [Ch-06 3-5, 3-6절](/blog/cert/cka/cka-06-troubleshooting) |
 | 컨테이너 로그 | `k logs <pod> -c <컨테이너> --previous`, `k logs -l app=x --all-containers --prefix` | 없음 | `-c` 없이 치면 기본 컨테이너(어노테이션, 없으면 첫 번째) 로그. `Defaulted container` 안내를 봄 | [Ch-06 4절](/blog/cert/cka/cka-06-troubleshooting) |
 | Service 응답 없음 | `k get endpointslices -l kubernetes.io/service-name=<svc>`, `k get pod --show-labels`, 임시 Pod에서 `wget -qO- -T 2` | Service `selector`, `targetPort`, readiness probe | ENDPOINTS가 비면 selector와 라벨, 아니면 readiness. `nslookup` 성공은 엔드포인트 존재를 뜻하지 않음 | [Ch-06 5절](/blog/cert/cka/cka-06-troubleshooting) |
@@ -440,7 +440,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 5. kubeadm init/join --cri-socket unix:///run/cri-dockerd.sock
 ```
 
-1.35가 containerd 1.x를 지원하는 마지막 버전이니(v1.35 릴리스 글) 1.37 노드는 containerd 2.x로 맞춥니다. sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
+1.35가 containerd 1.x를 지원하는 마지막 버전이니(v1.35 릴리스 글) 1.37 노드는 containerd 2.3 이상으로 맞춥니다(containerd 호환표 기준. 1.7은 2026-09-30 지원 종료). sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ---
 
@@ -470,7 +470,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 | 18 | 테인트를 견디는 톨러레이션을 주면 그 노드로 감 | 톨러레이션은 허가일 뿐. 보내려면 nodeSelector나 노드 어피니티를 함께 | Ch-03 |
 | 19 | PriorityClass 사용자 값은 2억~10억 | 10억 이하의 32비트 정수면 됨. 하한은 없음 | Ch-03 |
 | 20 | Kustomize의 `patchesStrategicMerge`, `bases`, `commonLabels` | 사용 중단. `patches`, `resources`, `labels` | Ch-02 |
-| 21 | HPA `minReplicas`는 1 이상 | 1.37 beta(기본 활성)부터 Object, External 메트릭이면 `0` 가능. CPU, 메모리 기준은 불가 | Ch-07 |
+| 21 | HPA `minReplicas`는 1 이상 | 1.37 beta(기본 활성)부터 Object, External 메트릭이면 `0` 가능. CPU, 메모리 기준은 불가 | Ch-03 3-2 |
 | 22 | static Pod도 `configMapRef`, `secretRef`를 쓸 수 있음 | API 객체 참조 불가. 1.37부터 완전 금지, 우회 게이트 제거 | Ch-06 2-2 |
 
 ---
@@ -495,7 +495,7 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 - `etcdutl`과 `crictl`이 시험 호스트에 있는지는 확인하지 못했습니다.
 - metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지는 확인하지 못했습니다.
 - etcd 백업 복구와 kubeadm 업그레이드가 개정 후 출제되는지는 확인하지 못했습니다. "클러스터 수명주기 관리"에 걸려 남겼습니다.
-- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. LF 문서는 새 마이너 출시 후 약 4~8주 안에 시험 환경을 맞춘다고 적지만 1.36은 건너뛰었으니 시험 전에 Important Instructions의 버전 표기를 봅니다.
+- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. LF 문서는 새 마이너 출시 후 약 4~8주 안에 시험 환경을 맞춘다고 적지만 1.36은 건너뛰었으니 시험 전에 Important Instructions의 버전 표기를 봅니다. v1.38은 2026-12-16 출시 예정(sig-release 일정)이라 2027년 1~2월 응시자는 특히 다시 확인합니다.
 
 ## 참고 자료
 
