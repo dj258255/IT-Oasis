@@ -225,6 +225,8 @@ kubectl patch serviceaccount default -n shop \
 
 ServiceAccount에 붙이면 이후 새로 만드는 Pod에 `ServiceAccount` 승인 컨트롤러가 값을 채웁니다. 이미 떠 있는 Pod에는 들어가지 않습니다.
 
+htpasswd 인증 `registry:2`로 확인한 Events 문구는 Secret이 없으면 `authorization failed: no basic auth credentials`, 비밀번호가 틀리면 `... manifests/1.0: 401 Unauthorized`입니다.
+
 ### 2-8. securityContext의 runAsUser와 capabilities
 
 과제 지문에 나오면 문서에서 찾아 쓰는 정도로 알아 둡니다. Pod 수준(`spec.securityContext`)은 모든 컨테이너에, 컨테이너 수준은 그 컨테이너에만 적용되고 같은 필드가 두 곳에 있으면 컨테이너 수준이 이깁니다. `capabilities`는 컨테이너 수준에만 있습니다.
@@ -317,9 +319,11 @@ spec:
 spec.metrics: Forbidden: must specify at least one Object or External metric to support scaling to zero replicas
 ```
 
+kind에서 레플리카 2개가 `cpu: 78%/60%`가 되자 `ceil(2 × 78/60) = 3`으로 늘며 `New size: 3; reason: cpu resource utilization (percentage of request) above target`이 남았습니다.
+
 ### 3-3. VPA
 
-VerticalPodAutoscaler는 사용량에 맞춰 requests와 limits를 조정합니다. "Vertical Pod Autoscaling" 문서 기준으로 CRD(`autoscaling.k8s.io/v1`)로 정의되어 따로 설치해야 하고 예시가 적어서 `kubectl explain`으로 필드를 찾습니다.
+VerticalPodAutoscaler는 사용량에 맞춰 requests와 limits를 조정합니다. "Vertical Pod Autoscaling" 문서 기준으로 CRD(`autoscaling.k8s.io/v1`)로 정의되어 따로 설치해야 하고 예시가 적어서 `kubectl explain`으로 필드를 찾습니다. 설치는 kubernetes/autoscaler 저장소의 `vertical-pod-autoscaler` 디렉터리에서 `./hack/vpa-up.sh`를 실행합니다(2026년 10월 기본 1.8.0).
 
 ```bash
 kubectl get crd | grep verticalpodautoscaler
@@ -346,6 +350,17 @@ spec:
       - containerName: "*"
         minAllowed: { cpu: 100m, memory: 64Mi }
         maxAllowed: { cpu: "1", memory: 512Mi }
+```
+
+이 YAML을 VPA 1.8.0에 적용한 뒤의 `describe vpa`입니다. `Target`은 `Uncapped Target`을 `minAllowed`로 올린 값입니다.
+
+```text
+    Container Recommendations:
+      Container Name:  nginx
+      Lower Bound:     Cpu: 100m   Memory: 250Mi
+      Target:          Cpu: 100m   Memory: 250Mi
+      Uncapped Target: Cpu: 25m    Memory: 250Mi
+      Upper Bound:     Cpu: 1      Memory: 512Mi
 ```
 
 `updateMode`는 `Off`(권장값만 `.status`에 둠), `Initial`(새 Pod에만 적용), `Recreate`(Pod를 내보내고 새 Pod에 적용), `InPlaceOrRecreate`(제자리 resize를 먼저 시도), `InPlace`(제자리 resize만) 중 하나입니다. 옛 자료의 `Auto`는 VPA 1.4.0부터 deprecated된 `Recreate`의 별칭입니다. 설치된 VPA 버전에 따라 `InPlace` 계열 값이 없을 수 있으니 `kubectl explain vpa.spec.updatePolicy`로 확인합니다.
@@ -407,6 +422,8 @@ containers:
 ```
 
 `httpGet` 자리에 `exec: { command: ["cat", "/tmp/healthy"] }`나 `tcpSocket: { port: 5432 }`를 쓸 수 있습니다.
+
+`<이미지>`를 45초 뒤 8080에서 응답하는 `busybox:1.36` httpd로 바꿔 돌리면 이 YAML은 `RESTARTS 0`으로 Ready가 되고 startupProbe를 지운 쪽은 `failed liveness probe, will be restarted`로 재시작을 반복했습니다.
 
 ### 4-3. 헷갈리는 지점
 
@@ -610,6 +627,8 @@ drain 명령과 `--ignore-daemonsets`, `--delete-emptydir-data`, `--force` 옵�
 
 ValidatingAdmissionPolicy(1.30 stable)는 웹훅 서버 없이 CEL 식(`object.spec.replicas <= 5` 같은)으로 규칙을 적는 객체입니다. 정책과 `ValidatingAdmissionPolicyBinding`이 둘 다 있어야 효력이 나고 YAML은 "Validating Admission Policy" 문서의 예제를 고쳐 씁니다. 함정은 둘입니다. 정책의 `resources`에 `deployments`만 적으면 `kubectl scale`이 고치는 `deployments/scale` 하위 리소스는 정책에 걸리지 않습니다. 바인딩의 `validationActions`에 `Deny`와 `Warn`을 함께 적으면 바인딩 자체가 `must not contain both Deny and Warn`으로 거절됩니다.
 
+VAP 거부는 422에 `ValidatingAdmissionPolicy 'max-replicas' with binding 'max-replicas' denied request: replicas must be <= 5`, 서버 없는 웹훅(`failurePolicy: Fail`)은 500에 `failed calling webhook`입니다(응답 코드 표는 [Ch-01b 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow)).
+
 ### 5-2. requests와 limits
 
 | 값 | 누가 쓰는지 | 넘으면 |
@@ -800,6 +819,13 @@ spec:
 - `globalDefault: true`는 하나만 둘 수 있고 없으면 이름을 적지 않은 Pod의 우선순위는 0입니다.
 - 놓을 노드가 없으면 스케줄러가 우선순위 낮은 Pod를 축출해 자리를 만듭니다(선점). `preemptionPolicy: Never`면 대기열 앞에만 서고 선점하지 않습니다.
 
+kind에서 선점이 일어나면 높은 Pod는 희생자의 종료 유예 동안 `Pending`이고 `.status.nominatedNodeName`이 채워집니다.
+
+```text
+FailedScheduling  ... preemption: found a potential placement for pod on node node01, preempting 1 victims
+Preempted         Preempted by pod <uid> on node node01
+```
+
 ### 5-10. DaemonSet
 
 DaemonSet은 조건에 맞는 노드마다 Pod를 하나씩 띄우는 컨트롤러입니다. 로그 수집 에이전트, CNI 플러그인, kube-proxy가 이 방식으로 돕니다. static Pod(5-8절)와 달리 API 서버의 객체이고 컨트롤러와 스케줄러를 거칩니다. `kubectl create` 하위 명령이 없어 Deployment 뼈대를 받아 고칩니다.
@@ -942,7 +968,7 @@ topologySpreadConstraints:
 ## 범위와 한계
 
 - 명령과 YAML, 오류 문구는 kind 클러스터(노드 v1.37.0, 컨트롤 플레인 1대와 워커 2대, kubectl v1.37.1)에서 2026년 10월에 직접 돌려 확인했습니다. 노드 이름은 `node01`, `node02`로 바꿔 적었습니다.
-- VPA(설치하지 않음), startupProbe 예시, 웹훅, 비공개 레지스트리 인증, 선점은 돌리지 않았습니다. 3-3절 VPA YAML은 문서의 필드 구조를 따른 것입니다.
+- VPA 1.8.0 설치와 3-3절 YAML, startupProbe 예시, 선점, htpasswd 레지스트리 인증, VAP 거부도 같은 kind 클러스터에서 확인했습니다. 웹훅은 이미지 빌드가 필요해 서버 없는 웹훅의 500 응답만 봤습니다.
 - 시험 환경에 Metrics Server와 VPA가 미리 설치되어 있는지는 공식 문서로 확인하지 못했습니다.
 - 기능 게이트 단계와 `metrics.k8s.io/v1` stable처럼 버전마다 바뀌는 사실은 응시 시점의 kubernetes.io 문서로 다시 확인합니다. 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다.
 

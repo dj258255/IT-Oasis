@@ -71,13 +71,13 @@ kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 �
 
 ### 1-2. API 서버 안의 다섯 관문
 
-| 단계 | 하는 일 | 실패할 때 | 시험에서 만나는 예 |
+| 단계 | 하는 일 | 실패할 때(kind v1.37에서 `kubectl -v=6`으로 확인) | 시험에서 만나는 예 |
 |---|---|---|---|
-| 인증 | 클라이언트 인증서, 베어러 토큰(ServiceAccount 토큰 포함) 등으로 사용자 확인 | 401 | kubeconfig의 인증서 경로 오류, 만료된 인증서 |
-| 인가 | 기본 모드 `Node,RBAC`로 이 사용자가 이 동작을 해도 되는지 판단 | 403 | `kubectl auth can-i`로 확인하는 RBAC 문제 |
-| 변형 어드미션 | 요청 객체를 고침 | 403 등 거부 응답 | `DefaultTolerationSeconds`가 300초 톨러레이션 추가, `LimitRanger`가 기본 requests 주입 |
-| 스키마 검증 | 객체가 API 스키마에 맞는지 확인 | 422 Invalid | 오타 난 필드, selector와 템플릿 라벨 불일치 |
-| 검증 어드미션 | 정책 위반이면 거부만 함 | 403 등 | `ResourceQuota` 초과, PodSecurity 위반 |
+| 인증 | 클라이언트 인증서, 베어러 토큰(ServiceAccount 토큰 포함) 등으로 사용자 확인 | `401 Unauthorized`. kubectl은 `error: You must be logged in to the server (Unauthorized)` | kubeconfig의 인증서 경로 오류, 만료된 인증서, 잘못된 토큰 |
+| 인가 | 기본 모드 `Node,RBAC`로 이 사용자가 이 동작을 해도 되는지 판단 | `403 Forbidden`. `pods is forbidden: User "..." cannot list resource "pods" ...` | `kubectl auth can-i`로 확인하는 RBAC 문제 |
+| 변형 어드미션 | 요청 객체를 고침 | `403 Forbidden`. 없는 PriorityClass는 `no PriorityClass with name nope was found` | `DefaultTolerationSeconds`가 300초 톨러레이션 추가, `LimitRanger`가 기본 requests 주입 |
+| 스키마 검증 | 객체가 API 스키마에 맞는지 확인 | 잘못된 값은 `422 Unprocessable Entity`(`is invalid: spec.replicas: Invalid value: -1`). 오타 난 필드는 kubectl 기본 `fieldValidation=Strict` 때문에 `400 Bad Request`(`strict decoding error: unknown field`) | 음수 replicas, selector와 템플릿 라벨 불일치(422), 필드 이름 오타(400) |
+| 검증 어드미션 | 정책 위반이면 거부만 함 | ResourceQuota, LimitRange, PodSecurity는 `403 Forbidden`. ValidatingAdmissionPolicy는 `422`(메시지는 `is forbidden: ValidatingAdmissionPolicy ... denied request`). 웹훅 서버가 없는데 `failurePolicy: Fail`이면 `500 Internal Server Error`(`failed calling webhook`) | `exceeded quota`, `violates PodSecurity "restricted:latest"`, `maximum cpu usage per Container is 200m` |
 
 Admission Control 문서 기준으로 변형 어드미션, 스키마 검증, 검증 어드미션 순서로 돌고 어드미션은 쓰기 요청에만 적용됩니다.
 
@@ -607,7 +607,7 @@ kubectl explain pod.spec.containers.resources --recursive | head -30
 ## 범위와 한계
 
 - 명령과 YAML, 오류 문구는 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. kubeadm 기본 인증서 경로와 `kubeadm certs check-expiration`은 kind에서 돌리지 않았고 kubeadm 문서 기준입니다.
-- 1-2절 표의 401과 403은 Controlling Access 문서에 있고 422와 어드미션 거부의 응답 코드는 API 규약과 문서 예시를 근거로 적었습니다. 플러그인마다 다를 수 있습니다.
+- 1-2절 표의 응답 코드는 kind에서 `kubectl -v=6`의 `status=` 값으로 확인했습니다. 서드파티 웹훅은 응답에 코드를 직접 넣을 수 있어 다를 수 있습니다.
 - Endpoints deprecated(v1.33), taint-eviction 컨트롤러 분리(v1.34), IPVS deprecated(v1.35), in-place resize GA(v1.35)는 버전에 따라 달라지는 항목입니다.
 - 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다.
 

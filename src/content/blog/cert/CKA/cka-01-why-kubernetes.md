@@ -236,6 +236,8 @@ kubectl get pod <Pod> -o jsonpath='{range .spec.tolerations[*]}{.key} {.effect} 
 
 Pod 삭제는 v1.34부터 별도의 taint-eviction 컨트롤러가 맡고 지워진 Pod를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러입니다. 둘 다 controller-manager 안에서 돌므로 controller-manager가 멈춘 동안에는 축출도 일어나지 않습니다. 주인 없는 단독 Pod는 다시 만들어지지 않습니다.
 
+kind 워커 컨테이너를 `docker stop`으로 멈춰 잰 결과입니다. 약 45초 안에 노드가 `Unknown`이 되고 `unreachable` 테인트가 붙었습니다. `tolerationSeconds: 30`을 준 Pod는 그 30초 뒤, 기본 Pod는 약 300초 뒤 `TaintManagerEviction`(`Marking for deletion Pod shop/web-...`) 이벤트와 함께 `Terminating`이 됐고 Deployment의 대체 Pod는 다른 워커에서 `Running`이 됐습니다. 노드가 돌아오지 않으면 옛 Pod는 `Terminating`에 남습니다.
+
 ### 3-5. 직접 해 보기
 
 ```bash
@@ -348,6 +350,16 @@ kubectl logs mem-over -p        # 직전에 죽은 컨테이너의 로그
 
 노드 전체 메모리가 모자라면 kubelet이 Pod를 골라 축출합니다(리눅스 기본 hard 임계 `memory.available<100Mi`). 이때 Pod는 `Failed`와 `reason: Evicted`가 되고 노드 조건에 `MemoryPressure=True`가 뜹니다. kubelet은 사용량이 requests를 넘은 Pod를 먼저 보므로 requests가 없는 BestEffort Pod가 가장 먼저 대상이 되고 Guaranteed Pod는 마지막입니다.
 
+kind 워커의 `/var/lib/kubelet/config.yaml`에 `evictionHard: memory.available: 9800Mi`(가용량보다 큰 값)를 넣고 kubelet을 재시작해 본 결과입니다.
+
+```text
+MemoryPressure  True  ...  KubeletHasInsufficientMemory  kubelet has insufficient memory available
+Taints:         node.kubernetes.io/memory-pressure:NoSchedule
+Warning  Evicted  pod/order-api-...  The node was low on resource: memory. Threshold quantity: 9800Mi, available: 9936872Ki. Container nginx was using 7076Ki, request is 0, has larger consumption of memory.
+```
+
+축출된 Pod는 `.status.phase`가 `Failed`, `.status.reason`이 `Evicted`인데 `kubectl get pod`의 STATUS 열에는 `Error`나 `ContainerStatusUnknown`으로 보였습니다. 그래서 `kubectl get pod -A --field-selector status.phase=Failed`로 찾습니다.
+
 ### 4-6. 직접 해 보기
 
 ```bash
@@ -384,7 +396,15 @@ kubectl top pod -A --sort-by=cpu        # 또는 --sort-by=memory
 kubectl top pod <Pod> --containers      # 컨테이너별
 ```
 
-`top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다. CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 kubelet이 내놓은 사용량은 약 50m이었고 같은 시점 커널 카운터로는 주기의 약 92%가 스로틀되어 있었습니다. 사용량이 limit에 붙어 있으면 스로틀링을 의심하고 `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다. 해결은 limit을 올리거나 지우는 것입니다.
+kind에서 metrics-server v0.9.0 매니페스트에 `--kubelet-insecure-tls`를 더한 뒤의 `kubectl top node`입니다(이 인자가 없으면 로그에 `x509: cannot validate certificate for 172.18.0.5 because it doesn't contain any IP SANs`가 남고 top은 계속 `Metrics API not available`).
+
+```text
+NAME                      CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)
+cka-lab-r-control-plane   426m         7%       640Mi           6%
+cka-lab-r-worker          92m          1%       168Mi           1%
+```
+
+`top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다. CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 `kubectl top pod`는 `51m`이었고 같은 시점 커널 카운터로는 주기의 약 92%가 스로틀되어 있었습니다. 사용량이 limit에 붙어 있으면 스로틀링을 의심하고 `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다. 해결은 limit을 올리거나 지우는 것입니다.
 
 메모리 쪽 `top` 값은 working set이라 컨테이너 안의 `free` 숫자와 다르게 나올 수 있습니다. 출력을 읽는 법과 metrics-server가 없을 때의 점검은 [Ch-06 3장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
@@ -470,9 +490,8 @@ CPU 스로틀링입니다. CPU limit을 넘는 컨테이너는 죽지 않고 주
 
 ## 범위와 한계
 
-- 명령과 출력은 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. kind에서는 노드에 `docker exec`로 들어가고 시험의 kubeadm 노드에서는 ssh 뒤 `sudo`를 붙입니다.
-- 노드 전체 OOM, 노드 압박 축출, 노드 장애 뒤 약 50초 + 300초의 축출은 직접 재현하지 않았고 공식 문서 기준입니다.
-- metrics-server가 있는 상태의 `kubectl top` 출력은 이 클러스터에서 보지 못했습니다. 5-2절의 약 50m은 metrics-server가 읽는 kubelet summary API 값입니다.
+- 명령과 출력은 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 노드 압박 축출은 실제 메모리를 쓰지 않고 `evictionHard`를 올려 만들었고 노드 장애는 워커 컨테이너를 멈춰 재현했습니다. kind에서는 노드에 `docker exec`로 들어가고 시험의 kubeadm 노드에서는 ssh 뒤 `sudo`를 붙입니다.
+- 노드 전체 메모리를 실제로 소진시키는 OOM은 같은 VM의 다른 작업에 영향을 줄 수 있어 재현하지 않았습니다.
 - `--node-monitor-grace-period` 기본값 50초와 taint-eviction 컨트롤러 분리(v1.34)는 버전에 따라 달라진 항목입니다.
 
 ## 참고 자료

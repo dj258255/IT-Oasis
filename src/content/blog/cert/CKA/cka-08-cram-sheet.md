@@ -37,10 +37,12 @@ LF Important Instructions 기준으로 과제용 ssh 호스트에는 아래 도�
 | 구분 | 도구 | 대처 |
 |---|---|---|
 | 공식 사전 설치 목록 | `kubectl`(alias `k`, bash 자동완성 설정됨), `yq`, `curl`, `wget`, `man` | 그대로 씀 |
-| 목록에 없음 | `helm`, `kustomize`(단독 바이너리), `jq`, `etcdctl`, `etcdutl`, `crictl`, `tmux` | 과제 호스트 상황에 따름. 쓰기 전에 `which helm etcdctl etcdutl crictl`로 확인 |
+| 2025-03 판부터 목록에서 빠짐 | `jq`, `tmux` | 기대지 않음. `jq` 자리는 `yq` |
+| 목록에 없지만 해당 과제 호스트에는 있을 가능성 높음 | `helm`, `etcdctl` | 쓰기 전에 `which helm etcdctl` |
+| 근거 없음 | `etcdutl`, `crictl`, `kustomize`(단독 바이너리) | `which etcdutl crictl`로 확인. crictl이 없으면 `/var/log/pods`, kustomize는 아래 줄 |
 | kubectl 내장 | `kubectl apply -k`, `kubectl kustomize` | 단독 kustomize가 없어도 씀 |
 
-Resources Allowed는 필요하면 배포판 패키지를 설치해도 된다고 적지만 패키지 저장소에 닿는지는 공식 문서에 없습니다. 그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다. 직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
+Resources Allowed는 배포판 패키지를 설치해도 되지만 과제 수행에 필요하지는 않다고 적습니다. 패키지 저장소에 닿는지는 공식 문서에 없습니다. 그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다. 직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
 
 시험 중 열 수 있는 문서는 kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io(CKA만) 네 곳과 과제의 Quick Reference 링크이고 시험 VM 안 Firefox로만 엽니다. 터미널 복사와 붙여넣기는 Ctrl+Shift+C/V이고 INSERT 키는 쓰지 않습니다.
 
@@ -111,7 +113,7 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 | 첫 3분 | `k get pod -o wide`, `k describe pod`(Events), `k get events --sort-by=.metadata.creationTimestamp` | 없음 | 이벤트는 네임스페이스 단위 | [Ch-06 0절](/blog/cert/cka/cka-06-troubleshooting) |
 | 노드 NotReady | 노드에서 `systemctl status kubelet`, `journalctl -u kubelet -n 50`, `systemctl status containerd` | `/var/lib/kubelet/config.yaml`, `/etc/kubernetes/kubelet.conf` | `restart`만 하고 `enable`을 빠뜨림. 1.35부터 cgroup v1 노드는 kubelet이 기본으로 시작 안 함 | [Ch-06 1-3, 1-4절](/blog/cert/cka/cka-06-troubleshooting) |
 | 컨트롤 플레인 구성요소 | `crictl ps -a`, `crictl logs <ID>`, crictl이 없으면 `ls /var/log/pods` | `/etc/kubernetes/manifests/*.yaml` | 백업을 같은 디렉터리에 두면 kubelet이 그것도 읽음. mirror Pod를 `delete`해도 다시 생김. 이미지 태그 오류면 `crictl ps -a`에 컨테이너가 없음 | [Ch-06 2절](/blog/cert/cka/cka-06-troubleshooting) |
-| 리소스 사용량 | `k top pod -A --sort-by=cpu --no-headers`, `k top pod --containers` | 없음 | `--sort-by`는 `cpu`, `memory`만. metrics-server가 없으면 동작 안 함. Metrics API는 1.37에서 `v1` Stable이지만 metrics-server v0.9.0은 `v1beta1`만 제공(`kubectl top`은 알아서 맞춤) | [Ch-06 3-1, 3-4절](/blog/cert/cka/cka-06-troubleshooting) |
+| 리소스 사용량 | `k top pod -A --sort-by=cpu --no-headers`, `k top pod --containers` | 없음 | `--sort-by`는 `cpu`, `memory`만. metrics-server가 없으면 동작 안 함(시험 클러스터에 있는지는 확인되지 않으니 `k -n kube-system get deploy metrics-server`부터). Metrics API는 1.37에서 `v1` Stable이지만 metrics-server v0.9.0은 `v1beta1`만 제공(`kubectl top`은 알아서 맞춤) | [Ch-06 3-1, 3-4절](/blog/cert/cka/cka-06-troubleshooting) |
 | 값 뽑기 | `-o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'`, `-o custom-columns=NAME:.metadata.name`, `--sort-by=` | 없음 | custom-columns에는 `.items[*]`를 붙이지 않음. JSONPath는 정규식 없음. 식은 작은따옴표로 | [Ch-06 3-5, 3-6절](/blog/cert/cka/cka-06-troubleshooting) |
 | 컨테이너 로그 | `k logs <pod> -c <컨테이너> --previous`, `k logs -l app=x --all-containers --prefix` | 없음 | `-c` 없이 치면 기본 컨테이너(어노테이션, 없으면 첫 번째) 로그. `Defaulted container` 안내를 봄 | [Ch-06 4절](/blog/cert/cka/cka-06-troubleshooting) |
 | Service 응답 없음 | `k get endpointslices -l kubernetes.io/service-name=<svc>`, `k get pod --show-labels`, 임시 Pod에서 `wget -qO- -T 2` | Service `selector`, `targetPort`, readiness probe | ENDPOINTS가 비면 selector와 라벨, 아니면 readiness. `nslookup` 성공은 엔드포인트 존재를 뜻하지 않음 | [Ch-06 5절](/blog/cert/cka/cka-06-troubleshooting) |
@@ -319,7 +321,7 @@ kubeadm 패키지 교체 -> kubeadm upgrade node -> 4~6 반복
 
 ### 4-2. etcd 백업과 복구
 
-`etcdctl`, `etcdutl`은 공식 사전 설치 목록에 없으니 `which etcdctl etcdutl`부터 봅니다.
+`etcdctl`은 etcd 과제 호스트에 있을 가능성이 높지만 공식 목록에 없고 `etcdutl`은 근거가 없으니 `which etcdctl etcdutl`부터 봅니다.
 
 ```bash
 # 0) 인증서 경로부터 확인
@@ -490,14 +492,16 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 
 - 이 글은 Ch-00~Ch-07과 Ch-01.5의 요약입니다. 요약에서 조건이 빠졌다면 링크한 원래 글이 기준입니다.
 - 명령과 YAML은 kind v1.37과 Lima VM의 kubeadm 1.36→1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 3-2, 3-3절의 스토리지와 Gateway 뼈대는 문서 예시를 옮긴 것이라 연습 클러스터에서 확인한 뒤 씁니다.
-- 시험 호스트에 helm, etcdctl, etcdutl, crictl, jq가 있는지와 그 버전은 공식 문서에 없습니다. 당일 `which`와 `etcdutl version`, `helm version`으로 확인합니다.
-- etcd 백업 복구와 kubeadm 업그레이드는 2025년 개정 커리큘럼의 명시 항목이 아니지만 "클러스터 수명주기 관리"에 걸려 남겼습니다.
-- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. 새 마이너가 나오면 시험 환경이 4~8주 안에 바뀝니다.
+- `etcdutl`과 `crictl`이 시험 호스트에 있는지는 확인하지 못했습니다.
+- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지는 확인하지 못했습니다.
+- etcd 백업 복구와 kubeadm 업그레이드가 개정 후 출제되는지는 확인하지 못했습니다. "클러스터 수명주기 관리"에 걸려 남겼습니다.
+- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. LF 문서는 새 마이너 출시 후 약 4~8주 안에 시험 환경을 맞춘다고 적지만 1.36은 건너뛰었으니 시험 전에 Important Instructions의 버전 표기를 봅니다.
 
 ## 참고 자료
 
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf)
 - Linux Foundation, [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad), [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed), [FAQ](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks)
+- Wayback Machine, Important Instructions [2025-02-11 판](https://web.archive.org/web/20250211081937/https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad), [2025-03-28 판](https://web.archive.org/web/20250328093613/https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)
 - Kubernetes, [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/), [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/), [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)
 - Kubernetes, [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Certificates and Certificate Signing Requests](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/)
 - Kubernetes, [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/), [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/), [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), [Storage Classes](https://kubernetes.io/docs/concepts/storage/storage-classes/), [Create static Pods](https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/)
