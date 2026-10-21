@@ -1,6 +1,6 @@
 ---
 title: '[CKA Ch-07] 준비 자료와 시험 당일 전략: 공식 규칙, 할인, 연습 환경, 후기 경향 정리'
-description: CKA(커리큘럼 v1.37, 2025년 2월 개정 범위)를 준비할 때 쓸 수 있는 정당한 자료를 2026년 10월 기준으로 모았습니다. Linux Foundation 공식 규칙과 점검표, 날짜가 확인된 할인 이력, killer.sh와 Killercoda와 KodeKloud와 GitHub 연습 저장소 비교, 홈 랩 구성, 2025~2026년 후기에서 겹친 출제 경향과 함정, 1.33~1.37 변경 중 시험 답에 영향을 주는 것, 시험 당일 순서와 D-30 계획, 덤프를 쓰지 않는 이유를 약관 원문으로 정리합니다.
+description: CKA(커리큘럼 v1.37, 2025년 2월 개정 범위)를 준비할 때 쓸 수 있는 정당한 자료를 2026년 10월 기준으로 모았습니다. Linux Foundation 공식 규칙과 점검표, 과제마다 ssh로 옮기는 시험 환경과 사전 설치 도구, 날짜가 확인된 할인 이력, killer.sh와 Killercoda와 KodeKloud와 GitHub 연습 저장소 비교, 홈 랩 구성, 2025~2026년 후기에서 겹친 출제 경향과 함정, 1.33~1.37 변경 중 시험 답에 영향을 주는 것, 시험 당일 순서와 D-30 계획, 덤프를 뺀 근거를 LF 응시 약관 원문으로 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
   - CKA
@@ -21,8 +21,9 @@ seriesOrder: 7
 1. 응시권 하나($445, 2026년 10월 20일 기준)에는 재응시 1회와 killer.sh 시뮬레이터 2회가 들어 있습니다. 구매 후 12개월 안에 응시해야 하고 예약 변경은 24시간 전까지만 됩니다. 예정 시각에서 30분이 지나도록 시작하지 못하면 결시가 되고 환불도 재응시도 없습니다.
 2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했습니다(2025년은 제3자 기사 기준). 2026년 10월 현재 CKA 페이지에는 최대 40% 할인 배너가 떠 있습니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
 3. 연습은 강의와 랩(KodeKloud), 무료 시나리오(Killercoda), 공식 시뮬레이터(killer.sh 2회) 순서로 잡습니다. killer.sh가 실제 시험보다 어렵다는 평가는 응시자와 강의 운영진에게서 나왔고 공식 문서에는 그런 비교가 없습니다. 풀이를 보고 배우는 용도로 씁니다.
-4. 2025~2026년 후기에서 반복해 나온 주제는 트러블슈팅(kubelet, 컨테이너 런타임, 컨트롤 플레인), Helm, Gateway API, CNI 설치, Kustomize입니다. 가장 흔한 실패 원인은 시간 부족이었고 모의고사 점수와 실제 점수가 크게 어긋난 사례도 여럿 있었습니다.
-5. 덤프와 "실제 시험 문제"를 표방하는 자료는 이 글에서 다루지 않습니다. LF 응시 약관 4.4절은 다른 사람의 기억에 기댄 자료(braindump)를 쓰는 것 자체를 부정행위로 정의하고 자격 취소와 영구 응시 제한까지 적어 둡니다.
+4. 덤프를 쓰지 않은 2025~2026년 후기에서 반복해 나온 주제는 트러블슈팅(kubelet, 인증서와 kubeconfig, 컨트롤 플레인), Helm, Gateway API, CNI 설치, Kustomize, CRD입니다. 가장 흔한 실패 원인은 시간 부족이었고 모의고사 점수와 실제 점수가 크게 어긋난 사례도 여럿 있었습니다.
+5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`이고 `helm`, `etcdctl`, `crictl`, `jq`는 공식 목록에 없습니다.
+6. 덤프와 "실제 시험 문제"를 표방하는 자료는 이 글에서 다루지 않습니다. LF 응시 약관 4.4절은 다른 사람의 기억에 기댄 자료(braindump)를 쓰는 것 자체를 부정행위로 정의하고 자격 취소와 영구 응시 제한까지 적어 둡니다.
 
 시험 구조와 영역별 범위는 [CKA Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [Ch-02](/blog/cert/cka/cka-02-cluster-architecture)부터 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 그 위에서 자료와 규칙과 당일 운영만 다룹니다.
 
@@ -30,7 +31,7 @@ seriesOrder: 7
 
 ## 1. 공식 자료와 규칙
 
-LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문서, killer.sh FAQ를 2026년 10월 20일에 읽고 정리했습니다. Ch-00에 이미 적은 키 조작과 허용 문서 목록은 겹치지 않게 줄였습니다.
+LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문서, killer.sh FAQ를 2026년 10월 20일에 읽고 정리했습니다. 키 조작과 허용 문서 목록의 자세한 표는 Ch-00에 있습니다.
 
 ### 1-1. 응시권에 들어 있는 것
 
@@ -79,11 +80,12 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 
 키 조작(Ctrl+Shift+C/V, Ctrl+Alt+W, INSERT 금지)과 허용 문서(kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io)는 [Ch-00 3절](/blog/cert/cka/cka-00-exam-and-study-plan)에 있습니다. 공식 안내에서 추가로 확인한 것은 다음과 같습니다.
 
-- 시작 호스트(`base`)에는 `kubectl`이 없습니다. 모든 작업은 과제가 지정한 호스트에 `ssh`로 들어가서 합니다. `base`를 재부팅하면 시험 환경이 다시 시작되지 않습니다.
+- 시작 호스트(`base`)에는 `kubectl`이 없습니다. 모든 작업은 과제가 지정한 호스트에 `ssh`로 들어가서 합니다. ssh 안에서 다시 ssh는 할 수 없고 `base`를 재부팅하면 시험 환경이 다시 시작되지 않습니다.
+- 모든 ssh 호스트에 `kubectl`(alias `k`, bash 자동완성), `yq`, `curl`, `wget`, `man`이 깔려 있습니다. `helm`, `etcdctl`/`etcdutl`, `crictl`, `jq`, `tmux`는 공식 목록에 없고 과제 호스트에 있는지는 공식 문서로 확인할 수 없습니다. Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 적습니다. `kubectl apply -k`와 `kubectl kustomize`는 kubectl에 내장입니다.
+- 허용 문서 네 곳 외에 과제의 Quick Reference 상자 링크와 /usr/share 아래 문서도 볼 수 있습니다. 허용 문서 안의 검색은 되지만 외부 검색 결과를 여는 것은 안 됩니다.
 - VSCodium의 확장 설치는 금지입니다. 내장 터미널은 써도 됩니다.
 - Firefox에는 Simple Translate 확장이 깔려 있습니다. 번역된 문서도 허용되지만 LF는 최신 내용인 영어판을 권합니다.
 - 화면 확대는 PSI 툴바의 +와 - 버튼으로 하고 설정(톱니) 메뉴에 화면 맞춤과 해상도 변경, Reset Desktop이 있습니다.
-- 허용 문서 안의 검색은 되지만 외부 검색 결과를 여는 것은 안 됩니다.
 
 ### 1-5. killer.sh 시뮬레이터
 
@@ -191,29 +193,33 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 
 | 글 | 결과 | 준비 | 이 절에서 쓴 내용 |
 |---|---|---|---|
-| Domenic Cassisi, 개인 블로그(2026-06) | 95% | KodeKloud, Killercoda 커뮤니티 시나리오, Kubernetes The Hard Way, killer.sh | 막히면 넘기고 마지막에 요구사항 재확인. `kubectl explain` 사용. 직접 만든 alias는 ssh 이동 때 사라짐 |
-| Atsushi Suzuki, dev.to(2026-01) | 72% | KodeKloud 모의고사 3회와 유료 모의고사 5회, killer.sh | 시간 부족으로 표시해 둔 트러블슈팅 문제에 돌아가지 못함. 문서 URL을 외워 둘 것 |
-| 109x79m, Qiita(2026-07) | 69%, 약 4개월 | Udemy(Mumshad), killer.sh, 『Kubernetes完全ガイド』 | 16문항 중 5~6개가 어려웠고 1개는 못 풂. 문항을 네 단계 난이도로 나눠 쉬운 것부터. CKA-JP로 응시해도 문서는 영어 |
-| yu-min, Zenn(2025-10) | 1차 58%, 2차 69%, 약 80시간 | KodeKloud, killer.sh | 체크인 실패가 반복돼 시작이 크게 늦어짐. 조작마다 2~3초 지연. 울트라와이드 모니터는 화면 전체를 못 씀 |
-| cnative_tkb, Zenn(2026-05) | 점수 비공개, 약 30시간(실무 3년) | kubernetes.io, Killercoda, killer.sh, Udemy(Mumshad) | 시스템 점검 도구를 지운 뒤 시험 소프트웨어 설치. 윈도우 집중 모드와 업데이트 일시 정지. 외장 키보드면 입력기 전환 미리 확인 |
-| Aditya Nakadi, Medium(2025-09) | 개정 후 첫 응시 62점, 다음 응시 합격 | Udemy(Mumshad)와 KodeKloud 랩, EC2에 kubeadm, Killercoda, killer.sh | Wi-Fi 30Mbps에서 감독관 쪽 영상이 계속 멈춰 시험이 중단됨(지원팀이 응시 기회 복구). 개정 뒤 Helm, Kustomize, Gateway API를 새로 공부 |
-| Christophe, KodeKloud 커뮤니티(2026-08) | 61%, 44%(두 번 불합격) | KodeKloud 전 과정, 약 6개월 | KodeKloud 모의고사는 90% 안팎이었음. CNI 설치와 Gateway API 리소스 관계에서 막힘 |
+| Matt Bargenquast, 개인 블로그(2025-02, 베타) | 글에 없음 | 글에 없음 | CKS보다 시간 압박이 커서 몇 문항을 남김. 문서 예시를 베끼는 문제보다 응용 문제. 문서 검색에 쓸 시간이 거의 없음 |
 | KodeKloud 커뮤니티 스레드(2025-02 ~ 2025-03) | 응시자 여럿 | 해당 없음 | 개정 직후 응시자가 언급한 주제: CRD, Helm, 컨테이너 런타임·CNI·CSI 설치, HPA, PriorityClass, 기본 StorageClass, Ingress, NetworkPolicy |
+| Nattapol, 개인 블로그(2025-06) | 78% | Udemy/KodeKloud, killer.sh, 공식 문서 | 새 주제로 HPA·VPA, Gateway API, CNI·CRI·CRD·Helm·Kustomize 설치. VPA는 `kubectl explain`이 도움. 17문항 중 준비 못 한 2문항은 건너뜀 |
+| yu-min, Zenn(2025-10) | 1차 58%, 2차 69%, 약 80시간 | KodeKloud, killer.sh | 체크인 실패가 반복돼 시작이 크게 늦어짐. 조작마다 2~3초 지연. 울트라와이드 모니터는 화면 전체를 못 씀 |
+| Atsushi Suzuki, dev.to(2026-01) | 72% | KodeKloud 모의고사 3회와 유료 모의고사 5회, killer.sh | 시간 부족으로 표시해 둔 트러블슈팅 문제에 돌아가지 못함. 문서 URL을 외워 둘 것. 네임스페이스 전환 alias 같은 옛 팁은 불필요 |
+| Talha Juikar, 개인 블로그(2026-01) | 합격(점수 미기재) | KodeKloud, Killercoda, killer.sh, VM의 kubeadm 클러스터 | 트러블슈팅, 인증서·kubeconfig, etcd 명령과 kubeadm 플래그에서 시간이 듦. killer.sh가 실제보다 어려움. Hard Way는 선택 |
+| cnative_tkb, Zenn(2026-05) | 점수 비공개, 약 30시간(실무 3년) | kubernetes.io, Killercoda, killer.sh, Udemy(Mumshad) | 시스템 점검 도구를 지운 뒤 시험 소프트웨어 설치. 윈도우 집중 모드와 업데이트 일시 정지. 외장 키보드면 입력기 전환 미리 확인 |
+| Domenic Cassisi, 개인 블로그(2026-06) | 95% | KodeKloud, Killercoda 커뮤니티 시나리오, Kubernetes The Hard Way, killer.sh | 막히면 넘기고 마지막에 요구사항 재확인. `kubectl explain` 사용. 직접 만든 alias는 ssh 이동 때 사라짐. 복잡한 리눅스 명령은 불필요 |
+| 109x79m, Qiita(2026-07) | 69%, 약 4개월 | Udemy(Mumshad), killer.sh, 『Kubernetes完全ガイド』 | 16문항 중 5~6개가 어려웠고 1개는 못 풂. 쉬운 것부터. CKA-JP로 응시해도 문서는 영어 |
 | yltw, dev.to(2026-07) | 글 작성 시점 결과 미확인 | Udemy, killer.sh(16/75 → 58/93) | 5분 규칙, 오래 걸리는 컨트롤 플레인 명령은 다른 터미널 탭에 두고 다음 작업 |
+| Christophe, KodeKloud 커뮤니티(2026-08) | 61%, 44%(두 번 불합격) | KodeKloud 전 과정, 약 6개월 | KodeKloud 모의고사는 90% 안팎이었음. CNI 설치와 Gateway API 리소스 관계에서 막힘 |
 
 ### 5-1. 주제 수준의 경향
 
 - 트러블슈팅: 노드가 NotReady일 때 kubelet과 컨테이너 런타임 확인, 망가진 컨트롤 플레인 구성요소 복구가 여러 글에 나옵니다. 비중 30% 영역이라 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)의 판단 순서를 손에 익히는 것이 가장 큽니다.
 - 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다. 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다. 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다. 확인 명령과 순서는 [Ch-02 7-2절](/blog/cert/cka/cka-02-cluster-architecture)에 정리했습니다.
-- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 적었고 2026년 3월 합격 후기(techwithmohamed)도 Gateway와 HTTPRoute를 알아 두라고 적었습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [Ch-04 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
+- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 적었고 Nattapol(2025-06)과 Suzuki(2026-01)도 Gateway API를 새로 공부한 주제로 꼽았습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [Ch-04 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
 - Helm과 Kustomize: 커리큘럼 문구는 "Helm과 Kustomize로 클러스터 구성요소 설치"입니다. 개정 직후 응시자들이 Helm 과제를 언급했고 2026년 8월 후기 작성자는 모의고사에서 Helm 문제를 건너뛰었다고 적었습니다. Kustomize는 yltw가 시험 전에 익힌 명령으로 꼽았습니다. 정리는 [Ch-02 6절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
-- etcd와 kubeadm 업그레이드: 개정 커리큘럼에서 명시 항목이 빠졌고 Cassisi는 일부 강의에 아직 etcd 내용이 남아 있다고 지적했습니다. "클러스터 수명주기 관리"에 들어가는지는 공식 문서로 확인되지 않아 한 번씩은 손으로 해 보는 쪽이 안전합니다.
+- etcd와 kubeadm 업그레이드: 개정 커리큘럼에서 명시 항목이 빠졌고 후기도 갈립니다. Cassisi는 etcd가 실러버스에서 빠졌다고 판단했고 Juikar는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 절차를 한 번씩은 손으로 해 봅니다([Ch-02 4장](/blog/cert/cka/cka-02-cluster-architecture)).
+- 인증서와 kubeconfig: Juikar가 시간이 든 주제로 따로 꼽았습니다. `kubeadm certs check-expiration`, kubeconfig의 서버 주소와 인증서 경로 확인은 [Ch-06 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+- 깊이: Cassisi는 복잡한 리눅스 명령이 필요 없었다고 적었고 커널 내부를 언급한 후기는 없었습니다. Hard Way 전 과정도 Cassisi와 Juikar 모두 선택으로 봤습니다.
 
 ### 5-2. 반복된 함정
 
 - 시간: 합격한 후기에서도 "다 못 풀었다"(Suzuki), "1개는 못 풀었다"(Qiita)가 나옵니다. 공식 기준 120분에 15~20문항이면 문항당 6~8분입니다.
 - 모의고사 점수: KodeKloud 모의고사 90% 안팎에서 실제 61%와 44%가 나온 사례, 1차 58%에서 2차 69%로 붙은 사례가 있습니다. 모의고사는 범위 점검용이고 실제 점수를 예측하지 못합니다.
-- 플랫폼과 장비: 체크인 실패 반복, 감독관 쪽 영상 끊김으로 인한 중단, 원격 화면 지연이 여러 글에 나옵니다. Nakadi는 플랫폼 문제로 중단된 뒤 LF 지원에 상황을 설명해 응시 기회를 돌려받았습니다.
+- 플랫폼과 장비: 체크인 실패 반복과 원격 화면 지연이 여러 글에 나옵니다. 연결 문제가 생기면 시각과 증상을 적어 두고 그날 LF 지원에 문의합니다.
 - 호스트 이동: 공식 안내상 ssh 안에서 다시 ssh는 안 되고 과제가 끝나면 `exit`로 돌아와야 합니다. 이전 과제의 노드에 남은 채 다음 과제를 시작하면 엉뚱한 클러스터를 고치게 됩니다.
 - 화면 크기: 노트북 화면에서는 문서와 터미널을 오가며 시간이 샌다는 후기가 많았습니다. 단일 외장 모니터를 쓸 수 있으면 씁니다(노트북 화면은 꺼야 함).
 
@@ -229,16 +235,19 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 | 1.34 | `KubeletCgroupDriverFromCRI` stable, 스왑(`NodeSwap`) stable | kubelet이 런타임에서 cgroup 드라이버를 받는다. 스왑 기본 동작(kubelet 시작 실패)은 그대로 | Container Runtimes, Installing kubeadm | Ch-02 2-2, 2-4 |
 | 1.34 | `RecoverVolumeExpansionFailure` stable | 확장에 실패한 PVC를 더 작은 값으로 다시 요청 가능 | Persistent Volumes | Ch-05 3-5 |
 | 1.35 | in-place Pod resize stable | `kubectl patch pod ... --subresource resize` | Resize CPU and Memory Resources assigned to Containers | Ch-03 3-3 |
-| 1.35 | kube-proxy `ipvs` 모드 사용 중단, cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true` | Virtual IPs and Service Proxies, cgroups | Ch-04 1-2, Ch-02 2-4 |
+| 1.35 | kube-proxy `ipvs` 모드 사용 중단(1.40 기본 비활성, 1.43 제거 예정), cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true`라 cgroup v1 노드에서는 kubelet이 시작하지 않음 | Virtual IPs and Service Proxies, cgroups | Ch-04 1-2, Ch-02 2-4 |
 | 1.36 | containerd 2.0 이상 필요. 1.35가 containerd 1.x를 지원하는 마지막 버전 | 런타임 설정은 2.x 경로(`plugins.'io.containerd.cri.v1.runtime'...`)로 쓴다 | v1.35 릴리스 글, Container Runtimes | Ch-02 2-4 |
+| 1.36 | Service `externalIPs` 사용 중단 | 새로 쓰지 않는다. 외부 노출은 NodePort, LoadBalancer, Gateway | v1.36 externalIPs 공지 | Ch-04 3절 |
 | 1.37 | HPA `behavior.scaleUp/scaleDown.tolerance` stable | 허용 범위를 HPA마다 지정 | Horizontal Pod Autoscaling | Ch-03 3-2 |
 | 1.37 | HPA scale to zero beta, 기본 활성 | Object나 External 메트릭을 쓰는 HPA는 `spec.minReplicas: 0` 가능. CPU와 메모리 기준으로는 불가 | v1.37 릴리스 글 | Ch-03 3절 |
 | 1.37 | static Pod의 Secret, ConfigMap 참조가 완전히 금지되고 `PreventStaticPodAPIReferences` 게이트 제거 | static Pod 매니페스트에 `configMapRef`, `secretRef`를 넣으면 안 된다 | v1.37 릴리스 글 | Ch-06 2-5 |
+| 1.37 | `metrics.k8s.io/v1` stable(v1beta1도 전환 기간 사용 가능) | `kubectl top` 명령은 같다. metrics-server 버전에 따라 제공 API 버전이 다를 수 있음 | v1.37 릴리스 글 | Ch-06 3-1 |
+| 1.37 | kube-dns 애드온 빌드 1.40 이후 중단 예정 | CoreDNS도 Service 이름은 `kube-dns`를 그대로 쓴다. 이름과 애드온을 혼동하지 않는다 | v1.37 릴리스 글 | Ch-04 6절 |
 | etcd 3.6 이후(kubeadm 1.37 기본 3.7.0, 1.36은 3.6.8) | `etcdctl snapshot status`, `snapshot restore` 제거 | 확인과 복구는 `etcdutl` | etcd CHANGELOG-3.6, kubeadm constants | Ch-02 4-5, 4-6 |
 | Helm 4(2025-11) | `--atomic`이 `--rollback-on-failure`, `--force`가 `--force-replace`로 이름 변경. 새 릴리스는 server-side apply | 옛 이름은 경고와 함께 동작 | Helm 4 Overview | Ch-02 6-1 |
 | 2026-03 | Ingress NGINX 유지보수 종료 | Ingress API는 동결된 GA로 남음. 새 기능은 Gateway API | Kubernetes 블로그 | Ch-04 5-1 |
 
-Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페이스 라벨)은 v1.37 CKA 커리큘럼 문구에 없고 CKS 쪽 주제라 이 시리즈에서는 다루지 않았습니다. 커리큘럼의 "Pod 승인" 항목은 [Ch-03 5-1절](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota, PriorityClass로 정리했습니다.
+Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페이스 라벨)은 v1.37 CKA 커리큘럼 문구에 없고 정책 설계는 CKS 쪽 주제입니다. Pod 생성이 거부될 때 `kubectl get ns <이름> --show-labels`로 이 라벨이 있는지 보는 정도면 충분합니다. 커리큘럼의 "Pod 승인" 항목은 [Ch-03 5-1절](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota, PriorityClass로 정리했습니다.
 
 ## 6. 시험 당일 전략과 체크리스트
 
@@ -284,12 +293,12 @@ exit
 
 - 과제를 끝까지 읽습니다. "하지 말라"는 조건, 출력 파일 경로, 네임스페이스를 놓쳐 점수를 잃었다는 후기가 많습니다.
 - 권한이 필요하면 `sudo -i`나 명령 앞에 `sudo`를 붙입니다(공식 안내).
-- `kubectl`(alias `k`와 자동완성), `yq`, `curl`, `wget`, `man`은 각 호스트에 이미 깔려 있습니다. alias를 따로 만들 필요가 적습니다.
+- `kubectl`(alias `k`와 자동완성), `yq`, `curl`, `wget`, `man`은 각 호스트에 이미 깔려 있어 alias를 따로 만들 필요가 적습니다. 값을 뽑을 때는 공식 목록에 없는 `jq` 대신 `-o jsonpath`나 `yq`를 씁니다.
 - Service 연결은 임시 Pod에서 확인합니다. `k run tmp --rm -it --image=busybox:1.36 --restart=Never -- wget -qO- http://pay-api.payment` 같은 식입니다.
 
-### 6-3. 컨텍스트 전환
+### 6-3. 호스트 이동과 권한
 
-현재 LF 공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다. `kubectl config use-context`를 문항마다 실행했다는 글은 2024년 이전 후기들이고 2025~2026년 후기들은 ssh 방식을 적었습니다. 과제 상자에 실행할 명령이 적혀 있으면 그것을 그대로 먼저 실행합니다. 컨텍스트 확인과 전환 명령(`kubectl config get-contexts`, `use-context`, `--kubeconfig`)은 [Ch-02 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 모았습니다.
+공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행하고 끝나면 `exit`로 base로 돌아옵니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 그 호스트의 `kubectl`이 이미 대상 클러스터를 가리키므로 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다. kubeconfig 구조와 컨텍스트 개념은 [Ch-02 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 
 ### 6-4. vim과 YAML
 
@@ -310,7 +319,7 @@ set expandtab tabstop=2 shiftwidth=2
 | D-1 저녁 | 책상 위와 아래 비우기. 벽의 종이 떼기. 신분증 유효기간과 체크리스트 이름 확인 |
 | 2시간 전 | 재부팅, 다른 앱 종료, 백신 검사 일시 정지, 전원 연결, 유선 연결, 가족에게 시간 알리기 |
 | 30분 전 | 포털에서 시험 시작 버튼. 신분증 촬영, 셀카, 방 스캔. 라벨 없는 투명 용기의 음료만 |
-| 시험 중 | 소리 내어 읽지 않기. 얼굴과 입 가리지 않기. 과제마다 호스트 확인과 `exit` |
+| 시험 중 | 문제는 속으로 읽기. 얼굴과 입은 화면에 보이게. 과제마다 호스트 확인과 `exit` |
 | 연결이 끊기면 | PSI 대시보드의 Access로 다시 들어가 체크인 반복. 시각과 증상을 적어 두고 그날 LF 지원에 문의 |
 | 종료 후 | End Exam, End Session. 결과는 보통 24시간 안에 이메일 |
 
@@ -331,7 +340,7 @@ set expandtab tabstop=2 shiftwidth=2
 
 불합격해도 재응시 기회가 남습니다. yu-min은 1차 불합격(5월 19일) 뒤 약 3주 반 만에 다시 응시해 합격했습니다. 재응시 때 killer.sh를 새로 받는지는 LF 문서에서 확인하지 못했고 FAQ는 "two attempts (per exam registration)"라고만 적습니다.
 
-## 8. 덤프를 쓰지 않는 이유
+## 8. 덤프를 뺀 근거: LF 응시 약관
 
 이 글에서 덤프 사이트와 "실제 시험 문제"를 내건 자료를 이름도 링크도 없이 뺀 근거는 LF 응시 약관(LF Global Certification & Confidentiality Agreement)입니다. 시험 체크인 때 이 약관에 동의해야 시험이 열립니다.
 
@@ -357,13 +366,9 @@ set expandtab tabstop=2 shiftwidth=2
 
 ## 9. 범위와 한계
 
-- 공식 규칙, 가격, 할인 배너, 프로그래머스 가격은 2026년 10월 20일에 확인했습니다. 가격과 할인은 자주 바뀝니다.
-- 2025년 Cyber Week 할인 내용은 LF 공식 공지를 찾지 못해 제3자 기사 세 곳(It's FOSS, techbeatly, DevOpsCube)이 일치하는 범위만 적었습니다.
-- PSI의 운영체제, 대역폭, 웹캠 해상도 같은 세부 사양은 LF 문서가 PSI 페이지로 넘기고 있어 확인하지 못했습니다. 시스템 점검 도구로 직접 확인해야 합니다.
-- Killercoda CKA 시나리오 목록과 KodeKloud Ultimate Mock의 현재 개정 반영 여부는 확인하지 못했습니다.
-- ExamUI에 문항 표시(flag) 기능이 있는지는 공식 문서에서 확인하지 못했고 후기에 기댔습니다.
-- Reddit(r/kubernetes, r/CKAExam)은 접속이 막혀 직접 읽지 못했습니다. 중국 본토 블로그(知乎, CSDN)는 열리지 않았거나 문제 은행형 자료를 전제로 한 글이 많아 이 글에 쓰지 않았습니다.
-- 후기의 점수와 준비 기간은 각자의 조건(실무 경험, 하루 공부 시간)에서 나온 것입니다.
+- 공식 규칙, 가격, 할인 배너, 프로그래머스 가격은 2026년 10월 20일에 확인했습니다. 가격과 할인은 자주 바뀝니다. 2025년 Cyber Week 할인은 LF 공식 공지를 찾지 못해 제3자 기사 세 곳이 일치하는 범위만 적었습니다.
+- `helm`, `etcdutl`, `crictl`이 과제 호스트에 있는지, ExamUI에 문항 표시(flag) 기능이 있는지는 공식 문서로 확인하지 못했습니다.
+- 후기는 개정 뒤 응시했고 덤프나 "실제 시험 문제" 자료를 썼다는 언급이 없는 것만 골랐습니다. Reddit과 일부 Medium 글은 접속이 막혀 읽지 못했습니다.
 - 이 글은 응시 전에 쓴 정리입니다.
 
 ## 참고 자료
@@ -396,18 +401,20 @@ set expandtab tabstop=2 shiftwidth=2
 버전 변경 근거
 - Kubernetes, [Feature Gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/), [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/), [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/), [Virtual IPs and Service Proxies](https://kubernetes.io/docs/reference/networking/virtual-ips/), [About cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/), [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/), [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/), [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
 - kubernetes/kubernetes, [CHANGELOG-1.34](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md), [release-1.37 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.37/cmd/kubeadm/app/constants/constants.go), [release-1.36 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.36/cmd/kubeadm/app/constants/constants.go)
-- Kubernetes Blog, [Kubernetes v1.35: Timbernetes](https://kubernetes.io/blog/2025/12/17/kubernetes-v1-35-release/), [Kubernetes v1.37: Garhwal](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/)
+- Kubernetes Blog, [Kubernetes v1.35: Timbernetes](https://kubernetes.io/blog/2025/12/17/kubernetes-v1-35-release/), [Kubernetes v1.37: Garhwal](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/), [Deprecation and removal of Service ExternalIPs](https://kubernetes.io/blog/2026/05/14/kubernetes-v1-36-deprecation-and-removal-of-service-externalips/)
 - etcd, [CHANGELOG-3.6](https://github.com/etcd-io/etcd/blob/main/CHANGELOG/CHANGELOG-3.6.md)
 - Helm, [Helm 4 Overview](https://helm.sh/docs/overview/)
 - Kubernetes Blog, [Ingress NGINX Retirement: What You Need to Know](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/), 2025-11-11
 
 후기와 커뮤니티
+- Matt Bargenquast, [CKS and beta CKA 2025](https://bargenqua.st/posts/cks-cka-2025/), 2025
+- Nattapol, [I passed the CKA (February 2025 Changes)](https://nattapol.com/i-passed-the-cka-february-2025-changes/), 2025
+- Talha Juikar, [Passing the CKA Exam](https://talhajuikar.com/posts/passing-cka-exam/), 2026
 - Domenic Cassisi, [I passed the CKA! My Exam Experience (2026)](https://dcassisi.com/2026/06/09/i-passed-the-cka-my-exam-experience-2026/), 2026
 - Atsushi Suzuki, [CKA (Certified Kubernetes Administrator) Exam Report 2026: Don't Rely on Old Guides](https://dev.to/suzuki0430/cka-certified-kubernetes-administrator-exam-report-2026-dont-rely-on-old-guides-mastering-the-534m), 2026
 - 109x79m, [【2025年2月改訂版】CKA受験体験記](https://qiita.com/109x79m/items/c7057af1d073c43b6575), 2026
 - yu-min, [業務未経験から半年でKubestronaut達成（KCNA/KCSA/CKA/CKAD/CKS全冠）勉強法まとめ](https://zenn.dev/yuu7751/articles/24f509769b97b5), 2025
 - cnative_tkb, [CKA-JP 更新試験 受験記 — 2026年版](https://zenn.dev/cnative_tkb/articles/2d1447e98a7aed), 2026
-- Aditya Nakadi, [How I passed CKA 2025: My Experience and Strategy](https://medium.com/@adityanakadi3/how-i-passed-cka-2025-my-experience-and-strategy-ad453ba1c513), 2025
 - yltw, [How I Passed the CKA in 2026](https://dev.to/yltw27/how-i-passed-the-cka-in-2026-143c), 2026
 - KodeKloud 커뮤니티, [CKA real exam 2026 vs Mock ultimate mock and killer sh](https://kodekloud.com/community/t/cka-real-exam-2026-vs-mock-ultimate-mock-and-killer-sh/501584), 2026-08
 - KodeKloud 커뮤니티, [Am I ready for the CKA? (KodeKloud Mocks vs. Killer.sh Difficulty)](https://kodekloud.com/community/t/am-i-ready-for-the-cka-kodekloud-mocks-vs-killer-sh-difficulty/496955), 2026-03
