@@ -339,6 +339,8 @@ Service 문서의 정의는 "하나 이상의 Pod로 실행되는 네트워크 �
 
 LB 컨트롤러가 없는 클러스터(kubeadm 연습 클러스터, kind)에서 LoadBalancer Service의 `EXTERNAL-IP`는 `<pending>`으로 남습니다. 결과는 `.status.loadBalancer`에 기록됩니다.
 
+Service의 `spec.externalIPs` 필드는 보안 문제(CVE-2020-8554)로 1.36에서 사용 중단됐습니다. `kubectl get svc`의 `EXTERNAL-IP` 열과는 다른 것이고 새 Service에는 쓰지 않습니다([v1.36 공지](https://kubernetes.io/blog/2026/05/14/kubernetes-v1-36-deprecation-and-removal-of-service-externalips/)).
+
 ### 3-4. 명령으로 만들기
 
 시험에서는 `kubectl expose`가 가장 빠릅니다. 대상 리소스의 selector를 그대로 가져와 새 Service의 selector로 씁니다.
@@ -694,7 +696,7 @@ kubectl get referencegrant -A
 
 ### 4-8. 자주 틀리는 지점
 
-- Gateway API는 CRD라서 설치되어 있지 않으면 `kubectl get gateway`가 `the server doesn't have a resource type "gateway"`를 냅니다. Getting started 가이드의 설치 명령은 `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml`입니다(2026년 10월 가이드 기준). CRD만 있고 구현체가 없으면 Gateway가 `Programmed`가 되지 않습니다.
+- Gateway API는 CRD라서 설치되어 있지 않으면 `kubectl get gateway`가 `the server doesn't have a resource type "gateway"`를 냅니다. Getting started 가이드의 설치 명령은 `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml`입니다(2026년 10월 가이드 기준). 같은 줄의 최신 패치는 v1.6.3(2026-10-06, conformance 수정)입니다. CRD만 있고 구현체가 없으면 Gateway가 `Programmed`가 되지 않습니다.
 - `parentRefs`에 Gateway 이름을 틀리게 적으면 Route가 붙지 않습니다. `kubectl describe httproute`의 `Accepted`와 `ResolvedRefs`를 봅니다.
 - `hostnames`가 리스너의 `hostname`과 겹치지 않으면 요청이 이 Route로 오지 않습니다.
 - Route가 다른 네임스페이스에 있는데 `allowedRoutes`가 기본값 `Same`이면 붙지 않습니다.
@@ -881,7 +883,7 @@ Customizing DNS Service 문서 기준입니다.
 | Pod가 DNS 서버를 아는 방법 | kubelet의 `clusterDNS`(플래그 `--cluster-dns`) 값이 각 컨테이너의 resolv.conf로 들어감 |
 | 클러스터 도메인 | kubelet의 `clusterDomain`(플래그 `--cluster-domain`). 흔히 `cluster.local` |
 
-kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일 `/var/lib/kubelet/config.yaml`에 있습니다(예: `clusterDNS: [10.96.0.10]`, `clusterDomain: cluster.local`). `clusterDNS`와 `kube-dns` Service의 클러스터 IP가 어긋나면 Pod가 엉뚱한 DNS 서버를 봅니다. Service 이름 `kube-dns`와 옛 kube-dns 애드온은 다른 것입니다. v1.37 릴리스 글은 kube-dns 애드온 빌드를 v1.40 이후 중단할 예정이라고 적었고 CoreDNS는 앞으로도 `kube-dns`라는 Service 이름을 씁니다.
+kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일 `/var/lib/kubelet/config.yaml`에 있습니다(예: `clusterDNS: [10.96.0.10]`, `clusterDomain: cluster.local`). `clusterDNS`와 `kube-dns` Service의 클러스터 IP가 어긋나면 Pod가 엉뚱한 DNS 서버를 봅니다. Service 이름 `kube-dns`와 옛 kube-dns 애드온은 다른 것입니다. v1.37 릴리스 글은 kube-dns 애드온 빌드를 v1.40 이후 중단할 예정이라고 적었습니다. CoreDNS의 Service 이름이 `kube-dns`인 것은 옛 kube-dns와의 호환 때문이라고 Debugging DNS Resolution 문서가 적습니다.
 
 ### 6-2. 무엇이 어떤 이름을 받나
 

@@ -286,7 +286,7 @@ kubelet과 런타임은 같은 cgroup 드라이버를 써야 하고 systemd가 i
 
 - 1.34부터 kubelet은 드라이버를 런타임에 묻고 자기 설정의 `cgroupDriver`를 무시합니다(`KubeletCgroupDriverFromCRI`). containerd 2.x 노드라면 containerd의 `SystemdCgroup` 값부터 봅니다.
 - 1.35부터 kubelet은 cgroup v1 노드에서 기본으로 시작하지 않습니다(`failCgroupV1: true`).
-- 1.35가 containerd 1.x를 지원하는 마지막 버전입니다. 1.37 노드는 containerd 2.x를 전제로 합니다.
+- 1.35가 containerd 1.x를 지원하는 마지막 버전입니다. containerd 호환표 기준 1.37 노드는 containerd 2.3 이상이고 containerd 1.7은 2026-09-30에 지원이 끝났습니다.
 
 cgroup 내부 동작은 [쿠버네티스 아래의 리눅스 3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에 있습니다.
 
@@ -364,7 +364,7 @@ sudo kubeadm init \
   --pod-network-cidr=10.244.0.0/16
 ```
 
-`--control-plane-endpoint`는 나중에 HA로 늘릴 계획이면 처음부터 지정합니다(없이 만든 클러스터는 HA로 못 바꿈). `--pod-network-cidr`는 CNI가 요구할 때 호스트 네트워크와 다른 대역으로 줍니다. `--apiserver-advertise-address`는 광고 주소를 바꿀 때, `--cri-socket`은 런타임이 여럿일 때 씁니다.
+`--control-plane-endpoint`는 나중에 HA로 늘릴 계획이면 처음부터 지정합니다(없이 만든 클러스터는 HA로 못 바꿈). `--pod-network-cidr`는 CNI가 요구할 때 호스트 네트워크와 다른 대역으로 줍니다. `--apiserver-advertise-address`는 광고 주소를 바꿀 때, `--cri-socket`은 런타임이 여럿일 때 씁니다. `--config` 설정 파일로 init하면 파일의 `apiVersion`은 `kubeadm.k8s.io/v1beta4`입니다. `v1beta3`은 1.37에서 제거됐고 옛 파일은 1.35 kubeadm의 `kubeadm config migrate`로 바꿉니다(CHANGELOG-1.37).
 
 `init`이 끝나면 `admin.conf`를 `$HOME/.kube/config`로 복사하는 명령과 `kubeadm join` 명령이 출력됩니다.
 

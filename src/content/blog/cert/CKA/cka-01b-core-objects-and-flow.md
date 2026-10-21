@@ -167,7 +167,7 @@ etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 
 | replicaset-controller | ReplicaSet의 Pod 수를 replicas에 맞춤 |
 | endpointslice-controller | Service selector에 맞는 Pod로 EndpointSlice를 만듦. kube-proxy가 이것을 봄 |
 | node-lifecycle-controller | 노드 하트비트가 끊기면 NotReady/Unknown 표시와 `unreachable`, `not-ready` NoExecute 테인트 부착 |
-| taint-eviction-controller | NoExecute 테인트를 견디지 못하는 Pod를 삭제(v1.34에서 분리되어 GA) |
+| taint-eviction-controller | NoExecute 테인트를 견디지 못하는 Pod를 삭제(1.29 beta부터 기본 분리, 1.34 GA) |
 
 옛 v1 Endpoints API는 v1.33부터 deprecated라 조회하면 `v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice` 경고가 붙습니다. Service 디버깅은 `kubectl get endpointslices -l kubernetes.io/service-name=<svc>`로 익혀 둡니다. 노드가 죽은 뒤 약 50초 + 300초에 Pod가 옮겨지는 과정은 [Ch-01 3-4절](/blog/cert/cka/cka-01-why-kubernetes)에 있습니다.
 
@@ -608,7 +608,7 @@ kubectl explain pod.spec.containers.resources --recursive | head -30
 
 - 명령과 YAML, 오류 문구는 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. kubeadm 기본 인증서 경로와 `kubeadm certs check-expiration`은 kind에서 돌리지 않았고 kubeadm 문서 기준입니다.
 - 1-2절 표의 응답 코드는 kind에서 `kubectl -v=6`의 `status=` 값으로 확인했습니다. 서드파티 웹훅은 응답에 코드를 직접 넣을 수 있어 다를 수 있습니다.
-- Endpoints deprecated(v1.33), taint-eviction 컨트롤러 분리(v1.34), IPVS deprecated(v1.35), in-place resize GA(v1.35)는 버전에 따라 달라지는 항목입니다.
+- Endpoints deprecated(v1.33), taint-eviction 컨트롤러 분리(1.29 beta, 1.34 GA), IPVS deprecated(v1.35), in-place resize GA(v1.35)는 버전에 따라 달라지는 항목입니다.
 - 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다.
 
 ## 참고 자료

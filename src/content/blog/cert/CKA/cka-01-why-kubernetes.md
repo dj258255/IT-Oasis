@@ -234,7 +234,7 @@ kubectl get pod <Pod> -o jsonpath='{range .spec.tolerations[*]}{.key} {.effect} 
 # node.kubernetes.io/unreachable NoExecute 300
 ```
 
-Pod 삭제는 v1.34부터 별도의 taint-eviction 컨트롤러가 맡고 지워진 Pod를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러입니다. 둘 다 controller-manager 안에서 돌므로 controller-manager가 멈춘 동안에는 축출도 일어나지 않습니다. 주인 없는 단독 Pod는 다시 만들어지지 않습니다.
+Pod 삭제는 별도의 taint-eviction 컨트롤러가 맡고(1.29 beta부터 기본 분리, 1.34 GA) 지워진 Pod를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러입니다. 둘 다 controller-manager 안에서 돌므로 controller-manager가 멈춘 동안에는 축출도 일어나지 않습니다. 주인 없는 단독 Pod는 다시 만들어지지 않습니다.
 
 kind 워커 컨테이너를 `docker stop`으로 멈춰 잰 결과입니다. 약 45초 안에 노드가 `Unknown`이 되고 `unreachable` 테인트가 붙었습니다. `tolerationSeconds: 30`을 준 Pod는 그 30초 뒤, 기본 Pod는 약 300초 뒤 `TaintManagerEviction`(`Marking for deletion Pod shop/web-...`) 이벤트와 함께 `Terminating`이 됐고 Deployment의 대체 Pod는 다른 워커에서 `Running`이 됐습니다. 노드가 돌아오지 않으면 옛 Pod는 `Terminating`에 남습니다.
 
@@ -492,7 +492,7 @@ CPU 스로틀링입니다. CPU limit을 넘는 컨테이너는 죽지 않고 주
 
 - 명령과 출력은 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 노드 압박 축출은 실제 메모리를 쓰지 않고 `evictionHard`를 올려 만들었고 노드 장애는 워커 컨테이너를 멈춰 재현했습니다. kind에서는 노드에 `docker exec`로 들어가고 시험의 kubeadm 노드에서는 ssh 뒤 `sudo`를 붙입니다.
 - 노드 전체 메모리를 실제로 소진시키는 OOM은 같은 VM의 다른 작업에 영향을 줄 수 있어 재현하지 않았습니다.
-- `--node-monitor-grace-period` 기본값 50초와 taint-eviction 컨트롤러 분리(v1.34)는 버전에 따라 달라진 항목입니다.
+- `--node-monitor-grace-period` 기본값 50초와 taint-eviction 컨트롤러 분리(1.29 beta 기본 활성, 1.34 GA)는 버전에 따라 달라진 항목입니다.
 
 ## 참고 자료
 
@@ -503,7 +503,7 @@ CPU 스로틀링입니다. CPU limit을 넘는 컨테이너는 죽지 않고 주
 - Troubleshooting Clusters: https://kubernetes.io/docs/tasks/debug/debug-cluster/
 - Leases: https://kubernetes.io/docs/concepts/architecture/leases/
 - Taints and Tolerations: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
-- Container Runtime Interface: https://kubernetes.io/docs/concepts/architecture/cri/
+- Container Runtime Interface: https://kubernetes.io/docs/concepts/containers/cri/
 - Resource Management for Pods and Containers: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 - Assign Memory Resources to Containers and Pods: https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/
 - Pod Quality of Service Classes: https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/

@@ -385,7 +385,7 @@ API 버전은 두 층을 나눠서 봅니다.
 |---|---|---|
 | API 정의 | `metrics.k8s.io`가 `v1beta1`에서 `v1`로 변경 없이 승격(Stable). `v1beta1`은 전환 기간 동안 계속 쓸 수 있음 | CHANGELOG-1.37, KEP-5207, v1.37 릴리스 글 |
 | `kubectl top` | 1.37 kubectl이 `v1` 지원 추가. discovery로 제공 버전을 보고 `v1`이 없으면 `v1beta1`로 내려감 | CHANGELOG-1.37, KEP-5207 |
-| metrics-server | 최신 릴리스 v0.9.0(2026-07-13, 쿠버네티스 의존성 1.36.2)은 APIService `v1beta1.metrics.k8s.io`만 등록. `v1.metrics.k8s.io` 등록은 2026-09-04 main 브랜치 커밋이고 이 글을 쓰는 시점에 릴리스되지 않음 | metrics-server 릴리스 노트, `manifests/base/apiservice.yaml` |
+| metrics-server | 최신 릴리스 v0.9.0(2026-07-13, 쿠버네티스 의존성 1.36.2)은 APIService `v1beta1.metrics.k8s.io`만 등록. `v1.metrics.k8s.io` 등록은 2026-09-25 main 브랜치에 머지됐고 이 글을 쓰는 시점에 릴리스되지 않음(다음 릴리스에서 추가 예정) | metrics-server 릴리스 노트, `manifests/base/apiservice.yaml` |
 
 aggregation 계층은 등록된 버전만 응답하므로 v0.9.0에서 `/apis/metrics.k8s.io/v1/...`을 직접 부르면 `NotFound`입니다(kind에서 확인, KEP-5207의 버전 표와 같음). `kubectl top`은 버전을 알아서 고르니 경로를 손으로 칠 때만 `kubectl get apiservice | grep metrics`로 버전을 먼저 봅니다.
 
