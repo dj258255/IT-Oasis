@@ -29,7 +29,7 @@ seriesOrder: 4
 
 ## 1. 시험 안내서 항목과 이 글의 순서
 
-2025년 10월판 시험 안내서의 4영역 제목은 "Troubleshooting and Tuning Apache Spark DataFrame API Applications"이고 항목은 셋입니다.
+2026년 10월 8일판 시험 안내서(2025년 10월판과 같음)의 4영역 제목은 "Troubleshooting and Tuning Apache Spark DataFrame API Applications"이고 항목은 셋입니다.
 
 | 안내서 항목(원문 요약) | 이 글 |
 |---|---|
@@ -318,7 +318,7 @@ Performance Tuning 문서는 AQE를 런타임 통계로 가장 효율적인 실�
 ### 6-3. 조인 전략 바꾸기
 
 - sort-merge 조인에서 broadcast hash 조인으로: 한쪽의 런타임 크기가 AQE broadcast 기준(`spark.sql.adaptive.autoBroadcastJoinThreshold`, 기본은 10MB 기준과 같음)보다 작으면 바꿉니다. 문서는 처음부터 broadcast로 계획한 것만큼 효율적이지는 않다고 적습니다. 이미 셔플은 했기 때문입니다. 그래도 양쪽 정렬을 건너뛰고 `spark.sql.adaptive.localShuffleReader.enabled`(기본 true)로 셔플 파일을 로컬에서 읽어 네트워크를 아낍니다.
-- sort-merge 조인에서 shuffled hash 조인으로: 셔플 뒤 모든 파티션이 `spark.sql.adaptive.maxShuffledHashJoinLocalMapThreshold`보다 작으면 바꿉니다. 기본값이 0이라 기본 설정에서는 이 변환이 일어나지 않습니다.
+- sort-merge 조인에서 shuffled hash 조인으로: 셔플 뒤 모든 파티션이 `spark.sql.adaptive.maxShuffledHashJoinLocalMapThreshold`보다 작으면 바꿉니다. 기본값이 0이라 기본 설정에서는 이 변환이 일어나지 않습니다. 설정 설명은 이 값이 `advisoryPartitionSizeInBytes`(64MB) 이상일 때만 shuffled hash 조인을 고른다고 적으니 켜려면 64MB 이상으로 줍니다.
 
 ### 6-4. 계획에서 AQE 확인하기
 
@@ -399,7 +399,7 @@ DataFrame.explain(extended=None, mode=None)
 
 Stage 상세의 요약 지표는 문서 기준으로 Task 역직렬화 시간, Duration, GC time, 결과 직렬화 시간, 결과 가져오기 시간, 스케줄러 지연, Peak execution memory, Shuffle Read Size / Records, Shuffle Read Fetch Wait Time, Shuffle Remote Reads, Shuffle Write Time, Shuffle spill(memory), Shuffle spill(disk)입니다. Spill(disk)이 크면 실행 메모리가 모자라 디스크로 넘긴 것이고 GC time이 Duration에서 큰 몫을 차지하면 힙이 빡빡하다는 신호입니다. Stage 상세의 DAG는 노드를 WholeStageCodegen, Exchange 같은 연산 범위로 묶고 codegen id를 붙여서 SQL 탭의 계획과 대조할 수 있습니다.
 
-Stages 목록의 skipped는 실행할 필요가 없어 건너뛴 Stage이고 failed와 따로 셉니다. RDD Programming Guide는 셔플 파일을 해당 RDD가 쓰이는 동안 남겨 두어 계보를 다시 계산할 때 셔플을 다시 만들지 않는다고 적습니다. 같은 셔플 결과를 쓰는 두 번째 액션에서 앞 Stage가 skipped로 나오는 것이 이 재사용으로 보입니다. 이 연결은 화면으로 확인하지 못했습니다.
+Stages 목록의 skipped는 실행할 필요가 없어 건너뛴 Stage이고 failed와 따로 셉니다. RDD Programming Guide는 셔플 파일을 해당 RDD가 쓰이는 동안 남겨 두어 계보를 다시 계산할 때 셔플을 다시 만들지 않는다고 적습니다. Spark 4.2.0 소스가 이 재사용과 skipped 표시를 잇습니다. `DAGScheduler.getMissingParentStages`는 앞 셔플 Stage의 출력이 이미 있으면(`mapStage.isAvailable`) 그 Stage를 다시 제출할 목록에 넣지 않습니다. `AppStatusListener`는 Job이 끝날 때까지 제출되지 않고 대기 중으로 남은 Stage를 `SKIPPED`로 바꿉니다. 그래서 같은 셔플 결과를 쓰는 두 번째 액션에서는 앞 Stage가 skipped로 나옵니다.
 
 ## 9. 드라이버 로그와 익스큐터 로그
 
@@ -484,7 +484,7 @@ Python을 쓰면 힙 밖 메모리도 봐야 합니다. pandas UDF와 Python UDF
 
 ### 10-3. 헷갈리는 지점
 
-- `spark.driver.memory`는 드라이버 JVM이 뜬 뒤에는 바꿔도 효과가 없습니다. client 모드라면 `spark-submit --driver-memory`나 설정 파일로 시작할 때 줍니다. 노트북에서 `spark.conf.set`으로 바꾸는 보기는 오답입니다.
+- `spark.driver.memory`는 드라이버 JVM이 뜬 뒤에는 바꿔도 효과가 없습니다. client 모드라면 `spark-submit --driver-memory`나 설정 파일로 시작할 때 줍니다. 노트북에서 `spark.conf.set`으로 바꾸는 보기는 오답입니다. 기본 설정에서는 `CANNOT_MODIFY_CONFIG` 오류가 나고 값도 바뀌지 않습니다(문제 7).
 - 익스큐터 OOM을 메모리 증설로만 풀면 쏠린 키 하나가 그 메모리마저 넘길 때 다시 납니다. 4절의 진단이 먼저입니다.
 
 ## 11. 클러스터 저사용 진단
@@ -570,7 +570,7 @@ AQE의 셔플 파티션 합치기가 작은 파티션을 합쳤기 때문입니�
 <details>
 <summary>정답과 근거</summary>
 
-늘어나지 않습니다. 드라이버 메모리는 드라이버 JVM이 뜰 때 정해집니다. client 모드에서는 `spark-submit --driver-memory`나 기본 설정 파일처럼 시작 전에 줘야 합니다.
+늘어나지 않습니다. 기본 설정에서는 이 호출이 `CANNOT_MODIFY_CONFIG` 오류로 거부됩니다. Spark 4.2.0 소스의 `RuntimeConfig.requireNonStaticConf`가 SQL 설정이 아닌 SparkConf 항목을 막고(`spark.sql.legacy.setCommandRejectsSparkCoreConfs` 기본 true) SQL 마이그레이션 가이드는 이 검사가 3.0부터라고 적습니다. 드라이버 메모리는 드라이버 JVM이 뜰 때 정해집니다. client 모드에서는 `spark-submit --driver-memory`나 기본 설정 파일처럼 시작 전에 줘야 합니다.
 
 </details>
 
@@ -610,15 +610,13 @@ B입니다. `Exchange`가 셔플이니 A는 틀립니다. `AdaptiveSparkPlan` �
 
 - 설정 이름, 기본값, 버전은 2026년 10월 19일에 연 Spark 4.2.0 문서(Performance Tuning, Configuration, Tuning, Web UI, PySpark API)를 기준으로 했습니다. 시험 기준 버전이 공개되지 않아 3.5와 다를 수 있는 부분은 본문에 버전을 적었습니다.
 - 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark를 띄우지 못했습니다. `explain()` 출력 예시는 공식 문서 예제의 형태를 따라 적은 것이고 실제 출력은 다를 수 있습니다.
-- 2026년 10월 20일에 Spark 3.5.7 문서(Performance Tuning, Configuration)와 비교했습니다. AQE 설정 이름과 기본값은 같고 `parallelismFirst` 권고 문장과 `memoryOverhead` 최솟값 표기만 달랐습니다(본문에 적음).
-- 문서 문장이 없어 Spark 4.2.0 소스로 확인한 것이 있습니다. `AdaptiveSparkPlan isFinalPlan` 표기, `PushedFilters`와 `ReadSchema` 필드, Summary metrics 표의 백분위 열, broadcast 테이블을 드라이버로 모으는 동작, `SPARK_LOG_SCHEMA` 컬럼입니다. 화면으로는 보지 못했습니다.
-- 확인하지 못한 것을 따로 적습니다. salting은 공식 문서에서 찾지 못한 일반 기법입니다. skipped Stage가 셔플 재사용 때문이라는 연결은 문서 두 곳을 이어 붙인 해석입니다.
+- salting(4-3)은 Spark 공식 문서와 소스에서 찾지 못한 일반 기법입니다.
 - Databricks 런타임 고유의 기능(Photon, 자동 최적화 등)은 다루지 않았습니다. 시험 안내서는 Apache Spark 기준으로 씁니다.
 
 ## 참고 자료
 
 공식 자료
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (4영역 항목과 샘플 문항 2, 5)
+- Databricks, [Exam Guide, 2026-10-08판](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (4영역 항목과 샘플 문항 2, 5)
 - Apache Spark 4.2.0, [Performance Tuning](https://spark.apache.org/docs/latest/sql-performance-tuning.html) (AQE, 조인 힌트, 파티셔닝 힌트, 파일 파티션 설정)
 - Apache Spark 4.2.0, [Tuning Spark](https://spark.apache.org/docs/latest/tuning.html) (Memory Management Overview, Level of Parallelism, Memory Usage of Reduce Tasks)
 - Apache Spark 4.2.0, [Spark Configuration](https://spark.apache.org/docs/latest/configuration.html) (드라이버·익스큐터 메모리, 로그, 필터 푸시다운 설정, Configuring Logging)
@@ -629,7 +627,8 @@ B입니다. `Exchange`가 셔플이니 A는 틀립니다. `AdaptiveSparkPlan` �
 - Apache Spark 3.5.7, [Performance Tuning](https://spark.apache.org/docs/3.5.7/sql-performance-tuning.html), [Spark Configuration](https://spark.apache.org/docs/3.5.7/configuration.html) (버전 비교)
 - Apache Spark 4.2.0, [Running Spark on YARN](https://spark.apache.org/docs/latest/running-on-yarn.html) (Debugging your Application, `yarn logs`), [Migration Guide: Spark Core](https://spark.apache.org/docs/latest/core-migration-guide.html) (3.3의 log4j 2.x 전환), [RDD Programming Guide](https://spark.apache.org/docs/latest/rdd-programming-guide.html) (셔플 파일 보존)
 - PySpark 4.2.0 API: [DataFrame.repartitionByRange](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.repartitionByRange.html), [DataFrame.hint](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.hint.html), [RDD.coalesce](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.RDD.coalesce.html), [SparkContext.setLogLevel](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.SparkContext.setLogLevel.html)
-- Apache Spark 소스(v4.2.0): [AdaptiveSparkPlanExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/AdaptiveSparkPlanExec.scala), [DataSourceScanExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/DataSourceScanExec.scala), [BroadcastExchangeExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala), [stagespage-template.html](https://github.com/apache/spark/blob/v4.2.0/core/src/main/resources/org/apache/spark/ui/static/stagespage-template.html), [pyspark/logger/logger.py](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/logger/logger.py)
+- Apache Spark 소스(v4.2.0): [AdaptiveSparkPlanExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/AdaptiveSparkPlanExec.scala), [DataSourceScanExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/DataSourceScanExec.scala), [BroadcastExchangeExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala), [stagespage-template.html](https://github.com/apache/spark/blob/v4.2.0/core/src/main/resources/org/apache/spark/ui/static/stagespage-template.html), [pyspark/logger/logger.py](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/logger/logger.py), [DAGScheduler.scala](https://github.com/apache/spark/blob/v4.2.0/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala), [AppStatusListener.scala](https://github.com/apache/spark/blob/v4.2.0/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala), [RuntimeConfig.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/RuntimeConfig.scala)
+- Apache Spark 4.2.0, [SQL Migration Guide](https://spark.apache.org/docs/latest/sql-migration-guide.html) (3.0의 `SET` 명령 SparkConf 키 거부)
 - PySpark 4.2.0 API: [DataFrame.repartition](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.repartition.html), [DataFrame.coalesce](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.coalesce.html), [DataFrame.explain](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.explain.html), [DataFrame.toPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toPandas.html), [functions.broadcast](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.broadcast.html)
 
 이 시리즈

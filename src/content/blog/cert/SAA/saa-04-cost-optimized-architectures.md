@@ -30,7 +30,7 @@ seriesOrder: 4
 
 ## 1. 영역 4를 읽는 법
 
-시험 안내서의 영역 4는 과제 네 개(4.1 스토리지, 4.2 컴퓨팅, 4.3 데이터베이스, 4.4 네트워크)로 나뉩니다(2026년 10월 19일 확인). 눈에 띄는 점은 네 과제 모두 지식 항목 첫머리에 같은 두 줄이 반복된다는 것입니다.
+시험 안내서의 영역 4는 과제 네 개(4.1 스토리지, 4.2 컴퓨팅, 4.3 데이터베이스, 4.4 네트워크)로 나뉩니다(2026년 10월 19일 확인). 눈에 띄는 점은 네 과제 모두 지식 항목 앞부분에 같은 두 줄이 반복된다는 것입니다(4.1은 요청자 지불 항목 다음에 나옵니다).
 
 - 비용 관리 서비스 기능(예: 비용 할당 태그, 다중 계정 결제)
 - 비용 관리 도구와 용도(예: Cost Explorer, Budgets, Cost and Usage Report)
@@ -44,14 +44,14 @@ seriesOrder: 4
 | | Cost Explorer | Budgets | Cost and Usage Report(CUR) |
 |---|---|---|---|
 | 하는 일 | 비용과 사용량을 그래프로 보고 분석 | 한도를 정하고 알림이나 조치 | 가장 상세한 비용과 사용량 데이터를 S3로 |
-| 기간 | 최근 13개월과 이번 달, 앞으로 18개월 예측 | 월, 분기, 연, 사용자 지정 기간 | 청구 기간 단위로 누적 |
-| 갱신 | 최소 24시간에 한 번 | 하루 최대 세 번 | 하루 최소 한 번, 최대 세 번 |
-| 요금 | 콘솔은 무료, API는 페이지 요청당 0.01달러 | 예산 모니터링과 알림은 무료. 조치(action)를 단 예산은 매월 2개까지 무료, 그 뒤 예산당 하루 0.10달러. 예산 보고서는 1건 전달에 0.01달러(Budgets 요금 페이지, 2026년 10월 20일) | 이번에 확인 못 함 |
+| 기간 | 기본 최근 13개월과 이번 달(다년 데이터를 켜면 월 단위로 최대 38개월), 앞으로 18개월 예측 | 월, 분기, 연, 사용자 지정 기간 | 청구 기간 단위로 누적 |
+| 갱신 | 최소 24시간에 한 번 | 하루 최대 세 번 | 하루 최소 한 번 |
+| 요금 | 콘솔은 무료, API는 페이지 요청당 0.01달러 | 예산 모니터링과 알림은 무료. 조치(action)를 단 예산은 매월 2개까지 무료, 그 뒤 예산당 하루 0.10달러. 예산 보고서는 1건 전달에 0.01달러(Budgets 요금 페이지, 2026년 10월 20일) | CUR 자체는 무료이고 S3 저장 요금만 냄 |
 | 시험 문구 | "어떤 서비스가 비용을 늘렸는지 분석", "RI 구매 권장" | "한도의 80%에 도달하면 알림", "초과 시 IAM 정책으로 생성 차단" | "Athena로 시간 단위 비용을 쿼리", "리소스별 상세 청구 데이터" |
 
 Budgets 문서는 예산 유형을 여섯 가지로 나눕니다. 비용 예산, 사용량 예산, RI 사용률과 RI 적용률(coverage) 예산, Savings Plans 사용률과 적용률 예산입니다. 실제 지출과 예측 지출 둘 다로 알림을 걸 수 있고 알림은 이메일이나 SNS로 갑니다. 문서는 사용과 청구 사이에 지연이 있어서 알림이 오기 전에 한도를 넘을 수 있다고도 적습니다. 예산 조치(budget action)로 사용자 지정 IAM 정책을 붙여 추가 리소스 생성을 막는 예가 문서에 있습니다.
 
-CUR은 시간, 일, 월 단위로 서비스, 리소스, 태그별 비용을 CSV로 S3 버킷에 보냅니다. Athena, Redshift, Amazon Quick과 연동하도록 설정할 수 있습니다.
+CUR은 시간, 일, 월 단위로 서비스, 리소스, 태그별 비용을 S3 버킷에 보냅니다. 기존 CUR은 이제 문서에서 레거시로 분류되고 AWS는 Data Exports의 CUR 2.0을 권합니다. 내보내기는 하루 최소 한 번 CSV나 Parquet 파일로 쌓이고 Athena, Redshift, Amazon Quick과 연동할 수 있습니다.
 
 ### 2-2. 비용 할당 태그
 
@@ -69,7 +69,7 @@ CUR은 시간, 일, 월 단위로 서비스, 리소스, 태그별 비용을 CSV�
 
 ### 2-4. Trusted Advisor와 Support 플랜
 
-Trusted Advisor도 범위 안 서비스이고 비용 절감 권고를 냅니다. 지원 문서(2026년 10월 20일 확인)는 Basic Support 플랜에서는 Service Limits 범주 전체와 Security, Fault tolerance 범주 일부 검사만 쓸 수 있고 전체 검사(비용 최적화 포함)와 API는 Business Support+, Enterprise Support, Unified Operations 플랜에서 쓴다고 적습니다. 같은 문서는 Developer Support, Business Support, Enterprise On-Ramp가 2027년 1월 1일에 종료되고 Business Support+로 옮기라고 공지합니다.
+Trusted Advisor도 범위 안 서비스이고 비용 절감 권고를 냅니다. 지원 문서(2026년 10월 20일 확인)는 Basic Support 플랜에서는 Service Limits 범주 전체와 Security, Fault tolerance 범주 일부 검사만 쓸 수 있고 전체 검사(비용 최적화 포함)와 API는 Business Support+, Enterprise Support, Unified Operations 플랜에서 쓴다고 적습니다. 같은 문서는 Developer Support, Business Support, Enterprise On-Ramp가 2027년 1월 1일에 종료된다고 공지합니다. Developer와 Business 고객은 Business Support+로 옮기고 Enterprise On-Ramp 고객은 2026년 중에 Enterprise Support로 자동 전환됩니다. GovCloud(US) 리전에서는 기존 플랜이 유지됩니다.
 
 기존 강의 자료의 "Business 이상이면 Trusted Advisor 전체 검사"라는 문장은 플랜 이름만 바뀌는 중이라 의미는 같습니다. 시험 문항이 새 플랜 이름을 쓰는지는 알 수 없습니다. "유휴 리소스와 적정 크기 권고"가 단독으로 나오면 Compute Optimizer(4-3절), "여러 범주의 모범 사례 점검과 서비스 한도 확인"이면 Trusted Advisor로 구분했습니다.
 
@@ -153,7 +153,7 @@ S3 클래스별 가용성, AZ 수, 최소 보관 기간은 Ch-00 4-2절 표에 �
 | FSx for OpenZFS | 저비용용 HDD 저장 옵션 |
 | FSx for Lustre | S3 데이터셋 자동 가져오기와 내보내기로 고속 계층에 필요한 기간만 데이터를 둔다 |
 
-EFS 문서는 Elastic 처리량에서 읽거나 쓴 메타데이터와 데이터 양에만 요금을 낸다고 적습니다. 부하가 가끔 튀는 공유 디렉터리는 처리량을 미리 사 두는 Provisioned보다 Elastic이 맞는 경우가 많습니다. EFS 수명 주기 정책으로 IA나 Archive로 옮기는 일수 같은 세부값은 이번에 확인하지 않았습니다.
+EFS 문서는 Elastic 처리량에서 읽거나 쓴 메타데이터와 데이터 양에만 요금을 낸다고 적습니다. 부하가 가끔 튀는 공유 디렉터리는 처리량을 미리 사 두는 Provisioned보다 Elastic이 맞는 경우가 많습니다. EFS 수명 주기 정책의 기본값은 30일 동안 접근하지 않으면 IA, 90일이면 Archive로 옮기는 것입니다. 일수는 1, 7, 14, 30, 60, 90, 180, 270, 365일 중에서 고르고 IA나 Archive의 파일을 첫 접근 때 Standard로 되돌리는 설정도 있습니다.
 
 ### 3-7. AWS로 데이터를 옮기는 가장 싼 방법
 
@@ -164,7 +164,7 @@ EFS 문서는 Elastic 처리량에서 읽거나 쓴 메타데이터와 데이터
 | 온프레미스 NFS, SMB 파일을 온라인으로 대량 이관 | DataSync |
 | 협력사가 SFTP로 보내고 클라이언트를 바꿀 수 없음 | Transfer Family |
 | 이관 후에도 온프레미스 앱이 파일 공유로 계속 접근 | Storage Gateway(S3 File Gateway) |
-| 네트워크로는 너무 오래 걸리는 수백 TB | Snowball. 상용 리전 지원이 2026년 12월 31일에 끝난다는 공지가 있다 |
+| 네트워크로는 너무 오래 걸리는 수백 TB | Snowball. 신규 고객은 받지 않고 상용 리전 지원은 2026년 12월 31일에 끝난다. AWS는 신규 고객에게 DataSync나 AWS Data Transfer Terminal을 안내한다 |
 | 작은 파일 수백만 개 | 묶어서(tar, 큰 객체) 올린다. 요청 수와 Glacier 객체당 40KB 부담이 줄어든다 |
 
 배치 업로드가 유리한 이유는 S3 요금이 요청 수에도 붙기 때문입니다. 3-2절의 128KB 기준과 40KB 오버헤드도 같은 방향을 가리킵니다.
@@ -204,6 +204,7 @@ EC2 요금 페이지와 Savings Plans, Reserved Instances 문서 기준입니다
 
 - Reserved Instances 문서 첫머리에 "Reserved Instances보다 Savings Plans를 권한다"는 문장이 있습니다. RI는 특정 인스턴스 구성에 약정하고 Savings Plans는 시간당 사용 금액에 약정합니다.
 - RI는 실제 인스턴스가 아니고 조건이 맞는 On-Demand 사용에 붙는 청구 할인입니다. 자동으로 갱신되지 않아 만료되면 On-Demand 요금으로 돌아갑니다. 구매는 취소할 수 없고 수정, 교환, RI Marketplace 판매만 가능합니다.
+- RI 범위(scope)는 가격에 영향을 주지 않습니다. 리전 RI는 용량을 예약하지 않는 대신 리전 안 모든 AZ에 할인이 붙고 같은 패밀리 안 크기 유연성(Linux/Unix 기본 테넌시)이 있습니다. 영역 RI는 지정한 AZ의 용량을 예약하고 AZ와 크기 유연성이 없습니다.
 - 결제 방식은 전액 선결제, 부분 선결제, 선결제 없음 세 가지이고 선결제가 클수록 대체로 더 쌉니다.
 - Spot은 회수 2분 전에 중단 알림이 EventBridge 이벤트와 인스턴스 메타데이터로 옵니다. 중단 동작을 최대 절전으로 정하면 알림은 오지만 2분 유예 없이 바로 시작합니다.
 - Savings Plans에는 Database Savings Plans(최대 35%, 5-6절)와 SageMaker AI Savings Plans(최대 64%)도 있습니다. Savings Plans 유형 문서(2026년 10월 20일 확인)는 Compute Savings Plans가 테넌시(Dedicated, Dedicated Host)와 관계없이 적용되지만 Dedicated Instance가 하나라도 도는 리전마다 붙는 시간당 2달러 전용 요금은 Savings Plans로 할인되지 않는다고 적습니다.
@@ -235,7 +236,7 @@ Compute Optimizer 문서는 리소스의 설정과 사용률 지표를 분석해
 
 ### 4-4. Graviton
 
-AWS Graviton 제품 페이지(2026년 10월)는 Graviton 기반 인스턴스가 비교 가능한 x86 기반 EC2 인스턴스보다 최대 20% 저렴하고 같은 성능에 최대 60% 적은 에너지를 쓴다고 적습니다. 인스턴스 이름의 `g` 옵션(예: m7g, c7gn)이 Graviton입니다. 시험에서 "애플리케이션이 Arm에서 동작한다", "가격 대비 성능 개선"이 조건이면 Graviton 패밀리로 옮기는 보기가 맞습니다. 강의 자료에 자주 나오는 "가격 대비 성능 최대 40% 향상"은 이번에 연 페이지에서 찾지 못했습니다.
+AWS Graviton 제품 페이지(2026년 10월)는 Graviton 기반 인스턴스가 비교 가능한 x86 기반 EC2 인스턴스보다 최대 20% 저렴하고 같은 성능에 최대 60% 적은 에너지를 쓴다고 적습니다. 인스턴스 이름의 `g` 옵션(예: m7g, c7gn)이 Graviton입니다. 시험에서 "애플리케이션이 Arm에서 동작한다", "가격 대비 성능 개선"이 조건이면 Graviton 패밀리로 옮기는 보기가 맞습니다. 강의 자료에 자주 나오는 "가격 대비 성능 최대 40% 향상"은 Graviton2 기반 M6g 인스턴스 페이지가 M5와 비교해 적은 수치이고 지금 Graviton 제품 페이지에는 없습니다.
 
 ### 4-5. 확장 방식: 수평, 수직, 최대 절전
 
@@ -261,9 +262,9 @@ Compute Savings Plans가 EC2, Fargate, Lambda 모두에 적용된다는 점도 �
 
 ### 4-7. 로드 밸런서와 하이브리드 컴퓨팅
 
-안내서 4.2 기술 항목에 ALB(L7), NLB(L4), GWLB 비교가 있습니다. 비용 관점에서는 하나의 ALB가 호스트와 경로 규칙으로 여러 서비스를 나눌 수 있다는 점이 중요합니다. 서비스마다 로드 밸런서를 따로 만들 필요가 줄어듭니다. 로드 밸런서 요금 구조(LCU 등)는 이번에 요금 페이지에서 확인하지 않았습니다.
+안내서 4.2 기술 항목에 ALB(L7), NLB(L4), GWLB 비교가 있습니다. 비용 관점에서는 하나의 ALB가 호스트와 경로 규칙으로 여러 서비스를 나눌 수 있다는 점이 중요합니다. 서비스마다 로드 밸런서를 따로 만들 필요가 줄어듭니다. ELB 요금 페이지는 로드 밸런서가 떠 있는 시간과 분 단위로 쓴 용량 단위(ALB는 LCU, NLB는 NLCU, GWLB는 GLCU)에 요금을 매긴다고 적습니다. ALB의 LCU는 새 연결, 활성 연결, 처리 바이트, 규칙 평가 네 기준 중 가장 큰 값으로 셉니다.
 
-지식 항목의 하이브리드 컴퓨팅 예시는 AWS Outposts, 분산 컴퓨팅 예시는 엣지 처리입니다. 지연이나 데이터 상주 요건 때문에 온프레미스에서 AWS 인프라를 써야 하는 경우가 Outposts의 문구인데 Outposts 문서는 이번에 열어 보지 않았습니다.
+지식 항목의 하이브리드 컴퓨팅 예시는 AWS Outposts, 분산 컴퓨팅 예시는 엣지 처리입니다. 지연이나 데이터 상주 요건 때문에 온프레미스에서 AWS 인프라를 써야 하는 경우가 Outposts의 문구입니다. Outposts 문서는 AWS 인프라와 서비스, API, 도구를 고객 시설로 확장해 낮은 지연과 로컬 데이터 처리 요건에 쓰는 완전관리형 서비스로 설명합니다. 1U와 2U Outposts 서버는 판매가 끝났습니다.
 
 ### 4-8. 시험에서 갈리는 조건(컴퓨팅)
 
@@ -298,7 +299,7 @@ Compute Savings Plans가 EC2, Fargate, Lambda 모두에 적용된다는 점도 �
 "How Aurora serverless works" 문서 기준입니다.
 
 - 단위는 ACU이고 1 ACU는 약 2GiB 메모리와 그에 맞는 CPU, 네트워크입니다.
-- 범위는 0~256 ACU입니다. 최소값 0은 자동 일시 정지(auto-pause)를 지원하는 엔진 버전(예: Aurora MySQL 3.08.0 이상, Aurora PostgreSQL 16.3 이상 등)에서만 고를 수 있습니다. 부하가 없으면 0까지 내려갑니다.
+- 범위는 0~256 ACU입니다. 최소값 0은 자동 일시 정지(auto-pause)를 지원하는 엔진 버전(예: Aurora MySQL 3.08.0 이상, Aurora PostgreSQL 13.15, 14.12, 15.7, 16.3 이상)에서만 고를 수 있습니다. 부하가 없으면 0까지 내려갑니다.
 - 0.5 ACU 단위까지 잘게 늘고 줄며 용량은 초 단위로 측정하고 ACU-시간으로 과금합니다.
 - 소매, 게임, 스포츠 사이트의 주기적 프로모션, 필요할 때만 보고서를 만드는 DB, 개발과 테스트 환경이 문서가 드는 예시입니다. 꾸준한 부하에는 프로비저닝 클러스터가 맞다고 적습니다.
 
@@ -323,7 +324,7 @@ Ch-03 4-5절에서 본 대로 온디맨드는 요청당 요금, 프로비저닝�
 
 ### 5-5. 백업과 보존 정책
 
-안내서 기술 항목은 "스냅샷 빈도 같은 백업과 보존 정책 설계"를 듭니다. 이번에 RDS 자동 백업 보존 기간 최대값이나 백업 저장 요금 규칙은 문서로 확인하지 않아 원칙만 적습니다. 복구 시점 목표(RPO)가 짧을수록 스냅샷 빈도와 저장량이 늘고 보존 기간이 길수록 저장 비용이 늡니다. EBS 스냅샷 문서는 AWS Backup으로 만든 스냅샷도 아카이브 계층으로 보낼 수 있다고 적으니 장기 보존분은 3-5절의 아카이브 계층으로 내리는 설계가 가능합니다.
+안내서 기술 항목은 "스냅샷 빈도 같은 백업과 보존 정책 설계"를 듭니다. RDS 자동 백업 보존 기간은 0~35일이고 0이면 자동 백업이 꺼집니다(Multi-AZ DB 클러스터는 1~35일). RDS와 Aurora 모두 리전의 전체 DB 저장 용량의 100%까지는 백업 저장에 추가 요금이 없습니다. 복구 시점 목표(RPO)가 짧을수록 스냅샷 빈도와 저장량이 늘고 보존 기간이 길수록 저장 비용이 늡니다. EBS 스냅샷 문서는 AWS Backup으로 만든 스냅샷도 아카이브 계층으로 보낼 수 있다고 적으니 장기 보존분은 3-5절의 아카이브 계층으로 내리는 설계가 가능합니다.
 
 ### 5-6. Database Savings Plans
 
@@ -339,9 +340,9 @@ Savings Plans 문서(2026년 10월)는 Database Savings Plans를 Aurora, RDS, Dy
 | 시간 순서 측정값, 최근 데이터 위주 조회 | 시계열 | Timestream |
 | 관계 탐색(추천, 소셜 그래프) | 그래프 | Neptune |
 
-범용 관계형 DB에 분석 쿼리까지 몰아넣으면 인스턴스를 키우게 됩니다. 분석은 컬럼 형식으로 빼는 편이 같은 요구를 더 싸게 처리합니다. 서비스별 상세 특성은 이번에 각 문서를 열어 확인하지 않았고 Database Savings Plans 적용 대상 목록에서 이름만 확인했습니다.
+범용 관계형 DB에 분석 쿼리까지 몰아넣으면 인스턴스를 키우게 됩니다. 분석은 컬럼 형식으로 빼는 편이 같은 요구를 더 싸게 처리합니다. Neptune 문서는 Gremlin, openCypher, SPARQL을 지원하는 완전관리형 그래프 DB로 설명하고 추천, 사기 탐지, 지식 그래프를 용도로 듭니다. Timestream for LiveAnalytics는 2025년 6월 20일부터 신규 고객을 받지 않고 AWS는 신규 고객에게 Timestream for InfluxDB를 권합니다.
 
-이관 도구는 Ch-03 4-7절의 DMS와 DMS Schema Conversion(SCT)입니다. DMS 문서는 사용한 만큼만 내는 요금 모델이라고 적고 상용 엔진에서 RDS, Aurora, DynamoDB, S3 같은 관리형 서비스로 옮겨 비용을 줄이는 경우를 예로 듭니다.
+이관 도구는 Ch-03 4-7절의 DMS와 DMS Schema Conversion(AWS SCT 변환 엔진을 쓰는 DMS의 관리형 기능) 또는 AWS SCT입니다. DMS 문서는 사용한 만큼만 내는 요금 모델이라고 적고 상용 엔진에서 RDS, Aurora, DynamoDB, S3 같은 관리형 서비스로 옮겨 비용을 줄이는 경우를 예로 듭니다.
 
 ### 5-8. 시험에서 갈리는 조건(데이터베이스)
 
@@ -354,7 +355,7 @@ Savings Plans 문서(2026년 10월)는 Database Savings Plans를 Aurora, RDS, Dy
 | 몇 년 치 주문 이력 테이블, 거의 안 읽음 | DynamoDB Standard-IA 테이블 클래스 |
 | 반복 조회 때문에 RCU를 크게 잡음 | DAX |
 | 운영 DB에 분석 쿼리를 돌리느라 인스턴스를 키움 | 분석을 Redshift 또는 S3 + Athena로 분리 |
-| 상용 DB 라이선스 비용을 줄이려 오픈 소스 엔진으로 | DMS Schema Conversion(SCT) + DMS로 Aurora PostgreSQL |
+| 상용 DB 라이선스 비용을 줄이려 오픈 소스 엔진으로 | DMS Schema Conversion(또는 AWS SCT) + DMS로 Aurora PostgreSQL |
 
 ## 6. 과제 4.4 비용 최적화 네트워크
 
@@ -371,11 +372,11 @@ Savings Plans 문서(2026년 10월)는 Database Savings Plans를 Aurora, RDS, Dy
 | AWS 오리진(S3, ELB, API Gateway)에서 CloudFront | 항상 무료, CloudFront에서 사용자로 나가는 전송만 과금 | CloudFront 개발자 가이드 |
 | 인터넷으로 나가는 전송 | 모든 서비스와 리전 합산 월 100GB 무료(중국, GovCloud 제외) | EC2 On-Demand 요금 페이지 |
 
-AZ 간 전송의 GB당 단가와 리전 간 단가는 이번에 요금 페이지에서 수치를 찾지 못했습니다. 원칙은 "같은 AZ, 같은 리전, 사설 경로일수록 싸다"로 정리하고 수치는 시험 전에 다시 확인합니다.
+EC2 On-Demand 요금 페이지는 같은 AZ 안 전송은 무료이고 같은 리전의 AZ 사이 전송은 방향마다 GB당 0.01달러라고 적습니다. 리전 간 전송은 출발과 도착 리전에 따라 다르고 요금 데이터(2026년 10월 21일 요금 데이터)에서 버지니아에서 오하이오는 GB당 0.01달러, 서울에서 도쿄는 0.08달러였습니다. 원칙은 "같은 AZ, 같은 리전, 사설 경로일수록 싸다"로 정리하고 수치는 요금 페이지에서 다시 확인합니다.
 
 ### 6-2. NAT 게이트웨이 요금 구조
 
-"Pricing for NAT gateways" 문서는 NAT 게이트웨이가 사용 가능한 시간마다, 그리고 처리한 GB마다 요금을 낸다고 적습니다. Amazon VPC 요금 페이지의 미국 동부(오하이오) 예시는 시간당 0.045달러, 처리한 GB당 0.045달러입니다(2026년 10월 19일 확인). 처리 요금은 출발지와 목적지와 관계없이 붙고 일반 데이터 전송 요금도 따로 붙습니다. 서울 리전 단가는 이번에 확인하지 않았습니다.
+"Pricing for NAT gateways" 문서는 NAT 게이트웨이가 사용 가능한 시간마다, 그리고 처리한 GB마다 요금을 낸다고 적습니다. Amazon VPC 요금 페이지의 미국 동부(오하이오) 예시는 시간당 0.045달러, 처리한 GB당 0.045달러입니다(2026년 10월 19일 확인). 처리 요금은 출발지와 목적지와 관계없이 붙고 일반 데이터 전송 요금도 따로 붙습니다. 서울 리전은 시간당 0.059달러, 처리한 GB당 0.059달러입니다(2026년 10월 21일 요금 데이터).
 
 같은 문서가 권하는 절감 방법은 두 가지입니다.
 
@@ -412,7 +413,7 @@ AWS는 NAT 게이트웨이를 권합니다. 시험에서 NAT 인스턴스가 정
 |---|---|---|
 | 대상 | S3, DynamoDB만 | 대부분의 AWS 서비스, 다른 계정 서비스 |
 | 방식 | 라우팅 테이블에 접두사 목록 경로 추가 | 서브넷에 ENI 생성 |
-| 요금 | 추가 요금 없음 | PrivateLink 요금(시간, 처리량). 단가는 이번에 확인하지 않음 |
+| 요금 | 추가 요금 없음 | 엔드포인트가 AZ마다 떠 있는 시간(오하이오 0.01달러, 서울 0.013달러) + 처리 GB당 0.01달러(첫 1PB) |
 | 범위 | 같은 리전만. 다른 리전 S3로 가는 트래픽은 인터넷 게이트웨이로 간다 | |
 
 사설 서브넷의 EC2가 NAT 게이트웨이를 통해 같은 리전 S3로 매일 수 TB를 올린다면 NAT 처리 요금이 GB마다 붙습니다. 게이트웨이 엔드포인트를 만들면 같은 트래픽이 추가 요금 없이 엔드포인트로 갑니다. 영역 4에서 가장 자주 나오는 조합으로 보입니다.
@@ -427,7 +428,7 @@ AWS는 NAT 게이트웨이를 권합니다. 시험에서 NAT 인스턴스가 정
 | 대역폭 | 가변 | 터널당 최대 1.25Gbps, 큰 터널 5Gbps, ECMP로 합산 | 1, 10, 100, 400Gbps 전용, 파트너의 호스티드 연결 |
 | 시작 | 즉시 | 빠름 | 검토 최대 72영업시간 + 회선 작업 |
 
-Direct Connect 문서는 포트가 활성화되거나 LOA 발급 후 90일 중 먼저 오는 시점부터 과금이 시작된다고 적습니다. 전용 연결의 포트 속도는 만든 뒤 바꿀 수 없어서 속도를 바꾸려면 새 연결을 만듭니다. 대역폭 할당 문제에서 "필요한 대역폭이 2Gbps"면 VPN 터널 하나로는 부족하고 ECMP로 여러 터널을 묶거나 Direct Connect 속도를 고르는 판단이 됩니다. VPN과 Direct Connect의 시간 단가는 이번에 요금 페이지에서 확인하지 않았습니다.
+Direct Connect 문서는 포트가 활성화되거나 LOA 발급 후 90일 중 먼저 오는 시점부터 과금이 시작된다고 적습니다. 전용 연결의 포트 속도는 만든 뒤 바꿀 수 없어서 속도를 바꾸려면 새 연결을 만듭니다. 대역폭 할당 문제에서 "필요한 대역폭이 2Gbps"면 VPN 터널 하나로는 부족하고 ECMP로 여러 터널을 묶거나 Direct Connect 속도를 고르는 판단이 됩니다. 요금 페이지 기준 Site-to-Site VPN 연결은 오하이오와 서울 모두 시간당 0.05달러이고 Direct Connect 전용 포트는 시간당 1Gbps 0.30달러, 10Gbps 2.25달러(일본 제외)입니다. Direct Connect로 들어오는 전송은 무료입니다(2026년 10월 21일 요금 데이터).
 
 ### 6-5. 토폴로지: 피어링과 Transit Gateway
 
@@ -435,15 +436,15 @@ Transit Gateway 문서는 연결(attachment)마다 시간 요금, 처리한 트�
 
 | | VPC 피어링 | Transit Gateway |
 |---|---|---|
-| 요금 | 피어링 연결 자체 요금은 이번에 확인하지 않음. 전송 요금은 붙는다 | 연결 시간 + 처리량 |
+| 요금 | 연결 자체는 무료. 같은 AZ 안 전송은 무료, 같은 리전 AZ 간은 방향마다 GB당 0.01달러, 리전 간은 리전 간 전송 요금 | 연결 시간 + 처리량(버지니아 예시 연결당 시간 0.05달러, GB당 0.02달러) |
 | 확장 | VPC가 늘면 연결 수가 제곱으로 늘어남 | 허브 하나에 연결 추가 |
 | 맞는 경우 | VPC 몇 개, 대량 트래픽 | VPC 많음, 온프레미스 공유, 라우팅 분리 |
 
-VPC 둘 사이에 트래픽이 아주 많고 전이 라우팅이 필요 없다면 처리 요금이 없는 피어링이 쌀 수 있습니다. 이 비교도 Transit Gateway의 처리 요금 구조에서 끌어낸 추론이고 피어링 쪽 요금은 문서로 확인하지 못했습니다.
+VPC 둘 사이에 트래픽이 아주 많고 전이 라우팅이 필요 없다면 연결 요금과 처리 요금이 없고 전송 요금만 붙는 피어링이 쌀 수 있습니다. 두 요금 구조는 VPC 피어링 문서와 Transit Gateway 요금 페이지에서 확인했고 "더 싸다"는 결론은 그 구조에서 끌어낸 판단입니다.
 
 ### 6-6. CDN과 엣지 캐싱
 
-CloudFront 문서는 요금이 엣지에서 나가는 데이터 전송과 HTTP/HTTPS 요청에 붙는다고 적습니다. AWS 오리진에서 CloudFront로 가는 전송은 항상 무료입니다. 오리진(S3, ALB)에서 사용자에게 직접 나가던 전송을 CloudFront로 돌리면 오리진 쪽 전송 비용과 오리진 부하가 같이 줄어듭니다. 캐시 적중률이 높을수록 효과가 큽니다. 기본 캐시 기간은 24시간이고 오리진 헤더로 조정합니다.
+CloudFront 문서는 요금이 엣지에서 나가는 데이터 전송과 HTTP/HTTPS 요청에 붙는다고 적습니다. AWS 오리진에서 CloudFront로 가는 전송은 항상 무료입니다. 오리진(S3, ALB)에서 사용자에게 직접 나가던 전송을 CloudFront로 돌리면 오리진 쪽 전송 비용과 오리진 부하가 같이 줄어듭니다. 캐시 적중률이 높을수록 효과가 큽니다. 캐시 정책을 쓰지 않으면 기본 TTL은 24시간이고 캐시 정책이나 오리진 헤더로 조정합니다.
 
 Global Accelerator도 안내서 4.4에 예시로 나오지만 캐시를 하지 않으니 비용 절감 수단이 되기는 어렵습니다. 성능과 고정 IP가 조건일 때의 서비스입니다(Ch-03 5-2절).
 
@@ -575,11 +576,12 @@ B입니다. AWS 오리진에서 CloudFront로 가는 전송은 무료이고 같�
 
 ## 8. 범위와 한계
 
-- 요금 수치는 2026년 10월 19일에 연 AWS 요금 페이지와 문서 기준입니다. NAT 게이트웨이 단가는 미국 동부(오하이오) 예시이고 서울 리전 단가는 확인하지 않았습니다. 요금은 바뀌니 이 글의 금액을 계산 근거로 쓰지 않습니다.
+- 요금 수치는 2026년 10월 19일에 연 AWS 요금 페이지와 문서 기준입니다. NAT 게이트웨이와 전송 단가는 10월 21일에 요금 페이지가 쓰는 요금 데이터로 다시 확인했습니다. 요금은 바뀌니 이 글의 금액을 계산 근거로 쓰지 않습니다.
 - 서비스를 직접 만들어 청구서를 확인하지 않았습니다. 비용 비교는 모두 문서가 밝힌 요금 구조에서 읽은 것이고 실제 청구 금액으로 검증한 것이 없습니다. 프리 티어 실습 뒤 Cost Explorer로 본 결과를 따로 쓰겠습니다.
-- 확인하지 못한 것: AZ 간, 리전 간 데이터 전송 단가(EC2 On-Demand 요금 페이지를 다시 열었지만 수치가 표시되지 않음), VPN과 Direct Connect와 PrivateLink와 VPC 피어링 단가, 로드 밸런서 요금 구조, CUR 요금, RDS 자동 백업 보존 규칙, EFS 수명 주기 일수, Outposts, Timestream, Neptune의 상세 특성, Graviton "가격 대비 성능 40%" 문구의 출처, RI 범위(리전·영역) 세부.
+- 2026년 10월 21일 보강: AZ 간·리전 간 전송 단가, VPN, Direct Connect, PrivateLink, VPC 피어링, Transit Gateway 단가, 로드 밸런서 요금 구조, CUR 요금과 CUR 2.0, RDS 자동 백업 보존 규칙, EFS 수명 주기 일수, Outposts, Timestream, Neptune, Graviton 40% 출처, RI 범위를 문서와 요금 페이지가 쓰는 공식 요금 데이터로 확인해 본문에 넣었습니다. 요금 페이지 HTML에 숫자가 없는 경우 페이지가 불러오는 b0.p.awsstatic.com 요금 데이터를 읽었습니다.
+- 확인하지 못한 것: Compute Optimizer가 NAT 게이트웨이에 내는 권고의 구체 내용.
 - 2026년 10월 20일 보강: Budgets 요금, EBS 볼륨 크기 축소 불가와 24시간 4회 수정 한도, Savings Plans 네 유형의 최대 할인, Dedicated Host·Dedicated Instance·Capacity Reservation, Trusted Advisor와 Support 플랜 개편(2027년 1월 1일)을 문서로 확인해 넣었습니다.
-- 6-2절의 NAT 인스턴스 판단과 6-5절의 피어링 비교는 문서 문장이 아니고 요금 구조에서 끌어낸 추론입니다.
+- 6-2절의 NAT 인스턴스 판단과 6-5절의 "피어링이 더 쌀 수 있다"는 결론은 문서 문장이 아니고 요금 구조에서 끌어낸 추론입니다.
 - 리전 NAT 게이트웨이, Database Savings Plans, Support 플랜 이름 변경처럼 최근 문서에 있는 내용이 시험에 반영됐는지는 모릅니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난이도나 문구와 다를 수 있습니다.
 
@@ -632,3 +634,11 @@ B입니다. AWS 오리진에서 CloudFront로 가는 전송은 무료이고 같�
 - [What is AWS Transit Gateway for Amazon VPC?](https://docs.aws.amazon.com/vpc/latest/tgw/what-is-transit-gateway.html), [How VPC peering connections work](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html)
 - [AWS Site-to-Site VPN quotas](https://docs.aws.amazon.com/vpn/latest/s2svpn/vpn-limits.html), [Dedicated Direct Connect connections](https://docs.aws.amazon.com/directconnect/latest/UserGuide/dedicated_connection.html)
 - [What is Amazon CloudFront?](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html)
+
+2026년 10월 21일 보강 때 연 문서
+- [Data Exports (CUR 2.0)](https://docs.aws.amazon.com/cur/latest/userguide/what-is-data-exports.html), [CUR FAQs](https://aws.amazon.com/aws-cost-management/aws-cost-and-usage-reporting/faqs/), [CloudWatch billing and cost](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_billing.html), [Cost Explorer multi-year data](https://docs.aws.amazon.com/cost-management/latest/userguide/ce-multi-year-data.html)
+- [Trusted Advisor (Support 플랜 공지)](https://docs.aws.amazon.com/awssupport/latest/user/trusted-advisor.html), [Amazon EC2 M6g](https://aws.amazon.com/ec2/instance-types/m6g/), [What is AWS Outposts?](https://docs.aws.amazon.com/outposts/latest/userguide/what-is-outposts.html), [Reserved Instance scope](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/reserved-instances-scope.html)
+- [Aurora Serverless v2 how it works](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.how-it-works.html), [Backup retention period](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.BackupRetention.html), [Amazon RDS for MySQL pricing](https://aws.amazon.com/rds/mysql/pricing/), [Amazon Aurora pricing](https://aws.amazon.com/rds/aurora/pricing/)
+- [Timestream for LiveAnalytics availability change](https://docs.aws.amazon.com/timestream/latest/developerguide/AmazonTimestreamForLiveAnalytics-availability-change.html), [What is Amazon Neptune?](https://docs.aws.amazon.com/neptune/latest/userguide/intro.html), [DMS Schema Conversion](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_SchemaConversion.html)
+- [EFS lifecycle management](https://docs.aws.amazon.com/efs/latest/ug/lifecycle-management-efs.html), [What is AWS Snowball Edge?](https://docs.aws.amazon.com/snowball/latest/developer-guide/whatisedge.html)
+- [EC2 On-Demand pricing](https://aws.amazon.com/ec2/pricing/on-demand/), [Amazon VPC pricing](https://aws.amazon.com/vpc/pricing/), [What is VPC peering?](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html), [Site-to-Site VPN pricing](https://aws.amazon.com/vpn/pricing/), [Direct Connect pricing](https://aws.amazon.com/directconnect/pricing/), [PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/), [Transit Gateway pricing](https://aws.amazon.com/transit-gateway/pricing/), [Elastic Load Balancing pricing](https://aws.amazon.com/elasticloadbalancing/pricing/)

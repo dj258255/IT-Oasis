@@ -26,7 +26,7 @@ seriesOrder: 3
 
 ---
 
-시험 안내서(2025년 10월판) 3영역의 항목은 열 개입니다. 비슷한 것끼리 묶어 목차로 씁니다. 11절과 12절은 목록에 없지만 중복 제거, 집계, 배열 처리 문항의 보기에 섞이기 쉬워 덧붙였습니다.
+시험 안내서(2026년 10월 8일판, 2025년 10월판과 같음) 3영역의 항목은 열 개입니다. 비슷한 것끼리 묶어 목차로 씁니다. 11절과 12절은 목록에 없지만 중복 제거, 집계, 배열 처리 문항의 보기에 섞이기 쉬워 덧붙였습니다.
 
 | 안내서 항목 | 이 글 |
 |---|---|
@@ -260,7 +260,7 @@ orders.select(
 
 `approx_count_distinct`도 셔플을 합니다. 차이는 셔플하는 양입니다. Spark 4.2.0 소스(`AggUtils.planAggregateWithOneDistinct`)를 보면 `count_distinct`는 그룹 키에 DISTINCT 대상 컬럼을 더한 조합으로 먼저 묶습니다. 그래서 그룹마다 고유값이 모두 셔플됩니다. `approx_count_distinct`는 일반 집계처럼 파티션 안에서 부분 집계를 해 그룹마다 HyperLogLog++ 스케치 하나를 만들고 그 스케치만 셔플합니다. 고유값이 많을수록 셔플 데이터가 크게 줄어듭니다. 이 설명은 소스를 읽고 정리한 것이고 같은 내용의 문서 문장은 찾지 못했습니다.
 
-`approx_count_distinct` 문서는 `rsd`를 0.01보다 작게 잡을 거면 `count_distinct()`를 쓰는 편이 효율적이라고 적습니다. `countDistinct`는 3.5.9 문서에 `count_distinct`의 별칭으로 나오고 `count_distinct`를 직접 쓰라고 권합니다. 4.2.0 함수 목록에서는 `countDistinct` 페이지를 찾지 못했습니다.
+`approx_count_distinct` 문서는 `rsd`를 0.01보다 작게 잡을 거면 `count_distinct()`를 쓰는 편이 효율적이라고 적습니다. `countDistinct`는 3.5.9 문서에 `count_distinct`의 별칭으로 나오고 `count_distinct`를 직접 쓰라고 권합니다. 4.2.0 API 문서에는 `countDistinct` 페이지가 없지만 4.2.0 소스(`functions/builtin.py`)에는 같은 설명의 별칭으로 남아 있어 호출은 됩니다.
 
 ### 3-2. 평균, 합계, groupBy
 
@@ -353,11 +353,11 @@ parts = dated.select(
 |---|---|---|
 | `to_date("2026-13-45")` | null | 오류 |
 | `CAST('a' AS INT)` | null | `CAST_INVALID_INPUT` 오류 |
-| `F.col("amount") / 0` | null(문서 문장으로는 확인하지 못함) | 0으로 나누기 오류(`try_divide` 설명 기준) |
+| `F.col("amount") / 0` | null | 0으로 나누기 오류(`try_divide` 설명과 4.2.0 소스 `DivModLike`) |
 | `size(null)` | -1 | null(2-3절) |
 | null로 받고 싶을 때 | 그대로 | `try_to_date`(4.0.0~), `try_to_timestamp`(3.5.0~), `Column.try_cast`(4.0.0~), `try_divide`(3.2.0~) |
 
-`unix_timestamp`의 API 문서는 3.5.9와 4.2.0 모두 "실패하면 null을 돌려준다"고 적습니다. ANSI 문서와 엇갈리는 부분인데 4.x 기본 설정에서는 ANSI 문서 쪽 동작을 기준으로 보는 편이 안전합니다. 실제 동작은 실행해서 확인하겠습니다.
+`unix_timestamp`의 API 문서는 3.5.9와 4.2.0 모두 "실패하면 null을 돌려준다"고 적습니다. ANSI 문서와 엇갈리는데 4.2.0 소스를 보면 ANSI 문서 쪽이 맞습니다. `UnixTimestamp` 식의 `failOnError` 기본값이 `spark.sql.ansi.enabled`이고 이 값이 true면 해석 실패에서 예외를 던지며 false일 때만 null을 돌려줍니다. 4.x 기본 설정에서는 오류가 납니다.
 
 같은 가이드는 4.0에서 `spark.sql.legacy.timeParserPolicy` 기본값이 `EXCEPTION`에서 `CORRECTED`로 바뀌었다고 적습니다. ANSI 모드에서는 `CANNOT_PARSE_TIMESTAMP` 오류가 나고 ANSI가 꺼져 있으면 null이 나옵니다.
 
@@ -432,7 +432,7 @@ same_user = a.join(b, (F.col("a.user_id") == F.col("b.user_id")) &
                       (F.col("a.order_id") < F.col("b.order_id")))
 ```
 
-조인 키가 null이면 `=` 비교가 null이 되어 매칭되지 않습니다. null끼리 맞추려면 null-safe 비교(`<=>`, PySpark에서는 `Column.eqNullSafe`)를 씁니다. 이 내용은 NULL Semantics 문서 기준이고 `eqNullSafe` API 페이지는 이번에 열지 않았습니다.
+조인 키가 null이면 `=` 비교가 null이 되어 매칭되지 않습니다. null끼리 맞추려면 null-safe 비교(`<=>`, PySpark에서는 `Column.eqNullSafe`)를 씁니다. `eqNullSafe` 문서 예제에서 null 값과 `'foo'`를 비교하면 `==`는 NULL, `eqNullSafe`는 false이고 `eqNullSafe(None)`은 true입니다.
 
 ### 5-3. broadcast 조인
 
@@ -457,7 +457,7 @@ joined.explain()   # 물리 계획에 BroadcastHashJoin이 나오는지 본다
 ### 헷갈리는 지점
 
 - `how`를 생략하면 inner입니다. 샘플 문항류에서 "왼쪽 행이 모두 남는다"를 고르려면 `how="left"`가 있어야 합니다.
-- `left_semi`는 오른쪽에 매칭이 여러 개여도 왼쪽 행을 한 번만 돌려줍니다(semi join 정의상 매칭 여부만 본다). inner 조인 뒤 왼쪽 컬럼만 고르는 것과는 중복 처리에서 다릅니다. 이 차이는 SQL 레퍼런스 정의에서 추론한 것입니다.
+- `left_semi`는 오른쪽에 매칭이 여러 개여도 왼쪽 행을 한 번만 돌려줍니다. 4.2.0 소스의 해시 조인 구현(`HashJoin.semiJoin`)은 왼쪽 행마다 매칭이 있는지만 보고 걸러 내는 `filter`라서 행이 늘지 않습니다. inner 조인 뒤 왼쪽 컬럼만 고르면 매칭 수만큼 행이 늘어나니 중복 처리에서 다릅니다.
 - broadcast 대상은 작은 쪽입니다. 큰 쪽을 `broadcast()`로 감싸면 드라이버와 익스큐터 메모리를 크게 씁니다.
 - broadcast 조인(`F.broadcast(df)`)과 broadcast 변수(`sc.broadcast(value)`)는 다른 API입니다. 10절에서 다룹니다.
 
@@ -503,7 +503,7 @@ oct_orders.unionByName(with_note, allowMissingColumns=True)
 ### 헷갈리는 지점
 
 - `union`이 중복을 없앤다는 보기는 틀립니다. SQL의 `UNION`과 이름이 같아서 생기는 함정입니다. 예전 자료 중에도 union이 이름으로 맞춘다고 잘못 적은 글이 있습니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 5절).
-- 위치가 바뀐 두 DataFrame의 컬럼 타입이 같으면 `union`은 오류 없이 값을 섞습니다. 4.2.0 `union` 문서 예제 2는 `id LONG, money INT`와 `money INT, id LONG`을 union해도 오류 없이 위치대로 붙는 모습을 보여 줍니다. 숫자 타입끼리는 넓은 타입으로 맞춰지는 것으로 보이고 문자열과 숫자처럼 계열이 다른 타입끼리의 동작은 이번에 확인하지 못했습니다.
+- 위치가 바뀐 두 DataFrame의 컬럼 타입이 같으면 `union`은 오류 없이 값을 섞습니다. 4.2.0 `union` 문서 예제 2는 `id LONG, money INT`와 `money INT, id LONG`을 union해도 오류 없이 위치대로 붙는 모습을 보여 줍니다. 타입이 다르면 위치마다 공통 타입을 찾아 캐스트합니다(4.2.0 소스 `WidenSetOperationTypes`). 문자열과 정수가 같은 위치에 오면 ANSI가 꺼진 3.5에서는 STRING으로 맞추고 ANSI가 켜진 4.x에서는 BIGINT로 맞춥니다(ANSI Compliance 문서의 "least common type between Byte/Short/Int and String is Long"). 4.x에서는 숫자로 읽을 수 없는 문자열이 있으면 캐스트에서 오류가 납니다.
 - 결과 컬럼 이름은 첫 번째 DataFrame을 따릅니다. 문서 예제 3에서 `A, B`와 `C, D`를 union한 결과 컬럼은 `A, B`입니다.
 - 집합 연산(`intersect`, `subtract`)은 null끼리 같은 값으로 봅니다(NULL Semantics 문서).
 
@@ -573,7 +573,7 @@ spark.read.parquet("/out/orders_typed").printSchema()   # 다시 읽어도 같�
 ### 헷갈리는 지점
 
 - `df.schema()`처럼 괄호를 붙이면 오류입니다. `schema`는 속성입니다. 샘플 문항 4번의 오답 보기 B에 이 코드가 있습니다.
-- 파일에서 읽을 때 지정한 `nullable=False`가 그대로 지켜진다고 보기 어렵습니다. 파일 소스가 nullable을 어떻게 다루는지는 이번에 문서로 확인하지 못해 시험 답으로 쓰지 않겠습니다.
+- 파일에서 읽을 때 지정한 `nullable=False`는 지켜지지 않습니다. 4.2.0 소스의 `DataSource.resolveRelation`이 파일 소스의 데이터 스키마를 기본으로 `asNullable`로 바꿉니다. Parquet 문서도 읽을 때 모든 컬럼이 호환성 때문에 nullable로 바뀐다고 적습니다.
 - CSV `enforceSchema` 기본값 true는 지정한 스키마를 파일에 강제로 적용하고 헤더 이름을 무시합니다. 문서는 잘못된 결과를 피하려면 끄라고 권합니다.
 
 ## 8. 정렬, 반복, 리스트 변환
@@ -701,7 +701,7 @@ orders.createOrReplaceTempView("orders_v")
 spark.sql("SELECT order_id, grade_of(amount) AS grade FROM orders_v")
 ```
 
-반환 타입을 실제 값과 다르게 선언하면 결과가 틀어집니다. 예를 들어 위 `item_count`를 `returnType` 없이 만들면 정수를 돌려주는데 선언은 문자열이 됩니다. Arrow를 쓰지 않던 시절 이런 불일치가 null로 바뀐다는 설명을 자주 보지만 4.2.0 문서에서 그 동작을 적은 문장은 찾지 못했습니다. 반환 타입은 항상 맞춰 적습니다.
+반환 타입을 실제 값과 다르게 선언하면 결과가 틀어집니다. Arrow를 쓰지 않는 경로는 4.2.0 소스(`EvaluatePython.makeFromJava`)에서 선언 타입과 맞지 않는 값을 null로 바꾸고 선언이 문자열일 때만 값을 문자열로 바꿔 받습니다. 그래서 위 `item_count`를 `returnType` 없이 만들면 오류도 null도 없이 정수가 `"2"` 같은 문자열로 나옵니다. 4.2.0 기본인 Arrow 경로의 변환 규칙은 확인하지 못했습니다. 반환 타입은 항상 맞춰 적습니다.
 
 ### 9-2. pandas UDF
 
@@ -1070,13 +1070,13 @@ B. `values`를 주면 결과 스키마를 바로 정할 수 있어 고유값 계
 
 - 시그니처와 기본값은 2026년 10월 19일에 연 PySpark 4.2.0 API 문서와 Spark 4.2.0 문서 기준입니다. 3.x와 다른 부분은 문서에 버전이 적힌 것만 표시했습니다(ANSI 기본 켜짐 4.0, `size(null)`의 -1과 null, `try_to_date` 4.0.0, `try_to_timestamp` 3.5.0, `Column.try_cast` 4.0.0, `StructType.fromDDL` 4.0.0, 컬럼 위치 정렬 4.0.0, UDF 호출 쪽 키워드 인자 4.0.0, 타입 힌트 `udf`의 벡터화 4.1.0, Arrow 기본 4.2, Python UDF Arrow 기본 4.2, `countDistinct`는 3.5.9 문서와 비교). 2026년 10월 20일에 2-3절, 4-2절, 6절, 8-3절, 9절을 다시 확인해 고쳤고 11절과 12절을 더했습니다. 시험의 기준 Spark 버전은 공개되지 않았습니다.
 - 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어 PySpark를 띄울 수 없었습니다. "문서 기준 예상 결과"는 API 문서의 정의와 예제로 예상한 값이고 epoch 값은 Python `datetime`으로 계산했습니다.
-- 문서로 확인하지 못해 추론이나 미확인으로 표시한 내용은 다음과 같습니다. `union`에서 문자열과 숫자처럼 계열이 다른 타입이 같은 위치에 올 때의 동작, ANSI가 꺼진 3.5에서 0으로 나눈 결과(null), `approx_count_distinct`와 `count_distinct`의 셔플 비교(소스 기준), 12-1절 고차 함수의 결과값, `left_semi`의 중복 처리, UDF 반환 타입 불일치의 결과, 파일 소스의 nullable 처리, 내장 함수가 UDF보다 낫다는 권고, `eqNullSafe` API, `unix_timestamp` API 문서와 ANSI 문서의 엇갈림입니다.
-- `summary()`의 Parameters 설명은 4.2.0 문서에서 본문과 어긋나 보여 본문과 예제를 따랐습니다.
+- 2026년 10월 21일에 Spark 4.2.0 소스로 `union`의 타입 맞추기, 0으로 나누기, `unix_timestamp`의 ANSI 동작, `left_semi`의 중복 처리, 비 Arrow UDF의 반환 타입 불일치, 파일 소스의 nullable 처리, `countDistinct` 별칭을 확인해 본문에 반영했습니다. `approx_count_distinct`와 `count_distinct`의 셔플 비교도 문서 문장 없이 소스로만 확인한 내용입니다.
+- 확인하지 못한 것은 Arrow 경로 UDF의 반환 타입 불일치 결과, 내장 함수가 UDF보다 낫다는 권고의 공식 문서 문장, 12-1절 고차 함수의 실제 결과값(실행하지 않음)입니다.
 
 ## 참고 자료
 
 시험
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (Section 3 항목과 샘플 문항 3, 4, 6번)
+- Databricks, [Exam Guide, 2026-10-08판](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (Section 3 항목과 샘플 문항 3, 4, 6번)
 
 PySpark 4.2.0 API
 - DataFrame: [withColumn](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumn.html), [withColumns](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumns.html), [drop](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.drop.html), [withColumnRenamed](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumnRenamed.html), [withColumnsRenamed](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.withColumnsRenamed.html), [filter](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.filter.html), [distinct](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.distinct.html), [dropDuplicates](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.dropDuplicates.html), [dropna](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.dropna.html), [fillna](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.fillna.html), [describe](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.describe.html), [summary](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.summary.html), [groupBy](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.groupBy.html), [join](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.join.html), [crossJoin](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.crossJoin.html), [union](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.union.html), [unionAll](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.unionAll.html), [unionByName](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.unionByName.html), [sort](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.sort.html), [collect](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.collect.html), [head](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.head.html), [tail](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.tail.html), [toLocalIterator](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toLocalIterator.html), [toPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toPandas.html), [printSchema](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.printSchema.html), [hint](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.hint.html)
@@ -1086,7 +1086,7 @@ PySpark 4.2.0 API
 - 3.5.9 비교: [functions.countDistinct (3.5.9)](https://spark.apache.org/docs/3.5.9/api/python/reference/pyspark.sql/api/pyspark.sql.functions.countDistinct.html), [functions.unix_timestamp (3.5.9)](https://spark.apache.org/docs/3.5.9/api/python/reference/pyspark.sql/api/pyspark.sql.functions.unix_timestamp.html)
 
 Apache Spark 4.2.0 문서
-- [NULL Semantics](https://spark.apache.org/docs/latest/sql-ref-null-semantics.html), [JOIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-join.html), [ORDER BY](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-orderby.html)
+- [NULL Semantics](https://spark.apache.org/docs/latest/sql-ref-null-semantics.html), [Parquet Files](https://spark.apache.org/docs/latest/sql-data-sources-parquet.html), [Column.eqNullSafe](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Column.eqNullSafe.html), [JOIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-join.html), [ORDER BY](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-orderby.html)
 - [ANSI Compliance](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html), [SQL Migration Guide](https://spark.apache.org/docs/latest/sql-migration-guide.html), [PySpark Migration Guide](https://spark.apache.org/docs/latest/api/python/migration_guide/pyspark_upgrade.html)
 - [Performance Tuning](https://spark.apache.org/docs/latest/sql-performance-tuning.html), [RDD Programming Guide](https://spark.apache.org/docs/latest/rdd-programming-guide.html)
 - [Spark SQL, Built-in Functions: Collection Functions](https://spark.apache.org/docs/latest/api/sql/collection-functions/) (`size`, `cardinality`), [Aggregate Functions](https://spark.apache.org/docs/latest/api/sql/agg-functions/) (`approx_count_distinct`)
@@ -1096,3 +1096,7 @@ Apache Spark 4.2.0 문서
 Apache Spark 4.2.0 소스
 - [sql/core/.../aggregate/AggUtils.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/aggregate/AggUtils.scala) (`planAggregateWithOneDistinct`)
 - [sql/core/.../window/WindowExecBase.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/window/WindowExecBase.scala) (파티션 없는 윈도 경고)
+- [sql/catalyst/.../analysis/TypeCoercionBase.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/TypeCoercionBase.scala) (`WidenSetOperationTypes`), [AnsiStringPromotionTypeCoercion.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/AnsiStringPromotionTypeCoercion.scala), [TypeCoercion.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/analysis/TypeCoercion.scala) (union의 타입 맞추기)
+- [sql/catalyst/.../expressions/arithmetic.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/arithmetic.scala) (`DivModLike`), [datetimeExpressions.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/datetimeExpressions.scala) (`UnixTimestamp`의 `failOnError`)
+- [sql/core/.../joins/HashJoin.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/joins/HashJoin.scala) (`semiJoin`), [sql/core/.../datasources/DataSource.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSource.scala) (`resolveRelation`의 `asNullable`), [sql/core/.../python/EvaluatePython.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/python/EvaluatePython.scala) (`makeFromJava`)
+- [python/pyspark/sql/functions/builtin.py](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/sql/functions/builtin.py) (`countDistinct`)

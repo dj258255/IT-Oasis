@@ -52,7 +52,7 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
 4. 그다음은 보통의 Spark 실행 과정이라 옵티마이저와 실행 엔진의 최적화를 그대로 씁니다.
 5. 결과는 Apache Arrow로 인코딩한 행 배치로 gRPC 스트림을 통해 클라이언트로 돌아옵니다.
 
-해석 전 계획을 보낸다는 점이 시험 보기를 가르는 기준입니다. 클라이언트는 컬럼 이름이 실제로 있는지 모른 채 계획을 보내고 이름 확인(analysis)은 서버가 합니다. 그래서 Connect에서는 존재하지 않는 컬럼을 참조해도 그 줄에서 바로 오류가 나지 않고 액션이나 스키마 조회처럼 서버에 물어볼 때 오류가 날 수 있습니다. 이 오류 시점은 구조에서 추론한 것이고 실행해서 확인하지 않았습니다.
+해석 전 계획을 보낸다는 점이 시험 보기를 가르는 기준입니다. 클라이언트는 컬럼 이름이 실제로 있는지 모른 채 계획을 보내고 이름 확인(analysis)은 서버가 합니다. 4.2.0 문서의 "Eager vs Lazy: Spark Connect vs Spark Classic"이 이 차이를 예로 듭니다. `spark.sql("select 1 as a, 2 as b").filter("c > 1")`은 Classic에서는 그 줄에서 컬럼 `c`가 없다는 오류를 냅니다. Connect에서는 그 줄은 통과하고 `df.columns`나 `df.show()`를 부를 때 오류가 납니다. 스키마 조회, `explain`, `persist`, 액션처럼 해석된 계획이 필요한 연산이 서버에 분석 요청을 보내기 때문입니다. `df["c"]`와 `df.c`로 컬럼을 꺼낼 때 이름을 바로 검사하던 Connect Python 클라이언트 동작은 각각 4.1과 4.2에서 없어졌습니다(PySpark 마이그레이션 가이드).
 
 ### 2-2. 클래식 PySpark와 비교
 
@@ -95,7 +95,7 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
 | 정적 Spark 설정 | 위와 같은 이유 |
 | `df._jdf` 같은 JVM 내부 필드 | 클라이언트가 Py4J를 쓰지 않는다 |
 
-쓸 수 있는 것은 DataFrame, functions, Column 등 PySpark API 대부분과 Streaming API 대부분(`DataStreamReader`, `DataStreamWriter`, `StreamingQuery`, `StreamingQueryListener`)입니다. UDF도 됩니다. PySpark API 문서는 함수마다 "Supports Spark Connect" 표시를 달아서 옮기기 전에 확인하라고 안내합니다.
+문서의 PySpark 항목은 3.4부터 DataFrame, Functions, Column 등 PySpark API 대부분을 지원한다고 적습니다. UDF와 Streaming API 대부분(`DataStreamReader`, `DataStreamWriter`, `StreamingQuery`, `StreamingQueryListener`)을 지원한다는 문장은 같은 절의 Scala 항목(3.5부터)에 있습니다. Python 쪽 범위는 PySpark API 참조 첫 화면의 안내문이 정리합니다. Spark SQL, pandas API on Spark, Structured Streaming, MLlib(DataFrame 기반)가 Spark Connect를 지원한다는 문장이고 4.0.0 문서부터 있습니다(3.5.6 문서에는 없습니다). API 문서는 함수마다 "Supports Spark Connect" 표시를 달아서 옮기기 전에 확인하라고 안내합니다.
 
 RDD에 기대던 코드는 DataFrame 함수로 바꿔야 합니다.
 
@@ -113,7 +113,7 @@ status_map = spark.createDataFrame([("PAID", 1), ("CANCELLED", 0)], "status stri
 flagged = orders.join(F.broadcast(status_map), "status", "left")
 ```
 
-accumulator와 broadcast 변수는 `SparkContext`에 달린 API라 Connect에서 막힌다고 보는 게 맞습니다. 이 둘이 막힌다는 문장을 문서에서 따로 찾지는 못했고 `SparkContext`를 쓸 수 없다는 문장에서 추론했습니다.
+accumulator와 broadcast 변수도 Connect에서 막힙니다. PySpark에서 `accumulator()`와 `broadcast()`는 `SparkContext`의 메서드이고 Connect 세션은 `spark.sparkContext`에 접근하면 `JVM_ATTRIBUTE_NOT_SUPPORTED` 오류를 냅니다(4.2.0 소스 `pyspark/sql/connect/session.py`의 `__getattr__`). 문서에 이 둘을 따로 적은 문장은 없고 소스로 확인했습니다.
 
 헷갈리는 지점입니다.
 
@@ -221,7 +221,7 @@ local 모드는 엄밀히 말하면 `--deploy-mode` 값이 아니고 master URL�
 
 - 로컬 모드에서 `spark.default.parallelism`은 머신의 코어 수입니다. `local[2]`로 띄우면 스레드가 둘이라 Task도 동시에 둘만 돕니다.
 - `sc://host:port`는 master URL 표에 없습니다. Submitting Applications 문서의 master URL은 클러스터 매니저를 고르는 값이고 `sc://`는 `--remote`나 `builder.remote()`에 주는 Spark Connect 서버 주소입니다. 보기에 `--master sc://...`가 나오면 섞어 놓은 오답으로 봅니다.
-- Spark Connect 서버도 하나의 Spark 드라이버 애플리케이션입니다. `start-connect-server.sh`에 `--master`를 주면 그 서버가 어느 클러스터에서 돌지 정합니다. 이 스크립트가 `spark-submit` 옵션을 받는다는 점은 문서 문장으로 확인하지 못했습니다.
+- Spark Connect 서버도 하나의 Spark 드라이버 애플리케이션입니다. `start-connect-server.sh`에 `--master`를 주면 그 서버가 어느 클러스터에서 돌지 정합니다. 4.2.0 스크립트는 받은 인자를 `spark-daemon.sh submit`으로 넘겨 `spark-submit`으로 서버 클래스를 띄우고 `--help`에는 `spark-submit` 옵션 목록을 보여 줍니다(소스 `sbin/start-connect-server.sh`).
 - client 모드에서 드라이버가 죽으면 애플리케이션 전체가 끝납니다. cluster 모드의 Standalone에는 `--supervise`(`spark.driver.supervise`, 기본 false)로 0이 아닌 종료 코드일 때 드라이버를 자동 재시작하는 옵션이 있습니다.
 
 ## 6. pandas API on Spark의 장점
@@ -589,14 +589,16 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 
 - 동작과 기본값은 2026년 10월 19일에 연 Spark 4.2.0 문서(Spark Connect Overview, Cluster Mode Overview, Submitting Applications, Configuration)와 PySpark 4.2.0 문서(Apache Arrow in PySpark, pandas API on Spark의 Options and settings, From/to pandas and PySpark DataFrames, Best Practices, Upgrading PySpark, API 참조)를 기준으로 했습니다. 3.5 기본값은 3.5.6 Configuration 문서로, 4.0과 4.1의 Arrow 기본값은 4.0.0과 4.1.0 Configuration 문서로 2026년 10월 20일에 다시 확인했습니다. `pyspark-client`의 첫 버전은 PyPI 릴리스 목록으로 확인했습니다.
 - 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark와 로컬 Connect 서버를 띄우지 못했습니다. Python 문법 검사(`ast.parse`)만 했습니다. `load_coupon_alias_table()`은 설명용으로 가정한 함수입니다.
-- 확인하지 못한 것을 따로 적습니다. Connect에서 존재하지 않는 컬럼 오류가 나는 시점, accumulator와 broadcast 변수가 막히는지, `start-connect-server.sh`가 `spark-submit` 옵션을 받는지는 문서 문장으로 확인하지 못했습니다. 1절의 영역별 문항 수 짐작은 비중으로 계산한 값입니다.
-- Spark Connect 위에서 pandas API on Spark가 어디까지 되는지는 다루지 않았습니다. 이번에 연 문서에서 지원 범위 표를 찾지 못했습니다.
+- 2026년 10월 21일에 Connect의 오류 시점(Eager vs Lazy 문서), accumulator와 broadcast 변수(Connect 세션 소스), `start-connect-server.sh`의 옵션 처리(스크립트 소스), pandas API on Spark의 Connect 지원(PySpark API 참조 안내문)을 확인해 본문에 넣었습니다. Arrow 관련 기본값 넷은 3.5.6, 4.0.0, 4.1.0, 4.2.0 태그의 `SQLConf.scala`로 한 번 더 맞춰 봤습니다.
+- 1절의 영역별 문항 수 짐작은 비중으로 계산한 값이고 Connect 위 pandas API on Spark의 메서드별 지원 표는 찾지 못했습니다.
 
 ## 참고 자료
 
 공식 자료
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (6, 7영역 항목과 샘플 문항 7)
-- Apache Spark 4.2.0, [Spark Connect Overview](https://spark.apache.org/docs/latest/spark-connect-overview.html)
+- Databricks, [Exam Guide, 2026-10-08판](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (6, 7영역 항목과 샘플 문항 7)
+- Apache Spark 4.2.0, [Spark Connect Overview](https://spark.apache.org/docs/latest/spark-connect-overview.html), [Eager vs Lazy: Spark Connect vs Spark Classic](https://spark.apache.org/docs/latest/spark-connect-gotchas.html)
+- Apache Spark 저장소 v4.2.0, [python/pyspark/sql/connect/session.py](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/sql/connect/session.py), [sbin/start-connect-server.sh](https://github.com/apache/spark/blob/v4.2.0/sbin/start-connect-server.sh), [SQLConf.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala)
+- PySpark 4.2.0, [API Reference](https://spark.apache.org/docs/latest/api/python/reference/index.html) (Spark Connect 지원 안내문)
 - PySpark 4.2.0, [Quickstart: Spark Connect](https://spark.apache.org/docs/latest/api/python/getting_started/quickstart_connect.html)
 - Apache Spark 저장소, [client-connection-string.md](https://github.com/apache/spark/blob/master/sql/connect/docs/client-connection-string.md) (master 브랜치)
 - Apache Spark 4.2.0, [Cluster Mode Overview](https://spark.apache.org/docs/latest/cluster-overview.html), [Submitting Applications](https://spark.apache.org/docs/latest/submitting-applications.html)

@@ -28,7 +28,7 @@ seriesOrder: 0
 
 ## 1. 시험 구조
 
-AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인한 내용입니다(2026년 10월 기준).
+AWS 공식 시험 페이지와 시험 안내서(SAA-C03), 응시 정책 페이지로 확인한 내용입니다(2026년 10월 21일 확인).
 
 | 항목 | 내용 |
 |---|---|
@@ -37,7 +37,7 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 | 시간 | 130분 |
 | 합격 | 100~1,000점 척도에서 720점. 보상형 채점이라 영역별 기준은 없다 |
 | 감점 | 답하지 않은 문항은 오답, 틀려도 감점은 없다. 모든 문항에 답한다 |
-| 가격 | 150 USD |
+| 가격 | 150 USD. 원화 결제는 197,287원(세금 별도 가능, 환율 반영 가격은 최소 매년 5월에 갱신) |
 | 언어 | 한국어 포함 |
 | 응시 | Pearson VUE 시험장 또는 온라인 |
 | 유효 기간 | 3년 |
@@ -45,7 +45,7 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 
 영어로 응시하는 비원어민은 ESL +30분을 신청할 수 있습니다. 시험을 등록하기 전에 계정의 응시 편의 요청에서 한 번 신청하면 이후 등록에 모두 적용됩니다. 한국어로 응시하면 해당하지 않습니다. 대만의 응시자(De-Wei Ye, 2026)는 이 신청을 잊어 시험을 취소하고 다시 예약했다고 적었습니다.
 
-새 버전(SAA-C04)이 나온다는 글이 몇 곳 있지만 AWS 공식 시험 페이지와 "Coming soon" 페이지에는 없습니다(2026년 10월 확인).
+새 버전(SAA-C04)이 나온다는 글이 몇 곳 있지만 AWS 공식 시험 페이지와 "Coming soon" 페이지에는 없습니다(2026년 10월 21일 확인). AWS가 2026년 9월 1일 블로그로 개정을 공지한 시험은 Solutions Architect Professional(SAP-C03), Developer Associate(DVA-C03), Machine Learning Engineer Associate(MLA-C02) 셋이고 SAA는 들어 있지 않습니다.
 
 ## 2. 영역과 과제
 
@@ -67,15 +67,15 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 | 범주(일부) | 범위 안 서비스 |
 |---|---|
 | Analytics | Athena, Data Exchange, Data Firehose, EMR, Glue, Kinesis, Lake Formation, MSK, OpenSearch Service, Redshift 등 |
-| Application Integration | SQS, SNS, EventBridge, Step Functions |
-| Database | Aurora, Aurora Serverless, DynamoDB, ElastiCache, RDS |
-| Networking | CloudFront, Direct Connect, ELB, Global Accelerator, PrivateLink, Route 53, Transit Gateway, VPC |
+| Application Integration | SQS, SNS, EventBridge, Step Functions, AppFlow, MQ |
+| Database | Aurora, Aurora Serverless, DynamoDB, ElastiCache, RDS, DocumentDB, Keyspaces, Neptune, Redshift |
+| Networking | CloudFront, Direct Connect, ELB, Global Accelerator, PrivateLink, Route 53, Transit Gateway, VPC, Site-to-Site VPN, Client VPN |
 | Security | KMS, CloudHSM, WAF, Shield, GuardDuty, Macie, IAM Identity Center, Inspector, Network Firewall, Firewall Manager, RAM, Artifact 등 |
 | Storage | S3, S3 Glacier, EBS, EFS, FSx, Storage Gateway, Backup |
 | Management and Governance | CloudTrail, CloudWatch, Config, Control Tower, Organizations, Compute Optimizer, Trusted Advisor, Well-Architected Tool 등 |
 | Migration and Transfer | Application Migration Service, DataSync, DMS, Snow Family, Transfer Family |
 
-2026년 10월 20일에 다시 연 목록에는 AWS Elastic Disaster Recovery가 없고 Application Migration Service는 있습니다. 둘 다 블록 수준 복제를 쓰는 서비스라 보기에 함께 나올 수 있어 [Ch-02](/blog/cert/saa/saa-02-resilient-architectures) 3-12절에 짧게 정리했습니다.
+2026년 10월 21일에 다시 연 목록에도 AWS Elastic Disaster Recovery가 없고 Application Migration Service는 있습니다. 둘 다 블록 수준 복제를 쓰는 서비스라 보기에 함께 나올 수 있어 [Ch-02](/blog/cert/saa/saa-02-resilient-architectures) 3-12절에 짧게 정리했습니다.
 
 범위 밖 예시로는 MWAA(관리형 Airflow), Lightsail, CDK, CodeBuild, CodeDeploy, IoT 전체 등이 나옵니다. 시험에서는 짧은 공식 이름(예: Amazon SNS)으로 표기하고 시험 중 도움말에서 정식 명칭과의 대응표를 볼 수 있습니다.
 
@@ -94,7 +94,7 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03, Version 1.1)로 확인�
 
 오른쪽 열의 대응은 AWS가 적은 것이 아니고 이름을 나란히 놓고 짝지은 것입니다. 프레임워크 문서에는 시험의 정답을 고를 때 도움이 되는 문장이 있습니다. 기둥 사이에는 맞바꾸는 관계가 있지만 보안과 운영 우수성은 대체로 다른 기둥과 맞바꾸지 않는다는 것입니다. 보기 중 비용은 싸지만 보안을 약하게 만드는 선택지는 대체로 오답이라고 읽을 수 있습니다.
 
-프레임워크로 실제 워크로드를 점검하는 도구가 Well-Architected Tool이고 범위 안 서비스입니다. 제품 페이지는 콘솔에서 워크로드를 프레임워크 기준으로 평가하고 렌즈(lens)로 분야별 질문을 더하며 마일스톤으로 시점별 상태를 저장하고 개선 계획을 준다고 설명합니다. "아키텍처를 모범 사례에 비춰 검토하고 위험 항목을 추적"이 이 도구의 문구입니다. 요금은 이번에 연 제품 페이지에 적혀 있지 않았습니다.
+프레임워크로 실제 워크로드를 점검하는 도구가 Well-Architected Tool이고 범위 안 서비스입니다. 제품 페이지는 콘솔에서 워크로드를 프레임워크 기준으로 평가하고 렌즈(lens)로 분야별 질문을 더하며 마일스톤으로 시점별 상태를 저장하고 개선 계획을 준다고 설명합니다. "아키텍처를 모범 사례에 비춰 검토하고 위험 항목을 추적"이 이 도구의 문구입니다. 요금 페이지와 FAQ는 이 도구에 추가 요금이 없고 쓰는 AWS 리소스 요금만 낸다고 적습니다(2026년 10월 21일 확인).
 
 ## 4. 문제는 조건으로 갈린다
 
@@ -107,7 +107,7 @@ AWS가 공개한 SAA-C03 샘플 문항 10개에서 출제 방식을 보면 이�
 | Q6 | 가장 비용 효율적으로, 중단할 수 없는 작업 | On-Demand. 해설은 Spot이 가장 싸지만 중단 불가·시간 제한 작업에는 맞지 않는다고 적는다 |
 | Q7 | 가장 효율적으로, 중단 없이 | 투표가 DB에 몰리는 상황을 SQS로 분리 |
 | Q10 | Aurora의 읽기 부하 분리 | Aurora Replica를 추가하고 읽기 엔드포인트를 쓴다. "Multi-AZ 대기 인스턴스에서 읽기"는 오답 |
-| Q5 | 암호화 키를 온프레미스에 둬야 함 | 고객 제공 키 서버 측 암호화(SSE-C)나 클라이언트 측 암호화 |
+| Q5 | 암호화 키를 온프레미스에 둬야 함 | 고객 제공 키 서버 측 암호화(SSE-C)나 클라이언트 측 암호화. 2026년 4월부터 새 범용 버킷은 SSE-C가 기본 차단이라 켜야 쓸 수 있음(Ch-01 4-5절) |
 
 Ryan Pothecary의 글(2023)도 "가장 비용 효율적인", "운영 부담이 가장 적은", "가장 효율적인" 같은 문구가 정답 방향을 가리킨다고 설명합니다. 같은 글은 범위 안 서비스가 SAA-C02의 39개에서 SAA-C03의 131개로 늘었다고 적었습니다.
 
@@ -218,7 +218,7 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 
 ## 8. 범위와 한계
 
-- 시험 정보는 2026년 10월 19일 AWS 공식 페이지와 시험 안내서로 확인했습니다. 등록 전에 다시 확인합니다.
+- 시험 정보는 2026년 10월 19일에 처음 확인하고 21일에 AWS 공식 시험 페이지, 시험 안내서, 범위 안·밖 서비스 목록, 응시 정책 페이지로 다시 확인했습니다. 등록 전에 다시 확인합니다.
 - 4-2절의 서비스 비교는 공식 문서 기준이지만 요금과 기본값은 바뀝니다. 처음 쓸 때 확인하지 못했던 읽기 복제본 개수와 Aurora 사본 수는 2026년 10월 20일 RDS 할당량 문서(원본당 읽기 복제본 15개, Oracle은 15개까지 되지만 5개 이하 권장)와 Aurora 고가용성 문서(저장 노드 6개)로 확인해 표에 넣었습니다.
 - 3절의 기둥과 영역 대응은 AWS가 적은 것이 아닙니다.
 - 이 글은 응시 전에 쓴 계획입니다. 응시한 뒤 결과와 바뀐 판단을 덧붙이겠습니다.
@@ -231,7 +231,9 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 - AWS, [SAA-C03 Sample Exam Questions](https://d1.awsstatic.com/training-and-certification/docs-sa-assoc/AWS-Certified-Solutions-Architect-Associate_Sample-Questions.pdf)
 - AWS, [Before testing: 응시 편의(ESL +30분)](https://aws.amazon.com/certification/policies/before-testing/), [Coming soon](https://aws.amazon.com/certification/coming-soon/)
 - AWS Training and Certification Blog, [Protecting AWS Certification value through security measures](https://aws.amazon.com/blogs/training-and-certification/protecting-aws-certification-value-through-security-measures/), 2025
-- AWS, [Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html), [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/)
+- AWS Training and Certification Blog, [Certification updates: September 2026](https://aws.amazon.com/blogs/training-and-certification/september-2026-new-offerings/), 2026-09-01
+- AWS, [Before testing: 시험 가격](https://aws.amazon.com/certification/policies/before-testing/), [Out-of-Scope AWS Services (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/saa-03-out-of-scope-services.html)
+- AWS, [Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html), [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/), [AWS Well-Architected Tool pricing](https://aws.amazon.com/well-architected-tool/pricing/)
 - AWS 문서: [SNS 팬아웃](https://docs.aws.amazon.com/sns/latest/dg/sns-sqs-as-subscriber.html), [Kinesis Data Streams FAQ](https://aws.amazon.com/kinesis/data-streams/faqs/), [S3 storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html), [RDS Multi-AZ](https://aws.amazon.com/rds/features/multi-az/), [ELB features](https://aws.amazon.com/elasticloadbalancing/features/), [Gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html), [Athena pricing](https://aws.amazon.com/athena/pricing/)
 - AWS 문서: [Quotas and constraints for Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html), [High availability for Amazon Aurora](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.AuroraHighAvailability.html), [In-Scope AWS Services (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/saa-03-in-scope-services.html)
 

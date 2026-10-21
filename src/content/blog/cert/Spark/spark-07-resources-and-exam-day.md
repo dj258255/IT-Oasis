@@ -31,14 +31,14 @@ seriesOrder: 7
 
 ### 1-1. 시험 안내서 2026년 10월판
 
-자격증 페이지가 2026년 10월 20일 현재 연결하는 안내서는 파일 이름이 `...exam-guide-august-2026.pdf`이지만 본문에는 "Exam Published October 8, 2026"과 "Exam Guide Updated October 8, 2026"이 적혀 있습니다. 2025년 10월판과 비교한 결과는 아래와 같습니다.
+자격증 페이지가 2026년 10월 21일 현재 연결하는 안내서는 파일 이름이 `...exam-guide-august-2026.pdf`이지만 본문에는 "Exam Published October 8, 2026"과 "Exam Guide Updated October 8, 2026"이 적혀 있습니다. 2025년 10월판과 비교한 결과는 아래와 같습니다.
 
 | 항목 | 2025년 10월 30일판 | 2026년 10월 8일판 |
 |---|---|---|
 | 출제 영역과 비중 | 7개 영역, 20/20/30/10/10/5/5% | 같음(목표 문장도 오탈자 수정 말고는 같음) |
 | 채점 문항 | 45개 | 45개 |
 | 채점하지 않는 문항 | 있을 수 있다고만 적음 | 최대 10개, 화면에 보이는 문항은 최대 55개 |
-| 응시료 | 200 USD | 200 USD에 현지 세금 별도 |
+| 응시료 | 안내서에 적지 않음(자격증 페이지는 200 USD) | 200 USD에 현지 세금 별도 |
 | 보조 자료 | API 문서를 포함해 없음 | 없음(None allowed) |
 | 권장 과정 | 강사 과정 1개, 자기 주도 과정 4개 | 같음 |
 | 샘플 문항 | 10개 | 10개, 정답마다 해설 추가 |
@@ -76,7 +76,7 @@ Databricks 자격증 FAQ는 "We currently do not offer any practice exams"라고
 | 응시 자격 | 만 18세 이상 | FAQ |
 | 일정 변경 | 온라인은 24시간 전, 시험장은 72시간 전까지. 넘기면 수수료 | FAQ, Kryterion |
 | 재응시 | 14일 뒤부터, 횟수 제한 없음, 매번 같은 가격, 무료 재응시 바우처 없음 | FAQ |
-| 결과 | 제출 직후. 합격하면 Accredible 배지가 메일로 오고 credentials.databricks.com에서 본다 | FAQ |
+| 결과 | 비공식 결과는 제출 직후. 합격하면 Databricks가 감독 녹화를 검토한 뒤 Accredible 배지를 메일로 보내고 credentials.databricks.com에 올린다 | FAQ |
 | 유효 기간 | 받은 날부터 2년. 갱신은 그때 살아 있는 시험 전체를 다시 본다 | FAQ, 안내서 |
 | 지원 | 시험 중단 같은 문제는 Databricks 교육 지원 창구(help.databricks.com)에 티켓으로 | 커뮤니티 직원 답변(2026년 4월) |
 
@@ -126,7 +126,7 @@ Apache Spark Developer 경로의 네 모듈은 1-2절의 자기 주도 과정 �
 - 바우처는 Academy 계정 이메일에 묶입니다. Webassessor도 같은 이메일로 만들거나 그 주소를 보조 이메일로 추가해야 씁니다.
 - 유효 기간은 약 90일이고 그 안에 예약과 응시를 모두 마쳐야 합니다.
 
-다음 회차 날짜는 2026년 10월 20일 현재 공지를 찾지 못했습니다. 2026년 4월 커뮤니티 답글 하나가 "July and October"라고 적었고 실제로 6~7월과 9~10월에 열렸습니다. 2025년 10월과 2026년 1월에도 열렸으니 2027년 1월 전후에 다음 회차가 열릴 가능성은 있습니다. 공지로 확인한 일정은 아직 없습니다. 행사 공지는 Databricks 커뮤니티의 Learning Events 게시판에 올라옵니다.
+다음 회차 날짜는 2026년 10월 21일 현재 공지를 찾지 못했습니다. 2026년 4월 커뮤니티 답글 하나가 "July and October"라고 적었고 실제로 6~7월과 9~10월에 열렸습니다. 2025년 10월과 2026년 1월에도 열렸으니 2027년 1월 전후에 다음 회차가 열릴 가능성은 있습니다. 공지로 확인한 일정은 아직 없습니다. 행사 공지는 Databricks 커뮤니티의 Learning Events 게시판에 올라옵니다.
 
 무료 바우처를 요청하는 커뮤니티 글은 2026년에도 여럿 있었지만 이번에 확인한 범위에서 Spark 시험에 쓸 무료 바우처를 주는 공식 행사는 찾지 못했습니다.
 
@@ -345,7 +345,7 @@ Learning Festival 바우처를 쓰려면 행사 기간 안에 경로를 끝내�
 
 Databricks 자격증 약관(Effective Date: June 11, 2024)은 시험 내용을 기밀 정보로 정의합니다. 문항, 정답, 시험에 관한 모든 의사소통이 들어갑니다. 금지 행위 목록에 다음 항목이 있습니다.
 
-- "Using unauthorized materials (including brain-dump material and/or unauthorized publication of Exam questions"
+- "Using unauthorized materials (including brain-dump material and/or unauthorized publication of Exam questions with or without answers) to prepare for the Exam"
 - "Disseminating actual Exam content by any means including but not limited to web postings"
 - "Making notes of any kind during the Exam"
 
@@ -355,7 +355,7 @@ Databricks 자격증 약관(Effective Date: June 11, 2024)은 시험 내용을 �
 
 ## 10. 범위와 한계
 
-- 시험 정보는 2026년 10월 20일에 Databricks 자격증 페이지, FAQ, 약관, 2026년 10월 8일판과 2025년 10월 30일판 안내서로 확인했습니다.
+- 시험 정보는 2026년 10월 21일에 Databricks 자격증 페이지, FAQ, 약관, 2026년 10월 8일판과 2025년 10월 30일판 안내서로 다시 확인했습니다. 할인 행사와 가격처럼 날짜가 지나면 바뀌는 항목은 응시 전에 공식 페이지에서 다시 확인합니다.
 - 4절의 Docker와 Colab 명령은 이 환경에서 실행하지 않았습니다. 이 노트북에 Java가 없고 이번 작업에서 Docker도 돌리지 않았습니다. 이미지 문서, Dockerfile, Spark 소스, Colab 패키지 목록을 읽고 적었습니다.
 - 다음 Learning Festival 날짜, Udemy 강의의 2025년 11월 갱신 내용, Colab에서 Spark UI를 여는 방법, 시험 화면의 문항 표시 기능은 확인하지 못했습니다.
 - Udemy 페이지는 접속이 막혀 일부를 읽기 도구와 검색 결과 요약으로만 봤습니다. Medium 글은 RSS로 본문을 확인했습니다. Reddit은 이 환경에서 열리지 않았습니다.
@@ -382,10 +382,10 @@ Learning Festival
 - Databricks Community, [Learning Festival events - 2026](https://community.databricks.com/t5/certifications/learning-festival-events-2026/td-p/153478)
 
 Kryterion
-- Kryterion, [Online Testing Requirements: What You Need to Know](https://support.kryterion.com/en_us/online-testing-requirements:-what-you-need-to-know-ry42HLJsJl.md)
-- Kryterion, [Online Proctored Exams and Behaviors to Consider](https://support.kryterion.com/en_us/online-proctored-exams-and-behaviors-to-consider-BJ7nBU1j1e.md)
-- Kryterion, [How to Launch an Online Proctored (OLP) Exam](https://support.kryterion.com/en_us/how-to-launch-an-online-proctored-olp-exam-Byr5BLJi1e.md)
-- Kryterion, [What Type of Identification Must I Bring to the Testing Center?](https://support.kryterion.com/en_us/what-type-of-identification-must-i-bring-to-the-testing-center-HJKCH8JjJx.md)
+- Kryterion, [Online Testing Requirements: What You Need to Know](https://support.kryterion.com/en_us/online-testing-requirements-what-you-need-to-know-ry42HLJsJl)
+- Kryterion, [Online Proctored Exams and Behaviors to Consider](https://support.kryterion.com/en_us/online-proctored-exams-and-behaviors-to-consider-BJ7nBU1j1e)
+- Kryterion, [How to Launch an Online Proctored (OLP) Exam](https://support.kryterion.com/en_us/how-to-launch-an-online-proctored-olp-exam-Byr5BLJi1e)
+- Kryterion, [What Type of Identification Must I Bring to the Testing Center?](https://support.kryterion.com/en_us/what-type-of-identification-must-i-bring-to-the-testing-center-HJKCH8JjJx)
 - Kryterion, [What to Bring on Test Day: A Complete Guide to Kryterion ID Requirements](https://www.kryterion.com/blog/what-to-bring-on-test-day-a-complete-guide-to-kryterion-id-requirements/), 2025-11-28
 
 커뮤니티 답변
@@ -409,4 +409,4 @@ Kryterion
 - Apache Spark, [sbin/start-connect-server.sh](https://github.com/apache/spark/blob/v4.2.0/sbin/start-connect-server.sh), [Spark Connect Overview](https://spark.apache.org/docs/latest/spark-connect-overview.html), [PySpark 설치(Python Spark Connect Client)](https://spark.apache.org/docs/latest/api/python/getting_started/install.html), [Parquet Files](https://spark.apache.org/docs/latest/sql-data-sources-parquet.html)
 - Jupyter Docker Stacks, [docs/using/specifics.md](https://github.com/jupyter/docker-stacks/blob/main/docs/using/specifics.md), [pyspark-notebook Dockerfile](https://github.com/jupyter/docker-stacks/blob/main/images/pyspark-notebook/Dockerfile)
 - Google Colab, [googlecolab/backend-info](https://github.com/googlecolab/backend-info)
-- Delta Lake, [Releases(Compatibility with Apache Spark)](https://docs.delta.io/latest/releases.html)
+- Delta Lake, [Releases(Compatibility with Apache Spark)](https://docs.delta.io/releases/)

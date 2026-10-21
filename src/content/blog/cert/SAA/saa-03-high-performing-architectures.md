@@ -23,7 +23,7 @@ seriesOrder: 3
 1. 영역 3의 문제는 대부분 병목 하나를 문장 속에 숨겨 둡니다. "읽기가 몰린다", "연결이 폭주한다", "대륙을 건너 업로드한다", "같은 키를 반복해서 읽는다" 같은 문구가 병목의 위치를 알려 주고 정답은 그 자리를 넓히는 서비스입니다.
 2. 스토리지는 접근 방식(객체, 파일, 블록)으로 먼저 나누고 그 다음에 수치로 고릅니다. gp3는 기본 3,000 IOPS와 125MiB/s를 크기와 따로 늘릴 수 있고 최대 80,000 IOPS입니다. 그보다 크거나 지연이 500마이크로초 아래여야 하면 io2 Block Express입니다. 인스턴스 스토어는 중지하면 데이터가 지워집니다.
 3. 데이터베이스는 읽기 확장과 장애 조치를 구분해야 합니다. RDS 읽기 복제본은 비동기이고 자동으로 늘어나지 않습니다. Aurora 복제본은 같은 저장소를 공유해 지연이 보통 100밀리초보다 훨씬 작고 장애 조치 대상도 됩니다. 연결 수 문제는 RDS Proxy, 같은 키 반복 읽기는 DAX나 ElastiCache입니다.
-4. 네트워크는 "HTTP 콘텐츠 캐시"면 CloudFront, "TCP/UDP와 고정 IP 2개"면 Global Accelerator입니다. VPN 터널 하나는 최대 1.25Gbps이고 Transit Gateway에서 ECMP로 묶을 수 있습니다. VPC 피어링은 전이 라우팅이 안 됩니다.
+4. 네트워크는 "HTTP 콘텐츠 캐시"면 CloudFront, "TCP/UDP와 고정 IP 2개"면 Global Accelerator입니다. VPN 표준 터널 하나는 최대 1.25Gbps이고 Transit Gateway에서 ECMP로 묶거나 대역폭 큰 터널(최대 5Gbps)을 고를 수 있습니다. VPC 피어링은 전이 라우팅이 안 됩니다.
 5. 데이터 수집은 빈도로 나눕니다. 실시간에 가깝고 다시 읽어야 하면 Kinesis Data Streams(샤드당 쓰기 1MB/s), 버퍼링해서 S3에 쌓으면 되면 Data Firehose, 이미 Kafka를 쓰면 MSK입니다. CSV를 Parquet으로 바꾸는 경로는 Firehose(JSON 입력, Lambda로 CSV 변환), Glue ETL, Athena CTAS 셋을 알아 둡니다.
 
 ---
@@ -90,7 +90,7 @@ Transfer Acceleration은 조건이 몇 가지 붙습니다. "Configuring fast, s
 
 멀티파트 업로드는 큰 객체를 나눠 병렬로 올리는 방법이고 Transfer Acceleration은 먼 거리 경로를 줄이는 방법이라 둘을 함께 쓸 수 있습니다. 같은 리전 안 업로드가 느리다면 Transfer Acceleration은 답이 아닙니다.
 
-지연이 한 자리 밀리초로 일정해야 하는 경우를 위해 S3 Express One Zone도 있습니다. 고성능 워크로드 페이지는 S3 Standard보다 접근 속도가 최대 10배 빠르고 요청 비용이 80% 낮다고 적고 스토리지 클래스 소개 페이지는 같은 비교를 50%로 적습니다(둘 다 2026년 10월 20일 확인). 문서끼리 숫자가 달라 "요청 비용이 Standard보다 낮다"까지만 기억해 둡니다. 단일 AZ의 디렉터리 버킷에 저장되고 설계 가용성은 99.95%입니다. AZ를 하나만 쓰니 내구성이나 가용성을 조건으로 건 문제에서는 오답이 됩니다.
+지연이 한 자리 밀리초로 일정해야 하는 경우를 위해 S3 Express One Zone도 있습니다. 고성능 워크로드 페이지는 S3 Standard보다 접근 속도가 최대 10배 빠르고 요청 비용이 최대 80% 낮다고 적고 Express One Zone 제품 페이지도 80%입니다. 스토리지 클래스 소개 페이지만 같은 비교를 50%로 적습니다(2026년 10월 21일 확인). 문서끼리 숫자가 달라 "요청 비용이 Standard보다 낮다"까지만 기억해 둡니다. 단일 AZ의 디렉터리 버킷에 저장되고 설계 가용성은 99.95%입니다. AZ를 하나만 쓰니 내구성이나 가용성을 조건으로 건 문제에서는 오답이 됩니다.
 
 ### 2-3. EBS 볼륨 유형
 
@@ -161,12 +161,12 @@ Storage Gateway 문서는 파일(S3 File Gateway, FSx File Gateway), 볼륨(Volu
 | 유형 | 온프레미스에서 보이는 모습 | 데이터가 사는 곳 |
 |---|---|---|
 | S3 File Gateway | NFS, SMB 파일 공유 | S3 객체 |
-| FSx File Gateway | SMB 공유 | FSx for Windows File Server. 2026년 10월 기준 신규 고객에게는 제공하지 않는다 |
+| FSx File Gateway | SMB 공유 | FSx for Windows File Server. 2024년 10월 28일부터 신규 고객에게는 제공하지 않는다 |
 | Volume Gateway 캐시 볼륨 | iSCSI 볼륨 | 주 데이터는 S3, 자주 쓰는 일부만 로컬 캐시 |
 | Volume Gateway 저장 볼륨 | iSCSI 볼륨 | 전체 데이터는 로컬, 시점 스냅샷을 비동기로 S3에 백업 |
 | Tape Gateway | 가상 테이프 라이브러리 | S3와 아카이브 클래스 |
 
-캐시 볼륨과 저장 볼륨의 차이가 자주 나옵니다. "전체 데이터셋에 낮은 지연으로 접근"이면 저장 볼륨, "온프레미스 용량을 늘리지 않고 자주 쓰는 데이터만 빠르게"면 캐시 볼륨입니다. FSx File Gateway를 신규로 쓸 수 없다는 공지는 2026년 10월 문서에서 확인했고 시험 문항이 이 변경을 반영했는지는 모릅니다.
+캐시 볼륨과 저장 볼륨의 차이가 자주 나옵니다. "전체 데이터셋에 낮은 지연으로 접근"이면 저장 볼륨, "온프레미스 용량을 늘리지 않고 자주 쓰는 데이터만 빠르게"면 캐시 볼륨입니다. FSx File Gateway 문서 이력은 2024년 10월 28일부터 신규 고객에게 제공하지 않는다고 적고 기존 고객은 계속 씁니다. 시험 문항이 이 변경을 반영했는지는 모릅니다.
 
 ### 2-8. 시험에서 갈리는 조건(스토리지)
 
@@ -241,8 +241,8 @@ EC2 Auto Scaling의 동적 조정 정책은 대상 추적(target tracking), 단�
 |---|---|
 | 메모리 | 128MB~10,240MB, 1MB 단위. CPU는 메모리에 비례해 할당 |
 | 1 vCPU에 해당하는 메모리 | 1,769MB |
-| 최대 실행 시간 | 900초(15분) |
-| 리전당 기본 동시 실행 | 1,000(늘릴 수 있음) |
+| 최대 실행 시간 | 900초(15분). Lambda Managed Instances의 비동기 호출과 이벤트 소스 매핑은 최대 90분 |
+| 리전당 기본 동시 실행 | 1,000(늘릴 수 있음). 새 계정은 동시 실행과 메모리 할당량이 더 낮게 시작한다 |
 | `/tmp` 저장 공간 | 512MB~10,240MB |
 | 동기 호출 페이로드 | 요청과 응답 각 6MB |
 
@@ -260,7 +260,7 @@ Fargate 문서는 Fargate를 "서버나 EC2 클러스터를 관리하지 않고 
 
 ### 3-7. 배치 처리: AWS Batch와 EMR
 
-AWS Batch 문서는 Batch를 제출된 작업에 맞춰 자원을 프로비저닝하는 완전 관리형 배치 서비스로 설명하고 EC2(On-Demand, Spot), Fargate, ECS, EKS 위에서 돈다고 적습니다. EMR은 Hadoop과 Spark 같은 빅데이터 프레임워크를 돌리는 관리형 클러스터 플랫폼입니다.
+AWS Batch 문서는 Batch를 제출된 작업에 맞춰 자원을 프로비저닝하는 완전 관리형 배치 서비스로 설명하고 ECS와 EKS 위에서 EC2(On-Demand, Spot), Fargate, ECS Managed Instances 용량을 늘리고 줄인다고 적습니다. EMR은 Hadoop과 Spark 같은 빅데이터 프레임워크를 돌리는 관리형 클러스터 플랫폼입니다.
 
 | 조건 | 고를 것 |
 |---|---|
@@ -298,7 +298,7 @@ AWS Batch 문서는 Batch를 제출된 작업에 맞춰 자원을 프로비저�
 
 "Working with DB instance read replicas"와 RDS 할당량 문서에서 확인한 내용입니다.
 
-- 원본의 변경을 비동기로 복제하고 읽기 전용 연결만 받습니다. Db2와 Oracle은 사용자 연결을 받지 않는 대기(mounted, standby) 복제본도 있고 주 용도는 리전 간 재해 복구입니다.
+- 원본의 변경을 비동기로 복제하고 읽기 전용 연결만 받습니다. Db2는 대기(standby) 복제본, Oracle은 마운트(mounted) 복제본을 지원합니다. 둘 다 사용자 연결을 받지 않고 주 용도는 리전 간 재해 복구입니다.
 - 원본 인스턴스당 읽기 복제본 기본 할당량은 15개입니다. Oracle은 15개까지 만들 수 있지만 복제 지연을 줄이려면 5개로 제한하라고 권합니다.
 - 읽기 복제본은 자동으로 늘거나 줄지 않습니다. 직접 만들고 직접 지웁니다.
 - 같은 리전 안 원본과 복제본 사이의 복제 데이터 전송에는 요금이 없습니다. 복제본 자체는 같은 인스턴스 클래스 요금을 냅니다.
@@ -309,8 +309,10 @@ AWS Batch 문서는 Batch를 제출된 작업에 맞춰 자원을 프로비저�
 | | MySQL, MariaDB | PostgreSQL | Oracle, SQL Server |
 |---|---|---|---|
 | 복제 방식 | 논리 복제 | 물리 복제 | 물리 복제 |
-| 복제본을 쓰기 가능하게 | 가능 | 불가 | 불가(승격하면 가능) |
-| 복제본의 복제본 | 가능 | 일부 버전 가능 | 불가 |
+| 복제본을 쓰기 가능하게 | 가능 | 불가(승격하면 가능) | 불가(승격하면 가능) |
+| 복제본의 복제본 | 가능 | 14.1 이상 가능 | 불가 |
+
+복제본의 복제본 행은 차이 비교 페이지에 없어 엔진별 페이지에서 채웠습니다. PostgreSQL은 RDS for PostgreSQL 읽기 복제본 페이지에서 14.1 이상의 계단식 복제본을 확인했고 Oracle과 SQL Server의 "불가"는 이번에 연 엔진별 페이지에서 명시 문장을 찾지 못했습니다.
 
 Multi-AZ 대기 인스턴스는 동기 복제이고 읽기를 처리하지 않는다는 점은 Ch-00에서 정리했습니다. 문서도 "읽기 복제본과 달리 대기 복제본은 읽기 트래픽을 처리할 수 없다"고 적습니다.
 
@@ -335,7 +337,7 @@ Aurora 저장 구성에는 Standard와 I/O-Optimized 두 가지가 있습니다.
 | 제약 | 내용 |
 |---|---|
 | 위치 | DB와 같은 VPC. 프록시는 공개 접근 불가 |
-| 복제 구성 | 라이터 인스턴스에만 연결. 읽기 복제본에는 붙일 수 없다 |
+| 복제 구성 | RDS DB 인스턴스 복제 구성에서는 라이터 인스턴스에만 연결. 읽기 복제본에는 붙일 수 없다. Aurora는 읽기 전용 프록시 엔드포인트로 리더에 연결(Ch-02 참고) |
 | 기본 엔드포인트 | 두 AZ에 프로비저닝 |
 | 계정당 프록시 | 기본 20개 |
 
@@ -420,7 +422,7 @@ CloudFront 문서는 요청을 지연이 가장 낮은 엣지로 보내고 캐�
 | | Site-to-Site VPN | Direct Connect |
 |---|---|---|
 | 경로 | 인터넷 위 IPsec 터널 | 전용 물리 회선 |
-| 대역폭 | 표준 터널당 최대 1.25Gbps, 대역폭 큰 터널은 최대 5Gbps | 전용 연결 1, 10, 100, 400Gbps. 호스티드 연결은 파트너가 제공 |
+| 대역폭 | 표준 터널당 최대 1.25Gbps. Transit Gateway나 Cloud WAN에 붙은 연결은 대역폭 큰 터널(최대 5Gbps)을 고를 수 있다 | 전용 연결 1, 10, 100, 400Gbps. 호스티드 연결은 파트너가 제공 |
 | 개통 | 빠르다 | AWS 검토에 최대 72영업시간. 그 뒤 회선 작업 |
 | 대역폭 늘리기 | Transit Gateway에서 ECMP로 터널을 묶는다(동적 라우팅 필요) | LAG로 여러 연결을 하나처럼 |
 | 암호화 | IPsec | 전용 연결에서 MACsec 선택 가능 |
@@ -459,7 +461,7 @@ ALB, NLB, GWLB의 계층과 고정 IP 차이는 Ch-00 4-2절에 있습니다. �
 | 전 세계 사용자에게 상품 이미지 전달 지연 감소 | CloudFront |
 | 모바일 게임 서버, UDP, 고정 IP 허용 목록 | Global Accelerator |
 | 온프레미스와 10Gbps 일관된 대역폭 | Direct Connect |
-| VPN 대역폭이 1.25Gbps에 막힘 | Transit Gateway + ECMP로 터널 여러 개 |
+| VPN 대역폭이 1.25Gbps에 막힘 | Transit Gateway에서 대역폭 큰 터널(5Gbps)로 바꾸거나 ECMP로 터널 여러 개를 묶음 |
 | VPC 여러 개가 서로 다 통신, 관리 단순화 | Transit Gateway |
 | 협력사에 내부 API 하나만 사설 노출 | PrivateLink |
 
@@ -490,7 +492,7 @@ ALB, NLB, GWLB의 계층과 고정 IP 차이는 Ch-00 4-2절에 있습니다. �
 | 보존 기간 | 최소 24시간, 최대 8,760시간(365일) | 같음 |
 | 레코드 크기 | base64 인코딩 전 최대 10MiB | 같음 |
 
-향상된 팬아웃(enhanced fan-out) 소비자는 온디맨드 Standard와 프로비저닝 모드에서 스트림당 20개까지 등록하고 2026년 10월 문서의 On-demand Advantage 모드에서는 50개까지 등록합니다. 소비자가 많아 샤드당 읽기 2MB/s를 나눠 쓰느라 느려지면 향상된 팬아웃이 답입니다. "Develop enhanced fan-out consumers with dedicated throughput" 문서(2026년 10월 20일 확인)의 비교는 이렇습니다.
+향상된 팬아웃(enhanced fan-out) 소비자는 온디맨드 Standard와 프로비저닝 모드에서 스트림당 20개까지 등록하고 2026년 10월 문서의 On-demand Advantage 모드에서는 지원 리전(서울 포함)에서 50개까지 등록합니다. 소비자가 많아 샤드당 읽기 2MB/s를 나눠 쓰느라 느려지면 향상된 팬아웃이 답입니다. "Develop enhanced fan-out consumers with dedicated throughput" 문서(2026년 10월 20일 확인)의 비교는 이렇습니다.
 
 | | 공유 처리량 소비자 | 향상된 팬아웃 소비자 |
 |---|---|---|
@@ -505,7 +507,7 @@ ALB, NLB, GWLB의 계층과 고정 IP 차이는 Ch-00 4-2절에 있습니다. �
 
 Firehose 문서는 Firehose를 S3, Redshift, OpenSearch, Splunk, Iceberg 테이블, HTTP 엔드포인트로 스트리밍 데이터를 전달하는 완전 관리형 서비스로 설명합니다. 애플리케이션을 만들거나 자원을 관리할 필요가 없습니다.
 
-버퍼링 값은 API 참조 "BufferingHints" 기준입니다. 버퍼 간격은 0~900초(기본 300초), 버퍼 크기는 1~128MiB(기본 5MiB)이고 둘 중 먼저 차는 쪽에서 전달합니다. 문서는 버퍼 크기를 보통 10초 동안 들어오는 양보다 크게 잡으라고 권합니다. 0초 간격은 지연이 낮은 실시간 용도를 위한 값이고 60초 미만이면 S3 전달에 멀티파트 업로드를 써서 PUT 요청 비용이 늘 수 있습니다. 이 마지막 두 문장은 Firehose 개발자 가이드의 버퍼링 페이지 검색 요약으로 확인했고 페이지 본문은 직접 열지 못했습니다.
+버퍼링 값은 API 참조 "BufferingHints" 기준입니다. 버퍼 간격은 0~900초(기본 300초), 버퍼 크기는 1~128MiB(기본 5MiB)이고 둘 중 먼저 차는 쪽에서 전달합니다. 문서는 버퍼 크기를 보통 10초 동안 들어오는 양보다 크게 잡으라고 권합니다. 0초 간격은 지연이 낮은 실시간 용도를 위한 값이고 60초 미만이면 S3 전달에 멀티파트 업로드를 써서 PUT 요청 비용이 늘 수 있습니다. 이 두 문장은 Firehose 개발자 가이드 "Configure backup settings" 페이지의 버퍼링 절에서 확인했고 0초 간격은 S3 백업 대상과 동적 파티셔닝에는 쓸 수 없습니다. 범위와 기본값은 대상마다 달라 위 값은 S3 기준입니다(Splunk는 1~5MiB, 0~60초).
 
 형식 변환("Convert input data format in Amazon Data Firehose")의 조건은 세 가지입니다.
 
@@ -526,9 +528,9 @@ MSK 문서는 MSK를 오픈 소스 Apache Kafka를 그대로 돌리는 완전 �
 | DataSync | NFS, SMB, HDFS, 객체 스토리지와 S3, EFS, FSx 사이 온라인 전송. 암호화와 무결성 검증 포함 | 대량 파일 이관, 반복 동기화, 콜드 데이터를 Glacier로 |
 | Storage Gateway | 온프레미스 앱이 계속 파일, 볼륨, 테이프 인터페이스로 클라우드 저장소를 씀 | 이관 후에도 온프레미스 접근이 계속 필요 |
 | Transfer Family | SFTP, FTPS, FTP, AS2, 브라우저 전송을 S3나 EFS로 | 협력사가 SFTP로 파일을 보냄, 클라이언트 설정을 바꾸지 않음 |
-| Snowball | 오프라인 기기로 대량 데이터 이동 | 네트워크가 제한된 환경. 상용 리전 지원은 2026년 12월 31일에 끝난다는 공지가 있다 |
+| Snowball | 오프라인 기기로 대량 데이터 이동 | 네트워크가 제한된 환경. 신규 고객에게는 제공하지 않고 상용 리전 지원은 2026년 12월 31일에 끝난다. 신규 고객에게는 DataSync나 AWS Data Transfer Terminal을 권한다 |
 
-DataSync 문서는 VPC 엔드포인트로 공용 인터넷을 거치지 않고 전송할 수 있다고 적습니다. 안내서 지식 항목 "수집 접근 지점에 대한 안전한 접근"에 해당합니다. Snowball 지원 종료 공지는 2026년 10월 AWS Snowball 제품 페이지에서 확인했습니다. 시험 문항에 Snowball이 아직 정답으로 나오는지는 확인할 방법이 없습니다.
+DataSync 문서는 VPC 엔드포인트로 공용 인터넷을 거치지 않고 전송할 수 있다고 적습니다. 안내서 지식 항목 "수집 접근 지점에 대한 안전한 접근"에 해당합니다. Snowball 지원 종료는 AWS Snowball 제품 페이지에, 신규 고객 제공 중단은 Snowball Edge 개발자 가이드에 공지돼 있습니다(2026년 10월 21일 확인). 시험 문항에 Snowball이 아직 정답으로 나오는지는 확인할 방법이 없습니다.
 
 ### 6-6. 변환과 처리: Glue, EMR, Athena
 
@@ -565,7 +567,7 @@ Athena 문서("Optimize data")가 Parquet 같은 컬럼 형식을 권하는 이�
 
 ### 6-9. 시각화
 
-안내서는 시각화 서비스 예로 Amazon Quick을 적습니다. Lake Formation과 CUR 문서도 같은 이름을 씁니다. 이전 이름 QuickSight와 어떤 관계인지는 이번에 공식 문서로 확인하지 못했습니다. 시험에서는 "S3와 Athena의 결과를 대시보드로 공유"가 이 서비스의 문구로 보입니다.
+안내서는 시각화 서비스 예로 Amazon Quick을 적습니다. Lake Formation과 CUR 문서도 같은 이름을 씁니다. Amazon Quick 사용자 가이드는 Quick이 QuickSight에서 발전한 서비스이고 QuickSight는 Quick 안의 기능인 Amazon Quick Sight로 이어지며 기존 QuickSight API와 SDK는 그대로 동작한다고 적습니다. 시험에서는 "S3와 Athena의 결과를 대시보드로 공유"가 이 서비스의 문구로 보입니다.
 
 ### 6-10. 시험에서 갈리는 조건(데이터)
 
@@ -692,7 +694,7 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 
 - 수치와 제약은 2026년 10월 19일에 연 AWS 공식 문서 기준입니다. gp3 최대값처럼 최근에 바뀐 값이 있어서 강의 자료와 다를 수 있고 시험 문항이 언제 기준인지는 알 수 없습니다.
 - 이 글의 서비스들을 직접 만들어 측정하지 않았습니다. 성능 수치는 모두 문서가 밝힌 설계 값이거나 최대값이고 제가 잰 값이 없습니다. Ch-00 계획의 실습 단계를 마친 뒤 측정한 내용을 따로 쓰겠습니다.
-- 확인하지 못한 것: Firehose 버퍼링 페이지 본문(검색 요약으로만 확인), Amazon Quick과 QuickSight의 관계, MySQL과 PostgreSQL을 비교한 공식 표. ElastiCache의 지연 로딩과 라이트 스루 정의는 Ch-02 2-11절에서 ElastiCache 문서로 정리했습니다.
+- 확인하지 못한 것: MySQL과 PostgreSQL을 비교한 공식 표(RDS 문서에서 찾지 못함), Oracle과 SQL Server 계단식 복제본 불가의 명시 문장. Firehose 버퍼링과 Amazon Quick은 2026년 10월 21일에 문서로 확인해 본문에 넣었습니다. ElastiCache의 지연 로딩과 라이트 스루 정의는 Ch-02 2-11절에서 ElastiCache 문서로 정리했습니다.
 - 2026년 10월 20일 보강: 향상된 팬아웃의 소비자당 샤드 2MB/s와 평균 약 70ms 전파 지연, Transfer Acceleration 조건, Aurora Global Database 보조 리전 수(엔진 공통 10개), S3 Express One Zone 요청 비용 문구가 페이지마다 다른 점을 확인해 넣었습니다.
 - FSx File Gateway 신규 제공 중단과 Snowball 지원 종료(2026년 12월 31일) 공지는 확인했지만 시험 출제 범위에 반영됐는지는 모릅니다. Kinesis On-demand Advantage 모드도 시험 안내서 이후에 생긴 것으로 보입니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난이도나 문구와 다를 수 있습니다.
@@ -710,7 +712,7 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 - [Instance store temporary block storage for EC2 instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html), [Data persistence for Amazon EC2 instance store volumes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-lifetime.html)
 - [Amazon EFS performance specifications](https://docs.aws.amazon.com/efs/latest/ug/performance.html)
 - [Help Me Choose An Amazon FSx File System](https://aws.amazon.com/fsx/when-to-choose-fsx/)
-- [AWS Storage Gateway Documentation](https://docs.aws.amazon.com/storagegateway/latest/userguide/WhatIsStorageGateway.html), [What is Volume Gateway?](https://docs.aws.amazon.com/storagegateway/latest/vgw/WhatIsStorageGateway.html), [What is Amazon FSx File Gateway](https://docs.aws.amazon.com/filegateway/latest/filefsxw/what-is-file-fsxw.html)
+- [AWS Storage Gateway Documentation](https://docs.aws.amazon.com/storagegateway/), [What is Volume Gateway?](https://docs.aws.amazon.com/storagegateway/latest/vgw/WhatIsStorageGateway.html), [What is Amazon FSx File Gateway](https://docs.aws.amazon.com/filegateway/latest/filefsxw/what-is-file-fsxw.html)
 
 컴퓨팅
 - [Amazon EC2 instance type naming conventions](https://docs.aws.amazon.com/ec2/latest/instancetypes/instance-type-names.html)
@@ -739,3 +741,8 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 - [What is AWS DataSync?](https://docs.aws.amazon.com/datasync/latest/userguide/what-is-datasync.html), [What is AWS Transfer Family?](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html), [AWS Snowball](https://aws.amazon.com/snowball/)
 - [What is AWS Glue?](https://docs.aws.amazon.com/glue/latest/dg/what-is-glue.html), [What is AWS Lake Formation?](https://docs.aws.amazon.com/lake-formation/latest/dg/what-is-lake-formation.html)
 - [Optimize Athena performance](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html), [Optimize data (Athena)](https://docs.aws.amazon.com/athena/latest/ug/performance-tuning-data-optimization-techniques.html)
+
+2026년 10월 21일 보강 때 연 문서
+- [Site-to-Site VPN tunnel options](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNTunnels.html), [Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [What is AWS Snowball Edge?](https://docs.aws.amazon.com/snowball/latest/developer-guide/whatisedge.html)
+- [FSx File Gateway document history](https://docs.aws.amazon.com/filegateway/latest/filefsxw/DocumentHistory.html), [S3 Express One Zone](https://aws.amazon.com/s3/storage-classes/express-one-zone/), [Firehose: Configure backup settings](https://docs.aws.amazon.com/firehose/latest/dev/create-configure-backup.html)
+- [Read replicas with RDS for PostgreSQL](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PostgreSQL.Replication.ReadReplicas.html), [What is Amazon Quick?](https://docs.aws.amazon.com/quick/latest/userguide/what-is.html)

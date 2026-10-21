@@ -141,11 +141,11 @@ IAM 문서는 사람 사용자가 자격 증명 공급자(IdP)를 통한 페더�
 
 | 방식 | 계정 범위 | 대상 | 지원하는 자격 증명 원본 |
 |---|---|---|---|
-| IAM Identity Center | Organizations로 묶인 여러 계정 | 조직 구성원(워크포스) | SAML 2.0, AWS Managed Microsoft AD, Identity Center 디렉터리 |
+| IAM Identity Center | Organizations로 묶인 여러 계정 | 조직 구성원(워크포스) | SAML 2.0, Active Directory(AWS Managed Microsoft AD 또는 AD Connector로 연결한 자체 관리 AD), Identity Center 디렉터리 |
 | IAM 페더레이션 | 단일 계정 | 단기·소규모 사람 사용자, 머신 사용자 | SAML 2.0, OIDC |
 | Cognito 자격 증명 풀 | 제한 없음 | AWS 리소스에 직접 접근해야 하는 앱 사용자 | SAML 2.0, OIDC, 일부 소셜 IdP |
 
-IAM Identity Center는 조직 인스턴스와 계정 인스턴스가 있고 문서는 조직 인스턴스를 모범 사례로 듭니다. 조직 인스턴스는 관리 계정에 배포되고 AWS 계정 접근을 관리할 수 있는 유일한 인스턴스 유형입니다. 권한 세트(permission set)로 직무별 권한을 정의해 여러 계정에 배포하고 사용자와 그룹에 할당합니다. 2022년 7월 26일에 AWS Single Sign-On에서 이름이 바뀌었으니 보기에 SSO가 나오면 같은 서비스입니다.
+IAM Identity Center는 조직 인스턴스와 계정 인스턴스가 있고 문서는 조직 인스턴스를 모범 사례로 듭니다. 조직 인스턴스는 관리 계정에 배포되고 AWS 계정 접근을 관리할 수 있는 유일한 인스턴스 유형입니다. 권한 세트(permission set)로 직무별 권한을 정의해 여러 계정에 배포하고 사용자와 그룹에 할당합니다. 2026년 10월 문서는 권한 세트를 조직 인스턴스에서만 쓰는 선택 기능으로 적고 각 계정에 이미 있는 IAM 역할을 Identity Center 사용자와 그룹에 할당하는 IAM account access manager도 함께 소개합니다. 2022년 7월 26일에 AWS Single Sign-On에서 이름이 바뀌었으니 보기에 SSO가 나오면 같은 서비스입니다.
 
 "사내 Active Directory 사용자가 여러 AWS 계정 콘솔에 로그인"은 IAM Identity Center에 AD를 자격 증명 원본으로 연결하는 것이 답입니다. "디렉터리를 IAM 역할과 페더레이션할 시점"이라는 안내서 항목은 이 표의 첫 두 줄을 고르는 문제로 읽었습니다.
 
@@ -174,7 +174,7 @@ RCP(리소스 제어 정책)는 SCP와 짝을 이루는 조직 정책입니다. 
 | 권한 부여 | 하지 않는다 | 하지 않는다 |
 | 관리 계정 | 적용되지 않는다 | 관리 계정의 리소스에는 적용되지 않는다 |
 | 서비스 연결 역할 | 영향 없음 | 영향 없음 |
-| 대상 서비스 | 모든 서비스 | 일부 서비스(S3, SQS, KMS, Secrets Manager, STS, DynamoDB, CloudWatch Logs 등 문서 목록) |
+| 대상 서비스 | 모든 서비스 | 문서 목록의 서비스(2026년 10월 기준 60여 개. S3, SQS, KMS, Secrets Manager, STS, DynamoDB, CloudWatch Logs, CloudFront, Cognito, ECR 등) |
 | 예외 | | AWS 관리형 KMS 키에는 적용되지 않는다 |
 | 사용 조건 | 모든 기능을 켠 조직 | 모든 기능을 켠 조직 |
 
@@ -264,7 +264,7 @@ NAT 게이트웨이는 사설 서브넷의 인스턴스가 밖으로 연결을 �
 |---|---|---|
 | 대상 서비스 | S3, DynamoDB만 | 대부분의 AWS 서비스, PrivateLink 엔드포인트 서비스 |
 | 기반 | PrivateLink를 쓰지 않는다. 라우팅 테이블에 서비스 접두사 목록 경로가 추가된다 | PrivateLink. 지정한 서브넷마다 엔드포인트 네트워크 인터페이스(사설 IP)가 생긴다 |
-| 요금 | 추가 요금 없음 | 시간당과 처리 데이터량 요금(이번에 금액은 확인하지 않음) |
+| 요금 | 추가 요금 없음 | 엔드포인트·AZ당 시간 요금과 처리 데이터 GB당 요금(리전 월 합계 첫 1PB까지 GB당 0.01달러). 요금 페이지 예시의 시간 요금은 ENI당 시간당 0.01달러이고 리전마다 다르다 |
 | 접근 통제 | 엔드포인트 정책, 버킷 정책의 `aws:SourceVpce` | 엔드포인트 정책, 보안 그룹 |
 | 범위 | 같은 리전의 서비스만. 다른 리전의 S3로 가는 트래픽은 인터넷 게이트웨이로 간다 | |
 
@@ -307,7 +307,7 @@ WAF는 보호 대상 리소스로 들어오는 HTTP(S) 요청을 검사하는 �
 
 Shield Standard는 모든 AWS 고객에게 추가 요금 없이 자동 적용되고 흔한 네트워크·전송 계층(L3, L4) DDoS 공격을 막습니다. 문서는 Route 53 호스팅 영역, CloudFront 배포, Global Accelerator 표준 가속기가 특히 이 보호를 넓게 받는다고 적습니다.
 
-Shield Advanced는 구독형입니다. 요금 페이지의 예시에는 월 3,000달러가 나오고 1년 약정이 필요하며 DDoS 비용 보호를 포함한 모든 혜택은 1년 기간을 채우는 것이 전제라고 적혀 있습니다. 보호 대상 리소스의 표준 WAF 요금(웹 ACL, 규칙, 요청 검사)을 1,500 WCU와 기본 본문 크기 범위 안에서 포함합니다.
+Shield Advanced는 구독형입니다. 요금 페이지의 예시에는 월 3,000달러가 나오고 1년 약정이 필요하며 DDoS 비용 보호를 포함한 모든 혜택은 1년 기간을 채우는 것이 전제라고 적혀 있습니다. 보호 대상 리소스의 표준 WAF 요금(웹 ACL, 규칙, 요청 검사)을 1,500 WCU와 기본 본문 크기 범위 안에서 월 500억 건 요청까지 포함합니다. 같은 페이지는 Shield 대응팀(SRT)에 연락하려면 Business 또는 Enterprise 수준의 Support 플랜이 필요하다고 적습니다.
 
 | 요구 | 답 |
 |---|---|
@@ -413,7 +413,7 @@ KMS는 데이터 키를 저장하거나 추적하지 않습니다. S3, EBS 같�
 
 ### 4-4. CloudHSM이 필요한 자리
 
-CloudHSM은 단일 테넌트 HSM이고 FIPS 모드 클러스터는 FIPS 140-2 레벨 3 또는 FIPS 140-3 레벨 3 검증을 받았습니다. 데이터 플레인이 종단 간 암호화되어 AWS가 볼 수 없고 사용자 관리도 고객이 IAM 밖에서 합니다. PKCS #11, JCE, CNG 같은 표준 API를 쓰는 기존 애플리케이션을 옮기기 쉽습니다. 문서는 HSM을 직접 운영할 필요가 없으면 KMS를 고려하라고 적습니다.
+CloudHSM은 단일 테넌트 HSM이고 FIPS 모드 클러스터는 FIPS 140-2 레벨 3 또는 FIPS 140-3 레벨 3 검증을 받았습니다. 데이터 플레인이 종단 간 암호화되어 AWS가 볼 수 없고 사용자 관리도 고객이 IAM 밖에서 합니다. PKCS #11, JCE, CNG 같은 표준 API를 쓰는 기존 애플리케이션을 옮기기 쉽습니다. 문서는 HSM을 직접 운영할 필요가 없으면 KMS를 고려하라고 적습니다. KMS도 FIPS 140-3 Security Level 3 검증 HSM으로 키를 보호한다고 KMS 문서가 적으므로 "레벨 3"만으로는 CloudHSM을 고를 근거가 되지 않습니다. 단일 테넌트 HSM과 고객의 직접 통제가 둘을 가르는 조건입니다.
 
 | 요구 | 답 |
 |---|---|
@@ -447,7 +447,8 @@ ACM은 공용·사설 SSL/TLS 인증서의 발급, 저장, 갱신을 맡습니�
 | 자동 갱신 | DNS 검증이면 자동 갱신, 이메일 검증이면 만료 전 알림. ELB나 CloudFront에 연결된 인증서는 대상 |
 | 갱신 대상 아님 | 가져온(import) 인증서, 이미 만료된 인증서, ACME로 발급한 인증서 |
 | EC2에서 직접 TLS | 공개 인증서를 EC2 같은 자체 서버에 쓰려면 ACME 프로토콜로 발급·갱신을 자동화하라고 안내 |
-| 내보낼 수 있는 공개 인증서 | 2026년 10월 문서에는 EC2, 컨테이너, 온프레미스 서버에 내보내 쓰는 공개 인증서가 있다. 유효 기간 198일, 만료 45일 전에 ACM이 갱신하고 알리지만 새 인증서를 서버에 배포하는 일은 고객이 한다. 추가 요금이 있다 |
+| 유효 기간 | ACM 인증서는 198일(2026년 10월 인증서 특성 문서) |
+| 내보낼 수 있는 공개 인증서 | 2026년 10월 문서에는 EC2, 컨테이너, 온프레미스 서버에 내보내 쓰는 공개 인증서가 있다. 만료 45일 전에 ACM이 갱신하고 알리지만 새 인증서를 서버에 배포하는 일은 고객이 한다. 추가 요금이 있다 |
 
 "인증서 만료로 장애가 났다, 재발 방지"는 ACM 발급 인증서 + DNS 검증 + ELB나 CloudFront 연결입니다. 가져온 인증서는 자동 갱신이 없으니 만료 이벤트를 모니터링해야 합니다. 내보낼 수 있는 공개 인증서는 시험 안내서보다 나중에 생긴 기능이라 문항에 반영됐는지는 알 수 없고 기존 문항은 "ACM 인증서는 통합 서비스(ELB, CloudFront 등)에서만 쓴다"를 전제로 했을 가능성이 높습니다.
 
@@ -490,7 +491,9 @@ CloudFront 앞단에 두는 경우는 원본 접근 통제(OAC)로 S3를 비공�
 | 최대 유효 기간 | 콘솔에서 1분~12시간, CLI·SDK에서 최대 7일(IAM 사용자, SigV4) |
 | 임시 자격 증명으로 만든 경우 | 자격 증명이 먼저 만료되면 URL도 그때 만료된다. 역할 세션 기본 1시간이면 URL도 1시간 |
 
-게시판의 첨부 파일을 로그인한 사용자에게만 10분 동안 내려받게 하려면 앱 서버가 미리 서명된 URL을 만들어 돌려줍니다. "URL이 설정보다 일찍 만료된다"는 시나리오의 원인은 EC2 인스턴스 프로필이나 역할 세션 같은 임시 자격 증명으로 서명한 경우입니다.
+게시판의 첨부 파일을 로그인한 사용자에게만 10분 동안 내려받게 하려면 앱 서버가 미리 서명된 URL을 만들어 돌려줍니다. "URL이 설정보다 일찍 만료된다"는 시나리오의 원인은 EC2 인스턴스 프로필이나 역할 세션 같은 임시 자격 증명으로 서명한 경우입니다. S3 문서는 EC2 인스턴스의 역할 자격 증명이 보통 6시간 유효하다고 적으므로 이때 URL은 남은 자격 증명 기간이 끝날 때 함께 만료됩니다.
+
+CloudFront 앞단이라면 CloudFront의 서명된 URL과 서명된 쿠키를 씁니다. CloudFront 문서 기준으로 파일 하나를 제한하거나 쿠키를 못 쓰는 클라이언트면 서명된 URL, 지금 URL을 바꾸지 않고 여러 파일을 제한하면 서명된 쿠키이고 둘을 함께 쓰면 서명된 URL이 우선합니다.
 
 ### 4-9. 보존과 삭제 방지: 버전 관리, Object Lock, MFA Delete
 
@@ -530,9 +533,14 @@ S3 교차 리전 복제는 원본과 대상 버킷 모두 버전 관리가 켜�
 | 누가 언제 어떤 API를 불렀는지 기록 | CloudTrail(객체 수준은 데이터 이벤트를 따로 켠다) |
 | 리소스 설정이 기준에 맞는지 지속 점검 | AWS Config 관리형 규칙(예: `s3-bucket-public-read-prohibited`, `s3-bucket-versioning-enabled`) |
 | 민감 데이터 분류 | Macie |
-| 여러 서비스의 보안 결과 모아 보기 | Security Hub CSPM |
+| 여러 서비스의 보안 결과 모아 보기 | AWS Security Hub. 설정 점검과 표준 준수 검사는 Security Hub CSPM이고 이전 자료의 "Security Hub"가 지금의 Security Hub CSPM에 해당한다 |
 | 보안 사건의 원인 조사 | Detective |
 | 백업이 정책대로 되는지 감사 | AWS Backup Audit Manager |
+| AWS의 SOC, PCI, ISO 보고서 내려받기, AWS와의 계약 수락 | AWS Artifact |
+
+AWS Audit Manager(규정 준수 증거 수집)는 문서 기준으로 신규 고객을 받지 않고 2026년 4월 30일부터 새 계정에서 설정할 수 없습니다. 기존 고객만 유지 관리 모드로 계속 씁니다. 위 표의 AWS Backup Audit Manager는 AWS Backup의 기능이라 이 변경과 관계가 없습니다.
+
+Directory Service는 AWS Managed Microsoft AD, AD Connector, Simple AD 같은 디렉터리 유형을 제공합니다. IAM Identity Center는 Simple AD를 연결 디렉터리로 지원하지 않는다고 문서가 적습니다.
 
 CloudTrail과 Config는 보기에 함께 나와서 헷갈리기 쉽습니다. 2026년 10월 20일에 연 두 서비스 문서로 차이를 정리했습니다.
 
@@ -555,7 +563,7 @@ CloudTrail과 Config는 보기에 함께 나와서 헷갈리기 쉽습니다. 20
 | AWS Firewall Manager | WAF, Shield Advanced, 보안 그룹과 네트워크 ACL, Network Firewall, Route 53 Resolver DNS Firewall 정책을 조직의 여러 계정에 한 번에 적용하고 새 계정과 리소스에도 자동 적용 | "수십 개 계정의 WAF 규칙을 중앙에서" |
 | AWS RAM | 서브넷, Transit Gateway 같은 리소스를 다른 계정, 조직, OU와 공유. 추가 요금 없음 | "한 계정의 서브넷을 여러 계정이 같이 씀" |
 
-Trusted Advisor도 범위 안입니다. 지원 문서(2026년 10월 20일 확인)는 Basic Support 플랜에서는 Service Limits 범주의 모든 검사와 Security, Fault tolerance 범주의 일부 검사만 쓸 수 있고 전체 검사와 API는 Business Support+, Enterprise Support, Unified Operations 플랜에서 쓴다고 적습니다. 같은 문서는 Developer Support와 Business Support, Enterprise On-Ramp가 2027년 1월 1일에 종료된다고 공지합니다. 기존 자료의 "Business 이상에서 전체 검사"라는 표현은 플랜 이름이 바뀌는 중이라 시험 문항이 어느 이름을 쓰는지는 알 수 없습니다.
+Trusted Advisor도 범위 안입니다. 지원 문서(2026년 10월 20일 확인)는 Basic Support 플랜에서는 Service Limits 범주의 모든 검사와 Security, Fault tolerance 범주의 일부 검사만 쓸 수 있고 전체 검사와 API는 Business Support+, Enterprise Support, Unified Operations 플랜에서 쓴다고 적습니다. 같은 문서는 Developer Support와 Business Support, Enterprise On-Ramp가 2027년 1월 1일에 종료된다고 공지합니다. Enterprise On-Ramp 고객은 2026년 중 Enterprise Support로 자동 전환되고 GovCloud(US) 리전에서는 세 플랜이 계속 제공됩니다. 기존 자료의 "Business 이상에서 전체 검사"라는 표현은 플랜 이름이 바뀌는 중이라 시험 문항이 어느 이름을 쓰는지는 알 수 없습니다.
 
 ### 4-12. 과제 1.3에서 갈리는 조건
 
@@ -563,7 +571,7 @@ Trusted Advisor도 범위 안입니다. 지원 문서(2026년 10월 20일 확인
 |---|---|
 | 키 사용을 감사, 키 정책 직접 통제 | KMS 고객 관리형 키 |
 | 운영 부담 최소, 기본 암호화면 충분 | SSE-S3(기본값) |
-| 단일 테넌트, FIPS 140 레벨 3 | CloudHSM |
+| 단일 테넌트 HSM을 고객이 직접 통제 | CloudHSM |
 | 4KB보다 큰 데이터를 KMS로 | 봉투 암호화(`GenerateDataKey`) |
 | SSE-KMS 요청 비용이 큼 | S3 Bucket Key |
 | 매년 키 교체 요구, 코드 수정 없이 | 고객 관리형 키 자동 회전 |
@@ -693,9 +701,10 @@ B입니다. ACM 인증서는 리전 리소스라 리전 사이에 복사할 수 
 
 - 이 글은 2026년 10월 19일에 열어 본 AWS 공식 문서와 SAA-C03 시험 안내서로 정리했습니다. 한도와 요금은 바뀌므로 응시 전에 다시 확인합니다.
 - 실습은 아직 하지 않았습니다. 정책 평가 순서, 네트워크 ACL의 임시 포트 문제, 엔드포인트 정책 동작은 문서로만 확인했고 Ch-00의 3단계(손으로 해 보기)에서 직접 만들어 볼 계획입니다.
-- 확인하지 못한 것: 인터페이스 엔드포인트와 Direct Connect의 요금·개통 기간, AWS Artifact·Audit Manager·Directory Service의 세부 기능, CloudFront 서명된 URL과 서명된 쿠키의 차이. 요금과 개통 기간은 본문 해당 문장에 "확인하지 않음"을 붙였고 나머지는 본문에서 다루지 않았습니다.
+- 확인하지 못한 것: Direct Connect 회선 개통 기간(FAQ에 절차만 있고 기간 수치가 없음).
+- 2026년 10월 21일 보강: 인터페이스 엔드포인트 요금 구조, CloudFront 서명된 URL과 서명된 쿠키, AWS Artifact, Directory Service, Audit Manager 신규 고객 중단, Security Hub와 Security Hub CSPM 구분, KMS의 FIPS 140-3 레벨 3, ACM 인증서 유효 기간 198일, RCP 대상 서비스 수, Shield Advanced의 WAF 포함 한도를 각 문서로 확인해 본문에 넣었습니다.
 - 2026년 10월 20일 보강: S3 게이트웨이와 인터페이스 엔드포인트의 차이(온프레미스·다른 리전 접근), CloudFront OAC와 OAI, 미리 서명된 URL 유효 기간, SCP와 RCP 비교, CloudTrail과 Config, Inspector·Network Firewall·Firewall Manager·RAM·Trusted Advisor를 각 서비스 문서로 확인해 추가했습니다.
-- 리전 NAT 게이트웨이, S3 SSE-C 기본 비활성화(2026년 4월), Object Lock 가변 보존, WAF의 Bedrock AgentCore Gateway 연결, ACM 내보낼 수 있는 공개 인증서, RCP, AWS Support 플랜 개편(2027년 1월 1일)은 시험 안내서 이후에 생긴 것으로 보이며 시험 문항에 반영되었는지는 알 수 없습니다.
+- 리전 NAT 게이트웨이, S3 SSE-C 기본 비활성화(2026년 4월), Object Lock 가변 보존, WAF의 Bedrock AgentCore Gateway 연결, ACM 내보낼 수 있는 공개 인증서, RCP, AWS Support 플랜 개편(2027년 1월 1일), Security Hub 이름 변경, Audit Manager 신규 고객 중단(2026년 4월 30일)은 시험 안내서 이후에 생긴 것으로 보이며 시험 문항에 반영되었는지는 알 수 없습니다.
 - "시험에서 갈리는 조건" 표는 공식 문서의 서비스 설명을 시나리오 단어와 짝지은 제 정리이고 AWS가 만든 표가 아닙니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난도나 문체와 다를 수 있습니다.
 
@@ -707,7 +716,7 @@ B입니다. ACM 인증서는 리전 리소스라 리전 사이에 복사할 수 
 
 IAM과 여러 계정
 - AWS, [Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/)
-- IAM User Guide: [AWS account root user](https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-tasks.html), [Security best practices in IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html), [Policy evaluation logic](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html), [Cross-account policy evaluation logic](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html), [Methods to assume a role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html), [Identity providers and federation into AWS](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers.html)
+- IAM User Guide: [AWS account root user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html#root-user-tasks), [Security best practices in IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html), [Policy evaluation logic](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html), [Cross-account policy evaluation logic](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html), [Methods to assume a role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_manage-assume.html), [Identity providers and federation into AWS](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers.html)
 - AWS IAM Identity Center User Guide, [What is IAM Identity Center?](https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html)
 - AWS Organizations User Guide, [Service control policies (SCPs)](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
 - AWS Control Tower User Guide, [What Is AWS Control Tower?](https://docs.aws.amazon.com/controltower/latest/userguide/what-is-control-tower.html)
@@ -738,3 +747,9 @@ IAM과 여러 계정
 - AWS Config Developer Guide, [What Is AWS Config?](https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html)
 - [What is Amazon Inspector?](https://docs.aws.amazon.com/inspector/latest/user/what-is-inspector.html), [What is AWS Network Firewall?](https://docs.aws.amazon.com/network-firewall/latest/developerguide/what-is-aws-network-firewall.html), [AWS Firewall Manager](https://docs.aws.amazon.com/waf/latest/developerguide/fms-chapter.html), [What is AWS Resource Access Manager?](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)
 - AWS Support User Guide, [AWS Trusted Advisor](https://docs.aws.amazon.com/awssupport/latest/user/trusted-advisor.html)
+
+2026년 10월 21일 보강 때 연 문서
+- [What is AWS Security Hub?](https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub-v2.html), [What is AWS Security Hub CSPM?](https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub.html)
+- [AWS Audit Manager availability change](https://docs.aws.amazon.com/audit-manager/latest/userguide/audit-manager-availability-change.html), [What is AWS Artifact?](https://docs.aws.amazon.com/artifact/latest/ug/what-is-aws-artifact.html), [What is AWS Directory Service?](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html)
+- [AWS KMS overview](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html), [ACM certificate characteristics](https://docs.aws.amazon.com/acm/latest/userguide/acm-certificate-characteristics.html), [AWS PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/)
+- [Connect to a Microsoft AD directory (IAM Identity Center)](https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source-ad.html), [Decide when to use CloudFront signed URLs or signed cookies](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-choosing-signed-urls-cookies.html)

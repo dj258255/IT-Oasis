@@ -103,7 +103,7 @@ SNS는 발행자가 토픽에 보낸 메시지를 모든 구독자에게 밀어 
 
 ### 2-5. 이벤트 기반: EventBridge
 
-EventBridge 문서는 이벤트를 처리하는 방법을 세 가지로 나눕니다.
+EventBridge 문서는 이벤트를 처리하는 방식을 이벤트 버스와 파이프 두 가지로 나누고 여기에 스케줄러를 따로 둡니다.
 
 | 기능 | 하는 일 |
 |---|---|
@@ -111,7 +111,7 @@ EventBridge 문서는 이벤트를 처리하는 방법을 세 가지로 나눕�
 | 파이프 | 하나의 원본에서 하나의 대상으로 가는 점대점 통합. 변환과 보강 지원 |
 | 스케줄러 | cron, rate 표현식이나 일회성 일정으로 작업을 호출 |
 
-2026년 10월 문서에는 이벤트를 정한 기간 보존하고 순서 전달과 재생을 지원하는 새 Custom Event Bus와 기존 규칙 기반 버스(Custom Event Bus - Classic)가 함께 나옵니다. 시험 문항은 규칙과 대상 중심의 기존 모델을 전제로 할 가능성이 높다고 보고 있습니다.
+2026년 10월 문서에는 이벤트를 정한 기간 보존하고 순서 전달과 재생을 지원하는 새 Custom Event Bus와 기존 규칙 기반 버스(Custom Event Bus - Classic)가 함께 나옵니다. 문서는 새 애플리케이션이면 새 Custom Event Bus로 시작하라고 권하고 Classic도 계속 쓸 수 있다고 적습니다. 시험 문항은 규칙과 대상 중심의 기존 모델을 전제로 할 가능성이 높다고 보고 있습니다.
 
 SNS와 EventBridge가 함께 보기에 나오면 이벤트 내용으로 세밀하게 걸러 여러 AWS 서비스나 SaaS로 보내는 쪽이 EventBridge, 대량 구독자에게 단순히 밀어 넣는 쪽이 SNS로 구분했습니다. 이 구분은 두 서비스 문서를 나란히 놓고 정리한 것이고 AWS가 이렇게 비교한 문서를 이번에 찾지는 못했습니다.
 
@@ -145,7 +145,7 @@ API Gateway 문서는 HTTP API를 기능을 줄이고 가격을 낮춘 제품으
 
 | 할당량(2026년 10월) | 값 |
 |---|---|
-| 계정·리전당 스로틀 | 초당 10,000요청, 버스트 버킷 5,000요청(늘릴 수 있음). 일부 신규 리전은 2,500과 1,250 |
+| 계정·리전당 스로틀 | 초당 10,000요청(증가 요청 가능), 버스트 버킷 5,000요청(고객이 따로 바꿀 수 없고 AWS가 RPS 한도에 맞춰 정함). 일부 신규 리전은 2,500과 1,250 |
 | REST API 통합 제한 시간 | 50밀리초 ~ 29초. 리전·프라이빗 API는 29초보다 늘릴 수 있지만 리전 스로틀 한도가 줄 수 있다. 엣지 최적화는 늘릴 수 없다 |
 | 페이로드 | 10MB |
 | 캐시 TTL | 기본 300초, 0~3,600초 |
@@ -176,7 +176,7 @@ Lambda 문서에는 API Gateway의 기본 스로틀(초당 10,000)과 Lambda의 
 | ECS Managed Instances | EC2 인스턴스 유형을 고르되 프로비저닝, 패치, 확장은 AWS에 맡길 때(2026년 10월 문서) |
 | EKS | 이미 쿠버네티스를 쓰거나 쿠버네티스 API와 생태계가 필요할 때 |
 
-"컨테이너로 옮기는 방법"이라는 안내서 항목은 기존 애플리케이션을 컨테이너 이미지로 만들어 ECR에 올리고 ECS 서비스로 띄우는 흐름으로 이해했습니다. ECS 문서는 서비스를 "오래 실행되는 상태 비저장 애플리케이션", 태스크를 "작업을 하고 끝나는 애플리케이션"으로 구분합니다. EKS는 이번에 서비스 문서를 열지 않아 쿠버네티스 호환이라는 일반적 설명만 적었습니다.
+"컨테이너로 옮기는 방법"이라는 안내서 항목은 기존 애플리케이션을 컨테이너 이미지로 만들어 ECR에 올리고 ECS 서비스로 띄우는 흐름으로 이해했습니다. ECS 문서는 서비스를 "오래 실행되는 상태 비저장 애플리케이션", 태스크를 "작업을 하고 끝나는 애플리케이션"으로 구분합니다. EKS 문서는 쿠버네티스 컨트롤 플레인을 AWS가 관리한다고 적고 노드 관리까지 맡기는 EKS Auto Mode, 온프레미스에서 쓰는 EKS Anywhere와 Hybrid Nodes를 함께 소개합니다.
 
 ### 2-10. Auto Scaling
 
@@ -188,13 +188,13 @@ Lambda 문서에는 API Gateway의 기본 스로틀(초당 10,000)과 Lambda의 
 
 문서는 대상 추적을 강하게 권하고 용량에 반비례하는 지표(평균 CPU 사용률, 대상당 요청 수)를 고르라고 합니다. 용량을 두 배로 늘리면 지표가 절반으로 줄어드는 지표여야 비례 조정이 맞게 일어난다는 이유입니다. 정책이 여러 개 동시에 발동하면 가장 큰 용량을 주는 정책을 따릅니다.
 
-SQS 소비자를 늘릴 때는 큐 길이 대신 인스턴스당 처리할 메시지 수(backlog per instance)를 지표로 쓰는 문서가 따로 있습니다(이번에는 목차에서 제목만 확인). 예약 조정과 예측 조정도 있는데 이번에는 문서를 열지 않았습니다. 매일 같은 시각에 몰리는 부하는 예약 조정, 과거 패턴으로 미리 늘리는 것은 예측 조정이라는 일반적인 구분만 적어 둡니다.
+SQS 소비자를 늘릴 때는 큐 길이 대신 인스턴스당 처리할 메시지 수(backlog per instance)를 지표로 쓰는 문서가 따로 있습니다(이번에는 목차에서 제목만 확인). 예약 조정은 정한 시각에 원하는 용량과 최소·최대를 바꾸는 예약 작업이고 한 번만 실행하거나 cron으로 반복할 수 있으며 동적 조정 정책과 함께 쓸 수 있습니다. 예측 조정은 과거 부하에서 일 단위·주 단위 패턴을 찾아 예상 부하보다 먼저 용량을 늘리고 문서는 업무 시간 주기 트래픽, 반복 배치, 초기화가 오래 걸리는 앱에 맞다고 적습니다.
 
 조정 정책 말고도 인스턴스가 들어오고 나가는 순간을 다루는 기능 두 가지가 문제에 나옵니다. EC2 Auto Scaling 사용자 가이드(2026년 10월 20일 확인) 기준입니다.
 
 | 기능 | 하는 일 | 값과 제약 |
 |---|---|---|
-| 수명 주기 후크(lifecycle hook) | 시작 중이거나 종료 중인 인스턴스를 대기 상태로 잡아 두고 사용자 작업(소프트웨어 설치, 로그 내려받기)을 마친 뒤 다음 상태로 보낸다 | 기본 하트비트 제한 시간 1시간. 대기 최대는 48시간과 하트비트의 100배 중 작은 값. 종료 후크는 최선 노력(best effort)이고 Spot 회수는 막지 못한다 |
+| 수명 주기 후크(lifecycle hook) | 시작 중이거나 종료 중인 인스턴스를 대기 상태로 잡아 두고 사용자 작업(소프트웨어 설치, 로그 내려받기)을 마친 뒤 다음 상태로 보낸다 | 기본 하트비트 제한 시간 1시간. 대기 최대는 48시간과 하트비트의 100배 중 작은 값. 종료 후크는 기본으로 최선 노력(best effort)이고 인스턴스 수명 주기 정책의 보존 설정과 함께 쓸 수 있다. Spot 회수는 막지 못한다 |
 | 웜 풀(warm pool) | 부팅이 아주 오래 걸리는 앱을 위해 미리 초기화한 인스턴스를 그룹 옆에 두었다가 확장할 때 꺼내 쓴다 | 상태는 Stopped, Hibernated, Running 중 선택. Stopped나 Hibernated면 인스턴스 요금 없이 EBS와 탄력적 IP 요금만 낸다. Running은 권하지 않는다 |
 
 "새 인스턴스가 설정 스크립트를 끝내기 전에 ALB가 트래픽을 보내 오류" 또는 "축소 전에 로그를 S3로 옮겨야 함"은 수명 주기 후크입니다. "부팅에 10분 넘게 걸려 급증에 늦게 대응, 상시 과다 프로비저닝은 싫음"은 웜 풀입니다.
@@ -206,7 +206,7 @@ SQS 소비자를 늘릴 때는 큐 길이 대신 인스턴스당 처리할 메�
 | 엣지 | CloudFront | 정적·동적 웹 콘텐츠. 기본 TTL 24시간, 최소 0초 |
 | API | API Gateway REST API 캐시 | API 응답. 기본 TTL 300초 |
 | 애플리케이션과 DB 사이 | ElastiCache(Valkey, Redis OSS, Memcached) | 조회 결과, 세션 |
-| DynamoDB 앞 | DAX | DynamoDB 읽기(이번에 문서는 열지 않음) |
+| DynamoDB 앞 | DAX | DynamoDB API와 호환되는 인메모리 캐시. 최종 일관 읽기를 한 자릿수 밀리초에서 마이크로초로. 강력 일관 읽기나 쓰기 위주 앱에는 맞지 않음 |
 
 ElastiCache 문서의 캐시 채우기 전략입니다.
 
@@ -362,7 +362,7 @@ DR 백서의 정의입니다.
 | 구성 | 복제 | 대기·복제본의 읽기 | 장애 조치 |
 |---|---|---|---|
 | RDS Multi-AZ DB 인스턴스 | 다른 AZ의 대기 인스턴스와 동기 | 대기 인스턴스는 읽기를 처리하지 않는다 | 보통 60~120초. 큰 트랜잭션이나 긴 복구는 더 걸린다. DNS 레코드가 대기 인스턴스를 가리키도록 바뀌어 연결을 다시 맺어야 한다 |
-| RDS Multi-AZ DB 클러스터(MySQL, PostgreSQL) | 읽을 수 있는 대기 2개 | 읽기 가능 | Ch-00에서 정리한 RDS Multi-AZ 기능 페이지 기준 보통 35초 미만(이번에 다시 열지 않음) |
+| RDS Multi-AZ DB 클러스터(MySQL, PostgreSQL) | 반동기. 서로 다른 AZ 3개에 쓰기 1개와 읽을 수 있는 대기 2개 | 읽기 가능 | RDS Multi-AZ 기능 페이지 기준 보통 35초 미만(2026년 10월 21일 확인) |
 | RDS 읽기 복제본 | 비동기 | 읽기 전용 | 자동 장애 조치 없음. 승격은 몇 분이 걸리고 재부팅이 포함된다(DR 백서) |
 | Aurora | 클러스터 볼륨이 여러 AZ의 저장 노드 6개에 동기 복제 | Aurora 복제본 최대 15개, 읽기 가능 | 복제본이 있으면 보통 60초 미만, 자주 30초 미만. 복제본이 없으면 같은 AZ에 새 기본 인스턴스를 만들어 보통 10분 미만 |
 
@@ -370,7 +370,7 @@ Multi-AZ 장애 조치가 일어나는 조건으로 문서는 OS 패치, 기본 
 
 Aurora 복제본에는 0(최우선)부터 15까지 승격 우선순위를 줄 수 있습니다. 같은 우선순위면 크기가 큰 복제본을 먼저 승격합니다. 연결 문자열은 클러스터 엔드포인트를 쓰면 장애 조치 뒤에도 그대로입니다.
 
-RDS Proxy는 DB 연결 풀을 만들어 재사용하고 장애 조치 때 애플리케이션 연결을 유지한 채 새 인스턴스로 라우팅합니다. Aurora 문서는 DNS 캐시를 우회해 Aurora Multi-AZ의 장애 조치 시간을 최대 66% 줄인다고 적습니다. 클라이언트에 IAM 인증을 강제하고 DB 자격 증명은 Secrets Manager나 IAM DB 인증으로 처리합니다. 프록시는 DB와 같은 VPC에 있어야 하고 공개 접근이 불가능하며 복제 구성에서는 쓰기 인스턴스에만 연결할 수 있습니다.
+RDS Proxy는 DB 연결 풀을 만들어 재사용하고 장애 조치 때 애플리케이션 연결을 유지한 채 새 인스턴스로 라우팅합니다. Aurora 문서는 DNS 캐시를 우회해 Aurora Multi-AZ의 장애 조치 시간을 최대 66% 줄인다고 적습니다. 클라이언트에 IAM 인증을 강제하고 DB 자격 증명은 Secrets Manager나 IAM DB 인증으로 처리합니다. 프록시는 DB와 같은 VPC에 있어야 하고 공개 접근이 불가능합니다. RDS DB 인스턴스의 복제 구성에서는 프록시를 쓰기 인스턴스에만 연결할 수 있습니다. Aurora에서는 기본 프록시 엔드포인트가 쓰기 인스턴스로 가고 읽기 전용 프록시 엔드포인트를 만들면 클러스터의 리더 엔드포인트로 읽기를 나눌 수 있습니다.
 
 "Lambda가 동시에 수백 개 떠서 RDS 연결이 바닥난다"는 RDS Proxy의 대표 시나리오입니다. "앱 코드를 고칠 수 없는데 장애 조치 시간을 줄이고 싶다"도 RDS Proxy가 답이 되는 경우가 많습니다. 안내서 2.2의 프록시 개념 항목이 이것입니다.
 
@@ -395,13 +395,15 @@ DR 백서는 보조 리전을 "최대 5개"로 적고 있어 서비스 문서와
 |---|---|---|
 | 기본값 | 지정하지 않으면 MREC | |
 | 충돌 해결 | 마지막 쓰기 우선(last writer wins) | |
-| 복제 방식 | DynamoDB Streams를 읽어 다른 복제본에 적용. 복제본의 Streams는 끌 수 없다 | Streams를 쓰지 않는다 |
+| 복제 방식 | DynamoDB Streams를 읽어 다른 복제본에 적용. 복제본의 Streams는 끌 수 없다 | 복제에 Streams를 쓰지 않아 기본으로 꺼져 있다. 필요하면 켤 수 있다 |
+| 리전 | | 정확히 리전 3개(복제본 3개, 또는 복제본 2개와 감시 리전 1개). 서울을 포함한 15개 리전에서 지원 |
+| RPO | 보통 몇 초 | 0 |
 | TTL | 지원 | 미지원 |
 | 트랜잭션 | 호출한 리전 안에서만 원자적 | 미지원 |
 | 계정 | 같은 계정, 여러 계정 | 같은 계정만 |
 | 지표 | `ReplicationLatency` 발행 | 발행하지 않음 |
 
-일관성 모드는 만든 뒤 바꿀 수 없습니다. 글로벌 테이블의 가용성 SLA는 99.999%이고 단일 리전 테이블은 99.99%입니다. MRSC의 리전 수 제약과 지연 특성은 이번에 연 페이지에 없어서 확인하지 못했습니다.
+일관성 모드는 만든 뒤 바꿀 수 없습니다. 글로벌 테이블의 가용성 SLA는 99.999%이고 단일 리전 테이블은 99.99%입니다. MRSC는 쓰기와 강력 일관 읽기에 리전 간 통신이 필요해 MREC보다 지연이 큽니다. 빈 테이블에서만 만들 수 있고 만든 뒤에는 복제본을 더할 수 없습니다(DynamoDB 글로벌 테이블 동작 문서, 2026년 10월 21일 확인).
 
 DR 백서는 쓰기 전략을 셋으로 나눕니다. 모든 쓰기를 한 리전으로 보내는 write global(Aurora Global Database가 맞음), 가까운 리전에 쓰는 write local(DynamoDB 글로벌 테이블이 맞음), 사용자 ID 같은 키로 쓰기 리전을 정하는 write partitioned(양방향 S3 복제 등)입니다.
 
@@ -414,11 +416,11 @@ DR 백서는 쓰기 전략을 셋으로 나눕니다. 모든 쓰기를 한 리�
 | CRR | 다른 리전 버킷으로. 규정 준수 거리, 지연 단축 |
 | SRR | 같은 리전 버킷으로. 로그 모으기, 운영·테스트 계정 동기화, 데이터 주권 |
 | 버전 관리 | 원본과 대상 모두 켜야 한다 |
-| S3 RTC | 새 객체의 99.99%를 15분 안에 복제(SLA). Batch Replication에는 적용되지 않는다 |
+| S3 RTC | 새 객체의 99.99%를 15분 안에 복제하도록 설계됐고 SLA는 리전 쌍마다 99.9%를 약속한다. Batch Replication에는 적용되지 않는다 |
 | 삭제 마커 | 기본으로 원본에서 객체를 지우면 원본에만 삭제 마커가 생긴다(DR 백서). 복제할지 설정할 수 있다 |
 | 양방향 복제 | 복제본 수정 동기화를 켜서 ACL, 태그, 객체 잠금 변경까지 맞춘다 |
 
-S3 복제 문서의 표 한 줄에는 RTC가 "99.9%"로 적혀 있어 본문(99.99%)과 다릅니다. 본문 문장과 SLA 언급이 있는 쪽을 따랐습니다.
+S3 복제 문서 안에 99.99%와 99.9%가 함께 나오는 이유는 S3 FAQ가 설명합니다. 99.99%는 설계 목표이고 SLA가 약속하는 값은 리전 쌍마다 99.9%입니다. 두 숫자가 가리키는 대상이 다릅니다.
 
 ### 3-11. 백업으로 데이터 내구성 지키기
 
@@ -435,7 +437,7 @@ AWS Backup 개발자 가이드의 리전 간 복사 페이지(2026년 10월 20�
 
 "규정상 백업을 운영 리전과 떨어진 곳에 자동으로 보관"은 백업 계획의 복사 규칙이 답이고 Lambda로 스냅샷을 복사하는 보기는 운영 부담이 큰 쪽입니다.
 
-백서는 백업 복원이 컨트롤 플레인 작업이라서 재해 때 쓸 수 없을 수도 있으니 주기적으로 DR 리전에 미리 복원해 두는 방법을 권합니다. AWS Backup에는 예약 복원 기능이 없어 SDK로 직접 자동화한다고 적혀 있습니다. 백업은 복원 테스트까지 해야 백업이라는 것이 백서의 주의 사항입니다.
+백서는 백업 복원이 컨트롤 플레인 작업이라서 재해 때 쓸 수 없을 수도 있으니 주기적으로 DR 리전에 미리 복원해 두는 방법을 권합니다. 2021년판 백서는 AWS Backup에 예약 복원이 없어 SDK로 직접 자동화한다고 적었습니다. 지금 AWS Backup에는 정한 주기마다 복원을 실행해 복원 가능 여부와 걸린 시간을 보는 복원 테스트(restore testing) 기능이 있습니다. 다만 테스트로 만든 리소스는 끝나면 지워지므로 DR 리전에 복원본을 계속 두려면 여전히 직접 자동화합니다. 백업은 복원 테스트까지 해야 백업이라는 것이 백서의 주의 사항입니다.
 
 ### 3-12. 앱 수정 없이 레거시 애플리케이션의 신뢰성 높이기
 
@@ -451,7 +453,7 @@ AWS Backup 개발자 가이드의 리전 간 복사 페이지(2026년 10월 20�
 
 Elastic Disaster Recovery 사용자 가이드는 RPO와 RTO 숫자를 명시하지 않고 "몇 분 안에 복구 인스턴스를 띄운다"고만 적습니다. 같은 서비스의 FAQ는 "RPOs of seconds", "RTOs of minutes"라고 적어 흔히 보이는 "RPO 초 단위, RTO 분 단위"의 출처가 FAQ임을 확인했습니다(2026년 10월 20일). 복제 원본으로는 물리 서버, VMware vSphere, Microsoft Hyper-V, 다른 클라우드를 듭니다.
 
-다만 2026년 10월 20일에 연 SAA-C03 범위 안 서비스 목록에는 Elastic Disaster Recovery가 없고 Migration and Transfer 범주에 AWS Application Migration Service가 있습니다. 이관(한 번 옮기기)이 목적이면 Application Migration Service, 계속 복제하다가 장애 때 띄우는 DR이 목적이면 Elastic Disaster Recovery라고 구분해 두었습니다. Application Migration Service 문서는 이번에 열지 않았습니다.
+다만 2026년 10월 20일에 연 SAA-C03 범위 안 서비스 목록에는 Elastic Disaster Recovery가 없고 Migration and Transfer 범주에 AWS Application Migration Service가 있습니다. 이관(한 번 옮기기)이 목적이면 Application Migration Service, 계속 복제하다가 장애 때 띄우는 DR이 목적이면 Elastic Disaster Recovery라고 구분해 두었습니다. Application Migration Service는 2026년 10월 제품 페이지와 사용자 가이드에서 AWS Transform MGN으로 이름이 바뀌어 있고 시험 범위 목록에는 옛 이름으로 남아 있습니다. 문서는 물리·가상·클라우드 서버를 블록 수준으로 계속 복제해 AWS에서 띄우는 리호스팅 서비스로 설명합니다.
 
 ### 3-13. 불변 인프라와 자동화
 
@@ -467,13 +469,13 @@ DR 백서는 웜 스탠바이에서 DR 리전을 프로덕션 용량으로 늘�
 
 ### 3-15. 가시성: X-Ray
 
-X-Ray는 애플리케이션이 처리한 요청과 그 요청이 부른 AWS 리소스, 마이크로서비스, DB, 외부 API 호출을 추적합니다. 추적 데이터로 트레이스 맵을 만들어 병목, 지연 급증 같은 문제를 찾게 합니다. SDK는 세그먼트를 UDP로 X-Ray 데몬에 보내고 데몬이 모아서 올립니다. Lambda는 추적 데이터를 보내고 데몬을 대신 실행합니다.
+X-Ray는 애플리케이션이 처리한 요청과 그 요청이 부른 AWS 리소스, 마이크로서비스, DB, 외부 API 호출을 추적합니다. 추적 데이터로 트레이스 맵을 만들어 병목, 지연 급증 같은 문제를 찾게 합니다. SDK는 세그먼트를 UDP로 X-Ray 데몬에 보내고 데몬이 모아서 올립니다. Lambda는 추적 데이터를 보내고 데몬을 대신 실행합니다. X-Ray 문서는 2026년 2월 25일부터 X-Ray SDK와 데몬이 유지 관리 모드에 들어가 보안 수정만 받는다고 공지하고 새 계측에는 OpenTelemetry로 옮기라고 권합니다. 트레이스를 모아 보는 X-Ray 서비스 자체는 그대로입니다.
 
 "마이크로서비스 여러 개 중 어디서 느려지는지 모름"은 X-Ray, "지표 임계값 알림"은 CloudWatch 경보로 구분합니다. 안내서의 "비즈니스 요구에 맞는 지표 식별" 항목은 가용성을 무엇으로 잴지(오류율, 지연, 큐 적체)를 정하는 문제로 읽었습니다.
 
 ### 3-16. AWS 관리형 서비스 항목에 대해
 
-안내서 2.2의 지식 항목에는 "AWS Managed Services (AMS) with appropriate use cases (for example, Amazon Comprehend, Amazon Polly)"가 있습니다. AMS라는 이름의 별도 운영 대행 서비스가 있지만 예시는 관리형 AI 서비스입니다. 저는 이 항목을 "직접 모델과 서버를 운영하지 않고 목적별 관리형 서비스로 해결하는 선택"으로 읽었습니다. Comprehend(자연어 분석)와 Polly(텍스트 음성 변환)의 서비스 문서는 이번에 열지 않았습니다.
+안내서 2.2의 지식 항목에는 "AWS Managed Services (AMS) with appropriate use cases (for example, Amazon Comprehend, Amazon Polly)"가 있습니다. AMS라는 이름의 별도 운영 대행 서비스가 있지만 예시는 관리형 AI 서비스입니다. 저는 이 항목을 "직접 모델과 서버를 운영하지 않고 목적별 관리형 서비스로 해결하는 선택"으로 읽었습니다. Comprehend는 문서에서 엔터티, 핵심 구문, 언어, 감정을 뽑는 자연어 처리 서비스이고 토픽 모델링, 이벤트 감지, 프롬프트 안전 분류 기능은 신규 고객에게 더 이상 제공되지 않습니다. Polly는 텍스트를 음성으로 바꾸는 서비스이고 생성형, 장문형, 뉴럴, 표준 음성을 고를 수 있습니다.
 
 ### 3-17. 과제 2.2에서 갈리는 조건
 
@@ -605,16 +607,16 @@ E. RTC가 기존 객체에도 15분 SLA를 적용한다
 <details>
 <summary>정답과 이유</summary>
 
-A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RTC는 새 객체의 99.99%를 15분 안에 복제하는 SLA를 줍니다. 실시간 복제는 설정 이전 객체를 복제하지 않으므로 기존 객체는 Batch Replication을 씁니다. C와 D는 문서와 반대입니다. E는 문서가 RTC는 Batch Replication에 적용되지 않는다고 명시합니다.
+A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RTC는 새 객체의 99.99%를 15분 안에 복제하도록 설계됐으며 99.9%까지를 SLA로 보장합니다. 실시간 복제는 설정 이전 객체를 복제하지 않으므로 기존 객체는 Batch Replication을 씁니다. C와 D는 문서와 반대입니다. E는 문서가 RTC는 Batch Replication에 적용되지 않는다고 명시합니다.
 </details>
 
 ## 5. 범위와 한계
 
 - 2026년 10월 19일에 열어 본 AWS 공식 문서, SAA-C03 시험 안내서, DR 백서(Disaster Recovery of Workloads on AWS)로 정리했습니다. 한도와 요금은 바뀌므로 응시 전에 다시 확인합니다.
 - 실습은 아직 하지 않았습니다. SQS 표시 제한 시간과 DLQ 동작, Route 53 장애 조치 전환 시간, RDS 장애 조치 시간은 문서 수치를 옮긴 것이고 직접 잰 값이 아닙니다. Ch-00의 3단계에서 SQS와 SNS 팬아웃부터 만들어 볼 계획입니다.
-- 확인하지 못한 것: DynamoDB MRSC의 리전 수와 지연 특성, Auto Scaling 예약·예측 조정 세부, Application Migration Service, DAX, EKS, Comprehend, Polly 문서.
+- 2026년 10월 21일 보강: DynamoDB MRSC의 리전 수와 지연 특성, Auto Scaling 예약·예측 조정, Application Migration Service(AWS Transform MGN), DAX, EKS, Comprehend, Polly를 각 문서로 확인해 본문에 넣었습니다. S3 RTC 99.99%와 99.9%의 차이, AWS Backup 복원 테스트, X-Ray SDK·데몬 유지 관리 모드, Aurora에서 RDS Proxy 읽기 전용 엔드포인트도 고쳤습니다.
 - 2026년 10월 20일 보강: 읽기 복제본 15개는 RDS 할당량 문서의 "Read replicas per primary" 기본값 15로, Route 53 실패 임계값 기본값 3은 API 참조로, Elastic Disaster Recovery의 RPO 초·RTO 분은 FAQ로, 서울 리전의 SQS FIFO 높은 처리량 한도(그 밖의 리전 2,400)는 메시지 할당량 문서로 확인했습니다. ELB 교차 영역·고정 세션·등록 취소 지연, Auto Scaling 수명 주기 후크·웜 풀, AWS Backup 리전 간 복사를 새로 넣었습니다.
-- 문서끼리 숫자가 다른 곳이 두 군데 있었습니다. Aurora Global Database 보조 리전 수(사용자 가이드 10개, 2021년판 DR 백서 5개)와 S3 RTC 비율(본문 99.99%, 표 한 줄 99.9%)입니다. 본문에 어느 쪽을 따랐는지 적었습니다.
+- 문서끼리 숫자가 다른 곳은 Aurora Global Database 보조 리전 수(사용자 가이드 10개, 2021년판 DR 백서 5개)입니다. 본문에 어느 쪽을 따랐는지 적었습니다.
 - SQS 메시지 최대 크기(1MiB), Lambda 비동기 페이로드 1MB와 Managed Instances 90분, EventBridge의 새 Custom Event Bus, ECS Managed Instances, 리전 NAT 게이트웨이는 시험 안내서 이후 바뀌거나 생긴 것으로 보이며 문항 반영 여부는 알 수 없습니다. Elastic Disaster Recovery는 2026년 10월 범위 안 서비스 목록에 없습니다.
 - "시험에서 갈리는 조건" 표와 SNS·EventBridge 구분은 문서 설명을 시나리오 단어와 짝지은 제 정리입니다. 확인 문제는 직접 만든 것입니다.
 
@@ -637,7 +639,7 @@ A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RT
 - Amazon ElastiCache, [Caching strategies for Memcached](https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/Strategies.html)
 - Amazon CloudFront Developer Guide, [What is Amazon CloudFront?](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html)
 - Amazon RDS User Guide: [Working with DB instance read replicas](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.html), [Differences between read replicas for DB engines](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.Overview.Differences.html)
-- AWS What's New, [Amazon RDS for MySQL, MariaDB and PostgreSQL now support up to 15 read replicas for 3X read capacity](https://aws.amazon.com/about-aws/whats-new/2022/10/amazon-rds-mysql-mariadb-postgre-sql-support-15-read-replicas-3x-read-capacity), 2022
+- AWS What's New, [Amazon RDS for MySQL, MariaDB and PostgreSQL now support up to 15 read replicas for 3X read capacity](https://aws.amazon.com/about-aws/whats-new/2022/10/amazon-rds-mysql-mariadb-postgre-sql-support-15-read-replicas-3x-read-capacity/), 2022
 - [What is Amazon Elastic File System?](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html), [Amazon EBS volumes](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volumes.html), [What is AWS Transfer Family?](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html)
 
 가용성과 복구
@@ -659,4 +661,13 @@ A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RT
 - AWS, [AWS Elastic Disaster Recovery FAQs](https://aws.amazon.com/disaster-recovery/faqs/)
 - AWS Backup Developer Guide, [Creating backup copies across AWS Regions](https://docs.aws.amazon.com/aws-backup/latest/devguide/cross-region-backup.html)
 - Amazon RDS User Guide, [Quotas and constraints for Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html)
+
+2026년 10월 21일 보강 때 연 문서
+- AWS, [Amazon S3 FAQs](https://aws.amazon.com/s3/faqs/), [S3 Replication Time Control SLA](https://aws.amazon.com/s3/sla-rtc/)
+- AWS Backup Developer Guide, [Restore testing](https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html)
+- AWS X-Ray Developer Guide, [X-Ray SDK and daemon support timeline](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html)
+- [AWS Transform MGN](https://aws.amazon.com/application-migration-service/), [Amazon RDS Proxy for Aurora](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-proxy.html), [Multi-AZ DB cluster deployments](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/multi-az-db-clusters-concepts.html)
+- Amazon DynamoDB Developer Guide, [How global tables work](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/V2globaltables_HowItWorks.html), [In-memory acceleration with DAX](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.html)
+- EC2 Auto Scaling: [Scheduled scaling](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-scheduled-scaling.html), [Predictive scaling](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-predictive-scaling.html)
+- [What is Amazon EKS?](https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html), [What is Amazon Comprehend?](https://docs.aws.amazon.com/comprehend/latest/dg/what-is.html), [Amazon Comprehend availability change](https://docs.aws.amazon.com/comprehend/latest/dg/comprehend-availability-change.html), [What is Amazon Polly?](https://docs.aws.amazon.com/polly/latest/dg/what-is.html)
 - AWS, [In-Scope AWS Services (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/saa-03-in-scope-services.html)

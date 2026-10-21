@@ -1,6 +1,6 @@
 ---
 title: '[Spark Ch-00] Databricks Spark 자격증 시험 구조와 공부 계획: API 문서 없이 기본값까지 외워야 하는 시험'
-description: Databricks Certified Associate Developer for Apache Spark는 90분 동안 채점 문항 45개를 푸는 Python 전용 시험이고 2025년에 범위가 크게 바뀌었습니다. 공식 페이지와 2025년 10월판 시험 안내서로 영역별 비중과 출제 항목을 정리하고, 자주 헷갈리는 동작을 Spark 공식 문서 기준으로 확인한 뒤, 실습 환경의 제약과 응시 후기를 바탕으로 공부 계획을 세웁니다.
+description: Databricks Certified Associate Developer for Apache Spark는 90분 동안 채점 문항 45개를 푸는 Python 전용 시험이고 2025년에 범위가 크게 바뀌었습니다. 공식 페이지와 시험 안내서(2026년 10월 8일판)로 영역별 비중과 출제 항목을 정리하고 자주 헷갈리는 동작을 Spark 공식 문서 기준으로 확인한 뒤 실습 환경의 제약과 응시 후기를 바탕으로 공부 계획을 세웁니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - Spark
@@ -28,38 +28,40 @@ seriesOrder: 0
 
 ## 1. 시험 구조
 
-Databricks 자격증 페이지, 자격증 FAQ, 2025년 10월판 시험 안내서로 확인했습니다(2026년 10월 기준).
+Databricks 자격증 페이지, 자격증 FAQ, 2026년 10월 8일판 시험 안내서로 확인했습니다(2026년 10월 21일 기준). 출제 영역과 비중은 2025년 10월판과 같습니다.
 
 | 항목 | 내용 |
 |---|---|
-| 문항 | 채점 문항 45개. 채점하지 않는 문항이 추가로 나올 수 있고 그만큼 시간이 더 주어진다 |
+| 문항 | 채점 문항 45개. 채점하지 않는 문항이 최대 10개 더 나올 수 있어 화면에는 최대 55문항이 보이고 그만큼 시간이 이미 포함되어 있다 |
 | 시간 | 90분 |
 | 언어 | 영어. 코드는 Python |
-| 가격 | 200 USD. 재응시도 같은 가격이고 무료 재응시는 없다 |
+| 가격 | 200 USD와 현지 법에 따른 세금. 재응시도 같은 가격이고 무료 재응시는 없다 |
 | 합격 점수 | 공개하지 않는다. FAQ는 통계적으로 정하고 바뀔 수 있어서 공개하지 않는다고 적는다 |
 | 재응시 | 마지막 응시 후 14일 이상 지나야 한다. 횟수 제한은 없다 |
 | 응시 | Webassessor로 등록하고 Kryterion이 감독한다. 온라인 또는 시험장 |
 | 보조 자료 | API 문서를 포함해 제공하지 않는다 |
 | 권장 경험 | Spark 실무 6개월 이상 |
-| 결과 | 비공식 결과는 제출 직후 나온다 |
+| 결과 | 비공식 결과는 제출 직후 나온다. 합격하면 Databricks가 감독 녹화를 검토한 뒤 배지를 올린다 |
 
-시험장 응시를 다시 예약하려면 72시간 전까지 해야 합니다. 응시 후기(Sarah Chua, 2025)에 따르면 제출 직후 주제별 정답률과 합격 여부가 화면에 나왔고 45문항 외에 채점하지 않는 문항 10개가 더 나왔습니다.
+시험장 응시를 다시 예약하려면 72시간 전까지 해야 합니다. 응시 후기(Sarah Chua, 2025)에 따르면 제출 직후 주제별 정답률과 합격 여부가 화면에 나왔고 45문항 외에 채점하지 않는 문항 10개가 더 나왔습니다. 2026년 10월판 안내서가 적은 상한(최대 10개)과 같은 수입니다.
 
 ### 1-1. 2025년에 무엇이 바뀌었나
 
 | | 예전 시험(Spark 3.0) | 지금 시험 |
 |---|---|---|
-| 상태 | 2025년 4월 15일 등록 마감, 폐지 | 2025년 4월판 안내서부터 |
+| 상태 | 2025년 4월 30일이 마지막 응시일, 이후 폐지 | 2025년 4월 30일 공개 |
 | 문항과 시간 | 60문항, 120분 | 45문항, 90분 |
 | 합격선 | 70%로 공개 | 공개하지 않음 |
 | 시험 중 문서 | 제공(검색 불가) | 제공하지 않음 |
 | 범위 | 아키텍처와 DataFrame API 중심 | Streaming, Spark Connect, pandas API on Spark 추가 |
 
-시험이 기준으로 하는 Spark 버전(3.5인지 4.x인지)은 공식 페이지와 안내서 어디에도 없습니다. 안내서는 "Apache Spark"라고만 씁니다. 버전을 적은 곳은 상업 강의 페이지뿐이었습니다. 이 글의 동작 설명은 열람 시점의 Spark 공식 문서(4.2.0) 기준이고 버전 사이에 바뀐 동작은 따로 표시했습니다.
+두 날짜는 Databricks 커뮤니티의 커뮤니티 매니저와 직원 답변(2025년 5월)에서 가져왔습니다. 공식 폐지 공지 문서는 찾지 못했습니다.
+
+시험이 기준으로 하는 Spark 버전(3.5인지 4.x인지)은 공식 페이지와 안내서(2026년 10월판 포함) 어디에도 없습니다. 안내서는 "Apache Spark"라고만 씁니다. 버전을 적은 곳은 상업 강의 페이지뿐이었습니다. 이 글의 동작 설명은 열람 시점의 Spark 공식 문서(4.2.0) 기준이고 버전 사이에 바뀐 동작은 따로 표시했습니다.
 
 ## 2. 영역과 출제 항목
 
-비중은 자격증 페이지에 있고 항목은 2025년 10월판 안내서를 요약했습니다.
+비중은 자격증 페이지와 안내서에 있고 항목은 2026년 10월 8일판 안내서를 요약했습니다. 목표 문장은 2025년 10월판과 같습니다.
 
 | 영역 | 비중 | 항목 |
 |---|---|---|
@@ -71,7 +73,7 @@ Databricks 자격증 페이지, 자격증 FAQ, 2025년 10월판 시험 안내서
 | 6. Spark Connect | 5% | Spark Connect의 특징 / 배포 모드(Client, Cluster, Local) |
 | 7. pandas API on Spark | 5% | 장점 / pandas UDF 만들기와 호출 |
 
-안내서에는 샘플 문항 10개와 정답이 실려 있습니다. 다루는 것은 `partitionBy`와 overwrite, Spark UI에서 익스큐터 로그 찾기, `withColumn`과 `withColumnRenamed`, `spark.sql.shuffle.partitions`의 기본값 200, `na.drop()`, Local 모드, `approx_count_distinct`(HyperLogLog) 등입니다. 대부분 동작이나 기본값을 정확히 아는지 묻습니다.
+안내서에는 샘플 문항 10개와 정답이 실려 있고 2026년 10월판부터는 정답마다 해설이 붙습니다. 다루는 것은 `partitionBy`와 overwrite, Spark UI에서 익스큐터 로그 찾기, `withColumn`과 `withColumnRenamed`, `spark.sql.shuffle.partitions`의 기본값 200, `na.drop()`, Local 모드, `approx_count_distinct`(HyperLogLog) 등입니다. 대부분 동작이나 기본값을 정확히 아는지 묻습니다.
 
 ## 3. 헷갈리기 쉬운 동작(공식 문서 기준)
 
@@ -117,12 +119,12 @@ Free Edition의 서버리스 컴퓨트 자체가 Spark Connect로 동작하니, 
 ```bash
 pip install "pyspark[sql,pandas_on_spark,connect]"
 
-# 로컬 Spark Connect 서버(기본 포트 15002)에 붙기
-$SPARK_HOME/sbin/start-connect-server.sh
-pyspark --remote "sc://localhost"
+# 로컬 Spark Connect 서버(기본 포트 15002)는 내려받은 Spark 배포판(spark-4.2.0-bin-hadoop3.tgz) 폴더에서 띄운다
+./sbin/start-connect-server.sh
+./bin/pyspark --remote "sc://localhost"
 ```
 
-아직 이 노트북에서 실행해 보지 않은 명령입니다. 다음 글에서 설치하고 결과를 남기겠습니다.
+공식 문서를 읽고 적은 명령이고 실행해 보지 않았습니다. pip로 받은 PySpark의 `sbin`에는 History Server 스크립트만 들어 있고 `start-connect-server.sh`는 없어서(4.2.0 `setup.py`의 `package_data`) Connect 서버는 배포판으로 띄웁니다. Java 없이 Docker로 띄우는 방법은 [Ch-07](/blog/cert/spark/spark-07-resources-and-exam-day) 4절에 정리했습니다.
 
 ## 5. 후기에서 확인한 것
 
@@ -142,11 +144,11 @@ pyspark --remote "sc://localhost"
 
 | 단계 | 할 일 | 끝났다고 보는 기준 |
 |---|---|---|
-| 1. 기준 잡기 | 2025년 10월판 안내서의 항목(2절)을 체크리스트로 옮기고 샘플 문항 10개를 푼다 | 틀린 문항마다 해당 항목을 적는다 |
+| 1. 기준 잡기 | 최신 안내서(2026년 10월 8일판)의 항목(2절)을 체크리스트로 옮기고 샘플 문항 10개를 푼다 | 틀린 문항마다 해당 항목을 적는다 |
 | 2. 환경 | 로컬 PySpark와 Free Edition을 준비한다 | 로컬에서 Spark UI가 뜨고 Free Edition에서 노트북이 돈다 |
 | 3. 아키텍처와 DataFrame API(50%) | 3절 표의 동작을 하나씩 코드로 재현하고 Spark UI에서 Job, Stage, 셔플을 확인한다. 쇼핑몰 주문과 회원 데이터 같은 작은 예제로 조인, 집계, 날짜 처리를 연습한다 | 기본값과 시그니처를 문서 없이 쓴다 |
 | 4. Spark SQL(20%) | 파일에 직접 SQL, 저장 모드, `partitionBy`와 `bucketBy`, 임시 뷰를 재현한다 | 각 저장 모드가 기존 데이터에 무엇을 하는지 설명한다 |
-| 5. 튜닝, Streaming, Connect, pandas API(30%) | 쏠린 데이터로 AQE 전후 계획을 비교하고, 파일 소스 스트리밍으로 출력 모드와 워터마크 중복 제거를 확인한다. 로컬 Connect 서버로 RDD가 막히는 것을 본다 | 각 영역에서 안 되는 것을 이유와 함께 말한다 |
+| 5. 튜닝, Streaming, Connect, pandas API(30%) | 쏠린 데이터로 AQE 전후 계획을 비교하고 파일 소스 스트리밍으로 출력 모드와 워터마크 중복 제거를 확인한다. 로컬 Connect 서버로 RDD가 막히는 것을 본다 | 각 영역에서 안 되는 것을 이유와 함께 말한다 |
 | 6. 모의고사 | 공식 Academy 과정을 마치고 안내서 샘플 문항과 새 범위가 반영된 모의고사로 시간을 재고 푼다. Databricks는 공식 모의고사를 제공하지 않는다 | 90분 안에 다 풀고 꾸준히 여유 있게 넘는다 |
 
 합격선이 공개되지 않아 모의고사 목표치를 정할 근거가 약합니다. 커뮤니티에서는 80% 정도를 목표로 하라는 개인 의견이 있었습니다.
@@ -155,20 +157,21 @@ pyspark --remote "sc://localhost"
 
 ## 7. 범위와 한계
 
-- 시험 정보는 2026년 10월 19일 Databricks 공식 페이지, FAQ, 2025년 10월판 안내서로 확인했습니다. 2026년 10월 20일에 2026년 10월 8일판 안내서를 찾았고 출제 영역과 비중은 같았습니다. 바뀐 점은 [Ch-07](/blog/cert/spark/spark-07-resources-and-exam-day) 1-1절에 적었습니다.
+- 시험 정보는 2026년 10월 21일 Databricks 자격증 페이지, FAQ, 2026년 10월 8일판 안내서로 다시 확인했습니다. 2025년 10월판과 달라진 점은 [Ch-07](/blog/cert/spark/spark-07-resources-and-exam-day) 1-1절에 적었습니다. 안내서는 시험 2주 전에 다시 확인하라고 적으니 응시 전에 자격증 페이지에서 판을 확인합니다.
 - 3절의 동작은 Spark 4.2.0 문서 기준입니다. 시험의 기준 버전이 공개되지 않아 버전에 따라 다를 수 있습니다.
-- 4절의 명령과 6절의 재현은 아직 실행하지 않았습니다. 실행한 뒤 결과를 이 시리즈에 남기겠습니다.
-- 새 시험 후기는 두 건만 확인했습니다. Medium 글은 2026년 10월 20일에 작성자 RSS로 원문 주소와 본문을 확인해 링크를 붙였습니다.
+- 4절의 명령과 6절의 재현은 실행하지 않았습니다.
+- 새 시험 후기는 두 건만 확인했습니다.
 
 ## 참고 자료
 
 공식 자료
 - Databricks, [Databricks Certified Associate Developer for Apache Spark](https://www.databricks.com/learn/certification/apache-spark-developer-associate)
 - Databricks, [Certification and Badging FAQ](https://www.databricks.com/learn/certification/faq)
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf), [Exam Guide, Apr 2025](https://www.databricks.com/sites/default/files/2025-04/Databricks-Certified-Associate-Developer-for-Apache-Spark_Exam-Guide_1_Apr_2025.pdf)
+- Databricks, [Exam Guide, 2026-10-08판(파일명 august-2026)](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf), [Exam Guide, Apr 2025](https://www.databricks.com/sites/default/files/2025-04/Databricks-Certified-Associate-Developer-for-Apache-Spark_Exam-Guide_1_Apr_2025.pdf)
+- Databricks Community, [Databricks Certified Associate Developer for Apache Spark 3.0 (예전 시험 폐지 답변)](https://community.databricks.com/t5/certifications/databricks-certified-associate-developer-for-apache-spark-3-0/m-p/117763), 2025-05
 - Databricks Community, [Official Certification Exam Retake Policy Announcement](https://community.databricks.com/t5/certifications/official-certification-exam-retake-policy-announcement/td-p/50296), 2023
 - Databricks, [Free Edition](https://www.databricks.com/learn/free-edition), [Free Edition limitations](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations), [Serverless compute limitations](https://docs.databricks.com/aws/en/compute/serverless/limitations)
-- Apache Spark: [PySpark 설치](https://spark.apache.org/docs/latest/api/python/getting_started/install.html), [RDD Programming Guide](https://spark.apache.org/docs/latest/rdd-programming-guide.html), [Cluster Mode Overview](https://spark.apache.org/docs/latest/cluster-overview.html), [Performance Tuning](https://spark.apache.org/docs/latest/sql-performance-tuning.html), [Structured Streaming](https://spark.apache.org/docs/latest/streaming/index.html), [Spark Connect Overview](https://spark.apache.org/docs/latest/spark-connect-overview.html), [Arrow와 pandas UDF](https://spark.apache.org/docs/latest/api/python/tutorial/sql/arrow_pandas.html)
+- Apache Spark: [PySpark 설치](https://spark.apache.org/docs/latest/api/python/getting_started/install.html), [RDD Programming Guide](https://spark.apache.org/docs/latest/rdd-programming-guide.html), [Cluster Mode Overview](https://spark.apache.org/docs/latest/cluster-overview.html), [Performance Tuning](https://spark.apache.org/docs/latest/sql-performance-tuning.html), [Structured Streaming](https://spark.apache.org/docs/latest/streaming/index.html), [Spark Connect Overview](https://spark.apache.org/docs/latest/spark-connect-overview.html), [Arrow와 pandas UDF](https://spark.apache.org/docs/latest/api/python/tutorial/sql/arrow_pandas.html), [python/packaging/classic/setup.py(v4.2.0)](https://github.com/apache/spark/blob/v4.2.0/python/packaging/classic/setup.py)
 
 후기와 커뮤니티
 - Sarah Chua, [Databricks Certified Associate Developer for Apache Spark — 2025](https://sarahchua-sg.medium.com/databricks-certified-associate-developer-for-apache-spark-2025-a1d39fd9808d), Medium, 2025-09-03

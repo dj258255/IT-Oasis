@@ -26,7 +26,7 @@ seriesOrder: 2
 
 ---
 
-시험 안내서(2025년 10월판) 2영역의 항목은 넷입니다.
+시험 안내서(2026년 10월 8일판, 2025년 10월판과 같음) 2영역의 항목은 넷입니다.
 
 | 안내서 항목 | 이 글 |
 |---|---|
@@ -290,7 +290,7 @@ spark.sql("SELECT order_date, sum(amount) AS revenue "
 |---|---|---|
 | Parquet, ORC | 파일에 든 스키마 그대로 | SQL 레퍼런스 File 문서 예제 |
 | JSON | 스키마를 추론해 컬럼으로 | 같은 문서 예제 |
-| CSV | 옵션을 줄 수 없다. `header` 기본값 `false`이므로 첫 줄도 데이터로 읽는다 | Databricks CSV 문서, Spark CSV 옵션 기본값 |
+| CSV | Databricks 문서는 옵션을 줄 수 없다고 적는다. `header` 기본값 `false`이므로 첫 줄도 데이터로 읽는다 | Databricks CSV 문서, Spark CSV 옵션 기본값 |
 | Text | `value` 문자열 컬럼 하나 | Spark Text 문서 |
 | Delta | 테이블의 현재 버전 | Delta Lake 문서 `delta.`/path`` |
 
@@ -336,7 +336,7 @@ Delta 테이블에서 임의 조건에 맞는 행만 골라 바꿀 때는 `repla
 ### 헷갈리는 지점
 
 - 경로를 감싸는 기호는 백틱(`` ` ``)입니다. 작은따옴표로 감싸면 문자열 리터럴이 됩니다.
-- 헤더 없이 읽은 CSV의 컬럼 이름은 `_c0`, `_c1`, `_c2` 순서로 붙습니다. CSV 문서의 예제가 `spark.read.csv(path)` 결과를 `_c0` 컬럼으로 보여 주고 첫 줄 `name;age;job`이 데이터 행으로 나옵니다. 직접 SQL도 `header` 기본값이 같으니 같은 이름이 붙을 것으로 보지만 직접 SQL 예제로 확인한 것은 아닙니다.
+- 헤더 없이 읽은 CSV의 컬럼 이름은 `_c0`, `_c1`, `_c2` 순서로 붙습니다. CSV 문서의 예제가 `spark.read.csv(path)` 결과를 `_c0` 컬럼으로 보여 주고 첫 줄 `name;age;job`이 데이터 행으로 나옵니다. 직접 SQL도 같습니다. Spark 4.2.0 소스의 `ResolveSQLOnFile` 규칙은 파일 직접 SQL을 `spark.read`와 같은 `DataSource`로 바꾸면서 옵션을 따로 넣지 않습니다. 그래서 `header`가 기본값 `false`로 남고 `CSVUtils`가 컬럼 이름을 `_c` 뒤에 위치 번호를 붙여 만듭니다.
 - Delta에 overwrite하면 Delta는 트랜잭션 로그로 이전 버전을 남깁니다. Delta Lake 문서는 지금 테이블에 없는 데이터를 트랜잭션 로그로 읽는 기능을 time travel이라고 적습니다. Parquet 경로 overwrite는 기존 파일을 지우고 씁니다.
 
 ## 3. 저장 모드
@@ -394,7 +394,7 @@ INSERT OVERWRITE shop.orders SELECT * FROM orders_v WHERE status = 'PAID';
 
 - `"error"`와 `"errorifexists"`는 같은 모드입니다. 보기에 둘이 따로 나오면 둘 다 기본값입니다.
 - `ignore`는 대상이 이미 있으면 쓰기 자체를 건너뛰고 오류도 내지 않습니다. 대상이 없으면 평소처럼 씁니다. 그래서 쓰기가 실제로 일어났는지 코드만 보고 알 수 없습니다.
-- `insertInto`의 위치 기반 매칭은 `union`의 위치 기반 매칭과 같은 함정입니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 7절).
+- `insertInto`의 위치 기반 매칭은 `union`의 위치 기반 매칭과 같은 함정입니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 6절).
 
 ## 4. 영구 테이블: partitionBy, bucketBy, sortBy
 
@@ -516,7 +516,7 @@ spark.sql("""CREATE TABLE shop.orders_ext
 spark.sql("MSCK REPAIR TABLE shop.orders_ext")
 ```
 
-마지막 `CREATE TABLE`처럼 스키마를 생략하고 기존 Parquet 경로에 붙이는 방식은 SQL 레퍼런스가 "파일 소스는 대상이 미리 있어야 한다는 규칙의 예외"라고 적은 부분에 기댄 것입니다. 실행해서 확인한 코드가 아닙니다.
+마지막 `CREATE TABLE`처럼 스키마를 생략하고 기존 Parquet 경로에 붙이는 동작은 Spark 4.2.0 소스의 `CreateDataSourceTableCommand`로 확인했습니다. 스키마가 비어 있으면 경로의 파일에서 스키마와 파티션 컬럼을 추론해 메타스토어에 적습니다. 파티션 목록은 비어 있는 채로 시작하고 소스 주석이 `msck repair table`을 불러 채워야 한다고 적습니다. 그래서 `MSCK REPAIR TABLE`을 이어 붙였습니다. 실행해서 확인한 코드는 아닙니다.
 
 ### 5-2. Databricks Unity Catalog 기준
 
@@ -526,7 +526,7 @@ Databricks 문서의 관리형 테이블과 외부 테이블 설명입니다.
 |---|---|---|
 | 위치 | Unity Catalog가 저장소, 최적화까지 관리 | 클라우드 저장소. `LOCATION`이 필수이고 등록된 external location 아래여야 한다 |
 | 형식 | 기본 Delta. `USING iceberg`면 Iceberg | DELTA, CSV, JSON, AVRO, PARQUET, ORC, TEXT |
-| `DROP TABLE` | 기본 7일 보관 후 비동기로 파일 삭제. 그 안에는 `UNDROP TABLE`로 복구 | 메타데이터만 삭제. 파일은 직접 지워야 한다 |
+| `DROP TABLE` | 기본 7일 보관 후 비동기로 파일 삭제. 그 안에는 `UNDROP TABLE`로 복구. 보관 기간은 카탈로그나 스키마 단위로 0시간(복구 끔) 또는 7~30일로 바꿀 수 있다 | 메타데이터만 삭제. 파일은 직접 지워야 한다 |
 | 권장 | Databricks가 기본으로 권하는 테이블 유형 | |
 
 테이블 이름을 부르는 방식도 다릅니다.
@@ -731,14 +731,14 @@ C. 기본 `mode`가 `PERMISSIVE`이고 깨진 문자열은 `columnNameOfCorruptR
 
 - 기본값과 시그니처는 2026년 10월 19일과 20일에 연 Spark 4.2.0 문서, PySpark 4.2.0 API 문서, Databricks 문서, Delta Lake 문서 기준입니다. 3.x와 다른 부분은 SQL Migration Guide에 적힌 것(`CREATE TABLE` 기본 형식, ORC 압축 기본값, 임시 뷰 한정자)과 3.5.7 문서로 대조한 것만 표시했습니다. 시험의 기준 Spark 버전은 공개되지 않았습니다.
 - 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어 PySpark를 띄울 수 없었습니다. 코드 블록은 Python 문법 검사만 했습니다. JDBC 예제의 주소와 계정은 형식을 보이려는 예시이고 실제로 연결한 적이 없습니다.
-- `bucketBy`와 `sortBy` 오류 문장, JDBC 범위 밖 행이 들어가는 파티션은 실행 대신 Spark 4.2.0 소스로 확인했습니다. Spark Connect 클라이언트에서는 오류가 서버에서 돌아오므로 표시 형식이 다를 수 있습니다.
-- 아직 확인하지 못한 것은 CSV 직접 SQL에서 붙는 컬럼 이름(`_c0`은 `spark.read.csv` 예제로만 확인)과 스키마 없이 기존 경로에 `CREATE TABLE ... LOCATION`을 붙이는 동작입니다.
+- `bucketBy`와 `sortBy` 오류 문장, JDBC 범위 밖 행이 들어가는 파티션, CSV 직접 SQL의 컬럼 이름, 스키마 없이 기존 경로에 붙인 `CREATE TABLE`의 동작은 실행 대신 Spark 4.2.0 소스로 확인했습니다. Spark Connect 클라이언트에서는 오류가 서버에서 돌아오므로 표시 형식이 다를 수 있습니다.
+- Spark 4.0부터 SQL 문법에 테이블 이름 뒤 `WITH (키 = 값)` 옵션 절이 생겼고 `ResolveSQLOnFile`이 그 옵션을 `DataSource`로 넘깁니다. 그래서 Apache Spark 4.x에서는 직접 SQL에도 CSV 옵션을 줄 수 있어 보이지만 Spark 문서와 테스트에서 그 예제를 찾지 못해 본문에는 Databricks 문서 문장만 남겼습니다.
 - Delta는 `overwriteSchema`, `mergeSchema`, `replaceWhere`, `versionAsOf`의 문서 설명만 옮겼습니다. Delta의 동적 파티션 덮어쓰기 같은 세부 동작은 다루지 않았습니다.
 
 ## 참고 자료
 
 시험
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (Section 2 항목과 샘플 문항 1번)
+- Databricks, [Exam Guide, 2026-10-08판](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (Section 2 항목과 샘플 문항 1번)
 
 Apache Spark 4.2.0 문서
 - [Generic Load/Save Functions](https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html)
@@ -764,4 +764,4 @@ Databricks와 Delta Lake
 - Databricks, [Read and write CSV files](https://docs.databricks.com/aws/en/query/formats/csv)
 - Databricks, [What is Delta Lake in Databricks?](https://docs.databricks.com/aws/en/delta/)
 - Databricks, [Database objects in the legacy Hive metastore](https://docs.databricks.com/aws/en/database-objects/hive-metastore)
-- Delta Lake, [Table batch reads and writes](https://docs.delta.io/latest/delta-batch.html), [Quick Start](https://docs.delta.io/latest/quick-start.html), [Releases(Compatibility with Apache Spark)](https://docs.delta.io/latest/releases.html)
+- Delta Lake, [Table batch reads and writes](https://docs.delta.io/delta-batch/), [Quick Start](https://docs.delta.io/quick-start/), [Releases(Compatibility with Apache Spark)](https://docs.delta.io/releases/)

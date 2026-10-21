@@ -26,7 +26,7 @@ seriesOrder: 1
 
 ---
 
-시험 안내서(2025년 10월판) 1영역의 항목은 일곱 개입니다. 이 글은 그 순서를 그대로 목차로 씁니다.
+시험 안내서(2026년 10월 8일판, 2025년 10월판과 같음) 1영역의 항목은 일곱 개입니다. 이 글은 그 순서를 그대로 목차로 씁니다.
 
 | 안내서 항목 | 이 글 |
 |---|---|
@@ -150,7 +150,7 @@ Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Conn
 | 설정 | 기본값 | 의미 |
 |---|---|---|
 | `spark.executor.memory` | `1g` | 익스큐터 프로세스의 힙. 최소 450m |
-| `spark.executor.memoryOverhead` | 익스큐터 메모리 x 0.10, 최소 384m | 힙 밖 메모리(VM 오버헤드, 네이티브 메모리). YARN과 Kubernetes에서 쓴다 |
+| `spark.executor.memoryOverhead` | 익스큐터 메모리 x `spark.executor.memoryOverheadFactor`(0.10), 최소 384m(`spark.executor.minMemoryOverhead`) | 힙 밖 메모리(VM 오버헤드, 네이티브 메모리). YARN과 Kubernetes에서 쓴다. Kubernetes의 JVM 밖 작업(PySpark 등)은 비율 기본값이 0.40이다 |
 | `spark.memory.fraction` | `0.6` | (힙 - 300MiB) 중 실행과 저장이 함께 쓰는 통합 영역 M의 비율 |
 | `spark.memory.storageFraction` | `0.5` | M 안에서 캐시가 실행 메모리에 밀려나지 않는 구간 R의 비율 |
 | `spark.driver.memory` | `1g` | 드라이버 힙. client 모드에서는 `SparkConf`로 못 바꾸고 `--driver-memory`로 준다 |
@@ -456,7 +456,7 @@ Job 0 (collect)
 | RDD 셔플, `parallelize` | `spark.default.parallelism` | 셔플은 부모 RDD의 최대 파티션 수, `parallelize`는 local에서 코어 수, 그 밖에는 전체 익스큐터 코어 수와 2 중 큰 값 |
 | 셔플 후 파티션 합치기 | `spark.sql.adaptive.coalescePartitions.enabled` | true(AQE가 켜져 있을 때) |
 
-AQE(`spark.sql.adaptive.enabled`)는 3.2.0부터 기본으로 켜져 있습니다. 켜져 있으면 셔플 후 인접한 작은 파티션을 목표 크기(`advisoryPartitionSizeInBytes`, 64MB)에 맞춰 합칩니다. 그래서 200으로 셔플해도 Spark UI의 다음 Stage Task 수가 200보다 적게 보일 수 있습니다. AQE는 4영역(튜닝)에서 자세히 다룹니다.
+AQE(`spark.sql.adaptive.enabled`)는 3.2.0부터 기본으로 켜져 있습니다. 켜져 있으면 셔플 후 인접한 작은 파티션을 합칩니다. 합치는 기준은 `spark.sql.adaptive.coalescePartitions.parallelismFirst`(기본 true)가 정합니다. 기본값에서는 목표 크기(`advisoryPartitionSizeInBytes`, 64MB)를 무시하고 최소 크기(`coalescePartitions.minPartitionSize`, 1MB)만 지키며 병렬도를 우선합니다. false로 두면 64MB를 목표로 합칩니다([Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) 6-2절). 그래서 200으로 셔플해도 Spark UI의 다음 Stage Task 수가 200보다 적게 보일 수 있습니다. AQE는 4영역(튜닝)에서 자세히 다룹니다.
 
 ### 8-2. 셔플이란
 
@@ -561,7 +561,7 @@ step2.show()                                  # 또 액션. 캐시가 없으므�
 
 ### 헷갈리는 지점
 
-- GraphX는 4.2.0 문서의 고수준 도구 목록에 있지만 시험 안내서의 모듈 목록에는 없습니다.
+- GraphX는 4.2.0 문서의 고수준 도구 목록에 있지만 시험 안내서의 모듈 목록에는 없습니다. Spark 홈페이지 메뉴는 2026년 10월 현재 GraphX에 "(deprecated)"를 붙여 둡니다.
 - pandas API on Spark는 pandas와 비슷한 API로 Spark DataFrame을 다루는 모듈입니다. 계산은 Spark가 분산해서 합니다. `to_pandas()`는 데이터를 클라이언트로 다 모읍니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 3절).
 
 ## 11. 확인 문제
@@ -675,15 +675,13 @@ C. `checkpoint()`는 체크포인트 디렉터리에 파일로 쓰고 논리 계
 - 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어 PySpark를 띄울 수 없었습니다. 주석의 결과는 문서 예제와 정의로 예상한 값이고 7절의 Stage 그림은 개념 구조입니다. 로컬 환경을 갖춘 뒤 Spark UI 화면과 함께 실제 결과로 바꾸겠습니다.
 - 2-4절과 문제 5의 메모리 계산은 문서 공식을 적용한 값이고 측정값이 아닙니다.
 - 9-2절의 넓은 변환 목록은 RDD 가이드의 셔플 연산 목록을 DataFrame 연산에 대응시킨 것입니다. DataFrame 연산마다 셔플 여부를 적은 공식 표는 찾지 못했습니다.
-- 10절의 MLlib과 Spark Core 설명은 이번에 문서를 깊이 읽지 않았습니다.
 - 2026년 10월 20일에 4.2.0과 3.5.7 문서, PySpark 4.2.0 API 문서를 다시 열어 기본값을 대조했습니다. 이때 추가한 버전 표시는 `checkpoint`와 `localCheckpoint`의 Spark Connect 지원(4.0.0), `spark.checkpoint.dir`(4.0.0), `localCheckpoint`의 `storageLevel` 인자(4.0.0), 3.5.7 튜닝 가이드의 G1GC 권고입니다.
-- 4절의 `getOrCreate()`가 기존 세션에 런타임 설정만 적용한다는 내용과 `stop()`이 기본 세션 기록을 지운다는 내용은 API 문서에 없어서 PySpark 4.2.0 소스(`python/pyspark/sql/session.py`)를 읽고 적었습니다.
 - 6절의 JDK 17 GC 로그 옵션은 Atlassian 지원 문서 기준이고 Spark에서 실행해 보지 않았습니다.
 
 ## 참고 자료
 
 시험
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (Section 1 항목과 샘플 문항 4, 5번)
+- Databricks, [Exam Guide, 2026-10-08판](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (Section 1 항목과 샘플 문항 4, 5번)
 
 Apache Spark 4.2.0 문서
 - [Overview](https://spark.apache.org/docs/latest/index.html), [Apache Spark 홈페이지](https://spark.apache.org/)

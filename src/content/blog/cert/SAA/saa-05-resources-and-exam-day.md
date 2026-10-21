@@ -20,9 +20,9 @@ seriesOrder: 5
 ## 결론부터
 
 1. 무료 공식 자료만으로 시작할 수 있습니다. 시험 안내서, 샘플 문항 10개, Skill Builder의 공식 연습 문항(Official Practice Question Set) 20개, 2시간짜리 표준 Exam Prep 과정이 무료입니다. 실제 시험과 같은 길이의 공식 모의고사(Official Practice Exam)와 실습 랩은 Skill Builder 구독(개인 월 29 USD)이 있어야 합니다.
-2. 응시료는 150 USD이고 원화로는 197,287원입니다(2026년 10월 AWS 표, 세금 별도 가능). 떨어지면 14일 뒤 다시 볼 수 있고 매번 전액을 냅니다. AWS 시험에 한 번 합격하면 다음 시험 50% 할인 바우처가 나옵니다. 2026년 10월 현재 SAA를 무료나 할인으로 볼 수 있는 AWS 공식 캠페인은 찾지 못했습니다.
+2. 응시료는 150 USD이고 원화로는 197,287원입니다(2026년 10월 AWS 표, 세금 별도 가능). 떨어지면 14일 뒤 다시 볼 수 있고 매번 전액을 냅니다. AWS 시험에 한 번 합격하면 다음 시험 50% 할인 바우처가 나옵니다. 2026년 10월 21일에 연 AWS 바우처 캠페인 약관에는 SAA를 대상으로 한 캠페인이 없었습니다.
 3. 유료 연습 자료 중 가격과 문항 출처를 직접 확인한 것은 Tutorials Dojo 모의고사(14.99 USD, 자체 작성 명시)와 Adrian Cantrill 강의(40 USD, 모의고사 2회 포함)입니다. freeCodeCamp의 약 50시간 강의는 무료입니다.
-4. 2025년 7월 15일 이후 만든 AWS 계정은 크레딧 방식 프리 티어(가입 100 USD, 활동 보상 최대 100 USD, 6개월)를 받습니다. 무료 플랜은 요금이 나가지 않지만 AWS Organizations에 가입하면 유료 플랜으로 자동 전환됩니다. 예산 알림은 8~12시간 늦게 올 수 있어 NAT 게이트웨이처럼 시간당 요금이 붙는 리소스는 실습이 끝나면 바로 지웁니다.
+4. 2025년 7월 15일 이후 만든 AWS 계정은 크레딧 방식 프리 티어(가입 100 USD, 활동 보상 최대 100 USD, 무료 플랜 최대 6개월)를 받습니다. 무료 플랜은 요금이 나가지 않지만 AWS Organizations에 가입하면 유료 플랜으로 자동 전환됩니다. 2026년 10월 일부 고객에게 열린 새 가입 방식은 리전을 고를 수 없고 IAM Access Analyzer를 쓸 수 없어 SAA 실습에는 기존(advanced) 가입이 맞습니다. 예산 알림은 8~12시간 늦게 올 수 있어 NAT 게이트웨이처럼 시간당 요금이 붙는 리소스는 실습이 끝나면 바로 지웁니다.
 5. 2025~2026년 후기 중 유출 문항을 쓰지 않은 8건(이 글 6건, Ch-00 2건)을 보면 자주 나왔다고 꼽힌 서비스는 S3, VPC, Lambda, RDS와 DynamoDB, ECS와 EKS였고 S3와 Lambda는 두 글이 함께 꼽았습니다. 모의고사 정답률과 실제 점수의 관계는 제각각이었습니다. 문제집 정답률이 52~61%였는데 합격한 사례도 있고 94%를 받고 824점을 받은 사례도 있습니다.
 6. 시험장에서는 문제의 마지막 문장(요구 조건)을 먼저 읽고 확신이 없는 문항은 표시해 두고 넘깁니다. 한국어로 응시해도 문항마다 영어 원문으로 바꿔 볼 수 있습니다. 온라인 응시는 시험 중 자리를 뜰 수 없습니다.
 
@@ -44,11 +44,11 @@ AWS 시험 페이지는 SAA-C03 준비 경로를 Skill Builder의 4단계 계획
 | 3. 복습과 실습 | AWS Cloud Quest | 기본 역할 무료, Solutions Architect 역할은 구독 | 게임 형식 실습 |
 | 3. 복습과 실습 | 실습 랩(Builder Labs), AWS Jam | 구독 | 실제 콘솔에서 하는 과제 |
 | 3. 복습과 실습 | AWS Escape Room(SAA-C03용) | 구독 | 2025년 7월 추가. 해설이 붙은 시험형 문항과 실습 랩, 퍼즐 |
-| 4. 준비 상태 확인 | Official Practice Exam | 구독 | 실제 시험과 같은 문항 형식과 난도, 채점 |
+| 4. 준비 상태 확인 | Official Practice Exam | 구독 | 시험 준비 페이지 표현으로 전체 길이(full-length) 모의고사. 실제 시험과 같은 문항 형식과 난도, 합격·불합격과 척도 점수 |
 
-구독료는 Training FAQ 기준으로 개인 월 29 USD, 연 449 USD입니다. 연 구독에는 AWS Digital Classroom 과정이 더 붙습니다. 무료 체험 기간이 있는지는 FAQ에서 찾지 못했습니다.
+구독료는 Training FAQ 기준으로 개인 월 29 USD, 연 449 USD이고 자동 갱신됩니다. 연 구독에는 AWS Digital Classroom 과정이 더 붙습니다. FAQ에 무료 체험 항목은 없고 처음 구매한 날부터 3일 안에 요청하면 즉시 해지와 전액 환불을 받을 수 있다고 적혀 있습니다.
 
-이 표에서 돈을 아끼는 순서가 나옵니다. 1~3단계는 무료 자료와 외부 강의로 채우고 시험 1~2주 전에 한 달만 구독해 공식 모의고사와 랩을 쓰는 방법입니다. 공식 모의고사가 몇 문항인지는 구독 없이 볼 수 있는 페이지에서 확인하지 못했습니다.
+이 표에서 돈을 아끼는 순서가 나옵니다. 1~3단계는 무료 자료와 외부 강의로 채우고 시험 1~2주 전에 한 달만 구독해 공식 모의고사와 랩을 쓰는 방법입니다. 공식 모의고사의 정확한 문항 수는 구독 없이 볼 수 있는 페이지에 숫자로 나와 있지 않고 "전체 길이"라는 표현만 있습니다.
 
 ### 1-2. 시험 안내서 다음으로 읽을 문서
 
@@ -98,22 +98,22 @@ Tutorials Dojo의 팁 글은 2024년에 갱신된 것이라 목록에 지금은 
 | 합격선 | 100~1,000 척도에서 720. 영역별 기준은 없다 |
 | 재응시 | 불합격하면 14일 뒤부터. 횟수 제한은 없고 매번 전액 |
 | 합격 후 | 같은 시험은 2년 동안 다시 볼 수 없다 |
-| 유효 기간과 갱신 | 3년. 최신 SAA를 다시 통과하거나 Solutions Architect Professional에 합격하면 3년 연장. Skill Builder에서 유지 과정을 마치는 방법은 1년만 연장 |
+| 유효 기간과 갱신 | 3년. 최신 SAA를 다시 통과하거나 Solutions Architect Professional에 합격하면 3년 연장. Skill Builder에서 유지(maintain) 과정을 마치는 방법은 유료 구독이 필요하고 1년만 연장 |
 
 후기에 적힌 결과 도착 시간은 시험 당일 저녁이 많았습니다. Hadomen은 같은 날 21시쯤, IwatsukaYura와 SoftBank 블로그 필자는 20시쯤, Mynavi 블로그 필자는 약 6시간 뒤, Nishath J P는 약 8시간 뒤에 받았습니다. 공식 기준은 5영업일입니다.
 
-2026년 10월 확인 기준으로 SAA-C03의 새 버전 공지는 없습니다. 같은 달 AWS 블로그는 Solutions Architect Professional이 2026년 11월 17일부터 SAP-C03으로, Developer Associate가 12월 1일부터 DVA-C03으로 바뀐다고 공지했습니다. SAA 갱신을 Professional 합격으로 하려면 새 버전 범위를 보고 준비해야 합니다.
+2026년 10월 21일 확인 기준으로 SAA-C03의 새 버전 공지는 없습니다. AWS 블로그는 2026년 9월 1일 글에서 Solutions Architect Professional이 2026년 11월 17일부터 SAP-C03으로(SAP-C02 마지막 응시일 11월 16일), Developer Associate가 12월 1일부터 DVA-C03으로 바뀐다고 공지했습니다. 두 새 시험 모두 등록은 10월 27일에 열립니다. SAA 갱신을 Professional 합격으로 하려면 새 버전 범위를 보고 준비해야 합니다.
 
 ## 2. 비용과 할인
 
 | 항목 | 금액, 조건 | 확인한 곳 |
 |---|---|---|
-| 응시료(Associate) | 150 USD, 197,287원. 세금이 붙을 수 있다. 환율은 해마다 5월 이상 갱신 | AWS Before testing(2026-10) |
+| 응시료(Associate) | 150 USD, 197,287원. 세금이 붙을 수 있다. 환율 반영 가격은 최소 매년 5월에 갱신하고 그 사이에도 30일 전 공지 후 바뀔 수 있다 | AWS Before testing(2026-10-21) |
 | 재응시 | 매번 전액. 14일 대기 | AWS After testing |
 | 합격 혜택 | 다음 시험이나 갱신 시험에 쓰는 50% 할인 바우처 | AWS Benefits, Recertification |
 | Skill Builder 구독 | 개인 월 29 USD, 연 449 USD | AWS Training FAQ |
-| 2026년 2분기 바우처 캠페인 | 100% 바우처와 무료 재응시. Professional과 Specialty만 해당 | AWS Voucher Campaigns Terms |
-| 2026년 AI 업스킬링 캠페인 | AI Practitioner 50% 할인, 합격하면 Cloud Practitioner 무료. 2026-09-30에 AIF-C01 응시 기간 종료 | 같은 문서 |
+| 2026년 2분기 바우처 캠페인(마감) | 무료 재응시가 붙는 바우처. Professional과 Specialty만 해당. 바우처 구매는 2026-06-30에 마감했고 첫 응시는 2026-12-31까지 | AWS Voucher Campaigns Terms |
+| 2026년 AI 업스킬링 캠페인(마감) | AI Practitioner 50% 할인, 합격하면 Cloud Practitioner 무료. AIF-C01 응시 기간은 2026-09-30에 끝났고 무료 CLF-C02는 이미 자격을 얻은 사람만 2026-11-30까지 응시 | 같은 문서 |
 | Emerging Talent Community 포인트 바우처 | 현재 할인 바우처를 주지 않는다고 적은 대학 안내가 있다(미확인) | UT Dallas 안내 |
 
 50% 바우처를 쓰는 조건은 공식 페이지가 짧게만 적습니다. r/AWSCertifications 위키(2026년 6월 갱신)는 자격이 유효한 동안 3년간 쓸 수 있고 한 번만 쓰며 양도할 수 없다고 정리했습니다. 공식 문서로 확인한 내용은 아닙니다.
@@ -127,7 +127,7 @@ Tutorials Dojo의 팁 글은 2024년에 갱신된 것이라 목록에 지금은 
 | 자료 | 만든 곳 | 형식 | 분량 | 가격 | 문항 출처 표기 |
 |---|---|---|---|---|---|
 | Official Practice Question Set | AWS | 문제와 해설 | 20문항 | 무료 | AWS 제작 |
-| Official Practice Exam | AWS | 시간 제한 모의고사 | 확인 못 함 | Skill Builder 구독 | AWS 제작 |
+| Official Practice Exam | AWS | 시간 제한 모의고사 | 전체 길이(문항 수는 공개 페이지에 없음) | Skill Builder 구독 | AWS 제작 |
 | AWS 샘플 문항 PDF | AWS | 문제와 해설 | 10문항 | 무료 | AWS 제작 |
 | Tutorials Dojo 모의고사(Jon Bonso) | Tutorials Dojo | 시간 제한 9세트, 복습 모드 9세트, 영역별 4세트, 주제별 13개, 무작위 65문항 | 문제 은행 400문항 이상(학습 경로 글 기준) | 14.99 USD, 1년 이용 | 시험 안내서와 자체 응시 경험을 바탕으로 직접 썼다고 명시. 덤프가 아니라고 적음 |
 | Tutorials Dojo 치트 시트 | 같은 곳 | 서비스별, 비교형 요약 | 웹 문서 | 무료 | 공식 문서 링크 첨부 |
@@ -156,9 +156,11 @@ AWS는 2025년 7월 15일 이후 만든 계정에 크레딧 방식 프리 티어
 | 쓸 수 있는 서비스 | 일부. Savings Plans, Reserved Instances, 일부 Marketplace 상품 등은 막혀 있다 | 전부 |
 | 요금 | 나가지 않는다 | 크레딧을 넘는 사용량은 청구 |
 | 끝나는 시점 | 6개월이 지나거나 크레딧을 다 쓰면 계정이 닫힌다. 90일 안에 유료로 바꾸지 않으면 데이터가 지워진다 | 크레딧을 다 써도 계정은 유지 |
-| 크레딧 유효 기간 | 가입 후 12개월 | 같음 |
+| 크레딧 유효 기간 | 활동 보상 크레딧은 가입 후 12개월. 가입 크레딧은 FAQ의 일반 항목에 6개월, 유료 플랜 항목에 12개월로 엇갈려 적혀 있어 콘솔의 Credits 화면에서 만료일을 확인 | 같음 |
 
-SAA 공부에서 조심할 점이 하나 있습니다. 무료 플랜 계정이 AWS Organizations에 가입하거나 Control Tower 랜딩 존을 만들면 유료 플랜으로 자동 전환됩니다. SCP나 여러 계정 구조를 실습하려면 이 전환을 감안하고 시작합니다. 남은 크레딧은 유료 전환 뒤에도 청구서에 적용됩니다.
+SAA 공부에서 조심할 점이 하나 있습니다. 무료 플랜 계정이 AWS Organizations에 가입하거나 Control Tower 랜딩 존을 만들면 유료 플랜으로 자동 전환되고 FAQ 기준으로 그 시점부터 활동 보상도 더 받을 수 없습니다. SCP나 여러 계정 구조를 실습하려면 활동 보상을 먼저 받고 이 전환을 감안해 시작합니다. 남은 크레딧은 유료 전환 뒤에도 청구서에 적용됩니다.
+
+가입 화면도 하나 확인합니다. AWS 계정 관리 문서(2026년 10월 21일 확인)는 일부 고객에게 먼저 여는 새 가입 방식(Sign up for AWS (new))과 기존 방식(advanced)을 비교합니다. 새 방식은 리소스를 프로젝트 단위로 묶고 월 지출 한도를 걸 수 있지만 리전을 직접 고를 수 없고 IAM Access Analyzer, Savings Plans, Marketplace를 쓸 수 없으며 Organizations와 IAM Identity Center에 자동으로 들어갑니다. VPC를 원하는 리전에 만들고 IAM 정책을 직접 다뤄야 하는 SAA 실습에는 기존 방식이 맞습니다. 새 방식으로 만들었다면 고급 기능(advanced features)을 켜면 되지만 FAQ는 그 뒤로 활동 보상 크레딧을 더 받을 수 없다고 적습니다.
 
 ### 4-2. 실습 전에 거는 예산 알림
 
@@ -177,7 +179,7 @@ AWS Budgets 템플릿 중 두 가지를 먼저 만듭니다.
 | 퍼블릭 IPv4 주소 | 2024년 2월 1일부터 연결 여부와 상관없이 시간당 0.005 USD | 쓰지 않는 탄력적 IP 해제 |
 | EC2, RDS | 인스턴스 시간과 스토리지 | 종료. RDS는 스냅샷 보존 여부 확인 |
 
-서울 리전 NAT 게이트웨이 단가는 요금 페이지에서 확인하지 못했습니다. 실습 리전을 하나로 정해 두면 지우지 못한 리소스를 찾기 쉽습니다.
+서울 리전 NAT 게이트웨이는 시간당 0.059 USD, 처리 GB당 0.059 USD입니다(VPC 요금 페이지가 불러오는 공식 요금 데이터, 2026년 10월 21일 확인). 한 달 켜 두면 시간 요금만 42.48 USD입니다. 실습 리전을 하나로 정해 두면 지우지 못한 리소스를 찾기 쉽습니다.
 
 ### 4-4. 쇼핑몰 예제로 묶은 실습 순서
 
@@ -315,8 +317,8 @@ AWS 시험 보안팀은 2025년 6월 25일 글 "Protecting AWS Certification val
 
 ## 9. 범위와 한계
 
-- 공식 규정, 가격, 캠페인은 2026년 10월 20일에 연 AWS와 Pearson VUE 페이지 기준입니다. 등록 전에 다시 확인합니다.
-- 확인하지 못한 것: 공식 모의고사의 문항 수, Skill Builder 무료 체험 유무, Stéphane Maarek 강의의 현재 시간, Digital Cloud Training과 Whizlabs의 가격과 문항 출처 방침, 시험장에서 종이나 메모판을 주는지, 서울 리전 NAT 게이트웨이 단가, 50% 바우처의 세부 조건(위키 기준).
+- 공식 규정, 가격, 캠페인은 2026년 10월 20일에 연 AWS와 Pearson VUE 페이지 기준이고 21일에 시험 페이지, 응시 정책, 바우처 약관, Training FAQ, 프리 티어 FAQ를 다시 확인했습니다. 등록 전에 다시 확인합니다.
+- 확인하지 못한 것: 공식 모의고사의 정확한 문항 수, Stéphane Maarek 강의의 현재 시간, Digital Cloud Training과 Whizlabs의 가격과 문항 출처 방침, 시험장에서 종이나 메모판을 주는지, 50% 바우처의 세부 조건(위키 기준).
 - 5절 후기 중 일본어 후기가 쓴 일본어 웹 문제집과 Udemy 일본어 문제집은 문항 출처 방침을 확인하지 못했습니다. 후기의 경향만 옮겼고 자료를 추천하지 않습니다.
 - 후기는 한 사람의 체감입니다. 일본어 후기는 일본어 시험 기준이라 한국어 번역 품질과 같다고 볼 근거가 없습니다.
 - 4-4절의 실습 순서는 직접 만들어 청구서를 확인한 것이 아니고 Ch-00의 계획을 예제로 묶은 것입니다.
@@ -333,20 +335,20 @@ AWS 시험 보안팀은 2025년 6월 25일 글 "Protecting AWS Certification val
 - AWS, [Voucher Campaigns Terms and Conditions](https://aws.amazon.com/certification/bulk-voucher/terms-and-conditions/)
 - AWS, [AWS Certification Program Agreement](https://aws.amazon.com/certification/certification-agreement/), 2026-07-17
 - AWS Exam Security, [Protecting AWS Certification value through security measures](https://aws.amazon.com/blogs/training-and-certification/protecting-aws-certification-value-through-security-measures/), 2025-06-25
-- AWS Training and Certification Blog, [July 2025 new offerings](https://aws.amazon.com/blogs/training-and-certification/july-2025-new-offerings), [Certification updates: September 2026](https://aws.amazon.com/blogs/training-and-certification/september-2026-new-offerings/), [Addition of new exam question types](https://aws.amazon.com/blogs/training-and-certification/aws-certification-new-exam-question-types/)
-- Pearson VUE, [Online testing for Amazon Web Services (AWS)](https://home.pearsonvue.com/aws/onvue)
+- AWS Training and Certification Blog, [July 2025 new offerings](https://aws.amazon.com/blogs/training-and-certification/july-2025-new-offerings/), [Certification updates: September 2026](https://aws.amazon.com/blogs/training-and-certification/september-2026-new-offerings/), [Addition of new exam question types](https://aws.amazon.com/blogs/training-and-certification/aws-certification-new-exam-question-types/)
+- Pearson VUE, [Online testing for Amazon Web Services (AWS)](https://www.pearsonvue.com/us/en/aws/onvue.html)
 - AWS, [Disaster Recovery of Workloads on AWS: Recovery in the Cloud](https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-workloads-on-aws.html), 2021
 
 시험 전략
 - Grey Newell, Joshua Kurz, [5 tips for AWS Certification exams from AWS Solutions Architects](https://aws.amazon.com/blogs/training-and-certification/5-tips-for-aws-certification-exams-from-aws-solutions-architects/), 2023
-- Manikanta Gona, [Breaking down the questions on AWS Certification exams](https://aws.amazon.com/blogs/training-and-certification/breaking-down-the-questions-on-aws-certification-exams), 2021
-- Elizabeth Davis, Joe Hanko, [Increase your AWS Certification exam readiness](https://aws.amazon.com/blogs/training-and-certification/tips-for-increasing-your-aws-certification-exam-readiness), 2020
+- Manikanta Gona, [Breaking down the questions on AWS Certification exams](https://aws.amazon.com/blogs/training-and-certification/breaking-down-the-questions-on-aws-certification-exams/), 2021
+- Elizabeth Davis, Joe Hanko, [Increase your AWS Certification exam readiness](https://aws.amazon.com/blogs/training-and-certification/tips-for-increasing-your-aws-certification-exam-readiness/), 2020
 - Jon Bonso, [AWS Certified Solutions Architect Associate Exam Tips](https://tutorialsdojo.com/aws-solutions-architect-associate-exam-tips/), 2024, [SAA-C03 Study Path](https://tutorialsdojo.com/aws-certified-solutions-architect-associate-exam-saa-c03-study-path/)
 
 프리 티어와 비용
 - AWS, [AWS Free Tier](https://aws.amazon.com/free/)
-- AWS News Blog, [AWS Free Tier update: New customers can get started and explore AWS with up to $200 in credits](https://aws.amazon.com/blogs/aws/aws-free-tier-update-new-customers-can-get-started-and-explore-aws-with-up-to-200-in-credits), 2025
-- AWS, [Choosing a plan](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-plans.html)
+- AWS News Blog, [AWS Free Tier update: New customers can get started and explore AWS with up to $200 in credits](https://aws.amazon.com/blogs/aws/aws-free-tier-update-new-customers-can-get-started-and-explore-aws-with-up-to-200-in-credits/), 2025
+- AWS, [Choosing a plan](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-plans.html), [AWS Free Tier FAQs](https://aws.amazon.com/free/free-tier-faqs/), [Compare sign-up options](https://docs.aws.amazon.com/accounts/latest/reference/sign-up-for-aws.html)
 - AWS, [Using a budget template](https://docs.aws.amazon.com/cost-management/latest/userguide/budget-templates.html), [Managing your costs with AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
 - AWS, [Amazon VPC pricing](https://aws.amazon.com/vpc/pricing/), [New – AWS Public IPv4 Address Charge](https://aws.amazon.com/blogs/aws/new-aws-public-ipv4-address-charge-public-ip-insights/)
 - AWS, [AWS Educate](https://aws.amazon.com/education/awseducate/)

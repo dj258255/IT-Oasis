@@ -29,7 +29,7 @@ seriesOrder: 5
 
 ## 1. 시험 안내서 항목과 이 글의 순서
 
-2025년 10월판 안내서의 5영역 항목은 넷입니다.
+2026년 10월 8일판 안내서의 5영역 항목은 넷이고 2025년 10월판과 같습니다.
 
 | 안내서 항목(원문 요약) | 이 글 |
 |---|---|
@@ -85,7 +85,7 @@ Spark는 입력 테이블 전체를 메모리에 만들지 않습니다. 문서�
 
 Continuous 모드는 소스 파티션 수만큼 Task를 계속 띄워 두므로 Kafka 토픽 파티션이 10개면 코어가 10개 이상 있어야 진행합니다. 실패한 Task를 자동으로 재시도하지 않아서 실패하면 쿼리가 멈추고 체크포인트에서 수동으로 다시 시작해야 합니다.
 
-PySpark 4.2.0의 `DataStreamWriter.trigger`에는 `realTime` 인자가 있고 설명은 "real time mode 쿼리를 주어진 배치 기간으로 실행"입니다. 같은 함수의 PySpark 3.5.6, 4.0.0, 4.1.0 API 문서에는 이 인자가 없습니다. 엔진 쪽 설정은 더 먼저 들어왔습니다. 4.2.0 설정 문서에 `spark.sql.streaming.realTimeMode.minBatchDuration`(기본 5000ms)과 `spark.sql.streaming.realTimeMode.allowlistCheck`(기본 true)가 있고 둘 다 도입 버전이 4.1.0입니다. 이 모드를 설명하는 프로그래밍 가이드 페이지는 4.2.0 문서에서 찾지 못했습니다. 시험 기준 버전이 이보다 이전일 가능성이 커서 이름만 적어 둡니다.
+PySpark 4.2.0의 `DataStreamWriter.trigger`에는 `realTime` 인자가 있고 설명은 "real time mode 쿼리를 주어진 배치 기간으로 실행"입니다. 같은 함수의 PySpark 3.5.6, 4.0.0, 4.1.0, 4.1.3 API 문서에는 이 인자가 없습니다. 엔진 쪽은 더 먼저 들어왔습니다. Java API `Trigger.RealTime`은 4.1.0 소스에 이미 있고 4.2.0 설정 문서의 `spark.sql.streaming.realTimeMode.minBatchDuration`(기본 5000ms)과 `spark.sql.streaming.realTimeMode.allowlistCheck`(기본 true)도 도입 버전이 4.1.0입니다. 4.2.0 문서에는 이 모드를 설명하는 페이지가 없고 apache/spark 메인 브랜치에 아직 배포되지 않은 `docs/streaming/real-time-mode.md`만 있습니다. 이 문서는 Real-time Mode를 4.1.0에 도입한 실행 모드로 소개하고 상태 없는 쿼리(투영, 필터, union, 스트림과 정적 조인)를 지원하며 중복 제거와 집계 같은 상태 연산은 4.3.0부터 지원한다고 적습니다(2026년 10월 21일 현재 최신 릴리스는 4.2.0). 시험 기준 버전이 이보다 이전일 가능성이 커서 이름만 적어 둡니다.
 
 ## 3. exactly-once와 장애 복구
 
@@ -247,7 +247,7 @@ clicks.filter("post_id > 0").writeStream.outputMode("complete")
 | console | Append, Update, Complete | 아니오 | 디버깅용. `numRows` 기본 20, `truncate` 기본 true |
 | memory | Append, Complete | 아니오(Complete 모드는 재시작 시 전체 테이블 재생성) | 디버깅용. 쿼리 이름이 테이블 이름 |
 
-console 싱크는 문서 안에서 표기가 엇갈립니다. 본문 설명은 "Append와 Complete 지원"이고 싱크 표는 Append, Update, Complete입니다. 위 표는 싱크 표를 따랐습니다. console과 memory는 매 트리거 출력 전체를 드라이버 메모리로 모으므로 작은 데이터에만 씁니다.
+console 싱크는 문서 안에서 표기가 엇갈립니다. 본문 설명은 "Append와 Complete 지원"이고 싱크 표는 Append, Update, Complete입니다. 4.2.0 소스(`console.scala`)의 쓰기 빌더가 Complete용 `SupportsTruncate`와 Update용 `SupportsStreamingUpdateAsAppend`를 둘 다 구현하므로 싱크 표가 맞습니다. console과 memory는 매 트리거 출력 전체를 드라이버 메모리로 모으므로 작은 데이터에만 씁니다.
 
 ```python
 # memory 싱크로 결과를 SQL로 확인하기
@@ -301,7 +301,7 @@ DataStreamWriter.trigger(*, processingTime=None, once=None,
                          continuous=None, availableNow=None, realTime=None)
 ```
 
-인자는 하나만 줄 수 있습니다. `realTime`은 4.x에만 있습니다(2-2).
+인자는 하나만 줄 수 있습니다. `realTime`은 PySpark 4.2.0부터 있습니다(2-2).
 
 | 트리거 | 코드 | 동작 |
 |---|---|---|
@@ -458,7 +458,7 @@ Append는 정확하지만 허용 지연만큼 늦게 나옵니다. 위 예에서
 | 윈도 종류 | 텀블링, 슬라이딩, 세션 | 텀블링, 슬라이딩, 세션, 글로벌 |
 | 처리 단위 | 마이크로배치(기본) | 레코드 단위 |
 
-Spark에는 Flink의 `withIdleness`에 해당하는 설정을 이번에 연 문서에서 찾지 못했습니다. 그래서 조용한 입력 하나가 전역 워터마크를 붙잡는 문제는 Spark에서도 최솟값 정책일 때 생길 수 있다고 추론하고 실험으로 확인할 목록에 넣었습니다.
+Flink의 `withIdleness`에 해당하는 설정은 4.2.0 설정 문서와 `SQLConf` 소스에 없습니다. 4.2.0 소스의 `WatermarkTracker.updateWatermark`는 이번 배치에 행이 들어온 입력의 워터마크만 올리고 행이 없는 입력은 이전 값(데이터가 한 번도 없었으면 0)을 그대로 둔 채 정책으로 전역 워터마크를 고릅니다. 그래서 기본 `min` 정책에서는 조용한 입력 하나가 전역 워터마크를 붙잡습니다. 프로그래밍 가이드도 한 스트림이 업스트림 장애로 데이터를 받지 못하는 경우를 예로 들며 전역 워터마크가 가장 느린 스트림 속도로 움직인다고 적습니다.
 
 ## 11. 스트리밍 중복 제거
 
@@ -480,7 +480,7 @@ dedup_bounded = (clicks
 
 중복이 최대 얼마나 늦게 올지 알면 이벤트 시간에 워터마크를 걸고 고유 ID와 이벤트 시간 컬럼을 함께 중복 판정 컬럼으로 씁니다. 엔진은 워터마크보다 오래된 상태를 지웁니다. `dropDuplicates` 문서는 워터마크보다 오래된 데이터는 중복 가능성을 없애기 위해 버린다고 적습니다.
 
-여기서 시험에 나올 만한 함정이 있습니다. 판정 컬럼에 이벤트 시간을 넣지 않고 `withWatermark(...).dropDuplicates(["event_id"])`라고 쓰면 워터마크는 걸렸지만 상태를 이벤트 시간으로 정리할 근거가 없습니다. 문서 예제는 두 컬럼을 같이 쓰는 형태만 보여 주고 이 경우 상태가 정리되지 않는다는 문장은 없어서 추론으로 적습니다.
+여기서 시험에 나올 만한 함정이 있습니다. 판정 컬럼에 이벤트 시간을 넣지 않고 `withWatermark(...).dropDuplicates(["event_id"])`라고 쓰면 워터마크는 걸렸지만 상태가 정리되지 않습니다. 4.2.0 소스의 `StreamingDeduplicateExec`는 상태 키(중복 판정 컬럼)에 워터마크가 걸린 컬럼이 있을 때만 워터마크보다 오래된 키를 지웁니다. 워터마크보다 늦은 입력 행을 버리는 필터는 입력 컬럼을 보고 동작하므로 이 경우에도 걸립니다. 프로그래밍 가이드 예제도 두 컬럼을 같이 쓰는 형태입니다.
 
 ### 11-3. dropDuplicatesWithinWatermark
 
@@ -627,14 +627,13 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 ## 14. 범위와 한계
 
 - 동작과 기본값은 Spark 4.2.0 Structured Streaming Programming Guide와 PySpark 4.2.0 API 문서를 기준으로 했습니다(2026년 10월 19일 작성, 10월 20일 재확인). 출력 모드 호환 표, 지원하지 않는 연산 목록, 조인 지원 표는 3.5.6 가이드와 대조했고 내용이 같았습니다. `trigger`의 `realTime` 인자와 상태 연산 체인(12-1)처럼 버전에 따라 다른 부분은 본문에 표시했습니다.
-- 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark를 띄우지 못했습니다. Python 코드 블록은 문법 검사(`ast.parse`)만 통과시켰습니다. 예외가 나는 시점(5-2)과 체크포인트를 생략했을 때의 동작(3-2)은 4.2.0 소스를 읽고 적었습니다. 이벤트 시간을 판정 컬럼에서 뺀 중복 제거의 상태 정리(11-2), Spark에서 조용한 입력이 워터마크를 붙잡는지(10-5)는 문서 문장으로 확인하지 못한 추론입니다.
-- Real-time Mode는 PySpark API와 설정 문서의 항목으로만 확인했고 동작 설명 페이지는 찾지 못했습니다. Kafka 연동 옵션과 `transformWithState`의 API는 범위가 커서 다루지 않았습니다.
-- 출력 모드와 싱크 표는 문서 표를 옮긴 것이고 console 싱크의 지원 모드는 문서 안에서 서술이 엇갈립니다.
+- 이 글의 코드는 아직 실행하지 않았습니다. 이 노트북에 Java가 없어서 PySpark를 띄우지 못했습니다. Python 코드 블록은 문법 검사(`ast.parse`)만 통과시켰습니다. 예외가 나는 시점(5-2), 체크포인트를 생략했을 때의 동작(3-2), console 싱크의 지원 모드(6-1), 조용한 입력과 전역 워터마크(10-5), 이벤트 시간을 판정 컬럼에서 뺀 중복 제거의 상태 정리(11-2)는 4.2.0 소스를 읽고 적었습니다.
+- Real-time Mode의 동작 설명은 배포되지 않은 메인 브랜치 문서로만 확인했습니다. Kafka 연동 옵션과 `transformWithState`의 API는 범위가 커서 다루지 않았습니다.
 
 ## 참고 자료
 
 공식 자료
-- Databricks, [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (5영역 항목과 샘플 문항 8, 9)
+- Databricks, [Exam Guide, 2026-10-08판](https://www.databricks.com/sites/default/files/2026-10/databricks-certified-associate-developer-apache-spark-exam-guide-august-2026.pdf), [Exam Guide, Oct 2025](https://www.databricks.com/sites/default/files/2025-10/databricks-certified-associate-developer-apache-spark-exam-guide-oct-2025.pdf) (5영역 항목과 샘플 문항 8, 9)
 - Apache Spark 4.2.0, [Structured Streaming Programming Guide: Overview](https://spark.apache.org/docs/latest/streaming/index.html)
 - Apache Spark 4.2.0, [Getting Started](https://spark.apache.org/docs/latest/streaming/getting-started.html) (Programming Model, Fault Tolerance Semantics)
 - Apache Spark 4.2.0, [APIs on DataFrames and Datasets](https://spark.apache.org/docs/latest/streaming/apis-on-dataframes-and-datasets.html) (소스, 윈도, 워터마크, 중복 제거, State Store, 출력 모드, 싱크, 트리거, 복구)
@@ -647,10 +646,14 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 - Apache Spark 3.5.6, [Structured Streaming Programming Guide](https://spark.apache.org/docs/3.5.6/structured-streaming-programming-guide.html) (4.2.0과 대조용)
 - Apache Spark 3.3.0과 3.4.0, [Structured Streaming Programming Guide 3.3.0](https://archive.apache.org/dist/spark/docs/3.3.0/structured-streaming-programming-guide.html), [Structured Streaming Programming Guide 3.4.0](https://archive.apache.org/dist/spark/docs/3.4.0/structured-streaming-programming-guide.html) (Unsupported Operations의 상태 연산 체인 문장 비교)
 
-소스 코드(4.2.0 태그)
+소스 코드(표시 없는 것은 4.2.0 태그)
 - Apache Spark, [sql/classic/DataStreamWriter.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/DataStreamWriter.scala) (임시 체크포인트를 허용하는 싱크 목록)
 - Apache Spark, [sql/classic/StreamingQueryManager.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/StreamingQueryManager.scala) (`start()`에서 쓰기 계획 분석)
 - Apache Spark, [ResolveWriteToStream.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/runtime/ResolveWriteToStream.scala) (출력 모드 검사, 체크포인트 위치 결정, AQE 비활성 경고)
+- Apache Spark, [console.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/console.scala) (console 싱크의 Complete, Update 지원)
+- Apache Spark, [WatermarkTracker.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/runtime/WatermarkTracker.scala) (입력별 워터마크와 전역 워터마크 선택)
+- Apache Spark, [statefulOperators.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/operators/stateful/statefulOperators.scala) (`StreamingDeduplicateExec`의 상태 정리 조건)
+- Apache Spark, [Trigger.java 4.1.0](https://github.com/apache/spark/blob/v4.1.0/sql/api/src/main/java/org/apache/spark/sql/streaming/Trigger.java) (`Trigger.RealTime`), [docs/streaming/real-time-mode.md(메인 브랜치, 미배포)](https://github.com/apache/spark/blob/master/docs/streaming/real-time-mode.md)
 
 이 시리즈와 비교 글
 - [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning)
