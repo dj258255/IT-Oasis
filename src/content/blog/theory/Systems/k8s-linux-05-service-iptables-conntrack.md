@@ -1,5 +1,5 @@
 ---
-title: '[CKA 부록 5] Service의 실체는 커널 규칙: iptables DNAT와 conntrack, 그리고 조용히 끊긴 DNS'
+title: '[쿠버네티스 아래의 리눅스 5] Service의 실체는 커널 규칙: iptables DNAT와 conntrack, 그리고 조용히 끊긴 DNS'
 description: ClusterIP로 보낸 패킷이 netfilter 훅과 kube-proxy의 KUBE-SERVICES, KUBE-SVC, KUBE-SEP 체인을 지나 파드 IP로 DNAT되는 과정을 따라갑니다. conntrack이 첫 패킷의 결정을 기억하는 방식과, 낡은 UDP conntrack 항목 때문에 DNS가 계속 타임아웃 난 ThousandEyes 장애(SREcon26 Americas 발표)를 함께 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -11,13 +11,13 @@ tags:
   - netfilter
   - DNS
   - CoreDNS
-category: cert/CKA
+category: theory/Systems
 topics:
-  - cert
   - systems
+  - distributed
 draft: false
-series: "CKA 공부"
-seriesOrder: 9.5
+series: "쿠버네티스 아래의 리눅스"
+seriesOrder: 5
 ---
 
 ## 결론부터
@@ -30,7 +30,7 @@ seriesOrder: 9.5
 
 ---
 
-이 시리즈의 [1편](/blog/cert/cka/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 커널 기능을 조합한다는 이야기로 시작했습니다. [2편](/blog/cert/cka/k8s-linux-02-namespaces-pause)은 파드마다 네트워크 네임스페이스와 veth가 생기는 과정을 다뤘습니다. 마지막인 이번 글은 그 네임스페이스 밖으로 나간 패킷이 Service를 만나는 지점을 봅니다. 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API `order-api`가 파드 3개로 떠 있다고 가정합니다.
+이 시리즈의 [1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 커널 기능을 조합한다는 이야기로 시작했습니다. [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)은 파드마다 네트워크 네임스페이스와 veth가 생기는 과정을 다뤘습니다. 마지막인 이번 글은 그 네임스페이스 밖으로 나간 패킷이 Service를 만나는 지점을 봅니다. 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API `order-api`가 파드 3개로 떠 있다고 가정합니다.
 
 Service를 YAML로 만드는 법과 타입별 사용법은 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)에 정리했습니다. 여기서는 그 YAML이 노드 커널에 무엇으로 남는지를 따라갑니다.
 
@@ -503,7 +503,7 @@ kind의 kindnet(ptp 플러그인)도 브리지 없이 라우팅합니다. 파드
 | 최신 kube-proxy | 엔드포인트가 사라지면 해당 UDP 항목을 reconciler가 지움 | v1.32 이상, 후속 수정이 들어간 패치 버전 |
 | NodeLocal DNSCache | 파드가 노드 로컬 캐시로 질의해 DNAT와 conntrack을 건너뜀. 캐시에서 CoreDNS로는 TCP로 올려 보낼 수 있음 | 공식 문서: TCP 항목은 연결 종료 때 지워지고 UDP 항목은 타임아웃을 기다려야 함 |
 | 클라이언트 포트 재사용 점검 | 사이드카나 DNS 프록시가 고정 출발지 포트를 쓰는지 확인 | `conntrack -L`에서 같은 `sport` 항목의 남은 시간이 계속 다시 차는지 봄 |
-| CoreDNS 메모리 한도 점검 | 발단인 OOMKilled 자체를 줄임 | [3편](/blog/cert/cka/k8s-linux-03-cgroup-qos)의 memory.max와 OOM 경로 참고 |
+| CoreDNS 메모리 한도 점검 | 발단인 OOMKilled 자체를 줄임 | [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)의 memory.max와 OOM 경로 참고 |
 
 장애 중 임시로 항목을 지워야 한다면 `conntrack -D -p udp --orig-dst 10.96.0.10 --dport 53` 같은 명령이 있습니다. 노드의 모든 DNS 흐름을 끊는 명령이라 영향 범위를 알고 써야 합니다. 이 명령은 conntrack 도구의 일반 사용법이며 사례 슬라이드에는 나오지 않습니다.
 
@@ -641,5 +641,5 @@ kubelet이 써 준 resolv.conf에 `options ndots:5`가 있어서 점이 5개 미
 
 이 블로그의 관련 글
 - [CKA Ch-04: 서비스와 네트워킹](/blog/cert/cka/cka-04-services-networking)
-- [CKA 부록 2: 네임스페이스와 pause](/blog/cert/cka/k8s-linux-02-namespaces-pause)
-- [CKA 부록 3: cgroup과 QoS](/blog/cert/cka/k8s-linux-03-cgroup-qos)
+- [쿠버네티스 아래의 리눅스 2: 네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause)
+- [쿠버네티스 아래의 리눅스 3: cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)

@@ -96,7 +96,7 @@ CPU, 메모리, Pod 수 쿼터에 걸리는 Deployment도 `kubectl create`는 �
 
 kubelet은 `spec.nodeName=<자기 노드 이름>` 필드 셀렉터로 자기 노드의 Pod만 골라 watch합니다. 자기 노드에 배정된 Pod가 생기면 CRI로 containerd 같은 런타임을 호출합니다. 순서는 Pod 샌드박스(네트워크 네임스페이스를 잡는 pause 컨테이너)를 만들고 CNI로 IP를 받은 뒤 이미지를 받고 컨테이너를 시작하는 흐름입니다. 결과는 `pods/<이름>/status` 서브리소스로 API 서버에 올립니다. `kubectl get pod -o wide`의 IP와 NODE 열은 이렇게 채워집니다.
 
-pause 컨테이너와 네임스페이스 공유는 CKA 부록의 [네임스페이스와 pause 글](/blog/cert/cka/k8s-linux-02-namespaces-pause)에서 커널 쪽으로 따라갑니다.
+pause 컨테이너와 네임스페이스 공유는 커널 시리즈의 [네임스페이스와 pause 글](/blog/theory/systems/k8s-linux-02-namespaces-pause)에서 커널 쪽으로 따라갑니다.
 
 ### 1-5. watch와 resourceVersion
 
@@ -216,7 +216,7 @@ kube-proxy는 규칙 관리자입니다. EndpointSlice와 Service를 watch해서
 | `nftables` | v1.33 GA |
 | `ipvs` | v1.35 deprecated(KEP-5495). 제거 버전은 미정 |
 
-eBPF로 Service를 처리하는 것은 Cilium 같은 CNI의 kube-proxy 대체 기능이고 그런 CNI를 쓰면 kube-proxy를 아예 설치하지 않기도 합니다(`kubeadm init --skip-phases=addon/kube-proxy`). kubeadm 클러스터에서는 `kube-system`에 DaemonSet과 ConfigMap `kube-proxy`가 있고 ConfigMap을 고친 뒤에는 `kubectl -n kube-system rollout restart ds kube-proxy`로 다시 띄웁니다. iptables 규칙이 커널에서 어떻게 패킷을 바꾸는지는 [Service와 iptables, conntrack 글](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
+eBPF로 Service를 처리하는 것은 Cilium 같은 CNI의 kube-proxy 대체 기능이고 그런 CNI를 쓰면 kube-proxy를 아예 설치하지 않기도 합니다(`kubeadm init --skip-phases=addon/kube-proxy`). kubeadm 클러스터에서는 `kube-system`에 DaemonSet과 ConfigMap `kube-proxy`가 있고 ConfigMap을 고친 뒤에는 `kubectl -n kube-system rollout restart ds kube-proxy`로 다시 띄웁니다. iptables 규칙이 커널에서 어떻게 패킷을 바꾸는지는 [Service와 iptables, conntrack 글](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
 
 ### 2-8. 직접 해 보기
 
