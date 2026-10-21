@@ -75,7 +75,7 @@ IP 대역도 셋으로 나뉩니다. Pod IP는 네트워크 플러그인이, Ser
 
 kube-proxy는 리눅스에서 `iptables`, `ipvs`, `nftables` 모드를 지원합니다. Virtual IPs and Service Proxies 문서는 모드를 지정하지 않으면 현재 기본값이 `iptables`이고 앞으로 `nftables`로 바뀔 예정이라고 적습니다. `ipvs` 모드는 v1.35부터 사용 중단(deprecated) 상태이고 v1.40에서 기본 비활성화, v1.43에서 제거될 예정입니다. 옛 강의에서 ipvs를 기본처럼 다루면 걸러서 듣습니다.
 
-패킷이 Service IP를 만나 iptables 규칙과 conntrack을 거쳐 Pod로 가는 커널 쪽 경로는 [CKA 부록 5](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 따로 다룹니다. 이 글은 시험에서 쓰는 확인 명령까지만 봅니다.
+패킷이 Service IP를 만나 iptables 규칙과 conntrack을 거쳐 Pod로 가는 커널 쪽 경로는 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 따로 다룹니다. 이 글은 시험에서 쓰는 확인 명령까지만 봅니다.
 
 ### 1-3. 노드가 여는 포트 표
 
@@ -1020,7 +1020,7 @@ options ndots:5
 
 `search` 덕분에 같은 네임스페이스에서는 `payment`만으로, 다른 네임스페이스에서는 `payment.billing`처럼 짧게 부를 수 있습니다. 네임스페이스를 빼고 부르면 자기 네임스페이스에서만 찾습니다. `shop`의 Pod가 `billing` 네임스페이스의 `payment`를 `payment`로 부르면 응답이 없습니다.
 
-`options ndots:5`는 resolv.conf 매뉴얼(resolv.conf(5)) 기준으로 점이 5개보다 적은 이름은 `search` 목록을 먼저 붙여 보고 그다음에 이름 그대로 질의한다는 뜻입니다. `api.example.com`(점 2개)처럼 외부 도메인을 부르면 `api.example.com.shop.svc.cluster.local` 같은 질의가 먼저 나가고 실패한 뒤에 원래 이름을 묻습니다. 외부 호출이 많은 Pod에서 DNS 질의가 몇 배로 늘어나는 이유가 이것입니다. 이름 끝에 점을 붙인 FQDN(`api.example.com.`)을 쓰거나 Pod의 `dnsConfig.options`에서 `ndots`를 낮춰 줄일 수 있습니다. 질의 하나가 실제로 어떻게 퍼지는지는 [부록 5편](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
+`options ndots:5`는 resolv.conf 매뉴얼(resolv.conf(5)) 기준으로 점이 5개보다 적은 이름은 `search` 목록을 먼저 붙여 보고 그다음에 이름 그대로 질의한다는 뜻입니다. `api.example.com`(점 2개)처럼 외부 도메인을 부르면 `api.example.com.shop.svc.cluster.local` 같은 질의가 먼저 나가고 실패한 뒤에 원래 이름을 묻습니다. 외부 호출이 많은 Pod에서 DNS 질의가 몇 배로 늘어나는 이유가 이것입니다. 이름 끝에 점을 붙인 FQDN(`api.example.com.`)을 쓰거나 Pod의 `dnsConfig.options`에서 `ndots`를 낮춰 줄일 수 있습니다. 질의 하나가 실제로 어떻게 퍼지는지는 [커널 시리즈 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
 
 Pod는 대개 Ready여야 DNS 레코드를 받습니다. Service에 `publishNotReadyAddresses: true`를 주면 예외입니다.
 
@@ -1340,7 +1340,7 @@ Ingress 컨트롤러
 - ingress-nginx, [Rewrite](https://kubernetes.github.io/ingress-nginx/examples/rewrite/), [kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx) (보관된 저장소)
 
 이 시리즈의 관련 글
-- [CKA 부록 5: Service의 실체는 커널 규칙](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)
+- [쿠버네티스 아래의 리눅스 5: Service의 실체는 커널 규칙](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)
 
 Gateway API
 - [Getting started with Gateway API](https://gateway-api.sigs.k8s.io/guides/)
