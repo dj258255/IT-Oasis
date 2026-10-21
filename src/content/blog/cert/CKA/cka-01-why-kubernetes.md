@@ -26,7 +26,7 @@ seriesOrder: 1
 4. `limits.cpu: 50m`은 `cpu.max`의 `5000 100000`이 됩니다. kind에서 무한 루프 컨테이너를 2분쯤 돌렸을 때 전체 주기의 91.7%가 스로틀됐습니다. 같은 시점에 kubelet이 내놓은 사용량은 약 50m이라 `kubectl top` 같은 사용량 지표만으로는 정상처럼 보입니다.
 5. CKA 비중이 가장 큰 트러블슈팅(30%)에서 쓰는 `kubectl describe`, `crictl`, `journalctl -u kubelet`, `/etc/kubernetes/manifests`는 각각 이 층 구조의 다른 층을 봅니다. 증상이 어느 층에서 생겼는지 알면 어떤 명령부터 칠지 정할 수 있습니다.
 
-이 글은 시리즈의 출발점입니다. 쿠버네티스 쪽은 다음 글 [핵심 오브젝트와 요청 흐름](/blog/cert/cka/cka-01b-core-objects-and-flow)으로 이어지고 커널 쪽은 "쿠버네티스 아래의 리눅스" 시리즈에서 한 기능씩 깊이 들어갑니다. 여기서는 두 시리즈가 만나는 자리를 한 번에 훑어봅니다.
+이 글은 시리즈의 출발점입니다. 쿠버네티스 쪽은 다음 글 [핵심 오브젝트와 요청 흐름](/blog/cert/cka/cka-01b-core-objects-and-flow)으로 이어지고 커널 쪽은 이 시리즈 끝의 부록 다섯 편에서 한 기능씩 깊이 들어갑니다. 여기서는 둘이 만나는 자리를 한 번에 훑어봅니다.
 
 본문의 출력은 2026-10-20에 이 Mac의 colima(arm64 VM, 커널 6.8) 위에 kind v0.33으로 만든 단일 노드 클러스터 `cka-lab-c`(kindest/node:v1.37.0, containerd 2.3.4, runc 1.4.3, cgroup v2)에서 실제로 얻은 값입니다. kind는 노드가 도커 컨테이너라서 경로와 PID가 일반 kubeadm 노드와 조금 다릅니다. 다른 곳은 해당 절에 적었습니다.
 

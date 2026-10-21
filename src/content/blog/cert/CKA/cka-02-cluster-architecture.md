@@ -765,6 +765,8 @@ kind v1.37.0 컨트롤 플레인 노드에서 `kubeadm certs check-expiration`�
 
 컨트롤 플레인이 여러 대면 `renew`를 모든 컨트롤 플레인 노드에서 실행합니다. 갱신한 뒤에는 컨트롤 플레인 Pod를 재시작해야 합니다. 모든 구성요소가 인증서를 동적으로 다시 읽지는 못하기 때문입니다. Lima VM(1.37.1)에서 `kubeadm certs renew all`은 마지막에 `Done renewing certificates. You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.`를 찍었습니다. 재시작 전에 `openssl s_client`로 6443과 2379 포트가 내놓는 인증서의 serial을 보니 kube-apiserver와 etcd의 서빙 인증서는 이미 새 파일 것으로 바뀌어 있었습니다. kubeconfig에 든 컨트롤러 매니저와 스케줄러의 클라이언트 인증서는 밖에서 확인할 방법이 없으니 출력대로 네 구성요소를 모두 재시작합니다. static Pod는 노드의 kubelet이 관리해서 kubectl로 지우고 다시 띄울 수 없습니다. 그래서 문서는 매니페스트를 `/etc/kubernetes/manifests/` 밖으로 잠시 옮기고 20초(kubelet의 `fileCheckFrequency`)쯤 기다렸다가 되돌리라고 적습니다.
 
+만료도 실제로 내 봤습니다. Lima VM의 kubeadm 1.37.1 단일 노드에서 시계를 400일 앞당기자 `kubectl`은 `tls: failed to verify certificate: x509: certificate has expired or is not yet valid: current time 2027-11-25T09:01:30+09:00 is after 2027-10-21T00:17:12Z`로 실패했습니다. `check-expiration`은 `RESIDUAL TIME`을 `<invalid>`로 찍었고 API로 `kubeadm-config`를 읽지 못해 `Falling back to default configuration`을 남겼습니다. `renew all`은 그 상태에서도 열한 항목을 모두 갱신했고 kubectl은 재시작 전부터 응답했습니다. 갱신되는 파일은 `/etc/kubernetes/admin.conf`라서 `~/.kube/config`에 복사해 둔 사본은 다시 복사합니다. 만료된 클라이언트 인증서로 붙으면 `error: You must be logged in to the server (Unauthorized)`가 납니다. kubelet 클라이언트 인증서는 `renew all`이 건드리지 않아 따로 복구했습니다([Ch-06 1-4절](/blog/cert/cka/cka-06-troubleshooting)).
+
 ### 4-5. etcd 백업
 
 kubeadm 클러스터의 etcd는 컨트롤 플레인 노드의 static Pod이고 데이터 디렉터리는 `/var/lib/etcd`입니다. 스냅샷은 동작 중인 멤버에서 `etcdctl snapshot save`로 뜹니다. 문서는 스냅샷 생성이 그 멤버의 성능에 영향을 주지 않는다고 적습니다.
@@ -960,6 +962,8 @@ sudo kubeadm init --control-plane-endpoint "LOAD_BALANCER_DNS:LOAD_BALANCER_PORT
 sudo kubeadm init phase upload-certs --upload-certs
 ```
 
+kind v0.33(노드 v1.37.0)으로 컨트롤 플레인 3대를 만들면 `kubeadm-config`의 `controlPlaneEndpoint`가 `<클러스터 이름>-external-load-balancer:6443`입니다. 이 로드 밸런서 컨테이너는 `envoyproxy/envoy:v1.36.2`이고 세 API 서버의 6443을 TCP로 묶어 2초마다 `/healthz`로 상태를 봅니다. 나머지 컨트롤 플레인은 kind가 CA와 `sa.key`를 노드에 직접 복사한 뒤 `certificateKey` 없는 `JoinConfiguration`으로 붙이므로 `kubeadm-certs` Secret이 없었습니다. 첫 노드에서 위 `upload-certs` 명령을 돌리자 CA 세 쌍과 `sa.key`, `sa.pub` 여덟 항목이 든 Secret이 생겼습니다. Secret의 `ownerReferences`가 2시간짜리 부트스트랩 토큰을 가리켜 토큰과 함께 지워집니다. 출력된 키를 `kubeadm token create --print-join-command --certificate-key <키>`에 넘기면 `kubeadm join <엔드포인트> --token ... --discovery-token-ca-cert-hash sha256:... --control-plane --certificate-key ...` 한 줄이 나옵니다. 이 명령으로 실제 join까지 하지는 않았습니다.
+
 ### 5-3. 헷갈리는 지점
 
 - 3-1절의 제약과 연결됩니다. `--control-plane-endpoint` 없이 만든 클러스터를 나중에 고가용성으로 바꾸는 것은 지원하지 않습니다.
@@ -968,6 +972,8 @@ sudo kubeadm init phase upload-certs --upload-certs
 ### 5-4. 직접 해 보기
 
 VM이 넉넉하면 컨트롤 플레인 3대를 stacked 구조로 만들고 한 대의 kubelet을 멈춘 뒤 `kubectl get nodes`가 계속 응답하는지 봅니다. VM이 부족하면 위 init과 join 명령을 문서에서 찾아 실행 순서만 손으로 적어 봅니다.
+
+kind v0.33(노드 v1.37.0, colima, arm64)에서 노드 컨테이너를 `docker stop`으로 멈춰 해 봤습니다. etcd Pod 안의 `etcdctl member list`는 세 멤버를 `started`로 보였습니다. etcd 리더이던 첫 노드를 멈추자 로드 밸런서로 보낸 조회와 생성이 그대로 됐고 etcd 리더와 컨트롤러 매니저, 스케줄러의 Lease가 다른 노드로 옮겨 갔습니다. 멈춘 노드는 1분 안에 `NotReady`가 됐습니다. 둘째 노드까지 멈추자 남은 멤버는 `became pre-candidate`만 되풀이했고 `kubectl get nodes`와 ConfigMap 생성이 모두 15초 제한을 넘겼습니다. 남은 API 서버에 직접 붙으면 `/readyz`에 `[-]etcd failed`가, 조회에 `etcdserver: request timed out`이 나왔습니다. 멈춘 노드 하나를 `docker start`하자 5초 안에 쓰기가 돌아왔습니다.
 
 ## 6. Helm과 Kustomize로 구성요소 설치
 
@@ -1609,7 +1615,7 @@ argocd-operator.v0.19.0   Argo CD   0.19.0              argocd-operator.v0.18.0 
 
 - 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(컨트롤 플레인 1대, 워커 2대, colima, arm64), kubectl v1.37.1, Helm v4.3.1, kubectl 내장 Kustomize v5.8.1에서 1-11, 4-9, 6-7, 8-4절의 직접 해 보기와 3-5절의 `kubelet-config` 반영, 확인 문제 1, 3, 5, 7~11, 13의 명령을 돌렸습니다. etcd 도구는 노드 이미지에 없어 etcd v3.7.0 arm64 릴리스의 `etcdctl`, `etcdutl`을 컨트롤 플레인 노드에 넣었습니다. 본문에 "kind에서"로 적은 출력과 오류 문구가 그 결과입니다.
 - kind로 할 수 없던 kubeadm 계열은 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5 LTS, arm64, 커널 6.8.0-142, 컨트롤 플레인 2 CPU와 2.5GiB, 워커 2 CPU와 2GiB)에서 돌렸습니다. 두 VM은 Lima의 `user-v2` 네트워크(192.168.104.0/24)로 서로 통신했고 호스트 네트워크 설정은 바꾸지 않았습니다. 패키지는 pkgs.k8s.io(kubeadm, kubelet, kubectl 1.36.5와 1.37.1, cri-tools 1.37.0), containerd 2.4.2와 cri-dockerd 0.4.9와 etcd v3.7.0의 GitHub 릴리스, runc 1.5.2와 CNI 플러그인 1.9.1의 GitHub 릴리스, Ubuntu 저장소의 `docker.io`, Calico v3.33.0 공식 매니페스트에서 받았습니다. 2장 노드 준비와 2-6절, 3-1~3-5절, 4-2~4-6절, 7-2절의 CNI 설치, 확인 문제 4, 6, 12의 흐름이 이 환경의 결과이고 본문에 "Lima VM에서"로 적었습니다.
-- 아직 돌리지 않은 것은 HA 컨트롤 플레인(5장), 실제 공개 차트 저장소(로컬 차트로 대신), 인증서를 실제로 만료시키는 시험입니다.
+- 5장 HA는 2026년 10월 21일 kind v0.33(컨트롤 플레인 3대, 워커 1대)으로 돌렸습니다. kind는 envoy 로드 밸런서를 두고 CA 파일을 노드에 복사해 join합니다. 그래서 VM 세 대를 `kubeadm join --control-plane --certificate-key`로 직접 붙인 결과와 다를 수 있습니다. 4-4절의 인증서 만료는 같은 날 Lima VM 한 대(Ubuntu 24.04.5, 2 CPU, 2.5GiB, kubeadm 1.37.1, containerd 2.4.2)의 시계를 2027년 11월 25일로 옮겨 재현했습니다. 실제 공개 차트 저장소는 쓰지 않았습니다(로컬 차트로 대신).
 - kind 특유의 조건이 결과에 들어간 곳이 있습니다. kubeconfig의 클러스터 이름이 `kind-<이름>`이고 server가 `https://127.0.0.1:<포트>`이며 `apiserver.crt`의 SAN에 `localhost`와 `127.0.0.1`이 더 들어 있습니다. 노드가 컨테이너라 `ssh` 대신 `docker exec`를 썼습니다.
 - 4-6절의 etcd 복구는 컨트롤 플레인 1대에서 돌렸습니다. 복구 뒤 컨트롤 플레인 static Pod 재시작이 필요했던 이유를 API 서버 캐시로 본 것은 관찰에서 끌어낸 판단입니다. Lima VM에서 본 kubelet과 kube-proxy 문제는 복구를 두 번 하고 그 사이 워커를 cri-dockerd로 다시 붙인 클러스터에서 나왔습니다. 어느 단계가 원인인지 따로 떼어 보지는 않았습니다.
 - 공식 문서는 2026년 10월 19일 기준 kubernetes.io(v1.37)와 helm.sh(4.3.1)에서 확인했습니다.

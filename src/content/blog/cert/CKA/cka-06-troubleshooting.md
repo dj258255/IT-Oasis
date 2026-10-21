@@ -232,6 +232,14 @@ sudo kubeadm kubeconfig user --org system:nodes --client-name system:node:$NODE 
 
 kind v1.37.0에서 이 절차를 워커 하나에 처음부터 끝까지 해 봤습니다. 컨트롤 플레인 노드에서 `kubeadm kubeconfig user`로 만든 파일을 워커로 옮기고 kubelet을 재시작하자 새 CSR이 생겨 자동 승인됐고 `kubelet-client-current.pem`이 다시 생겼습니다. 5번처럼 두 줄을 바꾸고 재시작한 뒤 노드는 `Ready`였습니다. 만든 파일의 `server`는 컨트롤 플레인 노드 IP였습니다. kind의 정상 `kubelet.conf`도 같은 노드 IP를 쓰므로 그대로 두었지만 실제 클러스터에서는 원래 `kubelet.conf`의 `server`와 클러스터 이름에 맞춰 고칩니다.
 
+Lima VM의 kubeadm 1.37.1 단일 노드에서 시계를 400일 앞당겨 실제로 만료시켜 보니 증상이 세 단계로 나왔습니다.
+
+- 만료 직후 kubelet 로그에는 `"Failed to update lease" err="... tls: failed to verify certificate: x509: certificate has expired or is not yet valid: current time 2027-11-25T09:00:05+09:00 is after 2027-10-21T00:17:12Z"`가 찍혔습니다. kubelet이 API 서버의 만료된 서빙 인증서를 거부한 것입니다. 반대쪽 kube-apiserver 로그에는 `"Unable to authenticate the request" err="[x509: certificate has expired or is not yet valid: ...]"`가, 컨트롤러 매니저와 스케줄러 로그에는 kubelet과 같은 `tls: failed to verify certificate` 줄이 나왔습니다.
+- `kubeadm certs renew all`과 컨트롤 플레인 재시작 뒤에도 kubelet 인증서는 그대로였습니다. 로그는 `User "system:anonymous" cannot get resource "leases"`로 바뀌었고 노드는 `NotReady`가 됐습니다.
+- 이때 kubelet을 재시작하면 `part of the existing bootstrap client certificate in /etc/kubernetes/kubelet.conf is expired`와 `unable to load bootstrap kubeconfig: stat /etc/kubernetes/bootstrap-kubelet.conf: no such file or directory`를 남기고 기동하지 못합니다. 이 노드에는 부트스트랩 kubeconfig가 없어서 자동 갱신으로 돌아오는 길이 없었습니다.
+
+위 1~6 절차를 그대로 따르자 새 CSR이 자동 승인됐고 `kubelet-client-current.pem`의 만료가 1년 뒤로 바뀌며 노드가 `Ready`로 돌아왔습니다.
+
 kubelet 서빙 인증서는 별개입니다. kubeadm이 배포하는 서빙 인증서는 기본이 자체 서명이고 이것이 3-4절의 metrics-server `x509` 오류 원인입니다. `serverTLSBootstrap: true`로 클러스터 CA 서명 인증서를 받게 하면 그 CSR은 kube-controller-manager가 자동 승인하지 않아 `kubectl certificate approve`로 승인해야 한다고 같은 문서는 적습니다.
 
 ### 1-5. kubectl debug로 노드 들여다보기
@@ -917,7 +925,7 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $로 보인다
 
 - 2026년 10월 20일 kind v0.33, 노드 이미지 `kindest/node:v1.37.0`(컨트롤 플레인 1대, 워커 2대, colima, arm64), kubectl v1.37.1, containerd 2.3.4에서 1-8, 2-7, 3-7, 4-7, 5-6절의 직접 해 보기와 확인 문제 1~9의 명령을 돌렸습니다. kubelet과 컨트롤 플레인 고장은 `docker exec`로 노드 컨테이너에 들어가 연습 클러스터에서만 냈고 끝난 뒤 되돌렸습니다. 본문에 "kind에서"로 적은 출력과 오류 문구가 그 결과입니다.
 - kind의 노드는 컨테이너라서 `ssh` 대신 `docker exec`를 썼고 `kubectl debug node`의 `/host`도 노드 컨테이너의 파일시스템입니다. 노드 조건에 `NetworkUnavailable`이 없는 것, Metrics Server를 직접 설치하고 `--kubelet-insecure-tls`를 줘야 하는 것, arm64에서 `busybox:1.28`의 `wget`이 죽는 것은 이 환경의 조건입니다.
-- 1-4절의 kubelet 클라이언트 인증서 복구 절차는 인증서를 만료시키지 않고 인증서와 `kubelet.conf`를 지운 상태에서 돌렸습니다. 만료 시 kube-apiserver에 찍히는 `x509` 문구는 재현하지 못했습니다.
+- 1-4절의 kubelet 클라이언트 인증서 복구 절차는 kind에서 인증서와 `kubelet.conf`를 지운 상태로 한 번 돌렸습니다. 2026년 10월 21일에는 Lima VM 한 대(Ubuntu 24.04.5, kubeadm 1.37.1 단일 노드, containerd 2.4.2)의 시계를 2027년 11월 25일로 옮겨 인증서를 실제로 만료시킨 상태로 다시 돌렸습니다. Lima guest agent가 시계를 호스트에 맞춰 되돌려서 실습 동안 `lima-guestagent`를 멈췄습니다. 워커가 따로 있는 클러스터에서 워커 kubelet 인증서만 만료되는 경우는 보지 않았습니다.
 - kind로 못 하던 것 일부는 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5, arm64, kubeadm 1.36.5에서 1.37.1로 업그레이드, containerd 2.4.2, Calico v3.33.0)에서 돌렸습니다. 1-3절 파일 위치, 1-4절 kubelet 설정 고장과 복구, 워커 재부팅 뒤 kubelet과 런타임 자동 기동, 5-1 표 2번의 NetworkPolicy 차단(Calico에서 `podSelector: {}` Ingress 기본 거부를 넣자 다른 노드 Pod의 `wget`이 시간 초과로 실패하고 허용 정책을 더하자 다시 응답)이 그 결과이고 본문에 "Lima VM"으로 적었습니다.
 - 실행하지 못한 것은 이렇습니다. cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway, `PodLogsQuerySplitStreams` 알파 기능입니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 문서는 Metrics API를 1.37 stable과 `metrics.k8s.io/v1` 경로로 적지만 kind에 넣은 metrics-server v0.9.0은 `v1beta1`만 제공했습니다. 시험 클러스터의 metrics-server가 어느 버전을 제공하는지는 확인하지 못했습니다.

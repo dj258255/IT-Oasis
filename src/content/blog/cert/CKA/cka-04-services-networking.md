@@ -75,7 +75,7 @@ IP 대역도 셋으로 나뉩니다. Pod IP는 네트워크 플러그인이, Ser
 
 kube-proxy는 리눅스에서 `iptables`, `ipvs`, `nftables` 모드를 지원합니다. Virtual IPs and Service Proxies 문서는 모드를 지정하지 않으면 현재 기본값이 `iptables`이고 앞으로 `nftables`로 바뀔 예정이라고 적습니다. `ipvs` 모드는 v1.35부터 사용 중단(deprecated) 상태이고 v1.40에서 기본 비활성화, v1.43에서 제거될 예정입니다. 옛 강의에서 ipvs를 기본처럼 다루면 걸러서 듣습니다.
 
-패킷이 Service IP를 만나 iptables 규칙과 conntrack을 거쳐 Pod로 가는 커널 쪽 경로는 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 따로 다룹니다. 이 글은 시험에서 쓰는 확인 명령까지만 봅니다.
+패킷이 Service IP를 만나 iptables 규칙과 conntrack을 거쳐 Pod로 가는 커널 쪽 경로는 [CKA 부록 5](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 따로 다룹니다. 이 글은 시험에서 쓰는 확인 명령까지만 봅니다.
 
 ### 1-3. 노드가 여는 포트 표
 
@@ -162,7 +162,7 @@ kind v1.37.0 워커에서 두 경우를 일부러 만들어 본 결과입니다(
 
 두 경우 모두 노드에 들어가 `ls /etc/cni/net.d /opt/cni/bin`으로 파일을 보고 `journalctl -u containerd`(CRI-O면 `-u crio`)와 `journalctl -u kubelet`을 같이 읽습니다. CNI를 직접 실행하는 런타임 쪽 로그가 원인을 더 구체적으로 적는 경우가 많습니다. "cni failed to set up pod"로 시작하는 옛 이벤트 문구는 dockershim 시절 것이라 지금 런타임에서는 모양이 다릅니다.
 
-Weave Net은 옛 강의와 블로그에 자주 나오지만 GitHub의 `weaveworks/weave` 저장소는 보관(archived) 상태이고 마지막 릴리스는 v2.8.1(2021-01-25)입니다(2026년 10월 20일 GitHub API 기준). 운영사 Weaveworks는 2024년 2월에 영업을 접었습니다. 지금 연습 클러스터에는 Calico, Cilium, Flannel처럼 유지되는 플러그인을 씁니다. Flannel 단독 구성은 NetworkPolicy를 집행하지 않는 것으로 알려져 있으니 2절을 연습하려면 Calico나 Cilium을 고릅니다. CKA 시험 환경이 어떤 CNI를 쓰는지는 커리큘럼과 공식 안내에 나오지 않습니다.
+Weave Net은 옛 강의와 블로그에 자주 나오지만 GitHub의 `weaveworks/weave` 저장소는 보관(archived) 상태이고 마지막 릴리스는 v2.8.1(2021-01-25)입니다(2026년 10월 20일 GitHub API 기준). 운영사 Weaveworks는 2024년 2월에 영업을 접었습니다. 지금 연습 클러스터에는 Calico, Cilium, Flannel처럼 유지되는 플러그인을 씁니다. Flannel 공식 매니페스트(v0.28.10)만 설치한 Lima VM 단일 노드(kubeadm 1.37.1)에서 `podSelector: {}`로 Ingress와 Egress를 모두 막는 정책을 넣어도 Service 이름, Pod IP, DNS 조회가 모두 그대로 응답했습니다. 정책 객체는 만들어지지만 집행할 주체가 없는 것입니다. Flannel README도 `flanneld`는 NetworkPolicy를 집행하지 않는다고 적고 Helm 차트의 `netpol.enabled`(kube-network-policies를 함께 설치, 기본값 `false`)나 Calico 같은 별도 컨트롤러를 안내합니다. 2절을 연습하려면 Calico나 Cilium을 고릅니다. CKA 시험 환경이 어떤 CNI를 쓰는지는 커리큘럼과 공식 안내에 나오지 않습니다.
 
 ### 1-5. Pod 대역, Service 대역, kube-proxy 모드 확인
 
@@ -1020,7 +1020,7 @@ options ndots:5
 
 `search` 덕분에 같은 네임스페이스에서는 `payment`만으로, 다른 네임스페이스에서는 `payment.billing`처럼 짧게 부를 수 있습니다. 네임스페이스를 빼고 부르면 자기 네임스페이스에서만 찾습니다. `shop`의 Pod가 `billing` 네임스페이스의 `payment`를 `payment`로 부르면 응답이 없습니다.
 
-`options ndots:5`는 resolv.conf 매뉴얼(resolv.conf(5)) 기준으로 점이 5개보다 적은 이름은 `search` 목록을 먼저 붙여 보고 그다음에 이름 그대로 질의한다는 뜻입니다. `api.example.com`(점 2개)처럼 외부 도메인을 부르면 `api.example.com.shop.svc.cluster.local` 같은 질의가 먼저 나가고 실패한 뒤에 원래 이름을 묻습니다. 외부 호출이 많은 Pod에서 DNS 질의가 몇 배로 늘어나는 이유가 이것입니다. 이름 끝에 점을 붙인 FQDN(`api.example.com.`)을 쓰거나 Pod의 `dnsConfig.options`에서 `ndots`를 낮춰 줄일 수 있습니다. 질의 하나가 실제로 어떻게 퍼지는지는 [커널 시리즈 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
+`options ndots:5`는 resolv.conf 매뉴얼(resolv.conf(5)) 기준으로 점이 5개보다 적은 이름은 `search` 목록을 먼저 붙여 보고 그다음에 이름 그대로 질의한다는 뜻입니다. `api.example.com`(점 2개)처럼 외부 도메인을 부르면 `api.example.com.shop.svc.cluster.local` 같은 질의가 먼저 나가고 실패한 뒤에 원래 이름을 묻습니다. 외부 호출이 많은 Pod에서 DNS 질의가 몇 배로 늘어나는 이유가 이것입니다. 이름 끝에 점을 붙인 FQDN(`api.example.com.`)을 쓰거나 Pod의 `dnsConfig.options`에서 `ndots`를 낮춰 줄일 수 있습니다. 질의 하나가 실제로 어떻게 퍼지는지는 [부록 5편](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)에서 다룹니다.
 
 Pod는 대개 Ready여야 DNS 레코드를 받습니다. Service에 `publishNotReadyAddresses: true`를 주면 예외입니다.
 
@@ -1292,12 +1292,12 @@ kubectl create ingress a --rule="shop.example.com/cart=cart:80" --rule="shop.exa
 
 - 2026-10-20에 kind v0.33 + 노드 v1.37.0(colima, arm64, VM 커널 6.8.0-117-generic, CNI kindnet, kube-proxy iptables 모드, Service CIDR 10.96.0.0/16)에서 1-4의 CNI 고장 재현, 1-8, 2장 정책과 2-7, 확인 문제 풀이, 3장 Service 타입과 3-9, selector 없는 Service와 EndpointSlice, 4장 Gateway API(v1.6.1 CRD, Envoy Gateway v1.9.2), 5장 Ingress(ingress-nginx v1.15.1 kind용 매니페스트), 6장 CoreDNS 과제를 돌렸습니다. 결과는 각 "직접 해 보기" 아래에 적었습니다. 출력 예시 가운데 "문서 예시"로 표시한 것은 kubernetes.io 문서의 것입니다.
 - Calico 설치는 같은 날 Lima 2.2.1 VM 두 대(Ubuntu 24.04.5, arm64, kubeadm 1.36.5, containerd 2.4.2)에서 v3.33.0 공식 매니페스트로 했습니다. 서로 다른 노드의 Pod 사이에서 `podSelector: {}` Ingress 기본 거부를 넣자 `wget`이 시간 초과로 실패했고 `app: cli`를 허용하는 정책을 더하자 다시 응답했습니다. 1-5의 Pod IP 대역 차이도 이 환경에서 본 것입니다.
-- 돌리지 못한 것: 클라우드 LB가 실제로 주소를 채우는 동작, Flannel 설치, Weave Net, CoreDNS `loop` 오류 재현. kind는 노드가 컨테이너라 노드 IP가 Mac에서 바로 닿지 않고 Gateway에 주소가 할당되지 않습니다.
+- 돌리지 못한 것: 클라우드 LB가 실제로 주소를 채우는 동작, kind 위의 Flannel, Weave Net, CoreDNS `loop` 오류 재현. kind v0.33(`disableDefaultCNI: true`)에 Flannel v0.28.10을 올리자 `flanneld`가 `Failed to check br_netfilter: stat /proc/sys/net/bridge/bridge-nf-call-iptables: no such file or directory`로 종료했습니다. colima VM 커널에 `br_netfilter`가 올라와 있지 않았고 이 VM은 다른 작업과 함께 쓰는 것이라 모듈을 올리지 않았습니다. kind 노드의 `/opt/cni/bin`에는 Flannel이 위임하는 `bridge`도 없었습니다(`host-local`, `loopback`, `portmap`, `ptp`만 있음). kind는 노드가 컨테이너라 노드 IP가 Mac에서 바로 닿지 않고 Gateway에 주소가 할당되지 않습니다.
 - kubernetes.io 문서는 2026년 10월 19일에 kubernetes/website 저장소의 main 브랜치 원문으로 읽었습니다. 사이트에 게시된 현재 버전과 같은 내용이지만 시험 기준 버전(v1.37)과 문서 버전이 어긋나는 항목이 있을 수 있습니다.
 - `kubectl create ingress`에서 `*` 유무에 따른 `pathType`은 kind에서 `Prefix`와 `Exact`로 확인했습니다.
 - LoadBalancer Service의 `<pending>` 표시는 kind에서 확인했습니다. CoreDNS `loop` 오류가 생기는 구체적인 노드 설정은 확인하지 못했습니다.
 - 시험 환경에 깔린 Ingress 컨트롤러와 Gateway API 구현체, CNI 플러그인 종류는 공식 문서에 없습니다. Weave Net이 시험 환경에서 다른 플러그인으로 바뀌었는지도 공식 자료로 확인하지 못했습니다.
-- Flannel 단독 구성이 NetworkPolicy를 집행하지 않는다는 것은 널리 알려진 내용으로만 적었고 Flannel 문서로 확인하지 않았습니다.
+- Flannel과 NetworkPolicy는 2026년 10월 21일 Lima VM 한 대(Ubuntu 24.04.5, kubeadm 1.37.1, containerd 2.4.2, CNI 플러그인 1.9.1)에 Flannel v0.28.10 공식 매니페스트(vxlan 백엔드)를 올려 확인했습니다. 노드가 하나라 같은 노드 Pod 사이만 봤고 노드를 건너는 트래픽은 보지 않았습니다. `netpol.enabled` 차트 옵션도 돌리지 않았습니다.
 - kube-proxy의 `/proxyMode` 경로는 kubernetes.io 문서에 없어서 kube-proxy 소스로 확인했습니다. containerd가 `/etc/cni/net.d`의 파일을 이름 순으로 정렬해 읽는다는 부분은 containerd 설정 문서의 `max_conf_num` 설명과 libcni 동작을 근거로 했고 파일을 여러 개 두는 실험은 하지 않았습니다. CNI 바이너리가 없을 때의 Pod 이벤트 문구는 1-4에 kind 실측으로 적었습니다.
 - ingress-nginx 저장소의 보관 상태와 Weave Net의 마지막 릴리스는 2026년 10월 20일 GitHub API 응답 기준입니다.
 - Gateway API는 v1.6.1 설치 명령 기준이고 HTTPRoute 규칙은 저장소 main 브랜치의 타입 정의 주석으로 확인했습니다. 구현체마다 지원 범위(Extended 기능)가 다릅니다.
@@ -1340,7 +1340,7 @@ Ingress 컨트롤러
 - ingress-nginx, [Rewrite](https://kubernetes.github.io/ingress-nginx/examples/rewrite/), [kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx) (보관된 저장소)
 
 이 시리즈의 관련 글
-- [쿠버네티스 아래의 리눅스 5편: Service의 실체는 커널 규칙](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)
+- [CKA 부록 5: Service의 실체는 커널 규칙](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack)
 
 Gateway API
 - [Getting started with Gateway API](https://gateway-api.sigs.k8s.io/guides/)
