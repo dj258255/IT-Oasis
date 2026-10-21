@@ -1,5 +1,5 @@
 ---
-title: '[쿠버네티스 아래의 리눅스 3] cgroup v2와 QoS: requests와 limits가 커널 파일이 되기까지'
+title: '[CKA 부록 3] cgroup v2와 QoS: requests와 limits가 커널 파일이 되기까지'
 description: 파드의 requests와 limits가 cgroup v2의 cpu.max, cpu.weight, memory.max로 바뀌고 커널이 그 값을 집행하는 과정을 따라갑니다. OOMKilled와 CPU 스로틀링이 각각 어디서 생기는지, QoS 클래스와 oom_score_adj가 누구를 먼저 죽이는지 커널 문서와 kubelet 소스로 확인하고 JVM 서비스의 OOMKilled 포스트모템을 함께 읽습니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -9,13 +9,13 @@ tags:
   - OOMKilled
   - CPU Throttling
   - QoS
-category: theory/Systems
+category: cert/CKA
 topics:
+  - cert
   - systems
-  - performance
 draft: false
-series: "쿠버네티스 아래의 리눅스"
-seriesOrder: 3
+series: "CKA 공부"
+seriesOrder: 9.3
 ---
 
 ## 결론부터
@@ -28,7 +28,7 @@ seriesOrder: 3
 
 ---
 
-[2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에서는 네임스페이스로 컨테이너가 무엇을 볼 수 있는지를 정했습니다. 이 글은 컨테이너가 얼마나 쓸 수 있는지를 정하는 cgroup을 다룹니다. requests와 limits를 쓰는 법은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에서 정리했으니 여기서는 그 값이 노드에서 어떤 파일이 되고 커널이 어떻게 집행하는지를 따라갑니다.
+[2편](/blog/cert/cka/k8s-linux-02-namespaces-pause)에서는 네임스페이스로 컨테이너가 무엇을 볼 수 있는지를 정했습니다. 이 글은 컨테이너가 얼마나 쓸 수 있는지를 정하는 cgroup을 다룹니다. requests와 limits를 쓰는 법은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에서 정리했으니 여기서는 그 값이 노드에서 어떤 파일이 되고 커널이 어떻게 집행하는지를 따라갑니다.
 
 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API(`order-api`)가 있고 컨테이너 하나에 아래 자원을 줍니다.
 
@@ -742,4 +742,4 @@ Guaranteed 컨테이너와 메모리를 다툴 때 kubelet과 컨테이너 런�
 - proc_pid_oom_score_adj(5): https://man7.org/linux/man-pages/man5/proc_pid_oom_score_adj.5.html
 - Harry Tran, Understanding and Resolving OOMKilled errors in JVM microservices, Endowus Tech Blog (2023-12-14): https://build.endowus.com/oomkilled/
 
-다음 글 [4편](/blog/theory/systems/k8s-linux-04-overlayfs)에서는 컨테이너 이미지 레이어가 OverlayFS로 합쳐지는 과정을 다룹니다.
+다음 글 [4편](/blog/cert/cka/k8s-linux-04-overlayfs)에서는 컨테이너 이미지 레이어가 OverlayFS로 합쳐지는 과정을 다룹니다.

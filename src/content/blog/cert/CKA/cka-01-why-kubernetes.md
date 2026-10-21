@@ -367,11 +367,11 @@ nsenter -t $PID -n ip -br addr             # 파드 쪽 끝
 
 | 커널 기능 | 쿠버네티스에서 드러나는 모습 | 이어지는 글 |
 |---|---|---|
-| 시스템 콜과 커널 경계 | 모든 런타임 동작이 결국 시스템 콜 | [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary) |
-| namespace | 파드의 IP와 호스트 이름 공유, 컨테이너 안 PID 1, pause 컨테이너 | [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause) |
-| cgroup v2 | requests와 limits, QoS, OOMKilled, CPU 스로틀링 | [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos) |
-| overlayfs | 이미지 레이어, 컨테이너 쓰기 계층, 재시작 시 사라지는 파일 | [OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs) |
-| veth, netfilter, conntrack | 파드 네트워크, Service의 가상 IP | [Service, iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) |
+| 시스템 콜과 커널 경계 | 모든 런타임 동작이 결국 시스템 콜 | [커널 경계](/blog/cert/cka/k8s-linux-01-kernel-boundary) |
+| namespace | 파드의 IP와 호스트 이름 공유, 컨테이너 안 PID 1, pause 컨테이너 | [네임스페이스와 pause](/blog/cert/cka/k8s-linux-02-namespaces-pause) |
+| cgroup v2 | requests와 limits, QoS, OOMKilled, CPU 스로틀링 | [cgroup과 QoS](/blog/cert/cka/k8s-linux-03-cgroup-qos) |
+| overlayfs | 이미지 레이어, 컨테이너 쓰기 계층, 재시작 시 사라지는 파일 | [OverlayFS](/blog/cert/cka/k8s-linux-04-overlayfs) |
+| veth, netfilter, conntrack | 파드 네트워크, Service의 가상 IP | [Service, iptables, conntrack](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack) |
 
 mount namespace는 2002년 커널 2.4.19에, cgroup은 2008년 2.6.24에 들어왔습니다. Docker가 처음 공개된 2013년보다 앞섭니다. 컨테이너 도구들은 이 기능들을 조합하는 방법을 표준화했고 쿠버네티스는 그 조합을 여러 노드에 걸쳐 원하는 상태대로 유지합니다.
 
@@ -679,7 +679,7 @@ CKA의 트러블슈팅 영역은 비중이 30%로 가장 큽니다. 커리큘럼
 | 노드가 `NotReady` | kubelet 또는 런타임 | `systemctl status kubelet`, `journalctl -u kubelet`, `crictl info` |
 | `OOMKilled`, Exit 137 | 커널의 cgroup OOM | `describe`의 Last State, `memory.events`, `dmesg` |
 | 죽지 않는데 느림 | 커널의 CPU 대역폭 제어 | `cpu.stat`, cAdvisor의 `container_cpu_cfs_*` |
-| 파드 사이 통신 실패 | CNI, kube-proxy, 커널 netfilter | [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)와 커널 시리즈 5편 |
+| 파드 사이 통신 실패 | CNI, kube-proxy, 커널 netfilter | [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)와 부록 5편 |
 
 시험장 노드에서 cgroup 파일까지 읽을 일은 드뭅니다. 그래도 `OOMKilled`가 커널이 끝낸 일을 kubelet이 적은 결과라는 것을 알면 실제 사용량과 requests, limits의 관계부터 확인하게 됩니다. 컨트롤 플레인이 static Pod라는 것을 알면 kubectl이 안 될 때 노드로 내려갈 생각을 바로 하게 됩니다.
 
@@ -691,7 +691,7 @@ CKA의 트러블슈팅 영역은 비중이 30%로 가장 큽니다. 커리큘럼
 | 컨트롤 플레인 구성, kubeadm 설치와 업그레이드 | [CKA Ch-02 클러스터 아키텍처](/blog/cert/cka/cka-02-cluster-architecture) |
 | requests, limits, QoS를 시험 관점에서 | [CKA Ch-03 워크로드와 스케줄링](/blog/cert/cka/cka-03-workloads-scheduling) |
 | 증상별 트러블슈팅 절차 | [CKA Ch-06 트러블슈팅](/blog/cert/cka/cka-06-troubleshooting) |
-| 커널 쪽을 한 기능씩 | [커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary), [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause), [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos), [OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs), [Service와 iptables, conntrack](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) |
+| 커널 쪽을 한 기능씩 | [커널 경계](/blog/cert/cka/k8s-linux-01-kernel-boundary), [네임스페이스와 pause](/blog/cert/cka/k8s-linux-02-namespaces-pause), [cgroup과 QoS](/blog/cert/cka/k8s-linux-03-cgroup-qos), [OverlayFS](/blog/cert/cka/k8s-linux-04-overlayfs), [Service와 iptables, conntrack](/blog/cert/cka/k8s-linux-05-service-iptables-conntrack) |
 
 ---
 

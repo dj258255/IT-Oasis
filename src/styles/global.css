@@ -622,28 +622,42 @@ button, input, select, textarea {
 .prose details > summary {
   cursor: pointer;
   list-style: none;
-  padding: 0.9rem 1.1rem 0.9rem 2.4rem;
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.1rem;
   font-size: 0.95rem;
+  font-weight: 600;
   line-height: 1.5;
+  color: #1a6aa0;
   user-select: none;
 }
 .prose details > summary::-webkit-details-marker { display: none; }
+/* 글자 크기에 맞춘 꺾쇠. 글리프(▶)는 폰트마다 높이가 달라 글자보다 떠 보였다 */
 .prose details > summary::before {
-  content: '▶';
-  position: absolute;
-  left: 1.05rem;
-  font-size: 0.7rem;
-  opacity: 0.65;
+  content: '';
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
   transition: transform 0.15s ease;
 }
-.prose details[open] > summary::before { transform: rotate(90deg); }
+.prose details[open] > summary::before { transform: rotate(45deg); }
 .prose details > summary:hover { background: rgba(100, 160, 200, 0.09); }
+.prose details > summary:focus-visible { outline: 2px solid #1a6aa0; outline-offset: -2px; }
 .prose details[open] > summary { border-bottom: 1px solid rgba(100, 160, 200, 0.2); }
-.prose details > summary strong { font-weight: 600; }
+.prose details > summary strong { font-weight: 700; }
 .prose details > *:not(summary) { padding-inline: 1.1rem; }
-.prose details > h2:first-of-type { margin-top: 1.2rem; }
-.prose details > *:last-child { margin-bottom: 1.2rem; }
+/* 펼친 내용의 첫 블록이 구분선에 붙지 않게, 코드 블록이든 문단이든 같은 간격으로 시작한다 */
+.prose details > summary + * { margin-top: 1rem; }
+.prose details > .expressive-code { margin-inline: 1.1rem; padding-inline: 0; }
+.prose details > summary + .expressive-code { margin-top: 1rem !important; }
+.prose details > ol, .prose details > ul { padding-left: 2.6rem; }
+.prose details > *:last-child { margin-bottom: 1.1rem; }
+.dark .prose details > summary { color: #7cc4f0; }
+.dark .prose details > summary:focus-visible { outline-color: #7cc4f0; }
 
 .prose h1, .prose h2, .prose h3 {
   @apply font-bold mt-10 mb-4;
@@ -1308,4 +1322,11 @@ button, input, select, textarea {
   background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent);
   pointer-events: none;
   border-radius: 0 0 22px 22px;
+}
+
+/* JetBrains Mono는 합자가 기본으로 켜져 있어 `>=`가 `≥`, `->`가 화살표로 그려진다.
+   명령과 YAML은 친 그대로 보여야 하므로 코드 글꼴에서는 합자를 끈다. */
+code, pre, kbd, samp, .expressive-code, .expressive-code * {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
