@@ -770,7 +770,7 @@ Jepsen은 돌아가는 시스템에 고장을 넣고 기록된 연산들이 선�
 - [MySQL 8.0, InnoDB Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.0/en/innodb-consistent-read.html)
 - [Apache Kafka, Consumer Configs (isolation.level)](https://kafka.apache.org/39/generated/consumer_config.html), [Producer Configs (acks, transaction.timeout.ms)](https://kafka.apache.org/39/generated/producer_config.html), [Topic Configs (min.insync.replicas)](https://kafka.apache.org/39/generated/topic_config.html)
 - [Apache Kafka 4.0.0 Release Announcement (2025)](https://kafka.apache.org/blog/2025/03/18/apache-kafka-4.0.0-release-announcement/)
-- [Apache Kafka 4.1 Documentation (Design의 Replication, Operations의 ZooKeeper에서 KRaft로 이전)](https://kafka.apache.org/41/documentation.html)
+- Apache Kafka 4.1 Documentation, [Design의 Replication](https://kafka.apache.org/41/design/design/#replication), [Operations의 ZooKeeper에서 KRaft로 이전](https://kafka.apache.org/41/operations/kraft/#zookeeper-to-kraft-migration)
 - [KIP-98: Exactly Once Delivery and Transactional Messaging](https://cwiki.apache.org/confluence/display/KAFKA/KIP-98+-+Exactly+Once+Delivery+and+Transactional+Messaging)
 - [KIP-833: Mark KRaft as Production Ready](https://cwiki.apache.org/confluence/display/KAFKA/KIP-833%3A+Mark+KRaft+as+Production+Ready)
 - [KIP-890: Transactions Server-Side Defense](https://cwiki.apache.org/confluence/display/KAFKA/KIP-890%3A+Transactions+Server-Side+Defense)
