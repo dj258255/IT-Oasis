@@ -450,12 +450,14 @@ Gateway API는 CRD로 설치하는 애드온 API 묶음이고 kubernetes.io 문�
 
 ### 4-2. 리소스 모델
 
-| 종류 | 맡는 사람 | 하는 일 |
+| 종류 | 쓰기 권한을 가진 가장 좁은 역할 | 하는 일 |
 |---|---|---|
 | GatewayClass | 인프라 제공자 | 어느 컨트롤러가 Gateway를 구현하는지(`spec.controllerName`) |
 | Gateway | 클러스터 운영자 | 트래픽을 받는 인스턴스. 리스너(프로토콜, 포트, 호스트 이름, TLS) |
 | HTTPRoute | 애플리케이션 개발자 | 리스너로 들어온 HTTP 요청을 어떤 Service로 보낼지 |
 | GRPCRoute | 애플리케이션 개발자 | gRPC 요청의 라우팅 |
+
+역할 칸은 Gateway API 문서 Security Model의 3단계 쓰기 권한 표를 따랐습니다. 인프라 제공자는 셋 다, 클러스터 운영자는 Gateway와 Route, 애플리케이션 개발자는 Route만 쓸 수 있다고 적습니다. kubernetes.io의 Gateway 문서는 세 역할을 소개만 하고 리소스와 짝짓지 않습니다.
 
 Gateway 하나는 GatewayClass 정확히 하나와 연결됩니다. Route는 `parentRefs`로 Gateway를 가리키고 Gateway는 리스너의 `allowedRoutes`로 붙을 수 있는 Route를 거릅니다. 문서는 이 구조를 양방향 신뢰 모델이라고 부릅니다.
 
@@ -684,7 +686,7 @@ kubectl get referencegrant -A
 | Ingress의 진입점과 `tls` | Gateway 리스너 |
 | Ingress의 `rules` | HTTPRoute `rules` |
 | `pathType: Prefix` | `type: PathPrefix` |
-| `pathType: Exact` | `type: Exact` |
+| `pathType: Exact` | `type: Exact` (HTTPRoute의 `PathMatchType`은 `Exact`, `PathPrefix`, `RegularExpression`) |
 | `defaultBackend` | 대응 필드 없음. `/` PathPrefix 규칙을 직접 만든다 |
 | 컨트롤러별 어노테이션 | 리다이렉트, 헤더 수정, 트래픽 분할, 경로 재작성은 HTTPRoute 필드 |
 
@@ -1139,6 +1141,7 @@ Gateway API
 - [Getting started with Gateway API](https://gateway-api.sigs.k8s.io/guides/)
 - [Migrating from Ingress](https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/)
 - [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/)
+- [Gateway API Security Model](https://gateway-api.sigs.k8s.io/docs/concepts/security/), [httproute_types.go의 PathMatchType](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go)
 - kubernetes-sigs/gateway-api, [apis/v1/httproute_types.go](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go)
 
 CNI, Ingress 컨트롤러, CoreDNS

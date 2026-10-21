@@ -276,7 +276,7 @@ sudo sysctl --system
 sysctl net.ipv4.ip_forward   # 1이면 적용됨
 ```
 
-과제가 커널 모듈(`overlay`, `br_netfilter`)이나 다른 sysctl을 더 요구하면 `/etc/modules-load.d/`, `/etc/sysctl.d/`에 파일로 적고 `modprobe`, `sysctl --system`으로 적용해 재부팅 뒤에도 유지되게 합니다.
+현재 Container Runtimes 문서가 공통 사전 준비로 요구하는 것은 `net.ipv4.ip_forward` 하나이고 다른 sysctl이나 커널 모듈은 쓰는 네트워크 구현의 문서를 보라고 적습니다. 예전 문서에 있던 `overlay`, `br_netfilter` 모듈 단계는 지금 공통 절차에 없습니다. 과제나 CNI 문서가 모듈이나 다른 sysctl을 더 요구하면 `/etc/modules-load.d/`, `/etc/sysctl.d/`에 파일로 적고 `modprobe`, `sysctl --system`으로 적용해 재부팅 뒤에도 유지되게 합니다.
 
 ### 2-4. 컨테이너 런타임과 cgroup 드라이버
 
@@ -528,7 +528,7 @@ etcdutl --write-out=table snapshot status /opt/backup/etcd-snapshot.db
 
 - `ETCDCTL_API=3`은 필요 없습니다(3.4부터 v3 기본). 붙이면 `unrecognized environment variable` 경고 한 줄 뒤 저장됩니다.
 - etcd 3.6에서 `etcdctl snapshot status`와 `restore`가 제거됐고 kubeadm 1.37의 기본 etcd는 3.7.0입니다. 3.7 `etcdctl snapshot`에는 `save`만 있고 `etcdctl snapshot restore --data-dir ...`는 `Error: unknown flag: --data-dir`로 실패합니다.
-- `etcdctl`, `etcdutl`은 시험 공식 사전 설치 목록(kubectl, yq, curl, wget, man)에 없으니 과제 호스트에서 `which`로 먼저 봅니다.
+- `etcdctl`, `etcdutl`은 시험 공식 사전 설치 목록(kubectl, yq, curl, wget, man)에 없습니다. Resources Allowed 문서가 과제에 필요한 패키지 설치는 요구하지 않는다고 적으므로 etcd 과제가 나오는 호스트라면 `etcdctl`은 있을 가능성이 높지만 `etcdutl`은 근거가 없습니다. 과제 호스트에서 `which etcdctl etcdutl`로 먼저 봅니다.
 
 ### 4-6. etcd 복구
 
@@ -635,11 +635,39 @@ sudo kubeadm join LOAD_BALANCER_DNS:6443 --token <토큰> \
   --control-plane --certificate-key <키>
 ```
 
-`--upload-certs`는 컨트롤 플레인 인증서를 암호화해 `kube-system`의 `kubeadm-certs` Secret에 올리고 이 Secret과 키는 2시간 뒤 만료됩니다. 그 뒤에 컨트롤 플레인을 추가하려면 새 키를 만들어 join 명령에 넘깁니다.
+Lima VM 3대(kubeadm 1.37.1)에서 엔드포인트를 첫 노드 IP의 `/etc/hosts` 이름 `k8s-api`로 두고 돌린 init 출력입니다(LB가 없어 첫 노드가 죽으면 API 주소도 사라짐).
+
+```text
+[upload-certs] Storing the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace
+...
+  kubeadm join k8s-api:6443 --token <토큰> \
+	--discovery-token-ca-cert-hash sha256:<해시> \
+	--control-plane --certificate-key <64자 hex 키>
+
+As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you can use
+"kubeadm init phase upload-certs --upload-certs" to reload certs afterward.
+```
+
+두 번째 노드에서 이 명령에 `--apiserver-advertise-address=<자기 IP>`를 더하면 `[download-certs]`로 CA를 받고 `[etcd] Announced new etcd member joining to the existing etcd cluster`를 거쳐 join이 끝납니다. 멤버는 etcd Pod 안의 etcdctl로 봅니다.
+
+```bash
+kubectl -n kube-system exec etcd-lima-ha1 -- etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key member list -w table
+# lima-ha1, lima-ha2, lima-ha3 세 줄 모두 STATUS started, IS LEARNER false
+```
+
+`--upload-certs`는 CA 세 쌍과 sa 키(Secret 키 `ca.crt`, `etcd-ca.key`, `front-proxy-ca.crt`, `sa.pub` 등 8개)를 암호화해 `kube-system`의 `kubeadm-certs` Secret에 올립니다. Secret의 owner가 `kubeadm token list`에 `Proxy for managing TTL for the kubeadm-certs secret`로 보이는 TTL 토큰이라 2시간 뒤 함께 지워집니다. 이 토큰을 지워 만료를 재현하자 옛 키의 join이 이렇게 실패했습니다.
+
+```text
+error: error execution phase control-plane-prepare/download-certs: error downloading certs: error downloading the secret: Secret "kubeadm-certs" was not found in the "kube-system" Namespace. This Secret might have expired. Please, run `kubeadm init phase upload-certs --upload-certs` on a control plane to generate a new one
+```
+
+새 키로 만든 명령으로 세 번째 노드가 붙었습니다.
 
 ```bash
 sudo kubeadm init phase upload-certs --upload-certs            # 새 certificate key 출력
-kubeadm token create --print-join-command --certificate-key <키>
+kubeadm token create --print-join-command --certificate-key <새 키>
 ```
 
 ### 5-3. 헷갈리는 지점
@@ -650,11 +678,11 @@ kubeadm token create --print-join-command --certificate-key <키>
 
 ### 5-4. 직접 해 보기
 
-kind로 컨트롤 플레인 3대 클러스터를 만들고 노드 컨테이너를 하나씩 `docker stop`하며 `kubectl get lease -n kube-system`의 HOLDER와 위 동작을 확인합니다. kind는 CA 파일을 복사해 join하므로 `--certificate-key` 흐름은 `upload-certs`와 `--print-join-command --certificate-key`로 명령 모양만 봅니다.
+kind로 컨트롤 플레인 3대 클러스터를 만들고 노드 컨테이너를 하나씩 `docker stop`하며 `kubectl get lease -n kube-system`의 HOLDER와 위 동작을 확인합니다. kind는 CA 파일을 복사해 join하므로 `--certificate-key` 흐름은 리눅스 VM 2~3대에서 5-2절 순서로 해 봅니다. 2대면 etcd 멤버 2개라 1대만 죽어도 쿼럼을 잃습니다.
 
 ## 6. Helm과 Kustomize로 구성요소 설치
 
-커리큘럼 문구는 "Use Helm and Kustomize to install cluster components"입니다. 시험 중에 helm.sh/docs를 열 수 있습니다. `helm`은 공식 사전 설치 목록에 없으니 과제 호스트에서 `helm version`으로 있는지와 메이저 버전부터 봅니다. Kustomize는 kubectl에 들어 있습니다.
+커리큘럼 문구는 "Use Helm and Kustomize to install cluster components"입니다. 시험 중에 helm.sh/docs를 열 수 있습니다. `helm`은 공식 사전 설치 목록에 없지만 Resources Allowed 문서가 과제에 필요한 패키지 설치는 요구하지 않는다고 적으므로 Helm 과제 호스트에는 있을 가능성이 높습니다. 과제 호스트에서 `helm version`으로 있는지와 메이저 버전부터 봅니다. Kustomize는 kubectl에 들어 있습니다.
 
 ### 6-1. Helm
 
@@ -1023,15 +1051,15 @@ Error from server (NotFound): Unable to list "example.com/v1, Resource=boardjobs
 
 ## 범위와 한계
 
-- 명령과 YAML은 kind v1.37 클러스터와 Lima VM의 kubeadm 1.36→1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. HA는 kind로 확인해서 `--certificate-key` join은 명령 모양까지만 봤습니다.
+- 명령과 YAML은 kind v1.37 클러스터와 Lima VM의 kubeadm 1.36→1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. HA 장애 동작은 kind 컨트롤 플레인 3대로, `--certificate-key` join과 키 재발급은 Lima VM 3대로 확인했습니다. 이 VM 구성은 LB 없이 첫 노드 IP를 엔드포인트로 썼고 2시간 만료는 TTL 토큰을 지워 재현했습니다.
 - etcd 백업과 kubeadm 업그레이드가 현재 시험에 나오는지는 공식 문서로 확인되지 않고 후기도 엇갈립니다.
-- 시험 호스트에 `helm`, `etcdctl`, `etcdutl`, `crictl`이 있는지는 공개 자료로 확인할 수 없습니다. 공식 사전 설치 목록에는 kubectl, yq, curl, wget, man만 있습니다.
+- 시험 호스트의 `etcdutl`, `crictl`은 공개 자료로 확인할 수 없습니다. `helm`, `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도이고 공식 사전 설치 목록은 kubectl, yq, curl, wget, man입니다.
 - etcd 기본 버전(1.37은 3.7.0), containerd 설정 형식, Helm 플래그 이름은 패치나 메이저 버전마다 달라질 수 있으니 시험 노드에서 `--version`과 `config default`로 확인합니다.
 - 확인 문제는 문서를 바탕으로 제가 만든 것이고 실제 시험 문항과 관계없습니다.
 
 ## 참고 자료
 
-- CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf); Linux Foundation, [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)
+- CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf); Linux Foundation, [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad); Linux Foundation, [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
 - Kubernetes, [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Issue a Certificate for a Kubernetes API Client Using A CertificateSigningRequest](https://kubernetes.io/docs/tasks/tls/certificate-issue-client-csr/), [PKI certificates and requirements](https://kubernetes.io/docs/setup/best-practices/certificates/)
 - Kubernetes, [Installing kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/), [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/), [Reconfiguring a kubeadm cluster](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-reconfigure/)
 - Kubernetes, [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/), [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/), [Creating Highly Available Clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)

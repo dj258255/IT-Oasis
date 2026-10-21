@@ -137,7 +137,9 @@ Taints:             node.kubernetes.io/unreachable:NoExecute
   Ready                Unknown   ...   NodeStatusUnknown   Kubelet stopped posting node status.
 ```
 
-`Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어갑니다.
+`Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어갑니다. kind 워커 컨테이너를 멈췄을 때는 약 45초 안에 `Unknown`과 테인트가 붙었고 기본 톨러레이션 Pod는 약 300초 뒤 `Terminating`이 되어 노드가 돌아올 때까지 그 상태로 남았습니다.
+
+kind 워커의 `evictionHard`에 가용량보다 큰 `memory.available`을 넣어 압박을 만들면 노드에 `MemoryPressure True ... KubeletHasInsufficientMemory`와 `node.kubernetes.io/memory-pressure:NoSchedule` 테인트가 생겼습니다. 축출된 Pod의 메시지는 `The node was low on resource: memory. Threshold quantity: ...`이고 압박 중 kubelet이 다시 받는 BestEffort Pod는 `Pod was rejected: The node had condition: [MemoryPressure].`로 거절됐습니다. 둘 다 `.status.reason`은 `Evicted`인데 STATUS 열은 `Error`나 `ContainerStatusUnknown`이라 `--field-selector status.phase=Failed`로 찾습니다.
 
 ### 1-3. 노드 안에서 볼 것
 
@@ -417,7 +419,7 @@ kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는
 | APIService 상태 | `kubectl get apiservice \| grep metrics`(AVAILABLE이 `True`인지) |
 | metrics-server 로그 | `kubectl -n kube-system logs deploy/metrics-server` |
 
-Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포하므로 metrics-server가 kubelet에 붙을 때 `x509: certificate signed by unknown authority` 같은 오류가 납니다. 문서는 `--kubelet-insecure-tls`로 우회할 수 있지만 운영에는 권하지 않고 서명된 서빙 인증서(1-4절 끝)를 쓰라고 안내합니다. 시험장에서는 과제 지시를 따릅니다. kind도 같은 이유로 metrics-server v0.9.0 매니페스트에 `--kubelet-insecure-tls`를 더해야 Pod가 Ready가 됐습니다.
+Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포하므로 metrics-server가 kubelet에 붙을 때 `x509: certificate signed by unknown authority` 같은 오류가 납니다. 문서는 `--kubelet-insecure-tls`로 우회할 수 있지만 운영에는 권하지 않고 서명된 서빙 인증서(1-4절 끝)를 쓰라고 안내합니다. 시험장에서는 과제 지시를 따릅니다. kind에서는 로그에 `x509: cannot validate certificate for 172.18.0.5 because it doesn't contain any IP SANs`가 찍히고 APIService가 `False (MissingEndpoints)`였으며 metrics-server v0.9.0 매니페스트에 `--kubelet-insecure-tls`를 더해야 Pod가 Ready가 됐습니다.
 
 ### 3-5. 출력 형식으로 값 뽑기
 
@@ -818,7 +820,7 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $
 ## 7. 범위와 한계
 
 - 명령과 오류 문구는 kind v1.37.0 클러스터(arm64)와 Lima VM의 kubeadm 1.37.1 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 본문에 "(kind)", "(Lima VM)"으로 표시한 출력이 그 결과입니다.
-- 시험 노드에 crictl, jq가 있는지는 공식 문서로 확인할 수 없습니다. 그래서 `/var/log/pods`와 JSONPath, `yq` 대안을 함께 적었습니다.
+- jq는 2025년 3월 판 시험 안내부터 사전 설치 목록에서 빠졌고 crictl은 있다는 근거가 없습니다. 그래서 `/var/log/pods`와 JSONPath, `yq` 대안을 함께 적었습니다.
 - cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway 경유 장애는 돌려 보지 못했습니다.
 - Metrics API는 1.37에서 `v1`이 Stable이지만 2026년 10월 기준 릴리스된 metrics-server(v0.9.0)는 `v1beta1`만 제공합니다. 시험 클러스터의 metrics-server 버전은 확인하지 못했습니다.
 - etcd 백업과 복구, kubeadm 업그레이드 절차는 [Ch-02](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.

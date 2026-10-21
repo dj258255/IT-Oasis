@@ -22,7 +22,7 @@ seriesOrder: 7
 2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했습니다(2025년은 제3자 기사 기준). 2026년 10월 현재 CKA 페이지에는 최대 40% 할인 배너가 떠 있습니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
 3. 연습은 강의와 랩(KodeKloud), 무료 시나리오(Killercoda), 공식 시뮬레이터(killer.sh 2회) 순서로 잡습니다. killer.sh가 실제 시험보다 어렵다는 평가는 응시자와 강의 운영진에게서 나왔고 공식 문서에는 그런 비교가 없습니다. 풀이를 보고 배우는 용도로 씁니다.
 4. 덤프를 쓰지 않은 2025~2026년 후기에서 반복해 나온 주제는 트러블슈팅(kubelet, 인증서와 kubeconfig, 컨트롤 플레인), Helm, Gateway API, CNI 설치, Kustomize, CRD입니다. 가장 흔한 실패 원인은 시간 부족이었고 모의고사 점수와 실제 점수가 크게 어긋난 사례도 여럿 있었습니다.
-5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`이고 `helm`, `etcdctl`, `crictl`, `jq`는 공식 목록에 없습니다.
+5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`입니다. `jq`와 `tmux`는 2025년 3월 판부터 목록에서 빠졌고 `helm`과 `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도입니다.
 6. 덤프와 "실제 시험 문제"를 표방하는 자료는 이 글에서 다루지 않습니다. LF 응시 약관 4.4절은 다른 사람의 기억에 기댄 자료(braindump)를 쓰는 것 자체를 부정행위로 정의하고 자격 취소와 영구 응시 제한까지 적어 둡니다.
 
 시험 구조와 영역별 범위는 [CKA Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [Ch-02](/blog/cert/cka/cka-02-cluster-architecture)부터 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 그 위에서 자료와 규칙과 당일 운영만 다룹니다.
@@ -55,7 +55,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | 변경과 취소 | 시작 24시간 전까지. 24시간 안에는 변경 불가 |
 | 결시 | 예정 시각 30분이 지나도록 시작하지 않으면 결시. 환불과 재응시 모두 없음 |
 | 환불 | 구매 후 3영업일 안이고 아직 예약하거나 응시하지 않았을 때만 |
-| 재응시 | 불합격하면 이유와 상관없이 재응시 기회가 있음(자격이 될 때). 두 번 모두 불합격하면 새로 사야 함 |
+| 재응시 | 불합격하면 이유와 상관없이 1회(자격이 될 때). 최초 구매일로부터 12개월 안에 응시해야 함. 재응시가 없는 단일 응시 상품도 있음. 두 번 모두 불합격하면 새로 사야 함 |
 | 재구매 | 한 번에 활성 주문은 하나. 지금 주문을 다 써야 다음 주문이 열림 |
 
 ### 1-3. 시험 전 점검표
@@ -81,7 +81,8 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 키 조작(Ctrl+Shift+C/V, Ctrl+Alt+W, INSERT 금지)과 허용 문서(kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io)는 [Ch-00 3절](/blog/cert/cka/cka-00-exam-and-study-plan)에 있습니다. 공식 안내에서 추가로 확인한 것은 다음과 같습니다.
 
 - 시작 호스트(`base`)에는 `kubectl`이 없습니다. 모든 작업은 과제가 지정한 호스트에 `ssh`로 들어가서 합니다. ssh 안에서 다시 ssh는 할 수 없고 `base`를 재부팅하면 시험 환경이 다시 시작되지 않습니다.
-- 모든 ssh 호스트에 `kubectl`(alias `k`, bash 자동완성), `yq`, `curl`, `wget`, `man`이 깔려 있습니다. `helm`, `etcdctl`/`etcdutl`, `crictl`, `jq`, `tmux`는 공식 목록에 없고 과제 호스트에 있는지는 공식 문서로 확인할 수 없습니다. Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 적습니다. `kubectl apply -k`와 `kubectl kustomize`는 kubectl에 내장입니다.
+- 모든 ssh 호스트에 `kubectl`(alias `k`, bash 자동완성), `yq`, `curl`, `wget`, `man`이 "pre-installed and pre-configured" 상태입니다. 2025-02-11 판까지 목록에 있던 `jq`와 `tmux`는 2025-03-28 판부터 빠졌고 `jq` 자리에 `yq`가 들어왔습니다(Wayback Machine 대조).
+- Resources Allowed는 패키지 설치가 과제 수행에 필요하지 않다고 적습니다. 그래서 `helm`과 `etcdctl`은 해당 과제가 나오는 호스트에 있을 가능성이 높습니다. 도구 이름을 밝힌 공식 문장은 없습니다. `etcdutl`, `crictl`, 단독 `kustomize`는 근거가 없으니 `which`로 먼저 확인합니다. `kubectl apply -k`와 `kubectl kustomize`는 kubectl에 내장입니다.
 - 허용 문서 네 곳 외에 과제의 Quick Reference 상자 링크와 /usr/share 아래 문서도 볼 수 있습니다. 허용 문서 안의 검색은 되지만 외부 검색 결과를 여는 것은 안 됩니다.
 - VSCodium의 확장 설치는 금지입니다. 내장 터미널은 써도 됩니다.
 - Firefox에는 Simple Translate 확장이 깔려 있습니다. 번역된 문서도 허용되지만 LF는 최신 내용인 영어판을 권합니다.
@@ -225,7 +226,7 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 
 ### 5-3. 1.33~1.37 변경 중 답이 달라지는 것
 
-시험 환경은 v1.37입니다. 2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
+시험 환경은 v1.37입니다. LF 안내문의 버전 표기는 1.35에서 1.36을 건너뛰고 1.37로 바뀌었습니다. 2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
 
 | 버전 | 바뀐 것 | 시험 답에 주는 영향 | 근거 | 이 시리즈 |
 |---|---|---|---|---|
@@ -257,7 +258,7 @@ Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페�
 |---|---|
 | 0~5분 | 문항 목록을 훑고 문항마다 난이도를 가늠 |
 | 첫 바퀴(약 80분) | 6~8분 안에 끝낼 수 있는 과제부터 끝까지 풀고 검증. 5분을 넘기면 표시하고 넘김 |
-| 두 바퀴(약 25분) | 표시해 둔 과제. 부분 점수가 있으므로 이름이 지정된 리소스부터 만들어 둠 |
+| 두 바퀴(약 25분) | 표시해 둔 과제. killer.sh FAQ가 실제 시험도 하위 과제별 부분 점수가 있다고 하므로 이름이 지정된 리소스부터 만들어 둠 |
 | 마지막 10분 | 30분, 15분, 5분 알림 중 15분 알림에서 새 과제를 멈추고 리소스 이름, 네임스페이스, 호스트를 다시 확인 |
 
 표시 기능은 LF ExamUI 문서에서 확인하지 못했고 후기들이 표시하고 넘겼다고 적은 것을 옮겼습니다.
@@ -298,7 +299,7 @@ exit
 
 ### 6-3. 호스트 이동과 권한
 
-공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행하고 끝나면 `exit`로 base로 돌아옵니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 그 호스트의 `kubectl`이 이미 대상 클러스터를 가리키므로 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다. kubeconfig 구조와 컨텍스트 개념은 [Ch-02 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
+공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행하고 끝나면 `exit`로 base로 돌아옵니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 공식 문구는 모든 ssh 호스트의 `kubectl`이 "pre-installed and pre-configured"라고 적으므로 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. 들어가면 `k get nodes`로 과제 클러스터인지 한 번 확인합니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다. kubeconfig 구조와 컨텍스트 개념은 [Ch-02 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 
 ### 6-4. vim과 YAML
 
@@ -338,7 +339,7 @@ set expandtab tabstop=2 shiftwidth=2
 | D-2 ~ D-1 | 새 공부는 멈추고 6-5절 점검표 확인 | 점검표 통과 |
 | D-day | 6-1절 시간 배분대로 | |
 
-불합격해도 재응시 기회가 남습니다. yu-min은 1차 불합격(5월 19일) 뒤 약 3주 반 만에 다시 응시해 합격했습니다. 재응시 때 killer.sh를 새로 받는지는 LF 문서에서 확인하지 못했고 FAQ는 "two attempts (per exam registration)"라고만 적습니다.
+불합격해도 재응시 기회가 남습니다. yu-min은 1차 불합격(5월 19일) 뒤 약 3주 반 만에 다시 응시해 합격했습니다. LF FAQ는 시뮬레이터를 "two attempts (per exam registration)"라고 적습니다. 재응시도 같은 등록 안의 기회라서 첫 응시 전에 2회를 다 썼다면 재응시 대비 세션은 추가로 사야 합니다.
 
 ## 8. 덤프를 뺀 근거: LF 응시 약관
 
@@ -367,7 +368,9 @@ set expandtab tabstop=2 shiftwidth=2
 ## 9. 범위와 한계
 
 - 공식 규칙, 가격, 할인 배너, 프로그래머스 가격은 2026년 10월 20일에 확인했습니다. 가격과 할인은 자주 바뀝니다. 2025년 Cyber Week 할인은 LF 공식 공지를 찾지 못해 제3자 기사 세 곳이 일치하는 범위만 적었습니다.
-- `helm`, `etcdutl`, `crictl`이 과제 호스트에 있는지, ExamUI에 문항 표시(flag) 기능이 있는지는 공식 문서로 확인하지 못했습니다.
+- `etcdutl`과 `crictl`이 과제 호스트에 있는지, ExamUI에 문항 표시(flag) 기능이 있는지는 확인하지 못했습니다.
+- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지는 확인하지 못했습니다.
+- 개정 후 etcd 백업·복구와 kubeadm 업그레이드가 실제로 출제되는지는 후기가 갈려 확인하지 못했습니다.
 - 후기는 개정 뒤 응시했고 덤프나 "실제 시험 문제" 자료를 썼다는 언급이 없는 것만 골랐습니다. Reddit과 일부 Medium 글은 접속이 막혀 읽지 못했습니다.
 - 이 글은 응시 전에 쓴 정리입니다.
 
@@ -375,7 +378,8 @@ set expandtab tabstop=2 shiftwidth=2
 
 공식 문서
 - Linux Foundation, [Certified Kubernetes Administrator (CKA)](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
-- Linux Foundation, [Frequently Asked Questions: CKA and CKAD & CKS](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks), [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad), [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
+- Linux Foundation, [Frequently Asked Questions: CKA and CKAD & CKS](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks), [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad), [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed), [Exam Terms of Service](https://docs.linuxfoundation.org/tc-docs/certification/exam-terms-of-service)
+- Wayback Machine, Important Instructions [2025-02-11 판](https://web.archive.org/web/20250211081937/https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad), [2025-03-28 판](https://web.archive.org/web/20250328093613/https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)
 - Linux Foundation 핸드북, [Candidate Requirements](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/candidate-requirements), [Exam Preparation Checklist](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-preparation-checklist), [Scheduling or Rescheduling an Exam](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/scheduling-or-rescheduling-an-exam), [Taking the Exam](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/taking-the-exam), [Candidate Identification and Authentication](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/candidate-identification-and-authentication), [Exam Refund Policy](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-refund-policy), [Repurchasing the Exam](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/repurchasing-the-exam), [Exam Scoring and Notification](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-scoring-and-notification), [ExamUI: Performance Based Exams](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-user-interface/examui-performance-based-exams), [PSI Remote Testing Tutorial](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/psi-remote-testing-tutorial-test-the-secure-browser-+-add-appointment-to-your-online-calendar), [Exam Rules and Policies](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-rules-and-policies)
 - Linux Foundation, [Expanding CARE: Passing CKS Can Now Extend Your CKA Certification](https://training.linuxfoundation.org/blog/expanding-care-passing-cks-can-now-extend-your-cka-certification/), 2026-06-18
 - Linux Foundation, [LF Global Certification & Confidentiality Agreement](https://docs.linuxfoundation.org/tc-docs/certification/lf-cert-agreement), [Zero Tolerance for Linux Foundation Exam Misconduct](https://training.linuxfoundation.org/blog/zero-tolerance-for-linux-foundation-exam-misconduct/)

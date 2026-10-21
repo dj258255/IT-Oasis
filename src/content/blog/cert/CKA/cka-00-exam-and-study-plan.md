@@ -33,9 +33,9 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 |---|---|
 | 형식 | 온라인 감독, 리눅스 명령줄에서 푸는 실기 과제 15~20개 |
 | 시간 | 2시간 |
-| 합격 | 66% 이상 |
-| 기준 버전 | Kubernetes v1.37(2026-08-26 출시). 새 마이너 버전이 나오면 약 4~8주 안에 시험 환경을 맞춘다 |
-| 가격 | $445(2025-02-04부터), 재응시 1회 포함 |
+| 합격 | 66% 이상(LF FAQ, 2026-10-15 갱신판). 2025년 개정 때 74%로 올랐다는 글이 있지만 LF FAQ와 다르다 |
+| 기준 버전 | Kubernetes v1.37(2026-08-26 출시). LF 문서는 새 마이너 버전 출시 후 "approximately 4 to 8 weeks" 안에 시험 환경을 맞춘다고 적는다. 실제 안내문 표기는 더 늦을 때가 있었고(1.33은 10주 이상) 1.36은 표기된 적 없이 1.35에서 1.37로 넘어갔다 |
+| 가격 | $445(2025-02-04부터), 재응시 1회 포함(최초 구매일로부터 12개월 안). 결시하면 응시료와 재응시 자격을 모두 잃는다 |
 | 시뮬레이터 | killer.sh 2회(활성화 후 각 36시간, 세션당 17문항). 단일 등록 상품(CKA-SINGLE)에는 없다 |
 | 유효 기간 | 2년(2024-04-01 이전 취득은 3년). 2026년 6월 18일부터 CKS에 합격하거나 갱신하면 CKA도 연장되고 이미 만료된 CKA는 복원된다(CARE 확장) |
 | 결과 | 자동 채점, 시험 종료 후 24시간 안에 이메일 |
@@ -75,7 +75,7 @@ LF는 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했고 기준은 �
 
 etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스터 수명주기 관리"와 HA 항목에 걸리고 kubernetes.io에 태스크 문서로 남아 있습니다. 후기도 갈립니다. Cassisi(2026)는 실러버스에서 빠졌다고 판단했고 Juikar(2026)는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 그래서 이 시리즈는 두 절차를 함정 위주로 짧게 남겼습니다([Ch-02 4장](/blog/cert/cka/cka-02-cluster-architecture)).
 
-도구도 바뀌었습니다. etcd 3.6부터 `etcdctl snapshot status`와 `snapshot restore`가 제거되어 확인과 복구는 `etcdutl`로 합니다. kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion`, 1.36은 3.6.8) 둘 다 3.6 이후입니다. `ETCDCTL_API=3`을 붙이던 옛 강의 명령은 그대로 외우지 않습니다.
+도구도 바뀌었습니다. etcd 3.6부터 `etcdctl snapshot status`와 `snapshot restore`가 제거되어 확인과 복구는 `etcdutl`로 합니다. kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion`, 1.36은 3.6.8) 둘 다 3.6 이후입니다. `ETCDCTL_API=3`을 붙이던 옛 강의 명령은 그대로 외우지 않습니다. 개정 전 Important Instructions에 있던 "The CKA environment is currently running etcd v3.5." 줄은 2025년 11월 판부터 없습니다.
 
 ## 3. 시험 환경과 규칙
 
@@ -93,12 +93,14 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 
 ### 3-2. 과제마다 다른 호스트
 
-공식 안내는 각 과제를 지정된 호스트에서 풀라고 적습니다. `ssh <노드 이름>`으로 들어가고 ssh 안에서 다시 ssh는 할 수 없으며 끝나면 `exit`로 시작 호스트(base)로 돌아옵니다. base 노드는 재부팅하면 안 됩니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다.
+공식 안내는 각 과제를 지정된 호스트에서 풀라고 적습니다. `ssh <노드 이름>`으로 들어가고 ssh 안에서 다시 ssh는 할 수 없으며 끝나면 `exit`로 시작 호스트(base)로 돌아옵니다. base 노드는 재부팅하면 안 됩니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 공식 문구는 ssh 호스트의 kubectl이 미리 설정되어 있다고 적지만 kubectl에 sudo가 필요한지는 적지 않습니다.
 
 | 도구 | 공식 안내 기준 |
 |---|---|
-| `kubectl`(alias `k`, bash 자동완성 설정됨), `yq`, `curl`, `wget`, `man` | 모든 ssh 호스트에 사전 설치. base 호스트에는 없음 |
-| `helm`, `etcdctl`/`etcdutl`, `crictl`, `jq`, `tmux` | 공식 사전 설치 목록에 없음. 과제 호스트에 있는지는 공식 문서로 확인할 수 없음 |
+| `kubectl`(alias `k`, bash 자동완성 설정됨), `yq`, `curl`, `wget`, `man` | 모든 ssh 호스트에 "pre-installed and pre-configured". base 호스트에는 없음 |
+| `jq`, `tmux` | 2025-02-11 판까지 목록에 있었고 2025-03-28 판부터 빠졌다. `jq` 자리는 `yq`로 바뀌었다 |
+| `helm`, `etcdctl` | 목록에 없음. Resources Allowed가 패키지 설치는 과제 수행에 필요하지 않다고 적으니 해당 과제가 나오는 호스트에는 있을 가능성이 높다 |
+| `etcdutl`, `crictl`, 단독 `kustomize` | 목록에 없고 후기로도 확인되지 않음. 쓰기 전에 `which`로 본다 |
 | `kubectl apply -k`, `kubectl kustomize` | kubectl에 내장 |
 
 Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 적지만 설치에도 시간이 듭니다. 그래서 이 시리즈의 예시는 `jq` 대신 `-o jsonpath`나 `yq`를 우선합니다.
@@ -200,7 +202,9 @@ Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 
 
 - 시험 규칙과 범위는 2026년 10월에 LF 문서와 cncf/curriculum 저장소에서 확인했습니다. 시험 2주 전에 다시 확인합니다.
 - 현재 시험 지문에 클러스터 컨텍스트 전환(`kubectl config use-context`)이 나오는지는 공식 문서에서 확인하지 못했습니다. 공식 안내는 과제마다 ssh로 호스트를 옮기는 방식만 적습니다.
-- `helm`, `etcdutl`, `crictl`이 과제 호스트에 있는지는 공식 사전 설치 목록으로는 확인되지 않습니다. 문항별 배점도 공개되지 않습니다.
+- `etcdutl`과 `crictl`이 과제 호스트에 있는지는 공식 문서와 후기 어디서도 확인하지 못했습니다.
+- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지는 확인하지 못했습니다.
+- 개정 후 etcd 백업·복구와 kubeadm 업그레이드가 실제로 출제되는지는 후기가 갈려 확인하지 못했습니다.
 - 이 글은 응시 전에 쓴 계획이고 후기의 점수와 준비 기간은 각자의 경험입니다.
 
 ## 참고 자료
@@ -212,6 +216,7 @@ Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 
 - Linux Foundation, [Expanding CARE: Passing CKS Can Now Extend Your CKA Certification](https://training.linuxfoundation.org/blog/expanding-care-passing-cks-can-now-extend-your-cka-certification/), 2026-06-18
 - Kubernetes, [Kubernetes v1.37 릴리스](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)
 - etcd, [Announcing etcd v3.6.0](https://etcd.io/blog/2025/announcing-etcd-3.6/), kubernetes/kubernetes [release-1.37 kubeadm constants.go](https://github.com/kubernetes/kubernetes/blob/release-1.37/cmd/kubeadm/app/constants/constants.go)
+- Linux Foundation, [Exam Terms of Service](https://docs.linuxfoundation.org/tc-docs/certification/exam-terms-of-service)(재응시 조건), [Important Instructions 2025-02-11 판](https://web.archive.org/web/20250211081937/https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)과 [2025-03-28 판](https://web.archive.org/web/20250328093613/https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)(Wayback Machine, 사전 설치 목록 변경 대조)
 - [killer.sh CKA](https://killer.sh/cka), [killer.sh FAQ](https://killer.sh/faq)
 
 후기
