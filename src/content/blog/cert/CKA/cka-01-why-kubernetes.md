@@ -38,15 +38,27 @@ seriesOrder: 1
 <details>
 <summary>기초부터: 컨테이너를 사람이 직접 돌리면 생기는 문제와 쿠버네티스의 자리</summary>
 
-쇼핑몰 상품 API를 컨테이너 하나로 띄웠다고 해 봅니다. 서버 한 대에서 `docker run` 한 줄이면 뜨지만 실제로 서비스를 시작하면 질문이 줄줄이 따라옵니다.
+> **핵심 한 줄**: 쿠버네티스는 사람이 서버마다 손으로 하던 컨테이너 관리(재시작, 배치, 이전, 주소, 배포)를 대신 맡는 **컨테이너 오케스트레이터**입니다.
 
-1. 컨테이너 프로세스가 죽으면 누가 다시 띄우는지
-2. 요청이 늘어 세 개로 늘릴 때 어느 서버에 띄울지 누가 고르는지
-3. 서버 한 대가 꺼지면 그 위의 컨테이너를 누가 다른 서버에서 다시 띄우는지
-4. 컨테이너가 새로 뜰 때마다 IP가 바뀌는데 다른 서비스는 어떤 주소로 부르는지
-5. 새 이미지로 바꿀 때 전부 한꺼번에 내리지 않고 하나씩 바꾸는 일을 누가 하는지
+#### 1. 왜 필요한가
 
-서버가 두세 대일 때는 사람이 스크립트로 버틸 수 있습니다. 서버가 수십 대, 컨테이너가 수백 개가 되면 사람이 매번 확인하고 손으로 고치는 방식은 무너집니다. 이 일을 대신 맡는 소프트웨어를 컨테이너 오케스트레이터라고 부르고 쿠버네티스가 그 대표입니다. 공식 문서 "Overview"는 쿠버네티스를 컨테이너화된 워크로드와 서비스를 관리하는 이식 가능하고 확장 가능한 오픈소스 플랫폼으로 소개하고 자가 치유, 서비스 디스커버리와 로드 밸런싱, 자동 롤아웃과 롤백, 자동 빈 패킹(bin packing)을 기능으로 듭니다. 위 질문 다섯과 하나씩 짝이 맞습니다.
+쇼핑몰 상품 API를 컨테이너 하나로 띄웠다고 해 봅니다. 서버 한 대에서 `docker run` 한 줄이면 뜨지만 실제로 서비스를 시작하면 질문 다섯 개가 따라옵니다.
+
+1. **재시작**: 컨테이너 프로세스가 죽으면 누가 다시 띄우는지
+2. **배치**: 요청이 늘어 세 개로 늘릴 때 어느 서버에 띄울지 누가 고르는지
+3. **이전**: 서버 한 대가 꺼지면 그 위의 컨테이너를 누가 다른 서버에서 다시 띄우는지
+4. **주소**: 컨테이너가 새로 뜰 때마다 IP가 바뀌는데 다른 서비스는 어떤 주소로 부르는지
+5. **배포**: 새 이미지로 바꿀 때 전부 한꺼번에 내리지 않고 하나씩 바꾸는 일을 누가 하는지
+
+| 규모 | 버티는 방식 | 결과 |
+|---|---|---|
+| 서버 두세 대 | 사람이 스크립트로 확인하고 고침 | 버틸 수 있음 |
+| 서버 수십 대, 컨테이너 수백 개 | 사람이 매번 확인하고 손으로 고침 | 무너짐 |
+| 오케스트레이터 사용 | 소프트웨어가 계속 확인하고 고침 | 쿠버네티스가 그 대표 |
+
+공식 문서 "Overview"는 쿠버네티스를 컨테이너화된 워크로드와 서비스를 관리하는 이식 가능하고 확장 가능한 오픈소스 플랫폼으로 소개하고 자가 치유, 서비스 디스커버리와 로드 밸런싱, 자동 롤아웃과 롤백, 자동 빈 패킹(bin packing)을 기능으로 듭니다. 위 질문 다섯과 하나씩 짝이 맞습니다.
+
+#### 2. 질문별로 맡는 구성요소
 
 | 질문 | 쿠버네티스에서 맡는 구성요소 |
 |---|---|
@@ -56,7 +68,19 @@ seriesOrder: 1
 | 바뀌는 IP를 고정 주소로 부르기 | Service와 CoreDNS |
 | 하나씩 바꾸는 배포 | Deployment의 롤링 업데이트 |
 
-일하는 방식이 핵심입니다. 사람은 "상품 API 컨테이너 3개, 이미지 nginx:1.27"처럼 도달할 결과만 API에 적어 둡니다. 그 결과를 어떻게 맞출지는 쿠버네티스 구성요소들이 계속 확인하면서 처리합니다. 이 방식을 선언형(declarative)이라고 하고 이 장 전체가 그 동작을 다룹니다. 컨테이너가 리눅스 커널의 namespace와 cgroup으로 격리한 보통 프로세스라는 바탕은 [커널 경계 글](/blog/theory/systems/k8s-linux-01-kernel-boundary)에 있습니다.
+#### 3. 어떻게 일하나: 선언형
+
+1. **결과만 적기**: 사람은 "상품 API 컨테이너 3개, 이미지 nginx:1.27"처럼 도달할 결과만 API에 적어 둡니다.
+2. **계속 확인하기**: 쿠버네티스 구성요소들이 적힌 결과와 지금 모습을 계속 비교합니다.
+3. **차이 메우기**: 다르면 구성요소가 알아서 맞춥니다.
+
+```text
+사람: "상품 API 3개" 기록 → API 서버 → 구성요소가 지금 몇 개인지 확인 → 모자라면 더 띄움
+```
+
+이 방식을 **선언형(declarative)**이라고 하고 이 장 전체가 그 동작을 다룹니다.
+
+> **정리**: 사람은 원하는 결과를 적고 쿠버네티스가 재시작, 배치, 이전, 주소, 배포를 맡습니다. 그 아래의 컨테이너가 리눅스 커널의 namespace와 cgroup으로 격리한 보통 프로세스라는 바탕은 [커널 경계 글](/blog/theory/systems/k8s-linux-01-kernel-boundary)에 있습니다.
 
 </details>
 
@@ -65,9 +89,18 @@ seriesOrder: 1
 <details>
 <summary>기초부터: 오브젝트 YAML의 네 칸(apiVersion, kind, metadata, spec)</summary>
 
-쿠버네티스에서 "오브젝트"는 etcd에 저장되는 기록 한 건입니다. Pod 오브젝트를 만들었다는 말은 "이런 Pod가 있어야 한다"는 기록을 남겼다는 뜻이고 실제 컨테이너는 그 기록을 본 kubelet이 따로 만듭니다. 기록과 실물이 나뉘어 있다는 점을 먼저 잡아 두면 뒤의 내용이 쉬워집니다.
+> **핵심 한 줄**: 오브젝트는 etcd에 저장되는 **기록** 한 건이고 거의 모든 오브젝트 YAML은 `apiVersion`, `kind`, `metadata`, `spec` 네 칸으로 시작합니다.
 
-거의 모든 오브젝트 YAML은 같은 네 칸으로 시작합니다.
+#### 1. 왜 기록과 실물을 나눠 보나
+
+| 구분 | 무엇인지 | 누가 만드나 |
+|---|---|---|
+| 기록(오브젝트) | "이런 Pod가 있어야 한다"는 내용 | 사용자가 API 서버에 보냄, etcd에 저장 |
+| 실물(컨테이너) | 노드에서 도는 프로세스 | 그 기록을 본 kubelet이 따로 만듦 |
+
+Pod 오브젝트를 만들었다는 말은 기록을 남겼다는 뜻입니다. 기록과 실물이 나뉘어 있다는 점을 먼저 잡아 두면 뒤의 내용이 쉬워집니다.
+
+#### 2. 네 칸 읽기
 
 ```yaml
 apiVersion: v1          # 1) 이 오브젝트를 정의한 API 그룹과 버전
@@ -83,12 +116,27 @@ spec:                   # 4) 원하는 상태. kind마다 내용이 다름
     image: nginx:1.27
 ```
 
-1. `apiVersion`은 이 kind가 어느 API에 속하는지 알려 줍니다. Pod, Service, ConfigMap처럼 초창기부터 있던 것은 그룹 없이 `v1`이고 Deployment는 `apps/v1`, Job은 `batch/v1`처럼 `그룹/버전`으로 씁니다. 틀리면 API 서버가 그런 kind를 모른다고 거부합니다.
-2. `kind`는 첫 글자가 대문자인 종류 이름입니다.
-3. `metadata`는 오브젝트를 찾고 고르는 데 쓰는 정보입니다. 같은 네임스페이스 안에서 같은 kind끼리 `name`이 겹칠 수 없습니다.
-4. `spec`은 내가 원하는 모습입니다. 무엇을 적을 수 있는지는 kind마다 달라서 `kubectl explain pod.spec`처럼 클러스터에 직접 물어봅니다.
+| 칸 | 뜻 | 예와 주의점 |
+|---|---|---|
+| `apiVersion` | 이 kind가 어느 API에 속하는지 | 초창기부터 있던 Pod, Service, ConfigMap은 그룹 없이 `v1`. Deployment는 `apps/v1`, Job은 `batch/v1`처럼 `그룹/버전`. 틀리면 API 서버가 그런 kind를 모른다고 거부 |
+| `kind` | 종류 이름 | 첫 글자가 대문자 |
+| `metadata` | 오브젝트를 찾고 고르는 정보(이름, 네임스페이스, 라벨) | 같은 네임스페이스 안에서 같은 kind끼리 `name`이 겹칠 수 없음 |
+| `spec` | 내가 원하는 모습 | kind마다 내용이 달라서 `kubectl explain pod.spec`처럼 클러스터에 직접 물어봄 |
 
-`status`는 사용자가 쓰지 않습니다. kubelet과 컨트롤러가 관측한 결과를 채우는 칸이라 YAML 파일에 적어도 무시됩니다. `kubectl get pod product-api -o yaml`로 받아 보면 내가 쓴 네 칸 아래에 `status`와 `metadata.uid`, `creationTimestamp` 같은 시스템 필드가 붙어 있습니다. 시험에서 이 출력을 그대로 고쳐 다시 만들 때 시스템 필드를 지우는 이유가 이것입니다.
+#### 3. 다섯째 칸 status
+
+| 구분 | `spec` | `status` |
+|---|---|---|
+| 누가 쓰나 | 사용자 | kubelet과 컨트롤러 |
+| 담는 것 | 원하는 상태 | 관측한 결과 |
+| YAML 파일에 적으면 | 반영됨 | 무시됨 |
+
+#### 4. 실전에서 보이는 모습
+
+- `kubectl get pod product-api -o yaml`로 받아 보면 내가 쓴 네 칸 아래에 `status`와 `metadata.uid`, `creationTimestamp` 같은 시스템 필드가 붙어 있습니다.
+- 시험에서 이 출력을 그대로 고쳐 다시 만들 때 시스템 필드를 지우는 이유가 이것입니다.
+
+> **정리**: 네 칸은 사용자가 쓰고 `status`는 쿠버네티스가 씁니다. 바로 아래 본문에서 `spec`과 `status`의 차이로 트러블슈팅하는 법을 봅니다.
 
 </details>
 
@@ -128,17 +176,50 @@ kubectl get deploy web -o jsonpath='{.spec.replicas} {.status.readyReplicas}{"\n
 <details>
 <summary>기초부터: 컨트롤 루프는 온도 조절기처럼 돈다</summary>
 
-공식 문서 "Controllers"는 컨트롤 루프를 방 온도 조절기에 빗대 설명합니다. 사람은 원하는 온도 24도를 정해 둡니다. 조절기는 현재 온도를 재고 24도보다 낮으면 난방을 켜고 맞으면 끕니다. 사람이 "지금 난방을 켜라"고 지시하지 않아도 정해 둔 값과 잰 값의 차이만 보고 움직입니다.
+> **핵심 한 줄**: 컨트롤러는 원하는 값과 잰 값의 **차이**만 보고 움직이는 루프입니다. 공식 문서 "Controllers"는 이를 방 온도 조절기에 빗댑니다.
 
-쿠버네티스 컨트롤러도 같은 세 단계를 끝없이 반복합니다.
+#### 1. 온도 조절기 비유
 
-1. 관찰: API 서버에서 자기가 맡은 오브젝트의 spec(원하는 상태)과 실제 상황을 읽습니다. ReplicaSet 컨트롤러라면 `replicas: 3`과 selector에 맞는 Pod 수를 봅니다.
-2. 비교: 둘의 차이를 계산합니다. 원하는 수 3, 실제 수 2면 차이는 1입니다.
-3. 조치: 차이를 줄이는 요청을 API 서버에 보냅니다. Pod 하나를 새로 만들어 달라고 요청하고 결과를 status에 적습니다.
+사람은 원하는 온도 24도를 정해 둡니다. 조절기는 현재 온도를 재고 24도보다 낮으면 난방을 켜고 맞으면 끕니다. 사람이 "지금 난방을 켜라"고 지시하지 않아도 정해 둔 값과 잰 값의 차이만 보고 움직입니다. 쿠버네티스 컨트롤러도 이렇게 동작합니다.
 
-이 방식에는 이름이 있습니다. "Pod가 지워졌다"는 사건 하나하나에 반응하는 방식을 이벤트 기반(edge-triggered)이라 하고 "지금 몇 개여야 하는데 몇 개인지"라는 상태 수준을 보는 방식을 레벨 기반(level-triggered)이라 합니다. 쿠버네티스 컨트롤러는 레벨 기반으로 판단합니다. 그래서 컨트롤러가 재시작되는 동안 사건을 몇 개 놓쳐도 다시 돌아와 지금 상태를 한 번 보면 해야 할 일이 그대로 나옵니다. 3장에서 controller-manager를 멈췄다 살리는 실험이 이 성질을 보여 줍니다.
+| 온도 조절기 | ReplicaSet 컨트롤러 |
+|---|---|
+| 원하는 온도 24도 | `replicas: 3` |
+| 현재 온도 | selector에 맞는 Pod 수 |
+| 난방 켜기 | Pod 생성 요청 |
 
-한 컨트롤러는 한 종류의 일만 합니다. Deployment 컨트롤러는 ReplicaSet만 만들고 Pod는 만들지 않습니다. Pod는 ReplicaSet 컨트롤러가 만들고 노드 배정은 스케줄러가 합니다. 작은 루프 여러 개가 API 서버의 기록을 매개로 이어 달리기를 하는 구조라서 어느 단계에서 멈췄는지 `spec`과 `status`를 차례로 보면 찾을 수 있습니다.
+#### 2. 어떻게 동작하나
+
+1. **관찰**: API 서버에서 자기가 맡은 오브젝트의 spec(원하는 상태)과 실제 상황을 읽습니다. ReplicaSet 컨트롤러라면 `replicas: 3`과 selector에 맞는 Pod 수를 봅니다.
+2. **비교**: 둘의 차이를 계산합니다. 원하는 수 3, 실제 수 2면 차이는 1입니다.
+3. **조치**: 차이를 줄이는 요청을 API 서버에 보냅니다. Pod 하나를 새로 만들어 달라고 요청하고 결과를 status에 적습니다.
+
+```text
+관찰(spec 3, 실제 2) → 비교(차이 1) → 조치(Pod 1개 생성 요청) → 다시 관찰 → ...
+```
+
+#### 3. 이벤트 기반과 레벨 기반
+
+| 구분 | 이벤트 기반(edge-triggered) | 레벨 기반(level-triggered) |
+|---|---|---|
+| 무엇에 반응하나 | "Pod가 지워졌다"는 사건 하나하나 | "지금 몇 개여야 하는데 몇 개인지"라는 상태 수준 |
+| 사건을 놓치면 | 해야 할 일을 모름 | 다시 돌아와 지금 상태를 한 번 보면 해야 할 일이 그대로 나옴 |
+| 쿠버네티스 컨트롤러 | 판단 기준으로 쓰지 않음 | 이쪽으로 판단 |
+
+3장에서 controller-manager를 멈췄다 살리는 실험이 이 성질을 보여 줍니다.
+
+#### 4. 이어 달리기 구조
+
+한 컨트롤러는 한 종류의 일만 합니다.
+
+```text
+Deployment 컨트롤러 → ReplicaSet 생성 → ReplicaSet 컨트롤러 → Pod 생성 → 스케줄러 → 노드 배정
+```
+
+- Deployment 컨트롤러는 ReplicaSet만 만들고 Pod는 만들지 않습니다.
+- 작은 루프 여러 개가 API 서버의 기록을 매개로 이어 달리기를 하는 구조라서 어느 단계에서 멈췄는지 `spec`과 `status`를 차례로 보면 찾을 수 있습니다.
+
+> **정리**: 컨트롤러는 관찰, 비교, 조치를 끝없이 반복하고 상태 수준을 보기 때문에 잠시 멈춰도 다시 따라잡습니다. 아래 본문의 그림이 이 이어 달리기를 구성요소별로 보여 줍니다.
 
 </details>
 
@@ -177,7 +258,9 @@ Pod 이름이 바뀌고 ReplicaSet의 `DESIRED`는 그대로인지 봅니다. �
 <details>
 <summary>기초부터: 클러스터, 노드, 컨트롤 플레인이라는 말</summary>
 
-용어부터 정리합니다.
+> **핵심 한 줄**: 컨트롤 플레인은 **판단과 기록**을 맡고 워커 노드는 **실행**을 맡으며 둘은 API 서버를 거쳐서만 이어집니다.
+
+#### 1. 용어 정리
 
 | 용어 | 뜻 |
 |---|---|
@@ -186,16 +269,39 @@ Pod 이름이 바뀌고 ReplicaSet의 `DESIRED`는 그대로인지 봅니다. �
 | 컨트롤 플레인 | 클러스터의 상태를 저장하고 결정을 내리는 구성요소 묶음. 옛 자료의 "마스터" |
 | 워커 노드 | 사용자 Pod가 실제로 도는 노드 |
 
-컨트롤 플레인은 판단과 기록을 맡고 워커 노드는 실행을 맡습니다. 쇼핑몰 주문 API Pod 하나를 만드는 요청을 따라가면 각 구성요소가 어디서 등장하는지 보입니다.
+#### 2. 요청 하나를 따라가기
 
-1. 사용자가 `kubectl apply`를 칩니다. kubectl은 YAML을 HTTPS 요청으로 바꿔 kube-apiserver에 보냅니다.
-2. kube-apiserver가 요청자를 확인하고 내용을 검사한 뒤 etcd에 기록합니다. etcd는 클러스터의 모든 오브젝트를 담는 키-값 저장소입니다.
-3. kube-controller-manager 안의 컨트롤러들이 새 기록을 보고 필요한 하위 오브젝트(ReplicaSet, Pod)를 만들어 달라고 다시 API 서버에 요청합니다.
-4. kube-scheduler가 아직 노드가 정해지지 않은 Pod를 보고 알맞은 노드를 골라 기록합니다.
-5. 그 노드의 kubelet이 "내 노드에 배정된 Pod"를 보고 컨테이너 런타임(containerd 등)에 컨테이너를 만들게 합니다.
-6. kube-proxy는 Service 정보를 보고 노드의 패킷 전달 규칙을 고칩니다. 그래야 다른 Pod가 Service 주소로 주문 API에 닿습니다.
+쇼핑몰 주문 API Pod 하나를 만드는 요청을 따라가면 각 구성요소가 어디서 등장하는지 보입니다.
 
-모든 화살표가 API 서버를 거친다는 점이 중요합니다. 구성요소끼리 직접 말을 걸지 않고 API 서버에 기록을 남기고 서로의 기록을 지켜봅니다. 그래서 API 서버가 멈추면 새로 바뀌는 일은 전부 멈추지만 이미 노드에서 도는 컨테이너는 kubelet과 런타임이 계속 돌립니다. 아래 표는 이 여섯 단계의 구성요소를 kubeadm 기준 실행 방식과 함께 정리한 것입니다.
+1. **kubectl**: 사용자가 `kubectl apply`를 칩니다. kubectl은 YAML을 HTTPS 요청으로 바꿔 kube-apiserver에 보냅니다.
+2. **kube-apiserver와 etcd**: kube-apiserver가 요청자를 확인하고 내용을 검사한 뒤 etcd에 기록합니다. etcd는 클러스터의 모든 오브젝트를 담는 키-값 저장소입니다.
+3. **kube-controller-manager**: 안의 컨트롤러들이 새 기록을 보고 필요한 하위 오브젝트(ReplicaSet, Pod)를 만들어 달라고 다시 API 서버에 요청합니다.
+4. **kube-scheduler**: 아직 노드가 정해지지 않은 Pod를 보고 알맞은 노드를 골라 기록합니다.
+5. **kubelet**: 그 노드의 kubelet이 "내 노드에 배정된 Pod"를 보고 컨테이너 런타임(containerd 등)에 컨테이너를 만들게 합니다.
+6. **kube-proxy**: Service 정보를 보고 노드의 패킷 전달 규칙을 고칩니다. 그래야 다른 Pod가 Service 주소로 주문 API에 닿습니다.
+
+```text
+            [컨트롤 플레인: 판단과 기록]
+kubectl → kube-apiserver ↔ etcd
+               ▲   ▲   ▲
+     controller-manager  scheduler
+               │
+            [워커 노드: 실행]
+         kubelet → 컨테이너 런타임
+         kube-proxy → 패킷 전달 규칙
+```
+
+#### 3. 헷갈리는 점
+
+- 구성요소끼리 직접 말을 걸지 않습니다. API 서버에 기록을 남기고 서로의 기록을 지켜봅니다. 모든 화살표가 API 서버를 거칩니다.
+- 그래서 API 서버가 멈추면 새로 바뀌는 일은 전부 멈추지만 이미 노드에서 도는 컨테이너는 kubelet과 런타임이 계속 돌립니다.
+
+| API 서버가 멈췄을 때 | 결과 |
+|---|---|
+| 새 배포, 스케일, 스케줄링 | 멈춤 |
+| 이미 노드에서 도는 컨테이너 | kubelet과 런타임이 계속 돌림 |
+
+> **정리**: 여섯 단계 모두 API 서버를 중심으로 이어집니다. 아래 표는 이 여섯 단계의 구성요소를 kubeadm 기준 실행 방식과 함께 정리한 것입니다.
 
 </details>
 
@@ -245,20 +351,38 @@ kubectl get pod -n kube-system kube-controller-manager-<노드> \
 <details>
 <summary>기초부터: Docker, containerd, CRI, OCI는 어떤 관계인지</summary>
 
-"쿠버네티스가 Docker를 버렸다"는 말을 들으면 Docker로 만든 이미지도 못 쓰는지 헷갈립니다. 층을 나눠 보면 정리됩니다.
+> **핵심 한 줄**: "쿠버네티스가 Docker를 버렸다"는 말에서 빠진 것은 **kubelet과 Docker Engine 사이의 연결**뿐이고 Docker로 만든 이미지는 그대로 쓸 수 있습니다.
 
-1. Docker는 원래 이미지 빌드, 이미지 저장소 연동, 컨테이너 실행을 한 프로그램에 담은 도구였습니다. 그 안에서 컨테이너 실행을 맡던 부분을 떼어 낸 것이 containerd이고 지금은 CNCF 프로젝트입니다. Docker Engine도 내부에서 containerd를 씁니다.
-2. 이미지 형식과 컨테이너 실행 방법은 OCI(Open Container Initiative) 표준으로 정해져 있습니다. Docker로 빌드한 이미지는 OCI 형식이라 containerd나 CRI-O도 그대로 받아 실행합니다. 실제로 namespace와 cgroup을 설정해 프로세스를 띄우는 것은 그 아래의 runc 같은 OCI 런타임입니다.
-3. kubelet이 런타임에 "Pod 샌드박스를 만들어라", "이 이미지로 컨테이너를 띄워라"라고 말하는 규약이 CRI(Container Runtime Interface)입니다. containerd와 CRI-O는 CRI를 직접 구현했습니다.
-4. Docker Engine은 CRI를 구현하지 않았습니다. 그래서 kubelet 안에 dockershim이라는 번역 코드를 두고 붙였는데 v1.24에서 이 코드가 빠졌습니다. 지금 Docker Engine을 노드 런타임으로 쓰려면 cri-dockerd라는 별도 어댑터가 필요합니다([Ch-02 2-4b절](/blog/cert/cka/cka-02-cluster-architecture)).
+#### 1. 왜 헷갈리나
 
-정리하면 빠진 것은 kubelet과 Docker Engine 사이의 연결뿐이고 이미지는 그대로 쓸 수 있습니다. 도구 이름도 층에 맞춰 고릅니다.
+이 말을 들으면 Docker로 만든 이미지도 못 쓰는지 헷갈립니다. Docker 하나에 여러 층이 겹쳐 있었기 때문입니다. 층을 나눠 보면 정리됩니다.
+
+#### 2. 층 나눠 보기
+
+1. **Docker와 containerd**: Docker는 원래 이미지 빌드, 이미지 저장소 연동, 컨테이너 실행을 한 프로그램에 담은 도구였습니다. 그 안에서 컨테이너 실행을 맡던 부분을 떼어 낸 것이 containerd이고 지금은 CNCF 프로젝트입니다. Docker Engine도 내부에서 containerd를 씁니다.
+2. **OCI 표준**: 이미지 형식과 컨테이너 실행 방법은 OCI(Open Container Initiative) 표준으로 정해져 있습니다. Docker로 빌드한 이미지는 OCI 형식이라 containerd나 CRI-O도 그대로 받아 실행합니다. 실제로 namespace와 cgroup을 설정해 프로세스를 띄우는 것은 그 아래의 runc 같은 OCI 런타임입니다.
+3. **CRI**: kubelet이 런타임에 "Pod 샌드박스를 만들어라", "이 이미지로 컨테이너를 띄워라"라고 말하는 규약이 CRI(Container Runtime Interface)입니다. containerd와 CRI-O는 CRI를 직접 구현했습니다.
+4. **dockershim 제거**: Docker Engine은 CRI를 구현하지 않았습니다. 그래서 kubelet 안에 dockershim이라는 번역 코드를 두고 붙였는데 v1.24에서 이 코드가 빠졌습니다. 지금 Docker Engine을 노드 런타임으로 쓰려면 cri-dockerd라는 별도 어댑터가 필요합니다([Ch-02 2-4b절](/blog/cert/cka/cka-02-cluster-architecture)).
+
+```text
+v1.23까지: kubelet → dockershim(kubelet 안) → Docker Engine → containerd → runc
+지금:      kubelet → CRI → containerd 또는 CRI-O → runc
+           kubelet → CRI → cri-dockerd(별도 설치) → Docker Engine → containerd → runc
+```
+
+#### 3. 한눈에 비교: 층에 맞는 도구
 
 | 도구 | 말을 거는 대상 | 쓰는 때 |
 |---|---|---|
 | `docker` | Docker Engine | 개발 PC에서 이미지 빌드와 실행 |
 | `crictl` | CRI 소켓(containerd, CRI-O) | 쿠버네티스 노드에서 Pod와 컨테이너 점검. 시험에서 쓰는 도구 |
 | `ctr`, `nerdctl` | containerd | containerd 자체 디버깅 |
+
+#### 4. 실전에서 보이는 모습
+
+- containerd를 런타임으로 쓰는 노드에서 kubelet이 만든 컨테이너는 Docker Engine을 거치지 않으므로 `docker ps`에 나오지 않습니다. 노드에서는 `crictl ps`, `crictl pods`로 봅니다.
+
+> **정리**: 이미지는 OCI 표준 덕에 그대로 쓰고 kubelet은 CRI로 런타임과 말합니다. 아래 본문의 그림이 kubelet에서 커널까지 이 층을 위에서 아래로 보여 줍니다.
 
 </details>
 
@@ -388,10 +512,28 @@ sudo mv /root/kube-scheduler.yaml /etc/kubernetes/manifests/
 <details>
 <summary>기초부터: requests와 limits를 적는 자리와 단위</summary>
 
-노드 한 대에 Pod 여러 개가 함께 돌면 자원을 나눠 써야 합니다. 아무 표시가 없으면 스케줄러는 Pod가 얼마나 쓸지 모르고 한 Pod가 메모리를 다 먹어도 막을 장치가 없습니다. 그래서 컨테이너마다 두 값을 적습니다.
+> **핵심 한 줄**: **requests**는 스케줄러가 자리를 잡을 때 쓰는 예약 값이고 **limits**는 커널이 집행하는 상한입니다.
 
-- requests: "최소한 이만큼은 확보해 달라"는 예약 값입니다. 스케줄러는 노드에 이미 배치된 Pod들의 requests 합과 노드의 할당 가능량(allocatable)을 비교해 들어갈 자리가 있는 노드만 고릅니다. 실제 사용량은 보지 않습니다.
-- limits: "이 이상은 쓰지 못하게 막아 달라"는 상한입니다. kubelet이 런타임을 통해 리눅스 cgroup에 값을 적고 커널이 집행합니다.
+#### 1. 왜 필요한가
+
+노드 한 대에 Pod 여러 개가 함께 돌면 자원을 나눠 써야 합니다. 아무 표시가 없으면 두 가지 문제가 생깁니다.
+
+| 표시가 없을 때 | 문제 | 막는 값 |
+|---|---|---|
+| 스케줄러가 Pod가 얼마나 쓸지 모름 | 이미 꽉 찬 노드에 또 배치될 수 있음 | requests |
+| 한 Pod가 메모리를 다 먹음 | 막을 장치가 없음 | limits |
+
+#### 2. 어떻게 동작하나
+
+1. **requests(예약)**: "최소한 이만큼은 확보해 달라"는 값입니다. 스케줄러는 노드에 이미 배치된 Pod들의 requests 합과 노드의 할당 가능량(allocatable)을 비교해 들어갈 자리가 있는 노드만 고릅니다. 실제 사용량은 보지 않습니다.
+2. **limits(상한)**: "이 이상은 쓰지 못하게 막아 달라"는 값입니다. kubelet이 런타임을 통해 리눅스 cgroup에 값을 적고 커널이 집행합니다.
+
+```text
+requests → kube-scheduler(노드 고르기)
+limits   → kubelet → 컨테이너 런타임 → cgroup → 커널(집행)
+```
+
+#### 3. 적는 자리
 
 ```yaml
 spec:
@@ -407,7 +549,7 @@ spec:
         memory: "128Mi"
 ```
 
-단위가 처음에 헷갈립니다.
+#### 4. 단위 비교
 
 | 표기 | 뜻 |
 |---|---|
@@ -416,7 +558,13 @@ spec:
 | `memory: 128Mi` | 128 × 1024 × 1024 바이트(이진 단위) |
 | `memory: 128M` | 128 × 1000 × 1000 바이트(십진 단위). Mi보다 약간 작음 |
 
-메모리를 `128m`처럼 소문자 m으로 쓰면 "0.128 바이트"라는 뜻이 되어 엉뚱한 값이 들어갑니다. limits만 적고 requests를 비우면 requests는 limits와 같은 값으로 채워집니다. 두 값을 어떻게 적느냐에 따라 Pod의 QoS 클래스(Guaranteed, Burstable, BestEffort)가 정해지고 노드 메모리가 모자랄 때 어느 Pod부터 축출할지가 여기서 갈립니다.
+#### 5. 헷갈리는 점
+
+- 메모리를 `128m`처럼 소문자 m으로 쓰면 "0.128 바이트"라는 뜻이 되어 엉뚱한 값이 들어갑니다.
+- limits만 적고 requests를 비우면 requests는 limits와 같은 값으로 채워집니다.
+- requests가 들어갈 노드가 하나도 없으면 Pod는 `Pending`에 머뭅니다. 공식 문서 "Resource Management for Pods and Containers"의 예시 이벤트는 `Warning  FailedScheduling  ...  default-scheduler  0/42 nodes available: insufficient cpu`입니다. 모든 노드가 `cpu: 1`인데 request가 `cpu: 1.1`이면 영원히 배치되지 않습니다.
+
+> **정리**: 두 값을 어떻게 적느냐에 따라 Pod의 QoS 클래스(Guaranteed, Burstable, BestEffort)가 정해지고 노드 메모리가 모자랄 때 어느 Pod부터 축출할지가 여기서 갈립니다. 넘었을 때의 결과는 바로 아래 표에 있습니다.
 
 </details>
 
@@ -541,7 +689,16 @@ limit을 300Mi로 올린 버전으로 다시 만들어 `Running`이 유지되는
 <details>
 <summary>기초부터: kubectl top 뒤의 metrics-server 경로</summary>
 
-`kubectl top`은 kubectl이 직접 노드에 가서 재는 명령으로 보이지만 실제로는 API 서버의 Metrics API(`metrics.k8s.io`)를 조회합니다. 이 API를 채우는 것은 metrics-server라는 애드온이고 기본 설치에 들어 있지 않습니다. 그래서 kind나 kubeadm 기본 클러스터에서는 `Metrics API not available`이 나옵니다.
+> **핵심 한 줄**: `kubectl top`은 API 서버의 Metrics API(`metrics.k8s.io`)를 조회하고 그 API를 채우는 것은 기본 설치에 없는 애드온 **metrics-server**입니다.
+
+#### 1. 왜 알아야 하나
+
+| 겉으로 보이는 모습 | 실제 동작 |
+|---|---|
+| kubectl이 직접 노드에 가서 재는 명령 같음 | API 서버의 Metrics API를 조회 |
+| 어느 클러스터에서나 될 것 같음 | metrics-server가 없으면 kind나 kubeadm 기본 클러스터에서 `Metrics API not available` |
+
+#### 2. 어떻게 동작하나
 
 값이 모이는 경로는 이렇습니다(Resource metrics pipeline 문서 기준).
 
@@ -555,11 +712,25 @@ limit을 300Mi로 올린 버전으로 다시 만들어 `Running`이 유지되는
                     kube-apiserver ◀── kubectl top, HPA
 ```
 
-1. 각 노드의 kubelet이 컨테이너별 CPU와 메모리 사용량을 엔드포인트로 내놓습니다.
-2. metrics-server가 모든 kubelet에서 이 값을 주기적으로 긁어 메모리에 들고 있습니다.
-3. API 서버는 `metrics.k8s.io` 요청을 metrics-server로 넘겨 줍니다. 이렇게 API를 다른 서버에 맡기는 장치를 API 집계(aggregation)라고 합니다.
+1. **kubelet이 내놓기**: 각 노드의 kubelet이 컨테이너별 CPU와 메모리 사용량을 엔드포인트로 내놓습니다.
+2. **metrics-server가 긁기**: metrics-server가 모든 kubelet에서 이 값을 주기적으로 긁어 메모리에 들고 있습니다.
+3. **API 서버가 넘기기**: API 서버는 `metrics.k8s.io` 요청을 metrics-server로 넘겨 줍니다. 이렇게 API를 다른 서버에 맡기는 장치를 **API 집계(aggregation)**라고 합니다.
 
-metrics-server는 최근 값만 들고 있고 기록을 쌓지 않습니다. README도 자동 확장(HPA, VPA)용이며 모니터링 데이터 원천으로 쓰지 말라고 적습니다. 지난 한 시간의 그래프가 필요하면 Prometheus 같은 별도 모니터링을 둡니다. metrics-server가 kubelet에 HTTPS로 붙기 때문에 kubelet 서빙 인증서가 노드 IP를 담고 있지 않으면 수집이 실패하는데 아래 kind 사례의 `--kubelet-insecure-tls`가 그 문제를 우회한 것입니다.
+#### 3. 한눈에 비교
+
+| 구분 | metrics-server | Prometheus 같은 모니터링 |
+|---|---|---|
+| 들고 있는 값 | 최근 값만, 기록을 쌓지 않음 | 시간에 따른 기록 |
+| 쓰임 | 자동 확장(HPA, VPA)과 `kubectl top` | 지난 한 시간의 그래프 같은 모니터링 |
+
+metrics-server README도 자동 확장용이며 모니터링 데이터 원천으로 쓰지 말라고 적습니다.
+
+#### 4. 실전에서 보이는 모습
+
+- metrics-server가 없으면 `kubectl top`이 `Metrics API not available`로 끝납니다.
+- metrics-server가 kubelet에 HTTPS로 붙기 때문에 kubelet 서빙 인증서가 노드 IP를 담고 있지 않으면 수집이 실패합니다. 아래 kind 사례의 `--kubelet-insecure-tls`가 그 문제를 우회한 것입니다.
+
+> **정리**: `kubectl top`은 kubelet → metrics-server → API 서버 경로로 최근 사용량만 보여 줍니다. 아래 본문에서 이 경로가 없을 때와 있을 때의 출력을 봅니다.
 
 </details>
 
