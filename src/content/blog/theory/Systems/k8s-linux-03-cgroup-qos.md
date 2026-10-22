@@ -57,6 +57,38 @@ requests와 limits가 다르니 이 파드는 Burstable입니다. 이 글에 나
 
 ### 1-1. 압축 가능한 CPU와 압축할 수 없는 메모리
 
+<details>
+<summary>기초부터: cgroup이 무엇이고 CPU와 메모리를 왜 다르게 다루나</summary>
+
+> **핵심 한 줄**: cgroup(control group)은 프로세스 묶음에 자원 한도를 걸고 사용량을 세는 커널 기능입니다. 네임스페이스가 "무엇이 보이는가"를 정한다면 cgroup은 "얼마나 쓸 수 있는가"를 정합니다.
+
+#### 1. 왜 필요한가: 시끄러운 이웃
+- 한 서버에 쇼핑몰 API, 게시판, 결제 서비스가 함께 돈다고 해 보겠습니다. 게시판에 버그가 생겨 CPU와 메모리를 다 먹으면 나머지 둘도 같이 멈춥니다. 이런 상황을 noisy neighbor(시끄러운 이웃)라고 부릅니다.
+- 게시판 프로세스 묶음에 "CPU 2개, 메모리 512Mi"를 걸어 두면 폭주해도 커널이 그 선에서 막습니다. 옆 서비스는 영향을 덜 받습니다.
+- 이 한도는 프로그램이 지켜 주기를 바라는 권고와 다릅니다. 커널이 할당과 스케줄링 단계에서 직접 강제합니다.
+
+#### 2. 하는 일 세 가지
+| 역할 | 뜻 | 보이는 파일 예 |
+|---|---|---|
+| 제한 | 상한을 넘지 못하게 막음 | `cpu.max`, `memory.max`, `pids.max` |
+| 분배 | 경합할 때 나눠 갖는 비율 | `cpu.weight`, `io.weight` |
+| 정산(accounting) | 누가 얼마나 썼는지 셈 | `cpu.stat`, `memory.current`, `memory.stat` |
+
+#### 3. cgroup v2가 다루는 자원
+커널 문서(Control Group v2)에 있는 컨트롤러는 cpu, cpuset, memory, io, pids, rdma, hugetlb, misc 등입니다. 네트워크 대역폭을 나누는 컨트롤러는 v2에 없습니다. v1에는 패킷에 표시만 붙이는 `net_cls`, `net_prio`가 있었고 v2에서는 eBPF나 tc로 따로 다룹니다. "CPU, 메모리, 디스크 I/O, 네트워크 네 가지"로 외우면 마지막 항목이 틀립니다.
+
+#### 4. CPU와 메모리 비교에 더할 칸
+| 항목 | CPU | 메모리 |
+|---|---|---|
+| 쪼갤 수 있나 | 시간으로 쪼갬(100ms 중 20ms만 쓰게) | 이미 준 페이지는 시간으로 나눌 수 없음 |
+| 되찾는 방법 | 다음 주기까지 실행을 멈춤 | 회수에 실패하면 프로세스 종료뿐 |
+| 집행하는 커널 부분 | 스케줄러의 CFS bandwidth control | 메모리 컨트롤러와 OOM killer |
+| 앱이 정리할 기회 | 계속 살아 있음 | SIGKILL이라 종료 처리(graceful shutdown) 없음 |
+
+> **정리**: cgroup은 제한, 분배, 정산을 합니다. 같은 "한도 초과"라도 CPU는 느려지고 메모리는 죽는다는 차이가 아래 파일 이름과 이벤트에 그대로 남습니다.
+
+</details>
+
 쿠버네티스 문서는 CPU를 압축 가능한(compressible) 자원, 메모리를 압축할 수 없는(incompressible) 자원으로 나눕니다. 한도를 넘었을 때 커널이 하는 일이 둘에서 완전히 다릅니다.
 
 | 항목 | CPU | 메모리 |
@@ -70,6 +102,34 @@ requests와 limits가 다르니 이 파드는 Burstable입니다. 이 글에 나
 CPU 시간은 다음 주기에 다시 주어집니다. 메모리는 이미 할당된 페이지를 프로세스에게서 빼앗을 방법이 회수밖에 없습니다. 회수할 수 없는 익명 메모리로 한도를 채우면 커널에게 남는 선택은 프로세스를 죽이는 것뿐입니다.
 
 ### 1-2. 설정 경로와 집행 경로
+
+<details>
+<summary>기초부터: /sys/fs/cgroup의 파일은 진짜 파일이 아님</summary>
+
+> **핵심 한 줄**: `/sys/fs/cgroup` 아래 파일은 커널과 대화하는 창구입니다. 값을 쓰는 순간 커널 컨트롤러 설정이 바뀌고 읽는 순간 커널이 현재 값을 만들어 돌려줍니다.
+
+#### 1. 어떻게 동작하나
+1. **마운트**: `/sys/fs/cgroup`에는 `cgroup2` 종류의 파일시스템이 마운트됩니다(`stat -fc %T`로 `cgroup2fs`). sysfs 아래 경로에 붙어 있을 뿐 sysfs와는 다른 파일시스템입니다.
+2. **디렉터리 = cgroup**: `mkdir`하면 cgroup 하나가 생기고 그 안에 컨트롤러 파일이 자동으로 나타납니다.
+3. **쓰기 = 설정**: runc는 `memory.max` 파일을 열어 `write()` 시스템 콜로 `178257920` 같은 바이트 수를 씁니다. 이 호출이 커널 경계를 넘어 메모리 컨트롤러 한도를 바꿉니다.
+4. **읽기 = 조회**: `cat memory.current`는 디스크를 읽지 않고 커널이 지금 센 값을 보여 줍니다.
+
+```text
+runc ── write("178257920") ──> /sys/fs/cgroup/.../memory.max ──> 커널 메모리 컨트롤러 한도
+```
+
+#### 2. 시스템 데몬 cgroup에서 흔히 보이는 값
+| 파일 | 예 | 뜻 |
+|---|---|---|
+| `memory.max` | `max` | 한도 없음. 부모 cgroup과 노드 메모리가 실제 상한 |
+| `cpu.max` | `max 100000` | quota 없음, period 100ms(기본값) |
+| `memory.current` | 수십 MiB | 지금 charge된 양. 할당과 회수, GC에 따라 계속 변함 |
+
+kubelet이나 containerd처럼 따로 한도를 걸지 않은 서비스의 cgroup에서는 보통 위처럼 나옵니다.
+
+> **정리**: 파드 스펙의 값은 결국 이 가상 파일 몇 개에 쓰는 숫자가 됩니다. 한 번 쓰고 나면 집행은 커널 몫입니다.
+
+</details>
 
 값이 커널에 들어가는 시점과 커널이 그 값을 집행하는 시점은 따로 있습니다. 둘을 한 화살표로 이으면 OOM 순간에 kubelet이 무언가를 결정한다고 오해하기 쉽습니다.
 
@@ -101,6 +161,27 @@ kubectl apply
 
 ### 2-1. 매핑 한눈에 보기
 
+<details>
+<summary>기초부터: requests는 보장, limits는 상한</summary>
+
+> **핵심 한 줄**: requests는 "적어도 이만큼은 확보해 달라"는 값이고 limits는 "아무리 많아도 여기까지"라는 값입니다. 쓰이는 곳이 달라서 cgroup 파일도 다릅니다.
+
+#### 1. 두 값의 쓰임
+| 구분 | requests | limits |
+|---|---|---|
+| 스케줄러 | 노드 선택에 씀 | 쓰지 않음 |
+| CPU cgroup | `cpu.weight`(경합 시 비율) | `cpu.max`(주기당 상한) |
+| 메모리 cgroup | 기본 설정에서는 없음 | `memory.max`(넘으면 OOM) |
+| 넘었을 때 | 넘는 것 자체는 허용 | CPU는 스로틀링, 메모리는 OOM kill |
+
+#### 2. 헷갈리는 점
+- `requests.memory`가 `memory.min`으로 간다는 표가 있습니다. 이는 `MemoryQoS` 게이트와 `memoryReservationPolicy`를 켰을 때의 이야기이고 기본 설정에서는 어디에도 쓰이지 않습니다(2-5).
+- `limits.cpu`를 아예 빼거나 넉넉히 잡는 운영 방식이 있습니다. CPU가 남을 때 그 여유를 쓰게 해 스로틀링(5장)을 피하려는 선택입니다. 대신 한 파드가 남는 CPU를 독차지할 수 있고 Guaranteed가 되지 않아 QoS가 바뀝니다(6-1). 팀이 어느 쪽을 택할지는 지연 민감도와 노드 공유 정도에 따라 다릅니다.
+
+> **정리**: 보장 쪽(requests)은 스케줄링과 가중치에, 상한 쪽(limits)은 커널이 막는 한도에 쓰입니다.
+
+</details>
+
 | 파드 스펙 | cgroup v2 파일 | `order-api` 값 | 변환 |
 |---|---|---|---|
 | `limits.cpu: 200m` | `cpu.max` | `20000 100000` | quota = 밀리코어 × period / 1000 |
@@ -123,6 +204,37 @@ quota = limits.cpu(밀리코어) × 100000 / 1000
 quota가 period보다 클 수 있다는 점이 중요합니다. limit 2는 100ms 동안 모든 CPU에서 쓴 시간을 합쳐 200ms까지 허용한다는 뜻입니다. 어느 코어에서 실행할지는 정하지 않습니다. kubelet은 quota의 하한을 1000(1ms)으로 두므로 10m보다 작은 limit은 모두 `1000 100000`이 됩니다.
 
 ### 2-3. requests.cpu는 shares를 거쳐 cpu.weight가 된다
+
+<details>
+<summary>기초부터: QoS slice의 cpu.weight가 노드마다 다른 이유</summary>
+
+> **핵심 한 줄**: `kubepods-burstable.slice`의 weight는 그 노드에 놓인 Burstable 파드들의 CPU request 합으로 정해집니다. 그래서 같은 클러스터여도 노드마다 값이 다릅니다.
+
+#### 1. 어떻게 동작하나
+1. **합 구하기**: kubelet이 노드의 Burstable 파드 CPU request를 모두 더합니다.
+2. **shares 계산**: 합(밀리코어) × 1024 / 1000을 slice의 shares로 씁니다.
+3. **다시 계산**: 파드가 들어오거나 나가면 1~2를 다시 합니다.
+
+#### 2. 예: kubeadm 컨트롤 플레인과 워커
+kubeadm 기본 매니페스트의 CPU request로 컨트롤 플레인 노드를 계산하면 이렇습니다.
+
+| 파드 | CPU request |
+|---|---|
+| kube-apiserver | 250m |
+| kube-controller-manager | 200m |
+| kube-scheduler | 100m |
+| etcd | 100m |
+| CoreDNS 2개 | 100m × 2 |
+| 합 | 850m |
+
+모두 request만 있고 limit이 없어서 Burstable입니다. 워커에 request 100m짜리 앱 하나만 있다면 합은 100m입니다. 그래서 컨트롤 플레인의 Burstable slice weight가 워커보다 크게 나옵니다.
+
+#### 3. 헷갈리는 점
+- 이 weight는 경합할 때만 의미가 있습니다. CPU가 남으면 모든 파드가 자기 limit까지 씁니다. 다툴 때 request를 크게 잡은 쪽이 더 큰 몫을 받습니다.
+
+> **정리**: 계층마다 weight가 따로 붙고 QoS slice의 값은 노드 상황에 따라 움직입니다. 값을 비교할 때는 어느 계층의 파일인지부터 확인합니다.
+
+</details>
 
 `cpu.weight`는 1~10000 범위의 상대 가중치이고 기본값은 100입니다. CPU가 남을 때는 아무 의미가 없고 여러 cgroup이 CPU를 두고 다툴 때 나눠 갖는 비율을 정합니다. kubelet은 cgroup v1 시절부터 쓰던 `cpu.shares` 단위로 값을 계산합니다.
 
@@ -158,6 +270,33 @@ kind 실측(v1.37.0, runc 1.4.3)에서는 계층마다 다른 식이 보였습�
 
 ### 2-4. limits.memory는 바이트 단위 memory.max가 된다
 
+<details>
+<summary>기초부터: 바이트 한도를 페이지 수로 바꿔 보기</summary>
+
+> **핵심 한 줄**: 커널은 메모리를 페이지 단위로 나눠 주므로 `memory.max`도 결국 "페이지 몇 장까지"라는 뜻이 됩니다.
+
+#### 1. 계산
+```bash
+getconf PAGESIZE     # x86_64 일반 커널이면 4096
+```
+```text
+512Mi = 536,870,912바이트
+536,870,912 / 4,096 = 131,072페이지
+→ 131,072장까지 charge 가능, 한 장 더 필요해지는 순간 한도에 닿음
+```
+
+#### 2. 한도에 닿은 순간
+1. **회수 먼저**: 그 cgroup의 페이지 캐시처럼 비울 수 있는 페이지를 비워 자리를 만듭니다.
+2. **실패하면 OOM**: 쿠버네티스 노드는 보통 스왑을 끄고 쓰므로 익명 메모리로 가득 찼다면 회수할 것이 없습니다. 그때 cgroup OOM killer가 SIGKILL을 보냅니다(3-2).
+
+#### 3. 헷갈리는 점
+- 한도에 닿았다고 그 즉시 죽지는 않습니다. 회수가 성공하면 그대로 돕니다.
+- 영향 범위는 그 cgroup뿐입니다. 노드에 메모리가 넉넉해도 이 컨테이너만 죽고 옆 파드는 그대로입니다.
+
+> **정리**: `Mi` 단위 한도는 페이지 수로 나누어떨어지고 마지막 한 장을 회수로 못 구하면 OOM이 납니다.
+
+</details>
+
 `Mi`는 1024 기반입니다. 170Mi는 170 × 1,048,576 = 178,257,920바이트이고 `memory.max`에 이 숫자가 그대로 들어갑니다. `M`(1000 기반)으로 쓰면 170M = 170,000,000바이트라서 약 4.86% 작습니다. 한도를 넉넉하게 잡았다고 생각했는데 단위 하나 때문에 8MiB 넘게 모자랄 수 있습니다.
 
 커널은 `memory.max`를 페이지 크기 단위로 다룹니다. x86_64에서 페이지는 4KiB이고 arm64는 커널 설정에 따라 16KiB나 64KiB 페이지를 쓰기도 합니다. Mi 단위 값은 어느 쪽이든 나누어떨어집니다.
@@ -180,6 +319,36 @@ kind 실측(v1.37.0, runc 1.4.3)에서는 계층마다 다른 식이 보였습�
 커널이 실제로 막는 메모리 한도는 `limits.memory`에서 온 `memory.max` 하나입니다.
 
 ### 2-6. systemd 드라이버의 cgroup 경로
+
+<details>
+<summary>기초부터: 파드 cgroup 찾아가기와 system.slice와의 분리</summary>
+
+> **핵심 한 줄**: 노드의 cgroup 트리는 시스템 데몬(`system.slice`)과 파드(`kubepods.slice`)로 크게 갈립니다. 파드 메모리가 부족해도 kubelet 쪽 cgroup은 따로 있어서 함께 무너지지 않습니다.
+
+#### 1. 파드 UID로 디렉터리 찾기
+디렉터리 이름에는 컨테이너 이름 대신 파드 UID가 들어가고 systemd 드라이버에서는 `-`가 `_`로 바뀝니다.
+```bash
+UID_=$(kubectl get pod -n shop order-api -o jsonpath='{.metadata.uid}' | tr '-' '_')
+find /sys/fs/cgroup -type d -name "*pod${UID_}*"
+```
+
+#### 2. 위쪽 구조
+```text
+/sys/fs/cgroup
+├── system.slice      ← containerd, kubelet 같은 시스템 서비스
+├── user.slice        ← 로그인 세션
+└── kubepods.slice    ← 파드 전체(노드 allocatable 한도)
+    ├── kubepods-besteffort.slice
+    ├── kubepods-burstable.slice
+    └── kubepods-pod<uid>.slice   ← Guaranteed 파드
+```
+
+#### 3. Guaranteed만 중간 slice가 없는 이유
+BestEffort와 Burstable은 QoS 계층 slice에 weight와 한도를 걸어 같은 등급끼리 묶어 다룹니다. Guaranteed 파드는 request와 limit이 같아 자기 몫이 이미 정해져 있으니 `kubepods.slice` 바로 아래에 둡니다(kubelet `qos_container_manager_linux.go`는 Burstable과 BestEffort 계층만 만듭니다).
+
+> **정리**: 경로만 보고도 파드의 QoS를 알 수 있고 시스템 데몬과 파드가 다른 가지에 있다는 점이 노드 안정성의 바탕입니다.
+
+</details>
 
 kubelet과 containerd가 systemd cgroup 드라이버를 쓰면 경로가 slice 이름으로 만들어집니다. kubelet은 파드 UID의 `-`를 `_`로 바꿔 slice 이름에 넣습니다(`cgroup_manager_linux.go`).
 
@@ -242,6 +411,26 @@ cgroup v2 노드에서 kubelet은 컨테이너 cgroup에 `memory.oom.group`을 �
 쿠버네티스 문서는 한 가지를 더 적습니다. 컨테이너는 메모리 압박이 감지될 때만 종료되므로 한도를 넘은 순간 바로 죽지 않을 수 있습니다. 회수할 수 있는 캐시가 남아 있으면 커널은 회수로 버팁니다.
 
 ### 3-3. memory.events와 커널 로그
+
+<details>
+<summary>기초부터: dmesg로 OOM 기록 읽기</summary>
+
+> **핵심 한 줄**: `dmesg`는 커널 로그 링 버퍼를 보여 주는 명령입니다. OOM kill은 커널이 하는 일이라 기록도 여기에 남습니다.
+
+#### 1. 옵션
+| 명령 | 뜻 |
+|---|---|
+| `dmesg -T` | 부팅 후 경과 초 대신 사람이 읽는 시각으로 표시. 절전이나 VM 일시 정지가 있었다면 시각이 어긋날 수 있음 |
+| `journalctl -k` | systemd 저널에 저장된 커널 로그. 재부팅 전 기록도 남을 수 있음 |
+
+#### 2. OOM 한 건에서 보는 순서
+1. **`... invoked oom-killer`**: 할당하다 한도에 닿은 프로세스 이름과 그 프로세스의 `oom_score_adj`.
+2. **`constraint=`**: `CONSTRAINT_MEMCG`면 cgroup 한도, `CONSTRAINT_NONE`이면 노드 전체 부족.
+3. **`Killed process ... anon-rss:...`**: 죽은 프로세스와 그 순간의 익명 메모리(힙, 스택) 크기. limit 128Mi 컨테이너라면 `anon-rss`가 한도 근처에 찍힙니다.
+
+> **정리**: 실습 전에 `dmesg -T`가 비어 있는지 보고 OOM 뒤에 다시 보면 새로 생긴 줄만 골라 읽기 쉽습니다.
+
+</details>
 
 `memory.events`의 형식은 이렇습니다(커널 문서 항목 기준 예시).
 
@@ -440,6 +629,38 @@ kubelet은 파드의 requests와 limits로 QoS 클래스를 정하고 `status.qo
 
 ### 6-2. 클래스별 oom_score_adj
 
+<details>
+<summary>기초부터: 노드 OOM의 생존 서열</summary>
+
+> **핵심 한 줄**: `oom_score_adj`가 클수록 노드 OOM에서 먼저 죽습니다. kubelet은 사용자 파드를 위에, 노드 운영에 꼭 필요한 프로세스를 아래에 둡니다.
+
+#### 1. 서열 표
+| 순서 | 대상 | `oom_score_adj` | 근거 |
+|---|---|---|---|
+| 먼저 죽음 | BestEffort 컨테이너 | 1000 | `policy.go` |
+| | Burstable 컨테이너 | 3~999 (request 비율로) | `policy.go` |
+| | Guaranteed 컨테이너 | -997 | `policy.go` |
+| | pause 컨테이너 | -998 | kind 실측(6장 과제) |
+| | kubelet, kube-proxy, containerd | -999 | `policy.go`, `containerd.service` |
+| 후보에서 제외 | 노드 PID 1(systemd) | 보통 0 | `oom_unkillable_task()`가 init을 뺌(6-5) |
+
+#### 2. Burstable 계산 감 잡기
+```text
+oom_score_adj ≈ 1000 - 1000 × (메모리 request / 노드 메모리 용량)
+노드의 50%를 request → 약 500
+노드의 1%를 request  → 약 990
+```
+request를 크게 잡은 파드일수록 점수가 낮아져 뒤로 밀립니다.
+
+#### 3. 헷갈리는 점
+- Burstable 범위를 1~999로 적는 자료가 있습니다. 문서 공식의 하한은 2이고 kubelet 코드는 3으로 올립니다. Guaranteed(-997)보다 늘 위에 두려는 처리입니다.
+- PID 1을 -1000으로 적는 자료도 있습니다. systemd의 값은 보통 0이고 init이라서 커널이 후보에서 아예 뺍니다. 노드 전체 OOM에서 죽일 후보가 하나도 남지 않으면 커널은 `Out of memory and no killable processes...`를 남기고 `System is deadlocked on memory`로 panic합니다(`mm/oom_kill.c`). cgroup OOM에서는 panic하지 않습니다.
+- kubelet이 -1000을 쓰지 않는 이유를 "kubelet이 폭주할 때 마지막에 죽일 수 있게"로 설명하는 글이 있습니다. 설계 문서에는 이 이유가 적혀 있지 않습니다(6-4).
+
+> **정리**: 사용자 파드는 QoS 순서대로, 노드 데몬은 그 아래, init은 아예 후보 밖에 있습니다.
+
+</details>
+
 커널은 OOM 희생자를 고를 때 프로세스마다 badness 점수를 계산합니다. 메모리 사용량 비율을 0~1000으로 환산한 값에 `oom_score_adj`(-1000~+1000)를 더합니다. 결과는 `/proc/<pid>/oom_score`로 보이고 커널 문서상 범위는 0~2000입니다. `oom_score_adj`가 -1000이면 OOM kill 대상에서 완전히 빠집니다.
 
 kubelet은 컨테이너 프로세스에 아래 값을 줍니다(노드 압박 eviction 문서와 `pkg/kubelet/qos/policy.go` 기준).
@@ -495,6 +716,42 @@ kind 실측(노드 메모리 용량 10161128Ki)은 이랬습니다. BestEffort �
 ## 7. 사례: JVM 서비스의 OOMKilled 포스트모템
 
 ### 7-1. 무엇이 일어났나
+
+<details>
+<summary>기초부터: 이 사례를 읽기 전에 알아 둘 배경</summary>
+
+> **핵심 한 줄**: 개발자가 보는 메모리(JVM 힙)와 커널이 세는 메모리(cgroup의 `memory.current`)는 범위가 다릅니다. 이 사례는 그 차이 1.63GB를 끝까지 찾아간 기록입니다.
+
+#### 1. 환경(원문 기준)
+| 항목 | 내용 |
+|---|---|
+| 규모 | 서른 개 남짓한 마이크로서비스 |
+| 언어와 프레임워크 | Scala, Akka |
+| 모니터링 | Prometheus, Grafana, JVM 지표 |
+| 증상 | `rebalance` 서비스가 OOMKilled로 반복 재시작 |
+
+#### 2. 그래프에서 보인 모양
+1. **우상향**: Grafana의 committed heap 그래프가 계속 올라갑니다.
+2. **0으로 뚝**: 어느 순간 0으로 떨어집니다. 컨테이너가 죽고 새로 떠서 힙이 처음부터 다시 잡힌 지점입니다.
+3. **모순**: 떨어지기 직전 힙은 4.37GB로 6GB 한도의 약 73%였고 JVM이 허용한 4.8GB(80%)에도 못 미쳤습니다.
+
+#### 3. 빈칸 1.63GB 나누기
+```text
+6GB - 힙 4.37GB          = 약 1.63GB (힙 밖 어딘가)
+JVM 지표가 보고한 힙 밖  = 1027MB
+남는 사각지대             = 약 600MB
+  그중 원문이 짚은 것: JImage 버퍼 약 153MB, GC 오버헤드 약 100~150MB
+```
+원문은 JImage와 GC로 사각지대 600MB 가운데 250~300MB 정도만 설명하고 나머지를 항목별로 다 나누지는 않았습니다. "사각지대 = JImage + GC"로 정리하면 실제보다 깔끔하게 맞아떨어지는 것처럼 보입니다.
+
+#### 4. 헷갈리는 점
+- "cgroup은 RSS를 감시한다"는 요약이 흔합니다. `memory.max`와 비교되는 값은 `memory.current`이고 여기에는 RSS 밖의 페이지 캐시, 커널 메모리, tmpfs도 들어갑니다(3-1).
+- Akka 버퍼 크기를 "256KB여야 할 것을 2GB로" 같은 식으로 옮긴 요약이 있습니다. 원문의 숫자는 `maximum-frame-size` 28MiB, 버퍼 하나 30,000,000바이트, `buffer-pool-size` 기본 128이고 최악의 경우 약 3.6GB입니다(7-2 표).
+- 교훈은 JVM에만 해당하지 않습니다. 파이썬이든 Go든 앱 안의 지표만으로는 cgroup이 세는 양을 다 알 수 없습니다.
+
+> **정리**: 힙 그래프가 한도 아래에 있어도 OOMKilled는 납니다. 아래 표와 7-4가 그 빈칸을 어떻게 채웠는지 보여 줍니다.
+
+</details>
 
 싱가포르의 자산관리 서비스 Endowus의 엔지니어링 블로그에 Harry Tran이 2023-12-14에 올린 "Understanding and Resolving OOMKilled errors in JVM microservices"는 이 글의 3장을 실제 장애로 보여 줍니다. 아래 숫자는 모두 원문에서 가져왔습니다.
 

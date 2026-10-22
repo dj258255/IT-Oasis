@@ -42,6 +42,61 @@ seriesOrder: 1
 
 ## 1. 유저 공간, 커널 공간, 그리고 386개의 입구
 
+<details>
+<summary>기초부터: 커널 안에 무엇이 있고 왜 공간을 나누나</summary>
+
+> **핵심 한 줄**: 쿠버네티스 구성요소는 전부 유저 공간 프로그램이고 실제 일은 시스템 콜을 받은 커널이 합니다. 쿠버네티스가 지시하고 커널이 집행합니다.
+
+#### 1. 쿠버네티스 개념의 리눅스 쪽 실체
+
+| 쿠버네티스에서 부르는 이름 | 리눅스에서의 실체 |
+|---|---|
+| kubelet | systemd가 띄우는 평범한 데몬 프로세스 |
+| Pod | 네임스페이스와 cgroup으로 둘러싼 프로세스 묶음 |
+| Service 라우팅 | 커널 netfilter(iptables, nftables) 규칙이나 eBPF 프로그램 |
+
+#### 2. 두 공간과 사는 것
+
+| 공간 | 사는 것 |
+|---|---|
+| 유저 공간 | kubelet, containerd, nginx, 직접 만든 게시판 API |
+| 커널 공간 | 프로세스 스케줄러, 메모리 관리, VFS와 파일시스템, 네트워크 스택, IPC, 보안(LSM, seccomp), 블록 레이어와 장치 모델, 네임스페이스, cgroup |
+
+경계를 넘는 정해진 문이 시스템 콜입니다.
+
+#### 3. 왜 나누나
+
+1. **보안**: 유저 프로그램이 하드웨어를 직접 만지면 다른 프로세스의 메모리를 읽거나 디스크를 망가뜨릴 수 있습니다. 커널이 허락한 일만 대신 해 줍니다.
+2. **안정성**: nginx가 죽으면 nginx만 끝나지만 커널이 죽으면(커널 패닉) 그 노드 전체가 멈춥니다. 쿠버네티스에서 이것은 노드가 NotReady로 보이고 일정 시간 뒤 Pod가 축출되는 장애입니다. 컨트롤 플레인은 사람이 하는 cordon을 걸지 않고 node lifecycle 컨트롤러가 `unreachable` taint를 붙입니다. 시간표는 7장에 있습니다.
+
+#### 4. 커널의 기본 기능과 쿠버네티스의 연결
+
+| 커널 기능 | 하는 일 | 쿠버네티스에서 이어지는 곳 |
+|---|---|---|
+| 프로세스 스케줄러 | CPU 시간을 잘게 나눠 여러 프로세스에 배분 | `requests.cpu`(비중), `limits.cpu`(상한), 8장 |
+| 메모리 관리 | RAM 할당과 회수, 모자라면 OOM killer | `limits.memory`, OOMKilled, [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos) |
+| VFS | ext4, overlay, proc 같은 서로 다른 파일시스템을 같은 `open`, `read`로 쓰게 함 | 4장 |
+| 네트워크 스택 | 소켓 → TCP/UDP → IP → 장치 순으로 패킷 처리 | Pod 통신과 Service, 5장 |
+| IPC | 공유 메모리, 세마포어처럼 같은 서버 안 프로세스끼리 네트워크 없이 주고받는 방법 | 같은 Pod의 컨테이너는 IPC 네임스페이스를 공유하고 다른 Pod와는 격리 |
+| LSM, seccomp | 자원 접근 검사와 시스템 콜 필터 | `securityContext`, 6장 |
+| 블록 레이어 | 디스크 입출력 요청을 모으고 순서를 정함 | CSI 드라이버가 블록 장치를 붙여 PV로 마운트할 때의 아래층 |
+| 장치 모델 | GPU 같은 장치를 커널 객체로 관리하고 sysfs로 노출 | 장치 플러그인, DRA(Dynamic Resource Allocation)로 Pod에 장치 할당 |
+| 네임스페이스, cgroup | 보이는 범위 격리와 사용량 제한 | 컨테이너 그 자체, [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)과 3편 |
+
+#### 5. 이 글이 답하는 다섯 질문
+
+| 질문 | 답이 있는 곳 |
+|---|---|
+| 커널은 메모리와 자원을 왜, 어떻게 나누나 | 이 토글 3번, 4장, 3편 |
+| 유저 프로그램은 커널에 어떻게 부탁하나 | 1장(시스템 콜) |
+| 쿠버네티스 구성요소는 커널 위에서 어떻게 도나 | 2장 |
+| 컨테이너가 돌려면 커널에 무엇이 준비돼야 하나 | 3장, 5장 |
+| `/proc`은 디스크에 없는데 왜 파일로 보이나 | 4장 |
+
+> **정리**: 유저 공간의 구성요소가 시스템 콜로 부탁하면 커널의 각 기능이 그 일을 맡습니다. 아래 본문은 그 문(시스템 콜)부터 봅니다.
+
+</details>
+
 ### 1-1. 두 공간을 가르는 것은 CPU 권한 수준
 
 리눅스에서 프로세스는 유저 모드로 실행됩니다. 유저 모드 코드는 하드웨어 장치, 페이지 테이블, 다른 프로세스의 메모리를 직접 건드릴 수 없습니다. 이런 일은 커널 모드에서 도는 커널 코드만 할 수 있습니다. x86_64에서는 이 구분이 CPU의 권한 링(ring 3과 ring 0)으로 구현됩니다.
@@ -168,6 +223,43 @@ kind 워커(containerd 2.3.4, runc 1.4.3)에서 두 과제를 돌린 실측입�
 
 ## 3. 커널 빌트인과 모듈: overlay와 br_netfilter
 
+<details>
+<summary>기초부터: 코어와 모듈을 명령으로 구분하기</summary>
+
+> **핵심 한 줄**: 코어(빌트인)는 커널 이미지와 한 몸이라 붙였다 뗄 수 없고 모듈은 필요할 때 메모리에 올리는 확장 부품입니다.
+
+#### 1. 두 형태 비교
+
+| 구분 | 코어(빌트인) | 모듈 |
+|---|---|---|
+| 들어가는 때 | 커널을 빌드할 때 이미지 안에 | 부팅 뒤 필요할 때 `.ko` 파일을 적재 |
+| `modprobe`, `rmmod` | 해당 없음 | 올리고 내릴 수 있음(참조 카운트가 0일 때만 내림) |
+| 예 | 네임스페이스, cgroup | overlay, br_netfilter(대부분의 배포판) |
+
+#### 2. 확인하는 명령
+
+1. **`lsmod | grep cgroup`**: 아무것도 나오지 않습니다. cgroup은 코어라서 모듈 목록에 없습니다.
+2. **`mount | grep cgroup`**: cgroup v2가 `/sys/fs/cgroup`에 `cgroup2` 타입으로 마운트된 것이 보입니다. 코어 기능도 VFS를 통해 파일로 드러납니다.
+3. **`lsmod | grep overlay`**: 줄이 나오면 모듈로 올라와 있는 것입니다.
+4. **`modinfo overlay`**: `filename` 줄에 디스크에 있는 원본 모듈 파일 경로가 나옵니다.
+5. **`sudo modprobe overlay`**: 이미 올라와 있어도 오류 없이 끝납니다. 몇 번 실행해도 결과가 같아서(멱등) 설치 스크립트에 넣기 좋습니다.
+
+#### 3. 옛 설치 체크리스트와 지금
+
+인터넷의 설치 글에는 아래 다섯 줄이 노드 필수 조건으로 자주 나옵니다.
+
+| 항목 | 옛 체크리스트의 값 | 지금 기준 |
+|---|---|---|
+| overlay 모듈 | `lsmod`에 있음 | 첫 overlay 마운트 때 자동 적재되는 경우가 많음(3-3절) |
+| br_netfilter 모듈 | `lsmod`에 있음 | 브리지형 CNI에서 필요(5-3절) |
+| `net.ipv4.ip_forward` | 1 | Container Runtimes 문서의 유일한 필수 설정(5-1절) |
+| `net.bridge.bridge-nf-call-iptables` | 1 | br_netfilter가 있어야 파일이 생김, 브리지형 CNI에서 필요 |
+| `net.bridge.bridge-nf-call-ip6tables` | 1 | 위와 같고 IPv6용 |
+
+> **정리**: 코어인지 모듈인지는 `lsmod` 하나로 판단하지 않고 `/proc/filesystems`와 `modules.builtin`까지 봅니다. 아래 본문에서 그 근거를 봅니다.
+
+</details>
+
 ### 3-1. 빌트인과 모듈의 차이
 
 커널 기능은 커널 이미지에 처음부터 들어간 빌트인과 필요할 때 적재하는 모듈(`.ko` 파일)로 나뉩니다. 어느 쪽으로 빌드할지는 배포판이 커널 설정(`CONFIG_...=y` 또는 `=m`)으로 정합니다.
@@ -209,6 +301,44 @@ br_netfilter는 이런 자동 경로가 없습니다. 적재되기 전에는 `/p
 colima VM 실측에서 `/proc/filesystems`에는 `nodev overlay`가 있었고 `modules.builtin`에는 overlay도 br_netfilter도 없었습니다. 두 기능 모두 모듈이고 br_netfilter는 적재되지 않은 상태였습니다. 그래서 `/proc/sys/net/bridge` 디렉터리도 없었습니다. 그 상태에서도 kind의 kindnet(ptp 플러그인, 라우팅형)으로 Service와 NetworkPolicy가 정상 동작했습니다.
 
 ## 4. VFS와 디스크에 없는 파일들
+
+<details>
+<summary>기초부터: 장착한 RAM, MemTotal, 그리고 Mi와 M</summary>
+
+> **핵심 한 줄**: `/proc` 파일은 읽는 순간 커널이 RAM 속 자료구조를 글자로 만들어 주는 창이라 디스크 블록을 쓰지 않습니다.
+
+#### 1. 경로 비교
+
+```text
+일반 파일: read → VFS → ext4 → 블록 레이어 → 디스크
+/proc 파일: read → VFS → procfs → 커널 자료구조를 그 자리에서 텍스트로
+```
+
+`du -sh /etc`는 실제 크기(수 MB)가 나오고 `du -sh /proc`은 0에 가깝습니다.
+
+#### 2. 장착한 RAM과 MemTotal 비교하기
+
+1. **장착량**: `sudo dmidecode -t memory | grep -i size`로 메인보드가 보고하는 메모리 모듈 크기를 봅니다. 가상 머신에서는 하이퍼바이저가 흉내 낸 값입니다.
+2. **커널이 쓸 수 있는 양**: `grep MemTotal /proc/meminfo`를 봅니다.
+3. **차이**: MemTotal이 조금 작습니다. 펌웨어 예약 영역, kdump용 영역, 커널 코드가 빠지기 때문입니다(4-4절). 객실 100개짜리 호텔에서 직원용 몇 칸은 손님에게 내주지 않는 것과 비슷합니다.
+
+#### 3. Mi와 M
+
+| 표기 | 바이트 | 관계 |
+|---|---|---|
+| `1M`(메가바이트) | 1,000,000 | 십진 단위 |
+| `1Mi`(메비바이트) | 1,048,576 | 이진 단위. M보다 약 4.9% 큼 |
+
+쿠버네티스는 두 표기를 모두 받고 서로 다른 값으로 계산합니다. `512M`과 `512Mi`는 약 24MiB 차이가 나므로 메모리 limit은 한 가지 표기로 통일해 두는 편이 읽기 쉽습니다.
+
+#### 4. 헷갈리는 점
+
+- `MemFree`가 작아도 정상입니다. 남는 메모리를 페이지 캐시로 쓰기 때문입니다.
+- kubelet의 축출 판단은 `MemAvailable`을 그대로 쓰지 않습니다. 계산식은 4-5절에 있습니다.
+
+> **정리**: `/proc`과 `/sys`는 커널이 내용을 만들어 주는 파일이고 그 숫자를 읽을 때는 정의를 함께 봐야 합니다.
+
+</details>
 
 ### 4-1. VFS 위에 붙은 가상 파일시스템
 
@@ -282,6 +412,45 @@ colima VM(arm64) 실측입니다. 세 마운트는 `proc`, `sysfs`, `cgroup2`(`s
 - `grep -E 'MemTotal|MemFree|MemAvailable' /proc/meminfo`를 기록합니다. 같은 시각에 `kubectl get --raw "/api/v1/nodes/<노드>/proxy/stats/summary"`의 `node.memory.workingSetBytes`로 `memory.available`을 직접 계산해 둘을 비교합니다.
 
 ## 5. 노드를 준비할 때 만지는 커널 설정
+
+<details>
+<summary>기초부터: 패킷이 Pod에서 Pod로 가는 길과 Service IP</summary>
+
+> **핵심 한 줄**: 쿠버네티스에는 자체 패킷 엔진이 없습니다. Pod 통신은 커널 네트워크 스택을 그대로 타고 Service는 그 길 중간의 netfilter가 목적지 주소를 바꿔서 만듭니다.
+
+#### 1. 기본 경로
+
+```text
+앱이 소켓에 쓰기 → 커널 진입 → 전송 계층(TCP/UDP) → 네트워크 계층(IP, 다음 경로 결정) → 장치 → 네트워크
+```
+
+Pod끼리 Pod IP로 통신하면 이 길을 그대로 탑니다.
+
+#### 2. Service IP로 보낼 때
+
+1. **가상 주소**: iptables나 nftables 모드에서 ClusterIP(예: `10.96.0.10`)는 어떤 인터페이스에도 붙어 있지 않아 `ip addr`로 찾아도 나오지 않습니다. 커널의 netfilter 규칙에만 있습니다. IPVS 모드는 `kube-ipvs0` 더미 인터페이스에 주소를 붙이므로 예외입니다.
+2. **규칙 쓰기**: kube-proxy가 API 서버에서 Service와 EndpointSlice를 watch해 규칙을 써 둡니다.
+3. **주소 바꾸기(DNAT)**: 패킷이 netfilter를 지날 때 목적지를 실제 Pod IP(예: `10.244.2.2`나 `10.244.1.5` 중 하나)로 바꿉니다. 엔드포인트가 여럿이면 여기서 나뉩니다.
+4. **전달**: 바뀐 주소로 라우팅 테이블을 찾아 같은 노드면 그 Pod의 veth로, 다른 노드면 CNI가 정한 경로(직접 라우팅이나 VXLAN 같은 터널)로 보냅니다.
+
+netfilter는 주소를 바꾸기만 하고 패킷을 옮기는 일은 라우팅과 장치가 합니다.
+
+#### 3. ip_forward가 0이면 무엇이 끊기나
+
+| 통신 | `ip_forward = 0` | `ip_forward = 1` |
+|---|---|---|
+| 같은 노드의 Pod끼리 | 브리지형 CNI처럼 L2로 바로 닿는 구조라면 통신됨 | 통신됨 |
+| 다른 노드의 Pod로 | 노드가 자기 주소가 아닌 패킷을 버려 끊김 | 라우팅 테이블을 보고 넘겨줌. 노드가 라우터가 됨 |
+
+커널은 Pod를 모르므로 Pod 패킷은 "남의 주소로 가는 패킷"일 뿐입니다. 어느 대역을 어디로 넘길지는 CNI가 라우팅 테이블에 미리 적어 둡니다.
+
+#### 4. 헷갈리는 점
+
+- br_netfilter가 없어도 Service로 가는 요청은 netfilter를 지납니다. 다른 서브넷으로 가는 패킷은 노드의 L3를 거치므로 DNAT가 걸립니다. 문제가 되는 것은 같은 브리지 안에서 돌아오는 응답이 netfilter를 건너뛰는 경우이고 5-2절에서 다룹니다.
+
+> **정리**: Pod 통신은 커널 네트워크 스택, Service는 netfilter의 주소 변환, 노드 사이 전달은 `ip_forward`와 라우팅이 맡습니다.
+
+</details>
 
 ### 5-1. 필수로 남은 것은 ip_forward 하나
 
@@ -374,6 +543,41 @@ kind 워커 실측입니다. `net.ipv4.ip_forward = 1`이었고 `net.bridge.brid
 
 ## 6. 보안 경계: seccomp와 LSM
 
+<details>
+<summary>기초부터: 시스템 콜과 컨테이너 탈출</summary>
+
+> **핵심 한 줄**: 컨테이너는 호스트와 커널을 함께 쓰므로 컨테이너가 부를 수 있는 시스템 콜의 범위가 곧 공격면입니다.
+
+#### 1. 시스템 콜 몇 개
+
+| 시스템 콜 | 하고 싶은 일 |
+|---|---|
+| `open`, `openat` | 파일 열기 |
+| `sendto` | 소켓으로 데이터 보내기 |
+| `clone` | 새 프로세스(또는 스레드) 만들기 |
+| `unshare` | 새 네임스페이스로 떨어져 나가기(컨테이너 격리의 핵심) |
+
+#### 2. 컨테이너 탈출은 어떻게 일어나나
+
+1. **침투**: 공격자가 게시판 웹 서버의 취약점으로 컨테이너 안에서 코드를 실행합니다.
+2. **권한 넓히기**: 커널 모듈 적재나 권한 상승에 쓰이는 시스템 콜, 커널 버그를 노리는 호출을 시도합니다.
+3. **탈출**: 성공하면 Pod 하나를 넘어 같은 커널을 쓰는 노드 전체를 쥐게 됩니다. 이것을 컨테이너 탈출(container escape, breakout)이라고 합니다.
+
+```text
+앱 취약점 → 컨테이너 안 코드 실행 → 위험한 시스템 콜 → 커널 → 노드 전체
+                                     ▲ seccomp가 여기서 막음
+```
+
+#### 3. 막는 층
+
+- seccomp는 2번 단계의 입구에서 호출 자체를 거릅니다.
+- LSM(AppArmor, SELinux)은 호출이 통과한 뒤 커널 객체에 접근하는 순간을 거릅니다.
+- `securityContext`에서 둘 다 지정하고 non-root 실행, 권한 상승 차단(`allowPrivilegeEscalation: false`)도 함께 겁니다. 이 조합은 CKS 시험의 주요 주제입니다.
+
+> **정리**: 시스템 콜은 유저 프로그램이 커널에 닿는 유일한 문이라서 컨테이너 보안도 그 문에서 시작합니다.
+
+</details>
+
 ### 6-1. seccomp는 시스템 콜 입구의 필터
 
 컨테이너 안의 프로세스도 결국 같은 커널에 시스템 콜을 부릅니다. 그래서 컨테이너 보안의 첫 경계는 "어떤 시스템 콜을 부를 수 있는가"입니다. seccomp(secure computing mode)는 프로세스에 BPF 필터를 붙여 시스템 콜 번호와 인자를 보고 허용, 거부(`EPERM` 등), 프로세스 종료를 정하는 커널 기능입니다. 1장의 시스템 콜 번호가 바로 이 필터의 입력입니다.
@@ -453,6 +657,29 @@ kubelet이 살아 있는데 노드가 준비되지 않은 경우(예: 런타임 
 kind v1.37.0 실측입니다. `docker stop`을 시작하고 약 47초 뒤 Ready 조건이 `Unknown`(Reason `NodeStatusUnknown`, Message `Kubelet stopped posting node status.`)으로 바뀌었습니다. 기본값 50초와 맞는 범위입니다. taint는 `node.kubernetes.io/unreachable:NoExecute`와 `node.kubernetes.io/unreachable:NoSchedule` 두 개가 붙었습니다. Deployment 파드의 tolerations에는 `not-ready`와 `unreachable` 두 키가 `tolerationSeconds: 300`으로 들어 있었습니다. 300초 축출과 `tolerationSeconds: 30` 비교는 기다리지 않고 노드를 다시 켰습니다.
 
 ## 8. CPU 스케줄러: EEVDF와 cpu.max
+
+<details>
+<summary>기초부터: CPU request와 limit은 스케줄러에 주는 지시서</summary>
+
+> **핵심 한 줄**: 프로세스 100개가 CPU 2개를 나눠 쓸 수 있는 것은 스케줄러가 CPU 시간을 잘게 쪼개 차례로 나눠 주기 때문이고 YAML의 CPU 값은 그 배분 규칙입니다.
+
+#### 1. 두 값 비교
+
+| YAML | cgroup v2 파일 | 커널이 하는 일 |
+|---|---|---|
+| `requests.cpu: 500m` | `cpu.weight` | 경합할 때 나눠 받는 비중. CPU가 남으면 500m을 넘겨 쓸 수 있음 |
+| `limits.cpu: 1000m` | `cpu.max` | 경합과 상관없는 절대 상한. CPU가 남아돌아도 1코어 넘게 못 씀. 넘으면 스로틀 |
+
+`m`은 밀리코어이고 1코어가 1000m입니다. 500m은 "경합 때 1코어의 절반쯤 몫"으로 읽습니다.
+
+#### 2. 헷갈리는 점
+
+- request는 경합 때의 비중이라서 CPU에 여유가 있을 때는 사용량을 묶지 않습니다. 사용량을 묶는 것은 limit뿐입니다.
+- 6.6부터 실행 순서를 고르는 정책이 EEVDF로 바뀌었어도 두 파일의 의미는 같습니다.
+
+> **정리**: `cpu.weight`는 몫, `cpu.max`는 상한입니다. 아래 본문은 이 두 값이 어느 커널 기능에 걸리는지 봅니다.
+
+</details>
 
 ### 8-1. 6.6에서 바뀐 것은 실행 순서를 고르는 정책
 
