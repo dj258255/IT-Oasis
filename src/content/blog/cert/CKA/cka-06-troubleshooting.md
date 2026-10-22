@@ -700,7 +700,7 @@ kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' |
 | 표준 출력(stdout) | 일반 출력 | 화면에 찍힌다 | 볼 화면이 없어 런타임이 받아 파일에 적는다 |
 | 표준 오류(stderr) | 오류 출력 | 화면에 찍힌다 | 마찬가지 |
 
-Docker의 `docker logs <ID>`(`-f`로 계속 따라가기)가 이 파일을 읽는 명령이고 쿠버네티스의 `kubectl logs`가 같은 역할입니다.
+Docker의 `docker logs <ID>`(`-f`로 계속 따라가기)가 이 파일을 읽는 명령이고 쿠버네티스의 `kubectl logs`가 같은 역할입니다. `docker run -d`로 백그라운드에서 띄운 컨테이너는 출력이 터미널에 나오지 않으므로 이 명령으로 봅니다.
 
 #### 2. kubectl logs가 로그를 가져오는 길
 

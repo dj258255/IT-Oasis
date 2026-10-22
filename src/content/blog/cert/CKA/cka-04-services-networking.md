@@ -142,6 +142,20 @@ ip -n blue link set veth-blue up
 
 커널 쪽 구조는 [쿠버네티스 아래의 리눅스 2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에 더 자세히 있습니다.
 
+#### 4. 실전에서 방 안으로 들어가 보기
+
+컨테이너 런타임이 만든 네임스페이스는 `ip netns` 목록에 이름으로 나오지 않는 경우가 많습니다. 이럴 때는 컨테이너 프로세스의 PID로 그 네트워크 네임스페이스에 들어갑니다.
+
+1. **PID 찾기**: 노드에서 `crictl ps`로 컨테이너 ID를 찾고 `crictl inspect <컨테이너 ID>` 출력의 `pid` 값을 봅니다.
+2. **들어가서 보기**: `nsenter -t <PID> -n ip addr`, `nsenter -t <PID> -n ip route`처럼 `-n`(네트워크 네임스페이스만)을 주면 노드에 있는 `ip`, `ss`, `tcpdump`를 Pod의 네트워크 시점으로 실행합니다. 이미지에 도구가 없어도 됩니다.
+3. **바깥에서 보기**: 노드에서 `ip link`로 veth 끝이 브리지(또는 CNI 인터페이스)에 붙어 있는지, `iptables -t nat -L -n`으로 NAT 규칙이 있는지 봅니다.
+
+| 볼 것 | 정상이면 |
+|---|---|
+| Pod 안 `ip addr` | `eth0`이 UP이고 Pod 대역 IP가 있다 |
+| Pod 안 `ip route` | `default via <게이트웨이>` 줄이 있다 |
+| 노드 `sysctl net.ipv4.ip_forward` | 1 |
+
 > **정리**: 방(네임스페이스)을 케이블(veth)로 스위치(브리지)에 꽂고 바깥과는 NAT로 주소를 바꿔 통신합니다. Docker와 CNI 플러그인이 하는 일이 이 다섯 단계입니다.
 
 </details>
@@ -243,6 +257,8 @@ Pod A → 노드1 [안: 10.244.1.2→10.244.2.2 | 겉: 192.168.1.11→192.168.1.
 |---|---|
 | 2단계(Pod 연결) | 런타임이 Pod를 만들 때마다 부르는 CNI 플러그인 |
 | 1단계와 3단계(대역 나누기, 경로나 터널 유지) | 플러그인이 DaemonSet으로 띄운 에이전트 |
+
+노드 사이 Pod 통신만 안 되면 이 에이전트부터 봅니다. `kubectl -n kube-system get pod -o wide`로 문제 노드의 에이전트 Pod가 Running인지 확인하고 `kubectl -n kube-system logs <에이전트 Pod>`로 경로나 터널을 만들다 실패한 기록을 읽습니다. 플러그인에 따라 에이전트가 다른 네임스페이스(예: `kube-flannel`)에 있으니 `-A`로 찾습니다.
 
 > **정리**: 노드별 대역, Pod 연결, 노드 간 경로 세 가지를 갖추면 Pod 네트워크 규칙이 맞춰집니다. Pod는 수없이 생기고 사라지니 사람이 할 수 없고 그 호출 방식이 1-4절의 CNI입니다.
 
@@ -349,6 +365,8 @@ kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으�
 | `/etc/cni/net.d`의 설정을 읽어 어떤 플러그인을 쓸지 정한다 | 경로와 필요한 규칙을 설정한다 |
 | Pod 생성 때 `ADD`, 삭제 때 `DEL`로 플러그인을 실행한다 | 결과(받은 IP 등)를 정해진 JSON 형식으로 돌려준다 |
 
+플러그인은 두 부류입니다. CNI 프로젝트가 함께 배포하는 기본 플러그인(인터페이스용 `bridge`, `ptp`, `macvlan`, `ipvlan`, `vlan`, `host-device`, `loopback`과 IPAM용 `host-local`, `dhcp`, `static`)은 한 노드 안의 연결만 만듭니다. Calico, Cilium, Flannel 같은 서드파티 솔루션은 여기에 노드 간 경로, 터널, NetworkPolicy 집행을 더하고 노드의 `/opt/cni/bin`에 자기 실행 파일을 설치합니다.
+
 #### 3. Pod 하나가 만들어질 때의 순서
 
 1. **배정**: 스케줄러가 Pod를 노드에 배정합니다.
@@ -395,6 +413,7 @@ bridge 플러그인 설정은 대략 이런 모양입니다(값은 예시).
 #### 5. 헷갈리는 점 / 실전에서 보이는 모습
 
 - 3~5단계 중 하나라도 실패하면 Pod는 `ContainerCreating`에 머물고 이벤트에 `FailedCreatePodSandBox`가 남습니다. 아래 표의 두 상황이 이 단계의 실패입니다.
+- 노드에서 확인하는 순서는 넷입니다. ① `ls /etc/cni/net.d`로 설정 파일이 있는지(비어 있으면 CNI 플러그인을 아직 설치하지 않은 것), ② 파일이 여럿이면 이름 순으로 맨 앞 파일이 의도한 것인지, ③ 그 파일의 JSON 문법(괄호, 쉼표)과 `"type"` 값, ④ `ls /opt/cni/bin`에 그 `type`과 같은 이름의 실행 파일이 있는지입니다. JSON이 깨진 파일은 런타임이 불러오지 못하므로 단서가 `journalctl -u containerd`에 남습니다.
 - Docker Engine의 네트워크는 자체 모델(CNM)로 만들어져 CNI 규약을 따르지 않습니다. 그래서 dockershim 시절에는 kubelet이 CNI를 대신 불렀고 지금은 CNI를 직접 지원하는 런타임이 부릅니다.
 
 > **정리**: kubelet은 런타임을 부르고 런타임은 `/etc/cni/net.d`의 첫 설정과 `/opt/cni/bin`의 실행 파일로 플러그인을 부릅니다. 이 두 경로가 CNI 장애를 볼 때 가장 먼저 열 곳입니다.
@@ -975,6 +994,7 @@ Ingress의 표준 필드는 HTTP 요청을 호스트와 경로로 나누는 것�
 
 #### 5. 헷갈리는 점
 
+- GatewayClass는 클러스터에 여러 개 둘 수 있습니다. 바깥 공개용과 내부용 프록시를 서로 다른 구현체로 함께 돌리고 Gateway의 `gatewayClassName`으로 어느 쪽에 맡길지 고릅니다.
 - kubernetes.io 문서가 stable로 꼽는 종류는 GatewayClass, Gateway, HTTPRoute, GRPCRoute 넷입니다. TCP, UDP, TLS 트래픽용 Route도 프로젝트에 있지만 이 목록에 없으니 쓰려면 설치한 CRD 채널과 구현체의 지원 여부를 확인합니다.
 
 > **정리**: 클래스는 누가 구현하나, Gateway는 어디로 들어오나, Route는 어디로 보내나를 맡습니다. CRD와 컨트롤러가 없으면 객체만 저장되고 아무 일도 일어나지 않습니다.
@@ -1269,7 +1289,7 @@ Ingress 문서는 첫머리에 Ingress 대신 Gateway를 권하고 Ingress API�
 
 | 부품 | 정체 | 누가 설치하나 |
 |---|---|---|
-| **Ingress 컨트롤러** | 실제로 요청을 받는 프록시와 그 설정을 갱신하는 컨트롤러. 보통 Deployment나 DaemonSet, 바깥에서 들어오게 하는 NodePort나 LoadBalancer Service, API를 watch할 RBAC 권한으로 구성 | 관리자. 쿠버네티스 기본 설치에 들어 있지 않다 |
+| **Ingress 컨트롤러** | 실제로 요청을 받는 프록시와 그 설정을 갱신하는 컨트롤러. 보통 Deployment나 DaemonSet, 프록시 설정을 담는 ConfigMap(구현체에 따라), 바깥에서 들어오게 하는 NodePort나 LoadBalancer Service, API를 watch할 ServiceAccount와 RBAC 권한으로 구성 | 관리자. 쿠버네티스 기본 설치에 들어 있지 않다 |
 | **Ingress 리소스** | "이 호스트, 이 경로는 이 Service로"라는 규칙 | 앱 담당자 |
 
 #### 3. 어떻게 동작하나
@@ -1489,6 +1509,16 @@ curl payment → nsswitch(hosts: files dns)
 ```
 
 같은 네임스페이스의 Service를 이름만으로 부를 수 있는 이유가 search 줄입니다. Pod 이름은 이 방식으로 풀리지 않습니다(6-2절).
+
+2단계의 `hostAliases`는 특정 Pod 하나만 다른 주소로 보내 시험할 때 씁니다. Pod 안의 `/etc/hosts`는 kubelet이 관리해서 직접 고친 줄은 컨테이너가 다시 만들어질 때 사라질 수 있으므로 스펙에 적습니다.
+
+```yaml
+spec:
+  hostAliases:
+  - ip: "10.0.0.99"          # 시험용 결제 DB 주소
+    hostnames:
+    - "payment-db.internal"
+```
 
 #### 3. 레코드 종류
 

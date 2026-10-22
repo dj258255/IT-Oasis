@@ -644,6 +644,7 @@ htpasswd 인증 `registry:2`로 확인한 Events 문구는 Secret이 없으면 `
 | Docker 옵션 | securityContext |
 |---|---|
 | `docker run --user 1000` | `runAsUser: 1000` |
+| Dockerfile의 `USER 1000` | 이미지 기본 UID. `runAsUser`를 적으면 Pod 값이 이김 |
 | `--cap-add NET_ADMIN` | `capabilities.add: ["NET_ADMIN"]` |
 | `--privileged` | `privileged: true` |
 
@@ -906,7 +907,21 @@ resizePolicy:
 #### 5. 한계
 
 - CPU와 메모리만 바꿀 수 있고 QoS 클래스가 달라지는 변경은 거절됩니다.
+- 대상 컨테이너에도 제한이 있습니다. 일반 init 컨테이너와 임시(ephemeral) 컨테이너는 바꿀 수 없고 사이드카(`restartPolicy: Always`인 init 컨테이너)는 바꿀 수 있습니다. Windows Pod는 지원하지 않습니다(1.37 문서의 Limitations 절).
+- 한 번 적은 request와 limit을 아예 지우는 변경도 받지 않습니다. 다른 값으로 바꾸는 것만 됩니다.
 - 메모리 limit을 줄이면 kubelet이 현재 사용량이 새 limit보다 큰지 best-effort로 확인하고 크면 resize를 미뤄 둡니다. 확인한 직후 사용량이 튀는 것까지는 막지 못합니다.
+
+#### 6. HPA와 VPA 고르기
+
+| 구분 | HPA | VPA |
+|---|---|---|
+| 바꾸는 것 | Pod 개수 | Pod 하나의 requests와 limits |
+| 기존 Pod | 그대로 두고 새 Pod를 더함 | `Recreate`면 축출 뒤 다시 만듦. `InPlace` 계열이면 제자리 resize |
+| 갑작스러운 부하 | 복제본을 늘려 바로 나눔 | 새 값으로 다시 뜨는 시간만큼 늦음 |
+| 잘 맞는 워크로드 | 복제본을 늘리기 쉬운 무상태 웹, API | 복제본을 늘리기 어렵거나 Pod 하나의 크기를 맞춰야 하는 워크로드 |
+
+- 같은 Deployment에 HPA와 VPA를 둘 다 CPU나 메모리 기준으로 걸면 VPA가 requests를 바꿀 때마다 HPA 사용률의 분모가 달라집니다. kubernetes/autoscaler 저장소의 VPA README는 이 조합을 권하지 않고 함께 쓸 때는 HPA를 사용자 정의 메트릭이나 외부 메트릭 기준으로 두라고 적습니다.
+- 권장값은 `kubectl describe vpa`의 `Target`(권장), `Lower Bound`(하한), `Upper Bound`(상한)로 봅니다.
 
 > **정리**: Recommender가 계산하고 Updater와 Admission Controller가 반영합니다. in-place resize가 GA가 되면서 Pod를 다시 만들지 않고 반영하는 길이 생겼습니다.
 
@@ -1651,6 +1666,8 @@ spec:
 | `PreferNoSchedule` | 스케줄러 | 되도록 피함 | 건드리지 않음 |
 | `NoExecute` | 스케줄러 + kube-controller-manager의 테인트 축출 컨트롤러 | 배치 안 함 | 톨러레이션 없는 Pod를 내보냄 |
 
+`kubectl taint`로 건 값은 Node 객체의 `spec.taints`에 `key`, `value`, `effect` 세 필드로 저장됩니다. Pod의 `spec.tolerations` 항목은 이 세 값과 `operator`로 맞춰 봅니다. 노드는 클러스터 자원이라 YAML을 고치기보다 `kubectl taint` 명령으로 거는 것이 보통입니다.
+
 ```text
 테인트   : 노드 ──X──> 톨러레이션 없는 Pod   (밀어냄)
 어피니티 : Pod  ────> 라벨이 맞는 노드       (끌어당김)
@@ -1741,6 +1758,8 @@ systemd → kubelet → /etc/kubernetes/manifests/*.yaml
 
 - **mirror Pod는 읽기용 사본**: 진짜 정의는 노드의 파일입니다. `kubectl edit`으로는 바꿀 수 없고 `kubectl delete`로 지워도 kubelet이 다시 등록합니다.
 - **이름 끝에 노드 이름**: mirror Pod는 `kube-apiserver-controlplane`처럼 이름 뒤에 노드 이름이 붙어 구분됩니다.
+- **Pod만 static으로 돈다**: kubelet이 이 디렉터리에서 읽는 것은 Pod 매니페스트뿐입니다. Deployment나 ReplicaSet 파일을 넣어도 static으로 돌지 않으니 복제가 필요하면 API 서버의 컨트롤러를 씁니다.
+- **경로를 찾는 두 곳**: kubelet 설정 파일(`/var/lib/kubelet/config.yaml`)의 `staticPodPath`가 기본입니다. 옛 클러스터는 kubelet 실행 옵션 `--pod-manifest-path`로 줬을 수 있고 이 플래그는 설정 파일로 옮기라는 deprecated 표시가 붙어 있습니다. `ps -ef | grep kubelet`으로 `--config` 경로부터 찾습니다.
 - **매니페스트를 잘못 고치면**: kube-apiserver가 다시 뜨지 못하고 `kubectl`이 `connection refused`로 응답하지 않습니다. 이때는 노드에서 `crictl ps -a`와 `crictl logs`로 컨테이너 상태를 봅니다.
 
 > **정리**: static Pod는 노드 파일이 원본이고 API 서버에 보이는 것은 사본입니다. 바꾸려면 노드에 들어가 파일을 고칩니다.
@@ -1945,6 +1964,9 @@ kubectl get ds -n kube-system
 
 단계 하나하나가 **확장 지점(extension point)**이고 플러그인은 특정 지점에 끼워지는 코드입니다.
 
+- **NormalizeScore**: "Scheduling Framework" 문서는 score 뒤에 같은 플러그인이 자기 점수를 최종 순위 계산 전에 고쳐 맞추는 NormalizeScore 지점을 둡니다. 플러그인마다 점수 범위가 달라도 합산할 수 있게 하는 자리입니다.
+- **reserve가 있는 이유**: 바인딩이 끝나기를 기다리는 동안 다른 Pod가 같은 자리를 계산에 넣는 경쟁 상태를 막으려고 고른 노드의 자원을 먼저 잡아 둡니다. bind가 실패하면 Unreserve로 풀어 줍니다.
+
 #### 2. 다른 배치 규칙이 필요할 때의 두 길
 
 1. **스케줄러를 하나 더 띄우기**: kube-scheduler를 Deployment로 하나 더 띄웁니다. 설정 파일(`KubeSchedulerConfiguration`)은 ConfigMap으로 만들어 볼륨으로 마운트하고 노드와 Pod를 읽고 Binding을 쓸 수 있도록 ServiceAccount와 RBAC 권한을 줍니다. 복제본을 여럿 두면 하나만 일하도록 `leaderElection`을 켭니다. Pod에는 `schedulerName: my-scheduler`를 적습니다.
@@ -1962,6 +1984,8 @@ profiles:
       score:
         disabled: [{ name: "*" }]
 ```
+
+플러그인을 더할 때는 같은 확장 지점 아래에 `enabled`를 적습니다. 문서 예시는 score에서 기본 `PodTopologySpread`를 `disabled`로 빼고 직접 만든 플러그인을 `enabled`에 `weight`와 함께 넣습니다. `disabled`의 `name: "*"`는 그 지점의 기본 플러그인을 모두 끕니다.
 
 #### 3. 한눈에 비교
 

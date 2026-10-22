@@ -65,6 +65,14 @@ merged (컨테이너가 보는 화면)
 
 층을 겹쳐 보여 주는 일은 스토리지 드라이버(지금은 대부분 overlay2, containerd에서는 overlayfs snapshotter)가 합니다. Docker 단독 환경에서는 `/var/lib/docker/overlay2`, 쿠버네티스 노드의 containerd에서는 `/var/lib/containerd` 아래에 있습니다.
 
+| 스토리지 드라이버 | Docker 문서 기준 상태 |
+|---|---|
+| `overlay2` | 지금의 기본. 문서는 가장 안정적이고 배포판 호환성이 넓다고 적음 |
+| `aufs` | 예전 Ubuntu 기본. v19.03에서 사용 중단, Docker Engine v24.0에서 제거 |
+| `devicemapper` | 예전 RHEL/CentOS 계열. v18.09에서 사용 중단, v25.0에서 제거 |
+
+Docker에서 `docker inspect <컨테이너>`를 보면 `GraphDriver.Data`에 위 그림의 경로가 그대로 나옵니다. `LowerDir`(이미지 레이어들), `UpperDir`(쓰기 층), `MergedDir`(합쳐 보이는 화면), `WorkDir`(커널이 복사 작업에 쓰는 작업 공간)입니다. 네 디렉터리의 커널 쪽 동작은 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에 있습니다.
+
 #### 3. 한눈에 비교
 
 | 방식 | 명령 예 | 디렉터리 위치 |
@@ -72,7 +80,10 @@ merged (컨테이너가 보는 화면)
 | 볼륨 마운트 | `docker run --mount type=volume,source=order_data,target=/var/lib/mysql mysql` | Docker가 관리(`/var/lib/docker/volumes/`) |
 | 바인드 마운트 | `docker run --mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql` | 사용자가 지정한 호스트 경로 |
 
-`-v order_data:/var/lib/mysql`처럼 짧게 쓸 수도 있습니다.
+`-v order_data:/var/lib/mysql`처럼 짧게 쓸 수도 있습니다. Docker 문서는 옵션이 이름으로 드러나고 모든 옵션을 받는 `--mount`를 권합니다.
+
+- 볼륨은 `docker volume create order_data`로 미리 만들 수 있고 없는 볼륨 이름으로 `docker run`을 하면 Docker가 그 자리에서 만듭니다.
+- 바인드 마운트는 호스트 경로를 그대로 쓰므로 개발 중 소스 디렉터리를 컨테이너에 비출 때 주로 씁니다.
 
 | 구분 | 스토리지 드라이버 | 볼륨 드라이버 |
 |---|---|---|

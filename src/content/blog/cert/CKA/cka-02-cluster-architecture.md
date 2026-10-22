@@ -279,6 +279,7 @@ kubectl --kubeconfig /path/to/user.conf get pods -n shop
 - RBAC은 명시적으로 거부하지 않고 맞는 규칙이 없으면 의견 없음을 냅니다. 그래서 `Node,RBAC`에서 kubelet 요청은 대부분 Node가 바로 판단하고 사람의 요청은 Node가 의견 없음으로 넘겨 RBAC이 판단합니다.
 - 앞에 `AlwaysAllow`를 두면 모든 요청이 거기서 허용되어 RBAC은 쓸모가 없어집니다.
 - 단계마다 실패 코드가 다릅니다. 인증에서 걸리면 401(kubectl에는 `Unauthorized`), 인가에서 걸리면 403(`Forbidden`)입니다. 401이면 인증서나 토큰을, 403이면 RBAC 바인딩을 봅니다.
+- 정적 토큰 파일은 한 줄이 `토큰,사용자,UID,"그룹1,그룹2"` 형식의 CSV이고 API 서버는 실행 중에 바뀐 내용을 다시 읽지 않습니다(Authentication 문서). kubeadm 클러스터의 API 서버는 static Pod라서 `--token-auth-file`만 더하면 컨테이너 안에서 파일을 찾지 못합니다. `kube-apiserver.yaml`에 그 파일이 든 디렉터리를 hostPath 볼륨과 volumeMounts로 함께 넣어야 합니다.
 
 > **정리**: 사람은 클러스터 밖에서 오고 기계는 ServiceAccount로 클러스터 안에 있습니다. 인증으로 이름을 확인한 뒤 인가 모듈이 앞에서부터 판단하고 아무도 허용하지 않으면 403입니다.
 
@@ -657,7 +658,14 @@ current-context: settle-user@kubernetes
                                    └ 아니오 → EKS, GKE, AKS
 ```
 
-쿠버네티스는 리눅스 커널 기능 위에서 돌기 때문에 macOS나 Windows PC에서는 리눅스 VM이나 컨테이너 안에 노드를 띄웁니다.
+쿠버네티스는 리눅스 커널 기능 위에서 돌기 때문에 macOS나 Windows PC에서는 리눅스 VM이나 컨테이너 안에 노드를 띄웁니다. 컨트롤 플레인은 리눅스에서만 돌고 Windows 서버는 워커 노드로만 붙일 수 있습니다(Windows in Kubernetes 문서).
+
+| 도구 | 기계 준비 | 노드 수 |
+|---|---|---|
+| minikube | VM이나 컨테이너를 스스로 만들고 그 안에 클러스터까지 설치 | 기본 한 대, `--nodes`로 늘림 |
+| kubeadm | 이미 있는 리눅스 머신이 전제. 기계는 만들지 않고 쿠버네티스 구성요소만 올림 | 여러 대 |
+
+VM 여러 대를 손으로 만들기 번거로우면 Vagrant 같은 도구로 VM의 CPU, 메모리, IP, OS 이미지를 `Vagrantfile` 한 파일에 적어 두고 `vagrant up`으로 한꺼번에 띄운 뒤 `vagrant ssh <이름>`으로 들어갑니다. 이때 VM에 붙는 `192.168.56.x` 같은 주소는 노드 IP이고 나중에 CNI가 나눠 줄 Pod 대역과는 다른 대역입니다.
 
 #### 3. 한눈에 비교: 관리형과 직접 설치
 | 구분 | 관리형 서비스 | 직접 설치 |
@@ -666,10 +674,14 @@ current-context: settle-user@kubernetes
 | 사용자가 보는 범위 | 워커 노드와 워크로드 | 구성 전체를 통제 |
 | CKA | 묻지 않음 | 묻는 쪽. 이 장과 다음 장이 kubeadm 기준 |
 
+직접 설치 쪽에도 두 갈래가 있습니다. kubeadm처럼 구성요소만 올려 주는 도구가 있고 kOps나 OpenShift처럼 VM 준비부터 클러스터 구성까지 묶어 주는 배포판(턴키 방식)이 있습니다. 어느 쪽이든 설치가 끝난 뒤 OS 패치, 쿠버네티스 업그레이드, etcd 백업은 내 몫입니다.
+
 #### 4. 숫자와 설계 원칙
 - 공식 문서("Considerations for large clusters")의 기준은 클러스터 하나에 노드 5,000대, Pod 150,000개, 컨테이너 300,000개, 노드당 Pod 110개입니다. 숫자를 외울 필요는 없고 노드당 110개가 kubelet `maxPods` 기본값과 같다는 정도만 기억합니다.
 - **컨트롤 플레인 노드에 사용자 Pod를 올리지 않습니다.** 사용자 Pod가 메모리를 다 쓰면 API 서버와 etcd가 같이 죽으니 kubeadm은 컨트롤 플레인 노드에 `NoSchedule` 테인트를 붙입니다(3-4절).
 - **큰 클러스터에서는 etcd를 별도 노드로 뺍니다.** etcd는 디스크 쓰기 지연에 민감해서 다른 구성요소와 디스크를 다투면 클러스터 전체가 느려집니다(5-1절 external etcd).
+- **스토리지는 워크로드에 맞춰 고릅니다.** DB처럼 입출력이 많은 워크로드에는 SSD 기반 볼륨을 쓰고 여러 Pod가 같은 데이터를 동시에 써야 하면(`ReadWriteMany`) NFS 같은 네트워크 스토리지를 씁니다. 종류별로 StorageClass를 만들어 두면 PVC가 필요한 종류를 골라 동적으로 받습니다([Ch-05](/blog/cert/cka/cka-05-storage)).
+- **컨트롤 플레인 크기는 노드 수를 따라갑니다.** 관리형 서비스는 노드가 늘면 컨트롤 플레인 자원을 사업자가 맞춰 주고 직접 운영하면 그 산정도 내 몫입니다.
 
 > **정리**: 용도와 운영 주체가 도구를 정하고 시험은 kubeadm 직접 설치를 묻습니다. 컨트롤 플레인 격리와 etcd 분리라는 두 원칙은 이 장 뒤에서 다시 나옵니다.
 
@@ -863,6 +875,8 @@ kubeadm이 하지 않는 일도 있습니다. VM을 만들거나 컨테이너 �
 
 #### 4. 실전에서 보이는 모습
 - CNI를 넣기 전까지 노드는 `NotReady`이고 CoreDNS는 `Pending`입니다(3-2절).
+- VM에 인터페이스가 둘 이상이면(예: NAT용 `eth0`과 VM끼리 쓰는 사설망 `enp0s8`) kubeadm은 기본 게이트웨이가 걸린 인터페이스의 주소를 API 서버 광고 주소로 고릅니다. 워커가 그 주소로 닿지 못하면 join이 실패하니 init에 `--apiserver-advertise-address=<사설망 IP>`를 줍니다.
+- init이 끝나면 출력 안내대로 `/etc/kubernetes/admin.conf`를 `$HOME/.kube/config`로 복사하고 소유자를 바꿔야 일반 사용자로 kubectl을 쓸 수 있습니다.
 - 부트스트랩 토큰은 기본 24시간 뒤 만료됩니다. init 출력의 join 명령을 잃었거나 토큰이 만료됐다면 컨트롤 플레인에서 `kubeadm token create --print-join-command`로 새 join 명령을 받습니다.
 
 > **정리**: 기계 준비, 런타임과 kubeadm 설치, init, CNI, join의 다섯 단계입니다. init은 인증서부터 애드온까지 정해진 순서로 만들고 join은 해시와 토큰으로 양쪽 신뢰를 맺습니다.
@@ -1150,6 +1164,7 @@ etcdctl ──mTLS──> etcd(127.0.0.1:2379)
 - 본문 예시가 `etcd/server.crt`를 클라이언트 인증서로 쓰는 것은 공식 문서 예시를 따른 것이고 kubeadm이 만든 이 인증서가 클라이언트 용도도 함께 갖고 있어 동작합니다. API 서버 자신은 `server.crt`를 쓰지 않고 `apiserver-etcd-client.crt`로 붙습니다.
 - 옛 자료의 `ETCDCTL_API=3`은 etcd 3.3 이전에 기본 API가 v2라서 붙이던 것입니다. 3.4부터 v3가 기본이라 필요 없습니다.
 - 스냅샷 파일의 상태 확인(리비전, 키 수, 크기)과 복구는 etcd 3.6부터 `etcdutl`이 맡습니다. 손상된 파일로 복구를 시도하지 않도록 저장 직후 `snapshot status`로 한 번 봅니다.
+- 스냅샷을 얻는 길은 `etcdctl snapshot save` 말고도 둘 더 있습니다(Operating etcd clusters 문서). etcd 프로세스가 쓰지 않는 데이터 디렉터리에서 `member/snap/db` 파일을 복사하는 방법과 etcd가 EBS처럼 스냅샷을 지원하는 볼륨 위에 있으면 그 볼륨을 스냅샷하는 방법입니다. 앞의 방법은 etcd를 멈춰야 하므로 동작 중인 클러스터에는 `snapshot save`를 씁니다.
 
 > **정리**: 직접 운영하는 클러스터의 백업은 etcd 스냅샷이고 플래그는 주소, CA, 클라이언트 인증서와 키 넷입니다. 저장 직후 `etcdutl snapshot status`로 파일이 성한지 확인합니다.
 
@@ -1530,6 +1545,8 @@ Kustomize: 평범한 YAML(base) + 바꿀 부분(overlay) → 덧입힘 → 최�
 #### 4. 헷갈리는 점
 - Helm은 기능이 많은 만큼 템플릿이 복잡해져 차트가 실제로 무엇을 만드는지 읽기 어려울 수 있습니다. Kustomize는 기능이 적은 대신 결과를 예상하기 쉽습니다.
 - 둘을 함께 쓰기도 합니다. Helm으로 렌더링한 결과를 Kustomize로 한 번 더 고치는 식입니다.
+- Helm도 환경별 차이를 다룹니다. 템플릿은 하나로 두고 `values-dev.yaml`, `values-prod.yaml`처럼 환경마다 값 파일을 만들어 `helm install shop ./shop-chart -f values-prod.yaml`로 고릅니다. Kustomize의 overlay 자리에 값 파일이 들어가는 셈입니다.
+- 조건문은 Helm에만 있습니다. 템플릿을 `{{- if .Values.ingress.enabled }}`로 감싸 두면 운영 값 파일에서 `ingress.enabled: true`를 줄 때만 Ingress가 만들어집니다. 대신 이런 분기가 쌓일수록 템플릿이 읽기 어려워집니다.
 - 시험에서는 "Helm으로 이 차트를 설치하라", "Kustomize overlay를 적용하라"처럼 도구를 지정해 주니 각 도구의 기본 동작을 익혀 두면 됩니다.
 
 > **정리**: YAML 묶음 관리의 어려움은 쿠버네티스가 앱 단위를 모르는 데서 옵니다. 남의 앱 설치와 이력 관리는 Helm, 내 매니페스트의 환경별 변형은 Kustomize가 어울립니다.
@@ -1575,6 +1592,10 @@ Artifact Hub에서는 프로젝트가 직접 올린 차트에 공식(Official)�
 - 릴리스 기록(어떤 차트, 어떤 값, 어떤 매니페스트였는지)은 내 PC에 남지 않습니다. 클러스터의 Secret에 저장됩니다(6-3절). 그래서 다른 관리자가 다른 PC에서도 같은 릴리스를 이어서 업그레이드할 수 있습니다.
 - 시험 환경에서 외부 사이트에 닿는지는 알 수 없으니 과제가 주는 저장소 주소를 쓰는 연습을 해 둡니다.
 - 명령이 기억나지 않으면 `helm --help`, `helm repo --help`처럼 하위 명령마다 도움말을 봅니다. 롤백이 `restore`인지 `rollback`인지 헷갈릴 때 목록에서 바로 확인됩니다.
+- 저장소 관리는 `helm repo add`, `helm repo list`(등록한 저장소 보기), `helm repo update`, `helm repo remove` 네 명령으로 끝납니다.
+- `helm install`이 끝나면 접속 주소나 초기 비밀번호 확인 방법 같은 안내문이 출력됩니다. 차트의 `templates/NOTES.txt`를 렌더링한 결과이고 나중에 다시 보려면 `helm get notes <릴리스>`를 씁니다.
+- Helm은 kubectl과 같은 kubeconfig의 현재 컨텍스트로 클러스터에 붙습니다. 설치 전에 `kubectl config current-context`로 대상 클러스터부터 확인합니다.
+- 내 PC에 Helm을 설치할 때는 helm.sh 설치 문서의 공식 스크립트(`get-helm-4`)나 릴리스 바이너리를 씁니다. snap(`sudo snap install helm --classic`), apt, Homebrew 패키지도 있지만 커뮤니티가 관리하는 경로입니다.
 
 > **정리**: 차트로 릴리스를 설치하고 릴리스를 바꿀 때마다 리비전이 쌓이며 차트는 저장소에서 받습니다. 릴리스 기록은 클러스터 Secret에 있어 누구의 PC에서든 이어서 관리됩니다.
 
@@ -1624,7 +1645,8 @@ board-app/
 │   └── service.yaml
 ├── charts/           의존하는 다른 차트(하위 차트)
 ├── crds/             CRD(있을 때만, 6-1c절)
-└── README.md         사람이 읽을 설명(선택)
+├── README.md         사람이 읽을 설명(선택)
+└── LICENSE           차트 라이선스 전문(선택)
 ```
 
 템플릿의 한 줄과 값 파일의 한 줄이 짝을 이룹니다.
@@ -1657,6 +1679,10 @@ image:
 | `appVersion` | 차트가 설치하는 앱의 버전. 참고용 정보 |
 | `type` | `application`(기본) 또는 다른 차트를 돕는 `library` |
 | `dependencies` | 하위 차트 목록. 게시판 차트가 DB 차트를 직접 복사해 넣지 않고 의존성으로 가져옴 |
+| `name` | 차트 이름. `apiVersion`, `version`과 함께 필수 필드 |
+| `description`, `keywords`, `home`, `icon`, `maintainers` | 설명, 검색용 키워드, 프로젝트 주소, 아이콘 주소, 관리자 목록. 모두 선택 |
+
+`apiVersion: v1` 차트는 의존성을 `Chart.yaml` 대신 별도 `requirements.yaml`에 적었고 `type` 필드도 없었습니다. Helm 3는 `v1` 차트도 설치합니다. Helm 3.3.2부터 표에 없는 임의 필드는 넣을 수 없어 사용자 정의 정보는 `annotations`에 둡니다.
 
 #### 3. 값을 바꾸는 세 방법과 우선순위
 1. **`--set key=value`**: 바꿀 값이 몇 개일 때. 중첩 키는 `--set image.tag=1.28`처럼 점으로 잇습니다.
@@ -1763,7 +1789,7 @@ board/kustomization.yaml → resources 읽기 → 변형 적용 → 최종 YAML
 #### 4. 헷갈리는 점
 - build만 하고 `kubectl get`을 쳐서 아무것도 없다고 놀라는 경우가 많은데 build는 미리보기입니다.
 - **base와 overlay**가 이 구조의 확장입니다. base 디렉터리에 모든 환경에 공통인 YAML과 kustomization을 둡니다. overlays/staging, overlays/prod에는 `resources: [../../base]`로 base를 가져오고 그 환경에서 바꿀 것만 적은 kustomization을 둡니다. 개발 환경이 base와 같다면 overlay를 따로 만들 필요도 없습니다. `../../base`는 overlays/prod에서 두 단계 위로 올라가 base로 들어가는 상대 경로입니다.
-- kubectl 안에 Kustomize가 들어 있어 따로 설치하지 않아도 됩니다. 다만 kubectl에 내장된 버전은 최신 kustomize보다 늦을 수 있어 새 기능이 필요하면 kustomize 바이너리를 따로 설치합니다. 내장 버전은 `kubectl version --client`에 나옵니다.
+- kubectl 안에 Kustomize가 들어 있어 따로 설치하지 않아도 됩니다. 다만 kubectl에 내장된 버전은 최신 kustomize보다 늦을 수 있어 새 기능이 필요하면 kustomize 바이너리를 따로 설치합니다. 내장 버전은 `kubectl version --client`에 나옵니다. 따로 설치할 때는 kustomize 문서의 설치 스크립트(`curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash`)를 씁니다. 이 스크립트는 OS에 맞는 바이너리를 현재 디렉터리에 내려받기만 하므로 PATH에 있는 디렉터리(`/usr/local/bin` 등)로 옮긴 뒤 `kustomize version`으로 확인합니다.
 
 > **정리**: kustomization.yaml은 가져올 것과 바꿀 것의 목록입니다. build는 결과를 보여 주기만 하고 `apply -k`가 적용하며 base와 overlay는 이 파일을 디렉터리 여러 개로 쌓은 것입니다.
 
@@ -1806,7 +1832,7 @@ configMapGenerator:
 > **핵심 한 줄**: Helm 3는 Tiller를 없애 내 RBAC 권한으로 직접 동작하고 이전, 새, 라이브 세 상태를 비교해 바꾸며 롤백은 새 리비전을 쌓아 매니페스트만 되돌립니다.
 
 #### 1. 왜 필요한가
-온라인 자료에 Helm 2와 3 이야기가 섞여 있어 차이를 알아 두지 않으면 옛 설명을 그대로 믿게 됩니다.
+온라인 자료에 Helm 2와 3 이야기가 섞여 있어 차이를 알아 두지 않으면 옛 설명을 그대로 믿게 됩니다. Helm 2는 2016년 11월, Helm 3는 2019년 11월에 나왔고 Helm 2는 2020년 11월에 지원이 끝났습니다.
 
 | 구분 | Helm 2 | Helm 3 |
 |---|---|---|
@@ -1818,6 +1844,7 @@ configMapGenerator:
 1. **라이브 객체가 바뀐 상황**: 누가 `kubectl set image`로 라이브 객체를 직접 바꿨습니다.
 2. **Helm 2**: 두 매니페스트에는 그 흔적이 없으니 롤백해도 직접 바꾼 값이 남거나 업그레이드 때 엉뚱하게 처리됐습니다.
 3. **Helm 3**: 라이브 상태가 기록과 다르면 그 차이까지 보고 목표 상태로 맞춥니다.
+4. **업그레이드에서 보이는 차이**: 서비스 메시가 라이브 Deployment에 사이드카 컨테이너를 주입해 둔 상태에서 차트를 올려 이미지 태그만 바꾼다고 해 봅니다. Helm 2는 이전과 새 매니페스트만 비교하므로 매니페스트에 없는 사이드카를 지웠습니다. Helm 3는 새 매니페스트가 태그를 바꾼다는 점과 라이브 상태에 사이드카가 있다는 점을 함께 보고 태그만 바꾼 뒤 사이드카는 그대로 둡니다.
 
 ```text
 이전 매니페스트 ┐
