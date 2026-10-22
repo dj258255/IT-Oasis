@@ -203,6 +203,7 @@ vagrant destroy -f        # 전부 지우기
 #### 3. 헷갈리는 점
 
 - `192.168.56.x`는 VM끼리 통하는 노드 IP입니다. 나중에 CNI가 Pod에 나눠 줄 대역과 겹치지 않게 둡니다. 리눅스와 macOS의 VirtualBox는 host-only 네트워크에 기본으로 `192.168.56.0/21` 범위만 허용해서 예제가 이 대역을 씁니다.
+- 강의 저장소의 `Vagrantfile`은 VM 이름을 `kubemaster`, `kubenode01`, `kubenode02`로 씁니다. 위 예시의 `controlplane`, `node01`과 이름만 다르고 구조는 같으니 `vagrant ssh kubemaster`처럼 저장소에 적힌 이름으로 들어갑니다.
 - 오래된 강의 저장소는 지원이 끝난 Ubuntu 18.04 box를 쓰기도 합니다. 지금 kubeadm 패키지를 올리려면 지원 중인 Ubuntu box로 바꿔 씁니다.
 - 애플 실리콘 맥은 아래 본문처럼 VirtualBox 대신 Multipass 스크립트를 씁니다.
 

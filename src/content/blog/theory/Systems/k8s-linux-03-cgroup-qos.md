@@ -175,7 +175,7 @@ kubectl apply
 | 넘었을 때 | 넘는 것 자체는 허용 | CPU는 스로틀링, 메모리는 OOM kill |
 
 #### 2. 헷갈리는 점
-- `requests.memory`가 `memory.min`으로 간다는 표가 있습니다. 이는 `MemoryQoS` 게이트와 `memoryReservationPolicy`를 켰을 때의 이야기이고 기본 설정에서는 어디에도 쓰이지 않습니다(2-5).
+- `requests.memory`가 `memory.min`으로 간다는 표가 있습니다. 이는 `MemoryQoS` 게이트를 켜고 kubelet 설정 `memoryReservationPolicy`를 `TieredReservation`으로 바꿨을 때 Guaranteed 파드에만 해당합니다. 이때 Burstable 파드는 `memory.low`로 갑니다. 기본값 `None`에서는 `memory.min`과 `memory.low` 어디에도 쓰이지 않습니다(2-5).
 - `limits.cpu`를 아예 빼거나 넉넉히 잡는 운영 방식이 있습니다. CPU가 남을 때 그 여유를 쓰게 해 스로틀링(5장)을 피하려는 선택입니다. 대신 한 파드가 남는 CPU를 독차지할 수 있고 Guaranteed가 되지 않아 QoS가 바뀝니다(6-1). 팀이 어느 쪽을 택할지는 지연 민감도와 노드 공유 정도에 따라 다릅니다.
 
 > **정리**: 보장 쪽(requests)은 스케줄링과 가중치에, 상한 쪽(limits)은 커널이 막는 한도에 쓰입니다.
@@ -227,7 +227,7 @@ kubeadm 기본 매니페스트의 CPU request로 컨트롤 플레인 노드를 �
 | CoreDNS 2개 | 100m × 2 |
 | 합 | 850m |
 
-모두 request만 있고 limit이 없어서 Burstable입니다. 워커에 request 100m짜리 앱 하나만 있다면 합은 100m입니다. 그래서 컨트롤 플레인의 Burstable slice weight가 워커보다 크게 나옵니다.
+모두 request가 있고 request와 limit이 같지 않아서(CoreDNS는 메모리 limit 170Mi만 있음) Burstable입니다. 워커에 request 100m짜리 앱 하나만 있다면 합은 100m입니다. 그래서 컨트롤 플레인의 Burstable slice weight가 워커보다 크게 나옵니다.
 
 #### 3. 헷갈리는 점
 - 이 weight는 경합할 때만 의미가 있습니다. CPU가 남으면 모든 파드가 자기 limit까지 씁니다. 다툴 때 request를 크게 잡은 쪽이 더 큰 몫을 받습니다.
@@ -303,12 +303,13 @@ getconf PAGESIZE     # x86_64 일반 커널이면 4096
 
 ### 2-5. requests.memory가 쓰이는 세 곳
 
-기본 설정에서 `requests.memory`는 어떤 cgroup 파일에도 들어가지 않습니다. `memory.min`이나 `memory.low`로 바뀐다고 설명하는 자료가 있는데 이건 `MemoryQoS` 기능 게이트를 켰을 때 이야기입니다.
+기본 설정에서 `requests.memory`는 어떤 cgroup 파일에도 들어가지 않습니다. `memory.min`이나 `memory.low`로 바뀐다고 설명하는 자료가 있는데 이건 `MemoryQoS` 게이트가 켜져 있고 kubelet의 `memoryReservationPolicy`까지 `TieredReservation`으로 바꿨을 때 이야기입니다.
 
 | 버전 | MemoryQoS 상태 |
 |---|---|
 | 1.22 | 알파로 도입, 기본 꺼짐 |
 | 1.36 | 여전히 알파, 기본 꺼짐. 게이트는 `memory.high` 스로틀링만 켜고 `memory.min`/`memory.low` 보호는 kubelet 설정 `memoryReservationPolicy`(기본값 None)로 따로 켬. 켜면 Guaranteed에는 `memory.min`, Burstable에는 `memory.low`가 걸림 |
+| 1.37 | 베타로 올라가 게이트가 기본으로 켜짐. 다만 `memoryThrottlingFactor` 기본값이 null로 바뀌고 `memoryReservationPolicy` 기본값은 None이라 따로 설정하지 않으면 `memory.high`, `memory.min`, `memory.low` 어느 것도 쓰지 않음 |
 
 그러니 일반 클러스터에서 `requests.memory`가 실제로 영향을 주는 곳은 세 군데입니다.
 
@@ -911,7 +912,7 @@ OCI 런타임 버전입니다. 100m은 102 shares이고 shares를 weight로 바�
 
 <details><summary>정답</summary>
 
-어떤 파일에도 쓰이지 않습니다. `MemoryQoS`는 1.36에서도 알파이고 기본으로 꺼져 있습니다. 기본 설정에서 `requests.memory`는 스케줄링, Burstable 컨테이너의 `oom_score_adj` 계산, kubelet eviction 순위에 쓰입니다.
+어떤 파일에도 쓰이지 않습니다. `MemoryQoS`는 1.36까지 알파이고 기본으로 꺼져 있습니다. 1.37에서 베타가 되며 게이트가 기본으로 켜졌지만 kubelet 기본 설정이 스로틀링과 예약을 모두 끈 상태라 결과는 같습니다. 기본 설정에서 `requests.memory`는 스케줄링, Burstable 컨테이너의 `oom_score_adj` 계산, kubelet eviction 순위에 쓰입니다.
 
 </details>
 
@@ -961,7 +962,7 @@ Guaranteed 컨테이너와 메모리를 다툴 때 kubelet과 컨테이너 런�
 - 돌리지 못한 것: kind에는 metrics-server가 없어 `kubectl top`과 working set 비교(4장 과제)는 하지 않았습니다. 노드 전체 OOM과 eviction 재현, MemoryQoS, in-place resize 거부는 돌리지 않았습니다. kind 노드는 컨테이너라 cgroup 경로 앞에 `/docker/<id>/`와 `kubelet.slice`가 붙고 eviction 임계값도 일반 노드와 다릅니다.
 - 버전 기준은 쿠버네티스 1.35~1.37, 리눅스 커널 6.x, cgroup v2 노드입니다. cgroup v1 노드는 파일 이름과 동작이 다릅니다.
 - `cpu.weight` 변환은 노드의 runc나 crun 버전에 따라 다릅니다. 새 식으로 1 CPU를 계산하면 정확히 100이 나오는데 쿠버네티스 블로그 표에는 102로 적혀 있습니다. 이 차이의 이유는 확인하지 못했습니다.
-- MemoryQoS와 `memoryReservationPolicy`의 동작은 1.36 블로그와 KEP-2570 기준입니다. 알파 기능이라 이후 버전에서 이름이나 기본값이 바뀔 수 있습니다.
+- MemoryQoS와 `memoryReservationPolicy`의 동작은 1.36 블로그, 1.37 베타 블로그(2026-09-14), KEP-2570 기준입니다. 베타 기능이라 이후 버전에서 기본값이 바뀔 수 있습니다.
 - 노드 전체 OOM으로 컨테이너 프로세스가 죽었을 때도 런타임이 `OOMKilled`로 보고할 수 있다고 적은 부분은 커널이 희생자의 memcg에 `oom_kill` 이벤트를 남긴다는 점에서 추론한 것입니다. containerd 버전별 동작을 직접 확인하지는 않았습니다.
 - `kubepods.slice`에 걸리는 한도의 정확한 계산식(kube-reserved, system-reserved, eviction 임계값 중 무엇을 빼는지)은 이 글에서 다루지 않았습니다. Node Allocatable 문서를 따로 확인해야 합니다.
 - kind v0.33 노드 안의 cgroup 상위 경로는 `kubelet.slice/kubelet-kubepods.slice`라 2-6의 트리(kubeadm 노드 기준)와 이름이 다릅니다.

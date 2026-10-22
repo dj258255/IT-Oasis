@@ -77,7 +77,7 @@ RBAC만 잘 걸면 클러스터가 안전할 것 같지만 공격 경로는 여�
 같은 공개 키를 노드 세 대에 등록 → 개인 키 하나로 세 대 모두 접속
 ```
 
-- 네트워크로 오가는 비밀번호가 없어서 비밀번호를 하나씩 넣어 보는 무차별 대입(brute force) 공격이 통하지 않습니다.
+- 키 인증에는 네트워크로 오가는 비밀번호가 없어서 비밀번호를 하나씩 넣어 보는 무차별 대입(brute force) 공격이 통하지 않습니다. 다만 비밀번호 로그인이 켜져 있으면 그 경로로는 여전히 시도할 수 있습니다.
 - 그래서 키 인증을 켠 뒤 `sshd_config`에서 `PasswordAuthentication no`, `PermitRootLogin no`로 비밀번호 로그인과 root 직접 로그인을 끕니다.
 
 > **정리**: 보안은 노드, API 서버, 구성요소 통신, Pod 네트워크의 네 층입니다. 이 장은 2번 층인 API 서버 접근을 다루고 아래에서 그 인가 단계인 RBAC부터 봅니다.
@@ -165,7 +165,7 @@ roleRef:
 #### 4. 실전에서 보이는 모습
 - 위 바인딩은 `shop` 안에서만 효력이 있어서 jane이 `board`의 Pod를 지우려 하면 403이 납니다. 메시지는 `Error from server (Forbidden): pods "..." is forbidden: User "jane" cannot delete resource "pods" in API group "" in the namespace "board"` 모양입니다.
 - 권한을 미리 확인할 때는 `kubectl auth can-i delete pods -n board --as jane`처럼 묻고 `yes` 또는 `no`로 답을 받습니다.
-- 만든 객체는 `kubectl get roles,rolebindings -n shop`으로 목록을 보고 `kubectl describe role order-developer -n shop`으로 규칙을 봅니다. describe는 규칙을 Resources, Resource Names, Verbs 열의 표로 펼쳐 주니 그룹이나 동사를 빠뜨렸는지 한눈에 보입니다. `kubectl describe rolebinding jane-order-developer -n shop`은 연결된 Role과 Subjects를 보여 줍니다.
+- 만든 객체는 `kubectl get roles,rolebindings -n shop`으로 목록을 보고 `kubectl describe role order-developer -n shop`으로 규칙을 봅니다. describe는 규칙을 Resources, Non-Resource URLs, Resource Names, Verbs 열의 표로 펼쳐 주니 그룹이나 동사를 빠뜨렸는지 한눈에 보입니다. `kubectl describe rolebinding jane-order-developer -n shop`은 연결된 Role과 Subjects를 보여 줍니다.
 
 > **정리**: Role은 "그룹, 리소스, 동사"의 목록이고 RoleBinding은 그 목록을 누구에게 줄지입니다. 네임스페이스 밖 리소스와 재사용은 ClusterRole로 풉니다.
 
@@ -717,25 +717,7 @@ VM 여러 대를 손으로 만들기 번거로우면 Vagrant 같은 도구로 VM
 #### 5. 내 PC에 실습 기계 만들기
 - **리눅스 PC**: 구성요소 바이너리를 직접 깔아 클러스터를 꾸릴 수도 있습니다. 다만 인증서와 설정을 하나씩 맞춰야 해서 보통 kind, minikube 같은 도구를 쓰거나 VM을 만들어 kubeadm을 올립니다.
 - **Windows PC**: Docker Desktop은 리눅스 컨테이너를 WSL 2나 Docker VMM 위에서 돌리고 Hyper-V는 전체 사용자 설치에서만 고를 수 있습니다(Docker Desktop 설치 문서). Docker Desktop의 쿠버네티스도 그 위의 Docker 컨테이너로 돕니다.
-- **VM 여러 대**: 역할을 나누면 이렇습니다.
-
-| 도구 | 하는 일 |
-|---|---|
-| VirtualBox(하이퍼바이저) | 내 PC의 CPU, 메모리를 나눠 VM을 실제로 만들고 돌림 |
-| Vagrant | `Vagrantfile`에 적힌 VM 사양을 읽어 하이퍼바이저에 생성과 설정을 지시. 누가 돌려도 같은 VM이 나옴 |
-
-```bash
-git clone <실습 저장소 주소>    # Vagrantfile이 든 저장소
-cd <저장소 디렉터리>
-vagrant status                # 아직 만들지 않은 VM은 not created
-vagrant up                    # Vagrantfile 순서대로 이미지 받기, 생성, 부팅
-vagrant status                # 모두 running이면 준비 끝
-vagrant ssh kubemaster        # 접속. 나올 때는 logout
-vagrant halt                  # 전부 끄기
-vagrant destroy -f            # 전부 지우기
-```
-
-강의 저장소는 `kubemaster`, `kubenode01`, `kubenode02` 세 대를 `192.168.56.x` 고정 IP로 만듭니다. 그 Vagrantfile이 쓰는 Ubuntu 18.04(`bionic64`) 박스는 2023년 5월에 표준 지원이 끝난 버전이니 새로 만든다면 지원 중인 LTS 박스를 고릅니다.
+- **VM 여러 대**: VirtualBox가 VM을 실제로 돌리고 Vagrant가 `Vagrantfile`에 적힌 사양대로 VM을 한꺼번에 만듭니다. 설치 순서, `Vagrantfile` 예시, `vagrant` 명령은 [Ch-07 홈 랩 구성](/blog/cert/cka/cka-07-resources-and-exam-day#4-홈-랩-구성)에 모아 두었습니다.
 
 > **정리**: 용도와 운영 주체가 도구를 정하고 시험은 kubeadm 직접 설치를 묻습니다. 컨트롤 플레인 격리와 etcd 분리라는 두 원칙은 이 장 뒤에서 다시 나옵니다.
 
@@ -1546,7 +1528,7 @@ controller-manager 1(리더, Lease 보유)  2, 3(대기, 2초마다 Lease 확인
 #### 4. 헷갈리는 점 / 실전에서 보이는 모습
 - 옛 자료는 Endpoints 오브젝트를 잠금으로 썼다고 적지만 지금은 Lease를 씁니다. `kubectl get lease -n kube-system`을 치면 `kube-controller-manager`, `kube-scheduler` Lease와 지금 리더(HOLDER)가 보입니다.
 - 옛 강의의 "컨트롤 플레인 2대 + stacked etcd" 구성은 etcd 멤버 2개라 1대만 죽어도 쿼럼을 잃으므로 HA가 되지 않습니다.
-- API 서버 앞 로드 밸런서로 kubeadm 문서("Options for Software Load Balancing")는 가상 IP를 띄우는 keepalived와 TCP를 나눠 주는 haproxy 조합, 둘을 한 서비스로 합친 kube-vip를 소개합니다. 상태 확인은 6443 포트 TCP 검사입니다.
+- API 서버 앞 로드 밸런서로 kubeadm 문서("Options for Software Load Balancing")는 가상 IP를 띄우는 keepalived와 TCP를 나눠 주는 haproxy 조합, 둘을 한 서비스로 합친 kube-vip를 소개합니다. 문서 예시의 상태 확인은 두 도구 모두 API 서버의 `/healthz`를 HTTPS로 부르는 방식입니다(keepalived 검사 스크립트는 curl, haproxy는 `http-check`).
 - 강의의 확장 설계는 컨트롤 플레인 2대, LB 전용 노드 1대, 워커 2대로 모두 5대입니다. 위 이유로 실제 HA를 원하면 컨트롤 플레인을 3대로 둡니다. LB 노드가 한 대뿐이면 그 노드가 새 단일 장애 지점이 되므로 운영에서는 keepalived 가상 IP나 클라우드 LB로 LB 자체도 이중화합니다.
 
 > **정리**: API 서버는 LB 뒤에서 함께 일하고 컨트롤러 매니저와 스케줄러는 Lease로 리더 한 대만 일합니다. etcd는 과반 규칙 때문에 홀수로 두며 그 이유가 다음 토글의 Raft입니다.

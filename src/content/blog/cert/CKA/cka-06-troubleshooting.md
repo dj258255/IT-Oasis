@@ -651,7 +651,10 @@ kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINT:.spec.taints[*].k
 kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.capacity.cpu}{"\n"}{end}'
 kubectl get nodes -o custom-columns=NODE:.metadata.name,CPU:.status.capacity.cpu
 kubectl get nodes --sort-by=.metadata.name
+kubectl get nodes --sort-by=.status.capacity.cpu
 ```
+
+`.status.capacity.cpu`처럼 값이 `"4"`, `"500m"` 같은 수량 문자열이어도 `kubectl get --sort-by`는 두 값이 모두 수량으로 해석되면 크기로 비교합니다. 해석되지 않는 값은 문자열 순서로 비교하고 결과는 오름차순입니다(kubectl 소스 `pkg/cmd/get/sorter.go`).
 
 #### 3. 한눈에 비교
 

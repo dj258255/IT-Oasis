@@ -632,11 +632,12 @@ etcd가 클러스터 CA를 믿는다면 클러스터 CA로 서명받은 사용�
 
 | 새어 나간 열쇠 | 그 열쇠로 할 수 있는 일 | 막히는 일 |
 |---|---|---|
-| 워커 노드의 `kubelet.conf` 클라이언트 인증서 | `system:node:<노드>` 자격으로 API 서버에 붙음. 기본 인가 모드의 Node 인가와 `NodeRestriction` 어드미션 때문에 자기 Node 객체, 자기 노드에 배정된 Pod, 그 Pod가 쓰는 Secret과 ConfigMap 정도로 범위가 좁음 | etcd 직접 접속(클러스터 CA가 서명한 인증서라 etcd 전용 CA 검증을 통과하지 못함), 다른 노드 객체 수정 |
+| 워커 노드의 `kubelet.conf` 클라이언트 인증서 | `system:node:<노드>` 자격으로 API 서버에 붙음. kubeadm이 켜 두는 Node 인가(`--authorization-mode=Node,RBAC`)와 `NodeRestriction` 어드미션 때문에 자기 Node 객체, 자기 노드에 배정된 Pod, 그 Pod가 쓰는 Secret과 ConfigMap 정도로 범위가 좁음 | etcd 직접 접속(클러스터 CA가 서명한 인증서라 etcd 전용 CA 검증을 통과하지 못함), 다른 노드 객체 수정 |
 | `apiserver-etcd-client` 인증서 | etcd의 모든 데이터를 읽고 씀 | 막히는 것이 거의 없음. 그래서 컨트롤 플레인 노드 밖으로 나가지 않게 둠 |
 
 워커 노드에는 etcd에 붙을 수 있는 인증서가 아예 없으므로 노드 하나가 뚫려도 클러스터 전체 데이터까지 번지지 않습니다.
- 서버 인증서, 거는 쪽은 클라이언트 인증서, 검증은 CA 인증서입니다. API 서버는 받는 쪽이자 거는 쪽이라 둘 다 갖고 etcd는 전용 CA로 따로 보호됩니다.
+
+> **정리**: 받는 쪽은 서버 인증서, 거는 쪽은 클라이언트 인증서, 검증은 CA 인증서입니다. API 서버는 받는 쪽이자 거는 쪽이라 둘 다 갖고 etcd는 전용 CA로 따로 보호됩니다.
 
 </details>
 
