@@ -114,11 +114,12 @@ Tutorials Dojo의 팁 글은 2024년에 갱신된 것이라 목록에 지금은 
 | Skill Builder 구독 | 개인 월 29 USD, 연 449 USD | AWS Training FAQ |
 | 2026년 2분기 바우처 캠페인(마감) | 무료 재응시가 붙는 바우처. Professional과 Specialty만 해당. 바우처 구매는 2026-06-30에 마감했고 첫 응시는 2026-12-31까지 | AWS Voucher Campaigns Terms |
 | 2026년 AI 업스킬링 캠페인(마감) | AI Practitioner 50% 할인, 합격하면 Cloud Practitioner 무료. AIF-C01 응시 기간은 2026-09-30에 끝났고 무료 CLF-C02는 이미 자격을 얻은 사람만 2026-11-30까지 응시 | 같은 문서 |
+| re:Invent 2026 현장 참가자 | 원하는 AWS 시험 50% 바우처 1장. 현장 등록자만 해당(온라인 참가 제외). 참가자 포털에서 받고 2027-01-31까지 응시. 다른 할인과 중복 불가. 행사는 2026-11-30 ~ 12-04 라스베이거스 | [re:Invent FAQ](https://aws.amazon.com/events/reinvent/faqs/)(2026-10-22) |
 | Emerging Talent Community 포인트 바우처 | 현재 할인 바우처를 주지 않는다고 적은 대학 안내가 있다(미확인) | UT Dallas 안내 |
 
 50% 바우처를 쓰는 조건은 공식 페이지가 짧게만 적습니다. r/AWSCertifications 위키(2026년 6월 갱신)는 자격이 유효한 동안 3년간 쓸 수 있고 한 번만 쓰며 양도할 수 없다고 정리했습니다. 공식 문서로 확인한 내용은 아닙니다.
 
-할인 경로를 정리하면 이렇습니다. SAA가 첫 AWS 시험이면 지금 확인된 공식 할인이 없습니다. Cloud Practitioner나 AI Practitioner를 먼저 따면 50% 바우처로 SAA를 75 USD에 볼 수 있습니다. 다만 그 시험 응시료(100 USD)를 더하면 SAA만 보는 쪽보다 비쌉니다. 기초 시험이 공부에 도움이 될 때만 의미가 있습니다. AWS Summit 학생 대상 배포처럼 행사 단위 바우처도 있지만 대상과 날짜가 행사마다 달라 이 글에서는 다루지 않았습니다.
+할인 경로를 정리하면 이렇습니다. SAA가 첫 AWS 시험이면 지금(2026년 10월 22일) 누구나 쓸 수 있는 공식 할인은 없습니다. Linux Foundation처럼 매달 도는 사이트 할인 행사도 AWS에는 없고 할인은 합격 혜택, 캠페인 바우처, 행사 참가 혜택 세 갈래로만 나옵니다. 캠페인은 AWS FAQ가 "global certification challenge promotions"로 부르는 것으로 Skill Builder와 AWS Training 블로그 공지를 지켜봐야 합니다. 시험 바우처를 정가보다 싸게 판다는 제3자 판매처는 공식 경로 밖이라 다루지 않습니다. Cloud Practitioner나 AI Practitioner를 먼저 따면 50% 바우처로 SAA를 75 USD에 볼 수 있습니다. 다만 그 시험 응시료(100 USD)를 더하면 SAA만 보는 쪽보다 비쌉니다. 기초 시험이 공부에 도움이 될 때만 의미가 있습니다. AWS Summit 학생 대상 배포처럼 행사 단위 바우처도 있지만 대상과 날짜가 행사마다 달라 이 글에서는 다루지 않았습니다.
 
 ## 3. 연습 자료 비교표
 

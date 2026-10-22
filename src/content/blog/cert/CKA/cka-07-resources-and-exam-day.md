@@ -19,7 +19,7 @@ seriesOrder: 7
 ## 결론부터
 
 1. 응시권 하나($445, 2026년 10월 20일 기준)에는 재응시 1회와 killer.sh 시뮬레이터 2회가 들어 있습니다. 구매 후 12개월 안에 응시해야 하고 예약 변경은 24시간 전까지만 됩니다. 예정 시각에서 30분이 지나도록 시작하지 못하면 결시가 되고 환불도 재응시도 없습니다.
-2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했습니다(2025년은 제3자 기사 기준). 지금 진행 중인 할인은 LF CKA 시험 페이지에서 확인합니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
+2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했고(2025년은 제3자 기사 기준) 2026년에는 거의 매달 일주일 안팎의 35~40% 행사를 열었으며 5월에는 50%가 한 번 있었습니다. 지금 진행 중인 할인은 LF CKA 시험 페이지에서 확인합니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
 3. 연습은 강의와 랩(KodeKloud), 무료 시나리오(Killercoda), 공식 시뮬레이터(killer.sh 2회) 순서로 잡습니다. killer.sh가 실제 시험보다 어렵다는 평가는 응시자와 강의 운영진에게서 나왔고 공식 문서에는 그런 비교가 없습니다. 풀이를 보고 배우는 용도로 씁니다.
 4. 덤프를 쓰지 않은 2025~2026년 후기에서 반복해 나온 주제는 트러블슈팅(kubelet, 인증서와 kubeconfig, 컨트롤 플레인), Helm, Gateway API, CNI 설치, Kustomize, CRD입니다. 가장 흔한 실패 원인은 시간 부족이었고 모의고사 점수와 실제 점수가 크게 어긋난 사례도 여럿 있었습니다.
 5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`입니다. `jq`와 `tmux`는 2025년 3월 판부터 목록에서 빠졌고 `helm`과 `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도입니다.
@@ -112,7 +112,17 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 | 2024-12-02 ~ 2024-12-11 | Cyber Monday. 개별 강의와 시험 50%. 실기 시험 $395 → $198. THRIVE 연간 구독과 묶으면 65% | LF 공식 블로그 |
 | 2025-01-21 ~ 2025-01-31 | 사이트 전체 35%, THRIVE 묶음 40%. 2025-02-04 가격 인상 전 행사 | LF 공식 블로그 |
 | 2025-12-01 ~ 2025-12-09 | Cyber Week. 개별 시험 50%, 번들 60%, THRIVE-ONE 묶음 최대 65%. 구매마다 $100 상품권(2026-01-01 ~ 2026-10-31 사용) | 제3자(It's FOSS, techbeatly, DevOpsCube). LF 공식 공지는 찾지 못함 |
-| 2026-10-16 ~ 2026-10-23 | Cybersecurity Awareness Month. 사이버보안 교육과 시험 40%, 그 밖의 교육과 시험 35%. CKA는 35% 쪽으로 추정 | [LF 공식 블로그](https://training.linuxfoundation.org/blog/stay-ahead-of-cyber-threats/) |
+| 2026-02-17 ~ 2026-02-24 | 설 연휴(Lunar New Year). 개별 강의와 시험 35%, 묶음 50%, Super Bundle 75%, Kubestronaut 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/ignite-your-next-career-move/) |
+| 2026-03-13 ~ 2026-03-18 | 개별 시험 35%, 시험+강의 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/bundles-create-the-perfect-formula-for-career-momentum/) |
+| 2026-04-14 ~ | 지구의 날. 사이트 전체 35%(끝나는 날은 글 목록에서 확인 못 함) | [LF 공식 블로그](https://training.linuxfoundation.org/blog/build-skills-that-last-save-35-sitewide/) |
+| 2026-05-12 ~ 2026-05-20 | Mega May. **모든 시험 50%**, CKA+LFS258 같은 시험+강의 묶음 60%, THRIVE-ONE 묶음 최대 65%. 올해 단일 시험 할인 중 가장 큼 | [LF 공식 블로그](https://training.linuxfoundation.org/blog/mega-may-power-up-cyber-deals/) |
+| 2026-06 초 ~ 2026-06-12 | 기술 인재 보고서 발표 기념 사이트 전체 40% | 제3자 검색 결과. LF 글 본문에서는 코드와 날짜를 확인 못 함 |
+| 2026-06-23 ~ 2026-06-26 | Prime Time(나흘). 개별 시험 40%, 묶음 50%, Super Bundle 75% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/four-days-only-prime-time-to-level-up-your-it-career/) |
+| 2026-07-14 ~ 2026-07-21 | 하반기 시작. 개별 시험 35%, 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/score-big-on-your-tech-career-save-up-to-40/) |
+| 2026-08-11 ~ 2026-08-18 | 리눅스 35주년. 사이트 전체 35%(THRIVE-ONE 등 제외) | [LF 공식 블로그](https://training.linuxfoundation.org/blog/built-by-a-community-that-never-stops-learning/) |
+| 2026-09-15 ~ 2026-09-22 | Back to School. 개별 시험 35%, 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/pack-your-future-with-new-skills/) |
+| 2026-10-06 ~ 2026-10-07 | Prime(이틀). 개별 시험 40%, 묶음 50%, Super Bundle 75% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/special-delivery-prime-savings-have-arrived/) |
+| 2026-10-16 ~ 2026-10-23 | Cybersecurity Awareness Month. 사이버보안 교육과 시험 40%, 그 밖의 교육과 시험 35%. CKA는 35% 쪽 | [LF 공식 블로그](https://training.linuxfoundation.org/blog/stay-ahead-of-cyber-threats/), [It's FOSS](https://itsfoss.com/news/lf-cyber-security-26/) |
 | 상시 | killer.sh CKA 페이지에 CKA 시험 구매 30% 할인 코드가 적혀 있음 | killer.sh 공식 페이지(2026-10-20 확인) |
 | 상시 | 프로그래머스 CKA 바우처 690,000원 → 552,000원(20%). 구매 후 7일 안에 LF 사이트에서 등록, 등록일부터 1년 안에 응시. 환불은 7일 안 미사용 시만 | 프로그래머스 페이지(2026-10-20 확인). 페이지 제목에 "Linux Foundation ATP" 표기 |
 
@@ -121,6 +131,29 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 - 학생 할인은 LF 공식 문서에서 찾지 못했습니다.
 - KubeCon 기간 할인은 KodeKloud 커뮤니티 답변에 "블랙프라이데이와 KubeCon 무렵에 할인이 나오곤 했다"는 말이 있을 뿐 LF 공식 근거는 찾지 못했습니다.
 - 가격은 행사마다 기준가가 달랐습니다. 2024년 공지는 $395를 기준으로 썼고 2026년 10월 정가는 $445입니다.
+- 2026년 행사의 코드는 행사마다 바뀌고 같은 행사 안에서도 개별 시험용과 묶음용이 따로 있어 표에 적지 않았습니다. 대부분 신규 개인 구매에만 적용되고 다른 할인과 겹쳐 쓸 수 없다고 적혀 있습니다.
+
+### 2-1. 정가 $445 기준으로 계산한 CKA 가격
+
+| 할인율 | CKA 가격 | 2026년에 이 할인율이 나온 때 |
+|---|---|---|
+| 0% | $445 | |
+| 30% | 약 $311 | 상시 코드(killer.sh 페이지 등) |
+| 35% | 약 $289 | 2월, 3월, 4월, 7월, 8월, 9월, 10월 하순 |
+| 40% | 약 $267 | 6월 Prime Time, 10월 초 Prime(6월 초 사이트 전체 40%는 제3자 기준) |
+| 50% | 약 $222 | 5월 Mega May. 2024년과 2025년 12월 Cyber Week |
+
+### 2-2. 11월과 12월 전망
+
+2026년 10월 22일 기준으로 LF의 11~12월 행사 공지는 아직 없습니다. 쿠폰 사이트에 도는 "11월 Cyber Monday 65%" 같은 글은 지난해 행사를 옮기거나 추측한 것입니다.
+
+| 연도 | 행사 기간 | 단일 시험 할인 |
+|---|---|---|
+| 2024 | 12-02 ~ 12-11 | 50% |
+| 2025 | 12-01 ~ 12-09 | 50% |
+| 2026 | 미발표. 지난 2년은 Cyber Monday(2026년은 11월 30일) 즈음 시작해 열흘쯤 이어짐 | 지난 2년과 같다면 50% 안팎 |
+
+응시권은 등록일부터 12개월 동안 쓸 수 있습니다. 12월에 응시할 계획이면 Cyber Week에 사서 바로 예약하는 흐름이 가장 쌉니다. 예약은 최소 24시간 전에 잡아야 하므로(1-2절) 행사 마지막 날 사서 바로 다음 날 응시하는 식은 안 됩니다. 행사가 예상과 다르게 열리지 않으면 상시 30% 코드가 기준선입니다.
 
 정리하면 응시권은 12개월 동안 유효하므로 12월 초 Cyber Week나 상시 할인으로 사 두고 그 뒤에 일정을 잡는 쪽이 비용이 가장 적게 듭니다. 다만 12개월 안에 두 번을 다 써야 하니 공부 시작 시점에 맞춰 사는 편이 안전합니다.
 
@@ -152,6 +185,32 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 - 개정 항목(Helm, Kustomize, Gateway API, CRD)을 실습으로 다루는지. 2025년 이전 자료는 이 넷이 비어 있습니다.
 - 시험장 문서(kubernetes.io, helm.sh, gateway-api.sigs.k8s.io)만 보고 풀 수 있게 연습시키는지.
 - 문제 출처를 밝히는지.
+
+### 3-1. Udemy 강의를 사면 받는 KodeKloud 무료 랩
+
+KodeKloud CKA 강의는 Udemy에서도 같은 강사(Mumshad Mannambeth)의 "Certified Kubernetes Administrator (CKA) with Practice Tests"로 팝니다. Udemy판을 사면 실습 랩을 KodeKloud 사이트에서 따로 결제하지 않고 씁니다.
+
+| 항목 | 내용 |
+|---|---|
+| 받는 방법 | Udemy 강의 첫 섹션의 "Accessing the Labs" 강의에 있는 링크와 쿠폰 코드로 KodeKloud의 "Udemy Labs" 과정에 무료 등록 |
+| 계정 | KodeKloud 계정을 따로 만듦. 가입을 마치면 바로 열림. 예전 랩 진행 기록은 넘어오지 않음 |
+| 들어 있는 것 | 실습 랩 53개(Core Concepts, Scheduling, Logging & Monitoring, Application Lifecycle, Cluster Maintenance, Security, Storage, Networking, Install, Troubleshooting, Other Topics), Lightning Lab 1개, 모의고사 3회와 풀이 |
+| 실습 방식 | 브라우저에서 바로 열리는 클러스터 터미널. 내 PC에 VM이나 kind를 깔 필요 없음 |
+| 들어 있지 않은 것 | KodeKloud 구독(전체 강의 목록, 플레이그라운드), Ultimate CKA Mock Exam Series |
+| 확인하지 못한 것 | 랩 이용 기간 제한, 랩의 쿠버네티스 버전 |
+
+Udemy판 영상과 KodeKloud 사이트판 영상의 차이는 확인하지 못했습니다(Udemy 강의 페이지가 자동 조회를 막음). Udemy는 할인 행사가 잦아 정가로 살 일이 드뭅니다. 쿠폰이 지금도 유효한지는 강의를 산 뒤 "Accessing the Labs" 강의에서 확인합니다.
+
+연습 순서는 이렇게 이어집니다.
+
+```text
+Udemy 강의 영상 → 강의별 KodeKloud 랩 → Lightning Lab → 모의고사 3회
+→ Killercoda 무료 시나리오로 약한 주제 반복
+→ 응시 1~2주 전 killer.sh 2회(활성화 후 36시간, 1-5절)
+→ 응시
+```
+
+KodeKloud 모의고사에서 90% 안팎이 나와도 실제 시험 61%가 나온 사례가 있습니다(5절). 모의고사는 범위 점검용으로 쓰고 시간 압박 연습은 killer.sh로 합니다.
 
 ## 4. 홈 랩 구성
 
@@ -449,8 +508,11 @@ set expandtab tabstop=2 shiftwidth=2
 - techbeatly, [Explore the Cyber Monday Deals and Grab the Best IT and DevOps Offers](https://techbeatly.com/cyber-week/)
 - DevOpsCube 뉴스레터, [Linux Foundation Cyber Monday](https://newsletter.devopscube.com/p/linux-foundation-cyber-monday), 2025-11-30
 - 프로그래머스, [CKA 시험 (Certified Kubernetes Administrator)](https://lf.programmers.co.kr/cka), 2026-10-20 확인
+- Linux Foundation 교육 블로그 2026년 행사 글 11편(표의 링크), 2026-10-22 확인
+- It's FOSS, [Save Upto 40% on Kubernetes Security Certifications From the Linux Foundation](https://itsfoss.com/news/lf-cyber-security-26/), 2026-10
 
 연습 자료와 홈 랩
+- KodeKloud, [Udemy Labs: CKA with Practice Tests](https://kodekloud.com/courses/udemy-labs-certified-kubernetes-administrator-with-practice-tests), Udemy, [Certified Kubernetes Administrator (CKA) with Practice Tests](https://www.udemy.com/course/certified-kubernetes-administrator-with-practice-tests/)
 - KodeKloud, [Certified Kubernetes Administrator (CKA)](https://kodekloud.com/courses/cka-certification-course-certified-kubernetes-administrator), [Demo Setting Up Virtual Machines on Mac](https://notes.kodekloud.com/docs/Kubernetes-for-the-Absolute-Beginners-Hands-on-Tutorial/Appendix/Demo-Setting-Up-Virtual-Machines-on-Mac/page), [kodekloudhub/certified-kubernetes-administrator-course](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)
 - GitHub, [theplatformlab/CKA-Certified-Kubernetes-Administrator](https://github.com/theplatformlab/CKA-Certified-Kubernetes-Administrator), [techiescamp/cka-certification-guide](https://github.com/techiescamp/cka-certification-guide), [walidshaari/Kubernetes-Certified-Administrator](https://github.com/walidshaari/Kubernetes-Certified-Administrator), [alijahnas/CKA-practice-exercises](https://github.com/alijahnas/CKA-practice-exercises), [chadmcrowell/CKA-Exercises](https://github.com/chadmcrowell/CKA-Exercises), [sailor-sh/CK-X](https://github.com/sailor-sh/CK-X), [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way)
 - computingforgeeks, [Best Kubernetes Certification Books](https://computingforgeeks.com/best-kubernetes-certification-books/), 2026-10-04 갱신
