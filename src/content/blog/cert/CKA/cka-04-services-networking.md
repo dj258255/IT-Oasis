@@ -45,6 +45,120 @@ seriesOrder: 4
 
 ### 1-1. 네트워크 모델 네 가지 문제
 
+<details>
+<summary>기초부터: 스위치, 라우터, 게이트웨이와 라우팅 테이블</summary>
+
+쿠버네티스 네트워크는 리눅스 네트워크 위에 올라가 있습니다. Pod끼리 통신이 안 될 때 노드에서 `ip route`를 읽어야 하는 이유가 여기에 있으니 바닥부터 짚고 갑니다.
+
+**1단계. 같은 네트워크 안: 스위치**
+
+컴퓨터 A(192.168.1.10)와 B(192.168.1.11)가 같은 대역 192.168.1.0/24에 있으면 둘을 스위치에 연결하는 것만으로 통신이 됩니다. 스위치는 같은 네트워크 안에서 MAC 주소를 보고 프레임을 전달하는 장비입니다. 각 컴퓨터에는 네트워크 인터페이스(`eth0` 같은 랜카드)가 있어야 하고 그 인터페이스에 IP가 붙어 있어야 합니다.
+
+```bash
+ip link                                   # 인터페이스 목록과 상태
+ip addr                                   # 인터페이스별 IP
+ip addr add 192.168.1.10/24 dev eth0      # IP 붙이기 (재부팅하면 사라짐)
+```
+
+**2단계. 다른 네트워크로: 라우터와 게이트웨이**
+
+A가 다른 대역의 C(192.168.2.10)에게 보내려면 스위치만으로는 안 됩니다. 두 네트워크에 동시에 발을 걸친 라우터가 필요합니다. 라우터는 양쪽 네트워크에 각각 IP(예: 192.168.1.1과 192.168.2.1)를 가지고 한쪽에서 받은 패킷을 다른 쪽으로 넘깁니다. A 입장에서 "저 네트워크로 가려면 이 라우터에 넘겨라"라고 정해 둔 라우터 주소를 게이트웨이라고 부릅니다. 방에서 밖으로 나가는 문을 정해 두는 것과 비슷하고 실제로는 커널의 라우팅 테이블에 한 줄로 적힙니다.
+
+```bash
+ip route                                          # 라우팅 테이블 보기
+ip route add 192.168.2.0/24 via 192.168.1.1       # 이 대역은 192.168.1.1로 넘겨라
+```
+
+통신은 왕복입니다. C 쪽에도 192.168.1.0/24로 돌아오는 경로가 있어야 응답이 옵니다. 한쪽에만 경로를 넣으면 요청은 가는데 응답이 돌아오지 못합니다.
+
+**3단계. 모르는 대역 전부: 기본 게이트웨이**
+
+인터넷의 모든 대역을 한 줄씩 적을 수는 없습니다. 그래서 "어느 줄에도 안 맞는 목적지는 여기로"라는 줄을 하나 둡니다. 이것이 기본 게이트웨이이고 `ip route`에 `default via 192.168.1.1`(0.0.0.0/0과 같은 뜻)로 보입니다. 커널은 목적지와 가장 길게 일치하는 줄을 고르고 맞는 줄이 없을 때 default 줄을 씁니다.
+
+**4단계. 리눅스를 라우터로 쓰기: IP 포워딩**
+
+리눅스 서버에 인터페이스가 둘 있고 양쪽 대역 IP를 다 줘도 한쪽에서 받은 패킷을 다른 쪽으로 넘기지 않습니다. 보안을 위해 기본으로 꺼 둔 것입니다. `net.ipv4.ip_forward`를 1로 켜야 넘깁니다. `sysctl -w`나 `/proc/sys/net/ipv4/ip_forward`에 쓴 값은 재부팅하면 돌아가므로 영구 적용은 `/etc/sysctl.d/` 아래 파일에 적습니다.
+
+쿠버네티스 노드가 바로 이 라우터 역할을 합니다. 노드 안의 Pod들이 보낸 패킷을 다른 노드로 넘겨야 하니 ip_forward가 켜져 있어야 하고 다른 노드의 Pod 대역으로 가는 경로가 라우팅 테이블에 있어야 합니다. 1-6절 점검 표의 마지막 두 줄이 이 둘을 확인하는 명령입니다.
+
+</details>
+
+<details>
+<summary>기초부터: 네트워크 네임스페이스, veth, 브리지, NAT</summary>
+
+Pod마다 IP가 따로 있는 것은 Pod마다 네트워크 네임스페이스가 따로 있기 때문입니다. 컨테이너 네트워크를 손으로 한 번 만들어 보면 CNI 플러그인이 대신 해 주는 일이 그대로 보입니다.
+
+**네트워크 네임스페이스란**
+
+리눅스 커널이 네트워크 스택을 여러 벌로 나눠 둔 것입니다. 네임스페이스마다 인터페이스, 라우팅 테이블, ARP 테이블, iptables 규칙을 따로 가집니다. 집 안을 방으로 나눈 것과 비슷합니다. 방 안 프로세스는 자기 방의 인터페이스만 보고 호스트(루트 네임스페이스)는 `ip netns` 같은 도구로 모든 방에 들어가 볼 수 있습니다.
+
+```bash
+ip netns add red
+ip netns add blue
+ip -n red link            # 새 네임스페이스에는 lo 하나뿐이고 호스트의 eth0은 보이지 않는다
+```
+
+**두 방을 잇는 케이블: veth 쌍**
+
+veth는 양 끝이 있는 가상 케이블입니다. 한쪽 끝으로 들어간 패킷이 다른 끝으로 나옵니다. 한 끝을 red에, 다른 끝을 blue에 넣고 IP를 주면 둘이 통신합니다. 한쪽을 지우면 짝도 함께 사라집니다.
+
+```bash
+ip link add veth-red type veth peer name veth-blue
+ip link set veth-red netns red
+ip link set veth-blue netns blue
+ip -n red addr add 192.168.15.1/24 dev veth-red
+ip -n blue addr add 192.168.15.2/24 dev veth-blue
+ip -n red link set veth-red up
+ip -n blue link set veth-blue up
+```
+
+**방이 많아지면: 리눅스 브리지**
+
+방이 늘 때마다 모든 쌍을 케이블로 이을 수는 없습니다. 호스트에 가상 스위치인 브리지(`ip link add v-net-0 type bridge`)를 하나 만들고 각 네임스페이스의 veth 반대쪽 끝을 브리지에 꽂습니다(`ip link set <끝> master v-net-0`). 브리지는 호스트에서 보면 인터페이스이기도 해서 IP(예: 192.168.15.5)를 주면 호스트와 네임스페이스가 서로 통신합니다.
+
+**바깥으로 나가기: 게이트웨이와 NAT**
+
+네임스페이스에서 외부로 나가려면 두 가지가 더 필요합니다.
+
+1. 경로: 네임스페이스의 기본 게이트웨이를 브리지 IP로 지정합니다(`ip -n blue route add default via 192.168.15.5`). 호스트는 ip_forward가 켜져 있어야 넘겨 줍니다.
+2. 주소 변환: 192.168.15.x는 바깥 네트워크가 모르는 사설 주소라 응답이 돌아오지 못합니다. 호스트에서 출발지 주소를 자기 주소로 바꾸는 MASQUERADE 규칙을 겁니다(`iptables -t nat -A POSTROUTING -s 192.168.15.0/24 -j MASQUERADE`).
+
+반대로 바깥에서 안으로 들어오게 하려면 목적지 주소를 바꾸는 DNAT 규칙을 겁니다. 호스트 8080으로 온 요청을 192.168.15.2:80으로 보내는 식입니다. Docker의 `-p 8080:80`과 iptables 모드 kube-proxy의 Service 구현이 같은 DNAT 원리를 씁니다.
+
+**쿠버네티스에서는**
+
+Pod 하나가 네트워크 네임스페이스 하나이고 같은 Pod의 컨테이너는 그 네임스페이스를 함께 씁니다. 그래서 같은 Pod 안에서는 `localhost`로 통신합니다. veth를 만들어 Pod에 넣고 IP를 주고 경로를 잡는 일은 Pod가 생길 때마다 CNI 플러그인이 합니다. 커널 쪽 구조는 [쿠버네티스 아래의 리눅스 2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에 더 자세히 있습니다.
+
+</details>
+
+<details>
+<summary>기초부터: Docker 네트워크 모드 none, host, bridge</summary>
+
+Docker가 컨테이너 네트워크를 어떻게 만드는지 보면 쿠버네티스 Pod 네트워크의 뼈대가 보입니다. `docker run --network <모드>`로 고르는 기본 모드는 셋입니다.
+
+| 모드 | 컨테이너가 받는 것 | 결과 |
+|---|---|---|
+| `none` | 자기 네트워크 네임스페이스와 `lo`만 | 외부와도 다른 컨테이너와도 통신하지 못한다 |
+| `host` | 호스트의 네트워크 네임스페이스를 그대로 | 포트 매핑 없이 호스트 IP와 포트로 바로 접근된다. 대신 80번을 쓰는 컨테이너 둘을 한 호스트에 띄울 수 없다 |
+| `bridge` (기본) | 자기 네임스페이스, veth 한 쌍, 사설 IP | 같은 브리지의 컨테이너끼리 통신한다. 외부에서 들어오려면 포트 매핑이 필요하다 |
+
+bridge 모드는 앞 토글에서 손으로 만든 구조와 같습니다.
+
+1. Docker를 설치하면 호스트에 `docker0` 브리지가 생기고 기본으로 172.17.0.1/16 같은 주소를 받습니다.
+2. 컨테이너를 만들 때마다 네트워크 네임스페이스를 만들고 veth 쌍의 한 끝은 컨테이너 안 `eth0`으로, 다른 끝(`vethXXXX`)은 `docker0`에 꽂습니다.
+3. 컨테이너는 172.17.0.x 사설 IP를 받고 기본 게이트웨이는 `docker0`입니다. 바깥으로 나갈 때는 호스트의 MASQUERADE 규칙으로 출발지 주소가 바뀝니다.
+4. `docker run -p 8080:80 nginx`를 하면 Docker가 nat 테이블에 "호스트 8080으로 온 패킷의 목적지를 컨테이너 IP:80으로 바꿔라"는 DNAT 규칙을 넣습니다.
+
+```bash
+docker network ls               # bridge, host, none
+ip addr show docker0            # 호스트의 브리지
+iptables -t nat -L -n           # Docker가 넣은 MASQUERADE, DNAT 규칙
+```
+
+쿠버네티스 노드의 런타임은 1.24 이후 containerd나 CRI-O이고 Pod 네트워크는 CNI 플러그인이 만듭니다. 그래도 "Pod마다 네임스페이스, veth로 노드에 연결, 노드에서 NAT와 DNAT"라는 뼈대는 같습니다. Pod 스펙의 `hostNetwork: true`가 Docker의 host 모드에 해당합니다.
+
+</details>
+
 Cluster Networking 문서는 풀어야 할 문제를 넷으로 나눕니다. 같은 Pod 안 컨테이너끼리는 `localhost`(네트워크 네임스페이스 공유), Pod와 Pod는 Pod 네트워크, Pod와 Service는 Service, 클러스터 밖에서 들어오는 트래픽은 NodePort, LoadBalancer, Ingress, Gateway가 맡습니다. Pod 네트워크의 약속은 셋입니다.
 
 - 클러스터의 모든 Pod는 클러스터 전체에서 고유한 IP를 받습니다.
@@ -52,6 +166,33 @@ Cluster Networking 문서는 풀어야 할 문제를 넷으로 나눕니다. 같
 - 노드의 에이전트(시스템 데몬, kubelet)는 그 노드의 모든 Pod와 통신할 수 있습니다.
 
 ### 1-2. 누가 무엇을 구현하나
+
+<details>
+<summary>기초부터: Pod 네트워크를 직접 만든다면 (노드별 대역, 노드 간 경로, 오버레이)</summary>
+
+쿠버네티스가 정하는 것은 Pod 네트워크의 규칙뿐입니다. 모든 Pod가 고유 IP를 받고 같은 노드든 다른 노드든 NAT 없이 서로 닿아야 한다는 규칙입니다(1-1절). 이 규칙을 맞추려면 무엇을 해야 하는지 손으로 따라가 보면 CNI 플러그인이 하는 일이 보입니다. 노드 두 대(192.168.1.11, 192.168.1.12)가 있다고 하겠습니다.
+
+**1단계. 노드마다 브리지와 서로 다른 대역**
+
+각 노드에 브리지를 하나 만들고 노드마다 겹치지 않는 Pod 대역을 줍니다. 노드1은 10.244.1.0/24, 노드2는 10.244.2.0/24입니다. 대역이 겹치면 같은 IP를 가진 Pod가 두 노드에 생길 수 있어 고유 IP 규칙이 깨집니다.
+
+**2단계. Pod가 생길 때마다 연결**
+
+Pod가 생기면 veth 쌍을 만들어 한 끝은 Pod 네임스페이스 안 `eth0`으로, 다른 끝은 노드 브리지에 꽂고 대역에서 남는 IP 하나(10.244.1.2)를 줍니다. 기본 게이트웨이는 브리지 IP(10.244.1.1)로 잡습니다. 여기까지 하면 같은 노드의 Pod끼리 통신합니다.
+
+**3단계. 노드 사이의 경로**
+
+노드1의 Pod(10.244.1.2)가 노드2의 Pod(10.244.2.2)에게 보내면 노드1은 10.244.2.0/24가 어디 있는지 모릅니다. 노드1의 라우팅 테이블에 "10.244.2.0/24는 192.168.1.12로"를 넣고 노드2에는 반대 방향 경로를 넣으면 클러스터 전체가 10.244.0.0/16 하나로 묶입니다. 노드들이 같은 L2 네트워크에 있을 때 쓸 수 있는 방법입니다.
+
+**경로를 넣을 수 없는 환경: 오버레이**
+
+노드가 다른 서브넷에 있거나 노드 사이 네트워크 장비가 Pod 대역을 모르면 경로만으로는 안 됩니다. 이때 쓰는 것이 캡슐화입니다. 출발 노드가 Pod끼리 주고받는 원래 패킷(출발지와 목적지가 Pod IP)을 노드 IP끼리 주고받는 바깥 패킷 안에 통째로 넣어 보내고 목적지 노드가 바깥 헤더를 벗겨 안의 패킷을 Pod에 넘깁니다. 소포를 한 번 더 포장해 보내는 셈입니다. VXLAN이 대표적인 캡슐화 방식이고 Flannel의 기본 백엔드도 VXLAN입니다. 옛 강의의 Weave Net도 노드마다 에이전트를 DaemonSet으로 띄워 서로 Pod 위치를 공유하고 캡슐화로 전달하는 방식이었습니다(지금은 저장소가 보관된 프로젝트입니다).
+
+**누가 자동으로 하나**
+
+Pod는 하루에도 수없이 생기고 사라지니 위 작업을 사람이 할 수는 없습니다. 런타임이 Pod를 만들 때마다 CNI 플러그인을 불러 2단계를 하게 하고 1단계와 3단계(대역 나누기, 경로나 터널 유지)는 플러그인이 DaemonSet으로 띄운 에이전트가 맡습니다. 그 호출 방식이 1-4절의 CNI입니다.
+
+</details>
 
 쿠버네티스는 API만 정의하고 대부분을 외부 구성요소가 채웁니다.
 
@@ -67,6 +208,29 @@ IP 대역은 셋입니다. Pod IP는 네트워크 플러그인이, Service IP는
 kube-proxy 모드는 리눅스에서 `iptables`, `ipvs`, `nftables`입니다. 지정하지 않으면 기본값은 `iptables`이고 문서는 앞으로 `nftables`로 바꿀 예정이라고 적습니다. `ipvs`는 v1.35부터 사용 중단(deprecated)이고 v1.37 릴리스 글 기준 v1.40에서 기본 비활성화, v1.43에서 제거 예정입니다. iptables 체인과 conntrack 해석은 시험 범위 밖이라 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에 따로 두었습니다.
 
 ### 1-3. 노드가 여는 포트 표
+
+<details>
+<summary>기초부터: 노드가 갖춰야 할 것과 포트가 필요한 이유</summary>
+
+클러스터의 구성요소는 서로 네트워크로 대화합니다. 그래서 노드가 갖춰야 할 조건과 열어 둘 포트가 정해져 있습니다.
+
+**노드마다 고유해야 하는 값**
+
+kubeadm 설치 문서는 노드마다 호스트 이름, MAC 주소, `product_uuid`(`/sys/class/dmi/id/product_uuid`)가 달라야 한다고 적습니다. 쿠버네티스가 이 값들로 노드를 구별하기 때문입니다. 실물 장비는 대개 다르지만 VM 하나를 복제해 워커를 늘리면 값이 같아질 수 있고 그러면 설치가 실패할 수 있습니다. 연습용 VM을 복제했다면 `hostnamectl`, `ip link`, `product_uuid`를 먼저 확인합니다.
+
+**포트는 누가 누구에게 접속하는지로 읽기**
+
+포트 표를 외우기 전에 연결 방향을 그려 보면 쉽습니다.
+
+- kubectl, kubelet, 컨트롤러 매니저, 스케줄러는 모두 API 서버에 접속합니다. 그래서 6443은 모두에게 열려 있어야 합니다.
+- API 서버는 etcd에 접속합니다(2379). etcd 멤버가 여럿이면 멤버끼리 2380으로 복제합니다.
+- API 서버는 반대 방향으로 각 노드의 kubelet(10250)에도 접속합니다. `kubectl logs`, `exec`, `port-forward`가 이 길을 탑니다.
+- 스케줄러(10259)와 컨트롤러 매니저(10257)는 kubeadm에서 127.0.0.1에만 바인딩되어 자기 노드 안에서만 쓰입니다. 바깥에 열 필요가 없습니다.
+- 외부 사용자는 NodePort 범위(30000-32767)로 워커에 들어옵니다.
+
+클라우드에서 클러스터를 직접 올렸는데 노드가 `NotReady`이거나 `kubectl logs`만 타임아웃이 나면 보안 그룹이나 노드 방화벽(firewalld, iptables)에서 이 포트가 막혔는지부터 봅니다.
+
+</details>
 
 노드끼리 통신이 안 되는 과제는 방화벽이 필요한 포트를 막은 경우가 많습니다. Ports and Protocols 문서의 표이고 모두 바꿀 수 있는 기본값입니다.
 
@@ -84,6 +248,57 @@ kube-proxy 모드는 리눅스에서 `iptables`, `ipvs`, `nftables`입니다. �
 kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으로 접속해서 처리합니다. 워커의 10250이 막히면 Pod는 잘 도는데 `kubectl logs`만 실패합니다. 실제 포트는 정적 Pod 매니페스트(`/etc/kubernetes/manifests/`)의 `--secure-port` 등으로 확인합니다.
 
 ### 1-4. CNI 설정은 컨테이너 런타임이 읽는다
+
+<details>
+<summary>기초부터: CNI는 무엇이고 Pod가 만들어질 때 어떤 순서로 불리나</summary>
+
+**왜 생겼나**
+
+1-2절 토글의 2단계(네임스페이스에 veth 넣기, IP 주기, 경로 잡기)는 어느 컨테이너 플랫폼에나 필요합니다. 플랫폼마다 이 코드를 따로 만들면 네트워크 솔루션 하나를 지원하는 데도 플랫폼 수만큼 일이 생깁니다. 그래서 네트워크 구성을 외부 실행 파일(플러그인)로 떼어 내고 "런타임은 플러그인을 이렇게 부르고 플러그인은 이렇게 답한다"는 규약을 정했습니다. 이 규약이 CNI(Container Network Interface)입니다.
+
+**역할 나누기**
+
+| 컨테이너 런타임(containerd, CRI-O) | CNI 플러그인(bridge, Calico, Cilium, Flannel 등) |
+|---|---|
+| Pod의 네트워크 네임스페이스를 만든다 | 그 네임스페이스에 인터페이스를 넣고 IP를 준다 |
+| `/etc/cni/net.d`의 설정을 읽어 어떤 플러그인을 쓸지 정한다 | 경로와 필요한 규칙을 설정한다 |
+| Pod 생성 때 `ADD`, 삭제 때 `DEL`로 플러그인을 실행한다 | 결과(받은 IP 등)를 정해진 JSON 형식으로 돌려준다 |
+
+**Pod 하나가 만들어질 때의 순서**
+
+1. 스케줄러가 Pod를 노드에 배정합니다.
+2. 그 노드의 kubelet이 CRI로 런타임에 Pod 샌드박스를 만들어 달라고 요청합니다. 1.24부터 kubelet은 CNI를 직접 다루지 않습니다.
+3. 런타임이 네트워크 네임스페이스를 만들고 `/etc/cni/net.d`에서 파일 이름 순으로 첫 설정 파일을 읽습니다.
+4. 설정의 `"type"` 값과 같은 이름의 실행 파일을 `/opt/cni/bin`에서 찾아 `ADD`로 실행합니다. 네임스페이스 경로와 설정 JSON을 함께 넘깁니다.
+5. 플러그인이 veth를 만들어 Pod에 넣고 IP를 붙인 뒤 결과를 돌려주면 런타임이 앱 컨테이너를 시작합니다.
+
+3~5단계 중 하나라도 실패하면 Pod는 `ContainerCreating`에 머물고 이벤트에 `FailedCreatePodSandBox`가 남습니다. 아래 표의 두 상황이 이 단계의 실패입니다.
+
+**설정 파일 읽기**
+
+bridge 플러그인 설정은 대략 이런 모양입니다(값은 예시).
+
+```json
+{
+  "cniVersion": "1.0.0",
+  "name": "mynet",
+  "type": "bridge",
+  "bridge": "cni0",
+  "isGateway": true,
+  "ipMasq": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.244.1.0/24",
+    "routes": [{ "dst": "0.0.0.0/0" }]
+  }
+}
+```
+
+`type`은 실행할 플러그인, `isGateway`는 브리지에 IP를 줘서 Pod의 게이트웨이로 쓸지, `ipMasq`는 바깥으로 나갈 때 MASQUERADE를 걸지입니다. `ipam` 블록은 IP 나눠 주기를 맡을 별도 플러그인을 고릅니다(1-5절 토글).
+
+Docker Engine의 네트워크는 자체 모델(CNM)로 만들어져 CNI 규약을 따르지 않습니다. 그래서 dockershim 시절에는 kubelet이 CNI를 대신 불렀고 지금은 CNI를 직접 지원하는 런타임이 부릅니다.
+
+</details>
 
 CNI 플러그인을 부르는 쪽은 containerd나 CRI-O입니다. kubelet이 `--network-plugin`, `--cni-bin-dir`로 CNI를 다룬 것은 dockershim 경로뿐이었고 이 옵션들은 1.24에서 dockershim과 함께 제거됐습니다. 지금은 런타임 설정을 봅니다.
 
@@ -107,6 +322,31 @@ CNI 문제는 증상이 둘로 나타납니다. kind v1.37 워커에서 일부�
 NetworkPolicy를 연습하려면 정책을 집행하는 플러그인이 필요합니다. Flannel README는 `flanneld`가 NetworkPolicy를 집행하지 않는다고 적고 실제로 Flannel만 깐 노드에서는 기본 거부 정책을 넣어도 통신이 그대로 됐습니다. Calico, Cilium, kind 기본 CNI(kindnet)는 집행합니다. 옛 강의의 Weave Net은 저장소가 보관(archived)됐고 마지막 릴리스가 2021년입니다.
 
 ### 1-5. Pod 대역, Service 대역, kube-proxy 모드 확인
+
+<details>
+<summary>기초부터: IPAM, Pod IP는 누가 나눠 주나</summary>
+
+Pod가 생길 때마다 겹치지 않는 IP를 하나씩 줘야 합니다. 어떤 IP가 이미 쓰이는지 장부를 들고 있다가 빈 IP를 내주고 Pod가 사라지면 돌려받는 일을 IPAM(IP Address Management)이라고 합니다.
+
+**두 층으로 나뉜다**
+
+1. 노드별 대역 나누기: kube-controller-manager가 `--allocate-node-cidrs=true`일 때 `--cluster-cidr`(예: 10.244.0.0/16)를 노드마다 `/24`로 잘라 Node의 `spec.podCIDR`에 적습니다. kubeadm은 `--pod-network-cidr`를 주면 이것을 켭니다.
+2. 대역 안에서 IP 하나 고르기: CNI 설정의 `ipam` 블록이 가리키는 IPAM 플러그인이 합니다.
+
+**IPAM 플러그인**
+
+| `ipam.type` | 장부를 두는 곳 |
+|---|---|
+| `host-local` | 노드의 로컬 디스크(기본 `/var/lib/cni/networks/<네트워크 이름>/`)에 할당한 IP를 파일로 기록. 가장 흔하다 |
+| `dhcp` | 노드 밖 DHCP 서버에서 받아 온다. 노드에 `dhcp` 데몬이 따로 떠 있어야 한다 |
+
+네트워크를 붙이는 방식(bridge, macvlan 등)과 IP를 고르는 방식을 따로 둔 덕분에 둘을 바꿔 끼울 수 있습니다. 런타임이 플러그인을 부르면 플러그인이 다시 `ipam.type`의 IPAM 플러그인을 불러 IP를 받아 옵니다.
+
+**플러그인마다 다르다**
+
+Flannel 같은 플러그인은 노드의 `spec.podCIDR`를 그대로 씁니다. Calico, Cilium처럼 자체 IPAM을 가진 플러그인은 자기 방식으로 블록을 나눠 `spec.podCIDR`와 다른 대역에서 IP를 줄 수 있습니다(아래 목록의 둘째 항목). "이 노드의 Pod 대역"을 묻는 과제에서는 `spec.podCIDR`, CNI 설정 파일의 `ipam`, 실제 Pod IP를 함께 봅니다.
+
+</details>
 
 "이 클러스터의 Pod IP 대역과 Service IP 대역을 적어라" 같은 과제는 어느 구성요소의 옵션에 값이 있는지만 알면 됩니다. 시험에서는 과제가 지정한 노드에 `ssh`로 들어가 실행합니다.
 
@@ -162,6 +402,59 @@ kubectl -n shop run tmp --rm -it --restart=Never --image=busybox -- wget -qO- -T
 ## 2. NetworkPolicy 정의와 적용
 
 ### 2-1. 격리의 의미
+
+<details>
+<summary>기초부터: NetworkPolicy가 왜 필요하고 어떻게 읽나</summary>
+
+**문제 상황**
+
+쇼핑몰에 웹 프런트, 주문 API, 결제 DB가 있다고 하겠습니다. 쿠버네티스의 기본 네트워크는 모두 열려 있어서 웹 프런트 Pod가 결제 DB에 바로 접속할 수 있습니다. 주문 API만 DB에 접속하게 하고 싶어도 기본 상태에는 막을 장치가 없습니다. NetworkPolicy는 Pod 단위로 "누가 들어올 수 있고 어디로 나갈 수 있는지"를 적는 객체입니다.
+
+**방향은 요청을 시작한 쪽 기준**
+
+규칙은 보호하려는 Pod 입장에서 씁니다.
+
+- Ingress: 다른 곳에서 이 Pod로 들어오는 연결입니다. 주문 API → DB는 DB 입장에서 Ingress입니다.
+- Egress: 이 Pod에서 바깥으로 나가는 연결입니다. DB → 외부 백업 서버는 DB 입장에서 Egress입니다.
+
+허용된 연결의 응답은 자동으로 통과합니다. 주문 API의 요청을 받으려고 DB의 Ingress를 열었다면 DB가 돌려주는 응답을 위해 Egress를 따로 열 필요가 없습니다.
+
+**동작 순서**
+
+1. 정책의 `spec.podSelector`가 라벨로 대상 Pod를 고릅니다. Service가 Pod를 고르는 방식과 같습니다.
+2. 그 순간 대상 Pod는 `policyTypes`에 적힌 방향으로 격리됩니다. 격리된 방향은 기본 거부입니다.
+3. `ingress.from`, `egress.to`에 적은 상대와 `ports`에 맞는 연결만 열립니다.
+4. 같은 Pod를 고르는 정책이 여럿이면 열린 범위를 모두 합칩니다.
+
+"DB에는 주문 API만 3306으로 들어온다"를 쓰면 이렇습니다.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-db-ingress
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-db        # 보호할 Pod
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: order-api     # 들어올 수 있는 Pod (정책과 같은 네임스페이스)
+    ports:
+    - protocol: TCP
+      port: 3306
+```
+
+**누가 실제로 막나**
+
+API 서버는 이 객체를 저장만 합니다. 패킷을 실제로 거르는 것은 CNI 플러그인입니다. 정책을 지원하지 않는 플러그인(Flannel 단독)에서는 객체가 오류 없이 만들어지는데 아무것도 막히지 않습니다. 지원하는 예로는 Calico, Cilium, Antrea가 있습니다. 정책을 만든 뒤에는 막혀야 할 연결이 정말 막히는지 직접 요청해 확인합니다.
+
+</details>
 
 NetworkPolicy는 IP와 포트 수준에서 TCP, UDP, SCTP 트래픽을 제어합니다. 네트워크 플러그인이 지원하지 않으면 정책을 만들어도 아무 효과가 없습니다. 기본 상태의 Pod는 격리되지 않아 모든 연결이 허용되고 격리는 방향마다 따로 적용됩니다.
 
@@ -311,6 +604,39 @@ spec:
 
 ### 3-1. Service가 필요한 이유
 
+<details>
+<summary>기초부터: Service의 정체와 kube-proxy가 하는 일</summary>
+
+**문제 상황**
+
+주문 API Pod가 세 개 떠 있고 게시판이 주문 API를 부릅니다. Pod IP는 재시작이나 재배치 때 바뀌고 Pod 수도 늘었다 줄었다 합니다. 게시판 코드에 Pod IP를 적어 둘 수 없으니 바뀌지 않는 주소 하나가 필요합니다. 그 주소가 Service의 ClusterIP입니다.
+
+**Service의 정체는 규칙**
+
+처음 배울 때 가장 헷갈리는 점입니다. ClusterIP에는 그 주소를 가진 인터페이스도, 요청을 받는 서버 프로세스도 없습니다. iptables 모드 클러스터에서 ClusterIP로 `ping`을 보내도 응답이 없는 이유입니다. Service는 "이 IP:포트로 가는 패킷은 이 Pod들 중 하나로 보내라"는 규칙이고 그 규칙이 모든 노드에 똑같이 깔려 있습니다.
+
+**규칙이 깔리는 순서**
+
+1. Service를 만들면 kube-apiserver가 `--service-cluster-ip-range`(Service 대역)에서 ClusterIP 하나를 줍니다.
+2. EndpointSlice 컨트롤러가 selector에 맞는 Ready Pod의 IP와 포트를 EndpointSlice에 적습니다.
+3. 각 노드의 kube-proxy가 API 서버를 watch하다가 Service와 EndpointSlice가 바뀌면 그 노드의 커널에 전달 규칙을 다시 씁니다.
+4. 게시판 Pod가 ClusterIP:80으로 패킷을 보내면 패킷이 노드를 떠나기 전에 커널이 규칙대로 목적지를 Pod IP:targetPort 중 하나로 바꿉니다(DNAT). 그다음은 일반 Pod 간 통신입니다.
+
+kube-proxy는 규칙을 쓰기만 하고 패킷을 직접 나르지 않습니다. 그래서 kube-proxy Pod가 잠시 죽어도 이미 깔린 규칙으로 기존 Service는 계속 동작하고 그사이의 변경만 반영되지 않습니다.
+
+**프록시 모드**
+
+| 모드 | 동작 | 1.37 기준 상태 |
+|---|---|---|
+| userspace | kube-proxy 프로세스가 연결을 직접 받아 넘김. 커널과 사용자 공간을 오가 느렸다 | 1.26에서 제거 |
+| `iptables` | iptables nat 규칙으로 DNAT. 백엔드는 무작위로 고른다 | 기본값 |
+| `ipvs` | 커널의 L4 로드밸런서 IPVS가 해시 테이블로 찾고 여러 분산 알고리즘을 지원 | v1.35부터 사용 중단 |
+| `nftables` | iptables의 후속인 nftables로 규칙을 씀. Service가 많을 때 iptables보다 규칙 갱신과 처리 부담이 작다 | 앞으로 기본값이 될 예정 |
+
+iptables 모드에서 실제 규칙은 노드에서 `sudo iptables-save | grep <Service 이름>`으로 보입니다. Pod 대역과 Service 대역은 겹치면 안 됩니다. Service 대역은 kube-apiserver의 `--service-cluster-ip-range`, Pod 대역은 `--cluster-cidr`와 CNI 설정이 정합니다(1-5절).
+
+</details>
+
 Service 문서의 정의는 "하나 이상의 Pod로 실행되는 네트워크 애플리케이션을 노출하는 방법"입니다. Pod는 사라지고 IP가 바뀌므로 클라이언트가 부를 이름과 가상 IP를 앞에 둡니다. 동작은 두 단계입니다.
 
 1. 컨트롤 플레인의 컨트롤러가 Service의 selector에 맞는 Pod를 찾아 EndpointSlice에 기록합니다.
@@ -447,6 +773,33 @@ endpoints:
 ## 4. Gateway API로 Ingress 트래픽 관리
 
 ### 4-1. 왜 Gateway API인가
+
+<details>
+<summary>기초부터: Ingress에서 Gateway API로 넘어온 이유와 요청이 흐르는 길</summary>
+
+**Ingress에서 생긴 문제**
+
+Ingress의 표준 필드는 HTTP 요청을 호스트와 경로로 나누는 것까지입니다. 카나리 비율, 헤더 바꾸기, HTTP→HTTPS 리다이렉트 같은 기능은 컨트롤러마다 다른 어노테이션 문자열로 넣었습니다. 그래서 세 가지 문제가 생겼습니다.
+
+1. 어노테이션은 그냥 문자열이라 API 서버가 오타를 검증하지 못합니다. 틀리면 조용히 무시됩니다.
+2. 컨트롤러를 바꾸면 어노테이션을 전부 다시 써야 합니다.
+3. 인프라 설정(진입점, TLS 인증서)과 앱 라우팅(경로)이 한 객체에 섞여 있어서 여러 팀이 같은 Ingress를 고치다 서로의 설정을 덮어쓰기 쉽습니다.
+
+**역할별로 객체를 나눴다**
+
+Gateway API는 한 덩어리였던 것을 셋으로 나눕니다. 건물에 비유하면 GatewayClass는 출입 설비를 어느 업체가 맡는지, Gateway는 실제 출입문(몇 번 포트, 어떤 프로토콜, 어떤 인증서), HTTPRoute는 문 안에 붙인 안내판(이 경로는 이 Service로)입니다. 실제 동작으로 옮기면 이렇습니다.
+
+1. 클러스터에 Gateway API CRD와 구현체(Envoy Gateway, Istio, NGINX Gateway Fabric 등)의 컨트롤러가 설치되어 있어야 합니다. 쿠버네티스 본체에는 둘 다 들어 있지 않습니다.
+2. GatewayClass의 `controllerName`이 그 컨트롤러를 가리킵니다.
+3. 운영자가 Gateway를 만들면 컨트롤러가 실제 프록시(Pod와 그 앞의 Service나 로드밸런서)를 준비하고 리스너대로 포트를 엽니다.
+4. 개발자가 HTTPRoute를 만들어 `parentRefs`로 Gateway에 붙이면 컨트롤러가 Route 규칙을 프록시 설정으로 바꿉니다.
+5. 요청이 Gateway 주소로 들어오면 프록시가 호스트, 경로, 헤더를 Route 규칙과 맞춰 `backendRefs`의 Service 뒤 Pod로 보냅니다.
+
+어노테이션으로 하던 기능은 HTTPRoute의 표준 필드가 됐습니다. 가중치 분배는 `backendRefs[].weight`, 리다이렉트와 경로 재작성과 헤더 변경은 `filters`, 요청 복제는 `RequestMirror` 필터입니다. 미러링은 실제 요청을 원래 백엔드가 처리하는 동안 복사본을 새 버전에 보내 보는 기능이라 사용자는 원래 백엔드의 응답만 받습니다.
+
+kubernetes.io 문서가 stable로 꼽는 종류는 GatewayClass, Gateway, HTTPRoute, GRPCRoute 넷입니다. TCP, UDP, TLS 트래픽용 Route도 프로젝트에 있지만 이 목록에 없으니 쓰려면 설치한 CRD 채널과 구현체의 지원 여부를 확인합니다.
+
+</details>
 
 Gateway API는 CRD로 설치하는 애드온 API 묶음이고 kubernetes.io 문서가 Ingress의 후속으로 소개합니다. 리소스를 역할별로 나눴고 헤더 매칭이나 가중치 분배처럼 Ingress에서는 컨트롤러 어노테이션으로만 되던 기능을 표준 필드로 지원합니다. Ingress 종류(kind)를 포함하지 않으므로 기존 Ingress는 한 번 변환해야 합니다.
 
@@ -717,6 +1070,40 @@ Ingress 문서는 첫머리에 Ingress 대신 Gateway를 권하고 Ingress API�
 
 ### 5-2. 컨트롤러와 리소스는 별개
 
+<details>
+<summary>기초부터: Ingress가 푸는 문제와 컨트롤러가 하는 일</summary>
+
+**문제 상황**
+
+쇼핑몰의 주문, 게시판, 결제 화면을 모두 밖에 공개한다고 하겠습니다. NodePort로 열면 `http://<노드IP>:30080`처럼 포트 번호가 주소에 드러나고 서비스마다 포트가 따로 생깁니다. LoadBalancer로 열면 Service마다 클라우드 로드밸런서가 하나씩 생겨 비용과 관리할 주소가 서비스 수만큼 늘어납니다. HTTPS 인증서도 서비스마다 따로 붙여야 합니다.
+
+Ingress는 진입점을 하나로 모읍니다. L7 프록시 하나가 앞에 서서 요청의 호스트 이름과 URL 경로를 보고 알맞은 Service로 나눠 보내고 TLS도 그 자리에서 한 번에 풉니다.
+
+**두 부품**
+
+| 부품 | 정체 | 누가 설치하나 |
+|---|---|---|
+| Ingress 컨트롤러 | 실제로 요청을 받는 프록시와 그 설정을 갱신하는 컨트롤러. 보통 Deployment나 DaemonSet, 바깥에서 들어오게 하는 NodePort나 LoadBalancer Service, API를 watch할 RBAC 권한으로 구성 | 관리자. 쿠버네티스 기본 설치에 들어 있지 않다 |
+| Ingress 리소스 | "이 호스트, 이 경로는 이 Service로"라는 규칙 | 앱 담당자 |
+
+동작 순서는 이렇습니다.
+
+1. 컨트롤러가 Ingress, Service, EndpointSlice를 watch합니다.
+2. Ingress가 생기거나 바뀌면 그 규칙을 자기 프록시 설정으로 바꿔 적용합니다.
+3. 요청이 컨트롤러의 Service로 들어오면 프록시가 규칙에 맞는 백엔드 Pod로 보냅니다.
+
+그래서 컨트롤러 없이 Ingress만 만들면 객체는 저장되지만 아무 일도 일어나지 않습니다.
+
+**규칙 모양 세 가지**
+
+- 기본 백엔드만: `spec.defaultBackend` 하나로 모든 요청을 한 Service로 보냅니다.
+- 경로 기준: 같은 호스트에서 `/orders`는 주문 API, `/board`는 게시판으로 보냅니다(5-4절의 첫 예).
+- 호스트 기준: `orders.shop.example`과 `board.shop.example`처럼 호스트 이름별로 다른 Service로 보냅니다. `rules[]`에 `host`가 다른 항목을 여러 개 둡니다.
+
+어느 규칙에도 맞지 않는 요청은 `defaultBackend`로 가고 그것도 없으면 컨트롤러가 정한 대로(대개 404) 처리됩니다. 옛 강의가 전제하는 ingress-nginx 컨트롤러는 2026년 3월 유지보수가 끝났으니 시험 환경에서는 `kubectl get ingressclass`로 실제 컨트롤러를 확인합니다.
+
+</details>
+
 Ingress 리소스는 규칙만 담습니다. 규칙을 읽어 실제 프록시를 설정하는 것은 Ingress 컨트롤러이고 컨트롤러가 없으면 Ingress를 만들어도 아무 일이 일어나지 않습니다. kube-controller-manager에 들어 있지 않으므로 따로 설치합니다.
 
 여러 컨트롤러를 둘 때는 IngressClass로 나눕니다.
@@ -872,6 +1259,48 @@ spec:
 
 ### 6-1. 어떻게 붙어 있나
 
+<details>
+<summary>기초부터: 리눅스에서 이름이 IP로 바뀌는 과정</summary>
+
+CoreDNS를 보기 전에 리눅스 프로그램이 이름을 IP로 바꾸는 과정을 짚습니다. Pod 안도 같은 리눅스 규칙을 따릅니다.
+
+**1단계. /etc/hosts: 각자 들고 있는 메모**
+
+가장 단순한 방법은 `/etc/hosts`에 `192.168.1.11 db`처럼 적는 것입니다. 빠르고 확실하지만 서버가 100대면 100대의 파일을 다 고쳐야 하고 IP가 바뀔 때마다 다시 고쳐야 합니다.
+
+**2단계. DNS 서버: 장부를 한곳에**
+
+그래서 이름과 IP 짝을 한 서버(DNS 서버)에 모아 두고 모두가 그 서버에 묻습니다. 어느 서버에 물을지는 `/etc/resolv.conf`의 `nameserver` 줄에 적습니다.
+
+```
+nameserver 10.96.0.10
+search shop.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+```
+
+**3단계. 어느 쪽을 먼저 보나: /etc/nsswitch.conf**
+
+hosts 파일과 DNS 서버가 다른 답을 주면 `/etc/nsswitch.conf`의 `hosts: files dns` 줄 순서대로 봅니다. 보통 files(`/etc/hosts`)가 먼저입니다. 쿠버네티스에서는 Pod 스펙의 `hostAliases`로 그 Pod의 `/etc/hosts`에 줄을 넣어 특정 이름만 다른 IP로 보낼 수 있습니다.
+
+**4단계. search: 짧은 이름에 꼬리 붙이기**
+
+`search` 줄이 있으면 짧은 이름 뒤에 목록의 도메인을 차례로 붙여 물어봅니다. 위 설정에서 `payment`를 찾으면 `payment.shop.svc.cluster.local`부터 물어봅니다. 쿠버네티스에서 같은 네임스페이스의 Service를 이름만으로 부를 수 있는 이유입니다. Pod 이름은 이 방식으로 풀리지 않습니다(6-2절).
+
+**5단계. 레코드 종류**
+
+| 레코드 | 내용 |
+|---|---|
+| A | 이름 → IPv4 주소 |
+| AAAA | 이름 → IPv6 주소 |
+| CNAME | 이름 → 다른 이름(별칭). ExternalName Service의 응답이 이것 |
+| SRV | 서비스 이름 → 호스트와 포트. 이름 붙은 Service 포트에 쓰인다 |
+
+**6단계. 확인 도구마다 보는 곳이 다르다**
+
+`ping`, `curl`, `getent hosts`는 nsswitch 순서를 따라 `/etc/hosts`까지 봅니다. `nslookup`과 `dig`는 `/etc/hosts`를 보지 않고 DNS 서버에 바로 묻습니다. 그래서 hosts 파일로 바꾼 이름을 `nslookup`으로 확인하면 DNS 서버의 원래 답이 나옵니다. "DNS 서버가 제대로 답하는지"는 `nslookup`, `dig`로, "이 Pod의 프로그램이 실제로 어디로 가는지"는 `getent hosts`로 봅니다.
+
+</details>
+
 Customizing DNS Service 문서 기준입니다.
 
 | 항목 | 내용 |
@@ -886,6 +1315,27 @@ Customizing DNS Service 문서 기준입니다.
 kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일 `/var/lib/kubelet/config.yaml`에 있습니다(예: `clusterDNS: [10.96.0.10]`, `clusterDomain: cluster.local`). `clusterDNS`와 `kube-dns` Service의 클러스터 IP가 어긋나면 Pod가 엉뚱한 DNS 서버를 봅니다. Service 이름 `kube-dns`와 옛 kube-dns 애드온은 다른 것입니다. v1.37 릴리스 글은 kube-dns 애드온 빌드를 v1.40 이후 중단할 예정이라고 적었습니다. CoreDNS의 Service 이름이 `kube-dns`인 것은 옛 kube-dns와의 호환 때문이라고 Debugging DNS Resolution 문서가 적습니다.
 
 ### 6-2. 무엇이 어떤 이름을 받나
+
+<details>
+<summary>기초부터: 클러스터 DNS가 이름을 알고 Pod에 알려 주는 과정</summary>
+
+**CoreDNS는 어떻게 이름을 아나**
+
+CoreDNS는 `kube-system`에 Deployment(kubeadm 기본 복제본 2개)로 떠 있는 DNS 서버입니다. `kubernetes` 플러그인이 API 서버를 watch하면서 Service와 EndpointSlice를 메모리에 들고 있습니다. 그래서 Service가 생기면 누가 따로 등록하지 않아도 곧바로 그 이름으로 답합니다. 클러스터 도메인 밖의 이름(예: `example.com`)은 `forward` 플러그인이 CoreDNS Pod의 `/etc/resolv.conf`에 적힌 업스트림 DNS로 넘깁니다.
+
+**Pod는 어떻게 CoreDNS를 아나**
+
+1. CoreDNS Pod 앞에 `kube-dns`라는 이름의 ClusterIP Service가 있습니다(kubeadm 기본 10.96.0.10).
+2. 각 노드의 kubelet 설정에 `clusterDNS: [10.96.0.10]`, `clusterDomain: cluster.local`이 들어 있습니다. kubelet은 이 설정값을 그대로 쓰고 Service를 조회해서 찾지는 않습니다.
+3. kubelet이 Pod를 띄울 때 컨테이너의 `/etc/resolv.conf`에 `nameserver <clusterDNS>`와 `search <ns>.svc.cluster.local svc.cluster.local cluster.local`을 써 줍니다.
+
+**이름 구조 읽기**
+
+`payment.billing.svc.cluster.local`을 뒤에서부터 읽습니다. `cluster.local`은 클러스터 도메인, `svc`는 Service 레코드라는 표시, `billing`은 네임스페이스, `payment`는 Service 이름입니다. search 목록 덕분에 같은 네임스페이스에서는 `payment`, 다른 네임스페이스에서는 `payment.billing`까지만 써도 됩니다.
+
+Pod가 받는 이름은 두 종류입니다. 하나는 IP의 점을 대시로 바꾼 `10-244-1-5.shop.pod.cluster.local`이고 Corefile의 `pods` 설정에 따라 응답합니다(kubeadm 기본은 `pods insecure`). 다른 하나는 Pod에 `hostname`과 `subdomain`을 주고 같은 이름의 headless Service를 둘 때 생기는 이름입니다. StatefulSet Pod가 `order-db-0.order-db`처럼 불리는 것이 이 방식입니다. `pod.cluster.local`은 search 목록에 없으므로 IP 기반 이름은 전체를 적어야 합니다.
+
+</details>
 
 DNS for Services and Pods 문서 기준입니다.
 
