@@ -67,6 +67,53 @@ payments = spark.createDataFrame(
 
 ### 1-1. Reader와 Writer의 모양
 
+<details>
+<summary>기초부터: Spark SQL과 DataFrame은 같은 엔진, 그리고 spark.read가 하는 일</summary>
+
+> **핵심 한 줄**: `spark.sql("SELECT ...")`와 `df.filter(...).groupBy(...)`는 같은 논리 계획으로 바뀌어 같은 Catalyst 최적화기와 실행 엔진을 탑니다. 다른 것은 문법뿐입니다.
+
+#### 1. 왜 필요한가
+
+분석가는 SQL로, 엔지니어는 Python으로 쓰고 싶어 합니다. 엔진이 둘이면 같은 계산의 성능과 결과가 달라질 수 있습니다. Spark SQL 가이드는 어떤 API와 언어로 표현하든 같은 실행 엔진을 쓴다고 적습니다([Ch-01](/blog/cert/spark/spark-01-architecture) 1절 표). SQL로 쓰든 DataFrame으로 쓰든 [Ch-01](/blog/cert/spark/spark-01-architecture) 9-1절 토글의 Catalyst 단계를 똑같이 거칩니다.
+
+#### 2. 같은 계산을 두 문법으로
+
+```python
+orders.createOrReplaceTempView("orders_v")
+
+by_sql = spark.sql("""
+    SELECT order_date, sum(amount) AS revenue
+    FROM orders_v WHERE status = 'PAID' GROUP BY order_date
+""")
+by_df = (orders.filter(F.col("status") == "PAID")
+               .groupBy("order_date").agg(F.sum("amount").alias("revenue")))
+
+by_sql.explain()
+by_df.explain()   # 두 물리 계획의 모양이 같을 것으로 예상합니다(실행해서 비교하지 않았습니다)
+```
+
+#### 3. spark.read가 하는 일
+
+1. **소스 고르기**: `format()`(생략하면 `parquet`)으로 데이터 소스 구현을 고릅니다.
+2. **스키마 정하기**: 지정한 스키마를 쓰거나 Parquet 파일의 메타데이터에서 읽습니다. CSV와 JSON에서 추론을 켜면 데이터를 훑어 정합니다.
+3. **DataFrame 반환**: 데이터는 아직 읽지 않았습니다. "이 경로를 이 형식으로 읽는다"는 계획 한 단계가 생겼을 뿐입니다.
+4. **액션 때 읽기**: 파일을 파티션([Ch-01](/blog/cert/spark/spark-01-architecture) 8절)으로 나눠 Task마다 자기 조각을 읽습니다. 필요한 컬럼만, 조건에 맞는 파일만 읽도록 최적화가 들어갑니다(1-2절, 1-4절 토글).
+
+```text
+spark.read.parquet(path)   →  계획: [Scan parquet path]        (읽지 않음)
+  .filter(...).select(...) →  계획: [Scan] → [Filter] → [Project]
+  .count()                 →  최적화 후 Task들이 파일 조각을 나눠 읽음
+```
+
+| 구분 | `spark.read` | `df.write` |
+|---|---|---|
+| 실행 시점 | 계획만 만듦(스키마 추론은 예외로 데이터를 훑음) | 호출 즉시 실행(액션) |
+| 돌려주는 것 | DataFrame | 없음 |
+
+> **정리**: 읽기는 계획의 첫 단계이고 쓰기는 계획을 실행하는 액션입니다. SQL과 DataFrame은 그 사이의 계획을 만드는 두 가지 문법입니다.
+
+</details>
+
 읽기는 `spark.read`(`DataFrameReader`), 쓰기는 `df.write`(`DataFrameWriter`)로 시작합니다. 형식 전용 메서드(`csv`, `json`, `parquet`, `orc`, `text`, `jdbc`)와 범용 메서드(`format().load()`, `format().save()`)가 있고 결과는 같습니다.
 
 ```python
@@ -94,6 +141,56 @@ orders.write.format("parquet").mode("overwrite").save("/out/orders")
 ```
 
 ### 1-2. 파일 소스 옵션의 기본값
+
+<details>
+<summary>기초부터: 행 기반 파일(CSV, JSON)과 열 기반 파일(Parquet, ORC)</summary>
+
+> **핵심 한 줄**: CSV와 JSON은 한 행씩 이어 적은 텍스트이고 Parquet와 ORC는 컬럼별로 묶어 타입과 통계까지 적은 바이너리입니다. 분석 쿼리는 몇 개 컬럼만 읽는 경우가 많아서 열 기반 파일이 유리합니다.
+
+#### 1. 왜 필요한가
+
+주문 테이블에 컬럼이 50개 있고 `amount`의 합만 구한다고 합시다. CSV는 한 줄에 50개 값이 섞여 있어서 `amount` 하나를 꺼내려고 모든 줄을 처음부터 끝까지 읽고 쪼개야 합니다. 열 기반 파일은 `amount` 값들이 한곳에 모여 있어서 그 부분만 읽으면 됩니다.
+
+#### 2. 어떻게 저장되나
+
+```text
+행 기반 (CSV)
+1,101,PAID,32000,2026-10-01
+2,102,PAID,15000,2026-10-01
+3,101,CANCELED,8000,2026-10-02
+
+열 기반 (Parquet 개념도: 행 묶음 하나 안의 컬럼 덩어리)
+order_id : 1, 2, 3
+user_id  : 101, 102, 101
+status   : PAID, PAID, CANCELED
+amount   : 32000, 15000, 8000       ← 최솟값 8000, 최댓값 32000을 메타데이터에 기록
+```
+
+#### 3. 열 기반이 빠른 이유
+
+1. **컬럼 가지치기(column pruning)**: 쿼리에 필요한 컬럼 덩어리만 읽습니다.
+2. **필터 내려보내기(predicate pushdown)**: 행 묶음(row group)마다 적힌 최솟값과 최댓값을 보고 `amount > 100000`을 만족할 수 없는 묶음은 건너뜁니다. Parquet에서는 `spark.sql.parquet.filterPushdown`(기본 true)이 이 기능을 켭니다.
+3. **압축**: 같은 타입 값이 모여 있어 잘 압축됩니다. Spark의 Parquet 기본 코덱은 `snappy`입니다(`spark.sql.parquet.compression.codec`).
+4. **스키마 내장**: 파일에 컬럼 이름과 타입이 들어 있어 추론할 필요가 없습니다.
+
+#### 4. 한눈에 비교
+
+| 구분 | CSV, JSON | Parquet, ORC |
+|---|---|---|
+| 저장 단위 | 행 | 행 묶음 안에서 열 |
+| 스키마 | 파일에 없음. 지정하거나 추론 | 파일에 들어 있음 |
+| 스키마 추론 비용 | 데이터를 훑어야 함 | 메타데이터만 읽음 |
+| 일부 컬럼만 읽기 | 줄 전체를 읽어야 함 | 필요한 컬럼만 |
+| 사람이 직접 읽기 | 쉬움 | 도구가 필요 |
+
+#### 5. 헷갈리는 점
+
+- CSV를 스키마 없이 `inferSchema` 기본값(`false`)으로 읽으면 모든 컬럼이 문자열입니다. 숫자 계산 전에 타입을 바꾸거나 처음부터 스키마를 줍니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 7-1절 토글).
+- Delta는 Parquet 데이터 파일에 트랜잭션 로그를 더한 형식입니다(2절). 열 기반의 이점을 그대로 가집니다.
+
+> **정리**: 아래 표의 옵션 대부분이 CSV와 JSON에 몰려 있는 이유는 이 형식들이 타입 정보를 갖고 있지 않아서입니다. Parquet와 ORC는 타입과 통계를 파일에 담아 옵션이 적습니다.
+
+</details>
 
 시험에 문서가 없으니 형식별로 자주 쓰는 옵션의 기본값을 외워 둡니다. 4.2.0 Data Source 문서의 값입니다.
 
@@ -164,6 +261,42 @@ Text 형식은 쓸 때 제약이 있습니다. `DataFrameWriter.text` 문서는 
 
 ### 1-3. JDBC 읽기와 쓰기
 
+<details>
+<summary>기초부터: JDBC 병렬 읽기가 쿼리를 나누는 방식</summary>
+
+> **핵심 한 줄**: `partitionColumn`의 값 범위를 `numPartitions`개 구간으로 잘라 구간마다 WHERE 절을 붙인 쿼리를 따로 보냅니다. 구간 하나가 파티션 하나이고 DB 연결 하나입니다.
+
+#### 1. 왜 필요한가
+
+분할 옵션 없이 읽으면 Spark는 테이블 전체를 가져오는 쿼리 하나를 연결 하나로 보냅니다. 결과가 파티션 하나, Task 하나로 들어와서 익스큐터가 많아도 코어 하나만 일합니다.
+
+#### 2. 어떻게 나누나 (Spark 4.2.0 `JDBCRelation.columnPartition`)
+
+계산이 나누어떨어지도록 `lowerBound=0`, `upperBound=100000`, `numPartitions=4`로 두겠습니다.
+
+1. **보폭 계산**: `upperBound / numPartitions - lowerBound / numPartitions` = 25000입니다.
+2. **구간마다 WHERE**: 첫 구간에는 하한을 두지 않고 null도 함께 받습니다. 마지막 구간에는 상한을 두지 않습니다.
+3. **Task마다 쿼리 하나**: 각 Task가 자기 WHERE 절을 붙인 쿼리로 DB에 따로 질의합니다.
+
+```text
+파티션 0: WHERE order_id < 25000 or order_id is null
+파티션 1: WHERE order_id >= 25000 AND order_id < 50000
+파티션 2: WHERE order_id >= 50000 AND order_id < 75000
+파티션 3: WHERE order_id >= 75000
+```
+
+위 WHERE 절은 소스의 계산식에 값을 넣어 쓴 것이고 실행해서 본 쿼리 로그는 아닙니다. 본문 예제처럼 `lowerBound=1`이면 보폭이 나누어떨어지지 않아 경계가 몇 칸 옮겨집니다.
+
+#### 3. 헷갈리는 점
+
+- 범위 밖의 값은 첫 구간과 마지막 구간에 들어갑니다. 본문의 "테이블의 모든 행이 파티션되어 반환된다"는 문장이 이 구조에서 나옵니다.
+- 보폭은 값의 범위로만 정하고 실제 분포는 보지 않습니다. 주문 번호가 한쪽에 몰려 있으면 파티션 하나만 커집니다.
+- `numPartitions`가 곧 DB 동시 연결 수입니다. 크게 잡을수록 DB가 받는 부하도 커집니다.
+
+> **정리**: JDBC 병렬 읽기는 값 범위를 쪼갠 쿼리 여러 개입니다. `lowerBound`, `upperBound`는 보폭을 정하는 데만 쓰입니다.
+
+</details>
+
 ```python
 DataFrameReader.jdbc(url, table, column=None, lowerBound=None, upperBound=None,
                      numPartitions=None, predicates=None, properties=None)
@@ -217,6 +350,49 @@ orders.write.jdbc(jdbc_url, "public.orders_copy", mode="append", properties=prop
 ```
 
 ### 1-4. overwrite와 partitionBy
+
+<details>
+<summary>기초부터: 디스크의 파티션 디렉터리와 파티션 가지치기</summary>
+
+> **핵심 한 줄**: `partitionBy`는 컬럼 값별로 폴더를 나눠 쓰는 기능입니다. 읽을 때 그 컬럼으로 거르면 맞는 폴더만 열어서 읽는 양이 줄어듭니다(파티션 가지치기).
+
+#### 1. 왜 필요한가
+
+3년 치 주문이 한 폴더에 있으면 "10월 3일 주문"만 보려 해도 모든 파일을 열어 날짜를 확인해야 합니다. 날짜별 폴더로 나눠 두면 폴더 이름만 보고 나머지를 건너뜁니다.
+
+#### 2. 어떻게 동작하나
+
+1. **쓰기**: Task마다 자기 파티션의 행을 `order_date` 값별로 나눠 해당 폴더에 파일로 씁니다.
+2. **폴더 이름이 값**: 파일 안에는 `order_date`를 저장하지 않고 폴더 이름(`order_date=2026-10-03`)이 그 값을 대신합니다.
+3. **읽기**: 경로 아래 폴더 이름을 훑어 파티션 컬럼을 스키마 끝에 붙입니다(이 절 Partition Discovery 문단).
+4. **가지치기**: 조건이 `order_date = '2026-10-03'`이면 그 폴더만 읽습니다. `explain()`의 파일 스캔 줄에 `PartitionFilters`로 조건이 보입니다.
+
+```text
+spark.read.parquet("/out/orders_by_date").filter("order_date = '2026-10-03'")
+
+/out/orders_by_date/
+├── order_date=2026-10-01/   건너뜀
+├── order_date=2026-10-02/   건너뜀
+└── order_date=2026-10-03/   읽음
+```
+
+#### 3. 두 가지 "파티션"
+
+| 구분 | 메모리 파티션([Ch-01](/blog/cert/spark/spark-01-architecture) 8절) | 디스크 파티션(`partitionBy`) |
+|---|---|---|
+| 무엇 | DataFrame을 나눈 조각. Task 하나의 몫 | 컬럼 값별 폴더 |
+| 정하는 것 | `maxPartitionBytes`, `shuffle.partitions`, `repartition` | `partitionBy`에 준 컬럼 |
+| 수명 | 실행하는 동안 | 파일로 남음 |
+| 효과 | 병렬도 | 읽는 범위 줄이기 |
+
+#### 4. 헷갈리는 점
+
+- 출력 파일 수는 "Task 수 × 각 Task가 만난 값의 수"까지 늘 수 있습니다. 메모리 파티션 200개가 저마다 365개 날짜를 섞어 갖고 있으면 파일이 최대 200 × 365개 생깁니다. 쓰기 전에 `repartition("order_date")`로 같은 날짜를 한 파티션에 모으면 날짜당 파일 수가 줄어듭니다.
+- 고유값이 아주 많은 컬럼은 폴더가 너무 많이 생깁니다. 그런 컬럼은 `bucketBy`를 씁니다(4-2절).
+
+> **정리**: 디스크 파티션은 폴더로 데이터를 미리 나눠 읽기 범위를 줄이는 장치입니다. 실행 중의 메모리 파티션과 이름만 같고 하는 일은 다릅니다.
+
+</details>
 
 `partitionBy(*cols)`는 출력을 Hive 파티셔닝처럼 `컬럼=값` 디렉터리로 나눕니다. 시험 안내서 샘플 문항 1번이 정확히 이 조합(`mode("overwrite").partitionBy("country").parquet(...)`)을 묻습니다.
 
@@ -343,6 +519,50 @@ Delta 테이블에서 임의 조건에 맞는 행만 골라 바꿀 때는 `repla
 
 ### 3-1. 네 가지 모드
 
+<details>
+<summary>기초부터: 쓰기는 Task마다 파일을 따로 쓴다</summary>
+
+> **핵심 한 줄**: `df.write`는 Task마다 자기 파티션을 파일로 쓰고 모든 Task가 끝나면 드라이버가 작업 전체를 확정(commit)하는 분산 작업입니다.
+
+#### 1. 왜 알아야 하나
+
+출력 경로에 폴더가 생기고 그 안에 `part-00000-...` 파일이 여러 개 생기는 모습이 처음에는 낯섭니다. 저장 모드가 원자적이지 않다는 아래 문서 문장도 이 구조를 알면 이해됩니다.
+
+#### 2. 어떻게 동작하나
+
+1. **모드 확인**: 드라이버가 대상이 이미 있는지 보고 저장 모드를 적용합니다. `errorifexists`면 여기서 예외, `ignore`면 여기서 끝, `overwrite`면 기존 데이터를 지웁니다.
+2. **Task별 쓰기**: 각 Task가 자기 파티션의 행을 파일로 씁니다.
+3. **확정**: Task가 쓴 파일은 Task 단위와 Job 단위의 커밋을 거쳐 최종 경로에 보이게 됩니다. 커밋하는 방식은 출력 커미터 구현에 따라 다릅니다.
+
+```text
+orders (메모리 파티션 4개)
+ Task 0 ─► part-00000-....parquet
+ Task 1 ─► part-00001-....parquet
+ Task 2 ─► part-00002-....parquet
+ Task 3 ─► part-00003-....parquet
+           └─► 모두 성공하면 Job 커밋 → /out/orders/ 에서 보임
+```
+
+#### 3. 모드별로 1단계에서 하는 일
+
+| 모드 | 대상이 이미 있을 때 1단계 | 이후 |
+|---|---|---|
+| `errorifexists` | 예외 | 쓰지 않음 |
+| `ignore` | 아무것도 하지 않고 끝 | 쓰지 않음 |
+| `append` | 기존 데이터 유지 | 새 파일을 더함 |
+| `overwrite` | 기존 데이터 삭제 | 새 파일을 씀 |
+
+`overwrite`는 1단계에서 지우고 2~3단계에서 쓰므로 그 사이에 실패하면 옛 데이터는 이미 사라진 뒤입니다. 아래 문서 주의 2번이 이 상황입니다.
+
+#### 4. 헷갈리는 점
+
+- 출력 파일 수는 쓰기 직전의 파티션 수를 따릅니다. `partitionBy`를 함께 쓰면 더 늘어납니다(1-4절 토글).
+- 파일 하나로 받고 싶으면 `coalesce(1)` 뒤에 씁니다. Task 하나가 전부 쓰므로 느려집니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-3절).
+
+> **정리**: 쓰기는 여러 Task가 나눠 하는 일이고 저장 모드는 그 앞에서 대상 경로를 어떻게 다룰지를 정합니다.
+
+</details>
+
 Generic Load/Save Functions 문서(4.2.0)의 표를 옮깁니다.
 
 | Scala/Java | 문자열 | 데이터가 이미 있을 때 |
@@ -397,6 +617,48 @@ INSERT OVERWRITE shop.orders SELECT * FROM orders_v WHERE status = 'PAID';
 - `insertInto`의 위치 기반 매칭은 `union`의 위치 기반 매칭과 같은 함정입니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 6절).
 
 ## 4. 영구 테이블: partitionBy, bucketBy, sortBy
+
+<details>
+<summary>기초부터: 버킷팅은 무엇이고 왜 셔플을 줄이나</summary>
+
+> **핵심 한 줄**: 버킷팅은 키의 해시값으로 행을 고정된 n개 버킷에 미리 나눠 저장하는 방식입니다. 같은 키는 항상 같은 번호의 버킷에 들어가므로 나중에 그 키로 조인하거나 집계할 때 셔플을 건너뛸 수 있습니다.
+
+#### 1. 왜 필요한가
+
+주문과 회원을 `user_id`로 매일 조인하면 매번 양쪽을 `user_id`로 셔플합니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-2절 토글). 섞는 방식은 매번 같은데 비용도 매번 냅니다. 저장할 때 한 번 키별로 나눠 두면 읽을 때 다시 섞을 일이 줄어듭니다.
+
+#### 2. 어떻게 동작하나
+
+1. **저장**: 행마다 버킷 번호(키 해시값을 버킷 수로 나눈 나머지)를 계산해 그 버킷 파일에 씁니다.
+2. **테이블 정보에 기록**: 버킷 컬럼과 버킷 수를 메타스토어의 테이블 정보에 남깁니다. 이 정보가 메타스토어에 있어야 하므로 `saveAsTable`로 만든 영구 테이블에서만 씁니다.
+3. **조인할 때**: 양쪽 테이블이 같은 키, 같은 버킷 수로 버킷팅돼 있으면 Spark가 같은 번호 버킷끼리 바로 조인합니다. 물리 계획에서 그 쪽의 `Exchange`(셔플)가 빠집니다.
+
+```text
+orders (bucketBy 8, user_id)            users (bucketBy 8, user_id)
+ 버킷 0 : 해시(user_id) % 8 = 0  ◄─조인─►  버킷 0
+ 버킷 1                          ◄─조인─►  버킷 1
+ ...                                       ...
+ 버킷 7                          ◄─조인─►  버킷 7
+ 같은 번호끼리 만나므로 셔플 없이 조인
+```
+
+#### 3. partitionBy와 비교
+
+| 구분 | `partitionBy` | `bucketBy` |
+|---|---|---|
+| 나누는 기준 | 값 그대로 | 해시값을 버킷 수로 나눈 나머지 |
+| 나뉘는 개수 | 고유값 수만큼 폴더 | n개로 고정 |
+| 얻는 것 | 필터할 때 폴더 건너뛰기 | 조인, 집계할 때 셔플 생략 |
+| 맞는 컬럼 | 날짜처럼 고유값이 적고 필터에 쓰는 컬럼 | `user_id`처럼 고유값이 많고 조인 키로 쓰는 컬럼 |
+
+#### 4. 헷갈리는 점
+
+- 두 테이블의 버킷 수가 다르면 기본 설정에서 셔플이 다시 생길 수 있습니다. 같이 조인할 테이블은 같은 키, 같은 버킷 수로 맞춥니다.
+- 조인 방식 자체(sort merge 조인, broadcast 조인)는 [Ch-03](/blog/cert/spark/spark-03-dataframe-api) 5-3절 토글에서 봅니다.
+
+> **정리**: `partitionBy`는 읽는 범위를 줄이고 `bucketBy`는 셔플을 줄입니다. 아래 4-2절의 선택 기준이 이 차이에서 나옵니다.
+
+</details>
 
 ### 4-1. 시그니처와 제약
 
@@ -489,9 +751,46 @@ Python API와 SQL 이름이 엇갈립니다.
 
 ## 5. 관리형 테이블과 외부 테이블
 
+<details>
+<summary>기초부터: 테이블은 파일과 메타데이터 두 부분이다</summary>
+
+> **핵심 한 줄**: 테이블은 데이터 파일과 그 파일을 설명하는 메타데이터로 이뤄집니다. 메타데이터를 보관하는 곳이 메타스토어(카탈로그)이고 관리형과 외부 테이블은 `DROP TABLE`이 파일까지 지우는지로 갈립니다.
+
+#### 1. 왜 필요한가
+
+경로만 있으면 매번 `spark.read.format("parquet").load("/lake/orders_ext")`처럼 경로와 형식을 기억해 적어야 합니다. `shop.orders` 같은 이름만으로 부르려면 이름마다 위치, 형식, 스키마, 파티션을 적어 둔 장부가 필요합니다.
+
+#### 2. 어떻게 동작하나
+
+1. **만들기**: `saveAsTable`이나 `CREATE TABLE`이 파일을 쓰고 메타스토어에 테이블 항목을 만듭니다.
+2. **조회**: SQL이나 `spark.table("shop.orders")`가 이름을 쓰면 분석 단계([Ch-01](/blog/cert/spark/spark-01-architecture) 9-1절 토글)에서 카탈로그를 찾아 위치와 스키마를 알아낸 뒤 파일 스캔으로 바꿉니다.
+3. **삭제**: `DROP TABLE`이 메타스토어 항목을 지웁니다. 관리형이면 파일도 지웁니다.
+
+```text
+메타스토어(장부)                       저장소(파일)
+shop.orders_managed ──► spark-warehouse/shop.db/orders_managed/   Spark가 관리
+shop.orders_ext     ──► /lake/orders_ext/                          사용자가 관리
+```
+
+| 장부에 적는 것 | 예 |
+|---|---|
+| 위치 | `/lake/orders_ext` |
+| 형식 | `parquet` |
+| 스키마 | 컬럼 이름과 타입 |
+| 파티션, 버킷 정보 | `order_date`, 버킷 8개 |
+
+#### 3. 헷갈리는 점
+
+- 로컬 PySpark 스크립트에서 `enableHiveSupport()` 없이 만든 세션은 카탈로그를 메모리에 둡니다. Spark 4.2.0 소스의 `spark.sql.catalogImplementation` 기본값이 `in-memory`이고 `enableHiveSupport()`가 이 값을 `hive`로 바꿉니다. 메모리 카탈로그의 테이블 항목은 애플리케이션이 끝나면 사라지고 파일만 남습니다. 5-1절 본문과 5-2절 표의 Derby 메타스토어는 Hive 지원을 켰을 때의 이야기입니다. `pyspark` 셸은 Hive 클래스가 있으면 Hive 지원을 켠 세션을 만듭니다(같은 소스의 `_create_shell_session`).
+- Databricks에서는 Unity Catalog가 이 장부 역할을 합니다(5-2절).
+
+> **정리**: 테이블 이름은 장부의 한 줄이고 데이터는 파일에 있습니다. 관리형은 장부와 파일을 Spark가 함께 관리하고 외부 테이블은 장부만 관리합니다.
+
+</details>
+
 ### 5-1. Apache Spark 기준
 
-`saveAsTable`은 DataFrame 내용을 실체화하고 메타스토어에 그 데이터를 가리키는 포인터를 만듭니다. 메타스토어 연결이 같으면 프로그램을 다시 시작해도 테이블이 남습니다. Hive를 따로 설치하지 않아도 Spark가 Derby로 로컬 Hive 메타스토어를 만든다고 문서가 적습니다.
+`saveAsTable`은 DataFrame 내용을 실체화하고 메타스토어에 그 데이터를 가리키는 포인터를 만듭니다. 메타스토어 연결이 같으면 프로그램을 다시 시작해도 테이블이 남습니다. Hive 지원을 켠 세션(`enableHiveSupport()`, `pyspark` 셸은 Hive 클래스가 있으면 자동으로 켬)이면 Hive를 따로 설치하지 않아도 Spark가 Derby로 로컬 Hive 메타스토어를 만든다고 문서가 적습니다. Hive 지원 없이 만든 세션은 카탈로그를 메모리에 두므로(4.2.0 기본값 `spark.sql.catalogImplementation=in-memory`) 프로그램이 끝나면 테이블 항목이 사라집니다.
 
 | | 관리형(managed) | 외부(external) |
 |---|---|---|
@@ -534,7 +833,7 @@ Databricks 문서의 관리형 테이블과 외부 테이블 설명입니다.
 | | 로컬 Apache Spark(기본 설정) | Databricks Unity Catalog | Databricks 레거시 Hive 메타스토어 |
 |---|---|---|---|
 | 이름 | `database.table`(예: `shop.orders`) | `catalog.schema.table` 세 단계 | `hive_metastore.schema.table` |
-| 메타데이터 | Derby 로컬 메타스토어 | Unity Catalog | 워크스페이스 Hive 메타스토어 |
+| 메타데이터 | Hive 지원을 켜면 Derby 로컬 메타스토어, 아니면 메모리 카탈로그 | Unity Catalog | 워크스페이스 Hive 메타스토어 |
 | 관리형 데이터 위치 | `spark.sql.warehouse.dir`(기본 `$PWD/spark-warehouse`) | Unity Catalog가 관리하는 저장소 | 워크스페이스 설정을 따른다(이번에 확인하지 않음) |
 | 형식 생략 시 | `spark.sql.sources.default`(기본 `parquet`) | Delta | Delta |
 

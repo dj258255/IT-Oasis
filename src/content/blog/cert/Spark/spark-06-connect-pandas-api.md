@@ -42,6 +42,51 @@ seriesOrder: 6
 
 ## 2. Spark Connect의 구조
 
+<details>
+<summary>기초부터: 클래식 PySpark 구조와 클라이언트를 떼어 낸 이유</summary>
+
+> **핵심 한 줄**: 클래식 PySpark에서는 내 Python 프로그램이 드라이버 JVM과 붙어서 돕니다. Spark Connect는 이 둘을 네트워크로 떨어진 클라이언트와 서버로 나눴습니다.
+
+#### 1. 왜 필요한가
+
+클래식 PySpark에서 `SparkSession`을 만들면 같은 머신에 드라이버 JVM이 뜨고 Python이 Py4J로 그 JVM 객체를 직접 부릅니다. 여러 사용자가 클러스터 하나를 같이 쓰면 이 결합이 문제를 만듭니다. Spark Connect 문서가 꼽은 이점을 거꾸로 읽으면 클래식 구조의 불편이 보입니다.
+
+| 클래식 구조에서 생기는 일 | Spark Connect에서 |
+|---|---|
+| 메모리를 많이 쓰는 애플리케이션이 드라이버 쪽에 영향을 준다 | 클라이언트가 자기 프로세스에서 돌아 영향이 자기 환경에 머문다 |
+| 내 Python 의존성이 드라이버 환경과 충돌할 수 있다 | 의존성을 클라이언트에 둔다 |
+| Spark를 올리면 애플리케이션 환경도 같이 맞춰야 한다 | 서버 RPC가 하위 호환이면 드라이버만 따로 올린다 |
+| 드라이버와 같은 곳에서 Python을 띄워야 한다 | IDE, 노트북, 앱 서버에서 원격으로 붙는다 |
+
+#### 2. 어떻게 동작하나
+
+```text
+클래식 PySpark (한 머신 안)
+  Python 프로세스 ──Py4J──▶ 드라이버 JVM ──▶ 익스큐터들
+  SparkContext, RDD, JVM 객체를 직접 만진다
+
+Spark Connect
+  Python 클라이언트 ──gRPC, 계획(protobuf)──▶ Connect 서버 = 드라이버 JVM ──▶ 익스큐터들
+                    ◀──gRPC, 결과(Arrow 배치)──
+  클라이언트는 계획만 만들고 JVM 객체는 볼 수 없다
+```
+
+1. **클라이언트는 계획만 만든다**: DataFrame 연산을 해석 전 논리 계획으로 쌓습니다.
+2. **서버가 드라이버 일을 한다**: 계획을 받아 분석, 최적화, Job 제출을 합니다.
+3. **결과만 돌아온다**: 액션의 결과를 Arrow 배치로 받습니다.
+4. **세션은 서버 쪽에 있다**: 접속 문자열의 `session_id`가 서버 쪽 세션을 가리킵니다(4-3).
+
+비유하면 손님은 주문서만 내고 주방에는 들어가지 못합니다. 실제 동작으로는 클라이언트가 protobuf 계획만 보내고 `SparkContext`나 RDD처럼 드라이버 JVM 안의 객체는 쓸 수 없습니다(3절).
+
+#### 3. 헷갈리는 점
+
+- Connect 서버도 Spark 드라이버 애플리케이션입니다. 익스큐터와 클러스터 구조는 클래식과 같습니다(5-2 헷갈리는 지점).
+- 원격 서버에 붙는 클라이언트 쪽에는 드라이버 JVM이 뜨지 않습니다. 4.0부터 있는 `pyspark-client` 패키지가 이 클라이언트만 담은 형태입니다(4-2).
+
+> **정리**: Spark Connect는 "Python과 드라이버가 같은 몸"이던 구조를 "계획을 보내는 쪽과 실행하는 쪽"으로 나눈 것입니다. 2-1의 다섯 단계가 이 나뉜 구조 위에서 요청이 오가는 순서입니다.
+
+</details>
+
 ### 2-1. 요청이 오가는 순서
 
 Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나누면 이렇습니다.
@@ -226,6 +271,47 @@ local 모드는 엄밀히 말하면 `--deploy-mode` 값이 아니고 master URL�
 
 ## 6. pandas API on Spark의 장점
 
+<details>
+<summary>기초부터: pandas와 Spark는 어디서 계산하나</summary>
+
+> **핵심 한 줄**: pandas는 Python 프로세스 하나의 메모리에서 바로 계산합니다. Spark는 데이터를 파티션으로 나눠 여러 익스큐터에서 나중에 한꺼번에 계산합니다. pandas API on Spark는 앞의 문법으로 뒤의 엔진을 부르는 층입니다.
+
+#### 1. 왜 필요한가
+
+노트북에서 pandas로 주문 분석 코드를 만들었는데 데이터가 수백 GB로 커지면 머신 한 대 메모리에 들어가지 않습니다. PySpark DataFrame으로 옮기려면 문법이 달라서(`pdf[pdf.amount > 0]`과 `df.filter(F.col("amount") > 0)`) 코드를 다시 짜야 합니다. pandas 문법을 유지하면서 실행만 Spark로 옮기려고 만든 것이 pandas API on Spark입니다.
+
+#### 2. 어떻게 동작하나
+
+1. **pandas 문법으로 쓰기**: `psdf[psdf["status"] == "PAID"]`처럼 씁니다.
+2. **Spark 계획으로 쌓기**: pandas-on-Spark DataFrame 안에는 Spark DataFrame과 인덱스 정보가 들어 있고 연산은 Spark 계획으로 쌓입니다.
+3. **필요할 때 실행**: 결과를 화면에 보이거나 저장할 때 Spark Job이 돕니다.
+4. **화면에는 일부만**: repr로 보여 줄 때는 `display.max_rows`(기본 1000)까지만 가져옵니다(7-3 표).
+
+```text
+pandas            Python 프로세스 1개 ── 메모리 안 DataFrame ── 즉시 계산
+pandas on Spark   pandas 문법 ──▶ Spark 계획 ──▶ 드라이버 ──▶ 익스큐터 N개 (파티션별 계산)
+PySpark           Spark 문법  ──▶ Spark 계획 ──▶ 드라이버 ──▶ 익스큐터 N개
+```
+
+#### 3. 한눈에 비교
+
+| 구분 | pandas | pandas API on Spark | PySpark DataFrame |
+|---|---|---|---|
+| 데이터 위치 | 한 프로세스 메모리 | 익스큐터들의 파티션 | 익스큐터들의 파티션 |
+| 실행 시점 | 즉시 | 지연 | 지연 |
+| 인덱스 | 있다 | 있다(없으면 기본 인덱스를 만든다) | 없다 |
+| 행 순서 | 메모리 순서 그대로 | 분산이라 따로 맞춰야 한다 | 정렬하지 않으면 정해지지 않는다 |
+| 규모 상한 | 머신 메모리 | 클러스터 | 클러스터 |
+
+#### 4. 헷갈리는 점
+
+- pandas UDF와 pandas API on Spark는 다른 기능입니다. pandas UDF는 PySpark DataFrame 안에서 pandas 함수를 배치마다 부르는 것(10절)이고 pandas API on Spark는 DataFrame 전체를 pandas 문법으로 다루는 것입니다.
+- 데이터가 작으면 pandas가 더 빠를 수 있습니다. Spark는 Job을 띄우고 Task를 나누는 고정 비용이 있습니다.
+
+> **정리**: 문법은 pandas, 실행은 Spark입니다. 그래서 pandas에 있던 "행 순서와 인덱스는 공짜"라는 전제가 깨지고 그 빈자리를 7절의 기본 인덱스가 채웁니다.
+
+</details>
+
 PySpark 문서 첫 화면의 설명을 정리하면 장점은 넷입니다.
 
 - pandas 워크로드를 여러 노드에 분산해서 데이터 크기에 맞게 키울 수 있습니다.
@@ -264,6 +350,40 @@ Best Practices 문서가 권하는 것을 줄이면 이렇습니다.
 ## 7. 기본 인덱스
 
 ### 7-1. 세 가지 종류
+
+<details>
+<summary>기초부터: 인덱스가 하는 일과 분산에서 순번이 비싼 이유</summary>
+
+> **핵심 한 줄**: pandas 인덱스는 행마다 붙는 이름표이고 두 데이터를 연산할 때 이 이름표로 행을 맞춥니다. 분산 데이터에서는 이 이름표를 매기는 일 자체에 비용이 듭니다.
+
+#### 1. 왜 필요한가
+
+pandas에서 `s1 + s2`를 하면 같은 인덱스끼리 더합니다. 인덱스 0, 1, 2…는 데이터가 메모리에 한 줄로 있으니 바로 매길 수 있습니다. Spark DataFrame에는 인덱스가 없고 파티션들이 여러 익스큐터에 흩어져 있습니다. 어떤 행이 전체에서 몇 번째인지 알려면 앞 파티션들의 행 수를 먼저 알아야 합니다.
+
+#### 2. 어떻게 동작하나 (기본 인덱스를 매기는 세 방법)
+
+1. **sequence**: 파티션 지정 없는 Window로 순번을 매깁니다. 전체 데이터가 파티션 하나로 모이고 Task 하나가 순번을 붙입니다.
+2. **distributed-sequence(기본)**: 파티션별 행 수를 먼저 세고 앞 파티션들의 합을 시작 번호로 줘서 각 파티션이 자기 순번을 매깁니다. 4.2.0 소스 `AttachDistributedSequenceExec`는 입력을 캐시한 뒤 RDD `zipWithIndex`로 이 계산을 합니다. 옵션 `compute.default_index_cache`가 이 캐시의 저장 레벨입니다.
+3. **distributed**: `monotonically_increasing_id`를 씁니다. API 문서 기준으로 파티션 ID를 상위 31비트, 파티션 안 순서를 하위 33비트에 넣은 값이라 다른 파티션과 주고받을 것이 없지만 번호가 연속이 아닙니다.
+
+```text
+파티션 0: 3행        파티션 1: 2행          파티션 2: 4행
+
+sequence              한 파티션으로 모아 0 ~ 8
+distributed-sequence  [0, 1, 2]           [3, 4]                [5, 6, 7, 8]
+distributed           [0, 1, 2]           [2^33, 2^33+1]        [2×2^33, ...]
+```
+
+7-1 본문의 `ps.range(3)` 예제 값 25769803776은 3 × 2^33입니다. 파티션 3번의 첫 행이라는 뜻입니다.
+
+#### 3. 헷갈리는 점
+
+- distributed-sequence의 순번은 전역으로 이어지지만 같은 번호에 같은 행이 붙는다는 보장은 없습니다. 다시 읽을 때 파티션 안 순서가 달라질 수 있기 때문이고 7-2가 그 경고입니다.
+- 인덱스로 맞추는 연산(`psdf1["a"] + psdf2["b"]`)은 Spark에서 조인이 됩니다(7-3).
+
+> **정리**: 순번이 촘촘할수록 비싸고 느슨할수록 쌉니다. sequence는 한 곳에 모으고 distributed-sequence는 개수를 한 번 더 세며 distributed는 셀 필요가 없습니다.
+
+</details>
 
 pandas-on-Spark DataFrame은 인덱스가 필요합니다. Spark DataFrame에서 바꿀 때처럼 인덱스를 모르면 기본 인덱스를 붙이고 종류는 `compute.default_index_type`으로 고릅니다.
 
@@ -348,6 +468,46 @@ psdf2 = sdf.pandas_api(index_col="order_id")       # order_id를 다시 인덱�
 
 ## 9. Arrow 설정
 
+<details>
+<summary>기초부터: Arrow가 JVM과 Python 사이에서 바꾸는 것</summary>
+
+> **핵심 한 줄**: JVM과 Python 사이를 건너는 길 자체는 같고 Arrow는 그 길로 보내는 데이터의 모양을 바꿉니다. 행을 하나씩 pickle로 바꾸는 대신 컬럼 묶음(레코드 배치)으로 보내서 pandas로 옮기는 비용을 줄입니다.
+
+익스큐터 JVM이 Python 워커 프로세스와 데이터를 주고받는 경로는 [Ch-03 9-1절](/blog/cert/spark/spark-03-dataframe-api#9-1-일반-python-udf) 토글에 있습니다. 여기서는 Arrow를 켜면 그 경로에서 무엇이 달라지는지만 봅니다.
+
+#### 1. 왜 필요한가
+
+pandas DataFrame은 컬럼별 배열입니다. Arrow 없이 `toPandas()`를 하면 행을 pickle로 바꿔 보내고 Python 쪽에서 풀어 다시 컬럼으로 모아야 합니다. 행이 많을수록 이 변환 시간이 커집니다. Arrow 문서는 Arrow를 JVM과 Python 프로세스 사이에서 데이터를 효율적으로 옮기는 인메모리 컬럼 형식이라고 설명합니다.
+
+#### 2. 어떻게 동작하나 (`toPandas()`에 Arrow를 켰을 때)
+
+1. **Arrow 배치 만들기**: 익스큐터가 파티션을 Arrow 레코드 배치로 바꿉니다. 배치 하나는 최대 `maxRecordsPerBatch`(기본 10000)행입니다.
+2. **드라이버로 모으기**: 배치들이 드라이버 JVM을 거쳐 Python 프로세스로 갑니다.
+3. **pandas로 바꾸기**: Arrow 배치를 pandas DataFrame으로 바꿉니다. 둘 다 컬럼 형식이라 행을 다시 모으는 단계가 없습니다.
+
+```text
+Arrow 끔   익스큐터 ──행(pickle)──▶ 드라이버 ──▶ Python: 행 풀기 ──▶ 컬럼으로 모으기 ──▶ pandas
+Arrow 켬   익스큐터 ──Arrow 배치──▶ 드라이버 ──▶ Python: 배치 ──────────────────────▶ pandas
+```
+
+#### 3. 한눈에 비교
+
+| 구분 | Arrow 없이 | Arrow 사용 |
+|---|---|---|
+| 건너는 단위 | 행 | 컬럼 묶음(레코드 배치) |
+| 직렬화 | pickle | Arrow 형식 |
+| pandas로 바꾸기 | 행을 다시 컬럼으로 모은다 | 컬럼 형식을 그대로 옮긴다 |
+| 쓰는 곳 | Arrow를 끈 `toPandas()`, 4.1까지 기본 Python UDF | pandas UDF, pandas Function API, Arrow를 켠 `toPandas()`와 `createDataFrame(pandas)` |
+
+#### 4. 헷갈리는 점
+
+- Arrow는 건너는 형식을 바꿀 뿐입니다. `toPandas()`가 드라이버로 모으는 데이터 양은 같습니다.
+- 파티션을 Arrow 배치로 바꾸는 동안 JVM 메모리를 순간적으로 많이 쓸 수 있어서 컬럼이 많으면 `maxRecordsPerBatch`를 줄입니다.
+
+> **정리**: Arrow는 JVM과 Python 사이의 변환 비용을 줄이는 형식입니다. 아래 표는 이 형식을 어디에 켜는지 정하는 설정이고 10절의 pandas UDF는 항상 Arrow를 씁니다.
+
+</details>
+
 Arrow는 JVM과 Python 사이에서 데이터를 컬럼 형식으로 주고받는 데 씁니다. pandas UDF는 추가 설정 없이 Arrow로 데이터를 옮긴다고 문서가 적습니다. `toPandas()`와 pandas DataFrame으로 `createDataFrame()`을 할 때는 아래 설정을 따릅니다.
 
 | 설정 | 4.2.0 | 4.0.0, 4.1.0 | 3.5.6 | 뜻 |
@@ -371,6 +531,38 @@ Arrow를 켜도 `toPandas()`는 모든 레코드를 드라이버로 모읍니다
 ## 10. pandas UDF
 
 ### 10-1. 시그니처와 종류
+
+<details>
+<summary>기초부터: 한 행씩 부르기와 한 묶음씩 부르기</summary>
+
+> **핵심 한 줄**: 일반 Python UDF는 행마다 함수를 한 번씩 부릅니다. pandas UDF는 배치마다 한 번 부르고 pandas 벡터 연산으로 배치 전체를 한꺼번에 계산합니다.
+
+두 UDF가 Python 워커에서 도는 경로는 [Ch-03 9-1절](/blog/cert/spark/spark-03-dataframe-api#9-1-일반-python-udf) 토글에 있습니다. 여기서는 호출 횟수와 배치 경계만 봅니다.
+
+#### 1. 왜 필요한가
+
+주문 1억 건에 부가세를 붙이는 UDF를 만든다고 합시다. 행마다 부르면 Python 함수 호출이 1억 번 일어나고 매번 인자를 Python 값으로 바꿉니다. pandas UDF는 배치 크기 기본값 10000행 기준으로 1만 번 남짓 부르고 곱셈은 pandas가 배열 단위로 합니다.
+
+#### 2. 어떻게 동작하나
+
+1. **종류 정하기**: 타입 힌트(`pd.Series -> pd.Series` 등)로 Spark가 어떤 모양으로 부를지 정합니다.
+2. **배치로 자르기**: 파티션을 최대 `spark.sql.execution.arrow.maxRecordsPerBatch`행씩 자릅니다.
+3. **배치마다 호출**: 배치 하나를 pandas Series로 바꿔 함수를 한 번 부릅니다.
+4. **이어 붙이기**: 배치별 결과를 이어 붙입니다. Series에서 Series 종류는 입력과 출력 길이가 같아야 합니다.
+
+```text
+udf         row1 → f()   row2 → f()   ...   row 1억 → f()           호출 1억 번
+pandas_udf  [1 ~ 10000] → f(Series)   [10001 ~ 20000] → f(Series) ...  호출 1만 번 남짓
+```
+
+#### 3. 헷갈리는 점
+
+- 함수 안에서 `amount * 1.1` 같은 pandas 벡터 연산을 써야 이득이 납니다. pandas UDF 안에서 `for`로 행을 하나씩 돌면 행 단위 UDF와 비슷한 속도가 됩니다.
+- 배치 경계는 사용자가 고르지 않습니다. Series에서 Series 함수는 배치 하나만 보므로 함수 안에서 `s.mean()`을 구하면 전체 평균 대신 배치마다 다른 평균이 나옵니다. 전체나 그룹 단위 집계는 Series에서 스칼라 종류(10-4)나 `applyInPandas`(11절)를 씁니다.
+
+> **정리**: pandas UDF의 이득은 "호출 횟수 감소"와 "벡터 연산" 두 가지에서 나옵니다. 아래 표의 타입 힌트가 함수를 어떤 묶음으로 부를지를 정합니다.
+
+</details>
 
 ```python
 pyspark.sql.functions.pandas_udf(f=None, returnType=None, functionType=None)

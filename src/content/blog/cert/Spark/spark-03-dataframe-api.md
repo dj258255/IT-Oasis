@@ -79,6 +79,53 @@ payments = spark.createDataFrame(
 
 ## 1. 컬럼과 행 다루기
 
+<details>
+<summary>기초부터: Column은 식이고 DataFrame은 바뀌지 않는다</summary>
+
+> **핵심 한 줄**: `F.col("amount") * 1.1`은 계산 방법을 적은 식(Column)입니다. DataFrame 메서드는 이 식을 받아 계획에 단계를 하나 얹은 새 DataFrame을 돌려줍니다.
+
+#### 1. 왜 필요한가
+
+pandas에 익숙하면 `df["amount"] * 1.1`이 곧바로 숫자 열을 만든다고 생각하기 쉽습니다. Spark에서는 데이터가 여러 익스큐터에 흩어져 있고 실행이 지연되므로([Ch-01](/blog/cert/spark/spark-01-architecture) 9-1절) 그 시점의 드라이버에는 계산할 값이 없습니다. 그래서 컬럼 연산은 "나중에 각 파티션에서 이렇게 계산하라"는 식으로 쌓입니다.
+
+#### 2. 어떻게 동작하나
+
+1. **식 만들기**: `F.col`, `F.lit`, 연산자(`+`, `==`, `&`), 함수(`F.upper`)가 Column 식을 만듭니다. 드라이버에서 일어나고 데이터는 건드리지 않습니다.
+2. **계획에 넣기**: `withColumn`, `select`, `filter`가 식을 받아 원래 계획 위에 단계를 얹은 새 DataFrame을 돌려줍니다.
+3. **원본은 그대로**: 원래 변수는 옛 계획을 계속 가리킵니다.
+4. **액션 때 계산**: 각 Task가 자기 파티션의 행마다 식을 계산합니다.
+
+```text
+orders ── 계획: [읽기]
+   │ .withColumn("amount_vat", F.col("amount") * 1.1)
+   ▼
+o1 ────── 계획: [읽기] → [Project: *, amount * 1.1 AS amount_vat]
+   │ .drop("amount_vat")
+   ▼
+o2 ────── 계획: [읽기] → [Project ...] → [Project: amount_vat 뺀 컬럼들]
+
+orders 변수는 여전히 [읽기]만 가리킴
+```
+
+#### 3. 컬럼을 가리키는 방법
+
+| 방법 | 예 | 쓰는 곳 |
+|---|---|---|
+| 문자열 이름 | `"amount"` | 대부분의 메서드 인자 |
+| `F.col` | `F.col("amount")` | 식을 만들 때 |
+| DataFrame 속성 | `orders.amount`, `orders["amount"]` | 조인 뒤 어느 쪽 컬럼인지 밝힐 때(5-2절) |
+| `F.lit` | `F.lit(0)` | 상수 |
+| SQL 문자열 식 | `F.expr("amount * 1.1")`, `filter("amount > 0")` | SQL 문법으로 쓸 때 |
+
+#### 4. 헷갈리는 점
+
+- Python `if F.col("amount") > 0:`처럼 Column을 Python 조건문에 넣으면 PySpark가 Column을 bool로 바꿀 수 없다는 오류를 냅니다. 행마다 다른 값을 고르려면 `F.when(...).otherwise(...)`를 씁니다.
+- Spark Classic에서는 없는 컬럼 이름을 `select`나 `withColumn`에 쓰면 DataFrame을 만드는 줄에서 분석 오류가 납니다. `drop`과 `withColumnRenamed`만 예외로 아무 일도 하지 않습니다(결론부터 1번).
+
+> **정리**: 컬럼 연산은 식을 쌓는 일이고 메서드는 새 DataFrame을 돌려줍니다. 그래서 결과를 변수에 받아야 하고 같은 계획에 `withColumn`을 반복해 붙이면 계획이 커집니다(이 절의 헷갈리는 지점).
+
+</details>
+
 ### 1-1. 시그니처
 
 | 메서드 | 시그니처 | 동작 |
@@ -182,6 +229,54 @@ orders.select("user_id").distinct().count()     # 3, 다만 결과 컬럼은 use
 
 ### 2-2. null 처리
 
+<details>
+<summary>기초부터: null과 참, 거짓, 모름의 3값 논리</summary>
+
+> **핵심 한 줄**: SQL의 null은 "값을 모른다"는 표시입니다. 모르는 값과 비교한 결과도 알 수 없으므로 null이 되고 `filter`는 결과가 참인 행만 남깁니다.
+
+#### 1. 왜 필요한가
+
+결제 상태가 아직 정해지지 않은 주문의 `status`를 빈 문자열로 적으면 진짜 빈 문자열과 섞입니다. 그래서 SQL은 "값 없음"을 null로 따로 표시합니다. 그 대가로 비교와 논리 연산의 결과가 참, 거짓, 모름(null) 세 가지가 됩니다.
+
+#### 2. 연산별 동작 (NULL Semantics 문서)
+
+1. **비교**: `null = 'PAID'`, `null != 'PAID'`, `null = null` 모두 결과가 null입니다.
+2. **논리 연산**: 아래 표와 같습니다. `NOT null`도 null입니다.
+3. **filter, WHERE, 조인 조건**: 결과가 참인 행만 남습니다. null은 거짓처럼 걸러집니다.
+4. **집계**: `count(컬럼)`, `sum`, `avg` 같은 집계 함수는 null을 건너뜁니다(3-2절).
+5. **묶기**: `GROUP BY`, `DISTINCT`, 집합 연산은 null끼리 같은 값으로 묶습니다.
+6. **산술**: `null + 1`은 null입니다.
+
+| A | B | A AND B | A OR B |
+|---|---|---|---|
+| true | null | null | true |
+| false | null | false | null |
+| null | null | null | null |
+
+```python
+# status가 null인 주문 5(중복 2행)는 앞의 두 필터 어디에도 들어가지 않는다
+orders.filter(F.col("status") == "PAID")      # 주문 1, 2, 4
+orders.filter(F.col("status") != "PAID")      # 주문 3
+orders.filter(F.col("status").isNull() | (F.col("status") != "PAID"))   # 주문 3, 5, 5
+```
+
+#### 3. null을 다루는 도구
+
+| 하고 싶은 일 | 도구 |
+|---|---|
+| null인지 검사 | `isNull()`, `isNotNull()` |
+| null끼리도 같다고 비교 | `eqNullSafe`(SQL `<=>`, 5-2절) |
+| null을 다른 값으로 | `fillna`, `F.coalesce` |
+| null 행 지우기 | `dropna`(`na.drop`) |
+
+#### 4. NaN은 null과 다르다
+
+NaN은 실수 타입의 "숫자가 아님" 값입니다. NaN Semantics 문서는 `NaN = NaN`을 참으로 보고 오름차순 정렬에서 NaN을 어떤 숫자보다 큰 값으로 마지막에 둔다고 적습니다. `na.drop()`은 null과 NaN을 함께 지웁니다(이 절 헷갈리는 지점).
+
+> **정리**: null이 섞인 조건은 결과가 null이 되어 `filter`에서 빠집니다. 아래 2-3절의 `is_valid` 예제가 4.x에서 어느 쪽에도 잡히지 않는 이유가 이것입니다.
+
+</details>
+
 ```python
 DataFrame.dropna(how='any', thresh=None, subset=None)     # = df.na.drop(...)
 DataFrame.fillna(value, subset=None)                      # = df.na.fill(...)
@@ -264,6 +359,53 @@ orders.select(
 
 ### 3-2. 평균, 합계, groupBy
 
+<details>
+<summary>기초부터: 분산 집계는 부분 집계, 셔플, 최종 집계로 돈다</summary>
+
+> **핵심 한 줄**: `groupBy().agg()`는 각 파티션에서 먼저 부분 결과를 낸 뒤 그 부분 결과만 셔플하고 마지막에 합칩니다.
+
+#### 1. 왜 필요한가
+
+회원별 결제 합계를 구할 때 원본 행을 전부 셔플하면 1억 행이 네트워크를 탑니다. 파티션 안에서 회원별로 먼저 더해 두면 셔플하는 양은 "파티션마다 그 파티션에 있는 회원 수"만큼으로 줄어듭니다.
+
+#### 2. 어떻게 동작하나
+
+1. **부분 집계 (Stage 0)**: 각 Task가 자기 파티션의 행을 `user_id`별로 더해 (`user_id`, 부분합)을 만듭니다.
+2. **셔플**: `user_id` 해시로 목적지를 정해 부분합을 보냅니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-2절 토글).
+3. **최종 집계 (Stage 1)**: 같은 `user_id`의 부분합을 모두 더합니다.
+
+```text
+(중복 행 하나를 뺀 주문 5행을 파티션 2개로 나눠 그린 그림)
+파티션 0: (101, 32000) (102, 15000) (101, 8000)  → 부분합 (101, 40000) (102, 15000)
+파티션 1: (103, 54000) (102, 15000)              → 부분합 (103, 54000) (102, 15000)
+                    ── 셔플(user_id 해시) ──
+최종: 101 → 40000   102 → 15000 + 15000 = 30000   103 → 54000
+```
+
+`explain()`으로 보면 이 세 단계가 연산자 셋으로 나옵니다. 아래는 연산자 이름만 추린 개념도입니다.
+
+```text
+HashAggregate(keys=[user_id], functions=[sum(amount)])                 ← 최종 집계
++- Exchange hashpartitioning(user_id, 200)                              ← 셔플
+   +- HashAggregate(keys=[user_id], functions=[partial_sum(amount)])    ← 부분 집계
+```
+
+#### 3. 함수마다 부분 단계에서 들고 다니는 값
+
+| 함수 | 부분 단계의 값 | 최종 단계 |
+|---|---|---|
+| `sum` | 부분합 | 부분합을 더함 |
+| `count` | 부분 개수 | 개수를 더함 |
+| `avg`(`mean`) | 합과 개수 | 전체 합 ÷ 전체 개수 |
+| `max`, `min` | 부분 최댓값, 최솟값 | 그중 최댓값, 최솟값 |
+| `count_distinct` | 고유값 자체 | 고유값을 모아 셈(3-1절) |
+
+평균은 파티션별 평균을 다시 평균 내면 틀린 값이 나옵니다. 그래서 부분 단계에서 합과 개수를 따로 들고 다닙니다.
+
+> **정리**: 집계가 셔플하는 양은 그룹 수와 부분 결과의 크기가 정합니다. 3-1절에서 `count_distinct`가 `approx_count_distinct`보다 셔플이 큰 이유도 부분 단계에서 들고 다니는 값의 차이입니다.
+
+</details>
+
 `F.mean(col)`은 `F.avg(col)`의 별칭입니다. 집계 함수는 null을 무시합니다(`count(*)` 제외). 모든 입력이 null이거나 입력이 비면 `max`, `min`, `sum`, `avg`는 null을 돌려준다고 NULL Semantics 문서가 적습니다.
 
 ```python
@@ -310,6 +452,53 @@ orders.summary("count", "min", "90%").show()
 ## 4. 날짜와 시간
 
 ### 4-1. 시그니처와 반환 타입
+
+<details>
+<summary>기초부터: epoch 초, DATE, TIMESTAMP와 세션 시간대</summary>
+
+> **핵심 한 줄**: Spark 안에서 DATE는 1970-01-01부터 센 일 수이고 TIMESTAMP는 1970-01-01 00:00:00 UTC부터 센 마이크로초입니다. 화면에 보이는 날짜와 시각 문자열은 이 값을 세션 시간대로 바꿔 보여 준 결과입니다.
+
+#### 1. 왜 필요한가
+
+결제 시스템은 결제 시각을 `1790812800` 같은 epoch 초(1970-01-01 00:00:00 UTC부터 지난 초)로 남기는 일이 많습니다. 숫자라서 비교와 계산은 쉽지만 사람이 읽기 어렵고 "몇 월"을 바로 뽑을 수 없습니다. 같은 순간도 서울과 UTC에서 날짜가 다를 수 있습니다.
+
+#### 2. 네 가지 표현
+
+| 표현 | 타입 | 안에 든 값 | 보이는 모양 |
+|---|---|---|---|
+| epoch 초 | LONG | `1790812800` | 숫자 그대로 |
+| 타임스탬프 | TIMESTAMP | UTC 기준 마이크로초 | 세션 시간대로 바꾼 날짜와 시각 |
+| 날짜 | DATE | 1970-01-01부터 일 수 | `2026-10-01` |
+| 문자열 | STRING | 글자 | 형식 패턴대로 |
+
+#### 3. 변환하는 길
+
+1. **숫자 → 시각**: `timestamp_seconds`로 TIMESTAMP를 만듭니다.
+2. **시각 → 요소**: `year`, `month`, `dayofweek`로 정수를 꺼냅니다.
+3. **시각 → 문자열**: `date_format`. epoch 초에서 바로 문자열로 가려면 `from_unixtime`입니다.
+4. **문자열 → 시각**: `to_timestamp`, `to_date`, `unix_timestamp`. 형식이 맞지 않으면 4.x 기본 설정에서 오류가 납니다(4-2절).
+
+```text
+LONG 1790812800 ─timestamp_seconds─► TIMESTAMP ─to_date─► DATE
+       │                                │
+       └──from_unixtime──► STRING ◄──date_format──┘
+STRING ─to_timestamp / to_date─► TIMESTAMP / DATE   (unix_timestamp는 STRING → LONG)
+```
+
+#### 4. 시간대가 결과를 바꾸는 예
+
+`1790877600`은 UTC로 2026-10-01 18:00:00입니다(Python `datetime`으로 계산). 세션 시간대에 따라 문자열과 날짜가 달라집니다.
+
+| `spark.sql.session.timeZone` | `from_unixtime` 결과 | 그 문자열의 `to_date` |
+|---|---|---|
+| `UTC` | `2026-10-01 18:00:00` | 2026-10-01 |
+| `Asia/Seoul` | `2026-10-02 03:00:00` | 2026-10-02 |
+
+이 표는 함수 정의에 시각을 넣어 계산한 값이고 Spark로 실행해 본 결과는 아닙니다. 이 글 예제가 세션 시간대를 UTC로 고정한 이유가 이것입니다.
+
+> **정리**: 타임스탬프 값 자체는 시간대와 무관한 한 순간이고 문자열로 바꾸거나 날짜로 자를 때 세션 시간대가 끼어듭니다. 날짜 문항은 먼저 반환 타입이 STRING, DATE, TIMESTAMP 중 무엇인지 봅니다.
+
+</details>
 
 | 함수 | 시그니처 | 반환 |
 |---|---|---|
@@ -436,6 +625,62 @@ same_user = a.join(b, (F.col("a.user_id") == F.col("b.user_id")) &
 
 ### 5-3. broadcast 조인
 
+<details>
+<summary>기초부터: 분산 조인 방식, broadcast hash join과 sort merge join</summary>
+
+> **핵심 한 줄**: 분산 조인의 핵심은 같은 키의 행을 한 Task에서 만나게 하는 것입니다. 작은 쪽을 모든 익스큐터에 복사하는 broadcast hash join과 양쪽을 키로 셔플해 정렬한 뒤 맞추는 sort merge join이 대표적입니다.
+
+#### 1. 왜 필요한가
+
+주문 1억 행과 회원 1만 행이 각각 여러 파티션에 흩어져 있습니다. 주문 파티션 0에 있는 `user_id` 101 행의 짝은 회원 파티션 3에 있을 수 있습니다. 같은 키끼리 한곳에 모이지 않으면 조인할 수 없습니다.
+
+#### 2. 어떻게 동작하나
+
+**broadcast hash join**
+
+1. **작은 쪽 수집**: 회원 데이터를 드라이버로 모읍니다.
+2. **해시 테이블 배포**: `user_id`로 찾는 해시 테이블을 만들어 모든 익스큐터에 보냅니다.
+3. **큰 쪽은 제자리**: 주문 파티션마다 행을 읽으며 해시 테이블에서 바로 짝을 찾습니다. 주문은 셔플하지 않습니다.
+
+**sort merge join**
+
+1. **양쪽 셔플**: 주문과 회원을 `user_id` 해시로 같은 수의 파티션에 나눕니다. 같은 `user_id`는 양쪽 모두 같은 번호 파티션에 갑니다.
+2. **양쪽 정렬**: 파티션 안을 `user_id` 순서로 정렬합니다.
+3. **병합**: 정렬된 두 목록을 앞에서부터 나란히 훑으며 같은 키를 짝짓습니다.
+
+```text
+broadcast hash join
+  회원(작음) ─► 드라이버 ─► 모든 익스큐터에 복사
+  주문 P0 + 회원 해시 테이블 → 결과
+  주문 P1 + 회원 해시 테이블 → 결과        주문은 셔플 없음
+
+sort merge join
+  주문 ─셔플(user_id)─► P0 .. P199 ─정렬─┐
+                                          ├─ 같은 번호끼리 병합 → 결과
+  회원 ─셔플(user_id)─► P0 .. P199 ─정렬─┘
+```
+
+#### 3. 한눈에 비교
+
+| 구분 | broadcast hash join | sort merge join |
+|---|---|---|
+| 셔플 | 큰 쪽은 없음. 작은 쪽을 복사 | 양쪽 모두 |
+| 쓸 수 있는 때 | 한쪽이 충분히 작음(자동은 기본 10MB 이하, 또는 힌트) | 등가 조인 |
+| 메모리 부담 | 해시 테이블이 드라이버와 모든 익스큐터에 올라감 | 파티션 단위. 모자라면 spill |
+| `explain()`에 보이는 이름 | `BroadcastHashJoin` | `SortMergeJoin` |
+| 큰 테이블끼리 | 맞지 않음 | 기본 선택(`spark.sql.join.preferSortMergeJoin` 기본 true) |
+
+등가 조건 없이 범위 비교만 있는 조인이나 cross 조인은 `BroadcastNestedLoopJoin`이나 `CartesianProduct`로 실행됩니다. 셔플 후 해시 테이블로 맞추는 `ShuffledHashJoin`도 있고 `SHUFFLE_HASH` 힌트로 고를 수 있습니다.
+
+#### 4. 헷갈리는 점
+
+- 10MB 기준은 통계로 추정한 크기와 비교합니다. 필터 뒤에 실제로 작아져도 추정치가 크면 자동 broadcast가 되지 않을 수 있고 AQE가 실행 중 통계로 sort merge join을 broadcast join으로 바꿀 수 있습니다([Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)).
+- `left` 조인에서는 오른쪽만 broadcast할 수 있습니다. 왼쪽 행을 하나도 빠짐없이 남겨야 하므로 왼쪽은 파티션 그대로 훑는 쪽이 됩니다.
+
+> **정리**: 작은 쪽이 있으면 broadcast로 큰 쪽의 셔플을 없애고 둘 다 크면 sort merge로 양쪽을 섞어 맞춥니다. 아래 표의 세 방법은 broadcast 쪽을 고르게 만드는 수단입니다.
+
+</details>
+
 broadcast 조인은 작은 쪽 DataFrame 전체를 모든 익스큐터에 보내고 큰 쪽은 셔플하지 않은 채 각 파티션에서 바로 조인합니다. 큰 쪽의 셔플을 없애는 것이 목적입니다.
 
 | 방법 | 코드 |
@@ -510,6 +755,47 @@ oct_orders.unionByName(with_note, allowMissingColumns=True)
 ## 7. 스키마를 지정한 읽기와 쓰기
 
 ### 7-1. StructType과 DDL 문자열
+
+<details>
+<summary>기초부터: 스키마와 Spark 데이터 타입</summary>
+
+> **핵심 한 줄**: 스키마는 컬럼 이름, 타입, null 허용 여부의 목록입니다. Spark는 이 정보로 값을 어떻게 읽고 저장할지와 어떤 연산이 맞는지를 정합니다.
+
+#### 1. 왜 필요한가
+
+CSV의 `32000`은 그냥 글자입니다. 금액인지 우편번호인지 Spark는 알 수 없습니다. 스키마를 주지 않으면 모두 문자열로 읽거나(`inferSchema=False`) 데이터를 한 번 더 훑어 추측합니다(`inferSchema=True`). 추측은 틀릴 수 있고 들어오는 데이터가 바뀌면 날마다 다른 타입이 나올 수도 있습니다.
+
+#### 2. 스키마가 쓰이는 단계
+
+1. **읽기**: 필드마다 어떤 타입으로 해석할지 정합니다. 해석하지 못하면 `mode`(`PERMISSIVE` 등)에 따라 null, 행 제외, 예외 중 하나가 됩니다([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-2절).
+2. **분석**: `amount + 1` 같은 식의 결과 타입을 정하고 타입이 맞지 않는 연산을 찾아냅니다.
+3. **실행**: INT는 4바이트, BIGINT는 8바이트처럼 타입마다 정해진 크기로 값을 다룹니다.
+4. **쓰기**: Parquet와 ORC는 스키마를 파일에 함께 기록합니다([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-2절 토글).
+
+#### 3. Python 값과 Spark 타입 (스키마 없이 추론할 때)
+
+| Python 값 | 추론되는 Spark 타입 | DDL 이름 |
+|---|---|---|
+| `int` | `LongType` | `BIGINT` |
+| `float` | `DoubleType` | `DOUBLE` |
+| `str` | `StringType` | `STRING` |
+| `bool` | `BooleanType` | `BOOLEAN` |
+| `datetime.date` | `DateType` | `DATE` |
+| `datetime.datetime` | `TimestampType` | `TIMESTAMP` |
+| `list` | `ArrayType` | `ARRAY<...>` |
+| `dict` | `MapType`(기본 설정) | `MAP<..., ...>` |
+| 중첩 `Row` | `StructType` | `STRUCT<...>` |
+
+PySpark 4.2.0 소스(`pyspark/sql/types.py`의 `_type_mappings`)에서 `int`가 `LongType`으로 대응합니다.
+
+#### 4. 헷갈리는 점
+
+- 이 글 예제처럼 DDL로 `INT`라고 적으면 `IntegerType`이고 같은 데이터를 추론에 맡기면 `LongType`이 됩니다. 두 DataFrame을 `union`하면 위치마다 공통 타입으로 맞춥니다(6절 헷갈리는 지점).
+- 스키마의 `nullable=False`는 파일을 읽을 때 지켜지지 않습니다(이 절 헷갈리는 지점).
+
+> **정리**: 스키마를 미리 주면 추론 비용이 사라지고 타입이 고정됩니다. 아래 두 방식(`StructType`, DDL 문자열)은 같은 스키마를 적는 두 문법입니다.
+
+</details>
 
 ```python
 StructType(fields=None)
@@ -604,6 +890,41 @@ orders.orderBy(F.col("status").desc_nulls_last())
 
 ### 8-2. 드라이버로 가져오기
 
+<details>
+<summary>기초부터: 결과가 드라이버로 모이는 길</summary>
+
+> **핵심 한 줄**: `collect`, `take`, `toPandas`는 익스큐터에 흩어진 결과를 드라이버 프로세스 하나의 메모리로 모읍니다. 결과가 드라이버 메모리보다 크면 드라이버가 버티지 못합니다.
+
+#### 1. 왜 조심하나
+
+DataFrame은 여러 익스큐터에 나뉘어 있어서 전체 크기가 드라이버 메모리보다 훨씬 커도 됩니다. Python 리스트나 pandas로 바꾸는 순간 그 전부가 드라이버 한곳에 있어야 합니다.
+
+#### 2. 어떻게 동작하나 (`collect`)
+
+1. **Job 실행**: 마지막 Stage의 Task가 각자 결과 파티션을 만듭니다.
+2. **전송**: Task 결과를 직렬화해 드라이버로 보냅니다. 합계가 `spark.driver.maxResultSize`(기본 1g)를 넘으면 Job을 중단합니다([Ch-01](/blog/cert/spark/spark-01-architecture) 2-4절).
+3. **드라이버에서 합치기**: 드라이버 JVM이 결과를 모읍니다.
+4. **Python으로 넘기기**: PySpark가 결과를 Python 쪽으로 넘겨 `Row` 객체 리스트로 만듭니다.
+
+```text
+익스큐터 1: 파티션 0, 1 ─┐
+익스큐터 2: 파티션 2, 3 ─┼─► 드라이버 JVM ─► Python 드라이버 ─► list[Row]
+익스큐터 3: 파티션 4, 5 ─┘
+```
+
+#### 3. 한 번에 드라이버로 오는 양
+
+| 방법 | 드라이버로 오는 양 |
+|---|---|
+| `collect()`, `toPandas()` | 전부 |
+| `take(n)`, `head(n)` | n행. 앞쪽 파티션부터 필요한 만큼 읽음 |
+| `toLocalIterator()` | 파티션 하나씩 |
+| `write...save()` | 오지 않음. 익스큐터가 직접 파일로 씀 |
+
+> **정리**: 큰 결과는 드라이버로 가져오지 않고 파일로 씁니다. 꼭 가져와야 하면 `limit`이나 집계로 줄인 뒤 가져옵니다.
+
+</details>
+
 | 메서드 | 반환 | 메모리 |
 |---|---|---|
 | `collect()` | `Row` 리스트 전체 | 전부 드라이버에 |
@@ -629,6 +950,51 @@ pdf = orders.limit(100).toPandas()    # 작게 줄인 뒤 변환
 4.2.0부터 `spark.sql.execution.arrow.pyspark.enabled`가 기본 true라서 `toPandas()`와 pandas에서 만드는 `createDataFrame`이 Arrow를 씁니다(PySpark Migration Guide, 4.1 → 4.2). 3.x와 4.1까지는 기본 false였습니다.
 
 ### 8-3. 반복
+
+<details>
+<summary>기초부터: 클로저, 함수가 익스큐터로 복사되는 방식</summary>
+
+> **핵심 한 줄**: `foreach(f)`에 넘긴 함수 `f`는 그 함수가 참조하는 변수와 함께 직렬화돼 Task마다 복사됩니다. 이 묶음을 클로저라고 부릅니다. 익스큐터는 복사본을 고치므로 드라이버의 변수는 그대로입니다.
+
+#### 1. 왜 필요한가
+
+```python
+seen = []
+
+def remember(row):
+    seen.append(row.order_id)
+
+orders.foreach(remember)
+print(seen)   # RDD 가이드의 counter 예제와 같은 구조라 드라이버의 seen은 비어 있을 것으로 예상합니다
+```
+
+RDD 가이드의 "Understanding closures" 절은 같은 구조의 counter 예제에서 드라이버의 값이 0으로 남는다고 설명합니다.
+
+#### 2. 어떻게 동작하나
+
+1. **직렬화**: 드라이버가 함수와 함수가 참조하는 변수(`seen`의 지금 값)를 바이트로 만듭니다.
+2. **Task와 함께 전송**: 이 바이트가 Task와 함께 익스큐터로 갑니다.
+3. **복원과 실행**: 익스큐터 쪽 Python 프로세스가 바이트를 되살려 자기 복사본으로 함수를 실행합니다.
+4. **사라짐**: Task가 끝나면 복사본도 사라지고 바뀐 내용은 드라이버로 돌아오지 않습니다.
+
+```text
+드라이버: seen = [] ─직렬화─► 익스큐터 1: seen 복사본 [] → [1, 2, 3]
+                  └직렬화─► 익스큐터 2: seen 복사본 [] → [4, 5, 5]
+드라이버의 seen은 계속 []
+```
+
+#### 3. 하고 싶은 일별 도구
+
+| 하고 싶은 일 | 도구 |
+|---|---|
+| 결과 행을 드라이버로 | `collect`, `take`(8-2절) |
+| 개수나 합계를 드라이버로 | accumulator(10-2절) |
+| 큰 읽기 전용 값을 익스큐터마다 한 번만 보내기 | broadcast 변수(10-1절) |
+| 외부 시스템에 쓰기 | `foreachPartition` 안에서 연결을 열고 씀 |
+
+> **정리**: 익스큐터에서 도는 함수는 드라이버 변수의 복사본만 봅니다. 10절의 broadcast 변수와 accumulator는 이 한계를 메우려고 있는 도구입니다.
+
+</details>
 
 안내서의 "iterating"은 행을 하나씩 도는 방법을 묻습니다. 어디서 도는지가 핵심이라 실행 위치로 나눕니다.
 
@@ -664,6 +1030,47 @@ spark.createDataFrame([Row(order_id=1, status="PAID")])
 ## 9. UDF
 
 ### 9-1. 일반 Python UDF
+
+<details>
+<summary>기초부터: Python UDF가 실행되는 길</summary>
+
+> **핵심 한 줄**: 내장 함수는 익스큐터 JVM 안에서 바로 계산됩니다. Python UDF는 행 데이터를 JVM에서 따로 뜬 Python 워커 프로세스로 보냈다가 결과를 받아 오는 왕복이 붙습니다.
+
+#### 1. 왜 필요한가
+
+Spark 엔진은 JVM에서 돕니다. Python으로 쓴 함수는 JVM이 실행할 수 없어서 익스큐터 옆에 Python 프로세스를 띄워 거기서 실행합니다.
+
+#### 2. 어떻게 동작하나
+
+1. **함수 전송**: 드라이버가 UDF 함수를 직렬화해 Task와 함께 보냅니다(8-3절 토글).
+2. **Python 워커 준비**: 익스큐터가 Python 워커 프로세스를 띄우거나 이미 뜬 것을 다시 씁니다.
+3. **입력 보내기**: JVM이 UDF 입력 컬럼을 묶음 단위로 직렬화해 워커로 보냅니다. 4.2.0부터 기본은 Arrow 형식입니다(아래 표의 Arrow 줄).
+4. **계산**: 워커가 행마다 함수를 부릅니다.
+5. **결과 돌려받기**: 결과를 다시 직렬화해 JVM으로 보내고 선언한 `returnType`으로 해석합니다.
+
+```text
+익스큐터 JVM                                  Python 워커 프로세스
+[파일 읽기 → filter] ─입력 컬럼 묶음 전송─►   [item_count(x)를 행마다 실행]
+[다음 연산]          ◄─결과 묶음 전송──────
+```
+
+#### 3. 한눈에 비교
+
+| 구분 | 내장 함수(`F.size` 등) | Python UDF | pandas UDF |
+|---|---|---|---|
+| 실행 위치 | 익스큐터 JVM | Python 워커 | Python 워커 |
+| 데이터 이동 | 없음 | JVM과 Python 사이 직렬화 | Arrow 묶음 |
+| 함수 호출 단위 | 코드 생성으로 연산자와 묶임 | 행마다 | `pd.Series` 묶음마다 |
+| 최적화기가 안을 봄 | 봄 | 못 봄 | 못 봄 |
+
+#### 4. 실전에서 보이는 모습
+
+- `explain()`에 `BatchEvalPython`이나 `ArrowEvalPython` 연산자가 보이면 그 자리에서 Python UDF가 돕니다.
+- Python 워커는 익스큐터 JVM 힙(`spark.executor.memory`) 밖의 별도 프로세스입니다.
+
+> **정리**: Python UDF의 비용은 대부분 JVM과 Python 사이의 왕복에서 나옵니다. 같은 일을 하는 내장 함수가 있으면 내장 함수가 왕복 없이 끝납니다.
+
+</details>
 
 ```python
 F.udf(f=None, returnType=StringType(), *, useArrow=None)
@@ -811,6 +1218,43 @@ print(bad_rows.value)      # 문서 기준 예상 결과: 2 (status가 null인 �
 안내서 3영역 목록에 윈도 함수가 따로 적혀 있지는 않습니다. 다만 2-1절처럼 "같은 키에서 특정 행 하나 남기기"를 풀려면 필요하고 정렬, 집계 문항의 보기에 자주 섞입니다. `groupBy`는 그룹마다 한 행으로 줄이고 윈도 함수는 행 수를 그대로 둔 채 같은 그룹의 값을 옆에 붙입니다.
 
 ### 11-1. Window 스펙과 기본 프레임
+
+<details>
+<summary>기초부터: 윈도 함수가 행을 줄이지 않고 계산하는 방식</summary>
+
+> **핵심 한 줄**: 윈도 함수는 행을 그룹(`partitionBy`)으로 나누고 그룹 안을 정렬(`orderBy`)한 뒤 행마다 주변 행 범위(프레임)를 보고 값을 계산해 그 행 옆에 붙입니다. 행 수는 그대로입니다.
+
+#### 1. 왜 필요한가
+
+"회원별 가장 최근 주문"이나 "회원별 누적 결제 금액"은 `groupBy`로 풀기 어렵습니다. `groupBy`는 회원마다 한 행으로 줄여 주문 행 자체가 사라집니다. 주문 행을 남긴 채 같은 회원의 다른 주문을 참고하려면 윈도 함수가 필요합니다.
+
+#### 2. 어떻게 동작하나
+
+1. **셔플**: `partitionBy` 컬럼(`user_id`) 해시로 같은 회원의 행을 한 파티션에 모읍니다.
+2. **정렬**: 파티션 안을 (`user_id`, `orderBy` 컬럼) 순서로 정렬합니다.
+3. **프레임 계산**: 행마다 프레임(예: 처음부터 현재 행까지)의 값을 모아 함수를 계산합니다.
+4. **붙이기**: 결과를 새 컬럼으로 붙입니다.
+
+```text
+회원 102의 주문, ordered_at 오름차순
+order_id  amount  프레임(처음 ~ 현재)    sum(amount).over(running)
+2         15000   [15000]                15000
+5         15000   [15000, 15000]         30000
+```
+
+물리 계획에서는 `Exchange hashpartitioning(user_id, ...)` 다음에 `Sort`, 그다음에 `Window` 연산자가 오는 모양입니다.
+
+#### 3. groupBy와 비교
+
+| 구분 | `groupBy().agg()` | 윈도 함수 |
+|---|---|---|
+| 결과 행 수 | 그룹 수 | 원래 행 수 |
+| 셔플 | 부분 집계 뒤 부분 결과만(3-2절 토글) | 원본 행을 모두 |
+| 쓰임 | 그룹 요약 | 순위, 누적, 앞뒤 행 비교 |
+
+> **정리**: 윈도 함수는 같은 그룹의 행을 한 파티션에 모아 정렬한 뒤 계산합니다. `partitionBy`를 빼면 모든 행이 파티션 하나로 모이는 이유도 이 1단계 때문입니다(이 절 마지막 문단).
+
+</details>
 
 ```python
 from pyspark.sql import Window
