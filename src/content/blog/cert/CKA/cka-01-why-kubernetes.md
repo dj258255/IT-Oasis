@@ -11,10 +11,15 @@ tags:
 category: cert/CKA
 topics:
   - cert
+coverImage: /uploads/cert/cka/k8s-architecture.webp
 draft: false
 series: "CKA 공부"
 seriesOrder: 1
 ---
+
+![쿠버네티스 클러스터 구조: 컨트롤 플레인(etcd, API Server, Scheduler, Controller Manager, Cloud Controller Manager)과 워커 노드(kubelet, Container Runtime, kube-proxy)](/uploads/cert/cka/k8s-architecture.webp)
+
+*그림 출처: [DevOps Mojo](https://medium.com/devops-mojo), Ashish Patel*
 
 ## 결론부터
 
