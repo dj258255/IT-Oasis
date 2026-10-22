@@ -155,6 +155,61 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 
 ## 4. 홈 랩 구성
 
+<details>
+<summary>기초부터: VirtualBox와 Vagrant로 kubeadm 연습용 VM 준비하기</summary>
+
+> **핵심 한 줄**: VirtualBox는 VM을 실제로 돌리는 엔진이고 Vagrant는 VM 여러 대의 사양을 `Vagrantfile` 한 파일에 적어 두고 명령 한 줄로 만들어 주는 도구입니다.
+
+#### 1. 왜 필요한가
+
+kubeadm은 이미 있는 리눅스 머신 위에 쿠버네티스를 올릴 뿐 머신을 만들지 않습니다. 노드 3대를 손으로 만들면 OS 설치 화면을 세 번 넘겨야 하고 IP를 하나씩 맞추다 실수하기 쉽습니다.
+
+| 방식 | VM 3대 준비 | 다시 만들 때 |
+|---|---|---|
+| 손으로 설치 | ISO를 받아 VM마다 설치 화면을 넘김 | 처음부터 반복 |
+| Vagrant | `vagrant up` 한 번 | `vagrant destroy` 뒤 `vagrant up`이면 같은 환경 |
+
+#### 2. 어떻게 동작하나
+
+1. **준비**: 호스트 OS에 맞는 VirtualBox와 Vagrant를 각 공식 페이지에서 받아 설치합니다.
+2. **명세**: `Vagrantfile`에 box(OS 이미지), VM 이름, CPU, 메모리, 사설 IP를 적습니다. 강의 저장소를 클론하면 이 파일이 이미 들어 있습니다.
+3. **생성**: `vagrant up`이 box를 받고 파일에 적힌 순서대로 VM을 만들어 부팅합니다.
+4. **접속**: `vagrant ssh <이름>`으로 들어가고 `exit`(또는 `logout`)로 나옵니다.
+
+```ruby
+Vagrant.configure("2") do |config|
+  config.vm.box = "<box 이름>"
+  ["controlplane", "node01", "node02"].each_with_index do |name, i|
+    config.vm.define name do |node|
+      node.vm.hostname = name
+      node.vm.network "private_network", ip: "192.168.56.#{11 + i}"
+      node.vm.provider "virtualbox" do |vb|
+        vb.cpus = 2
+        vb.memory = 2048
+      end
+    end
+  end
+end
+```
+
+```bash
+vagrant status            # 만들기 전에는 not created, 만든 뒤에는 running
+vagrant up                # 전부 생성하고 부팅. 처음에는 box를 받느라 오래 걸림
+vagrant ssh controlplane  # 노드 안으로
+vagrant halt              # 전부 끄기
+vagrant destroy -f        # 전부 지우기
+```
+
+#### 3. 헷갈리는 점
+
+- `192.168.56.x`는 VM끼리 통하는 노드 IP입니다. 나중에 CNI가 Pod에 나눠 줄 대역과 겹치지 않게 둡니다. 리눅스와 macOS의 VirtualBox는 host-only 네트워크에 기본으로 `192.168.56.0/21` 범위만 허용해서 예제가 이 대역을 씁니다.
+- 오래된 강의 저장소는 지원이 끝난 Ubuntu 18.04 box를 쓰기도 합니다. 지금 kubeadm 패키지를 올리려면 지원 중인 Ubuntu box로 바꿔 씁니다.
+- 애플 실리콘 맥은 아래 본문처럼 VirtualBox 대신 Multipass 스크립트를 씁니다.
+
+> **정리**: VM은 Vagrant로 찍고 그 위에 kubeadm을 올립니다. 노드 IP와 Pod 대역을 따로 잡아 두는 것이 다음 단계(Ch-02의 kubeadm init)를 편하게 합니다.
+
+</details>
+
 시험 환경은 kubeadm으로 만든 클러스터에 노드마다 ssh로 들어가는 구조입니다. 그래서 연습 환경도 주제에 따라 나눠 쓰는 편이 맞습니다.
 
 | 환경 | 만드는 방법 | 맞는 연습 | 한계 |

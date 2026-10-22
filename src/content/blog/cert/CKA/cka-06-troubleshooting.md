@@ -166,6 +166,16 @@ kubelet ──10초마다 Lease 갱신──→ API 서버 ←──watch── 
 - 마지막 보고 시각은 `.status`의 `lastHeartbeatTime`보다 Lease의 `spec.renewTime`이 정확합니다(`kubectl -n kube-node-lease get lease <노드> -o yaml`).
 - 노드에 ssh로 들어가면 자원(`df -h`, `free -m`, `top`), kubelet 상태(`systemctl status kubelet`), kubelet 로그(`journalctl -u kubelet`), kubelet 인증서 순으로 봅니다. 1-3절과 1-4절이 이 순서의 세부입니다.
 
+#### 5. 노드 자체가 꺼졌을 때
+
+노드 전원이 꺼졌거나 커널이 멈춘 경우에도 `Unknown`이 됩니다. ssh부터 되는지 보고 갈래를 나눕니다.
+
+| 확인 | 뜻 | 다음 조치 |
+|---|---|---|
+| `ssh <노드>`가 시간 초과 | 노드가 꺼졌거나 네트워크가 끊김 | 클라우드 콘솔이나 하이퍼바이저에서 전원을 확인하고 다시 켬 |
+| 접속은 되는데 `uptime`이 몇 분 | 방금 다시 부팅됨(크래시 뒤 재기동일 수 있음) | 저널을 디스크에 남기는 설정이면 `journalctl -b -1`로 직전 부팅의 마지막 로그를 봄 |
+| 다시 켰는데 계속 `NotReady` | kubelet이 부팅 때 자동으로 뜨지 않음 | `systemctl is-enabled kubelet`이 `disabled`면 `systemctl enable --now kubelet` |
+
 > **정리**: 하트비트는 Lease, 자세한 상태는 Node `.status`입니다. `Unknown`이면 노드로 들어가고 `False`면 조건 메시지가 가리키는 구성요소를 봅니다.
 
 </details>
@@ -348,6 +358,21 @@ kube-proxy는 DaemonSet, CoreDNS는 Deployment로 떠 있어 manifests 디렉터
 1. **전체 상태**: `kubectl get nodes`, `kubectl get pods -A`. `kubectl` 자체가 안 되면 API 서버 문제입니다.
 2. **방식 가리기**: `ls /etc/kubernetes/manifests`와 `kubectl -n kube-system get pod`로 봅니다.
 3. **로그 보기**: static Pod면 `kubectl logs`, API 서버가 죽었으면 `crictl ps -a`와 `crictl logs`로 내려갑니다. 서비스면 `journalctl -u <구성요소>`입니다.
+
+#### 4. 서비스 방식에서 노드마다 볼 서비스
+
+| 노드 | 확인할 서비스 |
+|---|---|
+| 컨트롤 플레인 | kube-apiserver, kube-controller-manager, kube-scheduler, etcd(같은 노드에 따로 설치했을 때) |
+| 워커 | kubelet, kube-proxy, 컨테이너 런타임(containerd) |
+
+kubeadm에서 DaemonSet으로 뜨는 kube-proxy도 바이너리 설치에서는 워커마다 systemd 서비스로 돕니다. 강의 자료에 나오는 `service kube-apiserver status`는 SysV init 시절의 명령이고 systemd 배포판에서는 같은 요청을 systemctl에 넘겨 줍니다. 그래서 `systemctl`로 바로 칩니다.
+
+```bash
+sudo systemctl status kube-apiserver kube-controller-manager kube-scheduler   # 컨트롤 플레인 노드
+sudo systemctl status kubelet kube-proxy containerd                            # 워커 노드
+sudo journalctl -u kube-apiserver --since "10 min ago"
+```
 
 > **정리**: manifests 디렉터리에 파일이 있으면 static Pod, 없으면 서비스로 봅니다. kubelet은 어느 쪽이든 서비스라 늘 함께 확인합니다.
 
@@ -635,6 +660,22 @@ kubectl get nodes --sort-by=.metadata.name
 | 경로 기준 | 목록 전체(`.items[*]`부터) | 원소 하나 기준(`.items[*]`를 뺌). 원소마다 알아서 반복 | 원소 하나 기준 |
 | 쓰임 | 원하는 모양의 텍스트 | 표가 목적일 때 더 짧다 | 정렬 |
 
+#### 4. 처음 식을 세우는 순서와 자주 쓰는 경로
+
+1. **명령 고르기**: 원하는 값이 노드에 있으면 `kubectl get nodes`, Pod에 있으면 `kubectl get pods`입니다.
+2. **구조 보기**: 같은 명령에 `-o json`(또는 `-o yaml`)을 붙여 필드가 어디 있는지 찾습니다.
+3. **경로 적기**: 찾은 위치를 `.items[*]...` 꼴로 적습니다.
+4. **전달**: `-o jsonpath='{경로}'`로 넘깁니다. 작은따옴표와 중괄호는 빼면 안 됩니다.
+
+| 알고 싶은 것 | 조회 | 경로(목록 기준) |
+|---|---|---|
+| 노드 이름 | `get nodes` | `.items[*].metadata.name` |
+| 노드 CPU 아키텍처 | `get nodes` | `.items[*].status.nodeInfo.architecture` |
+| 노드 CPU 수 | `get nodes` | `.items[*].status.capacity.cpu` |
+| 첫 Pod의 첫 컨테이너 이미지 | `get pods` | `.items[0].spec.containers[0].image` |
+
+이미지 경로는 Pod 객체에 있고 노드 JSON에는 `spec.containers`가 없습니다. 식 둘을 구분자 없이 이어 쓰면(`'{.items[*].metadata.name}{.items[*].status.capacity.cpu}'`) 결과가 한 줄에 붙어 나오니 사이에 `{"\n"}`이나 `{"\t"}`를 넣습니다.
+
 > **정리**: JSON 구조를 보고 경로를 짚으면 원하는 값만 뽑힙니다. 목록 조회는 `items`로 감싸인다는 점부터 확인하고 아래 세 단계로 식을 세웁니다.
 
 </details>
@@ -724,7 +765,7 @@ kubectl logs → kube-apiserver → 노드 kubelet:10250 → 파일 읽기 → �
 | Pod가 노드에서 지워짐 | 로그 파일도 함께 지워진다 |
 | 워커의 10250이 막힘 | Pod는 잘 도는데 `kubectl logs`만 실패한다 |
 
-`kubectl logs`에는 검색이나 장기 보관 기능이 없습니다. 운영 환경에서는 노드마다 로그 수집 에이전트(Fluent Bit 등)를 DaemonSet으로 띄워 중앙 저장소(Elasticsearch, Loki 등)로 보냅니다.
+`kubectl logs`에는 검색이나 장기 보관 기능이 없습니다. 운영 환경에서는 노드마다 로그 수집 에이전트(Fluent Bit 등)를 DaemonSet으로 띄워 중앙 저장소(Elasticsearch, Loki 등)로 보냅니다. 수집기 Fluentd(또는 Fluent Bit), 저장소 Elasticsearch, 화면 Kibana를 묶어 EFK라고 부르고 이 일을 상용 서비스에 맡기기도 합니다.
 
 > **정리**: 로그는 stdout과 stderr이고 노드 파일에 있으며 kubelet을 거쳐 읽습니다. 지금과 직전 컨테이너만 보는 도구라 보관은 별도 수집기가 맡습니다.
 
@@ -882,6 +923,8 @@ kubectl -n shop logs board -c access-log
 5. **DB Pod**: 상태와 로그에서 DB 자체 오류(인증 실패, 디스크 부족 등)를 찾습니다.
 
 뒤쪽(DB)에서 거꾸로 올라와도 됩니다.
+
+`--previous`에도 원인이 보이지 않으면 `kubectl logs -f <pod>`를 띄워 두고 다음 실패를 기다립니다. 컨테이너가 죽으면 스트림이 끝나고 죽기 직전 줄이 화면에 남습니다.
 
 #### 4. 실전에서 보이는 모습
 

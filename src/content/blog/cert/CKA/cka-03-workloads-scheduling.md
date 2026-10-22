@@ -321,7 +321,7 @@ etcd 직접 읽기     → 평문과 다름없음       (저장 시 암호화로
 
 - 기본 동작에서는 Kubernetes Secret 객체를 만들지 않아 etcd에 값이 남지 않습니다.
 - 환경 변수로도 쓰고 싶으면 `secretObjects`로 Secret 동기화를 켭니다.
-- 외부 값이 바뀌었을 때 자동으로 다시 받아 오는 순환(rotation)은 alpha 기능이라 기본으로 꺼져 있고 드라이버에 `--enable-secret-rotation=true`를 줘야 동작합니다.
+- 외부 값이 바뀌었을 때 자동으로 다시 받아 오는 순환(rotation)은 alpha 기능이라 기본으로 꺼져 있고 드라이버에 `--enable-secret-rotation=true`를 줘야 동작합니다. 켜면 드라이버가 `--rotation-poll-interval`(기본 `2m`) 간격으로 외부 저장소를 다시 확인합니다.
 
 CKA 범위 밖이라 개념만 알아 둡니다.
 
@@ -518,6 +518,48 @@ Secret은 base64일 뿐이라 etcd 데이터 디렉터리나 etcd 백업 스냅�
 - 설정을 켠 뒤에도 기존 Secret은 다시 쓰기 전까지 평문입니다.
 - 매니페스트에 hostPath 마운트를 빠뜨리면 kube-apiserver가 설정 파일을 찾지 못해 뜨지 못하고 그동안 `kubectl`이 응답하지 않습니다.
 
+#### 5. 파일 두 개의 뼈대
+
+설정 파일과 kube-apiserver 매니페스트에서 손대는 자리만 모았습니다. 경로 `/etc/kubernetes/enc`는 예로 든 값입니다.
+
+```yaml
+# /etc/kubernetes/enc/enc.yaml (컨트롤 플레인 노드의 호스트 파일)
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:                    # 첫 번째: 새로 쓰는 값은 이것으로 암호화
+          keys:
+            - name: key1
+              secret: <head -c 32 /dev/urandom | base64 결과>
+      - identity: {}               # 설정 전 평문 Secret 읽기용
+```
+
+```yaml
+# /etc/kubernetes/manifests/kube-apiserver.yaml 일부
+spec:
+  containers:
+    - command:
+        - kube-apiserver
+        - --encryption-provider-config=/etc/kubernetes/enc/enc.yaml   # 컨테이너 안 경로
+      volumeMounts:
+        - name: enc
+          mountPath: /etc/kubernetes/enc
+          readOnly: true
+  volumes:
+    - name: enc
+      hostPath:
+        path: /etc/kubernetes/enc    # 호스트 경로
+        type: DirectoryOrCreate
+```
+
+| 확인할 것 | 방법 |
+|---|---|
+| API 서버가 다시 떴나 | `kubectl get pods -n kube-system`에 `kube-apiserver-<노드>`가 Running |
+| 새 Secret이 암호문인가 | `etcdctl get /registry/secrets/<ns>/<이름> \| hexdump -C`(인증서 옵션 생략)에 `k8s:enc:aescbc:v1:key1` 접두어 |
+
 > **정리**: 첫 번째 공급자로 쓰고 접두어로 읽습니다. 순서와 기존 Secret 다시 쓰기, hostPath 마운트 세 가지만 놓치지 않으면 됩니다.
 
 </details>
@@ -555,7 +597,7 @@ Secret은 base64일 뿐이라 etcd 데이터 디렉터리나 etcd 백업 스냅�
 
 노드에서 사람이 `docker login`을 하듯 비밀번호를 칠 수는 없으니 자격 증명을 Secret으로 클러스터에 넣어 두고 Pod가 그 이름을 알려 주는 구조입니다.
 
-1. **Secret 준비**: `docker-registry` 타입 Secret에 레지스트리 주소와 계정을 넣습니다.
+1. **Secret 준비**: `docker-registry` 타입 Secret에 레지스트리 주소와 계정을 넣습니다. 옛 강의 예시에 붙는 `--docker-email`은 kubectl 문서가 선택 항목으로 적고 있어 빼도 됩니다. `--docker-server`를 빼면 기본값 `https://index.docker.io/v1/`(Docker Hub)이 들어가니 비공개 레지스트리는 주소를 꼭 적습니다.
 2. **Pod에 이름 적기**: Pod spec의 `imagePullSecrets`에 Secret 이름을 적습니다. 컨테이너가 생기기 전에 노드가 쓰는 값이라 `containers` 항목 안에 들어가지 않고 Pod spec 높이에 있습니다.
 3. **kubelet이 전달**: Pod가 배치되면 kubelet이 Secret을 읽어 자격 증명을 런타임에 넘깁니다.
 4. **런타임이 pull**: 런타임(containerd 등)이 인증하고 이미지를 받습니다.
@@ -615,7 +657,7 @@ htpasswd 인증 `registry:2`로 확인한 Events 문구는 Secret이 없으면 `
 
 이미지 대부분은 따로 정하지 않으면 컨테이너 안 프로세스를 root(UID 0)로 실행합니다. 컨테이너는 호스트 커널을 함께 쓰는 프로세스이고 네임스페이스로 보이는 범위만 가린 것입니다.
 
-- Pod에 `hostUsers: false`(사용자 네임스페이스)를 적지 않는 한 컨테이너 안의 UID 0은 호스트에서도 UID 0입니다.
+- Pod에 `hostUsers: false`(사용자 네임스페이스)를 적지 않는 한 컨테이너 안의 UID 0은 호스트에서도 UID 0입니다. Docker도 사용자 네임스페이스 매핑(dockerd의 `--userns-remap`)을 기본으로 꺼 두어 같은 상황입니다.
 - 앱 취약점으로 셸을 빼앗기거나 hostPath로 호스트 파일이 마운트되어 있으면 피해가 그대로 커집니다.
 
 #### 2. 어떻게 동작하나
@@ -646,6 +688,7 @@ htpasswd 인증 `registry:2`로 확인한 Events 문구는 Secret이 없으면 `
 | `docker run --user 1000` | `runAsUser: 1000` |
 | Dockerfile의 `USER 1000` | 이미지 기본 UID. `runAsUser`를 적으면 Pod 값이 이김 |
 | `--cap-add NET_ADMIN` | `capabilities.add: ["NET_ADMIN"]` |
+| `--cap-drop ALL` | `capabilities.drop: ["ALL"]` |
 | `--privileged` | `privileged: true` |
 
 UID 1000은 리눅스 배포판이 첫 일반 사용자에게 주는 번호라 예시에 자주 나옵니다.
@@ -654,6 +697,7 @@ UID 1000은 리눅스 배포판이 첫 일반 사용자에게 주는 번호라 �
 
 - **Pod 수준과 컨테이너 수준**: Pod에 적은 값은 모든 컨테이너에 기본값처럼 깔리고 컨테이너에 같은 필드가 있으면 컨테이너 값이 이깁니다.
 - **capabilities가 컨테이너에만 있는 이유**: 컨테이너마다 필요한 커널 권한이 다르기 때문에 API는 capabilities를 컨테이너 단위로만 둡니다. Pod 수준에 적으면 스키마 검증에서 걸립니다.
+- **`MAC_ADMIN`은 MAC 주소와 무관**: 이름의 MAC은 강제 접근 제어(Mandatory Access Control)입니다. capabilities(7) 매뉴얼 기준으로 `CAP_MAC_ADMIN`은 Smack 같은 보안 모듈(LSM)의 설정을 바꾸는 권한입니다. 네트워크 장치의 MAC 주소를 바꾸는 일은 `NET_ADMIN`이 맡습니다.
 - **`runAsNonRoot: true`인데 이미지가 root로 돌게 되어 있으면**: 컨테이너가 시작되지 않고 STATUS에 `CreateContainerConfigError`가 보입니다. `runAsUser`로 0이 아닌 UID를 함께 적으면 풀립니다.
 
 > **정리**: UID는 `runAsUser`, 커널 권한 조각은 `capabilities`로 좁힙니다. `privileged: true`는 이 모든 제한을 푸는 값이라 꼭 필요할 때만 씁니다.
@@ -1055,6 +1099,7 @@ containers:
 - **네트워크 네임스페이스**: 같은 IP를 쓰고 서로 `localhost:<포트>`로 부릅니다.
 - **볼륨**: 같은 `emptyDir`을 두 컨테이너가 마운트하면 한쪽이 쓴 파일을 다른 쪽이 바로 읽습니다.
 - **수명**: 같은 노드에 함께 배치되고 함께 지워집니다.
+- **복제 단위**: Deployment는 Pod 단위로 늘리고 줄입니다. 레플리카를 3에서 5로 올리면 앱과 보조 컨테이너가 한 쌍씩 함께 늘어나 앱 하나에 보조 하나라는 짝이 유지됩니다.
 
 #### 2. 어떻게 동작하나 (시작 순서)
 
@@ -1396,6 +1441,7 @@ cgroup v2의 `cpu.max`는 `$MAX $PERIOD` 형식이고 기본값은 `max 100000`(
 | CPU `0.5` = `500m` | 1 CPU의 절반. `m`은 1/1000이고 `1m`보다 작게는 못 적음 |
 | 메모리 `128Mi` | 128 × 1024 × 1024 바이트(메비바이트) |
 | 메모리 `128M` | 128 × 1000 × 1000 바이트(메가바이트) |
+| 메모리 `1Gi`, `1G` | 1024³ 바이트(기비바이트), 1000³ 바이트(기가바이트). 쿠버네티스 예시는 대부분 `Mi`, `Gi`를 씀 |
 
 **조합에 따라 달라지는 것**
 
@@ -1547,6 +1593,27 @@ Pod 생성(nodeName 비어 있음, Pending)
 - **맞는 노드가 없으면**: Pod가 `Pending`에 머물고 `kubectl describe pod`의 Events에 `FailedScheduling`과 함께 "몇 개 노드가 어떤 이유로 맞지 않았는지"가 찍힙니다.
 - **스케줄러가 죽어 있으면**: 모든 새 Pod가 `Pending`이고 Events에 아무것도 남지 않습니다. `kubectl get pods -n kube-system`에서 kube-scheduler 상태부터 봅니다.
 
+#### 5. Binding을 HTTP로 직접 보내기
+
+옛 강의는 Binding을 kubectl 대신 curl로 API 서버에 보냅니다. 스케줄러가 하는 요청을 손으로 흉내 내는 방식이라 원리를 보기에 좋습니다.
+
+1. **중계 띄우기**: `kubectl proxy`가 내 kubeconfig로 인증을 붙여 주는 중계를 `127.0.0.1:8001`에 띄웁니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
+2. **POST 보내기**: 아래 본문의 Binding JSON을 Pod의 `binding` 하위 리소스 주소로 보냅니다.
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  --data @binding.json \
+  http://127.0.0.1:8001/api/v1/namespaces/board/pods/board-web/binding
+```
+
+| 방법 | 쓰는 자리 |
+|---|---|
+| `kubectl create -f binding.json` | 시험. 짧고 인증을 kubectl이 처리 |
+| curl + `kubectl proxy` | 스케줄러가 보내는 요청 모양을 직접 볼 때 |
+| `kubectl replace --force -f pod.yaml` | `nodeName`을 넣은 YAML로 Pod를 지우고 곧바로 다시 만들 때 |
+
+Binding은 한 번 보내면 끝나는 동작입니다. 같은 파일을 다시 보내면 `409 Conflict`만 돌아오니 저장소에 두고 반복 적용할 매니페스트로 다루지 않습니다.
+
 > **정리**: 스케줄링은 `nodeName` 한 칸을 채우는 일입니다. 직접 채우면 빠르지만 자원 계산이 빠지고 라벨로 고르면 스케줄러가 계산을 이어 갑니다.
 
 </details>
@@ -1687,6 +1754,7 @@ spec:
 
 - 테인트가 걸린 노드만 남으면 Pod는 `Pending`이고 Events의 `FailedScheduling`에 "untolerated taint"가 있는 노드 수가 나옵니다.
 - `NoExecute` 테인트를 걸면 톨러레이션 없는 Pod가 바로 축출되어 다른 노드에서 다시 만들어집니다.
+- **톨러레이션 값의 따옴표**: `key`, `value`, `effect`는 문자열 필드라 `value: blue`처럼 따옴표 없이 적어도 됩니다. 값이 `1`이나 `true`처럼 YAML이 숫자나 불리언으로 읽는 모양일 때만 `"1"`처럼 따옴표로 감쌉니다.
 
 > **정리**: 테인트는 밖에서 들어오는 Pod를 막고 어피니티는 원하는 Pod를 그 노드에 묶습니다. 막는 방향이 달라서 전용 노드에는 둘을 함께 씁니다.
 
@@ -1839,6 +1907,21 @@ spec:
 - **노드 압박 축출**: 노드 메모리가 모자라 kubelet이 Pod를 축출할 때도 우선순위가 순서에 반영됩니다.
 - **선점 흔적**: 높은 Pod를 `kubectl get pod -o yaml`로 보면 배치 전까지 `status.nominatedNodeName`이 보이고 희생된 Pod의 Events에는 선점으로 종료됐다는 기록이 남습니다.
 - **없는 클래스 이름**: Pod 생성이 승인 단계에서 바로 거절됩니다.
+
+#### 5. YAML로 쓰면
+
+`kubectl create priorityclass`가 만드는 객체를 YAML로 적으면 다음과 같습니다. `value`는 `spec` 아래가 아니고 최상위 필드입니다.
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: payment-high
+value: 100000
+globalDefault: false                    # true는 클러스터에 하나만
+description: "결제 API용"
+preemptionPolicy: PreemptLowerPriority  # 또는 Never
+```
 
 > **정리**: 값은 승인 단계에서 채워지고 대기열 순서와 선점에 쓰입니다. 남을 내보내지 않게 하려면 `preemptionPolicy: Never`를 적습니다.
 

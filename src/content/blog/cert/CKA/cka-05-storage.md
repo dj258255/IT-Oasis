@@ -68,8 +68,8 @@ merged (컨테이너가 보는 화면)
 | 스토리지 드라이버 | Docker 문서 기준 상태 |
 |---|---|
 | `overlay2` | 지금의 기본. 문서는 가장 안정적이고 배포판 호환성이 넓다고 적음 |
-| `aufs` | 예전 Ubuntu 기본. v19.03에서 사용 중단, Docker Engine v24.0에서 제거 |
-| `devicemapper` | 예전 RHEL/CentOS 계열. v18.09에서 사용 중단, v25.0에서 제거 |
+| `aufs` | 예전 Ubuntu 기본. 리눅스 메인라인 커널에 들어간 적이 없어 배포판이 따로 패치를 얹어야 했다. v19.03에서 사용 중단, Docker Engine v24.0에서 제거 |
+| `devicemapper` | 예전 RHEL/CentOS 계열. 설정 없이 쓰면 loop-lvm 모드(희소 파일을 루프 장치로 붙임)였는데 문서는 이 모드가 느리고 운영에 쓰면 안 되며 운영은 블록 장치를 쓰는 direct-lvm이어야 한다고 적었다. v18.09에서 사용 중단, v25.0에서 제거 |
 
 Docker에서 `docker inspect <컨테이너>`를 보면 `GraphDriver.Data`에 위 그림의 경로가 그대로 나옵니다. `LowerDir`(이미지 레이어들), `UpperDir`(쓰기 층), `MergedDir`(합쳐 보이는 화면), `WorkDir`(커널이 복사 작업에 쓰는 작업 공간)입니다. 네 디렉터리의 커널 쪽 동작은 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에 있습니다.
 
@@ -90,6 +90,24 @@ Docker에서 `docker inspect <컨테이너>`를 보면 `GraphDriver.Data`에 위
 | 맡는 일 | 이미지 레이어와 쓰기 층 관리 | 볼륨을 만들고 마운트 |
 | 예 | overlay2, overlayfs snapshotter | Docker 기본 `local`(호스트 디스크), 서드파티 플러그인(클라우드 디스크, NFS) |
 | 쿠버네티스에서 | 런타임 내부 | CSI 드라이버가 이 자리를 맡고 PV, PVC, StorageClass가 그 위에 있다(2-4절) |
+
+Docker에서 볼륨 드라이버를 고르는 자리는 `docker volume create --driver <드라이버> <이름>`이나 `docker run --mount type=volume,source=<이름>,target=<경로>,volume-driver=<드라이버>`입니다. 드라이버가 클라우드 디스크나 NAS를 붙이면 데이터가 호스트 밖에 있으므로 컨테이너나 호스트가 사라져도 남습니다. 쿠버네티스에서는 이 생각이 2-1절의 볼륨 타입과 2-4절의 CSI로 이어집니다.
+
+#### 4. 빌드 캐시와 CI 환경
+
+레이어 캐시는 같은 호스트에서 다시 빌드할 때만 이득이 납니다. 매번 새 러너나 새 Pod에서 빌드하는 CI는 캐시가 비어서 시작합니다.
+
+1. **BuildKit의 빌드 그래프**: 지금 Docker의 빌더인 BuildKit은 빌드 정의를 LLB라는 의존 그래프로 바꾸고 각 단계를 체크섬으로 추적합니다. 문서는 서로 의존하지 않는 스테이지를 병렬로 빌드하고 최종 결과에 쓰이지 않는 스테이지는 건너뛴다고 적습니다.
+2. **원격 캐시**: `docker buildx build --cache-to type=registry,ref=<레지스트리>/<캐시 이미지> --cache-from type=registry,ref=<같은 곳>`처럼 캐시를 레지스트리에 내보내고 다음 빌드가 받아 씁니다. 백엔드는 `inline`, `registry`, `local`, `gha`(GitHub Actions 캐시, 문서 기준 beta) 등이 있습니다.
+3. **캐시 범위**: `mode=min`(기본)은 최종 이미지에 들어간 레이어만, `mode=max`는 중간 스테이지 레이어까지 내보냅니다. `max`는 캐시가 커지는 대신 적중이 늘어납니다.
+
+| 방식 | 장점 | 한계 |
+|---|---|---|
+| CI 러너에 디스크(블록 볼륨)를 붙여 캐시 보관 | 로컬 디스크 속도 | 블록 디스크는 한 존에 묶이고 RWO라 동시에 도는 빌드끼리 같은 디스크를 쓸 수 없다 |
+| 레지스트리 원격 캐시 | 존과 동시성 제약이 없다 | 캐시를 올리고 받는 네트워크 시간이 든다 |
+
+- 기본 `docker` 드라이버는 containerd 이미지 저장소를 켰을 때만 registry 캐시를 내보냅니다. 아니면 `docker buildx create`로 다른 드라이버의 빌더를 만듭니다.
+- 큰 캐시를 올리는 시간이 배포를 늦춘다면 캐시 내보내기를 배포와 다른 작업으로 떼어 놓는 구성도 씁니다. 대신 그 작업이 끝나기 전에 시작한 다음 빌드는 이전 캐시를 받습니다.
 
 > **정리**: 이미지는 읽기 전용, 컨테이너 쓰기 층은 일회용입니다. 남길 데이터는 볼륨으로 빼고 쿠버네티스에서는 그 볼륨을 아래 PV, PVC로 다룹니다.
 
@@ -614,6 +632,7 @@ Pod ──claimName──→ PVC (3Gi, RWO) ──Bound──→ PV (10Gi, RWO, 
 - 일대일이라 요청보다 큰 PV가 묶이면 남는 용량은 다른 PVC가 쓰지 못합니다. 아래 예에서 3Gi 요청이 10Gi PV에 묶이는 것이 그 경우입니다.
 - 문서는 맞는 볼륨이 없으면 PVC가 무기한 묶이지 않은 채로 남고 맞는 볼륨이 생기면 묶인다고 적습니다. 50Gi PV만 여럿 있는 클러스터에서 100Gi PVC는 100Gi PV가 추가될 때까지 `Pending`입니다.
 - Pod가 쓰는 PVC를 지우면 `Terminating`에 머물고 Finalizers에 `kubernetes.io/pvc-protection`이 보입니다(3-4절).
+- PVC를 지운 뒤 PV를 어떻게 할지는 회수 정책이 정합니다(2-3절). 볼륨을 `rm -rf`로 비워 다시 내주던 `Recycle`은 사용 중단됐고 문서는 그 대신 동적 프로비저닝을 쓰라고 권합니다. 요청이 올 때마다 새 볼륨을 만들고 다 쓰면 `Delete`로 지우는 흐름입니다.
 
 > **정리**: 공급(PV)과 요청(PVC)을 나눠 앱과 저장소를 떼어 놓았습니다. 이 낭비와 수작업을 줄이려고 1절의 동적 프로비저닝을 씁니다.
 

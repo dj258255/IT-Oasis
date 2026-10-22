@@ -156,6 +156,24 @@ ip -n blue link set veth-blue up
 | Pod 안 `ip route` | `default via <게이트웨이>` 줄이 있다 |
 | 노드 `sysctl net.ipv4.ip_forward` | 1 |
 
+자주 쓰는 도구를 더 모으면 이렇습니다.
+
+| 하려는 일 | 명령 |
+|---|---|
+| Docker 컨테이너의 PID | `docker inspect -f '{{.State.Pid}}' <컨테이너>` |
+| 이름 붙은 네임스페이스 안 패킷 저장 | `ip netns exec <ns> tcpdump -i any -w out.pcap` |
+| NAT가 걸린 연결 목록 | `conntrack -L` (conntrack 도구가 설치돼 있어야 함) |
+| NAT 규칙과 적중 횟수, 줄 번호 | `iptables -t nat -L -n -v --line-numbers` |
+| 브리지에 꽂힌 끝 | `bridge link` |
+
+Pod 통신이 안 될 때는 안에서 밖으로 넓혀 갑니다. Pod 안의 인터페이스와 기본 경로, 노드에서 veth 짝이 브리지(또는 CNI 인터페이스)에 붙었는지, iptables와 conntrack과 ip_forward, 마지막으로 CNI 에이전트의 상태와 로그 순서입니다. 에이전트 상태는 플러그인 도구로도 봅니다(Calico `calicoctl node status`, Cilium `cilium status`).
+
+| 플러그인 | 노드 사이를 잇는 방식(대표 설정) |
+|---|---|
+| Flannel | VXLAN 터널이 기본 백엔드. 구조가 가장 단순하고 NetworkPolicy는 집행하지 않는다 |
+| Calico | 노드 라우팅 테이블에 Pod 경로를 넣고 BGP로 경로를 나눈다. IPIP나 VXLAN 캡슐화도 고를 수 있다 |
+| Cilium | eBPF로 패킷을 처리한다. 설정하면 kube-proxy를 대신해 Service도 처리한다 |
+
 > **정리**: 방(네임스페이스)을 케이블(veth)로 스위치(브리지)에 꽂고 바깥과는 NAT로 주소를 바꿔 통신합니다. Docker와 CNI 플러그인이 하는 일이 이 다섯 단계입니다.
 
 </details>
@@ -194,6 +212,10 @@ docker network ls               # bridge, host, none
 ip addr show docker0            # 호스트의 브리지
 iptables -t nat -L -n           # Docker가 넣은 MASQUERADE, DNAT 규칙
 ```
+
+- **veth 짝 맞추기**: 호스트 `ip link`에 `vethXXXX@if7`처럼 보이면 짝은 인터페이스 번호 7입니다. 컨테이너 안에서 `ip link`를 보면 `7: eth0@if8`처럼 번호가 서로를 가리킵니다. 짝은 대개 이웃한 번호라 두 줄을 맞춰 보면 어느 veth가 어느 컨테이너 것인지 압니다.
+- **컨테이너 쪽 정보**: `docker inspect <컨테이너>`의 `NetworkSettings`에 IP 주소, MAC 주소, 게이트웨이와 네트워크 네임스페이스 파일 경로(`SandboxKey`, `/var/run/docker/netns/` 아래)가 나옵니다.
+- **ip netns에 안 보이는 이유**: `ip netns`는 `/var/run/netns` 아래만 읽습니다. Docker는 네임스페이스를 자기 디렉터리에 두므로 그 파일을 `/var/run/netns/<이름>`으로 심볼릭 링크해야 `ip netns exec`로 들어갈 수 있습니다. PID를 아는 경우는 앞 토글의 `nsenter -t <PID> -n`이 더 간단합니다.
 
 #### 4. 쿠버네티스와 이어 보기
 
@@ -414,7 +436,7 @@ bridge 플러그인 설정은 대략 이런 모양입니다(값은 예시).
 
 - 3~5단계 중 하나라도 실패하면 Pod는 `ContainerCreating`에 머물고 이벤트에 `FailedCreatePodSandBox`가 남습니다. 아래 표의 두 상황이 이 단계의 실패입니다.
 - 노드에서 확인하는 순서는 넷입니다. ① `ls /etc/cni/net.d`로 설정 파일이 있는지(비어 있으면 CNI 플러그인을 아직 설치하지 않은 것), ② 파일이 여럿이면 이름 순으로 맨 앞 파일이 의도한 것인지, ③ 그 파일의 JSON 문법(괄호, 쉼표)과 `"type"` 값, ④ `ls /opt/cni/bin`에 그 `type`과 같은 이름의 실행 파일이 있는지입니다. JSON이 깨진 파일은 런타임이 불러오지 못하므로 단서가 `journalctl -u containerd`에 남습니다.
-- Docker Engine의 네트워크는 자체 모델(CNM)로 만들어져 CNI 규약을 따르지 않습니다. 그래서 dockershim 시절에는 kubelet이 CNI를 대신 불렀고 지금은 CNI를 직접 지원하는 런타임이 부릅니다.
+- Docker Engine의 네트워크는 자체 모델(CNM)로 만들어져 CNI 규약을 따르지 않습니다. 그래서 dockershim 시절에는 kubelet이 Docker에 네트워크 없는(`none`) 샌드박스 컨테이너를 만들게 한 뒤 그 네임스페이스에 CNI 플러그인을 대신 불렀고 지금은 CNI를 직접 지원하는 런타임이 부릅니다.
 
 > **정리**: kubelet은 런타임을 부르고 런타임은 `/etc/cni/net.d`의 첫 설정과 `/opt/cni/bin`의 실행 파일로 플러그인을 부릅니다. 이 두 경로가 CNI 장애를 볼 때 가장 먼저 열 곳입니다.
 
@@ -607,6 +629,51 @@ spec:
 
 - 정책을 지원하지 않는 플러그인(Flannel 단독)에서는 객체가 오류 없이 만들어지는데 아무것도 막히지 않습니다. 지원하는 예로는 Calico, Cilium, Antrea가 있습니다.
 - 정책을 만든 뒤에는 막혀야 할 연결이 정말 막히는지 직접 요청해 확인합니다. 막힌 연결은 거부 응답 없이 타임아웃으로 보이는 경우가 많습니다.
+
+#### 5. 들어오고 나가는 쪽을 한 정책에
+
+"결제 DB는 `env=prod` 네임스페이스의 주문 API에게서만 3306으로 받고 클러스터 밖 백업 서버 192.168.5.1의 80번으로만 내보낸다"를 한 객체로 쓰면 이렇습니다.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-db-strict
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:       # 대시 하나 아래 두 선택자 = AND
+        matchLabels:
+          env: prod
+      podSelector:
+        matchLabels:
+          app: order-api
+    ports:
+    - protocol: TCP
+      port: 3306
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 192.168.5.1/32   # 클러스터 밖 주소 하나
+    ports:
+    - protocol: TCP
+      port: 80
+```
+
+| 읽는 곳 | 뜻 |
+|---|---|
+| `policyTypes` 두 개 | 이 Pod는 양방향 모두 기본 거부가 된다 |
+| `ingress.from` 한 항목 안의 두 선택자 | `env=prod` 라벨이 붙은 네임스페이스에 있으면서 `app=order-api`인 Pod만(2-2절 AND/OR). `env` 같은 라벨은 네임스페이스에 직접 붙여 둬야 하고 자동으로 붙는 것은 `kubernetes.io/metadata.name`뿐이다 |
+| `egress.to.ipBlock` | Pod IP는 바뀌므로 클러스터 밖 고정 주소에 쓴다 |
+
+이 정책만 있으면 DB의 DNS 질의도 막힙니다. 백업 서버를 이름으로 부른다면 2-4절처럼 DNS Egress를 함께 엽니다. 들어온 요청에 대한 응답은 Egress 목록과 상관없이 나갑니다.
 
 > **정리**: podSelector로 고르는 순간 그 방향은 기본 거부가 되고 적은 것만 열립니다. 객체는 API 서버에 저장되고 집행은 CNI 플러그인이 하니 지원 여부부터 확인합니다.
 
@@ -802,7 +869,8 @@ board Pod → ClusterIP 10.96.0.50:80 → (같은 노드 커널에서 DNAT) → 
 #### 4. 헷갈리는 점 / 실전에서 보이는 모습
 
 - ClusterIP에는 그 주소를 가진 인터페이스도, 요청을 받는 서버 프로세스도 없습니다. iptables 모드 클러스터에서 ClusterIP로 `ping`을 보내도 응답이 없는 이유입니다.
-- kube-proxy는 규칙을 쓰기만 하고 패킷을 직접 나르지 않습니다. kube-proxy Pod가 잠시 죽어도 기존 Service는 계속 동작하고 그사이의 변경만 반영되지 않습니다.
+- kube-proxy는 규칙을 쓰기만 하고 패킷을 직접 나르지 않습니다. kube-proxy Pod가 잠시 죽어도 기존 Service는 계속 동작하고 그사이의 변경만 반영되지 않습니다. 패킷이 kube-proxy 프로세스를 거치던 옛 userspace 모드에서는 프로세스가 멈추면 그 노드의 Service 전달도 멈췄습니다.
+- iptables 모드는 Service마다 규칙이 늘고 패킷이 규칙 목록을 차례로 비교하므로 Service가 아주 많으면 부담이 커집니다. 해시 테이블로 찾는 IPVS가 그 대안이었고 지금 문서가 가리키는 후속은 `nftables` 모드입니다. IPVS는 노드 커널에 IPVS 모듈이 있어야 했습니다.
 - iptables 모드에서 실제 규칙은 노드에서 `sudo iptables-save | grep <Service 이름>`으로 보입니다.
 - Pod 대역과 Service 대역은 겹치면 안 됩니다. Service 대역은 kube-apiserver의 `--service-cluster-ip-range`, Pod 대역은 `--cluster-cidr`와 CNI 설정이 정합니다(1-5절).
 
@@ -1537,6 +1605,10 @@ spec:
 | `nslookup`, `dig` | 보지 않고 DNS 서버에 바로 묻는다 | DNS 서버가 제대로 답하는지 |
 
 hosts 파일로 바꾼 이름을 `nslookup`으로 확인하면 DNS 서버의 원래 답이 나옵니다.
+
+- `dig`는 `nslookup`보다 많이 보여 줍니다. 질의한 서버, 응답 섹션의 레코드와 TTL, 걸린 시간(`Query time`)이 함께 나옵니다.
+- `/etc/resolv.conf`에는 `nameserver` 줄을 여러 개 둘 수 있습니다. 리졸버는 앞의 서버가 응답하지 않을 때 다음 서버로 넘어갑니다. 앞 서버가 "그런 이름 없음"이라고 답하면 뒤 서버에 다시 묻지 않습니다.
+- hosts 파일 바꿔치기는 DNS 레코드를 바꾸기 전에 내 컴퓨터에서만 새 서버로 접속해 볼 때도 씁니다. 쿠버네티스에서 Pod 하나만 다른 주소로 보낼 때가 위의 `hostAliases`입니다.
 
 > **정리**: 순서는 nsswitch, 서버는 resolv.conf, 짧은 이름은 search가 정합니다. 다음 토글에서는 쿠버네티스가 이 resolv.conf를 누가 어떻게 채우는지 봅니다.
 

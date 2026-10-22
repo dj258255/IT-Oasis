@@ -67,6 +67,19 @@ RBAC만 잘 걸면 클러스터가 안전할 것 같지만 공격 경로는 여�
 - RBAC은 2번 층 안에서도 인가 단계 하나만 맡습니다. 1번 층이 뚫려 `ca.key`가 새면 공격자가 인증서를 직접 서명해 만들 수 있어 RBAC으로는 막지 못합니다.
 - 원칙은 층마다 같습니다. 필요한 최소 권한만 주고(**최소 권한 원칙**) 한 층이 뚫려도 다음 층에서 막히게 겹쳐 둡니다.
 
+#### 5. 노드 층의 SSH 키 인증은 이렇게 돕니다
+1. **키 쌍 만들기**: 접속하는 쪽 PC에서 `ssh-keygen`으로 개인 키와 공개 키를 만듭니다.
+2. **공개 키 등록**: 서버의 `~/.ssh/authorized_keys`에 공개 키만 넣습니다. 개인 키는 PC를 떠나지 않습니다.
+3. **접속**: 서버가 낸 문제에 PC가 개인 키로 서명해 답하고 서버는 등록된 공개 키로 그 서명을 확인합니다.
+
+```text
+내 PC: 개인 키(보관)  ──서명──>  서버: authorized_keys의 공개 키로 확인
+같은 공개 키를 노드 세 대에 등록 → 개인 키 하나로 세 대 모두 접속
+```
+
+- 네트워크로 오가는 비밀번호가 없어서 비밀번호를 하나씩 넣어 보는 무차별 대입(brute force) 공격이 통하지 않습니다.
+- 그래서 키 인증을 켠 뒤 `sshd_config`에서 `PasswordAuthentication no`, `PermitRootLogin no`로 비밀번호 로그인과 root 직접 로그인을 끕니다.
+
 > **정리**: 보안은 노드, API 서버, 구성요소 통신, Pod 네트워크의 네 층입니다. 이 장은 2번 층인 API 서버 접근을 다루고 아래에서 그 인가 단계인 RBAC부터 봅니다.
 
 </details>
@@ -152,6 +165,7 @@ roleRef:
 #### 4. 실전에서 보이는 모습
 - 위 바인딩은 `shop` 안에서만 효력이 있어서 jane이 `board`의 Pod를 지우려 하면 403이 납니다. 메시지는 `Error from server (Forbidden): pods "..." is forbidden: User "jane" cannot delete resource "pods" in API group "" in the namespace "board"` 모양입니다.
 - 권한을 미리 확인할 때는 `kubectl auth can-i delete pods -n board --as jane`처럼 묻고 `yes` 또는 `no`로 답을 받습니다.
+- 만든 객체는 `kubectl get roles,rolebindings -n shop`으로 목록을 보고 `kubectl describe role order-developer -n shop`으로 규칙을 봅니다. describe는 규칙을 Resources, Resource Names, Verbs 열의 표로 펼쳐 주니 그룹이나 동사를 빠뜨렸는지 한눈에 보입니다. `kubectl describe rolebinding jane-order-developer -n shop`은 연결된 Role과 Subjects를 보여 줍니다.
 
 > **정리**: Role은 "그룹, 리소스, 동사"의 목록이고 RoleBinding은 그 목록을 누구에게 줄지입니다. 네임스페이스 밖 리소스와 재사용은 ClusterRole로 풉니다.
 
@@ -280,6 +294,9 @@ kubectl --kubeconfig /path/to/user.conf get pods -n shop
 - 앞에 `AlwaysAllow`를 두면 모든 요청이 거기서 허용되어 RBAC은 쓸모가 없어집니다.
 - 단계마다 실패 코드가 다릅니다. 인증에서 걸리면 401(kubectl에는 `Unauthorized`), 인가에서 걸리면 403(`Forbidden`)입니다. 401이면 인증서나 토큰을, 403이면 RBAC 바인딩을 봅니다.
 - 정적 토큰 파일은 한 줄이 `토큰,사용자,UID,"그룹1,그룹2"` 형식의 CSV이고 API 서버는 실행 중에 바뀐 내용을 다시 읽지 않습니다(Authentication 문서). kubeadm 클러스터의 API 서버는 static Pod라서 `--token-auth-file`만 더하면 컨테이너 안에서 파일을 찾지 못합니다. `kube-apiserver.yaml`에 그 파일이 든 디렉터리를 hostPath 볼륨과 volumeMounts로 함께 넣어야 합니다.
+- `--authorization-mode`를 아예 적지 않으면 기본값은 `AlwaysAllow`입니다(kube-apiserver 레퍼런스, `--authorization-config`를 쓰지 않을 때). 손으로 띄운 API 서버에서 이 플래그를 빠뜨리면 인증만 통과한 누구나 무엇이든 할 수 있게 되고 kubeadm이 `Node,RBAC`을 넣어 주는 이유가 이것입니다.
+- `Webhook`은 OPA 같은 외부 정책 엔진에 "이 사용자가 이 동작을 해도 되나"를 HTTP로 묻고 답을 받아 따릅니다. 판단 규칙을 클러스터 밖에서 한곳에 모아 관리하고 싶을 때 씁니다.
+- 옛 자료에는 "앞 모듈이 거부하면 다음 모듈로 넘긴다"는 설명이 있는데 다음으로 넘어가는 것은 의견 없음일 때뿐이고 명시적 거부는 그 자리에서 끝납니다.
 
 > **정리**: 사람은 클러스터 밖에서 오고 기계는 ServiceAccount로 클러스터 안에 있습니다. 인증으로 이름을 확인한 뒤 인가 모듈이 앞에서부터 판단하고 아무도 허용하지 않으면 403입니다.
 
@@ -333,6 +350,8 @@ sudo grep authorization-mode /etc/kubernetes/manifests/kube-apiserver.yaml
 #### 4. 실전에서 보이는 모습
 - 클러스터에 그룹 목록을 물을 때는 `kubectl get --raw /apis | head`도 됩니다.
 - `kubectl api-resources`는 리소스마다 APIVERSION(그룹/버전)과 NAMESPACED(네임스페이스 범위 여부)를 보여 줍니다. Role의 `apiGroups`가 헷갈릴 때 여기서 확인합니다.
+- proxy 없이 curl로 부를 때는 인증서 세 개를 붙입니다. `curl --cacert ca.crt --cert admin.crt --key admin.key https://<API 서버>:6443/apis`처럼 CA(서버 검증), 클라이언트 인증서, 개인 키를 줍니다.
+- 인증서를 하나도 안 붙이면 요청은 익명 사용자 `system:anonymous`(그룹 `system:unauthenticated`)로 처리됩니다(`--anonymous-auth` 기본 true). 기본 ClusterRole `system:public-info-viewer`가 이 그룹에도 바인딩되어 있어 `/version`, `/healthz` 같은 공개 정보는 응답하고 `/api/v1/pods` 같은 경로는 인가에서 403으로 막힙니다. 그래서 "인증서 없이 부르면 무조건 401"은 맞지 않습니다.
 
 > **정리**: core는 `/api/v1`, 나머지는 `/apis/<그룹>/<버전>`에 있고 URL의 그룹, 리소스, 메서드가 그대로 RBAC 규칙이 됩니다. kubectl proxy는 이 URL을 손으로 불러 보는 도구입니다.
 
@@ -497,6 +516,17 @@ audience나 수명을 바꾸려면 Pod 스펙의 projected 볼륨에 `serviceAcc
 - 서명 플래그 두 개가 틀리면 승인을 해도 인증서가 나오지 않습니다. 승인만 되고 `status.certificate`가 비어 있으면 kube-controller-manager의 이 플래그부터 봅니다.
 - 인증서를 받아도 권한은 0이고 RBAC 바인딩을 따로 해야 합니다.
 
+#### 5. 컨트롤러 매니저 안의 CSR 컨트롤러 셋
+kube-controller-manager 레퍼런스의 `--controllers` 목록에 CSR을 맡는 컨트롤러가 셋 있고 모두 기본으로 켜져 있습니다.
+
+| 컨트롤러 | 하는 일 |
+|---|---|
+| `certificatesigningrequest-approving-controller` | kubelet 클라이언트 CSR(`kube-apiserver-client-kubelet`)을 자동 승인 |
+| `certificatesigningrequest-signing-controller` | 승인된 CSR에 `--cluster-signing-*` 키로 서명 |
+| `certificatesigningrequest-cleaner-controller` | 끝난 CSR 객체 정리 |
+
+정리 시간은 CSR 문서 기준으로 승인, 거절, 실패한 요청은 1시간, Pending으로 남은 요청은 24시간이고 발급된 인증서가 만료되면 그 CSR도 지워집니다.
+
 > **정리**: CA는 노드의 `ca.crt`, `ca.key` 두 파일이고 CSR API는 키를 노드 밖으로 꺼내지 않고 서명합니다. 사람용 CSR은 사람이 승인하고 서명은 kube-controller-manager가 하며 권한은 RBAC으로 따로 줍니다.
 
 </details>
@@ -596,6 +626,7 @@ current-context: dev-jane  → 모든 kubectl 명령이 이 조합으로 감
 - `kubectl config use-context <이름>`은 파일의 `current-context` 값만 바꾸고 그 뒤 모든 kubectl 명령이 그 조합으로 갑니다.
 - 운영과 개발이 한 파일에 있다면 지울 일을 하기 전에 `kubectl config current-context`로 지금 위치부터 봅니다. `kubectl config get-contexts`는 현재 컨텍스트에 `*`를 붙여 보여 줍니다.
 - `kubectl config view`는 `-data` 값을 `DATA+OMITTED`나 `REDACTED`로 가려서 보여 줍니다.
+- `clusters`의 `certificate-authority`는 브라우저에 내장된 공인 CA 목록과 같은 역할입니다. 클러스터 CA는 kubeadm이 만든 사설 CA라 어느 PC에도 미리 들어 있지 않으니 kubeconfig에 직접 넣어 줘야 서버 인증서를 믿을 수 있습니다. 사설 CA가 발급한 인증서를 쓰는 내부 사이트를 열려면 그 CA를 PC에 먼저 설치해야 하는 것과 같은 이치입니다.
 
 > **정리**: kubeconfig는 clusters, users, contexts 세 목록과 current-context 하나입니다. 컨텍스트를 바꾸면 모든 명령의 목적지와 신원이 함께 바뀌니 위험한 작업 전에는 현재 컨텍스트를 확인합니다.
 
@@ -682,6 +713,29 @@ VM 여러 대를 손으로 만들기 번거로우면 Vagrant 같은 도구로 VM
 - **큰 클러스터에서는 etcd를 별도 노드로 뺍니다.** etcd는 디스크 쓰기 지연에 민감해서 다른 구성요소와 디스크를 다투면 클러스터 전체가 느려집니다(5-1절 external etcd).
 - **스토리지는 워크로드에 맞춰 고릅니다.** DB처럼 입출력이 많은 워크로드에는 SSD 기반 볼륨을 쓰고 여러 Pod가 같은 데이터를 동시에 써야 하면(`ReadWriteMany`) NFS 같은 네트워크 스토리지를 씁니다. 종류별로 StorageClass를 만들어 두면 PVC가 필요한 종류를 골라 동적으로 받습니다([Ch-05](/blog/cert/cka/cka-05-storage)).
 - **컨트롤 플레인 크기는 노드 수를 따라갑니다.** 관리형 서비스는 노드가 늘면 컨트롤 플레인 자원을 사업자가 맞춰 주고 직접 운영하면 그 산정도 내 몫입니다.
+
+#### 5. 내 PC에 실습 기계 만들기
+- **리눅스 PC**: 구성요소 바이너리를 직접 깔아 클러스터를 꾸릴 수도 있습니다. 다만 인증서와 설정을 하나씩 맞춰야 해서 보통 kind, minikube 같은 도구를 쓰거나 VM을 만들어 kubeadm을 올립니다.
+- **Windows PC**: Docker Desktop은 리눅스 컨테이너를 WSL 2나 Docker VMM 위에서 돌리고 Hyper-V는 전체 사용자 설치에서만 고를 수 있습니다(Docker Desktop 설치 문서). Docker Desktop의 쿠버네티스도 그 위의 Docker 컨테이너로 돕니다.
+- **VM 여러 대**: 역할을 나누면 이렇습니다.
+
+| 도구 | 하는 일 |
+|---|---|
+| VirtualBox(하이퍼바이저) | 내 PC의 CPU, 메모리를 나눠 VM을 실제로 만들고 돌림 |
+| Vagrant | `Vagrantfile`에 적힌 VM 사양을 읽어 하이퍼바이저에 생성과 설정을 지시. 누가 돌려도 같은 VM이 나옴 |
+
+```bash
+git clone <실습 저장소 주소>    # Vagrantfile이 든 저장소
+cd <저장소 디렉터리>
+vagrant status                # 아직 만들지 않은 VM은 not created
+vagrant up                    # Vagrantfile 순서대로 이미지 받기, 생성, 부팅
+vagrant status                # 모두 running이면 준비 끝
+vagrant ssh kubemaster        # 접속. 나올 때는 logout
+vagrant halt                  # 전부 끄기
+vagrant destroy -f            # 전부 지우기
+```
+
+강의 저장소는 `kubemaster`, `kubenode01`, `kubenode02` 세 대를 `192.168.56.x` 고정 IP로 만듭니다. 그 Vagrantfile이 쓰는 Ubuntu 18.04(`bionic64`) 박스는 2023년 5월에 표준 지원이 끝난 버전이니 새로 만든다면 지원 중인 LTS 박스를 고릅니다.
 
 > **정리**: 용도와 운영 주체가 도구를 정하고 시험은 kubeadm 직접 설치를 묻습니다. 컨트롤 플레인 격리와 etcd 분리라는 두 원칙은 이 장 뒤에서 다시 나옵니다.
 
@@ -815,6 +869,43 @@ found multiple CRI endpoints on the host. Please define which one do you wish to
 
 ### 2-5. kubeadm, kubelet, kubectl 패키지
 
+<details>
+<summary>기초부터: pkgs.k8s.io 저장소 등록부터 버전 고정까지</summary>
+
+> **핵심 한 줄**: 서명 키를 받고, 마이너 버전이 박힌 저장소 주소를 등록하고, 세 패키지를 설치한 뒤 `hold`로 묶습니다. 모든 노드에서 같은 순서입니다.
+
+#### 1. 왜 필요한가
+kubeadm은 kubelet과 kubectl을 대신 설치하거나 관리하지 않습니다. 세 패키지를 노드마다 직접 깔고 버전을 컨트롤 플레인에 맞춰 둬야 합니다. 저장소 하나에는 마이너 버전 하나의 패키지만 있어서 주소를 잘못 적으면 엉뚱한 버전이 깔립니다.
+
+#### 2. 어떻게 하나(Installing kubeadm 문서, Debian/Ubuntu)
+```bash
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+sudo mkdir -p -m 755 /etc/apt/keyrings      # Debian 12, Ubuntu 22.04보다 오래된 배포판에는 없음
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.37/deb/Release.key | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.37/deb/ /' | \
+  sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+kubeadm version                              # 설치된 버전 확인
+```
+
+| 단계 | 하는 일 |
+|---|---|
+| 키 받기 | 저장소 패키지의 서명을 확인할 공개 키. 모든 저장소가 같은 키라 URL의 버전은 상관없음 |
+| 저장소 등록 | URL의 `v1.37`이 설치될 마이너 버전. 다른 버전이면 이 부분을 바꿈 |
+| `apt-mark hold` | `apt-get upgrade`가 세 패키지를 몰래 올리지 않게 묶음 |
+
+#### 3. 헷갈리는 점
+- 강의 자료는 `v1.31` 경로를 씁니다. 명령 모양은 같고 URL의 버전만 다릅니다.
+- `tee`는 `kubernetes.list`를 덮어씁니다. 업그레이드할 때 이 파일의 버전을 바꾸는 이유가 여기 있습니다(4-2절).
+
+> **정리**: 키, 저장소, 설치, 고정의 네 단계이고 버전은 저장소 URL이 정합니다. 설치 직후 kubelet이 재시작을 반복하는 것은 init 전의 정상 상태입니다.
+
+</details>
+
 저장소는 `pkgs.k8s.io`이고 마이너 버전마다 경로가 다릅니다(`.../core:/stable:/v1.37/deb/`). 예전 `apt.kubernetes.io`는 동결되었습니다. 설치 뒤 `apt-mark hold`로 버전을 고정합니다.
 
 ```bash
@@ -878,6 +969,31 @@ kubeadm이 하지 않는 일도 있습니다. VM을 만들거나 컨테이너 �
 - VM에 인터페이스가 둘 이상이면(예: NAT용 `eth0`과 VM끼리 쓰는 사설망 `enp0s8`) kubeadm은 기본 게이트웨이가 걸린 인터페이스의 주소를 API 서버 광고 주소로 고릅니다. 워커가 그 주소로 닿지 못하면 join이 실패하니 init에 `--apiserver-advertise-address=<사설망 IP>`를 줍니다.
 - init이 끝나면 출력 안내대로 `/etc/kubernetes/admin.conf`를 `$HOME/.kube/config`로 복사하고 소유자를 바꿔야 일반 사용자로 kubectl을 쓸 수 있습니다.
 - 부트스트랩 토큰은 기본 24시간 뒤 만료됩니다. init 출력의 join 명령을 잃었거나 토큰이 만료됐다면 컨트롤 플레인에서 `kubeadm token create --print-join-command`로 새 join 명령을 받습니다.
+
+#### 5. 강의 실습 흐름을 명령으로
+노드 IP는 컨트롤 플레인 `192.168.56.11`, 워커 `192.168.56.21`, `192.168.56.22`이고 CNI는 Flannel인 구성입니다.
+
+```bash
+# 컨트롤 플레인에서
+sudo kubeadm init --apiserver-advertise-address=192.168.56.11 --pod-network-cidr=10.244.0.0/16
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+kubectl get nodes                       # CNI 전이라 NotReady
+
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+kubectl get pods -n kube-flannel        # 노드마다 flannel Pod 하나
+kubectl get nodes                       # Ready로 바뀜
+
+# 워커 두 대에서 init 출력의 join 명령 실행 뒤, 다시 컨트롤 플레인에서
+kubectl get nodes                       # 세 대 모두 Ready
+kubectl run web --image=nginx           # 시험용 Pod
+kubectl get pods -w                     # Running까지 지켜봄(Ctrl+C로 빠져나옴)
+kubectl delete pod web
+```
+
+- Flannel 매니페스트의 기본 Pod 대역이 `10.244.0.0/16`이라 init에 같은 값을 줍니다. 다른 대역을 쓰려면 매니페스트를 받아 `net-conf.json`의 `Network` 값을 고친 뒤 적용합니다(Flannel README).
+- Flannel Pod는 `kube-system`이 아닌 `kube-flannel` 네임스페이스에 뜹니다.
 
 > **정리**: 기계 준비, 런타임과 kubeadm 설치, init, CNI, join의 다섯 단계입니다. init은 인증서부터 애드온까지 정해진 순서로 만들고 join은 해시와 토큰으로 양쪽 신뢰를 맺습니다.
 
@@ -979,6 +1095,7 @@ ConfigMap 안의 설정은 YAML 문자열이라 저장할 때 검증이 없습�
 
 - 프로젝트는 최근 세 마이너의 릴리스 브랜치를 유지하고 1.19 이후 마이너 하나는 약 1년 동안 패치를 받습니다(Version Skew Policy 문서).
 - etcd, CoreDNS, containerd는 쿠버네티스와 별개 프로젝트라 버전 번호가 다르고 kubeadm이 그 쿠버네티스 버전에 맞는 etcd와 CoreDNS 버전을 골라 줍니다.
+- 반대로 kube-apiserver, kube-controller-manager, kube-scheduler, kubelet, kube-proxy, kubectl은 한 릴리스로 함께 나와 같은 버전 번호를 씁니다. kubeadm이 고른 조합은 `kubeadm config images list`로 확인합니다. 컨트롤 플레인 이미지는 쿠버네티스 버전 그대로, etcd와 CoreDNS 이미지는 각자의 버전으로 찍혀 나옵니다. 이 조합을 임의로 바꾸지 않는 것이 안전합니다.
 
 #### 3. 기능 성숙도 세 단계(Feature Gates 문서)
 1. **alpha**: 기본으로 꺼져 있습니다. 쓰려면 구성요소의 `--feature-gates=<기능>=true`로 켭니다. 다음 릴리스에서 동작이 바뀌거나 빠질 수 있습니다.
@@ -1135,7 +1252,7 @@ sudo openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
 | 리소스 내보내기 | API 서버에 물어 오브젝트를 YAML로 저장. Velero 같은 도구 | etcd에 접근할 수 없는 관리형 클러스터, 네임스페이스 단위 이전 |
 | etcd 스냅샷 | etcd 데이터 전체를 파일 하나로 저장 | 직접 운영하는 kubeadm 클러스터. 시험의 백업 과제 |
 
-`kubectl get all -A -o yaml`은 이름과 달리 ConfigMap, Secret, PVC, RBAC, CRD를 빠뜨려서 백업으로 쓰기에 부족합니다.
+`kubectl get all -A -o yaml`은 이름과 달리 ConfigMap, Secret, PVC, RBAC, CRD를 빠뜨려서 백업으로 쓰기에 부족합니다. Velero는 예전 이름이 Heptio Ark였던 도구로 API 서버를 거쳐 리소스를 통째로 받아 두기 때문에 이런 빈틈을 메웁니다.
 
 #### 2. 어떻게 동작하나: 플래그 하나하나
 ```text
@@ -1223,6 +1340,19 @@ etcd 데이터만 과거로 돌리면 옛 멤버 정보, API 서버 캐시, kube
 - 복구가 돌려주는 범위는 4-5절의 표와 같습니다. 스냅샷 시점 이후에 만든 오브젝트는 사라집니다.
 - PV 안의 애플리케이션 데이터는 스냅샷과 관계없이 그대로입니다.
 
+#### 5. etcd를 systemd 서비스로 돌리는 클러스터일 때
+kubeadm 밖에서 손으로 세운 클러스터나 external etcd는 etcd가 노드의 systemd 서비스로 돕니다. 이때는 매니페스트 대신 유닛 파일을 고칩니다.
+
+1. **API 서버 멈추기**: kube-apiserver도 서비스라면 `systemctl stop kube-apiserver`로 먼저 멈춥니다.
+2. **새 디렉터리에 풀기**: `etcdutl snapshot restore`로 새 경로에 풉니다. 여기까지는 kubeadm과 같습니다.
+3. **유닛 파일의 `--data-dir` 바꾸기**: `etcd.service`의 `ExecStart` 줄에서 `--data-dir`를 새 경로로 고칩니다.
+4. **systemd에 다시 읽히기**: 유닛 파일을 고친 뒤에는 `systemctl daemon-reload`를 해야 systemd가 바뀐 내용을 압니다. 그다음 `systemctl restart etcd`를 하고 API 서버를 다시 띄웁니다.
+
+```text
+static Pod etcd : etcd.yaml hostPath 수정 → kubelet이 알아서 재생성
+systemd etcd    : etcd.service --data-dir 수정 → daemon-reload → restart etcd
+```
+
 > **정리**: 새 디렉터리에 풀고 etcd가 그곳을 보게 한 뒤 위 구성요소를 재시작하고 설정 원본까지 고쳐야 복구가 유지됩니다. etcd 스냅샷은 오브젝트 기록만 되돌린다는 점도 함께 기억합니다.
 
 </details>
@@ -1305,6 +1435,37 @@ drain 없이 노드가 죽으면 `--node-monitor-grace-period`(기본 50s) 뒤 �
 
 ### 4-8. 인증서 내용 읽기: openssl x509
 
+<details>
+<summary>기초부터: 인증서 필드마다 틀렸을 때 보이는 증상과 로그를 찾는 깊이</summary>
+
+> **핵심 한 줄**: 인증서 문제는 "어느 파일을 쓰는지 확인 → 필드 읽기 → 로그 찾기" 순서로 풀고 필드마다 틀렸을 때 나는 오류가 다릅니다.
+
+#### 1. 어느 파일인지부터
+kubeadm 클러스터의 컨트롤 플레인은 static Pod라서 실제로 쓰는 인증서 경로는 `/etc/kubernetes/manifests/kube-apiserver.yaml`의 `command` 인자(`--tls-cert-file`, `--tls-private-key-file` 등)에 적혀 있습니다. 경로를 짐작해서 엉뚱한 파일을 열지 않도록 매니페스트부터 봅니다. 손으로 세운 클러스터라면 같은 인자가 systemd 유닛 파일에 있습니다.
+
+#### 2. 필드별 증상
+| 필드 | 확인할 것 | 틀렸을 때 |
+|---|---|---|
+| Subject CN, O | 사용자 이름과 그룹이 RBAC 바인딩과 맞는지 | 인증은 통과하고 인가에서 403 Forbidden |
+| SAN | 클라이언트가 부른 이름이나 IP가 목록에 있는지 | `x509: certificate is valid for <목록>, not <부른 이름>` |
+| Issuer | 클러스터 CA(`CN=kubernetes`)가 서명했는지 | `x509: certificate signed by unknown authority` |
+| Not After | 만료일이 지나지 않았는지 | `x509: certificate has expired or is not yet valid` |
+
+API 서버는 노드 IP, `kubernetes.default.svc`, Service IP `10.96.0.1` 등 여러 이름으로 불리므로 SAN에 그 이름이 모두 있어야 합니다. 로드밸런서 주소를 나중에 붙였다면 SAN에 없어서 위 오류가 납니다.
+
+#### 3. 로그를 찾는 깊이
+1. **API 서버가 살아 있을 때**: `kubectl logs -n kube-system <Pod>`로 인증 실패를 반복하는 구성요소의 로그를 봅니다.
+2. **API 서버가 죽었을 때**: kubectl이 `connection refused`로 아무것도 못 하니 컨트롤 플레인 노드에 SSH로 들어가 `crictl ps -a`로 멈춘 컨테이너를 찾고 `crictl logs <컨테이너 ID>`로 인증서를 못 읽었다는 원인을 봅니다.
+
+```text
+kubectl 됨  → kubectl logs -n kube-system <Pod>
+kubectl 안 됨 → ssh 노드 → crictl ps -a → crictl logs <ID>
+```
+
+> **정리**: 매니페스트에서 경로를 확인하고 CN/O, SAN, Issuer, 만료일을 차례로 읽습니다. API 서버가 내려가 있으면 kubectl을 건너뛰고 런타임 로그로 내려갑니다.
+
+</details>
+
 ```bash
 sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -text -noout
 ```
@@ -1385,6 +1546,8 @@ controller-manager 1(리더, Lease 보유)  2, 3(대기, 2초마다 Lease 확인
 #### 4. 헷갈리는 점 / 실전에서 보이는 모습
 - 옛 자료는 Endpoints 오브젝트를 잠금으로 썼다고 적지만 지금은 Lease를 씁니다. `kubectl get lease -n kube-system`을 치면 `kube-controller-manager`, `kube-scheduler` Lease와 지금 리더(HOLDER)가 보입니다.
 - 옛 강의의 "컨트롤 플레인 2대 + stacked etcd" 구성은 etcd 멤버 2개라 1대만 죽어도 쿼럼을 잃으므로 HA가 되지 않습니다.
+- API 서버 앞 로드 밸런서로 kubeadm 문서("Options for Software Load Balancing")는 가상 IP를 띄우는 keepalived와 TCP를 나눠 주는 haproxy 조합, 둘을 한 서비스로 합친 kube-vip를 소개합니다. 상태 확인은 6443 포트 TCP 검사입니다.
+- 강의의 확장 설계는 컨트롤 플레인 2대, LB 전용 노드 1대, 워커 2대로 모두 5대입니다. 위 이유로 실제 HA를 원하면 컨트롤 플레인을 3대로 둡니다. LB 노드가 한 대뿐이면 그 노드가 새 단일 장애 지점이 되므로 운영에서는 keepalived 가상 IP나 클라우드 LB로 LB 자체도 이중화합니다.
 
 > **정리**: API 서버는 LB 뒤에서 함께 일하고 컨트롤러 매니저와 스케줄러는 Lease로 리더 한 대만 일합니다. etcd는 과반 규칙 때문에 홀수로 두며 그 이유가 다음 토글의 Raft입니다.
 
@@ -1421,6 +1584,8 @@ etcd 멤버 세 대가 같은 데이터를 갖고 있어야 한다면 "누가 �
 | 7대 | 4대 / 3대 | 4 | 4대 쪽이 리더를 뽑고 계속 동작. 3대 쪽만 멈춤 |
 
 홀수면 어떻게 갈라져도 한쪽이 과반을 가질 수 있습니다. 실무에서는 3대(1대 장애 견딤)나 5대(2대 장애 견딤)를 씁니다.
+
+본문 표 뒤를 이어 보면 6대는 쿼럼 4라 2대까지 견뎌 5대와 같고 7대는 쿼럼 4라 3대까지 견딥니다. 7대는 더 버티는 대신 쓰기마다 복제할 멤버와 확정에 필요한 응답 수가 늘어 리더의 부담이 커집니다.
 
 #### 4. 실전에서 보이는 모습
 - etcd를 손으로 클러스터로 묶을 때는 `--initial-cluster`에 첫 멤버 전원의 이름과 피어 주소(2380)를 적어 서로를 찾게 합니다.
@@ -1523,6 +1688,7 @@ kind로 컨트롤 플레인 3대 클러스터를 만들고 노드 컨테이너�
 2. **값 변경**: PVC 크기 20Gi를 100Gi로 바꾸려면 어느 파일 어느 줄인지 찾아 고칩니다.
 3. **업그레이드**: 몇 달 뒤 여러 파일을 다시 고치다 엉뚱한 곳을 건드립니다.
 4. **삭제**: 이 앱에 속한 오브젝트를 전부 기억해 하나씩 지워야 합니다.
+5. **파일 하나로 합치기**: 모든 오브젝트를 `---`로 이어 한 파일에 넣어도 수백 줄 안에서 고칠 곳을 찾는 수고는 그대로입니다.
 
 근본 원인은 쿠버네티스가 이 Deployment와 저 Secret이 같은 게시판 앱에 속한다는 사실을 모른다는 점입니다. 여기에 환경 문제가 겹칩니다. 개발, 스테이징, 운영에서 대부분 같고 레플리카 수나 이미지 태그만 다를 때 디렉터리를 셋으로 복사하면 한쪽만 고치고 다른 쪽을 잊는 불일치가 생깁니다.
 
@@ -1547,6 +1713,7 @@ Kustomize: 평범한 YAML(base) + 바꿀 부분(overlay) → 덧입힘 → 최�
 - 둘을 함께 쓰기도 합니다. Helm으로 렌더링한 결과를 Kustomize로 한 번 더 고치는 식입니다.
 - Helm도 환경별 차이를 다룹니다. 템플릿은 하나로 두고 `values-dev.yaml`, `values-prod.yaml`처럼 환경마다 값 파일을 만들어 `helm install shop ./shop-chart -f values-prod.yaml`로 고릅니다. Kustomize의 overlay 자리에 값 파일이 들어가는 셈입니다.
 - 조건문은 Helm에만 있습니다. 템플릿을 `{{- if .Values.ingress.enabled }}`로 감싸 두면 운영 값 파일에서 `ingress.enabled: true`를 줄 때만 Ingress가 만들어집니다. 대신 이런 분기가 쌓일수록 템플릿이 읽기 어려워집니다.
+- Helm의 역할은 두 가지로 요약됩니다. 설치와 삭제를 명령 하나로 끝내는 패키지 관리자이고 업그레이드와 롤백 이력을 쥐는 릴리스 관리자입니다. 어느 쪽이든 오브젝트 묶음을 앱 하나로 다룬다는 점이 출발점입니다.
 - 시험에서는 "Helm으로 이 차트를 설치하라", "Kustomize overlay를 적용하라"처럼 도구를 지정해 주니 각 도구의 기본 동작을 익혀 두면 됩니다.
 
 > **정리**: YAML 묶음 관리의 어려움은 쿠버네티스가 앱 단위를 모르는 데서 옵니다. 남의 앱 설치와 이력 관리는 Helm, 내 매니페스트의 환경별 변형은 Kustomize가 어울립니다.
@@ -1596,6 +1763,8 @@ Artifact Hub에서는 프로젝트가 직접 올린 차트에 공식(Official)�
 - `helm install`이 끝나면 접속 주소나 초기 비밀번호 확인 방법 같은 안내문이 출력됩니다. 차트의 `templates/NOTES.txt`를 렌더링한 결과이고 나중에 다시 보려면 `helm get notes <릴리스>`를 씁니다.
 - Helm은 kubectl과 같은 kubeconfig의 현재 컨텍스트로 클러스터에 붙습니다. 설치 전에 `kubectl config current-context`로 대상 클러스터부터 확인합니다.
 - 내 PC에 Helm을 설치할 때는 helm.sh 설치 문서의 공식 스크립트(`get-helm-4`)나 릴리스 바이너리를 씁니다. snap(`sudo snap install helm --classic`), apt, Homebrew 패키지도 있지만 커뮤니티가 관리하는 경로입니다.
+- 패키지 경로는 OS마다 다릅니다. Fedora는 `sudo dnf install helm`, FreeBSD는 `pkg install helm`, Windows는 `choco install kubernetes-helm`, `scoop install helm`, `winget install Helm.Helm`입니다(helm.sh 설치 문서). snap의 `--classic`은 격리를 풀고 일반 패키지처럼 시스템 자원에 접근하게 하는 옵션이라 helm이 홈 디렉터리의 `~/.kube/config`를 읽을 수 있습니다.
+- Artifact Hub는 예전 Helm Hub를 이어받은 사이트입니다(2020년 10월 helm.sh 공지). 옛 자료의 Helm Hub는 지금 Artifact Hub를 말합니다.
 
 > **정리**: 차트로 릴리스를 설치하고 릴리스를 바꿀 때마다 리비전이 쌓이며 차트는 저장소에서 받습니다. 릴리스 기록은 클러스터 Secret에 있어 누구의 PC에서든 이어서 관리됩니다.
 
@@ -2349,6 +2518,8 @@ API 서버 ─list/watch─> 인포머(로컬 캐시) ─바뀐 객체만─> wo
 ```
 
 이 루프를 바닥부터 짜면 API 서버를 계속 조회하느라 부하가 커지고 재연결, 캐시, 작업 순서 처리를 모두 직접 만들어야 합니다. 그래서 컨트롤러는 대개 Go 언어와 공식 라이브러리 client-go로 만듭니다. client-go의 **인포머**(Informer)는 list와 watch로 객체를 로컬 캐시에 들고 있다가 바뀐 객체만 작업 큐(workqueue)에 넣어 줍니다. 공식 예제 저장소 `kubernetes/sample-controller`가 이 뼈대를 보여 줍니다. 완성된 컨트롤러는 컨테이너 이미지로 만들어 클러스터 안에 Deployment로 띄웁니다.
+
+개발 중에는 클러스터에 올리지 않고 내 PC에서 돌려 봅니다. sample-controller README는 `go build -o sample-controller .`로 빌드한 뒤 `./sample-controller -kubeconfig=$HOME/.kube/config`로 실행하고 클러스터 안에서 돌 때는 이 플래그가 필요 없다고 적습니다. 밖에서는 kubeconfig의 자격 증명으로, 안에서는 Pod에 들어온 ServiceAccount 토큰(1-8절)으로 API 서버에 붙기 때문입니다. 그래서 클러스터 안에 띄울 때는 컨트롤러용 ServiceAccount에 RBAC 권한을 따로 줘야 합니다.
 
 #### 3. 한눈에 비교: 컨트롤러와 오퍼레이터
 "Operator pattern" 문서는 오퍼레이터를 커스텀 리소스로 애플리케이션과 그 구성요소를 관리하는 소프트웨어 확장으로 설명합니다. 사람 운영자가 하던 일을 코드로 옮긴다는 뜻에서 이름이 붙었습니다. etcd를 예로 들면 차이가 분명합니다.
