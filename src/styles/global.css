@@ -724,16 +724,20 @@ button, input, select, textarea {
   text-decoration-color: currentColor;
 }
 /* Inline code only (not inside Expressive Code blocks) */
+/* Slack 인라인 코드 색: 라이트는 붉은 글자, 다크는 주황 글자 */
 .prose :not(pre) > code {
-  @apply px-2 py-0.5 rounded-lg text-sm font-mono;
+  @apply font-mono;
   font-size: 0.875em;
-  background: rgba(129, 139, 152, 0.15);
-  color: #1f2328;
-  border: 0;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(29, 28, 29, 0.04);
+  color: #e01e5a;
+  border: 1px solid rgba(29, 28, 29, 0.13);
 }
 .dark .prose :not(pre) > code {
-  background: rgba(101, 108, 118, 0.3);
-  color: #e6edf3;
+  background: rgba(232, 232, 232, 0.04);
+  color: #e8912d;
+  border-color: rgba(232, 232, 232, 0.13);
 }
 /* Expressive Code wrapper spacing */
 .prose .expressive-code {
