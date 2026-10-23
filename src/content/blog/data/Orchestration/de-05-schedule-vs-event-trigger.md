@@ -39,17 +39,25 @@ seriesOrder: 5
 
 시각을 기다리는 대신 데이터를 기다리는 방법이 두 가지 있습니다. 주기적으로 "왔는지" 확인하는 폴링과, 데이터가 왔다는 신호를 받는 이벤트입니다.
 
+택배로 치면 폴링은 현관문을 5분마다 열어 보는 것이고 이벤트는 초인종이 울리면 나가는 것입니다. 문을 자주 열수록 빨리 알지만 그만큼 수고가 듭니다. 초인종은 수고가 없지만 고장 나면 택배가 왔는지조차 모릅니다. 이 글의 나머지는 이 두 가지 대가를 숫자와 도구로 따져 보는 내용입니다.
+
 ## 2. 폴링: Airflow 센서의 세 가지 모드
 
 ### 2-1. poke, reschedule, deferrable
 
-Airflow에서 폴링은 센서로 합니다. 같은 센서라도 기다리는 방식이 셋입니다.
+Airflow에서 폴링은 센서로 합니다. 센서는 "조건이 참이 될 때까지 기다렸다가 성공하는 태스크"입니다. 예를 들어 `S3KeySensor`는 지정한 경로에 파일이 생길 때까지 기다립니다.
+
+센서의 비용을 이해하려면 워커 슬롯부터 알아야 합니다. 워커 하나가 동시에 돌릴 수 있는 태스크 수는 설정으로 정해져 있고 그 한 칸을 슬롯이라고 부릅니다. 슬롯이 16개인 워커에서 센서 16개가 기다리고 있으면 진짜 일을 하는 태스크는 들어갈 자리가 없습니다. 같은 센서라도 기다리는 방식이 셋이고 차이는 이 슬롯을 언제 쥐고 언제 놓느냐입니다.
 
 | 모드 | 기다리는 동안 | 맞는 경우 |
 |---|---|---|
 | poke(기본값) | 워커 슬롯을 계속 잡고 있다 | 초 단위로 확인할 때 |
 | reschedule | 확인할 때만 슬롯을 쓰고 나머지 시간은 슬롯을 놓는다 | 분 단위로 확인할 때 |
 | deferrable | trigger를 등록하고 워커를 놓는다. triggerer가 비동기로 기다리다 조건이 되면 태스크를 다시 큐에 넣는다 | 오래 기다릴 때. 확인 조건이 시간이 아니어도 된다 |
+
+![같은 날 세 모드가 워커 슬롯을 쓰는 모양. 파일이 03:00에 도착할 때 poke는 00:00부터 03:00까지 약 3시간 동안 슬롯을 쥐고 있고 reschedule은 5분마다 1초씩 37번만 슬롯을 쓰며 deferrable은 처음 등록과 마지막 재개 때만 워커를 쓰고 그사이는 triggerer가 기다린다](/uploads/data/de-05-schedule-vs-event-trigger/sensor-modes.svg)
+
+reschedule이 늘 이기는 것은 아닙니다. 확인할 때마다 태스크를 다시 스케줄해야 해서 스케줄러 일이 늘어납니다. Astronomer 가이드는 확인 주기가 5분보다 짧으면 poke를 쓰라고 권하고 그보다 짧은 주기에 reschedule을 쓰면 스케줄러에 부담이 갈 수 있다고 적습니다. 센서의 기본 timeout이 7일이라 기다릴 시간에 맞게 줄여 두라는 조언도 같은 글에 있습니다([Astronomer, Airflow sensors](https://www.astronomer.io/docs/learn/what-is-a-sensor)).
 
 Airflow 문서는 일반 오퍼레이터와 센서가 "아무것도 안 하는 동안에도 실행 시간 내내 워커 슬롯 하나를 통째로 차지한다"고 적습니다. triggerer는 asyncio 이벤트 루프 하나로 수백에서 수만 개 trigger를 기다릴 수 있고 기다리는 태스크는 기본적으로 pool 슬롯도 차지하지 않습니다. 대신 triggerer를 하나 더 띄울 때마다 DB 연결이 하나 더 상주합니다.
 
@@ -76,6 +84,12 @@ Airbnb는 Airflow 2.0을 앞두고 AIP-17(Smart Sensor)을 제안했습니다. �
 | 하루 평균 확인 횟수 | 34.2회(poke, reschedule 같음) |
 | 발견 지연 | 평균 2.6분, 최대 4.9분 |
 | 워커 슬롯 점유(하루 평균) | poke 2.8시간, reschedule 34초 |
+
+표의 숫자는 손으로도 대략 맞춰 볼 수 있습니다.
+
+- 발견 지연: 파일은 확인과 확인 사이 아무 때나 도착합니다. 5분 간격 안에서 고르게 도착한다면 다음 확인까지 평균 절반인 2.5분을 기다리고 아무리 늦어도 5분을 넘지 않습니다. 결과의 평균 2.6분, 최대 4.9분이 이 계산과 맞습니다.
+- 확인 횟수: 00:00부터 5분마다 확인하니 파일을 발견하기까지의 확인 횟수는 발견 시각(분) ÷ 5 + 1입니다. 평균 34.2회를 거꾸로 풀면 이 30일 표본의 평균 발견 시각은 약 2시 46분입니다.
+- 슬롯 점유: poke는 00:00부터 발견할 때까지 슬롯을 쥐고 있으니 평균 약 166분, 곧 2.8시간입니다. reschedule은 확인 한 번에 1초씩만 쓰니 34.2회 × 1초 ≈ 34초입니다.
 
 확인 주기 5분은 발견 지연의 상한을 5분으로 만듭니다. 주기를 1분으로 줄이면 지연은 줄지만 확인 횟수가 다섯 배가 됩니다. poke 모드는 파일이 늦게 오는 날일수록 슬롯을 오래 잡습니다. 이 DAG가 하나면 하루 2.8시간이 별것 아니지만 Airbnb처럼 센서가 태스크의 대부분이 되면 워커 전체가 기다리는 데 쓰입니다.
 
@@ -110,7 +124,18 @@ def daily_sales():
 - 여러 asset은 `&`(모두 갱신)와 `|`(하나라도 갱신)로 묶을 수 있습니다. 괄호로 `a | (b & c)`처럼 조합합니다.
 - 소비자 DAG는 마지막 실행 이후 소비하는 asset이 모두 한 번 이상 갱신돼야 돕니다. 문서는 "다른 asset이 갱신되기 전에 한 asset이 여러 번 갱신돼도 소비자 DAG는 한 번만 돈다"고 적습니다.
 
-세 번째가 중요합니다. 주문 파일이 시간마다 갱신되는데 소비자 DAG가 `orders & products`를 기다린다면, `products`가 갱신되기 전까지 들어온 `orders` 이벤트 여러 건은 실행 한 번으로 합쳐집니다. 소비자 DAG가 "이벤트마다 그 이벤트의 데이터만 처리한다"고 짜여 있으면 합쳐진 이벤트의 데이터를 놓칩니다. 실행 한 번에 들어온 이벤트 목록은 `triggering_asset_events`로 받을 수 있으니 그걸 다 처리하거나, 처리 범위를 이벤트 대신 테이블 상태로 정해야 합니다.
+세 번째가 이 글에서 가장 헷갈리기 쉬운 대목이라 시간 순서로 풀어 보겠습니다. 소비자 DAG가 `schedule=(orders & products)`로 두 asset을 모두 기다린다고 합시다.
+
+| 시각 | 일어난 일 | 소비자 DAG |
+|---|---|---|
+| 09:00 | `orders` 갱신(이벤트 1) | `products`가 아직이라 기다린다 |
+| 10:00 | `orders` 갱신(이벤트 2) | 기다린다 |
+| 11:00 | `orders` 갱신(이벤트 3) | 기다린다 |
+| 11:30 | `products` 갱신 | 조건이 찼다. 실행 1번. `triggering_asset_events`에 `orders` 이벤트 3건과 `products` 1건이 들어 있다 |
+
+이벤트는 네 건이 왔는데 실행은 한 번입니다. 이 실행이 "가장 최근 `orders` 이벤트의 파일 하나만 읽는다"고 짜여 있으면 09시와 10시 파일은 아무도 처리하지 않습니다.
+
+주문 파일이 시간마다 갱신되는데 소비자 DAG가 `orders & products`를 기다린다면 `products`가 갱신되기 전까지 들어온 `orders` 이벤트 여러 건은 실행 한 번으로 합쳐집니다. 소비자 DAG가 "이벤트마다 그 이벤트의 데이터만 처리한다"고 짜여 있으면 합쳐진 이벤트의 데이터를 놓칩니다. 실행 한 번에 들어온 이벤트 목록은 `triggering_asset_events`로 받을 수 있으니 그걸 다 처리하거나 처리 범위를 이벤트 대신 테이블 상태로 정해야 합니다.
 
 ### 3-3. Airflow가 기록하는 것은 생산자 태스크의 성공뿐이다
 
@@ -145,12 +170,12 @@ watcher는 triggerer에서 돕니다. 쓸 때 걸리는 조건이 있습니다.
 AWS가 MWAA와 Airflow 3 AssetWatcher, SQS로 구성한 글도 운영 주의점으로 같은 결을 짚습니다.
 
 - triggerer가 죽으면 메시지는 큐에 쌓이기만 합니다.
-- SQS 보존 기간(기본 4일, 최대 14일)을 넘기면 메시지가 사라지므로 DLQ를 둡니다.
-- VisibilityTimeout이 짧으면 같은 메시지를 다시 받아 DAG가 중복 실행됩니다.
+- SQS 보존 기간(기본 4일, 최대 14일)을 넘기면 메시지가 사라지므로 DLQ를 둡니다. DLQ(dead-letter queue)는 여러 번 처리에 실패한 메시지를 따로 옮겨 두는 큐라 나중에 사람이 보고 다시 넣을 수 있습니다.
+- VisibilityTimeout이 짧으면 같은 메시지를 다시 받아 DAG가 중복 실행됩니다. SQS는 메시지를 꺼내 간 소비자가 삭제할 때까지 그 메시지를 잠시 다른 소비자에게 숨기는데 그 시간이 VisibilityTimeout입니다. 처리가 이 시간보다 오래 걸리면 메시지가 다시 보이고 다른 소비자가 또 가져갑니다.
 
 ## 5. Argo Events: EventSource, EventBus, Sensor, Trigger
 
-Argo Events는 이벤트를 받아 Argo Workflow 같은 쿠버네티스 리소스를 만듭니다.
+Argo Events는 이벤트를 받아 Argo Workflow 같은 쿠버네티스 리소스를 만듭니다. 이름 하나를 미리 짚고 갑니다. Argo Events의 Sensor는 2절의 Airflow 센서와 이름만 같고 하는 일이 다릅니다. Airflow 센서는 조건을 직접 확인하러 가는 폴링 태스크이고 Argo Events의 Sensor는 이미 도착한 이벤트들을 받아 조건이 맞는지 따지는 부품입니다.
 
 ```
 EventSource ──→ EventBus ──→ Sensor ──(조건 충족)──→ Trigger ──→ Workflow 생성
@@ -167,7 +192,7 @@ EventSource ──→ EventBus ──→ Sensor ──(조건 충족)──→ T
 
 ### 5-1. 중복 이벤트
 
-문서는 NATS Streaming이 at-least-once 전달을 보장하고 JetStream은 exactly-once에 더 가까운 기능이 있다고 적습니다. Sensor 쪽에는 최근 5분 동안 전달된 이벤트 ID를 메모리에 캐시해 중복을 거르는 장치가 있습니다.
+at-least-once는 "적어도 한 번은 전달한다"는 약속입니다. 보낸 쪽이 받았다는 확인을 못 받으면 다시 보내니 유실은 막지만 확인 응답만 사라진 경우에는 같은 이벤트가 두 번 도착합니다(Ch-13). 문서는 NATS Streaming이 at-least-once 전달을 보장하고 JetStream은 exactly-once에 더 가까운 기능이 있다고 적습니다. Sensor 쪽에는 최근 5분 동안 전달된 이벤트 ID를 메모리에 캐시해 중복을 거르는 장치가 있습니다.
 
 이 캐시는 두 가지 한계가 있습니다. 메모리에 있으니 Sensor Pod가 재시작하면 비워지고 5분이 지난 뒤 같은 이벤트가 다시 오면 거르지 못합니다. 문서가 이 한계를 직접 적지는 않았지만 "메모리 캐시, 5분"이라는 설명에서 나오는 결론입니다. 그 밖의 중복은 Trigger가 Workflow를 하나 더 만드는 것으로 이어집니다. 그래서 Workflow 쪽에서 막는 장치(mutex, semaphore, 이벤트 키로 정한 이름)가 필요하고 Ch-06에서 다룹니다.
 
@@ -235,6 +260,7 @@ EventSource ──→ EventBus ──→ Sensor ──(조건 충족)──→ T
 - [AIP-17 Smart Sensor](https://cwiki.apache.org/confluence/spaces/AIRFLOW/pages/103093484/AIP-17+Consolidate+and+de-duplicate+sensor+tasks+in+airflow+Smart+Sensor)
 - AWS Big Data Blog, [Event-driven pipeline orchestration with Amazon MWAA and Airflow 3.0](https://aws.amazon.com/blogs/big-data/event-driven-pipeline-orchestration-with-amazon-mwaa-and-airflow-3-0/) (2026)
 - Astronomer, [Event-driven scheduling](https://www.astronomer.io/docs/learn/airflow-event-driven-scheduling)
+- Astronomer, [Airflow sensors](https://www.astronomer.io/docs/learn/what-is-a-sensor)
 - 비브로스, [Argo Events 도입기](https://boostbrothers.github.io/2024-04-15-infra-argo-events/) (2024)
 
 이 시리즈

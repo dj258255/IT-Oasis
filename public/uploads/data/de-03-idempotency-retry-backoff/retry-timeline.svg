@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<rect width="1200" height="760" fill="#ffffff"/>
+<text x="600" y="38" font-size="23" font-weight="800" fill="#1e1e1e" text-anchor="middle">클라이언트 1,000개, 서버는 30초 동안 죽어 있다</text>
+<text x="600" y="66" font-size="14" font-weight="600" fill="#495057" text-anchor="middle">막대 하나 = 그 1초 동안 서버에 들어온 요청 수 (회색: 죽어 있는 동안 재시도, 색: 살아난 뒤 첫 요청)</text>
+<text x="70" y="180" font-size="17" font-weight="800" fill="#e03131" text-anchor="middle">지터 없음</text>
+<path d="M150.8 259.2 Q648.2 261.7 1150.0 259.8" fill="none" stroke="#495057" stroke-width="1.4" stroke-linecap="round" opacity="1"/>
+<clipPath id="c1"><rect x="152" y="112" width="329.3333333333333" height="146" rx="6"/></clipPath>
+<rect x="150" y="110" width="333.3333333333333" height="150" rx="6" fill="#f1f3f5" opacity="0.35"/>
+<path d="M148.7 108.5 Q317.4 111.4 484.4 109.8" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M149.8 110.7 Q317.9 107.6 482.5 111.4" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M481.8 110.1 Q485.3 182.7 484.7 259.6" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M481.8 109.1 Q482.0 184.6 483.1 260.0" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M482.4 259.9 Q315.4 258.7 149.3 258.5" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M483.8 259.0 Q318.3 260.3 151.6 261.2" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M150.7 260.7 Q148.2 184.2 151.4 109.8" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M149.4 260.3 Q151.6 185.8 151.2 111.1" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<rect x="162.1" y="120.0" width="9.1" height="140.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="184.3" y="120.0" width="9.1" height="140.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="228.8" y="120.0" width="9.1" height="140.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="317.7" y="120.0" width="9.1" height="140.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="495.4" y="120.0" width="9.1" height="140.0" fill="#e03131" opacity="0.85"/>
+<text x="520.6666666666667" y="132" font-size="15" font-weight="800" fill="#e03131" text-anchor="start">31초에 1,000건 한꺼번에</text>
+<text x="166.11111111111111" y="130" font-size="12" font-weight="700" fill="#495057" text-anchor="middle">1초</text>
+<text x="188.33333333333334" y="130" font-size="12" font-weight="700" fill="#495057" text-anchor="middle">3초</text>
+<text x="232.77777777777777" y="130" font-size="12" font-weight="700" fill="#495057" text-anchor="middle">7초</text>
+<text x="321.66666666666663" y="130" font-size="12" font-weight="700" fill="#495057" text-anchor="middle">15초</text>
+<text x="70" y="390" font-size="17" font-weight="800" fill="#2f9e44" text-anchor="middle">full jitter</text>
+<path d="M149.4 468.7 Q651.9 468.4 1149.1 471.4" fill="none" stroke="#495057" stroke-width="1.4" stroke-linecap="round" opacity="1"/>
+<clipPath id="c2"><rect x="152" y="322" width="329.3333333333333" height="146" rx="6"/></clipPath>
+<rect x="150" y="320" width="333.3333333333333" height="150" rx="6" fill="#f1f3f5" opacity="0.35"/>
+<path d="M150.9 319.2 Q314.6 321.2 482.9 318.9" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M148.6 320.1 Q317.1 318.7 482.3 318.6" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M484.9 320.2 Q483.5 392.8 483.6 469.9" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M482.1 320.7 Q482.9 395.4 484.5 470.0" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M483.9 469.2 Q317.8 471.2 150.8 469.3" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M483.4 470.0 Q318.1 469.0 150.4 468.8" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M149.4 471.5 Q147.9 396.9 150.5 319.6" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M151.6 471.2 Q150.4 396.0 151.3 321.6" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<rect x="151.0" y="330.0" width="9.1" height="140.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="162.1" y="380.8" width="9.1" height="89.2" fill="#adb5bd" opacity="0.85"/>
+<rect x="195.4" y="424.6" width="9.1" height="45.4" fill="#adb5bd" opacity="0.85"/>
+<rect x="217.7" y="446.1" width="9.1" height="23.9" fill="#adb5bd" opacity="0.85"/>
+<rect x="306.6" y="459.2" width="9.1" height="10.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="473.2" y="464.1" width="9.1" height="5.9" fill="#adb5bd" opacity="0.85"/>
+<rect x="228.8" y="448.2" width="9.1" height="21.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="184.3" y="429.1" width="9.1" height="40.9" fill="#adb5bd" opacity="0.85"/>
+<rect x="206.6" y="430.5" width="9.1" height="39.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="373.2" y="457.0" width="9.1" height="13.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="173.2" y="399.2" width="9.1" height="70.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="251.0" y="446.6" width="9.1" height="23.4" fill="#adb5bd" opacity="0.85"/>
+<rect x="317.7" y="457.7" width="9.1" height="12.3" fill="#adb5bd" opacity="0.85"/>
+<rect x="395.4" y="459.4" width="9.1" height="10.6" fill="#adb5bd" opacity="0.85"/>
+<rect x="339.9" y="457.0" width="9.1" height="13.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="328.8" y="459.5" width="9.1" height="10.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="273.2" y="452.4" width="9.1" height="17.6" fill="#adb5bd" opacity="0.85"/>
+<rect x="262.1" y="449.6" width="9.1" height="20.4" fill="#adb5bd" opacity="0.85"/>
+<rect x="384.3" y="459.5" width="9.1" height="10.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="362.1" y="456.7" width="9.1" height="13.3" fill="#adb5bd" opacity="0.85"/>
+<rect x="351.0" y="459.5" width="9.1" height="10.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="295.4" y="457.5" width="9.1" height="12.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="239.9" y="445.1" width="9.1" height="24.9" fill="#adb5bd" opacity="0.85"/>
+<rect x="406.6" y="460.2" width="9.1" height="9.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="284.3" y="456.4" width="9.1" height="13.6" fill="#adb5bd" opacity="0.85"/>
+<rect x="451.0" y="461.9" width="9.1" height="8.1" fill="#adb5bd" opacity="0.85"/>
+<rect x="462.1" y="465.2" width="9.1" height="4.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="417.7" y="463.3" width="9.1" height="6.7" fill="#adb5bd" opacity="0.85"/>
+<rect x="439.9" y="464.3" width="9.1" height="5.7" fill="#adb5bd" opacity="0.85"/>
+<rect x="428.8" y="462.0" width="9.1" height="8.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="906.6" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="584.3" y="464.7" width="9.1" height="5.3" fill="#2f9e44" opacity="0.85"/>
+<rect x="695.4" y="467.6" width="9.1" height="2.4" fill="#2f9e44" opacity="0.85"/>
+<rect x="684.3" y="467.1" width="9.1" height="2.9" fill="#2f9e44" opacity="0.85"/>
+<rect x="484.3" y="464.4" width="9.1" height="5.6" fill="#2f9e44" opacity="0.85"/>
+<rect x="562.1" y="464.1" width="9.1" height="5.9" fill="#2f9e44" opacity="0.85"/>
+<rect x="528.8" y="463.8" width="9.1" height="6.2" fill="#2f9e44" opacity="0.85"/>
+<rect x="495.4" y="464.7" width="9.1" height="5.3" fill="#2f9e44" opacity="0.85"/>
+<rect x="606.6" y="465.5" width="9.1" height="4.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="595.4" y="465.5" width="9.1" height="4.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="639.9" y="465.8" width="9.1" height="4.2" fill="#2f9e44" opacity="0.85"/>
+<rect x="506.6" y="464.0" width="9.1" height="6.0" fill="#2f9e44" opacity="0.85"/>
+<rect x="706.6" y="466.6" width="9.1" height="3.4" fill="#2f9e44" opacity="0.85"/>
+<rect x="717.7" y="468.2" width="9.1" height="1.8" fill="#2f9e44" opacity="0.85"/>
+<rect x="628.8" y="465.9" width="9.1" height="4.1" fill="#2f9e44" opacity="0.85"/>
+<rect x="728.8" y="468.0" width="9.1" height="2.0" fill="#2f9e44" opacity="0.85"/>
+<rect x="806.6" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="828.8" y="468.0" width="9.1" height="2.0" fill="#2f9e44" opacity="0.85"/>
+<rect x="517.7" y="464.0" width="9.1" height="6.0" fill="#2f9e44" opacity="0.85"/>
+<rect x="873.2" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="817.7" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="662.1" y="465.2" width="9.1" height="4.8" fill="#2f9e44" opacity="0.85"/>
+<rect x="551.0" y="465.2" width="9.1" height="4.8" fill="#2f9e44" opacity="0.85"/>
+<rect x="573.2" y="464.4" width="9.1" height="5.6" fill="#2f9e44" opacity="0.85"/>
+<rect x="1017.7" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="539.9" y="465.2" width="9.1" height="4.8" fill="#2f9e44" opacity="0.85"/>
+<rect x="851.0" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="962.1" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="762.1" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1128.8" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="673.2" y="465.9" width="9.1" height="4.1" fill="#2f9e44" opacity="0.85"/>
+<rect x="617.7" y="465.4" width="9.1" height="4.6" fill="#2f9e44" opacity="0.85"/>
+<rect x="795.4" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="928.8" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="995.4" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1073.2" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="862.1" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="751.0" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="784.3" y="468.3" width="9.1" height="1.7" fill="#2f9e44" opacity="0.85"/>
+<rect x="984.3" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="973.2" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="651.0" y="466.8" width="9.1" height="3.2" fill="#2f9e44" opacity="0.85"/>
+<rect x="939.9" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="884.3" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="895.4" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="917.7" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="739.9" y="468.2" width="9.1" height="1.8" fill="#2f9e44" opacity="0.85"/>
+<rect x="839.9" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1051.0" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="773.2" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="951.0" y="468.0" width="9.1" height="2.0" fill="#2f9e44" opacity="0.85"/>
+<rect x="1039.9" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1117.7" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1084.3" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1062.1" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1095.4" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1028.8" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<rect x="1006.6" y="468.5" width="9.1" height="1.5" fill="#2f9e44" opacity="0.85"/>
+<text x="164.0" y="338" font-size="12" font-weight="700" fill="#495057" text-anchor="start">1,271</text>
+<text x="650.0" y="380" font-size="15" font-weight="800" fill="#2f9e44" text-anchor="start">30~88초에 흩어짐, 가장 많은 1초가 44건</text>
+<text x="650.0" y="404" font-size="14" font-weight="700" fill="#495057" text-anchor="start">대신 마지막 성공은 88초</text>
+<text x="70" y="600" font-size="17" font-weight="800" fill="#1971c2" text-anchor="middle">equal jitter</text>
+<path d="M150.0 680.5 Q648.4 680.4 1151.1 680.0" fill="none" stroke="#495057" stroke-width="1.4" stroke-linecap="round" opacity="1"/>
+<clipPath id="c3"><rect x="152" y="532" width="329.3333333333333" height="146" rx="6"/></clipPath>
+<rect x="150" y="530" width="333.3333333333333" height="150" rx="6" fill="#f1f3f5" opacity="0.35"/>
+<path d="M150.8 529.9 Q317.9 532.1 482.4 530.9" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M149.3 528.4 Q315.2 527.9 483.1 529.8" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M484.6 529.4 Q484.1 603.6 482.0 681.0" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M482.3 528.9 Q483.5 605.8 482.4 679.7" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M482.2 680.2 Q315.5 681.3 151.4 679.5" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M484.2 680.8 Q317.9 682.1 149.1 680.4" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<path d="M150.6 679.8 Q147.9 603.7 148.4 528.5" fill="none" stroke="#ced4da" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<path d="M151.0 679.8 Q150.9 605.5 150.8 531.4" fill="none" stroke="#ced4da" stroke-width="0.6" stroke-linecap="round" opacity="0.55"/>
+<rect x="151.0" y="540.0" width="9.1" height="140.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="173.2" y="574.0" width="9.1" height="106.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="206.6" y="616.3" width="9.1" height="63.7" fill="#adb5bd" opacity="0.85"/>
+<rect x="262.1" y="647.2" width="9.1" height="32.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="395.4" y="663.2" width="9.1" height="16.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="195.4" y="630.3" width="9.1" height="49.7" fill="#adb5bd" opacity="0.85"/>
+<rect x="239.9" y="673.8" width="9.1" height="6.2" fill="#adb5bd" opacity="0.85"/>
+<rect x="406.6" y="661.5" width="9.1" height="18.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="162.1" y="646.0" width="9.1" height="34.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="273.2" y="644.9" width="9.1" height="35.1" fill="#adb5bd" opacity="0.85"/>
+<rect x="384.3" y="664.3" width="9.1" height="15.7" fill="#adb5bd" opacity="0.85"/>
+<rect x="428.8" y="664.0" width="9.1" height="16.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="373.2" y="667.0" width="9.1" height="13.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="439.9" y="665.4" width="9.1" height="14.6" fill="#adb5bd" opacity="0.85"/>
+<rect x="284.3" y="651.6" width="9.1" height="28.4" fill="#adb5bd" opacity="0.85"/>
+<rect x="451.0" y="672.0" width="9.1" height="8.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="251.0" y="658.0" width="9.1" height="22.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="217.7" y="656.6" width="9.1" height="23.4" fill="#adb5bd" opacity="0.85"/>
+<rect x="362.1" y="670.9" width="9.1" height="9.1" fill="#adb5bd" opacity="0.85"/>
+<rect x="295.4" y="665.2" width="9.1" height="14.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="351.0" y="673.6" width="9.1" height="6.4" fill="#adb5bd" opacity="0.85"/>
+<rect x="184.3" y="676.8" width="9.1" height="3.2" fill="#adb5bd" opacity="0.85"/>
+<rect x="339.9" y="678.0" width="9.1" height="2.0" fill="#adb5bd" opacity="0.85"/>
+<rect x="417.7" y="664.2" width="9.1" height="15.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="462.1" y="676.2" width="9.1" height="3.8" fill="#adb5bd" opacity="0.85"/>
+<rect x="306.6" y="678.5" width="9.1" height="1.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="328.8" y="678.5" width="9.1" height="1.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="473.2" y="678.5" width="9.1" height="1.5" fill="#adb5bd" opacity="0.85"/>
+<rect x="662.1" y="670.8" width="9.1" height="9.2" fill="#1971c2" opacity="0.85"/>
+<rect x="728.8" y="673.0" width="9.1" height="7.0" fill="#1971c2" opacity="0.85"/>
+<rect x="673.2" y="671.2" width="9.1" height="8.8" fill="#1971c2" opacity="0.85"/>
+<rect x="639.9" y="670.5" width="9.1" height="9.5" fill="#1971c2" opacity="0.85"/>
+<rect x="551.0" y="677.9" width="9.1" height="2.1" fill="#1971c2" opacity="0.85"/>
+<rect x="773.2" y="677.5" width="9.1" height="2.5" fill="#1971c2" opacity="0.85"/>
+<rect x="706.6" y="672.0" width="9.1" height="8.0" fill="#1971c2" opacity="0.85"/>
+<rect x="584.3" y="675.4" width="9.1" height="4.6" fill="#1971c2" opacity="0.85"/>
+<rect x="617.7" y="672.0" width="9.1" height="8.0" fill="#1971c2" opacity="0.85"/>
+<rect x="762.1" y="677.5" width="9.1" height="2.5" fill="#1971c2" opacity="0.85"/>
+<rect x="695.4" y="673.0" width="9.1" height="7.0" fill="#1971c2" opacity="0.85"/>
+<rect x="628.8" y="672.7" width="9.1" height="7.3" fill="#1971c2" opacity="0.85"/>
+<rect x="528.8" y="678.5" width="9.1" height="1.5" fill="#1971c2" opacity="0.85"/>
+<rect x="573.2" y="676.8" width="9.1" height="3.2" fill="#1971c2" opacity="0.85"/>
+<rect x="595.4" y="672.4" width="9.1" height="7.6" fill="#1971c2" opacity="0.85"/>
+<rect x="717.7" y="669.4" width="9.1" height="10.6" fill="#1971c2" opacity="0.85"/>
+<rect x="684.3" y="670.3" width="9.1" height="9.7" fill="#1971c2" opacity="0.85"/>
+<rect x="739.9" y="674.3" width="9.1" height="5.7" fill="#1971c2" opacity="0.85"/>
+<rect x="562.1" y="677.8" width="9.1" height="2.2" fill="#1971c2" opacity="0.85"/>
+<rect x="651.0" y="671.9" width="9.1" height="8.1" fill="#1971c2" opacity="0.85"/>
+<rect x="784.3" y="677.6" width="9.1" height="2.4" fill="#1971c2" opacity="0.85"/>
+<rect x="539.9" y="678.5" width="9.1" height="1.5" fill="#1971c2" opacity="0.85"/>
+<rect x="751.0" y="674.0" width="9.1" height="6.0" fill="#1971c2" opacity="0.85"/>
+<rect x="606.6" y="675.1" width="9.1" height="4.9" fill="#1971c2" opacity="0.85"/>
+<rect x="806.6" y="678.5" width="9.1" height="1.5" fill="#1971c2" opacity="0.85"/>
+<rect x="795.4" y="678.5" width="9.1" height="1.5" fill="#1971c2" opacity="0.85"/>
+<text x="816.6666666666666" y="590" font-size="15" font-weight="800" fill="#1971c2" text-anchor="start">34~59초, 가장 많은 1초가 76건</text>
+<text x="150.0" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">0초</text>
+<text x="261.1111111111111" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">10초</text>
+<text x="372.22222222222223" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">20초</text>
+<text x="483.3333333333333" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">30초</text>
+<text x="594.4444444444445" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">40초</text>
+<text x="705.5555555555555" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">50초</text>
+<text x="816.6666666666666" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">60초</text>
+<text x="927.7777777777778" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">70초</text>
+<text x="1038.888888888889" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">80초</text>
+<text x="1150.0" y="700" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">90초</text>
+<text x="483.3333333333333" y="95" font-size="13" font-weight="800" fill="#495057" text-anchor="middle">서버 살아남</text>
+<path d="M484.5 100.8 Q481.6 394.3 483.5 691.1" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" opacity="1" stroke-dasharray="5 6"/>
+<text x="600" y="740" font-size="13" font-weight="600" fill="#495057" text-anchor="middle">backoff_jitter.py와 같은 계산(random.seed(1)), 시작 1초, 두 배씩, 상한 60초</text>
+</svg>

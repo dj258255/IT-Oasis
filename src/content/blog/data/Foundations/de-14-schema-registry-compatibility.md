@@ -33,6 +33,29 @@ Ch-11에서 토픽의 데이터는 보존 기간 동안 남는다고 했습니�
 
 스키마 레지스트리는 스키마를 버전별로 저장하고 새 버전을 등록할 때 정한 규칙(호환성 모드)을 지키는지 검사합니다. 메시지에는 스키마 전체 대신 스키마 ID만 붙입니다. Confluent 형식은 첫 바이트가 0(버전 바이트), 다음 4바이트가 스키마 ID이고 그 뒤가 데이터입니다.
 
+### 1-1. Avro 바이트에는 필드 이름이 없다
+
+레지스트리가 왜 꼭 필요한지는 Avro가 데이터를 어떻게 쓰는지 보면 납득이 됩니다. Avro 명세는 바이너리로 인코딩된 데이터에 타입 정보도 필드 이름도 없다고 적습니다. 레코드는 스키마에 선언된 순서대로 값만 이어 붙입니다.
+
+주문 하나(`order_id: long = 1001`, `amount: int = 15000`)를 직접 인코딩해 보면 이렇습니다. 정수는 zig-zag 변환 뒤 7비트씩 끊어 쓰는 가변 길이 방식이라 1001은 `D2 0F`, 15000은 `B0 EA 01`이 됩니다.
+
+```txt
+D2 0F B0 EA 01
+└─┬─┘ └──┬───┘
+order_id  amount   (이름, 타입, 구분자 없음. 5바이트가 전부)
+```
+
+같은 내용을 JSON으로 쓰면 `{"order_id":1001,"amount":15000}`로 32바이트입니다. Avro가 작은 이유는 이름을 빼서이고 같은 이유로 스키마 없이는 이 5바이트를 읽을 수 없습니다. 첫 값이 몇 바이트에서 끝나는지, 그게 `order_id`인지조차 스키마가 알려 줍니다. 그래서 읽는 쪽은 반드시 이 바이트를 쓸 때 쓴 스키마(writer 스키마)를 알아야 합니다. Martin Kleppmann은 2012년 글 [Schema evolution in Avro, Protocol Buffers and Thrift](https://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html)에서 레코드를 하나씩 따로 저장하는 경우 각 레코드에 스키마 버전 번호를 달고 스키마 레지스트리에서 찾아 쓰라고 정리했습니다. Kafka 메시지가 바로 그 경우입니다.
+
+레지스트리를 거치는 흐름을 이 예에 맞춰 따라가면 이렇습니다(직렬화기 기본 설정 기준).
+
+1. 프로듀서의 직렬화기가 주문 스키마를 레지스트리에 등록합니다. 처음이면 호환성 검사를 거쳐 새 ID(예: 7)를 받고 이미 있으면 기존 ID를 돌려받습니다. 받은 ID는 캐시합니다.
+2. 메시지 바이트를 `00` + `00 00 00 07` + `D2 0F B0 EA 01`로 만들어 보냅니다. 앞의 5바이트가 Confluent 형식의 머리입니다.
+3. 컨슈머의 역직렬화기는 머리에서 ID 7을 읽고 레지스트리에서 7번 스키마를 받아 옵니다(역시 캐시합니다).
+4. 7번 스키마(writer)로 바이트를 해석한 뒤 컨슈머 코드가 기대하는 스키마(reader)에 맞춰 2절의 규칙대로 필드를 옮깁니다.
+
+호환성 검사는 1번, 등록하는 순간에만 일어납니다. 그때 레지스트리가 보는 것은 새 스키마와 옛 스키마의 모양뿐이고 프로듀서와 컨슈머 중 누가 먼저 배포되는지는 보지 않습니다. 6-1절의 사고가 그 틈에서 났습니다.
+
 ## 2. Avro의 스키마 해석 규칙
 
 Avro 명세는 데이터를 쓸 때의 스키마를 writer 스키마, 애플리케이션이 기대하는 스키마를 reader 스키마라고 부르고 둘이 다를 때의 규칙을 정합니다.
@@ -45,6 +68,8 @@ Avro 명세는 데이터를 쓸 때의 스키마를 writer 스키마, 애플리�
 | reader에만 있고 기본값이 없는 필드 | 오류 |
 | 타입 승격 | int는 long, float, double로, long은 float, double로, float는 double로, string과 bytes는 서로 승격된다 |
 | enum | writer의 값이 reader의 enum에 없을 때 reader에 기본값이 있으면 그걸 쓰고 없으면 오류 |
+
+타입 승격은 작은 그릇에 담긴 값을 큰 그릇으로 옮겨 담는 일입니다. int로 쓴 15000은 long으로 읽어도 15000이라 잃는 것이 없습니다. 반대로 long으로 쓴 값을 int로 읽으면 int에 다 안 들어가는 값이 있을 수 있으니 명세는 이 방향을 허용하지 않습니다. 승격 규칙은 대체로 "reader가 writer의 값을 받을 그릇이 되는가"로 읽으면 됩니다. 다만 long을 float로 읽는 것처럼 큰 정수에서 정밀도가 줄 수 있는 승격도 명세는 허용합니다.
 
 ## 3. 재현: 어떤 변경이 어느 방향으로 읽히나
 
@@ -63,7 +88,7 @@ Avro 명세는 데이터를 쓸 때의 스키마를 writer 스키마, 애플리�
 
 결과는 2절의 규칙 그대로입니다.
 
-- 기본값 없는 필드를 추가하면, 옛 데이터에는 그 필드가 없는데 새 reader가 채울 값을 모릅니다. 그래서 BACKWARD가 깨집니다.
+- 기본값 없는 필드를 추가하면 옛 데이터에는 그 필드가 없는데 새 reader가 채울 값을 모릅니다. 그래서 BACKWARD가 깨집니다.
 - 필드를 삭제하면 반대로 옛 reader가 그 필드를 기대하는데 새 데이터에 없습니다. 옛 스키마에서 그 필드에 기본값이 없었으니 FORWARD가 깨집니다.
 - int를 long으로 넓히면 새 reader(long)는 옛 int 데이터를 승격해서 읽지만 옛 reader(int)는 새 long 데이터를 좁힐 수 없습니다.
 
@@ -85,6 +110,12 @@ Confluent Schema Registry 문서의 정의입니다.
 | FULL_TRANSITIVE | 모든 과거 버전과 양방향 | 아무 쪽이나 |
 | NONE | 검사하지 않는다 | 모두 동시에, 또는 새 토픽 |
 
+모드 이름이 헷갈리면 "배포하는 동안 누가 누구를 읽게 되나"를 그려 보면 됩니다.
+
+![위 줄 BACKWARD는 프로듀서가 아직 v1이고 토픽에 v1 메시지만 있는데 컨슈머를 먼저 v2로 올린 그림이다. 검사하는 것은 새 스키마 v2를 가진 컨슈머가 옛 데이터 v1을 읽을 수 있는지다. 아래 줄 FORWARD는 프로듀서를 먼저 v2로 올려 토픽에 v1과 v2 메시지가 섞이고 컨슈머는 아직 v1인 그림이다. 검사하는 것은 옛 스키마 v1을 가진 컨슈머가 새 데이터 v2를 읽을 수 있는지다](/uploads/data/de-14-schema-registry-compatibility/de14-deploy-order.svg)
+
+BACKWARD는 "컨슈머가 먼저 올라가서 한동안 옛 메시지를 읽는다"는 그림을 전제로 그 장면만 검사합니다. FORWARD는 "프로듀서가 먼저 올라가서 옛 컨슈머가 한동안 새 메시지를 읽는다"를 검사합니다. 모드를 고른다는 것은 배포 순서를 고르는 것과 같습니다.
+
 문서는 업그레이드 순서를 이렇게 적습니다. BACKWARD 계열은 새 이벤트를 쓰기 전에 모든 컨슈머를 올립니다. FORWARD 계열은 프로듀서를 먼저 올리고 옛 스키마로 쓴 데이터가 컨슈머에게 가지 않게 한 뒤 컨슈머를 올립니다. FULL 계열은 따로 올려도 됩니다.
 
 ### 4-2. BACKWARD가 기본인 이유와 transitive
@@ -95,13 +126,15 @@ Confluent Schema Registry 문서의 정의입니다.
 
 ### 4-3. subject와 이름 전략
 
-호환성은 subject 단위로 검사합니다. 기본 `TopicNameStrategy`는 subject를 `<토픽>-value`, `<토픽>-key`로 정해서 토픽 하나에 스키마 한 종류를 둡니다. 토픽 하나에 이벤트 종류 여러 개(주문 생성, 주문 취소)를 담으려면 레코드 이름 기준의 `RecordNameStrategy`나 `TopicRecordNameStrategy`를 씁니다.
+subject는 레지스트리 안에서 스키마 버전들을 묶어 두는 이름입니다. v1, v2, v3이 같은 subject 아래 줄줄이 쌓이고 호환성은 이 subject 안에서 앞뒤 버전끼리 검사합니다. 기본 `TopicNameStrategy`는 subject를 `<토픽>-value`, `<토픽>-key`로 정해서 토픽 하나에 스키마 한 종류를 둡니다. `orders` 토픽의 값 스키마는 `orders-value`라는 subject에 쌓입니다.
+
+토픽 하나에 이벤트 종류 여러 개(주문 생성, 주문 취소)를 담으려면 레코드 이름 기준의 `RecordNameStrategy`나 `TopicRecordNameStrategy`를 씁니다. 굳이 한 토픽에 담는 이유는 순서입니다. Kafka는 파티션 안에서만 순서를 지키니 "주문 생성"과 "주문 취소"를 다른 토픽에 나누면 컨슈머가 취소를 생성보다 먼저 처리할 수 있습니다. Martin Kleppmann은 Confluent 블로그 글 [Should You Put Several Event Types in the Same Kafka Topic?](https://www.confluent.io/blog/put-several-event-types-kafka-topic/)(2018)에서 순서가 지켜져야 하는 이벤트는 같은 토픽에 같은 키로 넣어야 한다고 정리하고 이 두 전략이 그걸 가능하게 한다고 설명합니다.
 
 ## 5. Protobuf와 JSON Schema
 
 | 형식 | 문서에서 확인한 것 |
 |---|---|
-| Protobuf | 필드는 번호로 맞춘다. 번호를 재사용하면 디코딩이 모호해지므로 지운 필드의 번호(와 이름)는 `reserved`로 막는다. 기존 필드의 번호를 바꾸는 것은 안전하지 않다. Confluent는 새 메시지 타입 추가가 FORWARD 호환이 아니라서 Protobuf에는 `BACKWARD_TRANSITIVE`를 권한다 |
+| Protobuf | 필드는 번호로 맞춘다. 번호를 재사용하면 디코딩이 모호해지므로 지운 필드의 번호(와 이름)는 `reserved`로 막는다. 기존 필드의 번호를 바꾸는 것은 안전하지 않다. Confluent는 새 메시지 타입 추가가 FORWARD 호환을 깨므로 Protobuf에는 `BACKWARD_TRANSITIVE`를 권한다 |
 | JSON Schema | 기본이 열린 모델(`additionalProperties: true`)이라 아무 속성이나 더 올 수 있다. Confluent 문서는 JSON Schema의 BACKWARD 규칙이 Avro보다 복잡하다고 적고 열린 모델과 닫힌 모델에 따라 허용되는 변경이 반대로 갈린다 |
 
 JSON Schema가 까다로운 이유를 Robert Yokota의 글(2021)이 설명합니다. 열린 모델의 스키마는 어떤 속성이든 받아들이는데 여기에 타입이 정해진 속성을 추가하면 이전에 그 이름으로 다른 타입의 값이 들어왔을 수 있어서 BACKWARD가 깨집니다.
@@ -116,7 +149,7 @@ Kris Drouet의 2026년 글에 이런 사례가 있습니다. 프로듀서 팀이
 
 ### 6-2. data contract
 
-스키마는 모양(필드 이름과 타입)만 정합니다. "금액은 0 이상", "주민번호는 9자리" 같은 값의 규칙과 이 데이터의 담당자, 변경 절차는 스키마 밖에 있습니다.
+스키마는 모양(필드 이름과 타입)만 정합니다. "금액은 0 이상", "미국 사회보장번호(SSN)는 9자리" 같은 값의 규칙과 이 데이터의 담당자, 변경 절차는 스키마 밖에 있습니다.
 
 Andrew Jones는 2021년 글 "Data contracts"에서 스키마를 하류 사용자와의 계약으로 보고 애플리케이션 API처럼 문서화하고 버전을 매기고 깨지는 변경을 피한다고 썼습니다. Confluent 문서는 data contract를 상류와 하류 사이에 움직이는 데이터의 구조와 의미에 대한 공식 합의로 정의하고 스키마는 그 한 요소라고 적습니다. 구성 요소로 구조, 무결성 제약, 메타데이터, 규칙, 변경 절차를 듭니다.
 
@@ -145,7 +178,7 @@ Confluent의 구현은 스키마에 규칙을 붙이는 방식입니다(CP 7.4 �
 
 - 3절은 fastavro 1.13.1로 확인했습니다. 레지스트리 서버를 띄워 등록 검사를 돌리지는 않았습니다. 레지스트리의 검사 결과는 Confluent 문서의 요약표와 대조했습니다.
 - Confluent 문서 안에서 Kafka Streams가 지원하는 모드를 두 곳에서 다르게 적고 있어 다루지 않았습니다.
-- 6-1절은 한 사람의 경험담이고 채용 회사와 함께 쓴 글입니다.
+- 6-1절은 한 사람의 경험담이고 채용 업체와 함께 쓴 글입니다.
 
 ## 10. 헷갈렸던 것
 
@@ -174,6 +207,8 @@ Confluent 문서는 NONE으로 모든 클라이언트를 동시에 올리거나,
 - Apicurio, [Apicurio Registry content rule reference](https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/getting-started/assembly-rule-reference.html)
 
 글과 사례
+- Martin Kleppmann, [Schema evolution in Avro, Protocol Buffers and Thrift](https://martin.kleppmann.com/2012/12/05/schema-evolution-in-avro-protocol-buffers-thrift.html), 2012
+- Martin Kleppmann, [Should You Put Several Event Types in the Same Kafka Topic?](https://www.confluent.io/blog/put-several-event-types-kafka-topic/), Confluent, 2018
 - Andrew Jones, [Data contracts](https://andrew-jones.com/blog/data-contracts/), 2021
 - Chad Sanderson, [The Rise of Data Contracts](https://dataproducts.substack.com/p/the-rise-of-data-contracts), 2022
 - Robert Yokota, [Understanding JSON Schema Compatibility](https://yokota.blog/2021/03/29/understanding-json-schema-compatibility/), 2021

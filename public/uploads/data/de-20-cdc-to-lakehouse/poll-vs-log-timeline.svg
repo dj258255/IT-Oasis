@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<defs><clipPath id="c1"><rect x="341.0" y="319" width="118" height="42"/></clipPath><clipPath id="c3"><rect x="801.0" y="319" width="118" height="42"/></clipPath></defs>
+<rect width="1200" height="640" fill="#ffffff"/>
+<text x="600" y="40" font-size="23" font-weight="800" fill="#1e1e1e" text-anchor="middle">같은 7번의 변경을 조회 기반과 로그 기반이 각각 무엇으로 받는가 (2-1절)</text>
+<text x="30" y="156" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="start">원천 DB</text>
+<text x="30" y="346" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="start">조회 기반</text>
+<text x="30" y="370" font-size="14" font-weight="500" fill="#495057" text-anchor="start">10초마다</text>
+<text x="30" y="526" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="start">로그 기반</text>
+<path d="M160.4 150.6 Q631.0 150.4 1099.7 150.2" stroke="#adb5bd" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M160.2 149.3 Q631.5 151.3 1099.8 151.1" stroke="#adb5bd" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M160.6 339.9 Q629.0 339.6 1099.6 339.7" stroke="#adb5bd" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M159.8 340.3 Q631.5 339.4 1100.7 340.0" stroke="#adb5bd" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M159.3 519.4 Q629.0 520.2 1099.6 520.3" stroke="#adb5bd" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M159.3 519.2 Q629.2 520.7 1099.0 520.4" stroke="#adb5bd" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="170.0" y="600" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">0초</text>
+<path d="M169.6 91.3 Q170.9 335.3 170.2 579.7" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<path d="M170.2 91.9 Q168.7 336.5 169.3 580.3" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<text x="400.0" y="600" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">10초</text>
+<path d="M399.5 92.6 Q400.1 335.8 400.5 580.3" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<path d="M399.7 91.2 Q401.8 336.3 400.2 580.0" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<text x="630.0" y="600" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">20초</text>
+<path d="M630.5 91.4 Q629.8 337.2 630.6 579.3" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<path d="M630.5 93.0 Q630.5 335.3 630.1 580.6" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<text x="860.0" y="600" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">30초</text>
+<path d="M859.4 91.9 Q858.9 336.4 859.8 579.4" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<path d="M859.5 91.1 Q860.9 334.5 860.4 579.6" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<text x="1090.0" y="600" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">40초</text>
+<path d="M1089.6 92.0 Q1088.9 334.9 1089.3 579.3" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<path d="M1089.2 91.6 Q1090.6 336.1 1089.2 579.5" stroke="#dee2e6" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3 6"/>
+<circle cx="193.0" cy="150" r="8" fill="#a5d8ff" opacity="0.8"/>
+<ellipse cx="192.8" cy="149.4" rx="7.4" ry="7.5" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="192.4" cy="150.2" rx="9.2" ry="8.5" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="233.0" y="128" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문1 pending</text>
+<circle cx="239.0" cy="150" r="8" fill="#a5d8ff" opacity="0.8"/>
+<ellipse cx="238.9" cy="149.0" rx="7.4" ry="8.3" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="238.7" cy="151.1" rx="9.3" ry="7.3" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="279.0" y="182" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문1 paid</text>
+<circle cx="285.0" cy="150" r="8" fill="#a5d8ff" opacity="0.8"/>
+<ellipse cx="284.7" cy="149.6" rx="8.4" ry="7.2" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="284.3" cy="151.2" rx="7.6" ry="9.5" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="325.0" y="100" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문1 shipped</text>
+<circle cx="446.0" cy="150" r="8" fill="#d0bfff" opacity="0.8"/>
+<ellipse cx="445.8" cy="150.7" rx="7.9" ry="7.2" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="446.2" cy="149.1" rx="9.3" ry="8.6" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="446.0" y="128" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문2 생성</text>
+<circle cx="515.0" cy="150" r="8" fill="#d0bfff" opacity="0.8"/>
+<ellipse cx="515.1" cy="150.8" rx="8.1" ry="8.9" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="515.7" cy="149.0" rx="7.3" ry="9.1" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="515.0" y="182" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문2 삭제</text>
+<circle cx="676.0" cy="150" r="8" fill="#ffd8a8" opacity="0.8"/>
+<ellipse cx="675.2" cy="151.0" rx="7.1" ry="8.5" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="676.4" cy="149.7" rx="8.3" ry="8.3" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="676.0" y="128" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문3 생성</text>
+<circle cx="883.0" cy="150" r="8" fill="#ffd8a8" opacity="0.8"/>
+<ellipse cx="882.7" cy="149.6" rx="7.1" ry="8.3" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<ellipse cx="884.2" cy="149.6" rx="9.1" ry="7.7" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+<text x="883.0" y="128" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문3 삭제</text>
+<rect x="338.0" y="316" width="124" height="48" fill="#b2f2bb" opacity="0.55"/>
+<path d="M289.5 364.0 L338.6 316.0 M301.9 364.0 L348.2 316.0 M312.7 364.0 L359.6 316.0 M323.5 364.0 L370.6 316.0 M335.0 364.0 L381.7 316.0 M344.4 364.0 L392.1 316.0 M355.3 364.0 L403.2 316.0 M367.6 364.0 L414.0 316.0 M377.2 364.0 L425.5 316.0 M388.3 364.0 L437.6 316.0 M399.0 364.0 L448.4 316.0 M410.7 364.0 L458.3 316.0 M421.5 364.0 L470.1 316.0 M432.5 364.0 L480.8 316.0 M443.8 364.0 L492.1 316.0 M455.4 364.0 L502.6 316.0" stroke="#2f9e44" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c1)"/>
+<path d="M337.5 316.6 Q400.4 316.9 461.0 316.0 M462.4 316.8 Q461.4 338.5 462.0 363.6 M462.3 364.1 Q401.6 366.0 338.3 364.5 M338.6 364.6 Q338.7 340.2 338.3 316.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M338.0 315.4 Q399.3 314.5 461.9 315.0 M463.2 316.2 Q464.1 338.1 463.3 365.2 M463.5 364.5 Q398.3 362.8 336.7 363.3 M336.7 362.6 Q335.9 339.0 336.6 315.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="400.0" y="346" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문1 shipped</text>
+<rect x="568.0" y="316" width="124" height="48" fill="#e9ecef" opacity="0.55"/>
+<path d="M568.4 316.4 Q630.9 316.0 691.1 316.5 M693.1 315.9 Q692.0 339.7 692.4 364.7 M691.3 363.5 Q629.9 362.6 567.3 363.8 M568.6 364.3 Q566.3 341.1 567.1 315.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M568.7 317.2 Q632.1 317.9 691.1 315.3 M691.6 315.2 Q691.7 339.9 693.0 363.0 M690.9 363.5 Q630.4 365.6 567.6 363.3 M566.8 362.6 Q570.2 342.0 568.3 316.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="630.0" y="346" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">없음</text>
+<rect x="798.0" y="316" width="124" height="48" fill="#b2f2bb" opacity="0.55"/>
+<path d="M749.1 364.0 L798.7 316.0 M761.8 364.0 L809.1 316.0 M771.2 364.0 L819.4 316.0 M783.7 364.0 L831.4 316.0 M793.9 364.0 L842.9 316.0 M804.1 364.0 L853.4 316.0 M816.7 364.0 L864.7 316.0 M826.2 364.0 L875.4 316.0 M838.1 364.0 L886.3 316.0 M848.3 364.0 L897.9 316.0 M860.9 364.0 L907.2 316.0 M871.1 364.0 L919.1 316.0 M881.9 364.0 L929.7 316.0 M892.5 364.0 L941.5 316.0 M904.0 364.0 L951.9 316.0 M915.0 364.0 L962.6 316.0" stroke="#2f9e44" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c3)"/>
+<path d="M797.4 315.5 Q861.6 317.1 922.1 316.3 M921.0 316.9 Q923.6 341.7 920.8 364.2 M921.3 363.0 Q861.1 362.7 797.9 364.8 M797.7 365.0 Q796.0 341.0 798.1 315.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M797.9 316.6 Q858.9 317.8 922.5 317.0 M921.0 316.4 Q920.9 337.9 920.8 362.5 M921.0 363.4 Q859.2 364.8 796.8 365.5 M798.4 363.6 Q800.1 342.5 797.3 315.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="860.0" y="346" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">주문3 pending</text>
+<rect x="1028.0" y="316" width="124" height="48" fill="#e9ecef" opacity="0.55"/>
+<path d="M1027.1 316.9 Q1091.1 316.2 1152.9 314.8 M1151.9 316.8 Q1150.4 340.0 1151.3 365.2 M1153.2 364.6 Q1089.4 362.6 1028.7 363.2 M1027.9 364.9 Q1029.9 339.2 1027.1 314.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1029.4 317.5 Q1090.6 316.0 1151.6 316.8 M1151.8 315.4 Q1149.5 341.1 1151.3 363.9 M1150.5 362.5 Q1089.8 363.0 1026.5 365.1 M1029.3 362.7 Q1027.6 339.8 1029.0 317.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1090.0" y="346" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">없음</text>
+<text x="249.0" y="294" font-size="14" font-weight="700" fill="#e03131" text-anchor="middle">paid는 shipped에 덮여 사라짐</text>
+<text x="545.0" y="392" font-size="14" font-weight="700" fill="#e03131" text-anchor="middle">주문2는 생겼다 지워져 한 번도 못 봄</text>
+<text x="903.0" y="294" font-size="14" font-weight="700" fill="#e03131" text-anchor="middle">주문3 삭제는 결과에서 빠질 뿐</text>
+<path d="M171.3 379.8 Q284.8 380.5 397.3 380.3" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="3 4"/>
+<path d="M172.1 380.7 Q286.7 381.5 398.4 378.9" stroke="#868e96" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="3 4"/>
+<text x="285.0" y="400" font-size="12" font-weight="500" fill="#868e96" text-anchor="middle">10초 조회 조건: updated_at &gt; 0</text>
+<rect x="184.0" y="506" width="18" height="28" fill="#a5d8ff" opacity="0.55"/>
+<path d="M183.8 505.6 Q192.3 504.4 200.9 504.8 M202.8 506.3 Q200.5 520.3 202.9 533.4 M201.0 534.1 Q192.0 533.5 183.1 533.0 M183.9 533.9 Q185.4 519.0 182.9 504.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M184.8 505.9 Q194.9 508.1 201.0 504.9 M202.4 507.5 Q202.1 518.5 203.4 533.2 M203.3 535.5 Q191.6 531.6 185.0 534.7 M183.4 534.0 Q184.5 522.2 185.3 506.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="230.0" y="506" width="18" height="28" fill="#a5d8ff" opacity="0.55"/>
+<path d="M229.5 506.9 Q238.4 504.8 248.2 506.5 M248.1 504.9 Q249.4 520.9 248.7 533.4 M248.0 534.3 Q237.7 532.1 229.1 533.1 M229.3 535.0 Q229.8 520.1 229.8 505.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M229.4 505.5 Q240.6 507.5 247.8 504.6 M247.1 506.7 Q250.1 518.5 247.9 534.5 M249.4 535.5 Q237.2 534.8 228.5 532.9 M230.0 533.9 Q228.5 520.4 229.2 504.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="276.0" y="506" width="18" height="28" fill="#a5d8ff" opacity="0.55"/>
+<path d="M276.4 507.2 Q284.8 504.9 293.1 506.9 M292.9 505.6 Q295.7 519.6 293.4 534.5 M293.3 533.3 Q286.9 535.8 275.8 533.4 M274.8 533.4 Q276.6 520.5 275.9 505.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M274.7 505.7 Q286.3 503.8 293.0 504.8 M292.6 506.8 Q296.5 521.0 292.8 535.4 M292.6 533.2 Q283.5 533.1 274.9 534.7 M275.2 535.0 Q278.3 518.0 276.2 507.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="437.0" y="506" width="18" height="28" fill="#d0bfff" opacity="0.55"/>
+<path d="M436.9 505.8 Q445.3 504.3 454.1 506.3 M455.5 506.6 Q455.9 520.3 455.9 534.5 M455.9 534.8 Q445.3 535.5 438.0 532.8 M436.6 533.2 Q438.5 521.4 437.7 506.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M435.9 505.4 Q445.6 503.7 455.5 506.9 M455.4 505.9 Q452.9 517.8 455.0 535.3 M454.6 534.2 Q443.5 534.8 436.1 535.0 M437.4 533.7 Q436.5 519.9 435.9 506.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="506.0" y="506" width="18" height="28" fill="#d0bfff" opacity="0.55"/>
+<path d="M506.4 506.9 Q513.5 505.9 524.0 506.1 M523.4 505.7 Q524.2 520.3 523.0 533.0 M522.9 535.1 Q516.1 532.5 505.1 533.1 M506.1 533.4 Q504.5 519.9 506.7 506.7" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M504.9 507.2 Q514.8 504.4 523.0 507.3 M523.5 506.7 Q523.2 522.4 522.6 533.5 M525.2 535.3 Q516.3 536.1 507.4 534.6 M506.4 534.9 Q505.7 518.3 506.2 505.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="667.0" y="506" width="18" height="28" fill="#ffd8a8" opacity="0.55"/>
+<path d="M666.8 505.3 Q676.5 506.5 685.6 505.2 M685.2 507.1 Q683.2 520.7 684.5 533.6 M685.9 534.8 Q677.4 534.4 667.3 533.4 M665.8 534.4 Q667.0 521.9 668.0 506.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M667.0 505.6 Q675.9 506.7 686.5 507.3 M685.9 505.9 Q683.6 517.8 685.2 533.1 M685.5 535.4 Q678.5 536.2 665.7 534.3 M667.2 534.8 Q665.0 521.9 666.8 504.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="874.0" y="506" width="18" height="28" fill="#ffd8a8" opacity="0.55"/>
+<path d="M874.5 507.0 Q882.2 506.3 892.7 506.7 M892.2 505.2 Q893.4 519.5 891.7 534.8 M891.6 532.8 Q882.1 532.9 873.5 533.1 M874.8 534.1 Q873.9 518.9 874.6 505.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M875.3 505.8 Q883.4 508.6 892.4 506.4 M891.3 506.0 Q890.2 521.9 890.7 534.7 M891.3 532.9 Q883.9 536.4 872.7 532.6 M872.9 534.1 Q875.6 519.0 873.5 507.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="630.0" y="566" font-size="16" font-weight="700" fill="#1e1e1e" text-anchor="middle">c, u, u, c, d, c, d 일곱 개를 순서대로 모두 받는다</text>
+</svg>

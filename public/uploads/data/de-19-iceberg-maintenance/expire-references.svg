@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<defs><clipPath id="c3"><rect x="67" y="143" width="66" height="46"/></clipPath><clipPath id="c4"><rect x="169" y="143" width="66" height="46"/></clipPath><clipPath id="c5"><rect x="271" y="143" width="66" height="46"/></clipPath><clipPath id="c6"><rect x="373" y="143" width="66" height="46"/></clipPath><clipPath id="c7"><rect x="475" y="143" width="66" height="46"/></clipPath><clipPath id="c8"><rect x="71" y="393" width="98" height="68"/></clipPath><clipPath id="c9"><rect x="191" y="393" width="98" height="68"/></clipPath><clipPath id="c10"><rect x="311" y="393" width="98" height="68"/></clipPath><clipPath id="c11"><rect x="441" y="393" width="98" height="68"/></clipPath><clipPath id="c16"><rect x="1065" y="143" width="66" height="46"/></clipPath><clipPath id="c17"><rect x="661" y="393" width="98" height="68"/></clipPath><clipPath id="c18"><rect x="781" y="393" width="98" height="68"/></clipPath><clipPath id="c19"><rect x="901" y="393" width="98" height="68"/></clipPath><clipPath id="c20"><rect x="1031" y="393" width="98" height="68"/></clipPath></defs>
+<rect width="1200" height="600" fill="#ffffff"/>
+<text x="600" y="42" font-size="24" font-weight="800" fill="#1e1e1e" text-anchor="middle">스냅샷 만료가 끊는 것은 참조이고 파일은 따로 지워야 한다</text>
+<path d="M40.0 70.0 Q305.7 71.1 569.7 71.2 M569.4 69.4 Q569.2 318.6 569.6 569.4 M569.5 570.2 Q303.4 569.3 39.3 569.0 M39.7 570.6 Q38.8 320.2 40.7 69.8" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M40.8 69.7 Q302.9 71.2 570.5 69.4 M570.9 71.4 Q572.2 321.7 569.2 570.1 M569.7 568.9 Q306.2 571.6 40.4 568.8 M39.9 569.9 Q41.1 317.4 38.8 69.9" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="305" y="104" font-size="19" font-weight="800" fill="#1e1e1e" text-anchor="middle">만료 전: 스냅샷 5개</text>
+<path d="M631.0 70.9 Q895.0 69.5 1160.9 69.4 M1159.1 70.5 Q1158.1 319.5 1159.4 569.1 M1160.6 569.9 Q894.1 569.6 629.5 570.4 M630.4 570.6 Q628.2 318.8 629.0 69.0" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M628.5 69.8 Q895.0 70.8 1159.3 68.7 M1159.9 68.8 Q1158.3 318.9 1160.4 571.2 M1160.5 570.4 Q896.0 567.8 628.5 569.6 M631.3 570.2 Q630.8 322.3 630.3 71.4" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="895" y="104" font-size="19" font-weight="800" fill="#1e1e1e" text-anchor="middle">S1~S4 만료 뒤 (PyIceberg 0.12.0)</text>
+<rect x="64" y="140" width="72" height="52" fill="#a5d8ff" opacity="0.55"/>
+<path d="M11.4 192.0 L64.0 140.0 M22.1 192.0 L75.5 140.0 M34.3 192.0 L85.4 140.0 M44.4 192.0 L97.0 140.0 M56.5 192.0 L107.3 140.0 M66.6 192.0 L119.0 140.0 M77.5 192.0 L130.8 140.0 M89.5 192.0 L141.9 140.0 M100.3 192.0 L152.4 140.0 M110.6 192.0 L163.0 140.0 M121.9 192.0 L174.0 140.0 M132.1 192.0 L185.7 140.0" stroke="#1971c2" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c3)"/>
+<path d="M65.0 140.0 Q98.6 139.8 136.9 139.4 M135.6 139.7 Q135.9 165.5 135.9 192.8 M136.4 192.1 Q101.9 190.4 63.8 190.9 M63.7 192.2 Q63.4 165.3 63.7 139.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M63.7 141.5 Q98.8 142.5 135.0 140.5 M136.0 141.2 Q136.3 167.1 136.3 190.6 M135.2 192.7 Q100.9 192.6 65.0 191.3 M64.3 191.8 Q62.2 164.9 62.7 139.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="100" y="173" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="middle">S1</text>
+<rect x="166" y="140" width="72" height="52" fill="#a5d8ff" opacity="0.55"/>
+<path d="M114.1 192.0 L166.2 140.0 M124.7 192.0 L177.6 140.0 M136.4 192.0 L187.5 140.0 M146.7 192.0 L199.9 140.0 M157.4 192.0 L209.9 140.0 M168.6 192.0 L221.2 140.0 M180.6 192.0 L231.2 140.0 M190.4 192.0 L242.1 140.0 M201.3 192.0 L254.0 140.0 M213.0 192.0 L265.9 140.0 M223.9 192.0 L276.1 140.0 M234.1 192.0 L286.5 140.0" stroke="#1971c2" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c4)"/>
+<path d="M166.7 139.8 Q201.2 139.0 237.1 140.1 M238.3 139.0 Q236.6 164.7 238.6 191.9 M239.1 192.6 Q200.3 192.7 166.8 193.1 M166.6 191.8 Q165.1 165.9 167.1 139.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M165.8 138.5 Q199.5 137.9 238.3 141.5 M237.2 139.0 Q240.3 168.5 236.7 193.3 M238.5 193.4 Q199.5 189.8 166.1 190.6 M166.6 191.4 Q163.6 167.7 167.5 139.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="202" y="173" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="middle">S2</text>
+<rect x="268" y="140" width="72" height="52" fill="#a5d8ff" opacity="0.55"/>
+<path d="M215.3 192.0 L268.9 140.0 M226.1 192.0 L278.7 140.0 M237.4 192.0 L290.3 140.0 M249.0 192.0 L300.5 140.0 M260.3 192.0 L311.2 140.0 M272.0 192.0 L323.6 140.0 M281.4 192.0 L334.2 140.0 M292.5 192.0 L345.1 140.0 M303.6 192.0 L355.4 140.0 M315.0 192.0 L366.1 140.0 M327.0 192.0 L378.6 140.0 M336.5 192.0 L389.2 140.0" stroke="#1971c2" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c5)"/>
+<path d="M267.7 140.5 Q302.7 138.7 339.0 141.0 M340.0 141.0 Q339.0 164.7 339.8 192.1 M339.6 191.3 Q305.9 192.1 268.1 192.3 M266.8 193.1 Q268.4 164.8 268.5 140.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M267.0 141.4 Q305.8 139.6 341.2 138.6 M338.5 140.2 Q340.7 166.0 340.5 191.8 M340.5 191.3 Q302.7 194.0 268.9 193.3 M266.7 190.9 Q267.4 166.4 269.1 141.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="304" y="173" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="middle">S3</text>
+<rect x="370" y="140" width="72" height="52" fill="#ffc9c9" opacity="0.55"/>
+<path d="M318.9 192.0 L369.3 140.0 M329.4 192.0 L380.8 140.0 M339.4 192.0 L392.8 140.0 M350.2 192.0 L402.2 140.0 M361.7 192.0 L413.3 140.0 M372.8 192.0 L425.3 140.0 M384.0 192.0 L436.8 140.0 M395.0 192.0 L446.3 140.0 M406.1 192.0 L457.0 140.0 M417.3 192.0 L468.3 140.0 M428.0 192.0 L479.9 140.0 M439.9 192.0 L490.3 140.0" stroke="#e03131" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c6)"/>
+<path d="M370.0 139.7 Q405.1 139.3 443.2 141.0 M442.7 140.1 Q443.8 166.7 441.3 191.2 M442.4 190.9 Q404.8 193.1 369.5 191.0 M370.0 191.7 Q370.1 165.4 369.8 139.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M370.8 140.3 Q407.5 137.8 442.9 138.9 M443.4 139.3 Q440.9 168.1 441.6 191.5 M442.0 191.8 Q405.1 194.3 371.3 192.4 M369.8 190.7 Q372.3 166.8 370.0 140.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="406" y="173" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="middle">S4</text>
+<rect x="472" y="140" width="72" height="52" fill="#b2f2bb" opacity="0.55"/>
+<path d="M420.2 192.0 L472.7 140.0 M430.7 192.0 L483.1 140.0 M442.6 192.0 L494.9 140.0 M453.6 192.0 L504.5 140.0 M464.6 192.0 L516.3 140.0 M474.6 192.0 L527.1 140.0 M486.6 192.0 L538.6 140.0 M496.5 192.0 L549.0 140.0 M508.3 192.0 L559.3 140.0 M519.5 192.0 L571.6 140.0 M530.2 192.0 L582.9 140.0 M540.6 192.0 L592.6 140.0" stroke="#2f9e44" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c7)"/>
+<path d="M470.8 139.8 Q509.9 140.5 543.6 140.8 M544.4 140.9 Q545.9 164.5 543.1 191.9 M544.2 192.5 Q506.1 191.4 471.5 192.4 M472.0 192.7 Q472.2 165.5 472.7 139.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M471.9 139.1 Q509.5 139.7 544.0 138.6 M543.6 141.1 Q545.8 165.3 544.6 191.9 M545.1 191.3 Q509.9 192.5 472.9 193.4 M473.5 192.3 Q471.5 167.4 472.8 138.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="508" y="173" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="middle">S5</text>
+<path d="M100.5 195.4 Q108.8 292.0 120.5 385.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M100.1 195.5 Q111.5 292.9 120.7 387.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M120.0 386.0 L112.1 374.1" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M120.0 386.0 L125.0 373.2" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M202.2 196.6 Q159.5 291.9 119.3 385.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M201.8 197.2 Q161.6 292.7 120.1 387.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M120.0 386.0 L120.2 371.3" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M120.0 386.0 L130.1 376.5" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M202.2 195.7 Q221.1 291.6 239.4 385.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M201.2 196.1 Q223.2 289.7 239.2 386.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M240.0 386.0 L231.5 374.2" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M240.0 386.0 L243.5 372.8" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M304.8 195.3 Q212.2 290.2 119.1 385.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M304.4 195.7 Q213.7 291.1 119.6 385.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M120.0 386.0 L123.9 372.9" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M120.0 386.0 L132.8 381.9" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M304.8 195.3 Q272.8 290.1 240.8 385.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M303.8 195.6 Q273.5 291.1 240.2 386.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M240.0 386.0 L237.6 372.1" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M240.0 386.0 L249.8 376.5" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M303.3 195.8 Q331.0 290.1 359.9 385.7" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M302.8 196.5 Q330.2 292.9 359.3 386.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M360.0 386.0 L350.4 375.6" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M360.0 386.0 L361.6 371.7" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M507.1 196.3 Q497.8 291.6 489.6 385.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M507.1 195.4 Q500.5 292.1 490.7 385.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M490.0 386.0 L485.5 373.0" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M490.0 386.0 L497.3 373.7" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<rect x="68" y="390" width="104" height="74" fill="#ffec99" opacity="0.55"/>
+<path d="M-5.9 464.0 L68.8 390.0 M4.2 464.0 L79.0 390.0 M16.0 464.0 L89.0 390.0 M26.6 464.0 L100.4 390.0 M38.3 464.0 L112.4 390.0 M49.3 464.0 L122.8 390.0 M60.6 464.0 L134.6 390.0 M71.4 464.0 L144.1 390.0 M81.4 464.0 L156.6 390.0 M92.4 464.0 L167.2 390.0 M104.8 464.0 L177.6 390.0 M114.9 464.0 L188.7 390.0 M126.1 464.0 L199.7 390.0 M136.4 464.0 L211.9 390.0 M147.8 464.0 L222.9 390.0 M158.9 464.0 L232.3 390.0 M169.4 464.0 L243.8 390.0" stroke="#f08c00" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c8)"/>
+<path d="M67.1 389.7 Q121.9 389.8 171.8 390.2 M171.1 389.6 Q170.6 426.2 172.0 464.7 M171.1 463.7 Q118.5 462.5 69.0 465.2 M67.5 463.7 Q67.9 428.6 67.4 390.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M68.9 390.6 Q118.6 391.8 172.5 389.5 M171.6 390.3 Q171.1 427.7 171.0 464.3 M171.4 463.4 Q121.8 464.8 67.4 463.5 M68.3 463.1 Q69.7 424.9 68.1 390.7" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="120" y="420" font-size="16" font-weight="800" fill="#1e1e1e" text-anchor="middle">파일 A</text>
+<text x="120" y="446" font-size="14" font-weight="600" fill="#1e1e1e" text-anchor="middle">주문 1, 2</text>
+<rect x="188" y="390" width="104" height="74" fill="#ffec99" opacity="0.55"/>
+<path d="M113.9 464.0 L187.4 390.0 M125.2 464.0 L198.6 390.0 M136.1 464.0 L210.5 390.0 M146.6 464.0 L221.1 390.0 M158.2 464.0 L232.0 390.0 M168.6 464.0 L242.4 390.0 M180.7 464.0 L253.3 390.0 M190.3 464.0 L264.0 390.0 M202.9 464.0 L275.5 390.0 M213.4 464.0 L286.7 390.0 M224.3 464.0 L298.2 390.0 M234.6 464.0 L308.8 390.0 M246.8 464.0 L320.4 390.0 M256.3 464.0 L331.7 390.0 M267.8 464.0 L341.0 390.0 M279.1 464.0 L353.7 390.0 M290.2 464.0 L363.5 390.0" stroke="#f08c00" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c9)"/>
+<path d="M187.0 388.9 Q240.3 388.3 292.1 390.1 M291.3 391.2 Q291.6 427.5 291.2 463.8 M293.2 463.0 Q240.5 462.4 188.5 463.0 M188.3 463.3 Q187.9 428.6 189.0 389.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M188.5 389.6 Q238.3 390.1 292.1 390.1 M291.1 391.3 Q290.5 426.7 292.5 462.9 M292.6 465.6 Q239.7 462.8 187.3 464.5 M188.0 464.0 Q186.9 426.7 188.1 390.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="240" y="420" font-size="16" font-weight="800" fill="#1e1e1e" text-anchor="middle">파일 B</text>
+<text x="240" y="446" font-size="14" font-weight="600" fill="#1e1e1e" text-anchor="middle">주문 3</text>
+<rect x="308" y="390" width="104" height="74" fill="#ffec99" opacity="0.55"/>
+<path d="M234.1 464.0 L308.7 390.0 M245.8 464.0 L318.4 390.0 M256.1 464.0 L330.6 390.0 M267.9 464.0 L340.8 390.0 M277.5 464.0 L352.4 390.0 M289.9 464.0 L362.4 390.0 M299.6 464.0 L374.4 390.0 M310.3 464.0 L384.5 390.0 M321.7 464.0 L395.6 390.0 M333.1 464.0 L406.9 390.0 M343.4 464.0 L418.4 390.0 M355.0 464.0 L429.5 390.0 M365.2 464.0 L440.8 390.0 M376.9 464.0 L451.4 390.0 M388.1 464.0 L462.9 390.0 M399.9 464.0 L473.1 390.0 M409.8 464.0 L483.0 390.0" stroke="#f08c00" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c10)"/>
+<path d="M308.7 389.5 Q358.3 388.7 411.1 390.4 M411.8 391.1 Q410.4 425.6 411.6 464.1 M411.5 463.2 Q360.2 462.1 307.4 463.5 M307.9 463.2 Q307.6 426.8 307.2 388.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M307.1 389.7 Q361.8 390.1 410.5 391.1 M411.6 388.7 Q413.8 426.8 413.0 462.9 M413.3 462.7 Q359.8 466.1 307.4 464.7 M308.2 463.9 Q309.3 426.1 309.2 391.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="360" y="420" font-size="16" font-weight="800" fill="#1e1e1e" text-anchor="middle">파일 C</text>
+<text x="360" y="446" font-size="14" font-weight="600" fill="#1e1e1e" text-anchor="middle">주문 4</text>
+<rect x="438" y="390" width="104" height="74" fill="#ffec99" opacity="0.55"/>
+<path d="M364.8 464.0 L438.4 390.0 M375.3 464.0 L449.4 390.0 M385.3 464.0 L460.3 390.0 M397.0 464.0 L470.9 390.0 M407.6 464.0 L481.6 390.0 M418.9 464.0 L493.8 390.0 M431.0 464.0 L503.9 390.0 M441.1 464.0 L515.6 390.0 M451.6 464.0 L527.0 390.0 M463.1 464.0 L536.2 390.0 M473.7 464.0 L548.2 390.0 M485.9 464.0 L558.7 390.0 M495.8 464.0 L569.9 390.0 M506.3 464.0 L580.0 390.0 M518.6 464.0 L591.2 390.0 M529.5 464.0 L603.7 390.0 M540.7 464.0 L613.0 390.0" stroke="#f08c00" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c11)"/>
+<path d="M437.1 389.5 Q490.0 388.1 541.9 389.7 M542.4 389.6 Q540.6 426.8 542.5 463.6 M541.9 463.6 Q491.2 464.8 437.5 463.3 M438.6 463.8 Q436.1 427.0 438.0 391.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M439.2 390.8 Q488.9 389.6 540.9 389.7 M542.9 391.0 Q542.3 425.8 540.6 464.3 M540.5 464.4 Q487.4 464.0 436.7 462.6 M437.5 462.6 Q439.1 424.7 438.2 389.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="490" y="420" font-size="16" font-weight="800" fill="#1e1e1e" text-anchor="middle">파일 D</text>
+<text x="490" y="446" font-size="14" font-weight="600" fill="#1e1e1e" text-anchor="middle">주문 1~4</text>
+<text x="305" y="500" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">S4(delete)는 파일 A·B·C를 지운 것으로 기록만 하고</text>
+<text x="305" y="524" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">새 파일은 S5가 파일 D로 더한다</text>
+<path d="M654.1 140.5 Q689.7 140.8 726.8 139.2 M726.7 140.2 Q725.1 164.7 725.3 191.4 M725.4 191.8 Q688.4 191.8 654.1 192.5 M653.5 192.5 Q654.1 165.9 653.2 139.3" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<path d="M653.0 141.0 Q689.0 142.6 727.2 141.3 M724.9 139.1 Q728.3 167.1 726.8 192.7 M727.2 191.5 Q690.1 190.9 654.2 193.3 M653.6 192.8 Q653.7 166.9 655.2 138.5" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<text x="690" y="173" font-size="18" font-weight="700" fill="#adb5bd" text-anchor="middle">S1</text>
+<path d="M757.2 140.1 Q791.7 141.9 827.1 139.2 M827.1 141.1 Q829.7 166.6 827.0 191.6 M828.1 192.1 Q792.9 190.1 756.5 191.8 M755.3 192.5 Q756.1 165.9 755.7 140.4" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<path d="M756.9 139.3 Q792.4 141.3 829.0 140.9 M826.7 141.5 Q828.7 164.9 828.6 190.8 M827.2 191.4 Q794.2 192.7 757.5 191.2 M755.7 191.0 Q755.0 166.6 756.4 138.8" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<text x="792" y="173" font-size="18" font-weight="700" fill="#adb5bd" text-anchor="middle">S2</text>
+<path d="M858.6 140.9 Q892.0 140.3 929.0 139.1 M928.9 139.7 Q928.9 164.5 929.4 192.5 M931.2 191.1 Q892.5 192.2 857.1 192.0 M857.4 192.6 Q859.2 165.3 857.6 139.8" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<path d="M857.7 140.2 Q894.2 139.5 931.4 141.5 M930.5 140.0 Q929.4 163.8 929.9 193.3 M930.9 193.1 Q892.0 193.5 859.0 192.3 M857.1 190.6 Q857.5 166.0 857.5 140.8" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<text x="894" y="173" font-size="18" font-weight="700" fill="#adb5bd" text-anchor="middle">S3</text>
+<path d="M959.2 138.9 Q997.2 140.1 1031.9 141.2 M1031.0 140.3 Q1030.6 164.9 1032.2 192.0 M1032.9 192.1 Q994.1 191.9 960.8 192.6 M960.7 192.0 Q961.9 164.1 960.8 140.4" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<path d="M961.1 139.1 Q998.3 142.6 1032.0 140.2 M1032.1 140.5 Q1034.4 166.7 1031.8 192.8 M1032.9 192.2 Q993.4 193.0 960.2 193.3 M961.6 191.2 Q961.9 165.7 960.7 139.0" stroke="#adb5bd" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 6"/>
+<text x="996" y="173" font-size="18" font-weight="700" fill="#adb5bd" text-anchor="middle">S4</text>
+<rect x="1062" y="140" width="72" height="52" fill="#b2f2bb" opacity="0.55"/>
+<path d="M1010.4 192.0 L1061.8 140.0 M1020.5 192.0 L1072.9 140.0 M1031.2 192.0 L1084.5 140.0 M1043.4 192.0 L1095.7 140.0 M1054.6 192.0 L1106.2 140.0 M1064.3 192.0 L1117.1 140.0 M1075.5 192.0 L1128.7 140.0 M1087.0 192.0 L1139.4 140.0 M1098.3 192.0 L1150.4 140.0 M1109.2 192.0 L1160.5 140.0 M1119.4 192.0 L1171.6 140.0 M1131.2 192.0 L1183.0 140.0" stroke="#2f9e44" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c16)"/>
+<path d="M1062.5 140.4 Q1096.8 139.7 1133.8 141.1 M1134.5 139.8 Q1133.1 166.0 1133.7 193.1 M1133.2 190.9 Q1097.7 192.5 1061.1 192.2 M1062.7 191.6 Q1063.7 167.3 1062.7 139.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1062.7 139.4 Q1096.7 137.5 1134.3 140.2 M1132.9 139.9 Q1132.4 163.6 1133.4 190.8 M1133.4 193.5 Q1096.9 192.4 1062.2 193.4 M1061.6 193.3 Q1063.7 164.6 1062.9 140.6" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1098" y="173" font-size="18" font-weight="800" fill="#1e1e1e" text-anchor="middle">S5</text>
+<path d="M1097.6 195.2 Q1088.4 290.6 1079.9 385.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1096.7 195.4 Q1090.3 288.9 1080.7 385.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1080.0 386.0 L1075.4 373.5" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M1080.0 386.0 L1087.0 374.5" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<rect x="658" y="390" width="104" height="74" fill="#e9ecef" opacity="0.55"/>
+<path d="M584.1 464.0 L658.5 390.0 M594.5 464.0 L669.7 390.0 M605.7 464.0 L680.7 390.0 M617.1 464.0 L691.8 390.0 M627.5 464.0 L702.8 390.0 M639.8 464.0 L712.6 390.0 M650.4 464.0 L724.5 390.0 M661.1 464.0 L735.1 390.0 M672.2 464.0 L746.2 390.0 M683.2 464.0 L756.2 390.0 M693.3 464.0 L769.0 390.0 M705.0 464.0 L779.9 390.0 M716.2 464.0 L790.4 390.0 M726.8 464.0 L801.7 390.0 M737.9 464.0 L812.5 390.0 M748.9 464.0 L823.4 390.0 M760.4 464.0 L834.3 390.0" stroke="#868e96" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c17)"/>
+<path d="M657.9 389.9 Q709.9 388.2 762.8 389.4 M761.4 389.0 Q763.6 428.2 761.8 465.1 M762.3 465.1 Q710.2 464.8 656.9 463.3 M656.9 464.5 Q659.2 426.7 658.7 389.9" stroke="#868e96" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 6"/>
+<path d="M656.6 391.1 Q709.3 391.3 762.1 390.9 M760.7 389.4 Q759.5 429.0 762.4 464.6 M761.2 465.4 Q707.6 465.4 657.8 464.5 M657.5 465.4 Q655.9 426.7 657.4 389.8" stroke="#868e96" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 6"/>
+<text x="710" y="420" font-size="16" font-weight="800" fill="#868e96" text-anchor="middle">파일 A</text>
+<text x="710" y="446" font-size="14" font-weight="600" fill="#868e96" text-anchor="middle">주문 1, 2</text>
+<rect x="778" y="390" width="104" height="74" fill="#e9ecef" opacity="0.55"/>
+<path d="M703.8 464.0 L777.6 390.0 M714.9 464.0 L789.7 390.0 M725.2 464.0 L799.2 390.0 M736.9 464.0 L811.9 390.0 M747.3 464.0 L822.4 390.0 M759.6 464.0 L832.6 390.0 M771.0 464.0 L844.7 390.0 M780.2 464.0 L854.9 390.0 M792.0 464.0 L866.7 390.0 M803.0 464.0 L876.8 390.0 M813.4 464.0 L888.6 390.0 M825.2 464.0 L899.8 390.0 M836.3 464.0 L910.7 390.0 M847.5 464.0 L920.4 390.0 M857.2 464.0 L931.3 390.0 M869.0 464.0 L943.9 390.0 M879.3 464.0 L953.3 390.0" stroke="#868e96" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c18)"/>
+<path d="M778.1 390.7 Q828.2 390.0 882.4 389.5 M882.9 390.4 Q883.6 425.3 883.2 463.4 M881.5 463.2 Q828.6 462.3 778.8 465.2 M778.4 463.2 Q778.9 425.5 778.6 390.9" stroke="#868e96" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 6"/>
+<path d="M779.3 389.2 Q831.7 389.7 881.0 389.3 M882.1 391.1 Q881.9 426.8 881.1 464.2 M880.8 465.1 Q830.8 465.2 778.2 462.6 M779.5 464.7 Q780.2 428.2 776.9 390.1" stroke="#868e96" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 6"/>
+<text x="830" y="420" font-size="16" font-weight="800" fill="#868e96" text-anchor="middle">파일 B</text>
+<text x="830" y="446" font-size="14" font-weight="600" fill="#868e96" text-anchor="middle">주문 3</text>
+<rect x="898" y="390" width="104" height="74" fill="#e9ecef" opacity="0.55"/>
+<path d="M823.2 464.0 L898.1 390.0 M835.0 464.0 L908.8 390.0 M845.4 464.0 L919.2 390.0 M856.3 464.0 L930.2 390.0 M867.1 464.0 L941.2 390.0 M878.2 464.0 L953.8 390.0 M890.9 464.0 L964.2 390.0 M901.8 464.0 L975.4 390.0 M912.9 464.0 L985.4 390.0 M923.9 464.0 L997.9 390.0 M933.3 464.0 L1008.5 390.0 M945.3 464.0 L1018.7 390.0 M956.9 464.0 L1030.1 390.0 M966.4 464.0 L1041.1 390.0 M977.4 464.0 L1051.2 390.0 M988.4 464.0 L1062.3 390.0 M999.2 464.0 L1073.8 390.0" stroke="#868e96" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c19)"/>
+<path d="M898.2 390.0 Q950.3 389.0 1003.2 389.2 M1002.2 390.0 Q1003.8 426.8 1002.9 463.2 M1002.3 465.2 Q950.8 463.7 898.5 462.9 M898.3 464.6 Q896.8 426.6 898.9 389.2" stroke="#868e96" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 6"/>
+<path d="M898.2 388.6 Q951.0 390.2 1001.7 391.1 M1001.0 388.9 Q1001.6 428.7 1003.0 464.3 M1003.2 463.1 Q948.2 462.6 898.8 465.3 M899.6 465.3 Q898.9 424.9 898.0 389.3" stroke="#868e96" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 6"/>
+<text x="950" y="420" font-size="16" font-weight="800" fill="#868e96" text-anchor="middle">파일 C</text>
+<text x="950" y="446" font-size="14" font-weight="600" fill="#868e96" text-anchor="middle">주문 4</text>
+<rect x="1028" y="390" width="104" height="74" fill="#ffec99" opacity="0.55"/>
+<path d="M953.2 464.0 L1027.6 390.0 M965.7 464.0 L1039.0 390.0 M977.0 464.0 L1049.2 390.0 M987.1 464.0 L1061.5 390.0 M997.5 464.0 L1072.7 390.0 M1010.0 464.0 L1083.7 390.0 M1020.6 464.0 L1094.2 390.0 M1031.5 464.0 L1104.2 390.0 M1042.5 464.0 L1116.1 390.0 M1052.3 464.0 L1127.4 390.0 M1064.8 464.0 L1137.9 390.0 M1074.2 464.0 L1149.7 390.0 M1085.4 464.0 L1159.3 390.0 M1097.6 464.0 L1170.6 390.0 M1107.3 464.0 L1182.4 390.0 M1119.9 464.0 L1192.8 390.0 M1130.9 464.0 L1204.8 390.0" stroke="#f08c00" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c20)"/>
+<path d="M1027.9 390.0 Q1079.1 389.7 1131.8 390.8 M1132.2 389.2 Q1132.3 427.5 1131.4 464.2 M1131.5 464.4 Q1080.6 464.0 1028.2 464.1 M1028.0 465.0 Q1027.9 425.6 1028.3 390.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1028.9 391.5 Q1082.0 390.0 1132.8 388.9 M1132.3 389.8 Q1131.6 425.1 1133.1 463.1 M1130.9 465.2 Q1080.6 465.1 1026.8 464.0 M1029.4 465.3 Q1029.3 425.0 1029.1 389.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1080" y="420" font-size="16" font-weight="800" fill="#1e1e1e" text-anchor="middle">파일 D</text>
+<text x="1080" y="446" font-size="14" font-weight="600" fill="#1e1e1e" text-anchor="middle">주문 1~4</text>
+<text x="895" y="500" font-size="16" font-weight="800" fill="#e03131" text-anchor="middle">파일 A·B·C를 가리키는 스냅샷이 없다</text>
+<text x="895" y="526" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">그래도 parquet 4개는 디스크에 그대로 남았다</text>
+<text x="895" y="550" font-size="15" font-weight="600" fill="#495057" text-anchor="middle">이렇게 남은 파일이 고아 파일 삭제의 대상</text>
+</svg>

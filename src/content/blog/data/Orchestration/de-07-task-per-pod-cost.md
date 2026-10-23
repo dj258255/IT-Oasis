@@ -35,6 +35,18 @@ Ch-02에서 executor를 고르는 것은 태스크를 어디서 돌릴지 고르
 
 태스크가 30분짜리라면 몇 초는 문제가 되지 않습니다. 태스크가 1~2초짜리이고 수백 개라면 기동 시간이 실행 시간보다 커집니다. 얼마나 붙는지 알려면 먼저 그 시간이 어디서 쓰이는지 나눠야 합니다.
 
+이 글에 계속 나오는 쿠버네티스 용어를 먼저 정리해 둡니다. 자세한 설명은 CKA 시리즈에 있습니다.
+
+| 용어 | 이 글에서 필요한 만큼의 뜻 |
+|---|---|
+| Pod | 쿠버네티스가 컨테이너를 띄우는 단위. 컨테이너 하나 이상과 그들이 같이 쓰는 네트워크를 묶은 것 |
+| kubelet | 노드마다 하나씩 도는 에이전트. 자기 노드에 배정된 Pod를 보고 이미지를 받고 컨테이너를 띄운다 |
+| 샌드박스 | Pod의 컨테이너들이 같이 쓸 네트워크 공간. 컨테이너보다 먼저 만들어지고 여기에 Pod IP가 붙는다 |
+| 이미지와 레이어 | 이미지는 여러 레이어(파일 묶음)를 쌓은 것. 노드에 없는 레이어만 레지스트리에서 받는다 |
+| init 컨테이너 | 본 컨테이너보다 먼저 차례로 돌고 끝나야 하는 준비용 컨테이너 |
+
+([CKA Ch-01b](/blog/cert/cka/cka-01b-core-objects-and-flow), [k8s-linux Ch-02](/blog/theory/systems/k8s-linux-02-namespaces-pause))
+
 ## 2. Pod가 컨테이너를 시작하기까지
 
 ### 2-1. 구간과 관측 지점
@@ -55,7 +67,14 @@ Timestamp                   Containers            이벤트                     
 | init 끝 | condition `Initialized` | 모든 init 컨테이너가 성공했다 |
 | 컨테이너 시작 | `containerStatuses[].state.*.startedAt` | |
 
-각 condition에는 상태가 바뀐 시각 `lastTransitionTime`이 있어서 생성 시각과의 차이로 구간을 셀 수 있습니다.
+각 condition에는 상태가 바뀐 시각 `lastTransitionTime`이 있어서 생성 시각과의 차이로 구간을 셀 수 있습니다. Pod 하나의 시각을 한 번에 보려면 이렇게 꺼냅니다.
+
+```bash
+kubectl get pod <이름> -o jsonpath='{.metadata.creationTimestamp}{"\n"}{range .status.conditions[*]}{.type}{"\t"}{.lastTransitionTime}{"\n"}{end}'
+kubectl get events --field-selector involvedObject.name=<이름> | grep -E 'Pulling|Pulled'
+```
+
+첫 줄은 생성 시각을 찍고 그 아래로 condition 이름과 바뀐 시각을 한 줄씩 찍습니다. 두 번째 줄은 그 Pod의 이벤트 가운데 이미지를 받기 시작하고 끝낸 기록만 남깁니다. 예를 들어 `PodScheduled` 시각에서 생성 시각을 빼면 스케줄링에 걸린 초가 나오고 `PodReadyToStartContainers`에서 `PodScheduled`를 빼면 샌드박스 준비에 걸린 초가 나옵니다.
 
 조심할 곳이 하나 있습니다. 쿠버네티스 문서는 init 컨테이너가 없는 Pod에서 kubelet이 샌드박스 생성과 네트워크 설정을 시작하기 전에 `Initialized`를 True로 바꾼다고 적습니다. init 컨테이너가 없는 Pod에서는 `Initialized` 시각이 `PodReadyToStartContainers`보다 앞설 수 있으니 구간 계산에 쓰면 안 됩니다.
 
@@ -78,17 +97,23 @@ total과 SLI 메트릭의 차이가 pull과 init에 쓴 시간입니다.
 - SLI: 스케줄 가능한 stateless Pod의 기동 지연. 이미지 pull과 init 컨테이너 실행 시간을 빼고 Pod 생성 시각부터 모든 컨테이너가 시작했다고 보고되어 watch로 관측될 때까지.
 - SLO: 기본 설치에서 클러스터별 하루 기준 99번째 백분위 5초 이하.
 
+SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은가"라는 목표입니다. 99번째 백분위(p99)는 하루 동안 뜬 Pod를 기동 시간 순으로 줄 세웠을 때 99% 지점의 값이라 Pod 100개 가운데 99개가 5초 안에 시작했다는 뜻입니다(백분위는 Ch-08). 아래 그림은 이 SLI가 2-1절의 구간 가운데 어디를 세고 어디를 빼는지 보여 줍니다.
+
+![Pod 생성부터 모든 컨테이너 시작까지를 스케줄링, 샌드박스, 이미지 pull, init 컨테이너, 컨테이너 시작 다섯 구간으로 나눈 막대. 스케줄링, 샌드박스, 컨테이너 시작은 파란색으로 공식 SLO가 세는 구간이고 이미지 pull과 init 컨테이너는 빨간색으로 SLO에서 빠지는 구간이다. 배치 태스크가 실제로 기다리는 시간은 다섯 구간 전체다](/uploads/data/de-07-task-per-pod-cost/pod-startup-segments.svg)
+
 이 숫자를 보고 "태스크 하나에 최대 5초"로 읽으면 안 됩니다. 배치 태스크는 이미지 pull과 init 컨테이너까지 다 기다립니다. 처음 보는 노드에서 큰 이미지를 받는 경우가 SLO에서 빠진 구간입니다.
 
 ## 3. 이미지 pull
 
 ### 3-1. pull 정책과 순서
 
+먼저 이미지 이름의 두 가지 표기를 구분해 둡니다. `python:3.12`의 `3.12`는 태그이고 태그는 나중에 다른 이미지를 가리키도록 바뀔 수 있습니다. `python@sha256:…`처럼 쓰는 digest는 이미지 내용으로 만든 해시라 절대 바뀌지 않습니다. pull 정책이 태그냐 digest냐에 따라 달라지는 이유가 이것입니다.
+
 | 규칙 | 쿠버네티스 문서 |
 |---|---|
 | 기본 pull 정책 | 태그가 `:latest`이거나 없으면 `Always`, 그 외 태그나 digest면 `IfNotPresent` |
 | `Always`의 실제 동작 | 매번 레지스트리에 태그의 digest를 묻고 없는 레이어만 받는다. 레이어가 다 있어도 레지스트리 왕복은 생긴다 |
-| pull 순서 | kubelet은 기본적으로 이미지를 하나씩 받는다. `serializeImagePulls: false`로 병렬을 켜고 `maxParallelImagePulls`로 상한을 둔다 |
+| pull 순서 | kubelet은 기본적으로 이미지를 하나씩 받는다. `serializeImagePulls: false`로 병렬을 켜고 `maxParallelImagePulls`로 상한을 둔다. 상한 설정은 1.27에서 들어왔다([1.27 소개 글](https://kubernetes.io/blog/2023/05/15/speed-up-pod-startup/)) |
 | Pod 하나 안 | 병렬 pull을 켜도 한 Pod를 위해 여러 이미지를 동시에 받지 않는다 |
 
 마지막 줄은 Argo처럼 Pod 하나에 컨테이너가 여럿인 경우에 해당합니다. init 이미지와 main 이미지가 다르면 차례로 받습니다.
@@ -98,6 +123,8 @@ total과 SLI 메트릭의 차이가 pull과 init에 쓴 시간입니다.
 ### 3-2. lazy pulling
 
 이미지를 다 받기 전에 컨테이너를 시작하고 필요한 파일만 먼저 받는 방식입니다.
+
+이게 통하는 이유는 컨테이너가 시작할 때 이미지 파일 대부분을 읽지 않는다는 데 있습니다. `python:3.12` 이미지에는 컴파일러, 문서, 쓰지 않는 표준 라이브러리 모듈이 다 들어 있지만 `print("hello")`를 실행하는 데 필요한 파일은 그중 일부입니다. 2016년 FAST 학회에 실린 Slacker 논문은 컨테이너 시작 시간의 76%가 이미지를 받는 데 쓰이는데 받은 데이터 가운데 실제로 읽히는 것은 6.4%뿐이라고 측정했습니다([Harter 외, Slacker](https://www.usenix.org/conference/fast16/technical-sessions/presentation/harter)). 오래된 측정이라 지금 숫자는 다를 수 있지만 "다 받고 조금 읽는다"는 구조는 그대로입니다. 그래서 읽는 순간에 그 파일만 받아 오자는 것이 lazy pulling입니다.
 
 | 방식 | 내용 | 확인한 수치 |
 |---|---|---|
@@ -117,7 +144,7 @@ KubernetesExecutor는 태스크마다 워커 Pod를 하나 띄우고 태스크�
 - 루프 안에서는 생성 호출을 순서대로 보내고 API 서버가 429를 주면 그 루프의 생성을 멈춥니다.
 - 10.21.0부터 `async_pod_creation`(기본 False)과 `pod_creation_max_concurrency`가 생겼습니다. 켜면 생성 호출을 동시에 보냅니다. 설정 설명은 호출마다 지연이 클 때(네트워크 왕복, admission webhook) 스케줄러 루프가 막히는 시간을 줄인다고 적습니다.
 
-태스크 수백 개가 한꺼번에 준비되면, 2절의 구간이 시작되기도 전에 Pod 생성 요청을 기다리는 줄이 생길 수 있습니다. `kubernetes_executor.pod_creation_batch_duration` 메트릭으로 볼 수 있습니다.
+배치 크기 1이 무슨 뜻인지 숫자로 보면 이렇습니다. 태스크 300개가 한꺼번에 `queued`가 되면 스케줄러는 루프 한 번에 하나씩 Pod 생성을 요청하니 300번째 태스크의 Pod는 루프를 300번 돈 뒤에야 생성 요청이 나갑니다. 2절의 구간이 시작되기도 전에 Pod 생성 요청을 기다리는 줄이 생기는 것입니다. 루프 한 번이 몇 초인지는 환경마다 달라서 이 줄이 실제로 몇 초가 되는지는 직접 재 봐야 합니다. `kubernetes_executor.pod_creation_batch_duration` 메트릭으로 볼 수 있습니다.
 
 ### 4-2. KubernetesPodOperator를 KubernetesExecutor 위에서 쓰면
 
@@ -220,6 +247,8 @@ SLO는 기본 설치에서 pull과 init을 뺀 값이고 stateless Pod 기준입
 - [GKE Image streaming](https://docs.cloud.google.com/kubernetes-engine/docs/how-to/image-streaming)
 
 사례
+- Tyler Harter 외, [Slacker: Fast Distribution with Lazy Docker Containers](https://www.usenix.org/conference/fast16/technical-sessions/presentation/harter), USENIX FAST 2016
+- Kubernetes Blog, [Kubernetes 1.27: updates on speeding up Pod startup](https://kubernetes.io/blog/2023/05/15/speed-up-pod-startup/) (2023)
 - AWS Containers Blog, [Under the hood: Lazy loading container images with Seekable OCI and AWS Fargate](https://aws.amazon.com/blogs/containers/under-the-hood-lazy-loading-container-images-with-seekable-oci-and-aws-fargate/) (2023)
 - Grab Engineering, [Docker lazy loading](https://engineering.grab.com/docker-lazy-loading) (2026)
 - LINE Engineering, [Kubernetes를 이용한 효율적인 데이터 엔지니어링(Airflow on Kubernetes VS Airflow Kubernetes Executor) - 2](https://engineering.linecorp.com/ko/blog/data-engineering-with-airflow-k8s-2/) (2021)

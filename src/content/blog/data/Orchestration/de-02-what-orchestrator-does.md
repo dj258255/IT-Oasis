@@ -38,6 +38,10 @@ seriesOrder: 2
 0 2 * * *  python daily_sales.py      # C
 ```
 
+cron 한 줄의 앞 다섯 칸은 차례로 분, 시, 일, 월, 요일입니다. `*`는 "아무 값이나"라는 뜻이라 `0 1 * * *`는 매일 1시 0분, `30 1 * * *`는 매일 1시 30분에 명령을 실행합니다([crontab 사용법 정리](https://www.daleseo.com/linux-crontab/)).
+
+여기서 눈여겨볼 것은 cron이 아는 정보가 이 시각표뿐이라는 점입니다. A가 몇 시에 끝났는지, 성공했는지는 cron이 모릅니다. 그래서 사람이 "A는 보통 20분이면 끝나니 B는 30분 뒤에 걸자"처럼 여유를 짐작해서 시각을 띄워 둡니다. 순서를 시각 차이로 흉내 내는 셈입니다.
+
 처음에는 잘 돕니다. 문제는 A가 30분 넘게 걸린 날 생깁니다.
 
 | 빠진 것 | cron에서 생기는 일 |
@@ -62,9 +66,42 @@ extract_orders ──→ clean ──→ daily_sales
 
 순환이 없어야 하는 이유는 스케줄러가 하는 일에서 나옵니다. 스케줄러는 "앞 태스크가 모두 성공한 태스크"를 찾아 실행합니다. B가 C를 기다리고 C가 B를 기다리면 둘 다 영원히 시작할 수 없습니다. 순환이 없으면 위상 정렬로 항상 실행 순서를 만들 수 있습니다.
 
+위상 정렬은 이름이 어려워 보이지만 하는 일은 단순합니다. 기다릴 것이 없는 태스크를 꺼냅니다. 그 태스크에서 나가는 화살표를 지운 뒤 다시 기다릴 것이 없는 태스크를 꺼냅니다. 이 일을 태스크가 다 나올 때까지 반복합니다. 상품 정보까지 합쳐 집계하는 조금 큰 DAG로 따라가 보겠습니다.
+
+```
+extract_orders ───┐
+                  ├──→ clean ──→ daily_sales
+extract_products ─┘          └──→ category_sales
+```
+
+| 차례 | 기다릴 것이 없는 태스크 | 꺼낸 뒤 지워지는 화살표 |
+|---|---|---|
+| 1 | `extract_orders`, `extract_products` | 두 태스크에서 `clean`으로 가는 화살표 |
+| 2 | `clean` | `clean`에서 두 집계로 가는 화살표 |
+| 3 | `daily_sales`, `category_sales` | 없음. 끝 |
+
+같은 차례에 나온 태스크끼리는 서로 기다리지 않으니 동시에 돌려도 됩니다. 1차례의 추출 두 개와 3차례의 집계 두 개가 그렇습니다. 오케스트레이터가 병렬로 돌릴 수 있는 태스크를 알아내는 근거가 이것입니다.
+
+순환이 있으면 어느 차례에선가 "기다릴 것이 없는 태스크"가 하나도 남지 않은 채 멈춥니다. 그래서 Airflow는 DAG 파일을 읽을 때 순환을 검사하고 순환이 있으면 그 DAG를 등록하지 않고 import 오류로 보여 줍니다. 실제 스케줄러는 순서표를 미리 다 만들어 두지 않고 루프를 돌 때마다 "앞 태스크가 다 끝난 태스크"를 찾지만 결과로 나오는 순서는 위 표와 같습니다.
+
 반복이 필요한 흐름도 있습니다. Netflix가 2024년 공개한 Maestro는 DAG와 함께 순환 워크플로, for-each 반복, 하위 워크플로도 지원합니다. 순환을 허용하는 엔진이 실행 순서와 종료를 어떻게 정하는지는 이번에 확인하지 못했습니다.
 
 ## 3. Airflow 3의 부품
+
+### 3-0. 새벽 1시 한 번의 실행을 위에서부터 따라가기
+
+부품 표를 먼저 보면 이름만 여섯 개라 감이 오지 않습니다. 1절의 일일 매출 DAG가 새벽 1시에 한 번 돌 때 무슨 일이 어떤 순서로 일어나는지 먼저 따라가고 그다음 부품별로 내려가겠습니다.
+
+1. 미리 해 둔 일: DAG 프로세서가 DAG 파일(파이썬)을 읽어 "태스크가 셋이고 A → B → C 순서"라는 구조를 메타DB에 적어 둡니다. 메타DB는 Airflow가 쓰는 관계형 DB(보통 PostgreSQL)이고 DAG 구조, 실행 기록, 태스크 상태가 전부 여기에 쌓입니다.
+2. 1시 정각: 스케줄러가 "이 DAG의 다음 실행 시각이 됐다"를 보고 DAG run 하나를 만듭니다. DAG run은 "10월 1일치 실행 한 번"이라는 기록이고 그 안의 태스크 하나하나의 실행 기록을 태스크 인스턴스라고 부릅니다.
+3. 스케줄러가 앞 태스크가 없는 A를 `scheduled`로 바꾸고 executor에 넘깁니다. 넘긴 순간 `queued`가 됩니다.
+4. 워커가 A를 받아 실행합니다(`running`). 실행하는 동안 워커는 API 서버로 "살아 있다"는 heartbeat를 보내고 끝나면 결과를 보고합니다. 그 보고가 메타DB에 `success`로 남습니다.
+5. 스케줄러가 다음 루프에서 "A가 성공했으니 B를 돌려도 된다"를 보고 B를 `scheduled`로 바꿉니다. 이후 3~4를 B와 C에서 반복합니다.
+6. B가 실패했고 재시도가 남아 있으면 `up_for_retry`로 기다렸다가 다시 `scheduled`가 됩니다. 재시도를 다 쓰면 `failed`가 되고 C는 `upstream_failed`로 시작하지 않습니다.
+
+![태스크 인스턴스 상태 흐름. none에서 scheduled, queued, running을 거쳐 success가 된다. running에서 실패하면 재시도가 남았을 때 up_for_retry로 갔다가 시간이 되면 다시 scheduled가 되고 재시도가 없으면 failed가 된다. 외부 일을 기다릴 때는 deferred로 가서 triggerer가 기다리다 조건이 되면 다시 scheduled가 된다](/uploads/data/de-02-what-orchestrator-does/task-states.svg)
+
+상태 이름은 3.2 문서의 태스크 인스턴스 상태 목록에서 자주 보는 것만 골랐습니다([Airflow Tasks](https://airflow.apache.org/docs/apache-airflow/3.2.0/core-concepts/tasks.html)). 이 흐름을 머리에 두면 아래 부품 표가 "누가 어느 화살표를 맡는가"로 읽힙니다. 스케줄러는 `scheduled`와 `queued`로 가는 화살표를, 워커는 `running`을, API 서버는 워커의 보고를 받는 창구를, 메타DB는 모든 상태를 적어 두는 장부를 맡습니다.
 
 ### 3-1. 부품별 역할
 
@@ -75,8 +112,8 @@ Airflow 3.2 공식 문서의 Architecture Overview 기준입니다.
 | 스케줄러(scheduler) | 어떤 태스크를 지금 돌릴지 정하고 executor에 넘긴다. executor는 별도 서비스가 아니고 스케줄러 프로세스 안에서 돈다 | 필수 |
 | DAG 프로세서(dag-processor) | DAG 파일(파이썬)을 읽어 구조를 메타DB에 저장한다. 3.x에서는 모든 배포에 필요하다 | 필수 |
 | API 서버(api-server) | UI와 REST API를 제공한다. 태스크도 이 API로 상태를 보고한다 | 필수(UI 포함) |
-| triggerer | deferred 태스크의 대기를 asyncio 이벤트 루프 하나로 모아 처리한다 | deferred 태스크를 쓸 때만 |
-| 메타DB | DAG 구조, 실행 기록, 태스크 상태, XCom이 쌓인다 | 필수 |
+| triggerer | deferred 태스크의 대기를 asyncio 이벤트 루프 하나로 모아 처리한다. deferred는 외부 일(파일 도착, 외부 잡 완료)을 기다리는 동안 워커를 놓고 잠든 상태다 | deferred 태스크를 쓸 때만 |
+| 메타DB | DAG 구조, 실행 기록, 태스크 상태, XCom(태스크끼리 주고받는 작은 값, 5절)이 쌓인다 | 필수 |
 | 워커 | 태스크를 실제로 실행한다. 기본 설치에서는 스케줄러 안에 있을 수 있다 | executor에 따라 |
 
 ### 3-2. executor는 "태스크를 어디서 돌릴지"를 정한다
@@ -111,19 +148,35 @@ Airflow Summit 2025 세션 "Security made us do it"이 이유를 둘로 정리�
 - 동시 실행 수와 pool 한도를 지키는 구간은 `SELECT ... FOR UPDATE`로 한 번에 한 스케줄러만 들어갑니다.
 - 태스크를 집을 때는 `SKIP LOCKED`로 다른 스케줄러가 잠근 행을 건너뛰어 서로 다른 태스크를 동시에 가져갑니다.
 
+두 문장이 낯설면 줄 서기를 떠올리면 됩니다. `scheduled` 상태의 태스크 네 개(t1~t4)가 메타DB에 있고 스케줄러 S1과 S2가 동시에 일감을 찾는 장면입니다.
+
+| | S1 | S2 |
+|---|---|---|
+| `FOR UPDATE`만 쓸 때 | t1, t2를 잠그고 가져간다 | t1, t2의 잠금이 풀릴 때까지 기다린다. 사실상 한 줄로 선다 |
+| `FOR UPDATE SKIP LOCKED` | t1, t2를 잠그고 가져간다 | 잠긴 t1, t2는 건너뛰고 t3, t4를 바로 가져간다 |
+
+`FOR UPDATE`는 "내가 읽은 행은 내 트랜잭션이 끝날 때까지 다른 사람이 못 가져간다"는 잠금이고 `SKIP LOCKED`는 "이미 누가 잠근 행은 기다리지 말고 결과에서 빼라"는 옵션입니다. 두 스케줄러가 같은 태스크를 집는 일은 잠금이 막고 서로 기다리느라 느려지는 일은 `SKIP LOCKED`가 막습니다. 작업 큐 테이블을 여러 워커가 나눠 가져가는 흔한 패턴과 같습니다([Percona, Using SKIP LOCK for queue processing in MySQL](https://www.percona.com/blog/using-skip-lock-for-queue-processing-in-mysql/)).
+
 그래서 이 잠금을 지원하는 PostgreSQL 12 이상, MySQL 8.0 이상에서만 여러 스케줄러를 쓸 수 있습니다. MariaDB는 10.6에서야 `SKIP LOCKED`를 넣었고 그 전에는 데드락이 보고됐습니다.
 
 ### 3-5. 실행 중인 태스크가 죽은 걸 알아채는 방식
 
 태스크가 도는 동안 워커는 주기적으로 heartbeat를 보냅니다. 일정 시간 heartbeat가 끊기면 스케줄러가 그 태스크를 정리합니다. 재시도 횟수가 남았으면 재시도로, 아니면 실패로 바꿉니다. 예전에는 이런 태스크를 zombie task라고 불렀고 3.x 문서는 Task Instance Heartbeat Timeout이라고 부릅니다. 관련 설정은 `[scheduler] task_instance_heartbeat_timeout`(기준 시간), `task_instance_heartbeat_sec`(보내는 주기), `task_instance_heartbeat_timeout_detection_interval`(검사 주기)입니다.
 
-OOM으로 프로세스가 죽었을 때, 쿠버네티스가 liveness probe 실패로 워커를 재시작했을 때, 노드 축소로 워커가 옮겨질 때 이 경로를 탑니다.
+heartbeat가 필요한 이유는 "죽은 워커는 죽었다고 말할 수 없다"는 데 있습니다. 워커가 태스크를 끝내면 성공이나 실패를 보고하지만 워커 프로세스가 통째로 사라지면 아무 보고도 오지 않습니다. 그러면 메타DB에는 그 태스크가 영원히 `running`으로 남습니다. 그래서 거꾸로 "살아 있는 동안 계속 신호를 보내라, 신호가 끊기면 죽은 것으로 본다"고 정해 둔 것입니다.
+
+OOM(메모리 부족으로 운영체제가 프로세스를 강제로 끝내는 것)으로 프로세스가 죽었을 때, 쿠버네티스가 liveness probe 실패로 워커를 재시작했을 때, 노드 축소로 워커가 옮겨질 때 이 경로를 탑니다.
 
 ## 4. Argo Workflows의 부품과 상태 저장
 
 ### 4-1. 컨트롤러와 서버
 
-Argo Workflows는 처음부터 쿠버네티스 위에서만 돌도록 만들어졌습니다.
+Argo Workflows는 처음부터 쿠버네티스 위에서만 돌도록 만들어졌습니다. 그래서 Argo를 이해하려면 쿠버네티스의 두 가지 버릇을 먼저 알아야 합니다.
+
+- 쿠버네티스에서는 "이렇게 되어 있으면 좋겠다"는 원하는 상태를 리소스(YAML)로 API 서버에 저장합니다. 이 저장소가 etcd입니다.
+- 컨트롤러라는 프로그램이 원하는 상태와 지금 상태를 계속 비교하고 차이를 메우는 쪽으로 움직입니다. 이 반복을 reconcile이라고 부릅니다([CKA Ch-01b](/blog/cert/cka/cka-01b-core-objects-and-flow)).
+
+Argo는 "워크플로"라는 새 리소스 종류를 쿠버네티스에 등록하고(CRD, 사용자 정의 리소스) 그 리소스를 지켜보는 컨트롤러를 하나 둡니다. 워크플로를 제출하면 컨트롤러가 "1단계 Pod가 있어야 하는데 없다"를 보고 Pod를 만듭니다. 그 Pod가 끝나면 "2단계 Pod가 있어야 한다"를 보고 다음 Pod를 만듭니다.
 
 | 부품 | 하는 일 |
 |---|---|
@@ -138,11 +191,13 @@ Argo Workflows는 처음부터 쿠버네티스 위에서만 돌도록 만들어�
 | main | 사용자 이미지. `argoexec`가 마운트되어 지정한 명령을 하위 프로세스로 실행한다 |
 | wait | main이 끝나길 기다렸다가 출력 파라미터와 artifact를 저장한다 |
 
+컨테이너가 셋이나 되는 이유는 main이 사용자 이미지라는 데 있습니다. Argo는 사용자가 고른 이미지 안에 S3 업로드 도구가 있는지 알 수 없습니다. 그래서 입력을 받아 오는 일은 main보다 먼저 도는 init이, 결과를 올리는 일은 옆에서 기다리는 wait가 맡고 둘 다 Argo가 만든 이미지를 씁니다. 이 구조가 Pod마다 기동 시간을 더한다는 이야기는 Ch-07에서 다시 나옵니다.
+
 ### 4-2. 상태가 etcd에 있다는 것
 
 Airflow는 실행 상태를 자체 메타DB에 둡니다. Argo는 워크플로를 쿠버네티스 리소스로 etcd에 저장하고 단계별 상태도 그 리소스의 `status`에 들어갑니다.
 
-여기서 제약이 생깁니다. 쿠버네티스 리소스 하나는 약 1MB를 넘을 수 없습니다. 단계가 아주 많은 워크플로는 노드 상태가 이 한도를 넘는데 그러면 Argo는 먼저 상태를 압축하고 그래도 크면 별도 SQL DB로 내보냅니다(offloading). 완료된 워크플로를 오래 보관하려면 Workflow Archive를 켜서 PostgreSQL이나 MySQL에 저장해야 합니다. 둘 다 켜지 않으면 상태는 etcd에만 있습니다.
+여기서 제약이 생깁니다. etcd는 쿠버네티스 전체 설정을 담는 작은 저장소로 만들어져서 리소스 하나는 약 1MB를 넘을 수 없습니다. 단계가 아주 많은 워크플로는 노드 상태가 이 한도를 넘는데 그러면 Argo는 먼저 상태를 압축하고 그래도 크면 별도 SQL DB로 내보냅니다(offloading). 완료된 워크플로를 오래 보관하려면 Workflow Archive를 켜서 PostgreSQL이나 MySQL에 저장해야 합니다. 둘 다 켜지 않으면 상태는 etcd에만 있습니다.
 
 | | Airflow 3 | Argo Workflows |
 |---|---|---|
@@ -229,7 +284,7 @@ def shop_daily_sales():
 | 快手(2022) | Airflow 단일 클러스터의 DAG가 1만 개 가까이 되자 태스크 하나의 스케줄링 지연 P99가 5분까지 올랐고 스케줄러에 HA가 없어 연간 장애가 약 8건(가용성 99.5%)이었습니다. 자체 엔진 Kwaiflow로 피크 지연 P99 5초 미만, 기동 속도 분당 십수만 건(Airflow는 분당 수천 건), 가용성 99.99%를 적었습니다 |
 | 有赞(2021) | Airflow 1.7 + Celery 구성에서 스케줄러 HA를 Active/Standby로 붙였는데 프로세스가 살아 있는지만 봐서 교착으로 멈춘 스케줄러를 알아채지 못했습니다. Airflow 2.0 전에는 DAG 파싱이 한 곳에서만 돌아 스캔 지연이 60~70초까지 갔습니다. Apache DolphinScheduler로 옮겼습니다 |
 
-두 사례가 짚은 것은 3-4절(스케줄러 여러 대)과 3-1절(DAG 프로세서)입니다. Airflow 2와 3은 스케줄러 HA와 별도 DAG 프로세서를 넣어 이 문제들을 풀었습니다. 1절의 Spotify처럼 규모가 커지면 오케스트레이터 자체의 한계가 먼저 드러납니다.
+두 사례가 짚은 것은 3-4절(스케줄러 여러 대)과 3-1절(DAG 프로세서)입니다. Airflow 2와 3은 스케줄러 HA와 별도 DAG 프로세서를 넣어 이 문제들을 풀었습니다. 10절의 Spotify처럼 규모가 커지면 오케스트레이터 자체의 한계가 먼저 드러납니다.
 
 ### 8-2. 직접 만든 스케줄러의 구조
 
@@ -274,6 +329,7 @@ Spotify가 오케스트레이터를 바꾼 글이 좋은 예입니다. 하루 2�
 - [AIP-72 Task Execution Interface aka Task SDK](https://cwiki.apache.org/confluence/spaces/AIRFLOW/pages/311626182/AIP-72+Task+Execution+Interface+aka+Task+SDK)
 - [Airflow Summit 2025, Security made us do it: Airflow's new task execution architecture](https://airflowsummit.org/sessions/2025/security-made-us-do-it-airflows-new-task-execution-architecture/)
 - [Airflow Summit 2021 스케줄러 발표 자료](https://airflowsummit.org/slides/2021/d2-Scheduler.pdf)
+- [Astronomer, Deferrable operators](https://www.astronomer.io/docs/learn/deferrable-operators)
 - [Argo Workflows Architecture](https://argo-workflows.readthedocs.io/en/latest/architecture/)
 - [Argo Workflows Offloading Large Workflows](https://argo-workflows.readthedocs.io/en/latest/offloading-large-workflows/)
 - [Argo Workflows Workflow Archive](https://argo-workflows.readthedocs.io/en/latest/workflow-archive/)
@@ -286,6 +342,8 @@ Spotify가 오케스트레이터를 바꾼 글이 좋은 예입니다. 하루 2�
 - [쏘카, Airflow와 함께한 데이터 환경 구축기](https://tech.socar.kr/data/2021/06/01/data-engineering-with-airflow) (2021)
 - [쏘카, 전사 구성원들이 사용하는 배치 데이터 플랫폼 만들기](https://tech.socarcorp.kr/data/2022/11/09/advanced-airflow-for-databiz.html) (2022)
 - [Wikipedia, Apache Airflow](https://en.wikipedia.org/wiki/Apache_Airflow)
+- [Percona, Using SKIP LOCK for Queue Processing in MySQL](https://www.percona.com/blog/using-skip-lock-for-queue-processing-in-mysql/) (2020)
+- [Dale Seo, crontab 명령어 사용법](https://www.daleseo.com/linux-crontab/)
 
 이 시리즈
 - [CKA Ch-01 쿠버네티스는 왜 필요한가](/blog/cert/cka/cka-01-why-kubernetes)
