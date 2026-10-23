@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<defs><clipPath id="c1"><rect x="53" y="83" width="244" height="64"/></clipPath><clipPath id="c6"><rect x="333" y="83" width="244" height="64"/></clipPath><clipPath id="c11"><rect x="613" y="83" width="244" height="64"/></clipPath><clipPath id="c16"><rect x="893" y="83" width="244" height="64"/></clipPath></defs>
+<rect width="1200" height="640" fill="#ffffff"/>
+<text x="600" y="44" font-size="25" font-weight="800" fill="#1e1e1e" text-anchor="middle">문제의 조건 문구가 영역을 정하고 영역이 챕터를 정한다</text>
+<rect x="50" y="80" width="250" height="70" fill="#ffc9c9" opacity="0.55"/>
+<path d="M-20.7 150.0 L50.4 80.0 M-8.7 150.0 L61.0 80.0 M1.4 150.0 L72.6 80.0 M13.6 150.0 L83.0 80.0 M24.0 150.0 L93.5 80.0 M34.0 150.0 L104.7 80.0 M46.2 150.0 L115.1 80.0 M57.6 150.0 L126.5 80.0 M67.5 150.0 L137.1 80.0 M80.0 150.0 L149.5 80.0 M90.8 150.0 L160.2 80.0 M100.1 150.0 L170.7 80.0 M112.0 150.0 L181.2 80.0 M123.9 150.0 L192.7 80.0 M133.3 150.0 L204.6 80.0 M144.2 150.0 L215.9 80.0 M155.9 150.0 L226.1 80.0 M166.7 150.0 L237.0 80.0 M177.4 150.0 L247.1 80.0 M189.7 150.0 L258.5 80.0 M200.6 150.0 L269.4 80.0 M211.9 150.0 L281.8 80.0 M222.5 150.0 L292.5 80.0 M233.2 150.0 L303.5 80.0 M243.2 150.0 L314.0 80.0 M255.7 150.0 L324.4 80.0 M266.8 150.0 L336.8 80.0 M276.8 150.0 L346.7 80.0 M287.9 150.0 L357.8 80.0 M300.0 150.0 L368.8 80.0" stroke="#e03131" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c1)"/>
+<path d="M50.5 81.2 Q173.1 78.4 300.0 80.0 M299.3 80.3 Q300.2 116.0 300.1 150.3 M299.6 151.0 Q173.7 148.7 49.6 150.2 M49.0 150.8 Q49.2 113.4 50.7 79.7" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M51.2 81.4 Q176.0 80.9 299.7 81.5 M301.2 80.0 Q302.4 115.5 299.6 149.2 M298.7 151.0 Q177.0 148.2 50.9 149.9 M49.2 149.3 Q51.8 112.7 49.7 79.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="175" y="124" font-size="23" font-weight="800" fill="#1e1e1e" text-anchor="middle">보안 30%</text>
+<path d="M61.0 181.2 Q173.3 179.4 290.6 179.9 M290.1 180.5 Q289.0 213.8 288.9 243.3 M290.9 244.2 Q176.4 245.2 59.8 244.2 M60.1 243.5 Q61.4 211.2 60.6 178.8" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M58.5 180.3 Q176.0 182.4 290.4 181.1 M289.7 181.4 Q290.4 210.7 291.3 242.9 M288.5 243.8 Q172.9 241.9 58.9 245.1 M60.1 243.5 Q60.8 210.1 60.0 179.1" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="175" y="219" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“최소 권한, 다른 계정”</text>
+<path d="M59.7 264.5 Q173.7 262.7 290.1 262.9 M290.7 264.7 Q290.8 297.5 288.8 327.9 M289.2 328.5 Q173.3 329.1 59.4 328.5 M59.7 327.5 Q59.3 294.2 61.0 263.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M61.4 262.7 Q175.0 264.3 290.3 264.0 M289.4 264.6 Q291.2 298.4 290.1 328.2 M291.5 327.5 Q172.7 329.6 59.4 329.5 M58.7 329.0 Q58.0 293.8 60.8 263.8" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="175" y="303" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“암호화 키를 직접 관리”</text>
+<path d="M60.3 347.9 Q175.5 346.1 290.0 347.7 M288.9 347.8 Q289.6 378.9 289.4 412.5 M289.9 411.4 Q176.3 412.9 59.7 412.0 M59.0 412.0 Q60.5 381.9 60.0 348.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M60.4 348.8 Q177.0 349.5 290.5 349.1 M289.2 349.3 Q291.0 381.0 289.6 412.4 M291.5 410.5 Q176.7 414.4 59.4 411.4 M60.2 410.7 Q59.4 378.2 59.4 349.4" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="175" y="387" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“버킷은 비공개로 두고 배포”</text>
+<path d="M174.3 420.8 Q175.7 438.9 175.4 457.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M175.5 419.4 Q174.3 439.6 176.2 457.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M175.0 458.0 L168.5 445.9" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M175.0 458.0 L180.5 445.7" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<rect x="95" y="462" width="160" height="60" fill="#ffc9c9" opacity="0.55"/>
+<path d="M94.5 461.7 Q173.8 462.4 256.1 461.9 M254.5 461.2 Q254.7 492.5 254.7 521.5 M253.9 522.7 Q173.8 523.8 96.0 522.5 M93.9 522.3 Q93.1 492.0 95.5 461.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M93.7 461.4 Q172.4 462.2 254.9 463.2 M255.9 463.0 Q254.3 490.1 255.1 520.6 M255.2 521.1 Q173.4 521.5 95.9 523.1 M93.5 522.3 Q97.2 494.0 93.7 463.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="175" y="500" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">Ch-01</text>
+<rect x="330" y="80" width="250" height="70" fill="#b2f2bb" opacity="0.55"/>
+<path d="M260.5 150.0 L330.5 80.0 M270.4 150.0 L340.1 80.0 M282.6 150.0 L352.2 80.0 M293.2 150.0 L362.9 80.0 M304.6 150.0 L373.7 80.0 M314.5 150.0 L384.7 80.0 M325.6 150.0 L396.3 80.0 M337.8 150.0 L406.1 80.0 M347.1 150.0 L418.0 80.0 M359.4 150.0 L428.4 80.0 M369.5 150.0 L439.1 80.0 M380.1 150.0 L451.0 80.0 M392.4 150.0 L462.3 80.0 M402.3 150.0 L472.2 80.0 M414.9 150.0 L484.1 80.0 M424.8 150.0 L495.4 80.0 M436.5 150.0 L506.0 80.0 M446.2 150.0 L517.7 80.0 M457.4 150.0 L527.1 80.0 M468.7 150.0 L539.1 80.0 M480.3 150.0 L549.3 80.0 M491.4 150.0 L561.0 80.0 M501.3 150.0 L572.7 80.0 M513.6 150.0 L583.8 80.0 M524.4 150.0 L593.4 80.0 M535.6 150.0 L605.8 80.0 M546.1 150.0 L616.8 80.0 M557.9 150.0 L626.8 80.0 M568.9 150.0 L638.9 80.0 M579.6 150.0 L648.0 80.0" stroke="#2f9e44" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c6)"/>
+<path d="M330.3 80.6 Q454.4 80.5 580.4 79.2 M580.9 79.3 Q581.7 115.1 581.2 150.1 M580.9 149.7 Q456.1 151.0 329.0 149.8 M330.8 149.7 Q328.7 115.2 329.1 78.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M328.5 80.5 Q454.6 80.4 579.1 78.8 M581.2 80.0 Q582.2 115.1 578.8 149.2 M580.8 150.8 Q454.6 150.7 330.5 149.2 M330.0 149.3 Q329.6 114.4 330.1 79.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="455" y="124" font-size="23" font-weight="800" fill="#1e1e1e" text-anchor="middle">복원력 26%</text>
+<path d="M340.2 180.7 Q453.1 181.3 570.6 180.6 M569.7 178.8 Q572.0 211.5 570.4 244.2 M569.3 243.3 Q455.3 246.0 340.6 244.7 M339.7 244.8 Q339.9 210.2 340.0 179.9" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M340.3 180.6 Q454.4 180.7 571.1 180.8 M570.9 180.9 Q569.3 210.7 571.3 243.1 M568.7 243.4 Q456.8 246.0 340.4 242.9 M340.6 243.4 Q341.7 210.8 339.1 179.1" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="455" y="219" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“AZ 하나가 멈춰도”</text>
+<path d="M339.3 264.4 Q455.0 264.9 569.6 264.4 M569.1 262.9 Q569.5 294.8 570.5 327.8 M570.4 326.9 Q453.5 329.5 340.5 328.2 M341.1 327.7 Q339.8 296.0 340.3 264.3" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M340.8 264.4 Q454.3 263.2 569.9 264.0 M568.5 264.4 Q568.6 297.5 569.9 327.1 M568.7 328.0 Q455.5 328.4 339.0 328.9 M339.1 326.6 Q339.1 295.1 339.0 262.9" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="455" y="303" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“급증에도 주문을 잃지 않게”</text>
+<path d="M339.3 347.1 Q455.5 349.4 570.1 347.1 M569.3 348.5 Q569.6 381.0 570.1 411.0 M569.0 411.3 Q454.0 412.4 340.2 412.8 M338.8 411.5 Q340.1 380.7 339.6 349.0" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M338.5 348.0 Q454.3 349.5 571.2 348.8 M571.3 346.7 Q570.4 378.3 571.4 412.9 M569.0 411.5 Q456.1 412.2 340.5 412.5 M338.6 411.3 Q339.4 381.6 338.7 347.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="455" y="387" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“RPO 15분, RTO 1시간”</text>
+<path d="M454.4 419.7 Q455.9 439.8 454.3 458.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M454.7 421.0 Q454.7 437.8 454.8 458.5" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M455.0 458.0 L449.1 445.4" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M455.0 458.0 L461.2 445.2" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<rect x="375" y="462" width="160" height="60" fill="#b2f2bb" opacity="0.55"/>
+<path d="M374.5 461.6 Q453.8 462.0 534.2 463.0 M533.9 461.3 Q534.7 490.8 535.9 521.6 M535.4 521.9 Q455.7 520.9 375.6 522.1 M375.2 522.8 Q374.5 491.1 375.5 462.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M376.1 460.9 Q454.1 464.0 535.6 462.8 M536.2 461.2 Q535.9 494.4 536.5 521.5 M534.0 521.7 Q454.4 524.5 375.4 521.3 M375.4 522.8 Q373.8 493.5 375.9 463.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="455" y="500" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">Ch-02</text>
+<rect x="610" y="80" width="250" height="70" fill="#a5d8ff" opacity="0.55"/>
+<path d="M540.8 150.0 L610.6 80.0 M552.0 150.0 L621.0 80.0 M562.4 150.0 L632.0 80.0 M573.9 150.0 L643.3 80.0 M583.9 150.0 L654.3 80.0 M594.6 150.0 L664.3 80.0 M605.8 150.0 L675.3 80.0 M616.0 150.0 L686.2 80.0 M627.9 150.0 L698.5 80.0 M638.1 150.0 L709.3 80.0 M649.2 150.0 L720.0 80.0 M660.6 150.0 L730.9 80.0 M672.4 150.0 L741.8 80.0 M682.8 150.0 L753.5 80.0 M693.2 150.0 L763.7 80.0 M705.4 150.0 L775.7 80.0 M717.0 150.0 L785.5 80.0 M727.3 150.0 L796.6 80.0 M738.4 150.0 L808.7 80.0 M748.3 150.0 L818.7 80.0 M760.9 150.0 L829.7 80.0 M771.3 150.0 L841.6 80.0 M781.6 150.0 L852.6 80.0 M792.0 150.0 L862.7 80.0 M803.3 150.0 L873.7 80.0 M814.4 150.0 L884.1 80.0 M826.6 150.0 L895.3 80.0 M837.1 150.0 L907.1 80.0 M848.7 150.0 L918.7 80.0 M859.2 150.0 L928.3 80.0" stroke="#1971c2" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c11)"/>
+<path d="M611.0 79.5 Q736.0 78.4 859.4 79.3 M860.9 80.6 Q859.6 116.2 860.6 149.4 M859.8 150.9 Q734.3 149.2 611.2 149.0 M609.9 150.5 Q611.9 116.7 610.7 79.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M611.2 81.3 Q735.6 82.5 858.7 80.7 M859.0 80.2 Q859.9 117.1 858.8 150.9 M859.4 148.9 Q736.2 147.6 610.4 150.4 M611.5 149.8 Q607.7 117.3 610.2 79.6" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="735" y="124" font-size="23" font-weight="800" fill="#1e1e1e" text-anchor="middle">성능 24%</text>
+<path d="M619.9 180.6 Q735.4 179.6 849.2 179.5 M849.0 181.0 Q851.1 210.9 849.2 243.8 M849.6 244.1 Q734.3 243.0 619.1 244.1 M619.3 243.4 Q618.2 210.3 619.6 179.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M619.9 180.8 Q736.8 180.8 850.6 179.4 M850.1 180.8 Q850.6 213.3 850.4 245.3 M851.5 244.1 Q733.8 244.9 621.3 242.7 M620.8 243.8 Q621.2 210.8 620.1 179.2" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="735" y="219" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“읽기가 한 DB에 몰린다”</text>
+<path d="M620.3 264.3 Q734.0 265.5 849.1 263.5 M850.1 264.5 Q851.9 294.8 850.0 328.1 M849.4 327.8 Q736.9 329.1 619.8 328.4 M620.5 327.8 Q620.7 295.0 618.8 263.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M620.5 265.5 Q734.4 262.4 851.3 264.4 M850.3 265.2 Q851.9 296.0 848.6 327.6 M849.8 326.6 Q734.3 327.2 620.6 329.4 M619.5 328.9 Q618.6 294.4 619.1 264.8" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="735" y="303" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“같은 키를 반복해서 읽는다”</text>
+<path d="M620.5 348.4 Q733.7 348.4 849.0 349.1 M850.9 348.2 Q851.4 379.9 849.2 411.8 M848.9 411.2 Q736.3 411.9 619.2 412.2 M619.8 413.1 Q620.6 379.8 619.6 348.4" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M619.0 346.8 Q733.5 348.1 849.5 346.8 M850.2 348.9 Q849.4 380.8 849.9 410.7 M850.8 413.5 Q736.2 411.5 620.1 411.2 M619.4 410.8 Q619.3 380.0 619.7 348.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="735" y="387" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“대륙을 건너 업로드”</text>
+<path d="M735.7 420.5 Q735.9 439.8 734.8 458.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M735.5 419.4 Q733.0 440.3 734.9 457.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M735.0 458.0 L729.4 445.3" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M735.0 458.0 L741.5 446.1" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<rect x="655" y="462" width="160" height="60" fill="#a5d8ff" opacity="0.55"/>
+<path d="M654.6 463.1 Q736.1 461.5 816.0 461.3 M815.6 461.5 Q814.4 493.2 814.9 523.1 M815.4 523.0 Q733.4 521.1 656.1 521.9 M654.6 521.3 Q656.2 493.9 654.4 462.7" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M656.3 461.1 Q733.1 462.2 815.4 462.1 M815.0 463.3 Q817.4 492.1 815.8 520.9 M816.5 523.4 Q736.6 521.5 655.0 521.7 M654.1 521.0 Q653.6 490.8 655.7 460.6" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="735" y="500" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">Ch-03</text>
+<rect x="890" y="80" width="250" height="70" fill="#ffec99" opacity="0.55"/>
+<path d="M820.2 150.0 L890.2 80.0 M831.5 150.0 L901.1 80.0 M842.9 150.0 L911.6 80.0 M852.2 150.0 L923.2 80.0 M863.5 150.0 L935.0 80.0 M875.8 150.0 L945.4 80.0 M886.7 150.0 L955.5 80.0 M897.0 150.0 L966.8 80.0 M907.7 150.0 L977.7 80.0 M919.0 150.0 L989.3 80.0 M929.1 150.0 L1000.1 80.0 M940.3 150.0 L1011.9 80.0 M952.1 150.0 L1022.2 80.0 M962.6 150.0 L1033.4 80.0 M974.4 150.0 L1044.8 80.0 M985.2 150.0 L1054.5 80.0 M996.3 150.0 L1065.1 80.0 M1007.5 150.0 L1076.6 80.0 M1018.4 150.0 L1087.3 80.0 M1029.2 150.0 L1098.3 80.0 M1039.1 150.0 L1109.5 80.0 M1051.7 150.0 L1120.8 80.0 M1062.0 150.0 L1132.6 80.0 M1074.0 150.0 L1142.5 80.0 M1084.4 150.0 L1154.6 80.0 M1095.6 150.0 L1164.7 80.0 M1105.9 150.0 L1176.6 80.0 M1116.5 150.0 L1187.0 80.0 M1128.3 150.0 L1198.7 80.0 M1138.5 150.0 L1209.3 80.0" stroke="#f08c00" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c16)"/>
+<path d="M889.9 80.4 Q1013.9 78.6 1140.3 81.1 M1140.0 79.4 Q1138.7 115.1 1141.0 149.1 M1140.3 150.4 Q1014.0 148.2 889.3 151.0 M891.1 150.8 Q890.5 113.8 889.6 80.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M889.7 81.4 Q1013.1 79.2 1139.4 79.6 M1139.0 81.1 Q1138.5 116.7 1139.5 150.2 M1140.1 150.4 Q1017.0 148.8 890.2 149.7 M888.9 148.5 Q890.8 114.0 890.3 80.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1015" y="124" font-size="23" font-weight="800" fill="#1e1e1e" text-anchor="middle">비용 20%</text>
+<path d="M900.4 179.9 Q1016.2 178.6 1130.1 180.8 M1130.3 179.2 Q1130.1 211.7 1130.9 244.0 M1131.1 245.1 Q1013.2 243.9 899.8 243.4 M898.8 243.4 Q901.7 211.1 899.9 180.4" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M900.7 179.5 Q1012.7 179.1 1129.0 180.7 M1130.0 181.0 Q1129.7 213.0 1130.0 245.5 M1130.0 244.3 Q1016.6 245.2 899.6 242.7 M900.8 245.1 Q902.0 213.6 900.2 181.5" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="1015" y="219" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“가장 비용 효율적으로”</text>
+<path d="M899.0 263.7 Q1014.9 265.9 1130.2 264.8 M1129.7 264.4 Q1130.1 297.2 1130.7 328.2 M1128.8 327.5 Q1013.1 328.6 899.1 328.6 M899.0 327.3 Q898.7 296.9 900.5 265.0" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M899.7 264.4 Q1012.8 264.6 1128.7 262.5 M1130.0 264.4 Q1127.8 298.0 1128.9 328.6 M1130.9 329.1 Q1017.1 326.4 901.5 328.2 M900.9 327.4 Q900.8 295.2 900.4 264.4" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="1015" y="303" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“가끔만 읽는 오래된 파일”</text>
+<path d="M899.0 347.2 Q1017.0 349.1 1129.7 347.8 M1130.1 347.9 Q1130.9 379.0 1129.5 412.3 M1129.1 413.0 Q1014.7 413.9 900.3 411.9 M900.7 411.6 Q898.3 380.6 900.5 348.1" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M899.4 347.9 Q1012.9 349.9 1130.8 349.2 M1131.1 346.9 Q1131.8 379.3 1130.2 411.8 M1130.5 413.0 Q1016.9 413.2 899.5 411.8 M899.1 412.7 Q897.9 379.2 898.8 349.3" stroke="#1e1e1e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<text x="1015" y="387" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">“중단돼도 되는 배치”</text>
+<path d="M1014.3 419.9 Q1015.3 438.8 1015.1 457.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1014.8 419.4 Q1017.1 438.4 1014.7 457.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1015.0 458.0 L1009.5 444.7" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M1015.0 458.0 L1020.9 445.5" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<rect x="935" y="462" width="160" height="60" fill="#ffec99" opacity="0.55"/>
+<path d="M935.0 461.0 Q1014.9 461.3 1094.5 461.8 M1094.8 462.4 Q1096.1 491.7 1094.5 522.1 M1095.1 522.4 Q1013.8 522.5 935.9 522.7 M936.1 521.9 Q937.0 490.9 934.7 461.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M936.0 461.4 Q1017.2 464.4 1093.8 461.1 M1093.6 460.5 Q1095.9 493.1 1096.5 521.5 M1093.7 523.0 Q1012.6 521.8 935.1 522.4 M934.1 522.9 Q937.2 490.0 935.3 461.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1015" y="500" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">Ch-04</text>
+<text x="600" y="610" font-size="15" font-weight="500" fill="#495057" text-anchor="middle">한 문제에 조건이 둘이면 둘 다 만족하는 보기만 남긴다. 보통 비용과 운영 부담이 마지막에 갈린다</text>
+</svg>

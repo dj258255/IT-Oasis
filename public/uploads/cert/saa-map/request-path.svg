@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1150" viewBox="0 0 1200 1150" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+<defs><clipPath id="c1"><rect x="83" y="85" width="614" height="80"/></clipPath><clipPath id="c20"><rect x="63" y="1019" width="1074" height="94"/></clipPath></defs>
+<rect width="1200" height="1150" fill="#ffffff"/>
+<text x="600" y="48" font-size="26" font-weight="800" fill="#1e1e1e" text-anchor="middle">주문 요청 하나가 위에서 아래로 지나가는 층</text>
+<rect x="80" y="82" width="620" height="86" fill="#e9ecef" opacity="0.55"/>
+<path d="M-6.5 168.0 L80.1 82.0 M4.7 168.0 L91.2 82.0 M16.3 168.0 L101.1 82.0 M26.0 168.0 L113.7 82.0 M37.5 168.0 L123.5 82.0 M50.0 168.0 L134.9 82.0 M60.7 168.0 L146.0 82.0 M71.3 168.0 L156.3 82.0 M82.3 168.0 L168.7 82.0 M93.0 168.0 L179.5 82.0 M104.3 168.0 L189.1 82.0 M115.5 168.0 L201.2 82.0 M125.6 168.0 L211.1 82.0 M137.7 168.0 L222.9 82.0 M148.4 168.0 L234.8 82.0 M159.4 168.0 L245.8 82.0 M169.8 168.0 L256.6 82.0 M180.9 168.0 L267.9 82.0 M192.8 168.0 L277.2 82.0 M202.3 168.0 L288.4 82.0 M214.9 168.0 L299.9 82.0 M225.3 168.0 L310.6 82.0 M236.0 168.0 L321.8 82.0 M246.7 168.0 L333.2 82.0 M258.2 168.0 L344.8 82.0 M269.4 168.0 L355.9 82.0 M280.7 168.0 L367.0 82.0 M291.3 168.0 L376.3 82.0 M302.7 168.0 L388.9 82.0 M313.8 168.0 L399.1 82.0 M324.4 168.0 L409.4 82.0 M335.7 168.0 L421.1 82.0 M345.6 168.0 L431.1 82.0 M357.7 168.0 L444.0 82.0 M367.2 168.0 L454.6 82.0 M378.8 168.0 L464.3 82.0 M389.6 168.0 L476.5 82.0 M401.7 168.0 L486.1 82.0 M412.2 168.0 L497.1 82.0 M423.4 168.0 L508.7 82.0 M434.8 168.0 L521.0 82.0 M445.0 168.0 L532.0 82.0 M455.6 168.0 L541.2 82.0 M467.2 168.0 L552.1 82.0 M477.4 168.0 L563.8 82.0 M489.2 168.0 L574.3 82.0 M499.1 168.0 L586.7 82.0 M510.6 168.0 L597.9 82.0 M522.8 168.0 L607.8 82.0 M532.9 168.0 L619.0 82.0 M544.3 168.0 L630.2 82.0 M555.1 168.0 L641.2 82.0 M566.9 168.0 L652.0 82.0 M576.9 168.0 L663.4 82.0 M587.5 168.0 L673.6 82.0 M600.0 168.0 L685.0 82.0 M610.1 168.0 L695.0 82.0 M620.8 168.0 L707.2 82.0 M631.0 168.0 L718.2 82.0 M643.3 168.0 L728.1 82.0 M654.3 168.0 L739.9 82.0 M665.4 168.0 L750.7 82.0 M676.4 168.0 L762.5 82.0 M686.0 168.0 L772.1 82.0 M698.4 168.0 L784.9 82.0" stroke="#868e96" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c1)"/>
+<path d="M80.2 81.6 Q389.0 81.8 699.7 81.6 M699.5 81.7 Q699.5 125.4 700.7 166.9 M699.5 167.3 Q390.3 168.9 80.7 167.4 M80.5 167.0 Q78.7 124.7 79.6 81.6" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M81.1 81.0 Q391.7 81.7 699.5 82.5 M699.1 80.8 Q702.0 124.7 700.1 167.0 M699.0 167.3 Q391.6 169.8 81.0 168.4 M78.8 167.4 Q81.6 124.2 80.9 81.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="118" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">사용자 브라우저</text>
+<text x="390" y="148" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">shop.example.com 입력, 주문 버튼 클릭</text>
+<path d="M389.9 171.8 Q389.5 182.8 390.8 193.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M391.0 173.3 Q387.8 185.0 389.8 195.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 194.0 L384.6 180.9" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 194.0 L396.5 181.9" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M79.5 197.6 Q390.7 198.1 699.3 197.0 M700.7 196.9 Q700.4 240.1 701.0 284.5 M701.0 284.2 Q391.7 285.6 78.8 284.6 M80.4 284.1 Q78.7 240.2 79.8 199.1" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M79.2 199.1 Q390.6 197.2 699.9 198.9 M700.1 199.0 Q699.2 239.4 699.0 284.9 M701.0 282.5 Q392.2 285.6 80.4 285.1 M79.3 284.1 Q77.7 239.8 79.8 197.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="234" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">Route 53</text>
+<text x="390" y="264" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">이름을 주소로 바꾸고 장애면 다른 답을 준다</text>
+<rect x="740" y="210" width="63" height="28" fill="#b2f2bb" opacity="0.55"/>
+<path d="M738.9 209.1 Q772.6 208.0 802.1 209.0 M802.0 210.0 Q804.9 225.4 802.6 237.6 M803.2 237.7 Q770.9 238.6 739.3 237.6 M740.5 237.7 Q738.5 224.2 739.0 209.2" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M740.9 209.6 Q770.8 210.5 803.9 210.4 M803.0 210.6 Q802.6 223.3 802.8 238.6 M803.1 238.6 Q771.3 236.7 738.7 237.8 M741.4 237.6 Q739.6 226.0 741.2 210.9" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="771.5" y="229" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">복원력</text>
+<text x="742" y="270" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-02 3-3, 3-4</text>
+<path d="M389.3 288.6 Q389.3 298.9 390.3 310.7" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.6 288.2 Q391.3 299.7 389.0 310.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 310.0 L383.1 296.8" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 310.0 L396.5 296.7" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M80.9 313.2 Q388.4 312.4 698.9 314.8 M700.4 314.8 Q698.5 358.4 701.1 400.2 M700.6 400.0 Q391.2 398.1 80.5 399.1 M78.9 399.6 Q81.0 358.7 80.2 314.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M79.2 314.4 Q388.7 312.3 700.8 313.7 M699.5 313.7 Q699.3 356.5 698.7 400.0 M700.8 398.9 Q392.5 399.5 80.6 400.8 M79.9 400.4 Q80.9 357.1 81.2 312.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="350" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">CloudFront  +  S3 정적 파일</text>
+<text x="390" y="380" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">이미지는 엣지에서, 버킷은 OAC로 비공개</text>
+<rect x="740" y="326" width="48" height="28" fill="#a5d8ff" opacity="0.55"/>
+<path d="M741.0 326.0 Q762.4 327.0 787.9 326.5 M787.3 326.2 Q786.7 339.1 787.6 353.4 M787.5 354.5 Q764.8 355.8 739.8 354.8 M739.3 352.9 Q740.3 339.1 740.0 325.7" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M739.4 326.9 Q762.3 325.3 786.9 327.5 M787.9 327.0 Q787.9 340.5 789.0 354.2 M789.1 353.7 Q763.9 355.1 740.7 355.4 M739.2 354.7 Q739.8 338.6 740.5 327.4" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="764.0" y="345" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">성능</text>
+<rect x="798" y="326" width="48" height="28" fill="#ffc9c9" opacity="0.55"/>
+<path d="M797.3 325.4 Q823.4 325.0 845.2 326.5 M845.4 326.9 Q847.4 341.6 845.6 353.8 M845.0 354.8 Q822.9 352.3 797.5 353.7 M796.8 353.6 Q798.3 340.7 797.8 326.0" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M799.4 325.7 Q820.5 326.4 846.1 324.8 M844.8 327.2 Q844.8 340.9 847.3 352.7 M846.8 354.8 Q824.3 353.3 797.4 354.5 M797.3 354.8 Q798.8 341.6 799.4 326.5" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="822.0" y="345" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">보안</text>
+<text x="742" y="386" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-03 5-2 · Ch-01 4-8</text>
+<path d="M390.0 403.7 Q390.1 413.8 390.4 426.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.4 404.3 Q390.3 413.6 389.2 427.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 426.0 L384.2 412.8" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 426.0 L396.8 412.8" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M80.2 430.1 Q389.3 430.9 700.4 429.9 M699.0 430.5 Q699.2 471.7 700.6 516.1 M699.4 515.7 Q391.0 515.4 80.9 514.9 M80.6 515.6 Q80.0 472.0 79.6 429.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M79.5 431.1 Q390.2 431.4 698.8 429.3 M700.9 430.7 Q697.9 471.0 699.0 515.0 M701.0 516.8 Q389.6 517.3 80.3 514.9 M80.1 516.2 Q79.5 471.4 79.1 429.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="466" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">ALB</text>
+<text x="390" y="496" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">HTTPS 종료, 경로 규칙, 상태 확인</text>
+<rect x="740" y="442" width="63" height="28" fill="#b2f2bb" opacity="0.55"/>
+<path d="M740.7 442.9 Q772.6 440.1 804.1 441.7 M803.3 443.1 Q803.2 456.3 803.4 469.5 M803.2 470.5 Q772.9 469.9 738.8 470.6 M740.1 469.9 Q740.6 456.0 739.3 442.1" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M740.5 441.8 Q769.1 442.0 803.2 443.4 M803.9 442.4 Q805.0 454.1 801.6 469.6 M803.1 471.3 Q770.1 467.8 739.4 471.2 M741.1 470.3 Q741.0 454.1 741.3 442.7" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="771.5" y="461" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">복원력</text>
+<rect x="813" y="442" width="48" height="28" fill="#ffc9c9" opacity="0.55"/>
+<path d="M813.7 443.0 Q838.0 441.4 861.9 441.8 M860.1 440.9 Q862.0 455.9 860.0 469.3 M861.5 470.1 Q835.6 470.0 812.8 470.4 M813.6 469.8 Q812.2 455.9 812.2 443.0" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M812.6 442.1 Q838.1 441.3 861.3 441.1 M861.9 440.9 Q858.4 454.5 860.9 469.0 M860.7 469.0 Q835.5 468.3 811.5 468.8 M811.6 468.5 Q811.3 455.9 812.8 441.7" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="837.0" y="461" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">보안</text>
+<text x="742" y="502" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-02 2-2 · Ch-01 4-6</text>
+<path d="M389.8 519.8 Q390.6 529.7 389.1 542.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M389.9 519.1 Q388.8 529.2 390.3 541.6" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 542.0 L383.3 528.7" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 542.0 L396.5 529.0" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M81.0 545.5 Q391.2 545.9 699.4 545.4 M699.6 545.0 Q701.3 589.5 700.4 633.1 M698.9 631.0 Q390.4 630.0 79.2 630.9 M81.0 631.3 Q78.2 589.6 81.1 545.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M81.4 544.5 Q391.6 548.2 699.4 546.3 M699.4 547.1 Q702.3 586.9 698.8 631.7 M701.3 631.0 Q389.1 632.9 80.7 632.7 M81.3 631.6 Q81.7 589.3 79.7 545.2" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="582" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">Auto Scaling 그룹 (EC2 · 컨테이너)</text>
+<text x="390" y="612" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">두 AZ에 나눠 두고 대상 추적으로 늘린다</text>
+<rect x="740" y="558" width="63" height="28" fill="#b2f2bb" opacity="0.55"/>
+<path d="M739.4 557.2 Q772.6 557.9 803.5 558.3 M803.0 557.2 Q803.8 571.5 803.5 584.9 M803.4 585.0 Q771.4 587.0 739.4 586.8 M740.9 585.9 Q740.6 573.5 741.0 558.6" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M738.7 557.7 Q770.6 557.3 804.4 556.8 M801.7 558.5 Q803.4 570.0 802.2 584.6 M803.3 584.5 Q769.7 586.8 739.2 587.5 M739.7 586.9 Q738.5 572.3 740.3 558.9" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="771.5" y="577" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">복원력</text>
+<rect x="813" y="558" width="48" height="28" fill="#ffec99" opacity="0.55"/>
+<path d="M812.2 557.0 Q837.1 556.8 861.8 557.1 M860.3 558.9 Q859.1 573.9 860.0 585.9 M861.3 586.3 Q835.9 587.3 813.6 586.9 M812.9 585.1 Q812.4 572.4 813.8 558.2" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M813.1 557.9 Q838.6 556.5 861.7 556.7 M859.7 558.2 Q860.2 571.9 861.7 585.8 M860.1 585.5 Q837.8 586.6 814.5 585.5 M812.1 585.0 Q812.6 569.8 814.3 558.7" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="837.0" y="577" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">비용</text>
+<text x="742" y="618" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-02 2-10 · Ch-04 4-1</text>
+<path d="M390.2 636.8 Q391.1 648.5 390.1 657.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M391.2 636.0 Q392.0 648.8 390.7 657.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 658.0 L384.7 646.1" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 658.0 L395.8 646.1" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M80.5 661.5 Q388.7 660.4 700.0 662.3 M699.5 661.8 Q698.2 706.0 699.6 748.6 M699.0 747.5 Q391.0 747.1 79.8 747.0 M80.5 749.1 Q78.6 706.1 81.2 662.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M79.4 661.9 Q389.3 660.2 700.1 662.1 M699.3 661.9 Q699.3 706.8 701.2 749.0 M701.0 746.5 Q388.9 746.7 78.9 748.1 M78.6 747.1 Q80.2 703.3 80.8 661.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="698" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">ElastiCache  →  RDS</text>
+<text x="390" y="728" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">읽기는 캐시 먼저, 쓰기는 Multi-AZ 주 DB</text>
+<rect x="740" y="674" width="48" height="28" fill="#a5d8ff" opacity="0.55"/>
+<path d="M741.2 672.9 Q765.9 675.1 787.2 672.8 M786.9 674.1 Q787.7 687.4 787.0 701.5 M787.8 701.4 Q763.0 703.2 738.9 701.8 M741.0 702.7 Q740.5 688.7 739.4 673.1" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M740.0 675.0 Q765.3 675.5 788.2 673.3 M788.4 675.2 Q786.3 685.5 789.3 701.9 M789.0 702.3 Q764.9 704.2 739.7 702.1 M740.6 703.5 Q738.3 686.4 740.1 673.7" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="764.0" y="693" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">성능</text>
+<rect x="798" y="674" width="63" height="28" fill="#b2f2bb" opacity="0.55"/>
+<path d="M798.7 673.9 Q828.9 673.8 862.1 673.2 M860.8 674.8 Q860.3 688.1 861.8 703.0 M861.2 702.1 Q829.9 700.1 798.0 701.5 M797.0 702.4 Q798.8 689.6 797.7 674.0" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M798.4 673.0 Q831.6 676.4 862.3 673.0 M860.4 673.3 Q860.4 689.7 862.4 703.4 M860.3 700.9 Q828.6 701.4 797.2 703.5 M797.1 700.7 Q795.8 686.6 798.1 674.8" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="829.5" y="693" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">복원력</text>
+<text x="742" y="734" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-03 4-6 · Ch-02 3-7</text>
+<path d="M390.6 751.1 Q391.0 763.4 389.6 774.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 751.4 Q388.1 762.0 390.1 772.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 774.0 L383.5 762.1" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 774.0 L395.5 762.0" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M80.4 778.4 Q388.7 780.0 699.1 776.9 M699.3 778.8 Q701.0 819.7 700.9 862.9 M699.7 863.1 Q391.8 864.1 79.7 865.2 M79.1 863.1 Q79.1 819.5 79.6 779.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M81.4 779.6 Q387.8 776.4 701.5 777.2 M700.0 778.6 Q699.2 823.3 699.4 862.5 M700.9 864.2 Q389.2 865.3 79.9 864.1 M81.0 863.1 Q79.7 821.2 80.3 779.4" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="814" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">SQS  →  워커</text>
+<text x="390" y="844" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">결제 알림과 메일은 큐로 미루고 응답부터</text>
+<rect x="740" y="790" width="63" height="28" fill="#b2f2bb" opacity="0.55"/>
+<path d="M741.1 790.8 Q772.9 788.7 802.2 789.4 M804.1 789.8 Q801.8 802.2 803.9 817.1 M803.7 819.2 Q769.6 819.5 740.4 818.1 M740.1 817.9 Q741.1 802.4 739.2 790.2" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M739.6 789.4 Q770.6 790.0 802.6 790.3 M804.1 791.0 Q805.5 806.3 802.3 819.5 M803.0 818.7 Q770.3 816.0 739.5 818.5 M739.9 817.9 Q738.9 806.4 740.1 791.2" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="771.5" y="809" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">복원력</text>
+<text x="742" y="850" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-02 2-3, 2-4</text>
+<path d="M389.9 868.2 Q391.5 879.1 389.2 889.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M388.8 868.9 Q391.5 880.2 389.7 891.3" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M390.0 890.0 L383.7 876.9" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M390.0 890.0 L396.2 878.0" stroke="#1e1e1e" stroke-width="2" stroke-linecap="round"/>
+<path d="M80.5 893.7 Q389.7 895.5 699.5 894.0 M700.4 894.9 Q699.6 936.5 700.2 979.2 M700.3 979.1 Q388.9 979.5 79.0 979.6 M80.1 981.0 Q79.1 935.1 80.1 894.6" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M81.3 893.8 Q391.7 895.8 700.6 892.8 M699.9 895.2 Q702.0 936.4 699.3 979.0 M698.7 978.5 Q391.7 980.5 79.5 978.5 M79.3 979.7 Q81.7 935.4 80.0 893.8" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="390" y="930" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">S3</text>
+<text x="390" y="960" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">영수증과 로그를 쌓고 수명 주기로 내린다</text>
+<rect x="740" y="906" width="48" height="28" fill="#ffec99" opacity="0.55"/>
+<path d="M739.8 905.0 Q764.5 906.6 789.1 906.5 M788.6 907.2 Q786.3 919.8 787.0 932.8 M788.9 934.8 Q763.9 933.7 739.6 933.8 M739.3 933.7 Q740.3 921.5 739.0 906.3" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M740.1 906.2 Q761.5 908.3 786.7 905.2 M788.1 905.3 Q787.8 921.9 789.5 934.5 M787.4 935.2 Q764.1 932.5 738.9 934.1 M740.8 935.3 Q740.6 919.2 741.1 906.7" stroke="#1e1e1e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<text x="764.0" y="925" font-size="14" font-weight="700" fill="#1e1e1e" text-anchor="middle">비용</text>
+<text x="742" y="966" font-size="16" font-weight="600" fill="#495057" text-anchor="start">Ch-04 3-1, 3-2</text>
+<rect x="60" y="1016" width="1080" height="100" fill="#ffc9c9" opacity="0.55"/>
+<path d="M-40.6 1116.0 L59.1 1016.0 M-29.1 1116.0 L70.6 1016.0 M-18.6 1116.0 L82.7 1016.0 M-7.6 1116.0 L93.6 1016.0 M4.9 1116.0 L103.2 1016.0 M15.8 1116.0 L114.8 1016.0 M25.4 1116.0 L125.4 1016.0 M36.1 1116.0 L137.0 1016.0 M47.8 1116.0 L148.7 1016.0 M59.7 1116.0 L158.1 1016.0 M69.8 1116.0 L169.8 1016.0 M80.4 1116.0 L180.5 1016.0 M91.5 1116.0 L192.4 1016.0 M102.7 1116.0 L202.2 1016.0 M113.4 1116.0 L213.9 1016.0 M125.1 1116.0 L224.5 1016.0 M136.4 1116.0 L235.4 1016.0 M147.3 1116.0 L247.2 1016.0 M157.4 1116.0 L258.5 1016.0 M168.8 1116.0 L269.1 1016.0 M180.2 1116.0 L280.3 1016.0 M190.9 1116.0 L290.1 1016.0 M202.6 1116.0 L302.7 1016.0 M213.0 1116.0 L313.2 1016.0 M223.5 1116.0 L324.8 1016.0 M235.4 1116.0 L334.4 1016.0 M246.6 1116.0 L347.0 1016.0 M256.7 1116.0 L358.0 1016.0 M268.0 1116.0 L367.4 1016.0 M279.4 1116.0 L378.7 1016.0 M290.5 1116.0 L390.2 1016.0 M300.2 1116.0 L401.1 1016.0 M312.7 1116.0 L412.0 1016.0 M323.1 1116.0 L423.7 1016.0 M333.9 1116.0 L434.0 1016.0 M345.2 1116.0 L445.6 1016.0 M355.4 1116.0 L455.2 1016.0 M367.5 1116.0 L467.1 1016.0 M377.6 1116.0 L478.8 1016.0 M389.8 1116.0 L489.1 1016.0 M401.0 1116.0 L500.7 1016.0 M411.5 1116.0 L510.6 1016.0 M421.0 1116.0 L522.4 1016.0 M433.5 1116.0 L532.7 1016.0 M444.0 1116.0 L544.1 1016.0 M454.5 1116.0 L555.4 1016.0 M466.1 1116.0 L565.8 1016.0 M476.2 1116.0 L577.1 1016.0 M487.6 1116.0 L588.4 1016.0 M498.3 1116.0 L598.8 1016.0 M509.4 1116.0 L609.8 1016.0 M521.2 1116.0 L620.2 1016.0 M531.1 1116.0 L632.0 1016.0 M542.4 1116.0 L643.0 1016.0 M553.3 1116.0 L653.2 1016.0 M565.1 1116.0 L665.8 1016.0 M576.7 1116.0 L676.0 1016.0 M586.8 1116.0 L686.1 1016.0 M597.6 1116.0 L697.6 1016.0 M609.9 1116.0 L708.2 1016.0 M620.9 1116.0 L720.0 1016.0 M630.9 1116.0 L730.5 1016.0 M642.9 1116.0 L741.4 1016.0 M653.1 1116.0 L753.0 1016.0 M663.4 1116.0 L763.4 1016.0 M676.0 1116.0 L775.6 1016.0 M686.5 1116.0 L786.8 1016.0 M696.2 1116.0 L797.4 1016.0 M708.5 1116.0 L807.5 1016.0 M718.9 1116.0 L819.9 1016.0 M729.7 1116.0 L830.5 1016.0 M740.3 1116.0 L841.3 1016.0 M751.5 1116.0 L852.0 1016.0 M762.7 1116.0 L863.7 1016.0 M774.5 1116.0 L874.0 1016.0 M785.4 1116.0 L884.9 1016.0 M796.6 1116.0 L895.5 1016.0 M807.1 1116.0 L907.2 1016.0 M817.8 1116.0 L917.1 1016.0 M828.3 1116.0 L929.3 1016.0 M839.4 1116.0 L940.5 1016.0 M851.0 1116.0 L951.9 1016.0 M862.7 1116.0 L962.5 1016.0 M872.7 1116.0 L972.1 1016.0 M884.1 1116.0 L984.5 1016.0 M895.8 1116.0 L994.4 1016.0 M905.3 1116.0 L1007.0 1016.0 M917.5 1116.0 L1017.0 1016.0 M928.5 1116.0 L1027.3 1016.0 M939.1 1116.0 L1039.3 1016.0 M950.2 1116.0 L1049.3 1016.0 M960.3 1116.0 L1061.2 1016.0 M972.8 1116.0 L1071.3 1016.0 M982.0 1116.0 L1082.2 1016.0 M994.6 1116.0 L1093.8 1016.0 M1004.9 1116.0 L1106.0 1016.0 M1016.2 1116.0 L1115.5 1016.0 M1027.4 1116.0 L1126.0 1016.0 M1037.6 1116.0 L1138.4 1016.0 M1048.3 1116.0 L1148.1 1016.0 M1060.0 1116.0 L1159.7 1016.0 M1071.9 1116.0 L1170.2 1016.0 M1082.6 1116.0 L1181.8 1016.0 M1093.6 1116.0 L1192.9 1016.0 M1104.3 1116.0 L1203.7 1016.0 M1114.4 1116.0 L1214.9 1016.0 M1126.6 1116.0 L1225.7 1016.0 M1136.5 1116.0 L1236.8 1016.0" stroke="#e03131" stroke-width="1" opacity="0.35" fill="none" clip-path="url(#c20)"/>
+<path d="M60.2 1016.1 Q598.4 1015.3 1140.2 1015.5 M1139.6 1015.3 Q1138.1 1064.1 1140.2 1115.4 M1140.4 1116.6 Q601.0 1116.4 60.1 1115.8 M60.7 1116.0 Q59.2 1064.3 59.0 1017.0" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M59.8 1014.8 Q600.4 1016.6 1141.6 1015.0 M1138.8 1016.0 Q1139.3 1068.6 1139.9 1115.2 M1138.5 1115.9 Q602.2 1115.6 58.5 1116.7 M58.6 1116.5 Q61.9 1068.1 59.4 1015.9" stroke="#1e1e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="600" y="1056" font-size="21" font-weight="800" fill="#1e1e1e" text-anchor="middle">바닥: VPC · 서브넷 · 보안 그룹  /  IAM 역할  /  KMS 암호화</text>
+<text x="600" y="1090" font-size="16" font-weight="500" fill="#343a40" text-anchor="middle">모든 층이 이 위에 올라간다. 시험 비중이 가장 큰 보안(30%)이 여기서 나온다  ·  Ch-01 2~4절</text>
+</svg>
