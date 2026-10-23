@@ -77,7 +77,7 @@ ON CONFLICT (day) DO UPDATE SET total = excluded.total;
 
 입력 테이블의 최신 상태를 읽는 태스크는 재실행 사이에 누군가 입력을 고치면 다른 결과를 냅니다. 문서는 고정된 파티션을 읽으라고 권합니다.
 
-세 경우의 공통점은 같은 실행이 다시 돌 때 입력이나 쓰기 방식이 달라진다는 것입니다. 멱등한 태스크는 입력을 고정하고(구간을 인자로 받는다), 쓰기를 덮어쓰기로 만듭니다.
+세 경우의 공통점은 같은 실행이 다시 돌 때 입력이나 쓰기 방식이 달라진다는 것입니다. 멱등한 태스크는 구간을 인자로 받아 입력을 고정하고 쓰기를 덮어쓰기로 만듭니다.
 
 ## 4. 멱등하게 만드는 세 가지 방법
 
@@ -127,6 +127,7 @@ def overwrite(day, crash=False, tx=True):
 5. 예외가 났으면 `ROLLBACK`으로 1번 이후의 변경을 모두 없던 일로 돌립니다.
 
 `tx=False`면 1, 4, 5번의 트랜잭션 문장이 빠집니다. 이때 DuckDB는 문장 하나하나를 그 자리에서 확정하는 자동 커밋(autocommit)으로 동작합니다. `DELETE`는 실행되는 순간 확정되고 되돌릴 방법이 없습니다.
+
 ### 5-2. 결과
 
 | 경우 | `daily_sales` 결과 |
@@ -162,7 +163,7 @@ Google SRE Book 22장은 재시도할 수 있는 오류와 없는 오류를 나�
 도구도 이 구분을 지원합니다.
 
 - Airflow: 태스크 안에서 `AirflowFailException`을 던지면 남은 재시도와 상관없이 바로 실패합니다.
-- Argo Workflows: `retryPolicy`로 어떤 실패를 재시도할지 고릅니다. `OnFailure`(기본, main 컨테이너 실패), `OnError`(컨트롤러 오류나 init·wait 컨테이너 실패), `OnTransientError`(일시적 오류로 정의된 것), `Always` 중 하나이고 `expression`으로 `lastRetry.exitCode` 같은 조건을 더할 수 있습니다. 둘은 AND로 묶입니다.
+- Argo Workflows: `retryPolicy`로 어떤 실패를 재시도할지 고릅니다. `OnFailure`(main 컨테이너 실패. `expression`이 없을 때의 기본값이고 `expression`을 주면 기본값이 `Always`가 된다), `OnError`(컨트롤러 오류나 init·wait 컨테이너 실패), `OnTransientError`(일시적 오류로 정의된 것), `Always` 중 하나이고 `expression`으로 `lastRetry.exitCode` 같은 조건을 더할 수 있습니다. 둘은 AND로 묶입니다.
 
 ### 6-2. 횟수 상한과 재시도 예산
 
@@ -179,9 +180,9 @@ SRE Book은 요청 하나의 재시도 횟수에 상한을 두고 프로세스 �
 
 ### 6-3. 계층마다 재시도하면 곱으로 늘어난다
 
-같은 장에 나오는 계산입니다. 네 계층이 각자 네 번씩 시도하면 사용자 요청 하나가 DB에 4 × 4 × 4 = 64번 도달할 수 있습니다.
+같은 장에 나오는 계산입니다. DB 위의 세 계층이 각자 네 번씩(첫 시도 1번 + 재시도 3번) 시도하면 사용자 요청 하나가 DB에 4 × 4 × 4 = 64번 도달할 수 있습니다. 책의 예는 JavaScript, 프런트엔드, 백엔드 세 계층입니다.
 
-곱이 되는 이유는 위 계층의 재시도 한 번마다 아래 계층이 처음부터 자기 재시도를 다시 하기 때문입니다. 프런트엔드 → 백엔드 → DB 접근 계층 → DB 순서라면 DB 접근 계층이 DB에 네 번 시도하고 실패를 올려보내면 백엔드가 그걸 한 번의 실패로 보고 다시 부릅니다. 백엔드의 네 번 각각이 DB 네 번이니 16번이고 프런트엔드의 네 번이 다시 이걸 감싸 64번이 됩니다. AWS Builders' Library도 재시도는 스택의 한 곳에서만 하라고 권합니다. 오케스트레이터가 태스크를 재시도한다면 태스크 안의 HTTP 클라이언트까지 재시도하는지 확인해야 합니다. 둘 다 세 번씩이면 외부 API는 아홉 번 호출을 받습니다.
+곱이 되는 이유는 위 계층의 재시도 한 번마다 아래 계층이 처음부터 자기 재시도를 다시 하기 때문입니다. 프런트엔드 → 백엔드 → DB 접근 계층 → DB 순서라면 DB 접근 계층이 DB에 네 번 시도하고 실패를 올려보내면 백엔드가 그걸 한 번의 실패로 보고 다시 부릅니다. 백엔드의 네 번 각각이 DB 네 번이니 16번이고 프런트엔드의 네 번이 다시 이걸 감싸 64번이 됩니다. AWS Builders' Library도 재시도는 스택의 한 곳에서만 하라고 권합니다. 오케스트레이터가 태스크를 재시도한다면 태스크 안의 HTTP 클라이언트까지 재시도하는지 확인해야 합니다. 둘 다 첫 시도를 포함해 세 번씩 시도하면 외부 API는 아홉 번 호출을 받습니다. Airflow의 `retries=3`은 첫 시도 말고 세 번을 더 한다는 뜻이라 HTTP 클라이언트도 재시도 3회라면 4 × 4 = 16번이 됩니다.
 
 결제 API에서 같은 문제를 측정한 글이 [결제 재시도는 가용성을 높이는가, 장애를 증폭하는가](/blog/project/be-commerce/be-commerce-ch26-payment-retries-retry-storm)와 [재전송을 켰더니 느린 PG에서 결제 실패가 늘었다](/blog/project/be-commerce/be-commerce-ch60-resend-budget)입니다.
 
@@ -244,10 +245,13 @@ equal jitter는 대기의 절반을 보장해서 두 극단 사이에 있습니�
 | 횟수 | `retries` | `retryStrategy.limit`(첫 시도는 세지 않음) |
 | 대기 | `retry_delay` | `backoff.duration` |
 | 지수 증가 | `retry_exponential_backoff`(3.2부터 배수를 float로 지정 가능) | `backoff.factor` |
-| 상한 | `max_retry_delay`, 전역 상한 `[core] max_task_retry_delay`(기본 24시간) | `backoff.maxDuration` |
+| 지터 | 지수 백오프를 켜면 자동으로 들어간다(아래 설명) | 필드가 없다 |
+| 상한 | `max_retry_delay`, 전역 상한 `[core] max_task_retry_delay`(기본 24시간) | `backoff.cap`(대기 한 번의 상한). `backoff.maxDuration`은 재시도를 포함해 허용하는 전체 시간 |
 | 재시도 조건 | `AirflowFailException`으로 즉시 실패 | `retryPolicy`, `expression` |
 
-Argo의 `backoff` 세부 필드(`duration`, `factor`, `maxDuration`)는 공식 Retries 페이지에 설명이 없어서 2차 자료로 확인했습니다. 둘 다 재시도 대기에 지터를 넣는 설정이 있는지는 이번에 확인하지 못했습니다.
+Argo의 `backoff` 세부 필드는 공식 Retries 페이지에 설명이 없어서 소스의 `Backoff` 구조체 주석으로 확인했습니다. `duration`은 기본 대기, `factor`는 실패할 때마다 곱하는 배수, `cap`은 곱해서 커진 대기의 상한이고 `maxDuration`은 재시도를 다 합쳐 허용하는 전체 시간입니다. 지터 필드는 구조체에 없습니다.
+
+Airflow는 따로 켜지 않아도 지수 백오프에 지터가 붙습니다. 3.2.2 소스의 `next_retry_datetime`은 `retry_delay × 배수^(try_number−1)`을 최소 대기로 잡고 DAG ID, 태스크 ID, logical date, 시도 번호를 SHA-1로 해시한 값을 더해 최소 대기와 그 두 배 사이에서 대기를 고릅니다. 같은 태스크 인스턴스는 늘 같은 값이 나오는 결정적 지터이고 7절의 equal jitter와 모양이 비슷합니다. 마지막에 `max_retry_delay`로 자릅니다.
 
 ## 9. 중국 빅테크 사례: 스케줄러가 재시도할 때
 
@@ -274,7 +278,7 @@ Stripe의 멱등성 글이 이 경우를 따로 나눕니다. 처리가 원자�
 
 **Q. 백오프 상한(cap)은 왜 두나요?**
 
-상한 없이 두 배씩 늘리면 열 번째 재시도는 1초 × 2^10 = 약 17분 뒤입니다. 서버가 이미 살아났는데 클라이언트는 한참 기다립니다. 상한은 회복 뒤의 최대 대기 시간을 정합니다. 재현 2에서 상한을 60초로 둔 것도 그래서입니다.
+상한 없이 두 배씩 늘리면 7절 공식으로 열한 번째 재시도 앞의 대기가 1초 × 2^10 = 1,024초, 약 17분입니다. 서버가 이미 살아났는데 클라이언트는 한참 기다립니다. 상한은 회복 뒤의 최대 대기 시간을 정합니다. 재현 2에서 상한을 60초로 둔 것도 그래서입니다.
 
 ## 참고 자료
 
@@ -282,6 +286,8 @@ Stripe의 멱등성 글이 이 경우를 따로 나눕니다. 처리가 원자�
 - [Airflow 3.2 Best Practices](https://airflow.apache.org/docs/apache-airflow/3.2.2/best-practices.html)
 - Astronomer, [Rerun Airflow Dags and tasks](https://www.astronomer.io/docs/learn/airflow-3/rerunning-dags)
 - [Argo Workflows Retries](https://argo-workflows.readthedocs.io/en/latest/retries/)
+- Argo Workflows 소스, [`Backoff` 구조체(workflow_types.go)](https://github.com/argoproj/argo-workflows/blob/main/pkg/apis/workflow/v1alpha1/workflow_types.go)
+- Airflow 3.2.2 소스, [`next_retry_datetime`(taskinstance.py)](https://github.com/apache/airflow/blob/3.2.2/airflow-core/src/airflow/models/taskinstance.py)
 - Google, [Site Reliability Engineering 22장 Addressing Cascading Failures](https://sre.google/sre-book/addressing-cascading-failures/)
 - Amazon, [Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter)
 - AWS Architecture Blog, [Exponential Backoff And Jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/)

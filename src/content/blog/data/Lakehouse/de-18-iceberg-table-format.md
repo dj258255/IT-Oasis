@@ -22,7 +22,7 @@ seriesOrder: 18
 
 1. Hive 방식 테이블은 파티션을 디렉터리로 두고 그 안의 파일을 나열해서 테이블을 읽습니다. 바꾸는 단위가 파일과 디렉터리라 여러 파일에 걸친 변경을 한 번에 반영할 수 없고 계획할 때 파티션 수만큼 나열을 호출합니다.
 2. Iceberg는 테이블에 속한 파일 하나하나를 메타데이터에 기록합니다. 카탈로그 → metadata.json → manifest list(스냅샷) → manifest → 데이터 파일의 계층이고 커밋은 카탈로그가 가리키는 metadata.json을 원자적으로 바꾸는 일입니다.
-3. PyIceberg로 확인해 보니 커밋 한 번마다 metadata.json이 하나씩 늘었고(4번 커밋 뒤 5개), 스냅샷마다 manifest list가 생겼습니다. 덮어쓰기 한 번은 delete 스냅샷과 append 스냅샷 두 개를 한 커밋으로 만들었습니다.
+3. PyIceberg로 확인해 보니 커밋 한 번마다 metadata.json이 하나씩 늘었고(4번 커밋 뒤 5개) 스냅샷마다 manifest list가 생겼습니다. 덮어쓰기 한 번은 delete 스냅샷과 append 스냅샷 두 개를 한 커밋으로 만들었습니다.
 4. 커밋은 낙관적 동시성으로 합니다. 두 쓰기가 같은 버전을 기준으로 동시에 커밋하면 하나만 성공하고 나머지는 새 버전을 기준으로 다시 시도합니다.
 5. 파티션 값을 컬럼에서 자동으로 만들어(숨은 파티셔닝) 쿼리가 파티션 구조를 몰라도 되고 컬럼을 이름 대신 ID로 추적해서 이름 바꾸기와 삭제가 안전합니다.
 
@@ -269,12 +269,12 @@ equality delete:  (order_id = 4)
 
 position delete는 "어느 파일 몇 번째 행"을 정확히 짚으니 읽을 때 그 행만 건너뛰면 돼서 가볍습니다. 대신 쓰는 쪽이 주문 4가 어느 파일 몇 번째에 있는지 먼저 찾아야 합니다. equality delete는 찾을 필요 없이 "주문 번호 4인 행은 없는 셈 쳐라"고만 적으니 쓰기가 빠릅니다. 대신 읽는 쪽이 읽는 행마다 이 조건과 맞춰 봐야 합니다. Ch-20의 스트리밍 CDC가 equality delete를 쓰는 이유가 이것입니다. 변경 이벤트가 초당 수천 건 오는데 매번 "그 행이 어느 파일에 있나"를 찾아다닐 수는 없습니다([RisingWave, CDC to Apache Iceberg](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)).
 
-삭제 파일이 어느 데이터 파일에 적용되는지는 시퀀스 번호로 정해집니다. 커밋마다 번호가 하나씩 커지고 명세의 규칙은 이렇습니다.
+삭제 파일이 어느 데이터 파일에 적용되는지는 시퀀스 번호로 정해집니다. 커밋마다 번호가 하나씩 커지고(정확히는 스냅샷마다 붙습니다. 2-2절 실습의 metadata.json을 열어 보면 한 커밋에 함께 든 S4와 S5의 `sequence-number`가 4와 5로 다릅니다) 명세의 규칙은 이렇습니다.
 
 - equality delete는 자기보다 시퀀스 번호가 **작은**(같은 것 제외) 데이터 파일에만 적용합니다.
 - position delete는 시퀀스 번호가 **같거나 작은** 데이터 파일에 적용합니다.
 
-equality delete에서 "같은 것 제외"가 중요합니다. 주문 4의 금액을 고치는 upsert는 한 커밋 안에서 `order_id = 4` 삭제와 새 주문 4 행을 함께 씁니다. 같은 커밋의 새 행에도 삭제가 적용되면 방금 넣은 행까지 지워집니다. 규칙 덕분에 삭제는 그 커밋 전의 옛 행에만 걸립니다.
+equality delete에서 "같은 것 제외"가 중요합니다. 주문 4의 금액을 고치는 upsert는 한 커밋(스냅샷 하나) 안에서 `order_id = 4` 삭제와 새 주문 4 행을 함께 씁니다. 같은 커밋의 새 행에도 삭제가 적용되면 방금 넣은 행까지 지워집니다. 규칙 덕분에 삭제는 그 커밋 전의 옛 행에만 걸립니다.
 
 v3의 deletion vector는 Roaring bitmap으로 저장하고 한 스냅샷에서 데이터 파일 하나에 deletion vector가 많아야 하나라서 새 삭제를 기존 것과 합쳐 씁니다. Roaring bitmap은 "지운 행 번호"를 비트 하나씩으로 표시하되 비어 있는 구간은 압축하는 자료구조입니다. 위의 position delete 예라면 `f1.parquet`의 비트맵에서 36번 비트 하나를 켜는 것과 같습니다. 명세는 position delete 파일보다 실행할 때 효율적이라고 적습니다.
 
@@ -285,7 +285,7 @@ v3의 deletion vector는 Roaring bitmap으로 저장하고 한 스냅샷에서 �
 | copy-on-write | 바뀐 행이 든 파일을 다시 쓴다. 쓰기가 무겁고 읽기가 가볍다 | 이것 |
 | merge-on-read | 삭제 파일만 쓰고 읽을 때 합친다. 쓰기가 가볍고 읽기가 무겁다 | |
 
-얼마나 차이가 나는지는 Dremio의 Alex Merced가 든 예가 감을 잡기 좋습니다. 고객 한 명의 주문을 지우는 `DELETE FROM orders WHERE customer_id = 42`가 256MB짜리 파일 50개에 걸쳐 있다면 copy-on-write는 그 50개를 모두 다시 써서 약 12.5GB를 씁니다. merge-on-read는 `customer_id = 42`라고 적은 작은 삭제 파일 하나를 씁니다([Dremio, Copy-On-Write vs. Merge-On-Read](https://www.dremio.com/blog/row-level-changes-on-the-lakehouse-copy-on-write-vs-merge-on-read-in-apache-iceberg/)). 그 대신 merge-on-read는 이후 그 50개 파일을 읽는 쿼리마다 삭제 파일을 맞춰 보는 비용을 냅니다. 그래서 가끔 큰 수정이 있고 읽기가 많은 테이블은 copy-on-write, 작은 수정이 끊임없이 들어오는 테이블은 merge-on-read에 주기적인 컴팩션을 붙이는 조합이 흔합니다.
+얼마나 차이가 나는지는 Dremio의 Alex Merced가 든 예가 감을 잡기 좋습니다. 고객 한 명의 주문을 지우는 `DELETE FROM orders WHERE customer_id = 42`가 256MB짜리 파일 50개에 걸쳐 있다면 copy-on-write는 그 50개(합계 약 12.5GB)를 모두 읽어서 다시 씁니다. merge-on-read는 `customer_id = 42`라고 적은 작은 삭제 파일 하나를 씁니다([Dremio, Copy-On-Write vs. Merge-On-Read](https://www.dremio.com/blog/row-level-changes-on-the-lakehouse-copy-on-write-vs-merge-on-read-in-apache-iceberg/)). 그 대신 merge-on-read는 이후 그 50개 파일을 읽는 쿼리마다 삭제 파일을 맞춰 보는 비용을 냅니다. 그래서 가끔 큰 수정이 있고 읽기가 많은 테이블은 copy-on-write, 작은 수정이 끊임없이 들어오는 테이블은 merge-on-read에 주기적인 컴팩션을 붙이는 조합이 흔합니다.
 
 Ch-20의 CDC 스트리밍 반영은 merge-on-read 쪽이라 삭제 파일이 계속 쌓이고 Ch-19의 유지보수가 필요해집니다. `format-version` 기본값은 1.4.0부터 2입니다. 명세에는 아직 채택되지 않은 v4도 개발 중으로 올라와 있습니다.
 
@@ -304,8 +304,8 @@ Ch-20의 CDC 스트리밍 반영은 merge-on-read 쪽이라 삭제 파일이 계
 
 Iceberg는 배치 처리를 중심으로 설계됐습니다. 스트리밍으로 자주 갱신되는 테이블을 다루려고 중국에서 시작된 프로젝트가 둘 있습니다.
 
-- **Apache Paimon(Alibaba)**: 2022년 1월 Flink 커뮤니티에서 Flink Table Store로 시작해 Apache 인큐베이터 제안서 기준 주요 개발자가 Alibaba 소속입니다. Flink 커뮤니티의 2024년 글 "Apache Paimon: Streaming Lakehouse is Coming"은 Iceberg가 배치 처리를 위해 설계됐다는 점을 출발점으로 들고 레이크 포맷에 LSM 트리를 결합해 스트리밍 갱신을 받습니다. 같은 글은 권장 갱신 주기를 Iceberg 연동 1시간, Hudi 연동 10분, Paimon 1~5분으로 적습니다. Paimon 진영의 시각이라는 점을 감안해서 읽어야 합니다. LSM 트리는 들어오는 쓰기를 메모리에 모았다가 정렬된 파일로 내려 쓰고 그 파일들을 뒤에서 계속 합치는 구조입니다. 잦은 갱신을 "기존 파일 고치기" 대신 "새 파일 덧붙이기와 나중에 합치기"로 바꿔서 받습니다.
-- **Amoro(NetEase, 구 Arctic)**: NetEase는 2020년 Flink와 Iceberg로 시작했지만 운영 환경과 거리가 멀었다고 적었습니다. 당시 Iceberg에 upsert가 없었고 작은 파일을 누가 관리할지가 문제였습니다. 변경 데이터를 받는 change store와 기본 데이터인 base store를 나누고 플랫폼이 최적화를 자동으로 돌리는 구조로 만들었고 2023년 Amoro로 이름을 바꿔 Apache 인큐베이터에 들어갔습니다.
+- **Apache Paimon(Alibaba)**: 2022년 1월 Flink 커뮤니티에서 Flink Table Store로 시작해 Apache 인큐베이터 제안서 기준 주요 개발자가 Alibaba 소속입니다. Flink 커뮤니티의 2024년 글 "Apache Paimon: Streaming Lakehouse is Coming"은 Iceberg가 배치 처리를 위해 설계됐다는 점을 출발점으로 듭니다. Paimon은 레이크 포맷에 LSM 트리를 결합해 스트리밍 갱신을 받습니다. 같은 글은 갱신 주기를 Iceberg 연동 1시간, Hudi 연동 10분으로 적고 Paimon은 1~5분 지연을 내세웁니다. Paimon 진영의 시각이라는 점을 감안해서 읽어야 합니다. LSM 트리는 들어오는 쓰기를 메모리에 모았다가 정렬된 파일로 내려 쓰고 그 파일들을 뒤에서 계속 합치는 구조입니다. 잦은 갱신을 "기존 파일 고치기" 대신 "새 파일 덧붙이기와 나중에 합치기"로 바꿔서 받습니다.
+- **Amoro(NetEase, 구 Arctic)**: NetEase는 2020년 Flink와 Iceberg로 시작했지만 운영 환경과 거리가 멀었다고 적었습니다. 당시 Iceberg에 upsert가 없었고 작은 파일을 누가 관리할지가 문제였습니다. 변경 데이터를 받는 change store와 기본 데이터인 base store를 나누고 플랫폼이 최적화를 자동으로 돌리는 구조로 만들었고 2023년 Amoro로 이름을 바꿨고 2024년 3월 Apache 인큐베이터에 들어갔습니다([Apache Incubator, Amoro](https://incubator.apache.org/projects/amoro.html)).
 
 小米는 2025년 발표 정리에서 레이크하우스는 주로 Iceberg를 쓰지만 스트림 조인, 실시간 중복 제거, 일부 컬럼 갱신 같은 스트리밍 의미를 지원하기 어려워 Paimon을 들였다고 적었습니다. 이유로 든 것이 5절의 equality delete입니다. Iceberg의 equality delete는 적용 범위가 모든 과거 파일에 걸쳐 매번 거의 모든 과거 파일을 다시 써야 할 수 있다고 설명합니다.
 

@@ -78,7 +78,7 @@ kubectl get events --field-selector involvedObject.name=<이름> | grep -E 'Pull
 
 조심할 곳이 하나 있습니다. 쿠버네티스 문서는 init 컨테이너가 없는 Pod에서 kubelet이 샌드박스 생성과 네트워크 설정을 시작하기 전에 `Initialized`를 True로 바꾼다고 적습니다. init 컨테이너가 없는 Pod에서는 `Initialized` 시각이 `PodReadyToStartContainers`보다 앞설 수 있으니 구간 계산에 쓰면 안 됩니다.
 
-그리고 condition 시각은 초 단위라서 1초보다 짧은 구간은 구분되지 않습니다. 더 잘게 보려면 kubelet 메트릭을 씁니다(모두 ALPHA).
+그리고 condition 시각은 초 단위라서 1초보다 짧은 구간은 구분되지 않습니다. 더 잘게 보려면 메트릭을 씁니다. kubelet 메트릭은 모두 ALPHA이고 스케줄러 메트릭 하나만 BETA입니다.
 
 | 메트릭 | 재는 것 |
 |---|---|

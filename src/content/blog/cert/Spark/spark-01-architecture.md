@@ -442,7 +442,7 @@ Spark 1.x에서는 용도마다 진입점이 따로 있었습니다. RDD는 `Spa
 #### 3. 헷갈리는 점
 
 - Databricks 노트북이나 `pyspark` 셸에는 `spark` 변수가 이미 만들어져 있습니다. 거기서 `getOrCreate()`를 불러도 그 세션을 돌려받습니다.
-- Spark Connect에서는 클라이언트 쪽에 SparkContext가 없어서 `spark.sparkContext`를 쓸 수 없습니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 10절).
+- Spark Connect에서는 클라이언트 쪽에 SparkContext가 없어서 `spark.sparkContext`를 쓸 수 없습니다([Ch-06](/blog/cert/spark/spark-06-connect-pandas-api#3-spark-connect의-api-지원-범위) 3절).
 
 > **정리**: 세션은 여러 개, SparkContext는 하나입니다. 이 구조를 알면 아래 표에서 무엇이 세션별이고 무엇이 공유인지 바로 읽힙니다.
 

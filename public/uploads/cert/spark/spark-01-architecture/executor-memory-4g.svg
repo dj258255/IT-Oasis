@@ -86,7 +86,7 @@
 <text x="699.775390625" y="404" font-size="15" font-weight="700" fill="#2f9e44" text-anchor="middle">실행이 모자라면 캐시를 R까지 밀어냄</text>
 <text x="699.775390625" y="450" font-size="15" font-weight="700" fill="#e03131" text-anchor="middle">반대로 캐시는 실행 중인 메모리를 뺏지 못함</text>
 <text x="699.775390625" y="474" font-size="14" font-weight="500" fill="#495057" text-anchor="middle">(계산 중인 중간 상태라 버리면 Task가 실패)</text>
-<text x="600" y="540" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">PySpark의 Python 워커 프로세스는 JVM 밖에서 돌아서 힙이 아니라 overhead 쪽 메모리를 씁니다</text>
+<text x="600" y="540" font-size="15" font-weight="600" fill="#1e1e1e" text-anchor="middle">PySpark의 Python 워커 프로세스는 JVM 밖에서 돌아서 힙 대신 overhead 쪽 메모리를 씁니다</text>
 <text x="600" y="568" font-size="15" font-weight="500" fill="#495057" text-anchor="middle">YARN, Kubernetes는 힙 + overhead(+ pyspark.memory, offHeap)를 컨테이너 한도로 잡습니다</text>
 <text x="600" y="612" font-size="13" font-weight="500" fill="#495057" text-anchor="middle">참고: Alexey Grishchenko, Spark Memory Management (0x0fff.com) 그림을 4.2.0 기본값으로 다시 그림</text>
 </svg>

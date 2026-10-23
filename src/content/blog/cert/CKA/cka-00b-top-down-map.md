@@ -20,7 +20,7 @@ seriesOrder: 0.5
 
 1. CKA 범위는 넓어 보여도 대부분 `kubectl apply` 한 번이 지나가는 길 위에 있습니다. kubectl에서 출발해 API 서버, etcd, 컨트롤러, 스케줄러, kubelet, 런타임과 플러그인, Service, Gateway까지 아홉 층을 내려가면 시험 다섯 영역이 전부 한 번씩 등장합니다.
 2. 층마다 고장 나는 모양이 다릅니다. API 서버 앞에서 막히면 `kubectl`이 바로 오류를 돌려주고 그 아래에서 막히면 명령은 성공했는데 Pod가 `Pending`이나 `ContainerCreating`에 남습니다. 증상을 보고 몇 번째 층인지 짚는 것이 트러블슈팅(30%)의 출발점입니다.
-3. 이 글은 지도입니다. 층마다 무슨 일이 일어나는지 몇 줄로 적고 자세한 내용은 Ch-01부터 Ch-06의 해당 절로 넘깁니다. 처음 읽을 때는 그림 두 장과 5장의 증상 표만 기억해도 됩니다.
+3. 이 글은 지도입니다. 층마다 무슨 일이 일어나는지 몇 줄로 적고 자세한 내용은 Ch-01부터 Ch-06의 해당 절로 넘깁니다. 처음 읽을 때는 3장과 4장의 그림 두 장과 5장의 증상 표만 기억해도 됩니다.
 
 ---
 
@@ -135,7 +135,7 @@ kubectl은 kubeconfig에서 API 서버 주소와 자격 증명을 읽고 YAML을
 
 요청은 인증(누구인가), 인가(이 동작을 해도 되는가), 어드미션(내용을 고치거나 거절할 것인가)을 차례로 지납니다. 인가는 kubeadm 기본값으로 `Node,RBAC` 모드입니다. 어드미션 단계에서 ServiceAccount나 기본 톨러레이션 같은 값이 채워지고 ResourceQuota나 PodSecurity 위반이면 거절됩니다.
 
-- 고장 나면: 인증 실패는 `401`, 인가 실패는 `403 Forbidden`과 `cannot create resource ...`, 쿼터 위반은 `exceeded quota`가 kubectl 화면에 바로 찍힙니다. 이 층의 문제는 숨지 않습니다.
+- 고장 나면: 인증 실패는 `401`, 인가 실패는 `403 Forbidden`과 `cannot create resource ...`, 쿼터 위반은 `exceeded quota`가 kubectl 화면에 바로 찍힙니다. 내가 kubectl로 보낸 객체에 대해서는 이 층의 문제가 숨지 않습니다. Deployment가 대신 만드는 Pod가 쿼터에 걸리면 kubectl에는 보이지 않고 3-4절처럼 ReplicaSet 이벤트에 남습니다.
 - 더 볼 곳: 관문 다섯 단계의 실패 메시지 표는 [Ch-01.5 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow#1-2-api-서버-안의-다섯-관문), RBAC 객체 네 개는 [Ch-02 1장](/blog/cert/cka/cka-02-cluster-architecture)
 
 ### 3-3. etcd: 여기까지 오면 kubectl은 끝난다
@@ -154,7 +154,7 @@ kube-controller-manager 안의 deployment 컨트롤러가 새 Deployment를 보�
 
 ### 3-5. kube-scheduler: 노드를 고른다
 
-스케줄러는 `nodeName`이 빈 Pod를 큐에 넣고 Filter 단계에서 못 쓰는 노드를 거른 뒤 Score 단계에서 남은 노드에 점수를 매겨 하나를 고릅니다. 결정은 binding 요청으로 API 서버에 기록됩니다. requests, nodeSelector, 어피니티, 테인트와 톨러레이션이 전부 Filter에서 쓰입니다.
+스케줄러는 `nodeName`이 빈 Pod를 큐에 넣고 Filter 단계에서 못 쓰는 노드를 거른 뒤 Score 단계에서 남은 노드에 점수를 매겨 하나를 고릅니다. 결정은 binding 요청으로 API 서버에 기록됩니다. requests, nodeSelector, 필수(required) 어피니티, `NoSchedule` 테인트와 톨러레이션은 Filter에서 쓰이고 선호(preferred) 어피니티와 `PreferNoSchedule` 테인트는 Score에서 점수로 반영됩니다.
 
 - 고장 나면: Pod가 `Pending`에 남고 NODE 칸이 `<none>`입니다. 스케줄러가 살아 있는데 맞는 노드가 없으면 `FailedScheduling` 이벤트에 이유가 적힙니다. 스케줄러 자체가 멈췄으면 이벤트가 아예 없습니다.
 - 더 볼 곳: 스케줄러 동작은 [Ch-01.5 1-3절](/blog/cert/cka/cka-01b-core-objects-and-flow#1-3-스케줄러가-노드를-고르는-방식), 배치를 바꾸는 값들은 [Ch-03 5장](/blog/cert/cka/cka-03-workloads-scheduling)
@@ -168,7 +168,7 @@ kube-controller-manager 안의 deployment 컨트롤러가 새 Deployment를 보�
 
 ### 3-7. CRI, CNI, CSI: 컨테이너, 네트워크, 디스크를 붙인다
 
-kubelet은 직접 컨테이너를 만들지 않습니다. 세 인터페이스로 일을 나눠 맡깁니다.
+kubelet은 직접 컨테이너를 만들지 않습니다. 세 인터페이스로 일을 나눠 맡깁니다. CRI와 CSI는 kubelet이 직접 부르고 CNI는 CRI 런타임(containerd 등)이 샌드박스를 만들 때 부릅니다.
 
 | 인터페이스 | 맡는 일 | 대표 구현 |
 |---|---|---|
@@ -181,9 +181,9 @@ kubelet은 직접 컨테이너를 만들지 않습니다. 세 인터페이스로
 
 ### 3-8. Service와 kube-proxy: 바뀌는 Pod IP 앞에 고정 주소를 둔다
 
-Pod 세 개가 Ready가 되면 EndpointSlice 컨트롤러가 Service `web`의 selector에 맞는 Pod IP를 EndpointSlice에 적습니다. 각 노드의 kube-proxy는 Service와 EndpointSlice를 지켜보다가 ClusterIP로 온 패킷을 Pod IP 중 하나로 바꾸는 규칙을 커널에 씁니다. 기본 모드는 `iptables`입니다. 이름 `web.shop.svc.cluster.local`은 CoreDNS가 ClusterIP로 풀어 줍니다.
+Pod가 IP를 받으면 EndpointSlice 컨트롤러가 Service `web`의 selector에 맞는 Pod IP를 Ready 여부(`conditions.ready`)와 함께 EndpointSlice에 적습니다. 각 노드의 kube-proxy는 Service와 EndpointSlice를 지켜보다가 ClusterIP로 온 패킷을 Pod IP 중 하나로 바꾸는 규칙을 커널에 씁니다. 기본 모드는 `iptables`입니다. 이름 `web.shop.svc.cluster.local`은 CoreDNS가 ClusterIP로 풀어 줍니다.
 
-- 고장 나면: Service는 있는데 응답이 없습니다. 가장 흔한 원인은 selector와 Pod 라벨이 어긋나 EndpointSlice가 비어 있는 경우입니다. readiness probe가 실패한 Pod도 EndpointSlice에서 빠집니다. 이름만 안 풀리고 IP로는 닿으면 CoreDNS 쪽입니다.
+- 고장 나면: Service는 있는데 응답이 없습니다. 가장 흔한 원인은 selector와 Pod 라벨이 어긋나 EndpointSlice가 비어 있는 경우입니다. readiness probe가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다. 이름만 안 풀리고 IP로는 닿으면 CoreDNS 쪽입니다.
 - 더 볼 곳: Service 타입과 포트 셋은 [Ch-04 3장](/blog/cert/cka/cka-04-services-networking), 확인 순서는 [Ch-06 5장](/blog/cert/cka/cka-06-troubleshooting), CoreDNS는 [Ch-04 6장](/blog/cert/cka/cka-04-services-networking)
 
 ### 3-9. Gateway와 Ingress: 클러스터 바깥에서 들어오는 문

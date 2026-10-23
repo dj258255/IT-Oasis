@@ -281,7 +281,7 @@ local 모드는 엄밀히 말하면 `--deploy-mode` 값이 아니고 master URL�
 
 헷갈리는 지점입니다.
 
-- 로컬 모드에서 `spark.default.parallelism`은 머신의 코어 수입니다. `local[2]`로 띄우면 스레드가 둘이라 Task도 동시에 둘만 돕니다.
+- Configuration 문서는 로컬 모드의 `spark.default.parallelism` 기본값을 "머신의 코어 수"로 적지만 실제 값은 `local[K]`의 K입니다(4.2.0 소스 `LocalSchedulerBackend.defaultParallelism`이 스레드 수를 돌려줍니다). `local[2]`로 띄우면 스레드가 둘이라 Task도 동시에 둘만 돌고 기본 병렬도도 2입니다.
 - `sc://host:port`는 master URL 표에 없습니다. Submitting Applications 문서의 master URL은 클러스터 매니저를 고르는 값이고 `sc://`는 `--remote`나 `builder.remote()`에 주는 Spark Connect 서버 주소입니다. 보기에 `--master sc://...`가 나오면 섞어 놓은 오답으로 봅니다.
 - Spark Connect 서버도 하나의 Spark 드라이버 애플리케이션입니다. `start-connect-server.sh`에 `--master`를 주면 그 서버가 어느 클러스터에서 돌지 정합니다. 4.2.0 스크립트는 받은 인자를 `spark-daemon.sh submit`으로 넘겨 `spark-submit`으로 서버 클래스를 띄우고 `--help`에는 `spark-submit` 옵션 목록을 보여 줍니다(소스 `sbin/start-connect-server.sh`).
 - client 모드에서 드라이버가 죽으면 애플리케이션 전체가 끝납니다. cluster 모드의 Standalone에는 `--supervise`(`spark.driver.supervise`, 기본 false)로 0이 아닌 종료 코드일 때 드라이버를 자동 재시작하는 옵션이 있습니다.

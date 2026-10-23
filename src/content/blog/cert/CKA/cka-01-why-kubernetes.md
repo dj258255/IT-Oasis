@@ -678,7 +678,7 @@ kubectl get pod <Pod> -o jsonpath='{range .spec.tolerations[*]}{.key} {.effect} 
 
 Pod 삭제는 별도의 taint-eviction 컨트롤러가 맡고(1.29 beta부터 기본 분리, 1.34 GA) 지워진 Pod를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러입니다. 둘 다 controller-manager 안에서 돌므로 controller-manager가 멈춘 동안에는 축출도 일어나지 않습니다. 주인 없는 단독 Pod는 다시 만들어지지 않습니다.
 
-kind 워커 컨테이너를 `docker stop`으로 멈춰 잰 결과입니다. 약 45초 안에 노드가 `Unknown`이 되고 `unreachable` 테인트가 붙었습니다. `tolerationSeconds: 30`을 준 Pod는 그 30초 뒤, 기본 Pod는 약 300초 뒤 `TaintManagerEviction`(`Marking for deletion Pod shop/web-...`) 이벤트와 함께 `Terminating`이 됐고 Deployment의 대체 Pod는 다른 워커에서 `Running`이 됐습니다. 노드가 돌아오지 않으면 옛 Pod는 `Terminating`에 남습니다.
+kind 워커 컨테이너를 `docker stop`으로 멈춰 잰 결과입니다. 약 45초 안에 노드가 `Unknown`이 되고 `unreachable` 테인트가 붙었습니다. 50초보다 짧은 것은 유예 시간이 멈춘 시각에서 세지 않고 마지막 Lease 갱신 시각에서 세기 때문입니다. 갱신이 10초 간격이라 멈추기 몇 초 전의 갱신이 기준이 됩니다. `tolerationSeconds: 30`을 준 Pod는 그 30초 뒤, 기본 Pod는 약 300초 뒤 `TaintManagerEviction`(`Marking for deletion Pod shop/web-...`) 이벤트와 함께 `Terminating`이 됐고 Deployment의 대체 Pod는 다른 워커에서 `Running`이 됐습니다. 노드가 돌아오지 않으면 옛 Pod는 `Terminating`에 남습니다.
 
 ### 3-5. 직접 해 보기
 
@@ -795,7 +795,7 @@ requests와 limits 조합이 정하는 QoS 클래스와 LimitRange, ResourceQuot
 [그 뒤]   런타임이 종료 수거 → kubelet이 OOMKilled, 137로 보고
 ```
 
-SIGKILL은 프로세스가 잡거나 막거나 무시할 수 없는 시그널입니다(signal(7)). 그래서 애플리케이션은 정리 작업 없이 바로 끝납니다. 정상 종료 요청인 SIGTERM(143)과 다른 점입니다.
+SIGKILL은 프로세스가 잡거나 막거나 무시할 수 없는 시그널입니다(signal(7)). 그래서 애플리케이션은 정리 작업 없이 바로 끝납니다. 정상 종료 요청인 SIGTERM(15번, 받고 끝나면 종료 코드 143)과 다른 점입니다.
 
 #### 3. 커널 로그에서 확인하기
 
@@ -870,7 +870,7 @@ kubectl describe pod mem-over
 #     Restart Count:  2
 ```
 
-시험에서 확인할 곳은 `describe`의 `Last State`입니다. 컨테이너가 재시작해 지금 `Running`이어도 직전 종료 이유가 `Last State`에 남습니다. jsonpath로 뽑으면 이렇습니다.
+`describe`는 `get`보다 조금 뒤에 친 출력이라 `Restart Count`가 하나 더 많습니다. 시험에서 확인할 곳은 `describe`의 `Last State`입니다. 컨테이너가 재시작해 지금 `Running`이어도 직전 종료 이유가 `Last State`에 남습니다. jsonpath로 뽑으면 이렇습니다.
 
 ```bash
 kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason} {.status.containerStatuses[0].lastState.terminated.exitCode}{"\n"}'

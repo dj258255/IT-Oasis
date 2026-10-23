@@ -361,7 +361,7 @@ kubelet ─┼──→ kube-apiserver:6443 ──→ etcd:2379 (멤버끼리 :2
 | 워커 | 10256/TCP | kube-proxy 헬스체크 | 자기 자신, 로드밸런서 |
 | 워커 | 30000-32767/TCP, UDP | NodePort Service 기본 범위 | 전부 |
 
-kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으로 접속해서 처리합니다. 워커의 10250이 막히면 Pod는 잘 도는데 `kubectl logs`만 실패합니다. 실제 포트는 정적 Pod 매니페스트(`/etc/kubernetes/manifests/`)의 `--secure-port` 등으로 확인합니다.
+kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으로 접속해서 처리합니다. 워커의 10250이 막히면 Pod는 잘 도는데 `kubectl logs`만 실패합니다. 컨트롤 플레인 구성요소의 실제 포트는 정적 Pod 매니페스트(`/etc/kubernetes/manifests/`)의 `--secure-port` 등으로 확인합니다. kubelet은 systemd 서비스로 돌기 때문에 매니페스트에 없고 kubelet 설정 파일(`/var/lib/kubelet/config.yaml`)의 `port` 값을 봅니다. 값이 없으면 기본값 10250입니다.
 
 ### 1-4. CNI 설정은 컨테이너 런타임이 읽는다
 
@@ -1103,7 +1103,7 @@ Ingress의 표준 필드는 HTTP 요청을 호스트와 경로로 나누는 것�
 
 | 객체 | 비유(건물) | 실제 내용 | 주로 만드는 쪽 |
 |---|---|---|---|
-| **GatewayClass** | 출입 설비를 맡은 업체 | `controllerName`으로 구현체 컨트롤러를 가리킴 | 인프라 제공자 |
+| **GatewayClass** | 출입 관리를 맡은 업체 | `controllerName`으로 구현체 컨트롤러를 가리킴 | 인프라 제공자 |
 | **Gateway** | 실제 출입문 | 리스너(포트, 프로토콜, 인증서) | 클러스터 운영자 |
 | **HTTPRoute** | 문 안의 안내판 | 호스트, 경로, 헤더 매칭과 `backendRefs` | 앱 개발자 |
 
@@ -2054,7 +2054,7 @@ Gateway API
 - [Getting started with Gateway API](https://gateway-api.sigs.k8s.io/guides/)
 - [Migrating from Ingress](https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/)
 - [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/)
-- [Gateway API Security Model](https://gateway-api.sigs.k8s.io/docs/concepts/security/), [httproute_types.go의 PathMatchType](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go)
+- [Gateway API Security Model](https://gateway-api.sigs.k8s.io/docs/concepts/security/)
 - kubernetes-sigs/gateway-api, [apis/v1/httproute_types.go](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go)
 - kubernetes-sigs/gateway-api, [apis/v1/shared_types.go의 BackendRef Weight](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/shared_types.go)
 

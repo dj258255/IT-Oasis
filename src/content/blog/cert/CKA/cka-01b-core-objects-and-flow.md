@@ -177,7 +177,7 @@ webhooks:
 | 단계 | 하는 일 | 실패할 때(kind v1.37에서 `kubectl -v=6`으로 확인) | 시험에서 만나는 예 |
 |---|---|---|---|
 | 인증 | 클라이언트 인증서, 베어러 토큰(ServiceAccount 토큰 포함) 등으로 사용자 확인 | `401 Unauthorized`. kubectl은 `error: You must be logged in to the server (Unauthorized)` | kubeconfig의 인증서 경로 오류, 만료된 인증서, 잘못된 토큰 |
-| 인가 | 기본 모드 `Node,RBAC`로 이 사용자가 이 동작을 해도 되는지 판단 | `403 Forbidden`. `pods is forbidden: User "..." cannot list resource "pods" ...` | `kubectl auth can-i`로 확인하는 RBAC 문제 |
+| 인가 | kubeadm이 켜는 `Node,RBAC` 모드(플래그 자체의 기본값은 `AlwaysAllow`)로 이 사용자가 이 동작을 해도 되는지 판단 | `403 Forbidden`. `pods is forbidden: User "..." cannot list resource "pods" ...` | `kubectl auth can-i`로 확인하는 RBAC 문제 |
 | 변형 어드미션 | 요청 객체를 고침 | `403 Forbidden`. 없는 PriorityClass는 `no PriorityClass with name nope was found` | `DefaultTolerationSeconds`가 300초 톨러레이션 추가, `LimitRanger`가 기본 requests 주입 |
 | 스키마 검증 | 객체가 API 스키마에 맞는지 확인 | 잘못된 값은 `422 Unprocessable Entity`(`is invalid: spec.replicas: Invalid value: -1`). 오타 난 필드는 kubectl 기본 `fieldValidation=Strict` 때문에 `400 Bad Request`(`strict decoding error: unknown field`) | 음수 replicas, selector와 템플릿 라벨 불일치(422), 필드 이름 오타(400) |
 | 검증 어드미션 | 정책 위반이면 거부만 함 | ResourceQuota, LimitRange, PodSecurity는 `403 Forbidden`. ValidatingAdmissionPolicy는 `422`(메시지는 `is forbidden: ValidatingAdmissionPolicy ... denied request`). 웹훅 서버가 없는데 `failurePolicy: Fail`이면 `500 Internal Server Error`(`failed calling webhook`) | `exceeded quota`, `violates PodSecurity "restricted:latest"`, `maximum cpu usage per Container is 200m` |
@@ -417,7 +417,7 @@ Kubernetes Components 문서와 각 구성요소의 명령줄 레퍼런스를 �
 | kube-scheduler | `nodeName`이 빈 Pod에 노드를 정함 | static Pod | 10259 |
 | kube-controller-manager | 여러 컨트롤러를 한 프로세스로 묶어 실행 | static Pod | 10257 |
 | kubelet | 노드에서 Pod를 실제로 실행하고 상태 보고 | systemd 서비스 | 10250 |
-| kube-proxy | Service용 iptables/nftables/IPVS 규칙 관리 | DaemonSet | (규칙만 관리) |
+| kube-proxy | Service용 iptables/nftables/IPVS 규칙 관리 | DaemonSet | 10256(헬스 체크). Service 트래픽은 직접 받지 않음 |
 
 ### 2-2. kube-apiserver
 
@@ -1020,7 +1020,7 @@ Deployment order-api        "nginx:1.28로 3개, 하나씩 바꿔라"
 | ReplicaSet | "지금 템플릿으로 몇 개" |
 | Deployment | "템플릿이 바뀌면 어떻게 갈아탈지" |
 
-YAML에서는 `spec.template`이 "이렇게 생긴 Pod를 찍어 내라"는 틀입니다. 앞 4장의 Pod YAML에서 `apiVersion`과 `kind`를 뺀 `metadata`와 `spec`이 그대로 이 자리에 들어갑니다. 1장에서 본 리비전과 롤아웃은 모두 이 `template`이 바뀌었는지로 정해집니다.
+YAML에서는 `spec.template`이 "이렇게 생긴 Pod를 찍어 내라"는 틀입니다. 앞 4장의 Pod YAML에서 `apiVersion`과 `kind`를 뺀 `metadata`와 `spec`이 그대로 이 자리에 들어갑니다. 5-4절에서 볼 리비전과 롤아웃은 모두 이 `template`이 바뀌었는지로 정해집니다.
 
 #### 3. 한눈에 비교: RC와 RS
 
@@ -1687,10 +1687,10 @@ kubectl create deployment product-web --image=nginx:1.27 --replicas=3 -n shop \
   --dry-run=client -o yaml > deploy.yaml
 
 # 이미 있는 Deployment에 ClusterIP Service 붙이기 (selector를 그대로 가져옴)
-kubectl expose deployment product-web --port=80 --target-port=8080 -n shop
+kubectl expose deployment product-web --port=80 --target-port=80 -n shop
 
 # Pod와 같은 이름의 ClusterIP Service를 한 번에
-kubectl run order-api --image=nginx:1.27 --port=8080 --expose -n shop
+kubectl run order-api --image=nginx:1.27 --port=80 --expose -n shop
 
 # 필드 설명 찾기
 kubectl explain deployment.spec.strategy.rollingUpdate
@@ -1791,9 +1791,9 @@ kubectl explain pod.spec.containers.resources --recursive | head -30
 - Kubernetes, [ReplicationController](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/), [ReplicaSet](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/), [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 - Kubernetes, [Service](https://kubernetes.io/docs/concepts/services-networking/service/), [DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/), [Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/), [Resource Quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/), [Limit Ranges](https://kubernetes.io/docs/concepts/policy/limit-range/)
 - Kubernetes, [Kubernetes Object Management](https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/), [Declarative Management](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/)
+- Kubernetes, [kubectl edit](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_edit/), [kubectl apply](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_apply/), [kubectl scale](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_scale/), [kubectl run](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_run/), [kubectl expose](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_expose/)
 - Kubernetes, [kube-scheduler Configuration (v1)](https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/)(NodeResourcesFit 기본 전략 LeastAllocated), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/)(HPA를 쓸 때 매니페스트에서 replicas 빼기)
 
 기술 블로그
 - Jamie Hannaford, [What happens when ... Kubernetes edition!](https://github.com/jamiehannaford/what-happens-when-k8s)(1-1절 흐름 참고. 쿠버네티스 1.8 무렵 내용이라 kubectl run, Initializers, Docker 부분은 옛 동작)
 - Chiara Salvatore, LearnKube, [Server-side apply: what happens when you run kubectl apply](https://learnkube.com/server-side-apply-kubernetes)(7-2절 replicas 되돌림 예)
-- Kubernetes, [kubectl edit](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_edit/), [kubectl apply](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_apply/), [kubectl scale](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_scale/), [kubectl run](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_run/), [kubectl expose](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_expose/)

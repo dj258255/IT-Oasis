@@ -590,7 +590,7 @@ DataStreamWriter.trigger(*, processingTime=None, once=None,
 | 트리거 | 코드 | 동작 |
 |---|---|---|
 | 지정 안 함(기본) | 없음 | 마이크로배치. 이전 배치가 끝나면 바로 다음 배치. `processingTime='0 seconds'`와 같다 |
-| 고정 간격 | `trigger(processingTime="2 minutes")` | 간격마다 배치 시작. 이전 배치가 간격 안에 끝나면 기다리고 넘기면 끝나자마자 시작. 새 데이터가 없으면 배치를 띄우지 않는다 |
+| 고정 간격 | `trigger(processingTime="2 minutes")` | 간격마다 배치 시작. 이전 배치가 간격 안에 끝나면 기다리고 넘기면 끝나자마자 시작. 새 데이터가 없으면 배치를 띄우지 않는다(워터마크가 바뀐 상태 연산 쿼리의 빈 배치는 예외, 10-1) |
 | 한 번(deprecated) | `trigger(once=True)` | 쌓인 데이터를 배치 하나로 처리하고 멈춘다 |
 | 지금 있는 것 전부 | `trigger(availableNow=True)` | 쌓인 데이터를 소스 옵션에 맞춘 여러 배치로 처리하고 멈춘다 |
 | Continuous(실험적) | `trigger(continuous="1 second")` | 저지연 모드. 인자는 체크포인트 간격 |

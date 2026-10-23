@@ -167,9 +167,9 @@ fencing token은 이 문제를 쓰는 쪽에서 막습니다. 락을 잡을 때�
 | 컨트롤러 `parallelism`, `namespaceParallelism` | 클러스터, 네임스페이스 전체 Workflow 수 | 대기 중인 Workflow는 `spec.priority` 순으로 시작한다 |
 | mutex | 동시 1개 | Workflow 단위나 템플릿 단위로 건다 |
 | semaphore | 동시 N개 | ConfigMap의 값으로 N을 정한다 |
-| DB 기반 mutex·semaphore | 컨트롤러 여러 대가 공유 | 3.7에서 도입. PostgreSQL, MySQL. heartbeat 기본 60초, 300초 응답이 없으면 inactive. 그 컨트롤러가 이미 잡은 락은 수동으로 풀어야 한다 |
+| DB 기반 mutex·semaphore | 컨트롤러 여러 대가 공유 | 3.7에서 도입. PostgreSQL, MySQL, MariaDB. heartbeat 기본 60초, 300초 응답이 없으면 inactive. 그 컨트롤러가 이미 잡은 락은 수동으로 풀어야 한다 |
 
-락을 기다리는 Workflow는 priority가 높은 순, 같으면 먼저 만들어진 순으로 줄을 섭니다. 락 여러 개가 필요한 Workflow가 줄 맨 앞에 있으면 전부 얻을 때까지 기다리면서 뒤의 Workflow까지 막을 수 있습니다.
+락을 기다리는 Workflow는 priority가 높은 순, 같으면 먼저 만들어진 순으로 줄을 섭니다. 락 여러 개가 필요한 Workflow가 줄 맨 앞에 있으면 전부 얻을 때까지 기다리고 그 락 가운데 하나만 필요한 뒤의 Workflow도 함께 기다립니다.
 
 ## 5. 사람 승인 단계
 

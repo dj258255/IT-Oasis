@@ -23,7 +23,7 @@ seriesOrder: 3
 1. 파드 스펙의 `resources`는 컨테이너가 만들어질 때 OCI 런타임(runc, crun)이 cgroup v2 파일에 써 넣습니다. `limits.cpu`는 `cpu.max`, `requests.cpu`는 변환을 거쳐 `cpu.weight`, `limits.memory`는 `memory.max`가 됩니다. 한 번 쓰인 뒤 한도를 지키게 하는 주체는 커널입니다. kubelet과 containerd는 OOM이 일어나는 순간에 끼어들지 않고 결과만 사후에 보고합니다.
 2. CPU는 압축 가능한 자원이라 한도를 넘으면 다음 주기까지 기다립니다(스로틀링). 메모리는 압축할 수 없는 자원이라 회수(reclaim)에 실패하면 커널이 cgroup 안의 프로세스를 죽입니다(OOM kill). 그래서 CPU 한도 초과는 느려짐으로, 메모리 한도 초과는 `OOMKilled`와 재시작으로 나타납니다.
 3. `memory.max`와 비교되는 값은 `memory.current`입니다. 익명 메모리, 페이지 캐시, 커널 메모리, tmpfs가 모두 들어갑니다. 애플리케이션이 보는 힙 크기나 RSS만으로는 OOMKilled를 설명하지 못하는 경우가 많습니다.
-4. 기본 설정(쿠버네티스 1.36 기준)에서 `requests.memory`는 cgroup 파일에 쓰이지 않습니다. 스케줄링, Burstable 컨테이너의 `oom_score_adj` 계산, kubelet eviction 순위에만 쓰입니다.
+4. 기본 설정(쿠버네티스 1.36과 1.37 기준)에서 `requests.memory`는 cgroup 파일에 쓰이지 않습니다. 스케줄링, Burstable 컨테이너의 `oom_score_adj` 계산, kubelet eviction 순위에만 쓰입니다.
 5. QoS 클래스는 노드 메모리가 부족할 때 누가 먼저 죽을지를 정합니다. BestEffort는 `oom_score_adj` 1000, Guaranteed는 -997, Burstable은 메모리 request 비율로 3~999 사이 값을 받고 kubelet과 containerd는 -999입니다.
 
 ---
@@ -101,7 +101,7 @@ requests와 limits가 다르니 이 파드는 Burstable입니다. 이 글에 나
 
 CPU 시간은 다음 주기에 다시 주어집니다. 메모리는 이미 할당된 페이지를 프로세스에게서 빼앗을 방법이 회수밖에 없습니다. 회수할 수 없는 익명 메모리로 한도를 채우면 커널에게 남는 선택은 프로세스를 죽이는 것뿐입니다.
 
-이 글 내내 나오는 메모리 용어 네 개를 여기서 정리합니다.
+이 글 내내 나오는 메모리 용어 다섯 개를 여기서 정리합니다.
 
 | 용어 | 뜻 | 주문 API에서의 예 |
 |---|---|---|
@@ -313,7 +313,7 @@ getconf PAGESIZE     # x86_64 일반 커널이면 4096
 
 </details>
 
-`Mi`는 1024 기반입니다. 170Mi는 170 × 1,048,576 = 178,257,920바이트이고 `memory.max`에 이 숫자가 그대로 들어갑니다. `M`(1000 기반)으로 쓰면 170M = 170,000,000바이트라서 약 4.86% 작습니다. 한도를 넉넉하게 잡았다고 생각했는데 단위 하나 때문에 8MiB 넘게 모자랄 수 있습니다.
+`Mi`는 1024 기반입니다. 170Mi는 170 × 1,048,576 = 178,257,920바이트이고 `memory.max`에 이 숫자가 그대로 들어갑니다. `M`(1000 기반)으로 쓰면 170M = 170,000,000바이트라서 약 4.6% 작습니다. 한도를 넉넉하게 잡았다고 생각했는데 단위 하나 때문에 8,257,920바이트(약 7.9MiB)가 모자랍니다.
 
 커널은 `memory.max`를 페이지 크기 단위로 다룹니다. x86_64에서 페이지는 4KiB이고 arm64는 커널 설정에 따라 16KiB나 64KiB 페이지를 쓰기도 합니다. Mi 단위 값은 어느 쪽이든 나누어떨어집니다.
 
@@ -583,7 +583,7 @@ throttled_usec 512094377
 | `nr_throttled` | 그중 quota를 다 써서 멈춘 주기 수 |
 | `throttled_usec` | 멈춰 있던 시간의 합 |
 
-뒤의 세 필드는 cpu 컨트롤러가 켜져 있을 때만 나오고 fair 스케줄링 클래스의 태스크만 셉니다. 커널 6.6부터 fair 클래스 안에서 다음 태스크를 고르는 정책은 EEVDF로 바뀌는 중이지만 `cpu.max`를 집행하는 대역폭 제어(CFS bandwidth control)는 그대로 있습니다. 메트릭 이름에 남은 `cfs`도 이 기능을 가리킵니다.
+뒤의 세 필드는 cpu 컨트롤러가 켜져 있을 때만 나오고 fair 스케줄링 클래스의 태스크만 셉니다. 커널 6.6부터 fair 클래스 안에서 다음 태스크를 고르는 정책은 EEVDF로 바뀌었지만 `cpu.max`를 집행하는 대역폭 제어(CFS bandwidth control)는 그대로 있습니다. 메트릭 이름에 남은 `cfs`도 이 기능을 가리킵니다.
 
 cAdvisor(kubelet에 내장)는 같은 값을 Prometheus 메트릭으로 내보냅니다.
 
@@ -876,7 +876,7 @@ docker exec kind-control-plane dmesg | grep -i -A2 'memory cgroup out of memory'
 
 - `Last State`가 `Reason: OOMKilled`, `Exit Code: 137`인지
 - `kubectl get pod -w`에서 재시작 간격이 10초, 20초, 40초로 늘어나는지
-- 커널 로그 머리가 `Memory cgroup out of memory`이고 `oom_memcg` 경로가 이 컨테이너 scope인지
+- 커널 로그 머리가 `Memory cgroup out of memory`이고 `oom_memcg` 경로가 이 파드의 slice나 컨테이너 scope인지
 - 로그 끝의 `oom_score_adj` 값이 6-2 공식으로 계산한 값과 같은지
 - 컨테이너가 살아 있는 짧은 순간에 `kubectl exec`로 `memory.max`(134217728)와 `memory.events`를 읽을 수 있는지
 

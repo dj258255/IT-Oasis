@@ -608,7 +608,7 @@ parts = dated.select(
 | `CAST('a' AS INT)` | null | `CAST_INVALID_INPUT` 오류 |
 | `F.col("amount") / 0` | null | 0으로 나누기 오류(`try_divide` 설명과 4.2.0 소스 `DivModLike`) |
 | `size(null)` | -1 | null(2-3절) |
-| null로 받고 싶을 때 | 그대로 | `try_to_date`(4.0.0~), `try_to_timestamp`(3.5.0~), `Column.try_cast`(4.0.0~), `try_divide`(3.2.0~) |
+| null로 받고 싶을 때 | 그대로 | `try_to_date`(4.0.0~), `try_to_timestamp`(3.5.0~), `Column.try_cast`(4.0.0~), `F.try_divide`(3.5.0~, SQL 함수는 3.2.0~). 버전은 PySpark API 기준 |
 
 `unix_timestamp`의 API 문서는 3.5.9와 4.2.0 모두 "실패하면 null을 돌려준다"고 적습니다. ANSI 문서와 엇갈리는데 4.2.0 소스를 보면 ANSI 문서 쪽이 맞습니다. `UnixTimestamp` 식의 `failOnError` 기본값이 `spark.sql.ansi.enabled`이고 이 값이 true면 해석 실패에서 예외를 던지며 false일 때만 null을 돌려줍니다. 4.x 기본 설정에서는 오류가 납니다.
 

@@ -13,8 +13,8 @@ CHECK_COST = 1             # 확인 한 번 1초
 arrivals = [random.uniform(1 * 3600, 5 * 3600) for _ in range(DAYS)]   # 자정부터 초
 
 def polling(arrival):
-    checks = int(arrival // INTERVAL) + 1                  # 0분부터 5분마다, 도착 뒤 첫 확인에서 찾는다
-    found_at = checks * INTERVAL
+    found_at = (int(arrival // INTERVAL) + 1) * INTERVAL   # 도착 뒤 첫 확인 시각
+    checks = found_at // INTERVAL + 1                      # 00:00의 첫 확인부터 found_at까지 센다
     return checks, found_at - arrival, found_at
 
 poke_slot, resched_slot, delays, checks_total = 0, 0, [], 0

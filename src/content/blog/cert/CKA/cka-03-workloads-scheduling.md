@@ -125,7 +125,7 @@ kubectl rollout restart deployment/order-api -n shop
 
 ### 1-3. 헷갈리는 지점
 
-- `rollout status`는 롤아웃이 끝나면 종료 코드 0을 돌려줍니다. `--timeout`이나 진행 기한을 넘기면 `error: timed out waiting for the condition`과 함께 0이 아닌 코드로 끝납니다.
+- `rollout status`는 롤아웃이 끝나면 종료 코드 0을 돌려줍니다. `--timeout`을 넘기면 `error: timed out waiting for the condition`, `progressDeadlineSeconds`를 넘기면 `error: deployment "order-api" exceeded its progress deadline`과 함께 0이 아닌 코드로 끝납니다.
 - 없는 이미지 태그로 바꾸면 롤아웃이 멈춥니다. `maxUnavailable` 덕분에 옛 Pod가 전부 내려가지는 않으니 `rollout undo`로 되돌립니다.
 - 롤백하면 되돌아간 리비전 번호는 빠지고 같은 템플릿이 새 번호로 붙습니다. `1, 2, 3`에서 `undo`로 2에 돌아가면 `1, 3, 4`입니다.
 - `kubectl set image`나 `kubectl edit`으로 바꾼 값은 손에 든 매니페스트 파일에 남지 않습니다. 나중에 옛 파일로 `kubectl apply`를 하면 옛 이미지로 롤아웃이 다시 일어나니 파일도 함께 고쳐 둡니다.
@@ -179,7 +179,7 @@ kubectl edit deploy (env 추가) → 템플릿 변경 → 롤아웃 → 새 Pod�
 | `spec.tolerations` | 기존 항목에 더하는 것만 |
 | `spec.terminationGracePeriodSeconds` | 음수였던 값을 1로 바꿀 때만 |
 | `spec.schedulingGates` | 기존 게이트를 지우는 것만 |
-| `spec.nodeSelector`, `spec.affinity.nodeAffinity` | Pod에 스케줄링 게이트가 남아 있는 동안만 |
+| `spec.nodeSelector`, `spec.affinity.nodeAffinity` | Pod에 스케줄링 게이트가 남아 있는 동안 조건을 더해 좁히는 변경만(preferred 항목은 자유롭게 바꿈) |
 
 라벨과 어노테이션은 따로 바꿀 수 있고 CPU와 메모리는 3-3절의 `resize` 하위 리소스로 바꿉니다. 환경 변수, 볼륨, `command`, ServiceAccount 같은 나머지 필드를 고치면 "pod updates may not change fields other than ..."로 시작하는 메시지와 함께 거절됩니다.
 
@@ -814,7 +814,7 @@ HPA 객체에는 대상 워크로드(Deployment, StatefulSet 등), 목표치, �
 
 | 증상 | 원인 |
 |---|---|
-| `kubectl get hpa`의 `TARGETS`가 `<unknown>/60%` | metrics-server가 없거나 아직 값을 못 받음. HPA 컨트롤러는 사용량을 직접 재지 못해 아무것도 하지 않음 |
+| `kubectl get hpa`의 `TARGETS`가 `cpu: <unknown>/60%` | metrics-server가 없거나 아직 값을 못 받음. HPA 컨트롤러는 사용량을 직접 재지 못해 아무것도 하지 않음 |
 | CPU 사용률이 계산되지 않음 | 대상 컨테이너에 CPU request가 없음(사용률의 분모가 request) |
 | 초당 요청 수로 확장하고 싶음 | Prometheus Adapter 같은 어댑터가 `custom.metrics.k8s.io`나 `external.metrics.k8s.io` API를 제공해야 함 |
 
@@ -971,7 +971,7 @@ resizePolicy:
 
 </details>
 
-VerticalPodAutoscaler는 사용량에 맞춰 requests와 limits를 조정합니다. "Vertical Pod Autoscaling" 문서 기준으로 CRD(`autoscaling.k8s.io/v1`)로 정의되어 따로 설치해야 하고 예시가 적어서 `kubectl explain`으로 필드를 찾습니다. 설치는 kubernetes/autoscaler 저장소의 `vertical-pod-autoscaler` 디렉터리에서 `./hack/vpa-up.sh`를 실행합니다(2026년 10월 기본 1.8.0).
+VerticalPodAutoscaler는 사용량에 맞춰 requests와 limits를 조정합니다. "Vertical Pod Autoscaling" 문서 기준으로 CRD(`autoscaling.k8s.io/v1`)로 정의되어 따로 설치해야 하고 예시가 적어서 `kubectl explain`으로 필드를 찾습니다. 설치는 kubernetes/autoscaler 저장소의 `vertical-pod-autoscaler` 디렉터리에서 `./hack/vpa-up.sh`를 실행합니다. 아래 출력은 1.8.0에서 얻은 것이고 2026년 10월 21일에 1.8.1이 나왔습니다.
 
 ```bash
 kubectl get crd | grep verticalpodautoscaler
@@ -1170,7 +1170,7 @@ startupProbe를 지우면 처음부터 liveness가 돕니다. 0, 10, 20초에 �
 | 앱 이미지에 함께 넣기 | 앱을 고칠 때마다 보조 프로그램까지 다시 빌드 |
 | 이미지를 따로 만들어 같은 Pod에 넣기 | 앱 코드는 그대로 두고 기능만 붙임 |
 
-같은 Pod의 컨테이너가 함께 쓰는 것은 셋입니다.
+같은 Pod의 컨테이너가 함께 쓰는 것은 넷입니다.
 
 - **네트워크 네임스페이스**: 같은 IP를 쓰고 서로 `localhost:<포트>`로 부릅니다.
 - **볼륨**: 같은 `emptyDir`을 두 컨테이너가 마운트하면 한쪽이 쓴 파일을 다른 쪽이 바로 읽습니다.
@@ -1447,7 +1447,7 @@ YAML로 쓰면 `policy/v1`의 `spec.minAvailable`(또는 `maxUnavailable`, 한 P
 - `ALLOWED DISRUPTIONS`가 0이면 drain은 아래 줄을 찍으며 재시도하고 대체 Pod가 Ready가 되면 진행합니다. `maxUnavailable: 0`이나 레플리카 수와 같은 `minAvailable`이면 끝나지 않습니다.
 
 ```text
-error when evicting pods/"order-api-..." (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
+error when evicting pods/"order-api-..." -n "shop" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
 ```
 
 drain 명령과 `--ignore-daemonsets`, `--delete-emptydir-data`, `--force` 옵션은 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 4-7절에 정리했습니다.
@@ -2069,6 +2069,7 @@ ssh node01
 sudo -i
 grep staticPodPath /var/lib/kubelet/config.yaml
 vi /etc/kubernetes/manifests/board-check.yaml     # 아래 YAML을 붙여 넣음
+exit; exit                                        # root 셸과 ssh에서 나와 kubectl이 있는 호스트로
 kubectl get pods -A -o wide | grep board-check    # board-check-node01
 ```
 

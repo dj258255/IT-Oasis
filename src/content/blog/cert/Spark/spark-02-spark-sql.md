@@ -380,7 +380,7 @@ paid_db = (spark.read.format("jdbc")
            .option("numPartitions", "4")
            .load())
 
-# 쓰기: 기본 모드는 errorifexists
+# 쓰기: 기본 모드가 errorifexists라서 이미 있는 테이블에 붙이려면 append를 준다
 orders.write.jdbc(jdbc_url, "public.orders_copy", mode="append", properties=props)
 ```
 

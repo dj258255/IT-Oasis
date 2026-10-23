@@ -113,7 +113,7 @@ namespaces(7)의 표를 옮기고 clone(2)에 적힌 도입 버전을 붙였습�
 | Network | `CLONE_NEWNET` | 네트워크 장치, 스택, 포트, 라우팅 | 2.6.24 |
 | User | `CLONE_NEWUSER` | UID/GID, 권한(capability) | 2.6.23부터 단계적, 3.8에서 완성 |
 | Cgroup | `CLONE_NEWCGROUP` | cgroup 루트 디렉터리 | 4.6 |
-| Time | `CLONE_NEWTIME` | 부팅 시각, monotonic 시계 | 5.6 (2020) |
+| Time | `CLONE_NEWTIME` | boot 시계(부팅 후 흐른 시간), monotonic 시계 | 5.6 (2020) |
 
 Mount 네임스페이스만 플래그 이름이 `CLONE_NEWNS`라서 다른 종류와 모양이 다릅니다. mount 네임스페이스가 리눅스에 처음 들어온 네임스페이스였기 때문입니다. 2002년 2.4.19 당시에는 다른 종류가 없었으니 "새 네임스페이스(NEW NameSpace)"라는 이름으로 충분했습니다. 나머지 종류가 몇 년 뒤에 차례로 들어오면서 이름이 비대칭으로 남았습니다.
 
@@ -260,7 +260,7 @@ PID 네임스페이스의 첫 프로세스(init)는 두 가지 특별한 책임�
 
 시그널은 커널이 프로세스에게 보내는 짧은 알림입니다(SIGTERM은 "정리하고 끝내 달라", SIGKILL은 "지금 끝낸다"). 프로세스는 시그널마다 받았을 때 실행할 함수를 등록해 둘 수 있고 이 함수를 핸들러라고 부릅니다. 등록하지 않은 시그널을 받으면 커널이 정해 둔 기본 동작이 실행되는데 SIGTERM의 기본 동작은 종료입니다.
 
-pid_namespaces(7)는 네임스페이스 init에 대한 시그널 규칙을 따로 둡니다. 같은 네임스페이스 안의 다른 프로세스가 실수로 init을 죽여 네임스페이스 전체가 무너지는 일을 막으려는 규칙이고 호스트의 PID 1(systemd)이 받는 보호와 같은 것입니다.
+pid_namespaces(7)는 네임스페이스 init에 대한 시그널 규칙을 따로 둡니다. 같은 네임스페이스 안의 다른 프로세스가 실수로 init을 죽여 네임스페이스 전체가 무너지는 일을 막으려는 규칙이고 호스트의 PID 1(systemd)이 받는 보호와 비슷합니다.
 
 | 보내는 쪽 | init이 핸들러를 등록한 시그널 | 핸들러가 없는 시그널 |
 |---|---|---|
@@ -300,7 +300,7 @@ JVM은 SIGTERM에 반응하는 핸들러를 스스로 등록하고 그 안에서
 3. 안쪽에서 `sleep 1000 &`을 띄우고 바깥에서 안쪽 bash(PID 1)에 `sudo kill -KILL <호스트PID>`를 보냅니다. 바깥에서 `pgrep -f "sleep 1000"`이 비어 있는지 확인합니다. `zap_pid_ns_processes()`가 sleep까지 정리했는지 보는 과제입니다.
 4. `sudo unshare --pid --fork --mount-proc sleep 1000`으로 핸들러 없는 프로그램을 PID 1로 띄우고 바깥에서 `kill -TERM <호스트PID>`를 보냈을 때 살아 있는지 확인합니다.
 
-kind 노드 안 실측입니다. 1번에서 `echo $$`는 1이었습니다. `--fork`를 빼고 `unshare --pid --mount-proc bash`로 들어가면 첫 명령부터 `bash: fork: Cannot allocate memory`가 났습니다. 첫 자식이 PID 1이 된 뒤 bash가 끝나 네임스페이스에 새 프로세스를 만들 수 없게 된 것입니다. 2번의 `NSpid`는 `10528 1`처럼 두 숫자였습니다. 3번에서 PID 1 bash를 KILL로 죽이자 안쪽 sleep도 함께 사라졌습니다. 4번의 sleep은 TERM을 무시하고 살아 있었고 KILL로만 끝났습니다.
+kind 노드 안 실측입니다. 1번에서 `echo $$`는 1이었습니다. `--fork`를 빼고 `unshare --pid --mount-proc bash`로 들어가면 첫 명령부터 `bash: fork: Cannot allocate memory`가 났습니다. bash가 시작하면서 띄운 첫 자식이 PID 1을 차지했다가 끝나 버려서 그 네임스페이스에 새 프로세스를 만들 수 없게 된 것으로 보입니다. 2번의 `NSpid`는 `10528 1`처럼 두 숫자였습니다. 3번에서 PID 1 bash를 KILL로 죽이자 안쪽 sleep도 함께 사라졌습니다. 4번의 sleep은 TERM을 무시하고 살아 있었고 KILL로만 끝났습니다.
 
 ## 3. UTS, mount, network 네임스페이스 재현
 
@@ -780,7 +780,7 @@ kubelet
 
 1. 네트워크 네임스페이스를 새로 만들고 `/var/run/netns/cni-<id>`에 bind mount로 고정합니다(`netns.NewNetNS`). 3-4절의 `ip netns add`와 같은 방식입니다.
 2. 그 경로를 넘겨 CNI 플러그인을 호출합니다(`setupPodNetwork`, CNI ADD). 플러그인이 veth를 만들고 IP를 받아 넣습니다.
-3. pause 컨테이너를 그 네트워크 네임스페이스에 넣어 띄웁니다. ipc, uts(그리고 PID를 공유하는 설정이면 pid)는 pause 컨테이너를 만들 때 runc가 새로 만듭니다.
+3. pause 컨테이너를 그 네트워크 네임스페이스에 넣어 띄웁니다. ipc, uts, pid, mnt는 pause 컨테이너를 만들 때 runc가 새로 만듭니다(4-3의 pause 스펙 실측). 이 가운데 다른 컨테이너가 합류하는 것은 ipc, uts와 `shareProcessNamespace: true`일 때의 pid입니다.
 
 이 경로에서 CNI를 호출하는 주체는 처음부터 런타임이었습니다. kubelet이 CNI 바이너리를 직접 호출한 것은 Docker를 쓰던 dockershim 경로에서뿐이었습니다. dockershim이 1.24에서 제거되면서 kubelet의 `--network-plugin`, `--cni-bin-dir` 플래그도 함께 사라졌고 이제는 어떤 구성이든 CNI 호출이 런타임(containerd, CRI-O)의 일입니다.
 

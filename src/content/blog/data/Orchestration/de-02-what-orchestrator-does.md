@@ -161,7 +161,7 @@ Airflow Summit 2025 세션 "Security made us do it"이 이유를 둘로 정리�
 
 ### 3-5. 실행 중인 태스크가 죽은 걸 알아채는 방식
 
-태스크가 도는 동안 워커는 주기적으로 heartbeat를 보냅니다. 일정 시간 heartbeat가 끊기면 스케줄러가 그 태스크를 정리합니다. 재시도 횟수가 남았으면 재시도로, 아니면 실패로 바꿉니다. 예전에는 이런 태스크를 zombie task라고 불렀고 3.x 문서는 Task Instance Heartbeat Timeout이라고 부릅니다. 관련 설정은 `[scheduler] task_instance_heartbeat_timeout`(기준 시간), `task_instance_heartbeat_sec`(보내는 주기), `task_instance_heartbeat_timeout_detection_interval`(검사 주기)입니다.
+태스크가 도는 동안 워커는 주기적으로 heartbeat를 보냅니다. 일정 시간 heartbeat가 끊기면 스케줄러가 그 태스크를 정리합니다. 재시도 횟수가 남았으면 재시도로, 아니면 실패로 바꿉니다. 예전에는 이런 태스크를 zombie task라고 불렀고 3.x 문서는 Task Instance Heartbeat Timeout이라고 부릅니다. 관련 설정은 `[scheduler] task_instance_heartbeat_timeout`(기준 시간, 기본 300초), `task_instance_heartbeat_sec`(보내는 주기, 기본 0이면 기준 시간 값을 따른다), `task_instance_heartbeat_timeout_detection_interval`(검사 주기, 기본 10초)입니다([3.2 Configuration Reference](https://airflow.apache.org/docs/apache-airflow/3.2.0/configurations-ref.html)). 기본값이면 워커가 사라진 뒤 길게는 5분 남짓 지나서야 스케줄러가 그 태스크를 정리합니다.
 
 heartbeat가 필요한 이유는 "죽은 워커는 죽었다고 말할 수 없다"는 데 있습니다. 워커가 태스크를 끝내면 성공이나 실패를 보고하지만 워커 프로세스가 통째로 사라지면 아무 보고도 오지 않습니다. 그러면 메타DB에는 그 태스크가 영원히 `running`으로 남습니다. 그래서 거꾸로 "살아 있는 동안 계속 신호를 보내라, 신호가 끊기면 죽은 것으로 본다"고 정해 둔 것입니다.
 
@@ -302,7 +302,7 @@ def shop_daily_sales():
 
 - 3절과 4절은 Airflow 3.2, Argo Workflows 최신 문서 기준입니다. 버전이 바뀌면 부품 구성과 설정 이름이 달라질 수 있습니다.
 - 6절 표의 API 서버 행은 상태 보고가 막힌 뒤 태스크가 어떻게 정리되는지 문서로 확인하지 못했습니다.
-- heartbeat timeout의 기본값은 3.2 문서에 적혀 있지 않아서 숫자를 적지 않았습니다. `airflow config get-value scheduler task_instance_heartbeat_timeout`으로 직접 확인할 수 있습니다.
+- heartbeat timeout 기본값(300초)은 3.2.0 설정 참조 문서 기준입니다. 운영 중인 환경의 값은 `airflow config get-value scheduler task_instance_heartbeat_timeout`으로 직접 확인할 수 있습니다.
 - Dagster처럼 태스크 대신 데이터 자산을 중심에 두는 오케스트레이터는 다루지 않았습니다. Airflow 3의 Asset은 Ch-05에서 다룹니다.
 
 ## 10. 헷갈렸던 것

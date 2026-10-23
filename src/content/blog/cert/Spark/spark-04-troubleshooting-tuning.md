@@ -624,7 +624,7 @@ Performance Tuning 문서는 AQE를 런타임 통계로 가장 효율적인 실�
 | 20GB | true(기본) | min(1,280, 64) = 64MB | 약 320 |
 | 20GB | false | 64MB | 약 320 |
 
-셔플 데이터가 작을 때만 두 설정이 갈립니다. 기본값 true는 코어 16개를 다 쓰도록 작은 파티션을 남기고 false는 Task 수를 줄여 다른 Job에 코어를 양보합니다. 데이터가 크면 어느 쪽이든 64MB가 목표가 됩니다.
+문서 문장은 `parallelismFirst=true`일 때 64MB를 "무시한다"고 적지만 소스의 식에서는 64MB가 상한으로 남습니다. 무시되는 것은 "64MB만큼 채워 합친다"는 쪽이고 목표 크기는 셔플 크기를 코어 수로 나눈 값까지 내려갑니다. 셔플 데이터가 작을 때만 두 설정이 갈립니다. 기본값 true는 코어 16개를 다 쓰도록 작은 파티션을 남기고 false는 Task 수를 줄여 다른 Job에 코어를 양보합니다. 데이터가 크면 어느 쪽이든 64MB가 목표가 됩니다.
 
 문서가 제안하는 사용법은 `initialPartitionNum`을 넉넉하게 크게 두고 합치기를 AQE에 맡기는 것입니다. 데이터 크기에 맞는 셔플 파티션 수를 미리 맞출 필요가 줄어듭니다.
 
@@ -926,7 +926,7 @@ Python을 쓰면 힙 밖 메모리도 봐야 합니다. pandas UDF와 Python UDF
 <details>
 <summary>정답과 근거</summary>
 
-쪼개지 않습니다. 배수 조건(중앙값 20MB × 5 = 100MB 초과)은 넘지만 `skewedPartitionThresholdInBytes` 256MB를 넘지 못합니다. 두 조건을 동시에 넘어야 쏠림으로 판정합니다. 또 이 최적화는 sort-merge 조인에만 적용됩니다.
+쪼개지 않습니다. 배수 조건(중앙값 20MB × 5 = 100MB 초과)은 넘지만 `skewedPartitionThresholdInBytes` 256MB를 넘지 못합니다. 두 조건을 동시에 넘어야 쏠림으로 판정합니다. 또 문서 기준으로 이 최적화는 조인(sort-merge 조인)에 적용되고 `groupBy` 집계의 쏠림에는 적용되지 않습니다(4.2.0 소스는 shuffled hash 조인도 처리합니다, 4-2).
 
 </details>
 
@@ -958,7 +958,7 @@ C입니다. `toPandas()`는 모든 데이터를 드라이버 메모리로 올립
 <details>
 <summary>정답과 근거</summary>
 
-AQE의 셔플 파티션 합치기가 작은 파티션을 합쳤기 때문입니다. `coalescePartitions.enabled`가 기본 true이고 `parallelismFirst`가 true여서 최소 크기 1MB를 기준으로 합칩니다. 셔플 데이터가 작으면 200개가 몇 개로 줄어듭니다.
+AQE의 셔플 파티션 합치기가 작은 파티션을 합쳤기 때문입니다. `coalescePartitions.enabled`가 기본 true이고 `parallelismFirst`가 true여서 목표 크기를 "셔플 전체 크기 ÷ 기본 병렬도"(1MB 이상, 64MB 이하)로 잡고 합칩니다(6-2). 셔플 데이터가 작으면 200개가 몇 개로 줄어듭니다. 예를 들어 코어 8개에서 셔플 전체가 7MB라면 목표 크기가 1MB(7 ÷ 8 = 0.875MB를 최소 크기로 올린 값)라서 파티션은 7개 안팎이 됩니다.
 
 </details>
 

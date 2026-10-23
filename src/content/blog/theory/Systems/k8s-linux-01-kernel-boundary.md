@@ -149,8 +149,8 @@ openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 ...
 openat(AT_FDCWD, "/proc/cpuinfo", O_RDONLY) = 3
 fstat(3, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
-read(3, "processor\t: 0\nvendor_id\t: Genu"..., 131072) = 3072
-write(1, "processor\t: 0\nvendor_id\t: Genu"..., 3072) = 3072
+read(3, "processor\t: 0\nvendor_id\t: Genuin"..., 131072) = 3072
+write(1, "processor\t: 0\nvendor_id\t: Genuin"..., 3072) = 3072
 read(3, "", 131072) = 0
 close(3) = 0
 ```
@@ -163,7 +163,7 @@ strace 한 줄은 `시스템 콜 이름(인자들) = 반환값` 꼴입니다. �
 | `AT_FDCWD` | "현재 디렉터리 기준으로 경로를 해석하라"는 특수 값입니다. `openat`의 첫 인자입니다 |
 | `O_RDONLY\|O_CLOEXEC` | 읽기 전용으로 열고 이 프로세스가 다른 프로그램을 `execve`하면 자동으로 닫으라는 플래그입니다 |
 | `= 3` | 반환값입니다. `openat`은 새 파일 디스크립터 번호를 돌려줍니다. 0, 1, 2는 표준 입력, 출력, 오류가 이미 쓰고 있어 3부터 나옵니다 |
-| `"processor\t: 0\nvendor_id\t: Genu"...` | 버퍼 내용의 앞부분입니다. strace는 문자열을 기본 32자까지만 보여 주고 뒤를 `...`으로 자릅니다(`-s`로 늘림) |
+| `"processor\t: 0\nvendor_id\t: Genuin"...` | 버퍼 내용의 앞부분입니다. strace는 문자열을 기본 32자까지만 보여 주고 뒤를 `...`으로 자릅니다(`-s`로 늘림) |
 | `read(..., 131072) = 3072` | 최대 131072바이트를 달라고 했고 3072바이트를 받았다는 뜻입니다 |
 | `read(3, "", 131072) = 0` | 0은 파일 끝입니다. `cat`은 이 값을 보고 읽기를 멈춥니다 |
 
@@ -257,9 +257,9 @@ kube-proxy의 iptables, ipvs, nftables 모드에서 kube-proxy는 패킷을 직�
 
 - kubeadm 노드에서 `ps -eo pid,ppid,comm | grep -E 'kubelet|containerd|shim'`으로 부모 관계를 봅니다. 앱 컨테이너 프로세스의 PPID가 shim인지 확인합니다.
 - `sudo strace -f -e trace=clone,clone3,unshare,setns,pivot_root,mount -p $(pidof containerd) -o /tmp/trace.txt`를 걸어 둔 상태에서 파드 하나를 만들고 `trace.txt`에서 runc가 부른 호출 순서를 찾아봅니다. 추적이 끝나면 바로 끕니다.
-
-kind 워커(containerd 2.3.4, runc 1.4.3)에서 두 과제를 돌린 실측입니다. 노드 컨테이너 안에서 kubelet과 containerd의 PPID는 1(systemd)이었고 shim의 부모도 1이었습니다. shim은 띄운 쪽에서 떨어져 나와 init에 입양되므로 containerd가 재시작돼도 남습니다. 추적 파일에서는 containerd가 `unshare(CLONE_NEWNET)`으로 파드 네트워크 네임스페이스를 먼저 만들었습니다. pause 컨테이너용 runc는 `setns(..., CLONE_NEWNET)` 뒤에 `unshare(CLONE_NEWNS|CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWPID)`와 `pivot_root(".", ".")`를 불렀습니다. 앱 컨테이너는 `setns`로 IPC, UTS, NET을 pause 것에 합류한 뒤 `unshare(CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWPID)`를 불렀습니다. overlay `mount`의 대상은 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/<id>/rootfs`였습니다. `systemctl restart containerd` 과제는 돌리지 않았습니다.
 - `sudo systemctl restart containerd` 뒤에도 기존 파드의 컨테이너 프로세스 PID가 그대로인지 확인합니다. 컨테이너의 부모가 shim이고 네임스페이스와 cgroup은 커널 객체라서 containerd가 재시작해도 남습니다.
+
+kind 워커(containerd 2.3.4, runc 1.4.3)에서 앞의 두 과제를 돌린 실측입니다. 노드 컨테이너 안에서 kubelet과 containerd의 PPID는 1(systemd)이었고 shim의 부모도 1이었습니다. shim은 띄운 쪽에서 떨어져 나와 init에 입양되므로 containerd가 재시작돼도 남습니다. 추적 파일에서는 containerd가 `unshare(CLONE_NEWNET)`으로 파드 네트워크 네임스페이스를 먼저 만들었습니다. pause 컨테이너용 runc는 `setns(..., CLONE_NEWNET)` 뒤에 `unshare(CLONE_NEWNS|CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWPID)`와 `pivot_root(".", ".")`를 불렀습니다. 앱 컨테이너는 `setns`로 IPC, UTS, NET을 pause 것에 합류한 뒤 `unshare(CLONE_NEWNS|CLONE_NEWCGROUP|CLONE_NEWPID)`를 불렀습니다. overlay `mount`의 대상은 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/<id>/rootfs`였습니다. `systemctl restart containerd` 과제는 돌리지 않았습니다.
 
 ## 3. 커널 빌트인과 모듈: overlay와 br_netfilter
 
@@ -325,7 +325,7 @@ overlay                212992  12
 
 colima VM(커널 6.8.0-117-generic)의 실측은 `bridge 405504 0`, `overlay 204800 234`였고 `br_netfilter` 줄은 없었습니다. kind 노드 세 개와 다른 컨테이너의 rootfs가 모두 overlay라서 참조 카운트가 234까지 올라갔습니다.
 
-세 번째 숫자 열("Used by")은 그 모듈을 쓰고 있는 사용자 수, 즉 참조 카운트입니다. 다른 모듈이 의존하거나 커널 객체가 모듈을 붙잡고 있으면 늘어납니다. `bridge` 줄의 `1 br_netfilter`는 `br_netfilter`가 `bridge`에 의존한다는 뜻입니다. overlay의 숫자가 마운트 수와 함께 움직이는 것처럼 보이는 것은 overlay 마운트 하나하나가 모듈 참조를 잡기 때문입니다. 숫자의 정의는 어디까지나 참조 카운트이고 0이 아니면 `rmmod`로 내릴 수 없습니다.
+세 번째 열("Used by")은 그 모듈을 쓰고 있는 사용자 수, 즉 참조 카운트입니다. 다른 모듈이 의존하거나 커널 객체가 모듈을 붙잡고 있으면 늘어납니다. `bridge` 줄의 `1 br_netfilter`는 `br_netfilter`가 `bridge`에 의존한다는 뜻입니다. overlay의 숫자가 마운트 수와 함께 움직이는 것처럼 보이는 것은 overlay 마운트 하나하나가 모듈 참조를 잡기 때문입니다. 숫자의 정의는 어디까지나 참조 카운트이고 0이 아니면 `rmmod`로 내릴 수 없습니다.
 
 ### 3-3. overlay는 마운트할 때 적재되고 br_netfilter는 따로 적재해야 한다
 
@@ -457,9 +457,9 @@ memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 - `mount | grep -E ' type (proc|sysfs|cgroup2) '`로 세 가상 파일시스템의 마운트 지점과 타입을 확인합니다.
 - `stat /proc/meminfo`의 Size와 `wc -c /proc/meminfo`를 비교합니다. `ls -l /proc/kcore`의 크기도 봅니다.
 - `grep -E 'physical id|siblings|cpu cores' /proc/cpuinfo | sort -u`로 SMT가 켜졌는지 판단하고 `grep -c hypervisor /proc/cpuinfo`로 VM인지 확인합니다. `lscpu`의 "Thread(s) per core"와 결과가 같은지 맞춰 봅니다.
-
-colima VM(arm64) 실측입니다. 세 마운트는 `proc`, `sysfs`, `cgroup2`(`stat -fc %T`로 `cgroup2fs`)였습니다. `/proc/meminfo`는 `stat` 크기 0, `wc -c` 1504바이트였습니다. `/proc/kcore`는 278240543391744바이트(약 253TiB)로 4-2의 x86_64 값과 달랐습니다. arm64의 가상 주소 배치가 x86_64와 다르기 때문입니다. arm64 `cpuinfo`에는 `physical id`, `siblings`, `cpu cores`, `flags`, `hypervisor` 필드가 없고 `Features` 줄만 있어 이 과제의 SMT와 VM 판단은 할 수 없었습니다. `lscpu`는 `Thread(s) per core: 1`이었습니다.
 - `grep -E 'MemTotal|MemFree|MemAvailable' /proc/meminfo`를 기록합니다. 같은 시각에 `kubectl get --raw "/api/v1/nodes/<노드>/proxy/stats/summary"`의 `node.memory.workingSetBytes`로 `memory.available`을 직접 계산해 둘을 비교합니다.
+
+colima VM(arm64)에서 앞의 세 과제를 돌린 실측입니다(네 번째 과제의 값은 적지 않았습니다). 세 마운트는 `proc`, `sysfs`, `cgroup2`(`stat -fc %T`로 `cgroup2fs`)였습니다. `/proc/meminfo`는 `stat` 크기 0, `wc -c` 1504바이트였습니다. `/proc/kcore`는 278240543391744바이트(약 253TiB)로 4-2의 x86_64 값과 달랐습니다. arm64의 가상 주소 배치가 x86_64와 다르기 때문입니다. arm64 `cpuinfo`에는 `physical id`, `siblings`, `cpu cores`, `flags`, `hypervisor` 필드가 없고 `Features` 줄만 있어 이 과제의 SMT와 VM 판단은 할 수 없었습니다. `lscpu`는 `Thread(s) per core: 1`이었습니다.
 
 ## 5. 노드를 준비할 때 만지는 커널 설정
 
@@ -571,7 +571,7 @@ kubelet은 시작할 때 일부 커널 값을 직접 확인합니다. kubelet �
 
 ### 5-6. cgroup v2는 1.35부터 기본 필수
 
-쿠버네티스 1.35에서 cgroup v1 지원이 deprecated 되었습니다. 같은 버전에서 kubelet의 `failCgroupV1` 기본값이 `true`로 바뀌어 cgroup v1 노드에서는 kubelet이 기본적으로 시작하지 않습니다. kubeadm preflight도 오류를 냅니다. `failCgroupV1: false`로 당분간 우회할 수 있으며 코드 제거는 KEP-5573에서 따로 진행 중입니다. 정리하면 "기본적으로 필수, 임시 우회 가능"입니다.
+쿠버네티스 1.35에서 cgroup v1 지원이 deprecated 되었습니다. 같은 버전에서 kubelet의 `failCgroupV1` 기본값이 `true`로 바뀌어 cgroup v1 노드에서는 kubelet이 기본적으로 시작하지 않습니다. kubeadm preflight도 오류를 냅니다. `failCgroupV1: false`로 당분간 우회할 수 있습니다. 이 기본값 변경이 KEP-5573의 베타 단계이고 cgroup v1 코드를 지우는 일은 같은 KEP의 GA 단계로 미뤄져 있으며 KEP는 1.38보다 이르지 않다고 적고 있습니다. 정리하면 "기본적으로 필수, 임시 우회 가능"입니다.
 
 노드가 어느 버전인지는 cgroups 문서가 안내하는 명령으로 확인합니다.
 

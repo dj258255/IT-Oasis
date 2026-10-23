@@ -107,7 +107,8 @@ LF는 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했고 기준은 �
 | CNI 플러그인 선택 | Gateway API |
 | 매니페스트 관리와 템플릿 도구 인식 | NetworkPolicy 정의와 적용 |
 | 애플리케이션 확장 방법, 클러스터·노드 로깅 평가, 애플리케이션 모니터링 | 워크로드 자동 확장, Pod 승인 |
-| 스토리지 문구의 volume mode | 고가용성 컨트롤 플레인 구성, 동적 볼륨 프로비저닝 |
+| 스토리지 문구의 volume mode | 동적 볼륨 프로비저닝 |
+| 고가용성 클러스터 관리(Manage a highly-available Kubernetes cluster) | 고가용성 컨트롤 플레인 구현과 구성(왼쪽 옛 문구를 구체화한 것) |
 
 etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스터 수명주기 관리"와 HA 항목에 걸리고 kubernetes.io에 태스크 문서로 남아 있습니다. 후기도 갈립니다. Cassisi(2026)는 실러버스에서 빠졌다고 판단했고 Juikar(2026)는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 그래서 이 시리즈는 두 절차를 함정 위주로 짧게 남겼습니다([Ch-02 4장](/blog/cert/cka/cka-02-cluster-architecture)).
 
@@ -125,7 +126,7 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 | Gateway API | 바깥 HTTP 요청을 Service로 잇는 새 방식. Ingress의 후속 | `shop.example.com/cart`는 장바구니 Service로 | [Ch-04](/blog/cert/cka/cka-04-services-networking) |
 | CRD | 쿠버네티스에 없는 종류(kind)를 새로 등록하는 정의 | `kind: Coupon` 같은 객체를 만들 수 있게 함 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
 | 오퍼레이터 | CRD로 만든 객체를 보고 실제 작업을 하는 컨트롤러 | Coupon 객체가 생기면 만료 처리까지 맡는 프로그램 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| CRI, CNI, CSI | kubelet이 컨테이너, 네트워크, 디스크 일을 외부 플러그인에 맡길 때 쓰는 약속 | 런타임은 containerd, 네트워크는 Calico처럼 갈아 끼움 | [Ch-02 7장](/blog/cert/cka/cka-02-cluster-architecture#7-확장-인터페이스-cni-csi-cri) |
+| CRI, CNI, CSI | 컨테이너, 네트워크, 디스크 일을 외부 플러그인에 맡길 때 쓰는 약속. CRI와 CSI는 kubelet이 부르고 CNI는 컨테이너 런타임이 Pod 샌드박스를 만들 때 부름 | 런타임은 containerd, 네트워크는 Calico처럼 갈아 끼움 | [Ch-02 7장](/blog/cert/cka/cka-02-cluster-architecture#7-확장-인터페이스-cni-csi-cri) |
 | HPA | 사용량을 보고 Pod 수를 늘리고 줄이는 자동 확장 | 할인 행사 때 주문 API Pod를 3개에서 10개로 | [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling) |
 | etcd | 클러스터의 모든 객체가 저장되는 키-값 저장소 | 주문 장부 원본 | [Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow) |
 

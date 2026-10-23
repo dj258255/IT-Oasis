@@ -122,7 +122,7 @@ Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 �
 | `kubectl`이 API 서버에 연결 못 함 | API 서버 응답 없음 | 컨트롤 플레인 노드의 `crictl ps -a`, `kube-apiserver.yaml` | 매니페스트 오타, 인증서 경로, etcd 주소 | 2 |
 | Deployment는 있는데 Pod가 0개 | 컨트롤러가 Pod 객체를 만들지 않음 | `kube-system`의 kube-controller-manager Pod | static Pod 매니페스트 오류 | 2 |
 | Service가 응답 없음, 엔드포인트 없음 | selector가 Pod를 못 고르거나 Pod가 Ready 아님 | `kubectl get endpointslices -l kubernetes.io/service-name=<svc>` | selector와 라벨 불일치, `targetPort` 오류, readiness 실패 | 5 |
-| 이름 해석 실패 | CoreDNS 경로 어딘가의 문제 | `nslookup kubernetes.default`, CoreDNS Pod와 `kube-dns` Service | CoreDNS 다운, Corefile 오류, Egress NetworkPolicy가 DNS 차단 | 5, [Ch-04](/blog/cert/cka/cka-04-services-networking) |
+| 이름 해석 실패 | CoreDNS 경로 어딘가의 문제 | `nslookup kubernetes.default.svc.cluster.local`(5-2절 끝의 busybox 주의), CoreDNS Pod와 `kube-dns` Service | CoreDNS 다운, Corefile 오류, Egress NetworkPolicy가 DNS 차단 | 5, [Ch-04](/blog/cert/cka/cka-04-services-networking) |
 | `kubectl top` 실패 | Metrics API 없음 | `kubectl get apiservice`, metrics-server Pod | metrics-server 미설치, kubelet 인증서 검증 실패 | 3 |
 
 ### 0-3. Pending
@@ -278,7 +278,7 @@ Node Status 문서의 조건 표입니다.
 | `PIDPressure` | 프로세스가 너무 많음 |
 | `NetworkUnavailable` | 노드 네트워크가 제대로 설정되지 않음. 이 조건을 설정하는 구성요소(클라우드 라우트 컨트롤러나 일부 CNI)가 있을 때만 보임 |
 
-kubelet은 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다, Node의 `.status`는 변화가 없으면 기본 5분마다 갱신합니다. `Ready`가 grace period보다 오래 `Unknown`이나 `False`이면 `node.kubernetes.io/unreachable` 또는 `not-ready` 테인트가 붙고 Pod의 기본 톨러레이션(300초)이 지나면 축출됩니다. kubelet을 멈춘 노드의 `describe`는 이렇게 나옵니다(kind v1.37.0 워커에서 확인).
+kubelet은 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다, Node의 `.status`는 변화가 없으면 기본 5분마다 갱신합니다. `Ready`가 `Unknown`이 되면(grace period 동안 보고 없음) `node.kubernetes.io/unreachable`, `False`가 되면 `node.kubernetes.io/not-ready` 테인트가 붙고 Pod의 기본 톨러레이션(300초)이 지나면 축출됩니다. kubelet을 멈춘 노드의 `describe`는 이렇게 나옵니다(kind v1.37.0 워커에서 확인).
 
 ```
 Taints:             node.kubernetes.io/unreachable:NoExecute
@@ -287,7 +287,7 @@ Taints:             node.kubernetes.io/unreachable:NoExecute
   Ready                Unknown   ...   NodeStatusUnknown   Kubelet stopped posting node status.
 ```
 
-`Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어갑니다. kind 워커 컨테이너를 멈췄을 때는 약 45초 안에 `Unknown`과 테인트가 붙었고 기본 톨러레이션 Pod는 약 300초 뒤 `Terminating`이 되어 노드가 돌아올 때까지 그 상태로 남았습니다.
+`Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어갑니다. kind 워커 컨테이너를 멈췄을 때는 약 45초 안에 `Unknown`과 테인트가 붙었고(50초는 마지막 Lease 갱신부터 세므로 멈춘 시각부터 재면 최대 10초 짧게 보일 수 있습니다) 기본 톨러레이션 Pod는 약 300초 뒤 `Terminating`이 되어 노드가 돌아올 때까지 그 상태로 남았습니다.
 
 kind 워커의 `evictionHard`에 가용량보다 큰 `memory.available`을 넣어 압박을 만들면 노드에 `MemoryPressure True ... KubeletHasInsufficientMemory`와 `node.kubernetes.io/memory-pressure:NoSchedule` 테인트가 생겼습니다. 축출된 Pod의 메시지는 `The node was low on resource: memory. Threshold quantity: ...`이고 압박 중 kubelet이 다시 받는 BestEffort Pod는 `Pod was rejected: The node had condition: [MemoryPressure].`로 거절됐습니다. 둘 다 `.status.reason`은 `Evicted`인데 STATUS 열은 `Error`나 `ContainerStatusUnknown`이라 `--field-selector status.phase=Failed`로 찾습니다.
 
@@ -1088,7 +1088,7 @@ Debug Services 문서는 질문을 하나씩 확인하는 순서로 짜여 있�
 |---|---|---|---|
 | 1 | Service가 존재하는지 | `kubectl get svc <svc>` | `kubectl expose`로 만든다 |
 | 2 | 대상 Pod에 걸린 NetworkPolicy Ingress 규칙이 있는지 | `kubectl get networkpolicy -n <ns>` | 규칙을 검토한다 |
-| 3 | DNS 이름으로 동작하는지 | 클러스터 안 Pod에서 `nslookup <svc>`, `nslookup <svc>.<ns>` | [Ch-04](/blog/cert/cka/cka-04-services-networking)의 CoreDNS 점검 |
+| 3 | DNS 이름으로 동작하는지 | 클러스터 안 Pod에서 `nslookup <svc>`, `nslookup <svc>.<ns>`(busybox 1.36이면 `<svc>.<ns>.svc.cluster.local`) | [Ch-04](/blog/cert/cka/cka-04-services-networking)의 CoreDNS 점검 |
 | 4 | Service IP로 동작하는지 | `wget -qO- <ClusterIP>:<port>` | 다음 단계로 좁히기 |
 | 5 | Service 정의가 맞는지 | `kubectl get svc <svc> -o yaml` | 포트, `targetPort`, 프로토콜, 이름 붙은 포트 |
 | 6 | EndpointSlice가 있는지 | `kubectl get endpointslices -l kubernetes.io/service-name=<svc>` | selector와 Pod 라벨 대조 |
@@ -1126,7 +1126,7 @@ kubectl -n shop get networkpolicy
 kubectl -n shop describe networkpolicy <이름>
 ```
 
-임시 Pod 이미지는 `busybox:1.36`을 씁니다. 문서 예시의 `busybox:1.28`은 arm64 노드에서 `wget`이 `Segmentation fault`로 죽었습니다(kind). 1.36의 `nslookup`은 `order-db-0.order-db`처럼 점이 든 짧은 이름을 풀지 못하니 그럴 때는 `<svc>.<ns>.svc.cluster.local` 전체 이름을 씁니다.
+임시 Pod 이미지는 `busybox:1.36`을 씁니다. 문서 예시의 `busybox:1.28`은 arm64 노드에서 `wget`이 `Segmentation fault`로 죽었습니다(kind). 1.36의 `nslookup`은 이름에 점이 하나라도 있으면 `/etc/resolv.conf`의 search 도메인을 붙이지 않고 그대로 묻습니다(busybox `networking/nslookup.c`의 `add_query_with_search`). 그래서 `order-db-0.order-db`나 `kubernetes.default`, `order-api.shop`처럼 점이 든 짧은 이름은 풀지 못하니 그럴 때는 `<svc>.<ns>.svc.cluster.local` 전체 이름을 씁니다. 점이 없는 `order-api`는 search 도메인이 붙어 풀립니다.
 
 ### 5-3. kube-proxy 확인
 

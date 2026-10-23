@@ -172,7 +172,7 @@ ALB 뒤에는 주문 API를 돌리는 EC2 인스턴스들이 Auto Scaling 그룹
 
 ## 6. 추천 읽기 순서
 
-1. **이 글을 먼저 훑습니다.** 서비스 이름을 다 몰라도 됩니다. 층이 여덟 개이고 바닥이 하나라는 것만 잡습니다.
+1. **이 글을 먼저 훑습니다.** 서비스 이름을 다 몰라도 됩니다. 3절의 층이 여덟 개(그림에는 데이터 갈래인 3-8을 뺀 일곱 개)이고 바닥이 하나라는 것만 잡습니다.
 2. **Ch-01을 먼저 읽습니다.** 바닥(VPC, IAM, KMS)을 모르면 위층 문제의 보기 절반이 무슨 말인지 안 들어옵니다. 비중도 가장 큽니다.
 3. **Ch-02, Ch-03, Ch-04 순서로 읽습니다.** 읽다가 서비스 하나가 지도 어디에 있는지 헷갈리면 2절 그림으로 돌아옵니다.
 4. **다시 이 글로 돌아옵니다.** 3절의 층마다 "여기서 무엇을 고르는지"를 링크를 누르지 않고 말로 설명해 봅니다. 막히는 층이 다시 읽을 절입니다.
@@ -183,7 +183,7 @@ ALB 뒤에는 주문 API를 돌리는 EC2 인스턴스들이 Auto Scaling 그룹
 - **여러 리전과 재해 복구**: 지도는 한 리전 안의 모양입니다. 백업과 복원부터 다중 사이트 액티브/액티브까지 네 가지 DR 전략과 Aurora Global Database, S3 복제는 [Ch-02 3-6](/blog/cert/saa/saa-02-resilient-architectures#3-6-재해-복구-전략과-rpo-rto) 이후에 있습니다.
 - **여러 계정**: Organizations, SCP, Control Tower는 [Ch-01 2-8](/blog/cert/saa/saa-01-secure-architectures#2-8-여러-계정-보안-organizations-scp-rcp-control-tower)에 있습니다.
 - **서버리스로 바꾼 모양**: ALB와 Auto Scaling 그룹 자리를 API Gateway와 Lambda로 바꾸는 구성은 [Ch-02 2-7](/blog/cert/saa/saa-02-resilient-architectures#2-7-api-생성과-관리-api-gateway)과 [2-8](/blog/cert/saa/saa-02-resilient-architectures#2-8-서버리스-lambda와-fargate)에 있습니다.
-- **하이브리드 연결**: 사내 데이터센터와 잇는 VPN, Direct Connect, Storage Gateway는 지도 밖에 두었습니다.
+- **하이브리드 연결**: 온프레미스 데이터 센터와 잇는 VPN, Direct Connect, Storage Gateway는 지도 밖에 두었습니다.
 
 지도는 시험 범위를 다 덮지 않습니다. 범위 전체는 [Ch-00 2절](/blog/cert/saa/saa-00-exam-and-study-plan#2-영역과-과제)의 과제 목록이 기준입니다.
 

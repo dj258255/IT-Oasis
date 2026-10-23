@@ -83,7 +83,7 @@ Spark 공식 문서의 Cluster Mode Overview에 이 관계를 그린 그림이 �
 
 ### 3-2. 논리 계획: 아직 아무것도 돌지 않는다
 
-`read.parquet`, `groupBy`, `count`는 전부 트랜스포메이션입니다. 이 셋을 부르는 동안에는 데이터를 한 줄도 계산하지 않고 "무엇을 할지"를 적은 트리만 자랍니다. 여기서 `count()`가 헷갈립니다. `df.count()`는 숫자를 돌려주는 액션인데 `groupBy(...).count()`는 `count` 컬럼이 붙은 새 DataFrame을 돌려주는 트랜스포메이션입니다. 이 코드에서 액션은 맨 끝의 `show()` 하나입니다.
+`groupBy`와 `count`는 트랜스포메이션이고 `read.parquet`는 계획의 시작점(어떤 파일을 읽을지)을 만듭니다. 이 셋을 부르는 동안에는 행 데이터를 한 줄도 계산하지 않고 "무엇을 할지"를 적은 트리만 자랍니다. 다만 `read.parquet`는 스키마를 알아내려고 파일 목록과 Parquet 파일 끝의 메타데이터(footer)를 그 줄에서 바로 읽기 때문에 Spark UI에 짧은 Job이 찍힐 수 있습니다. 여기서 `count()`가 헷갈립니다. `df.count()`는 숫자를 돌려주는 액션인데 `groupBy(...).count()`는 `count` 컬럼이 붙은 새 DataFrame을 돌려주는 트랜스포메이션입니다. 이 코드에서 액션은 맨 끝의 `show()` 하나입니다.
 
 클래식 PySpark는 DataFrame을 만드는 순간 분석까지는 바로 합니다. 그래서 `groupBy("categroy")`처럼 컬럼 이름을 틀리면 그 줄에서 `AnalysisException`이 납니다. Spark Connect는 분석을 서버로 미루니 오류가 나는 줄이 달라집니다(5절).
 
