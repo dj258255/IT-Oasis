@@ -328,6 +328,27 @@ IAM 사용자의 액세스 키는 지우기 전까지 영원히 유효합니다.
 | IAM 역할 신뢰 정책 | 누가 이 역할을 맡을 수 있는지 |
 | VPC 엔드포인트 정책 | 엔드포인트를 통해 어떤 주체가 어떤 리소스에 접근할지. 기본 정책은 모두 허용 |
 
+버킷 정책에서 처음 보면 헷갈리는 모양이 "허용"을 쓰지 않고 "조건이 거짓이면 거부"로 쓰는 문장입니다. HTTPS 강제가 대표적입니다.
+
+```json
+{
+  "Sid": "DenyInsecureTransport",
+  "Effect": "Deny",
+  "Principal": "*",
+  "Action": "s3:*",
+  "Resource": ["arn:aws:s3:::board-attachments", "arn:aws:s3:::board-attachments/*"],
+  "Condition": { "Bool": { "aws:SecureTransport": "false" } }
+}
+```
+
+| 줄 | 뜻 |
+|---|---|
+| `Effect: Deny`, `Principal: *` | 누구든 이 조건에 걸리면 거부 |
+| `Resource` 두 개 | 버킷 자체(`ListBucket` 같은 버킷 작업)와 그 안의 모든 객체(`/*`). 하나만 적으면 다른 쪽 요청은 걸리지 않습니다 |
+| `aws:SecureTransport: false` | 요청이 HTTPS가 아닐 때 참 |
+
+"HTTPS일 때 허용"으로 쓰지 않는 이유는 2-4절의 평가 순서에 있습니다. 허용 문장은 다른 정책의 허용과 합쳐질 뿐이라 HTTP 요청을 막지 못합니다. 명시적 거부는 어떤 허용보다 먼저 이기므로 "HTTP면 무조건 거부"가 됩니다. 특정 VPC 엔드포인트에서만 받게 하는 `aws:SourceVpce` 조건도 같은 이유로 `StringNotEquals`와 `Deny`를 짝지어 씁니다(3-4절).
+
 ### 2-7. 페더레이션: IAM Identity Center, IAM, Cognito
 
 <details>
@@ -1039,6 +1060,62 @@ Secrets Manager는 대부분의 관리형 비밀에 Lambda 없이 동작하는 �
 
 ### 4-2. 키 정책과 봉투 암호화
 
+<details>
+<summary>기초부터: 기본 키 정책 한 줄 읽기, grant, 봉투 암호화를 따라가기</summary>
+
+> **핵심 한 줄**: KMS 키는 키 정책이 먼저 문을 열어 줘야 IAM 정책이 효과를 내고 큰 데이터는 KMS가 직접 암호화하지 않고 KMS가 내준 데이터 키로 우리 서버에서 암호화합니다.
+
+#### 1. 왜 "키 정책이 허용하지 않으면 IAM 정책도 소용없다"가 되나
+
+S3 버킷은 같은 계정의 IAM 정책만으로 접근을 줄 수 있습니다. KMS 키는 다릅니다. KMS 문서는 다른 AWS 리소스 정책과 달리 키 정책이 계정이나 그 안의 어떤 신원에게도 자동으로 권한을 주지 않는다고 적습니다. 그래서 키를 만들 때 AWS가 넣어 주는 기본 키 정책의 첫 문장이 이 문제를 풀어 줍니다.
+
+```json
+{
+  "Sid": "Enable IAM User Permissions",
+  "Effect": "Allow",
+  "Principal": { "AWS": "arn:aws:iam::111122223333:root" },
+  "Action": "kms:*",
+  "Resource": "*"
+}
+```
+
+| 줄 | 뜻 |
+|---|---|
+| `Principal ... :root` | 루트 사용자 한 명을 가리키지 않습니다. 문서는 이것을 "계정 주체"라고 부르고 계정과 그 관리자들을 뜻한다고 적습니다 |
+| `Action: kms:*` | 이 키에 대한 모든 KMS 작업 |
+| 문장 전체의 효과 | 계정 주체에게 직접 권한을 준다기보다 "이 계정은 IAM 정책으로 이 키 권한을 나눠 줘도 된다"는 위임입니다 |
+
+이 문장을 지우면 IAM 정책의 허용은 효과가 없어지고 IAM 정책의 거부만 계속 효과를 냅니다. 키 정책에 사용자 한 명만 적어 두었다가 그 사용자를 지우면 키를 관리할 사람이 없어져 AWS Support에 연락해야 한다는 경고도 같은 문서에 있습니다. 시험에서 "IAM 정책에 `kms:Decrypt`를 줬는데 거부된다"가 나오면 키 정책부터 봅니다. 다른 계정에 키를 쓰게 할 때도 키 정책에 그 계정을 적고 그 계정 안에서 다시 IAM 정책으로 나눠 줘야 합니다. 2-4절의 교차 계정 규칙이 키에도 똑같이 걸립니다.
+
+#### 2. grant는 무엇인가
+
+grant는 특정 주체에게 KMS 키 하나를 암호 작업에 쓰게 해 주는 권한 부여 수단입니다. 키 정책이나 IAM 정책을 고치지 않고 만들었다가 쓰고 지울 수 있어서 잠깐 필요한 권한에 맞습니다. 허용만 할 수 있고 거부는 못 합니다. 주로 AWS 서비스가 씁니다. 암호화된 EBS 볼륨을 EC2 인스턴스에 붙일 때 EC2가 사용자 대신 grant를 만들어 그 키를 쓰고 일이 끝나면 grant를 거둡니다. 콘솔이 만드는 기본 키 정책에 `kms:CreateGrant`와 `kms:GrantIsForAWSResource` 조건이 들어 있는 이유가 이것입니다.
+
+#### 3. 봉투 암호화는 왜 필요한가
+
+KMS의 `Encrypt`는 한 번에 4,096바이트까지만 받습니다. 쇼핑몰 주문 내역 파일 100MB를 KMS로 보내 암호화할 수는 없습니다. 크기 제한이 없더라도 매 바이트를 네트워크로 KMS에 보냈다 받으면 느리고 요청 수만큼 요금과 할당량을 씁니다. 그래서 일을 나눕니다.
+
+![봉투 암호화의 두 흐름. 암호화할 때는 앱이 KMS에 GenerateDataKey를 요청해 평문 데이터 키와 암호화된 데이터 키를 받고 평문 키로 파일을 암호화한 뒤 암호문과 암호화된 키를 함께 저장한다. 복호화할 때는 둘을 읽어 암호화된 키만 KMS에 Decrypt로 보내 평문 키를 받고 서버에서 직접 복호화한다](/uploads/cert/saa/saa-01-secure-architectures/envelope-encryption.svg)
+
+| 단계 | 누가 | 무엇을 |
+|---|---|---|
+| ① | 앱 → KMS | `GenerateDataKey`. "이 KMS 키로 데이터 키 하나 만들어 줘" |
+| ② | KMS → 앱 | 같은 데이터 키의 평문 사본과 KMS 키로 잠근 사본 두 개 |
+| ③ | 앱 | 평문 데이터 키로 100MB 파일을 서버에서 암호화하고 평문 키는 메모리에서 지움 |
+| ④ | 앱 → 저장소 | 암호문 옆에 잠근 데이터 키를 같이 저장. 이 키를 잃으면 데이터를 영영 못 풉니다 |
+| ⑤~⑧ | 복호화 | 잠근 데이터 키만 KMS `Decrypt`로 보내 평문 키를 돌려받고 파일은 서버에서 풉니다 |
+
+봉투라는 이름은 데이터를 데이터 키로 잠그고 그 데이터 키를 다시 KMS 키로 잠가 한 봉투에 넣는 모양에서 왔습니다. KMS 키가 KMS 밖으로 나오는 순간은 없습니다. 키를 교체할 때도 이득이 있습니다. 바깥 키를 바꿀 때 데이터 전체는 그대로 두고 작은 데이터 키들만 다시 잠그면 된다는 설명이 WorkOS 글([Envelope encryption explained](https://workos.com/blog/envelope-encryption-explained), 2026)에 잘 정리되어 있습니다. KMS 자동 회전은 그마저도 하지 않고 이전 키 자료를 남겨 두어 옛 데이터 키를 계속 풀 수 있게 합니다(4-3절).
+
+#### 4. 헷갈리는 점
+
+- S3의 SSE-KMS는 이 과정을 S3가 대신 합니다. 그래서 S3에 객체를 올리는 역할에도 그 키의 `kms:GenerateDataKey` 권한이 필요하고 읽는 역할에는 `kms:Decrypt`가 필요합니다. 버킷 권한만 주고 키 권한을 빠뜨려 `AccessDenied`가 나는 경우가 흔합니다.
+- 객체마다 KMS를 부르면 요청이 많아집니다. 4-5절의 S3 Bucket Key가 이 횟수를 줄이는 장치입니다.
+
+> **정리**: 키 정책은 KMS 키의 첫 관문이고 기본 키 정책의 `:root` 문장이 IAM 정책을 쓸 수 있게 열어 줍니다. 큰 데이터는 데이터 키로 서버에서 암호화하고 KMS는 그 작은 데이터 키만 잠그고 풉니다.
+
+</details>
+
 KMS 키에는 반드시 정확히 하나의 키 정책이 있습니다. 문서의 핵심 문장은 두 가지입니다. 루트 사용자나 키 생성자를 포함해 어떤 주체도 키 정책, IAM 정책, 권한 부여(grant) 중 하나에서 명시적으로 허용되고 거부되지 않아야 키를 쓸 수 있습니다. 키 정책이 허용하지 않으면 IAM 정책으로 허용해도 효과가 없고 기본 키 정책에는 IAM 정책을 활성화하는 문장이 들어 있습니다. 키 정책은 리전 단위라 다른 리전의 키에는 영향을 주지 않습니다.
 
 `Encrypt` API로 직접 암호화할 수 있는 평문은 대칭 키 기준 최대 4,096바이트입니다. 그보다 큰 데이터는 봉투 암호화를 씁니다.
@@ -1208,6 +1285,17 @@ S3 Block Public Access 설정은 네 개이고 액세스 포인트, 버킷, 계�
 | `BlockPublicPolicy` | 공개 접근을 허용하는 버킷 정책 설정을 거부한다. 계정 수준에 거는 것을 권장 |
 | `RestrictPublicBuckets` | 공개 정책이 있는 버킷을 AWS 서비스 주체와 버킷 소유 계정의 권한 있는 사용자만 접근하게 제한한다 |
 
+네 설정의 이름이 비슷해서 헷갈리면 두 기준으로 나눠 보면 됩니다. 무엇을 다루는지(ACL인지 버킷 정책인지)와 언제 작동하는지(새로 공개로 거는 순간을 막는지, 이미 걸린 공개 설정을 무력화하는지)입니다.
+
+| | 새로 공개로 거는 요청을 막는다 | 이미 걸린 공개 설정을 무력화한다 |
+|---|---|---|
+| ACL | `BlockPublicAcls` | `IgnorePublicAcls` |
+| 버킷 정책 | `BlockPublicPolicy` | `RestrictPublicBuckets` |
+
+S3 API 문서([PublicAccessBlockConfiguration](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PublicAccessBlockConfiguration.html))를 기준으로 보면 `BlockPublicAcls`는 이미 있는 ACL을 건드리지 않고 `IgnorePublicAcls`는 공개 ACL을 지우지 않은 채 무시만 합니다. 그래서 둘을 같이 켜야 "앞으로도 못 걸고 이미 걸린 것도 효과 없음"이 됩니다. 정책 쪽 두 설정도 같은 짝입니다.
+
+게시판 첨부 파일 버킷을 예로 들면 이렇습니다. 누군가 예전에 객체 하나에 `public-read` ACL을 걸어 두었다면 `IgnorePublicAcls`를 켜는 순간 그 객체는 외부에서 열리지 않습니다. ACL 자체는 남아 있어서 설정을 끄면 다시 열립니다. 시험에서 "계정의 어떤 버킷도 실수로 공개되지 않게"가 나오면 네 설정을 모두 켠 계정 수준 Block Public Access가 답입니다.
+
 Object Ownership의 기본값은 "버킷 소유자 적용(bucket owner enforced)"이고 ACL이 꺼진 상태입니다. 문서는 객체마다 따로 접근을 통제해야 하는 경우가 아니면 ACL을 끄라고 권합니다.
 
 ### 4-8. 버킷을 비공개로 둔 채 내보내기: CloudFront OAC와 미리 서명된 URL
@@ -1342,7 +1430,7 @@ Object Lock은 버전 관리가 켜진 버킷에서만 동작하고 객체 버�
 
 AWS Backup은 백업 계획(backup plan)으로 여러 서비스의 백업을 중앙에서 일정에 맞춰 만들고 리전 간과 계정 간 복사를 지원합니다. Organizations와 연동하면 백업 정책을 조직 계정 전체에 적용합니다.
 
-Backup Vault Lock은 백업 저장소(vault)에 WORM을 겁니다.
+Backup Vault Lock은 백업 저장소(vault)에 WORM을 겁니다. WORM(Write Once, Read Many)은 한 번 쓰면 정해진 기간 동안 읽기만 되고 고치거나 지울 수 없는 상태를 말합니다. 4-9절의 Object Lock이 S3 객체에 거는 것과 같은 성질을 백업 복구 지점에 거는 셈입니다. 랜섬웨어가 관리자 권한을 빼앗아 백업부터 지우려는 상황을 막는 장치로 이해하면 됩니다.
 
 | 모드 | 동작 |
 |---|---|
@@ -1582,3 +1670,8 @@ IAM과 여러 계정
 - [AWS Audit Manager availability change](https://docs.aws.amazon.com/audit-manager/latest/userguide/audit-manager-availability-change.html), [What is AWS Artifact?](https://docs.aws.amazon.com/artifact/latest/ug/what-is-aws-artifact.html), [What is AWS Directory Service?](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html)
 - [AWS KMS overview](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html), [ACM certificate characteristics](https://docs.aws.amazon.com/acm/latest/userguide/acm-certificate-characteristics.html), [AWS PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/)
 - [Connect to a Microsoft AD directory (IAM Identity Center)](https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source-ad.html), [Decide when to use CloudFront signed URLs or signed cookies](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-choosing-signed-urls-cookies.html)
+
+2026년 10월 23일 보강 때 연 문서와 글
+- AWS KMS Developer Guide: [Default key policy](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html), [Grants in AWS KMS](https://docs.aws.amazon.com/kms/latest/developerguide/grants.html)
+- Amazon S3 API Reference, [PublicAccessBlockConfiguration](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PublicAccessBlockConfiguration.html)
+- Maria Paktiti, WorkOS Blog, [Envelope encryption explained](https://workos.com/blog/envelope-encryption-explained) (2026-07-15). 봉투 암호화에서 키 교체 비용이 줄어드는 이유를 참고했습니다

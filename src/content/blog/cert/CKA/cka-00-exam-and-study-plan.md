@@ -43,6 +43,42 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 
 채점은 클러스터의 최종 상태를 봅니다. 응시자 핸드북은 과제를 푸는 방법이 여럿일 수 있다고 적고 문항별 배점과 성적은 공개하지 않습니다. 하위 과제별 부분 점수는 killer.sh FAQ가 설명하는 방식이고 LF FAQ에는 부분 점수에 대한 언급이 없습니다.
 
+<details>
+<summary>기초부터: 실기 과제 하나는 어떤 모양인가</summary>
+
+> **핵심 한 줄**: 실기 과제는 "이 호스트에 들어가서 클러스터를 이 상태로 만들어라"라는 지시이고 채점기는 내가 친 명령을 보지 않고 **끝났을 때 클러스터에 남은 상태**를 봅니다.
+
+#### 1. 객관식 시험과 무엇이 다른가
+
+객관식 시험은 답을 아는지 묻습니다. CKA는 답을 손으로 만들 수 있는지 묻습니다. 그래서 개념을 알아도 명령을 치는 속도가 느리면 점수가 나오지 않습니다. 후기들이 시간 부족을 첫 어려움으로 꼽는 이유가 여기에 있습니다(4절).
+
+#### 2. 과제 하나를 푸는 흐름
+
+아래 과제는 흐름을 보이려고 제가 만든 예시이고 실제 출제 문항과는 상관이 없습니다.
+
+```text
+과제: 호스트 node-a에서 작업한다. 네임스페이스 shop에 Deployment web을 만든다.
+      이미지는 nginx:1.27, 복제본은 3개. 이 Deployment를 포트 80의 ClusterIP Service web으로 노출한다.
+```
+
+| 순서 | 하는 일 | 치는 것(예) |
+|---|---|---|
+| 1 | 지시된 호스트로 이동 | `ssh node-a` |
+| 2 | 뼈대 만들기 | `k create deployment web --image=nginx:1.27 --replicas=3 -n shop` |
+| 3 | 노출 | `k expose deployment web --port=80 -n shop` |
+| 4 | 확인 | `k get deploy,svc,endpointslices -n shop` |
+| 5 | 시작 호스트로 복귀 | `exit` |
+
+네임스페이스 `shop`이 없다면 2번 전에 만들어야 합니다. 4번은 건너뛰기 쉬운데 채점은 최종 상태로 하니 확인이 곧 점수 확인입니다. 이름 하나, 네임스페이스 하나만 틀려도 채점기는 그 객체를 찾지 못합니다.
+
+#### 3. 시간 계산
+
+2시간은 120분이고 과제가 15~20개면 과제당 6~8분입니다. 위 예시처럼 명령 몇 줄로 끝나는 과제에서 시간을 벌어 두어야 트러블슈팅처럼 원인을 찾아야 하는 과제에 10분 넘게 쓸 수 있습니다.
+
+> **정리**: 과제는 "호스트 이동, 만들기, 확인, 복귀"의 반복입니다. 채점은 남은 상태로 하므로 이름과 네임스페이스를 지시문과 한 글자씩 맞추고 확인 명령까지 쳐야 끝납니다.
+
+</details>
+
 ## 2. 영역과 범위
 
 ### 2-1. 영역별 비중과 세부 항목
@@ -77,6 +113,28 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 
 도구도 바뀌었습니다. etcd 3.6부터 `etcdctl snapshot status`와 `snapshot restore`가 제거되어 확인과 복구는 `etcdutl`로 합니다. kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion`, 1.36은 3.6.8) 둘 다 3.6 이후입니다. `ETCDCTL_API=3`을 붙이던 옛 강의 명령은 그대로 외우지 않습니다. 개정 전 Important Instructions에 있던 "The CKA environment is currently running etcd v3.5." 줄은 2025년 11월 판부터 없습니다.
 
+<details>
+<summary>기초부터: 개정으로 들어온 단어를 한 줄씩</summary>
+
+> **핵심 한 줄**: 새로 들어온 항목은 대부분 "클러스터에 무엇을 더 얹고 어떻게 넓히는가"에 관한 것입니다. 이름만 낯설고 하는 일은 한 줄로 설명됩니다.
+
+| 단어 | 한 줄 뜻 | 쇼핑몰로 보면 | 다루는 곳 |
+|---|---|---|---|
+| Helm | 여러 YAML을 묶은 패키지(차트)를 값만 바꿔 설치하고 올리는 도구 | 결제 모듈 하나를 설치 마법사로 까는 일 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
+| Kustomize | 원본 YAML은 두고 환경별 차이만 덧씌우는 도구. `kubectl apply -k`에 들어 있음 | 같은 상품 API를 개발용은 복제본 1개, 운영용은 3개로 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
+| Gateway API | 바깥 HTTP 요청을 Service로 잇는 새 방식. Ingress의 후속 | `shop.example.com/cart`는 장바구니 Service로 | [Ch-04](/blog/cert/cka/cka-04-services-networking) |
+| CRD | 쿠버네티스에 없는 종류(kind)를 새로 등록하는 정의 | `kind: Coupon` 같은 객체를 만들 수 있게 함 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
+| 오퍼레이터 | CRD로 만든 객체를 보고 실제 작업을 하는 컨트롤러 | Coupon 객체가 생기면 만료 처리까지 맡는 프로그램 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
+| CRI, CNI, CSI | kubelet이 컨테이너, 네트워크, 디스크 일을 외부 플러그인에 맡길 때 쓰는 약속 | 런타임은 containerd, 네트워크는 Calico처럼 갈아 끼움 | [Ch-02 7장](/blog/cert/cka/cka-02-cluster-architecture#7-확장-인터페이스-cni-csi-cri) |
+| HPA | 사용량을 보고 Pod 수를 늘리고 줄이는 자동 확장 | 할인 행사 때 주문 API Pod를 3개에서 10개로 | [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling) |
+| etcd | 클러스터의 모든 객체가 저장되는 키-값 저장소 | 주문 장부 원본 | [Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow) |
+
+`etcdctl`과 `etcdutl`은 이름이 한 글자 차이라 헷갈립니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙어 묻는 클라이언트이고 `etcdutl`은 서버 없이 etcd 데이터 파일을 직접 다루는 관리 도구입니다([etcd 문서](https://etcd.io/docs/v3.6/op-guide/recovery/)). 스냅숏을 뜨는 일은 서버에 물어야 하니 `etcdctl snapshot save`이고 받아 둔 파일을 확인하고 풀어 놓는 일은 파일 작업이니 `etcdutl snapshot status`, `etcdutl snapshot restore`입니다.
+
+> **정리**: 단어가 낯설어도 하는 일은 "패키지 설치(Helm), 환경별 덧씌우기(Kustomize), 바깥 문(Gateway API), 새 종류 등록(CRD), 그 종류를 돌보는 프로그램(오퍼레이터), 플러그인 약속(CRI·CNI·CSI)"입니다.
+
+</details>
+
 ## 3. 시험 환경과 규칙
 
 공부할 때부터 시험 환경에 맞춰 연습해야 해서 따로 정리합니다. 출처는 LF의 Important Instructions: CKA and CKAD, Resources Allowed, ExamUI 문서입니다.
@@ -106,6 +164,44 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 적지만 설치에도 시간이 듭니다. 그래서 이 시리즈의 예시는 `jq` 대신 `-o jsonpath`나 `yq`를 우선합니다.
 
 후기 두 편(Cassisi 2026, Suzuki 2026)이 같은 점을 짚었습니다. 노드를 옮기면 직접 만든 alias가 사라지고 네임스페이스나 컨텍스트 전환용 alias 같은 옛 팁은 필요 없다는 것입니다. `k`는 이미 있으니 다른 설정을 외우는 데 시간을 쓰지 않아도 됩니다.
+
+<details>
+<summary>기초부터: base 호스트, ssh 호스트, kubeconfig가 어떻게 이어지나</summary>
+
+> **핵심 한 줄**: 시험 터미널이 처음 열리는 곳이 base 호스트이고 과제마다 지정된 호스트로 `ssh`해서 들어가면 그 호스트의 kubectl이 그 과제의 클러스터를 가리키도록 미리 설정되어 있습니다.
+
+#### 1. 흐름
+
+```text
+base 호스트(시작 터미널, kubectl 없음)
+  ├─ ssh node-a ──▶ node-a의 kubectl ──▶ 과제 1의 클러스터
+  │   exit ◀─────────────────────────────┘
+  ├─ ssh node-b ──▶ node-b의 kubectl ──▶ 과제 2의 클러스터
+  │   exit
+  ...
+```
+
+호스트 이름 `node-a`, `node-b`는 설명용입니다. 실제 이름은 과제 지문에 적혀 있습니다.
+
+#### 2. kubeconfig와 컨텍스트
+
+kubectl은 `~/.kube/config` 파일(kubeconfig)을 읽고 어느 클러스터에 누구로 접속할지 정합니다. 파일 안에는 세 가지 목록이 있습니다.
+
+| 칸 | 담는 것 |
+|---|---|
+| clusters | API 서버 주소와 그 서버의 CA 인증서 |
+| users | 접속할 때 내밀 자격 증명(클라이언트 인증서나 토큰) |
+| contexts | "이 cluster에 이 user로" 짝을 지은 이름. 지금 쓰는 짝이 `current-context` |
+
+과제 호스트마다 이 파일이 미리 맞춰져 있으니 호스트만 제대로 옮기면 컨텍스트를 따로 바꿀 일이 없다는 것이 공식 안내가 적은 방식입니다. 파일 구조는 [Ch-02 1-10절](/blog/cert/cka/cka-02-cluster-architecture#1-10-kubeconfig-파일-구조)에 있습니다.
+
+#### 3. alias가 사라지는 이유
+
+alias는 셸 하나에만 걸리는 설정입니다. base 호스트에서 `alias kn=...`을 만들어도 `ssh`로 다른 기계에 들어가면 그 기계에서 새 셸이 뜨고 그 기계의 설정 파일만 읽습니다. 그래서 base에서 만든 alias는 따라가지 않습니다. 과제 호스트에는 `k`와 자동완성이 이미 설정되어 있으니 그대로 씁니다.
+
+> **정리**: 과제를 읽으면 호스트 이름부터 보고 `ssh`로 옮긴 뒤 풀고 `exit`로 돌아옵니다. 엉뚱한 호스트에서 푼 과제는 다른 클러스터에 적용되어 점수가 나오지 않습니다.
+
+</details>
 
 ### 3-3. 볼 수 있는 문서
 
@@ -197,6 +293,49 @@ Resources Allowed는 배포판 패키지를 필요하면 설치해도 된다고 
 | `ssh`, `sudo`, `journalctl -u kubelet`, `crictl ps -a`, `/etc/kubernetes/manifests` | 컨트롤 플레인과 노드 트러블슈팅. [Ch-01 3장](/blog/cert/cka/cka-01-why-kubernetes)에서 구성요소별 증상을 정리 |
 | `-o jsonpath`, `yq` | 값을 뽑아 파일로 저장하는 과제. `jq`는 공식 사전 설치 목록에 없다 |
 | kubernetes.io 문서의 위치 | Gateway API, NetworkPolicy, PV/PVC, Kustomize, kubeadm 페이지를 검색 없이 찾아간다 |
+
+<details>
+<summary>기초부터: 위 표의 명령 세 개를 한 줄씩 읽기</summary>
+
+> **핵심 한 줄**: YAML은 처음부터 쓰지 않고 kubectl에게 뼈대를 받아 고칩니다. 필드 이름은 `kubectl explain`에 묻고 권한 과제는 `kubectl auth can-i`로 끝을 확인합니다.
+
+#### 1. 뼈대 만들기
+
+```bash
+k create deployment web --image=nginx:1.27 --replicas=3 -n shop --dry-run=client -o yaml > web.yaml
+```
+
+| 조각 | 뜻 |
+|---|---|
+| `k create deployment web` | 이름이 `web`인 Deployment를 만드는 명령 |
+| `--image=nginx:1.27 --replicas=3` | 컨테이너 이미지와 복제본 수 |
+| `-n shop` | 네임스페이스 |
+| `--dry-run=client` | 서버에 보내지 않고 kubectl 안에서만 객체를 만들어 봄 |
+| `-o yaml` | 만든 객체를 YAML로 출력 |
+| `> web.yaml` | 출력을 파일로 저장 |
+
+이렇게 받은 파일에 명령 옵션으로 못 넣는 값(볼륨, 프로브, `resources`)만 더 적고 `k apply -f web.yaml`로 보냅니다. 출력에는 `status: {}`처럼 비어 있는 칸이 섞여 있을 수 있는데 그대로 둬도 API 서버가 무시합니다.
+
+#### 2. 필드 이름 묻기
+
+```bash
+k explain deployment.spec.strategy
+k explain pod.spec.containers.resources --recursive
+```
+
+점으로 이어 내려가며 그 자리에 올 수 있는 필드와 설명을 클러스터에서 직접 받습니다. 클러스터에 설치된 CRD도 같은 방식으로 물을 수 있어 문서 예시가 적은 리소스에서 특히 쓸모가 있습니다. `--recursive`는 아래 필드 이름을 한 번에 펼쳐 보여 줍니다.
+
+#### 3. 권한 확인
+
+```bash
+k auth can-i create pods -n shop --as=system:serviceaccount:shop:builder
+```
+
+"`shop` 네임스페이스의 ServiceAccount `builder`가 Pod를 만들 수 있나"를 묻고 `yes`나 `no` 한 단어로 답을 받습니다. Role과 RoleBinding을 만든 뒤 이 한 줄로 확인하면 바인딩 대상의 이름이나 네임스페이스를 잘못 적은 실수를 바로 잡습니다.
+
+> **정리**: 만들 때는 `--dry-run=client -o yaml`, 모를 때는 `explain`, 끝낼 때는 `get`이나 `auth can-i`로 확인합니다.
+
+</details>
 
 ## 6. 범위와 한계
 

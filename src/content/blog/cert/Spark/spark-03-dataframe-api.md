@@ -154,6 +154,14 @@ o = (orders
 
 `split`의 pattern은 정규식이라 `.`이나 `|`를 그대로 쓰면 의도와 다르게 나뉩니다. `limit`이 양수면 결과 배열 길이가 limit을 넘지 않고 마지막 원소에 나머지가 다 들어갑니다. 0 이하면 가능한 만큼 나눕니다. 기본값 -1은 3.0에서 추가됐습니다.
 
+`.`을 그대로 넣으면 어떻게 되는지 따라가 보면 왜 이스케이프가 필요한지 보입니다. 정규식에서 `.`은 "아무 글자 하나"입니다.
+
+1. `"A.B.C"`의 다섯 글자 `A`, `.`, `B`, `.`, `C`가 모두 구분자로 맞습니다.
+2. 구분자 다섯 개 사이와 양 끝에 남는 것은 빈 문자열뿐이라 조각이 여섯 개 나옵니다.
+3. Spark는 끝에 붙은 빈 문자열도 지우지 않습니다. 4.2.0 소스(`UTF8String.split`)가 limit 0을 -1로 바꿔 Java `String.split`에 넘기기 때문입니다.
+
+그래서 `F.split("sku", ".")`의 결과는 `['', '', '', '', '', '']`처럼 빈 문자열 여섯 개입니다(정규식 정의로 따져 본 값이고 Spark로 실행해 보지는 않았습니다). 글자 그대로의 점으로 나누려면 아래처럼 `r"\."`로 씁니다.
+
 ```python
 names = users.select(
     F.split("full_name", " ").getItem(0).alias("last_name"),   # 'Kim'
@@ -177,7 +185,17 @@ orders.filter(F.col("status").isin("PAID", "REFUNDED"))
 orders.filter(~F.col("status").isin("CANCELED"))                 # ~ 는 NOT
 ```
 
-Python의 `and`, `or`, `not`은 Column에 쓸 수 없고 `&`, `|`, `~`를 씁니다. `&`가 비교 연산자보다 먼저 묶이므로 각 조건을 괄호로 감쌉니다. `status`가 null인 행은 `status == "PAID"`도 `status != "PAID"`도 통과하지 못합니다. NULL Semantics 문서는 WHERE와 JOIN 조건에서 결과가 `True`인 행만 남고 null(unknown)은 걸러진다고 적습니다.
+Python의 `and`, `or`, `not`은 Column에 쓸 수 없고 `&`, `|`, `~`를 씁니다. `&`가 비교 연산자보다 먼저 묶이므로 각 조건을 괄호로 감쌉니다. 괄호를 빼면 Python이 식을 어떻게 읽는지 따라가 보겠습니다([Python 연산자 우선순위](https://docs.python.org/3/reference/expressions.html#operator-precedence)).
+
+```python
+F.col("status") == "PAID" & F.col("amount") > 20000
+# Python은 & 를 먼저 묶는다
+F.col("status") == ("PAID" & F.col("amount")) > 20000
+# == 와 > 가 이어진 비교라서 다시 이렇게 풀린다
+(F.col("status") == X) and (X > 20000)      # X = "PAID" & F.col("amount")
+```
+
+마지막 줄의 `and`가 왼쪽 Column을 참인지 거짓인지 판단하려고 bool로 바꾸려 하고 PySpark는 Column을 bool로 바꿀 수 없다는 오류를 냅니다. Python이 식을 계산하는 순간 나는 오류라서 Spark Job이 돌기 전에 바로 보입니다. `status`가 null인 행은 `status == "PAID"`도 `status != "PAID"`도 통과하지 못합니다. NULL Semantics 문서는 WHERE와 JOIN 조건에서 결과가 `True`인 행만 남고 null(unknown)은 걸러진다고 적습니다.
 
 ### 1-4. explode와 explode_outer
 
@@ -225,7 +243,13 @@ orders.dropDuplicates(["user_id"]).count()      # 회원 101, 102, 103 하나씩
 orders.select("user_id").distinct().count()     # 3, 다만 결과 컬럼은 user_id 하나
 ```
 
-`dropDuplicates(subset)`이 같은 키의 여러 행 중 어느 행을 남기는지는 API 문서에 적혀 있지 않습니다. 특정 행(예: 가장 최근 주문)을 남겨야 하면 윈도 함수 `row_number()`로 직접 고릅니다(11절). 스트리밍 DataFrame의 `dropDuplicates`는 트리거를 넘어 모든 데이터를 상태로 들고 있고 `withWatermark()`로 범위를 줄인다고 문서가 적습니다(5영역에서 다룹니다).
+`dropDuplicates(subset)`이 같은 키의 여러 행 중 어느 행을 남기는지는 API 문서에 적혀 있지 않습니다. 왜 정해지지 않는지는 실행 방식을 보면 이해됩니다. 4.2.0 소스의 최적화 규칙 `ReplaceDeduplicateWithAggregate`는 배치 DataFrame의 `dropDuplicates(["user_id"])`를 `groupBy("user_id")`로 바꾸고 나머지 컬럼마다 `first()`를 씌웁니다.
+
+1. **부분 집계**: 파티션마다 `user_id`별로 처음 본 행 하나를 고릅니다.
+2. **셔플**: 파티션별 후보들이 `user_id` 해시로 모입니다.
+3. **최종 집계**: 도착한 후보 중 처음 것을 고릅니다.
+
+회원 101의 주문 1과 주문 3이 서로 다른 파티션에 있었다면 3단계에서 어느 쪽이 먼저 도착하느냐가 결과를 정합니다. 도착 순서는 셔플 블록을 가져오는 순서에 달려 있어서 실행마다 달라질 수 있습니다. 그래서 특정 행(예: 가장 최근 주문)을 남겨야 하면 윈도 함수 `row_number()`로 직접 고릅니다(11절). 스트리밍 DataFrame의 `dropDuplicates`는 트리거를 넘어 모든 데이터를 상태로 들고 있고 `withWatermark()`로 범위를 줄인다고 문서가 적습니다(5영역에서 다룹니다).
 
 ### 2-2. null 처리
 
@@ -352,6 +376,46 @@ orders.select(
 )
 # 문서 기준 예상 결과(근사값 제외): 6, 4, 3
 ```
+
+<details>
+<summary>기초부터: 고유값을 근사로 세는 이유와 HyperLogLog</summary>
+
+> **핵심 한 줄**: 정확히 세려면 지금까지 본 값을 모두 기억해야 합니다. HyperLogLog는 값을 기억하지 않고 해시의 모양만 기록해서 수백 바이트로 고유값 수를 어림합니다.
+
+#### 1. 왜 필요한가
+
+"오늘 상품 페이지를 본 회원이 몇 명인가"를 정확히 세려면 회원 ID를 전부 모아 중복을 지워야 합니다. 회원이 1억 명이면 1억 개를 들고 있어야 하고 분산 환경에서는 그 값들이 셔플로 한곳에 모여야 합니다. 대시보드 숫자처럼 몇 퍼센트 오차를 견딜 수 있다면 이 비용을 크게 줄일 수 있습니다.
+
+#### 2. 어떻게 동작하나
+
+동전 던지기에 빗대면 감이 옵니다. 누군가 "앞면이 연속 10번 나왔다"고 하면 그 사람이 동전을 꽤 많이 던졌으리라 짐작할 수 있습니다. 연속 10번은 대략 2^10번에 한 번 나오는 일이기 때문입니다. HyperLogLog는 이 짐작을 해시값에 씁니다([Databricks 블로그, 2016](https://www.databricks.com/blog/2016/05/19/approximate-algorithms-in-apache-spark-hyperloglog-and-quantiles.html)).
+
+1. **해시**: 회원 ID마다 해시값을 냅니다. 같은 ID는 늘 같은 해시이므로 중복은 저절로 무시됩니다.
+2. **칸 나누기**: 해시의 앞 몇 비트로 칸(레지스터) 번호를 고릅니다.
+3. **0의 길이 기록**: 나머지 비트에서 앞쪽 0이 몇 개 이어지는지 세어 그 칸의 최댓값만 남깁니다.
+4. **어림**: 칸마다 남은 최댓값을 조화평균으로 묶어 고유값 수를 계산합니다. 칸이 많을수록 운에 덜 휘둘립니다.
+5. **합치기**: 두 스케치는 칸마다 큰 값을 고르면 합쳐집니다. 그래서 파티션마다 따로 만들고 나중에 합칠 수 있습니다.
+
+칸 수는 `rsd`에서 정해집니다. 4.2.0 소스(`HyperLogLogPlusPlusHelper`)의 식으로 계산하면 이렇습니다.
+
+| `rsd` | 칸 수 | 스케치 하나의 크기 |
+|---|---|---|
+| 0.05(기본) | 512 | 약 416바이트 |
+| 0.01 | 16,384 | 약 13KB |
+
+회원이 1억 명이든 1,000명이든 스케치 크기는 같습니다. 오차를 0.05에서 0.01로 다섯 배 줄이면 크기는 서른 배 넘게 커집니다. 문서가 `rsd`를 0.01보다 작게 잡을 거면 정확한 `count_distinct`를 쓰라고 권하는 이유가 여기 있습니다.
+
+#### 3. 한눈에 비교
+
+| 구분 | `count_distinct` | `approx_count_distinct` |
+|---|---|---|
+| 들고 다니는 것 | 고유값 자체 | 그룹마다 스케치 하나 |
+| 메모리 | 고유값 수에 비례 | 고정(`rsd`로 정함) |
+| 결과 | 정확 | 기본 상대 표준편차 5% |
+
+> **정리**: 근사 집계는 값을 기억하는 대신 해시 모양을 기록해 메모리를 고정합니다. 아래 문단의 셔플 양 차이도 여기서 나옵니다.
+
+</details>
 
 `approx_count_distinct`도 셔플을 합니다. 차이는 셔플하는 양입니다. Spark 4.2.0 소스(`AggUtils.planAggregateWithOneDistinct`)를 보면 `count_distinct`는 그룹 키에 DISTINCT 대상 컬럼을 더한 조합으로 먼저 묶습니다. 그래서 그룹마다 고유값이 모두 셔플됩니다. `approx_count_distinct`는 일반 집계처럼 파티션 안에서 부분 집계를 해 그룹마다 HyperLogLog++ 스케치 하나를 만들고 그 스케치만 셔플합니다. 고유값이 많을수록 셔플 데이터가 크게 줄어듭니다. 이 설명은 소스를 읽고 정리한 것이고 같은 내용의 문서 문장은 찾지 못했습니다.
 
@@ -582,6 +646,23 @@ DataFrame.crossJoin(other)
 | cross | 카테시안 곱 | 양쪽 |
 | left_semi | 오른쪽에 매칭이 있는 왼쪽 행 | 왼쪽만 |
 | left_anti | 오른쪽에 매칭이 없는 왼쪽 행 | 왼쪽만 |
+
+표의 말만으로는 행이 어떻게 남는지 감이 잘 오지 않아서 예제 데이터로 직접 따라가 봅니다. 중복을 지운 주문 5건과 회원 3명을 `user_id`로 조인합니다.
+
+- 주문의 `user_id`: 1→101, 2→102, 3→101, 4→103, 5→102
+- 회원: 101, 102, 104
+- 짝이 맞는 것: 주문 1, 2, 3, 5. 짝이 없는 것: 주문 4(회원 103이 없음), 회원 104(주문이 없음)
+
+| `how` | 남는 행 | 행 수 |
+|---|---|---|
+| `inner` | 주문 1, 2, 3, 5 | 4 |
+| `left` | 주문 1, 2, 3, 5 + 주문 4(회원 컬럼은 null) | 5 |
+| `right` | 주문 1, 2, 3, 5 + 회원 104(주문 컬럼은 null) | 5 |
+| `full` | 주문 1, 2, 3, 5 + 주문 4 + 회원 104 | 6 |
+| `left_semi` | 주문 1, 2, 3, 5(주문 컬럼만) | 4 |
+| `left_anti` | 주문 4(주문 컬럼만) | 1 |
+
+정의로 따져 센 값이고 실행해 본 결과는 아닙니다. `inner`와 `left_semi`는 행 수가 같지만 컬럼이 다릅니다. 왼쪽 행 하나에 맞는 오른쪽 행이 여러 개면 `inner`는 그만큼 행이 늘고 `left_semi`는 늘지 않습니다(이 절 헷갈리는 지점).
 
 ### 5-2. on을 주는 방법에 따라 달라지는 컬럼
 
@@ -1118,6 +1199,15 @@ F.pandas_udf(f=None, returnType=None, functionType=None)
 
 pandas UDF는 Arrow로 데이터를 넘기고 pandas로 계산합니다. 3.0부터는 Python 타입 힌트로 종류를 정하고 `functionType`은 호환용으로만 남아 있습니다. 7영역(pandas API on Spark)에서 자세히 다룹니다.
 
+일반 UDF와 무엇이 다른지는 함수가 몇 번 불리는지로 세어 보면 분명해집니다. 파티션 하나에 주문이 100만 행 있다고 하겠습니다.
+
+| 방식 | 함수 한 번이 받는 것 | 함수 호출 수 |
+|---|---|---|
+| Arrow를 쓰지 않는 Python UDF | 값 하나 | 1,000,000번 |
+| pandas UDF | `pd.Series` 하나(기본 최대 10,000행) | 100번 |
+
+10,000은 Arrow 묶음 하나에 담는 최대 행 수인 `spark.sql.execution.arrow.maxRecordsPerBatch`의 기본값입니다. pandas UDF 안의 `amount * 1.1`은 pandas가 묶음 전체에 한 번에 적용하는 벡터 연산이라 행마다 Python 함수를 부르는 비용이 사라집니다.
+
 ```python
 import pandas as pd
 
@@ -1275,6 +1365,15 @@ Window.unboundedPreceding, Window.unboundedFollowing, Window.currentRow
 
 RANGE 프레임은 정렬 키가 같은 행을 한 덩어리로 봅니다. 같은 시각의 주문이 둘이면 두 행의 누적값이 같게 나옵니다. 행 단위 누적이 필요하면 `rowsBetween(Window.unboundedPreceding, Window.currentRow)`를 명시합니다.
 
+예제 데이터에는 같은 회원의 같은 시각 주문이 없어서 가상의 주문 두 건으로 따라가 봅니다. 회원 105가 같은 초에 15,000원과 5,000원을 결제했습니다.
+
+| 행 | `ordered_at` | `amount` | RANGE(기본) 누적 | ROWS 누적 |
+|---|---|---|---|---|
+| 첫째 | 1790812800 | 15000 | 20000 | 15000 |
+| 둘째 | 1790812800 | 5000 | 20000 | 20000 |
+
+RANGE는 "정렬 키가 현재 행 이하인 모든 행"이라 두 행 모두 상대 행을 프레임에 넣습니다. ROWS는 "현재 행까지의 행 개수"라 첫째 행은 자기 자신만 봅니다. ROWS 쪽은 같은 시각의 두 행 중 어느 쪽이 첫째가 될지 정해지지 않으니 `orderBy`에 `order_id`를 더해 순서를 고정합니다.
+
 `partitionBy` 없이 `orderBy`만 주면 모든 데이터가 파티션 하나로 모입니다. Spark 4.2.0 소스(`WindowExecBase.scala`)에 "No Partition Defined for Window operation! Moving all data to a single partition" 경고가 있습니다.
 
 ### 11-2. 순위와 앞뒤 행
@@ -1336,6 +1435,16 @@ orders.select(
 )
 # 문서 정의로 예상한 주문 1(["book", "pen"])의 결과: ["BOOK", "PEN"], ["book"], true, true, 7
 ```
+
+`aggregate`는 누적값(`acc`)을 들고 원소를 하나씩 접습니다. 주문 1에서 마지막 값 7이 나오는 과정입니다.
+
+| 단계 | `acc` | `x` | `acc + length(x)` |
+|---|---|---|---|
+| 시작 | 0(`initialValue`) | | |
+| 1 | 0 | `"book"` | 4 |
+| 2 | 4 | `"pen"` | 7 |
+
+빈 배열인 주문 3은 접을 원소가 없어 시작값 0이 그대로 결과이고 `items`가 null인 주문 4는 결과도 null입니다.
 
 `F.filter`는 배열 함수이고 `DataFrame.filter`는 행을 거르는 메서드입니다. 이름이 같아서 보기에서 섞이기 쉽습니다.
 
@@ -1544,3 +1653,8 @@ Apache Spark 4.2.0 소스
 - [sql/catalyst/.../expressions/arithmetic.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/arithmetic.scala) (`DivModLike`), [datetimeExpressions.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/datetimeExpressions.scala) (`UnixTimestamp`의 `failOnError`)
 - [sql/core/.../joins/HashJoin.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/joins/HashJoin.scala) (`semiJoin`), [sql/core/.../datasources/DataSource.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/DataSource.scala) (`resolveRelation`의 `asNullable`), [sql/core/.../python/EvaluatePython.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/python/EvaluatePython.scala) (`makeFromJava`)
 - [python/pyspark/sql/functions/builtin.py](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/sql/functions/builtin.py) (`countDistinct`)
+- [common/unsafe/.../types/UTF8String.java](https://github.com/apache/spark/blob/v4.2.0/common/unsafe/src/main/java/org/apache/spark/unsafe/types/UTF8String.java) (`split`의 limit 처리), [sql/catalyst/.../optimizer/Optimizer.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/optimizer/Optimizer.scala) (`ReplaceDeduplicateWithAggregate`), [sql/catalyst/.../util/HyperLogLogPlusPlusHelper.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/HyperLogLogPlusPlusHelper.scala) (`rsd`에서 칸 수를 정하는 식), [SQLConf.scala](https://github.com/apache/spark/blob/v4.2.0/sql/catalyst/src/main/scala/org/apache/spark/sql/internal/SQLConf.scala) (`spark.sql.execution.arrow.maxRecordsPerBatch` 기본 10000)
+
+기술 블로그와 그 밖
+- Databricks, [Approximate Algorithms in Apache Spark: HyperLogLog and Quantiles](https://www.databricks.com/blog/2016/05/19/approximate-algorithms-in-apache-spark-hyperloglog-and-quantiles.html) (2016, 선행 0의 개수로 고유값 수를 어림하는 원리와 오차에 따른 실행 시간)
+- Python, [Operator precedence](https://docs.python.org/3/reference/expressions.html#operator-precedence) (`&`가 비교 연산자보다 먼저 묶임)

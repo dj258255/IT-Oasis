@@ -78,7 +78,13 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 
 ### 1-4. 시험 화면에서 알아 둘 것
 
-키 조작(Ctrl+Shift+C/V, Ctrl+Alt+W, INSERT 금지)과 허용 문서(kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io)는 [Ch-00 3절](/blog/cert/cka/cka-00-exam-and-study-plan)에 있습니다. 공식 안내에서 추가로 확인한 것은 다음과 같습니다.
+키 조작(Ctrl+Shift+C/V, Ctrl+Alt+W, INSERT 금지)과 허용 문서(kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io)는 [Ch-00 3절](/blog/cert/cka/cka-00-exam-and-study-plan)에 있습니다.
+
+처음 응시하는 사람이 가장 낯설어하는 것은 터미널 구조입니다. 시험 화면의 터미널을 열면 `base`라는 시작 호스트에 있고 여기서는 `kubectl`이 안 됩니다. 과제마다 문제 상자에 "이 호스트에서 풀라"는 `ssh` 명령이 적혀 있고 그 호스트에 들어가야 그 과제의 클러스터를 만질 수 있습니다.
+
+![시험 터미널의 구조 예시. kubectl이 없는 base 호스트에서 과제마다 ssh로 과제 호스트에 들어가고 exit로 base에 돌아온다. 과제 호스트에는 k, yq, curl, wget, man이 있고 과제 호스트 안에서 다시 ssh할 수는 없다](/uploads/cert/cka/cka-07-resources-and-exam-day/exam-hosts.svg)
+
+그림의 클러스터 이름과 개수는 설명을 위한 예입니다. 지켜야 할 것은 "들어가서 풀고 나온다"는 왕복 하나입니다. 이전 과제 호스트에 남은 채 다음 과제를 풀면 다른 클러스터를 고치게 되고 채점 대상 클러스터에는 아무것도 안 남습니다. 공식 안내에서 추가로 확인한 것은 다음과 같습니다.
 
 - 시작 호스트(`base`)에는 `kubectl`이 없습니다. 모든 작업은 과제가 지정한 호스트에 `ssh`로 들어가서 합니다. ssh 안에서 다시 ssh는 할 수 없고 `base`를 재부팅하면 시험 환경이 다시 시작되지 않습니다.
 - 모든 ssh 호스트에 `kubectl`(alias `k`, bash 자동완성), `yq`, `curl`, `wget`, `man`이 "pre-installed and pre-configured" 상태입니다. 2025-02-11 판까지 목록에 있던 `jq`와 `tmux`는 2025-03-28 판부터 빠졌고 `jq` 자리에 `yq`가 들어왔습니다(Wayback Machine 대조).
@@ -132,6 +138,18 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 - KubeCon 기간 할인은 KodeKloud 커뮤니티 답변에 "블랙프라이데이와 KubeCon 무렵에 할인이 나오곤 했다"는 말이 있을 뿐 LF 공식 근거는 찾지 못했습니다.
 - 가격은 행사마다 기준가가 달랐습니다. 2024년 공지는 $395를 기준으로 썼고 2026년 10월 정가는 $445입니다.
 - 2026년 행사의 코드는 행사마다 바뀌고 같은 행사 안에서도 개별 시험용과 묶음용이 따로 있어 표에 적지 않았습니다. 대부분 신규 개인 구매에만 적용되고 다른 할인과 겹쳐 쓸 수 없다고 적혀 있습니다.
+
+표에 나오는 상품 이름은 LF 페이지에서 확인한 뜻으로 풀면 이렇습니다. CKA 하나만 볼 생각이면 "개별 시험" 줄만 보면 됩니다.
+
+| 이름 | 뜻 |
+|---|---|
+| 개별 시험 | CKA 응시권 하나(재응시 1회, killer.sh 2회 포함) |
+| 시험+강의 묶음 | CKA 응시권과 LF 공식 강의 LFS258(Kubernetes Fundamentals)을 함께 파는 상품 |
+| THRIVE-ONE | LF의 온라인 강의 목록 전체를 12개월 동안 듣는 구독(연 $360). 시험 응시권은 들어 있지 않고 CKA+THRIVE-ONE 묶음($625)으로 따로 판다 |
+| Super Bundle | 시험 응시권과 여러 강의를 크게 묶은 상품. 구성은 행사 페이지마다 달라 살 때 내용을 확인 |
+| Kubestronaut 묶음 | 쿠버네티스 자격 다섯 개(KCNA, KCSA, CKA, CKAD, CKS) 응시권을 한 번에 사는 상품($1,645). 다섯 개를 모두 따면 받는 칭호 이름이기도 함 |
+
+출처는 LF [Subscriptions](https://training.linuxfoundation.org/subscriptions/), [THRIVE-ONE Annual Subscription](https://training.linuxfoundation.org/subscription/thrive-one-annual-subscription/), [Kubestronaut Program](https://training.linuxfoundation.org/resources/kubestronaut-program/) 페이지이고 가격은 2026년 10월 23일에 본 정가입니다.
 
 ### 2-1. 정가 $445 기준으로 계산한 CKA 가격
 
@@ -408,6 +426,18 @@ k auth can-i list pods -n payment --as=system:serviceaccount:payment:pay-sa
 exit
 ```
 
+명령마다 왜 그렇게 치는지 풀면 이렇습니다.
+
+| 단계 | 명령의 뜻 | 빼먹으면 |
+|---|---|---|
+| 1 | 과제가 지정한 호스트(그 과제의 클러스터)로 들어간다 | 다른 클러스터를 고쳐 점수 0 |
+| 2 | `-n payment`를 명령마다 붙여 그 네임스페이스만 본다 | `default`에 만들어져 채점에서 못 찾음 |
+| 3 | `--dry-run=client`는 API 서버에 보내지 않고 kubectl이 객체를 만들어 보기만 하라는 뜻이고 `-o yaml`은 그 결과를 YAML로 찍으라는 뜻. 파일로 받아 고친 뒤 `apply` | YAML을 처음부터 쓰다 들여쓰기 오류로 시간 소모 |
+| 3 | `expose`는 Deployment의 라벨을 selector로 쓰는 Service를 만든다 | selector를 손으로 적다 라벨과 어긋남 |
+| 4 | `explain`은 필드 이름과 설명을 터미널에서 보여 준다. 브라우저 문서보다 빠름 | 필드 이름 오타로 `apply` 실패 |
+| 5 | `rollout status`는 새 Pod가 다 뜰 때까지 기다리고 EndpointSlice는 Service 뒤에 실제 Pod IP가 붙었는지 보여 준다. `auth can-i --as=...`는 그 ServiceAccount 행세를 하고 권한을 물어본다 | 만들기만 하고 동작하는지 모른 채 넘어감 |
+| 6 | base로 나온다 | 다음 과제를 이 호스트에서 풀게 됨 |
+
 - 과제를 끝까지 읽습니다. "하지 말라"는 조건, 출력 파일 경로, 네임스페이스를 놓쳐 점수를 잃었다는 후기가 많습니다.
 - 권한이 필요하면 `sudo -i`나 명령 앞에 `sudo`를 붙입니다(공식 안내).
 - `kubectl`(alias `k`와 자동완성), `yq`, `curl`, `wget`, `man`은 각 호스트에 이미 깔려 있어 alias를 따로 만들 필요가 적습니다. 값을 뽑을 때는 공식 목록에 없는 `jq` 대신 `-o jsonpath`나 `yq`를 씁니다.
@@ -426,7 +456,7 @@ exit
 set expandtab tabstop=2 shiftwidth=2
 ```
 
-문서에서 YAML을 붙여 넣다가 들여쓰기가 계단처럼 밀리면 붙여 넣기 전에 `:set paste`를 켭니다. 붙여 넣은 뒤 `yq . 파일명`으로 문법을 먼저 확인하면 `apply` 오류로 시간을 쓰는 일이 줄어듭니다.
+문서에서 YAML을 붙여 넣다가 들여쓰기가 계단처럼 밀리면 붙여 넣기 전에 `:set paste`를 켭니다. 원격 터미널에서는 붙여 넣은 글이 키보드로 한 글자씩 친 것처럼 들어갈 수 있고 그러면 vim이 줄마다 자동 들여쓰기를 덧붙여 한 칸씩 밀립니다. paste 모드는 이 자동 들여쓰기를 잠시 끕니다. 다 붙여 넣으면 `:set nopaste`로 되돌립니다. 붙여 넣은 뒤 `yq . 파일명`으로 문법을 먼저 확인하면 `apply` 오류로 시간을 쓰는 일이 줄어듭니다.
 
 ### 6-5. 당일 체크리스트
 

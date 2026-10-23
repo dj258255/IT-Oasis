@@ -290,6 +290,55 @@ Parquet 스키마 병합은 이 시리즈에서 다루지 않았지만 2영역�
 | pandas | 기본 인덱스 `distributed-sequence`. `to_pandas()`는 드라이버로 모은다 | [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) |
 | pandas | pandas UDF는 타입 힌트로 종류를 정한다(Series→Series, Series 반복자, 여러 Series 튜플의 반복자, Series→스칼라). `spark.sql.execution.arrow.pyspark.enabled`와 Python UDF의 Arrow 기본값은 3.5, 4.0, 4.1에서 false이고 4.2부터 true | [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) |
 
+<details>
+<summary>기초부터: 표 한 줄만 보고는 감이 안 오는 다섯 항목을 숫자로 풀기</summary>
+
+#### 통합 메모리 60%와 저장 보호 구간
+
+익스큐터 힙이 4GiB(4,096MiB)라고 두고 계산합니다.
+
+| 단계 | 계산 | 결과 |
+|---|---|---|
+| Spark가 먼저 떼어 두는 몫 | 고정 300MiB | 300MiB |
+| 통합 메모리(실행 + 저장) | (4,096 - 300) × 0.6 | 약 2,278MiB |
+| 그중 저장 보호 구간 | 2,278 × 0.5 | 약 1,139MiB |
+| 나머지(사용자 객체, UDF 등) | 4,096 - 300 - 2,278 | 약 1,518MiB |
+
+통합 메모리 안에서 실행(셔플, 조인, 정렬)과 저장(캐시)은 서로 빈 자리를 빌려 씁니다. 보호 구간 안에 들어간 캐시는 실행 쪽이 자리를 빼앗지 못합니다. 문항이 "캐시를 많이 했더니 셔플이 디스크로 넘친다"처럼 나오면 이 경계를 떠올리면 됩니다.
+
+#### `F.count(col)`과 `count(*)`
+
+주문 금액이 `100, null, 300`인 세 행이면 `F.count("amount")`는 2, `F.count("*")`와 `df.count()`는 3입니다. 컬럼을 지정한 count는 "값이 있는 행"을 세고 별표는 "행"을 셉니다.
+
+#### `union`은 위치로 맞춘다
+
+| | 첫째 컬럼 | 둘째 컬럼 |
+|---|---|---|
+| `a` | 고객ID = "u1" | 등급 = "GOLD" |
+| `b` | 등급 = "SILVER" | 고객ID = "u2" |
+| `a.union(b)` 둘째 행 | 고객ID 칸에 "SILVER" | 등급 칸에 "u2" |
+
+두 컬럼이 모두 문자열이라 오류 없이 섞인 결과가 나옵니다. 이런 조용한 오답을 막는 것이 `unionByName`입니다.
+
+#### 윈도 함수의 기본 프레임
+
+금액이 날짜순으로 `100, 200, 300`인 고객 하나에 `F.sum("amount").over(w)`를 걸면 이렇게 갈립니다.
+
+| 윈도 스펙 | 결과 | 이유 |
+|---|---|---|
+| `Window.partitionBy("고객ID").orderBy("날짜")` | 100, 300, 600 | `orderBy`가 있으면 처음부터 현재 행까지(누적) |
+| `Window.partitionBy("고객ID")` | 600, 600, 600 | `orderBy`가 없으면 파티션 전체 |
+
+`orderBy`가 있을 때 기본 프레임은 값 기준(RANGE)이라 같은 날짜가 두 행이면 두 행 모두 그 날짜까지의 합을 같이 받습니다.
+
+#### 시간 배분의 98초
+
+90분은 5,400초이고 화면에 최대 55문항이 나오면 5,400 ÷ 55 ≈ 98초입니다. 7-1절의 "1차 60분"은 문항당 약 65초로 한 바퀴를 돌고 30분을 검토에 남기는 계산입니다.
+
+> **정리**: 체크리스트의 기본값은 작은 예 하나로 결과를 손으로 내 보면 오래 남습니다. 특히 union, count, 윈도 프레임은 오류 없이 다른 숫자가 나오는 유형이라 시험에서 보기를 가르는 데 그대로 쓰입니다.
+
+</details>
+
 버전에 따라 갈리는 항목(ANSI 모드, Arrow 기본값, Python UDF의 Arrow 사용)은 시험이 기준 버전을 밝히지 않아서 보기에 버전 단서가 있는지 먼저 봅니다. 이 판단 순서는 [Ch-03](/blog/cert/spark/spark-03-dataframe-api) 4-2절과 [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) 9절에 적었습니다.
 
 ## 7. 시험 당일 전략
@@ -372,6 +421,7 @@ Databricks 자격증 약관(Effective Date: June 11, 2024)은 시험 내용을 �
 - Databricks Training Catalog: [Apache Spark Programming with Databricks](https://www.databricks.com/training/catalog/apache-spark-programming-with-databricks-134), [Introduction to Apache Spark](https://www.databricks.com/training/catalog/introduction-to-apache-spark-3898), [Developing Applications with Apache Spark](https://www.databricks.com/training/catalog/developing-applications-with-apache-spark-3957), [Stream Processing and Analysis with Apache Spark](https://www.databricks.com/training/catalog/stream-processing-and-analysis-with-apache-spark-3944), [Monitoring and Optimizing Apache Spark Workloads on Databricks](https://www.databricks.com/training/catalog/monitoring-and-optimizing-apache-spark-workloads-on-databricks-3990)
 - Databricks, [Introducing Databricks Free Edition](https://www.databricks.com/blog/introducing-databricks-free-edition), 2025-06-11
 - Databricks, [Spark: The Definitive Guide (발췌본 페이지)](https://pages.databricks.com/definitive-guide-spark.html)
+- Apache Spark, [Tuning Spark: Memory Management Overview](https://spark.apache.org/docs/latest/tuning.html#memory-management-overview), [pyspark.sql.Window](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Window.html) (기초부터 토글의 메모리 계산과 기본 프레임)
 
 Learning Festival
 - Databricks Community, [FAQ for Databricks Learning Festival (Virtual): 10 October - 31 October 2025](https://community.databricks.com/t5/databricks-academy-learners/faq-for-databricks-learning-festival-virtual-10-october-31/td-p/128193)

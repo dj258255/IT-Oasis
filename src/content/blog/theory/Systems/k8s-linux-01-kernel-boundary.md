@@ -103,6 +103,24 @@ seriesOrder: 1
 
 유저 프로그램이 파일을 열거나 메모리를 더 받거나 새 프로세스를 만들려면 커널에 부탁해야 합니다. 그 부탁의 공식 통로가 시스템 콜입니다. x86_64에서는 `syscall` 명령어로 커널에 진입하고 `rax` 레지스터에 담은 번호로 어떤 시스템 콜인지 고릅니다. 커널은 그 번호로 시스템 콜 테이블을 찾아 해당 함수를 실행한 뒤 결과를 돌려주고 유저 모드로 복귀합니다.
 
+이 문단에 처음 보는 말이 셋 있습니다. 레지스터는 CPU 안의 아주 작은 저장 칸이고 `rax`, `rdi` 같은 이름이 붙어 있습니다. 권한 링은 CPU가 지금 실행 중인 코드에 무엇을 허락할지 숫자로 나눈 단계이고 리눅스는 0(커널)과 3(유저) 두 단계만 씁니다. 페이지 테이블은 프로세스가 쓰는 가상 주소를 실제 메모리 위치로 바꾸는 표입니다. 이 표를 고칠 수 있으면 남의 메모리를 들여다볼 수 있어서 링 0만 만질 수 있게 막아 둡니다.
+
+`cat`이 `/proc/cpuinfo`를 읽는 `read` 한 번이 커널에 다녀오는 길을 순서대로 적으면 이렇습니다.
+
+![read 한 번이 커널에 다녀오는 길. 위쪽 유저 공간(링 3)에서 cat이 read를 부르고 glibc가 rax에 0, rdi에 3, rsi에 buf, rdx에 131072를 넣고 syscall을 실행한다. 빨간 점선 경계를 넘어 커널 공간(링 0)의 entry_SYSCALL_64, do_syscall_64와 시스템 콜 테이블, VFS와 procfs를 거쳐 바이트 수를 rax에 담고 링 3으로 돌아온다](/uploads/theory/k8s-linux-01-kernel-boundary/syscall-read.svg)
+
+| 단계 | 어디서 | 하는 일 |
+|---|---|---|
+| 1 | `cat`(링 3) | C 함수 `read(3, buf, 131072)`를 부릅니다. 이 함수는 커널 코드가 아니고 glibc에 있는 래퍼 함수입니다 |
+| 2 | glibc(링 3) | 시스템 콜 번호 0을 `rax`에, 인자 셋을 `rdi`(3), `rsi`(buf 주소), `rdx`(131072)에 넣고 `syscall` 명령어를 실행합니다 |
+| 3 | CPU | 권한을 링 0으로 올리고 커널이 부팅 때 MSR_LSTAR 레지스터에 적어 둔 주소로 뜁니다. 지금 커널에서 그 진입점은 `entry_SYSCALL_64`입니다 |
+| 4 | 커널(링 0) | 유저 쪽 레지스터 값을 커널 스택에 저장하고 `do_syscall_64`가 `rax`의 0으로 시스템 콜 테이블에서 `read` 구현을 찾아 부릅니다 |
+| 5 | VFS, procfs | 디스크립터 3이 procfs 파일을 가리키므로 디스크를 읽지 않고 CPU 정보를 그 자리에서 글자로 만들어 buf에 복사합니다(4장) |
+| 6 | 커널에서 CPU로 | 복사한 바이트 수(예: 3072)를 `rax`에 넣고 링 3으로 돌아갑니다 |
+| 7 | glibc | `rax`가 음수면 오류로 보고 `errno`에 오류 번호를 넣은 뒤 -1을 돌려줍니다. 0 이상이면 그 값을 그대로 돌려줍니다 |
+
+인자가 넷 이상인 시스템 콜은 `r10`, `r8`, `r9`를 이어서 씁니다(syscall(2) 매뉴얼). LWN의 2014년 글 "Anatomy of a system call"이 이 경로를 커널 소스로 따라가는데 그때 진입점 이름은 `system_call`이었습니다. 이름은 바뀌었지만 번호로 테이블을 찾아 부르는 구조는 같습니다.
+
 쿠버네티스에 적용하면 이렇습니다. kubelet이 "이 컨테이너의 메모리를 170Mi로 제한한다"고 결정해도 그 결정은 kubelet 프로세스의 메모리 안에 있는 값일 뿐입니다. 실제 제한은 누군가가 `/sys/fs/cgroup/.../memory.max` 파일에 `openat`과 `write`를 호출해서 커널의 cgroup 자료구조를 바꾼 순간부터 걸립니다. 한도를 넘었을 때 프로세스를 죽이는 것도 커널입니다. 이 경로는 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 따라갑니다.
 
 ### 1-2. x86_64 시스템 콜 테이블: 386개, 번호는 0~472
@@ -136,6 +154,18 @@ write(1, "processor\t: 0\nvendor_id\t: Genu"..., 3072) = 3072
 read(3, "", 131072) = 0
 close(3) = 0
 ```
+
+strace 한 줄은 `시스템 콜 이름(인자들) = 반환값` 꼴입니다. 처음 보면 낯선 조각만 풀어 둡니다.
+
+| 출력 조각 | 뜻 |
+|---|---|
+| `openat(... "/etc/ld.so.cache" ...) = 3` | `cat` 코드가 돌기 전에 동적 링커가 공유 라이브러리 위치 목록을 여는 줄입니다. `...`은 이 단계의 다른 줄을 줄인 것입니다 |
+| `AT_FDCWD` | "현재 디렉터리 기준으로 경로를 해석하라"는 특수 값입니다. `openat`의 첫 인자입니다 |
+| `O_RDONLY\|O_CLOEXEC` | 읽기 전용으로 열고 이 프로세스가 다른 프로그램을 `execve`하면 자동으로 닫으라는 플래그입니다 |
+| `= 3` | 반환값입니다. `openat`은 새 파일 디스크립터 번호를 돌려줍니다. 0, 1, 2는 표준 입력, 출력, 오류가 이미 쓰고 있어 3부터 나옵니다 |
+| `"processor\t: 0\nvendor_id\t: Genu"...` | 버퍼 내용의 앞부분입니다. strace는 문자열을 기본 32자까지만 보여 주고 뒤를 `...`으로 자릅니다(`-s`로 늘림) |
+| `read(..., 131072) = 3072` | 최대 131072바이트를 달라고 했고 3072바이트를 받았다는 뜻입니다 |
+| `read(3, "", 131072) = 0` | 0은 파일 끝입니다. `cat`은 이 값을 보고 읽기를 멈춥니다 |
 
 읽을 거리가 세 가지 있습니다.
 
@@ -183,7 +213,17 @@ kubeadm으로 만든 클러스터의 워커 노드에서 `ps`를 보면 쿠버�
 
 ### 2-2. 파드 하나가 뜨는 경로
 
-API 서버에 파드가 저장되고 스케줄러가 노드를 정한 뒤의 노드 쪽 경로를 그리면 다음과 같습니다. 화살표 오른쪽이 그 단계에서 커널로 넘어가는 대표 시스템 콜이나 파일입니다.
+API 서버에 파드가 저장되고 스케줄러가 노드를 정한 뒤의 노드 쪽 경로를 그리면 다음과 같습니다. 화살표 오른쪽이 그 단계에서 커널로 넘어가는 대표 시스템 콜이나 파일입니다. 그림에 나오는 이름부터 정리합니다.
+
+| 이름 | 뜻 |
+|---|---|
+| CRI | kubelet이 컨테이너 런타임에 "파드 샌드박스를 만들어라", "컨테이너를 시작하라"고 요청하는 표준 API입니다. gRPC로 주고받습니다 |
+| gRPC | 다른 프로세스의 함수를 부르듯 요청하는 원격 호출 방식입니다. 여기서는 같은 노드의 유닉스 소켓 위에서 돕니다 |
+| 샌드박스(`RunPodSandbox`) | 파드 하나가 함께 쓸 네트워크 네임스페이스 같은 공용 환경입니다. containerd는 pause 컨테이너로 만듭니다([2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)) |
+| CNI 플러그인 | 파드에 네트워크 인터페이스와 IP를 붙이는 실행 파일입니다. containerd가 정해진 규약대로 실행합니다 |
+| shim | 컨테이너마다 하나씩 붙는 작은 관리 프로세스입니다. 컨테이너의 출력과 종료 코드를 받아 두어 containerd가 재시작돼도 컨테이너가 계속 돌게 합니다 |
+| ttrpc | containerd가 shim과 이야기할 때 쓰는 gRPC의 경량판입니다. shim이 컨테이너 수만큼 떠 있으니 메모리를 적게 쓰도록 만든 것입니다 |
+| runc | OCI 런타임 명세대로 커널 기능을 불러 컨테이너를 실제로 만드는 저수준 도구입니다 |
 
 ```text
 kubelet  (API 서버를 watch하다 자기 노드에 배정된 파드를 발견)
@@ -399,6 +439,16 @@ memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 ```
 
 문서는 이 값을 cgroupfs에서 구한다고 명시하고 `free -m` 같은 도구는 컨테이너 안에서 제대로 동작하지 않는다고 이유를 답니다. working set은 cgroup의 메모리 사용량에서 `inactive_file`(비활성 LRU 목록에 있는 파일 기반 메모리)을 뺀 값입니다. kubelet은 이 부분을 압박이 오면 회수할 수 있는 메모리로 봅니다. 리눅스 기본 hard eviction 임계값은 `memory.available<100Mi`입니다.
+
+가상의 숫자로 계산해 보겠습니다. 노드 capacity가 8,192Mi이고 노드 전체 cgroup의 메모리 사용량이 7,900Mi, 그중 `inactive_file`이 400Mi라고 합시다.
+
+| 단계 | 계산 | 값 |
+|---|---|---|
+| working set | 7,900 − 400 | 7,500Mi |
+| `memory.available` | 8,192 − 7,500 | 692Mi |
+| 기본 임계값까지 남은 양 | 692 − 100 | 592Mi |
+
+여기서 앱이 592Mi를 더 쓰면 축출이 시작됩니다. 같은 순간 `MemAvailable`은 활성 목록에 있는 파일 캐시 일부도 회수할 수 있다고 보고 셈하므로 이보다 크게 나올 수 있습니다. kubelet은 그 캐시를 회수할 수 없는 쪽으로 셉니다.
 
 그래서 같은 순간에도 `MemAvailable`과 kubelet의 `memory.available`은 다르게 나올 수 있습니다. 계산에 넣는 캐시의 범위가 다르고 기준값도 `MemTotal`과 노드 capacity로 다릅니다. "free로 보면 아직 여유가 있는데 파드가 축출됐다"는 상황은 대개 이 차이에서 나옵니다. eviction 시점을 예측하려면 루트 cgroup의 `memory.current`와 `memory.stat`의 `inactive_file`을 봐야 합니다. 이 계산은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 더 다룹니다.
 
@@ -685,6 +735,8 @@ kind v1.37.0 실측입니다. `docker stop`을 시작하고 약 47초 뒤 Ready 
 
 리눅스 6.6(2023년 10월)부터 일반 프로세스(fair 클래스)의 스케줄링 정책이 CFS(Completely Fair Scheduler)에서 EEVDF(Earliest Eligible Virtual Deadline First)로 바뀌기 시작했습니다. 커널 문서도 "전환을 시작했다"고 표현합니다. EEVDF는 각 태스크가 받아야 할 몫과 실제로 받은 몫의 차이(lag)와 가상 마감 시각을 계산해 다음에 실행할 태스크를 고릅니다. 지연에 민감한 태스크가 더 빨리 CPU를 받게 하는 것이 목적입니다.
 
+두 용어를 풀면 이렇습니다. lag는 공정하게 나눴다면 받았어야 할 CPU 시간에서 실제로 받은 시간을 뺀 값입니다. lag가 0 이상인 태스크는 덜 받았거나 딱 맞게 받은 것이라 다음 차례를 받을 자격(eligible)이 있고 음수인 태스크는 더 받은 것이라 몫이 따라잡힐 때까지 기다립니다. 가상 마감 시각은 자격이 생긴 시각에 그 태스크가 한 번에 받을 실행 조각(slice)을 더한 값입니다. 자격 있는 태스크 중 마감이 가장 이른 것이 먼저 돌기 때문에 조각을 짧게 요청하는 태스크가 앞서 CPU를 받습니다(LWN, An EEVDF CPU scheduler for Linux).
+
 ### 8-2. cpu.max 대역폭 제한은 그대로
 
 쿠버네티스의 CPU limit은 이 정책 교체와 무관하게 같은 방식으로 동작합니다. `limits.cpu`는 cgroup v2의 `cpu.max`로 들어갑니다. 이 파일은 "주기(period)마다 쓸 수 있는 시간(quota)"을 정합니다. 커널 문서에서 이 기능의 이름은 지금도 "CFS Bandwidth Control"입니다.
@@ -693,6 +745,16 @@ kind v1.37.0 실측입니다. `docker stop`을 시작하고 약 47초 뒤 Ready 
 limits.cpu: 200m   →   cpu.max: "20000 100000"
 (100,000µs 주기마다 20,000µs까지 실행, 다 쓰면 주기가 끝날 때까지 스로틀)
 ```
+
+이 제한이 왜 응답 지연이 되는지 숫자로 보겠습니다. `limits.cpu: 200m`인 게시판 API가 요청 하나에 CPU 50ms가 드는 계산을 스레드 하나로 한다고 합시다. 요청이 주기 시작에 맞춰 들어왔다면 이렇게 흘러갑니다.
+
+| 구간 | 실행 | 대기 |
+|---|---|---|
+| 0~100ms 주기 | 20ms | 80ms(쿼터 소진) |
+| 100~200ms 주기 | 20ms | 80ms |
+| 200~210ms | 남은 10ms | 끝 |
+
+CPU가 놀고 있어도 쿼터를 다 쓴 cgroup은 다음 주기까지 기다리므로 50ms짜리 일이 약 210ms 뒤에 끝납니다. Indeed 엔지니어링 블로그의 "Unthrottled: Fixing CPU Limits in the Cloud"도 같은 계산으로 0.4코어 한도에서 200ms 요청이 440ms가 된다고 보였습니다. 같은 글은 커널 4.18에 들어간 커밋이 CPU를 적게 쓰는 컨테이너까지 심하게 스로틀하던 버그와 그 수정 과정도 다룹니다.
 
 `requests.cpu`는 `cpu.weight`로 바뀌어 경쟁할 때의 상대적 몫을 정합니다. 이 비중을 실제 실행 순서로 풀어내는 쪽이 6.6 이후로는 EEVDF입니다. 즉 "누가 먼저 도는가"는 EEVDF가, "이 cgroup이 한 주기에 최대 얼마나 도는가"는 대역폭 제어가 맡습니다. 스로틀링 확인 방법(`cpu.stat`의 `nr_throttled`)과 weight 변환식은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
@@ -815,3 +877,10 @@ kubernetes.io
 - containerd, [core/runtime/v2/README.md](https://github.com/containerd/containerd/blob/main/core/runtime/v2/README.md) (shim 구조)
 - Docker Docs, [Seccomp security profiles for Docker](https://docs.docker.com/engine/security/seccomp/)
 - Tigera, [Calico FAQ](https://docs.tigera.io/calico/latest/reference/faq) (169.254.1.1과 proxy ARP)
+- containerd, [ttrpc](https://github.com/containerd/ttrpc) (shim 통신용 경량 gRPC)
+- man7.org, [syscall(2)](https://man7.org/linux/man-pages/man2/syscall.2.html) (아키텍처별 시스템 콜 레지스터 규약)
+
+기술 블로그
+- David Drysdale(LWN, 2014), [Anatomy of a system call, part 1](https://lwn.net/Articles/604287/)
+- Jonathan Corbet(LWN, 2023), [An EEVDF CPU scheduler for Linux](https://lwn.net/Articles/925371/)
+- Dave Chiluk(Indeed Engineering, 2019), [Unthrottled: Fixing CPU Limits in the Cloud](https://engineering.indeedblog.com/blog/2019/12/unthrottled-fixing-cpu-limits-in-the-cloud/)

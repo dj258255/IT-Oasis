@@ -67,6 +67,48 @@ customers = spark.read.parquet("/data/customers")  # customer_id, grade, region
 
 Tuning 가이드의 "Level of Parallelism" 절은 클러스터의 CPU 코어 하나당 Task 2~3개를 권합니다. 코어가 16개라면 셔플 파티션 32~48개가 출발점이라는 계산입니다. 기본값 200은 로컬 노트북에서는 너무 많고 수백 GB 셔플에는 너무 적을 수 있습니다. AQE의 파티션 합치기(6절)가 이 값을 런타임에 줄여 주는 이유이기도 합니다.
 
+<details>
+<summary>기초부터: 파일을 읽을 때 파티션 수가 나오는 계산</summary>
+
+> **핵심 한 줄**: 파일 읽기 파티션은 128MB로 단순히 자르지 않습니다. 코어 수와 파일 개수까지 넣은 계산으로 조각 크기를 정하고 그 크기에 맞춰 파일을 담습니다.
+
+#### 1. 왜 필요한가
+
+"1GB 파일을 읽었더니 파티션이 16개 나왔다. 128MB로 나누면 8개여야 하지 않나?" 같은 질문은 `maxPartitionBytes` 하나만 알면 답할 수 없습니다. 같은 데이터라도 코어 수와 파일 개수에 따라 파티션 수가 달라지기 때문입니다.
+
+#### 2. 어떻게 동작하나
+
+4.2.0 소스 `FilePartition.maxSplitBytes`와 `getFilePartitions`를 단계로 옮겼습니다.
+
+1. **전체 크기 재기**: 파일마다 "파일 크기 + `openCostInBytes`(4MB)"를 더해 `totalBytes`를 구합니다. 파일 하나를 여는 데 4MB를 읽는 만큼의 비용이 든다고 치는 것입니다.
+2. **코어당 몫**: `bytesPerCore = totalBytes ÷ 기본 병렬도(보통 전체 코어 수)`.
+3. **조각 크기 정하기**: `maxSplitBytes = min(128MB, max(4MB, bytesPerCore))`. 데이터가 작아 코어당 몫이 128MB보다 작으면 조각을 더 잘게 잘라 코어를 다 쓰게 합니다.
+4. **큰 파일 자르기**: 나눌 수 있는 형식의 파일은 `maxSplitBytes` 크기 조각으로 자릅니다.
+5. **조각 담기**: 큰 조각부터 차례로 파티션에 담습니다. 담을 때마다 "조각 크기 + 4MB"를 더하고 다음 조각을 넣으면 `maxSplitBytes`를 넘게 될 때 파티션을 닫습니다.
+
+#### 3. 숫자로 따라가기
+
+계산식에 값을 넣어 본 결과이고 실행해서 잰 값은 아닙니다.
+
+| 상황 | `totalBytes` | `bytesPerCore` | 조각 크기 | 파티션 수 |
+|---|---|---|---|---|
+| 1GB 파일 하나, 코어 4개 | 1024 + 4 = 1028MB | 257MB | min(128, 257) = 128MB | 1024 ÷ 128 = 8 |
+| 같은 파일, 코어 16개 | 1028MB | 약 64MB | 약 64MB | 16 |
+| 1MB 파일 1,000개, 코어 4개 | 1000 × (1 + 4) = 5000MB | 1250MB | 128MB | 약 39 |
+
+둘째 줄은 코어가 많으면 128MB보다 잘게 잘라 코어를 다 쓰게 한다는 뜻입니다. 셋째 줄이 작은 파일 문제의 모양입니다.
+
+1. 파일 하나를 담을 때마다 실제 크기 1MB에 여는 비용 4MB가 더해져 5MB로 셉니다.
+2. 25개를 담으면 125MB입니다. 26번째는 125 + 1 = 126MB로 128MB를 넘지 않아 들어가고 합계는 130MB가 됩니다.
+3. 27번째는 130 + 1 = 131MB라 넘으므로 파티션을 닫습니다. 파티션 하나에 파일 26개씩입니다.
+4. 1,000 ÷ 26 = 38.5라서 파티션은 39개입니다.
+
+여는 비용을 0으로 친다면 파티션 하나에 128개씩 담겨 8개면 됩니다. 데이터는 1GB가 안 되는데 Task가 다섯 배 가까이 늘어난 셈입니다. 파일마다 열고 메타데이터를 읽는 실제 비용을 이 4MB가 대신 반영합니다. 근본 대책은 쓰는 쪽에서 파일을 합쳐 두는 것입니다(3-1의 `coalesce`, 3-2의 `REBALANCE`).
+
+> **정리**: 파일 읽기 파티션 수는 데이터 크기, 코어 수, 파일 개수 세 가지로 정해집니다. 128MB는 상한이고 데이터가 작거나 코어가 많으면 더 잘게 자릅니다.
+
+</details>
+
 현재 파티션 수와 파티션별 행 수는 이렇게 봅니다.
 
 ```python
@@ -280,7 +322,17 @@ AQE의 skew join 최적화는 sort-merge 조인에서 쏠린 파티션을 여러
 | `spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes` | 256MB | 이 바이트보다도 커야 한다. advisory 크기(64MB)보다 크게 두라고 문서가 권한다 |
 | `spark.sql.adaptive.forceOptimizeSkewedJoin` | false | 셔플이 하나 더 생겨도 skew join 규칙을 강제로 적용 |
 
-중앙값이 10MB인데 한 파티션이 200MB라면 배수 조건(50MB 초과)은 넘지만 256MB를 넘지 못해 쏠림으로 보지 않습니다. 두 조건이 AND라는 점이 시험에서 헷갈리기 좋은 자리입니다. 대상이 sort-merge 조인이라는 점도 문서에 적혀 있습니다. 집계(`groupBy`)의 쏠림은 이 규칙이 처리하지 않습니다.
+중앙값이 10MB인데 한 파티션이 200MB라면 배수 조건(50MB 초과)은 넘지만 256MB를 넘지 못해 쏠림으로 보지 않습니다. 두 조건이 AND라는 점이 시험에서 헷갈리기 좋은 자리입니다. 대상이 sort-merge 조인이라는 점도 문서에 적혀 있습니다(4.2.0 소스 `OptimizeSkewedJoin`은 shuffled hash 조인도 함께 처리합니다). 집계(`groupBy`)의 쏠림은 이 규칙이 처리하지 않습니다.
+
+쏠렸다고 판정한 뒤 어떻게 쪼개는지를 숫자로 따라가 봅니다. `orders`와 `customers`를 `store_id`로 조인하는 상황을 가정한 값입니다.
+
+1. **판정**: 셔플 파티션 200개의 중앙값이 10MB이고 매장 7이 들어간 파티션이 1GB입니다. 기준은 max(256MB, 10MB × 5) = 256MB이고 1GB는 이를 넘으므로 쏠림입니다.
+2. **목표 크기**: 4.2.0 소스는 쏠리지 않은 파티션의 평균과 advisory 크기(64MB) 중 큰 값을 목표로 씁니다. 평균이 10MB 근처라면 목표는 64MB입니다.
+3. **쪼개는 단위**: 쏠린 파티션 1GB는 앞 Stage의 맵 Task 100개가 각자 쓴 10MB짜리 블록 100개로 이뤄져 있습니다. 블록을 앞에서부터 64MB를 넘지 않게 묶으면 6개씩(60MB) 묶여 17조각이 됩니다.
+4. **반대쪽 복제**: `customers`에서 매장 7이 들어간 파티션은 쪼개지 않고 17조각과 각각 짝지어 17번 읽습니다.
+5. **결과**: 1GB짜리 Task 하나가 60MB 안팎 Task 17개로 바뀝니다.
+
+3단계에서 보듯 쪼개는 단위는 맵 Task의 출력 블록입니다. 쏠린 키의 데이터가 맵 Task 하나에서 다 나왔다면 블록이 하나뿐이라 쪼갤 수 없습니다. 조인 종류도 제약이 됩니다. 소스의 `canSplitLeftSide`는 inner, cross, left semi, left anti, left outer 조인에서만 왼쪽을 쪼개고 `canSplitRightSide`는 inner, cross, right outer에서만 오른쪽을 쪼갭니다. `orders LEFT JOIN customers`에서 쏠림이 `customers` 쪽에 있으면 이 규칙으로는 풀리지 않습니다. 같은 세 기능의 동작은 Databricks 블로그 [Adaptive Query Execution: Speeding up Spark SQL at Runtime](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html)(2020)에 그림과 함께 설명되어 있습니다.
 
 ### 4-3. salting으로 직접 처리
 
@@ -297,6 +349,16 @@ partial = (salted.groupBy("store_id", "salt")
 # 2단계: 원래 키로 다시 합치기
 revenue = partial.groupBy("store_id").agg(F.sum("part_sum").alias("revenue"))
 ```
+
+위 코드는 salting의 모양을 보이려고 `sum`을 썼지만 `sum`과 `count`는 salting 없이도 쏠림에 강한 편입니다. 매장 7의 주문이 800만 건이고 `orders`가 입력 파티션 100개로 읽힌다고 가정해 셔플 뒤 매장 7을 맡는 Task가 받는 양을 세어 보면 이유가 보입니다.
+
+| 집계 | 셔플 전에 하는 일 | 매장 7을 맡는 Task가 받는 것 |
+|---|---|---|
+| `groupBy("store_id").agg(sum)` | 입력 파티션마다 매장별 부분 합(5-3) | 부분 합 최대 100행 |
+| `groupBy("store_id").applyInPandas(f, ...)` | 없음. 그룹의 행을 그대로 보낸다 | 800만 행 |
+| `Window.partitionBy("store_id")` | 없음. 같은 매장 행을 한 파티션에 모아 정렬한다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 11-1절 토글) | 800만 행 |
+
+부분 집계가 양을 줄여 주는 `sum`과 달리 그룹의 행을 통째로 한 Task에 모아야 하는 연산에서 salting이 값을 합니다. 이때도 그룹을 조각으로 나눠 계산한 결과를 다시 합칠 수 있어야 합니다. 합계와 개수는 조각별 결과를 더하면 되지만 중앙값처럼 조각별 결과로 전체를 다시 계산할 수 없는 연산에는 쓸 수 없습니다. salt 값 8개가 해시로 서로 다른 파티션에 떨어진다는 보장도 없어서 조각 수와 Task 수가 꼭 같지는 않습니다.
 
 조인에 쓸 때는 큰 쪽에 0~N-1 사이의 salt를 붙이고 작은 쪽은 salt 0~N-1을 모두 가진 행으로 N배 복제해서 `(key, salt)`로 조인합니다. 작은 쪽이 N배 커지는 대가가 있습니다. 작은 쪽이 broadcast할 만큼 작으면 salting보다 broadcast 조인(5-1)이 더 단순합니다.
 
@@ -545,6 +607,24 @@ Performance Tuning 문서는 AQE를 런타임 통계로 가장 효율적인 실�
 | `spark.sql.adaptive.coalescePartitions.initialPartitionNum` | 없음(셔플 파티션 수와 같음) | 3.0.0 |
 
 기본값에서 함정이 하나 있습니다. `parallelismFirst`가 true면 목표 크기 64MB를 무시하고 최소 크기 1MB만 지키면서 병렬도를 최대로 둡니다. 문서는 AQE를 켰을 때 성능이 떨어지는 일을 막으려는 기본값이라고 설명합니다. 권고 문장은 버전마다 조금 다릅니다. 4.2.0 문서는 바쁜 클러스터에서 자원을 효율적으로 쓰려면(작은 Task를 덜 만들려면) false로 두라고 적습니다. 3.5 문서는 조건 없이 false로 두고 목표 크기를 따르라고 적습니다. 어느 쪽이든 기본 설정에서 "AQE가 파티션을 64MB 단위로 합친다"는 말은 정확하지 않습니다.
+
+실제 목표 크기는 4.2.0 소스 `ShufflePartitionsUtil.coalescePartitions`에서 이렇게 정해집니다.
+
+```text
+목표 크기 = max( min( 셔플 전체 크기 ÷ 최소 파티션 수, 64MB ), 1MB )
+최소 파티션 수 = parallelismFirst가 true면 기본 병렬도(코어 수), false면 1
+```
+
+코어 16개 클러스터에서 셔플 파티션 200개를 합치는 두 경우에 값을 넣어 봅니다(계산 예시이고 실행 결과는 아닙니다).
+
+| 셔플 전체 크기 | `parallelismFirst` | 목표 크기 | 합친 뒤 파티션 수(어림) |
+|---|---|---|---|
+| 200MB | true(기본) | min(200 ÷ 16, 64) = 12.5MB | 약 16~17 |
+| 200MB | false | min(200 ÷ 1, 64) = 64MB | 약 4 |
+| 20GB | true(기본) | min(1,280, 64) = 64MB | 약 320 |
+| 20GB | false | 64MB | 약 320 |
+
+셔플 데이터가 작을 때만 두 설정이 갈립니다. 기본값 true는 코어 16개를 다 쓰도록 작은 파티션을 남기고 false는 Task 수를 줄여 다른 Job에 코어를 양보합니다. 데이터가 크면 어느 쪽이든 64MB가 목표가 됩니다.
 
 문서가 제안하는 사용법은 `initialPartitionNum`을 넉넉하게 크게 두고 합치기를 AQE에 맡기는 것입니다. 데이터 크기에 맞는 셔플 파티션 수를 미리 맞출 필요가 줄어듭니다.
 
@@ -956,6 +1036,10 @@ B입니다. `Exchange`가 셔플이니 A는 틀립니다. `AdaptiveSparkPlan` �
 - Apache Spark 소스(v4.2.0): [AdaptiveSparkPlanExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/AdaptiveSparkPlanExec.scala), [DataSourceScanExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/DataSourceScanExec.scala), [BroadcastExchangeExec.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/BroadcastExchangeExec.scala), [stagespage-template.html](https://github.com/apache/spark/blob/v4.2.0/core/src/main/resources/org/apache/spark/ui/static/stagespage-template.html), [pyspark/logger/logger.py](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/logger/logger.py), [DAGScheduler.scala](https://github.com/apache/spark/blob/v4.2.0/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala), [AppStatusListener.scala](https://github.com/apache/spark/blob/v4.2.0/core/src/main/scala/org/apache/spark/status/AppStatusListener.scala), [RuntimeConfig.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/classic/RuntimeConfig.scala)
 - Apache Spark 4.2.0, [SQL Migration Guide](https://spark.apache.org/docs/latest/sql-migration-guide.html) (3.0의 `SET` 명령 SparkConf 키 거부)
 - PySpark 4.2.0 API: [DataFrame.repartition](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.repartition.html), [DataFrame.coalesce](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.coalesce.html), [DataFrame.explain](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.explain.html), [DataFrame.toPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toPandas.html), [functions.broadcast](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.broadcast.html)
+- Apache Spark 소스(v4.2.0, 이번에 계산을 따라가며 확인): [FilePartition.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/FilePartition.scala) (`maxSplitBytes`, `getFilePartitions`), [ShufflePartitionsUtil.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/ShufflePartitionsUtil.scala) (합치기 목표 크기, 쏠린 파티션 쪼개기), [CoalesceShufflePartitions.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/CoalesceShufflePartitions.scala) (`parallelismFirst`일 때 최소 파티션 수), [OptimizeSkewedJoin.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/adaptive/OptimizeSkewedJoin.scala) (쏠림 기준, 목표 크기, 쪼갤 수 있는 조인 쪽)
+
+기술 블로그와 그 밖
+- Databricks, [Adaptive Query Execution: Speeding up Spark SQL at Runtime](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html) (2020, 파티션 합치기, 조인 전략 바꾸기, skew join의 동작 그림)
 
 이 시리즈
 - [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan)

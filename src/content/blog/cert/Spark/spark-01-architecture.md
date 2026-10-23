@@ -1,6 +1,6 @@
 ---
 title: '[Spark Ch-01] Spark 아키텍처와 구성 요소: 액션 하나가 Job, Stage, Task로 나뉘는 과정'
-description: Databricks Spark 자격증 1영역(아키텍처와 구성 요소, 20%)을 시험 안내서의 항목 순서대로 정리합니다. 드라이버와 익스큐터의 역할, 메모리 구조, 캐시 저장 레벨, GC, 실행 계층, 셔플과 파티션, 지연 평가를 Spark 4.2.0 공식 문서의 기본값과 함께 확인하고, 3.x와 달라진 동작을 표시합니다.
+description: Databricks Spark 자격증 1영역(아키텍처와 구성 요소, 20%)을 시험 안내서의 항목 순서대로 정리합니다. 드라이버와 익스큐터의 역할, 메모리 구조, 캐시 저장 레벨, GC, 실행 계층, 셔플과 파티션, 지연 평가를 Spark 4.2.0 공식 문서의 기본값과 함께 확인하고 3.x와 달라진 동작을 표시합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - Spark
@@ -229,6 +229,16 @@ local 모드의 마스터 URL은 의미가 조금씩 다릅니다.
 | `local[*]` | 논리 코어 수만큼 워커 스레드 |
 | `local[K,F]` | 스레드 K개, Task 최대 실패 횟수 F |
 
+client와 cluster의 차이는 "드라이버가 죽으면 애플리케이션 전체가 끝난다"는 사실 하나로 정리됩니다.
+
+| 장면 | client 모드 | cluster 모드 |
+|---|---|---|
+| 노트북에서 `spark-submit` 후 노트북을 덮음 | 드라이버가 노트북 안에 있어서 애플리케이션이 같이 끝납니다 | 드라이버는 클러스터 노드에 있어서 계속 돕니다 |
+| `collect()` 결과와 `print` 출력 | 내 터미널에 바로 찍힙니다 | 클러스터 쪽 드라이버 로그에 남습니다 |
+| 드라이버와 익스큐터 사이 통신 | 내 자리에서 클러스터까지 네트워크를 오갑니다 | 클러스터 안에서 오갑니다 |
+
+그래서 문서는 콘솔 입출력이 필요한 대화형 작업에 client를, 멀리 떨어진 곳에서 제출하는 작업에 cluster를 권합니다. 밤마다 도는 배치처럼 제출한 사람이 자리를 떠도 끝까지 돌아야 하는 작업이 cluster 모드에 맞습니다.
+
 Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Connect의 배포 방식은 [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api)에서 6영역 범위로 묶어 다룹니다.
 
 ### 2-3. 코어와 동시에 도는 Task 수
@@ -241,6 +251,10 @@ Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Conn
 ```
 
 파티션이 200개인 Stage라면 Task 200개가 이 16개 자리를 돌아가며 씁니다. 반대로 파티션이 8개뿐이면 자리 8개는 놀게 됩니다. 튜닝 가이드가 코어당 Task 2~3개를 권하는 이유입니다.
+
+코어 수와 딱 맞춘 16개보다 많은 32~48개를 권하는 데에는 이유가 하나 더 있습니다. Task마다 걸리는 시간이 다르기 때문입니다. 16개로 나누면 먼저 끝난 코어는 가장 늦은 Task가 끝날 때까지 할 일이 없습니다. 48개로 잘게 나누면 먼저 끝난 코어가 남은 Task를 이어받아 놀지 않습니다. Task 하나가 맡는 데이터도 작아져서 메모리에 들어가기 쉬워집니다. Cloudera의 Spark 튜닝 문서는 Task가 슬롯보다 적으면 CPU를 다 쓰지 못한다고 적고 "망설여지면 Task를 더 많이 두는 쪽"을 권합니다. 입력 파티션 수에서 시작해 1.5배씩 늘려 가며 더 빨라지지 않는 지점을 찾는 방법도 같은 문서에 있습니다([Cloudera, Tuning the Number of Partitions](https://docs.cloudera.com/runtime/7.3.1/tuning-spark/topics/spark-admin-tuning-the-number-of-partitions.html)).
+
+`spark.executor.cores`를 무작정 크게 잡지 않는 이유도 같은 문서에 있습니다. 익스큐터 하나에서 HDFS에 동시에 쓰는 스레드가 다섯 개를 넘으면 쓰기 처리량이 더 늘지 않는다고 보고 익스큐터당 코어를 5개 아래로 두라고 권합니다. 메모리가 너무 큰 익스큐터는 GC 멈춤이 길어진다는 경고도 함께 적습니다([Cloudera, Tuning Resource Allocation](https://docs.cloudera.com/runtime/7.3.1/tuning-spark/topics/spark-admin-tuning-resource-allocation.html)). 이 두 권고는 Apache Spark 공식 문서의 값이 아니고 YARN과 HDFS 환경을 전제로 한 벤더 문서의 경험칙입니다.
 
 ### 2-4. 메모리 구조
 
@@ -306,6 +320,14 @@ Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Conn
 나머지 40%       약 1518.4 MiB (사용자 자료구조, Spark 내부 메타데이터)
 ```
 
+![익스큐터 메모리 4g를 예약 300MiB, 사용자 영역 약 1518MiB, 통합 영역 M 약 2278MiB로 나누고 M을 저장과 실행으로 반씩 그린 그림. 힙 밖에는 overhead 약 410MiB가 따로 있다. 실행이 모자라면 캐시를 R까지 밀어내고 캐시는 실행 메모리를 뺏지 못한다는 화살표가 있다](/uploads/cert/spark/spark-01-architecture/executor-memory-4g.svg)
+
+그림에서 헷갈리기 쉬운 곳이 둘입니다.
+
+**왜 실행만 캐시를 밀어낼 수 있나.** 캐시 블록은 다시 만들 수 있는 사본입니다. 밀려나면 디스크로 옮기거나 나중에 계보로 다시 계산하면 됩니다. 실행 메모리에 있는 것은 지금 돌고 있는 Task의 중간 상태(집계 중인 해시 테이블, 정렬 중인 버퍼)입니다. 이것을 빼앗으면 그 Task는 계속할 수 없습니다. 문서는 이유를 "구현이 복잡해서"라고만 적지만 Alexey Grishchenko의 [Spark Memory Management](https://0x0fff.com/spark-memory-management/) 글이 이 차이로 설명합니다. 이 글은 Spark 1.6 기준이라 `spark.memory.fraction`을 0.75로 계산합니다. 지금 기본값은 0.6입니다.
+
+**PySpark 코드는 어느 칸을 쓰나.** UDF나 `mapInPandas`를 쓰면 익스큐터 옆에 Python 워커 프로세스가 뜹니다. 이 프로세스는 JVM 밖이라 위 힙 계산에 들어가지 않습니다. Configuration 문서는 `spark.executor.pyspark.memory`를 설정하지 않으면 Python 메모리를 제한하지 않고 overhead 공간을 다른 JVM 밖 프로세스와 나눠 쓴다고 적습니다. YARN과 Kubernetes는 힙, overhead, `spark.memory.offHeap.size`, `spark.executor.pyspark.memory`를 더한 값을 컨테이너 한도로 잡습니다. 그래서 힙에는 여유가 있는데 Python 쪽이 메모리를 많이 써서 컨테이너가 한도를 넘어 죽는 일이 생깁니다. 이때 손볼 값은 `spark.executor.memory`보다 `spark.executor.memoryOverhead`나 `spark.executor.pyspark.memory` 쪽입니다.
+
 ### 헷갈리는 지점
 
 - 드라이버는 Task를 실행하지 않습니다. 계획을 세우고 Task를 나눠 보내며 결과를 받습니다. local 모드에서만 드라이버 JVM 안의 스레드가 Task를 실행합니다.
@@ -337,7 +359,7 @@ RDD 쪽은 엔진이 lambda를 그대로 실행할 뿐입니다. DataFrame 쪽�
 
 1. **스키마**: 컬럼 이름, 타입, null 허용 여부의 목록입니다. `printSchema()`가 보여 주는 트리가 이것입니다.
 2. **식(expression)**: `F.col("amount") * 0.1` 같은 Column은 계산 방법을 적은 식입니다. 아직 값을 담고 있지 않고 계획 안에 쌓입니다.
-3. **내부 표현**: 엔진은 행을 타입별로 정해진 바이트 형식(UnsafeRow)으로 다룹니다. 행마다 객체를 만들지 않으니 GC 부담이 작습니다(6절).
+3. **내부 표현**: 엔진은 행을 타입별로 정해진 바이트 형식(UnsafeRow)으로 다룹니다. 행마다 객체를 만들지 않으니 GC 부담이 작습니다(6절). 이 방식은 2015년 Project Tungsten에서 들어왔습니다. Databricks의 [Project Tungsten 글](https://www.databricks.com/blog/2015/04/28/project-tungsten-bringing-spark-closer-to-bare-metal.html)은 4바이트짜리 문자열이 JVM 객체로는 48바이트를 넘긴다는 예로 객체 하나하나의 머리말과 포인터가 얼마나 비싼지 보여 줍니다.
 4. **꺼낼 때만 Row**: `collect()`, `first()` 같은 액션이 결과를 드라이버로 돌려줄 때 Python `Row` 객체로 바뀝니다.
 
 ```text
@@ -630,7 +652,7 @@ local_cut = base.localCheckpoint(eager=False)   # 첫 액션 때 익스큐터 �
 - "`cache()`는 즉시 데이터를 메모리에 올린다"는 틀린 보기입니다. 액션이 있어야 올라갑니다. SQL 문 `CACHE TABLE`은 반대로 기본이 즉시 캐시이고 `CACHE LAZY TABLE`이라고 써야 처음 쓸 때 캐시합니다(SQL 레퍼런스).
 - `cache()`와 `persist()`의 차이는 인자 유무뿐입니다. DataFrame에서는 둘 다 기본 `MEMORY_AND_DISK_DESER`입니다.
 - `unpersist()`의 `blocking` 기본값은 `False`입니다. 2.0에서 Scala와 맞추려고 바뀌었다고 문서가 적습니다.
-- Spark는 캐시를 노드마다 LRU 방식으로 비웁니다. 직접 지우지 않아도 오래된 파티션은 빠질 수 있습니다.
+- Spark는 캐시를 노드마다 LRU 방식으로 비웁니다. LRU(Least Recently Used)는 공간이 모자랄 때 가장 오랫동안 안 쓴 것부터 내보내는 규칙입니다. 직접 지우지 않아도 오래된 파티션은 빠질 수 있습니다.
 - Databricks 서버리스 컴퓨트(Free Edition 포함)에서는 `cache()`가 예외를 냅니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 4절). 이 절의 실습은 로컬에서 해야 합니다.
 
 ## 6. 가비지 컬렉션
@@ -694,6 +716,11 @@ GC가 문제인지 보는 방법은 둘입니다. Web UI의 Stage 상세 화면�
 | minor GC는 잦고 major GC는 적음 | Eden을 늘린다. Young 크기를 `-Xmn=4/3*E`로 잡는다 |
 | Old가 거의 참 | `spark.memory.fraction`을 낮춰 캐시를 줄인다. 캐시를 덜 하는 편이 Task를 느리게 하는 것보다 낫다 |
 | 큰 익스큐터 힙 | G1 region 크기(`-XX:G1HeapRegionSize`)를 키운다 |
+
+표의 두 줄은 숫자가 낯설어서 풀어 둡니다.
+
+- **`-Xmn=4/3*E`**: E는 Eden에 필요하다고 어림한 크기입니다. 튜닝 가이드는 Task 하나가 HDFS 블록 128MB를 읽고 압축이 풀리면 2~3배가 된다고 보고 Task 4개가 동시에 돌면 Eden을 `4 x 3 x 128MB`로 잡는 예를 듭니다. Young 영역은 Eden과 Survivor 두 칸을 합친 것이라 Eden만 E로 잡으면 Survivor 몫이 모자랍니다. 4/3을 곱하는 이유가 이 Survivor 공간이라고 문서가 괄호로 적습니다.
+- **G1 region**: G1은 힙을 같은 크기의 작은 칸(region) 여러 개로 나눠 관리합니다. 칸 하나의 절반보다 큰 객체는 여러 칸을 이어 붙인 특별 영역에 따로 둡니다. 힙이 크고 큰 배열이 많으면 이런 객체가 늘어나기 때문에 칸 크기를 키우라는 권고입니다. 칸 크기 계산 규칙은 JDK 버전마다 다르니 이 줄은 "큰 힙이면 region 크기를 키운다"는 방향만 기억하면 됩니다.
 
 버전 차이가 하나 있습니다. 4.2.0 튜닝 가이드는 Spark 4.0.0부터 JDK 17이 기본이고 그래서 G1GC가 기본 수집기라고 적습니다. 3.5.7 튜닝 가이드의 같은 자리는 "`-XX:+UseG1GC`로 G1GC를 써 보라"는 권고입니다. 기본 수집기는 JDK가 정하므로 3.x 시절 자료의 GC 설명은 그때 쓰던 JDK 기준으로 읽어야 합니다.
 
@@ -783,6 +810,22 @@ Job 0 (collect)
 ```
 
 실제 Job 개수와 Task 수는 AQE와 최적화기에 따라 달라질 수 있습니다. 위 그림은 개념 구조이고 실행해서 확인한 값이 아닙니다. 다음 실습 글에서 Spark UI 화면으로 확인하겠습니다.
+
+숫자를 넣어 한 번 세어 보겠습니다. 주문 파일이 300MB 하나이고 다른 설정은 기본값이라고 가정합니다.
+
+| 단계 | 계산 | 결과 |
+|---|---|---|
+| Stage 0의 Task 수 | 300MB를 `maxPartitionBytes` 128MB 이하로 자름 | 대략 3개(128, 128, 44MB) |
+| Stage 0이 하는 일 | Task마다 자기 조각을 읽고 `PAID`만 거른 뒤 날짜별 부분 합계를 셔플 파일로 씀 | 셔플 파일 3벌 |
+| Stage 1의 Task 수 | `spark.sql.shuffle.partitions` 기본 200 | 200개에서 시작. AQE가 작은 파티션을 합치면 더 적어짐 |
+| Stage 1이 하는 일 | Task마다 자기 몫의 날짜 키를 세 셔플 파일에서 모아 최종 합계 | 날짜별 매출 |
+| 드라이버 | `collect()`로 결과 행을 받음 | 날짜 수만큼의 `Row` |
+
+Stage 0의 3개는 파일 크기가 정하고 Stage 1의 200개는 설정이 정합니다. 날짜가 세 개뿐인데 Stage 1에 Task 200개가 생기면 대부분 빈 파티션을 맡습니다. AQE의 파티션 합치기가 기본으로 켜져 있는 이유가 이것입니다(8-1절). 300MB 파일이 실제로 몇 조각이 되는지는 파일 형식과 `openCostInBytes`, 코어 수에 따라 조금 달라집니다. 위 표는 원리를 보이려고 단순하게 나눈 값입니다.
+
+![groupBy count가 Stage 둘로 잘리는 모양. 입력 파티션 세 개가 각각 부분 count를 하고 셔플에서 category 기준으로 다시 나뉘어 최종 count가 되고 드라이버가 결과를 받는다](/uploads/cert/spark-map/stages.svg)
+
+위 그림은 [Ch-00b 지도](/blog/cert/spark/spark-00b-top-down-map)에 쓴 것으로 키가 날짜 대신 상품 분류이고 셔플 파티션을 세 개로 줄여 그렸습니다. 입력 파티션마다 부분 집계를 먼저 하고 셔플을 건너 최종 집계를 한다는 구조는 같습니다.
 
 ### 헷갈리는 지점
 
@@ -961,6 +1004,16 @@ plan = orders.select("order_id", "amount", "status").filter("amount >= 10000")
 plan.explain(mode="extended")
 # Parsed Logical Plan, Analyzed Logical Plan, Optimized Logical Plan, Physical Plan 네 부분을 출력합니다
 ```
+
+`explain()` 출력은 처음 보면 기호가 많아 막막합니다. 몇 가지만 알면 읽힙니다.
+
+1. **아래에서 위로 읽습니다.** 트리의 맨 아래가 데이터를 읽는 연산자이고 위로 올라가며 계산이 이어집니다.
+2. **`Exchange`가 셔플입니다.** `Exchange hashpartitioning(order_date, 200)`이 보이면 그 자리에서 Stage가 끊깁니다. `BroadcastExchange`는 작은 쪽을 모든 익스큐터에 보내는 방송입니다.
+3. **`*(1)` 같은 번호**는 whole-stage codegen으로 하나의 함수에 묶인 연산자 묶음입니다.
+4. **파일 스캔 줄**에서 최적화가 들어갔는지 봅니다. `PushedFilters`는 파일 읽기 단계로 내려간 필터, `PartitionFilters`는 디렉터리 단위로 건너뛴 조건([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-4절 토글), `ReadSchema`는 실제로 읽는 컬럼 목록입니다. 위 예제는 `createDataFrame`으로 만든 데이터라 파일 스캔 대신 `LocalTableScan`이 나옵니다.
+5. **`AdaptiveSparkPlan isFinalPlan=false`**가 맨 위에 있으면 AQE가 실행 중에 계획을 바꿀 수 있다는 뜻입니다. 실행이 끝난 뒤 Spark UI의 SQL 탭에서 보면 바뀐 최종 계획이 나옵니다.
+
+Spark 문서의 [EXPLAIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-explain.html) 예제에 `*(2) HashAggregate`, `Exchange hashpartitioning(k#33, 200)`, `*(1) LocalTableScan`이 차례로 쌓인 계획이 실려 있어 1~3번을 그대로 연습할 수 있습니다. 같은 예제에 `partial_sum`(셔플 전 부분 합계)과 `sum`(셔플 뒤 최종 합계)이 `Exchange` 아래위로 나뉘어 있는데 이것이 7절 표의 Stage 0과 Stage 1입니다. AQE는 Databricks의 [AQE 소개 글](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html)이 자세합니다. Catalyst가 규칙으로 트리를 바꾸는 원리는 Databricks의 [Deep Dive into Spark SQL's Catalyst Optimizer](https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html)가 `x + (1 + 2)`를 `x + 3`으로 접는 예로 설명합니다.
 
 #### 3. 한눈에 비교
 
@@ -1215,3 +1268,11 @@ PySpark 4.2.0 API
 - Apache Spark 3.5.7, [Tuning Spark](https://spark.apache.org/docs/3.5.7/tuning.html)
 - Apache Spark, [python/pyspark/sql/session.py (v4.2.0)](https://github.com/apache/spark/blob/v4.2.0/python/pyspark/sql/session.py)
 - Atlassian, [Unrecognized JVM GC options when using JDK 11/17](https://support.atlassian.com/confluence/kb/unrecognized-jvm-gc-options-when-using-jdk-11-17/)
+- Apache Spark, [EXPLAIN (SQL Reference)](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-explain.html)
+
+기술 블로그와 벤더 문서
+- Databricks, [Deep Dive into Spark SQL's Catalyst Optimizer](https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html) (2015, 9-1절)
+- Databricks, [Project Tungsten: Bringing Apache Spark Closer to Bare Metal](https://www.databricks.com/blog/2015/04/28/project-tungsten-bringing-spark-closer-to-bare-metal.html) (2015, 3절)
+- Databricks, [Adaptive Query Execution: Speeding Up Spark SQL at Runtime](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html) (2020, 9-1절)
+- Alexey Grishchenko, [Spark Memory Management](https://0x0fff.com/spark-memory-management/) (Spark 1.6 기준, 2-4절 그림 참고)
+- Cloudera, [Tuning the Number of Partitions](https://docs.cloudera.com/runtime/7.3.1/tuning-spark/topics/spark-admin-tuning-the-number-of-partitions.html), [Tuning Resource Allocation](https://docs.cloudera.com/runtime/7.3.1/tuning-spark/topics/spark-admin-tuning-resource-allocation.html) (2-3절)

@@ -730,6 +730,17 @@ ingress:
         app: order-api
 ```
 
+대시는 "목록의 새 항목"이라는 뜻입니다. 대시가 하나면 두 선택자가 한 항목에 들어가 둘 다 맞아야 하고 대시가 둘이면 항목이 두 개라 어느 하나만 맞아도 됩니다. 정책이 `shop` 네임스페이스에 있고 `checkout` 네임스페이스에 라벨 `team=checkout`이 붙어 있다고 두고 네 Pod가 보내는 요청을 따라가 보면 차이가 바로 보입니다.
+
+| 보내는 Pod | AND(대시 하나) | OR(대시 둘) |
+|---|---|---|
+| `checkout`의 `app=order-api` | 허용 | 허용 |
+| `checkout`의 `app=cart` | 거부(Pod 라벨이 안 맞음) | 허용(네임스페이스가 맞음) |
+| `shop`의 `app=order-api` | 거부(네임스페이스가 안 맞음) | 허용(같은 네임스페이스의 `podSelector`) |
+| `shop`의 `app=board` | 거부 | 거부 |
+
+OR 쪽의 `podSelector`는 혼자 쓰였으므로 정책과 같은 네임스페이스(`shop`)의 Pod만 고릅니다. `checkout`의 `order-api`가 OR에서 허용되는 것은 `namespaceSelector` 항목 덕분입니다. 대시 하나 차이로 허용되는 Pod가 한 개에서 세 개로 늘어납니다.
+
 헷갈리면 문서 권고대로 `kubectl describe networkpolicy <이름>`으로 쿠버네티스가 어떻게 해석했는지 읽습니다.
 
 네임스페이스를 이름으로 지정하는 필드는 없습니다. 컨트롤 플레인이 모든 네임스페이스에 바꿀 수 없는 라벨 `kubernetes.io/metadata.name=<네임스페이스 이름>`을 붙이므로 이 라벨로 고릅니다. 과제가 "네임스페이스 payment에서 오는 트래픽만"이라고 하면 라벨을 새로 붙일 필요 없이 이 라벨을 씁니다.
@@ -760,6 +771,8 @@ spec:
 | Default deny all ingress and egress | `{}` | `Ingress`, `Egress` | 없음 |
 
 규칙 필드가 아예 없으면 아무것도 허용하지 않고 빈 규칙 `{}` 하나가 있으면 모든 것을 허용합니다.
+
+둘이 반대로 동작하는 이유는 규칙 하나를 "조건을 모두 통과한 연결을 허용한다"로 읽으면 풀립니다. `ingress:` 목록이 비어 있으면 통과시킬 규칙이 하나도 없으니 격리된 Pod에는 아무것도 못 들어옵니다. `ingress: [{}]`는 규칙이 하나 있는데 그 규칙에 `from`도 `ports`도 없습니다. 걸러 낼 조건이 없으니 모든 출발지와 모든 포트가 통과합니다. 빈 `podSelector: {}`가 "모든 Pod"인 것과 같은 읽기 방식입니다.
 
 ### 2-4. Egress를 막으면 DNS도 막힌다
 
@@ -893,6 +906,16 @@ Service 문서의 정의는 "하나 이상의 Pod로 실행되는 네트워크 �
 
 `targetPort`에 이름을 쓰면 Pod 버전마다 실제 포트 번호가 달라도 Service를 바꾸지 않아도 됩니다. 프로토콜 기본값은 TCP입니다.
 
+세 숫자가 어디서 쓰이는지는 요청 하나를 따라가면 구분됩니다. `port: 80`, `targetPort: 8080`, `nodePort: 30080`인 NodePort Service `web`이 있다고 하겠습니다.
+
+| 누가 보내나 | 보내는 주소 | 쓰이는 필드 | 그다음 |
+|---|---|---|---|
+| 클러스터 밖 손님 | `<노드IP>:30080` | `nodePort` | 노드 커널이 Pod IP:8080으로 바꿔 보낸다 |
+| 클러스터 안 Pod | `web:80` 또는 `<ClusterIP>:80` | `port` | 노드 커널이 Pod IP:8080으로 바꿔 보낸다 |
+| (공통 목적지) | `<Pod IP>:8080` | `targetPort` | 컨테이너가 실제로 듣는 포트 |
+
+`port`와 `nodePort`는 Service가 받는 입구이고 `targetPort`는 출구입니다. 입구가 둘이어도 출구는 같은 컨테이너 포트입니다. 그래서 Ingress나 HTTPRoute의 백엔드 포트에는 입구인 `port`(80)를 적고 컨테이너 포트(8080)를 적지 않습니다(5-7절).
+
 ### 3-3. 타입 네 가지
 
 | 타입 | 동작(문서 기준) | 메모 |
@@ -996,6 +1019,52 @@ endpoints:
 | `externalTrafficPolicy` | `Cluster`, `Local` | 외부 트래픽에 같은 규칙. `Local`이면 엔드포인트가 있는 노드만 응답하고 클라이언트 IP를 보존한다 |
 | `sessionAffinity` | `None`(기본), `ClientIP` | `ClientIP`면 같은 클라이언트 IP를 같은 Pod로 |
 | `sessionAffinityConfig.clientIP.timeoutSeconds` | 기본 10800 | 3시간 |
+
+<details>
+<summary>기초부터: Local로 바꾸면 왜 손님 IP가 보이고 왜 어떤 노드는 응답하지 않나</summary>
+
+> **핵심 한 줄**: `Cluster`는 아무 노드로 와도 다른 노드의 Pod까지 데려다주는 대신 출발지를 노드 IP로 바꾸고 `Local`은 자기 노드의 Pod에만 넘기는 대신 출발지를 그대로 둡니다.
+
+#### 1. 왜 필요한가
+
+쇼핑몰 웹 서버가 로그인 실패를 손님 IP별로 세서 같은 IP에서 너무 많이 틀리면 막는다고 하겠습니다. 그런데 접근 로그를 열어 보니 모든 요청의 출발지가 `192.168.0.11`, `192.168.0.12` 같은 노드 IP뿐입니다. 손님 IP가 어디서 사라졌는지가 이 필드의 이야기입니다.
+
+#### 2. 어떻게 동작하나
+
+![externalTrafficPolicy Cluster와 Local 비교. 왼쪽 Cluster는 손님 203.0.113.7이 Pod 없는 노드1의 30080으로 보내면 노드1이 출발지를 자기 IP로 바꾼 뒤 노드2의 web Pod로 넘겨 Pod가 192.168.0.11을 본다. 오른쪽 Local은 노드1로 온 요청을 버리고 노드2로 온 요청만 Pod가 받아 출발지 203.0.113.7을 그대로 본다](/uploads/cert/cka/cka-04-services-networking/external-traffic-policy.svg)
+
+**`Cluster`(기본값)에서 손님이 Pod 없는 노드1로 보낸 경우**
+
+1. 손님(`203.0.113.7`)이 `노드1:30080`으로 요청을 보냅니다.
+2. 노드1 커널이 목적지를 노드2에 있는 Pod `10.244.2.7:8080`으로 바꿉니다(DNAT).
+3. 같은 순간 출발지도 노드1 자신의 IP로 바꿉니다(SNAT). 이걸 하지 않으면 Pod의 응답이 노드1을 거치지 않고 손님에게 곧장 가려 합니다. 손님은 노드1에 보냈는데 엉뚱한 주소에서 답이 오니 그 응답을 버립니다.
+4. Pod는 출발지가 `192.168.0.11`인 요청을 받고 응답은 노드1을 거쳐 손님에게 돌아갑니다.
+
+**`Local`로 바꾸면**
+
+1. 노드1에는 이 Service의 Pod가 없으므로 노드1로 온 요청은 버려집니다.
+2. 노드2로 온 요청은 같은 노드의 Pod로만 넘어가므로 다른 노드를 거칠 일이 없습니다. 출발지를 바꿀 이유가 없어 Pod는 `203.0.113.7`을 그대로 봅니다.
+3. LoadBalancer 타입이면 쿠버네티스가 `spec.healthCheckNodePort`를 하나 배정합니다. 각 노드가 이 포트의 `/healthz`로 자기에게 엔드포인트가 있는지 답하고 클라우드 LB는 상태 확인에 실패한 노드(노드1)를 대상에서 뺍니다. 손님 요청이 버려지는 노드로 가지 않게 하는 장치입니다.
+
+#### 3. 한눈에 비교
+
+| | `Cluster` | `Local` |
+|---|---|---|
+| Pod가 보는 출발지 | 노드 IP(SNAT) | 손님 IP |
+| Pod 없는 노드로 온 요청 | 다른 노드의 Pod로 전달 | 버림 |
+| 노드를 한 번 더 건너는가 | 건널 수 있다 | 건너지 않는다 |
+| 부하 분산 | Pod 단위로 고르게 | 노드 단위로 나뉜다. Pod가 노드1에 3개, 노드2에 1개면 노드2의 Pod 하나가 절반을 받을 수 있다 |
+
+`internalTrafficPolicy: Local`도 같은 생각을 클러스터 안 트래픽에 적용합니다. 같은 노드의 Pod로만 보내고 없으면 버립니다. 노드마다 하나씩 뜨는 DaemonSet 에이전트에 로그를 보낼 때처럼 "내 노드의 것과만 이야기하면 되는" 경우에 씁니다.
+
+#### 4. 헷갈리는 점 / 실전에서 보이는 모습
+
+- NodePort가 일부 노드에서만 응답하면 장애가 아닐 수 있습니다. `Local`이면 Pod 없는 노드가 버리는 것이 정상 동작입니다(3-8절).
+- 실제로 확인하는 방법은 Using Source IP 튜토리얼에 있습니다. 받은 요청의 출발지를 그대로 찍어 주는 `echoserver` 이미지를 NodePort로 노출하고 정책을 바꿔 가며 `client_address`가 노드 IP에서 손님 IP로 바뀌는지 봅니다.
+
+> **정리**: 손님 IP가 필요하면 `Local`, 어느 노드로 와도 응답해야 하면 `Cluster`입니다. `Local`의 대가는 Pod 없는 노드가 요청을 버린다는 것이고 LB는 `healthCheckNodePort`로 그 노드를 피합니다.
+
+</details>
 
 ### 3-8. 자주 틀리는 지점
 
@@ -1154,6 +1223,19 @@ HTTPRoute 타입 정의의 주석과 기본값에서 확인한 규칙입니다.
 | 맞는 규칙이 없을 때 | 404 |
 | `backendRefs[].weight` | 기본 1. 비율로 나뉜다 |
 
+우선순위 줄은 요청 몇 개를 직접 넣어 보면 익숙해집니다. 한 Gateway에 규칙 세 개(`Exact /orders`, `PathPrefix /orders`, `PathPrefix /`)가 붙어 있다고 하겠습니다.
+
+| 요청 경로 | 맞는 규칙 | 고른 규칙과 이유 |
+|---|---|---|
+| `/orders` | 셋 다 | `Exact /orders`. Exact가 Prefix보다 먼저 |
+| `/orders/123` | `PathPrefix /orders`, `PathPrefix /` | `PathPrefix /orders`. 더 긴 접두사가 먼저 |
+| `/ordersheet` | `PathPrefix /`만 | `PathPrefix /`. 접두사는 `/`로 나눈 경로 요소 단위라 `/orders`가 `/ordersheet`에 맞지 않는다 |
+| `/board` | `PathPrefix /`만 | `PathPrefix /` |
+
+`/ordersheet` 줄은 문자열 접두사로 생각하면 틀리는 곳입니다. 타입 정의 주석의 예로는 `/abc`가 `/abc`, `/abc/`, `/abc/def`에는 맞고 `/abcd`에는 맞지 않습니다. Ingress의 `Prefix`와 같은 규칙입니다(5-3절).
+
+가중치는 백분율이 아닙니다. 타입 정의는 각 백엔드의 몫을 `weight / (그 목록의 weight 합)`으로 계산한다고 적습니다. `90`과 `10`은 `9`와 `1`과 같고 합이 100일 필요도 없습니다. `weight: 0`인 백엔드에는 요청을 보내지 않으므로 새 버전을 잠깐 빼 둘 때 지우지 않고 0으로 내립니다.
+
 결제 서비스의 새 버전이 10%만 받게 하는 예입니다.
 
 ```yaml
@@ -1181,7 +1263,7 @@ spec:
 
 ### 4-5. TLS와 네임스페이스 경계
 
-TLS 종료는 Gateway 리스너의 속성이고 인증서와 키는 Secret에 둡니다(Migrating from Ingress 가이드).
+TLS 종료는 Gateway 리스너의 속성이고 인증서와 키는 Secret에 둡니다(Migrating from Ingress 가이드). "종료(Terminate)"는 손님 브라우저와 맺은 암호화 연결을 Gateway에서 풀어 평문 HTTP로 만든다는 뜻입니다. 그래서 Gateway가 경로와 헤더를 읽고 HTTPRoute 규칙을 적용할 수 있습니다. 반대로 암호를 풀지 않고 그대로 넘기는 방식(`mode: Passthrough`)에서는 Gateway가 경로를 읽지 못합니다. 이때 라우팅은 연결을 열 때 보이는 호스트 이름(SNI)만으로 고르는 TLSRoute가 맡습니다.
 
 ```yaml
 listeners:
@@ -1719,6 +1801,25 @@ options ndots:5
 
 `search` 덕분에 같은 네임스페이스에서는 `payment`만으로, 다른 네임스페이스는 `payment.billing`처럼 짧게 부릅니다. 네임스페이스를 빼면 자기 네임스페이스에서만 찾으므로 `shop`의 Pod가 `billing`의 `payment`를 `payment`로 부르면 풀리지 않습니다. `ndots:5`는 점이 5개보다 적은 이름에 search 목록을 먼저 붙여 본다는 뜻이라 외부 도메인 질의가 몇 배로 늘어납니다. 끝에 점을 붙인 FQDN이나 Pod의 `dnsConfig.options`로 줄입니다.
 
+`shop` 네임스페이스의 주문 API가 외부 결제 대행사 `api.pay.example.com`을 부를 때 실제로 나가는 질의를 순서대로 적으면 이렇습니다. 이 이름에는 점이 3개라 5개보다 적습니다.
+
+| 순서 | 질의하는 이름 | 결과 |
+|---|---|---|
+| 1 | `api.pay.example.com.shop.svc.cluster.local` | NXDOMAIN |
+| 2 | `api.pay.example.com.svc.cluster.local` | NXDOMAIN |
+| 3 | `api.pay.example.com.cluster.local` | NXDOMAIN |
+| 4 | `api.pay.example.com` | 응답 |
+
+답을 받기까지 이름 네 개를 묻고 앞의 셋은 헛걸음입니다. IPv4(A)와 IPv6(AAAA)를 함께 묻는 리졸버라면 질의 수가 두 배가 됩니다. 반대로 `payment`처럼 점이 없는 클러스터 안 이름은 1번에서 바로 풀립니다. ndots를 5로 크게 잡은 것은 `payment.billing`이나 `order-db-0.order-db`처럼 점이 몇 개 있는 클러스터 안 이름도 search 목록으로 먼저 찾게 하려는 것입니다. Marco Pracucci는 같은 현상을 측정한 글에서 외부 이름을 자주 부르는 Pod라면 끝에 점을 붙이거나 그 Pod만 `ndots`를 낮추라고 권했습니다([Kubernetes pods /etc/resolv.conf ndots:5 option, 2018](https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html)).
+
+```yaml
+spec:
+  dnsConfig:
+    options:
+    - name: ndots
+      value: "2"        # 점이 2개 이상이면 바로 그 이름부터 묻는다
+```
+
 Pod는 대개 Ready여야 DNS 레코드를 받습니다. Service에 `publishNotReadyAddresses: true`를 주면 예외입니다.
 
 ### 6-3. dnsPolicy
@@ -1766,7 +1867,7 @@ Customizing DNS Service 문서에 실린 기본 Corefile입니다. kubeadm 1.37�
 
 ### 6-5. 설정 바꾸기
 
-특정 도메인만 다른 DNS 서버로 보내는 stub 도메인과 업스트림 변경은 `forward` 플러그인으로 합니다. 사내 도메인 `corp.example`을 10.150.0.1로 보내는 예입니다(문서의 Consul 예시를 바꾼 것).
+특정 도메인만 다른 DNS 서버로 보내는 stub 도메인과 업스트림 변경은 `forward` 플러그인으로 합니다. 클러스터 밖의 별도 DNS 서버가 관리하는 도메인 `corp.example`을 10.150.0.1로 보내는 예입니다(문서의 Consul 예시를 바꾼 것).
 
 ```bash
 kubectl -n kube-system get configmap coredns -o yaml > coredns-backup.yaml
@@ -1938,6 +2039,7 @@ kubernetes.io
 - [Service](https://kubernetes.io/docs/concepts/services-networking/service/)
 - [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
 - [Debug Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)
+- [Using Source IP](https://kubernetes.io/docs/tutorials/services/source-ip/) (externalTrafficPolicy와 healthCheckNodePort)
 - [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/)
 - [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
 - [Ingress Controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/)
@@ -1954,11 +2056,15 @@ Gateway API
 - [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/)
 - [Gateway API Security Model](https://gateway-api.sigs.k8s.io/docs/concepts/security/), [httproute_types.go의 PathMatchType](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go)
 - kubernetes-sigs/gateway-api, [apis/v1/httproute_types.go](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go)
+- kubernetes-sigs/gateway-api, [apis/v1/shared_types.go의 BackendRef Weight](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/shared_types.go)
 
 CNI, Ingress 컨트롤러, CoreDNS
 - flannel-io, [flannel README](https://github.com/flannel-io/flannel)
 - ingress-nginx, [Rewrite](https://kubernetes.github.io/ingress-nginx/examples/rewrite/)
 - CoreDNS, [kubernetes plugin](https://coredns.io/plugins/kubernetes/)
+
+기술 블로그
+- Marco Pracucci, [Kubernetes pods /etc/resolv.conf ndots:5 option and why it may negatively affect your application performances](https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html), 2018-08-10
 
 이 블로그의 관련 글
 - [쿠버네티스 아래의 리눅스 5: Service의 실체는 커널 규칙](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack) (시험 범위 밖 심화)

@@ -220,6 +220,41 @@ S3 클래스별 가용성, AZ 수, 최소 보관 기간은 Ch-00 4-2절 표에 �
 
 수명 주기의 만료(expiration) 동작으로 객체를 지울 수도 있습니다. 쇼핑몰 주문 영수증 PDF를 "30일 Standard, 이후 Glacier Instant Retrieval, 5년 뒤 삭제"로 관리하는 규칙이 데이터 수명 주기 항목의 전형입니다.
 
+<details>
+<summary>기초부터: 최소 보관 기간과 객체당 40KB가 청구서에서 어떻게 보이나</summary>
+
+#### 최소 보관 기간은 "그만큼은 낸다"는 약속입니다
+
+S3의 차가운 클래스에는 최소 보관 기간이 있습니다. Standard-IA와 One Zone-IA는 30일, Glacier Instant Retrieval과 Glacier Flexible Retrieval은 90일, Deep Archive는 180일입니다. 이 기간 전에 객체를 지우거나 덮어쓰거나 다른 클래스로 옮기면 남은 날수만큼의 보관료를 한꺼번에 냅니다.
+
+쇼핑몰 장바구니 미리보기 이미지를 Standard-IA에 올렸다가 10일 만에 지운 경우를 따라가 보겠습니다.
+
+| 날 | 일어난 일 | 내는 보관료 |
+|---|---|---|
+| 1일 | Standard-IA에 업로드 | 매일 보관료가 쌓임 |
+| 10일 | 삭제 | 10일치는 이미 냄 |
+| 삭제 시점 | 최소 30일에서 남은 20일 | 20일치를 한 번에 청구 |
+
+결과적으로 30일치를 다 냅니다. 며칠만 두는 임시 파일은 IA에 넣으면 오히려 비쌉니다. 시험에서 "업로드 후 7일 안에 처리하고 지운다"가 붙으면 IA 계열은 오답 후보입니다.
+
+본문의 94일 예시도 같은 계산입니다. 4일째 Glacier Instant Retrieval로 옮겼으면 그 클래스의 최소 90일을 채워야 다음 클래스로 갈 수 있으니 4 + 90 = 94일째부터 Deep Archive 전환을 걸 수 있습니다.
+
+#### 객체당 40KB는 작은 객체에서 크게 불어납니다
+
+Glacier Flexible Retrieval과 Deep Archive로 보낸 객체마다 이름과 메타데이터를 위한 40KB가 붙습니다. 8KB는 Standard 요금, 32KB는 해당 Glacier 요금입니다. 1KB짜리 접근 로그 1,000만 개를 Deep Archive로 보낸다고 계산해 보겠습니다.
+
+| 항목 | 계산 | 청구되는 양 |
+|---|---|---|
+| 실제 데이터 | 1KB × 1,000만 | 약 10GB(Deep Archive 요금) |
+| Standard 요금으로 붙는 몫 | 8KB × 1,000만 | 약 80GB(Standard 요금) |
+| Glacier 요금으로 붙는 몫 | 32KB × 1,000만 | 약 320GB(Deep Archive 요금) |
+
+데이터는 10GB인데 청구되는 저장량은 410GB 정도이고 그중 80GB는 가장 비싼 Standard 단가입니다. 전환 요청 요금도 객체 1,000만 개만큼 붙습니다. 같은 로그를 하루치씩 tar로 묶어 큰 객체 몇백 개로 만들면 40KB 부담과 요청 수가 함께 사라집니다. 3-7절 표의 "작은 파일 수백만 개는 묶어서"가 이 계산에서 나옵니다.
+
+> **정리**: 최소 보관 기간은 일찍 지워도 그 기간만큼 내는 약속이고 40KB는 객체 개수에 비례하는 고정 부담입니다. 둘 다 "짧게 두는 객체"와 "작은 객체"를 차가운 클래스에 보내면 손해라는 같은 결론으로 이어집니다.
+
+</details>
+
 ### 3-3. Intelligent-Tiering 계층
 
 "How S3 Intelligent-Tiering works" 문서 기준입니다.
@@ -574,9 +609,63 @@ Compute Savings Plans가 EC2, Fargate, Lambda 모두에 적용된다는 점도 �
 
 같은 Aurora라도 저장 구성으로 요금이 달라집니다. Aurora Standard는 I/O 요청 100만 건당 요금을 따로 내고 I/O-Optimized는 I/O 요금이 없는 대신 인스턴스와 저장 단가가 다릅니다. 문서 기준은 I/O 지출이 Aurora 전체 지출의 25% 이상이면 I/O-Optimized입니다. Standard에서 I/O-Optimized로는 30일에 한 번 바꿀 수 있습니다.
 
+<details>
+<summary>기초부터: 25%라는 기준은 어디서 나오나</summary>
+
+#### 고정비를 더 내고 변동비를 없애는 거래입니다
+
+Aurora Standard는 인스턴스, 저장, I/O 세 가지에 요금을 냅니다. I/O-Optimized는 I/O 요금을 0으로 만드는 대신 인스턴스와 저장 단가를 올립니다. 휴대폰 요금제로 치면 쓴 만큼 내는 요금제와 무제한 요금제의 차이입니다. 많이 쓰는 사람만 무제한이 이득입니다.
+
+Aurora 요금 페이지 예시의 버지니아 북부 단가로 한 달(730시간) 비용을 계산해 보겠습니다. 인스턴스는 db.r6i.large 한 대, 저장량은 100GB로 잡았습니다.
+
+| 항목 | Standard | I/O-Optimized |
+|---|---|---|
+| 인스턴스 | 시간당 0.29달러 × 730 = 211.70달러 | 시간당 0.377달러 × 730 = 275.21달러 |
+| 저장 | GB당 0.10달러 × 100 = 10.00달러 | GB당 0.225달러 × 100 = 22.50달러 |
+| I/O | 100만 건당 0.20달러 | 0 |
+| I/O를 뺀 합계 | 221.70달러 | 297.71달러 |
+
+I/O-Optimized는 I/O가 하나도 없어도 76.01달러를 더 냅니다. Standard에서 I/O 요금이 76.01달러(약 3억 8천만 건)를 넘는 달부터 I/O-Optimized가 쌉니다. 그 경계에서 Standard 청구서를 보면 I/O가 76.01 ÷ 297.71 ≈ 25.5%를 차지합니다. 문서의 25% 기준과 같은 자리입니다. 이 예에서 인스턴스 웃돈은 약 30%이고 저장 단가는 2.25배입니다. 그래서 저장량이 인스턴스 비용에 비해 아주 크면 저장 웃돈이 커져 경계가 25%보다 조금 올라갑니다. 다른 인스턴스와 리전은 요금 페이지에서 같은 방식으로 셉니다.
+
+#### 시험에서 읽는 법
+
+보기에 "I/O 요금이 청구서의 40%"처럼 숫자가 나오면 25%와 비교합니다. "I/O가 예측할 수 없이 튀어 비용 예측이 어렵다"도 I/O-Optimized 쪽 단서입니다. I/O 요금이 고정되기 때문입니다. AWS 출시 글은 I/O 지출이 25%를 넘는 워크로드에서 최대 40%를 아낄 수 있다고 적습니다([AWS News Blog, 2023](https://aws.amazon.com/blogs/aws/new-amazon-aurora-i-o-optimized-cluster-configuration-with-up-to-40-cost-savings-for-i-o-intensive-applications)).
+
+> **정리**: I/O-Optimized는 인스턴스와 저장에 웃돈을 내고 I/O를 무료로 만드는 요금제이고 그 웃돈을 I/O 요금이 넘어서는 지점이 대략 청구서의 25%입니다.
+
+</details>
+
 ### 5-3. DynamoDB 용량 모드와 테이블 클래스
 
-Ch-03 4-5절에서 본 대로 온디맨드는 요청당 요금, 프로비저닝은 프로비저닝한 시간당 용량에 요금을 냅니다. 비용 관점의 판단은 사용률입니다. 프로비저닝한 용량을 꾸준히 많이 쓰면 프로비저닝이 싸고 트래픽이 들쭉날쭉해 평소에 놀면 온디맨드가 쌉니다. 이 손익 분기점을 숫자로 계산하는 공식 예시는 이번에 찾지 않았습니다.
+Ch-03 4-5절에서 본 대로 온디맨드는 요청당 요금, 프로비저닝은 프로비저닝한 시간당 용량에 요금을 냅니다. 비용 관점의 판단은 사용률입니다. 프로비저닝한 용량을 꾸준히 많이 쓰면 프로비저닝이 싸고 트래픽이 들쭉날쭉해 평소에 놀면 온디맨드가 쌉니다. AWS가 손익 분기점을 숫자로 밝힌 문서는 찾지 못했고 아래 토글에서 요금 페이지 단가로 직접 계산했습니다.
+
+<details>
+<summary>기초부터: 온디맨드와 프로비저닝의 손익 분기점을 단가로 계산하기</summary>
+
+#### 같은 1시간을 두 요금제로 세어 봅니다
+
+프로비저닝의 WCU 하나는 "1KB 쓰기를 초당 1번" 할 수 있는 용량이고 쓰든 안 쓰든 시간당 요금을 냅니다. 온디맨드는 실제로 들어온 쓰기 1번(1KB 이하)마다 요금을 냅니다. 요금 페이지 예시의 버지니아 북부, Standard 테이블 클래스 단가로 WCU 하나가 1시간 동안 꽉 찼을 때를 비교합니다.
+
+| | 계산 | 1시간 비용 |
+|---|---|---|
+| 프로비저닝 WCU 1개 | 시간당 0.00065달러 | 0.00065달러 |
+| 같은 양을 온디맨드로 | 3,600번 × 100만 건당 0.625달러 | 0.00225달러 |
+
+꽉 채워 쓰면 프로비저닝이 약 3.5배 쌉니다. 그런데 평균 사용률이 낮으면 이야기가 바뀝니다. 프로비저닝은 사용률과 관계없이 0.00065달러를 내므로 사용률이 0.00065 ÷ 0.00225 ≈ 29% 아래로 내려가면 온디맨드가 쌉니다. 읽기도 RCU 시간당 0.00013달러와 100만 건당 0.125달러로 계산하면 같은 29% 근처가 나옵니다.
+
+#### 사용률 29%가 생각보다 높은 이유
+
+쇼핑몰 주문 테이블을 떠올려 보면 낮에는 바쁘고 새벽에는 거의 놉니다. 자동 조정을 켜도 목표 사용률(20~90% 사이에서 설정)만큼 여유를 남기고 늘리고 줄이는 데 시간이 걸려서 하루 평균 사용률은 목표보다 낮아지기 쉽습니다. 그래서 하루 종일 일정하게 바쁜 테이블이 아니면 29%를 넘기기가 생각보다 어렵습니다.
+
+AWS는 2024년 11월 온디맨드 처리량 요금을 50% 내리면서 대부분의 프로비저닝 워크로드가 온디맨드로 더 싸진다고 밝히고 온디맨드를 대부분 워크로드의 기본 권장 모드로 바꿨습니다([AWS Database Blog](https://aws.amazon.com/blogs/database/new-amazon-dynamodb-lowers-pricing-for-on-demand-throughput-and-global-tables/)). 이 인하 전에 쓰인 강의 자료는 분기점을 훨씬 낮게 잡았을 수 있습니다.
+
+#### 시험에서 읽는 법
+
+시험 문구는 여전히 "예측 불가, 새 서비스, 들쭉날쭉"이면 온디맨드, "꾸준하고 예측 가능"이면 프로비저닝(+ 자동 조정, 예약 용량)으로 갈립니다. 위 계산은 그 구분이 왜 성립하는지 보여 주는 근거입니다. 예약 용량(reserved capacity)은 프로비저닝 용량에만 붙는 약정 할인이라 "꾸준하고 1년 이상 계속" 문구에서 프로비저닝 쪽을 더 굳힙니다.
+
+> **정리**: 프로비저닝은 빌린 용량값을 늘 내고 온디맨드는 쓴 만큼 냅니다. 현재 단가로 평균 사용률 약 29%가 갈림길이고 하루 종일 꾸준히 바쁜 테이블만 그 선을 넘깁니다.
+
+</details>
 
 "DynamoDB table classes" 문서는 Standard-IA 테이블 클래스를 저장이 비용의 대부분인 테이블에 맞춘 클래스로 소개합니다. 예시는 애플리케이션 로그, 오래된 게시글, 전자상거래 주문 이력, 지난 게임 업적입니다. 테이블 클래스는 나중에 바꿀 수 있습니다.
 
@@ -787,7 +876,7 @@ Transit Gateway 문서는 연결(attachment)마다 시간 요금, 처리한 트�
 | | VPC 피어링 | Transit Gateway |
 |---|---|---|
 | 요금 | 연결 자체는 무료. 같은 AZ 안 전송은 무료, 같은 리전 AZ 간은 방향마다 GB당 0.01달러, 리전 간은 리전 간 전송 요금 | 연결 시간 + 처리량(버지니아 예시 연결당 시간 0.05달러, GB당 0.02달러) |
-| 확장 | VPC가 늘면 연결 수가 제곱으로 늘어남 | 허브 하나에 연결 추가 |
+| 확장 | VPC가 늘면 연결 수가 제곱으로 늘어남(VPC n개를 모두 잇는 데 n(n-1)/2개, 10개면 45개) | 허브 하나에 연결 추가(10개면 연결 10개) |
 | 맞는 경우 | VPC 몇 개, 대량 트래픽 | VPC 많음, 온프레미스 공유, 라우팅 분리 |
 
 VPC 둘 사이에 트래픽이 아주 많고 전이 라우팅이 필요 없다면 연결 요금과 처리 요금이 없고 전송 요금만 붙는 피어링이 쌀 수 있습니다. 두 요금 구조는 VPC 피어링 문서와 Transit Gateway 요금 페이지에서 확인했고 "더 싸다"는 결론은 그 구조에서 끌어낸 판단입니다.
@@ -1016,6 +1105,9 @@ B입니다. AWS 오리진에서 CloudFront로 가는 전송은 무료이고 같�
 - [In-memory acceleration with DynamoDB Accelerator (DAX)](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.html)
 - [Working with DB instance read replicas](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.html), [Amazon RDS Proxy](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-proxy.html)
 - [What is AWS Database Migration Service?](https://docs.aws.amazon.com/dms/latest/userguide/Welcome.html)
+- [Amazon DynamoDB pricing for provisioned capacity](https://aws.amazon.com/dynamodb/pricing/provisioned/), [Amazon DynamoDB pricing for on-demand capacity](https://aws.amazon.com/dynamodb/pricing/on-demand/)
+- AWS Database Blog, [New – Amazon DynamoDB lowers pricing for on-demand throughput and global tables](https://aws.amazon.com/blogs/database/new-amazon-dynamodb-lowers-pricing-for-on-demand-throughput-and-global-tables/)
+- AWS News Blog, [New – Amazon Aurora I/O-Optimized Cluster Configuration with Up to 40% Cost Savings for I/O-Intensive Applications](https://aws.amazon.com/blogs/aws/new-amazon-aurora-i-o-optimized-cluster-configuration-with-up-to-40-cost-savings-for-i-o-intensive-applications)
 
 네트워크
 - [Pricing for NAT gateways](https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-pricing.html), [Amazon VPC Pricing](https://aws.amazon.com/vpc/pricing/)

@@ -250,6 +250,16 @@ kubectl patch storageclass order-fast -p '{"metadata": {"annotations":{"storagec
 
 kubectl v1.37은 기본 어노테이션이 붙은 클래스가 둘이어도 실제로 쓰이는 하나(가장 최근 것)에만 `(default)`를 붙였습니다. 기본을 바꾼 뒤에는 이전 클래스의 어노테이션이 `"false"`인지도 확인합니다.
 
+PVC에 `storageClassName`을 쓰는 방법은 세 가지이고 결과가 모두 다릅니다. 정적 PV 과제에서 점수를 잃는 곳이 대부분 여기입니다.
+
+| PVC에 적은 값 | API 서버가 저장하는 값 | 묶일 수 있는 PV |
+|---|---|---|
+| 필드를 아예 안 씀 | 기본 클래스 이름이 채워짐(기본 클래스가 있을 때) | 그 기본 클래스의 PV, 없으면 동적 프로비저닝 |
+| `storageClassName: ""` | 빈 문자열 그대로 | 클래스가 없는 PV만. 동적 프로비저닝은 일어나지 않음 |
+| `storageClassName: manual` | `manual` | `storageClassName: manual`인 PV. 맞는 PV가 없으면 `manual`이라는 StorageClass로 동적 프로비저닝을 시도 |
+
+그래서 관리자가 `manual` 클래스로 만든 PV에 PVC를 묶으려는데 PVC 쪽 필드를 빠뜨리면 기본 클래스(kind라면 `standard`)가 채워져 클래스가 어긋납니다. 묶일 PV가 없으니 PVC는 `standard`의 프로비저너가 새 볼륨을 만들어 줄 때까지 기다리거나 엉뚱한 새 볼륨에 묶입니다.
+
 ### 1-4. volumeBindingMode
 
 | 값 | 바인딩과 프로비저닝 시점 | 쓰는 곳 |
@@ -258,6 +268,17 @@ kubectl v1.37은 기본 어노테이션이 붙은 클래스가 둘이어도 실�
 | `WaitForFirstConsumer` | PVC를 쓰는 Pod가 만들어질 때까지 미룸. Pod의 스케줄링 제약(자원 요청, 노드 셀렉터, 어피니티, 테인트와 톨러레이션)을 보고 PV를 고르거나 만든다 | 특정 노드나 존에 묶인 저장소, `local` 볼륨 |
 
 `Immediate`로 특정 존에만 있는 저장소를 쓰면 Pod의 스케줄링 요구를 모른 채 PV가 정해져 Pod를 어디에도 둘 수 없게 될 수 있습니다.
+
+말로만 보면 감이 오지 않으니 주문 DB로 따라가 보겠습니다. 클라우드 블록 디스크는 만들어진 존(데이터센터 한 곳)의 노드에만 붙일 수 있습니다.
+
+![같은 PVC를 Immediate와 WaitForFirstConsumer로 만들 때의 차이. Immediate는 PVC를 만들자마자 존 a에 디스크를 만들고 나중에 온 Pod는 자리가 있는 존 c 노드로만 갈 수 있어 Pending이 된다. WaitForFirstConsumer는 Pod가 존 c 노드를 받은 뒤 존 c에 디스크를 만들어 Bound가 된다](/uploads/cert/cka/cka-05-storage/binding-mode-zones.svg)
+
+1. **`Immediate`**: PVC `order-db-data`를 만드는 순간 프로비저너가 디스크를 만듭니다. 아직 이 디스크를 쓸 Pod가 없으니 프로비저너는 존을 아무렇게나 고르고 존 a에 만들었다고 하겠습니다.
+2. 이제 주문 DB Pod를 만듭니다. 스케줄러는 PV의 노드 어피니티(존 a)와 Pod의 요구(메모리 8Gi)를 함께 맞춰야 하는데 존 a의 노드는 메모리가 꽉 찼고 여유가 있는 노드는 존 c에만 있습니다.
+3. 두 조건을 동시에 만족하는 노드가 없어 Pod는 `Pending`에 머물고 Events에 `volume node affinity conflict`가 찍힙니다. 디스크를 지우고 다시 만들기 전에는 풀리지 않습니다.
+4. **`WaitForFirstConsumer`**: PVC는 `Pending`으로 기다립니다. Pod가 만들어지면 스케줄러가 메모리, 테인트, 어피니티를 모두 보고 존 c 노드를 고른 뒤 그 존에 디스크를 만들게 합니다. 순서가 바뀌었을 뿐인데 충돌이 생길 틈이 없습니다.
+
+Kubernetes 블로그는 이 기능을 소개하면서 예전 방식의 문제를 셋으로 꼽았습니다. 볼륨이 만들어진 존에 CPU나 메모리가 모자란 경우, 노드 셀렉터나 어피니티와 맞지 않는 경우, 테인트 때문에 Pod를 못 두는 경우입니다. 볼륨을 여러 개 쓰는 Pod라면 볼륨마다 다른 존에 만들어져 어디에도 못 가는 일도 있었다고 적었습니다([Topology-Aware Volume Provisioning in Kubernetes](https://kubernetes.io/blog/2018/10/11/topology-aware-volume-provisioning-in-kubernetes/), 2018).
 
 `WaitForFirstConsumer`에는 함정이 하나 있습니다. Pod 스펙에 `nodeName`을 직접 쓰면 스케줄러를 건너뛰므로 PVC가 `Pending`으로 남고 Pod에는 `FailedMount ... PVC is not bound`가 반복됩니다. 노드를 고정하려면 `kubernetes.io/hostname` 노드 셀렉터를 씁니다.
 
@@ -500,6 +521,25 @@ pvc-8560aeed-4a36-48fd-8345-7970fefc501e   1Gi        RWO            Retain     
 kubectl patch pv <PV 이름> --type=json -p '[{"op":"remove","path":"/spec/claimRef"}]'
 kubectl get pv <PV 이름>     # STATUS가 Available로 바뀌는지
 ```
+
+왜 `claimRef`를 지워야 하는지는 PV 컨트롤러가 짝을 확인하는 방법을 보면 풀립니다.
+
+![PV 상태가 바뀌는 길. Available에서 맞는 PVC가 생기면 Bound가 되고 claimRef에 PVC 이름과 UID가 적힌다. PVC를 지우면 Released가 되고 claimRef에는 지운 PVC의 UID가 남는다. Delete 정책이면 PV와 디스크가 지워지고 Retain 정책이면 Released로 남는다. 관리자가 claimRef 전체나 uid만 지우면 다시 Available이 된다](/uploads/cert/cka/cka-05-storage/pv-states.svg)
+
+1. PV가 묶이면 `claimRef`에 PVC의 네임스페이스와 이름, 그리고 UID가 적힙니다. UID는 객체를 만들 때마다 새로 받는 고유 번호라서 같은 이름으로 지웠다 다시 만들어도 값이 달라집니다.
+2. PVC를 지우면 컨트롤러는 `claimRef`가 가리키는 PVC를 찾다가 없거나 UID가 다르면 "주인이 사라졌다"고 보고 PV를 `Released`로 바꿉니다.
+3. 이 상태에서 같은 이름으로 PVC를 다시 만들어도 UID가 다르니 컨트롤러는 옛 주인이 돌아온 것으로 보지 않습니다. 이전 데이터를 엉뚱한 PVC가 받지 않게 하는 안전장치입니다.
+4. `claimRef`를 통째로 지우면 PV는 `Available`이 되고 조건이 맞는 아무 PVC에나 묶일 수 있습니다.
+
+PV 컨트롤러 소스(`pv_controller.go`)에는 중간 방법도 보입니다. `claimRef`의 이름은 두고 `uid`만 지우면 컨트롤러가 "이 PVC를 위해 예약된 PV"로 보고 `Available`로 바꿉니다. 그러면 같은 이름의 PVC만 이 PV를 가져갈 수 있습니다. 소스와 커뮤니티 글로 확인한 내용이고 이 글을 쓰면서 직접 돌려 보지는 않았습니다.
+
+```bash
+kubectl patch pv <PV 이름> --type=json -p '[{"op":"remove","path":"/spec/claimRef/uid"}]'
+```
+
+`kubectl patch`가 두 모양으로 나와서 헷갈릴 수 있습니다. `--type`을 생략하면 strategic merge patch라서 적은 필드를 기존 객체에 합칩니다(회수 정책을 바꿀 때). 필드를 지우려면 "이 경로를 지워라"를 직접 적는 JSON patch(`--type=json`, `op: remove`)를 씁니다. 세 번째 형식인 `--type=merge`도 있습니다([kubectl patch](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_patch/)).
+
+Delete와 Retain을 나란히 돌려 보고 `Released` PV를 되살리는 연습은 iximiuz Labs의 [PV reclaim policies 챌린지](https://labs.iximiuz.com/challenges/kubernetes-pv-reclaim-policies-5395f28c)에 있습니다(가입 필요).
 
 ### 2-4. CSI 드라이버와 프로비저너 이름
 
@@ -786,6 +826,15 @@ kubectl -n shop get pvc order-db-data -w
 
 드라이버가 확장을 지원하지 않으면 `allowVolumeExpansion`을 켜도 진행되지 않습니다. kind 기본 local-path는 `waiting for an external controller`에서 멈췄습니다.
 
+"쓰는 Pod가 없으면 파일시스템 확장이 끝나지 않는다"는 줄은 확장이 두 단계라서 나옵니다.
+
+| 단계 | 누가 | 하는 일 | PVC 조건(`kubectl describe pvc`의 Conditions) |
+|---|---|---|---|
+| 1. 볼륨 키우기 | 컨트롤 플레인 쪽(CSI라면 external-resizer) | 저장소에 디스크 크기를 20Gi에서 30Gi로 늘려 달라고 요청 | `Resizing` |
+| 2. 파일시스템 키우기 | 그 볼륨을 마운트한 노드의 kubelet | 디스크 위의 ext4, XFS를 새 크기만큼 넓힘 | `FileSystemResizePending` |
+
+1단계가 끝나도 파일시스템은 아직 20Gi라서 Pod 안에서 `df -h`를 치면 옛 크기가 보입니다. 2단계는 볼륨이 노드에 마운트돼 있어야 kubelet이 할 수 있으므로 쓰는 Pod가 없으면 `FileSystemResizePending`에서 기다립니다. 두 조건 이름의 정의는 쿠버네티스 API 소스(`core/v1/types.go`)에 있습니다. 둘 다 끝나면 조건이 사라지고 `kubectl get pvc`의 CAPACITY가 30Gi로 바뀝니다.
+
 ### 3-6. PVC가 Pending일 때 확인 순서
 
 1절과 3-2절을 합친 점검 목록입니다.
@@ -801,7 +850,16 @@ kubectl -n shop get pvc order-db-data -w
 | 7 | `volumeName`으로 지정한 PV가 이미 다른 PVC에 묶였는지 | `kubectl get pv`의 CLAIM 열 |
 | 8 | 동적 프로비저닝이면 클래스의 프로비저너가 설치돼 있고 컨트롤러 Pod가 도는지 | `kubectl get csidriver`, `kubectl get pod -A \| grep -i csi` |
 
-Events 문구로 갈래를 바로 나눌 수 있습니다. 맞는 정적 PV가 없고 PVC의 클래스 이름에 해당하는 StorageClass도 없으면 크기 이야기 대신 `ProvisioningFailed  storageclass.storage.k8s.io "manual" not found`가 찍힙니다. 맞는 PV가 없어서 그 이름으로 동적 프로비저닝을 시도했다는 뜻이라 "맞는 PV가 없다"와 "프로비저너가 없다"를 함께 봅니다.
+`describe pvc`의 Events에 찍히는 문구는 PV 컨트롤러 소스에 그대로 있어서 문구만 보고 위 표의 어느 줄로 갈지 고를 수 있습니다.
+
+| Events 문구 | 뜻 | 볼 곳 |
+|---|---|---|
+| `waiting for first consumer to be created before binding` | `WaitForFirstConsumer` 클래스이고 아직 Pod가 없음. 고장 아님 | 3번 |
+| `no persistent volumes available for this claim and no storage class is set` | 클래스가 빈 PVC(`""`로 적었거나 기본 클래스가 없는데 생략)인데 맞는 PV가 없음 | 4~7번 |
+| `Waiting for a volume to be created either by the external provisioner '<이름>' or manually by the system administrator...` | 동적 프로비저닝을 맡겼는데 아직 아무도 볼륨을 안 만듦 | 8번 |
+| `storageclass.storage.k8s.io "<이름>" not found` | PVC가 적은 클래스가 클러스터에 없음 | 2번 |
+
+마지막 줄은 조금 더 설명이 필요합니다. 맞는 정적 PV가 없고 PVC의 클래스 이름에 해당하는 StorageClass도 없으면 크기 이야기 대신 `ProvisioningFailed  storageclass.storage.k8s.io "manual" not found`가 찍힙니다. 맞는 PV가 없어서 그 이름으로 동적 프로비저닝을 시도했다는 뜻이라 "맞는 PV가 없다"와 "프로비저너가 없다"를 함께 봅니다.
 
 ### 3-7. 자주 틀리는 지점
 
@@ -958,6 +1016,15 @@ kubernetes.io
 - [Configure a Pod to Use a PersistentVolume for Storage](https://kubernetes.io/docs/tutorials/configuration/configure-persistent-volume-storage/)
 - [Change the Reclaim Policy of a PersistentVolume](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/)
 - [Change the default StorageClass](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/)
+- [kubectl patch](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_patch/)
+- Kubernetes Blog, [Topology-Aware Volume Provisioning in Kubernetes](https://kubernetes.io/blog/2018/10/11/topology-aware-volume-provisioning-in-kubernetes/), 2018-10-11
+
+소스 코드
+- kubernetes/kubernetes, [release-1.37 pv_controller.go](https://github.com/kubernetes/kubernetes/blob/release-1.37/pkg/controller/volume/persistentvolume/pv_controller.go) (Events 문구, `claimRef` UID 비교, `uid`가 빈 `claimRef`의 예약 처리)
+- kubernetes/api, [core/v1/types.go](https://github.com/kubernetes/api/blob/master/core/v1/types.go) (`Resizing`, `FileSystemResizePending` 조건)
+
+연습
+- iximiuz Labs, [Kubernetes PV reclaim policies 챌린지](https://labs.iximiuz.com/challenges/kubernetes-pv-reclaim-policies-5395f28c)
 
 이 블로그의 관련 글
 - [쿠버네티스 아래의 리눅스 4: OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs) (시험 범위 밖 심화)

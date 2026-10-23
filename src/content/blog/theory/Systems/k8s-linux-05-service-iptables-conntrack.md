@@ -73,10 +73,10 @@ Service를 YAML로 만드는 법과 타입별 사용법은 [CKA Ch-04](/blog/cer
 
 | 계층(TCP/IP 모델) | 머리말에 든 주소 | 이 글에서 다루는 것 |
 |---|---|---|
-| 링크 | MAC 주소 | Calico의 proxy ARP(5절) |
+| 링크 | MAC 주소 | Calico의 proxy ARP(6-1) |
 | 인터넷 | 출발지 IP, 목적지 IP, TTL | DNAT, SNAT, TTL 감소 |
 | 전송 | 출발지 포트, 목적지 포트, TCP 플래그 | 포트 변환, conntrack 튜플, handshake |
-| 응용 | DNS 질의, HTTP 요청 | DNS 경로(3절) |
+| 응용 | DNS 질의, HTTP 요청 | DNS 경로(5장) |
 
 DNAT는 목적지 IP와 포트를, SNAT(마스커레이드 포함)는 출발지 IP와 포트를 바꿉니다. 응용 계층 데이터는 건드리지 않습니다. 그래서 주문 API 입장에서는 요청이 ClusterIP를 거쳐 왔는지 직접 왔는지 구분할 수 없습니다.
 
@@ -410,9 +410,22 @@ kube-proxy가 쓰는 값은 `0.3333333333`입니다. `iptables-save`로 읽으�
 -A KUBE-SEP-AAAA -p tcp -m tcp -j DNAT --to-destination 10.244.1.5:8080
 ```
 
-두 번째 줄이 이 글의 핵심인 DNAT입니다. 목적지 `10.96.120.15:80`이 `10.244.1.5:8080`으로 바뀝니다. 첫 줄은 헤어핀 경우를 처리합니다. 파드가 자기 Service를 불렀는데 자기 자신이 뽑히면 출발지와 목적지가 같아집니다. 응답이 돌아올 길이 꼬이지 않게 출발지도 노드 주소로 바꾸라고 표시해 둡니다.
+두 번째 줄이 이 글의 핵심인 DNAT입니다. 목적지 `10.96.120.15:80`이 `10.244.1.5:8080`으로 바뀝니다.
+
+첫 줄은 헤어핀 경우를 처리합니다. 헤어핀은 파드가 자기 Service를 불렀는데 자기 자신이 엔드포인트로 뽑힌 경우입니다. 표시가 없다면 어떻게 되는지 따라가 보면 첫 줄이 왜 필요한지 보입니다.
+
+| 단계 | 패킷 | 어디서 |
+|---|---|---|
+| ① 요청 | `10.244.1.5:51000 → 10.96.120.15:80` | 파드에서 veth를 지나 노드로 나감 |
+| ② DNAT | `10.244.1.5:51000 → 10.244.1.5:8080` | 노드 nat PREROUTING. 다시 같은 파드로 들어감 |
+| ③ 응답 | `10.244.1.5:8080 → 10.244.1.5:51000` | 목적지가 자기 IP라 파드 안에서 바로 전달. 노드를 거치지 않음 |
+| ④ 결과 | 클라이언트 소켓은 `10.96.120.15:80`의 답을 기다리는데 `10.244.1.5:8080`에서 온 패킷을 받음 | 응답이 노드의 conntrack을 지나지 않아 출발지가 ClusterIP로 되돌아가지 못함 |
+
+TCP라면 ④에서 클라이언트 커널이 모르는 연결의 패킷으로 보고 연결이 맺어지지 않습니다. `-s 10.244.1.5/32 -j KUBE-MARK-MASQ`가 붙으면 ②에서 출발지도 노드 쪽 주소로 바뀝니다(3-5). 그러면 ③의 응답은 목적지가 노드 쪽 주소라 파드 밖 노드로 나가고 노드의 conntrack이 출발지와 목적지를 모두 원래대로 되돌린 뒤 파드에 넘깁니다.
 
 ### 3-5. KUBE-MARK-MASQ와 KUBE-POSTROUTING
+
+MASQUERADE는 SNAT의 한 종류입니다. SNAT는 바꿀 출발지 주소를 규칙에 적어 두고 MASQUERADE는 패킷이 실제로 나가는 인터페이스의 주소를 그때 골라 씁니다(iptables-extensions(8)). 노드의 인터페이스 주소가 바뀌어도 규칙을 고칠 필요가 없어서 kube-proxy가 이쪽을 씁니다.
 
 마스커레이드는 두 단계로 나뉩니다. `KUBE-MARK-MASQ`는 패킷에 방화벽 마크(기본 `0x4000`)만 붙이고 아무것도 바꾸지 않습니다. 실제 출발지 변환은 패킷이 나가기 직전 nat POSTROUTING에 걸린 `KUBE-POSTROUTING`이 합니다.
 
@@ -423,7 +436,7 @@ kube-proxy가 쓰는 값은 `0.3333333333`입니다. `iptables-save`로 읽으�
 -A KUBE-POSTROUTING -m comment --comment "kubernetes service traffic requiring SNAT" -j MASQUERADE --random-fully
 ```
 
-kube-proxy 소스는 두 번째 줄을 `--xor-mark 0x4000`으로 쓰지만 `iptables -S`로 읽으면 같은 뜻의 `--set-xmark 0x4000/0x0`으로 보입니다. 위 세 줄은 kind 워커(iptables v1.8.11, nf_tables 백엔드)에서 읽은 실측 그대로입니다. 표시가 없으면 그냥 돌려보냅니다. 있으면 표시를 지운 뒤 MASQUERADE합니다. 표시를 지우는 이유는 소스 주석에 있습니다. 패킷이 네트워크 스택을 다시 지날 때 두 번 마스커레이드되는 일을 막기 위해서입니다. DNAT 판단 시점(PREROUTING)에는 아직 나갈 인터페이스를 모르므로 결정과 실행을 이렇게 나눠 둡니다.
+kube-proxy 소스는 두 번째 줄을 `--xor-mark 0x4000`으로 쓰지만 `iptables -S`로 읽으면 같은 뜻의 `--set-xmark 0x4000/0x0`으로 보입니다. 위 세 줄은 kind 워커(iptables v1.8.11, nf_tables 백엔드)에서 읽은 실측 그대로입니다. 표시가 없으면 그냥 돌려보냅니다. 있으면 표시를 지운 뒤 MASQUERADE합니다. 표시를 지우는 이유는 소스 주석에 있습니다. 패킷이 네트워크 스택을 다시 지날 때 두 번 마스커레이드되는 일을 막기 위해서입니다. DNAT 판단 시점(PREROUTING)에는 아직 나갈 인터페이스를 모르므로 결정과 실행을 이렇게 나눠 둡니다. 마지막 줄의 `--random-fully`는 바뀐 출발지 포트를 완전히 무작위로 고르라는 옵션입니다. iptables-extensions(8) 매뉴얼은 커널 3.13부터 쓸 수 있고 커널 5.0부터는 `--random`과 같은 동작이라고 적습니다.
 
 ### 3-6. kube-proxy 모드와 eBPF
 
@@ -486,7 +499,7 @@ tcpdump로 보면 차이가 바로 보입니다. TCP는 `[S]`, `[S.]`, `[.]` 다
 
 #### 2. conntrack이 UDP를 다루는 방식
 
-1. **첫 패킷**: 새 5-튜플이면 항목을 만들고 nat 규칙의 결정(DNAT)을 함께 기록합니다.
+1. **첫 패킷**: 새 5-튜플이면 항목을 만들고 nat 규칙의 결정(DNAT)을 함께 기록합니다. 5-튜플은 흐름 하나를 가리키는 다섯 값(프로토콜, 출발지 IP, 출발지 포트, 목적지 IP, 목적지 포트)입니다. 다섯 값이 모두 같으면 conntrack은 같은 흐름으로 봅니다.
 2. **응답**: 역방향 튜플과 맞는 패킷이 오면 출발지를 ClusterIP로 되돌립니다.
 3. **소멸**: 끝 신호가 없으니 마지막 패킷 이후 타임아웃이 지나야 사라집니다(4-3).
 
@@ -503,7 +516,7 @@ tcpdump로 보면 차이가 바로 보입니다. TCP는 `[S]`, `[S.]`, `[.]` 다
 
 iptables(8) 매뉴얼은 nat 테이블을 "새 연결을 만드는 패킷을 만났을 때 참조하는 테이블"로 설명합니다. 3장의 확률 선택과 DNAT는 연결의 첫 패킷에만 일어납니다. 커널의 conntrack은 그 결과를 항목 하나로 기억합니다. 같은 연결의 다음 패킷은 규칙을 다시 훑지 않고 기억한 대로 변환됩니다. SREcon26 슬라이드는 conntrack의 역할을 "이미 본 패킷을 바탕으로 패킷을 활성 연결에 매칭하고 알려진 연결의 패킷이 iptables를 다시 평가하지 않게 해 CPU를 아낀다"고 요약합니다.
 
-이 성질이 장점이자 5장 사례의 원인입니다. 한 번 정해진 엔드포인트는 그 conntrack 항목이 살아 있는 동안 바뀌지 않습니다. 엔드포인트가 사라져도 항목이 남아 있으면 패킷은 사라진 곳으로 계속 갑니다.
+이 성질이 장점이자 7장 사례의 원인입니다. 한 번 정해진 엔드포인트는 그 conntrack 항목이 살아 있는 동안 바뀌지 않습니다. 엔드포인트가 사라져도 항목이 남아 있으면 패킷은 사라진 곳으로 계속 갑니다.
 
 ### 4-2. 정방향 튜플과 역방향 튜플
 
@@ -516,6 +529,10 @@ conntrack 항목은 튜플 두 개를 갖습니다. 정방향(original)은 클�
 ```
 
 응답 패킷이 역방향 튜플과 맞으면 커널이 출발지를 다시 `10.96.0.10:53`으로 되돌려 클라이언트에 넘깁니다. 클라이언트는 ClusterIP와 대화한 것으로 압니다. 역방향 튜플의 `src`를 보면 어느 엔드포인트가 뽑혔는지 알 수 있습니다.
+
+3장의 규칙 사슬과 이 장부를 한 장에 놓으면 이렇습니다. 첫 패킷만 체인을 끝까지 타고 DNAT 결과가 장부에 남습니다. 응답과 같은 흐름의 다음 패킷은 체인을 다시 보지 않고 장부만 봅니다.
+
+![클라이언트 파드 10.244.2.9가 10.96.0.10:53으로 보낸 첫 패킷이 노드 커널의 PREROUTING, KUBE-SERVICES, KUBE-SVC, KUBE-SEP을 차례로 지나 10.244.1.7:53으로 DNAT되고 그 결정이 conntrack 장부에 정방향과 역방향 튜플로 기록되는 그림. 응답은 장부의 역방향 튜플과 맞춰 출발지가 10.96.0.10:53으로 되돌아간다](/uploads/theory/k8s-linux-05-service-iptables-conntrack/first-packet-and-reply.svg)
 
 ### 4-3. UDP 타임아웃
 
@@ -561,6 +578,31 @@ conntrack -S                                                          # CPU별 �
 ```
 
 파드 하나에서 `nslookup order-api.shop`을 몇 번 실행한 뒤 위 명령을 다시 봅니다. 역방향 튜플의 `src`가 CoreDNS 파드 IP 중 하나인지 `kubectl -n kube-system get pod -l k8s-app=kube-dns -o wide`와 비교합니다. kind 실측에서 sysctl 값은 30과 120이었고 역방향 `src`는 CoreDNS 파드 IP 10.244.0.3과 10.244.0.4로 나뉘었습니다. `conntrack -S`는 모든 CPU에서 `insert_failed=0 drop=0`이었습니다. 질의용 파드는 5-4의 이유로 busybox 대신 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3`을 썼습니다.
+
+### 4-6. insert_failed와 5초씩 늦는 DNS
+
+4-5의 `conntrack -S`에서 `insert_failed`를 본 이유가 있습니다. 쿠버네티스 DNS에서 오래 알려진 conntrack 문제가 이 숫자로 드러나기 때문입니다. 7장 사례와는 다른 문제라서 따로 적습니다.
+
+glibc 리졸버는 기본 설정에서 IPv4 주소(A)와 IPv6 주소(AAAA)를 같은 UDP 소켓으로 거의 동시에 묻습니다. 두 질의는 5-튜플이 같습니다. conntrack 항목은 패킷을 처음 볼 때 만들어지고 패킷이 노드를 떠나기 직전에 테이블에 확정(confirm)됩니다. 확정되기 전의 항목은 다른 패킷이 찾지 못하므로 두 패킷이 각자 "처음 보는 흐름"으로 항목을 만듭니다. DNAT가 끼면 두 항목이 서로 다른 CoreDNS를 고를 수도 있습니다. 둘째 항목을 확정하려는 순간 같은 튜플이 이미 있으니 커널은 그 패킷을 버리고 `insert_failed`를 하나 올립니다.
+
+| 단계 | 질의 A | 질의 AAAA |
+|---|---|---|
+| ① 같은 소켓에서 거의 동시에 출발 | 새 항목 생성, DNAT 결정 | 새 항목 생성, DNAT 결정 |
+| ② 노드를 떠나기 직전 확정 | 테이블에 들어감 | 같은 튜플이 이미 있음 → 패킷 버림, `insert_failed` 증가 |
+| ③ 결과 | 응답 받음 | 응답이 오지 않아 리졸버 기본 타임아웃 5초를 기다린 뒤 다시 보냄 |
+
+그래서 증상은 "가끔 DNS가 정확히 5초 늦는다"입니다. Ubuntu 커널 패치 메일링 리스트는 이 경쟁을 "같은 출발지에서 같은 목적지로 동시에 보낸 패킷이 NAT 환경에서 경쟁해 하나가 버려지고 5초 DNS 타임아웃이 생긴다"는 취지로 정리하고 두 커밋을 수정으로 꼽습니다. 하나는 같은 내용의 항목끼리 부딪히면 버리지 않고 합치는 커밋(ed07d9a021df, 4.19)이고 다른 하나는 같은 출발지의 NAT 충돌 처리를 고친 커밋(4e35c1cb9460, 5.0, 4.9.163, 4.14.106, 4.19.29 등에 백포트)입니다([Ubuntu kernel-team](https://lists.snapcraft.io/archives/kernel-team/2019-July/102291.html)).
+
+커널을 바로 올릴 수 없을 때 현장에서 쓴 우회도 정리돼 있습니다. 한 팀은 resolv.conf의 `single-request-reopen`으로는 `insert_failed`가 계속 늘어서 DNS를 TCP로 바꾸는 쪽으로 해결했고 장기 대책으로 NodeLocal DNSCache를 꼽았습니다([Bruno Ferreira, DNS hell in Kubernetes](https://dev.to/bmbferreira/dns-hell-in-k8s-4m6i)). 쿠버네티스의 NodeLocal DNSCache 문서도 도입 이유의 하나로 "iptables DNAT와 conntrack을 건너뛰어 conntrack 경쟁을 줄인다"를 적습니다(7-5).
+
+노드에서 확인하는 순서는 이렇습니다.
+
+```bash
+conntrack -S | grep -o 'insert_failed=[0-9]*' | sort | uniq -c   # CPU별 값. 0이 아니고 계속 늘면 의심
+uname -r                                                          # 위 두 커밋이 들어간 커널인지
+```
+
+4-5의 kind 실측에서는 모든 CPU가 `insert_failed=0`이었습니다. 커널 6.8에는 두 커밋이 모두 들어 있습니다.
 
 ## 5. 파드가 이름을 IP로 바꾸는 길
 
@@ -688,6 +730,8 @@ Service를 거치지 않고 파드 IP로 직접 보내는 경우의 경로는 CN
 ```
 
 ### 6-2. TTL로 경로 확인하기
+
+TTL(Time To Live)은 IP 머리말의 8비트 칸입니다. 라우터를 하나 지날 때마다 1씩 줄고 0이 되면 패킷을 버립니다. 경로가 고리처럼 꼬여도 패킷이 영원히 돌지 않게 하는 장치입니다. 리눅스는 보낼 때 기본 64로 시작합니다(`net.ipv4.ip_default_ttl`). 그래서 받은 쪽에서 본 TTL이 63이면 라우팅을 한 번, 62면 두 번 거친 것입니다.
 
 라우팅을 한 번 거칠 때마다 TTL이 1 줄어듭니다. Calico에서는 같은 노드의 파드끼리도 노드 라우팅을 한 번 거치므로 TTL이 1 줄어듭니다. 다른 노드면 목적지 노드에서 한 번 더 줄어 2가 됩니다. 캡슐화 없이 BGP로 라우팅하면 중간 물리 라우터 수만큼 더 줄 수 있습니다. 브리지 방식 CNI에서 같은 노드 통신은 L2 스위칭이라 TTL이 줄지 않습니다.
 
@@ -925,6 +969,10 @@ kubelet이 써 준 resolv.conf에 `options ndots:5`가 있어서 점이 5개 미
 - [nsswitch.conf(5)](https://man7.org/linux/man-pages/man5/nsswitch.conf.5.html)
 - [tcpdump(1)](https://www.tcpdump.org/manpages/tcpdump.1.html)
 - [RFC 6891: Extension Mechanisms for DNS (EDNS(0))](https://www.rfc-editor.org/rfc/rfc6891)
+- [iptables-extensions(8) (MASQUERADE, --random-fully)](https://man7.org/linux/man-pages/man8/iptables-extensions.8.html)
+- [Ubuntu kernel-team: Fix nf_conntrack races when dealing with same origin requests in NAT environments (2019)](https://lists.snapcraft.io/archives/kernel-team/2019-July/102291.html)
+- [kubernetes #56903: DNS intermittent delays of 5s](https://github.com/kubernetes/kubernetes/issues/56903)
+- [Bruno Ferreira, DNS hell in Kubernetes](https://dev.to/bmbferreira/dns-hell-in-k8s-4m6i)
 
 사례와 CNI
 - Ricard Bejarano, [The Inconspicuous Role of Conntrack in Kubernetes Networking](https://www.usenix.org/conference/srecon26americas/presentation/bejarano), SREcon26 Americas ([슬라이드 PDF](https://www.usenix.org/system/files/sre26amer_slides_bejarano.pdf))

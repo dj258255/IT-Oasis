@@ -41,6 +41,10 @@ seriesOrder: 6
 
 ## 0. 증상에서 출발하는 판단 표
 
+![트러블슈팅 다섯 층. kubectl get, kubectl describe, kubectl logs --previous, 노드에 ssh로 들어가 systemctl과 journalctl, crictl과 /var/log/pods 순서로 내려가고 각 층 오른쪽에 다음 층으로 내려가는 신호가 적혀 있다](/uploads/cert/cka/cka-06-troubleshooting/drill-down.svg)
+
+이 글 전체가 위 그림의 다섯 층을 차례로 펼친 것입니다. 위층에서 원인이 보이면 거기서 고치고 끝냅니다. 아래층일수록 보는 데 시간이 더 들기 때문에 시험에서는 순서를 건너뛰지 않는 편이 빠릅니다.
+
 ### 0-1. 첫 3분
 
 어떤 과제든 처음 세 명령은 같습니다.
@@ -52,6 +56,56 @@ kubectl get events -n <ns> --sort-by=.metadata.creationTimestamp
 ```
 
 이벤트는 네임스페이스 단위입니다(Debug Running Pods 문서). 다른 네임스페이스는 `-n`, 전체는 `-A`를 줍니다.
+
+<details>
+<summary>기초부터: describe 출력에서 Events를 읽는 법</summary>
+
+> **핵심 한 줄**: `describe` 맨 아래의 Events는 스케줄러, kubelet, 컨트롤러가 일하면서 남긴 일지입니다. 누가(From) 무슨 이유로(Reason) 무엇을 말했는지(Message) 읽으면 어느 층에서 막혔는지 나옵니다.
+
+#### 1. 왜 Events부터 보나
+
+Pod의 STATUS는 결과를 한 단어로만 보여 줍니다. `Pending`만 보고는 스케줄러가 노드를 못 찾은 것인지 PVC를 기다리는 것인지 알 수 없습니다. 그 이유를 문장으로 남겨 두는 곳이 Event 객체입니다. 구성요소들은 단계를 넘기거나 실패할 때마다 Event를 하나씩 만듭니다.
+
+#### 2. 줄 하나 읽기
+
+노드가 3대이고 그중 1대는 컨트롤 플레인, 워커 2대는 CPU가 모자란 상황에서 `order-api` Pod를 만들면 Events가 이런 꼴로 나옵니다(형식 예시).
+
+```text
+Events:
+  Type     Reason            Age                From               Message
+  ----     ------            ----               ----               -------
+  Warning  FailedScheduling  12s (x3 over 45s)  default-scheduler  0/3 nodes are available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane: }, 2 Insufficient cpu. preemption: ...
+```
+
+| 열 | 뜻 | 이 줄에서 |
+|---|---|---|
+| Type | `Normal`은 정상 진행이고 `Warning`은 실패나 이상 | Warning이니 여기서 막힘 |
+| Reason | 기계가 붙인 짧은 이유 이름 | `FailedScheduling`이니 스케줄 단계 |
+| Age | 마지막으로 생긴 지 얼마나 됐는지. `(x3 over 45s)`는 45초 동안 같은 일이 3번 반복됐다는 뜻 | 지금도 계속 실패 중 |
+| From | 이 Event를 남긴 구성요소 | `default-scheduler` |
+| Message | 사람이 읽는 설명 | 아래에서 풀어 읽음 |
+
+Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 노드 3대 중 조건에 맞는 노드가 0대라는 뜻입니다. 뒤에 노드가 떨어진 이유가 개수와 함께 붙습니다. 위 예에서는 1대가 테인트 때문에, 2대가 CPU 부족 때문에 떨어졌고 이유별 숫자를 더하면 전체 노드 수 3이 됩니다. 컨트롤 플레인 테인트는 원래 있는 것이니 고칠 곳은 CPU 요청이나 워커 자원 쪽입니다.
+
+#### 3. From 열로 층 가르기
+
+| From | 그 Event가 말하는 층 | 자주 보는 Reason |
+|---|---|---|
+| `default-scheduler` | 노드 고르기 | `Scheduled`, `FailedScheduling` |
+| `kubelet` | 노드 안에서 이미지 받기, 볼륨 붙이기, 컨테이너 실행 | `Pulling`, `Failed`, `BackOff`, `Unhealthy`(probe 실패), `FailedMount` |
+| `replicaset-controller` 같은 컨트롤러 | 객체 만들기 | `SuccessfulCreate`, `FailedCreate` |
+
+`Scheduled` 다음 줄부터 From이 kubelet으로 바뀝니다. Normal 줄이 이어지다가 처음 나오는 Warning이 막힌 지점입니다.
+
+#### 4. 헷갈리는 점
+
+- Event는 오래 남지 않습니다. kube-apiserver의 `--event-ttl` 기본값이 1시간이라 그보다 오래된 일은 Events가 `<none>`으로 보일 수 있습니다. 그때는 `describe`의 Last State와 로그로 갑니다.
+- `kubectl get events`는 시간 순서로 정렬되지 않으니 0-1의 `--sort-by=.metadata.creationTimestamp`를 붙입니다. Pod 하나만 보려면 `--field-selector involvedObject.name=<pod>`를 줍니다.
+- 스케줄러가 죽어 있으면 `FailedScheduling`조차 생기지 않습니다. Events가 빈 `Pending`은 2-3절의 스케줄러 중지를 의심합니다.
+
+> **정리**: Type으로 실패 줄을 찾고 From으로 층을 정하고 Message의 이유별 숫자로 고칠 곳을 고릅니다.
+
+</details>
 
 ### 0-2. 증상별 판단 표
 
@@ -99,6 +153,40 @@ Debug Pods 문서는 흔한 원인으로 finalizer와 finalizer 제거를 막는
 kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations
 kubectl -n shop get pod board-xxxx -o jsonpath='{.metadata.finalizers}'
 ```
+
+<details>
+<summary>기초부터: finalizer와 admission 웹훅이 삭제를 붙잡는 방법</summary>
+
+> **핵심 한 줄**: finalizer는 "이 정리가 끝나기 전에는 지우지 마라"는 꼬리표입니다. 꼬리표가 남아 있으면 삭제를 요청받은 객체가 `Terminating`인 채로 남습니다.
+
+#### 1. 삭제가 단계로 나뉜 이유
+
+Pod가 아직 쓰고 있는 PersistentVolume이 지워지면 데이터가 사라집니다. 그래서 쿠버네티스는 지우라는 요청을 받아도 바로 지우지 않고 단계를 밟습니다(Finalizers 문서).
+
+1. **표시**: API 서버가 객체의 `metadata.deletionTimestamp`를 채우고 `202 Accepted`로 답합니다. `metadata.finalizers`가 비어 있지 않으면 객체는 남아 있고 `get`에 `Terminating`으로 보입니다.
+2. **정리**: finalizer마다 맡은 컨트롤러가 있고 그 컨트롤러가 자기 정리를 끝내면 목록에서 자기 이름을 지웁니다.
+3. **삭제**: 목록이 비면 API 서버가 객체를 실제로 지웁니다.
+
+문서의 예는 `kubernetes.io/pv-protection`입니다. Pod가 쓰고 있는 PV를 지우면 `Terminating`에 머물다가 Pod가 볼륨을 놓으면 꼬리표가 지워지고 PV가 삭제됩니다.
+
+#### 2. 웹훅이 끼면
+
+admission 웹훅은 API 서버가 객체를 저장하기 전에 물어보는 바깥 HTTP 서버입니다. 컨트롤러가 finalizer를 지우는 것도 객체를 바꾸는 `UPDATE` 요청이라 웹훅을 지나갑니다. 웹훅 서버가 죽었거나 그 변경을 거부하면 finalizer가 지워지지 않습니다.
+
+```text
+kubectl delete → deletionTimestamp 기록 → 컨트롤러가 finalizer 제거(UPDATE 요청)
+                                            ✕ 웹훅이 거부하거나 응답 없음
+                                            → 목록이 그대로 → Terminating 유지
+```
+
+#### 3. 헷갈리는 점
+
+- finalizer를 손으로 지우면 객체는 바로 사라지지만 컨트롤러가 하려던 정리가 건너뛰어집니다. Finalizers 문서도 꼬리표의 목적을 알고 그 정리를 다른 방법으로 끝낸 경우가 아니면 손으로 지우지 말라고 적습니다. 멈춘 컨트롤러나 웹훅을 먼저 고칩니다.
+- Pod의 `Terminating`은 finalizer보다 종료 대기 때문인 경우가 많습니다. 기본 유예 시간은 30초(`terminationGracePeriodSeconds`)입니다. 그 노드의 kubelet이 죽었으면 컨테이너를 멈췄다고 보고할 쪽이 없어 노드가 돌아올 때까지 남습니다(1-2절). 위 두 명령으로 finalizer와 웹훅이 둘 다 없으면 노드 상태를 봅니다.
+
+> **정리**: `Terminating`이 끝나지 않으면 finalizer 목록, 그 finalizer를 지울 컨트롤러, 그 UPDATE를 막는 웹훅, 노드의 kubelet 순으로 봅니다.
+
+</details>
 
 ### 0-6. Running인데 기대와 다르게 동작
 
@@ -294,7 +382,7 @@ ssh를 쓸 수 없으면 Debug Running Pods 문서의 노드 디버그를 씁니
 kubectl debug node/<노드> -it --image=ubuntu
 ```
 
-노드의 루트 파일시스템이 `/host`에 마운트되고 호스트의 IPC, 네트워크, PID 네임스페이스에서 돕니다. 특권 Pod가 아니라서 `chroot /host` 같은 일부 동작이 실패할 수 있고 그때는 `--profile=sysadmin`을 씁니다. 끝나면 디버그 Pod를 지웁니다.
+노드의 루트 파일시스템이 `/host`에 마운트되고 호스트의 IPC, 네트워크, PID 네임스페이스에서 돕니다. 특권 Pod로 뜨지 않아서 `chroot /host` 같은 일부 동작이 실패할 수 있고 그때는 `--profile=sysadmin`을 씁니다. 끝나면 디버그 Pod를 지웁니다.
 
 ### 1-6. 노드를 서비스에서 빼고 넣기
 
@@ -572,6 +660,8 @@ kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는
 | CPU | cpu 단위의 평균 코어 사용량. 누적 CPU 카운터의 변화율로 계산. 구간은 Metrics API의 `window` 필드 |
 | 메모리 | 수집 순간의 working set(바이트). 압박에서도 회수할 수 없는 사용 중 메모리에 가깝고 파일 캐시 일부가 섞일 수 있음 |
 
+출력의 단위도 읽을 줄 알아야 합니다. CPU 열의 `250m`은 밀리코어이고 1코어가 `1000m`이니 4분의 1코어입니다. 메모리 열의 `Mi`는 메비바이트(1,048,576바이트)입니다. `limits.cpu: 500m`인 컨테이너가 `top`에서 계속 `490m`대로 나오면 상한에 거의 붙어 있는 것이라 CPU 스로틀링을 의심합니다. 스로틀링이 요청 지연으로 바뀌는 계산은 [쿠버네티스 아래의 리눅스 1편 8-2절](/blog/theory/systems/k8s-linux-01-kernel-boundary#8-2-cpumax-대역폭-제한은-그대로)에 있습니다.
+
 메모리 수치가 컨테이너 안의 `free`와 달라도 이상한 일은 아닙니다. 컨테이너가 `limits.memory`를 넘으면 커널이 종료하고 `describe`의 Last State에 `OOMKilled`, Exit Code 137이 남습니다. 이 과정을 cgroup 쪽에서 본 설명은 [쿠버네티스 아래의 리눅스 3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에 있습니다(시험 범위 밖 심화).
 
 ### 3-4. kubectl top이 안 될 때
@@ -825,6 +915,57 @@ kubectl -n shop get pod payment-xxxx -o jsonpath='{.status.containerStatuses[0].
 kubectl -n shop get deploy payment -o yaml | grep -A5 -E 'command|args|env|resources|livenessProbe'
 ```
 
+<details>
+<summary>기초부터: Last State와 Exit Code 읽기</summary>
+
+> **핵심 한 줄**: 원인은 지금 상태(State)가 아닌 직전 상태(Last State)에 있습니다. Exit Code가 128보다 크면 프로세스가 시그널을 받고 죽은 것이고 128을 뺀 값이 시그널 번호입니다.
+
+#### 1. describe에서 볼 곳
+
+CrashLoopBackOff인 결제 Pod의 `describe`에서 컨테이너 부분은 이런 꼴입니다(형식 예시).
+
+```text
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+      Started:      ...
+      Finished:     ...
+    Ready:          False
+    Restart Count:  4
+```
+
+| 줄 | 뜻 |
+|---|---|
+| `State: Waiting`, `CrashLoopBackOff` | 지금은 컨테이너가 없고 다음 재시작을 기다리는 중 |
+| `Last State: Terminated` | 바로 앞 컨테이너가 끝난 모습. 원인은 여기에 있음 |
+| `Reason` | 끝난 이유의 이름. `OOMKilled`, `Error`, `Completed` 등 |
+| `Exit Code` | 프로세스의 종료 코드 |
+| `Restart Count` | 지금까지 재시작한 횟수 |
+
+#### 2. 숫자 읽기
+
+셸에서는 시그널 N으로 죽은 프로세스의 종료 상태를 128+N으로 적습니다(Bash 매뉴얼 Exit Status). 컨테이너의 Exit Code도 같은 관례로 나옵니다.
+
+| Exit Code | 계산 | 뜻 | 먼저 볼 것 |
+|---|---|---|---|
+| 0 | | 정상 종료 | Deployment 컨테이너가 0으로 끝나면 계속 돌아야 할 프로세스가 할 일을 마치고 끝난 것. `command`가 한 번 실행하고 끝나는 명령인지 |
+| 1 | | 앱이 스스로 오류로 끝냄 | `logs --previous`의 마지막 줄 |
+| 126 | | 명령은 찾았지만 실행할 수 없음 | `command`에 준 파일의 실행 권한 |
+| 127 | | 명령을 찾지 못함 | `command`, `args` 오타, 이미지에 없는 바이너리 |
+| 137 | 128 + 9(SIGKILL) | 강제 종료 | Reason이 `OOMKilled`면 메모리 한도. 아니면 아래 3번 |
+| 139 | 128 + 11(SIGSEGV) | 잘못된 메모리 접근 | 앱이나 이미지 문제. 5-2절에서 `busybox:1.28`의 `wget`이 arm64에서 `Segmentation fault`로 죽은 것도 이 시그널 |
+| 143 | 128 + 15(SIGTERM) | 종료 요청을 받고 끝남 | liveness 실패나 삭제로 kubelet이 멈춘 것 |
+
+#### 3. 137인데 OOMKilled가 아닐 때
+
+kubelet은 컨테이너를 멈출 때 SIGTERM을 먼저 보내고 유예 시간(기본 30초)이 지나도 살아 있으면 SIGKILL을 보냅니다. 그런데 `sh -c '...'`로 띄운 셸이 컨테이너의 PID 1이면 SIGTERM이 전달되지 않습니다. 리눅스는 PID 네임스페이스의 첫 프로세스(init)에 대해 핸들러를 등록하지 않은 시그널을 보내지 않고 바깥 네임스페이스에서 보낸 SIGKILL만 강제로 전달합니다(pid_namespaces(7) 매뉴얼). 그래서 liveness 실패로 재시작되는 컨테이너가 143이 아닌 137로 끝나고 매번 30초씩 늦게 내려갑니다. Reason이 `Error`이고 Events에 `Unhealthy`가 함께 보이면 이 경우입니다.
+
+> **정리**: Last State가 원인이고 128을 넘는 코드는 시그널입니다. 137은 Reason으로 OOMKilled인지부터 가르고 아니면 probe와 종료 처리를 봅니다.
+
+</details>
+
 `--previous`를 붙이는 습관이 안전합니다. 다음 재시작을 기다리는 동안에는 실행 중인 컨테이너가 없어 `kubectl logs`와 `--previous`가 같은 직전 인스턴스를 보여 줍니다. 새 컨테이너가 도는 동안에는 `--previous`를 빼면 새 컨테이너의 짧은 로그가 나옵니다(kind v1.37.0에서 확인).
 
 Determine the Reason for Pod Failure 문서는 컨테이너가 `/dev/termination-log`에 쓴 종료 메시지를 읽는 방법을 보여 줍니다. `terminationMessagePolicy: FallbackToLogsOnError`를 주면 메시지 파일이 비었고 오류로 끝났을 때 로그 마지막 부분(2048바이트와 80줄 중 작은 쪽)을 메시지로 씁니다.
@@ -925,7 +1066,7 @@ kubectl -n shop logs board -c access-log
 4. **DB Service**: 웹 Pod가 부르는 이름(환경 변수나 설정의 호스트명)과 Service 이름, 포트가 맞는지, 엔드포인트가 있는지 2번과 같은 방법으로 봅니다.
 5. **DB Pod**: 상태와 로그에서 DB 자체 오류(인증 실패, 디스크 부족 등)를 찾습니다.
 
-뒤쪽(DB)에서 거꾸로 올라와도 됩니다.
+뒤쪽(DB)에서 거꾸로 올라와도 됩니다. LearnKube의 시각 가이드(A visual guide on troubleshooting Kubernetes deployments)는 반대로 맨 아래 Pod부터 Service, Ingress 순으로 올라가라고 권합니다. 위층은 아래층에 기대고 있어서 위에서 보인 문제가 아래층 Pod나 Service에서 오는 경우가 많기 때문입니다. 어느 쪽에서 시작하든 지도 위의 칸을 하나도 건너뛰지 않는다는 점은 같습니다.
 
 `--previous`에도 원인이 보이지 않으면 `kubectl logs -f <pod>`를 띄워 두고 다음 실패를 기다립니다. 컨테이너가 죽으면 스트림이 끝나고 죽기 직전 줄이 화면에 남습니다.
 
@@ -1004,9 +1145,9 @@ kind v1.37.0에서 ConfigMap의 `mode`는 `iptables`였고 kube-proxy 로그에 
 
 | 증상 | 확인 |
 |---|---|
-| Pod가 자기 Service IP로 자신에게 접속 못 함 | hairpin 모드. Troubleshooting kubeadm 문서는 많은 네트워크 애드온이 hairpin을 켜지 않는다고 적음 |
+| Pod가 자기 Service IP로 자신에게 접속 못 함 | hairpin 모드. 패킷이 들어온 브리지 포트로 다시 나가게 허용하는 설정이고 Service IP로 보낸 요청이 DNAT 뒤 보낸 Pod 자신에게 돌아오려면 필요함. Troubleshooting kubeadm 문서는 많은 네트워크 애드온이 hairpin을 켜지 않는다고 적음 |
 | 특정 노드의 Pod끼리만 통신 실패 | 그 노드의 CNI 플러그인 Pod, 노드 조건 `NetworkUnavailable` |
-| NodePort로 외부 접속 실패 | `nodePort` 번호, 노드 방화벽, `externalTrafficPolicy: Local`인데 그 노드에 엔드포인트가 없는지 |
+| NodePort로 외부 접속 실패 | `nodePort` 번호, 노드 방화벽, `externalTrafficPolicy: Local`인데 그 노드에 엔드포인트가 없는지. `Local`은 요청이 들어온 노드에 있는 Pod로만 보내고 다른 노드로 넘기지 않으니 Pod가 없는 노드로 들어온 요청은 실패함 |
 | Ingress나 Gateway 경유 실패 | 백엔드 Service부터 위 순서로 확인한 뒤 `ingressClassName`, HTTPRoute의 `Accepted`와 `ResolvedRefs` 조건 |
 | 갑자기 모든 이름 해석 실패 | CoreDNS Pod, Corefile, Egress NetworkPolicy([Ch-04](/blog/cert/cka/cka-04-services-networking)) |
 
@@ -1162,3 +1303,6 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $
 - Kubernetes, [CHANGELOG-1.37](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.37.md), [KEP-5207 metrics.k8s.io API definition](https://github.com/kubernetes/enhancements/tree/master/keps/sig-instrumentation/5207-metrics-k8s-io-api-definition), 블로그 [Kubernetes v1.37: Garhwal](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/)
 - kubernetes-sigs, [metrics-server README](https://github.com/kubernetes-sigs/metrics-server), [metrics-server releases](https://github.com/kubernetes-sigs/metrics-server/releases)
 - kubernetes/kubectl, [pkg/polymorphichelpers/logsforobject.go](https://github.com/kubernetes/kubectl/blob/master/pkg/polymorphichelpers/logsforobject.go) (기본 컨테이너 선택)
+- kubernetes.io, [Finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/), [kube-apiserver 레퍼런스](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) (`--event-ttl` 기본 1h)
+- GNU, [Bash Reference Manual: Exit Status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html), man7.org, [pid_namespaces(7)](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html)
+- Daniele Polencic(LearnKube), [A visual guide on troubleshooting Kubernetes deployments](https://learnkube.com/troubleshooting-deployments)

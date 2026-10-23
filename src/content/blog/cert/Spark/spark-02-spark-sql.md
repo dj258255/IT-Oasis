@@ -234,6 +234,25 @@ lines = spark.read.text("/data/logs")   # 스키마: value STRING 한 컬럼
 
 `PERMISSIVE`에서 깨진 줄을 버리지 않고 보려면 사용자 스키마에 문자열 컬럼 `_corrupt_record`를 직접 넣어야 합니다. CSV와 JSON 문서 모두 스키마에 그 컬럼이 없으면 깨진 레코드를 파싱 중에 버린다고 적습니다.
 
+세 모드가 같은 파일에서 어떻게 갈리는지 한 줄로 따라가 보겠습니다. 주문 CSV에 금액 칸이 `abc`로 잘못 들어간 줄이 하나 섞여 있고 `header`를 켠 채 `amount INT` 스키마로 읽는다고 합시다.
+
+```text
+order_id,user_id,status,amount
+1,101,PAID,32000
+6,104,PAID,abc        ← amount를 INT로 바꿀 수 없음
+```
+
+| 읽는 방법 | 1번 줄 | 6번 줄 |
+|---|---|---|
+| `PERMISSIVE` + 스키마에 `_corrupt_record` 있음 | 정상 행, `_corrupt_record`는 null | `amount`는 null, 나머지 칸은 값이 들어가고 `_corrupt_record`에 원래 줄 `6,104,PAID,abc` |
+| `PERMISSIVE` + 스키마에 그 컬럼 없음 | 정상 행 | 버려짐 |
+| `DROPMALFORMED` | 정상 행 | 버려짐 |
+| `FAILFAST` | 액션을 실행하는 순간 예외 | |
+
+표의 값은 CSV 문서의 모드 설명을 이 줄에 적용한 예상이고 실행해서 본 결과가 아닙니다. `FAILFAST`도 `spark.read`를 부르는 줄에서는 조용하다가 데이터를 실제로 읽는 액션 줄에서 예외가 납니다([Ch-01](/blog/cert/spark/spark-01-architecture) 9-3절 헷갈리는 지점).
+
+표에서 설명이 필요한 옵션이 하나 더 있습니다. `enforceSchema`(기본 `true`)는 헤더 줄과 내가 준 스키마가 다를 때 누구 말을 따를지 정합니다. `true`면 CSV 문서 표현대로 스키마를 강제로 적용하고 헤더는 무시합니다. 헤더가 `order_id,user_id`인데 스키마를 `user_id INT, order_id INT`로 주면 이름을 보고 맞추지 않고 위치대로 첫 칸이 `user_id`가 됩니다. `false`로 두고 `header`도 켜면 스키마를 헤더와 대조해 검증합니다.
+
 ```python
 raw = (spark.read
        .schema("order_id INT, user_id INT, status STRING, amount INT, _corrupt_record STRING")
@@ -285,7 +304,23 @@ Text 형식은 쓸 때 제약이 있습니다. `DataFrameWriter.text` 문서는 
 파티션 3: WHERE order_id >= 75000
 ```
 
-위 WHERE 절은 소스의 계산식에 값을 넣어 쓴 것이고 실행해서 본 쿼리 로그는 아닙니다. 본문 예제처럼 `lowerBound=1`이면 보폭이 나누어떨어지지 않아 경계가 몇 칸 옮겨집니다.
+위 WHERE 절은 소스의 계산식에 값을 넣어 쓴 것이고 실행해서 본 쿼리 로그는 아닙니다.
+
+본문 예제는 `lowerBound=1`입니다. 이때는 나누어떨어지지 않아서 소스가 두 가지를 더 합니다.
+
+1. **보폭을 정수로 자름**: 정확한 보폭은 100000/4 - 1/4 = 24999.75이고 소스가 이를 `toLong`으로 잘라 24999를 씁니다.
+2. **시작점을 조금 옮김**: 잘려 나간 0.75씩이 네 구간에 쌓이면 마지막 구간이 그만큼 길어집니다. 소스는 잃은 길이(0.75 x 4 = 3)의 절반쯤을 반올림한 2를 하한에 더해 첫 구간과 마지막 구간이 비슷해지게 합니다. 그래서 시작점이 1에서 3으로 옮겨집니다.
+
+```text
+경계 = 3 + 24999 = 25002, 25002 + 24999 = 50001, 50001 + 24999 = 75000
+
+파티션 0: WHERE order_id < 25002 or order_id is null
+파티션 1: WHERE order_id >= 25002 AND order_id < 50001
+파티션 2: WHERE order_id >= 50001 AND order_id < 75000
+파티션 3: WHERE order_id >= 75000
+```
+
+이 값은 Spark 4.2.0 `JDBCRelation.columnPartition`의 계산식을 같은 정밀도(BigDecimal 34자리)로 Python에서 따라 계산한 것입니다. 경계가 몇 칸 옮겨져도 범위 밖 값이 첫 구간과 마지막 구간에 들어간다는 성질은 그대로입니다.
 
 #### 3. 헷갈리는 점
 
@@ -423,6 +458,16 @@ Parquet 문서의 Partition Discovery 절에 따르면 파티션 컬럼 값은 �
 
 같은 값을 쓰기 옵션 `partitionOverwriteMode`로 줄 수 있고 옵션이 설정보다 우선합니다.
 
+두 모드 차이는 결과 폴더를 나란히 놓으면 바로 보입니다. 경로에 10월 1~3일 폴더가 있고 10월 3일 행만 담은 `fix`를 overwrite로 쓴다고 합시다.
+
+| 폴더 | 쓰기 전 | `STATIC`(기본)으로 쓴 뒤 | `DYNAMIC`으로 쓴 뒤 |
+|---|---|---|---|
+| `order_date=2026-10-01/` | 있음 | 사라짐 | 그대로 |
+| `order_date=2026-10-02/` | 있음 | 사라짐 | 그대로 |
+| `order_date=2026-10-03/` | 옛 데이터 | 새 데이터 | 새 데이터로 교체 |
+
+`STATIC`의 "조건에 맞는 파티션"은 `INSERT OVERWRITE ... PARTITION (order_date='2026-10-03')`처럼 파티션 값을 고정해 줄 때의 조건입니다. DataFrame 쓰기는 그런 조건이 없으니 경로 아래 파티션 전체가 지울 대상이 됩니다. 매일 그날 파티션만 다시 쓰는 배치에서 이 기본값을 모르고 돌리면 지난 날짜가 전부 사라집니다. 같은 날짜를 몇 번 다시 돌려도 결과가 같게 만드는 쓰기 패턴은 [DE Ch-03](/blog/data/foundations/de-03-idempotency-retry-backoff)에서 더 다룹니다.
+
 ```python
 # 10월 3일 파티션만 다시 쓰고 나머지 날짜는 남긴다
 fix = orders.filter("order_date = '2026-10-03'")
@@ -554,6 +599,14 @@ orders (메모리 파티션 4개)
 
 `overwrite`는 1단계에서 지우고 2~3단계에서 쓰므로 그 사이에 실패하면 옛 데이터는 이미 사라진 뒤입니다. 아래 문서 주의 2번이 이 상황입니다.
 
+3단계의 "확정"이 출력 폴더에서 어떻게 보이는지도 알아 두면 좋습니다. Spark가 기본으로 쓰는 Hadoop `FileOutputCommitter`의 알고리즘 1번(`spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version` 기본 1) 기준입니다.
+
+1. Task는 처음에 최종 경로 대신 `/out/orders/_temporary/...` 아래 자기 몫의 임시 폴더에 씁니다.
+2. Task가 성공하면 그 폴더를 Job 시도용 폴더로 이름을 바꿔 옮깁니다(Task 커밋).
+3. 모든 Task가 끝나면 드라이버가 파일을 `/out/orders/` 바로 아래로 옮기고 `_temporary`를 지운 뒤 빈 파일 `_SUCCESS`를 남깁니다(Job 커밋).
+
+그래서 출력 폴더에 `_SUCCESS`가 있으면 Job 커밋까지 끝났다는 표시이고 `_temporary`가 남아 있으면 중간에 멈춘 흔적입니다. 다음 단계 작업이 `_SUCCESS`를 보고 시작하게 만드는 파이프라인이 많은 이유입니다. 이 순서는 Hadoop `mapred-default.xml`의 알고리즘 설명에 적혀 있습니다. S3 같은 객체 저장소는 이름 바꾸기를 복사로 흉내 내서 이 방식이 느리고 실패하면 상태를 알 수 없게 될 수 있다고 Spark의 [Cloud Integration](https://spark.apache.org/docs/latest/cloud-integration.html) 문서가 경고합니다. 객체 저장소에서는 이름을 바꾸지 않는 전용 커미터를 쓰라는 것이 같은 문서의 권고입니다.
+
 #### 4. 헷갈리는 점
 
 - 출력 파일 수는 쓰기 직전의 파티션 수를 따릅니다. `partitionBy`를 함께 쓰면 더 늘어납니다(1-4절 토글).
@@ -600,8 +653,20 @@ orders.write.mode("overwrite").saveAsTable("shop.orders")
 # 컬럼 순서를 바꾼 DataFrame
 reordered = orders.select("amount", "order_id", "user_id", "status", "order_date")
 reordered.write.mode("append").saveAsTable("shop.orders")   # 이름으로 맞춰 들어간다
-reordered.write.insertInto("shop.orders")                   # 위치로 들어간다. 타입이 안 맞으면 오류, 맞으면 값이 엉뚱한 컬럼에 들어간다
+reordered.write.insertInto("shop.orders")                   # 위치로 들어간다. 아래 표처럼 이 줄은 오류가 난다
 ```
+
+`insertInto`가 위치로 맞춘다는 말을 칸마다 따라가 보면 이렇습니다. 테이블은 `order_id INT, user_id INT, status STRING, amount INT, order_date STRING` 순서입니다.
+
+| 위치 | `reordered`의 컬럼(타입) | 들어가는 테이블 컬럼(타입) | 결과 |
+|---|---|---|---|
+| 1 | `amount`(INT) | `order_id`(INT) | 타입이 같아 그대로 들어감. 금액이 주문 번호 칸에 |
+| 2 | `order_id`(INT) | `user_id`(INT) | 그대로 들어감. 주문 번호가 회원 번호 칸에 |
+| 3 | `user_id`(INT) | `status`(STRING) | 숫자를 문자열로 바꾸는 것은 허용 |
+| 4 | `status`(STRING) | `amount`(INT) | 문자열을 숫자 칸에 넣는 것은 거부 |
+| 5 | `order_date`(STRING) | `order_date`(STRING) | 그대로 |
+
+4번 칸 때문에 이 쓰기는 실패합니다. Spark 3.0부터 `spark.sql.storeAssignmentPolicy` 기본값이 `ANSI`이고 [ANSI Compliance](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html) 문서의 저장 규칙 표는 문자열을 숫자 칸에 넣는 것을 허용하지 않습니다(`Cannot safely cast ... "STRING" to "INT"`). 더 위험한 경우는 오류가 나지 않을 때입니다. 1번과 2번처럼 타입이 같은 컬럼끼리 순서만 바뀌면 경고 없이 금액이 주문 번호 칸에 들어갑니다. 위 표는 문서의 규칙을 적용한 예상이고 실행해 본 결과가 아닙니다.
 
 SQL로는 `INSERT INTO`와 `INSERT OVERWRITE`가 각각 append와 overwrite에 대응합니다.
 
@@ -994,7 +1059,7 @@ D. `query` 옵션이 없어서 오류가 난다.
 <details>
 <summary>정답과 풀이</summary>
 
-B. `lowerBound`와 `upperBound`는 파티션 보폭만 정하고 행을 거르지 않습니다. 범위 밖 행은 첫 구간과 마지막 구간에 들어갑니다. Spark 4.2.0 소스의 `JDBCRelation`은 첫 파티션 조건을 `order_id < 첫 경계 or order_id is null`로, 마지막 파티션 조건을 `order_id >= 마지막 경계`로 만들어 아래위가 열려 있습니다. null도 첫 파티션으로 갑니다. `dbtable`과 `query`는 둘 중 하나만 쓰므로 D는 틀립니다.
+B. `lowerBound`와 `upperBound`는 파티션 보폭만 정하고 행을 거르지 않습니다. 범위 밖 행은 첫 구간과 마지막 구간에 들어갑니다. Spark 4.2.0 소스의 `JDBCRelation`은 첫 파티션 조건을 `order_id < 첫 경계 or order_id is null`로, 마지막 파티션 조건을 `order_id >= 마지막 경계`로 만들어 아래위가 열려 있습니다. null도 첫 파티션으로 갑니다. 이 문제의 값을 넣으면 보폭이 (2000 - 1000) / 5 = 200으로 나누어떨어져 경계가 1200, 1400, 1600, 1800이 됩니다. `order_id`가 500인 행은 첫 파티션(`order_id < 1200`)에, 5000인 행은 마지막 파티션(`order_id >= 1800`)에 들어가고 어느 행도 버려지지 않습니다. `dbtable`과 `query`는 둘 중 하나만 쓰므로 D는 틀립니다.
 
 </details>
 
@@ -1064,3 +1129,8 @@ Databricks와 Delta Lake
 - Databricks, [What is Delta Lake in Databricks?](https://docs.databricks.com/aws/en/delta/)
 - Databricks, [Database objects in the legacy Hive metastore](https://docs.databricks.com/aws/en/database-objects/hive-metastore)
 - Delta Lake, [Table batch reads and writes](https://docs.delta.io/delta-batch/), [Quick Start](https://docs.delta.io/quick-start/), [Releases(Compatibility with Apache Spark)](https://docs.delta.io/releases/)
+
+쓰기 확정과 저장 규칙
+- Apache Spark, [ANSI Compliance](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html) (`spark.sql.storeAssignmentPolicy`와 저장 규칙 표, 3-2절)
+- Apache Spark, [Integration with Cloud Infrastructures](https://spark.apache.org/docs/latest/cloud-integration.html) (이름 바꾸기 기반 커밋의 한계, 3-1절 토글)
+- Apache Hadoop, [mapred-default.xml](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) (`mapreduce.fileoutputcommitter.algorithm.version` 설명의 `_temporary`와 `_SUCCESS`)

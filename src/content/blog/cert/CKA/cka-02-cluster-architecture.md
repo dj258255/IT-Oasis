@@ -195,6 +195,15 @@ roleRef:
 
 kubeadm의 `admin.conf` 인증서는 그룹 `kubeadm:cluster-admins`(`cluster-admin`에 바인딩)이고 `super-admin.conf`는 RBAC을 건너뛰는 `system:masters` 그룹입니다.
 
+표만 보면 `admin`과 `edit`이 비슷해 보입니다. 갈리는 지점은 "남에게 권한을 나눠 줄 수 있느냐"입니다. 쇼핑몰 `shop` 네임스페이스의 팀장에게 `admin`을 주면 팀원에게 줄 Role과 RoleBinding을 팀장이 직접 만들 수 있고 `edit`만 받은 팀원은 Deployment는 고쳐도 권한 객체는 못 건드립니다. RBAC 문서는 `admin`, `edit`, `view`를 "RoleBinding으로 특정 네임스페이스 안에서 주도록 만든 역할"로 분류합니다. ClusterRole이라고 ClusterRoleBinding으로 주면 모든 네임스페이스에 효력이 생기니 시험에서 "shop에서만"이라는 조건이 붙으면 RoleBinding으로 겁니다.
+
+```bash
+# shop 팀장 jane에게 shop 안에서만 admin
+kubectl create rolebinding jane-admin -n shop --clusterrole=admin --user=jane
+```
+
+`system:masters`는 바인딩을 지워도 막을 수 없습니다. API 서버가 이 그룹을 인가 단계 앞에서 통과시키기 때문입니다. 그래서 kubeadm은 평소 쓰는 `admin.conf`를 일반 그룹으로 바꾸고 `super-admin.conf`는 비상용으로만 둡니다.
+
 ### 1-3. 시험에서 쓰는 명령
 
 ServiceAccount의 사용자 이름은 `system:serviceaccount:<네임스페이스>:<이름>`입니다. 복수형 `system:serviceaccounts:<네임스페이스>`는 그룹 이름이라 `--as`에 넣을 때 헷갈리기 쉽습니다.
@@ -218,13 +227,23 @@ kubectl auth can-i delete configmaps -n shop \
   --as=system:serviceaccount:shop:order-api
 ```
 
-YAML 뼈대는 `--dry-run=client -o yaml`로 받습니다. `--resource-name`은 특정 이름만 허용하고 서브리소스는 `pods/log`처럼 적고 사용자와 그룹은 `--user`, `--group`으로 바인딩합니다.
+YAML 뼈대는 `--dry-run=client -o yaml`로 받습니다. 과제 문장에 자주 붙는 조건과 그에 맞는 옵션은 이렇습니다.
+
+| 과제 문장 | 옵션 | 예 |
+|---|---|---|
+| "order-config라는 ConfigMap만" | `--resource-name` | `kubectl create role cm-one -n shop --verb=get,update --resource=configmaps --resource-name=order-config` |
+| "Pod 로그를 볼 수 있게" | 서브리소스 `pods/log` | `kubectl create role log-reader -n shop --verb=get --resource=pods/log` |
+| "사용자 jane에게" | `--user` | `kubectl create rolebinding ... --user=jane` |
+| "dev 그룹 전체에" | `--group` | `kubectl create rolebinding ... --group=dev` |
+| "ServiceAccount에게" | `--serviceaccount=<ns>:<이름>` | 위 코드 블록 |
+
+`pods`에 `get`을 줘도 `kubectl logs`는 막힙니다. 로그는 `pods/log`라는 별도 서브리소스라 따로 줘야 합니다. `kubectl exec`도 같은 이유로 `pods/exec`에 `create`가 필요합니다.
 
 ### 1-4. 헷갈리는 지점
 
 - 클러스터 범위 리소스(노드, PV, 네임스페이스)의 권한은 ClusterRole로 정의합니다.
 - API 그룹이 있는 리소스는 그룹까지 맞아야 합니다. `kubectl create role`에서는 `--resource=deployments.apps`처럼 점 뒤에 그룹을 붙입니다.
-- `roleRef`를 바꾸는 과제라면 바인딩을 지우고 다시 만듭니다. 고치려 하면 이런 오류가 납니다.
+- `roleRef`를 바꾸는 과제라면 바인딩을 지우고 다시 만듭니다. RBAC 문서가 드는 이유는 둘입니다. 하나는 바인딩에 `update` 권한만 받은 사람이 subjects 명단은 관리하되 그 명단에 주는 역할은 못 바꾸게 하려는 것입니다. 다른 하나는 역할이 바뀌면 사실상 다른 바인딩이니 기존 명단 전원에게 새 역할을 줘도 되는지 다시 확인하게 하려는 것입니다. 고치려 하면 이런 오류가 납니다.
 
 ```text
 The RoleBinding "order-api-config-reader" is invalid: roleRef: Invalid value: ...: field is immutable
@@ -473,6 +492,11 @@ audience나 수명을 바꾸려면 Pod 스펙의 projected 볼륨에 `serviceAcc
 | apiserver -> kubelet | kubelet 서빙 인증서 | `apiserver-kubelet-client.crt` | `ca` |
 | apiserver -> etcd | `etcd/server.crt` | `apiserver-etcd-client.crt` | `etcd/ca` |
 | etcdctl(백업) -> etcd | `etcd/server.crt` | `etcd/server.crt` 또는 `etcd/healthcheck-client.crt` | `etcd/ca` |
+
+표에서 두 군데는 설명이 더 필요합니다.
+
+- **apiserver -> kubelet 줄**: kubeadm이 까는 kubelet 서빙 인증서는 기본이 자체 서명입니다(kubeadm "Certificate Management" 문서). kubeadm은 API 서버에 `--kubelet-certificate-authority`를 넣지 않으니 API 서버는 이 인증서를 검증하지 않고 붙습니다. 반대로 kubelet은 API 서버가 내미는 클라이언트 인증서를 `ca`로 확인합니다. metrics-server가 `x509: cannot validate certificate` 류의 오류로 kubelet에 못 붙을 때 `--kubelet-insecure-tls`를 넣는 흔한 처방이 이 자체 서명 때문입니다. 제대로 고치려면 kubelet 설정에 `serverTLSBootstrap: true`를 넣고 `kubernetes.io/kubelet-serving` CSR을 승인합니다(1-9절).
+- **`front-proxy-ca`**: metrics-server처럼 API 서버 뒤에 붙는 확장 API 서버로 요청을 넘길 때 쓰는 CA입니다. API 서버가 "이 요청은 jane이 보낸 것"이라는 헤더를 붙여 넘기면 확장 서버는 그 헤더를 믿어도 되는지 `front-proxy-client` 인증서로 확인합니다. `kubectl top`이 안 될 때 보는 줄입니다.
 
 `ca.key`를 꺼내지 않고 서명받는 길이 1-9절의 CSR API이고 인증서를 읽는 `openssl` 명령은 4-8절에 있습니다.
 
@@ -729,9 +753,13 @@ VM 여러 대를 손으로 만들기 번거로우면 Vagrant 같은 도구로 VM
 
 머신당 메모리 2GB 이상, 컨트롤 플레인은 CPU 2개 이상, 머신 사이 전체 연결과 필요한 포트 개방(`nc 127.0.0.1 6443 -zv -w 2`)이 조건입니다. 호스트 이름, MAC 주소, `product_uuid`(`/sys/class/dmi/id/product_uuid`)는 노드마다 달라야 합니다.
 
+CPU와 메모리 조건은 `kubeadm init`이 시작할 때 사전 점검(preflight)으로 확인합니다. 1코어 VM에서 돌리면 `[ERROR NumCPU]`로 멈추고 연습용이라면 `--ignore-preflight-errors=NumCPU`로 넘길 수 있습니다. 고유값 조건은 VM을 복제해 노드를 늘릴 때 걸립니다. 쿠버네티스가 이 값으로 노드를 구별하는데 이미지 하나를 복사한 VM 세 대는 `product_uuid`나 MAC이 같을 수 있고 그러면 설치가 실패할 수 있다고 설치 문서가 적습니다. 복제한 VM이라면 `ip link`와 `cat /sys/class/dmi/id/product_uuid`를 노드마다 찍어 비교해 봅니다.
+
 ### 2-2. 스왑
 
 kubelet은 기본 설정에서 스왑이 켜져 있으면 시작하지 않습니다. `sudo swapoff -a`로 끄고 `/etc/fstab`의 스왑 줄도 지웁니다. 허용하려면 kubelet 설정에 `failSwapOn: false`를 넣습니다.
+
+왜 끄라고 하는지는 메모리 계산을 생각하면 보입니다. Pod에 `limits.memory: 512Mi`를 줬는데 그 일부가 디스크로 밀려나면 Pod가 실제로 얼마를 쓰는지, 노드에 메모리가 얼마 남았는지를 kubelet과 스케줄러가 예측하기 어려워집니다. 노드 스왑 KEP(2400)도 스왑이 끼면 Pod 메모리 사용량을 보장하고 계산하기 어렵다는 점을 지원하지 않았던 이유로 적습니다. 또 `failSwapOn: false`만 넣으면 kubelet이 뜨기만 할 뿐 Pod는 여전히 스왑을 못 씁니다. 기본 `swapBehavior`가 `NoSwap`이라서 Pod가 스왑을 쓰게 하려면 `memorySwap.swapBehavior: LimitedSwap`을 따로 줘야 합니다(설치 문서). `/etc/fstab` 줄을 안 지우면 재부팅 뒤 스왑이 다시 켜지고 kubelet이 안 떠서 노드가 `NotReady`가 됩니다.
 
 ### 2-3. IP 포워딩과 커널 설정
 
@@ -792,7 +820,9 @@ sysctl net.ipv4.ip_forward   # 1이면 적용됨
 
 ### 2-4. 컨테이너 런타임과 cgroup 드라이버
 
-kubelet과 런타임은 같은 cgroup 드라이버를 써야 하고 systemd가 init인 시스템(대부분의 배포판)에서는 `systemd` 드라이버를 씁니다. containerd는 `config.toml`의 runc 옵션에 `SystemdCgroup = true`를, kubelet은 `KubeletConfiguration`에 `cgroupDriver: systemd`를 넣습니다.
+cgroup은 프로세스 묶음마다 CPU와 메모리 한도를 거는 커널 기능이고 cgroup 드라이버는 "그 cgroup 디렉터리를 누가 만들고 관리하나"를 정하는 방식입니다. `cgroupfs`는 kubelet이나 런타임이 `/sys/fs/cgroup`을 직접 만지고 `systemd`는 systemd에게 부탁해서 만듭니다. systemd는 원래 서비스마다 cgroup을 하나씩 만들어 관리하는데 kubelet이 `cgroupfs`로 따로 만지면 관리자가 둘이 됩니다. 런타임 문서는 이러면 사용 가능한 자원과 사용 중인 자원에 대한 시각이 둘로 갈리고 자원이 부족할 때 노드가 불안정해질 수 있다고 적습니다. 장부를 두 사람이 따로 쓰는 상황입니다.
+
+그래서 kubelet과 런타임은 같은 cgroup 드라이버를 써야 하고 systemd가 init인 시스템(대부분의 배포판)에서는 `systemd` 드라이버를 씁니다. containerd는 `config.toml`의 runc 옵션에 `SystemdCgroup = true`를, kubelet은 `KubeletConfiguration`에 `cgroupDriver: systemd`를 넣습니다.
 
 버전에 따라 알아 둘 사실은 셋입니다.
 
@@ -854,7 +884,7 @@ found multiple CRI endpoints on the host. Please define which one do you wish to
 <details>
 <summary>기초부터: pkgs.k8s.io 저장소 등록부터 버전 고정까지</summary>
 
-> **핵심 한 줄**: 서명 키를 받고, 마이너 버전이 박힌 저장소 주소를 등록하고, 세 패키지를 설치한 뒤 `hold`로 묶습니다. 모든 노드에서 같은 순서입니다.
+> **핵심 한 줄**: 서명 키를 받고 마이너 버전이 박힌 저장소 주소를 등록하고 세 패키지를 설치한 뒤 `hold`로 묶습니다. 모든 노드에서 같은 순서입니다.
 
 #### 1. 왜 필요한가
 kubeadm은 kubelet과 kubectl을 대신 설치하거나 관리하지 않습니다. 세 패키지를 노드마다 직접 깔고 버전을 컨트롤 플레인에 맞춰 둬야 합니다. 저장소 하나에는 마이너 버전 하나의 패키지만 있어서 주소를 잘못 적으면 엉뚱한 버전이 깔립니다.
@@ -991,7 +1021,16 @@ sudo kubeadm init \
   --pod-network-cidr=10.244.0.0/16
 ```
 
-`--control-plane-endpoint`는 나중에 HA로 늘릴 계획이면 처음부터 지정합니다(없이 만든 클러스터는 HA로 못 바꿈). `--pod-network-cidr`는 CNI가 요구할 때 호스트 네트워크와 다른 대역으로 줍니다. `--apiserver-advertise-address`는 광고 주소를 바꿀 때, `--cri-socket`은 런타임이 여럿일 때 씁니다. `--config` 설정 파일로 init하면 파일의 `apiVersion`은 `kubeadm.k8s.io/v1beta4`입니다. `v1beta3`은 1.37에서 제거됐고 옛 파일은 1.35 kubeadm의 `kubeadm config migrate`로 바꿉니다(CHANGELOG-1.37).
+옵션마다 "왜 여기서 정해야 하나"가 있습니다.
+
+| 옵션 | 뜻 | 안 정하면 생기는 일 |
+|---|---|---|
+| `--control-plane-endpoint` | 모든 노드와 kubeconfig가 API 서버를 부를 주소. 보통 LB나 DNS 이름 | 첫 노드 IP가 인증서와 kubeconfig 곳곳에 박혀 나중에 HA로 늘리지 못함 |
+| `--pod-network-cidr` | Pod IP를 나눠 줄 대역. Flannel 기본값이 `10.244.0.0/16` | 노드가 쓰는 사설망과 겹치면 Pod가 같은 대역의 실제 서버로 가는 패킷을 자기 쪽으로 착각해 통신이 깨짐 |
+| `--apiserver-advertise-address` | 이 API 서버가 "나는 이 IP로 받는다"고 다른 구성요소에 알리는 주소 | 기본 경로가 걸린 NIC의 IP를 씀. VM에 NIC가 둘(NAT용, 노드 간 통신용)이면 엉뚱한 NAT 주소가 잡혀 워커가 못 붙음 |
+| `--cri-socket` | 런타임 소켓 | 소켓이 둘 이상이면 2-4b절 오류로 멈춤 |
+
+첫 줄은 이렇게 생각하면 됩니다. kubeadm은 API 서버 인증서의 SAN(이 인증서가 유효한 이름 목록)과 모든 kubeconfig의 `server:`에 엔드포인트를 적습니다. 처음에 노드 IP로 만들면 그 IP가 사라지거나 LB로 바꾸고 싶을 때 인증서와 kubeconfig를 전부 다시 만들어야 합니다. DNS 이름(`cluster-endpoint`)으로 만들어 두면 이름이 가리키는 곳만 LB로 바꾸면 됩니다. `--config` 설정 파일로 init하면 파일의 `apiVersion`은 `kubeadm.k8s.io/v1beta4`입니다. `v1beta3`은 1.37에서 제거됐고 옛 파일은 1.35 kubeadm의 `kubeadm config migrate`로 바꿉니다(CHANGELOG-1.37).
 
 `init`이 끝나면 `admin.conf`를 `$HOME/.kube/config`로 복사하는 명령과 `kubeadm join` 명령이 출력됩니다.
 
@@ -1048,7 +1087,7 @@ sudo kubeadm upgrade node phase kubelet-config     # 노드에서
 sudo systemctl restart kubelet
 ```
 
-ConfigMap 안의 설정은 YAML 문자열이라 저장할 때 검증이 없습니다. `kubeadm upgrade`는 `kubeadm-config`로 static Pod 매니페스트를, `kubelet-config`로 `/var/lib/kubelet/config.yaml`을 다시 만듭니다. 매니페스트에만 넣은 `--event-ttl=2h`가 `upgrade apply` 뒤 사라지는 것을 확인했습니다. 그래서 "API 서버에 플래그를 더하라"는 과제는 매니페스트를 고쳐 바로 반영하고 유지가 필요하면 `kubeadm-config`의 `extraArgs`(v1beta4는 `- name: ...` / `value: ...` 목록)에도 넣습니다.
+ConfigMap 안의 설정은 YAML 문자열이라 저장할 때 검증이 없습니다. `kubeadm upgrade`는 `kubeadm-config`로 static Pod 매니페스트를, `kubelet-config`로 `/var/lib/kubelet/config.yaml`을 다시 만듭니다. 그래서 매니페스트에만 넣은 `--event-ttl=2h` 같은 플래그는 `upgrade apply` 뒤 사라집니다([Reconfiguring a kubeadm cluster](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-reconfigure/)). 그래서 "API 서버에 플래그를 더하라"는 과제는 매니페스트를 고쳐 바로 반영하고 유지가 필요하면 `kubeadm-config`의 `extraArgs`(v1beta4는 `- name: ...` / `value: ...` 목록)에도 넣습니다.
 
 ### 3-5. 직접 해 보기
 
@@ -2659,6 +2698,7 @@ Error from server (NotFound): Unable to list "example.com/v1, Resource=boardjobs
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf); Linux Foundation, [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad); Linux Foundation, [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
 - Kubernetes, [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Issue a Certificate for a Kubernetes API Client Using A CertificateSigningRequest](https://kubernetes.io/docs/tasks/tls/certificate-issue-client-csr/), [PKI certificates and requirements](https://kubernetes.io/docs/setup/best-practices/certificates/)
 - Kubernetes, [Installing kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/), [Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/), [Reconfiguring a kubeadm cluster](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-reconfigure/)
+- Kubernetes, [Swap memory management](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/), [KEP-2400 Node swap support](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/2400-node-swap/README.md)
 - Kubernetes, [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/), [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/), [Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/), [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/), [Creating Highly Available Clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)
 - Kubernetes, [Custom Resources](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/), [Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/); Helm, [Using Helm](https://helm.sh/docs/intro/using_helm/), [CRD Best Practices](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/), [Helm 4 Overview](https://helm.sh/docs/overview/)
 - etcd, [Announcing etcd v3.6](https://etcd.io/blog/2025/announcing-etcd-3.6/); containerd, [CRI plugin config](https://github.com/containerd/containerd/blob/main/docs/cri/config.md); Mirantis, [cri-dockerd Install](https://mirantis.github.io/cri-dockerd/usage/install/)

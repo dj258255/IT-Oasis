@@ -98,7 +98,7 @@ seriesOrder: 1
 
 #### 5. 실전 시나리오: 자가 치유만으로 못 막는 연쇄 장애
 
-새벽에 503(Service Unavailable)이 급증합니다. Pod 한두 개가 아니라 서비스 전체가 응답하지 못한다는 신호입니다.
+새벽에 503(Service Unavailable)이 급증합니다. Pod 한두 개에서 그치지 않고 서비스 전체가 응답하지 못한다는 신호입니다.
 
 ```text
 트래픽 급증
@@ -443,6 +443,40 @@ Kubernetes Components 문서 기준입니다. "도는 방식"은 kubeadm 클러�
 
 ### 2-2. static Pod는 kubelet이 직접 띄운다
 
+<details>
+<summary>기초부터: static Pod가 따로 있는 이유와 미러 Pod</summary>
+
+> **핵심 한 줄**: API 서버도 Pod로 돌리고 싶은데 Pod를 만들려면 API 서버가 있어야 합니다. 이 순환을 끊으려고 kubelet이 **디스크의 파일만 보고** 띄우는 Pod가 static Pod입니다.
+
+#### 1. 닭과 달걀
+
+보통 Pod는 "API 서버에 기록 → 스케줄러가 노드 배정 → kubelet이 실행" 순서로 뜹니다. 그런데 클러스터를 처음 켤 때는 API 서버가 아직 없습니다. 그래서 kubeadm은 컨트롤 플레인 네 구성요소를 `/etc/kubernetes/manifests`에 파일로 두고 kubelet이 이 파일을 직접 읽어 띄우게 합니다. 공식 문서 "Static Pods"도 static Pod의 주된 쓰임을 컨트롤 플레인을 스스로 띄우는 일로 듭니다.
+
+#### 2. 미러 Pod
+
+| 구분 | static Pod | 미러 Pod |
+|---|---|---|
+| 정체 | 노드에서 실제로 도는 컨테이너 | API 서버에 남긴 보기용 기록 |
+| 누가 만드나 | kubelet(매니페스트 파일) | kubelet(API 서버가 살아 있을 때) |
+| 이름 | 파일 안의 `metadata.name` | 그 이름 뒤에 `-<노드 이름>`이 붙음. 예: `kube-apiserver-controlplane` |
+| `kubectl delete`하면 | 영향 없음 | 지워져도 kubelet이 다시 만듦 |
+
+`kubectl get pods -n kube-system`에 컨트롤 플레인 Pod가 보이는 것은 미러 Pod 덕분입니다. 공식 문서 "Create static Pods"는 미러 Pod를 kubectl로 지워도 kubelet이 static Pod를 지우지 않는다고 적습니다.
+
+#### 3. 고칠 때는 파일을 고친다
+
+- `kubectl edit`으로 미러 Pod를 고쳐도 실제 컨테이너는 바뀌지 않습니다. 매니페스트 파일을 고치고 저장하면 kubelet이 바뀐 것을 보고 Pod를 새로 만듭니다.
+- static Pod의 spec은 ServiceAccount, ConfigMap, Secret 같은 다른 API 객체를 참조할 수 없습니다(Static Pods 문서). 그래서 컨트롤 플레인 매니페스트는 인증서와 설정을 `hostPath` 볼륨으로 노드 디렉터리에서 직접 읽습니다.
+- 파일을 지우거나 디렉터리 밖으로 옮기면 kubelet이 그 Pod를 내립니다. 3-1절 실험이 이 방법을 씁니다.
+
+#### 4. 아래 jsonpath의 `\.`
+
+아래 명령의 `kubernetes\.io/config\.source`는 어노테이션 키 하나입니다. jsonpath에서 점은 "한 단계 아래로"라는 뜻이라 키 안의 점을 그대로 쓰면 `kubernetes` 아래의 `io/config` 아래의 `source`로 읽힙니다. 키 안의 점 앞에 `\`를 붙여 글자 그대로의 점이라고 알려 줍니다.
+
+> **정리**: static Pod는 API 서버 없이 뜨는 Pod이고 미러 Pod는 그 모습을 API 서버에 비춰 둔 기록입니다. 컨트롤 플레인을 고칠 때는 kubectl을 내려놓고 노드의 매니페스트 파일을 고칩니다.
+
+</details>
+
 kubeadm으로 만든 클러스터는 컨트롤 플레인 네 구성요소의 매니페스트를 `/etc/kubernetes/manifests`에 둡니다.
 
 ```bash
@@ -550,7 +584,18 @@ kubectl get pods -l app=web
 # web-69c6f74b8b-vgg57   1/1     Running   0          2m22s
 ```
 
-출력 세 개가 서로 맞지 않습니다. Deployment의 `spec.replicas`는 5로 바뀌었지만 Deployment 컨트롤러가 없어서 ReplicaSet의 `DESIRED`는 3에 머물렀습니다. 실제 Pod는 2개인데 ReplicaSet과 Deployment의 `status`는 3을 가리킵니다. `status`를 갱신하는 주체도 컨트롤러라서 컨트롤러가 멈추면 `status`는 마지막 값으로 굳습니다. 남은 Pod 2개는 계속 Running이었습니다.
+출력 세 개가 서로 맞지 않습니다. 먼저 각 칸이 어느 필드에서 오는지 알아야 이 어긋남이 읽힙니다.
+
+| 출력 | 칸 | 가져오는 필드 | 위 값 |
+|---|---|---|---|
+| `get deploy` | READY | `status.readyReplicas` / `spec.replicas` | 3/5 |
+| `get deploy` | UP-TO-DATE, AVAILABLE | `status.updatedReplicas`, `status.availableReplicas` | 3, 3 |
+| `get rs` | DESIRED | ReplicaSet의 `spec.replicas` | 3 |
+| `get rs` | CURRENT, READY | ReplicaSet의 `status.replicas`, `status.readyReplicas` | 3, 3 |
+
+`kubectl scale`은 Deployment의 `spec.replicas`를 API 서버에 직접 고쳐 쓰는 요청이라 컨트롤러 없이도 반영됩니다. READY의 분모가 5가 된 이유입니다. 나머지 칸은 모두 컨트롤러가 채우는 값입니다.
+
+이제 출력을 다시 보면 Deployment의 `spec.replicas`는 5로 바뀌었지만 Deployment 컨트롤러가 없어서 ReplicaSet의 `DESIRED`는 3에 머물렀습니다. 실제 Pod는 2개인데 ReplicaSet과 Deployment의 `status`는 3을 가리킵니다. `status`를 갱신하는 주체도 컨트롤러라서 컨트롤러가 멈추면 `status`는 마지막 값으로 굳습니다. 남은 Pod 2개는 계속 Running이었습니다.
 
 매니페스트를 되돌린 뒤의 출력입니다.
 
@@ -592,6 +637,38 @@ kube-scheduler 행의 "스케줄링 이벤트가 없음"은 이벤트를 쓰는 
 ### 3-4. 노드 전체가 응답을 멈추면 약 50초 + 5분
 
 노드가 상태 갱신을 멈추면 node lifecycle 컨트롤러가 `--node-monitor-grace-period`(1.37 기본 50초, 옛 자료는 40초)가 지난 뒤 노드 조건을 `Unknown`으로 바꾸고 `node.kubernetes.io/unreachable` taint를 붙입니다. 노드가 응답은 하지만 준비되지 않았다고 보고하면 `node.kubernetes.io/not-ready`가 붙습니다. Pod에는 `DefaultTolerationSeconds` 어드미션 플러그인이 넣은 300초 toleration이 기본으로 있습니다. 그래서 기본 설정에서는 약 50초에 300초를 더한 뒤 그 노드의 Pod가 삭제됩니다.
+
+<details>
+<summary>기초부터: 테인트와 톨러레이션, 그리고 노드가 꺼진 뒤의 시간표</summary>
+
+> **핵심 한 줄**: 테인트는 노드에 붙는 "조건이 맞지 않는 Pod는 오지 말거나 나가라"는 표시이고 톨러레이션은 Pod가 지닌 "이 표시는 몇 초까지 견딘다"는 허가입니다.
+
+#### 1. 세 가지 효과
+
+| effect | 새 Pod 배치 | 이미 도는 Pod |
+|---|---|---|
+| `NoSchedule` | 막음 | 그대로 둠 |
+| `PreferNoSchedule` | 되도록 피함 | 그대로 둠 |
+| `NoExecute` | 막음 | 톨러레이션이 없으면 바로, 있으면 `tolerationSeconds` 뒤에 쫓아냄 |
+
+노드 장애 때 붙는 `unreachable`과 `not-ready`는 `NoExecute`입니다. 그래서 이미 도는 Pod까지 정리 대상이 되고 Pod에 기본으로 들어간 300초 톨러레이션이 유예 시간이 됩니다.
+
+#### 2. 노드가 꺼진 뒤 시간표
+
+kubelet은 `kube-node-lease` 네임스페이스의 Lease 객체를 기본 10초마다 갱신해 살아 있다고 알립니다(Leases 문서). 이 갱신이 끊긴 순간을 0초로 잡으면 기본 설정에서 이렇게 흘러갑니다.
+
+| 시각 | 일어나는 일 | 하는 쪽 |
+|---|---|---|
+| 0초 | 노드가 꺼져 Lease 갱신과 상태 보고가 멈춤 | (노드) |
+| 약 50초 | 노드 Ready 조건이 `Unknown`, `unreachable:NoExecute` 테인트가 붙음 | node lifecycle 컨트롤러 |
+| 약 350초 | 300초 톨러레이션이 끝나 그 노드의 Pod가 삭제 표시됨(`Terminating`) | taint-eviction 컨트롤러 |
+| 그 직후 | 원하는 수보다 모자라니 새 Pod를 만들고 다른 노드에 배치 | ReplicaSet 컨트롤러, 스케줄러 |
+
+꺼진 노드의 kubelet은 컨테이너를 정리했다고 보고할 수 없어서 옛 Pod는 노드가 돌아올 때까지 `Terminating`으로 남습니다. Deployment는 새 Pod를 따로 만들기 때문에 서비스는 이어집니다.
+
+> **정리**: 노드 장애 뒤 Pod가 옮겨 가기까지의 약 6분은 "노드를 의심하는 50초"와 "Pod가 견디는 300초"를 더한 시간입니다. 어느 쪽이든 Pod 스펙의 `tolerationSeconds`나 컨트롤러 플래그로 줄일 수 있습니다.
+
+</details>
 
 ```bash
 kubectl get pod <Pod> -o jsonpath='{range .spec.tolerations[*]}{.key} {.effect} {.tolerationSeconds}{"\n"}{end}'
@@ -814,12 +891,25 @@ kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.te
 |---|---|---|
 | 0 | 정상 종료. `restartPolicy: Always`면 다시 시작되어 재시작 횟수가 늘어남 | `command`가 곧바로 끝나는지 |
 | 1 | 애플리케이션 오류 | `kubectl logs -p` |
-| 137 | SIGKILL. OOM이거나 종료 유예 시간을 넘김 | `Reason`이 `OOMKilled`인지 `Error`인지 |
+| 137 | SIGKILL. OOM이거나 종료 유예 시간(`terminationGracePeriodSeconds`, 기본 30초)을 넘김 | `Reason`이 `OOMKilled`인지 `Error`인지 |
 | 143 | SIGTERM(128+15)으로 정상 종료 요청을 받고 끝남 | 삭제나 롤아웃 중이었는지 |
+
+143과 137이 한 흐름에서 갈리는 경우가 있습니다. Pod를 지우면 kubelet은 먼저 SIGTERM을 보내고 유예 시간(기본 30초)을 기다립니다. 그 안에 프로세스가 스스로 끝나면 143이고 30초가 지나도 살아 있으면 kubelet이 SIGKILL을 보내 137이 됩니다(Pod Lifecycle 문서의 Termination of Pods). 그래서 137인데 Reason이 `OOMKilled`가 아니면 "종료 신호를 받고도 제때 안 끝난 앱"을 의심합니다.
 
 ### 4-4. 같은 Pod 안의 재시작과 CrashLoopBackOff
 
 `restartPolicy`의 기본값은 `Always`라서 kubelet은 OOM으로 끝난 컨테이너를 같은 Pod 안에서 다시 시작합니다. Pod 오브젝트와 IP는 그대로입니다. 다시 250M을 잡으면 또 죽으므로 kubelet은 재시작 사이에 간격을 둡니다. 공식 문서 "Pod Lifecycle" 기준으로 간격은 10초에서 시작해 두 배씩 늘고 300초에서 멈춥니다. 컨테이너가 10분 동안 문제없이 돌면 간격이 초기화됩니다. 기다리는 동안의 상태가 `CrashLoopBackOff`이고 이벤트에는 이렇게 남습니다.
+
+| 연속 실패 | 다음 시작까지 대기 |
+|---|---|
+| 1번째 | 10초 |
+| 2번째 | 20초 |
+| 3번째 | 40초 |
+| 4번째 | 80초 |
+| 5번째 | 160초 |
+| 6번째부터 | 300초에서 멈춤 |
+
+10분을 문제없이 돌면 대기 시간이 다시 10초부터 시작합니다. 이 기본값을 바꾸는 기능도 있습니다. `ReduceDefaultCrashLoopBackOffDecay`(1.33 알파, 기본 꺼짐)는 시작 1초, 최대 60초로 줄이고 `KubeletCrashLoopBackOffMax`(1.35 베타, 기본 켜짐)는 kubelet 설정으로 최대값을 바꿀 수 있게 합니다. 시험 클러스터에서 설정을 바꿨다는 안내는 없으니 표의 기본값을 기준으로 봅니다.
 
 ```
 Warning   BackOff   pod/mem-over   Back-off restarting failed container stress in pod mem-over_default(...)
@@ -843,6 +933,8 @@ MemoryPressure  True  ...  KubeletHasInsufficientMemory  kubelet has insufficien
 Taints:         node.kubernetes.io/memory-pressure:NoSchedule
 Warning  Evicted  pod/order-api-...  The node was low on resource: memory. Threshold quantity: 9800Mi, available: 9936872Ki. Container nginx was using 7076Ki, request is 0, has larger consumption of memory.
 ```
+
+메시지의 숫자를 읽어 보면 축출 이유가 그대로 나옵니다. `available: 9936872Ki`를 1024로 나누면 약 9,704Mi이고 기준 `9800Mi`보다 작습니다. 그래서 kubelet은 노드가 메모리 압박 상태라고 판단했습니다. `request is 0`은 이 Pod에 메모리 request가 없다는 뜻이라 사용량이 request를 넘은 Pod로 분류되어 먼저 골랐습니다. 실제 메모리는 넉넉했고 기준값을 일부러 올려 만든 상황입니다.
 
 축출된 Pod는 `.status.phase`가 `Failed`, `.status.reason`이 `Evicted`인데 `kubectl get pod`의 STATUS 열에는 `Error`나 `ContainerStatusUnknown`으로 보였습니다. 그래서 `kubectl get pod -A --field-selector status.phase=Failed`로 찾습니다.
 
@@ -1102,6 +1194,7 @@ CPU 스로틀링입니다. CPU limit을 넘는 컨테이너는 죽지 않고 주
 - Create static Pods: https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/
 - Troubleshooting Clusters: https://kubernetes.io/docs/tasks/debug/debug-cluster/
 - Leases: https://kubernetes.io/docs/concepts/architecture/leases/
+- Static Pods: https://kubernetes.io/docs/concepts/workloads/pods/static-pods/
 - Taints and Tolerations: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
 - Container Runtime Interface: https://kubernetes.io/docs/concepts/containers/cri/
 - Resource Management for Pods and Containers: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/

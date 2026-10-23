@@ -136,7 +136,9 @@ EC2 세 대를 두면 사용자는 어느 IP로 가야 할지 모르고 한 대�
 | 고정 세션(sticky session) | 대상 그룹 단위. 로드 밸런서가 만드는 `AWSALB` 쿠키(기간 1초~7일)나 애플리케이션 쿠키 기반. 교차 영역을 끈 대상 그룹에서는 쓸 수 없다 | "세션을 서버 메모리에 두는 레거시 앱이 로그인이 풀림" |
 | 등록 취소 지연(deregistration delay) | 기본 300초 동안 진행 중 요청을 마치게 기다린 뒤 대상을 뺀다 | "축소할 때 처리 중이던 요청이 끊김" |
 
-예제로 보면 AZ A에 대상 2개, AZ B에 8개가 있고 교차 영역이 꺼져 있으면 A의 대상은 각각 25%, B의 대상은 각각 6.25%를 받는다고 문서가 설명합니다. 켜면 10개가 10%씩 받습니다. 고정 세션은 상태를 서버에 두는 앱을 수정 없이 살리는 방법이지만 부하가 고르게 퍼지지 않으니 2-1절처럼 세션을 외부 저장소로 옮기는 것이 근본 해결입니다.
+예제로 보면 AZ A에 대상 2개, AZ B에 8개가 있고 교차 영역이 꺼져 있으면 A의 대상은 각각 25%, B의 대상은 각각 6.25%를 받는다고 문서가 설명합니다. 켜면 10개가 10%씩 받습니다.
+
+숫자가 나오는 과정은 이렇습니다. 클라이언트가 ALB 이름을 조회하면 Route 53이 AZ마다 하나씩 있는 로드 밸런서 노드의 IP를 돌려주고 요청은 두 노드에 반씩(50%) 갑니다. 교차 영역이 꺼져 있으면 노드는 자기 AZ의 대상에게만 넘깁니다. A 노드는 50%를 대상 2개에 나눠 25%씩, B 노드는 50%를 대상 8개에 나눠 6.25%씩입니다. A의 서버 한 대가 B의 서버 한 대보다 네 배 바쁜 셈입니다. 교차 영역을 켜면 두 노드가 모두 10개 전체에 나눠 주니 10%씩 고르게 받습니다([ELB 사용자 가이드, How Elastic Load Balancing works](https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html)). 고정 세션은 상태를 서버에 두는 앱을 수정 없이 살리는 방법이지만 부하가 고르게 퍼지지 않으니 2-1절처럼 세션을 외부 저장소로 옮기는 것이 근본 해결입니다.
 
 ### 2-3. 큐: SQS
 
@@ -177,6 +179,10 @@ EC2 세 대를 두면 사용자는 어느 IP로 가야 할지 모르고 한 대�
 
 - 표준 큐는 "최소 한 번" 전달이라 같은 메시지가 두 번 올 수 있습니다. 주문 ID로 이미 처리했는지 보는 멱등 처리가 필요합니다.
 - 큐 적체(`ApproximateNumberOfMessagesVisible`)가 계속 늘면 소비자가 모자란 상태입니다. 2-10절의 Auto Scaling 지표로 씁니다.
+- 표시 제한 시간이 짧으면 생기는 일을 시간순으로 따라가 봅니다. 제한 시간 30초, 메일 발송에 40초가 걸린다고 합시다. 0초에 워커 A가 메시지를 받습니다. 30초에 제한 시간이 끝나 메시지가 다시 보이고 워커 B가 받아 같은 메일을 또 보내기 시작합니다. 40초에 A가 끝내고 `DeleteMessage`를 불러도 B의 발송은 이미 시작됐습니다. 손님은 메일을 두 통 받습니다. 제한 시간을 처리 시간보다 넉넉하게 잡는 이유입니다.
+- FIFO 큐의 **메시지 그룹 ID**는 "이 메시지들끼리는 순서를 지켜라"라는 묶음 이름입니다. 주문 번호를 그룹 ID로 주면 같은 주문의 "결제 → 취소"는 순서대로 처리되고 다른 주문끼리는 동시에 처리됩니다. 순서는 그룹 안에서만 지켜집니다.
+- FIFO 큐의 중복 제거는 5분 창 안에서만 동작합니다. 같은 중복 제거 ID로 5분 안에 다시 보내면 SQS가 두 번째를 큐에 넣지 않습니다([SQS 문서, Exactly-once processing](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues-exactly-once-processing.html)). 5분 뒤의 재전송까지 막아 주지는 않습니다.
+- **쇼트 폴링과 롱 폴링**: 기본(쇼트 폴링)은 서버 일부만 보고 바로 답하므로 메시지가 있어도 빈 응답이 올 수 있고 빈 응답도 요청 요금이 붙습니다. `WaitTimeSeconds`를 1~20초로 주는 롱 폴링은 메시지가 올 때까지 그 시간만큼 기다렸다가 답해서 빈 응답과 호출 수가 함께 줄어듭니다.
 
 > **정리**: SQS는 "가져간 뒤 지우기 전까지 숨김"으로 실패해도 메시지를 잃지 않습니다. 아래 표의 표시 제한 시간, 보존 기간, DLQ가 모두 이 일생의 한 단계에 붙은 설정입니다.
 
@@ -214,6 +220,8 @@ SQS 큐 유형 문서의 비교를 옮겼습니다.
 메시지 최대 크기는 예전 자료에 256KB로 적힌 곳이 많습니다. 2026년 10월 문서는 1MiB이니 문항이 옛 숫자를 전제로 할 수도 있다는 점만 기억해 두었습니다.
 
 표시 제한 시간은 소비자가 메시지를 받은 뒤 다른 소비자에게 보이지 않는 시간입니다. 처리 시간보다 짧으면 같은 메시지가 두 번 처리됩니다. "주문이 가끔 두 번 처리된다"는 시나리오에서는 표시 제한 시간을 처리 시간보다 길게 늘리거나 처리를 멱등하게 만드는 보기가 답입니다. 일정 횟수 실패한 메시지는 배달 못한 편지 큐(DLQ)로 옮겨 따로 살펴봅니다. 롱 폴링(`WaitTimeSeconds`)은 빈 응답을 줄여 API 호출을 아낍니다.
+
+큐가 장애를 흡수해 준다는 말에는 뒷면이 있습니다. Amazon Builders' Library의 David Yanacek 글은 큐 기반 시스템이 두 상태를 오간다고 설명합니다. 쌓인 메시지가 없을 때는 지연이 낮고 들어오는 속도가 처리 속도를 넘는 순간부터는 지연이 계속 늘어납니다. 소비자가 1시간 멈췄다면 그동안 들어온 1시간치가 쌓여 있으니 평소 용량으로는 새로 들어오는 양만 겨우 처리하고 밀린 양은 줄지 않습니다. 글은 1시간 장애에서 회복하려면 그 뒤 1시간 동안 평소의 약 두 배 용량이 필요하다고 적습니다([Avoiding insurmountable queue backlogs](https://builder.aws.com/content/3EuRcgkTP1MI0c7zM8W6HL3WIqA/avoiding-insurmountable-queue-backlogs)). 그래서 큐 길이와 함께 가장 오래된 메시지의 나이(SQS 지표 `ApproximateAgeOfOldestMessage`)를 보고 DLQ에 쌓이는 양에 경보를 겁니다. 너무 오래된 메시지는 처리해도 의미가 없을 수 있어서 보존 기간을 짧게 잡아 버리는 선택도 같은 글에 나옵니다.
 
 ### 2-4. 발행/구독: SNS와 팬아웃
 
@@ -362,6 +370,8 @@ SNS와 EventBridge가 함께 보기에 나오면 이벤트 내용으로 세밀�
 
 워크플로 유형은 만든 뒤 바꿀 수 없습니다. 쇼핑몰의 주문 흐름(재고 확인, 결제, 배송 요청, 실패 시 보상 처리)은 결제가 들어 있어 정확히 한 번이 필요하므로 표준 워크플로입니다. 여러 Lambda를 직접 서로 호출하게 엮는 보기보다 Step Functions로 단계와 재시도를 정의하는 보기가 운영 부담이 적은 답이 됩니다.
 
+국내 사례로는 AWS 기술 블로그의 CJ올리브영 랭킹 시스템 글이 이 절과 2-5절을 한 번에 보여 줍니다. EventBridge 규칙이 일정 주기로 파이프라인을 시작하고 Step Functions의 Parallel 상태가 여러 랭킹 집계 쿼리를 동시에 돌립니다. 결과가 S3에 떨어지면 S3 이벤트가 Lambda를 불러 ElastiCache에 적재하고 실패는 CloudWatch 경보와 SNS로 알립니다. 글은 DB 안에서 10분 넘게 걸리던 집계를 수백 개 동시에 돌려도 수 분 안에 끝내게 됐다고 적습니다([AWS 기술 블로그, 올리브영 서버리스 랭킹 시스템](https://aws.amazon.com/ko/blogs/tech/oliveyoung-serverless-ranking-system)). 단계를 직접 엮는 코드 대신 일정(EventBridge), 흐름과 병렬(Step Functions), 이벤트 연결(S3 알림)을 각각 관리형 서비스에 맡긴 구성입니다.
+
 ### 2-7. API 생성과 관리: API Gateway
 
 <details>
@@ -397,6 +407,8 @@ API Gateway 문서는 **토큰 버킷** 방식을 씁니다. 버킷에 토큰이
 | rate | 초당 채워지는 토큰 수(평균 처리량) |
 | burst | 버킷 크기(순간 최대) |
 
+숫자로 따라가 봅니다. rate 100, burst 50인 스테이지가 한동안 한가해서 버킷에 토큰 50개가 꽉 차 있습니다. 그 순간 요청 200개가 한꺼번에 들어오면 50개는 쌓인 토큰으로 바로 통과하고 나머지 150개는 429를 받습니다. 그 뒤로는 1초에 토큰 100개가 다시 채워지니 고르게 들어오는 요청은 초당 100개까지 통과합니다. burst는 "잠깐 몰리는 것을 얼마나 봐줄지", rate는 "평소에 얼마나 받을지"입니다.
+
 > **정리**: API Gateway는 백엔드 앞에서 막을 것은 막고 넘길 것만 넘깁니다. 아래 REST와 HTTP의 기능 차이는 위 단계 중 어떤 칸을 제공하는지의 차이입니다.
 
 </details>
@@ -422,6 +434,8 @@ API Gateway 문서는 HTTP API를 기능을 줄이고 가격을 낮춘 제품으
 | 캐시 TTL | 기본 300초, 0~3,600초 |
 
 Lambda 문서에는 API Gateway의 기본 스로틀(초당 10,000)과 Lambda의 기본 동시성(1,000)이 맞지 않아 API Gateway가 받은 요청을 Lambda가 다 처리하지 못할 수 있다는 예시가 있습니다. 안내서 2.2의 "서비스 할당량과 스로틀링" 항목과 이어지는 내용입니다.
+
+두 숫자는 단위가 달라서 바로 비교하면 안 됩니다. API Gateway는 초당 요청 수이고 Lambda는 동시에 돌고 있는 실행 환경 수입니다. 2-8절의 식(동시성 ≈ 초당 요청 수 × 평균 실행 시간)으로 바꿔 봅니다. 함수가 평균 0.1초에 끝나면 초당 10,000요청은 동시성 1,000이라 딱 맞습니다. 평균 0.3초면 동시성 3,000이 필요해서 1,000을 넘는 몫은 Lambda가 스로틀하고 API Gateway는 그 요청에 오류를 돌려줍니다. 함수가 느려질수록 같은 트래픽이 더 많은 동시성을 먹는다는 점이 함정입니다.
 
 ### 2-8. 서버리스: Lambda와 Fargate
 
@@ -571,7 +585,7 @@ Auto Scaling 그룹 ─ 지금 2대 ≠ 5대 ─> 시작 템플릿으로 3대 �
 
 문서는 대상 추적을 강하게 권하고 용량에 반비례하는 지표(평균 CPU 사용률, 대상당 요청 수)를 고르라고 합니다. 용량을 두 배로 늘리면 지표가 절반으로 줄어드는 지표여야 비례 조정이 맞게 일어난다는 이유입니다. 정책이 여러 개 동시에 발동하면 가장 큰 용량을 주는 정책을 따릅니다.
 
-SQS 소비자를 늘릴 때는 큐 길이 대신 인스턴스당 처리할 메시지 수(backlog per instance)를 지표로 쓰는 문서가 따로 있습니다(이번에는 목차에서 제목만 확인). 예약 조정은 정한 시각에 원하는 용량과 최소·최대를 바꾸는 예약 작업이고 한 번만 실행하거나 cron으로 반복할 수 있으며 동적 조정 정책과 함께 쓸 수 있습니다. 예측 조정은 과거 부하에서 일 단위·주 단위 패턴을 찾아 예상 부하보다 먼저 용량을 늘리고 문서는 업무 시간 주기 트래픽, 반복 배치, 초기화가 오래 걸리는 앱에 맞다고 적습니다.
+SQS 소비자를 늘릴 때는 큐 길이 대신 인스턴스당 처리할 메시지 수(backlog per instance)를 지표로 씁니다. "Scaling policy based on Amazon SQS" 문서의 예를 그대로 따라가 봅니다. 그룹에 인스턴스가 10대 있고 큐에 메시지가 1,500개 있습니다. 메시지 하나 처리에 평균 0.1초가 걸리고 허용할 수 있는 최대 지연이 10초라면 인스턴스 한 대가 10초 안에 비울 수 있는 양은 10 ÷ 0.1 = 100개입니다. 이 100이 대상 추적의 목표값입니다. 지금은 1,500 ÷ 10 = 150개라 목표보다 크니 그룹이 늘어나고 1,500 ÷ 100 = 15대가 되도록 5대를 더합니다. 큐 길이 1,500만 보고 정책을 걸면 대수가 늘어도 그 숫자가 바로 줄지 않아 필요 이상으로 늘린다는 것이 문서의 설명입니다. 지금 문서는 이 값을 직접 계산해 올리는 대신 지표 수학(metric math)으로 만들라고 권합니다. 예약 조정은 정한 시각에 원하는 용량과 최소·최대를 바꾸는 예약 작업이고 한 번만 실행하거나 cron으로 반복할 수 있으며 동적 조정 정책과 함께 쓸 수 있습니다. 예측 조정은 과거 부하에서 일 단위·주 단위 패턴을 찾아 예상 부하보다 먼저 용량을 늘리고 문서는 업무 시간 주기 트래픽, 반복 배치, 초기화가 오래 걸리는 앱에 맞다고 적습니다.
 
 조정 정책 말고도 인스턴스가 들어오고 나가는 순간을 다루는 기능 두 가지가 문제에 나옵니다. EC2 Auto Scaling 사용자 가이드(2026년 10월 20일 확인) 기준입니다.
 
@@ -814,6 +828,8 @@ DR 백서의 업무 연속성 계획 절은 AWS 리전 안의 AZ가 서로 의�
 
 시험 문제에서 "AZ 하나의 장애에도 서비스 유지"는 Multi-AZ, "리전 장애에도 유지"는 다중 리전 문제로 읽습니다. 리전 문제에 Multi-AZ만 답한 보기, AZ 문제에 다중 리전 액티브/액티브를 답한 보기는 각각 요구 미달과 과잉 비용으로 걸러집니다.
 
+Multi-AZ로 나눠 두기만 하면 끝나는 것도 아닙니다. Amazon Builders' Library의 정적 안정성(static stability) 글은 AZ 3개에 걸친 서비스가 필요한 용량보다 50%를 더 두어 각 AZ를 시험한 용량의 약 66%로 돌린다고 설명합니다. AZ 하나가 사라져도 남은 두 AZ가 새 인스턴스를 띄우지 않고 전체 부하를 받기 위해서입니다([Static stability using Availability Zones](https://builder.aws.com/content/3K9SiqiJ369TGkkGzqPM95BuYWI/static-stability-using-availability-zones)). 쇼핑몰이 평소 웹 서버 6대가 필요하다면 AZ마다 3대씩 9대를 둡니다. AZ 하나를 잃어도 6대가 남습니다. AZ마다 2대씩 6대만 두면 4대가 남아 Auto Scaling이 2대를 새로 띄워야 하는데 새로 띄우는 일은 3-6절에서 다룰 컨트롤 플레인 작업이라 장애 때 늦거나 실패할 수 있습니다.
+
 ### 3-2. 단일 장애 지점 제거
 
 | 구성 요소 | 단일 장애 지점이 되는 구성 | 고친 구성 |
@@ -897,7 +913,7 @@ DNS는 자기가 돌려주는 IP가 살아 있는지 모릅니다. 서울 리전
 
 1. **레코드 두 개**: `shop.example.com` 장애 조치 레코드를 기본(서울 ALB)과 보조(도쿄 ALB)로 만들고 기본에 상태 확인을 연결합니다.
 2. **주기 확인**: 상태 확인기들이 30초(또는 10초)마다 `https://…/health`를 부릅니다.
-3. **판정**: 연속 실패가 임계값(기본 3)에 닿으면 각 확인기가 비정상으로 봅니다. Route 53 문서는 확인기의 18%를 넘는 수가 정상이라고 보면 엔드포인트를 정상으로 판정한다고 적습니다.
+3. **판정**: 연속 실패가 임계값(기본 3)에 닿으면 각 확인기가 비정상으로 봅니다. Route 53 문서는 확인기의 18%를 넘는 수가 정상이라고 보면 엔드포인트를 정상으로 판정한다고 적습니다. 기준이 낮아 보이는 데는 이유가 있습니다. 일부 확인기 위치와 엔드포인트 사이 네트워크만 끊긴 경우 엔드포인트는 멀쩡한데 그 위치의 확인기만 실패를 봅니다. 여러 지역의 확인기가 정상이라고 보는 한 정상으로 두어 이런 오판으로 장애 조치가 일어나지 않게 정한 값이라고 문서가 설명합니다([How Route 53 determines whether a health check is healthy](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-determining-health-of-endpoints.html)).
 4. **답 바꾸기**: 기본이 비정상이면 Route 53이 보조 레코드로 답합니다.
 5. **사용자 전환**: 리졸버에 남은 옛 답의 TTL이 지나야 사용자가 도쿄로 갑니다.
 
@@ -914,6 +930,8 @@ DNS는 자기가 돌려주는 IP가 살아 있는지 모릅니다. 서울 리전
 | 요청 간격 30 → 10초 | 감지 빨라짐 | 추가 요금 |
 | 실패 임계값 3 → 1 | 감지 빨라짐 | 일시적 오류에도 전환 |
 | TTL 300 → 60초 | 전환 반영 빨라짐 | DNS 질의 증가 |
+
+기본값으로 계산해 봅니다. 간격 30초, 임계값 3이면 서울 ALB가 멈추고 확인기들이 비정상으로 보기까지 약 30 × 3 = 90초입니다. 그 직후부터 Route 53은 도쿄를 답하지만 직전에 서울 답을 받은 리졸버는 TTL 60초 동안 그 답을 계속 줍니다. 그래서 가장 늦게 넘어가는 사용자는 약 90 + 60 = 150초, 2분 30초 뒤에 도쿄로 갑니다. TTL이 300초였다면 6분 30초입니다. 브라우저나 JVM이 DNS 답을 TTL보다 오래 붙잡는 경우는 이보다 더 늦습니다.
 
 > **정리**: 상태 확인은 감지, 장애 조치 레코드는 전환, TTL은 반영 속도를 맡습니다. 아래 두 표가 각각 감지 방식과 감지 속도를 정하는 설정입니다.
 
@@ -1120,6 +1138,8 @@ RDS Proxy는 DB 연결 풀을 만들어 재사용하고 장애 조치 때 애플
 
 DR 백서는 보조 리전을 "최대 5개"로 적고 있어 서비스 문서와 다릅니다. 2026년 10월 20일에 Aurora 사용자 가이드의 "Using Amazon Aurora Global Database" 페이지를 다시 열어 "up to 10 secondary DB clusters in different Regions"라는 문장을 확인했고 엔진(MySQL, PostgreSQL)을 가리지 않는 서술입니다. 백서는 2021년판이라 이전 한도로 보고 사용자 가이드의 10개를 따랐습니다. 시험 문항이 숫자 자체를 묻는다면 출제 시점에 따라 5가 정답일 수도 있어서 "리전 여러 개에 읽기 전용 사본, 1초 미만 복제"라는 성격으로 기억해 둡니다. 백서는 보조 리전을 1분 안에 읽기·쓰기로 승격할 수 있다고 적습니다.
 
+표의 스위치오버와 장애 조치는 이름이 비슷해 헷갈립니다. 갈리는 지점은 기본 리전이 살아 있는지입니다. 스위치오버는 서울과 도쿄가 모두 정상일 때 쓰기 역할을 도쿄로 옮기는 계획된 작업이라 복제가 다 따라잡은 뒤 역할을 바꾸고 그래서 잃는 데이터가 없습니다. 리전 순환 점검이나 DR 훈련에 씁니다. 장애 조치는 서울이 멈춘 상황에서 도쿄를 쓰기 리전으로 올리는 작업이라 서울에서 커밋됐지만 아직 도쿄에 닿지 못한 쓰기(복제 지연만큼, 보통 1초 미만)는 잃을 수 있습니다. 문제에서 "계획된 리전 이동, 데이터 손실 없이"는 스위치오버, "리전 장애"는 장애 조치로 읽습니다.
+
 ### 3-9. DynamoDB 글로벌 테이블
 
 <details>
@@ -1174,9 +1194,44 @@ GetItem(userId="u1", ConsistentRead=true)  → 최신 사본
 
 일관성 모드는 만든 뒤 바꿀 수 없습니다. 글로벌 테이블의 가용성 SLA는 99.999%이고 단일 리전 테이블은 99.99%입니다. MRSC는 쓰기와 강력 일관 읽기에 리전 간 통신이 필요해 MREC보다 지연이 큽니다. 빈 테이블에서만 만들 수 있고 만든 뒤에는 복제본을 더할 수 없습니다(DynamoDB 글로벌 테이블 동작 문서, 2026년 10월 21일 확인).
 
+MRSC 표의 "감시 리전(witness)"도 풀어 둡니다. MRSC는 쓰기가 성공을 돌려주기 전에 다른 리전 최소 한 곳에 동기로 복제합니다. 그래서 세 리전이 필요하고 셋 중 하나는 복제본 대신 감시 리전으로 둘 수 있습니다. 감시 리전은 복제본에 쓰인 데이터를 받아 두지만 앱이 읽거나 쓸 수는 없고 고객 계정에 테이블로 보이지도 않습니다. 복제본 두 개 중 하나가 멈춰도 남은 복제본과 감시 리전이 함께 있어 MRSC의 가용성 구조가 유지되도록 하는 자리라고 문서가 설명합니다. 같은 항목을 두 리전에서 동시에 고치면 MREC는 마지막 쓰기가 이기지만 MRSC는 나중 쓰기를 `ReplicatedWriteConflictException`으로 거부하고 앱이 다시 시도하게 합니다([How DynamoDB global tables work](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/V2globaltables_HowItWorks.html)).
+
 DR 백서는 쓰기 전략을 셋으로 나눕니다. 모든 쓰기를 한 리전으로 보내는 write global(Aurora Global Database가 맞음), 가까운 리전에 쓰는 write local(DynamoDB 글로벌 테이블이 맞음), 사용자 ID 같은 키로 쓰기 리전을 정하는 write partitioned(양방향 S3 복제 등)입니다.
 
 ### 3-10. S3 복제
+
+<details>
+<summary>기초부터: 버전 관리와 삭제 마커, 복제가 따라 하는 것과 따라 하지 않는 것</summary>
+
+> **핵심 한 줄**: S3 복제는 원본 버킷에 새 버전이 생길 때마다 그 버전을 대상 버킷에 비동기로 복사하는 기능이라서 "버전"이라는 개념이 먼저 켜져 있어야 합니다.
+
+#### 1. 왜 필요한가
+
+버전 관리 없는 버킷에서 같은 키로 다시 올리면 이전 내용은 사라지고 지우면 객체도 사라집니다. 복제가 "무엇이 새로 생겼는지"를 알아보려면 쓰기 하나하나가 구분되는 이름(버전 ID)을 가져야 합니다. 버전 관리를 원본과 대상 모두에 켜야 하는 이유입니다.
+
+#### 2. 어떻게 동작하나
+
+1. **버전 생성**: 버전 관리를 켠 버킷에 `receipts/1001.pdf`를 올리면 버전 ID가 붙습니다. 같은 키로 다시 올리면 새 버전이 생기고 이전 버전은 남습니다.
+2. **삭제 마커**: 버전 ID 없이 지우면 객체가 사라지는 대신 "지워졌다"는 표시인 삭제 마커가 최신 버전으로 올라갑니다. `GET`은 404를 받지만 이전 버전은 그대로 있어 마커를 지우면 되살아납니다.
+3. **복제**: 복제 규칙에 맞는 새 버전이 생기면 S3가 같은 버전 ID로 대상 버킷에 복사합니다. 비동기 작업이라 끝나는 시각이 약속되지 않고 RTC를 켜야 15분 목표와 SLA가 붙습니다.
+4. **삭제의 복제**: `Filter`를 쓰는 지금 형식의 복제 규칙은 삭제 마커를 기본으로 복제하지 않고 삭제 마커 복제를 켰을 때만 옮깁니다. 특정 버전 ID를 지정해 영구 삭제하는 요청은 원본에서만 일어나고 대상에는 복제되지 않습니다. 문서는 이것이 악의적 삭제로부터 데이터를 지키기 위한 동작이라고 적습니다([What does Amazon S3 replicate?](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-what-is-isnot-replicated.html)).
+
+```text
+원본(버전 관리 ON)                       대상(버전 관리 ON)
+receipts/1001.pdf  v1 ───복제────────▶  v1
+receipts/1001.pdf  v2 ───복제────────▶  v2
+DELETE(버전 ID 없음) → 삭제 마커 ─(설정 시만)─▶ 삭제 마커
+DELETE v1(버전 지정) → 원본의 v1 영구 삭제     대상의 v1은 남음
+```
+
+#### 3. 헷갈리는 점
+
+- 4번 동작 덕분에 누군가 원본에서 버전을 하나하나 지정해 지워도 대상 버킷에는 남습니다. 3-6절의 "복제는 실수도 복제한다"는 원칙에 S3가 마련한 안전장치입니다. 다만 대상 쪽까지 지울 권한이 있는 계정이 털리면 소용이 없어 대상을 다른 계정에 두고 객체 잠금을 거는 구성이 함께 나옵니다.
+- 복제 규칙을 만든 시점 이전의 객체는 복제되지 않습니다. 아래 표의 Batch Replication이 이 빈칸을 채웁니다.
+
+> **정리**: 버전 관리가 "무엇이 바뀌었는지"를 만들고 복제는 그 버전을 옮깁니다. 아래 표의 각 줄은 이 흐름에서 언제, 무엇을, 얼마나 빨리 옮길지를 정하는 설정입니다.
+
+</details>
 
 | 구분 | 내용 |
 |---|---|
@@ -1303,6 +1358,8 @@ DR 백서는 백업과 복원 전략에서도 인프라를 IaC(CloudFormation, C
 DR 백서는 웜 스탠바이에서 DR 리전을 프로덕션 용량으로 늘릴 때 그 리전의 서비스 할당량이 충분히 높게 설정되어 있는지 확인하라고 적습니다. 평소 DR 리전은 작게 돌기 때문에 할당량을 올려 두지 않으면 정작 장애 때 확장이 할당량에 막힙니다.
 
 스로틀링은 서비스 사이의 한도 차이에서도 생깁니다. 2-7절의 API Gateway 초당 10,000요청과 Lambda 기본 동시성 1,000이 그 예이고 Lambda 문서는 예상 트래픽에 맞춰 동시성 한도를 미리 올리고 부하 테스트로 한도를 찾으라고 권합니다.
+
+지터가 왜 필요한지는 AWS Architecture Blog의 Marc Brooker 글 "Exponential Backoff And Jitter"가 시뮬레이션으로 보여 줍니다. 클라이언트 여럿이 같은 순간에 실패하면 지수 백오프만으로는 모두 1초, 2초, 4초 뒤에 함께 다시 몰립니다. 대기 시간을 0부터 그 상한 사이에서 무작위로 고르면(full jitter) 재시도가 시간축에 흩어져 전체 호출 수와 완료 시간이 함께 줄어든다는 결과입니다([Exponential Backoff And Jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/)). 같은 계산을 직접 돌려 본 결과는 [DE Ch-03](/blog/data/foundations/de-03-idempotency-retry-backoff)에 있습니다.
 
 ### 3-15. 가시성: X-Ray
 
@@ -1480,6 +1537,7 @@ A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RT
 
 - 2026년 10월 19일에 열어 본 AWS 공식 문서, SAA-C03 시험 안내서, DR 백서(Disaster Recovery of Workloads on AWS)로 정리했습니다. 한도와 요금은 바뀌므로 응시 전에 다시 확인합니다.
 - 실습은 아직 하지 않았습니다. SQS 표시 제한 시간과 DLQ 동작, Route 53 장애 조치 전환 시간, RDS 장애 조치 시간은 문서 수치를 옮긴 것이고 직접 잰 값이 아닙니다. Ch-00의 3단계에서 SQS와 SNS 팬아웃부터 만들어 볼 계획입니다.
+- 2026년 10월 23일 보강: 처음 공부하는 사람이 막히는 대목에 풀이를 더했습니다. 교차 영역 25%와 6.25%의 계산, 표시 제한 시간이 짧을 때 두 번 처리되는 순서, FIFO 메시지 그룹과 5분 중복 제거 창, 토큰 버킷 숫자 예, API Gateway 초당 요청과 Lambda 동시성의 환산, SQS 백로그 기반 확장 계산(문서 예), Route 53 18% 기준의 이유와 전환 시간 계산, Aurora Global Database 스위치오버와 장애 조치의 차이, MRSC 감시 리전, S3 버전 관리와 삭제의 복제를 넣었습니다. Amazon Builders' Library 글 두 편(큐 적체, 정적 안정성), Marc Brooker의 지터 글, CJ올리브영 사례를 참고했고 해당 대목에 출처를 달았습니다. 계산 예의 숫자 가운데 문서에서 온 것(교차 영역, SQS 백로그)과 설명용으로 고른 것(토큰 버킷, Lambda 실행 시간, 웹 서버 대수)을 본문에서 구분했습니다.
 - 2026년 10월 21일 보강: DynamoDB MRSC의 리전 수와 지연 특성, Auto Scaling 예약·예측 조정, Application Migration Service(AWS Transform MGN), DAX, EKS, Comprehend, Polly를 각 문서로 확인해 본문에 넣었습니다. S3 RTC 99.99%와 99.9%의 차이, AWS Backup 복원 테스트, X-Ray SDK·데몬 유지 관리 모드, Aurora에서 RDS Proxy 읽기 전용 엔드포인트도 고쳤습니다.
 - 2026년 10월 20일 보강: 읽기 복제본 15개는 RDS 할당량 문서의 "Read replicas per primary" 기본값 15로, Route 53 실패 임계값 기본값 3은 API 참조로, Elastic Disaster Recovery의 RPO 초·RTO 분은 FAQ로, 서울 리전의 SQS FIFO 높은 처리량 한도(그 밖의 리전 2,400)는 메시지 할당량 문서로 확인했습니다. ELB 교차 영역·고정 세션·등록 취소 지연, Auto Scaling 수명 주기 후크·웜 풀, AWS Backup 리전 간 복사를 새로 넣었습니다.
 - 문서끼리 숫자가 다른 곳은 Aurora Global Database 보조 리전 수(사용자 가이드 10개, 2021년판 DR 백서 5개)입니다. 본문에 어느 쪽을 따랐는지 적었습니다.
@@ -1537,3 +1595,14 @@ A와 B입니다. CRR은 원본과 대상 모두 버전 관리가 필요하고 RT
 - EC2 Auto Scaling: [Scheduled scaling](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-scheduled-scaling.html), [Predictive scaling](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-predictive-scaling.html)
 - [What is Amazon EKS?](https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html), [What is Amazon Comprehend?](https://docs.aws.amazon.com/comprehend/latest/dg/what-is.html), [Amazon Comprehend availability change](https://docs.aws.amazon.com/comprehend/latest/dg/comprehend-availability-change.html), [What is Amazon Polly?](https://docs.aws.amazon.com/polly/latest/dg/what-is.html)
 - AWS, [In-Scope AWS Services (SAA-C03)](https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/saa-03-in-scope-services.html)
+
+2026년 10월 23일 보강 때 참고한 글
+- David Yanacek, Amazon Builders' Library, [Avoiding insurmountable queue backlogs](https://builder.aws.com/content/3EuRcgkTP1MI0c7zM8W6HL3WIqA/avoiding-insurmountable-queue-backlogs)
+- Becky Weiss, Mike Furr, Amazon Builders' Library, [Static stability using Availability Zones](https://builder.aws.com/content/3K9SiqiJ369TGkkGzqPM95BuYWI/static-stability-using-availability-zones)
+- Marc Brooker, AWS Architecture Blog, [Exponential Backoff And Jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/), 2015
+- AWS 기술 블로그, [CJ올리브영의 서버리스 랭킹 시스템](https://aws.amazon.com/ko/blogs/tech/oliveyoung-serverless-ranking-system)
+- Elastic Load Balancing User Guide, [How Elastic Load Balancing works](https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html)
+- Amazon SQS Developer Guide, [Exactly-once processing in Amazon SQS](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues-exactly-once-processing.html)
+- Amazon EC2 Auto Scaling User Guide, [Scaling policy based on Amazon SQS](https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html)
+- Amazon Route 53 Developer Guide, [How Amazon Route 53 determines whether a health check is healthy](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-determining-health-of-endpoints.html)
+- Amazon S3 User Guide, [What does Amazon S3 replicate?](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-what-is-isnot-replicated.html)

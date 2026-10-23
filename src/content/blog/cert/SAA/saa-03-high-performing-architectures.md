@@ -224,6 +224,15 @@ gp3와 gp2는 성능이 정해지는 방식이 다릅니다.
 - gp2는 GiB당 3 IOPS로 크기에 비례하고(최소 100, 최대 16,000) 1TiB보다 작은 볼륨은 I/O 크레딧으로 3,000 IOPS까지 버스트합니다. 크레딧이 떨어지면 기준 성능으로 돌아가니 `BurstBalance` 지표를 봅니다.
 - io2 Block Express는 16KiB I/O 기준 평균 지연 500마이크로초 미만으로 설계됐습니다. 256,000 IOPS는 Nitro 기반 인스턴스에서만 받을 수 있습니다.
 
+gp3 규칙 세 개를 한 번에 써 보는 예입니다. 쇼핑몰 주문 DB가 16KiB 크기의 랜덤 I/O를 초당 20,000번 한다고 합시다(설명용 가정).
+
+1. **IOPS**: 20,000이 필요하니 기본 3,000에 17,000을 더 프로비저닝합니다.
+2. **크기 조건**: GiB당 500 IOPS까지라서 20,000 ÷ 500 = 40GiB 이상이어야 합니다. 데이터가 이보다 크면 조건은 이미 맞습니다.
+3. **처리량**: 20,000 × 16KiB = 320,000KiB/s, 약 312.5MiB/s입니다. 기본 125MiB/s로는 IOPS보다 처리량 한도에 먼저 닿으니 처리량도 313MiB/s 이상으로 올립니다.
+4. **처리량 조건**: IOPS당 0.25MiB/s까지라서 20,000 IOPS면 처리량을 5,000MiB/s까지 줄 수 있습니다. 313은 그 안이고 볼륨 최대 2,000MiB/s 안이기도 합니다.
+
+같은 일을 gp2로 하려면 GiB당 3 IOPS라서 20,000 ÷ 3 ≈ 6,667GiB짜리 볼륨이 필요합니다. 데이터는 100GiB인데 IOPS 때문에 6.5TiB를 사야 하는 셈이고 이것이 "크기와 따로 성능을 정한다"는 gp3 설명이 시험에서 비용 문제로 이어지는 이유입니다.
+
 HDD 두 종류는 큰 순차 I/O용입니다. st1은 빅데이터, 데이터 웨어하우스, 로그 처리가 예시이고 sc1은 접근이 드물고 저장 비용이 가장 중요한 경우입니다. 둘 다 부트 볼륨으로 쓸 수 없다는 점이 보기 하나를 지우는 근거가 됩니다.
 
 ### 2-4. 인스턴스 스토어: 재부팅만 살아남는다
@@ -288,6 +297,8 @@ AZ-c  웹 서버 3 ─┘
 | Elastic(권장, 기본) | 급증하거나 예측하기 어려운 부하, 평균 대비 최대 비율이 5% 이하 |
 | Provisioned | 성능 요구를 알고 있거나 평균 대비 최대 비율이 5% 이상 |
 | Bursting | 저장량에 비례하는 처리량이면 되는 경우. Standard 저장 GiB당 50KiBps 기준 |
+
+Bursting이 작은 파일 시스템에서 함정이 되는 이유를 숫자로 보면 분명합니다. 리뷰 사진이 100GiB 쌓인 파일 시스템의 기준 처리량은 100 × 50KiBps = 5,000KiBps, 약 4.9MiBps입니다. 크레딧이 남아 있을 때는 더 빨리 쓰다가 크레딧이 떨어지면 이 값으로 묶입니다. 데이터는 적은데 처리량이 많이 필요한 워크로드가 Bursting에서 갑자기 느려지는 장면이 여기서 나오고 그래서 문서가 기본값으로 Elastic을 권합니다.
 
 성능 모드는 General Purpose와 Max I/O 두 가지인데 문서는 Max I/O를 이전 세대로 분류하고 모든 파일 시스템에 General Purpose를 권합니다. Max I/O는 지연이 더 길고 One Zone이나 Elastic 처리량과 함께 쓸 수 없습니다. 오래된 강의에서 "병렬 처리가 많으면 Max I/O"라고 배웠다면 지금 문서와 다르다는 점을 기억해 둡니다.
 
@@ -772,6 +783,8 @@ Aurora 문서("Amazon Aurora storage", "Replication with Amazon Aurora", "How Au
 - 라이터가 실패하면 복제본 하나를 승격합니다. 복제본이 없으면 인스턴스가 복구될 때까지 클러스터를 쓸 수 없습니다.
 - 리전 간 확장은 Aurora Global Database입니다. 2026년 10월 사용자 가이드는 엔진을 가리지 않고 다른 리전에 읽기 전용 보조 클러스터를 최대 10개 둘 수 있다고 적습니다(2021년판 DR 백서는 5개, Ch-02 3-8절).
 
+사본이 왜 6개인지는 AWS Database Blog의 "Amazon Aurora under the hood: quorum and correlated failure"가 설명합니다. AZ 3개에 2개씩 6개를 두고 쓰기는 6개 중 4개가 확인하면 성공(쓰기 정족수 4), 읽기는 3개에서 읽으면 최신이 보장되도록(읽기 정족수 3) 설계했습니다. AZ 하나가 통째로 사라지면 사본 2개를 잃어도 4개가 남아 쓰기가 계속됩니다. 여기에 다른 AZ의 사본 하나가 더 고장 나도(AZ+1) 3개가 남아 데이터를 잃지 않고 읽을 수 있습니다([Amazon Aurora under the hood: quorum and correlated failure](https://aws.amazon.com/blogs/database/amazon-aurora-under-the-hood-quorum-and-correlated-failure/)). 4와 3을 더하면 6보다 크니 어떤 쓰기 집합과 읽기 집합도 적어도 한 사본에서 겹치고 그 사본이 최신 쓰기를 알고 있다는 것이 정족수 설계의 핵심입니다. 시험에는 정족수 숫자보다 "AZ 3개에 사본 6개, AZ 하나를 잃어도 쓰기 유지"라는 결과가 나옵니다.
+
 Aurora 저장 구성에는 Standard와 I/O-Optimized 두 가지가 있습니다. 문서는 I/O 지출이 Aurora 전체 지출의 25% 이상이면 I/O-Optimized, 25% 미만이면 Standard가 낫다고 적습니다. 이 기준은 비용 영역(Ch-04)에서 다시 씁니다.
 
 ### 4-4. RDS Proxy: 연결을 모아 쓰기
@@ -856,6 +869,7 @@ PutItem(userId="u-2042") → hash("u-2042") → 파티션 7
 #### 4. 헷갈리는 점
 
 - 온디맨드 모드여도 파티션 한도는 그대로라서 키 하나에 몰리는 부하는 스로틀링됩니다. 문서는 테이블 항목 수에 비해 고유 값이 많은 파티션 키를 권합니다.
+- 핫 파티션을 숫자로 보면 이렇습니다(설명용 가정). 특가 상품 하나의 항목이 3KB이고 행사 시작 순간 초당 10,000번 읽힙니다. 강한 일관성이면 10,000 RCU, 최종 일관성이어도 5,000 RCU가 필요합니다. 이 항목은 파티션 하나에 있고 파티션 하나는 초당 3,000 읽기 단위까지라 테이블 전체 용량을 아무리 올려도 이 키의 읽기는 스로틀링됩니다. 같은 키를 반복해서 읽는 부하이니 DAX가 앞에서 받아 주면 DynamoDB까지 가는 읽기가 캐시 미스만큼으로 줄어듭니다.
 - 읽기는 기본이 최종 일관성입니다. 강한 일관성을 요청하면 RCU를 두 배 씁니다. 같은 키 반복 읽기가 많으면 DAX가 이 RCU를 대신 받아 줍니다.
 
 > **정리**: DynamoDB 성능 문제는 "키가 고르게 퍼졌는지"가 먼저이고 그다음이 용량 모드입니다. 아래 본문의 두 모드는 이 용량 단위를 미리 사는지(프로비저닝) 요청마다 내는지(온디맨드)의 차이입니다.
@@ -911,6 +925,18 @@ DB 요청 수 = 전체 요청 × (1 − h)
 - **짧은 TTL**: 키가 자주 사라져 미스가 늘어납니다. 낡은 데이터를 얼마나 견딜지와 맞바꾸는 값입니다.
 - **축출**: 노드 메모리가 작으면 자주 쓰는 키도 밀려납니다. ElastiCache의 축출 지표가 늘면 노드를 키우거나 늘립니다.
 - **반복 읽기가 적은 부하**: 키마다 한 번씩만 읽으면 거의 모두 미스입니다. DAX 문서가 적중률 90% 이상에서 가장 잘 동작한다고 적는 이유도 같습니다.
+
+#### 5. 캐시가 비는 순간
+
+위 표를 뒤집어 읽으면 위험도 보입니다. 히트율 99%로 DB가 전체 요청의 1%만 받던 시스템에서 캐시 노드가 재시작돼 비면 그 순간 DB로 가는 요청이 100배가 됩니다. DB는 1% 부하에 맞춰 크기를 줄여 두었을 테니 그대로 넘어갑니다. Amazon Builders' Library의 "Caching challenges and strategies"는 이렇게 캐시가 서비스의 필수 부품이 되는 상황을 경고하고 대책 몇 가지를 듭니다([Caching challenges and strategies](https://builder.aws.com/content/3K9TeXp6strMiJ4vhakpRD7BQWO/caching-challenges-and-strategies)).
+
+| 대책 | 하는 일 |
+|---|---|
+| 요청 합치기(request coalescing) | 같은 키의 미스가 동시에 100건 와도 DB에는 한 건만 보내고 나머지는 그 결과를 기다리게 한다 |
+| 부정 캐싱(negative caching) | "없음"이나 오류 응답도 짧은 TTL로 캐시해 없는 상품 ID를 반복 조회하는 요청이 DB를 계속 두드리지 않게 한다 |
+| DB 쪽 요청 상한 | 캐시가 비었을 때 DB로 보내는 요청 수에 상한을 두고 넘는 요청은 빨리 실패시킨다 |
+
+ElastiCache를 Valkey/Redis OSS로 두고 복제와 자동 장애 조치를 켜는 이유 가운데 하나가 이 "캐시가 통째로 비는 순간"을 줄이는 것입니다. 아래 엔진 표의 복제 행이 그 선택입니다.
 
 > **정리**: 캐시 효과는 히트율로 읽습니다. 엔진(Memcached, Valkey/Redis OSS)은 아래 표처럼 자료형, 복제, 백업이 필요한지로 고릅니다.
 
@@ -1030,7 +1056,9 @@ CloudFront 문서는 요청을 지연이 가장 낮은 엣지로 보내고 캐�
 | 대역폭 늘리기 | Transit Gateway에서 ECMP로 터널을 묶는다(동적 라우팅 필요) | LAG로 여러 연결을 하나처럼 |
 | 암호화 | IPsec | 전용 연결에서 MACsec 선택 가능 |
 
-VPN 할당량 문서는 Transit Gateway에 붙은 VPN 연결이 ECMP로 여러 터널을 묶어 대역폭을 늘릴 수 있고 정적 라우팅에서는 ECMP가 지원되지 않는다고 적습니다. 가상 프라이빗 게이트웨이는 VPC 하나에만 붙으니 같은 VPN을 VPC 여러 개에 쓰려면 Transit Gateway를 권합니다.
+VPN 할당량 문서는 Transit Gateway에 붙은 VPN 연결이 ECMP로 여러 터널을 묶어 대역폭을 늘릴 수 있고 정적 라우팅에서는 ECMP가 지원되지 않는다고 적습니다.
+
+ECMP가 대역폭을 늘리는 방식에는 함정이 하나 있습니다. Transit Gateway는 패킷마다 터널을 고르지 않고 프로토콜, 출발지와 목적지 IP, 포트 다섯 값을 해시해 흐름(연결) 하나를 터널 하나에 붙입니다. 그래서 터널 4개를 묶으면 여러 연결의 합계는 1.25Gbps의 약 4배까지 늘지만 큰 파일 하나를 TCP 연결 하나로 보내는 전송은 여전히 터널 하나의 1.25Gbps에 묶입니다. AWS Networking 블로그의 "Scaling VPN throughput using AWS Transit Gateway"가 이 점을 "단일 흐름은 단일 터널에 매핑된다"는 취지로 적고 시험할 때 흐름을 여러 개 만들라고 권합니다([Scaling VPN throughput using AWS Transit Gateway](https://aws.amazon.com/blogs/networking-and-content-delivery/scaling-vpn-throughput-using-aws-transit-gateway/)). 고객 게이트웨이 장비도 ECMP와 BGP를 지원해야 합니다. 가상 프라이빗 게이트웨이는 VPC 하나에만 붙으니 같은 VPN을 VPC 여러 개에 쓰려면 Transit Gateway를 권합니다.
 
 자주 나오는 조합은 Direct Connect를 주 경로로 두고 Site-to-Site VPN을 백업 경로로 두는 구성입니다. "일관된 대역폭과 지연"은 Direct Connect, "며칠 안에 연결", "비용이 낮은 암호화 연결"은 VPN입니다.
 
@@ -1194,6 +1222,15 @@ PutRecord(key="order-91") → MD5 → 0xC4...  → 샤드 2 [0x80.. ~ 0xFF..]
 - 순서는 샤드 안에서만 지켜집니다. 스트림 전체의 순서는 보장되지 않습니다.
 - 파티션 키를 해시해 칸을 고르는 원리는 4-5절의 DynamoDB 파티션과 같습니다.
 
+#### 4. 샤드 수 계산해 보기
+
+결제 이벤트가 초당 3,000건, 건당 약 1.5KB로 들어온다고 합시다(설명용 가정). 프로비저닝 모드라면 샤드 수는 이렇게 셉니다.
+
+1. **쓰기 양**: 3,000 × 1.5KB = 4,500KB/s, 약 4.5MB/s입니다. 샤드당 1MB/s이니 5개가 필요합니다.
+2. **쓰기 건수**: 샤드당 1,000건/s이니 3개면 됩니다.
+3. **둘 중 큰 쪽**: 5개입니다. 키가 고르게 퍼진다는 전제이고 쏠림이 있으면 더 필요합니다.
+4. **읽기**: 5개 샤드의 읽기 한도는 합쳐서 10MB/s입니다. 사기 탐지, 정산, 적재 소비자 셋이 각자 4.5MB/s 전부를 읽어야 하면 합계 13.5MB/s가 필요해서 공유 처리량으로는 모자랍니다. 이때 향상된 팬아웃을 쓰면 소비자마다 샤드당 2MB/s를 따로 받아 셋 모두 충분합니다.
+
 > **정리**: 처리량은 샤드 수로, 순서와 쏠림은 파티션 키 설계로 결정됩니다. 소비자가 많아 읽기가 모자라면 아래 본문의 향상된 팬아웃입니다.
 
 </details>
@@ -1224,6 +1261,8 @@ PutRecord(key="order-91") → MD5 → 0xC4...  → 샤드 2 [0x80.. ~ 0xFF..]
 Firehose 문서는 Firehose를 S3, Redshift, OpenSearch, Splunk, Iceberg 테이블, HTTP 엔드포인트로 스트리밍 데이터를 전달하는 완전 관리형 서비스로 설명합니다. 애플리케이션을 만들거나 자원을 관리할 필요가 없습니다.
 
 버퍼링 값은 API 참조 "BufferingHints" 기준입니다. 버퍼 간격은 0~900초(기본 300초), 버퍼 크기는 1~128MiB(기본 5MiB)이고 둘 중 먼저 차는 쪽에서 전달합니다. 문서는 버퍼 크기를 보통 10초 동안 들어오는 양보다 크게 잡으라고 권합니다. 0초 간격은 지연이 낮은 실시간 용도를 위한 값이고 60초 미만이면 S3 전달에 멀티파트 업로드를 써서 PUT 요청 비용이 늘 수 있습니다. 이 두 문장은 Firehose 개발자 가이드 "Configure backup settings" 페이지의 버퍼링 절에서 확인했고 0초 간격은 S3 백업 대상과 동적 파티셔닝에는 쓸 수 없습니다. 범위와 기본값은 대상마다 달라 위 값은 S3 기준입니다(Splunk는 1~5MiB, 0~60초).
+
+"둘 중 먼저 차는 쪽"을 기본값(300초, 5MiB)으로 따라가 봅니다. 웹 서버 접근 로그가 초당 100KiB 들어오면 5MiB(5,120KiB)가 차는 데 약 51초라 크기 조건이 먼저 걸려 51초마다 5MiB 파일이 S3에 생깁니다. 밤에 초당 1KiB로 줄면 300초 동안 약 300KiB만 모이니 간격 조건이 먼저 걸려 5분마다 300KiB짜리 작은 파일이 생깁니다. 파일이 작고 많아지면 6-8절의 Athena 성능 조언(작은 파일을 피하라)과 부딪히니 S3에 분석용으로 쌓을 때는 크기와 간격을 함께 키우는 쪽을 검토합니다.
 
 형식 변환("Convert input data format in Amazon Data Firehose")의 조건은 세 가지입니다.
 
@@ -1446,6 +1485,7 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 - 확인하지 못한 것: MySQL과 PostgreSQL을 비교한 공식 표(RDS 문서에서 찾지 못함), Oracle과 SQL Server 계단식 복제본 불가의 명시 문장. Firehose 버퍼링과 Amazon Quick은 2026년 10월 21일에 문서로 확인해 본문에 넣었습니다. ElastiCache의 지연 로딩과 라이트 스루 정의는 Ch-02 2-11절에서 ElastiCache 문서로 정리했습니다.
 - 2026년 10월 20일 보강: 향상된 팬아웃의 소비자당 샤드 2MB/s와 평균 약 70ms 전파 지연, Transfer Acceleration 조건, Aurora Global Database 보조 리전 수(엔진 공통 10개), S3 Express One Zone 요청 비용 문구가 페이지마다 다른 점을 확인해 넣었습니다.
 - FSx File Gateway 신규 제공 중단과 Snowball 지원 종료(2026년 12월 31일) 공지는 확인했지만 시험 출제 범위에 반영됐는지는 모릅니다. Kinesis On-demand Advantage 모드도 시험 안내서 이후에 생긴 것으로 보입니다.
+- 2026년 10월 23일 보강: gp3 20,000 IOPS 처리량 계산, EFS Bursting 기준 처리량 계산, Aurora 정족수(쓰기 4/6, 읽기 3/6), DynamoDB 핫 키 RCU 계산, 캐시가 비는 순간의 대책, VPN ECMP 단일 흐름 한계, Kinesis 샤드 수 계산, Firehose 버퍼 추적을 넣었습니다. 계산의 트래픽 숫자는 설명용 가정이고 한도 값은 문서 기준입니다.
 - 확인 문제는 직접 만든 것이라 실제 시험의 난이도나 문구와 다를 수 있습니다.
 
 ## 참고 자료
@@ -1495,3 +1535,8 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 - [Site-to-Site VPN tunnel options](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNTunnels.html), [Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [What is AWS Snowball Edge?](https://docs.aws.amazon.com/snowball/latest/developer-guide/whatisedge.html)
 - [FSx File Gateway document history](https://docs.aws.amazon.com/filegateway/latest/filefsxw/DocumentHistory.html), [S3 Express One Zone](https://aws.amazon.com/s3/storage-classes/express-one-zone/), [Firehose: Configure backup settings](https://docs.aws.amazon.com/firehose/latest/dev/create-configure-backup.html)
 - [Read replicas with RDS for PostgreSQL](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PostgreSQL.Replication.ReadReplicas.html), [What is Amazon Quick?](https://docs.aws.amazon.com/quick/latest/userguide/what-is.html)
+
+2026년 10월 23일 보강 때 참고한 글
+- [Amazon Aurora under the hood: quorum and correlated failure](https://aws.amazon.com/blogs/database/amazon-aurora-under-the-hood-quorum-and-correlated-failure/) (AWS Database Blog)
+- [Scaling VPN throughput using AWS Transit Gateway](https://aws.amazon.com/blogs/networking-and-content-delivery/scaling-vpn-throughput-using-aws-transit-gateway/) (AWS Networking & Content Delivery Blog)
+- [Caching challenges and strategies](https://builder.aws.com/content/3K9TeXp6strMiJ4vhakpRD7BQWO/caching-challenges-and-strategies) (Amazon Builders' Library)

@@ -74,6 +74,8 @@ kubelet (해당 노드)
 
 kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 정해지지 않았습니다. 그래서 명령이 성공했는데 Pod가 `Pending`에 남는 일이 생깁니다. API 서버의 관문은 통과했고 스케줄러나 kubelet 쪽에서 멈춘 경우입니다.
 
+같은 경로를 kubectl 소스 코드부터 컨테이너 시작까지 한 단계씩 따라간 글로 Jamie Hannaford의 [What happens when ... Kubernetes edition!](https://github.com/jamiehannaford/what-happens-when-k8s)이 있습니다. 다만 쿠버네티스 1.8 무렵에 쓰인 글이라 `kubectl run`이 Deployment를 만들던 시절의 동작, 지금은 없어진 Initializers, Docker 런타임 같은 옛 내용이 섞여 있습니다. 순서를 잡는 데만 쓰고 세부는 이 글과 공식 문서로 확인합니다.
+
 ### 1-2. API 서버 안의 다섯 관문
 
 <details>
@@ -187,6 +189,53 @@ CPU, 메모리, Pod 수 쿼터에 걸리는 Deployment도 `kubectl create`는 �
 ### 1-3. 스케줄러가 노드를 고르는 방식
 
 스케줄러는 `spec.nodeName`이 비어 있는 Pod를 watch해서 하나씩 노드를 정합니다. Filter 단계에서 남은 CPU와 메모리가 requests보다 작은 노드, 견디지 못하는 테인트가 있는 노드, nodeSelector나 어피니티에 맞지 않는 노드를 지우고 Score 단계에서 남은 노드 중 점수가 가장 높은 노드를 고릅니다. 결과는 `pods/<이름>/binding` 서브리소스로 보내고 API 서버가 `spec.nodeName`을 채웁니다. 남는 노드가 없으면 Pod는 `Pending`에 머물고 `describe pod`의 Events에 `FailedScheduling`과 이유가 남습니다.
+
+<details>
+<summary>기초부터: Filter와 Score를 노드 네 대로 따라가기</summary>
+
+> **핵심 한 줄**: 스케줄러는 "지금 실제로 얼마나 쓰는지"를 보지 않고 **노드에 이미 배정된 Pod들의 requests 합계**를 보고 판단합니다.
+
+#### 1. 예시 상황
+
+주문 API Pod가 `resources.requests.cpu: 500m`을 요청하고 톨러레이션은 없습니다. 워커 노드는 넷이고 모두 할당 가능한 CPU(allocatable)가 2코어입니다.
+
+| 노드 | 이미 배정된 Pod들의 CPU requests 합 | 테인트 | 남은 CPU(2 - 합) |
+|---|---|---|---|
+| node1 | 1800m | 없음 | 200m |
+| node2 | 400m | `dedicated=batch:NoSchedule` | 1600m |
+| node3 | 500m | 없음 | 1500m |
+| node4 | 1200m | 없음 | 800m |
+
+#### 2. Filter: 받을 수 없는 노드 지우기
+
+| 노드 | 걸리는 검사 | 결과 |
+|---|---|---|
+| node1 | 남은 200m < 요청 500m (NodeResourcesFit) | 탈락 |
+| node2 | 견디지 못하는 테인트 (TaintToleration) | 탈락 |
+| node3 | 통과 | 후보 |
+| node4 | 통과 | 후보 |
+
+여기서 후보가 하나도 남지 않으면 Events에 `0/4 nodes are available:` 뒤로 노드마다 걸린 이유가 개수와 함께 붙습니다. `1 Insufficient cpu`, `1 node(s) had untolerated taint ...` 같은 조각입니다. 이 문장을 읽으면 어느 검사에서 몇 대가 떨어졌는지 바로 압니다.
+
+#### 3. Score: 남은 후보에 점수 매기기
+
+kube-scheduler 설정 레퍼런스는 NodeResourcesFit의 기본 점수 전략을 `LeastAllocated`(CPU와 메모리 가중치 같음)로 적습니다. 이 Pod를 올린 뒤에 덜 차 있는 노드가 높은 점수를 받는 방식입니다.
+
+| 노드 | 올린 뒤 requests 합 | 올린 뒤 사용률 | 남는 비율(점수 감각) |
+|---|---|---|---|
+| node3 | 1000m | 50% | 50 |
+| node4 | 1700m | 85% | 15 |
+
+CPU만 놓고 보면 node3이 이깁니다. 실제 점수는 BalancedAllocation, ImageLocality, PodTopologySpread 같은 다른 플러그인 점수도 가중치를 곱해 더한 값이라 이 표는 감을 잡기 위한 단순화입니다. 점수가 같으면 그중 하나를 무작위로 고릅니다.
+
+#### 4. 헷갈리는 점과 실전에서 보이는 모습
+
+- `kubectl top node`로 보면 node1이 실제로는 CPU 10%만 쓰고 있어도 requests 합이 1800m이면 탈락합니다. 반대로 requests를 안 적은 Pod는 0으로 계산되어 이미 바쁜 노드에도 올라갈 수 있습니다. `kubectl describe node`의 `Allocated resources` 칸이 스케줄러가 보는 숫자입니다.
+- 노드를 한 대 고른 뒤 실제 배정은 binding이라는 별도 요청으로 합니다. 그래서 `PodScheduled` condition이 True가 된 뒤에도 kubelet이 아직 일을 시작하지 않은 짧은 구간이 있습니다.
+
+> **정리**: Filter는 "올릴 수 있나"를, Score는 "올릴 수 있는 곳 중 어디가 나은가"를 묻습니다. Pending의 이유는 거의 언제나 Filter 쪽 문장에 적혀 있습니다.
+
+</details>
 
 ### 1-4. kubelet이 컨테이너를 띄우고 상태를 보고하는 방식
 
@@ -796,6 +845,50 @@ kubectl get pod order-api -n shop -o jsonpath='{.status.phase}{"\n"}'
 kubectl get pod order-api -n shop -o jsonpath='{.status.containerStatuses[0].state}{"\n"}'
 ```
 
+<details>
+<summary>기초부터: CrashLoopBackOff 하나를 시간순으로 따라가기</summary>
+
+> **핵심 한 줄**: STATUS 열은 순간 사진이고 phase는 Pod 전체의 단계입니다. 컨테이너가 계속 죽어도 다시 띄울 예정이면 phase는 `Running`에 머뭅니다.
+
+#### 1. `kubectl get pod` 한 줄 읽기
+
+```text
+NAME        READY   STATUS             RESTARTS      AGE
+order-api   0/1     CrashLoopBackOff   4 (30s ago)   3m
+```
+
+| 칸 | 뜻 |
+|---|---|
+| READY | 준비된 컨테이너 수 / 전체 컨테이너 수. `0/1`이면 하나뿐인 컨테이너가 아직 요청을 받을 수 없음 |
+| STATUS | 위 4-1절 표의 값 중 사람이 보기 좋은 것 하나. 컨테이너가 Waiting이면 그 reason |
+| RESTARTS | 이 Pod 안에서 컨테이너가 다시 시작된 횟수와 마지막 재시작이 얼마 전인지 |
+| AGE | Pod가 만들어진 뒤 지난 시간. 컨테이너가 다시 시작돼도 줄지 않음 |
+
+#### 2. 시작하자마자 exit 1로 끝나는 컨테이너
+
+설정 파일 경로를 잘못 줘서 앱이 뜨자마자 종료되는 주문 API를 떠올려 봅니다. `restartPolicy`는 기본값 `Always`입니다.
+
+| 순서 | STATUS 열에 보이는 것 | 컨테이너 상태 | Pod phase |
+|---|---|---|---|
+| 1. 이미지 받는 중 | `ContainerCreating` | Waiting | Pending |
+| 2. 실행 직후 종료 | `Error` | Terminated(exit code 1) | Running |
+| 3. kubelet이 다시 띄우기 전 대기 | `CrashLoopBackOff` | Waiting(reason CrashLoopBackOff) | Running |
+| 4. 다시 시작했다가 또 종료 | `Error` | Terminated | Running |
+| 5. 대기 시간이 점점 길어지며 3과 4 반복 | `CrashLoopBackOff`와 `Error`가 번갈아 | | Running |
+
+Pod Lifecycle 문서 기준으로 kubelet은 재시작 사이에 10초, 20초, 40초처럼 두 배씩 늘어나는 대기를 두고 최대 300초(5분)에서 멈춥니다. 컨테이너가 문제없이 10분을 버티면 이 대기 시간은 처음으로 돌아갑니다. "Back-off"는 이 점점 늘어나는 대기를 뜻합니다. 같은 문서에는 최대 대기를 노드마다 바꾸는 kubelet 설정(`crashLoopBackOff.maxContainerRestartPeriod`, v1.35 beta)도 있지만 기본값은 그대로입니다.
+
+phase가 `Running`에 머무는 이유는 phase 정의에 "시작 또는 재시작 중"이 들어 있기 때문입니다. 같은 컨테이너라도 `restartPolicy: Never`였다면 다시 띄우지 않으니 첫 종료에서 phase가 `Failed`가 됩니다.
+
+#### 3. 실전에서 보이는 모습
+
+- 이미 다시 시작된 컨테이너의 `kubectl logs`는 새로 뜬 컨테이너의 로그라 비어 있기 쉽습니다. 죽기 직전 로그는 `kubectl logs order-api --previous`로 봅니다.
+- `describe pod`의 `Last State: Terminated`에 직전 종료의 exit code와 reason이 남습니다. `OOMKilled`(exit 137)면 메모리 limit, `Error`(exit 1)면 앱 쪽 문제부터 봅니다.
+
+> **정리**: STATUS는 지금 이 순간의 모습, phase는 Pod 전체의 단계, 컨테이너 상태는 컨테이너 하나의 모습입니다. 세 가지를 따로 읽으면 CrashLoopBackOff인데 phase가 Running인 것이 이상하지 않습니다.
+
+</details>
+
 1.18 이후 `kubectl run`은 Pod 하나만 만듭니다. 옛 자료처럼 Deployment가 생기지 않습니다.
 
 ### 4-2. Pod IP는 생성 직후부터 클러스터 안 어디서나 닿는다
@@ -1098,7 +1191,49 @@ Deployment는 ReplicaSet을 관리하고 Pod 템플릿이 바뀔 때마다 새 R
 | pause 중 | 템플릿을 바꿔도 롤아웃하지 않고 resume 때 한 번에 반영. 스케일은 됨. `rollout undo`는 못 씀 |
 | 변경 사유 기록 | `--record`는 deprecated. `kubernetes.io/change-cause` 어노테이션을 직접 달아야 `rollout history`에 표시 |
 
-replicas가 3이면 maxSurge는 0.75를 올려 1, maxUnavailable은 0.75를 내려 0입니다. 새 Pod 하나가 먼저 Ready가 된 뒤에야 옛 Pod가 하나 줄어드는 순서가 됩니다. `set image`, `rollout status`, `undo --to-revision` 같은 명령 묶음은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)의 롤링 업데이트 장에 있습니다.
+replicas가 3이면 maxSurge는 0.75를 올려 1, maxUnavailable은 0.75를 내려 0입니다. 새 Pod 하나가 먼저 Ready가 된 뒤에야 옛 Pod가 하나 줄어드는 순서가 됩니다.
+
+<details>
+<summary>기초부터: replicas 3의 롤링 업데이트를 한 단계씩</summary>
+
+> **핵심 한 줄**: maxSurge는 "잠깐 몇 개까지 더 띄워도 되나", maxUnavailable은 "잠깐 몇 개까지 모자라도 되나"입니다.
+
+#### 1. 기본값(maxSurge 1, maxUnavailable 0)일 때
+
+replicas 3이면 Pod는 언제나 3개 이상 Ready이고 4개를 넘지 않아야 합니다. 이미지를 `nginx:1.27`에서 `nginx:1.28`로 바꾸면 이렇게 진행합니다.
+
+| 단계 | 옛 RS | 새 RS | 전체 | 일어난 일 |
+|---|---|---|---|---|
+| 0 | 3 | 0 | 3 | 업데이트 전 |
+| 1 | 3 | 1 | 4 | 새 Pod 하나 생성. 상한 4에 닿아서 Ready를 기다림 |
+| 2 | 2 | 1 | 3 | 새 Pod가 Ready가 되자 옛 Pod 하나 삭제 |
+| 3 | 2 | 2 | 4 | 새 Pod 하나 더 |
+| 4 | 1 | 2 | 3 | 옛 Pod 하나 삭제 |
+| 5 | 1 | 3 | 4 | 새 Pod 하나 더 |
+| 6 | 0 | 3 | 3 | 마지막 옛 Pod 삭제. 완료 |
+
+Deployments 문서의 예시 설명도 같은 흐름입니다. 새 ReplicaSet을 1로 올려 뜨기를 기다리고 옛 것을 2로, 새 것을 2로 바꿔 가며 "최소 3개 사용 가능, 최대 4개 생성"을 지킨다고 적습니다.
+
+#### 2. 새 이미지가 잘못됐다면
+
+`nginx:1.28`을 `ngnix:1.28`로 잘못 적었다고 해 봅니다. 단계 1의 새 Pod가 `ImagePullBackOff`에 걸려 Ready가 되지 않으니 단계 2로 넘어가지 못합니다. 옛 Pod 3개는 그대로 요청을 받습니다. maxUnavailable이 0이면 잘못된 배포가 서비스를 줄이지 못합니다. `kubectl rollout status`가 끝나지 않고 기다리는 것이 이 상태이고 `kubectl rollout undo`로 되돌립니다.
+
+#### 3. 반대로 maxSurge 0, maxUnavailable 1이면
+
+| 단계 | 옛 RS | 새 RS | 전체 | 일어난 일 |
+|---|---|---|---|---|
+| 1 | 2 | 0 | 2 | 먼저 옛 Pod 하나를 지움 |
+| 2 | 2 | 1 | 3 | 빈자리에 새 Pod |
+| 3 | 1 | 1 | 2 | 새 Pod가 Ready가 되면 옛 Pod 하나 더 삭제 |
+| … | | | | 반복 |
+
+노드 자원이 빠듯해서 Pod 하나를 더 띄울 여유가 없을 때 쓰는 설정입니다. 대신 업데이트 내내 Pod가 2개뿐인 구간이 생깁니다.
+
+> **정리**: maxSurge는 잠깐 쓰는 여분 자원, maxUnavailable은 잠깐 줄어드는 처리량입니다. 둘 다 0일 수는 없고 시험에서는 이 표를 머릿속에서 그릴 수 있으면 충분합니다.
+
+</details>
+
+`set image`, `rollout status`, `undo --to-revision` 같은 명령 묶음은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)의 롤링 업데이트 장에 있습니다.
 
 ### 5-5. 스케일 명령 세 가지
 
@@ -1462,7 +1597,37 @@ last-applied에 있었는데 새 파일에서 빠진 필드 → 삭제
 어느 쪽에도 없던 필드(다른 주체가 넣은 값)   → 그대로 둠
 ```
 
-세 번째 줄이 중요합니다. HPA가 바꾼 replicas나 컨트롤러가 채운 기본값처럼 파일에 적은 적이 없는 필드는 apply가 건드리지 않습니다. 반대로 `kubectl create`로 만든 객체에는 이 어노테이션이 없어서 처음 apply할 때 경고가 나옵니다(어노테이션은 자동으로 붙음).
+세 번째 줄이 중요합니다. 컨트롤러가 채운 기본값이나 다른 도구가 붙인 어노테이션처럼 파일에 적은 적이 없는 필드는 apply가 건드리지 않습니다. 반대로 `kubectl create`로 만든 객체에는 이 어노테이션이 없어서 처음 apply할 때 경고가 나옵니다(어노테이션은 자동으로 붙음).
+
+<details>
+<summary>기초부터: 세 줄 규칙을 Deployment 하나로 따라가기</summary>
+
+> **핵심 한 줄**: apply는 "지난번에 내가 적었던 것"과 "이번에 적은 것"을 비교해 내 몫만 고칩니다. 그래서 파일에 남아 있는 필드는 남이 바꿔 놔도 내 값으로 되돌립니다.
+
+#### 1. 상황
+
+`product-web` Deployment를 apply로 만들었고 그 뒤 HPA가 replicas를 5로 올렸습니다. 이번에 파일에서는 `team: shop` 라벨을 지우고 이미지를 바꿨습니다.
+
+| 필드 | last-applied(지난 파일) | 이번 파일 | 라이브 객체 | apply 뒤 |
+|---|---|---|---|---|
+| `metadata.labels.team` | `shop` | 없음 | `shop` | 삭제(지난번엔 적었고 이번엔 뺐으니) |
+| `spec.template...image` | `nginx:1.27` | `nginx:1.28` | `nginx:1.27` | `nginx:1.28` |
+| `spec.replicas` | `3` | `3` | `5`(HPA가 바꿈) | `3`(파일에 있으니 파일 값) |
+| `metadata.annotations["deployment.kubernetes.io/revision"]` | 없음 | 없음 | `1` | 그대로 둠(내가 적은 적 없음) |
+
+#### 2. replicas 줄이 함정입니다
+
+HPA는 `/scale` 서브리소스로 replicas를 바꾸므로 last-applied에는 여전히 3이 남아 있습니다. 파일에도 3이 있으니 apply는 "내가 원하는 값은 3"으로 읽고 5를 3으로 내립니다. 경고도 없습니다. LearnKube의 [Server-side apply 글](https://learnkube.com/server-side-apply-kubernetes)이 바로 이 예로 클라이언트 측 apply가 조용히 값을 되돌린다고 설명합니다.
+
+HPA 문서도 HPA를 켠 Deployment는 매니페스트에서 `spec.replicas`를 빼라고 권합니다. 이때 한 번은 조심해야 합니다. last-applied에 있던 replicas를 파일에서 빼면 규칙 두 번째 줄대로 필드가 지워지고 기본값 1이 되어 Pod가 잠깐 하나로 줄어듭니다. 문서는 이 일회성 감소를 피하는 방법을 따로 안내합니다.
+
+#### 3. server-side apply에서는
+
+server-side apply는 필드마다 주인(`metadata.managedFields`)을 기록합니다. HPA 같은 다른 주체가 가진 필드를 내 파일이 다른 값으로 바꾸려 하면 조용히 덮지 않고 충돌로 거부하며 어떤 필드를 누가 가졌는지 알려 줍니다. 덮어쓸 생각이면 `--force-conflicts`, 아니면 파일에서 그 필드를 뺍니다.
+
+> **정리**: 지난번에 적었고 이번에 뺀 필드는 지워집니다. 파일에 있는 필드는 파일 값으로 맞춰집니다. 한 번도 적지 않은 필드는 남습니다. 시험에서 라벨을 지웠는데 apply 뒤에도 남아 있다면 그 라벨이 last-applied에 없었던 경우입니다.
+
+</details>
 
 `kubectl apply --server-side`는 이 비교를 API 서버가 하고 다른 관리자가 소유한 필드를 바꾸려 하면 충돌로 거부합니다. 의도한 변경이면 `--force-conflicts`를 붙입니다.
 
@@ -1626,4 +1791,9 @@ kubectl explain pod.spec.containers.resources --recursive | head -30
 - Kubernetes, [ReplicationController](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/), [ReplicaSet](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/), [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 - Kubernetes, [Service](https://kubernetes.io/docs/concepts/services-networking/service/), [DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/), [Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/), [Resource Quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/), [Limit Ranges](https://kubernetes.io/docs/concepts/policy/limit-range/)
 - Kubernetes, [Kubernetes Object Management](https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/), [Declarative Management](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/)
+- Kubernetes, [kube-scheduler Configuration (v1)](https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/)(NodeResourcesFit 기본 전략 LeastAllocated), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/)(HPA를 쓸 때 매니페스트에서 replicas 빼기)
+
+기술 블로그
+- Jamie Hannaford, [What happens when ... Kubernetes edition!](https://github.com/jamiehannaford/what-happens-when-k8s)(1-1절 흐름 참고. 쿠버네티스 1.8 무렵 내용이라 kubectl run, Initializers, Docker 부분은 옛 동작)
+- Chiara Salvatore, LearnKube, [Server-side apply: what happens when you run kubectl apply](https://learnkube.com/server-side-apply-kubernetes)(7-2절 replicas 되돌림 예)
 - Kubernetes, [kubectl edit](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_edit/), [kubectl apply](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_apply/), [kubectl scale](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_scale/), [kubectl run](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_run/), [kubectl expose](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_expose/)

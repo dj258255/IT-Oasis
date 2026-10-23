@@ -1044,6 +1044,39 @@ Pod의 `restartPolicy`는 `Always`(기본), `OnFailure`, `Never`입니다. Deplo
 
 1.35부터는 컨테이너에 `restartPolicy`와 `restartPolicyRules`(예: `exitCodes`가 `In [42]`일 때만 `Restart`)를 적어 Pod 값을 덮어쓸 수 있습니다(`ContainerRestartRules`, 1.35 beta 기본 활성). 규칙을 쓰면서 컨테이너 `restartPolicy`를 빠뜨리면 `must specify restartPolicy when restart rules are used`로 거절됩니다.
 
+<details>
+<summary>기초부터: 재시작이 점점 늦어지는 이유와 CrashLoopBackOff 읽기</summary>
+
+> **핵심 한 줄**: `CrashLoopBackOff`는 원인을 알려 주지 않습니다. "이 컨테이너가 계속 죽어서 다음 재시작까지 기다리는 중"이라는 상태 표시일 뿐이고 진짜 원인은 직전 컨테이너의 로그와 종료 코드에 있습니다.
+
+#### 1. 왜 기다렸다가 다시 띄우나
+
+게시판 API가 시작하자마자 설정 파일을 못 찾아 죽는다고 해 보겠습니다. kubelet이 죽는 즉시 다시 띄우면 1초에도 몇 번씩 죽고 뜨기를 반복하면서 노드의 CPU와 로그만 채웁니다. 설정 파일이 없다는 원인은 재시작으로 고쳐지지 않으니 재시작 간격을 점점 벌려서 노드를 보호합니다.
+
+#### 2. 시간표로 따라가기
+
+문서 기준 간격(10초에서 시작해 두 배씩, 상한 300초)으로 계속 죽는 컨테이너를 따라가면 이렇습니다.
+
+| 몇 번째 재시작 | 직전에 기다린 시간 | `RESTARTS` | `STATUS`에 보이는 것 |
+|---|---|---|---|
+| 1 | 10초 | 1 | 기다리는 동안 `CrashLoopBackOff` |
+| 2 | 20초 | 2 | 〃 |
+| 3 | 40초 | 3 | 〃 |
+| 4 | 80초 | 4 | 〃 |
+| 5 | 160초 | 5 | 〃 |
+| 6부터 | 300초(상한) | 6, 7, … | 〃 |
+
+기다리는 동안에는 컨테이너가 없어서 `kubectl logs <pod>`가 비어 있거나 오류를 냅니다. 그래서 `--previous`를 붙여 방금 죽은 컨테이너의 로그를 봅니다. 종료 코드는 `kubectl describe pod`의 `Last State: Terminated`에 `Exit Code`와 `Reason`으로 찍힙니다. `Reason: OOMKilled`(종료 코드 137)이면 메모리 limit 문제이고 `Error`에 코드 1이면 대개 앱이 스스로 끝난 것입니다.
+
+#### 3. 헷갈리는 점
+
+- 원인을 고쳐도 백오프 대기는 남아 있습니다. 5분을 기다리기 싫으면 Pod를 지워 컨트롤러가 새 Pod를 만들게 합니다. 새 Pod는 백오프 기록이 없습니다.
+- 백오프는 컨테이너가 10분 동안 문제없이 돌아야 초기화됩니다. 3분 돌다 죽는 앱은 간격이 계속 커집니다.
+
+> **정리**: `RESTARTS`가 오르고 `CrashLoopBackOff`가 보이면 `logs --previous`와 `describe`의 `Last State`부터 봅니다. 재시작 간격은 증상이고 원인은 컨테이너 안에 있습니다.
+
+</details>
+
 ### 4-2. 프로브 셋
 
 | 프로브 | 실패하면 | 쓰는 자리 |
@@ -1072,6 +1105,49 @@ containers:
 `httpGet` 자리에 `exec: { command: ["cat", "/tmp/healthy"] }`나 `tcpSocket: { port: 5432 }`를 쓸 수 있습니다.
 
 `<이미지>`를 45초 뒤 8080에서 응답하는 `busybox:1.36` httpd로 바꿔 돌리면 이 YAML은 `RESTARTS 0`으로 Ready가 되고 startupProbe를 지운 쪽은 `failed liveness probe, will be restarted`로 재시작을 반복했습니다.
+
+<details>
+<summary>기초부터: 프로브 셋이 각각 묻는 질문과 결제 API가 뜨는 1분</summary>
+
+> **핵심 한 줄**: startupProbe는 "다 떴나?", livenessProbe는 "멈춰 버리지 않았나?", readinessProbe는 "지금 손님을 받아도 되나?"를 묻습니다. 실패했을 때 kubelet이 하는 일이 다르니 질문에 맞는 검사를 걸어야 합니다.
+
+#### 1. 왜 셋이나 필요한가
+
+`Running`은 프로세스가 떠 있다는 뜻일 뿐입니다. 결제 API가 떠는 있지만 아직 캐시를 채우는 중일 수도 있고 교착 상태(deadlock)에 빠져 요청을 하나도 처리하지 못할 수도 있습니다. 앞쪽은 기다리면 풀리고 뒤쪽은 다시 띄워야 풀립니다. 이 둘을 섞으면 기다려야 할 Pod를 죽이거나 죽여야 할 Pod를 계속 살려 둡니다.
+
+| 프로브 | 묻는 질문 | 실패하면 | 비유 |
+|---|---|---|---|
+| startup | 시작이 끝났나 | 시작 실패로 보고 재시작 | 개점 준비가 끝났는지 |
+| liveness | 아직 살아서 움직이나 | 재시작 | 직원이 쓰러지지 않았는지 |
+| readiness | 지금 요청을 받아도 되나 | Service에서 잠시 뺌 | 계산대에 "잠시 닫음" 팻말 |
+
+#### 2. 위 YAML로 1분 따라가기
+
+앱이 45초 뒤에야 8080에서 응답한다고 하겠습니다. `periodSeconds` 10초라서 startupProbe는 0, 10, 20, 30, 40, 50초에 묻습니다.
+
+| 시각 | 일어나는 일 |
+|---|---|
+| 0~40초 | startupProbe 5번 실패. 허용치가 30번이라 아무 일도 없음. liveness와 readiness는 아직 실행되지 않음 |
+| 45초 | 앱이 응답하기 시작 |
+| 50초 | startupProbe 성공. 이때부터 liveness와 readiness가 돌기 시작 |
+| 50초 직후 | readinessProbe 성공 → `READY 1/1`, EndpointSlice에 Pod IP가 들어가 트래픽을 받음 |
+
+startupProbe를 지우면 처음부터 liveness가 돕니다. 0, 10, 20초에 세 번 실패하면 재시작하고 앱은 45초까지 가 보지도 못한 채 다시 처음부터 시작합니다. 4-2절 마지막 문단의 `failed liveness probe, will be restarted` 반복이 이 장면입니다.
+
+#### 3. 운영 중에 DB가 느려지면
+
+결제 API의 `/healthz`가 DB 연결까지 확인하도록 짜여 있다고 해 보겠습니다. DB가 잠깐 느려지면 모든 Pod의 liveness가 동시에 실패하고 kubelet이 모든 Pod를 재시작합니다. 재시작으로 DB가 빨라지지는 않으니 얻는 것 없이 처리 중이던 요청만 잃습니다. 재시작한 Pod가 다시 뜨는 동안 남은 Pod에 부하가 몰려 그쪽 liveness까지 무너지는 연쇄도 생깁니다. 그래서 liveness는 프로세스 자신만 확인하고 DB 같은 외부 의존성은 넣지 않는 것이 정석입니다([Colin Breck, Kubernetes Liveness and Readiness Probes: How to Avoid Shooting Yourself in the Foot](https://blog.colinbreck.com/kubernetes-liveness-and-readiness-probes-how-to-avoid-shooting-yourself-in-the-foot/)). 같은 글은 readiness에 모든 Pod가 함께 쓰는 의존성을 넣어도 위험하다고 짚습니다. DB가 느려지는 순간 모든 Pod가 한꺼번에 Service에서 빠져 서비스 전체가 멈추기 때문입니다.
+
+국내에서도 프로브 실패의 원인이 애플리케이션 쪽(DB 부하)에 있었고 프로브 동작 원리를 몰라 원인을 찾는 데 시간이 걸렸다는 경험담이 있습니다([악분, 쿠버네티스에 설정한 probe가 어떻게 실행되는지 알아야 하는 이유](https://akbun.substack.com/p/probe)).
+
+#### 4. 헷갈리는 점
+
+- 프로브를 실행하는 주체는 그 노드의 kubelet입니다. API 서버와 Service는 프로브에 관여하지 않습니다. 그래서 `httpGet`은 Pod IP로 직접 가고 Service 설정과 상관없습니다.
+- readiness 실패는 Pod를 죽이지 않으니 `RESTARTS`는 0인 채로 `READY 0/1`만 보입니다. 재시작이 늘면 liveness나 startup 쪽입니다.
+
+> **정리**: 시작이 느리면 startup, 멈춤을 잡으려면 liveness, 트래픽을 조절하려면 readiness입니다. liveness에는 외부 의존성을 넣지 않습니다.
+
+</details>
 
 ### 4-3. 헷갈리는 지점
 
@@ -1238,6 +1314,42 @@ spec:
 
 Pod `order-db-0`, `order-db-1`과 PVC `data-order-db-0`, `data-order-db-1`이 생기고 `order-db-0`을 지우면 같은 이름의 Pod가 같은 PVC를 달고 돌아옵니다. StorageClass를 적지 않으면 기본 StorageClass가 쓰입니다([CKA Ch-05](/blog/cert/cka/cka-05-storage)). `kubectl create` 하위 명령이 없어 Deployment 뼈대에서 `kind`를 바꾸고 두 필드를 더합니다.
 
+<details>
+<summary>기초부터: 주문 DB를 Deployment로 띄우면 무엇이 깨지나</summary>
+
+> **핵심 한 줄**: Deployment의 Pod는 서로 바꿔 끼울 수 있는 부품이고 StatefulSet의 Pod는 이름과 디스크가 정해진 개인입니다. 복제본마다 자기 데이터와 역할이 있으면 StatefulSet입니다.
+
+#### 1. Deployment로 띄웠을 때 생기는 일
+
+주문 DB 두 대를 Deployment로 띄우고 PVC 하나를 같이 달았다고 해 보겠습니다.
+
+| 문제 | Deployment에서 일어나는 일 | StatefulSet은 |
+|---|---|---|
+| 이름 | Pod가 죽으면 `order-db-7c9f-x2k`처럼 매번 새 이름으로 돌아옴. "주 DB는 어느 Pod"인지 이름으로 가리킬 수 없음 | 항상 `order-db-0`, `order-db-1` |
+| 디스크 | 템플릿에 적은 PVC 하나를 모든 Pod가 같이 씀. `ReadWriteOnce`면 다른 노드의 두 번째 Pod는 붙지 못함 | Pod마다 자기 PVC(`data-order-db-0`, `data-order-db-1`) |
+| 주소 | Service 하나 뒤에서 어느 Pod로 갈지 모름. 복제 설정에 "0번에 붙어라"를 적을 수 없음 | `order-db-0.order-db.shop.svc.cluster.local`로 콕 집어 부름 |
+| 순서 | 모두 한꺼번에 뜸. 주 DB가 뜨기 전에 복제본이 붙으려다 실패할 수 있음 | 0번이 Ready가 된 뒤 1번 |
+
+#### 2. headless Service가 하는 일
+
+보통 Service는 ClusterIP 하나를 받고 그 뒤의 Pod 중 아무 데로나 보냅니다. `clusterIP: None`인 headless Service는 IP를 받지 않습니다. 대신 클러스터 DNS가 Pod마다 레코드를 만들어 줍니다.
+
+| 질의 | 일반 Service | headless Service |
+|---|---|---|
+| `order-db.shop.svc.cluster.local` | ClusterIP 하나 | Ready인 Pod IP 전부 |
+| `order-db-0.order-db.shop.svc.cluster.local` | 없음 | `order-db-0`의 IP 하나 |
+
+StatefulSet의 `serviceName`은 "Pod별 DNS 이름을 이 headless Service 아래에 만들어 달라"는 뜻입니다. Service를 직접 만들지 않으면 Pod는 떠도 Pod별 이름이 풀리지 않습니다.
+
+#### 3. 헷갈리는 점
+
+- StatefulSet이 복제나 장애 조치를 해 주지는 않습니다. 이름, 디스크, 순서를 고정해 줄 뿐이고 주 DB와 복제본을 맞추는 일은 DB 자신이나 오퍼레이터가 합니다.
+- Pod를 지워도 PVC는 남으니 다시 만들면 예전 데이터가 그대로 붙습니다. 데이터를 새로 시작하려면 PVC를 직접 지웁니다.
+
+> **정리**: 이름, 디스크, 순서 셋 중 하나라도 복제본마다 고정돼야 하면 StatefulSet이고 그 이름을 DNS로 풀어 주는 것이 headless Service입니다. 단계별 실습은 [StatefulSet Basics](https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/) 튜토리얼이 같은 흐름을 따라갑니다.
+
+</details>
+
 ### 4-6. Job과 CronJob
 
 Job은 지정한 수만큼 Pod가 성공하면 끝나는 컨트롤러이고 `restartPolicy`는 `Never`나 `OnFailure`만 허용됩니다. 자주 더하는 필드는 `completions`(성공해야 하는 Pod 수, 기본 1), `parallelism`(동시 실행 수, 기본 1), `backoffLimit`(실패 판정 전 재시도, 기본 6), `activeDeadlineSeconds`(전체 실행 시간 상한, `backoffLimit`보다 우선하고 넘으면 `reason: DeadlineExceeded`로 실패), `ttlSecondsAfterFinished`(끝난 Job 자동 삭제)입니다.
@@ -1280,6 +1392,45 @@ spec:
               command: ["sh", "-c", "date"]
 ```
 
+<details>
+<summary>기초부터: completions와 parallelism, concurrencyPolicy를 시간표로</summary>
+
+> **핵심 한 줄**: Deployment는 "계속 몇 개를 떠 있게"가 목표이고 Job은 "성공을 몇 번 채우면 끝"입니다. `completions`는 목표 성공 수, `parallelism`은 동시에 돌릴 수입니다.
+
+#### 1. `completions: 5`, `parallelism: 2` 따라가기
+
+게시판 통계를 다섯 조각으로 나눠 처리하고 각 Pod는 1분 걸린다고 하겠습니다.
+
+| 시각 | 돌고 있는 Pod | 누적 성공 |
+|---|---|---|
+| 0분 | 2개 시작 | 0 |
+| 1분 | 2개 성공 → 새로 2개 시작 | 2 |
+| 2분 | 2개 성공 → 남은 목표가 1이라 1개만 시작 | 4 |
+| 3분 | 1개 성공 → Job `Complete` | 5 |
+
+중간에 Pod 하나가 실패하면 그만큼 다시 만들고 실패 횟수가 `backoffLimit`을 넘으면 Job 전체가 `Failed`가 됩니다. `restartPolicy: OnFailure`면 같은 Pod 안에서 컨테이너만 재시작하고 `Never`면 실패한 Pod를 남겨 둔 채 새 Pod를 만듭니다. `Never` 쪽은 실패한 Pod의 로그가 남아 원인을 보기 쉽습니다.
+
+#### 2. concurrencyPolicy 따라가기
+
+결제 대사(payment reconcile) 작업이 매시 정각에 시작하는데 이번엔 90분이 걸렸다고 하겠습니다. 1시에 시작한 Job이 2시 30분까지 돕니다.
+
+| 정책 | 2시 정각에 일어나는 일 |
+|---|---|
+| `Allow`(기본) | 2시 Job도 시작. 두 대사 작업이 같은 데이터를 동시에 만짐 |
+| `Forbid` | 2시 실행을 건너뜀. 다음 기회는 3시 |
+| `Replace` | 1시 Job을 지우고 2시 Job을 새로 시작 |
+
+같은 데이터를 두 작업이 동시에 고치면 안 되는 대사나 집계는 `Forbid`를 씁니다. 늘 최신 실행 하나만 의미가 있는 작업(최신 상태를 다시 계산하는 일 등)이면 `Replace`가 맞습니다.
+
+#### 3. 헷갈리는 점
+
+- CronJob은 Job을 만드는 틀이고 실제 Pod를 만드는 것은 Job입니다. 그래서 YAML이 CronJob `spec` → `jobTemplate.spec`(Job 설정) → `template.spec`(Pod 설정)으로 세 겹입니다.
+- `kubectl create job --from=cronjob/...`은 일정을 기다리지 않고 같은 틀로 Job을 하나 찍어 냅니다. 설정이 맞는지 확인할 때 씁니다.
+
+> **정리**: Job은 성공 수가 목표에 닿으면 끝나고 CronJob은 시간마다 그 Job을 찍어 냅니다. 앞 실행이 안 끝났을 때의 행동은 `concurrencyPolicy`로 정합니다.
+
+</details>
+
 ### 4-7. PodDisruptionBudget와 drain
 
 PodDisruptionBudget(PDB)는 drain 같은 자발적 중단 중에도 남아 있어야 할 Pod 수를 정합니다. PDB를 지키는 쪽은 Eviction API라서 `kubectl drain`은 따르고 Pod를 직접 지우는 것과 노드 장애는 PDB와 무관합니다.
@@ -1300,6 +1451,43 @@ error when evicting pods/"order-api-..." (will retry after 5s): Cannot evict pod
 ```
 
 drain 명령과 `--ignore-daemonsets`, `--delete-emptydir-data`, `--force` 옵션은 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 4-7절에 정리했습니다.
+
+<details>
+<summary>기초부터: ALLOWED DISRUPTIONS 계산과 drain이 기다리는 이유</summary>
+
+> **핵심 한 줄**: PDB는 "지금 몇 개까지 내보내도 되나"를 숫자 하나(`ALLOWED DISRUPTIONS`)로 계산해 두고 drain은 그 숫자가 0보다 클 때만 Pod를 하나씩 내보냅니다.
+
+#### 1. 계산
+
+`ALLOWED DISRUPTIONS`는 지금 건강한 Pod 수에서 반드시 남아야 할 수를 뺀 값입니다.
+
+| 상황 | 건강한 Pod | 남아야 할 수 | ALLOWED DISRUPTIONS |
+|---|---|---|---|
+| 레플리카 3, `minAvailable: 2` | 3 | 2 | 1 |
+| 위에서 하나가 내보내져 대체 Pod가 아직 뜨는 중 | 2 | 2 | 0 |
+| 레플리카 7, `minAvailable: "50%"` | 7 | 4(3.5 올림) | 3 |
+| 레플리카 10, `maxUnavailable: 1` | 10 | 9 | 1 |
+| 레플리카 3, `minAvailable: 3` | 3 | 3 | 0(영원히) |
+
+#### 2. drain이 주문 API Pod 둘이 있는 노드를 비우는 순서
+
+레플리카 3, `minAvailable: 2`이고 `node01`에 Pod 둘, `node02`에 Pod 하나가 있다고 하겠습니다.
+
+1. drain이 `node01`을 cordon(새 Pod 금지)하고 첫 Pod를 Eviction API로 내보냅니다. 허용 1이라 통과합니다.
+2. Deployment가 대체 Pod를 다른 노드에 만듭니다. 그 Pod가 Ready가 되기 전까지 건강한 Pod는 2개, 허용은 0입니다.
+3. drain이 두 번째 Pod를 내보내려다 4-7절의 `violate the pod's disruption budget` 메시지를 찍고 5초마다 재시도합니다.
+4. 대체 Pod가 Ready가 되면 건강한 Pod가 3개로 돌아와 허용이 1이 되고 두 번째 Pod가 나갑니다.
+
+drain이 "멈춘 것처럼" 보이는 시간은 대체 Pod가 Ready가 되기까지의 시간입니다. 대체 Pod가 갈 노드가 없거나 readiness가 계속 실패하면 drain은 끝나지 않습니다.
+
+#### 3. 헷갈리는 점
+
+- PDB는 자발적 중단(drain, 클러스터 축소 등 Eviction API를 거치는 일)만 막습니다. `kubectl delete pod`, 노드 전원 장애, OOM은 막지 못합니다.
+- 레플리카 1개짜리 앱에 `minAvailable: 1`을 걸면 그 노드는 drain할 수 없습니다. 시험에서 drain이 끝나지 않으면 `kubectl get pdb -A`부터 봅니다.
+
+> **정리**: `ALLOWED DISRUPTIONS` = 건강한 수 − 남아야 할 수입니다. drain은 이 값이 0이면 기다리고 대체 Pod가 Ready가 되면 이어 갑니다. 백분율 계산 예는 [Specifying a Disruption Budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) 문서에 더 있습니다.
+
+</details>
 
 ### 4-8. 직접 해 보기
 
@@ -1548,6 +1736,40 @@ kubectl describe quota shop-quota -n shop     # Used와 Hard 비교
 - 쿼터를 넘는 생성이나 수정은 `403 Forbidden`입니다.
 - Deployment는 만들어지고 Pod만 덜 생깁니다. `pods=3` 쿼터에 레플리카 5개면 Pod 3개만 뜨고 `kubectl describe rs`에 `FailedCreate`와 `exceeded quota: ..., requested: pods=1, used: pods=3, limited: pods=3`이 붙습니다.
 - 객체 수는 `count/deployments.apps`, `count/pods`처럼 `count/<리소스>.<그룹>` 형식으로 묶습니다.
+
+<details>
+<summary>기초부터: LimitRange와 ResourceQuota는 무엇을 재고 어떤 순서로 검사하나</summary>
+
+> **핵심 한 줄**: LimitRange는 Pod 하나하나를 재는 자이고 ResourceQuota는 네임스페이스 전체의 지갑입니다. 둘 다 승인 단계에서 작동하고 LimitRange가 먼저 기본값을 채운 뒤 ResourceQuota가 합계를 셉니다.
+
+#### 1. 한눈에 비교
+
+| | LimitRange | ResourceQuota |
+|---|---|---|
+| 재는 단위 | 컨테이너나 Pod 하나 | 네임스페이스 전체 합계 |
+| 하는 일 | 기본값 채우기, 한 개의 최소·최대 검사 | 합계가 상한을 넘는지 검사, 객체 수 제한 |
+| 비유 | "한 사람당 짐 20kg까지, 안 적으면 10kg로 봄" | "비행기 전체 짐 2톤까지" |
+| 만드는 법 | YAML만 | `kubectl create quota` |
+
+#### 2. Pod 하나가 들어올 때의 순서
+
+`shop` 네임스페이스에 5-3절 LimitRange와 5-4절 쿼터(`requests.cpu=2`)가 함께 있고 이미 request 합계가 1.9 CPU라고 하겠습니다. 자원을 적지 않은 Pod를 하나 만듭니다.
+
+1. LimitRange 승인 플러그인이 비어 있는 칸에 기본값을 넣습니다. request 100m, limit 500m이 됩니다.
+2. LimitRange가 최대값(limit 1 CPU)을 넘지 않는지 봅니다. 통과합니다.
+3. ResourceQuota 승인 플러그인이 합계를 셉니다. 1.9 + 0.1 = 2.0이라 상한 2와 같고 통과합니다.
+4. 다음 Pod는 2.0 + 0.1 = 2.1이 되어 `exceeded quota`로 거절됩니다.
+
+순서가 이렇기 때문에 쿼터가 걸린 네임스페이스에서 자원을 안 적은 Pod가 거절될 때 LimitRange를 두면 해결됩니다. 기본값이 먼저 채워져 쿼터가 셀 숫자가 생깁니다.
+
+#### 3. 헷갈리는 점
+
+- 둘 다 이미 떠 있는 Pod에는 소급하지 않습니다. 쿼터를 줄여도 기존 Pod는 그대로이고 `Used`가 `Hard`보다 큰 상태로 보일 수 있습니다.
+- Deployment로 만들면 거절 메시지가 `kubectl apply` 화면에 나오지 않습니다. Deployment 자체는 만들어지고 ReplicaSet이 Pod를 만들다 거절당하니 `kubectl describe rs`나 `kubectl get events`에서 찾습니다.
+
+> **정리**: 한 개는 LimitRange, 합계는 ResourceQuota입니다. 기본값을 먼저 채우고 합계를 나중에 셉니다.
+
+</details>
 
 ### 5-5. nodeSelector와 nodeName
 
@@ -2222,4 +2444,5 @@ topologySpreadConstraints:
 - Kubernetes 개념: [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/), [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/), [Horizontal Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/), [Vertical Pod Autoscaling](https://kubernetes.io/docs/concepts/workloads/autoscaling/vertical-pod-autoscale/), [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/), [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/), [Jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/), [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)
 - Kubernetes 태스크: [HorizontalPodAutoscaler Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/), [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/), [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/), [Specifying a Disruption Budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/), [Create static Pods](https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/)
 - Kubernetes 스케줄링과 승인: [Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/), [Pod Quality of Service Classes](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/), [Limit Ranges](https://kubernetes.io/docs/concepts/policy/limit-range/), [Resource Quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/), [Assigning Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/), [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/), [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/), [Pod Priority and Preemption](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/), [Admission Control in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/)
+- 튜토리얼과 기술 블로그: [StatefulSet Basics](https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/), Colin Breck, [Kubernetes Liveness and Readiness Probes: How to Avoid Shooting Yourself in the Foot](https://blog.colinbreck.com/kubernetes-liveness-and-readiness-probes-how-to-avoid-shooting-yourself-in-the-foot/), 악분, [쿠버네티스에 설정한 probe가 어떻게 실행되는지 알아야 하는 이유](https://akbun.substack.com/p/probe)
 - 버전 변경: [Kubernetes v1.37 릴리스](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/), [In-place resize GA(v1.35)](https://kubernetes.io/blog/2025/12/19/kubernetes-v1-35-in-place-pod-resize-ga/), [CHANGELOG-1.34](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md)

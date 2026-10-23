@@ -72,6 +72,17 @@ Docker, containerd, CRI-O, runc는 이 커널 기능을 편하게 부르는 도�
 
 커널 소스에서 `container`라는 구조체를 찾으면 나오지 않습니다. 프로세스를 나타내는 `task_struct`에는 `nsproxy` 포인터가 있고 `nsproxy`는 이 프로세스가 쓰는 uts, ipc, mnt, pid(자식용), net, time, cgroup 네임스페이스를 가리킵니다. user 네임스페이스는 프로세스의 자격 증명(`cred`) 쪽에 달려 있습니다. cgroup 소속은 `css_set`으로 따로 관리합니다.
 
+구조체 이름이 처음이면 이렇게 읽으면 됩니다.
+
+| 이름 | 쉬운 말 | 비유 |
+|---|---|---|
+| `task_struct` | 커널이 프로세스 하나를 기억하는 기록 카드 | 주민 한 명의 등록 카드 |
+| `nsproxy` | 그 프로세스가 어느 네임스페이스들에 속하는지 적은 묶음 | 카드에 붙은 "사는 동, 쓰는 우편함, 전화번호부" 목록 |
+| `cred` | 그 프로세스의 UID, GID, 권한(capability) | 출입증 |
+| `css_set` | 그 프로세스가 속한 cgroup들의 묶음 | 관리비를 어느 세대 계량기로 달지 적은 표 |
+
+네임스페이스 몇 개를 같은 것으로 가리키는 두 카드는 같은 방에 사는 셈이고 다른 것을 가리키면 서로 못 보는 셈입니다. 이 글 전체가 이 포인터를 언제 누가 어디로 바꾸는지에 대한 이야기입니다.
+
 그래서 "컨테이너 안의 nginx"는 커널 입장에서 이렇게 생긴 평범한 프로세스입니다.
 
 ```
@@ -112,7 +123,9 @@ Cgroup 네임스페이스는 자원을 제한하지 않습니다. `/proc/self/cg
 
 ### 1-4. /proc/<pid>/ns 링크와 inode 번호
 
-프로세스마다 `/proc/<pid>/ns/` 디렉터리에 종류별 심볼릭 링크가 있습니다. 링크 대상은 `종류:[inode 번호]` 형태입니다. namespaces(7) 예시와 같은 모양으로 적으면 이렇습니다.
+프로세스마다 `/proc/<pid>/ns/` 디렉터리에 종류별 심볼릭 링크가 있습니다. 링크 대상은 `종류:[inode 번호]` 형태입니다.
+
+inode는 리눅스 파일시스템이 파일 하나하나에 붙이는 고유 번호입니다. 이름은 바뀌어도 inode가 같으면 같은 파일입니다. 커널은 네임스페이스마다 눈에 안 보이는 작은 파일(nsfs라는 내부 파일시스템의 파일)을 하나씩 만들어 두고 그 파일의 inode 번호를 네임스페이스의 신분증처럼 씁니다. 그래서 "번호가 같다 = 같은 네임스페이스"라는 비교가 성립합니다. namespaces(7) 예시와 같은 모양으로 적으면 이렇습니다.
 
 ```
 $ ls -l /proc/$$/ns
@@ -237,13 +250,17 @@ PID 네임스페이스는 트리입니다. 부모 네임스페이스의 프로�
 
 ### 2-4. PID 1이 죽으면 zap_pid_ns_processes
 
-PID 네임스페이스의 첫 프로세스(init)는 두 가지 특별한 책임을 집니다. 하나는 고아가 된 프로세스를 넘겨받아 좀비를 회수하는 일입니다. 다른 하나는 수명입니다. init이 종료하면 커널의 `kernel/pid_namespace.c`에 있는 `zap_pid_ns_processes()`가 그 네임스페이스에 남은 모든 프로세스에 SIGKILL을 보냅니다.
+PID 네임스페이스의 첫 프로세스(init)는 두 가지 특별한 책임을 집니다. 하나는 고아가 된 프로세스를 넘겨받아 좀비를 회수하는 일입니다.
+
+두 용어를 먼저 짚겠습니다. 프로세스가 끝나도 커널은 종료 코드를 부모가 읽어 갈 때까지 프로세스 표의 한 줄을 남겨 둡니다. 이렇게 끝났지만 아직 거둬지지 않은 프로세스가 좀비이고 `ps`에 `<defunct>`로 보입니다. 부모가 `wait()` 계열 호출로 종료 코드를 읽으면 그 줄이 지워집니다. 고아는 부모가 먼저 끝나 버린 프로세스입니다. 고아는 그 네임스페이스의 PID 1에게 입양되고 나중에 끝나면 PID 1이 거둬야 합니다. nginx 같은 일반 프로그램은 자기가 만들지 않은 자식을 거두도록 짜여 있지 않아서 PID 1 자리에 두면 좀비가 쌓일 수 있습니다([Ian Lewis, The Almighty Pause Container](https://www.ianlewis.org/en/almighty-pause-container)). 좀비는 메모리를 거의 쓰지 않지만 PID 번호를 하나씩 붙잡고 있어서 많이 쌓이면 새 프로세스를 못 만듭니다. 다른 하나는 수명입니다. init이 종료하면 커널의 `kernel/pid_namespace.c`에 있는 `zap_pid_ns_processes()`가 그 네임스페이스에 남은 모든 프로세스에 SIGKILL을 보냅니다.
 
 컨테이너의 메인 프로세스가 끝나면 같은 컨테이너 안에서 백그라운드로 돌던 프로세스까지 함께 사라지는 동작이 여기서 나옵니다. 이 정리는 커널이 네임스페이스 단위로 한 번에 합니다.
 
 ### 2-5. PID 1의 시그널 규칙
 
-pid_namespaces(7)는 네임스페이스 init에 대한 시그널 규칙을 따로 둡니다.
+시그널은 커널이 프로세스에게 보내는 짧은 알림입니다(SIGTERM은 "정리하고 끝내 달라", SIGKILL은 "지금 끝낸다"). 프로세스는 시그널마다 받았을 때 실행할 함수를 등록해 둘 수 있고 이 함수를 핸들러라고 부릅니다. 등록하지 않은 시그널을 받으면 커널이 정해 둔 기본 동작이 실행되는데 SIGTERM의 기본 동작은 종료입니다.
+
+pid_namespaces(7)는 네임스페이스 init에 대한 시그널 규칙을 따로 둡니다. 같은 네임스페이스 안의 다른 프로세스가 실수로 init을 죽여 네임스페이스 전체가 무너지는 일을 막으려는 규칙이고 호스트의 PID 1(systemd)이 받는 보호와 같은 것입니다.
 
 | 보내는 쪽 | init이 핸들러를 등록한 시그널 | 핸들러가 없는 시그널 |
 |---|---|---|
@@ -261,6 +278,18 @@ kubectl delete pod → kubelet → CRI StopContainer
 ```
 
 파드 삭제가 매번 30초씩 걸리고 애플리케이션은 정리 작업 없이 죽습니다. 셸 스크립트(`sh -c "..."`)로 앱을 감싸 띄울 때 자주 생기는 상황입니다. 대응은 애플리케이션이 SIGTERM 핸들러를 두거나, `exec`로 셸을 앱으로 바꿔 앱이 PID 1이 되게 하거나, tini 같은 작은 init을 PID 1로 두는 방법이 있습니다.
+
+tini가 하는 일은 두 가지뿐입니다. 자기가 PID 1이 되어 받은 시그널을 앱에게 그대로 넘기고 고아가 된 좀비를 거둡니다. 앱은 PID 1이 아닌 평범한 프로세스가 되므로 핸들러가 없어도 SIGTERM의 기본 동작(종료)이 다시 살아납니다. tini README가 내세우는 이유도 이 두 가지입니다([krallin/tini](https://github.com/krallin/tini)). Docker의 `docker run --init`이 넣어 주는 것도 tini입니다.
+
+쇼핑몰 주문 API를 예로 들면 차이가 이렇게 납니다.
+
+| 이미지의 시작 명령 | PID 1 | `kubectl delete pod` 뒤 |
+|---|---|---|
+| `CMD ["./start.sh"]`, 스크립트 안에서 설정을 준비하고 `java -jar order-api.jar`를 실행한 뒤 종료 로그를 남김 | sh | sh는 SIGTERM 핸들러가 없어 무시, java는 신호를 못 받음, 30초 뒤 SIGKILL |
+| 같은 스크립트의 java 줄을 `exec java -jar order-api.jar`로 바꿈 | java | java가 SIGTERM을 받아 셧다운 훅 실행 |
+| `ENTRYPOINT ["tini", "--"]` + `CMD ["java", "-jar", "order-api.jar"]` | tini | tini가 java에 SIGTERM 전달, java 종료 뒤 tini도 종료 |
+
+JVM은 SIGTERM에 반응하는 핸들러를 스스로 등록하고 그 안에서 셧다운 훅을 돌리므로 두 번째 줄처럼 PID 1이 되어도 정상 종료합니다. 첫 번째 줄은 java 뒤에 할 일이 남은 스크립트라 sh가 java를 자식으로 띄우고 끝나기를 기다리는 구조입니다. 신호는 PID 1인 sh에서 멈추고 java까지 내려가지 않습니다. 명령이 하나뿐인 `sh -c "java ..."`는 셸에 따라 마지막 명령을 스스로 `exec`로 바꿔 실행하기도 해서 결과가 셸 종류와 버전마다 다를 수 있습니다. 확실하게 하려면 `exec`를 직접 적습니다.
 
 ### 2-6. 직접 해 보기
 
@@ -338,6 +367,16 @@ ls /tmp/ns-demo          # 빈 디렉터리
 새 mount 네임스페이스는 만들어지는 순간 부모의 마운트 목록을 복사해 갖고 시작합니다. 그 뒤에 일어나는 마운트와 언마운트는 각자의 목록에만 반영됩니다.
 
 여기에 전파(propagation) 설정이 끼어듭니다. systemd를 쓰는 배포판은 `/`를 shared로 마운트해 두고 shared 마운트 아래에서 생긴 마운트는 같은 peer 그룹의 다른 네임스페이스로 전파됩니다. unshare(1)는 `--propagation` 기본값을 `private`으로 두고 새 네임스페이스의 마운트를 모두 private으로 바꿉니다. 위 실습에서 tmpfs가 바깥으로 새지 않는 데는 이 기본값도 한몫합니다.
+
+전파는 "한쪽에서 마운트하면 다른 쪽에도 보이게 할 것인가"를 마운트 지점마다 정하는 설정입니다. 네임스페이스를 복사할 때 shared였던 마운트는 원본과 사본이 한 묶음(peer group)으로 엮입니다. 그 묶음 안에서 누가 마운트하든 나머지에도 똑같이 생깁니다.
+
+| 종류 | 이쪽에서 마운트하면 | 저쪽에서 마운트하면 |
+|---|---|---|
+| shared | 저쪽에도 생김 | 이쪽에도 생김 |
+| private | 이쪽에만 | 이쪽에 안 생김 |
+| slave | 이쪽에만 | 이쪽에도 생김(받기만 함) |
+
+예를 들어 노드에 USB 디스크를 꽂아 `/mnt/usb`에 마운트했을 때 이미 떠 있는 컨테이너에도 보이게 하고 싶다면 그 컨테이너의 마운트가 slave나 shared여야 합니다. 쿠버네티스 볼륨의 `mountPropagation: HostToContainer`가 slave, `Bidirectional`이 shared에 해당합니다. 커널의 기본값은 private인데 systemd는 shared를 더 쓸모 있는 기본값으로 보고 모든 마운트를 shared로 바꿔 둡니다([Michael Kerrisk, Mount namespaces and shared subtrees, LWN 2016](https://lwn.net/Articles/689856/)).
 
 ### 3-3. network: unshare --net 직후에는 lo 하나
 
@@ -471,6 +510,8 @@ kubelet은 자기 노드로 배정된 파드를 watch하다가 CRI로 containerd
 
 runc의 네임스페이스 처리는 C 코드(`libcontainer/nsenter/nsexec.c`)에 있습니다. Go 런타임은 시작하자마자 여러 스레드를 띄우는데 `setns`나 `unshare(CLONE_NEWUSER)`는 다중 스레드 프로세스에서 제대로 동작하지 않는 경우가 있습니다. 그래서 Go 런타임이 뜨기 전에 실행되는 C 생성자에서 네임스페이스 작업을 끝냅니다. 코드는 세 단계(stage)로 나뉩니다.
 
+"다중 스레드에서 안 된다"는 말은 man 페이지에 구체적으로 적혀 있습니다. setns(2)는 스레드가 여럿인 프로세스가 다른 user 네임스페이스로 옮기려 하면 `EINVAL`로 거절합니다. mount 네임스페이스도 파일시스템 관련 속성(현재 디렉터리, 루트 디렉터리)을 다른 스레드와 함께 쓰고 있으면 옮길 수 없는데 같은 프로세스의 스레드들은 이 속성을 기본으로 함께 씁니다. 스레드 하나만 다른 방으로 옮기면 나머지 스레드와 보는 세상이 어긋나기 때문에 커널이 막아 둔 것입니다. C 생성자는 `__attribute__((constructor))`로 표시한 함수로 `main`보다, 그리고 Go 런타임이 스레드를 띄우기보다 먼저 실행됩니다. 이 시점에는 스레드가 하나뿐이라 위 제약에 걸리지 않습니다.
+
 ```
 stage-0 (STAGE_PARENT, "runc:[0:PARENT]")
   └─ clone(CLONE_PARENT | SIGCHLD)  ─────────────┐
@@ -489,6 +530,8 @@ stage-2 (STAGE_INIT, "runc:[2:INIT]")
 
 소스 주석에 각 선택의 이유가 적혀 있습니다.
 
+아래 설명에 나오는 capability는 root 권한을 기능별로 잘게 나눈 것입니다. 예를 들어 `CAP_NET_ADMIN`은 네트워크 설정만, `CAP_SYS_ADMIN`은 마운트와 네임스페이스 조작 같은 넓은 관리 작업을 허락합니다. 새 user 네임스페이스에 들어간 프로세스는 그 안에서는 capability를 갖지만 원래 네임스페이스에서는 모두 잃습니다.
+
 - 먼저 `clone`하고 자식에서 `unshare`하는 이유: stage-0이 직접 `unshare(CLONE_NEWUSER)`를 하면 stage-0이 원래 네임스페이스의 capability를 모두 잃어 uid/gid 매핑을 여러 줄로 쓰는 일 같은 준비 작업을 할 수 없습니다. 그래서 자식을 먼저 만들고 자식이 unshare하는 동안 stage-0이 바깥에서 매핑을 써 줍니다.
 - 네임스페이스 플래그를 `clone`에 바로 넣지 않는 이유: 주석은 "clone(CLONE_PARENT | CLONE_NEWPID)가 깨져 있던 옛 커널 버전이 있어서 clone과 합치지 않는다"고 적고 그 버그가 있던 마지막 메인라인 커널을 3.12로 봅니다.
 - user 네임스페이스를 따로 먼저 만드는 이유: 한 번에 다 unshare하면 일부 네임스페이스 객체의 소유자가 잘못 잡히는 경우가 있다고 적습니다. 예로 user 매핑 전에 UTS를 만들면 mqueue 내부 마운트의 SELinux 레이블이 틀어지는 사례를 듭니다.
@@ -499,7 +542,9 @@ stage-2 (STAGE_INIT, "runc:[2:INIT]")
 
 ### 4-3. 기존 네임스페이스 합류는 setns
 
-OCI 런타임 스펙(`config.json`)의 `linux.namespaces` 항목은 종류마다 `path`를 줄 수 있습니다. `path`가 없으면 새로 만들고 있으면 그 경로의 네임스페이스에 합류합니다.
+OCI(Open Container Initiative)는 컨테이너 이미지와 런타임의 형식을 정한 표준입니다. 런타임 스펙에 따르면 runc 같은 런타임은 "루트 파일시스템 디렉터리 + `config.json` 한 장"을 받아 컨테이너를 만듭니다. `config.json`에는 실행할 명령, 환경 변수, 마운트, cgroup 한도, 그리고 어떤 네임스페이스를 새로 만들고 어떤 것에 합류할지가 들어 있습니다. containerd가 파드 스펙을 보고 이 파일을 써 주고 runc는 이 파일만 읽습니다.
+
+`config.json`의 `linux.namespaces` 항목은 종류마다 `path`를 줄 수 있습니다. `path`가 없으면 새로 만들고 있으면 그 경로의 네임스페이스에 합류합니다.
 
 ```json
 "namespaces": [
@@ -578,6 +623,10 @@ B:        대기 ............ 깨어남 1→0 ─ 쓰기
 
 IPC 쪽에는 덧붙일 내용이 있습니다. IPC 네임스페이스가 격리하는 대상은 System V IPC(`shmget`, `semget`, `msgget`)와 POSIX 메시지 큐입니다. POSIX 공유 메모리(`shm_open`)는 `/dev/shm`의 tmpfs 파일이라서 mount 쪽 문제입니다. containerd는 샌드박스의 `/dev/shm`을 파드 안 컨테이너들에 함께 마운트하므로 이것도 결과적으로 파드 안에서 공유됩니다.
 
+표를 6-6의 `shop` 파드에 겹쳐 그리면 이렇습니다. pause가 공유 네임스페이스 세 개를 먼저 만들어 쥐고 있고 앱 컨테이너들이 `setns`로 그 안에 들어가며 나머지 세 개는 각자 새로 만듭니다.
+
+![shop 파드 그림. 가운데 pause 컨테이너가 net, ipc, uts 네임스페이스를 만들어 붙잡고 있고 shop-web과 log-agent 컨테이너가 점선 화살표의 setns로 합류한다. 두 컨테이너는 localhost:80으로 서로 닿고 각자 pid, mnt, cgroup 네임스페이스를 따로 갖는다. 맨 아래 띠에 user와 time은 노드 것을 그대로 쓴다고 적혀 있다](/uploads/theory/k8s-linux-02-namespaces-pause/pod-namespaces.svg)
+
 net 공유의 결과로 같은 파드의 두 컨테이너는 `localhost`로 서로 통신할 수 있고 같은 포트를 동시에 열 수 없습니다. 웹 컨테이너가 80번을 쓰고 있으면 사이드카는 80번을 bind하지 못합니다.
 
 ### 5-2. shareProcessNamespace
@@ -598,7 +647,16 @@ cgroup v1 노드이거나 privileged 컨테이너이면 노드의 cgroup 네임�
 
 `hostUsers`를 지정하지 않으면(기본 true) 파드는 노드의 user 네임스페이스를 씁니다. 컨테이너 안의 root(UID 0)는 노드에서도 UID 0입니다. 다른 격리 장치(capability 제한, seccomp, LSM)가 막고 있을 뿐 탈출 취약점이 생기면 노드의 root 권한과 이어집니다.
 
-`spec.hostUsers: false`를 주면 파드마다 새 user 네임스페이스를 만들고 컨테이너 안의 UID 0을 노드의 권한 없는 UID 범위로 매핑합니다. 파드마다 겹치지 않는 범위를 받으므로 한 파드에서 탈출해도 다른 파드의 파일에 접근할 권한이 없습니다. 지원 이력은 1.25 알파, 1.30 베타, 1.33 기본 활성 베타, 1.36(2026년 4월) GA입니다. 노드 커널이 idmap 마운트를 지원해야 하고 런타임 버전 요건이 있으니 "User Namespaces" 문서의 요구 사항을 확인하고 켭니다.
+`spec.hostUsers: false`를 주면 파드마다 새 user 네임스페이스를 만들고 컨테이너 안의 UID 0을 노드의 권한 없는 UID 범위로 매핑합니다. 파드마다 겹치지 않는 범위를 받으므로 한 파드에서 탈출해도 다른 파드의 파일에 접근할 권한이 없습니다.
+
+매핑은 번호 바꾸기 표입니다. 예를 들어 파드 A가 노드의 UID 65536~131071을 받았다면 이렇게 읽힙니다.
+
+| 컨테이너 안 | 노드에서 |
+|---|---|
+| UID 0 (root) | UID 65536 (권한 없는 일반 사용자) |
+| UID 1000 | UID 66536 |
+
+이때 볼륨 파일이 문제가 됩니다. 볼륨의 파일 주인이 노드 기준 UID 0으로 적혀 있으면 컨테이너 안의 root(노드에서는 65536)는 그 파일의 주인이 아닙니다. idmap 마운트는 마운트할 때 이 번호 바꾸기 표를 함께 걸어 파일 주인 번호를 읽고 쓸 때마다 변환해 주는 커널 기능입니다. 디스크의 파일을 일일이 `chown`하지 않고도 컨테이너 안에서는 자기 파일처럼 보이게 합니다. 지원 이력은 1.25 알파, 1.30 베타, 1.33 기본 활성 베타, 1.36(2026년 4월) GA입니다. 노드 커널이 idmap 마운트를 지원해야 하고 런타임 버전 요건이 있으니 "User Namespaces" 문서의 요구 사항을 확인하고 켭니다.
 
 ```yaml
 apiVersion: v1
@@ -621,6 +679,8 @@ spec:
 | `hostPID: true` | 노드의 모든 프로세스가 보임 | 같은 UID 프로세스의 `/proc/<pid>/environ`, 명령줄 인자에 담긴 비밀 값 노출, 권한이 있으면 시그널이나 ptrace |
 | `hostNetwork: true` | 노드의 네트워크 장치와 포트 공간 | 노드의 localhost에만 열어 둔 서비스 접근, 노드 포트 점유, 네트워크 정책 우회 |
 | `hostIPC: true` | 노드의 System V IPC | 노드의 다른 프로세스가 쓰는 공유 메모리 세그먼트 읽기와 쓰기 |
+
+표의 ptrace는 다른 프로세스에 붙어 메모리를 읽고 실행을 멈추거나 바꾸는 시스템 콜입니다. 디버거(gdb)와 `strace`가 이것으로 동작합니다. 노드의 프로세스가 보이고 권한까지 있으면 결제 프로세스의 메모리에서 카드 토큰을 읽어 낼 수도 있다는 뜻입니다.
 
 Pod Security Standards의 baseline 정책은 "Host Namespaces" 항목에서 세 필드를 미설정이나 `false`로만 허용합니다. 정책이 누적식이라 restricted도 같고 이 필드를 허용하는 수준은 privileged뿐입니다. 네임스페이스에 `pod-security.kubernetes.io/enforce: baseline` 레이블을 달면 Pod Security Admission이 이런 파드를 생성 단계에서 거절합니다.
 
@@ -907,6 +967,12 @@ containerd가 `RunPodSandbox` 처리 중에 네트워크 네임스페이스를 �
 - opencontainers/runc, [libcontainer/nsenter/nsexec.c](https://github.com/opencontainers/runc/blob/main/libcontainer/nsenter/nsexec.c)
 - opencontainers/runtime-spec, [Linux Container Configuration](https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md)
 - containerd/containerd, [internal/cri/server/sandbox_run.go](https://github.com/containerd/containerd/blob/main/internal/cri/server/sandbox_run.go), [internal/cri/server/podsandbox/sandbox_run_linux.go](https://github.com/containerd/containerd/blob/main/internal/cri/server/podsandbox/sandbox_run_linux.go), [internal/cri/server/container_create.go](https://github.com/containerd/containerd/blob/main/internal/cri/server/container_create.go), [core/runtime/v2/README.md](https://github.com/containerd/containerd/blob/main/core/runtime/v2/README.md)
+
+해설 글
+- Michael Kerrisk, [Namespaces in operation, part 1: namespaces overview](https://lwn.net/Articles/531114/), LWN, 2013-01-04 (시리즈 목차 포함)
+- Michael Kerrisk, [Mount namespaces and shared subtrees](https://lwn.net/Articles/689856/), LWN, 2016-06-08
+- Ian Lewis, [The Almighty Pause Container](https://www.ianlewis.org/en/almighty-pause-container), 2017-10-10 (PID 공유 기본값 서술은 2017년 기준)
+- krallin, [tini README](https://github.com/krallin/tini)
 
 쿠버네티스
 - kubernetes/kubernetes, [build/pause/linux/pause.c](https://github.com/kubernetes/kubernetes/blob/master/build/pause/linux/pause.c)

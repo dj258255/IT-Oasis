@@ -101,6 +101,18 @@ requests와 limits가 다르니 이 파드는 Burstable입니다. 이 글에 나
 
 CPU 시간은 다음 주기에 다시 주어집니다. 메모리는 이미 할당된 페이지를 프로세스에게서 빼앗을 방법이 회수밖에 없습니다. 회수할 수 없는 익명 메모리로 한도를 채우면 커널에게 남는 선택은 프로세스를 죽이는 것뿐입니다.
 
+이 글 내내 나오는 메모리 용어 네 개를 여기서 정리합니다.
+
+| 용어 | 뜻 | 주문 API에서의 예 |
+|---|---|---|
+| 페이지 | 커널이 메모리를 나눠 주는 단위. x86_64에서 보통 4KiB | 주문 객체 몇 개가 페이지 한 장에 들어감 |
+| 익명 메모리 | 디스크 파일과 연결되지 않은 메모리. 힙, 스택, `malloc`으로 받은 영역 | JVM 힙에 올라간 주문 목록 |
+| 페이지 캐시 | 파일을 읽거나 쓸 때 커널이 메모리에 남겨 두는 파일 내용의 사본 | 로그 파일을 쓰면 그 내용이 잠시 메모리에 머묾 |
+| 회수(reclaim) | 한도에 가까워졌을 때 커널이 비울 수 있는 페이지를 비워 자리를 만드는 일 | 이미 디스크에 쓴 로그 파일의 캐시를 버림 |
+| charge | 페이지를 어느 cgroup의 사용량으로 셀지 정해 그 cgroup 계산서에 올리는 일 | 주문 API가 읽은 파일의 캐시는 주문 API cgroup에 올라감 |
+
+회수가 되는 것과 안 되는 것의 차이가 중요합니다. 페이지 캐시는 원본이 디스크에 있으니 버려도 나중에 다시 읽으면 됩니다. 익명 메모리는 원본이 메모리에만 있어서 스왑이 없으면 버릴 수 없습니다. 쿠버네티스 노드는 보통 스왑을 끄고 쓰므로 힙이 한도를 채우면 커널이 회수할 것이 없습니다.
+
 ### 1-2. 설정 경로와 집행 경로
 
 <details>
@@ -147,7 +159,7 @@ kubectl apply
   → 커널 메모리 컨트롤러 / CPU 대역폭 제어가 cgroup 한도와 비교
   → 초과 시 커널이 직접 회수, OOM kill, 스로틀링
   → containerd가 OOM 이벤트를 받아 기록
-  → kubelet이 컨테이너 상태를 OOMKilled로 보고, restartPolicy에 따라 재시작
+  → kubelet이 컨테이너 상태를 OOMKilled로 보고하고 restartPolicy에 따라 재시작
 ```
 
 컨테이너가 도는 동안 kubelet이 하는 일은 메트릭 수집과 노드 단위 eviction 판단입니다(4장). 컨테이너 한도 위반에 대한 판단은 전부 커널이 합니다.
@@ -190,6 +202,8 @@ kubectl apply
 | `requests.memory: 128Mi` | 기본 설정에서는 없음 | 해당 없음 | 2-5 참고 |
 
 ### 2-2. limits.cpu는 cpu.max의 quota가 된다
+
+먼저 단위입니다. 쿠버네티스의 CPU 단위 `m`은 밀리코어로 1000m이 CPU 하나(코어 하나 또는 하이퍼스레드 하나)입니다. 200m은 "CPU 하나의 20%"라는 뜻인데 커널에는 코어를 0.2개만 떼어 주는 기능이 없습니다. 그래서 시간으로 나눕니다. 100ms마다 20ms씩만 실행하게 하면 평균이 CPU 0.2개가 됩니다.
 
 `cpu.max`는 `$MAX $PERIOD` 두 값을 담습니다. 커널 문서 기준 기본값은 `max 100000`이고 한도가 없다는 뜻입니다. period는 마이크로초 단위이고 kubelet은 기본으로 100000(100ms)을 씁니다. quota는 그 주기 안에서 cgroup이 쓸 수 있는 CPU 시간입니다.
 
@@ -263,6 +277,8 @@ kubelet은 shares까지만 계산하고 이를 weight로 바꾸는 일은 OCI �
 옛 식은 shares 2~262144를 weight 1~10000에 직선으로 펼칩니다. 그래서 request 1 CPU가 기본 weight 100의 40%도 안 되는 39를 받았습니다. 쿠버네티스 밖에서 기본 weight 100으로 도는 시스템 프로세스와 경쟁하면 파드가 불리했던 이유입니다. 새 식은 (2, 1), (1024, 100), (262144, 10000) 세 점을 지나게 만들어 1 CPU가 기본값 100 근처로 오게 했습니다. 식에 L = 10을 넣으면 정확히 100이 나옵니다. 블로그 표의 102와 다른 까닭은 확인하지 못했습니다.
 
 새 식은 runc 1.3.2(2025-10-02)와 1.4.0, crun 1.23부터 들어 있습니다. runc 1.3.0과 1.3.1에는 옛 식이 남아 있습니다. 같은 쿠버네티스 버전이어도 노드의 런타임 버전에 따라 `cpu.weight`가 4로도 17로도 나올 수 있습니다.
+
+아래 문단의 slice와 scope는 systemd가 cgroup 디렉터리에 붙이는 이름 규칙입니다. 여러 프로세스 묶음을 다시 묶는 중간 디렉터리가 `.slice`, 실제 프로세스가 들어 있는 맨 아래 디렉터리가 `.scope`입니다. 트리 전체 모양은 2-6에 있습니다.
 
 파드 cgroup 위의 QoS 계층에도 weight가 붙습니다. kubelet은 노드에 있는 Burstable 파드들의 CPU request를 모두 더해 `kubepods-burstable.slice`의 shares를 정하고 파드가 들어오고 나갈 때마다 다시 계산합니다. BestEffort 계층은 항상 2 shares(최솟값)입니다.
 
@@ -518,7 +534,15 @@ kubelet이 보는 `memory.available`은 cgroupfs에서 구한 값입니다. 노�
 memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 ```
 
-working set은 cgroupfs에서 구한 사용량에서 `inactive_file`(곧 회수할 수 있는 파일 페이지)을 뺀 값입니다. 그래서 `free` 명령이나 `/proc/meminfo`의 `MemAvailable`과 숫자가 다르게 나올 수 있습니다. 리눅스에서 기본 hard eviction 임계값은 `memory.available<100Mi`입니다. hard 임계값에 걸리면 kubelet은 유예 시간 없이 파드를 종료합니다.
+working set은 cgroupfs에서 구한 사용량에서 `inactive_file`(곧 회수할 수 있는 파일 페이지)을 뺀 값입니다. 숫자로 보면 이렇습니다.
+
+```text
+memory.current        900Mi   (힙 500Mi + 최근에 쓴 파일 캐시 100Mi + 오래 안 쓴 파일 캐시 300Mi)
+inactive_file         300Mi
+working set           600Mi   = 900Mi - 300Mi
+```
+
+오래 안 쓴 파일 캐시 300Mi는 압박이 오면 커널이 먼저 비울 테니 "지금 실제로 필요한 양"에서 뺀다는 생각입니다. 그래서 `free` 명령이나 `/proc/meminfo`의 `MemAvailable`과 숫자가 다르게 나올 수 있습니다. 리눅스에서 기본 hard eviction 임계값은 `memory.available<100Mi`입니다. hard 임계값에 걸리면 kubelet은 유예 시간 없이 파드를 종료합니다.
 
 `kubectl top`이 보여 주는 메모리도 working set입니다. 그래서 `kubectl top`의 메모리는 `memory.current`보다 작게 나오고 OOM 판단에 쓰이는 값과도 정확히 같지 않습니다.
 
@@ -580,7 +604,13 @@ period 100ms, quota 100ms, 스레드 4개가 동시에 실행
 100ms        : 다음 period, quota 다시 100ms
 ```
 
+![limit 1 CPU 컨테이너에서 스레드 4개가 0~25ms에 동시에 실행해 quota 100ms를 다 쓰고 25~100ms 동안 빗금 친 빨간 구간처럼 모두 멈춘 뒤 100ms에 다음 주기가 시작되어 같은 모양이 반복되는 시간축 그림](/uploads/theory/k8s-linux-03-cgroup-qos/quota-burst.svg)
+
 이 컨테이너의 평균 사용량은 1 CPU 이하라서 사용률 그래프로는 한도에 닿은 것처럼 보이지 않을 수 있습니다. 그런데 요청 하나가 25ms 지점에서 시작하면 75ms를 그냥 기다립니다. JVM의 GC 스레드나 요청 처리 스레드 풀처럼 짧은 시간에 여러 스레드가 몰리는 애플리케이션에서 p99 지연이 튀는 원인이 됩니다.
+
+핵심은 quota가 "한 주기 동안 합쳐서 얼마까지"를 막는 값이라는 점입니다. 같은 순간에 코어를 몇 개 쓰는지는 막지 않습니다. Dan Luu와 David Mackey가 Twitter의 서비스를 분석한 글에 실제 사례가 있습니다. 20코어를 할당받은 서비스가 평균 8코어(할당의 40%) 정도만 쓰는데도 지연 목표를 어겼고 원인은 순간적으로 20코어를 넘게 쓰는 스레드 몰림이었습니다. 부하가 걸리면 할당받은 코어 하나당 실행 대기 스레드가 1.5~2개였고 스레드 풀 크기를 줄이자 서비스가 감당하는 양이 대략 두 배가 됐다고 적었습니다([Dan Luu, The container throttling problem](https://danluu.com/cgroup-throttling/)). 그러니 스로틀링이 보이면 limit을 올리기 전에 스레드 풀과 GC 스레드 수가 limit보다 지나치게 크지 않은지부터 봅니다. JVM은 `-XX:ActiveProcessorCount`로 JVM이 보는 CPU 수를 직접 정할 수 있습니다.
+
+커널 버그가 스로틀링을 키운 시기도 있었습니다. Indeed의 Dave Chiluk은 CPU를 얼마 쓰지 않는 컨테이너가 심하게 스로틀되는 현상을 추적해 4.18 커널에 들어간 커밋 512ac999d275를 원인으로 짚었습니다([Unthrottled: Fixing CPU Limits in the Cloud, 2019](https://engineering.indeedblog.com/blog/2019/12/unthrottled-fixing-cpu-limits-in-the-cloud/)). 커널은 quota를 CPU별로 작은 조각(기본 5ms)씩 나눠 줍니다. 이 조각은 설계상 주기가 끝나면 만료되게 되어 있었는데 시계 오차 때문에 제대로 만료되지 않던 것을 이 커밋이 고치면서 CPU가 받아 놓고 다 쓰지 못한 조각이 주기마다 실제로 버려지기 시작했습니다. 스레드가 여러 CPU에 흩어져 조금씩 쓰는 서비스는 쓰지도 않은 몫을 잃고 스로틀됐습니다. 그가 낸 수정(de53fd7aedb1, CPU별 조각의 만료를 없앰)이 메인라인에 들어갔고 512ac999d275를 받은 stable 커널에도 함께 넣도록 요청됐습니다. 오래된 커널을 쓰는 노드라면 이 수정이 들어 있는지 확인할 만합니다.
 
 ### 5-3. 스로틀 비율 계산
 
@@ -663,6 +693,17 @@ request를 크게 잡은 파드일수록 점수가 낮아져 뒤로 밀립니다
 </details>
 
 커널은 OOM 희생자를 고를 때 프로세스마다 badness 점수를 계산합니다. 메모리 사용량 비율을 0~1000으로 환산한 값에 `oom_score_adj`(-1000~+1000)를 더합니다. 결과는 `/proc/<pid>/oom_score`로 보이고 커널 문서상 범위는 0~2000입니다. `oom_score_adj`가 -1000이면 OOM kill 대상에서 완전히 빠집니다.
+
+8GiB 노드에서 노드 전체 OOM이 났다고 하고 대략 계산해 보겠습니다(실제 계산에는 페이지 테이블과 스왑도 들어가지만 감을 잡는 데는 메모리 비율이면 충분합니다).
+
+| 프로세스 | 쓰는 메모리 | 사용 비율 점수 | `oom_score_adj` | 합 |
+|---|---|---|---|---|
+| BestEffort 배치 작업 | 400Mi | 약 49 | 1000 | 약 1049 |
+| Burstable 주문 API(request 128Mi) | 1Gi | 125 | 985 | 1110 |
+| Guaranteed 결제 API | 2Gi | 250 | -997 | 0으로 내림 |
+| kubelet | 200Mi | 약 24 | -999 | 0으로 내림 |
+
+메모리를 가장 많이 쓰는 것은 결제 API지만 `oom_score_adj` 덕분에 맨 뒤로 갑니다. 이 표에서는 메모리를 더 쓰는 주문 API가 BestEffort 배치보다 먼저 죽습니다. `oom_score_adj` 차이가 15밖에 안 나서 메모리 사용량 차이가 뒤집은 것입니다. QoS는 순서를 크게 기울일 뿐이고 같은 등급 근처에서는 실제 사용량이 승부를 냅니다.
 
 kubelet은 컨테이너 프로세스에 아래 값을 줍니다(노드 압박 eviction 문서와 `pkg/kubelet/qos/policy.go` 기준).
 
@@ -999,5 +1040,8 @@ Guaranteed 컨테이너와 메모리를 다툴 때 kubelet과 컨테이너 런�
 - bash(1), EXIT STATUS: https://man7.org/linux/man-pages/man1/bash.1.html
 - proc_pid_oom_score_adj(5): https://man7.org/linux/man-pages/man5/proc_pid_oom_score_adj.5.html
 - Harry Tran, Understanding and Resolving OOMKilled errors in JVM microservices, Endowus Tech Blog (2023-12-14): https://build.endowus.com/oomkilled/
+- Dan Luu, David Mackey, The container throttling problem (2019, 2021 보강): https://danluu.com/cgroup-throttling/
+- Dave Chiluk, Unthrottled: Fixing CPU Limits in the Cloud, Indeed Engineering Blog (2019-12-05): https://engineering.indeedblog.com/blog/2019/12/unthrottled-fixing-cpu-limits-in-the-cloud/
+- Linux 커밋 de53fd7aedb1, sched/fair: Fix low cpu usage with high throttling by removing expiration of cpu-local slices: https://lkml.iu.edu/hypermail/linux/kernel/1905.3/04783.html
 
 다음 글 [4편](/blog/theory/systems/k8s-linux-04-overlayfs)에서는 컨테이너 이미지 레이어가 OverlayFS로 합쳐지는 과정을 다룹니다.

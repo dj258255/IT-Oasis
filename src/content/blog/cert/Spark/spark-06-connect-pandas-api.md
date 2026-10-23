@@ -97,6 +97,19 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
 4. 그다음은 보통의 Spark 실행 과정이라 옵티마이저와 실행 엔진의 최적화를 그대로 씁니다.
 5. 결과는 Apache Arrow로 인코딩한 행 배치로 gRPC 스트림을 통해 클라이언트로 돌아옵니다.
 
+단어 셋이 낯설면 이 절이 통째로 안 읽힙니다. gRPC는 다른 컴퓨터에 있는 함수를 내 함수처럼 부르게 해 주는 원격 호출 규약이고 HTTP/2 위에서 돕니다. protocol buffers(protobuf)는 그 호출에 실어 보내는 데이터를 정해진 스키마에 맞춰 작은 바이트로 바꾸는 직렬화 형식입니다. Arrow는 표 모양 데이터를 컬럼 단위 메모리 형식으로 담는 규격입니다(9절). 정리하면 "계획은 protobuf로 포장해 gRPC로 부치고 결과 표는 Arrow로 포장해 돌려받는다"입니다.
+
+"해석 전 논리 계획"은 이름과 타입을 아직 확인하지 않은 계획입니다. 클래식 PySpark에서 `spark.sql("SELECT * FROM orders WHERE amount > 10000").explain(extended=True)`를 부르면 맨 위에 나오는 Parsed Logical Plan이 이 단계이고 모양은 대략 이렇습니다.
+
+```text
+== Parsed Logical Plan ==
+'Project [*]
++- 'Filter ('amount > 10000)
+   +- 'UnresolvedRelation [orders], [], false
+```
+
+앞에 붙은 작은따옴표(`'`)가 "아직 해석 안 됨" 표시입니다. `orders`라는 테이블이 정말 있는지, `amount`가 숫자 컬럼인지는 이 단계에서 모릅니다. 다음 단계인 Analyzed Logical Plan에서 카탈로그를 보고 이름을 붙이면 따옴표가 사라집니다([Ch-02](/blog/cert/spark/spark-02-spark-sql)의 Catalyst 단계와 같은 흐름입니다). Connect 클라이언트가 보내는 것은 첫 단계에 해당하는 계획이고 이름 확인부터는 서버가 합니다.
+
 해석 전 계획을 보낸다는 점이 시험 보기를 가르는 기준입니다. 클라이언트는 컬럼 이름이 실제로 있는지 모른 채 계획을 보내고 이름 확인(analysis)은 서버가 합니다. 4.2.0 문서의 "Eager vs Lazy: Spark Connect vs Spark Classic"이 이 차이를 예로 듭니다. `spark.sql("select 1 as a, 2 as b").filter("c > 1")`은 Classic에서는 그 줄에서 컬럼 `c`가 없다는 오류를 냅니다. Connect에서는 그 줄은 통과하고 `df.columns`나 `df.show()`를 부를 때 오류가 납니다. 스키마 조회, `explain`, `persist`, 액션처럼 해석된 계획이 필요한 연산이 서버에 분석 요청을 보내기 때문입니다. `df["c"]`와 `df.c`로 컬럼을 꺼낼 때 이름을 바로 검사하던 Connect Python 클라이언트 동작은 각각 4.1과 4.2에서 없어졌습니다(PySpark 마이그레이션 가이드).
 
 ### 2-2. 클래식 PySpark와 비교
@@ -127,7 +140,7 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
 | 업그레이드 | 드라이버를 애플리케이션과 따로 올릴 수 있다. 서버 쪽 RPC 정의가 하위 호환이면 애플리케이션은 그대로 쓴다 |
 | 디버깅과 관측 | IDE에서 대화형으로 디버깅하고 애플리케이션 프레임워크의 지표와 로깅으로 본다 |
 
-여러 사용자가 클러스터 하나를 함께 쓸 때(멀티테넌트) 생기는 문제를 줄인다는 맥락입니다. Databricks의 서버리스 컴퓨트와 Free Edition도 Spark Connect로 돌아서 Ch-00에서 Free Edition에서는 RDD API를 쓸 수 없다고 적었습니다.
+여러 사용자가 클러스터 하나를 함께 쓸 때(멀티테넌트) 생기는 문제를 줄인다는 맥락입니다. Spark Connect를 처음 발표한 Databricks 블로그 글(2022년 7월)은 이 문제를 더 직접적으로 적습니다. 사용자 코드가 드라이버 안에서 돌기 때문에 한 사용자가 낸 메모리 부족 같은 치명적 예외가 클러스터를 모든 사용자에게서 내려 버릴 수 있고 라이브러리가 한 클래스패스를 같이 쓰니 Spark 버전을 올리기 어렵다는 것입니다. 사용자가 드라이버 프로세스에 디버거를 붙일 권한이 없는 경우가 많다는 점도 듭니다([Databricks, Introducing Spark Connect](https://www.databricks.com/blog/2022/07/07/introducing-spark-connect-the-power-of-apache-spark-everywhere.html)). 쇼핑몰 분석팀 다섯 명이 드라이버 하나를 함께 쓰는 공유 클러스터에 붙어 있다고 생각하면 됩니다. 클래식 구조에서는 각자의 Python 코드와 라이브러리가 그 드라이버 곁에서 돌아서 한 명이 메모리를 다 써 버리면 나머지 네 명의 작업도 같이 흔들립니다. Connect에서는 각자의 Python 코드가 자기 클라이언트 프로세스에서 돌아서 그런 사고가 그 사람 환경에 머뭅니다. 다만 서버에 보낸 쿼리 자체가 무거우면 서버 드라이버는 여전히 그 부담을 집니다. Databricks의 서버리스 컴퓨트와 Free Edition도 Spark Connect로 돌아서 Ch-00에서 Free Edition에서는 RDD API를 쓸 수 없다고 적었습니다.
 
 ## 3. Spark Connect의 API 지원 범위
 
@@ -227,6 +240,10 @@ sc://spark.example.com:443/;token=ABCDEFG;user_id=analyst
 ### 5-1. client, cluster, local
 
 Cluster Mode Overview의 용어표는 배포 모드(deploy mode)를 "드라이버 프로세스가 어디서 뜨는지 구분하는 것"으로 정의합니다.
+
+![배포 모드 세 가지. client는 제출한 노트북에 드라이버가 있고 클러스터에는 익스큐터만 있다. cluster는 노트북이 제출만 하고 드라이버가 클러스터 안 노드에 뜬다. local은 한 머신 한 JVM 안에 드라이버와 실행 스레드가 함께 있다](/uploads/cert/spark/spark-06-connect-pandas-api/deploy-modes.svg)
+
+그림에서 익스큐터의 자리는 client와 cluster가 같습니다. 바뀌는 것은 드라이버 상자 하나의 위치입니다. 그래서 문제에서 "드라이버가 클러스터 안에서 뜨기를 원한다"면 cluster, "셸이나 노트북에서 결과를 바로 보며 작업한다"면 client, "모든 것이 머신 하나에서 돈다"면 local을 고릅니다.
 
 | 모드 | 드라이버 위치 | 익스큐터 | 쓰임 |
 |---|---|---|---|
@@ -418,6 +435,23 @@ ps.reset_option("compute.default_index_type")
 | 3.5까지 | False. 다른 DataFrame끼리 연산하면 예외 |
 | 4.0부터 | True(PySpark 마이그레이션 가이드) |
 
+"내부적으로 조인이 일어난다"가 결과에 어떻게 드러나는지 작은 예로 보겠습니다. 인덱스가 주문 번호인 두 Series를 더합니다.
+
+```python
+amount = ps.Series([12000, 5300, 87000], index=[101, 102, 103])
+coupon = ps.Series([1000, 500],          index=[102, 104])
+amount - coupon
+```
+
+| 인덱스 | amount | coupon | 결과 |
+|---|---|---|---|
+| 101 | 12000 | 없음 | NaN |
+| 102 | 5300 | 1000 | 4300.0 |
+| 103 | 87000 | 없음 | NaN |
+| 104 | 없음 | 500 | NaN |
+
+pandas와 같은 규칙입니다. 같은 인덱스끼리 짝을 짓고 한쪽에만 있는 인덱스는 NaN이 됩니다. 결과가 실수형(4300.0)이 되는 것도 NaN을 담으려고 타입이 float로 바뀌기 때문입니다. 차이는 비용입니다. pandas는 메모리 안에서 바로 맞추지만 pandas API on Spark는 두 분산 데이터를 인덱스로 full outer join해야 하고 셔플이 일어납니다. 그래서 옛 기본값은 이 연산을 막고 사용자가 옵션을 켜서 "비용을 안다"고 확인하게 했습니다.
+
 4.2.0 옵션 문서 본문은 아직 "기본으로 막는다"고 쓰면서 옵션 표에는 True로 적혀 있어 문서 안에서 서술이 어긋납니다. 시험 기준 버전에 따라 답이 갈릴 수 있는 지점이라 표시해 둡니다. `distributed` 인덱스를 쓰면서 이 옵션을 켜면 두 DataFrame의 인덱스가 같다는 보장이 없어서 예상과 다른 결과가 나올 가능성이 크다고 문서가 경고합니다.
 
 그 밖의 옵션 기본값입니다.
@@ -543,6 +577,8 @@ Arrow를 켜도 `toPandas()`는 모든 레코드를 드라이버로 모읍니다
 
 주문 1억 건에 부가세를 붙이는 UDF를 만든다고 합시다. 행마다 부르면 Python 함수 호출이 1억 번 일어나고 매번 인자를 Python 값으로 바꿉니다. pandas UDF는 배치 크기 기본값 10000행 기준으로 1만 번 남짓 부르고 곱셈은 pandas가 배열 단위로 합니다.
 
+pandas UDF를 처음 소개한 Databricks 블로그 글(Li Jin, Two Sigma, 2017년 10월)이 이 차이를 숫자로 보여 줍니다. 1천만 행 DataFrame에서 1 더하기, 누적 확률, 그룹 평균 빼기 세 예제를 행 단위 UDF와 비교했고 pandas UDF가 3배에서 100배 넘게 빨랐다고 적습니다. 행 단위 UDF의 느린 원인으로는 직렬화와 함수 호출 비용을 꼽습니다([Databricks, Introducing Pandas UDF for PySpark](https://www.databricks.com/blog/2017/10/30/introducing-vectorized-udfs-for-pyspark.html)). 단일 노드에서 잰 2017년 결과라 지금 버전의 배수와는 다를 수 있습니다.
+
 #### 2. 어떻게 동작하나
 
 1. **종류 정하기**: 타입 힌트(`pd.Series -> pd.Series` 등)로 Spark가 어떤 모양으로 부를지 정합니다.
@@ -664,6 +700,21 @@ def big_orders(batches):
 
 large = orders.mapInPandas(big_orders, schema=orders.schema)
 ```
+
+두 API가 함수를 몇 번, 어떤 덩어리로 부르는지 주문 다섯 건으로 따라가 보겠습니다.
+
+| customer_id | order_id | amount |
+|---|---|---|
+| c1 | o1 | 10000 |
+| c1 | o2 | 30000 |
+| c2 | o3 | 5000 |
+| c2 | o4 | 5000 |
+| c2 | o5 | 20000 |
+
+- `applyInPandas(center_amount, ...)`: 고객별로 한 번씩, 모두 두 번 부릅니다. c1 호출은 두 행을 받아 평균 20000을 빼고 -10000, 10000을 돌려줍니다. c2 호출은 세 행을 받아 평균 10000을 빼고 -5000, -5000, 10000을 돌려줍니다. 같은 고객의 행은 한 호출에 반드시 모여 있습니다. 그래서 고객 평균 같은 그룹 계산이 됩니다.
+- `mapInPandas(big_orders, ...)`: 그룹 개념이 없습니다. 파티션을 `maxRecordsPerBatch` 크기로 자른 덩어리가 순서대로 들어오고 c1 행과 c2 행이 한 덩어리에 섞일 수도 있고 같은 c2가 두 덩어리로 갈릴 수도 있습니다. 그래서 행 하나만 보고 결정하는 필터나 변환에 맞고 그룹 평균에는 맞지 않습니다.
+
+`applyInPandas`가 같은 고객을 한 호출에 모으려면 먼저 `customer_id`로 셔플해야 합니다. `mapInPandas`는 셔플 없이 파티션을 그대로 씁니다. 같은 일을 둘 다로 할 수 있다면 `mapInPandas`가 쌉니다.
 
 헷갈리는 지점입니다.
 
@@ -802,6 +853,10 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 - PySpark 4.2.0, [Apache Arrow in PySpark](https://spark.apache.org/docs/latest/api/python/tutorial/sql/arrow_pandas.html)
 - PySpark 4.2.0, [Upgrading PySpark](https://spark.apache.org/docs/latest/api/python/migration_guide/pyspark_upgrade.html)
 - PySpark 4.2.0 API: [functions.pandas_udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.pandas_udf.html), [DataFrame.mapInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.mapInPandas.html), [GroupedData.applyInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.GroupedData.applyInPandas.html), [PandasCogroupedOps.applyInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.PandasCogroupedOps.applyInPandas.html), [functions.udf](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.udf.html), [DataStreamWriter.foreachBatch](https://spark.apache.org/docs/latest/api/python/reference/pyspark.ss/api/pyspark.sql.streaming.DataStreamWriter.foreachBatch.html), [DataFrame.pandas_api](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.pandas_api.html), [pyspark.pandas.DataFrame.to_spark](https://spark.apache.org/docs/latest/api/python/reference/pyspark.pandas/api/pyspark.pandas.DataFrame.to_spark.html), [pyspark.pandas.DataFrame.to_pandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.pandas/api/pyspark.pandas.DataFrame.to_pandas.html), [SparkSession.builder.remote](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.builder.remote.html)
+
+참고한 기술 블로그
+- Stefania Leone, Martin Grund, Herman van Hövell, Reynold Xin, [Introducing Spark Connect: The Power of Apache Spark, Everywhere](https://www.databricks.com/blog/2022/07/07/introducing-spark-connect-the-power-of-apache-spark-everywhere.html) (Databricks, 2022-07-07). 2-3의 드라이버 일체형 구조의 문제
+- Li Jin, [Introducing Pandas UDF for PySpark](https://www.databricks.com/blog/2017/10/30/introducing-vectorized-udfs-for-pyspark.html) (Databricks, 2017-10-30). 10-1의 3배~100배 비교
 
 이 시리즈
 - [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning), [Spark Ch-05: Structured Streaming](/blog/cert/spark/spark-05-structured-streaming)

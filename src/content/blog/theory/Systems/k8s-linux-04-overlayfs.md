@@ -168,6 +168,10 @@ OverlayFS는 여러 디렉터리를 겹쳐 하나의 디렉터리 트리처럼 �
 
 lowerdir의 순서도 규칙이 있습니다. `lowerdir=/lower1:/lower2:/lower3`이면 커널 문서 기준으로 `lower1`이 맨 위, `lower3`이 맨 아래입니다. 이미지로 치면 가장 최근 레이어가 왼쪽에 옵니다. 커널 소스(`fs/overlayfs/params.h`)의 `OVL_MAX_STACK`은 500이라 lower 층은 500개까지 쌓을 수 있습니다.
 
+2-2부터 2-4까지 나오는 세 동작을 한 장에 모으면 이렇습니다. 층은 위에서 아래로 merged, upperdir, lower1, lower2이고 2-6 실습과 같은 파일 이름을 썼습니다.
+
+![OverlayFS 네 층에서 읽기, 쓰기, 삭제가 남기는 흔적. 읽기는 upperdir부터 아래로 찾아 lower2의 a.txt를 보여 준다. 쓰기는 lower2의 a.txt 전체를 upperdir로 복사한 뒤 한 줄을 붙인다. 삭제는 upperdir에 문자 디바이스 0, 0인 whiteout을 만들어 lower1과 lower2의 config.txt를 가린다. 아래층은 어느 경우에도 그대로다](/uploads/theory/k8s-linux-04-overlayfs/overlay-read-write-delete.svg)
+
 ### 2-2. 읽기는 위층부터 아래층으로 찾습니다
 
 merged에서 경로를 찾으면 커널은 upperdir부터 보고 없으면 lowerdir을 왼쪽부터 차례로 봅니다. 처음 찾은 곳의 파일을 돌려줍니다.
@@ -184,6 +188,8 @@ lower3 (베이스)  ...
 디렉터리는 조금 다릅니다. 같은 이름의 디렉터리가 여러 층에 있으면 내용을 합쳐서 보여 줍니다. `/etc`가 베이스 레이어와 `RUN useradd` 레이어 양쪽에 있으면 merged의 `/etc`에는 두 층의 파일이 함께 보입니다. 같은 이름의 파일이 겹칠 때만 위층이 아래층을 가립니다.
 
 읽기에는 복사가 없습니다. 같은 이미지로 뜬 컨테이너 열 개가 `/usr/lib`의 라이브러리를 읽으면 모두 같은 lowerdir의 같은 inode를 읽습니다. 페이지 캐시도 공유됩니다.
+
+두 용어를 풀면 이 문장의 무게가 보입니다. inode는 파일 하나의 실체입니다. 크기, 권한, 데이터가 디스크 어디에 있는지를 담은 커널 객체이고 경로 이름은 이 inode를 가리키는 이름표일 뿐입니다. 페이지 캐시는 커널이 디스크에서 읽은 파일 내용을 메모리에 남겨 두는 자리입니다. 캐시는 inode 단위로 붙으므로 컨테이너 열 개가 같은 inode를 읽으면 라이브러리 내용은 메모리에 한 벌만 올라갑니다. 레이어를 컨테이너마다 복사했다면 디스크도 열 벌, 페이지 캐시도 열 벌이 됐을 것입니다.
 
 ### 2-3. 쓰기는 copy-up으로 파일 전체를 올립니다
 
@@ -212,7 +218,7 @@ lower1    /app/config.yml   (그대로 남아 있음, merged에서는 안 보임
 
 이미지 크기 문제가 여기서 나옵니다. 한 `RUN`에서 받은 파일을 다음 `RUN`에서 지우면 앞 레이어에는 파일이 그대로 있고 뒤 레이어에는 whiteout만 추가됩니다. 이미지가 줄지 않습니다. 같은 `RUN` 안에서 받고 지워야 레이어에 남지 않습니다.
 
-디렉터리를 지우고 같은 이름으로 다시 만들면 opaque 디렉터리가 쓰입니다. upperdir의 디렉터리에 xattr `trusted.overlay.opaque="y"`가 붙고 커널은 그 아래층의 같은 이름 디렉터리를 합치지 않습니다. 새로 만든 디렉터리가 빈 디렉터리로 보이는 이유입니다.
+디렉터리를 지우고 같은 이름으로 다시 만들면 opaque 디렉터리가 쓰입니다. xattr(확장 속성)는 파일이나 디렉터리에 "이름=값" 쌍을 덧붙여 두는 기능이고 `trusted.`로 시작하는 이름은 xattr(7) 매뉴얼 기준으로 `CAP_SYS_ADMIN` 권한이 있는 프로세스만 읽고 씁니다. 컨테이너 안의 일반 프로세스가 이 표시를 위조하지 못하는 이유입니다. upperdir의 디렉터리에 xattr `trusted.overlay.opaque="y"`가 붙고 커널은 그 아래층의 같은 이름 디렉터리를 합치지 않습니다. 새로 만든 디렉터리가 빈 디렉터리로 보이는 이유입니다.
 
 커널 문서에는 대체 whiteout 형식도 있습니다. 크기 0인 일반 파일에 `overlay.whiteout` xattr을 붙이는 방식입니다. 커널이 직접 만들지는 않고 사용자 공간 도구가 쓸 수 있도록 열어 둔 형식입니다. 권한 없는 사용자 공간에서 overlay를 쓸 때는 xattr 이름이 `trusted.overlay.*` 대신 `user.overlay.*`가 되는 `userxattr` 옵션도 있습니다. containerd snapshotter는 시작할 때 이 옵션이 필요한지 검사해서 붙입니다.
 
@@ -222,7 +228,7 @@ lower1    /app/config.yml   (그대로 남아 있음, merged에서는 안 보임
 
 ### 2-6. 직접 해 보기: overlay를 손으로 마운트하기
 
-리눅스 VM에서 root 권한으로 해 볼 과제입니다. `/tmp`가 tmpfs인 배포판이 있으니 디스크 위 경로(`/var/tmp`)를 씁니다.
+리눅스 VM에서 root 권한으로 해 볼 과제입니다. `/tmp`가 tmpfs인 배포판이 있으니 디스크 위 경로(`/var/tmp`)를 씁니다. Julia Evans도 같은 실험을 ["How containers work: overlayfs"](https://jvns.ca/blog/2019/11/18/how-containers-work--overlayfs/)에 남겼는데 한 가지 함정을 짚습니다. 옵션에 적은 디렉터리 하나가 없거나 `~`처럼 셸이 펼치지 않은 경로를 쓰면 `special device overlay does not exist`라는 엉뚱한 오류가 납니다. 이 메시지를 보면 overlay 모듈보다 경로부터 확인합니다.
 
 ```bash
 B=/var/tmp/ovl
@@ -307,7 +313,17 @@ findmnt -t overlay -o TARGET,OPTIONS | grep '/snapshots/1/fs'
 
 이미지를 받으면 containerd는 두 단계로 일합니다. 먼저 압축 blob을 content store에 저장하고 digest를 검증합니다(1-4). 그다음 snapshotter가 레이어를 하나씩 풀어 디렉터리로 만듭니다. 쿠버네티스 노드의 containerd는 기본으로 `overlayfs` snapshotter를 씁니다.
 
-레이어 하나를 풀 때마다 snapshotter는 "부모 위에 새 층 준비, 압축 풀어 넣기, 확정"를 반복합니다. 베이스 레이어부터 순서대로 하므로 각 층은 바로 아래 층을 부모로 기억합니다. 이 체인의 식별자로 OCI 명세의 ChainID(diff_id들을 이어 해시한 값)가 쓰입니다.
+레이어 하나를 풀 때마다 snapshotter는 "부모 위에 새 층 준비, 압축 풀어 넣기, 확정"을 반복합니다. 베이스 레이어부터 순서대로 하므로 각 층은 바로 아래 층을 부모로 기억합니다. 이 체인의 식별자로 OCI 명세의 ChainID가 쓰입니다.
+
+diff_id가 있는데 ChainID가 따로 필요한 이유는 같은 변경분이라도 어디 위에 얹었느냐에 따라 결과 파일시스템이 달라지기 때문입니다. "`/etc/app.conf` 추가"라는 레이어 B를 Debian 베이스 위에 얹은 결과와 Alpine 베이스 위에 얹은 결과는 다른 트리입니다. diff_id는 B 하나만 가리키므로 둘을 구분하지 못합니다. OCI 이미지 명세(config.md)는 ChainID를 이렇게 정의합니다.
+
+```text
+ChainID(A)     = DiffID(A)
+ChainID(A|B)   = SHA256( ChainID(A) + " " + DiffID(B) )
+ChainID(A|B|C) = SHA256( ChainID(A|B) + " " + DiffID(C) )
+```
+
+`A|B`는 "A 위에 B를 적용한 결과"라는 뜻입니다. 아래층 전체의 이력이 해시에 말려 들어가므로 ChainID가 같으면 베이스부터 그 층까지 쌓인 순서와 내용이 모두 같다는 뜻이 됩니다. snapshotter가 "이 층까지 이미 풀어 둔 스냅샷이 있나"를 물을 때 ChainID를 키로 쓰는 것도 그래서입니다. 3-4 직접 해 보기에서 Active 스냅샷의 PARENT가 `sha256:`으로 시작하는 값이었던 것이 이 ChainID입니다.
 
 ### 3-2. metadata.db와 snapshots/<숫자>/fs
 
@@ -326,6 +342,8 @@ overlayfs snapshotter의 루트는 `/var/lib/containerd/io.containerd.snapshotte
         ├── fs/          # 컨테이너 쓰기 계층(upperdir)
         └── work/        # workdir. active 스냅샷에만 생김
 ```
+
+bbolt는 파일 하나에 통째로 담기는 임베디드 키-값 데이터베이스입니다. 따로 서버 프로세스가 없고 containerd가 그 파일을 직접 엽니다. etcd가 디스크에 데이터를 저장할 때 쓰는 엔진도 bbolt입니다.
 
 디렉터리 이름의 숫자는 레이어 digest와 관계없습니다. `core/snapshots/storage/bolt.go`에서 bolt 버킷의 `NextSequence()`로 받은 값입니다. 계속 증가하고 재사용되지 않으므로 숫자가 크다는 것은 나중에 만들어졌다는 뜻일 뿐입니다. 어떤 숫자가 어느 레이어인지는 `metadata.db`를 거쳐야 알 수 있습니다.
 
@@ -353,7 +371,7 @@ options: index=off, [userxattr],
          lowerdir=/var/lib/containerd/.../snapshots/56/fs:.../55/fs:...:.../1/fs
 ```
 
-lowerdir은 부모 목록 순서대로라 가장 가까운 부모가 왼쪽, 베이스가 오른쪽에 옵니다. 2-1의 "왼쪽이 맨 위" 규칙과 맞습니다. 같은 함수에는 예외도 있습니다. 부모가 하나도 없는 스냅샷은 overlay가 성립하지 않으므로 `fs` 디렉터리를 bind mount로 돌려줍니다. 부모가 하나뿐인 읽기 전용 스냅샷도 bind mount입니다.
+lowerdir은 부모 목록 순서대로라 가장 가까운 부모가 왼쪽, 베이스가 오른쪽에 옵니다. 2-1의 "왼쪽이 맨 위" 규칙과 맞습니다. 같은 함수에는 예외도 있습니다. 부모가 하나도 없는 스냅샷은 overlay가 성립하지 않으므로 `fs` 디렉터리를 bind mount로 돌려줍니다. bind mount는 이미 있는 디렉터리를 다른 경로에 한 번 더 보이게 거는 마운트입니다. 복사가 없고 두 경로가 같은 내용을 가리킵니다. 부모가 하나뿐인 읽기 전용 스냅샷도 bind mount입니다.
 
 이 마운트가 실제로 걸리는 자리는 runtime v2 shim의 작업 디렉터리입니다. 쿠버네티스 노드에서는 네임스페이스가 `k8s.io`이므로 경로가 `/run/containerd/io.containerd.runtime.v2.task/k8s.io/<container-id>/rootfs`가 됩니다. runc는 컨테이너의 mount 네임스페이스 안에서 이 디렉터리를 새 루트로 삼습니다([2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)의 pivot_root 흐름).
 
@@ -377,7 +395,7 @@ sudo crictl ps -q | head -1 | xargs -I{} sudo ctr -n k8s.io snapshots mounts /tm
 
 ### 4-1. mount(2)는 옵션을 한 페이지까지 복사
 
-3-4의 lowerdir 문자열은 레이어 수만큼 길어집니다. 경로 하나가 `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/123/fs`라면 70바이트가 넘습니다. 레이어 50개면 lowerdir만 3,500바이트를 넘깁니다.
+3-4의 lowerdir 문자열은 레이어 수만큼 길어집니다. 경로 하나가 `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/123/fs`라면 75바이트입니다. 구분자 콜론까지 76바이트씩 붙으니 레이어 50개면 lowerdir만 약 3,800바이트입니다. 여기에 `upperdir=`와 `workdir=` 경로 두 개(합쳐 약 170바이트)가 더해지면 한 페이지 4096바이트에 거의 닿습니다. containerd는 4-3에서 보듯 3,584바이트(4096 - 512)부터 경로를 줄이므로 이 이미지는 줄이는 경로를 탑니다.
 
 레거시 `mount(2)` 시스템 콜은 옵션 문자열을 커널로 복사할 때 `copy_mount_options()`(`fs/namespace.c`)를 거칩니다. 이 함수는 한 페이지(x86_64 기본 4096바이트)까지만 복사합니다. 그보다 긴 옵션은 잘리므로 런타임이 미리 줄여야 합니다. Docker와 containerd는 이 문제를 다르게 풀었습니다.
 
@@ -620,7 +638,7 @@ overlay 마운트              1
 
 읽는 쪽은 경로 탐색입니다. 프로세스가 파일을 열 때 커널은 `path_init()`(`fs/namei.c`)에서 마운트 구조를 읽기 전에 이 시퀀스를 확인합니다. 쓰는 쪽이 작업 중이면 시퀀스가 끝날 때까지 돌면서 기다립니다. 원문은 프로파일 결과를 "path_init()에서 시퀀스 락을 기다리는 tight spin loop"로 적었고 시간 대부분이 `pause` 명령에 쓰였다고 합니다. CPU를 붙잡은 채 도는 대기입니다.
 
-이 구조가 노드 전체로 번지는 이유가 여기 있습니다. `mount_lock`은 노드에 하나뿐인 전역 락이고 노드의 모든 프로세스가 파일을 열 때 같은 시퀀스를 봅니다. 컨테이너 100개를 띄우면서 2만 번 넘게 쓰기 쪽 락을 잡으면 이미 돌고 있던 다른 컨테이너의 파일 열기까지 같이 느려집니다. 원문의 TMA(Top-down Microarchitecture Analysis) 결과는 경합 접근으로 인한 스톨 95.5%, false sharing 57%였습니다.
+이 구조가 노드 전체로 번지는 이유가 여기 있습니다. `mount_lock`은 노드에 하나뿐인 전역 락이고 노드의 모든 프로세스가 파일을 열 때 같은 시퀀스를 봅니다. 컨테이너 100개를 띄우면서 2만 번 넘게 쓰기 쪽 락을 잡으면 이미 돌고 있던 다른 컨테이너의 파일 열기까지 같이 느려집니다. 원문의 TMA(Top-down Microarchitecture Analysis) 결과는 경합 접근으로 인한 스톨 95.5%, false sharing 57%였습니다. TMA는 Intel이 정리한 분석법으로 CPU가 일을 못 하고 멈춘 사이클(스톨)을 원인별로 위에서부터 나눠 봅니다. false sharing은 서로 다른 변수가 같은 캐시 라인(x86에서 64바이트)에 들어 있어서 생기는 경합입니다. 한 코어가 자기 변수만 고쳐도 그 라인 전체가 다른 코어의 캐시에서 무효가 되므로 실제로는 공유하지 않는 값 때문에 라인이 코어 사이를 계속 오갑니다.
 
 ### 6-4. CPU 구조에 따라 갈린 결과
 
@@ -765,6 +783,8 @@ lowerdir만 있다면 맨 왼쪽인 `/a`의 파일입니다. 커널 문서 기�
 ## 참고 자료
 
 - Linux kernel, Overlay Filesystem: https://docs.kernel.org/filesystems/overlayfs.html
+- xattr(7) man page: https://man7.org/linux/man-pages/man7/xattr.7.html
+- Julia Evans, "How containers work: overlayfs"(2019): https://jvns.ca/blog/2019/11/18/how-containers-work--overlayfs/
 - Linux kernel, Sequence counters and sequential locks: https://docs.kernel.org/locking/seqlock.html
 - torvalds/linux `fs/namespace.c`(copy_mount_options): https://github.com/torvalds/linux/blob/master/fs/namespace.c
 - torvalds/linux `fs/fsopen.c`(fsconfig 값 256바이트): https://github.com/torvalds/linux/blob/master/fs/fsopen.c

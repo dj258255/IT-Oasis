@@ -324,6 +324,30 @@ clicks.isStreaming   # True
 
 Kafka 소스는 `spark.readStream.format("kafka").option("kafka.bootstrap.servers", ...).option("subscribe", "orders").load()` 형태이고 `key`, `value`가 바이너리라 `CAST(value AS STRING)` 후 `from_json`으로 펼칩니다. Kafka 연동은 `spark-sql-kafka` 패키지를 따로 붙여야 해서 이번 글의 재현은 파일 소스로 했습니다.
 
+처음 보면 "왜 바로 컬럼이 안 나오지?"에서 막힙니다. Kafka는 메시지 내용이 JSON인지 Avro인지 모르고 바이트만 저장합니다. 그래서 Spark가 돌려주는 DataFrame은 메시지 내용 대신 Kafka가 아는 정보로 고정된 스키마를 가집니다. Kafka 연동 가이드의 스키마는 `key`(binary), `value`(binary), `topic`(string), `partition`(int), `offset`(long), `timestamp`(timestamp), `timestampType`(int)이고 `includeHeaders`를 켜면 `headers`가 붙습니다. 주문 JSON을 컬럼으로 만들려면 두 단계를 거칩니다.
+
+```python
+order_schema = "order_id string, amount long, status string, event_time timestamp"
+
+orders = (spark.readStream
+          .format("kafka")
+          .option("kafka.bootstrap.servers", "broker1:9092")
+          .option("subscribe", "orders")
+          .load()                                                  # key, value, topic, partition, offset, ...
+          .select(F.col("value").cast("string").alias("json"))     # 1단계: 바이트를 문자열로
+          .select(F.from_json("json", order_schema).alias("o"))    # 2단계: 문자열을 struct로
+          .select("o.*"))                                          # struct를 컬럼으로 펼치기
+```
+
+| 줄 | 하는 일 |
+|---|---|
+| `load()` | Kafka 메시지 하나가 행 하나. 이때 주문 내용은 `value` 칸의 바이트 덩어리입니다 |
+| `cast("string")` | 바이트를 UTF-8 문자열로 읽습니다. `{"order_id":"o-1","amount":12000,...}` 같은 글자가 됩니다 |
+| `from_json(..., order_schema)` | 문자열을 스키마에 맞춰 struct 하나로 바꿉니다. 스키마와 안 맞는 메시지는 null이 됩니다 |
+| `select("o.*")` | struct 안의 필드를 일반 컬럼으로 꺼냅니다 |
+
+스트리밍 쿼리에서 `startingOffsets` 기본값은 `latest`라서 처음 띄운 쿼리는 그 뒤에 들어온 메시지부터 읽습니다(배치 쿼리는 `earliest`). 체크포인트가 있으면 이 옵션은 무시되고 체크포인트의 오프셋부터 이어 갑니다.
+
 ### 4-2. 쿼리 시작하기
 
 `writeStream`에서 정하는 것은 다섯입니다. 싱크(형식과 위치), 출력 모드, 쿼리 이름(선택), 트리거(선택), 체크포인트 위치입니다. `start()`를 불러야 실행되고 `StreamingQuery` 핸들이 돌아옵니다.
@@ -345,6 +369,32 @@ q.stop()
 
 spark.streams.active   # 이 세션에서 도는 쿼리 목록
 ```
+
+`lastProgress`는 쿼리가 잘 돌고 있는지 확인하는 첫 창구인데 출력이 긴 dict라서 어디를 봐야 할지 막막합니다. 공식 가이드의 출력 예(Kafka 소스, memory 싱크)에서 자주 보는 칸만 남기면 이렇습니다.
+
+```text
+{'id': 'ce011fdc-...', 'runId': '88e2ff94-...', 'name': 'MyQuery',
+ 'numInputRows': 10, 'inputRowsPerSecond': 120.0, 'processedRowsPerSecond': 200.0,
+ 'durationMs': {'getOffset': 2, 'triggerExecution': 3},
+ 'eventTime': {'watermark': '2016-12-14T18:45:24.873Z'},
+ 'stateOperators': [],
+ 'sources': [{'description': 'KafkaSource[Subscribe[topic-0]]',
+              'startOffset': {'topic-0': {'0': 1, '1': 1, ...}},
+              'endOffset':   {'topic-0': {'0': 534, '1': 134, ...}}, ...}],
+ 'sink': {'description': 'MemorySink'}}
+```
+
+| 칸 | 읽는 법 |
+|---|---|
+| `id`, `runId` | 체크포인트를 따라 유지되는 쿼리 id와 시작할 때마다 바뀌는 실행 id(3-2) |
+| `numInputRows` | 이번 배치에 들어온 행 수 |
+| `inputRowsPerSecond`, `processedRowsPerSecond` | 들어오는 속도와 처리하는 속도. 처리 속도가 계속 더 낮으면 밀리고 있다는 뜻입니다 |
+| `durationMs.triggerExecution` | 배치 하나 전체에 걸린 시간 |
+| `eventTime.watermark` | 지금 워터마크(10절). 워터마크를 걸지 않았으면 이 칸이 없습니다 |
+| `stateOperators` | 상태 연산별 상태 행 수와 메모리(12절). 상태 연산이 없어서 빈 목록입니다 |
+| `sources[].startOffset`, `endOffset` | 이번 배치가 읽은 범위. 파티션 `0`은 오프셋 1부터 534 전까지 읽었습니다 |
+
+빠르게 진단할 때는 두 속도를 먼저 비교하고 상태 연산이 있으면 `stateOperators`의 행 수가 계속 늘기만 하는지 봅니다.
 
 헷갈리는 지점입니다.
 
@@ -489,9 +539,44 @@ order_q = (order_stats.writeStream
 - Spark Connect에서는 함수가 바깥 변수에 접근하지 못한다고 API 문서가 적습니다. 함수가 서버 쪽에서 돌기 때문입니다.
 - 4.1.0에서 `spark.sql.streaming.stateStore.commitValidation.enabled`(기본 true)가 생겼습니다. 상태가 있는 쿼리의 `foreachBatch` 안에서 `show()`나 `limit()`처럼 모든 파티션을 처리하지 않는 동작을 하면 이를 검출합니다.
 
+"`batch_id`로 중복을 거른다"는 말이 실제 코드로 어떻게 되는지 보겠습니다. 가장 단순한 방법은 배치마다 자기 전용 위치를 정해 두고 거기에 덮어쓰는 것입니다.
+
+```python
+def write_idempotent(batch_df, batch_id):
+    (batch_df
+     .write
+     .mode("overwrite")                                   # 같은 위치에 다시 쓰면 덮어쓴다
+     .parquet(f"/out/order_stats/batch_id={batch_id}"))   # 배치마다 전용 디렉터리
+```
+
+배치 7을 쓰다가 드라이버가 죽었다고 합시다. 재시작하면 엔진은 `commits/7`이 없으니 배치 7을 같은 오프셋 범위로 다시 돌리고(3-1) 함수는 같은 `batch_id=7`을 받습니다. 결정적 쿼리라면 출력도 같으니 `batch_id=7` 디렉터리를 같은 내용으로 덮어쓰고 끝납니다. 두 번 실행됐지만 결과는 한 벌입니다. DB에 쓸 때는 같은 생각을 "이미 처리한 `batch_id`를 기록하는 표"로 옮깁니다. 쓰기와 기록을 한 트랜잭션에 묶고 함수 첫 줄에서 그 표에 `batch_id`가 있으면 바로 돌아갑니다.
+
 ### 6-3. foreach
 
-`foreach`는 행마다 쓰는 로직을 `open(partition_id, epoch_id)`, `process(row)`, `close(error)`로 나눕니다. Python에서는 함수 하나만 넘길 수도 있지만 그러면 재처리 때 중복을 거를 수 없고 객체로 넘겨야 `open`에서 받은 `partition_id`와 `epoch_id`로 중복을 판단할 수 있습니다. Python에서 `process`만 필수입니다.
+`foreach`는 행마다 쓰는 로직을 `open(partition_id, epoch_id)`, `process(row)`, `close(error)`로 나눕니다. Python에서는 `process`만 필수입니다.
+
+```python
+class OrderAlertWriter:
+    def open(self, partition_id, epoch_id):
+        self.conn = connect_alert_api()     # 연결은 여기서 연다(가정한 함수)
+        return True                         # False면 이 파티션의 process를 건너뛴다
+    def process(self, row):
+        self.conn.send(row.order_id, row.amount)
+    def close(self, error):
+        self.conn.close()
+
+orders.writeStream.foreach(OrderAlertWriter()).start()
+```
+
+| 메서드 | 불리는 때 |
+|---|---|
+| `open(partition_id, epoch_id)` | 배치(Continuous 모드에서는 epoch)마다, 파티션마다 한 번 |
+| `process(row)` | `open`이 True를 돌려준 경우 그 파티션의 행마다 |
+| `close(error)` | 파티션 처리가 끝나면. 처리 중 난 오류가 있으면 인자로 받는다 |
+
+객체는 직렬화돼 Task마다 새 복사본으로 넘어갑니다. 그래서 연결처럼 직렬화할 수 없는 것은 생성자 대신 `open`에서 만들라고 문서가 권합니다.
+
+`epoch_id`로 중복을 거를 수 있을 것 같지만 문서는 반대로 적습니다. 같은 `(partition_id, epoch_id)`에 같은 출력이 나온다는 보장이 없어서 이 쌍으로는 중복을 거를 수 없고 출력 중복 제거가 필요하면 `foreachBatch`를 쓰라고 합니다. 소스가 주는 파티션 수가 바뀌거나 최적화로 파티션 수가 달라지면 같은 번호의 파티션에 다른 행이 들어가기 때문입니다(SPARK-28650). 그래서 `foreach`의 보장은 at-least-once입니다.
 
 ## 7. 트리거
 
@@ -509,6 +594,19 @@ DataStreamWriter.trigger(*, processingTime=None, once=None,
 | 한 번(deprecated) | `trigger(once=True)` | 쌓인 데이터를 배치 하나로 처리하고 멈춘다 |
 | 지금 있는 것 전부 | `trigger(availableNow=True)` | 쌓인 데이터를 소스 옵션에 맞춘 여러 배치로 처리하고 멈춘다 |
 | Continuous(실험적) | `trigger(continuous="1 second")` | 저지연 모드. 인자는 체크포인트 간격 |
+
+고정 간격 트리거가 실제로 언제 배치를 띄우는지 `processingTime="2 minutes"`로 따라가 보겠습니다. 배치는 0분, 2분, 4분처럼 간격의 경계에 맞춰 시작하려고 합니다.
+
+| 배치 | 시작 | 걸린 시간 | 끝 | 다음 배치 |
+|---|---|---|---|---|
+| 0 | 0:00 | 1분 | 1:00 | 2:00 경계까지 기다린다 |
+| 1 | 2:00 | 3분 | 5:00 | 4:00 경계를 이미 넘겼으니 끝나자마자 5:00에 시작 |
+| 2 | 5:00 | 1분 | 6:00 | 6:00 경계에 맞춰 바로 시작 |
+| (6:00 확인) | 새 데이터 없음 | | | 배치를 띄우지 않고 8:00 경계에 다시 본다 |
+
+배치 1처럼 한 번 밀리면 다음 배치는 경계를 기다리지 않고 바로 붙습니다. 배치 처리 시간이 계속 간격보다 길면 트리거 간격은 의미를 잃고 기본 트리거처럼 쉬지 않고 돕니다. 이때 볼 곳이 4-2의 `durationMs.triggerExecution`입니다.
+
+Continuous 트리거의 인자 `"1 second"`는 배치 간격과 뜻이 다릅니다. Continuous 모드의 Task는 멈추지 않고 계속 처리하고 엔진은 이 간격마다 epoch라는 표시를 데이터 사이에 끼워 지금까지 진행한 위치를 체크포인트에 남깁니다. 1초는 진행 위치를 기록하는 주기이고 결과는 이 주기와 상관없이 처리되는 대로 나갑니다.
 
 `once`와 `availableNow`는 둘 다 처리하고 멈추지만 문서는 `availableNow`로 옮기라고 권합니다. 이유는 셋입니다. `maxFilesPerTrigger` 같은 옵션을 지켜 여러 배치로 나누니 한 번에 너무 큰 배치가 생기지 않습니다. 이전 실행에서 남은 미커밋 배치부터 처리해서 실행 시점의 데이터를 모두 끝냅니다. 배치마다 워터마크가 진행되고 마지막에 데이터 없는 배치까지 돌아 상태가 작게 유지됩니다. 소스 중 하나라도 `availableNow`를 지원하지 않으면 한 번 트리거로 대신 돈다는 주의도 있습니다.
 
@@ -611,6 +709,27 @@ pyspark.sql.functions.window(timeColumn, windowDuration, slideDuration=None, sta
 pyspark.sql.functions.session_window(timeColumn, gapDuration)
 ```
 
+![같은 클릭 여섯 개를 텀블링, 슬라이딩, 세션 윈도로 묶은 모양. 텀블링은 10분 칸에 하나씩, 슬라이딩은 5분마다 시작하는 10분 칸이 겹쳐서 12:07 클릭이 두 칸에 들어가고 세션은 30분 넘게 비면 끊겨서 두 세션이 된다](/uploads/cert/spark/spark-05-structured-streaming/three-windows.svg)
+
+행 하나가 어느 윈도에 들어가는지를 직접 계산해 보면 표가 외워집니다. 프로그래밍 가이드의 예처럼 크기 10분, 간격 5분인 슬라이딩 윈도에서 12:07 클릭을 보겠습니다.
+
+1. 윈도는 5분마다 시작하니 후보 시작 시각은 12:00, 12:05, 12:10, …입니다.
+2. 각 윈도는 시작부터 10분이니 `[12:00, 12:10)`, `[12:05, 12:15)`, `[12:10, 12:20)`입니다.
+3. 12:07을 포함하는 것은 앞의 둘입니다. 그래서 이 클릭은 두 윈도의 개수를 하나씩 올립니다.
+
+크기를 간격으로 나눈 값(10 ÷ 5 = 2)이 행 하나가 들어가는 윈도 수입니다. 텀블링은 크기와 간격이 같아서 1입니다.
+
+세션 윈도는 시작과 끝이 데이터로 정해집니다. 간격 30분으로 한 사용자의 클릭을 따라가 보겠습니다.
+
+| 클릭 | 직전 클릭과의 거리 | 세션 |
+|---|---|---|
+| 10:00 | 처음 | 세션 1 시작, `[10:00, 10:30)` |
+| 10:20 | 20분 | 30분 안이라 세션 1이 `[10:00, 10:50)`으로 늘어남 |
+| 10:45 | 25분 | 세션 1이 `[10:00, 11:15)`로 늘어남 |
+| 11:30 | 45분 | 11:15에 이미 끝났으니 세션 2 시작, `[11:30, 12:00)` |
+
+세션의 끝은 마지막 클릭 시각에 간격을 더한 값입니다. 늦게 온 클릭이 두 세션 사이 빈틈을 메우면(예를 들어 11:10 클릭이 뒤늦게 도착) 두 세션이 하나로 합쳐질 수 있습니다. 그래서 세션 윈도는 워터마크가 지나기 전까지 끝을 확정할 수 없습니다.
+
 `window`의 규칙입니다. 시작은 포함, 끝은 제외라서 12:05는 `[12:05, 12:10)`에 들어가고 `[12:00, 12:05)`에는 안 들어갑니다. `slideDuration`을 안 주면 텀블링입니다. 월 단위 윈도는 지원하지 않고 "1 day"는 항상 86,400,000밀리초입니다. `startTime`은 1970-01-01 00:00:00 UTC 기준 오프셋이라 매시 15분에 시작하는 1시간 윈도라면 `startTime="15 minutes"`입니다. 결과 컬럼은 `window`라는 struct이고 안에 `start`, `end`가 있습니다.
 
 ```python
@@ -678,6 +797,8 @@ hourly = five_min.groupBy(F.window(F.window_time("window"), "1 hour"), "post_id"
 | 4(데이터 없음) | 없음 | 12:11 | 12:21 | 닫힘. Append는 최종 3건을 이때 내보냄 |
 | 5 | 12:04 | 12:11 | 12:21 | 12:04 행은 닫힌 윈도라 버려짐 |
 
+표에서 헷갈리는 칸은 "이 배치의 워터마크"입니다. 배치 2의 워터마크 11:57은 배치 1이 끝났을 때의 최대 이벤트 시간 12:07에서 10분을 뺀 값입니다. 배치 2에 들어온 12:14는 배치 3의 워터마크(12:04)를 정하는 데 쓰입니다. 워터마크는 배치가 끝날 때 계산해 다음 배치에 쓰므로 표에서 항상 한 줄씩 밀려 보입니다. 배치 2에서 12:09가 늦게 왔는데도 들어간 이유도 여기 있습니다. 그 순간 워터마크는 11:57이었고 12:09는 그보다 뒤입니다.
+
 4번 배치는 새 데이터가 없어도 워터마크가 바뀌면 돌리는 빈 배치입니다. 4.2.0 `SQLConf`의 `spark.sql.streaming.noDataMicroBatches.enabled`(기본 true)가 상태 연산 쿼리에서 이 배치를 돌립니다.
 
 ```text
@@ -703,6 +824,8 @@ DataFrame.withWatermark(eventTime, delayThreshold)
 API 문서의 정의는 "쿼리의 모든 파티션에서 본 MAX(eventTime)에서 사용자가 준 delayThreshold를 뺀 값"입니다. 파티션 사이에 이 값을 맞추는 비용 때문에 실제 워터마크는 실제 이벤트 시간보다 최소 delayThreshold만큼 뒤에 있다는 것만 보장하고 경우에 따라 그보다 더 늦은 레코드도 처리될 수 있다고 적습니다.
 
 프로그래밍 가이드의 예를 게시판 클릭으로 옮기면 이렇습니다. 허용 지연이 10분이고 트리거 동안 본 최대 이벤트 시간이 12:14이면 다음 트리거의 워터마크는 12:04입니다. 12:09에 발생한 클릭이 늦게 도착해도 12:04보다 뒤라서 `[12:00, 12:10)`과 `[12:05, 12:15)` 윈도에 들어갑니다. 최대 이벤트 시간이 12:21까지 가서 워터마크가 12:11이 되면 `[12:00, 12:10)` 윈도의 상태를 지우고 그 뒤에 온 12:04 클릭은 너무 늦은 데이터로 버립니다.
+
+워터마크를 처음 소개한 Databricks 블로그 글(Tathagata Das, 2017)도 같은 그림으로 설명합니다. 지금까지 본 최대 이벤트 시간이 12:33이고 허용 지연이 10분이면 워터마크는 12:23이 되고 12:23보다 오래된 윈도의 상태를 지웁니다. 허용 지연을 늘리면 더 늦은 데이터를 받는 대신 메모리를 더 쓴다는 교환도 그 글이 짚습니다([Databricks, Event-time Aggregation and Watermarking](https://www.databricks.com/blog/2017/05/08/event-time-aggregation-watermarking-apache-sparks-structured-streaming.html)).
 
 보장은 한 방향입니다. 허용 지연 2시간이면 2시간보다 덜 늦은 데이터는 절대 버리지 않습니다. 2시간보다 더 늦은 데이터는 버려진다는 보장이 없고 집계될 수도 있습니다. 시험 보기에 "워터마크보다 늦은 데이터는 항상 버려진다"가 나오면 틀린 문장입니다.
 
@@ -850,6 +973,8 @@ dedup_within = (clicks
 | HDFS 기반(HDFSBackedStateStore) | 기본 | 처음에는 메모리 맵에 두고 HDFS 호환 파일 시스템 파일로 백업. 업데이트 묶음마다 버전이 올라간다 |
 | RocksDB(3.2부터) | 선택 | 상태를 JVM 힙 대신 네이티브 메모리와 로컬 디스크에 둔다. 체크포인트 위치에 변경을 저장해 장애 내성은 같다 |
 
+표의 "네이티브 메모리"는 JVM 힙 밖에서 프로세스가 직접 잡는 메모리입니다. 힙에 있는 객체는 GC가 주기적으로 훑어야 해서 상태 객체가 수백만 개면 훑는 일 자체가 길어지고 그동안 Task가 멈춥니다. RocksDB는 C++ 라이브러리라 상태를 힙 밖 메모리와 로컬 디스크에 두고 GC는 그 내용을 보지 않습니다.
+
 문서가 RocksDB를 권하는 상황은 상태 키가 수백만 개라서 HDFS 기반 저장소가 힙에 상태 객체를 많이 들고 있고 GC 멈춤 때문에 마이크로배치 처리 시간이 크게 흔들릴 때입니다. 켜는 방법입니다.
 
 ```python
@@ -983,6 +1108,11 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 - Apache Spark, [WatermarkTracker.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/runtime/WatermarkTracker.scala) (입력별 워터마크와 전역 워터마크 선택)
 - Apache Spark, [statefulOperators.scala](https://github.com/apache/spark/blob/v4.2.0/sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/operators/stateful/statefulOperators.scala) (`StreamingDeduplicateExec`의 상태 정리 조건)
 - Apache Spark, [Trigger.java 4.1.0](https://github.com/apache/spark/blob/v4.1.0/sql/api/src/main/java/org/apache/spark/sql/streaming/Trigger.java) (`Trigger.RealTime`), [docs/streaming/real-time-mode.md(메인 브랜치, 미배포)](https://github.com/apache/spark/blob/master/docs/streaming/real-time-mode.md)
+
+참고한 기술 블로그
+- Tathagata Das, [Event-time Aggregation and Watermarking in Apache Spark's Structured Streaming](https://www.databricks.com/blog/2017/05/08/event-time-aggregation-watermarking-apache-sparks-structured-streaming.html) (Databricks, 2017-05-08). 10-1의 12:33, 12:23 예와 허용 지연과 메모리의 교환
+- Apache Spark 4.2.0, [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/latest/streaming/structured-streaming-kafka-integration.html) (4-1의 Kafka 소스 스키마와 `startingOffsets` 기본값)
+- Apache Spark JIRA, [SPARK-28650](https://issues.apache.org/jira/browse/SPARK-28650) (6-3의 `(partition_id, epoch_id)` 중복 제거 한계)
 
 이 시리즈와 비교 글
 - [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning)

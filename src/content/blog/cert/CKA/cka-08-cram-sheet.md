@@ -85,6 +85,8 @@ k create deploy pay-api --image=nginx:1.27 --replicas=2 -n payment $do > deploy.
 k expose deploy pay-api --port=80 --target-port=8080 -n payment $do > svc.yaml
 ```
 
+`--dry-run=client`는 API 서버에 보내지 않고 kubectl 안에서 객체만 만들어 보라는 뜻이라 클러스터에는 아무것도 생기지 않습니다. `-o yaml`이 그 객체를 찍고 `>`가 파일로 받습니다. 고친 뒤 `k apply -f`로 올립니다. `$do`는 따옴표 없이 써야 공백에서 옵션 두 개로 나뉩니다.
+
 | 생성 명령이 있음 | 생성 명령이 없음(문서 예제를 복사) |
 |---|---|
 | Pod(`run`), Deployment, Service(`expose` 권장), ConfigMap, Secret, ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding, ResourceQuota(`quota`), PriorityClass, Ingress, Job, CronJob, HPA(`autoscale`) | NetworkPolicy, PV, PVC, StorageClass, LimitRange, DaemonSet(Deployment 뼈대에서 kind를 바꿈), Gateway, HTTPRoute, CRD |
@@ -160,7 +162,7 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 | HPA | `k autoscale deploy <이름> --cpu=60% --min=2 --max=8` | `autoscaling/v2`의 `behavior` | CPU request가 없으면 CPU 기준 동작 불가. `%`를 빼면 양으로 해석 |
 | in-place resize | `k patch pod <pod> --subresource resize --patch '{...}'` | 없음 | 1.35 stable. CPU와 메모리만, QoS 클래스가 바뀌는 변경은 거절 |
 | 사이드카 | `k logs <pod> -c <사이드카>` | `initContainers[]`에 `restartPolicy: Always` | `containers`에 두면 일반 컨테이너 |
-| 자원과 승인 | `k set resources deploy <이름> --requests=cpu=100m --limits=cpu=500m`, `k create quota <이름> --hard=pods=10` | LimitRange(`default`, `defaultRequest`, `max`) | 쿼터 초과 Deployment는 만들어지고 Pod만 안 생김. 메모리 `400m`은 0.4바이트 |
+| 자원과 승인 | `k set resources deploy <이름> --requests=cpu=100m --limits=cpu=500m`, `k create quota <이름> --hard=pods=10` | LimitRange(`default`, `defaultRequest`, `max`) | 쿼터 초과 Deployment는 만들어지고 Pod만 안 생김. 메모리 `400m`은 0.4바이트(`m`은 1/1000, 메가바이트는 `400Mi`) |
 | 노드 고르기 | `k label node <노드> k=v`, `k taint node <노드> k=v:NoSchedule[-]` | `nodeSelector`, `affinity.nodeAffinity`, `tolerations` | 톨러레이션만으로는 그 노드로 가지 않음. `nodeSelectorTerms`끼리 OR, `matchExpressions` 안은 AND |
 | static Pod, DaemonSet | `k run ... $do > f.yaml` 후 노드의 `/etc/kubernetes/manifests`에 복사 | DaemonSet은 Deployment 뼈대에서 `replicas`, `strategy` 삭제 | 컨트롤 플레인 테인트는 DaemonSet 자동 톨러레이션에 없음 |
 | PriorityClass | `k create priorityclass <이름> --value=100000 [--preemption-policy=Never]` | `spec.priorityClassName` | 사용자 값은 10억 이하. 없는 이름을 적으면 Pod 거절 |
@@ -176,7 +178,7 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 | StorageClass | `k get sc`, 기본 클래스 교체는 어노테이션 `storageclass.kubernetes.io/is-default-class`를 patch | 3-2절 | `reclaimPolicy` 생략 시 `Delete`, `volumeBindingMode` 생략 시 `Immediate` |
 | 접근 모드와 회수 | `k patch pv <pv> -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'` | `accessModes`, `persistentVolumeReclaimPolicy` | RWO는 노드 하나 기준. Pod 하나는 RWOP(CSI 전용). `Recycle`은 사용 중단 |
 | PV와 PVC | `k get pv,pvc`, `k describe pvc`, `k -n <ns> patch pvc <이름> -p '{"spec":{"resources":{"requests":{"storage":"30Gi"}}}}'` | 3-2절 | `storageClassName` 생략은 기본 클래스, `""`는 클래스 없는 PV만. `WaitForFirstConsumer`는 Pod 전까지 `Pending`이 정상. 확장은 `allowVolumeExpansion: true`인 클래스만 |
-| Released 재사용 | `k patch pv <pv> --type=json -p '[{"op":"remove","path":"/spec/claimRef"}]'` | PVC의 `volumeName` | `Retain` PV는 PVC 삭제 뒤 `Released`라 자동으로 다시 묶이지 않음 |
+| Released 재사용 | `k patch pv <pv> --type=json -p '[{"op":"remove","path":"/spec/claimRef"}]'` | PVC의 `volumeName` | `Retain` PV는 PVC 삭제 뒤 `Released`라 자동으로 다시 묶이지 않음. `claimRef`에 지운 PVC의 UID가 남아 있어서이고 같은 이름으로 다시 만들어도 UID가 다름 |
 
 ---
 
@@ -317,7 +319,7 @@ k auth can-i --list -n shop --as=system:serviceaccount:shop:order-api
 kubeadm 패키지 교체 -> kubeadm upgrade node -> 4~6 반복
 ```
 
-컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. kubelet은 kube-apiserver보다 새로울 수 없기 때문입니다. `drain`은 kubectl이 있는 호스트에서, apt와 kubeadm은 해당 노드에서 실행합니다. 3번이 성공하면 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".` 꼴의 줄이 나옵니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
+컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. kubelet은 kube-apiserver보다 새로울 수 없기 때문입니다. `drain`은 kubectl이 있는 호스트에서 실행하고 apt와 kubeadm은 해당 노드에서 실행합니다. 3번이 성공하면 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".` 꼴의 줄이 나옵니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ### 4-2. etcd 백업과 복구
 
@@ -355,6 +357,8 @@ kubectl get deploy -A          # 복구한 시점의 객체가 보이는지
 sudo systemctl restart kubelet
 kubectl -n kube-system delete pod -l k8s-app=kube-proxy
 ```
+
+도구가 둘인 이유는 하는 일이 달라서입니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙는 클라이언트라서 `--endpoints`와 인증서가 필요하고 `etcdutl`은 서버 없이 스냅샷 파일과 데이터 디렉터리를 직접 다루는 도구라서 인증서가 필요 없습니다. 6번에서 매니페스트를 밖으로 뺐다 넣는 것은 kubelet이 `/etc/kubernetes/manifests`를 지켜보다가 파일이 사라지면 그 static Pod를 멈추고 다시 생기면 새로 띄우기 때문입니다. `kubectl delete pod`로는 mirror Pod만 지워져 재시작이 되지 않습니다.
 
 함정은 셋입니다.
 
@@ -402,7 +406,7 @@ sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -su
 ```bash
 openssl genrsa -out settle-user.key 3072
 openssl req -new -key settle-user.key -out settle-user.csr -subj "/CN=settle-user/O=finance"
-cat settle-user.csr | base64 | tr -d "\n"     # CSR 객체의 spec.request
+cat settle-user.csr | base64 | tr -d "\n"     # CSR 객체의 spec.request. GNU base64는 76자마다 줄을 바꿔서 tr로 한 줄로
 
 k apply -f settle-user-csr.yaml               # signerName, usages: [client auth]
 k certificate approve settle-user

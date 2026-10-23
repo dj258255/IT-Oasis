@@ -102,6 +102,38 @@ Databricks 자격증 페이지, 자격증 FAQ, 2026년 10월 8일판 시험 안�
 | Spark Connect | 3.4에서 도입. 클라이언트가 논리 계획을 gRPC로 보내고 결과를 Arrow로 받는다 | SparkContext와 RDD API를 쓸 수 없다 |
 | pandas API on Spark | `to_pandas()`는 모든 데이터를 클라이언트로 모은다 | Spark DataFrame에서 바꾸면 기본 인덱스가 새로 생긴다 |
 
+<details>
+<summary>기초부터: 표에 나온 말을 처음 보는 사람을 위한 짧은 풀이</summary>
+
+#### 파티션, 좁은 변환, 넓은 변환
+
+Spark는 큰 데이터를 파티션이라는 조각으로 나눠 여러 익스큐터가 동시에 처리합니다. 쇼핑몰 주문 1억 건이 파티션 1,000개로 나뉘어 있다고 생각하면 됩니다. 변환은 두 종류로 갈립니다.
+
+| 종류 | 뜻 | 예 |
+|---|---|---|
+| 좁은 변환(narrow) | 각 파티션이 자기 데이터만 보고 끝난다 | `filter(금액 > 0)`, `withColumn` |
+| 넓은 변환(wide) | 다른 파티션의 데이터가 필요해 네트워크로 다시 나눈다. 이 재분배가 셔플이다 | `groupBy("고객ID")`, `join`, `repartition` |
+
+같은 고객의 주문이 여러 파티션에 흩어져 있으니 고객별 합계를 내려면 같은 고객 주문을 한 파티션으로 모아야 합니다. 이 이동이 셔플이고 Stage는 셔플을 경계로 잘립니다. 자세한 그림은 [Ch-01 9-2절](/blog/cert/spark/spark-01-architecture#9-2-좁은-변환과-넓은-변환)에 있습니다.
+
+#### coalesce가 셔플 없이 줄일 수 있는 이유
+
+`coalesce(100)`은 파티션 1,000개를 열 개씩 묶어 100개로 만듭니다. 묶을 파티션을 고르기만 하고 행을 다른 키로 다시 나누지 않으니 셔플이 없습니다. 대신 묶인 결과의 크기가 고르지 않을 수 있고 늘리는 방향으로는 쓸 수 없습니다. `repartition(100)`은 모든 행을 해시로 다시 나누니 크기는 고르지만 셔플 비용을 냅니다. 비교 예는 [Ch-01 8-3절](/blog/cert/spark/spark-01-architecture#8-3-repartition과-coalesce)에 있습니다.
+
+#### 그 밖의 낯선 말
+
+| 말 | 짧은 뜻 | 자세히 |
+|---|---|---|
+| 저장 레벨 | 캐시한 데이터를 메모리에 둘지, 넘치면 디스크로 보낼지, 객체로 둘지 직렬화해 둘지 정하는 옵션. `MEMORY_AND_DISK_DESER`는 메모리에 객체 그대로 두고 넘치면 디스크 | [Ch-01 5-1절](/blog/cert/spark/spark-01-architecture#5-1-기본-저장-레벨-세-가지) |
+| broadcast 조인 | 작은 테이블을 모든 익스큐터에 통째로 복사해 큰 테이블을 셔플하지 않고 조인 | Ch-03 |
+| AQE | 실행 중에 셔플 결과의 실제 크기를 보고 계획을 고치는 기능. 작은 파티션 합치기, 쏠린 파티션 쪼개기 | [Ch-04 4-2절](/blog/cert/spark/spark-04-troubleshooting-tuning#4-2-aqe-skew-join으로-자동-처리) |
+| `approx_count_distinct` | 고유 값 개수를 HyperLogLog로 추정. 정확히 세지 않는 대신 메모리를 아주 적게 쓴다. 기본값 0.05는 허용하는 최대 상대 표준편차라 오차의 표준편차를 참값의 5% 안으로 맞춘다는 뜻 | Ch-03 |
+| 워터마크 | 스트림에서 "이 시각보다 오래된 이벤트는 더 기다리지 않는다"는 기준선. 상태를 언제 지울지 정한다 | [Ch-05 10-1절](/blog/cert/spark/spark-05-structured-streaming#10-1-정의) |
+
+> **정리**: 표의 기본값을 외우기 전에 파티션과 셔플 두 단어를 먼저 잡으면 나머지 항목 대부분이 "셔플을 줄이거나 피하는 방법"으로 묶입니다.
+
+</details>
+
 Structured Streaming의 워터마크와 상태는 DE 시리즈의 Flink 글과 같은 개념을 다룹니다([DE Ch-15](/blog/data/streaming/de-15-flink-time-watermark)). 셔플과 파티션은 Kafka 파티셔닝 글([DE Ch-11](/blog/data/streaming/de-11-kafka-log-partition-group))과 같은 질문(어떤 키로 데이터를 나누는가)에서 시작합니다.
 
 ## 4. 실습 환경의 제약

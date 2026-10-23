@@ -28,7 +28,7 @@ seriesOrder: 0.5
 
 쿠버네티스를 처음 공부할 때 흔히 구성요소 목록부터 봅니다. etcd는 저장소, 스케줄러는 노드 배정, kubelet은 노드 에이전트. 하나하나는 어렵지 않은데 이 목록만으로는 시험 과제와 연결이 잘 안 됩니다. "Deployment는 있는데 Pod가 0개입니다. 고치세요" 같은 과제를 받았을 때 목록 어디를 봐야 하는지가 안 떠오르기 때문입니다.
 
-그래서 이 글은 순서를 거꾸로 잡습니다. 실제로 하는 일 하나를 먼저 정하고 그 일이 클러스터 안에서 어떤 길로 내려가는지 위에서부터 따라갑니다. 구성요소는 그 길 위에서 만날 때 소개합니다. 어떤 구성요소가 멈추면 길의 어디가 끊기는지가 같이 보여서 트러블슈팅을 공부할 때도 같은 지도를 그대로 씁니다.
+그래서 이 글은 순서를 거꾸로 잡습니다. 실제로 하는 일 하나를 먼저 정하고 그 일이 클러스터 안에서 어떤 길로 내려가는지 위에서부터 따라갑니다. 구성요소는 그 길 위에서 만날 때 소개합니다. 어떤 구성요소가 멈추면 길의 어디가 끊기는지가 같이 보여서 트러블슈팅을 공부할 때도 같은 지도를 그대로 씁니다. 같은 방식으로 `kubectl run` 한 번을 소스 코드 수준까지 따라간 글로 Jamie Hannaford의 [What happens when I type kubectl run](https://github.com/jamiehannaford/what-happens-when-k8s)이 있습니다. 링크된 소스가 대부분 v1.14 무렵이라 세부는 지금과 다르지만 층을 나누는 순서는 이 글과 같습니다.
 
 따라갈 장면은 쇼핑몰 웹 서버를 올리는 일입니다.
 
@@ -86,6 +86,38 @@ kubectl apply -f shop-web.yaml
 
 그림에서 눈여겨볼 점은 모든 화살표가 kube-apiserver로 모인다는 것입니다. 스케줄러도 컨트롤러도 kubelet도 서로 직접 말하지 않고 API 서버에 쓰고 API 서버를 지켜봅니다(watch). 이 구조 덕분에 아래 3장의 흐름이 "누가 무엇을 써 두면 다음 사람이 그걸 보고 움직인다"는 릴레이로 읽힙니다.
 
+<details>
+<summary>기초부터: 3장에 나오는 단어를 한 줄씩</summary>
+
+> **핵심 한 줄**: 3장은 처음 보는 단어가 층마다 하나씩 나옵니다. 아래 표를 옆에 두고 읽으면 막히지 않고 끝까지 내려갈 수 있습니다.
+
+#### 1. 릴레이를 식당 주문으로 보기
+
+손님(사용자)이 주문서를 써서 카운터(API 서버)에 내면 카운터는 주문서를 주문 꽂이(etcd)에 꽂습니다. 주방장(컨트롤러)은 꽂이를 지켜보다가 "파스타 3인분"을 보고 접시 세 개 분량의 작업표를 다시 꽂고 배치 담당(스케줄러)은 작업표마다 화구 번호를 적습니다. 화구 앞 요리사(kubelet)는 자기 화구 번호가 적힌 작업표만 집어 요리합니다. 누구도 서로에게 말을 걸지 않고 꽂이만 봅니다. 이 "지켜보다가 바뀌면 받아 보기"가 watch입니다.
+
+비유는 흐름까지만 맞습니다. 실제 etcd는 키-값 저장소이고 API 서버만 etcd에 직접 읽고 씁니다.
+
+#### 2. 단어 표
+
+| 단어 | 한 줄 뜻 | 처음 나오는 층 |
+|---|---|---|
+| kubeconfig, 컨텍스트 | kubectl이 읽는 접속 설정 파일. "어느 클러스터에 누구로"를 묶은 이름이 컨텍스트 | ① |
+| watch | 객체 목록을 한 번 받고 이후 바뀐 것만 계속 이어 받는 API 요청 | ② |
+| 어드미션 | 인증·인가를 통과한 요청을 저장 직전에 고치거나 거절하는 단계 | ② |
+| ClusterIP | Service에 붙는 클러스터 안 전용 가상 IP | ③ |
+| ReplicaSet | "이 라벨의 Pod를 N개 유지"만 맡는 객체. Deployment가 버전마다 하나씩 만듦 | ④ |
+| `spec.nodeName` | Pod가 돌 노드 이름. 비어 있으면 아직 배정 전 | ④⑤ |
+| 테인트, 톨러레이션 | 노드에 붙이는 "아무나 오지 마" 표시와 Pod가 지닌 "이 표시는 견딘다" 허가 | ⑤ |
+| 샌드박스(pause) | Pod마다 먼저 뜨는 작은 컨테이너. 네트워크 네임스페이스를 잡아 둠 | ⑦ |
+| 라벨, selector | 객체에 붙인 이름표와 그 이름표로 객체를 고르는 조건 | ⑧ |
+| EndpointSlice | Service 뒤의 실제 Pod IP와 포트 목록 | ⑧ |
+| readiness probe | 컨테이너가 요청을 받을 준비가 됐는지 kubelet이 주기적으로 묻는 검사 | ⑧ |
+| DNAT | 패킷의 목적지 주소를 바꿔 쓰는 커널 규칙. ClusterIP를 Pod IP로 바꿈 | ⑧ |
+
+> **정리**: 기록은 API 서버에만 남고 각 구성요소는 watch로 자기 몫의 변화를 받아 움직입니다. 표의 단어는 각 층에서 다시 한 번 짧게 설명합니다.
+
+</details>
+
 ## 3. kubectl apply 한 번을 위에서부터 따라가기
 
 ![kubectl apply -f shop-web.yaml 한 번이 kubectl, kube-apiserver, etcd, 컨트롤러, kube-scheduler, kubelet, CRI·CNI·CSI, Service와 kube-proxy, Gateway와 Ingress의 아홉 층을 차례로 내려가는 그림. 층마다 자세히 다루는 챕터와 절이 오른쪽에 붙어 있다](/uploads/cert/cka-map/apply-top-down.svg)
@@ -94,7 +126,7 @@ kubectl apply -f shop-web.yaml
 
 ### 3-1. kubectl: 파일을 HTTP 요청으로 바꾼다
 
-kubectl은 kubeconfig에서 API 서버 주소와 자격 증명을 읽고 YAML을 JSON으로 바꿔 HTTPS 요청을 보냅니다. 클러스터에 없는 객체면 생성 요청이 나가고 이미 있으면 바뀐 부분만 보내는 요청이 나갑니다.
+kubectl은 kubeconfig에서 API 서버 주소와 자격 증명을 읽고 YAML을 JSON으로 바꿔 HTTPS 요청을 보냅니다. 클러스터에 없는 객체면 생성 요청(POST)이 나가고 이미 있으면 바뀐 부분만 보내는 요청(PATCH)이 나갑니다.
 
 - 고장 나면: `The connection to the server ... was refused`처럼 아예 연결이 안 되거나 엉뚱한 클러스터에 적용됩니다. 시험에서는 과제마다 컨텍스트와 호스트가 달라서 두 번째 경우가 실제로 점수를 깎습니다.
 - 더 볼 곳: kubeconfig 구조는 [Ch-02 1-10절](/blog/cert/cka/cka-02-cluster-architecture#1-10-kubeconfig-파일-구조), 과제마다 호스트를 옮기는 규칙은 [Ch-00 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan#3-2-과제마다-다른-호스트)
@@ -239,6 +271,8 @@ Ch-02를 뒤로 미룬 이유는 설치 과정이 앞의 층을 전부 한 번�
 ## 참고 자료
 
 - [Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/), 구성요소 그림 출처(CC BY 4.0)
+- Jamie Hannaford, [What happens when I type kubectl run](https://github.com/jamiehannaford/what-happens-when-k8s), 위에서부터 따라가는 구성 참고(소스 링크는 v1.14 무렵)
+- [Efficient detection of changes (watch)](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes)
 - [Controlling Access to the Kubernetes API](https://kubernetes.io/docs/concepts/security/controlling-access/)
 - [Admission Control in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/)
 - [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/)
