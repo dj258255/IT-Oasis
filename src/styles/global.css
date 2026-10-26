@@ -658,6 +658,12 @@ button, input, select, textarea {
 .prose details > *:last-child { margin-bottom: 1.1rem; }
 .dark .prose details > summary { color: #7cc4f0; }
 .dark .prose details > summary:focus-visible { outline-color: #7cc4f0; }
+/* 토글 안에서는 소제목과 인용 상자의 왼쪽 띠를 뺀다. 상자 테두리 안에 띠가 겹겹이 서면 장식만 남는다 */
+.prose details > h4,
+.prose details > blockquote {
+  border-left: 0;
+  padding-left: 1.1rem;
+}
 
 .prose h1, .prose h2, .prose h3 {
   @apply font-bold mt-10 mb-4;
