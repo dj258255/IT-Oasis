@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-06] 트러블슈팅: 증상에서 출발해 kubelet과 로그까지 내려가는 순서'
+title: '[CKA] 트러블슈팅: 증상에서 출발해 kubelet과 로그까지 내려가는 순서'
 description: CKA 커리큘럼 v1.37에서 비중이 가장 큰 Troubleshooting 영역(30%)을 증상, 확인 명령, 고칠 곳 순서로 정리합니다. 노드 NotReady와 kubelet 인증서, static Pod 컨트롤 플레인과 crictl, kubectl top과 Metrics API 버전, JSONPath 값 뽑기, kubectl logs, Service에서 EndpointSlice까지의 점검을 다룹니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 6
+seriesOrder: 9
 ---
 
 ## 결론부터
@@ -37,7 +37,7 @@ seriesOrder: 6
 | 4 | Manage and evaluate container output streams | 4. 컨테이너 출력 스트림 |
 | 5 | Troubleshoot services and networking | 5. 서비스와 네트워킹 |
 
-예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API(`order-api`), 결제(`payment`), 게시판(`board`)이 있습니다. [Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에서 정리한 후기들이 공통으로 꼽은 어려움이 트러블슈팅에서 시간을 잃은 것이었습니다. 그래서 이 글은 "어디부터 볼지"를 정하는 데 비중을 둡니다.
+예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API(`order-api`), 결제(`payment`), 게시판(`board`)이 있습니다. [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에서 정리한 후기들이 공통으로 꼽은 어려움이 트러블슈팅에서 시간을 잃은 것이었습니다. 그래서 이 글은 "어디부터 볼지"를 정하는 데 비중을 둡니다.
 
 ## 0. 증상에서 출발하는 판단 표
 
@@ -122,12 +122,12 @@ Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 �
 | `kubectl`이 API 서버에 연결 못 함 | API 서버 응답 없음 | 컨트롤 플레인 노드의 `crictl ps -a`, `kube-apiserver.yaml` | 매니페스트 오타, 인증서 경로, etcd 주소 | 2 |
 | Deployment는 있는데 Pod가 0개 | 컨트롤러가 Pod 객체를 만들지 않음 | `kube-system`의 kube-controller-manager Pod | static Pod 매니페스트 오류 | 2 |
 | Service가 응답 없음, 엔드포인트 없음 | selector가 Pod를 못 고르거나 Pod가 Ready 아님 | `kubectl get endpointslices -l kubernetes.io/service-name=<svc>` | selector와 라벨 불일치, `targetPort` 오류, readiness 실패 | 5 |
-| 이름 해석 실패 | CoreDNS 경로 어딘가의 문제 | `nslookup kubernetes.default.svc.cluster.local`(5-2절 끝의 busybox 주의), CoreDNS Pod와 `kube-dns` Service | CoreDNS 다운, Corefile 오류, Egress NetworkPolicy가 DNS 차단 | 5, [Ch-04](/blog/cert/cka/cka-04-services-networking) |
+| 이름 해석 실패 | CoreDNS 경로 어딘가의 문제 | `nslookup kubernetes.default.svc.cluster.local`(5-2절 끝의 busybox 주의), CoreDNS Pod와 `kube-dns` Service | CoreDNS 다운, Corefile 오류, Egress NetworkPolicy가 DNS 차단 | 5, [7편](/blog/cert/cka/cka-04-services-networking) |
 | `kubectl top` 실패 | Metrics API 없음 | `kubectl get apiservice`, metrics-server Pod | metrics-server 미설치, kubelet 인증서 검증 실패 | 3 |
 
 ### 0-3. Pending
 
-Debug Pods 문서는 `Pending`을 "노드에 스케줄할 수 없는 상태"로 정의하고 원인으로 자원 부족과 `hostPort` 충돌을 듭니다. 시험에서 더 자주 보는 것은 Workloads 영역과 겹치는 원인입니다. `nodeSelector`의 라벨이 어느 노드에도 없거나, 노드에 테인트가 있는데 톨러레이션이 없거나, 쓰는 PVC가 `Pending`인 경우입니다. PVC가 원인이면 [Ch-05](/blog/cert/cka/cka-05-storage)의 PVC 바인딩 점검으로 넘어갑니다.
+Debug Pods 문서는 `Pending`을 "노드에 스케줄할 수 없는 상태"로 정의하고 원인으로 자원 부족과 `hostPort` 충돌을 듭니다. 시험에서 더 자주 보는 것은 Workloads 영역과 겹치는 원인입니다. `nodeSelector`의 라벨이 어느 노드에도 없거나, 노드에 테인트가 있는데 톨러레이션이 없거나, 쓰는 PVC가 `Pending`인 경우입니다. PVC가 원인이면 [8편](/blog/cert/cka/cka-05-storage)의 PVC 바인딩 점검으로 넘어갑니다.
 
 ```bash
 kubectl describe pod order-api-xxxx -n shop | sed -n '/Events/,$p'
@@ -1020,7 +1020,7 @@ spec:
 kubectl -n shop logs board -c access-log
 ```
 
-이 Pod에서 `-c` 없이 `kubectl -n shop logs board`를 치면 `Defaulted container "app" out of: app, access-log` 안내와 함께 빈 출력이 나옵니다. `app`은 파일에만 쓰기 때문입니다. 같은 구조를 네이티브 사이드카(`initContainers`에 `restartPolicy: Always`, 1.33 stable)로 쓰는 법은 [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+이 Pod에서 `-c` 없이 `kubectl -n shop logs board`를 치면 `Defaulted container "app" out of: app, access-log` 안내와 함께 빈 출력이 나옵니다. `app`은 파일에만 쓰기 때문입니다. 같은 구조를 네이티브 사이드카(`initContainers`에 `restartPolicy: Always`, 1.33 stable)로 쓰는 법은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
 ### 4-6. 자주 틀리는 지점
 
@@ -1088,7 +1088,7 @@ Debug Services 문서는 질문을 하나씩 확인하는 순서로 짜여 있�
 |---|---|---|---|
 | 1 | Service가 존재하는지 | `kubectl get svc <svc>` | `kubectl expose`로 만든다 |
 | 2 | 대상 Pod에 걸린 NetworkPolicy Ingress 규칙이 있는지 | `kubectl get networkpolicy -n <ns>` | 규칙을 검토한다 |
-| 3 | DNS 이름으로 동작하는지 | 클러스터 안 Pod에서 `nslookup <svc>`, `nslookup <svc>.<ns>`(busybox 1.36이면 `<svc>.<ns>.svc.cluster.local`) | [Ch-04](/blog/cert/cka/cka-04-services-networking)의 CoreDNS 점검 |
+| 3 | DNS 이름으로 동작하는지 | 클러스터 안 Pod에서 `nslookup <svc>`, `nslookup <svc>.<ns>`(busybox 1.36이면 `<svc>.<ns>.svc.cluster.local`) | [7편](/blog/cert/cka/cka-04-services-networking)의 CoreDNS 점검 |
 | 4 | Service IP로 동작하는지 | `wget -qO- <ClusterIP>:<port>` | 다음 단계로 좁히기 |
 | 5 | Service 정의가 맞는지 | `kubectl get svc <svc> -o yaml` | 포트, `targetPort`, 프로토콜, 이름 붙은 포트 |
 | 6 | EndpointSlice가 있는지 | `kubectl get endpointslices -l kubernetes.io/service-name=<svc>` | selector와 Pod 라벨 대조 |
@@ -1149,7 +1149,7 @@ kind v1.37.0에서 ConfigMap의 `mode`는 `iptables`였고 kube-proxy 로그에 
 | 특정 노드의 Pod끼리만 통신 실패 | 그 노드의 CNI 플러그인 Pod, 노드 조건 `NetworkUnavailable` |
 | NodePort로 외부 접속 실패 | `nodePort` 번호, 노드 방화벽, `externalTrafficPolicy: Local`인데 그 노드에 엔드포인트가 없는지. `Local`은 요청이 들어온 노드에 있는 Pod로만 보내고 다른 노드로 넘기지 않으니 Pod가 없는 노드로 들어온 요청은 실패함 |
 | Ingress나 Gateway 경유 실패 | 백엔드 Service부터 위 순서로 확인한 뒤 `ingressClassName`, HTTPRoute의 `Accepted`와 `ResolvedRefs` 조건 |
-| 갑자기 모든 이름 해석 실패 | CoreDNS Pod, Corefile, Egress NetworkPolicy([Ch-04](/blog/cert/cka/cka-04-services-networking)) |
+| 갑자기 모든 이름 해석 실패 | CoreDNS Pod, Corefile, Egress NetworkPolicy([7편](/blog/cert/cka/cka-04-services-networking)) |
 
 ### 5-5. 자주 틀리는 지점
 
@@ -1288,7 +1288,7 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $
 - jq는 2025년 3월 판 시험 안내부터 사전 설치 목록에서 빠졌고 crictl은 있다는 근거가 없습니다. 그래서 `/var/log/pods`와 JSONPath, `yq` 대안을 함께 적었습니다.
 - cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway 경유 장애는 돌려 보지 못했습니다.
 - Metrics API는 1.37에서 `v1`이 Stable이지만 2026년 10월 기준 릴리스된 metrics-server(v0.9.0)는 `v1beta1`만 제공합니다. 시험 클러스터의 metrics-server 버전은 확인하지 못했습니다.
-- etcd 백업과 복구, kubeadm 업그레이드 절차는 [Ch-02](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
+- etcd 백업과 복구, kubeadm 업그레이드 절차는 [5편](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 
 ## 참고 자료
 

@@ -1,6 +1,6 @@
 ---
-title: '[DE Ch-00] 위에서부터 보는 지도: 주문 하나가 대시보드 숫자가 되기까지'
-description: 쇼핑몰 주문 하나가 생겨서 "어제 매출"과 "지난 5분 주문 수"라는 두 숫자가 되기까지를 위에서부터 따라갑니다. 전체 흐름을 먼저 보고 배치 경로, 스트림 경로, 저장, 측정으로 한 층씩 내려가면서 그 자리에서 생기는 문제와 그 문제를 다루는 챕터를 잇습니다. Ch-01~20이 지도 어디에 걸리는지 표로 정리하고 목적별 읽기 순서를 제안합니다.
+title: '[DE] 위에서부터 보는 지도: 주문 하나가 대시보드 숫자가 되기까지'
+description: 쇼핑몰 주문 하나가 생겨서 "어제 매출"과 "지난 5분 주문 수"라는 두 숫자가 되기까지를 위에서부터 따라갑니다. 전체 흐름을 먼저 보고 배치 경로, 스트림 경로, 저장, 측정으로 한 층씩 내려가면서 그 자리에서 생기는 문제와 그 문제를 다루는 챕터를 잇습니다. 2~21편이 지도 어디에 걸리는지 표로 정리하고 목적별 읽기 순서를 제안합니다.
 date: 2026-10-23T00:00:00.000Z
 tags:
   - Data Engineering
@@ -12,7 +12,7 @@ topics:
   - pipeline
 draft: false
 series: "DE 공부"
-seriesOrder: 0
+seriesOrder: 1
 ---
 
 ## 결론부터
@@ -20,13 +20,13 @@ seriesOrder: 0
 1. 이 시리즈는 주문 하나가 대시보드 숫자 하나가 되기까지의 길을 스무 조각으로 나눈 것입니다. 조각을 번호 순서로 읽기 전에 길 전체를 한 번 보고 들어가면 각 편이 왜 그 자리에 있는지가 보입니다.
 2. 길은 두 갈래입니다. 하루치를 모아 밤에 계산하는 배치 경로(어제 매출)와 들어오는 대로 계산하는 스트림 경로(지난 5분 주문 수)입니다. 두 갈래는 같은 Kafka 토픽에서 출발하고 같은 레이크하우스에 원본을 남깁니다.
 3. 층을 내려갈수록 질문이 구체적으로 바뀝니다. 맨 위에서는 "데이터가 어디로 가나"를 묻고 맨 아래에서는 "실패한 태스크를 다시 돌려도 결과가 같나", "10시 1분 이벤트가 10시 5분에 오면 어느 창에 들어가나" 같은 것을 묻습니다.
-4. 처음이면 Ch-01 → 02 → 03 → 11 → 13 → 15 → 18 순서로 뼈대를 잡고 나머지는 궁금한 자리에서 꺼내 읽기를 권합니다.
+4. 처음이면 2편 → 02 → 03 → 11 → 13 → 15 → 18 순서로 뼈대를 잡고 나머지는 궁금한 자리에서 꺼내 읽기를 권합니다.
 
 ---
 
 ## 1. 탑다운으로 읽는 이유
 
-시리즈를 Ch-01부터 차례로 쓰다 보니 한 가지 아쉬움이 남았습니다. Ch-11에서 Kafka 파티션을 늘리면 키가 옮겨 간다는 이야기를 읽을 때 "그래서 이게 내 대시보드 숫자와 무슨 상관인데?"라는 질문에 바로 답하기가 어렵습니다. 부품을 아래에서부터 쌓아 올리는 순서는 쓰는 사람에게는 편한데 읽는 사람에게는 목적지가 안 보입니다.
+시리즈를 2편부터 차례로 쓰다 보니 한 가지 아쉬움이 남았습니다. 12편에서 Kafka 파티션을 늘리면 키가 옮겨 간다는 이야기를 읽을 때 "그래서 이게 내 대시보드 숫자와 무슨 상관인데?"라는 질문에 바로 답하기가 어렵습니다. 부품을 아래에서부터 쌓아 올리는 순서는 쓰는 사람에게는 편한데 읽는 사람에게는 목적지가 안 보입니다.
 
 그래서 이 글은 반대 방향으로 갑니다. 목적지를 먼저 정하고 거기까지 가는 길을 위에서부터 한 층씩 펼칩니다. 각 층에서 "여기서 무엇이 틀어질 수 있나"를 묻고 그 질문을 다루는 챕터로 링크를 겁니다. 링크를 따라 내려갔다가 다시 이 지도로 올라오는 식으로 읽으면 됩니다.
 
@@ -48,9 +48,9 @@ seriesOrder: 0
 3. Kafka에서 길이 둘로 나뉩니다. Flink가 토픽을 계속 읽으면서 5분 창마다 주문 수를 세고 다른 한쪽은 토픽 내용을 받은 그대로 레이크하우스의 Bronze 테이블에 적재합니다.
 4. 밤마다 오케스트레이터가 Bronze를 정제해 Silver를 만들고 Silver를 집계해 Gold를 만듭니다. 어제 매출은 Gold에서 읽습니다.
 
-이 층에서 알아 둘 것은 Ch-01 한 편에 다 있습니다. 데이터가 생성, 저장, 수집, 변환, 서빙 다섯 단계를 거친다는 것, 배치와 스트림을 가르는 기준이 속도보다 입력이 끝나는지라는 것, Bronze에 원본을 고치지 않고 남겨야 나중에 Silver 로직 버그를 알았을 때 다시 만들 수 있다는 것입니다.
+이 층에서 알아 둘 것은 2편 한 편에 다 있습니다. 데이터가 생성, 저장, 수집, 변환, 서빙 다섯 단계를 거친다는 것, 배치와 스트림을 가르는 기준이 속도보다 입력이 끝나는지라는 것, Bronze에 원본을 고치지 않고 남겨야 나중에 Silver 로직 버그를 알았을 때 다시 만들 수 있다는 것입니다.
 
-→ [Ch-01 데이터 파이프라인의 큰 그림](/blog/data/foundations/de-01-pipeline-big-picture)
+→ [2편 데이터 파이프라인의 큰 그림](/blog/data/foundations/de-01-pipeline-big-picture)
 
 ## 3. 둘째 층: 네 영역으로 나누기
 
@@ -60,10 +60,10 @@ seriesOrder: 0
 
 | 영역 | 맡는 숫자 | 핵심 질문 | 챕터 |
 |---|---|---|---|
-| 배치 경로 | 어제 매출 | 밤 작업을 누가 어떤 순서로 돌리고 실패하면 어떻게 다시 돌리나 | Ch-02~07 |
-| 스트림 경로 | 지난 5분 주문 수 | 끝없이 들어오는 이벤트를 어떻게 빠짐없이 한 번씩 세나 | Ch-10~17 |
-| 저장 | 둘 다 | 원본과 중간 결과를 어떤 테이블에 어떻게 쌓고 치우나 | Ch-18~20 |
-| 측정 | 둘 다 | 숫자가 얼마나 늦게 보이는지 어떻게 재나 | Ch-08~09 |
+| 배치 경로 | 어제 매출 | 밤 작업을 누가 어떤 순서로 돌리고 실패하면 어떻게 다시 돌리나 | 3~8편 |
+| 스트림 경로 | 지난 5분 주문 수 | 끝없이 들어오는 이벤트를 어떻게 빠짐없이 한 번씩 세나 | 11~18편 |
+| 저장 | 둘 다 | 원본과 중간 결과를 어떤 테이블에 어떻게 쌓고 치우나 | 19~21편 |
+| 측정 | 둘 다 | 숫자가 얼마나 늦게 보이는지 어떻게 재나 | 9~10편 |
 
 여기서부터는 영역 하나씩 내려갑니다.
 
@@ -71,23 +71,23 @@ seriesOrder: 0
 
 어제 매출을 만드는 밤 작업은 겉보기에 단순합니다. "매일 새벽 2시에 Bronze를 읽어 Silver를 만들고 Silver를 집계해 Gold에 쓴다." 이걸 cron 세 줄로 돌리다 보면 다음 질문이 순서대로 찾아옵니다.
 
-**정제가 끝나기 전에 집계가 시작되면?** cron은 정해진 시각에 명령을 실행할 뿐이라 앞 작업이 끝났는지 모릅니다. 작업 사이의 의존성, 재시도, 실행 기록을 맡는 것이 오케스트레이터입니다. Airflow 3와 Argo Workflows가 이 일을 어떤 부품으로 나눠 맡는지가 Ch-02입니다.
-→ [Ch-02 오케스트레이터는 무엇을 맡나](/blog/data/orchestration/de-02-what-orchestrator-does)
+**정제가 끝나기 전에 집계가 시작되면?** cron은 정해진 시각에 명령을 실행할 뿐이라 앞 작업이 끝났는지 모릅니다. 작업 사이의 의존성, 재시도, 실행 기록을 맡는 것이 오케스트레이터입니다. Airflow 3와 Argo Workflows가 이 일을 어떤 부품으로 나눠 맡는지가 3편입니다.
+→ [3편 오케스트레이터는 무엇을 맡나](/blog/data/orchestration/de-02-what-orchestrator-does)
 
-**결제 데이터가 새벽 3시에 들어오는 날이 있다면?** 2시에 시작하면 너무 이르고 4시로 미루면 대부분의 날에 한 시간을 버립니다. 시각을 기다릴지 데이터 도착을 기다릴지가 Ch-05입니다.
-→ [Ch-05 스케줄 트리거와 이벤트 트리거](/blog/data/orchestration/de-05-schedule-vs-event-trigger)
+**결제 데이터가 새벽 3시에 들어오는 날이 있다면?** 2시에 시작하면 너무 이르고 4시로 미루면 대부분의 날에 한 시간을 버립니다. 시각을 기다릴지 데이터 도착을 기다릴지가 6편입니다.
+→ [6편 스케줄 트리거와 이벤트 트리거](/blog/data/orchestration/de-05-schedule-vs-event-trigger)
 
 **오늘 새벽에 도는 작업은 어느 날짜를 처리하나?** 배치 작업에는 실행 시각과 처리 구간이라는 시계가 둘 있습니다. Airflow 3에서 기본 timetable이 바뀌면서 매일 00시 run의 `ds`가 어제에서 오늘로 바뀌었습니다. 지난주 데이터를 다시 돌리는 backfill도 이 구분 위에서 동작합니다.
-→ [Ch-04 논리 날짜와 backfill](/blog/data/foundations/de-04-logical-date-backfill)
+→ [5편 논리 날짜와 backfill](/blog/data/foundations/de-04-logical-date-backfill)
 
 **집계 태스크가 중간에 죽어서 재시도하면 매출이 두 번 더해지나?** 오케스트레이터는 실패한 태스크를 처음부터 다시 돌립니다. append로 쓰면 두 번 더해지고 파티션을 통째로 덮어쓰면 몇 번을 돌려도 같습니다. 재시도 간격에 지터를 넣는 이유도 여기서 다룹니다.
-→ [Ch-03 멱등성과 재시도·백오프](/blog/data/foundations/de-03-idempotency-retry-backoff)
+→ [4편 멱등성과 재시도·백오프](/blog/data/foundations/de-03-idempotency-retry-backoff)
 
 **어제 작업이 늦게 끝나서 오늘 작업과 겹치면?** `max_active_runs=1`은 겹침을 막을 뿐 같은 날짜가 두 번 도는 것은 막지 않습니다. 결제 API처럼 외부 시스템을 부를 때 pool로 동시 호출을 묶는 법과 사람 승인 단계를 넣는 법도 함께 봅니다.
-→ [Ch-06 동시성 제한, 중복 실행, 사람 승인](/blog/data/orchestration/de-06-concurrency-dedup-approval)
+→ [7편 동시성 제한, 중복 실행, 사람 승인](/blog/data/orchestration/de-06-concurrency-dedup-approval)
 
-**태스크마다 Pod를 띄우는데 몇 초씩 먹는다면?** KubernetesExecutor와 Argo는 태스크 하나에 Pod 하나를 씁니다. 쿠버네티스의 Pod 기동 SLO(p99 5초)는 이미지 pull과 init 컨테이너를 뺀 값이라 실제로 기다리는 시간과 다릅니다. 그 시간을 구간으로 나눠 보는 것이 Ch-07입니다.
-→ [Ch-07 태스크 하나가 Pod 하나가 될 때](/blog/data/orchestration/de-07-task-per-pod-cost)
+**태스크마다 Pod를 띄우는데 몇 초씩 먹는다면?** KubernetesExecutor와 Argo는 태스크 하나에 Pod 하나를 씁니다. 쿠버네티스의 Pod 기동 SLO(p99 5초)는 이미지 pull과 init 컨테이너를 뺀 값이라 실제로 기다리는 시간과 다릅니다. 그 시간을 구간으로 나눠 보는 것이 8편입니다.
+→ [8편 태스크 하나가 Pod 하나가 될 때](/blog/data/orchestration/de-07-task-per-pod-cost)
 
 배치 경로를 한 문장으로 줄이면 이렇습니다. 순서를 맡기고(02), 시작 시점을 정하고(05), 처리할 날짜를 분명히 하고(04), 다시 돌려도 같게 만들고(03), 겹쳐 돌지 않게 하고(06), 그 모든 걸 띄우는 비용을 잰다(07).
 
@@ -96,28 +96,28 @@ seriesOrder: 0
 지난 5분 주문 수는 입력이 끝나지 않는다는 점에서 배치와 출발점이 다릅니다. "다 모은 다음 센다"가 불가능하니 질문이 바뀝니다. 이벤트가 들어오는 순서를 따라 내려가 보겠습니다.
 
 **매장 키오스크의 와이파이가 자주 끊긴다면?** 키오스크는 MQTT로 브로커에 주문을 보냅니다. MQTT의 QoS는 발행자에서 브로커, 브로커에서 구독자 구간마다 따로 적용되고 끊긴 동안의 메시지는 세션이 맡습니다. 브로커에서 Kafka로 넘길 때 보장이 어떻게 이어지는지도 여기서 봅니다.
-→ [Ch-10 MQTT: QoS와 세션](/blog/data/streaming/de-10-mqtt-qos-session)
+→ [11편 MQTT: QoS와 세션](/blog/data/streaming/de-10-mqtt-qos-session)
 
 **같은 고객의 주문 생성과 취소가 순서가 뒤바뀌어 읽히면?** Kafka는 파티션 안에서만 순서를 보장하고 같은 키는 같은 파티션에 갑니다. 그런데 파티션 수를 6개에서 8개로 늘리면 키의 74.6%가 다른 파티션으로 옮겨 갑니다. 고객 ID를 키로 쓰고 있었다면 늘리는 순간 순서가 흔들릴 수 있습니다.
-→ [Ch-11 Kafka 로그 구조](/blog/data/streaming/de-11-kafka-log-partition-group)
+→ [12편 Kafka 로그 구조](/blog/data/streaming/de-11-kafka-log-partition-group)
 
 **앱이 이벤트를 보내는 데서부터 이미 늦다면?** 프로듀서는 레코드를 배치로 모아 보냅니다. `linger.ms`만큼 기다리면 요청 수가 줄어 오히려 지연이 줄기도 하고 Kafka 4.0에서 이 기본값이 0에서 5로 바뀌었습니다. `acks`와 멱등성 설정이 내구성과 순서를 정하는 방식도 함께 봅니다.
-→ [Ch-12 프로듀서 설정과 지연](/blog/data/streaming/de-12-kafka-producer-latency)
+→ [13편 프로듀서 설정과 지연](/blog/data/streaming/de-12-kafka-producer-latency)
 
 **컨슈머가 처리 도중 죽어서 같은 주문을 두 번 세면?** at-most-once와 at-least-once는 처리와 오프셋 커밋 중 무엇을 먼저 하느냐로 갈립니다. exactly-once는 처리 결과와 읽은 위치를 한 트랜잭션으로 커밋해서 만듭니다. 결과를 외부 DB로 내보내는 순간 그 보장이 끝난다는 점이 실무에서 자주 걸립니다.
-→ [Ch-13 전달 보장](/blog/data/foundations/de-13-delivery-semantics)
+→ [14편 전달 보장](/blog/data/foundations/de-13-delivery-semantics)
 
 **주문 이벤트에 쿠폰 필드가 새로 붙으면?** 보내는 쪽과 읽는 쪽은 서로 다른 날 배포됩니다. 스키마 레지스트리의 호환성 모드는 새 스키마를 등록하는 시점에 "옛 컨슈머가 새 메시지를 읽을 수 있나" 같은 방향을 검사합니다. 누가 먼저 배포되는지가 모드를 정합니다.
-→ [Ch-14 스키마 레지스트리와 호환성](/blog/data/foundations/de-14-schema-registry-compatibility)
+→ [15편 스키마 레지스트리와 호환성](/blog/data/foundations/de-14-schema-registry-compatibility)
 
 **10시 4분 59초 주문이 10시 5분 3초에 도착하면 어느 5분에 세나?** 끝없는 입력에서는 "이 구간이 다 왔다"를 알 수 없어서 watermark라는 추정을 씁니다. 오래 기다리면 숫자가 늦게 뜨고 짧게 기다리면 늦게 온 주문을 놓칩니다. 조용한 파티션 하나가 전체를 붙잡는 현상도 여기서 다룹니다.
-→ [Ch-15 Flink의 시간과 watermark](/blog/data/streaming/de-15-flink-time-watermark)
+→ [16편 Flink의 시간과 watermark](/blog/data/streaming/de-15-flink-time-watermark)
 
 **"결제까지 끝난 주문"만 세고 싶다면?** 주문 스트림과 결제 스트림을 이어야 합니다. 몇 분 안에 들어온 결제까지 짝으로 볼지 정하는 범위가 짝지어지는 비율과 Flink가 붙들고 있어야 하는 상태 크기를 함께 정합니다.
-→ [Ch-16 윈도와 interval join](/blog/data/streaming/de-16-flink-window-join)
+→ [17편 윈도와 interval join](/blog/data/streaming/de-16-flink-window-join)
 
 **Flink 작업이 죽었다 살아나면 숫자가 어떻게 되나?** Flink는 체크포인트로 상태를 저장하고 장애가 나면 마지막 체크포인트부터 다시 처리합니다. exactly-once 싱크는 체크포인트가 끝날 때 결과를 커밋하므로 체크포인트 간격이 곧 숫자가 보이기까지의 지연이 됩니다.
-→ [Ch-17 체크포인트와 백프레셔](/blog/data/streaming/de-17-flink-checkpoint-backpressure)
+→ [18편 체크포인트와 백프레셔](/blog/data/streaming/de-17-flink-checkpoint-backpressure)
 
 스트림 경로에서 반복해서 나오는 맞바꿈이 하나 있습니다. 더 기다리면 더 정확하고 덜 기다리면 더 빠릅니다. watermark 허용치(15), join 범위(16), 체크포인트 간격(17), `linger.ms`(12)가 모두 이 맞바꿈의 다른 얼굴입니다.
 
@@ -126,23 +126,23 @@ seriesOrder: 0
 두 경로가 공유하는 바닥입니다. Bronze, Silver, Gold를 "폴더 세 개"로만 생각하면 다음 문제를 만납니다.
 
 **밤 작업이 Silver를 쓰는 도중에 누가 Silver를 읽으면?** 디렉터리를 나열해서 테이블 상태를 알아내는 Hive 방식에는 원자적 커밋이 없어서 반쯤 쓴 파일이 보일 수 있습니다. Iceberg는 테이블에 속한 파일 목록을 메타데이터로 기록하고 포인터 하나를 바꿔 커밋합니다.
-→ [Ch-18 테이블 포맷이 필요한 이유](/blog/data/lakehouse/de-18-iceberg-table-format)
+→ [19편 테이블 포맷이 필요한 이유](/blog/data/lakehouse/de-18-iceberg-table-format)
 
 **매일 덮어쓰다 보니 저장 비용이 계속 오른다면?** Iceberg는 커밋마다 스냅샷을 남겨 과거 시점을 그대로 읽게 해 줍니다. 그 대가로 옛 파일이 쌓이고 스냅샷을 만료해도 데이터 파일은 따로 치워야 남지 않습니다.
-→ [Ch-19 Iceberg 유지보수](/blog/data/lakehouse/de-19-iceberg-maintenance)
+→ [20편 Iceberg 유지보수](/blog/data/lakehouse/de-19-iceberg-maintenance)
 
 **주문 DB의 변경을 Bronze까지 어떻게 옮기나?** `updated_at`으로 주기적으로 조회하면 삭제된 주문과 그 사이의 중간 상태를 놓칩니다. DB 변경 로그를 읽는 CDC는 이걸 잡지만 PostgreSQL replication slot이 디스크를 채우는 새 실패 경로가 생깁니다. 맨 위 그림의 왼쪽 위 화살표가 이 편입니다.
-→ [Ch-20 CDC로 레이크하우스 채우기](/blog/data/lakehouse/de-20-cdc-to-lakehouse)
+→ [21편 CDC로 레이크하우스 채우기](/blog/data/lakehouse/de-20-cdc-to-lakehouse)
 
 ## 7. 측정으로 내려가기: 얼마나 늦나
 
 "지난 5분 주문 수가 늦게 뜬다"는 말을 들으면 먼저 얼마나 늦는지를 재야 합니다. 여기에도 함정이 둘 있습니다.
 
 **평균 지연이 200ms인데 왜 느리다는 말이 나오나?** 지연은 정규분포를 따르지 않아서 평균이 꼬리를 숨깁니다. 백분위 여러 개와 최댓값을 함께 보고 서버 여러 대의 백분위는 평균 내지 말고 히스토그램을 합쳐서 구합니다.
-→ [Ch-08 지연은 백분위와 최댓값으로 본다](/blog/data/foundations/de-08-latency-percentiles)
+→ [9편 지연은 백분위와 최댓값으로 본다](/blog/data/foundations/de-08-latency-percentiles)
 
 **부하 테스트에서는 p99가 1ms였는데?** 응답을 받아야 다음 요청을 보내는 부하 도구는 서버가 멈춘 동안 요청을 보내지 않아서 가장 나쁜 순간을 기록에서 지웁니다. 이를 coordinated omission이라고 부릅니다.
-→ [Ch-09 측정의 함정](/blog/data/foundations/de-09-measurement-pitfalls)
+→ [10편 측정의 함정](/blog/data/foundations/de-09-measurement-pitfalls)
 
 측정 두 편은 그림 어디에도 화살표로 걸리지 않습니다. 대신 모든 화살표 위에서 "이 구간이 얼마나 걸리나"를 물을 때 꺼내 쓰는 도구입니다.
 
@@ -150,52 +150,52 @@ seriesOrder: 0
 
 | 챕터 | 지도 위 자리 | 이 편을 펼치는 질문 |
 |---|---|---|
-| [Ch-01](/blog/data/foundations/de-01-pipeline-big-picture) | 전체 | 데이터는 어떤 단계를 거치고 원본은 왜 남기나 |
-| [Ch-02](/blog/data/orchestration/de-02-what-orchestrator-does) | 배치 | cron 대신 무엇이 순서와 재시도를 맡나 |
-| [Ch-03](/blog/data/foundations/de-03-idempotency-retry-backoff) | 배치 | 다시 돌려도 결과가 같나 |
-| [Ch-04](/blog/data/foundations/de-04-logical-date-backfill) | 배치 | 이 run은 어느 날짜를 처리하나 |
-| [Ch-05](/blog/data/orchestration/de-05-schedule-vs-event-trigger) | 배치 | 시각을 기다리나 데이터를 기다리나 |
-| [Ch-06](/blog/data/orchestration/de-06-concurrency-dedup-approval) | 배치 | 겹쳐 돌거나 두 번 돌면 |
-| [Ch-07](/blog/data/orchestration/de-07-task-per-pod-cost) | 배치 | Pod 하나 띄우는 데 어디서 시간이 드나 |
-| [Ch-08](/blog/data/foundations/de-08-latency-percentiles) | 측정 | 지연을 어떤 숫자로 보나 |
-| [Ch-09](/blog/data/foundations/de-09-measurement-pitfalls) | 측정 | 잰 숫자를 믿어도 되나 |
-| [Ch-10](/blog/data/streaming/de-10-mqtt-qos-session) | 스트림 입구 | 끊기는 기기에서 어떻게 받나 |
-| [Ch-11](/blog/data/streaming/de-11-kafka-log-partition-group) | 스트림 | 순서는 어디까지 보장되나 |
-| [Ch-12](/blog/data/streaming/de-12-kafka-producer-latency) | 스트림 입구 | 보내는 쪽에서 얼마나 기다리나 |
-| [Ch-13](/blog/data/foundations/de-13-delivery-semantics) | 스트림 | 한 번만 처리됐다고 말할 수 있나 |
-| [Ch-14](/blog/data/foundations/de-14-schema-registry-compatibility) | 스트림 | 메시지 모양이 바뀌면 |
-| [Ch-15](/blog/data/streaming/de-15-flink-time-watermark) | 스트림 | 늦게 온 이벤트는 언제까지 기다리나 |
-| [Ch-16](/blog/data/streaming/de-16-flink-window-join) | 스트림 | 두 스트림을 어떻게 잇나 |
-| [Ch-17](/blog/data/streaming/de-17-flink-checkpoint-backpressure) | 스트림 | 죽었다 살아나면 어디서부터 다시 하나 |
-| [Ch-18](/blog/data/lakehouse/de-18-iceberg-table-format) | 저장 | 테이블은 무엇으로 정의되나 |
-| [Ch-19](/blog/data/lakehouse/de-19-iceberg-maintenance) | 저장 | 쌓인 파일은 누가 치우나 |
-| [Ch-20](/blog/data/lakehouse/de-20-cdc-to-lakehouse) | 저장 입구 | 원천 DB 변경을 어떻게 옮기나 |
+| [2편](/blog/data/foundations/de-01-pipeline-big-picture) | 전체 | 데이터는 어떤 단계를 거치고 원본은 왜 남기나 |
+| [3편](/blog/data/orchestration/de-02-what-orchestrator-does) | 배치 | cron 대신 무엇이 순서와 재시도를 맡나 |
+| [4편](/blog/data/foundations/de-03-idempotency-retry-backoff) | 배치 | 다시 돌려도 결과가 같나 |
+| [5편](/blog/data/foundations/de-04-logical-date-backfill) | 배치 | 이 run은 어느 날짜를 처리하나 |
+| [6편](/blog/data/orchestration/de-05-schedule-vs-event-trigger) | 배치 | 시각을 기다리나 데이터를 기다리나 |
+| [7편](/blog/data/orchestration/de-06-concurrency-dedup-approval) | 배치 | 겹쳐 돌거나 두 번 돌면 |
+| [8편](/blog/data/orchestration/de-07-task-per-pod-cost) | 배치 | Pod 하나 띄우는 데 어디서 시간이 드나 |
+| [9편](/blog/data/foundations/de-08-latency-percentiles) | 측정 | 지연을 어떤 숫자로 보나 |
+| [10편](/blog/data/foundations/de-09-measurement-pitfalls) | 측정 | 잰 숫자를 믿어도 되나 |
+| [11편](/blog/data/streaming/de-10-mqtt-qos-session) | 스트림 입구 | 끊기는 기기에서 어떻게 받나 |
+| [12편](/blog/data/streaming/de-11-kafka-log-partition-group) | 스트림 | 순서는 어디까지 보장되나 |
+| [13편](/blog/data/streaming/de-12-kafka-producer-latency) | 스트림 입구 | 보내는 쪽에서 얼마나 기다리나 |
+| [14편](/blog/data/foundations/de-13-delivery-semantics) | 스트림 | 한 번만 처리됐다고 말할 수 있나 |
+| [15편](/blog/data/foundations/de-14-schema-registry-compatibility) | 스트림 | 메시지 모양이 바뀌면 |
+| [16편](/blog/data/streaming/de-15-flink-time-watermark) | 스트림 | 늦게 온 이벤트는 언제까지 기다리나 |
+| [17편](/blog/data/streaming/de-16-flink-window-join) | 스트림 | 두 스트림을 어떻게 잇나 |
+| [18편](/blog/data/streaming/de-17-flink-checkpoint-backpressure) | 스트림 | 죽었다 살아나면 어디서부터 다시 하나 |
+| [19편](/blog/data/lakehouse/de-18-iceberg-table-format) | 저장 | 테이블은 무엇으로 정의되나 |
+| [20편](/blog/data/lakehouse/de-19-iceberg-maintenance) | 저장 | 쌓인 파일은 누가 치우나 |
+| [21편](/blog/data/lakehouse/de-20-cdc-to-lakehouse) | 저장 입구 | 원천 DB 변경을 어떻게 옮기나 |
 
 ## 9. 목적별 읽기 순서
 
 번호 순서대로 읽어도 됩니다. 다만 목적이 분명하면 아래처럼 잘라 읽는 편이 빠릅니다.
 
 **뼈대만 먼저 잡고 싶을 때 (7편)**
-Ch-01 → 02 → 03 → 11 → 13 → 15 → 18
+2편 → 02 → 03 → 11 → 13 → 15 → 18
 
 파이프라인의 큰 그림, 배치 쪽 핵심인 오케스트레이터와 멱등성, 스트림 쪽 핵심인 파티션과 전달 보장과 watermark, 저장 쪽 핵심인 테이블 포맷입니다. 이 일곱 편을 읽고 나면 나머지 열세 편은 어느 칸을 채우는 글인지 바로 보입니다.
 
 **배치 파이프라인을 맡게 됐을 때**
-Ch-01 → 02 → 04 → 03 → 05 → 06 → 07 → 18 → 19
+2편 → 02 → 04 → 03 → 05 → 06 → 07 → 18 → 19
 
-Ch-04를 Ch-03보다 앞에 둔 이유가 있습니다. 어느 날짜를 처리하는지가 분명해야 "같은 날짜를 다시 돌리면 같은 결과"라는 멱등성의 기준이 잡힙니다.
+5편을 4편보다 앞에 둔 이유가 있습니다. 어느 날짜를 처리하는지가 분명해야 "같은 날짜를 다시 돌리면 같은 결과"라는 멱등성의 기준이 잡힙니다.
 
 **스트림 파이프라인을 맡게 됐을 때**
-Ch-01 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 08 → 09
+2편 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 08 → 09
 
-입구가 MQTT라면 Ch-11 앞에 Ch-10을, 원천이 DB라면 Ch-20을 끼웁니다. 측정 두 편은 마지막에 두었는데 지연을 줄였다고 말하려면 그 숫자를 어떻게 쟀는지부터 따져야 하기 때문입니다.
+입구가 MQTT라면 12편 앞에 11편을, 원천이 DB라면 21편을 끼웁니다. 측정 두 편은 마지막에 두었는데 지연을 줄였다고 말하려면 그 숫자를 어떻게 쟀는지부터 따져야 하기 때문입니다.
 
 ## 10. 이 지도에 없는 것
 
 지도를 그려 보니 비어 있는 칸도 보였습니다.
 
 - **서빙 쪽**: 대시보드 도구, 지표 정의를 한곳에 모으는 시맨틱 레이어, 집계 결과를 빠르게 내주는 OLAP 엔진은 다루지 않았습니다. 첫 그림 맨 아래의 노란 상자 두 개(지난 5분 주문 수, 어제 매출 대시보드)가 사실상 빈칸입니다.
-- **데이터 품질과 거버넌스**: Ch-14에서 data contract를 잠깐 다룬 것 말고는 품질 검사, 계보(lineage), 접근 권한을 다루지 않았습니다.
+- **데이터 품질과 거버넌스**: 15편에서 data contract를 잠깐 다룬 것 말고는 품질 검사, 계보(lineage), 접근 권한을 다루지 않았습니다.
 - **배치 엔진 자체**: Silver와 Gold를 실제로 계산하는 엔진(Spark, Trino 같은 것)의 내부는 이 시리즈 범위 밖입니다. Spark는 [Databricks Spark 자격증 시리즈](/blog/cert/spark/spark-01-architecture)에서 따로 다룹니다.
 
 이 칸들은 시리즈가 이어지면 채우고 그때 이 지도도 같이 고치겠습니다.

@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-01] 쿠버네티스의 동작 방식: 선언형 API, 구성요소, 멈췄을 때 보이는 증상'
+title: '[CKA] 쿠버네티스의 동작 방식: 선언형 API, 구성요소, 멈췄을 때 보이는 증상'
 description: 쿠버네티스는 원하는 상태를 API 오브젝트로 받아 두고 컨트롤러와 kubelet이 실제 상태를 거기에 맞춥니다. 컨트롤 플레인과 노드 구성요소가 각각 무엇을 하고 하나가 멈추면 무엇이 멈추는지, requests와 limits가 OOMKilled(137)와 CPU 스로틀링으로 이어지는 과정을 시험에서 쓰는 kubectl describe, top, 이벤트로 확인하는 방법을 정리합니다.
 date: 2026-10-15T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
 coverImage: /uploads/cert/cka/k8s-architecture.webp
 draft: false
 series: "CKA 공부"
-seriesOrder: 1
+seriesOrder: 3
 ---
 
 ![쿠버네티스 클러스터 구조: 컨트롤 플레인(etcd, API Server, Scheduler, Controller Manager, Cloud Controller Manager)과 워커 노드(kubelet, Container Runtime, kube-proxy)](/uploads/cert/cka/k8s-architecture.webp)
@@ -94,7 +94,7 @@ seriesOrder: 1
 | 상품 API 서버 1대 | 서비스 전체가 멈춤(SPOF) |
 | 상품 API Pod 3개를 노드 3대에 분산 | 나머지 2개가 요청을 받고 컨트롤러가 1개를 다시 띄움 |
 
-운영 방식도 바뀝니다. 예전에는 새벽에 서버가 죽으면 사람이 알람에 깨서 손으로 살렸습니다. 지금은 컨트롤러가 먼저 Pod를 다시 띄우고 사람은 나중에 원인을 봅니다. 다만 컨트롤 플레인 자체가 한 대뿐이면 그것이 SPOF로 남으므로 컨트롤 플레인을 여러 대로 두는 HA 구성은 [Ch-02 5-1절](/blog/cert/cka/cka-02-cluster-architecture#5-1-두-가지-토폴로지)에서 다룹니다.
+운영 방식도 바뀝니다. 예전에는 새벽에 서버가 죽으면 사람이 알람에 깨서 손으로 살렸습니다. 지금은 컨트롤러가 먼저 Pod를 다시 띄우고 사람은 나중에 원인을 봅니다. 다만 컨트롤 플레인 자체가 한 대뿐이면 그것이 SPOF로 남으므로 컨트롤 플레인을 여러 대로 두는 HA 구성은 [5편 5-1절](/blog/cert/cka/cka-02-cluster-architecture#5-1-두-가지-토폴로지)에서 다룹니다.
 
 #### 5. 실전 시나리오: 자가 치유만으로 못 막는 연쇄 장애
 
@@ -439,7 +439,7 @@ Kubernetes Components 문서 기준입니다. "도는 방식"은 kubeadm 클러�
 | kube-proxy | Service용 iptables/nftables/IPVS 규칙 관리 | DaemonSet |
 | CoreDNS | 클러스터 DNS(Service 이름 해석) | Deployment(`kube-system`) |
 
-각 구성요소의 플래그와 인증서 방향은 [Ch-01.5 2~3장](/blog/cert/cka/cka-01b-core-objects-and-flow)에 정리했습니다.
+각 구성요소의 플래그와 인증서 방향은 [4편 2~3장](/blog/cert/cka/cka-01b-core-objects-and-flow)에 정리했습니다.
 
 ### 2-2. static Pod는 kubelet이 직접 띄운다
 
@@ -515,7 +515,7 @@ kubectl get pod -n kube-system kube-controller-manager-<노드> \
 1. **Docker와 containerd**: Docker는 원래 이미지 빌드, 이미지 저장소 연동, 컨테이너 실행을 한 프로그램에 담은 도구였습니다. 그 안에서 컨테이너 실행을 맡던 부분을 떼어 낸 것이 containerd이고 지금은 CNCF 프로젝트입니다. Docker Engine도 내부에서 containerd를 씁니다.
 2. **OCI 표준**: 이미지 형식과 컨테이너 실행 방법은 OCI(Open Container Initiative) 표준으로 정해져 있습니다. Docker로 빌드한 이미지는 OCI 형식이라 containerd나 CRI-O도 그대로 받아 실행합니다. 실제로 namespace와 cgroup을 설정해 프로세스를 띄우는 것은 그 아래의 runc 같은 OCI 런타임입니다.
 3. **CRI**: kubelet이 런타임에 "Pod 샌드박스를 만들어라", "이 이미지로 컨테이너를 띄워라"라고 말하는 규약이 CRI(Container Runtime Interface)입니다. containerd와 CRI-O는 CRI를 직접 구현했습니다.
-4. **dockershim 제거**: Docker Engine은 CRI를 구현하지 않았습니다. 그래서 kubelet 안에 dockershim이라는 번역 코드를 두고 붙였는데 v1.24에서 이 코드가 빠졌습니다. 지금 Docker Engine을 노드 런타임으로 쓰려면 cri-dockerd라는 별도 어댑터가 필요합니다([Ch-02 2-4b절](/blog/cert/cka/cka-02-cluster-architecture)).
+4. **dockershim 제거**: Docker Engine은 CRI를 구현하지 않았습니다. 그래서 kubelet 안에 dockershim이라는 번역 코드를 두고 붙였는데 v1.24에서 이 코드가 빠졌습니다. 지금 Docker Engine을 노드 런타임으로 쓰려면 cri-dockerd라는 별도 어댑터가 필요합니다([5편 2-4b절](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ```text
 v1.23까지: kubelet → dockershim(kubelet 안) → Docker Engine → containerd → runc
@@ -619,7 +619,7 @@ kubectl get deploy web; kubectl get rs
 
 ### 3-3. 구성요소별로 멈출 때의 증상과 처음 볼 곳
 
-Troubleshooting Clusters 문서의 장애 시나리오와 각 구성요소의 역할을 묶은 표입니다. 자세한 복구 순서는 [Ch-06 2장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+Troubleshooting Clusters 문서의 장애 시나리오와 각 구성요소의 역할을 묶은 표입니다. 자세한 복구 순서는 [9편 2장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 | 멈춘 구성요소 | 보이는 증상 | 처음 볼 곳 |
 |---|---|---|
@@ -770,7 +770,7 @@ spec:
 | `limits.memory` | kubelet이 런타임을 거쳐 커널(cgroup)에 한도로 적음 | 커널이 컨테이너 프로세스를 SIGKILL로 종료(OOMKilled) |
 | `limits.cpu` | 같은 경로로 커널에 CPU 시간 한도로 적음 | 종료되지 않고 실행이 지연(스로틀링) |
 
-requests와 limits 조합이 정하는 QoS 클래스와 LimitRange, ResourceQuota는 [Ch-03 5장](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다. cgroup 파일에 값이 어떻게 적히는지는 [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
+requests와 limits 조합이 정하는 QoS 클래스와 LimitRange, ResourceQuota는 [6편 5장](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다. cgroup 파일에 값이 어떻게 적히는지는 [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
 ### 4-2. OOMKilled 재현과 describe에서 읽을 곳
 
@@ -1098,7 +1098,7 @@ cka-lab-r-worker          92m          1%       168Mi           1%
 
 `top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다. CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 `kubectl top pod`는 `51m`이었고 같은 시점 커널 카운터로는 주기의 약 92%가 스로틀되어 있었습니다. 사용량이 limit에 붙어 있으면 스로틀링을 의심하고 `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다. limit을 올리거나 지우면 풀립니다.
 
-메모리 쪽 `top` 값은 working set이라 컨테이너 안의 `free` 숫자와 다르게 나올 수 있습니다. 출력을 읽는 법과 metrics-server가 없을 때의 점검은 [Ch-06 3장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+메모리 쪽 `top` 값은 working set이라 컨테이너 안의 `free` 숫자와 다르게 나올 수 있습니다. 출력을 읽는 법과 metrics-server가 없을 때의 점검은 [9편 3장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 ### 5-3. 직접 해 보기
 
@@ -1108,14 +1108,14 @@ metrics-server를 설치한 클러스터에서 `busybox:1.36` 이미지로 `whil
 
 ## 6. 이어지는 글
 
-증상별로 처음 칠 명령은 3-3절 표에 모았고 시험 비중이 가장 큰 트러블슈팅(30%) 절차는 Ch-06에서 이어집니다.
+증상별로 처음 칠 명령은 3-3절 표에 모았고 시험 비중이 가장 큰 트러블슈팅(30%) 절차는 9편에서 이어집니다.
 
 | 다음에 볼 것 | 글 |
 |---|---|
-| Pod, Deployment, Service가 API 서버를 거쳐 노드에 닿는 흐름과 kubectl 사용법 | [CKA Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow) |
-| kubeadm 설치, 업그레이드, etcd, 인증서 | [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| requests, limits, QoS, LimitRange | [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling) |
-| 증상별 트러블슈팅 절차 | [CKA Ch-06](/blog/cert/cka/cka-06-troubleshooting) |
+| Pod, Deployment, Service가 API 서버를 거쳐 노드에 닿는 흐름과 kubectl 사용법 | [4편](/blog/cert/cka/cka-01b-core-objects-and-flow) |
+| kubeadm 설치, 업그레이드, etcd, 인증서 | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
+| requests, limits, QoS, LimitRange | [6편](/blog/cert/cka/cka-03-workloads-scheduling) |
+| 증상별 트러블슈팅 절차 | [9편](/blog/cert/cka/cka-06-troubleshooting) |
 | 시험 범위 밖 심화: 커널 경계, namespace, cgroup, overlayfs, iptables | [쿠버네티스 아래의 리눅스 1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)부터 [5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)까지 |
 
 ---

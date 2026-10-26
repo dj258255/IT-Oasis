@@ -32,7 +32,7 @@ seriesOrder: 5
 
 이 시리즈의 [1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 커널 기능을 조합한다는 이야기로 시작했습니다. [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)은 파드마다 네트워크 네임스페이스와 veth가 생기는 과정을 다뤘습니다. 마지막인 이번 글은 그 네임스페이스 밖으로 나간 패킷이 Service를 만나는 지점을 봅니다. 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API `order-api`가 파드 3개로 떠 있다고 가정합니다.
 
-Service를 YAML로 만드는 법과 타입별 사용법은 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)에 정리했습니다. 여기서는 그 YAML이 노드 커널에 무엇으로 남는지를 따라갑니다.
+Service를 YAML로 만드는 법과 타입별 사용법은 [CKA 7편](/blog/cert/cka/cka-04-services-networking)에 정리했습니다. 여기서는 그 YAML이 노드 커널에 무엇으로 남는지를 따라갑니다.
 
 ## 1. 네트워크 기초: 주소 세 종류와 CIDR
 
@@ -980,6 +980,6 @@ kubelet이 써 준 resolv.conf에 `options ndots:5`가 있어서 점이 5개 미
 - [Calico FAQ](https://docs.tigera.io/calico/latest/reference/faq)
 
 이 블로그의 관련 글
-- [CKA Ch-04: 서비스와 네트워킹](/blog/cert/cka/cka-04-services-networking)
+- [CKA 7편: 서비스와 네트워킹](/blog/cert/cka/cka-04-services-networking)
 - [쿠버네티스 아래의 리눅스 2: 네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause)
 - [쿠버네티스 아래의 리눅스 3: cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)

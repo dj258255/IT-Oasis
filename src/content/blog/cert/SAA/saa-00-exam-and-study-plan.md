@@ -1,5 +1,5 @@
 ---
-title: '[SAA Ch-00] AWS SAA 시험 구조와 공부 계획: 서비스를 외우기 전에 비교하는 법부터'
+title: '[SAA] AWS SAA 시험 구조와 공부 계획: 서비스를 외우기 전에 비교하는 법부터'
 description: AWS Certified Solutions Architect Associate(SAA-C03)는 130분 동안 65문항을 푸는 시나리오형 객관식 시험이고 1,000점 만점에 720점이면 합격입니다. 공식 시험 안내서의 영역별 과제와 서비스 범위, Well-Architected Framework와의 관계, 공식 샘플 문항이 보여 주는 출제 방식, 자주 비교되는 서비스의 공식 문서 기준 차이, 응시자 후기에서 공통으로 나온 공부법을 정리하고 데이터 엔지니어 관점의 공부 계획을 세웁니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -13,7 +13,7 @@ topics:
   - cert
 draft: false
 series: "SAA 공부"
-seriesOrder: 0
+seriesOrder: 1
 ---
 
 ## 결론부터
@@ -81,7 +81,7 @@ AWS 공식 시험 페이지와 시험 안내서(SAA-C03), 응시 정책 페이�
 | Management and Governance | CloudTrail, CloudWatch, Config, Control Tower, Organizations, Compute Optimizer, Trusted Advisor, Well-Architected Tool 등 |
 | Migration and Transfer | Application Migration Service, DataSync, DMS, Snow Family, Transfer Family |
 
-2026년 10월 21일에 다시 연 목록에도 AWS Elastic Disaster Recovery가 없고 Application Migration Service는 있습니다. 둘 다 블록 수준 복제를 쓰는 서비스라 보기에 함께 나올 수 있어 [Ch-02](/blog/cert/saa/saa-02-resilient-architectures) 3-12절에 짧게 정리했습니다.
+2026년 10월 21일에 다시 연 목록에도 AWS Elastic Disaster Recovery가 없고 Application Migration Service는 있습니다. 둘 다 블록 수준 복제를 쓰는 서비스라 보기에 함께 나올 수 있어 [4편](/blog/cert/saa/saa-02-resilient-architectures) 3-12절에 짧게 정리했습니다.
 
 범위 밖 예시로는 MWAA(관리형 Airflow), Lightsail, CDK, CodeBuild, CodeDeploy, IoT 전체 등이 나옵니다. 시험에서는 짧은 공식 이름(예: Amazon SNS)으로 표기하고 시험 중 도움말에서 정식 명칭과의 대응표를 볼 수 있습니다.
 
@@ -113,7 +113,7 @@ AWS가 공개한 SAA-C03 샘플 문항 10개에서 출제 방식을 보면 이�
 | Q6 | 가장 비용 효율적으로, 중단할 수 없는 작업 | On-Demand. 해설은 Spot이 가장 싸지만 중단 불가·시간 제한 작업에는 맞지 않는다고 적는다 |
 | Q7 | 가장 효율적으로, 중단 없이 | 투표가 DB에 몰리는 상황을 SQS로 분리 |
 | Q10 | Aurora의 읽기 부하 분리 | Aurora Replica를 추가하고 읽기 엔드포인트를 쓴다. "Multi-AZ 대기 인스턴스에서 읽기"는 오답 |
-| Q5 | 암호화 키를 온프레미스에 둬야 함 | 고객 제공 키 서버 측 암호화(SSE-C)나 클라이언트 측 암호화. 2026년 4월부터 새 범용 버킷은 SSE-C가 기본 차단이라 켜야 쓸 수 있음(Ch-01 4-5절) |
+| Q5 | 암호화 키를 온프레미스에 둬야 함 | 고객 제공 키 서버 측 암호화(SSE-C)나 클라이언트 측 암호화. 2026년 4월부터 새 범용 버킷은 SSE-C가 기본 차단이라 켜야 쓸 수 있음(3편 4-5절) |
 
 Ryan Pothecary의 글(2023)도 "가장 비용 효율적인", "운영 부담이 가장 적은", "가장 효율적인" 같은 문구가 정답 방향을 가리킨다고 설명합니다. 같은 글은 범위 안 서비스가 SAA-C02의 39개에서 SAA-C03의 131개로 늘었다고 적었습니다.
 
@@ -126,7 +126,7 @@ Ryan Pothecary의 글(2023)도 "가장 비용 효율적인", "운영 부담이 �
 | | SNS | SQS | Kinesis Data Streams | MSK |
 |---|---|---|---|---|
 | 방식 | 구독자에게 밀어 넣기(push) | 소비자가 가져가기(poll) | 샤드에서 읽기 | Kafka |
-| 순서 | | 표준 큐는 보장하지 않음 | 샤드 안 순서(같은 파티션 키는 같은 샤드) | 파티션 안 순서(DE Ch-11) |
+| 순서 | | 표준 큐는 보장하지 않음 | 샤드 안 순서(같은 파티션 키는 같은 샤드) | 파티션 안 순서(DE 12편) |
 | 다시 읽기 | 안 됨 | 처리 후 삭제 | 여러 앱이 같은 스트림을 읽고 재처리 가능. 보존 기본 24시간, 최대 365일 | 보존 기간 동안 가능 |
 | 확장 | | 프로비저닝 없이 확장 | 샤드를 미리 정한다 | 브로커를 정한다 |
 
@@ -200,10 +200,10 @@ L7과 L4는 로드 밸런서가 요청을 어디까지 열어 보는지의 차�
 | 서비스 | 공식 문서에서 확인한 것 | 이 블로그에서 이어지는 글 |
 |---|---|---|
 | Data Firehose | JSON을 Parquet이나 ORC로 바꿔 S3에 쓴다. 스키마는 Glue Data Catalog에 있어야 하고 CSV는 Lambda로 먼저 JSON으로 바꾼다 | |
-| Athena | 스캔한 데이터 1TB당 요금. 요금 페이지 예시에서 GZIP 압축과 Parquet을 쓰면 같은 쿼리 비용이 $15에서 $1.25가 된다 | DE Ch-18(컬럼 통계로 파일 거르기) |
+| Athena | 스캔한 데이터 1TB당 요금. 요금 페이지 예시에서 GZIP 압축과 Parquet을 쓰면 같은 쿼리 비용이 $15에서 $1.25가 된다 | DE 19편(컬럼 통계로 파일 거르기) |
 | Lake Formation | IAM을 보완하는 권한 모델. 컬럼, 행, 셀 단위 통제를 Athena, Redshift Spectrum, EMR, Glue에 적용한다 | |
-| MSK | 범위 안. 이미 Kafka를 쓰면 MSK | DE Ch-11~13 |
-| MWAA | 범위 밖 | DE Ch-02~07 |
+| MSK | 범위 안. 이미 Kafka를 쓰면 MSK | DE 12~14편 |
+| MWAA | 범위 밖 | DE 3~8편 |
 
 ## 6. 응시자들의 후기에서 공통으로 나온 것
 
@@ -239,7 +239,7 @@ AWS 시험 보안팀은 2025년 6월 글 "Protecting AWS Certification value thr
 | 5. 모의고사 | 정식 모의고사로 시간을 재고 푼다. 문제의 마지막 문장(조건)을 먼저 읽는다 | 130분 안에 다 풀고 정답률이 꾸준히 합격선 위 |
 | 6. 마무리 | 공식 모의고사(Official Practice Exam)로 준비 상태를 확인한다 | |
 
-무료와 구독 자료의 구분, 연습 자료 비교, 프리 티어 실습 비용 관리, 시험 당일 전략과 D-30 마무리 계획은 [SAA Ch-05](/blog/cert/saa/saa-05-resources-and-exam-day)에 정리했습니다.
+무료와 구독 자료의 구분, 연습 자료 비교, 프리 티어 실습 비용 관리, 시험 당일 전략과 D-30 마무리 계획은 [7편](/blog/cert/saa/saa-05-resources-and-exam-day)에 정리했습니다.
 
 데이터 엔지니어링 시리즈를 이미 쓰고 있어서 과제 3.5는 상대적으로 익숙합니다. 반대로 후기에서 어렵다고 한 보안(VPC, IAM 정책, KMS)과 네트워크는 직접 만들어 보는 시간을 더 잡습니다.
 

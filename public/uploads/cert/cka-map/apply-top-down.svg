@@ -25,7 +25,7 @@
 <path d="M1129.2 137.6 Q1129.5 165.9 1130.7 194.9" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1130.9 194.3 Q978.2 192.4 830.8 193.2" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M830.9 193.6 Q829.7 165.0 830.4 139.4" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="172.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-01.5 §1, Ch-02 §1-10</text>
+<text x="980" y="172.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">4편 §1, 5편 §1-10</text>
 <path d="M410.8 215.3 Q409.2 222.7 409.8 230.6" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M409.0 213.0 Q408.5 223.9 410.2 231.0" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.4 230.3 Q407.4 224.2 403.5 218.7" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -52,7 +52,7 @@
 <path d="M1128.7 250.0 Q1129.6 277.9 1130.3 305.7" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1130.1 306.0 Q979.2 306.7 830.6 306.3" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M829.0 306.2 Q830.9 279.7 829.4 251.6" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="285.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-01.5 §1-2, Ch-02 §1</text>
+<text x="980" y="285.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">4편 §1-2, 5편 §1</text>
 <path d="M411.2 326.1 Q409.5 335.0 409.3 343.5" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M408.9 327.3 Q409.0 333.8 410.2 344.7" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.3 344.7 Q408.1 337.2 403.5 331.7" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -79,7 +79,7 @@
 <path d="M1131.2 364.7 Q1130.6 390.0 1130.2 418.6" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1130.5 421.4 Q981.0 419.7 831.2 418.8" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M830.7 419.7 Q831.2 391.8 829.9 363.8" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="398.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-01.5 §2-3, Ch-02 §4-5</text>
+<text x="980" y="398.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">4편 §2-3, 5편 §4-5</text>
 <path d="M410.8 438.6 Q408.2 447.6 408.8 458.1" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M409.1 439.1 Q410.6 448.7 409.5 458.1" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M409.5 456.9 Q407.1 451.7 404.0 444.9" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -106,7 +106,7 @@
 <path d="M1130.1 478.4 Q1130.4 504.8 1130.2 534.3" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1128.8 532.4 Q979.4 534.1 830.5 533.5" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M829.4 532.6 Q831.4 504.5 830.1 475.7" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="511.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-01 §1, Ch-03 §1</text>
+<text x="980" y="511.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">3편 §1, 6편 §1</text>
 <path d="M408.9 552.4 Q409.4 562.3 411.2 571.4" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M409.1 552.0 Q409.1 560.3 410.7 570.6" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.3 569.2 Q406.4 563.7 404.4 558.0" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -133,7 +133,7 @@
 <path d="M1129.0 589.6 Q1131.7 617.9 1129.3 646.4" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1129.8 645.9 Q980.9 647.2 829.9 645.6" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M830.6 645.5 Q829.8 618.8 830.2 589.0" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="624.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-01.5 §1-3, Ch-03 §5</text>
+<text x="980" y="624.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">4편 §1-3, 6편 §5</text>
 <path d="M409.5 664.5 Q407.8 674.0 408.7 682.8" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M408.9 665.6 Q411.6 675.7 409.7 682.5" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.5 682.8 Q406.1 676.9 403.4 669.8" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -160,7 +160,7 @@
 <path d="M1130.7 703.6 Q1129.5 730.7 1129.1 760.3" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1131.4 759.3 Q982.0 759.0 829.7 757.8" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M830.6 759.3 Q828.0 731.4 830.8 702.8" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="737.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-01 §2-3, Ch-06 §1</text>
+<text x="980" y="737.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">3편 §2-3, 9편 §1</text>
 <path d="M410.4 779.2 Q411.2 788.0 410.5 796.2" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.5 778.8 Q408.5 788.1 411.1 796.0" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M409.8 795.5 Q406.2 789.7 404.5 782.9" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -187,7 +187,7 @@
 <path d="M1131.3 815.7 Q1129.2 841.9 1130.8 871.9" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1129.9 872.4 Q982.0 870.2 828.7 873.2" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M828.8 870.8 Q829.3 844.7 828.8 816.8" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="850.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-02 §7, Ch-04 §1, Ch-05</text>
+<text x="980" y="850.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">5편 §7, 7편 §1, 8편</text>
 <path d="M410.1 890.7 Q412.1 902.5 410.9 909.0" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.2 891.2 Q411.0 901.0 409.1 908.0" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.7 908.3 Q406.8 902.2 404.3 895.8" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -214,7 +214,7 @@
 <path d="M1130.7 928.6 Q1131.5 955.9 1130.7 985.4" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1129.8 984.9 Q978.2 984.9 830.2 985.5" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M830.9 985.5 Q829.6 957.1 829.1 928.0" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="963.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-04 §3, Ch-06 §5</text>
+<text x="980" y="963.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">7편 §3, 9편 §5</text>
 <path d="M409.6 1006.2 Q408.9 1015.7 411.5 1022.6" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M410.0 1006.1 Q409.5 1014.4 410.0 1022.3" fill="none" stroke="#495057" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M409.5 1022.1 Q407.4 1016.0 403.8 1009.7" fill="none" stroke="#495057" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
@@ -241,6 +241,6 @@
 <path d="M1128.8 1041.9 Q1130.8 1069.4 1130.9 1098.5" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M1128.7 1098.1 Q978.1 1099.4 829.1 1097.4" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M830.6 1099.1 Q828.9 1070.5 830.0 1040.8" fill="none" stroke="#495057" stroke-width="0.8800000000000001" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="980" y="1076.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">Ch-04 §4~5</text>
+<text x="980" y="1076.0" font-size="16" font-weight="600" fill="#343a40" text-anchor="middle">7편 §4~5</text>
 <text x="980" y="106" font-size="16" font-weight="700" fill="#495057" text-anchor="middle">자세히 보는 곳</text>
 </svg>

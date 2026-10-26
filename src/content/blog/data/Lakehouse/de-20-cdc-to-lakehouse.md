@@ -1,5 +1,5 @@
 ---
-title: '[DE Ch-20] CDC로 레이크하우스 채우기: 조회는 상태를 보고 로그는 변경을 본다'
+title: '[DE] CDC로 레이크하우스 채우기: 조회는 상태를 보고 로그는 변경을 본다'
 description: 원천 DB의 변경을 레이크하우스로 옮기는 방법은 updated_at을 주기적으로 조회하는 방식과 DB의 변경 로그를 읽는 방식으로 나뉩니다. 조회 방식은 삭제와 중간 상태를 놓친다는 것을 SQLite로 재현하고 Debezium이 binlog와 WAL을 읽는 구조, 초기 스냅샷, at-least-once 보장, PostgreSQL replication slot이 디스크를 채우는 경로, Iceberg에 upsert로 반영할 때의 조건을 공식 문서와 사례로 정리합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -16,7 +16,7 @@ topics:
   - database
 draft: false
 series: "DE 공부"
-seriesOrder: 20
+seriesOrder: 21
 ---
 
 ## 결론부터
@@ -25,13 +25,13 @@ seriesOrder: 20
 2. 로그 기반 CDC는 DB가 복구와 복제를 위해 이미 남기는 변경 로그(MySQL binlog, PostgreSQL WAL)를 읽습니다. 모든 변경과 삭제를 순서대로 받고 원천 DB에 조회 부하를 주지 않습니다. Debezium이 대표 도구입니다.
 3. Debezium의 기본 보장은 at-least-once이고 내부 중복 제거 계층이 없습니다. 받는 쪽은 기본 키로 upsert해서 멱등하게 반영합니다.
 4. PostgreSQL의 replication slot은 소비자가 가져가지 않은 WAL을 지우지 않습니다. 기본 설정(`max_slot_wal_keep_size=-1`)에서는 한도 없이 쌓여 디스크를 채울 수 있습니다.
-5. Iceberg에 반영할 때 Flink Iceberg sink는 exactly-once를 보장하고 upsert 모드는 v2 테이블과 식별 필드가 필요합니다. 스트리밍 반영은 작은 파일과 delete 파일을 계속 만들어서 Ch-19의 유지보수가 따라와야 합니다.
+5. Iceberg에 반영할 때 Flink Iceberg sink는 exactly-once를 보장하고 upsert 모드는 v2 테이블과 식별 필드가 필요합니다. 스트리밍 반영은 작은 파일과 delete 파일을 계속 만들어서 20편의 유지보수가 따라와야 합니다.
 
 ---
 
 ## 1. 원천 DB에서 레이크하우스로
 
-Ch-01의 수명주기에서 수집 단계에 해당하는 이야기입니다. 주문 서비스의 DB(MySQL, PostgreSQL)에 있는 주문 테이블을 분석용 Iceberg 테이블로 옮긴다고 해 봅시다. 하루 한 번 통째로 복사하면 간단하지만 테이블이 크면 오래 걸리고 하루 동안의 변화는 보이지 않습니다. 바뀐 것만 옮기는 방법이 CDC(Change Data Capture)이고 바뀐 것을 알아내는 방법이 두 가지입니다.
+2편의 수명주기에서 수집 단계에 해당하는 이야기입니다. 주문 서비스의 DB(MySQL, PostgreSQL)에 있는 주문 테이블을 분석용 Iceberg 테이블로 옮긴다고 해 봅시다. 하루 한 번 통째로 복사하면 간단하지만 테이블이 크면 오래 걸리고 하루 동안의 변화는 보이지 않습니다. 바뀐 것만 옮기는 방법이 CDC(Change Data Capture)이고 바뀐 것을 알아내는 방법이 두 가지입니다.
 
 비유하면 이렇습니다. 하나는 10초마다 주문 테이블을 들여다보며 "지난번 이후 바뀐 행 있어?" 하고 묻는 방식입니다(조회 기반). 다른 하나는 DB가 스스로 쓰는 변경 일지를 처음부터 차례로 읽는 방식입니다(로그 기반). 묻는 방식은 물어보는 순간의 모습만 보고 일지를 읽는 방식은 그사이 일어난 일을 전부 봅니다. 이 차이가 2절의 재현에서 그대로 드러나고 3절부터는 일지를 읽는 쪽의 세부(일지의 종류, 처음 시작할 때의 문제, 중복, 디스크)로 내려갑니다.
 
@@ -135,7 +135,7 @@ PostgreSQL에서는 `REPLICA IDENTITY`가 기본값이면 update 이벤트의 `b
 | `d` | 삭제(`after`가 null) |
 | `r` | 초기 스냅샷으로 읽은 행 |
 
-삭제 이벤트 뒤에는 같은 키에 값이 null인 tombstone 이벤트가 하나 더 붙습니다(`tombstones.on.delete` 기본 true). Ch-11의 log compaction이 이 tombstone을 보고 그 키의 이전 메시지를 지웁니다. 이벤트의 키는 테이블의 기본 키라서 같은 행의 변경은 같은 Kafka 파티션에 순서대로 들어갑니다.
+삭제 이벤트 뒤에는 같은 키에 값이 null인 tombstone 이벤트가 하나 더 붙습니다(`tombstones.on.delete` 기본 true). 12편의 log compaction이 이 tombstone을 보고 그 키의 이전 메시지를 지웁니다. 이벤트의 키는 테이블의 기본 키라서 같은 행의 변경은 같은 Kafka 파티션에 순서대로 들어갑니다.
 
 주문 3의 일생으로 보면 이렇게 됩니다.
 
@@ -169,7 +169,7 @@ Debezium은 이후 incremental snapshot을 넣었습니다(DDD-3). Netflix의 DB
 
 Debezium 문서는 이렇게 적습니다. Debezium은 at-least-once 전달을 보장하고 exactly-once를 위한 내부 중복 제거 계층은 구현하지 않는다. PostgreSQL 커넥터 문서는 두 경우를 듭니다. Kafka Connect 프로세스가 갑자기 죽으면 태스크가 마지막으로 기록된 오프셋부터 다시 시작해 직전에 보낸 이벤트를 또 보낼 수 있습니다. 신호로 띄운 블로킹 스냅샷이 끝난 직후에는 스냅샷이 이미 담은 레코드와 겹치는 이벤트를 내보낼 수 있습니다.
 
-Kafka Connect 3.3 이상을 분산 모드로 띄우고 worker와 커넥터에 exactly-once 설정을 켜면 일부 커넥터(MySQL, PostgreSQL 등)는 exactly-once로 쓸 수 있습니다. 조건이 여럿이라 받는 쪽은 중복이 올 수 있다고 보고 기본 키로 upsert하는 구성이 흔합니다(Ch-13).
+Kafka Connect 3.3 이상을 분산 모드로 띄우고 worker와 커넥터에 exactly-once 설정을 켜면 일부 커넥터(MySQL, PostgreSQL 등)는 exactly-once로 쓸 수 있습니다. 조건이 여럿이라 받는 쪽은 중복이 올 수 있다고 보고 기본 키로 upsert하는 구성이 흔합니다(14편).
 
 중복이 어디서 생기는지 한 번 따라가 보겠습니다. 커넥터는 이벤트를 Kafka에 보내고 "여기까지 보냈다"는 위치(오프셋)를 주기적으로 따로 저장합니다.
 
@@ -266,11 +266,11 @@ Flink upsert 쪽은 같은 일을 Iceberg의 삭제 파일로 합니다. 주문 
 | 1 | 데이터 파일 F1: `(1, pending)` | pending |
 | 2 | 데이터 파일 F2: `(1, shipped)`, equality delete D1: `id = 1` | D1이 F1의 pending을 가리고 F2의 shipped만 보임 |
 
-D1은 시퀀스 번호가 더 작은 F1에만 적용되고 같은 커밋의 F2에는 적용되지 않습니다([Ch-18 5절](/blog/data/lakehouse/de-18-iceberg-table-format#5-행-단위-삭제)의 규칙). 쓰는 쪽은 F1을 열어 볼 필요가 없어 빠르지만 읽는 쪽은 F1을 읽을 때마다 D1과 맞춰 봐야 합니다. 이런 삭제 파일이 커밋마다 쌓이는 것이 다음 절의 부산물입니다([RisingWave](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)의 설명을 주문 예로 다시 썼습니다).
+D1은 시퀀스 번호가 더 작은 F1에만 적용되고 같은 커밋의 F2에는 적용되지 않습니다([19편 5절](/blog/data/lakehouse/de-18-iceberg-table-format#5-행-단위-삭제)의 규칙). 쓰는 쪽은 F1을 열어 볼 필요가 없어 빠르지만 읽는 쪽은 F1을 읽을 때마다 D1과 맞춰 봐야 합니다. 이런 삭제 파일이 커밋마다 쌓이는 것이 다음 절의 부산물입니다([RisingWave](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)의 설명을 주문 예로 다시 썼습니다).
 
 ### 5-2. 스트리밍 반영의 부산물
 
-Flink upsert는 쓸 때마다 이전 값을 지우는 equality delete 파일을 만듭니다. Iceberg 유지보수 문서는 스트리밍 쿼리가 작은 데이터 파일을 만들어 합쳐야 하고 커밋이 잦은 테이블은 메타데이터 파일을 주기적으로 정리해야 한다고 적습니다. 반영이 잘 돌아가는 동안에도 읽기는 점점 느려질 수 있어서 Ch-19의 컴팩션과 스냅샷 만료가 CDC 파이프라인의 일부가 됩니다.
+Flink upsert는 쓸 때마다 이전 값을 지우는 equality delete 파일을 만듭니다. Iceberg 유지보수 문서는 스트리밍 쿼리가 작은 데이터 파일을 만들어 합쳐야 하고 커밋이 잦은 테이블은 메타데이터 파일을 주기적으로 정리해야 한다고 적습니다. 반영이 잘 돌아가는 동안에도 읽기는 점점 느려질 수 있어서 20편의 컴팩션과 스냅샷 만료가 CDC 파이프라인의 일부가 됩니다.
 
 ## 6. outbox 패턴
 
@@ -333,7 +333,7 @@ Meituan의 2018년 글 "美团DB数据同步到数据仓库的架构与实践"�
 
 **Q. Debezium이 at-least-once면 레이크하우스에 중복 행이 생기나요?**
 
-append로 쌓으면 생깁니다. 기본 키로 upsert하면 같은 변경이 두 번 와도 결과 행은 같습니다. Ch-03의 멱등성이 여기서도 마지막 방어선입니다.
+append로 쌓으면 생깁니다. 기본 키로 upsert하면 같은 변경이 두 번 와도 결과 행은 같습니다. 4편의 멱등성이 여기서도 마지막 방어선입니다.
 
 **Q. replication slot 감시는 무엇을 보면 되나요?**
 

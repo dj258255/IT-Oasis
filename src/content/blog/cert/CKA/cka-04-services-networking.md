@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-04] 서비스와 네트워킹: Pod IP에서 Gateway API까지 한 줄로 잇기'
+title: '[CKA] 서비스와 네트워킹: Pod IP에서 Gateway API까지 한 줄로 잇기'
 description: CKA 커리큘럼 v1.37의 Services and Networking 영역(20%)을 시험 과제 중심으로 정리합니다. Pod 연결과 대역 확인, NetworkPolicy의 AND/OR와 DNS 허용, Service 타입과 EndpointSlice, Gateway API(HTTPRoute 매칭, 가중치, 필터, TLS, ReferenceGrant), Ingress와 pathType, CoreDNS 설정과 점검 순서를 시험에서 쓰는 명령과 YAML, 자주 틀리는 지점, 연습 과제로 묶었습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -15,7 +15,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 4
+seriesOrder: 7
 ---
 
 ## 결론부터
@@ -1209,7 +1209,7 @@ spec:
       port: 80
 ```
 
-`kubectl create`에는 Gateway나 HTTPRoute 생성 명령이 없어서 YAML을 씁니다. 시험에서 열 수 있는 문서에 gateway-api.sigs.k8s.io가 CKA에 한해 들어 있으니(Ch-00 3-3절) HTTP routing, Traffic splitting, TLS 가이드의 예제 위치를 미리 알아 둡니다.
+`kubectl create`에는 Gateway나 HTTPRoute 생성 명령이 없어서 YAML을 씁니다. 시험에서 열 수 있는 문서에 gateway-api.sigs.k8s.io가 CKA에 한해 들어 있으니(1편 3-3절) HTTP routing, Traffic splitting, TLS 가이드의 예제 위치를 미리 알아 둡니다.
 
 ### 4-4. 매칭과 가중치
 

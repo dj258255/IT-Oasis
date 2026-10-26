@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-01] Spark 아키텍처와 구성 요소: 액션 하나가 Job, Stage, Task로 나뉘는 과정'
+title: '[Spark] Spark 아키텍처와 구성 요소: 액션 하나가 Job, Stage, Task로 나뉘는 과정'
 description: Databricks Spark 자격증 1영역(아키텍처와 구성 요소, 20%)을 시험 안내서의 항목 순서대로 정리합니다. 드라이버와 익스큐터의 역할, 메모리 구조, 캐시 저장 레벨, GC, 실행 계층, 셔플과 파티션, 지연 평가를 Spark 4.2.0 공식 문서의 기본값과 함께 확인하고 3.x와 달라진 동작을 표시합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -13,7 +13,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 1
+seriesOrder: 3
 ---
 
 ## 결론부터
@@ -130,7 +130,7 @@ Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analy
 | 메모리 관리 | 셔플용 자료구조가 힙을 많이 쓴다. 메모리에 안 들어가면 디스크로 흘려 쓰고(spill) 디스크 I/O와 GC가 늘어난다 |
 | 설정할 값이 많음 | 병렬도를 충분히 높이지 않으면 클러스터를 다 쓰지 못한다. 문서는 CPU 코어당 Task 2~3개를 권한다 |
 | 드라이버 병목 | `collect()`처럼 결과를 드라이버로 모으는 연산은 드라이버 메모리에 다 올라간다 |
-| 데이터 쏠림 | Performance Tuning 문서는 쏠림이 조인 성능을 크게 떨어뜨릴 수 있다고 적고 AQE가 sort-merge 조인의 쏠린 Task를 비슷한 크기로 쪼갠다고 설명한다([Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)) |
+| 데이터 쏠림 | Performance Tuning 문서는 쏠림이 조인 성능을 크게 떨어뜨릴 수 있다고 적고 AQE가 sort-merge 조인의 쏠린 Task를 비슷한 크기로 쪼갠다고 설명한다([6편](/blog/cert/spark/spark-04-troubleshooting-tuning)) |
 | 작은 파일이 많음 | 파일을 여는 비용을 `spark.sql.files.openCostInBytes`(기본 4MB)만큼 읽는 시간으로 쳐서 작은 파일 여러 개를 한 파티션에 묶는다(8-1절) |
 | GC | 튜닝 가이드: 저장한 RDD가 자주 바뀔수록(churn) GC가 문제가 되고 GC 비용은 Java 객체 수에 비례한다(6절) |
 
@@ -239,7 +239,7 @@ client와 cluster의 차이는 "드라이버가 죽으면 애플리케이션 전
 
 그래서 문서는 콘솔 입출력이 필요한 대화형 작업에 client를, 멀리 떨어진 곳에서 제출하는 작업에 cluster를 권합니다. 밤마다 도는 배치처럼 제출한 사람이 자리를 떠도 끝까지 돌아야 하는 작업이 cluster 모드에 맞습니다.
 
-Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Connect의 배포 방식은 [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api)에서 6영역 범위로 묶어 다룹니다.
+Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Connect의 배포 방식은 [8편](/blog/cert/spark/spark-06-connect-pandas-api)에서 6영역 범위로 묶어 다룹니다.
 
 ### 2-3. 코어와 동시에 도는 Task 수
 
@@ -376,7 +376,7 @@ DataFrame  : 스키마(order_id INT, status STRING ...) + 행들   엔진이 컬
 | Catalyst 최적화 | 받지 못함 | 받음 | 받음 |
 | Python에서 | 쓸 수 있음(Spark Connect 제외) | 쓸 수 있음 | 없음 |
 
-> **정리**: 스키마가 있어서 엔진이 계산 내용을 읽을 수 있다는 점이 DataFrame의 핵심입니다. 이 정보로 최적화하는 과정은 9-1절 토글에서, 스키마와 타입을 직접 정하는 법은 [Ch-03](/blog/cert/spark/spark-03-dataframe-api) 7절에서 봅니다.
+> **정리**: 스키마가 있어서 엔진이 계산 내용을 읽을 수 있다는 점이 DataFrame의 핵심입니다. 이 정보로 최적화하는 과정은 9-1절 토글에서, 스키마와 타입을 직접 정하는 법은 [5편](/blog/cert/spark/spark-03-dataframe-api) 7절에서 봅니다.
 
 </details>
 
@@ -442,7 +442,7 @@ Spark 1.x에서는 용도마다 진입점이 따로 있었습니다. RDD는 `Spa
 #### 3. 헷갈리는 점
 
 - Databricks 노트북이나 `pyspark` 셸에는 `spark` 변수가 이미 만들어져 있습니다. 거기서 `getOrCreate()`를 불러도 그 세션을 돌려받습니다.
-- Spark Connect에서는 클라이언트 쪽에 SparkContext가 없어서 `spark.sparkContext`를 쓸 수 없습니다([Ch-06](/blog/cert/spark/spark-06-connect-pandas-api#3-spark-connect의-api-지원-범위) 3절).
+- Spark Connect에서는 클라이언트 쪽에 SparkContext가 없어서 `spark.sparkContext`를 쓸 수 없습니다([8편](/blog/cert/spark/spark-06-connect-pandas-api#3-spark-connect의-api-지원-범위) 3절).
 
 > **정리**: 세션은 여러 개, SparkContext는 하나입니다. 이 구조를 알면 아래 표에서 무엇이 세션별이고 무엇이 공유인지 바로 읽힙니다.
 
@@ -645,7 +645,7 @@ cut.explain()                    # groupBy가 계획에서 빠진다(계획을 �
 local_cut = base.localCheckpoint(eager=False)   # 첫 액션 때 익스큐터 캐시에 저장
 ```
 
-두 메서드 모두 원본을 바꾸지 않고 새 DataFrame을 돌려줍니다. 이후 계산에서 체크포인트를 쓰려면 돌려받은 DataFrame(`cut`)으로 이어 가야 합니다. 두 API 문서 모두 "This API is experimental"이라고 적습니다. Structured Streaming의 `checkpointLocation`은 쿼리의 진행 상황과 상태를 남기는 다른 기능입니다([Ch-05](/blog/cert/spark/spark-05-structured-streaming)).
+두 메서드 모두 원본을 바꾸지 않고 새 DataFrame을 돌려줍니다. 이후 계산에서 체크포인트를 쓰려면 돌려받은 DataFrame(`cut`)으로 이어 가야 합니다. 두 API 문서 모두 "This API is experimental"이라고 적습니다. Structured Streaming의 `checkpointLocation`은 쿼리의 진행 상황과 상태를 남기는 다른 기능입니다([7편](/blog/cert/spark/spark-05-structured-streaming)).
 
 ### 헷갈리는 지점
 
@@ -653,7 +653,7 @@ local_cut = base.localCheckpoint(eager=False)   # 첫 액션 때 익스큐터 �
 - `cache()`와 `persist()`의 차이는 인자 유무뿐입니다. DataFrame에서는 둘 다 기본 `MEMORY_AND_DISK_DESER`입니다.
 - `unpersist()`의 `blocking` 기본값은 `False`입니다. 2.0에서 Scala와 맞추려고 바뀌었다고 문서가 적습니다.
 - Spark는 캐시를 노드마다 LRU 방식으로 비웁니다. LRU(Least Recently Used)는 공간이 모자랄 때 가장 오랫동안 안 쓴 것부터 내보내는 규칙입니다. 직접 지우지 않아도 오래된 파티션은 빠질 수 있습니다.
-- Databricks 서버리스 컴퓨트(Free Edition 포함)에서는 `cache()`가 예외를 냅니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 4절). 이 절의 실습은 로컬에서 해야 합니다.
+- Databricks 서버리스 컴퓨트(Free Edition 포함)에서는 `cache()`가 예외를 냅니다([1편](/blog/cert/spark/spark-00-exam-and-study-plan) 4절). 이 절의 실습은 로컬에서 해야 합니다.
 
 ## 6. 가비지 컬렉션
 
@@ -703,7 +703,7 @@ Spark는 JVM 위에서 돌기 때문에 익스큐터 힙의 객체는 GC가 치�
 | full GC | Old가 거의 차면 일어난다 |
 | 목표 | 오래 쓰는 캐시 데이터만 Old에 두고 Young은 짧게 쓰는 객체를 담을 만큼 크게 둔다 |
 
-GC가 문제인지 보는 방법은 둘입니다. Web UI의 Stage 상세 화면은 Task 요약 지표에 GC time(JVM GC에 쓴 총시간)을 보여 주고 Executors 탭은 익스큐터(드라이버 포함)마다 한 줄씩 GC time을 보여 줍니다. 탭 읽는 법은 [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)에 모았습니다. 더 자세히 보려면 Java 옵션에 `-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps`를 넣습니다. 이 로그는 워커 노드의 `stdout`(작업 디렉터리 안)에 찍힌다고 문서가 따로 강조합니다. 익스큐터 GC 옵션은 `spark.executor.extraJavaOptions`나 `spark.executor.defaultJavaOptions`로 줍니다.
+GC가 문제인지 보는 방법은 둘입니다. Web UI의 Stage 상세 화면은 Task 요약 지표에 GC time(JVM GC에 쓴 총시간)을 보여 주고 Executors 탭은 익스큐터(드라이버 포함)마다 한 줄씩 GC time을 보여 줍니다. 탭 읽는 법은 [6편](/blog/cert/spark/spark-04-troubleshooting-tuning)에 모았습니다. 더 자세히 보려면 Java 옵션에 `-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps`를 넣습니다. 이 로그는 워커 노드의 `stdout`(작업 디렉터리 안)에 찍힌다고 문서가 따로 강조합니다. 익스큐터 GC 옵션은 `spark.executor.extraJavaOptions`나 `spark.executor.defaultJavaOptions`로 줍니다.
 
 이 옵션 문구는 3.5.7과 4.2.0 튜닝 가이드에 똑같이 남아 있지만 JDK 8 시절 옵션입니다. JDK 9부터 GC 로그가 통합 로깅(`-Xlog:gc*`)으로 바뀌었고 JDK 11과 17에서는 `-XX:+PrintGCTimeStamps` 같은 옵션을 인식하지 못해 JVM이 뜨지 않는다는 벤더 문서(Atlassian)가 있습니다. Spark 4.x 기본인 JDK 17에서 실제로 GC 로그를 켤 때는 `-Xlog:gc*`를 쓰는 편이 안전합니다. 이 조합은 이번에 실행해 보지 않았습니다. 시험에서는 튜닝 가이드의 문구 그대로 나올 수 있으니 "Java 옵션으로 GC 로그를 켜고 워커의 stdout에서 본다"는 흐름을 기억합니다.
 
@@ -825,7 +825,7 @@ Stage 0의 3개는 파일 크기가 정하고 Stage 1의 200개는 설정이 정
 
 ![groupBy count가 Stage 둘로 잘리는 모양. 입력 파티션 세 개가 각각 부분 count를 하고 셔플에서 category 기준으로 다시 나뉘어 최종 count가 되고 드라이버가 결과를 받는다](/uploads/cert/spark-map/stages.svg)
 
-위 그림은 [Ch-00b 지도](/blog/cert/spark/spark-00b-top-down-map)에 쓴 것으로 키가 날짜 대신 상품 분류이고 셔플 파티션을 세 개로 줄여 그렸습니다. 입력 파티션마다 부분 집계를 먼저 하고 셔플을 건너 최종 집계를 한다는 구조는 같습니다.
+위 그림은 [2편 지도](/blog/cert/spark/spark-00b-top-down-map)에 쓴 것으로 키가 날짜 대신 상품 분류이고 셔플 파티션을 세 개로 줄여 그렸습니다. 입력 파티션마다 부분 집계를 먼저 하고 셔플을 건너 최종 집계를 한다는 구조는 같습니다.
 
 ### 헷갈리는 지점
 
@@ -864,11 +864,11 @@ orders 1TB (파일 여러 개)
 | 파티션 수 < 전체 코어 수 | 코어가 놉니다(2-3절) |
 | 파티션 하나가 너무 큼 | Task가 오래 걸리고 spill(2-4절 토글)이나 메모리 부족이 생깁니다 |
 | 파티션이 너무 많고 작음 | Task 예약 비용이 커지고 쓰기 결과로 작은 파일이 많이 생깁니다 |
-| 파티션 크기가 들쭉날쭉 | 몇몇 Task만 늦게 끝납니다(데이터 쏠림, [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)) |
+| 파티션 크기가 들쭉날쭉 | 몇몇 Task만 늦게 끝납니다(데이터 쏠림, [6편](/blog/cert/spark/spark-04-troubleshooting-tuning)) |
 
 #### 4. 헷갈리는 점
 
-- 이 절의 파티션은 실행 중 메모리 위의 조각입니다. 쓰기의 `partitionBy`가 만드는 `컬럼=값` 디렉터리도 파티션이라고 부르지만 다른 개념입니다([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-4절 토글).
+- 이 절의 파티션은 실행 중 메모리 위의 조각입니다. 쓰기의 `partitionBy`가 만드는 `컬럼=값` 디렉터리도 파티션이라고 부르지만 다른 개념입니다([4편](/blog/cert/spark/spark-02-spark-sql) 1-4절 토글).
 - Spark Classic에서는 `df.rdd.getNumPartitions()`로 파티션 수를 봅니다(8-3절 예제).
 
 > **정리**: 파티션은 병렬 처리의 단위이고 읽기, 셔플, 직접 지정의 세 자리에서 개수가 정해집니다. 셔플이 파티션을 다시 나누는 과정은 바로 아래 8-2절 토글에서 봅니다.
@@ -885,7 +885,7 @@ orders 1TB (파일 여러 개)
 | RDD 셔플, `parallelize` | `spark.default.parallelism` | 셔플은 부모 RDD의 최대 파티션 수, `parallelize`는 local에서 코어 수, 그 밖에는 전체 익스큐터 코어 수와 2 중 큰 값 |
 | 셔플 후 파티션 합치기 | `spark.sql.adaptive.coalescePartitions.enabled` | true(AQE가 켜져 있을 때) |
 
-AQE(`spark.sql.adaptive.enabled`)는 3.2.0부터 기본으로 켜져 있습니다. 켜져 있으면 셔플 후 인접한 작은 파티션을 합칩니다. 합치는 기준은 `spark.sql.adaptive.coalescePartitions.parallelismFirst`(기본 true)가 정합니다. 기본값에서는 목표 크기(`advisoryPartitionSizeInBytes`, 64MB)를 무시하고 최소 크기(`coalescePartitions.minPartitionSize`, 1MB)만 지키며 병렬도를 우선합니다. false로 두면 64MB를 목표로 합칩니다([Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) 6-2절). 그래서 200으로 셔플해도 Spark UI의 다음 Stage Task 수가 200보다 적게 보일 수 있습니다. AQE는 4영역(튜닝)에서 자세히 다룹니다.
+AQE(`spark.sql.adaptive.enabled`)는 3.2.0부터 기본으로 켜져 있습니다. 켜져 있으면 셔플 후 인접한 작은 파티션을 합칩니다. 합치는 기준은 `spark.sql.adaptive.coalescePartitions.parallelismFirst`(기본 true)가 정합니다. 기본값에서는 목표 크기(`advisoryPartitionSizeInBytes`, 64MB)를 무시하고 최소 크기(`coalescePartitions.minPartitionSize`, 1MB)만 지키며 병렬도를 우선합니다. false로 두면 64MB를 목표로 합칩니다([6편](/blog/cert/spark/spark-04-troubleshooting-tuning) 6-2절). 그래서 200으로 셔플해도 Spark UI의 다음 Stage Task 수가 200보다 적게 보일 수 있습니다. AQE는 4영역(튜닝)에서 자세히 다룹니다.
 
 ### 8-2. 셔플이란
 
@@ -900,7 +900,7 @@ AQE(`spark.sql.adaptive.enabled`)는 3.2.0부터 기본으로 켜져 있습니�
 
 #### 2. 어떻게 동작하나
 
-1. **map 쪽 계산**: 앞 Stage의 Task가 자기 파티션을 처리합니다. 집계라면 파티션 안에서 부분 집계를 먼저 합니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 3-2절 토글).
+1. **map 쪽 계산**: 앞 Stage의 Task가 자기 파티션을 처리합니다. 집계라면 파티션 안에서 부분 집계를 먼저 합니다([5편](/blog/cert/spark/spark-03-dataframe-api) 3-2절 토글).
 2. **목적지 정하기**: 행마다 키의 해시값을 셔플 파티션 수로 나눈 나머지로 보낼 곳을 정합니다.
 3. **셔플 쓰기**: 목적지별로 정리해 로컬 디스크에 파일로 씁니다.
 4. **경계에서 대기**: 앞 Stage의 Task가 모두 끝나야 다음 Stage가 시작합니다.
@@ -989,7 +989,7 @@ by_user.select(F.spark_partition_id().alias("pid")).distinct().count()
 1. **미해석 논리 계획**: 코드나 SQL을 그대로 옮긴 트리입니다. 컬럼 이름이 실제로 있는지는 아직 모릅니다.
 2. **분석(Analysis)**: 카탈로그와 스키마를 보고 테이블과 컬럼 이름을 확인하고 타입을 붙입니다. 없는 컬럼이면 여기서 `AnalysisException`이 납니다.
 3. **논리 최적화**: 필터를 앞으로 당기고(predicate pushdown) 안 쓰는 컬럼을 빼고(column pruning) 상수식을 미리 계산하는 규칙들을 적용합니다.
-4. **물리 계획**: 같은 논리 연산을 어떤 방식으로 실행할지 고릅니다. 조인이면 broadcast 조인과 sort merge 조인 중에서 고릅니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 5-3절 토글).
+4. **물리 계획**: 같은 논리 연산을 어떤 방식으로 실행할지 고릅니다. 조인이면 broadcast 조인과 sort merge 조인 중에서 고릅니다([5편](/blog/cert/spark/spark-03-dataframe-api) 5-3절 토글).
 5. **코드 생성**: 이어진 여러 연산자를 하나의 함수로 묶은 Java 코드를 만들어 컴파일합니다(whole-stage codegen). `explain()` 출력에서 `*(1)`처럼 별표와 번호가 붙은 연산자가 이렇게 묶인 것입니다.
 6. **실행**: 7절의 Job, Stage, Task로 나뉘어 돕니다.
 
@@ -1010,7 +1010,7 @@ plan.explain(mode="extended")
 1. **아래에서 위로 읽습니다.** 트리의 맨 아래가 데이터를 읽는 연산자이고 위로 올라가며 계산이 이어집니다.
 2. **`Exchange`가 셔플입니다.** `Exchange hashpartitioning(order_date, 200)`이 보이면 그 자리에서 Stage가 끊깁니다. `BroadcastExchange`는 작은 쪽을 모든 익스큐터에 보내는 방송입니다.
 3. **`*(1)` 같은 번호**는 whole-stage codegen으로 하나의 함수에 묶인 연산자 묶음입니다.
-4. **파일 스캔 줄**에서 최적화가 들어갔는지 봅니다. `PushedFilters`는 파일 읽기 단계로 내려간 필터, `PartitionFilters`는 디렉터리 단위로 건너뛴 조건([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-4절 토글), `ReadSchema`는 실제로 읽는 컬럼 목록입니다. 위 예제는 `createDataFrame`으로 만든 데이터라 파일 스캔 대신 `LocalTableScan`이 나옵니다.
+4. **파일 스캔 줄**에서 최적화가 들어갔는지 봅니다. `PushedFilters`는 파일 읽기 단계로 내려간 필터, `PartitionFilters`는 디렉터리 단위로 건너뛴 조건([4편](/blog/cert/spark/spark-02-spark-sql) 1-4절 토글), `ReadSchema`는 실제로 읽는 컬럼 목록입니다. 위 예제는 `createDataFrame`으로 만든 데이터라 파일 스캔 대신 `LocalTableScan`이 나옵니다.
 5. **`AdaptiveSparkPlan isFinalPlan=false`**가 맨 위에 있으면 AQE가 실행 중에 계획을 바꿀 수 있다는 뜻입니다. 실행이 끝난 뒤 Spark UI의 SQL 탭에서 보면 바뀐 최종 계획이 나옵니다.
 
 Spark 문서의 [EXPLAIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qry-explain.html) 예제에 `*(2) HashAggregate`, `Exchange hashpartitioning(k#33, 200)`, `*(1) LocalTableScan`이 차례로 쌓인 계획이 실려 있어 1~3번을 그대로 연습할 수 있습니다. 같은 예제에 `partial_sum`(셔플 전 부분 합계)과 `sum`(셔플 뒤 최종 합계)이 `Exchange` 아래위로 나뉘어 있는데 이것이 7절 표의 Stage 0과 Stage 1입니다. AQE는 Databricks의 [AQE 소개 글](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html)이 자세합니다. Catalyst가 규칙으로 트리를 바꾸는 원리는 Databricks의 [Deep Dive into Spark SQL's Catalyst Optimizer](https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html)가 `x + (1 + 2)`를 `x + 3`으로 접는 예로 설명합니다.
@@ -1026,7 +1026,7 @@ Spark 문서의 [EXPLAIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qr
 #### 4. 헷갈리는 점
 
 - Spark Classic은 DataFrame을 만들 때 분석(2단계)까지 바로 합니다. 그래서 없는 컬럼 오류는 트랜스포메이션 줄에서 나고 데이터 값 때문에 나는 오류는 액션 줄에서 납니다(9절 헷갈리는 지점).
-- SQL로 쓴 쿼리도 1단계부터 같은 길을 탑니다([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-1절 토글).
+- SQL로 쓴 쿼리도 1단계부터 같은 길을 탑니다([4편](/blog/cert/spark/spark-02-spark-sql) 1-1절 토글).
 
 > **정리**: 지연 평가 덕분에 Catalyst가 계획 전체를 보고 최적화할 수 있습니다. 최적화된 물리 계획이 7절의 Job, Stage, Task로 실행됩니다.
 
@@ -1110,8 +1110,8 @@ step2.show()                                  # 또 액션. 캐시가 없으므�
 
 | 모듈 | 문서의 용도 | 이 시리즈 |
 |---|---|---|
-| Spark Core | RDD Programming Guide가 다루는 기반 API. 문서는 RDD를 "core but old API"라고 적고 accumulator와 broadcast 변수를 함께 설명한다 | 이 글, [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| Spark SQL, DataFrames | SQL과 구조화 데이터 처리 | Ch-02, Ch-03 |
+| Spark Core | RDD Programming Guide가 다루는 기반 API. 문서는 RDD를 "core but old API"라고 적고 accumulator와 broadcast 변수를 함께 설명한다 | 이 글, [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| Spark SQL, DataFrames | SQL과 구조화 데이터 처리 | 4, 5편 |
 | pandas API on Spark | pandas 작업 | 7영역 |
 | Structured Streaming | 증분 계산과 스트림 처리. DataFrame 기반 | 5영역 |
 | MLlib | 머신러닝 | 이 시험에서는 기능만 묻는다 |
@@ -1122,7 +1122,7 @@ step2.show()                                  # 또 액션. 캐시가 없으므�
 ### 헷갈리는 지점
 
 - GraphX는 4.2.0 문서의 고수준 도구 목록에 있지만 시험 안내서의 모듈 목록에는 없습니다. Spark 홈페이지 메뉴는 2026년 10월 현재 GraphX에 "(deprecated)"를 붙여 둡니다.
-- pandas API on Spark는 pandas와 비슷한 API로 Spark DataFrame을 다루는 모듈입니다. 계산은 Spark가 분산해서 합니다. `to_pandas()`는 데이터를 클라이언트로 다 모읍니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 3절).
+- pandas API on Spark는 pandas와 비슷한 API로 Spark DataFrame을 다루는 모듈입니다. 계산은 Spark가 분산해서 합니다. `to_pandas()`는 데이터를 클라이언트로 다 모읍니다([1편](/blog/cert/spark/spark-00-exam-and-study-plan) 3절).
 
 ## 11. 확인 문제
 

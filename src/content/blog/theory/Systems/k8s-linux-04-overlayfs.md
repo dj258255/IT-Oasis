@@ -497,7 +497,7 @@ spec:
       claimName: board-search-data
 ```
 
-`emptyDir`은 파드와 함께 사라지므로 다시 만들 수 있는 캐시나 중간 파일에 씁니다. 파드가 바뀌어도 남아야 하는 데이터는 PV에 둡니다. 쿠버네티스 문서 기준으로 컨테이너 쓰기 계층과 로그, 디스크 기반 `emptyDir`은 모두 노드의 local ephemeral storage 사용량으로 집계됩니다. `resources.limits.ephemeral-storage`를 넘으면 파드가 축출될 수 있으니 쓰기 계층에 큰 파일을 쌓는 습관은 축출 원인이 되기도 합니다. 볼륨 종류와 PV 바인딩은 [CKA Ch-05](/blog/cert/cka/cka-05-storage)에서 다룹니다.
+`emptyDir`은 파드와 함께 사라지므로 다시 만들 수 있는 캐시나 중간 파일에 씁니다. 파드가 바뀌어도 남아야 하는 데이터는 PV에 둡니다. 쿠버네티스 문서 기준으로 컨테이너 쓰기 계층과 로그, 디스크 기반 `emptyDir`은 모두 노드의 local ephemeral storage 사용량으로 집계됩니다. `resources.limits.ephemeral-storage`를 넘으면 파드가 축출될 수 있으니 쓰기 계층에 큰 파일을 쌓는 습관은 축출 원인이 되기도 합니다. 볼륨 종류와 PV 바인딩은 [CKA 8편](/blog/cert/cka/cka-05-storage)에서 다룹니다.
 
 **직접 해 보기**
 

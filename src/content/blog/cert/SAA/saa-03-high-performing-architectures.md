@@ -1,5 +1,5 @@
 ---
-title: '[SAA Ch-03] 고성능 아키텍처 설계: 병목이 어디인지 먼저 말하는 서비스를 고른다'
+title: '[SAA] 고성능 아키텍처 설계: 병목이 어디인지 먼저 말하는 서비스를 고른다'
 description: SAA-C03 영역 3(고성능 아키텍처, 채점 문항의 24%)을 시험 안내서의 과제 3.1~3.5 순서로 정리합니다. 스토리지, 컴퓨팅, 데이터베이스, 네트워크, 데이터 수집과 변환에서 자주 헷갈리는 서비스를 공식 문서의 수치와 조건으로 비교하고 시나리오 문구가 어느 서비스를 가리키는지 표로 묶었습니다. 직접 만든 확인 문제와 해설을 끝에 붙였습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -15,7 +15,7 @@ topics:
   - cert
 draft: false
 series: "SAA 공부"
-seriesOrder: 3
+seriesOrder: 5
 ---
 
 ## 결론부터
@@ -40,7 +40,7 @@ seriesOrder: 3
 | 3.4 고성능 또는 확장 가능한 네트워크 | 글로벌, 하이브리드, 다계층 토폴로지와 로드 밸런싱 | 5절 |
 | 3.5 고성능 데이터 수집과 변환 | 데이터 레이크, 스트리밍, 전송, 시각화, 형식 변환 | 6절 |
 
-Ch-00에서 만든 비교표(SNS와 SQS, S3 클래스, Multi-AZ와 읽기 복제본, ALB와 NLB)는 여기서 다시 옮기지 않고 필요한 자리에서 한 줄로만 이어 붙입니다.
+1편에서 만든 비교표(SNS와 SQS, S3 클래스, Multi-AZ와 읽기 복제본, ALB와 NLB)는 여기서 다시 옮기지 않고 필요한 자리에서 한 줄로만 이어 붙입니다.
 
 ## 2. 과제 3.1 고성능 스토리지
 
@@ -49,7 +49,7 @@ Ch-00에서 만든 비교표(SNS와 SQS, S3 클래스, Multi-AZ와 읽기 복제
 <details>
 <summary>기초부터: 스토리지 유형마다 성능을 재는 지표가 다르다</summary>
 
-> **핵심 한 줄**: 블록, 파일, 객체가 데이터를 다루는 단위는 [Ch-02 2-13절](/blog/cert/saa/saa-02-resilient-architectures#2-13-스토리지-유형-객체-파일-블록)에 있습니다. 여기서는 그 단위 차이가 어떤 성능 지표와 병목으로 이어지는지만 봅니다.
+> **핵심 한 줄**: 블록, 파일, 객체가 데이터를 다루는 단위는 [4편 2-13절](/blog/cert/saa/saa-02-resilient-architectures#2-13-스토리지-유형-객체-파일-블록)에 있습니다. 여기서는 그 단위 차이가 어떤 성능 지표와 병목으로 이어지는지만 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -539,14 +539,14 @@ EC2 Auto Scaling의 동적 조정 정책은 대상 추적(target tracking), 단�
 
 ### 3-4. 워크로드 분리와 게시/구독
 
-안내서 기술 항목 첫 줄이 "구성 요소가 독립적으로 확장되도록 워크로드를 분리"입니다. 쇼핑몰 주문 접수와 결제 승인을 직접 호출로 묶으면 결제 계층이 느려질 때 주문 접수도 같이 느려집니다. 둘 사이에 SQS 큐를 두면 주문 접수는 큐에 넣고 바로 응답하고 결제 작업자는 큐 길이에 맞춰 따로 늘어납니다. 주문 완료 이벤트를 재고, 알림, 정산이 각자 받아야 하면 SNS 토픽 아래 SQS 큐 여러 개를 다는 팬아웃입니다. SNS, SQS, Kinesis, MSK의 차이는 Ch-00 4-2절 표에 있습니다.
+안내서 기술 항목 첫 줄이 "구성 요소가 독립적으로 확장되도록 워크로드를 분리"입니다. 쇼핑몰 주문 접수와 결제 승인을 직접 호출로 묶으면 결제 계층이 느려질 때 주문 접수도 같이 느려집니다. 둘 사이에 SQS 큐를 두면 주문 접수는 큐에 넣고 바로 응답하고 결제 작업자는 큐 길이에 맞춰 따로 늘어납니다. 주문 완료 이벤트를 재고, 알림, 정산이 각자 받아야 하면 SNS 토픽 아래 SQS 큐 여러 개를 다는 팬아웃입니다. SNS, SQS, Kinesis, MSK의 차이는 1편 4-2절 표에 있습니다.
 
 ### 3-5. Lambda 메모리와 한도
 
 <details>
 <summary>기초부터: 콜드 스타트 지연을 줄이는 방법</summary>
 
-> **핵심 한 줄**: 실행 환경, Init과 Invoke, 동시성의 기본 동작은 [Ch-02 2-8절](/blog/cert/saa/saa-02-resilient-architectures#2-8-서버리스-lambda와-fargate)에 있습니다. 여기서는 첫 요청이 느린 원인(콜드 스타트)과 줄이는 방법, 메모리가 속도를 바꾸는 이유만 봅니다.
+> **핵심 한 줄**: 실행 환경, Init과 Invoke, 동시성의 기본 동작은 [4편 2-8절](/blog/cert/saa/saa-02-resilient-architectures#2-8-서버리스-lambda와-fargate)에 있습니다. 여기서는 첫 요청이 느린 원인(콜드 스타트)과 줄이는 방법, 메모리가 속도를 바꾸는 이유만 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -600,7 +600,7 @@ warm                                         [Invoke]   ← 응답 시간 = Invo
 <details>
 <summary>기초부터: 컨테이너 서비스가 늘어나는 속도를 정하는 것</summary>
 
-> **핵심 한 줄**: 컨테이너, 오케스트레이터, ECS 용어(태스크 정의, 서비스, 클러스터, 태스크)는 [Ch-02 2-9절](/blog/cert/saa/saa-02-resilient-architectures#2-9-컨테이너-ecs-eks-fargate)에 있습니다. 여기서는 부하가 늘 때 새 태스크가 요청을 받기까지 무엇이 시간을 쓰는지만 봅니다.
+> **핵심 한 줄**: 컨테이너, 오케스트레이터, ECS 용어(태스크 정의, 서비스, 클러스터, 태스크)는 [4편 2-9절](/blog/cert/saa/saa-02-resilient-architectures#2-9-컨테이너-ecs-eks-fargate)에 있습니다. 여기서는 부하가 늘 때 새 태스크가 요청을 받기까지 무엇이 시간을 쓰는지만 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -684,7 +684,7 @@ AWS Batch 문서는 Batch를 제출된 작업에 맞춰 자원을 프로비저�
 <details>
 <summary>기초부터: 읽기 복제본으로 읽기를 나누면 앱에서 무엇이 바뀌나</summary>
 
-> **핵심 한 줄**: 읽기 복제본은 쓰기 DB의 사본을 하나 더 두고 읽기 요청만 그쪽으로 보내 쓰기 DB의 부담을 덜어 주는 방법입니다. 복제의 원리와 Multi-AZ와의 차이는 [Ch-02 2-12절](/blog/cert/saa/saa-02-resilient-architectures)에 있습니다.
+> **핵심 한 줄**: 읽기 복제본은 쓰기 DB의 사본을 하나 더 두고 읽기 요청만 그쪽으로 보내 쓰기 DB의 부담을 덜어 주는 방법입니다. 복제의 원리와 Multi-AZ와의 차이는 [4편 2-12절](/blog/cert/saa/saa-02-resilient-architectures)에 있습니다.
 
 #### 1. 왜 필요한가
 
@@ -729,7 +729,7 @@ AWS Batch 문서는 Batch를 제출된 작업에 맞춰 자원을 프로비저�
 
 복제본의 복제본 행은 차이 비교 페이지에 없어 엔진별 페이지에서 채웠습니다. PostgreSQL은 RDS for PostgreSQL 읽기 복제본 페이지에서 14.1 이상의 계단식 복제본을 확인했고 Oracle과 SQL Server의 "불가"는 이번에 연 엔진별 페이지에서 명시 문장을 찾지 못했습니다.
 
-Multi-AZ 대기 인스턴스는 동기 복제이고 읽기를 처리하지 않는다는 점은 Ch-00에서 정리했습니다. 문서도 "읽기 복제본과 달리 대기 복제본은 읽기 트래픽을 처리할 수 없다"고 적습니다.
+Multi-AZ 대기 인스턴스는 동기 복제이고 읽기를 처리하지 않는다는 점은 1편에서 정리했습니다. 문서도 "읽기 복제본과 달리 대기 복제본은 읽기 트래픽을 처리할 수 없다"고 적습니다.
 
 ### 4-3. Aurora의 공유 저장소와 복제본
 
@@ -777,15 +777,15 @@ Aurora  라이터 ─┐
 
 Aurora 문서("Amazon Aurora storage", "Replication with Amazon Aurora", "How Aurora serverless works")에서 확인한 사실입니다.
 
-- 클러스터 볼륨은 한 리전의 AZ 3개에 걸친 사본으로 구성됩니다. 서버리스 문서는 이를 "AZ 3개에 걸친 데이터 사본 6개"라고 적습니다. Ch-00에서 확인하지 못했던 사본 개수를 이번에 확인했습니다.
+- 클러스터 볼륨은 한 리전의 AZ 3개에 걸친 사본으로 구성됩니다. 서버리스 문서는 이를 "AZ 3개에 걸친 데이터 사본 6개"라고 적습니다. 1편에서 확인하지 못했던 사본 개수를 이번에 확인했습니다.
 - 클러스터당 Aurora 복제본은 최대 15개이고 리더 엔드포인트로 읽기 연결을 분산합니다.
 - 복제본이 같은 볼륨을 보기 때문에 복제 지연은 보통 100밀리초보다 훨씬 작습니다. 쓰기가 몰리면 늘어날 수 있습니다.
 - 라이터가 실패하면 복제본 하나를 승격합니다. 복제본이 없으면 인스턴스가 복구될 때까지 클러스터를 쓸 수 없습니다.
-- 리전 간 확장은 Aurora Global Database입니다. 2026년 10월 사용자 가이드는 엔진을 가리지 않고 다른 리전에 읽기 전용 보조 클러스터를 최대 10개 둘 수 있다고 적습니다(2021년판 DR 백서는 5개, Ch-02 3-8절).
+- 리전 간 확장은 Aurora Global Database입니다. 2026년 10월 사용자 가이드는 엔진을 가리지 않고 다른 리전에 읽기 전용 보조 클러스터를 최대 10개 둘 수 있다고 적습니다(2021년판 DR 백서는 5개, 4편 3-8절).
 
 사본이 왜 6개인지는 AWS Database Blog의 "Amazon Aurora under the hood: quorum and correlated failure"가 설명합니다. AZ 3개에 2개씩 6개를 두고 쓰기는 6개 중 4개가 확인하면 성공(쓰기 정족수 4), 읽기는 3개에서 읽으면 최신이 보장되도록(읽기 정족수 3) 설계했습니다. AZ 하나가 통째로 사라지면 사본 2개를 잃어도 4개가 남아 쓰기가 계속됩니다. 여기에 다른 AZ의 사본 하나가 더 고장 나도(AZ+1) 3개가 남아 데이터를 잃지 않고 읽을 수 있습니다([Amazon Aurora under the hood: quorum and correlated failure](https://aws.amazon.com/blogs/database/amazon-aurora-under-the-hood-quorum-and-correlated-failure/)). 4와 3을 더하면 6보다 크니 어떤 쓰기 집합과 읽기 집합도 적어도 한 사본에서 겹치고 그 사본이 최신 쓰기를 알고 있다는 것이 정족수 설계의 핵심입니다. 시험에는 정족수 숫자보다 "AZ 3개에 사본 6개, AZ 하나를 잃어도 쓰기 유지"라는 결과가 나옵니다.
 
-Aurora 저장 구성에는 Standard와 I/O-Optimized 두 가지가 있습니다. 문서는 I/O 지출이 Aurora 전체 지출의 25% 이상이면 I/O-Optimized, 25% 미만이면 Standard가 낫다고 적습니다. 이 기준은 비용 영역(Ch-04)에서 다시 씁니다.
+Aurora 저장 구성에는 Standard와 I/O-Optimized 두 가지가 있습니다. 문서는 I/O 지출이 Aurora 전체 지출의 25% 이상이면 I/O-Optimized, 25% 미만이면 Standard가 낫다고 적습니다. 이 기준은 비용 영역(6편)에서 다시 씁니다.
 
 ### 4-4. RDS Proxy: 연결을 모아 쓰기
 
@@ -826,7 +826,7 @@ Lambda 1,000개 ──연결 1,000──▶ RDS Proxy ──연결 수십 개(�
 | 제약 | 내용 |
 |---|---|
 | 위치 | DB와 같은 VPC. 프록시는 공개 접근 불가 |
-| 복제 구성 | RDS DB 인스턴스 복제 구성에서는 라이터 인스턴스에만 연결. 읽기 복제본에는 붙일 수 없다. Aurora는 읽기 전용 프록시 엔드포인트로 리더에 연결(Ch-02 참고) |
+| 복제 구성 | RDS DB 인스턴스 복제 구성에서는 라이터 인스턴스에만 연결. 읽기 복제본에는 붙일 수 없다. Aurora는 읽기 전용 프록시 엔드포인트로 리더에 연결(4편 참고) |
 | 기본 엔드포인트 | 두 AZ에 프로비저닝 |
 | 계정당 프록시 | 기본 20개 |
 
@@ -891,7 +891,7 @@ DAX는 DynamoDB와 API가 호환되는 인메모리 캐시입니다. DAX 문서�
 <details>
 <summary>기초부터: 히트율이 응답 시간과 DB 부하를 바꾸는 정도</summary>
 
-> **핵심 한 줄**: 캐시 히트와 미스, TTL과 축출의 기본 동작은 [Ch-02 2-11절](/blog/cert/saa/saa-02-resilient-architectures#2-11-캐싱-전략)에 있습니다. 여기서는 히트율이 평균 지연과 DB로 가는 요청을 얼마나 바꾸는지 숫자로 봅니다.
+> **핵심 한 줄**: 캐시 히트와 미스, TTL과 축출의 기본 동작은 [4편 2-11절](/blog/cert/saa/saa-02-resilient-architectures#2-11-캐싱-전략)에 있습니다. 여기서는 히트율이 평균 지연과 DB로 가는 요청을 얼마나 바꾸는지 숫자로 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -955,7 +955,7 @@ ElastiCache 문서("Comparing node-based Valkey, Memcached, and Redis OSS cluste
 
 2026년 10월 문서 이름은 Valkey가 앞에 오고 Redis OSS가 뒤에 옵니다. 시험 문구가 "Redis"라고 써도 같은 엔진 계열입니다. 게임 순위표(정렬 집합), 장애 시 캐시 데이터 보존, 다중 AZ 복제가 조건이면 Valkey/Redis OSS이고 "단순 객체 캐시, 멀티스레드"면 Memcached입니다.
 
-캐싱 전략은 두 가지를 구분해 둡니다. 지연 로딩(lazy loading)은 캐시에 없을 때만 DB에서 읽어 넣고 라이트 스루(write-through)는 DB에 쓸 때 캐시도 같이 갱신합니다. ElastiCache 문서의 "Caching strategies" 페이지 기준 장단점은 Ch-02 2-11절 표에 정리했습니다.
+캐싱 전략은 두 가지를 구분해 둡니다. 지연 로딩(lazy loading)은 캐시에 없을 때만 DB에서 읽어 넣고 라이트 스루(write-through)는 DB에 쓸 때 캐시도 같이 갱신합니다. ElastiCache 문서의 "Caching strategies" 페이지 기준 장단점은 4편 2-11절 표에 정리했습니다.
 
 ### 4-7. 엔진 선택과 이관
 
@@ -986,7 +986,7 @@ ElastiCache 문서("Comparing node-based Valkey, Memcached, and Redis OSS cluste
 
 ### 5-1. 서브넷 계층과 자원 배치
 
-안내서 지식 항목은 "서브넷 계층, 라우팅, IP 주소 체계"를 예로 듭니다. 다계층(multi-tier) 쇼핑몰이라면 인터넷을 마주하는 ALB만 공용 서브넷에 두고 웹과 애플리케이션 서버, DB는 사설 서브넷에 둡니다. 계층마다 AZ 2개 이상에 서브넷을 만들고 사설 서브넷의 아웃바운드는 NAT 게이트웨이로 보냅니다. S3와 DynamoDB로 가는 트래픽은 게이트웨이 엔드포인트로 돌리면 NAT를 거치지 않습니다(비용은 Ch-04). VPC를 여러 개 연결할 계획이면 VPC마다 CIDR 범위를 서로 다르게 처음부터 나눠 둡니다. 피어링은 CIDR이 겹치면 만들 수 없기 때문입니다(5-4절).
+안내서 지식 항목은 "서브넷 계층, 라우팅, IP 주소 체계"를 예로 듭니다. 다계층(multi-tier) 쇼핑몰이라면 인터넷을 마주하는 ALB만 공용 서브넷에 두고 웹과 애플리케이션 서버, DB는 사설 서브넷에 둡니다. 계층마다 AZ 2개 이상에 서브넷을 만들고 사설 서브넷의 아웃바운드는 NAT 게이트웨이로 보냅니다. S3와 DynamoDB로 가는 트래픽은 게이트웨이 엔드포인트로 돌리면 NAT를 거치지 않습니다(비용은 6편). VPC를 여러 개 연결할 계획이면 VPC마다 CIDR 범위를 서로 다르게 처음부터 나눠 둡니다. 피어링은 CIDR이 겹치면 만들 수 없기 때문입니다(5-4절).
 
 ### 5-2. CloudFront와 Global Accelerator
 
@@ -1124,7 +1124,7 @@ NLB  클라이언트 ─TCP──▶ [5-튜플 해시] ──연결 단위로─
 
 </details>
 
-ALB, NLB, GWLB의 계층과 고정 IP 차이는 Ch-00 4-2절에 있습니다. 성능 관점에서 덧붙이면 ALB는 경로와 호스트 기반 라우팅으로 마이크로서비스를 나누고 NLB는 고정 IP와 TCP/UDP, 아주 높은 처리량이 필요할 때 씁니다. PrivateLink 엔드포인트 서비스를 만들 때 서비스 쪽 앞단이 NLB라는 점도 5-4절과 이어집니다.
+ALB, NLB, GWLB의 계층과 고정 IP 차이는 1편 4-2절에 있습니다. 성능 관점에서 덧붙이면 ALB는 경로와 호스트 기반 라우팅으로 마이크로서비스를 나누고 NLB는 고정 IP와 TCP/UDP, 아주 높은 처리량이 필요할 때 씁니다. PrivateLink 엔드포인트 서비스를 만들 때 서비스 쪽 앞단이 NLB라는 점도 5-4절과 이어집니다.
 
 ### 5-6. 시험에서 갈리는 조건(네트워크)
 
@@ -1139,7 +1139,7 @@ ALB, NLB, GWLB의 계층과 고정 IP 차이는 Ch-00 4-2절에 있습니다. �
 
 ## 6. 과제 3.5 고성능 데이터 수집과 변환
 
-이 과제는 Ch-00에서 데이터 엔지니어 관점으로 짧게 다뤘고 여기서는 안내서 항목 순서로 넓힙니다. Kafka의 로그와 파티션 구조는 [DE Ch-11](/blog/data/streaming/de-11-kafka-log-partition-group), 테이블 포맷과 레이크하우스는 [DE Ch-18](/blog/data/lakehouse/de-18-iceberg-table-format)과 [DE Ch-20](/blog/data/lakehouse/de-20-cdc-to-lakehouse)에서 더 깊게 정리했습니다.
+이 과제는 1편에서 데이터 엔지니어 관점으로 짧게 다뤘고 여기서는 안내서 항목 순서로 넓힙니다. Kafka의 로그와 파티션 구조는 [DE 12편](/blog/data/streaming/de-11-kafka-log-partition-group), 테이블 포맷과 레이크하우스는 [DE 19편](/blog/data/lakehouse/de-18-iceberg-table-format)과 [DE 21편](/blog/data/lakehouse/de-20-cdc-to-lakehouse)에서 더 깊게 정리했습니다.
 
 ### 6-1. 수집 빈도로 경로 정하기
 
@@ -1274,7 +1274,7 @@ Firehose 문서는 Firehose를 S3, Redshift, OpenSearch, Splunk, Iceberg 테이�
 
 ### 6-4. MSK
 
-MSK 문서는 MSK를 오픈 소스 Apache Kafka를 그대로 돌리는 완전 관리형 서비스로 설명합니다. 기존 애플리케이션과 도구를 코드 변경 없이 쓸 수 있습니다. 브로커는 AZ마다 지정하고 Provisioned(Standard, Express 브로커)와 Serverless가 있습니다. Kinesis FAQ가 "이미 Kafka를 쓰면 MSK"를 권한다는 점은 Ch-00에서 정리했습니다. Kinesis와 Kafka 모두 파티션(샤드) 안에서만 순서를 지킨다는 공통점은 DE Ch-11에서 다뤘습니다.
+MSK 문서는 MSK를 오픈 소스 Apache Kafka를 그대로 돌리는 완전 관리형 서비스로 설명합니다. 기존 애플리케이션과 도구를 코드 변경 없이 쓸 수 있습니다. 브로커는 AZ마다 지정하고 Provisioned(Standard, Express 브로커)와 Serverless가 있습니다. Kinesis FAQ가 "이미 Kafka를 쓰면 MSK"를 권한다는 점은 1편에서 정리했습니다. Kinesis와 Kafka 모두 파티션(샤드) 안에서만 순서를 지킨다는 공통점은 DE 12편에서 다뤘습니다.
 
 ### 6-5. 데이터 전송 서비스
 
@@ -1481,8 +1481,8 @@ B입니다. Transit Gateway는 VPC와 온프레미스를 잇는 허브이고 연
 ## 8. 범위와 한계
 
 - 수치와 제약은 2026년 10월 19일에 연 AWS 공식 문서 기준입니다. gp3 최대값처럼 최근에 바뀐 값이 있어서 강의 자료와 다를 수 있고 시험 문항이 언제 기준인지는 알 수 없습니다.
-- 이 글의 서비스들을 직접 만들어 측정하지 않았습니다. 성능 수치는 모두 문서가 밝힌 설계 값이거나 최대값이고 제가 잰 값이 없습니다. Ch-00 계획의 실습 단계를 마친 뒤 측정한 내용을 따로 쓰겠습니다.
-- 확인하지 못한 것: MySQL과 PostgreSQL을 비교한 공식 표(RDS 문서에서 찾지 못함), Oracle과 SQL Server 계단식 복제본 불가의 명시 문장. Firehose 버퍼링과 Amazon Quick은 2026년 10월 21일에 문서로 확인해 본문에 넣었습니다. ElastiCache의 지연 로딩과 라이트 스루 정의는 Ch-02 2-11절에서 ElastiCache 문서로 정리했습니다.
+- 이 글의 서비스들을 직접 만들어 측정하지 않았습니다. 성능 수치는 모두 문서가 밝힌 설계 값이거나 최대값이고 제가 잰 값이 없습니다. 1편 계획의 실습 단계를 마친 뒤 측정한 내용을 따로 쓰겠습니다.
+- 확인하지 못한 것: MySQL과 PostgreSQL을 비교한 공식 표(RDS 문서에서 찾지 못함), Oracle과 SQL Server 계단식 복제본 불가의 명시 문장. Firehose 버퍼링과 Amazon Quick은 2026년 10월 21일에 문서로 확인해 본문에 넣었습니다. ElastiCache의 지연 로딩과 라이트 스루 정의는 4편 2-11절에서 ElastiCache 문서로 정리했습니다.
 - 2026년 10월 20일 보강: 향상된 팬아웃의 소비자당 샤드 2MB/s와 평균 약 70ms 전파 지연, Transfer Acceleration 조건, Aurora Global Database 보조 리전 수(엔진 공통 10개), S3 Express One Zone 요청 비용 문구가 페이지마다 다른 점을 확인해 넣었습니다.
 - FSx File Gateway 신규 제공 중단과 Snowball 지원 종료(2026년 12월 31일) 공지는 확인했지만 시험 출제 범위에 반영됐는지는 모릅니다. Kinesis On-demand Advantage 모드도 시험 안내서 이후에 생긴 것으로 보입니다.
 - 2026년 10월 23일 보강: gp3 20,000 IOPS 처리량 계산, EFS Bursting 기준 처리량 계산, Aurora 정족수(쓰기 4/6, 읽기 3/6), DynamoDB 핫 키 RCU 계산, 캐시가 비는 순간의 대책, VPN ECMP 단일 흐름 한계, Kinesis 샤드 수 계산, Firehose 버퍼 추적을 넣었습니다. 계산의 트래픽 숫자는 설명용 가정이고 한도 값은 문서 기준입니다.

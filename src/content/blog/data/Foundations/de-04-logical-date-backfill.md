@@ -1,5 +1,5 @@
 ---
-title: '[DE Ch-04] 논리 날짜와 backfill: Airflow 3에서 {{ ds }}가 가리키는 날이 바뀌었다'
+title: '[DE] 논리 날짜와 backfill: Airflow 3에서 {{ ds }}가 가리키는 날이 바뀌었다'
 description: 배치 작업에는 시계가 둘 있습니다. 언제 실행하는지와 어느 구간의 데이터를 처리하는지입니다. Airflow 2는 둘을 data interval로 묶었고 Airflow 3는 기본 timetable을 바꿔 매일 00시 run의 ds가 어제에서 오늘이 됐습니다. 이 차이를 DuckDB로 재현하고 catchup과 backfill이 지난 구간을 다시 돌리는 방식, Argo CronWorkflow가 같은 문제를 다루는 방식을 정리합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -17,7 +17,7 @@ topics:
   - messaging
 draft: false
 series: "DE 공부"
-seriesOrder: 4
+seriesOrder: 5
 ---
 
 ## 결론부터
@@ -50,7 +50,7 @@ seriesOrder: 4
 | 실행 시각(run_after) | 이 run을 언제 만들고 실행해도 되는지 | 10/2 00:00 |
 | 데이터 구간(data interval) | 이 run이 어느 구간의 데이터를 처리하는지 | 10/1 00:00 ~ 10/2 00:00 |
 
-Ch-03에서 태스크 안에서 `now()`로 "어제"를 계산하면 재시도할 때 다른 날을 처리한다고 했습니다. 실행 시각은 재시도마다 바뀌고 데이터 구간은 run에 고정되어 있으니 처리 범위는 데이터 구간으로 정해야 합니다. 그런데 Airflow 3에서는 이 데이터 구간이 기본적으로 없어졌습니다.
+4편에서 태스크 안에서 `now()`로 "어제"를 계산하면 재시도할 때 다른 날을 처리한다고 했습니다. 실행 시각은 재시도마다 바뀌고 데이터 구간은 run에 고정되어 있으니 처리 범위는 데이터 구간으로 정해야 합니다. 그런데 Airflow 3에서는 이 데이터 구간이 기본적으로 없어졌습니다.
 
 이 두 시계가 헷갈리는 데는 이름 탓도 있었습니다. Airflow 2.1까지는 logical date를 `execution_date`라고 불렀습니다. 이름만 보면 "실행한 시각"인데 실제로는 구간 시작이라 실행 시각보다 늘 한 구간 앞이었습니다. 10/2 00:00에 실행된 run의 `execution_date`가 10/1이었으니 처음 쓰는 사람마다 하루씩 헷갈렸습니다. 2.2에서 이 이름을 바꾼 설계 문서 AIP-39도 이름이 직관과 다르다는 점을 이유로 들고 `execution_date`를 `data_interval_start`로, `next_execution_date`를 `data_interval_end`로 바꾸자고 제안했습니다.
 
@@ -138,7 +138,7 @@ DAG를 켰을 때 `start_date`부터 지금까지 놓친 run을 자동으로 만
 
 291은 1월 1일부터 10월 18일까지의 날수입니다. 1~9월이 273일이고 10월 18일이 더해져 291일입니다. CronDataInterval은 하루가 다 끝난 구간에만 run을 만드니 10/19 하루는 아직 진행 중이라 빠집니다. CronTrigger는 10/19 00:00 트리거 시각이 이미 지났으니 그 run까지 만들어 하나가 많습니다.
 
-291개 run이 동시에 생기면 Ch-06의 동시성 제한이 바로 의미를 갖습니다. `max_active_runs` 기본값 16만큼 동시에 돌면서 DB나 외부 API를 두드립니다. 오늘의집 Airflow 도입기(2021)도 과거 `start_date`가 자동 backfill로 이어지는 걸 짚고 `catchup=False`를 쓰라고 했습니다.
+291개 run이 동시에 생기면 7편의 동시성 제한이 바로 의미를 갖습니다. `max_active_runs` 기본값 16만큼 동시에 돌면서 DB나 외부 API를 두드립니다. 오늘의집 Airflow 도입기(2021)도 과거 `start_date`가 자동 backfill로 이어지는 걸 짚고 `catchup=False`를 쓰라고 했습니다.
 
 `catchup=False`일 때의 동작도 timetable마다 다릅니다. 문서의 예시는 1/31 15시에 DAG를 멈췄다가 2/2 15시에 다시 켠 경우입니다. CronTrigger는 2/1, 2/2 run을 건너뛰고 2/3 00시에 다음 run을 실행합니다. CronDataInterval은 2/1 run만 건너뛰고 2/2 run을 다시 켜자마자 실행합니다.
 
@@ -181,7 +181,7 @@ UI에서는 Trigger에서 Backfill을 고르고 reprocess 선택지가 "Missing 
 
 공식 문서끼리 플래그 이름이 다른 곳이 있습니다. backfill 개념 문서의 예시는 `--start-date`, `--end-date`, `--reprocessing-behavior`를 쓰고 3.2.2 CLI 레퍼런스는 `--from-date`, `--to-date`, `--reprocess-behavior`입니다. 위 예시는 CLI 레퍼런스를 따랐습니다. FAQ에도 3.0에서 없어진 `execution_date` 설명이 아직 남아 있습니다.
 
-backfill이 안전하려면 Ch-03의 멱등성이 전제입니다. `completed`로 이미 성공한 날을 다시 돌릴 때 append로 쌓는 태스크라면 매출이 두 배가 됩니다.
+backfill이 안전하려면 4편의 멱등성이 전제입니다. `completed`로 이미 성공한 날을 다시 돌릴 때 append로 쌓는 태스크라면 매출이 두 배가 됩니다.
 
 ### 5-2. 사례: execution_date 제거의 비용
 
@@ -236,7 +236,7 @@ Alibaba의 DataWorks는 태스크 하나 대신 혈연으로 이어진 사슬 �
 
 ## 9. 범위와 한계
 
-- 2-2절은 timetable 정의를 흉내 낸 시뮬레이션입니다. Airflow 3.2를 직접 띄워 `ds` 값을 찍어 보지는 않았습니다. 직접 확인하려면 Ch-02 실습 환경에서 `@daily` DAG로 `{{ ds }}`와 `{{ data_interval_start }}`를 출력해 보면 됩니다.
+- 2-2절은 timetable 정의를 흉내 낸 시뮬레이션입니다. Airflow 3.2를 직접 띄워 `ds` 값을 찍어 보지는 않았습니다. 직접 확인하려면 3편 실습 환경에서 `@daily` DAG로 `{{ ds }}`와 `{{ data_interval_start }}`를 출력해 보면 됩니다.
 - 3절의 `{{ ds }}` 렌더링 오류는 소스를 읽고 내린 추론입니다.
 - 4절의 `catchup=False` 동작은 문서 예시를 옮겼고 직접 재현하지 않았습니다.
 - `create_delta_data_intervals` 설정과 timedelta 스케줄의 관계는 문서와 소스가 맞지 않아 다루지 않았습니다.
@@ -253,7 +253,7 @@ timetable이 데이터 구간을 갖고 있으면 `ds`는 구간 시작 날짜�
 
 **Q. Argo `concurrencyPolicy: Forbid`면 중복 실행이 없나요?**
 
-이전 Workflow가 돌고 있으면 이번 스케줄을 건너뜁니다. 건너뛴 날짜의 데이터는 처리되지 않으니 나중에 따로 돌려야 합니다. Ch-06에서 본 것처럼 겹침을 막는 장치와 같은 일을 한 번만 하게 하는 장치는 다릅니다.
+이전 Workflow가 돌고 있으면 이번 스케줄을 건너뜁니다. 건너뛴 날짜의 데이터는 처리되지 않으니 나중에 따로 돌려야 합니다. 7편에서 본 것처럼 겹침을 막는 장치와 같은 일을 한 번만 하게 하는 장치는 다릅니다.
 
 ## 참고 자료
 

@@ -28,7 +28,7 @@ seriesOrder: 3
 
 ---
 
-[2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에서는 네임스페이스로 컨테이너가 무엇을 볼 수 있는지를 정했습니다. 이 글은 컨테이너가 얼마나 쓸 수 있는지를 정하는 cgroup을 다룹니다. requests와 limits를 쓰는 법은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에서 정리했으니 여기서는 그 값이 노드에서 어떤 파일이 되고 커널이 어떻게 집행하는지를 따라갑니다.
+[2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)에서는 네임스페이스로 컨테이너가 무엇을 볼 수 있는지를 정했습니다. 이 글은 컨테이너가 얼마나 쓸 수 있는지를 정하는 cgroup을 다룹니다. requests와 limits를 쓰는 법은 [CKA 6편](/blog/cert/cka/cka-03-workloads-scheduling)에서 정리했으니 여기서는 그 값이 노드에서 어떤 파일이 되고 커널이 어떻게 집행하는지를 따라갑니다.
 
 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API(`order-api`)가 있고 컨테이너 하나에 아래 자원을 줍니다.
 

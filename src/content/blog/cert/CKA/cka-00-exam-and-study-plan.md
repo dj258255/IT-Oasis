@@ -1,6 +1,6 @@
 ---
-title: '[CKA Ch-00] CKA 시험 구조와 공부 계획: 2025년 개정 뒤의 범위로 준비하기'
-description: CKA는 2시간 동안 터미널에서 15~20개 과제를 푸는 실기 시험이고 66% 이상이면 합격입니다. 커리큘럼 v1.37의 다섯 영역과 2025년 2월 개정으로 바뀐 범위, 과제마다 ssh로 호스트를 옮기는 시험 환경과 허용 문서, 덤프를 쓰지 않은 후기에서 겹친 경향을 공식 문서로 확인하고 이 시리즈(Ch-01~08)를 따라가는 공부 계획을 세웁니다.
+title: '[CKA] CKA 시험 구조와 공부 계획: 2025년 개정 뒤의 범위로 준비하기'
+description: CKA는 2시간 동안 터미널에서 15~20개 과제를 푸는 실기 시험이고 66% 이상이면 합격입니다. 커리큘럼 v1.37의 다섯 영역과 2025년 2월 개정으로 바뀐 범위, 과제마다 ssh로 호스트를 옮기는 시험 환경과 허용 문서, 덤프를 쓰지 않은 후기에서 겹친 경향을 공식 문서로 확인하고 이 시리즈(3~11편)를 따라가는 공부 계획을 세웁니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -12,7 +12,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 0
+seriesOrder: 1
 ---
 
 ## 결론부터
@@ -21,7 +21,7 @@ seriesOrder: 0
 2. 2025년 2월 18일부터 범위가 바뀌었습니다. 개정 전 커리큘럼(v1.31)과 대조하면 etcd 백업과 복구, kubeadm 버전 업그레이드가 명시 항목에서 빠지고 Helm, Kustomize, Gateway API, CRD와 오퍼레이터, 확장 인터페이스(CNI, CSI, CRI)가 들어왔습니다. 개정 전 강의와 후기는 걸러서 봅니다.
 3. 비중이 가장 큰 영역은 트러블슈팅(30%)이고 그다음이 클러스터 아키텍처·설치·구성(25%)입니다. 후기들은 실패 원인으로 시간 부족과 트러블슈팅에서 잃은 시간을 공통으로 꼽습니다.
 4. 시험은 과제마다 지정된 호스트에 `ssh`로 들어가 풀고 `exit`로 돌아오는 방식입니다. 각 호스트에는 `kubectl`(alias `k`와 자동완성), `yq`, `curl`, `wget`, `man`이 깔려 있고 열 수 있는 문서는 kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io 네 곳입니다.
-5. 공부는 이 시리즈 순서를 따릅니다. Ch-01과 Ch-01.5로 구조를 잡고 Ch-02~06에서 영역별 명령과 YAML을 손에 익힌 뒤 Ch-07의 연습 자료와 killer.sh 2회로 시간을 맞추고 Ch-08로 마무리합니다.
+5. 공부는 이 시리즈 순서를 따릅니다. 3편과 4편으로 구조를 잡고 5~9편에서 영역별 명령과 YAML을 손에 익힌 뒤 10편의 연습 자료와 killer.sh 2회로 시간을 맞추고 11편으로 마무리합니다.
 
 ---
 
@@ -87,11 +87,11 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 
 | 영역 | 비중 | 세부 항목 | 이 시리즈 |
 |---|---|---|---|
-| Troubleshooting | 30% | 클러스터와 노드, 클러스터 구성요소, 리소스 사용량 모니터링, 컨테이너 출력 스트림, 서비스와 네트워킹 트러블슈팅 | [Ch-06](/blog/cert/cka/cka-06-troubleshooting) |
-| Cluster Architecture, Installation and Configuration | 25% | RBAC, 기반 인프라 준비, kubeadm으로 클러스터 생성과 관리, 클러스터 수명주기 관리, 고가용성 컨트롤 플레인, Helm과 Kustomize로 구성요소 설치, 확장 인터페이스(CNI, CSI, CRI), CRD와 오퍼레이터 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| Services and Networking | 20% | Pod 간 연결, NetworkPolicy, ClusterIP·NodePort·LoadBalancer와 엔드포인트, Gateway API, Ingress 컨트롤러와 리소스, CoreDNS | [Ch-04](/blog/cert/cka/cka-04-services-networking) |
-| Workloads and Scheduling | 15% | 롤링 업데이트와 롤백, ConfigMap과 Secret, 워크로드 자동 확장, 자가 치유 기본 요소, Pod 승인과 스케줄링(리소스 제한, 노드 어피니티 등) | [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling) |
-| Storage | 10% | StorageClass와 동적 프로비저닝, 볼륨 타입·접근 모드·회수 정책, PV와 PVC | [Ch-05](/blog/cert/cka/cka-05-storage) |
+| Troubleshooting | 30% | 클러스터와 노드, 클러스터 구성요소, 리소스 사용량 모니터링, 컨테이너 출력 스트림, 서비스와 네트워킹 트러블슈팅 | [9편](/blog/cert/cka/cka-06-troubleshooting) |
+| Cluster Architecture, Installation and Configuration | 25% | RBAC, 기반 인프라 준비, kubeadm으로 클러스터 생성과 관리, 클러스터 수명주기 관리, 고가용성 컨트롤 플레인, Helm과 Kustomize로 구성요소 설치, 확장 인터페이스(CNI, CSI, CRI), CRD와 오퍼레이터 | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
+| Services and Networking | 20% | Pod 간 연결, NetworkPolicy, ClusterIP·NodePort·LoadBalancer와 엔드포인트, Gateway API, Ingress 컨트롤러와 리소스, CoreDNS | [7편](/blog/cert/cka/cka-04-services-networking) |
+| Workloads and Scheduling | 15% | 롤링 업데이트와 롤백, ConfigMap과 Secret, 워크로드 자동 확장, 자가 치유 기본 요소, Pod 승인과 스케줄링(리소스 제한, 노드 어피니티 등) | [6편](/blog/cert/cka/cka-03-workloads-scheduling) |
+| Storage | 10% | StorageClass와 동적 프로비저닝, 볼륨 타입·접근 모드·회수 정책, PV와 PVC | [8편](/blog/cert/cka/cka-05-storage) |
 
 PDF의 네트워크 영역 제목은 "Servicing and Networking"으로 적혀 있고 LF 시험 페이지는 "Services & Networking"으로 씁니다. LF 시험 페이지의 커리큘럼 링크는 2026년 10월 현재 v1.35 PDF를 가리키지만 문구가 같아 실질 차이는 없습니다.
 
@@ -110,7 +110,7 @@ LF는 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했고 기준은 �
 | 스토리지 문구의 volume mode | 동적 볼륨 프로비저닝 |
 | 고가용성 클러스터 관리(Manage a highly-available Kubernetes cluster) | 고가용성 컨트롤 플레인 구현과 구성(왼쪽 옛 문구를 구체화한 것) |
 
-etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스터 수명주기 관리"와 HA 항목에 걸리고 kubernetes.io에 태스크 문서로 남아 있습니다. 후기도 갈립니다. Cassisi(2026)는 실러버스에서 빠졌다고 판단했고 Juikar(2026)는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 그래서 이 시리즈는 두 절차를 함정 위주로 짧게 남겼습니다([Ch-02 4장](/blog/cert/cka/cka-02-cluster-architecture)).
+etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스터 수명주기 관리"와 HA 항목에 걸리고 kubernetes.io에 태스크 문서로 남아 있습니다. 후기도 갈립니다. Cassisi(2026)는 실러버스에서 빠졌다고 판단했고 Juikar(2026)는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 그래서 이 시리즈는 두 절차를 함정 위주로 짧게 남겼습니다([5편 4장](/blog/cert/cka/cka-02-cluster-architecture)).
 
 도구도 바뀌었습니다. etcd 3.6부터 `etcdctl snapshot status`와 `snapshot restore`가 제거되어 확인과 복구는 `etcdutl`로 합니다. kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion`, 1.36은 3.6.8) 둘 다 3.6 이후입니다. `ETCDCTL_API=3`을 붙이던 옛 강의 명령은 그대로 외우지 않습니다. 개정 전 Important Instructions에 있던 "The CKA environment is currently running etcd v3.5." 줄은 2025년 11월 판부터 없습니다.
 
@@ -121,14 +121,14 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 
 | 단어 | 한 줄 뜻 | 쇼핑몰로 보면 | 다루는 곳 |
 |---|---|---|---|
-| Helm | 여러 YAML을 묶은 패키지(차트)를 값만 바꿔 설치하고 올리는 도구 | 결제 모듈 하나를 설치 마법사로 까는 일 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| Kustomize | 원본 YAML은 두고 환경별 차이만 덧씌우는 도구. `kubectl apply -k`에 들어 있음 | 같은 상품 API를 개발용은 복제본 1개, 운영용은 3개로 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| Gateway API | 바깥 HTTP 요청을 Service로 잇는 새 방식. Ingress의 후속 | `shop.example.com/cart`는 장바구니 Service로 | [Ch-04](/blog/cert/cka/cka-04-services-networking) |
-| CRD | 쿠버네티스에 없는 종류(kind)를 새로 등록하는 정의 | `kind: Coupon` 같은 객체를 만들 수 있게 함 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| 오퍼레이터 | CRD로 만든 객체를 보고 실제 작업을 하는 컨트롤러 | Coupon 객체가 생기면 만료 처리까지 맡는 프로그램 | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) |
-| CRI, CNI, CSI | 컨테이너, 네트워크, 디스크 일을 외부 플러그인에 맡길 때 쓰는 약속. CRI와 CSI는 kubelet이 부르고 CNI는 컨테이너 런타임이 Pod 샌드박스를 만들 때 부름 | 런타임은 containerd, 네트워크는 Calico처럼 갈아 끼움 | [Ch-02 7장](/blog/cert/cka/cka-02-cluster-architecture#7-확장-인터페이스-cni-csi-cri) |
-| HPA | 사용량을 보고 Pod 수를 늘리고 줄이는 자동 확장 | 할인 행사 때 주문 API Pod를 3개에서 10개로 | [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling) |
-| etcd | 클러스터의 모든 객체가 저장되는 키-값 저장소 | 주문 장부 원본 | [Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow) |
+| Helm | 여러 YAML을 묶은 패키지(차트)를 값만 바꿔 설치하고 올리는 도구 | 결제 모듈 하나를 설치 마법사로 까는 일 | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
+| Kustomize | 원본 YAML은 두고 환경별 차이만 덧씌우는 도구. `kubectl apply -k`에 들어 있음 | 같은 상품 API를 개발용은 복제본 1개, 운영용은 3개로 | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
+| Gateway API | 바깥 HTTP 요청을 Service로 잇는 새 방식. Ingress의 후속 | `shop.example.com/cart`는 장바구니 Service로 | [7편](/blog/cert/cka/cka-04-services-networking) |
+| CRD | 쿠버네티스에 없는 종류(kind)를 새로 등록하는 정의 | `kind: Coupon` 같은 객체를 만들 수 있게 함 | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
+| 오퍼레이터 | CRD로 만든 객체를 보고 실제 작업을 하는 컨트롤러 | Coupon 객체가 생기면 만료 처리까지 맡는 프로그램 | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
+| CRI, CNI, CSI | 컨테이너, 네트워크, 디스크 일을 외부 플러그인에 맡길 때 쓰는 약속. CRI와 CSI는 kubelet이 부르고 CNI는 컨테이너 런타임이 Pod 샌드박스를 만들 때 부름 | 런타임은 containerd, 네트워크는 Calico처럼 갈아 끼움 | [5편 7장](/blog/cert/cka/cka-02-cluster-architecture#7-확장-인터페이스-cni-csi-cri) |
+| HPA | 사용량을 보고 Pod 수를 늘리고 줄이는 자동 확장 | 할인 행사 때 주문 API Pod를 3개에서 10개로 | [6편](/blog/cert/cka/cka-03-workloads-scheduling) |
+| etcd | 클러스터의 모든 객체가 저장되는 키-값 저장소 | 주문 장부 원본 | [4편](/blog/cert/cka/cka-01b-core-objects-and-flow) |
 
 `etcdctl`과 `etcdutl`은 이름이 한 글자 차이라 헷갈립니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙어 묻는 클라이언트이고 `etcdutl`은 서버 없이 etcd 데이터 파일을 직접 다루는 관리 도구입니다([etcd 문서](https://etcd.io/docs/v3.6/op-guide/recovery/)). 스냅숏을 뜨는 일은 서버에 물어야 하니 `etcdctl snapshot save`이고 받아 둔 파일을 확인하고 풀어 놓는 일은 파일 작업이니 `etcdutl snapshot status`, `etcdutl snapshot restore`입니다.
 
@@ -194,7 +194,7 @@ kubectl은 `~/.kube/config` 파일(kubeconfig)을 읽고 어느 클러스터에 
 | users | 접속할 때 내밀 자격 증명(클라이언트 인증서나 토큰) |
 | contexts | "이 cluster에 이 user로" 짝을 지은 이름. 지금 쓰는 짝이 `current-context` |
 
-공식 안내대로라면 과제 호스트마다 이 파일이 미리 맞춰져 있어서 호스트만 제대로 옮기면 컨텍스트를 따로 바꿀 일이 없습니다. 파일 구조는 [Ch-02 1-10절](/blog/cert/cka/cka-02-cluster-architecture#1-10-kubeconfig-파일-구조)에 있습니다.
+공식 안내대로라면 과제 호스트마다 이 파일이 미리 맞춰져 있어서 호스트만 제대로 옮기면 컨텍스트를 따로 바꿀 일이 없습니다. 파일 구조는 [5편 1-10절](/blog/cert/cka/cka-02-cluster-architecture#1-10-kubeconfig-파일-구조)에 있습니다.
 
 #### 3. alias가 사라지는 이유
 
@@ -236,7 +236,7 @@ alias는 셸 하나에만 걸리는 설정입니다. base 호스트에서 `alias
 - 시작 30분 전부터 체크인할 수 있고 예정 시각에서 30분이 지나도록 시작하지 않으면 결시 처리됩니다. 결시는 환불도 재응시도 없습니다.
 - 메모, 문제를 소리 내어 읽기, 얼굴과 입을 가리는 것, 음식은 금지입니다. 투명한 용기에 담은 투명한 음료만 됩니다.
 
-점검표와 당일 순서는 [Ch-07 6절](/blog/cert/cka/cka-07-resources-and-exam-day)에 있습니다.
+점검표와 당일 순서는 [10편 6절](/blog/cert/cka/cka-07-resources-and-exam-day)에 있습니다.
 
 ## 4. 응시자들의 후기에서 공통으로 나온 것
 
@@ -255,7 +255,7 @@ alias는 셸 하나에만 걸리는 설정입니다. base 호스트에서 `alias
 | 109x79m, Qiita(2026-07) | 69% | Udemy, killer.sh, 『Kubernetes完全ガイド』 | 16문항 중 5~6개가 어려웠고 1개는 못 풀었다. 쉬운 것부터 풀었다 |
 | yltw27, dev.to(2026) | 결과 대기 | Udemy, killer.sh | 가장 큰 병목은 터미널 속도. 첫 killer.sh가 16/75. 컨트롤 플레인 명령이 오래 걸리면 다른 탭에 두고 다음 작업 |
 
-표에서 겹치는 것만 추렸습니다. 주제별 경향은 [Ch-07 5절](/blog/cert/cka/cka-07-resources-and-exam-day)에 모았습니다.
+표에서 겹치는 것만 추렸습니다. 주제별 경향은 [10편 5절](/blog/cert/cka/cka-07-resources-and-exam-day)에 모았습니다.
 
 - **시간**: 10편 중 대부분이 시간 부족이나 문제 전환 비용을 첫 어려움으로 꼽았습니다. 공식 기준 2시간에 15~20문항이면 문항당 6~8분입니다. 어려운 문제는 표시하고 넘긴 뒤 마지막에 돌아갑니다.
 - **실제로 시간이 든 주제**: 트러블슈팅(컨트롤 플레인 구성요소, kubelet, 인증서와 kubeconfig)과 개정으로 들어온 Helm, Kustomize, Gateway API, CRD, CNI 설치입니다.
@@ -271,16 +271,16 @@ alias는 셸 하나에만 걸리는 설정입니다. base 호스트에서 `alias
 
 | 단계 | 할 일 | 볼 글 | 끝났다고 보는 기준 |
 |---|---|---|---|
-| 1. 구조 잡기 | 선언형 API와 컨트롤 루프, 구성요소 역할, 요청 흐름, 기본 오브젝트와 kubectl 사용법 | [Ch-01](/blog/cert/cka/cka-01-why-kubernetes), [Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow) | 구성요소 하나가 멈췄을 때의 증상을 말할 수 있다 |
-| 2. 아키텍처·설치(25%) | RBAC, kubeadm 설치와 업그레이드, etcd, 인증서, HA, Helm, Kustomize, CNI, CRD | [Ch-02](/blog/cert/cka/cka-02-cluster-architecture) | VM의 kubeadm 클러스터를 문서만 보고 만들고 올린다 |
-| 3. 워크로드·스케줄링(15%) | 롤아웃, ConfigMap/Secret, HPA, 프로브, 사이드카, requests/limits, 어피니티, taint | [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling) | 각 과제를 뼈대 명령으로 5분 안에 한다 |
-| 4. 서비스·네트워킹(20%) | Service, NetworkPolicy, Gateway API, Ingress, CoreDNS | [Ch-04](/blog/cert/cka/cka-04-services-networking) | Ingress를 Gateway와 HTTPRoute로 옮긴다 |
-| 5. 스토리지(10%) | StorageClass, PV/PVC 바인딩, 회수 정책, 확장 | [Ch-05](/blog/cert/cka/cka-05-storage) | Pending PVC의 원인을 바인딩 조건으로 찾는다 |
-| 6. 트러블슈팅(30%) | 노드, 컨트롤 플레인, 로그, `kubectl top`, Service와 DNS 점검 | [Ch-06](/blog/cert/cka/cka-06-troubleshooting) | 스스로 망가뜨린 클러스터를 문서만 보고 고친다 |
-| 7. 시간 맞추기 | Killercoda 시나리오, 강의 모의고사, killer.sh 2회(시험 2주 전과 1주 전) | [Ch-07](/blog/cert/cka/cka-07-resources-and-exam-day) | killer.sh 2회차에서 표시한 문제까지 돌아간다 |
-| 8. 마무리 | 명령, YAML 뼈대, 자주 틀리는 것 복습. 당일 점검표 | [Ch-08](/blog/cert/cka/cka-08-cram-sheet), Ch-07 6절 | 점검표 통과 |
+| 1. 구조 잡기 | 선언형 API와 컨트롤 루프, 구성요소 역할, 요청 흐름, 기본 오브젝트와 kubectl 사용법 | [3편](/blog/cert/cka/cka-01-why-kubernetes), [4편](/blog/cert/cka/cka-01b-core-objects-and-flow) | 구성요소 하나가 멈췄을 때의 증상을 말할 수 있다 |
+| 2. 아키텍처·설치(25%) | RBAC, kubeadm 설치와 업그레이드, etcd, 인증서, HA, Helm, Kustomize, CNI, CRD | [5편](/blog/cert/cka/cka-02-cluster-architecture) | VM의 kubeadm 클러스터를 문서만 보고 만들고 올린다 |
+| 3. 워크로드·스케줄링(15%) | 롤아웃, ConfigMap/Secret, HPA, 프로브, 사이드카, requests/limits, 어피니티, taint | [6편](/blog/cert/cka/cka-03-workloads-scheduling) | 각 과제를 뼈대 명령으로 5분 안에 한다 |
+| 4. 서비스·네트워킹(20%) | Service, NetworkPolicy, Gateway API, Ingress, CoreDNS | [7편](/blog/cert/cka/cka-04-services-networking) | Ingress를 Gateway와 HTTPRoute로 옮긴다 |
+| 5. 스토리지(10%) | StorageClass, PV/PVC 바인딩, 회수 정책, 확장 | [8편](/blog/cert/cka/cka-05-storage) | Pending PVC의 원인을 바인딩 조건으로 찾는다 |
+| 6. 트러블슈팅(30%) | 노드, 컨트롤 플레인, 로그, `kubectl top`, Service와 DNS 점검 | [9편](/blog/cert/cka/cka-06-troubleshooting) | 스스로 망가뜨린 클러스터를 문서만 보고 고친다 |
+| 7. 시간 맞추기 | Killercoda 시나리오, 강의 모의고사, killer.sh 2회(시험 2주 전과 1주 전) | [10편](/blog/cert/cka/cka-07-resources-and-exam-day) | killer.sh 2회차에서 표시한 문제까지 돌아간다 |
+| 8. 마무리 | 명령, YAML 뼈대, 자주 틀리는 것 복습. 당일 점검표 | [11편](/blog/cert/cka/cka-08-cram-sheet), 10편 6절 | 점검표 통과 |
 
-영역 순서는 커리큘럼 순서를 따랐고 트러블슈팅은 앞 영역의 지식을 모두 쓰므로 마지막에 둡니다. 연습 자료 비교, 할인, 홈 랩 구성, D-30 계획은 [Ch-07](/blog/cert/cka/cka-07-resources-and-exam-day)에 있습니다.
+영역 순서는 커리큘럼 순서를 따랐고 트러블슈팅은 앞 영역의 지식을 모두 쓰므로 마지막에 둡니다. 연습 자료 비교, 할인, 홈 랩 구성, D-30 계획은 [10편](/blog/cert/cka/cka-07-resources-and-exam-day)에 있습니다.
 
 "쿠버네티스 아래의 리눅스" 시리즈([1편 커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary)부터 5편까지)는 namespace, cgroup, overlayfs, iptables를 커널 쪽에서 보는 시험 범위 밖 심화입니다.
 
@@ -291,7 +291,7 @@ alias는 셸 하나에만 걸리는 설정입니다. base 호스트에서 `alias
 | `kubectl create`, `kubectl run`에 `--dry-run=client -o yaml`을 붙여 매니페스트 뼈대 만들기 | YAML을 처음부터 쓰지 않는다. 후기 여러 편이 같은 방식을 썼다 |
 | `kubectl explain <리소스>.<필드>` | 필드 이름이 기억나지 않을 때와 CRD, VPA처럼 문서 예시가 적은 리소스 |
 | `kubectl auth can-i ... --as` | RBAC 과제를 끝낸 뒤 검증 |
-| `ssh`, `sudo`, `journalctl -u kubelet`, `crictl ps -a`, `/etc/kubernetes/manifests` | 컨트롤 플레인과 노드 트러블슈팅. [Ch-01 3장](/blog/cert/cka/cka-01-why-kubernetes)에서 구성요소별 증상을 정리 |
+| `ssh`, `sudo`, `journalctl -u kubelet`, `crictl ps -a`, `/etc/kubernetes/manifests` | 컨트롤 플레인과 노드 트러블슈팅. [3편 3장](/blog/cert/cka/cka-01-why-kubernetes)에서 구성요소별 증상을 정리 |
 | `-o jsonpath`, `yq` | 값을 뽑아 파일로 저장하는 과제. `jq`는 공식 사전 설치 목록에 없다 |
 | kubernetes.io 문서의 위치 | Gateway API, NetworkPolicy, PV/PVC, Kustomize, kubeadm 페이지를 검색 없이 찾아간다 |
 

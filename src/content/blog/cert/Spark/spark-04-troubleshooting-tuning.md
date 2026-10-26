@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-04] 문제 해결과 튜닝: 느린 Job은 파티션 크기와 셔플 위치부터 본다'
+title: '[Spark] 문제 해결과 튜닝: 느린 Job은 파티션 크기와 셔플 위치부터 본다'
 description: Databricks Spark 자격증 4영역(문제 해결과 튜닝, 10%)을 시험 안내서 항목 순서대로 정리합니다. repartition과 coalesce, 데이터 쏠림, 셔플 줄이기, AQE의 설정과 기본값, explain()과 Spark UI, 드라이버·익스큐터 로그로 메모리 부족과 저사용을 가르는 방법을 Spark 4.2.0 공식 문서 기준으로 확인합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 4
+seriesOrder: 6
 ---
 
 ## 결론부터
@@ -121,7 +121,7 @@ print(orders.rdd.getNumPartitions())
  .show(5))
 ```
 
-`df.rdd`는 Spark Connect에서 쓸 수 없습니다(Ch-06에서 다룹니다). Connect 환경에서는 `spark_partition_id()`로 묶어 세는 두 번째 방법만 됩니다.
+`df.rdd`는 Spark Connect에서 쓸 수 없습니다(8편에서 다룹니다). Connect 환경에서는 `spark_partition_id()`로 묶어 세는 두 번째 방법만 됩니다.
 
 헷갈리는 지점은 둘입니다.
 
@@ -203,7 +203,7 @@ SELECT /*+ REBALANCE(store_id) */ * FROM orders;
 
 #### 1. 왜 필요한가
 
-`groupBy("store_id")`나 `join(..., "store_id")`를 하려면 같은 `store_id`의 행이 한 파티션에 모여 있어야 합니다. Spark는 키의 해시값으로 목적지 파티션을 정해서 이 조건을 맞춥니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-2). 키마다 행 수가 비슷하면 파티션 크기도 비슷합니다. 대형 입점 매장 하나가 주문의 절반을 차지하면 그 매장이 배정된 파티션 하나만 커집니다.
+`groupBy("store_id")`나 `join(..., "store_id")`를 하려면 같은 `store_id`의 행이 한 파티션에 모여 있어야 합니다. Spark는 키의 해시값으로 목적지 파티션을 정해서 이 조건을 맞춥니다([3편](/blog/cert/spark/spark-01-architecture) 8-2). 키마다 행 수가 비슷하면 파티션 크기도 비슷합니다. 대형 입점 매장 하나가 주문의 절반을 차지하면 그 매장이 배정된 파티션 하나만 커집니다.
 
 #### 2. 어떻게 동작하나
 
@@ -253,7 +253,7 @@ SELECT /*+ REBALANCE(store_id) */ * FROM orders;
 
 #### 1. 왜 필요한가
 
-"Job이 느리다"는 증상만으로는 어디를 고칠지 알 수 없습니다. 액션 하나가 Job을 만들고 Job은 셔플 경계마다 Stage로 나뉘며 Stage는 파티션마다 Task를 하나씩 띄웁니다([Ch-01](/blog/cert/spark/spark-01-architecture) 7절). UI는 이 계층을 그대로 화면으로 보여 줍니다. 위에서부터 내려가면 느린 곳을 Task 하나까지 좁힐 수 있습니다.
+"Job이 느리다"는 증상만으로는 어디를 고칠지 알 수 없습니다. 액션 하나가 Job을 만들고 Job은 셔플 경계마다 Stage로 나뉘며 Stage는 파티션마다 Task를 하나씩 띄웁니다([3편](/blog/cert/spark/spark-01-architecture) 7절). UI는 이 계층을 그대로 화면으로 보여 줍니다. 위에서부터 내려가면 느린 곳을 Task 하나까지 좁힐 수 있습니다.
 
 #### 2. 어떻게 동작하나
 
@@ -356,7 +356,7 @@ revenue = partial.groupBy("store_id").agg(F.sum("part_sum").alias("revenue"))
 |---|---|---|
 | `groupBy("store_id").agg(sum)` | 입력 파티션마다 매장별 부분 합(5-3) | 부분 합 최대 100행 |
 | `groupBy("store_id").applyInPandas(f, ...)` | 없음. 그룹의 행을 그대로 보낸다 | 800만 행 |
-| `Window.partitionBy("store_id")` | 없음. 같은 매장 행을 한 파티션에 모아 정렬한다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 11-1절 토글) | 800만 행 |
+| `Window.partitionBy("store_id")` | 없음. 같은 매장 행을 한 파티션에 모아 정렬한다([5편](/blog/cert/spark/spark-03-dataframe-api) 11-1절 토글) | 800만 행 |
 
 부분 집계가 양을 줄여 주는 `sum`과 달리 그룹의 행을 통째로 한 Task에 모아야 하는 연산에서 salting이 값을 합니다. 이때도 그룹을 조각으로 나눠 계산한 결과를 다시 합칠 수 있어야 합니다. 합계와 개수는 조각별 결과를 더하면 되지만 중앙값처럼 조각별 결과로 전체를 다시 계산할 수 없는 연산에는 쓸 수 없습니다. salt 값 8개가 해시로 서로 다른 파티션에 떨어진다는 보장도 없어서 조각 수와 Task 수가 꼭 같지는 않습니다.
 
@@ -378,7 +378,7 @@ revenue = partial.groupBy("store_id").agg(F.sum("part_sum").alias("revenue"))
 
 > **핵심 한 줄**: broadcast 조인은 작은 쪽을 익스큐터마다 복사하는 비용을 내고 큰 쪽의 셔플을 없앱니다. 복사본이 드라이버와 익스큐터 메모리에 여유 있게 들어갈 때만 이득입니다.
 
-두 조인 방식이 데이터를 어떻게 옮기는지는 [Ch-03 5-3절](/blog/cert/spark/spark-03-dataframe-api#5-3-broadcast-조인) 토글에 있습니다. 여기서는 튜닝에서 고르는 기준만 봅니다.
+두 조인 방식이 데이터를 어떻게 옮기는지는 [5편 5-3절](/blog/cert/spark/spark-03-dataframe-api#5-3-broadcast-조인) 토글에 있습니다. 여기서는 튜닝에서 고르는 기준만 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -413,7 +413,7 @@ sort-merge 조인에서는 큰 쪽 전체가 셔플로 다시 나뉘어서 조�
 - **드라이버 메모리 부족**: 작은 쪽을 드라이버로 모아 해시 테이블을 만들다가 `OutOfMemoryError`가 나면 broadcast할 메모리가 부족하다는 오류로 바꿔 던집니다.
 - **크기 상한 초과**: 만든 테이블이 `spark.sql.maxBroadcastTableSize`(4.1.0부터, 기본 8GB) 이상이면 broadcast를 거부합니다.
 - **시간 초과**: `spark.sql.broadcastTimeout`(기본 300초) 안에 끝나지 않으면 timeout 오류가 납니다. 작은 쪽을 만드는 계산 자체가 무거울 때도 걸립니다.
-- **계획에 `SortMergeJoin`이 남음**: 추정 크기가 기준을 넘었거나 조인 유형이 그쪽 broadcast를 지원하지 않는 경우입니다(Ch-03 토글의 `left` 조인 설명).
+- **계획에 `SortMergeJoin`이 남음**: 추정 크기가 기준을 넘었거나 조인 유형이 그쪽 broadcast를 지원하지 않는 경우입니다(5편 토글의 `left` 조인 설명).
 
 > **정리**: broadcast는 "작은 쪽 복사 비용"과 "큰 쪽 셔플 비용"의 교환입니다. 아래 표의 기준값과 힌트가 이 교환을 언제 할지 정합니다.
 
@@ -529,7 +529,7 @@ paid.explain()
 
 - 집계는 셔플 전에 부분 집계를 합니다. EXPLAIN 문서 예제의 계획이 `HashAggregate(partial_sum)` 다음에 `Exchange hashpartitioning(k, 200)`, 그다음 `HashAggregate(sum)` 순서입니다. 그래서 `groupBy().agg(sum)`은 키별 부분 합만 셔플합니다.
 - 조인과 집계를 같은 키로 이어서 하면 이미 그 키로 나뉜 데이터는 다시 셔플하지 않습니다. 앞의 3-1에서 `repartition(64, "store_id")`를 미리 해 둔 이유입니다.
-- 같은 셔플 결과를 여러 액션에서 쓰면 `cache()`로 재계산을 막습니다. DataFrame `cache()`의 기본 저장 레벨은 `MEMORY_AND_DISK_DESER`입니다(Ch-00 표).
+- 같은 셔플 결과를 여러 액션에서 쓰면 `cache()`로 재계산을 막습니다. DataFrame `cache()`의 기본 저장 레벨은 `MEMORY_AND_DISK_DESER`입니다(1편 표).
 - 자주 같은 키로 조인하는 영구 테이블은 `bucketBy`로 저장해 셔플을 줄일 수 있습니다. 2영역(Spark SQL) 범위라 여기서는 이름만 적습니다.
 
 ## 6. AQE
@@ -583,7 +583,7 @@ AQE 실행
 
 - 이미 실행한 스테이지는 되돌리지 않습니다. 위 예에서 orders 셔플은 이미 끝났으므로 broadcast로 바꿔도 처음부터 broadcast로 계획한 것보다는 덜 효율적입니다(6-3).
 - 셔플이 없는 쿼리는 끊을 경계가 없어서 AQE가 바꿀 것이 거의 없습니다.
-- 스트리밍 쿼리에는 적용되지 않습니다([Ch-05](/blog/cert/spark/spark-05-structured-streaming) 4-2).
+- 스트리밍 쿼리에는 적용되지 않습니다([7편](/blog/cert/spark/spark-05-structured-streaming) 4-2).
 
 > **정리**: AQE의 세 기능은 모두 "끝난 셔플의 실제 크기를 보고 다음 단계를 고친다"는 한 가지 동작에서 나옵니다. 아래 표가 그 세 기능입니다.
 
@@ -753,7 +753,7 @@ DataFrame.explain(extended=None, mode=None)
 | Environment | Runtime Information, Spark Properties, Resource Profiles, Hadoop Properties, System Properties, Metrics Properties, Classpath Entries 하위 탭 | 설정이 의도대로 들어갔는지(`spark.driver.memory` 같은 값) |
 | Executors | 드라이버를 포함한 익스큐터별 메모리, 디스크, 코어, Active Tasks, 캐시용 저장 메모리, 셔플 합계, GC 시간, stdout/stderr 로그 링크, Thread Dump | 익스큐터 로그, 저사용 |
 | SQL | DataFrame과 SQL 쿼리 목록, 계획 그래프와 노드별 지표, Details에 논리·물리 계획 | 조인 전략, 셔플 바이트, AQE 결과 |
-| Structured Streaming | 스트리밍 쿼리별 입력·처리 속도, 배치 시간, 상태 행 수 | Ch-05 |
+| Structured Streaming | 스트리밍 쿼리별 입력·처리 속도, 배치 시간, 상태 행 수 | 7편 |
 
 Stage 상세의 요약 지표는 문서 기준으로 Task 역직렬화 시간, Duration, GC time, 결과 직렬화 시간, 결과 가져오기 시간, 스케줄러 지연, Peak execution memory, Shuffle Read Size / Records, Shuffle Read Fetch Wait Time, Shuffle Remote Reads, Shuffle Write Time, Shuffle spill(memory), Shuffle spill(disk)입니다. Spill(disk)이 크면 실행 메모리가 모자라 디스크로 넘긴 것이고 GC time이 Duration에서 큰 몫을 차지하면 힙이 빡빡하다는 신호입니다. Stage 상세의 DAG는 노드를 WholeStageCodegen, Exchange 같은 연산 범위로 묶고 codegen id를 붙여서 SQL 탭의 계획과 대조할 수 있습니다.
 
@@ -814,7 +814,7 @@ log_df.filter(F.col("level") == "ERROR").show(truncate=False)
 
 `spark.driver.maxResultSize`는 액션 하나에서 모든 파티션 결과를 직렬화한 총합의 한도이고 넘으면 Job을 중단합니다. 문서는 이 한도를 너무 높이면 드라이버 OOM이 날 수 있고 적절한 한도가 드라이버를 보호한다고 적습니다. 그래서 `collect()`가 이 한도에 걸려 실패했다면 한도를 올리기 전에 정말 다 모아야 하는지부터 봅니다.
 
-`toPandas()` 문서도 결과가 작을 때만 쓰라고 하고 모든 데이터를 드라이버 메모리로 올린다고 적습니다. Arrow를 켜도 모은다는 사실은 같습니다(Ch-06).
+`toPandas()` 문서도 결과가 작을 때만 쓰라고 하고 모든 데이터를 드라이버 메모리로 올린다고 적습니다. Arrow를 켜도 모은다는 사실은 같습니다(8편).
 
 ```python
 # 드라이버로 다 모으는 코드
@@ -837,7 +837,7 @@ orders.write.mode("overwrite").parquet("/out/orders_snapshot")
 
 #### 1. 왜 필요한가
 
-`spark.executor.memory=4g`를 줘도 Task 하나가 4GB를 다 쓰지는 못합니다. 힙에는 Spark 예약분, 사용자 객체, 캐시가 함께 있고 동시에 도는 Task들이 실행 메모리를 나눠 씁니다. Python 워커처럼 힙 밖에서 도는 것도 있습니다. 어느 칸이 찼는지에 따라 증상과 해법이 달라서 칸을 구분해 두어야 합니다. 칸별 기본값과 계산 예는 [Ch-01](/blog/cert/spark/spark-01-architecture) 2-4절에 있습니다.
+`spark.executor.memory=4g`를 줘도 Task 하나가 4GB를 다 쓰지는 못합니다. 힙에는 Spark 예약분, 사용자 객체, 캐시가 함께 있고 동시에 도는 Task들이 실행 메모리를 나눠 씁니다. Python 워커처럼 힙 밖에서 도는 것도 있습니다. 어느 칸이 찼는지에 따라 증상과 해법이 달라서 칸을 구분해 두어야 합니다. 칸별 기본값과 계산 예는 [3편](/blog/cert/spark/spark-01-architecture) 2-4절에 있습니다.
 
 #### 2. 어떻게 동작하나
 
@@ -872,7 +872,7 @@ orders.write.mode("overwrite").parquet("/out/orders_snapshot")
 - 스필은 Task가 끝까지 돌기 위한 정상 동작이고 대가는 디스크 I/O입니다. 스필이 크면 파티션을 늘려 Task당 입력을 줄이는 쪽이 먼저입니다.
 - Web UI 문서 기준으로 Shuffle spill(memory)는 메모리 안 역직렬화 형태의 크기, Shuffle spill(disk)는 디스크에 쓴 직렬화 형태의 크기입니다. 같은 데이터를 두 형태로 잰 값이라 보통 disk 쪽 숫자가 작습니다.
 - 익스큐터 코어를 늘리면 동시 Task N이 커져 Task 하나의 실행 메모리 몫이 줄어듭니다.
-- 캐시를 많이 하면 실행 메모리가 쓸 수 있는 여유가 줄어 스필이 늘 수 있습니다. 저장 레벨은 [Ch-01](/blog/cert/spark/spark-01-architecture) 5절에 있습니다.
+- 캐시를 많이 하면 실행 메모리가 쓸 수 있는 여유가 줄어 스필이 늘 수 있습니다. 저장 레벨은 [3편](/blog/cert/spark/spark-01-architecture) 5절에 있습니다.
 
 > **정리**: 실행 메모리 부족은 스필로 버티고 힙의 다른 칸이나 힙 밖이 넘치면 OOM이 납니다. 아래 문단의 300MiB, 0.6, 0.5와 overhead 설정이 이 칸들의 크기입니다.
 
@@ -1042,4 +1042,4 @@ B입니다. `Exchange`가 셔플이니 A는 틀립니다. `AdaptiveSparkPlan` �
 - Databricks, [Adaptive Query Execution: Speeding up Spark SQL at Runtime](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html) (2020, 파티션 합치기, 조인 전략 바꾸기, skew join의 동작 그림)
 
 이 시리즈
-- [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan)
+- [1편: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan)

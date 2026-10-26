@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-07] 준비 자료와 시험 당일 전략: 공식 규칙, 할인, 연습 환경, 후기 경향 정리'
+title: '[CKA] 준비 자료와 시험 당일 전략: 공식 규칙, 할인, 연습 환경, 후기 경향 정리'
 description: CKA(커리큘럼 v1.37, 2025년 2월 개정 범위)를 준비할 때 쓸 수 있는 정당한 자료를 2026년 10월 기준으로 모았습니다. Linux Foundation 공식 규칙과 점검표, 과제마다 ssh로 옮기는 시험 환경과 사전 설치 도구, 날짜가 확인된 할인 이력, killer.sh와 Killercoda와 KodeKloud와 GitHub 연습 저장소 비교, 홈 랩 구성, 2025~2026년 후기에서 겹친 출제 경향과 함정, 1.33~1.37 변경 중 시험 답에 영향을 주는 것, 시험 당일 순서와 D-30 계획, 덤프를 뺀 근거를 LF 응시 약관 원문으로 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -13,7 +13,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 7
+seriesOrder: 10
 ---
 
 ## 결론부터
@@ -25,13 +25,13 @@ seriesOrder: 7
 5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`입니다. `jq`와 `tmux`는 2025년 3월 판부터 목록에서 빠졌고 `helm`과 `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도입니다.
 6. 덤프와 "실제 시험 문제"를 표방하는 자료는 이 글에서 다루지 않습니다. LF 응시 약관 4.4절은 다른 사람의 기억에 기댄 자료(braindump)를 쓰는 것 자체를 부정행위로 정의하고 자격 취소와 영구 응시 제한까지 정해 두었습니다.
 
-시험 구조와 영역별 범위는 [CKA Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [Ch-02](/blog/cert/cka/cka-02-cluster-architecture)부터 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 그 위에서 자료와 규칙과 당일 운영만 다룹니다.
+시험 구조와 영역별 범위는 [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [5편](/blog/cert/cka/cka-02-cluster-architecture)부터 [9편](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 그 위에서 자료와 규칙과 당일 운영만 다룹니다.
 
 ---
 
 ## 1. 공식 자료와 규칙
 
-LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문서, killer.sh FAQ를 2026년 10월 20일에 읽고 정리했습니다. 키 조작과 허용 문서 목록의 자세한 표는 Ch-00에 있습니다.
+LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문서, killer.sh FAQ를 2026년 10월 20일에 읽고 정리했습니다. 키 조작과 허용 문서 목록의 자세한 표는 1편에 있습니다.
 
 ### 1-1. 응시권에 들어 있는 것
 
@@ -78,7 +78,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 
 ### 1-4. 시험 화면에서 알아 둘 것
 
-키 조작(Ctrl+Shift+C/V, Ctrl+Alt+W, INSERT 금지)과 허용 문서(kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io)는 [Ch-00 3절](/blog/cert/cka/cka-00-exam-and-study-plan)에 있습니다.
+키 조작(Ctrl+Shift+C/V, Ctrl+Alt+W, INSERT 금지)과 허용 문서(kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io)는 [1편 3절](/blog/cert/cka/cka-00-exam-and-study-plan)에 있습니다.
 
 처음 응시하면 터미널 구조가 가장 낯섭니다. 시험 화면의 터미널을 열면 `base`라는 시작 호스트에 있고 여기서는 `kubectl`이 안 됩니다. 과제마다 문제 상자에 "이 호스트에서 풀라"는 `ssh` 명령이 적혀 있고 그 호스트에 들어가야 그 과제의 클러스터를 만질 수 있습니다.
 
@@ -284,7 +284,7 @@ vagrant destroy -f        # 전부 지우기
 - 오래된 강의 저장소는 지원이 끝난 Ubuntu 18.04 box를 쓰기도 합니다. 지금 kubeadm 패키지를 올리려면 지원 중인 Ubuntu box로 바꿔 씁니다.
 - 애플 실리콘 맥은 아래 본문처럼 VirtualBox 대신 Multipass 스크립트를 씁니다.
 
-> **정리**: Vagrant는 VM까지만 만들고 쿠버네티스는 그 위에 kubeadm으로 따로 올립니다. 노드 IP를 Pod 대역과 겹치지 않게 처음부터 나눠 두면 다음 단계(Ch-02의 kubeadm init)가 편해집니다.
+> **정리**: Vagrant는 VM까지만 만들고 쿠버네티스는 그 위에 kubeadm으로 따로 올립니다. 노드 IP를 Pod 대역과 겹치지 않게 처음부터 나눠 두면 다음 단계(5편의 kubeadm init)가 편해집니다.
 
 </details>
 
@@ -319,7 +319,7 @@ kind create cluster --name cka --config kind-cka.yaml
 kubectl get nodes   # CNI가 없어 NotReady인 상태에서 시작
 ```
 
-kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/cert/cka/cka-02-cluster-architecture)에, 일부러 망가뜨리고 고치는 과제는 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)의 "직접 해 보기"에 있습니다.
+kubeadm 클러스터를 처음부터 만드는 순서는 [5편 2~4절](/blog/cert/cka/cka-02-cluster-architecture)에, 일부러 망가뜨리고 고치는 과제는 [9편](/blog/cert/cka/cka-06-troubleshooting)의 "직접 해 보기"에 있습니다.
 
 ## 5. 2025~2026년 후기에서 공통으로 나온 출제 경향과 함정
 
@@ -341,12 +341,12 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 
 ### 5-1. 주제 수준의 경향
 
-- 트러블슈팅: 노드가 NotReady일 때 kubelet과 컨테이너 런타임 확인, 망가진 컨트롤 플레인 구성요소 복구가 여러 글에 나옵니다. 비중 30% 영역이라 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)의 판단 순서를 손에 익혀 두는 효과가 가장 큽니다.
-- 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다. 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다. 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다. 확인 명령과 순서는 [Ch-02 7-2절](/blog/cert/cka/cka-02-cluster-architecture)에 정리했습니다.
-- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 했고 Nattapol(2025-06)과 Suzuki(2026-01)도 Gateway API를 새로 공부한 주제로 꼽았습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [Ch-04 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
-- Helm과 Kustomize: 커리큘럼 문구는 "Helm과 Kustomize로 클러스터 구성요소 설치"입니다. 개정 직후 응시자들이 Helm 과제를 언급했고 2026년 8월 후기 작성자는 모의고사에서 Helm 문제를 건너뛰었다고 썼습니다. Kustomize는 yltw가 시험 전에 익힌 명령으로 꼽았습니다. 정리는 [Ch-02 6절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
-- etcd와 kubeadm 업그레이드: 개정 커리큘럼에서 명시 항목이 빠졌고 후기도 갈립니다. Cassisi는 etcd가 실러버스에서 빠졌다고 판단했고 Juikar는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 절차를 한 번씩은 손으로 해 봅니다([Ch-02 4장](/blog/cert/cka/cka-02-cluster-architecture)).
-- 인증서와 kubeconfig: Juikar가 시간이 든 주제로 따로 꼽았습니다. `kubeadm certs check-expiration`, kubeconfig의 서버 주소와 인증서 경로 확인은 [Ch-06 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+- 트러블슈팅: 노드가 NotReady일 때 kubelet과 컨테이너 런타임 확인, 망가진 컨트롤 플레인 구성요소 복구가 여러 글에 나옵니다. 비중 30% 영역이라 [9편](/blog/cert/cka/cka-06-troubleshooting)의 판단 순서를 손에 익혀 두는 효과가 가장 큽니다.
+- 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다. 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다. 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다. 확인 명령과 순서는 [5편 7-2절](/blog/cert/cka/cka-02-cluster-architecture)에 정리했습니다.
+- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 했고 Nattapol(2025-06)과 Suzuki(2026-01)도 Gateway API를 새로 공부한 주제로 꼽았습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [7편 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
+- Helm과 Kustomize: 커리큘럼 문구는 "Helm과 Kustomize로 클러스터 구성요소 설치"입니다. 개정 직후 응시자들이 Helm 과제를 언급했고 2026년 8월 후기 작성자는 모의고사에서 Helm 문제를 건너뛰었다고 썼습니다. Kustomize는 yltw가 시험 전에 익힌 명령으로 꼽았습니다. 정리는 [5편 6절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
+- etcd와 kubeadm 업그레이드: 개정 커리큘럼에서 명시 항목이 빠졌고 후기도 갈립니다. Cassisi는 etcd가 실러버스에서 빠졌다고 판단했고 Juikar는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 절차를 한 번씩은 손으로 해 봅니다([5편 4장](/blog/cert/cka/cka-02-cluster-architecture)).
+- 인증서와 kubeconfig: Juikar가 시간이 든 주제로 따로 꼽았습니다. `kubeadm certs check-expiration`, kubeconfig의 서버 주소와 인증서 경로 확인은 [9편 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 - 깊이: Cassisi는 복잡한 리눅스 명령이 필요 없었다고 했고 커널 내부를 언급한 후기는 없었습니다. Hard Way 전 과정도 Cassisi와 Juikar 모두 선택으로 봤습니다.
 
 ### 5-2. 반복된 함정
@@ -363,26 +363,26 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [Ch-02 2~4절](/blog/ce
 
 | 버전 | 바뀐 것 | 시험 답에 주는 영향 | 근거 | 이 시리즈 |
 |---|---|---|---|---|
-| 1.33 | 네이티브 사이드카(`SidecarContainers`) stable | 사이드카 과제는 `initContainers`에 `restartPolicy: Always` | Sidecar Containers, Feature Gates | Ch-03 4-4 |
-| 1.33 | Endpoints API 사용 중단 | Service 점검은 `kubectl get endpointslices -l kubernetes.io/service-name=<이름>` | Service, EndpointSlices | Ch-04 3-5 |
-| 1.34(kubectl) | `kubectl autoscale --cpu`, `--memory` 추가, `--cpu-percent` 사용 중단 시작 | 사용률이면 `--cpu=60%`처럼 `%`를 붙인다 | CHANGELOG-1.34, kubectl autoscale 레퍼런스 | Ch-03 3-2 |
-| 1.34 | `KubeletCgroupDriverFromCRI` stable, 스왑(`NodeSwap`) stable | kubelet이 런타임에서 cgroup 드라이버를 받는다. 스왑 기본 동작(kubelet 시작 실패)은 그대로 | Container Runtimes, Installing kubeadm | Ch-02 2-2, 2-4 |
-| 1.34 | `RecoverVolumeExpansionFailure` stable | 확장에 실패한 PVC를 더 작은 값으로 다시 요청 가능 | Persistent Volumes | Ch-05 3-5 |
-| 1.35 | in-place Pod resize stable | `kubectl patch pod ... --subresource resize` | Resize CPU and Memory Resources assigned to Containers | Ch-03 3-3 |
-| 1.35 | kube-proxy `ipvs` 모드 사용 중단(1.40 기본 비활성, 1.43 제거 예정), cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true`라 cgroup v1 노드에서는 kubelet이 시작하지 않음 | Virtual IPs and Service Proxies, cgroups | Ch-04 1-2, Ch-02 2-4 |
-| 1.36 | containerd 2.0 이상 필요. 1.35가 containerd 1.x를 지원하는 마지막 버전. containerd 호환표 기준 1.37은 2.3 이상, containerd 1.7은 2026-09-30 지원 종료 | 런타임 설정은 2.x 경로(`plugins.'io.containerd.cri.v1.runtime'...`)로 쓴다 | v1.35 릴리스 글, Container Runtimes | Ch-02 2-4 |
-| 1.36 | Service `externalIPs` 사용 중단 | 새로 쓰지 않는다. 외부 노출은 NodePort, LoadBalancer, Gateway | v1.36 externalIPs 공지 | Ch-04 3-3 |
-| 1.37 | kubeadm 설정 API `v1beta3` 제거 | 설정 파일은 `apiVersion: kubeadm.k8s.io/v1beta4`. 옛 파일은 1.35 kubeadm의 `kubeadm config migrate`로 바꾼다 | CHANGELOG-1.37 | Ch-02 3-1 |
-| 1.37 | HPA `behavior.scaleUp/scaleDown.tolerance` stable | 허용 범위를 HPA마다 지정 | Horizontal Pod Autoscaling | Ch-03 3-2 |
-| 1.37 | HPA scale to zero beta, 기본 활성 | Object나 External 메트릭을 쓰는 HPA는 `spec.minReplicas: 0` 가능. CPU와 메모리 기준으로는 불가 | v1.37 릴리스 글 | Ch-03 3절 |
-| 1.37 | static Pod의 Secret, ConfigMap 참조가 완전히 금지되고 `PreventStaticPodAPIReferences` 게이트 제거 | static Pod 매니페스트에 `configMapRef`, `secretRef`를 넣으면 안 된다 | v1.37 릴리스 글 | Ch-06 2-5 |
-| 1.37 | `metrics.k8s.io/v1` stable(v1beta1도 전환 기간 사용 가능) | `kubectl top` 명령은 같다. metrics-server 버전에 따라 제공 API 버전이 다를 수 있음 | v1.37 릴리스 글 | Ch-06 3-1 |
-| 1.37 | kube-dns 애드온 빌드 1.40 이후 중단 예정 | CoreDNS도 Service 이름은 `kube-dns`를 그대로 쓴다. 이름과 애드온을 혼동하지 않는다 | v1.37 릴리스 글 | Ch-04 6절 |
-| etcd 3.6 이후(kubeadm 1.37 기본 3.7.0, 1.36은 3.6.8) | `etcdctl snapshot status`, `snapshot restore` 제거 | 확인과 복구는 `etcdutl` | etcd CHANGELOG-3.6, kubeadm constants | Ch-02 4-5, 4-6 |
-| Helm 4(2025-11) | `--atomic`이 `--rollback-on-failure`, `--force`가 `--force-replace`로 이름 변경. 새 릴리스는 server-side apply | 옛 이름은 경고와 함께 동작 | Helm 4 Overview | Ch-02 6-1 |
-| 2026-03 | Ingress NGINX 유지보수 종료 | Ingress API는 동결된 GA로 남음. 새 기능은 Gateway API | Kubernetes 블로그 | Ch-04 5-1 |
+| 1.33 | 네이티브 사이드카(`SidecarContainers`) stable | 사이드카 과제는 `initContainers`에 `restartPolicy: Always` | Sidecar Containers, Feature Gates | 6편 4-4 |
+| 1.33 | Endpoints API 사용 중단 | Service 점검은 `kubectl get endpointslices -l kubernetes.io/service-name=<이름>` | Service, EndpointSlices | 7편 3-5 |
+| 1.34(kubectl) | `kubectl autoscale --cpu`, `--memory` 추가, `--cpu-percent` 사용 중단 시작 | 사용률이면 `--cpu=60%`처럼 `%`를 붙인다 | CHANGELOG-1.34, kubectl autoscale 레퍼런스 | 6편 3-2 |
+| 1.34 | `KubeletCgroupDriverFromCRI` stable, 스왑(`NodeSwap`) stable | kubelet이 런타임에서 cgroup 드라이버를 받는다. 스왑 기본 동작(kubelet 시작 실패)은 그대로 | Container Runtimes, Installing kubeadm | 5편 2-2, 2-4 |
+| 1.34 | `RecoverVolumeExpansionFailure` stable | 확장에 실패한 PVC를 더 작은 값으로 다시 요청 가능 | Persistent Volumes | 8편 3-5 |
+| 1.35 | in-place Pod resize stable | `kubectl patch pod ... --subresource resize` | Resize CPU and Memory Resources assigned to Containers | 6편 3-3 |
+| 1.35 | kube-proxy `ipvs` 모드 사용 중단(1.40 기본 비활성, 1.43 제거 예정), cgroup v1 사용 중단 | 기본 모드는 여전히 `iptables`. kubelet `failCgroupV1` 기본 `true`라 cgroup v1 노드에서는 kubelet이 시작하지 않음 | Virtual IPs and Service Proxies, cgroups | 7편 1-2, 5편 2-4 |
+| 1.36 | containerd 2.0 이상 필요. 1.35가 containerd 1.x를 지원하는 마지막 버전. containerd 호환표 기준 1.37은 2.3 이상, containerd 1.7은 2026-09-30 지원 종료 | 런타임 설정은 2.x 경로(`plugins.'io.containerd.cri.v1.runtime'...`)로 쓴다 | v1.35 릴리스 글, Container Runtimes | 5편 2-4 |
+| 1.36 | Service `externalIPs` 사용 중단 | 새로 쓰지 않는다. 외부 노출은 NodePort, LoadBalancer, Gateway | v1.36 externalIPs 공지 | 7편 3-3 |
+| 1.37 | kubeadm 설정 API `v1beta3` 제거 | 설정 파일은 `apiVersion: kubeadm.k8s.io/v1beta4`. 옛 파일은 1.35 kubeadm의 `kubeadm config migrate`로 바꾼다 | CHANGELOG-1.37 | 5편 3-1 |
+| 1.37 | HPA `behavior.scaleUp/scaleDown.tolerance` stable | 허용 범위를 HPA마다 지정 | Horizontal Pod Autoscaling | 6편 3-2 |
+| 1.37 | HPA scale to zero beta, 기본 활성 | Object나 External 메트릭을 쓰는 HPA는 `spec.minReplicas: 0` 가능. CPU와 메모리 기준으로는 불가 | v1.37 릴리스 글 | 6편 3절 |
+| 1.37 | static Pod의 Secret, ConfigMap 참조가 완전히 금지되고 `PreventStaticPodAPIReferences` 게이트 제거 | static Pod 매니페스트에 `configMapRef`, `secretRef`를 넣으면 안 된다 | v1.37 릴리스 글 | 9편 2-5 |
+| 1.37 | `metrics.k8s.io/v1` stable(v1beta1도 전환 기간 사용 가능) | `kubectl top` 명령은 같다. metrics-server 버전에 따라 제공 API 버전이 다를 수 있음 | v1.37 릴리스 글 | 9편 3-1 |
+| 1.37 | kube-dns 애드온 빌드 1.40 이후 중단 예정 | CoreDNS도 Service 이름은 `kube-dns`를 그대로 쓴다. 이름과 애드온을 혼동하지 않는다 | v1.37 릴리스 글 | 7편 6절 |
+| etcd 3.6 이후(kubeadm 1.37 기본 3.7.0, 1.36은 3.6.8) | `etcdctl snapshot status`, `snapshot restore` 제거 | 확인과 복구는 `etcdutl` | etcd CHANGELOG-3.6, kubeadm constants | 5편 4-5, 4-6 |
+| Helm 4(2025-11) | `--atomic`이 `--rollback-on-failure`, `--force`가 `--force-replace`로 이름 변경. 새 릴리스는 server-side apply | 옛 이름은 경고와 함께 동작 | Helm 4 Overview | 5편 6-1 |
+| 2026-03 | Ingress NGINX 유지보수 종료 | Ingress API는 동결된 GA로 남음. 새 기능은 Gateway API | Kubernetes 블로그 | 7편 5-1 |
 
-Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페이스 라벨)은 v1.37 CKA 커리큘럼 문구에 없고 정책 설계는 CKS 쪽 주제입니다. Pod 생성이 거부될 때 `kubectl get ns <이름> --show-labels`로 이 라벨이 있는지 보는 정도면 충분합니다. 커리큘럼의 "Pod 승인" 항목은 [Ch-03 5-1절](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota, PriorityClass로 정리했습니다.
+Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페이스 라벨)은 v1.37 CKA 커리큘럼 문구에 없고 정책 설계는 CKS 쪽 주제입니다. Pod 생성이 거부될 때 `kubectl get ns <이름> --show-labels`로 이 라벨이 있는지 보는 정도면 충분합니다. 커리큘럼의 "Pod 승인" 항목은 [6편 5-1절](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota, PriorityClass로 정리했습니다.
 
 ## 6. 시험 당일 전략과 체크리스트
 
@@ -445,7 +445,7 @@ exit
 
 ### 6-3. 호스트 이동과 권한
 
-공식 안내에 나오는 방식은 과제마다 ssh로 호스트를 옮기는 것 하나뿐입니다. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행하고 끝나면 `exit`로 base로 돌아옵니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 모든 ssh 호스트의 `kubectl`이 "pre-installed and pre-configured" 상태라는 공식 문구가 있으니 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. 들어가면 `k get nodes`로 과제 클러스터인지 한 번 확인합니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다. kubeconfig 구조와 컨텍스트 개념은 [Ch-02 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
+공식 안내에 나오는 방식은 과제마다 ssh로 호스트를 옮기는 것 하나뿐입니다. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행하고 끝나면 `exit`로 base로 돌아옵니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 모든 ssh 호스트의 `kubectl`이 "pre-installed and pre-configured" 상태라는 공식 문구가 있으니 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. 들어가면 `k get nodes`로 과제 클러스터인지 한 번 확인합니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다. kubeconfig 구조와 컨텍스트 개념은 [5편 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 
 ### 6-4. vim과 YAML
 
@@ -472,11 +472,11 @@ set expandtab tabstop=2 shiftwidth=2
 
 ## 7. D-30 마무리 계획
 
-[Ch-00의 공부 계획](/blog/cert/cka/cka-00-exam-and-study-plan) 1~4단계를 마친 뒤 시험 30일 전부터의 순서입니다. killer.sh는 활성화 후 36시간만 열리니 날짜를 정해 두고 씁니다.
+[1편의 공부 계획](/blog/cert/cka/cka-00-exam-and-study-plan) 1~4단계를 마친 뒤 시험 30일 전부터의 순서입니다. killer.sh는 활성화 후 36시간만 열리니 날짜를 정해 두고 씁니다.
 
 | 기간 | 할 일 | 끝났다고 보는 기준 |
 |---|---|---|
-| D-30 ~ D-22 | 영역별 약점 정리. Ch-02~Ch-06의 "확인 문제"를 시간을 재며 풀기 | 영역마다 한 번씩 시간 안에 풂 |
+| D-30 ~ D-22 | 영역별 약점 정리. 5~9편의 "확인 문제"를 시간을 재며 풀기 | 영역마다 한 번씩 시간 안에 풂 |
 | D-21 ~ D-15 | Killercoda 시나리오와 강의 모의고사를 실제 시간 제한으로. 문서는 kubernetes.io와 helm.sh, gateway-api.sigs.k8s.io만 열기 | 모의고사에서 시간이 남음 |
 | D-14 | killer.sh A세트 활성화. 첫 120분은 실전처럼, 남은 시간에 풀이를 보며 다시 풀기. 풀이 페이지 저장 | 틀린 과제 목록이 생김 |
 | D-13 ~ D-8 | 틀린 과제의 주제를 홈 랩에서 다시. 문서 위치를 메모 없이 찾아가기 | 같은 주제를 5분 안에 풂 |

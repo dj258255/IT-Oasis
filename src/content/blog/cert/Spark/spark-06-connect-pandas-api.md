@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-06] Spark Connect와 pandas API on Spark: 클라이언트는 계획만 보내고 pandas 코드는 분산으로 돈다'
+title: '[Spark] Spark Connect와 pandas API on Spark: 클라이언트는 계획만 보내고 pandas 코드는 분산으로 돈다'
 description: Databricks Spark 자격증 6영역(Spark Connect, 5%)과 7영역(pandas API on Spark, 5%)을 시험 안내서 항목 순서대로 정리합니다. Spark Connect의 구조와 쓸 수 없는 API, 배포 모드와 master URL, pandas API on Spark의 기본 인덱스와 변환 비용, pandas UDF와 pandas Function API, Arrow 설정을 Spark 4.2.0 공식 문서 기준으로 확인하고 3.5와 달라진 기본값을 표시합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 6
+seriesOrder: 8
 ---
 
 ## 결론부터
@@ -108,7 +108,7 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
    +- 'UnresolvedRelation [orders], [], false
 ```
 
-앞에 붙은 작은따옴표(`'`)가 "아직 해석 안 됨" 표시입니다. `orders`라는 테이블이 정말 있는지, `amount`가 숫자 컬럼인지는 이 단계에서 모릅니다. 다음 단계인 Analyzed Logical Plan에서 카탈로그를 보고 이름을 붙이면 따옴표가 사라집니다([Ch-02](/blog/cert/spark/spark-02-spark-sql)의 Catalyst 단계와 같은 흐름입니다). Connect 클라이언트가 보내는 것은 첫 단계에 해당하는 계획이고 이름 확인부터는 서버가 합니다.
+앞에 붙은 작은따옴표(`'`)가 "아직 해석 안 됨" 표시입니다. `orders`라는 테이블이 정말 있는지, `amount`가 숫자 컬럼인지는 이 단계에서 모릅니다. 다음 단계인 Analyzed Logical Plan에서 카탈로그를 보고 이름을 붙이면 따옴표가 사라집니다([4편](/blog/cert/spark/spark-02-spark-sql)의 Catalyst 단계와 같은 흐름입니다). Connect 클라이언트가 보내는 것은 첫 단계에 해당하는 계획이고 이름 확인부터는 서버가 합니다.
 
 해석 전 계획을 보낸다는 점이 시험 보기를 가르는 기준입니다. 클라이언트는 컬럼 이름이 실제로 있는지 모른 채 계획을 보내고 이름 확인(analysis)은 서버가 합니다. 4.2.0 문서의 "Eager vs Lazy: Spark Connect vs Spark Classic"이 이 차이를 예로 듭니다. `spark.sql("select 1 as a, 2 as b").filter("c > 1")`은 Classic에서는 그 줄에서 컬럼 `c`가 없다는 오류를 냅니다. Connect에서는 그 줄은 통과하고 `df.columns`나 `df.show()`를 부를 때 오류가 납니다. 스키마 조회, `explain`, `persist`, 액션처럼 해석된 계획이 필요한 연산이 서버에 분석 요청을 보내기 때문입니다. `df["c"]`와 `df.c`로 컬럼을 꺼낼 때 이름을 바로 검사하던 Connect Python 클라이언트 동작은 각각 4.1과 4.2에서 없어졌습니다(PySpark 마이그레이션 가이드).
 
@@ -140,7 +140,7 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
 | 업그레이드 | 드라이버를 애플리케이션과 따로 올릴 수 있다. 서버 쪽 RPC 정의가 하위 호환이면 애플리케이션은 그대로 쓴다 |
 | 디버깅과 관측 | IDE에서 대화형으로 디버깅하고 애플리케이션 프레임워크의 지표와 로깅으로 본다 |
 
-여러 사용자가 클러스터 하나를 함께 쓸 때(멀티테넌트) 생기는 문제를 줄인다는 맥락입니다. Spark Connect를 처음 발표한 Databricks 블로그 글(2022년 7월)은 이 문제를 더 직접적으로 적습니다. 사용자 코드가 드라이버 안에서 돌기 때문에 한 사용자가 낸 메모리 부족 같은 치명적 예외가 클러스터를 모든 사용자에게서 내려 버릴 수 있고 라이브러리가 한 클래스패스를 같이 쓰니 Spark 버전을 올리기 어렵다는 것입니다. 사용자가 드라이버 프로세스에 디버거를 붙일 권한이 없는 경우가 많다는 점도 듭니다([Databricks, Introducing Spark Connect](https://www.databricks.com/blog/2022/07/07/introducing-spark-connect-the-power-of-apache-spark-everywhere.html)). 쇼핑몰 분석팀 다섯 명이 드라이버 하나를 함께 쓰는 공유 클러스터에 붙어 있다고 생각하면 됩니다. 클래식 구조에서는 각자의 Python 코드와 라이브러리가 그 드라이버 곁에서 돌아서 한 명이 메모리를 다 써 버리면 나머지 네 명의 작업도 같이 흔들립니다. Connect에서는 각자의 Python 코드가 자기 클라이언트 프로세스에서 돌아서 그런 사고가 그 사람 환경에 머뭅니다. 다만 서버에 보낸 쿼리 자체가 무거우면 서버 드라이버는 여전히 그 부담을 집니다. Databricks의 서버리스 컴퓨트와 Free Edition도 Spark Connect로 돌아서 Ch-00에서 Free Edition에서는 RDD API를 쓸 수 없다고 적었습니다.
+여러 사용자가 클러스터 하나를 함께 쓸 때(멀티테넌트) 생기는 문제를 줄인다는 맥락입니다. Spark Connect를 처음 발표한 Databricks 블로그 글(2022년 7월)은 이 문제를 더 직접적으로 적습니다. 사용자 코드가 드라이버 안에서 돌기 때문에 한 사용자가 낸 메모리 부족 같은 치명적 예외가 클러스터를 모든 사용자에게서 내려 버릴 수 있고 라이브러리가 한 클래스패스를 같이 쓰니 Spark 버전을 올리기 어렵다는 것입니다. 사용자가 드라이버 프로세스에 디버거를 붙일 권한이 없는 경우가 많다는 점도 듭니다([Databricks, Introducing Spark Connect](https://www.databricks.com/blog/2022/07/07/introducing-spark-connect-the-power-of-apache-spark-everywhere.html)). 쇼핑몰 분석팀 다섯 명이 드라이버 하나를 함께 쓰는 공유 클러스터에 붙어 있다고 생각하면 됩니다. 클래식 구조에서는 각자의 Python 코드와 라이브러리가 그 드라이버 곁에서 돌아서 한 명이 메모리를 다 써 버리면 나머지 네 명의 작업도 같이 흔들립니다. Connect에서는 각자의 Python 코드가 자기 클라이언트 프로세스에서 돌아서 그런 사고가 그 사람 환경에 머뭅니다. 다만 서버에 보낸 쿼리 자체가 무거우면 서버 드라이버는 여전히 그 부담을 집니다. Databricks의 서버리스 컴퓨트와 Free Edition도 Spark Connect로 돌아서 1편에서 Free Edition에서는 RDD API를 쓸 수 없다고 적었습니다.
 
 ## 3. Spark Connect의 API 지원 범위
 
@@ -176,7 +176,7 @@ accumulator와 broadcast 변수도 Connect에서 막힙니다. PySpark에서 `ac
 헷갈리는 지점입니다.
 
 - `spark.sparkContext.setLogLevel()`도 `SparkContext`를 거쳐서 Connect에서 쓸 수 없습니다.
-- 스트리밍의 `foreachBatch`는 Connect에서 함수가 바깥 변수에 접근하지 못한다고 API 문서가 적습니다(Ch-05 6-2).
+- 스트리밍의 `foreachBatch`는 Connect에서 함수가 바깥 변수에 접근하지 못한다고 API 문서가 적습니다(7편 6-2).
 - Spark Connect 자체에는 인증이 들어 있지 않습니다. 문서는 gRPC HTTP/2 인터페이스 앞에 인증 프록시를 두는 방식을 설명합니다. 접속 문자열의 `token`은 bearer 토큰을 보내는 자리입니다.
 
 ## 4. Spark Connect에 연결하기
@@ -507,7 +507,7 @@ psdf2 = sdf.pandas_api(index_col="order_id")       # order_id를 다시 인덱�
 
 > **핵심 한 줄**: JVM과 Python 사이를 건너는 길 자체는 같고 Arrow는 그 길로 보내는 데이터의 모양을 바꿉니다. 행을 하나씩 pickle로 바꾸는 대신 컬럼 묶음(레코드 배치)으로 보내서 pandas로 옮기는 비용을 줄입니다.
 
-익스큐터 JVM이 Python 워커 프로세스와 데이터를 주고받는 경로는 [Ch-03 9-1절](/blog/cert/spark/spark-03-dataframe-api#9-1-일반-python-udf) 토글에 있습니다. 여기서는 Arrow를 켜면 그 경로에서 무엇이 달라지는지만 봅니다.
+익스큐터 JVM이 Python 워커 프로세스와 데이터를 주고받는 경로는 [5편 9-1절](/blog/cert/spark/spark-03-dataframe-api#9-1-일반-python-udf) 토글에 있습니다. 여기서는 Arrow를 켜면 그 경로에서 무엇이 달라지는지만 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -571,7 +571,7 @@ Arrow를 켜도 `toPandas()`는 모든 레코드를 드라이버로 모읍니다
 
 > **핵심 한 줄**: 일반 Python UDF는 행마다 함수를 한 번씩 부릅니다. pandas UDF는 배치마다 한 번 부르고 pandas 벡터 연산으로 배치 전체를 한꺼번에 계산합니다.
 
-두 UDF가 Python 워커에서 도는 경로는 [Ch-03 9-1절](/blog/cert/spark/spark-03-dataframe-api#9-1-일반-python-udf) 토글에 있습니다. 여기서는 호출 횟수와 배치 경계만 봅니다.
+두 UDF가 Python 워커에서 도는 경로는 [5편 9-1절](/blog/cert/spark/spark-03-dataframe-api#9-1-일반-python-udf) 토글에 있습니다. 여기서는 호출 횟수와 배치 경계만 봅니다.
 
 #### 1. 왜 필요한가
 
@@ -718,7 +718,7 @@ large = orders.mapInPandas(big_orders, schema=orders.schema)
 
 헷갈리는 지점입니다.
 
-- `applyInPandas`는 함수를 적용하기 전에 그룹 하나의 데이터를 전부 메모리에 올립니다. 그룹 크기가 쏠리면 OOM이 날 수 있고 `maxRecordsPerBatch`는 그룹에 적용되지 않는다고 문서가 적습니다. Ch-04 10절의 익스큐터 OOM 원인 표에 이 API를 넣은 이유입니다. 4.1.0부터는 pandas DataFrame 반복자를 받는 형태도 지원하고 API 문서는 이 형태로 OOM 위험을 줄일 수 있다고 적습니다. cogroup 쪽은 코그룹 하나의 데이터를 전부 메모리에 올린다는 같은 주의가 있습니다.
+- `applyInPandas`는 함수를 적용하기 전에 그룹 하나의 데이터를 전부 메모리에 올립니다. 그룹 크기가 쏠리면 OOM이 날 수 있고 `maxRecordsPerBatch`는 그룹에 적용되지 않는다고 문서가 적습니다. 6편 10절의 익스큐터 OOM 원인 표에 이 API를 넣은 이유입니다. 4.1.0부터는 pandas DataFrame 반복자를 받는 형태도 지원하고 API 문서는 이 형태로 OOM 위험을 줄일 수 있다고 적습니다. cogroup 쪽은 코그룹 하나의 데이터를 전부 메모리에 올린다는 같은 주의가 있습니다.
 - 반환 DataFrame의 컬럼 라벨은 `schema`를 문자열로 주면 필드 이름과 맞아야 하고 정수 인덱스처럼 문자열이 아니면 위치로 맞춥니다.
 - `mapInPandas`의 각 pandas DataFrame 크기는 `maxRecordsPerBatch`로 조절됩니다.
 - 3.0 이전의 grouped map pandas UDF(`PandasUDFType.GROUPED_MAP`과 `groupby().apply()`)는 `applyInPandas`로 옮기라고 문서가 권합니다.
@@ -815,7 +815,7 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 <details>
 <summary>정답과 근거</summary>
 
-해결되지 않습니다. `applyInPandas`는 그룹 하나를 통째로 메모리에 올리고 `maxRecordsPerBatch`는 그룹에 적용되지 않습니다. 쏠린 그룹을 쪼개거나(Ch-04 salting) 그룹 단위 로직을 다시 짜야 합니다. 4.1 이상이면 함수를 `Iterator[pd.DataFrame]`을 받는 형태로 바꾸는 방법도 API 문서가 제시합니다.
+해결되지 않습니다. `applyInPandas`는 그룹 하나를 통째로 메모리에 올리고 `maxRecordsPerBatch`는 그룹에 적용되지 않습니다. 쏠린 그룹을 쪼개거나(6편 salting) 그룹 단위 로직을 다시 짜야 합니다. 4.1 이상이면 함수를 `Iterator[pd.DataFrame]`을 받는 형태로 바꾸는 방법도 API 문서가 제시합니다.
 
 </details>
 
@@ -859,4 +859,4 @@ B입니다. Series에서 Series 타입 힌트가 같은 길이 결과를 내는 
 - Li Jin, [Introducing Pandas UDF for PySpark](https://www.databricks.com/blog/2017/10/30/introducing-vectorized-udfs-for-pyspark.html) (Databricks, 2017-10-30). 10-1의 3배~100배 비교
 
 이 시리즈
-- [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning), [Spark Ch-05: Structured Streaming](/blog/cert/spark/spark-05-structured-streaming)
+- [1편: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [6편: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning), [7편: Structured Streaming](/blog/cert/spark/spark-05-structured-streaming)

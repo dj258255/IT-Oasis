@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-01.5] 기본 오브젝트와 컨트롤 플레인: kubectl 한 줄이 Pod가 되기까지'
+title: '[CKA] 기본 오브젝트와 컨트롤 플레인: kubectl 한 줄이 Pod가 되기까지'
 description: kubectl run 한 줄이 API 서버의 인증, 인가, 어드미션, 스키마 검증을 지나 etcd에 저장되고 스케줄러와 kubelet을 거쳐 Running이 되는 경로를 따라갑니다. 컨트롤 플레인 구성요소와 인증서 방향, Pod와 ReplicaSet, Deployment, Service, Namespace의 관계, 시험에서 쓰는 명령형과 선언형 kubectl, 실행 중인 Pod에서 고칠 수 있는 필드를 정리했습니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -15,7 +15,7 @@ topics:
 coverImage: /uploads/cert/cka/k8s-architecture.webp
 draft: false
 series: "CKA 공부"
-seriesOrder: 1.5
+seriesOrder: 4
 ---
 
 ![쿠버네티스 클러스터 구조: 컨트롤 플레인(etcd, API Server, Scheduler, Controller Manager, Cloud Controller Manager)과 워커 노드(kubelet, Container Runtime, kube-proxy)](/uploads/cert/cka/k8s-architecture.webp)
@@ -30,7 +30,7 @@ seriesOrder: 1.5
 4. ReplicaSet은 selector에 맞는 주인 없는 Pod를 자기 것으로 입양합니다. Deployment는 Pod 템플릿이 바뀔 때만 새 리비전을 만들고 레플리카 수 변경은 리비전을 만들지 않습니다.
 5. 실행 중인 Pod는 이미지, `activeDeadlineSeconds`, 톨러레이션 추가 정도만 고칠 수 있습니다(`terminationGracePeriodSeconds`는 이전 값이 음수였을 때 1로 바꾸는 경우만 허용). `kubectl edit`이 거부되면 수정본이 임시 디렉터리(리눅스는 `/tmp`)의 `kubectl-edit-*.yaml`에 남으니 그 파일로 `kubectl replace --force -f`를 실행합니다.
 
-이 글은 [CKA Ch-01](/blog/cert/cka/cka-01-why-kubernetes)과 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 사이의 기초 편입니다. 뒤 글들이 전제로 까는 요청 흐름과 오브젝트 관계, 시험에서 쓰는 kubectl 방식을 한 번에 잡습니다. 롤링 업데이트와 스케줄링 세부는 [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에, Service 타입은 [Ch-04](/blog/cert/cka/cka-04-services-networking)에, 구성요소 장애 대응은 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+이 글은 [3편](/blog/cert/cka/cka-01-why-kubernetes)과 [5편](/blog/cert/cka/cka-02-cluster-architecture) 사이의 기초 편입니다. 뒤 글들이 전제로 까는 요청 흐름과 오브젝트 관계, 시험에서 쓰는 kubectl 방식을 한 번에 잡습니다. 롤링 업데이트와 스케줄링 세부는 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에, Service 타입은 [7편](/blog/cert/cka/cka-04-services-networking)에, 구성요소 장애 대응은 [9편](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 ---
 
@@ -162,7 +162,7 @@ webhooks:
   failurePolicy: Fail      # 웹훅이 응답하지 않으면 요청도 거부
 ```
 
-웹훅 서버 없이 정책을 거는 방법도 있습니다. **ValidatingAdmissionPolicy**(v1.30 GA)는 CEL 식으로 조건을 적고 API 서버 안에서 바로 평가합니다. 아래 표의 VAP 422 응답이 이 경로입니다. 예시는 [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+웹훅 서버 없이 정책을 거는 방법도 있습니다. **ValidatingAdmissionPolicy**(v1.30 GA)는 CEL 식으로 조건을 적고 API 서버 안에서 바로 평가합니다. 아래 표의 VAP 422 응답이 이 경로입니다. 예시는 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
 #### 6. 실전에서 보이는 모습
 
@@ -291,7 +291,7 @@ API 서버가 Pod를 저장할 때마다 담당 kubelet을 찾아가 "이 컨테
 #### 4. 헷갈리는 점과 실전에서 보이는 모습
 
 - kubectl이 받는 `created`는 "etcd에 기록됐다"는 접수 확인입니다. 실제 실행은 그 뒤에 비동기로 따라오므로 명령이 성공해도 Pod가 `Pending`에 남을 수 있습니다.
-- 컨트롤러는 이벤트를 "다시 비교해 볼 때가 됐다"는 신호로만 씁니다. 판단은 늘 지금 상태와 원하는 상태의 비교로 하므로([Ch-01 1-2절](/blog/cert/cka/cka-01-why-kubernetes)) 이벤트 한두 개를 놓쳐도 다음 비교에서 바로잡힙니다.
+- 컨트롤러는 이벤트를 "다시 비교해 볼 때가 됐다"는 신호로만 씁니다. 판단은 늘 지금 상태와 원하는 상태의 비교로 하므로([3편 1-2절](/blog/cert/cka/cka-01-why-kubernetes)) 이벤트 한두 개를 놓쳐도 다음 비교에서 바로잡힙니다.
 - API 서버가 보관하지 않은 오래된 `resourceVersion`으로 watch를 요청하면 `410 Gone`이 돌아옵니다. 공식 문서([API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes)) 기준으로 이때 클라이언트는 로컬 캐시를 비우고 list를 다시 한 뒤 돌아온 `resourceVersion`부터 watch를 시작해야 합니다.
 - `kubectl get pods -w`를 띄워 두고 다른 터미널에서 Pod를 만들면 이 이벤트 흐름을 사람 눈으로 볼 수 있습니다.
 
@@ -303,7 +303,7 @@ API 서버가 Pod를 저장할 때마다 담당 kubelet을 찾아가 "이 컨테
 
 ### 1-6. Deployment가 Pod 세 개가 되는 경로
 
-컨트롤러는 원하는 상태(spec)와 현재 상태(status)를 비교해 차이를 줄이는 제어 루프입니다([Ch-01 1-2절](/blog/cert/cka/cka-01-why-kubernetes)). `kubectl create deployment order-api --image=nginx:1.27 --replicas=3 -n shop`의 경로는 이렇게 이어집니다.
+컨트롤러는 원하는 상태(spec)와 현재 상태(status)를 비교해 차이를 줄이는 제어 루프입니다([3편 1-2절](/blog/cert/cka/cka-01-why-kubernetes)). `kubectl create deployment order-api --image=nginx:1.27 --replicas=3 -n shop`의 경로는 이렇게 이어집니다.
 
 ```text
 kubectl ──▶ API 서버: Deployment 저장
@@ -373,7 +373,7 @@ controller-manager  scheduler     kubelet        kube-proxy
 | kube-controller-manager | 원하는 개수와 지금 개수를 비교해 오브젝트를 만들고 지움 | 노드를 고르지 않음 |
 | kube-proxy | Service와 EndpointSlice를 watch해 노드 커널에 iptables나 nftables 규칙을 깖 | 트래픽을 직접 받지 않음. 실제 패킷 전달은 커널이 함 |
 
-스케줄러 단계 구조와 프로파일은 [Ch-03 5-11절](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+스케줄러 단계 구조와 프로파일은 [6편 5-11절](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
 #### 4. 헷갈리는 점과 실전에서 보이는 모습
 
@@ -400,7 +400,7 @@ endpointslice 컨트롤러가 목록 하나를 고치는 과정입니다.
 3. **요청**: 그 목록을 EndpointSlice 오브젝트로 만들거나 고쳐 달라고 API 서버에 보냅니다.
 4. **저장**: API 서버가 인증, 인가, 어드미션, 검증을 거친 뒤 etcd에 씁니다. 컨트롤러가 보낸 요청도 kubectl 요청과 같은 관문을 지납니다.
 
-kube-proxy 이름에 proxy가 붙은 데에는 이력이 있습니다. 초기의 userspace 모드에서는 kube-proxy 프로세스가 연결을 직접 받아 Pod로 넘겼고 커널과 사용자 공간을 오가느라 느렸습니다. 그 뒤 커널 규칙만 깔아 두는 iptables 모드가 기본이 되었고 userspace 모드는 1.26에서 제거되었습니다([Ch-04](/blog/cert/cka/cka-04-services-networking)).
+kube-proxy 이름에 proxy가 붙은 데에는 이력이 있습니다. 초기의 userspace 모드에서는 kube-proxy 프로세스가 연결을 직접 받아 Pod로 넘겼고 커널과 사용자 공간을 오가느라 느렸습니다. 그 뒤 커널 규칙만 깔아 두는 iptables 모드가 기본이 되었고 userspace 모드는 1.26에서 제거되었습니다([7편](/blog/cert/cka/cka-04-services-networking)).
 
 > **정리**: 개수는 컨트롤러 매니저, 자리는 스케줄러, 실행은 kubelet, 트래픽 규칙은 kube-proxy 몫입니다. 새 Pod가 `spec.nodeName` 없이 `Pending`이면 스케줄러를, ReplicaSet조차 생기지 않으면 컨트롤러 매니저를 먼저 의심합니다. 이 구성요소들이 kubeadm에서 어떤 형태로 도는지는 다음 표에 있습니다.
 
@@ -462,11 +462,11 @@ scheduler, kubelet, kubectl ──▶ kube-apiserver ──▶ etcd
 - 클러스터의 모든 Secret이 들어 있으니 etcd 접속에는 전용 CA로 만든 인증서를 쓰고 스냅샷 파일도 Secret과 같은 수준으로 보관합니다.
 - etcd는 여러 대를 묶어 같은 데이터를 나눠 갖는 분산 저장소입니다. 여러 대가 같은 순서로 쓰기를 맞추는 규칙이 Raft 합의이고 과반이 살아 있어야 쓰기가 됩니다.
 
-> **정리**: etcd는 "무엇이 있어야 하는가"의 기록을 담고 실제 데이터와 이미지, 로그는 다른 곳에 있습니다. Raft 원리와 홀수 대수 이야기는 [Ch-02 5-1절](/blog/cert/cka/cka-02-cluster-architecture)에서 이어집니다.
+> **정리**: etcd는 "무엇이 있어야 하는가"의 기록을 담고 실제 데이터와 이미지, 로그는 다른 곳에 있습니다. Raft 원리와 홀수 대수 이야기는 [5편 5-1절](/blog/cert/cka/cka-02-cluster-architecture)에서 이어집니다.
 
 </details>
 
-etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 구성(stacked)에서는 컨트롤 플레인 노드마다 static Pod로 돌고 데이터는 hostPath `/var/lib/etcd`에 있습니다. 외부 etcd를 쓰는 클러스터라면 `kube-apiserver.yaml`의 `--etcd-servers`를 보면 위치가 나옵니다. 백업과 복구는 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture)의 etcd 절에 정리했습니다.
+etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 구성(stacked)에서는 컨트롤 플레인 노드마다 static Pod로 돌고 데이터는 hostPath `/var/lib/etcd`에 있습니다. 외부 etcd를 쓰는 클러스터라면 `kube-apiserver.yaml`의 `--etcd-servers`를 보면 위치가 나옵니다. 백업과 복구는 [5편](/blog/cert/cka/cka-02-cluster-architecture)의 etcd 절에 정리했습니다.
 
 ### 2-4. kube-scheduler와 nodeName 직접 지정
 
@@ -486,7 +486,7 @@ etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 
 | node-lifecycle-controller | 노드 하트비트가 끊기면 NotReady/Unknown 표시와 `unreachable`, `not-ready` NoExecute 테인트 부착 |
 | taint-eviction-controller | NoExecute 테인트를 견디지 못하는 Pod를 삭제(1.29 beta부터 기본 분리, 1.34 GA) |
 
-옛 v1 Endpoints API는 v1.33부터 deprecated라 조회하면 `v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice` 경고가 붙습니다. Service 디버깅은 `kubectl get endpointslices -l kubernetes.io/service-name=<svc>`로 익혀 둡니다. 노드가 죽은 뒤 약 50초 + 300초에 Pod가 옮겨지는 과정은 [Ch-01 3-4절](/blog/cert/cka/cka-01-why-kubernetes)에 있습니다.
+옛 v1 Endpoints API는 v1.33부터 deprecated라 조회하면 `v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice` 경고가 붙습니다. Service 디버깅은 `kubectl get endpointslices -l kubernetes.io/service-name=<svc>`로 익혀 둡니다. 노드가 죽은 뒤 약 50초 + 300초에 Pod가 옮겨지는 과정은 [3편 3-4절](/blog/cert/cka/cka-01-why-kubernetes)에 있습니다.
 
 `--leader-elect`(기본 true) 때문에 컨트롤 플레인이 여러 대여도 일은 리더 하나만 합니다. 리더는 `kube-system`의 Lease 객체로 정하고 스케줄러도 같은 방식입니다. `kubectl -n kube-system get lease`의 HOLDER로 지금 리더가 어느 노드인지 봅니다.
 
@@ -520,7 +520,7 @@ API 서버 ──watch(내 노드 Pod)──▶ kubelet ──CRI──▶ conta
 | kube-proxy, CoreDNS | DaemonSet, Deployment | 컨트롤러가 API 서버를 거쳐 만듦 |
 | kubelet | systemd 서비스 | 운영체제 |
 
-API 서버도 Pod인데 Pod는 API 서버를 거쳐야 만들어진다면 처음 API 서버는 누가 띄우느냐는 문제가 생깁니다. kubelet은 API 서버 없이도 매니페스트 디렉터리만 보고 static Pod를 띄울 수 있습니다. 그래서 부팅 때 kubelet이 먼저 서고 컨트롤 플레인 Pod를 띄웁니다. 이 순서 때문에 kubeadm 클러스터의 쿠버네티스 구성요소 가운데 kubelet만 컨테이너 밖에서 systemd 서비스로 돕니다. static Pod 만드는 법은 [Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)의 static Pod 절에 있습니다.
+API 서버도 Pod인데 Pod는 API 서버를 거쳐야 만들어진다면 처음 API 서버는 누가 띄우느냐는 문제가 생깁니다. kubelet은 API 서버 없이도 매니페스트 디렉터리만 보고 static Pod를 띄울 수 있습니다. 그래서 부팅 때 kubelet이 먼저 서고 컨트롤 플레인 Pod를 띄웁니다. 이 순서 때문에 kubeadm 클러스터의 쿠버네티스 구성요소 가운데 kubelet만 컨테이너 밖에서 systemd 서비스로 돕니다. static Pod 만드는 법은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)의 static Pod 절에 있습니다.
 
 #### 4. 헷갈리는 점과 실전에서 보이는 모습
 
@@ -533,7 +533,7 @@ API 서버도 Pod인데 Pod는 API 서버를 거쳐야 만들어진다면 처음
 
 kubelet은 노드 등록, Pod 실행(CRI 호출), 프로브 실행, 볼륨 마운트, 노드 압박 시 축출, 하트비트를 맡습니다. 하트비트는 Node 객체의 status 갱신과 `kube-node-lease` 네임스페이스의 노드별 Lease 갱신 두 갈래입니다.
 
-kubeadm 클러스터에서 컨트롤 플레인은 static Pod이고 kube-proxy는 DaemonSet인데 kubelet은 systemd 서비스입니다. static Pod를 띄우는 주체가 kubelet이니 kubelet 자신은 그 바깥에 있어야 합니다. 설정 파일은 `/var/lib/kubelet/config.yaml`(여기서 `staticPodPath` 확인)이고 API 서버 접속용 kubeconfig는 `/etc/kubernetes/kubelet.conf`입니다. kubelet이 멈춘 노드의 복구 순서는 [CKA Ch-06](/blog/cert/cka/cka-06-troubleshooting)의 클러스터 구성요소 장에 있습니다.
+kubeadm 클러스터에서 컨트롤 플레인은 static Pod이고 kube-proxy는 DaemonSet인데 kubelet은 systemd 서비스입니다. static Pod를 띄우는 주체가 kubelet이니 kubelet 자신은 그 바깥에 있어야 합니다. 설정 파일은 `/var/lib/kubelet/config.yaml`(여기서 `staticPodPath` 확인)이고 API 서버 접속용 kubeconfig는 `/etc/kubernetes/kubelet.conf`입니다. kubelet이 멈춘 노드의 복구 순서는 [9편](/blog/cert/cka/cka-06-troubleshooting)의 클러스터 구성요소 장에 있습니다.
 
 ### 2-7. kube-proxy
 
@@ -612,7 +612,7 @@ API 서버 주소로 오가는 요청에는 Secret 값과 토큰이 실립니다
          (개인 키는 한 번도 네트워크를 타지 않음)
 ```
 
-[Ch-02 1-9절](/blog/cert/cka/cka-02-cluster-architecture)의 CSR 승인 흐름이 이 순서를 쿠버네티스 API로 옮긴 것입니다.
+[5편 1-9절](/blog/cert/cka/cka-02-cluster-architecture)의 CSR 승인 흐름이 이 순서를 쿠버네티스 API로 옮긴 것입니다.
 
 #### 5. 실전에서 보이는 모습
 
@@ -755,7 +755,7 @@ API 서버 매니페스트에는 스케줄러나 컨트롤러 매니저를 위�
 
 ### 3-3. 유효 기간과 확인 명령
 
-kubeadm이 만든 리프 인증서는 1년(`certificateValidityPeriod` 기본 8760h), CA는 10년(`caCertificateValidityPeriod` 기본 87600h)입니다. 만료일은 `kubeadm certs check-expiration`으로 보고 kubelet 클라이언트 인증서는 `/var/lib/kubelet/pki`에서 자동으로 회전하므로 이 목록에 나오지 않습니다. `kubeadm certs renew all` 뒤 static Pod를 다시 띄우는 절차와 `kubeadm upgrade`가 인증서를 함께 갱신한다는 점은 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture)의 인증서 만료 절에 정리했습니다.
+kubeadm이 만든 리프 인증서는 1년(`certificateValidityPeriod` 기본 8760h), CA는 10년(`caCertificateValidityPeriod` 기본 87600h)입니다. 만료일은 `kubeadm certs check-expiration`으로 보고 kubelet 클라이언트 인증서는 `/var/lib/kubelet/pki`에서 자동으로 회전하므로 이 목록에 나오지 않습니다. `kubeadm certs renew all` 뒤 static Pod를 다시 띄우는 절차와 `kubeadm upgrade`가 인증서를 함께 갱신한다는 점은 [5편](/blog/cert/cka/cka-02-cluster-architecture)의 인증서 만료 절에 정리했습니다.
 
 ### 3-4. 직접 해 보기
 
@@ -977,7 +977,7 @@ Pod가 대신 해 주는 일은 도커만으로 같은 구성을 만들어 보�
 
 한 Pod 안의 컨테이너는 같은 노드에서 함께 뜨고 함께 사라지며 네트워크 네임스페이스를 공유합니다. 같은 Pod의 다른 컨테이너에는 `localhost:<포트>`로 닿고 볼륨은 정의한 만큼 공유합니다.
 
-보조 컨테이너는 두 방식으로 넣습니다. 일반 init 컨테이너(`initContainers`)는 순서대로 하나씩 실행되고 모두 성공해야 앱 컨테이너가 시작됩니다. 네이티브 사이드카는 `initContainers`에 `restartPolicy: Always`를 준 컨테이너로 앱보다 먼저 뜨고 Pod가 끝날 때까지 계속 돕니다(v1.33 GA). 예시 YAML은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)의 네이티브 사이드카 절에 있습니다.
+보조 컨테이너는 두 방식으로 넣습니다. 일반 init 컨테이너(`initContainers`)는 순서대로 하나씩 실행되고 모두 성공해야 앱 컨테이너가 시작됩니다. 네이티브 사이드카는 `initContainers`에 `restartPolicy: Always`를 준 컨테이너로 앱보다 먼저 뜨고 Pod가 끝날 때까지 계속 돕니다(v1.33 GA). 예시 YAML은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)의 네이티브 사이드카 절에 있습니다.
 
 ### 4-4. 직접 해 보기
 
@@ -1233,7 +1233,7 @@ Deployments 문서의 예시 설명도 같은 흐름입니다. 새 ReplicaSet을
 
 </details>
 
-`set image`, `rollout status`, `undo --to-revision` 같은 명령 묶음은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)의 롤링 업데이트 장에 있습니다.
+`set image`, `rollout status`, `undo --to-revision` 같은 명령 묶음은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)의 롤링 업데이트 장에 있습니다.
 
 ### 5-5. 스케일 명령 세 가지
 
@@ -1310,7 +1310,7 @@ kubectl scale rs product-web --replicas=6 -n shop
 
 - ClusterIP는 어떤 프로세스도 그 주소로 포트를 열고 있지 않은 가상 주소입니다. 그래서 iptables나 nftables 모드에서는 ClusterIP에 `ping`을 해도 응답이 없는 것이 정상이고 포트로 접속해야 규칙이 동작합니다.
 - Service로 요청이 닿지 않으면 selector가 Pod 라벨과 맞는지와 대상 Pod가 Ready인지 봅니다. `kubectl get endpointslices -n shop -l kubernetes.io/service-name=order-api`에 주소가 비어 있으면 보낼 곳이 없는 상태입니다([Debug Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)).
-- LoadBalancer 타입을 Service마다 쓰면 클라우드 LB가 Service 수만큼 생깁니다. 쇼핑몰, 게시판, 결제를 각각 열면 LB가 셋이고 비용과 관리할 외부 주소도 그만큼 늘어납니다. 그래서 바깥에 여는 HTTP 서비스가 여럿이면 LB 하나 뒤에 Ingress나 Gateway를 두고 호스트 이름이나 경로(`/shop`, `/board`)로 나눠 각 ClusterIP Service로 보냅니다. 이 구성은 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)에서 다룹니다.
+- LoadBalancer 타입을 Service마다 쓰면 클라우드 LB가 Service 수만큼 생깁니다. 쇼핑몰, 게시판, 결제를 각각 열면 LB가 셋이고 비용과 관리할 외부 주소도 그만큼 늘어납니다. 그래서 바깥에 여는 HTTP 서비스가 여럿이면 LB 하나 뒤에 Ingress나 Gateway를 두고 호스트 이름이나 경로(`/shop`, `/board`)로 나눠 각 ClusterIP Service로 보냅니다. 이 구성은 [7편](/blog/cert/cka/cka-04-services-networking)에서 다룹니다.
 
 #### 5. NodePort와 LoadBalancer를 고를 때
 
@@ -1346,7 +1346,7 @@ spec:
 
 `externalTrafficPolicy: Local`을 주면 들어온 노드에 있는 Ready Pod로만 전달해 클라이언트 IP를 보존하고 그 노드에 Pod가 없으면 트래픽을 버립니다. 기본값 `Cluster`는 아무 노드의 Pod로 전달합니다.
 
-타입 네 가지와 headless, `expose` 명령, EndpointSlice는 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)에 자세히 있습니다.
+타입 네 가지와 headless, `expose` 명령, EndpointSlice는 [7편](/blog/cert/cka/cka-04-services-networking)에 자세히 있습니다.
 
 ### 6-2. 네임스페이스 범위와 클러스터 범위
 
@@ -1362,7 +1362,7 @@ spec:
 #### 2. 무엇이 나뉘나
 
 1. **이름**: 같은 kind의 이름은 네임스페이스 안에서만 겹치면 안 됩니다. `shop`과 `board`에 각각 `web`이라는 Deployment를 둘 수 있습니다.
-2. **권한**: Role과 RoleBinding은 네임스페이스 안에서만 효력이 있어서 "board 팀은 board 네임스페이스만"을 표현할 수 있습니다([Ch-02 1장](/blog/cert/cka/cka-02-cluster-architecture)).
+2. **권한**: Role과 RoleBinding은 네임스페이스 안에서만 효력이 있어서 "board 팀은 board 네임스페이스만"을 표현할 수 있습니다([5편 1장](/blog/cert/cka/cka-02-cluster-architecture)).
 3. **자원 총량**: ResourceQuota와 LimitRange를 네임스페이스마다 걸어 한 팀이 클러스터 자원을 다 쓰는 것을 막습니다(6-5절).
 4. **정리**: 네임스페이스를 지우면 그 안의 오브젝트가 모두 함께 지워집니다.
 
@@ -1501,7 +1501,7 @@ kubectl create quota shop-quota -n shop --hard=requests.cpu=2,requests.memory=2G
 kubectl describe quota shop-quota -n shop
 ```
 
-LimitRange는 명령형 생성 명령이 없어서 YAML로 씁니다. 예시와 값 계산은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota 절에 있습니다.
+LimitRange는 명령형 생성 명령이 없어서 YAML로 씁니다. 예시와 값 계산은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)의 LimitRange, ResourceQuota 절에 있습니다.
 
 ### 6-6. 직접 해 보기
 
@@ -1654,7 +1654,7 @@ kubectl replace --force -f /tmp/kubectl-edit-xxxx.yaml
 # 기존 Pod를 지우고 수정본으로 다시 만듦
 ```
 
-`replace --force`는 삭제 후 재생성이라 Pod IP가 바뀌고 잠시 서비스가 끊깁니다. Deployment에 속한 Pod라면 Deployment의 템플릿을 고칩니다. Deployment 소유 Pod에 `replace --force`를 하면 다시 만든 Pod도 같은 라벨이라 ReplicaSet이 개수 초과로 보고 그 Pod를 지웁니다(kind에서 확인). CPU와 메모리 requests, limits는 v1.35에서 GA가 된 in-place resize로 `resize` 서브리소스를 통해 Pod를 다시 만들지 않고 바꿀 수 있습니다(`kubectl patch pod ... --subresource resize`). 자세한 사용법은 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+`replace --force`는 삭제 후 재생성이라 Pod IP가 바뀌고 잠시 서비스가 끊깁니다. Deployment에 속한 Pod라면 Deployment의 템플릿을 고칩니다. Deployment 소유 Pod에 `replace --force`를 하면 다시 만든 Pod도 같은 라벨이라 ReplicaSet이 개수 초과로 보고 그 Pod를 지웁니다(kind에서 확인). CPU와 메모리 requests, limits는 v1.35에서 GA가 된 in-place resize로 `resize` 서브리소스를 통해 Pod를 다시 만들지 않고 바꿀 수 있습니다(`kubectl patch pod ... --subresource resize`). 자세한 사용법은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
 ### 7-5. -n과 파일의 namespace가 다를 때
 

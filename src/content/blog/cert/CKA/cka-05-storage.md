@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-05] 스토리지: PVC가 Pending에 머무는 이유를 바인딩 규칙으로 읽기'
+title: '[CKA] 스토리지: PVC가 Pending에 머무는 이유를 바인딩 규칙으로 읽기'
 description: CKA 커리큘럼 v1.37의 Storage 영역(10%)을 시험 과제 중심으로 정리합니다. StorageClass와 기본 클래스 교체, volumeBindingMode, 볼륨 타입(emptyDir, hostPath, generic ephemeral volume), 접근 모드(ReadWriteOncePod 포함), 회수 정책 변경과 Released PV 재사용, PV와 PVC의 바인딩 규칙, 볼륨 확장, Pending PVC 점검 순서를 시험에서 쓰는 YAML과 명령, 자주 틀리는 지점, 연습 과제로 묶었습니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -13,7 +13,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 5
+seriesOrder: 8
 ---
 
 ## 결론부터

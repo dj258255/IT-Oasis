@@ -1,5 +1,5 @@
 ---
-title: '[DE Ch-07] 태스크 하나가 Pod 하나가 될 때: 기동 시간을 구간으로 나누기'
+title: '[DE] 태스크 하나가 Pod 하나가 될 때: 기동 시간을 구간으로 나누기'
 description: KubernetesExecutor와 Argo Workflows는 태스크마다 Pod를 띄웁니다. 쿠버네티스의 공식 Pod 기동 SLO는 p99 5초인데, 이 숫자는 이미지 pull과 init 컨테이너를 뺀 값입니다. Pod가 생성되어 컨테이너가 시작하기까지를 condition, 이벤트, kubelet 메트릭으로 나누는 방법과, 이미지 pull, Pod 생성 호출, init 컨테이너가 각각 어디서 시간을 쓰는지, 짧은 태스크가 많을 때의 대안을 정리합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -16,7 +16,7 @@ topics:
   - performance
 draft: false
 series: "DE 공부"
-seriesOrder: 7
+seriesOrder: 8
 ---
 
 ## 결론부터
@@ -31,7 +31,7 @@ seriesOrder: 7
 
 ## 1. 1초짜리 태스크에 몇 초가 붙나
 
-Ch-02에서 executor를 고르는 것은 태스크를 어디서 돌릴지 고르는 일이라고 했습니다. 컨테이너 방식(KubernetesExecutor, Argo)은 태스크마다 의존성을 격리하고 상주 워커를 관리하지 않아도 됩니다. Airflow 3.2 executor 문서는 그 대가를 이렇게 적습니다. 태스크를 시작하기 전에 컨테이너나 Pod가 떠야 해서 기동 지연이 있다. 상주 워커를 쓰는 큐 방식 executor는 이 지연이 비교적 낮다.
+3편에서 executor를 고르는 것은 태스크를 어디서 돌릴지 고르는 일이라고 했습니다. 컨테이너 방식(KubernetesExecutor, Argo)은 태스크마다 의존성을 격리하고 상주 워커를 관리하지 않아도 됩니다. Airflow 3.2 executor 문서는 그 대가를 이렇게 적습니다. 태스크를 시작하기 전에 컨테이너나 Pod가 떠야 해서 기동 지연이 있다. 상주 워커를 쓰는 큐 방식 executor는 이 지연이 비교적 낮다.
 
 태스크가 30분짜리라면 몇 초는 문제가 되지 않습니다. 태스크가 1~2초짜리이고 수백 개라면 기동 시간이 실행 시간보다 커집니다. 얼마나 붙는지 알려면 먼저 그 시간이 어디서 쓰이는지 나눠야 합니다.
 
@@ -45,7 +45,7 @@ Ch-02에서 executor를 고르는 것은 태스크를 어디서 돌릴지 고르
 | 이미지와 레이어 | 이미지는 여러 레이어(파일 묶음)를 쌓은 것. 노드에 없는 레이어만 레지스트리에서 받는다 |
 | init 컨테이너 | 본 컨테이너보다 먼저 차례로 돌고 끝나야 하는 준비용 컨테이너 |
 
-([CKA Ch-01b](/blog/cert/cka/cka-01b-core-objects-and-flow), [k8s-linux Ch-02](/blog/theory/systems/k8s-linux-02-namespaces-pause))
+([CKA 4편](/blog/cert/cka/cka-01b-core-objects-and-flow), [k8s-linux 3편](/blog/theory/systems/k8s-linux-02-namespaces-pause))
 
 ## 2. Pod가 컨테이너를 시작하기까지
 
@@ -97,7 +97,7 @@ total과 SLI 메트릭의 차이가 pull과 init에 쓴 시간입니다.
 - SLI: 스케줄 가능한 stateless Pod의 기동 지연. 이미지 pull과 init 컨테이너 실행 시간을 빼고 Pod 생성 시각부터 모든 컨테이너가 시작했다고 보고되어 watch로 관측될 때까지.
 - SLO: 기본 설치에서 클러스터별 하루 기준 99번째 백분위 5초 이하.
 
-SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은가"라는 목표입니다. 99번째 백분위(p99)는 하루 동안 뜬 Pod를 기동 시간 순으로 줄 세웠을 때 99% 지점의 값이라 Pod 100개 가운데 99개가 5초 안에 시작했다는 뜻입니다(백분위는 Ch-08). 아래 그림은 이 SLI가 2-1절의 구간 가운데 어디를 세고 어디를 빼는지 보여 줍니다.
+SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은가"라는 목표입니다. 99번째 백분위(p99)는 하루 동안 뜬 Pod를 기동 시간 순으로 줄 세웠을 때 99% 지점의 값이라 Pod 100개 가운데 99개가 5초 안에 시작했다는 뜻입니다(백분위는 9편). 아래 그림은 이 SLI가 2-1절의 구간 가운데 어디를 세고 어디를 빼는지 보여 줍니다.
 
 ![Pod 생성부터 모든 컨테이너 시작까지를 스케줄링, 샌드박스, 이미지 pull, init 컨테이너, 컨테이너 시작 다섯 구간으로 나눈 막대. 스케줄링, 샌드박스, 컨테이너 시작은 파란색으로 공식 SLO가 세는 구간이고 이미지 pull과 init 컨테이너는 빨간색으로 SLO에서 빠지는 구간이다. 배치 태스크가 실제로 기다리는 시간은 다섯 구간 전체다](/uploads/data/de-07-task-per-pod-cost/pod-startup-segments.svg)
 
@@ -161,7 +161,7 @@ LINE 엔지니어링 블로그(2021, Airflow 1.10.12)가 이 구조를 명시했
 
 ## 5. Argo Workflows
 
-Argo는 단계 하나나 DAG 태스크 하나마다 Pod를 하나 만들고 그 Pod에 컨테이너가 셋 들어갑니다(Ch-02).
+Argo는 단계 하나나 DAG 태스크 하나마다 Pod를 하나 만들고 그 Pod에 컨테이너가 셋 들어갑니다(3편).
 
 | 컨테이너 | 기동에 주는 영향 |
 |---|---|
@@ -179,7 +179,7 @@ Argo 컨트롤러는 기본적으로 끝난 Pod를 지우지 않습니다. 비�
 |---|---|---|
 | 상주 워커로 보낸다 | Airflow 2.10부터 executor를 여러 개 설정하고 태스크마다 `executor=`로 고른다. 짧은 태스크는 Celery로, 격리가 필요한 태스크는 Kubernetes로 | Celery 워커와 브로커를 운영해야 한다. 3.0에서 CeleryKubernetesExecutor 같은 하이브리드 executor는 없어졌고 다중 executor가 공식 경로다 |
 | 한 Pod에 여러 컨테이너(Argo container set) | 단계 여러 개를 Pod 하나 안의 컨테이너로 돌린다. Pod 기동과 init, wait 컨테이너를 줄인다 | 자원 요청이 컨테이너들의 합이라 비쌀 수 있다. container 템플릿만 쓸 수 있고 수십 개 규모에 맞다 |
-| 태스크를 묶는다 | 짧은 태스크 여러 개를 태스크 하나로 합친다 | 재시도 단위가 커진다. 하나만 실패해도 묶음 전체를 다시 돈다(Ch-03) |
+| 태스크를 묶는다 | 짧은 태스크 여러 개를 태스크 하나로 합친다 | 재시도 단위가 커진다. 하나만 실패해도 묶음 전체를 다시 돈다(4편) |
 | 이미지를 줄이거나 미리 받는다 | 3절 | 노드가 자주 바뀌면 사전 적재 효과가 줄어든다 |
 
 Airflow의 KubernetesExecutor 문서는 공식 Helm 차트가 Celery 워커를 0개까지 줄일 수 있게 되면서 KubernetesExecutor의 자원 측면 이점이 줄었다고도 적습니다.
@@ -254,7 +254,7 @@ SLO는 기본 설치에서 pull과 init을 뺀 값이고 stateless Pod 기준입
 - LINE Engineering, [Kubernetes를 이용한 효율적인 데이터 엔지니어링(Airflow on Kubernetes VS Airflow Kubernetes Executor) - 2](https://engineering.linecorp.com/ko/blog/data-engineering-with-airflow-k8s-2/) (2021)
 
 이 시리즈
-- [Ch-02 오케스트레이터는 무엇을 맡나](/blog/data/orchestration/de-02-what-orchestrator-does)
+- [3편 오케스트레이터는 무엇을 맡나](/blog/data/orchestration/de-02-what-orchestrator-does)
 - 실습 코드: [labs/de-study/ch07](https://github.com/dj258255/IT-Oasis/tree/main/labs/de-study/ch07)
 
 중국과 국내 빅테크 사례

@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-05] Structured Streaming: 출력 모드는 쿼리 모양이 정하고 상태 크기는 워터마크가 정한다'
+title: '[Spark] Structured Streaming: 출력 모드는 쿼리 모양이 정하고 상태 크기는 워터마크가 정한다'
 description: Databricks Spark 자격증 5영역(Structured Streaming, 10%)을 시험 안내서 항목 순서대로 정리합니다. 무한 입력 테이블 모델과 마이크로배치, 체크포인트와 재실행 가능한 소스로 만드는 exactly-once, 출력 모드와 싱크별 보장, 트리거, 이벤트 시간 윈도와 워터마크, 워터마크가 있을 때와 없을 때의 중복 제거를 Spark 4.2.0 공식 문서 기준으로 확인합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 5
+seriesOrder: 7
 ---
 
 ## 결론부터
@@ -260,7 +260,7 @@ Fault Tolerance Semantics 절의 설명을 순서대로 옮기면 이렇습니�
 
 - 쿼리마다 다른 경로를 줍니다. 두 쿼리가 한 경로를 쓰면 같은 쿼리 id를 이어받아 기록이 섞입니다.
 - 체크포인트를 지우고 시작하면 처음 보는 쿼리가 됩니다. 소스의 시작 위치 옵션(Kafka `startingOffsets` 등)부터 다시 읽습니다.
-- 배치 DataFrame의 `checkpoint()`는 계보를 잘라 결과를 저장하는 다른 기능입니다([Ch-01](/blog/cert/spark/spark-01-architecture) 5-4).
+- 배치 DataFrame의 `checkpoint()`는 계보를 잘라 결과를 저장하는 다른 기능입니다([3편](/blog/cert/spark/spark-01-architecture) 5-4).
 
 > **정리**: 체크포인트는 "어디까지 읽었고 어디까지 썼고 무엇을 기억하는지"를 파일로 남긴 것입니다. 그래서 3-3처럼 재시작 사이에 쿼리 모양을 바꾸면 이 기록과 어긋날 수 있습니다.
 
@@ -400,7 +400,7 @@ spark.streams.active   # 이 세션에서 도는 쿼리 목록
 
 - 스트리밍 DataFrame에 `count()`, `show()`, `foreach()` 같은 즉시 실행 액션을 부르면 `AnalysisException`이 납니다. 개수는 `groupBy().count()`로 스트리밍 결과를 만들고 화면 출력은 console 싱크로 합니다.
 - `limit`, `take`, `distinct`는 스트리밍에서 지원하지 않습니다. 정렬은 집계 뒤 Complete 모드에서만 됩니다. 중복 제거가 필요하면 `distinct` 자리에 11절의 `dropDuplicates`를 씁니다.
-- `spark.sql.adaptive.enabled`가 켜져 있어도 스트리밍 쿼리에는 AQE를 적용하지 않습니다. 4.2.0 소스(`ResolveWriteToStream`)는 이 경우 "스트리밍에서 지원하지 않아 끈다"는 경고만 남깁니다. [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)의 AQE 설명은 배치 쿼리 기준입니다.
+- `spark.sql.adaptive.enabled`가 켜져 있어도 스트리밍 쿼리에는 AQE를 적용하지 않습니다. 4.2.0 소스(`ResolveWriteToStream`)는 이 경우 "스트리밍에서 지원하지 않아 끈다"는 경고만 남깁니다. [6편](/blog/cert/spark/spark-04-troubleshooting-tuning)의 AQE 설명은 배치 쿼리 기준입니다.
 - 스트리밍 DataFrame에도 `createOrReplaceTempView`를 걸고 SQL을 쓸 수 있고 결과는 또 하나의 스트리밍 DataFrame입니다.
 
 ## 5. 출력 모드
@@ -856,9 +856,9 @@ Append는 정확하지만 허용 지연만큼 늦게 나옵니다. 위 예에서
 
 ### 10-5. Flink와 비교
 
-같은 개념을 Flink에서 정리한 글이 [DE Ch-15](/blog/data/streaming/de-15-flink-time-watermark)와 [DE Ch-16](/blog/data/streaming/de-16-flink-window-join)입니다. 둘을 나란히 놓으면 차이가 보입니다.
+같은 개념을 Flink에서 정리한 글이 [DE 16편](/blog/data/streaming/de-15-flink-time-watermark)과 [DE 17편](/blog/data/streaming/de-16-flink-window-join)입니다. 둘을 나란히 놓으면 차이가 보입니다.
 
-| 항목 | Spark Structured Streaming | Flink(DE Ch-15, 16 기준) |
+| 항목 | Spark Structured Streaming | Flink(DE 16, 17편 기준) |
 |---|---|---|
 | 워터마크 정의 | 최대 이벤트 시간 − 허용 지연. 트리거 시작마다 갱신 | `forBoundedOutOfOrderness(d)` 등 전략으로 생성, `pipeline.auto-watermark-interval`(기본 200ms)마다 내보냄 |
 | 여러 입력 | 기본 최솟값, `multipleWatermarkPolicy=max` 선택 | 입력 중 최솟값. 멈춘 입력은 `withIdleness`로 계산에서 뺀다 |
@@ -1115,5 +1115,5 @@ B입니다. Kafka 소스는 오프셋으로 다시 읽을 수 있고 파일 싱�
 - Apache Spark JIRA, [SPARK-28650](https://issues.apache.org/jira/browse/SPARK-28650) (6-3의 `(partition_id, epoch_id)` 중복 제거 한계)
 
 이 시리즈와 비교 글
-- [Spark Ch-00: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [Spark Ch-04: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning)
-- [DE Ch-15: Flink의 시간과 watermark](/blog/data/streaming/de-15-flink-time-watermark), [DE Ch-16: 윈도와 interval join](/blog/data/streaming/de-16-flink-window-join)
+- [1편: 시험 구조와 공부 계획](/blog/cert/spark/spark-00-exam-and-study-plan), [6편: 문제 해결과 튜닝](/blog/cert/spark/spark-04-troubleshooting-tuning)
+- [DE 16편: Flink의 시간과 watermark](/blog/data/streaming/de-15-flink-time-watermark), [DE 17편: 윈도와 interval join](/blog/data/streaming/de-16-flink-window-join)

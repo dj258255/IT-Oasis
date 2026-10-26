@@ -1,5 +1,5 @@
 ---
-title: '[SAA Ch-05] 준비 자료와 시험 당일: 무료 공식 자료부터 쓰고 모의고사는 시간을 재고 푼다'
+title: '[SAA] 준비 자료와 시험 당일: 무료 공식 자료부터 쓰고 모의고사는 시간을 재고 푼다'
 description: AWS SAA-C03을 2026년 10월 기준으로 준비할 때 쓸 수 있는 정식 자료를 모았습니다. Skill Builder의 무료와 구독 구분, 응시료와 할인 바우처, Tutorials Dojo와 Udemy, Adrian Cantrill, freeCodeCamp 같은 연습 자료 비교, 2025년 7월에 바뀐 프리 티어에서 실습 비용을 묶어 두는 법, 2025~2026년 후기에서 나온 주제 수준의 출제 경향, 한국어 응시자의 영어 원문 보기와 130분 배분, D-30 마무리 계획을 공식 문서와 원문 후기 기준으로 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "SAA 공부"
-seriesOrder: 5
+seriesOrder: 7
 ---
 
 ## 결론부터
@@ -23,10 +23,10 @@ seriesOrder: 5
 2. 응시료는 150 USD이고 원화로는 197,287원입니다(2026년 10월 AWS 표, 세금 별도 가능). 떨어지면 14일 뒤 다시 볼 수 있고 매번 전액을 냅니다. AWS 시험에 한 번 합격하면 다음 시험 50% 할인 바우처가 나옵니다. 2026년 10월 21일에 연 AWS 바우처 캠페인 약관에는 SAA를 대상으로 한 캠페인이 없었습니다.
 3. 유료 연습 자료 중 가격과 문항 출처를 직접 확인한 것은 Tutorials Dojo 모의고사(14.99 USD, 자체 작성 명시)와 Adrian Cantrill 강의(40 USD, 모의고사 2회 포함)입니다. freeCodeCamp의 약 50시간 강의는 무료입니다.
 4. 2025년 7월 15일 이후 만든 AWS 계정은 크레딧 방식 프리 티어(가입 100 USD, 활동 보상 최대 100 USD, 무료 플랜 최대 6개월)를 받습니다. 무료 플랜은 요금이 나가지 않지만 AWS Organizations에 가입하면 유료 플랜으로 자동 전환됩니다. 2026년 10월 일부 고객에게 열린 새 가입 방식은 리전을 고를 수 없고 IAM Access Analyzer를 쓸 수 없어 SAA 실습에는 기존(advanced) 가입이 맞습니다. 예산 알림은 8~12시간 늦게 올 수 있어 NAT 게이트웨이처럼 시간당 요금이 붙는 리소스는 실습이 끝나면 바로 지웁니다.
-5. 2025~2026년 후기 중 유출 문항을 쓰지 않은 8건(이 글 6건, Ch-00 2건)을 보면 자주 나왔다고 꼽힌 서비스는 S3, VPC, Lambda, RDS와 DynamoDB, ECS와 EKS였고 S3와 Lambda는 두 글이 함께 꼽았습니다. 모의고사 정답률과 실제 점수의 관계는 제각각이었습니다. 문제집 정답률이 52~61%였는데 합격한 사례도 있고 94%를 받고 824점을 받은 사례도 있습니다.
+5. 2025~2026년 후기 중 유출 문항을 쓰지 않은 8건(이 글 6건, 1편 2건)을 보면 자주 나왔다고 꼽힌 서비스는 S3, VPC, Lambda, RDS와 DynamoDB, ECS와 EKS였고 S3와 Lambda는 두 글이 함께 꼽았습니다. 모의고사 정답률과 실제 점수의 관계는 제각각이었습니다. 문제집 정답률이 52~61%였는데 합격한 사례도 있고 94%를 받고 824점을 받은 사례도 있습니다.
 6. 시험장에서는 문제의 마지막 문장(요구 조건)을 먼저 읽고 확신이 없는 문항은 표시해 두고 넘깁니다. 한국어로 응시해도 문항마다 영어 원문으로 바꿔 볼 수 있습니다. 온라인 응시는 시험 중 자리를 뜰 수 없습니다.
 
-시험 구조와 영역별 비중은 [SAA Ch-00](/blog/cert/saa/saa-00-exam-and-study-plan)에, 영역별 내용은 [Ch-01 보안](/blog/cert/saa/saa-01-secure-architectures), [Ch-02 복원력](/blog/cert/saa/saa-02-resilient-architectures), [Ch-03 고성능](/blog/cert/saa/saa-03-high-performing-architectures), [Ch-04 비용](/blog/cert/saa/saa-04-cost-optimized-architectures)에 있습니다. 이 글은 그 내용을 어떤 자료로 다지고 시험 당일 어떻게 푸는지만 다룹니다.
+시험 구조와 영역별 비중은 [1편](/blog/cert/saa/saa-00-exam-and-study-plan)에, 영역별 내용은 [3편 보안](/blog/cert/saa/saa-01-secure-architectures), [4편 복원력](/blog/cert/saa/saa-02-resilient-architectures), [5편 고성능](/blog/cert/saa/saa-03-high-performing-architectures), [6편 비용](/blog/cert/saa/saa-04-cost-optimized-architectures)에 있습니다. 이 글은 그 내용을 어떤 자료로 다지고 시험 당일 어떻게 푸는지만 다룹니다.
 
 ---
 
@@ -52,16 +52,16 @@ AWS 시험 페이지는 SAA-C03 준비 경로를 Skill Builder의 4단계 계획
 
 ### 1-2. 시험 안내서 다음으로 읽을 문서
 
-AWS 시험 안내서는 이 시험이 Well-Architected Framework에 기반한 설계 능력을 검증한다고 적습니다. 그래서 첫 번째로 읽을 문서는 [Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)입니다. 기둥과 시험 영역의 관계는 [Ch-00의 3절](/blog/cert/saa/saa-00-exam-and-study-plan)에 정리했습니다.
+AWS 시험 안내서는 이 시험이 Well-Architected Framework에 기반한 설계 능력을 검증한다고 적습니다. 그래서 첫 번째로 읽을 문서는 [Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)입니다. 기둥과 시험 영역의 관계는 [1편의 3절](/blog/cert/saa/saa-00-exam-and-study-plan)에 정리했습니다.
 
 AWS가 SAA용 백서 목록을 따로 내지는 않습니다. 외부 자료가 추천하는 목록을 보면 이렇습니다.
 
 | 문서 | 추천한 곳 | 이 시리즈에서 다룬 곳 |
 |---|---|---|
-| Disaster Recovery of Workloads on AWS(2021년 2월) | AWS 공식 백서. 네 가지 DR 전략과 RPO, RTO | [Ch-02 3-6절](/blog/cert/saa/saa-02-resilient-architectures) |
-| Cost Optimization Pillar | Tutorials Dojo 학습 경로 | [Ch-04](/blog/cert/saa/saa-04-cost-optimized-architectures) |
-| SQS, DynamoDB, ElastiCache, Kinesis, Lambda, API Gateway, IAM, KMS FAQ | Tutorials Dojo 시험 팁(2024년 8월 갱신) | Ch-01~03 |
-| Auto Scaling, ELB, EC2, RDS, CloudWatch FAQ | 같은 글 | Ch-02, Ch-03 |
+| Disaster Recovery of Workloads on AWS(2021년 2월) | AWS 공식 백서. 네 가지 DR 전략과 RPO, RTO | [4편 3-6절](/blog/cert/saa/saa-02-resilient-architectures) |
+| Cost Optimization Pillar | Tutorials Dojo 학습 경로 | [6편](/blog/cert/saa/saa-04-cost-optimized-architectures) |
+| SQS, DynamoDB, ElastiCache, Kinesis, Lambda, API Gateway, IAM, KMS FAQ | Tutorials Dojo 시험 팁(2024년 8월 갱신) | 3~5편 |
+| Auto Scaling, ELB, EC2, RDS, CloudWatch FAQ | 같은 글 | 4, 5편 |
 
 Tutorials Dojo의 팁 글은 2024년에 갱신된 것이라 목록에 지금은 시험 범위 밖인 배포 관련 백서(Blue/Green Deployments 등)도 섞여 있습니다. 범위 안인지는 시험 안내서의 범위 안 서비스 목록으로 다시 거릅니다.
 
@@ -170,7 +170,7 @@ AWS Budgets 템플릿 중 두 가지를 먼저 만듭니다.
 - Zero spend budget: 프리 티어 한도를 넘어 지출이 생기면 알린다.
 - Monthly cost budget: 정한 월 금액을 넘었거나 넘을 것으로 예측되면 알린다.
 
-이 알림은 늦게 옵니다. Budgets 문서는 정보가 하루 최대 세 번, 보통 8~12시간 간격으로 갱신된다고 적고 알림을 받기 전에 비용이 이미 임계를 넘을 수 있다고 경고합니다. 알림 금액은 낮게 잡고 실습이 끝나면 알림과 상관없이 리소스를 지웁니다. 예산 액션으로 IAM 정책을 자동 적용해 새 리소스 생성을 막는 방법도 문서에 있습니다. 비용 관리 도구 자체는 [Ch-04 2절](/blog/cert/saa/saa-04-cost-optimized-architectures)에 정리했습니다.
+이 알림은 늦게 옵니다. Budgets 문서는 정보가 하루 최대 세 번, 보통 8~12시간 간격으로 갱신된다고 적고 알림을 받기 전에 비용이 이미 임계를 넘을 수 있다고 경고합니다. 알림 금액은 낮게 잡고 실습이 끝나면 알림과 상관없이 리소스를 지웁니다. 예산 액션으로 IAM 정책을 자동 적용해 새 리소스 생성을 막는 방법도 문서에 있습니다. 비용 관리 도구 자체는 [6편 2절](/blog/cert/saa/saa-04-cost-optimized-architectures)에 정리했습니다.
 
 ### 4-3. 켜 두기만 해도 요금이 붙는 리소스
 
@@ -184,7 +184,7 @@ AWS Budgets 템플릿 중 두 가지를 먼저 만듭니다.
 
 ### 4-4. 쇼핑몰 예제로 묶은 실습 순서
 
-[Ch-00 7절](/blog/cert/saa/saa-00-exam-and-study-plan)의 3단계(손으로 해 보기)를 쇼핑몰 예제 하나로 이으면 리소스를 한 번에 정리하기 쉽습니다.
+[1편 7절](/blog/cert/saa/saa-00-exam-and-study-plan)의 3단계(손으로 해 보기)를 쇼핑몰 예제 하나로 이으면 리소스를 한 번에 정리하기 쉽습니다.
 
 1. VPC: 공용 서브넷과 사설 서브넷을 두 AZ에 만들고 S3 게이트웨이 엔드포인트를 붙인다. NAT 게이트웨이는 사설 서브넷에서 인터넷이 필요한 단계에서만 만들고 확인 뒤 지운다.
 2. 웹 계층: ALB 뒤에 Auto Scaling 그룹을 두고 인스턴스 하나를 종료해 대체되는지 본다.
@@ -196,7 +196,7 @@ AWS Budgets 템플릿 중 두 가지를 먼저 만듭니다.
 
 ### 5-1. 모은 후기
 
-유출 문항을 썼다고 적은 후기는 뺐습니다. 2025~2026년 한국어 후기와 중국어 후기는 찾은 글 대부분이 유출 문항 풀이를 공부법으로 적어서 표에 남은 글이 없습니다. 아래 표는 일본어와 영어 후기이고 [Ch-00 6절](/blog/cert/saa/saa-00-exam-and-study-plan)의 후기 표에 이어지는 목록입니다.
+유출 문항을 썼다고 적은 후기는 뺐습니다. 2025~2026년 한국어 후기와 중국어 후기는 찾은 글 대부분이 유출 문항 풀이를 공부법으로 적어서 표에 남은 글이 없습니다. 아래 표는 일본어와 영어 후기이고 [1편 6절](/blog/cert/saa/saa-00-exam-and-study-plan)의 후기 표에 이어지는 목록입니다.
 
 | 글 | 결과 | 준비 | 연습 점수와 실제 점수 |
 |---|---|---|---|
@@ -206,15 +206,15 @@ AWS Budgets 템플릿 중 두 가지를 먼저 만듭니다.
 | Hiroaki Ito, SoftBank 블로그(2025-10) | 정답률 74%로 합격(필자 표기) | 약 1.5개월, 60~70시간. Udemy 강의(47.5시간)와 문제집(390문항) | 문제집 6회 52~61%. 문제집이 실제 시험보다 어려웠다고 적음 |
 | Nishath J P, DEV(2025-10) | 863점 | 1.5개월 이상. Maarek 강의와 PDF, Maarek, Bonso, Davis 모의고사 21회, 공식 연습 문항 | 모의고사 80% 이상을 목표로 함. "실제 시험이 모의고사보다 쉬웠다" |
 | Fabio Alessandro Locati, 개인 블로그(2025-10) | 재응시(점수 미기재) | 3년 전 같은 시험 합격, 이번에는 준비 시간 없음 | AI 관련 문항이 전보다 많았다는 체감 |
-| Pravesh Sudha(2025-08), De-Wei Ye(2026-01), Ryan Pothecary(2023) | Ch-00 표 참고 | | |
+| Pravesh Sudha(2025-08), De-Wei Ye(2026-01), Ryan Pothecary(2023) | 1편 표 참고 | | |
 
 ### 5-2. 겹치는 경향
 
 자주 나왔다고 적힌 서비스: IwatsukaYura는 S3, VPC, Lambda, RDS와 DynamoDB를 꼽았습니다. SoftBank 블로그는 S3, ECS와 EKS, Lambda를 꼽았습니다. 두 글 모두 S3와 Lambda가 들어갑니다.
 
-시나리오의 축: SoftBank 블로그는 비용과 보안을 맞바꾸는 시나리오가 많았다고 적었습니다. 정해진 시간에만 도는 작업에 EC2보다 EventBridge와 Lambda 조합을 고르는 식의 문제입니다. Ch-00 4절의 공식 샘플 문항에서 본 "조건이 정답을 가른다"는 관찰과 같은 방향입니다.
+시나리오의 축: SoftBank 블로그는 비용과 보안을 맞바꾸는 시나리오가 많았다고 적었습니다. 정해진 시간에만 도는 작업에 EC2보다 EventBridge와 Lambda 조합을 고르는 식의 문제입니다. 1편 4절의 공식 샘플 문항에서 본 "조건이 정답을 가른다"는 관찰과 같은 방향입니다.
 
-헷갈린 영역: Mynavi 필자는 VPC 엔드포인트와 보안 그룹, 보안 그룹과 네트워크 ACL의 차이, S3 스토리지 클래스, ECS와 EKS, Kinesis를 약점으로 적었습니다. 이 다섯은 [Ch-01](/blog/cert/saa/saa-01-secure-architectures) 3-2절과 3-4절, [Ch-03](/blog/cert/saa/saa-03-high-performing-architectures) 3-6절과 6-2절, [Ch-04](/blog/cert/saa/saa-04-cost-optimized-architectures) 3-1절에서 다뤘습니다.
+헷갈린 영역: Mynavi 필자는 VPC 엔드포인트와 보안 그룹, 보안 그룹과 네트워크 ACL의 차이, S3 스토리지 클래스, ECS와 EKS, Kinesis를 약점으로 적었습니다. 이 다섯은 [3편](/blog/cert/saa/saa-01-secure-architectures) 3-2절과 3-4절, [5편](/blog/cert/saa/saa-03-high-performing-architectures) 3-6절과 6-2절, [6편](/blog/cert/saa/saa-04-cost-optimized-architectures) 3-1절에서 다뤘습니다.
 
 처음 보는 서비스: Hadomen, SoftBank, Mynavi 세 글이 모두 문제집에서 못 본 서비스가 나왔다고 적었습니다. Mynavi 필자는 SageMaker, EFS, Direct Connect를 예로 들었습니다. 범위 안 서비스 목록을 한 번은 처음부터 끝까지 읽어 두는 이유입니다.
 
@@ -237,7 +237,7 @@ AWS 블로그 두 글이 같은 방법을 다른 말로 설명합니다.
 
 1. 마지막 문장에서 요구와 수식어를 찾는다. "가장 비용 효율적인", "운영 부담이 가장 적은", "가장 적은 변경으로" 같은 말이다.
 2. 앞부분에서 조건을 찾는다. 중단 가능 여부, 데이터 크기와 빈도, 지연 요구, 규정 요구가 여기 있다.
-3. 보기 중 조건 하나라도 어기는 것을 지운다. 보안을 약하게 만드는 보기는 비용이 싸도 대개 오답이다(Ch-00 3절).
+3. 보기 중 조건 하나라도 어기는 것을 지운다. 보안을 약하게 만드는 보기는 비용이 싸도 대개 오답이다(1편 3절).
 4. 남은 보기 둘 중에서 수식어(비용, 운영 부담)로 고른다.
 
 네 단계를 제가 만든 문제 하나에 대 보면 이렇습니다. 실제 시험 문항이 아니고 순서를 보이려고 쓴 예입니다.
@@ -253,7 +253,7 @@ AWS 블로그 두 글이 같은 방법을 다른 말로 설명합니다.
 | 1. 마지막 문장 | 요구는 SQL 조회, 수식어는 "운영 부담이 가장 적은" |
 | 2. 조건 | 데이터가 이미 S3에 있다, 조회는 가끔이다, 서버 관리를 원하지 않는다 |
 | 3. 지우기 | A와 D는 서버(인스턴스, 클러스터)를 직접 운영합니다. B도 상시 켜 두는 클러스터와 적재 작업이 생깁니다 |
-| 4. 고르기 | C. Athena는 서버 없이 S3를 바로 조회하고 스캔한 양만큼만 냅니다([Ch-03](/blog/cert/saa/saa-03-high-performing-architectures) 6-6절) |
+| 4. 고르기 | C. Athena는 서버 없이 S3를 바로 조회하고 스캔한 양만큼만 냅니다([5편](/blog/cert/saa/saa-03-high-performing-architectures) 6-6절) |
 
 조건 하나만 바꿔도 답이 바뀝니다. "조회가 하루 종일 수백 명에게서 몰리고 응답이 1초 안이어야 한다"가 붙으면 B 쪽을 다시 봐야 합니다. 키워드 표(6-2절)는 출발점으로만 쓰고 2단계에서 조건을 빠짐없이 적어 두는 쪽이 점수를 지킵니다.
 
@@ -265,19 +265,19 @@ AWS 블로그 두 글이 같은 방법을 다른 말로 설명합니다.
 
 | 시나리오 문구 | 먼저 떠올릴 서비스 | 자세한 곳 |
 |---|---|---|
-| 구성 요소 사이를 끊어 한쪽 장애나 폭주를 버틴다 | SQS | Ch-02 2-3절 |
-| 한 이벤트를 여러 소비자에게 동시에 | SNS와 SQS 팬아웃 | Ch-02 2-4절 |
-| 사설 서브넷에서 S3나 DynamoDB로, 추가 요금 없이 | 게이트웨이 엔드포인트 | Ch-01 3-4절, Ch-04 6-3절 |
-| 다른 서비스를 사설 연결로 | 인터페이스 엔드포인트(PrivateLink) | Ch-01 3-4절 |
-| 읽기 부하를 나눈다 | 읽기 복제본, Aurora 복제본 | Ch-03 4-2절, 4-3절 |
-| 같은 리전 안 자동 장애 조치 | RDS Multi-AZ | Ch-02 3-7절 |
-| 전 세계 사용자에게 정적 콘텐츠를 낮은 지연으로 | CloudFront | Ch-03 5-2절 |
-| 고정 IP와 TCP, UDP의 전역 가속 | Global Accelerator | Ch-03 5-2절 |
-| 중단돼도 되는 배치를 가장 싸게 | Spot 인스턴스 | Ch-04 4-1절 |
-| 이미 Kafka를 쓴다 | MSK | Ch-03 6-4절 |
-| S3에 있는 데이터를 서버 없이 SQL로 | Athena | Ch-03 6-6절 |
-| SQL 인젝션, 웹 공격 차단 | WAF | Ch-01 3-6절 |
-| 접근 패턴을 모르는 S3 객체 | Intelligent-Tiering | Ch-04 3-3절 |
+| 구성 요소 사이를 끊어 한쪽 장애나 폭주를 버틴다 | SQS | 4편 2-3절 |
+| 한 이벤트를 여러 소비자에게 동시에 | SNS와 SQS 팬아웃 | 4편 2-4절 |
+| 사설 서브넷에서 S3나 DynamoDB로, 추가 요금 없이 | 게이트웨이 엔드포인트 | 3편 3-4절, 6편 6-3절 |
+| 다른 서비스를 사설 연결로 | 인터페이스 엔드포인트(PrivateLink) | 3편 3-4절 |
+| 읽기 부하를 나눈다 | 읽기 복제본, Aurora 복제본 | 5편 4-2절, 4-3절 |
+| 같은 리전 안 자동 장애 조치 | RDS Multi-AZ | 4편 3-7절 |
+| 전 세계 사용자에게 정적 콘텐츠를 낮은 지연으로 | CloudFront | 5편 5-2절 |
+| 고정 IP와 TCP, UDP의 전역 가속 | Global Accelerator | 5편 5-2절 |
+| 중단돼도 되는 배치를 가장 싸게 | Spot 인스턴스 | 6편 4-1절 |
+| 이미 Kafka를 쓴다 | MSK | 5편 6-4절 |
+| S3에 있는 데이터를 서버 없이 SQL로 | Athena | 5편 6-6절 |
+| SQL 인젝션, 웹 공격 차단 | WAF | 3편 3-6절 |
+| 접근 패턴을 모르는 S3 객체 | Intelligent-Tiering | 6편 3-3절 |
 
 ### 6-3. 130분 배분
 
@@ -313,12 +313,12 @@ AWS 블로그 두 글이 같은 방법을 다른 말로 설명합니다.
 
 ## 7. D-30 마무리 계획
 
-Ch-00의 공부 계획에서 강의와 실습(2~3단계)을 마친 뒤 시험 30일 전부터 쓰는 계획입니다. "끝났다고 보는 기준"의 정답률은 후기와 판매처가 권한 값(80% 이상, Tutorials Dojo는 90% 이상)을 참고한 것이고 합격을 보장하지 않습니다.
+1편의 공부 계획에서 강의와 실습(2~3단계)을 마친 뒤 시험 30일 전부터 쓰는 계획입니다. "끝났다고 보는 기준"의 정답률은 후기와 판매처가 권한 값(80% 이상, Tutorials Dojo는 90% 이상)을 참고한 것이고 합격을 보장하지 않습니다.
 
 | 기간 | 할 일 | 끝났다고 보는 기준 |
 |---|---|---|
 | D-30~D-24 | 공식 연습 문항 20개와 샘플 10개를 다시 풀어 기준선을 잡는다. 외부 모의고사 1세트를 복습 모드로 푼다 | 틀린 문항을 과제 번호(1.1~4.4)로 분류했다 |
-| D-23~D-15 | 약한 과제 두세 개를 Ch-01~04에서 다시 읽고 4-4절 실습 중 해당 부분을 다시 만든다. 영역별 문제를 푼다 | 약한 과제마다 비교표 한 장 |
+| D-23~D-15 | 약한 과제 두세 개를 3~6편에서 다시 읽고 4-4절 실습 중 해당 부분을 다시 만든다. 영역별 문제를 푼다 | 약한 과제마다 비교표 한 장 |
 | D-14~D-8 | 시간 제한 모의고사를 이틀에 한 번. 오답을 세 종류(지식 부족, 조건을 놓침, 번역이나 문장 해석)로 나눈다 | 첫 회독이 100분 안에 끝난다 |
 | D-7~D-3 | 필요하면 Skill Builder를 한 달 구독해 공식 모의고사를 본다. 같은 문제집을 반복해 답을 외운 상태라면 새 세트로 바꾼다 | 처음 보는 세트에서 정답률이 꾸준히 오른다 |
 | D-2~D-1 | 오답 노트와 6-2절 표만 본다. 시스템 테스트나 시험장 위치를 다시 확인한다 | 6-5절 체크리스트 완료 |
@@ -339,7 +339,7 @@ AWS 시험 보안팀은 2025년 6월 25일 글 "Protecting AWS Certification val
 - 확인하지 못한 것: 공식 모의고사의 정확한 문항 수, Stéphane Maarek 강의의 현재 시간, Digital Cloud Training과 Whizlabs의 가격과 문항 출처 방침, 시험장에서 종이나 메모판을 주는지, 50% 바우처의 세부 조건(위키 기준).
 - 5절 후기 중 일본어 후기가 쓴 일본어 웹 문제집과 Udemy 일본어 문제집은 문항 출처 방침을 확인하지 못했습니다. 후기의 경향만 옮겼고 자료를 추천하지 않습니다.
 - 후기는 한 사람의 체감입니다. 일본어 후기는 일본어 시험 기준이라 한국어 번역 품질과 같다고 볼 근거가 없습니다.
-- 4-4절의 실습 순서는 직접 만들어 청구서를 확인한 것이 아니고 Ch-00의 계획을 예제로 묶은 것입니다.
+- 4-4절의 실습 순서는 직접 만들어 청구서를 확인한 것이 아니고 1편의 계획을 예제로 묶은 것입니다.
 - 이 글은 응시 전에 쓴 정리입니다. 응시한 뒤 시험 당일 경험과 바뀐 판단을 덧붙이겠습니다.
 
 ## 참고 자료

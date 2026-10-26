@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-02] 클러스터 아키텍처, 설치, 구성: kubeadm 한 벌로 만들고 올리고 되살리기'
+title: '[CKA] 클러스터 아키텍처, 설치, 구성: kubeadm 한 벌로 만들고 올리고 되살리기'
 description: CKA 비중 25%인 클러스터 아키텍처 영역을 시험에서 쓰는 명령과 함정 위주로 정리합니다. RBAC과 CSR, 노드와 런타임 준비, kubeadm 생성과 업그레이드, 인증서 갱신, etcd 백업과 복구(etcdutl), HA, Helm과 Kustomize, CNI·CSI·CRI, CRD와 오퍼레이터를 다룹니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -15,7 +15,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 2
+seriesOrder: 5
 ---
 
 ## 결론부터
@@ -26,7 +26,7 @@ seriesOrder: 2
 4. etcd 백업과 복구는 개정에서 명시 문구가 빠졌지만 수명주기 관리에 걸려 절차를 외워 둡니다. etcd 3.6부터 확인과 복구는 `etcdutl`이고 복구 뒤에는 컨트롤 플레인 static Pod를 다시 띄웁니다.
 5. Helm, Kustomize, CRD는 명령 수가 적어 문서 위치와 함정 몇 개(`helm template`은 기본으로 CRD를 뺌 등)만 익히면 빨리 풉니다.
 
-시험 구조와 영역 비중은 [CKA Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에, 컨트롤 플레인 구성요소가 각각 무엇을 하는지는 [CKA Ch-01](/blog/cert/cka/cka-01-why-kubernetes)에 정리했습니다.
+시험 구조와 영역 비중은 [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에, 컨트롤 플레인 구성요소가 각각 무엇을 하는지는 [3편](/blog/cert/cka/cka-01-why-kubernetes)에 정리했습니다.
 
 ---
 
@@ -42,9 +42,9 @@ RBAC만 잘 걸면 클러스터가 안전할 것 같지만 공격 경로는 여�
 
 #### 2. 어떻게 동작하나
 1. **노드(호스트) 접근**: 컨트롤 플레인 노드에 root로 들어가면 `/etc/kubernetes/pki/ca.key`와 etcd 데이터가 그대로 보입니다. 여기가 뚫리면 위의 모든 장치가 의미를 잃습니다.
-2. **API 서버 접근**: 모든 조작이 API 서버를 지나므로 여기서 세 번 묻습니다. 인증으로 누구인지, 인가로 그 동작을 해도 되는지, 어드미션으로 요청 내용이 정책에 맞는지 확인합니다([Ch-01.5 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow)).
-3. **구성요소 사이 통신**: API 서버, etcd, kubelet, 스케줄러가 서로 TLS 인증서로 신원을 확인하고 암호화해서 말합니다([Ch-01.5 3장](/blog/cert/cka/cka-01b-core-objects-and-flow)).
-4. **Pod 사이 네트워크**: 기본 상태에서는 모든 Pod가 모든 Pod에 닿습니다. NetworkPolicy로 허용한 경로만 엽니다([Ch-04](/blog/cert/cka/cka-04-services-networking)).
+2. **API 서버 접근**: 모든 조작이 API 서버를 지나므로 여기서 세 번 묻습니다. 인증으로 누구인지, 인가로 그 동작을 해도 되는지, 어드미션으로 요청 내용이 정책에 맞는지 확인합니다([4편 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow)).
+3. **구성요소 사이 통신**: API 서버, etcd, kubelet, 스케줄러가 서로 TLS 인증서로 신원을 확인하고 암호화해서 말합니다([4편 3장](/blog/cert/cka/cka-01b-core-objects-and-flow)).
+4. **Pod 사이 네트워크**: 기본 상태에서는 모든 Pod가 모든 Pod에 닿습니다. NetworkPolicy로 허용한 경로만 엽니다([7편](/blog/cert/cka/cka-04-services-networking)).
 
 ```text
 공격자
@@ -60,8 +60,8 @@ RBAC만 잘 걸면 클러스터가 안전할 것 같지만 공격 경로는 여�
 |---|---|---|---|
 | 노드 | CA 키와 etcd 데이터 노출 | 비밀번호 로그인과 root 직접 로그인 끄기, SSH 키 인증만 허용 | 일반 리눅스 운영, CKS |
 | API 서버 | 남의 이름이나 넘치는 권한으로 조작 | 인증, 인가(RBAC), 어드미션 | 이 장의 RBAC, CSR, ServiceAccount |
-| 구성요소 통신 | 평문이면 같은 네트워크에서 토큰과 Secret을 엿봄 | TLS 인증서 | Ch-01.5 3장 |
-| Pod 네트워크 | 상품 웹 Pod 하나가 털리면 그 Pod에서 결제 DB로 바로 접속 시도 | NetworkPolicy | Ch-04 |
+| 구성요소 통신 | 평문이면 같은 네트워크에서 토큰과 Secret을 엿봄 | TLS 인증서 | 4편 3장 |
+| Pod 네트워크 | 상품 웹 Pod 하나가 털리면 그 Pod에서 결제 DB로 바로 접속 시도 | NetworkPolicy | 7편 |
 
 #### 4. 헷갈리는 점
 - RBAC은 2번 층 안에서도 인가 단계 하나만 맡습니다. 1번 층이 뚫려 `ca.key`가 새면 공격자가 인증서를 직접 서명해 만들 수 있어 RBAC으로는 막지 못합니다.
@@ -735,13 +735,13 @@ VM 여러 대를 손으로 만들기 번거로우면 Vagrant 같은 도구로 VM
 - 공식 문서("Considerations for large clusters")의 기준은 클러스터 하나에 노드 5,000대, Pod 150,000개, 컨테이너 300,000개, 노드당 Pod 110개입니다. 숫자를 외울 필요는 없고 노드당 110개가 kubelet `maxPods` 기본값과 같다는 정도만 기억합니다.
 - **컨트롤 플레인 노드에 사용자 Pod를 올리지 않습니다.** 사용자 Pod가 메모리를 다 쓰면 API 서버와 etcd가 같이 죽으니 kubeadm은 컨트롤 플레인 노드에 `NoSchedule` 테인트를 붙입니다(3-4절).
 - **큰 클러스터에서는 etcd를 별도 노드로 뺍니다.** etcd는 디스크 쓰기 지연에 민감해서 다른 구성요소와 디스크를 다투면 클러스터 전체가 느려집니다(5-1절 external etcd).
-- **스토리지는 워크로드에 맞춰 고릅니다.** DB처럼 입출력이 많은 워크로드에는 SSD 기반 볼륨을 쓰고 여러 Pod가 같은 데이터를 동시에 써야 하면(`ReadWriteMany`) NFS 같은 네트워크 스토리지를 씁니다. 종류별로 StorageClass를 만들어 두면 PVC가 필요한 종류를 골라 동적으로 받습니다([Ch-05](/blog/cert/cka/cka-05-storage)).
+- **스토리지는 워크로드에 맞춰 고릅니다.** DB처럼 입출력이 많은 워크로드에는 SSD 기반 볼륨을 쓰고 여러 Pod가 같은 데이터를 동시에 써야 하면(`ReadWriteMany`) NFS 같은 네트워크 스토리지를 씁니다. 종류별로 StorageClass를 만들어 두면 PVC가 필요한 종류를 골라 동적으로 받습니다([8편](/blog/cert/cka/cka-05-storage)).
 - **컨트롤 플레인 크기는 노드 수를 따라갑니다.** 관리형 서비스는 노드가 늘면 컨트롤 플레인 자원을 사업자가 맞춰 주고 직접 운영하면 그 산정도 내 몫입니다.
 
 #### 5. 내 PC에 실습 기계 만들기
 - **리눅스 PC**: 구성요소 바이너리를 직접 깔아 클러스터를 꾸릴 수도 있습니다. 다만 인증서와 설정을 하나씩 맞춰야 해서 보통 kind, minikube 같은 도구를 쓰거나 VM을 만들어 kubeadm을 올립니다.
 - **Windows PC**: Docker Desktop은 리눅스 컨테이너를 WSL 2나 Docker VMM 위에서 돌리고 Hyper-V는 전체 사용자 설치에서만 고를 수 있습니다(Docker Desktop 설치 문서). Docker Desktop의 쿠버네티스도 그 위의 Docker 컨테이너로 돕니다.
-- **VM 여러 대**: VirtualBox가 VM을 실제로 돌리고 Vagrant가 `Vagrantfile`에 적힌 사양대로 VM을 한꺼번에 만듭니다. 설치 순서, `Vagrantfile` 예시, `vagrant` 명령은 [Ch-07 홈 랩 구성](/blog/cert/cka/cka-07-resources-and-exam-day#4-홈-랩-구성)에 모아 두었습니다.
+- **VM 여러 대**: VirtualBox가 VM을 실제로 돌리고 Vagrant가 `Vagrantfile`에 적힌 사양대로 VM을 한꺼번에 만듭니다. 설치 순서, `Vagrantfile` 예시, `vagrant` 명령은 [10편 홈 랩 구성](/blog/cert/cka/cka-07-resources-and-exam-day#4-홈-랩-구성)에 모아 두었습니다.
 
 > **정리**: 용도와 운영 주체가 도구를 정하고 시험은 kubeadm 직접 설치를 묻습니다. 컨트롤 플레인 격리와 etcd 분리라는 두 원칙은 이 장 뒤에서 다시 나옵니다.
 
@@ -804,7 +804,7 @@ Service로 들어온 패킷도 노드 커널이 목적지를 Pod IP로 바꿔 �
 - `/proc/sys/net/ipv4/ip_forward`에 1을 쓰면 바로 켜지지만 재부팅하면 사라지니 위 본문처럼 `/etc/sysctl.d/`에 파일로 둡니다.
 - kubeadm은 preflight에서 이 값을 확인하고 0이면 `/proc/sys/net/ipv4/ip_forward contents are not set to 1` 오류로 멈춥니다.
 
-> **정리**: 같은 대역은 스위치, 다른 대역은 라우터와 게이트웨이로 갑니다. 노드는 Pod 대역 사이의 라우터라서 `ip_forward`가 켜져 있어야 하고 Pod 네트워크 안의 라우팅은 [Ch-04](/blog/cert/cka/cka-04-services-networking)와 [Service와 iptables 글](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 이어집니다.
+> **정리**: 같은 대역은 스위치, 다른 대역은 라우터와 게이트웨이로 갑니다. 노드는 Pod 대역 사이의 라우터라서 `ip_forward`가 켜져 있어야 하고 Pod 네트워크 안의 라우팅은 [7편](/blog/cert/cka/cka-04-services-networking)과 [Service와 iptables 글](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 이어집니다.
 
 </details>
 
@@ -955,7 +955,7 @@ kubeadm이 하지 않는 일도 있습니다. VM을 만들거나 컨테이너 �
 4. **CNI 설치**: Pod끼리 노드를 넘어 통신하게 하는 네트워크 플러그인을 `kubectl apply`로 넣습니다.
 5. **워커에서 `kubeadm join`**: init 출력의 join 명령으로 워커를 붙입니다.
 
-`kubeadm init`이 하는 일을 순서대로 보면 1장과 Ch-01.5에서 본 파일들이 어디서 왔는지 보입니다(Implementation details 문서 기준).
+`kubeadm init`이 하는 일을 순서대로 보면 1장과 4편에서 본 파일들이 어디서 왔는지 보입니다(Implementation details 문서 기준).
 
 | 순서 | 하는 일 | 결과물 |
 |---|---|---|
@@ -1256,7 +1256,7 @@ sudo openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
 - `renew all`은 마지막에 `You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.`를 찍습니다. static Pod는 kubectl로 재시작할 수 없으니 매니페스트를 `/etc/kubernetes/manifests/` 밖으로 옮기고 20초쯤(kubelet `fileCheckFrequency`) 기다렸다가 되돌립니다.
 - 갱신되는 파일은 `/etc/kubernetes/admin.conf`이니 `~/.kube/config` 사본은 다시 복사합니다.
 
-만료되면 kubectl은 `x509: certificate has expired or is not yet valid`로 실패하고 만료된 상태에서도 `renew all`은 동작합니다. kubelet 인증서 복구는 [Ch-06](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+만료되면 kubectl은 `x509: certificate has expired or is not yet valid`로 실패하고 만료된 상태에서도 `renew all`은 동작합니다. kubelet 인증서 복구는 [9편](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 ### 4-5. etcd 백업
 
@@ -1510,7 +1510,7 @@ sudo grep client-certificate-data /etc/kubernetes/admin.conf | awk '{print $2}' 
 kubectl get csr <이름> -o jsonpath='{.spec.request}' | base64 -d | openssl req -noout -subject
 ```
 
-kubectl이 안 되면 노드에서 `crictl ps -a`, `crictl logs <ID>`로 봅니다([Ch-06](/blog/cert/cka/cka-06-troubleshooting)).
+kubectl이 안 되면 노드에서 `crictl ps -a`, `crictl logs <ID>`로 봅니다([9편](/blog/cert/cka/cka-06-troubleshooting)).
 
 ### 4-9. 직접 해 보기
 
@@ -2275,7 +2275,7 @@ kubelet ──CRI──> 컨테이너 런타임(containerd, CRI-O)
 
 #### 4. 헷갈리는 점
 - CNI와 CSI는 쿠버네티스 전용도 아니어서 다른 오케스트레이터도 같은 규격을 씁니다.
-- Docker Engine은 CRI를 구현하지 않습니다. 쿠버네티스 안에 있던 Docker 연동 코드(dockershim)는 1.24에서 제거됐고 Docker Engine을 계속 쓰려면 cri-dockerd가 필요합니다. 관계는 [Ch-01 2-3절](/blog/cert/cka/cka-01-why-kubernetes)의 Docker와 containerd 설명을 함께 봅니다.
+- Docker Engine은 CRI를 구현하지 않습니다. 쿠버네티스 안에 있던 Docker 연동 코드(dockershim)는 1.24에서 제거됐고 Docker Engine을 계속 쓰려면 cri-dockerd가 필요합니다. 관계는 [3편 2-3절](/blog/cert/cka/cka-01-why-kubernetes)의 Docker와 containerd 설명을 함께 봅니다.
 
 > **정리**: Docker Engine은 CRI를 구현하지 않아 1.24부터 cri-dockerd를 거쳐야 합니다. 드라이버가 본체 밖으로 나온 만큼 CNI와 CSI 드라이버는 DaemonSet이나 Deployment로 따로 설치하고 올립니다. 아래 두 토글에서 CNI와 CSI가 실제로 어떤 순서로 불리는지 봅니다.
 
@@ -2397,11 +2397,11 @@ PVC 삭제 + reclaim Delete → DeleteVolume
 - 옛 강의는 "Pod가 생기면 CreateVolume, Pod가 지워지면 DeleteVolume"으로 줄여 설명하는데 실제로 디스크의 수명은 PVC와 PV를 따라갑니다. 그래서 Pod를 지웠다 다시 만들어도 같은 PVC를 쓰면 데이터가 남습니다.
 - `WaitForFirstConsumer` StorageClass의 PVC는 Pod가 생기기 전까지 `Pending`이고 이벤트에 `waiting for first consumer to be created before binding`이 보입니다. 고장이 난 것은 아닙니다.
 
-> **정리**: Pod를 지워도 디스크는 남고 `DeleteVolume`은 PVC를 지울 때 reclaim 정책이 `Delete`여야 불립니다. `WaitForFirstConsumer` PVC가 `Pending`인 것은 Pod가 배정되기 전의 정상 상태입니다. 볼륨과 StorageClass의 시험 쪽 내용은 [Ch-05](/blog/cert/cka/cka-05-storage)에 있습니다.
+> **정리**: Pod를 지워도 디스크는 남고 `DeleteVolume`은 PVC를 지울 때 reclaim 정책이 `Delete`여야 불립니다. `WaitForFirstConsumer` PVC가 `Pending`인 것은 Pod가 배정되기 전의 정상 상태입니다. 볼륨과 StorageClass의 시험 쪽 내용은 [8편](/blog/cert/cka/cka-05-storage)에 있습니다.
 
 </details>
 
-예전 볼륨 플러그인은 쿠버네티스 바이너리 안(in-tree)에 있었고 CSI가 이 결합을 끊었습니다. CSI 드라이버를 설치하면 StorageClass의 `provisioner`에 그 드라이버 이름을 적어 씁니다([Ch-05](/blog/cert/cka/cka-05-storage)).
+예전 볼륨 플러그인은 쿠버네티스 바이너리 안(in-tree)에 있었고 CSI가 이 결합을 끊었습니다. CSI 드라이버를 설치하면 StorageClass의 `provisioner`에 그 드라이버 이름을 적어 씁니다([8편](/blog/cert/cka/cka-05-storage)).
 
 ### 7-4. 직접 해 보기
 
@@ -2526,7 +2526,7 @@ kubectl get bj -A
 > **핵심 한 줄**: 커스텀 컨트롤러는 내가 정의한 리소스에 대해 관찰, 비교, 조치 루프를 도는 프로그램이고 오퍼레이터는 여기에 사람 운영자의 운영 지식까지 담습니다.
 
 #### 1. 왜 필요한가
-CRD만 있으면 BoardJob은 저장만 됩니다. 저장된 원하는 상태를 실제 상태로 만들어 줄 주체가 필요하고 그것이 커스텀 컨트롤러입니다. 내장 컨트롤러와 같은 루프를 돕니다([Ch-01 1-2절](/blog/cert/cka/cka-01-why-kubernetes)).
+CRD만 있으면 BoardJob은 저장만 됩니다. 저장된 원하는 상태를 실제 상태로 만들어 줄 주체가 필요하고 그것이 커스텀 컨트롤러입니다. 내장 컨트롤러와 같은 루프를 돕니다([3편 1-2절](/blog/cert/cka/cka-01-why-kubernetes)).
 
 #### 2. 어떻게 동작하나
 1. **관찰**: API 서버에서 BoardJob 객체를 watch합니다.

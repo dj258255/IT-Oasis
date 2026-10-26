@@ -422,7 +422,7 @@ ping -c1 8.8.8.8
 
 새 네트워크 네임스페이스에는 루프백 장치 `lo` 하나만 있고 그마저 DOWN 상태입니다. 라우팅 테이블도 비어 있고 iptables 규칙도 따로입니다. 포트 번호 공간도 네임스페이스마다 따로라서 호스트에서 80번을 쓰고 있어도 안쪽에서 80번을 다시 열 수 있습니다.
 
-이 빈 네트워크 네임스페이스에 장치를 꽂고 주소와 라우팅을 채우는 일이 CNI 플러그인의 몫입니다. 쿠버네티스의 파드 네트워크가 어떻게 구성되는지는 [CKA Ch-04](/blog/cert/cka/cka-04-services-networking)와 이 시리즈 [5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 이어서 봅니다.
+이 빈 네트워크 네임스페이스에 장치를 꽂고 주소와 라우팅을 채우는 일이 CNI 플러그인의 몫입니다. 쿠버네티스의 파드 네트워크가 어떻게 구성되는지는 [CKA 7편](/blog/cert/cka/cka-04-services-networking)과 이 시리즈 [5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에서 이어서 봅니다.
 
 ### 3-4. ip netns와 veth로 두 네임스페이스 잇기
 
@@ -847,7 +847,7 @@ busybox의 `nc`는 빌드 설정에 따라 `-z`가 없을 수 있습니다. 그�
 
 </details>
 
-같은 파드의 두 컨테이너가 무엇을 공유하고 무엇을 따로 갖는지 한 번에 확인하는 과제입니다. 쇼핑몰 웹 서버(nginx)와 그 웹 서버를 주기적으로 호출해 로그를 남기는 사이드카를 둡니다. 네이티브 사이드카(`initContainers`의 `restartPolicy: Always`)로 써도 되지만 여기서는 네임스페이스만 볼 것이라 일반 컨테이너 두 개로 둡니다. 네이티브 사이드카는 [CKA Ch-03](/blog/cert/cka/cka-03-workloads-scheduling)에 정리했습니다.
+같은 파드의 두 컨테이너가 무엇을 공유하고 무엇을 따로 갖는지 한 번에 확인하는 과제입니다. 쇼핑몰 웹 서버(nginx)와 그 웹 서버를 주기적으로 호출해 로그를 남기는 사이드카를 둡니다. 네이티브 사이드카(`initContainers`의 `restartPolicy: Always`)로 써도 되지만 여기서는 네임스페이스만 볼 것이라 일반 컨테이너 두 개로 둡니다. 네이티브 사이드카는 [CKA 6편](/blog/cert/cka/cka-03-workloads-scheduling)에 정리했습니다.
 
 ```yaml
 apiVersion: v1

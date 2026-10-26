@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-07] 시험 준비 자료와 당일 전략: 공식 자료, 바우처, Docker 실습, 기본값 체크리스트'
+title: '[Spark] 시험 준비 자료와 당일 전략: 공식 자료, 바우처, Docker 실습, 기본값 체크리스트'
 description: Databricks Certified Associate Developer for Apache Spark를 2026년 10월 기준으로 준비하는 데 필요한 공식 자료, 비용과 할인 바우처, 연습 자료의 새 시험 반영 여부, Java 없이 Docker와 Colab으로 실습하는 방법, 새 시험 후기에서 겹치는 경향, 시험 전날 외울 기본값과 당일 시간 배분을 정리합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 7
+seriesOrder: 9
 ---
 
 ## 결론부터
@@ -44,7 +44,7 @@ seriesOrder: 7
 | 샘플 문항 | 10개 | 10개, 정답마다 해설 추가 |
 | 그 밖에 | | AI Prep Guide와 Free Edition 실습을 준비 방법으로 안내 |
 
-출제 범위가 같아서 [Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan)의 영역 표와 Ch-01부터 Ch-06까지의 내용은 그대로 씁니다. 안내서는 시험 2주 전에 다시 확인하라고 적으니 D-14에 한 번 더 내려받습니다.
+출제 범위가 같아서 [1편](/blog/cert/spark/spark-00-exam-and-study-plan)의 영역 표와 3편부터 8편까지의 내용은 그대로 씁니다. 안내서는 시험 2주 전에 다시 확인하라고 적으니 D-14에 한 번 더 내려받습니다.
 
 ### 1-2. 권장 과정과 접근 방법
 
@@ -147,7 +147,7 @@ Apache Spark Developer 경로의 네 모듈은 1-2절의 자기 주도 과정 �
 | Afaque Ahmad 유튜브 채널 | 영상, 무료 | 아키텍처와 튜닝 영역 | 메모리 관리, 캐시와 저장 레벨, broadcast 조인과 AQE, salting, DAG와 쿼리 계획 읽기 영상 | Spark 일반 강의다. Sarah Chua 후기가 추천 |
 | Spark: The Definitive Guide | 책. Databricks가 일부 장을 무료 발췌본으로 배포 | 미반영 | 예제 저장소의 마지막 push가 2020-08-26 | Spark Connect(3.4), pandas API on Spark 이전 |
 | Learning Spark 2판 | 책 | 미반영(Spark 3.0) | 예제 저장소 LearningSparkV2의 마지막 push가 2025-01-28 | Databricks의 예전 무료 배포 주소는 2026년 10월 현재 다른 eBook 페이지로 넘어간다 |
-| Packt 책과 예제 저장소 | 책 | 미반영 | 저장소 마지막 push 2024-06-13 | Structured Streaming을 범위 밖으로 둔다(Ch-00 참고) |
+| Packt 책과 예제 저장소 | 책 | 미반영 | 저장소 마지막 push 2024-06-13 | Structured Streaming을 범위 밖으로 둔다(1편 참고) |
 | Spark By Examples | 웹 | 글마다 다름 | 버전 표기가 없는 글이 많다 | 2026년 10월 열람 시 cache와 persist 비교 글은 회원 전용이었다 |
 
 유료 모의고사를 고를 때는 네 가지를 봤습니다. 설명에 Spark Connect와 pandas API on Spark가 영역으로 들어 있는지, 마지막 갱신일이 2025년 4월 이후인지, 문항을 직접 썼다고 밝히는지, 해설에 공식 문서 링크가 붙는지입니다. "실제 시험 문항"이나 "기출"을 내세우는 상품은 9절의 약관 문제 때문에 고르지 않습니다. 안내서 샘플 문항은 공개된 공식 자료라서 7-2절에 해설의 요점만 인용했습니다. 문항 전체는 안내서 PDF에서 직접 풉니다.
@@ -161,9 +161,9 @@ Apache Spark Developer 경로의 네 모듈은 1-2절의 자기 주도 과정 �
 | Docker `spark:python3` | Spark UI, 캐시와 저장 레벨, RDD와 accumulator, 로그, Spark Connect 서버 | 이미지 안(Java 21) | Spark 4.2.0. 3.5 동작 비교는 `spark:3.5.9-python3` |
 | Docker `quay.io/jupyter/pyspark-notebook` | pandas API on Spark, pandas UDF를 노트북으로 | 이미지 안(OpenJDK 21) | pandas와 pyarrow, grpcio 포함 |
 | Google Colab | 설치 없이 DataFrame API와 SQL 연습 | 런타임에 OpenJDK 21 | 2026-10-03 기준 PySpark 4.0.4 기본 설치 |
-| Databricks Free Edition | Spark Connect 기반 서버리스 체감, Delta 파일에 SQL | 필요 없음 | Spark UI, `cache()`, RDD 불가([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 4절) |
+| Databricks Free Edition | Spark Connect 기반 서버리스 체감, Delta 파일에 SQL | 필요 없음 | Spark UI, `cache()`, RDD 불가([1편](/blog/cert/spark/spark-00-exam-and-study-plan) 4절) |
 
-Delta 실습은 Free Edition에 맡깁니다. 2026년 10월 20일에 연 Delta Lake 호환표에서 최신 Delta 4.3.x는 Spark 4.0.x와 4.1.x만 지원하고 Spark 4.2는 아직 목록에 없습니다. 그래서 `spark:python3`(Spark 4.2.0) 이미지에 맞는 `delta-spark` 짝이 없습니다. 컨테이너에서 Delta를 써야 하면 Spark 4.1 이하나 3.5 이미지에 호환표의 버전을 맞춥니다([Ch-02](/blog/cert/spark/spark-02-spark-sql)).
+Delta 실습은 Free Edition에 맡깁니다. 2026년 10월 20일에 연 Delta Lake 호환표에서 최신 Delta 4.3.x는 Spark 4.0.x와 4.1.x만 지원하고 Spark 4.2는 아직 목록에 없습니다. 그래서 `spark:python3`(Spark 4.2.0) 이미지에 맞는 `delta-spark` 짝이 없습니다. 컨테이너에서 Delta를 써야 하면 Spark 4.1 이하나 3.5 이미지에 호환표의 버전을 맞춥니다([4편](/blog/cert/spark/spark-02-spark-sql)).
 
 ### 4-1. Docker 공식 이미지
 
@@ -177,7 +177,7 @@ docker run -it spark:python3 /opt/spark/bin/pyspark
 docker run -it --rm -p 4040:4040 spark:python3 /opt/spark/bin/pyspark
 ```
 
-셸이 뜨면 `spark.range(1000 * 1000 * 1000).count()`가 1,000,000,000을 돌려준다고 문서가 적습니다. 그 Job을 브라우저의 `localhost:4040`에서 열어 Ch-01의 Job, Stage, Task와 Ch-04의 Executors 탭을 따라가면 됩니다. Apache Spark 프로젝트가 따로 올리는 `apache/spark` 이미지도 같은 방식(`docker run -it apache/spark /opt/spark/bin/pyspark`)으로 씁니다.
+셸이 뜨면 `spark.range(1000 * 1000 * 1000).count()`가 1,000,000,000을 돌려준다고 문서가 적습니다. 그 Job을 브라우저의 `localhost:4040`에서 열어 3편의 Job, Stage, Task와 6편의 Executors 탭을 따라가면 됩니다. Apache Spark 프로젝트가 따로 올리는 `apache/spark` 이미지도 같은 방식(`docker run -it apache/spark /opt/spark/bin/pyspark`)으로 씁니다.
 
 이미지의 Python 레이어는 `python3`와 `python3-pip`만 설치합니다. pandas와 pyarrow가 들어 있다는 내용은 Dockerfile에 없어서 pandas API와 pandas UDF는 다음 이미지로 넘깁니다.
 
@@ -193,7 +193,7 @@ Dockerfile은 OpenJDK 21과 최신 Spark를 받고 Spark 버전에 맞춘 pandas
 
 ### 4-3. Spark Connect 서버를 컨테이너에, 클라이언트를 노트북에
 
-Ch-06의 Spark Connect는 이 조합이 가장 직관적입니다. Spark 4.0.0부터 `start-connect-server.sh`에 `--wait` 옵션이 생겨 서버가 포그라운드에서 돕니다(소스의 `SPARK_NO_DAEMONIZE` 처리). 컨테이너의 메인 프로세스로 쓰기 알맞습니다.
+8편의 Spark Connect는 이 조합이 가장 직관적입니다. Spark 4.0.0부터 `start-connect-server.sh`에 `--wait` 옵션이 생겨 서버가 포그라운드에서 돕니다(소스의 `SPARK_NO_DAEMONIZE` 처리). 컨테이너의 메인 프로세스로 쓰기 알맞습니다.
 
 ```bash
 # 컨테이너: Connect 서버(기본 포트 15002). 인증 토큰이 기본으로 없으니 로컬 주소에만 연다
@@ -211,7 +211,7 @@ spark = SparkSession.builder.remote("sc://localhost:15002").getOrCreate()
 orders = spark.createDataFrame([(1, "PAID", 32000), (2, "CANCELLED", 15000)],
                                "order_id INT, status STRING, amount INT")
 orders.groupBy("status").count().show()
-# spark.sparkContext  -> Connect 세션이라 쓸 수 없다(Ch-06 3절)
+# spark.sparkContext  -> Connect 세션이라 쓸 수 없다(8편 3절)
 ```
 
 `pyspark-client`는 4.0.0에 처음 PyPI에 올라왔고 `spark.remote`와 접속 문자열만 지원합니다. 서버 바인딩 주소(`spark.connect.grpc.binding.address`)를 지정하지 않으면 서버가 모든 인터페이스에서 받는 것을 소스에서 확인했습니다. 그래서 포트 매핑을 `127.0.0.1`로 묶었습니다.
@@ -228,7 +228,7 @@ spark = SparkSession.builder.master("local[*]").getOrCreate()
 spark.version
 ```
 
-Colab에서 Spark UI 포트를 브라우저로 여는 방법은 이번에 확인하지 못했습니다. Spark UI를 봐야 하는 Ch-01과 Ch-04 실습은 Docker 쪽에 둡니다.
+Colab에서 Spark UI 포트를 브라우저로 여는 방법은 이번에 확인하지 못했습니다. Spark UI를 봐야 하는 3편과 6편 실습은 Docker 쪽에 둡니다.
 
 ## 5. 새 시험 후기 두 건에서 나온 경향
 
@@ -242,7 +242,7 @@ Colab에서 Spark UI 포트를 브라우저로 여는 방법은 이번에 확인
 두 글과 공식 안내서를 함께 놓고 정리한 경향은 넷입니다.
 
 - 화면에 보이는 문항 수는 45개보다 많을 수 있습니다. Sarah Chua는 채점 문항 45개에 채점하지 않는 문항 10개를 더 받아 55문항을 풀었고 2026년 10월판 안내서도 "최대 55문항"이라고 적습니다. 어느 문항이 채점되지 않는지 표시되지 않으니 모든 문항을 같은 무게로 풉니다.
-- 비중이 작은 영역은 한 문항의 무게가 큽니다. 공식 비중으로 Spark Connect와 pandas API on Spark는 각각 5%라서 45문항으로 환산하면 2문항 남짓입니다(공식 문항 수는 공개되지 않았습니다). 문항이 적어 하나만 틀려도 영역 점수가 크게 흔들립니다. [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api)의 배포 모드와 pandas UDF 시그니처를 따로 외워 둘 이유입니다.
+- 비중이 작은 영역은 한 문항의 무게가 큽니다. 공식 비중으로 Spark Connect와 pandas API on Spark는 각각 5%라서 45문항으로 환산하면 2문항 남짓입니다(공식 문항 수는 공개되지 않았습니다). 문항이 적어 하나만 틀려도 영역 점수가 크게 흔들립니다. [8편](/blog/cert/spark/spark-06-connect-pandas-api)의 배포 모드와 pandas UDF 시그니처를 따로 외워 둘 이유입니다.
 - Spark UI를 읽는 문항이 범위에 있습니다. 안내서 샘플 2번은 Spark UI의 Stages 탭에서 익스큐터 로그를 찾는 문항이고 4영역 목표도 드라이버와 익스큐터 로그로 메모리 부족과 저사용을 진단하라고 적습니다. 화면 구성은 직접 열어 봐야 익숙해지니 4절의 Docker 환경에서 4040 포트를 열어 Jobs, Stages, Executors 탭과 DAG를 보는 시간을 8절 계획에 넣었습니다.
 - 준비 범위가 공식 과정 바깥으로 넓어졌습니다. 커뮤니티 응시자는 과정만으로 부족했다고 적었고 Sarah Chua는 안내서 항목마다 문서를 찾아 읽었습니다.
 
@@ -254,41 +254,41 @@ Parquet 스키마 병합은 이 시리즈에서 다루지 않았지만 2영역�
 
 | 영역 | 외울 것 | Ch |
 |---|---|---|
-| 아키텍처 | 액션 1개가 Job 1개, 셔플 경계에서 Stage가 나뉘고 파티션마다 Task 1개 | [Ch-01](/blog/cert/spark/spark-01-architecture) |
-| 아키텍처 | `explain()`, `printSchema()`, `cache()`는 Job을 만들지 않는다 | [Ch-01](/blog/cert/spark/spark-01-architecture) |
-| 아키텍처 | DataFrame `cache()`는 `MEMORY_AND_DISK_DESER`, RDD `cache()`는 `MEMORY_ONLY`, `spark.catalog.cacheTable()`은 `MEMORY_AND_DISK` | [Ch-01](/blog/cert/spark/spark-01-architecture) |
-| 아키텍처 | SQL `CACHE TABLE`은 `LAZY`가 없으면 바로 캐시한다(기본 `MEMORY_AND_DISK`). `checkpoint()`는 기본 eager라 바로 Job을 만들고 `setCheckpointDir`가 먼저 필요하며 계보를 끊는다 | [Ch-01](/blog/cert/spark/spark-01-architecture) |
-| 아키텍처 | `SparkSession.builder...getOrCreate()`는 있는 세션을 돌려주고 그때는 실행 중 바꿀 수 있는 설정만 적용된다. Python에는 타입 있는 Dataset이 없고 DataFrame만 쓴다 | [Ch-01](/blog/cert/spark/spark-01-architecture) |
-| 아키텍처 | 통합 메모리는 (힙 - 300MiB)의 60%(`spark.memory.fraction`), 그 절반이 저장 보호 구간(`spark.memory.storageFraction` 0.5) | [Ch-01](/blog/cert/spark/spark-01-architecture) |
-| 아키텍처 | 배포 모드 client(기본), cluster, local. local은 드라이버와 익스큐터가 한 JVM | [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) |
-| 파티션 | `spark.sql.shuffle.partitions` 200, `spark.sql.files.maxPartitionBytes` 128MB | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| 파티션 | `coalesce`는 셔플 없이 줄이기만, `repartition`은 전체 셔플로 늘리고 줄이기 | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| 튜닝 | AQE는 3.2.0부터 기본 켜짐. 쏠림 판정은 중앙값 5배 초과이면서 256MB 초과 | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| 튜닝 | `spark.sql.autoBroadcastJoinThreshold` 10MB, -1이면 끔 | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| 튜닝 | 익스큐터 로그는 Spark UI의 Executors 탭이나 Stage 상세의 Task 표에서. Web UI 기본 포트 4040이고 이미 쓰이면 4041, 4042로 올라간다 | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| 튜닝 | 끝난 앱은 `spark.eventLog.enabled`(기본 false)를 켜 두어야 History Server(기본 포트 18080)에서 다시 본다 | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| 튜닝 | `explain()` 계획의 `Exchange`는 셔플, `BroadcastExchange`와 `BroadcastHashJoin`은 broadcast 조인. 계획은 아래에서 위로 읽는다 | [Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning) |
-| SQL | 저장 모드 기본 `errorifexists`. 나머지는 append, overwrite, ignore | [Ch-02](/blog/cert/spark/spark-02-spark-sql) |
-| SQL | 형식 기본 `parquet`. CSV `header`와 `inferSchema` 기본 false. JSON은 한 줄에 객체 하나 | [Ch-02](/blog/cert/spark/spark-02-spark-sql) |
-| SQL | `bucketBy`와 `sortBy`는 `saveAsTable` 전용이고 `sortBy`는 `bucketBy` 없이 쓰면 오류, `partitionBy`는 둘 다. `insertInto`는 이름 대신 위치로 컬럼을 맞춘다 | [Ch-02](/blog/cert/spark/spark-02-spark-sql) |
-| SQL | 임시 뷰는 SparkSession 수명, 전역 임시 뷰는 `global_temp.이름` | [Ch-02](/blog/cert/spark/spark-02-spark-sql) |
+| 아키텍처 | 액션 1개가 Job 1개, 셔플 경계에서 Stage가 나뉘고 파티션마다 Task 1개 | [3편](/blog/cert/spark/spark-01-architecture) |
+| 아키텍처 | `explain()`, `printSchema()`, `cache()`는 Job을 만들지 않는다 | [3편](/blog/cert/spark/spark-01-architecture) |
+| 아키텍처 | DataFrame `cache()`는 `MEMORY_AND_DISK_DESER`, RDD `cache()`는 `MEMORY_ONLY`, `spark.catalog.cacheTable()`은 `MEMORY_AND_DISK` | [3편](/blog/cert/spark/spark-01-architecture) |
+| 아키텍처 | SQL `CACHE TABLE`은 `LAZY`가 없으면 바로 캐시한다(기본 `MEMORY_AND_DISK`). `checkpoint()`는 기본 eager라 바로 Job을 만들고 `setCheckpointDir`가 먼저 필요하며 계보를 끊는다 | [3편](/blog/cert/spark/spark-01-architecture) |
+| 아키텍처 | `SparkSession.builder...getOrCreate()`는 있는 세션을 돌려주고 그때는 실행 중 바꿀 수 있는 설정만 적용된다. Python에는 타입 있는 Dataset이 없고 DataFrame만 쓴다 | [3편](/blog/cert/spark/spark-01-architecture) |
+| 아키텍처 | 통합 메모리는 (힙 - 300MiB)의 60%(`spark.memory.fraction`), 그 절반이 저장 보호 구간(`spark.memory.storageFraction` 0.5) | [3편](/blog/cert/spark/spark-01-architecture) |
+| 아키텍처 | 배포 모드 client(기본), cluster, local. local은 드라이버와 익스큐터가 한 JVM | [8편](/blog/cert/spark/spark-06-connect-pandas-api) |
+| 파티션 | `spark.sql.shuffle.partitions` 200, `spark.sql.files.maxPartitionBytes` 128MB | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| 파티션 | `coalesce`는 셔플 없이 줄이기만, `repartition`은 전체 셔플로 늘리고 줄이기 | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| 튜닝 | AQE는 3.2.0부터 기본 켜짐. 쏠림 판정은 중앙값 5배 초과이면서 256MB 초과 | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| 튜닝 | `spark.sql.autoBroadcastJoinThreshold` 10MB, -1이면 끔 | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| 튜닝 | 익스큐터 로그는 Spark UI의 Executors 탭이나 Stage 상세의 Task 표에서. Web UI 기본 포트 4040이고 이미 쓰이면 4041, 4042로 올라간다 | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| 튜닝 | 끝난 앱은 `spark.eventLog.enabled`(기본 false)를 켜 두어야 History Server(기본 포트 18080)에서 다시 본다 | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| 튜닝 | `explain()` 계획의 `Exchange`는 셔플, `BroadcastExchange`와 `BroadcastHashJoin`은 broadcast 조인. 계획은 아래에서 위로 읽는다 | [6편](/blog/cert/spark/spark-04-troubleshooting-tuning) |
+| SQL | 저장 모드 기본 `errorifexists`. 나머지는 append, overwrite, ignore | [4편](/blog/cert/spark/spark-02-spark-sql) |
+| SQL | 형식 기본 `parquet`. CSV `header`와 `inferSchema` 기본 false. JSON은 한 줄에 객체 하나 | [4편](/blog/cert/spark/spark-02-spark-sql) |
+| SQL | `bucketBy`와 `sortBy`는 `saveAsTable` 전용이고 `sortBy`는 `bucketBy` 없이 쓰면 오류, `partitionBy`는 둘 다. `insertInto`는 이름 대신 위치로 컬럼을 맞춘다 | [4편](/blog/cert/spark/spark-02-spark-sql) |
+| SQL | 임시 뷰는 SparkSession 수명, 전역 임시 뷰는 `global_temp.이름` | [4편](/blog/cert/spark/spark-02-spark-sql) |
 | SQL | Parquet `mergeSchema` 기본 false | 5절 |
-| DataFrame | `withColumn(이름, Column)`, `withColumnRenamed(기존, 새)`. 없는 컬럼의 `drop`과 rename은 오류 없이 무시 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | `na.drop()` 기본 `how='any'`. `thresh`를 주면 `how` 무시 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | `F.count(col)`은 null 제외, `count(*)`와 `df.count()`는 전체 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | `approx_count_distinct` 기본 상대 오차 0.05 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | `join` 기본 `inner`. `on`에 이름을 주면 키 컬럼 하나, 조건식을 주면 둘 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | `union`과 `unionAll`은 위치로 맞추고 중복 유지. 이름으로는 `unionByName` | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | `from_unixtime` 기본 형식 `yyyy-MM-dd HH:mm:ss`. `udf` 반환 타입 기본 `StringType` | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | null 비교는 `col.isNull()`. `col == None`은 아무 행도 통과하지 못한다 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | 윈도 스펙에 `orderBy`가 있으면 기본 프레임은 처음부터 현재 행까지(누적), 없으면 파티션 전체. `pivot`에 values를 주면 고유값 계산 Job을 건너뛴다 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| DataFrame | ANSI 모드는 4.0부터 기본 켜짐. 잘못된 캐스트와 0 나누기가 오류가 되고 `size(null)`은 3.5에서 -1, 4.x에서 null. 오류를 피하려면 `try_` 함수 | [Ch-03](/blog/cert/spark/spark-03-dataframe-api) |
-| Streaming | 출력 모드 기본 Append. 워터마크 없는 집계는 Complete와 Update만, 집계 없는 쿼리는 Complete 불가, 조인이 들어간 쿼리는 Append만. 정렬은 집계 뒤 Complete에서만. 모드 위반 오류는 `start()`에서 난다 | [Ch-05](/blog/cert/spark/spark-05-structured-streaming) |
-| Streaming | 파일 싱크 exactly-once, Kafka와 foreach 싱크 at-least-once, foreachBatch는 기본 at-least-once이고 구현에 달렸다. 체크포인트 없이 파일이나 Kafka 싱크를 쓰면 `start()`에서 오류 | [Ch-05](/blog/cert/spark/spark-05-structured-streaming) |
-| Streaming | 워터마크 없는 `dropDuplicates`는 상태를 계속 쌓는다. `dropDuplicatesWithinWatermark`는 3.5.0부터 | [Ch-05](/blog/cert/spark/spark-05-structured-streaming) |
-| Connect | `sc://host:15002`, gRPC로 논리 계획을 보내고 Arrow로 받는다. `SparkContext`와 RDD 불가 | [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) |
-| pandas | 기본 인덱스 `distributed-sequence`. `to_pandas()`는 드라이버로 모은다 | [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) |
-| pandas | pandas UDF는 타입 힌트로 종류를 정한다(Series→Series, Series 반복자, 여러 Series 튜플의 반복자, Series→스칼라). `spark.sql.execution.arrow.pyspark.enabled`와 Python UDF의 Arrow 기본값은 3.5, 4.0, 4.1에서 false이고 4.2부터 true | [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) |
+| DataFrame | `withColumn(이름, Column)`, `withColumnRenamed(기존, 새)`. 없는 컬럼의 `drop`과 rename은 오류 없이 무시 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | `na.drop()` 기본 `how='any'`. `thresh`를 주면 `how` 무시 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | `F.count(col)`은 null 제외, `count(*)`와 `df.count()`는 전체 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | `approx_count_distinct` 기본 상대 오차 0.05 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | `join` 기본 `inner`. `on`에 이름을 주면 키 컬럼 하나, 조건식을 주면 둘 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | `union`과 `unionAll`은 위치로 맞추고 중복 유지. 이름으로는 `unionByName` | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | `from_unixtime` 기본 형식 `yyyy-MM-dd HH:mm:ss`. `udf` 반환 타입 기본 `StringType` | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | null 비교는 `col.isNull()`. `col == None`은 아무 행도 통과하지 못한다 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | 윈도 스펙에 `orderBy`가 있으면 기본 프레임은 처음부터 현재 행까지(누적), 없으면 파티션 전체. `pivot`에 values를 주면 고유값 계산 Job을 건너뛴다 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| DataFrame | ANSI 모드는 4.0부터 기본 켜짐. 잘못된 캐스트와 0 나누기가 오류가 되고 `size(null)`은 3.5에서 -1, 4.x에서 null. 오류를 피하려면 `try_` 함수 | [5편](/blog/cert/spark/spark-03-dataframe-api) |
+| Streaming | 출력 모드 기본 Append. 워터마크 없는 집계는 Complete와 Update만, 집계 없는 쿼리는 Complete 불가, 조인이 들어간 쿼리는 Append만. 정렬은 집계 뒤 Complete에서만. 모드 위반 오류는 `start()`에서 난다 | [7편](/blog/cert/spark/spark-05-structured-streaming) |
+| Streaming | 파일 싱크 exactly-once, Kafka와 foreach 싱크 at-least-once, foreachBatch는 기본 at-least-once이고 구현에 달렸다. 체크포인트 없이 파일이나 Kafka 싱크를 쓰면 `start()`에서 오류 | [7편](/blog/cert/spark/spark-05-structured-streaming) |
+| Streaming | 워터마크 없는 `dropDuplicates`는 상태를 계속 쌓는다. `dropDuplicatesWithinWatermark`는 3.5.0부터 | [7편](/blog/cert/spark/spark-05-structured-streaming) |
+| Connect | `sc://host:15002`, gRPC로 논리 계획을 보내고 Arrow로 받는다. `SparkContext`와 RDD 불가 | [8편](/blog/cert/spark/spark-06-connect-pandas-api) |
+| pandas | 기본 인덱스 `distributed-sequence`. `to_pandas()`는 드라이버로 모은다 | [8편](/blog/cert/spark/spark-06-connect-pandas-api) |
+| pandas | pandas UDF는 타입 힌트로 종류를 정한다(Series→Series, Series 반복자, 여러 Series 튜플의 반복자, Series→스칼라). `spark.sql.execution.arrow.pyspark.enabled`와 Python UDF의 Arrow 기본값은 3.5, 4.0, 4.1에서 false이고 4.2부터 true | [8편](/blog/cert/spark/spark-06-connect-pandas-api) |
 
 <details>
 <summary>기초부터: 표 한 줄만 보고는 감이 안 오는 다섯 항목을 숫자로 풀기</summary>
@@ -339,7 +339,7 @@ Parquet 스키마 병합은 이 시리즈에서 다루지 않았지만 2영역�
 
 </details>
 
-버전에 따라 갈리는 항목(ANSI 모드, Arrow 기본값, Python UDF의 Arrow 사용)은 시험이 기준 버전을 밝히지 않아서 보기에 버전 단서가 있는지 먼저 봅니다. 이 판단 순서는 [Ch-03](/blog/cert/spark/spark-03-dataframe-api) 4-2절과 [Ch-06](/blog/cert/spark/spark-06-connect-pandas-api) 9절에 적었습니다.
+버전에 따라 갈리는 항목(ANSI 모드, Arrow 기본값, Python UDF의 Arrow 사용)은 시험이 기준 버전을 밝히지 않아서 보기에 버전 단서가 있는지 먼저 봅니다. 이 판단 순서는 [5편](/blog/cert/spark/spark-03-dataframe-api) 4-2절과 [8편](/blog/cert/spark/spark-06-connect-pandas-api) 9절에 적었습니다.
 
 ## 7. 시험 당일 전략
 
@@ -376,14 +376,14 @@ API 문서가 없으니 보기 네 개를 눈으로 실행해야 합니다. 안�
 
 ## 8. D-30 마무리 계획
 
-시험일을 먼저 잡고 거꾸로 셉니다. 이 계획은 Ch-00 6절의 공부 계획 중 마지막 단계(모의고사)를 30일로 펼친 것입니다.
+시험일을 먼저 잡고 거꾸로 셉니다. 이 계획은 1편 6절의 공부 계획 중 마지막 단계(모의고사)를 30일로 펼친 것입니다.
 
 | 기간 | 할 일 | 끝났다고 보는 기준 |
 |---|---|---|
-| D-30 ~ D-22 | 안내서 샘플 10문항을 풀고 틀린 영역을 적는다. Docker 환경을 띄워 Ch-01과 Ch-03의 예제를 재현한다 | 4040 포트에서 Job과 Stage를 찾아 설명한다 |
-| D-21 ~ D-15 | Ch-02와 Ch-04. 쏠린 데이터로 AQE 전후 계획을 비교하고 DAG와 SQL 탭을 읽는다 | 저장 모드 네 개와 `explain` 모드를 문서 없이 쓴다 |
+| D-30 ~ D-22 | 안내서 샘플 10문항을 풀고 틀린 영역을 적는다. Docker 환경을 띄워 3편과 5편의 예제를 재현한다 | 4040 포트에서 Job과 Stage를 찾아 설명한다 |
+| D-21 ~ D-15 | 4편과 6편. 쏠린 데이터로 AQE 전후 계획을 비교하고 DAG와 SQL 탭을 읽는다 | 저장 모드 네 개와 `explain` 모드를 문서 없이 쓴다 |
 | D-14 | 안내서를 다시 내려받아 판이 바뀌었는지 본다 | 바뀐 항목이 있으면 계획에 넣는다 |
-| D-14 ~ D-8 | Ch-05와 Ch-06. 파일 소스 스트리밍, 컨테이너 Connect 서버, pandas UDF | 영역마다 쓸 수 없는 것과 이유를 말한다 |
+| D-14 ~ D-8 | 7편과 8편. 파일 소스 스트리밍, 컨테이너 Connect 서버, pandas UDF | 영역마다 쓸 수 없는 것과 이유를 말한다 |
 | D-7 ~ D-3 | AI Prep Guide 학습 루프의 모의고사 단계(Practice)와 새 범위가 들어간 연습 문제를 시간을 재고 푼다. 오답은 6절 표의 해당 Ch로 돌아가 확인한다 | 55문항 기준 60분 안에 1차를 마친다 |
 | D-2 | 온라인이면 시스템 체크, 시험장이면 위치와 신분증 확인 | 점검 화면을 끝까지 통과한다 |
 | D-1 | 6절 체크리스트만 본다 | 표를 가리고 기본값을 말한다 |

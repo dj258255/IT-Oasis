@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-02] Spark SQL로 읽고 쓰기: 저장 모드 기본값은 errorifexists'
+title: '[Spark] Spark SQL로 읽고 쓰기: 저장 모드 기본값은 errorifexists'
 description: Databricks Spark 자격증 2영역(Spark SQL 사용, 20%)을 시험 안내서의 항목 순서대로 정리합니다. JDBC와 파일 소스의 읽기·쓰기, overwrite와 partitionBy, 파일에 직접 SQL 실행, 저장 모드, bucketBy와 sortBy를 쓴 영구 테이블, 관리형과 외부 테이블, 임시 뷰를 Spark 4.2.0과 Databricks 공식 문서의 기본값으로 확인합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -13,7 +13,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 2
+seriesOrder: 4
 ---
 
 ## 결론부터
@@ -35,7 +35,7 @@ seriesOrder: 2
 | 정렬과 파티셔닝을 적용해 영구 테이블에 저장 | 4절, 5절 |
 | DataFrame을 임시 뷰로 등록해 SQL로 조회 | 6절 |
 
-[Ch-01](/blog/cert/spark/spark-01-architecture)과 같은 주문 데이터에 회원과 결제를 더해 씁니다.
+[3편](/blog/cert/spark/spark-01-architecture)과 같은 주문 데이터에 회원과 결제를 더해 씁니다.
 
 ```python
 from pyspark.sql import SparkSession
@@ -74,7 +74,7 @@ payments = spark.createDataFrame(
 
 #### 1. 왜 필요한가
 
-분석가는 SQL로, 엔지니어는 Python으로 쓰고 싶어 합니다. 엔진이 둘이면 같은 계산의 성능과 결과가 달라질 수 있습니다. Spark SQL 가이드는 어떤 API와 언어로 표현하든 같은 실행 엔진을 쓴다고 적습니다([Ch-01](/blog/cert/spark/spark-01-architecture) 1절 표). SQL로 쓰든 DataFrame으로 쓰든 [Ch-01](/blog/cert/spark/spark-01-architecture) 9-1절 토글의 Catalyst 단계를 똑같이 거칩니다.
+분석가는 SQL로, 엔지니어는 Python으로 쓰고 싶어 합니다. 엔진이 둘이면 같은 계산의 성능과 결과가 달라질 수 있습니다. Spark SQL 가이드는 어떤 API와 언어로 표현하든 같은 실행 엔진을 쓴다고 적습니다([3편](/blog/cert/spark/spark-01-architecture) 1절 표). SQL로 쓰든 DataFrame으로 쓰든 [3편](/blog/cert/spark/spark-01-architecture) 9-1절 토글의 Catalyst 단계를 똑같이 거칩니다.
 
 #### 2. 같은 계산을 두 문법으로
 
@@ -97,7 +97,7 @@ by_df.explain()   # 두 물리 계획의 모양이 같을 것으로 예상합니
 1. **소스 고르기**: `format()`(생략하면 `parquet`)으로 데이터 소스 구현을 고릅니다.
 2. **스키마 정하기**: 지정한 스키마를 쓰거나 Parquet 파일의 메타데이터에서 읽습니다. CSV와 JSON에서 추론을 켜면 데이터를 훑어 정합니다.
 3. **DataFrame 반환**: 데이터는 아직 읽지 않았습니다. "이 경로를 이 형식으로 읽는다"는 계획 한 단계가 생겼을 뿐입니다.
-4. **액션 때 읽기**: 파일을 파티션([Ch-01](/blog/cert/spark/spark-01-architecture) 8절)으로 나눠 Task마다 자기 조각을 읽습니다. 필요한 컬럼만, 조건에 맞는 파일만 읽도록 최적화가 들어갑니다(1-2절, 1-4절 토글).
+4. **액션 때 읽기**: 파일을 파티션([3편](/blog/cert/spark/spark-01-architecture) 8절)으로 나눠 Task마다 자기 조각을 읽습니다. 필요한 컬럼만, 조건에 맞는 파일만 읽도록 최적화가 들어갑니다(1-2절, 1-4절 토글).
 
 ```text
 spark.read.parquet(path)   →  계획: [Scan parquet path]        (읽지 않음)
@@ -185,7 +185,7 @@ amount   : 32000, 15000, 8000       ← 최솟값 8000, 최댓값 32000을 메�
 
 #### 5. 헷갈리는 점
 
-- CSV를 스키마 없이 `inferSchema` 기본값(`false`)으로 읽으면 모든 컬럼이 문자열입니다. 숫자 계산 전에 타입을 바꾸거나 처음부터 스키마를 줍니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 7-1절 토글).
+- CSV를 스키마 없이 `inferSchema` 기본값(`false`)으로 읽으면 모든 컬럼이 문자열입니다. 숫자 계산 전에 타입을 바꾸거나 처음부터 스키마를 줍니다([5편](/blog/cert/spark/spark-03-dataframe-api) 7-1절 토글).
 - Delta는 Parquet 데이터 파일에 트랜잭션 로그를 더한 형식입니다(2절). 열 기반의 이점을 그대로 가집니다.
 
 > **정리**: 아래 표의 옵션 대부분이 CSV와 JSON에 몰려 있는 이유는 이 형식들이 타입 정보를 갖고 있지 않아서입니다. Parquet와 ORC는 타입과 통계를 파일에 담아 옵션이 적습니다.
@@ -249,7 +249,7 @@ order_id,user_id,status,amount
 | `DROPMALFORMED` | 정상 행 | 버려짐 |
 | `FAILFAST` | 액션을 실행하는 순간 예외 | |
 
-표의 값은 CSV 문서의 모드 설명을 이 줄에 적용한 예상이고 실행해서 본 결과가 아닙니다. `FAILFAST`도 `spark.read`를 부르는 줄에서는 조용하다가 데이터를 실제로 읽는 액션 줄에서 예외가 납니다([Ch-01](/blog/cert/spark/spark-01-architecture) 9-3절 헷갈리는 지점).
+표의 값은 CSV 문서의 모드 설명을 이 줄에 적용한 예상이고 실행해서 본 결과가 아닙니다. `FAILFAST`도 `spark.read`를 부르는 줄에서는 조용하다가 데이터를 실제로 읽는 액션 줄에서 예외가 납니다([3편](/blog/cert/spark/spark-01-architecture) 9-3절 헷갈리는 지점).
 
 표에서 설명이 필요한 옵션이 하나 더 있습니다. `enforceSchema`(기본 `true`)는 헤더 줄과 내가 준 스키마가 다를 때 누구 말을 따를지 정합니다. `true`면 CSV 문서 표현대로 스키마를 강제로 적용하고 헤더는 무시합니다. 헤더가 `order_id,user_id`인데 스키마를 `user_id INT, order_id INT`로 주면 이름을 보고 맞추지 않고 위치대로 첫 칸이 `user_id`가 됩니다. `false`로 두고 `header`도 켜면 스키마를 헤더와 대조해 검증합니다.
 
@@ -413,7 +413,7 @@ spark.read.parquet("/out/orders_by_date").filter("order_date = '2026-10-03'")
 
 #### 3. 두 가지 "파티션"
 
-| 구분 | 메모리 파티션([Ch-01](/blog/cert/spark/spark-01-architecture) 8절) | 디스크 파티션(`partitionBy`) |
+| 구분 | 메모리 파티션([3편](/blog/cert/spark/spark-01-architecture) 8절) | 디스크 파티션(`partitionBy`) |
 |---|---|---|
 | 무엇 | DataFrame을 나눈 조각. Task 하나의 몫 | 컬럼 값별 폴더 |
 | 정하는 것 | `maxPartitionBytes`, `shuffle.partitions`, `repartition` | `partitionBy`에 준 컬럼 |
@@ -466,7 +466,7 @@ Parquet 문서의 Partition Discovery 절에 따르면 파티션 컬럼 값은 �
 | `order_date=2026-10-02/` | 있음 | 사라짐 | 그대로 |
 | `order_date=2026-10-03/` | 옛 데이터 | 새 데이터 | 새 데이터로 교체 |
 
-`STATIC`의 "조건에 맞는 파티션"은 `INSERT OVERWRITE ... PARTITION (order_date='2026-10-03')`처럼 파티션 값을 고정해 줄 때의 조건입니다. DataFrame 쓰기는 그런 조건이 없으니 경로 아래 파티션 전체가 지울 대상이 됩니다. 매일 그날 파티션만 다시 쓰는 배치에서 이 기본값을 모르고 돌리면 지난 날짜가 전부 사라집니다. 같은 날짜를 몇 번 다시 돌려도 결과가 같게 만드는 쓰기 패턴은 [DE Ch-03](/blog/data/foundations/de-03-idempotency-retry-backoff)에서 더 다룹니다.
+`STATIC`의 "조건에 맞는 파티션"은 `INSERT OVERWRITE ... PARTITION (order_date='2026-10-03')`처럼 파티션 값을 고정해 줄 때의 조건입니다. DataFrame 쓰기는 그런 조건이 없으니 경로 아래 파티션 전체가 지울 대상이 됩니다. 매일 그날 파티션만 다시 쓰는 배치에서 이 기본값을 모르고 돌리면 지난 날짜가 전부 사라집니다. 같은 날짜를 몇 번 다시 돌려도 결과가 같게 만드는 쓰기 패턴은 [DE 4편](/blog/data/foundations/de-03-idempotency-retry-backoff)에서 더 다룹니다.
 
 ```python
 # 10월 3일 파티션만 다시 쓰고 나머지 날짜는 남긴다
@@ -610,7 +610,7 @@ orders (메모리 파티션 4개)
 #### 4. 헷갈리는 점
 
 - 출력 파일 수는 쓰기 직전의 파티션 수를 따릅니다. `partitionBy`를 함께 쓰면 더 늘어납니다(1-4절 토글).
-- 파일 하나로 받고 싶으면 `coalesce(1)` 뒤에 씁니다. Task 하나가 전부 쓰므로 느려집니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-3절).
+- 파일 하나로 받고 싶으면 `coalesce(1)` 뒤에 씁니다. Task 하나가 전부 쓰므로 느려집니다([3편](/blog/cert/spark/spark-01-architecture) 8-3절).
 
 > **정리**: 쓰기는 여러 Task가 나눠 하는 일이고 저장 모드는 그 앞에서 대상 경로를 어떻게 다룰지를 정합니다.
 
@@ -679,7 +679,7 @@ INSERT OVERWRITE shop.orders SELECT * FROM orders_v WHERE status = 'PAID';
 
 - `"error"`와 `"errorifexists"`는 같은 모드입니다. 보기에 둘이 따로 나오면 둘 다 기본값입니다.
 - `ignore`는 대상이 이미 있으면 쓰기 자체를 건너뛰고 오류도 내지 않습니다. 대상이 없으면 평소처럼 씁니다. 그래서 쓰기가 실제로 일어났는지 코드만 보고 알 수 없습니다.
-- `insertInto`의 위치 기반 매칭은 `union`의 위치 기반 매칭과 같은 함정입니다([Ch-03](/blog/cert/spark/spark-03-dataframe-api) 6절).
+- `insertInto`의 위치 기반 매칭은 `union`의 위치 기반 매칭과 같은 함정입니다([5편](/blog/cert/spark/spark-03-dataframe-api) 6절).
 
 ## 4. 영구 테이블: partitionBy, bucketBy, sortBy
 
@@ -690,7 +690,7 @@ INSERT OVERWRITE shop.orders SELECT * FROM orders_v WHERE status = 'PAID';
 
 #### 1. 왜 필요한가
 
-주문과 회원을 `user_id`로 매일 조인하면 매번 양쪽을 `user_id`로 셔플합니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-2절 토글). 섞는 방식은 매번 같은데 비용도 매번 냅니다. 저장할 때 한 번 키별로 나눠 두면 읽을 때 다시 섞을 일이 줄어듭니다.
+주문과 회원을 `user_id`로 매일 조인하면 매번 양쪽을 `user_id`로 셔플합니다([3편](/blog/cert/spark/spark-01-architecture) 8-2절 토글). 섞는 방식은 매번 같은데 비용도 매번 냅니다. 저장할 때 한 번 키별로 나눠 두면 읽을 때 다시 섞을 일이 줄어듭니다.
 
 #### 2. 어떻게 동작하나
 
@@ -719,7 +719,7 @@ orders (bucketBy 8, user_id)            users (bucketBy 8, user_id)
 #### 4. 헷갈리는 점
 
 - 두 테이블의 버킷 수가 다르면 기본 설정에서 셔플이 다시 생길 수 있습니다. 같이 조인할 테이블은 같은 키, 같은 버킷 수로 맞춥니다.
-- 조인 방식 자체(sort merge 조인, broadcast 조인)는 [Ch-03](/blog/cert/spark/spark-03-dataframe-api) 5-3절 토글에서 봅니다.
+- 조인 방식 자체(sort merge 조인, broadcast 조인)는 [5편](/blog/cert/spark/spark-03-dataframe-api) 5-3절 토글에서 봅니다.
 
 > **정리**: `partitionBy`는 읽는 범위를 줄이고 `bucketBy`는 셔플을 줄입니다. 아래 4-2절의 선택 기준이 이 차이에서 나옵니다.
 
@@ -828,7 +828,7 @@ Python API와 SQL 이름이 엇갈립니다.
 #### 2. 어떻게 동작하나
 
 1. **만들기**: `saveAsTable`이나 `CREATE TABLE`이 파일을 쓰고 메타스토어에 테이블 항목을 만듭니다.
-2. **조회**: SQL이나 `spark.table("shop.orders")`가 이름을 쓰면 분석 단계([Ch-01](/blog/cert/spark/spark-01-architecture) 9-1절 토글)에서 카탈로그를 찾아 위치와 스키마를 알아낸 뒤 파일 스캔으로 바꿉니다.
+2. **조회**: SQL이나 `spark.table("shop.orders")`가 이름을 쓰면 분석 단계([3편](/blog/cert/spark/spark-01-architecture) 9-1절 토글)에서 카탈로그를 찾아 위치와 스키마를 알아낸 뒤 파일 스캔으로 바꿉니다.
 3. **삭제**: `DROP TABLE`이 메타스토어 항목을 지웁니다. 관리형이면 파일도 지웁니다.
 
 ```text
@@ -967,7 +967,7 @@ SELECT city, count(*) AS cnt FROM global_temp.users_g GROUP BY city;
 | 메타스토어 | 기록하지 않는다 | 기록한다 |
 | 프로그램 재시작 후 | 사라진다 | 같은 메타스토어면 남는다 |
 
-임시 뷰를 여러 번 조회할 예정이면 `spark.catalog.cacheTable("orders_v")`나 DataFrame `cache()`를 겁니다. 두 API의 기본 저장 레벨이 다른 점은 [Ch-01](/blog/cert/spark/spark-01-architecture) 5절에 정리했습니다. 뷰를 지우면 캐시도 함께 해제된다고 `dropTempView` 문서가 적습니다.
+임시 뷰를 여러 번 조회할 예정이면 `spark.catalog.cacheTable("orders_v")`나 DataFrame `cache()`를 겁니다. 두 API의 기본 저장 레벨이 다른 점은 [3편](/blog/cert/spark/spark-01-architecture) 5절에 정리했습니다. 뷰를 지우면 캐시도 함께 해제된다고 `dropTempView` 문서가 적습니다.
 
 ### 헷갈리는 지점
 

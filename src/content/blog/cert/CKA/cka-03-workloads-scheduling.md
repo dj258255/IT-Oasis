@@ -1,5 +1,5 @@
 ---
-title: '[CKA Ch-03] 워크로드와 스케줄링: Pod가 어디에 얼마만큼 뜨는지 정하는 값들'
+title: '[CKA] 워크로드와 스케줄링: Pod가 어디에 얼마만큼 뜨는지 정하는 값들'
 description: CKA 비중 15%인 워크로드와 스케줄링 영역을 v1.37 커리큘럼 순서대로 시험에 쓰는 명령과 YAML 중심으로 정리합니다. 롤아웃과 롤백, ConfigMap과 Secret, HPA와 VPA, in-place resize, 프로브와 사이드카, StatefulSet, Job, PDB, requests와 limits, LimitRange, ResourceQuota, 어피니티, 테인트, static Pod, PriorityClass, DaemonSet을 다룹니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -14,7 +14,7 @@ topics:
   - cert
 draft: false
 series: "CKA 공부"
-seriesOrder: 3
+seriesOrder: 6
 ---
 
 ## 결론부터
@@ -25,7 +25,7 @@ seriesOrder: 3
 4. HPA는 CPU request가 없으면 CPU 사용률을 계산하지 못합니다. 1.34부터 `kubectl autoscale`의 옵션은 `--cpu=60%` 형식입니다.
 5. 테인트는 노드가 Pod를 밀어내는 장치이고 톨러레이션은 그 밀어냄을 견디는 허가입니다. 톨러레이션만으로는 그 노드로 가지 않습니다. 특정 노드로 보내려면 nodeSelector나 노드 어피니티를 함께 씁니다.
 
-시험 구조는 [CKA Ch-00](/blog/cert/cka/cka-00-exam-and-study-plan)에 정리했습니다. 옛 커리큘럼의 이 영역에 있던 매니페스트 관리 도구와 템플릿 항목은 v1.37 문구에 없고 아키텍처 영역의 "Use Helm and Kustomize to install cluster components"가 그 자리를 맡아 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 6장에서 다룹니다.
+시험 구조는 [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에 정리했습니다. 옛 커리큘럼의 이 영역에 있던 매니페스트 관리 도구와 템플릿 항목은 v1.37 문구에 없고 아키텍처 영역의 "Use Helm and Kustomize to install cluster components"가 그 자리를 맡아 [5편](/blog/cert/cka/cka-02-cluster-architecture) 6장에서 다룹니다.
 
 ---
 
@@ -1025,7 +1025,7 @@ kubectl get pod order-api-xxxx -n shop -o jsonpath='{.status.containerStatuses[0
 
 ### 3-4. 직접 해 보기
 
-request 없는 `order-api`에 HPA를 만들어 `TARGETS`가 `cpu: <unknown>/60%`인지, describe에 `missing request for cpu`가 있는지 봅니다. `kubectl set resources deployment order-api -n shop --requests=cpu=100m` 뒤 `cpu: 0%/60%`로 바뀌면 Walkthrough 문서의 부하 Pod를 띄우고 `kubectl get hpa --watch`로 확장을 봅니다. kind에서는 metrics-server를 따로 넣고 `--kubelet-insecure-tls` 인자를 더해야 합니다([Ch-06](/blog/cert/cka/cka-06-troubleshooting) 3-4절).
+request 없는 `order-api`에 HPA를 만들어 `TARGETS`가 `cpu: <unknown>/60%`인지, describe에 `missing request for cpu`가 있는지 봅니다. `kubectl set resources deployment order-api -n shop --requests=cpu=100m` 뒤 `cpu: 0%/60%`로 바뀌면 Walkthrough 문서의 부하 Pod를 띄우고 `kubectl get hpa --watch`로 확장을 봅니다. kind에서는 metrics-server를 따로 넣고 `--kubelet-insecure-tls` 인자를 더해야 합니다([9편](/blog/cert/cka/cka-06-troubleshooting) 3-4절).
 
 ## 4. 자가 치유를 만드는 기본 요소
 
@@ -1312,7 +1312,7 @@ spec:
             storage: 1Gi
 ```
 
-Pod `order-db-0`, `order-db-1`과 PVC `data-order-db-0`, `data-order-db-1`이 생기고 `order-db-0`을 지우면 같은 이름의 Pod가 같은 PVC를 달고 돌아옵니다. StorageClass를 적지 않으면 기본 StorageClass가 쓰입니다([CKA Ch-05](/blog/cert/cka/cka-05-storage)). `kubectl create` 하위 명령이 없어 Deployment 뼈대에서 `kind`를 바꾸고 두 필드를 더합니다.
+Pod `order-db-0`, `order-db-1`과 PVC `data-order-db-0`, `data-order-db-1`이 생기고 `order-db-0`을 지우면 같은 이름의 Pod가 같은 PVC를 달고 돌아옵니다. StorageClass를 적지 않으면 기본 StorageClass가 쓰입니다([8편](/blog/cert/cka/cka-05-storage)). `kubectl create` 하위 명령이 없어 Deployment 뼈대에서 `kind`를 바꾸고 두 필드를 더합니다.
 
 <details>
 <summary>기초부터: 주문 DB를 Deployment로 띄우면 무엇이 깨지나</summary>
@@ -1450,7 +1450,7 @@ YAML로 쓰면 `policy/v1`의 `spec.minAvailable`(또는 `maxUnavailable`, 한 P
 error when evicting pods/"order-api-..." -n "shop" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.
 ```
 
-drain 명령과 `--ignore-daemonsets`, `--delete-emptydir-data`, `--force` 옵션은 [CKA Ch-02](/blog/cert/cka/cka-02-cluster-architecture) 4-7절에 정리했습니다.
+drain 명령과 `--ignore-daemonsets`, `--delete-emptydir-data`, `--force` 옵션은 [5편](/blog/cert/cka/cka-02-cluster-architecture) 4-7절에 정리했습니다.
 
 <details>
 <summary>기초부터: ALLOWED DISRUPTIONS 계산과 drain이 기다리는 이유</summary>
@@ -1582,7 +1582,7 @@ mutating이 먼저 도는 이유는 고쳐진 최종 결과를 validating이 검
 
 ValidatingAdmissionPolicy(1.30 stable)는 웹훅 서버 없이 CEL 식(`object.spec.replicas <= 5` 같은)으로 규칙을 적는 객체입니다. 정책과 `ValidatingAdmissionPolicyBinding`이 둘 다 있어야 효력이 나고 YAML은 "Validating Admission Policy" 문서의 예제를 고쳐 씁니다. 함정은 둘입니다. 정책의 `resources`에 `deployments`만 적으면 `kubectl scale`이 고치는 `deployments/scale` 하위 리소스는 정책에 걸리지 않습니다. 바인딩의 `validationActions`에 `Deny`와 `Warn`을 함께 적으면 바인딩 자체가 `must not contain both Deny and Warn`으로 거절됩니다.
 
-VAP 거부는 422에 `ValidatingAdmissionPolicy 'max-replicas' with binding 'max-replicas' denied request: replicas must be <= 5`, 서버 없는 웹훅(`failurePolicy: Fail`)은 500에 `failed calling webhook`입니다(응답 코드 표는 [Ch-01b 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow)).
+VAP 거부는 422에 `ValidatingAdmissionPolicy 'max-replicas' with binding 'max-replicas' denied request: replicas must be <= 5`, 서버 없는 웹훅(`failurePolicy: Fail`)은 500에 `failed calling webhook`입니다(응답 코드 표는 [4편 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow)).
 
 ### 5-2. requests와 limits
 
@@ -1819,7 +1819,7 @@ Pod 생성(nodeName 비어 있음, Pending)
 
 옛 강의는 Binding을 kubectl 대신 curl로 API 서버에 보냅니다. 스케줄러가 하는 요청을 손으로 흉내 내는 방식이라 원리를 보기에 좋습니다.
 
-1. **중계 띄우기**: `kubectl proxy`가 내 kubeconfig로 인증을 붙여 주는 중계를 `127.0.0.1:8001`에 띄웁니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
+1. **중계 띄우기**: `kubectl proxy`가 내 kubeconfig로 인증을 붙여 주는 중계를 `127.0.0.1:8001`에 띄웁니다([5편](/blog/cert/cka/cka-02-cluster-architecture)).
 2. **POST 보내기**: 아래 본문의 Binding JSON을 Pod의 `binding` 하위 리소스 주소로 보냅니다.
 
 ```bash

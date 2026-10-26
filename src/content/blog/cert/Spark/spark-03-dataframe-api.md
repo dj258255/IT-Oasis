@@ -1,5 +1,5 @@
 ---
-title: '[Spark Ch-03] DataFrame API: union은 위치로, unionByName은 이름으로 맞춘다'
+title: '[Spark] DataFrame API: union은 위치로, unionByName은 이름으로 맞춘다'
 description: Databricks Spark 자격증에서 비중이 가장 큰 3영역(DataFrame/Dataset API, 30%)을 시험 안내서의 항목 순서대로 정리합니다. 컬럼 조작, 중복 제거와 null 처리, 집계, 날짜 함수, 조인과 union, 스키마 지정, 정렬과 리스트 변환, UDF, broadcast 변수와 accumulator를 PySpark 4.2.0 API 문서의 시그니처와 기본값으로 확인하고 3.x와 달라진 동작을 표시합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -13,7 +13,7 @@ topics:
   - cert
 draft: false
 series: "Spark 공부"
-seriesOrder: 3
+seriesOrder: 5
 ---
 
 ## 결론부터
@@ -86,7 +86,7 @@ payments = spark.createDataFrame(
 
 #### 1. 왜 필요한가
 
-pandas에 익숙하면 `df["amount"] * 1.1`이 곧바로 숫자 열을 만든다고 생각하기 쉽습니다. Spark에서는 데이터가 여러 익스큐터에 흩어져 있고 실행이 지연되므로([Ch-01](/blog/cert/spark/spark-01-architecture) 9-1절) 그 시점의 드라이버에는 계산할 값이 없습니다. 그래서 컬럼 연산은 "나중에 각 파티션에서 이렇게 계산하라"는 식으로 쌓입니다.
+pandas에 익숙하면 `df["amount"] * 1.1`이 곧바로 숫자 열을 만든다고 생각하기 쉽습니다. Spark에서는 데이터가 여러 익스큐터에 흩어져 있고 실행이 지연되므로([3편](/blog/cert/spark/spark-01-architecture) 9-1절) 그 시점의 드라이버에는 계산할 값이 없습니다. 그래서 컬럼 연산은 "나중에 각 파티션에서 이렇게 계산하라"는 식으로 쌓입니다.
 
 #### 2. 어떻게 동작하나
 
@@ -435,7 +435,7 @@ orders.select(
 #### 2. 어떻게 동작하나
 
 1. **부분 집계 (Stage 0)**: 각 Task가 자기 파티션의 행을 `user_id`별로 더해 (`user_id`, 부분합)을 만듭니다.
-2. **셔플**: `user_id` 해시로 목적지를 정해 부분합을 보냅니다([Ch-01](/blog/cert/spark/spark-01-architecture) 8-2절 토글).
+2. **셔플**: `user_id` 해시로 목적지를 정해 부분합을 보냅니다([3편](/blog/cert/spark/spark-01-architecture) 8-2절 토글).
 3. **최종 집계 (Stage 1)**: 같은 `user_id`의 부분합을 모두 더합니다.
 
 ```text
@@ -755,7 +755,7 @@ sort merge join
 
 #### 4. 헷갈리는 점
 
-- 10MB 기준은 통계로 추정한 크기와 비교합니다. 필터 뒤에 실제로 작아져도 추정치가 크면 자동 broadcast가 되지 않을 수 있고 AQE가 실행 중 통계로 sort merge join을 broadcast join으로 바꿀 수 있습니다([Ch-04](/blog/cert/spark/spark-04-troubleshooting-tuning)).
+- 10MB 기준은 통계로 추정한 크기와 비교합니다. 필터 뒤에 실제로 작아져도 추정치가 크면 자동 broadcast가 되지 않을 수 있고 AQE가 실행 중 통계로 sort merge join을 broadcast join으로 바꿀 수 있습니다([6편](/blog/cert/spark/spark-04-troubleshooting-tuning)).
 - `left` 조인에서는 오른쪽만 broadcast할 수 있습니다. 왼쪽 행을 하나도 빠짐없이 남겨야 하므로 왼쪽은 파티션 그대로 훑는 쪽이 됩니다.
 
 > **정리**: 작은 쪽이 있으면 broadcast로 큰 쪽의 셔플을 없애고 둘 다 크면 sort merge로 양쪽을 섞어 맞춥니다. 아래 표의 세 방법은 broadcast 쪽을 고르게 만드는 수단입니다.
@@ -828,7 +828,7 @@ oct_orders.unionByName(with_note, allowMissingColumns=True)
 
 ### 헷갈리는 지점
 
-- `union`이 중복을 없앤다는 보기는 틀립니다. SQL의 `UNION`과 이름이 같아서 생기는 함정입니다. 예전 자료 중에도 union이 이름으로 맞춘다고 잘못 적은 글이 있습니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 5절).
+- `union`이 중복을 없앤다는 보기는 틀립니다. SQL의 `UNION`과 이름이 같아서 생기는 함정입니다. 예전 자료 중에도 union이 이름으로 맞춘다고 잘못 적은 글이 있습니다([1편](/blog/cert/spark/spark-00-exam-and-study-plan) 5절).
 - 위치가 바뀐 두 DataFrame의 컬럼 타입이 같으면 `union`은 오류 없이 값을 섞습니다. 4.2.0 `union` 문서 예제 2는 `id LONG, money INT`와 `money INT, id LONG`을 union해도 오류 없이 위치대로 붙는 모습을 보여 줍니다. 타입이 다르면 위치마다 공통 타입을 찾아 캐스트합니다(4.2.0 소스 `WidenSetOperationTypes`). 문자열과 정수가 같은 위치에 오면 ANSI가 꺼진 3.5에서는 STRING으로 맞추고 ANSI가 켜진 4.x에서는 BIGINT로 맞춥니다(ANSI Compliance 문서의 "least common type between Byte/Short/Int and String is Long"). 4.x에서는 숫자로 읽을 수 없는 문자열이 있으면 캐스트에서 오류가 납니다.
 - 결과 컬럼 이름은 첫 번째 DataFrame을 따릅니다. 문서 예제 3에서 `A, B`와 `C, D`를 union한 결과 컬럼은 `A, B`입니다.
 - 집합 연산(`intersect`, `subtract`)은 null끼리 같은 값으로 봅니다(NULL Semantics 문서).
@@ -848,10 +848,10 @@ CSV의 `32000`은 그냥 글자입니다. 금액인지 우편번호인지 Spark�
 
 #### 2. 스키마가 쓰이는 단계
 
-1. **읽기**: 필드마다 어떤 타입으로 해석할지 정합니다. 해석하지 못하면 `mode`(`PERMISSIVE` 등)에 따라 null, 행 제외, 예외 중 하나가 됩니다([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-2절).
+1. **읽기**: 필드마다 어떤 타입으로 해석할지 정합니다. 해석하지 못하면 `mode`(`PERMISSIVE` 등)에 따라 null, 행 제외, 예외 중 하나가 됩니다([4편](/blog/cert/spark/spark-02-spark-sql) 1-2절).
 2. **분석**: `amount + 1` 같은 식의 결과 타입을 정하고 타입이 맞지 않는 연산을 찾아냅니다.
 3. **실행**: INT는 4바이트, BIGINT는 8바이트처럼 타입마다 정해진 크기로 값을 다룹니다.
-4. **쓰기**: Parquet와 ORC는 스키마를 파일에 함께 기록합니다([Ch-02](/blog/cert/spark/spark-02-spark-sql) 1-2절 토글).
+4. **쓰기**: Parquet와 ORC는 스키마를 파일에 함께 기록합니다([4편](/blog/cert/spark/spark-02-spark-sql) 1-2절 토글).
 
 #### 3. Python 값과 Spark 타입 (스키마 없이 추론할 때)
 
@@ -983,7 +983,7 @@ DataFrame은 여러 익스큐터에 나뉘어 있어서 전체 크기가 드라�
 #### 2. 어떻게 동작하나 (`collect`)
 
 1. **Job 실행**: 마지막 Stage의 Task가 각자 결과 파티션을 만듭니다.
-2. **전송**: Task 결과를 직렬화해 드라이버로 보냅니다. 합계가 `spark.driver.maxResultSize`(기본 1g)를 넘으면 Job을 중단합니다([Ch-01](/blog/cert/spark/spark-01-architecture) 2-4절).
+2. **전송**: Task 결과를 직렬화해 드라이버로 보냅니다. 합계가 `spark.driver.maxResultSize`(기본 1g)를 넘으면 Job을 중단합니다([3편](/blog/cert/spark/spark-01-architecture) 2-4절).
 3. **드라이버에서 합치기**: 드라이버 JVM이 결과를 모읍니다.
 4. **Python으로 넘기기**: PySpark가 결과를 Python 쪽으로 넘겨 `Row` 객체 리스트로 만듭니다.
 
@@ -1228,7 +1228,7 @@ orders.select("order_id", with_vat("amount").alias("amount_vat"))
 | 내장 stateful 연산자 | 스트리밍 `groupBy().agg()`, 윈도 집계, `dropDuplicates`, 스트림-스트림 조인 | Spark가 State Store에 그룹별 중간 결과를 저장한다 |
 | 사용자 정의 상태 함수 | `applyInPandasWithState`(3.4.0~), `transformWithStateInPandas`(4.0.0~) | 사용자가 그룹별 상태를 읽고 쓴다. 저장은 State Store가 맡는다 |
 
-시험 보기에서 "UDF가 이전 배치의 값을 기억한다"는 설명은 상태 없는 UDF에는 맞지 않습니다. 이전 값을 기억해야 하면 위 표 세 번째 줄의 API를 씁니다. 각 연산자의 출력 모드와 워터마크는 [Ch-05](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
+시험 보기에서 "UDF가 이전 배치의 값을 기억한다"는 설명은 상태 없는 UDF에는 맞지 않습니다. 이전 값을 기억해야 하면 위 표 세 번째 줄의 API를 씁니다. 각 연산자의 출력 모드와 워터마크는 [7편](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
 
 | 개념 | 4.2.0 Structured Streaming 문서 |
 |---|---|
@@ -1237,7 +1237,7 @@ orders.select("order_id", with_vat("amount").alias("amount_vat"))
 | RocksDB | 3.2부터 내장. `spark.sql.streaming.stateStore.providerClass`를 `org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider`로 준다 |
 | 임의 상태 연산 | 2.2부터 `mapGroupsWithState`, `flatMapGroupsWithState`(지금은 legacy). 4.0부터 `transformWithState`를 권한다 |
 
-기본 구현은 상태를 익스큐터 JVM 메모리에 두기 때문에 상태 객체가 많으면 GC 일시 정지가 길어질 수 있다고 문서가 적습니다. RocksDB 제공자가 나온 이유입니다. 사용법은 [Ch-05](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
+기본 구현은 상태를 익스큐터 JVM 메모리에 두기 때문에 상태 객체가 많으면 GC 일시 정지가 길어질 수 있다고 문서가 적습니다. RocksDB 제공자가 나온 이유입니다. 사용법은 [7편](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
 
 ### 헷갈리는 지점
 
@@ -1301,7 +1301,7 @@ print(bad_rows.value)      # 문서 기준 예상 결과: 2 (status가 null인 �
 
 - broadcast 변수는 읽기 전용, accumulator는 Task 쪽에서 쓰기 전용(더하기)이라고 짝지어 외우면 됩니다.
 - `map` 같은 트랜스포메이션 안에서 accumulator를 더하고 액션을 부르지 않으면 값은 0 그대로입니다. RDD 가이드 예제가 이 경우입니다.
-- `spark.sparkContext`가 필요하므로 Spark Connect(Databricks 서버리스 포함)에서는 이 절의 코드를 쓸 수 없습니다([Ch-00](/blog/cert/spark/spark-00-exam-and-study-plan) 3절).
+- `spark.sparkContext`가 필요하므로 Spark Connect(Databricks 서버리스 포함)에서는 이 절의 코드를 쓸 수 없습니다([1편](/blog/cert/spark/spark-00-exam-and-study-plan) 3절).
 
 ## 11. 윈도 함수
 
