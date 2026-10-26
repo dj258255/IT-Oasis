@@ -1,4 +1,4 @@
-# Ch-03 실습: 멱등한 적재와 지터
+# DE 공부 4편 실습: 멱등한 적재와 지터
 
 ```bash
 python idempotent_load.py

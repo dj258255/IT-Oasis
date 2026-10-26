@@ -1,4 +1,4 @@
-# Ch-05 실습: 폴링 비용 세기
+# DE 공부 6편 실습: 폴링 비용 세기
 
 ```bash
 python polling_vs_event.py

@@ -1,4 +1,4 @@
-# Ch-04 실습: 처리 날짜를 고르는 방법과 catchup 수
+# DE 공부 5편 실습: 처리 날짜를 고르는 방법과 catchup 수
 
 ```bash
 python interval_vs_now.py     # duckdb 필요

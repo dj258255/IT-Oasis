@@ -1,4 +1,4 @@
-# Ch-15 실습: watermark 허용치와 조용한 파티션
+# DE 공부 16편 실습: watermark 허용치와 조용한 파티션
 
 ```bash
 python watermark.py

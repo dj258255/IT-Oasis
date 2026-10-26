@@ -1,4 +1,4 @@
-# Ch-10 실습: Mosquitto로 와일드카드, retained, 세션, QoS 낮추기 보기
+# DE 공부 11편 실습: Mosquitto로 와일드카드, retained, 세션, QoS 낮추기 보기
 
 Docker가 필요하다. 아직 직접 돌려 결과를 기록하지 않았다.
 

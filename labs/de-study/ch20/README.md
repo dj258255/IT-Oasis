@@ -1,4 +1,4 @@
-# Ch-20 실습: 조회 기반 CDC와 로그 기반 CDC
+# DE 공부 21편 실습: 조회 기반 CDC와 로그 기반 CDC
 
 ```bash
 python cdc_poll_vs_log.py

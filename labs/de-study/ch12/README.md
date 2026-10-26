@@ -1,4 +1,4 @@
-# Ch-12 실습: linger.ms와 배치
+# DE 공부 13편 실습: linger.ms와 배치
 
 ```bash
 python batching.py

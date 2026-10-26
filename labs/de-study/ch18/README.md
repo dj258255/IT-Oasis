@@ -1,4 +1,4 @@
-# Ch-18, Ch-19 실습: PyIceberg로 스냅샷과 시간 여행, 만료
+# DE 공부 19, 20편 실습: PyIceberg로 스냅샷과 시간 여행, 만료
 
 ```bash
 pip install "pyiceberg[sql-sqlite,pyarrow]"

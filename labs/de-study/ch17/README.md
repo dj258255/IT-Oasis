@@ -1,4 +1,4 @@
-# Ch-17 실습: 체크포인트 간격
+# DE 공부 18편 실습: 체크포인트 간격
 
 ```bash
 python checkpoint_visibility.py

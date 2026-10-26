@@ -1,4 +1,4 @@
-# Ch-06 실습: pool과 중복 실행
+# DE 공부 7편 실습: pool과 중복 실행
 
 ```bash
 python pool_limit.py

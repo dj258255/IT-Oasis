@@ -1,4 +1,4 @@
-# Ch-13 실습: 처리와 커밋의 순서
+# DE 공부 14편 실습: 처리와 커밋의 순서
 
 ```bash
 python delivery_semantics.py

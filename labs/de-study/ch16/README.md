@@ -1,4 +1,4 @@
-# Ch-16 실습: interval join 범위
+# DE 공부 17편 실습: interval join 범위
 
 ```bash
 python interval_join.py

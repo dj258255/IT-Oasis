@@ -1,4 +1,4 @@
-# Ch-02 실습: airflow standalone으로 재시도와 메타DB 보기
+# DE 공부 3편 실습: airflow standalone으로 재시도와 메타DB 보기
 
 쿠버네티스 없이 맥에서 Airflow 3.2.2를 띄우고 `dags/shop_daily_sales.py`를 돌린다.
 

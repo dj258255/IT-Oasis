@@ -1,4 +1,4 @@
-# Ch-09 실습: coordinated omission
+# DE 공부 10편 실습: coordinated omission
 
 ```bash
 python coordinated_omission.py

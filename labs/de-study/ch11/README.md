@@ -1,4 +1,4 @@
-# Ch-11 실습: 키와 파티션
+# DE 공부 12편 실습: 키와 파티션
 
 ```bash
 python murmur2.py       # Kafka 단위 테스트(UtilsTest.testMurmur2)의 값과 같은지 확인

@@ -1,4 +1,4 @@
-# Ch-14 실습: Avro 스키마 해석
+# DE 공부 15편 실습: Avro 스키마 해석
 
 ```bash
 pip install fastavro

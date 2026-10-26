@@ -1,4 +1,4 @@
-# Ch-01 실습: Bronze, Silver, Gold
+# DE 공부 2편 실습: Bronze, Silver, Gold
 
 쇼핑몰 상품 조회 로그 1만 건(사용자 5명, 0.1초 간격)에 중복, 잘못된 가격, 순서 뒤바뀜을 섞어 Bronze에 그대로 넣고, Silver에서 정리하고, Gold에서 사용자별 1분 평균 가격으로 집계한다.
 
