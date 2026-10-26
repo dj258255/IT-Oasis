@@ -138,7 +138,7 @@ seriesOrder: 1
 
 #### 7. 왜 지금 이 문제가 커졌나: MSA와 컨테이너 수
 
-인프라 모양은 물리 서버에서 VM과 컨테이너로 바뀌었어도 목표는 그대로입니다. 서비스가 멈추지 않게 하는 것입니다. 달라진 것은 관리할 대상의 수입니다. 쇼핑몰을 상품, 주문, 결제, 회원 서비스로 잘게 나누는 MSA(Microservice Architecture)로 가면 서비스마다 컨테이너가 여러 개씩 붙어서 전체가 수백에서 수천 개가 됩니다. 이 수를 사람이 하나씩 배포하고 지켜보고 살리는 방식은 버티지 못하므로 1번 표의 셋째 줄(오케스트레이터)로 넘어갑니다.
+인프라 모양이 물리 서버에서 VM과 컨테이너로 바뀌는 동안에도 서비스가 멈추지 않게 한다는 목표는 그대로였습니다. 바뀐 쪽은 관리할 대상의 수입니다. 쇼핑몰을 상품, 주문, 결제, 회원 서비스로 잘게 나누는 MSA(Microservice Architecture)로 가면 서비스마다 컨테이너가 여러 개씩 붙어서 전체가 수백에서 수천 개가 됩니다. 이 수를 사람이 하나씩 배포하고 지켜보고 살리는 방식은 버티지 못하므로 1번 표의 셋째 줄(오케스트레이터)로 넘어갑니다.
 
 #### 8. VM이 풀어 준 것과 남긴 것, 하이퍼바이저 두 종류
 
@@ -188,7 +188,7 @@ Type 1이어도 VM마다 커널이 따로 있다는 점은 같습니다. 이 중
 
 비유는 역할 분담까지만 맞습니다. 실제로는 kubelet이 런타임을 거쳐 cgroup 파일에 한도를 적어 두고 그 뒤의 판단과 집행은 커널이 혼자 합니다(4-2, 5-1절 토글).
 
-컨테이너를 만드는 커널 기능은 네 가지로 묶어 볼 수 있습니다.
+컨테이너는 아래 네 커널 기능으로 만듭니다.
 
 | 커널 기능 | 하는 일 | 쿠버네티스에서 보이는 모습 |
 |---|---|---|
@@ -199,7 +199,7 @@ Type 1이어도 VM마다 커널이 따로 있다는 점은 같습니다. 이 중
 
 네 기능의 커널 쪽 동작은 [쿠버네티스 아래의 리눅스 시리즈](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 한 편씩 다룹니다.
 
-> **정리**: 사람은 원하는 결과를 적고 쿠버네티스가 재시작, 배치, 이전, 주소, 배포를 맡습니다. 그 아래의 컨테이너가 리눅스 커널의 namespace와 cgroup으로 격리한 보통 프로세스라는 바탕은 [커널 경계 글](/blog/theory/systems/k8s-linux-01-kernel-boundary)에 있습니다.
+> **정리**: 쿠버네티스는 원하는 상태를 받아 두고 맞추라고 지시하는 쪽이고 실제 집행은 리눅스 커널이 합니다. 컨테이너가 namespace와 cgroup으로 격리한 보통 프로세스라는 바탕은 [커널 경계 글](/blog/theory/systems/k8s-linux-01-kernel-boundary)에 있습니다.
 
 </details>
 
@@ -217,7 +217,7 @@ Type 1이어도 VM마다 커널이 따로 있다는 점은 같습니다. 이 중
 | 기록(오브젝트) | "이런 Pod가 있어야 한다"는 내용 | 사용자가 API 서버에 보냄, etcd에 저장 |
 | 실물(컨테이너) | 노드에서 도는 프로세스 | 그 기록을 본 kubelet이 따로 만듦 |
 
-Pod 오브젝트를 만들었다는 말은 기록을 남겼다는 뜻입니다. 기록과 실물이 나뉘어 있다는 점을 먼저 잡아 두면 뒤의 내용이 쉬워집니다.
+Pod 오브젝트를 만든 시점에 생긴 것은 기록 한 건입니다. 기록과 실물이 나뉘어 있다는 점을 먼저 잡아 두면 뒤의 내용이 쉬워집니다.
 
 #### 2. 네 칸 읽기
 
@@ -253,7 +253,7 @@ spec:                   # 4) 원하는 상태. kind마다 내용이 다름
 #### 4. 실전에서 보이는 모습
 
 - `kubectl get pod product-api -o yaml`로 받아 보면 내가 쓴 네 칸 아래에 `status`와 `metadata.uid`, `creationTimestamp` 같은 시스템 필드가 붙어 있습니다.
-- 시험에서 이 출력을 그대로 고쳐 다시 만들 때 시스템 필드를 지우는 이유가 이것입니다.
+- 그래서 시험에서 이 출력을 그대로 고쳐 다시 만들 때는 시스템 필드를 지웁니다.
 
 > **정리**: 네 칸은 사용자가 쓰고 `status`는 쿠버네티스가 씁니다. 바로 아래 본문에서 `spec`과 `status`의 차이로 트러블슈팅하는 법을 봅니다.
 
@@ -288,7 +288,7 @@ kubectl get deploy web -o jsonpath='{.spec.replicas} {.status.readyReplicas}{"\n
 # 3 3   ← 원하는 수와 관측된 준비 수
 ```
 
-시험에서 `spec`과 `status`를 나눠 보는 습관이 쓸모 있는 곳은 트러블슈팅입니다. `spec`은 바뀌었는데 `status`가 따라오지 않으면 그 사이를 메우는 구성요소가 멈춘 것입니다.
+`spec`과 `status`를 나눠 보는 습관은 시험의 트러블슈팅에서 쓸모가 있습니다. `spec`은 바뀌었는데 `status`가 따라오지 않으면 그 사이를 메우는 구성요소가 멈춰 있습니다.
 
 ### 1-2. 컨트롤러는 차이를 계속 메우는 루프
 
@@ -420,7 +420,7 @@ kubectl → kube-apiserver ↔ etcd
 | 새 배포, 스케일, 스케줄링 | 멈춤 |
 | 이미 노드에서 도는 컨테이너 | kubelet과 런타임이 계속 돌림 |
 
-> **정리**: 여섯 단계 모두 API 서버를 중심으로 이어집니다. 아래 표는 이 여섯 단계의 구성요소를 kubeadm 기준 실행 방식과 함께 정리한 것입니다.
+> **정리**: API 서버가 멈추면 새로 맞추는 일은 멈추고 이미 도는 컨테이너는 계속 돕니다. 여섯 단계의 구성요소를 kubeadm 기준 실행 방식과 함께 보려면 아래 2-1절 표로 갑니다.
 
 </details>
 
@@ -461,7 +461,7 @@ Kubernetes Components 문서 기준입니다. "도는 방식"은 kubeadm 클러�
 | 이름 | 파일 안의 `metadata.name` | 그 이름 뒤에 `-<노드 이름>`이 붙음. 예: `kube-apiserver-controlplane` |
 | `kubectl delete`하면 | 영향 없음 | 지워져도 kubelet이 다시 만듦 |
 
-`kubectl get pods -n kube-system`에 컨트롤 플레인 Pod가 보이는 것은 미러 Pod 덕분입니다. 공식 문서 "Create static Pods"는 미러 Pod를 kubectl로 지워도 kubelet이 static Pod를 지우지 않는다고 적습니다.
+`kubectl get pods -n kube-system`에 컨트롤 플레인 Pod가 보이는 것은 미러 Pod 덕분입니다. 미러 Pod를 kubectl로 지워도 kubelet은 static Pod를 지우지 않습니다(공식 문서 "Create static Pods").
 
 #### 3. 고칠 때는 파일을 고친다
 
@@ -546,9 +546,9 @@ kubelet                      API 서버에서 자기 노드 Pod를 받음
       → 리눅스 커널            격리(namespace)와 자원 제한(cgroup)을 집행
 ```
 
-kubelet과 런타임 사이의 표준이 CRI(Container Runtime Interface)입니다. Docker Engine을 kubelet에 붙이던 dockershim은 v1.24에서 제거됐고 지금 노드는 containerd나 CRI-O처럼 CRI를 직접 구현한 런타임을 씁니다. 노드에서 컨테이너를 볼 때 `crictl`을 쓰는 이유가 이것입니다.
+kubelet과 런타임 사이의 표준이 CRI(Container Runtime Interface)입니다. Docker Engine을 kubelet에 붙이던 dockershim은 v1.24에서 제거됐고 지금 노드는 containerd나 CRI-O처럼 CRI를 직접 구현한 런타임을 씁니다. 그래서 노드에서 컨테이너를 볼 때는 `crictl`을 씁니다.
 
-Pod마다 먼저 뜨는 pause 컨테이너가 네트워크 네임스페이스를 잡아 두고 앱 컨테이너가 거기에 합류합니다. `crictl pods`에 Pod 샌드박스가 따로 보이고 같은 Pod의 컨테이너끼리 `localhost`로 통신하는 이유입니다. 커널 쪽 동작은 [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause)와 [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
+Pod마다 먼저 뜨는 pause 컨테이너가 네트워크 네임스페이스를 잡아 두고 앱 컨테이너가 거기에 합류합니다. 그래서 `crictl pods`에 Pod 샌드박스가 따로 보이고 같은 Pod의 컨테이너끼리 `localhost`로 통신합니다. 커널 쪽 동작은 [네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause)와 [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
 `kubectl get nodes -o wide`의 `CONTAINER-RUNTIME` 열이 그 노드의 kubelet이 붙은 런타임입니다(예: `containerd://2.3.4`).
 
@@ -593,7 +593,7 @@ kubectl get pods -l app=web
 | `get rs` | DESIRED | ReplicaSet의 `spec.replicas` | 3 |
 | `get rs` | CURRENT, READY | ReplicaSet의 `status.replicas`, `status.readyReplicas` | 3, 3 |
 
-`kubectl scale`은 Deployment의 `spec.replicas`를 API 서버에 직접 고쳐 쓰는 요청이라 컨트롤러 없이도 반영됩니다. READY의 분모가 5가 된 이유입니다. 나머지 칸은 모두 컨트롤러가 채우는 값입니다.
+`kubectl scale`은 Deployment의 `spec.replicas`를 API 서버에 직접 고쳐 쓰는 요청이라 컨트롤러 없이도 반영됩니다. READY의 분모가 5로 바뀐 것은 이 때문입니다. 나머지 칸은 모두 컨트롤러가 채우는 값입니다.
 
 이제 출력을 다시 보면 Deployment의 `spec.replicas`는 5로 바뀌었지만 Deployment 컨트롤러가 없어서 ReplicaSet의 `DESIRED`는 3에 머물렀습니다. 실제 Pod는 2개인데 ReplicaSet과 Deployment의 `status`는 3을 가리킵니다. `status`를 갱신하는 주체도 컨트롤러라서 컨트롤러가 멈추면 `status`는 마지막 값으로 굳습니다. 남은 Pod 2개는 계속 Running이었습니다.
 
@@ -832,7 +832,7 @@ cgroup 한도로 죽었다면 `Memory cgroup out of memory: Killed process <PID>
 | 2. 근거 확인 | `dmesg`로 커널이 어떤 프로세스를 왜 골랐는지 확인 | 원인 후보가 좁혀짐 |
 | 3. 구조적 해결 | cgroup 지표와 애플리케이션 메모리 사용 패턴을 함께 보고 설정과 코드의 어긋남을 고침 | 근본 원인 분석(RCA) |
 
-> **정리**: 한도는 컨테이너를 만들 때 cgroup에 적히고 넘었을 때의 판단과 종료는 커널이 합니다. 아래 본문은 시험에서 이 결과를 `describe`로 읽는 법입니다.
+> **정리**: `describe`의 `OOMKilled`와 137만 보고 한도를 올리면 증상만 막습니다. 커널이 고른 프로세스는 `dmesg`에, 희생 순서의 기준은 `oom_score_adj`에 있습니다. 아래 본문은 시험에서 이 결과를 `describe`로 읽는 법입니다.
 
 </details>
 
@@ -877,7 +877,7 @@ kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.te
 # OOMKilled 137
 ```
 
-판단과 종료는 커널이 합니다. kubelet은 컨테이너를 만들 때 한도를 런타임에 넘기고 끝난 뒤 결과를 받아 `OOMKilled`로 보고합니다. 공식 문서 "Resource Management for Pods and Containers"는 한도를 넘은 컨테이너가 커널이 메모리 압박을 감지할 때 종료된다고 적습니다. 노드의 커널 로그(`dmesg`)에는 `Memory cgroup out of memory: Killed process ...` 줄이 남습니다.
+판단과 종료는 커널이 합니다. kubelet은 컨테이너를 만들 때 한도를 런타임에 넘기고 끝난 뒤 결과를 받아 `OOMKilled`로 보고합니다. 한도를 넘은 컨테이너는 커널이 메모리 압박을 감지할 때 종료됩니다(공식 문서 "Resource Management for Pods and Containers"). 노드의 커널 로그(`dmesg`)에는 `Memory cgroup out of memory: Killed process ...` 줄이 남습니다.
 
 ### 4-3. 137은 128 + 9
 
@@ -920,7 +920,7 @@ kubectl get events --field-selector involvedObject.name=mem-over --sort-by=.last
 kubectl logs mem-over -p        # 직전에 죽은 컨테이너의 로그
 ```
 
-해결은 limit을 실제 사용량에 맞게 올리거나 애플리케이션의 메모리 사용을 줄이는 것입니다. Deployment라면 `kubectl set resources deployment <이름> --limits=memory=256Mi`로 템플릿을 고칩니다.
+limit을 실제 사용량에 맞게 올리거나 애플리케이션의 메모리 사용을 줄이면 해결됩니다. Deployment라면 `kubectl set resources deployment <이름> --limits=memory=256Mi`로 템플릿을 고칩니다.
 
 ### 4-5. 노드 메모리가 모자랄 때의 축출
 
@@ -1014,10 +1014,10 @@ cat /sys/fs/cgroup/<그 경로>/cpu.stat                     # 스로틀 카운�
 
 #### 5. 헷갈리는 점
 
-- `kubectl top`은 최근 구간의 평균 사용률이라 `50m` 근처로 안정돼 보입니다. 머리가 천장에 닿아 있다는 것은 보여 주지만 몇 번 부딪혔는지는 보여 주지 않는 셈입니다.
+- `kubectl top`은 최근 구간의 평균 사용률이라 `50m` 근처로 안정돼 보입니다. 머리가 천장에 닿아 있다는 것은 보여 주지만 몇 번 부딪혔는지는 알려 주지 않습니다.
 - 운영에서는 노드마다 들어가 파일을 읽지 않습니다. kubelet에 들어 있는 cAdvisor가 이 카운터를 `container_cpu_cfs_periods_total`, `container_cpu_cfs_throttled_periods_total` 같은 메트릭으로 내놓고 Prometheus 같은 도구가 모읍니다. 대시보드의 스로틀 그래프도 출처는 커널의 `cpu.stat`입니다.
 
-> **정리**: CPU limit은 주기와 쿼터로 커널에 적히고 넘으면 기다립니다. 시험에서는 아래 본문처럼 사용량이 limit에 붙어 있는지로 판단합니다.
+> **정리**: 스로틀 횟수는 `kubectl top`의 평균 사용률에는 드러나지 않고 `cpu.stat`의 `nr_throttled`나 cAdvisor 메트릭에 남습니다. 시험에서는 아래 본문처럼 사용량이 limit에 붙어 있는지로 판단합니다.
 
 </details>
 
@@ -1062,14 +1062,14 @@ cat /sys/fs/cgroup/<그 경로>/cpu.stat                     # 스로틀 카운�
 | 들고 있는 값 | 최근 값만, 기록을 쌓지 않음 | 시간에 따른 기록 |
 | 쓰임 | 자동 확장(HPA, VPA)과 `kubectl top` | 지난 한 시간의 그래프 같은 모니터링 |
 
-metrics-server README도 자동 확장용이며 모니터링 데이터 원천으로 쓰지 말라고 적습니다.
+metrics-server README에도 자동 확장용이니 모니터링 데이터 원천으로 쓰지 말라는 안내가 있습니다.
 
 #### 4. 실전에서 보이는 모습
 
 - metrics-server가 없으면 `kubectl top`이 `Metrics API not available`로 끝납니다.
-- metrics-server가 kubelet에 HTTPS로 붙기 때문에 kubelet 서빙 인증서가 노드 IP를 담고 있지 않으면 수집이 실패합니다. 아래 kind 사례의 `--kubelet-insecure-tls`가 그 문제를 우회한 것입니다.
+- metrics-server가 kubelet에 HTTPS로 붙기 때문에 kubelet 서빙 인증서가 노드 IP를 담고 있지 않으면 수집이 실패합니다. 아래 kind 사례의 `--kubelet-insecure-tls`는 그 문제를 우회합니다.
 
-> **정리**: `kubectl top`은 kubelet → metrics-server → API 서버 경로로 최근 사용량만 보여 줍니다. 아래 본문에서 이 경로가 없을 때와 있을 때의 출력을 봅니다.
+> **정리**: metrics-server는 최근 값만 들고 있어 `kubectl top`으로 지난 기록은 볼 수 없고 kubelet 인증서 문제로 수집 자체가 막히기도 합니다. 아래 본문에서 이 경로가 없을 때와 있을 때의 출력을 봅니다.
 
 </details>
 
@@ -1096,7 +1096,7 @@ cka-lab-r-control-plane   426m         7%       640Mi           6%
 cka-lab-r-worker          92m          1%       168Mi           1%
 ```
 
-`top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다. CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 `kubectl top pod`는 `51m`이었고 같은 시점 커널 카운터로는 주기의 약 92%가 스로틀되어 있었습니다. 사용량이 limit에 붙어 있으면 스로틀링을 의심하고 `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다. 해결은 limit을 올리거나 지우는 것입니다.
+`top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다. CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 `kubectl top pod`는 `51m`이었고 같은 시점 커널 카운터로는 주기의 약 92%가 스로틀되어 있었습니다. 사용량이 limit에 붙어 있으면 스로틀링을 의심하고 `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다. limit을 올리거나 지우면 풀립니다.
 
 메모리 쪽 `top` 값은 working set이라 컨테이너 안의 `free` 숫자와 다르게 나올 수 있습니다. 출력을 읽는 법과 metrics-server가 없을 때의 점검은 [Ch-06 3장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
@@ -1142,7 +1142,7 @@ kube-controller-manager입니다. Deployment 컨트롤러가 ReplicaSet의 `spec
 
 <details><summary>정답</summary>
 
-kube-scheduler입니다. 스케줄러가 돌고 있는데 자원이 모자라거나 taint에 걸렸다면 `FailedScheduling` 이벤트가 남습니다. 이벤트조차 없으면 스케줄러가 Pod를 보지 못하고 있는 것입니다. `kubectl -n kube-system get pods`로 scheduler Pod를 보고 컨트롤 플레인 노드의 `/etc/kubernetes/manifests/kube-scheduler.yaml`과 `crictl logs`를 확인합니다.
+kube-scheduler입니다. 스케줄러가 돌고 있는데 자원이 모자라거나 taint에 걸렸다면 `FailedScheduling` 이벤트가 남습니다. 이벤트조차 없으면 스케줄러가 Pod를 보지 못하고 있습니다. `kubectl -n kube-system get pods`로 scheduler Pod를 보고 컨트롤 플레인 노드의 `/etc/kubernetes/manifests/kube-scheduler.yaml`과 `crictl logs`를 확인합니다.
 
 </details>
 

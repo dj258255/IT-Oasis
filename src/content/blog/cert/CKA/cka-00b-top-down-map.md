@@ -74,7 +74,7 @@ kubectl apply -f shop-web.yaml
 # service/web created
 ```
 
-두 줄이 출력되기까지 1초도 안 걸립니다. 그런데 이 출력이 나온 시점에 컨테이너는 아직 하나도 떠 있지 않습니다. 그 사이에 무슨 일이 있는지가 이 글의 내용입니다.
+두 줄이 출력되기까지 1초도 안 걸립니다. 그런데 이 출력이 나온 시점에 컨테이너는 아직 하나도 떠 있지 않습니다. 그 사이에 일어나는 일을 이 글에서 따라갑니다.
 
 ## 2. 등장하는 구성요소
 
@@ -84,7 +84,7 @@ kubectl apply -f shop-web.yaml
 
 *그림 출처: [Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/), The Kubernetes Authors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). 다크 모드에서 보이도록 흰 배경만 넣었습니다.*
 
-그림에서 눈여겨볼 점은 모든 화살표가 kube-apiserver로 모인다는 것입니다. 스케줄러도 컨트롤러도 kubelet도 서로 직접 말하지 않고 API 서버에 쓰고 API 서버를 지켜봅니다(watch). 이 구조 덕분에 아래 3장의 흐름이 "누가 무엇을 써 두면 다음 사람이 그걸 보고 움직인다"는 릴레이로 읽힙니다.
+그림을 보면 모든 화살표가 kube-apiserver로 모입니다. 스케줄러도 컨트롤러도 kubelet도 서로 직접 말하지 않고 API 서버에 쓰고 API 서버를 지켜봅니다(watch). 이 구조 덕분에 아래 3장의 흐름이 "누가 무엇을 써 두면 다음 사람이 그걸 보고 움직인다"는 릴레이로 읽힙니다.
 
 <details>
 <summary>기초부터: 3장에 나오는 단어를 한 줄씩</summary>
@@ -122,7 +122,7 @@ kubectl apply -f shop-web.yaml
 
 ![kubectl apply -f shop-web.yaml 한 번이 kubectl, kube-apiserver, etcd, 컨트롤러, kube-scheduler, kubelet, CRI·CNI·CSI, Service와 kube-proxy, Gateway와 Ingress의 아홉 층을 차례로 내려가는 그림. 층마다 자세히 다루는 챕터와 절이 오른쪽에 붙어 있다](/uploads/cert/cka-map/apply-top-down.svg)
 
-각 층을 같은 틀로 적었습니다. 무슨 일이 일어나는지, 고장 나면 무엇이 보이는지, 어디서 더 보는지입니다.
+각 층은 같은 틀로 적었습니다. 무슨 일이 일어나는지 먼저 쓰고 고장 나면 무엇이 보이는지와 어디서 더 보는지를 붙였습니다.
 
 ### 3-1. kubectl: 파일을 HTTP 요청으로 바꾼다
 
@@ -199,7 +199,7 @@ Pod가 IP를 받으면 EndpointSlice 컨트롤러가 Service `web`의 selector�
 
 ![사용자 요청이 Gateway와 HTTPRoute, Service ClusterIP, kube-proxy가 쓴 iptables DNAT 규칙, CNI가 배정한 Pod IP를 거쳐 nginx 컨테이너 프로세스에 닿는 그림. 이름 해석은 CoreDNS, 차단 규칙은 NetworkPolicy가 맡는다](/uploads/cert/cka-map/request-path.svg)
 
-눈여겨볼 점은 요청이 지나가는 길에 API 서버, 스케줄러, 컨트롤러가 없다는 것입니다. 컨트롤 플레인이 잠깐 멈춰도 이미 깔린 커널 규칙과 떠 있는 컨테이너로 요청은 계속 처리됩니다. 반대로 새 Pod가 뜨거나 Pod IP가 바뀐 것은 반영되지 않습니다. [Ch-01 3장](/blog/cert/cka/cka-01-why-kubernetes#3-구성요소가-멈추면-무엇이-멈추는지)에서 controller-manager를 멈춰 놓고 확인한 내용이 이것입니다.
+요청이 지나가는 길에는 API 서버도 스케줄러도 컨트롤러도 없습니다. 컨트롤 플레인이 잠깐 멈춰도 이미 깔린 커널 규칙과 떠 있는 컨테이너로 요청은 계속 처리됩니다. 반대로 새 Pod가 뜨거나 Pod IP가 바뀐 것은 반영되지 않습니다. [Ch-01 3장](/blog/cert/cka/cka-01-why-kubernetes#3-구성요소가-멈추면-무엇이-멈추는지)에서 controller-manager를 멈춰 놓고 확인한 것도 이 동작입니다.
 
 ## 5. 층별 고장 증상 지도
 
@@ -253,13 +253,13 @@ Ch-02를 뒤로 미룬 이유는 설치 과정이 앞의 층을 전부 한 번�
 
 ### 7-1. 한 층 더 내려가고 싶을 때: 쿠버네티스 아래의 리눅스
 
-시험 범위는 아니지만 ⑥⑦⑧ 층 아래에서 실제로 일하는 것은 리눅스 커널입니다. 증상의 이유가 궁금해지면 이어서 봅니다.
+시험 범위는 아니지만 ⑥⑦⑧ 층 아래에서 실제로 일하는 쪽은 리눅스 커널입니다. 증상의 이유가 궁금해지면 이어서 봅니다.
 
-- [1편 커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary): kubelet도 kube-proxy도 결국 시스템 콜을 부르는 프로세스라는 것. ⑥층 아래입니다.
+- [1편 커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary): kubelet도 kube-proxy도 결국 시스템 콜을 부르는 프로세스라는 이야기로, ⑥층 아래를 다룹니다.
 - [2편 네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause): 한 Pod 안의 컨테이너가 네트워크를 나눠 쓰는 방식. ⑦의 CRI가 만드는 샌드박스의 정체입니다.
 - [3편 cgroup v2와 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos): requests와 limits가 커널 파일이 되고 OOMKilled가 나기까지. ⑤와 ⑥이 정한 값이 집행되는 곳입니다.
 - [4편 OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs): 이미지 레이어가 컨테이너의 루트 파일시스템이 되는 방식. ⑦의 CRI가 이미지를 받은 다음 일입니다.
-- [5편 Service와 iptables](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack): ClusterIP가 DNAT 규칙과 conntrack으로 바뀌는 과정. ⑧층의 실체입니다.
+- [5편 Service와 iptables](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack): ClusterIP가 DNAT 규칙과 conntrack으로 바뀌는 과정으로, ⑧층을 커널 쪽에서 봅니다.
 
 ## 8. 범위와 한계
 

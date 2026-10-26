@@ -67,9 +67,9 @@ merged (컨테이너가 보는 화면)
 
 | 스토리지 드라이버 | Docker 문서 기준 상태 |
 |---|---|
-| `overlay2` | 지금의 기본. 문서는 가장 안정적이고 배포판 호환성이 넓다고 적음 |
+| `overlay2` | 지금의 기본. 가장 안정적이고 배포판 호환성이 넓다 |
 | `aufs` | 예전 Ubuntu 기본. 리눅스 메인라인 커널에 들어간 적이 없어 배포판이 따로 패치를 얹어야 했다. v19.03에서 사용 중단, Docker Engine v24.0에서 제거 |
-| `devicemapper` | 예전 RHEL/CentOS 계열. 설정 없이 쓰면 loop-lvm 모드(희소 파일을 루프 장치로 붙임)였는데 문서는 이 모드가 느리고 운영에 쓰면 안 되며 운영은 블록 장치를 쓰는 direct-lvm이어야 한다고 적었다. v18.09에서 사용 중단, v25.0에서 제거 |
+| `devicemapper` | 예전 RHEL/CentOS 계열. 설정 없이 쓰면 loop-lvm 모드(희소 파일을 루프 장치로 붙임)였는데 이 모드는 느리고 운영에 쓰면 안 되며 운영에는 블록 장치를 쓰는 direct-lvm을 써야 했다. v18.09에서 사용 중단, v25.0에서 제거 |
 
 Docker에서 `docker inspect <컨테이너>`를 보면 `GraphDriver.Data`에 위 그림의 경로가 그대로 나옵니다. `LowerDir`(이미지 레이어들), `UpperDir`(쓰기 층), `MergedDir`(합쳐 보이는 화면), `WorkDir`(커널이 복사 작업에 쓰는 작업 공간)입니다. 네 디렉터리의 커널 쪽 동작은 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에 있습니다.
 
@@ -97,7 +97,7 @@ Docker에서 볼륨 드라이버를 고르는 자리는 `docker volume create --
 
 레이어 캐시는 같은 호스트에서 다시 빌드할 때만 이득이 납니다. 매번 새 러너나 새 Pod에서 빌드하는 CI는 캐시가 비어서 시작합니다.
 
-1. **BuildKit의 빌드 그래프**: 지금 Docker의 빌더인 BuildKit은 빌드 정의를 LLB라는 의존 그래프로 바꾸고 각 단계를 체크섬으로 추적합니다. 문서는 서로 의존하지 않는 스테이지를 병렬로 빌드하고 최종 결과에 쓰이지 않는 스테이지는 건너뛴다고 적습니다.
+1. **BuildKit의 빌드 그래프**: 지금 Docker의 빌더인 BuildKit은 빌드 정의를 LLB라는 의존 그래프로 바꾸고 각 단계를 체크섬으로 추적합니다. 문서 기준으로 서로 의존하지 않는 스테이지는 병렬로 빌드하고 최종 결과에 쓰이지 않는 스테이지는 건너뜁니다.
 2. **원격 캐시**: `docker buildx build --cache-to type=registry,ref=<레지스트리>/<캐시 이미지> --cache-from type=registry,ref=<같은 곳>`처럼 캐시를 레지스트리에 내보내고 다음 빌드가 받아 씁니다. 백엔드는 `inline`, `registry`, `local`, `gha`(GitHub Actions 캐시, 문서 기준 beta) 등이 있습니다.
 3. **캐시 범위**: `mode=min`(기본)은 최종 이미지에 들어간 레이어만, `mode=max`는 중간 스테이지 레이어까지 내보냅니다. `max`는 캐시가 커지는 대신 적중이 늘어납니다.
 
@@ -109,7 +109,7 @@ Docker에서 볼륨 드라이버를 고르는 자리는 `docker volume create --
 - 기본 `docker` 드라이버는 containerd 이미지 저장소를 켰을 때만 registry 캐시를 내보냅니다. 아니면 `docker buildx create`로 다른 드라이버의 빌더를 만듭니다.
 - 큰 캐시를 올리는 시간이 배포를 늦춘다면 캐시 내보내기를 배포와 다른 작업으로 떼어 놓는 구성도 씁니다. 대신 그 작업이 끝나기 전에 시작한 다음 빌드는 이전 캐시를 받습니다.
 
-> **정리**: 이미지는 읽기 전용, 컨테이너 쓰기 층은 일회용입니다. 남길 데이터는 볼륨으로 빼고 쿠버네티스에서는 그 볼륨을 아래 PV, PVC로 다룹니다.
+> **정리**: 이미지 레이어는 여러 컨테이너가 함께 쓰는 읽기 전용이고 쓰기 층은 컨테이너마다 하나씩 붙는 일회용입니다. 쓰기가 많은 DB 데이터는 CoW 비용 때문에도 볼륨으로 빼고 쿠버네티스에서는 그 볼륨을 아래 PV, PVC로 다룹니다.
 
 </details>
 
@@ -130,7 +130,7 @@ Persistent Volumes 문서의 정의를 표로 옮겼습니다.
       PV 생성                                   으로 참조              Retain/Delete
 ```
 
-PV는 Pod와 무관한 수명을 가지고 `emptyDir` 같은 임시 볼륨은 Pod와 함께 사라집니다. 컨테이너 자체의 쓰기 레이어는 컨테이너가 다시 시작되면 비워지므로 남겨야 할 데이터는 볼륨에 둡니다. 쓰기 레이어의 커널 쪽 구조(OverlayFS)는 시험 범위 밖이라 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에 따로 두었습니다.
+PV의 수명은 Pod와 무관하고 `emptyDir` 같은 임시 볼륨은 Pod와 함께 사라집니다. 컨테이너 자체의 쓰기 레이어는 컨테이너가 다시 시작되면 비워지므로 남겨야 할 데이터는 볼륨에 둡니다. 쓰기 레이어의 커널 쪽 구조(OverlayFS)는 시험 범위 밖이라 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에 따로 두었습니다.
 
 ## 1. StorageClass와 동적 프로비저닝
 
@@ -148,7 +148,7 @@ PV는 Pod와 무관한 수명을 가지고 `emptyDir` 같은 임시 볼륨은 Po
 | 준비 | PVC가 생길 때마다 관리자가 디스크와 PV를 미리 만든다 | PVC가 들어오면 프로비저너가 만든다 |
 | 크기 | 일대일 바인딩이라 맞는 PV가 없으면 큰 PV가 묶인다. 1Gi 요청에 100Gi PV만 있으면 99Gi를 다른 PVC가 못 쓴다 | 요청한 크기대로 만들어 남는 용량이 없다 |
 
-주문이 들어올 때 그 크기로 만들어 주는 셈입니다.
+주문이 들어오면 그 크기로 만들어 줍니다.
 
 #### 2. 어떻게 동작하나
 
@@ -220,20 +220,20 @@ parameters:
 
 ### 1-2. 동적 프로비저닝의 흐름
 
-Dynamic Volume Provisioning 문서를 따라가면 순서는 다음과 같습니다.
+Dynamic Volume Provisioning 문서 기준 순서입니다.
 
 1. 관리자가 StorageClass를 하나 이상 만듭니다.
 2. 사용자가 PVC의 `storageClassName`에 그 클래스 이름을 적습니다(옛 `volume.beta.kubernetes.io/storage-class` 어노테이션은 사용 중단).
 3. 정적으로 만든 PV 중 맞는 것이 없으면 클러스터가 그 PVC만을 위한 볼륨을 동적으로 만듭니다.
 4. 동적으로 만든 PV는 항상 그 PVC에 묶입니다.
 
-`storageClassName: ""`인 PVC는 동적 프로비저닝을 스스로 끈 것입니다. selector가 비어 있지 않은 PVC에도 PV를 동적으로 만들 수 없습니다.
+`storageClassName: ""`로 적은 PVC는 동적 프로비저닝을 스스로 끕니다. selector가 비어 있지 않은 PVC에도 PV를 동적으로 만들 수 없습니다.
 
 ### 1-3. 기본 StorageClass
 
 PVC가 `storageClassName`을 적지 않으면 기본 StorageClass가 쓰입니다. StorageClass 하나에 어노테이션 `storageclass.kubernetes.io/is-default-class: "true"`가 있어야 하고 API 서버의 `DefaultStorageClass` 승인 컨트롤러(기본 켜짐)가 클래스를 생략한 PVC에 그 이름을 채워 넣습니다.
 
-기본 클래스는 `kubectl get sc`에서 이름 옆에 `(default)`로 표시됩니다. Change the default StorageClass 문서의 방법은 기존 기본 클래스의 어노테이션을 `"false"`로 바꾸고 새 클래스를 `"true"`로 바꾸는 것입니다.
+기본 클래스는 `kubectl get sc`에서 이름 옆에 `(default)`로 표시됩니다. 기본을 바꿀 때는 Change the default StorageClass 문서대로 기존 기본 클래스의 어노테이션을 `"false"`로, 새 클래스의 어노테이션을 `"true"`로 바꿉니다.
 
 ```bash
 kubectl get storageclass
@@ -367,7 +367,7 @@ Pod(노드1 또는 노드2) → PVC → PV → CSI 드라이버 → NFS, Ceph, �
 
 - 옛 자료의 `awsElasticBlockStore`, `gcePersistentDisk`, `cephfs`처럼 Pod 스펙에 저장소를 직접 적던 in-tree 타입은 CSI로 옮겨졌거나 제거됐습니다.
 
-> **정리**: 볼륨 타입이 데이터의 실제 위치를 정하고 hostPath는 노드 한 대에 묶입니다. 어느 노드에서든 같은 데이터를 보려면 노드 밖 저장소를 CSI와 PVC로 연결합니다.
+> **정리**: Pod가 어느 노드로 옮겨 가도 같은 데이터를 보게 하려면 노드 밖 저장소를 CSI와 PVC로 연결합니다. hostPath는 단일 노드 테스트나 노드 단위 시스템 구성요소에 씁니다.
 
 </details>
 
@@ -396,7 +396,7 @@ Pod(노드1 또는 노드2) → PVC → PV → CSI 드라이버 → NFS, Ceph, �
 | `File` | 파일이 있어야 함 |
 | `Socket`, `CharDevice`, `BlockDevice` | 해당 종류가 있어야 함 |
 
-문서는 `hostPath` PV를 단일 노드 테스트 전용이라고 적지만 공식 튜토리얼과 연습 과제는 PV 개념을 보여 주려고 `hostPath` PV를 자주 씁니다.
+문서상 `hostPath` PV는 단일 노드 테스트 전용이지만 공식 튜토리얼과 연습 과제는 PV 개념을 보여 주려고 `hostPath` PV를 자주 씁니다.
 
 게시판 Pod가 업로드 임시 파일을 `emptyDir`에 두고 크기를 제한하는 예입니다.
 
@@ -467,7 +467,7 @@ spec:
 - 접근 모드는 PVC와 PV를 맞추는 데 쓰이고 마운트 뒤의 쓰기 보호는 강제하지 않습니다. `ReadOnlyMany`로 만든 PV가 읽기 전용이라는 보장도 없습니다. 실제로 Pod 하나로 제한하는 것은 `ReadWriteOncePod`뿐입니다.
 - 볼륨이 여러 모드를 지원해도 한 번에 한 모드로만 마운트됩니다.
 - 지원하는 모드는 볼륨 플러그인마다 다릅니다. 문서 표 기준 HostPath는 RWO만, NFS는 RWO, ROX, RWX, CSI는 드라이버에 따라 다릅니다.
-- 문서는 `ReadWriteOncePod`를 CSI 볼륨 전용이라고 적습니다. kind의 local-path(hostPath PV)에서도 RWOP PVC가 묶였고 같은 PVC를 쓰는 두 번째 Pod는 `unavailable due to PersistentVolumeClaim with ReadWriteOncePod`로 스케줄되지 않았습니다.
+- `ReadWriteOncePod`는 문서상 CSI 볼륨 전용입니다. 다만 kind의 local-path(hostPath PV)에서도 RWOP PVC가 묶였고 같은 PVC를 쓰는 두 번째 Pod는 `unavailable due to PersistentVolumeClaim with ReadWriteOncePod`로 스케줄되지 않았습니다.
 
 주문 DB처럼 Pod 하나만 써야 하는 볼륨이면 이렇게 요청합니다.
 
@@ -591,7 +591,7 @@ kubelet ─NodeStageVolume→ 노드 공통 경로 ─NodePublishVolume→ Pod �
 - 정리는 거꾸로 갑니다. Pod가 지워지면 언마운트와 detach가 일어나고 볼륨은 남습니다.
 - `DeleteVolume`은 PVC가 지워지고 PV의 회수 정책이 `Delete`일 때 불립니다. Pod를 지운다고 저장소의 볼륨이 지워지지는 않습니다.
 
-> **정리**: StorageClass의 `provisioner`가 CSI 드라이버를 가리키고 사이드카와 kubelet이 만들기, 붙이기, 마운트 순서로 RPC를 부릅니다. 아래 명령이 이 고리를 하나씩 확인합니다.
+> **정리**: Pod를 지우면 언마운트와 detach만 일어나고 저장소의 볼륨은 PVC가 지워지고 회수 정책이 `Delete`일 때 지워집니다. 고리의 출발점은 StorageClass의 `provisioner`가 가리키는 드라이버 이름이라 아래 명령으로 하나씩 따라가며 확인합니다.
 
 </details>
 
@@ -670,11 +670,11 @@ Pod ──claimName──→ PVC (3Gi, RWO) ──Bound──→ PV (10Gi, RWO, 
 #### 4. 헷갈리는 점 / 실전에서 보이는 모습
 
 - 일대일이라 요청보다 큰 PV가 묶이면 남는 용량은 다른 PVC가 쓰지 못합니다. 아래 예에서 3Gi 요청이 10Gi PV에 묶이는 것이 그 경우입니다.
-- 문서는 맞는 볼륨이 없으면 PVC가 무기한 묶이지 않은 채로 남고 맞는 볼륨이 생기면 묶인다고 적습니다. 50Gi PV만 여럿 있는 클러스터에서 100Gi PVC는 100Gi PV가 추가될 때까지 `Pending`입니다.
+- 맞는 볼륨이 없으면 PVC는 무기한 묶이지 않은 채로 남고 맞는 볼륨이 생기면 그때 묶입니다(Persistent Volumes 문서). 50Gi PV만 여럿 있는 클러스터에서 100Gi PVC는 100Gi PV가 추가될 때까지 `Pending`입니다.
 - Pod가 쓰는 PVC를 지우면 `Terminating`에 머물고 Finalizers에 `kubernetes.io/pvc-protection`이 보입니다(3-4절).
 - PVC를 지운 뒤 PV를 어떻게 할지는 회수 정책이 정합니다(2-3절). 볼륨을 `rm -rf`로 비워 다시 내주던 `Recycle`은 사용 중단됐고 문서는 그 대신 동적 프로비저닝을 쓰라고 권합니다. 요청이 올 때마다 새 볼륨을 만들고 다 쓰면 `Delete`로 지우는 흐름입니다.
 
-> **정리**: 공급(PV)과 요청(PVC)을 나눠 앱과 저장소를 떼어 놓았습니다. 이 낭비와 수작업을 줄이려고 1절의 동적 프로비저닝을 씁니다.
+> **정리**: 공급(PV)과 요청(PVC)을 나눠 앱과 저장소를 떼어 놓았습니다. 정적 PV에서 생기는 남는 용량과 미리 만드는 수작업은 1절의 동적 프로비저닝으로 줄입니다.
 
 </details>
 
@@ -782,7 +782,7 @@ spec:
     path: /mnt/order-db
 ```
 
-문서는 이 방법이 `Retain` 정책의 PV를 다시 쓸 때 유용하다고 적습니다.
+`Retain` 정책의 PV를 다시 쓸 때 이 방법이 유용합니다(Persistent Volumes 문서).
 
 ### 3-3. PV 상태
 

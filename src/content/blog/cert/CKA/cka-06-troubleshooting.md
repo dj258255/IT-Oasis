@@ -19,7 +19,7 @@ seriesOrder: 6
 
 ## 결론부터
 
-1. 트러블슈팅은 증상에서 출발해 한 층씩 내려갑니다. `kubectl get`으로 상태 보기, `kubectl describe`의 Events 읽기, `kubectl logs`로 컨테이너 출력 보기, 노드에 ssh로 들어가 `journalctl -u kubelet`과 `crictl` 보기 순서입니다. 0절의 판단 표가 이 순서를 증상별로 정리한 것입니다.
+1. 트러블슈팅은 증상에서 출발해 한 층씩 내려갑니다. `kubectl get`으로 상태 보기, `kubectl describe`의 Events 읽기, `kubectl logs`로 컨테이너 출력 보기, 노드에 ssh로 들어가 `journalctl -u kubelet`과 `crictl` 보기 순서입니다. 이 순서를 증상별로 정리한 표가 0절에 있습니다.
 2. kubeadm 클러스터의 컨트롤 플레인 구성요소(kube-apiserver, kube-controller-manager, kube-scheduler, etcd)는 `/etc/kubernetes/manifests`의 static Pod입니다. 매니페스트를 고치면 kubelet이 다시 띄웁니다. API 서버가 죽어 `kubectl`이 안 되면 노드에서 `crictl ps -a`와 `crictl logs`, 또는 `/var/log/pods`의 파일을 봅니다.
 3. kubelet과 컨테이너 런타임은 systemd 서비스입니다. 노드가 `NotReady`이면 그 노드에서 `systemctl status kubelet`과 `journalctl -u kubelet`부터 봅니다. kubeadm이 쓰는 kubelet 설정 파일은 `/var/lib/kubelet/config.yaml`입니다.
 4. `kubectl top`은 metrics-server(또는 Metrics API를 제공하는 다른 어댑터)가 있어야 동작합니다. `--sort-by`는 `cpu`와 `memory`만 받고 메모리 수치는 working set 기준입니다.
@@ -43,7 +43,7 @@ seriesOrder: 6
 
 ![트러블슈팅 다섯 층. kubectl get, kubectl describe, kubectl logs --previous, 노드에 ssh로 들어가 systemctl과 journalctl, crictl과 /var/log/pods 순서로 내려가고 각 층 오른쪽에 다음 층으로 내려가는 신호가 적혀 있다](/uploads/cert/cka/cka-06-troubleshooting/drill-down.svg)
 
-이 글 전체가 위 그림의 다섯 층을 차례로 펼친 것입니다. 위층에서 원인이 보이면 거기서 고치고 끝냅니다. 아래층일수록 보는 데 시간이 더 들기 때문에 시험에서는 순서를 건너뛰지 않는 편이 빠릅니다.
+이 글은 위 그림의 다섯 층을 차례로 펼칩니다. 위층에서 원인이 보이면 거기서 고치고 끝냅니다. 아래층일수록 보는 데 시간이 더 들기 때문에 시험에서는 순서를 건너뛰지 않는 편이 빠릅니다.
 
 ### 0-1. 첫 3분
 
@@ -64,7 +64,7 @@ kubectl get events -n <ns> --sort-by=.metadata.creationTimestamp
 
 #### 1. 왜 Events부터 보나
 
-Pod의 STATUS는 결과를 한 단어로만 보여 줍니다. `Pending`만 보고는 스케줄러가 노드를 못 찾은 것인지 PVC를 기다리는 것인지 알 수 없습니다. 그 이유를 문장으로 남겨 두는 곳이 Event 객체입니다. 구성요소들은 단계를 넘기거나 실패할 때마다 Event를 하나씩 만듭니다.
+Pod의 STATUS는 결과를 한 단어로만 보여 줍니다. `Pending`만 보고는 스케줄러가 노드를 못 찾은 것인지 PVC를 기다리는 것인지 알 수 없습니다. 그 이유는 Event 객체에 문장으로 남습니다. 구성요소들은 단계를 넘기거나 실패할 때마다 Event를 하나씩 만듭니다.
 
 #### 2. 줄 하나 읽기
 
@@ -137,7 +137,7 @@ kubectl get node --show-labels
 
 ### 0-4. ImagePullBackOff
 
-Images 문서는 이유로 잘못된 이미지 이름과 `imagePullSecret` 없이 비공개 레지스트리에서 받으려 한 경우를 듭니다. Debug Pods 문서의 점검 목록은 이미지 이름이 맞는지, 레지스트리에 있는지, 직접 pull해서 받아지는지 세 가지입니다.
+Images 문서는 이유로 잘못된 이미지 이름과 `imagePullSecret` 없이 비공개 레지스트리에서 받으려 한 경우를 듭니다. Debug Pods 문서는 이미지 이름이 맞는지, 레지스트리에 있는지, 직접 pull해서 받아지는지를 점검하게 합니다.
 
 ```bash
 kubectl -n shop get pod order-api-xxxx -o jsonpath='{.spec.containers[*].image}'
@@ -196,7 +196,7 @@ Pod 명세에 오타가 있으면 그 키가 조용히 무시될 수 있습니�
 
 ### 1-1. 노드 목록부터
 
-Troubleshooting Clusters 문서의 첫 단계는 노드가 모두 등록됐고 `Ready`인지 보는 것입니다.
+Troubleshooting Clusters 문서는 노드가 모두 등록됐고 `Ready`인지부터 봅니다.
 
 ```bash
 kubectl get nodes
@@ -392,7 +392,7 @@ kubectl drain --ignore-daemonsets <노드>      # Pod 축출. DaemonSet Pod는 �
 kubectl uncordon <노드>                       # 다시 배치 허용
 ```
 
-DaemonSet Pod가 있으면 `--ignore-daemonsets`가 있어야 drain이 성공합니다(Safely Drain a Node 문서). cordon된 노드는 출력에 `SchedulingDisabled`로 보이고 Node Status 문서는 이것이 조건 목록에 없는 출력용 표시라고 적습니다.
+DaemonSet Pod가 있으면 `--ignore-daemonsets`가 있어야 drain이 성공합니다(Safely Drain a Node 문서). cordon된 노드는 출력에 `SchedulingDisabled`로 보입니다. Node Status 문서 기준으로 이것은 조건 목록에 없는 출력용 표시입니다.
 
 ### 1-7. 자주 틀리는 지점
 
@@ -496,7 +496,7 @@ sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/backup/
 sudo vi /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-static Pod를 재시작하려면 매니페스트를 잠시 디렉터리 밖으로 옮겼다가 되돌립니다. Certificate Management with kubeadm 문서는 kubelet의 `fileCheckFrequency`만큼(문서는 20초) 기다리라고 적습니다.
+static Pod를 재시작하려면 매니페스트를 잠시 디렉터리 밖으로 옮겼다가 되돌립니다. 그 사이에 kubelet의 `fileCheckFrequency`만큼(문서는 20초) 기다립니다(Certificate Management with kubeadm 문서).
 
 ```bash
 sudo mv /etc/kubernetes/manifests/kube-scheduler.yaml /tmp/
@@ -616,7 +616,7 @@ kubeadm으로 막 만든 클러스터에서 `kubectl top node`를 치면 실패�
 - 막 설치했거나 막 만든 Pod는 첫 수집이 끝날 때까지 `Metrics not available`이 나올 수 있으니 1~2분 기다린 뒤 다시 봅니다.
 - 계속 안 되면 경로를 거꾸로 짚습니다. APIService가 `True`인지, metrics-server Pod와 로그, kubelet 인증서 오류 순입니다(3-4절).
 
-> **정리**: 숫자의 원천은 cgroup이고 kubelet이 내놓고 metrics-server가 모아 API로 냅니다. 지금 값만 있으니 이력이 필요하면 별도 저장소를 둡니다.
+> **정리**: `kubectl top`이 안 되면 이 경로를 거꾸로 APIService, metrics-server, kubelet 인증서 순으로 짚습니다. 지금 값만 남으니 이력이 필요하면 별도 저장소를 둡니다.
 
 </details>
 
@@ -628,7 +628,7 @@ Resource metrics pipeline 문서의 구성입니다.
    -> HPA, VPA, kubectl top
 ```
 
-metrics-server는 Metrics API의 참조 구현인 클러스터 애드온이고 이것(또는 다른 어댑터)을 배포해야 Metrics API가 생깁니다. README는 수집 간격 15초, 자동 확장 전용이라고 적습니다. `kubectl top`의 값도 가장 최근 수집값뿐입니다.
+metrics-server는 Metrics API의 참조 구현인 클러스터 애드온이고 이것(또는 다른 어댑터)을 배포해야 Metrics API가 생깁니다. README 기준으로 수집 간격은 15초이고 용도는 자동 확장 전용입니다. `kubectl top`의 값도 가장 최근 수집값뿐입니다.
 
 API 버전은 두 층을 나눠서 봅니다.
 
@@ -769,7 +769,7 @@ kubectl get nodes --sort-by=.status.capacity.cpu
 
 이미지 경로는 Pod 객체에 있고 노드 JSON에는 `spec.containers`가 없습니다. 식 둘을 구분자 없이 이어 쓰면(`'{.items[*].metadata.name}{.items[*].status.capacity.cpu}'`) 결과가 한 줄에 붙어 나오니 사이에 `{"\n"}`이나 `{"\t"}`를 넣습니다.
 
-> **정리**: JSON 구조를 보고 경로를 짚으면 원하는 값만 뽑힙니다. 목록 조회는 `items`로 감싸인다는 점부터 확인하고 아래 세 단계로 식을 세웁니다.
+> **정리**: 목록 조회는 `items`로 감싸인다는 점부터 확인합니다. jsonpath는 `.items[*]`부터 적고 custom-columns와 `--sort-by`는 원소 하나 기준으로 적습니다. 식은 아래 세 단계로 세웁니다.
 
 </details>
 
@@ -795,7 +795,7 @@ kubectl -n shop get pod board -o jsonpath='{.spec.containers[?(@.name=="app")].i
 kubectl get node -o custom-columns='NODE:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status'
 ```
 
-JSONPath는 정규 표현식을 지원하지 않고 문서는 그럴 때 `jq`를 쓰라고 적습니다. 그런데 시험 호스트의 사전 설치 목록에는 `jq`가 없고 `yq`가 있습니다. 그래서 jq로 하던 일은 이렇게 바꿉니다.
+JSONPath는 정규 표현식을 지원하지 않아 문서는 그럴 때 `jq`를 쓰라고 권합니다. 그런데 시험 호스트의 사전 설치 목록에는 `jq`가 없고 `yq`가 있습니다. 그래서 jq로 하던 일은 이렇게 바꿉니다.
 
 | jq로 하던 일 | 대신 |
 |---|---|
@@ -809,7 +809,7 @@ JSONPath는 정규 표현식을 지원하지 않고 문서는 그럴 때 `jq`를
 kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort | uniq -c
 ```
 
-자주 하는 실수는 네 가지입니다. 식을 작은따옴표로 감싸지 않아 셸이 `[*]`나 `"`를 먼저 해석하는 것, 중괄호를 빼먹는 것, custom-columns에 `.items[*]`를 붙이는 것, 마지막 `{"\n"}`이 없어 파일 끝 줄바꿈이 빠지는 것입니다. 파일로 옮겼다면 `cat -A`로 탭(`^I`)과 줄 끝(`$`)까지 확인합니다.
+식을 작은따옴표로 감싸지 않아 셸이 `[*]`나 `"`를 먼저 해석하거나, 중괄호를 빼먹거나, custom-columns에 `.items[*]`를 붙이거나, 마지막 `{"\n"}`이 없어 파일 끝 줄바꿈이 빠지는 실수가 잦습니다. 파일로 옮겼다면 `cat -A`로 탭(`^I`)과 줄 끝(`$`)까지 확인합니다.
 
 ### 3-7. 직접 해 보기
 
@@ -823,7 +823,7 @@ kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' |
 <details>
 <summary>기초부터: 컨테이너 로그는 표준 출력이다</summary>
 
-> **핵심 한 줄**: `kubectl logs`가 보여 주는 것은 앱이 stdout과 stderr로 낸 출력을 런타임이 노드 파일에 적어 둔 것입니다. 앱이 자기 파일에만 쓰면 `kubectl logs`에는 아무것도 나오지 않습니다.
+> **핵심 한 줄**: `kubectl logs`는 앱이 stdout과 stderr로 낸 출력, 곧 런타임이 노드 파일에 적어 둔 내용을 보여 줍니다. 앱이 자기 파일에만 쓰면 `kubectl logs`에는 아무것도 나오지 않습니다.
 
 #### 1. 왜 필요한가
 
@@ -860,7 +860,7 @@ kubectl logs → kube-apiserver → 노드 kubelet:10250 → 파일 읽기 → �
 
 `kubectl logs`에는 검색이나 장기 보관 기능이 없습니다. 운영 환경에서는 노드마다 로그 수집 에이전트(Fluent Bit 등)를 DaemonSet으로 띄워 중앙 저장소(Elasticsearch, Loki 등)로 보냅니다. 수집기 Fluentd(또는 Fluent Bit), 저장소 Elasticsearch, 화면 Kibana를 묶어 EFK라고 부르고 이 일을 상용 서비스에 맡기기도 합니다.
 
-> **정리**: 로그는 stdout과 stderr이고 노드 파일에 있으며 kubelet을 거쳐 읽습니다. 지금과 직전 컨테이너만 보는 도구라 보관은 별도 수집기가 맡습니다.
+> **정리**: `kubectl logs`가 비어 있으면 앱이 stdout 대신 파일에만 쓰는지부터 봅니다. 지금과 직전 컨테이너만 보는 도구라 보관은 별도 수집기가 맡습니다.
 
 </details>
 
@@ -962,7 +962,7 @@ CrashLoopBackOff인 결제 Pod의 `describe`에서 컨테이너 부분은 이런
 
 kubelet은 컨테이너를 멈출 때 SIGTERM을 먼저 보내고 유예 시간(기본 30초)이 지나도 살아 있으면 SIGKILL을 보냅니다. 그런데 `sh -c '...'`로 띄운 셸이 컨테이너의 PID 1이면 SIGTERM이 전달되지 않습니다. 리눅스는 PID 네임스페이스의 첫 프로세스(init)에 대해 핸들러를 등록하지 않은 시그널을 보내지 않고 바깥 네임스페이스에서 보낸 SIGKILL만 강제로 전달합니다(pid_namespaces(7) 매뉴얼). 그래서 liveness 실패로 재시작되는 컨테이너가 143이 아닌 137로 끝나고 매번 30초씩 늦게 내려갑니다. Reason이 `Error`이고 Events에 `Unhealthy`가 함께 보이면 이 경우입니다.
 
-> **정리**: Last State가 원인이고 128을 넘는 코드는 시그널입니다. 137은 Reason으로 OOMKilled인지부터 가르고 아니면 probe와 종료 처리를 봅니다.
+> **정리**: 원인은 Last State의 Reason과 Exit Code에서 찾습니다. 128을 넘는 137이면 Reason으로 OOMKilled인지부터 가르고 아니면 probe와 종료 처리를 봅니다.
 
 </details>
 
@@ -1078,7 +1078,7 @@ kubectl -n shop logs board -c access-log
 | EndpointSlice | 목록이 비어 있음 | `kubectl get endpointslice -l kubernetes.io/service-name=<이름>` |
 | Pod | `CrashLoopBackOff`, RESTARTS 증가 | `kubectl describe pod`, `kubectl logs --previous` |
 
-> **정리**: 지도 위의 객체와 연결을 하나도 건너뛰지 않는 것이 요점입니다. 아래 표는 이 가운데 Service 하나를 확인하는 세부 순서입니다.
+> **정리**: EndpointSlice가 비면 selector와 라벨을 대조하고 Pod가 재시작 중이면 `--previous` 로그를 봅니다. 아래 표는 이 가운데 Service 하나를 확인하는 세부 순서입니다.
 
 </details>
 
@@ -1097,7 +1097,7 @@ Debug Services 문서는 질문을 하나씩 확인하는 순서로 짜여 있�
 
 5번의 점검 목록은 문서 원문입니다. 접근하려는 포트가 `spec.ports[]`에 있는지, `targetPort`가 Pod가 쓰는 포트인지, 숫자 포트를 의도했는데 문자열로 쓰지 않았는지, 이름 붙은 포트라면 Pod가 같은 이름의 포트를 노출하는지, 프로토콜이 맞는지입니다.
 
-6번에서 ENDPOINTS가 비어 있으면(`kubectl get endpointslices`는 `<unset>`, 1.33부터 사용 중단 경고를 찍는 `kubectl get endpoints`는 `<none>`) Service의 `spec.selector`가 Pod의 라벨을 실제로 고르는지 봅니다. 라벨은 맞는데 비어 있으면 readiness probe 실패입니다. Pod Lifecycle 문서는 readiness가 실패한 Pod의 IP를 EndpointSlice 컨트롤러가 뺀다고 적습니다.
+6번에서 ENDPOINTS가 비어 있으면(`kubectl get endpointslices`는 `<unset>`, 1.33부터 사용 중단 경고를 찍는 `kubectl get endpoints`는 `<none>`) Service의 `spec.selector`가 Pod의 라벨을 실제로 고르는지 봅니다. 라벨은 맞는데 비어 있으면 readiness probe 실패입니다. readiness가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다(Pod Lifecycle 문서, EndpointSlice 문서).
 
 ### 5-2. 쇼핑몰 예로 따라가기
 

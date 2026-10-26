@@ -91,7 +91,7 @@ kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 �
 | 인가(RBAC) | 이 사람이 shop 네임스페이스에 Pod를 만들어도 되느냐 | 동작의 겉면(동사, 리소스, 네임스페이스) |
 | 어드미션 | 만들려는 Pod의 내용이 정책에 맞느냐 | 요청 객체 전체 |
 
-만들려는 Pod가 어느 레지스트리의 이미지를 쓰는지, root로 돌려 하는지, 필수 라벨을 달았는지는 RBAC 규칙으로 표현할 수 없습니다. 요청의 내용물을 보고 고치거나 막는 단계가 따로 필요하고 그것이 어드미션 컨트롤입니다.
+만들려는 Pod가 어느 레지스트리의 이미지를 쓰는지, root로 돌려 하는지, 필수 라벨을 달았는지는 RBAC 규칙으로 표현할 수 없습니다. 요청의 내용물을 보고 고치거나 막는 단계가 따로 있어야 하는데, 그게 어드미션 컨트롤입니다.
 
 #### 2. 어떻게 동작하나
 
@@ -170,7 +170,7 @@ webhooks:
 - 웹훅 서버가 내려가 있는데 `failurePolicy: Fail`이면 `500 Internal Server Error`와 `failed calling webhook`이 보이고 그 규칙에 걸리는 요청이 모두 막힙니다.
 - Deployment는 만들어졌는데 Pod가 없으면 어드미션 거부가 ReplicaSet 쪽에서 일어난 경우입니다. `kubectl describe rs`의 Events를 봅니다.
 
-> **정리**: 인증은 누구인지, 인가는 해도 되는 동작인지, 어드미션은 내용이 정책에 맞는지를 봅니다. 어드미션은 변형 다음 검증 순서로 돌고 쓰기 요청에만 적용됩니다. 각 단계가 실패할 때의 응답 코드는 바로 아래 표에 있습니다.
+> **정리**: 누구인지는 인증이, 해도 되는 동작인지는 인가가 보고 RBAC로 표현할 수 없는 내용 조건은 어드미션이 맡습니다. 어드미션은 쓰기 요청에만 변형 다음 검증 순서로 돕니다. 단계별 실패 응답 코드는 바로 아래 표에 있습니다.
 
 </details>
 
@@ -219,7 +219,7 @@ CPU, 메모리, Pod 수 쿼터에 걸리는 Deployment도 `kubectl create`는 �
 
 #### 3. Score: 남은 후보에 점수 매기기
 
-kube-scheduler 설정 레퍼런스는 NodeResourcesFit의 기본 점수 전략을 `LeastAllocated`(CPU와 메모리 가중치 같음)로 적습니다. 이 Pod를 올린 뒤에 덜 차 있는 노드가 높은 점수를 받는 방식입니다.
+kube-scheduler 설정 레퍼런스 기준으로 NodeResourcesFit의 기본 점수 전략은 `LeastAllocated`(CPU와 메모리 가중치 같음)입니다. 이 Pod를 올린 뒤에 덜 차 있는 노드일수록 점수가 높습니다.
 
 | 노드 | 올린 뒤 requests 합 | 올린 뒤 사용률 | 남는 비율(점수 감각) |
 |---|---|---|---|
@@ -292,10 +292,10 @@ API 서버가 Pod를 저장할 때마다 담당 kubelet을 찾아가 "이 컨테
 
 - kubectl이 받는 `created`는 "etcd에 기록됐다"는 접수 확인입니다. 실제 실행은 그 뒤에 비동기로 따라오므로 명령이 성공해도 Pod가 `Pending`에 남을 수 있습니다.
 - 컨트롤러는 이벤트를 "다시 비교해 볼 때가 됐다"는 신호로만 씁니다. 판단은 늘 지금 상태와 원하는 상태의 비교로 하므로([Ch-01 1-2절](/blog/cert/cka/cka-01-why-kubernetes)) 이벤트 한두 개를 놓쳐도 다음 비교에서 바로잡힙니다.
-- API 서버가 보관하지 않은 오래된 `resourceVersion`으로 watch를 요청하면 `410 Gone`이 돌아옵니다. 공식 문서([API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes))는 이때 클라이언트가 로컬 캐시를 비우고 list를 다시 한 뒤 돌아온 `resourceVersion`부터 watch를 시작해야 한다고 적습니다.
+- API 서버가 보관하지 않은 오래된 `resourceVersion`으로 watch를 요청하면 `410 Gone`이 돌아옵니다. 공식 문서([API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes)) 기준으로 이때 클라이언트는 로컬 캐시를 비우고 list를 다시 한 뒤 돌아온 `resourceVersion`부터 watch를 시작해야 합니다.
 - `kubectl get pods -w`를 띄워 두고 다른 터미널에서 Pod를 만들면 이 이벤트 흐름을 사람 눈으로 볼 수 있습니다.
 
-> **정리**: 저장은 API 서버가, 실행은 watch로 일을 받아 간 구성요소가 맡습니다. 다음 절의 컨트롤러와 스케줄러, kubelet이 모두 이 구조 위에서 움직입니다.
+> **정리**: `created`는 접수 확인일 뿐이라 명령이 성공해도 Pod가 `Pending`에 남을 수 있습니다. 이벤트를 몇 개 놓쳐도 컨트롤러는 다음 비교에서 바로잡습니다. 다음 절의 컨트롤러와 스케줄러, kubelet이 모두 이 구조 위에서 움직입니다.
 
 </details>
 
@@ -402,7 +402,7 @@ endpointslice 컨트롤러가 목록 하나를 고치는 과정입니다.
 
 kube-proxy 이름에 proxy가 붙은 데에는 이력이 있습니다. 초기의 userspace 모드에서는 kube-proxy 프로세스가 연결을 직접 받아 Pod로 넘겼고 커널과 사용자 공간을 오가느라 느렸습니다. 그 뒤 커널 규칙만 깔아 두는 iptables 모드가 기본이 되었고 userspace 모드는 1.26에서 제거되었습니다([Ch-04](/blog/cert/cka/cka-04-services-networking)).
 
-> **정리**: 개수는 컨트롤러 매니저, 자리는 스케줄러, 실행은 kubelet, 트래픽 규칙은 kube-proxy가 맡고 서로 직접 부르지 않고 API 서버로만 이어집니다. 다음 표는 이 구성요소들이 kubeadm에서 어떤 형태로 도는지 보여 줍니다.
+> **정리**: 개수는 컨트롤러 매니저, 자리는 스케줄러, 실행은 kubelet, 트래픽 규칙은 kube-proxy 몫입니다. 새 Pod가 `spec.nodeName` 없이 `Pending`이면 스케줄러를, ReplicaSet조차 생기지 않으면 컨트롤러 매니저를 먼저 의심합니다. 이 구성요소들이 kubeadm에서 어떤 형태로 도는지는 다음 표에 있습니다.
 
 </details>
 
@@ -476,7 +476,7 @@ etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 
 
 ### 2-5. kube-controller-manager
 
-컨트롤러 매니저는 컨트롤러 수십 개를 한 바이너리에 담은 것입니다. 이 글의 흐름과 맞닿는 컨트롤러만 고르면 이렇습니다.
+컨트롤러 매니저 바이너리 하나에 컨트롤러 수십 개가 들어 있습니다. 이 글의 흐름과 맞닿는 것만 고르면 이렇습니다.
 
 | 컨트롤러 | 하는 일 |
 |---|---|
@@ -499,7 +499,7 @@ etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 
 
 #### 1. 왜 필요한가
 
-스케줄러는 `spec.nodeName`을 채우는 데서 일을 마칩니다. 그 노드에서 이미지를 받고 컨테이너를 띄우고 살아 있는지 살필 누군가가 노드마다 있어야 하고 그 역할이 kubelet입니다.
+스케줄러는 `spec.nodeName`을 채우는 데서 일을 마칩니다. 그 노드에서 이미지를 받고 컨테이너를 띄우고 살아 있는지 살필 누군가가 노드마다 있어야 하는데, 그게 kubelet입니다.
 
 #### 2. 어떻게 동작하나
 
@@ -527,7 +527,7 @@ API 서버도 Pod인데 Pod는 API 서버를 거쳐야 만들어진다면 처음
 - `kubectl get pods -n kube-system`에 보이는 `kube-apiserver-<노드>`는 static Pod를 API 서버에 비춰 보여 주는 미러 Pod입니다. kubectl로 지워도 kubelet이 매니페스트를 기준으로 다시 올립니다.
 - kubelet이 멈추면 그 노드는 하트비트가 끊겨 `NotReady`가 되고 새 Pod를 받지 못합니다. 이미 떠 있는 컨테이너는 런타임이 계속 돌립니다.
 
-> **정리**: kubelet은 노드 등록, Pod 실행, 프로브와 상태 보고를 맡고 static Pod로 컨트롤 플레인을 세우는 출발점이라 호스트에 직접 설치됩니다. 설정 파일 위치는 바로 아래 본문에 있습니다.
+> **정리**: 컨트롤 플레인 static Pod를 띄우는 쪽이 kubelet이라 kubelet만 systemd 서비스로 돕니다. kubelet이 멈추면 노드는 `NotReady`가 되지만 떠 있던 컨테이너는 런타임이 계속 돌립니다. 설정 파일 위치는 바로 아래 본문에 있습니다.
 
 </details>
 
@@ -618,14 +618,14 @@ API 서버 주소로 오가는 요청에는 Secret 값과 토큰이 실립니다
 
 kubeadm 트러블슈팅 문서([Troubleshooting kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/))에 나오는 메시지입니다.
 
-- `x509: certificate signed by unknown authority`: kubectl이 가진 CA로 서버 인증서를 검증하지 못했습니다. 문서는 kubeconfig의 인증서가 클러스터와 맞는지 확인하라고 안내합니다.
-- `x509: certificate has expired or is not yet valid`: 인증서 유효 기간 밖입니다. 문서는 kubelet 클라이언트 인증서 회전 실패 사례로 듭니다.
+- `x509: certificate signed by unknown authority`: kubectl이 가진 CA로 서버 인증서를 검증하지 못했습니다. kubeconfig의 인증서가 클러스터와 맞는지부터 확인합니다.
+- `x509: certificate has expired or is not yet valid`: 인증서 유효 기간 밖입니다. 문서에서는 kubelet 클라이언트 인증서 회전이 실패한 사례로 나옵니다.
 
 > **정리**: TLS는 비대칭 키로 신원을 확인하고 대칭 키로 데이터를 지킵니다. 인증서는 CA가 서명한 공개 키 신분증이고 개인 키는 만든 자리를 떠나지 않습니다. 다음 절에서 이 인증서가 클러스터 안 어느 연결에 쓰이는지 나눠 봅니다.
 
 </details>
 
-인증서 문제를 풀 때 가장 먼저 정할 것은 "이 연결에서 누가 클라이언트이고 누가 서버인지"입니다. 방향이 정해지면 어떤 플래그를 볼지가 따라 나옵니다.
+인증서 문제를 풀 때는 "이 연결에서 누가 클라이언트이고 누가 서버인지"부터 정합니다. 방향이 정해지면 어떤 플래그를 볼지가 따라 나옵니다.
 
 ### 3-1. API 서버는 양쪽 역할을 다 한다
 
@@ -686,7 +686,7 @@ etcd가 클러스터 CA를 믿는다면 클러스터 CA로 서명받은 사용�
 
 워커 노드에는 etcd에 붙을 수 있는 인증서가 아예 없으므로 노드 하나가 뚫려도 클러스터 전체 데이터까지 번지지 않습니다.
 
-> **정리**: 받는 쪽은 서버 인증서, 거는 쪽은 클라이언트 인증서, 검증은 CA 인증서입니다. API 서버는 받는 쪽이자 거는 쪽이라 둘 다 갖고 etcd는 전용 CA로 따로 보호됩니다.
+> **정리**: API 서버는 받는 쪽이자 거는 쪽이라 서버 인증서와 클라이언트 인증서를 둘 다 갖습니다. etcd는 전용 CA로 따로 보호되므로 워커 노드의 인증서가 새어 나가도 etcd까지는 닿지 못합니다.
 
 </details>
 
@@ -952,7 +952,7 @@ spec:
 | 게시판 앱 + 로그 전달기 | 같은 Pod | 1:1로 붙어 다니고 같은 파일을 읽음 |
 | 게시판 웹 + DB | 다른 Pod(다른 Deployment, StatefulSet)와 Service | 늘리는 기준과 수명이 다름 |
 
-판단 기준은 "반드시 1:1로 붙어 다니고 같은 파일이나 localhost를 써야 하는지"입니다.
+"반드시 1:1로 붙어 다니고 같은 파일이나 localhost를 써야 하는지"로 판단합니다.
 
 #### 4. 실전에서 보이는 모습
 
@@ -1168,11 +1168,11 @@ spec:
 - selector와 템플릿 라벨이 다르면 `selector does not match template labels` 메시지와 함께 생성이 거부됩니다(5-3절).
 - `kubectl get pods --show-labels`로 각 Pod의 라벨을 한 번에 보고 `-l`로 걸러 셀렉터가 무엇을 잡는지 미리 확인합니다.
 
-> **정리**: 라벨은 붙이는 꼬리표, 셀렉터는 그 꼬리표로 찾는 조건, 어노테이션은 고르는 데 쓰지 않는 메모입니다. 라벨만 맞으면 주인 없는 Pod도 RS에 들어가는 이유가 바로 아래 본문에 이어집니다.
+> **정리**: RS YAML의 라벨 세 군데 중 selector와 템플릿 라벨은 반드시 맞아야 하고 RS 자신의 라벨은 달라도 됩니다. 셀렉터는 누가 만든 Pod인지 따지지 않으므로 라벨만 맞으면 주인 없는 Pod도 RS에 들어갑니다. 그 동작은 바로 아래 본문에서 이어집니다.
 
 </details>
 
-ReplicaSet 문서의 "Non-Template Pod acquisitions" 절은 ownerReference가 없는 Pod가 RS의 selector에 맞으면 그 RS가 즉시 그 Pod를 자기 것으로 가져간다고 적습니다. 그래서 `app=product-web, tier=frontend` 라벨을 단 단독 Pod가 이미 2개 있는 상태에서 위 RS(replicas 3)를 만들면 RS는 Pod를 1개만 새로 만듭니다. 순서가 반대여도 같습니다. RS가 이미 3개를 유지하는 중에 같은 라벨의 단독 Pod를 만들면 RS가 그 Pod를 입양하고 4개가 되었으니 하나를 지웁니다. 문서 예시에서는 새로 만든 Pod가 입양된 직후 종료됩니다.
+ReplicaSet 문서의 "Non-Template Pod acquisitions" 절 기준으로, ownerReference가 없는 Pod가 RS의 selector에 맞으면 그 RS가 즉시 그 Pod를 자기 것으로 가져갑니다. 그래서 `app=product-web, tier=frontend` 라벨을 단 단독 Pod가 이미 2개 있는 상태에서 위 RS(replicas 3)를 만들면 RS는 Pod를 1개만 새로 만듭니다. 순서가 반대여도 같습니다. RS가 이미 3개를 유지하는 중에 같은 라벨의 단독 Pod를 만들면 RS가 그 Pod를 입양하고 4개가 되었으니 하나를 지웁니다. 문서 예시에서는 새로 만든 Pod가 입양된 직후 종료됩니다.
 
 ### 5-3. selector와 템플릿 라벨이 다르면 생성이 거부된다
 
@@ -1212,7 +1212,7 @@ replicas 3이면 Pod는 언제나 3개 이상 Ready이고 4개를 넘지 않아�
 | 5 | 1 | 3 | 4 | 새 Pod 하나 더 |
 | 6 | 0 | 3 | 3 | 마지막 옛 Pod 삭제. 완료 |
 
-Deployments 문서의 예시 설명도 같은 흐름입니다. 새 ReplicaSet을 1로 올려 뜨기를 기다리고 옛 것을 2로, 새 것을 2로 바꿔 가며 "최소 3개 사용 가능, 최대 4개 생성"을 지킨다고 적습니다.
+Deployments 문서의 예시 설명도 같은 흐름입니다. 새 ReplicaSet을 1로 올려 뜨기를 기다리고 옛 것을 2로, 새 것을 2로 바꿔 가며 "최소 3개 사용 가능, 최대 4개 생성"을 지킵니다.
 
 #### 2. 새 이미지가 잘못됐다면
 
@@ -1542,7 +1542,7 @@ apply -f web.yaml
                          └─ 있음 → 파일과 다른 필드만 반영 → 같으면 변화 없음
 ```
 
-몇 번을 실행해도 결과가 같은 이 성질을 멱등(idempotent)이라고 부르고 자동화 스크립트와 Git 기반 배포가 apply를 쓰는 이유가 이것입니다.
+몇 번을 실행해도 결과가 같은 이 성질을 멱등(idempotent)이라고 부릅니다. 자동화 스크립트와 Git 기반 배포가 apply를 쓰는 것도 이 성질 때문입니다.
 
 #### 3. 한눈에 비교
 
@@ -1571,7 +1571,7 @@ apply -f web.yaml
 - `kubectl edit`은 실행 중인 객체를 메모리에서 바로 고치는 기능처럼 소개되곤 합니다. 실제로는 현재 객체를 임시 파일로 받아 편집기로 열고 저장할 때 API 서버에 보냅니다(7-3절). 실행 중인 Pod는 바꿀 수 있는 필드가 적어 대부분 거부됩니다(7-4절).
 - 명령형 명령은 실행한 기록이 셸 히스토리에만 남습니다. 같은 상태를 다시 만들거나 남에게 넘기려면 `-o yaml`로 뽑아 파일로 둡니다.
 
-> **정리**: 명령형은 동작을, 선언형은 결과를 적습니다. 시험은 명령형으로 뼈대를 빨리 만들고 선언형으로 마무리하는 조합이 기본이고 세 방식의 공식 구분은 바로 아래 7-1절에 있습니다.
+> **정리**: 시험에서는 명령형으로 뼈대를 빨리 만들고 선언형으로 마무리하는 조합이 기본입니다. `kubectl scale`처럼 명령으로 바꾼 값은 그 파일로 다시 apply하면 파일 값으로 돌아간다는 점만 조심합니다. 세 방식의 공식 구분은 바로 아래 7-1절에 있습니다.
 
 </details>
 
@@ -1619,7 +1619,7 @@ last-applied에 있었는데 새 파일에서 빠진 필드 → 삭제
 
 HPA는 `/scale` 서브리소스로 replicas를 바꾸므로 last-applied에는 여전히 3이 남아 있습니다. 파일에도 3이 있으니 apply는 "내가 원하는 값은 3"으로 읽고 5를 3으로 내립니다. 경고도 없습니다. LearnKube의 [Server-side apply 글](https://learnkube.com/server-side-apply-kubernetes)이 바로 이 예로 클라이언트 측 apply가 조용히 값을 되돌린다고 설명합니다.
 
-HPA 문서도 HPA를 켠 Deployment는 매니페스트에서 `spec.replicas`를 빼라고 권합니다. 이때 한 번은 조심해야 합니다. last-applied에 있던 replicas를 파일에서 빼면 규칙 두 번째 줄대로 필드가 지워지고 기본값 1이 되어 Pod가 잠깐 하나로 줄어듭니다. 문서는 이 일회성 감소를 피하는 방법을 따로 안내합니다.
+HPA 문서도 HPA를 켠 Deployment는 매니페스트에서 `spec.replicas`를 빼라고 권합니다. 이때 한 번은 조심해야 합니다. last-applied에 있던 replicas를 파일에서 빼면 규칙 두 번째 줄대로 필드가 지워지고 기본값 1이 되어 Pod가 잠깐 하나로 줄어듭니다. 이 일회성 감소를 피하는 방법은 문서에 따로 나옵니다.
 
 #### 3. server-side apply에서는
 
@@ -1633,7 +1633,7 @@ server-side apply는 필드마다 주인(`metadata.managedFields`)을 기록합�
 
 ### 7-3. kubectl edit은 임시 파일을 편집한다
 
-`kubectl edit`은 현재 객체를 받아 임시 파일로 만들고 `KUBE_EDITOR` 또는 `EDITOR` 환경 변수의 편집기(리눅스 기본 vi)로 엽니다. 저장하고 닫으면 그 내용을 API 서버에 보냅니다. kubectl edit 레퍼런스는 반영 중 에러가 나면 적용하지 못한 수정본을 담은 임시 파일을 디스크에 남긴다고 적습니다. 경로는 운영체제의 임시 디렉터리 아래 `kubectl-edit-<임의 문자열>.yaml` 형태로 출력되고 리눅스인 시험 호스트에서는 `/tmp`입니다. 터미널에는 `error: pods "..." is invalid`와 `A copy of your changes has been stored to "..."`가 찍히고 Forbidden의 상세 문구는 그 임시 파일 머리의 주석에 들어 있습니다.
+`kubectl edit`은 현재 객체를 받아 임시 파일로 만들고 `KUBE_EDITOR` 또는 `EDITOR` 환경 변수의 편집기(리눅스 기본 vi)로 엽니다. 저장하고 닫으면 그 내용을 API 서버에 보냅니다. kubectl edit 레퍼런스 기준으로, 반영 중 에러가 나면 kubectl은 적용하지 못한 수정본을 담은 임시 파일을 디스크에 남깁니다. 경로는 운영체제의 임시 디렉터리 아래 `kubectl-edit-<임의 문자열>.yaml` 형태로 출력되고 리눅스인 시험 호스트에서는 `/tmp`입니다. 터미널에는 `error: pods "..." is invalid`와 `A copy of your changes has been stored to "..."`가 찍히고 Forbidden의 상세 문구는 그 임시 파일 머리의 주석에 들어 있습니다.
 
 ### 7-4. 실행 중인 Pod에서 바꿀 수 있는 필드
 

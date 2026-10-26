@@ -18,7 +18,7 @@ seriesOrder: 8
 
 ## 결론부터
 
-1. 과제마다 호스트, 네임스페이스, 리소스 이름 세 가지를 먼저 확인합니다. 지정된 호스트로 `ssh`해서 풀고 끝나면 `exit`로 base에 돌아옵니다. ssh 안에서 다시 ssh할 수는 없습니다.
+1. 과제마다 호스트, 네임스페이스, 리소스 이름부터 확인합니다. 지정된 호스트로 `ssh`해서 풀고 끝나면 `exit`로 base에 돌아옵니다. ssh 안에서 다시 ssh할 수는 없습니다.
 2. YAML은 처음부터 쓰지 않습니다. `kubectl create`와 `run`에 `--dry-run=client -o yaml`을 붙여 뼈대를 받고 생성 명령이 없는 객체(NetworkPolicy, PV, PVC, StorageClass, Gateway, HTTPRoute)는 허용 문서의 예제를 복사해 고칩니다. 필드 이름은 `kubectl explain`으로 찾습니다.
 3. 공식 기준 120분에 15~20문항이면 문항당 6~8분이고 합격선은 66%입니다. 막힌 채 5분이 지난 과제는 표시하고 넘어가고 15분 알림이 오면 새 과제를 멈춥니다.
 4. 비중이 가장 큰 트러블슈팅(30%)은 `get`, `describe`의 Events, `logs --previous`, 노드의 `journalctl -u kubelet`과 `crictl` 순서로 한 층씩 내려갑니다. API 서버가 죽었으면 `kubectl` 대신 `crictl`이나 `/var/log/pods`입니다.
@@ -42,7 +42,7 @@ LF Important Instructions 기준으로 과제용 ssh 호스트에는 아래 도�
 | 근거 없음 | `etcdutl`, `crictl`, `kustomize`(단독 바이너리) | `which etcdutl crictl`로 확인. crictl이 없으면 `/var/log/pods`, kustomize는 아래 줄 |
 | kubectl 내장 | `kubectl apply -k`, `kubectl kustomize` | 단독 kustomize가 없어도 씀 |
 
-Resources Allowed는 배포판 패키지를 설치해도 되지만 과제 수행에 필요하지는 않다고 적습니다. 패키지 저장소에 닿는지는 공식 문서에 없습니다. 그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다. 직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
+Resources Allowed 기준으로 배포판 패키지는 설치해도 되지만 과제 수행에 필요하지는 않습니다. 패키지 저장소에 닿는지는 공식 문서에 나오지 않습니다. 그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다. 직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
 
 시험 중 열 수 있는 문서는 kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io(CKA만) 네 곳과 과제의 Quick Reference 링크이고 시험 VM 안 Firefox로만 엽니다. 터미널 복사와 붙여넣기는 Ctrl+Shift+C/V이고 INSERT 키는 쓰지 않습니다.
 
@@ -72,7 +72,7 @@ exit                              # base로 돌아온다
 
 ### 1-3. vim 설정
 
-공식 안내가 말하는 것은 `i`로 입력하고 Esc로 나온다는 것뿐입니다. `~/.vimrc`에 `set expandtab tabstop=2 shiftwidth=2`를 넣는 것은 관행이고 호스트마다 다시 넣습니다. 붙여 넣을 때 들여쓰기가 밀리면 `:set paste`를 켜고 붙여 넣은 파일은 `yq . 파일명`으로 문법부터 봅니다.
+공식 안내에는 `i`로 입력하고 Esc로 나온다는 내용만 있습니다. `~/.vimrc`에 `set expandtab tabstop=2 shiftwidth=2`를 넣는 것은 관행이고 호스트마다 다시 넣습니다. 붙여 넣을 때 들여쓰기가 밀리면 `:set paste`를 켜고 붙여 넣은 파일은 `yq . 파일명`으로 문법부터 봅니다.
 
 ### 1-4. 뼈대는 `--dry-run=client -o yaml`
 
@@ -91,7 +91,7 @@ k expose deploy pay-api --port=80 --target-port=8080 -n payment $do > svc.yaml
 |---|---|
 | Pod(`run`), Deployment, Service(`expose` 권장), ConfigMap, Secret, ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding, ResourceQuota(`quota`), PriorityClass, Ingress, Job, CronJob, HPA(`autoscale`) | NetworkPolicy, PV, PVC, StorageClass, LimitRange, DaemonSet(Deployment 뼈대에서 kind를 바꿈), Gateway, HTTPRoute, CRD |
 
-자세한 목록은 [Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow)에 있습니다.
+전체 목록은 [Ch-01.5](/blog/cert/cka/cka-01b-core-objects-and-flow)에 있습니다.
 
 ### 1-5. 필드 이름은 `kubectl explain`
 
@@ -138,7 +138,7 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 
 ### 2-3. 서비스와 네트워킹 20%
 
-자세한 내용은 [Ch-04](/blog/cert/cka/cka-04-services-networking)에 있습니다.
+[Ch-04](/blog/cert/cka/cka-04-services-networking)에서 자세히 다룹니다.
 
 | 항목 | 외울 명령 | YAML 뼈대 | 함정 |
 |---|---|---|---|
@@ -171,7 +171,7 @@ YAML 파일에 `namespace:`를 적었다면 `-n`을 빼고 적지 않았다면 `
 
 ### 2-5. 스토리지 10%
 
-자세한 내용은 [Ch-05](/blog/cert/cka/cka-05-storage)에 있습니다.
+근거는 [Ch-05](/blog/cert/cka/cka-05-storage)에 있습니다.
 
 | 항목 | 외울 명령 | YAML 뼈대 | 함정 |
 |---|---|---|---|
@@ -319,7 +319,7 @@ k auth can-i --list -n shop --as=system:serviceaccount:shop:order-api
 kubeadm 패키지 교체 -> kubeadm upgrade node -> 4~6 반복
 ```
 
-컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. kubelet은 kube-apiserver보다 새로울 수 없기 때문입니다. `drain`은 kubectl이 있는 호스트에서 실행하고 apt와 kubeadm은 해당 노드에서 실행합니다. 3번이 성공하면 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".` 꼴의 줄이 나옵니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
+kubelet은 kube-apiserver보다 새로울 수 없어서 컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. `drain`은 kubectl이 있는 호스트에서 실행하고 apt와 kubeadm은 해당 노드에서 실행합니다. 3번이 성공하면 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".` 꼴의 줄이 나옵니다([Ch-02](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ### 4-2. etcd 백업과 복구
 
@@ -358,7 +358,7 @@ sudo systemctl restart kubelet
 kubectl -n kube-system delete pod -l k8s-app=kube-proxy
 ```
 
-도구가 둘인 이유는 하는 일이 달라서입니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙는 클라이언트라서 `--endpoints`와 인증서가 필요하고 `etcdutl`은 서버 없이 스냅샷 파일과 데이터 디렉터리를 직접 다루는 도구라서 인증서가 필요 없습니다. 6번에서 매니페스트를 밖으로 뺐다 넣는 것은 kubelet이 `/etc/kubernetes/manifests`를 지켜보다가 파일이 사라지면 그 static Pod를 멈추고 다시 생기면 새로 띄우기 때문입니다. `kubectl delete pod`로는 mirror Pod만 지워져 재시작이 되지 않습니다.
+두 도구는 하는 일이 다릅니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙는 클라이언트라서 `--endpoints`와 인증서가 필요하고 `etcdutl`은 서버 없이 스냅샷 파일과 데이터 디렉터리를 직접 다루는 도구라서 인증서가 필요 없습니다. 6번에서 매니페스트를 밖으로 뺐다 넣는 데도 까닭이 있습니다. kubelet은 `/etc/kubernetes/manifests`를 지켜보다가 파일이 사라지면 그 static Pod를 멈추고 다시 생기면 새로 띄웁니다. `kubectl delete pod`로는 mirror Pod만 지워져 재시작이 되지 않습니다.
 
 함정은 셋입니다.
 
@@ -399,7 +399,7 @@ sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -subject -issuer 
 sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -subject -dates
 ```
 
-`kubeadm certs renew all`의 출력은 kube-apiserver, kube-controller-manager, kube-scheduler, etcd 네 구성요소의 재시작을 요구합니다. kubelet 클라이언트 인증서의 정상 subject는 `O = system:nodes, CN = system:node:<노드 이름>`이고 만료됐을 때의 복구 절차는 [Ch-06 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+`kubeadm certs renew all`을 돌리면 출력에 kube-apiserver, kube-controller-manager, kube-scheduler, etcd 네 구성요소를 재시작하라는 안내가 나옵니다. kubelet 클라이언트 인증서의 정상 subject는 `O = system:nodes, CN = system:node:<노드 이름>`이고 만료됐을 때의 복구 절차는 [Ch-06 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 ### 4-5. CSR 승인
 
@@ -497,9 +497,9 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 - 이 글은 Ch-00~Ch-07과 Ch-01.5의 요약입니다. 요약에서 조건이 빠졌다면 링크한 원래 글이 기준입니다.
 - 명령과 YAML은 kind v1.37과 Lima VM의 kubeadm 1.36→1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 3-2, 3-3절의 스토리지와 Gateway 뼈대는 문서 예시를 옮긴 것이라 연습 클러스터에서 확인한 뒤 씁니다.
 - `etcdutl`과 `crictl`이 시험 호스트에 있는지는 확인하지 못했습니다.
-- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지는 확인하지 못했습니다.
-- etcd 백업 복구와 kubeadm 업그레이드가 개정 후 출제되는지는 확인하지 못했습니다. "클러스터 수명주기 관리"에 걸려 남겼습니다.
-- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. LF 문서는 새 마이너 출시 후 약 4~8주 안에 시험 환경을 맞춘다고 적지만 1.36은 건너뛰었으니 시험 전에 Important Instructions의 버전 표기를 봅니다. v1.38은 2026-12-16 출시 예정(sig-release 일정)이라 2027년 1~2월 응시자는 특히 다시 확인합니다.
+- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지도 모릅니다.
+- etcd 백업 복구와 kubeadm 업그레이드가 개정 후에도 출제되는지 확인하지 못했지만 "클러스터 수명주기 관리"에 걸려 남겼습니다.
+- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. LF 문서에 따르면 새 마이너 출시 후 약 4~8주 안에 시험 환경을 맞추는데 1.36은 건너뛰었으니 시험 전에 Important Instructions의 버전 표기를 봅니다. v1.38은 2026-12-16 출시 예정(sig-release 일정)이라 2027년 1~2월 응시자는 특히 다시 확인합니다.
 
 ## 참고 자료
 
