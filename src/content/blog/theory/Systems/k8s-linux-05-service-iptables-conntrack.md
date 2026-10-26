@@ -30,7 +30,7 @@ seriesOrder: 5
 
 ---
 
-이 시리즈의 [1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 결국 커널 기능을 조합한다는 이야기로 시작했습니다. [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)은 파드마다 네트워크 네임스페이스와 veth가 생기는 과정을 다뤘습니다. 마지막인 이번 글은 그 네임스페이스 밖으로 나간 패킷이 Service를 만나는 지점을 봅니다. 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API `order-api`가 파드 3개로 떠 있다고 가정합니다.
+이 시리즈의 [1편](/blog/theory/systems/k8s-linux-01-kernel-boundary)에서 쿠버네티스가 커널 기능을 조합해 움직인다는 이야기로 시작했습니다. [2편](/blog/theory/systems/k8s-linux-02-namespaces-pause)은 파드마다 네트워크 네임스페이스와 veth가 생기는 과정을 다뤘습니다. 마지막인 이번 글은 그 네임스페이스 밖으로 나간 패킷이 Service를 만나는 지점을 봅니다. 예시는 가상의 쇼핑몰입니다. 네임스페이스 `shop`에 주문 API `order-api`가 파드 3개로 떠 있다고 가정합니다.
 
 Service를 YAML로 만드는 법과 타입별 사용법은 [CKA 7편](/blog/cert/cka/cka-04-services-networking)에 정리했습니다. 여기서는 그 YAML이 노드 커널에 무엇으로 남는지를 따라갑니다.
 
@@ -163,7 +163,7 @@ ClusterIP에 ping이 안 되는 이유가 마지막 열에 있습니다. ICMP를
 
 ### 1-4. 직접 해 보기
 
-kind나 kubeadm 클러스터의 노드에서 해 볼 것입니다.
+kind나 kubeadm 클러스터의 노드에서 해 봅니다.
 
 ```bash
 ip -br addr                          # 노드 인터페이스 목록. ClusterIP가 있는지 찾아 본다
@@ -229,7 +229,7 @@ headless와 ExternalName에는 kube-proxy가 관여하지 않습니다. 이 둘�
 <details>
 <summary>기초부터: 포트가 가리키는 것</summary>
 
-> **핵심 한 줄**: IP가 "어느 컴퓨터"라면 포트는 "그 컴퓨터 안의 어느 프로그램"입니다. 같은 서버에 웹 서버와 DNS 서버가 함께 떠도 섞이지 않는 이유입니다.
+> **핵심 한 줄**: IP가 "어느 컴퓨터"라면 포트는 "그 컴퓨터 안의 어느 프로그램"입니다. 그래서 같은 서버에 웹 서버와 DNS 서버가 함께 떠도 섞이지 않습니다.
 
 #### 1. 어떻게 동작하나
 
@@ -286,7 +286,7 @@ containers:
 kubectl -n shop get endpointslice -l kubernetes.io/service-name=order-api -o yaml
 ```
 
-EndpointSlice의 `ports`에 `8080`이 들어 있는지 봅니다. kube-proxy가 DNAT 목적지로 쓰는 값이 바로 이 EndpointSlice의 주소와 포트입니다. kind에서 nginx 컨테이너에 `name: http, containerPort: 80`을 주고 같은 Service(`targetPort: http`)를 만들었더니 EndpointSlice의 `ports`가 `[{"name":"http","port":80,"protocol":"TCP"}]`로 채워졌습니다. 이름이 숫자로 풀린 것입니다.
+EndpointSlice의 `ports`에 `8080`이 들어 있는지 봅니다. kube-proxy는 이 EndpointSlice의 주소와 포트를 DNAT 목적지로 씁니다. kind에서 nginx 컨테이너에 `name: http, containerPort: 80`을 주고 같은 Service(`targetPort: http`)를 만들었더니 EndpointSlice의 `ports`가 `[{"name":"http","port":80,"protocol":"TCP"}]`로 채워졌습니다. 이름이 숫자로 풀렸습니다.
 
 ## 3. 패킷이 ClusterIP를 만나는 곳: netfilter와 kube-proxy 규칙
 
@@ -314,7 +314,7 @@ API 서버 ──watch──> kube-proxy ──iptables-restore──> 노드 �
 - `iptables -t nat -L KUBE-SERVICES -n`의 `prot` 칸은 iptables 버전에 따라 `tcp`, `udp` 같은 이름이나 `6`, `17` 같은 번호로 나옵니다. 번호는 IP 머리말의 프로토콜 번호이고 TCP가 6, UDP가 17입니다. conntrack 출력의 `udp 17`도 같은 번호입니다.
 - kube-dns Service 줄이 여럿 보이는 것은 포트마다 한 줄이기 때문입니다. UDP 53은 이름 해석, TCP 53은 큰 응답, TCP 9153은 메트릭용입니다(5-3).
 
-> **정리**: Service에는 따로 도는 로드밸런서 프로세스가 없습니다. kube-proxy가 쓴 규칙과 그 규칙을 실행하는 커널이 Service의 실체입니다.
+> **정리**: kube-proxy가 잠깐 멈춰도 기존 통신은 이미 써 둔 규칙으로 이어지고 바뀐 엔드포인트 반영만 늦어집니다.
 
 </details>
 
@@ -343,7 +343,7 @@ API 서버 ──watch──> kube-proxy ──iptables-restore──> 노드 �
               (밖으로 나감)
 ```
 
-파드에서 나온 패킷은 파드 네임스페이스의 veth를 지나 노드 네임스페이스에 "밖에서 들어온 패킷"으로 도착합니다. 그래서 PREROUTING을 지납니다. 노드 자체 프로세스(예: 노드에서 직접 `curl`)가 보낸 패킷은 OUTPUT을 지납니다. kube-proxy가 `KUBE-SERVICES`를 nat 테이블의 PREROUTING과 OUTPUT 두 곳에 거는 이유가 이것입니다. kube-proxy 소스(`pkg/proxy/iptables/proxier.go`)의 `iptablesJumpChains` 목록에서 이 연결을 직접 볼 수 있습니다.
+파드에서 나온 패킷은 파드 네임스페이스의 veth를 지나 노드 네임스페이스에 "밖에서 들어온 패킷"으로 도착합니다. 그래서 PREROUTING을 지납니다. 노드 자체 프로세스(예: 노드에서 직접 `curl`)가 보낸 패킷은 OUTPUT을 지납니다. 두 경로를 모두 잡으려고 kube-proxy는 `KUBE-SERVICES`를 nat 테이블의 PREROUTING과 OUTPUT 두 곳에 겁니다. kube-proxy 소스(`pkg/proxy/iptables/proxier.go`)의 `iptablesJumpChains` 목록에서 이 연결을 직접 볼 수 있습니다.
 
 | 테이블 | 내장 체인 | 거는 kube-proxy 체인 |
 |---|---|---|
@@ -354,7 +354,7 @@ API 서버 ──watch──> kube-proxy ──iptables-restore──> 노드 �
 
 ### 3-2. KUBE-SERVICES: Service 찾기
 
-`KUBE-SERVICES`는 Service 하나의 포트마다 규칙 한 줄을 갖습니다. 목적지 IP와 포트가 맞으면 그 Service의 `KUBE-SVC-*` 체인으로 점프합니다. 체인 이름의 해시는 네임스페이스, Service 이름, 포트 이름, 프로토콜을 합친 문자열로 만듭니다. 아래는 이런 형태로 나온다는 예시이며 해시 값은 지어낸 것입니다.
+`KUBE-SERVICES`는 Service 하나의 포트마다 규칙 한 줄을 갖습니다. 목적지 IP와 포트가 맞으면 그 Service의 `KUBE-SVC-*` 체인으로 점프합니다. 체인 이름의 해시는 네임스페이스, Service 이름, 포트 이름, 프로토콜을 합친 문자열로 만듭니다. 아래는 형태 예시이고 해시 값은 지어냈습니다.
 
 ```text
 # iptables -t nat -S KUBE-SERVICES (형태 예시)
@@ -566,7 +566,7 @@ udp      17 27 src=10.244.2.9 dst=10.96.0.10 sport=51877 dport=53 [UNREPLIED] sr
 
 kind 실측에서 `nslookup`을 몇 번 돌린 뒤의 항목은 `udp 17 29 src=10.244.1.59 dst=10.96.0.10 sport=51849 dport=53 src=10.244.0.3 dst=10.244.1.59 sport=53 dport=51849 mark=0 use=1`처럼 `[UNREPLIED]`도 `[ASSURED]`도 없었습니다. 질의 하나와 응답 하나로 끝난 UDP 흐름은 ASSURED가 되지 않고 30초 타임아웃을 받습니다. 7-6처럼 같은 포트로 질의를 반복하자 `[ASSURED]`가 붙고 남은 시간이 120초 안쪽으로 올라갔습니다.
 
-두 번째 줄처럼 `[UNREPLIED]` 항목이 같은 엔드포인트로 몰려 있으면 그 엔드포인트가 응답하지 않는다는 신호입니다. 남은 초가 계속 다시 차오르는 항목이 있다면 4-3에서 말한 갱신이 일어나고 있는 것입니다.
+두 번째 줄처럼 `[UNREPLIED]` 항목이 같은 엔드포인트로 몰려 있으면 그 엔드포인트가 응답하지 않는다는 신호입니다. 남은 초가 계속 다시 차오르는 항목이 있다면 4-3에서 말한 갱신이 일어나는 중입니다.
 
 ### 4-5. 직접 해 보기
 
@@ -581,7 +581,7 @@ conntrack -S                                                          # CPU별 �
 
 ### 4-6. insert_failed와 5초씩 늦는 DNS
 
-4-5의 `conntrack -S`에서 `insert_failed`를 본 이유가 있습니다. 쿠버네티스 DNS에서 오래 알려진 conntrack 문제가 이 숫자로 드러나기 때문입니다. 7장 사례와는 다른 문제라서 따로 적습니다.
+4-5의 `conntrack -S`에서 `insert_failed`를 본 것은 쿠버네티스 DNS에서 오래 알려진 conntrack 문제가 이 숫자로 드러나기 때문입니다. 7장 사례와는 다른 문제라서 따로 적습니다.
 
 glibc 리졸버는 기본 설정에서 IPv4 주소(A)와 IPv6 주소(AAAA)를 같은 UDP 소켓으로 거의 동시에 묻습니다. 두 질의는 5-튜플이 같습니다. conntrack 항목은 패킷을 처음 볼 때 만들어지고 패킷이 노드를 떠나기 직전에 테이블에 확정(confirm)됩니다. 확정되기 전의 항목은 다른 패킷이 찾지 못하므로 두 패킷이 각자 "처음 보는 흐름"으로 항목을 만듭니다. DNAT가 끼면 두 항목이 서로 다른 CoreDNS를 고를 수도 있습니다. 둘째 항목을 확정하려는 순간 같은 튜플이 이미 있으니 커널은 그 패킷을 버리고 `insert_failed`를 하나 올립니다.
 
@@ -618,7 +618,7 @@ uname -r                                                          # 위 두 커�
 | Service `kube-dns` | 고정 가상 주소(kubeadm 기본 `10.96.0.10`) |
 | 파드 `coredns-*` | 실제로 질의에 답하는 프로그램 |
 
-kubeadm 문서는 CoreDNS Service 이름을 `kube-dns`로 둔 이유를 예전 kube-dns 애드온과의 호환으로 적습니다. 예전 이름을 가리키던 설정과 도구가 DNS 구현을 바꾼 뒤에도 그대로 동작하게 하려는 것입니다.
+kubeadm 문서 기준으로 CoreDNS Service 이름을 `kube-dns`로 둔 것은 예전 kube-dns 애드온과의 호환 때문입니다. 그래야 예전 이름을 가리키던 설정과 도구가 DNS 구현을 바꾼 뒤에도 그대로 동작합니다.
 
 #### 2. 노드의 resolv.conf는 다를 수 있습니다
 
@@ -759,7 +759,7 @@ veth239ed463 Out IP 10.96.53.219.80 > 10.244.1.60.58130: Flags [S.], ...
 
 보낸 파드의 veth로 들어온 SYN은 아직 ClusterIP를 향합니다. 패킷 캡처 지점이 nat PREROUTING보다 앞이기 때문입니다. 노드 밖으로 나가는 `eth0`에서는 목적지가 파드 IP로 바뀌어 있고 응답은 반대로 veth에 나갈 때 출발지가 ClusterIP로 되돌아가 있습니다. 같은 노드 안의 파드가 뽑혔다면 받는 파드의 veth에서 바뀐 목적지를 봅니다.
 
-kind의 kindnet(ptp 플러그인)도 브리지 없이 라우팅합니다. 파드의 `ip route`는 `default via 10.244.1.1 dev eth0`였고 `ping` TTL은 같은 노드 파드가 63, 다른 노드 파드가 62였습니다. 6-2의 Calico 설명과 같은 모양입니다. colima 위 kind에서는 ClusterIP에 `ping`을 보내도 응답이 왔습니다. 존재하지 않는 `10.123.45.67`도 TTL 62로 응답했으니 VM 바깥 네트워크 계층이 대신 답한 것입니다. 이 환경에서는 1-3의 "ClusterIP에 ping이 안 된다"를 ping으로 확인할 수 없습니다.
+kind의 kindnet(ptp 플러그인)도 브리지 없이 라우팅합니다. 파드의 `ip route`는 `default via 10.244.1.1 dev eth0`였고 `ping` TTL은 같은 노드 파드가 63, 다른 노드 파드가 62였습니다. 6-2의 Calico 설명과 같은 모양입니다. colima 위 kind에서는 ClusterIP에 `ping`을 보내도 응답이 왔습니다. 존재하지 않는 `10.123.45.67`도 TTL 62로 응답했으니 VM 바깥 네트워크 계층이 대신 답했습니다. 이 환경에서는 1-3의 "ClusterIP에 ping이 안 된다"를 ping으로 확인할 수 없습니다.
 
 ## 7. 사례: 낡은 UDP conntrack 항목이 DNS를 막은 날
 
@@ -807,7 +807,7 @@ Istio 문서 기준으로 DNS 프록시를 켜면 애플리케이션의 DNS 요�
 | kube-proxy | "Lack of a cleanup mechanism for stale conntrack entries of terminated pods. Fixed in v1.32." | 4-1 첫 패킷만 nat 규칙 |
 | conntrack | "Default bidirectional UDP stream timeout setting of 2 minutes." | 4-3 `_stream` 120초 |
 
-발단은 "A CoreDNS pod was OOMKilled"였습니다. ThousandEyes는 Istio를 사이드카 모드로 쓰고 있었습니다. 슬라이드는 Istio ServiceEntry의 DNS 재해석 주기에 대해 "This interval is hard-coded"라고 적습니다. Istio 문서 기준으로 `resolution: DNS` ServiceEntry의 재해석 주기는 30초이고 설정으로 바꿀 수 없습니다.
+발단은 "A CoreDNS pod was OOMKilled"였습니다. ThousandEyes는 Istio를 사이드카 모드로 쓰고 있었습니다. 슬라이드는 Istio ServiceEntry의 DNS 재해석 주기를 두고 "This interval is hard-coded"라고 적습니다. Istio 문서 기준으로 `resolution: DNS` ServiceEntry의 재해석 주기는 30초이고 설정으로 바꿀 수 없습니다.
 
 ### 7-3. 세 원인이 맞물리는 방식
 
@@ -819,7 +819,7 @@ Istio 문서 기준으로 DNS 프록시를 켜면 애플리케이션의 DNS 요�
 4. 질의는 30초 간격으로 계속 옵니다. 항목의 남은 시간은 120초(양방향 UDP 스트림 기본값) 안에서 매번 다시 채워지므로 항목이 만료되지 않습니다.
 5. 질의가 응답 없는 곳으로 계속 가서 `i/o timeout`이 납니다. 다른 CoreDNS 파드가 멀쩡해도 이 5-튜플은 그쪽으로 갈 기회가 없습니다.
 
-4번이 이 사례의 핵심입니다. conntrack 타임아웃은 "마지막 패킷 이후 경과 시간"으로 재므로 보내는 쪽이 멈추지 않는 한 낡은 항목은 스스로 사라지지 않습니다. 매번 새 출발지 포트를 쓰는 클라이언트였다면 질의마다 새 항목이 생기고 nat 규칙을 다시 타서 살아 있는 엔드포인트로 갔을 것입니다.
+4번 때문에 장애가 저절로 풀리지 않았습니다. conntrack 타임아웃은 "마지막 패킷 이후 경과 시간"으로 재므로 보내는 쪽이 멈추지 않는 한 낡은 항목은 스스로 사라지지 않습니다. 매번 새 출발지 포트를 쓰는 클라이언트였다면 질의마다 새 항목이 생기고 nat 규칙을 다시 타서 살아 있는 엔드포인트로 갔을 것입니다.
 
 ### 7-4. kube-proxy 쪽 수정: conntrack reconciler
 
@@ -886,7 +886,7 @@ ClusterIP는 nat 테이블 규칙의 매치 조건으로만 존재합니다. kub
 
 <details><summary>정답</summary>
 
-노드 프로세스가 보낸 패킷은 nat OUTPUT, 파드에서 보낸 패킷은 veth를 지나 노드 네임스페이스로 들어오므로 nat PREROUTING입니다. kube-proxy가 두 곳 모두에 `KUBE-SERVICES` 점프를 거는 이유입니다.
+노드 프로세스가 보낸 패킷은 nat OUTPUT, 파드에서 보낸 패킷은 veth를 지나 노드 네임스페이스로 들어오므로 nat PREROUTING입니다. 그래서 kube-proxy는 두 곳 모두에 `KUBE-SERVICES` 점프를 겁니다.
 
 </details>
 

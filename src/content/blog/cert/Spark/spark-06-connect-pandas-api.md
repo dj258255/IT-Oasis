@@ -83,7 +83,7 @@ Spark Connect
 - Connect 서버도 Spark 드라이버 애플리케이션입니다. 익스큐터와 클러스터 구조는 클래식과 같습니다(5-2 헷갈리는 지점).
 - 원격 서버에 붙는 클라이언트 쪽에는 드라이버 JVM이 뜨지 않습니다. 4.0부터 있는 `pyspark-client` 패키지가 이 클라이언트만 담은 형태입니다(4-2).
 
-> **정리**: Spark Connect는 "Python과 드라이버가 같은 몸"이던 구조를 "계획을 보내는 쪽과 실행하는 쪽"으로 나눈 것입니다. 2-1의 다섯 단계가 이 나뉜 구조 위에서 요청이 오가는 순서입니다.
+> **정리**: 클라이언트가 드라이버 JVM 안의 객체를 못 쓰는 것도, 클라이언트만 담은 패키지가 드라이버 JVM 없이 도는 것도 계획을 보내는 쪽과 실행하는 쪽이 갈라졌기 때문입니다. 2-1의 다섯 단계가 이 나뉜 구조 위에서 요청이 오가는 순서입니다.
 
 </details>
 
@@ -140,7 +140,7 @@ Spark Connect Overview 문서의 "How Spark Connect works" 절을 단계로 나�
 | 업그레이드 | 드라이버를 애플리케이션과 따로 올릴 수 있다. 서버 쪽 RPC 정의가 하위 호환이면 애플리케이션은 그대로 쓴다 |
 | 디버깅과 관측 | IDE에서 대화형으로 디버깅하고 애플리케이션 프레임워크의 지표와 로깅으로 본다 |
 
-여러 사용자가 클러스터 하나를 함께 쓸 때(멀티테넌트) 생기는 문제를 줄인다는 맥락입니다. Spark Connect를 처음 발표한 Databricks 블로그 글(2022년 7월)은 이 문제를 더 직접적으로 적습니다. 사용자 코드가 드라이버 안에서 돌기 때문에 한 사용자가 낸 메모리 부족 같은 치명적 예외가 클러스터를 모든 사용자에게서 내려 버릴 수 있고 라이브러리가 한 클래스패스를 같이 쓰니 Spark 버전을 올리기 어렵다는 것입니다. 사용자가 드라이버 프로세스에 디버거를 붙일 권한이 없는 경우가 많다는 점도 듭니다([Databricks, Introducing Spark Connect](https://www.databricks.com/blog/2022/07/07/introducing-spark-connect-the-power-of-apache-spark-everywhere.html)). 쇼핑몰 분석팀 다섯 명이 드라이버 하나를 함께 쓰는 공유 클러스터에 붙어 있다고 생각하면 됩니다. 클래식 구조에서는 각자의 Python 코드와 라이브러리가 그 드라이버 곁에서 돌아서 한 명이 메모리를 다 써 버리면 나머지 네 명의 작업도 같이 흔들립니다. Connect에서는 각자의 Python 코드가 자기 클라이언트 프로세스에서 돌아서 그런 사고가 그 사람 환경에 머뭅니다. 다만 서버에 보낸 쿼리 자체가 무거우면 서버 드라이버는 여전히 그 부담을 집니다. Databricks의 서버리스 컴퓨트와 Free Edition도 Spark Connect로 돌아서 1편에서 Free Edition에서는 RDD API를 쓸 수 없다고 적었습니다.
+여러 사용자가 클러스터 하나를 함께 쓸 때(멀티테넌트) 생기는 문제를 줄인다는 맥락입니다. Spark Connect를 처음 발표한 Databricks 블로그 글(2022년 7월)은 이 문제를 더 직접적으로 씁니다. 사용자 코드가 드라이버 안에서 돌기 때문에 한 사용자가 낸 메모리 부족 같은 치명적 예외가 클러스터를 모든 사용자에게서 내려 버릴 수 있고 라이브러리가 한 클래스패스를 같이 쓰니 Spark 버전을 올리기도 어렵다고 합니다. 사용자가 드라이버 프로세스에 디버거를 붙일 권한이 없는 경우가 많다는 점도 듭니다([Databricks, Introducing Spark Connect](https://www.databricks.com/blog/2022/07/07/introducing-spark-connect-the-power-of-apache-spark-everywhere.html)). 쇼핑몰 분석팀 다섯 명이 드라이버 하나를 함께 쓰는 공유 클러스터에 붙어 있다고 생각하면 됩니다. 클래식 구조에서는 각자의 Python 코드와 라이브러리가 그 드라이버 곁에서 돌아서 한 명이 메모리를 다 써 버리면 나머지 네 명의 작업도 같이 흔들립니다. Connect에서는 각자의 Python 코드가 자기 클라이언트 프로세스에서 돌아서 그런 사고가 그 사람 환경에 머뭅니다. 다만 서버에 보낸 쿼리 자체가 무거우면 서버 드라이버는 여전히 그 부담을 집니다. Databricks의 서버리스 컴퓨트와 Free Edition도 Spark Connect로 돌아서 1편에서 Free Edition에서는 RDD API를 쓸 수 없다고 적었습니다.
 
 ## 3. Spark Connect의 API 지원 범위
 
@@ -176,7 +176,7 @@ accumulator와 broadcast 변수도 Connect에서 막힙니다. PySpark에서 `ac
 헷갈리는 지점입니다.
 
 - `spark.sparkContext.setLogLevel()`도 `SparkContext`를 거쳐서 Connect에서 쓸 수 없습니다.
-- 스트리밍의 `foreachBatch`는 Connect에서 함수가 바깥 변수에 접근하지 못한다고 API 문서가 적습니다(7편 6-2).
+- API 문서 기준으로 스트리밍의 `foreachBatch`는 Connect에서 함수가 바깥 변수에 접근하지 못합니다(7편 6-2).
 - Spark Connect 자체에는 인증이 들어 있지 않습니다. 문서는 gRPC HTTP/2 인터페이스 앞에 인증 프록시를 두는 방식을 설명합니다. 접속 문자열의 `token`은 bearer 토큰을 보내는 자리입니다.
 
 ## 4. Spark Connect에 연결하기
@@ -211,7 +211,7 @@ orders = spark.read.parquet("/data/orders")
 orders.groupBy("status").count().show()
 ```
 
-PySpark Quickstart: Spark Connect 노트북은 원격 세션을 만들기 전에 기존 일반 세션을 멈춥니다. 같은 프로세스에서 일반 세션과 원격 세션이 함께 있을 수 없다고 적습니다.
+PySpark Quickstart: Spark Connect 노트북은 같은 프로세스에서 일반 세션과 원격 세션이 함께 있을 수 없다며 원격 세션을 만들기 전에 기존 일반 세션을 멈춥니다.
 
 독립 애플리케이션용으로는 클라이언트만 담은 패키지가 있습니다. 4.2.0 문서는 `pip install pyspark-client==4.2.0`을 안내합니다. PyPI의 릴리스 목록에서 가장 이른 버전은 4.0.0(2025년 5월 23일 업로드)이라 3.5에는 이 패키지가 없습니다.
 
@@ -251,7 +251,7 @@ Cluster Mode Overview의 용어표는 배포 모드(deploy mode)를 "드라이�
 | cluster | 클러스터 매니저가 클러스터 안의 노드에 띄운다 | 클러스터 워커 노드 | 노트북 같은 먼 곳에서 제출해 드라이버와 익스큐터 사이 지연을 줄일 때 |
 | local | 한 머신, 한 JVM | 드라이버와 같은 JVM의 스레드 | 개발, 테스트, 학습 |
 
-`spark-submit --deploy-mode` 기본값은 client이고 설정으로는 `spark.submit.deployMode`(기본 `client`)입니다. Submitting Applications 문서는 게이트웨이 머신이 워커와 같은 곳에 있으면 client 모드가 맞다고 봅니다. 노트북처럼 워커에서 먼 곳에서 제출하면 cluster 모드가 흔하다고 적습니다. 같은 문서가 Standalone 클러스터는 Python 애플리케이션의 cluster 모드를 지원하지 않는다고 적습니다.
+`spark-submit --deploy-mode` 기본값은 client이고 설정으로는 `spark.submit.deployMode`(기본 `client`)입니다. Submitting Applications 문서 기준으로 게이트웨이 머신이 워커와 같은 곳에 있으면 client 모드가 맞고 노트북처럼 워커에서 먼 곳에서 제출하면 cluster 모드가 흔합니다. Standalone 클러스터가 Python 애플리케이션의 cluster 모드를 지원하지 않는다는 점도 같은 문서에 있습니다.
 
 local 모드는 엄밀히 말하면 `--deploy-mode` 값이 아니고 master URL을 `local`로 준 실행 방식입니다. 시험 안내서는 Client, Cluster, Local을 나란히 배포 모드로 부르므로 시험 맥락에서는 셋을 같이 외웁니다.
 
@@ -336,7 +336,7 @@ PySpark 문서 첫 화면의 설명을 정리하면 장점은 넷입니다.
 - 코드베이스 하나로 pandas(테스트, 작은 데이터셋)와 Spark(운영, 분산 데이터셋)를 모두 다룹니다.
 - pandas API와 pandas API on Spark 사이를 쉽게 오갑니다.
 
-같은 문서는 Spark를 처음 쓰거나 어떤 API를 쓸지 고르는 중이라면 PySpark DataFrame을 권한다고도 적습니다. pandas API on Spark는 pandas에서 넘어오는 길을 쉽게 하려는 도구라는 위치입니다.
+같은 문서는 Spark를 처음 쓰거나 어떤 API를 쓸지 고르는 중이라면 PySpark DataFrame을 권하기도 합니다. pandas API on Spark는 pandas에서 넘어오는 길을 쉽게 하려고 둔 도구입니다.
 
 ```python
 import pyspark.pandas as ps
@@ -347,7 +347,7 @@ by_store = paid.groupby("store_id")["amount"].sum().sort_values(ascending=False)
 print(by_store.head(10))
 ```
 
-pandas와 다른 점 세 가지를 같이 기억합니다.
+pandas와 다른 점도 같이 기억합니다.
 
 | | pandas | pandas API on Spark |
 |---|---|---|
@@ -391,7 +391,7 @@ distributed-sequence  [0, 1, 2]           [3, 4]                [5, 6, 7, 8]
 distributed           [0, 1, 2]           [2^33, 2^33+1]        [2×2^33, ...]
 ```
 
-7-1 본문의 `ps.range(3)` 예제 값 25769803776은 3 × 2^33입니다. 파티션 3번의 첫 행이라는 뜻입니다.
+7-1 본문의 `ps.range(3)` 예제 값 25769803776은 3 × 2^33이고 파티션 3번의 첫 행에 붙은 값입니다.
 
 #### 3. 헷갈리는 점
 
@@ -420,7 +420,7 @@ ps.reset_option("compute.default_index_type")
 
 ### 7-2. distributed-sequence의 주의점
 
-4.2.0 Options and settings 문서에는 경고가 하나 있습니다. `distributed-sequence`는 인덱스 자체는 전역 순번이지만 각 인덱스에 대응하는 행은 데이터를 읽을 때마다 달라질 수 있습니다. `apply()`, `groupby()`, `transform()` 중에 인덱스를 새로 만들면 원래 행과 계산 값이 어긋날 수 있다고 적습니다. 경고가 연결하는 Best Practices 문서의 "Handling index misalignment with distributed-sequence" 절이 예방법 셋을 제시합니다.
+4.2.0 Options and settings 문서에는 경고가 하나 있습니다. `distributed-sequence`는 인덱스 자체는 전역 순번이지만 각 인덱스에 대응하는 행은 데이터를 읽을 때마다 달라질 수 있습니다. `apply()`, `groupby()`, `transform()` 중에 인덱스를 새로 만들면 원래 행과 계산 값이 어긋날 수 있습니다. 경고가 연결하는 Best Practices 문서의 "Handling index misalignment with distributed-sequence" 절에 예방법이 셋 있습니다.
 
 1. 함수를 적용하기 전에 `set_index("order_id")`로 인덱스를 명시합니다.
 2. `psdf.spark.persist()`로 행 순서를 고정합니다.
@@ -538,7 +538,7 @@ Arrow 켬   익스큐터 ──Arrow 배치──▶ 드라이버 ──▶ Pyth
 - Arrow는 건너는 형식을 바꿀 뿐입니다. `toPandas()`가 드라이버로 모으는 데이터 양은 같습니다.
 - 파티션을 Arrow 배치로 바꾸는 동안 JVM 메모리를 순간적으로 많이 쓸 수 있어서 컬럼이 많으면 `maxRecordsPerBatch`를 줄입니다.
 
-> **정리**: Arrow는 JVM과 Python 사이의 변환 비용을 줄이는 형식입니다. 아래 표는 이 형식을 어디에 켜는지 정하는 설정이고 10절의 pandas UDF는 항상 Arrow를 씁니다.
+> **정리**: Arrow를 켜면 건너는 단위가 행에서 레코드 배치로 바뀌지만 드라이버로 모이는 양은 그대로입니다. 아래 표는 이 형식을 어디에 켜는지 정하는 설정이고 10절의 pandas UDF는 항상 Arrow를 씁니다.
 
 </details>
 
@@ -560,7 +560,7 @@ spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")   # 3.5에�
 pdf = orders.filter("status = 'PAID'").limit(10000).toPandas()
 ```
 
-Arrow를 켜도 `toPandas()`는 모든 레코드를 드라이버로 모읍니다. 바뀌는 것은 직렬화 방식입니다. 문서가 Arrow 변환에서 지원하지 않는다고 적은 타입은 `TimestampType`의 `ArrayType`이고 `MapType`과 중첩 `StructType`의 `ArrayType`은 PyArrow 2.0.0 이상에서만 됩니다. 파티션을 Arrow 배치로 바꾸면서 JVM 메모리를 순간적으로 많이 쓸 수 있어서 컬럼이 많으면 `maxRecordsPerBatch`를 낮추라고 문서가 권합니다.
+Arrow를 켜도 `toPandas()`는 모든 레코드를 드라이버로 모읍니다. 바뀌는 것은 직렬화 방식입니다. Arrow 문서 기준으로 Arrow 변환이 지원하지 않는 타입은 `TimestampType`의 `ArrayType`이고 `MapType`과 중첩 `StructType`의 `ArrayType`은 PyArrow 2.0.0 이상에서만 됩니다. 같은 문서는 파티션을 Arrow 배치로 바꾸면서 JVM 메모리를 순간적으로 많이 쓸 수 있으니 컬럼이 많으면 `maxRecordsPerBatch`를 낮추라고 권합니다.
 
 ## 10. pandas UDF
 
@@ -577,7 +577,7 @@ Arrow를 켜도 `toPandas()`는 모든 레코드를 드라이버로 모읍니다
 
 주문 1억 건에 부가세를 붙이는 UDF를 만든다고 합시다. 행마다 부르면 Python 함수 호출이 1억 번 일어나고 매번 인자를 Python 값으로 바꿉니다. pandas UDF는 배치 크기 기본값 10000행 기준으로 1만 번 남짓 부르고 곱셈은 pandas가 배열 단위로 합니다.
 
-pandas UDF를 처음 소개한 Databricks 블로그 글(Li Jin, Two Sigma, 2017년 10월)이 이 차이를 숫자로 보여 줍니다. 1천만 행 DataFrame에서 1 더하기, 누적 확률, 그룹 평균 빼기 세 예제를 행 단위 UDF와 비교했고 pandas UDF가 3배에서 100배 넘게 빨랐다고 적습니다. 행 단위 UDF의 느린 원인으로는 직렬화와 함수 호출 비용을 꼽습니다([Databricks, Introducing Pandas UDF for PySpark](https://www.databricks.com/blog/2017/10/30/introducing-vectorized-udfs-for-pyspark.html)). 단일 노드에서 잰 2017년 결과라 지금 버전의 배수와는 다를 수 있습니다.
+pandas UDF를 처음 소개한 Databricks 블로그 글(Li Jin, Two Sigma, 2017년 10월)에 이 차이가 숫자로 나옵니다. 1천만 행 DataFrame에서 1 더하기, 누적 확률, 그룹 평균 빼기 세 예제를 행 단위 UDF와 비교했고 pandas UDF가 3배에서 100배 넘게 빨랐습니다. 행 단위 UDF의 느린 원인으로는 직렬화와 함수 호출 비용을 꼽습니다([Databricks, Introducing Pandas UDF for PySpark](https://www.databricks.com/blog/2017/10/30/introducing-vectorized-udfs-for-pyspark.html)). 단일 노드에서 잰 2017년 결과라 지금 버전의 배수와는 다를 수 있습니다.
 
 #### 2. 어떻게 동작하나
 
@@ -596,7 +596,7 @@ pandas_udf  [1 ~ 10000] → f(Series)   [10001 ~ 20000] → f(Series) ...  호�
 - 함수 안에서 `amount * 1.1` 같은 pandas 벡터 연산을 써야 이득이 납니다. pandas UDF 안에서 `for`로 행을 하나씩 돌면 행 단위 UDF와 비슷한 속도가 됩니다.
 - 배치 경계는 사용자가 고르지 않습니다. Series에서 Series 함수는 배치 하나만 보므로 함수 안에서 `s.mean()`을 구하면 전체 평균 대신 배치마다 다른 평균이 나옵니다. 전체나 그룹 단위 집계는 Series에서 스칼라 종류(10-4)나 `applyInPandas`(11절)를 씁니다.
 
-> **정리**: pandas UDF의 이득은 "호출 횟수 감소"와 "벡터 연산" 두 가지에서 나옵니다. 아래 표의 타입 힌트가 함수를 어떤 묶음으로 부를지를 정합니다.
+> **정리**: 이득을 보려면 함수 안을 벡터 연산으로 쓰고 배치 하나만 보는 함수에서 전체 집계를 구하지 않아야 합니다. 아래 표의 타입 힌트가 함수를 어떤 묶음으로 부를지를 정합니다.
 
 </details>
 
@@ -667,10 +667,10 @@ payments.groupBy("method").agg(trimmed_mean("amount").alias("amount_tm"))
 
 ### 10-5. 헷갈리는 지점
 
-- pandas UDF 안에서는 조건식이나 불리언 단축 평가가 지원되지 않아 모든 행에서 함수가 실행됩니다. 특정 행에서 실패할 수 있으면 조건을 함수 안에 넣으라고 API 문서가 적습니다.
-- 호출하는 쪽에서 키워드 인자를 쓸 수 없다고 적혀 있습니다. 4.0.0에서 SCALAR와 GROUPED_AGG 종류는 키워드 인자를 지원하게 바뀌었다는 표시도 같은 문서에 있어서 버전에 따라 다릅니다.
+- API 문서 기준으로 pandas UDF 안에서는 조건식이나 불리언 단축 평가가 지원되지 않아 모든 행에서 함수가 실행됩니다. 특정 행에서 실패할 수 있으면 조건을 함수 안에 넣으라는 안내도 있습니다.
+- 호출하는 쪽에서는 키워드 인자를 쓸 수 없다고 되어 있습니다. 다만 4.0.0에서 SCALAR와 GROUPED_AGG 종류가 키워드 인자를 지원하게 바뀌었다는 표시도 같은 문서에 있어서 버전에 따라 다릅니다.
 - 같은 API 문서에 4.1.0에서 GROUPED_MAP 종류가, 4.2.0에서 GROUPED_AGG 종류가 반복자 API를 지원하게 됐다는 변경 표시가 있습니다. 시험 기준 버전이 이전이면 범위 밖입니다.
-- `ArrayType`의 `TimestampType`과 중첩 `StructType`은 출력 타입으로 지원하지 않는다고 API 문서가 적습니다.
+- `ArrayType`의 `TimestampType`과 중첩 `StructType`은 출력 타입으로 지원하지 않습니다(API 문서).
 - 반환한 Series의 타입이 `returnType`과 다르면 Spark가 변환을 시도하고 그 변환이 맞다는 보장이 없습니다. 4.1부터 `spark.sql.execution.pandas.convertToArrowArraySafely`가 기본으로 켜져서 정수 넘침 같은 안전하지 않은 변환에 오류를 냅니다.
 
 ## 11. pandas Function API
@@ -718,7 +718,7 @@ large = orders.mapInPandas(big_orders, schema=orders.schema)
 
 헷갈리는 지점입니다.
 
-- `applyInPandas`는 함수를 적용하기 전에 그룹 하나의 데이터를 전부 메모리에 올립니다. 그룹 크기가 쏠리면 OOM이 날 수 있고 `maxRecordsPerBatch`는 그룹에 적용되지 않는다고 문서가 적습니다. 6편 10절의 익스큐터 OOM 원인 표에 이 API를 넣은 이유입니다. 4.1.0부터는 pandas DataFrame 반복자를 받는 형태도 지원하고 API 문서는 이 형태로 OOM 위험을 줄일 수 있다고 적습니다. cogroup 쪽은 코그룹 하나의 데이터를 전부 메모리에 올린다는 같은 주의가 있습니다.
+- `applyInPandas`는 함수를 적용하기 전에 그룹 하나의 데이터를 전부 메모리에 올립니다. 그룹 크기가 쏠리면 OOM이 날 수 있고 문서 기준으로 `maxRecordsPerBatch`는 그룹에 적용되지 않습니다. 그래서 6편 10절의 익스큐터 OOM 원인 표에 이 API를 넣었습니다. 4.1.0부터는 pandas DataFrame 반복자를 받는 형태도 지원하고 API 문서는 이 형태로 OOM 위험을 줄일 수 있다고 적습니다. cogroup 쪽은 코그룹 하나의 데이터를 전부 메모리에 올린다는 같은 주의가 있습니다.
 - 반환 DataFrame의 컬럼 라벨은 `schema`를 문자열로 주면 필드 이름과 맞아야 하고 정수 인덱스처럼 문자열이 아니면 위치로 맞춥니다.
 - `mapInPandas`의 각 pandas DataFrame 크기는 `maxRecordsPerBatch`로 조절됩니다.
 - 3.0 이전의 grouped map pandas UDF(`PandasUDFType.GROUPED_MAP`과 `groupby().apply()`)는 `applyInPandas`로 옮기라고 문서가 권합니다.
@@ -733,7 +733,7 @@ large = orders.mapInPandas(big_orders, schema=orders.schema)
 | 켜는 방법 | 기본 | `useArrow=True` 또는 `spark.sql.execution.pythonUDF.arrow.enabled=true`(설정은 `useArrow`가 None일 때만 적용) | 기본 |
 | 벡터화 연산 | 안 됨(4.1부터 예외 있음, 아래) | 안 됨 | 된다 |
 
-Arrow Python UDF는 따로 있는 함수가 아니고 `udf()`에 `useArrow`를 준 것입니다. 시그니처가 `udf(f=None, returnType=StringType(), *, useArrow=None)`이라 기본 반환 타입은 둘 다 `StringType`입니다. 4.2부터 일반 Python UDF가 기본으로 Arrow 최적화를 쓰면서 타입 변환(coercion) 동작이 달라졌습니다. 반환 값이 지정 타입과 맞지 않을 때 결과가 3.5와 다를 수 있다는 뜻입니다.
+Arrow Python UDF는 따로 있는 함수가 아니고 `udf()`에 `useArrow`를 준 것입니다. 시그니처가 `udf(f=None, returnType=StringType(), *, useArrow=None)`이라 기본 반환 타입은 둘 다 `StringType`입니다. 4.2부터 일반 Python UDF가 기본으로 Arrow 최적화를 쓰면서 타입 변환(coercion) 동작이 달라졌습니다. 반환 값이 지정 타입과 맞지 않으면 결과가 3.5와 다를 수 있습니다.
 
 4.2.0 `udf` API 문서에는 4.1.0 변경 표시가 하나 더 있습니다. 함수에 pandas UDF의 타입 힌트 패턴(예: `pd.Series -> pd.Series`)을 달고 `useArrow`를 따로 주지 않으면 `udf`로 만들어도 pandas UDF로 처리됩니다. 3.5 기준 보기에서는 `@udf`가 행 단위라는 판단이 맞지만 4.1 이후 문서로 공부했다면 이 차이를 같이 기억합니다.
 

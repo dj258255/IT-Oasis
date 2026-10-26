@@ -32,7 +32,7 @@ seriesOrder: 19
 
 이 글 전체를 한 질문으로 줄이면 이렇습니다. **"지금 이 테이블에 속한 파일은 정확히 어떤 것들인가?"** 데이터베이스는 이 질문을 내부에서 알아서 답해 주니 우리가 신경 쓸 일이 없습니다. 객체 스토리지 위에 parquet 파일을 쌓아 두고 테이블처럼 쓰면 이 답을 누군가 따로 관리해야 합니다. Hive 방식은 "디렉터리에 들어 있는 파일이 곧 테이블"이라고 답했고 Iceberg는 "메타데이터에 적힌 파일만 테이블"이라고 답합니다. 이 차이 하나에서 나머지가 전부 따라 나옵니다.
 
-2편의 메달리온 구조에서 Bronze, Silver, Gold는 결국 객체 스토리지(S3 같은) 위의 파일입니다. 파일 묶음을 테이블처럼 쓰는 가장 오래된 방법이 Hive 방식입니다.
+2편의 메달리온 구조에서 Bronze, Silver, Gold도 따지고 보면 객체 스토리지(S3 같은) 위의 파일입니다. 파일 묶음을 테이블처럼 쓰는 가장 오래된 방법이 Hive 방식입니다.
 
 ```
 s3://shop/orders/day=2026-10-01/part-0001.parquet
@@ -165,11 +165,11 @@ PyIceberg의 overwrite는 기존 행을 지우는 delete 스냅샷과 새 행을
 
 ![커밋마다 새로 쓰는 파일과 그대로 가리키는 파일. metadata.json 00001~00003은 각각 S1~S3 append 스냅샷을, 00004는 S4 delete와 S5 append 두 스냅샷을 가리킨다. S2는 새 manifest M2와 함께 S1의 M1을 다시 가리키고 S3는 M1, M2, M3를 가리킨다. S4의 manifest M4는 옛 데이터 파일 셋을 지운 것으로 기록하고 S5의 M5는 주문 1~4를 다시 쓴 새 파일 하나를 가리킨다](/uploads/data/de-18-iceberg-table-format/commit-tree.svg)
 
-그림을 위에서부터 읽으면 네 가지가 보입니다.
+그림을 위에서부터 차례로 읽어 봅니다.
 
 1. append 한 번에 새로 쓴 manifest는 하나뿐입니다. S2의 manifest list는 새 M2와 함께 S1 때 쓴 M1을 그대로 가리킵니다. 그래서 2-2절 표에서 append마다 .avro가 두 개(manifest 하나, manifest list 하나)씩만 늘었습니다.
 2. S4의 M4는 데이터 파일을 더하지 않고 옛 파일 셋을 "지웠다"고 적은 manifest입니다. 파일 자체는 디스크에서 지워지지 않았고 이후 스냅샷이 더 이상 가리키지 않을 뿐입니다.
-3. S5는 주문 1~4를 담은 새 파일 하나를 가리킵니다. overwrite 한 번에 .avro가 네 개(S4의 list와 manifest, S5의 list와 manifest) 늘어난 이유입니다.
+3. S5는 주문 1~4를 담은 새 파일 하나를 가리킵니다. 그래서 overwrite 한 번에 .avro가 네 개(S4의 list와 manifest, S5의 list와 manifest) 늘었습니다.
 4. S4와 S5는 metadata.json 00004 하나에 함께 들어 있습니다. 카탈로그 포인터는 00003에서 00004로 한 번만 움직였으니 읽는 쪽은 S3 다음에 바로 S5를 봅니다.
 
 옛 metadata.json, 옛 manifest, 옛 데이터 파일이 하나도 지워지지 않고 남는다는 점이 20편의 출발점입니다.
@@ -199,9 +199,9 @@ PyIceberg의 overwrite는 기존 행을 지우는 delete 스냅샷과 새 행을
 | 5 | | v4(A)를 기준으로 다시 확인하고 v5 후보를 씀 | v4(A) |
 | 6 | | "포인터가 v4이면 내 v5로" 요청, 성공 | v5(B) |
 
-5번에서 B가 처음부터 다 다시 하지는 않습니다. 명세는 manifest를 한 번 써 두면 재시도에서 그대로 재사용할 수 있고 재시도 때는 스냅샷의 맨 위 파일(manifest list)만 다시 쓰면 된다고 적습니다. 무거운 데이터 파일과 manifest는 그대로 두고 맨 위만 바꿔 다시 줄을 서는 셈입니다.
+5번에서 B가 처음부터 다 다시 하지는 않습니다. 명세는 manifest를 한 번 써 두면 재시도에서 그대로 재사용할 수 있고 재시도 때는 스냅샷의 맨 위 파일(manifest list)만 다시 쓰면 된다고 적습니다. 무거운 데이터 파일과 manifest는 그대로 두고 맨 위만 바꿔 다시 줄을 섭니다.
 
-다시 시도할 때는 작업 종류에 따라 확인할 것이 다릅니다. 명세는 append는 아무 조건 없이 항상 다시 적용할 수 있고 파일을 바꾸는 작업(replace)은 지울 파일이 아직 테이블에 있는지 확인해야 한다고 적습니다. Reliability 문서의 예로, 컴팩션이 `file_a`와 `file_b`를 `merged`로 합치는 커밋은 두 원본이 아직 테이블에 있을 때만 성공합니다. 그 사이 다른 작업이 `file_a`를 지웠다면 컴팩션 결과를 반영하면 안 되기 때문입니다. 위 표에서 A가 주문을 append한 경우는 B가 합친 파일과 겹치지 않으니 B의 재시도가 통과했습니다. A가 `file_a`를 지우거나 다시 쓰는 작업이었다면 B는 재시도에서 충돌로 실패하고 컴팩션을 다음 기회로 미룹니다.
+재시도 때 확인할 것은 작업 종류마다 다릅니다. 명세 기준으로 append는 아무 조건 없이 항상 다시 적용할 수 있고 파일을 바꾸는 작업(replace)은 지울 파일이 아직 테이블에 있는지 확인해야 합니다. Reliability 문서의 예로, 컴팩션이 `file_a`와 `file_b`를 `merged`로 합치는 커밋은 두 원본이 아직 테이블에 있을 때만 성공합니다. 그 사이 다른 작업이 `file_a`를 지웠다면 컴팩션 결과를 반영하면 안 되기 때문입니다. 위 표에서 A가 주문을 append한 경우는 B가 합친 파일과 겹치지 않으니 B의 재시도가 통과했습니다. A가 `file_a`를 지우거나 다시 쓰는 작업이었다면 B는 재시도에서 충돌로 실패하고 컴팩션을 다음 기회로 미룹니다.
 
 ### 3-2. 운영에서는 check-and-put이 되는 카탈로그를 쓴다
 
@@ -267,7 +267,7 @@ position delete:  (file = f1.parquet, pos = 36)    ← 0부터 세니 37번째 �
 equality delete:  (order_id = 4)
 ```
 
-position delete는 "어느 파일 몇 번째 행"을 정확히 짚으니 읽을 때 그 행만 건너뛰면 돼서 가볍습니다. 대신 쓰는 쪽이 주문 4가 어느 파일 몇 번째에 있는지 먼저 찾아야 합니다. equality delete는 찾을 필요 없이 "주문 번호 4인 행은 없는 셈 쳐라"고만 적으니 쓰기가 빠릅니다. 대신 읽는 쪽이 읽는 행마다 이 조건과 맞춰 봐야 합니다. 21편의 스트리밍 CDC가 equality delete를 쓰는 이유가 이것입니다. 변경 이벤트가 초당 수천 건 오는데 매번 "그 행이 어느 파일에 있나"를 찾아다닐 수는 없습니다([RisingWave, CDC to Apache Iceberg](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)).
+position delete는 "어느 파일 몇 번째 행"을 정확히 짚으니 읽을 때 그 행만 건너뛰면 돼서 가볍습니다. 대신 쓰는 쪽이 주문 4가 어느 파일 몇 번째에 있는지 먼저 찾아야 합니다. equality delete는 찾을 필요 없이 "주문 번호 4인 행은 없는 셈 쳐라"고만 적으니 쓰기가 빠릅니다. 대신 읽는 쪽이 읽는 행마다 이 조건과 맞춰 봐야 합니다. 21편의 스트리밍 CDC는 그래서 equality delete를 씁니다. 변경 이벤트가 초당 수천 건 오는데 매번 "그 행이 어느 파일에 있나"를 찾아다닐 수는 없습니다([RisingWave, CDC to Apache Iceberg](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)).
 
 삭제 파일이 어느 데이터 파일에 적용되는지는 시퀀스 번호로 정해집니다. 커밋마다 번호가 하나씩 커지고(정확히는 스냅샷마다 붙습니다. 2-2절 실습의 metadata.json을 열어 보면 한 커밋에 함께 든 S4와 S5의 `sequence-number`가 4와 5로 다릅니다) 명세의 규칙은 이렇습니다.
 
@@ -305,7 +305,7 @@ v3의 deletion vector는 Roaring bitmap으로 저장하고 한 스냅샷에서 �
 Iceberg는 배치 처리를 중심으로 설계됐습니다. 스트리밍으로 자주 갱신되는 테이블을 다루려고 중국에서 시작된 프로젝트가 둘 있습니다.
 
 - **Apache Paimon(Alibaba)**: 2022년 1월 Flink 커뮤니티에서 Flink Table Store로 시작해 Apache 인큐베이터 제안서 기준 주요 개발자가 Alibaba 소속입니다. Flink 커뮤니티의 2024년 글 "Apache Paimon: Streaming Lakehouse is Coming"은 Iceberg가 배치 처리를 위해 설계됐다는 점을 출발점으로 듭니다. Paimon은 레이크 포맷에 LSM 트리를 결합해 스트리밍 갱신을 받습니다. 같은 글은 갱신 주기를 Iceberg 연동 1시간, Hudi 연동 10분으로 적고 Paimon은 1~5분 지연을 내세웁니다. Paimon 진영의 시각이라는 점을 감안해서 읽어야 합니다. LSM 트리는 들어오는 쓰기를 메모리에 모았다가 정렬된 파일로 내려 쓰고 그 파일들을 뒤에서 계속 합치는 구조입니다. 잦은 갱신을 "기존 파일 고치기" 대신 "새 파일 덧붙이기와 나중에 합치기"로 바꿔서 받습니다.
-- **Amoro(NetEase, 구 Arctic)**: NetEase는 2020년 Flink와 Iceberg로 시작했지만 운영 환경과 거리가 멀었다고 적었습니다. 당시 Iceberg에 upsert가 없었고 작은 파일을 누가 관리할지가 문제였습니다. 변경 데이터를 받는 change store와 기본 데이터인 base store를 나누고 플랫폼이 최적화를 자동으로 돌리는 구조로 만들었고 2023년 Amoro로 이름을 바꿨고 2024년 3월 Apache 인큐베이터에 들어갔습니다([Apache Incubator, Amoro](https://incubator.apache.org/projects/amoro.html)).
+- **Amoro(NetEase, 구 Arctic)**: NetEase는 2020년 Flink와 Iceberg로 시작했지만 운영 환경과 거리가 멀었다고 적었습니다. 당시 Iceberg에 upsert가 없었고 작은 파일을 누가 관리할지가 문제였습니다. 변경 데이터를 받는 change store와 기본 데이터인 base store를 나누고 플랫폼이 최적화를 자동으로 돌리는 구조로 만들었습니다. 2023년 Amoro로 이름을 바꿨고 2024년 3월 Apache 인큐베이터에 들어갔습니다([Apache Incubator, Amoro](https://incubator.apache.org/projects/amoro.html)).
 
 小米는 2025년 발표 정리에서 레이크하우스는 주로 Iceberg를 쓰지만 스트림 조인, 실시간 중복 제거, 일부 컬럼 갱신 같은 스트리밍 의미를 지원하기 어려워 Paimon을 들였다고 적었습니다. 이유로 든 것이 5절의 equality delete입니다. Iceberg의 equality delete는 적용 범위가 모든 과거 파일에 걸쳐 매번 거의 모든 과거 파일을 다시 써야 할 수 있다고 설명합니다.
 

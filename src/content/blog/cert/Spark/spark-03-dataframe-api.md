@@ -122,7 +122,7 @@ orders 변수는 여전히 [읽기]만 가리킴
 - Python `if F.col("amount") > 0:`처럼 Column을 Python 조건문에 넣으면 PySpark가 Column을 bool로 바꿀 수 없다는 오류를 냅니다. 행마다 다른 값을 고르려면 `F.when(...).otherwise(...)`를 씁니다.
 - Spark Classic에서는 없는 컬럼 이름을 `select`나 `withColumn`에 쓰면 DataFrame을 만드는 줄에서 분석 오류가 납니다. `drop`과 `withColumnRenamed`만 예외로 아무 일도 하지 않습니다(결론부터 1번).
 
-> **정리**: 컬럼 연산은 식을 쌓는 일이고 메서드는 새 DataFrame을 돌려줍니다. 그래서 결과를 변수에 받아야 하고 같은 계획에 `withColumn`을 반복해 붙이면 계획이 커집니다(이 절의 헷갈리는 지점).
+> **정리**: 원래 변수는 옛 계획을 그대로 가리키니 결과는 새 변수에 받아야 합니다. 같은 계획에 `withColumn`을 반복해 붙이면 계획이 커집니다(이 절의 헷갈리는 지점).
 
 </details>
 
@@ -195,7 +195,7 @@ F.col("status") == ("PAID" & F.col("amount")) > 20000
 (F.col("status") == X) and (X > 20000)      # X = "PAID" & F.col("amount")
 ```
 
-마지막 줄의 `and`가 왼쪽 Column을 참인지 거짓인지 판단하려고 bool로 바꾸려 하고 PySpark는 Column을 bool로 바꿀 수 없다는 오류를 냅니다. Python이 식을 계산하는 순간 나는 오류라서 Spark Job이 돌기 전에 바로 보입니다. `status`가 null인 행은 `status == "PAID"`도 `status != "PAID"`도 통과하지 못합니다. NULL Semantics 문서는 WHERE와 JOIN 조건에서 결과가 `True`인 행만 남고 null(unknown)은 걸러진다고 적습니다.
+마지막 줄의 `and`가 왼쪽 Column을 참인지 거짓인지 판단하려고 bool로 바꾸려 하고 PySpark는 Column을 bool로 바꿀 수 없다는 오류를 냅니다. Python이 식을 계산하는 순간 나는 오류라서 Spark Job이 돌기 전에 바로 보입니다. `status`가 null인 행은 `status == "PAID"`도 `status != "PAID"`도 통과하지 못합니다. NULL Semantics 문서 기준으로 WHERE와 JOIN 조건에서는 결과가 `True`인 행만 남고 null(unknown)은 걸러집니다.
 
 ### 1-4. explode와 explode_outer
 
@@ -214,13 +214,13 @@ orders.select("order_id", F.explode_outer("items").alias("item"))
 # 주문 3과 4가 item = null 인 행으로 남는다
 ```
 
-`explode` 문서는 SELECT 하나에 explode를 하나만 쓸 수 있다고 적습니다. 두 배열을 펼치려면 `select`를 두 번 이어 씁니다.
+`explode` 문서 기준으로 SELECT 하나에는 explode를 하나만 쓸 수 있습니다. 두 배열을 펼치려면 `select`를 두 번 이어 씁니다.
 
 ### 헷갈리는 지점
 
 - `withColumn` 문서는 반복문에서 여러 번 부르면 내부 projection이 쌓여 계획이 커지고 성능 문제나 `StackOverflowException`이 날 수 있다고 경고합니다. 여러 컬럼은 `select`나 `withColumns`로 한 번에 만듭니다.
 - `withColumn`의 두 번째 인자는 Column 식이어야 합니다. 상수는 `F.lit(0)`으로 감쌉니다. 다른 DataFrame의 컬럼을 넣으면 오류가 납니다.
-- `drop("a")`와 `drop(F.col("a"))`는 의미가 다를 수 있다고 문서가 적습니다. 이름은 글자 그대로 찾고 Column은 같은 식을 찾습니다. 조인 뒤 같은 이름 컬럼이 둘일 때 차이가 납니다.
+- `drop("a")`와 `drop(F.col("a"))`는 의미가 다를 수 있습니다(API 문서). 이름은 글자 그대로 찾고 Column은 같은 식을 찾습니다. 조인 뒤 같은 이름 컬럼이 둘일 때 차이가 납니다.
 
 ## 2. 중복 제거와 검증
 
@@ -249,7 +249,7 @@ orders.select("user_id").distinct().count()     # 3, 다만 결과 컬럼은 use
 2. **셔플**: 파티션별 후보들이 `user_id` 해시로 모입니다.
 3. **최종 집계**: 도착한 후보 중 처음 것을 고릅니다.
 
-회원 101의 주문 1과 주문 3이 서로 다른 파티션에 있었다면 3단계에서 어느 쪽이 먼저 도착하느냐가 결과를 정합니다. 도착 순서는 셔플 블록을 가져오는 순서에 달려 있어서 실행마다 달라질 수 있습니다. 그래서 특정 행(예: 가장 최근 주문)을 남겨야 하면 윈도 함수 `row_number()`로 직접 고릅니다(11절). 스트리밍 DataFrame의 `dropDuplicates`는 트리거를 넘어 모든 데이터를 상태로 들고 있고 `withWatermark()`로 범위를 줄인다고 문서가 적습니다(5영역에서 다룹니다).
+회원 101의 주문 1과 주문 3이 서로 다른 파티션에 있었다면 3단계에서 어느 쪽이 먼저 도착하느냐가 결과를 정합니다. 도착 순서는 셔플 블록을 가져오는 순서에 달려 있어서 실행마다 달라질 수 있습니다. 그래서 특정 행(예: 가장 최근 주문)을 남겨야 하면 윈도 함수 `row_number()`로 직접 고릅니다(11절). 스트리밍 DataFrame의 `dropDuplicates`는 문서 기준으로 트리거를 넘어 모든 데이터를 상태로 들고 있고 `withWatermark()`로 범위를 줄입니다(5영역에서 다룹니다).
 
 ### 2-2. null 처리
 
@@ -295,9 +295,9 @@ orders.filter(F.col("status").isNull() | (F.col("status") != "PAID"))   # 주문
 
 #### 4. NaN은 null과 다르다
 
-NaN은 실수 타입의 "숫자가 아님" 값입니다. NaN Semantics 문서는 `NaN = NaN`을 참으로 보고 오름차순 정렬에서 NaN을 어떤 숫자보다 큰 값으로 마지막에 둔다고 적습니다. `na.drop()`은 null과 NaN을 함께 지웁니다(이 절 헷갈리는 지점).
+NaN은 실수 타입의 "숫자가 아님" 값입니다. NaN Semantics 문서에 따르면 `NaN = NaN`은 참이고 오름차순 정렬에서 NaN은 어떤 숫자보다 큰 값으로 마지막에 놓입니다. `na.drop()`은 null과 NaN을 함께 지웁니다(이 절 헷갈리는 지점).
 
-> **정리**: null이 섞인 조건은 결과가 null이 되어 `filter`에서 빠집니다. 아래 2-3절의 `is_valid` 예제가 4.x에서 어느 쪽에도 잡히지 않는 이유가 이것입니다.
+> **정리**: null이 섞인 조건은 같음 비교든 다름 비교든 `filter`를 통과하지 못하니 null 행을 보려면 null 검사를 따로 붙입니다. 아래 2-3절의 `is_valid` 예제가 4.x에서 어느 쪽 필터에도 잡히지 않는 것도 이 때문입니다.
 
 </details>
 
@@ -413,13 +413,13 @@ orders.select(
 | 메모리 | 고유값 수에 비례 | 고정(`rsd`로 정함) |
 | 결과 | 정확 | 기본 상대 표준편차 5% |
 
-> **정리**: 근사 집계는 값을 기억하는 대신 해시 모양을 기록해 메모리를 고정합니다. 아래 문단의 셔플 양 차이도 여기서 나옵니다.
+> **정리**: 스케치 크기는 데이터 양과 상관없이 허용 오차가 정하고 스케치끼리 합칠 수 있어 파티션마다 따로 만들어 둘 수 있습니다. 아래 문단의 셔플 양 차이도 여기서 나옵니다.
 
 </details>
 
 `approx_count_distinct`도 셔플을 합니다. 차이는 셔플하는 양입니다. Spark 4.2.0 소스(`AggUtils.planAggregateWithOneDistinct`)를 보면 `count_distinct`는 그룹 키에 DISTINCT 대상 컬럼을 더한 조합으로 먼저 묶습니다. 그래서 그룹마다 고유값이 모두 셔플됩니다. `approx_count_distinct`는 일반 집계처럼 파티션 안에서 부분 집계를 해 그룹마다 HyperLogLog++ 스케치 하나를 만들고 그 스케치만 셔플합니다. 고유값이 많을수록 셔플 데이터가 크게 줄어듭니다. 이 설명은 소스를 읽고 정리한 것이고 같은 내용의 문서 문장은 찾지 못했습니다.
 
-`approx_count_distinct` 문서는 `rsd`를 0.01보다 작게 잡을 거면 `count_distinct()`를 쓰는 편이 효율적이라고 적습니다. `countDistinct`는 3.5.9 문서에 `count_distinct`의 별칭으로 나오고 `count_distinct`를 직접 쓰라고 권합니다. 4.2.0 API 문서에는 `countDistinct` 페이지가 없지만 4.2.0 소스(`functions/builtin.py`)에는 같은 설명의 별칭으로 남아 있어 호출은 됩니다.
+`approx_count_distinct` 문서에 따르면 `rsd`를 0.01보다 작게 잡을 때는 `count_distinct()`를 쓰는 편이 효율적입니다. `countDistinct`는 3.5.9 문서에 `count_distinct`의 별칭으로 나오고 `count_distinct`를 직접 쓰라고 권합니다. 4.2.0 API 문서에는 `countDistinct` 페이지가 없지만 4.2.0 소스(`functions/builtin.py`)에는 같은 설명의 별칭으로 남아 있어 호출은 됩니다.
 
 ### 3-2. 평균, 합계, groupBy
 
@@ -470,7 +470,7 @@ HashAggregate(keys=[user_id], functions=[sum(amount)])                 ← 최�
 
 </details>
 
-`F.mean(col)`은 `F.avg(col)`의 별칭입니다. 집계 함수는 null을 무시합니다(`count(*)` 제외). 모든 입력이 null이거나 입력이 비면 `max`, `min`, `sum`, `avg`는 null을 돌려준다고 NULL Semantics 문서가 적습니다.
+`F.mean(col)`은 `F.avg(col)`의 별칭입니다. 집계 함수는 null을 무시합니다(`count(*)` 제외). NULL Semantics 문서 기준으로 모든 입력이 null이거나 입력이 비면 `max`, `min`, `sum`, `avg`는 null을 돌려줍니다.
 
 ```python
 DataFrame.groupBy(*cols)            # groupby는 별칭. 4.0.0부터 1부터 시작하는 컬럼 위치(int)도 받는다
@@ -490,7 +490,7 @@ orders.groupBy("user_id").agg({"amount": "avg", "*": "count"})   # dict 형식. 
 orders.groupBy("status").count()                                  # 컬럼 이름 status, count. null status도 한 그룹
 ```
 
-`agg` 문서는 내장 집계 함수와 그룹 집계 pandas UDF를 한 번의 `agg` 호출에 섞을 수 없다고 적습니다.
+내장 집계 함수와 그룹 집계 pandas UDF는 한 번의 `agg` 호출에 섞을 수 없습니다(`agg` 문서).
 
 ### 3-3. describe와 summary
 
@@ -505,7 +505,7 @@ orders.summary().show()                    # 사분위수까지
 orders.summary("count", "min", "90%").show()
 ```
 
-두 메서드 모두 숫자와 문자열 컬럼에 대해 통계를 냅니다. 결과는 통계 이름 컬럼(`summary`)이 붙은 DataFrame이고 값은 문자열로 나옵니다. 문서는 결과 스키마의 하위 호환을 보장하지 않는 탐색용 기능이라고 적습니다. 사분위수는 근사값입니다.
+두 메서드 모두 숫자와 문자열 컬럼의 통계를 냅니다. 결과는 통계 이름 컬럼(`summary`)이 붙은 DataFrame이고 값은 문자열로 나옵니다. 문서상 탐색용 기능이라 결과 스키마의 하위 호환은 보장하지 않습니다. 사분위수는 근사값입니다.
 
 ### 헷갈리는 지점
 
@@ -558,7 +558,7 @@ STRING ─to_timestamp / to_date─► TIMESTAMP / DATE   (unix_timestamp는 STR
 | `UTC` | `2026-10-01 18:00:00` | 2026-10-01 |
 | `Asia/Seoul` | `2026-10-02 03:00:00` | 2026-10-02 |
 
-이 표는 함수 정의에 시각을 넣어 계산한 값이고 Spark로 실행해 본 결과는 아닙니다. 이 글 예제가 세션 시간대를 UTC로 고정한 이유가 이것입니다.
+이 표는 함수 정의에 시각을 넣어 계산한 값이고 Spark로 실행해 본 결과는 아닙니다. 이 글 예제는 이 차이 때문에 세션 시간대를 UTC로 고정했습니다.
 
 > **정리**: 타임스탬프 값 자체는 시간대와 무관한 한 순간이고 문자열로 바꾸거나 날짜로 자를 때 세션 시간대가 끼어듭니다. 날짜 문항은 먼저 반환 타입이 STRING, DATE, TIMESTAMP 중 무엇인지 봅니다.
 
@@ -600,7 +600,7 @@ parts = dated.select(
 
 ### 4-2. 3.x와 4.x의 차이: ANSI 모드
 
-4.2.0 SQL Migration Guide는 Spark 4.0부터 `spark.sql.ansi.enabled`가 기본으로 켜졌다고 적습니다. ANSI Compliance 문서는 ANSI 모드에서 `to_date`, `to_timestamp`, `unix_timestamp`, `to_unix_timestamp`가 입력을 해석할 수 없거나 패턴이 잘못되면 실패한다고 적습니다.
+4.2.0 SQL Migration Guide에 따르면 Spark 4.0부터 `spark.sql.ansi.enabled`가 기본으로 켜졌습니다. ANSI 모드에서는 `to_date`, `to_timestamp`, `unix_timestamp`, `to_unix_timestamp`가 입력을 해석할 수 없거나 패턴이 잘못되면 실패합니다(ANSI Compliance 문서).
 
 | 상황 | ANSI 꺼짐(3.5 기본) | ANSI 켜짐(4.0 기본) |
 |---|---|---|
@@ -612,7 +612,7 @@ parts = dated.select(
 
 `unix_timestamp`의 API 문서는 3.5.9와 4.2.0 모두 "실패하면 null을 돌려준다"고 적습니다. ANSI 문서와 엇갈리는데 4.2.0 소스를 보면 ANSI 문서 쪽이 맞습니다. `UnixTimestamp` 식의 `failOnError` 기본값이 `spark.sql.ansi.enabled`이고 이 값이 true면 해석 실패에서 예외를 던지며 false일 때만 null을 돌려줍니다. 4.x 기본 설정에서는 오류가 납니다.
 
-같은 가이드는 4.0에서 `spark.sql.legacy.timeParserPolicy` 기본값이 `EXCEPTION`에서 `CORRECTED`로 바뀌었다고 적습니다. ANSI 모드에서는 `CANNOT_PARSE_TIMESTAMP` 오류가 나고 ANSI가 꺼져 있으면 null이 나옵니다.
+같은 가이드 기준으로 4.0에서 `spark.sql.legacy.timeParserPolicy` 기본값이 `EXCEPTION`에서 `CORRECTED`로 바뀌었습니다. ANSI 모드에서는 `CANNOT_PARSE_TIMESTAMP` 오류가 나고 ANSI가 꺼져 있으면 null이 나옵니다.
 
 ```python
 raw = spark.createDataFrame([("2026-10-01",), ("2026-13-45",), (None,)], "d STRING")
@@ -709,7 +709,7 @@ same_user = a.join(b, (F.col("a.user_id") == F.col("b.user_id")) &
 <details>
 <summary>기초부터: 분산 조인 방식, broadcast hash join과 sort merge join</summary>
 
-> **핵심 한 줄**: 분산 조인의 핵심은 같은 키의 행을 한 Task에서 만나게 하는 것입니다. 작은 쪽을 모든 익스큐터에 복사하는 broadcast hash join과 양쪽을 키로 셔플해 정렬한 뒤 맞추는 sort merge join이 대표적입니다.
+> **핵심 한 줄**: 분산 조인을 하려면 같은 키의 행이 한 Task에서 만나야 합니다. 작은 쪽을 모든 익스큐터에 복사하는 broadcast hash join과 양쪽을 키로 셔플해 정렬한 뒤 맞추는 sort merge join이 대표적입니다.
 
 #### 1. 왜 필요한가
 
@@ -758,11 +758,11 @@ sort merge join
 - 10MB 기준은 통계로 추정한 크기와 비교합니다. 필터 뒤에 실제로 작아져도 추정치가 크면 자동 broadcast가 되지 않을 수 있고 AQE가 실행 중 통계로 sort merge join을 broadcast join으로 바꿀 수 있습니다([6편](/blog/cert/spark/spark-04-troubleshooting-tuning)).
 - `left` 조인에서는 오른쪽만 broadcast할 수 있습니다. 왼쪽 행을 하나도 빠짐없이 남겨야 하므로 왼쪽은 파티션 그대로 훑는 쪽이 됩니다.
 
-> **정리**: 작은 쪽이 있으면 broadcast로 큰 쪽의 셔플을 없애고 둘 다 크면 sort merge로 양쪽을 섞어 맞춥니다. 아래 표의 세 방법은 broadcast 쪽을 고르게 만드는 수단입니다.
+> **정리**: 자동 broadcast 여부는 실제 크기보다 추정 크기로 갈리고 left 조인에서는 오른쪽만 broadcast할 수 있습니다. 아래 표의 세 방법은 broadcast 쪽을 고르게 만드는 수단입니다.
 
 </details>
 
-broadcast 조인은 작은 쪽 DataFrame 전체를 모든 익스큐터에 보내고 큰 쪽은 셔플하지 않은 채 각 파티션에서 바로 조인합니다. 큰 쪽의 셔플을 없애는 것이 목적입니다.
+broadcast 조인은 작은 쪽 DataFrame 전체를 모든 익스큐터에 보내고 큰 쪽은 셔플하지 않은 채 각 파티션에서 바로 조인합니다. 큰 쪽의 셔플을 없애려고 씁니다.
 
 | 방법 | 코드 |
 |---|---|
@@ -770,7 +770,7 @@ broadcast 조인은 작은 쪽 DataFrame 전체를 모든 익스큐터에 보내
 | 함수 | `F.broadcast(df)`. 1.6.0부터 |
 | 힌트 | `df.hint("broadcast")`, SQL `/*+ BROADCAST(t) */`(`BROADCASTJOIN`, `MAPJOIN`도 같다) |
 
-Performance Tuning 문서는 broadcast 힌트를 주면 추정 크기가 임계값을 넘어도 그 쪽을 build 쪽으로 broadcast 조인을 우선한다고 적습니다. 다만 조인 종류가 지원하지 않으면 힌트를 따르지 않을 수 있습니다. 양쪽에 힌트가 다르면 우선순위는 `BROADCAST` > `MERGE` > `SHUFFLE_HASH` > `SHUFFLE_REPLICATE_NL`입니다. broadcast 대기 시간 상한은 `spark.sql.broadcastTimeout`(기본 300초)입니다.
+Performance Tuning 문서 기준으로 broadcast 힌트를 주면 추정 크기가 임계값을 넘어도 그 쪽을 build 쪽으로 삼아 broadcast 조인을 우선합니다. 다만 조인 종류가 지원하지 않으면 힌트를 따르지 않을 수 있습니다. 양쪽에 힌트가 다르면 우선순위는 `BROADCAST` > `MERGE` > `SHUFFLE_HASH` > `SHUFFLE_REPLICATE_NL`입니다. broadcast 대기 시간 상한은 `spark.sql.broadcastTimeout`(기본 300초)입니다.
 
 ```python
 big = o            # 실제로는 수억 건이라고 가정
@@ -911,7 +911,7 @@ DDL 문자열로는 `NOT NULL`을 적지 않는 한 nullable이 true입니다. �
 | `spark.createDataFrame(data, schema=None, samplingRatio=None, verifySchema=True)` | `DataType`, DDL 문자열, 컬럼 이름 리스트 |
 | `Column.cast(dataType)` | `DataType` 또는 DDL 타입 문자열 |
 
-`DataFrameReader.schema` 문서는 스키마를 주면 소스가 스키마 추론 단계를 건너뛰어 읽기가 빨라진다고 적습니다. CSV의 `inferSchema=True`는 데이터를 한 번 더 훑습니다.
+`DataFrameReader.schema` 문서에 따르면 스키마를 주면 소스가 스키마 추론 단계를 건너뛰어 읽기가 빨라집니다. CSV의 `inferSchema=True`는 데이터를 한 번 더 훑습니다.
 
 ```python
 orders_in = (spark.read
@@ -1077,7 +1077,7 @@ RDD 가이드의 "Understanding closures" 절은 같은 구조의 counter 예제
 
 </details>
 
-안내서의 "iterating"은 행을 하나씩 도는 방법을 묻습니다. 어디서 도는지가 핵심이라 실행 위치로 나눕니다.
+안내서의 "iterating"은 행을 하나씩 도는 방법을 묻습니다. 함수가 어디서 도는지에 따라 답이 갈리니 실행 위치로 나눕니다.
 
 | 방법 | 함수가 도는 곳 | 쓰임 |
 |---|---|---|
@@ -1149,7 +1149,7 @@ Spark 엔진은 JVM에서 돕니다. Python으로 쓴 함수는 JVM이 실행할
 - `explain()`에 `BatchEvalPython`이나 `ArrowEvalPython` 연산자가 보이면 그 자리에서 Python UDF가 돕니다.
 - Python 워커는 익스큐터 JVM 힙(`spark.executor.memory`) 밖의 별도 프로세스입니다.
 
-> **정리**: Python UDF의 비용은 대부분 JVM과 Python 사이의 왕복에서 나옵니다. 같은 일을 하는 내장 함수가 있으면 내장 함수가 왕복 없이 끝납니다.
+> **정리**: 실행 계획에 Python UDF 연산자가 보이면 그 자리마다 JVM과 Python 사이 왕복이 있습니다. 같은 일을 하는 내장 함수가 있으면 왕복 없이 끝납니다.
 
 </details>
 
@@ -1237,12 +1237,12 @@ orders.select("order_id", with_vat("amount").alias("amount_vat"))
 | RocksDB | 3.2부터 내장. `spark.sql.streaming.stateStore.providerClass`를 `org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider`로 준다 |
 | 임의 상태 연산 | 2.2부터 `mapGroupsWithState`, `flatMapGroupsWithState`(지금은 legacy). 4.0부터 `transformWithState`를 권한다 |
 
-기본 구현은 상태를 익스큐터 JVM 메모리에 두기 때문에 상태 객체가 많으면 GC 일시 정지가 길어질 수 있다고 문서가 적습니다. RocksDB 제공자가 나온 이유입니다. 사용법은 [7편](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
+문서에 따르면 기본 구현은 상태를 익스큐터 JVM 메모리에 두기 때문에 상태 객체가 많으면 GC 일시 정지가 길어질 수 있습니다. RocksDB 제공자는 이 문제 때문에 나왔습니다. 사용법은 [7편](/blog/cert/spark/spark-05-structured-streaming)에서 다룹니다.
 
 ### 헷갈리는 지점
 
 - UDF는 최적화기가 안을 들여다볼 수 없습니다. 같은 일을 하는 내장 함수(`F.size`, `F.when`)가 있으면 내장 함수가 낫습니다. 이 권고는 공식 문서 문장으로 확인하지 못했고 일반적인 설명입니다.
-- `udf`가 결정적 함수로 취급되므로 최적화 과정에서 호출이 줄거나 늘 수 있다고 문서가 적습니다. 난수나 현재 시각을 쓰는 UDF는 `asNondeterministic()`을 붙입니다.
+- `udf`는 결정적 함수로 취급되므로 최적화 과정에서 호출이 줄거나 늘 수 있습니다(API 문서). 난수나 현재 시각을 쓰는 UDF는 `asNondeterministic()`을 붙입니다.
 - `register`는 Python 함수에는 `returnType`을 줄 수 있고 이미 만든 UDF에는 줄 수 없습니다.
 
 ## 10. broadcast 변수와 accumulator
@@ -1256,7 +1256,7 @@ bc.unpersist(blocking=False)               # 익스큐터 복사본 삭제. 다�
 bc.destroy(blocking=False)                 # 영구 해제. 이후 사용 불가
 ```
 
-RDD 가이드의 설명입니다. broadcast 변수는 읽기 전용 값을 Task마다 보내지 않고 머신마다 한 번 캐시해 둡니다. Spark는 Stage 안의 Task가 공통으로 쓰는 데이터를 이미 자동으로 broadcast하므로 직접 만드는 broadcast 변수는 여러 Stage가 같은 데이터를 쓰거나 역직렬화된 형태로 캐시하는 것이 중요할 때 쓸모가 있다고 적습니다. broadcast한 뒤에는 원래 객체를 바꾸지 말라고도 적습니다.
+RDD 가이드에 따르면 broadcast 변수는 읽기 전용 값을 Task마다 보내지 않고 머신마다 한 번 캐시해 둡니다. Spark는 Stage 안의 Task가 공통으로 쓰는 데이터를 이미 자동으로 broadcast하므로 직접 만드는 broadcast 변수는 여러 Stage가 같은 데이터를 쓰거나 역직렬화된 형태로 캐시하는 것이 중요할 때 쓸모가 있습니다. 같은 가이드는 broadcast한 뒤에 원래 객체를 바꾸지 말라고도 당부합니다.
 
 ```python
 city_names = {"Seoul": "서울", "Busan": "부산"}
@@ -1342,7 +1342,7 @@ order_id  amount  프레임(처음 ~ 현재)    sum(amount).over(running)
 | 셔플 | 부분 집계 뒤 부분 결과만(3-2절 토글) | 원본 행을 모두 |
 | 쓰임 | 그룹 요약 | 순위, 누적, 앞뒤 행 비교 |
 
-> **정리**: 윈도 함수는 같은 그룹의 행을 한 파티션에 모아 정렬한 뒤 계산합니다. `partitionBy`를 빼면 모든 행이 파티션 하나로 모이는 이유도 이 1단계 때문입니다(이 절 마지막 문단).
+> **정리**: 윈도 함수는 부분 집계 없이 원본 행을 모두 셔플하니 groupBy 집계보다 셔플이 큽니다. `partitionBy`를 빼면 모든 행이 파티션 하나로 모이는 것도 이 1단계 때문입니다(이 절 마지막 문단).
 
 </details>
 
@@ -1414,7 +1414,7 @@ o.select(
 
 ### 12-1. 배열 고차 함수
 
-배열 컬럼을 펼치지 않고 원소마다 식을 적용하는 함수들입니다. 모두 3.1.0에 Python API가 생겼고 Python lambda는 Column을 받아 Column을 돌려줘야 합니다. 문서는 lambda 안에서 Python UDF를 쓸 수 없다고 적습니다(SPARK-27052).
+배열 컬럼을 펼치지 않고 원소마다 식을 적용하는 함수들입니다. 모두 3.1.0에 Python API가 생겼고 Python lambda는 Column을 받아 Column을 돌려줘야 합니다. lambda 안에서는 Python UDF를 쓸 수 없습니다(문서, SPARK-27052).
 
 | 함수 | 시그니처 | 반환 |
 |---|---|---|
@@ -1465,7 +1465,7 @@ o.groupBy("user_id").pivot("status", ["PAID", "CANCELED"]).agg(F.sum("amount"))
 # 103     | 54000 | null
 ```
 
-`values`를 생략하면 결과 스키마를 정하려고 `pivot_col`의 고유값을 먼저 계산한다고 문서가 적습니다(eager computation). 트랜스포메이션을 정의하는 시점에 Job이 하나 더 돕니다. 값 목록을 알고 있으면 `values`로 넘겨 그 계산을 없앱니다. 목록에 없는 값(위 예제에서 status가 null인 주문 5)은 결과 컬럼에 들어가지 않습니다.
+문서에 따르면 `values`를 생략할 때 Spark는 결과 스키마를 정하려고 `pivot_col`의 고유값을 먼저 계산합니다(eager computation). 트랜스포메이션을 정의하는 시점에 Job이 하나 더 돕니다. 값 목록을 알고 있으면 `values`로 넘겨 그 계산을 없앱니다. 목록에 없는 값(위 예제에서 status가 null인 주문 5)은 결과 컬럼에 들어가지 않습니다.
 
 `pivot`은 `GroupedData`의 메서드라서 `groupBy` 없이 DataFrame에서 바로 부를 수 없습니다. 반대로 넓은 표를 긴 표로 되돌리는 메서드는 `DataFrame.unpivot(ids, values, variableColumnName, valueColumnName)`(3.4.0~, 별칭 `melt`)입니다. 문서는 집계까지 되돌리지는 못한다고 적습니다.
 

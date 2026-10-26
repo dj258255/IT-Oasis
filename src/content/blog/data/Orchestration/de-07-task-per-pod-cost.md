@@ -25,13 +25,13 @@ seriesOrder: 8
 2. 쿠버네티스 공식 SLO(p99 5초 이하)는 이미지 pull과 init 컨테이너를 뺀 숫자입니다. 배치 태스크가 실제로 기다리는 시간은 이 둘을 더한 값입니다.
 3. kubelet은 기본적으로 이미지를 하나씩 순서대로 받고 한 Pod 안의 이미지는 병렬 pull을 켜도 동시에 받지 않습니다. 이미지가 크면 lazy pulling(SOCI, eStargz, GKE Image streaming)으로 시작에 필요한 부분만 먼저 받을 수 있습니다.
 4. Airflow KubernetesExecutor는 스케줄러 루프마다 Pod 생성 API를 기본 1건씩 순서대로 부릅니다. KubernetesPodOperator를 이 executor 위에서 쓰면 워커 Pod가 다시 Pod를 띄워서 기동 비용을 두 번 냅니다.
-5. Argo는 단계마다 init, wait, main 컨테이너 셋을 띄웁니다. 문서는 init 컨테이너가 모든 Pod에 기동 지연을 더한다고 적고 대안으로 한 Pod에 여러 컨테이너를 넣는 container set과 v4.1의 init-less Pod(beta)를 제공합니다.
+5. Argo는 단계마다 init, wait, main 컨테이너 셋을 띄웁니다. 문서 기준으로 init 컨테이너는 모든 Pod에 기동 지연을 더하고 대안으로는 한 Pod에 여러 컨테이너를 넣는 container set과 v4.1의 init-less Pod(beta)가 있습니다.
 
 ---
 
 ## 1. 1초짜리 태스크에 몇 초가 붙나
 
-3편에서 executor를 고르는 것은 태스크를 어디서 돌릴지 고르는 일이라고 했습니다. 컨테이너 방식(KubernetesExecutor, Argo)은 태스크마다 의존성을 격리하고 상주 워커를 관리하지 않아도 됩니다. Airflow 3.2 executor 문서는 그 대가를 이렇게 적습니다. 태스크를 시작하기 전에 컨테이너나 Pod가 떠야 해서 기동 지연이 있다. 상주 워커를 쓰는 큐 방식 executor는 이 지연이 비교적 낮다.
+3편에서 executor를 고르는 것은 태스크를 어디서 돌릴지 고르는 일이라고 했습니다. 컨테이너 방식(KubernetesExecutor, Argo)은 태스크마다 의존성을 격리하고 상주 워커를 관리하지 않아도 됩니다. 그 대가는 Airflow 3.2 executor 문서에 이렇게 나옵니다. 태스크를 시작하기 전에 컨테이너나 Pod가 떠야 해서 기동 지연이 있다. 상주 워커를 쓰는 큐 방식 executor는 이 지연이 비교적 낮다.
 
 태스크가 30분짜리라면 몇 초는 문제가 되지 않습니다. 태스크가 1~2초짜리이고 수백 개라면 기동 시간이 실행 시간보다 커집니다. 얼마나 붙는지 알려면 먼저 그 시간이 어디서 쓰이는지 나눠야 합니다.
 
@@ -76,7 +76,7 @@ kubectl get events --field-selector involvedObject.name=<이름> | grep -E 'Pull
 
 첫 줄은 생성 시각을 찍고 그 아래로 condition 이름과 바뀐 시각을 한 줄씩 찍습니다. 두 번째 줄은 그 Pod의 이벤트 가운데 이미지를 받기 시작하고 끝낸 기록만 남깁니다. 예를 들어 `PodScheduled` 시각에서 생성 시각을 빼면 스케줄링에 걸린 초가 나오고 `PodReadyToStartContainers`에서 `PodScheduled`를 빼면 샌드박스 준비에 걸린 초가 나옵니다.
 
-조심할 곳이 하나 있습니다. 쿠버네티스 문서는 init 컨테이너가 없는 Pod에서 kubelet이 샌드박스 생성과 네트워크 설정을 시작하기 전에 `Initialized`를 True로 바꾼다고 적습니다. init 컨테이너가 없는 Pod에서는 `Initialized` 시각이 `PodReadyToStartContainers`보다 앞설 수 있으니 구간 계산에 쓰면 안 됩니다.
+조심할 곳이 하나 있습니다. 쿠버네티스 문서에 따르면 init 컨테이너가 없는 Pod에서 kubelet은 샌드박스 생성과 네트워크 설정을 시작하기 전에 `Initialized`를 True로 바꿉니다. init 컨테이너가 없는 Pod에서는 `Initialized` 시각이 `PodReadyToStartContainers`보다 앞설 수 있으니 구간 계산에 쓰면 안 됩니다.
 
 그리고 condition 시각은 초 단위라서 1초보다 짧은 구간은 구분되지 않습니다. 더 잘게 보려면 메트릭을 씁니다. kubelet 메트릭은 모두 ALPHA이고 스케줄러 메트릭 하나만 BETA입니다.
 
@@ -107,7 +107,7 @@ SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은�
 
 ### 3-1. pull 정책과 순서
 
-먼저 이미지 이름의 두 가지 표기를 구분해 둡니다. `python:3.12`의 `3.12`는 태그이고 태그는 나중에 다른 이미지를 가리키도록 바뀔 수 있습니다. `python@sha256:…`처럼 쓰는 digest는 이미지 내용으로 만든 해시라 절대 바뀌지 않습니다. pull 정책이 태그냐 digest냐에 따라 달라지는 이유가 이것입니다.
+먼저 이미지 이름의 표기 두 개를 구분해 둡니다. `python:3.12`의 `3.12`는 태그이고 태그는 나중에 다른 이미지를 가리키도록 바뀔 수 있습니다. `python@sha256:…`처럼 쓰는 digest는 이미지 내용으로 만든 해시라 절대 바뀌지 않습니다. 그래서 pull 정책도 태그냐 digest냐에 따라 달라집니다.
 
 | 규칙 | 쿠버네티스 문서 |
 |---|---|
@@ -142,9 +142,9 @@ KubernetesExecutor는 태스크마다 워커 Pod를 하나 띄우고 태스크�
 
 - `worker_pods_creation_batch_size`의 기본값은 1입니다. 스케줄러 루프 한 번에 Pod 생성 API를 1건 부릅니다.
 - 루프 안에서는 생성 호출을 순서대로 보내고 API 서버가 429를 주면 그 루프의 생성을 멈춥니다.
-- 10.21.0부터 `async_pod_creation`(기본 False)과 `pod_creation_max_concurrency`가 생겼습니다. 켜면 생성 호출을 동시에 보냅니다. 설정 설명은 호출마다 지연이 클 때(네트워크 왕복, admission webhook) 스케줄러 루프가 막히는 시간을 줄인다고 적습니다.
+- 10.21.0부터 `async_pod_creation`(기본 False)과 `pod_creation_max_concurrency`가 생겼습니다. 켜면 생성 호출을 동시에 보냅니다. 설정 설명에는 호출마다 지연이 클 때(네트워크 왕복, admission webhook) 스케줄러 루프가 막히는 시간을 줄인다고 되어 있습니다.
 
-배치 크기 1이 무슨 뜻인지 숫자로 보면 이렇습니다. 태스크 300개가 한꺼번에 `queued`가 되면 스케줄러는 루프 한 번에 하나씩 Pod 생성을 요청하니 300번째 태스크의 Pod는 루프를 300번 돈 뒤에야 생성 요청이 나갑니다. 2절의 구간이 시작되기도 전에 Pod 생성 요청을 기다리는 줄이 생기는 것입니다. 루프 한 번이 몇 초인지는 환경마다 달라서 이 줄이 실제로 몇 초가 되는지는 직접 재 봐야 합니다. `kubernetes_executor.pod_creation_batch_duration` 메트릭으로 볼 수 있습니다.
+배치 크기 1이 무슨 뜻인지 숫자로 보면 이렇습니다. 태스크 300개가 한꺼번에 `queued`가 되면 스케줄러는 루프 한 번에 하나씩 Pod 생성을 요청하니 300번째 태스크의 Pod는 루프를 300번 돈 뒤에야 생성 요청이 나갑니다. 2절의 구간이 시작되기도 전에 Pod 생성 요청을 기다리는 줄이 생깁니다. 루프 한 번이 몇 초인지는 환경마다 달라서 이 줄이 실제로 몇 초가 되는지는 직접 재 봐야 합니다. `kubernetes_executor.pod_creation_batch_duration` 메트릭으로 볼 수 있습니다.
 
 ### 4-2. KubernetesPodOperator를 KubernetesExecutor 위에서 쓰면
 
@@ -171,7 +171,7 @@ Argo는 단계 하나나 DAG 태스크 하나마다 Pod를 하나 만들고 그 
 
 v4.1의 init-less Pod 문서는 "init 컨테이너는 모든 일반 컨테이너보다 먼저 차례로 실행되어 모든 Pod에 기동 지연을 더한다"고 적습니다. `initlessPod.enabled: true`(beta, 기본 꺼짐)로 켜면 init 컨테이너 없이 `argoexec`를 이미지 볼륨으로 붙이고 `supervisor` 컨테이너 하나가 init과 wait의 일을 함께 합니다. 쿠버네티스 1.33~1.35에서는 feature gate가 필요하고 1.36부터는 기본으로 켜져 있는 기능을 씁니다. init과 wait 오버헤드를 초 단위로 잰 공식 수치는 찾지 못했습니다.
 
-Argo 컨트롤러는 기본적으로 끝난 Pod를 지우지 않습니다. 비용 최적화 문서는 컨트롤러의 CPU와 메모리가 Pod 수에 비례해 늘어난다고 적고 `podGC` 설정을 권합니다.
+Argo 컨트롤러는 기본적으로 끝난 Pod를 지우지 않습니다. 비용 최적화 문서에 따르면 컨트롤러의 CPU와 메모리는 Pod 수에 비례해 늘어나고 그래서 `podGC` 설정을 권합니다.
 
 ## 6. 짧은 태스크가 많을 때
 
@@ -182,7 +182,7 @@ Argo 컨트롤러는 기본적으로 끝난 Pod를 지우지 않습니다. 비�
 | 태스크를 묶는다 | 짧은 태스크 여러 개를 태스크 하나로 합친다 | 재시도 단위가 커진다. 하나만 실패해도 묶음 전체를 다시 돈다(4편) |
 | 이미지를 줄이거나 미리 받는다 | 3절 | 노드가 자주 바뀌면 사전 적재 효과가 줄어든다 |
 
-Airflow의 KubernetesExecutor 문서는 공식 Helm 차트가 Celery 워커를 0개까지 줄일 수 있게 되면서 KubernetesExecutor의 자원 측면 이점이 줄었다고도 적습니다.
+Airflow의 KubernetesExecutor 문서에는 공식 Helm 차트가 Celery 워커를 0개까지 줄일 수 있게 되면서 KubernetesExecutor의 자원 측면 이점이 줄었다는 설명도 있습니다.
 
 마지막 줄의 "태스크 묶기"는 공식 문서가 권하는 방법으로 찾지는 못했고 재시도 단위와의 교환 관계를 따져 넣었습니다.
 

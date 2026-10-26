@@ -65,7 +65,7 @@ customers = spark.read.parquet("/data/customers")  # customer_id, grade, region
 | RDD 셔플, `parallelize` | `spark.default.parallelism` | `reduceByKey`나 `join`은 부모 RDD 중 가장 많은 파티션 수. `parallelize`는 로컬이면 코어 수, 그 밖은 전체 익스큐터 코어 수와 2 중 큰 값 | DataFrame 셔플에는 위 설정이 쓰인다 |
 | 직접 지정 | `repartition()`, `coalesce()`, `repartitionByRange()` | 없음 | 3절 |
 
-Tuning 가이드의 "Level of Parallelism" 절은 클러스터의 CPU 코어 하나당 Task 2~3개를 권합니다. 코어가 16개라면 셔플 파티션 32~48개가 출발점이라는 계산입니다. 기본값 200은 로컬 노트북에서는 너무 많고 수백 GB 셔플에는 너무 적을 수 있습니다. AQE의 파티션 합치기(6절)가 이 값을 런타임에 줄여 주는 이유이기도 합니다.
+Tuning 가이드의 "Level of Parallelism" 절은 클러스터의 CPU 코어 하나당 Task 2~3개를 권합니다. 코어가 16개라면 셔플 파티션 32~48개가 출발점이라는 계산입니다. 기본값 200은 로컬 노트북에서는 너무 많고 수백 GB 셔플에는 너무 적을 수 있습니다. 그래서 AQE의 파티션 합치기(6절)가 이 값을 런타임에 줄여 줍니다.
 
 <details>
 <summary>기초부터: 파일을 읽을 때 파티션 수가 나오는 계산</summary>
@@ -80,7 +80,7 @@ Tuning 가이드의 "Level of Parallelism" 절은 클러스터의 CPU 코어 하
 
 4.2.0 소스 `FilePartition.maxSplitBytes`와 `getFilePartitions`를 단계로 옮겼습니다.
 
-1. **전체 크기 재기**: 파일마다 "파일 크기 + `openCostInBytes`(4MB)"를 더해 `totalBytes`를 구합니다. 파일 하나를 여는 데 4MB를 읽는 만큼의 비용이 든다고 치는 것입니다.
+1. **전체 크기 재기**: 파일마다 "파일 크기 + `openCostInBytes`(4MB)"를 더해 `totalBytes`를 구합니다. 파일 하나를 여는 데 4MB를 읽는 만큼의 비용이 든다고 칩니다.
 2. **코어당 몫**: `bytesPerCore = totalBytes ÷ 기본 병렬도(보통 전체 코어 수)`.
 3. **조각 크기 정하기**: `maxSplitBytes = min(128MB, max(4MB, bytesPerCore))`. 데이터가 작아 코어당 몫이 128MB보다 작으면 조각을 더 잘게 잘라 코어를 다 쓰게 합니다.
 4. **큰 파일 자르기**: 나눌 수 있는 형식의 파일은 `maxSplitBytes` 크기 조각으로 자릅니다.
@@ -96,16 +96,16 @@ Tuning 가이드의 "Level of Parallelism" 절은 클러스터의 CPU 코어 하
 | 같은 파일, 코어 16개 | 1028MB | 약 64MB | 약 64MB | 16 |
 | 1MB 파일 1,000개, 코어 4개 | 1000 × (1 + 4) = 5000MB | 1250MB | 128MB | 약 39 |
 
-둘째 줄은 코어가 많으면 128MB보다 잘게 잘라 코어를 다 쓰게 한다는 뜻입니다. 셋째 줄이 작은 파일 문제의 모양입니다.
+둘째 줄처럼 코어가 많으면 128MB보다 잘게 잘라 코어를 다 쓰게 합니다. 셋째 줄이 작은 파일 문제의 모양입니다.
 
 1. 파일 하나를 담을 때마다 실제 크기 1MB에 여는 비용 4MB가 더해져 5MB로 셉니다.
 2. 25개를 담으면 125MB입니다. 26번째는 125 + 1 = 126MB로 128MB를 넘지 않아 들어가고 합계는 130MB가 됩니다.
 3. 27번째는 130 + 1 = 131MB라 넘으므로 파티션을 닫습니다. 파티션 하나에 파일 26개씩입니다.
 4. 1,000 ÷ 26 = 38.5라서 파티션은 39개입니다.
 
-여는 비용을 0으로 친다면 파티션 하나에 128개씩 담겨 8개면 됩니다. 데이터는 1GB가 안 되는데 Task가 다섯 배 가까이 늘어난 셈입니다. 파일마다 열고 메타데이터를 읽는 실제 비용을 이 4MB가 대신 반영합니다. 근본 대책은 쓰는 쪽에서 파일을 합쳐 두는 것입니다(3-1의 `coalesce`, 3-2의 `REBALANCE`).
+여는 비용을 0으로 친다면 파티션 하나에 128개씩 담겨 8개면 됩니다. 데이터는 1GB가 안 되는데 Task는 다섯 배 가까이 늘었습니다. 파일마다 열고 메타데이터를 읽는 실제 비용을 이 4MB가 대신 반영합니다. 근본적으로는 쓰는 쪽에서 파일을 합쳐 두면 풀립니다(3-1의 `coalesce`, 3-2의 `REBALANCE`).
 
-> **정리**: 파일 읽기 파티션 수는 데이터 크기, 코어 수, 파일 개수 세 가지로 정해집니다. 128MB는 상한이고 데이터가 작거나 코어가 많으면 더 잘게 자릅니다.
+> **정리**: 파티션이 예상보다 많이 나오면 두 경우를 의심합니다. 코어가 많아 조각이 128MB보다 작아졌거나 작은 파일이 많아 파일마다 여는 비용을 더해 센 경우입니다.
 
 </details>
 
@@ -151,7 +151,7 @@ DataFrame.coalesce(numPartitions)
 
 `coalesce` 문서는 1000개를 100개로 줄이면 셔플 없이 새 파티션 하나가 기존 파티션 10개를 맡는다고 설명합니다. 같은 문서가 `numPartitions = 1`처럼 급격히 줄이면 계산이 원하는 것보다 적은 노드(1이면 노드 하나)에서 돌 수 있으니 `repartition()`을 쓰라고 권합니다. 셔플이 하나 더 생기지만 앞 단계는 원래 파티션 수대로 병렬로 돕니다.
 
-`repartition(numPartitions)`의 첫 인자에 컬럼을 주면 그 컬럼이 첫 파티셔닝 컬럼이 되고 파티션 수는 기본값을 씁니다. `repartition("store_id")`는 셔플 파티션 수(기본 200)만큼 나뉩니다. `repartitionByRange`는 컬럼을 하나 이상 꼭 줘야 하고 정렬 방향을 적지 않으면 "ascending nulls first"로 나눕니다. 범위를 샘플링으로 추정하기 때문에 실행할 때마다 경계가 조금 달라질 수 있다고 API 문서가 적습니다.
+`repartition(numPartitions)`의 첫 인자에 컬럼을 주면 그 컬럼이 첫 파티셔닝 컬럼이 되고 파티션 수는 기본값을 씁니다. `repartition("store_id")`는 셔플 파티션 수(기본 200)만큼 나뉩니다. `repartitionByRange`는 컬럼을 하나 이상 꼭 줘야 하고 정렬 방향을 적지 않으면 "ascending nulls first"로 나눕니다. API 문서 기준으로 범위는 샘플링으로 추정하므로 실행할 때마다 경계가 조금 달라질 수 있습니다.
 
 RDD의 `coalesce(numPartitions, shuffle=False)`에는 셔플 여부를 고르는 인자가 있지만 DataFrame의 `coalesce`는 숫자 하나만 받습니다. 시험 보기에 `df.coalesce(10, shuffle=True)`가 나오면 DataFrame API에 없는 인자입니다.
 
@@ -286,7 +286,7 @@ Jobs 탭 ──▶ Job 상세 ──▶ Stage 상세 ──▶ Task 표 ──�
 - percentile 표는 Task 값의 분포라서 평균 하나보다 쏠림을 잘 드러냅니다.
 - Stage 목록의 skipped는 실패한 Stage가 아닙니다. 이미 있는 셔플 결과를 다시 써서 건너뛴 Stage입니다(8절).
 
-> **정리**: Job에서 Stage로, Stage에서 Task로 내려가며 "어느 Task가 왜 다른지"를 찾는 것이 UI 진단의 기본 동선입니다. 아래 표는 그 동선에서 쏠림을 확인하는 칸들입니다.
+> **정리**: Stage 상세에서는 Median과 Max를 나란히 놓고 봅니다. Max만 튀면 쏠림을, 둘이 비슷하면 전체 데이터량이나 파티션 수를 의심합니다. 아래 표는 그 동선에서 쏠림을 확인하는 칸들입니다.
 
 </details>
 
@@ -442,7 +442,7 @@ SELECT /*+ BROADCAST(c) */ o.order_id, c.grade
 FROM orders o JOIN customers c ON o.customer_id = c.customer_id;
 ```
 
-조인 전략 힌트는 `BROADCAST`, `MERGE`, `SHUFFLE_HASH`, `SHUFFLE_REPLICATE_NL` 네 가지입니다. SQL에서 `BROADCAST`는 `BROADCASTJOIN`, `MAPJOIN`이라고 써도 됩니다. 양쪽에 서로 다른 힌트를 주면 BROADCAST, MERGE, SHUFFLE_HASH, SHUFFLE_REPLICATE_NL 순으로 우선합니다. 문서는 어떤 전략은 모든 조인 유형을 지원하지 않아서 힌트대로 고른다는 보장이 없다고 적습니다.
+조인 전략 힌트는 `BROADCAST`, `MERGE`, `SHUFFLE_HASH`, `SHUFFLE_REPLICATE_NL` 네 가지입니다. SQL에서 `BROADCAST`는 `BROADCASTJOIN`, `MAPJOIN`이라고 써도 됩니다. 양쪽에 서로 다른 힌트를 주면 BROADCAST, MERGE, SHUFFLE_HASH, SHUFFLE_REPLICATE_NL 순으로 우선합니다. 다만 전략마다 지원하는 조인 유형이 달라서 힌트대로 고른다는 보장은 없습니다(Performance Tuning 문서).
 
 헷갈리는 지점입니다.
 
@@ -489,7 +489,7 @@ ORC도 stripe라는 단위로 같은 방식의 컬럼 저장과 통계를 둡니
 
 #### 4. 헷갈리는 점
 
-- 건너뛰기는 행 묶음 단위입니다. 통과한 묶음 안에는 조건에 맞지 않는 행도 섞여 있어서 Spark가 한 번 더 거릅니다. 아래 계획에 `PushedFilters`와 `Filter`가 함께 있는 이유입니다.
+- 건너뛰기는 행 묶음 단위입니다. 통과한 묶음 안에는 조건에 맞지 않는 행도 섞여 있어서 Spark가 한 번 더 거릅니다. 그래서 아래 계획에 `PushedFilters`와 `Filter`가 함께 있습니다.
 - UDF로 감싼 조건은 소스가 이해할 수 없는 식이라 통계와 비교할 수 없습니다.
 
 > **정리**: 필터와 `select`를 계획에 드러나게 쓰면 Spark가 그 정보를 파일 읽기 단계까지 내려보내 덜 읽습니다. 셔플할 양도 그만큼 줄어듭니다.
@@ -523,12 +523,12 @@ paid.explain()
         ReadSchema: struct<order_id:..., customer_id:..., amount:..., status:..., order_ts:...>
 ```
 
-`PushedFilters`에 조건이 있으면 소스로 내려간 것이고 `ReadSchema`에 필요한 컬럼만 있으면 가지치기가 된 것입니다. 두 필드 이름은 공식 문서 예제에는 없고 Spark 4.2.0 소스의 `DataSourceScanExec`(FileScan 노드의 메타데이터 `ReadSchema`, `PushedFilters`)에서 확인했습니다. 푸시다운은 블록 단위로 건너뛰는 최적화라서 남은 행에는 Spark가 `Filter`를 한 번 더 적용합니다. 위 계획에 `PushedFilters`와 `Filter` 노드가 함께 있는 이유입니다.
+`PushedFilters`에 조건이 있으면 소스로 내려갔다는 표시이고 `ReadSchema`에 필요한 컬럼만 있으면 가지치기가 됐다는 표시입니다. 두 필드 이름은 공식 문서 예제에는 없고 Spark 4.2.0 소스의 `DataSourceScanExec`(FileScan 노드의 메타데이터 `ReadSchema`, `PushedFilters`)에서 확인했습니다. 푸시다운은 블록 단위로 건너뛰는 최적화라서 남은 행에는 Spark가 `Filter`를 한 번 더 적용합니다. 위 계획에 `PushedFilters`와 `Filter` 노드가 함께 보이는 것도 이 때문입니다.
 
 ### 5-3. 셔플할 양 줄이기
 
 - 집계는 셔플 전에 부분 집계를 합니다. EXPLAIN 문서 예제의 계획이 `HashAggregate(partial_sum)` 다음에 `Exchange hashpartitioning(k, 200)`, 그다음 `HashAggregate(sum)` 순서입니다. 그래서 `groupBy().agg(sum)`은 키별 부분 합만 셔플합니다.
-- 조인과 집계를 같은 키로 이어서 하면 이미 그 키로 나뉜 데이터는 다시 셔플하지 않습니다. 앞의 3-1에서 `repartition(64, "store_id")`를 미리 해 둔 이유입니다.
+- 조인과 집계를 같은 키로 이어서 하면 이미 그 키로 나뉜 데이터는 다시 셔플하지 않습니다. 앞의 3-1에서 `repartition(64, "store_id")`를 미리 해 둔 것이 이 효과를 노린 코드입니다.
 - 같은 셔플 결과를 여러 액션에서 쓰면 `cache()`로 재계산을 막습니다. DataFrame `cache()`의 기본 저장 레벨은 `MEMORY_AND_DISK_DESER`입니다(1편 표).
 - 자주 같은 키로 조인하는 영구 테이블은 `bucketBy`로 저장해 셔플을 줄일 수 있습니다. 2영역(Spark SQL) 범위라 여기서는 이름만 적습니다.
 
@@ -589,7 +589,7 @@ AQE 실행
 
 </details>
 
-Performance Tuning 문서는 AQE를 런타임 통계로 가장 효율적인 실행 계획을 고르는 최적화라고 설명하고 3.2.0부터 기본으로 켜져 있다고 적습니다. 우산 설정은 `spark.sql.adaptive.enabled`입니다. 셔플이 끝난 Stage마다 실제 크기를 보고 남은 계획을 다시 짭니다. 정적 계획은 실행 전에 추정한 통계로만 정하니 추정이 틀린 만큼 손해를 봅니다.
+Performance Tuning 문서 기준으로 AQE는 런타임 통계로 가장 효율적인 실행 계획을 고르는 최적화이고 3.2.0부터 기본으로 켜져 있습니다. 우산 설정은 `spark.sql.adaptive.enabled`입니다. 셔플이 끝난 Stage마다 실제 크기를 보고 남은 계획을 다시 짭니다. 정적 계획은 실행 전에 추정한 통계로만 정하니 추정이 틀린 만큼 손해를 봅니다.
 
 | 기능 | 켜는 설정(기본) | 하는 일 |
 |---|---|---|
@@ -606,7 +606,7 @@ Performance Tuning 문서는 AQE를 런타임 통계로 가장 효율적인 실�
 | `spark.sql.adaptive.coalescePartitions.minPartitionSize` | 1MB | 3.2.0 |
 | `spark.sql.adaptive.coalescePartitions.initialPartitionNum` | 없음(셔플 파티션 수와 같음) | 3.0.0 |
 
-기본값에서 함정이 하나 있습니다. `parallelismFirst`가 true면 목표 크기 64MB를 무시하고 최소 크기 1MB만 지키면서 병렬도를 최대로 둡니다. 문서는 AQE를 켰을 때 성능이 떨어지는 일을 막으려는 기본값이라고 설명합니다. 권고 문장은 버전마다 조금 다릅니다. 4.2.0 문서는 바쁜 클러스터에서 자원을 효율적으로 쓰려면(작은 Task를 덜 만들려면) false로 두라고 적습니다. 3.5 문서는 조건 없이 false로 두고 목표 크기를 따르라고 적습니다. 어느 쪽이든 기본 설정에서 "AQE가 파티션을 64MB 단위로 합친다"는 말은 정확하지 않습니다.
+기본값에서 함정이 하나 있습니다. `parallelismFirst`가 true면 목표 크기 64MB를 무시하고 최소 크기 1MB만 지키면서 병렬도를 최대로 둡니다. 문서는 AQE를 켰을 때 성능이 떨어지는 일을 막으려는 기본값이라고 설명합니다. 권고 문장은 버전마다 조금 다릅니다. 4.2.0 문서는 바쁜 클러스터에서 자원을 효율적으로 쓰려면(작은 Task를 덜 만들려면) false로 두라고 하고 3.5 문서는 조건 없이 false로 두고 목표 크기를 따르라고 합니다. 어느 쪽이든 기본 설정에서 "AQE가 파티션을 64MB 단위로 합친다"는 말은 정확하지 않습니다.
 
 실제 목표 크기는 4.2.0 소스 `ShufflePartitionsUtil.coalescePartitions`에서 이렇게 정해집니다.
 
@@ -626,16 +626,16 @@ Performance Tuning 문서는 AQE를 런타임 통계로 가장 효율적인 실�
 
 문서 문장은 `parallelismFirst=true`일 때 64MB를 "무시한다"고 적지만 소스의 식에서는 64MB가 상한으로 남습니다. 무시되는 것은 "64MB만큼 채워 합친다"는 쪽이고 목표 크기는 셔플 크기를 코어 수로 나눈 값까지 내려갑니다. 셔플 데이터가 작을 때만 두 설정이 갈립니다. 기본값 true는 코어 16개를 다 쓰도록 작은 파티션을 남기고 false는 Task 수를 줄여 다른 Job에 코어를 양보합니다. 데이터가 크면 어느 쪽이든 64MB가 목표가 됩니다.
 
-문서가 제안하는 사용법은 `initialPartitionNum`을 넉넉하게 크게 두고 합치기를 AQE에 맡기는 것입니다. 데이터 크기에 맞는 셔플 파티션 수를 미리 맞출 필요가 줄어듭니다.
+문서는 `initialPartitionNum`을 넉넉하게 크게 두고 합치기를 AQE에 맡기는 사용법을 제안합니다. 데이터 크기에 맞는 셔플 파티션 수를 미리 맞출 필요가 줄어듭니다.
 
 ### 6-3. 조인 전략 바꾸기
 
-- sort-merge 조인에서 broadcast hash 조인으로: 한쪽의 런타임 크기가 AQE broadcast 기준(`spark.sql.adaptive.autoBroadcastJoinThreshold`, 기본은 10MB 기준과 같음)보다 작으면 바꿉니다. 문서는 처음부터 broadcast로 계획한 것만큼 효율적이지는 않다고 적습니다. 이미 셔플은 했기 때문입니다. 그래도 양쪽 정렬을 건너뛰고 `spark.sql.adaptive.localShuffleReader.enabled`(기본 true)로 셔플 파일을 로컬에서 읽어 네트워크를 아낍니다.
+- sort-merge 조인에서 broadcast hash 조인으로: 한쪽의 런타임 크기가 AQE broadcast 기준(`spark.sql.adaptive.autoBroadcastJoinThreshold`, 기본은 10MB 기준과 같음)보다 작으면 바꿉니다. 문서 기준으로 처음부터 broadcast로 계획한 것만큼 효율적이지는 않습니다. 이미 셔플은 했기 때문입니다. 그래도 양쪽 정렬을 건너뛰고 `spark.sql.adaptive.localShuffleReader.enabled`(기본 true)로 셔플 파일을 로컬에서 읽어 네트워크를 아낍니다.
 - sort-merge 조인에서 shuffled hash 조인으로: 셔플 뒤 모든 파티션이 `spark.sql.adaptive.maxShuffledHashJoinLocalMapThreshold`보다 작으면 바꿉니다. 기본값이 0이라 기본 설정에서는 이 변환이 일어나지 않습니다. 설정 설명은 이 값이 `advisoryPartitionSizeInBytes`(64MB) 이상일 때만 shuffled hash 조인을 고른다고 적으니 켜려면 64MB 이상으로 줍니다.
 
 ### 6-4. 계획에서 AQE 확인하기
 
-AQE가 켜진 상태에서 계획을 찍으면 최상단에 `AdaptiveSparkPlan` 노드가 붙고 그 인자로 `isFinalPlan=false` 또는 `true`가 나옵니다. 이 표기는 Spark 4.2.0 소스의 `AdaptiveSparkPlanExec`(`stringArgs`가 `isFinalPlan=$isFinalPlan`을 출력)에서 확인했습니다. 실행 전에 `explain()`을 찍으면 아직 런타임 통계가 없으니 false이고 그 아래 조인은 정적 계획(예: `SortMergeJoin`)입니다. 실행이 끝난 뒤의 최종 계획은 SQL 탭 상세 화면에서 봅니다. 실행 전과 후에 찍힌 값이 다른 동작은 로컬에서 확인하지 못했습니다. Performance Tuning 문서는 런타임 통계를 SQL UI의 "Details"에서 `Statistics(..., isRuntime=true)`로 찾을 수 있다고 적습니다.
+AQE가 켜진 상태에서 계획을 찍으면 최상단에 `AdaptiveSparkPlan` 노드가 붙고 그 인자로 `isFinalPlan=false` 또는 `true`가 나옵니다. 이 표기는 Spark 4.2.0 소스의 `AdaptiveSparkPlanExec`(`stringArgs`가 `isFinalPlan=$isFinalPlan`을 출력)에서 확인했습니다. 실행 전에 `explain()`을 찍으면 아직 런타임 통계가 없으니 false이고 그 아래 조인은 정적 계획(예: `SortMergeJoin`)입니다. 실행이 끝난 뒤의 최종 계획은 SQL 탭 상세 화면에서 봅니다. 실행 전과 후에 찍힌 값이 다른 동작은 로컬에서 확인하지 못했습니다. 런타임 통계는 SQL UI의 "Details"에서 `Statistics(..., isRuntime=true)`로 찾을 수 있습니다(Performance Tuning 문서).
 
 ```python
 spark.conf.get("spark.sql.adaptive.enabled")        # 'true'
@@ -657,7 +657,7 @@ spark.conf.set("spark.sql.adaptive.enabled", "false")  # 비교 실험용으로 
 
 #### 1. 왜 필요한가
 
-`filter`를 `join` 뒤에 써도 Spark는 필터를 스캔 쪽으로 내립니다. 코드 순서와 실제 실행 순서가 다를 수 있다는 뜻입니다. 느린 원인을 찾으려면 Spark가 최종적으로 고른 실행 방법을 봐야 하고 그것이 물리 계획입니다.
+`filter`를 `join` 뒤에 써도 Spark는 필터를 스캔 쪽으로 내립니다. 코드 순서와 실제 실행 순서가 다를 수 있습니다. 느린 원인을 찾으려면 Spark가 최종적으로 고른 실행 방법을 봐야 하고 그것이 물리 계획입니다.
 
 #### 2. 어떻게 동작하나
 
@@ -739,11 +739,11 @@ DataFrame.explain(extended=None, mode=None)
 | `AdaptiveSparkPlan isFinalPlan=false` | AQE가 켜져 있고 아직 실행 전이라 런타임 재계획이 반영되지 않은 계획(6-4) |
 | `FileScan ... PushedFilters: [...]` | 소스로 내려간 필터(5-2) |
 
-`explain()`은 계획만 출력하고 Job을 돌리지 않습니다. 비싼 연산이 들어 있는지 실행 전에 볼 수 있는 이유입니다.
+`explain()`은 계획만 출력하고 Job을 돌리지 않습니다. 그래서 비싼 연산이 들어 있는지 실행 전에 볼 수 있습니다.
 
 ## 8. Spark UI 탭
 
-드라이버마다 Web UI가 뜨고 기본 주소는 `http://<드라이버 호스트>:4040`(`spark.ui.port`)입니다. Web UI 문서는 그 포트가 이미 쓰이고 있으면(같은 호스트에 애플리케이션이 여러 개) 4041, 4042 순으로 빈 포트를 찾고 고른 포트를 시작 로그에 남긴다고 적습니다. 애플리케이션이 끝나면 UI도 사라지니 끝난 뒤에 보려면 `spark.eventLog.enabled`(기본 false)를 켜서 이벤트 로그를 `spark.eventLog.dir`(기본 `file:///tmp/spark-events`)에 남기고 `./sbin/start-history-server.sh`로 History Server를 띄웁니다. History Server의 기본 주소는 `http://<서버>:18080`이고 읽을 디렉터리는 `spark.history.fs.logDirectory`로 줍니다(Monitoring 문서).
+드라이버마다 Web UI가 뜨고 기본 주소는 `http://<드라이버 호스트>:4040`(`spark.ui.port`)입니다. Web UI 문서 기준으로 그 포트가 이미 쓰이고 있으면(같은 호스트에 애플리케이션이 여러 개) 4041, 4042 순으로 빈 포트를 찾고 고른 포트를 시작 로그에 남깁니다. 애플리케이션이 끝나면 UI도 사라지니 끝난 뒤에 보려면 `spark.eventLog.enabled`(기본 false)를 켜서 이벤트 로그를 `spark.eventLog.dir`(기본 `file:///tmp/spark-events`)에 남기고 `./sbin/start-history-server.sh`로 History Server를 띄웁니다. History Server의 기본 주소는 `http://<서버>:18080`이고 읽을 디렉터리는 `spark.history.fs.logDirectory`로 줍니다(Monitoring 문서).
 
 | 탭 | 보여 주는 것 | 진단에 쓰는 곳 |
 |---|---|---|
@@ -799,7 +799,7 @@ log_df = spark.read.schema(SPARK_LOG_SCHEMA).json("/logs/spark")
 log_df.filter(F.col("level") == "ERROR").show(truncate=False)
 ```
 
-`SPARK_LOG_SCHEMA`는 Spark 4.2.0 소스(`pyspark/logger/logger.py`)에 `ts`, `level`, `msg`, `context`, `exception`, `logger` 컬럼으로 정의되어 있어 `level`로 거를 수 있습니다. pyspark 셸에서는 import 없이 바로 쓸 수 있다고 문서가 적습니다.
+`SPARK_LOG_SCHEMA`는 Spark 4.2.0 소스(`pyspark/logger/logger.py`)에 `ts`, `level`, `msg`, `context`, `exception`, `logger` 컬럼으로 정의되어 있어 `level`로 거를 수 있습니다. 문서 기준으로 pyspark 셸에서는 import 없이 바로 씁니다.
 
 ## 10. 메모리 부족 진단
 
@@ -812,7 +812,7 @@ log_df.filter(F.col("level") == "ERROR").show(truncate=False)
 | 관련 설정 | `spark.driver.memory`(1g), `spark.driver.maxResultSize`(1g) | `spark.executor.memory`(1g), `spark.executor.memoryOverhead`, `spark.memory.fraction`(0.6) |
 | 먼저 할 일 | 모으지 않는다. 필요한 만큼 `limit` 후 모으거나 파일로 쓴다 | 파티션 수를 늘리고 쏠림을 푼다. 그다음 메모리를 늘린다 |
 
-`spark.driver.maxResultSize`는 액션 하나에서 모든 파티션 결과를 직렬화한 총합의 한도이고 넘으면 Job을 중단합니다. 문서는 이 한도를 너무 높이면 드라이버 OOM이 날 수 있고 적절한 한도가 드라이버를 보호한다고 적습니다. 그래서 `collect()`가 이 한도에 걸려 실패했다면 한도를 올리기 전에 정말 다 모아야 하는지부터 봅니다.
+`spark.driver.maxResultSize`는 액션 하나에서 모든 파티션 결과를 직렬화한 총합의 한도이고 넘으면 Job을 중단합니다. 문서 설명으로는 이 한도를 너무 높이면 드라이버 OOM이 날 수 있고 적절한 한도가 드라이버를 보호합니다. 그래서 `collect()`가 이 한도에 걸려 실패했다면 한도를 올리기 전에 정말 다 모아야 하는지부터 봅니다.
 
 `toPandas()` 문서도 결과가 작을 때만 쓰라고 하고 모든 데이터를 드라이버 메모리로 올린다고 적습니다. Arrow를 켜도 모은다는 사실은 같습니다(8편).
 
@@ -884,7 +884,7 @@ Tuning 가이드 기준입니다.
 - M 안에서 `spark.memory.storageFraction`(기본 0.5)만큼은 캐시 블록이 실행 메모리에 밀려나지 않는 영역 R입니다.
 - 실행은 필요하면 저장을 내쫓을 수 있지만 R 아래로는 못 내립니다. 저장은 실행을 내쫓지 못합니다.
 
-같은 가이드의 "Memory Usage of Reduce Tasks"는 RDD 전체가 메모리에 들어가더라도 `groupByKey` 같은 reduce Task 하나의 작업 집합이 너무 커서 OOM이 나는 경우가 있다고 설명합니다. 가장 단순한 해결은 병렬도를 높여 Task당 입력을 줄이는 것이고 Spark는 200ms짜리 짧은 Task도 효율적으로 돌린다고 적습니다.
+같은 가이드의 "Memory Usage of Reduce Tasks"는 RDD 전체가 메모리에 들어가더라도 `groupByKey` 같은 reduce Task 하나의 작업 집합이 너무 커서 OOM이 나는 경우가 있다고 설명합니다. 가장 단순하게는 병렬도를 높여 Task당 입력을 줄이면 되고 가이드는 Spark가 200ms짜리 짧은 Task도 효율적으로 돌린다고 덧붙입니다.
 
 Python을 쓰면 힙 밖 메모리도 봐야 합니다. pandas UDF와 Python UDF는 익스큐터 옆의 Python 워커 프로세스에서 돕니다. `spark.executor.pyspark.memory`는 기본으로 설정되지 않아 Spark가 Python 메모리에 상한을 두지 않습니다. 그러면 Python 워커는 다른 비 JVM 프로세스와 함께 overhead 공간을 나눠 씁니다. `spark.executor.memoryOverhead`의 기본값은 executorMemory × `spark.executor.memoryOverheadFactor`(0.10, Kubernetes의 비 JVM 작업은 0.40)이고 최소 384MiB입니다. 이 최솟값은 4.0.0부터 `spark.executor.minMemoryOverhead`(기본 384m)로 바꿀 수 있고 3.5 문서에는 "minimum of 384"로 고정되어 있습니다. YARN과 Kubernetes에서 익스큐터 컨테이너 하나의 최대 메모리는 `spark.executor.memory`, `memoryOverhead`, `spark.memory.offHeap.size`, `spark.executor.pyspark.memory`의 합입니다. 컨테이너가 메모리 초과로 죽으면 JVM 힙 OOM과 다른 메시지가 나오니 로그 문구를 보고 힙을 늘릴지 overhead를 늘릴지 정합니다.
 
@@ -895,7 +895,7 @@ Python을 쓰면 힙 밖 메모리도 봐야 합니다. pandas UDF와 Python UDF
 
 ## 11. 클러스터 저사용 진단
 
-저사용은 코어는 놀고 있는데 Job이 오래 걸리는 상태입니다. Tuning 가이드는 연산마다 병렬도를 충분히 높이지 않으면 클러스터를 다 쓰지 못한다고 적습니다.
+저사용은 코어는 놀고 있는데 Job이 오래 걸리는 상태입니다. Tuning 가이드 기준으로 연산마다 병렬도를 충분히 높이지 않으면 클러스터를 다 쓰지 못합니다.
 
 | 증상(UI에서) | 원인 후보 | 대응 |
 |---|---|---|
@@ -976,7 +976,7 @@ AQE의 셔플 파티션 합치기가 작은 파티션을 합쳤기 때문입니�
 <details>
 <summary>정답과 근거</summary>
 
-늘어나지 않습니다. 기본 설정에서는 이 호출이 `CANNOT_MODIFY_CONFIG` 오류로 거부됩니다. Spark 4.2.0 소스의 `RuntimeConfig.requireNonStaticConf`가 SQL 설정이 아닌 SparkConf 항목을 막고(`spark.sql.legacy.setCommandRejectsSparkCoreConfs` 기본 true) SQL 마이그레이션 가이드는 이 검사가 3.0부터라고 적습니다. 드라이버 메모리는 드라이버 JVM이 뜰 때 정해집니다. client 모드에서는 `spark-submit --driver-memory`나 기본 설정 파일처럼 시작 전에 줘야 합니다.
+늘어나지 않습니다. 기본 설정에서는 이 호출이 `CANNOT_MODIFY_CONFIG` 오류로 거부됩니다. Spark 4.2.0 소스의 `RuntimeConfig.requireNonStaticConf`가 SQL 설정이 아닌 SparkConf 항목을 막고(`spark.sql.legacy.setCommandRejectsSparkCoreConfs` 기본 true) 이 검사는 3.0부터 들어갔습니다(SQL 마이그레이션 가이드). 드라이버 메모리는 드라이버 JVM이 뜰 때 정해집니다. client 모드에서는 `spark-submit --driver-memory`나 기본 설정 파일처럼 시작 전에 줘야 합니다.
 
 </details>
 

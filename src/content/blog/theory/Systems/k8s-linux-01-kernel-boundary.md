@@ -93,7 +93,7 @@ seriesOrder: 1
 | 컨테이너가 돌려면 커널에 무엇이 준비돼야 하나 | 3장, 5장 |
 | `/proc`은 디스크에 없는데 왜 파일로 보이나 | 4장 |
 
-> **정리**: 유저 공간의 구성요소가 시스템 콜로 부탁하면 커널의 각 기능이 그 일을 맡습니다. 아래 본문은 그 문(시스템 콜)부터 봅니다.
+> **정리**: 위 표처럼 커널 기능마다 쿠버네티스에서 이어지는 자리가 있고 둘 사이의 문은 시스템 콜 하나입니다. 아래 본문은 그 문부터 봅니다.
 
 </details>
 
@@ -103,7 +103,7 @@ seriesOrder: 1
 
 유저 프로그램이 파일을 열거나 메모리를 더 받거나 새 프로세스를 만들려면 커널에 부탁해야 합니다. 그 부탁의 공식 통로가 시스템 콜입니다. x86_64에서는 `syscall` 명령어로 커널에 진입하고 `rax` 레지스터에 담은 번호로 어떤 시스템 콜인지 고릅니다. 커널은 그 번호로 시스템 콜 테이블을 찾아 해당 함수를 실행한 뒤 결과를 돌려주고 유저 모드로 복귀합니다.
 
-이 문단에 처음 보는 말이 셋 있습니다. 레지스터는 CPU 안의 아주 작은 저장 칸이고 `rax`, `rdi` 같은 이름이 붙어 있습니다. 권한 링은 CPU가 지금 실행 중인 코드에 무엇을 허락할지 숫자로 나눈 단계이고 리눅스는 0(커널)과 3(유저) 두 단계만 씁니다. 페이지 테이블은 프로세스가 쓰는 가상 주소를 실제 메모리 위치로 바꾸는 표입니다. 이 표를 고칠 수 있으면 남의 메모리를 들여다볼 수 있어서 링 0만 만질 수 있게 막아 둡니다.
+이 문단의 낯선 말부터 풀어 둡니다. 레지스터는 CPU 안의 아주 작은 저장 칸이고 `rax`, `rdi` 같은 이름이 붙어 있습니다. 권한 링은 CPU가 지금 실행 중인 코드에 무엇을 허락할지 숫자로 나눈 단계이고 리눅스는 0(커널)과 3(유저) 두 단계만 씁니다. 페이지 테이블은 프로세스가 쓰는 가상 주소를 실제 메모리 위치로 바꾸는 표입니다. 이 표를 고칠 수 있으면 남의 메모리를 들여다볼 수 있어서 링 0만 만질 수 있게 막아 둡니다.
 
 `cat`이 `/proc/cpuinfo`를 읽는 `read` 한 번이 커널에 다녀오는 길을 순서대로 적으면 이렇습니다.
 
@@ -167,7 +167,7 @@ strace 한 줄은 `시스템 콜 이름(인자들) = 반환값` 꼴입니다. �
 | `read(..., 131072) = 3072` | 최대 131072바이트를 달라고 했고 3072바이트를 받았다는 뜻입니다 |
 | `read(3, "", 131072) = 0` | 0은 파일 끝입니다. `cat`은 이 값을 보고 읽기를 멈춥니다 |
 
-읽을 거리가 세 가지 있습니다.
+이 출력에서 짚을 곳은 이렇습니다.
 
 - 프로그램은 `open`을 호출한 적이 없는데 `openat`이 찍힙니다. glibc의 `open()` 래퍼가 내부에서 `openat` 시스템 콜을 쓰기 때문입니다. 라이브러리 함수와 시스템 콜은 1:1로 대응하지 않습니다.
 - `fstat`이 돌려준 `st_size`가 0입니다. 그런데 `read`는 수천 바이트를 돌려줍니다. 파일 크기가 0인데 내용이 있는 이유는 4장에서 설명합니다.
@@ -426,7 +426,7 @@ SMT(인텔의 이름으로 하이퍼스레딩)가 실제로 켜져 있는지는 
 | `MemFree` | 어디에도 쓰이지 않는 RAM |
 | `MemAvailable` | 스왑 없이 새 애플리케이션을 시작하는 데 쓸 수 있는 메모리의 추정치. `MemFree`, 회수 가능한 slab, 파일 LRU 크기, 존별 low watermark로 계산 |
 
-`MemTotal`이 장착한 RAM보다 작은 것은 정상입니다. 펌웨어가 예약한 영역, `crashkernel=` 부트 옵션으로 kdump용으로 떼어 둔 영역, 커널 코드 자체가 빠집니다. 16GiB 인스턴스의 `MemTotal`이 16GiB에 못 미치는 이유가 이것입니다.
+`MemTotal`이 장착한 RAM보다 작은 것은 정상입니다. 펌웨어가 예약한 영역, `crashkernel=` 부트 옵션으로 kdump용으로 떼어 둔 영역, 커널 코드 자체가 빠집니다. 그래서 16GiB 인스턴스의 `MemTotal`도 16GiB에 못 미칩니다.
 
 `MemFree`가 작은 것은 정상 상태입니다. 리눅스는 남는 메모리를 페이지 캐시로 씁니다. 이 캐시는 필요하면 비워서 돌려줄 수 있으므로 `MemFree`는 오래 돈 서버일수록 작아집니다. "지금 새 프로세스에 얼마를 줄 수 있나"를 보려면 `MemAvailable`을 봅니다.
 
@@ -438,7 +438,7 @@ kubelet이 노드 메모리 압박을 판단할 때 쓰는 축출 신호 `memory
 memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 ```
 
-문서는 이 값을 cgroupfs에서 구한다고 명시하고 `free -m` 같은 도구는 컨테이너 안에서 제대로 동작하지 않는다고 이유를 답니다. working set은 cgroup의 메모리 사용량에서 `inactive_file`(비활성 LRU 목록에 있는 파일 기반 메모리)을 뺀 값입니다. kubelet은 이 부분을 압박이 오면 회수할 수 있는 메모리로 봅니다. 리눅스 기본 hard eviction 임계값은 `memory.available<100Mi`입니다.
+같은 문서 기준으로 이 값은 cgroupfs에서 구합니다. `free -m` 같은 도구가 컨테이너 안에서 제대로 동작하지 않기 때문입니다. working set은 cgroup의 메모리 사용량에서 `inactive_file`(비활성 LRU 목록에 있는 파일 기반 메모리)을 뺀 값입니다. kubelet은 이 부분을 압박이 오면 회수할 수 있는 메모리로 봅니다. 리눅스 기본 hard eviction 임계값은 `memory.available<100Mi`입니다.
 
 가상의 숫자로 계산해 보겠습니다. 노드 capacity가 8,192Mi이고 노드 전체 cgroup의 메모리 사용량이 7,900Mi, 그중 `inactive_file`이 400Mi라고 합시다.
 
@@ -450,7 +450,7 @@ memory.available := node.status.capacity[memory] - node.stats.memory.workingSet
 
 여기서 앱이 592Mi를 더 쓰면 축출이 시작됩니다. 같은 순간 `MemAvailable`은 활성 목록에 있는 파일 캐시 일부도 회수할 수 있다고 보고 셈하므로 이보다 크게 나올 수 있습니다. kubelet은 그 캐시를 회수할 수 없는 쪽으로 셉니다.
 
-그래서 같은 순간에도 `MemAvailable`과 kubelet의 `memory.available`은 다르게 나올 수 있습니다. 계산에 넣는 캐시의 범위가 다르고 기준값도 `MemTotal`과 노드 capacity로 다릅니다. "free로 보면 아직 여유가 있는데 파드가 축출됐다"는 상황은 대개 이 차이에서 나옵니다. eviction 시점을 예측하려면 루트 cgroup의 `memory.current`와 `memory.stat`의 `inactive_file`을 봐야 합니다. 이 계산은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 더 다룹니다.
+`MemAvailable`과 kubelet의 `memory.available`이 갈리는 곳은 두 군데입니다. 계산에 넣는 캐시의 범위가 다르고 기준값도 `MemTotal`과 노드 capacity로 다릅니다. "free로 보면 아직 여유가 있는데 파드가 축출됐다"는 상황은 대개 이 차이에서 나옵니다. eviction 시점을 예측하려면 루트 cgroup의 `memory.current`와 `memory.stat`의 `inactive_file`을 봐야 합니다. 이 계산은 [3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 더 다룹니다.
 
 **직접 해 보기**
 
@@ -514,7 +514,7 @@ sudo sysctl --system
 sysctl net.ipv4.ip_forward
 ```
 
-문서는 리눅스 커널이 기본적으로 인터페이스 사이의 IPv4 라우팅을 허용하지 않는다고 설명합니다. 대부분의 클러스터 네트워크 구현이 이 값을 직접 바꾸지만 관리자에게 맡기는 구현도 있다고 덧붙입니다. 다른 sysctl이나 커널 모듈이 필요한지는 사용하는 네트워크 구현의 문서를 보라고 안내합니다.
+리눅스 커널은 기본적으로 인터페이스 사이의 IPv4 라우팅을 허용하지 않습니다. 대부분의 클러스터 네트워크 구현은 이 값을 직접 바꾸지만 관리자에게 맡기는 구현도 있습니다. 다른 sysctl이나 커널 모듈이 필요한지는 사용하는 네트워크 구현의 문서를 보라는 것이 이 페이지의 안내입니다.
 
 예전 판(대략 1.29 이전)의 같은 문서에는 `overlay`, `br_netfilter` 모듈 적재와 sysctl 세 줄(`net.bridge.bridge-nf-call-iptables`, `net.bridge.bridge-nf-call-ip6tables`, `net.ipv4.ip_forward`)이 함께 있었습니다. 인터넷의 설치 글 상당수가 아직 이 판을 옮겨 적고 있습니다. 이 설정이 왜 필요한지 알아야 CNI를 바꿀 때 무엇을 지워도 되는지 판단할 수 있습니다.
 
@@ -571,7 +571,7 @@ kubelet은 시작할 때 일부 커널 값을 직접 확인합니다. kubelet �
 
 ### 5-6. cgroup v2는 1.35부터 기본 필수
 
-쿠버네티스 1.35에서 cgroup v1 지원이 deprecated 되었습니다. 같은 버전에서 kubelet의 `failCgroupV1` 기본값이 `true`로 바뀌어 cgroup v1 노드에서는 kubelet이 기본적으로 시작하지 않습니다. kubeadm preflight도 오류를 냅니다. `failCgroupV1: false`로 당분간 우회할 수 있습니다. 이 기본값 변경이 KEP-5573의 베타 단계이고 cgroup v1 코드를 지우는 일은 같은 KEP의 GA 단계로 미뤄져 있으며 KEP는 1.38보다 이르지 않다고 적고 있습니다. 정리하면 "기본적으로 필수, 임시 우회 가능"입니다.
+쿠버네티스 1.35에서 cgroup v1 지원이 deprecated 되었습니다. 같은 버전에서 kubelet의 `failCgroupV1` 기본값이 `true`로 바뀌어 cgroup v1 노드에서는 kubelet이 기본적으로 시작하지 않습니다. kubeadm preflight도 오류를 냅니다. `failCgroupV1: false`로 당분간 우회할 수 있습니다. 이 기본값 변경이 KEP-5573의 베타 단계이고 cgroup v1 코드를 지우는 일은 같은 KEP의 GA 단계로 미뤄져 있고 그 시점은 KEP 기준으로 1.38보다 이르지 않습니다. 지금 상태를 한 줄로 쓰면 "기본적으로 필수, 임시 우회 가능"입니다.
 
 노드가 어느 버전인지는 cgroups 문서가 안내하는 명령으로 확인합니다.
 
@@ -624,7 +624,7 @@ kind 워커 실측입니다. `net.ipv4.ip_forward = 1`이었고 `net.bridge.brid
 - LSM(AppArmor, SELinux)은 호출이 통과한 뒤 커널 객체에 접근하는 순간을 거릅니다.
 - `securityContext`에서 둘 다 지정하고 non-root 실행, 권한 상승 차단(`allowPrivilegeEscalation: false`)도 함께 겁니다. 이 조합은 CKS 시험의 주요 주제입니다.
 
-> **정리**: 시스템 콜은 유저 프로그램이 커널에 닿는 유일한 문이라서 컨테이너 보안도 그 문에서 시작합니다.
+> **정리**: seccomp는 호출 입구에서, LSM은 커널 객체에 접근하는 순간에 거릅니다. 막는 지점이 서로 달라서 둘을 함께 겁니다.
 
 </details>
 
@@ -694,7 +694,7 @@ kubelet이 살아 있는데 노드가 준비되지 않은 경우(예: 런타임 
 
 ### 7-2. v1.34에서 나뉜 두 컨트롤러
 
-예전에는 node-lifecycle-controller가 taint를 붙이는 일과 taint를 보고 파드를 지우는 일을 함께 했습니다. v1.34에서 KEP-3902가 GA가 되면서 둘이 나뉘었습니다. node-lifecycle-controller는 NoExecute taint를 붙이기만 하고 파드 삭제는 별도의 `taint-eviction-controller`가 맡습니다. 둘 다 kube-controller-manager 안에서 돌고 기본 동작은 같습니다. 달라진 점은 관리자가 taint 기반 축출만 끄거나 직접 구현한 컨트롤러로 바꿀 수 있게 되었다는 것입니다.
+예전에는 node-lifecycle-controller가 taint를 붙이는 일과 taint를 보고 파드를 지우는 일을 함께 했습니다. v1.34에서 KEP-3902가 GA가 되면서 둘이 나뉘었습니다. node-lifecycle-controller는 NoExecute taint를 붙이기만 하고 파드 삭제는 별도의 `taint-eviction-controller`가 맡습니다. 둘 다 kube-controller-manager 안에서 돌고 기본 동작은 같습니다. 대신 관리자가 taint 기반 축출만 끄거나 직접 구현한 컨트롤러로 바꿀 수 있게 되었습니다.
 
 축출은 파드 삭제입니다. 새 파드는 워크로드 컨트롤러가 새 이름으로 만듭니다. 컨트롤러 없이 만든 단독 파드는 그대로 사라집니다. StatefulSet 파드는 같은 이름을 다시 써야 합니다. 그래서 죽은 노드의 파드가 실제로 멈췄는지 확인되기 전(노드 객체 삭제나 강제 삭제 전)에는 새 파드가 만들어지지 않고 기다릴 수 있습니다.
 

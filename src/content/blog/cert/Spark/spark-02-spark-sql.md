@@ -20,7 +20,7 @@ seriesOrder: 4
 
 1. 저장 모드는 `append`, `overwrite`, `error`(= `errorifexists`), `ignore` 넷이고 기본값은 `errorifexists`입니다. 문서는 저장 모드가 잠금을 쓰지 않고 원자적이지 않으며 `overwrite`는 새 데이터를 쓰기 전에 기존 데이터를 먼저 지운다고 적습니다.
 2. 형식을 지정하지 않으면 `spark.sql.sources.default`(기본 `parquet`)로 읽고 씁니다. CSV는 `header`와 `inferSchema`가 둘 다 기본 `false`이고 JSON은 한 줄에 객체 하나(JSON Lines)가 기본입니다.
-3. `partitionBy`는 `save`와 `saveAsTable` 모두에 쓰고 `컬럼=값` 디렉터리를 만듭니다. `bucketBy`와 `sortBy`는 `saveAsTable`과 함께 쓰는 영구 테이블 전용입니다. 카디널리티가 큰 컬럼에는 `partitionBy` 대신 `bucketBy`가 맞다고 문서가 적습니다.
+3. `partitionBy`는 `save`와 `saveAsTable` 모두에 쓰고 `컬럼=값` 디렉터리를 만듭니다. `bucketBy`와 `sortBy`는 `saveAsTable`과 함께 쓰는 영구 테이블 전용입니다. 문서 기준으로 카디널리티가 큰 컬럼에는 `partitionBy` 대신 `bucketBy`가 맞습니다.
 4. `saveAsTable`에 `path` 옵션을 주면 외부 테이블이 되어 `DROP TABLE` 후에도 파일이 남습니다. 경로를 주지 않은 관리형 테이블은 웨어하우스 디렉터리의 파일까지 지워집니다. Databricks Unity Catalog의 관리형 테이블은 기본 형식이 Delta이고 삭제 후 7일 동안 `UNDROP`으로 되살릴 수 있습니다.
 5. 임시 뷰는 만든 SparkSession이 끝나면 사라지고 전역 임시 뷰는 애플리케이션이 끝날 때까지 `global_temp.뷰이름`으로 조회합니다. `createTempView`는 같은 이름이 있으면 예외를 내고 `createOrReplaceTempView`는 덮어씁니다.
 
@@ -188,7 +188,7 @@ amount   : 32000, 15000, 8000       ← 최솟값 8000, 최댓값 32000을 메�
 - CSV를 스키마 없이 `inferSchema` 기본값(`false`)으로 읽으면 모든 컬럼이 문자열입니다. 숫자 계산 전에 타입을 바꾸거나 처음부터 스키마를 줍니다([5편](/blog/cert/spark/spark-03-dataframe-api) 7-1절 토글).
 - Delta는 Parquet 데이터 파일에 트랜잭션 로그를 더한 형식입니다(2절). 열 기반의 이점을 그대로 가집니다.
 
-> **정리**: 아래 표의 옵션 대부분이 CSV와 JSON에 몰려 있는 이유는 이 형식들이 타입 정보를 갖고 있지 않아서입니다. Parquet와 ORC는 타입과 통계를 파일에 담아 옵션이 적습니다.
+> **정리**: CSV와 JSON은 타입 정보를 갖고 있지 않아서 아래 표의 옵션 대부분이 이 두 형식에 몰려 있습니다. Parquet와 ORC는 타입과 통계를 파일에 담아 옵션이 적습니다.
 
 </details>
 
@@ -262,7 +262,7 @@ raw = (spark.read
 bad = raw.filter(F.col("_corrupt_record").isNotNull())
 ```
 
-스키마는 `StructType`과 DDL 문자열 둘 다 받습니다(`DataFrameReader.schema` 문서). 스키마를 주면 추론 단계를 건너뛰어 읽기가 빨라진다고 같은 문서가 적습니다.
+스키마는 `StructType`과 DDL 문자열 둘 다 받습니다(`DataFrameReader.schema` 문서). 같은 문서에 따르면 스키마를 줄 때는 추론 단계를 건너뛰어 읽기가 빨라집니다.
 
 ```python
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType
@@ -328,7 +328,7 @@ Text 형식은 쓸 때 제약이 있습니다. `DataFrameWriter.text` 문서는 
 - 보폭은 값의 범위로만 정하고 실제 분포는 보지 않습니다. 주문 번호가 한쪽에 몰려 있으면 파티션 하나만 커집니다.
 - `numPartitions`가 곧 DB 동시 연결 수입니다. 크게 잡을수록 DB가 받는 부하도 커집니다.
 
-> **정리**: JDBC 병렬 읽기는 값 범위를 쪼갠 쿼리 여러 개입니다. `lowerBound`, `upperBound`는 보폭을 정하는 데만 쓰입니다.
+> **정리**: `lowerBound`, `upperBound`는 보폭을 정하는 데만 쓰이고 범위 밖 값과 null은 첫 구간과 마지막 구간으로 들어갑니다. 파티션 크기가 고른지는 실제 값 분포에 달려 있습니다.
 
 </details>
 
@@ -425,7 +425,7 @@ spark.read.parquet("/out/orders_by_date").filter("order_date = '2026-10-03'")
 - 출력 파일 수는 "Task 수 × 각 Task가 만난 값의 수"까지 늘 수 있습니다. 메모리 파티션 200개가 저마다 365개 날짜를 섞어 갖고 있으면 파일이 최대 200 × 365개 생깁니다. 쓰기 전에 `repartition("order_date")`로 같은 날짜를 한 파티션에 모으면 날짜당 파일 수가 줄어듭니다.
 - 고유값이 아주 많은 컬럼은 폴더가 너무 많이 생깁니다. 그런 컬럼은 `bucketBy`를 씁니다(4-2절).
 
-> **정리**: 디스크 파티션은 폴더로 데이터를 미리 나눠 읽기 범위를 줄이는 장치입니다. 실행 중의 메모리 파티션과 이름만 같고 하는 일은 다릅니다.
+> **정리**: 디스크 파티션은 고유값이 적은 필터 컬럼에 맞고 출력 파일 수는 쓰기 직전의 메모리 파티션 구성에 따라 크게 달라집니다. 실행 중의 메모리 파티션과는 이름만 같습니다.
 
 </details>
 
@@ -525,7 +525,7 @@ OPTIONS (path "/data/orders.csv", header "true", inferSchema "true", mode "FAILF
 SELECT status, count(*) FROM orders_csv GROUP BY status;
 ```
 
-Delta를 로컬에서 쓰려면 Delta Lake Quick Start가 적은 설정이 필요합니다. Delta 릴리스 호환표(2026년 10월 20일 열람)는 최신 Delta 4.3.x가 Spark 4.0.x와 4.1.x를 지원한다고 적고 Spark 4.2는 아직 표에 없습니다. Spark 3.5.x는 Delta 3.1~3.3.x와 짝입니다. Spark 4.2.0 이미지에서 Delta를 쓰기 전에 이 표를 먼저 봅니다.
+Delta를 로컬에서 쓰려면 Delta Lake Quick Start의 설정이 필요합니다. Delta 릴리스 호환표(2026년 10월 20일 열람)는 최신 Delta 4.3.x가 Spark 4.0.x와 4.1.x를 지원한다고 적고 Spark 4.2는 아직 표에 없습니다. Spark 3.5.x는 Delta 3.1~3.3.x와 짝입니다. Spark 4.2.0 이미지에서 Delta를 쓰기 전에 이 표를 먼저 봅니다.
 
 ```python
 # pip install delta-spark   (Spark 버전과 맞는 delta-spark 버전은 Delta 릴리스 호환표에서 확인)
@@ -605,7 +605,7 @@ orders (메모리 파티션 4개)
 2. Task가 성공하면 그 폴더를 Job 시도용 폴더로 이름을 바꿔 옮깁니다(Task 커밋).
 3. 모든 Task가 끝나면 드라이버가 파일을 `/out/orders/` 바로 아래로 옮기고 `_temporary`를 지운 뒤 빈 파일 `_SUCCESS`를 남깁니다(Job 커밋).
 
-그래서 출력 폴더에 `_SUCCESS`가 있으면 Job 커밋까지 끝났다는 표시이고 `_temporary`가 남아 있으면 중간에 멈춘 흔적입니다. 다음 단계 작업이 `_SUCCESS`를 보고 시작하게 만드는 파이프라인이 많은 이유입니다. 이 순서는 Hadoop `mapred-default.xml`의 알고리즘 설명에 적혀 있습니다. S3 같은 객체 저장소는 이름 바꾸기를 복사로 흉내 내서 이 방식이 느리고 실패하면 상태를 알 수 없게 될 수 있다고 Spark의 [Cloud Integration](https://spark.apache.org/docs/latest/cloud-integration.html) 문서가 경고합니다. 객체 저장소에서는 이름을 바꾸지 않는 전용 커미터를 쓰라는 것이 같은 문서의 권고입니다.
+그래서 출력 폴더에 `_SUCCESS`가 있으면 Job 커밋까지 끝났다는 표시이고 `_temporary`가 남아 있으면 중간에 멈춘 흔적입니다. 다음 단계 작업이 `_SUCCESS`를 보고 시작하게 만드는 파이프라인이 많은 것도 이 표시 때문입니다. 이 순서는 Hadoop `mapred-default.xml`의 알고리즘 설명에 적혀 있습니다. S3 같은 객체 저장소는 이름 바꾸기를 복사로 흉내 내서 이 방식이 느리고 실패하면 상태를 알 수 없게 될 수 있다고 Spark의 [Cloud Integration](https://spark.apache.org/docs/latest/cloud-integration.html) 문서가 경고합니다. 같은 문서는 객체 저장소에서 이름을 바꾸지 않는 전용 커미터를 쓰라고 권합니다.
 
 #### 4. 헷갈리는 점
 
@@ -625,7 +625,7 @@ Generic Load/Save Functions 문서(4.2.0)의 표를 옮깁니다.
 | `SaveMode.Overwrite` | `"overwrite"` | DataFrame 내용으로 덮어쓴다 |
 | `SaveMode.Ignore` | `"ignore"` | 아무것도 쓰지 않고 기존 데이터도 건드리지 않는다. SQL의 `CREATE TABLE IF NOT EXISTS`와 비슷하다 |
 
-같은 문서가 붙인 주의 두 가지가 중요합니다.
+같은 문서가 붙인 주의는 두 가지입니다.
 
 1. 저장 모드는 잠금을 쓰지 않고 원자적이지 않습니다.
 2. `Overwrite`는 새 데이터를 쓰기 전에 기존 데이터를 지웁니다. 쓰기가 중간에 실패하면 기존 데이터도 새 데이터도 온전하지 않은 상태가 될 수 있습니다(문서 문장에서 이끌어 낸 결론입니다).
@@ -666,7 +666,7 @@ reordered.write.insertInto("shop.orders")                   # 위치로 들어�
 | 4 | `status`(STRING) | `amount`(INT) | 문자열을 숫자 칸에 넣는 것은 거부 |
 | 5 | `order_date`(STRING) | `order_date`(STRING) | 그대로 |
 
-4번 칸 때문에 이 쓰기는 실패합니다. Spark 3.0부터 `spark.sql.storeAssignmentPolicy` 기본값이 `ANSI`이고 [ANSI Compliance](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html) 문서의 저장 규칙 표는 문자열을 숫자 칸에 넣는 것을 허용하지 않습니다(`Cannot safely cast ... "STRING" to "INT"`). 더 위험한 경우는 오류가 나지 않을 때입니다. 1번과 2번처럼 타입이 같은 컬럼끼리 순서만 바뀌면 경고 없이 금액이 주문 번호 칸에 들어갑니다. 위 표는 문서의 규칙을 적용한 예상이고 실행해 본 결과가 아닙니다.
+4번 칸 때문에 이 쓰기는 실패합니다. Spark 3.0부터 `spark.sql.storeAssignmentPolicy` 기본값이 `ANSI`이고 [ANSI Compliance](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html) 문서의 저장 규칙 표는 문자열을 숫자 칸에 넣는 것을 허용하지 않습니다(`Cannot safely cast ... "STRING" to "INT"`). 오류가 나지 않는 경우가 더 위험합니다. 1번과 2번처럼 타입이 같은 컬럼끼리 순서만 바뀌면 경고 없이 금액이 주문 번호 칸에 들어갑니다. 위 표는 문서의 규칙을 적용한 예상이고 실행해 본 결과가 아닙니다.
 
 SQL로는 `INSERT INTO`와 `INSERT OVERWRITE`가 각각 append와 overwrite에 대응합니다.
 
@@ -740,7 +740,7 @@ DataFrameWriter.saveAsTable(name, format=None, mode=None, partitionBy=None, **op
 | `bucketBy(n, col)` | 컬럼 해시로 고정된 n개 버킷 파일 | 파일 기반 소스 + `saveAsTable`만 |
 | `sortBy(col)` | 각 버킷 안을 정렬 | 버킷과 함께, 영구 테이블만 |
 
-문서 문장 그대로 "버킷팅과 정렬은 영구 테이블에만 적용된다." `bucketBy`의 해시 함수는 Hive 버킷팅과 다르고 호환되지 않는다고 `bucketBy` 문서가 적습니다. 버킷 수 상한은 `spark.sql.sources.bucketing.maxBuckets`(기본 100000)이고 `spark.sql.sources.bucketing.enabled`(기본 true)를 끄면 버킷 테이블을 일반 테이블처럼 다룹니다.
+문서 문장 그대로 "버킷팅과 정렬은 영구 테이블에만 적용된다." `bucketBy` 문서 기준으로 `bucketBy`의 해시 함수는 Hive 버킷팅과 다르고 호환되지 않습니다. 버킷 수 상한은 `spark.sql.sources.bucketing.maxBuckets`(기본 100000)이고 `spark.sql.sources.bucketing.enabled`(기본 true)를 끄면 버킷 테이블을 일반 테이블처럼 다룹니다.
 
 ```python
 # 주문 날짜로 파티션하고 회원 ID로 버킷을 나눈 뒤 버킷 안을 금액 순으로 정렬
@@ -902,7 +902,7 @@ Databricks 문서의 관리형 테이블과 외부 테이블 설명입니다.
 | 관리형 데이터 위치 | `spark.sql.warehouse.dir`(기본 `$PWD/spark-warehouse`) | Unity Catalog가 관리하는 저장소 | 워크스페이스 설정을 따른다(이번에 확인하지 않음) |
 | 형식 생략 시 | `spark.sql.sources.default`(기본 `parquet`) | Delta | Delta |
 
-Databricks 문서는 "Delta Lake is the default format for all operations on Databricks"라고 적어서 Databricks에서는 `format`을 생략한 `saveAsTable`도 Delta 테이블을 만듭니다. Unity Catalog 관리형 테이블 문서는 관리형 테이블을 세 단계 이름으로만 읽고 써야 하고 경로 접근은 접근 제어를 우회하므로 지원하지 않는다고 적습니다(Compatibility Mode는 예외). Hive 메타스토어는 Unity Catalog 워크스페이스에서 `hive_metastore` 카탈로그 아래에 보이고 Databricks는 Hive 메타스토어를 쓴 데이터 거버넌스를 지원 중단(deprecated) 상태로 둡니다. 시험 보기에 세 단계 이름이 나오면 Databricks와 Unity Catalog를 전제로 한 것입니다.
+Databricks 문서는 "Delta Lake is the default format for all operations on Databricks"라고 적어서 Databricks에서는 `format`을 생략한 `saveAsTable`도 Delta 테이블을 만듭니다. Unity Catalog 관리형 테이블 문서 기준으로 관리형 테이블은 세 단계 이름으로만 읽고 써야 하고 경로 접근은 접근 제어를 우회하므로 지원하지 않습니다(Compatibility Mode는 예외). Hive 메타스토어는 Unity Catalog 워크스페이스에서 `hive_metastore` 카탈로그 아래에 보이고 Databricks는 Hive 메타스토어를 쓴 데이터 거버넌스를 지원 중단(deprecated) 상태로 둡니다. 시험 보기에 세 단계 이름이 나오면 Databricks와 Unity Catalog를 전제로 한 것입니다.
 
 ### 헷갈리는 지점
 
@@ -957,7 +957,7 @@ CREATE OR REPLACE GLOBAL TEMPORARY VIEW city_users AS
 SELECT city, count(*) AS cnt FROM global_temp.users_g GROUP BY city;
 ```
 
-4.2.0 문서는 `IF NOT EXISTS`를 임시 뷰에는 아직 지원하지 않는다고 적습니다. 같은 문서는 임시 뷰가 세션별 `system.session` 네임스페이스에 산다고 설명하고 `session.v`나 `system.session.v`처럼 이름 앞에 붙이는 것을 허용합니다. 이 한정자는 4.2에서 생겼습니다. SQL Migration Guide가 "Since Spark 4.2"로 적고 3.5.7의 CREATE VIEW 문서에는 `system.session`이라는 말이 없습니다. 그 밖의 한정자(`mydb.v` 등)는 `INVALID_TEMP_OBJ_QUALIFIER` 오류입니다.
+4.2.0 문서 기준으로 임시 뷰에는 `IF NOT EXISTS`를 아직 지원하지 않습니다. 같은 문서는 임시 뷰가 세션별 `system.session` 네임스페이스에 산다고 설명하고 `session.v`나 `system.session.v`처럼 이름 앞에 붙이는 것을 허용합니다. 이 한정자는 4.2에서 생겼습니다. SQL Migration Guide가 "Since Spark 4.2"로 적고 3.5.7의 CREATE VIEW 문서에는 `system.session`이라는 말이 없습니다. 그 밖의 한정자(`mydb.v` 등)는 `INVALID_TEMP_OBJ_QUALIFIER` 오류입니다.
 
 ### 6-3. 뷰와 테이블과 캐시
 
@@ -967,7 +967,7 @@ SELECT city, count(*) AS cnt FROM global_temp.users_g GROUP BY city;
 | 메타스토어 | 기록하지 않는다 | 기록한다 |
 | 프로그램 재시작 후 | 사라진다 | 같은 메타스토어면 남는다 |
 
-임시 뷰를 여러 번 조회할 예정이면 `spark.catalog.cacheTable("orders_v")`나 DataFrame `cache()`를 겁니다. 두 API의 기본 저장 레벨이 다른 점은 [3편](/blog/cert/spark/spark-01-architecture) 5절에 정리했습니다. 뷰를 지우면 캐시도 함께 해제된다고 `dropTempView` 문서가 적습니다.
+임시 뷰를 여러 번 조회할 예정이면 `spark.catalog.cacheTable("orders_v")`나 DataFrame `cache()`를 겁니다. 두 API의 기본 저장 레벨이 다른 점은 [3편](/blog/cert/spark/spark-01-architecture) 5절에 정리했습니다. `dropTempView` 문서에 따르면 뷰를 지울 때 캐시도 함께 해제됩니다.
 
 ### 헷갈리는 지점
 

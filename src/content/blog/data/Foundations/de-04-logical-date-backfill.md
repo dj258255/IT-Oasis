@@ -69,7 +69,7 @@ Airflow 3.2.2 timetable 문서는 cron 스케줄을 해석하는 방식을 둘�
 | Airflow 2 기본값 | 이것 | |
 | Airflow 3 기본값 | | 이것(`create_cron_data_intervals=False`) |
 
-문서는 두 timetable이 같은 시각에 run을 실행하고 run_id에 붙는 타임스탬프만 다르다고 적습니다. 실행 시각은 그대로인데 logical date와 그 파생값(`ds`, `data_interval_*`)이 하루 밀린 셈입니다. Astronomer의 업그레이드 문서도 logical date가 Airflow 2에서는 `data_interval_start`와 같았고 Airflow 3에서는 run_after와 같아졌다고 정리합니다.
+문서 기준으로 두 timetable은 같은 시각에 run을 실행하고 run_id에 붙는 타임스탬프만 다릅니다. 실행 시각은 그대로인데 logical date와 그 파생값(`ds`, `data_interval_*`)이 하루 밀렸습니다. Astronomer의 업그레이드 문서도 logical date가 Airflow 2에서는 `data_interval_start`와 같았고 Airflow 3에서는 run_after와 같아졌다고 정리합니다.
 
 이 설정은 `schedule`에 cron 문자열(`"0 0 * * *"`, `"@daily"`)을 넘긴 DAG에만 적용됩니다. timetable 객체를 직접 넘긴 DAG는 영향이 없습니다. 문서는 업그레이드 전에 이 값을 명시적으로 고정하라고 권합니다.
 
@@ -110,18 +110,18 @@ from airflow.timetables.trigger import CronTriggerTimetable
 )
 ```
 
-- `CronTriggerTimetable`에 `interval`을 주면 run마다 그 길이의 데이터 구간이 생기고 트리거 시각에 끝납니다. 위 코드라면 서울 시각 10/2 00:00에 도는 run이 "10/1 00:00부터 10/2 00:00까지"라는 구간을 받습니다. `"0 0 * * *"`는 언제 돌릴지, `interval=timedelta(days=1)`은 그때 얼마만큼 뒤를 돌아볼지를 따로 정하는 셈입니다.
+- `CronTriggerTimetable`에 `interval`을 주면 run마다 그 길이의 데이터 구간이 생기고 트리거 시각에 끝납니다. 위 코드라면 서울 시각 10/2 00:00에 도는 run이 "10/1 00:00부터 10/2 00:00까지"라는 구간을 받습니다. `"0 0 * * *"`는 언제 돌릴지, `interval=timedelta(days=1)`은 그때 얼마만큼 뒤를 돌아볼지를 따로 정합니다.
 - 설정 `[scheduler] create_cron_data_intervals = True`로 cron 문자열 전체를 Airflow 2 방식으로 되돌릴 수도 있습니다. 문서는 trigger에서 data interval로 바꿀 때 기존 run이 있으면 스케줄 run 한 번이 건너뛰어진다고 경고합니다.
 
-그리고 태스크에서는 `ds` 대신 `data_interval_start`, `data_interval_end`를 씁니다. 3.2.2 템플릿 문서는 logical date에 대해 "의미가 없는 식별용 값"이라고 적고 의미 있는 시각이 필요하면 data interval을 쓰라고 합니다. 같은 문서는 logical date와 `ds`가 DAG 안에서 유일하다고 가정하지 말고 run을 구분하려면 run_id를 쓰라고 합니다.
+그리고 태스크에서는 `ds` 대신 `data_interval_start`, `data_interval_end`를 씁니다. 3.2.2 템플릿 문서에서 logical date는 "의미가 없는 식별용 값"이고 의미 있는 시각이 필요하면 data interval을 쓰라고 합니다. logical date와 `ds`가 DAG 안에서 유일하다고 가정하지 말고 run을 구분하려면 run_id를 쓰라는 안내도 같은 문서에 있습니다.
 
 ## 3. logical date가 없는 run
 
 run은 시계 말고 다른 계기로도 시작합니다. asset은 Airflow 3에서 "이 테이블이나 파일이 갱신됐다"를 나타내는 이름표입니다. 앞 DAG가 `orders` asset을 갱신했다고 알리면 그 asset을 기다리던 DAG가 바로 run을 만듭니다. 사람이 UI의 Trigger 버튼이나 REST API로 직접 돌리는 수동 트리거도 있습니다. 이런 run은 "어느 날짜를 처리하는지"가 스케줄에서 나오지 않습니다.
 
-Airflow 3.0 릴리스 노트는 asset 이벤트로 트리거되거나 logical date 없이 REST API로 트리거된 run은 `logical_date=None`이 되고 데이터 구간도 없다고 적습니다. 이 run의 태스크에서 `data_interval_start`, `data_interval_end`, `logical_date`를 꺼내면 KeyError가 납니다. 템플릿 문서도 asset 트리거 DAG에는 `logical_date`, `ds`, `ds_nodash` 같은 시간 변수가 없다고 적습니다.
+Airflow 3.0 릴리스 노트에 따르면 asset 이벤트로 트리거되거나 logical date 없이 REST API로 트리거된 run은 `logical_date=None`이 되고 데이터 구간도 없습니다. 이 run의 태스크에서 `data_interval_start`, `data_interval_end`, `logical_date`를 꺼내면 KeyError가 납니다. 템플릿 문서에도 asset 트리거 DAG에는 `logical_date`, `ds`, `ds_nodash` 같은 시간 변수가 없다고 나옵니다.
 
-같은 DAG를 스케줄로도 돌리고 asset으로도 돌린다면 태스크가 두 경우를 다 처리해야 합니다. 릴리스 노트는 `dag_run.logical_date`가 있는지 먼저 확인하라고 권합니다. logical date 없는 run에서 `{{ ds }}`를 렌더링하면 3.2.2 소스 기준으로 그 키가 컨텍스트에 들어가지 않고 DAG의 기본 `template_undefined`가 `StrictUndefined`라 렌더링 오류가 날 것으로 보입니다. `StrictUndefined`는 템플릿 엔진 Jinja의 설정으로 없는 변수를 만나면 빈 문자열로 넘어가지 않고 그 자리에서 오류를 냅니다. 조용히 `WHERE day = ''`가 되는 것보다는 낫지만 asset으로 돌린 run이 바로 실패한다는 뜻입니다. 직접 실행해 확인하지는 않았습니다.
+같은 DAG를 스케줄로도 돌리고 asset으로도 돌린다면 태스크가 두 경우를 다 처리해야 합니다. 릴리스 노트는 `dag_run.logical_date`가 있는지 먼저 확인하라고 권합니다. logical date 없는 run에서 `{{ ds }}`를 렌더링하면 3.2.2 소스 기준으로 그 키가 컨텍스트에 들어가지 않고 DAG의 기본 `template_undefined`가 `StrictUndefined`라 렌더링 오류가 날 것으로 보입니다. `StrictUndefined`는 템플릿 엔진 Jinja의 설정으로 없는 변수를 만나면 빈 문자열로 넘어가지 않고 그 자리에서 오류를 냅니다. 조용히 `WHERE day = ''`가 되는 것보다는 낫지만 그렇다면 asset으로 돌린 run은 바로 실패합니다. 직접 실행해 확인하지는 않았습니다.
 
 미래의 logical date로는 run을 트리거할 수 없게 된 것도 3.0의 변화입니다.
 
@@ -167,7 +167,7 @@ airflow backfill create --dag-id daily_sales \
 
 `depends_on_past`는 태스크 설정으로 "어제 run의 같은 태스크가 성공해야 오늘 것을 돌린다"는 뜻입니다. 누적 잔액처럼 전날 결과를 이어받는 계산에 씁니다. 거꾸로 돌면 어제 것이 아직 없으니 함께 쓸 수 없습니다. 3.2.2 소스는 `depends_on_past` 태스크가 있는 DAG에서 reprocess 옵션을 `none`(또는 생략)으로 두는 것도 막고 `failed`나 `completed`를 고르라는 오류를 냅니다.
 
-세 가지 reprocess 옵션의 차이는 상태가 섞인 한 달을 놓고 보면 분명합니다. 9월 30일 가운데 1~20일은 성공, 21~25일은 실패, 26~30일은 DAG가 꺼져 있어 run이 아예 없다고 하겠습니다.
+reprocess 옵션 셋의 차이는 상태가 섞인 한 달을 놓고 보면 분명합니다. 9월 30일 가운데 1~20일은 성공, 21~25일은 실패, 26~30일은 DAG가 꺼져 있어 run이 아예 없다고 하겠습니다.
 
 | 옵션 | 새로 만드는 run | 개수 |
 |---|---|---|
@@ -213,9 +213,9 @@ backfill도 내장 기능이 없습니다. 공식 cron-backfill 예시는 이렇
 2. CronWorkflow는 이 템플릿을 매일 부릅니다.
 3. backfill이 필요하면 별도 Workflow에서 `withSequence`로 날짜 목록을 만들어 날짜마다 템플릿을 부릅니다. Workflow 이름에 날짜를 넣어 같은 날짜가 두 번 만들어지지 않게 합니다.
 
-`withSequence`는 숫자 범위를 받아 그 개수만큼 같은 단계를 펼치는 Argo 문법입니다. 공식 예시는 `start: "19"`, `end: "21"`과 날짜 모양의 `format`을 줘서 숫자 하나하나를 그 달의 날짜 문자열로 바꾸고 날짜마다 `create-job` 단계를 하나씩 만듭니다. 각 단계는 `job-<날짜>`라는 이름의 Workflow를 `action: apply`로 만듭니다. 예시의 주석은 날짜로 이름을 지으면 이미 있는 리소스를 다시 만들지 않아 더 견고하다고 적었습니다. 같은 날짜로 backfill을 두 번 돌려도 같은 이름의 Workflow가 새로 하나 더 생기지 않는다는 뜻입니다. 다만 예시를 그대로 베끼지는 않는 게 좋습니다. 예시의 `format`은 `"2020-05-%02X"`인데 `%X`는 16진수라서 19가 `13`으로 찍힙니다. 10진수 날짜를 원하면 `%02d`로 바꿔야 합니다.
+`withSequence`는 숫자 범위를 받아 그 개수만큼 같은 단계를 펼치는 Argo 문법입니다. 공식 예시는 `start: "19"`, `end: "21"`과 날짜 모양의 `format`을 줘서 숫자 하나하나를 그 달의 날짜 문자열로 바꾸고 날짜마다 `create-job` 단계를 하나씩 만듭니다. 각 단계는 `job-<날짜>`라는 이름의 Workflow를 `action: apply`로 만듭니다. 예시의 주석에 따르면 날짜로 이름을 지어야 이미 있는 리소스를 다시 만들지 않아 더 견고합니다. 같은 날짜로 backfill을 두 번 돌려도 같은 이름의 Workflow가 새로 하나 더 생기지 않습니다. 다만 예시를 그대로 베끼지는 않는 게 좋습니다. 예시의 `format`은 `"2020-05-%02X"`인데 `%X`는 16진수라서 19가 `13`으로 찍힙니다. 10진수 날짜를 원하면 `%02d`로 바꿔야 합니다.
 
-Airflow가 구간 개념을 오케스트레이터 안에 둔다면 Argo는 그걸 작업 쪽 파라미터로 내보낸 셈입니다. 어느 쪽이든 처리 범위를 실행 시각과 분리해서 넘겨받는다는 원칙은 같습니다.
+Airflow가 구간 개념을 오케스트레이터 안에 둔다면 Argo는 그걸 작업 쪽 파라미터로 내보냈습니다. 어느 쪽이든 처리 범위를 실행 시각과 분리해서 넘겨받는다는 원칙은 같습니다.
 
 ## 8. 중국과 국내 빅테크 사례
 
@@ -231,7 +231,7 @@ Alibaba의 DataWorks는 태스크 하나 대신 혈연으로 이어진 사슬 �
 
 ### 8-3. backfill이 얼마나 큰 일인가
 
-- **Meituan**(2017): 두 데이터 플랫폼을 합칠 때 옮길 태스크가 7,000개를 넘었다가 8,000개를 넘었고 의존 깊이가 평균 10단계, 깊은 것은 수십 단계였습니다. 태스크 하나를 옮기는 데 데이터 복사 1~4일, 코드 수정과 시험과 이중 실행에 3~5일이 걸렸습니다. 만들어지는 데이터의 약 50%가 과거 데이터를 덮어쓰는 것이라고 적었습니다. 재계산이 일상의 절반이라는 뜻이고 5절의 backfill이 멱등해야 하는 이유입니다.
+- **Meituan**(2017): 두 데이터 플랫폼을 합칠 때 옮길 태스크가 7,000개를 넘었다가 8,000개를 넘었고 의존 깊이가 평균 10단계, 깊은 것은 수십 단계였습니다. 태스크 하나를 옮기는 데 데이터 복사 1~4일, 코드 수정과 시험과 이중 실행에 3~5일이 걸렸습니다. 만들어지는 데이터의 약 50%가 과거 데이터를 덮어쓰는 것이라고 밝혔습니다. 재계산이 일상의 절반이니 5절의 backfill은 멱등해야 합니다.
 - **有赞**(2021): 장애 동안 빠진 실행(예: 7시, 8시)은 복구 뒤 catchup으로 자동으로 채우고 여러 DAG에 걸친 재계산은 하류 인스턴스를 지운(clear) 뒤 catchup으로 다시 채운다고 설명했습니다.
 
 ## 9. 범위와 한계
@@ -245,7 +245,7 @@ Alibaba의 DataWorks는 태스크 하나 대신 혈연으로 이어진 사슬 �
 
 **Q. 그럼 Airflow 3에서 `ds`는 쓰면 안 되나요?**
 
-timetable이 데이터 구간을 갖고 있으면 `ds`는 구간 시작 날짜라 그대로 쓸 수 있습니다. 문제는 기본값인 CronTrigger에서 `ds`가 트리거 날짜가 된다는 점입니다. 어느 timetable인지 코드만 보고 알기 어렵다면 `data_interval_start`, `data_interval_end`를 쓰고 구간을 명시하는 쪽이 읽는 사람에게도 분명합니다.
+timetable이 데이터 구간을 갖고 있으면 `ds`는 구간 시작 날짜라 그대로 쓸 수 있습니다. 다만 기본값인 CronTrigger에서는 `ds`가 트리거 날짜가 됩니다. 어느 timetable인지 코드만 보고 알기 어렵다면 `data_interval_start`, `data_interval_end`를 쓰고 구간을 명시하는 쪽이 읽는 사람에게도 분명합니다.
 
 **Q. catchup과 backfill은 같은 건가요?**
 

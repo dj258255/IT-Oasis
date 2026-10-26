@@ -107,7 +107,7 @@ Spark     : 읽기 → filter → groupBy → join → ... (한 계획 안에서
 - 데이터가 작으면 분산이 손해일 수 있습니다. Task를 나눠 보내고 결과를 모으는 데에도 비용이 들기 때문입니다. 아래 "어려운 점" 표가 이런 비용들입니다.
 - "메모리 기반"이어도 디스크를 씁니다. 셔플 파일과 메모리에 안 들어가는 캐시는 디스크로 갑니다(이 절의 헷갈리는 지점 첫 줄).
 
-> **정리**: Spark는 데이터를 파티션으로 나눠 여러 익스큐터가 동시에 계산하는 엔진입니다. 여러 단계를 한 계획으로 이어 실행하고 재사용할 데이터는 메모리에 둡니다. 누가 나누고 누가 계산하는지는 2절에서 봅니다.
+> **정리**: MapReduce와 가장 크게 다른 곳은 단계 사이 중간 결과를 두는 자리입니다. 잡마다 HDFS를 거치지 않고 한 계획 안에서 이어 가며 디스크에는 셔플 파일만 씁니다. 누가 나누고 누가 계산하는지는 2절에서 봅니다.
 
 </details>
 
@@ -137,7 +137,7 @@ Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analy
 ### 헷갈리는 지점
 
 - "Spark는 항상 메모리에서만 계산한다"는 보기는 틀립니다. 저장 레벨에 디스크가 있고 셔플 중간 파일은 디스크(`spark.local.dir`, 기본 `/tmp`)에 씁니다.
-- 애플리케이션 사이에 데이터를 나누려면 외부 저장소에 써야 한다고 Cluster Mode Overview가 적습니다. Spark 자체는 계산 엔진이고 데이터는 파일이나 테이블로 남깁니다.
+- Cluster Mode Overview 기준으로 애플리케이션 사이에 데이터를 나누려면 외부 저장소에 써야 합니다. Spark 자체는 계산 엔진이고 데이터는 파일이나 테이블로 남깁니다.
 
 ## 2. 클러스터, 드라이버, 익스큐터, 코어, 메모리
 
@@ -190,7 +190,7 @@ Spark 공식 홈페이지는 Spark를 "Unified engine for large-scale data analy
 - Task는 드라이버에서 익스큐터로 바로 갑니다. 클러스터 매니저는 자원만 나눠 주고 Task 분배에는 끼지 않습니다.
 - `collect()` 결과는 드라이버 한 대로 모입니다. 드라이버 메모리가 작으면 여기서 터집니다(1절 표의 "드라이버 병목").
 
-> **정리**: 드라이버가 계획하고 익스큐터가 실행하며 클러스터 매니저는 자원만 빌려 줍니다. 익스큐터 하나가 동시에 몇 개 Task를 돌리는지는 2-3절, 익스큐터 안의 메모리는 2-4절에서 봅니다.
+> **정리**: Task는 드라이버에서 익스큐터로 바로 가고 클러스터 매니저의 역할은 자원 할당에서 끝납니다. 익스큐터 하나가 동시에 몇 개 Task를 돌리는지는 2-3절, 익스큐터 안의 메모리는 2-4절에서 봅니다.
 
 </details>
 
@@ -206,7 +206,7 @@ Cluster Mode Overview(4.2.0)의 용어 정의를 그대로 옮기면 이렇습�
 | Executor | 워커 노드에 애플리케이션용으로 뜨는 프로세스. Task를 실행하고 데이터를 메모리나 디스크에 들고 있다. 애플리케이션마다 자기 익스큐터가 있다 |
 | Task | 익스큐터 하나로 보내는 작업 단위 |
 
-동작 순서는 다음과 같습니다. SparkContext가 클러스터 매니저에 연결해 익스큐터를 얻습니다. 이어서 애플리케이션 코드(JAR나 Python 파일)를 익스큐터로 보내고 마지막으로 Task를 보내 실행시킵니다. 드라이버는 수명 내내 익스큐터의 연결을 받아야 하므로 워커 노드에서 네트워크로 닿을 수 있어야 합니다.
+SparkContext는 먼저 클러스터 매니저에 연결해 익스큐터를 얻습니다. 이어서 애플리케이션 코드(JAR나 Python 파일)를 익스큐터로 보내고 마지막으로 Task를 보내 실행시킵니다. 드라이버는 수명 내내 익스큐터의 연결을 받아야 하므로 워커 노드에서 네트워크로 닿을 수 있어야 합니다.
 
 클러스터 매니저는 4.2.0 문서 기준으로 Standalone, YARN, Kubernetes 세 가지입니다. 예전 자료에 나오는 Mesos는 4.2.0 문서의 목록에 없습니다.
 
@@ -250,7 +250,7 @@ Standalone(`spark://host:7077`), YARN, Kubernetes의 마스터 URL과 Spark Conn
 = 클러스터 전체에서 동시에 도는 Task 최대 16개
 ```
 
-파티션이 200개인 Stage라면 Task 200개가 이 16개 자리를 돌아가며 씁니다. 반대로 파티션이 8개뿐이면 자리 8개는 놀게 됩니다. 튜닝 가이드가 코어당 Task 2~3개를 권하는 이유입니다.
+파티션이 200개인 Stage라면 Task 200개가 이 16개 자리를 돌아가며 씁니다. 반대로 파티션이 8개뿐이면 자리 8개는 놉니다. 그래서 튜닝 가이드는 코어당 Task 2~3개를 권합니다.
 
 코어 수와 딱 맞춘 16개보다 많은 32~48개를 권하는 데에는 이유가 하나 더 있습니다. Task마다 걸리는 시간이 다르기 때문입니다. 16개로 나누면 먼저 끝난 코어는 가장 늦은 Task가 끝날 때까지 할 일이 없습니다. 48개로 잘게 나누면 먼저 끝난 코어가 남은 Task를 이어받아 놀지 않습니다. Task 하나가 맡는 데이터도 작아져서 메모리에 들어가기 쉬워집니다. Cloudera의 Spark 튜닝 문서는 Task가 슬롯보다 적으면 CPU를 다 쓰지 못한다고 적고 "망설여지면 Task를 더 많이 두는 쪽"을 권합니다. 입력 파티션 수에서 시작해 1.5배씩 늘려 가며 더 빨라지지 않는 지점을 찾는 방법도 같은 문서에 있습니다([Cloudera, Tuning the Number of Partitions](https://docs.cloudera.com/runtime/7.3.1/tuning-spark/topics/spark-admin-tuning-the-number-of-partitions.html)).
 
@@ -376,11 +376,11 @@ DataFrame  : 스키마(order_id INT, status STRING ...) + 행들   엔진이 컬
 | Catalyst 최적화 | 받지 못함 | 받음 | 받음 |
 | Python에서 | 쓸 수 있음(Spark Connect 제외) | 쓸 수 있음 | 없음 |
 
-> **정리**: 스키마가 있어서 엔진이 계산 내용을 읽을 수 있다는 점이 DataFrame의 핵심입니다. 이 정보로 최적화하는 과정은 9-1절 토글에서, 스키마와 타입을 직접 정하는 법은 [5편](/blog/cert/spark/spark-03-dataframe-api) 7절에서 봅니다.
+> **정리**: RDD의 lambda는 엔진이 들여다보지 못하고 DataFrame의 컬럼 이름과 비교식은 계획에 그대로 남습니다. 이 정보로 최적화하는 과정은 9-1절 토글에서, 스키마와 타입을 직접 정하는 법은 [5편](/blog/cert/spark/spark-03-dataframe-api) 7절에서 봅니다.
 
 </details>
 
-SQL 가이드(4.2.0)의 정의를 정리하면 다음과 같습니다.
+SQL 가이드(4.2.0)의 정의를 표로 옮깁니다.
 
 | 개념 | 정의 | 쓸 수 있는 언어 |
 |---|---|---|
@@ -389,7 +389,7 @@ SQL 가이드(4.2.0)의 정의를 정리하면 다음과 같습니다.
 
 Scala에서 `DataFrame`은 `Dataset[Row]`의 타입 별칭이고 Java에서는 `Dataset<Row>`로 씁니다. Python은 Dataset API를 지원하지 않습니다. 문서는 Python이 동적 언어라서 `row.columnName`처럼 이름으로 필드를 읽을 수 있어 Dataset의 장점 상당수를 이미 누린다고 설명합니다. 시험이 Python 전용이어도 "Dataset은 어느 언어에서 쓰는가"는 개념 문항으로 나올 수 있습니다.
 
-Dataset은 직렬화에 Java 직렬화나 Kryo 대신 Encoder를 씁니다. Encoder는 동적으로 생성된 코드라서 바이트를 객체로 되돌리지 않고도 필터, 정렬, 해싱을 할 수 있다고 Getting Started가 적습니다.
+Dataset은 직렬화에 Java 직렬화나 Kryo 대신 Encoder를 씁니다. Getting Started에 따르면 Encoder는 동적으로 생성된 코드라서 바이트를 객체로 되돌리지 않고도 필터, 정렬, 해싱을 할 수 있습니다.
 
 ```python
 # DataFrame은 스키마를 가진다
@@ -444,7 +444,7 @@ Spark 1.x에서는 용도마다 진입점이 따로 있었습니다. RDD는 `Spa
 - Databricks 노트북이나 `pyspark` 셸에는 `spark` 변수가 이미 만들어져 있습니다. 거기서 `getOrCreate()`를 불러도 그 세션을 돌려받습니다.
 - Spark Connect에서는 클라이언트 쪽에 SparkContext가 없어서 `spark.sparkContext`를 쓸 수 없습니다([8편](/blog/cert/spark/spark-06-connect-pandas-api#3-spark-connect의-api-지원-범위) 3절).
 
-> **정리**: 세션은 여러 개, SparkContext는 하나입니다. 이 구조를 알면 아래 표에서 무엇이 세션별이고 무엇이 공유인지 바로 읽힙니다.
+> **정리**: SQL 설정, 임시 뷰, UDF는 세션마다 따로 두고 SparkContext, 익스큐터, 캐시는 모든 세션이 같이 씁니다. 아래 표도 이 기준으로 읽으면 무엇이 세션별인지 바로 보입니다.
 
 </details>
 
@@ -558,7 +558,7 @@ paid.groupBy("order_date").sum("amount").show()   # 2회차: 다시 읽기부터
 - 캐시는 애플리케이션이 끝나면 사라집니다. 다른 애플리케이션과 나누려면 파일이나 테이블로 씁니다(1절 헷갈리는 지점).
 - 한 번만 쓰는 DataFrame을 캐시하면 저장 비용만 더 듭니다.
 
-> **정리**: 캐시는 계보의 중간 지점에 결과를 붙잡아 다음 액션이 거기서 시작하게 합니다. 잃어도 계보로 다시 만들 수 있습니다. 계보 자체를 잘라 내는 체크포인트는 5-4절에서 비교합니다.
+> **정리**: 캐시가 있으면 다음 액션은 캐시 지점 아래를 건너뛰고 블록을 잃으면 그 파티션만 계보로 다시 만듭니다. 계보 자체를 잘라 내는 체크포인트는 5-4절에서 비교합니다.
 
 </details>
 
@@ -593,7 +593,7 @@ StorageLevel(useDisk, useMemory, useOffHeap, deserialized, replication=1)
 
 ### 5-2. 저장 레벨의 뜻
 
-RDD Programming Guide의 설명을 줄이면 다음과 같습니다.
+RDD Programming Guide의 설명을 줄여 옮깁니다.
 
 | 레벨 | 동작 |
 |---|---|
@@ -603,7 +603,7 @@ RDD Programming Guide의 설명을 줄이면 다음과 같습니다.
 | `*_2`, `DISK_ONLY_3` | 같은 레벨에 파티션을 노드 2개(3개)에 복제 |
 | `OFF_HEAP` | 오프힙 메모리. 오프힙을 켜야 한다(실험적) |
 
-Python의 `StorageLevel` 상수는 `DISK_ONLY`, `DISK_ONLY_2`, `DISK_ONLY_3`, `MEMORY_AND_DISK`, `MEMORY_AND_DISK_2`, `MEMORY_AND_DISK_DESER`, `MEMORY_ONLY`, `MEMORY_ONLY_2`, `NONE`, `OFF_HEAP`입니다. `MEMORY_ONLY_SER`는 Java와 Scala용이라 Python 상수 목록에 없습니다. Python 쪽 데이터는 항상 직렬화되므로 Python 상수는 모두 직렬화 형식을 쓴다고 문서가 적습니다.
+Python의 `StorageLevel` 상수는 `DISK_ONLY`, `DISK_ONLY_2`, `DISK_ONLY_3`, `MEMORY_AND_DISK`, `MEMORY_AND_DISK_2`, `MEMORY_AND_DISK_DESER`, `MEMORY_ONLY`, `MEMORY_ONLY_2`, `NONE`, `OFF_HEAP`입니다. `MEMORY_ONLY_SER`는 Java와 Scala용이라 Python 상수 목록에 없습니다. 문서 기준으로 Python 쪽 데이터는 항상 직렬화되므로 Python 상수는 모두 직렬화 형식을 씁니다.
 
 ### 5-3. 캐시도 지연 평가된다
 
@@ -651,7 +651,7 @@ local_cut = base.localCheckpoint(eager=False)   # 첫 액션 때 익스큐터 �
 
 - "`cache()`는 즉시 데이터를 메모리에 올린다"는 틀린 보기입니다. 액션이 있어야 올라갑니다. SQL 문 `CACHE TABLE`은 반대로 기본이 즉시 캐시이고 `CACHE LAZY TABLE`이라고 써야 처음 쓸 때 캐시합니다(SQL 레퍼런스).
 - `cache()`와 `persist()`의 차이는 인자 유무뿐입니다. DataFrame에서는 둘 다 기본 `MEMORY_AND_DISK_DESER`입니다.
-- `unpersist()`의 `blocking` 기본값은 `False`입니다. 2.0에서 Scala와 맞추려고 바뀌었다고 문서가 적습니다.
+- `unpersist()`의 `blocking` 기본값은 `False`입니다. 문서에는 2.0에서 Scala와 맞추려고 바뀌었다고 나옵니다.
 - Spark는 캐시를 노드마다 LRU 방식으로 비웁니다. LRU(Least Recently Used)는 공간이 모자랄 때 가장 오랫동안 안 쓴 것부터 내보내는 규칙입니다. 직접 지우지 않아도 오래된 파티션은 빠질 수 있습니다.
 - Databricks 서버리스 컴퓨트(Free Edition 포함)에서는 `cache()`가 예외를 냅니다([1편](/blog/cert/spark/spark-00-exam-and-study-plan) 4절). 이 절의 실습은 로컬에서 해야 합니다.
 
@@ -690,7 +690,7 @@ new 객체 → Eden ─minor GC─► Survivor1 ⇄ Survivor2 ─오래 살면�
 - Spark UI Stage 상세의 Task 지표에서 GC time이 Task 시간의 큰 몫을 차지합니다.
 - Executors 탭의 익스큐터별 GC time이 다른 익스큐터보다 유난히 깁니다.
 
-> **정리**: GC 비용은 객체 수에 따라 커집니다. 그래서 문서의 대응은 대부분 객체 수를 줄이거나(직렬화 캐시) 객체가 머무는 영역의 크기를 조정하는 방향입니다.
+> **정리**: 문서의 대응은 대부분 객체 수를 줄이거나(직렬화 캐시) 객체가 머무는 영역의 크기를 조정하는 방향입니다.
 
 </details>
 
@@ -770,7 +770,7 @@ orders.filter(...)     ─┐
 | Stage | 셔플 경계 | 계획 안의 셔플 수 | Stages 탭 |
 | Task | 파티션 | 그 Stage가 다루는 파티션 수 | Stage 상세의 Task 목록 |
 
-> **정리**: 액션이 Job을 만들고 셔플이 Stage를 자르며 파티션이 Task 수를 정합니다. 셔플이 실제로 무엇을 하는지는 8-2절 토글에서 봅니다.
+> **정리**: Stage 수를 물으면 셔플 경계를 세고 Task 수를 물으면 그 Stage의 파티션 수를 봅니다. 액션 수가 정하는 것은 Job 수입니다. 셔플이 실제로 무엇을 하는지는 8-2절 토글에서 봅니다.
 
 </details>
 
@@ -782,7 +782,7 @@ Cluster Mode Overview의 정의에 RDD 가이드의 문장 둘을 붙이면 계�
 | Stage | Job을 나눈 Task 묶음. 서로 의존한다(MapReduce의 map/reduce 단계와 비슷) | 셔플 경계마다 나뉜다 |
 | Task | 익스큐터 하나로 보내는 작업 단위 | 파티션 하나당 하나 |
 
-RDD 가이드는 "액션은 분산 셔플 연산으로 나뉜 Stage들을 거쳐 실행된다"고 적고 "Task 하나는 파티션 하나를 처리한다"고 적습니다. 그래서 Stage 안의 Task 수는 그 Stage가 다루는 파티션 수와 같습니다.
+RDD 가이드에는 "액션은 분산 셔플 연산으로 나뉜 Stage들을 거쳐 실행된다"와 "Task 하나는 파티션 하나를 처리한다"라는 두 문장이 있습니다. 그래서 Stage 안의 Task 수는 그 Stage가 다루는 파티션 수와 같습니다.
 
 DAG(방향 비순환 그래프)는 트랜스포메이션이 쌓인 의존 관계입니다. Web UI의 Job 상세 화면은 DAG visualization을 보여 줍니다. 문서는 꼭짓점이 RDD나 DataFrame이고 간선이 적용할 연산이라고 설명합니다.
 
@@ -821,7 +821,7 @@ Job 0 (collect)
 | Stage 1이 하는 일 | Task마다 자기 몫의 날짜 키를 세 셔플 파일에서 모아 최종 합계 | 날짜별 매출 |
 | 드라이버 | `collect()`로 결과 행을 받음 | 날짜 수만큼의 `Row` |
 
-Stage 0의 3개는 파일 크기가 정하고 Stage 1의 200개는 설정이 정합니다. 날짜가 세 개뿐인데 Stage 1에 Task 200개가 생기면 대부분 빈 파티션을 맡습니다. AQE의 파티션 합치기가 기본으로 켜져 있는 이유가 이것입니다(8-1절). 300MB 파일이 실제로 몇 조각이 되는지는 파일 형식과 `openCostInBytes`, 코어 수에 따라 조금 달라집니다. 위 표는 원리를 보이려고 단순하게 나눈 값입니다.
+Stage 0의 3개는 파일 크기가 정하고 Stage 1의 200개는 설정이 정합니다. 날짜가 세 개뿐인데 Stage 1에 Task 200개가 생기면 대부분 빈 파티션을 맡습니다. AQE의 파티션 합치기가 기본으로 켜져 있는 것도 이 때문입니다(8-1절). 300MB 파일이 실제로 몇 조각이 되는지는 파일 형식과 `openCostInBytes`, 코어 수에 따라 조금 달라집니다. 위 표는 원리를 보이려고 단순하게 나눈 값입니다.
 
 ![groupBy count가 Stage 둘로 잘리는 모양. 입력 파티션 세 개가 각각 부분 count를 하고 셔플에서 category 기준으로 다시 나뉘어 최종 count가 되고 드라이버가 결과를 받는다](/uploads/cert/spark-map/stages.svg)
 
@@ -829,7 +829,7 @@ Stage 0의 3개는 파일 크기가 정하고 Stage 1의 200개는 설정이 정
 
 ### 헷갈리는 지점
 
-- `explain()`, `printSchema()`, `schema`, `columns`는 Job을 만들지 않습니다. 계획이나 메타데이터만 봅니다. 다만 CSV를 `inferSchema=True`로 읽으면 스키마를 추론하려고 읽기 시점에 데이터를 한 번 훑는다고 `DataFrameReader.csv` 문서가 적습니다.
+- `explain()`, `printSchema()`, `schema`, `columns`는 Job을 만들지 않습니다. 계획이나 메타데이터만 봅니다. 다만 CSV를 `inferSchema=True`로 읽으면 스키마를 추론하려고 읽기 시점에 데이터를 한 번 훑습니다(`DataFrameReader.csv` 문서).
 - 셔플이 없는 Job은 Stage가 하나입니다. Stage 경계는 셔플이고 액션 수와는 무관합니다.
 
 ## 8. 파티션과 셔플
@@ -1028,7 +1028,7 @@ Spark 문서의 [EXPLAIN](https://spark.apache.org/docs/latest/sql-ref-syntax-qr
 - Spark Classic은 DataFrame을 만들 때 분석(2단계)까지 바로 합니다. 그래서 없는 컬럼 오류는 트랜스포메이션 줄에서 나고 데이터 값 때문에 나는 오류는 액션 줄에서 납니다(9절 헷갈리는 지점).
 - SQL로 쓴 쿼리도 1단계부터 같은 길을 탑니다([4편](/blog/cert/spark/spark-02-spark-sql) 1-1절 토글).
 
-> **정리**: 지연 평가 덕분에 Catalyst가 계획 전체를 보고 최적화할 수 있습니다. 최적화된 물리 계획이 7절의 Job, Stage, Task로 실행됩니다.
+> **정리**: 분석에서 이름과 타입을 확인하고 최적화에서 필터와 컬럼을 정리한 물리 계획이 7절의 Job, Stage, Task로 실행됩니다.
 
 </details>
 
@@ -1101,7 +1101,7 @@ step2.show()                                  # 또 액션. 캐시가 없으므�
 ### 헷갈리는 지점
 
 - 캐시 없이 같은 DataFrame에 액션을 두 번 부르면 계보 전체를 두 번 계산합니다. 재사용이 많으면 `cache()`를 겁니다.
-- 데이터 값 때문에 나는 오류(예: ANSI 모드에서 날짜로 바꿀 수 없는 문자열)는 계산할 때 드러나므로 액션 줄에서 터집니다. 트랜스포메이션 줄만 보고 "여기서 오류가 난다"고 고르는 보기를 조심합니다. 임시 뷰 참조는 Spark Classic이 즉시 해석하고 Spark Connect가 늦게 분석한다고 `SparkSession.sql` 문서가 적으니, Connect에서는 분석 오류도 늦게 보일 수 있습니다.
+- 데이터 값 때문에 나는 오류(예: ANSI 모드에서 날짜로 바꿀 수 없는 문자열)는 계산할 때 드러나므로 액션 줄에서 터집니다. 트랜스포메이션 줄만 보고 "여기서 오류가 난다"고 고르는 보기를 조심합니다. `SparkSession.sql` 문서 기준으로 임시 뷰 참조는 Spark Classic이 즉시 해석하고 Spark Connect가 늦게 분석합니다. 그래서 Connect에서는 분석 오류도 늦게 보일 수 있습니다.
 - `show()`는 액션이지만 결과를 돌려주지 않습니다. 안내서 샘플 문항 4번의 오답 보기가 `show()`의 반환값을 리스트로 바꾸려는 코드입니다.
 
 ## 10. Spark 모듈
@@ -1186,7 +1186,7 @@ D. `df.explain(mode="cost")`의 통계에 GC 시간이 나온다.
 <details>
 <summary>정답과 풀이</summary>
 
-B. 튜닝 가이드는 GC 로그가 워커 노드의 `stdout`에 찍힌다고 적습니다. Web UI 문서는 Executors 탭과 Stages 탭에 GC time을 보여 줍니다. C와 D는 GC 로그와 관계가 없습니다.
+B. 튜닝 가이드는 GC 로그가 워커 노드의 `stdout`에 찍힌다고 적습니다. Web UI 문서 기준으로 GC time은 Executors 탭과 Stages 탭에 나옵니다. C와 D는 GC 로그와 관계가 없습니다.
 
 </details>
 

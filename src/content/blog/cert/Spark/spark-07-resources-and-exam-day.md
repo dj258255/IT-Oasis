@@ -31,7 +31,7 @@ seriesOrder: 9
 
 ### 1-1. 시험 안내서 2026년 10월판
 
-자격증 페이지가 2026년 10월 21일 현재 연결하는 안내서는 파일 이름이 `...exam-guide-august-2026.pdf`이지만 본문에는 "Exam Published October 8, 2026"과 "Exam Guide Updated October 8, 2026"이 적혀 있습니다. 2025년 10월판과 비교한 결과는 아래와 같습니다.
+자격증 페이지가 2026년 10월 21일 현재 연결하는 안내서는 파일 이름이 `...exam-guide-august-2026.pdf`이지만 본문에는 "Exam Published October 8, 2026"과 "Exam Guide Updated October 8, 2026"이 적혀 있습니다. 2025년 10월판과 비교하면 이렇습니다.
 
 | 항목 | 2025년 10월 30일판 | 2026년 10월 8일판 |
 |---|---|---|
@@ -66,7 +66,7 @@ seriesOrder: 9
 
 Databricks 자격증 FAQ는 "We currently do not offer any practice exams"라고 적고 이유로 모의고사 결과가 실제 시험만큼 엄격하게 만들어지지 않아 오해를 부르기 쉽다는 점을 듭니다. 2025년 7월 커뮤니티 질문에도 Databricks 직원이 안내서와 그 안의 샘플 문항을 보라고 답했습니다. 공식 모의고사를 풀었다는 후기는 예전 Spark 3.0 시험 시절 이야기입니다.
 
-2026년 6월에는 "AI Prep Guide: Any Databricks Certification"이라는 PDF가 나왔습니다. 쓰는 챗봇에 안내서를 올리고 영역마다 개요, 진단 10문항, 약점 심화, 모의고사, 오답 복기를 돌리는 방법입니다. 문서 스스로 AI가 만든 모의고사로는 준비도를 보정된 방식으로 잴 수 없다고 적습니다. 모든 주장은 공식 문서로 확인하라고 권합니다. 이 시리즈가 Ch마다 공식 문서 문장을 근거로 붙이는 방식과 같습니다.
+2026년 6월에는 "AI Prep Guide: Any Databricks Certification"이라는 PDF가 나왔습니다. 쓰는 챗봇에 안내서를 올리고 영역마다 개요, 진단 10문항, 약점 심화, 모의고사, 오답 복기를 돌리는 방법입니다. 문서 스스로 AI가 만든 모의고사로는 준비도를 보정된 방식으로 잴 수 없다고 밝히고 모든 주장은 공식 문서로 확인하라고 권합니다. 이 시리즈가 Ch마다 공식 문서 문장을 근거로 붙이는 방식과 같습니다.
 
 ### 1-4. 등록과 응시 규칙
 
@@ -118,7 +118,7 @@ Learning Festival은 정해진 기간 안에 학습 경로 하나를 처음부�
 | Advanced Learning Festival | 2026-06-15 ~ 07-06 | 2026년 7월 | 2026-10-06 전 | 포함 |
 | Advanced Learning Festival | 2026-09-16 ~ 10-14 | 2026-10-19 | 2027-01-17 전 | 포함 |
 
-Apache Spark Developer 경로의 네 모듈은 1-2절의 자기 주도 과정 넷과 같습니다. 일정이 맞으면 과정 수강과 응시료 할인을 한 번에 챙깁니다. 2026년 9월판 FAQ 기준 조건은 아래와 같습니다.
+Apache Spark Developer 경로의 네 모듈은 1-2절의 자기 주도 과정 넷과 같습니다. 일정이 맞으면 과정 수강과 응시료 할인을 한 번에 챙깁니다. 2026년 9월판 FAQ 기준 조건입니다.
 
 - Customer Academy 사용자만 대상이고 Partner Academy 사용자는 빠집니다. FAQ는 파트너가 다른 프로그램으로 할인을 받기 때문이라고 적습니다.
 - 경로를 여러 개 마쳐도 바우처 하나, 쿠폰 하나입니다. 다른 할인이나 success credit과 합쳐 쓸 수 없습니다.
@@ -177,7 +177,7 @@ docker run -it spark:python3 /opt/spark/bin/pyspark
 docker run -it --rm -p 4040:4040 spark:python3 /opt/spark/bin/pyspark
 ```
 
-셸이 뜨면 `spark.range(1000 * 1000 * 1000).count()`가 1,000,000,000을 돌려준다고 문서가 적습니다. 그 Job을 브라우저의 `localhost:4040`에서 열어 3편의 Job, Stage, Task와 6편의 Executors 탭을 따라가면 됩니다. Apache Spark 프로젝트가 따로 올리는 `apache/spark` 이미지도 같은 방식(`docker run -it apache/spark /opt/spark/bin/pyspark`)으로 씁니다.
+문서 기준으로 셸이 뜨면 `spark.range(1000 * 1000 * 1000).count()`가 1,000,000,000을 돌려줍니다. 그 Job을 브라우저의 `localhost:4040`에서 열어 3편의 Job, Stage, Task와 6편의 Executors 탭을 따라가면 됩니다. Apache Spark 프로젝트가 따로 올리는 `apache/spark` 이미지도 같은 방식(`docker run -it apache/spark /opt/spark/bin/pyspark`)으로 씁니다.
 
 이미지의 Python 레이어는 `python3`와 `python3-pip`만 설치합니다. pandas와 pyarrow가 들어 있다는 내용은 Dockerfile에 없어서 pandas API와 pandas UDF는 다음 이미지로 넘깁니다.
 
@@ -242,7 +242,7 @@ Colab에서 Spark UI 포트를 브라우저로 여는 방법은 이번에 확인
 두 글과 공식 안내서를 함께 놓고 정리한 경향은 넷입니다.
 
 - 화면에 보이는 문항 수는 45개보다 많을 수 있습니다. Sarah Chua는 채점 문항 45개에 채점하지 않는 문항 10개를 더 받아 55문항을 풀었고 2026년 10월판 안내서도 "최대 55문항"이라고 적습니다. 어느 문항이 채점되지 않는지 표시되지 않으니 모든 문항을 같은 무게로 풉니다.
-- 비중이 작은 영역은 한 문항의 무게가 큽니다. 공식 비중으로 Spark Connect와 pandas API on Spark는 각각 5%라서 45문항으로 환산하면 2문항 남짓입니다(공식 문항 수는 공개되지 않았습니다). 문항이 적어 하나만 틀려도 영역 점수가 크게 흔들립니다. [8편](/blog/cert/spark/spark-06-connect-pandas-api)의 배포 모드와 pandas UDF 시그니처를 따로 외워 둘 이유입니다.
+- 비중이 작은 영역은 한 문항의 무게가 큽니다. 공식 비중으로 Spark Connect와 pandas API on Spark는 각각 5%라서 45문항으로 환산하면 2문항 남짓입니다(공식 문항 수는 공개되지 않았습니다). 문항이 적어 하나만 틀려도 영역 점수가 크게 흔들립니다. [8편](/blog/cert/spark/spark-06-connect-pandas-api)의 배포 모드와 pandas UDF 시그니처는 따로 외워 둘 만합니다.
 - Spark UI를 읽는 문항이 범위에 있습니다. 안내서 샘플 2번은 Spark UI의 Stages 탭에서 익스큐터 로그를 찾는 문항이고 4영역 목표도 드라이버와 익스큐터 로그로 메모리 부족과 저사용을 진단하라고 적습니다. 화면 구성은 직접 열어 봐야 익숙해지니 4절의 Docker 환경에서 4040 포트를 열어 Jobs, Stages, Executors 탭과 DAG를 보는 시간을 8절 계획에 넣었습니다.
 - 준비 범위가 공식 과정 바깥으로 넓어졌습니다. 커뮤니티 응시자는 과정만으로 부족했다고 적었고 Sarah Chua는 안내서 항목마다 문서를 찾아 읽었습니다.
 
@@ -318,7 +318,7 @@ Parquet 스키마 병합은 이 시리즈에서 다루지 않았지만 2영역�
 | `b` | 등급 = "SILVER" | 고객ID = "u2" |
 | `a.union(b)` 둘째 행 | 고객ID 칸에 "SILVER" | 등급 칸에 "u2" |
 
-두 컬럼이 모두 문자열이라 오류 없이 섞인 결과가 나옵니다. 이런 조용한 오답을 막는 것이 `unionByName`입니다.
+두 컬럼이 모두 문자열이라 오류 없이 섞인 결과가 나옵니다. `unionByName`을 쓰면 이런 조용한 오답을 막습니다.
 
 #### 윈도 함수의 기본 프레임
 
