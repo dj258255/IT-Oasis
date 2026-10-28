@@ -36,7 +36,7 @@ seriesOrder: 2
 
 ## 2. 지도 한 장
 
-![주문 요청 하나가 사용자 브라우저에서 Route 53, CloudFront와 S3 정적 파일, ALB, Auto Scaling 그룹, ElastiCache와 RDS, SQS와 워커, S3를 차례로 지나가는 그림. 층마다 관련 시험 영역(보안, 복원력, 성능, 비용)과 챕터 절 번호가 붙어 있고 맨 아래에 VPC, 서브넷, 보안 그룹, IAM 역할, KMS 바닥이 깔려 있다](/uploads/cert/saa-map/request-path.svg)
+![주문 요청 하나가 사용자 브라우저에서 Route 53, CloudFront와 S3 정적 파일, ALB, Auto Scaling 그룹, ElastiCache와 RDS, SQS와 워커, S3를 차례로 지나가는 그림. 층마다 관련 시험 영역(보안, 복원력, 성능, 비용)이 붙어 있고 맨 아래에 VPC, 서브넷, 보안 그룹, IAM 역할, KMS 바닥이 깔려 있다](/uploads/cert/saa-map/request-path.svg)
 
 예제는 시리즈 전체에서 써 온 쇼핑몰입니다. 사용자가 `shop.example.com`에 들어와 상품 이미지를 보고 주문 버튼을 누릅니다. 서버는 주문을 DB에 쓰고 결제 알림과 메일은 나중에 처리하도록 큐에 넣은 뒤 바로 응답합니다. 영수증과 접속 기록은 S3에 쌓입니다.
 

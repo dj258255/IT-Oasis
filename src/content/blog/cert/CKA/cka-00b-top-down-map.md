@@ -122,8 +122,6 @@ kubectl apply -f shop-web.yaml
 
 ![kubectl apply -f shop-web.yaml 한 번이 kubectl, kube-apiserver, etcd, 컨트롤러, kube-scheduler, kubelet, CRI·CNI·CSI, Service와 kube-proxy, Gateway와 Ingress의 아홉 층을 차례로 내려가는 그림.](/uploads/cert/cka-map/apply-top-down.svg)
 
-각 층은 같은 틀로 적었습니다. 무슨 일이 일어나는지 먼저 쓰고 고장 나면 무엇이 보이는지와 어디서 더 보는지를 붙였습니다.
-
 ### 3-1. kubectl: 파일을 HTTP 요청으로 바꾼다
 
 kubectl은 kubeconfig에서 API 서버 주소와 자격 증명을 읽고 YAML을 JSON으로 바꿔 HTTPS 요청을 보냅니다. 클러스터에 없는 객체면 생성 요청(POST)이 나가고 이미 있으면 바뀐 부분만 보내는 요청(PATCH)이 나갑니다.

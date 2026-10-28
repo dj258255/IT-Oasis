@@ -63,7 +63,7 @@ spark = SparkSession.builder.appName("orders-map").getOrCreate()
 
 이 한 줄을 위에서부터 벗기면 아래 그림의 아홉 층이 나옵니다. 오른쪽 칸은 그 층을 깊게 다룬 챕터입니다.
 
-![코드 한 줄이 결과가 되기까지 아홉 층. SparkSession과 드라이버, 논리 계획, Catalyst 최적화, 물리 계획과 AQE, Job, Stage와 셔플, Task, 익스큐터와 파티션, 결과 20행 순서로 내려가고 각 층 오른쪽에 깊게 다룬 챕터 번호가 붙어 있다](/uploads/cert/spark-map/layers.svg)
+![코드 한 줄이 결과가 되기까지 아홉 층. SparkSession과 드라이버, 논리 계획, Catalyst 최적화, 물리 계획과 AQE, Job, Stage와 셔플, Task, 익스큐터와 파티션, 결과 20행 순서로 내려간다](/uploads/cert/spark-map/layers.svg)
 
 ## 3. 층별로 내려가기
 
