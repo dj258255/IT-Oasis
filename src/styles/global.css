@@ -445,6 +445,24 @@ button, input, select, textarea {
   margin-inline: auto;
 }
 
+/* 목차는 본문 오른쪽 바깥에 붙는데 body가 가로로 잘라 내므로, 오른쪽 여백이 목차보다 좁으면 목차가 잘린다.
+   목차가 있는 글은 본문을 왼쪽으로 밀고 그래도 모자라면 본문 폭을 줄여 목차가 화면 안에 들어오게 한다.
+   목차 폭과 간격은 [...slug].astro의 .floating-toc 값과 같다. */
+@media (min-width: 1280px) {
+  .post-article:has(> .floating-toc) {
+    --toc-space: calc(2rem + 260px);
+    --edge: 32px;
+    --article-w: min(calc(var(--measure) + 5rem), calc(100vw - var(--toc-space) - 2 * var(--edge)));
+    max-width: var(--article-w);
+    left: min(0px, calc((100vw - var(--article-w)) / 2 - var(--toc-space) - var(--edge)));
+  }
+}
+@media (min-width: 1536px) {
+  .post-article:has(> .floating-toc) {
+    --toc-space: calc(2.5rem + 300px);
+  }
+}
+
 /* Comfortable reading measure inside the article column */
 #post-content {
   max-width: var(--measure);
