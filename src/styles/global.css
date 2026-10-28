@@ -664,6 +664,11 @@ button, input, select, textarea {
   border-left: 0;
   padding-left: 1.1rem;
 }
+/* 띠가 없으면 인용 상자도 본문 문단이라 72ch에서 끊기면 줄이 중간에 꺾여 보인다. 토글 폭을 다 쓴다 */
+.prose details > blockquote {
+  max-width: none;
+  padding-right: 1.1rem;
+}
 
 .prose h1, .prose h2, .prose h3 {
   @apply font-bold mt-10 mb-4;
