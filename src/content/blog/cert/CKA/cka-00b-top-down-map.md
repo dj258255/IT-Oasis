@@ -127,42 +127,48 @@ kubectl apply -f shop-web.yaml
 kubectl은 kubeconfig에서 API 서버 주소와 자격 증명을 읽고 YAML을 JSON으로 바꿔 HTTPS 요청을 보냅니다. 클러스터에 없는 객체면 생성 요청(POST)이 나가고 이미 있으면 바뀐 부분만 보내는 요청(PATCH)이 나갑니다.
 
 - 고장 나면: `The connection to the server ... was refused`처럼 아예 연결이 안 되거나 엉뚱한 클러스터에 적용됩니다. 시험에서는 과제마다 컨텍스트와 호스트가 달라서 두 번째 경우가 실제로 점수를 깎습니다.
-- 더 볼 곳: kubeconfig 구조는 [5편 1-10절](/blog/cert/cka/cka-02-cluster-architecture#1-10-kubeconfig-파일-구조), 과제마다 호스트를 옮기는 규칙은 [1편 3-2절](/blog/cert/cka/cka-00-exam-and-study-plan#3-2-과제마다-다른-호스트)
+
+kubeconfig 파일은 클러스터(API 서버 주소와 CA 인증서), 사용자(클라이언트 인증서와 키), 컨텍스트 세 부분으로 되어 있습니다. 컨텍스트는 클러스터와 사용자, 기본 네임스페이스를 묶은 이름이고 `current-context`가 지금 쓰는 조합입니다. 파일은 `--kubeconfig`, `KUBECONFIG` 환경 변수, `$HOME/.kube/config` 순서로 고릅니다. 시험에서는 과제마다 지정된 호스트에 `ssh`로 들어가 풀고 끝나면 `exit`로 시작 호스트에 돌아옵니다. ssh 안에서 다시 ssh는 할 수 없습니다.
 
 ### 3-2. kube-apiserver: 세 관문을 통과해야 저장된다
 
 요청은 인증(누구인가), 인가(이 동작을 해도 되는가), 어드미션(내용을 고치거나 거절할 것인가)을 차례로 지납니다. 인가는 kubeadm 기본값으로 `Node,RBAC` 모드입니다. 어드미션 단계에서 ServiceAccount나 기본 톨러레이션 같은 값이 채워지고 ResourceQuota나 PodSecurity 위반이면 거절됩니다.
 
 - 고장 나면: 인증 실패는 `401`, 인가 실패는 `403 Forbidden`과 `cannot create resource ...`, 쿼터 위반은 `exceeded quota`가 kubectl 화면에 바로 찍힙니다. 내가 kubectl로 보낸 객체에 대해서는 이 층의 문제가 숨지 않습니다. Deployment가 대신 만드는 Pod가 쿼터에 걸리면 kubectl에는 보이지 않고 3-4절처럼 ReplicaSet 이벤트에 남습니다.
-- 더 볼 곳: 관문 다섯 단계의 실패 메시지 표는 [4편 1-2절](/blog/cert/cka/cka-01b-core-objects-and-flow#1-2-api-서버-안의-다섯-관문), RBAC 객체 네 개는 [5편 1장](/blog/cert/cka/cka-02-cluster-architecture)
+
+API 서버 안을 더 잘게 나누면 인증, 인가, 변형 어드미션, 스키마 검증, 검증 어드미션의 다섯 단계입니다. 실패 응답도 단계마다 다릅니다. 인증은 `401`, 인가와 ResourceQuota나 PodSecurity 같은 어드미션 거절은 `403`, 음수 replicas처럼 스키마에 맞지 않는 값은 `422`, 필드 이름 오타는 `400`입니다. 인가에 쓰는 RBAC 객체는 넷입니다. Role과 ClusterRole이 권한 묶음이고 RoleBinding과 ClusterRoleBinding이 그 묶음을 사용자나 ServiceAccount에 연결합니다. Role과 RoleBinding은 네임스페이스 하나, ClusterRole과 ClusterRoleBinding은 클러스터 전체가 범위입니다. 권한은 더하기만 있어서 막으려면 그 권한을 준 바인딩을 지웁니다.
 
 ### 3-3. etcd: 여기까지 오면 kubectl은 끝난다
 
 관문을 통과한 Deployment와 Service는 etcd에 저장되고 kubectl에 `created` 응답이 돌아갑니다. Service는 이때 ClusterIP를 배정받습니다. 이 시점에 Pod는 아직 한 개도 없습니다. kubectl의 성공 메시지는 "원하는 상태를 적어 두었다"는 뜻뿐입니다.
 
 - 고장 나면: etcd가 멈추면 API 서버가 제대로 뜨지 못하고 재시작을 반복합니다. 사용자 눈에는 `kubectl` 전체가 안 되는 것으로 보여서 API 서버 문제와 구분하려면 컨트롤 플레인 노드에서 `crictl logs`를 봐야 합니다.
-- 더 볼 곳: etcd의 역할은 [4편 2-3절](/blog/cert/cka/cka-01b-core-objects-and-flow#2-3-etcd), 백업과 복구는 [5편 4-5절](/blog/cert/cka/cka-02-cluster-architecture#4-5-etcd-백업)
+
+etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 구성에서는 컨트롤 플레인 노드마다 static Pod로 돌고 데이터는 `/var/lib/etcd`에 있습니다. 클러스터의 모든 객체가 여기 있으니 백업은 동작 중인 멤버에 접속해 `etcdctl snapshot save`로 스냅샷을 뜹니다. 접속에 쓸 인증서 경로는 etcd 매니페스트에서 먼저 확인합니다. 복구는 스냅샷을 새 데이터 디렉터리에 풀고 etcd 매니페스트가 그 디렉터리를 보게 고치는 일이고 매니페스트를 고치면 kubelet이 etcd Pod를 다시 만듭니다.
 
 ### 3-4. 컨트롤러: Deployment가 Pod 세 개가 된다
 
 kube-controller-manager 안의 deployment 컨트롤러가 새 Deployment를 보고 ReplicaSet을 만듭니다. replicaset 컨트롤러는 그 ReplicaSet을 보고 Pod 객체 세 개를 만듭니다. 만들어진 Pod는 `spec.nodeName`이 비어 있습니다. 어느 노드에서 돌지 아직 아무도 정하지 않았습니다.
 
 - 고장 나면: Deployment는 있는데 ReplicaSet이나 Pod가 생기지 않습니다. 스케일을 바꿔도 반응이 없습니다. 쿼터에 걸린 경우에는 `kubectl describe rs`에 `FailedCreate`가 남습니다.
-- 더 볼 곳: 컨트롤 루프는 [3편 1장](/blog/cert/cka/cka-01-why-kubernetes), Deployment에서 Pod까지의 경로는 [4편 1-6절](/blog/cert/cka/cka-01b-core-objects-and-flow#1-6-deployment가-pod-세-개가-되는-경로), 롤링 업데이트는 [6편 1장](/blog/cert/cka/cka-03-workloads-scheduling)
+
+컨트롤러는 spec(원하는 상태)과 status(관측한 상태)를 비교해 차이를 메우는 루프입니다. 스케줄러와 kubelet을 포함한 모든 구성요소가 API 서버를 watch하고 etcd를 직접 읽지 않습니다. Pod의 `metadata.ownerReferences`는 ReplicaSet을, ReplicaSet의 것은 Deployment를 가리킵니다. 그래서 Pod를 지우면 ReplicaSet이 다시 만들고 개수나 이미지는 맨 위 Deployment에서 고칩니다. Pod 템플릿을 바꾸면 Deployment가 새 ReplicaSet을 만들어 새 쪽을 늘리고 옛 쪽을 줄입니다. 이것이 롤링 업데이트이고 기본값은 `maxUnavailable`과 `maxSurge` 모두 25%입니다. 옛 ReplicaSet은 레플리카 0으로 남아 있다가 롤백할 때 다시 늘어납니다.
 
 ### 3-5. kube-scheduler: 노드를 고른다
 
 스케줄러는 `nodeName`이 빈 Pod를 큐에 넣고 Filter 단계에서 못 쓰는 노드를 거른 뒤 Score 단계에서 남은 노드에 점수를 매겨 하나를 고릅니다. 결정은 binding 요청으로 API 서버에 기록됩니다. requests, nodeSelector, 필수(required) 어피니티, `NoSchedule` 테인트와 톨러레이션은 Filter에서 쓰이고 선호(preferred) 어피니티와 `PreferNoSchedule` 테인트는 Score에서 점수로 반영됩니다.
 
 - 고장 나면: Pod가 `Pending`에 남고 NODE 칸이 `<none>`입니다. 스케줄러가 살아 있는데 맞는 노드가 없으면 `FailedScheduling` 이벤트에 이유가 적힙니다. 스케줄러 자체가 멈췄으면 이벤트가 아예 없습니다.
-- 더 볼 곳: 스케줄러 동작은 [4편 1-3절](/blog/cert/cka/cka-01b-core-objects-and-flow#1-3-스케줄러가-노드를-고르는-방식), 배치를 바꾸는 값들은 [6편 5장](/blog/cert/cka/cka-03-workloads-scheduling)
+
+고른 결과는 `binding` 서브리소스로 보내고 API 서버가 `spec.nodeName`을 채웁니다. 처음부터 `spec.nodeName`을 직접 적은 Pod는 스케줄러를 건너뛰고 그 노드의 kubelet이 바로 받습니다. 이때는 Filter를 거치지 않아서 노드 자원이 모자라면 kubelet이 Pod를 거부하고 Pod는 `OutOfcpu` 같은 이유로 곧바로 `Failed`가 됩니다. 스케줄러가 멈췄을 때 Pod를 특정 노드에 띄우는 방법으로도 씁니다.
 
 ### 3-6. kubelet: 자기 노드에 온 Pod를 실행한다
 
 각 노드의 kubelet은 `nodeName`이 자기인 Pod만 걸러 지켜봅니다. 새 Pod가 오면 아래 층의 런타임과 플러그인을 불러 실제로 실행하고 결과를 Pod의 `status`에 보고합니다. kubelet은 노드에서 systemd 서비스로 도는 프로세스라서 고칠 때도 `systemctl`과 `journalctl`을 씁니다.
 
 - 고장 나면: 노드가 `NotReady`가 되고 그 노드에는 새 Pod가 뜨지 않습니다. 기본 설정이면 약 50초 뒤 `unreachable` 테인트가 붙고 다시 300초 뒤 그 노드의 Pod가 축출됩니다.
-- 더 볼 곳: 노드에서 Pod가 프로세스가 되는 과정은 [3편 2-3절](/blog/cert/cka/cka-01-why-kubernetes#2-3-노드에서-pod가-프로세스가-되기까지), 노드 장애 대응은 [9편 1장](/blog/cert/cka/cka-06-troubleshooting)
+
+새 Pod를 받은 kubelet은 CRI로 런타임을 불러 샌드박스(네트워크 네임스페이스를 잡는 pause 컨테이너)를 만들고 CNI로 IP를 받은 뒤 이미지를 받아 컨테이너를 시작합니다. 결과는 `status` 서브리소스로 올라가 `kubectl get pod -o wide`의 IP와 NODE 칸을 채웁니다. 노드에서 컨테이너를 볼 때는 `crictl`을 씁니다. 노드가 살아 있다는 신호는 kubelet이 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다 갱신해 보냅니다. `kubectl describe node`에 `Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어가 kubelet을 봅니다.
 
 ### 3-7. CRI, CNI, CSI: 컨테이너, 네트워크, 디스크를 붙인다
 
@@ -175,21 +181,24 @@ kubelet은 직접 컨테이너를 만들지 않습니다. 세 인터페이스로
 | CSI | 볼륨을 만들고 노드에 붙여 마운트한다 | 클라우드 디스크 드라이버, 로컬 경로 드라이버 |
 
 - 고장 나면: 이미지를 못 받으면 `ImagePullBackOff`, 볼륨이나 네트워크를 못 붙이면 `ContainerCreating`에 오래 머뭅니다. CNI가 아예 없으면 노드 Ready 조건에 `cni plugin not initialized`가 보이고 노드가 `NotReady`입니다. PVC가 묶일 PV를 못 찾으면 Pod는 그보다 앞인 스케줄 단계에서 `Pending`입니다.
-- 더 볼 곳: 세 인터페이스는 [5편 7장](/blog/cert/cka/cka-02-cluster-architecture#7-확장-인터페이스-cni-csi-cri), Pod 간 연결은 [7편 1장](/blog/cert/cka/cka-04-services-networking), PVC가 `Pending`인 이유는 [8편](/blog/cert/cka/cka-05-storage)
+
+CRI 런타임은 kubelet의 `--container-runtime-endpoint`가 가리키는 소켓으로 붙습니다. dockershim이 1.24에서 빠졌으니 Docker Engine을 쓰려면 cri-dockerd가 필요합니다. CNI 설정은 `/etc/cni/net.d`, 플러그인 실행 파일은 `/opt/cni/bin`에 있어서 Pod IP가 안 잡히면 이 두 곳과 플러그인 Pod 상태부터 봅니다. NetworkPolicy도 CNI 플러그인이 지원해야 동작합니다. 쿠버네티스 네트워크 모델에서 모든 Pod는 클러스터 전체에서 고유한 IP를 받고 같은 노드든 다른 노드든 NAT 없이 직접 통신합니다. CSI 쪽에서 PVC는 조건이 맞는 PV와 일대일로 묶이고 맞는 PV가 없으면 `Pending`으로 남습니다. StorageClass의 `volumeBindingMode`가 `WaitForFirstConsumer`이면 그 PVC를 쓰는 Pod가 생길 때까지 `Pending`인 상태가 정상입니다.
 
 ### 3-8. Service와 kube-proxy: 바뀌는 Pod IP 앞에 고정 주소를 둔다
 
 Pod가 IP를 받으면 EndpointSlice 컨트롤러가 Service `web`의 selector에 맞는 Pod IP를 Ready 여부(`conditions.ready`)와 함께 EndpointSlice에 적습니다. 각 노드의 kube-proxy는 Service와 EndpointSlice를 지켜보다가 ClusterIP로 온 패킷을 Pod IP 중 하나로 바꾸는 규칙을 커널에 씁니다. 기본 모드는 `iptables`입니다. 이름 `web.shop.svc.cluster.local`은 CoreDNS가 ClusterIP로 풀어 줍니다.
 
 - 고장 나면: Service는 있는데 응답이 없습니다. 가장 흔한 원인은 selector와 Pod 라벨이 어긋나 EndpointSlice가 비어 있는 경우입니다. readiness probe가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다. 이름만 안 풀리고 IP로는 닿으면 CoreDNS 쪽입니다.
-- 더 볼 곳: Service 타입과 포트 셋은 [7편 3장](/blog/cert/cka/cka-04-services-networking), 확인 순서는 [9편 5장](/blog/cert/cka/cka-06-troubleshooting), CoreDNS는 [7편 6장](/blog/cert/cka/cka-04-services-networking)
+
+Service의 포트는 셋입니다. `port`는 Service가 받는 포트, `targetPort`는 트래픽을 보낼 Pod의 포트(생략하면 `port`와 같음), `nodePort`는 NodePort와 LoadBalancer 타입에서 모든 노드가 여는 포트입니다. 타입은 ClusterIP 위에 NodePort가 기능을 더하고 LoadBalancer는 보통 NodePort 위에 올라갑니다. ExternalName은 프록시 없이 DNS CNAME만 돌려줍니다. 응답이 없을 때는 Debug Services 문서 순서대로 좁힙니다. Service가 있는지, NetworkPolicy가 막는지, DNS 이름으로 되는지, ClusterIP로 되는지, 포트 정의가 맞는지, EndpointSlice가 비었는지, Pod에 직접 닿는지, kube-proxy가 도는지를 차례로 봅니다. CoreDNS는 `kube-system`에서 `kube-dns`라는 Service 이름으로 돌고 설정은 ConfigMap `coredns`의 Corefile에 있습니다. Pod는 kubelet 설정의 `clusterDNS` 값으로 이 DNS 서버 주소를 받습니다.
 
 ### 3-9. Gateway와 Ingress: 클러스터 바깥에서 들어오는 문
 
 여기까지 오면 클러스터 안에서는 `web`에 닿습니다. 바깥 사용자가 `shop.example.com`으로 들어오게 하려면 HTTP 요청을 Service로 이어 줄 규칙이 하나 더 필요합니다. Gateway API에서는 Gateway가 문을 열고 HTTPRoute가 경로를 Service로 잇습니다. Ingress는 같은 일을 하는 예전 방식이고 시험 범위에는 둘 다 있습니다.
 
 - 고장 나면: HTTPRoute를 만들었는데 트래픽이 안 옵니다. `kubectl describe httproute`의 `Accepted`와 `ResolvedRefs` 조건이 `False`면 사유에 Gateway 이름이나 네임스페이스 허용 문제가 적힙니다. Ingress는 리소스만 있고 컨트롤러가 없으면 아무 일도 일어나지 않습니다.
-- 더 볼 곳: [7편 4장 Gateway API](/blog/cert/cka/cka-04-services-networking#4-gateway-api로-ingress-트래픽-관리), [7편 5장 Ingress](/blog/cert/cka/cka-04-services-networking#5-ingress-컨트롤러와-ingress-리소스)
+
+Gateway API는 역할마다 객체를 나눕니다. GatewayClass는 어느 컨트롤러가 Gateway를 구현하는지 정하고 Gateway는 리스너(프로토콜, 포트, 호스트 이름, TLS)를 엽니다. HTTPRoute는 들어온 요청을 어느 Service로 보낼지 적습니다. Route는 `parentRefs`로 Gateway를 가리키고 Gateway는 리스너의 `allowedRoutes`로 붙을 수 있는 Route를 거릅니다. 양쪽이 서로 허락해야 연결됩니다. Ingress는 리소스가 규칙만 담고 실제 프록시는 따로 설치하는 Ingress 컨트롤러가 설정합니다. 컨트롤러가 여럿이면 `spec.ingressClassName`으로 고르고 경로마다 `pathType`이 반드시 있어야 합니다.
 
 ## 4. 반대 방향: 요청 하나가 컨테이너에 닿기까지
 

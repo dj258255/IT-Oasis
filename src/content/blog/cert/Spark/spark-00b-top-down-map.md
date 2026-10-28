@@ -61,7 +61,7 @@ spark = SparkSession.builder.appName("orders-map").getOrCreate()
 
 위 출력은 그림 3절의 작은 예시에 맞춰 적은 모양이고 실행 결과를 붙인 것이 아닙니다. `groupBy` 결과에는 정렬이 없어서 행 순서도 실행마다 다를 수 있습니다. 제목의 "20행"은 `show()`가 기본으로 찍는 최대 행 수이고 이 예는 카테고리가 셋이라 세 줄만 나옵니다.
 
-이 한 줄을 위에서부터 벗기면 아래 그림의 아홉 층이 나옵니다. 오른쪽 칸은 그 층을 깊게 다룬 챕터입니다.
+이 한 줄을 위에서부터 벗기면 아래 그림의 아홉 층이 나옵니다.
 
 ![코드 한 줄이 결과가 되기까지 아홉 층. SparkSession과 드라이버, 논리 계획, Catalyst 최적화, 물리 계획과 AQE, Job, Stage와 셔플, Task, 익스큐터와 파티션, 결과 20행 순서로 내려간다](/uploads/cert/spark-map/layers.svg)
 
