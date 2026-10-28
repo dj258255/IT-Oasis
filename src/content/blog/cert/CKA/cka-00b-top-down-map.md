@@ -120,7 +120,7 @@ kubectl apply -f shop-web.yaml
 
 ## 3. kubectl apply 한 번을 위에서부터 따라가기
 
-![kubectl apply -f shop-web.yaml 한 번이 kubectl, kube-apiserver, etcd, 컨트롤러, kube-scheduler, kubelet, CRI·CNI·CSI, Service와 kube-proxy, Gateway와 Ingress의 아홉 층을 차례로 내려가는 그림. 층마다 자세히 다루는 챕터와 절이 오른쪽에 붙어 있다](/uploads/cert/cka-map/apply-top-down.svg)
+![kubectl apply -f shop-web.yaml 한 번이 kubectl, kube-apiserver, etcd, 컨트롤러, kube-scheduler, kubelet, CRI·CNI·CSI, Service와 kube-proxy, Gateway와 Ingress의 아홉 층을 차례로 내려가는 그림.](/uploads/cert/cka-map/apply-top-down.svg)
 
 각 층은 같은 틀로 적었습니다. 무슨 일이 일어나는지 먼저 쓰고 고장 나면 무엇이 보이는지와 어디서 더 보는지를 붙였습니다.
 
@@ -223,7 +223,7 @@ Pod가 IP를 받으면 EndpointSlice 컨트롤러가 Service `web`의 selector�
 
 ## 6. 시험 다섯 영역은 지도의 어디에 있나
 
-![CKA 커리큘럼 v1.37의 다섯 영역 비중. Troubleshooting 30%는 9편, Cluster Architecture 25%는 5편, Services & Networking 20%는 7편, Workloads & Scheduling 15%는 6편, Storage 10%는 8편](/uploads/cert/cka-map/exam-weights.svg)
+![CKA 커리큘럼 v1.37의 다섯 영역 비중. Troubleshooting 30%, Cluster Architecture 25%, Services & Networking 20%, Workloads & Scheduling 15%, Storage 10%](/uploads/cert/cka-map/exam-weights.svg)
 
 | 영역 | 비중 | 지도에서의 위치 | 이 시리즈 |
 |---|---|---|---|
