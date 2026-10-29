@@ -1052,12 +1052,6 @@ PVC 이름은 `report-scratch`입니다. Pod가 이 PVC의 소유자이므로 Po
 
 </details>
 
-## 5. 범위와 한계
-
-- 명령과 YAML은 kind v1.37(기본 StorageClass `standard` = local-path-provisioner)에서 2026년 10월에 직접 돌려 확인했습니다. 확장과 VolumeAttachment는 local-path가 지원하지 않아 예제 드라이버 csi-driver-host-path로 확인했습니다.
-- 클라우드 디스크 CSI 드라이버, NFS 같은 RWX 볼륨, 여러 노드에 걸친 attach와 detach는 돌리지 못했습니다. 시험 환경에 어떤 프로비저너와 StorageClass가 준비되어 있는지는 공식 문서에 없으니 `kubectl get sc`부터 봅니다.
-- 볼륨 스냅샷, 복제, 원시 블록 볼륨은 커리큘럼 문구에 없어 다루지 않았습니다. `RecoverVolumeExpansionFailure`(v1.34 stable)처럼 버전에 따라 바뀌는 항목은 시험 기준 버전의 문서로 다시 확인합니다.
-
 ## 참고 자료
 
 시험 범위

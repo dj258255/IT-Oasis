@@ -1314,12 +1314,6 @@ CPU 스로틀링입니다. CPU limit을 넘는 컨테이너는 죽지 않고 주
 
 ---
 
-## 범위와 한계
-
-- 명령과 출력은 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 노드 압박 축출은 실제 메모리를 쓰지 않고 `evictionHard`를 올려 만들었고 노드 장애는 워커 컨테이너를 멈춰 재현했습니다. kind에서는 노드에 `docker exec`로 들어가고 시험의 kubeadm 노드에서는 ssh 뒤 `sudo`를 붙입니다.
-- 노드 전체 메모리를 실제로 소진시키는 OOM은 같은 VM의 다른 작업에 영향을 줄 수 있어 재현하지 않았습니다.
-- `--node-monitor-grace-period` 기본값 50초와 taint-eviction 컨트롤러 분리(1.29 beta 기본 활성, 1.34 GA)는 버전에 따라 달라진 항목입니다.
-
 ## 참고 자료
 
 - Objects In Kubernetes: https://kubernetes.io/docs/concepts/overview/working-with-objects/

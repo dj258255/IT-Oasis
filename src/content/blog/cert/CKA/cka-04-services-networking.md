@@ -2210,12 +2210,6 @@ Service IP 대역은 컨트롤 플레인 노드의 `/etc/kubernetes/manifests/ku
 
 </details>
 
-## 8. 범위와 한계
-
-- 명령과 YAML은 kind v1.37(kindnet)과 Lima VM의 kubeadm 1.36~1.37 클러스터(Calico v3.33, Flannel v0.28)에서 2026년 10월에 직접 돌려 확인했습니다. Gateway API는 v1.6.1 표준 CRD와 Envoy Gateway, Ingress는 ingress-nginx kind용 매니페스트로 확인했습니다.
-- 시험 환경에 깔린 CNI 플러그인, Ingress 컨트롤러, Gateway API 구현체 종류는 공식 문서에 없습니다. 클라우드 LB가 주소를 채우는 동작과 CoreDNS `loop` 오류는 재현하지 못했습니다.
-- Gateway API의 Extended 기능(URLRewrite, 쿼리와 메서드 매칭 등)은 구현체마다 지원이 다릅니다. Gateway API 버전과 kube-proxy 모드 기본값은 버전에 따라 바뀌니 시험 직전에 gateway-api.sigs.k8s.io와 kubernetes.io 문서로 다시 확인합니다.
-
 ## 참고 자료
 
 시험 범위

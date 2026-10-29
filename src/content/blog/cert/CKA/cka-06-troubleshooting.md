@@ -1423,14 +1423,6 @@ cat -A /opt/node-ips.txt     # 탭은 ^I, 줄 끝은 $
 
 </details>
 
-## 7. 범위와 한계
-
-- 명령과 오류 문구는 kind v1.37.0 클러스터(arm64)와 Lima VM의 kubeadm 1.37.1 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 본문에 "(kind)", "(Lima VM)"으로 표시한 출력이 그 결과입니다.
-- jq는 2025년 3월 판 시험 안내부터 사전 설치 목록에서 빠졌고 crictl은 있다는 근거가 없습니다. 그래서 `/var/log/pods`와 JSONPath, `yq` 대안을 함께 적었습니다.
-- cgroup v1과 스왑 노드, `serverTLSBootstrap` 서빙 인증서 승인, hairpin, NodePort 외부 접속, Ingress와 Gateway 경유 장애는 돌려 보지 못했습니다.
-- Metrics API는 1.37에서 `v1`이 Stable이지만 2026년 10월 기준 릴리스된 metrics-server(v0.9.0)는 `v1beta1`만 제공합니다. 시험 클러스터의 metrics-server 버전은 확인하지 못했습니다.
-- etcd 백업과 복구, kubeadm 업그레이드 절차는 [5편](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
-
 ## 참고 자료
 
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf)

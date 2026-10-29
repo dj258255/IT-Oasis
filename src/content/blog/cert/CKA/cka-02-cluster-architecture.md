@@ -2908,16 +2908,6 @@ Error from server (NotFound): Unable to list "example.com/v1, Resource=boardjobs
 
 </details>
 
-## 범위와 한계
-
-- 명령과 YAML은 kind v1.37 클러스터와 Lima VM의 kubeadm 1.36→1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다.
-  - HA 장애 동작: kind 컨트롤 플레인 3대
-  - `--certificate-key` join과 키 재발급: Lima VM 3대. 이 VM 구성은 LB 없이 첫 노드 IP를 엔드포인트로 썼고 2시간 만료는 TTL 토큰을 지워 재현했습니다.
-- etcd 백업과 kubeadm 업그레이드가 현재 시험에 나오는지는 공식 문서로 확인되지 않고 후기도 엇갈립니다.
-- 시험 호스트의 `etcdutl`, `crictl`은 공개 자료로 확인할 수 없습니다. `helm`, `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도이고 공식 사전 설치 목록은 kubectl, yq, curl, wget, man입니다.
-- etcd 기본 버전(1.37은 3.7.0), containerd 설정 형식, Helm 플래그 이름은 패치나 메이저 버전마다 달라질 수 있으니 시험 노드에서 `--version`과 `config default`로 확인합니다.
-- 확인 문제는 문서를 바탕으로 제가 만든 것이고 실제 시험 문항과 관계없습니다.
-
 ## 참고 자료
 
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf); Linux Foundation, [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad); Linux Foundation, [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)

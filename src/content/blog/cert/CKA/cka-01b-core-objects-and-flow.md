@@ -1957,13 +1957,6 @@ Service를 만드는 두 명령은 selector를 정하는 방식이 다릅니다.
 
 </details>
 
-## 범위와 한계
-
-- 명령과 YAML, 오류 문구는 kind v1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. kubeadm 기본 인증서 경로와 `kubeadm certs check-expiration`은 kind에서 돌리지 않았고 kubeadm 문서 기준입니다.
-- 1-2절 표의 응답 코드는 kind에서 `kubectl -v=6`의 `status=` 값으로 확인했습니다. 서드파티 웹훅은 응답에 코드를 직접 넣을 수 있어 다를 수 있습니다.
-- Endpoints deprecated(v1.33), taint-eviction 컨트롤러 분리(1.29 beta, 1.34 GA), IPVS deprecated(v1.35), in-place resize GA(v1.35)는 버전에 따라 달라지는 항목입니다.
-- 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다.
-
 ## 참고 자료
 
 공식 문서

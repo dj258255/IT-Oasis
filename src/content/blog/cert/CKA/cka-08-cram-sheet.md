@@ -541,15 +541,6 @@ sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([5�
 
 ---
 
-## 범위와 한계
-
-- 이 글은 1~10편과 4편의 요약입니다. 요약에서 조건이 빠졌다면 링크한 원래 글이 기준입니다.
-- 명령과 YAML은 kind v1.37과 Lima VM의 kubeadm 1.36→1.37 클러스터에서 2026년 10월에 직접 돌려 확인했습니다. 3-2, 3-3절의 스토리지와 Gateway 뼈대는 문서 예시를 옮긴 것이라 연습 클러스터에서 확인한 뒤 씁니다.
-- `etcdutl`과 `crictl`이 시험 호스트에 있는지는 확인하지 못했습니다.
-- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지도 모릅니다.
-- etcd 백업 복구와 kubeadm 업그레이드가 개정 후에도 출제되는지 확인하지 못했지만 "클러스터 수명주기 관리"에 걸려 남겼습니다.
-- 버전 기준은 Kubernetes v1.37, etcd 3.7, Helm 4입니다. LF 문서에 따르면 새 마이너 출시 후 약 4~8주 안에 시험 환경을 맞추는데 1.36은 건너뛰었으니 시험 전에 Important Instructions의 버전 표기를 봅니다. v1.38은 2026-12-16 출시 예정(sig-release 일정)이라 2027년 1~2월 응시자는 특히 다시 확인합니다.
-
 ## 참고 자료
 
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf)

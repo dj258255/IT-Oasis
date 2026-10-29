@@ -379,39 +379,6 @@ Ingress는 리소스만 있고 컨트롤러가 없으면 아무 일도 일어나
 
 트러블슈팅이 가장 크지만 따로 외울 것은 적습니다. 나머지 네 영역에서 각 층이 정상일 때 어떤 모습인지 알아야 고장 난 모습이 눈에 들어옵니다.
 
-## 7. 읽는 순서
-
-이 시리즈는 번호 순서로 읽어도 되지만 지도를 기준으로 하면 아래 순서를 권합니다. 위층에서 아래층으로 내려간 뒤 마지막에 전체를 고장 내 보는 순서입니다.
-
-1. [1편](/blog/cert/cka/cka-00-exam-and-study-plan): 시험 구조와 환경. 어떤 화면에서 무엇을 하는지 먼저 압니다.
-2. [4편 1장](/blog/cert/cka/cka-01b-core-objects-and-flow): 이 글 3장을 명령 출력과 함께 한 번 더 따라갑니다.
-3. [3편](/blog/cert/cka/cka-01-why-kubernetes): 컨트롤 루프와 구성요소를 직접 멈춰 보는 실험.
-4. [4편 2장 이후](/blog/cert/cka/cka-01b-core-objects-and-flow): Pod, ReplicaSet, Deployment, Service, Namespace 기본 객체.
-5. [6편](/blog/cert/cka/cka-03-workloads-scheduling): 컨트롤러와 스케줄러 층을 자세히.
-6. [7편](/blog/cert/cka/cka-04-services-networking)과 [8편](/blog/cert/cka/cka-05-storage): 맨 아래 플러그인 층과 트래픽 길.
-7. [5편](/blog/cert/cka/cka-02-cluster-architecture): 클러스터를 직접 만들고 올리고 되살리기. 앞의 층을 다 본 뒤라 kubeadm이 무엇을 설치하는지 보입니다.
-8. [9편](/blog/cert/cka/cka-06-troubleshooting): 아홉 층을 하나씩 고장 내고 고치기.
-9. [10편](/blog/cert/cka/cka-07-resources-and-exam-day)과 [11편](/blog/cert/cka/cka-08-cram-sheet): 연습 환경, 당일 전략, 직전 요약.
-
-5편을 뒤로 미룬 이유는 설치 과정이 앞의 층을 전부 한 번에 깔기 때문입니다. 처음부터 kubeadm을 따라 하면 명령은 끝나는데 무엇이 깔렸는지는 남지 않기 쉽습니다. 시험 비중으로는 두 번째로 크니 미룬 만큼 손으로 여러 번 해 봅니다.
-
-### 7-1. 한 층 더 내려가고 싶을 때: 쿠버네티스 아래의 리눅스
-
-시험 범위는 아니지만 ⑥⑦⑧ 층 아래에서 실제로 일하는 쪽은 리눅스 커널입니다. 증상의 이유가 궁금해지면 이어서 봅니다.
-
-- [1편 커널 경계](/blog/theory/systems/k8s-linux-01-kernel-boundary): kubelet도 kube-proxy도 결국 시스템 콜을 부르는 프로세스라는 이야기로, ⑥층 아래를 다룹니다.
-- [2편 네임스페이스와 pause](/blog/theory/systems/k8s-linux-02-namespaces-pause): 한 Pod 안의 컨테이너가 네트워크를 나눠 쓰는 방식. ⑦의 CRI가 만드는 샌드박스의 정체입니다.
-- [3편 cgroup v2와 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos): requests와 limits가 커널 파일이 되고 OOMKilled가 나기까지. ⑤와 ⑥이 정한 값이 집행되는 곳입니다.
-- [4편 OverlayFS](/blog/theory/systems/k8s-linux-04-overlayfs): 이미지 레이어가 컨테이너의 루트 파일시스템이 되는 방식. ⑦의 CRI가 이미지를 받은 다음 일입니다.
-- [5편 Service와 iptables](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack): ClusterIP가 DNAT 규칙과 conntrack으로 바뀌는 과정으로, ⑧층을 커널 쪽에서 봅니다.
-
-## 8. 범위와 한계
-
-- 이 글은 각 편의 내용을 한 장으로 묶은 안내입니다. 새로 실험한 결과는 없고 층마다 적은 증상은 각 편에서 확인한 내용과 공식 문서를 따랐습니다.
-- `kubectl apply`의 흐름은 처음 만드는 경우를 기준으로 적었습니다. 이미 있는 객체를 고치는 경우의 병합 방식(3-way merge, server-side apply)은 [4편 7-2절](/blog/cert/cka/cka-01b-core-objects-and-flow#7-2-apply의-3-way-merge와-server-side-apply)에 있습니다.
-- 그림의 kube-proxy는 기본값인 `iptables` 모드로 그렸습니다. `nftables` 모드에서는 규칙을 쓰는 커널 기능만 다르고 흐름은 같습니다.
-- 클라우드 컨트롤러 매니저와 LoadBalancer 타입 Service가 클라우드 장비를 만드는 과정은 시험 환경에서 쓰기 어려워 지도에서 뺐습니다.
-
 ## 참고 자료
 
 - [Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/), 구성요소 그림 출처(CC BY 4.0)

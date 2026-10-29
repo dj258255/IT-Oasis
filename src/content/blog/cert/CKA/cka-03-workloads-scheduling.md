@@ -2636,13 +2636,6 @@ topologySpreadConstraints:
 
 </details>
 
-## 범위와 한계
-
-- 명령과 YAML, 오류 문구는 kind 클러스터(노드 v1.37.0, 컨트롤 플레인 1대와 워커 2대, kubectl v1.37.1)에서 2026년 10월에 직접 돌려 확인했습니다. 노드 이름은 `node01`, `node02`로 바꿔 적었습니다.
-- VPA 1.8.0 설치와 3-3절 YAML, startupProbe 예시, 선점, htpasswd 레지스트리 인증, VAP 거부도 같은 kind 클러스터에서 확인했습니다. 웹훅은 이미지 빌드가 필요해 서버 없는 웹훅의 500 응답만 봤습니다.
-- 시험 환경에 Metrics Server와 VPA가 미리 설치되어 있는지는 공식 문서로 확인하지 못했습니다.
-- 기능 게이트 단계와 `metrics.k8s.io/v1` stable처럼 버전마다 바뀌는 사실은 응시 시점의 kubernetes.io 문서로 다시 확인합니다. 확인 문제는 제가 만든 것이고 실제 시험 문항과 관계없습니다.
-
 ## 참고 자료
 
 - CNCF, [CKA Curriculum v1.37](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf); Linux Foundation, [Important Instructions: CKA and CKAD](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)

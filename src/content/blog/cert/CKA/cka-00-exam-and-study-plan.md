@@ -374,15 +374,6 @@ k auth can-i create pods -n shop --as=system:serviceaccount:shop:builder
 
 </details>
 
-## 6. 범위와 한계
-
-- 시험 규칙과 범위는 2026년 10월에 LF 문서와 cncf/curriculum 저장소에서 확인했습니다. 시험 2주 전에 다시 확인합니다.
-- 현재 시험 지문에 클러스터 컨텍스트 전환(`kubectl config use-context`)이 나오는지는 공식 문서에서 확인하지 못했습니다. 공식 안내에는 과제마다 ssh로 호스트를 옮기는 방식만 나옵니다.
-- `etcdutl`과 `crictl`이 과제 호스트에 있는지는 공식 문서와 후기 어디서도 확인하지 못했습니다.
-- metrics-server와 VPA가 시험 클러스터에 미리 설치되어 있는지도 알아내지 못했습니다.
-- 개정 후 etcd 백업·복구와 kubeadm 업그레이드가 실제로 출제되는지는 후기가 갈려서 아직 모릅니다.
-- 이 글은 응시 전에 쓴 계획이고 후기의 점수와 준비 기간은 각자의 경험입니다.
-
 ## 참고 자료
 
 공식 문서
