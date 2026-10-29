@@ -85,7 +85,12 @@ Events:
 | From | 이 Event를 남긴 구성요소 | `default-scheduler` |
 | Message | 사람이 읽는 설명 | 아래에서 풀어 읽음 |
 
-Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 노드 3대 중 조건에 맞는 노드가 0대라는 뜻입니다. 뒤에 노드가 떨어진 이유가 개수와 함께 붙습니다. 위 예에서는 1대가 테인트 때문에, 2대가 CPU 부족 때문에 떨어졌고 이유별 숫자를 더하면 전체 노드 수 3이 됩니다. 컨트롤 플레인 테인트는 원래 있는 것이니 고칠 곳은 CPU 요청이나 워커 자원 쪽입니다.
+Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 노드 3대 중 조건에 맞는 노드가 0대라는 뜻입니다. 뒤에는 노드가 떨어진 이유가 개수와 함께 붙습니다.
+
+- 1대: 테인트 때문에 떨어짐
+- 2대: CPU 부족 때문에 떨어짐
+
+이유별 숫자를 더하면 전체 노드 수 3이 됩니다. 컨트롤 플레인 테인트는 원래 있는 것이니 고칠 곳은 CPU 요청이나 워커 자원 쪽입니다.
 
 #### 3. From 열로 층 가르기
 
@@ -127,7 +132,15 @@ Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 �
 
 ### 0-3. Pending
 
-Debug Pods 문서는 `Pending`을 "노드에 스케줄할 수 없는 상태"로 정의하고 원인으로 자원 부족과 `hostPort` 충돌을 듭니다. 시험에서 더 자주 보는 것은 Workloads 영역과 겹치는 원인입니다. `nodeSelector`의 라벨이 어느 노드에도 없거나, 노드에 테인트가 있는데 톨러레이션이 없거나, 쓰는 PVC가 `Pending`인 경우입니다. PVC가 원인이면 [8편](/blog/cert/cka/cka-05-storage)의 PVC 바인딩 점검으로 넘어갑니다.
+Debug Pods 문서는 `Pending`을 "노드에 스케줄할 수 없는 상태"로 정의하고 원인으로 자원 부족과 `hostPort` 충돌을 듭니다.
+
+시험에서 더 자주 보는 것은 Workloads 영역과 겹치는 원인입니다.
+
+- `nodeSelector`의 라벨이 어느 노드에도 없음
+- 노드에 테인트가 있는데 톨러레이션이 없음
+- 쓰는 PVC가 `Pending`
+
+PVC가 원인이면 [8편](/blog/cert/cka/cka-05-storage)의 PVC 바인딩 점검으로 넘어갑니다.
 
 ```bash
 kubectl describe pod order-api-xxxx -n shop | sed -n '/Events/,$p'
@@ -137,7 +150,11 @@ kubectl get node --show-labels
 
 ### 0-4. ImagePullBackOff
 
-Images 문서는 이유로 잘못된 이미지 이름과 `imagePullSecret` 없이 비공개 레지스트리에서 받으려 한 경우를 듭니다. Debug Pods 문서는 이미지 이름이 맞는지, 레지스트리에 있는지, 직접 pull해서 받아지는지를 점검하게 합니다.
+Images 문서는 이유로 잘못된 이미지 이름과 `imagePullSecret` 없이 비공개 레지스트리에서 받으려 한 경우를 듭니다. Debug Pods 문서가 시키는 점검은 셋입니다.
+
+1. 이미지 이름이 맞는가
+2. 레지스트리에 있는가
+3. 직접 pull해서 받아지는가
 
 ```bash
 kubectl -n shop get pod order-api-xxxx -o jsonpath='{.spec.containers[*].image}'
@@ -182,7 +199,8 @@ kubectl delete → deletionTimestamp 기록 → 컨트롤러가 finalizer 제거
 #### 3. 헷갈리는 점
 
 - finalizer를 손으로 지우면 객체는 바로 사라지지만 컨트롤러가 하려던 정리가 건너뛰어집니다. Finalizers 문서도 꼬리표의 목적을 알고 그 정리를 다른 방법으로 끝낸 경우가 아니면 손으로 지우지 말라고 적습니다. 멈춘 컨트롤러나 웹훅을 먼저 고칩니다.
-- Pod의 `Terminating`은 finalizer보다 종료 대기 때문인 경우가 많습니다. 기본 유예 시간은 30초(`terminationGracePeriodSeconds`)입니다. 그 노드의 kubelet이 죽었으면 컨테이너를 멈췄다고 보고할 쪽이 없어 노드가 돌아올 때까지 남습니다(1-2절). 위 두 명령으로 finalizer와 웹훅이 둘 다 없으면 노드 상태를 봅니다.
+- Pod의 `Terminating`은 finalizer보다 종료 대기 때문인 경우가 많습니다. 기본 유예 시간은 30초(`terminationGracePeriodSeconds`)입니다.
+- 그 노드의 kubelet이 죽었으면 컨테이너를 멈췄다고 보고할 쪽이 없어 노드가 돌아올 때까지 남습니다(1-2절). 위 두 명령으로 finalizer와 웹훅이 둘 다 없으면 노드 상태를 봅니다.
 
 > **정리**: `Terminating`이 끝나지 않으면 finalizer 목록, 그 finalizer를 지울 컨트롤러, 그 UPDATE를 막는 웹훅, 노드의 kubelet 순으로 봅니다.
 
@@ -278,7 +296,16 @@ Node Status 문서의 조건 표입니다.
 | `PIDPressure` | 프로세스가 너무 많음 |
 | `NetworkUnavailable` | 노드 네트워크가 제대로 설정되지 않음. 이 조건을 설정하는 구성요소(클라우드 라우트 컨트롤러나 일부 CNI)가 있을 때만 보임 |
 
-kubelet은 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다, Node의 `.status`는 변화가 없으면 기본 5분마다 갱신합니다. `Ready`가 `Unknown`이 되면(grace period 동안 보고 없음) `node.kubernetes.io/unreachable`, `False`가 되면 `node.kubernetes.io/not-ready` 테인트가 붙고 Pod의 기본 톨러레이션(300초)이 지나면 축출됩니다. kubelet을 멈춘 노드의 `describe`는 이렇게 나옵니다(kind v1.37.0 워커에서 확인).
+kubelet은 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다, Node의 `.status`는 변화가 없으면 기본 5분마다 갱신합니다.
+
+`Ready` 값에 따라 붙는 테인트가 다릅니다.
+
+| `Ready` | 붙는 테인트 |
+|---|---|
+| `Unknown`(grace period 동안 보고 없음) | `node.kubernetes.io/unreachable` |
+| `False` | `node.kubernetes.io/not-ready` |
+
+어느 쪽이든 Pod의 기본 톨러레이션(300초)이 지나면 축출됩니다. kubelet을 멈춘 노드의 `describe`는 이렇게 나옵니다(kind v1.37.0 워커에서 확인).
 
 ```
 Taints:             node.kubernetes.io/unreachable:NoExecute
@@ -287,9 +314,21 @@ Taints:             node.kubernetes.io/unreachable:NoExecute
   Ready                Unknown   ...   NodeStatusUnknown   Kubelet stopped posting node status.
 ```
 
-`Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어갑니다. kind 워커 컨테이너를 멈췄을 때는 약 45초 안에 `Unknown`과 테인트가 붙었고(50초는 마지막 Lease 갱신부터 세므로 멈춘 시각부터 재면 최대 10초 짧게 보일 수 있습니다) 기본 톨러레이션 Pod는 약 300초 뒤 `Terminating`이 되어 노드가 돌아올 때까지 그 상태로 남았습니다.
+`Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어갑니다.
 
-kind 워커의 `evictionHard`에 가용량보다 큰 `memory.available`을 넣어 압박을 만들면 노드에 `MemoryPressure True ... KubeletHasInsufficientMemory`와 `node.kubernetes.io/memory-pressure:NoSchedule` 테인트가 생겼습니다. 축출된 Pod의 메시지는 `The node was low on resource: memory. Threshold quantity: ...`이고 압박 중 kubelet이 다시 받는 BestEffort Pod는 `Pod was rejected: The node had condition: [MemoryPressure].`로 거절됐습니다. 둘 다 `.status.reason`은 `Evicted`인데 STATUS 열은 `Error`나 `ContainerStatusUnknown`이라 `--field-selector status.phase=Failed`로 찾습니다.
+kind 워커 컨테이너를 멈췄을 때는 이렇게 흘러갔습니다.
+
+1. 약 45초 안에 `Unknown`과 테인트가 붙었습니다. 50초는 마지막 Lease 갱신부터 세므로 멈춘 시각부터 재면 최대 10초 짧게 보일 수 있습니다.
+2. 기본 톨러레이션 Pod는 약 300초 뒤 `Terminating`이 되어 노드가 돌아올 때까지 그 상태로 남았습니다.
+
+메모리 압박은 다른 모습입니다. kind 워커의 `evictionHard`에 가용량보다 큰 `memory.available`을 넣으면 노드에 `MemoryPressure True ... KubeletHasInsufficientMemory`와 `node.kubernetes.io/memory-pressure:NoSchedule` 테인트가 생겼습니다. Pod 쪽 메시지는 둘로 갈렸습니다.
+
+| 경우 | 메시지 |
+|---|---|
+| 축출된 Pod | `The node was low on resource: memory. Threshold quantity: ...` |
+| 압박 중 kubelet이 다시 받는 BestEffort Pod | `Pod was rejected: The node had condition: [MemoryPressure].` |
+
+찾을 때 헷갈리는 점이 있습니다. 둘 다 `.status.reason`은 `Evicted`인데 STATUS 열은 `Error`나 `ContainerStatusUnknown`으로 보입니다. 그래서 `--field-selector status.phase=Failed`로 찾습니다.
 
 ### 1-3. 노드 안에서 볼 것
 
@@ -313,7 +352,13 @@ kubeadm이 kubelet에 넘기는 파일은 Configuring each kubelet in your clust
 | `/var/lib/kubelet/kubeadm-flags.env` | `kubeadm init`, `join`이 만드는 `KUBELET_KUBEADM_ARGS`. kubeadm 1.36~1.37에서는 비어 있을 수 있고 런타임 소켓은 같은 디렉터리의 `instance-config.yaml`(`containerRuntimeEndpoint`)에 있음(Lima VM에서 확인) |
 | `/etc/default/kubelet`(DEB), `/etc/sysconfig/kubelet`(RPM) | 사용자 재정의 `KUBELET_EXTRA_ARGS`. 우선순위가 가장 높음 |
 
-systemd drop-in의 경로는 설치 방법마다 다르니 `systemctl cat kubelet`으로 실제 위치를 봅니다. pkgs.k8s.io 패키지 설치에서는 `/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf`였습니다. drop-in을 고쳤으면 `systemctl daemon-reload` 뒤 `systemctl restart kubelet`을 하고 `kubectl get nodes`로 Ready를 확인합니다.
+systemd drop-in의 경로는 설치 방법마다 다르니 `systemctl cat kubelet`으로 실제 위치를 봅니다. pkgs.k8s.io 패키지 설치에서는 `/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf`였습니다.
+
+drop-in을 고쳤으면 순서를 지킵니다.
+
+1. `systemctl daemon-reload`
+2. `systemctl restart kubelet`
+3. `kubectl get nodes`로 Ready 확인
 
 ### 1-4. kubelet 설정 파일 오류와 인증서 만료
 
@@ -372,7 +417,9 @@ sudo kubeadm kubeconfig user --org system:nodes --client-name system:node:$NODE 
 
 kind v1.37.0 워커와 만료시킨 Lima VM 모두 이 절차 뒤 새 CSR이 자동 승인되고 노드가 `Ready`로 돌아왔습니다.
 
-kubelet 서빙 인증서는 별개입니다. kubeadm이 배포하는 서빙 인증서는 기본이 자체 서명이고 이것이 3-4절 metrics-server `x509` 오류의 원인입니다. `serverTLSBootstrap: true`로 클러스터 CA 서명 인증서를 받게 하면 그 CSR은 자동 승인되지 않아 `kubectl certificate approve`로 승인합니다.
+kubelet 서빙 인증서는 별개입니다. kubeadm이 배포하는 서빙 인증서는 기본이 자체 서명이고 이것이 3-4절 metrics-server `x509` 오류의 원인입니다.
+
+`serverTLSBootstrap: true`로 클러스터 CA 서명 인증서를 받게 하면 그 CSR은 자동 승인되지 않아 `kubectl certificate approve`로 승인합니다.
 
 ### 1-5. kubectl debug로 노드 들여다보기
 
@@ -382,7 +429,12 @@ ssh를 쓸 수 없으면 Debug Running Pods 문서의 노드 디버그를 씁니
 kubectl debug node/<노드> -it --image=ubuntu
 ```
 
-노드의 루트 파일시스템이 `/host`에 마운트되고 호스트의 IPC, 네트워크, PID 네임스페이스에서 돕니다. 특권 Pod로 뜨지 않아서 `chroot /host` 같은 일부 동작이 실패할 수 있고 그때는 `--profile=sysadmin`을 씁니다. 끝나면 디버그 Pod를 지웁니다.
+이렇게 뜬 디버그 Pod는 이런 환경입니다.
+
+- 노드의 루트 파일시스템이 `/host`에 마운트됨
+- 호스트의 IPC, 네트워크, PID 네임스페이스에서 돎
+
+다만 특권 Pod로 뜨지 않아서 `chroot /host` 같은 일부 동작이 실패할 수 있습니다. 그때는 `--profile=sysadmin`을 씁니다. 끝나면 디버그 Pod를 지웁니다.
 
 ### 1-6. 노드를 서비스에서 빼고 넣기
 
@@ -538,7 +590,9 @@ sudo crictl pods --name kube-apiserver
 
 crictl은 런타임 엔드포인트를 `--runtime-endpoint`, `CONTAINER_RUNTIME_ENDPOINT`, `/etc/crictl.yaml` 중 하나로 압니다. containerd는 `unix:///var/run/containerd/containerd.sock`입니다.
 
-crictl은 시험 안내의 사전 설치 도구 목록(`kubectl`, `yq`, `curl`, `wget`, `man`)에 없습니다. pkgs.k8s.io의 kubeadm 1.37 패키지도 cri-tools를 의존성으로 끌어오지 않습니다. 과제 노드에 crictl이 없으면 kubelet이 런타임에 쓰게 하는 로그 파일(Logging Architecture 문서)을 직접 읽습니다. 디렉터리 이름은 `<ns>_<pod>_<uid>/<컨테이너>/<재시작 번호>.log` 꼴입니다(kind 노드에서 확인).
+crictl이 늘 있다고 믿으면 안 됩니다. 시험 안내의 사전 설치 도구 목록(`kubectl`, `yq`, `curl`, `wget`, `man`)에 없고 pkgs.k8s.io의 kubeadm 1.37 패키지도 cri-tools를 의존성으로 끌어오지 않습니다.
+
+과제 노드에 crictl이 없으면 kubelet이 런타임에 쓰게 하는 로그 파일(Logging Architecture 문서)을 직접 읽습니다. 디렉터리 이름은 `<ns>_<pod>_<uid>/<컨테이너>/<재시작 번호>.log` 꼴입니다(kind 노드에서 확인).
 
 ```bash
 sudo ls /var/log/pods/ | grep kube-apiserver
@@ -628,7 +682,9 @@ Resource metrics pipeline 문서의 구성입니다.
    -> HPA, VPA, kubectl top
 ```
 
-metrics-server는 Metrics API의 참조 구현인 클러스터 애드온이고 이것(또는 다른 어댑터)을 배포해야 Metrics API가 생깁니다. README 기준으로 수집 간격은 15초이고 용도는 자동 확장 전용입니다. `kubectl top`의 값도 가장 최근 수집값뿐입니다.
+metrics-server는 Metrics API의 참조 구현인 클러스터 애드온입니다. 이것(또는 다른 어댑터)을 배포해야 Metrics API가 생깁니다.
+
+README 기준으로 수집 간격은 15초이고 용도는 자동 확장 전용입니다. 그래서 `kubectl top`의 값도 가장 최근 수집값뿐입니다.
 
 API 버전은 두 층을 나눠서 봅니다.
 
@@ -651,7 +707,11 @@ kubectl top pod -n shop -l app=order-api --sum # 합계 행 추가
 kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는 Pod 하나
 ```
 
-`--sort-by`는 `cpu`나 `memory`만 받습니다. 다른 값을 주면 `--sort-by accepts only cpu or memory`로 실패합니다(kubectl v1.37.1). 막 만든 Pod는 파이프라인 지연 때문에 몇 분 동안 `error: Metrics not available for pod ...`가 나올 수 있습니다. 결과를 파일로 옮길 때는 과제가 요구하는 형식(이름만인지, 네임스페이스를 포함하는지)을 다시 읽습니다.
+`kubectl top`의 `--sort-by`는 `cpu`나 `memory`만 받습니다. 다른 값을 주면 `--sort-by accepts only cpu or memory`로 실패합니다(kubectl v1.37.1).
+
+막 만든 Pod는 파이프라인 지연 때문에 몇 분 동안 `error: Metrics not available for pod ...`가 나올 수 있습니다.
+
+결과를 파일로 옮길 때는 과제가 요구하는 형식(이름만인지, 네임스페이스를 포함하는지)을 다시 읽습니다.
 
 ### 3-3. 숫자를 읽는 법
 
@@ -660,9 +720,16 @@ kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는
 | CPU | cpu 단위의 평균 코어 사용량. 누적 CPU 카운터의 변화율로 계산. 구간은 Metrics API의 `window` 필드 |
 | 메모리 | 수집 순간의 working set(바이트). 압박에서도 회수할 수 없는 사용 중 메모리에 가깝고 파일 캐시 일부가 섞일 수 있음 |
 
-출력의 단위도 읽을 줄 알아야 합니다. CPU 열의 `250m`은 밀리코어이고 1코어가 `1000m`이니 4분의 1코어입니다. 메모리 열의 `Mi`는 메비바이트(1,048,576바이트)입니다. `limits.cpu: 500m`인 컨테이너가 `top`에서 계속 `490m`대로 나오면 상한에 거의 붙어 있는 것이라 CPU 스로틀링을 의심합니다. 스로틀링이 요청 지연으로 바뀌는 계산은 [쿠버네티스 아래의 리눅스 1편 8-2절](/blog/theory/systems/k8s-linux-01-kernel-boundary#8-2-cpumax-대역폭-제한은-그대로)에 있습니다.
+출력의 단위도 읽을 줄 알아야 합니다.
 
-메모리 수치가 컨테이너 안의 `free`와 달라도 이상한 일은 아닙니다. 컨테이너가 `limits.memory`를 넘으면 커널이 종료하고 `describe`의 Last State에 `OOMKilled`, Exit Code 137이 남습니다. 이 과정을 cgroup 쪽에서 본 설명은 [쿠버네티스 아래의 리눅스 3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에 있습니다(시험 범위 밖 심화).
+- CPU 열의 `250m`은 밀리코어입니다. 1코어가 `1000m`이니 4분의 1코어입니다.
+- 메모리 열의 `Mi`는 메비바이트(1,048,576바이트)입니다.
+
+숫자를 한도와 나란히 놓고 봐야 쓸모가 생깁니다. `limits.cpu: 500m`인 컨테이너가 `top`에서 계속 `490m`대로 나오면 상한에 거의 붙어 있는 것이라 CPU 스로틀링을 의심합니다. 스로틀링이 요청 지연으로 바뀌는 계산은 [쿠버네티스 아래의 리눅스 1편 8-2절](/blog/theory/systems/k8s-linux-01-kernel-boundary#8-2-cpumax-대역폭-제한은-그대로)에 있습니다.
+
+메모리 수치가 컨테이너 안의 `free`와 달라도 이상한 일은 아닙니다.
+
+컨테이너가 `limits.memory`를 넘으면 커널이 종료하고 `describe`의 Last State에 `OOMKilled`, Exit Code 137이 남습니다. 이 과정을 cgroup 쪽에서 본 설명은 [쿠버네티스 아래의 리눅스 3편](/blog/theory/systems/k8s-linux-03-cgroup-qos)에 있습니다(시험 범위 밖 심화).
 
 ### 3-4. kubectl top이 안 될 때
 
@@ -672,7 +739,20 @@ kubectl top pod -A --sort-by=cpu --no-headers | head -1   # 가장 많이 쓰는
 | APIService 상태 | `kubectl get apiservice \| grep metrics`(AVAILABLE이 `True`인지) |
 | metrics-server 로그 | `kubectl -n kube-system logs deploy/metrics-server` |
 
-Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포하므로 metrics-server가 kubelet에 붙을 때 `x509: certificate signed by unknown authority` 같은 오류가 납니다. 문서는 `--kubelet-insecure-tls`로 우회할 수 있지만 운영에는 권하지 않고 서명된 서빙 인증서(1-4절 끝)를 쓰라고 안내합니다. 시험장에서는 과제 지시를 따릅니다. kind에서는 로그에 `x509: cannot validate certificate for 172.18.0.5 because it doesn't contain any IP SANs`가 찍히고 APIService가 `False (MissingEndpoints)`였으며 metrics-server v0.9.0 매니페스트에 `--kubelet-insecure-tls`를 더해야 Pod가 Ready가 됐습니다.
+Troubleshooting kubeadm 문서에 kubeadm 클러스터 고유의 함정이 있습니다. kubeadm은 kubelet에 자체 서명 서빙 인증서를 배포합니다. 그래서 metrics-server가 kubelet에 붙을 때 `x509: certificate signed by unknown authority` 같은 오류가 납니다.
+
+| 선택지 | 문서의 입장 |
+|---|---|
+| `--kubelet-insecure-tls`로 우회 | 가능하지만 운영에는 권하지 않음 |
+| 서명된 서빙 인증서(1-4절 끝) | 권장 |
+
+시험장에서는 과제 지시를 따릅니다.
+
+kind에서는 이렇게 보였습니다.
+
+1. 로그에 `x509: cannot validate certificate for 172.18.0.5 because it doesn't contain any IP SANs`가 찍혔습니다.
+2. APIService는 `False (MissingEndpoints)`였습니다.
+3. metrics-server v0.9.0 매니페스트에 `--kubelet-insecure-tls`를 더해야 Pod가 Ready가 됐습니다.
 
 ### 3-5. 출력 형식으로 값 뽑기
 
@@ -773,7 +853,13 @@ kubectl get nodes --sort-by=.status.capacity.cpu
 
 </details>
 
-식은 세 단계로 세웁니다. 먼저 `kubectl get <리소스> -o yaml`로 구조를 봅니다. 필드 이름이 헷갈리면 `kubectl explain pod.status.containerStatuses`로 스키마를 확인합니다. 찾은 경로를 `-o jsonpath='{...}'`에 넣으면 끝입니다. 목록을 조회하면 결과가 `items` 배열로 감싸이고 이름을 준 단일 객체 조회에는 `items`가 없다는 점이 첫 함정입니다.
+식은 세 단계로 세웁니다.
+
+1. `kubectl get <리소스> -o yaml`로 구조를 봅니다.
+2. 필드 이름이 헷갈리면 `kubectl explain pod.status.containerStatuses`로 스키마를 확인합니다.
+3. 찾은 경로를 `-o jsonpath='{...}'`에 넣으면 끝입니다.
+
+첫 함정은 `items`입니다. 목록을 조회하면 결과가 `items` 배열로 감싸이고 이름을 준 단일 객체 조회에는 `items`가 없습니다.
 
 | 연산자 | 뜻 | 예 |
 |---|---|---|
@@ -809,7 +895,14 @@ JSONPath는 정규 표현식을 지원하지 않아 문서는 그럴 때 `jq`를
 kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort | uniq -c
 ```
 
-식을 작은따옴표로 감싸지 않아 셸이 `[*]`나 `"`를 먼저 해석하거나, 중괄호를 빼먹거나, custom-columns에 `.items[*]`를 붙이거나, 마지막 `{"\n"}`이 없어 파일 끝 줄바꿈이 빠지는 실수가 잦습니다. 파일로 옮겼다면 `cat -A`로 탭(`^I`)과 줄 끝(`$`)까지 확인합니다.
+자주 하는 실수는 넷입니다.
+
+- 식을 작은따옴표로 감싸지 않아 셸이 `[*]`나 `"`를 먼저 해석함
+- 중괄호를 빼먹음
+- custom-columns에 `.items[*]`를 붙임
+- 마지막 `{"\n"}`이 없어 파일 끝 줄바꿈이 빠짐
+
+파일로 옮겼다면 `cat -A`로 탭(`^I`)과 줄 끝(`$`)까지 확인합니다.
 
 ### 3-7. 직접 해 보기
 
@@ -864,7 +957,11 @@ kubectl logs → kube-apiserver → 노드 kubelet:10250 → 파일 읽기 → �
 
 </details>
 
-Logging Architecture 문서의 흐름입니다. 컨테이너 런타임이 앱의 `stdout`과 `stderr`를 받아 kubelet이 지정한 `/var/log/pods` 아래 파일에 씁니다. kubelet이 로그 회전을 맡고(기본 `containerLogMaxSize` 10Mi, `containerLogMaxFiles` 5개) `kubectl logs`를 치면 그 노드의 kubelet이 파일을 읽어 돌려줍니다.
+Logging Architecture 문서의 흐름입니다.
+
+1. 컨테이너 런타임이 앱의 `stdout`과 `stderr`를 받아 kubelet이 지정한 `/var/log/pods` 아래 파일에 씁니다.
+2. kubelet이 로그 회전을 맡습니다(기본 `containerLogMaxSize` 10Mi, `containerLogMaxFiles` 5개).
+3. `kubectl logs`를 치면 그 노드의 kubelet이 파일을 읽어 돌려줍니다.
 
 | 사실 | 결과 |
 |---|---|
@@ -906,7 +1003,16 @@ kubectl -n shop get pod board -o jsonpath='{.spec.containers[*].name}{"\n"}{.spe
 
 ### 4-3. CrashLoopBackOff를 로그로 읽기
 
-Pod Lifecycle 문서 기준으로 재시작 지연은 10초, 20초, 40초로 두 배씩 늘어 300초에서 멈추고 컨테이너가 10분 동안 문제없이 돌면 초기화됩니다. 원인은 앱 오류, 잘못된 환경 변수나 빠진 설정 파일, 자원 부족, liveness나 startup probe 실패입니다. 조사 순서는 로그, 이벤트, 설정, 자원 한도입니다.
+Pod Lifecycle 문서 기준으로 재시작 지연은 10초, 20초, 40초로 두 배씩 늘어 300초에서 멈춥니다. 컨테이너가 10분 동안 문제없이 돌면 초기화됩니다.
+
+원인은 크게 넷입니다.
+
+- 앱 오류
+- 잘못된 환경 변수나 빠진 설정 파일
+- 자원 부족
+- liveness나 startup probe 실패
+
+조사 순서는 로그, 이벤트, 설정, 자원 한도입니다. 아래 명령이 그 순서입니다.
 
 ```bash
 kubectl -n shop logs payment-xxxx --previous              # 죽기 직전 출력
@@ -960,13 +1066,27 @@ CrashLoopBackOff인 결제 Pod의 `describe`에서 컨테이너 부분은 이런
 
 #### 3. 137인데 OOMKilled가 아닐 때
 
-kubelet은 컨테이너를 멈출 때 SIGTERM을 먼저 보내고 유예 시간(기본 30초)이 지나도 살아 있으면 SIGKILL을 보냅니다. 그런데 `sh -c '...'`로 띄운 셸이 컨테이너의 PID 1이면 SIGTERM이 전달되지 않습니다. 리눅스는 PID 네임스페이스의 첫 프로세스(init)에 대해 핸들러를 등록하지 않은 시그널을 보내지 않고 바깥 네임스페이스에서 보낸 SIGKILL만 강제로 전달합니다(pid_namespaces(7) 매뉴얼). 그래서 liveness 실패로 재시작되는 컨테이너가 143이 아닌 137로 끝나고 매번 30초씩 늦게 내려갑니다. Reason이 `Error`이고 Events에 `Unhealthy`가 함께 보이면 이 경우입니다.
+kubelet은 컨테이너를 멈출 때 두 단계를 밟습니다.
+
+1. SIGTERM을 먼저 보냅니다.
+2. 유예 시간(기본 30초)이 지나도 살아 있으면 SIGKILL을 보냅니다.
+
+그런데 `sh -c '...'`로 띄운 셸이 컨테이너의 PID 1이면 SIGTERM이 전달되지 않습니다. 리눅스는 PID 네임스페이스의 첫 프로세스(init)에 대해 핸들러를 등록하지 않은 시그널을 보내지 않고 바깥 네임스페이스에서 보낸 SIGKILL만 강제로 전달합니다(pid_namespaces(7) 매뉴얼).
+
+그래서 liveness 실패로 재시작되는 컨테이너가 143이 아닌 137로 끝나고 매번 30초씩 늦게 내려갑니다. Reason이 `Error`이고 Events에 `Unhealthy`가 함께 보이면 이 경우입니다.
 
 > **정리**: 원인은 Last State의 Reason과 Exit Code에서 찾습니다. 128을 넘는 137이면 Reason으로 OOMKilled인지부터 가르고 아니면 probe와 종료 처리를 봅니다.
 
 </details>
 
-`--previous`를 붙이는 습관이 안전합니다. 다음 재시작을 기다리는 동안에는 실행 중인 컨테이너가 없어 `kubectl logs`와 `--previous`가 같은 직전 인스턴스를 보여 줍니다. 새 컨테이너가 도는 동안에는 `--previous`를 빼면 새 컨테이너의 짧은 로그가 나옵니다(kind v1.37.0에서 확인).
+`--previous`를 붙이는 습관이 안전합니다. 언제 보느냐에 따라 결과가 달라지기 때문입니다.
+
+| 보는 시점 | `--previous` 없이 | `--previous` |
+|---|---|---|
+| 다음 재시작을 기다리는 중(실행 중인 컨테이너 없음) | 직전 인스턴스 | 같은 직전 인스턴스 |
+| 새 컨테이너가 도는 중 | 새 컨테이너의 짧은 로그 | 직전 인스턴스 |
+
+kind v1.37.0에서 확인한 동작입니다.
 
 Determine the Reason for Pod Failure 문서는 컨테이너가 `/dev/termination-log`에 쓴 종료 메시지를 읽는 방법을 보여 줍니다. `terminationMessagePolicy: FallbackToLogsOnError`를 주면 메시지 파일이 비었고 오류로 끝났을 때 로그 마지막 부분(2048바이트와 80줄 중 작은 쪽)을 메시지로 씁니다.
 
@@ -1095,9 +1215,20 @@ Debug Services 문서는 질문을 하나씩 확인하는 순서로 짜여 있�
 | 7 | Pod 자체가 동작하는지 | 엔드포인트 IP와 Pod 포트로 직접 `wget` | 앱이나 컨테이너 포트 문제 |
 | 8 | kube-proxy가 동작하는지 | kube-proxy Pod 상태와 로그 | 5-3절 |
 
-5번의 점검 목록은 문서 원문입니다. 접근하려는 포트가 `spec.ports[]`에 있는지, `targetPort`가 Pod가 쓰는 포트인지, 숫자 포트를 의도했는데 문자열로 쓰지 않았는지, 이름 붙은 포트라면 Pod가 같은 이름의 포트를 노출하는지, 프로토콜이 맞는지입니다.
+5번의 점검 목록은 문서 원문입니다.
 
-6번에서 ENDPOINTS가 비어 있으면(`kubectl get endpointslices`는 `<unset>`, 1.33부터 사용 중단 경고를 찍는 `kubectl get endpoints`는 `<none>`) Service의 `spec.selector`가 Pod의 라벨을 실제로 고르는지 봅니다. 라벨은 맞는데 비어 있으면 readiness probe 실패입니다. readiness가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다(Pod Lifecycle 문서, EndpointSlice 문서).
+- 접근하려는 포트가 `spec.ports[]`에 있는지
+- `targetPort`가 Pod가 쓰는 포트인지
+- 숫자 포트를 의도했는데 문자열로 쓰지 않았는지
+- 이름 붙은 포트라면 Pod가 같은 이름의 포트를 노출하는지
+- 프로토콜이 맞는지
+
+6번에서 ENDPOINTS가 비어 있으면 Service의 `spec.selector`가 Pod의 라벨을 실제로 고르는지 봅니다. 빈 모습은 명령마다 다릅니다.
+
+- `kubectl get endpointslices`: `<unset>`
+- `kubectl get endpoints`(1.33부터 사용 중단 경고를 찍음): `<none>`
+
+라벨은 맞는데 비어 있으면 readiness probe 실패입니다. readiness가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다(Pod Lifecycle 문서, EndpointSlice 문서).
 
 ### 5-2. 쇼핑몰 예로 따라가기
 
@@ -1126,7 +1257,9 @@ kubectl -n shop get networkpolicy
 kubectl -n shop describe networkpolicy <이름>
 ```
 
-임시 Pod 이미지는 `busybox:1.36`을 씁니다. 문서 예시의 `busybox:1.28`은 arm64 노드에서 `wget`이 `Segmentation fault`로 죽었습니다(kind). 1.36의 `nslookup`은 이름에 점이 하나라도 있으면 `/etc/resolv.conf`의 search 도메인을 붙이지 않고 그대로 묻습니다(busybox `networking/nslookup.c`의 `add_query_with_search`). 그래서 `order-db-0.order-db`나 `kubernetes.default`, `order-api.shop`처럼 점이 든 짧은 이름은 풀지 못하니 그럴 때는 `<svc>.<ns>.svc.cluster.local` 전체 이름을 씁니다. 점이 없는 `order-api`는 search 도메인이 붙어 풀립니다.
+임시 Pod 이미지는 `busybox:1.36`을 씁니다. 문서 예시의 `busybox:1.28`은 arm64 노드에서 `wget`이 `Segmentation fault`로 죽었습니다(kind).
+
+1.36에도 헷갈리기 쉬운 동작이 있습니다. 1.36의 `nslookup`은 이름에 점이 하나라도 있으면 `/etc/resolv.conf`의 search 도메인을 붙이지 않고 그대로 묻습니다(busybox `networking/nslookup.c`의 `add_query_with_search`). 그래서 `order-db-0.order-db`나 `kubernetes.default`, `order-api.shop`처럼 점이 든 짧은 이름은 풀지 못하니 그럴 때는 `<svc>.<ns>.svc.cluster.local` 전체 이름을 씁니다. 점이 없는 `order-api`는 search 도메인이 붙어 풀립니다.
 
 ### 5-3. kube-proxy 확인
 
@@ -1139,7 +1272,9 @@ kubectl -n kube-system logs <kube-proxy Pod>
 kubectl -n kube-system get configmap kube-proxy -o yaml | grep mode
 ```
 
-kind v1.37.0에서 ConfigMap의 `mode`는 `iptables`였고 kube-proxy 로그에 `Using iptables Proxier`가 찍혔습니다. iptables 모드라면 노드에서 `sudo iptables-save | grep <svc 이름>`으로 Service용 규칙이 생겼는지 봅니다(Debug Services 문서). 규칙의 체인 구조를 해석하는 것은 시험 범위 밖이고 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에 정리했습니다. 클러스터가 kube-proxy를 쓰지 않으면 대신 쓰는 서비스 구현체를 조사합니다.
+kind v1.37.0에서 ConfigMap의 `mode`는 `iptables`였고 kube-proxy 로그에 `Using iptables Proxier`가 찍혔습니다.
+
+iptables 모드라면 노드에서 `sudo iptables-save | grep <svc 이름>`으로 Service용 규칙이 생겼는지 봅니다(Debug Services 문서). 규칙의 체인 구조를 해석하는 것은 시험 범위 밖이고 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에 정리했습니다. 클러스터가 kube-proxy를 쓰지 않으면 대신 쓰는 서비스 구현체를 조사합니다.
 
 ### 5-4. 그 밖의 경우
 
@@ -1264,7 +1399,13 @@ sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -su
 date
 ```
 
-`notAfter`가 지났으면 1-4절 절차를 따릅니다. `kubelet.conf`와 `kubelet-client*`를 백업 후 지웁니다. 컨트롤 플레인 노드에서 `kubeadm kubeconfig user --org system:nodes --client-name system:node:node03`으로 만든 kubeconfig를 복사해 kubelet을 재시작합니다. `kubelet-client-current.pem`이 다시 생기면 `kubelet.conf`가 그 파일을 가리키게 고치고 한 번 더 재시작합니다. 날짜는 유효한데 노드 시계가 시작 시각보다 이르면 시계를 맞춥니다. `kubeadm certs check-expiration`에는 kubelet 인증서가 나오지 않습니다.
+`notAfter`가 지났으면 1-4절 절차를 따릅니다.
+
+1. `kubelet.conf`와 `kubelet-client*`를 백업 후 지웁니다.
+2. 컨트롤 플레인 노드에서 `kubeadm kubeconfig user --org system:nodes --client-name system:node:node03`으로 만든 kubeconfig를 복사해 kubelet을 재시작합니다.
+3. `kubelet-client-current.pem`이 다시 생기면 `kubelet.conf`가 그 파일을 가리키게 고치고 한 번 더 재시작합니다.
+
+날짜는 유효한데 노드 시계가 시작 시각보다 이르면 시계를 맞춥니다. `kubeadm certs check-expiration`에는 kubelet 인증서가 나오지 않습니다.
 
 </details>
 

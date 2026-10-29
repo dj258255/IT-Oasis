@@ -166,7 +166,14 @@ ip -n blue link set veth-blue up
 | NAT 규칙과 적중 횟수, 줄 번호 | `iptables -t nat -L -n -v --line-numbers` |
 | 브리지에 꽂힌 끝 | `bridge link` |
 
-Pod 통신이 안 될 때는 안에서 밖으로 넓혀 갑니다. Pod 안의 인터페이스와 기본 경로, 노드에서 veth 짝이 브리지(또는 CNI 인터페이스)에 붙었는지, iptables와 conntrack과 ip_forward, 마지막으로 CNI 에이전트의 상태와 로그 순서입니다. 에이전트 상태는 플러그인 도구로도 봅니다(Calico `calicoctl node status`, Cilium `cilium status`).
+Pod 통신이 안 될 때는 안에서 밖으로 넓혀 갑니다.
+
+1. Pod 안의 인터페이스와 기본 경로
+2. 노드에서 veth 짝이 브리지(또는 CNI 인터페이스)에 붙었는지
+3. iptables와 conntrack과 ip_forward
+4. 마지막으로 CNI 에이전트의 상태와 로그
+
+에이전트 상태는 플러그인 도구로도 봅니다(Calico `calicoctl node status`, Cilium `cilium status`).
 
 | 플러그인 | 노드 사이를 잇는 방식(대표 설정) |
 |---|---|
@@ -229,7 +236,16 @@ iptables -t nat -L -n           # Docker가 넣은 MASQUERADE, DNAT 규칙
 
 </details>
 
-Cluster Networking 문서는 풀어야 할 문제를 넷으로 나눕니다. 같은 Pod 안 컨테이너끼리는 `localhost`(네트워크 네임스페이스 공유), Pod와 Pod는 Pod 네트워크, Pod와 Service는 Service, 클러스터 밖에서 들어오는 트래픽은 NodePort, LoadBalancer, Ingress, Gateway가 맡습니다. Pod 네트워크의 약속은 셋입니다.
+Cluster Networking 문서는 풀어야 할 문제를 넷으로 나눕니다.
+
+| 통신 | 맡는 것 |
+|---|---|
+| 같은 Pod 안 컨테이너끼리 | `localhost`(네트워크 네임스페이스 공유) |
+| Pod와 Pod | Pod 네트워크 |
+| Pod와 Service | Service |
+| 클러스터 밖에서 들어오는 트래픽 | NodePort, LoadBalancer, Ingress, Gateway |
+
+이 중 Pod 네트워크가 지켜야 할 약속은 셋입니다.
 
 - 클러스터의 모든 Pod는 클러스터 전체에서 고유한 IP를 받습니다.
 - 의도적으로 네트워크를 나누지 않았다면 모든 Pod는 같은 노드든 다른 노드든 프록시나 NAT 없이 직접 통신합니다.
@@ -295,9 +311,23 @@ Pod A → 노드1 [안: 10.244.1.2→10.244.2.2 | 겉: 192.168.1.11→192.168.1.
 | Service 프록시 | 기본 구현은 kube-proxy. 일부 네트워크 구현체는 자체 프록시를 쓴다 |
 | NetworkPolicy | 대개 네트워크 플러그인 |
 
-IP 대역은 셋입니다. Pod IP는 네트워크 플러그인이, Service IP는 kube-apiserver가, 노드 IP는 kubelet 또는 cloud-controller-manager가 할당하고 세 대역은 겹치면 안 됩니다.
+IP 대역은 셋이고 누가 나눠 주는지가 각각 다릅니다.
 
-kube-proxy 모드는 리눅스에서 `iptables`, `ipvs`, `nftables`입니다. 지정하지 않을 때의 기본값은 `iptables`이며 공식 문서 기준으로 앞으로 `nftables`로 바뀔 예정입니다. `ipvs`는 v1.35부터 사용 중단(deprecated)이고 v1.37 릴리스 글 기준 v1.40에서 기본 비활성화, v1.43에서 제거 예정입니다. iptables 체인과 conntrack 해석은 시험 범위 밖이라 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에 따로 두었습니다.
+| 대역 | 할당하는 곳 |
+|---|---|
+| Pod IP | 네트워크 플러그인 |
+| Service IP | kube-apiserver |
+| 노드 IP | kubelet 또는 cloud-controller-manager |
+
+세 대역은 겹치면 안 됩니다.
+
+kube-proxy 모드는 리눅스에서 세 가지입니다.
+
+- `iptables`: 지정하지 않을 때의 기본값입니다. 공식 문서 기준으로 앞으로 `nftables`로 바뀔 예정입니다.
+- `nftables`: 위 기본값이 옮겨 갈 모드입니다.
+- `ipvs`: v1.35부터 사용 중단(deprecated)입니다. v1.37 릴리스 글 기준 v1.40에서 기본 비활성화, v1.43에서 제거 예정입니다.
+
+iptables 체인과 conntrack 해석은 시험 범위 밖이라 [쿠버네티스 아래의 리눅스 5편](/blog/theory/systems/k8s-linux-05-service-iptables-conntrack)에 따로 두었습니다.
 
 ### 1-3. 노드가 여는 포트 표
 
@@ -361,7 +391,12 @@ kubelet ─┼──→ kube-apiserver:6443 ──→ etcd:2379 (멤버끼리 :2
 | 워커 | 10256/TCP | kube-proxy 헬스체크 | 자기 자신, 로드밸런서 |
 | 워커 | 30000-32767/TCP, UDP | NodePort Service 기본 범위 | 전부 |
 
-kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으로 접속해서 처리합니다. 워커의 10250이 막히면 Pod는 잘 도는데 `kubectl logs`만 실패합니다. 컨트롤 플레인 구성요소의 실제 포트는 정적 Pod 매니페스트(`/etc/kubernetes/manifests/`)의 `--secure-port` 등으로 확인합니다. kubelet은 systemd 서비스로 돌기 때문에 매니페스트에 없고 kubelet 설정 파일(`/var/lib/kubelet/config.yaml`)의 `port` 값을 봅니다. 값이 없으면 기본값 10250입니다.
+kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으로 접속해서 처리합니다. 그래서 워커의 10250이 막히면 Pod는 잘 도는데 `kubectl logs`만 실패합니다.
+
+실제 포트를 확인하는 곳은 구성요소에 따라 다릅니다.
+
+- **컨트롤 플레인 구성요소**: 정적 Pod 매니페스트(`/etc/kubernetes/manifests/`)의 `--secure-port` 등으로 확인합니다.
+- **kubelet**: systemd 서비스로 돌기 때문에 매니페스트에 없습니다. kubelet 설정 파일(`/var/lib/kubelet/config.yaml`)의 `port` 값을 보고 값이 없으면 기본값 10250입니다.
 
 ### 1-4. CNI 설정은 컨테이너 런타임이 읽는다
 
@@ -387,7 +422,12 @@ kubectl의 `logs`, `exec`, `port-forward`는 API 서버가 kubelet의 10250으�
 | `/etc/cni/net.d`의 설정을 읽어 어떤 플러그인을 쓸지 정한다 | 경로와 필요한 규칙을 설정한다 |
 | Pod 생성 때 `ADD`, 삭제 때 `DEL`로 플러그인을 실행한다 | 결과(받은 IP 등)를 정해진 JSON 형식으로 돌려준다 |
 
-플러그인은 두 부류입니다. CNI 프로젝트가 함께 배포하는 기본 플러그인(인터페이스용 `bridge`, `ptp`, `macvlan`, `ipvlan`, `vlan`, `host-device`, `loopback`과 IPAM용 `host-local`, `dhcp`, `static`)은 한 노드 안의 연결만 만듭니다. Calico, Cilium, Flannel 같은 서드파티 솔루션은 여기에 노드 간 경로, 터널, NetworkPolicy 집행을 더하고 노드의 `/opt/cni/bin`에 자기 실행 파일을 설치합니다.
+플러그인은 두 부류입니다.
+
+| 부류 | 예 | 하는 일 |
+|---|---|---|
+| CNI 프로젝트가 함께 배포하는 기본 플러그인 | 인터페이스용 `bridge`, `ptp`, `macvlan`, `ipvlan`, `vlan`, `host-device`, `loopback`과 IPAM용 `host-local`, `dhcp`, `static` | 한 노드 안의 연결만 만든다 |
+| 서드파티 솔루션 | Calico, Cilium, Flannel | 여기에 노드 간 경로, 터널, NetworkPolicy 집행을 더하고 노드의 `/opt/cni/bin`에 자기 실행 파일을 설치한다 |
 
 #### 3. Pod 하나가 만들어질 때의 순서
 
@@ -435,7 +475,13 @@ bridge 플러그인 설정은 대략 이런 모양입니다(값은 예시).
 #### 5. 헷갈리는 점 / 실전에서 보이는 모습
 
 - 3~5단계 중 하나라도 실패하면 Pod는 `ContainerCreating`에 머물고 이벤트에 `FailedCreatePodSandBox`가 남습니다. 아래 표의 두 상황이 이 단계의 실패입니다.
-- 노드에서 확인하는 순서는 넷입니다. ① `ls /etc/cni/net.d`로 설정 파일이 있는지(비어 있으면 CNI 플러그인을 아직 설치하지 않은 것), ② 파일이 여럿이면 이름 순으로 맨 앞 파일이 의도한 것인지, ③ 그 파일의 JSON 문법(괄호, 쉼표)과 `"type"` 값, ④ `ls /opt/cni/bin`에 그 `type`과 같은 이름의 실행 파일이 있는지입니다. JSON이 깨진 파일은 런타임이 불러오지 못하므로 단서가 `journalctl -u containerd`에 남습니다.
+- 노드에서 확인하는 순서는 넷입니다.
+  1. `ls /etc/cni/net.d`로 설정 파일이 있는지. 비어 있으면 CNI 플러그인을 아직 설치하지 않았습니다.
+  2. 파일이 여럿이면 이름 순으로 맨 앞 파일이 의도한 것인지
+  3. 그 파일의 JSON 문법(괄호, 쉼표)과 `"type"` 값
+  4. `ls /opt/cni/bin`에 그 `type`과 같은 이름의 실행 파일이 있는지
+
+  JSON이 깨진 파일은 런타임이 불러오지 못하므로 단서가 `journalctl -u containerd`에 남습니다.
 - Docker Engine의 네트워크는 자체 모델(CNM)로 만들어져 CNI 규약을 따르지 않습니다. 그래서 dockershim 시절에는 kubelet이 Docker에 네트워크 없는(`none`) 샌드박스 컨테이너를 만들게 한 뒤 그 네임스페이스에 CNI 플러그인을 대신 불렀고 지금은 CNI를 직접 지원하는 런타임이 부릅니다.
 
 > **정리**: kubelet은 런타임을 부르고 런타임은 `/etc/cni/net.d`의 첫 설정과 `/opt/cni/bin`의 실행 파일로 플러그인을 부릅니다. 이 두 경로가 CNI 장애를 볼 때 가장 먼저 열 곳입니다.
@@ -450,7 +496,9 @@ CNI 플러그인을 부르는 쪽은 containerd나 CRI-O입니다. kubelet이 `-
 | `/opt/cni/bin` | 플러그인 실행 파일(`bridge`, `host-local`, `loopback` 등) |
 | `/etc/containerd/config.toml` | 위 두 경로를 바꾸는 곳 |
 
-containerd는 기본으로(`max_conf_num` 1) 설정 디렉터리에서 파일 이름 순으로 맨 앞 파일 하나만 읽습니다. `00-old.conflist` 같은 남은 파일이 앞에 있으면 엉뚱한 설정이 적용됩니다. 설정 파일의 `"type"` 값은 `/opt/cni/bin` 안의 실행 파일 이름과 같아야 합니다.
+containerd는 기본으로(`max_conf_num` 1) 설정 디렉터리에서 파일 이름 순으로 맨 앞 파일 하나만 읽습니다.
+
+여기서 잘 걸립니다. `00-old.conflist` 같은 남은 파일이 앞에 있으면 엉뚱한 설정이 적용됩니다. 설정 파일의 `"type"` 값은 `/opt/cni/bin` 안의 실행 파일 이름과 같아야 합니다.
 
 CNI 문제는 증상이 둘로 나타납니다. kind v1.37 워커에서 일부러 만들어 본 오류 문구입니다.
 
@@ -461,7 +509,12 @@ CNI 문제는 증상이 둘로 나타납니다. kind v1.37 워커에서 일부�
 
 두 경우 모두 노드에 들어가 `ls /etc/cni/net.d /opt/cni/bin`으로 파일을 보고 `journalctl -u containerd`(CRI-O면 `-u crio`)와 `journalctl -u kubelet`을 읽습니다. 설정 파일을 `mv`로 되돌렸는데 노드가 Ready로 안 돌아오면 파일을 다시 저장합니다.
 
-NetworkPolicy를 연습하려면 정책을 집행하는 플러그인이 필요합니다. Flannel README에 따르면 `flanneld`는 NetworkPolicy를 집행하지 않습니다. 실제로 Flannel만 깐 노드에서는 기본 거부 정책을 넣어도 통신이 그대로 됐습니다. Calico, Cilium, kind 기본 CNI(kindnet)는 집행합니다. 옛 강의의 Weave Net은 저장소가 보관(archived)됐고 마지막 릴리스가 2021년입니다.
+NetworkPolicy를 연습하려면 정책을 집행하는 플러그인이 필요합니다.
+
+- **집행하지 않음**: Flannel. README에 따르면 `flanneld`는 NetworkPolicy를 집행하지 않습니다. 실제로 Flannel만 깐 노드에서는 기본 거부 정책을 넣어도 통신이 그대로 됐습니다.
+- **집행함**: Calico, Cilium, kind 기본 CNI(kindnet)
+
+옛 강의의 Weave Net은 저장소가 보관(archived)됐고 마지막 릴리스가 2021년입니다.
 
 ### 1-5. Pod 대역, Service 대역, kube-proxy 모드 확인
 
@@ -536,7 +589,9 @@ kubectl -n shop get pod -o wide            # Pod IP와 노드 확인
 kubectl -n shop run tmp --rm -it --restart=Never --image=busybox -- wget -qO- -T 2 10.244.1.23:8080
 ```
 
-`-T 2`는 busybox `wget`의 타임아웃입니다. 막힌 연결은 응답 없이 기다리기만 하므로 타임아웃을 주지 않으면 시험 시간을 잃습니다. `registry.k8s.io/busybox:1.27.2`는 amd64 전용 이미지라 arm64 연습 환경에서는 `busybox:1.36`이 낫습니다.
+`-T 2`는 busybox `wget`의 타임아웃입니다. 막힌 연결은 응답 없이 기다리기만 하므로 타임아웃을 주지 않으면 시험 시간을 잃습니다.
+
+이미지도 하나 조심합니다. `registry.k8s.io/busybox:1.27.2`는 amd64 전용 이미지라 arm64 연습 환경에서는 `busybox:1.36`이 낫습니다.
 
 | 확인할 것 | 명령 |
 |---|---|
@@ -679,7 +734,9 @@ spec:
 
 </details>
 
-NetworkPolicy는 IP와 포트 수준에서 TCP, UDP, SCTP 트래픽을 제어합니다. 네트워크 플러그인이 지원하지 않으면 정책을 만들어도 아무 효과가 없습니다. 기본 상태의 Pod는 격리되지 않아 모든 연결이 허용되고 격리는 방향마다 따로 적용됩니다.
+NetworkPolicy는 IP와 포트 수준에서 TCP, UDP, SCTP 트래픽을 제어합니다. 네트워크 플러그인이 지원하지 않으면 정책을 만들어도 아무 효과가 없습니다.
+
+출발점은 "모두 열림"입니다. 기본 상태의 Pod는 격리되지 않아 모든 연결이 허용되고 격리는 방향마다 따로 적용됩니다.
 
 | 조건 | 결과 |
 |---|---|
@@ -730,7 +787,12 @@ ingress:
         app: order-api
 ```
 
-대시는 "목록의 새 항목"이라는 뜻입니다. 대시가 하나면 두 선택자가 한 항목에 들어가 둘 다 맞아야 하고 대시가 둘이면 항목이 두 개라 어느 하나만 맞아도 됩니다. 정책이 `shop` 네임스페이스에 있고 `checkout` 네임스페이스에 라벨 `team=checkout`이 붙어 있다고 두고 네 Pod가 보내는 요청을 따라가 보면 차이가 바로 보입니다.
+대시는 "목록의 새 항목"이라는 뜻입니다.
+
+- 대시가 하나: 두 선택자가 한 항목에 들어가 둘 다 맞아야 합니다(AND).
+- 대시가 둘: 항목이 두 개라 어느 하나만 맞아도 됩니다(OR).
+
+정책이 `shop` 네임스페이스에 있고 `checkout` 네임스페이스에 라벨 `team=checkout`이 붙어 있다고 두고 네 Pod가 보내는 요청을 따라가 보면 차이가 바로 보입니다.
 
 | 보내는 Pod | AND(대시 하나) | OR(대시 둘) |
 |---|---|---|
@@ -739,11 +801,15 @@ ingress:
 | `shop`의 `app=order-api` | 거부(네임스페이스가 안 맞음) | 허용(같은 네임스페이스의 `podSelector`) |
 | `shop`의 `app=board` | 거부 | 거부 |
 
-OR 쪽의 `podSelector`는 혼자 쓰였으므로 정책과 같은 네임스페이스(`shop`)의 Pod만 고릅니다. `checkout`의 `order-api`가 OR에서 허용되는 것은 `namespaceSelector` 항목 덕분입니다. 대시 하나 차이로 허용되는 Pod가 한 개에서 세 개로 늘어납니다.
+OR 쪽의 `podSelector`는 혼자 쓰였으므로 정책과 같은 네임스페이스(`shop`)의 Pod만 고릅니다. `checkout`의 `order-api`가 OR에서 허용되는 것은 `namespaceSelector` 항목 덕분입니다.
+
+대시 하나 차이로 허용되는 Pod가 한 개에서 세 개로 늘어납니다.
 
 헷갈리면 문서 권고대로 `kubectl describe networkpolicy <이름>`으로 쿠버네티스가 어떻게 해석했는지 읽습니다.
 
-네임스페이스를 이름으로 지정하는 필드는 없습니다. 컨트롤 플레인이 모든 네임스페이스에 바꿀 수 없는 라벨 `kubernetes.io/metadata.name=<네임스페이스 이름>`을 붙이므로 이 라벨로 고릅니다. 과제가 "네임스페이스 payment에서 오는 트래픽만"이라고 하면 라벨을 새로 붙일 필요 없이 이 라벨을 씁니다.
+네임스페이스를 이름으로 지정하는 필드는 없습니다.
+
+대신 컨트롤 플레인이 모든 네임스페이스에 바꿀 수 없는 라벨 `kubernetes.io/metadata.name=<네임스페이스 이름>`을 붙이므로 이 라벨로 고릅니다. 과제가 "네임스페이스 payment에서 오는 트래픽만"이라고 하면 라벨을 새로 붙일 필요 없이 이 라벨을 씁니다.
 
 ### 2-3. 기본 정책 다섯 가지
 
@@ -770,13 +836,25 @@ spec:
 | Allow all egress | `{}` | `Egress` | `egress: [{}]` |
 | Default deny all ingress and egress | `{}` | `Ingress`, `Egress` | 없음 |
 
-규칙 필드가 아예 없으면 아무것도 허용하지 않고 빈 규칙 `{}` 하나가 있으면 모든 것을 허용합니다.
+이 표에서 헷갈리는 곳은 규칙 칸입니다.
 
-둘이 반대로 동작하는 이유는 규칙 하나를 "조건을 모두 통과한 연결을 허용한다"로 읽으면 풀립니다. `ingress:` 목록이 비어 있으면 통과시킬 규칙이 하나도 없으니 격리된 Pod에는 아무것도 못 들어옵니다. `ingress: [{}]`는 규칙이 하나 있는데 그 규칙에 `from`도 `ports`도 없습니다. 걸러 낼 조건이 없으니 모든 출발지와 모든 포트가 통과합니다. 빈 `podSelector: {}`가 "모든 Pod"인 것과 같은 읽기 방식입니다.
+| 규칙 칸 | 결과 |
+|---|---|
+| 규칙 필드가 아예 없음 | 아무것도 허용하지 않는다 |
+| 빈 규칙 `{}` 하나 | 모든 것을 허용한다 |
+
+둘이 반대로 동작하는 이유는 규칙 하나를 "조건을 모두 통과한 연결을 허용한다"로 읽으면 풀립니다.
+
+- `ingress:` 목록이 비어 있으면 통과시킬 규칙이 하나도 없으니 격리된 Pod에는 아무것도 못 들어옵니다.
+- `ingress: [{}]`는 규칙이 하나 있는데 그 규칙에 `from`도 `ports`도 없습니다. 걸러 낼 조건이 없으니 모든 출발지와 모든 포트가 통과합니다.
+
+빈 `podSelector: {}`가 "모든 Pod"인 것과 같은 읽기 방식입니다.
 
 ### 2-4. Egress를 막으면 DNS도 막힌다
 
-문서는 Default deny all egress 아래에 주의 문구를 둡니다. 모든 Egress를 막으면 DNS 트래픽도 막히므로 이름 해석이 필요하면 클러스터 DNS로 나가는 Egress를 따로 허용합니다. 주문 API가 결제 서비스만 호출하도록 막는 정책을 DNS 허용과 함께 쓰면 이렇습니다.
+문서는 Default deny all egress 아래에 주의 문구를 둡니다. 모든 Egress를 막으면 DNS 트래픽도 막히므로 이름 해석이 필요하면 클러스터 DNS로 나가는 Egress를 따로 허용합니다.
+
+주문 API가 결제 서비스만 호출하도록 막는 정책을 DNS 허용과 함께 쓰면 이렇습니다.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -949,7 +1027,12 @@ kubectl -n shop expose deployment board --name=board-np --type=NodePort --port=8
 kubectl apply -f board-np.yaml
 ```
 
-`kubectl create service nodeport <이름> --tcp=80:8080 --node-port=30080`도 있지만 selector 옵션이 없고 selector를 `app: <Service 이름>`으로 고정해 넣습니다. Pod 라벨이 `app=<같은 이름>`이 아니면 엔드포인트가 비니 만든 뒤 `kubectl get svc <이름> -o yaml`로 selector를 확인하고 `kubectl set selector`나 `edit`으로 고칩니다.
+`kubectl create service nodeport <이름> --tcp=80:8080 --node-port=30080`도 있습니다. 다만 selector 옵션이 없고 selector를 `app: <Service 이름>`으로 고정해 넣습니다.
+
+그래서 Pod 라벨이 `app=<같은 이름>`이 아니면 엔드포인트가 빕니다. 만든 뒤에는 이렇게 손봅니다.
+
+1. `kubectl get svc <이름> -o yaml`로 selector를 확인합니다.
+2. `kubectl set selector`나 `edit`으로 고칩니다.
 
 ### 3-5. EndpointSlice
 
@@ -973,7 +1056,17 @@ NAME              ADDRESSTYPE   PORTS   ENDPOINTS
 hostnames-ytpni   IPv4          9376    10.244.0.5,10.244.0.6,10.244.0.7
 ```
 
-고르는 Pod가 없으면 kubectl v1.37에서 ENDPOINTS와 PORTS 열이 `<unset>`으로 나옵니다. 옛 `kubectl get endpoints`는 `<none>`과 함께 `Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice` 경고를 냅니다. 엔드포인트가 비면 Service의 `spec.selector`가 Pod의 `metadata.labels`를 실제로 고르는지 확인합니다. selector가 맞는데도 비어 있으면 Pod가 Ready가 아닌지 봅니다. readiness probe가 실패하는 Pod는 트래픽을 받지 않습니다.
+고르는 Pod가 없을 때 보이는 모습은 명령마다 다릅니다.
+
+| 명령 | 비었을 때 |
+|---|---|
+| `kubectl get endpointslices` (kubectl v1.37) | ENDPOINTS와 PORTS 열이 `<unset>` |
+| 옛 `kubectl get endpoints` | `<none>`과 함께 `Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice` 경고 |
+
+엔드포인트가 비면 두 가지를 차례로 봅니다.
+
+1. Service의 `spec.selector`가 Pod의 `metadata.labels`를 실제로 고르는지 확인합니다.
+2. selector가 맞는데도 비어 있으면 Pod가 Ready가 아닌지 봅니다. readiness probe가 실패하는 Pod는 트래픽을 받지 않습니다.
 
 ### 3-6. selector 없는 Service
 
@@ -1149,7 +1242,13 @@ Gateway API는 CRD로 설치하는 애드온 API 묶음이고 kubernetes.io 문�
 | HTTPRoute | 애플리케이션 개발자 | 리스너로 들어온 HTTP 요청을 어떤 Service로 보낼지 |
 | GRPCRoute | 애플리케이션 개발자 | gRPC 요청의 라우팅 |
 
-역할 칸은 Gateway API 문서 Security Model의 3단계 쓰기 권한 표를 따랐습니다. 그 표에서 인프라 제공자는 셋 다, 클러스터 운영자는 Gateway와 Route, 애플리케이션 개발자는 Route만 쓸 수 있습니다. kubernetes.io의 Gateway 문서는 세 역할을 소개만 하고 리소스와 짝짓지 않습니다.
+역할 칸은 Gateway API 문서 Security Model의 3단계 쓰기 권한 표를 따랐습니다. 그 표에서 쓸 수 있는 범위는 아래로 갈수록 좁아집니다.
+
+- 인프라 제공자: 셋 다
+- 클러스터 운영자: Gateway와 Route
+- 애플리케이션 개발자: Route만
+
+kubernetes.io의 Gateway 문서는 세 역할을 소개만 하고 리소스와 짝짓지 않습니다.
 
 Gateway 하나는 GatewayClass 정확히 하나와 연결됩니다. Route는 `parentRefs`로 Gateway를 가리키고 Gateway는 리스너의 `allowedRoutes`로 붙을 수 있는 Route를 거릅니다. 문서는 이 구조를 양방향 신뢰 모델이라고 부릅니다.
 
@@ -1234,7 +1333,10 @@ HTTPRoute 타입 정의의 주석과 기본값에서 확인한 규칙입니다.
 
 `/ordersheet` 줄은 문자열 접두사로 생각하면 틀리는 곳입니다. 타입 정의 주석의 예로는 `/abc`가 `/abc`, `/abc/`, `/abc/def`에는 맞고 `/abcd`에는 맞지 않습니다. Ingress의 `Prefix`와 같은 규칙입니다(5-3절).
 
-가중치는 백분율이 아닙니다. 타입 정의 기준으로 각 백엔드의 몫은 `weight / (그 목록의 weight 합)`입니다. `90`과 `10`은 `9`와 `1`과 같고 합이 100일 필요도 없습니다. `weight: 0`인 백엔드에는 요청을 보내지 않으므로 새 버전을 잠깐 빼 둘 때 지우지 않고 0으로 내립니다.
+가중치는 백분율이 아닙니다. 타입 정의 기준으로 각 백엔드의 몫은 `weight / (그 목록의 weight 합)`입니다.
+
+- `90`과 `10`은 `9`와 `1`과 같고 합이 100일 필요도 없습니다.
+- `weight: 0`인 백엔드에는 요청을 보내지 않습니다. 새 버전을 잠깐 빼 둘 때 지우지 않고 0으로 내립니다.
 
 결제 서비스의 새 버전이 10%만 받게 하는 예입니다.
 
@@ -1263,7 +1365,14 @@ spec:
 
 ### 4-5. TLS와 네임스페이스 경계
 
-TLS 종료는 Gateway 리스너의 속성이고 인증서와 키는 Secret에 둡니다(Migrating from Ingress 가이드). "종료(Terminate)"는 손님 브라우저와 맺은 암호화 연결을 Gateway에서 풀어 평문 HTTP로 만든다는 뜻입니다. 그래서 Gateway가 경로와 헤더를 읽고 HTTPRoute 규칙을 적용할 수 있습니다. 반대로 암호를 풀지 않고 그대로 넘기는 방식(`mode: Passthrough`)에서는 Gateway가 경로를 읽지 못합니다. 이때 라우팅은 연결을 열 때 보이는 호스트 이름(SNI)만으로 고르는 TLSRoute가 맡습니다.
+TLS 종료는 Gateway 리스너의 속성이고 인증서와 키는 Secret에 둡니다(Migrating from Ingress 가이드).
+
+"종료(Terminate)"는 손님 브라우저와 맺은 암호화 연결을 Gateway에서 풀어 평문 HTTP로 만든다는 뜻입니다. 암호를 풀지 않고 그대로 넘기는 방식과 나란히 놓으면 차이가 보입니다.
+
+| 방식 | Gateway가 경로와 헤더를 읽나 | 라우팅을 맡는 Route |
+|---|---|---|
+| 종료(Terminate) | 읽는다 | HTTPRoute 규칙을 적용 |
+| 그대로 넘김(`mode: Passthrough`) | 읽지 못한다 | 연결을 열 때 보이는 호스트 이름(SNI)만으로 고르는 TLSRoute |
 
 ```yaml
 listeners:
@@ -1297,7 +1406,12 @@ HTTPRoute 과제가 경로 나누기보다 한 단계 더 들어가면 매칭 �
 | 경로 재작성 | `URLRewrite`. `path.type`은 `ReplaceFullPath` 또는 `ReplacePrefixMatch` | Extended |
 | 응답 헤더 바꾸기, 미러링 | `ResponseHeaderModifier`, `RequestMirror` | Extended |
 
-한 규칙 안에 `matches` 항목이 여럿이면 하나만 맞아도 되고 한 항목 안의 경로, 헤더, 쿼리 조건은 모두 맞아야 합니다. NetworkPolicy의 `from`과 같은 대시 규칙입니다. `ReplacePrefixMatch`는 그 규칙의 `PathPrefix` 매칭이 정확히 하나일 때만 허용됩니다.
+조건을 묶는 방식은 NetworkPolicy의 `from`과 같은 대시 규칙입니다.
+
+- 한 규칙 안에 `matches` 항목이 여럿이면 하나만 맞아도 됩니다(OR).
+- 한 항목 안의 경로, 헤더, 쿼리 조건은 모두 맞아야 합니다(AND).
+
+`ReplacePrefixMatch`는 그 규칙의 `PathPrefix` 매칭이 정확히 하나일 때만 허용됩니다.
 
 결제 API의 새 버전을 `x-canary: "true"` 헤더가 붙은 요청에만 보내고 HTTP 요청은 HTTPS로 돌려보내는 예입니다. 리다이렉트용 Route는 HTTP 리스너에만 붙여야 하니 `parentRefs`의 `sectionName`으로 리스너를 고릅니다.
 
@@ -1399,7 +1513,9 @@ kubectl get referencegrant -A
 
 ### 4-8. 자주 틀리는 지점
 
-- Gateway API는 CRD라서 설치되어 있지 않으면 `kubectl get gateway`가 `the server doesn't have a resource type "gateway"`를 냅니다. Getting started 가이드의 설치 명령은 `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml`입니다(2026년 10월 가이드 기준). 같은 줄의 최신 패치는 v1.6.3(2026-10-06, conformance 수정)입니다. CRD만 있고 구현체가 없으면 Gateway가 `Programmed`가 되지 않습니다.
+- Gateway API는 CRD라서 설치되어 있지 않으면 `kubectl get gateway`가 `the server doesn't have a resource type "gateway"`를 냅니다.
+  - Getting started 가이드의 설치 명령은 `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml`입니다(2026년 10월 가이드 기준). 같은 줄의 최신 패치는 v1.6.3(2026-10-06, conformance 수정)입니다.
+  - CRD만 있고 구현체가 없으면 Gateway가 `Programmed`가 되지 않습니다.
 - `parentRefs`에 Gateway 이름을 틀리게 적으면 Route가 붙지 않습니다. `kubectl describe httproute`의 `Accepted`와 `ResolvedRefs`를 봅니다.
 - `hostnames`가 리스너의 `hostname`과 겹치지 않으면 요청이 이 Route로 오지 않습니다.
 - Route가 다른 네임스페이스에 있는데 `allowedRoutes`가 기본값 `Same`이면 붙지 않습니다.
@@ -1416,7 +1532,16 @@ kubectl get referencegrant -A
 
 ### 5-1. 현재 위치
 
-Ingress 문서 첫머리는 Ingress 대신 Gateway를 권하며 Ingress API가 동결됐다고 밝힙니다. GA API라 제거 계획은 없고 개발은 멈췄습니다. 컨트롤러 쪽에서는 Ingress NGINX 프로젝트의 유지보수가 2026년 3월로 끝났습니다(Kubernetes 블로그, 2025-11-11 발표). 은퇴한 것은 컨트롤러 프로젝트이고 Ingress API는 그대로 남습니다. 시험 환경의 Ingress 컨트롤러는 공식 문서에 나오지 않으니 `kubectl get ingressclass`로 확인합니다.
+Ingress는 지금 "남아는 있지만 더 자라지 않는" 상태입니다. API와 컨트롤러 양쪽에서 소식이 하나씩 있어서 둘을 나눠 기억하면 덜 헷갈립니다.
+
+| 대상 | 상태 |
+|---|---|
+| Ingress API | 문서 첫머리가 Ingress 대신 Gateway를 권하며 동결됐다고 밝힙니다. GA API라 제거 계획은 없고 개발은 멈췄습니다 |
+| Ingress NGINX 컨트롤러 프로젝트 | 유지보수가 2026년 3월로 끝났습니다(Kubernetes 블로그, 2025-11-11 발표) |
+
+은퇴한 것은 컨트롤러 프로젝트이고 Ingress API는 그대로 남습니다.
+
+시험 환경의 Ingress 컨트롤러는 공식 문서에 나오지 않으니 `kubectl get ingressclass`로 확인합니다.
 
 ### 5-2. 컨트롤러와 리소스는 별개
 
@@ -1472,7 +1597,9 @@ Ingress 문서 첫머리는 Ingress 대신 Gateway를 권하며 Ingress API가 �
 
 </details>
 
-Ingress 리소스는 규칙만 담습니다. 규칙을 읽어 실제 프록시를 설정하는 것은 Ingress 컨트롤러이고 컨트롤러가 없으면 Ingress를 만들어도 아무 일이 일어나지 않습니다. kube-controller-manager에 들어 있지 않으므로 따로 설치합니다.
+Ingress 리소스는 규칙만 담습니다. 규칙을 읽어 실제 프록시를 설정하는 것은 Ingress 컨트롤러입니다.
+
+컨트롤러는 kube-controller-manager에 들어 있지 않으므로 따로 설치합니다. 컨트롤러가 없으면 Ingress를 만들어도 아무 일이 일어나지 않습니다.
 
 여러 컨트롤러를 둘 때는 IngressClass로 나눕니다.
 
@@ -1489,7 +1616,9 @@ kubectl get ingressclass
 
 ### 5-3. 규칙과 pathType
 
-각 규칙은 선택적인 `host`와 `paths` 목록으로 이루어집니다. `host`를 생략하면 모든 호스트에 적용됩니다. 경로마다 `pathType`이 반드시 있어야 하고 없으면 검증에서 실패합니다.
+각 규칙은 선택적인 `host`와 `paths` 목록으로 이루어집니다. `host`를 생략하면 모든 호스트에 적용됩니다.
+
+경로마다 `pathType`이 반드시 있어야 합니다. 빠뜨리면 검증에서 실패합니다.
 
 | `pathType` | 매칭 |
 |---|---|
@@ -1506,11 +1635,18 @@ kubectl get ingressclass
 | Prefix | `/`, `/aaa` | `/aaa/ccc` | 예. `/aaa`가 이긴다 |
 | 혼합 | `/foo`(Prefix), `/foo`(Exact) | `/foo` | 예. Exact 우선 |
 
-여러 경로가 맞으면 가장 긴 경로가 먼저이고 길이가 같으면 Exact가 먼저입니다. 어느 규칙에도 맞지 않는 요청은 `defaultBackend`로 가고 `defaultBackend`가 없으면 처리는 컨트롤러에 달려 있습니다. `rules`가 없는 Ingress는 `defaultBackend`가 반드시 있어야 합니다.
+여러 경로가 맞을 때의 우선순위는 두 줄로 외웁니다.
+
+1. 가장 긴 경로가 먼저
+2. 길이가 같으면 Exact가 먼저
+
+어느 규칙에도 맞지 않는 요청은 `defaultBackend`로 갑니다. `defaultBackend`가 없으면 처리는 컨트롤러에 달려 있습니다. `rules`가 없는 Ingress는 `defaultBackend`가 반드시 있어야 합니다.
 
 ### 5-4. 명령으로 만들기
 
-`kubectl create ingress`의 규칙 문법은 `host/path=service:port[,tls[=secret]]`이고 경로 끝에 `*`를 붙이면 `pathType: Prefix`, 붙이지 않으면 `Exact`가 됩니다.
+`kubectl create ingress`의 규칙 문법은 `host/path=service:port[,tls[=secret]]`입니다.
+
+pathType은 경로 끝의 `*`로 정합니다. 붙이면 `pathType: Prefix`, 붙이지 않으면 `Exact`가 됩니다.
 
 ```bash
 # 쇼핑몰: /orders 하위는 order-api, /board 하위는 board (둘 다 Prefix)
@@ -1561,7 +1697,9 @@ Ingress 문서 기준 TLS 규칙입니다.
 
 ### 5-6. 경로 재작성 어노테이션 rewrite-target
 
-Ingress 스펙에는 경로를 바꿔 전달하는 필드가 없습니다. 요청은 `/orders/123`으로 들어오는데 주문 API는 `/123`만 알아듣는 경우 컨트롤러 어노테이션으로 해결합니다. 연습 문제에 자주 나오는 것은 ingress-nginx의 `rewrite-target`이고 Rewrite 예제는 정규식 캡처 그룹을 씁니다.
+요청은 `/orders/123`으로 들어오는데 주문 API는 `/123`만 알아듣는 경우가 있습니다. Ingress 스펙에는 경로를 바꿔 전달하는 필드가 없어서 컨트롤러 어노테이션으로 해결합니다.
+
+연습 문제에 자주 나오는 것은 ingress-nginx의 `rewrite-target`입니다. Rewrite 예제는 정규식 캡처 그룹을 씁니다.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -1587,7 +1725,16 @@ spec:
               number: 80
 ```
 
-`(.*)`가 잡은 부분이 `$2`로 들어가서 `/orders/123`은 `/123`으로, `/orders`는 `/`로 바뀌어 전달됩니다. 정규식 경로라 `pathType`은 `ImplementationSpecific`입니다. ingress-nginx 0.22.0부터 캡처 그룹으로 지정해야 하므로 옛 자료의 `rewrite-target: /` 한 줄짜리 예는 결과를 `curl`로 확인합니다.
+`(.*)`가 잡은 부분이 `$2`로 들어갑니다.
+
+| 들어온 요청 | 백엔드에 전달되는 경로 |
+|---|---|
+| `/orders/123` | `/123` |
+| `/orders` | `/` |
+
+정규식 경로라 `pathType`은 `ImplementationSpecific`입니다.
+
+옛 자료를 볼 때 조심할 곳이 있습니다. ingress-nginx 0.22.0부터 캡처 그룹으로 지정해야 하므로 옛 자료의 `rewrite-target: /` 한 줄짜리 예는 결과를 `curl`로 확인합니다.
 
 이 어노테이션은 ingress-nginx 전용입니다. Gateway API에서는 HTTPRoute의 `URLRewrite` 필터가 같은 일을 표준 필드로 합니다.
 
@@ -1707,7 +1854,14 @@ Customizing DNS Service 문서 기준입니다.
 | Pod가 DNS 서버를 아는 방법 | kubelet의 `clusterDNS`(플래그 `--cluster-dns`) 값이 각 컨테이너의 resolv.conf로 들어감 |
 | 클러스터 도메인 | kubelet의 `clusterDomain`(플래그 `--cluster-domain`). 흔히 `cluster.local` |
 
-kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일 `/var/lib/kubelet/config.yaml`에 있습니다(예: `clusterDNS: [10.96.0.10]`, `clusterDomain: cluster.local`). `clusterDNS`와 `kube-dns` Service의 클러스터 IP가 어긋나면 Pod가 엉뚱한 DNS 서버를 봅니다. Service 이름 `kube-dns`와 옛 kube-dns 애드온은 서로 다릅니다. v1.37 릴리스 글에 따르면 kube-dns 애드온 빌드는 v1.40 이후 중단될 예정입니다. CoreDNS의 Service 이름이 `kube-dns`인 것은 옛 kube-dns와의 호환 때문입니다(Debugging DNS Resolution 문서).
+kubeadm 클러스터에서는 이 값들이 kubelet 설정 파일 `/var/lib/kubelet/config.yaml`에 있습니다(예: `clusterDNS: [10.96.0.10]`, `clusterDomain: cluster.local`).
+
+`clusterDNS`와 `kube-dns` Service의 클러스터 IP가 어긋나면 Pod가 엉뚱한 DNS 서버를 봅니다.
+
+이름 때문에 헷갈리는 곳이 하나 있습니다. Service 이름 `kube-dns`와 옛 kube-dns 애드온은 서로 다릅니다.
+
+- CoreDNS의 Service 이름이 `kube-dns`인 것은 옛 kube-dns와의 호환 때문입니다(Debugging DNS Resolution 문서).
+- 옛 kube-dns 애드온 빌드는 v1.37 릴리스 글에 따르면 v1.40 이후 중단될 예정입니다.
 
 ### 6-2. 무엇이 어떤 이름을 받나
 
@@ -1789,7 +1943,16 @@ DNS for Services and Pods 문서 기준입니다.
 | Pod(hostname과 subdomain 지정, 같은 이름의 headless Service 존재) | `<hostname>.<subdomain>.<ns>.svc.<cluster-domain>` | A/AAAA |
 | Pod IP 기반 이름 | `<a-b-c-d>.<ns>.pod.<cluster-domain>` (IP의 점을 대시로) | A |
 
-마지막 줄은 IP가 `172.17.0.3`인 `default` 네임스페이스 Pod라면 `172-17-0-3.default.pod.cluster.local`입니다. 이 레코드는 CoreDNS `kubernetes` 플러그인의 `pods` 설정이 정합니다. 기본값은 `disabled`(응답 안 함)이고 6-4의 Corefile처럼 `pods insecure`면 Pod가 있는지 확인하지 않고 이름의 IP를 돌려줍니다. Pod 이름 자체로 부르는 레코드는 없습니다.
+마지막 줄은 IP가 `172.17.0.3`인 `default` 네임스페이스 Pod라면 `172-17-0-3.default.pod.cluster.local`입니다.
+
+이 레코드에 답할지는 CoreDNS `kubernetes` 플러그인의 `pods` 설정이 정합니다.
+
+| `pods` 설정 | 동작 |
+|---|---|
+| `disabled` (기본값) | 응답 안 함 |
+| `insecure` (6-4의 Corefile) | Pod가 있는지 확인하지 않고 이름의 IP를 돌려줌 |
+
+Pod 이름 자체로 부르는 레코드는 없습니다.
 
 kubelet이 Pod에 써 주는 `/etc/resolv.conf`는 이런 모양입니다(문서 예시).
 
@@ -1799,7 +1962,11 @@ search <namespace>.svc.cluster.local svc.cluster.local cluster.local
 options ndots:5
 ```
 
-`search` 덕분에 같은 네임스페이스에서는 `payment`만으로, 다른 네임스페이스는 `payment.billing`처럼 짧게 부릅니다. 네임스페이스를 빼면 자기 네임스페이스에서만 찾으므로 `shop`의 Pod가 `billing`의 `payment`를 `payment`로 부르면 풀리지 않습니다. `ndots:5`는 점이 5개보다 적은 이름에 search 목록을 먼저 붙여 본다는 뜻이라 외부 도메인 질의가 몇 배로 늘어납니다. 끝에 점을 붙인 FQDN이나 Pod의 `dnsConfig.options`로 줄입니다.
+`search` 덕분에 같은 네임스페이스에서는 `payment`만으로, 다른 네임스페이스는 `payment.billing`처럼 짧게 부릅니다.
+
+네임스페이스를 빼면 자기 네임스페이스에서만 찾습니다. 그래서 `shop`의 Pod가 `billing`의 `payment`를 `payment`로 부르면 풀리지 않습니다.
+
+`ndots:5`는 점이 5개보다 적은 이름에 search 목록을 먼저 붙여 본다는 뜻입니다. 이 탓에 외부 도메인 질의가 몇 배로 늘어납니다. 끝에 점을 붙인 FQDN이나 Pod의 `dnsConfig.options`로 줄입니다.
 
 `shop` 네임스페이스의 주문 API가 외부 결제 대행사 `api.pay.example.com`을 부를 때 실제로 나가는 질의를 순서대로 적으면 이렇습니다. 이 이름에는 점이 3개라 5개보다 적습니다.
 
@@ -1810,7 +1977,11 @@ options ndots:5
 | 3 | `api.pay.example.com.cluster.local` | NXDOMAIN |
 | 4 | `api.pay.example.com` | 응답 |
 
-답을 받기까지 이름 네 개를 묻고 앞의 셋은 헛걸음입니다. IPv4(A)와 IPv6(AAAA)를 함께 묻는 리졸버라면 질의 수가 두 배가 됩니다. 반대로 `payment`처럼 점이 없는 클러스터 안 이름은 1번에서 바로 풀립니다. ndots를 5로 크게 잡아 두면 `payment.billing`이나 `order-db-0.order-db`처럼 점이 몇 개 있는 클러스터 안 이름도 search 목록으로 먼저 찾습니다. Marco Pracucci는 같은 현상을 측정한 글에서 외부 이름을 자주 부르는 Pod라면 끝에 점을 붙이거나 그 Pod만 `ndots`를 낮추라고 권했습니다([Kubernetes pods /etc/resolv.conf ndots:5 option, 2018](https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html)).
+답을 받기까지 이름 네 개를 묻고 앞의 셋은 헛걸음입니다. IPv4(A)와 IPv6(AAAA)를 함께 묻는 리졸버라면 질의 수가 두 배가 됩니다.
+
+반대로 클러스터 안 이름에는 이 설정이 유리합니다. `payment`처럼 점이 없는 이름은 1번에서 바로 풀립니다. ndots를 5로 크게 잡아 두면 `payment.billing`이나 `order-db-0.order-db`처럼 점이 몇 개 있는 클러스터 안 이름도 search 목록으로 먼저 찾습니다.
+
+Marco Pracucci는 같은 현상을 측정한 글에서 외부 이름을 자주 부르는 Pod라면 끝에 점을 붙이거나 그 Pod만 `ndots`를 낮추라고 권했습니다([Kubernetes pods /etc/resolv.conf ndots:5 option, 2018](https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html)).
 
 ```yaml
 spec:
@@ -1833,7 +2004,10 @@ Pod는 대개 Ready여야 DNS 레코드를 받습니다. Service에 `publishNotR
 
 ### 6-4. 기본 Corefile 읽기
 
-Customizing DNS Service 문서에 실린 기본 Corefile입니다. kubeadm 1.37이 만드는 Corefile에는 `forward . /etc/resolv.conf { max_concurrent 1000 }`처럼 동시 질의 상한이 붙고 `cache 30` 블록 안에 `disable success cluster.local`, `disable denial cluster.local`이 들어갑니다.
+Customizing DNS Service 문서에 실린 기본 Corefile입니다. kubeadm 1.37이 만드는 Corefile은 여기서 두 군데가 다릅니다.
+
+- `forward . /etc/resolv.conf { max_concurrent 1000 }`처럼 동시 질의 상한이 붙습니다.
+- `cache 30` 블록 안에 `disable success cluster.local`, `disable denial cluster.local`이 들어갑니다.
 
 ```
 .:53 {
@@ -1882,7 +2056,14 @@ corp.example:53 {
 }
 ```
 
-이 블록을 기존 `.:53 { ... }` 블록 옆에 추가합니다. 클러스터 밖 질의를 모두 특정 서버로 보내려면 기존 블록의 `forward . /etc/resolv.conf`를 `forward . 172.16.0.1`처럼 바꿉니다. `reload`가 있으면 재시작 없이 반영되지만 시간이 걸리므로 급하면 `kubectl -n kube-system rollout restart deployment coredns`로 다시 띄웁니다. kubeadm이 아닌 클러스터라면 `kubectl -n kube-system get deploy`로 이름부터 확인합니다.
+무엇을 바꾸고 싶은지에 따라 고치는 곳이 다릅니다.
+
+| 하고 싶은 일 | 고치는 곳 |
+|---|---|
+| 특정 도메인만 다른 서버로 | 위 블록을 기존 `.:53 { ... }` 블록 옆에 추가 |
+| 클러스터 밖 질의를 모두 특정 서버로 | 기존 블록의 `forward . /etc/resolv.conf`를 `forward . 172.16.0.1`처럼 바꿈 |
+
+`reload`가 있으면 재시작 없이 반영되지만 시간이 걸립니다. 급하면 `kubectl -n kube-system rollout restart deployment coredns`로 다시 띄웁니다. kubeadm이 아닌 클러스터라면 `kubectl -n kube-system get deploy`로 이름부터 확인합니다.
 
 ### 6-6. DNS 문제를 좁히는 순서
 
@@ -2016,7 +2197,16 @@ Gateway 리스너의 `allowedRoutes.namespaces.from`이 기본값 `Same`이라 �
 <details>
 <summary>답 보기</summary>
 
-디렉터리는 CNI 설정이 있는 `/etc/cni/net.d`와 플러그인 실행 파일이 있는 `/opt/cni/bin`입니다. 설정 파일이 없거나 `"type"`에 적힌 이름의 실행 파일이 없으면 런타임이 네트워크를 만들지 못합니다. CNI를 부르는 쪽은 컨테이너 런타임이므로 로그는 `journalctl -u containerd`와 `journalctl -u kubelet`을 봅니다. Service IP 대역은 컨트롤 플레인 노드의 `/etc/kubernetes/manifests/kube-apiserver.yaml`에 있는 `--service-cluster-ip-range`이고 `kubectl get servicecidrs`로도 볼 수 있습니다.
+디렉터리는 둘입니다.
+
+- `/etc/cni/net.d`: CNI 설정
+- `/opt/cni/bin`: 플러그인 실행 파일
+
+설정 파일이 없거나 `"type"`에 적힌 이름의 실행 파일이 없으면 런타임이 네트워크를 만들지 못합니다.
+
+CNI를 부르는 쪽은 컨테이너 런타임이므로 로그는 `journalctl -u containerd`와 `journalctl -u kubelet`을 봅니다.
+
+Service IP 대역은 컨트롤 플레인 노드의 `/etc/kubernetes/manifests/kube-apiserver.yaml`에 있는 `--service-cluster-ip-range`이고 `kubectl get servicecidrs`로도 볼 수 있습니다.
 
 </details>
 

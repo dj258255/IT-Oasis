@@ -42,9 +42,20 @@ LF Important Instructions 기준으로 과제용 ssh 호스트에는 아래 도�
 | 근거 없음 | `etcdutl`, `crictl`, `kustomize`(단독 바이너리) | `which etcdutl crictl`로 확인. crictl이 없으면 `/var/log/pods`, kustomize는 아래 줄 |
 | kubectl 내장 | `kubectl apply -k`, `kubectl kustomize` | 단독 kustomize가 없어도 씀 |
 
-Resources Allowed 기준으로 배포판 패키지는 설치해도 되지만 과제 수행에 필요하지는 않습니다. 패키지 저장소에 닿는지는 공식 문서에 나오지 않습니다. 그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다. 직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
+Resources Allowed 기준으로 배포판 패키지는 설치해도 되지만 과제 수행에 필요하지는 않습니다. 패키지 저장소에 닿는지는 공식 문서에 나오지 않습니다.
 
-시험 중 열 수 있는 문서는 kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io(CKA만) 네 곳과 과제의 Quick Reference 링크이고 시험 VM 안 Firefox로만 엽니다. 터미널 복사와 붙여넣기는 Ctrl+Shift+C/V이고 INSERT 키는 쓰지 않습니다.
+그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다.
+
+직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
+
+시험 중 열 수 있는 문서는 네 곳과 과제의 Quick Reference 링크입니다. 시험 VM 안 Firefox로만 엽니다.
+
+- kubernetes.io/docs
+- kubernetes.io/blog
+- helm.sh/docs
+- gateway-api.sigs.k8s.io(CKA만)
+
+터미널 복사와 붙여넣기는 Ctrl+Shift+C/V이고 INSERT 키는 쓰지 않습니다.
 
 ```bash
 type k            # "k is aliased to `kubectl'"이면 준비됨
@@ -72,7 +83,10 @@ exit                              # base로 돌아온다
 
 ### 1-3. vim 설정
 
-공식 안내에는 `i`로 입력하고 Esc로 나온다는 내용만 있습니다. `~/.vimrc`에 `set expandtab tabstop=2 shiftwidth=2`를 넣는 것은 관행이고 호스트마다 다시 넣습니다. 붙여 넣을 때 들여쓰기가 밀리면 `:set paste`를 켜고 붙여 넣은 파일은 `yq . 파일명`으로 문법부터 봅니다.
+공식 안내에는 `i`로 입력하고 Esc로 나온다는 내용만 있습니다. `~/.vimrc`에 `set expandtab tabstop=2 shiftwidth=2`를 넣는 것은 관행이고 호스트마다 다시 넣습니다.
+
+- 붙여 넣을 때 들여쓰기가 밀리면 `:set paste`
+- 붙여 넣은 파일은 `yq . 파일명`으로 문법부터 확인
 
 ### 1-4. 뼈대는 `--dry-run=client -o yaml`
 
@@ -85,7 +99,9 @@ k create deploy pay-api --image=nginx:1.27 --replicas=2 -n payment $do > deploy.
 k expose deploy pay-api --port=80 --target-port=8080 -n payment $do > svc.yaml
 ```
 
-`--dry-run=client`는 API 서버에 보내지 않고 kubectl 안에서 객체만 만들어 보라는 뜻이라 클러스터에는 아무것도 생기지 않습니다. `-o yaml`이 그 객체를 찍고 `>`가 파일로 받습니다. 고친 뒤 `k apply -f`로 올립니다. `$do`는 따옴표 없이 써야 공백에서 옵션 두 개로 나뉩니다.
+`--dry-run=client`는 API 서버에 보내지 않고 kubectl 안에서 객체만 만들어 보라는 뜻이라 클러스터에는 아무것도 생기지 않습니다. `-o yaml`이 그 객체를 찍고 `>`가 파일로 받습니다. 고친 뒤 `k apply -f`로 올립니다.
+
+`$do`는 따옴표 없이 써야 공백에서 옵션 두 개로 나뉩니다.
 
 | 생성 명령이 있음 | 생성 명령이 없음(문서 예제를 복사) |
 |---|---|
@@ -319,7 +335,11 @@ k auth can-i --list -n shop --as=system:serviceaccount:shop:order-api
 kubeadm 패키지 교체 -> kubeadm upgrade node -> 4~6 반복
 ```
 
-kubelet은 kube-apiserver보다 새로울 수 없어서 컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다. `drain`은 kubectl이 있는 호스트에서 실행하고 apt와 kubeadm은 해당 노드에서 실행합니다. 3번이 성공하면 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".` 꼴의 줄이 나옵니다([5편](/blog/cert/cka/cka-02-cluster-architecture)).
+kubelet은 kube-apiserver보다 새로울 수 없어서 컨트롤 플레인을 모두 끝낸 뒤 워커로 갑니다.
+
+명령마다 실행할 곳이 다릅니다. `drain`은 kubectl이 있는 호스트에서, apt와 kubeadm은 해당 노드에서 실행합니다.
+
+3번이 성공하면 `[upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.37.1".` 꼴의 줄이 나옵니다([5편](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ### 4-2. etcd 백업과 복구
 
@@ -358,7 +378,14 @@ sudo systemctl restart kubelet
 kubectl -n kube-system delete pod -l k8s-app=kube-proxy
 ```
 
-두 도구는 하는 일이 다릅니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙는 클라이언트라서 `--endpoints`와 인증서가 필요하고 `etcdutl`은 서버 없이 스냅샷 파일과 데이터 디렉터리를 직접 다루는 도구라서 인증서가 필요 없습니다. 6번에서 매니페스트를 밖으로 뺐다 넣는 데도 까닭이 있습니다. kubelet은 `/etc/kubernetes/manifests`를 지켜보다가 파일이 사라지면 그 static Pod를 멈추고 다시 생기면 새로 띄웁니다. `kubectl delete pod`로는 mirror Pod만 지워져 재시작이 되지 않습니다.
+두 도구는 하는 일이 다릅니다.
+
+| 도구 | 하는 일 | 인증서 |
+|---|---|---|
+| `etcdctl` | 돌고 있는 etcd 서버에 네트워크로 붙는 클라이언트 | `--endpoints`와 인증서 필요 |
+| `etcdutl` | 서버 없이 스냅샷 파일과 데이터 디렉터리를 직접 다룸 | 필요 없음 |
+
+6번에서 매니페스트를 밖으로 뺐다 넣는 데도 까닭이 있습니다. kubelet은 `/etc/kubernetes/manifests`를 지켜보다가 파일이 사라지면 그 static Pod를 멈추고 다시 생기면 새로 띄웁니다. `kubectl delete pod`로는 mirror Pod만 지워져 재시작이 되지 않습니다.
 
 함정은 셋입니다.
 
@@ -399,7 +426,9 @@ sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -subject -issuer 
 sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -subject -dates
 ```
 
-`kubeadm certs renew all`을 돌리면 출력에 kube-apiserver, kube-controller-manager, kube-scheduler, etcd 네 구성요소를 재시작하라는 안내가 나옵니다. kubelet 클라이언트 인증서의 정상 subject는 `O = system:nodes, CN = system:node:<노드 이름>`이고 만료됐을 때의 복구 절차는 [9편 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
+`kubeadm certs renew all`을 돌리면 출력에 kube-apiserver, kube-controller-manager, kube-scheduler, etcd 네 구성요소를 재시작하라는 안내가 나옵니다.
+
+kubelet 클라이언트 인증서의 정상 subject는 `O = system:nodes, CN = system:node:<노드 이름>`이고 만료됐을 때의 복구 절차는 [9편 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 ### 4-5. CSR 승인
 
@@ -432,7 +461,15 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 6. 저장 후 crictl ps로 새 컨테이너가 뜰 때까지 기다린 뒤 kubectl
 ```
 
-`kubectl` 전체 실패는 kube-apiserver나 etcd, Pod 미생성은 kube-controller-manager, 이벤트 없는 `Pending`은 kube-scheduler를 의심합니다. `kubectl delete pod kube-apiserver-<노드>`는 mirror Pod만 지웁니다([9편 2절](/blog/cert/cka/cka-06-troubleshooting)).
+증상으로 먼저 의심할 구성요소를 고릅니다.
+
+| 증상 | 의심할 구성요소 |
+|---|---|
+| `kubectl` 전체 실패 | kube-apiserver나 etcd |
+| Pod 미생성 | kube-controller-manager |
+| 이벤트 없는 `Pending` | kube-scheduler |
+
+`kubectl delete pod kube-apiserver-<노드>`는 mirror Pod만 지웁니다([9편 2절](/blog/cert/cka/cka-06-troubleshooting)).
 
 ### 4-7. 런타임 패키지 설치
 
@@ -444,7 +481,9 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 5. kubeadm init/join --cri-socket unix:///run/cri-dockerd.sock
 ```
 
-1.35가 containerd 1.x를 지원하는 마지막 버전이니(v1.35 릴리스 글) 1.37 노드는 containerd 2.3 이상으로 맞춥니다(containerd 호환표 기준. 1.7은 2026-09-30 지원 종료). sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([5편](/blog/cert/cka/cka-02-cluster-architecture)).
+1.35가 containerd 1.x를 지원하는 마지막 버전이니(v1.35 릴리스 글) 1.37 노드는 containerd 2.3 이상으로 맞춥니다(containerd 호환표 기준. 1.7은 2026-09-30 지원 종료).
+
+sysctl은 `/etc/sysctl.d/`에 쓰고 `sysctl --system`으로 적용합니다([5편](/blog/cert/cka/cka-02-cluster-architecture)).
 
 ---
 
@@ -488,7 +527,17 @@ kube-controller-manager가 자동 승인하는 내장 서명자는 `kubernetes.i
 | 두 바퀴(약 20분) | 표시한 과제. 이름이 지정된 리소스부터 만듦 |
 | 마지막 15분 | 15분 알림이 오면 새 과제를 멈추고 리소스 이름, 네임스페이스, 호스트 재확인 |
 
-과제 하나는 호스트 이동, 뼈대 생성, 적용, 검증, `exit` 순서로 풉니다. 알림은 30분, 15분, 5분 남았을 때 옵니다. 표시 기능은 LF ExamUI 문서에서 확인하지 못했고 후기들이 적은 것을 옮겼습니다. 당일 체크리스트와 D-30 계획은 [10편](/blog/cert/cka/cka-07-resources-and-exam-day)에 있습니다.
+과제 하나는 이 순서로 풉니다.
+
+1. 호스트 이동
+2. 뼈대 생성
+3. 적용
+4. 검증
+5. `exit`
+
+알림은 30분, 15분, 5분 남았을 때 옵니다. 표시 기능은 LF ExamUI 문서에서 확인하지 못했고 후기들이 적은 것을 옮겼습니다.
+
+당일 체크리스트와 D-30 계획은 [10편](/blog/cert/cka/cka-07-resources-and-exam-day)에 있습니다.
 
 ---
 

@@ -18,9 +18,13 @@ seriesOrder: 1
 ## 결론부터
 
 1. CKA는 2시간 동안 15~20개의 실기 과제를 푸는 시험입니다. 답을 고르는 문제가 없고 리눅스 명령줄에서 클러스터를 직접 고칩니다. 66% 이상이면 합격이고 기준 버전은 Kubernetes v1.37입니다.
-2. 2025년 2월 18일부터 범위가 바뀌었습니다. 개정 전 커리큘럼(v1.31)과 대조하면 etcd 백업과 복구, kubeadm 버전 업그레이드가 명시 항목에서 빠지고 Helm, Kustomize, Gateway API, CRD와 오퍼레이터, 확장 인터페이스(CNI, CSI, CRI)가 들어왔습니다. 개정 전 강의와 후기는 걸러서 봅니다.
+2. 2025년 2월 18일부터 범위가 바뀌었습니다. 개정 전 커리큘럼(v1.31)과 대조한 결과입니다. 개정 전 강의와 후기는 걸러서 봅니다.
+   - 명시 항목에서 빠진 것: etcd 백업과 복구, kubeadm 버전 업그레이드
+   - 들어온 것: Helm, Kustomize, Gateway API, CRD와 오퍼레이터, 확장 인터페이스(CNI, CSI, CRI)
 3. 비중이 가장 큰 영역은 트러블슈팅(30%)이고 그다음이 클러스터 아키텍처·설치·구성(25%)입니다. 후기들은 실패 원인으로 시간 부족과 트러블슈팅에서 잃은 시간을 공통으로 꼽습니다.
-4. 시험은 과제마다 지정된 호스트에 `ssh`로 들어가 풀고 `exit`로 돌아오는 방식입니다. 각 호스트에는 `kubectl`(alias `k`와 자동완성), `yq`, `curl`, `wget`, `man`이 깔려 있고 열 수 있는 문서는 kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io 네 곳입니다.
+4. 시험은 과제마다 지정된 호스트에 `ssh`로 들어가 풀고 `exit`로 돌아오는 방식입니다.
+   - 각 호스트에 깔린 도구: `kubectl`(alias `k`와 자동완성), `yq`, `curl`, `wget`, `man`
+   - 열 수 있는 문서 네 곳: kubernetes.io/docs, kubernetes.io/blog, helm.sh/docs, gateway-api.sigs.k8s.io
 5. 공부는 이 시리즈 순서를 따릅니다. 3편과 4편으로 구조를 잡고 5~9편에서 영역별 명령과 YAML을 손에 익힌 뒤 10편의 연습 자료와 killer.sh 2회로 시간을 맞추고 11편으로 마무리합니다.
 
 ---
@@ -41,7 +45,9 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 | 결과 | 자동 채점, 시험 종료 후 24시간 안에 이메일 |
 | 일정 | 구매 후 12개월 안에 응시. 예약은 최소 24시간 전, 변경과 취소도 24시간 전까지 |
 
-채점은 클러스터의 최종 상태를 봅니다. 응시자 핸드북은 과제를 푸는 방법이 여럿일 수 있다고 적고 문항별 배점과 성적은 공개하지 않습니다. 하위 과제별 부분 점수는 killer.sh FAQ가 설명하는 방식이고 LF FAQ는 부분 점수를 언급하지 않습니다.
+채점은 클러스터의 최종 상태를 봅니다. 그래서 응시자 핸드북은 과제를 푸는 방법이 여럿일 수 있다고 적습니다. 문항별 배점과 성적은 공개하지 않습니다.
+
+부분 점수는 출처를 구분해서 봐야 합니다. 하위 과제별 부분 점수는 killer.sh FAQ가 설명하는 방식이고 LF FAQ는 부분 점수를 언급하지 않습니다.
 
 <details>
 <summary>기초부터: 실기 과제 하나는 어떤 모양인가</summary>
@@ -69,7 +75,9 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 | 4 | 확인 | `k get deploy,svc,endpointslices -n shop` |
 | 5 | 시작 호스트로 복귀 | `exit` |
 
-네임스페이스 `shop`이 없다면 2번 전에 만들어야 합니다. 4번은 건너뛰기 쉬운데 채점은 최종 상태로 하니 확인이 곧 점수 확인입니다. 이름 하나, 네임스페이스 하나만 틀려도 채점기는 그 객체를 찾지 못합니다.
+네임스페이스 `shop`이 없다면 2번 전에 만들어야 합니다.
+
+4번은 건너뛰기 쉽습니다. 그런데 채점은 최종 상태로 하니 확인이 곧 점수 확인입니다. 이름 하나, 네임스페이스 하나만 틀려도 채점기는 그 객체를 찾지 못합니다.
 
 #### 3. 시간 계산
 
@@ -83,7 +91,7 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 
 ### 2-1. 영역별 비중과 세부 항목
 
-[cncf/curriculum 저장소의 v1.37 커리큘럼](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf) 원문입니다. v1.33부터 v1.37까지 역량 문구는 같고 버전 숫자만 바뀌었습니다. v1.37 PDF는 v1.35 PDF에서 파일 이름만 바뀌었습니다(cncf/curriculum 커밋 b3c8508, 2026-10-15). 오른쪽 열은 이 시리즈에서 그 영역을 다루는 글입니다.
+[cncf/curriculum 저장소의 v1.37 커리큘럼](https://github.com/cncf/curriculum/blob/master/CKA_Curriculum_v1.37.pdf) 원문입니다. 오른쪽 열은 이 시리즈에서 그 영역을 다루는 글입니다.
 
 | 영역 | 비중 | 세부 항목 | 이 시리즈 |
 |---|---|---|---|
@@ -93,7 +101,9 @@ Linux Foundation(LF) 공식 페이지와 응시 안내 문서로 확인한 내�
 | Workloads and Scheduling | 15% | 롤링 업데이트와 롤백, ConfigMap과 Secret, 워크로드 자동 확장, 자가 치유 기본 요소, Pod 승인과 스케줄링(리소스 제한, 노드 어피니티 등) | [6편](/blog/cert/cka/cka-03-workloads-scheduling) |
 | Storage | 10% | StorageClass와 동적 프로비저닝, 볼륨 타입·접근 모드·회수 정책, PV와 PVC | [8편](/blog/cert/cka/cka-05-storage) |
 
-PDF의 네트워크 영역 제목은 "Servicing and Networking"으로 적혀 있고 LF 시험 페이지는 "Services & Networking"으로 씁니다. LF 시험 페이지의 커리큘럼 링크는 2026년 10월 현재 v1.35 PDF를 가리키지만 문구가 같아 실질 차이는 없습니다.
+버전 숫자에 신경 쓸 필요는 없습니다. v1.33부터 v1.37까지 역량 문구는 같고 버전 숫자만 바뀌었습니다. v1.37 PDF는 v1.35 PDF에서 파일 이름만 바뀌었습니다(cncf/curriculum 커밋 b3c8508, 2026-10-15). LF 시험 페이지의 커리큘럼 링크는 2026년 10월 현재 v1.35 PDF를 가리키지만 문구가 같아 실질 차이는 없습니다.
+
+영역 이름 표기도 조금 다릅니다. PDF의 네트워크 영역 제목은 "Servicing and Networking"으로 적혀 있고 LF 시험 페이지는 "Services & Networking"으로 씁니다.
 
 ### 2-2. 2025년 2월 개정에서 바뀐 것
 
@@ -110,9 +120,22 @@ LF는 개정 시행을 2025년 2월 18일 0시(UTC)로 공지했고 기준은 �
 | 스토리지 문구의 volume mode | 동적 볼륨 프로비저닝 |
 | 고가용성 클러스터 관리(Manage a highly-available Kubernetes cluster) | 고가용성 컨트롤 플레인 구현과 구성(왼쪽 옛 문구를 구체화한 것) |
 
-etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스터 수명주기 관리"와 HA 항목에 걸리고 kubernetes.io에 태스크 문서로 남아 있습니다. 후기도 갈립니다. Cassisi(2026)는 실러버스에서 빠졌다고 판단했고 Juikar(2026)는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 그래서 이 시리즈는 두 절차를 함정 위주로 짧게 남겼습니다([5편 4장](/blog/cert/cka/cka-02-cluster-architecture)).
+빠진 두 항목을 그냥 버리기는 어렵습니다. etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스터 수명주기 관리"와 HA 항목에 걸리고 kubernetes.io에 태스크 문서로 남아 있습니다.
 
-도구도 바뀌었습니다. etcd 3.6부터 `etcdctl snapshot status`와 `snapshot restore`가 제거되어 확인과 복구는 `etcdutl`로 합니다. kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0이고(release-1.37 `constants.go`의 `DefaultEtcdVersion`, 1.36은 3.6.8) 둘 다 3.6 이후입니다. `ETCDCTL_API=3`을 붙이던 옛 강의 명령은 그대로 외우지 않습니다. 개정 전 Important Instructions에 있던 "The CKA environment is currently running etcd v3.5." 줄은 2025년 11월 판부터 없습니다.
+후기도 갈립니다.
+
+- Cassisi(2026): 실러버스에서 빠졌다고 판단
+- Juikar(2026): etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적음
+
+그래서 이 시리즈는 두 절차를 함정 위주로 짧게 남겼습니다([5편 4장](/blog/cert/cka/cka-02-cluster-architecture)).
+
+도구도 바뀌었습니다. etcd 3.6부터 `etcdctl snapshot status`와 `snapshot restore`가 제거되어 확인과 복구는 `etcdutl`로 합니다. 시험 버전 기준으로도 이 변화를 피할 수 없습니다.
+
+- kubeadm 1.37이 기본으로 쓰는 etcd는 3.7.0입니다(release-1.37 `constants.go`의 `DefaultEtcdVersion`).
+- 1.36은 3.6.8입니다. 둘 다 3.6 이후입니다.
+- 개정 전 Important Instructions에 있던 "The CKA environment is currently running etcd v3.5." 줄은 2025년 11월 판부터 없습니다.
+
+`ETCDCTL_API=3`을 붙이던 옛 강의 명령은 그대로 외우지 않습니다.
 
 <details>
 <summary>기초부터: 개정으로 들어온 단어를 한 줄씩</summary>
@@ -130,7 +153,12 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 | HPA | 사용량을 보고 Pod 수를 늘리고 줄이는 자동 확장 | 할인 행사 때 주문 API Pod를 3개에서 10개로 | [6편](/blog/cert/cka/cka-03-workloads-scheduling) |
 | etcd | 클러스터의 모든 객체가 저장되는 키-값 저장소 | 주문 장부 원본 | [4편](/blog/cert/cka/cka-01b-core-objects-and-flow) |
 
-`etcdctl`과 `etcdutl`은 이름이 한 글자 차이라 헷갈립니다. `etcdctl`은 돌고 있는 etcd 서버에 네트워크로 붙어 묻는 클라이언트이고 `etcdutl`은 서버 없이 etcd 데이터 파일을 직접 다루는 관리 도구입니다([etcd 문서](https://etcd.io/docs/v3.6/op-guide/recovery/)). 스냅숏을 뜨는 일은 서버에 물어야 하니 `etcdctl snapshot save`이고 받아 둔 파일을 확인하고 풀어 놓는 일은 파일 작업이니 `etcdutl snapshot status`, `etcdutl snapshot restore`입니다.
+`etcdctl`과 `etcdutl`은 이름이 한 글자 차이라 헷갈립니다. 상대가 서버인지 파일인지로 가르면 됩니다([etcd 문서](https://etcd.io/docs/v3.6/op-guide/recovery/)).
+
+| 도구 | 정체 | 스냅숏 작업 |
+|---|---|---|
+| `etcdctl` | 돌고 있는 etcd 서버에 네트워크로 붙어 묻는 클라이언트 | 스냅숏을 뜨는 일은 서버에 물어야 하니 `etcdctl snapshot save` |
+| `etcdutl` | 서버 없이 etcd 데이터 파일을 직접 다루는 관리 도구 | 받아 둔 파일을 확인하고 풀어 놓는 일은 파일 작업이니 `etcdutl snapshot status`, `etcdutl snapshot restore` |
 
 > **정리**: 표의 단어는 하는 일 한 줄로 기억해 둡니다. etcd 도구는 돌고 있는 서버에 묻는 일이면 `etcdctl`, 데이터 파일을 직접 다루는 일이면 `etcdutl`로 가릅니다.
 
@@ -152,7 +180,13 @@ etcd와 kubeadm 업그레이드는 명시 문구에서 빠졌지만 "클러스�
 
 ### 3-2. 과제마다 다른 호스트
 
-공식 안내에 따르면 각 과제는 지정된 호스트에서 풉니다. `ssh <노드 이름>`으로 들어가고 ssh 안에서 다시 ssh는 할 수 없으며 끝나면 `exit`로 시작 호스트(base)로 돌아옵니다. base 노드는 재부팅하면 안 됩니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. ssh 호스트의 kubectl이 미리 설정되어 있다는 문구는 있지만 kubectl에 sudo가 필요한지는 나와 있지 않습니다.
+공식 안내에 따르면 각 과제는 지정된 호스트에서 풉니다.
+
+1. `ssh <노드 이름>`으로 들어갑니다. ssh 안에서 다시 ssh는 할 수 없습니다.
+2. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다.
+3. 끝나면 `exit`로 시작 호스트(base)로 돌아옵니다.
+
+base 노드는 재부팅하면 안 됩니다. ssh 호스트의 kubectl이 미리 설정되어 있다는 문구는 있지만 kubectl에 sudo가 필요한지는 나와 있지 않습니다.
 
 | 도구 | 공식 안내 기준 |
 |---|---|
@@ -214,7 +248,9 @@ alias는 셸 하나에만 걸리는 설정입니다. base 호스트에서 `alias
 | 과제마다 표시되는 Quick Reference 상자의 링크 | |
 | /usr/share 아래 문서, man 페이지 | Important Instructions가 각 ssh 호스트에 `man`과 man 페이지가 있다고 적는다 |
 
-문서는 시험 VM 안의 Firefox로만 엽니다. 번역 문서도 허용되지만 LF는 영어판을 권합니다. Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL을 외워 두라고 했습니다. 미리 위치를 익혀 둘 페이지는 시험 동사(install, upgrade, configure, troubleshoot)에 바로 걸리는 것들입니다. 경로는 모두 `https://kubernetes.io` 아래입니다.
+문서는 시험 VM 안의 Firefox로만 엽니다. 번역 문서도 허용되지만 LF는 영어판을 권합니다.
+
+Suzuki는 브라우저가 문서 페이지로 자동으로 열리지 않아 URL을 외워 두라고 했습니다. 미리 위치를 익혀 둘 페이지는 시험 동사(install, upgrade, configure, troubleshoot)에 바로 걸리는 것들입니다. 경로는 모두 `https://kubernetes.io` 아래입니다.
 
 | 주제 | 경로 |
 |---|---|

@@ -18,11 +18,21 @@ seriesOrder: 10
 
 ## 결론부터
 
-1. 응시권 하나($445, 2026년 10월 20일 기준)에는 재응시 1회와 killer.sh 시뮬레이터 2회가 들어 있습니다. 구매 후 12개월 안에 응시해야 하고 예약 변경은 24시간 전까지만 됩니다. 예정 시각에서 30분이 지나도록 시작하지 못하면 결시가 되고 환불도 재응시도 없습니다.
-2. 정가로 살 이유는 적습니다. Linux Foundation(LF)은 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50% 할인을 했고(2025년은 제3자 기사 기준) 2026년에는 거의 매달 일주일 안팎의 35~40% 행사를 열었으며 5월에는 50%가 한 번 있었습니다. 지금 진행 중인 할인은 LF CKA 시험 페이지에서 확인합니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
+1. 응시권 하나($445, 2026년 10월 20일 기준)에는 재응시 1회와 killer.sh 시뮬레이터 2회가 들어 있습니다. 기한 규칙은 세 가지입니다.
+   - 구매 후 12개월 안에 응시
+   - 예약 변경은 24시간 전까지만
+   - 예정 시각에서 30분이 지나도록 시작하지 못하면 결시. 환불도 재응시도 없음
+2. 정가로 살 이유는 적습니다. Linux Foundation(LF)의 할인 이력은 이렇습니다.
+   - 2024년과 2025년 모두 12월 초 Cyber Week에 단일 시험 50%(2025년은 제3자 기사 기준)
+   - 2026년에는 거의 매달 일주일 안팎의 35~40% 행사, 5월에는 50%가 한 번
+
+   지금 진행 중인 할인은 LF CKA 시험 페이지에서 확인합니다. 국내에서는 LF 공인 교육 파트너로 표기된 프로그래머스가 바우처를 552,000원(20% 할인가, 2026년 10월 20일 확인)에 팝니다.
 3. 연습은 강의와 랩(KodeKloud), 무료 시나리오(Killercoda), 공식 시뮬레이터(killer.sh 2회) 순서로 잡습니다. killer.sh가 실제 시험보다 어렵다는 평가는 응시자와 강의 운영진에게서 나왔고 공식 문서에는 그런 비교가 없습니다. 풀이를 보고 배우는 용도로 씁니다.
 4. 덤프를 쓰지 않은 2025~2026년 후기에서 반복해 나온 주제는 트러블슈팅(kubelet, 인증서와 kubeconfig, 컨트롤 플레인), Helm, Gateway API, CNI 설치, Kustomize, CRD입니다. 가장 흔한 실패 원인은 시간 부족이었고 모의고사 점수와 실제 점수가 크게 어긋난 사례도 여럿 있었습니다.
-5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 공식 사전 설치 도구는 `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`입니다. `jq`와 `tmux`는 2025년 3월 판부터 목록에서 빠졌고 `helm`과 `etcdctl`은 해당 과제 호스트에 있을 가능성이 높은 정도입니다.
+5. 시험은 과제마다 `ssh`로 호스트를 옮겨 푸는 방식이라 `kubectl config use-context`를 문항마다 치던 옛 팁은 필요 없습니다. 도구는 세 갈래로 기억합니다.
+   - 공식 사전 설치: `kubectl`(alias `k`), `yq`, `curl`, `wget`, `man`
+   - 2025년 3월 판부터 목록에서 빠짐: `jq`, `tmux`
+   - 해당 과제 호스트에 있을 가능성이 높은 정도: `helm`, `etcdctl`
 6. 덤프와 "실제 시험 문제"를 표방하는 자료는 이 글에서 다루지 않습니다. LF 응시 약관 4.4절은 다른 사람의 기억에 기댄 자료(braindump)를 쓰는 것 자체를 부정행위로 정의하고 자격 취소와 영구 응시 제한까지 정해 두었습니다.
 
 시험 구조와 영역별 범위는 [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [5편](/blog/cert/cka/cka-02-cluster-architecture)부터 [9편](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 그 위에서 자료와 규칙과 당일 운영만 다룹니다.
@@ -84,11 +94,17 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 
 ![시험 터미널의 구조 예시. kubectl이 없는 base 호스트에서 과제마다 ssh로 과제 호스트에 들어가고 exit로 base에 돌아온다. 과제 호스트에는 k, yq, curl, wget, man이 있고 과제 호스트 안에서 다시 ssh할 수는 없다](/uploads/cert/cka/cka-07-resources-and-exam-day/exam-hosts.svg)
 
-그림의 클러스터 이름과 개수는 설명을 위한 예입니다. "들어가서 풀고 나온다"는 왕복 하나만 지키면 됩니다. 이전 과제 호스트에 남은 채 다음 과제를 풀면 다른 클러스터를 고치게 되고 채점 대상 클러스터에는 아무것도 안 남습니다. 그 밖에 공식 안내에서 확인한 내용을 적어 둡니다.
+그림의 클러스터 이름과 개수는 설명을 위한 예입니다. "들어가서 풀고 나온다"는 왕복 하나만 지키면 됩니다.
+
+이걸 놓치면 손해가 큽니다. 이전 과제 호스트에 남은 채 다음 과제를 풀면 다른 클러스터를 고치게 되고 채점 대상 클러스터에는 아무것도 안 남습니다.
+
+그 밖에 공식 안내에서 확인한 내용을 적어 둡니다.
 
 - 시작 호스트(`base`)에는 `kubectl`이 없습니다. 모든 작업은 과제가 지정한 호스트에 `ssh`로 들어가서 합니다. ssh 안에서 다시 ssh는 할 수 없고 `base`를 재부팅하면 시험 환경이 다시 시작되지 않습니다.
 - 모든 ssh 호스트에 `kubectl`(alias `k`, bash 자동완성), `yq`, `curl`, `wget`, `man`이 "pre-installed and pre-configured" 상태입니다. 2025-02-11 판까지 목록에 있던 `jq`와 `tmux`는 2025-03-28 판부터 빠졌고 `jq` 자리에 `yq`가 들어왔습니다(Wayback Machine 대조).
-- Resources Allowed 문서에 따르면 과제를 푸는 데 패키지 설치는 필요하지 않습니다. 그래서 `helm`과 `etcdctl`은 해당 과제가 나오는 호스트에 있을 가능성이 높습니다. 도구 이름을 밝힌 공식 문장은 없습니다. `etcdutl`, `crictl`, 단독 `kustomize`는 근거가 없으니 `which`로 먼저 확인합니다. `kubectl apply -k`와 `kubectl kustomize`는 kubectl에 내장입니다.
+- Resources Allowed 문서에 따르면 과제를 푸는 데 패키지 설치는 필요하지 않습니다. 그래서 `helm`과 `etcdctl`은 해당 과제가 나오는 호스트에 있을 가능성이 높습니다. 도구 이름을 밝힌 공식 문장은 없습니다.
+  - `etcdutl`, `crictl`, 단독 `kustomize`는 근거가 없으니 `which`로 먼저 확인합니다.
+  - `kubectl apply -k`와 `kubectl kustomize`는 kubectl에 내장입니다.
 - 허용 문서 네 곳 외에 과제의 Quick Reference 상자 링크와 /usr/share 아래 문서도 볼 수 있습니다. 허용 문서 안의 검색은 되지만 외부 검색 결과를 여는 것은 안 됩니다.
 - VSCodium의 확장 설치는 금지입니다. 내장 터미널은 써도 됩니다.
 - Firefox에는 Simple Translate 확장이 깔려 있습니다. 번역된 문서도 허용되지만 LF는 최신 내용인 영어판을 권합니다.
@@ -171,7 +187,9 @@ killer.sh는 CKA 페이지에서 난이도를 "The CKA is hard but a rewarding c
 | 2025 | 12-01 ~ 12-09 | 50% |
 | 2026 | 미발표. 지난 2년은 Cyber Monday(2026년은 11월 30일) 즈음 시작해 열흘쯤 이어짐 | 지난 2년과 같다면 50% 안팎 |
 
-응시권은 등록일부터 12개월 동안 쓸 수 있습니다. 12월에 응시할 계획이면 Cyber Week에 사서 바로 예약하는 흐름이 가장 쌉니다. 예약은 최소 24시간 전에 잡아야 하므로(1-2절) 행사 마지막 날 사서 바로 다음 날 응시하는 식은 안 됩니다. 행사가 예상과 다르게 열리지 않으면 상시 30% 코드가 기준선입니다.
+응시권은 등록일부터 12개월 동안 쓸 수 있습니다. 12월에 응시할 계획이면 Cyber Week에 사서 바로 예약하는 흐름이 가장 쌉니다. 행사가 예상과 다르게 열리지 않으면 상시 30% 코드가 기준선입니다.
+
+예약 규칙 때문에 막히는 경우가 하나 있습니다. 예약은 최소 24시간 전에 잡아야 하므로(1-2절) 행사 마지막 날 사서 바로 다음 날 응시하는 식은 안 됩니다.
 
 12월 초 Cyber Week나 상시 할인으로 사 두고 그 뒤에 일정을 잡으면 비용이 가장 적게 듭니다. 다만 12개월 안에 두 번을 다 써야 하므로 공부를 시작하는 시점에 맞춰 사는 편이 안전합니다.
 
@@ -196,7 +214,12 @@ killer.sh는 CKA 페이지에서 난이도를 "The CKA is hard but a rewarding c
 | 『CKA Study Guide』 2판(O'Reilly, Benjamin Muschko) | 유료 | 책 | 해당 없음 | 2026-02 출간, Helm·Kustomize·Gateway API·CRD 포함(제3자 서평 기준) | 출판사 페이지 |
 | 『Acing the CKA Exam』 2판(Manning, Chad M. Crowell 외) | 유료 | 책 | 해당 없음 | 2025-11 출간, 오퍼레이터·Gateway API·Kustomize 포함(제3자 서평 기준) | 출판사 페이지 |
 
-표에 넣은 GitHub 저장소는 모두 연습 문제를 직접 만들었다고 밝히거나 공식 문서 링크를 모아 둔 곳입니다. theplatformlab 저장소는 "All exercises are independently designed training scenarios"와 "It does not include, share, or reproduce actual CKA exam questions"라는 문구를 README에 적어 두었습니다. 제목이나 설명에 "실제 시험 문제", "기출", "real exam questions"를 내건 강의와 영상과 저장소는 출처가 응시자 기억일 가능성이 높아 표에서 뺐습니다. 근거는 8절의 약관 조항입니다.
+표에 넣은 GitHub 저장소는 모두 연습 문제를 직접 만들었다고 밝히거나 공식 문서 링크를 모아 둔 곳입니다. 예를 들어 theplatformlab 저장소는 README에 이런 문구를 적어 두었습니다.
+
+- "All exercises are independently designed training scenarios"
+- "It does not include, share, or reproduce actual CKA exam questions"
+
+반대로 제목이나 설명에 "실제 시험 문제", "기출", "real exam questions"를 내건 강의와 영상과 저장소는 출처가 응시자 기억일 가능성이 높아 표에서 뺐습니다. 근거는 8절의 약관 조항입니다.
 
 자료를 고를 때는 이런 점을 봤습니다.
 
@@ -297,7 +320,12 @@ vagrant destroy -f        # 전부 지우기
 | VM에 kubeadm | 머신마다 2GB 이상 RAM, 컨트롤 플레인 2 CPU 이상, 스왑 처리. 맥은 Multipass | kubeadm init과 join, 업그레이드, etcd 백업과 복구, static Pod와 kubelet 트러블슈팅 | 메모리를 많이 씀 |
 | Killercoda 플레이그라운드 | 브라우저에서 바로 | 설치 없이 짧게 반복 | 세션 시간이 제한됨 |
 
-애플 실리콘 맥이면 KodeKloud가 공개한 [certified-kubernetes-administrator-course 저장소](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)의 `kubeadm/kubeadm-clusters/apple-silicon` 스크립트가 Multipass로 VM을 만들고 `/etc/hosts`까지 맞춰 줍니다. KodeKloud 안내는 최소 8GB(이때는 컨트롤 플레인 1대와 워커 1대), 3노드는 16GB 이상을 권합니다. KodeKloud 커뮤니티에는 ARM 맥에서 VirtualBox가 동작하지 않는다는 답변이 있고 LF 포럼(LFS258)에는 Multipass 노드를 껐다 켜면 `/etc/hosts`가 되돌아가 워커 조인이 깨졌다는 보고가 있습니다.
+애플 실리콘 맥이면 KodeKloud가 공개한 [certified-kubernetes-administrator-course 저장소](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)의 `kubeadm/kubeadm-clusters/apple-silicon` 스크립트가 Multipass로 VM을 만들고 `/etc/hosts`까지 맞춰 줍니다. 메모리는 KodeKloud 안내 기준으로 이만큼 잡습니다.
+
+- 최소 8GB: 컨트롤 플레인 1대와 워커 1대
+- 3노드: 16GB 이상
+
+맥에서 걸리는 지점도 두 가지 보고가 있습니다. KodeKloud 커뮤니티에는 ARM 맥에서 VirtualBox가 동작하지 않는다는 답변이 있습니다. LF 포럼(LFS258)에는 Multipass 노드를 껐다 켜면 `/etc/hosts`가 되돌아가 워커 조인이 깨졌다는 보고가 있습니다.
 
 kind로 CNI 설치까지 연습하는 설정은 공식 문서의 옵션 둘을 합치면 됩니다.
 
@@ -342,8 +370,12 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [5편 2~4절](/blog/cer
 ### 5-1. 주제 수준의 경향
 
 - 트러블슈팅: 노드가 NotReady일 때 kubelet과 컨테이너 런타임 확인, 망가진 컨트롤 플레인 구성요소 복구가 여러 글에 나옵니다. 비중 30% 영역이라 [9편](/blog/cert/cka/cka-06-troubleshooting)의 판단 순서를 손에 익혀 두는 효과가 가장 큽니다.
-- 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다. 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다. 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다. 확인 명령과 순서는 [5편 7-2절](/blog/cert/cka/cka-02-cluster-architecture)에 정리했습니다.
-- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 했고 Nattapol(2025-06)과 Suzuki(2026-01)도 Gateway API를 새로 공부한 주제로 꼽았습니다. 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다. 내용은 [7편 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
+- 설치형 과제: CNI 설치, 컨테이너 런타임 설치, Helm 차트 설치가 개정 직후부터 계속 언급됩니다.
+  - 2026년 8월 불합격 후기는 CNI 설치에서 Pod CIDR을 바꿔야 하는지 판단이 서지 않았다고 적었습니다.
+  - 과제가 요구하지 않은 값은 바꾸지 않고 클러스터의 실제 Pod CIDR을 먼저 확인하는 습관이 필요합니다. 확인 명령과 순서는 [5편 7-2절](/blog/cert/cka/cka-02-cluster-architecture)에 정리했습니다.
+- Gateway API: 2026년 8월 불합격 후기는 Gateway, GatewayClass, HTTPRoute, 호스트 이름, NodePort Service가 어떻게 이어지는지 헷갈렸다고 했습니다. Nattapol(2025-06)과 Suzuki(2026-01)도 Gateway API를 새로 공부한 주제로 꼽았습니다.
+  - 허용 문서인 gateway-api.sigs.k8s.io의 위치를 미리 익혀 둡니다.
+  - 내용은 [7편 4절](/blog/cert/cka/cka-04-services-networking)에 있고 헤더 매칭, 필터, 다른 네임스페이스 참조(ReferenceGrant)는 4-6절에 따로 모았습니다.
 - Helm과 Kustomize: 커리큘럼 문구는 "Helm과 Kustomize로 클러스터 구성요소 설치"입니다. 개정 직후 응시자들이 Helm 과제를 언급했고 2026년 8월 후기 작성자는 모의고사에서 Helm 문제를 건너뛰었다고 썼습니다. Kustomize는 yltw가 시험 전에 익힌 명령으로 꼽았습니다. 정리는 [5편 6절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 - etcd와 kubeadm 업그레이드: 개정 커리큘럼에서 명시 항목이 빠졌고 후기도 갈립니다. Cassisi는 etcd가 실러버스에서 빠졌다고 판단했고 Juikar는 etcd 명령과 kubeadm 플래그에서 시간을 썼다고 적었습니다. 절차를 한 번씩은 손으로 해 봅니다([5편 4장](/blog/cert/cka/cka-02-cluster-architecture)).
 - 인증서와 kubeconfig: Juikar가 시간이 든 주제로 따로 꼽았습니다. `kubeadm certs check-expiration`, kubeconfig의 서버 주소와 인증서 경로 확인은 [9편 1-4절](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
@@ -359,7 +391,9 @@ kubeadm 클러스터를 처음부터 만드는 순서는 [5편 2~4절](/blog/cer
 
 ### 5-3. 1.33~1.37 변경 중 답이 달라지는 것
 
-시험 환경은 v1.37입니다. LF 안내문의 버전 표기는 1.35에서 1.36을 건너뛰고 2026-10-15 갱신판에서 1.37로 바뀌었습니다(출시 후 약 7주). 2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
+시험 환경은 v1.37입니다. LF 안내문의 버전 표기는 1.35에서 1.36을 건너뛰고 2026-10-15 갱신판에서 1.37로 바뀌었습니다(출시 후 약 7주).
+
+2024년 이전 강의와 후기는 그보다 4~5개 마이너 버전 앞이라 명령이나 기본값이 달라진 곳이 있습니다. 공식 문서와 릴리스 기록으로 확인한 것만 모았고 자세한 내용은 각 장에 있습니다.
 
 | 버전 | 바뀐 것 | 시험 답에 주는 영향 | 근거 | 이 시리즈 |
 |---|---|---|---|---|
@@ -445,7 +479,14 @@ exit
 
 ### 6-3. 호스트 이동과 권한
 
-공식 안내에 나오는 방식은 과제마다 ssh로 호스트를 옮기는 것 하나뿐입니다. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행하고 끝나면 `exit`로 base로 돌아옵니다. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 모든 ssh 호스트의 `kubectl`이 "pre-installed and pre-configured" 상태라는 공식 문구가 있으니 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. 들어가면 `k get nodes`로 과제 클러스터인지 한 번 확인합니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다. kubeconfig 구조와 컨텍스트 개념은 [5편 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
+공식 안내에 나오는 방식은 과제마다 ssh로 호스트를 옮기는 것 하나뿐입니다. 과제 하나의 흐름은 이렇습니다.
+
+1. 과제 상자에 적힌 `ssh <노드>`를 먼저 실행합니다.
+2. 들어가면 `k get nodes`로 과제 클러스터인지 한 번 확인합니다.
+3. 권한이 필요하면 `sudo -i`나 명령마다 `sudo`를 씁니다. 과제가 특정 kubeconfig 파일을 주면 `--kubeconfig <파일>`을 붙입니다.
+4. 끝나면 `exit`로 base로 돌아옵니다.
+
+모든 ssh 호스트의 `kubectl`이 "pre-installed and pre-configured" 상태라는 공식 문구가 있습니다. 그래서 `kubectl config use-context`를 문항마다 치던 옛 팁(2024년 이전 후기)은 필요 없습니다. kubeconfig 구조와 컨텍스트 개념은 [5편 1-5절](/blog/cert/cka/cka-02-cluster-architecture)에 있습니다.
 
 ### 6-4. vim과 YAML
 
@@ -456,7 +497,11 @@ exit
 set expandtab tabstop=2 shiftwidth=2
 ```
 
-문서에서 YAML을 붙여 넣다가 들여쓰기가 계단처럼 밀리면 붙여 넣기 전에 `:set paste`를 켭니다. 원격 터미널에서는 붙여 넣은 글이 키보드로 한 글자씩 친 것처럼 들어갈 수 있고 그러면 vim이 줄마다 자동 들여쓰기를 덧붙여 한 칸씩 밀립니다. paste 모드는 이 자동 들여쓰기를 잠시 끕니다. 다 붙여 넣으면 `:set nopaste`로 되돌립니다. 붙여 넣은 뒤 `yq . 파일명`으로 문법을 먼저 확인하면 `apply` 오류로 시간을 쓰는 일이 줄어듭니다.
+문서에서 YAML을 붙여 넣다가 들여쓰기가 계단처럼 밀리는 일이 있습니다. 원격 터미널에서는 붙여 넣은 글이 키보드로 한 글자씩 친 것처럼 들어갈 수 있고 그러면 vim이 줄마다 자동 들여쓰기를 덧붙여 한 칸씩 밀립니다. paste 모드는 이 자동 들여쓰기를 잠시 끕니다.
+
+1. 붙여 넣기 전에 `:set paste`를 켭니다.
+2. 다 붙여 넣으면 `:set nopaste`로 되돌립니다.
+3. `yq . 파일명`으로 문법을 먼저 확인합니다. `apply` 오류로 시간을 쓰는 일이 줄어듭니다.
 
 ### 6-5. 당일 체크리스트
 
@@ -485,7 +530,9 @@ set expandtab tabstop=2 shiftwidth=2
 | D-2 ~ D-1 | 새 공부는 멈추고 6-5절 점검표 확인 | 점검표 통과 |
 | D-day | 6-1절 시간 배분대로 | |
 
-불합격해도 재응시 기회가 남습니다. yu-min은 1차 불합격(5월 19일) 뒤 약 3주 반 만에 다시 응시해 합격했습니다. LF FAQ 표현으로 시뮬레이터는 "two attempts (per exam registration)"입니다. 재응시도 같은 등록 안의 기회라서 첫 응시 전에 2회를 다 썼다면 재응시 대비 세션은 추가로 사야 합니다.
+불합격해도 재응시 기회가 남습니다. yu-min은 1차 불합격(5월 19일) 뒤 약 3주 반 만에 다시 응시해 합격했습니다.
+
+시뮬레이터 횟수는 따로 챙겨야 합니다. LF FAQ 표현으로 시뮬레이터는 "two attempts (per exam registration)"입니다. 재응시도 같은 등록 안의 기회라서 첫 응시 전에 2회를 다 썼다면 재응시 대비 세션은 추가로 사야 합니다.
 
 ## 8. 덤프를 뺀 근거: LF 응시 약관
 
@@ -499,7 +546,16 @@ set expandtab tabstop=2 shiftwidth=2
 
 > Seeking and/or obtaining unauthorized access to examination materials (this includes using recollections of others or materials from previous administration of any Exam, a.k.a. braindump material, and/or any unauthorized publication of Exam questions with or without answers)
 
-같은 절은 "reconstruction through memorization"을 포함해 실제 시험 내용을 퍼뜨리는 행위와 시험 중 AI 도움("using AI or ChatGPT")도 금지 목록에 둡니다. 4.4절에는 처벌도 나옵니다. 부정행위가 확인되면 시험을 끝내지 못하고 결과를 받지 못하며 다른 LF 시험도 볼 수 없고 가진 자격도 회수될 수 있습니다. 3.4절에 따르면 LF는 재량으로 모든 자격을 취소하고 영구히 응시를 막을 수 있습니다. 핸드북의 채점 안내는 "Data Forensics"라는 통계 분석으로 부정행위와 문제 유출을 감시한다고 밝힙니다.
+같은 절은 "reconstruction through memorization"을 포함해 실제 시험 내용을 퍼뜨리는 행위와 시험 중 AI 도움("using AI or ChatGPT")도 금지 목록에 둡니다.
+
+4.4절에는 처벌도 나옵니다. 부정행위가 확인되면 이렇게 됩니다.
+
+- 시험을 끝내지 못합니다.
+- 결과를 받지 못합니다.
+- 다른 LF 시험도 볼 수 없습니다.
+- 가진 자격도 회수될 수 있습니다.
+
+3.4절에 따르면 LF는 재량으로 모든 자격을 취소하고 영구히 응시를 막을 수 있습니다. 핸드북의 채점 안내는 "Data Forensics"라는 통계 분석으로 부정행위와 문제 유출을 감시한다고 밝힙니다.
 
 실기 시험이라는 점도 덤프의 쓸모를 줄입니다. 채점은 클러스터의 최종 상태를 보고 과제는 지정된 노드에서 직접 고쳐야 합니다. 그래서 이 시리즈도 영역마다 "직접 해 보기"를 붙였습니다.
 

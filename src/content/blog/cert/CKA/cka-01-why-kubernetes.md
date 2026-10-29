@@ -56,7 +56,14 @@ seriesOrder: 3
 | 서버 수십 대, 컨테이너 수백 개 | 사람이 매번 확인하고 손으로 고침 | 무너짐 |
 | 오케스트레이터 사용 | 소프트웨어가 계속 확인하고 고침 | 쿠버네티스가 그 대표 |
 
-공식 문서 "Overview"는 쿠버네티스를 컨테이너화된 워크로드와 서비스를 관리하는 이식 가능하고 확장 가능한 오픈소스 플랫폼으로 소개하고 자가 치유, 서비스 디스커버리와 로드 밸런싱, 자동 롤아웃과 롤백, 자동 빈 패킹(bin packing)을 기능으로 듭니다. 위 질문 다섯과 하나씩 짝이 맞습니다.
+공식 문서 "Overview"는 쿠버네티스를 컨테이너화된 워크로드와 서비스를 관리하는 이식 가능하고 확장 가능한 오픈소스 플랫폼으로 소개합니다. 기능으로는 넷을 듭니다.
+
+- 자가 치유
+- 서비스 디스커버리와 로드 밸런싱
+- 자동 롤아웃과 롤백
+- 자동 빈 패킹(bin packing)
+
+위 질문 다섯과 하나씩 짝이 맞습니다.
 
 #### 2. 질문별로 맡는 구성요소
 
@@ -94,7 +101,9 @@ seriesOrder: 3
 | 상품 API 서버 1대 | 서비스 전체가 멈춤(SPOF) |
 | 상품 API Pod 3개를 노드 3대에 분산 | 나머지 2개가 요청을 받고 컨트롤러가 1개를 다시 띄움 |
 
-운영 방식도 바뀝니다. 예전에는 새벽에 서버가 죽으면 사람이 알람에 깨서 손으로 살렸습니다. 지금은 컨트롤러가 먼저 Pod를 다시 띄우고 사람은 나중에 원인을 봅니다. 다만 컨트롤 플레인 자체가 한 대뿐이면 그것이 SPOF로 남으므로 컨트롤 플레인을 여러 대로 두는 HA 구성은 [5편 5-1절](/blog/cert/cka/cka-02-cluster-architecture#5-1-두-가지-토폴로지)에서 다룹니다.
+운영 방식도 바뀝니다. 예전에는 새벽에 서버가 죽으면 사람이 알람에 깨서 손으로 살렸습니다. 지금은 컨트롤러가 먼저 Pod를 다시 띄우고 사람은 나중에 원인을 봅니다.
+
+다만 컨트롤 플레인 자체가 한 대뿐이면 그것이 SPOF로 남습니다. 컨트롤 플레인을 여러 대로 두는 HA 구성은 [5편 5-1절](/blog/cert/cka/cka-02-cluster-architecture#5-1-두-가지-토폴로지)에서 다룹니다.
 
 #### 5. 실전 시나리오: 자가 치유만으로 못 막는 연쇄 장애
 
@@ -138,7 +147,9 @@ seriesOrder: 3
 
 #### 7. 왜 지금 이 문제가 커졌나: MSA와 컨테이너 수
 
-인프라 모양이 물리 서버에서 VM과 컨테이너로 바뀌는 동안에도 서비스가 멈추지 않게 한다는 목표는 그대로였습니다. 바뀐 쪽은 관리할 대상의 수입니다. 쇼핑몰을 상품, 주문, 결제, 회원 서비스로 잘게 나누는 MSA(Microservice Architecture)로 가면 서비스마다 컨테이너가 여러 개씩 붙어서 전체가 수백에서 수천 개가 됩니다. 이 수를 사람이 하나씩 배포하고 지켜보고 살리는 방식은 버티지 못하므로 1번 표의 셋째 줄(오케스트레이터)로 넘어갑니다.
+인프라 모양이 물리 서버에서 VM과 컨테이너로 바뀌는 동안에도 서비스가 멈추지 않게 한다는 목표는 그대로였습니다. 바뀐 쪽은 관리할 대상의 수입니다.
+
+쇼핑몰을 상품, 주문, 결제, 회원 서비스로 잘게 나누는 MSA(Microservice Architecture)로 가면 서비스마다 컨테이너가 여러 개씩 붙어서 전체가 수백에서 수천 개가 됩니다. 이 수를 사람이 하나씩 배포하고 지켜보고 살리는 방식은 버티지 못하므로 1번 표의 셋째 줄(오케스트레이터)로 넘어갑니다.
 
 #### 8. VM이 풀어 준 것과 남긴 것, 하이퍼바이저 두 종류
 
@@ -164,11 +175,25 @@ Type 1이어도 VM마다 커널이 따로 있다는 점은 같습니다. 이 중
 | 한 서버에 올리는 수 | 많음 | 적음 |
 | 격리 강도 | 커널을 공유하므로 상대적으로 약함 | 강함 |
 
-그래서 클라우드에서는 둘을 겹쳐 씁니다. VM은 고객 사이 보안 경계를, 컨테이너는 그 안의 자원 효율을 맡습니다. 베어 메탈은 GPU를 직접 붙이는 대규모 학습(HPC), 마이크로초 단위 지연을 다투는 금융 거래, 가상화의 작은 손실도 아까운 대량 배치 처리처럼 특수한 곳에서 씁니다.
+그래서 클라우드에서는 둘을 겹쳐 씁니다. VM은 고객 사이 보안 경계를, 컨테이너는 그 안의 자원 효율을 맡습니다.
+
+베어 메탈은 이런 특수한 곳에서 씁니다.
+
+- GPU를 직접 붙이는 대규모 학습(HPC)
+- 마이크로초 단위 지연을 다투는 금융 거래
+- 가상화의 작은 손실도 아까운 대량 배치 처리
 
 #### 9. 컨테이너와 Docker, 그리고 쿠버네티스 런타임의 변화
 
-컨테이너는 리눅스 커널에 오래전부터 있던 기능으로 격리한 **보통의 프로세스 묶음**입니다. 마운트 네임스페이스는 2002년(커널 2.4.19), cgroup은 2008년(커널 2.6.24)에 커널에 들어왔고 2013년에 Solomon Hykes가 공개한 Docker가 이 기능들을 `docker run` 한 줄로 쓰게 포장했습니다. Docker는 컨테이너를 다루는 도구 하나의 이름이고 컨테이너는 커널 기능으로 만든 격리 실행 환경을 가리킵니다.
+컨테이너는 리눅스 커널에 오래전부터 있던 기능으로 격리한 **보통의 프로세스 묶음**입니다.
+
+| 연도 | 일어난 일 |
+|---|---|
+| 2002년 | 마운트 네임스페이스가 커널에 들어옴(커널 2.4.19) |
+| 2008년 | cgroup이 커널에 들어옴(커널 2.6.24) |
+| 2013년 | Solomon Hykes가 공개한 Docker가 이 기능들을 `docker run` 한 줄로 쓰게 포장 |
+
+Docker는 컨테이너를 다루는 도구 하나의 이름이고 컨테이너는 커널 기능으로 만든 격리 실행 환경을 가리킵니다.
 
 | 시기 | kubelet과 런타임의 연결 |
 |---|---|
@@ -450,7 +475,9 @@ Kubernetes Components 문서 기준입니다. "도는 방식"은 kubeadm 클러�
 
 #### 1. 닭과 달걀
 
-보통 Pod는 "API 서버에 기록 → 스케줄러가 노드 배정 → kubelet이 실행" 순서로 뜹니다. 그런데 클러스터를 처음 켤 때는 API 서버가 아직 없습니다. 그래서 kubeadm은 컨트롤 플레인 네 구성요소를 `/etc/kubernetes/manifests`에 파일로 두고 kubelet이 이 파일을 직접 읽어 띄우게 합니다. 공식 문서 "Static Pods"도 static Pod의 주된 쓰임을 컨트롤 플레인을 스스로 띄우는 일로 듭니다.
+보통 Pod는 "API 서버에 기록 → 스케줄러가 노드 배정 → kubelet이 실행" 순서로 뜹니다. 그런데 클러스터를 처음 켤 때는 API 서버가 아직 없습니다.
+
+그래서 kubeadm은 컨트롤 플레인 네 구성요소를 `/etc/kubernetes/manifests`에 파일로 두고 kubelet이 이 파일을 직접 읽어 띄우게 합니다. 공식 문서 "Static Pods"도 static Pod의 주된 쓰임을 컨트롤 플레인을 스스로 띄우는 일로 듭니다.
 
 #### 2. 미러 Pod
 
@@ -488,7 +515,14 @@ sudo ls /etc/kubernetes/manifests
 # kube-scheduler.yaml
 ```
 
-공식 문서 "Create static Pods"에 따르면 static Pod는 API 서버가 관리하지 않고 그 노드의 kubelet이 직접 관리합니다. kubelet은 이 디렉터리의 파일을 읽어 컨테이너를 띄우고 API 서버에는 보기용 미러 Pod만 만듭니다. 그래서 컨트롤 플레인 구성요소의 설정은 이 파일에서 고치고 저장하면 kubelet이 Pod를 다시 만듭니다. kubelet 자신은 systemd가 다시 띄웁니다(`Restart=always`).
+공식 문서 "Create static Pods"에 따르면 static Pod는 API 서버가 관리하지 않고 그 노드의 kubelet이 직접 관리합니다. kubelet은 이 디렉터리의 파일을 읽어 컨테이너를 띄우고 API 서버에는 보기용 미러 Pod만 만듭니다.
+
+누가 누구를 다시 띄우는지 나눠 두면 고칠 곳이 헷갈리지 않습니다.
+
+| 대상 | 다시 띄우는 쪽 |
+|---|---|
+| 컨트롤 플레인 구성요소 | kubelet. 이 파일에서 설정을 고치고 저장하면 Pod를 다시 만듦 |
+| kubelet 자신 | systemd(`Restart=always`) |
 
 ```bash
 kubectl get pod -n kube-system kube-controller-manager-<노드> \
@@ -554,7 +588,14 @@ Pod마다 먼저 뜨는 pause 컨테이너가 네트워크 네임스페이스를
 
 ### 2-4. 직접 해 보기
 
-kubeadm 노드에 ssh로 들어가 `sudo ls /etc/kubernetes/manifests`, `systemctl status kubelet containerd`, `sudo crictl pods`, `sudo crictl ps`를 차례로 실행합니다. `crictl ps`에서 컨트롤 플레인 네 구성요소와 kube-proxy, CoreDNS가 각각 어느 Pod 샌드박스에 속하는지 적습니다. kind라면 `docker exec -it <노드 이름> bash`로 노드에 들어갑니다.
+kubeadm 노드에 ssh로 들어가 아래를 차례로 실행합니다.
+
+1. `sudo ls /etc/kubernetes/manifests`
+2. `systemctl status kubelet containerd`
+3. `sudo crictl pods`
+4. `sudo crictl ps`
+
+`crictl ps`에서 컨트롤 플레인 네 구성요소와 kube-proxy, CoreDNS가 각각 어느 Pod 샌드박스에 속하는지 적습니다. kind라면 `docker exec -it <노드 이름> bash`로 노드에 들어갑니다.
 
 ---
 
@@ -595,7 +636,11 @@ kubectl get pods -l app=web
 
 `kubectl scale`은 Deployment의 `spec.replicas`를 API 서버에 직접 고쳐 쓰는 요청이라 컨트롤러 없이도 반영됩니다. READY의 분모가 5로 바뀐 것은 이 때문입니다. 나머지 칸은 모두 컨트롤러가 채우는 값입니다.
 
-이제 출력을 다시 보면 Deployment의 `spec.replicas`는 5로 바뀌었지만 Deployment 컨트롤러가 없어서 ReplicaSet의 `DESIRED`는 3에 머물렀습니다. 실제 Pod는 2개인데 ReplicaSet과 Deployment의 `status`는 3을 가리킵니다. `status`를 갱신하는 주체도 컨트롤러라서 컨트롤러가 멈추면 `status`는 마지막 값으로 굳습니다. 남은 Pod 2개는 계속 Running이었습니다.
+이제 출력을 다시 보면 Deployment의 `spec.replicas`는 5로 바뀌었지만 Deployment 컨트롤러가 없어서 ReplicaSet의 `DESIRED`는 3에 머물렀습니다.
+
+실제 Pod는 2개인데 ReplicaSet과 Deployment의 `status`는 3을 가리킵니다. `status`를 갱신하는 주체도 컨트롤러라서 컨트롤러가 멈추면 `status`는 마지막 값으로 굳습니다.
+
+그 와중에도 남은 Pod 2개는 계속 Running이었습니다.
 
 매니페스트를 되돌린 뒤의 출력입니다.
 
@@ -636,7 +681,14 @@ kube-scheduler 행의 "스케줄링 이벤트가 없음"은 이벤트를 쓰는 
 
 ### 3-4. 노드 전체가 응답을 멈추면 약 50초 + 5분
 
-노드가 상태 갱신을 멈추면 node lifecycle 컨트롤러가 `--node-monitor-grace-period`(1.37 기본 50초, 옛 자료는 40초)가 지난 뒤 노드 조건을 `Unknown`으로 바꾸고 `node.kubernetes.io/unreachable` taint를 붙입니다. 노드가 응답은 하지만 준비되지 않았다고 보고하면 `node.kubernetes.io/not-ready`가 붙습니다. Pod에는 `DefaultTolerationSeconds` 어드미션 플러그인이 넣은 300초 toleration이 기본으로 있습니다. 그래서 기본 설정에서는 약 50초에 300초를 더한 뒤 그 노드의 Pod가 삭제됩니다.
+노드가 상태 갱신을 멈추면 두 개의 시계가 차례로 돕니다.
+
+1. node lifecycle 컨트롤러가 `--node-monitor-grace-period`(1.37 기본 50초, 옛 자료는 40초)가 지난 뒤 노드 조건을 `Unknown`으로 바꾸고 `node.kubernetes.io/unreachable` taint를 붙입니다.
+2. Pod에는 `DefaultTolerationSeconds` 어드미션 플러그인이 넣은 300초 toleration이 기본으로 있습니다. 이 300초가 지나면 그 노드의 Pod가 삭제됩니다.
+
+그래서 기본 설정에서는 약 50초에 300초를 더한 뒤 그 노드의 Pod가 삭제됩니다.
+
+노드가 응답은 하지만 준비되지 않았다고 보고하면 `node.kubernetes.io/not-ready`가 붙습니다.
 
 <details>
 <summary>기초부터: 테인트와 톨러레이션, 그리고 노드가 꺼진 뒤의 시간표</summary>
@@ -676,9 +728,22 @@ kubectl get pod <Pod> -o jsonpath='{range .spec.tolerations[*]}{.key} {.effect} 
 # node.kubernetes.io/unreachable NoExecute 300
 ```
 
-Pod 삭제는 별도의 taint-eviction 컨트롤러가 맡고(1.29 beta부터 기본 분리, 1.34 GA) 지워진 Pod를 다른 노드에 새로 만드는 쪽은 ReplicaSet 같은 워크로드 컨트롤러입니다. 둘 다 controller-manager 안에서 돌므로 controller-manager가 멈춘 동안에는 축출도 일어나지 않습니다. 주인 없는 단독 Pod는 다시 만들어지지 않습니다.
+Pod를 지우는 쪽과 새로 만드는 쪽은 다릅니다.
 
-kind 워커 컨테이너를 `docker stop`으로 멈춰 잰 결과입니다. 약 45초 안에 노드가 `Unknown`이 되고 `unreachable` 테인트가 붙었습니다. 50초보다 짧은 것은 유예 시간이 멈춘 시각에서 세지 않고 마지막 Lease 갱신 시각에서 세기 때문입니다. 갱신이 10초 간격이라 멈추기 몇 초 전의 갱신이 기준이 됩니다. `tolerationSeconds: 30`을 준 Pod는 그 30초 뒤, 기본 Pod는 약 300초 뒤 `TaintManagerEviction`(`Marking for deletion Pod shop/web-...`) 이벤트와 함께 `Terminating`이 됐고 Deployment의 대체 Pod는 다른 워커에서 `Running`이 됐습니다. 노드가 돌아오지 않으면 옛 Pod는 `Terminating`에 남습니다.
+| 하는 일 | 맡는 쪽 |
+|---|---|
+| 그 노드의 Pod 삭제 | 별도의 taint-eviction 컨트롤러(1.29 beta부터 기본 분리, 1.34 GA) |
+| 지워진 Pod를 다른 노드에 새로 만들기 | ReplicaSet 같은 워크로드 컨트롤러 |
+
+둘 다 controller-manager 안에서 돌므로 controller-manager가 멈춘 동안에는 축출도 일어나지 않습니다. 주인 없는 단독 Pod는 다시 만들어지지 않습니다.
+
+kind 워커 컨테이너를 `docker stop`으로 멈춰 잰 결과입니다.
+
+- 약 45초 안에 노드가 `Unknown`이 되고 `unreachable` 테인트가 붙었습니다.
+- `tolerationSeconds: 30`을 준 Pod는 그 30초 뒤, 기본 Pod는 약 300초 뒤 `TaintManagerEviction`(`Marking for deletion Pod shop/web-...`) 이벤트와 함께 `Terminating`이 됐습니다.
+- Deployment의 대체 Pod는 다른 워커에서 `Running`이 됐습니다. 노드가 돌아오지 않으면 옛 Pod는 `Terminating`에 남습니다.
+
+50초보다 짧은 것은 유예 시간이 멈춘 시각에서 세지 않고 마지막 Lease 갱신 시각에서 세기 때문입니다. 갱신이 10초 간격이라 멈추기 몇 초 전의 갱신이 기준이 됩니다.
 
 ### 3-5. 직접 해 보기
 
@@ -870,14 +935,23 @@ kubectl describe pod mem-over
 #     Restart Count:  2
 ```
 
-`describe`는 `get`보다 조금 뒤에 친 출력이라 `Restart Count`가 하나 더 많습니다. 시험에서 확인할 곳은 `describe`의 `Last State`입니다. 컨테이너가 재시작해 지금 `Running`이어도 직전 종료 이유가 `Last State`에 남습니다. jsonpath로 뽑으면 이렇습니다.
+`describe`는 `get`보다 조금 뒤에 친 출력이라 `Restart Count`가 하나 더 많습니다.
+
+시험에서 확인할 곳은 `describe`의 `Last State`입니다. 컨테이너가 재시작해 지금 `Running`이어도 직전 종료 이유는 `Last State`에 남아 있습니다. jsonpath로 뽑으면 이렇습니다.
 
 ```bash
 kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason} {.status.containerStatuses[0].lastState.terminated.exitCode}{"\n"}'
 # OOMKilled 137
 ```
 
-판단과 종료는 커널이 합니다. kubelet은 컨테이너를 만들 때 한도를 런타임에 넘기고 끝난 뒤 결과를 받아 `OOMKilled`로 보고합니다. 한도를 넘은 컨테이너는 커널이 메모리 압박을 감지할 때 종료됩니다(공식 문서 "Resource Management for Pods and Containers"). 노드의 커널 로그(`dmesg`)에는 `Memory cgroup out of memory: Killed process ...` 줄이 남습니다.
+여기서 역할을 헷갈리기 쉽습니다. 판단과 종료는 커널이 합니다.
+
+| 누가 | 하는 일 |
+|---|---|
+| kubelet | 컨테이너를 만들 때 한도를 런타임에 넘기고 끝난 뒤 결과를 받아 `OOMKilled`로 보고 |
+| 커널 | 메모리 압박을 감지할 때 한도를 넘은 컨테이너를 종료(공식 문서 "Resource Management for Pods and Containers") |
+
+커널이 한 일의 흔적은 노드의 커널 로그(`dmesg`)에 `Memory cgroup out of memory: Killed process ...` 줄로 남습니다.
 
 ### 4-3. 137은 128 + 9
 
@@ -885,7 +959,11 @@ kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.te
 137 = 128 + 9 (SIGKILL)
 ```
 
-셸과 컨테이너 런타임은 시그널 N으로 끝난 프로세스의 종료 코드를 128+N으로 적는 관례를 따릅니다(bash 매뉴얼의 EXIT STATUS). 그래서 128보다 큰 값이면 시그널로 끝났을 가능성이 높습니다. 프로세스가 직접 `exit(137)`을 불러도 같은 값이 나오므로 OOM 여부는 kubelet이 따로 적는 `Reason: OOMKilled`로 판단합니다. 자주 보는 값을 함께 적어 둡니다.
+셸과 컨테이너 런타임은 시그널 N으로 끝난 프로세스의 종료 코드를 128+N으로 적는 관례를 따릅니다(bash 매뉴얼의 EXIT STATUS). 그래서 128보다 큰 값이면 시그널로 끝났을 가능성이 높습니다.
+
+다만 가능성일 뿐입니다. 프로세스가 직접 `exit(137)`을 불러도 같은 값이 나옵니다. OOM 여부는 kubelet이 따로 적는 `Reason: OOMKilled`로 판단합니다.
+
+자주 보는 값을 함께 적어 둡니다.
 
 | Exit Code | 흔한 원인 | 같이 볼 것 |
 |---|---|---|
@@ -894,11 +972,19 @@ kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.te
 | 137 | SIGKILL. OOM이거나 종료 유예 시간(`terminationGracePeriodSeconds`, 기본 30초)을 넘김 | `Reason`이 `OOMKilled`인지 `Error`인지 |
 | 143 | SIGTERM(128+15)으로 정상 종료 요청을 받고 끝남 | 삭제나 롤아웃 중이었는지 |
 
-143과 137이 한 흐름에서 갈리는 경우가 있습니다. Pod를 지우면 kubelet은 먼저 SIGTERM을 보내고 유예 시간(기본 30초)을 기다립니다. 그 안에 프로세스가 스스로 끝나면 143이고 30초가 지나도 살아 있으면 kubelet이 SIGKILL을 보내 137이 됩니다(Pod Lifecycle 문서의 Termination of Pods). 그래서 137인데 Reason이 `OOMKilled`가 아니면 "종료 신호를 받고도 제때 안 끝난 앱"을 의심합니다.
+143과 137이 한 흐름에서 갈리는 경우가 있습니다. Pod를 지울 때입니다(Pod Lifecycle 문서의 Termination of Pods).
+
+1. kubelet이 먼저 SIGTERM을 보내고 유예 시간(기본 30초)을 기다립니다.
+2. 그 안에 프로세스가 스스로 끝나면 143입니다.
+3. 30초가 지나도 살아 있으면 kubelet이 SIGKILL을 보내 137이 됩니다.
+
+그래서 137인데 Reason이 `OOMKilled`가 아니면 "종료 신호를 받고도 제때 안 끝난 앱"을 의심합니다.
 
 ### 4-4. 같은 Pod 안의 재시작과 CrashLoopBackOff
 
-`restartPolicy`의 기본값은 `Always`라서 kubelet은 OOM으로 끝난 컨테이너를 같은 Pod 안에서 다시 시작합니다. Pod 오브젝트와 IP는 그대로입니다. 다시 250M을 잡으면 또 죽으므로 kubelet은 재시작 사이에 간격을 둡니다. 공식 문서 "Pod Lifecycle" 기준으로 간격은 10초에서 시작해 두 배씩 늘고 300초에서 멈춥니다. 컨테이너가 10분 동안 문제없이 돌면 간격이 초기화됩니다. 기다리는 동안의 상태가 `CrashLoopBackOff`이고 이벤트에는 이렇게 남습니다.
+`restartPolicy`의 기본값은 `Always`라서 kubelet은 OOM으로 끝난 컨테이너를 같은 Pod 안에서 다시 시작합니다. Pod 오브젝트와 IP는 그대로입니다.
+
+다시 250M을 잡으면 또 죽으므로 kubelet은 재시작 사이에 간격을 둡니다. 기다리는 동안의 상태가 `CrashLoopBackOff`입니다. 공식 문서 "Pod Lifecycle" 기준으로 간격은 10초에서 시작해 두 배씩 늘고 300초에서 멈춥니다.
 
 | 연속 실패 | 다음 시작까지 대기 |
 |---|---|
@@ -909,7 +995,14 @@ kubectl get pod mem-over -o jsonpath='{.status.containerStatuses[0].lastState.te
 | 5번째 | 160초 |
 | 6번째부터 | 300초에서 멈춤 |
 
-10분을 문제없이 돌면 대기 시간이 다시 10초부터 시작합니다. 이 기본값을 바꾸는 기능도 있습니다. `ReduceDefaultCrashLoopBackOffDecay`(1.33 알파, 기본 꺼짐)는 시작 1초, 최대 60초로 줄이고 `KubeletCrashLoopBackOffMax`(1.35 베타, 기본 켜짐)는 kubelet 설정으로 최대값을 바꿀 수 있게 합니다. 시험 클러스터에서 설정을 바꿨다는 안내는 없으니 표의 기본값을 기준으로 봅니다.
+컨테이너가 10분 동안 문제없이 돌면 대기 시간이 다시 10초부터 시작합니다.
+
+이 기본값을 바꾸는 기능도 있습니다.
+
+- `ReduceDefaultCrashLoopBackOffDecay`(1.33 알파, 기본 꺼짐): 시작 1초, 최대 60초로 줄입니다.
+- `KubeletCrashLoopBackOffMax`(1.35 베타, 기본 켜짐): kubelet 설정으로 최대값을 바꿀 수 있게 합니다.
+
+시험 클러스터에서 설정을 바꿨다는 안내는 없으니 표의 기본값을 기준으로 봅니다. 이벤트에는 이렇게 남습니다.
 
 ```
 Warning   BackOff   pod/mem-over   Back-off restarting failed container stress in pod mem-over_default(...)
@@ -924,7 +1017,12 @@ limit을 실제 사용량에 맞게 올리거나 애플리케이션의 메모리
 
 ### 4-5. 노드 메모리가 모자랄 때의 축출
 
-노드 전체 메모리가 모자라면 kubelet이 Pod를 골라 축출합니다(리눅스 기본 hard 임계 `memory.available<100Mi`). 이때 Pod는 `Failed`와 `reason: Evicted`가 되고 노드 조건에 `MemoryPressure=True`가 뜹니다. kubelet은 사용량이 requests를 넘은 Pod를 먼저 보므로 requests가 없는 BestEffort Pod가 가장 먼저 대상이 되고 Guaranteed Pod는 마지막입니다.
+4-2절의 OOM은 컨테이너 하나가 자기 한도를 넘은 경우였습니다. 노드 전체 메모리가 모자라면 이번에는 kubelet이 나서서 Pod를 골라 축출합니다(리눅스 기본 hard 임계 `memory.available<100Mi`).
+
+- Pod: `Failed`와 `reason: Evicted`가 됩니다.
+- 노드: 조건에 `MemoryPressure=True`가 뜹니다.
+
+누가 먼저 쫓겨나는지도 정해져 있습니다. kubelet은 사용량이 requests를 넘은 Pod를 먼저 봅니다. 그래서 requests가 없는 BestEffort Pod가 가장 먼저 대상이 되고 Guaranteed Pod는 마지막입니다.
 
 kind 워커의 `/var/lib/kubelet/config.yaml`에 `evictionHard: memory.available: 9800Mi`(가용량보다 큰 값)를 넣고 kubelet을 재시작해 본 결과입니다.
 
@@ -934,9 +1032,14 @@ Taints:         node.kubernetes.io/memory-pressure:NoSchedule
 Warning  Evicted  pod/order-api-...  The node was low on resource: memory. Threshold quantity: 9800Mi, available: 9936872Ki. Container nginx was using 7076Ki, request is 0, has larger consumption of memory.
 ```
 
-메시지의 숫자를 읽어 보면 축출 이유가 그대로 나옵니다. `available: 9936872Ki`를 1024로 나누면 약 9,704Mi이고 기준 `9800Mi`보다 작습니다. 그래서 kubelet은 노드가 메모리 압박 상태라고 판단했습니다. `request is 0`은 이 Pod에 메모리 request가 없다는 뜻이라 사용량이 request를 넘은 Pod로 분류되어 먼저 골랐습니다. 실제 메모리는 넉넉했고 기준값을 일부러 올려 만든 상황입니다.
+메시지의 숫자를 읽어 보면 축출 이유가 그대로 나옵니다.
 
-축출된 Pod는 `.status.phase`가 `Failed`, `.status.reason`이 `Evicted`인데 `kubectl get pod`의 STATUS 열에는 `Error`나 `ContainerStatusUnknown`으로 보였습니다. 그래서 `kubectl get pod -A --field-selector status.phase=Failed`로 찾습니다.
+1. `available: 9936872Ki`를 1024로 나누면 약 9,704Mi이고 기준 `9800Mi`보다 작습니다. 그래서 kubelet은 노드가 메모리 압박 상태라고 판단했습니다.
+2. `request is 0`은 이 Pod에 메모리 request가 없다는 뜻입니다. 사용량이 request를 넘은 Pod로 분류되어 먼저 골랐습니다.
+
+실제 메모리는 넉넉했고 기준값을 일부러 올려 만든 상황입니다.
+
+축출된 Pod는 찾을 때 걸리는 점이 있습니다. `.status.phase`가 `Failed`, `.status.reason`이 `Evicted`인데 `kubectl get pod`의 STATUS 열에는 `Error`나 `ContainerStatusUnknown`으로 보였습니다. 그래서 `kubectl get pod -A --field-selector status.phase=Failed`로 찾습니다.
 
 ### 4-6. 직접 해 보기
 
@@ -1021,7 +1124,11 @@ cat /sys/fs/cgroup/<그 경로>/cpu.stat                     # 스로틀 카운�
 
 </details>
 
-메모리는 넘으면 죽고 CPU는 넘으면 기다립니다. `limits.cpu: 50m`은 100ms마다 5ms까지 CPU를 쓸 수 있다는 한도로 커널에 적히고 그 시간을 다 쓰면 다음 주기까지 실행이 멈춥니다. 컨테이너는 종료되지 않고 에러 로그도 남기지 않으면서 응답만 느려집니다. 그래서 `describe`의 상태와 이벤트만으로는 잡히지 않습니다. 커널 쪽 설정 파일(`cpu.max`)과 스로틀 카운터(`cpu.stat`)는 [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
+메모리는 넘으면 죽고 CPU는 넘으면 기다립니다. 이 한 줄이 4장과 5장의 차이입니다.
+
+`limits.cpu: 50m`은 100ms마다 5ms까지 CPU를 쓸 수 있다는 한도로 커널에 적힙니다. 그 시간을 다 쓰면 다음 주기까지 실행이 멈춥니다.
+
+컨테이너는 종료되지 않고 에러 로그도 남기지 않으면서 응답만 느려집니다. 그래서 `describe`의 상태와 이벤트만으로는 잡히지 않습니다. 커널 쪽 설정 파일(`cpu.max`)과 스로틀 카운터(`cpu.stat`)는 [cgroup과 QoS](/blog/theory/systems/k8s-linux-03-cgroup-qos)에서 다룹니다.
 
 ### 5-2. kubectl top으로 볼 수 있는 것
 
@@ -1096,13 +1203,30 @@ cka-lab-r-control-plane   426m         7%       640Mi           6%
 cka-lab-r-worker          92m          1%       168Mi           1%
 ```
 
-`top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다. CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 `kubectl top pod`는 `51m`이었고 같은 시점 커널 카운터로는 주기의 약 92%가 스로틀되어 있었습니다. 사용량이 limit에 붙어 있으면 스로틀링을 의심하고 `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다. limit을 올리거나 지우면 풀립니다.
+`top`이 보여 주는 것은 사용량뿐입니다. 스로틀 횟수나 시간은 담지 않습니다.
+
+CPU 50m 한도의 무한 루프 컨테이너를 kind에서 돌렸을 때 두 숫자가 이렇게 달랐습니다.
+
+| 어디서 봤나 | 값 |
+|---|---|
+| `kubectl top pod` | `51m` |
+| 같은 시점 커널 카운터 | 주기의 약 92%가 스로틀 |
+
+그래서 판단 순서는 이렇습니다.
+
+1. 사용량이 limit에 붙어 있으면 스로틀링을 의심합니다.
+2. `kubectl describe pod`나 `-o jsonpath='{.spec.containers[*].resources}'`로 limit 값을 확인합니다.
+3. limit을 올리거나 지우면 풀립니다.
 
 메모리 쪽 `top` 값은 working set이라 컨테이너 안의 `free` 숫자와 다르게 나올 수 있습니다. 출력을 읽는 법과 metrics-server가 없을 때의 점검은 [9편 3장](/blog/cert/cka/cka-06-troubleshooting)에 있습니다.
 
 ### 5-3. 직접 해 보기
 
-metrics-server를 설치한 클러스터에서 `busybox:1.36` 이미지로 `while true; do :; done`을 도는 Pod를 CPU와 메모리 모두 requests와 limits를 같게(CPU `50m`, 메모리 `32Mi`) 띄웁니다. `kubectl top pod`가 50m 근처에 머무는지, `qosClass`가 `Guaranteed`인지 봅니다. `limits.cpu`를 `500m`으로 바꿔 다시 만들고 사용량이 어떻게 변하는지 비교합니다.
+metrics-server를 설치한 클러스터에서 해 봅니다.
+
+1. `busybox:1.36` 이미지로 `while true; do :; done`을 도는 Pod를 띄웁니다. CPU와 메모리 모두 requests와 limits를 같게(CPU `50m`, 메모리 `32Mi`) 둡니다.
+2. `kubectl top pod`가 50m 근처에 머무는지, `qosClass`가 `Guaranteed`인지 봅니다.
+3. `limits.cpu`를 `500m`으로 바꿔 다시 만들고 사용량이 어떻게 변하는지 비교합니다.
 
 ---
 
@@ -1150,7 +1274,13 @@ kube-scheduler입니다. 스케줄러가 돌고 있는데 자원이 모자라거
 
 <details><summary>정답</summary>
 
-API 서버가 응답하지 않으므로 kubectl로는 더 볼 수 없습니다. 컨트롤 플레인 노드에 ssh로 들어가 `sudo crictl ps -a | grep kube-apiserver`로 컨테이너가 Exited를 반복하는지 보고 `sudo crictl logs <ID>`로 원인 메시지를 찾습니다. 매니페스트 `/etc/kubernetes/manifests/kube-apiserver.yaml`의 오타나 인증서 경로를 고치면 kubelet이 static Pod를 다시 만듭니다. kubelet이 멈춰 있으면 static Pod도 뜨지 않으니 `systemctl status kubelet`도 봅니다.
+API 서버가 응답하지 않으므로 kubectl로는 더 볼 수 없습니다. 컨트롤 플레인 노드에 ssh로 들어가 이 순서로 봅니다.
+
+1. `sudo crictl ps -a | grep kube-apiserver`로 컨테이너가 Exited를 반복하는지 봅니다.
+2. `sudo crictl logs <ID>`로 원인 메시지를 찾습니다.
+3. 매니페스트 `/etc/kubernetes/manifests/kube-apiserver.yaml`의 오타나 인증서 경로를 고치면 kubelet이 static Pod를 다시 만듭니다.
+
+kubelet이 멈춰 있으면 static Pod도 뜨지 않으니 `systemctl status kubelet`도 봅니다.
 
 </details>
 
@@ -1174,7 +1304,11 @@ CPU 스로틀링입니다. CPU limit을 넘는 컨테이너는 죽지 않고 주
 
 <details><summary>정답</summary>
 
-약 50초 + 300초입니다. node lifecycle 컨트롤러가 `--node-monitor-grace-period`(기본 50초) 뒤 노드를 `Unknown`으로 바꾸고 `node.kubernetes.io/unreachable:NoExecute` taint를 붙입니다. Pod에는 `DefaultTolerationSeconds`가 넣은 300초 toleration이 있어 그 시간이 지난 뒤 taint-eviction 컨트롤러가 Pod를 지우고 ReplicaSet 컨트롤러가 다른 노드에 새로 만듭니다.
+약 50초 + 300초입니다.
+
+1. node lifecycle 컨트롤러가 `--node-monitor-grace-period`(기본 50초) 뒤 노드를 `Unknown`으로 바꾸고 `node.kubernetes.io/unreachable:NoExecute` taint를 붙입니다.
+2. Pod에는 `DefaultTolerationSeconds`가 넣은 300초 toleration이 있습니다. 그 시간이 지난 뒤 taint-eviction 컨트롤러가 Pod를 지웁니다.
+3. ReplicaSet 컨트롤러가 다른 노드에 새로 만듭니다.
 
 </details>
 

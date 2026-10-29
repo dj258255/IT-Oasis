@@ -20,15 +20,21 @@ seriesOrder: 2
 
 1. CKA 범위는 넓어 보여도 대부분 `kubectl apply` 한 번이 지나가는 길 위에 있습니다. kubectl에서 출발해 API 서버, etcd, 컨트롤러, 스케줄러, kubelet, 런타임과 플러그인, Service, Gateway까지 아홉 층을 내려가면 시험 다섯 영역이 전부 한 번씩 등장합니다.
 2. 층마다 고장 나는 모양이 다릅니다. API 서버 앞에서 막히면 `kubectl`이 바로 오류를 돌려주고 그 아래에서 막히면 명령은 성공했는데 Pod가 `Pending`이나 `ContainerCreating`에 남습니다. 증상을 보고 몇 번째 층인지 짚는 것이 트러블슈팅(30%)의 출발점입니다.
-3. 이 글은 지도입니다. 층마다 무슨 일이 일어나는지 몇 줄로 적고 자세한 내용은 3편부터 9편의 해당 절로 넘깁니다. 처음 읽을 때는 3장과 4장의 그림 두 장과 5장의 증상 표만 기억해도 됩니다.
+3. 이 글은 지도입니다. 층마다 무슨 일이 일어나는지와 고장 나면 무엇이 보이는지를 적었고 더 깊은 내용은 3편부터 9편에서 다룹니다. 처음 읽을 때는 3장과 4장의 그림 두 장과 5장의 증상 표만 기억해도 됩니다.
 
 ---
 
 ## 1. 왜 지도부터 보는가
 
-쿠버네티스를 처음 공부할 때 흔히 구성요소 목록부터 봅니다. etcd는 저장소, 스케줄러는 노드 배정, kubelet은 노드 에이전트. 하나하나는 어렵지 않은데 이 목록만으로는 시험 과제와 연결이 잘 안 됩니다. "Deployment는 있는데 Pod가 0개입니다. 고치세요" 같은 과제를 받았을 때 목록 어디를 봐야 하는지가 안 떠오르기 때문입니다.
+쿠버네티스를 처음 공부할 때 흔히 구성요소 목록부터 봅니다. etcd는 저장소, 스케줄러는 노드 배정, kubelet은 노드 에이전트. 하나하나는 어렵지 않습니다.
 
-그래서 이 글은 순서를 거꾸로 잡습니다. 실제로 하는 일 하나를 먼저 정하고 그 일이 클러스터 안에서 어떤 길로 내려가는지 위에서부터 따라갑니다. 구성요소는 그 길 위에서 만날 때 소개합니다. 어떤 구성요소가 멈추면 길의 어디가 끊기는지가 같이 보여서 트러블슈팅을 공부할 때도 같은 지도를 그대로 씁니다. 같은 방식으로 `kubectl run` 한 번을 소스 코드 수준까지 따라간 글로 Jamie Hannaford의 [What happens when I type kubectl run](https://github.com/jamiehannaford/what-happens-when-k8s)이 있습니다. 링크된 소스가 대부분 v1.14 무렵이라 세부는 지금과 다르지만 층을 나누는 순서는 이 글과 같습니다.
+문제는 이 목록만으로는 시험 과제와 연결이 잘 안 된다는 점입니다. "Deployment는 있는데 Pod가 0개입니다. 고치세요" 같은 과제를 받았을 때 목록 어디를 봐야 하는지가 안 떠오르기 때문입니다.
+
+그래서 이 글은 순서를 거꾸로 잡습니다. 실제로 하는 일 하나를 먼저 정하고 그 일이 클러스터 안에서 어떤 길로 내려가는지 위에서부터 따라갑니다. 구성요소는 그 길 위에서 만날 때 소개합니다.
+
+이렇게 보면 어떤 구성요소가 멈출 때 길의 어디가 끊기는지가 같이 보입니다. 트러블슈팅을 공부할 때도 같은 지도를 그대로 씁니다.
+
+같은 방식으로 `kubectl run` 한 번을 소스 코드 수준까지 따라간 글로 Jamie Hannaford의 [What happens when I type kubectl run](https://github.com/jamiehannaford/what-happens-when-k8s)이 있습니다. 링크된 소스가 대부분 v1.14 무렵이라 세부는 지금과 다르지만 층을 나누는 순서는 이 글과 같습니다.
 
 따라갈 장면은 쇼핑몰 웹 서버를 올리는 일입니다.
 
@@ -93,7 +99,9 @@ kubectl apply -f shop-web.yaml
 
 #### 1. 릴레이를 식당 주문으로 보기
 
-손님(사용자)이 주문서를 써서 카운터(API 서버)에 내면 카운터는 주문서를 주문 꽂이(etcd)에 꽂습니다. 주방장(컨트롤러)은 꽂이를 지켜보다가 "파스타 3인분"을 보고 접시 세 개 분량의 작업표를 다시 꽂고 배치 담당(스케줄러)은 작업표마다 화구 번호를 적습니다. 화구 앞 요리사(kubelet)는 자기 화구 번호가 적힌 작업표만 집어 요리합니다. 누구도 서로에게 말을 걸지 않고 꽂이만 봅니다. 이 "지켜보다가 바뀌면 받아 보기"가 watch입니다.
+손님(사용자)이 주문서를 써서 카운터(API 서버)에 내면 카운터는 주문서를 주문 꽂이(etcd)에 꽂습니다. 주방장(컨트롤러)은 꽂이를 지켜보다가 "파스타 3인분"을 보고 접시 세 개 분량의 작업표를 다시 꽂고 배치 담당(스케줄러)은 작업표마다 화구 번호를 적습니다. 화구 앞 요리사(kubelet)는 자기 화구 번호가 적힌 작업표만 집어 요리합니다.
+
+누구도 서로에게 말을 걸지 않고 꽂이만 봅니다. 이 "지켜보다가 바뀌면 받아 보기"가 watch입니다.
 
 비유는 흐름까지만 맞습니다. 실제 etcd는 키-값 저장소이고 API 서버만 etcd에 직접 읽고 씁니다.
 
@@ -124,55 +132,127 @@ kubectl apply -f shop-web.yaml
 
 ### 3-1. kubectl: 파일을 HTTP 요청으로 바꾼다
 
-kubectl은 kubeconfig에서 API 서버 주소와 자격 증명을 읽고 YAML을 JSON으로 바꿔 HTTPS 요청을 보냅니다. 클러스터에 없는 객체면 생성 요청(POST)이 나가고 이미 있으면 바뀐 부분만 보내는 요청(PATCH)이 나갑니다.
+kubectl이 하는 일은 생각보다 단순합니다. YAML을 JSON으로 바꿔 API 서버에 HTTPS 요청 하나를 보내는 게 전부입니다.
 
-- 고장 나면: `The connection to the server ... was refused`처럼 아예 연결이 안 되거나 엉뚱한 클러스터에 적용됩니다. 시험에서는 과제마다 컨텍스트와 호스트가 달라서 두 번째 경우가 실제로 점수를 깎습니다.
+- 클러스터에 없는 객체면 생성 요청(`POST`)
+- 이미 있으면 바뀐 부분만 보내는 요청(`PATCH`)
 
-kubeconfig 파일은 클러스터(API 서버 주소와 CA 인증서), 사용자(클라이언트 인증서와 키), 컨텍스트 세 부분으로 되어 있습니다. 컨텍스트는 클러스터와 사용자, 기본 네임스페이스를 묶은 이름이고 `current-context`가 지금 쓰는 조합입니다. 파일은 `--kubeconfig`, `KUBECONFIG` 환경 변수, `$HOME/.kube/config` 순서로 고릅니다. 시험에서는 과제마다 지정된 호스트에 `ssh`로 들어가 풀고 끝나면 `exit`로 시작 호스트에 돌아옵니다. ssh 안에서 다시 ssh는 할 수 없습니다.
+어디로, 누구 자격으로 보낼지는 kubeconfig에서 읽습니다. 파일은 세 덩어리입니다.
+
+| 부분 | 들어 있는 것 |
+|---|---|
+| 클러스터 | API 서버 주소, CA 인증서 |
+| 사용자 | 클라이언트 인증서와 키 |
+| 컨텍스트 | 클러스터 + 사용자 + 기본 네임스페이스를 묶은 이름 |
+
+지금 쓰는 조합이 `current-context`입니다. 파일은 `--kubeconfig` 플래그, `KUBECONFIG` 환경 변수, `$HOME/.kube/config` 순서로 찾습니다.
+
+**고장 나면** 두 가지 모습으로 나타납니다. 하나는 `The connection to the server ... was refused`처럼 아예 연결이 안 되는 경우입니다. 다른 하나는 연결은 잘 되는데 엉뚱한 클러스터에 적용되는 경우입니다.
+
+시험에서 점수를 깎는 건 두 번째입니다. 과제마다 지정된 호스트에 `ssh`로 들어가서 풀고 끝나면 `exit`로 시작 호스트에 돌아와야 합니다. ssh 안에서 다시 ssh는 할 수 없습니다.
 
 ### 3-2. kube-apiserver: 세 관문을 통과해야 저장된다
 
-요청은 인증(누구인가), 인가(이 동작을 해도 되는가), 어드미션(내용을 고치거나 거절할 것인가)을 차례로 지납니다. 인가는 kubeadm 기본값으로 `Node,RBAC` 모드입니다. 어드미션 단계에서 ServiceAccount나 기본 톨러레이션 같은 값이 채워지고 ResourceQuota나 PodSecurity 위반이면 거절됩니다.
+요청은 API 서버 안에서 관문 세 개를 차례로 지납니다.
 
-- 고장 나면: 인증 실패는 `401`, 인가 실패는 `403 Forbidden`과 `cannot create resource ...`, 쿼터 위반은 `exceeded quota`가 kubectl 화면에 바로 찍힙니다. 내가 kubectl로 보낸 객체에 대해서는 이 층의 문제가 숨지 않습니다. Deployment가 대신 만드는 Pod가 쿼터에 걸리면 kubectl에는 보이지 않고 3-4절처럼 ReplicaSet 이벤트에 남습니다.
+1. **인증**: 누구인가
+2. **인가**: 이 동작을 해도 되는가. kubeadm 기본값은 `Node,RBAC` 모드입니다.
+3. **어드미션**: 내용을 고치거나 거절할 것인가. ServiceAccount나 기본 톨러레이션 같은 값이 여기서 채워지고 ResourceQuota나 PodSecurity를 어기면 거절됩니다.
 
-API 서버 안을 더 잘게 나누면 인증, 인가, 변형 어드미션, 스키마 검증, 검증 어드미션의 다섯 단계입니다. 실패 응답도 단계마다 다릅니다. 인증은 `401`, 인가와 ResourceQuota나 PodSecurity 같은 어드미션 거절은 `403`, 음수 replicas처럼 스키마에 맞지 않는 값은 `422`, 필드 이름 오타는 `400`입니다. 인가에 쓰는 RBAC 객체는 넷입니다. Role과 ClusterRole이 권한 묶음이고 RoleBinding과 ClusterRoleBinding이 그 묶음을 사용자나 ServiceAccount에 연결합니다. Role과 RoleBinding은 네임스페이스 하나, ClusterRole과 ClusterRoleBinding은 클러스터 전체가 범위입니다. 권한은 더하기만 있어서 막으려면 그 권한을 준 바인딩을 지웁니다.
+조금 더 잘게 나누면 어드미션이 변형(mutating)과 검증(validating)으로 갈리고 그 사이에 스키마 검증이 끼어서 다섯 단계가 됩니다. 이 구분을 알아 두면 좋은 이유는 실패 코드만 보고 어디서 막혔는지 바로 알 수 있어서입니다.
+
+| 응답 코드 | 막힌 곳 | 예 |
+|---|---|---|
+| `401` | 인증 | 인증 실패 |
+| `403` | 인가, 또는 어드미션 거절 | `cannot create resource ...`, `exceeded quota`, PodSecurity 위반 |
+| `422` | 스키마 검증 | 음수 replicas |
+| `400` | 요청 형식 | 필드 이름 오타 |
+
+인가에 쓰는 RBAC 객체는 넷인데 두 축으로 놓으면 한 번에 외워집니다.
+
+| 범위 | 권한 묶음 | 묶음을 사용자·ServiceAccount에 연결 |
+|---|---|---|
+| 네임스페이스 하나 | Role | RoleBinding |
+| 클러스터 전체 | ClusterRole | ClusterRoleBinding |
+
+RBAC에는 "금지" 규칙이 없습니다. 권한은 더하기만 되니까 막고 싶으면 그 권한을 준 바인딩을 지웁니다.
+
+**고장 나면** 이 층의 문제는 숨지 않습니다. 내가 kubectl로 보낸 객체가 막히면 위 표의 코드가 화면에 바로 찍힙니다.
+
+함정은 하나입니다. Deployment가 대신 만드는 Pod가 쿼터에 걸리면 kubectl 화면은 조용합니다. 오류는 3-4절에서 보듯 ReplicaSet 이벤트에만 남습니다.
 
 ### 3-3. etcd: 여기까지 오면 kubectl은 끝난다
 
-관문을 통과한 Deployment와 Service는 etcd에 저장되고 kubectl에 `created` 응답이 돌아갑니다. Service는 이때 ClusterIP를 배정받습니다. 이 시점에 Pod는 아직 한 개도 없습니다. kubectl의 성공 메시지는 "원하는 상태를 적어 두었다"는 뜻뿐입니다.
+관문을 통과한 Deployment와 Service는 etcd에 저장되고 그제야 kubectl에 `created`가 돌아옵니다. Service는 이때 ClusterIP를 받습니다.
 
-- 고장 나면: etcd가 멈추면 API 서버가 제대로 뜨지 못하고 재시작을 반복합니다. 사용자 눈에는 `kubectl` 전체가 안 되는 것으로 보여서 API 서버 문제와 구분하려면 컨트롤 플레인 노드에서 `crictl logs`를 봐야 합니다.
+그런데 이 순간 Pod는 한 개도 없습니다. `created`는 "원하는 상태를 적어 두었다"는 데까지만 말해 줍니다. 실제로 띄우는 일은 이제부터 아래층이 합니다.
 
-etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. kubeadm 기본 구성에서는 컨트롤 플레인 노드마다 static Pod로 돌고 데이터는 `/var/lib/etcd`에 있습니다. 클러스터의 모든 객체가 여기 있으니 백업은 동작 중인 멤버에 접속해 `etcdctl snapshot save`로 스냅샷을 뜹니다. 접속에 쓸 인증서 경로는 etcd 매니페스트에서 먼저 확인합니다. 복구는 스냅샷을 새 데이터 디렉터리에 풀고 etcd 매니페스트가 그 디렉터리를 보게 고치는 일이고 매니페스트를 고치면 kubelet이 etcd Pod를 다시 만듭니다.
+etcd는 Raft 합의를 쓰는 분산 키-값 저장소입니다. 클러스터의 모든 객체가 여기 있으니 시험에서 손이 가는 건 백업과 복구입니다.
+
+- **위치**: kubeadm 기본 구성에서는 컨트롤 플레인 노드마다 static Pod로 돌고 데이터는 `/var/lib/etcd`에 있습니다.
+- **백업**: 동작 중인 멤버에 접속해 `etcdctl snapshot save`로 스냅샷을 뜹니다. 접속에 쓸 인증서 경로는 etcd 매니페스트에서 먼저 확인합니다.
+- **복구**: 스냅샷을 새 데이터 디렉터리에 풀고 etcd 매니페스트가 그 디렉터리를 보게 고칩니다. 매니페스트를 고치면 kubelet이 etcd Pod를 알아서 다시 만듭니다.
+
+**고장 나면** etcd가 멈추면 API 서버가 제대로 뜨지 못하고 재시작을 반복합니다. 사용자 눈에는 `kubectl`이 통째로 안 되는 것으로 보여서 API 서버 문제와 구분이 안 됩니다. 컨트롤 플레인 노드에 들어가 `crictl logs`를 봐야 갈립니다.
 
 ### 3-4. 컨트롤러: Deployment가 Pod 세 개가 된다
 
-kube-controller-manager 안의 deployment 컨트롤러가 새 Deployment를 보고 ReplicaSet을 만듭니다. replicaset 컨트롤러는 그 ReplicaSet을 보고 Pod 객체 세 개를 만듭니다. 만들어진 Pod는 `spec.nodeName`이 비어 있습니다. 어느 노드에서 돌지 아직 아무도 정하지 않았습니다.
+Pod 세 개는 한 번에 생기지 않고 두 단계를 거칩니다. 둘 다 kube-controller-manager 안에서 일어납니다.
 
-- 고장 나면: Deployment는 있는데 ReplicaSet이나 Pod가 생기지 않습니다. 스케일을 바꿔도 반응이 없습니다. 쿼터에 걸린 경우에는 `kubectl describe rs`에 `FailedCreate`가 남습니다.
+1. deployment 컨트롤러가 새 Deployment를 보고 ReplicaSet을 만듭니다.
+2. replicaset 컨트롤러가 그 ReplicaSet을 보고 Pod 객체 세 개를 만듭니다.
 
-컨트롤러는 spec(원하는 상태)과 status(관측한 상태)를 비교해 차이를 메우는 루프입니다. 스케줄러와 kubelet을 포함한 모든 구성요소가 API 서버를 watch하고 etcd를 직접 읽지 않습니다. Pod의 `metadata.ownerReferences`는 ReplicaSet을, ReplicaSet의 것은 Deployment를 가리킵니다. 그래서 Pod를 지우면 ReplicaSet이 다시 만들고 개수나 이미지는 맨 위 Deployment에서 고칩니다. Pod 템플릿을 바꾸면 Deployment가 새 ReplicaSet을 만들어 새 쪽을 늘리고 옛 쪽을 줄입니다. 이것이 롤링 업데이트이고 기본값은 `maxUnavailable`과 `maxSurge` 모두 25%입니다. 옛 ReplicaSet은 레플리카 0으로 남아 있다가 롤백할 때 다시 늘어납니다.
+이렇게 만들어진 Pod는 `spec.nodeName`이 비어 있습니다. 어느 노드에서 돌지 아직 아무도 정하지 않았습니다.
+
+컨트롤러는 모두 같은 일을 되풀이합니다. spec(원하는 상태)과 status(관측한 상태)를 비교해서 차이를 메우는 루프입니다. 스케줄러와 kubelet까지 포함해 누구도 etcd를 직접 읽지 않고 API 서버를 watch합니다.
+
+Deployment, ReplicaSet, Pod는 `metadata.ownerReferences`로 이어져 있습니다. Pod는 ReplicaSet을, ReplicaSet은 Deployment를 주인으로 가리킵니다. 여기서 두 가지가 따라 나옵니다.
+
+- Pod를 지우면 ReplicaSet이 다시 만듭니다. 개수나 이미지를 바꾸려면 맨 위 Deployment를 고칩니다.
+- Pod 템플릿을 바꾸면 Deployment가 새 ReplicaSet을 하나 더 만들고 새 쪽을 늘리면서 옛 쪽을 줄입니다. 이게 롤링 업데이트이고 기본값은 `maxUnavailable`과 `maxSurge` 모두 25%입니다. 옛 ReplicaSet은 레플리카 0으로 남아 있다가 롤백하면 다시 늘어납니다.
+
+**고장 나면** Deployment는 있는데 ReplicaSet이나 Pod가 생기지 않고 스케일을 바꿔도 반응이 없습니다. 쿼터에 걸린 경우라면 `kubectl describe rs`에 `FailedCreate`가 남습니다.
 
 ### 3-5. kube-scheduler: 노드를 고른다
 
-스케줄러는 `nodeName`이 빈 Pod를 큐에 넣고 Filter 단계에서 못 쓰는 노드를 거른 뒤 Score 단계에서 남은 노드에 점수를 매겨 하나를 고릅니다. 결정은 binding 요청으로 API 서버에 기록됩니다. requests, nodeSelector, 필수(required) 어피니티, `NoSchedule` 테인트와 톨러레이션은 Filter에서 쓰이고 선호(preferred) 어피니티와 `PreferNoSchedule` 테인트는 Score에서 점수로 반영됩니다.
+스케줄러는 `nodeName`이 빈 Pod를 큐에 넣고 두 단계로 노드를 고릅니다.
 
-- 고장 나면: Pod가 `Pending`에 남고 NODE 칸이 `<none>`입니다. 스케줄러가 살아 있는데 맞는 노드가 없으면 `FailedScheduling` 이벤트에 이유가 적힙니다. 스케줄러 자체가 멈췄으면 이벤트가 아예 없습니다.
+| 단계 | 하는 일 | 여기서 쓰이는 조건 |
+|---|---|---|
+| Filter | 못 쓰는 노드를 거른다 | requests, nodeSelector, 필수(required) 어피니티, `NoSchedule` 테인트와 톨러레이션 |
+| Score | 남은 노드에 점수를 매겨 하나를 고른다 | 선호(preferred) 어피니티, `PreferNoSchedule` 테인트 |
 
-고른 결과는 `binding` 서브리소스로 보내고 API 서버가 `spec.nodeName`을 채웁니다. 처음부터 `spec.nodeName`을 직접 적은 Pod는 스케줄러를 건너뛰고 그 노드의 kubelet이 바로 받습니다. 이때는 Filter를 거치지 않아서 노드 자원이 모자라면 kubelet이 Pod를 거부하고 Pod는 `OutOfcpu` 같은 이유로 곧바로 `Failed`가 됩니다. 스케줄러가 멈췄을 때 Pod를 특정 노드에 띄우는 방법으로도 씁니다.
+"반드시"는 Filter, "되도록"은 Score로 외우면 됩니다.
+
+고른 결과는 `binding` 서브리소스로 보내고 API 서버가 `spec.nodeName`을 채웁니다.
+
+`spec.nodeName`을 처음부터 직접 적은 Pod는 스케줄러를 건너뛰고 그 노드의 kubelet이 바로 받습니다. 스케줄러가 멈췄을 때 Pod를 특정 노드에 띄우는 방법으로 씁니다. 다만 Filter를 거치지 않아서 노드 자원이 모자라면 kubelet이 Pod를 거부하고 Pod는 `OutOfcpu` 같은 이유로 곧바로 `Failed`가 됩니다.
+
+**고장 나면** Pod가 `Pending`에 남고 NODE 칸이 `<none>`입니다. 이벤트를 보면 원인이 둘로 갈립니다.
+
+- `FailedScheduling` 이벤트에 이유가 적혀 있으면 스케줄러는 살아 있고 맞는 노드가 없는 경우입니다.
+- 이벤트가 아예 없으면 스케줄러 자체가 멈춘 경우입니다.
 
 ### 3-6. kubelet: 자기 노드에 온 Pod를 실행한다
 
-각 노드의 kubelet은 `nodeName`이 자기인 Pod만 걸러 지켜봅니다. 새 Pod가 오면 아래 층의 런타임과 플러그인을 불러 실제로 실행하고 결과를 Pod의 `status`에 보고합니다. kubelet은 노드에서 systemd 서비스로 도는 프로세스라서 고칠 때도 `systemctl`과 `journalctl`을 씁니다.
+각 노드의 kubelet은 `nodeName`이 자기인 Pod만 골라 지켜봅니다. 새 Pod가 오면 이 순서로 움직입니다.
 
-- 고장 나면: 노드가 `NotReady`가 되고 그 노드에는 새 Pod가 뜨지 않습니다. 기본 설정이면 약 50초 뒤 `unreachable` 테인트가 붙고 다시 300초 뒤 그 노드의 Pod가 축출됩니다.
+1. CRI로 런타임을 불러 샌드박스를 만듭니다. 네트워크 네임스페이스를 잡아 두는 pause 컨테이너입니다.
+2. CNI로 IP를 받습니다.
+3. 이미지를 받아 컨테이너를 시작합니다.
+4. 결과를 `status` 서브리소스로 올립니다. `kubectl get pod -o wide`의 IP와 NODE 칸이 이 값입니다.
 
-새 Pod를 받은 kubelet은 CRI로 런타임을 불러 샌드박스(네트워크 네임스페이스를 잡는 pause 컨테이너)를 만들고 CNI로 IP를 받은 뒤 이미지를 받아 컨테이너를 시작합니다. 결과는 `status` 서브리소스로 올라가 `kubectl get pod -o wide`의 IP와 NODE 칸을 채웁니다. 노드에서 컨테이너를 볼 때는 `crictl`을 씁니다. 노드가 살아 있다는 신호는 kubelet이 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다 갱신해 보냅니다. `kubectl describe node`에 `Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽이니 그 노드로 들어가 kubelet을 봅니다.
+kubelet은 노드에서 systemd 서비스로 도는 프로세스입니다. 그래서 고칠 때도 `systemctl`과 `journalctl`을 쓰고 노드의 컨테이너는 `crictl`로 봅니다.
+
+노드가 살아 있다는 신호는 Lease로 보냅니다. kubelet이 `kube-node-lease` 네임스페이스의 Lease를 기본 10초마다 갱신합니다.
+
+**고장 나면** 노드가 `NotReady`가 되고 그 노드에는 새 Pod가 뜨지 않습니다. 기본 설정이면 약 50초 뒤 `unreachable` 테인트가 붙고 다시 300초 뒤 그 노드의 Pod가 축출됩니다.
+
+`kubectl describe node`에 `Kubelet stopped posting node status.`가 보이면 원인은 노드 쪽입니다. 그 노드로 들어가 kubelet부터 봅니다.
 
 ### 3-7. CRI, CNI, CSI: 컨테이너, 네트워크, 디스크를 붙인다
 
-kubelet은 직접 컨테이너를 만들지 않습니다. 세 인터페이스로 일을 나눠 맡깁니다. CRI와 CSI는 kubelet이 직접 부르고 CNI는 CRI 런타임(containerd 등)이 샌드박스를 만들 때 부릅니다.
+kubelet은 컨테이너를 직접 만들지 않습니다. 세 인터페이스에 일을 나눠 맡깁니다.
 
 | 인터페이스 | 맡는 일 | 대표 구현 |
 |---|---|---|
@@ -180,25 +260,78 @@ kubelet은 직접 컨테이너를 만들지 않습니다. 세 인터페이스로
 | CNI | Pod에 네트워크 인터페이스와 IP를 붙인다 | Calico, Cilium, Flannel |
 | CSI | 볼륨을 만들고 노드에 붙여 마운트한다 | 클라우드 디스크 드라이버, 로컬 경로 드라이버 |
 
-- 고장 나면: 이미지를 못 받으면 `ImagePullBackOff`, 볼륨이나 네트워크를 못 붙이면 `ContainerCreating`에 오래 머뭅니다. CNI가 아예 없으면 노드 Ready 조건에 `cni plugin not initialized`가 보이고 노드가 `NotReady`입니다. PVC가 묶일 PV를 못 찾으면 Pod는 그보다 앞인 스케줄 단계에서 `Pending`입니다.
+부르는 쪽이 하나 다릅니다. CRI와 CSI는 kubelet이 직접 부르고 CNI는 CRI 런타임(containerd 등)이 샌드박스를 만들 때 부릅니다.
 
-CRI 런타임은 kubelet의 `--container-runtime-endpoint`가 가리키는 소켓으로 붙습니다. dockershim이 1.24에서 빠졌으니 Docker Engine을 쓰려면 cri-dockerd가 필요합니다. CNI 설정은 `/etc/cni/net.d`, 플러그인 실행 파일은 `/opt/cni/bin`에 있어서 Pod IP가 안 잡히면 이 두 곳과 플러그인 Pod 상태부터 봅니다. NetworkPolicy도 CNI 플러그인이 지원해야 동작합니다. 쿠버네티스 네트워크 모델에서 모든 Pod는 클러스터 전체에서 고유한 IP를 받고 같은 노드든 다른 노드든 NAT 없이 직접 통신합니다. CSI 쪽에서 PVC는 조건이 맞는 PV와 일대일로 묶이고 맞는 PV가 없으면 `Pending`으로 남습니다. StorageClass의 `volumeBindingMode`가 `WaitForFirstConsumer`이면 그 PVC를 쓰는 Pod가 생길 때까지 `Pending`인 상태가 정상입니다.
+노드에서 볼 곳은 인터페이스마다 정해져 있습니다.
+
+- **CRI**: kubelet의 `--container-runtime-endpoint`가 가리키는 소켓으로 붙습니다. dockershim이 1.24에서 빠졌으니 Docker Engine을 쓰려면 cri-dockerd가 필요합니다.
+- **CNI**: 설정은 `/etc/cni/net.d`, 실행 파일은 `/opt/cni/bin`에 있습니다. Pod IP가 안 잡히면 이 두 곳과 플러그인 Pod 상태부터 봅니다. NetworkPolicy도 CNI 플러그인이 지원해야 동작합니다.
+- **CSI**: PVC는 조건이 맞는 PV와 일대일로 묶이고 맞는 PV가 없으면 `Pending`으로 남습니다.
+
+네트워크 모델은 한 문장으로 외웁니다. 모든 Pod는 클러스터 전체에서 고유한 IP를 받고 같은 노드든 다른 노드든 NAT 없이 직접 통신합니다.
+
+**고장 나면** 상태 이름이 어느 인터페이스 문제인지 알려 줍니다.
+
+| 보이는 상태 | 원인 |
+|---|---|
+| `ImagePullBackOff` | 이미지를 못 받음(CRI) |
+| `ContainerCreating`에 오래 머묾 | 볼륨이나 네트워크를 못 붙임(CSI, CNI) |
+| 노드 `NotReady`, Ready 조건에 `cni plugin not initialized` | CNI가 아예 없음 |
+| Pod `Pending` | PVC가 묶일 PV를 못 찾음. 이때는 더 앞인 스케줄 단계에서 멈춤 |
+
+헷갈리기 쉬운 예외가 하나 있습니다. StorageClass의 `volumeBindingMode`가 `WaitForFirstConsumer`이면 그 PVC를 쓰는 Pod가 생길 때까지 `Pending`인 게 정상입니다.
 
 ### 3-8. Service와 kube-proxy: 바뀌는 Pod IP 앞에 고정 주소를 둔다
 
-Pod가 IP를 받으면 EndpointSlice 컨트롤러가 Service `web`의 selector에 맞는 Pod IP를 Ready 여부(`conditions.ready`)와 함께 EndpointSlice에 적습니다. 각 노드의 kube-proxy는 Service와 EndpointSlice를 지켜보다가 ClusterIP로 온 패킷을 Pod IP 중 하나로 바꾸는 규칙을 커널에 씁니다. 기본 모드는 `iptables`입니다. 이름 `web.shop.svc.cluster.local`은 CoreDNS가 ClusterIP로 풀어 줍니다.
+Pod가 IP를 받으면 두 구성요소가 움직입니다.
 
-- 고장 나면: Service는 있는데 응답이 없습니다. 가장 흔한 원인은 selector와 Pod 라벨이 어긋나 EndpointSlice가 비어 있는 경우입니다. readiness probe가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다. 이름만 안 풀리고 IP로는 닿으면 CoreDNS 쪽입니다.
+1. EndpointSlice 컨트롤러가 Service `web`의 selector에 맞는 Pod IP를 Ready 여부(`conditions.ready`)와 함께 EndpointSlice에 적습니다.
+2. 각 노드의 kube-proxy가 Service와 EndpointSlice를 지켜보다가 ClusterIP로 온 패킷을 Pod IP 중 하나로 바꾸는 규칙을 커널에 씁니다. 기본 모드는 `iptables`입니다.
 
-Service의 포트는 셋입니다. `port`는 Service가 받는 포트, `targetPort`는 트래픽을 보낼 Pod의 포트(생략하면 `port`와 같음), `nodePort`는 NodePort와 LoadBalancer 타입에서 모든 노드가 여는 포트입니다. 타입은 ClusterIP 위에 NodePort가 기능을 더하고 LoadBalancer는 보통 NodePort 위에 올라갑니다. ExternalName은 프록시 없이 DNS CNAME만 돌려줍니다. 응답이 없을 때는 Debug Services 문서 순서대로 좁힙니다. Service가 있는지, NetworkPolicy가 막는지, DNS 이름으로 되는지, ClusterIP로 되는지, 포트 정의가 맞는지, EndpointSlice가 비었는지, Pod에 직접 닿는지, kube-proxy가 도는지를 차례로 봅니다. CoreDNS는 `kube-system`에서 `kube-dns`라는 Service 이름으로 돌고 설정은 ConfigMap `coredns`의 Corefile에 있습니다. Pod는 kubelet 설정의 `clusterDNS` 값으로 이 DNS 서버 주소를 받습니다.
+이름 `web.shop.svc.cluster.local`은 CoreDNS가 ClusterIP로 풀어 줍니다. CoreDNS는 `kube-system`에서 `kube-dns`라는 Service 이름으로 돌고 설정은 ConfigMap `coredns`의 Corefile에 있습니다. Pod는 kubelet 설정의 `clusterDNS` 값으로 이 DNS 서버 주소를 받습니다.
+
+포트는 셋이라 자주 헷갈립니다.
+
+| 필드 | 뜻 |
+|---|---|
+| `port` | Service가 받는 포트 |
+| `targetPort` | 트래픽을 보낼 Pod의 포트. 생략하면 `port`와 같음 |
+| `nodePort` | NodePort, LoadBalancer 타입에서 모든 노드가 여는 포트 |
+
+타입은 쌓아 올리는 구조입니다. ClusterIP 위에 NodePort가 기능을 더하고 LoadBalancer는 보통 NodePort 위에 올라갑니다. ExternalName만 따로 떨어져 있어서 프록시 없이 DNS CNAME만 돌려줍니다.
+
+**고장 나면** Service는 있는데 응답이 없습니다. 가장 흔한 원인은 selector와 Pod 라벨이 어긋나 EndpointSlice가 비어 있는 경우입니다. readiness probe가 실패한 Pod는 EndpointSlice에 `ready: false`로 남고 kube-proxy가 트래픽 대상에서 뺍니다. 이름으로는 안 되는데 IP로는 닿으면 CoreDNS 쪽입니다.
+
+어디가 문제인지 모르겠으면 Debug Services 문서 순서대로 하나씩 지워 나갑니다.
+
+1. Service가 있는가
+2. NetworkPolicy가 막고 있지 않은가
+3. DNS 이름으로 되는가
+4. ClusterIP로 되는가
+5. 포트 정의가 맞는가
+6. EndpointSlice가 비어 있지 않은가
+7. Pod에 직접 닿는가
+8. kube-proxy가 돌고 있는가
 
 ### 3-9. Gateway와 Ingress: 클러스터 바깥에서 들어오는 문
 
-여기까지 오면 클러스터 안에서는 `web`에 닿습니다. 바깥 사용자가 `shop.example.com`으로 들어오게 하려면 HTTP 요청을 Service로 이어 줄 규칙이 하나 더 필요합니다. Gateway API에서는 Gateway가 문을 열고 HTTPRoute가 경로를 Service로 잇습니다. Ingress는 같은 일을 하는 예전 방식이고 시험 범위에는 둘 다 있습니다.
+여기까지 오면 클러스터 안에서는 `web`에 닿습니다. 바깥 사용자가 `shop.example.com`으로 들어오려면 HTTP 요청을 Service로 이어 줄 규칙이 하나 더 필요합니다. 방법은 둘이고 시험 범위에는 둘 다 있습니다.
 
-- 고장 나면: HTTPRoute를 만들었는데 트래픽이 안 옵니다. `kubectl describe httproute`의 `Accepted`와 `ResolvedRefs` 조건이 `False`면 사유에 Gateway 이름이나 네임스페이스 허용 문제가 적힙니다. Ingress는 리소스만 있고 컨트롤러가 없으면 아무 일도 일어나지 않습니다.
+Gateway API는 역할마다 객체를 나눕니다.
 
-Gateway API는 역할마다 객체를 나눕니다. GatewayClass는 어느 컨트롤러가 Gateway를 구현하는지 정하고 Gateway는 리스너(프로토콜, 포트, 호스트 이름, TLS)를 엽니다. HTTPRoute는 들어온 요청을 어느 Service로 보낼지 적습니다. Route는 `parentRefs`로 Gateway를 가리키고 Gateway는 리스너의 `allowedRoutes`로 붙을 수 있는 Route를 거릅니다. 양쪽이 서로 허락해야 연결됩니다. Ingress는 리소스가 규칙만 담고 실제 프록시는 따로 설치하는 Ingress 컨트롤러가 설정합니다. 컨트롤러가 여럿이면 `spec.ingressClassName`으로 고르고 경로마다 `pathType`이 반드시 있어야 합니다.
+| 객체 | 정하는 것 |
+|---|---|
+| GatewayClass | 어느 컨트롤러가 Gateway를 구현하는지 |
+| Gateway | 리스너(프로토콜, 포트, 호스트 이름, TLS)를 연다 |
+| HTTPRoute | 들어온 요청을 어느 Service로 보낼지 |
+
+연결은 양쪽이 서로 허락해야 성립합니다. Route는 `parentRefs`로 Gateway를 가리키고 Gateway는 리스너의 `allowedRoutes`로 붙을 수 있는 Route를 거릅니다.
+
+Ingress는 같은 일을 하는 예전 방식입니다. Ingress 리소스는 규칙만 담고 실제 프록시는 따로 설치한 Ingress 컨트롤러가 설정합니다. 컨트롤러가 여럿이면 `spec.ingressClassName`으로 고르고 경로마다 `pathType`이 반드시 있어야 합니다.
+
+**고장 나면** HTTPRoute를 만들었는데 트래픽이 안 옵니다. `kubectl describe httproute`에서 `Accepted`와 `ResolvedRefs` 조건을 봅니다. `False`면 사유에 Gateway 이름이나 네임스페이스 허용 문제가 적혀 있습니다.
+
+Ingress는 리소스만 있고 컨트롤러가 없으면 아무 일도 일어나지 않습니다.
 
 ## 4. 반대 방향: 요청 하나가 컨테이너에 닿기까지
 
@@ -206,7 +339,9 @@ Gateway API는 역할마다 객체를 나눕니다. GatewayClass는 어느 컨�
 
 ![사용자 요청이 Gateway와 HTTPRoute, Service ClusterIP, kube-proxy가 쓴 iptables DNAT 규칙, CNI가 배정한 Pod IP를 거쳐 nginx 컨테이너 프로세스에 닿는 그림. 이름 해석은 CoreDNS, 차단 규칙은 NetworkPolicy가 맡는다](/uploads/cert/cka-map/request-path.svg)
 
-요청이 지나가는 길에는 API 서버도 스케줄러도 컨트롤러도 없습니다. 컨트롤 플레인이 잠깐 멈춰도 이미 깔린 커널 규칙과 떠 있는 컨테이너로 요청은 계속 처리됩니다. 반대로 새 Pod가 뜨거나 Pod IP가 바뀐 것은 반영되지 않습니다. [3편 3장](/blog/cert/cka/cka-01-why-kubernetes#3-구성요소가-멈추면-무엇이-멈추는지)에서 controller-manager를 멈춰 놓고 확인한 것도 이 동작입니다.
+요청이 지나가는 길에는 API 서버도 스케줄러도 컨트롤러도 없습니다. 컨트롤 플레인이 잠깐 멈춰도 이미 깔린 커널 규칙과 떠 있는 컨테이너로 요청은 계속 처리됩니다.
+
+반대로 새 Pod가 뜨거나 Pod IP가 바뀐 것은 반영되지 않습니다. [3편 3장](/blog/cert/cka/cka-01-why-kubernetes#3-구성요소가-멈추면-무엇이-멈추는지)에서 controller-manager를 멈춰 놓고 확인한 것도 이 동작입니다.
 
 ## 5. 층별 고장 증상 지도
 
@@ -240,7 +375,9 @@ Gateway API는 역할마다 객체를 나눕니다. GatewayClass는 어느 컨�
 | Workloads and Scheduling | 15% | ④⑤. 컨트롤러가 만드는 것과 스케줄러가 고르는 기준 | [6편](/blog/cert/cka/cka-03-workloads-scheduling) |
 | Storage | 10% | ⑦의 CSI와 PV, PVC | [8편](/blog/cert/cka/cka-05-storage) |
 
-비중은 [cncf/curriculum의 v1.37 커리큘럼](https://github.com/cncf/curriculum)을 따랐고 세부 항목은 [1편 2-1절](/blog/cert/cka/cka-00-exam-and-study-plan#2-1-영역별-비중과-세부-항목)에 옮겨 두었습니다. 트러블슈팅이 가장 크지만 따로 외울 것은 적습니다. 나머지 네 영역에서 각 층이 정상일 때 어떤 모습인지 알아야 고장 난 모습이 눈에 들어옵니다.
+비중은 [cncf/curriculum의 v1.37 커리큘럼](https://github.com/cncf/curriculum)을 따랐고 세부 항목은 [1편 2-1절](/blog/cert/cka/cka-00-exam-and-study-plan#2-1-영역별-비중과-세부-항목)에 옮겨 두었습니다.
+
+트러블슈팅이 가장 크지만 따로 외울 것은 적습니다. 나머지 네 영역에서 각 층이 정상일 때 어떤 모습인지 알아야 고장 난 모습이 눈에 들어옵니다.
 
 ## 7. 읽는 순서
 
