@@ -13,7 +13,6 @@ category: cert/Spark
 topics:
   - cert
 draft: false
-unlisted: true
 series: "Spark 공부"
 seriesOrder: 9
 ---

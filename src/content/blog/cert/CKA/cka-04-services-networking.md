@@ -14,7 +14,6 @@ category: cert/CKA
 topics:
   - cert
 draft: false
-unlisted: true
 series: "CKA 공부"
 seriesOrder: 7
 ---

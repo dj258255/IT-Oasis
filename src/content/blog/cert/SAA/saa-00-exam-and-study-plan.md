@@ -12,7 +12,6 @@ category: cert/SAA
 topics:
   - cert
 draft: false
-unlisted: true
 series: "SAA 공부"
 seriesOrder: 1
 ---

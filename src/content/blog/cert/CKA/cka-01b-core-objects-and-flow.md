@@ -14,7 +14,6 @@ topics:
   - cert
 coverImage: /uploads/cert/cka/k8s-architecture.webp
 draft: false
-unlisted: true
 series: "CKA 공부"
 seriesOrder: 4
 ---
