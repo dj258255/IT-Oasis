@@ -15,6 +15,7 @@ topics:
   - projects
   - ai
 draft: false
+unlisted: true
 series: "텔레그램 Claude 봇"
 seriesOrder: 1
 ---

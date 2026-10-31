@@ -17,6 +17,7 @@ category: theory/Database
 topics:
   - database
 draft: false
+unlisted: true
 series: "DB 스토리지 내부"
 seriesOrder: 3
 ---

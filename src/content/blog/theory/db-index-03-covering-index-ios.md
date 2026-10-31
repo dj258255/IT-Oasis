@@ -16,6 +16,7 @@ category: theory/Database
 topics:
   - database
 draft: false
+unlisted: true
 series: "데이터베이스 인덱스"
 seriesOrder: 3
 ---

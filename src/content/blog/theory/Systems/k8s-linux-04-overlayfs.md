@@ -14,6 +14,7 @@ topics:
   - systems
   - performance
 draft: false
+unlisted: true
 series: "쿠버네티스 아래의 리눅스"
 seriesOrder: 4
 ---

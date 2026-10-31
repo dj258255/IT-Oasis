@@ -16,6 +16,7 @@ topics:
   - pipeline
   - distributed
 draft: false
+unlisted: true
 series: "DE 공부"
 seriesOrder: 4
 ---

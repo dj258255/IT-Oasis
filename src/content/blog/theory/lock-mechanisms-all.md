@@ -14,6 +14,7 @@ category: theory/Concurrency
 topics:
   - distributed
 draft: false
+unlisted: true
 series: "동시성과 락"
 seriesOrder: 3
 ---

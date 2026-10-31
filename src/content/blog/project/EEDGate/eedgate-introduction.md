@@ -16,6 +16,7 @@ topics:
   - projects
   - ai
 draft: false
+unlisted: true
 ---
 
 ## 프로젝트 소개

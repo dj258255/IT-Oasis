@@ -18,6 +18,7 @@ category: theory/Performance
 topics:
   - performance
 draft: false
+unlisted: true
 ---
 
 성능 지표는 요청 하나가 시스템을 지나가며 남긴 숫자라서 서로 이어져 있습니다. 백엔드 개발을 하다 보면 이런 말을 자주 접합니다.

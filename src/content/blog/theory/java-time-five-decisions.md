@@ -20,6 +20,7 @@ topics:
   - systems
   - database
 draft: false
+unlisted: true
 ---
 
 알리바바 클라우드 개발자 커뮤니티에 青栎이 쓴 "如何才能在Java中优雅的操纵时间？"(영어판 "How Can We Manipulate Time Gracefully in Java?")를 절 순서대로 따라가며 정리했습니다. 青栎은 프로젝트 코드에 `java.util.Date`와 `java.time.LocalDateTime`이 섞여 쓰이고 시간 도구 클래스도 여럿인 것을 보고 이 글을 썼습니다. 컴퓨터가 시간을 저장하는 방식에서 시작해 옛 API와 새 API를 차례로 보고 두 API 사이의 변환, DB 매핑, 시간 도구 클래스로 끝나는 구성입니다.

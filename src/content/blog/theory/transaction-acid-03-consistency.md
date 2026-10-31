@@ -17,6 +17,7 @@ topics:
   - database
   - distributed
 draft: false
+unlisted: true
 series: "트랜잭션 ACID"
 seriesOrder: 3
 ---

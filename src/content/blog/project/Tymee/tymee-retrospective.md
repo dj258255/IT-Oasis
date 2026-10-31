@@ -18,6 +18,7 @@ category: personal/Tymee
 topics:
   - projects
 draft: false
+unlisted: true
 ---
 
 타이미(Tymee)는 집중한 시간을 기록하고 그 시간만큼 보상과 성장 요소를 주는 게이미피케이션 타이머입니다. 기획부터 디자인, 백엔드, 모바일 앱까지 혼자 만들고 있습니다. 공부나 작업에 집중하는 시간을 게임처럼 눈에 보이게 만들어서 동기를 오래 유지하는 것이 목표입니다.

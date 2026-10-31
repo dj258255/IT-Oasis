@@ -14,6 +14,7 @@ topics:
   - pipeline
   - messaging
 draft: false
+unlisted: true
 series: "DE 공부"
 seriesOrder: 15
 ---

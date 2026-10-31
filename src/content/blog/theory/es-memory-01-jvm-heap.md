@@ -14,6 +14,7 @@ category: theory/JVM-Memory
 topics:
   - systems
 draft: false
+unlisted: true
 series: "JVM 메모리"
 seriesOrder: 1
 ---

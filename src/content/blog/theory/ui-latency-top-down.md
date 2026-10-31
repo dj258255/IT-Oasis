@@ -15,6 +15,7 @@ category: theory/Performance
 topics:
   - performance
 draft: false
+unlisted: true
 ---
 
 "UI 반응이 느린 거라 서버 쪽인지, API 콜 쪽인지, 렌더링 쪽인지, 전부 다인지 측정하고 UI 프레임워크 동작도 까 봐야 되고 피곤하네."

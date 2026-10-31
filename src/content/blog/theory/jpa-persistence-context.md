@@ -14,6 +14,7 @@ category: theory/Database
 topics:
   - database
 draft: false
+unlisted: true
 ---
 
 같은 클래스 안에서 메서드를 호출하면 `@Transactional`이 붙어 있어도 트랜잭션이 시작되지 않습니다. 프록시를 거치지 않고 바로 호출되기 때문입니다. `readOnly = true`는 더티 체킹을 생략해 주지만, 낙관적 락(`@Version`)과 함께 쓰면 그 락이 무력화될 수 있습니다.

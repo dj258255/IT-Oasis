@@ -16,6 +16,7 @@ category: theory/Database
 topics:
   - database
 draft: false
+unlisted: true
 series: "트랜잭션 ACID"
 seriesOrder: 1
 ---

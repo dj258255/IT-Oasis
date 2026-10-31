@@ -14,6 +14,7 @@ category: study/discord-bot
 topics:
   - projects
 draft: false
+unlisted: true
 series: "디스코드 출석봇"
 seriesOrder: 1
 ---

@@ -15,6 +15,7 @@ topics:
   - distributed
   - messaging
 draft: false
+unlisted: true
 series: "Java로 만드는 토이 Kafka"
 seriesOrder: 1
 ---

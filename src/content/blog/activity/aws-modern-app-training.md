@@ -13,6 +13,7 @@ category: activity
 topics:
   - projects
 draft: false
+unlisted: true
 ---
 
 **작성일**: 2023년 12월 11일 (제 개인 노션에 있는걸 옮겨왔습니다)

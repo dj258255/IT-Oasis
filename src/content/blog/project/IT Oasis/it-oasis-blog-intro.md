@@ -11,6 +11,7 @@ category: personal/IT Oasis
 topics:
   - projects
 draft: false
+unlisted: true
 ---
 
 ## 왜 직접 만들었나

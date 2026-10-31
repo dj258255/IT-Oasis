@@ -7,6 +7,7 @@ category: study/be-commerce
 topics:
   - search
 draft: false
+unlisted: true
 series: "BE-commerce"
 seriesOrder: 64
 tags:

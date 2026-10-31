@@ -20,6 +20,7 @@ topics:
 series: "데이터 복제"
 seriesOrder: 2
 draft: false
+unlisted: true
 ---
 
 메이퇀 기술 블로그에 仕禄이 쓴 "Replication（下）：事务，一致性与共识"(2021-08-25)를 절 순서대로 따라가며 정리했습니다. 仕禄은 『데이터 중심 애플리케이션 설계』(DDIA)를 길잡이로 삼아 트랜잭션과 내부 일관성과 합의를 풀고 Kafka의 복제 설계를 그 개념으로 다시 읽은 뒤 분산 알고리즘을 검증하는 도구로 글을 맺습니다. 상편은 [복제(상): 흔히 쓰는 복제 모델과 분산 시스템의 어려움](/blog/theory/replication-five-decisions)에 있습니다.
