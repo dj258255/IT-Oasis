@@ -1,37 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="610" viewBox="0 0 1400 610" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
-  <rect width="1400" height="610" fill="#ffffff"/>
-  <text x="60" y="54" font-size="26" font-weight="700" fill="#212529">같은 요청 제한을 세 가지 방법으로 쟀습니다</text>
-  <text x="60" y="86" font-size="15" fill="#59636e">제한: 한 사용자 초당 5건, 전체 초당 100건 · 앱, MySQL, Redis, 부하 도구가 한 대의 맥에서 실행</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1400" height="520" fill="#ffffff"/>
+  <text x="700" y="64" font-size="32" font-weight="700" fill="#212529" text-anchor="middle">요청 제한 숫자와 서버 용량은 다릅니다</text>
+  <text x="700" y="100" font-size="18" fill="#59636e" text-anchor="middle">같은 서버를 세 가지 방법으로 재면 숫자가 셋 나옵니다</text>
 
-  <!-- 1회차 -->
-  <rect x="60" y="116" width="400" height="350" rx="6" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
-  <text x="84" y="154" font-size="18" font-weight="700" fill="#212529">1. 사용자 한 명으로 부하를 줬습니다</text>
-  <line x1="84" y1="170" x2="436" y2="170" stroke="#d0d7de" stroke-width="1"/>
-  <text x="84" y="202" font-size="15" fill="#343a40"><tspan x="84" dy="0">요청의 97.5%가 429로 거절됐고 통과한 요청은</tspan><tspan x="84" dy="24">p95 737.81ms에서 52.01ms로 빨라졌습니다.</tspan></text>
-  <text x="84" y="266" font-size="15" fill="#343a40"><tspan x="84" dy="0">그런데 한 사용자는 초당 10건까지만 통과합니다.</tspan><tspan x="84" dy="24">사용자별 5건에 경로가 두 개(주문, 결제)이기 때문입니다.</tspan><tspan x="84" dy="24">실제 DB 도달량도 초당 10.2건이었습니다.</tspan></text>
-  <text x="84" y="366" font-size="14" font-weight="700" fill="#59636e">여기서 알 수 있는 것</text>
-  <text x="84" y="392" font-size="15" fill="#212529"><tspan x="84" dy="0">사용자별 제한은 동작합니다.</tspan><tspan x="84" dy="24">전체 상한 100건은 한 번도 시험되지 않았습니다.</tspan><tspan x="84" dy="24">그래서 이 숫자로 서버 용량을 말할 수 없습니다.</tspan></text>
+  <line x1="466" y1="140" x2="466" y2="420" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="933" y1="140" x2="933" y2="420" stroke="#d0d7de" stroke-width="1"/>
 
-  <!-- 2회차 -->
-  <rect x="500" y="116" width="400" height="350" rx="6" fill="#ffffff" stroke="#d0d7de" stroke-width="1"/>
-  <text x="524" y="154" font-size="18" font-weight="700" fill="#212529">2. 사용자 40명이 응답을 받고 다시 보냈습니다</text>
-  <line x1="524" y1="170" x2="876" y2="170" stroke="#d0d7de" stroke-width="1"/>
-  <text x="524" y="202" font-size="15" fill="#343a40"><tspan x="524" dy="0">전체 상한이 처음으로 요청을 거절했습니다.</tspan><tspan x="524" dy="24">서버가 처리한 양은 초당 약 120건으로 보였습니다.</tspan></text>
-  <text x="524" y="266" font-size="15" fill="#343a40"><tspan x="524" dy="0">함정이 하나 있습니다. 서버가 느려지면 사용자도</tspan><tspan x="524" dy="24">다음 요청을 늦게 보내서 부하가 같이 줄어듭니다.</tspan><tspan x="524" dy="24">부하 도구가 스스로 속도를 늦춘 셈입니다.</tspan></text>
-  <text x="524" y="366" font-size="14" font-weight="700" fill="#59636e">여기서 알 수 있는 것</text>
-  <text x="524" y="392" font-size="15" fill="#212529"><tspan x="524" dy="0">120건은 이 방법으로 밀어 넣을 수 있었던 양입니다.</tspan><tspan x="524" dy="24">서버가 버티는 한계와는 다른 숫자입니다.</tspan><tspan x="524" dy="24">제어를 켜고 끈 비교도 이 조건에서는 공정하지 않습니다.</tspan></text>
+  <!-- 1 -->
+  <text x="233" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">사용자 한 명으로 재면</text>
+  <text x="233" y="258" font-size="52" font-weight="700" fill="#59636e" text-anchor="middle">10건/초</text>
+  <text x="233" y="292" font-size="17" fill="#59636e" text-anchor="middle">한 사람이 통과시킬 수 있는 최대</text>
+  <text x="233" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="233" dy="0">전체 상한 100건은</tspan><tspan x="233" dy="28">건드리지도 못합니다</tspan></text>
+  <rect x="173" y="388" width="120" height="32" rx="4" fill="#f1f3f5"/>
+  <text x="233" y="410" font-size="16" font-weight="700" fill="#59636e" text-anchor="middle">용량 아님</text>
 
-  <!-- 3회차 -->
-  <rect x="940" y="116" width="400" height="350" rx="6" fill="#ffffff" stroke="#0969da" stroke-width="1.5"/>
-  <text x="964" y="154" font-size="18" font-weight="700" fill="#212529">3. 초당 보내는 양을 정해 놓고 올렸습니다</text>
-  <line x1="964" y1="170" x2="1316" y2="170" stroke="#d0d7de" stroke-width="1"/>
-  <text x="964" y="202" font-size="15" fill="#343a40"><tspan x="964" dy="0">서버가 느려져도 정한 속도로 계속 보냅니다.</tspan><tspan x="964" dy="24">실제 사용자 트래픽이 움직이는 방식과 같습니다.</tspan></text>
-  <text x="964" y="266" font-size="15" fill="#343a40"><tspan x="964" dy="0">초당 100건까지는 성공률 100%였습니다.</tspan><tspan x="964" dy="24">초당 120건에서 92.4%로 떨어졌고</tspan><tspan x="964" dy="24">140건부터는 55%에서 28%까지 내려갔습니다.</tspan></text>
-  <text x="964" y="366" font-size="14" font-weight="700" fill="#59636e">여기서 알 수 있는 것</text>
-  <text x="964" y="392" font-size="15" fill="#212529"><tspan x="964" dy="0">이 환경에서 성능이 꺾이는 구간은 초당 100~120건입니다.</tspan><tspan x="964" dy="24">전체 상한 100건은 그 구간 바로 아래에 있습니다.</tspan><tspan x="964" dy="24">운영 장비에서는 같은 방법으로 다시 잽니다.</tspan></text>
+  <!-- 2 -->
+  <text x="700" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">40명이 응답을 기다렸다 보내면</text>
+  <text x="700" y="258" font-size="52" font-weight="700" fill="#59636e" text-anchor="middle">120건/초</text>
+  <text x="700" y="292" font-size="17" fill="#59636e" text-anchor="middle">이 방법으로 밀어 넣을 수 있었던 양</text>
+  <text x="700" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="700" dy="0">서버가 느려지면</tspan><tspan x="700" dy="28">부하도 같이 줄어듭니다</tspan></text>
+  <rect x="640" y="388" width="120" height="32" rx="4" fill="#f1f3f5"/>
+  <text x="700" y="410" font-size="16" font-weight="700" fill="#59636e" text-anchor="middle">용량 아님</text>
 
-  <!-- 맺음 -->
-  <line x1="60" y1="506" x2="1340" y2="506" stroke="#d0d7de" stroke-width="1"/>
-  <text x="60" y="542" font-size="16" fill="#212529"><tspan x="60" dy="0">요청 제한에 적은 숫자와 서버가 실제로 버티는 양은 따로 재야 합니다.</tspan><tspan x="60" dy="26" fill="#343a40">실제 트래픽은 서버가 느려졌다고 요청을 줄여 주지 않으므로 용량은 3번처럼 보내는 양을 고정해 놓고 잽니다.</tspan></text>
+  <!-- 3 -->
+  <text x="1166" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">초당 보내는 양을 고정하면</text>
+  <text x="1166" y="258" font-size="52" font-weight="700" fill="#0969da" text-anchor="middle">100~120건/초</text>
+  <text x="1166" y="292" font-size="17" fill="#59636e" text-anchor="middle">성공률이 떨어지기 시작하는 구간</text>
+  <text x="1166" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="1166" dy="0">서버가 느려도 계속 보내니</tspan><tspan x="1166" dy="28">한계가 보입니다</tspan></text>
+  <rect x="1096" y="388" width="140" height="32" rx="4" fill="#ddf4ff"/>
+  <text x="1166" y="410" font-size="16" font-weight="700" fill="#0969da" text-anchor="middle">이것이 용량</text>
+
+  <line x1="60" y1="452" x2="1340" y2="452" stroke="#d0d7de" stroke-width="1"/>
+  <text x="700" y="494" font-size="20" fill="#212529" text-anchor="middle">요청 제한에 적은 100건과 서버가 실제로 버티는 양은 따로 잽니다</text>
 </svg>
