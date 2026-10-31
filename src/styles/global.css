@@ -676,15 +676,15 @@ button, input, select, textarea {
 .prose details > *:last-child { margin-bottom: 1.1rem; }
 .dark .prose details > summary { color: #7cc4f0; }
 .dark .prose details > summary:focus-visible { outline-color: #7cc4f0; }
-/* 토글 안에서는 소제목과 인용 상자의 왼쪽 띠를 뺀다. 상자 테두리 안에 띠가 겹겹이 서면 장식만 남는다 */
-.prose details > h4,
-.prose details > blockquote {
+/* 토글 안에서는 소제목의 왼쪽 띠를 뺀다. 상자 테두리 안에 띠가 겹겹이 서면 장식만 남는다 */
+.prose details > h4 {
   border-left: 0;
   padding-left: 1.1rem;
 }
-/* 띠가 없으면 인용 상자도 본문 문단이라 72ch에서 끊기면 줄이 중간에 꺾여 보인다. 토글 폭을 다 쓴다 */
+/* 인용 상자는 본문 문단이라 72ch에서 끊기면 줄이 중간에 꺾여 보인다. 토글 폭을 다 쓴다 */
 .prose details > blockquote {
   max-width: none;
+  padding-left: 1.1rem;
   padding-right: 1.1rem;
 }
 
@@ -772,19 +772,22 @@ button, input, select, textarea {
 .prose .expressive-code {
   @apply my-6 sm:my-8;
 }
+/* 인용 상자는 왼쪽 띠 없이 들여쓰기만 한다. 띠에 굵은 한 줄을 넣는 꼴은 모델 초안 레이아웃으로 읽힌다 */
 .prose blockquote {
-  @apply pl-5 sm:pl-7 pr-0 my-8 sm:my-10 py-1;
+  @apply pl-5 sm:pl-7 pr-0 my-6 sm:my-8 py-0;
   max-width: 72ch;
   background: transparent;
   border: 0;
-  border-left: 2px solid #7b8794;
   color: #59636e;
   font-style: normal;
   line-height: 1.8;
 }
 .dark .prose blockquote {
-  color: #c9d1d9;
-  border-left-color: #768390;
+  color: #b1bac4;
+}
+.prose blockquote strong {
+  font-weight: 600;
+  color: inherit;
 }
 .prose blockquote p:first-child { margin-top: 0; }
 .prose blockquote p:last-child { margin-bottom: 0; }
