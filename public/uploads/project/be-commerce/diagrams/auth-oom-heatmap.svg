@@ -2,8 +2,8 @@
   <rect width="900" height="650" rx="12" fill="#ffffff"/>
 
   <!-- Title -->
-  <text x="450" y="44" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">강화가 새 공격 표면을 열었다 — 힙 상한 × 동시 로그인별 OOM 실패 건수</text>
-  <text x="450" y="70" text-anchor="middle" font-size="12" fill="#64748b">메모리 축이 동시성에 곱해진다 — 해시 1건당 19MiB × 동시 로그인 수</text>
+  <text x="450" y="44" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">힙 상한 × 동시 로그인별 OOM 실패 건수</text>
+  <text x="450" y="70" text-anchor="middle" font-size="12" fill="#64748b">해시 1건당 19MiB × 동시 로그인 수</text>
 
   <!-- Axis captions -->
   <text x="44" y="124" font-size="12" font-weight="700" fill="#64748b">힙 상한</text>
