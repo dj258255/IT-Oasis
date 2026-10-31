@@ -681,12 +681,6 @@ button, input, select, textarea {
   border-left: 0;
   padding-left: 1.1rem;
 }
-/* 인용 상자는 본문 문단이라 72ch에서 끊기면 줄이 중간에 꺾여 보인다. 토글 폭을 다 쓴다 */
-.prose details > blockquote {
-  max-width: none;
-  padding-left: 1.1rem;
-  padding-right: 1.1rem;
-}
 
 .prose h1, .prose h2, .prose h3 {
   @apply font-bold mt-10 mb-4;
@@ -772,19 +766,42 @@ button, input, select, textarea {
 .prose .expressive-code {
   @apply my-6 sm:my-8;
 }
-/* 인용 상자는 왼쪽 띠 없이 들여쓰기만 한다. 띠에 굵은 한 줄을 넣는 꼴은 모델 초안 레이아웃으로 읽힌다 */
+/* 인용 상자는 왼쪽 띠 대신 모서리 괄호 두 개(왼쪽 위, 오른쪽 아래)로 묶는다.
+   폭은 본문과 같게 두어 줄이 본문보다 먼저 꺾이지 않게 한다 */
 .prose blockquote {
-  @apply pl-5 sm:pl-7 pr-0 my-6 sm:my-8 py-0;
-  max-width: 72ch;
+  @apply my-6 sm:my-8;
+  position: relative;
+  max-width: none;
+  padding: 0.55rem 1.1rem;
   background: transparent;
   border: 0;
   color: #59636e;
   font-style: normal;
   line-height: 1.8;
 }
-.dark .prose blockquote {
-  color: #b1bac4;
+.prose blockquote::before,
+.prose blockquote::after {
+  content: "";
+  position: absolute;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 0 solid #9aa4ae;
 }
+.prose blockquote::before {
+  top: 0;
+  left: 0;
+  border-top-width: 1.5px;
+  border-left-width: 1.5px;
+}
+.prose blockquote::after {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 1.5px;
+  border-right-width: 1.5px;
+}
+.dark .prose blockquote { color: #b1bac4; }
+.dark .prose blockquote::before,
+.dark .prose blockquote::after { border-color: #6e7a86; }
 .prose blockquote strong {
   font-weight: 600;
   color: inherit;
