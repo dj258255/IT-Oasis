@@ -1,47 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif">
-<rect width="1200" height="640" fill="#ffffff"/>
-<text x="600" y="48" text-anchor="middle" font-size="24" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">떠난 고객의 결제를 빼도 PG 호출은 8.4%만 줄었습니다</text>
-<text x="600" y="78" text-anchor="middle" font-size="14" fill="#64748b">PG 5초 지연 · 상한 40 · 초당 30건 · 요청의 30%에 남은 시간 0</text>
-<rect x="470" y="111" width="14" height="14" rx="3" fill="#2a78d6"/>
-<text x="492" y="123" font-size="15" fill="#52514e">데드라인 확인 끔</text>
-<rect x="635" y="111" width="14" height="14" rx="3" fill="#eb6834"/>
-<text x="657" y="123" font-size="15" fill="#52514e">켬</text>
-<line x1="90" y1="520.0" x2="380" y2="520.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="80" y="524.0" text-anchor="end" font-size="12" fill="#64748b">0</text>
-<line x1="90" y1="355.0" x2="380" y2="355.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="80" y="359.0" text-anchor="end" font-size="12" fill="#64748b">1,000</text>
-<line x1="90" y1="190.0" x2="380" y2="190.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="80" y="194.0" text-anchor="end" font-size="12" fill="#64748b">2,000</text>
-<line x1="90" y1="520" x2="380" y2="520" stroke="#64748b" stroke-width="1"/>
-<path d="M150,520 L150,275.5 Q150,271.5 154,271.5 L246,271.5 Q250,271.5 250,275.5 L250,520 Z" fill="#2a78d6"/>
-<text x="200" y="263.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,506</text>
-<path d="M252,520 L252,296.5 Q252,292.5 256,292.5 L348,292.5 Q352,292.5 352,296.5 L352,520 Z" fill="#eb6834"/>
-<text x="302" y="284.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">1,379</text>
-<text x="235" y="556" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">PG로 나간 승인 호출</text>
-<line x1="465" y1="520.0" x2="755" y2="520.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="455" y="524.0" text-anchor="end" font-size="12" fill="#64748b">0</text>
-<line x1="465" y1="355.0" x2="755" y2="355.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="455" y="359.0" text-anchor="end" font-size="12" fill="#64748b">1,000</text>
-<line x1="465" y1="190.0" x2="755" y2="190.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="455" y="194.0" text-anchor="end" font-size="12" fill="#64748b">2,000</text>
-<line x1="465" y1="520" x2="755" y2="520" stroke="#64748b" stroke-width="1"/>
-<path d="M525,520 L525,423.5 Q525,419.5 529,419.5 L621,419.5 Q625,419.5 625,423.5 L625,520 Z" fill="#2a78d6"/>
-<text x="575" y="411.5" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">609</text>
-<path d="M627,520 L627,496.1 Q627,492.1 631,492.1 L723,492.1 Q727,492.1 727,496.1 L727,520 Z" fill="#eb6834"/>
-<text x="677" y="484.1" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">169</text>
-<text x="610" y="556" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">상한 거절</text>
-<line x1="840" y1="520.0" x2="1130" y2="520.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="830" y="524.0" text-anchor="end" font-size="12" fill="#64748b">0%</text>
-<line x1="840" y1="355.0" x2="1130" y2="355.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="830" y="359.0" text-anchor="end" font-size="12" fill="#64748b">50%</text>
-<line x1="840" y1="190.0" x2="1130" y2="190.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="830" y="194.0" text-anchor="end" font-size="12" fill="#64748b">100%</text>
-<line x1="840" y1="520" x2="1130" y2="520" stroke="#64748b" stroke-width="1"/>
-<path d="M900,520 L900,298.6 Q900,294.6 904,294.6 L996,294.6 Q1000,294.6 1000,298.6 L1000,520 Z" fill="#2a78d6"/>
-<text x="950" y="286.6" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">68.3%</text>
-<path d="M1002,520 L1002,235.60000000000002 Q1002,231.60000000000002 1006,231.60000000000002 L1098,231.60000000000002 Q1102,231.60000000000002 1102,235.60000000000002 L1102,520 Z" fill="#eb6834"/>
-<text x="1052" y="223.6" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">87.4%</text>
-<text x="985" y="556" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">남은 고객 결제 중 PG에 닿은 비율</text>
-<text x="600" y="612" text-anchor="middle" font-size="14" fill="#64748b">PG를 부르지 않은 615건은 떠난 결제 수와 같음 · 비운 자리를 남은 결제가 바로 채움</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1400" height="520" fill="#ffffff"/>
+  <text x="700" y="64" font-size="32" font-weight="700" fill="#212529" text-anchor="middle">떠난 고객의 결제를 빼면 무엇이 달라질까</text>
+  <text x="700" y="100" font-size="18" fill="#59636e" text-anchor="middle">PG 5초 지연, 동시 호출 상한 40, 초당 30건, 요청의 30%가 떠난 고객</text>
+
+  <line x1="466" y1="140" x2="466" y2="420" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="933" y1="140" x2="933" y2="420" stroke="#d0d7de" stroke-width="1"/>
+
+  <!-- 1 -->
+  <text x="233" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">PG로 나간 호출</text>
+  <text x="233" y="258" font-size="52" font-weight="700" fill="#59636e" text-anchor="middle">8.4% 감소</text>
+  <text x="233" y="292" font-size="17" fill="#59636e" text-anchor="middle">1,506건에서 1,379건</text>
+  <text x="233" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="233" dy="0">비운 자리를</tspan><tspan x="233" dy="28">남은 결제가 바로 채웁니다</tspan></text>
+  <rect x="163" y="388" width="140" height="32" rx="4" fill="#f1f3f5"/>
+  <text x="233" y="410" font-size="16" font-weight="700" fill="#59636e" text-anchor="middle">거의 그대로</text>
+
+  <!-- 2 -->
+  <text x="700" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">상한에 막힌 결제</text>
+  <text x="700" y="258" font-size="52" font-weight="700" fill="#59636e" text-anchor="middle">609 → 169</text>
+  <text x="700" y="292" font-size="17" fill="#59636e" text-anchor="middle">상한 거절 건수</text>
+  <text x="700" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="700" dy="0">떠난 결제가 상한 앞에서</tspan><tspan x="700" dy="28">먼저 빠집니다</tspan></text>
+  <rect x="630" y="388" width="140" height="32" rx="4" fill="#f1f3f5"/>
+  <text x="700" y="410" font-size="16" font-weight="700" fill="#59636e" text-anchor="middle">72% 감소</text>
+
+  <!-- 3 -->
+  <text x="1166" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">남은 고객의 결제가 PG에 닿은 비율</text>
+  <text x="1166" y="258" font-size="52" font-weight="700" fill="#0969da" text-anchor="middle">68% → 87%</text>
+  <text x="1166" y="292" font-size="17" fill="#59636e" text-anchor="middle">68.3%에서 87.4%</text>
+  <text x="1166" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="1166" dy="0">자리를 쓰는 사람이</tspan><tspan x="1166" dy="28">기다리는 고객으로 바뀝니다</tspan></text>
+  <rect x="1096" y="388" width="140" height="32" rx="4" fill="#ddf4ff"/>
+  <text x="1166" y="410" font-size="16" font-weight="700" fill="#0969da" text-anchor="middle">이것이 효과</text>
+
+  <line x1="60" y1="452" x2="1340" y2="452" stroke="#d0d7de" stroke-width="1"/>
+  <text x="700" y="494" font-size="20" fill="#212529" text-anchor="middle">상한이 차 있으면 호출 수는 거의 그대로이고 그 자리를 누가 쓰는지가 바뀝니다</text>
 </svg>

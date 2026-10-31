@@ -87,5 +87,5 @@ private static Long parseAmount(String raw) {
 
 ## 참고
 
-- 앞 편: [부분취소가 오자 이미 끝난 결제 대사의 근거가 바뀌었다](/blog/project/be-commerce/be-commerce-ch21-cancel-row-overwrite)
-- 대사 조회 화면과 원인 제안: [대사 원인을 고르라면서 근거는 11곳에 흩어져 있었다](/blog/project/be-commerce/be-commerce-ch8-reconciliation-judgement)
+- 앞 편: [현재 잔액과 거래 사건의 분리](/blog/project/be-commerce/be-commerce-ch21-cancel-row-overwrite)
+- 대사 조회 화면과 원인 제안: [대사 근거를 한 화면에 모으는 구조](/blog/project/be-commerce/be-commerce-ch8-reconciliation-judgement)

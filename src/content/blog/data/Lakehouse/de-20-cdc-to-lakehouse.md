@@ -36,7 +36,7 @@ seriesOrder: 21
 
 비유하면 이렇습니다. 하나는 10초마다 주문 테이블을 들여다보며 "지난번 이후 바뀐 행 있어?" 하고 묻는 방식입니다(조회 기반). 다른 하나는 DB가 스스로 쓰는 변경 일지를 처음부터 차례로 읽는 방식입니다(로그 기반). 묻는 방식은 물어보는 순간의 모습만 보고 일지를 읽는 방식은 그사이 일어난 일을 전부 봅니다. 이 차이가 2절의 재현에서 그대로 드러나고 3절부터는 일지를 읽는 쪽의 세부(일지의 종류, 처음 시작할 때의 문제, 중복, 디스크)로 내려갑니다.
 
-이 블로그에는 프로젝트에서 CDC를 붙인 글이 이미 있습니다. [WikiEngine의 CDC 이벤트 동기화](/blog/project/wikiengine/cdc), [기본값 때문에 139배 느렸던 CDC](/blog/project/be-commerce/be-commerce-ch35-cdc-default-was-slow), [RUNNING인 채 5분 동안 아무것도 보내지 않은 커넥터](/blog/project/be-commerce/be-commerce-ch49-cdc-running-not-flowing)가 그 경험입니다. 이 글은 방식 자체를 비교합니다.
+이 블로그에는 프로젝트에서 CDC를 붙인 글이 이미 있습니다. [WikiEngine의 CDC 이벤트 동기화](/blog/project/wikiengine/cdc), [CDC 지연과 커넥터 기본값](/blog/project/be-commerce/be-commerce-ch35-cdc-default-was-slow), [RUNNING인 채 5분 동안 아무것도 보내지 않은 커넥터](/blog/project/be-commerce/be-commerce-ch49-cdc-running-not-flowing)가 그 경험입니다. 이 글은 방식 자체를 비교합니다.
 
 ## 2. 조회 기반 CDC가 놓치는 것
 

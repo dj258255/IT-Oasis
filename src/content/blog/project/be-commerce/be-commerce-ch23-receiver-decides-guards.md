@@ -56,4 +56,4 @@ tags:
 
 - 쌍 비교와 절대 점수의 차이: [SuperAnnotate](https://www.superannotate.com/blog/llm-as-a-judge-vs-human-evaluation), [Eugene Yan](https://eugeneyan.com/writing/llm-evaluators/)
 - 평가자의 길이 편향: [arXiv 2410.20266](https://arxiv.org/pdf/2410.20266)
-- 앞 편(사실 묶음과 검증기): [결제 상담 AI가 지어낸 금액을 막으려다 진짜 금액까지 버리고 있었다](/blog/project/be-commerce/be-commerce-ch10-ruler-first)
+- 앞 편(사실 묶음과 검증기): [모델 초안의 숫자 출처 검증](/blog/project/be-commerce/be-commerce-ch10-ruler-first)

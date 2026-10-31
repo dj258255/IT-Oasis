@@ -1,32 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif">
-<rect width="1200" height="640" fill="#ffffff"/>
-<text x="600" y="48" text-anchor="middle" font-size="24" font-weight="700" fill="#1e293b" letter-spacing="-0.02em">매진이면 대기열을 닫게 했지만 한 번도 닫히지 않았습니다</text>
-<text x="600" y="78" text-anchor="middle" font-size="14" fill="#64748b">재고 100 · 구매자 300명 · 입장 50명 · 입장 칸 만료 30초 · 결과 모름 약 10%</text>
-<text x="80" y="150" font-size="17" font-weight="700" fill="#1e293b">입장 차례가 온 사람의 매진 판정</text>
-<text x="80" y="214" font-size="15" fill="#52514e">판정 요청</text>
-<rect x="80" y="224" width="330.0" height="22" rx="4" fill="#2a78d6"/>
-<text x="420.0" y="241" font-size="15" font-weight="700" fill="#1e293b">300번</text>
-<text x="80" y="284" font-size="15" fill="#52514e">재고 0이지만 결과를 기다리는 예약이 남음</text>
-<rect x="80" y="294" width="166.1" height="22" rx="4" fill="#2a78d6"/>
-<text x="256.1" y="311" font-size="15" font-weight="700" fill="#1e293b">151번</text>
-<text x="80" y="354" font-size="15" fill="#52514e">매진으로 닫음</text>
-<rect x="80" y="364" width="3" height="22" fill="#2a78d6"/>
-<text x="93.0" y="381" font-size="15" font-weight="700" fill="#1e293b">0번</text>
-<line x1="660" y1="540.0" x2="1120" y2="540.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="650" y="544.0" text-anchor="end" font-size="12" fill="#64748b">0건</text>
-<line x1="660" y1="420.0" x2="1120" y2="420.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="650" y="424.0" text-anchor="end" font-size="12" fill="#64748b">100건</text>
-<line x1="660" y1="300.0" x2="1120" y2="300.0" stroke="#e2e8f0" stroke-width="1"/>
-<text x="650" y="304.0" text-anchor="end" font-size="12" fill="#64748b">200건</text>
-<line x1="660" y1="540" x2="1120" y2="540" stroke="#64748b" stroke-width="1"/>
-<path d="M720.0,540 L720.0,376.0 Q720.0,372.0 724.0,372.0 L826.0,372.0 Q830.0,372.0 830.0,376.0 L830.0,540 Z" fill="#2a78d6"/>
-<text x="775.0" y="364.0" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">140건</text>
-<text x="775.0" y="568" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">대기열 없음</text>
-<path d="M950.0,540 L950.0,376.0 Q950.0,372.0 954.0,372.0 L1056.0,372.0 Q1060.0,372.0 1060.0,376.0 L1060.0,540 Z" fill="#2a78d6"/>
-<text x="1005.0" y="364.0" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">140건</text>
-<text x="1005.0" y="568" text-anchor="middle" font-size="16" font-weight="600" fill="#1e293b">입장 50 · 닫기 켬</text>
-<text x="890" y="150" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">헛걸음은 그대로</text>
-<text x="890" y="174" text-anchor="middle" font-size="14" fill="#64748b">결제 단계에서 매진 응답을 받은 사람 수</text>
-<text x="600" y="612" text-anchor="middle" font-size="14" fill="#64748b">구매자는 한 번만 시도하고 결과 모름 결제의 예약은 복구 배치가 나중에 풂 · 재고가 돌아올 때는 다시 시도할 사람이 없었음</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="540" viewBox="0 0 1400 540" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <rect width="1400" height="540" fill="#ffffff"/>
+  <text x="700" y="64" font-size="32" font-weight="700" fill="#212529" text-anchor="middle">매진이면 닫게 했지만 대기열은 한 번도 닫히지 않았습니다</text>
+  <text x="700" y="100" font-size="18" fill="#59636e" text-anchor="middle">재고 100개, 구매자 300명, 입장 50명, 입장 칸 만료 30초, 결과를 모르는 결제 약 10%</text>
+
+  <line x1="466" y1="140" x2="466" y2="430" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="933" y1="140" x2="933" y2="430" stroke="#d0d7de" stroke-width="1"/>
+
+  <text x="233" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">입장 차례가 와서 매진을 물은 횟수</text>
+  <text x="233" y="258" font-size="52" font-weight="700" fill="#59636e" text-anchor="middle">300번</text>
+  <text x="233" y="292" font-size="17" fill="#59636e" text-anchor="middle">구매자 300명이 한 번씩 물었습니다</text>
+  <text x="233" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="233" dy="0">재고 0과 예약 0을</tspan><tspan x="233" dy="28">함께 확인합니다</tspan></text>
+  <rect x="173" y="398" width="120" height="32" rx="4" fill="#f1f3f5"/>
+  <text x="233" y="420" font-size="16" font-weight="700" fill="#59636e" text-anchor="middle">판정 요청</text>
+
+  <text x="700" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">재고는 0인데 닫지 못한 횟수</text>
+  <text x="700" y="258" font-size="52" font-weight="700" fill="#0969da" text-anchor="middle">151번</text>
+  <text x="700" y="292" font-size="17" fill="#59636e" text-anchor="middle">결과를 기다리는 예약이 아직 남아 있었습니다</text>
+  <text x="700" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="700" dy="0">그 예약이 실패로 끝나면</tspan><tspan x="700" dy="28">재고가 돌아올 수 있습니다</tspan></text>
+  <rect x="620" y="398" width="160" height="32" rx="4" fill="#ddf4ff"/>
+  <text x="700" y="420" font-size="16" font-weight="700" fill="#0969da" text-anchor="middle">닫을 수 없는 상태</text>
+
+  <text x="1166" y="176" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">매진으로 닫은 횟수</text>
+  <text x="1166" y="258" font-size="52" font-weight="700" fill="#59636e" text-anchor="middle">0번</text>
+  <text x="1166" y="292" font-size="17" fill="#59636e" text-anchor="middle">헛걸음은 140건 그대로였습니다</text>
+  <text x="1166" y="346" font-size="19" fill="#212529" text-anchor="middle"><tspan x="1166" dy="0">재고가 돌아올 때는</tspan><tspan x="1166" dy="28">다시 시도할 사람이 없었습니다</tspan></text>
+  <rect x="1096" y="398" width="140" height="32" rx="4" fill="#f1f3f5"/>
+  <text x="1166" y="420" font-size="16" font-weight="700" fill="#59636e" text-anchor="middle">닫힘 없음</text>
+
+  <line x1="60" y1="462" x2="1340" y2="462" stroke="#d0d7de" stroke-width="1"/>
+  <text x="700" y="506" font-size="20" fill="#212529" text-anchor="middle">재고 0과 예약 0이 함께 성립한 순간이 이번 부하에는 없었습니다</text>
 </svg>

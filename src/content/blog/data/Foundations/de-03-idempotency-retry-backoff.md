@@ -185,7 +185,7 @@ SRE Book은 요청 하나의 재시도 횟수에 상한을 두고 프로세스 �
 
 곱이 되는 이유는 위 계층의 재시도 한 번마다 아래 계층이 처음부터 자기 재시도를 다시 하기 때문입니다. 프런트엔드 → 백엔드 → DB 접근 계층 → DB 순서라면 DB 접근 계층이 DB에 네 번 시도하고 실패를 올려보내면 백엔드가 그걸 한 번의 실패로 보고 다시 부릅니다. 백엔드의 네 번 각각이 DB 네 번이니 16번이고 프런트엔드의 네 번이 다시 이걸 감싸 64번이 됩니다. AWS Builders' Library도 재시도는 스택의 한 곳에서만 하라고 권합니다. 오케스트레이터가 태스크를 재시도한다면 태스크 안의 HTTP 클라이언트까지 재시도하는지 확인해야 합니다. 둘 다 첫 시도를 포함해 세 번씩 시도하면 외부 API는 아홉 번 호출을 받습니다. Airflow의 `retries=3`은 첫 시도 말고 세 번을 더 한다는 뜻이라 HTTP 클라이언트도 재시도 3회라면 4 × 4 = 16번이 됩니다.
 
-결제 API에서 같은 문제를 측정한 글이 [결제 재시도는 가용성을 높이는가, 장애를 증폭하는가](/blog/project/be-commerce/be-commerce-ch26-payment-retries-retry-storm)와 [재전송을 켰더니 느린 PG에서 결제 실패가 늘었다](/blog/project/be-commerce/be-commerce-ch60-resend-budget)입니다.
+결제 API에서 같은 문제를 측정한 글이 [결제 재시도의 경계](/blog/project/be-commerce/be-commerce-ch26-payment-retries-retry-storm)와 [승인 재전송과 동시 호출 예산](/blog/project/be-commerce/be-commerce-ch60-resend-budget)입니다.
 
 ## 7. 재현 2: 지수 백오프와 지터
 
