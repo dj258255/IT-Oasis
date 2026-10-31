@@ -32,5 +32,5 @@
   <text x="1166" y="410" font-size="16" font-weight="700" fill="#0969da" text-anchor="middle">이것이 용량</text>
 
   <line x1="60" y1="452" x2="1340" y2="452" stroke="#d0d7de" stroke-width="1"/>
-  <text x="700" y="494" font-size="20" fill="#212529" text-anchor="middle">요청 제한에 적은 100건과 서버가 실제로 버티는 양은 따로 잽니다</text>
+  <text x="700" y="494" font-size="20" fill="#212529" text-anchor="middle">요청 제한에 적은 100건과 서버가 실제로 버티는 양은 다릅니다</text>
 </svg>
