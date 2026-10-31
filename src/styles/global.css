@@ -767,11 +767,12 @@ button, input, select, textarea {
   @apply my-6 sm:my-8;
 }
 /* 인용 상자는 왼쪽 띠 대신 모서리 괄호 두 개(왼쪽 위, 오른쪽 아래)로 묶는다.
-   폭은 본문과 같게 두어 줄이 본문보다 먼저 꺾이지 않게 한다 */
+   폭은 글 길이에 맞추되 본문 폭까지만 늘어나 오른쪽 아래 괄호가 문장 끝을 따라간다 */
 .prose blockquote {
   @apply my-6 sm:my-8;
   position: relative;
-  max-width: none;
+  width: fit-content;
+  max-width: 100%;
   padding: 0.55rem 1.1rem;
   background: transparent;
   border: 0;
