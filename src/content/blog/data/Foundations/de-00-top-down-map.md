@@ -11,7 +11,6 @@ category: data/Foundations
 topics:
   - pipeline
 draft: false
-unlisted: true
 series: "DE 공부"
 seriesOrder: 1
 ---

@@ -14,7 +14,6 @@ topics:
   - pipeline
   - database
 draft: false
-unlisted: true
 series: "DE 공부"
 seriesOrder: 20
 ---

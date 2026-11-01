@@ -14,7 +14,6 @@ topics:
   - pipeline
   - performance
 draft: false
-unlisted: true
 series: "DE 공부"
 seriesOrder: 9
 ---
