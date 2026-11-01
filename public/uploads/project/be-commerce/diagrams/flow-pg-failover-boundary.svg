@@ -1,0 +1,41 @@
+<svg viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1400" height="620" fill="#ffffff"/>
+  <text x="700" y="58" text-anchor="middle" font-size="28" font-weight="700" fill="#1f2328">다른 PG로 넘기는 경우는 요청이 닿지 못했을 때뿐입니다</text>
+  <text x="700" y="92" text-anchor="middle" font-size="19" fill="#59636e">승인 요청 하나가 라우터를 지나 어디로 가는지</text>
+
+  <rect x="560" y="130" width="280" height="64" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="700" y="169" text-anchor="middle" font-size="21" font-weight="700" fill="#1f2328">승인 요청 → 첫 PG</text>
+
+  <line x1="700" y1="194" x2="700" y2="236" stroke="#d0d7de" stroke-width="1.5"/>
+  <line x1="240" y1="236" x2="1160" y2="236" stroke="#d0d7de" stroke-width="1.5"/>
+  <line x1="240" y1="236" x2="240" y2="276" stroke="#d0d7de" stroke-width="1.5"/>
+  <line x1="700" y1="236" x2="700" y2="276" stroke="#d0d7de" stroke-width="1.5"/>
+  <line x1="1160" y1="236" x2="1160" y2="276" stroke="#d0d7de" stroke-width="1.5"/>
+
+  <!-- 칸 1 -->
+  <rect x="60" y="276" width="360" height="250" rx="8" fill="#ffffff" stroke="#0969da" stroke-width="2"/>
+  <text x="240" y="318" text-anchor="middle" font-size="21" font-weight="700" fill="#1f2328">PG에 닿지 못함</text>
+  <text x="240" y="348" text-anchor="middle" font-size="19" fill="#59636e">연결 실패, 서킷 열림</text>
+  <text x="240" y="412" text-anchor="middle" font-size="34" font-weight="700" fill="#0969da">다음 PG로</text>
+  <text x="240" y="458" text-anchor="middle" font-size="19" fill="#59636e">요청이 PG에 없으니</text>
+  <text x="240" y="486" text-anchor="middle" font-size="19" fill="#59636e">이중 승인이 생기지 않습니다</text>
+
+  <!-- 칸 2 -->
+  <rect x="520" y="276" width="360" height="250" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="700" y="318" text-anchor="middle" font-size="21" font-weight="700" fill="#1f2328">PG가 응답함</text>
+  <text x="700" y="348" text-anchor="middle" font-size="19" fill="#59636e">성공, 실패, 타임아웃</text>
+  <text x="700" y="412" text-anchor="middle" font-size="34" font-weight="700" fill="#1f2328">그대로 돌려줌</text>
+  <text x="700" y="458" text-anchor="middle" font-size="19" fill="#59636e">타임아웃은 승인됐을 수 있어</text>
+  <text x="700" y="486" text-anchor="middle" font-size="19" fill="#59636e">UNKNOWN으로 두고 조회로 확정</text>
+
+  <!-- 칸 3 -->
+  <rect x="980" y="276" width="360" height="250" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="1160" y="318" text-anchor="middle" font-size="21" font-weight="700" fill="#1f2328">모든 PG가 불가</text>
+  <text x="1160" y="348" text-anchor="middle" font-size="19" fill="#59636e">경로를 다 돌았는데 닿은 곳 없음</text>
+  <text x="1160" y="412" text-anchor="middle" font-size="34" font-weight="700" fill="#1f2328">UNKNOWN</text>
+  <text x="1160" y="458" text-anchor="middle" font-size="19" fill="#59636e">복구 배치가 PG에 다시 물어</text>
+  <text x="1160" y="486" text-anchor="middle" font-size="19" fill="#59636e">결과를 확정합니다</text>
+
+  <line x1="60" y1="560" x2="1340" y2="560" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="700" y="596" text-anchor="middle" font-size="20" fill="#1f2328">환불과 취소, 조회는 승인한 PG로만 갑니다</text>
+</svg>

@@ -70,5 +70,5 @@
   <text x="512" y="597" font-size="11" fill="#64748b">75건</text>
 
   <!-- Footer -->
-  <text x="450" y="628" text-anchor="middle" font-size="10" fill="#94a3b8">각 조건 1회 실행이고 동시 시작을 배리어로 맞췄습니다. 실패는 JVM이 죽은 게 아니라 해당 요청이 OutOfMemoryError로 끝난 건수입니다.</text>
+  <text x="450" y="628" text-anchor="middle" font-size="13" fill="#59636e">각 조건 1회 실행, 동시 시작은 배리어로 맞췄습니다. 실패는 요청이 OutOfMemoryError로 끝난 건수입니다.</text>
 </svg>

@@ -48,17 +48,7 @@ BE-commerce는 두 번째 줄을 반만 택했습니다. 어디까지 택했는�
 
 ## 3. BE-commerce의 "PENDING"은 무엇을 가리킬까?
 
-같은 단어가 서로 다른 두 모듈에서 다른 뜻으로 쓰이므로 먼저 구분해 둡니다.
-
-주문·결제 대사(`reconciliation` 모듈)의 후속 처리 상태 `ReconStatus`는 셋입니다.
-
-- `AUTO_RESOLVED`: 거래일·주문번호·금액이 결정적으로 맞아 자동 종결
-- `PENDING`: 내부 전용·외부 전용·금액 불일치라서 사람이 확인해야 함
-- `MANUALLY_RESOLVED`: 사람이 확인한 뒤 수기로 확정
-
-여기서 `PENDING`은 내부와 외부가 어긋나 사람 판단이 필요하다는 뜻이고 외부 거래의 게시 여부와는 관계가 없습니다. 웹훅이 결제 행보다 먼저 도착한 순서 역전은 `WebhookEventStatus.PENDING_PAYMENT`라는 별도 상태로 웹훅 쪽에서 처리하며 이 예외 큐와도 관계가 없습니다.
-
-판매자 지급 대사(`settlement` 모듈)는 외부 report의 pending과 posted를 직접 다룹니다. 이 글의 주제는 이쪽입니다.
+같은 단어가 두 모듈에서 다른 뜻으로 쓰입니다. 주문·결제 대사(`reconciliation` 모듈)의 `PENDING`은 내부와 외부가 어긋나 사람이 확인해야 한다는 뜻이고 외부 거래의 게시 여부와는 관계가 없습니다. 판매자 지급 대사(`settlement` 모듈)는 외부 report의 pending과 posted를 직접 다루고 이 글의 주제는 이쪽입니다.
 
 ## 4. 지급 대사는 언제 MATCHED로 올릴까?
 
@@ -73,6 +63,8 @@ posted이고 reference·통화·금액이 모두 맞을 때만입니다. 정산�
 | 통화가 다름 | `CURRENCY_MISMATCH` |
 | 금액이 다름 | `AMOUNT_MISMATCH` |
 | 위를 모두 통과 | `MATCHED` |
+
+![지급 대사 판정 순서. report가 오면 reference에 맞는 정산이 있는지, posted인지, 통화와 금액이 맞는지를 차례로 보고 전부 통과한 MATCHED만 지급 확정으로 간다. pending은 금액이 맞아도 운영자 화면에만 남는다](/uploads/project/be-commerce/diagrams/flow-payout-recon-gate.svg)
 
 `Settlement.markPaidOut()`은 대사 결과가 `MATCHED`가 아니면 예외를 던집니다. 그래서 `PAID_OUT` 전이와 `SettlementPaidOutEvent` 발행, 원장 지급 분개는 `MATCHED`에서만 일어납니다. pending이나 불일치 report는 원장에 아무것도 남기지 않습니다.
 
@@ -93,9 +85,7 @@ Modern Treasury와 비교하면 BE-commerce는 잠정 대사의 앞 절반만 �
 
 ## 6. 코드로 확인한 것은 어디까지일까?
 
-판정 규칙과 `PAID_OUT` 전이 조건까지입니다. `PayoutReconciliationEngineTest`는 스프링과 DB 없이 판정 규칙만 봅니다. exact match, pending이 금액이 맞아도 `MATCHED`가 되지 않는 경우, reference 누락·중복, 금액·통화 불일치를 합성 report로 재현합니다. `SettlementAdminServiceTest`는 저장소를 mock으로 바꾼 서비스 테스트이고 정확히 맞는 posted report만 `PAID_OUT`으로 넘어가는지 확인합니다.
-
-지급 대사 컬럼과 reference 유니크 제약을 추가한 Flyway `V65` 마이그레이션은 MySQL Testcontainers로 도는 다른 테스트에서 전체 마이그레이션 체인과 함께 적용되는 것까지 확인했습니다. 지급 대사 로직 자체를 실제 MySQL에서 돌린 테스트는 없습니다.
+판정 규칙과 `PAID_OUT` 전이 조건까지입니다. 판정 규칙 테스트는 스프링과 DB 없이 exact match, 금액이 맞는 pending이 `MATCHED`가 되지 않는 경우, reference 누락·중복, 금액·통화 불일치를 합성 report로 재현하고 서비스 테스트는 정확히 맞는 posted report만 `PAID_OUT`으로 넘어가는지 봅니다. 마이그레이션은 전체 체인과 함께 실제 MySQL에 적용되는 것까지 확인했지만 지급 대사 로직 자체를 실제 MySQL에서 돌린 테스트는 없습니다.
 
 실제 PG·은행 report는 검증하지 못했습니다. 그러려면 테스트 계정과 report 샘플, reference의 생명주기, 같은 파일을 다시 받았을 때 식별자가 유지된다는 보장이 필요합니다. 이 글에서 확인한 경계는 합성 report 안에서 성립하는 경계입니다.
 

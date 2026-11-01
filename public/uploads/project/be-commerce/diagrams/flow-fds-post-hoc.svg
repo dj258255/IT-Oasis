@@ -1,0 +1,38 @@
+<svg viewBox="0 0 1400 500" width="1400" height="500" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#59636e"/></marker></defs>
+  <rect width="1400" height="500" fill="#ffffff"/>
+  <text x="700" y="58" text-anchor="middle" font-size="30" font-weight="700" fill="#1f2328">FDS 판정은 승인이 끝난 뒤에 돕니다</text>
+
+  <text x="70" y="136" font-size="20" font-weight="700" fill="#59636e">승인 경로</text>
+  <g fill="#ffffff" stroke="#d0d7de" stroke-width="1.5">
+    <rect x="70" y="155" width="300" height="76" rx="8"/>
+    <rect x="550" y="155" width="300" height="76" rx="8"/>
+    <rect x="1030" y="155" width="300" height="76" rx="8"/>
+  </g>
+  <g font-size="21" fill="#1f2328" text-anchor="middle">
+    <text x="220" y="201">결제 승인 요청</text>
+    <text x="700" y="201">PG 승인</text>
+    <text x="1180" y="201">결제 완료 이벤트</text>
+  </g>
+
+  <text x="70" y="296" font-size="20" font-weight="700" fill="#59636e">승인 뒤</text>
+  <g fill="#ffffff" stroke="#d0d7de" stroke-width="1.5">
+    <rect x="1030" y="315" width="300" height="76" rx="8"/>
+    <rect x="550" y="315" width="300" height="76" rx="8"/>
+  </g>
+  <text x="1180" y="361" text-anchor="middle" font-size="21" fill="#1f2328">사후 리스너가 판정</text>
+  <text x="700" y="361" text-anchor="middle" font-size="21" fill="#1f2328">판정 등급 넷 중 하나</text>
+  <rect x="70" y="315" width="300" height="76" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="220" y="361" text-anchor="middle" font-size="21" font-weight="700" fill="#0969da">BLOCK은 심사 큐로</text>
+
+  <g stroke="#59636e" stroke-width="1.5" marker-end="url(#a)">
+    <line x1="372" y1="193" x2="546" y2="193"/>
+    <line x1="852" y1="193" x2="1026" y2="193"/>
+    <line x1="1180" y1="233" x2="1180" y2="311"/>
+    <line x1="1028" y1="353" x2="854" y2="353"/>
+    <line x1="548" y1="353" x2="374" y2="353"/>
+  </g>
+
+  <line x1="70" y1="426" x2="1330" y2="426" stroke="#d0d7de"/>
+  <text x="700" y="468" text-anchor="middle" font-size="22" fill="#1f2328">BLOCK이 나와도 이미 승인된 결제는 그대로이고 사람이 나중에 처리합니다</text>
+</svg>

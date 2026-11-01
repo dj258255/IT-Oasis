@@ -1,0 +1,53 @@
+<svg viewBox="0 0 1400 720" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1400" height="720" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9aa4ae"/>
+    </marker>
+  </defs>
+
+  <text x="700" y="56" text-anchor="middle" font-size="28" font-weight="700" fill="#1f2328">지급 대사는 네 관문을 다 지난 report만 돈을 움직입니다</text>
+  <text x="700" y="90" text-anchor="middle" font-size="19" fill="#59636e">외부 report 한 건이 MATCHED가 되기까지, 어디서 멈추면 어떤 결과가 남는지</text>
+
+  <!-- 왼쪽 세로 흐름 -->
+  <g font-size="20" fill="#1f2328" text-anchor="middle">
+    <rect x="300" y="130" width="360" height="64" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+    <text x="480" y="170">외부 report 도착</text>
+
+    <line x1="480" y1="194" x2="480" y2="228" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <rect x="300" y="230" width="360" height="64" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+    <text x="480" y="270">reference에 맞는 정산이 있나</text>
+
+    <line x1="480" y1="294" x2="480" y2="328" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <rect x="300" y="330" width="360" height="64" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+    <text x="480" y="370">posted인가</text>
+
+    <line x1="480" y1="394" x2="480" y2="428" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <rect x="300" y="430" width="360" height="64" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+    <text x="480" y="470">통화와 금액이 맞나</text>
+
+    <line x1="480" y1="494" x2="480" y2="528" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <rect x="300" y="530" width="360" height="64" rx="8" fill="#eaf2fb" stroke="#0969da" stroke-width="2"/>
+    <text x="480" y="570" fill="#0969da" font-weight="700">MATCHED → 지급 확정(PAID_OUT)</text>
+  </g>
+
+  <!-- 오른쪽: 멈춘 자리마다 남는 결과 -->
+  <g font-size="19" fill="#59636e">
+    <line x1="660" y1="262" x2="760" y2="262" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="776" y="256">없으면 UNMATCHED_PAYOUT</text>
+    <text x="776" y="282">둘 이상이면 DUPLICATE_PAYOUT_REFERENCE</text>
+
+    <line x1="660" y1="362" x2="760" y2="362" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="776" y="356">아니면 PENDING</text>
+    <text x="776" y="382">금액이 맞아도 운영자 화면에만 남습니다</text>
+
+    <line x1="660" y1="462" x2="760" y2="462" stroke="#9aa4ae" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="776" y="456">통화가 다르면 CURRENCY_MISMATCH</text>
+    <text x="776" y="482">금액이 다르면 AMOUNT_MISMATCH</text>
+
+    <text x="776" y="562">원장 지급 분개는 여기서만 생깁니다</text>
+  </g>
+
+  <line x1="120" y1="630" x2="1280" y2="630" stroke="#d0d7de" stroke-width="1"/>
+  <text x="700" y="676" text-anchor="middle" font-size="21" fill="#1f2328">pending은 빨리 보는 용도이고 돈은 posted가 와야 움직입니다</text>
+</svg>

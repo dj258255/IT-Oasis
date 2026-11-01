@@ -27,8 +27,6 @@ BE-commerce에서 Redis 캐시 값을 압축해 보니 187B에서는 원본보�
 - 교차점은 187B와 279B 사이였고 운영 임계값은 여유를 둔 1KB로 정했습니다.
 - 현재 캐시는 대부분 1KB보다 작거나 압축할 수 없는 구조라 코드를 켜지 않았습니다.
 
-측정은 개인화 컨텍스트와 같은 모양의 JSON 값으로 로컬 Redis에 한 요청씩 보내며 했습니다.
-
 ## 1. 지금 캐시에 압축할 값이 있을까?
 
 없습니다. 지금 BE-commerce에는 1KB를 넘는 값을 담는 Redis 캐시가 없습니다.
@@ -40,13 +38,11 @@ BE-commerce에서 Redis 캐시 값을 압축해 보니 187B에서는 원본보�
 | 추천 컨텍스트 | Redis | 사용자 활동 JSON | 넣을 수 없다. Redis 안의 Lua 스크립트가 값을 읽어 병합한다 |
 | 패싯 집계 | 앱 메모리 | 집계 객체 | 해당 없다. 직렬화하지 않는다 |
 
-그래서 아래 표의 187B~500KB는 추천 컨텍스트와 모양이 같게 만든 값입니다. 실제 캐시에 들어 있는 값의 크기를 잰 것은 아닙니다. 이 글은 "큰 값을 캐싱하게 되면 몇 바이트부터 압축할 것인지"를 미리 정해 둔 기록입니다.
+그래서 아래 표의 187B~500KB는 추천 컨텍스트와 모양이 같게 만든 JSON 값이고 로컬 Redis에 한 요청씩 보내며 쟀습니다. 실제 캐시에 들어 있는 값의 크기를 잰 것은 아니고 큰 값을 캐싱하게 되면 몇 바이트부터 압축할 것인지를 미리 정해 둔 기록입니다.
 
 ## 2. 압축이 이득을 보는 자리는 어디일까?
 
-수십~수백 KB짜리 값을 자주 읽는 곳입니다. [DoorDash](https://careersatdoordash.com/blog/speeding-up-redis-with-compression/)는 식당 메뉴를 JSON으로 직렬화해 Redis에 캐싱했습니다. Chick-fil-A 메뉴가 64,220바이트, Cheesecake Factory 메뉴가 350,333바이트였습니다. LZ4로 각각 10,199바이트와 67,863바이트, Snappy로 11,414바이트와 77,048바이트까지 줄었습니다. zlib, zstd, brotli는 압축 해제 속도와 CPU 부담 때문에 빼고 LZ4를 골랐습니다.
-
-아래 측정에서도 50KB와 500KB 구간의 이득이 가장 컸습니다. 기본 임계값도 비슷한 곳에 있습니다. [memcached PHP 확장](https://www.php.net/manual/en/memcached.configuration.php)은 2,000바이트를 넘는 값만 압축합니다. 우리 캐시는 모두 1KB 아래이거나 압축할 수 없는 자리라 지금 켜면 이득 없이 설정만 늘어납니다.
+수십~수백 KB짜리 값을 자주 읽는 곳입니다. DoorDash는 수십~수백 KB짜리 식당 메뉴 JSON을 Redis에 캐싱하면서 LZ4로 원본의 5~6분의 1까지 줄였습니다. memcached PHP 확장의 기본 임계값은 2,000바이트입니다. 아래 측정에서도 50KB와 500KB 구간의 이득이 가장 컸습니다. 우리 캐시는 모두 1KB 아래이거나 압축할 수 없는 자리라 지금 켜면 이득 없이 설정만 늘어납니다.
 
 ![값 크기별 압축 결과. 187B는 저장 크기가 원본의 1.070배로 손해, 1.1KB는 0.338배로 66% 감소, 500KB는 0.166배. 손익이 갈리는 교차점은 187B와 279B 사이이고 임계값은 여유를 둔 1KB로 정했다](/uploads/project/be-commerce/diagrams/flow-compress-threshold.svg)
 
@@ -83,9 +79,9 @@ BE-commerce에서 Redis 캐시 값을 압축해 보니 187B에서는 원본보�
 
 SNAPPY입니다. 코덱 선택 기준은 측정 전에 정해 두었습니다. 저장량이 비슷하면 CPU와 지연이 낮은 쪽을 고르기로 했습니다. 교과서적으로는 LZ4가 더 빠르다고 알려져 있습니다. 500KB 값으로 500번 왕복했을 때 CPU 시간은 SNAPPY 242ms, LZ4 359ms였습니다. 저장량은 50KB 이하에서 LZ4가 몇 % 낫고 50KB에서는 SNAPPY가 조금 나았으므로 사실상 같았습니다. 기준에 따라 SNAPPY를 골랐습니다.
 
-이유는 나중에 확인했습니다([#346](https://github.com/dj258255/BE-commerce/issues/346)). 앱을 실행하는 jar 안에서 LZ4는 순수 Java 구현으로 돌고 있었고 네이티브(JNI)는 로드되지 않았습니다. lz4-java는 시스템 클래스로더가 올린 경우에만 네이티브를 쓰는데 스프링 부트 실행 jar는 자체 클래스로더로 올립니다. Snappy는 앱 안에서도 네이티브였습니다. 그래서 처음 측정은 네이티브 Snappy와 Java LZ4의 비교였습니다.
+이유는 나중에 확인했습니다. 앱을 실행하는 jar 안에서 LZ4는 순수 Java 구현으로 돌고 있었고 네이티브(JNI)는 로드되지 않았습니다. lz4-java는 시스템 클래스로더가 올린 경우에만 네이티브를 쓰는데 스프링 부트 실행 jar는 자체 클래스로더로 올립니다. Snappy는 앱 안에서도 네이티브였습니다. 그래서 처음 측정은 네이티브 Snappy와 Java LZ4의 비교였습니다.
 
-같은 라이브러리를 단독으로 재면 LZ4도 네이티브로 돌았고 그래도 Snappy가 500KB 왕복에서 8.7% 쌌습니다. 코덱 결정은 그대로 두고 코덱이 어떤 구현으로 도는지 기동 로그에 남기게 했습니다. 같은 코덱 이름이라도 실행 방식에 따라 순서가 바뀌므로 우리 실행 환경에서 잰 값을 따랐고 DoorDash의 결론(LZ4)은 참고로만 두었습니다.
+같은 라이브러리를 단독으로 재면 LZ4도 네이티브로 돌았고 그래도 Snappy가 500KB 왕복에서 8.7% 쌌습니다. 코덱 결정은 그대로 두고 코덱이 어떤 구현으로 도는지 기동 로그에 남기게 했습니다. 같은 코덱 이름이라도 실행 방식에 따라 순서가 바뀌므로 우리 실행 환경에서 잰 값을 따랐습니다.
 
 ## 6. 압축은 언제 켤까?
 
@@ -110,4 +106,4 @@ SNAPPY입니다. 코덱 선택 기준은 측정 전에 정해 두었습니다. �
 - [ADR-041: 캐시 압축은 1KB부터](https://github.com/dj258255/BE-commerce/blob/main/docs/adr/ADR-041-cache-compression-threshold.md)
 - [DoorDash: Speeding Up Redis with Compression](https://careersatdoordash.com/blog/speeding-up-redis-with-compression/)
 - [PHP memcached 설정: compression_threshold](https://www.php.net/manual/en/memcached.configuration.php)
-- [트러블슈팅 기록](https://github.com/dj258255/BE-commerce/blob/main/docs/TROUBLESHOOTING-LOG.md)
+- [#346 실행 jar 안에서 LZ4가 Java 구현으로 도는 문제](https://github.com/dj258255/BE-commerce/issues/346)

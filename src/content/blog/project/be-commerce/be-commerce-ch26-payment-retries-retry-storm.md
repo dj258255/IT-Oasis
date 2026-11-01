@@ -21,6 +21,8 @@ tags:
 
 BE-commerce는 이 두 성질을 기준으로 승인과 조회의 재시도 정책을 따로 정했습니다.
 
+![승인 요청은 PG에 닿았을 가능성이 있으면 재시도하지 않고 UNKNOWN으로 보존한 뒤 상태 조회로 확정한다. 상태 조회만 최대 3회 backoff와 jitter로 재시도하고 소진되면 미확정 결제의 나이로 관찰한다](/uploads/project/be-commerce/diagrams/flow-retry-boundary.svg)
+
 ## 결론부터
 
 - 승인 요청은 PG에 도달했을 가능성이 있으면 자동 재시도하지 않고 `UNKNOWN`으로 남깁니다.
@@ -50,7 +52,7 @@ PG에 닿았을 가능성이 있으면 실패라고 단정하지 않고 닿지 �
 
 재시도 횟수가 많고 성공률이 높아 보여도 정상 API의 p95가 악화되고 PG 호출량이 폭증했다면 좋은 복구가 못 됩니다. 그래서 이번 retry storm 실험에서는 오류율, 도착률, 동시성, PG 지연을 고정하고 정상 API p95, connection wait, UNKNOWN age를 함께 비교했습니다.
 
-Uber는 장애의 원인 서비스와 장애를 전달하기만 한 서비스를 구분하는 error ownership을 retry 판단에 사용한다고 설명합니다. 모든 호출자가 같은 방식으로 재시도하면 호출 깊이에 따라 요청이 증폭될 수 있기 때문입니다. 현재 BE-commerce는 호출 경계가 짧아 이 구조를 복제하지 않고 bounded retry, jitter, 서킷, 동시성 상한을 먼저 선택했습니다.
+Uber는 장애의 원인 서비스와 전달만 한 서비스를 구분하는 error ownership으로 재시도를 가릅니다. 모든 호출자가 같은 방식으로 재시도하면 호출 깊이만큼 요청이 증폭되기 때문입니다. BE-commerce는 호출 경계가 짧아 이 구조를 들이지 않고 횟수 제한, jitter, 서킷, 동시성 상한으로 충분했습니다.
 
 ## 3. 로컬 브라운아웃에서 무엇을 확인했을까?
 
@@ -65,8 +67,6 @@ Uber는 장애의 원인 서비스와 장애를 전달하기만 한 서비스를
 상한을 끄자 마지막 대조군에서 Hikari connection timeout 133건과 active connection 최대 17개가 관측됐습니다. 상한 1에서는 PG에 닿은 요청만 PENDING으로 남고 닿기 전 요청은 실패로 끊겨 일반 읽기를 보호했습니다. 이 결과가 보여 주는 것은 미확정 결제와 일반 API 지연 사이의 비용을 어디에 둘지 정한 결정이고 timeout의 길이 자체가 성능을 좌우한다는 뜻은 담겨 있지 않습니다.
 
 항상 실패하는 조회 더블에 200개 요청과 32개 worker를 동시에 넣은 retry storm 실험에서는 delegate 호출 32회, retry event 32회, exhausted 0회, 45ms가 측정됐습니다. 공유 서킷이 먼저 열려 200×3회의 호출로 증폭되지 않았습니다. 단일 조회의 retry 예산은 별도 테스트에서 최대 3회로 제한됩니다.
-
-재현 기록은 [retry storm 실험 문서](https://github.com/dj258255/BE-commerce/blob/main/docs/34-%EA%B2%B0%EC%A0%9C-%EC%9E%AC%EC%8B%9C%EB%8F%84%EC%99%80-retry-storm-%EC%8B%A4%ED%97%98.md)에 남겼습니다.
 
 ## 한계와 후속 작업
 

@@ -1,0 +1,53 @@
+<svg viewBox="0 0 1400 560" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1400" height="560" fill="#ffffff"/>
+  <text x="700" y="58" text-anchor="middle" font-size="28" font-weight="700" fill="#1f2328">같은 계정 행에 쓰기가 몰리면 줄이 생깁니다</text>
+  <text x="700" y="92" text-anchor="middle" font-size="19" fill="#59636e">워커 8개가 200회씩 갱신, 실제 MySQL 8.4</text>
+
+  <!-- 왼쪽: hot -->
+  <text x="350" y="150" text-anchor="middle" font-size="22" font-weight="700" fill="#1f2328">여덟 워커가 계정 행 하나에 쓰면</text>
+  <g stroke="#9aa4ae" stroke-width="1.5" fill="#ffffff">
+    <rect x="110" y="190" width="70" height="40" rx="6"/><rect x="190" y="190" width="70" height="40" rx="6"/><rect x="270" y="190" width="70" height="40" rx="6"/><rect x="350" y="190" width="70" height="40" rx="6"/>
+    <rect x="430" y="190" width="70" height="40" rx="6"/><rect x="510" y="190" width="70" height="40" rx="6"/>
+  </g>
+  <g font-size="17" fill="#59636e" text-anchor="middle">
+    <text x="145" y="216">워커</text><text x="225" y="216">워커</text><text x="305" y="216">워커</text><text x="385" y="216">워커</text><text x="465" y="216">워커</text><text x="545" y="216">워커 …</text>
+  </g>
+  <g stroke="#9aa4ae" stroke-width="1.5">
+    <line x1="145" y1="230" x2="340" y2="290"/><line x1="225" y1="230" x2="345" y2="290"/><line x1="305" y1="230" x2="350" y2="290"/>
+    <line x1="385" y1="230" x2="352" y2="290"/><line x1="465" y1="230" x2="356" y2="290"/><line x1="545" y1="230" x2="360" y2="290"/>
+  </g>
+  <rect x="250" y="290" width="200" height="48" rx="6" fill="#ffffff" stroke="#1f2328" stroke-width="2"/>
+  <text x="350" y="321" text-anchor="middle" font-size="19" font-weight="700" fill="#1f2328">계정 행 1개</text>
+  <text x="350" y="410" text-anchor="middle" font-size="50" font-weight="700" fill="#59636e">207건/초</text>
+  <text x="350" y="445" text-anchor="middle" font-size="19" fill="#59636e">p95 44ms, 락 대기 1,599번</text>
+  <text x="350" y="480" text-anchor="middle" font-size="19" fill="#59636e">앞 워커가 끝나야 다음이 씁니다</text>
+
+  <line x1="700" y1="140" x2="700" y2="500" stroke="#d0d7de" stroke-width="1.5"/>
+
+  <!-- 오른쪽: cold -->
+  <text x="1050" y="150" text-anchor="middle" font-size="22" font-weight="700" fill="#1f2328">서로 다른 행에 쓰면</text>
+  <g stroke="#9aa4ae" stroke-width="1.5" fill="#ffffff">
+    <rect x="810" y="190" width="70" height="40" rx="6"/><rect x="890" y="190" width="70" height="40" rx="6"/><rect x="970" y="190" width="70" height="40" rx="6"/><rect x="1050" y="190" width="70" height="40" rx="6"/>
+    <rect x="1130" y="190" width="70" height="40" rx="6"/><rect x="1210" y="190" width="70" height="40" rx="6"/>
+  </g>
+  <g font-size="17" fill="#59636e" text-anchor="middle">
+    <text x="845" y="216">워커</text><text x="925" y="216">워커</text><text x="1005" y="216">워커</text><text x="1085" y="216">워커</text><text x="1165" y="216">워커</text><text x="1245" y="216">워커 …</text>
+  </g>
+  <g stroke="#9aa4ae" stroke-width="1.5">
+    <line x1="845" y1="230" x2="845" y2="290"/><line x1="925" y1="230" x2="925" y2="290"/><line x1="1005" y1="230" x2="1005" y2="290"/>
+    <line x1="1085" y1="230" x2="1085" y2="290"/><line x1="1165" y1="230" x2="1165" y2="290"/><line x1="1245" y1="230" x2="1245" y2="290"/>
+  </g>
+  <g stroke="#1f2328" stroke-width="2" fill="#ffffff">
+    <rect x="810" y="290" width="70" height="48" rx="6"/><rect x="890" y="290" width="70" height="48" rx="6"/><rect x="970" y="290" width="70" height="48" rx="6"/><rect x="1050" y="290" width="70" height="48" rx="6"/>
+    <rect x="1130" y="290" width="70" height="48" rx="6"/><rect x="1210" y="290" width="70" height="48" rx="6"/>
+  </g>
+  <g font-size="17" font-weight="700" fill="#1f2328" text-anchor="middle">
+    <text x="845" y="320">행</text><text x="925" y="320">행</text><text x="1005" y="320">행</text><text x="1085" y="320">행</text><text x="1165" y="320">행</text><text x="1245" y="320">행 …</text>
+  </g>
+  <text x="1050" y="410" text-anchor="middle" font-size="50" font-weight="700" fill="#0969da">1,224건/초</text>
+  <text x="1050" y="445" text-anchor="middle" font-size="19" fill="#59636e">p95 8ms, 락 대기 0번</text>
+  <text x="1050" y="480" text-anchor="middle" font-size="19" fill="#59636e">기다리는 워커가 없습니다</text>
+
+  <line x1="80" y1="505" x2="1320" y2="505" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="700" y="540" text-anchor="middle" font-size="20" fill="#1f2328">경합은 행 하나에 걸려 있어 인스턴스를 늘려도 줄지 않습니다</text>
+</svg>

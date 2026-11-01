@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" font-family="'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#59636e"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0969da"/></marker>
+  </defs>
+  <rect width="1400" height="560" fill="#ffffff"/>
+  <text x="700" y="64" font-size="30" font-weight="700" fill="#212529" text-anchor="middle">가상계좌 상태가 움직이는 길</text>
+  <text x="700" y="100" font-size="19" fill="#59636e" text-anchor="middle">완료에서 대기로 돌아오는 화살표가 카드 결제와 다른 점입니다</text>
+
+  <rect x="140" y="170" width="320" height="80" rx="6" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+  <text x="300" y="203" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">입금 대기</text>
+  <text x="300" y="232" font-size="19" fill="#59636e" text-anchor="middle">WAITING_FOR_DEPOSIT</text>
+
+  <rect x="940" y="170" width="320" height="80" rx="6" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+  <text x="1100" y="203" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">입금 완료</text>
+  <text x="1100" y="232" font-size="19" fill="#59636e" text-anchor="middle">DONE</text>
+
+  <rect x="140" y="400" width="320" height="80" rx="6" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+  <text x="300" y="433" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">기한 만료</text>
+  <text x="300" y="462" font-size="19" fill="#59636e" text-anchor="middle">EXPIRED</text>
+
+  <rect x="940" y="400" width="320" height="80" rx="6" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+  <text x="1100" y="433" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">취소</text>
+  <text x="1100" y="462" font-size="19" fill="#59636e" text-anchor="middle">CANCELED</text>
+
+  <line x1="462" y1="195" x2="936" y2="195" stroke="#59636e" stroke-width="2" marker-end="url(#a)"/>
+  <text x="700" y="184" font-size="19" fill="#212529" text-anchor="middle">입금 통보</text>
+
+  <line x1="938" y1="228" x2="464" y2="228" stroke="#0969da" stroke-width="3" marker-end="url(#b)"/>
+  <text x="700" y="262" font-size="19" font-weight="700" fill="#0969da" text-anchor="middle">일부 은행의 취소 통보</text>
+
+  <line x1="300" y1="252" x2="300" y2="396" stroke="#59636e" stroke-width="2" marker-end="url(#a)"/>
+  <text x="316" y="318" font-size="19" fill="#212529">기한이 지나면 만료 배치</text>
+  <text x="316" y="346" font-size="19" fill="#59636e">웹훅은 오지 않습니다</text>
+
+  <line x1="1100" y1="252" x2="1100" y2="396" stroke="#59636e" stroke-width="2" marker-end="url(#a)"/>
+  <text x="1116" y="332" font-size="19" fill="#212529">취소 처리</text>
+
+  <text x="700" y="530" font-size="21" font-weight="700" fill="#212529" text-anchor="middle">완료 뒤에도 되돌림이 올 수 있어 그 자리를 상태머신에 뒀습니다</text>
+</svg>

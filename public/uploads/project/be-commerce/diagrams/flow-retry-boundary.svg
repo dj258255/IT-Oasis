@@ -1,0 +1,48 @@
+<svg viewBox="0 0 1400 620" xmlns="http://www.w3.org/2000/svg" font-family="'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif">
+  <rect width="1400" height="620" fill="#ffffff"/>
+  <text x="700" y="58" text-anchor="middle" font-size="28" font-weight="700" fill="#1f2328">다시 보내도 되는 호출과 안 되는 호출</text>
+  <text x="700" y="92" text-anchor="middle" font-size="19" fill="#59636e">기준은 결과가 확정됐는지입니다</text>
+
+  <!-- 승인 줄 -->
+  <text x="120" y="190" font-size="21" font-weight="700" fill="#1f2328">승인 요청</text>
+  <rect x="270" y="150" width="200" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="370" y="192" text-anchor="middle" font-size="20" fill="#1f2328">PG에 보냄</text>
+  <line x1="470" y1="185" x2="540" y2="185" stroke="#9aa4ae" stroke-width="2"/>
+  <polygon points="540,185 530,180 530,190" fill="#9aa4ae"/>
+  <rect x="540" y="150" width="200" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="640" y="192" text-anchor="middle" font-size="20" fill="#1f2328">응답 없음</text>
+  <line x1="740" y1="185" x2="810" y2="185" stroke="#9aa4ae" stroke-width="2"/>
+  <polygon points="810,185 800,180 800,190" fill="#9aa4ae"/>
+  <rect x="810" y="150" width="220" height="70" rx="8" fill="#ffffff" stroke="#0969da" stroke-width="2"/>
+  <text x="920" y="192" text-anchor="middle" font-size="20" font-weight="700" fill="#0969da">UNKNOWN으로 보존</text>
+  <line x1="1030" y1="185" x2="1100" y2="185" stroke="#9aa4ae" stroke-width="2"/>
+  <polygon points="1100,185 1090,180 1090,190" fill="#9aa4ae"/>
+  <rect x="1100" y="150" width="200" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="1200" y="192" text-anchor="middle" font-size="20" fill="#1f2328">조회로 확정</text>
+  <text x="640" y="250" text-anchor="middle" font-size="19" fill="#59636e">PG가 이미 승인했을 수 있어 다시 보내면 이중 결제</text>
+
+  <line x1="120" y1="300" x2="1280" y2="300" stroke="#d0d7de" stroke-width="1"/>
+
+  <!-- 조회 줄 -->
+  <text x="120" y="390" font-size="21" font-weight="700" fill="#1f2328">상태 조회</text>
+  <rect x="270" y="350" width="200" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="370" y="392" text-anchor="middle" font-size="20" fill="#1f2328">PG에 물음</text>
+  <line x1="470" y1="385" x2="540" y2="385" stroke="#9aa4ae" stroke-width="2"/>
+  <polygon points="540,385 530,380 530,390" fill="#9aa4ae"/>
+  <rect x="540" y="350" width="200" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="640" y="392" text-anchor="middle" font-size="20" fill="#1f2328">응답 없음</text>
+  <line x1="740" y1="385" x2="810" y2="385" stroke="#9aa4ae" stroke-width="2"/>
+  <polygon points="810,385 800,380 800,390" fill="#9aa4ae"/>
+  <rect x="810" y="350" width="220" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="920" y="382" text-anchor="middle" font-size="20" fill="#1f2328">최대 3회 재시도</text>
+  <text x="920" y="406" text-anchor="middle" font-size="16" fill="#59636e">backoff와 jitter</text>
+  <line x1="1030" y1="385" x2="1100" y2="385" stroke="#9aa4ae" stroke-width="2"/>
+  <polygon points="1100,385 1090,380 1090,390" fill="#9aa4ae"/>
+  <rect x="1100" y="350" width="200" height="70" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="1200" y="382" text-anchor="middle" font-size="20" fill="#1f2328">소진되면</text>
+  <text x="1200" y="406" text-anchor="middle" font-size="16" fill="#59636e">미확정 나이로 관찰</text>
+  <text x="640" y="450" text-anchor="middle" font-size="19" fill="#59636e">읽기라 다시 물어도 결과는 같지만 장애 중에는 호출량이 늘어납니다</text>
+
+  <line x1="120" y1="500" x2="1280" y2="500" stroke="#d0d7de" stroke-width="1"/>
+  <text x="700" y="560" text-anchor="middle" font-size="21" fill="#1f2328">승인은 재시도하지 않고 조회만 횟수를 정해 재시도합니다</text>
+</svg>

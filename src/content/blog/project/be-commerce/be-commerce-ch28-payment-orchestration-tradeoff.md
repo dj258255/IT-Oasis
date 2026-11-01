@@ -20,6 +20,8 @@ tags:
 
 이 글은 다른 회사의 사례와 BE-commerce의 구현을 그 기준으로 나눠 적습니다. BE-commerce에는 라우팅 코드와 규칙 테스트가 있고 기본값은 꺼져 있습니다.
 
+![failover 경계. 요청이 PG에 닿지 못했을 때만 다음 PG로 넘긴다. PG가 성공·실패·타임아웃으로 응답했으면 그대로 돌려주고 모든 PG가 불가하면 UNKNOWN으로 남겨 복구 배치에 맡긴다](/uploads/project/be-commerce/diagrams/flow-pg-failover-boundary.svg)
+
 ## 결론부터
 
 - 다중 PG는 장애 우회 경로를 제공하고 UNKNOWN 승인·토큰·환불·정산·대사라는 책임은 그대로 남습니다.
@@ -73,7 +75,7 @@ Adyen은 [payment orchestration 글](https://www.adyen.com/knowledge-hub/payment
 
 ## 한계와 후속 작업
 
-두 실 PG 사이의 장애 전환, 토큰 이동, PG별 정산 파일 대사, 환불 계약은 계정과 외부 계약이 있어야 확인할 수 있습니다. 우아한형제들 사례처럼 PG를 여럿 둔 뒤에 생기는 "어느 경로가 아픈가" 문제도 실 트래픽이 있어야 드러납니다. 두 PG failover는 작업 보드에 `Blocked by external state`로 남아 있습니다.
+두 실 PG 사이의 장애 전환, 토큰 이동, PG별 정산 파일 대사, 환불 계약은 계정과 외부 계약이 있어야 확인할 수 있습니다. 우아한형제들 사례처럼 PG를 여럿 둔 뒤에 생기는 "어느 경로가 아픈가" 문제도 실 트래픽이 있어야 드러납니다.
 
 ## 참고
 
