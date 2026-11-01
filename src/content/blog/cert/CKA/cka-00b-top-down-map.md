@@ -1,5 +1,5 @@
 ---
-title: '[CKA] 위에서 내려다보는 CKA 지도: kubectl apply 한 번을 따라 아홉 층 내려가기'
+title: '[CKA] 위에서 내려다보는 CKA: kubectl apply 한 번을 따라 아홉 층 내려가기'
 description: CKA 공부를 구성요소 목록부터 외우면 어디에 쓰이는지 감이 늦게 옵니다. 쇼핑몰 웹 Deployment와 Service를 kubectl apply로 한 번 올리는 장면을 위에서부터 따라가며 API 서버, etcd, 컨트롤러, 스케줄러, kubelet, CRI·CNI·CSI, Service, Gateway까지 아홉 층을 지나고 층마다 고장 나면 보이는 증상과 이 시리즈에서 자세히 다루는 절을 이어 둡니다.
 date: 2026-10-23T00:00:00.000Z
 tags:
@@ -20,11 +20,11 @@ seriesOrder: 2
 
 1. CKA 범위는 넓어 보여도 대부분 `kubectl apply` 한 번이 지나가는 길 위에 있습니다. kubectl에서 출발해 API 서버, etcd, 컨트롤러, 스케줄러, kubelet, 런타임과 플러그인, Service, Gateway까지 아홉 층을 내려가면 시험 다섯 영역이 전부 한 번씩 등장합니다.
 2. 층마다 고장 나는 모양이 다릅니다. API 서버 앞에서 막히면 `kubectl`이 바로 오류를 돌려주고 그 아래에서 막히면 명령은 성공했는데 Pod가 `Pending`이나 `ContainerCreating`에 남습니다. 증상을 보고 몇 번째 층인지 짚는 것이 트러블슈팅(30%)의 출발점입니다.
-3. 이 글은 지도입니다. 층마다 무슨 일이 일어나는지와 고장 나면 무엇이 보이는지를 적었고 더 깊은 내용은 3편부터 9편에서 다룹니다. 처음 읽을 때는 3장과 4장의 그림 두 장과 5장의 증상 표만 기억해도 됩니다.
+3. 이 글은 큰 틀만 잡습니다. 층마다 무슨 일이 일어나는지와 고장 나면 무엇이 보이는지를 적었고 더 깊은 내용은 3편부터 9편에서 다룹니다. 처음 읽을 때는 3장과 4장의 그림 두 장과 5장의 증상 표만 기억해도 됩니다.
 
 ---
 
-## 1. 왜 지도부터 보는가
+## 1. 왜 큰 틀부터 볼까?
 
 쿠버네티스를 처음 공부할 때 흔히 구성요소 목록부터 봅니다. etcd는 저장소, 스케줄러는 노드 배정, kubelet은 노드 에이전트. 하나하나는 어렵지 않습니다.
 
@@ -32,7 +32,7 @@ seriesOrder: 2
 
 그래서 이 글은 순서를 거꾸로 잡습니다. 실제로 하는 일 하나를 먼저 정하고 그 일이 클러스터 안에서 어떤 길로 내려가는지 위에서부터 따라갑니다. 구성요소는 그 길 위에서 만날 때 소개합니다.
 
-이렇게 보면 어떤 구성요소가 멈출 때 길의 어디가 끊기는지가 같이 보입니다. 트러블슈팅을 공부할 때도 같은 지도를 그대로 씁니다.
+이렇게 보면 어떤 구성요소가 멈출 때 길의 어디가 끊기는지가 같이 보입니다. 트러블슈팅을 공부할 때도 이 큰 틀을 그대로 씁니다.
 
 같은 방식으로 `kubectl run` 한 번을 소스 코드 수준까지 따라간 글로 Jamie Hannaford의 [What happens when I type kubectl run](https://github.com/jamiehannaford/what-happens-when-k8s)이 있습니다. 링크된 소스가 대부분 v1.14 무렵이라 세부는 지금과 다르지만 층을 나누는 순서는 이 글과 같습니다.
 
@@ -343,7 +343,7 @@ Ingress는 리소스만 있고 컨트롤러가 없으면 아무 일도 일어나
 
 반대로 새 Pod가 뜨거나 Pod IP가 바뀐 것은 반영되지 않습니다. [3편 3장](/blog/cert/cka/cka-01-why-kubernetes#3-구성요소가-멈추면-무엇이-멈추는지)에서 controller-manager를 멈춰 놓고 확인한 것도 이 동작입니다.
 
-## 5. 층별 고장 증상 지도
+## 5. 층별 고장 증상
 
 3장의 "고장 나면"만 모은 표입니다. 시험에서 증상을 받으면 왼쪽 열에서 찾고 오른쪽 절로 갑니다.
 
@@ -363,11 +363,11 @@ Ingress는 리소스만 있고 컨트롤러가 없으면 아무 일도 일어나
 
 같은 내용을 증상 쪽에서 더 자세히 정리한 표가 [9편 0-2절](/blog/cert/cka/cka-06-troubleshooting#0-2-증상별-판단-표)에 있고 구성요소 쪽에서 정리한 표가 [3편 3-3절](/blog/cert/cka/cka-01-why-kubernetes#3-3-구성요소별로-멈출-때의-증상과-처음-볼-곳)에 있습니다.
 
-## 6. 시험 다섯 영역은 지도의 어디에 있나
+## 6. 시험 다섯 영역은 아홉 층의 어디에 있을까?
 
 ![CKA 커리큘럼 v1.37의 다섯 영역 비중. Troubleshooting 30%, Cluster Architecture 25%, Services & Networking 20%, Workloads & Scheduling 15%, Storage 10%](/uploads/cert/cka-map/exam-weights.svg)
 
-| 영역 | 비중 | 지도에서의 위치 | 이 시리즈 |
+| 영역 | 비중 | 아홉 층에서의 위치 | 이 시리즈 |
 |---|---|---|---|
 | Troubleshooting | 30% | 아홉 층 전부. 어느 층이 끊겼는지 찾는 일 | [9편](/blog/cert/cka/cka-06-troubleshooting) |
 | Cluster Architecture, Installation and Configuration | 25% | ①②③과 노드 준비. 인증과 RBAC, kubeadm, etcd, Helm과 Kustomize, CRI·CNI·CSI | [5편](/blog/cert/cka/cka-02-cluster-architecture) |
