@@ -1,6 +1,6 @@
 ---
-title: '[CKA] 준비 자료와 시험 당일 전략: 공식 규칙, 할인, 연습 환경, 후기 경향 정리'
-description: CKA(커리큘럼 v1.37, 2025년 2월 개정 범위)를 준비할 때 쓸 수 있는 정당한 자료를 2026년 10월 기준으로 모았습니다. Linux Foundation 공식 규칙과 점검표, 과제마다 ssh로 옮기는 시험 환경과 사전 설치 도구, 날짜가 확인된 할인 이력, killer.sh와 Killercoda와 KodeKloud와 GitHub 연습 저장소 비교, 홈 랩 구성, 2025~2026년 후기에서 겹친 출제 경향과 함정, 1.33~1.37 변경 중 시험 답에 영향을 주는 것, 시험 당일 순서와 D-30 계획, 덤프를 뺀 근거를 LF 응시 약관 원문으로 정리합니다.
+title: '[CKA] 준비 자료와 시험 당일 전략'
+description: CKA(커리큘럼 v1.37) 준비 자료와 시험 당일 운영을 2026년 10월 기준으로 정리합니다. LF 공식 규칙과 점검표, 할인 이력, 연습 자료 비교, 홈 랩 구성, 후기에서 겹친 출제 경향, 1.33~1.37 변경 중 시험 답에 영향을 주는 것, 당일 순서와 D-30 계획, 덤프를 뺀 근거를 담았습니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
   - CKA
@@ -35,7 +35,7 @@ seriesOrder: 10
    - 해당 과제 호스트에 있을 가능성이 높은 정도: `helm`, `etcdctl`
 6. 덤프와 "실제 시험 문제"를 표방하는 자료는 이 글에서 다루지 않습니다. LF 응시 약관 4.4절은 다른 사람의 기억에 기댄 자료(braindump)를 쓰는 것 자체를 부정행위로 정의하고 자격 취소와 영구 응시 제한까지 정해 두었습니다.
 
-시험 구조와 영역별 범위는 [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [5편](/blog/cert/cka/cka-02-cluster-architecture)부터 [9편](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 그 위에서 자료와 규칙과 당일 운영만 다룹니다.
+시험 구조와 영역별 범위는 [1편](/blog/cert/cka/cka-00-exam-and-study-plan)에, 영역별 내용은 [5편](/blog/cert/cka/cka-02-cluster-architecture)부터 [9편](/blog/cert/cka/cka-06-troubleshooting)까지에 있습니다. 이 글은 자료와 규칙과 당일 운영만 다룹니다.
 
 ---
 
@@ -96,7 +96,7 @@ LF 공식 페이지와 응시자 핸드북(PSI Bridge 판), CKA·CKAD 안내 문
 
 그림의 클러스터 이름과 개수는 설명을 위한 예입니다. "들어가서 풀고 나온다"는 왕복 하나만 지키면 됩니다.
 
-이걸 놓치면 손해가 큽니다. 이전 과제 호스트에 남은 채 다음 과제를 풀면 다른 클러스터를 고치게 되고 채점 대상 클러스터에는 아무것도 안 남습니다.
+이전 과제 호스트에 남은 채 다음 과제를 풀면 다른 클러스터를 고치게 되고 채점 대상 클러스터에는 아무것도 안 남습니다.
 
 그 밖에 공식 안내에서 확인한 내용을 적어 둡니다.
 
@@ -137,7 +137,7 @@ killer.sh는 CKA 페이지에서 난이도를 "The CKA is hard but a rewarding c
 | 2026-02-17 ~ 2026-02-24 | 설 연휴(Lunar New Year). 개별 강의와 시험 35%, 묶음 50%, Super Bundle 75%, Kubestronaut 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/ignite-your-next-career-move/) |
 | 2026-03-13 ~ 2026-03-18 | 개별 시험 35%, 시험+강의 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/bundles-create-the-perfect-formula-for-career-momentum/) |
 | 2026-04-14 ~ | 지구의 날. 사이트 전체 35%(끝나는 날은 글 목록에서 확인 못 함) | [LF 공식 블로그](https://training.linuxfoundation.org/blog/build-skills-that-last-save-35-sitewide/) |
-| 2026-05-12 ~ 2026-05-20 | Mega May. **모든 시험 50%**, CKA+LFS258 같은 시험+강의 묶음 60%, THRIVE-ONE 묶음 최대 65%. 올해 단일 시험 할인 중 가장 큼 | [LF 공식 블로그](https://training.linuxfoundation.org/blog/mega-may-power-up-cyber-deals/) |
+| 2026-05-12 ~ 2026-05-20 | Mega May. 모든 시험 50%, CKA+LFS258 같은 시험+강의 묶음 60%, THRIVE-ONE 묶음 최대 65%. 올해 단일 시험 할인 중 가장 큼 | [LF 공식 블로그](https://training.linuxfoundation.org/blog/mega-may-power-up-cyber-deals/) |
 | 2026-06 초 ~ 2026-06-12 | 기술 인재 보고서 발표 기념 사이트 전체 40% | 제3자 검색 결과. LF 글 본문에서는 코드와 날짜를 확인 못 함 |
 | 2026-06-23 ~ 2026-06-26 | Prime Time(나흘). 개별 시험 40%, 묶음 50%, Super Bundle 75% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/four-days-only-prime-time-to-level-up-your-it-career/) |
 | 2026-07-14 ~ 2026-07-21 | 하반기 시작. 개별 시험 35%, 묶음 40% | [LF 공식 블로그](https://training.linuxfoundation.org/blog/score-big-on-your-tech-career-save-up-to-40/) |
@@ -256,11 +256,11 @@ KodeKloud 모의고사에서 90% 안팎이 나와도 실제 시험 61%가 나온
 ## 4. 홈 랩 구성
 
 <details>
-<summary>기초부터: VirtualBox와 Vagrant로 kubeadm 연습용 VM 준비하기</summary>
+<summary>VirtualBox와 Vagrant로 kubeadm 연습용 VM 준비</summary>
 
-> **핵심 한 줄**: VirtualBox는 VM을 실제로 돌리는 엔진이고 Vagrant는 VM 여러 대의 사양을 `Vagrantfile` 한 파일에 적어 두고 명령 한 줄로 만들어 주는 도구입니다.
+VirtualBox는 VM을 실제로 돌리는 엔진이고 Vagrant는 VM 여러 대의 사양을 `Vagrantfile` 한 파일에 적어 두고 명령 한 줄로 만들어 주는 도구입니다.
 
-#### 1. 왜 필요한가
+#### Vagrant를 쓰는 이유
 
 kubeadm은 이미 있는 리눅스 머신 위에 쿠버네티스를 올릴 뿐 머신을 만들지 않습니다. 노드 3대를 손으로 만들면 OS 설치 화면을 세 번 넘겨야 하고 IP를 하나씩 맞추다 실수하기 쉽습니다.
 
@@ -269,12 +269,12 @@ kubeadm은 이미 있는 리눅스 머신 위에 쿠버네티스를 올릴 뿐 �
 | 손으로 설치 | ISO를 받아 VM마다 설치 화면을 넘김 | 처음부터 반복 |
 | Vagrant | `vagrant up` 한 번 | `vagrant destroy` 뒤 `vagrant up`이면 같은 환경 |
 
-#### 2. 어떻게 동작하나
+#### Vagrantfile과 명령
 
-1. **준비**: 호스트 OS에 맞는 VirtualBox와 Vagrant를 각 공식 페이지에서 받아 설치합니다.
-2. **명세**: `Vagrantfile`에 box(OS 이미지), VM 이름, CPU, 메모리, 사설 IP를 적습니다. 강의 저장소를 클론하면 이 파일이 이미 들어 있습니다.
-3. **생성**: `vagrant up`이 box를 받고 파일에 적힌 순서대로 VM을 만들어 부팅합니다.
-4. **접속**: `vagrant ssh <이름>`으로 들어가고 `exit`(또는 `logout`)로 나옵니다.
+1. 준비: 호스트 OS에 맞는 VirtualBox와 Vagrant를 각 공식 페이지에서 받아 설치합니다.
+2. 명세: `Vagrantfile`에 box(OS 이미지), VM 이름, CPU, 메모리, 사설 IP를 적습니다. 강의 저장소를 클론하면 이 파일이 이미 들어 있습니다.
+3. 생성: `vagrant up`이 box를 받고 파일에 적힌 순서대로 VM을 만들어 부팅합니다.
+4. 접속: `vagrant ssh <이름>`으로 들어가고 `exit`(또는 `logout`)로 나옵니다.
 
 ```ruby
 Vagrant.configure("2") do |config|
@@ -300,14 +300,12 @@ vagrant halt              # 전부 끄기
 vagrant destroy -f        # 전부 지우기
 ```
 
-#### 3. 헷갈리는 점
+#### VM을 띄울 때 걸리는 점
 
 - `192.168.56.x`는 VM끼리 통하는 노드 IP입니다. 나중에 CNI가 Pod에 나눠 줄 대역과 겹치지 않게 둡니다. 리눅스와 macOS의 VirtualBox는 host-only 네트워크에 기본으로 `192.168.56.0/21` 범위만 허용해서 예제가 이 대역을 씁니다.
 - 강의 저장소의 `Vagrantfile`은 VM 이름을 `kubemaster`, `kubenode01`, `kubenode02`로 씁니다. 위 예시의 `controlplane`, `node01`과 이름만 다르고 구조는 같으니 `vagrant ssh kubemaster`처럼 저장소에 적힌 이름으로 들어갑니다.
 - 오래된 강의 저장소는 지원이 끝난 Ubuntu 18.04 box를 쓰기도 합니다. 지금 kubeadm 패키지를 올리려면 지원 중인 Ubuntu box로 바꿔 씁니다.
 - 애플 실리콘 맥은 아래 본문처럼 VirtualBox 대신 Multipass 스크립트를 씁니다.
-
-> **정리**: Vagrant는 VM까지만 만들고 쿠버네티스는 그 위에 kubeadm으로 따로 올립니다. 노드 IP를 Pod 대역과 겹치지 않게 처음부터 나눠 두면 다음 단계(5편의 kubeadm init)가 편해집니다.
 
 </details>
 
@@ -349,7 +347,7 @@ kubectl get nodes   # CNI가 없어 NotReady인 상태에서 시작
 
 kubeadm 클러스터를 처음부터 만드는 순서는 [5편 2~4절](/blog/cert/cka/cka-02-cluster-architecture)에, 일부러 망가뜨리고 고치는 과제는 [9편](/blog/cert/cka/cka-06-troubleshooting)의 "직접 해 보기"에 있습니다.
 
-## 5. 2025~2026년 후기에서 공통으로 나온 출제 경향과 함정
+## 5. 후기에서 겹친 출제 경향과 함정
 
 2025년 2월 개정 뒤에 응시했고 덤프나 기억 기반 문제집을 쓰지 않았다고 확인되는 글만 읽었습니다. 출제 내용은 주제 수준으로만 옮깁니다.
 
@@ -420,7 +418,7 @@ Pod Security Admission(`pod-security.kubernetes.io/enforce` 같은 네임스페�
 
 ## 6. 시험 당일 전략과 체크리스트
 
-### 6-1. 시간 배분: 두 바퀴
+### 6-1. 시간 배분
 
 | 구간 | 할 일 |
 |---|---|
@@ -534,7 +532,7 @@ set expandtab tabstop=2 shiftwidth=2
 
 시뮬레이터 횟수는 따로 챙겨야 합니다. LF FAQ 표현으로 시뮬레이터는 "two attempts (per exam registration)"입니다. 재응시도 같은 등록 안의 기회라서 첫 응시 전에 2회를 다 썼다면 재응시 대비 세션은 추가로 사야 합니다.
 
-## 8. 덤프를 뺀 근거: LF 응시 약관
+## 8. LF 응시 약관과 덤프
 
 이 글에서 덤프 사이트와 "실제 시험 문제"를 내건 자료를 이름도 링크도 없이 뺀 근거는 LF 응시 약관(LF Global Certification & Confidentiality Agreement)입니다. 시험 체크인 때 이 약관에 동의해야 시험이 열립니다.
 

@@ -1,6 +1,6 @@
 ---
-title: '[CKA] 스토리지: PVC가 Pending에 머무는 이유를 바인딩 규칙으로 읽기'
-description: CKA 커리큘럼 v1.37의 Storage 영역(10%)을 시험 과제 중심으로 정리합니다. StorageClass와 기본 클래스 교체, volumeBindingMode, 볼륨 타입(emptyDir, hostPath, generic ephemeral volume), 접근 모드(ReadWriteOncePod 포함), 회수 정책 변경과 Released PV 재사용, PV와 PVC의 바인딩 규칙, 볼륨 확장, Pending PVC 점검 순서를 시험에서 쓰는 YAML과 명령, 자주 틀리는 지점, 연습 과제로 묶었습니다.
+title: '[CKA] 스토리지'
+description: CKA 커리큘럼 v1.37의 Storage 영역(출제 비중 10%)을 StorageClass와 동적 프로비저닝, 볼륨 타입과 접근 모드, 회수 정책, PV와 PVC 바인딩, Pending PVC 점검 순서까지 시험에서 쓰는 YAML과 명령 중심으로 정리합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
   - CKA
@@ -39,20 +39,20 @@ seriesOrder: 8
 ## 0. 먼저 잡을 그림
 
 <details>
-<summary>기초부터: 컨테이너는 왜 데이터를 잃나 (이미지 레이어, CoW, 볼륨)</summary>
+<summary>컨테이너가 데이터를 잃는 이유(이미지 레이어, CoW, 볼륨)</summary>
 
-> **핵심 한 줄**: 컨테이너가 쓰는 파일은 이미지 위에 얹힌 얇은 쓰기 층에 들어가고 그 층은 컨테이너와 함께 사라집니다. 남길 데이터는 쓰기 층 밖의 볼륨에 둡니다.
+컨테이너가 쓰는 파일은 이미지 위에 얹힌 얇은 쓰기 층에 들어가고 그 층은 컨테이너와 함께 사라집니다. 남길 데이터는 쓰기 층 밖의 볼륨에 둡니다.
 
-#### 1. 왜 필요한가
+#### 재시작하면 파일이 사라지는 이유
 
 DB 컨테이너가 재시작됐더니 테이블이 비어 있는 상황이 이 구조에서 나옵니다. 쿠버네티스에서는 컨테이너가 재시작되면 새 컨테이너가 새 쓰기 층으로 시작하므로 이전 파일이 보이지 않습니다.
 
-#### 2. 어떻게 동작하나
+#### 이미지 레이어와 쓰기 층
 
-1. **이미지 레이어**: Dockerfile의 `FROM`, `RUN`, `COPY`는 명령마다 바뀐 파일만 담은 층을 하나씩 만듭니다. 완성된 레이어는 읽기 전용이라 여러 이미지와 컨테이너가 함께 씁니다. 같은 베이스 이미지 컨테이너가 열 개여도 베이스 레이어는 디스크에 한 벌이고 빌드 캐시도 이 구조 덕분입니다.
-2. **쓰기 층 얹기**: 컨테이너를 시작하면 런타임이 맨 위에 쓰기 가능한 층을 하나 얹고 층들을 겹쳐 하나의 파일 시스템처럼 보여 줍니다. 컨테이너가 만든 파일, 로그, DB 데이터는 모두 여기에 들어갑니다.
-3. **Copy-on-Write(CoW)**: 이미지에 있던 파일을 고치면 원본 레이어는 두고 그 파일을 쓰기 층으로 복사한 뒤 복사본을 고칩니다. 큰 파일일수록 처음 고칠 때 복사 비용이 커서 DB처럼 쓰기가 많은 데이터를 쓰기 층에 두면 느립니다.
-4. **삭제**: 쓰기 층은 그 컨테이너의 것이라 컨테이너가 지워지면 함께 지워집니다.
+1. 이미지 레이어: Dockerfile의 `FROM`, `RUN`, `COPY`는 명령마다 바뀐 파일만 담은 층을 하나씩 만듭니다. 완성된 레이어는 읽기 전용이라 여러 이미지와 컨테이너가 함께 씁니다. 같은 베이스 이미지 컨테이너가 열 개여도 베이스 레이어는 디스크에 한 벌이고 빌드 캐시도 이 구조 덕분입니다.
+2. 쓰기 층 얹기: 컨테이너를 시작하면 런타임이 맨 위에 쓰기 가능한 층을 하나 얹고 층들을 겹쳐 하나의 파일 시스템처럼 보여 줍니다. 컨테이너가 만든 파일, 로그, DB 데이터는 모두 여기에 들어갑니다.
+3. Copy-on-Write(CoW): 이미지에 있던 파일을 고치면 원본 레이어는 두고 그 파일을 쓰기 층으로 복사한 뒤 복사본을 고칩니다. 큰 파일일수록 처음 고칠 때 복사 비용이 커서 DB처럼 쓰기가 많은 데이터를 쓰기 층에 두면 느립니다.
+4. 삭제: 쓰기 층은 그 컨테이너의 것이라 컨테이너가 지워지면 함께 지워집니다.
 
 ```text
 merged (컨테이너가 보는 화면)
@@ -80,7 +80,7 @@ Docker에서 `docker inspect <컨테이너>`를 보면 `GraphDriver.Data`에 위
 
 네 디렉터리의 커널 쪽 동작은 [쿠버네티스 아래의 리눅스 4편](/blog/theory/systems/k8s-linux-04-overlayfs)에 있습니다.
 
-#### 3. 한눈에 비교
+#### 볼륨 마운트와 바인드 마운트
 
 | 방식 | 명령 예 | 디렉터리 위치 |
 |---|---|---|
@@ -100,13 +100,13 @@ Docker에서 `docker inspect <컨테이너>`를 보면 `GraphDriver.Data`에 위
 
 Docker에서 볼륨 드라이버를 고르는 자리는 `docker volume create --driver <드라이버> <이름>`이나 `docker run --mount type=volume,source=<이름>,target=<경로>,volume-driver=<드라이버>`입니다. 드라이버가 클라우드 디스크나 NAS를 붙이면 데이터가 호스트 밖에 있으므로 컨테이너나 호스트가 사라져도 남습니다. 쿠버네티스에서는 이 생각이 2-1절의 볼륨 타입과 2-4절의 CSI로 이어집니다.
 
-#### 4. 빌드 캐시와 CI 환경
+#### 빌드 캐시와 CI 환경
 
 레이어 캐시는 같은 호스트에서 다시 빌드할 때만 이득이 납니다. 매번 새 러너나 새 Pod에서 빌드하는 CI는 캐시가 비어서 시작합니다.
 
-1. **BuildKit의 빌드 그래프**: 지금 Docker의 빌더인 BuildKit은 빌드 정의를 LLB라는 의존 그래프로 바꾸고 각 단계를 체크섬으로 추적합니다. 문서 기준으로 서로 의존하지 않는 스테이지는 병렬로 빌드하고 최종 결과에 쓰이지 않는 스테이지는 건너뜁니다.
-2. **원격 캐시**: `docker buildx build --cache-to type=registry,ref=<레지스트리>/<캐시 이미지> --cache-from type=registry,ref=<같은 곳>`처럼 캐시를 레지스트리에 내보내고 다음 빌드가 받아 씁니다. 백엔드는 `inline`, `registry`, `local`, `gha`(GitHub Actions 캐시, 문서 기준 beta) 등이 있습니다.
-3. **캐시 범위**: `mode=min`(기본)은 최종 이미지에 들어간 레이어만, `mode=max`는 중간 스테이지 레이어까지 내보냅니다. `max`는 캐시가 커지는 대신 적중이 늘어납니다.
+1. BuildKit의 빌드 그래프: 지금 Docker의 빌더인 BuildKit은 빌드 정의를 LLB라는 의존 그래프로 바꾸고 각 단계를 체크섬으로 추적합니다. 문서 기준으로 서로 의존하지 않는 스테이지는 병렬로 빌드하고 최종 결과에 쓰이지 않는 스테이지는 건너뜁니다.
+2. 원격 캐시: `docker buildx build --cache-to type=registry,ref=<레지스트리>/<캐시 이미지> --cache-from type=registry,ref=<같은 곳>`처럼 캐시를 레지스트리에 내보내고 다음 빌드가 받아 씁니다. 백엔드는 `inline`, `registry`, `local`, `gha`(GitHub Actions 캐시, 문서 기준 beta) 등이 있습니다.
+3. 캐시 범위: `mode=min`(기본)은 최종 이미지에 들어간 레이어만, `mode=max`는 중간 스테이지 레이어까지 내보냅니다. `max`는 캐시가 커지는 대신 적중이 늘어납니다.
 
 | 방식 | 장점 | 한계 |
 |---|---|---|
@@ -115,8 +115,6 @@ Docker에서 볼륨 드라이버를 고르는 자리는 `docker volume create --
 
 - 기본 `docker` 드라이버는 containerd 이미지 저장소를 켰을 때만 registry 캐시를 내보냅니다. 아니면 `docker buildx create`로 다른 드라이버의 빌더를 만듭니다.
 - 큰 캐시를 올리는 시간이 배포를 늦춘다면 캐시 내보내기를 배포와 다른 작업으로 떼어 놓는 구성도 씁니다. 대신 그 작업이 끝나기 전에 시작한 다음 빌드는 이전 캐시를 받습니다.
-
-> **정리**: 이미지 레이어는 여러 컨테이너가 함께 쓰는 읽기 전용이고 쓰기 층은 컨테이너마다 하나씩 붙는 일회용입니다. 쓰기가 많은 DB 데이터는 CoW 비용 때문에도 볼륨으로 빼고 쿠버네티스에서는 그 볼륨을 아래 PV, PVC로 다룹니다.
 
 </details>
 
@@ -150,26 +148,24 @@ Persistent Volumes 문서의 정의를 표로 옮겼습니다.
 ### 1-1. StorageClass가 하는 일
 
 <details>
-<summary>기초부터: 정적 프로비저닝의 불편과 StorageClass</summary>
+<summary>정적 프로비저닝의 불편과 StorageClass</summary>
 
-> **핵심 한 줄**: StorageClass는 "이런 종류의 디스크를 이 프로비저너로 만든다"는 설계도입니다. PVC가 들어올 때 요청한 크기대로 디스크와 PV를 그 자리에서 만듭니다.
+StorageClass는 "이런 종류의 디스크를 이 프로비저너로 만든다"는 설계도입니다. PVC가 들어올 때 요청한 크기대로 디스크와 PV를 그 자리에서 만듭니다.
 
-#### 1. 왜 필요한가
+#### 정적 프로비저닝의 불편
 
 | 구분 | 정적 프로비저닝(3절) | 동적 프로비저닝(StorageClass) |
 |---|---|---|
 | 준비 | PVC가 생길 때마다 관리자가 디스크와 PV를 미리 만든다 | PVC가 들어오면 프로비저너가 만든다 |
 | 크기 | 일대일 바인딩이라 맞는 PV가 없으면 큰 PV가 묶인다. 1Gi 요청에 100Gi PV만 있으면 99Gi를 다른 PVC가 못 쓴다 | 요청한 크기대로 만들어 남는 용량이 없다 |
 
-주문이 들어오면 그 크기로 만들어 줍니다.
+#### PVC가 PV가 되기까지
 
-#### 2. 어떻게 동작하나
-
-1. **PVC 생성**: 사용자가 `storageClassName: order-fast`, 크기 20Gi로 PVC를 만듭니다.
-2. **프로비저너가 감지**: 그 클래스의 `provisioner` 이름을 맡은 프로비저너(CSI 드라이버라면 external-provisioner 사이드카)가 PVC를 watch하다가 새 PVC를 봅니다. 클래스가 `WaitForFirstConsumer`면 그 PVC를 쓰는 Pod가 노드에 배정될 때까지 기다립니다.
-3. **볼륨 생성**: 프로비저너가 `parameters`를 붙여 저장소에 20Gi 볼륨을 만듭니다.
-4. **PV 생성**: 프로비저너가 그 볼륨을 가리키는 PV를 만들고 클래스의 `reclaimPolicy`를 PV에 적습니다.
-5. **바인딩**: PV와 PVC가 묶여 `Bound`가 되고 Pod가 마운트합니다.
+1. PVC 생성: 사용자가 `storageClassName: order-fast`, 크기 20Gi로 PVC를 만듭니다.
+2. 프로비저너가 감지: 그 클래스의 `provisioner` 이름을 맡은 프로비저너(CSI 드라이버라면 external-provisioner 사이드카)가 PVC를 watch하다가 새 PVC를 봅니다. 클래스가 `WaitForFirstConsumer`면 그 PVC를 쓰는 Pod가 노드에 배정될 때까지 기다립니다.
+3. 볼륨 생성: 프로비저너가 `parameters`를 붙여 저장소에 20Gi 볼륨을 만듭니다.
+4. PV 생성: 프로비저너가 그 볼륨을 가리키는 PV를 만들고 클래스의 `reclaimPolicy`를 PV에 적습니다.
+5. 바인딩: PV와 PVC가 묶여 `Bound`가 되고 Pod가 마운트합니다.
 
 ```text
 PVC(order-fast, 20Gi) ──storageClassName──→ StorageClass order-fast
@@ -182,7 +178,7 @@ PVC(order-fast, 20Gi) ──storageClassName──→ StorageClass order-fast
                                    PV(20Gi, reclaimPolicy 복사) ──Bound──→ PVC → Pod 마운트
 ```
 
-#### 3. 등급 나누기
+#### 클래스로 등급 나누기
 
 | 클래스 이름(예) | 뜻 |
 |---|---|
@@ -192,12 +188,10 @@ PVC(order-fast, 20Gi) ──storageClassName──→ StorageClass order-fast
 
 사용자는 PVC의 `storageClassName`만 바꿔 다른 등급을 고릅니다. 클래스가 실제로 무엇을 뜻하는지는 `provisioner`와 `parameters`가 정하고 쿠버네티스는 관여하지 않습니다.
 
-#### 4. 실전에서 보이는 모습
+#### PVC가 Pending에 머무는 경우
 
 - `WaitForFirstConsumer` 클래스의 PVC는 Pod가 생길 때까지 `Pending`인 것이 정상입니다(1-4절). Events의 `waiting for first consumer to be created before binding` 문구는 1-7절 실습에서 확인합니다.
 - `provisioner` 이름이 설치된 CSI 드라이버와 다르면 아무도 볼륨을 만들지 않아 PVC가 `Pending`에 머뭅니다(2-4절).
-
-> **정리**: 정적 방식은 미리 만들어 두고 기다리고 동적 방식은 주문을 받고 만듭니다. 어떤 디스크가 나올지는 클래스의 `provisioner`와 `parameters`가 정합니다.
 
 </details>
 
@@ -288,10 +282,10 @@ PVC에 `storageClassName`을 쓰는 방법은 세 가지이고 결과가 모두 
 
 ![같은 PVC를 Immediate와 WaitForFirstConsumer로 만들 때의 차이. Immediate는 PVC를 만들자마자 존 a에 디스크를 만들고 나중에 온 Pod는 자리가 있는 존 c 노드로만 갈 수 있어 Pending이 된다. WaitForFirstConsumer는 Pod가 존 c 노드를 받은 뒤 존 c에 디스크를 만들어 Bound가 된다](/uploads/cert/cka/cka-05-storage/binding-mode-zones.svg)
 
-1. **`Immediate`**: PVC `order-db-data`를 만드는 순간 프로비저너가 디스크를 만듭니다. 아직 이 디스크를 쓸 Pod가 없으니 프로비저너는 존을 아무렇게나 고르고 존 a에 만들었다고 하겠습니다.
+1. `Immediate`: PVC `order-db-data`를 만드는 순간 프로비저너가 디스크를 만듭니다. 아직 이 디스크를 쓸 Pod가 없으니 프로비저너는 존을 아무렇게나 고르고 존 a에 만들었다고 하겠습니다.
 2. 이제 주문 DB Pod를 만듭니다. 스케줄러는 PV의 노드 어피니티(존 a)와 Pod의 요구(메모리 8Gi)를 함께 맞춰야 하는데 존 a의 노드는 메모리가 꽉 찼고 여유가 있는 노드는 존 c에만 있습니다.
 3. 두 조건을 동시에 만족하는 노드가 없어 Pod는 `Pending`에 머물고 Events에 `volume node affinity conflict`가 찍힙니다. 디스크를 지우고 다시 만들기 전에는 풀리지 않습니다.
-4. **`WaitForFirstConsumer`**: PVC는 `Pending`으로 기다립니다. Pod가 만들어지면 스케줄러가 메모리, 테인트, 어피니티를 모두 보고 존 c 노드를 고른 뒤 그 존에 디스크를 만들게 합니다. 순서가 바뀌었을 뿐인데 충돌이 생길 틈이 없습니다.
+4. `WaitForFirstConsumer`: PVC는 `Pending`으로 기다립니다. Pod가 만들어지면 스케줄러가 메모리, 테인트, 어피니티를 모두 보고 존 c 노드를 고른 뒤 그 존에 디스크를 만들게 합니다. 순서가 바뀌었을 뿐인데 충돌이 생길 틈이 없습니다.
 
 Kubernetes 블로그는 이 기능을 소개하면서 예전 방식의 문제를 셋으로 꼽았습니다.
 
@@ -301,7 +295,7 @@ Kubernetes 블로그는 이 기능을 소개하면서 예전 방식의 문제를
 
 볼륨을 여러 개 쓰는 Pod라면 볼륨마다 다른 존에 만들어져 어디에도 못 가는 일도 있었다고 적었습니다([Topology-Aware Volume Provisioning in Kubernetes](https://kubernetes.io/blog/2018/10/11/topology-aware-volume-provisioning-in-kubernetes/), 2018).
 
-`WaitForFirstConsumer`에는 함정이 하나 있습니다. Pod 스펙에 `nodeName`을 직접 쓰면 스케줄러를 건너뛰므로 PVC가 `Pending`으로 남고 Pod에는 `FailedMount ... PVC is not bound`가 반복됩니다. 노드를 고정하려면 `kubernetes.io/hostname` 노드 셀렉터를 씁니다.
+Pod 스펙에 `nodeName`을 직접 쓰면 스케줄러를 건너뛰어서 `WaitForFirstConsumer` PVC가 `Pending`으로 남고 Pod에는 `FailedMount ... PVC is not bound`가 반복됩니다. 노드를 고정하려면 `kubernetes.io/hostname` 노드 셀렉터를 씁니다.
 
 ### 1-5. local 볼륨과 StorageClass
 
@@ -333,15 +327,15 @@ volumeBindingMode: WaitForFirstConsumer
 ### 2-1. 볼륨 타입
 
 <details>
-<summary>기초부터: 볼륨이 필요한 이유와 hostPath의 한계</summary>
+<summary>볼륨이 필요한 이유와 hostPath의 한계</summary>
 
-> **핵심 한 줄**: 볼륨은 Pod 스펙에 정의해 컨테이너 경로에 마운트하는 디렉터리이고 볼륨 타입이 그 디렉터리가 실제로 어디 있는지 정합니다. hostPath는 노드 한 대의 디렉터리라서 Pod가 다른 노드로 가면 데이터를 찾지 못합니다.
+볼륨은 Pod 스펙에 정의해 컨테이너 경로에 마운트하는 디렉터리이고 볼륨 타입이 그 디렉터리가 실제로 어디 있는지 정합니다. hostPath는 노드 한 대의 디렉터리라서 Pod가 다른 노드로 가면 데이터를 찾지 못합니다.
 
-#### 1. 왜 필요한가
+#### 볼륨이 필요한 이유
 
 0절 토글에서 본 것처럼 컨테이너의 쓰기 층은 컨테이너와 함께 사라집니다. 그래서 Pod 스펙의 `volumes`에 볼륨을 정의하고 `volumeMounts`로 컨테이너 경로에 붙입니다.
 
-#### 2. hostPath로 따라가 보기
+#### hostPath로 따라가 보기
 
 ```yaml
 spec:
@@ -359,11 +353,11 @@ spec:
       type: DirectoryOrCreate
 ```
 
-1. **마운트**: kubelet이 Pod를 띄우면서 노드의 `/data`를 컨테이너의 `/opt`에 마운트합니다.
-2. **쓰기**: 컨테이너가 `/opt/number.txt`에 쓴 내용은 실제로 노드의 `/data/number.txt`에 저장됩니다.
-3. **Pod 삭제**: Pod를 지워도 노드의 `/data`는 남습니다.
+1. 마운트: kubelet이 Pod를 띄우면서 노드의 `/data`를 컨테이너의 `/opt`에 마운트합니다.
+2. 쓰기: 컨테이너가 `/opt/number.txt`에 쓴 내용은 실제로 노드의 `/data/number.txt`에 저장됩니다.
+3. Pod 삭제: Pod를 지워도 노드의 `/data`는 남습니다.
 
-#### 3. 노드가 여럿이면 생기는 문제
+#### 노드가 여럿이면 생기는 문제
 
 ```text
 1회차: Pod → 노드1 /data (number.txt 있음)
@@ -376,7 +370,7 @@ Pod(노드1 또는 노드2) → PVC → PV → CSI 드라이버 → NFS, Ceph, �
 
 노드의 디스크는 노드끼리 동기화되지 않습니다. hostPath는 노드의 파일 시스템을 그대로 열어 주는 것이라 보안 위험도 큽니다. 그래서 문서는 hostPath를 단일 노드 테스트나 노드 단위 시스템 구성요소에 쓰는 것으로 봅니다.
 
-#### 4. 한눈에 비교
+#### hostPath와 노드 밖 저장소
 
 | 구분 | hostPath | 노드 밖 저장소(CSI + PVC) |
 |---|---|---|
@@ -384,11 +378,9 @@ Pod(노드1 또는 노드2) → PVC → PV → CSI 드라이버 → NFS, Ceph, �
 | 다른 노드로 옮기면 | 빈 디렉터리를 본다 | 같은 데이터를 본다(저장소가 허용하는 범위에서) |
 | 쓰임 | 단일 노드 테스트, 노드 단위 시스템 구성요소 | 일반 앱 데이터 |
 
-#### 5. 헷갈리는 점
+#### 옛 자료의 in-tree 타입
 
 - 옛 자료의 `awsElasticBlockStore`, `gcePersistentDisk`, `cephfs`처럼 Pod 스펙에 저장소를 직접 적던 in-tree 타입은 CSI로 옮겨졌거나 제거됐습니다.
-
-> **정리**: Pod가 어느 노드로 옮겨 가도 같은 데이터를 보게 하려면 노드 밖 저장소를 CSI와 PVC로 연결합니다. hostPath는 단일 노드 테스트나 노드 단위 시스템 구성요소에 씁니다.
 
 </details>
 
@@ -483,7 +475,7 @@ spec:
 | `ReadWriteMany` | RWX | 여러 노드에서 읽기 쓰기 |
 | `ReadWriteOncePod` | RWOP | 클러스터 전체에서 Pod 하나만 읽기 쓰기. v1.29 stable |
 
-문서가 덧붙이는 사실이 시험 함정입니다.
+문서가 덧붙이는 사실에서 시험 문제가 자주 나옵니다.
 
 - 접근 모드는 PVC와 PV를 맞추는 데 쓰이고 마운트 뒤의 쓰기 보호는 강제하지 않습니다. `ReadOnlyMany`로 만든 PV가 읽기 전용이라는 보장도 없습니다. 실제로 Pod 하나로 제한하는 것은 `ReadWriteOncePod`뿐입니다.
 - 볼륨이 여러 모드를 지원해도 한 번에 한 모드로만 마운트됩니다.
@@ -578,11 +570,11 @@ Delete와 Retain을 나란히 돌려 보고 `Released` PV를 되살리는 연습
 ### 2-4. CSI 드라이버와 프로비저너 이름
 
 <details>
-<summary>기초부터: CSI가 생긴 이유와 볼륨이 만들어지고 붙는 순서</summary>
+<summary>CSI가 생긴 이유와 볼륨이 만들어지고 붙는 순서</summary>
 
-> **핵심 한 줄**: CSI(Container Storage Interface)는 저장소 코드를 쿠버네티스 밖으로 떼어 낸 표준 gRPC 규격입니다. 볼륨은 만들기(CreateVolume), 노드에 붙이기(ControllerPublish), 마운트하기(NodeStage, NodePublish) 순서로 Pod에 닿습니다.
+CSI(Container Storage Interface)는 저장소 코드를 쿠버네티스 밖으로 떼어 낸 표준 gRPC 규격입니다. 볼륨은 만들기(CreateVolume), 노드에 붙이기(ControllerPublish), 마운트하기(NodeStage, NodePublish) 순서로 Pod에 닿습니다.
 
-#### 1. 왜 필요한가
+#### in-tree 방식과 CSI
 
 | 구분 | 예전(in-tree) | 지금(CSI) |
 |---|---|---|
@@ -592,7 +584,7 @@ Delete와 Retain을 나란히 돌려 보고 `Released` PV를 되살리는 연습
 
 런타임은 CRI, 네트워크는 CNI로 떼어 냈듯 저장소도 표준 인터페이스로 떼어 냈습니다. CSI 규격은 다른 컨테이너 오케스트레이터도 쓰는 공용 규격입니다.
 
-#### 2. 규격의 내용은 RPC 목록
+#### CSI가 정하는 RPC
 
 CSI는 드라이버가 구현해야 할 gRPC 호출과 각 호출의 인자, 오류 코드를 정합니다. 쿠버네티스 쪽에서는 드라이버 옆에 붙은 사이드카 컨테이너와 kubelet이 이 호출을 합니다.
 
@@ -603,12 +595,12 @@ CSI는 드라이버가 구현해야 할 gRPC 호출과 각 호출의 인자, 오
 | `NodeStageVolume` | kubelet | 노드의 공통 경로에 포맷하고 마운트 |
 | `NodePublishVolume` | kubelet | Pod 경로에 마운트 |
 
-#### 3. 동적 PVC 하나가 Pod에 붙기까지
+#### 동적 PVC 하나가 Pod에 붙기까지
 
-1. **만들기**: PVC가 만들어지면 external-provisioner가 드라이버에 `CreateVolume`을 부릅니다(`Immediate`면 바로, `WaitForFirstConsumer`면 Pod가 노드에 배정된 뒤). 저장소에 볼륨이 생기고 PV가 만들어집니다.
-2. **붙이기**: Pod가 노드에 배정되면 attach가 필요한 드라이버의 경우 VolumeAttachment 객체가 생기고 external-attacher가 `ControllerPublishVolume`으로 볼륨을 그 노드에 붙입니다.
-3. **마운트**: 그 노드의 kubelet이 드라이버의 노드 Pod에 `NodeStageVolume`과 `NodePublishVolume`을 부릅니다.
-4. **사용**: 컨테이너가 시작되면 마운트된 경로를 씁니다.
+1. 만들기: PVC가 만들어지면 external-provisioner가 드라이버에 `CreateVolume`을 부릅니다(`Immediate`면 바로, `WaitForFirstConsumer`면 Pod가 노드에 배정된 뒤). 저장소에 볼륨이 생기고 PV가 만들어집니다.
+2. 붙이기: Pod가 노드에 배정되면 attach가 필요한 드라이버의 경우 VolumeAttachment 객체가 생기고 external-attacher가 `ControllerPublishVolume`으로 볼륨을 그 노드에 붙입니다.
+3. 마운트: 그 노드의 kubelet이 드라이버의 노드 Pod에 `NodeStageVolume`과 `NodePublishVolume`을 부릅니다.
+4. 사용: 컨테이너가 시작되면 마운트된 경로를 씁니다.
 
 ```text
 Pod ──claimName──→ PVC ──Bound──→ PV ←──만듦── external-provisioner
@@ -620,18 +612,16 @@ VolumeAttachment → external-attacher ─ControllerPublishVolume→ 저장소 �
 kubelet ─NodeStageVolume→ 노드 공통 경로 ─NodePublishVolume→ Pod 경로 → 컨테이너
 ```
 
-#### 4. 헷갈리는 점
+#### 정리와 삭제의 순서
 
 - 정리는 거꾸로 갑니다. Pod가 지워지면 언마운트와 detach가 일어나고 볼륨은 남습니다.
 - `DeleteVolume`은 PVC가 지워지고 PV의 회수 정책이 `Delete`일 때 불립니다. Pod를 지운다고 저장소의 볼륨이 지워지지는 않습니다.
-
-> **정리**: Pod를 지우면 언마운트와 detach만 일어나고 저장소의 볼륨은 PVC가 지워지고 회수 정책이 `Delete`일 때 지워집니다. 고리의 출발점은 StorageClass의 `provisioner`가 가리키는 드라이버 이름이라 아래 명령으로 하나씩 따라가며 확인합니다.
 
 </details>
 
 CSI(Container Storage Interface)는 저장 시스템을 워크로드에 노출하는 표준 인터페이스이고 저장소 벤더는 드라이버를 쿠버네티스 코드 밖에서 만들어 클러스터에 설치합니다.
 
-시험에서 알아야 할 연결은 하나입니다. StorageClass의 `provisioner` 값이 설치된 CSI 드라이버 이름과 같아야 그 드라이버가 PVC를 보고 볼륨을 만듭니다. 이름이 다르면 아무도 볼륨을 만들지 않아 PVC가 `Pending`에 머뭅니다.
+시험에서는 StorageClass의 `provisioner` 값이 설치된 CSI 드라이버 이름과 같아야 그 드라이버가 PVC를 보고 볼륨을 만든다는 연결만 알면 됩니다. 이름이 다르면 아무도 볼륨을 만들지 않아 PVC가 `Pending`에 머뭅니다.
 
 ```bash
 kubectl get csidriver                       # 설치된 드라이버 이름, ATTACHREQUIRED
@@ -666,11 +656,11 @@ in-tree 볼륨 플러그인에서 CSI로 넘어가는 마이그레이션은 v1.2
 ### 3-1. 정적 프로비저닝 전체 흐름
 
 <details>
-<summary>기초부터: PV와 PVC를 나눈 이유</summary>
+<summary>PV와 PVC를 나눈 이유</summary>
 
-> **핵심 한 줄**: PV는 "실제 저장소가 여기 있다"는 공급이고 PVC는 "이만큼 필요하다"는 요청입니다. Pod는 PVC 이름만 알고 저장소의 세부는 PV 뒤에 숨습니다.
+PV는 "실제 저장소가 여기 있다"는 공급이고 PVC는 "이만큼 필요하다"는 요청입니다. Pod는 PVC 이름만 알고 저장소의 세부는 PV 뒤에 숨습니다.
 
-#### 1. 왜 필요한가
+#### 저장소 정보를 Pod에서 떼어 낸 이유
 
 Pod 수백 개의 스펙에 NFS 서버 주소나 디스크 ID를 직접 적었다고 하겠습니다.
 
@@ -680,7 +670,7 @@ Pod 수백 개의 스펙에 NFS 서버 주소나 디스크 ID를 직접 적었�
 | 앱 담당자의 부담 | 저장소의 세부 정보까지 알아야 한다 | "이 클래스로 RWO 20Gi"만 적는다 |
 | 다른 클러스터로 이식 | 매니페스트가 동작하지 않는다 | Pod와 PVC 매니페스트를 그대로 쓴다 |
 
-#### 2. 요청과 공급
+#### 요청과 공급
 
 | 구분 | PV | PVC |
 |---|---|---|
@@ -688,13 +678,13 @@ Pod 수백 개의 스펙에 NFS 서버 주소나 디스크 ID를 직접 적었�
 | 담는 내용 | 실제 저장소가 어디 있고 크기와 접근 모드가 무엇인지 | "이 클래스로 RWO 20Gi가 필요하다"는 요청 |
 | 범위 | 클러스터 전체 | 네임스페이스 |
 
-#### 3. 묶이는 과정
+#### 묶이는 과정
 
-1. **PV 준비**: 관리자가 PV를 만들면 `Available`입니다.
-2. **PVC 요청**: 사용자가 PVC를 만들면 컨트롤 플레인의 PV 컨트롤러가 클래스, 접근 모드, 크기가 맞는 PV를 찾습니다.
-3. **바인딩**: 맞는 PV가 있으면 일대일로 묶고 둘 다 `Bound`가 됩니다. PV의 `claimRef`에 PVC가, PVC의 `volumeName`에 PV가 적힙니다.
-4. **대기**: 맞는 PV가 없으면 PVC는 `Pending`으로 기다리다가 맞는 PV가 생기면 그때 묶입니다.
-5. **사용**: Pod가 `persistentVolumeClaim.claimName`으로 그 PVC를 마운트합니다.
+1. PV 준비: 관리자가 PV를 만들면 `Available`입니다.
+2. PVC 요청: 사용자가 PVC를 만들면 컨트롤 플레인의 PV 컨트롤러가 클래스, 접근 모드, 크기가 맞는 PV를 찾습니다.
+3. 바인딩: 맞는 PV가 있으면 일대일로 묶고 둘 다 `Bound`가 됩니다. PV의 `claimRef`에 PVC가, PVC의 `volumeName`에 PV가 적힙니다.
+4. 대기: 맞는 PV가 없으면 PVC는 `Pending`으로 기다리다가 맞는 PV가 생기면 그때 묶입니다.
+5. 사용: Pod가 `persistentVolumeClaim.claimName`으로 그 PVC를 마운트합니다.
 
 ```text
 [네임스페이스 shop]                         [클러스터 범위]
@@ -703,14 +693,12 @@ Pod ──claimName──→ PVC (3Gi, RWO) ──Bound──→ PV (10Gi, RWO, 
                                               └─→ 실제 저장소(hostPath, NFS, 클라우드 디스크)
 ```
 
-#### 4. 헷갈리는 점 / 실전에서 보이는 모습
+#### 바인딩에서 자주 마주치는 경우
 
 - 일대일이라 요청보다 큰 PV가 묶이면 남는 용량은 다른 PVC가 쓰지 못합니다. 아래 예에서 3Gi 요청이 10Gi PV에 묶이는 것이 그 경우입니다.
 - 맞는 볼륨이 없으면 PVC는 무기한 묶이지 않은 채로 남고 맞는 볼륨이 생기면 그때 묶입니다(Persistent Volumes 문서). 50Gi PV만 여럿 있는 클러스터에서 100Gi PVC는 100Gi PV가 추가될 때까지 `Pending`입니다.
 - Pod가 쓰는 PVC를 지우면 `Terminating`에 머물고 Finalizers에 `kubernetes.io/pvc-protection`이 보입니다(3-4절).
 - PVC를 지운 뒤 PV를 어떻게 할지는 회수 정책이 정합니다(2-3절). 볼륨을 `rm -rf`로 비워 다시 내주던 `Recycle`은 사용 중단됐고 문서는 그 대신 동적 프로비저닝을 쓰라고 권합니다. 요청이 올 때마다 새 볼륨을 만들고 다 쓰면 `Delete`로 지우는 흐름입니다.
-
-> **정리**: 공급(PV)과 요청(PVC)을 나눠 앱과 저장소를 떼어 놓았습니다. 정적 PV에서 생기는 남는 용량과 미리 만드는 수작업은 1절의 동적 프로비저닝으로 줄입니다.
 
 </details>
 
@@ -911,7 +899,7 @@ kubectl -n shop get pvc order-db-data -w
 | `Waiting for a volume to be created either by the external provisioner '<이름>' or manually by the system administrator...` | 동적 프로비저닝을 맡겼는데 아직 아무도 볼륨을 안 만듦 | 8번 |
 | `storageclass.storage.k8s.io "<이름>" not found` | PVC가 적은 클래스가 클러스터에 없음 | 2번 |
 
-마지막 줄은 조금 더 설명이 필요합니다.
+마지막 줄을 조금 더 풀어 보겠습니다.
 
 맞는 정적 PV가 없고 PVC의 클래스 이름에 해당하는 StorageClass도 없으면 크기 이야기 대신 `ProvisioningFailed  storageclass.storage.k8s.io "manual" not found`가 찍힙니다. 맞는 PV가 없어서 그 이름으로 동적 프로비저닝을 시도했다는 뜻이라 "맞는 PV가 없다"와 "프로비저너가 없다"를 함께 봅니다.
 
@@ -932,7 +920,7 @@ kubectl -n shop get pvc order-db-data -w
 
 직접 만든 연습 과제입니다. 시험 문항이나 덤프에서 옮긴 것이 아닙니다.
 
-**문제 1.** 이름 `pay-logs-pv`, 용량 2Gi, 접근 모드 ReadWriteOnce, 회수 정책 Retain, StorageClass `manual`, 노드 경로 `/srv/pay-logs`인 PV를 만들고 네임스페이스 `shop`에 이 PV에 묶일 1Gi PVC `pay-logs`를 만드세요.
+문제 1. 이름 `pay-logs-pv`, 용량 2Gi, 접근 모드 ReadWriteOnce, 회수 정책 Retain, StorageClass `manual`, 노드 경로 `/srv/pay-logs`인 PV를 만들고 네임스페이스 `shop`에 이 PV에 묶일 1Gi PVC `pay-logs`를 만드세요.
 
 <details>
 <summary>답 보기</summary>
@@ -970,7 +958,7 @@ spec:
 
 </details>
 
-**문제 2.** PVC `order-db-data`가 `Pending`입니다. PVC가 요청한 클래스 `order-fast`의 `VOLUMEBINDINGMODE`가 `WaitForFirstConsumer`이고 이 PVC를 쓰는 Pod는 아직 없습니다. 무엇을 해야 하나요?
+문제 2. PVC `order-db-data`가 `Pending`입니다. PVC가 요청한 클래스 `order-fast`의 `VOLUMEBINDINGMODE`가 `WaitForFirstConsumer`이고 이 PVC를 쓰는 Pod는 아직 없습니다. 무엇을 해야 하나요?
 
 <details>
 <summary>답 보기</summary>
@@ -981,7 +969,7 @@ spec:
 
 </details>
 
-**문제 3.** 동적으로 만들어진 PV `pvc-1a2b...`가 있습니다. PVC를 지워도 데이터가 남도록 바꾸세요.
+문제 3. 동적으로 만들어진 PV `pvc-1a2b...`가 있습니다. PVC를 지워도 데이터가 남도록 바꾸세요.
 
 <details>
 <summary>답 보기</summary>
@@ -995,7 +983,7 @@ kubectl get pv pvc-1a2b...
 
 </details>
 
-**문제 4.** 클러스터에 StorageClass `standard`(기본)와 `order-fast`가 있습니다. 기본을 `order-fast`로 바꾸세요.
+문제 4. 클러스터에 StorageClass `standard`(기본)와 `order-fast`가 있습니다. 기본을 `order-fast`로 바꾸세요.
 
 <details>
 <summary>답 보기</summary>
@@ -1010,7 +998,7 @@ kubectl get sc
 
 </details>
 
-**문제 5.** 노드 하나에서 도는 Pod 두 개가 같은 RWO PVC를 마운트하고 있습니다. 이것이 가능한 이유와 Pod 하나만 쓰게 강제하려면 무엇을 바꿔야 하는지 답하세요.
+문제 5. 노드 하나에서 도는 Pod 두 개가 같은 RWO PVC를 마운트하고 있습니다. 이것이 가능한 이유와 Pod 하나만 쓰게 강제하려면 무엇을 바꿔야 하는지 답하세요.
 
 <details>
 <summary>답 보기</summary>
@@ -1019,7 +1007,7 @@ RWO는 노드 하나에서 읽기 쓰기로 마운트하는 모드라서 같은 
 
 </details>
 
-**문제 6.** PVC `order-db-data`를 20Gi에서 30Gi로 늘리려 했는데 거부됩니다. 가장 먼저 확인할 것은 무엇인가요?
+문제 6. PVC `order-db-data`를 20Gi에서 30Gi로 늘리려 했는데 거부됩니다. 가장 먼저 확인할 것은 무엇인가요?
 
 <details>
 <summary>답 보기</summary>
@@ -1028,7 +1016,7 @@ PVC가 쓰는 StorageClass의 `allowVolumeExpansion`이 `true`인지 봅니다(`
 
 </details>
 
-**문제 7.** 네임스페이스 `shop`의 PVC `board-files`가 `Pending`이고 Events에는 외부 프로비저너가 볼륨을 만들기를 기다린다는 메시지만 반복됩니다. 클래스는 `Immediate` 모드이고 `provisioner`는 `csi-driver.example-vendor.example`입니다. 어디를 확인하나요?
+문제 7. 네임스페이스 `shop`의 PVC `board-files`가 `Pending`이고 Events에는 외부 프로비저너가 볼륨을 만들기를 기다린다는 메시지만 반복됩니다. 클래스는 `Immediate` 모드이고 `provisioner`는 `csi-driver.example-vendor.example`입니다. 어디를 확인하나요?
 
 <details>
 <summary>답 보기</summary>
@@ -1043,7 +1031,7 @@ kubectl get pod -A | grep -i csi
 
 </details>
 
-**문제 8.** 네임스페이스 `shop`의 Pod `report`에 이름이 `scratch`인 generic ephemeral volume이 있습니다. 만들어지는 PVC의 이름과 Pod를 지웠을 때 PVC가 어떻게 되는지 답하세요.
+문제 8. 네임스페이스 `shop`의 Pod `report`에 이름이 `scratch`인 generic ephemeral volume이 있습니다. 만들어지는 PVC의 이름과 Pod를 지웠을 때 PVC가 어떻게 되는지 답하세요.
 
 <details>
 <summary>답 보기</summary>

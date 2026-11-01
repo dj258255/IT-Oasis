@@ -1,5 +1,5 @@
 ---
-title: '[CKA] 시험 직전 핵심 요약: 30분에 훑는 명령, YAML 뼈대, 함정'
+title: '[CKA] 시험 직전 핵심 요약'
 description: CKA(커리큘럼 v1.37) 시험 직전 30분용 요약입니다. 과제마다 ssh로 옮기는 시험 환경과 사전 설치 도구, 영역별 명령과 YAML 뼈대와 함정, kubeadm 업그레이드와 etcd 복구 체크리스트, 버전이 바뀌어 자주 틀리는 것 22개를 표로 정리하고 자세한 글로 연결합니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -42,11 +42,7 @@ LF Important Instructions 기준으로 과제용 ssh 호스트에는 아래 도�
 | 근거 없음 | `etcdutl`, `crictl`, `kustomize`(단독 바이너리) | `which etcdutl crictl`로 확인. crictl이 없으면 `/var/log/pods`, kustomize는 아래 줄 |
 | kubectl 내장 | `kubectl apply -k`, `kubectl kustomize` | 단독 kustomize가 없어도 씀 |
 
-Resources Allowed 기준으로 배포판 패키지는 설치해도 되지만 과제 수행에 필요하지는 않습니다. 패키지 저장소에 닿는지는 공식 문서에 나오지 않습니다.
-
-그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다.
-
-직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
+Resources Allowed 기준으로 배포판 패키지는 설치해도 되지만 과제 수행에 필요하지는 않습니다. 패키지 저장소에 닿는지는 공식 문서에 나오지 않습니다. 그래서 `jq` 대신 `-o jsonpath`, `-o custom-columns`, `yq`로 연습합니다. 직접 만든 alias는 ssh로 호스트를 옮기면 사라집니다.
 
 시험 중 열 수 있는 문서는 네 곳과 과제의 Quick Reference 링크입니다. 시험 VM 안 Firefox로만 엽니다.
 
@@ -387,7 +383,7 @@ kubectl -n kube-system delete pod -l k8s-app=kube-proxy
 
 6번에서 매니페스트를 밖으로 뺐다 넣는 데도 까닭이 있습니다. kubelet은 `/etc/kubernetes/manifests`를 지켜보다가 파일이 사라지면 그 static Pod를 멈추고 다시 생기면 새로 띄웁니다. `kubectl delete pod`로는 mirror Pod만 지워져 재시작이 되지 않습니다.
 
-함정은 셋입니다.
+etcd 복구에서 틀리기 쉬운 곳은 아래와 같습니다.
 
 - 6번을 빼면 etcd는 복구됐는데도 `kubectl`에 옛 상태가 보이지 않습니다. 7번을 빼면 워커의 새 Pod가 `Pending`에 머물거나 Service IP 접속이 안 될 수 있습니다(kind와 Lima VM에서 확인).
 - 복구 뒤 `kubeadm upgrade apply`를 돌리면 `kubeadm-config`의 `etcd.local.dataDir`로 `etcd.yaml`이 다시 만들어지니 그 값도 새 경로로 고칩니다.

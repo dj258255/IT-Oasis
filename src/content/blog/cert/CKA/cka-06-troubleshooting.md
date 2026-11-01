@@ -1,5 +1,5 @@
 ---
-title: '[CKA] 트러블슈팅: 증상에서 출발해 kubelet과 로그까지 내려가는 순서'
+title: '[CKA] 트러블슈팅'
 description: CKA 커리큘럼 v1.37에서 비중이 가장 큰 Troubleshooting 영역(30%)을 증상, 확인 명령, 고칠 곳 순서로 정리합니다. 노드 NotReady와 kubelet 인증서, static Pod 컨트롤 플레인과 crictl, kubectl top과 Metrics API 버전, JSONPath 값 뽑기, kubectl logs, Service에서 EndpointSlice까지의 점검을 다룹니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -58,15 +58,15 @@ kubectl get events -n <ns> --sort-by=.metadata.creationTimestamp
 이벤트는 네임스페이스 단위입니다(Debug Running Pods 문서). 다른 네임스페이스는 `-n`, 전체는 `-A`를 줍니다.
 
 <details>
-<summary>기초부터: describe 출력에서 Events를 읽는 법</summary>
+<summary>describe 출력에서 Events를 읽는 법</summary>
 
-> **핵심 한 줄**: `describe` 맨 아래의 Events는 스케줄러, kubelet, 컨트롤러가 일하면서 남긴 일지입니다. 누가(From) 무슨 이유로(Reason) 무엇을 말했는지(Message) 읽으면 어느 층에서 막혔는지 나옵니다.
+`describe` 맨 아래의 Events는 스케줄러, kubelet, 컨트롤러가 일하면서 남긴 일지입니다. 누가(From) 무슨 이유로(Reason) 무엇을 말했는지(Message) 읽으면 어느 층에서 막혔는지 나옵니다.
 
-#### 1. 왜 Events부터 보나
+#### Events부터 보는 이유
 
 Pod의 STATUS는 결과를 한 단어로만 보여 줍니다. `Pending`만 보고는 스케줄러가 노드를 못 찾은 것인지 PVC를 기다리는 것인지 알 수 없습니다. 그 이유는 Event 객체에 문장으로 남습니다. 구성요소들은 단계를 넘기거나 실패할 때마다 Event를 하나씩 만듭니다.
 
-#### 2. 줄 하나 읽기
+#### Events 줄 하나 읽기
 
 노드가 3대이고 그중 1대는 컨트롤 플레인, 워커 2대는 CPU가 모자란 상황에서 `order-api` Pod를 만들면 Events가 이런 꼴로 나옵니다(형식 예시).
 
@@ -92,7 +92,7 @@ Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 �
 
 이유별 숫자를 더하면 전체 노드 수 3이 됩니다. 컨트롤 플레인 테인트는 원래 있는 것이니 고칠 곳은 CPU 요청이나 워커 자원 쪽입니다.
 
-#### 3. From 열로 층 가르기
+#### From 열로 층 가르기
 
 | From | 그 Event가 말하는 층 | 자주 보는 Reason |
 |---|---|---|
@@ -102,13 +102,11 @@ Message는 쉼표 단위로 끊어 읽습니다. `0/3 nodes are available`은 �
 
 `Scheduled` 다음 줄부터 From이 kubelet으로 바뀝니다. Normal 줄이 이어지다가 처음 나오는 Warning이 막힌 지점입니다.
 
-#### 4. 헷갈리는 점
+#### Events를 읽을 때 주의할 점
 
 - Event는 오래 남지 않습니다. kube-apiserver의 `--event-ttl` 기본값이 1시간이라 그보다 오래된 일은 Events가 `<none>`으로 보일 수 있습니다. 그때는 `describe`의 Last State와 로그로 갑니다.
 - `kubectl get events`는 시간 순서로 정렬되지 않으니 0-1의 `--sort-by=.metadata.creationTimestamp`를 붙입니다. Pod 하나만 보려면 `--field-selector involvedObject.name=<pod>`를 줍니다.
 - 스케줄러가 죽어 있으면 `FailedScheduling`조차 생기지 않습니다. Events가 빈 `Pending`은 2-3절의 스케줄러 중지를 의심합니다.
-
-> **정리**: Type으로 실패 줄을 찾고 From으로 층을 정하고 Message의 이유별 숫자로 고칠 곳을 고릅니다.
 
 </details>
 
@@ -150,11 +148,11 @@ kubectl get node --show-labels
 
 ### 0-4. ImagePullBackOff
 
-Images 문서는 이유로 잘못된 이미지 이름과 `imagePullSecret` 없이 비공개 레지스트리에서 받으려 한 경우를 듭니다. Debug Pods 문서가 시키는 점검은 셋입니다.
+Images 문서는 이유로 잘못된 이미지 이름과 `imagePullSecret` 없이 비공개 레지스트리에서 받으려 한 경우를 듭니다. Debug Pods 문서가 시키는 점검은 다음과 같습니다.
 
-1. 이미지 이름이 맞는가
-2. 레지스트리에 있는가
-3. 직접 pull해서 받아지는가
+1. 이미지 이름이 맞는지
+2. 레지스트리에 있는지
+3. 직접 pull해서 받아지는지
 
 ```bash
 kubectl -n shop get pod order-api-xxxx -o jsonpath='{.spec.containers[*].image}'
@@ -172,21 +170,21 @@ kubectl -n shop get pod board-xxxx -o jsonpath='{.metadata.finalizers}'
 ```
 
 <details>
-<summary>기초부터: finalizer와 admission 웹훅이 삭제를 붙잡는 방법</summary>
+<summary>finalizer와 admission 웹훅이 삭제를 붙잡는 방법</summary>
 
-> **핵심 한 줄**: finalizer는 "이 정리가 끝나기 전에는 지우지 마라"는 꼬리표입니다. 꼬리표가 남아 있으면 삭제를 요청받은 객체가 `Terminating`인 채로 남습니다.
+finalizer는 "이 정리가 끝나기 전에는 지우지 마라"는 꼬리표입니다. 꼬리표가 남아 있으면 삭제를 요청받은 객체가 `Terminating`인 채로 남습니다.
 
-#### 1. 삭제가 단계로 나뉜 이유
+#### 삭제가 단계로 나뉜 이유
 
 Pod가 아직 쓰고 있는 PersistentVolume이 지워지면 데이터가 사라집니다. 그래서 쿠버네티스는 지우라는 요청을 받아도 바로 지우지 않고 단계를 밟습니다(Finalizers 문서).
 
-1. **표시**: API 서버가 객체의 `metadata.deletionTimestamp`를 채우고 `202 Accepted`로 답합니다. `metadata.finalizers`가 비어 있지 않으면 객체는 남아 있고 `get`에 `Terminating`으로 보입니다.
-2. **정리**: finalizer마다 맡은 컨트롤러가 있고 그 컨트롤러가 자기 정리를 끝내면 목록에서 자기 이름을 지웁니다.
-3. **삭제**: 목록이 비면 API 서버가 객체를 실제로 지웁니다.
+1. 표시: API 서버가 객체의 `metadata.deletionTimestamp`를 채우고 `202 Accepted`로 답합니다. `metadata.finalizers`가 비어 있지 않으면 객체는 남아 있고 `get`에 `Terminating`으로 보입니다.
+2. 정리: finalizer마다 맡은 컨트롤러가 있고 그 컨트롤러가 자기 정리를 끝내면 목록에서 자기 이름을 지웁니다.
+3. 삭제: 목록이 비면 API 서버가 객체를 실제로 지웁니다.
 
 문서의 예는 `kubernetes.io/pv-protection`입니다. Pod가 쓰고 있는 PV를 지우면 `Terminating`에 머물다가 Pod가 볼륨을 놓으면 꼬리표가 지워지고 PV가 삭제됩니다.
 
-#### 2. 웹훅이 끼면
+#### 웹훅이 끼면
 
 admission 웹훅은 API 서버가 객체를 저장하기 전에 물어보는 바깥 HTTP 서버입니다. 컨트롤러가 finalizer를 지우는 것도 객체를 바꾸는 `UPDATE` 요청이라 웹훅을 지나갑니다. 웹훅 서버가 죽었거나 그 변경을 거부하면 finalizer가 지워지지 않습니다.
 
@@ -196,13 +194,11 @@ kubectl delete → deletionTimestamp 기록 → 컨트롤러가 finalizer 제거
                                             → 목록이 그대로 → Terminating 유지
 ```
 
-#### 3. 헷갈리는 점
+#### Terminating이 풀리지 않을 때 더 볼 것
 
 - finalizer를 손으로 지우면 객체는 바로 사라지지만 컨트롤러가 하려던 정리가 건너뛰어집니다. Finalizers 문서도 꼬리표의 목적을 알고 그 정리를 다른 방법으로 끝낸 경우가 아니면 손으로 지우지 말라고 적습니다. 멈춘 컨트롤러나 웹훅을 먼저 고칩니다.
 - Pod의 `Terminating`은 finalizer보다 종료 대기 때문인 경우가 많습니다. 기본 유예 시간은 30초(`terminationGracePeriodSeconds`)입니다.
 - 그 노드의 kubelet이 죽었으면 컨테이너를 멈췄다고 보고할 쪽이 없어 노드가 돌아올 때까지 남습니다(1-2절). 위 두 명령으로 finalizer와 웹훅이 둘 다 없으면 노드 상태를 봅니다.
-
-> **정리**: `Terminating`이 끝나지 않으면 finalizer 목록, 그 finalizer를 지울 컨트롤러, 그 UPDATE를 막는 웹훅, 노드의 kubelet 순으로 봅니다.
 
 </details>
 
@@ -225,20 +221,20 @@ kubectl get node <노드> -o yaml
 ### 1-2. 노드 조건과 하트비트
 
 <details>
-<summary>기초부터: 노드가 살아 있다는 것을 컨트롤 플레인이 아는 방법</summary>
+<summary>노드가 살아 있다는 것을 컨트롤 플레인이 아는 방법</summary>
 
-> **핵심 한 줄**: 컨트롤 플레인은 노드에 묻지 않고 kubelet의 보고를 기다립니다. 보고가 끊기면 `Unknown`, 보고는 오는데 무언가 준비되지 않았으면 `False`입니다.
+컨트롤 플레인은 노드에 묻지 않고 kubelet의 보고를 기다립니다. 보고가 끊기면 `Unknown`, 보고는 오는데 무언가 준비되지 않았으면 `False`입니다.
 
-#### 1. 왜 필요한가
+#### 하트비트를 쓰는 이유
 
-노드 수백 대를 컨트롤 플레인이 일일이 찔러 보면 부담이 큽니다. 그래서 각 노드의 kubelet이 API 서버에 주기적으로 보고하고 컨트롤 플레인은 보고가 끊긴 것을 보고 이상을 알아챕니다.
+노드 수백 대를 컨트롤 플레인이 일일이 찔러 보면 부담이 큽니다. 그래서 각 노드의 kubelet이 API 서버에 주기적으로 보고하고 컨트롤 플레인은 보고가 끊기면 이상으로 판단합니다.
 
 | 보고 | 내용 | 주기(기본값) |
 |---|---|---|
-| **Lease 갱신** | `kube-node-lease` 네임스페이스에 있는 자기 이름의 Lease 객체의 `renewTime`. 가벼운 "아직 살아 있다" 신호 | 10초마다 |
-| **Node `.status` 갱신** | 조건(Ready, MemoryPressure 등), 용량, 이미지 목록 | 상태가 바뀌면 바로, 바뀐 것이 없으면 5분마다 |
+| Lease 갱신 | `kube-node-lease` 네임스페이스에 있는 자기 이름의 Lease 객체의 `renewTime`. 가벼운 "아직 살아 있다" 신호 | 10초마다 |
+| Node `.status` 갱신 | 조건(Ready, MemoryPressure 등), 용량, 이미지 목록 | 상태가 바뀌면 바로, 바뀐 것이 없으면 5분마다 |
 
-#### 2. 조건 읽기
+#### 노드 조건 읽기
 
 | 조건 | 정상 값 | `True`가 되는 때 |
 |---|---|---|
@@ -249,11 +245,11 @@ kubectl get node <노드> -o yaml
 
 옛 자료의 `OutOfDisk` 조건은 지금 목록에 없고 디스크 부족은 `DiskPressure`로 봅니다.
 
-#### 3. 보고가 끊기면
+#### 보고가 끊기면
 
-1. **갱신 중단**: kubelet이 멈추거나 노드가 꺼지면 Lease 갱신이 멈춥니다.
-2. **Unknown 표시**: kube-controller-manager의 노드 라이프사이클 컨트롤러가 `node-monitor-grace-period`(기본 50초) 동안 소식을 듣지 못하면 조건을 `Unknown`으로 바꿉니다. 컨트롤러가 "소식이 없어 모른다"는 뜻으로 적은 것이라 메시지가 `Kubelet stopped posting node status.`입니다.
-3. **테인트와 축출**: 동시에 `unreachable` 테인트가 붙어 새 Pod가 배정되지 않고 기본 톨러레이션 300초가 지나면 그 노드의 Pod가 축출됩니다.
+1. 갱신 중단: kubelet이 멈추거나 노드가 꺼지면 Lease 갱신이 멈춥니다.
+2. Unknown 표시: kube-controller-manager의 노드 라이프사이클 컨트롤러가 `node-monitor-grace-period`(기본 50초) 동안 소식을 듣지 못하면 조건을 `Unknown`으로 바꿉니다. 컨트롤러가 "소식이 없어 모른다"는 뜻으로 적은 것이라 메시지가 `Kubelet stopped posting node status.`입니다.
+3. 테인트와 축출: 동시에 `unreachable` 테인트가 붙어 새 Pod가 배정되지 않고 기본 톨러레이션 300초가 지나면 그 노드의 Pod가 축출됩니다.
 
 ```text
 kubelet ──10초마다 Lease 갱신──→ API 서버 ←──watch── 노드 라이프사이클 컨트롤러
@@ -262,7 +258,7 @@ kubelet ──10초마다 Lease 갱신──→ API 서버 ←──watch── 
       → 300초 뒤 그 노드의 Pod 축출
 ```
 
-#### 4. 실전에서 보이는 모습
+#### Ready 값으로 원인 방향 가르기
 
 | Ready 값 | 뜻 | 원인 방향 |
 |---|---|---|
@@ -272,7 +268,7 @@ kubelet ──10초마다 Lease 갱신──→ API 서버 ←──watch── 
 - 마지막 보고 시각은 `.status`의 `lastHeartbeatTime`보다 Lease의 `spec.renewTime`이 정확합니다(`kubectl -n kube-node-lease get lease <노드> -o yaml`).
 - 노드에 ssh로 들어가면 자원(`df -h`, `free -m`, `top`), kubelet 상태(`systemctl status kubelet`), kubelet 로그(`journalctl -u kubelet`), kubelet 인증서 순으로 봅니다. 1-3절과 1-4절이 이 순서의 세부입니다.
 
-#### 5. 노드 자체가 꺼졌을 때
+#### 노드 자체가 꺼졌을 때
 
 노드 전원이 꺼졌거나 커널이 멈춘 경우에도 `Unknown`이 됩니다. ssh부터 되는지 보고 갈래를 나눕니다.
 
@@ -281,8 +277,6 @@ kubelet ──10초마다 Lease 갱신──→ API 서버 ←──watch── 
 | `ssh <노드>`가 시간 초과 | 노드가 꺼졌거나 네트워크가 끊김 | 클라우드 콘솔이나 하이퍼바이저에서 전원을 확인하고 다시 켬 |
 | 접속은 되는데 `uptime`이 몇 분 | 방금 다시 부팅됨(크래시 뒤 재기동일 수 있음) | 저널을 디스크에 남기는 설정이면 `journalctl -b -1`로 직전 부팅의 마지막 로그를 봄 |
 | 다시 켰는데 계속 `NotReady` | kubelet이 부팅 때 자동으로 뜨지 않음 | `systemctl is-enabled kubelet`이 `disabled`면 `systemctl enable --now kubelet` |
-
-> **정리**: 하트비트는 Lease, 자세한 상태는 Node `.status`입니다. `Unknown`이면 노드로 들어가고 `False`면 조건 메시지가 가리키는 구성요소를 봅니다.
 
 </details>
 
@@ -429,7 +423,7 @@ ssh를 쓸 수 없으면 Debug Running Pods 문서의 노드 디버그를 씁니
 kubectl debug node/<노드> -it --image=ubuntu
 ```
 
-이렇게 뜬 디버그 Pod는 이런 환경입니다.
+이렇게 뜬 디버그 Pod의 환경은 다음과 같습니다.
 
 - 노드의 루트 파일시스템이 `/host`에 마운트됨
 - 호스트의 IPC, 네트워크, PID 네임스페이스에서 돎
@@ -464,15 +458,15 @@ DaemonSet Pod가 있으면 `--ignore-daemonsets`가 있어야 drain이 성공합
 ### 2-1. 무엇이 어디서 도나
 
 <details>
-<summary>기초부터: 컨트롤 플레인이 떠 있는 두 가지 방식과 구별법</summary>
+<summary>컨트롤 플레인이 떠 있는 두 가지 방식과 구별법</summary>
 
-> **핵심 한 줄**: 컨트롤 플레인 구성요소는 static Pod(kubeadm)이거나 systemd 서비스(바이너리 설치)입니다. 방식에 따라 상태와 로그를 보는 도구가 다르니 방식부터 가립니다.
+컨트롤 플레인 구성요소는 static Pod(kubeadm)이거나 systemd 서비스(바이너리 설치)입니다. 방식에 따라 상태와 로그를 보는 도구가 다르니 방식부터 가립니다.
 
-#### 1. 왜 필요한가
+#### 방식부터 구별해야 하는 이유
 
 같은 "API 서버가 죽었다"도 static Pod면 `crictl`과 매니페스트 파일을, 서비스면 `systemctl`과 `journalctl`을 봐야 합니다. 방식을 모르고 들어가면 엉뚱한 도구로 시간을 씁니다.
 
-#### 2. 한눈에 비교
+#### 두 방식 비교
 
 | 구분 | static Pod (kubeadm) | systemd 서비스 (바이너리 직접 설치) |
 |---|---|---|
@@ -493,13 +487,13 @@ kube-proxy는 DaemonSet, CoreDNS는 Deployment로 떠 있어 manifests 디렉터
 [바이너리]  systemd → kube-apiserver.service, kube-scheduler.service ... (각자 프로세스)
 ```
 
-#### 3. 점검 흐름
+#### 점검 흐름
 
-1. **전체 상태**: `kubectl get nodes`, `kubectl get pods -A`. `kubectl` 자체가 안 되면 API 서버 문제입니다.
-2. **방식 가리기**: `ls /etc/kubernetes/manifests`와 `kubectl -n kube-system get pod`로 봅니다.
-3. **로그 보기**: static Pod면 `kubectl logs`, API 서버가 죽었으면 `crictl ps -a`와 `crictl logs`로 내려갑니다. 서비스면 `journalctl -u <구성요소>`입니다.
+1. 전체 상태: `kubectl get nodes`, `kubectl get pods -A`. `kubectl` 자체가 안 되면 API 서버 문제입니다.
+2. 방식 가리기: `ls /etc/kubernetes/manifests`와 `kubectl -n kube-system get pod`로 봅니다.
+3. 로그 보기: static Pod면 `kubectl logs`, API 서버가 죽었으면 `crictl ps -a`와 `crictl logs`로 내려갑니다. 서비스면 `journalctl -u <구성요소>`입니다.
 
-#### 4. 서비스 방식에서 노드마다 볼 서비스
+#### 서비스 방식에서 노드마다 볼 서비스
 
 | 노드 | 확인할 서비스 |
 |---|---|
@@ -513,8 +507,6 @@ sudo systemctl status kube-apiserver kube-controller-manager kube-scheduler   # 
 sudo systemctl status kubelet kube-proxy containerd                            # 워커 노드
 sudo journalctl -u kube-apiserver --since "10 min ago"
 ```
-
-> **정리**: manifests 디렉터리에 파일이 있으면 static Pod, 없으면 서비스로 봅니다. kubelet은 어느 쪽이든 서비스라 늘 함께 확인합니다.
 
 </details>
 
@@ -540,7 +532,7 @@ Static Pods와 Create static Pods 문서에서 시험에 필요한 사실을 모
 | 제약 | ServiceAccount, ConfigMap, Secret 같은 API 객체를 참조할 수 없음. 1.37부터 `configMapRef`, `secretRef` 참조도 완전히 금지되고 이를 풀던 `PreventStaticPodAPIReferences` 게이트도 제거됨(v1.37 릴리스 글) |
 | 파일 이름 | 점(.)으로 시작하는 파일만 무시. 확장자로 거르지 않음 |
 
-마지막 줄이 실전 함정입니다. `cp kube-apiserver.yaml kube-apiserver.yaml.backup`처럼 디렉터리 안에 백업을 만들면 kubelet이 두 파일을 모두 읽어 같은 이름의 Pod를 두 번 만들려 합니다. 결과는 정의되지 않았고 백업의 옛 스펙이 적용될 수도 있습니다. 백업은 디렉터리 밖(문서 예시는 `/etc/kubernetes/backup/`)에 둡니다.
+표의 마지막 줄 때문에 실수가 잦습니다. `cp kube-apiserver.yaml kube-apiserver.yaml.backup`처럼 디렉터리 안에 백업을 만들면 kubelet이 두 파일을 모두 읽어 같은 이름의 Pod를 두 번 만들려 합니다. 결과는 정의되지 않았고 백업의 옛 스펙이 적용될 수도 있습니다. 백업은 디렉터리 밖(문서 예시는 `/etc/kubernetes/backup/`)에 둡니다.
 
 ```bash
 sudo mkdir -p /etc/kubernetes/backup
@@ -590,7 +582,7 @@ sudo crictl pods --name kube-apiserver
 
 crictl은 런타임 엔드포인트를 `--runtime-endpoint`, `CONTAINER_RUNTIME_ENDPOINT`, `/etc/crictl.yaml` 중 하나로 압니다. containerd는 `unix:///var/run/containerd/containerd.sock`입니다.
 
-crictl이 늘 있다고 믿으면 안 됩니다. 시험 안내의 사전 설치 도구 목록(`kubectl`, `yq`, `curl`, `wget`, `man`)에 없고 pkgs.k8s.io의 kubeadm 1.37 패키지도 cri-tools를 의존성으로 끌어오지 않습니다.
+crictl이 늘 설치되어 있는 것은 아닙니다. 시험 안내의 사전 설치 도구 목록(`kubectl`, `yq`, `curl`, `wget`, `man`)에 없고 pkgs.k8s.io의 kubeadm 1.37 패키지도 cri-tools를 의존성으로 끌어오지 않습니다.
 
 과제 노드에 crictl이 없으면 kubelet이 런타임에 쓰게 하는 로그 파일(Logging Architecture 문서)을 직접 읽습니다. 디렉터리 이름은 `<ns>_<pod>_<uid>/<컨테이너>/<재시작 번호>.log` 꼴입니다(kind 노드에서 확인).
 
@@ -601,7 +593,7 @@ sudo tail -50 /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/*.log
 
 ### 2-5. 매니페스트에서 자주 망가지는 곳
 
-트러블슈팅 과제는 보통 "일부러 고장 낸 클러스터를 고치라"입니다. 아래는 매니페스트 구조에서 끌어낸 점검 순서이고 출제 범위를 문서로 확인한 것은 아닙니다.
+트러블슈팅 과제는 보통 "일부러 고장 낸 클러스터를 고치라"입니다. 아래는 매니페스트 구조를 보고 정리한 점검 순서이고 출제 범위를 문서로 확인한 것은 아닙니다.
 
 | 위치 | 확인 | 이렇게 보임 |
 |---|---|---|
@@ -629,11 +621,11 @@ sudo tail -50 /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/*.log
 ### 3-1. 리소스 메트릭 파이프라인
 
 <details>
-<summary>기초부터: kubectl top의 숫자는 어디서 오나</summary>
+<summary>kubectl top의 숫자는 어디서 오나</summary>
 
-> **핵심 한 줄**: `kubectl top`의 숫자는 커널 cgroup → kubelet → metrics-server → Metrics API를 거쳐 옵니다. metrics-server는 애드온이라 기본 설치에 없습니다.
+`kubectl top`의 숫자는 커널 cgroup → kubelet → metrics-server → Metrics API를 거쳐 옵니다. metrics-server는 애드온이라 기본 설치에 없습니다.
 
-#### 1. 왜 필요한가
+#### metrics-server가 필요한 이유
 
 kubeadm으로 막 만든 클러스터에서 `kubectl top node`를 치면 실패합니다. Pod가 CPU와 메모리를 얼마나 쓰는지 모으는 구성요소가 기본 설치에 들어 있지 않기 때문입니다.
 
@@ -642,12 +634,12 @@ kubeadm으로 막 만든 클러스터에서 `kubectl top node`를 치면 실패�
 | 사용량 수집 | Heapster | 애드온 metrics-server를 설치 |
 | 상태 | 오래전에 은퇴 | `metrics.k8s.io` API로 제공 |
 
-#### 2. 어떻게 동작하나
+#### 수치가 올라오는 경로
 
-1. **측정**: 컨테이너는 cgroup 안에서 돌고 커널이 cgroup별 CPU 시간과 메모리 사용량을 셉니다. kubelet에 내장된 cAdvisor(그리고 런타임)가 이 값을 컨테이너별로 읽습니다.
-2. **노출**: kubelet이 그 값을 자기 HTTPS 엔드포인트 `/metrics/resource`로 내놓습니다.
-3. **수집**: metrics-server가 모든 노드의 kubelet에서 15초 간격으로 값을 가져와 메모리에 최근 값만 들고 있습니다.
-4. **제공**: metrics-server가 API 서버에 `metrics.k8s.io` API로 등록되어 있어서 `kubectl top`과 HPA가 API 서버를 거쳐 이 값을 읽습니다.
+1. 측정: 컨테이너는 cgroup 안에서 돌고 커널이 cgroup별 CPU 시간과 메모리 사용량을 셉니다. kubelet에 내장된 cAdvisor(그리고 런타임)가 이 값을 컨테이너별로 읽습니다.
+2. 노출: kubelet이 그 값을 자기 HTTPS 엔드포인트 `/metrics/resource`로 내놓습니다.
+3. 수집: metrics-server가 모든 노드의 kubelet에서 15초 간격으로 값을 가져와 메모리에 최근 값만 들고 있습니다.
+4. 제공: metrics-server가 API 서버에 `metrics.k8s.io` API로 등록되어 있어서 `kubectl top`과 HPA가 API 서버를 거쳐 이 값을 읽습니다.
 
 ```text
 커널 cgroup → kubelet(cAdvisor) /metrics/resource
@@ -655,7 +647,7 @@ kubeadm으로 막 만든 클러스터에서 `kubectl top node`를 치면 실패�
    ──APIService metrics.k8s.io──→ kube-apiserver → kubectl top, HPA
 ```
 
-#### 3. 한눈에 비교
+#### metrics-server와 시계열 저장소 비교
 
 | 구분 | metrics-server | Prometheus 같은 시계열 저장소 |
 |---|---|---|
@@ -665,12 +657,10 @@ kubeadm으로 막 만든 클러스터에서 `kubectl top node`를 치면 실패�
 
 복제본은 기본 1개지만 HA 매니페스트로 여러 개를 둘 수도 있습니다.
 
-#### 4. 실전에서 보이는 모습
+#### 숫자가 안 나올 때
 
 - 막 설치했거나 막 만든 Pod는 첫 수집이 끝날 때까지 `Metrics not available`이 나올 수 있으니 1~2분 기다린 뒤 다시 봅니다.
 - 계속 안 되면 경로를 거꾸로 짚습니다. APIService가 `True`인지, metrics-server Pod와 로그, kubelet 인증서 오류 순입니다(3-4절).
-
-> **정리**: `kubectl top`이 안 되면 이 경로를 거꾸로 APIService, metrics-server, kubelet 인증서 순으로 짚습니다. 지금 값만 남으니 이력이 필요하면 별도 저장소를 둡니다.
 
 </details>
 
@@ -780,11 +770,11 @@ kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINT:.spec.taints[*].k
 ### 3-6. JSONPath를 jq 없이 쓰기
 
 <details>
-<summary>기초부터: JSONPath가 필요한 이유와 경로 읽는 법</summary>
+<summary>JSONPath가 필요한 이유와 경로 읽는 법</summary>
 
-> **핵심 한 줄**: API 서버는 객체를 JSON으로 돌려주고 JSONPath는 그 JSON 안의 원하는 필드를 경로로 짚어 꺼내는 문법입니다.
+API 서버는 객체를 JSON으로 돌려주고 JSONPath는 그 JSON 안의 원하는 필드를 경로로 짚어 꺼내는 문법입니다.
 
-#### 1. 왜 필요한가
+#### JSONPath가 필요한 이유
 
 | 출력 | 보여 주는 것 | 한계 |
 |---|---|---|
@@ -793,7 +783,7 @@ kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINT:.spec.taints[*].k
 | `describe` | 사람이 읽기 좋게 풀어서 | "노드마다 이름과 CPU 수를 한 줄씩" 같은 보고서는 못 만든다 |
 | `-o jsonpath`, `custom-columns` | 원하는 필드만 원하는 모양으로 | 경로를 알아야 한다 |
 
-#### 2. 경로 읽는 법
+#### 경로 읽는 법
 
 `kubectl get nodes -o json`의 뼈대는 이렇습니다.
 
@@ -805,9 +795,9 @@ kubectl get nodes -o custom-columns='NODE:.metadata.name,TAINT:.spec.taints[*].k
 ] }
 ```
 
-1. **원소 하나**: `.items[0].metadata.name` → `node1`
-2. **모든 원소**: `.items[*].metadata.name` → `node1 node2`
-3. **줄 맞추기**: 식 여러 개를 이어 쓰고 `{"\n"}`, `{"\t"}`로 줄바꿈과 탭을 넣고 `range ... end`로 원소마다 한 줄씩 찍습니다.
+1. 원소 하나: `.items[0].metadata.name` → `node1`
+2. 모든 원소: `.items[*].metadata.name` → `node1 node2`
+3. 줄 맞추기: 식 여러 개를 이어 쓰고 `{"\n"}`, `{"\t"}`로 줄바꿈과 탭을 넣고 `range ... end`로 원소마다 한 줄씩 찍습니다.
 
 ```text
 { "items": [ {...}, {...} ] }
@@ -826,19 +816,19 @@ kubectl get nodes --sort-by=.status.capacity.cpu
 
 `.status.capacity.cpu`처럼 값이 `"4"`, `"500m"` 같은 수량 문자열이어도 `kubectl get --sort-by`는 두 값이 모두 수량으로 해석되면 크기로 비교합니다. 해석되지 않는 값은 문자열 순서로 비교하고 결과는 오름차순입니다(kubectl 소스 `pkg/cmd/get/sorter.go`).
 
-#### 3. 한눈에 비교
+#### 세 가지 형식 비교
 
 | 구분 | `-o jsonpath` | `-o custom-columns` | `--sort-by` |
 |---|---|---|---|
 | 경로 기준 | 목록 전체(`.items[*]`부터) | 원소 하나 기준(`.items[*]`를 뺌). 원소마다 알아서 반복 | 원소 하나 기준 |
 | 쓰임 | 원하는 모양의 텍스트 | 표가 목적일 때 더 짧다 | 정렬 |
 
-#### 4. 처음 식을 세우는 순서와 자주 쓰는 경로
+#### 처음 식을 세우는 순서와 자주 쓰는 경로
 
-1. **명령 고르기**: 원하는 값이 노드에 있으면 `kubectl get nodes`, Pod에 있으면 `kubectl get pods`입니다.
-2. **구조 보기**: 같은 명령에 `-o json`(또는 `-o yaml`)을 붙여 필드가 어디 있는지 찾습니다.
-3. **경로 적기**: 찾은 위치를 `.items[*]...` 꼴로 적습니다.
-4. **전달**: `-o jsonpath='{경로}'`로 넘깁니다. 작은따옴표와 중괄호는 빼면 안 됩니다.
+1. 명령 고르기: 원하는 값이 노드에 있으면 `kubectl get nodes`, Pod에 있으면 `kubectl get pods`입니다.
+2. 구조 보기: 같은 명령에 `-o json`(또는 `-o yaml`)을 붙여 필드가 어디 있는지 찾습니다.
+3. 경로 적기: 찾은 위치를 `.items[*]...` 꼴로 적습니다.
+4. 전달: `-o jsonpath='{경로}'`로 넘깁니다. 작은따옴표와 중괄호는 빼면 안 됩니다.
 
 | 알고 싶은 것 | 조회 | 경로(목록 기준) |
 |---|---|---|
@@ -849,8 +839,6 @@ kubectl get nodes --sort-by=.status.capacity.cpu
 
 이미지 경로는 Pod 객체에 있고 노드 JSON에는 `spec.containers`가 없습니다. 식 둘을 구분자 없이 이어 쓰면(`'{.items[*].metadata.name}{.items[*].status.capacity.cpu}'`) 결과가 한 줄에 붙어 나오니 사이에 `{"\n"}`이나 `{"\t"}`를 넣습니다.
 
-> **정리**: 목록 조회는 `items`로 감싸인다는 점부터 확인합니다. jsonpath는 `.items[*]`부터 적고 custom-columns와 `--sort-by`는 원소 하나 기준으로 적습니다. 식은 아래 세 단계로 세웁니다.
-
 </details>
 
 식은 세 단계로 세웁니다.
@@ -859,7 +847,7 @@ kubectl get nodes --sort-by=.status.capacity.cpu
 2. 필드 이름이 헷갈리면 `kubectl explain pod.status.containerStatuses`로 스키마를 확인합니다.
 3. 찾은 경로를 `-o jsonpath='{...}'`에 넣으면 끝입니다.
 
-첫 함정은 `items`입니다. 목록을 조회하면 결과가 `items` 배열로 감싸이고 이름을 준 단일 객체 조회에는 `items`가 없습니다.
+먼저 조심할 것은 `items`입니다. 목록을 조회하면 결과가 `items` 배열로 감싸이고 이름을 준 단일 객체 조회에는 `items`가 없습니다.
 
 | 연산자 | 뜻 | 예 |
 |---|---|---|
@@ -914,11 +902,11 @@ kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' |
 ### 4-1. 로그가 어디서 오나
 
 <details>
-<summary>기초부터: 컨테이너 로그는 표준 출력이다</summary>
+<summary>컨테이너 로그는 표준 출력이다</summary>
 
-> **핵심 한 줄**: `kubectl logs`는 앱이 stdout과 stderr로 낸 출력, 곧 런타임이 노드 파일에 적어 둔 내용을 보여 줍니다. 앱이 자기 파일에만 쓰면 `kubectl logs`에는 아무것도 나오지 않습니다.
+`kubectl logs`는 앱이 stdout과 stderr로 낸 출력, 곧 런타임이 노드 파일에 적어 둔 내용을 보여 줍니다. 앱이 자기 파일에만 쓰면 `kubectl logs`에는 아무것도 나오지 않습니다.
 
-#### 1. 왜 필요한가
+#### stdout과 stderr
 
 리눅스 프로세스는 시작할 때 출력 통로 둘을 받습니다.
 
@@ -929,11 +917,11 @@ kubectl get pods -A -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' |
 
 Docker의 `docker logs <ID>`(`-f`로 계속 따라가기)가 이 파일을 읽는 명령이고 쿠버네티스의 `kubectl logs`가 같은 역할입니다. `docker run -d`로 백그라운드에서 띄운 컨테이너는 출력이 터미널에 나오지 않으므로 이 명령으로 봅니다.
 
-#### 2. kubectl logs가 로그를 가져오는 길
+#### kubectl logs가 로그를 가져오는 길
 
-1. **출력**: 앱이 stdout, stderr로 씁니다.
-2. **저장**: 노드의 런타임이 그 출력을 kubelet이 정한 `/var/log/pods/...` 파일에 씁니다.
-3. **조회**: `kubectl logs`를 치면 API 서버가 그 Pod가 있는 노드의 kubelet(10250)에 요청하고 kubelet이 파일을 읽어 돌려줍니다.
+1. 출력: 앱이 stdout, stderr로 씁니다.
+2. 저장: 노드의 런타임이 그 출력을 kubelet이 정한 `/var/log/pods/...` 파일에 씁니다.
+3. 조회: `kubectl logs`를 치면 API 서버가 그 Pod가 있는 노드의 kubelet(10250)에 요청하고 kubelet이 파일을 읽어 돌려줍니다.
 
 ```text
 앱 stdout/stderr → 런타임(containerd) → 노드 /var/log/pods/<ns>_<pod>_<uid>/<컨테이너>/
@@ -941,7 +929,7 @@ kubectl logs → kube-apiserver → 노드 kubelet:10250 → 파일 읽기 → �
 앱이 /var/log/app.log에만 쓰면 → 이 길에 아무것도 없음 → 4-5절 사이드카로 해결
 ```
 
-#### 3. 헷갈리는 점 / 실전에서 보이는 모습
+#### 상황별 동작
 
 | 상황 | 동작 |
 |---|---|
@@ -952,8 +940,6 @@ kubectl logs → kube-apiserver → 노드 kubelet:10250 → 파일 읽기 → �
 | 워커의 10250이 막힘 | Pod는 잘 도는데 `kubectl logs`만 실패한다 |
 
 `kubectl logs`에는 검색이나 장기 보관 기능이 없습니다. 운영 환경에서는 노드마다 로그 수집 에이전트(Fluent Bit 등)를 DaemonSet으로 띄워 중앙 저장소(Elasticsearch, Loki 등)로 보냅니다. 수집기 Fluentd(또는 Fluent Bit), 저장소 Elasticsearch, 화면 Kibana를 묶어 EFK라고 부르고 이 일을 상용 서비스에 맡기기도 합니다.
-
-> **정리**: `kubectl logs`가 비어 있으면 앱이 stdout 대신 파일에만 쓰는지부터 봅니다. 지금과 직전 컨테이너만 보는 도구라 보관은 별도 수집기가 맡습니다.
 
 </details>
 
@@ -1022,11 +1008,11 @@ kubectl -n shop get deploy payment -o yaml | grep -A5 -E 'command|args|env|resou
 ```
 
 <details>
-<summary>기초부터: Last State와 Exit Code 읽기</summary>
+<summary>Last State와 Exit Code 읽기</summary>
 
-> **핵심 한 줄**: 원인은 지금 상태(State)가 아닌 직전 상태(Last State)에 있습니다. Exit Code가 128보다 크면 프로세스가 시그널을 받고 죽은 것이고 128을 뺀 값이 시그널 번호입니다.
+원인은 직전 상태(Last State)에서 찾습니다. Exit Code가 128보다 크면 프로세스가 시그널을 받고 죽은 것이고 128을 뺀 값이 시그널 번호입니다.
 
-#### 1. describe에서 볼 곳
+#### describe에서 볼 곳
 
 CrashLoopBackOff인 결제 Pod의 `describe`에서 컨테이너 부분은 이런 꼴입니다(형식 예시).
 
@@ -1050,7 +1036,7 @@ CrashLoopBackOff인 결제 Pod의 `describe`에서 컨테이너 부분은 이런
 | `Exit Code` | 프로세스의 종료 코드 |
 | `Restart Count` | 지금까지 재시작한 횟수 |
 
-#### 2. 숫자 읽기
+#### Exit Code 숫자 읽기
 
 셸에서는 시그널 N으로 죽은 프로세스의 종료 상태를 128+N으로 적습니다(Bash 매뉴얼 Exit Status). 컨테이너의 Exit Code도 같은 관례로 나옵니다.
 
@@ -1064,7 +1050,7 @@ CrashLoopBackOff인 결제 Pod의 `describe`에서 컨테이너 부분은 이런
 | 139 | 128 + 11(SIGSEGV) | 잘못된 메모리 접근 | 앱이나 이미지 문제. 5-2절에서 `busybox:1.28`의 `wget`이 arm64에서 `Segmentation fault`로 죽은 것도 이 시그널 |
 | 143 | 128 + 15(SIGTERM) | 종료 요청을 받고 끝남 | liveness 실패나 삭제로 kubelet이 멈춘 것 |
 
-#### 3. 137인데 OOMKilled가 아닐 때
+#### 137인데 OOMKilled가 아닐 때
 
 kubelet은 컨테이너를 멈출 때 두 단계를 밟습니다.
 
@@ -1074,8 +1060,6 @@ kubelet은 컨테이너를 멈출 때 두 단계를 밟습니다.
 그런데 `sh -c '...'`로 띄운 셸이 컨테이너의 PID 1이면 SIGTERM이 전달되지 않습니다. 리눅스는 PID 네임스페이스의 첫 프로세스(init)에 대해 핸들러를 등록하지 않은 시그널을 보내지 않고 바깥 네임스페이스에서 보낸 SIGKILL만 강제로 전달합니다(pid_namespaces(7) 매뉴얼).
 
 그래서 liveness 실패로 재시작되는 컨테이너가 143이 아닌 137로 끝나고 매번 30초씩 늦게 내려갑니다. Reason이 `Error`이고 Events에 `Unhealthy`가 함께 보이면 이 경우입니다.
-
-> **정리**: 원인은 Last State의 Reason과 Exit Code에서 찾습니다. 128을 넘는 137이면 Reason으로 OOMKilled인지부터 가르고 아니면 probe와 종료 처리를 봅니다.
 
 </details>
 
@@ -1160,17 +1144,17 @@ kubectl -n shop logs board -c access-log
 ### 5-1. Debug Services 문서의 순서
 
 <details>
-<summary>기초부터: 애플리케이션 장애를 지도로 따라가는 법</summary>
+<summary>애플리케이션 장애를 요청 경로로 따라가는 법</summary>
 
-> **핵심 한 줄**: 요청이 지나가는 객체를 지도로 그리고 한쪽 끝에서 다른 쪽 끝까지 하나도 건너뛰지 않고 확인하면 고장 난 곳이 나옵니다.
+요청이 지나가는 객체를 순서대로 적고 한쪽 끝에서 다른 쪽 끝까지 하나도 건너뛰지 않고 확인하면 고장 난 곳이 나옵니다.
 
-#### 1. 왜 필요한가
+#### 요청 경로를 먼저 그리는 이유
 
-"사이트가 안 열린다"는 증상만으로는 어디가 고장인지 모릅니다. 생각나는 곳부터 보면 빠뜨리는 곳이 생기니 지도를 먼저 그립니다.
+"사이트가 안 열린다"는 증상만으로는 어디가 고장인지 모릅니다. 생각나는 곳부터 보면 빠뜨리는 곳이 생기니 요청 경로를 먼저 그립니다.
 
-#### 2. 지도 그리기
+#### 요청 경로 그리기
 
-쇼핑몰의 주문 화면을 예로 들면 지도는 이렇습니다.
+쇼핑몰의 주문 화면을 예로 들면 요청 경로는 이렇습니다.
 
 ```
 사용자 → (NodePort/Ingress) → order-web Service → order-web Pod
@@ -1178,27 +1162,25 @@ kubectl -n shop logs board -c access-log
                                  order-db Service → order-db Pod
 ```
 
-#### 3. 앞쪽(사용자)에서 따라가기
+#### 앞쪽(사용자)에서 따라가기
 
-1. **접속**: 사용자가 쓰는 방법 그대로 요청해 봅니다(`curl http://<노드IP>:<nodePort>`).
-2. **웹 Service**: EndpointSlice에 웹 Pod IP가 있는지 봅니다. 비어 있으면 Service의 `selector`와 Pod의 라벨을 나란히 놓고 비교합니다. 셀렉터 불일치가 가장 흔한 원인입니다.
-3. **웹 Pod**: STATUS와 RESTARTS를 봅니다. RESTARTS가 늘고 있으면 `describe pod`의 Events와 Last State, `kubectl logs`를 봅니다. 이미 재시작된 컨테이너의 실패 원인은 지금 로그에 없을 수 있으니 `--previous`로 직전 컨테이너 로그를 봅니다.
-4. **DB Service**: 웹 Pod가 부르는 이름(환경 변수나 설정의 호스트명)과 Service 이름, 포트가 맞는지, 엔드포인트가 있는지 2번과 같은 방법으로 봅니다.
-5. **DB Pod**: 상태와 로그에서 DB 자체 오류(인증 실패, 디스크 부족 등)를 찾습니다.
+1. 접속: 사용자가 쓰는 방법 그대로 요청해 봅니다(`curl http://<노드IP>:<nodePort>`).
+2. 웹 Service: EndpointSlice에 웹 Pod IP가 있는지 봅니다. 비어 있으면 Service의 `selector`와 Pod의 라벨을 나란히 놓고 비교합니다. 셀렉터 불일치가 가장 흔한 원인입니다.
+3. 웹 Pod: STATUS와 RESTARTS를 봅니다. RESTARTS가 늘고 있으면 `describe pod`의 Events와 Last State, `kubectl logs`를 봅니다. 이미 재시작된 컨테이너의 실패 원인은 지금 로그에 없을 수 있으니 `--previous`로 직전 컨테이너 로그를 봅니다.
+4. DB Service: 웹 Pod가 부르는 이름(환경 변수나 설정의 호스트명)과 Service 이름, 포트가 맞는지, 엔드포인트가 있는지 2번과 같은 방법으로 봅니다.
+5. DB Pod: 상태와 로그에서 DB 자체 오류(인증 실패, 디스크 부족 등)를 찾습니다.
 
-뒤쪽(DB)에서 거꾸로 올라와도 됩니다. LearnKube의 시각 가이드(A visual guide on troubleshooting Kubernetes deployments)는 반대로 맨 아래 Pod부터 Service, Ingress 순으로 올라가라고 권합니다. 위층은 아래층에 기대고 있어서 위에서 보인 문제가 아래층 Pod나 Service에서 오는 경우가 많기 때문입니다. 어느 쪽에서 시작하든 지도 위의 칸을 하나도 건너뛰지 않는다는 점은 같습니다.
+뒤쪽(DB)에서 거꾸로 올라와도 됩니다. LearnKube의 시각 가이드(A visual guide on troubleshooting Kubernetes deployments)는 반대로 맨 아래 Pod부터 Service, Ingress 순으로 올라가라고 권합니다. 위층은 아래층에 기대고 있어서 위에서 보인 문제가 아래층 Pod나 Service에서 오는 경우가 많기 때문입니다. 어느 쪽에서 시작하든 경로 위의 객체를 하나도 건너뛰지 않는다는 점은 같습니다.
 
 `--previous`에도 원인이 보이지 않으면 `kubectl logs -f <pod>`를 띄워 두고 다음 실패를 기다립니다. 컨테이너가 죽으면 스트림이 끝나고 죽기 직전 줄이 화면에 남습니다.
 
-#### 4. 실전에서 보이는 모습
+#### 지점별 증상과 확인 명령
 
 | 지점 | 흔한 증상 | 확인 명령 |
 |---|---|---|
 | Service 이름 | Debug Services 문서의 예처럼 `wget: unable to resolve host address 'hostnames'` | `kubectl get svc <이름>` (`Error from server (NotFound): services "hostnames" not found`) |
 | EndpointSlice | 목록이 비어 있음 | `kubectl get endpointslice -l kubernetes.io/service-name=<이름>` |
 | Pod | `CrashLoopBackOff`, RESTARTS 증가 | `kubectl describe pod`, `kubectl logs --previous` |
-
-> **정리**: EndpointSlice가 비면 selector와 라벨을 대조하고 Pod가 재시작 중이면 `--previous` 로그를 봅니다. 아래 표는 이 가운데 Service 하나를 확인하는 세부 순서입니다.
 
 </details>
 
@@ -1304,7 +1286,7 @@ iptables 모드라면 노드에서 `sudo iptables-save | grep <svc 이름>`으�
 
 직접 만든 연습 과제입니다. 시험 문항이나 덤프에서 옮긴 것이 아닙니다.
 
-**문제 1.** 워커 노드 `node02`가 `NotReady`입니다. `kubectl describe node node02`의 조건 메시지는 `Kubelet stopped posting node status.`입니다. 해결 순서를 적으세요.
+문제 1. 워커 노드 `node02`가 `NotReady`입니다. `kubectl describe node node02`의 조건 메시지는 `Kubelet stopped posting node status.`입니다. 해결 순서를 적으세요.
 
 <details>
 <summary>정답</summary>
@@ -1317,7 +1299,7 @@ iptables 모드라면 노드에서 `sudo iptables-save | grep <svc 이름>`으�
 
 </details>
 
-**문제 2.** `kubectl get pod` 명령이 API 서버에 연결하지 못합니다. 컨트롤 플레인 노드에서 무엇을 보나요?
+문제 2. `kubectl get pod` 명령이 API 서버에 연결하지 못합니다. 컨트롤 플레인 노드에서 무엇을 보나요?
 
 <details>
 <summary>정답</summary>
@@ -1333,7 +1315,7 @@ crictl이 없으면 `/var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/`
 
 </details>
 
-**문제 3.** 네임스페이스 `shop`의 `payment` Pod가 `CrashLoopBackOff`입니다. 컨테이너 이름은 `app`입니다. 죽기 직전 로그를 `/opt/payment-crash.log`에 저장하세요.
+문제 3. 네임스페이스 `shop`의 `payment` Pod가 `CrashLoopBackOff`입니다. 컨테이너 이름은 `app`입니다. 죽기 직전 로그를 `/opt/payment-crash.log`에 저장하세요.
 
 <details>
 <summary>정답</summary>
@@ -1342,11 +1324,11 @@ crictl이 없으면 `/var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/`
 kubectl -n shop logs <payment Pod 이름> -c app --previous > /opt/payment-crash.log
 ```
 
-`--previous`가 핵심입니다. 과제가 지정한 호스트에서 실행해야 파일이 그 호스트에 생깁니다.
+`--previous`를 붙여야 죽기 직전 로그가 나옵니다. 과제가 지정한 호스트에서 실행해야 파일이 그 호스트에 생깁니다.
 
 </details>
 
-**문제 4.** 모든 네임스페이스에서 메모리를 가장 많이 쓰는 Pod의 이름을 `/opt/top-mem.txt`에 적으세요.
+문제 4. 모든 네임스페이스에서 메모리를 가장 많이 쓰는 Pod의 이름을 `/opt/top-mem.txt`에 적으세요.
 
 <details>
 <summary>정답</summary>
@@ -1360,7 +1342,7 @@ cat /opt/top-mem.txt
 
 </details>
 
-**문제 5.** 컨트롤 플레인 노드의 `/etc/kubernetes/manifests` 안에서 `cp kube-scheduler.yaml kube-scheduler.yaml.bak`을 실행했습니다. 무엇이 문제인가요?
+문제 5. 컨트롤 플레인 노드의 `/etc/kubernetes/manifests` 안에서 `cp kube-scheduler.yaml kube-scheduler.yaml.bak`을 실행했습니다. 무엇이 문제인가요?
 
 <details>
 <summary>정답</summary>
@@ -1369,7 +1351,7 @@ kubelet은 점으로 시작하지 않는 모든 파일을 static Pod 매니페�
 
 </details>
 
-**문제 6.** `board` Service의 ENDPOINTS가 비어 있습니다. Pod는 3개 모두 `Running`이고 READY는 `0/1`입니다. 원인과 확인 방법은요?
+문제 6. `board` Service의 ENDPOINTS가 비어 있습니다. Pod는 3개 모두 `Running`이고 READY는 `0/1`입니다. 원인과 확인 방법은요?
 
 <details>
 <summary>정답</summary>
@@ -1378,7 +1360,7 @@ READY `0/1`은 readiness probe 실패이고 실패한 Pod의 IP는 EndpointSlice
 
 </details>
 
-**문제 7.** 새 Deployment `board`를 만들었는데 ReplicaSet은 있고 Pod 객체가 하나도 생기지 않습니다. 반대로 Pod 객체는 생겼는데 모두 `Pending`이고 Events에 아무것도 없다면 어떤가요? 각각 어느 구성요소를 보나요?
+문제 7. 새 Deployment `board`를 만들었는데 ReplicaSet은 있고 Pod 객체가 하나도 생기지 않습니다. 반대로 Pod 객체는 생겼는데 모두 `Pending`이고 Events에 아무것도 없다면 어떤가요? 각각 어느 구성요소를 보나요?
 
 <details>
 <summary>정답</summary>
@@ -1387,7 +1369,7 @@ Pod 객체가 생기지 않으면 kube-controller-manager를 봅니다. Pod는 �
 
 </details>
 
-**문제 8.** 워커 `node03`이 `NotReady`이고 kubelet은 `active (running)`입니다. kube-apiserver 로그에 `x509: certificate has expired or is not yet valid`가 반복됩니다. 무엇을 확인하고 어떻게 복구하나요?
+문제 8. 워커 `node03`이 `NotReady`이고 kubelet은 `active (running)`입니다. kube-apiserver 로그에 `x509: certificate has expired or is not yet valid`가 반복됩니다. 무엇을 확인하고 어떻게 복구하나요?
 
 <details>
 <summary>정답</summary>
@@ -1409,7 +1391,7 @@ date
 
 </details>
 
-**문제 9.** 모든 노드의 이름과 InternalIP를 탭으로 구분해 한 줄에 하나씩 `/opt/node-ips.txt`에 저장하세요. jq는 쓸 수 없습니다.
+문제 9. 모든 노드의 이름과 InternalIP를 탭으로 구분해 한 줄에 하나씩 `/opt/node-ips.txt`에 저장하세요. jq는 쓸 수 없습니다.
 
 <details>
 <summary>정답</summary>

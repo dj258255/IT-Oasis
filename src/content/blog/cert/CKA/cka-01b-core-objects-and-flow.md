@@ -1,5 +1,5 @@
 ---
-title: '[CKA] 기본 오브젝트와 컨트롤 플레인: kubectl 한 줄이 Pod가 되기까지'
+title: '[CKA] 기본 오브젝트와 컨트롤 플레인'
 description: kubectl run 한 줄이 API 서버의 인증, 인가, 어드미션, 스키마 검증을 지나 etcd에 저장되고 스케줄러와 kubelet을 거쳐 Running이 되는 경로를 따라갑니다. 컨트롤 플레인 구성요소와 인증서 방향, Pod와 ReplicaSet, Deployment, Service, Namespace의 관계, 시험에서 쓰는 명령형과 선언형 kubectl, 실행 중인 Pod에서 고칠 수 있는 필드를 정리했습니다.
 date: 2026-10-20T00:00:00.000Z
 tags:
@@ -74,7 +74,7 @@ kubelet (해당 노드)
 
 kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 정해지지 않았습니다.
 
-그래서 명령이 성공했는데 Pod가 `Pending`에 남는 일이 생깁니다. API 서버의 관문은 통과했고 스케줄러나 kubelet 쪽에서 멈춘 경우입니다.
+그래서 명령은 성공했는데 Pod가 `Pending`에 남기도 합니다. API 서버 단계는 통과했고 스케줄러나 kubelet 쪽에서 멈춘 경우입니다.
 
 같은 경로를 kubectl 소스 코드부터 컨테이너 시작까지 한 단계씩 따라간 글로 Jamie Hannaford의 [What happens when ... Kubernetes edition!](https://github.com/jamiehannaford/what-happens-when-k8s)이 있습니다. 다만 쿠버네티스 1.8 무렵에 쓰인 글이라 옛 내용이 섞여 있습니다.
 
@@ -84,29 +84,29 @@ kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 �
 
 순서를 잡는 데만 쓰고 세부는 이 글과 공식 문서로 확인합니다.
 
-### 1-2. API 서버 안의 다섯 관문
+### 1-2. API 서버 안의 다섯 단계
 
 <details>
-<summary>기초부터: 어드미션 컨트롤러는 왜 있고 어떻게 끼어드는지</summary>
+<summary>어드미션 컨트롤러는 왜 있고 어떻게 끼어드는지</summary>
 
-> **핵심 한 줄**: **어드미션 컨트롤러**는 인증과 인가를 통과한 쓰기 요청이 etcd에 저장되기 직전에 요청의 내용물을 보고 고치거나 막는 kube-apiserver 안의 플러그인입니다.
+어드미션 컨트롤러는 인증과 인가를 통과한 쓰기 요청이 etcd에 저장되기 직전에 요청의 내용물을 보고 고치거나 막는 kube-apiserver 안의 플러그인입니다.
 
-#### 1. 왜 필요한가
+#### 어드미션이 따로 있는 이유
 
 | 단계 | 묻는 것 | 볼 수 있는 범위 |
 |---|---|---|
-| 인증 | 누구냐 | 사용자 이름, 그룹 |
-| 인가(RBAC) | 이 사람이 shop 네임스페이스에 Pod를 만들어도 되느냐 | 동작의 겉면(동사, 리소스, 네임스페이스) |
-| 어드미션 | 만들려는 Pod의 내용이 정책에 맞느냐 | 요청 객체 전체 |
+| 인증 | 누구인지 | 사용자 이름, 그룹 |
+| 인가(RBAC) | 이 사람이 shop 네임스페이스에 Pod를 만들어도 되는지 | 동작의 겉면(동사, 리소스, 네임스페이스) |
+| 어드미션 | 만들려는 Pod의 내용이 정책에 맞는지 | 요청 객체 전체 |
 
-만들려는 Pod가 어느 레지스트리의 이미지를 쓰는지, root로 돌려 하는지, 필수 라벨을 달았는지는 RBAC 규칙으로 표현할 수 없습니다. 요청의 내용물을 보고 고치거나 막는 단계가 따로 있어야 하는데, 그게 어드미션 컨트롤입니다.
+만들려는 Pod가 어느 레지스트리의 이미지를 쓰는지, root로 돌리려 하는지, 필수 라벨을 달았는지는 RBAC 규칙으로 표현할 수 없습니다. 그래서 요청의 내용물을 보고 고치거나 막는 단계가 따로 있고 그것이 어드미션 컨트롤입니다.
 
-#### 2. 어떻게 동작하나
+#### 요청이 지나는 순서
 
-1. **대상 고르기**: 인증과 인가를 통과한 쓰기 요청(생성, 수정, 삭제)만 받습니다. 읽기 요청은 거치지 않습니다.
-2. **변형(Mutating)**: 요청 객체를 고쳐서 돌려줍니다.
-3. **검증(Validating)**: 고치지 않고 허용이나 거부만 합니다.
-4. **저장**: 모두 통과한 객체만 etcd에 들어갑니다.
+1. 대상 고르기: 인증과 인가를 통과한 쓰기 요청(생성, 수정, 삭제)만 받습니다. 읽기 요청은 거치지 않습니다.
+2. 변형(Mutating): 요청 객체를 고쳐서 돌려줍니다.
+3. 검증(Validating): 고치지 않고 허용이나 거부만 합니다.
+4. 저장: 모두 통과한 객체만 etcd에 들어갑니다.
 
 ```text
 쓰기 요청 → 인증 → 인가 → 변형 어드미션 → 스키마 검증 → 검증 어드미션 → etcd
@@ -115,7 +115,7 @@ kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 �
 
 순서는 항상 변형이 먼저이고 검증이 나중입니다. 변형 플러그인이 값을 바꿀 수 있으니 바뀐 최종 모습을 검증해야 빈틈이 없습니다. 검증이 먼저 돌면 통과한 뒤에 값이 바뀌어 정책을 어기는 객체가 저장될 수 있습니다.
 
-#### 3. 한눈에 비교
+#### 변형과 검증, 내장 플러그인
 
 | 종류 | 하는 일 | 예 |
 |---|---|---|
@@ -131,19 +131,19 @@ kubectl이 `pod/order-api created`를 출력한 순간에는 아직 노드도 �
 | `AlwaysPullImages` | 변형과 검증 | 모든 새 Pod의 `imagePullPolicy`를 `Always`로 바꿈. 노드에 캐시된 사설 이미지를 자격 증명 없는 다른 사용자가 쓰는 것을 막음. 기본 꺼짐 |
 | `EventRateLimit` | 검증 | API 서버로 몰리는 Event 요청 수를 제한. alpha이고 기본 꺼짐, 별도 설정 파일 필요 |
 
-#### 4. 켜고 끄는 법
+#### 플러그인 켜고 끄는 법
 
-1. **매니페스트 열기**: kubeadm 클러스터라면 `/etc/kubernetes/manifests/kube-apiserver.yaml`의 `command`를 고칩니다.
-2. **플래그 더하기와 빼기**: `--enable-admission-plugins=NodeRestriction,AlwaysPullImages`처럼 더하거나 `--disable-admission-plugins=DefaultStorageClass`로 뺍니다.
-3. **저장하면 적용**: 파일을 저장하면 kubelet이 API 서버 static Pod를 다시 만들고 새 설정이 적용됩니다.
+1. 매니페스트 열기: kubeadm 클러스터라면 `/etc/kubernetes/manifests/kube-apiserver.yaml`의 `command`를 고칩니다.
+2. 플래그 더하기와 빼기: `--enable-admission-plugins=NodeRestriction,AlwaysPullImages`처럼 더하거나 `--disable-admission-plugins=DefaultStorageClass`로 뺍니다.
+3. 저장하면 적용: 파일을 저장하면 kubelet이 API 서버 static Pod를 다시 만들고 새 설정이 적용됩니다.
 
 기본으로 켜지는 목록은 `kubectl -n kube-system exec kube-apiserver-<노드> -- kube-apiserver -h | grep enable-admission-plugins`로 볼 수 있습니다.
 
-#### 5. 바깥에 판단을 맡기는 웹훅
+#### 바깥에 판단을 맡기는 웹훅
 
-1. **웹훅 서버 띄우기**: 운영자가 판단 코드를 담은 HTTPS 서버를 Deployment와 Service로 띄웁니다.
-2. **등록**: `ValidatingWebhookConfiguration`(또는 `MutatingWebhookConfiguration`)으로 "Pod CREATE 요청이 오면 이 Service의 이 경로에 물어보라"고 등록합니다. `caBundle`은 API 서버가 웹훅 서버의 인증서를 검증할 CA입니다.
-3. **질의와 응답**: 요청이 오면 API 서버가 객체를 AdmissionReview JSON에 담아 웹훅에 보내고 `allowed`(변형이면 patch까지)를 받아 처리합니다.
+1. 웹훅 서버 띄우기: 운영자가 판단 코드를 담은 HTTPS 서버를 Deployment와 Service로 띄웁니다.
+2. 등록: `ValidatingWebhookConfiguration`(또는 `MutatingWebhookConfiguration`)으로 "Pod CREATE 요청이 오면 이 Service의 이 경로에 물어보라"고 등록합니다. `caBundle`은 API 서버가 웹훅 서버의 인증서를 검증할 CA입니다.
+3. 질의와 응답: 요청이 오면 API 서버가 객체를 AdmissionReview JSON에 담아 웹훅에 보내고 `allowed`(변형이면 patch까지)를 받아 처리합니다.
 
 ```text
 kubectl → API 서버 ──AdmissionReview──▶ 웹훅 Service(shop/image-policy) → 웹훅 Pod
@@ -170,15 +170,13 @@ webhooks:
   failurePolicy: Fail      # 웹훅이 응답하지 않으면 요청도 거부
 ```
 
-웹훅 서버 없이 정책을 거는 방법도 있습니다. **ValidatingAdmissionPolicy**(v1.30 GA)는 CEL 식으로 조건을 적고 API 서버 안에서 바로 평가합니다. 아래 표의 VAP 422 응답이 이 경로입니다. 예시는 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+웹훅 서버 없이 정책을 거는 방법도 있습니다. ValidatingAdmissionPolicy(v1.30 GA)는 CEL 식으로 조건을 적고 API 서버 안에서 바로 평가합니다. 아래 표의 VAP 422 응답이 이 경로입니다. 예시는 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
-#### 6. 실전에서 보이는 모습
+#### 걸렸을 때 보이는 메시지
 
 - 쿼터, LimitRange, PodSecurity에 걸리면 `403 Forbidden`과 `exceeded quota`, `violates PodSecurity` 같은 메시지가 돌아옵니다.
 - 웹훅 서버가 내려가 있는데 `failurePolicy: Fail`이면 `500 Internal Server Error`와 `failed calling webhook`이 보이고 그 규칙에 걸리는 요청이 모두 막힙니다.
 - Deployment는 만들어졌는데 Pod가 없으면 어드미션 거부가 ReplicaSet 쪽에서 일어난 경우입니다. `kubectl describe rs`의 Events를 봅니다.
-
-> **정리**: 누구인지는 인증이, 해도 되는 동작인지는 인가가 보고 RBAC로 표현할 수 없는 내용 조건은 어드미션이 맡습니다. 어드미션은 쓰기 요청에만 변형 다음 검증 순서로 돕니다. 단계별 실패 응답 코드는 바로 아래 표에 있습니다.
 
 </details>
 
@@ -192,27 +190,27 @@ webhooks:
 
 Admission Control 문서 기준으로 변형 어드미션, 스키마 검증, 검증 어드미션 순서로 돌고 어드미션은 쓰기 요청에만 적용됩니다.
 
-헷갈리기 쉬운 곳이 하나 있습니다. CPU, 메모리, Pod 수 쿼터에 걸리는 Deployment도 `kubectl create`는 성공합니다. 이 쿼터는 Pod가 만들어질 때 계산되므로 거부는 ReplicaSet 컨트롤러가 Pod를 만들려 할 때 일어나고 기록은 `kubectl describe rs`의 Events에 남습니다.
+CPU, 메모리, Pod 수 쿼터에 걸리는 Deployment도 `kubectl create`는 성공합니다. 이 쿼터는 Pod가 만들어질 때 계산되므로 거부는 ReplicaSet 컨트롤러가 Pod를 만들려 할 때 일어나고 기록은 `kubectl describe rs`의 Events에 남습니다.
 
 ### 1-3. 스케줄러가 노드를 고르는 방식
 
 스케줄러는 `spec.nodeName`이 비어 있는 Pod를 watch해서 하나씩 노드를 정합니다. 순서는 셋입니다.
 
-1. **Filter**: 받을 수 없는 노드를 지웁니다.
+1. Filter: 받을 수 없는 노드를 지웁니다.
    - 남은 CPU와 메모리가 requests보다 작은 노드
    - 견디지 못하는 테인트가 있는 노드
    - nodeSelector나 어피니티에 맞지 않는 노드
-2. **Score**: 남은 노드 중 점수가 가장 높은 노드를 고릅니다.
-3. **binding**: 결과를 `pods/<이름>/binding` 서브리소스로 보내고 API 서버가 `spec.nodeName`을 채웁니다.
+2. Score: 남은 노드 중 점수가 가장 높은 노드를 고릅니다.
+3. binding: 결과를 `pods/<이름>/binding` 서브리소스로 보내고 API 서버가 `spec.nodeName`을 채웁니다.
 
 남는 노드가 없으면 Pod는 `Pending`에 머물고 `describe pod`의 Events에 `FailedScheduling`과 이유가 남습니다.
 
 <details>
-<summary>기초부터: Filter와 Score를 노드 네 대로 따라가기</summary>
+<summary>Filter와 Score를 노드 네 대로 따라가기</summary>
 
-> **핵심 한 줄**: 스케줄러는 "지금 실제로 얼마나 쓰는지"를 보지 않고 **노드에 이미 배정된 Pod들의 requests 합계**를 보고 판단합니다.
+스케줄러는 "지금 실제로 얼마나 쓰는지"를 보지 않고 노드에 이미 배정된 Pod들의 requests 합계를 보고 판단합니다.
 
-#### 1. 예시 상황
+#### 예시 상황
 
 주문 API Pod가 `resources.requests.cpu: 500m`을 요청하고 톨러레이션은 없습니다. 워커 노드는 넷이고 모두 할당 가능한 CPU(allocatable)가 2코어입니다.
 
@@ -223,7 +221,7 @@ Admission Control 문서 기준으로 변형 어드미션, 스키마 검증, 검
 | node3 | 500m | 없음 | 1500m |
 | node4 | 1200m | 없음 | 800m |
 
-#### 2. Filter: 받을 수 없는 노드 지우기
+#### Filter로 받을 수 없는 노드 지우기
 
 | 노드 | 걸리는 검사 | 결과 |
 |---|---|---|
@@ -234,7 +232,7 @@ Admission Control 문서 기준으로 변형 어드미션, 스키마 검증, 검
 
 여기서 후보가 하나도 남지 않으면 Events에 `0/4 nodes are available:` 뒤로 노드마다 걸린 이유가 개수와 함께 붙습니다. `1 Insufficient cpu`, `1 node(s) had untolerated taint ...` 같은 조각입니다. 이 문장을 읽으면 어느 검사에서 몇 대가 떨어졌는지 바로 압니다.
 
-#### 3. Score: 남은 후보에 점수 매기기
+#### Score로 남은 후보에 점수 매기기
 
 kube-scheduler 설정 레퍼런스 기준으로 NodeResourcesFit의 기본 점수 전략은 `LeastAllocated`(CPU와 메모리 가중치 같음)입니다. 이 Pod를 올린 뒤에 덜 차 있는 노드일수록 점수가 높습니다.
 
@@ -245,12 +243,10 @@ kube-scheduler 설정 레퍼런스 기준으로 NodeResourcesFit의 기본 점�
 
 CPU만 놓고 보면 node3이 이깁니다. 실제 점수는 BalancedAllocation, ImageLocality, PodTopologySpread 같은 다른 플러그인 점수도 가중치를 곱해 더한 값이라 이 표는 감을 잡기 위한 단순화입니다. 점수가 같으면 그중 하나를 무작위로 고릅니다.
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### requests 합계로 판단해서 생기는 일
 
 - `kubectl top node`로 보면 node1이 실제로는 CPU 10%만 쓰고 있어도 requests 합이 1800m이면 탈락합니다. 반대로 requests를 안 적은 Pod는 0으로 계산되어 이미 바쁜 노드에도 올라갈 수 있습니다. `kubectl describe node`의 `Allocated resources` 칸이 스케줄러가 보는 숫자입니다.
 - 노드를 한 대 고른 뒤 실제 배정은 binding이라는 별도 요청으로 합니다. 그래서 `PodScheduled` condition이 True가 된 뒤에도 kubelet이 아직 일을 시작하지 않은 짧은 구간이 있습니다.
-
-> **정리**: Filter는 "올릴 수 있나"를, Score는 "올릴 수 있는 곳 중 어디가 나은가"를 묻습니다. Pending의 이유는 거의 언제나 Filter 쪽 문장에 적혀 있습니다.
 
 </details>
 
@@ -268,11 +264,11 @@ kubelet은 `spec.nodeName=<자기 노드 이름>` 필드 셀렉터로 자기 노
 ### 1-5. watch
 
 <details>
-<summary>기초부터: kubectl이 기다리지 않는 이유와 watch의 동작</summary>
+<summary>kubectl이 기다리지 않는 이유와 watch의 동작</summary>
 
-> **핵심 한 줄**: API 서버는 "기록을 받아 저장했다"까지만 책임지고 실행할 구성요소들은 **watch**로 바뀐 내용을 받아 가서 각자 일을 시작합니다.
+API 서버는 "기록을 받아 저장했다"까지만 책임지고 실행할 구성요소들은 watch로 바뀐 내용을 받아 가서 각자 일을 시작합니다.
 
-#### 1. 왜 필요한가
+#### 저장과 실행을 떼어 놓은 이유
 
 `kubectl run`이 Pod가 뜰 때까지 기다리지 않고 바로 `created`를 찍고 끝나는 것이 처음에는 이상해 보입니다. 노드 배정과 컨테이너 실행은 몇 초에서 몇 분이 걸릴 수 있고 실패할 수도 있어서 저장과 실행을 떼어 놓았습니다.
 
@@ -282,12 +278,12 @@ kubelet은 `spec.nodeName=<자기 노드 이름>` 필드 셀렉터로 자기 노
 | 폴링 | 스케줄러가 1초마다 "새 Pod 있어?"라고 목록 전체를 다시 받음 | 클러스터가 커질수록 같은 데이터를 계속 보내 API 서버 부하 증가 |
 | watch | 연결 하나를 열어 두고 바뀐 것만 받음 | 위 두 문제를 피함 |
 
-#### 2. 어떻게 동작하나
+#### watch가 이벤트를 받는 순서
 
-1. **처음 목록 받기(list)**: 클라이언트가 목록을 한 번 받습니다. 응답에는 그 시점을 가리키는 `resourceVersion` 번호가 붙습니다.
-2. **watch 열기**: 그 번호를 붙여 `?watch=true`로 다시 요청합니다. API 서버는 연결을 끊지 않고 열어 둡니다.
-3. **이벤트 받기**: 이후 오브젝트가 바뀔 때마다 `ADDED`, `MODIFIED`, `DELETED` 이벤트와 바뀐 객체가 그 연결로 흘러옵니다.
-4. **다시 붙기**: 연결이 끊기면 마지막으로 받은 `resourceVersion`부터 다시 watch합니다. 너무 오래된 번호라 이어 갈 수 없으면 목록을 새로 받습니다.
+1. 처음 목록 받기(list): 클라이언트가 목록을 한 번 받습니다. 응답에는 그 시점을 가리키는 `resourceVersion` 번호가 붙습니다.
+2. watch 열기: 그 번호를 붙여 `?watch=true`로 다시 요청합니다. API 서버는 연결을 끊지 않고 열어 둡니다.
+3. 이벤트 받기: 이후 오브젝트가 바뀔 때마다 `ADDED`, `MODIFIED`, `DELETED` 이벤트와 바뀐 객체가 그 연결로 흘러옵니다.
+4. 다시 붙기: 연결이 끊기면 마지막으로 받은 `resourceVersion`부터 다시 watch합니다. 너무 오래된 번호라 이어 갈 수 없으면 목록을 새로 받습니다.
 
 ```text
 list ──▶ [Pod 목록, resourceVersion=1200]
@@ -300,7 +296,7 @@ watch?resourceVersion=1200 ──▶ (연결 유지)
 
 kubelet은 여기에 필드 셀렉터 `spec.nodeName=<자기 노드>`를 붙여 자기 노드 Pod만 받습니다. 노드가 수천 대여도 각 kubelet은 자기 몫만 받으니 전송량이 줄어듭니다.
 
-#### 3. 한눈에 비교: API 서버가 직접 호출하는 push 방식과 watch
+#### push 방식과 watch 비교
 
 API 서버가 Pod를 저장할 때마다 담당 kubelet을 찾아가 "이 컨테이너를 띄워라"라고 직접 호출한다고 해 봅니다.
 
@@ -310,14 +306,12 @@ API 서버가 Pod를 저장할 때마다 담당 kubelet을 찾아가 "이 컨테
 | 회복력 | 호출 순간 노드가 끊겨 있으면 명령이 사라짐. 재전송 로직 필요 | 다시 붙은 kubelet이 목록을 새로 받아 원하는 상태에 맞춤. 재전송할 명령 자체가 없음 |
 | 긴 작업 | 이미지 받기 같은 몇 분짜리 작업을 API 서버가 기다림 | 기다리지 않음. kubelet이 일을 마친 뒤 status로 올림 |
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### created의 뜻과 watch가 끊겼을 때
 
 - kubectl이 받는 `created`는 "etcd에 기록됐다"는 접수 확인입니다. 실제 실행은 그 뒤에 비동기로 따라오므로 명령이 성공해도 Pod가 `Pending`에 남을 수 있습니다.
 - 컨트롤러는 이벤트를 "다시 비교해 볼 때가 됐다"는 신호로만 씁니다. 판단은 늘 지금 상태와 원하는 상태의 비교로 하므로([3편 1-2절](/blog/cert/cka/cka-01-why-kubernetes)) 이벤트 한두 개를 놓쳐도 다음 비교에서 바로잡힙니다.
 - API 서버가 보관하지 않은 오래된 `resourceVersion`으로 watch를 요청하면 `410 Gone`이 돌아옵니다. 공식 문서([API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes)) 기준으로 이때 클라이언트는 로컬 캐시를 비우고 list를 다시 한 뒤 돌아온 `resourceVersion`부터 watch를 시작해야 합니다.
 - `kubectl get pods -w`를 띄워 두고 다른 터미널에서 Pod를 만들면 이 이벤트 흐름을 사람 눈으로 볼 수 있습니다.
-
-> **정리**: `created`는 접수 확인일 뿐이라 명령이 성공해도 Pod가 `Pending`에 남을 수 있습니다. 이벤트를 몇 개 놓쳐도 컨트롤러는 다음 비교에서 바로잡습니다. 다음 절의 컨트롤러와 스케줄러, kubelet이 모두 이 구조 위에서 움직입니다.
 
 </details>
 
@@ -366,22 +360,22 @@ kind 클러스터에서 해 봅니다.
 ## 2. 컨트롤 플레인 구성요소의 역할
 
 <details>
-<summary>기초부터: 컨트롤 플레인 구성요소가 일을 나누는 방식</summary>
+<summary>컨트롤 플레인 구성요소가 일을 나누는 방식</summary>
 
-> **핵심 한 줄**: Pod 하나에 들어 있는 결정 여러 개를 구성요소마다 하나씩 맡기고 모두 API 서버를 watch하다가 자기 몫이 생기면 처리해 결과를 다시 API 서버에 적습니다.
+Pod 하나에 들어 있는 결정 여러 개를 구성요소마다 하나씩 맡기고 모두 API 서버를 watch하다가 자기 몫이 생기면 처리해 결과를 다시 API 서버에 적습니다.
 
-#### 1. 왜 필요한가
+#### 결정을 나눠 맡기는 이유
 
 Pod 하나를 띄우는 데에도 결정이 여러 개 들어 있습니다. 몇 개를 띄울지, 어느 노드에 둘지, 노드에서 누가 실제로 실행할지, Service로 온 트래픽을 어디로 보낼지입니다. 쿠버네티스는 이 결정을 한 프로그램에 몰지 않고 나눠 맡깁니다.
 
 | 질문 | 맡는 구성요소 |
 |---|---|
-| 몇 개가 있어야 하고 지금 상태가 맞는가 | kube-controller-manager |
+| 몇 개가 있어야 하고 지금 상태가 맞는지 | kube-controller-manager |
 | 이 Pod를 어느 노드에 둘까 | kube-scheduler |
 | 배정된 Pod를 실제로 실행하고 상태를 알림 | kubelet |
 | Service 주소로 온 패킷을 어느 Pod로 보낼까 | kube-proxy가 깐 커널 규칙 |
 
-#### 2. 어떻게 동작하나
+#### 구성요소와 API 서버의 관계
 
 ```text
                   ┌──────── kube-apiserver ────────┐
@@ -394,11 +388,11 @@ controller-manager  scheduler     kubelet        kube-proxy
 
 EndpointSlice 컨트롤러 하나를 따라가 보면 컨트롤러가 일하는 모양이 보입니다.
 
-1. **watch**: Service와 Pod를 watch합니다.
-2. **계산**: Service의 selector에 맞는 Pod를 찾아 IP, 포트, 준비 상태(ready)를 계산합니다.
-3. **기록**: 결과를 EndpointSlice 오브젝트로 API 서버에 기록합니다. Pod가 새로 뜨거나 Ready 상태가 바뀌면 다시 계산해 고칩니다.
+1. watch: Service와 Pod를 watch합니다.
+2. 계산: Service의 selector에 맞는 Pod를 찾아 IP, 포트, 준비 상태(ready)를 계산합니다.
+3. 기록: 결과를 EndpointSlice 오브젝트로 API 서버에 기록합니다. Pod가 새로 뜨거나 Ready 상태가 바뀌면 다시 계산해 고칩니다.
 
-#### 3. 한눈에 비교: 하는 일과 하지 않는 일
+#### 하는 일과 하지 않는 일
 
 | 구성요소 | 하는 일 | 하지 않는 일 |
 |---|---|---|
@@ -408,14 +402,14 @@ EndpointSlice 컨트롤러 하나를 따라가 보면 컨트롤러가 일하는 
 
 스케줄러 단계 구조와 프로파일은 [6편 5-11절](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### 이름과 달라서 헷갈리는 점과 고장 증상
 
 - 옛 강의의 "엔드포인트 컨트롤러"는 v1 Endpoints 오브젝트를 만들던 컨트롤러입니다. 지금 kube-proxy가 보는 기준은 EndpointSlice입니다(2-5절).
 - kube-proxy는 이름에 proxy가 들어 있어도 규칙만 관리합니다. 그래서 kube-proxy 프로세스가 잠깐 멈춰도 이미 깔린 규칙으로 기존 Service 통신은 이어지고 새 변경만 반영되지 않습니다.
 - kube-proxy는 모든 노드에 하나씩 있어야 하므로 kubeadm은 kube-proxy를 DaemonSet으로 띄웁니다.
 - 일을 나눠 맡은 결과 고장 위치가 증상으로 드러납니다. 스케줄러가 멈추면 새 Pod는 `spec.nodeName`이 빈 채 `Pending`에 남고 컨트롤러 매니저가 멈추면 Deployment를 만들어도 ReplicaSet과 Pod가 생기지 않습니다.
 
-#### 5. 강의에 나오는 컨트롤러와 점수 단계를 지금 동작으로 다시 읽기
+#### 강의에 나오는 컨트롤러와 점수 단계를 지금 동작으로 다시 읽기
 
 강의는 컨트롤러 셋과 스케줄러 점수를 짧게 소개합니다. 지금 버전의 이름과 실제 동작을 옆에 붙였습니다.
 
@@ -428,18 +422,16 @@ EndpointSlice 컨트롤러 하나를 따라가 보면 컨트롤러가 일하는 
 
 endpointslice 컨트롤러가 목록 하나를 고치는 과정입니다.
 
-1. **감지**: Service가 생기거나 Pod의 IP, Ready 상태가 바뀐 이벤트를 watch로 받습니다.
-2. **계산**: Service selector에 맞는 Pod의 IP와 포트 목록을 만듭니다.
-3. **요청**: 그 목록을 EndpointSlice 오브젝트로 만들거나 고쳐 달라고 API 서버에 보냅니다.
-4. **저장**: API 서버가 인증, 인가, 어드미션, 검증을 거친 뒤 etcd에 씁니다. 컨트롤러가 보낸 요청도 kubectl 요청과 같은 관문을 지납니다.
+1. 감지: Service가 생기거나 Pod의 IP, Ready 상태가 바뀐 이벤트를 watch로 받습니다.
+2. 계산: Service selector에 맞는 Pod의 IP와 포트 목록을 만듭니다.
+3. 요청: 그 목록을 EndpointSlice 오브젝트로 만들거나 고쳐 달라고 API 서버에 보냅니다.
+4. 저장: API 서버가 인증, 인가, 어드미션, 검증을 거친 뒤 etcd에 씁니다. 컨트롤러가 보낸 요청도 kubectl 요청과 같은 단계를 지납니다.
 
 kube-proxy 이름에 proxy가 붙은 데에는 이력이 있습니다. 초기의 userspace 모드에서는 kube-proxy 프로세스가 연결을 직접 받아 Pod로 넘겼고 커널과 사용자 공간을 오가느라 느렸습니다. 그 뒤 커널 규칙만 깔아 두는 iptables 모드가 기본이 되었고 userspace 모드는 1.26에서 제거되었습니다([7편](/blog/cert/cka/cka-04-services-networking)).
 
-> **정리**: 개수는 컨트롤러 매니저, 자리는 스케줄러, 실행은 kubelet, 트래픽 규칙은 kube-proxy 몫입니다. 새 Pod가 `spec.nodeName` 없이 `Pending`이면 스케줄러를, ReplicaSet조차 생기지 않으면 컨트롤러 매니저를 먼저 의심합니다. 이 구성요소들이 kubeadm에서 어떤 형태로 도는지는 다음 표에 있습니다.
-
 </details>
 
-### 2-1. 한눈에 보는 표
+### 2-1. 구성요소 표
 
 Kubernetes Components 문서와 각 구성요소의 명령줄 레퍼런스를 기준으로 했습니다. "kubeadm에서 도는 방식" 열은 kubeadm 클러스터 기준입니다.
 
@@ -461,19 +453,19 @@ API 서버는 1장의 인증, 인가, 어드미션, 스키마 검증 외에도 A
 ### 2-3. etcd
 
 <details>
-<summary>기초부터: etcd에는 무엇이 들어 있고 무엇이 없는지</summary>
+<summary>etcd에는 무엇이 들어 있고 무엇이 없는지</summary>
 
-> **핵심 한 줄**: **etcd**는 클러스터의 모든 오브젝트를 키 하나에 값 하나로 통째로 넣어 두는 키-값 데이터베이스이고 컨테이너 이미지, 로그, 볼륨 안 데이터는 담지 않습니다.
+etcd는 클러스터의 모든 오브젝트를 키 하나에 값 하나로 통째로 넣어 두는 키-값 데이터베이스이고 컨테이너 이미지, 로그, 볼륨 안 데이터는 담지 않습니다.
 
-#### 1. 왜 알아야 하나
+#### 백업이 지키는 것
 
 "etcd를 백업한다"가 무엇을 지키는 일인지 알아야 복구 뒤에 무엇이 돌아오고 무엇이 돌아오지 않는지 판단할 수 있습니다. etcd 키를 직접 볼 일은 거의 없지만 이 구조가 그 판단의 기준입니다.
 
-#### 2. 어떻게 생겼나
+#### 키-값 구조
 
-1. **키-값 저장**: 관계형 데이터베이스처럼 테이블과 열로 쪼개지 않고 오브젝트 하나를 값 하나로 통째로 넣습니다.
-2. **경로 모양 키**: 쿠버네티스는 오브젝트마다 경로 모양의 키를 씁니다.
-3. **API 서버만 접속**: API 서버만 etcd에 접속하고 나머지 구성요소는 API 서버를 거칩니다.
+1. 키-값 저장: 관계형 데이터베이스처럼 테이블과 열로 쪼개지 않고 오브젝트 하나를 값 하나로 통째로 넣습니다.
+2. 경로 모양 키: 쿠버네티스는 오브젝트마다 경로 모양의 키를 씁니다.
+3. API 서버만 접속: API 서버만 etcd에 접속하고 나머지 구성요소는 API 서버를 거칩니다.
 
 ```text
 /registry/pods/shop/order-api           → order-api Pod 오브젝트 전체
@@ -483,7 +475,7 @@ API 서버는 1장의 인증, 인가, 어드미션, 스키마 검증 외에도 A
 scheduler, kubelet, kubectl ──▶ kube-apiserver ──▶ etcd
 ```
 
-#### 3. 한눈에 비교
+#### etcd에 있는 것과 없는 것
 
 | etcd에 있음 | etcd에 없음 |
 |---|---|
@@ -491,13 +483,13 @@ scheduler, kubelet, kubectl ──▶ kube-apiserver ──▶ etcd
 | 노드 등록 정보, Lease, Event | 컨테이너 로그(노드의 `/var/log/pods`) |
 | | PV 안의 애플리케이션 데이터(스토리지 장치) |
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### 스냅샷을 되돌릴 때와 보안
 
 - etcd 스냅샷을 되돌리면 "어떤 Pod와 설정이 있어야 하는지"는 돌아오지만 DB 볼륨 안의 주문 데이터는 돌아오지 않습니다.
 - 클러스터의 모든 Secret이 들어 있으니 etcd 접속에는 전용 CA로 만든 인증서를 쓰고 스냅샷 파일도 Secret과 같은 수준으로 보관합니다.
 - etcd는 여러 대를 묶어 같은 데이터를 나눠 갖는 분산 저장소입니다. 여러 대가 같은 순서로 쓰기를 맞추는 규칙이 Raft 합의이고 과반이 살아 있어야 쓰기가 됩니다.
 
-> **정리**: etcd는 "무엇이 있어야 하는가"의 기록을 담고 실제 데이터와 이미지, 로그는 다른 곳에 있습니다. Raft 원리와 홀수 대수 이야기는 [5편 5-1절](/blog/cert/cka/cka-02-cluster-architecture)에서 이어집니다.
+Raft 원리와 홀수 대수 이야기는 [5편 5-1절](/blog/cert/cka/cka-02-cluster-architecture)에서 이어집니다.
 
 </details>
 
@@ -534,26 +526,26 @@ Assigning Pods to Nodes 문서가 적은 차이가 하나 더 있습니다. 스�
 ### 2-6. kubelet
 
 <details>
-<summary>기초부터: kubelet이 노드에서 맡는 일과 직접 설치되는 이유</summary>
+<summary>kubelet이 노드에서 맡는 일과 직접 설치되는 이유</summary>
 
-> **핵심 한 줄**: **kubelet**은 노드마다 하나씩 있는 실행 담당이고 컨테이너 런타임과 static Pod를 다뤄야 하므로 컨테이너 바깥의 호스트에 직접 설치됩니다.
+kubelet은 노드마다 하나씩 있는 실행 담당이고 컨테이너 런타임과 static Pod를 다뤄야 하므로 컨테이너 바깥의 호스트에 직접 설치됩니다.
 
-#### 1. 왜 필요한가
+#### 노드마다 kubelet이 필요한 이유
 
-스케줄러는 `spec.nodeName`을 채우는 데서 일을 마칩니다. 그 노드에서 이미지를 받고 컨테이너를 띄우고 살아 있는지 살필 누군가가 노드마다 있어야 하는데, 그게 kubelet입니다.
+스케줄러는 `spec.nodeName`을 채우는 데서 일을 마칩니다. 그 노드에서 이미지를 받고 컨테이너를 띄우고 살아 있는지 살필 누군가가 노드마다 있어야 하고 그것이 kubelet입니다.
 
-#### 2. 어떻게 동작하나
+#### kubelet이 하는 일
 
-1. **노드 등록**: 시작하면 자기 노드를 Node 오브젝트로 API 서버에 등록합니다. 등록된 노드여야 스케줄러 후보에 오릅니다.
-2. **Pod 실행**: 자기 노드에 배정된 Pod의 spec을 읽고 CRI로 containerd 같은 런타임에 컨테이너 생성과 중지를 요청합니다.
-3. **상태 확인과 보고**: liveness, readiness, startup 프로브를 kubelet이 직접 돌립니다. liveness가 실패하면 컨테이너를 다시 시작하고 readiness 결과는 Pod의 `Ready` 조건으로 API 서버에 올립니다. Service는 이 조건이 참인 Pod로만 트래픽을 보냅니다.
+1. 노드 등록: 시작하면 자기 노드를 Node 오브젝트로 API 서버에 등록합니다. 등록된 노드여야 스케줄러 후보에 오릅니다.
+2. Pod 실행: 자기 노드에 배정된 Pod의 spec을 읽고 CRI로 containerd 같은 런타임에 컨테이너 생성과 중지를 요청합니다.
+3. 상태 확인과 보고: liveness, readiness, startup 프로브를 kubelet이 직접 돌립니다. liveness가 실패하면 컨테이너를 다시 시작하고 readiness 결과는 Pod의 `Ready` 조건으로 API 서버에 올립니다. Service는 이 조건이 참인 Pod로만 트래픽을 보냅니다.
 
 ```text
 API 서버 ──watch(내 노드 Pod)──▶ kubelet ──CRI──▶ containerd ──▶ 컨테이너
          ◀──status(phase, Ready, podIP)──
 ```
 
-#### 3. 직접 설치되는 이유(닭과 달걀)
+#### 컨테이너 밖에 설치되는 이유
 
 | 구성요소 | kubeadm에서 도는 방식 | 띄우는 주체 |
 |---|---|---|
@@ -563,12 +555,10 @@ API 서버 ──watch(내 노드 Pod)──▶ kubelet ──CRI──▶ conta
 
 API 서버도 Pod인데 Pod는 API 서버를 거쳐야 만들어진다면 처음 API 서버는 누가 띄우느냐는 문제가 생깁니다. kubelet은 API 서버 없이도 매니페스트 디렉터리만 보고 static Pod를 띄울 수 있습니다. 그래서 부팅 때 kubelet이 먼저 서고 컨트롤 플레인 Pod를 띄웁니다. 이 순서 때문에 kubeadm 클러스터의 쿠버네티스 구성요소 가운데 kubelet만 컨테이너 밖에서 systemd 서비스로 돕니다. static Pod 만드는 법은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)의 static Pod 절에 있습니다.
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### 미러 Pod와 kubelet 중단
 
 - `kubectl get pods -n kube-system`에 보이는 `kube-apiserver-<노드>`는 static Pod를 API 서버에 비춰 보여 주는 미러 Pod입니다. kubectl로 지워도 kubelet이 매니페스트를 기준으로 다시 올립니다.
 - kubelet이 멈추면 그 노드는 하트비트가 끊겨 `NotReady`가 되고 새 Pod를 받지 못합니다. 이미 떠 있는 컨테이너는 런타임이 계속 돌립니다.
-
-> **정리**: 컨트롤 플레인 static Pod를 띄우는 쪽이 kubelet이라 kubelet만 systemd 서비스로 돕니다. kubelet이 멈추면 노드는 `NotReady`가 되지만 떠 있던 컨테이너는 런타임이 계속 돌립니다. 설정 파일 위치는 바로 아래 본문에 있습니다.
 
 </details>
 
@@ -617,11 +607,11 @@ Cilium 같은 CNI의 kube-proxy 대체 기능을 쓰면 kube-proxy가 아예 없
 ## 3. 구성요소 사이의 인증서 방향
 
 <details>
-<summary>기초부터: TLS와 인증서, CA를 처음부터</summary>
+<summary>TLS와 인증서, CA를 처음부터</summary>
 
-> **핵심 한 줄**: **TLS**는 네트워크에서 엿보기와 사칭을 막는 규약이고 인증서와 **CA**는 "이 공개 키가 정말 그 서버 것인지"를 보증합니다.
+TLS는 네트워크에서 엿보기와 사칭을 막는 규약이고 인증서와 CA는 "이 공개 키가 정말 그 서버 것인지"를 보증합니다.
 
-#### 1. 왜 필요한가
+#### TLS가 필요한 이유
 
 API 서버 주소로 오가는 요청에는 Secret 값과 토큰이 실립니다.
 
@@ -630,11 +620,11 @@ API 서버 주소로 오가는 요청에는 Secret 값과 토큰이 실립니다
 | 엿보기 | 같은 네트워크의 누구든 패킷을 떠서 읽음 | 데이터를 암호화 |
 | 사칭 | 가짜 서버가 끼어들어 요청을 받아 챔 | 인증서로 서버 신원을 확인 |
 
-#### 2. 어떻게 동작하나
+#### 대칭 키와 비대칭 키를 섞는 TLS
 
-1. **대칭 키 암호**: 같은 키 하나로 잠그고 엽니다. 빠르지만 그 키를 상대에게 어떻게 건넬지가 문제입니다. 네트워크로 보내다 가로채이면 끝입니다.
-2. **비대칭 키 암호**: 공개 키와 개인 키 한 쌍을 씁니다. 공개 키로 잠근 것은 짝인 개인 키로만 열리고 개인 키로 서명한 것은 공개 키로 누구나 검증할 수 있습니다. 공개 키는 마음껏 나눠 줘도 되고 개인 키만 지키면 됩니다. 대신 계산이 무겁습니다.
-3. **둘을 섞은 TLS**: 연결을 시작할 때 비대칭 키 연산으로 서버가 개인 키를 가진 진짜 주인임을 증명하고 이번 연결에서만 쓸 대칭 키를 양쪽이 안전하게 나눠 갖습니다. 그 뒤 실제 데이터는 빠른 대칭 키로 암호화합니다.
+1. 대칭 키 암호: 같은 키 하나로 잠그고 엽니다. 빠르지만 그 키를 상대에게 어떻게 건넬지가 문제입니다. 네트워크로 보내다 가로채이면 끝입니다.
+2. 비대칭 키 암호: 공개 키와 개인 키 한 쌍을 씁니다. 공개 키로 잠근 것은 짝인 개인 키로만 열리고 개인 키로 서명한 것은 공개 키로 누구나 검증할 수 있습니다. 공개 키는 마음껏 나눠 줘도 되고 개인 키만 지키면 됩니다. 대신 계산이 무겁습니다.
+3. 둘을 섞은 TLS: 연결을 시작할 때 비대칭 키 연산으로 서버가 개인 키를 가진 진짜 주인임을 증명하고 이번 연결에서만 쓸 대칭 키를 양쪽이 안전하게 나눠 갖습니다. 그 뒤 실제 데이터는 빠른 대칭 키로 암호화합니다.
 
 ```text
 [연결 시작] 비대칭 키: 서버 신원 확인 + 대칭 키 합의
@@ -643,7 +633,7 @@ API 서버 주소로 오가는 요청에는 Secret 값과 토큰이 실립니다
 
 옛 방식은 클라이언트가 만든 대칭 키를 서버 공개 키로 잠가 보냈고 지금 쓰는 TLS 1.3은 양쪽이 임시 키를 교환해 같은 대칭 키를 계산합니다. 어느 쪽이든 "비대칭은 신원 확인과 키 합의에, 대칭은 데이터에"라는 역할 분담은 같습니다.
 
-#### 3. 인증서와 CA
+#### 인증서와 CA
 
 가짜 서버도 자기 키 쌍을 만들어 공개 키를 내밀 수 있습니다. 그래서 공개 키에 보증이 붙어야 합니다.
 
@@ -664,11 +654,11 @@ API 서버는 클라이언트 인증서의 CN을 사용자 이름, O를 그룹�
 
 `.pem`은 인코딩 형식 이름이라 인증서와 키 어느 쪽이든 담을 수 있으니 내용을 열어 `BEGIN CERTIFICATE`인지 `BEGIN PRIVATE KEY`인지 봅니다.
 
-#### 4. 인증서를 새로 받는 순서
+#### 인증서를 새로 받는 순서
 
-1. **키 만들기**: 개인 키는 내 자리에서 만들고 밖으로 보내지 않습니다.
-2. **CSR 보내기**: 공개 키와 원하는 이름을 담은 서명 요청서(CSR)만 CA에 보냅니다.
-3. **인증서 받기**: CA가 서명한 인증서를 돌려받습니다.
+1. 키 만들기: 개인 키는 내 자리에서 만들고 밖으로 보내지 않습니다.
+2. CSR 보내기: 공개 키와 원하는 이름을 담은 서명 요청서(CSR)만 CA에 보냅니다.
+3. 인증서 받기: CA가 서명한 인증서를 돌려받습니다.
 
 ```text
 내 자리: 개인 키 생성 → CSR(공개 키 + 이름) ──▶ CA 서명 ──▶ 인증서 돌려받음
@@ -677,14 +667,12 @@ API 서버는 클라이언트 인증서의 CN을 사용자 이름, O를 그룹�
 
 [5편 1-9절](/blog/cert/cka/cka-02-cluster-architecture)의 CSR 승인 흐름이 이 순서를 쿠버네티스 API로 옮긴 것입니다.
 
-#### 5. 실전에서 보이는 모습
+#### 인증서 오류 메시지
 
 kubeadm 트러블슈팅 문서([Troubleshooting kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/))에 나오는 메시지입니다.
 
 - `x509: certificate signed by unknown authority`: kubectl이 가진 CA로 서버 인증서를 검증하지 못했습니다. kubeconfig의 인증서가 클러스터와 맞는지부터 확인합니다.
 - `x509: certificate has expired or is not yet valid`: 인증서 유효 기간 밖입니다. 문서에서는 kubelet 클라이언트 인증서 회전이 실패한 사례로 나옵니다.
-
-> **정리**: TLS는 비대칭 키로 신원을 확인하고 대칭 키로 데이터를 지킵니다. 인증서는 CA가 서명한 공개 키 신분증이고 개인 키는 만든 자리를 떠나지 않습니다. 다음 절에서 이 인증서가 클러스터 안 어느 연결에 쓰이는지 나눠 봅니다.
 
 </details>
 
@@ -693,29 +681,29 @@ kubeadm 트러블슈팅 문서([Troubleshooting kubeadm](https://kubernetes.io/d
 ### 3-1. API 서버는 양쪽 역할을 다 한다
 
 <details>
-<summary>기초부터: 서버 인증서, 클라이언트 인증서, CA 인증서로 나눠 보기</summary>
+<summary>서버 인증서, 클라이언트 인증서, CA 인증서로 나눠 보기</summary>
 
-> **핵심 한 줄**: 연결마다 "전화를 받는 쪽"과 "거는 쪽"을 정하면 `/etc/kubernetes/pki`의 파일 스무 개가 서버, 클라이언트, CA 세 갈래로 정리됩니다.
+연결마다 "전화를 받는 쪽"과 "거는 쪽"을 정하면 `/etc/kubernetes/pki`의 파일 스무 개가 서버, 클라이언트, CA 세 갈래로 정리됩니다.
 
-#### 1. 왜 필요한가
+#### pki 파일을 나눠 보는 이유
 
 `/etc/kubernetes/pki`를 처음 열면 파일이 스무 개가 넘어 막막합니다. 인증서 장애를 풀려면 어느 파일이 어느 연결의 어느 쪽에 쓰이는지 먼저 알아야 합니다.
 
-#### 2. 세 갈래로 나누기
+#### 세 갈래로 나누기
 
 | 종류 | 증명하는 것 | 가진 쪽 |
 |---|---|---|
-| **서버 인증서** | 연결을 받는 쪽이 "내가 진짜 그 서버" | kube-apiserver(`apiserver.crt`), etcd(`etcd/server.crt`), kubelet(10250 포트용 서빙 인증서) |
-| **클라이언트 인증서** | 연결을 거는 쪽이 "내가 권한 있는 그 사용자" | 관리자 kubectl, kube-scheduler, kube-controller-manager, kubelet, kube-proxy가 API 서버에 걸 때 |
-| **CA 인증서** | 위 두 종류에 서명한 쪽. 상대 인증서를 검증할 때 씀 | 검증하는 쪽 모두 |
+| 서버 인증서 | 연결을 받는 쪽이 "내가 진짜 그 서버" | kube-apiserver(`apiserver.crt`), etcd(`etcd/server.crt`), kubelet(10250 포트용 서빙 인증서) |
+| 클라이언트 인증서 | 연결을 거는 쪽이 "내가 권한 있는 그 사용자" | 관리자 kubectl, kube-scheduler, kube-controller-manager, kubelet, kube-proxy가 API 서버에 걸 때 |
+| CA 인증서 | 위 두 종류에 서명한 쪽. 상대 인증서를 검증할 때 씀 | 검증하는 쪽 모두 |
 
 kubeadm은 관리자, 스케줄러, 컨트롤러 매니저의 클라이언트 인증서를 별도 `.crt` 파일로 두지 않고 `/etc/kubernetes/*.conf` kubeconfig 안의 `client-certificate-data`에 넣습니다.
 
-#### 3. API 서버의 두 얼굴
+#### API 서버가 쓰는 인증서 셋
 
-1. **서버일 때**: kubectl과 kubelet의 요청을 받습니다. `apiserver.crt`를 씁니다.
-2. **etcd의 클라이언트일 때**: 데이터를 쓰러 etcd에 붙습니다. `apiserver-etcd-client.crt`를 씁니다.
-3. **kubelet의 클라이언트일 때**: `kubectl logs` 때문에 kubelet에 붙습니다. `apiserver-kubelet-client.crt`를 씁니다.
+1. 서버일 때: kubectl과 kubelet의 요청을 받습니다. `apiserver.crt`를 씁니다.
+2. etcd의 클라이언트일 때: 데이터를 쓰러 etcd에 붙습니다. `apiserver-etcd-client.crt`를 씁니다.
+3. kubelet의 클라이언트일 때: `kubectl logs` 때문에 kubelet에 붙습니다. `apiserver-kubelet-client.crt`를 씁니다.
 
 ```text
 kubectl, kubelet ──(apiserver.crt로 맞이함)──▶ kube-apiserver
@@ -723,7 +711,7 @@ kube-apiserver ──(apiserver-etcd-client.crt)──▶ etcd:2379
 kube-apiserver ──(apiserver-kubelet-client.crt)──▶ kubelet:10250
 ```
 
-#### 4. CA가 셋인 이유
+#### CA가 셋인 이유
 
 | CA | 파일 | 서명 대상 |
 |---|---|---|
@@ -733,12 +721,12 @@ kube-apiserver ──(apiserver-kubelet-client.crt)──▶ kubelet:10250
 
 etcd가 클러스터 CA를 믿는다면 클러스터 CA로 서명받은 사용자 인증서 아무것으로나 etcd에 직접 붙어 볼 수 있습니다. etcd는 전용 CA가 서명한 인증서만 받게 해서 모든 데이터를 쥔 저장소에 붙을 수 있는 주체를 API 서버와 etcd 자신으로 좁힙니다.
 
-#### 5. 실전에서 보이는 모습
+#### CA를 나눠서 생기는 장애
 
 - 아래 표의 `--etcd-cafile`이 클러스터 CA로 바뀌면 API 서버가 etcd에 못 붙는 장애가 이 분리에서 생깁니다.
 - `kubectl logs`나 `kubectl exec`만 실패하면 API 서버가 kubelet의 클라이언트로 붙는 구간을 의심합니다.
 
-#### 6. 노드 하나가 뚫렸을 때 피해가 멈추는 곳
+#### 노드 하나가 뚫렸을 때 피해가 멈추는 곳
 
 연결마다 인증서를 따로 두는 이유는 열쇠 하나가 새어 나가도 열리는 문을 줄이기 위해서입니다. etcd에 붙는 열쇠와 노드에 명령하는 열쇠를 나눠 두면 한쪽이 털려도 다른 쪽 권한은 그대로 남습니다.
 
@@ -748,8 +736,6 @@ etcd가 클러스터 CA를 믿는다면 클러스터 CA로 서명받은 사용�
 | `apiserver-etcd-client` 인증서 | etcd의 모든 데이터를 읽고 씀 | 막히는 것이 거의 없음. 그래서 컨트롤 플레인 노드 밖으로 나가지 않게 둠 |
 
 워커 노드에는 etcd에 붙을 수 있는 인증서가 아예 없으므로 노드 하나가 뚫려도 클러스터 전체 데이터까지 번지지 않습니다.
-
-> **정리**: API 서버는 받는 쪽이자 거는 쪽이라 서버 인증서와 클라이언트 인증서를 둘 다 갖습니다. etcd는 전용 CA로 따로 보호되므로 워커 노드의 인증서가 새어 나가도 etcd까지는 닿지 못합니다.
 
 </details>
 
@@ -769,15 +755,15 @@ kube-apiserver 레퍼런스와 PKI certificates and requirements 문서를 기�
 ### 3-2. 스케줄러와 컨트롤러 매니저는 kubeconfig로 붙는다
 
 <details>
-<summary>기초부터: 연결을 거는 방향과 컨트롤러별 계정</summary>
+<summary>연결을 거는 방향과 컨트롤러별 계정</summary>
 
-> **핵심 한 줄**: 스케줄러와 컨트롤러 매니저는 API 서버로 연결을 거는 쪽이라 자기 신분증(kubeconfig)을 직접 들고 가고 API 서버 쪽에는 이들을 위한 설정이 필요 없습니다.
+스케줄러와 컨트롤러 매니저는 API 서버로 연결을 거는 쪽이라 자기 신분증(kubeconfig)을 직접 들고 가고 API 서버 쪽에는 이들을 위한 설정이 필요 없습니다.
 
-#### 1. 왜 필요한가
+#### 스케줄러 플래그가 없는 이유
 
 3-1절의 API 서버 매니페스트에는 etcd와 kubelet용 클라이언트 인증서 플래그가 있습니다. 같은 매니페스트에 `--scheduler-client-*` 같은 플래그는 없어서 처음 보면 빠진 것처럼 보입니다. 차이는 누가 연결을 거느냐에 있습니다.
 
-#### 2. 방향으로 나눠 보기
+#### 방향으로 나눠 보기
 
 | 연결 | 거는 쪽 | 인증서를 챙기는 쪽 | 설정 위치(kubeadm) |
 |---|---|---|---|
@@ -788,20 +774,18 @@ kube-apiserver 레퍼런스와 PKI certificates and requirements 문서를 기�
 
 받는 쪽인 API 서버는 `--client-ca-file` 하나로 들어오는 클라이언트 인증서를 모두 검증합니다. 그래서 클라이언트가 늘어도 API 서버 설정은 그대로입니다.
 
-#### 3. 컨트롤러마다 권한을 나누는 장치
+#### 컨트롤러마다 권한을 나누는 장치
 
 컨트롤러 매니저는 프로세스 하나지만 안의 컨트롤러가 각자 다른 계정으로 API 서버를 부를 수 있습니다. RBAC 문서의 Controller roles 절 기준입니다.
 
-1. **플래그**: `--use-service-account-credentials`를 켜면 컨트롤러마다 `kube-system`의 전용 ServiceAccount(예: `replicaset-controller`)로 요청합니다. kubeadm은 이 값을 `true`로 넣습니다.
-2. **역할**: 내장 컨트롤러마다 `system:controller:` 접두사가 붙은 ClusterRole이 있어 그 컨트롤러가 다루는 리소스만 허용합니다.
-3. **끈 경우**: 모든 컨트롤러가 컨트롤러 매니저 자신의 자격으로 돌고 그 자격 하나에 필요한 권한을 전부 줘야 합니다.
+1. 플래그: `--use-service-account-credentials`를 켜면 컨트롤러마다 `kube-system`의 전용 ServiceAccount(예: `replicaset-controller`)로 요청합니다. kubeadm은 이 값을 `true`로 넣습니다.
+2. 역할: 내장 컨트롤러마다 `system:controller:` 접두사가 붙은 ClusterRole이 있어 그 컨트롤러가 다루는 리소스만 허용합니다.
+3. 끈 경우: 모든 컨트롤러가 컨트롤러 매니저 자신의 자격으로 돌고 그 자격 하나에 필요한 권한을 전부 줘야 합니다.
 
 ```bash
 grep use-service-account-credentials /etc/kubernetes/manifests/kube-controller-manager.yaml
 kubectl get clusterrole | grep 'system:controller:'
 ```
-
-> **정리**: 연결을 거는 쪽이 인증서를 챙기고 받는 쪽은 CA로 검증만 합니다. 컨트롤러 매니저 안에서도 컨트롤러별 계정으로 권한을 쪼개 한 컨트롤러의 실수가 번지는 범위를 줄입니다.
 
 </details>
 
@@ -844,19 +828,19 @@ kubeadm VM 클러스터에서 세 가지를 확인합니다.
 ## 4. Pod
 
 <details>
-<summary>기초부터: Pod는 왜 컨테이너를 한 번 더 감싸는지</summary>
+<summary>Pod는 왜 컨테이너를 한 번 더 감싸는지</summary>
 
-> **핵심 한 줄**: **Pod**는 쿠버네티스에서 만들고 관리할 수 있는 가장 작은 배포 단위이고 컨테이너가 하나면 "컨테이너 하나와 그 실행 환경"이라고 보면 됩니다.
+Pod는 쿠버네티스에서 만들고 관리할 수 있는 가장 작은 배포 단위이고 컨테이너가 하나면 "컨테이너 하나와 그 실행 환경"이라고 보면 됩니다.
 
-#### 1. 왜 필요한가
+#### Pod 단위로 다루는 이유
 
 쿠버네티스는 컨테이너를 직접 다루지 않고 Pod라는 단위로 다룹니다. 함께 움직여야 하는 것들을 하나로 묶기 위해서입니다. 대부분의 Pod에는 컨테이너가 하나 들어 있습니다.
 
-#### 2. 어떻게 묶나
+#### 컨테이너를 묶는 방식
 
-1. **배치와 수명**: 한 Pod의 컨테이너는 항상 같은 노드에 함께 배치되고 함께 시작하고 함께 사라집니다.
-2. **네트워크**: 같은 네트워크 네임스페이스를 써서 IP 하나를 나눠 갖고 서로를 `localhost`로 부릅니다.
-3. **볼륨**: Pod에 정의한 볼륨을 함께 마운트할 수 있습니다.
+1. 배치와 수명: 한 Pod의 컨테이너는 항상 같은 노드에 함께 배치되고 함께 시작하고 함께 사라집니다.
+2. 네트워크: 같은 네트워크 네임스페이스를 써서 IP 하나를 나눠 갖고 서로를 `localhost`로 부릅니다.
+3. 볼륨: Pod에 정의한 볼륨을 함께 마운트할 수 있습니다.
 
 ```text
 Pod order-api (IP 10.244.1.5)
@@ -884,7 +868,7 @@ spec:
 
 `kubectl run order-api --image=nginx:1.27 -n shop`이 같은 것을 명령 한 줄로 만듭니다.
 
-#### 3. 헷갈리는 점
+#### 흔한 오해
 
 | 흔한 오해 | 실제 동작 |
 |---|---|
@@ -892,12 +876,10 @@ spec:
 | 죽은 Pod를 고쳐서 다시 쓴다 | Pod는 갈아 끼웁니다. 노드가 죽거나 Pod가 지워지면 그 Pod는 끝이고 컨트롤러가 이름과 IP가 다른 새 Pod를 만듭니다 |
 | Pod IP를 적어 두고 부른다 | IP가 바뀌므로 6장의 Service로 부릅니다 |
 
-#### 4. 실전에서 보이는 모습
+#### 단독 Pod와 Deployment의 Pod
 
 - 실무와 시험 모두 Pod를 단독으로 만드는 일은 점검이나 일회성 작업에 한정하고 서비스는 Deployment로 띄웁니다.
 - 단독 Pod를 지우면 다시 생기지 않고 Deployment가 만든 Pod를 지우면 이름이 다른 Pod가 바로 생깁니다.
-
-> **정리**: Pod는 함께 배치되고 IP와 볼륨을 나누는 컨테이너 묶음입니다. 늘리기와 되살리기는 Pod 위의 컨트롤러가 맡고 고정 주소는 Service가 줍니다.
 
 </details>
 
@@ -916,7 +898,7 @@ Pod Lifecycle 문서는 Pod 전체의 phase와 컨테이너 하나하나의 상�
 | | Running | 실행 중 |
 | | Terminated | 끝남. exit code와 reason(`Completed`, `Error`, `OOMKilled`) 기록 |
 
-`kubectl get pod`의 STATUS 열은 phase 그대로가 아닙니다. 사람이 읽기 좋게 고른 값이고 컨테이너가 Waiting이면 그 reason을 띄웁니다. 그래서 STATUS와 phase가 엇갈려 보입니다.
+`kubectl get pod`의 STATUS 열에는 사람이 읽기 좋게 고른 값이 나오고 컨테이너가 Waiting이면 그 reason을 띄웁니다. 그래서 STATUS와 phase가 엇갈려 보입니다.
 
 | STATUS 열 | 그동안의 phase |
 |---|---|
@@ -931,11 +913,11 @@ kubectl get pod order-api -n shop -o jsonpath='{.status.containerStatuses[0].sta
 ```
 
 <details>
-<summary>기초부터: CrashLoopBackOff 하나를 시간순으로 따라가기</summary>
+<summary>CrashLoopBackOff 하나를 시간순으로 따라가기</summary>
 
-> **핵심 한 줄**: STATUS 열은 순간 사진이고 phase는 Pod 전체의 단계입니다. 컨테이너가 계속 죽어도 다시 띄울 예정이면 phase는 `Running`에 머뭅니다.
+STATUS 열은 순간 사진이고 phase는 Pod 전체의 단계입니다. 컨테이너가 계속 죽어도 다시 띄울 예정이면 phase는 `Running`에 머뭅니다.
 
-#### 1. `kubectl get pod` 한 줄 읽기
+#### `kubectl get pod` 한 줄 읽기
 
 ```text
 NAME        READY   STATUS             RESTARTS      AGE
@@ -949,7 +931,7 @@ order-api   0/1     CrashLoopBackOff   4 (30s ago)   3m
 | RESTARTS | 이 Pod 안에서 컨테이너가 다시 시작된 횟수와 마지막 재시작이 얼마 전인지 |
 | AGE | Pod가 만들어진 뒤 지난 시간. 컨테이너가 다시 시작돼도 줄지 않음 |
 
-#### 2. 시작하자마자 exit 1로 끝나는 컨테이너
+#### 시작하자마자 exit 1로 끝나는 컨테이너
 
 설정 파일 경로를 잘못 줘서 앱이 뜨자마자 종료되는 주문 API를 떠올려 봅니다. `restartPolicy`는 기본값 `Always`입니다.
 
@@ -971,12 +953,10 @@ order-api   0/1     CrashLoopBackOff   4 (30s ago)   3m
 
 phase가 `Running`에 머무는 이유는 phase 정의에 "시작 또는 재시작 중"이 들어 있기 때문입니다. 같은 컨테이너라도 `restartPolicy: Never`였다면 다시 띄우지 않으니 첫 종료에서 phase가 `Failed`가 됩니다.
 
-#### 3. 실전에서 보이는 모습
+#### 재시작된 컨테이너의 로그와 종료 원인
 
 - 이미 다시 시작된 컨테이너의 `kubectl logs`는 새로 뜬 컨테이너의 로그라 비어 있기 쉽습니다. 죽기 직전 로그는 `kubectl logs order-api --previous`로 봅니다.
 - `describe pod`의 `Last State: Terminated`에 직전 종료의 exit code와 reason이 남습니다. `OOMKilled`(exit 137)면 메모리 limit, `Error`(exit 1)면 앱 쪽 문제부터 봅니다.
-
-> **정리**: STATUS는 지금 이 순간의 모습, phase는 Pod 전체의 단계, 컨테이너 상태는 컨테이너 하나의 모습입니다. 세 가지를 따로 읽으면 CrashLoopBackOff인데 phase가 Running인 것이 이상하지 않습니다.
 
 </details>
 
@@ -996,21 +976,21 @@ Pod IP는 Pod가 다시 만들어질 때마다 바뀝니다. Service는 고정 I
 ### 4-3. 멀티 컨테이너와 네이티브 사이드카
 
 <details>
-<summary>기초부터: 컨테이너 여러 개를 한 Pod에 넣는 경우</summary>
+<summary>컨테이너 여러 개를 한 Pod에 넣는 경우</summary>
 
-> **핵심 한 줄**: 본 앱 옆에 반드시 하나씩 붙어 다니며 같은 파일이나 `localhost`를 써야 하는 보조 기능은 같은 Pod에 넣습니다.
+본 앱 옆에 반드시 하나씩 붙어 다니며 같은 파일이나 `localhost`를 써야 하는 보조 기능은 같은 Pod에 넣습니다.
 
-#### 1. 왜 필요한가
+#### 보조 기능을 같은 Pod에 넣는 이유
 
 컨테이너 하나에 기능을 다 넣지 않고 따로 이미지를 만드는 이유는 각자 따로 만들고 고치고 재사용하기 위해서입니다.
 
 그런데 어떤 보조 기능은 본 앱 옆에 반드시 하나씩 붙어 있어야 합니다. 게시판 앱이 파일로 남기는 로그를 읽어 중앙 수집기로 보내는 로그 전달기가 그런 예입니다. 앱 인스턴스가 셋이면 전달기도 셋이어야 하고 같은 파일을 읽어야 합니다.
 
-#### 2. 한 Pod에 넣으면 공유하는 것
+#### 한 Pod에 넣으면 공유하는 것
 
-1. **생명주기**: 같이 배치되고 같이 늘고 같이 사라집니다. 앱만 늘고 전달기는 그대로인 불일치가 생기지 않습니다.
-2. **네트워크**: IP와 포트 공간이 하나입니다. 상대 컨테이너를 `localhost:<포트>`로 부르고 Service를 따로 만들 필요가 없습니다.
-3. **볼륨**: 같은 볼륨을 양쪽에 마운트해 파일로 주고받습니다.
+1. 생명주기: 같이 배치되고 같이 늘고 같이 사라집니다. 앱만 늘고 전달기는 그대로인 불일치가 생기지 않습니다.
+2. 네트워크: IP와 포트 공간이 하나입니다. 상대 컨테이너를 `localhost:<포트>`로 부르고 Service를 따로 만들 필요가 없습니다.
+3. 볼륨: 같은 볼륨을 양쪽에 마운트해 파일로 주고받습니다.
 
 ```text
 Pod board-web
@@ -1043,7 +1023,7 @@ spec:
     - {name: logs, mountPath: /var/log/app}
 ```
 
-#### 3. 한눈에 비교: 같은 Pod와 다른 Pod
+#### 같은 Pod와 다른 Pod
 
 | 조합 | 판단 | 이유 |
 |---|---|---|
@@ -1052,13 +1032,13 @@ spec:
 
 "반드시 1:1로 붙어 다니고 같은 파일이나 localhost를 써야 하는지"로 판단합니다.
 
-#### 4. 실전에서 보이는 모습
+#### 포트 충돌과 `-c` 옵션
 
 - 두 컨테이너가 같은 포트를 열면 포트 공간이 하나라서 충돌합니다.
 - 여러 컨테이너가 있는 Pod에서 `kubectl logs`나 `exec`를 쓸 때는 `-c <컨테이너 이름>`으로 대상을 고릅니다. `-c`를 빼면 `kubectl.kubernetes.io/default-container` 어노테이션에 적힌 컨테이너가 기본 대상이 됩니다([Well-Known Labels, Annotations and Taints](https://kubernetes.io/docs/reference/labels-annotations-taints/#kubectl-kubernetes-io-default-container)).
 - READY 열은 `2/2`처럼 Pod 안 컨테이너 수 기준으로 보입니다.
 
-#### 5. 도커만으로 같은 묶음을 만들 때와 비교
+#### 도커만으로 같은 묶음을 만들 때와 비교
 
 Pod가 대신 해 주는 일은 도커만으로 같은 구성을 만들어 보면 드러납니다.
 
@@ -1068,8 +1048,6 @@ Pod가 대신 해 주는 일은 도커만으로 같은 구성을 만들어 보�
 | 볼륨 | 이름 있는 볼륨을 만들어 양쪽에 `-v`로 따로 마운트 | `volumes`에 한 번 정의하고 각 컨테이너가 마운트 |
 | 수명 | 앱 컨테이너가 지워지면 보조 컨테이너도 사람이나 스크립트가 찾아 지움 | 함께 생기고 함께 사라짐 |
 | 개수 | 앱을 셋으로 늘리면 보조 컨테이너 셋과 연결 셋을 직접 맞춤 | Pod 개수만 늘리면 끝 |
-
-> **정리**: 생명주기, 네트워크, 볼륨을 함께 써야 하는 보조 기능만 같은 Pod에 넣습니다. 앱보다 먼저 떠야 하는 보조 컨테이너는 아래 본문의 init 컨테이너와 네이티브 사이드카로 넣습니다.
 
 </details>
 
@@ -1095,11 +1073,11 @@ Pod가 대신 해 주는 일은 도커만으로 같은 구성을 만들어 보�
 ## 5. ReplicationController, ReplicaSet, Deployment
 
 <details>
-<summary>기초부터: Pod를 직접 만들지 않고 ReplicaSet과 Deployment를 쓰는 이유</summary>
+<summary>Pod를 직접 만들지 않고 ReplicaSet과 Deployment를 쓰는 이유</summary>
 
-> **핵심 한 줄**: Pod에는 "몇 개가 있어야 한다"는 정보가 없어서 그 개수를 지키는 **ReplicaSet**과 템플릿을 갈아타는 **Deployment**를 위에 둡니다.
+Pod에는 "몇 개가 있어야 한다"는 정보가 없어서 그 개수를 지키는 ReplicaSet과 템플릿을 갈아타는 Deployment를 위에 둡니다.
 
-#### 1. 왜 필요한가
+#### Pod 위에 컨트롤러를 두는 이유
 
 | 상황 | 단독 Pod | ReplicaSet | Deployment |
 |---|---|---|---|
@@ -1107,11 +1085,11 @@ Pod가 대신 해 주는 일은 도커만으로 같은 구성을 만들어 보�
 | 이미지를 바꿈 | 지우고 다시 만들어야 함 | 템플릿을 바꿔도 기존 Pod는 그대로 | 새 ReplicaSet으로 하나씩 갈아탐 |
 | 되돌리기 | 없음 | 없음 | 옛 ReplicaSet을 남겨 두어 `rollout undo` 가능 |
 
-#### 2. 어떻게 발전했나
+#### RC에서 Deployment까지
 
-1. **ReplicationController(RC)**: 처음 이 역할을 맡았습니다. "이 라벨의 Pod가 3개 있어야 한다"를 적어 두면 컨트롤러가 개수를 맞춥니다. 노드 여러 대에 걸쳐 Pod를 유지하므로 한 노드가 죽어도 다른 노드에 새로 만듭니다.
-2. **ReplicaSet(RS)**: RC의 후속입니다. 하는 일은 같고 셀렉터가 더 풍부해졌습니다(`matchExpressions`). 지금 RC는 레거시입니다.
-3. **Deployment**: ReplicaSet 위에 한 층을 더 얹습니다. 이미지를 바꾸면 새 템플릿으로 새 ReplicaSet을 만들고 옛 ReplicaSet은 줄이면서 새 쪽을 늘립니다. 이것이 롤링 업데이트입니다.
+1. ReplicationController(RC): 처음 이 역할을 맡았습니다. "이 라벨의 Pod가 3개 있어야 한다"를 적어 두면 컨트롤러가 개수를 맞춥니다. 노드 여러 대에 걸쳐 Pod를 유지하므로 한 노드가 죽어도 다른 노드에 새로 만듭니다.
+2. ReplicaSet(RS): RC의 후속입니다. 하는 일은 같고 셀렉터가 더 풍부해졌습니다(`matchExpressions`). 지금 RC는 레거시입니다.
+3. Deployment: ReplicaSet 위에 한 층을 더 얹습니다. 이미지를 바꾸면 새 템플릿으로 새 ReplicaSet을 만들고 옛 ReplicaSet은 줄이면서 새 쪽을 늘립니다. 이것이 롤링 업데이트입니다.
 
 ```text
 Deployment order-api        "nginx:1.28로 3개, 하나씩 바꿔라"
@@ -1129,7 +1107,7 @@ Deployment order-api        "nginx:1.28로 3개, 하나씩 바꿔라"
 
 YAML에서는 `spec.template`이 "이렇게 생긴 Pod를 찍어 내라"는 틀입니다. 앞 4장의 Pod YAML에서 `apiVersion`과 `kind`를 뺀 `metadata`와 `spec`이 그대로 이 자리에 들어갑니다. 5-4절에서 볼 리비전과 롤아웃은 모두 이 `template`이 바뀌었는지로 정해집니다.
 
-#### 3. 한눈에 비교: RC와 RS
+#### RC와 RS 비교
 
 | 항목 | ReplicationController | ReplicaSet |
 |---|---|---|
@@ -1138,7 +1116,7 @@ YAML에서는 `spec.template`이 "이렇게 생긴 Pod를 찍어 내라"는 틀�
 | selector 형식 | 라벨 일치(`key: value`)만 | `matchLabels`와 `matchExpressions`(In, NotIn, Exists, DoesNotExist) |
 | 지금 위치 | 레거시 | Deployment가 내부에서 사용 |
 
-#### 4. 헷갈리는 점
+#### 자주 헷갈리는 점
 
 - 사람은 Deployment만 고치고 ReplicaSet을 직접 만들거나 고칠 일은 거의 없습니다. ReplicaSet을 직접 고쳐도 Deployment 컨트롤러가 자기 기준으로 다시 덮어씁니다.
 - selector에 맞는 Pod가 이미 떠 있어도 `template`은 생략할 수 없습니다. ReplicaSet의 일은 개수를 계속 지키는 것이라 지금 있는 Pod가 나중에 죽으면 새로 찍어 내야 하고 그때 쓸 틀이 template입니다.
@@ -1146,7 +1124,7 @@ YAML에서는 `spec.template`이 "이렇게 생긴 Pod를 찍어 내라"는 틀�
 - 라벨이 맞는 주인 없는 Pod를 자기 것으로 세는 동작(5-2절)은 RC에도 있습니다. ReplicationController 문서는 RC의 selector에 맞는 Pod를 따로 만들지 말라고 경고합니다. RC가 그 Pod를 자기가 만든 것으로 여기기 때문입니다.
 - RS는 Pod 여러 개를 유지할 뿐이고 요청을 나눠 보내는 일은 6장의 Service가 합니다. Pod가 여러 노드에 흩어지는 것도 스케줄러의 배치 결과입니다.
 
-#### 5. RC, RS, Deployment YAML 나란히 보기
+#### RC, RS, Deployment YAML 나란히 보기
 
 같은 Pod 3개를 RC로 적으면 이렇습니다.
 
@@ -1176,8 +1154,6 @@ spec:
 | `replicas`, `template` | 같음 | 같음 | 같음 |
 
 Deployment의 가장 작은 YAML은 RS 파일에서 `kind`만 바꾼 모양입니다. `strategy`, `revisionHistoryLimit`처럼 Deployment에만 있는 필드는 생략하면 기본값(RollingUpdate, 10)이 들어갑니다.
-
-> **정리**: 개수는 ReplicaSet이, 버전 갈아타기와 되돌리기는 Deployment가 맡습니다. RC는 레거시이고 RS로 옮길 때 바꿀 곳은 바로 아래 5-1절에 있습니다.
 
 </details>
 
@@ -1219,11 +1195,11 @@ spec:
 ### 5-2. 라벨이 맞는 주인 없는 Pod는 입양된다
 
 <details>
-<summary>기초부터: 라벨과 셀렉터, 어노테이션</summary>
+<summary>라벨과 셀렉터, 어노테이션</summary>
 
-> **핵심 한 줄**: 쿠버네티스 오브젝트는 서로를 이름으로 찾지 않고 **라벨**과 **셀렉터**로 찾습니다. **어노테이션**은 고르는 데 쓰지 않는 메모입니다.
+쿠버네티스 오브젝트는 서로를 이름으로 찾지 않고 라벨과 셀렉터로 찾습니다. 어노테이션은 고르는 데 쓰지 않는 메모입니다.
 
-#### 1. 왜 필요한가
+#### 이름 대신 라벨로 찾는 이유
 
 ReplicaSet은 자기가 지켜야 할 Pod를 이름으로 찾지 않습니다. Pod 이름은 다시 만들 때마다 바뀌기 때문입니다. 대신 Pod에 붙은 라벨을 보고 찾습니다.
 
@@ -1232,11 +1208,11 @@ ReplicaSet은 자기가 지켜야 할 Pod를 이름으로 찾지 않습니다. P
 | 이름으로 연결 | 이름이 바뀌어 설정을 매번 고쳐야 함 |
 | 라벨로 연결 | 새 Pod에도 같은 라벨이 붙으니 설정을 고칠 필요가 없음(느슨한 결합) |
 
-#### 2. 어떻게 동작하나
+#### 라벨과 셀렉터가 맞물리는 방식
 
-1. **라벨 붙이기**: 오브젝트의 `metadata.labels`에 키-값 쌍을 붙입니다. `app: product-web`, `tier: frontend`, `env: prod`처럼 한 오브젝트에 여러 개를 붙일 수 있습니다.
-2. **셀렉터로 고르기**: "이 라벨을 가진 것"이라는 검색 조건입니다. ReplicaSet, Service, NetworkPolicy가 셀렉터로 대상 Pod를 고르고 사람도 `kubectl get pods -l app=product-web,tier=frontend`처럼 씁니다.
-3. **누가 만들었든 대상**: 라벨만 맞으면 누가 만든 Pod든 대상이 됩니다. 아래 본문의 "입양"이 그 결과입니다.
+1. 라벨 붙이기: 오브젝트의 `metadata.labels`에 키-값 쌍을 붙입니다. `app: product-web`, `tier: frontend`, `env: prod`처럼 한 오브젝트에 여러 개를 붙일 수 있습니다.
+2. 셀렉터로 고르기: "이 라벨을 가진 것"이라는 검색 조건입니다. ReplicaSet, Service, NetworkPolicy가 셀렉터로 대상 Pod를 고르고 사람도 `kubectl get pods -l app=product-web,tier=frontend`처럼 씁니다.
+3. 누가 만들었든 대상: 라벨만 맞으면 누가 만든 Pod든 대상이 됩니다. 아래 본문의 "입양"이 그 결과입니다.
 
 ```text
 Service selector: app=product-web
@@ -1266,7 +1242,7 @@ spec:
 
 2번과 3번이 맞아야 합니다. 맞지 않으면 RS가 만든 Pod를 자기가 찾지 못해 끝없이 만들게 되므로 API 서버가 아예 생성을 거부합니다(5-3절). 1번은 2번, 3번과 달라도 동작에는 영향이 없습니다.
 
-#### 3. 한눈에 비교: 라벨과 어노테이션
+#### 라벨과 어노테이션
 
 | 구분 | 라벨 | 어노테이션 |
 |---|---|---|
@@ -1275,12 +1251,10 @@ spec:
 | 쓰임 | 쿠버네티스가 오브젝트를 묶는 기준 | 빌드 번호, 담당 연락처, 도구가 읽을 설정처럼 붙여 두기만 할 정보 |
 | 예 | `app: product-web` | `kubernetes.io/change-cause`, `kubectl.kubernetes.io/last-applied-configuration` |
 
-#### 4. 실전에서 보이는 모습
+#### 라벨 오류와 확인 명령
 
 - selector와 템플릿 라벨이 다르면 `selector does not match template labels` 메시지와 함께 생성이 거부됩니다(5-3절).
 - `kubectl get pods --show-labels`로 각 Pod의 라벨을 한 번에 보고 `-l`로 걸러 셀렉터가 무엇을 잡는지 미리 확인합니다.
-
-> **정리**: RS YAML의 라벨 세 군데 중 selector와 템플릿 라벨은 반드시 맞아야 하고 RS 자신의 라벨은 달라도 됩니다. 셀렉터는 누가 만든 Pod인지 따지지 않으므로 라벨만 맞으면 주인 없는 Pod도 RS에 들어갑니다. 그 동작은 바로 아래 본문에서 이어집니다.
 
 </details>
 
@@ -1315,11 +1289,11 @@ Deployment는 ReplicaSet을 관리하고 Pod 템플릿이 바뀔 때마다 새 R
 replicas가 3이면 maxSurge는 0.75를 올려 1, maxUnavailable은 0.75를 내려 0입니다. 새 Pod 하나가 먼저 Ready가 된 뒤에야 옛 Pod가 하나 줄어드는 순서가 됩니다.
 
 <details>
-<summary>기초부터: replicas 3의 롤링 업데이트를 한 단계씩</summary>
+<summary>replicas 3의 롤링 업데이트를 한 단계씩</summary>
 
-> **핵심 한 줄**: maxSurge는 "잠깐 몇 개까지 더 띄워도 되나", maxUnavailable은 "잠깐 몇 개까지 모자라도 되나"입니다.
+maxSurge는 "잠깐 몇 개까지 더 띄워도 되나", maxUnavailable은 "잠깐 몇 개까지 모자라도 되나"입니다.
 
-#### 1. 기본값(maxSurge 1, maxUnavailable 0)일 때
+#### 기본값(maxSurge 1, maxUnavailable 0)일 때
 
 replicas 3이면 Pod는 언제나 3개 이상 Ready이고 4개를 넘지 않아야 합니다. 이미지를 `nginx:1.27`에서 `nginx:1.28`로 바꾸면 이렇게 진행합니다.
 
@@ -1335,13 +1309,13 @@ replicas 3이면 Pod는 언제나 3개 이상 Ready이고 4개를 넘지 않아�
 
 Deployments 문서의 예시 설명도 같은 흐름입니다. 새 ReplicaSet을 1로 올려 뜨기를 기다리고 옛 것을 2로, 새 것을 2로 바꿔 가며 "최소 3개 사용 가능, 최대 4개 생성"을 지킵니다.
 
-#### 2. 새 이미지가 잘못됐다면
+#### 새 이미지가 잘못됐다면
 
 `nginx:1.28`을 `ngnix:1.28`로 잘못 적었다고 해 봅니다. 단계 1의 새 Pod가 `ImagePullBackOff`에 걸려 Ready가 되지 않으니 단계 2로 넘어가지 못합니다. 옛 Pod 3개는 그대로 요청을 받습니다.
 
 maxUnavailable이 0이면 잘못된 배포가 서비스를 줄이지 못합니다. `kubectl rollout status`가 끝나지 않고 기다리는 것이 이 상태이고 `kubectl rollout undo`로 되돌립니다.
 
-#### 3. 반대로 maxSurge 0, maxUnavailable 1이면
+#### maxSurge 0, maxUnavailable 1이면
 
 | 단계 | 옛 RS | 새 RS | 전체 | 일어난 일 |
 |---|---|---|---|---|
@@ -1352,7 +1326,7 @@ maxUnavailable이 0이면 잘못된 배포가 서비스를 줄이지 못합니�
 
 노드 자원이 빠듯해서 Pod 하나를 더 띄울 여유가 없을 때 쓰는 설정입니다. 대신 업데이트 내내 Pod가 2개뿐인 구간이 생깁니다.
 
-> **정리**: maxSurge는 잠깐 쓰는 여분 자원, maxUnavailable은 잠깐 줄어드는 처리량입니다. 둘 다 0일 수는 없고 시험에서는 이 표를 머릿속에서 그릴 수 있으면 충분합니다.
+maxSurge와 maxUnavailable은 둘 다 0일 수 없습니다. 시험에서는 이 표를 머릿속에서 그릴 수 있으면 충분합니다.
 
 </details>
 
@@ -1391,11 +1365,11 @@ HPA가 붙어 있는 대상은 HPA가 replicas를 다시 덮어씁니다.
 ### 6-1. Service의 포트 셋과 NodePort가 열리는 위치
 
 <details>
-<summary>기초부터: Service가 필요한 이유와 요청이 Pod에 닿는 경로</summary>
+<summary>Service가 필요한 이유와 요청이 Pod에 닿는 경로</summary>
 
-> **핵심 한 줄**: **Service**는 "이 라벨의 Pod들"에 고정된 주소와 DNS 이름 하나를 붙여 IP가 바뀌는 Pod 묶음을 한 이름으로 부르게 해 줍니다.
+Service는 "이 라벨의 Pod들"에 고정된 주소와 DNS 이름 하나를 붙여 IP가 바뀌는 Pod 묶음을 한 이름으로 부르게 해 줍니다.
 
-#### 1. 왜 필요한가
+#### Service가 필요한 이유
 
 주문 API Pod 3개가 떠 있고 상품 웹이 주문 API를 불러야 한다고 해 봅니다.
 
@@ -1404,12 +1378,12 @@ HPA가 붙어 있는 대상은 HPA가 replicas를 다시 덮어씁니다.
 | Pod IP를 적어 두고 부름 | Pod가 다시 만들어질 때마다 IP가 바뀜(4장). 3개 중 어디로 보낼지도 상품 웹이 정해야 함 |
 | Service 이름으로 부름 | 고정 주소 하나로 부르고 Pod 고르기는 클러스터가 맡음 |
 
-#### 2. 어떻게 동작하나
+#### 요청이 Pod에 닿는 경로
 
-1. **주소 배정**: Service를 만들면 클러스터 안에서만 쓰는 가상 IP(ClusterIP)가 하나 배정되고 CoreDNS에 `order-api.shop.svc.cluster.local` 이름이 생깁니다.
-2. **대상 목록 갱신**: endpointslice 컨트롤러가 Service의 selector에 맞는 Pod의 IP와 준비 상태(ready)를 EndpointSlice 오브젝트에 담아 계속 갱신합니다. kube-proxy는 준비된 Pod로만 보냅니다.
-3. **커널 규칙 설치**: 각 노드의 kube-proxy가 Service와 EndpointSlice를 watch해 "이 ClusterIP:포트로 가는 패킷은 이 Pod IP들 중 하나로 보내라"는 커널 규칙(iptables 또는 nftables)을 깝니다.
-4. **요청 전달**: 상품 웹이 `order-api.shop:80`으로 요청하면 DNS가 ClusterIP를 돌려주고 노드 커널의 규칙이 목적지를 Pod IP 하나로 바꿔 보냅니다.
+1. 주소 배정: Service를 만들면 클러스터 안에서만 쓰는 가상 IP(ClusterIP)가 하나 배정되고 CoreDNS에 `order-api.shop.svc.cluster.local` 이름이 생깁니다.
+2. 대상 목록 갱신: endpointslice 컨트롤러가 Service의 selector에 맞는 Pod의 IP와 준비 상태(ready)를 EndpointSlice 오브젝트에 담아 계속 갱신합니다. kube-proxy는 준비된 Pod로만 보냅니다.
+3. 커널 규칙 설치: 각 노드의 kube-proxy가 Service와 EndpointSlice를 watch해 "이 ClusterIP:포트로 가는 패킷은 이 Pod IP들 중 하나로 보내라"는 커널 규칙(iptables 또는 nftables)을 깝니다.
+4. 요청 전달: 상품 웹이 `order-api.shop:80`으로 요청하면 DNS가 ClusterIP를 돌려주고 노드 커널의 규칙이 목적지를 Pod IP 하나로 바꿔 보냅니다.
 
 ```text
 상품 웹 → DNS(order-api.shop) → ClusterIP:80 → [노드 커널 규칙] → Pod IP 하나
@@ -1424,7 +1398,7 @@ HPA가 붙어 있는 대상은 HPA가 replicas를 다시 덮어씁니다.
               (모든 노드에 열림)   (클러스터 안 주소)   (컨테이너가 듣는 포트)
 ```
 
-#### 3. 한눈에 비교: Service 타입
+#### Service 타입
 
 타입은 "어디서 들어오는 요청을 받을지"로 고릅니다.
 
@@ -1436,13 +1410,13 @@ HPA가 붙어 있는 대상은 HPA가 replicas를 다시 덮어씁니다.
 
 세 타입은 포함 관계입니다(ClusterIP ⊂ NodePort ⊂ LoadBalancer). 기본 설정에서 NodePort Service를 만들면 ClusterIP도 함께 배정되고 LoadBalancer Service를 만들면 NodePort와 ClusterIP가 함께 생깁니다. 바깥 LB가 노드의 nodePort로 보내고 노드에서 Service 규칙을 거쳐 Pod에 닿는 구조라서 그렇습니다.
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### ping이 안 되는 이유와 Service가 안 닿을 때
 
 - ClusterIP는 어떤 프로세스도 그 주소로 포트를 열고 있지 않은 가상 주소입니다. 그래서 iptables나 nftables 모드에서는 ClusterIP에 `ping`을 해도 응답이 없는 것이 정상이고 포트로 접속해야 규칙이 동작합니다.
 - Service로 요청이 닿지 않으면 selector가 Pod 라벨과 맞는지와 대상 Pod가 Ready인지 봅니다. `kubectl get endpointslices -n shop -l kubernetes.io/service-name=order-api`에 주소가 비어 있으면 보낼 곳이 없는 상태입니다([Debug Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)).
 - LoadBalancer 타입을 Service마다 쓰면 클라우드 LB가 Service 수만큼 생깁니다. 쇼핑몰, 게시판, 결제를 각각 열면 LB가 셋이고 비용과 관리할 외부 주소도 그만큼 늘어납니다. 그래서 바깥에 여는 HTTP 서비스가 여럿이면 LB 하나 뒤에 Ingress나 Gateway를 두고 호스트 이름이나 경로(`/shop`, `/board`)로 나눠 각 ClusterIP Service로 보냅니다. 이 구성은 [7편](/blog/cert/cka/cka-04-services-networking)에서 다룹니다.
 
-#### 5. NodePort와 LoadBalancer를 고를 때
+#### NodePort와 LoadBalancer를 고를 때
 
 포트 셋을 한 YAML에 모으면 이렇습니다.
 
@@ -1468,8 +1442,6 @@ spec:
 | 부르던 노드가 죽으면 | 그 노드 IP로 부르던 클라이언트는 끊김. 다른 노드 IP로 바꿔 불러야 함 | 클라우드 LB가 상태 확인으로 응답 없는 노드를 빼고 나머지 노드로 보냄 |
 | 비용 | 추가 비용 없음 | Service마다 클라우드 LB 한 대 |
 
-> **정리**: Service는 고정 주소와 이름을, EndpointSlice는 지금 살아 있는 Pod 목록을, kube-proxy가 깐 커널 규칙은 실제 전달을 맡습니다. 포트 셋의 세부 규칙은 바로 아래 본문에 있습니다.
-
 </details>
 
 | 필드 | 뜻 | 생략하면 |
@@ -1490,20 +1462,20 @@ nodePort는 Pod가 있는 노드에만 열리지 않습니다. Service 문서는
 ### 6-2. 네임스페이스 범위와 클러스터 범위
 
 <details>
-<summary>기초부터: 네임스페이스는 무엇을 나누는지</summary>
+<summary>네임스페이스는 무엇을 나누는지</summary>
 
-> **핵심 한 줄**: **네임스페이스**는 클러스터 하나를 이름, 권한, 자원 총량 기준으로 나눈 논리적인 칸이고 네트워크와 노드는 나누지 않습니다.
+네임스페이스는 클러스터 하나를 이름, 권한, 자원 총량 기준으로 나눈 논리적인 칸이고 네트워크와 노드는 나누지 않습니다.
 
-#### 1. 왜 필요한가
+#### 네임스페이스로 칸을 나누는 이유
 
 클러스터 하나를 여러 팀이나 여러 환경이 같이 쓰면 이름이 겹치고 실수로 남의 것을 지우는 일이 생깁니다. 쇼핑몰 서비스는 `shop`, 게시판은 `board`, 결제는 `payment`에 두는 식으로 칸을 나눕니다.
 
-#### 2. 무엇이 나뉘나
+#### 무엇이 나뉘나
 
-1. **이름**: 같은 kind의 이름은 네임스페이스 안에서만 겹치면 안 됩니다. `shop`과 `board`에 각각 `web`이라는 Deployment를 둘 수 있습니다.
-2. **권한**: Role과 RoleBinding은 네임스페이스 안에서만 효력이 있어서 "board 팀은 board 네임스페이스만"을 표현할 수 있습니다([5편 1장](/blog/cert/cka/cka-02-cluster-architecture)).
-3. **자원 총량**: ResourceQuota와 LimitRange를 네임스페이스마다 걸어 한 팀이 클러스터 자원을 다 쓰는 것을 막습니다(6-5절).
-4. **정리**: 네임스페이스를 지우면 그 안의 오브젝트가 모두 함께 지워집니다.
+1. 이름: 같은 kind의 이름은 네임스페이스 안에서만 겹치면 안 됩니다. `shop`과 `board`에 각각 `web`이라는 Deployment를 둘 수 있습니다.
+2. 권한: Role과 RoleBinding은 네임스페이스 안에서만 효력이 있어서 "board 팀은 board 네임스페이스만"을 표현할 수 있습니다([5편 1장](/blog/cert/cka/cka-02-cluster-architecture)).
+3. 자원 총량: ResourceQuota와 LimitRange를 네임스페이스마다 걸어 한 팀이 클러스터 자원을 다 쓰는 것을 막습니다(6-5절).
+4. 정리: 네임스페이스를 지우면 그 안의 오브젝트가 모두 함께 지워집니다.
 
 ```text
 클러스터
@@ -1513,7 +1485,7 @@ nodePort는 Pod가 있는 노드에만 열리지 않습니다. Service 문서는
  노드 node-1, node-2 ← 어느 네임스페이스에도 속하지 않고 Pod가 섞여 뜸
 ```
 
-#### 3. 한눈에 비교
+#### 나뉘는 것과 나뉘지 않는 것
 
 | 나뉨 | 나뉘지 않음 |
 |---|---|
@@ -1521,7 +1493,7 @@ nodePort는 Pod가 있는 노드에만 열리지 않습니다. Service 문서는
 | Role, RoleBinding 권한 | 노드. 두 네임스페이스의 Pod가 같은 노드에 섞여 뜸 |
 | ResourceQuota, LimitRange | 클러스터 범위 리소스(아래 6-2절 표) |
 
-#### 4. 헷갈리는 점과 실전에서 보이는 모습
+#### 네임스페이스 고르는 순서와 흔한 실수
 
 - 네임스페이스를 고르는 순서는 이렇습니다.
 
@@ -1533,7 +1505,7 @@ nodePort는 Pod가 있는 노드에만 열리지 않습니다. Service 문서는
 - 없는 네임스페이스에 만들려 하면 1-2절의 `NamespaceLifecycle` 어드미션이 거부합니다.
 - `kube-system`에는 컨트롤 플레인과 CoreDNS, kube-proxy가 있습니다. 여기서 무언가를 지우거나 고치면 클러스터 전체가 영향을 받으니 문제에서 요구할 때만 손댑니다.
 
-#### 5. 자주 쓰는 명령과 한 파일로 만드는 예
+#### 자주 쓰는 명령과 한 파일로 만드는 예
 
 ```bash
 kubectl get ns                                          # 네임스페이스 목록(ns는 namespaces 줄임말)
@@ -1579,8 +1551,6 @@ spec:
 ```
 
 쿼터에 `limits.cpu`처럼 limits 항목이 있으면 그 네임스페이스의 Pod도 limits를 적어야 만들어집니다. 그래서 예시 Pod는 requests와 limits를 모두 적었습니다. 적지 않은 Pod를 받으려면 6-5절의 LimitRange로 기본값을 채웁니다.
-
-> **정리**: 네임스페이스는 이름, 권한, 쿼터의 경계이고 네트워크 벽은 NetworkPolicy가 따로 세웁니다. 어떤 리소스가 네임스페이스에 속하는지는 바로 아래 명령과 표로 확인합니다.
 
 </details>
 
@@ -1651,10 +1621,10 @@ LimitRange는 명령형 생성 명령이 없어서 YAML로 씁니다. 예시와 
 
 두 가지를 해 봅니다.
 
-1. **DNS**: `web` 네임스페이스의 임시 Pod에서 `nslookup order-api`와 `nslookup order-api.shop`을 차례로 실행하고 `/etc/resolv.conf`의 search 줄을 기록합니다. 이미지는 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3`을 씁니다.
-2. **쿼터**: `shop`에 6-5절의 쿼터를 만든 뒤 requests 없는 Pod가 거부되는지, `defaultRequest`가 있는 LimitRange를 더하면 만들어지는지 봅니다.
+1. DNS: `web` 네임스페이스의 임시 Pod에서 `nslookup order-api`와 `nslookup order-api.shop`을 차례로 실행하고 `/etc/resolv.conf`의 search 줄을 기록합니다. 이미지는 `registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3`을 씁니다.
+2. 쿼터: `shop`에 6-5절의 쿼터를 만든 뒤 requests 없는 Pod가 거부되는지, `defaultRequest`가 있는 LimitRange를 더하면 만들어지는지 봅니다.
 
-이미지를 따로 고른 데는 이유가 있습니다. `busybox:1.36`의 `nslookup`은 kind에서 search 처리 탓에 `order-api.shop`도 NXDOMAIN으로 보였습니다.
+이 이미지를 고른 이유는 `busybox:1.36`의 `nslookup`이 kind에서 search 처리 탓에 `order-api.shop`도 NXDOMAIN으로 보였기 때문입니다.
 
 kind에서 확인한 결과는 이렇습니다.
 
@@ -1668,13 +1638,13 @@ kind에서 확인한 결과는 이렇습니다.
 ## 7. 오브젝트를 다루는 세 방식
 
 <details>
-<summary>기초부터: 명령형과 선언형은 무엇이 다른지</summary>
+<summary>명령형과 선언형은 무엇이 다른지</summary>
 
-> **핵심 한 줄**: **명령형**은 매 순간 할 동작을 지시하고 **선언형**은 도착할 모습만 파일에 적어 `apply`가 지금 상태와 비교해 할 일을 정하게 합니다.
+명령형은 매 순간 할 동작을 지시하고 선언형은 도착할 모습만 파일에 적어 `apply`가 지금 상태와 비교해 할 일을 정하게 합니다.
 
 택시로 치면 "직진하다가 두 번째 신호에서 좌회전, 다음 골목에서 우회전"처럼 매 순간 할 일을 지시하는 쪽이 명령형이고 "시청역 3번 출구"처럼 도착할 곳만 말하는 쪽이 선언형입니다.
 
-#### 1. 왜 구분하나
+#### 같은 일을 하는 두 방식
 
 같은 일을 두 방식으로 할 수 있고 결과를 다시 만들 수 있는지가 달라집니다.
 
@@ -1684,11 +1654,11 @@ kind에서 확인한 결과는 이렇습니다.
 | 3개를 5개로 | `kubectl scale deployment web --replicas=5` | 파일의 `replicas`를 5로 고치고 다시 `apply` |
 | 이미지 바꾸기 | `kubectl set image deployment/web nginx=nginx:1.28` | 파일의 `image`를 고치고 다시 `apply` |
 
-#### 2. 어떻게 동작하나
+#### 명령형 명령, 오브젝트 구성, 선언형
 
-1. **명령형 명령**: 사람이 지금 상태를 알고 다음 동작을 고릅니다. 이미 있는 것을 `create`하면 "만들어라"라는 동작을 지시했기 때문에 `AlreadyExists`로 실패합니다.
-2. **명령형 오브젝트 구성(`create -f`, `replace -f`)**: 파일을 쓰지만 동작은 여전히 사람이 고릅니다. 없는 객체에 `replace -f`를 하면 `NotFound`로 실패하니 매번 지금 클러스터에 그 객체가 있는지 먼저 알아야 합니다.
-3. **선언형(`apply -f`)**: 최종 모습만 파일에 두고 `apply`가 없으면 만들고 있으면 파일과 달라진 부분만 반영합니다.
+1. 명령형 명령: 사람이 지금 상태를 알고 다음 동작을 고릅니다. 이미 있는 것을 `create`하면 "만들어라"라는 동작을 지시했기 때문에 `AlreadyExists`로 실패합니다.
+2. 명령형 오브젝트 구성(`create -f`, `replace -f`): 파일을 쓰지만 동작은 여전히 사람이 고릅니다. 없는 객체에 `replace -f`를 하면 `NotFound`로 실패하니 매번 지금 클러스터에 그 객체가 있는지 먼저 알아야 합니다.
+3. 선언형(`apply -f`): 최종 모습만 파일에 두고 `apply`가 없으면 만들고 있으면 파일과 달라진 부분만 반영합니다.
 
 ```text
 apply -f web.yaml
@@ -1698,7 +1668,7 @@ apply -f web.yaml
 
 몇 번을 실행해도 결과가 같은 이 성질을 멱등(idempotent)이라고 부릅니다. 자동화 스크립트와 Git 기반 배포가 apply를 쓰는 것도 이 성질 때문입니다.
 
-#### 3. 한눈에 비교
+#### 명령형과 선언형 비교
 
 | 구분 | 명령형 | 선언형 |
 |---|---|---|
@@ -1707,12 +1677,12 @@ apply -f web.yaml
 | 같은 명령 반복 | `create`는 두 번째에 실패 | 같은 파일을 열 번 apply해도 결과가 같음 |
 | 쓰는 곳 | 시험, 일회성 작업 | 운영 환경, Helm, Kustomize |
 
-#### 4. 실전에서 보이는 모습
+#### 시험에서 섞어 쓰기
 
 - 시험에서는 둘을 섞어 씁니다. 명령형 명령에 `--dry-run=client -o yaml`을 붙여 YAML 뼈대를 받고 필요한 필드를 고친 뒤 `apply`합니다(7-6절).
-- 섞어 쓸 때 조심할 점은 하나입니다. `kubectl scale`처럼 명령으로 바꾼 값은 파일에 없으니 나중에 그 파일로 다시 apply하면 파일 값으로 돌아갑니다.
+- 섞어 쓸 때는 `kubectl scale`처럼 명령으로 바꾼 값이 파일에 없으니 나중에 그 파일로 다시 apply하면 파일 값으로 돌아간다는 점을 조심합니다.
 
-#### 5. 명령 한 줄로 안 되는 것과 시험에서 섞는 순서
+#### 명령 한 줄로 안 되는 것과 시험에서 섞는 순서
 
 명령형 명령은 플래그로 표현할 수 있는 만큼만 만듭니다. `kubectl run`은 컨테이너 하나짜리 Pod만 만들고 init 컨테이너나 볼륨 마운트를 넣는 플래그가 없습니다. 상황별로 고르는 방법은 이렇습니다.
 
@@ -1724,8 +1694,6 @@ apply -f web.yaml
 
 - `kubectl edit`은 실행 중인 객체를 메모리에서 바로 고치는 기능처럼 소개되곤 합니다. 실제로는 현재 객체를 임시 파일로 받아 편집기로 열고 저장할 때 API 서버에 보냅니다(7-3절). 실행 중인 Pod는 바꿀 수 있는 필드가 적어 대부분 거부됩니다(7-4절).
 - 명령형 명령은 실행한 기록이 셸 히스토리에만 남습니다. 같은 상태를 다시 만들거나 남에게 넘기려면 `-o yaml`로 뽑아 파일로 둡니다.
-
-> **정리**: 시험에서는 명령형으로 뼈대를 빨리 만들고 선언형으로 마무리하는 조합이 기본입니다. `kubectl scale`처럼 명령으로 바꾼 값은 그 파일로 다시 apply하면 파일 값으로 돌아간다는 점만 조심합니다. 세 방식의 공식 구분은 바로 아래 7-1절에 있습니다.
 
 </details>
 
@@ -1751,14 +1719,14 @@ last-applied에 있었는데 새 파일에서 빠진 필드 → 삭제
 어느 쪽에도 없던 필드(다른 주체가 넣은 값)   → 그대로 둠
 ```
 
-세 번째 줄이 중요합니다. 컨트롤러가 채운 기본값이나 다른 도구가 붙인 어노테이션처럼 파일에 적은 적이 없는 필드는 apply가 건드리지 않습니다. 반대로 `kubectl create`로 만든 객체에는 이 어노테이션이 없어서 처음 apply할 때 경고가 나옵니다(어노테이션은 자동으로 붙음).
+세 번째 줄 때문에 컨트롤러가 채운 기본값이나 다른 도구가 붙인 어노테이션처럼 파일에 적은 적이 없는 필드는 apply가 건드리지 않습니다. 반대로 `kubectl create`로 만든 객체에는 이 어노테이션이 없어서 처음 apply할 때 경고가 나옵니다(어노테이션은 자동으로 붙음).
 
 <details>
-<summary>기초부터: 세 줄 규칙을 Deployment 하나로 따라가기</summary>
+<summary>세 줄 규칙을 Deployment 하나로 따라가기</summary>
 
-> **핵심 한 줄**: apply는 "지난번에 내가 적었던 것"과 "이번에 적은 것"을 비교해 내 몫만 고칩니다. 그래서 파일에 남아 있는 필드는 남이 바꿔 놔도 내 값으로 되돌립니다.
+apply는 "지난번에 내가 적었던 것"과 "이번에 적은 것"을 비교해 내 몫만 고칩니다. 그래서 파일에 남아 있는 필드는 남이 바꿔 놔도 내 값으로 되돌립니다.
 
-#### 1. 상황
+#### 상황
 
 `product-web` Deployment를 apply로 만들었고 그 뒤 HPA가 replicas를 5로 올렸습니다. 이번에 파일에서는 `team: shop` 라벨을 지우고 이미지를 바꿨습니다.
 
@@ -1769,17 +1737,17 @@ last-applied에 있었는데 새 파일에서 빠진 필드 → 삭제
 | `spec.replicas` | `3` | `3` | `5`(HPA가 바꿈) | `3`(파일에 있으니 파일 값) |
 | `metadata.annotations["deployment.kubernetes.io/revision"]` | 없음 | 없음 | `1` | 그대로 둠(내가 적은 적 없음) |
 
-#### 2. replicas 줄이 함정입니다
+#### replicas가 조용히 되돌아가는 이유
 
 HPA는 `/scale` 서브리소스로 replicas를 바꾸므로 last-applied에는 여전히 3이 남아 있습니다. 파일에도 3이 있으니 apply는 "내가 원하는 값은 3"으로 읽고 5를 3으로 내립니다. 경고도 없습니다. LearnKube의 [Server-side apply 글](https://learnkube.com/server-side-apply-kubernetes)이 바로 이 예로 클라이언트 측 apply가 조용히 값을 되돌린다고 설명합니다.
 
 HPA 문서도 HPA를 켠 Deployment는 매니페스트에서 `spec.replicas`를 빼라고 권합니다. 이때 한 번은 조심해야 합니다. last-applied에 있던 replicas를 파일에서 빼면 규칙 두 번째 줄대로 필드가 지워지고 기본값 1이 되어 Pod가 잠깐 하나로 줄어듭니다. 이 일회성 감소를 피하는 방법은 문서에 따로 나옵니다.
 
-#### 3. server-side apply에서는
+#### server-side apply에서는
 
 server-side apply는 필드마다 주인(`metadata.managedFields`)을 기록합니다. HPA 같은 다른 주체가 가진 필드를 내 파일이 다른 값으로 바꾸려 하면 조용히 덮지 않고 충돌로 거부하며 어떤 필드를 누가 가졌는지 알려 줍니다. 덮어쓸 생각이면 `--force-conflicts`, 아니면 파일에서 그 필드를 뺍니다.
 
-> **정리**: 지난번에 적었고 이번에 뺀 필드는 지워집니다. 파일에 있는 필드는 파일 값으로 맞춰집니다. 한 번도 적지 않은 필드는 남습니다. 시험에서 라벨을 지웠는데 apply 뒤에도 남아 있다면 그 라벨이 last-applied에 없었던 경우입니다.
+시험에서 라벨을 지웠는데 apply 뒤에도 남아 있다면 그 라벨이 last-applied에 없었던 경우입니다.
 
 </details>
 
@@ -1829,7 +1797,7 @@ kubectl replace --force -f /tmp/kubectl-edit-xxxx.yaml
 
 Deployment에 속한 Pod라면 이 방법을 쓰지 말고 Deployment의 템플릿을 고칩니다. Deployment 소유 Pod에 `replace --force`를 하면 다시 만든 Pod도 같은 라벨이라 ReplicaSet이 개수 초과로 보고 그 Pod를 지웁니다(kind에서 확인).
 
-CPU와 메모리는 예외입니다. requests, limits는 v1.35에서 GA가 된 in-place resize로 `resize` 서브리소스를 통해 Pod를 다시 만들지 않고 바꿀 수 있습니다(`kubectl patch pod ... --subresource resize`). 자세한 사용법은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
+CPU와 메모리는 예외입니다. requests, limits는 v1.35에서 GA가 된 in-place resize로 `resize` 서브리소스로 Pod를 다시 만들지 않고 바꿀 수 있습니다(`kubectl patch pod ... --subresource resize`). 자세한 사용법은 [6편](/blog/cert/cka/cka-03-workloads-scheduling)에 있습니다.
 
 ### 7-5. -n과 파일의 namespace가 다를 때
 
