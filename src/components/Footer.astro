@@ -2,39 +2,25 @@
 const year = new Date().getFullYear();
 ---
 
-<footer class="relative z-10 pb-8 sm:pb-10 pt-8 mt-12 footer-sky">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6">
-    <div class="flex items-center justify-between">
-      <!-- Left: Copyright -->
-      <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400">
-        &copy; {year} IT Oasis
-      </p>
-
-      <!-- Center: Description -->
-      <p class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400">
-        사막을 건너는 개발자에게, 쉼과 영감을 담아.
-      </p>
-
-      <!-- Right: Total views -->
-      <p id="total-views" class="text-[12px] sm:text-[13px] text-gray-500 dark:text-gray-400 opacity-0 transition-opacity duration-500">
-        <svg class="inline-block w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
+<footer class="site-footer">
+  <div class="site-col">
+    <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-[13px] text-gray-500 dark:text-gray-400">
+      <p>&copy; {year} IT Oasis</p>
+      <p id="total-views" class="opacity-0 transition-opacity duration-500">
         <span>전체 방문</span>
-        <span id="total-views-count" class="font-semibold text-gray-900 dark:text-gray-100">—</span>
+        <span id="total-views-count" class="font-semibold text-gray-900 dark:text-gray-100">&middot;</span>
       </p>
     </div>
   </div>
 </footer>
 
 <style>
-  /* 그라데이션 띠 대신 가는 위 테두리로 본문과 나눈다 */
-  .footer-sky {
+  .site-footer {
+    padding: 1.5rem 0 2rem;
     border-top: 1px solid #d1d9e0;
   }
 
-  :global(.dark) .footer-sky {
+  :global(.dark) .site-footer {
     border-top-color: #3d444d;
   }
 </style>
