@@ -62,7 +62,7 @@ Apache Lucene의 `IndexWriter` 초기화 실패 경로에서 발생하던 thread
 
 ## 2. WikiEngine: 1,215만 건 임베디드 검색 엔진
 
-- Github: <https://github.com/dj258255/wikiEngine>
+- Github: <https://github.com/dj258255/wiki-engine>
 - Blog: <https://dj258255.github.io/IT-Oasis/blog/project/wikiengine/wiki-engine-retrospective/>
 
 ### 프로젝트 개요
