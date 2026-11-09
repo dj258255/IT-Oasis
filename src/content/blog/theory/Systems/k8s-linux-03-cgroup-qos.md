@@ -13,6 +13,7 @@ category: theory/Systems
 topics:
   - systems
   - performance
+coverImage: /uploads/theory/kubernetes-logo.png
 draft: false
 unlisted: false
 series: "쿠버네티스 아래의 리눅스"

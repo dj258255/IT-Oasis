@@ -10,6 +10,7 @@ tags:
 category: cert/CKA
 topics:
   - cert
+coverImage: /uploads/cert/cka/cka-logo.webp
 draft: false
 series: "CKA 공부"
 seriesOrder: 1
