@@ -1,9 +1,9 @@
 ---
 /**
- * BE-commerce 개요 글 본문 아래의 영역별 글. 핵심 ERD 토글, 영역·글 수, 영역마다 카드 목록.
+ * BE-commerce 개요 글 본문 아래의 영역별 글. 핵심 ERD 토글, 영역·글 수, 영역마다 글 목록.
  * 위쪽 영역 지도(HubMap)에서 영역을 고르면 그 영역만 남는다.
  */
-import PostCard from './PostCard.astro';
+import PostList from './PostList.astro';
 import { base } from '../lib/config';
 import { getHubDomains } from '../lib/hub';
 
@@ -50,21 +50,7 @@ const ERD = '/uploads/project/be-commerce/diagrams/erd.svg';
       </div>
 
       {d.entries.length > 0 ? (
-        <div class="domain-posts">
-          {d.entries.map((post, i) => (
-            <PostCard
-              title={post.data.title}
-              description={post.data.description}
-              date={post.data.date}
-              slug={post.id}
-              tags={post.data.tags}
-              category={post.data.category}
-              topics={post.data.topics}
-              coverImage={post.data.coverImage}
-              index={i}
-            />
-          ))}
-        </div>
+        <PostList posts={d.entries} byYear={false} />
       ) : (
         <p class="domain-empty">
           이 영역의 글은 아직 없습니다. 설계와 실측 기록은 위 저장소 문서에서 먼저 볼 수 있습니다.
@@ -217,7 +203,7 @@ const ERD = '/uploads/project/be-commerce/diagrams/erd.svg';
 
   .hub-reset {
     border: 1px solid var(--rule);
-    border-radius: 999px;
+    border-radius: 4px;
     background: transparent;
     color: var(--ink);
     font-size: 13px;
@@ -275,12 +261,6 @@ const ERD = '/uploads/project/be-commerce/diagrams/erd.svg';
   .domain-doc a {
     color: var(--color-primary);
     font-weight: 600;
-  }
-
-  .domain-posts {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.25rem;
   }
 
   .domain-empty {

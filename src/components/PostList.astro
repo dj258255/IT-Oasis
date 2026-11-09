@@ -1,0 +1,66 @@
+---
+import { base } from '../lib/config';
+
+interface Props {
+  /** 최신순으로 정렬된 글 목록 */
+  posts: any[];
+  /** true 면 연도 소제목으로 묶고 날짜는 월.일 만 보인다. false 면 날짜 전체를 보인다 */
+  byYear?: boolean;
+  /** 행마다 설명 한 줄을 보일지 */
+  showDesc?: boolean;
+}
+
+const { posts, byYear = true, showDesc = true } = Astro.props;
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+const groups: { year: string; items: any[] }[] = [];
+if (byYear) {
+  for (const post of posts) {
+    const year = String(post.data.date.getUTCFullYear());
+    const last = groups[groups.length - 1];
+    if (last && last.year === year) last.items.push(post);
+    else groups.push({ year, items: [post] });
+  }
+} else {
+  groups.push({ year: '', items: posts });
+}
+
+const dateText = (d: Date) =>
+  byYear
+    ? `${pad(d.getUTCMonth() + 1)}.${pad(d.getUTCDate())}`
+    : `${d.getUTCFullYear()}.${pad(d.getUTCMonth() + 1)}.${pad(d.getUTCDate())}`;
+---
+
+<div class:list={['post-list', { 'post-list--full': !byYear }]}>
+  {groups.map((g) => (
+    <section>
+      {g.year && <h2 class="post-year">{g.year}</h2>}
+      <ul class="m-0 p-0 list-none">
+        {g.items.map((post) => (
+          <li class="post-row" data-post-topics={post.data.topics.join(' ')}>
+            <time class="post-row-date" datetime={post.data.date.toISOString().slice(0, 10)}>{dateText(post.data.date)}</time>
+            <div class="min-w-0">
+              <a href={`${base}/blog/${post.id}`} class="post-row-title">{post.data.title}</a>
+              {showDesc && post.data.description && <p class="post-row-desc">{post.data.description}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</div>
+
+<style is:global>
+  .post-list--full .post-row {
+    grid-template-columns: 6rem minmax(0, 1fr);
+  }
+  @media (max-width: 479px) {
+    .post-list--full .post-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .post-list--full .post-row-date {
+      padding-top: 0;
+    }
+  }
+</style>
