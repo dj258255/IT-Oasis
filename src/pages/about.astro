@@ -1,110 +1,69 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AuthorCard from '../components/AuthorCard.astro';
-import CarouselCard from '../components/CarouselCard.astro';
-import CarouselSection from '../components/CarouselSection.astro';
-import { projects, projectTypeLabels } from '../data/projects';
+import PostList from '../components/PostList.astro';
 import { getPublishedPosts, isCertPost } from '../lib/posts';
-import { translateCategory } from '../lib/utils';
 import { renderRichText } from '../lib/richtext';
-import { base, assetPath, getSiteSettings, getCategoryDisplayKo } from '../lib/config';
+import { base, getSiteSettings } from '../lib/config';
 
 const siteSettings = getSiteSettings();
-const catDisplayKo = getCategoryDisplayKo();
 const aboutHtmlKo = renderRichText(siteSettings.aboutContentKo, base);
 interface CareerItem { title: string; meta?: string; period?: string; details?: string[]; href?: string }
 const career: { label: string; items: CareerItem[] }[] = siteSettings.careerKo || [];
 const resolveHref = (href: string) => (href.startsWith('/') ? `${base}${href}` : href);
 
 const posts = (await getPublishedPosts()).filter((p) => !isCertPost(p)).slice(0, 8);
-const featuredProjects = projects.filter((project) => project.projectType !== 'toy');
 ---
 
-<BaseLayout title="소개 — IT Oasis" wide>
-  <div class="fade-in-up">
-    <div class="mb-10 sm:mb-14 px-1 text-center">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text">소개</span>
-      </h1>
-    </div>
+<BaseLayout title="소개 — IT Oasis">
+  <h1 class="text-[28px] sm:text-[32px] font-bold leading-[1.3] tracking-[-0.02em]">소개</h1>
 
-    <div class="glass-gradient rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10 relative overflow-hidden mb-14 sm:mb-20">
-      <div class="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-accent/10 to-rose/10 blur-3xl pointer-events-none"></div>
-      <div class="absolute -bottom-16 -left-16 w-32 h-32 rounded-full bg-gradient-to-br from-cyan/8 to-primary/8 blur-3xl pointer-events-none"></div>
-
-      <div class="relative prose">
-        <div set:html={aboutHtmlKo} />
-      </div>
-    </div>
-
-    <!-- Career -->
-    {career.length > 0 && (
-      <section class="mb-14 sm:mb-20">
-        <h2 class="text-2xl sm:text-3xl font-bold tracking-tight mb-6 sm:mb-8 px-1">{siteSettings.careerTitleKo || '이력'}</h2>
-        <div class="glass rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-10">
-          {career.map((group) => (
-            <div class="career-group">
-              <h3 class="career-label">{group.label}</h3>
-              <ul class="career-items">
-                {group.items.map((item) => (
-                  <li class="career-item">
-                    <div class="career-head">
-                      <p class="career-title">
-                        {item.href ? (
-                          <a href={resolveHref(item.href)} target={item.href.startsWith('/') ? undefined : '_blank'} rel={item.href.startsWith('/') ? undefined : 'noopener'}>{item.title}</a>
-                        ) : item.title}
-                      </p>
-                      {item.period && <span class="career-period">{item.period}</span>}
-                    </div>
-                    {item.meta && <p class="career-meta">{item.meta}</p>}
-                    {item.details && item.details.length > 0 && (
-                      <ul class="career-details">
-                        {item.details.map((line) => <li>{line}</li>)}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
-    )}
-
-    <!-- Author profile -->
-    <div class="mb-14 sm:mb-20">
-      <AuthorCard />
-    </div>
-
-    <!-- Projects carousel (same as homepage) -->
-    <CarouselSection id="projects" titleKo="프로젝트" viewAllHref={`${base}/projects`} large>
-      {featuredProjects.map((project) => (
-        <CarouselCard
-          href={project.story ? `${base}${project.hub ?? project.story}` : (Array.isArray(project.website) ? project.website[0]?.url : project.website) || (Array.isArray(project.github) ? project.github[0]?.url : project.github) || `${base}/projects`}
-          title={project.title}
-          description={project.description}
-          image={project.image ? assetPath(project.image) : undefined}
-          date={project.date}
-          category={projectTypeLabels[project.projectType]}
-          noOverlay
-        />
-      ))}
-    </CarouselSection>
-
-    <!-- Latest stories carousel (same as homepage) -->
-    <CarouselSection id="stories" titleKo="최신 스토리" viewAllHref={`${base}/blog`} large>
-      {posts.map((post) => (
-        <CarouselCard
-          href={`${base}/blog/${post.id}`}
-          title={post.data.title}
-          description={post.data.description}
-          image={assetPath(post.data.coverImage || '/uploads/banners/default-post-cover.png')}
-          date={post.data.date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })}
-          category={translateCategory(post.data.category, catDisplayKo)}
-        />
-      ))}
-    </CarouselSection>
+  <div class="prose mt-8">
+    <div set:html={aboutHtmlKo} />
   </div>
+
+  {career.length > 0 && (
+    <section class="rule-top">
+      <h2 class="text-[22px] sm:text-[24px] font-bold tracking-[-0.015em] mb-6">{siteSettings.careerTitleKo || '이력'}</h2>
+      {career.map((group) => (
+        <div class="career-group">
+          <h3 class="career-label">{group.label}</h3>
+          <ul class="career-items">
+            {group.items.map((item) => (
+              <li class="career-item">
+                <div class="career-head">
+                  <p class="career-title">
+                    {item.href ? (
+                      <a href={resolveHref(item.href)} target={item.href.startsWith('/') ? undefined : '_blank'} rel={item.href.startsWith('/') ? undefined : 'noopener'}>{item.title}</a>
+                    ) : item.title}
+                  </p>
+                  {item.period && <span class="career-period">{item.period}</span>}
+                </div>
+                {item.meta && <p class="career-meta">{item.meta}</p>}
+                {item.details && item.details.length > 0 && (
+                  <ul class="career-details">
+                    {item.details.map((line) => <li>{line}</li>)}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  )}
+
+  <section class="rule-top">
+    <AuthorCard />
+  </section>
+
+  <section class="mt-12">
+    <div class="flex items-baseline justify-between border-b border-[#d1d9e0] dark:border-[#3d444d] pb-2">
+      <h2 class="text-[14px] font-bold text-gray-500 dark:text-gray-400">최근 글</h2>
+      <a href={`${base}/blog`} class="text-[14px] text-primary hover:underline underline-offset-4">전체 보기</a>
+    </div>
+    <PostList posts={posts} byYear={false} />
+  </section>
 </BaseLayout>
 
 <style>
@@ -112,7 +71,7 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
     display: grid;
     gap: 0.75rem;
     padding: 1.5rem 0;
-    border-top: 1px solid rgb(148 163 184 / 0.2);
+    border-top: 1px solid #d1d9e0;
   }
 
   .career-group:first-child {
@@ -161,7 +120,7 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
 
   .career-title a {
     text-decoration: underline;
-    text-decoration-color: rgb(148 163 184 / 0.5);
+    text-decoration-color: #9aa4ae;
     text-underline-offset: 0.2em;
   }
 
@@ -173,14 +132,14 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
     font-size: 0.8125rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgb(100 116 139);
+    color: #59636e;
     white-space: nowrap;
   }
 
   .career-meta {
     margin-top: 0.125rem;
     font-size: 0.875rem;
-    color: rgb(100 116 139);
+    color: #59636e;
   }
 
   .career-details {
@@ -189,10 +148,10 @@ const featuredProjects = projects.filter((project) => project.projectType !== 't
     list-style: disc;
     font-size: 0.9375rem;
     line-height: 1.7;
-    color: rgb(75 85 99);
+    color: #1f2328;
   }
 
   :global(.dark) .career-period,
-  :global(.dark) .career-meta { color: rgb(148 163 184); }
-  :global(.dark) .career-details { color: rgb(209 213 219); }
+  :global(.dark) .career-meta { color: #8b949e; }
+  :global(.dark) .career-details { color: #d1d7e0; }
 </style>

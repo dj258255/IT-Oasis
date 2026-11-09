@@ -1,357 +1,124 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { projects, projectTypeLabels } from '../data/projects';
-import { base, assetPath } from '../lib/config';
-const visibleTagCount = 6;
+import { base } from '../lib/config';
+
+const linkList = (field: unknown, fallbackLabel: string) =>
+  Array.isArray(field)
+    ? (field as { label: string; url: string }[]).map((l) => ({ label: l.label, url: l.url }))
+    : field
+      ? [{ label: fallbackLabel, url: String(field) }]
+      : [];
 ---
 
-<BaseLayout title="프로젝트 — IT Oasis" wide>
-  <div class="fade-in-up mb-10 sm:mb-14">
-    <div class="px-1 text-center">
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-        <span class="gradient-text">프로젝트</span>
-      </h1>
-    </div>
+<BaseLayout title="프로젝트 — IT Oasis">
+  <h1 class="text-[28px] sm:text-[32px] font-bold leading-[1.3] tracking-[-0.02em]">프로젝트</h1>
+
+  <div class="text-links mt-5" role="group" aria-label="프로젝트 분류">
+    <button type="button" class="is-active" data-project-filter="featured" aria-pressed="true">팀·사이드 프로젝트</button>
+    <button type="button" data-project-filter="team" aria-pressed="false">팀 프로젝트</button>
+    <button type="button" data-project-filter="side" aria-pressed="false">사이드 프로젝트</button>
+    <button type="button" data-project-filter="toy" aria-pressed="false">토이 프로젝트</button>
+    <button type="button" data-project-filter="all" aria-pressed="false">전체</button>
   </div>
 
-  <div class="project-filters" role="group" aria-label="프로젝트 분류">
-    <button type="button" class="project-filter-button is-active" data-project-filter="featured" aria-pressed="true">팀·사이드 프로젝트</button>
-    <button type="button" class="project-filter-button" data-project-filter="team" aria-pressed="false">팀 프로젝트</button>
-    <button type="button" class="project-filter-button" data-project-filter="side" aria-pressed="false">사이드 프로젝트</button>
-    <button type="button" class="project-filter-button" data-project-filter="toy" aria-pressed="false">토이 프로젝트</button>
-    <button type="button" class="project-filter-button" data-project-filter="all" aria-pressed="false">전체</button>
-  </div>
-
-  <!-- Project cards -->
-  <div class="space-y-8 sm:space-y-10 stagger">
-    {projects.map((project) => (
-      <div
-        class:list={['project-card group', project.story && 'project-card--clickable']}
-        role={project.story ? 'link' : undefined}
-        tabindex={project.story ? '0' : undefined}
-        data-story-url={project.story ? `${base}${project.hub ?? project.story}` : undefined}
-        onclick={project.story ? "const link = event.target.closest('a'); if (link) return; const url = this.dataset.storyUrl; if (url) window.location.href = url;" : undefined}
-        onkeydown={project.story ? "if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); const url = this.dataset.storyUrl; if (url) window.location.href = url; }" : undefined}
-        data-project-type={project.projectType}
-        hidden={project.projectType === 'toy'}
-      >
-        <div class="flex flex-col sm:flex-row gap-6 sm:gap-10">
-          <!-- Image -->
-          <div class="sm:w-[300px] md:w-[360px] shrink-0">
-            <div class="aspect-[4/3] rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800/50 dark:to-gray-900/50 relative flex items-center justify-center">
-              {project.image && (
-                <img
-                  src={assetPath(project.image)}
-                  alt=""
-                  class="w-full h-full object-fill transition-transform duration-700 ease-out absolute inset-0 group-hover:scale-105"
-                  loading="lazy"
-                  onerror="this.style.display='none'"
-                />
-              )}
-              <svg class="w-12 h-12 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {/* Hover overlay with action buttons */}
-              <div class="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[8px] opacity-0 group-hover:opacity-100 transition-opacity duration-350 z-10 rounded-[inherit]">
-                <div class="flex flex-col gap-2.5 w-[80%] max-w-[240px]">
-                  {Array.isArray(project.website) ? project.website.map((link) => (
-                    <a href={link.url} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1f2328] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span>{link.label}</span>
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </a>
-                  )) : project.website && (
-                    <a href={project.website} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1f2328] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span>웹사이트 접속하기</span>
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </a>
-                  )}
-                  {Array.isArray(project.github) ? project.github.map((link) => (
-                    <a href={link.url} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1f2328] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span>{link.label}</span>
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </a>
-                  )) : project.github && (
-                    <a href={project.github} target="_blank" rel="noopener noreferrer" class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1f2328] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span>깃허브 보기</span>
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </a>
-                  )}
-                  {project.story && (
-                    <a href={`${base}${project.hub ?? project.story}`} class="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/95 text-[#1f2328] text-[13px] font-semibold no-underline shadow-sm hover:bg-white hover:-translate-y-px hover:shadow-md transition-all duration-200">
-                      <span>스토리 보기</span>
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Content -->
-          <div class="flex-1 flex flex-col justify-center">
-            <h2 class="text-[22px] sm:text-[28px] font-bold tracking-tight mb-4 group-hover:text-primary dark:group-hover:text-primary-light transition-colors duration-300">
-              {project.title}
-            </h2>
-
-            <span class="project-type-label">{projectTypeLabels[project.projectType]}</span>
-
-            <p class="text-[15px] sm:text-[17px] text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-              {project.description}
+  <ul class="mt-6 m-0 p-0 list-none">
+    {projects.map((project) => {
+      const links = [
+        ...(project.story ? [{ label: '스토리', url: `${base}${project.hub ?? project.story}` }] : []),
+        ...linkList(project.website, '웹사이트'),
+        ...linkList(project.github, '깃허브'),
+      ];
+      return (
+        <li class="project-item" data-project-type={project.projectType} hidden={project.projectType === 'toy'}>
+          <h2 class="project-title">
+            {project.story ? <a href={`${base}${project.hub ?? project.story}`}>{project.title}</a> : project.title}
+          </h2>
+          <p class="project-meta">{projectTypeLabels[project.projectType]} &middot; {project.date}</p>
+          <p class="project-desc">{project.description}</p>
+          {project.tags.length > 0 && <p class="project-tags">{project.tags.join(' · ')}</p>}
+          {links.length > 0 && (
+            <p class="project-links">
+              {links.map((l) => <a href={l.url} target={l.url.startsWith('http') ? '_blank' : undefined} rel={l.url.startsWith('http') ? 'noopener noreferrer' : undefined}>{l.label}</a>)}
             </p>
-
-            <!-- Tags -->
-            <div class="flex flex-wrap gap-2 items-center">
-              {project.tags.slice(0, visibleTagCount).map((tag) => (
-                <span class="project-tag">{tag}</span>
-              ))}
-              {project.tags.length > visibleTagCount && (
-                <details
-                  class="project-tags-more"
-                  onclick="event.stopPropagation()"
-                  onkeydown="event.stopPropagation()"
-                >
-                  <summary
-                    class="project-tag project-tags-summary"
-                    aria-label={`${project.title} 기술 태그 전체 보기`}
-                    title="기술 태그 전체 보기"
-                  >
-                    …
-                  </summary>
-                  <div class="project-tags-tooltip">
-                    <span class="project-tags-tooltip-title">전체 기술</span>
-                    <div class="project-tags-tooltip-list">
-                      {project.tags.map((tag) => (
-                        <span class="project-tag project-tag--tooltip">{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                </details>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-
+          )}
+        </li>
+      );
+    })}
+  </ul>
 </BaseLayout>
 
 <script>
-  const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-project-filter]'));
-  const projectCards = Array.from(document.querySelectorAll<HTMLElement>('[data-project-type]'));
+  function initProjectFilter() {
+    const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-project-filter]'));
+    const items = Array.from(document.querySelectorAll<HTMLElement>('[data-project-type]'));
+    if (filterButtons.length === 0) return;
 
-  function applyProjectFilter(filter: string) {
-    projectCards.forEach((card) => {
-      const type = card.dataset.projectType;
-      card.hidden = filter === 'all'
-        ? false
-        : filter === 'featured'
-          ? type === 'toy'
-          : type !== filter;
-    });
+    function apply(filter: string) {
+      items.forEach((item) => {
+        const type = item.dataset.projectType;
+        item.hidden = filter === 'all' ? false : filter === 'featured' ? type === 'toy' : type !== filter;
+      });
+      filterButtons.forEach((button) => {
+        const active = button.dataset.projectFilter === filter;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+    }
 
+    const ac = new AbortController();
+    (window as any).__projectFilterAC?.abort();
+    (window as any).__projectFilterAC = ac;
     filterButtons.forEach((button) => {
-      const active = button.dataset.projectFilter === filter;
-      button.classList.toggle('is-active', active);
-      button.setAttribute('aria-pressed', String(active));
+      button.addEventListener('click', () => apply(button.dataset.projectFilter || 'featured'), { signal: ac.signal });
     });
   }
 
-  filterButtons.forEach((button) => {
-    button.addEventListener('click', () => applyProjectFilter(button.dataset.projectFilter || 'featured'));
-  });
+  initProjectFilter();
+  document.addEventListener('astro:page-load', initProjectFilter);
 </script>
 
 <style>
-  .project-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.55rem;
-    margin: 0 0 2.25rem;
+  .project-item {
+    padding: 1.4rem 0;
+    border-bottom: 1px solid #d1d9e0;
   }
-
-  .project-filter-button {
-    border: 1px solid #d1d9e0;
-    border-radius: 999px;
-    background: #ffffff;
-    color: #59636e;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 0.55rem 1rem;
-    transition: border-color 0.2s ease, color 0.2s ease;
-  }
-
-  .project-filter-button:hover {
-    border-color: #9aa5b1;
+  :global(.dark) .project-item { border-bottom-color: #3d444d; }
+  .project-item[hidden] { display: none; }
+  .project-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.4;
     color: #1f2328;
   }
-
-  .project-filter-button.is-active {
-    background: #1f2328;
-    border-color: #1f2328;
-    color: #ffffff;
+  :global(.dark) .project-title { color: #f0f6fc; }
+  .project-title a { color: inherit; text-decoration: none; }
+  .project-title a:hover { color: #1a6aa0; text-decoration: underline; text-underline-offset: 3px; }
+  :global(.dark) .project-title a:hover { color: #8db8d0; }
+  .project-meta, .project-tags {
+    margin: 0.15rem 0 0;
+    font-size: 13.5px;
+    color: #59636e;
   }
-
-  :global(.dark) .project-filter-button {
-    background: #0d1117;
-    border-color: #3d444d;
-    color: #9198a1;
+  :global(.dark) .project-meta, :global(.dark) .project-tags { color: #8b949e; }
+  .project-desc {
+    margin: 0.6rem 0 0;
+    font-size: 16px;
+    line-height: 1.7;
   }
-
-  :global(.dark) .project-filter-button:hover {
-    border-color: #656c76;
-    color: #e6edf3;
-  }
-
-  :global(.dark) .project-filter-button.is-active {
-    background: #e6edf3;
-    border-color: #e6edf3;
-    color: #0d1117;
-  }
-
-
-  .project-type-label {
-    display: inline-block;
-    margin: -0.6rem 0 1rem;
-    color: #1a6aa0;
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  :global(.dark) .project-type-label {
-    color: #9dc7e3;
-  }
-
-  .project-card[hidden] {
-    display: none;
-  }
-
-  .project-card {
-    padding: 0 !important;
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-
-  .project-card--clickable {
-    cursor: pointer;
-  }
-
-  .project-card:hover {
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-
-  /* Project tech tags */
-  .project-tag {
-    display: inline-block;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    padding: 0.4rem 0.9rem;
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.04);
-    color: #4b5563;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all 0.25s ease;
-  }
-
-  :global(.dark) .project-tag {
-    background: rgba(255, 255, 255, 0.06);
-    color: #d1d5db;
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .project-card:hover .project-tag {
-    background: rgba(100, 160, 200, 0.07);
-    color: #1a6aa0;
-    border-color: rgba(100, 160, 200, 0.12);
-  }
-
-  :global(.dark) .project-card:hover .project-tag {
-    background: rgba(120, 170, 210, 0.08);
-    color: #9ab0c8;
-    border-color: rgba(120, 170, 210, 0.12);
-  }
-
-  .project-tags-more {
-    position: relative;
-    z-index: 30;
-  }
-
-  .project-tags-summary {
-    min-width: 2.75rem;
-    text-align: center;
-    cursor: pointer;
-    list-style: none;
-    user-select: none;
-  }
-
-  .project-tags-summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .project-tags-tooltip {
-    position: absolute;
-    left: 0;
-    bottom: calc(100% + 0.75rem);
-    width: min(420px, calc(100vw - 2rem));
-    max-height: 250px;
-    overflow-y: auto;
-    padding: 0.9rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.97);
-    border: 1px solid rgba(15, 40, 80, 0.1);
-    box-shadow: 0 18px 45px rgba(15, 40, 80, 0.16);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(6px);
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
-  }
-
-  .project-tags-more:hover .project-tags-tooltip,
-  .project-tags-more:focus-within .project-tags-tooltip,
-  .project-tags-more[open] .project-tags-tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
-
-  :global(.dark) .project-tags-tooltip {
-    background: rgba(22, 28, 38, 0.97);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.38);
-  }
-
-  .project-tags-tooltip-title {
-    display: block;
-    margin: 0 0 0.65rem 0.1rem;
-    color: #6b7280;
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  :global(.dark) .project-tags-tooltip-title {
-    color: #9ca3af;
-  }
-
-  .project-tags-tooltip-list {
+  .project-tags { margin-top: 0.5rem; }
+  .project-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.25rem 1rem;
+    margin: 0.6rem 0 0;
+    font-size: 14.5px;
   }
-
-  .project-tag--tooltip {
-    padding: 0.3rem 0.65rem;
-    font-size: 11px;
+  .project-links a {
+    color: #1a6aa0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
+  :global(.dark) .project-links a { color: #8db8d0; }
 </style>
