@@ -1,5 +1,5 @@
 ---
-title: '[DE] 태스크 하나가 Pod 하나가 될 때: 기동 시간을 구간으로 나누기'
+title: '[DE] 태스크마다 Pod를 띄우는 비용'
 description: KubernetesExecutor와 Argo Workflows는 태스크마다 Pod를 띄웁니다. 쿠버네티스의 공식 Pod 기동 SLO는 p99 5초인데, 이 숫자는 이미지 pull과 init 컨테이너를 뺀 값입니다. Pod가 생성되어 컨테이너가 시작하기까지를 condition, 이벤트, kubelet 메트릭으로 나누는 방법과, 이미지 pull, Pod 생성 호출, init 컨테이너가 각각 어디서 시간을 쓰는지, 짧은 태스크가 많을 때의 대안을 정리합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -47,9 +47,9 @@ seriesOrder: 8
 
 ([CKA 4편](/blog/cert/cka/cka-01b-core-objects-and-flow), [k8s-linux 3편](/blog/theory/systems/k8s-linux-02-namespaces-pause))
 
-## 2. Pod가 컨테이너를 시작하기까지
+## 2. Pod는 컨테이너를 시작하기까지 어떤 구간을 거칠까?
 
-### 2-1. 구간과 관측 지점
+### 2-1. 구간별 시간은 어디서 잴까?
 
 ```
 Pod 생성 ─→ 스케줄링 ─→ 샌드박스·네트워크·볼륨 ─→ 이미지 pull ─→ init 컨테이너 ─→ 컨테이너 시작
@@ -90,22 +90,22 @@ kubectl get events --field-selector involvedObject.name=<이름> | grep -E 'Pull
 
 total과 SLI 메트릭의 차이가 pull과 init에 쓴 시간입니다.
 
-### 2-2. 공식 SLO 5초가 빼놓은 것
+### 2-2. 공식 SLO 5초에서 빠진 구간은 무엇일까?
 
 쿠버네티스 sig-scalability의 Pod 기동 지연 SLO는 이렇습니다.
 
 - SLI: 스케줄 가능한 stateless Pod의 기동 지연. 이미지 pull과 init 컨테이너 실행 시간을 빼고 Pod 생성 시각부터 모든 컨테이너가 시작했다고 보고되어 watch로 관측될 때까지.
 - SLO: 기본 설치에서 클러스터별 하루 기준 99번째 백분위 5초 이하.
 
-SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은가"라는 목표입니다. 99번째 백분위(p99)는 하루 동안 뜬 Pod를 기동 시간 순으로 줄 세웠을 때 99% 지점의 값이라 Pod 100개 가운데 99개가 5초 안에 시작했다는 뜻입니다(백분위는 9편). 아래 그림은 이 SLI가 2-1절의 구간 가운데 어디를 세고 어디를 빼는지 보여 줍니다.
+SLI는 "무엇을 재는지"이고 SLO는 "그 값이 어디까지면 괜찮은지"라는 목표입니다. 99번째 백분위(p99)는 하루 동안 뜬 Pod를 기동 시간 순으로 줄 세웠을 때 99% 지점의 값이라 Pod 100개 가운데 99개가 5초 안에 시작했다는 뜻입니다(백분위는 9편). 아래 그림은 이 SLI가 2-1절의 구간 가운데 어디를 세고 어디를 빼는지 보여 줍니다.
 
 ![Pod 생성부터 모든 컨테이너 시작까지를 스케줄링, 샌드박스, 이미지 pull, init 컨테이너, 컨테이너 시작 다섯 구간으로 나눈 막대. 스케줄링, 샌드박스, 컨테이너 시작은 파란색으로 공식 SLO가 세는 구간이고 이미지 pull과 init 컨테이너는 빨간색으로 SLO에서 빠지는 구간이다. 배치 태스크가 실제로 기다리는 시간은 다섯 구간 전체다](/uploads/data/de-07-task-per-pod-cost/pod-startup-segments.svg)
 
 이 숫자를 보고 "태스크 하나에 최대 5초"로 읽으면 안 됩니다. 배치 태스크는 이미지 pull과 init 컨테이너까지 다 기다립니다. 처음 보는 노드에서 큰 이미지를 받는 경우가 SLO에서 빠진 구간입니다.
 
-## 3. 이미지 pull
+## 3. 이미지 pull에는 시간이 얼마나 들까?
 
-### 3-1. pull 정책과 순서
+### 3-1. pull 정책과 순서는 어떻게 정해질까?
 
 먼저 이미지 이름의 표기 두 개를 구분해 둡니다. `python:3.12`의 `3.12`는 태그이고 태그는 나중에 다른 이미지를 가리키도록 바뀔 수 있습니다. `python@sha256:…`처럼 쓰는 digest는 이미지 내용으로 만든 해시라 절대 바뀌지 않습니다. 그래서 pull 정책도 태그냐 digest냐에 따라 달라집니다.
 
@@ -120,9 +120,9 @@ SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은�
 
 노드에 이미지를 미리 받아 두는 방법(pre-pull)도 문서에 나옵니다. 다만 노드 구성을 직접 통제할 수 있을 때만 쓸 만하다는 단서가 붙습니다. 클라우드가 노드를 자동으로 교체하면 미리 받아 둔 이미지가 사라집니다.
 
-### 3-2. lazy pulling
+### 3-2. 이미지를 다 받기 전에 시작할 수 있을까?
 
-이미지를 다 받기 전에 컨테이너를 시작하고 필요한 파일만 먼저 받는 방식입니다.
+lazy pulling은 이미지를 다 받기 전에 컨테이너를 시작하고 필요한 파일만 먼저 받는 방식입니다.
 
 이게 통하는 이유는 컨테이너가 시작할 때 이미지 파일 대부분을 읽지 않는다는 데 있습니다. `python:3.12` 이미지에는 컴파일러, 문서, 쓰지 않는 표준 라이브러리 모듈이 다 들어 있지만 `print("hello")`를 실행하는 데 필요한 파일은 그중 일부입니다. 2016년 FAST 학회에 실린 Slacker 논문은 컨테이너 시작 시간의 76%가 이미지를 받는 데 쓰이는데 받은 데이터 가운데 실제로 읽히는 것은 6.4%뿐이라고 측정했습니다([Harter 외, Slacker](https://www.usenix.org/conference/fast16/technical-sessions/presentation/harter)). 오래된 측정이라 지금 숫자는 다를 수 있지만 "다 받고 조금 읽는다"는 구조는 그대로입니다. 그래서 읽는 순간에 그 파일만 받아 오자는 것이 lazy pulling입니다.
 
@@ -134,9 +134,9 @@ SLI는 "무엇을 재는가"이고 SLO는 "그 값이 어디까지면 괜찮은�
 
 Grab은 2026년 글에서 Airflow와 Spark Connect 이미지에 SOCI를 적용한 결과를 정리했습니다. 캐시가 없는 새 노드에서 이미지 pull이 약 4배 빨라졌고 SOCI 설정(동시 다운로드, 압축 해제 병렬도, 청크 크기)을 조정한 뒤 새 노드의 다운로드 시간이 60초에서 24초로 줄었습니다. 운영 환경 P95 기동 시간 개선 폭은 본문에서 30~40%, 결론에서 29~34%로 글 안에서 서로 다르게 적혀 있습니다. 같은 글에서 eStargz는 Airflow 애플리케이션 시작 시간이 25초로 overlayFS와 SOCI의 5초보다 길었습니다. pull이 빨라져도 실행 중에 파일을 받아 오면 시작이 늦어질 수 있다는 예입니다.
 
-## 4. Airflow KubernetesExecutor
+## 4. Airflow KubernetesExecutor는 Pod를 어떻게 만들까?
 
-### 4-1. Pod 생성 호출도 구간이다
+### 4-1. Pod 생성 호출에서도 기다리게 될까?
 
 KubernetesExecutor는 태스크마다 워커 Pod를 하나 띄우고 태스크가 끝나면 Pod를 지웁니다(`delete_worker_pods` 기본 True). Pod를 만드는 요청은 스케줄러가 보냅니다. cncf-kubernetes provider 10.24.0 기준으로 확인한 동작입니다.
 
@@ -146,7 +146,7 @@ KubernetesExecutor는 태스크마다 워커 Pod를 하나 띄우고 태스크�
 
 배치 크기 1이 무슨 뜻인지 숫자로 보면 이렇습니다. 태스크 300개가 한꺼번에 `queued`가 되면 스케줄러는 루프 한 번에 하나씩 Pod 생성을 요청하니 300번째 태스크의 Pod는 루프를 300번 돈 뒤에야 생성 요청이 나갑니다. 2절의 구간이 시작되기도 전에 Pod 생성 요청을 기다리는 줄이 생깁니다. 루프 한 번이 몇 초인지는 환경마다 달라서 이 줄이 실제로 몇 초가 되는지는 직접 재 봐야 합니다. `kubernetes_executor.pod_creation_batch_duration` 메트릭으로 볼 수 있습니다.
 
-### 4-2. KubernetesPodOperator를 KubernetesExecutor 위에서 쓰면
+### 4-2. KubernetesPodOperator를 executor 위에서 쓰면 어떻게 될까?
 
 KubernetesPodOperator(KPO)는 쿠버네티스 API로 Pod를 하나 띄워 그 안에서 지정한 이미지를 실행하는 오퍼레이터입니다. KubernetesExecutor가 없어도 쓸 수 있습니다. 둘을 같이 쓰면 이렇게 됩니다.
 
@@ -159,7 +159,7 @@ LINE 엔지니어링 블로그(2021, Airflow 1.10.12)가 이 구조를 명시했
 
 같은 글은 특정 노드에 Pod 생성이 몰려 워커 Pod와 태스크 Pod가 모두 늦어진 경험도 적었습니다. 원인은 워커 Pod에 CPU와 메모리 요청을 지정하지 않아 스케줄러가 노드에 Pod를 고르게 나누지 못한 것이었습니다.
 
-## 5. Argo Workflows
+## 5. Argo Workflows는 Pod마다 무엇을 더 띄울까?
 
 Argo는 단계 하나나 DAG 태스크 하나마다 Pod를 하나 만들고 그 Pod에 컨테이너가 셋 들어갑니다(3편).
 
@@ -173,7 +173,7 @@ v4.1의 init-less Pod 문서는 "init 컨테이너는 모든 일반 컨테이너
 
 Argo 컨트롤러는 기본적으로 끝난 Pod를 지우지 않습니다. 비용 최적화 문서에 따르면 컨트롤러의 CPU와 메모리는 Pod 수에 비례해 늘어나고 그래서 `podGC` 설정을 권합니다.
 
-## 6. 짧은 태스크가 많을 때
+## 6. 짧은 태스크가 많으면 어떻게 할까?
 
 | 방법 | 내용 | 대가 |
 |---|---|---|
@@ -254,7 +254,7 @@ SLO는 기본 설치에서 pull과 init을 뺀 값이고 stateless Pod 기준입
 - LINE Engineering, [Kubernetes를 이용한 효율적인 데이터 엔지니어링(Airflow on Kubernetes VS Airflow Kubernetes Executor) - 2](https://engineering.linecorp.com/ko/blog/data-engineering-with-airflow-k8s-2/) (2021)
 
 이 시리즈
-- [3편 오케스트레이터는 무엇을 맡나](/blog/data/orchestration/de-02-what-orchestrator-does)
+- [3편 오케스트레이터가 맡는 일](/blog/data/orchestration/de-02-what-orchestrator-does)
 - 실습 코드: [labs/de-study/ch07](https://github.com/dj258255/IT-Oasis/tree/main/labs/de-study/ch07)
 
 중국과 국내 빅테크 사례

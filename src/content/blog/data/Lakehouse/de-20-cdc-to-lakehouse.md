@@ -1,5 +1,5 @@
 ---
-title: '[DE] CDC로 레이크하우스 채우기: 조회는 상태를 보고 로그는 변경을 본다'
+title: '[DE] CDC로 레이크하우스 채우기'
 description: 원천 DB의 변경을 레이크하우스로 옮기는 방법은 updated_at을 주기적으로 조회하는 방식과 DB의 변경 로그를 읽는 방식으로 나뉩니다. 조회 방식은 삭제와 중간 상태를 놓친다는 것을 SQLite로 재현하고 Debezium이 binlog와 WAL을 읽는 구조, 초기 스냅샷, at-least-once 보장, PostgreSQL replication slot이 디스크를 채우는 경로, Iceberg에 upsert로 반영할 때의 조건을 공식 문서와 사례로 정리합니다.
 date: 2026-10-19T00:00:00.000Z
 tags:
@@ -29,17 +29,17 @@ seriesOrder: 21
 
 ---
 
-## 1. 원천 DB에서 레이크하우스로
+## 1. 원천 DB의 변경을 어떻게 옮길까?
 
-2편의 수명주기에서 수집 단계에 해당하는 이야기입니다. 주문 서비스의 DB(MySQL, PostgreSQL)에 있는 주문 테이블을 분석용 Iceberg 테이블로 옮긴다고 해 봅시다. 하루 한 번 통째로 복사하면 간단하지만 테이블이 크면 오래 걸리고 하루 동안의 변화는 보이지 않습니다. 바뀐 것만 옮기는 방법이 CDC(Change Data Capture)이고 바뀐 것을 알아내는 방법이 두 가지입니다.
+서비스 DB(MySQL, PostgreSQL)에 있는 테이블을 분석용 Iceberg 테이블로 옮긴다고 해 봅시다. 이 글은 주문 테이블을 예로 쓰지만 회원 테이블이나 기기 상태 테이블이어도 같은 문제가 생깁니다. 하루 한 번 통째로 복사하면 간단하지만 테이블이 크면 오래 걸리고 하루 동안의 변화는 보이지 않습니다. 바뀐 것만 옮기는 방법이 CDC(Change Data Capture)이고 바뀐 것을 알아내는 방법이 두 가지입니다.
 
 비유하면 이렇습니다. 하나는 10초마다 주문 테이블을 들여다보며 "지난번 이후 바뀐 행 있어?" 하고 묻는 방식입니다(조회 기반). 다른 하나는 DB가 스스로 쓰는 변경 일지를 처음부터 차례로 읽는 방식입니다(로그 기반). 묻는 방식은 물어보는 순간의 모습만 보고 일지를 읽는 방식은 그사이 일어난 일을 전부 봅니다. 이 차이가 2절의 재현에서 그대로 드러나고 3절부터는 일지를 읽는 쪽의 세부(일지의 종류, 처음 시작할 때의 문제, 중복, 디스크)로 내려갑니다.
 
 이 블로그에는 프로젝트에서 CDC를 붙인 글이 이미 있습니다. [WikiEngine의 CDC 이벤트 동기화](/blog/project/wikiengine/cdc), [CDC 지연과 커넥터 기본값](/blog/project/be-commerce/be-commerce-ch35-cdc-default-was-slow), [RUNNING인 채 5분 동안 아무것도 보내지 않은 커넥터](/blog/project/be-commerce/be-commerce-ch49-cdc-running-not-flowing)가 그 경험입니다. 이 글은 방식 자체를 비교합니다.
 
-## 2. 조회 기반 CDC가 놓치는 것
+## 2. 조회 기반 CDC는 무엇을 놓칠까?
 
-### 2-1. 재현
+### 2-1. 같은 변경을 두 방식에 주면 무엇이 다를까?
 
 SQLite 테이블 하나에 주문 변경을 일으키고 두 방식을 나란히 돌렸습니다([labs/de-study/ch20](https://github.com/dj258255/IT-Oasis/tree/main/labs/de-study/ch20)의 `cdc_poll_vs_log.py`).
 
@@ -86,7 +86,7 @@ rows = db.execute("SELECT id, status, updated_at FROM orders WHERE updated_at > 
 - 조회 사이에 생겼다 사라진 행: 주문 2는 한 번도 보지 못했습니다.
 - 삭제: 주문 3은 pending으로 받아 갔는데 31초의 삭제는 받지 못했습니다. 레이크하우스에는 주문 3이 계속 남습니다.
 
-### 2-2. 문서와 사례
+### 2-2. 다른 곳에서도 같은 문제가 보고됐을까?
 
 Debezium 블로그의 "Five Advantages of Log-Based Change Data Capture"(Gunnar Morling, 2018)가 같은 세 가지를 짚습니다. 조회 방식은 마지막 조회 이후 삭제된 레코드를 알 수 없고 두 조회 사이의 중간 변경을 놓칠 수 있으며 자주 조회하면 그 쿼리가 원천 DB에 부하를 줍니다.
 
@@ -94,16 +94,16 @@ Debezium 블로그의 "Five Advantages of Log-Based Change Data Capture"(Gunnar 
 
 삭제를 잡으려고 원천 테이블에 삭제 표시 컬럼(soft delete)을 두는 방법도 있지만 원천 서비스의 코드를 바꿔야 하고 중간 상태 문제는 그대로입니다.
 
-## 3. 로그 기반 CDC: Debezium
+## 3. 로그 기반 CDC는 어떻게 동작할까?
 
-### 3-1. 원천 DB별 준비
+### 3-1. 원천 DB마다 무엇을 켜야 할까?
 
 DB는 장애 복구와 복제를 위해 모든 변경을 로그로 남깁니다. Debezium은 이 로그를 복제본처럼 읽습니다.
 
 두 로그가 무엇인지 먼저 짚어 둡니다.
 
-- **PostgreSQL WAL(Write-Ahead Log)**: 이름 그대로 "먼저 쓰는 로그"입니다. 주문 행을 고칠 때 PostgreSQL은 데이터 파일을 고치기 전에 "어떤 행을 어떻게 바꿨다"를 WAL에 먼저 적습니다. 서버가 갑자기 꺼져도 다시 켜질 때 WAL을 읽어 고치던 작업을 마저 반영할 수 있고([PostgreSQL, Write-Ahead Logging](https://www.postgresql.org/docs/current/wal-intro.html)) 복제본 서버도 이 WAL을 받아 똑같이 따라 합니다. WAL의 위치는 LSN(Log Sequence Number)이라는 계속 커지는 번호로 가리킵니다. 4절에서 이 번호가 다시 나옵니다.
-- **MySQL binlog**: MySQL이 복제와 특정 시점 복구를 위해 남기는 변경 기록입니다. 복제본은 원본의 binlog를 받아 같은 변경을 적용합니다.
+- PostgreSQL WAL(Write-Ahead Log): 이름 그대로 "먼저 쓰는 로그"입니다. 주문 행을 고칠 때 PostgreSQL은 데이터 파일을 고치기 전에 "어떤 행을 어떻게 바꿨다"를 WAL에 먼저 적습니다. 서버가 갑자기 꺼져도 다시 켜질 때 WAL을 읽어 고치던 작업을 마저 반영할 수 있고([PostgreSQL, Write-Ahead Logging](https://www.postgresql.org/docs/current/wal-intro.html)) 복제본 서버도 이 WAL을 받아 똑같이 따라 합니다. WAL의 위치는 LSN(Log Sequence Number)이라는 계속 커지는 번호로 가리킵니다. 4절에서 이 번호가 다시 나옵니다.
+- MySQL binlog: MySQL이 복제와 특정 시점 복구를 위해 남기는 변경 기록입니다. 복제본은 원본의 binlog를 받아 같은 변경을 적용합니다.
 
 Debezium은 "복제본인 척하고 이 일지를 받아 와서 Kafka 메시지로 바꾸는" 일을 합니다.
 
@@ -116,7 +116,7 @@ MySQL 쪽 두 설정이 왜 필요한지는 예를 보면 바로 보입니다. `
 
 PostgreSQL에서는 `REPLICA IDENTITY`가 기본값이면 update 이벤트의 `before`에 기본 키만 들어갑니다. 변경 전 값 전체가 필요하면 테이블을 `REPLICA IDENTITY FULL`로 바꿔야 합니다. 주문 1을 pending에서 paid로 바꾼 이벤트라면 기본값에서는 `before`가 `{"id": 1}`뿐이라 "원래 pending이었다"는 사실을 이벤트만으로는 모릅니다. FULL이면 `before`에 `{"id": 1, "status": "pending", ...}`이 다 들어옵니다. 그 대신 WAL에 행 전체를 한 번 더 적으니 WAL이 커집니다.
 
-### 3-2. 변경 이벤트
+### 3-2. 변경 이벤트는 어떻게 생겼을까?
 
 ```json
 {
@@ -147,7 +147,7 @@ PostgreSQL에서는 `REPLICA IDENTITY`가 기본값이면 update 이벤트의 `b
 
 log compaction은 키마다 마지막 값만 남기고 앞의 메시지를 지우는 Kafka 기능입니다. 마지막 값이 null(tombstone)이면 일정 시간 뒤 그 키 자체를 지웁니다. 그래서 compaction을 켠 토픽을 처음부터 읽는 새 소비자는 "지금 살아 있는 주문"만 보게 되고 지워진 주문 3은 보이지 않습니다. tombstone 없이 `op:"d"` 메시지만 있었다면 그 메시지가 마지막 값으로 영원히 남습니다.
 
-### 3-3. 초기 스냅샷
+### 3-3. 처음 시작할 때 과거 데이터는 어떻게 가져올까?
 
 로그는 과거 전부를 담고 있지 않습니다. 그래서 처음 시작할 때 테이블 전체를 한 번 읽고(스냅샷) 그 뒤부터 로그를 따라갑니다. `snapshot.mode`로 정합니다. 기본값은 `initial`이고 스냅샷 없이 지금부터의 변경만 읽는 `no_data` 등이 있습니다.
 
@@ -165,7 +165,7 @@ Debezium은 이후 incremental snapshot을 넣었습니다(DDD-3). Netflix의 DB
 
 주문 7은 청크로 읽은 값이 옛 값일 수 있으니 버리고 로그의 최신 변경을 믿습니다. 청크를 읽은 정확한 시점은 몰라도 "lw와 hw 사이 어딘가"라는 것은 확실하니 그 구간에 변경이 있던 행만 빼면 순서가 꼬이지 않습니다([DBLog 논문](https://arxiv.org/abs/2010.12597)).
 
-### 3-4. 전달 보장
+### 3-4. 이벤트가 중복되면 어떻게 될까?
 
 Debezium 문서 기준으로 Debezium은 at-least-once 전달을 보장하고 exactly-once를 위한 내부 중복 제거 계층은 구현하지 않습니다. PostgreSQL 커넥터 문서는 두 경우를 듭니다. Kafka Connect 프로세스가 갑자기 죽으면 태스크가 마지막으로 기록된 오프셋부터 다시 시작해 직전에 보낸 이벤트를 또 보낼 수 있습니다. 신호로 띄운 블로킹 스냅샷이 끝난 직후에는 스냅샷이 이미 담은 레코드와 겹치는 이벤트를 내보낼 수 있습니다.
 
@@ -181,7 +181,7 @@ Kafka Connect 3.3 이상을 분산 모드로 띄우고 worker와 커넥터에 ex
 
 받는 쪽에는 paid, shipped, paid, shipped가 옵니다. append로 쌓으면 주문 1의 행이 네 개가 되지만 기본 키로 upsert하면 마지막 shipped가 남아 한 번만 받은 것과 결과가 같습니다. 다만 순서대로 와야 마지막이 맞으니 같은 키가 같은 파티션에 순서대로 들어간다는 3-2절의 성질이 여기서 같이 쓰입니다.
 
-## 4. replication slot이 디스크를 채우는 경로
+## 4. replication slot은 어떻게 디스크를 채울까?
 
 PostgreSQL의 replication slot은 소비자가 확인한 위치를 기억하고 그 이후의 WAL을 지우지 않습니다. 소비자가 멈춰도 마찬가지입니다.
 
@@ -213,7 +213,7 @@ PostgreSQL 문서의 문장입니다.
 
 소비자가 살아 있는데도 WAL이 쌓이는 경우가 있습니다. Debezium 문서는 추적하는 테이블의 변경은 드문데 DB 전체 변경이 많으면 커넥터가 확인할 위치를 앞으로 옮길 이벤트가 없어 이미 처리한 WAL이 남는다고 설명하고 `heartbeat.interval.ms`와 `heartbeat.action.query`를 해결책으로 듭니다.
 
-쇼핑몰로 바꾸면 이런 상황입니다. Debezium은 주문 테이블만 추적하는데 같은 서버의 접속 로그 테이블에 초당 수천 건이 쌓입니다. WAL은 서버 전체가 함께 쓰니 접속 로그의 변경도 전부 WAL에 들어갑니다. 새벽에 주문이 몇 시간 동안 하나도 없으면 Debezium은 WAL을 읽기는 하지만 내보낼 주문 이벤트가 없어 "여기까지 처리했다"는 확인을 보낼 계기가 없습니다. 그동안 쌓인 접속 로그 WAL이 고스란히 남습니다. Morling은 PostgreSQL 인스턴스 하나에 DB가 여럿이고 그중 조용한 DB에 slot이 있는 경우도 같은 모양이라고 설명합니다. WAL은 인스턴스 전체가 공유하는데 slot은 DB 단위이기 때문입니다.
+예를 들어 Debezium은 주문 테이블만 추적하는데 같은 서버의 접속 로그 테이블에 초당 수천 건이 쌓이는 상황입니다. WAL은 서버 전체가 함께 쓰니 접속 로그의 변경도 전부 WAL에 들어갑니다. 새벽에 주문이 몇 시간 동안 하나도 없으면 Debezium은 WAL을 읽기는 하지만 내보낼 주문 이벤트가 없어 "여기까지 처리했다"는 확인을 보낼 계기가 없습니다. 그동안 쌓인 접속 로그 WAL이 고스란히 남습니다. Morling은 PostgreSQL 인스턴스 하나에 DB가 여럿이고 그중 조용한 DB에 slot이 있는 경우도 같은 모양이라고 설명합니다. WAL은 인스턴스 전체가 공유하는데 slot은 DB 단위이기 때문입니다.
 
 heartbeat는 일부러 작은 변경을 주기적으로 만들어 확인 위치를 앞으로 미는 방법입니다. PostgreSQL 14부터는 테이블을 만들지 않고 WAL에 메시지만 남기는 `pg_logical_emit_message`를 heartbeat로 쓸 수 있습니다(함수 자체는 9.6부터 있었고 pgoutput이 이 메시지를 소비자에게 넘겨주는 것이 14부터입니다).
 
@@ -224,9 +224,9 @@ heartbeat.action.query=SELECT pg_logical_emit_message(false, 'heartbeat', now():
 
 1분마다 WAL에 작은 메시지를 하나 쓰고 Debezium이 그것을 읽으면서 확인 위치가 함께 전진합니다. 이 방식은 커넥터 계정에 그 함수의 실행 권한이 있어야 합니다([Morling](https://www.morling.dev/blog/mastering-postgres-replication-slots/)). Zalando의 2025년 글은 활동이 적은 DB에서 테이블 변경이 없으면 slot이 앞으로 가지 않아 WAL이 디스크가 바닥날 때까지 쌓였고 heartbeat를 설정했는데도 이것이 가장 큰 운영 문제였다고 적었습니다. 이 문제를 Debezium에 고쳐 넣었고 3.4.0에 `lsn.flush.mode=connector_and_driver`로 들어갔습니다.
 
-## 5. 레이크하우스에 반영하기
+## 5. 변경 이벤트를 Iceberg에 어떻게 반영할까?
 
-### 5-1. upsert
+### 5-1. 이벤트를 어떻게 upsert할까?
 
 변경 이벤트를 Iceberg 테이블에 반영하는 것은 기본 키로 upsert하는 일입니다. 생성과 수정은 그 키의 행을 새 값으로 바꾸고 삭제는 그 키의 행을 지웁니다.
 
@@ -266,13 +266,13 @@ Flink upsert 쪽은 같은 일을 Iceberg의 삭제 파일로 합니다. 주문 
 | 1 | 데이터 파일 F1: `(1, pending)` | pending |
 | 2 | 데이터 파일 F2: `(1, shipped)`, equality delete D1: `id = 1` | D1이 F1의 pending을 가리고 F2의 shipped만 보임 |
 
-D1은 시퀀스 번호가 더 작은 F1에만 적용되고 같은 커밋의 F2에는 적용되지 않습니다([19편 5절](/blog/data/lakehouse/de-18-iceberg-table-format#5-행-단위-삭제)의 규칙). 쓰는 쪽은 F1을 열어 볼 필요가 없어 빠르지만 읽는 쪽은 F1을 읽을 때마다 D1과 맞춰 봐야 합니다. 이런 삭제 파일이 커밋마다 쌓이는 것이 다음 절의 부산물입니다([RisingWave](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)의 설명을 주문 예로 다시 썼습니다).
+D1은 시퀀스 번호가 더 작은 F1에만 적용되고 같은 커밋의 F2에는 적용되지 않습니다([19편 5절](/blog/data/lakehouse/de-18-iceberg-table-format#5-행-하나를-어떻게-지울까)의 규칙). 쓰는 쪽은 F1을 열어 볼 필요가 없어 빠르지만 읽는 쪽은 F1을 읽을 때마다 D1과 맞춰 봐야 합니다. 이런 삭제 파일이 커밋마다 쌓이는 것이 다음 절의 부산물입니다([RisingWave](https://risingwave.com/blog/cdc-to-iceberg-upsert-delete/)의 설명을 주문 예로 다시 썼습니다).
 
-### 5-2. 스트리밍 반영의 부산물
+### 5-2. 스트리밍 반영은 무엇을 남길까?
 
 Flink upsert는 쓸 때마다 이전 값을 지우는 equality delete 파일을 만듭니다. Iceberg 유지보수 문서는 스트리밍 쿼리가 작은 데이터 파일을 만들어 합쳐야 하고 커밋이 잦은 테이블은 메타데이터 파일을 주기적으로 정리해야 한다고 적습니다. 반영이 잘 돌아가는 동안에도 읽기는 점점 느려질 수 있어서 20편의 컴팩션과 스냅샷 만료가 CDC 파이프라인의 일부가 됩니다.
 
-## 6. outbox 패턴
+## 6. outbox 패턴은 무엇을 해결할까?
 
 원천 서비스가 DB 테이블 대신 이벤트를 내보내고 싶을 때도 같은 구조를 씁니다. Debezium 문서는 outbox 패턴을 서비스의 내부 상태(DB)와 다른 서비스가 받는 이벤트 사이의 불일치를 피하는 방법으로 설명합니다. 서비스는 주문을 저장하는 트랜잭션 안에서 outbox 테이블에 이벤트 행을 함께 넣고 Debezium이 그 테이블의 변경을 읽어 Kafka로 보냅니다. DB 저장과 이벤트 발행이 한 트랜잭션으로 묶이니 "저장은 됐는데 이벤트는 못 보냄"이 생기지 않습니다.
 
@@ -296,10 +296,10 @@ COMMIT;
 
 로그 기반 CDC 도구 둘이 Alibaba에서 나왔습니다.
 
-- **Canal**: README에 따르면 Alibaba는 항저우와 미국 두 데이터센터 사이 동기화가 필요했고 처음에는 업무 트리거로 증분 변경을 얻다가 2010년부터 DB 로그를 해석하는 방식으로 옮겼습니다. Canal은 MySQL 복제본의 통신 규약을 흉내 내 자신을 복제본으로 위장하고 MySQL에 binlog 전송(dump)을 요청합니다. 3-1절의 "복제본처럼 로그를 읽는다"를 그대로 구현했습니다.
-- **Flink CDC**: 2020년 7월 개인 관심 프로젝트로 시작해 Ververica 저장소의 오픈소스가 됐고 이후 Apache Flink 하위 프로젝트로 기증됐습니다. 2021년 "Flink CDC 2.0 正式发布，详解核心改进"은 1.x의 문제를 셋으로 꼽았습니다. Debezium 방식이라 스냅샷 때 전역 락이나 테이블 락이 필요했고(DBA가 락 권한을 잘 주지 않음) 스냅샷을 병렬로 읽지 못했고 스냅샷 단계에서 체크포인트를 못 했습니다. 2.0은 3-3절의 incremental snapshot과 같은 DBLog 알고리즘을 단순화해 기본 키 범위 청크로 나눠 락 없이 병렬로 읽습니다. TPC-DS customer 테이블(약 6,500만 행, 병렬도 8, 스냅샷 단계만)에서 1.4가 89분, 2.0이 13분이었습니다.
+- Canal: README에 따르면 Alibaba는 항저우와 미국 두 데이터센터 사이 동기화가 필요했고 처음에는 업무 트리거로 증분 변경을 얻다가 2010년부터 DB 로그를 해석하는 방식으로 옮겼습니다. Canal은 MySQL 복제본의 통신 규약을 흉내 내 자신을 복제본으로 위장하고 MySQL에 binlog 전송(dump)을 요청합니다. 3-1절의 "복제본처럼 로그를 읽는다"를 그대로 구현했습니다.
+- Flink CDC: 2020년 7월 개인 관심 프로젝트로 시작해 Ververica 저장소의 오픈소스가 됐고 이후 Apache Flink 하위 프로젝트로 기증됐습니다. 2021년 "Flink CDC 2.0 正式发布，详解核心改进"은 1.x의 문제를 셋으로 꼽았습니다. Debezium 방식이라 스냅샷 때 전역 락이나 테이블 락이 필요했고(DBA가 락 권한을 잘 주지 않음) 스냅샷을 병렬로 읽지 못했고 스냅샷 단계에서 체크포인트를 못 했습니다. 2.0은 3-3절의 incremental snapshot과 같은 DBLog 알고리즘을 단순화해 기본 키 범위 청크로 나눠 락 없이 병렬로 읽습니다. TPC-DS customer 테이블(약 6,500만 행, 병렬도 8, 스냅샷 단계만)에서 1.4가 89분, 2.0이 13분이었습니다.
 
-### 7-2. 레이크 포맷 이전과 이후의 upsert
+### 7-2. 레이크 포맷 전과 후의 upsert는 어떻게 달랐을까?
 
 Meituan의 2018년 글 "美团DB数据同步到数据仓库的架构与实践"은 Canal로 MySQL binlog를 Kafka에 보내고 매시간 Hive ODS로 옮겼습니다. 최초 스냅샷 뒤로는 매일 기본 키로 병합해 원래 테이블에 `INSERT OVERWRITE`로 다시 썼고 Hive가 DELETE를 지원하지 않아 삭제는 left outer join으로 처리했습니다. 5-1절의 upsert를 테이블 전체 다시 쓰기로 하던 시대의 방식입니다.
 
@@ -313,9 +313,9 @@ Meituan의 2018년 글 "美团DB数据同步到数据仓库的架构与实践"�
 
 ### 7-3. 국내: 카카오, LINE, 토스
 
-- **카카오**(2024): 매일 MySQL 전체를 배치로 가져오다 DB 디스크 사용률이 100%에 닿는 문제를 Flink CDC와 Iceberg로 풀었습니다. 2절의 "조회 기반은 원천 DB에 부하를 준다"가 전체 복사에서 더 크게 나타난 경우입니다.
-- **LINE Plus**: Flink Iceberg 싱크의 upsert로 반영 주기를 60분에서 5분으로 줄였습니다. 식별 필드(identifier field)를 빠뜨리자 행이 중복되고 equality delete 파일이 비대해졌다고 적었습니다. 5-1절의 "upsert 모드는 식별 필드가 필요하다"를 놓치면 이렇게 됩니다.
-- **토스**(2024): Kafka Connect 기반 입수 자동화로 약 1,000개의 파이프라인을 세 명이 관리합니다. 기존 CDC 저장소(Kudu)는 큰 테이블에서 적재 지연이 컸다고 적었습니다.
+- 카카오(2024): 매일 MySQL 전체를 배치로 가져오다 DB 디스크 사용률이 100%에 닿는 문제를 Flink CDC와 Iceberg로 풀었습니다. 2절의 "조회 기반은 원천 DB에 부하를 준다"가 전체 복사에서 더 크게 나타난 경우입니다.
+- LINE Plus: Flink Iceberg 싱크의 upsert로 반영 주기를 60분에서 5분으로 줄였습니다. 식별 필드(identifier field)를 빠뜨리자 행이 중복되고 equality delete 파일이 비대해졌다고 적었습니다. 5-1절의 "upsert 모드는 식별 필드가 필요하다"를 놓치면 이렇게 됩니다.
+- 토스(2024): Kafka Connect 기반 입수 자동화로 약 1,000개의 파이프라인을 세 명이 관리합니다. 기존 CDC 저장소(Kudu)는 큰 테이블에서 적재 지연이 컸다고 적었습니다.
 
 ## 8. 범위와 한계
 
