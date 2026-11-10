@@ -105,29 +105,20 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
     --ink: #1f2328;
     --muted: #59636e;
     --lit: #1a6aa0;
-    --rule: rgba(15, 40, 80, 0.1);
+    --rule: #d1d9e0;
     margin: 1.5rem 0 2rem;
-    padding: 1.25rem;
-    border-radius: 1.25rem;
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    border: 1px solid rgba(15, 40, 80, 0.08);
-    box-shadow: 0 8px 28px rgba(15, 40, 80, 0.06), 0 1px 3px rgba(15, 40, 80, 0.05);
+    padding: 1.1rem 0;
+    border-top: 1px solid #d1d9e0;
+    border-bottom: 1px solid #d1d9e0;
   }
 
   :global(.dark) .hsn {
     --ink: #e6edf3;
     --muted: #9198a1;
     --lit: #8db8d0;
-    --rule: rgba(255, 255, 255, 0.1);
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
-  }
-
-  @media (min-width: 640px) {
-    .hsn { padding: 1.4rem 1.6rem 1.5rem; }
+    --rule: #3d444d;
+    border-top-color: #3d444d;
+    border-bottom-color: #3d444d;
   }
 
   .hsn-head {
@@ -147,17 +138,14 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
 
   .hsn-home {
     flex: none;
-    padding: 0.4rem 0.85rem;
-    border: 1px solid rgba(74, 141, 184, 0.3);
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--lit);
-    text-decoration: none;
-    transition: background-color 0.2s ease;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
-  .hsn-home:hover { background: rgba(74, 141, 184, 0.1); }
+  .hsn-home:hover { text-decoration-thickness: 2px; }
 
   .hsn-home:focus-visible {
     outline: 3px solid var(--lit);
@@ -255,8 +243,7 @@ const tiles = domains.map((d) => ({ ...d, count: d.entries.length }));
   .hsn-empty {
     margin: 0;
     padding: 1rem 1.1rem;
-    border: 1px dashed rgba(74, 141, 184, 0.35);
-    border-radius: 0.75rem;
+    border: 1px solid var(--rule);
     font-size: 14px;
     color: var(--muted);
   }

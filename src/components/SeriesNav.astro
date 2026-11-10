@@ -73,35 +73,16 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
 )}
 
 <style>
-  /* Panel: same calm white-glass family as cards/reading surface — no standalone blue island */
+  /* 상자 없이 위아래 가는 선으로 묶는다 */
   .series-nav {
-    position: relative;
     margin: 1.5rem 0 2rem;
-    padding: 1.05rem 1.25rem 1.15rem;
-    border-radius: 1.125rem;
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.86) 0%, rgba(236, 246, 255, 0.62) 100%);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    border: 1px solid rgba(15, 40, 80, 0.08);
-    box-shadow:
-      0 8px 28px rgba(15, 40, 80, 0.06),
-      0 1px 3px rgba(15, 40, 80, 0.05),
-      inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  }
-
-  @media (min-width: 640px) {
-    .series-nav {
-      padding: 1.15rem 1.5rem 1.3rem;
-      border-radius: 1.25rem;
-    }
+    padding: 1rem 0 1.1rem;
+    border-top: 1px solid #d1d9e0;
+    border-bottom: 1px solid #d1d9e0;
   }
 
   :global(.dark) .series-nav {
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(80, 140, 200, 0.045) 100%);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.28),
-      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    border-color: #3d444d;
   }
 
   /* Header: title + progress count */
@@ -126,13 +107,13 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
     color: #1a6aa0;
     flex: none;
   }
-  :global(.dark) .series-nav-icon { color: #38bdf8; }
+  :global(.dark) .series-nav-icon { color: #8db8d0; }
 
   .series-nav-title {
     font-size: 14px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: #334155;
+    color: #1f2328;
   }
   @media (min-width: 640px) { .series-nav-title { font-size: 15px; } }
   :global(.dark) .series-nav-title { color: #e5e7eb; }
@@ -149,7 +130,7 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
   .series-nav-count-sep { margin: 0 1px; }
   .series-nav-count-unit { margin-left: 2px; }
   :global(.dark) .series-nav-count { color: #9198a1; }
-  :global(.dark) .series-nav-count-now { color: #38bdf8; }
+  :global(.dark) .series-nav-count-now { color: #8db8d0; }
 
   /* Numbered list — two columns to fill the width, column-wise fill */
   .series-nav-list {
@@ -172,8 +153,7 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
     display: flex;
     align-items: baseline;
     gap: 0.55rem;
-    padding: 0.3rem 0.5rem;
-    border-radius: 9px;
+    padding: 0.3rem 0;
     text-decoration: none;
     transition: background 0.2s ease, color 0.2s ease;
   }
@@ -199,12 +179,12 @@ const currentNo = currentIndex >= 0 ? currentIndex + 1 : 0;
 
   a.series-link:hover .series-text { color: #1a6aa0; }
   a.series-link:hover .series-no { color: #1a6aa0; }
-  :global(.dark) a.series-link:hover .series-text { color: #7dd3fc; }
+  :global(.dark) a.series-link:hover .series-text { color: #8db8d0; }
 
   /* Current post — 굵게만 표시한다 */
   .is-current .series-link { cursor: default; }
   .is-current .series-no { color: #1a6aa0; font-weight: 700; }
-  .is-current .series-text { color: #0f172a; font-weight: 700; }
-  :global(.dark) .is-current .series-no { color: #38bdf8; }
-  :global(.dark) .is-current .series-text { color: #f1f5f9; }
+  .is-current .series-text { color: #1f2328; font-weight: 700; }
+  :global(.dark) .is-current .series-no { color: #8db8d0; }
+  :global(.dark) .is-current .series-text { color: #f0f6fc; }
 </style>
