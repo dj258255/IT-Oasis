@@ -371,7 +371,7 @@ button, input, select, textarea {
   line-height: 1.5;
   color: #1f2328;
   text-decoration: none;
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 .dark .post-row-title { color: #e6edf3; }
 .post-row-title:hover {
@@ -450,37 +450,5 @@ code, pre, kbd, samp, .expressive-code, .expressive-code * {
   font-variant-ligatures: none;
   font-feature-settings: "liga" 0, "calt" 0;
 }
-
-/* ===== 쓰지 않는 옛 사이드바(BlogSidebar.astro)가 아직 참조하는 규칙 ===== */
-.glass-sidebar {
-  background: #ffffff;
-  border: 1px solid #d1d9e0;
-}
-.dark .glass-sidebar {
-  background: #0d1117;
-  border-color: #3d444d;
-}
-.tag-pill {
-  font-size: 12px;
-  padding: 2px 8px;
-  color: #3b434b;
-}
-.dark .tag-pill { color: #c9d1d9; }
-.sidebar-link { display: flex; align-items: center; gap: 10px; padding: 8px 14px; font-size: 14px; color: #1f2328; }
-.dark .sidebar-link { color: #c9d1d9; }
-.sidebar-link.active { color: #1a6aa0; font-weight: 600; }
-.dark .sidebar-link.active { color: #8db8d0; }
-.sidebar-link .sidebar-count,
-.sidebar-child-link .sidebar-count { margin-left: auto; font-size: 12px; color: #59636e; }
-.dark .sidebar-link .sidebar-count,
-.dark .sidebar-child-link .sidebar-count { color: #9198a1; }
-.sidebar-group { margin-bottom: 2px; }
-.sidebar-children { margin-left: 22px; padding-left: 12px; }
-.sidebar-child-link { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 13px; color: #59636e; }
-.dark .sidebar-child-link { color: #9198a1; }
-.sidebar-child-link.active { color: #1a6aa0; font-weight: 600; }
-.dark .sidebar-child-link.active { color: #8db8d0; }
-.sidebar-child-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.sidebar-scroll { max-height: calc(100vh - 8rem); overflow-y: auto; }
 
 .text-links + .post-list { margin-top: 1.25rem; }
