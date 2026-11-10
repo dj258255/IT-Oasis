@@ -26,4 +26,4 @@ node build-all.mjs                 # 전부 다시 만든다
 **도식 문구는 본문과 따로 산다.** 본문에서 판단을 지웠으면 도식에 그 문구가 남았는지
 확인한다. 본문만 `grep` 해서 "문서에 없다"고 판단한 적이 두 번 있다.
 
-전체 스타일 규칙: `_workspace/prompts/diagram-style-prompt.md`
+전체 스타일 규칙: `_workspace/modules/조립/프롬프트/diagram-style-prompt.md`

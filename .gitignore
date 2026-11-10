@@ -63,3 +63,5 @@ __pycache__/
 /*portfolio*
 /*Portfolio*
 /blog-page.png
+# 브라우저로 받다 막힌 페이지 같은 루트 임시 HTML
+/*.html

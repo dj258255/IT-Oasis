@@ -209,4 +209,3 @@ docker compose -f docker-compose.app.yml up -d
 - 설계 결정: [DESIGN.md](https://github.com/dj258255/dbtower/blob/main/docs/DESIGN.md)
 - 역할별로 직접 눌러 보는 순서: [MANUAL-TEST.md](https://github.com/dj258255/dbtower/blob/main/docs/MANUAL-TEST.md)
 - 현재 화면 모음: [SCREENSHOTS.md](https://github.com/dj258255/dbtower/blob/main/docs/SCREENSHOTS.md)
-- 관제 데이터를 오래 보관해 분석하는 파이프라인: [dbtower-lakehouse](/blog/project/lakehouse/lakehouse-0-why)

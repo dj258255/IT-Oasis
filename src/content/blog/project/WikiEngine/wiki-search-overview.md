@@ -33,7 +33,7 @@ draft: false
 | 데이터 규모 | 6개 공개 데이터셋 합계 12,156,589건, 30개 카테고리, 고유 태그 약 216만 개 |
 | 기술 | Spring Boot, Java, Lucene, Nori, MySQL, Redis, Kafka, Debezium, Next.js |
 | 서비스 상태 | 2026년 5월 라이브를 종료했습니다. 지금은 코드와 문서로만 남아 있습니다 |
-| 코드 | [github.com/dj258255/wikiEngine](https://github.com/dj258255/wikiEngine) |
+| 코드 | [github.com/dj258255/wiki-engine](https://github.com/dj258255/wiki-engine) |
 
 ## 왜 만들었나
 
@@ -131,7 +131,7 @@ Oracle Cloud Free Tier 서버 4대로 구성했습니다. 서버 1은 Nginx와 S
 Java 25, Gradle 9.3, MySQL 8.0, Redis 7.4가 필요합니다. Kafka는 CDC 기능에만 필요합니다.
 
 ```bash
-git clone https://github.com/dj258255/wikiEngine.git
+git clone https://github.com/dj258255/wiki-engine.git
 cd wikiEngine/backend
 ./gradlew bootRun
 ```
@@ -148,7 +148,7 @@ npm run dev
 
 ## 더 보기
 
-- 코드: [GitHub 저장소](https://github.com/dj258255/wikiEngine)
+- 코드: [GitHub 저장소](https://github.com/dj258255/wiki-engine)
 - 검색 엔진을 MySQL에서 Lucene으로 옮긴 전체 과정: [Lucene 전환](/blog/project/wikiengine/lucene-decision)
 - 검색 색인과 캐시를 DB 변경 기준으로 맞춘 과정: [CDC 이벤트 기반 동기화](/blog/project/wikiengine/cdc)
 - 품질은 올랐지만 운영에서는 끈 재랭킹 모델의 전체 기록: [LTR 재랭킹](/blog/project/wikiengine/search-ltr-ranking)

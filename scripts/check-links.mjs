@@ -22,9 +22,9 @@
  * **`CI=true` 를 빼면 이 검사는 운영과 다른 것을 본다.** 운영 빌드에만 base(`/IT-Oasis`)가
  * 붙는데, 처음에 그걸 안 맞춰서 로컬 0건 / CI 440건이 나왔다.
  *
- * 깨진 링크나 base 누락이 하나라도 있으면 종료 코드 1.
+ * 깨진 링크, base 누락, dist 에 없는 업로드 자산(그림 등)이 하나라도 있으면 종료 코드 1.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, dirname, basename } from 'node:path';
 
 const DIST = process.argv[2] || 'dist';
@@ -104,6 +104,22 @@ if (base) {
   }
 }
 
+// 그림 같은 업로드 자산이 dist 에 실제로 있는지 본다. 위 검사는 페이지 링크만 보고 업로드는
+// 건너뛰므로, 쓰지 않는 그림을 지우다 쓰는 그림까지 지워도 여기 전에는 아무것도 안 걸렸다.
+// public/ 은 dist/ 로 그대로 복사되므로 base 를 떼고 dist 아래에서 찾는다.
+const missingAsset = new Map();
+const assetRe = new RegExp(`(?:src|href)="(${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/uploads/[^"#?]+)"`, 'g');
+for (const f of files) {
+  const html = readFileSync(f, 'utf8').replace(/<script[\s\S]*?<\/script>/gi, '');
+  for (const m of html.matchAll(assetRe)) {
+    let rel = m[1].slice(base.length);
+    try { rel = decodeURIComponent(rel); } catch { /* 인코딩이 깨진 경로는 그대로 찾는다 */ }
+    if (existsSync(join(DIST, rel))) continue;
+    if (!missingAsset.has(m[1])) missingAsset.set(m[1], new Set());
+    missingAsset.get(m[1]).add(relative(DIST, f));
+  }
+}
+
 function report(map, label) {
   for (const [target, sources] of [...map].sort()) {
     const from = [...sources].sort();
@@ -114,8 +130,9 @@ function report(map, label) {
 
 report(broken, '깨진 링크');
 report(missingBase, `base(${base}) 빠진 링크`);
+report(missingAsset, '없는 업로드 자산');
 report(caseOnly, '경고 — 대소문자만 다름(리눅스에서는 둘 다 생긴다)');
 
-const fail = broken.size + missingBase.size;
-console.log(`페이지 ${pages.size}개 · 깨진 링크 ${broken.size}종 · base 누락 ${missingBase.size}종 · 대소문자 경고 ${caseOnly.size}종`);
+const fail = broken.size + missingBase.size + missingAsset.size;
+console.log(`페이지 ${pages.size}개 · 깨진 링크 ${broken.size}종 · base 누락 ${missingBase.size}종 · 없는 자산 ${missingAsset.size}종 · 대소문자 경고 ${caseOnly.size}종`);
 process.exit(fail ? 1 : 0);

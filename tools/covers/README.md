@@ -55,7 +55,7 @@ node contact-sheet.mjs  # 이전/새 커버를 카드 크기로 나란히 놓은
 
 - `title` 은 **그 글의 주장**이다. 글 제목을 복사하지 않는다. 카드가 이미 제목을 보여준다.
 - `thesis` 에는 숫자가 있으면 숫자를 박는다. "배포 중단 270건 → 0건" 같은 한 줄이 썸네일에서 가장 강하다.
-- 문체는 `_workspace/prompts/diagram-style-prompt.md` §4 를 따른다. 문중 대시 금지,
+- 문체는 `_workspace/modules/조립/프롬프트/diagram-style-prompt.md` §4 를 따른다. 문중 대시 금지,
   "X가 아니라 Y" 대비 프레임 금지, 이모지 금지.
 - **라벨은 본문 표현이어야 한다.** 도식 문구는 본문과 따로 살아서 어긋나기 쉽다
   (`tools/diagrams/README.md` 에 문구 동기화 사고 기록이 세 번 있다).

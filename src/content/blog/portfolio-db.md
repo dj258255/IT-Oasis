@@ -451,7 +451,7 @@ DBTower의 관측 데이터는 7일 뒤 버려지고, 이상 감지의 14일 창
 
 **DBTower가 7일 뒤 삭제하는 관측 데이터를 만료 전에 내려(ELT) 장기 질문에 답합니다. 운영계와 분석계를 분리하고, 조용히 틀린 데이터는 fail-closed(이상하면 통과 대신 정지)로 차단하며, 그 위에서 DBA가 손으로 하던 판정 여섯을 컬럼으로 자동화합니다.**
 
-- **기간**: 2026.04 ~ 진행 중 · 개인(100%) · [GitHub](https://github.com/dj258255/dbtower-lakehouse) · [블로그 시리즈 0~5편](/blog/project/lakehouse/lakehouse-0-why)
+- **기간**: 2026.04 ~ 진행 중 · 개인(100%)
 - **스택**: Airflow · dbt · DuckDB/DuckLake · MinIO(S3) · PostgreSQL · Metabase · pytest · GitHub Actions
 - **역할 전부**: 멱등 추출(EL) / dbt 변환 / 품질 게이트 / DuckLake 테이블 포맷 / 운영(알림·deadman·CI) / 대시보드 / 규모 검증(2축·합성) / 판정층 6종 / 셀프호스트 어플라이언스 / 원천 되쓰기
 - **규모 가정**: 관제 대상은 5기종 인스턴스이고, 설계 목표는 수백 대·수년치(low-TB) 이력을 일 단위 SLA의 배치로 단일 노드 DuckDB가 감당하는 것입니다. 관심 지표는 초당 처리량이 아니라 "이력이 몇 배로 늘어도 매일 배치가 초 단위로 끝나는가"입니다. 시간축 1년치 **54.5M행**·인스턴스축 300대 **52.2M행** 두 축으로 합성 검증했습니다
@@ -673,12 +673,6 @@ DBTower의 관측 데이터는 7일 뒤 버려지고, 이상 감지의 14일 창
 - 블로그 총정리(0~9편): [dbtower-0-overview](/blog/project/dbtower/dbtower-0-overview)
 - 직접 실행(GHCR): `docker pull ghcr.io/dj258255/dbtower`
 - 재현 기록: docs/VERIFICATION.md 117개 절
-
-**DBTower-lakehouse**
-- GitHub 저장소: [github.com/dj258255/dbtower-lakehouse](https://github.com/dj258255/dbtower-lakehouse)
-- 블로그 총정리(0~5편): [lakehouse-0-why](/blog/project/lakehouse/lakehouse-0-why)
-- 직접 실행(GHCR): 멀티아치 공개 이미지 2종(`dbtower-lakehouse-airflow`·`-metabase`): `docker compose -f docker-compose.standalone.yml pull && up`으로 빌드 없이 기동
-- 운영 절차(RUNBOOK): [docs/RUNBOOK.md](https://github.com/dj258255/dbtower-lakehouse/blob/main/docs/RUNBOOK.md)
 
 **오픈소스**
 - Spring Boot [PR #49063](https://github.com/spring-projects/spring-boot/pull/49063) · Apache Lucene [PR #15675](https://github.com/apache/lucene/pull/15675)
