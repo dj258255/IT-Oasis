@@ -13,7 +13,7 @@ interface Props {
   noindex?: boolean;
 }
 
-const { title, description = '성장에 뿌리를 둔 기술 블로그입니다.', ogImage, noindex = false } = Astro.props;
+const { title, description, ogImage, noindex = false } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -23,18 +23,18 @@ const { title, description = '성장에 뿌리를 둔 기술 블로그입니다.
     <link rel="icon" type="image/svg+xml" href={`${base}/favicon-light.svg`} media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/svg+xml" href={`${base}/favicon-dark.svg`} media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description} />
+    {description && <meta name="description" content={description} />}
     {noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <meta name="generator" content={Astro.generator} />
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    {description && <meta property="og:description" content={description} />}
     <meta property="og:site_name" content="Blog" />
     {ogImage && <meta property="og:image" content={ogImage} />}
     <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
     <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    {description && <meta name="twitter:description" content={description} />}
     <!-- Fonts -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
